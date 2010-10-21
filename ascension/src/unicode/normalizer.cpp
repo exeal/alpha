@@ -1,7 +1,7 @@
 /**
  * @file normalizer.cpp
  * @author exeal
- * @date 2007-2009
+ * @date 2007-2010
  */
 
 #include <ascension/unicode-property.hpp>
@@ -262,7 +262,7 @@ namespace {
 				splice(i.tell(), last, 1, decomposedHangul, len);
 				continue;
 			}
-			src = lower_bound(CANONICAL_MAPPING_SOURCE, MANAH_ENDOF(CANONICAL_MAPPING_SOURCE), current);
+			src = lower_bound(CANONICAL_MAPPING_SOURCE, ASCENSION_ENDOF(CANONICAL_MAPPING_SOURCE), current);
 			if(*src == current) {
 				splice(i.tell(), last, (current < 0x010000ul) ? 1 : 2,
 					CANONICAL_MAPPING_DESTINATION[src - CANONICAL_MAPPING_SOURCE],
@@ -271,7 +271,7 @@ namespace {
 			}
 #ifndef ASCENSION_NO_UNICODE_COMPATIBILITY_MAPPING
 			else if(compatibility) {
-				src = lower_bound(COMPATIBILITY_MAPPING_SOURCE, MANAH_ENDOF(COMPATIBILITY_MAPPING_SOURCE), current);
+				src = lower_bound(COMPATIBILITY_MAPPING_SOURCE, ASCENSION_ENDOF(COMPATIBILITY_MAPPING_SOURCE), current);
 				if(*src == current) {
 					splice(i.tell(), last, (current < 0x010000ul) ? 1 : 2,
 						COMPATIBILITY_MAPPING_DESTINATION[src - COMPATIBILITY_MAPPING_SOURCE],
@@ -302,7 +302,7 @@ namespace {
 	 * @return true if the sequence is in FCD.
 	 */
 	template<typename CharacterSequence> inline bool isFCD(CharacterSequence first, CharacterSequence last) {
-		MANAH_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
+		ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
 		Char buffer[32];
 		length_t len;
 		int ccc, previous = CanonicalCombiningClass::NOT_REORDERED;

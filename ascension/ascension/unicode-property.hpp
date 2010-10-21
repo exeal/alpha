@@ -459,7 +459,7 @@ template<> inline bool BinaryProperty::is<BinaryProperty::DEFAULT_IGNORABLE_CODE
 		|| is<VARIATION_SELECTOR>(cp)
 		|| is<OTHER_DEFAULT_IGNORABLE_CODE_POINT>(cp))
 		&& !is<WHITE_SPACE>(cp)
-		&& !std::binary_search(EXCLUDED, MANAH_ENDOF(EXCLUDED), cp);}
+		&& !std::binary_search(EXCLUDED, ASCENSION_ENDOF(EXCLUDED), cp);}
 
 /// Specialization to implement Grapheme_Extend property.
 template<> inline bool BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(CodePoint cp) {

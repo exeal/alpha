@@ -109,7 +109,7 @@ namespace ascension {
 		 * @see kernel#Point, kernel#IPointListener, kernel#DisposedViewException
 		 */
 		class VisualPoint : public kernel::Point, public graphics::IVisualLinesListener {
-			MANAH_UNASSIGNABLE_TAG(VisualPoint);
+			ASCENSION_UNASSIGNABLE_TAG(VisualPoint);
 		public:
 			// constructors
 			explicit VisualPoint(TextViewer& viewer,

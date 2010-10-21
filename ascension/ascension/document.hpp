@@ -13,13 +13,12 @@
 #endif
 #include "character-iterator.hpp"
 #include "gap-vector.hpp"
-#include <manah/memory.hpp>		// manah.FastArenaObject
+#include "memory.hpp"	// FastArenaObject
 #include <iostream>
 #include <set>
 #ifndef ASCENSION_NO_GREP
 #	include <stack>
 #endif // !ASCENSION_NO_GREP
-
 
 namespace ascension {
 
@@ -92,7 +91,7 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 * @see Region, Point, viewers#VisualPoint, viewers#Caret
 		 */
-		class Position : public manah::FastArenaObject<Position> {
+		class Position : public FastArenaObject<Position> {
 		public:
 			/// Line number. Zero means that the position is the first line in the document.
 			length_t line;
@@ -127,7 +126,7 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 * @see Range
 		 */
-		class Region : public std::pair<Position, Position>, public manah::FastArenaObject<Region> {
+		class Region : public std::pair<Position, Position>, public FastArenaObject<Region> {
 		public:
 			/// Constructor creates an empty region.
 			explicit Region(const Position& p = Position()) /*throw()*/ : std::pair<Position, Position>(p, p) {}
@@ -189,7 +188,7 @@ namespace ascension {
 		 * @see IDocumentListener, PositionUpdater
 		 */
 		class DocumentChange {
-			MANAH_NONCOPYABLE_TAG(DocumentChange);
+			ASCENSION_NONCOPYABLE_TAG(DocumentChange);
 		public:
 			const Region& erasedRegion() const /*throw()*/;
 			const Region& insertedRegion() const /*throw()*/;
@@ -205,7 +204,7 @@ namespace ascension {
 		 * @see Document#property, Document#setProperty
 		 */
 		class DocumentPropertyKey {
-			MANAH_NONCOPYABLE_TAG(DocumentPropertyKey);
+			ASCENSION_NONCOPYABLE_TAG(DocumentPropertyKey);
 		public:
 			/// Default constructor.
 			DocumentPropertyKey() /*throw()*/ {}
@@ -485,7 +484,7 @@ namespace ascension {
 		 * @see Document#bookmarker, EditPoint#forwardBookmark, EditPoint#backwardBookmark
 		 */
 		class Bookmarker : private IDocumentListener {
-			MANAH_NONCOPYABLE_TAG(Bookmarker);
+			ASCENSION_NONCOPYABLE_TAG(Bookmarker);
 		public:
 			/// A @c Bookmarker#Iterator enumerates the all marked lines.
 			class Iterator : public StandardConstBidirectionalIteratorAdapter<Iterator, length_t> {
@@ -570,7 +569,7 @@ namespace ascension {
 
 		// the documentation is at document.cpp
 		class Document : public internal::IPointCollection<Point>, public texteditor::internal::ISessionElement {
-			MANAH_NONCOPYABLE_TAG(Document);
+			ASCENSION_NONCOPYABLE_TAG(Document);
 		public:
 			/// The property key for the title of the document.
 			static const DocumentPropertyKey TITLE_PROPERTY;
@@ -579,7 +578,7 @@ namespace ascension {
 			 * Content of a line.
 			 * @note This class is not intended to be subclassed.
 			 */
-			class Line : public manah::FastArenaObject<Line> {
+			class Line : public FastArenaObject<Line> {
 			public:
 				/// Returns the newline of the line.
 				Newline newline() const /*throw()*/ {return newline_;}
@@ -728,7 +727,7 @@ namespace ascension {
 
 		// the documentation is document.cpp
 		class CompoundChangeSaver {
-			MANAH_NONCOPYABLE_TAG(CompoundChangeSaver);
+			ASCENSION_NONCOPYABLE_TAG(CompoundChangeSaver);
 		public:
 			explicit CompoundChangeSaver(Document* document);
 			~CompoundChangeSaver();
@@ -738,7 +737,7 @@ namespace ascension {
 #if 0
 		// the documentation is document.cpp
 		class DocumentLocker {
-			MANAH_NONCOPYABLE_TAG(DocumentLocker);
+			ASCENSION_NONCOPYABLE_TAG(DocumentLocker);
 		public:
 			DocumentLocker(Document& document);
 			~DocumentLocker() /*throw()*/;
@@ -816,7 +815,7 @@ inline length_t calculateNumberOfLines(ForwardIterator first, ForwardIterator la
 		return 0;
 	length_t lines = 1;
 	while(true) {
-		first = std::find_first_of(first, last, NEWLINE_CHARACTERS, MANAH_ENDOF(NEWLINE_CHARACTERS));
+		first = std::find_first_of(first, last, NEWLINE_CHARACTERS, ASCENSION_ENDOF(NEWLINE_CHARACTERS));
 		if(first == last)
 			break;
 		++lines;

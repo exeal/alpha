@@ -12,9 +12,9 @@
 #include "point.hpp"
 #include "presentation.hpp"
 #include "content-assist.hpp"
-#include <manah/win32/gdi-object.hpp>
-#include <manah/win32/ui/window.hpp>
-#include <manah/com/unknown-impl.hpp>
+#include "win32/gdi-object.hpp"
+#include "win32/ui/window.hpp"
+#include "win32/com/unknown-impl.hpp"
 #include <set>
 #include <algorithm>
 #include <shlobj.h>	// IDragSourceHelper, IDropTargetHelper

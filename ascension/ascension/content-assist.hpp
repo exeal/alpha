@@ -60,7 +60,7 @@ namespace ascension {
 
 		/// Default implementation of @c ICompletionalProposal.
 		class CompletionProposal : public ICompletionProposal {
-			MANAH_UNASSIGNABLE_TAG(CompletionProposal);
+			ASCENSION_UNASSIGNABLE_TAG(CompletionProposal);
 		public:
 			explicit CompletionProposal(const String& replacementString,
 				const String& description = String(), HICON icon = 0, bool autoInsertable = true);
@@ -147,7 +147,7 @@ namespace ascension {
 		 * collecting identifiers in the document.
 		 */
 		class IdentifiersProposalProcessor : public IContentAssistProcessor {
-			MANAH_UNASSIGNABLE_TAG(IdentifiersProposalProcessor);
+			ASCENSION_UNASSIGNABLE_TAG(IdentifiersProposalProcessor);
 		protected:
 			// constructors
 			IdentifiersProposalProcessor(kernel::ContentType contentType, const text::IdentifierSyntax& syntax) /*throw()*/;
@@ -269,7 +269,7 @@ namespace ascension {
 				const IContentAssistProcessor* processor;
 				bool incremental;
 				kernel::Region replacementRegion;
-				manah::AutoBuffer<ICompletionProposal*> proposals;
+				AutoBuffer<ICompletionProposal*> proposals;
 				std::size_t numberOfProposals;
 				CompletionSession() /*throw()*/ : processor(0), numberOfProposals(0) {}
 				~CompletionSession() /*throw()*/ {for(std::size_t i = 0; i < numberOfProposals; ++i) delete proposals[i];}

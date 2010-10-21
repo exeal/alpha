@@ -35,7 +35,7 @@ namespace {
 	static const PathCharacter PREFERRED_PATH_SEPARATOR = PATH_SEPARATORS[0];
 	/// Returns @c true if the given character is a path separator.
 	inline bool isPathSeparator(PathCharacter c) /*throw()*/ {
-		return find(PATH_SEPARATORS, MANAH_ENDOF(PATH_SEPARATORS) - 1, c) != MANAH_ENDOF(PATH_SEPARATORS) - 1;}
+		return find(PATH_SEPARATORS, ASCENSION_ENDOF(PATH_SEPARATORS) - 1, c) != ASCENSION_ENDOF(PATH_SEPARATORS) - 1;}
 	/**
 	 * Returns @c true if the specified file or directory exists.
 	 * @param name the name of the file
@@ -126,7 +126,7 @@ namespace {
 	 * @throw IOException any I/O error occurred
 	 */
 	PathString makeTemporaryFileName(const PathString& seed) {
-		manah::AutoBuffer<PathCharacter> s(new PathCharacter[seed.length() + 1]);
+		AutoBuffer<PathCharacter> s(new PathCharacter[seed.length() + 1]);
 		copy(seed.begin(), seed.end(), s.get());
 		s[seed.length()] = 0;
 		PathCharacter* const name = s.get() + (findFileName(seed) - seed.begin());
@@ -230,7 +230,7 @@ PathString fileio::canonicalizePathName(const PathCharacter* pathName) {
 	// resolve relative path name
 	WCHAR path[MAX_PATH];
 	WCHAR* dummy;
-	if(::GetFullPathNameW(pathName, MANAH_COUNTOF(path), path, &dummy) == 0)
+	if(::GetFullPathNameW(pathName, ASCENSION_COUNTOF(path), path, &dummy) == 0)
 		wcscpy(path, pathName);
 
 	// get real component names (from Ftruename implementation in xyzzy)
@@ -307,7 +307,7 @@ bool fileio::comparePathNames(const PathCharacter* s1, const PathCharacter* s2) 
 	const int fc1 = ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, 0, 0);
 	const int fc2 = ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, 0, 0);
 	if(fc1 != 0 && fc2 != 0 && fc1 == fc2) {
-		manah::AutoBuffer<WCHAR> fs1(new WCHAR[fc1]), fs2(new WCHAR[fc2]);
+		AutoBuffer<WCHAR> fs1(new WCHAR[fc1]), fs2(new WCHAR[fc2]);
 		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, fs1.get(), fc1);
 		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, fs2.get(), fc2);
 		if(wmemcmp(fs1.get(), fs2.get(), fc1) == 0)
@@ -801,7 +801,7 @@ void TextFileStreamBuffer::openForWriting(const string& encoding, bool writeUnic
 
 	if(writeUnicodeByteOrderMark)
 		encoder_->setFlags(encoder_->flags() | Encoder::UNICODE_BYTE_ORDER_MARK);
-	setp(ucsBuffer_, MANAH_ENDOF(ucsBuffer_));
+	setp(ucsBuffer_, ASCENSION_ENDOF(ucsBuffer_));
 }
 
 /// @see std#basic_streambuf#overflow
@@ -831,14 +831,14 @@ int TextFileStreamBuffer::sync() {
 	if(isOpen() && inputMapping_.first == 0 && pptr() > pbase()) {
 		byte* toNext;
 		const Char* fromNext;
-		byte nativeBuffer[MANAH_COUNTOF(ucsBuffer_)];
+		byte nativeBuffer[ASCENSION_COUNTOF(ucsBuffer_)];
 		encoder_->setFlags(encoder_->flags() | Encoder::BEGINNING_OF_BUFFER | Encoder::END_OF_BUFFER);
 		while(true) {
 			const Char* const fromEnd = pptr();
 
 			// conversion
 			const Encoder::Result encodingResult = encoder_->fromUnicode(
-				nativeBuffer, MANAH_ENDOF(nativeBuffer), toNext, pbase(), fromEnd, fromNext);
+				nativeBuffer, ASCENSION_ENDOF(nativeBuffer), toNext, pbase(), fromEnd, fromNext);
 			if(encodingResult == Encoder::UNMAPPABLE_CHARACTER)
 				throw UnmappableCharacterException();
 			else if(encodingResult == Encoder::MALFORMED_INPUT)
@@ -862,7 +862,7 @@ int TextFileStreamBuffer::sync() {
 			if(encodingResult == Encoder::COMPLETED)
 				break;
 		}
-		setp(ucsBuffer_, MANAH_ENDOF(ucsBuffer_));
+		setp(ucsBuffer_, ASCENSION_ENDOF(ucsBuffer_));
 	}
 	return 0;
 }
@@ -875,7 +875,7 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 	Char* toNext;
 	const byte* fromNext;
 	encoder_->setFlags(encoder_->flags() | Encoder::BEGINNING_OF_BUFFER | Encoder::END_OF_BUFFER);
-	switch(encoder_->toUnicode(ucsBuffer_, MANAH_ENDOF(ucsBuffer_), toNext, inputMapping_.current, inputMapping_.last, fromNext)) {
+	switch(encoder_->toUnicode(ucsBuffer_, ASCENSION_ENDOF(ucsBuffer_), toNext, inputMapping_.current, inputMapping_.last, fromNext)) {
 	case Encoder::UNMAPPABLE_CHARACTER:
 		throw UnmappableCharacterException();
 	case Encoder::MALFORMED_INPUT:
@@ -898,7 +898,7 @@ bool TextFileStreamBuffer::unicodeByteOrderMark() const /*throw()*/ {
 // TextFileDocumentInput.FileLocker /////////////////////////////////////////
 
 class TextFileDocumentInput::FileLocker {
-	MANAH_NONCOPYABLE_TAG(FileLocker);
+	ASCENSION_NONCOPYABLE_TAG(FileLocker);
 public:
 	FileLocker() /*throw()*/;
 	~FileLocker() /*throw()*/;
@@ -1583,7 +1583,7 @@ DirectoryIterator::DirectoryIterator(const PathCharacter* directoryName) :
 		throw IOException(directoryName, ERROR_PATH_NOT_FOUND);
 	const size_t len = wcslen(directoryName);
 	assert(len > 0);
-	manah::AutoBuffer<PathCharacter> pattern(new PathCharacter[len + 3]);
+	AutoBuffer<PathCharacter> pattern(new PathCharacter[len + 3]);
 	wmemcpy(pattern.get(), directoryName, len);
 	wcscpy(pattern.get() + len, isPathSeparator(pattern[len - 1]) ? L"*" : L"\\*");
 	WIN32_FIND_DATAW data;

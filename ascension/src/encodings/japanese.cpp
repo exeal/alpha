@@ -300,7 +300,7 @@ namespace {
 	Encoder::Result convertUCStoX0213(const Char* first, const Char* last,
 			const Char*& next, bool eob, ushort& jis, bool& plane2) ASC_NOFAIL {
 		jis = 0;
-		if(binary_search(LEADING_BYTES_TO_JIS_X_0213, MANAH_ENDOF(LEADING_BYTES_TO_JIS_X_0213), first[0])) {
+		if(binary_search(LEADING_BYTES_TO_JIS_X_0213, ASCENSION_ENDOF(LEADING_BYTES_TO_JIS_X_0213), first[0])) {
 			if(first + 1 == last) {
 				if(!eob) {
 					// pending
@@ -483,11 +483,11 @@ namespace {
 			|| (jis >= jk(14, 2) && jis <= jk(15, 93))
 			|| (jis >= jk(47, 53) && jis <= jk(47, 93))
 			|| (jis >= jk(84, 8) && jis <= jk(94, 89))
-			|| binary_search(PROHIBITED_IDEOGRAPHS_2000, MANAH_ENDOF(PROHIBITED_IDEOGRAPHS_2000), jis);
+			|| binary_search(PROHIBITED_IDEOGRAPHS_2000, ASCENSION_ENDOF(PROHIBITED_IDEOGRAPHS_2000), jis);
 	}
 	// returns true if is "禁止漢字" added by JIS X 0213:2004.
 	inline bool isISO2022JP2004ProhibitedIdeograph(ushort jis) {
-		return binary_search(PROHIBITED_IDEOGRAPHS_2004, MANAH_ENDOF(PROHIBITED_IDEOGRAPHS_2004), jis);
+		return binary_search(PROHIBITED_IDEOGRAPHS_2004, ASCENSION_ENDOF(PROHIBITED_IDEOGRAPHS_2004), jis);
 	}
 
 	// converts from ISO-2022-JP-X into UTF-16.
@@ -706,7 +706,7 @@ namespace {
 				++from;
 			} else if(state.g0 == EncodingState::GB2312 || state.g0 == EncodingState::KS_C_5601) {	// GB2312:1980 or KSC5601:1987
 				const byte buffer[2] = {*from | 0x80, from[1] | 0x80};
-				const byte* const bufferEnd = MANAH_ENDOF(buffer);
+				const byte* const bufferEnd = ASCENSION_ENDOF(buffer);
 				const byte* next;
 				const Encoder::Result r = ((state.g0 == EncodingState::GB2312) ?
 					gb2312Encoder : ksc5601Encoder)->toUnicode(to, toEnd, toNext, buffer, bufferEnd, next);
@@ -841,16 +841,16 @@ namespace {
 					) && manah::toBoolean(jis = convertUCStoX0212(*from)))
 				charset = EncodingState::JIS_X_0212;
 			else if(/*x == '2' &&*/ gb2312Encoder.get() != 0
-					&& gb2312Encoder->fromUnicode(mbcs, MANAH_ENDOF(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
+					&& gb2312Encoder->fromUnicode(mbcs, ASCENSION_ENDOF(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
 				charset = EncodingState::GB2312;
 			else if(/*x == '2' &&*/ ksc5601Encoder.get() != 0
-					&& ksc5601Encoder->fromUnicode(mbcs, MANAH_ENDOF(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
+					&& ksc5601Encoder->fromUnicode(mbcs, ASCENSION_ENDOF(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
 				charset = EncodingState::KS_C_5601;
 			else if(x == '2'
-					&& iso88591Encoder->fromUnicode(mbcs, MANAH_ENDOF(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
+					&& iso88591Encoder->fromUnicode(mbcs, ASCENSION_ENDOF(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
 				charset = EncodingState::ISO_8859_1;
 			else if(x == '2'
-					&& iso88597Encoder->fromUnicode(mbcs, MANAH_ENDOF(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
+					&& iso88597Encoder->fromUnicode(mbcs, ASCENSION_ENDOF(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
 				charset = EncodingState::ISO_8859_7;
 			else 
 				ASCENSION_HANDLE_UNMAPPABLE()

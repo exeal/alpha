@@ -56,7 +56,7 @@ namespace {
 					size_t directoryLength = dictionaryPathName.length();
 					if(dictionaryPathName[directoryLength - 1] != '/' && dictionaryPathName[directoryLength - 1] != '\\')
 						++directoryLength;
-					manah::AutoBuffer<char> pathName(new char[directoryLength + 32]);
+					AutoBuffer<char> pathName(new char[directoryLength + 32]);
 					strcpy(pathName.get(), dictionaryPathName.c_str());
 					if(directoryLength != dictionaryPathName.length())
 						strcat(pathName.get(), "/");
@@ -116,7 +116,7 @@ namespace {
 				return 0;
 			else {
 				size_t bufferLength = encoder->properties().maximumNativeBytes() * (last - first);
-				manah::AutoBuffer<byte> buffer(new byte[bufferLength + 1]);
+				AutoBuffer<byte> buffer(new byte[bufferLength + 1]);
 				byte* toNext;
 				const Char* fromNext;
 				if(encoding::Encoder::COMPLETED != encoder->fromUnicode(buffer.get(),
@@ -522,8 +522,8 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 
 // MigemoPattern ////////////////////////////////////////////////////////////
 
-manah::AutoBuffer<char> MigemoPattern::runtimePathName_;
-manah::AutoBuffer<char> MigemoPattern::dictionaryPathName_;
+AutoBuffer<char> MigemoPattern::runtimePathName_;
+AutoBuffer<char> MigemoPattern::dictionaryPathName_;
 
 /**
  * Private constructor.

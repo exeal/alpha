@@ -14,10 +14,19 @@
 /// Version of Unicode we're tracking
 #define ASCENSION_UNICODE_VERSION 0x0510	// 5.1.0
 
+/// Returns the number of the elements of the given array.
+#define ASCENSION_COUNTOF(array) (sizeof(array) / sizeof((array)[0]))
+/// Returns the end of the given array.
+#define ASCENSION_ENDOF(array) ((array) + ASCENSION_COUNTOF(array))
+/// Makes the specified class unassignable. Used in class definition.
+#define ASCENSION_UNASSIGNABLE_TAG(className) private: className& operator=(const className&)
+/// Makes the specified class uncopyable. Used in class definition
+#define ASCENSION_NONCOPYABLE_TAG(className) ASCENSION_UNASSIGNABLE_TAG(className); className(const className&)
+
 // platform
 #if defined(_WIN32) || defined(_WIN64) || defined(WIN32) || defined(WIN64)
 #	define ASCENSION_WINDOWS
-#	include <manah/win32/windows.hpp>
+#	include "win32/windows.hpp"
 #else
 #	define ASCENSION_POSIX
 #endif
@@ -91,15 +100,6 @@
 #	define ASCENSION_USE_INTRINSIC_WCHAR_T
 #endif
 
-/// Returns the number of the elements of the given array.
-#define ASCENSION_COUNTOF(array) (sizeof(array) / sizeof((array)[0]))
-/// Returns the end of the given array.
-#define ASCENSION_ENDOF(array) ((array) + ASCENSION_COUNTOF(array))
-/// Makes the specified class unassignable. Used in class definition.
-#define ASCENSION_UNASSIGNABLE_TAG(className) private: className& operator=(const className&)
-/// Makes the specified class uncopyable. Used in class definition
-#define ASCENSION_NONCOPYABLE_TAG(className) ASCENSION_UNASSIGNABLE_TAG(className); className(const className&)
-
 namespace ascension {
 
 	namespace internal {
@@ -149,16 +149,14 @@ namespace ascension {
 #else
 	typedef uint16_t;						///< Type for characters as UTF-16 code unit.
 #endif
+	typedef uint32_t CodePoint;				///< Unicode code point.
 	typedef std::basic_string<Char> String;	///< Type for strings as UTF-16.
-	typedef std::size_t length_t;			///< Length of string or index.
 	ASCENSION_STATIC_ASSERT(sizeof(Char) == 2);
 	ASCENSION_STATIC_ASSERT(sizeof(CodePoint) == 4);
 
-	/// Invalid value of @c length_t.
-	const length_t INVALID_INDEX = 0xfffffffful;
+	typedef std::size_t length_t;					///< Length of string or index.
+	const length_t INVALID_INDEX = 0xfffffffful;	///< Invalid value of @c length_t.
 
-	/// Unicode code point.
-	typedef uint32_t CodePoint;
 	/// Code point of LINE FEED (U+000A).
 	const Char LINE_FEED = 0x000au;
 	/// Code point of CARRIAGE RETURN (U+000D).
