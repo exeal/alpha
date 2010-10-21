@@ -11,9 +11,8 @@
 #define ASCENSION_UNICODE_HPP
 #include "character-iterator.hpp"
 #include "internal.hpp"
+#include "memory.hpp"	// AutoBuffer
 #include "ustring.hpp"	// ustrlen
-#include <manah/object.hpp>	// manah.Noncopyable
-#include <manah/memory.hpp>	// manah.AutoBuffer
 #include <cassert>
 #include <stdexcept>
 #include <iterator>
@@ -182,7 +181,7 @@ namespace ascension {
 			template<typename CharacterSequence>
 			inline CharacterSequence eatIdentifier(
 					CharacterSequence first, CharacterSequence last) const {
-				MANAH_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
 				UTF16To32Iterator<CharacterSequence> i(first, last);
 				if(!i.hasNext() || !isIdentifierStartCharacter(*i))
 					return first;
@@ -204,7 +203,7 @@ namespace ascension {
 			template<typename CharacterSequence>
 			inline CharacterSequence eatWhiteSpaces(
 					CharacterSequence first, CharacterSequence last, bool includeTab) const {
-				MANAH_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
 				UTF16To32Iterator<CharacterSequence> i(first, last);
 				while(i.hasNext() && isWhiteSpace(*i, includeTab))
 					++i;
@@ -240,7 +239,7 @@ namespace ascension {
 		 * This class does not have an interface for standard C++ iterator.
 		 */
 		class BreakIterator {
-			MANAH_UNASSIGNABLE_TAG(BreakIterator);
+			ASCENSION_UNASSIGNABLE_TAG(BreakIterator);
 		public:
 			/// Destructor.
 			virtual ~BreakIterator() /*throw()*/ {}
@@ -305,7 +304,7 @@ namespace ascension {
 		template<class BaseIterator>
 		class GraphemeBreakIterator : public AbstractGraphemeBreakIterator,
 			public internal::BreakIteratorFacade<GraphemeBreakIterator <BaseIterator> > {
-			MANAH_UNASSIGNABLE_TAG(GraphemeBreakIterator);
+			ASCENSION_UNASSIGNABLE_TAG(GraphemeBreakIterator);
 		public:
 			/**
 			 * Constructor.
@@ -372,7 +371,7 @@ namespace ascension {
 		template<class BaseIterator>
 		class WordBreakIterator : public AbstractWordBreakIterator,
 			public internal::BreakIteratorFacade<WordBreakIterator<BaseIterator> > {
-			MANAH_UNASSIGNABLE_TAG(WordBreakIterator);
+			ASCENSION_UNASSIGNABLE_TAG(WordBreakIterator);
 		public:
 			/**
 			 * Constructor.
@@ -433,7 +432,7 @@ namespace ascension {
 		template<class BaseIterator>
 		class SentenceBreakIterator : public AbstractSentenceBreakIterator,
 			public internal::BreakIteratorFacade<SentenceBreakIterator<BaseIterator> > {
-			MANAH_UNASSIGNABLE_TAG(SentenceBreakIterator);
+			ASCENSION_UNASSIGNABLE_TAG(SentenceBreakIterator);
 		public:
 			/**
 			 * Constructor.
@@ -472,7 +471,7 @@ namespace ascension {
 		template<class BaseIterator>
 		class LineBreakIterator : public AbstractLineBreakIterator,
 			public internal::BreakIteratorFacade<LineBreakIterator<BaseIterator> > {
-			MANAH_UNASSIGNABLE_TAG(LineBreakIterator);
+			ASCENSION_UNASSIGNABLE_TAG(LineBreakIterator);
 		public:
 			/**
 			 * Constructor.
@@ -500,7 +499,7 @@ namespace ascension {
 		 * @see Collator, Normalizer, searcher#LiteralPattern
 		 */
 		class CaseFolder {
-			MANAH_NONCOPYABLE_TAG(CaseFolder);
+			ASCENSION_NONCOPYABLE_TAG(CaseFolder);
 		public:
 			static const length_t MAXIMUM_EXPANSION_CHARACTERS;
 			static int compare(const CharacterIterator& s1,
@@ -545,10 +544,10 @@ namespace ascension {
 				NUMBER_OF_COMMON_CASED_, NUMBER_OF_SIMPLE_CASED_, NUMBER_OF_FULL_CASED_;
 		};
 
-		class CollationKey : public manah::FastArenaObject<CollationKey> {
+		class CollationKey : public FastArenaObject<CollationKey> {
 		public:
 			CollationKey() /*throw()*/ : length_(0) {}
-			CollationKey(manah::AutoBuffer<const uchar> keyValues,
+			CollationKey(AutoBuffer<const uchar> keyValues,
 				std::size_t length) : keyValues_(keyValues), length_(length) {}
 			CollationKey(const CollationKey& other);
 			CollationKey&operator=(const CollationKey& other);
@@ -559,7 +558,7 @@ namespace ascension {
 			bool operator>(const CollationKey& other) const /*throw()*/;
 			bool operator>=(const CollationKey& other) const /*throw()*/;
 		private:
-			const manah::AutoBuffer<const uchar> keyValues_;
+			const AutoBuffer<const uchar> keyValues_;
 			const std::size_t length_;
 		};
 
@@ -676,7 +675,7 @@ namespace ascension {
 		template<typename CharacterSequence>
 		inline String CaseFolder::fold(CharacterSequence first,
 				CharacterSequence last, bool excludeTurkishI /* = false */) {
-			MANAH_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
+			ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
 			using namespace std;
 			std::basic_stringbuf<Char> s(ios_base::out);
 			CodePoint c, f;

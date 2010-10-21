@@ -242,7 +242,7 @@ namespace ascension {
 		class EncoderFactory;
 
 		class Encoder {
-			MANAH_NONCOPYABLE_TAG(Encoder);
+			ASCENSION_NONCOPYABLE_TAG(Encoder);
 		public:
 			/// Result of conversion.
 			enum Result {
@@ -311,7 +311,7 @@ namespace ascension {
 			static const char ALIASES_SEPARATOR;
 
 			/// A set of @c Flag values.
-			typedef manah::Flags<Flag> Flags;
+			typedef Flags<Flag> Flags;
 		public:
 			virtual ~Encoder() /*throw()*/;
 			// attributes
@@ -390,7 +390,7 @@ namespace ascension {
 		};
 
 		class EncodingDetector {
-			MANAH_NONCOPYABLE_TAG(EncodingDetector);
+			ASCENSION_NONCOPYABLE_TAG(EncodingDetector);
 		public:
 			// constructors
 			virtual ~EncodingDetector() /*throw()*/;
@@ -590,7 +590,7 @@ namespace ascension {
 			} // namespace sbcs
 
 			namespace dbcs {
-				MANAH_STATIC_ASSERT(sizeof(ushort) == 2);
+				ASCENSION_STATIC_ASSERT(sizeof(ushort) == 2);
 
 				/// Generates 16-DBCS character sequence.
 				template<

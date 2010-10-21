@@ -94,7 +94,7 @@ namespace ascension {
 			 */
 			virtual const CodePointIterator& start(int group = 0) const = 0;
 		private:
-			MANAH_STATIC_ASSERT(text::CodeUnitSizeOf<CodePointIterator>::result == 4);
+			ASCENSION_STATIC_ASSERT(text::CodeUnitSizeOf<CodePointIterator>::result == 4);
 		};
 
 		namespace internal {
@@ -161,7 +161,7 @@ namespace ascension {
 				char_type translate(char_type c) const {
 					if(unixLineMode) return (c == LINE_FEED) ? LINE_SEPARATOR : c;
 					return (c < 0x10000ul && std::binary_search(NEWLINE_CHARACTERS,
-						MANAH_ENDOF(NEWLINE_CHARACTERS), static_cast<Char>(c & 0xffffu))) ? LINE_SEPARATOR : c;
+						ASCENSION_ENDOF(NEWLINE_CHARACTERS), static_cast<Char>(c & 0xffffu))) ? LINE_SEPARATOR : c;
 				}
 				char_type translate_nocase(char_type c) const {return text::CaseFolder::fold(translate(c));}
 				string_type transform(const char_type* p1, const char_type* p2) const {return collator_->transform(p1, p2);}
@@ -556,7 +556,7 @@ namespace ascension {
 
 		/// Unchecked exception thrown to indicate a syntax error in a regular-expression pattern.
 		class PatternSyntaxException : public std::invalid_argument {
-			MANAH_UNASSIGNABLE_TAG(PatternSyntaxException);
+			ASCENSION_UNASSIGNABLE_TAG(PatternSyntaxException);
 		public:
 			/// Error types (corresponds to @c boost#regex_constants#error_type).
 			enum Code {
@@ -595,7 +595,7 @@ namespace ascension {
 
 		// the documentation is regex.cpp
 		class Pattern {
-			MANAH_UNASSIGNABLE_TAG(Pattern);
+			ASCENSION_UNASSIGNABLE_TAG(Pattern);
 		public:
 			enum {
 				UNIX_LINES = 0x01,			///< Enables Unix lines mode (not implemented).
@@ -692,7 +692,7 @@ namespace ascension {
 #ifndef ASCENSION_NO_MIGEMO
 		/// Builds regular expression pattern for Migemo use.
 		class MigemoPattern : public Pattern {
-			MANAH_UNASSIGNABLE_TAG(MigemoPattern);
+			ASCENSION_UNASSIGNABLE_TAG(MigemoPattern);
 		public:
 			static std::auto_ptr<MigemoPattern> compile(const Char* first, const Char* last, bool caseSensitive);
 			static void initialize(const char* runtimePathName, const char* dictionaryPathName);
@@ -700,7 +700,7 @@ namespace ascension {
 		private:
 			MigemoPattern(const Char* first, const Char* last, bool caseSensitive);
 			static void install();
-			static manah::AutoBuffer<char> runtimePathName_, dictionaryPathName_;
+			static AutoBuffer<char> runtimePathName_, dictionaryPathName_;
 		};
 #endif // !ASCENSION_NO_MIGEMO
 

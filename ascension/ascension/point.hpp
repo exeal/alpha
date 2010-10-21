@@ -52,7 +52,7 @@ namespace ascension {
 
 		// documentation is point.cpp
 		class Point {
-			MANAH_UNASSIGNABLE_TAG(Point);
+			ASCENSION_UNASSIGNABLE_TAG(Point);
 		public:
 			// constructors
 			explicit Point(Document& document,

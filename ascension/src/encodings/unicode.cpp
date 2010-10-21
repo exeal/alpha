@@ -125,19 +125,19 @@ namespace {
 
 #define ASCENSION_ENCODE_BOM(encoding)												\
 	if(flags().has(BEGINNING_OF_BUFFER) && flags().has(UNICODE_BYTE_ORDER_MARK)) {	\
-		if(to + MANAH_COUNTOF(encoding##_BOM) >= toEnd)								\
+		if(to + ASCENSION_COUNTOF(encoding##_BOM) >= toEnd)							\
 			return INSUFFICIENT_BUFFER;												\
-		memcpy(to, encoding##_BOM, MANAH_COUNTOF(encoding##_BOM));					\
-		to += MANAH_COUNTOF(encoding##_BOM);										\
+		memcpy(to, encoding##_BOM, ASCENSION_COUNTOF(encoding##_BOM));				\
+		to += ASCENSION_COUNTOF(encoding##_BOM);									\
 	}
 
-#define ASCENSION_DECODE_BOM(encoding)																	\
-	if(flags().has(BEGINNING_OF_BUFFER)) {																\
-		if(fromEnd - from >= 3 && memcmp(from, encoding##_BOM, MANAH_COUNTOF(encoding##_BOM)) == 0) {	\
-			setFlags(flags() | UNICODE_BYTE_ORDER_MARK);												\
-			from += MANAH_COUNTOF(encoding##_BOM);														\
-		} else																							\
-			setFlags(flags() & ~UNICODE_BYTE_ORDER_MARK);												\
+#define ASCENSION_DECODE_BOM(encoding)																		\
+	if(flags().has(BEGINNING_OF_BUFFER)) {																	\
+		if(fromEnd - from >= 3 && memcmp(from, encoding##_BOM, ASCENSION_COUNTOF(encoding##_BOM)) == 0) {	\
+			setFlags(flags() | UNICODE_BYTE_ORDER_MARK);													\
+			from += ASCENSION_COUNTOF(encoding##_BOM);														\
+		} else																								\
+			setFlags(flags() & ~UNICODE_BYTE_ORDER_MARK);													\
 	}
 
 
@@ -793,18 +793,18 @@ namespace {
 
 	size_t UnicodeDetector(const byte* first, const byte* last, MIBenum& mib) {
 		mib = MIB_UNKNOWN;
-		if(last - first >= 3 && memcmp(first, UTF8_BOM, MANAH_COUNTOF(UTF8_BOM)) == 0)
+		if(last - first >= 3 && memcmp(first, UTF8_BOM, ASCENSION_COUNTOF(UTF8_BOM)) == 0)
 			mib = fundamental::UTF_8;
 		else if(last - first >= 2) {
-			if(memcmp(first, UTF16LE_BOM, MANAH_COUNTOF(UTF16LE_BOM)) == 0)
+			if(memcmp(first, UTF16LE_BOM, ASCENSION_COUNTOF(UTF16LE_BOM)) == 0)
 				mib = fundamental::UTF_16LE;
-			else if(memcmp(first, UTF16BE_BOM, MANAH_COUNTOF(UTF16BE_BOM)) == 0)
+			else if(memcmp(first, UTF16BE_BOM, ASCENSION_COUNTOF(UTF16BE_BOM)) == 0)
 				mib = fundamental::UTF_16BE;
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 			if(last - first >= 4) {
-				if(memcmp(first, UTF32LE_BOM, MANAH_COUNTOF(UTF32LE_BOM)) == 0)
+				if(memcmp(first, UTF32LE_BOM, ASCENSION_COUNTOF(UTF32LE_BOM)) == 0)
 					mib = standard::UTF_32LE;
-				else if(memcmp(first, UTF32BE_BOM, MANAH_COUNTOF(UTF32BE_BOM)) == 0)
+				else if(memcmp(first, UTF32BE_BOM, ASCENSION_COUNTOF(UTF32BE_BOM)) == 0)
 					mib = standard::UTF_32BE;
 			}
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
@@ -820,18 +820,18 @@ namespace {
 pair<MIBenum, string> UnicodeDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const ASC_NOFAIL {
 	const IEncodingProperties* result = 0;
 	// first, test Unicode byte order marks
-	if(last - first >= 3 && memcmp(first, UTF8_BOM, MANAH_COUNTOF(UTF8_BOM)) == 0)
+	if(last - first >= 3 && memcmp(first, UTF8_BOM, ASCENSION_COUNTOF(UTF8_BOM)) == 0)
 		result = &utf8;
 	else if(last - first >= 2) {
-		if(memcmp(first, UTF16LE_BOM, MANAH_COUNTOF(UTF16LE_BOM)) == 0)
+		if(memcmp(first, UTF16LE_BOM, ASCENSION_COUNTOF(UTF16LE_BOM)) == 0)
 			result = &utf16le;
-		else if(memcmp(first, UTF16BE_BOM, MANAH_COUNTOF(UTF16BE_BOM)) == 0)
+		else if(memcmp(first, UTF16BE_BOM, ASCENSION_COUNTOF(UTF16BE_BOM)) == 0)
 			result = &utf16be;
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 		if(last - first >= 4) {
-			if(memcmp(first, UTF32LE_BOM, MANAH_COUNTOF(UTF32LE_BOM)) == 0)
+			if(memcmp(first, UTF32LE_BOM, ASCENSION_COUNTOF(UTF32LE_BOM)) == 0)
 				result = &utf32le;
-			else if(memcmp(first, UTF32BE_BOM, MANAH_COUNTOF(UTF32BE_BOM)) == 0)
+			else if(memcmp(first, UTF32BE_BOM, ASCENSION_COUNTOF(UTF32BE_BOM)) == 0)
 				result = &utf32be;
 		}
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS

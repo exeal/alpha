@@ -1,15 +1,17 @@
-// memory.hpp
-// (c) 2005-2010 exeal
+/**
+ * @file memory.hpp
+ * This file provides the following classes:
+ * - AutoBuffer
+ * - MemoryPool
+ * - FastArenaObject
+ * @author exeal
+ * @date 2005-2010 (was manah/memory.hpp)
+ * @date 2010-10-21
+ */
 
-#ifndef MANAH_MEMORY_HPP
-#define MANAH_MEMORY_HPP
-
-// This file contains following classes
-// - AutoBuffer
-// - MemoryPool
-// - FastArenaObject
-
-#include "object.hpp"	// MANAH_NONCOPYABLE_TAG
+#ifndef ASCENSION_MEMORY_HPP
+#define ASCENSION_MEMORY_HPP
+#include "common.hpp"	// MANAH_NONCOPYABLE_TAG
 #include <cassert>
 #include <algorithm>	// std.max
 #include <new>			// new[], delete[], std.bad_alloc, std.nothrow
@@ -18,8 +20,7 @@
 #undef min
 #undef max
 
-
-namespace manah {
+namespace ascension {
 
 	// std.auto_ptr for arrays.
 	template<typename T> class AutoBuffer {
@@ -48,7 +49,7 @@ namespace manah {
 
 	// Efficient memory pool implementation (from MemoryPool of Efficient C++).
 	class MemoryPool {
-		MANAH_NONCOPYABLE_TAG(MemoryPool);
+		ASCENSION_NONCOPYABLE_TAG(MemoryPool);
 	public:
 		MemoryPool(std::size_t chunkSize) /*throw()*/ : chunkSize_(std::max(chunkSize, sizeof(Chunk))), chunks_(0) {}
 		~MemoryPool() /*throw()*/ {release();}
@@ -137,6 +138,6 @@ namespace manah {
 
 	template<typename T> std::auto_ptr<MemoryPool> FastArenaObject<T>::pool_;
 
-} // namespace manah
+} // namespace ascension
 
-#endif // !MANAH_MEMORY_HPP
+#endif // !ASCENSION_MEMORY_HPP

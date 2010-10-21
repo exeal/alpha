@@ -32,7 +32,7 @@ namespace ascension {
 	namespace rules {
 		namespace internal {
 			class HashTable {
-				MANAH_NONCOPYABLE_TAG(HashTable);
+				ASCENSION_NONCOPYABLE_TAG(HashTable);
 			public:
 				template<typename StringSequence>
 				HashTable(StringSequence first, StringSequence last, bool caseSensitive);
@@ -96,7 +96,7 @@ HashTable::~HashTable() /*throw()*/ {
  */
 template<typename CharacterSequence>
 inline ulong HashTable::hashCode(CharacterSequence first, CharacterSequence last) {
-	MANAH_STATIC_ASSERT(sizeof(*first) == 2);
+	ASCENSION_STATIC_ASSERT(sizeof(*first) == 2);
 	ulong h = 0;
 	while(first < last) {
 		h *= 2;

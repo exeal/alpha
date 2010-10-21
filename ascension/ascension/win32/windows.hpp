@@ -1,6 +1,6 @@
 /**
  * @file windows.hpp
- * @date 2006-2009 exeal
+ * @date 2006-2010 exeal
  */
 
 #ifndef MANAH_WINDOWS_HPP
@@ -23,7 +23,7 @@
 	#endif
  */
 
-#include "../object.hpp"
+#include <ascension/common.hpp>
 #ifndef STRICT
 #	define STRICT
 #endif // !STRICT
@@ -229,7 +229,7 @@ namespace manah {
 
 		/// A resource identifier can be initialized by using both a string and a numeric identifier.
 		class ResourceID {
-			MANAH_NONCOPYABLE_TAG(ResourceID);
+			ASCENSION_NONCOPYABLE_TAG(ResourceID);
 		public:
 			/// Constructor takes a string identifier.
 			ResourceID(const WCHAR* name) /*throw()*/ : name_(name) {}
@@ -257,10 +257,10 @@ namespace manah {
 		public:
 			template<typename T>
 			DumpContext& operator<<(const T& rhs) throw();
-			void hexDump(const WCHAR* line, byte* pb, int bytes, int width = 0x10) throw();
+			void hexDump(const WCHAR* line, BYTE* pb, int bytes, int width = 0x10) throw();
 		};
 
-		inline void DumpContext::hexDump(const WCHAR* line, byte* pb, int bytes, int width /* = 0x10 */) throw() {
+		inline void DumpContext::hexDump(const WCHAR* line, BYTE* pb, int bytes, int width /* = 0x10 */) throw() {
 			WCHAR* const output = new WCHAR[static_cast<std::size_t>(
 				(std::wcslen(line) + 3 * width + 2) * static_cast<float>(bytes / width))];
 			std::wcscpy(output, line);

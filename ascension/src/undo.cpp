@@ -48,7 +48,7 @@ namespace {
 	};
 
 	// an atomic insertion change
-	class InsertionChange : public IAtomicChange, public manah::FastArenaObject<InsertionChange> {
+	class InsertionChange : public IAtomicChange, public FastArenaObject<InsertionChange> {
 	public:
 		InsertionChange(const Position& position, const String& text) : position_(position), text_(text) {}
 		bool appendChange(IAtomicChange&, const Document&) /*throw()*/ {return false;}
@@ -63,7 +63,7 @@ namespace {
 	};
 
 	// an atomic deletion change
-	class DeletionChange : public IAtomicChange, public manah::FastArenaObject<DeletionChange> {
+	class DeletionChange : public IAtomicChange, public FastArenaObject<DeletionChange> {
 	public:
 		explicit DeletionChange(const Region& region) /*throw()*/ : region_(region), revisions_(1) {}
 		bool appendChange(IAtomicChange& postChange, const Document&) /*throw()*/;
@@ -78,7 +78,7 @@ namespace {
 	};
 
 	// an atomic replacement change
-	class ReplacementChange : public IAtomicChange, public manah::FastArenaObject<ReplacementChange> {
+	class ReplacementChange : public IAtomicChange, public FastArenaObject<ReplacementChange> {
 	public:
 		explicit ReplacementChange(const Region& region, const String& text) : region_(region), text_(text) {}
 		bool appendChange(IAtomicChange&, const Document&) /*throw()*/ {return false;}
@@ -198,7 +198,7 @@ namespace {
 
 // manages undo/redo of the document.
 class Document::UndoManager {
-	MANAH_NONCOPYABLE_TAG(UndoManager);
+	ASCENSION_NONCOPYABLE_TAG(UndoManager);
 public:
 	// constructors
 	explicit UndoManager(Document& document) /*throw()*/;
@@ -568,7 +568,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 	const Position& beginning = region.beginning();
 	const Position& end = region.end();
 	const Char* nextNewline = (text.beginning() != 0 && !text.isEmpty()) ?
-		find_first_of(text.beginning(), text.end(), NEWLINE_CHARACTERS, MANAH_ENDOF(NEWLINE_CHARACTERS)) : 0;
+		find_first_of(text.beginning(), text.end(), NEWLINE_CHARACTERS, ASCENSION_ENDOF(NEWLINE_CHARACTERS)) : 0;
 	basic_stringbuf<Char> erasedString;
 	length_t erasedStringLength = 0, insertedStringLength = 0;
 	Position endOfInsertedString;
@@ -620,7 +620,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 				try {
 					const Char* p = nextNewline + newlineStringLength(eatNewline(nextNewline, text.end()));
 					while(true) {
-						nextNewline = find_first_of(p, text.end(), NEWLINE_CHARACTERS, MANAH_ENDOF(NEWLINE_CHARACTERS));
+						nextNewline = find_first_of(p, text.end(), NEWLINE_CHARACTERS, ASCENSION_ENDOF(NEWLINE_CHARACTERS));
 						auto_ptr<Line> temp(new Line(revisionNumber_ + 1, String(p, nextNewline), eatNewline(nextNewline, text.end())));
 						allocatedLines.push_back(temp.get());
 						temp.release();
@@ -721,7 +721,7 @@ void Document::replace(const Region& region, basic_istream<Char>& in, Position* 
 	Position e;
 	Char buffer[0x8000];
 	for(Region r(region); in; r.first = r.second = e) {
-		in.read(buffer, MANAH_COUNTOF(buffer));
+		in.read(buffer, ASCENSION_COUNTOF(buffer));
 		if(in.gcount() == 0)
 			break;
 		replace(r, StringPiece(buffer, buffer + in.gcount()), &e);

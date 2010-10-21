@@ -13,7 +13,7 @@
 #include <algorithm>
 #include <manah/object.hpp>
 #ifdef ASCENSION_WINDOWS
-#include <manah/win32/windows.hpp>	// LoadLibraryA, FreeLibrary, GetProcAddress, HMODULE
+#include "win32/windows.hpp"	// LoadLibraryA, FreeLibrary, GetProcAddress, HMODULE
 #endif // ASCENSION_WINDOWS
 
 namespace ascension {
@@ -92,7 +92,7 @@ namespace ascension {
 
 		/// Manages a strategy object.
 		template<typename Strategy> class StrategyPointer {
-			MANAH_NONCOPYABLE_TAG(StrategyPointer);
+			ASCENSION_NONCOPYABLE_TAG(StrategyPointer);
 		public:
 			StrategyPointer() /*throw()*/ : pointee_(0), manages_(false) {}
 			StrategyPointer(Strategy* pointee, bool manage) /*throw()*/ : pointee_(pointee), manages_(manage) {}
@@ -110,7 +110,7 @@ namespace ascension {
 
 		/// Manages the listeners.
 		template<class Listener> class Listeners {
-			MANAH_NONCOPYABLE_TAG(Listeners);
+			ASCENSION_NONCOPYABLE_TAG(Listeners);
 		public:
 			Listeners() /*throw()*/ {}
 			void add(Listener& listener) {
@@ -148,7 +148,7 @@ namespace ascension {
 
 #ifdef ASCENSION_WINDOWS
 		template<class ProcedureEntries> class SharedLibrary {
-			MANAH_NONCOPYABLE_TAG(SharedLibrary);
+			ASCENSION_NONCOPYABLE_TAG(SharedLibrary);
 		public:
 			explicit SharedLibrary(const char* fileName) : dll_(::LoadLibraryA(fileName)) {
 				if(dll_ == 0)

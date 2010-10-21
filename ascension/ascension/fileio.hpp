@@ -127,7 +127,7 @@ namespace ascension {
 			 * @note This class is not intended to be subclassed.
 			 */
 			class TextFileStreamBuffer : public std::basic_streambuf<Char> {
-				MANAH_NONCOPYABLE_TAG(TextFileStreamBuffer);
+				ASCENSION_NONCOPYABLE_TAG(TextFileStreamBuffer);
 			public:
 				TextFileStreamBuffer(const PathString& fileName, std::ios_base::openmode mode,
 					const std::string& encoding, encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
@@ -175,7 +175,7 @@ namespace ascension {
 			};
 
 			class TextFileDocumentInput : public IDocumentInput, public IDocumentStateListener {
-				MANAH_NONCOPYABLE_TAG(TextFileDocumentInput);
+				ASCENSION_NONCOPYABLE_TAG(TextFileDocumentInput);
 			public:
 				/// The structure used to represent a file time.
 #ifdef ASCENSION_WINDOWS
@@ -253,7 +253,7 @@ namespace ascension {
 
 #ifndef ASCENSION_NO_GREP
 			class DirectoryIteratorBase {
-				MANAH_NONCOPYABLE_TAG(DirectoryIteratorBase);
+				ASCENSION_NONCOPYABLE_TAG(DirectoryIteratorBase);
 			public:
 				virtual ~DirectoryIteratorBase() /*throw()*/;
 				/**

@@ -25,7 +25,7 @@ namespace ascension {
 		 * <a href="http://www.ietf.org/rfc/rfc3987.txt">RFC 3987</a>.
 		 */
 		class URIDetector {
-			MANAH_NONCOPYABLE_TAG(URIDetector);
+			ASCENSION_NONCOPYABLE_TAG(URIDetector);
 		public:
 			// constructors
 			explicit URIDetector() /*throw()*/;
@@ -53,7 +53,7 @@ namespace ascension {
 		};
 
 		/// A token is a text segment with identifier.
-		struct Token : public manah::FastArenaObject<Token> {
+		struct Token : public FastArenaObject<Token> {
 			typedef ushort Identifier;
 			static const Identifier UNCALCULATED;
 			Identifier id;
@@ -67,7 +67,7 @@ namespace ascension {
 		 * @see LexicalTokenScanner, RegionRule, NumberRule, WordRule, RegexRule
 		 */
 		class Rule {
-			MANAH_UNASSIGNABLE_TAG(Rule);
+			ASCENSION_UNASSIGNABLE_TAG(Rule);
 		public:
 			/// Destructor.
 			virtual ~Rule() /*throw()*/ {}
@@ -190,7 +190,7 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 */
 		class LexicalTokenScanner : public ITokenScanner {
-			MANAH_NONCOPYABLE_TAG(LexicalTokenScanner);
+			ASCENSION_NONCOPYABLE_TAG(LexicalTokenScanner);
 		public:
 			// constructors
 			explicit LexicalTokenScanner(kernel::ContentType contentType) /*throw()*/;
@@ -216,7 +216,7 @@ namespace ascension {
 		 * @see LexicalPartitioner
 		 */
 		class TransitionRule {
-			MANAH_UNASSIGNABLE_TAG(TransitionRule);
+			ASCENSION_UNASSIGNABLE_TAG(TransitionRule);
 		public:
 			virtual ~TransitionRule() /*throw()*/;
 			virtual std::auto_ptr<TransitionRule> clone() const = 0;
@@ -262,7 +262,7 @@ namespace ascension {
 		 * @see kernel#Document
 		 */
 		class LexicalPartitioner : public kernel::DocumentPartitioner {
-			MANAH_NONCOPYABLE_TAG(LexicalPartitioner);
+			ASCENSION_NONCOPYABLE_TAG(LexicalPartitioner);
 		public:
 			// constructor
 			LexicalPartitioner() /*throw()*/;
@@ -308,7 +308,7 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 */
 		class LexicalPartitionPresentationReconstructor : public presentation::IPartitionPresentationReconstructor {
-			MANAH_UNASSIGNABLE_TAG(LexicalPartitionPresentationReconstructor);
+			ASCENSION_UNASSIGNABLE_TAG(LexicalPartitionPresentationReconstructor);
 		public:
 			explicit LexicalPartitionPresentationReconstructor(
 				const presentation::Presentation& presentation, std::auto_ptr<ITokenScanner> tokenScanner,

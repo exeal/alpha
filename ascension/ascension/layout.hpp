@@ -120,7 +120,7 @@ namespace ascension {
 		protected:
 			/// Context of the layout.
 			struct LayoutContext {
-				MANAH_UNASSIGNABLE_TAG(LayoutContext);
+				ASCENSION_UNASSIGNABLE_TAG(LayoutContext);
 			public:
 				mutable Context& renderingContext;					///< the rendering context.
 				presentation::ReadingDirection readingDirection;	///< the orientation of the character.
@@ -261,7 +261,7 @@ namespace ascension {
 		};
 
 		class LineLayout {
-			MANAH_NONCOPYABLE_TAG(LineLayout);
+			ASCENSION_NONCOPYABLE_TAG(LineLayout);
 		public:
 			/// Edge of a character.
 			enum Edge {
@@ -270,7 +270,7 @@ namespace ascension {
 			};
 			/// Used for @c LineLayout#draw methods.
 			class Selection {
-				MANAH_UNASSIGNABLE_TAG(Selection);
+				ASCENSION_UNASSIGNABLE_TAG(Selection);
 			public:
 				/// Constructor.
 				explicit Selection(const viewers::Caret& caret) /*throw()*/;
@@ -367,7 +367,7 @@ namespace ascension {
 			class TextRun;
 			TextRun** runs_;
 			std::size_t numberOfRuns_;
-			manah::AutoBuffer<presentation::StyledRun> styledRanges_;
+			AutoBuffer<presentation::StyledRun> styledRanges_;
 			std::size_t numberOfStyledRanges_;
 			length_t* sublineOffsets_;		// size is numberOfSublines_
 			length_t* sublineFirstRuns_;	// size is numberOfSublines_
@@ -419,7 +419,7 @@ namespace ascension {
 		 * @see LineLayout, TextRenderer
 		 */
 		class LineLayoutBuffer : public kernel::IDocumentListener/*, public presentation::IPresentationStylistListener*/ {
-			MANAH_NONCOPYABLE_TAG(LineLayoutBuffer);
+			ASCENSION_NONCOPYABLE_TAG(LineLayoutBuffer);
 		public:
 			// constructors
 			LineLayoutBuffer(kernel::Document& document, length_t bufferSize, bool autoRepair);

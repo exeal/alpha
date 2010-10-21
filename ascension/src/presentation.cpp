@@ -5,15 +5,18 @@
  * @date 2007-2010
  */
 
+#include <ascension/layout.hpp>
 #include <ascension/presentation.hpp>
 #include <ascension/rules.hpp>
-#include <ascension/viewer.hpp>
+#ifdef ASCENSION_WINDOWS
+#include <shellapi.h>	// ShellExecuteW
+#endif // ASCENSION_WINDOWS
 using namespace ascension;
 using namespace ascension::kernel;
+using namespace ascension::graphics;
 using namespace ascension::presentation;
 using namespace ascension::presentation::hyperlink;
 using namespace ascension::rules;
-using namespace ascension::viewers;
 using namespace std;
 using ascension::presentation::Colors;
 
@@ -123,7 +126,7 @@ tr1::shared_ptr<const LineStyle> Presentation::DEFAULT_LINE_STYLE(new LineStyle(
 
 struct Presentation::Hyperlinks {
 	length_t lineNumber;
-	manah::AutoBuffer<IHyperlink*> hyperlinks;
+	AutoBuffer<IHyperlink*> hyperlinks;
 	size_t numberOfHyperlinks;
 };
 
@@ -142,9 +145,9 @@ Presentation::~Presentation() /*throw()*/ {
 	clearHyperlinksCache();
 }
 
-/// @see internal#ITextViewerCollection#addTextViewer
-void Presentation::addTextViewer(TextViewer& textViewer) /*throw()*/ {
-	textViewers_.insert(&textViewer);
+/// @see internal#ITextRendererCollection#addTextRenderer
+void Presentation::addTextRenderer(TextRenderer& textRenderer) /*throw()*/ {
+	textRenderers_.insert(&textRenderer);
 }
 
 void Presentation::clearHyperlinksCache() /*throw()*/ {
@@ -195,13 +198,13 @@ void Presentation::documentChanged(const Document&, const DocumentChange& change
 }
 
 /// Returns an iterator addresses the first text viewer.
-set<TextViewer*>::iterator Presentation::firstTextViewer() /*throw()*/ {
-	return textViewers_.begin();
+set<TextRenderer*>::iterator Presentation::firstTextRenderer() /*throw()*/ {
+	return textRenderers_.begin();
 }
 
 /// Returns an iterator addresses the first text viewer.
-set<TextViewer*>::const_iterator Presentation::firstTextViewer() const /*throw()*/ {
-	return textViewers_.begin();
+set<TextRenderer*>::const_iterator Presentation::firstTextRenderer() const /*throw()*/ {
+	return textRenderers_.begin();
 }
 
 /**
@@ -282,18 +285,18 @@ Colors Presentation::getLineColor(length_t line) const {
 }
 
 /// Returns an iterator addresses the location succeeding the last text viewer.
-set<TextViewer*>::iterator Presentation::lastTextViewer() /*throw()*/ {
-	return textViewers_.end();
+set<TextRenderer*>::iterator Presentation::lastTextRenderer() /*throw()*/ {
+	return textRenderers_.end();
 }
 
 /// Returns an iterator addresses the location succeeding the last text viewer.
-set<TextViewer*>::const_iterator Presentation::lastTextViewer() const /*throw()*/ {
-	return textViewers_.end();
+set<TextRenderer*>::const_iterator Presentation::lastTextRenderer() const /*throw()*/ {
+	return textRenderers_.end();
 }
 
-/// @see internal#ITextViewerCollection#removeTextViewer
-void Presentation::removeTextViewer(TextViewer& textViewer) /*throw()*/ {
-	textViewers_.erase(&textViewer);
+/// @see internal#ITextRendererCollection#removeTextRenderer
+void Presentation::removeTextRenderer(TextRenderer& textRenderer) /*throw()*/ {
+	textRenderers_.erase(&textRenderer);
 }
 
 /**
@@ -312,8 +315,8 @@ void Presentation::setDefaultLineStyle(tr1::shared_ptr<const LineStyle> newStyle
  */
 void Presentation::setDefaultTextRunStyle(tr1::shared_ptr<const RunStyle> newStyle) {
 	defaultTextRunStyle_ = newStyle;
-	for(set<TextViewer*>::iterator i(textViewers_.begin()), e(textViewers_.end()); i != e; ++i)
-		(*i)->textRenderer().updateTextMetrics();
+	for(set<TextRenderer*>::iterator i(textRenderers_.begin()), e(textRenderers_.end()); i != e; ++i)
+		(*i)->updateTextMetrics();
 }
 
 /**
@@ -514,8 +517,8 @@ PresentationReconstructor::~PresentationReconstructor() /*throw()*/ {
 
 /// @see kernel#IDocumentPartitioningListener#documentPartitioningChanged
 void PresentationReconstructor::documentPartitioningChanged(const Region& changedRegion) {
-	for(Presentation::TextViewerIterator i(presentation_.firstTextViewer()); i != presentation_.lastTextViewer(); ++i)
-		(*i)->textRenderer().invalidate(changedRegion.beginning().line, changedRegion.end().line + 1);
+	for(Presentation::TextRendererIterator i(presentation_.firstTextRenderer()); i != presentation_.lastTextRenderer(); ++i)
+		(*i)->invalidate(changedRegion.beginning().line, changedRegion.end().line + 1);
 }
 
 /// @see ILineStyleDirector#queryTextRunStyle

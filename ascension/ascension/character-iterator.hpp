@@ -9,10 +9,10 @@
 
 #ifndef ASCENSION_CHARACTER_ITERATOR_HPP
 #define ASCENSION_CHARACTER_ITERATOR_HPP
-#include <ascension/internal.hpp>
-#include <ascension/ustring.hpp>	// ustrlen
-#include <manah/object.hpp>	// manah.Noncopyable
-#include <manah/memory.hpp>	// manah.AutoBuffer
+#include "basic-types.hpp"	// StandardConstBidirectionalIteratorAdapter
+#include "internal.hpp"
+#include "memory.hpp"	// AutoBuffer
+#include "ustring.hpp"	// ustrlen
 #include <cassert>
 #include <stdexcept>
 #include <iterator>
@@ -108,7 +108,7 @@ namespace ascension {
 			 */
 			template<typename InputIterator>
 			inline CodePoint decodeFirst(InputIterator first, InputIterator last) /*throw()*/ {
-				MANAH_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::result == 2);
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::result == 2);
 				assert(first != last);
 				const Char high = *first;
 				return (++first != last) ? decode(high, *first) : high;
@@ -125,7 +125,7 @@ namespace ascension {
 			template<typename BidirectionalIterator>
 			inline CodePoint decodeLast(
 					BidirectionalIterator first, BidirectionalIterator last) /*throw()*/ {
-				MANAH_STATIC_ASSERT(CodeUnitSizeOf<BidirectionalIterator>::result == 2);
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<BidirectionalIterator>::result == 2);
 				assert(first != last);
 				const Char low = *--last;
 				return (last != first && isLowSurrogate(low)
@@ -143,7 +143,7 @@ namespace ascension {
 			 */
 			template<typename OutputIterator>
 			inline length_t encode(CodePoint c, OutputIterator dest) {
-				MANAH_STATIC_ASSERT(CodeUnitSizeOf<OutputIterator>::result == 2);
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<OutputIterator>::result == 2);
 				if(c < 0x00010000ul) {
 					*dest = static_cast<Char>(c & 0xffffu);
 					return !isSurrogate(c) ? 1 : 0;
@@ -163,7 +163,7 @@ namespace ascension {
 			 */
 			template<typename InputIterator>
 			inline InputIterator next(InputIterator start, InputIterator last) /*throw()*/ {
-				MANAH_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::result == 2);
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::result == 2);
 				assert(start != last);
 				return (isHighSurrogate(*(start++))
 					&& (start != last) && isLowSurrogate(*start)) ? ++start : start;
@@ -179,7 +179,7 @@ namespace ascension {
 			template<typename BidirectionalIterator>
 			inline BidirectionalIterator previous(
 					BidirectionalIterator first, BidirectionalIterator start) /*throw()*/ {
-				MANAH_STATIC_ASSERT(CodeUnitSizeOf<BidirectionalIterator>::result == 2);
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<BidirectionalIterator>::result == 2);
 				assert(first != start);
 				return (!isLowSurrogate(*--start)
 					|| (start == first) || isHighSurrogate(*--start)) ? start : ++start;
@@ -196,7 +196,7 @@ namespace ascension {
 			template<typename InputIterator>
 			inline InputIterator searchIsolatedSurrogate(
 					InputIterator first, InputIterator last) /*throw()*/ {
-				MANAH_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::result == 2);
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::result == 2);
 				while(first != last) {
 					if(isLowSurrogate(*first))
 						break;
