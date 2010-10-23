@@ -1,10 +1,10 @@
 // common.hpp
-// (c) 2002-2009 exeal
+// (c) 2002-2010 exeal
 
-#ifndef MANAH_COM_COMMON_HPP
+#ifndef ASCENSION_COM_COMMON_HPP
 #define MANAH_COM_COMMON_HPP
 
-#include "../object.hpp"
+#include "../../object.hpp"
 #include <objbase.h>
 #include <objsafe.h>
 #include <cassert>
