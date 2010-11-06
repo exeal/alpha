@@ -9,6 +9,7 @@
 #ifndef ASCENSION_VIEWER_HPP
 #define ASCENSION_VIEWER_HPP
 
+#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include "point.hpp"
 #include "presentation.hpp"
 #include "content-assist.hpp"

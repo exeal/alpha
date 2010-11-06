@@ -9,8 +9,8 @@
 #ifndef ASCENSION_DOCUMENT_CHARACTER_ITERATOR_HPP
 #define ASCENSION_DOCUMENT_CHARACTER_ITERATOR_HPP
 
-#include <ascension/basic-types.hpp>				// StandardConstBidirectionalIteratorAdapter
 #include <ascension/kernel/document.hpp>
+#include <ascension/corelib/basic-types.hpp>		// StandardConstBidirectionalIteratorAdapter
 #include <ascension/corelib/character-iterator.hpp>	// text.CharacterIterator
 
 namespace ascension {

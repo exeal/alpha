@@ -9,9 +9,10 @@
 
 #ifndef ASCENSION_UNICODE_SURROGATES_HPP
 #define ASCENSION_UNICODE_SURROGATES_HPP
-#include <ascension/common.hpp>	// CodePoint, ASCENSION_STATIC_ASSERT
-#include <cassert>				// assert
-#include <stdexcept>			// std.invalid_argument
+
+#include <ascension/corelib/basic-types.hpp>	// CodePoint, ASCENSION_STATIC_ASSERT
+#include <cassert>								// assert
+#include <stdexcept>							// std.invalid_argument
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #error These class definitions and implementations are based on old version of Unicode.

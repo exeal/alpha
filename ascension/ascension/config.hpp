@@ -8,14 +8,13 @@
 #ifndef ASCENSION_CONFIG_HPP
 #define ASCENSION_CONFIG_HPP
 
-
 /**
  * @def ASCENSION_CUSTOM_SHARED_PTR_HPP
  * User-provided header file path.
  * Ascension uses @c std#tr1#shared_ptr class and includes the header file provided by compiler or
  * Boost.SharedPtr. If you don't have the neither, you can specify your own shared_ptr.hpp file.
  */
-// #define ASCENSION_CUSTOM_BOOST_SHARED_PTR_HPP
+// #define ASCENSION_CUSTOM_SHARED_PTR_HPP <your-file-name>
 
 
 // about ascension.kernel ///////////////////////////////////////////////////
@@ -251,9 +250,9 @@
 #endif	// !ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT
 
 #ifdef ASCENSION_NO_REGEX
-#ifndef ASCENSION_NO_MIGEMO
-#error "conflicted configuration: Migemo support requires the regular expression engine"
-#endif // !ASCENSION_NO_MIGEMO
+#	ifndef ASCENSION_NO_MIGEMO
+#		error "conflicted configuration: Migemo support requires the regular expression engine"
+#	endif // !ASCENSION_NO_MIGEMO
 #endif // ASCENSION_NO_REGEX
 
 #endif // !ASCENSION_CONFIG_HPP

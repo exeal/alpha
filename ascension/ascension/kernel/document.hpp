@@ -8,13 +8,14 @@
 #ifndef ASCENSION_DOCUMENT_HPP
 #define ASCENSION_DOCUMENT_HPP
 
+#include <ascension/config.hpp>				// ASCENSION_DEFAULT_NEWLINE
+#include <ascension/internal.hpp>
+#include <ascension/corelib/basic-types.hpp>
+#include <ascension/corelib/gap-vector.hpp>	// GapVector
+#include <ascension/corelib/memory.hpp>		// FastArenaObject
 #ifdef ASCENSION_POSIX
 #	include <sys/stat.h>	// for POSIX environment
 #endif
-#include <ascension/basic-types.hpp>
-#include <ascension/internal.hpp>
-#include <ascension/corelib/gap-vector.hpp>	// GapVector
-#include <ascension/corelib/memory.hpp>		// FastArenaObject
 #include <iostream>
 #include <map>
 #include <set>
