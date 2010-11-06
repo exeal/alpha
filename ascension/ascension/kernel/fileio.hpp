@@ -25,6 +25,14 @@ namespace ascension {
 		/// Provides features about file-bound document.
 		namespace fileio {
 
+			/**
+			 * Character type for file names. This is equivalent to
+			 * @c ASCENSION_FILE_NAME_CHARACTER_TYPE configuration symbol.
+			 */
+			typedef ASCENSION_FILE_NAME_CHARACTER_TYPE PathCharacter;
+			/// String type for file names.
+			typedef std::basic_string<PathCharacter> PathString;
+
 			/// Used by functions and methods write to files. 
 			struct WritingFormat {
 				/// The the encoding name.

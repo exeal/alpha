@@ -10,9 +10,12 @@
 
 #include <ascension/config.hpp>				// ASCENSION_DEFAULT_NEWLINE
 #include <ascension/internal.hpp>
+#include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/gap-vector.hpp>	// GapVector
 #include <ascension/corelib/memory.hpp>		// FastArenaObject
+#include <ascension/corelib/standard-iterator-adapter.hpp>	// StandardConstBidirectionalIteratorAdapter
+#include <ascension/corelib/string-piece.hpp>
 #ifdef ASCENSION_POSIX
 #	include <sys/stat.h>	// for POSIX environment
 #endif

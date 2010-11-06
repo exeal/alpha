@@ -189,19 +189,7 @@ namespace ascension {
 	/// Returns a @c Range object using the given two values.
 	template<typename T> inline Range<T> makeRange(T v1, T v2) {return Range<T>(v1, v2);}
 
-	namespace kernel {
-		namespace fileio {
-			/**
-			 * Character type for file names. This is equivalent to
-			 * @c ASCENSION_FILE_NAME_CHARACTER_TYPE configuration symbol.
-			 */
-			typedef ASCENSION_FILE_NAME_CHARACTER_TYPE PathCharacter;
-			/// String type for file names.
-			typedef std::basic_string<PathCharacter> PathString;
-		}
-	}
-
-	/**
+	/**g
 	 * Notifies about the system parameter changes.
 	 * Clients of Ascension should call this function when the system settings are changed
 	 * (for example, received @c WM_SETTINGCHANGE window message on Win32 platform).
