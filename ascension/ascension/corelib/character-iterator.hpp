@@ -9,7 +9,8 @@
 
 #ifndef ASCENSION_CHARACTER_ITERATOR_HPP
 #define ASCENSION_CHARACTER_ITERATOR_HPP
-#include <ascension/basic-types.hpp>	// StandardConstBidirectionalIteratorAdapter
+#include <ascension/corelib/standard-iterator-adapter.hpp>	// StandardConstBidirectionalIteratorAdapter
+#include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/unicode-surrogates.hpp>
 #include <stdexcept>
 #include <iterator>

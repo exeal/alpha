@@ -10,6 +10,7 @@
 #ifndef ASCENSION_UNICODE_HPP
 #define ASCENSION_UNICODE_HPP
 
+#include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_NORMALIZATION
 #include <ascension/corelib/character-iterator.hpp>
 #include <ascension/corelib/memory.hpp>		// AutoBuffer
 #include <ascension/corelib/unicode-utf.hpp>

@@ -2,7 +2,7 @@
  * @file unicode-property.hpp
  * Defines Unicode property entries and provides methods to retrieve a property of character.
  * @author exeal
- * @date 2007-2009
+ * @date 2007-2010
  */
 
 #ifndef ASCENSION_UNICODE_PROPERTY_HPP
@@ -10,7 +10,7 @@
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #error These class definitions and implementations are based on old version of Unicode.
 #endif
-#include "unicode.hpp"
+#include <ascension/corelib/unicode.hpp>
 
 namespace ascension {
 	namespace text {
@@ -22,10 +22,11 @@ namespace ascension {
 		namespace ucd {
 
 			/**
-			 * A function object compares Unicode property (value) names based on "Property and Property Value Matching"
+			 * A function object compares Unicode property (value) names based on "Property and
+			 * Property Value Matching"
 			 * (http://www.unicode.org/Public/UNIDATA/UCD.html#Property_and_Property_Value_Matching).
-			 * @param p1 one property name
-			 * @param p2 the other property name
+			 * @param p1 One property name
+			 * @param p2 The other property name
 			 * @return true if p1 &lt; p2
 			 */
 			template<typename CharType>
@@ -39,7 +40,10 @@ namespace ascension {
 
 #include "src/generated/uprops-data-types"
 
-			/// General categories. These values are based on Unicode standard 5.0.0 "4.5 General Category".
+			/**
+			 * General categories.
+			 * These values are based on Unicode standard 5.0.0 "4.5 General Category".
+			 */
 			class GeneralCategory {
 			public:
 				enum {
@@ -118,7 +122,8 @@ namespace ascension {
 			};
 
 			/**
-			 * Canonical combining classes. These are based on Unicode standard 5.0.0 "4.3 Combining Classes".
+			 * Canonical combining classes. These are based on Unicode standard 5.0.0 "4.3
+			 * Combining Classes".
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 			 * @see Normalizer
 #endif // !ASCENSION_NO_UNICODE_NORMALIZATION
@@ -201,7 +206,10 @@ namespace ascension {
 				static const internal::ValueName NAMES_[];
 			};
 
-			/// Hangul syllable types. These values are based on HangulSyllableType.txt obtained from UCD.
+			/**
+			 * Hangul syllable types. These values are based on HangulSyllableType.txt obtained
+			 * from UCD.
+			 */
 			class HangulSyllableType {
 			public:
 				enum {
@@ -223,7 +231,8 @@ namespace ascension {
 			};
 			
 			/**
-			 * Binary properties These values are based on UCD.html and PropList.txt obtained from UCD.
+			 * Binary properties These values are based on UCD.html and PropList.txt obtained from
+			 * UCD.
 			 * @note Some values are not implemented.
 			 */
 			class BinaryProperty {

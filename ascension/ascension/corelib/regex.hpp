@@ -5,11 +5,14 @@
  * @date 2006-2010
  */
 
+#include <ascension/config.hpp>	// ASCENSION_NO_REGEX, ASCENSION_NO_MIGEMO
+
 #ifndef ASCENSION_NO_REGEX
 #ifndef ASCENSION_REGEX_HPP
 #define ASCENSION_REGEX_HPP
-#include "unicode.hpp"	// text.UTF16To32Iterator
-#include "unicode-property.hpp"
+
+#include <ascension/corelib/unicode-property.hpp>
+#include <ascension/corelib/unicode-utf.hpp>	// text.UTF16To32Iterator
 #include <memory>
 #include <map>
 #include <bitset>
