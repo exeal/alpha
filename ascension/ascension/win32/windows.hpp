@@ -3,8 +3,8 @@
  * @date 2006-2010 exeal
  */
 
-#ifndef MANAH_WINDOWS_HPP
-#define MANAH_WINDOWS_HPP
+#ifndef ASCENSION_WIN32_WINDOWS_HPP
+#define ASCENSION_WIN32_WINDOWS_HPP
 
 #if defined(_DEBUG) && !defined(MANAH_NO_MEMORY_LEAK_CHECK)
 #	define _CRTDBG_MAP_ALLOC
@@ -53,21 +53,24 @@
 #include <memory>	// std.auto_ptr
 #include <stdexcept>
 #include <sstream>
+#include <utility>	// std.swap
 
-namespace manah {
+namespace ascension {
 	namespace win32 {
 
-		/// The specified handle is invalid.
-		class InvalidHandleException : public std::invalid_argument {
-		public:
-			explicit InvalidHandleException(const std::string& message) : std::invalid_argument(message) {}
-		};
+		/**
+		 * Converts Win32 @c BOOL value to C++ standard @c bool one.
+		 * @param v The source value
+		 * @retval true @a is not @c FALSE (may be @c TRUE)
+		 * @retval false @a v is @c FALSE
+		 */
+		inline bool boole(BOOL v) /*throw()*/ {return v != FALSE;}
 
-		/// The specified handle is @c null and not allowed.
-		class NullHandleException : public InvalidHandleException {
-		public:
-			explicit NullHandleException(const std::string& message) : InvalidHandleException(message) {}
-		};
+		/**
+		 * Returns the default UI language.
+		 * Wrapper for Win32 @c GetUserDefaultUILanguage API.
+		 */
+		LANGID userDefaultUILanguage() /*throw()*/;
 
 		namespace internal {
 			class HandleDeleterBase {
@@ -93,16 +96,57 @@ namespace manah {
 		 */
 		template<typename T> class Handle {
 		public:
+			/**
+			 * Constructor. A @c Handle initialized by this constructor does not get the ownership
+			 * of the handle.
+			 * @param handle The handle to hold
+			 */
 			explicit Handle(T handle = 0) : handle_(handle) {}
+			/**
+			 * Constructor. A @c Handle initialized by this constructor gets the ownership of the
+			 * handle and the destructor destroys the handle.
+			 * @tparam Deleter The type of @a deleter
+			 * @param handle The handle to hold
+			 * @param deleter The function destroys the handle
+			 */
 			template<typename Deleter> Handle(T handle, Deleter deleter) : handle_(handle),
 				deleter_((deleter != 0) ? new internal::HandleDeleter<T, Deleter>(handle, deleter) : 0) {}
+			/// Destructor.
 			~Handle() {reset();}
-			Handle(Handle<T>& other) : handle_(other.handle_),
-				deleter_(other.deleter_) {other.handle_ = 0; other.deleter_ = 0;}
+			/**
+			 * Copy-constructor snatches the ownership of the handle from the source object.
+			 * @param other The source object
+			 */
+			Handle(Handle<T>& other) : handle_(other.handle_), deleter_(other.deleter_) {
+				other.handle_ = 0;
+			}
+			/**
+			 * Assignment operator snatches the ownership of the handle from the source object.
+			 * @param other The source object.
+			 * @return This object
+			 */
 			Handle<T>& operator=(Handle<T>& other) {
-				reset(other.handle_, other.deleter_); other.handle_ = 0; other.deleter_ = 0; return *this;}
+				reset(other.handle_, other.deleter_);
+				other.handle_ = 0;
+				other.deleter_.release();
+				return *this;
+			}
+			/// Returns the held handle.
 			T get() const {return handle_;}
-			T release() {delete deleter_; deleter_ = 0; HandleType temp(0); std::swap(handle_, temp); return temp;}
+			/**
+			 * Releases the held handle without destruction.
+			 * @return The held handle
+			 */
+			T release() {
+				deleter_.reset();
+				T temp(0);
+				std::swap(handle_, temp);
+				return temp;
+			}
+			/**
+			 * Resets the handle. This method does not get the ownership of the handle.
+			 * @param handle The handle to hold. Can be @c null
+			 */
 			void reset(T handle = 0) {
 //				return reset(handle, 0);
 				if(deleter_.get() != 0 && handle != handle_)
@@ -110,6 +154,12 @@ namespace manah {
 				handle_ = handle;
 				deleter_.reset();
 			}
+			/**
+			 * Resets the handle. This method does not get the ownership of the handle.
+			 * @tparam Deleter The type of @a deleter
+			 * @param handle The handle to hold. Can be @c null
+			 * @param deleter The function destroys the handle
+			 */
 			template<typename Deleter> void reset(T handle, Deleter deleter) {
 				std::auto_ptr<internal::HandleDeleterBase> newDeleter((deleter != 0) ?
 					new internal::HandleDeleter<T, Deleter>(handle, deleter) : 0);
@@ -117,11 +167,6 @@ namespace manah {
 					deleter_->destroy();
 				handle_ = handle;
 				std::swap(deleter_, newDeleter);
-			}
-			T use() const {
-				if(handle_ == 0)
-					throw std::logic_error("handle is null.");
-				return handle_;
 			}
 		private:
 			T handle_;
@@ -222,7 +267,7 @@ namespace manah {
 			bool manages_;
 		};
 
-#	define MANAH_WIN32_OBJECT_CONSTRUCTORS(ClassName)							\
+#	define ASCENSION_WIN32_OBJECT_CONSTRUCTORS(ClassName)						\
 		ClassName() : BaseObject() {}											\
 		explicit ClassName(Managed<HandleType>* handle) : BaseObject(handle) {}	\
 		explicit ClassName(Borrowed<HandleType>* handle) : BaseObject(handle) {}
@@ -304,4 +349,4 @@ namespace manah {
 #	endif // !UNICODE
 #endif // WINVER >= 0x0500 && !defined(MENUITEMINFO_SIZE_VERSION_400)
 
-#endif // !MANAH_WINDOWS_HPP
+#endif // !ASCENSION_WIN32_WINDOWS_HPP

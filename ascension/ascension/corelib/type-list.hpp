@@ -1,11 +1,15 @@
-// type-list.hpp
-// (c) 2009 exeal
+/**
+ * @file type-list.hpp
+ * @author exeal
+ * @date 2009-2010
+ * @date 2010-10-21 renamed from manah/type-list.hpp
+ */
 
-#ifndef MANAH_TYPE_LIST_HPP
-#define MANAH_TYPE_LIST_HPP
-#include "types.hpp"
+#ifndef ASCENSION_TYPE_LIST_HPP
+#define ASCENSION_TYPE_LIST_HPP
+#include "internal.hpp"	// internal.Select
 
-namespace manah {
+namespace ascension {
 	namespace typelist {
 
 		/// Concatenates type @a U to the type @a T and generates a type list.
@@ -40,17 +44,20 @@ namespace manah {
 		template<typename Car, typename Cdr, typename T> class MostDerived<Cat<Car, Cdr>, T> {
 			typedef typename MostDerived<Cdr, T>::Result Candidate_;
 		public:
-			typedef typename Select<IsBaseAndDerived<Candidate_, Car>::result, Car, Candidate_>::Result Result;
+			typedef typename ascension::internal::Select<
+				ascension::internal::IsBaseAndDerived<Candidate_, Car>::result, Car, Candidate_
+			>::Result Result;
 		};
 		template<typename T> class MostDerived<void, T> {public: typedef T Result;};
 
 		/// Returns true if the type @a T is the most derived in the given type list.
 		template<typename Types, typename T> struct IsMostDerived {
-			static const bool result = IsSame<typename MostDerived<Types, T>::Result, T>::result;};
+			static const bool result = ascension::internal::IsSame<typename MostDerived<Types, T>::Result, T>::result;
+		};
 
 		namespace internal {
 			template<typename Types, typename Current> struct RemoveBasesImpl {
-				typedef typename Select<
+				typedef typename ascension::internal::Select<
 					IsMostDerived<Types, typename Current::Car>::result,
 					Cat<typename Current::Car, typename RemoveBasesImpl<Types, typename Current::Cdr>::Result>,
 					typename RemoveBasesImpl<Types, typename Current::Cdr>::Result
@@ -63,7 +70,7 @@ namespace manah {
 		template<typename Types> struct RemoveBases {
 			typedef typename internal::RemoveBasesImpl<Types, Types>::Result Result;};
 
-	} // typelist
-} // namespace manah
+	}
+} // namespace ascension.typelist
 
-#endif // !MANAH_TYPE_LIST_HPP
+#endif // !ASCENSION_TYPE_LIST_HPP
