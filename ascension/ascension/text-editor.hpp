@@ -353,7 +353,7 @@ namespace ascension {
 			};
 			/// I.S.C. for Thai.
 			class ThaiInputSequenceChecker : public InputSequenceChecker {
-				MANAH_UNASSIGNABLE_TAG(ThaiInputSequenceChecker);
+				ASCENSION_UNASSIGNABLE_TAG(ThaiInputSequenceChecker);
 			public:
 				enum Mode {PASS_THROUGH, BASIC_MODE, STRICT_MODE};
 				ThaiInputSequenceChecker(Mode mode = BASIC_MODE) /*throw()*/ : mode_(mode) {}

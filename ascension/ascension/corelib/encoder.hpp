@@ -1,26 +1,26 @@
 /**
  * @file encoder.hpp
  * @author exeal
- * @date 2004-2009
+ * @date 2004-2010
  */
 
 #ifndef ASCENSION_ENCODER_HPP
 #define ASCENSION_ENCODER_HPP
-#include "unicode.hpp"
-#include <cassert>
+
+#include <ascension/corelib/unicode.hpp>
 #include <memory>	// std.auto_ptr
 #include <locale>	// std.locale, std.codecvt
 #include <vector>
-#include <set>
-
 
 namespace ascension {
 
 	/// Members of the namespace @c encoding provide conversions between text encodings.
 	namespace encoding {
 
-		/// "The MIBenum value is a unique value for use in MIBs to identify coded character sets"
-		/// (http://www.iana.org/assignments/character-sets).
+		/**
+		 * "The MIBenum value is a unique value for use in MIBs to identify coded character sets"
+		 * (http://www.iana.org/assignments/character-sets).
+		 */
 		typedef ushort MIBenum;
 
 		/// Indicates the encoding "is not registered by IANA."
@@ -99,8 +99,10 @@ namespace ascension {
 #endif // !ASCENSION_NO_PROPRIETARY_ENCODINGS
 
 #ifndef ASCENSION_NO_EXTENDED_ENCODINGS
-		/// MIBenum values of the extended encodings.
-		/// @deprecated
+		/**
+		 * MIBenum values of the extended encodings.
+		 * @deprecated 0.7
+		 */
 		namespace extended {
 			const MIBenum
 				// Unicode
@@ -166,6 +168,15 @@ namespace ascension {
 		 * Compares the given two encoding (charset) names based on
 		 * <a href="http://www.unicode.org/reports/tr22/">UTS #22: CharMapML</a> 1.4 Charset Alias
 		 * Matching.
+		 * @tparam CharacterSequence1 The type of @a first1 and @a last1
+		 * @tparam CharacterSequence2 The type of @a first2 and @a last2
+		 * @param first1 The beginning of the first character sequence
+		 * @param last1 The end of the first character sequence
+		 * @param first2 The beginning of the second character sequence
+		 * @param last2 The end of the second character sequence
+		 * @retval -1 The first encoding name is less than the second
+		 * @retval 0 The two encoding names matched
+		 * @retval 1 The first encoding name is greater than the second
 		 */
 		template<typename CharacterSequence1, typename CharacterSequence2>
 		inline int compareEncodingNames(
@@ -174,18 +185,27 @@ namespace ascension {
 			const std::locale& lc = std::locale::classic();
 			bool precededByDigit[2] = {false, false};
 			while(first1 != last1 && first2 != last2) {
-				if(*first1 == '0' && !precededByDigit[0]) ++first1;
-				else if(!std::isalnum(*first1, lc)) {++first1; precededByDigit[0] = false;}
-				else if(*first2 == '0' && !precededByDigit[1]) ++first2;
-				else if(!std::isalnum(*first2, lc)) {++first2; precededByDigit[1] = false;}
-				else {
-					if(const int d = std::tolower(*first1, lc) - std::tolower(*first2, lc)) return d;
+				if(*first1 == '0' && !precededByDigit[0])
+					++first1;
+				else if(!std::isalnum(*first1, lc)) {
+					++first1;
+					precededByDigit[0] = false;
+				} else if(*first2 == '0' && !precededByDigit[1])
+					++first2;
+				else if(!std::isalnum(*first2, lc)) {
+					++first2;
+					precededByDigit[1] = false;
+				} else {
+					if(const int d = std::tolower(*first1, lc) - std::tolower(*first2, lc))
+						return d;
 					precededByDigit[0] = std::isdigit(*(first1++), lc);
 					precededByDigit[1] = std::isdigit(*(first2++), lc);
 				}
 			}
-			if(first1 != last1) return 1;
-			else return (first2 == last2) ? 0 : -1;
+			if(first1 != last1)
+				return 1;
+			else
+				return (first2 == last2) ? 0 : -1;
 		}
 
 		MIBenum convertCCSIDtoMIB(uint ccsid) /*throw()*/;
@@ -213,7 +233,7 @@ namespace ascension {
 			/**
 			 * Returns the human-readable name of the encoding. Default implementation calls
 			 * @c #name method.
-			 * @param locale the locale used to localize the name
+			 * @param locale The locale used to localize the name
 			 * @see #name
 			 */
 			virtual std::string displayName(const std::locale& locale) const /*throw()*/ {return name();}
@@ -347,26 +367,26 @@ namespace ascension {
 		private:
 			/**
 			 * Converts the given string from UTF-16 into the native encoding.
-			 * @param[out] to the beginning of the destination buffer
-			 * @param[out] toEnd the end of the destination buffer
-			 * @param[out] toNext points the first unaltered character in the destination buffer after the conversion
-			 * @param[in] from the beginning of the buffer to be converted
-			 * @param[in] fromEnd the end of the buffer to be converted
-			 * @param[in] fromNext points to the first unconverted character after the conversion
-			 * @return the result of the conversion
+			 * @param[out] to The beginning of the destination buffer
+			 * @param[out] toEnd The end of the destination buffer
+			 * @param[out] toNext Points the first unaltered character in the destination buffer after the conversion
+			 * @param[in] from The beginning of the buffer to be converted
+			 * @param[in] fromEnd The end of the buffer to be converted
+			 * @param[in] fromNext Points to the first unconverted character after the conversion
+			 * @return The result of the conversion
 			 */
 			virtual Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 				const Char* from, const Char* fromEnd, const Char*& fromNext) = 0;
 			/**
 			 * Converts the given string from the native encoding into UTF-16.
-			 * @param[out] to the beginning of the destination buffer
-			 * @param[out] toEnd the end of the destination buffer
-			 * @param[out] toNext points the first unaltered character in the destination buffer
+			 * @param[out] to The beginning of the destination buffer
+			 * @param[out] toEnd The end of the destination buffer
+			 * @param[out] toNext Points the first unaltered character in the destination buffer
 			 *             after the conversion
-			 * @param[in] from the beginning of the buffer to be converted
-			 * @param[in] fromEnd the end of the buffer to be converted
-			 * @param[in] fromNext points to the first unconverted character after the conversion
-			 * @return the result of the conversion
+			 * @param[in] from The beginning of the buffer to be converted
+			 * @param[in] fromEnd The end of the buffer to be converted
+			 * @param[in] fromNext Points to the first unconverted character after the conversion
+			 * @return The result of the conversion
 			 */
 			virtual Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 				const byte* from, const byte* fromEnd, const byte*& fromNext) = 0;
@@ -411,12 +431,12 @@ namespace ascension {
 		private:
 			/**
 			 * Detects the encoding of the given character sequence.
-			 * @param first the beginning of the sequence
-			 * @param last the end of the sequence
-			 * @param[out] convertibleBytes the number of bytes (from @a first) absolutely
-			 *             detected. the value can't exceed the result of (@a last - @a first).
-			 *             may be @c null
-			 * @return the MIBenum value and the name of the detected encoding
+			 * @param first The beginning of the sequence
+			 * @param last The end of the sequence
+			 * @param[out] convertibleBytes The number of bytes (from @a first) absolutely
+			 *             detected. The value can't exceed the result of (@a last - @a first).
+			 *             May be @c null
+			 * @return The MIBenum value and the name of the detected encoding
 			 */
 			virtual std::pair<MIBenum, std::string> doDetect(
 				const byte* first, const byte* last, std::ptrdiff_t* convertibleBytes) const /*throw()*/ = 0;
@@ -615,9 +635,9 @@ namespace ascension {
 
 		/**
 		 * Returns informations for all available encodings.
-		 * @param[out] out the output iterator to receive pairs consist of the enumeration
-		 *             identifier and the encoding information. the expected type of the pair is
-		 *             @c std#pair&lt;std::size_t, const IEncodingProperties*&gt;. the enumeration
+		 * @param[out] out The output iterator to receive pairs consist of the enumeration
+		 *             identifier and the encoding information. The expected type of the pair is
+		 *             @c std#pair&lt;std::size_t, const IEncodingProperties*&gt;. The enumeration
 		 *             identifier can be used with @c #forID method.
 		 */
 		template<typename OutputIterator> inline void Encoder::availableEncodings(OutputIterator out) {
@@ -631,7 +651,7 @@ namespace ascension {
 
 		/**
 		 * Returns names for all available encoding detectors.
-		 * @param[out] out the output iterator to receive names
+		 * @param[out] out The output iterator to receive names
 		 */
 		template<typename OutputIterator> inline void EncodingDetector::availableNames(OutputIterator out) {
 			for(std::vector<EncodingDetector*>::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = (*i)->name();}
@@ -651,19 +671,29 @@ namespace ascension {
 			Line0::VALUES, Line1::VALUES, Line2::VALUES, Line3::VALUES, Line4::VALUES, Line5::VALUES, Line6::VALUES, Line7::VALUES,
 			Line8::VALUES, Line9::VALUES, LineA::VALUES, LineB::VALUES, LineC::VALUES, LineD::VALUES, LineE::VALUES, LineF::VALUES};
 
-		/// Returns the byte corresponds to the given character @c c or @c UNMAPPABLE_BYTE if umappable.
-		inline byte implementation::sbcs::BidirectionalMap::toByte(Char c) const /*throw()*/ {return unicodeToByte_[c >> 8][mask8Bit(c)];}
+		/**
+		 * Returns the byte corresponds to the given character @c c or @c UNMAPPABLE_BYTE if
+		 * umappable.
+		 */
+		inline byte implementation::sbcs::BidirectionalMap::toByte(Char c) const /*throw()*/ {
+			return unicodeToByte_[c >> 8][mask8Bit(c)];
+		}
 
-		/// Returns the character corresponds to the given byte @a c or @c REPLACEMENT_CHARACTER if umappable.
-		inline Char implementation::sbcs::BidirectionalMap::toCharacter(byte c) const /*throw()*/ {return wireAt(byteToUnicode_, c);}
+		/**
+		 * Returns the character corresponds to the given byte @a c or @c REPLACEMENT_CHARACTER if
+		 * umappable.
+		 */
+		inline Char implementation::sbcs::BidirectionalMap::toCharacter(byte c) const /*throw()*/ {
+			return wireAt(byteToUnicode_, c);
+		}
 
 		/**
 		 * Constructor.
-		 * @param name the name returned by @c #name
-		 * @param mib the MIBenum value returned by @c #mibEnum
-		 * @param displayName the display name returned by @c #displayName
-		 * @param aliases the encoding aliases returned by @c #aliases
-		 * @param substitutionCharacter the native character returned by @c #substitutionCharacter
+		 * @param name The name returned by @c #name
+		 * @param mib The MIBenum value returned by @c #mibEnum
+		 * @param displayName The display name returned by @c #displayName
+		 * @param aliases The encoding aliases returned by @c #aliases
+		 * @param substitutionCharacter The native character returned by @c #substitutionCharacter
 		 */
 		template<typename MappingTable>
 		inline implementation::sbcs::SingleByteEncoderFactory<MappingTable>::SingleByteEncoderFactory(const std::string& name, MIBenum mib,

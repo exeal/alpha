@@ -6,7 +6,7 @@
 
 #ifndef ASCENSION_BASIC_TYPES_HPP
 #define ASCENSION_BASIC_TYPES_HPP
-#include "common.hpp"
+#include <ascension/common.hpp>
 
 namespace ascension {
 

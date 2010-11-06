@@ -11,7 +11,7 @@
 
 #ifndef ASCENSION_MEMORY_HPP
 #define ASCENSION_MEMORY_HPP
-#include "common.hpp"	// MANAH_NONCOPYABLE_TAG
+#include <ascension/common.hpp>	// MANAH_NONCOPYABLE_TAG
 #include <cassert>
 #include <algorithm>	// std.max
 #include <new>			// new[], delete[], std.bad_alloc, std.nothrow

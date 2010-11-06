@@ -1,12 +1,12 @@
 /**
  * @file point.hpp
  * @author exeal
- * @date 2003-2009
+ * @date 2003-2010
  */
 
 #ifndef ASCENSION_POINT_HPP
 #define ASCENSION_POINT_HPP
-#include "document.hpp"
+#include <ascension/kernel/document.hpp>
 
 namespace ascension {
 

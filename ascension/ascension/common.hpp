@@ -23,42 +23,6 @@
 /// Makes the specified class uncopyable. Used in class definition
 #define ASCENSION_NONCOPYABLE_TAG(className) ASCENSION_UNASSIGNABLE_TAG(className); className(const className&)
 
-// platform
-#if defined(_WIN32) || defined(_WIN64) || defined(WIN32) || defined(WIN64)
-#	define ASCENSION_WINDOWS
-#	include "win32/windows.hpp"
-#else
-#	define ASCENSION_POSIX
-#endif
-
-// compiler
-#if defined(_MSC_VER)
-#	define ASCENSION_MSVC
-#elif defined(__GNUC__)
-#	define ASCENSION_GCC
-#endif
-
-#ifdef __i386__
-#	if defined(ASCENSION_MSVC)
-#		define ASCENSION_FASTCALL __fastcall
-#	elif defined(ASCENSION_GCC)
-#		define ASCENSION_FASTCALL __attribute__((regparm(3)))
-#	else
-#		define ASCENSION_FASTCALL
-#	endif
-#else
-#	define ASCENSION_FASTCALL
-#endif // __i386__
-
-#ifdef ASCENSION_WINDOWS
-#	ifndef _GLIBCXX_USE_WCHAR_T
-#		define _GLIBCXX_USE_WCHAR_T 1
-#	endif
-#	ifndef _GLIBCXX_USE_WSTRING
-#		define _GLIBCXX_USE_WSTRING 1
-#	endif
-#endif // ASCENSION_WINDOWS
-
 /**
  * @def ASCENSION_NOFAIL The method which has this tag guarentees "no-fail".
  * On debug releaese, this symbol is replaced with "throw()" empty exception-specification.
@@ -73,7 +37,8 @@
 /// @def ASC_NOFAIL Short version of @c ASCENSION_NOFAIL.
 #define ASC_NOFAIL ASCENSION_NOFAIL
 
-#include "config.hpp"
+#include <ascension/config.hpp>
+#include <ascension/platforms.hpp>
 #include <string>	// std.basic_string
 #include <iterator>
 #include <stdexcept>
@@ -94,10 +59,6 @@
 #if !defined(ASCENSION_WINDOWS) || defined(__BORLANDC__) || defined(__MINGW32__)
 #	include <cinttypes>
 #	define ASCENSION_HAS_CINTTYPES
-#endif
-
-#if defined(ASCENSION_WINDOWS)
-#	define ASCENSION_USE_INTRINSIC_WCHAR_T
 #endif
 
 namespace ascension {

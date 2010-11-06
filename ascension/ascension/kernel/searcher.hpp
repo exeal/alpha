@@ -2,18 +2,18 @@
  * @file searcher.hpp
  * @author exeal
  * @date 2004-2006 (was TextSearcher.h)
- * @date 2006-2009
+ * @date 2006-2010
  */
 
 #ifndef ASCENSION_SEARCHER_HPP
 #define ASCENSION_SEARCHER_HPP
-#include "document.hpp"
+
+#include <ascension/kernel/document-character-iterator.hpp>
 #ifndef ASCENSION_NO_REGEX
-#include "regex.hpp"
+#	include <ascension/corelib/regex.hpp>
 #endif // !ASCENSION_NO_REGEX
 #include <list>
 #include <stack>
-
 
 namespace ascension {
 
@@ -29,7 +29,7 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 */
 		class LiteralPattern {
-			MANAH_NONCOPYABLE_TAG(LiteralPattern);
+			ASCENSION_NONCOPYABLE_TAG(LiteralPattern);
 		public:
 			// constructors
 			LiteralPattern(const String& pattern, bool caseSensitive = true,
@@ -74,9 +74,9 @@ namespace ascension {
 		private:
 			/**
 			 * Returns how the text searcher should perform about matched text.
-			 * @param matchedRegion the region matched the pattern
-			 * @param canUndo this call can return the value @c UNDO as an action
-			 * @return the action the text searcher should perform
+			 * @param matchedRegion The region matched the pattern
+			 * @param canUndo This call can return the value @c UNDO as an action
+			 * @return The action the text searcher should perform
 			 */
 			virtual Action queryReplacementAction(const kernel::Region& matchedRegion, bool canUndo) = 0;
 			/**
@@ -87,8 +87,8 @@ namespace ascension {
 			virtual void replacementEnded(std::size_t numberOfMatches, std::size_t numberOfReplacements) = 0;
 			/**
 			 * The replacement started.
-			 * @param document the document to search and replace
-			 * @param scope the region to perform
+			 * @param document The document to search and replace
+			 * @param scope The region to perform
 			 */
 			virtual void replacementStarted(const kernel::Document& document, const kernel::Region& scope) = 0;
 			friend class TextSearcher;
@@ -107,7 +107,7 @@ namespace ascension {
 
 		// the documentation is searcher.cpp
 		class TextSearcher {
-			MANAH_NONCOPYABLE_TAG(TextSearcher);
+			ASCENSION_NONCOPYABLE_TAG(TextSearcher);
 		public:
 			/// Types of search.
 			enum Type {
@@ -218,7 +218,7 @@ namespace ascension {
 		private:
 			/**
 			 * The search was aborted.
-			 * @param initialPosition the position at which the search started.
+			 * @param initialPosition The position at which the search started.
 			 */
 			virtual void incrementalSearchAborted(const kernel::Position& initialPosition) = 0;
 			/// The search was completed successfully.
@@ -227,11 +227,11 @@ namespace ascension {
 			 * The search pattern was changed.
 			 * @param result the result on new pattern.
 			 */
-			virtual void incrementalSearchPatternChanged(Result result, const manah::Flags<WrappingStatus>& wrappingStatus) = 0;
+			virtual void incrementalSearchPatternChanged(Result result, const Flags<WrappingStatus>& wrappingStatus) = 0;
 			/**
 			 * The search was started. @c incrementalSearchPatternChanged is also called with
 			 * @c EMPTY_PATTERN after this.
-			 * @param document the document to search
+			 * @param document The document to search
 			 */
 			virtual void incrementalSearchStarted(const kernel::Document& document) = 0;
 			friend class IncrementalSearcher;
@@ -247,7 +247,7 @@ namespace ascension {
 		 * texteditor#commands#IncrementalSearchCommand
 		 */
 		class IncrementalSearcher : public kernel::IDocumentListener, public kernel::IBookmarkListener {
-			MANAH_NONCOPYABLE_TAG(IncrementalSearcher);
+			ASCENSION_NONCOPYABLE_TAG(IncrementalSearcher);
 		public:
 			// constructor
 			IncrementalSearcher() /*throw()*/;
@@ -307,15 +307,15 @@ namespace ascension {
 	inline const String& LiteralPattern::pattern() const /*throw()*/ {return pattern_;}
 	/**
 	 * Constructor.
-	 * @param numberOfReplacements the number of the replacements the object done successfully
+	 * @param numberOfReplacements The number of the replacements the object done successfully
 	 */
 	template<typename SourceException>
 	inline ReplacementInterruptedException<SourceException>::ReplacementInterruptedException(
 		std::size_t numberOfReplacements) : numberOfReplacements_(numberOfReplacements) {}
 	/**
 	 * Constructor.
-	 * @param message the message string passed to the @a SourceException's constructor
-	 * @param numberOfReplacements the number of the replacements the object done successfully
+	 * @param message The message string passed to the @a SourceException's constructor
+	 * @param numberOfReplacements The number of the replacements the object done successfully
 	 */
 	template<typename SourceException>
 	inline ReplacementInterruptedException<SourceException>::ReplacementInterruptedException(
@@ -395,9 +395,9 @@ namespace ascension {
 
 	/**
 	 * Sets the stored list.
-	 * @param first the first string of the list
-	 * @param last the end string of the list
-	 * @param forReplacements set true to set the replacements list
+	 * @param first The first string of the list
+	 * @param last The end string of the list
+	 * @param forReplacements Set @c true to set the replacements list
 	 */
 	template<typename InputIterator>
 	inline void TextSearcher::setStoredStrings(InputIterator first, InputIterator last, bool forReplacements) {
@@ -406,8 +406,8 @@ namespace ascension {
 	inline bool IncrementalSearcher::canUndo() const /*throw()*/ {return !operationHistory_.empty();}
 	/**
 	 * Returns the direction of the search.
-	 * @return the direction
-	 * @throw IllegalStateException the searcher is not running
+	 * @return The direction
+	 * @throw IllegalStateException The searcher is not running
 	 */
 	inline Direction IncrementalSearcher::direction() const {checkRunning(); return statusHistory_.top().direction;}
 	/// Returns true if the search is active.
@@ -419,12 +419,12 @@ namespace ascension {
 	inline const kernel::Region& IncrementalSearcher::matchedRegion() const {checkRunning(); return matchedRegion_;}
 	/**
 	 * Returns the current search pattern.
-	 * @throw NotRunningException the searcher is not running
+	 * @throw NotRunningException The searcher is not running
 	 */
 	inline const String& IncrementalSearcher::pattern() const {checkRunning(); return pattern_;}
 	/**
 	 * Returns the current search type.
-	 * @throw NotRunningException the searcher is not running
+	 * @throw NotRunningException The searcher is not running
 	 */
 	inline TextSearcher::Type IncrementalSearcher::type() const {checkRunning(); return type_;}
 
