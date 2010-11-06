@@ -8,8 +8,9 @@
 
 #ifndef ASCENSION_PRESENTATION_HPP
 #define ASCENSION_PRESENTATION_HPP
-#include "document.hpp"
-#include "graphics-datatypes.hpp"	// graphics.Color
+
+#include <ascension/kernel/document.hpp>
+#include <ascension/graphics/color.hpp>	// graphics.Color
 
 namespace ascension {
 

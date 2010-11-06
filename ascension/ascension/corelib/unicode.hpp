@@ -9,17 +9,15 @@
 
 #ifndef ASCENSION_UNICODE_HPP
 #define ASCENSION_UNICODE_HPP
-#include "character-iterator.hpp"
-#include "internal.hpp"
-#include "memory.hpp"	// AutoBuffer
-#include "ustring.hpp"	// ustrlen
-#include <cassert>
-#include <stdexcept>
+
+#include <ascension/corelib/character-iterator.hpp>
+#include <ascension/corelib/memory.hpp>		// AutoBuffer
+#include <ascension/corelib/unicode-utf.hpp>
+#include <ascension/corelib/ustring.hpp>	// ustrlen
 #include <iterator>
-#include <set>
-#include <bitset>
-#include <map>
 #include <locale>
+#include <set>
+#include <stdexcept>
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #error These class definitions and implementations are based on old version of Unicode.

@@ -11,14 +11,13 @@
 #ifdef ASCENSION_POSIX
 #	include <sys/stat.h>	// for POSIX environment
 #endif
-#include "character-iterator.hpp"
-#include "gap-vector.hpp"
-#include "memory.hpp"	// FastArenaObject
+#include <ascension/basic-types.hpp>
+#include <ascension/internal.hpp>
+#include <ascension/corelib/gap-vector.hpp>	// GapVector
+#include <ascension/corelib/memory.hpp>		// FastArenaObject
 #include <iostream>
+#include <map>
 #include <set>
-#ifndef ASCENSION_NO_GREP
-#	include <stack>
-#endif // !ASCENSION_NO_GREP
 
 namespace ascension {
 
@@ -529,44 +528,6 @@ namespace ascension {
 			friend class Document;
 		};
 
-		class DocumentCharacterIterator : public text::CharacterIterator,
-			public StandardConstBidirectionalIteratorAdapter<DocumentCharacterIterator, CodePoint> {
-		public:
-			// constructors
-			DocumentCharacterIterator() /*throw()*/;
-			DocumentCharacterIterator(const Document& document, const Position& position);
-			DocumentCharacterIterator(const Document& document, const Region& region);
-			DocumentCharacterIterator(const Document& document, const Region& region, const Position& position);
-			DocumentCharacterIterator(const DocumentCharacterIterator& other) /*throw()*/;
-			// attributes
-			const Document* document() const /*throw()*/;
-			const String& line() const /*throw()*/;
-			const Region& region() const /*throw()*/;
-			void setRegion(const Region& newRegion);
-			const Position& tell() const /*throw()*/;
-			// operation
-			DocumentCharacterIterator& seek(const Position& to);
-			// CharacterIterator
-			CodePoint current() const /*throw()*/;
-			bool hasNext() const /*throw()*/;
-			bool hasPrevious() const /*throw()*/;
-		private:
-			void doAssign(const CharacterIterator& other);
-			std::auto_ptr<CharacterIterator> doClone() const;
-			void doFirst();
-			void doLast();
-			bool doEquals(const CharacterIterator& other) const;
-			bool doLess(const CharacterIterator& other) const;
-			void doNext();
-			void doPrevious();
-		private:
-			static const ConcreteTypeTag CONCRETE_TYPE_TAG_;
-			const Document* document_;
-			Region region_;
-			const String* line_;
-			Position p_;
-		};
-
 		// the documentation is at document.cpp
 		class Document : public internal::IPointCollection<Point>, public texteditor::internal::ISessionElement {
 			ASCENSION_NONCOPYABLE_TAG(Document);
@@ -669,9 +630,6 @@ namespace ascension {
 			bool isNarrowed() const /*throw()*/;
 			void narrowToRegion(const Region& region);
 			void widen() /*throw()*/;
-			// iterations
-			DocumentCharacterIterator begin() const /*throw()*/;
-			DocumentCharacterIterator end() const /*throw()*/;
 			// overridables
 		protected:
 			virtual void doResetContent();
@@ -981,9 +939,6 @@ inline const Region& DocumentChange::erasedRegion() const /*throw()*/ {return er
 /// Returns the inserted region in the change. The returned region is normalized. Empty if no string was inserted.
 inline const Region& DocumentChange::insertedRegion() const /*throw()*/ {return insertedRegion_;}
 
-/// Returns the @c DocumentCharacterIterator addresses the beginning of the document.
-inline DocumentCharacterIterator Document::begin() const /*throw()*/ {return DocumentCharacterIterator(*this, region().first);}
-
 /// Returns the bookmarker of the document.
 inline Bookmarker& Document::bookmarker() /*throw()*/ {return *bookmarker_;}
 
@@ -992,9 +947,6 @@ inline const Bookmarker& Document::bookmarker() const /*throw()*/ {return *bookm
 
 /// Returns the content information provider.
 inline IContentTypeInformationProvider& Document::contentTypeInformation() const /*throw()*/ {return *contentTypeInformationProvider_;}
-
-/// Returns the @c DocumentCharacterIterator addresses the end of the document.
-inline DocumentCharacterIterator Document::end() const /*throw()*/ {return DocumentCharacterIterator(*this, region().second);}
 
 /**
  * Returns the information of the specified line.
@@ -1165,31 +1117,7 @@ inline void DocumentPartitioner::partition(const Position& at, DocumentPartition
 	return doGetPartition(at, partition);
 }
 
-/// Returns the document.
-inline const Document* DocumentCharacterIterator::document() const /*throw()*/ {return document_;}
-
-/// @see text#CharacterIterator#hasNext
-inline bool DocumentCharacterIterator::hasNext() const /*throw()*/ {return p_ != region_.second;}
-
-/// @see text#CharacterIterator#hasPrevious
-inline bool DocumentCharacterIterator::hasPrevious() const /*throw()*/ {return p_ != region_.first;}
-
-/// Returns the line.
-inline const String& DocumentCharacterIterator::line() const /*throw()*/ {return *line_;}
-
-/// Returns the iteration region.
-inline const Region& DocumentCharacterIterator::region() const /*throw()*/ {return region_;}
-
-/**
- * Moves to the specified position.
- * @param to the position. if this is outside of the iteration region, the start/end of the region will be used
- */
-inline DocumentCharacterIterator& DocumentCharacterIterator::seek(const Position& to) {
-	line_ = &document_->line((p_ = std::max(std::min(to, region_.second), region_.first)).line); return *this;}
-
-/// Returns the document position the iterator addresses.
-inline const Position& DocumentCharacterIterator::tell() const /*throw()*/ {return p_;}
-
-}} // namespace ascension.kernel
+	}
+} // namespace ascension.kernel
 
 #endif // !ASCENSION_DOCUMENT_HPP

@@ -8,11 +8,14 @@
 
 #ifndef ASCENSION_FILEIO_HPP
 #define ASCENSION_FILEIO_HPP
-#include "document.hpp"
-#include "encoder.hpp"	// encoding.Encoder.*
+#include <ascension/kernel/document.hpp>
+#include <ascension/corelib/encoder.hpp>	// encoding.Encoder.*
 #ifdef ASCENSION_POSIX
-#include <sys/types.h>
+#	include <sys/types.h>
 #endif // ASCENSION_POSIX
+#ifndef ASCENSION_NO_GREP
+#	include <stack>
+#endif // !ASCENSION_NO_GREP
 
 namespace ascension {
 	namespace kernel {
