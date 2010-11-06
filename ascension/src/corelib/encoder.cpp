@@ -4,7 +4,7 @@
  * @date 2004-2010
  */
 
-#include <ascension/encoder.hpp>
+#include <ascension/corelib/encoder.hpp>
 #include <algorithm>
 using namespace ascension;
 using namespace ascension::encoding;

@@ -1,12 +1,13 @@
 /**
  * @file point.cpp
  * @author exeal
- * @date 2003-2009
+ * @date 2003-2010
  */
 
-#include <ascension/point.hpp>
+#include <ascension/kernel/point.hpp>
+#include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/session.hpp>
-#include <ascension/unicode-property.hpp>	// text.ucd.BinaryProperty
+#include <ascension/corelib/unicode-property.hpp>	// text.ucd.BinaryProperty
 using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::text;

@@ -1,14 +1,13 @@
 /**
  * @file collator.cpp
  * @author exeal
- * @date 2007-2009
+ * @date 2007-2010
  */
 
 #ifndef ASCENSION_NO_UNICODE_COLLATION
-#include <ascension/unicode-property.hpp>
+#include <ascension/corelib/unicode-property.hpp>
 using namespace ascension;
 using namespace ascension::text;
-using namespace manah;
 using namespace std;
 
 

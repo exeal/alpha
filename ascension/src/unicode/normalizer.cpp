@@ -4,7 +4,7 @@
  * @date 2007-2010
  */
 
-#include <ascension/unicode-property.hpp>
+#include <ascension/corelib/unicode-property.hpp>
 using namespace ascension;
 using namespace ascension::text;
 using namespace std;
@@ -18,12 +18,12 @@ const length_t CaseFolder::MAXIMUM_EXPANSION_CHARACTERS = 3;
 
 /**
  * Compares the two character sequences case-insensitively.
- * @param s1 the character sequence
- * @param s2 the the other
- * @param excludeTurkishI set true to perform "Turkish I mapping"
- * @retval &lt;0 the first character sequence is less than the second
- * @retval 0 the both sequences are same
- * @retval &gt;0 the first character sequence is greater than the second
+ * @param s1 The character sequence
+ * @param s2 The the other
+ * @param excludeTurkishI Set @c true to perform "Turkish I mapping"
+ * @retval &lt;0 The first character sequence is less than the second
+ * @retval 0 The both sequences are same
+ * @retval &gt;0 The first character sequence is greater than the second
  */
 int CaseFolder::compare(const CharacterIterator& s1, const CharacterIterator& s2, bool excludeTurkishI /* = false */) {
 	auto_ptr<CharacterIterator> i1(s1.clone()), i2(s2.clone());
@@ -99,7 +99,7 @@ inline size_t CaseFolder::foldFull(CodePoint c, bool excludeTurkishI, CodePoint*
 
 
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
-#include <ascension/unicode-property.hpp>
+#include <ascension/corelib/unicode-property.hpp>
 
 // Normalizer ///////////////////////////////////////////////////////////////
 
@@ -155,9 +155,9 @@ namespace {
 
 	/**
 	 * Decomposes a Hangul character.
-	 * @param c the character to decompose
-	 * @param[out] destination the destination buffer. the size must be greater than 2
-	 * @return the number of the characters written to @a destination. either 0, 2, or 3
+	 * @param c The character to decompose
+	 * @param[out] destination The destination buffer. the size must be greater than 2
+	 * @return The number of the characters written to @a destination. either 0, 2, or 3
 	 */
 	length_t decomposeHangul(Char c, Char* destination) {
 		// from The Unicode Standard 5.0 pp.1356
@@ -218,7 +218,7 @@ namespace {
 	/**
 	 * Reorders the combining marks in the given character sequence according to "3.11 Canonical
 	 * Ordering Behavior" of Unicode standard 5.0.
-	 * @param[in,out] s the decomposed character sequence
+	 * @param[in,out] s The decomposed character sequence
 	 */
 	inline void reorderCombiningMarks(basic_string<CodePoint>& s) {
 		basic_string<CodePoint>::iterator current(s.begin()), next;
@@ -245,10 +245,10 @@ namespace {
 
 	/**
 	 * Decomposes the given character but does not reorder combining marks.
-	 * @param c the code point of the character to decompose
-	 * @param compatibility set true to perform compatibility decomposition
-	 * @param[out] destination the destination buffer
-	 * @return the length of the decomposition
+	 * @param c The code point of the character to decompose
+	 * @param compatibility Set @c true to perform compatibility decomposition
+	 * @param[out] destination The destination buffer
+	 * @return The length of the decomposition
 	 */
 	length_t internalDecompose(CodePoint c, bool compatibility, Char* destination) {
 		Char* last = destination + (surrogates::encode(c, destination) < 2 ? 1 : 2);
@@ -287,8 +287,8 @@ namespace {
 
 	/**
 	 * Composes the string.
-	 * @param s the source UTF-32 string to compose
-	 * @return the precomposed string
+	 * @param s The source UTF-32 string to compose
+	 * @return The precomposed string
 	 */
 	basic_string<CodePoint> internalCompose(const basic_string<CodePoint>& s) {
 		// TODO: not implemented.
@@ -296,9 +296,9 @@ namespace {
 	}
 
 	/**
-	 * Returns true if the specified character sequence is in FCD.
-	 * @param first the start of the character sequence
-	 * @param last the end of the character sequence
+	 * Returns @c true if the specified character sequence is in FCD.
+	 * @param first The start of the character sequence
+	 * @param last The end of the character sequence
 	 * @return true if the sequence is in FCD.
 	 */
 	template<typename CharacterSequence> inline bool isFCD(CharacterSequence first, CharacterSequence last) {
@@ -318,10 +318,10 @@ namespace {
 
 	/**
 	 * Normalizes the given character sequence.
-	 * @param first the start of the character sequence
-	 * @param last the end of the character sequence
-	 * @param form the normalization form
-	 * @return the normalized sequence
+	 * @param first The start of the character sequence
+	 * @param last The end of the character sequence
+	 * @param form The normalization form
+	 * @return The normalized sequence
 	 */
 	basic_string<CodePoint> internalNormalize(const CharacterIterator& first, const CharacterIterator& last, Normalizer::Form form) {
 		Char room[128];
@@ -342,9 +342,9 @@ namespace {
 
 	/**
 	 * Compares the two strings for canonical equivalence. The both strings must be FCD.
-	 * @param s1 the first string
-	 * @param s2 the second string
-	 * @return the result
+	 * @param s1 The first string
+	 * @param s2 The second string
+	 * @return The result
 	 */
 	int internalCompare(const String& s1, const String& s2, CaseSensitivity caseSensitivity) {
 #if 0
@@ -416,8 +416,8 @@ Normalizer::Normalizer() {
 
 /**
  * Constructor.
- * @param text the text to be normalized
- * @param form the normalization form
+ * @param text The text to be normalized
+ * @param form The normalization form
  */
 Normalizer::Normalizer(const CharacterIterator& text, Form form) : form_(form), current_(text.clone()) {
 	nextClosure(Direction::FORWARD, true);
@@ -443,11 +443,11 @@ Normalizer& Normalizer::operator=(const Normalizer& rhs) {
 
 /**
  * Compares the two strings for canonical equivalence.
- * @param s1 the string
- * @param s2 the other string
- * @param caseSensitivity for caseless match
+ * @param s1 The string
+ * @param s2 The other string
+ * @param caseSensitivity For caseless match
  * @retval &lt;0 @a s1 is less than @a s2
- * @retval 0 the two strings are canonical equivalent
+ * @retval 0 The two strings are canonical equivalent
  * @retval &gt;0 @a s1 is greater than @a s2
  */
 int Normalizer::compare(const String& s1, const String& s2, CaseSensitivity caseSensitivity) {
@@ -498,8 +498,8 @@ void Normalizer::nextClosure(Direction direction, bool initialize) {
 
 /**
  * Normalizes the specified text according to the normalization form.
- * @param text the text to normalize
- * @param form the normalization form
+ * @param text The text to normalize
+ * @param form The normalization form
  */
 String Normalizer::normalize(const CharacterIterator& text, Form form) {
 	// TODO: there is more efficient implementation.

@@ -208,7 +208,7 @@ namespace {
 	}
 } // namespace @0
 
-#include "generated/uprops-value-names"
+#include "../generated/uprops-value-names"
 
 
 // GeneralCategory ////////////////////////////////////////////////////////////////////////////////
@@ -263,7 +263,7 @@ const Char HangulSyllableType::SHORT_NAME[] = L"hst";
 
 // BinaryProperty /////////////////////////////////////////////////////////////////////////////////
 
-#include "generated/uprops-code-table"
+#include "../generated/uprops-code-table"
 
 
 /**
