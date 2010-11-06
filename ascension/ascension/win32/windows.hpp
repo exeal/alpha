@@ -23,7 +23,8 @@
 	#endif
  */
 
-#include <ascension/common.hpp>
+//#include <ascension/common.hpp>
+//#include <ascension/basic-types.hpp>
 #ifndef STRICT
 #	define STRICT
 #endif // !STRICT
@@ -50,10 +51,11 @@
 //#include <winnt.h>
 #include <windows.h>
 #undef size_t
-#include <memory>	// std.auto_ptr
+#include <memory>								// std.auto_ptr
 #include <stdexcept>
 #include <sstream>
-#include <utility>	// std.swap
+#include <utility>								// std.swap
+#include <ascension/corelib/basic-types.hpp>	// ASCENSION_NON_COPYABLE_TAG
 
 namespace ascension {
 	namespace win32 {
