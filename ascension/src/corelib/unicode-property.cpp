@@ -4,7 +4,7 @@
  * @date 2005-2010
  */
 
-#include <ascension/unicode-property.hpp>
+#include <ascension/corelib/unicode-property.hpp>
 using namespace ascension;
 using namespace ascension::text;
 using namespace ascension::text::ucd;
@@ -204,7 +204,7 @@ namespace {
 	bool isQU(CodePoint c, int gc) /*throw()*/ {
 		return gc == GeneralCategory::FINAL_PUNCTUATION
 			|| gc == GeneralCategory::INITIAL_PUNCTUATION
-			|| binary_search(QU, MANAH_ENDOF(QU), c);
+			|| binary_search(QU, ASCENSION_ENDOF(QU), c);
 	}
 } // namespace @0
 
@@ -455,7 +455,7 @@ int WordBreak::of(CodePoint c,
 	if(gc == GeneralCategory::FORMAT && c != ZERO_WIDTH_NON_JOINER && c != ZERO_WIDTH_JOINER)
 		return FORMAT;
 	else if(Script::of(c) == Script::KATAKANA
-			|| binary_search(KATAKANAS, MANAH_ENDOF(KATAKANAS), c))
+			|| binary_search(KATAKANAS, ASCENSION_ENDOF(KATAKANAS), c))
 		return KATAKANA;
 	else if(BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(c))
 		return GraphemeClusterBreak::EXTEND;
@@ -463,10 +463,10 @@ int WordBreak::of(CodePoint c,
 			|| c == 0x00a0u		// No-Break Space
 			|| c == 0x05f3u))	// Hebrew Punctuation Geresh
 		return A_LETTER;
-	else if(binary_search(MID_LETTERS, MANAH_ENDOF(MID_LETTERS), c)
+	else if(binary_search(MID_LETTERS, ASCENSION_ENDOF(MID_LETTERS), c)
 			|| (c == 0x003au && swedish.get() != 0 && lc == *swedish.get()))	// Colon (for Swedish)
 		return MID_LETTER;
-	else if(binary_search(MID_NUMS, MANAH_ENDOF(MID_NUMS), c))
+	else if(binary_search(MID_NUMS, ASCENSION_ENDOF(MID_NUMS), c))
 		return MID_NUM;
 	else if(isNU(c, gc))
 		return NUMERIC;
@@ -491,7 +491,7 @@ int SentenceBreak::of(CodePoint c) /*throw()*/ {
 	static const CodePoint SEPS[] = {LINE_FEED, CARRIAGE_RETURN, NEXT_LINE, LINE_SEPARATOR, PARAGRAPH_SEPARATOR};
 	if(BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(c))
 		return GraphemeClusterBreak::EXTEND;
-	else if(binary_search(SEPS, MANAH_ENDOF(SEPS), c))
+	else if(binary_search(SEPS, ASCENSION_ENDOF(SEPS), c))
 		return SEP;
 	const int gc = GeneralCategory::of(c);
 	if(gc == GeneralCategory::FORMAT && c != ZERO_WIDTH_NON_JOINER && c != ZERO_WIDTH_JOINER)

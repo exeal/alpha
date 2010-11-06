@@ -7,7 +7,7 @@
  * @date 2007-2010
  */
 
-#include <ascension/fileio.hpp>
+#include <ascension/kernel/fileio.hpp>
 #include <limits>	// std.numeric_limits
 #ifdef ASCENSION_POSIX
 #	include <errno.h>		// errno

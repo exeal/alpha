@@ -1,7 +1,7 @@
 /**
  * @file encoder.cpp
  * @author exeal
- * @date 2004-2009
+ * @date 2004-2010
  */
 
 #include <ascension/encoder.hpp>
@@ -16,8 +16,8 @@ using namespace std;
 
 /**
  * Converts the given encoding name from Unicode into 7-bit US-ASCII can pass to other functions.
- * @return the converted encoding name
- * @throw std#bad_alloc out of memory
+ * @return The converted encoding name
+ * @throw std#bad_alloc Out of memory
  * @throw UnsupportedEncodingException @a source can't convert
  */
 string encoding::encodingNameFromUnicode(const String& source) {
@@ -33,7 +33,7 @@ string encoding::encodingNameFromUnicode(const String& source) {
 
 /**
  * Constructor.
- * @param message the message string
+ * @param message The message string
  */
 UnsupportedEncodingException::UnsupportedEncodingException(const string& message) : invalid_argument(message) {
 }
@@ -126,8 +126,8 @@ Encoder::~Encoder() /*throw()*/ {
 /**
  * Returns @c true if the given character can be fully encoded with this encoding. This calls
  * @c #resetEncodingState method.
- * @param c the code point of the character
- * @return succeeded or not
+ * @param c The code point of the character
+ * @return Succeeded or not
  * @throw std#invalid_argument @a c is not a Unicode scalar value
  */
 bool Encoder::canEncode(CodePoint c) {
@@ -140,8 +140,8 @@ bool Encoder::canEncode(CodePoint c) {
 /**
  * Returns @c true if the given string can be fully encoded with this encoding. This calls
  * @c #resetEncodingState method.
- * @param s the string
- * @return succeeded or not
+ * @param s The string
+ * @return Succeeded or not
  */
 bool Encoder::canEncode(const StringPiece& s) {
 	if(s.beginning() == 0)
@@ -205,8 +205,8 @@ EncoderFactory* Encoder::find(const string& name) /*throw()*/ {
 
 /**
  * Returns the encoder which has the given enumeration identifier.
- * @param id the identifier obtained by @c #availableNames method
- * @return the encoder or @c null if not registered
+ * @param id The identifier obtained by @c #availableNames method
+ * @return The encoder or @c null if not registered
  * @see #availableNames
  */
 auto_ptr<Encoder> Encoder::forID(size_t id) /*throw()*/ {
@@ -215,8 +215,8 @@ auto_ptr<Encoder> Encoder::forID(size_t id) /*throw()*/ {
 
 /**
  * Returns the encoder which has the given MIBenum value.
- * @param mib the MIBenum value
- * @return the encoder or @c null if not registered
+ * @param mib The MIBenum value
+ * @return The encoder or @c null if not registered
  */
 auto_ptr<Encoder> Encoder::forMIB(MIBenum mib) /*throw()*/ {
 	EncoderFactory* const factory = find(mib);
@@ -225,8 +225,8 @@ auto_ptr<Encoder> Encoder::forMIB(MIBenum mib) /*throw()*/ {
 
 /**
  * Returns the encoder which matches the given name.
- * @param name the name
- * @return the encoder or @c null if not registered
+ * @param name The name
+ * @return The encoder or @c null if not registered
  */
 auto_ptr<Encoder> Encoder::forName(const string& name) /*throw()*/ {
 	EncoderFactory* const factory = find(name);
@@ -236,8 +236,8 @@ auto_ptr<Encoder> Encoder::forName(const string& name) /*throw()*/ {
 #ifdef ASCENSION_WINDOWS
 /**
  * Returns the encoder which has the given Win32 code page.
- * @param codePage the code page
- * @return the encoder or @c null if not registered
+ * @param codePage The code page
+ * @return The encoder or @c null if not registered
  */
 auto_ptr<Encoder> Encoder::forWindowsCodePage(uint codePage) /*throw()*/ {
 	// TODO: not implemented.
@@ -247,13 +247,14 @@ auto_ptr<Encoder> Encoder::forWindowsCodePage(uint codePage) /*throw()*/ {
 
 /**
  * Converts the given string from UTF-16 into the native encoding.
- * @param[out] to the beginning of the destination buffer
- * @param[out] toEnd the end of the destination buffer
- * @param[out] toNext points the first unaltered character in the destination buffer after the conversion
- * @param[in] from the beginning of the buffer to be converted
- * @param[in] fromEnd the end of the buffer to be converted
- * @param[in] fromNext points to the first unconverted character after the conversion
- * @return the result of the conversion
+ * @param[out] to The beginning of the destination buffer
+ * @param[out] toEnd The end of the destination buffer
+ * @param[out] toNext Points the first unaltered character in the destination buffer after the
+ *                    conversion
+ * @param[in] from The beginning of the buffer to be converted
+ * @param[in] fromEnd The end of the buffer to be converted
+ * @param[in] fromNext Points to the first unconverted character after the conversion
+ * @return The result of the conversion
  * @throw NullPointerException @a to, @a toEnd, @a from and/or @a fromEnd is @c null
  * @throw std#invalid_argument @a to &gt; @a toEnd or @a from &gt; @a fromEnd
  */
@@ -273,8 +274,8 @@ Encoder::Result Encoder::fromUnicode(byte* to, byte* toEnd,
 /**
  * Converts the given string from UTF-16 into the native encoding. This calls
  * @c #resetEncodingState method.
- * @param from the string to be converted
- * @return the converted string or an empty if encountered unconvertible character
+ * @param from The string to be converted
+ * @return The converted string or an empty if encountered unconvertible character
  * @throw std#bad_alloc
  */
 string Encoder::fromUnicode(const String& from) {
@@ -300,7 +301,7 @@ string Encoder::fromUnicode(const String& from) {
 
 /**
  * Registers the new encoder factory.
- * @param newFactory the encoder factory
+ * @param newFactory The encoder factory
  */
 void Encoder::registerFactory(EncoderFactory& newFactory) {
 	registry().push_back(&newFactory);
@@ -314,7 +315,7 @@ vector<EncoderFactory*>& Encoder::registry() {
 /**
  * Resets the intermediate conversion state for @c #toUnicode to the default. Derived class
  * implements stateful encoding should override this. Default implementation does nothing.
- * @return the encoder
+ * @return The encoder
  * @see #resetEncodingState
  */
 Encoder& Encoder::resetDecodingState() /*throw()*/ {
@@ -324,7 +325,7 @@ Encoder& Encoder::resetDecodingState() /*throw()*/ {
 /**
  * Resets the intermediate conversion state for @c #fromUnicode to the default. Derived class
  * implements stateful encoding should override this. Default implementation does nothing.
- * @return the encoder
+ * @return The encoder
  * @see #resetDecodingState
  */
 Encoder& Encoder::resetEncodingState() /*throw()*/ {
@@ -333,8 +334,8 @@ Encoder& Encoder::resetEncodingState() /*throw()*/ {
 
 /**
  * Sets the new miscellaneous flags.
- * @param newFlags the flags to set
- * @throw the encoder
+ * @param newFlags The flags to set
+ * @throw The encoder
  * @throw UnknownValueException<Flag> @a newFlags includes unknown value
  */
 Encoder& Encoder::setFlags(const Flags& newFlags) {
@@ -346,8 +347,8 @@ Encoder& Encoder::setFlags(const Flags& newFlags) {
 
 /**
  * Sets the conversion policy.
- * @param newPolicy the new policy
- * @return this encoder
+ * @param newPolicy The new policy
+ * @return This encoder
  * @throw UnknownValueException<SubstitutionPolicy> @a newPolicy is invalid
  */
 Encoder& Encoder::setSubstitutionPolicy(SubstitutionPolicy newPolicy) {
@@ -369,13 +370,13 @@ bool Encoder::supports(const string& name) /*throw()*/ {
 
 /**
  * Converts the given string from the native encoding into UTF-16.
- * @param[out] to the beginning of the destination buffer
- * @param[out] toEnd the end of the destination buffer
- * @param[out] toNext points the first unaltered character in the destination buffer after the conversion
- * @param[in] from the beginning of the buffer to be converted
- * @param[in] fromEnd the end of the buffer to be converted
- * @param[in] fromNext points to the first unconverted character after the conversion
- * @return the result of the conversion
+ * @param[out] to The beginning of the destination buffer
+ * @param[out] toEnd The end of the destination buffer
+ * @param[out] toNext Points the first unaltered character in the destination buffer after the conversion
+ * @param[in] from The beginning of the buffer to be converted
+ * @param[in] fromEnd The end of the buffer to be converted
+ * @param[in] fromNext Points to the first unconverted character after the conversion
+ * @return The result of the conversion
  */
 Encoder::Result Encoder::toUnicode(Char* to, Char* toEnd,
 		Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
@@ -392,8 +393,8 @@ Encoder::Result Encoder::toUnicode(Char* to, Char* toEnd,
 
 /**
  * Converts the given string from the native encoding into UTF-16.
- * @param from the string to be converted
- * @return the converted string or an empty if encountered unconvertible character
+ * @param from The string to be converted
+ * @return The converted string or an empty if encountered unconvertible character
  */
 String Encoder::toUnicode(const string& from) {
 	size_t chars = properties().maximumUCSLength() * from.length();
@@ -419,7 +420,7 @@ String Encoder::toUnicode(const string& from) {
 
 /**
  * Constructor.
- * @param name the name of the encoding detector
+ * @param name The name of the encoding detector
  * @throw std#invalid_argument @a name is invalid
  */
 EncodingDetector::EncodingDetector(const string& name) : name_(name) {
@@ -431,12 +432,12 @@ EncodingDetector::~EncodingDetector() /*throw()*/ {
 
 /**
  * Detects the encoding of the string buffer.
- * @param detectorID the identifier of the encoding detector to use
- * @param first the beginning of the sequence
- * @param last the end of the sequence
- * @param[out] convertibleBytes the number of bytes (from @a first) absolutely detected. the value
- *             can't exceed the result of (@a last - @a first). can be @c null if not needed
- * @return the MIBenum and the name of the detected encoding
+ * @param detectorID The identifier of the encoding detector to use
+ * @param first The beginning of the sequence
+ * @param last The end of the sequence
+ * @param[out] convertibleBytes The number of bytes (from @a first) absolutely detected. The value
+ *             can't exceed the result of (@a last - @a first). Can be @c null if not needed
+ * @return The MIBenum and the name of the detected encoding
  * @throw NullPointerException @a first or @last is @c null
  * @throw std#invalid_argument @c first is greater than @a last
  */
@@ -450,8 +451,8 @@ pair<MIBenum, string> EncodingDetector::detect(const byte* first, const byte* la
 
 /**
  * Returns the encoding detector which matches the given name.
- * @param name the name
- * @return the encoding detector or @c null if not registered
+ * @param name The name
+ * @return The encoding detector or @c null if not registered
  */
 EncodingDetector* EncodingDetector::forName(const string& name) /*throw()*/ {
 	for(vector<EncodingDetector*>::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
@@ -465,8 +466,8 @@ EncodingDetector* EncodingDetector::forName(const string& name) /*throw()*/ {
 #ifdef ASCENSION_WINDOWS
 /**
  * Returns the encoding detector which has the given Windows code page.
- * @param codePage the code page
- * @return the encoding detector or @c null if not registered
+ * @param codePage The code page
+ * @return The encoding detector or @c null if not registered
  */
 EncodingDetector* EncodingDetector::forWindowsCodePage(UINT codePage) /*throw()*/ {
 	switch(codePage) {
@@ -491,7 +492,7 @@ vector<EncodingDetector*>& EncodingDetector::registry() {
 
 /**
  * Registers the new encoding detector.
- * @param newDetector the encoding detector
+ * @param newDetector The encoding detector
  * @throw NullPointerException @a detector is @c null
  */
 void EncodingDetector::registerDetector(auto_ptr<EncodingDetector> newDetector) {
@@ -632,12 +633,12 @@ namespace {
 
 /**
  * Constructor.
- * @param name the name returned by @c #name
- * @param mib the MIBenum value returned by @c #mibEnum
- * @param displayName the display name returned by @c #displayName
- * @param maximumNativeBytes the value returned by @c #maximumNativeBytes
- * @param maximumUCSLength the value returned by @c #maximumUCSLength
- * @param aliases the encoding aliases returned by @c #aliases
+ * @param name The name returned by @c #name
+ * @param mib The MIBenum value returned by @c #mibEnum
+ * @param displayName The display name returned by @c #displayName
+ * @param maximumNativeBytes The value returned by @c #maximumNativeBytes
+ * @param maximumUCSLength The value returned by @c #maximumUCSLength
+ * @param aliases The encoding aliases returned by @c #aliases
  */
 EncoderFactoryBase::EncoderFactoryBase(const string& name, MIBenum mib,
 		const string& displayName /* = "" */,
@@ -703,7 +704,8 @@ const byte sbcs::BidirectionalMap::UNMAPPABLE_16x16_UNICODE_TABLE[0x100] = {
 
 /**
  * Constructor.
- * @param byteToCharacterWire the table defines byte-to-character mapping consists of 16Å~16-characters
+ * @param byteToCharacterWire The table defines byte-to-character mapping consists of
+ *                            16Å~16-characters
  */
 sbcs::BidirectionalMap::BidirectionalMap(const Char** byteToCharacterWire) /*throw()*/ : byteToUnicode_(byteToCharacterWire) {
 	fill_n(unicodeToByte_, ASCENSION_COUNTOF(unicodeToByte_), static_cast<byte*>(0));

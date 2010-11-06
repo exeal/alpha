@@ -8,15 +8,15 @@
 
 #include <ascension/viewer.hpp>
 #include <ascension/text-editor.hpp>	// texteditor.commands.*
-#include <manah/win32/ui/menu.hpp>
+#include <ascension/win32/ui/menu.hpp>
 #include <zmouse.h>
 using namespace ascension;
-using namespace ascension::kernel;
-using namespace ascension::layout;
+using namespace ascension::graphics;
 using namespace ascension::presentation;
 using namespace ascension::viewers;
 using namespace manah;
 using namespace std;
+namespace k = ascension::kernel;
 
 
 // TextViewer ///////////////////////////////////////////////////////////////
@@ -75,11 +75,12 @@ void TextViewer::handleGUICharacterInput(CodePoint c) {
 		// ignore if the cursor is not over a window belongs to the same thread
 		POINT pt;
 		::GetCursorPos(&pt);
-		Window pointedWindow(Window::fromPoint(pt));
-		if(pointedWindow.get() != 0 && pointedWindow.getThreadID() == getThreadID()) {
+		HWND pointedWindow = ::WindowFromPoint(pt);
+		if(pointedWindow != 0
+				&& ::GetWindowThreadProcessId(pointedWindow, 0) == ::GetWindowThreadProcessId(handle().get(), 0)) {
 			modeState_.cursorVanished = true;
 			::ShowCursor(false);
-			setCapture();
+			::SetCapture(handle().get());
 		}
 	}
 }
@@ -134,68 +135,68 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 		return true;
 	case VK_PRIOR:	// [PageUp]
 		if(controlPressed)	onVScroll(SB_PAGEUP, 0, 0);
-		else				CaretMovementCommand(*this, &locations::backwardPage, shiftPressed)();
+		else				CaretMovementCommand(*this, &k::locations::backwardPage, shiftPressed)();
 		return true;
 	case VK_NEXT:	// [PageDown]
 		if(controlPressed)	onVScroll(SB_PAGEDOWN, 0, 0);
-		else				CaretMovementCommand(*this, &locations::forwardPage, shiftPressed)();
+		else				CaretMovementCommand(*this, &k::locations::forwardPage, shiftPressed)();
 		return true;
 	case VK_HOME:	// [Home]
 		if(controlPressed)
-			CaretMovementCommand(*this, &locations::beginningOfDocument, shiftPressed)();
+			CaretMovementCommand(*this, &k::locations::beginningOfDocument, shiftPressed)();
 		else
-			CaretMovementCommand(*this, &locations::beginningOfVisualLine, shiftPressed)();
+			CaretMovementCommand(*this, &k::locations::beginningOfVisualLine, shiftPressed)();
 		return true;
 	case VK_END:	// [End]
 		if(controlPressed)
-			CaretMovementCommand(*this, &locations::endOfDocument, shiftPressed)();
+			CaretMovementCommand(*this, &k::locations::endOfDocument, shiftPressed)();
 		else
-			CaretMovementCommand(*this, &locations::endOfVisualLine, shiftPressed)();
+			CaretMovementCommand(*this, &k::locations::endOfVisualLine, shiftPressed)();
 		return true;
 	case VK_LEFT:	// [Left]
 		if(altPressed && shiftPressed) {
 			if(controlPressed)
-				RowSelectionExtensionCommand(*this, &locations::leftWord)();
+				RowSelectionExtensionCommand(*this, &k::locations::leftWord)();
 			else
-				RowSelectionExtensionCommand(*this, &locations::leftCharacter)();
+				RowSelectionExtensionCommand(*this, &k::locations::leftCharacter)();
 		} else {
 			if(controlPressed)
-				CaretMovementCommand(*this, &locations::leftWord, shiftPressed)();
+				CaretMovementCommand(*this, &k::locations::leftWord, shiftPressed)();
 			else
-				CaretMovementCommand(*this, &locations::leftCharacter, shiftPressed)();
+				CaretMovementCommand(*this, &k::locations::leftCharacter, shiftPressed)();
 		}
 		return true;
 	case VK_UP:		// [Up]
 		if(altPressed && shiftPressed && !controlPressed)
-			RowSelectionExtensionCommand(*this, &locations::backwardVisualLine)();
+			RowSelectionExtensionCommand(*this, &k::locations::backwardVisualLine)();
 		else if(controlPressed && !shiftPressed)
 			scroll(0, -1, true);
 		else
-			CaretMovementCommand(*this, &locations::backwardVisualLine, shiftPressed)();
+			CaretMovementCommand(*this, &k::locations::backwardVisualLine, shiftPressed)();
 		return true;
 	case VK_RIGHT:	// [Right]
 		if(altPressed) {
 			if(shiftPressed) {
 				if(controlPressed)
-					RowSelectionExtensionCommand(*this, &locations::rightWord)();
+					RowSelectionExtensionCommand(*this, &k::locations::rightWord)();
 				else
-					RowSelectionExtensionCommand(*this, &locations::rightCharacter)();
+					RowSelectionExtensionCommand(*this, &k::locations::rightCharacter)();
 			} else
 				CompletionProposalPopupCommand(*this)();
 		} else {
 			if(controlPressed)
-				CaretMovementCommand(*this, &locations::rightWord, shiftPressed)();
+				CaretMovementCommand(*this, &k::locations::rightWord, shiftPressed)();
 			else
-				CaretMovementCommand(*this, &locations::rightCharacter, shiftPressed)();
+				CaretMovementCommand(*this, &k::locations::rightCharacter, shiftPressed)();
 		}
 		return true;
 	case VK_DOWN:	// [Down]
 		if(altPressed && shiftPressed && !controlPressed)
-			RowSelectionExtensionCommand(*this, &locations::forwardVisualLine)();
+			RowSelectionExtensionCommand(*this, &k::locations::forwardVisualLine)();
 		else if(controlPressed && !shiftPressed)
 			onVScroll(SB_LINEDOWN, 0, 0);
 		else
-			CaretMovementCommand(*this, &locations::forwardVisualLine, shiftPressed)();
+			CaretMovementCommand(*this, &k::locations::forwardVisualLine, shiftPressed)();
 		return true;
 	case VK_INSERT:	// [Insert]
 		if(altPressed)
@@ -401,19 +402,20 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 	utils::closeCompletionProposalsPopup(*this);
 	abortIncrementalSearch(*this);
 
-	POINT menuPosition;
+	Point<> menuPosition;
 
 	// invoked by the keyboard
 	if(pt.x == 0xffff && pt.y == 0xffff) {
 		// MSDN says "the application should display the context menu at the location of the current selection."
 		menuPosition = clientXYForCharacter(caret(), false);
 		menuPosition.y += textRenderer().textMetrics().cellHeight() + 1;
-		RECT rc;
-		getClientRect(rc);
-		const RECT margins(textAreaMargins());
-		rc.left += margins.left; rc.top += margins.top;
-		rc.right -= margins.right - 1; rc.bottom -= margins.bottom;
-		if(!toBoolean(::PtInRect(&rc, menuPosition)))
+		Rect<> clientBounds(bounds(false));
+		const Rect<> margins(textAreaMargins());
+		clientBounds.left() += margins.left();
+		clientBounds.top() += margins.top();
+		clientBounds.right() -= margins.right() - 1;
+		clientBounds.bottom() -= margins.bottom();
+		if(!clientBounds.includes(menuPosition))
 			menuPosition.x = menuPosition.y = 1;
 		clientToScreen(menuPosition);
 	} else
@@ -426,10 +428,10 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 	if(!toBoolean(::PtInRect(&rect, menuPosition)))
 		return false;
 
-	const Document& doc = document();
+	const k::Document& doc = document();
 	const bool hasSelection = !isSelectionEmpty(caret());
 	const bool readOnly = doc.isReadOnly();
-	const bool japanese = PRIMARYLANGID(getUserDefaultUILanguage()) == LANG_JAPANESE;
+	const bool japanese = PRIMARYLANGID(userDefaultUILanguage()) == LANG_JAPANESE;
 
 	static PopupMenu menu;
 	static const WCHAR* captions[] = {
@@ -544,7 +546,7 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 	HKL keyboardLayout = ::GetKeyboardLayout(::GetCurrentThreadId());
 	if(//toBoolean(::ImmIsIME(keyboardLayout)) &&
 			::ImmGetProperty(keyboardLayout, IGP_SENTENCE) != IME_SMODE_NONE) {
-		HIMC imc = ::ImmGetContext(get());
+		HIMC imc = ::ImmGetContext(handle().get());
 		WCHAR* openIme = japanese ? L"IME \x3092\x958b\x304f(&O)" : L"&Open IME";
 		WCHAR* closeIme = japanese ? L"IME \x3092\x9589\x3058\x308b(&L)" : L"C&lose IME";
 		WCHAR* openSftKbd = japanese ? L"\x30bd\x30d5\x30c8\x30ad\x30fc\x30dc\x30fc\x30c9\x3092\x958b\x304f(&E)" : L"Op&en soft keyboard";
@@ -563,7 +565,7 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 		if(toBoolean(::ImmGetProperty(keyboardLayout, IGP_SETCOMPSTR) & SCS_CAP_SETRECONVERTSTRING))
 			menu << Menu::StringItem(ID_RECONVERT, reconvert, (!readOnly && hasSelection) ? MFS_ENABLED : MFS_GRAYED);
 
-		::ImmReleaseContext(get(), imc);
+		::ImmReleaseContext(handle().get(), imc);
 	}
 
 	// hyperlink
@@ -580,7 +582,7 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 		menu << Menu::SeparatorItem() << Menu::StringItem(ID_INVOKE_HYPERLINK, caption.get());
 	}
 
-	menu.trackPopup(TPM_LEFTALIGN, menuPosition.x, menuPosition.y, get());
+	menu.trackPopup(TPM_LEFTALIGN, menuPosition.x, menuPosition.y, handle().get());
 
 	// ...finally erase all items
 	int c = menu.getNumberOfItems();
@@ -595,7 +597,7 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 	if(document().isReadOnly())
 		return;
 	else if(/*lParam == 0 ||*/ toBoolean(lParam & GCS_RESULTSTR)) {	// completed
-		if(HIMC imc = ::ImmGetContext(get())) {
+		if(HIMC imc = ::ImmGetContext(handle().get())) {
 			if(const length_t len = ::ImmGetCompositionStringW(imc, GCS_RESULTSTR, 0, 0) / sizeof(WCHAR)) {
 				// this was not canceled
 				const AutoBuffer<Char> text(new Char[len + 1]);
@@ -604,12 +606,12 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 				if(!imeComposingCharacter_)
 					texteditor::commands::TextInputCommand(*this, text.get())();
 				else {
-					Document& doc = document();
+					k::Document& doc = document();
 					try {
 						doc.insertUndoBoundary();
-						doc.replace(Region(*caret_,
-							static_cast<DocumentCharacterIterator&>(DocumentCharacterIterator(doc, caret()).next()).tell()),
-							String(1, static_cast<Char>(wParam)));
+						doc.replace(k::Region(*caret_,
+							static_cast<k::DocumentCharacterIterator&>(k:DocumentCharacterIterator(doc, caret()).next()).tell()),
+							String(1, static_cast<Char>(wParam)));:
 						doc.insertUndoBoundary();
 					} catch(const DocumentCantChangeException&) {
 					}
@@ -618,17 +620,17 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 				}
 			}
 //			updateIMECompositionWindowPosition();
-			::ImmReleaseContext(get(), imc);
+			::ImmReleaseContext(handle().get(), imc);
 			handled = true;	// prevent to be send WM_CHARs
 		}
 	} else if(toBoolean(GCS_COMPSTR & lParam)) {
 		if(toBoolean(lParam & CS_INSERTCHAR)) {
-			Document& doc = document();
-			const Position temp(*caret_);
+			k::Document& doc = document();
+			const k::Position temp(*caret_);
 			try {
 				if(imeComposingCharacter_)
-					doc.replace(Region(*caret_,
-						static_cast<DocumentCharacterIterator&>(DocumentCharacterIterator(doc, caret()).next()).tell()),
+					doc.replace(k::Region(*caret_,
+						static_cast<k::DocumentCharacterIterator&>(k::DocumentCharacterIterator(doc, caret()).next()).tell()),
 						String(1, static_cast<Char>(wParam)));
 				else
 					insert(doc, *caret_, String(1, static_cast<Char>(wParam)));
@@ -658,7 +660,7 @@ LRESULT TextViewer::onIMENotify(WPARAM command, LPARAM, bool&) {
 
 /// @see WM_IME_REQUEST
 LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
-	const Document& doc = document();
+	const k::Document& doc = document();
 
 	// this command will be sent two times when reconversion is invoked
 	if(command == IMR_RECONVERTSTRING) {
@@ -678,7 +680,7 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 			}
 			return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(caret().line());
 		} else {
-			const String selection(selectedString(caret(), NLF_RAW_VALUE));
+			const String selection(selectedString(caret(), k::NLF_RAW_VALUE));
 			if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lParam)) {
 				rcs->dwStrLen = rcs->dwTargetStrLen = rcs->dwCompStrLen = static_cast<DWORD>(selection.length());
 				rcs->dwStrOffset = sizeof(RECONVERTSTRING);
@@ -692,7 +694,7 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 	// before reconversion. a RECONVERTSTRING contains the ranges of the composition
 	else if(command == IMR_CONFIRMRECONVERTSTRING) {
 		if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lParam)) {
-			const Region region(doc.accessibleRegion());
+			const k::Region region(doc.accessibleRegion());
 			if(!isSelectionEmpty(caret())) {
 				// reconvert the selected region. the selection may be multi-line
 				if(rcs->dwCompStrLen < rcs->dwStrLen)	// the composition region was truncated.
@@ -714,8 +716,8 @@ LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
 					}
 				}
 				caret().select(
-					Position(caret().line(), rcs->dwCompStrOffset / sizeof(Char)),
-					Position(caret().line(), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
+					k::Position(caret().line(), rcs->dwCompStrOffset / sizeof(Char)),
+					k::Position(caret().line(), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
 			}
 			handled = true;
 			return true;
@@ -961,11 +963,11 @@ void TextViewer::updateIMECompositionWindowPosition() {
 		// composition window placement
 		COMPOSITIONFORM cf;
 		getClientRect(cf.rcArea);
-		RECT margins = textAreaMargins();
-		cf.rcArea.left += margins.left;
-		cf.rcArea.top += margins.top;
-		cf.rcArea.right -= margins.right;
-		cf.rcArea.bottom -= margins.bottom;
+		const Rect<> margins(textAreaMargins());
+		cf.rcArea.left += margins.left();
+		cf.rcArea.top += margins.top();
+		cf.rcArea.right -= margins.right();
+		cf.rcArea.bottom -= margins.bottom();
 		cf.dwStyle = CFS_POINT;
 		cf.ptCurrentPos = clientXYForCharacter(caret().beginning(), false, LineLayout::LEADING);
 		if(cf.ptCurrentPos.y == 32767 || cf.ptCurrentPos.y == -32768)
@@ -990,14 +992,8 @@ void TextViewer::updateIMECompositionWindowPosition() {
 
 namespace {
 	/// Circled window displayed at which the auto scroll started.
-	class AutoScrollOriginMark : public manah::win32::ui::CustomControl<AutoScrollOriginMark> {
-		MANAH_NONCOPYABLE_TAG(AutoScrollOriginMark);
-		DEFINE_WINDOW_CLASS() {
-			name = L"AutoScrollOriginMark";
-			style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW;
-			bgColor = COLOR_WINDOW;
-			cursor = MAKEINTRESOURCEW(32513);	// IDC_IBEAM
-		}
+	class AutoScrollOriginMark : public win32::Window {
+		ASCENSION_NONCOPYABLE_TAG(AutoScrollOriginMark);
 	public:
 		/// Defines the type of the cursors obtained by @c #cursorForScrolling method.
 		enum CursorType {
@@ -1008,9 +1004,15 @@ namespace {
 	public:
 		AutoScrollOriginMark() /*throw()*/;
 		bool create(const TextViewer& view);
-		static win32::Object<HCURSOR, ::DestroyCursor> cursorForScrolling(CursorType type);
-	protected:
-		void onPaint(win32::gdi::PaintDC& dc);
+		static const win32::Handle<HCURSOR> cursorForScrolling(CursorType type);
+	private:
+		void paint(graphics::PaintContext& context);
+		void provideClassInformation(win32::ClassInformation& classInfomation) const {
+			classInformation.style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW;
+			background = COLOR_WINDOW;
+			cursor = MAKEINTRESOURCEW(32513);	// IDC_IBEAM
+		}
+		basic_string<WCHAR> provideClassName() const {return L"AutoScrollOriginMark";}
 	private:
 		static const long WINDOW_WIDTH = 28;
 	};
@@ -1048,12 +1050,12 @@ bool AutoScrollOriginMark::create(const TextViewer& view) {
  * @return the cursor. do not destroy the returned value
  * @throw UnknownValueException @a type is unknown
  */
-win32::Object<HCURSOR, ::DestroyCursor> AutoScrollOriginMark::cursorForScrolling(CursorType type) {
-	static win32::Object<HCURSOR, ::DestroyCursor> instances[3];
-	if(type >= MANAH_COUNTOF(instances))
+const win32::Handle<HCURSOR>& AutoScrollOriginMark::cursorForScrolling(CursorType type) {
+	static win32::Handle<HCURSOR> instances[3];
+	if(type >= ASCENSION_COUNTOF(instances))
 		throw UnknownValueException("type");
 	if(instances[type].get() == 0) {
-		static const manah::byte AND_LINE_3_TO_11[] = {
+		static const uint8_t AND_LINE_3_TO_11[] = {
 			0xff, 0xfe, 0x7f, 0xff,
 			0xff, 0xfc, 0x3f, 0xff,
 			0xff, 0xf8, 0x1f, 0xff,
@@ -1064,7 +1066,7 @@ win32::Object<HCURSOR, ::DestroyCursor> AutoScrollOriginMark::cursorForScrolling
 			0xff, 0x00, 0x00, 0xff,
 			0xff, 0x80, 0x01, 0xff
 		};
-		static const manah::byte XOR_LINE_3_TO_11[] = {
+		static const uint8_t XOR_LINE_3_TO_11[] = {
 			0x00, 0x01, 0x80, 0x00,
 			0x00, 0x02, 0x40, 0x00,
 			0x00, 0x04, 0x20, 0x00,
@@ -1075,7 +1077,7 @@ win32::Object<HCURSOR, ::DestroyCursor> AutoScrollOriginMark::cursorForScrolling
 			0x00, 0x80, 0x01, 0x00,
 			0x00, 0x7f, 0xfe, 0x00
 		};
-		static const manah::byte AND_LINE_13_TO_18[] = {
+		static const uint8_t AND_LINE_13_TO_18[] = {
 			0xff, 0xfe, 0x7f, 0xff,
 			0xff, 0xfc, 0x3f, 0xff,
 			0xff, 0xf8, 0x1f, 0xff,
@@ -1083,7 +1085,7 @@ win32::Object<HCURSOR, ::DestroyCursor> AutoScrollOriginMark::cursorForScrolling
 			0xff, 0xfc, 0x3f, 0xff,
 			0xff, 0xfe, 0x7f, 0xff,
 		};
-		static const manah::byte XOR_LINE_13_TO_18[] = {
+		static const uint8_t XOR_LINE_13_TO_18[] = {
 			0x00, 0x01, 0x80, 0x00,
 			0x00, 0x02, 0x40, 0x00,
 			0x00, 0x04, 0x20, 0x00,
@@ -1091,7 +1093,7 @@ win32::Object<HCURSOR, ::DestroyCursor> AutoScrollOriginMark::cursorForScrolling
 			0x00, 0x02, 0x40, 0x00,
 			0x00, 0x01, 0x80, 0x00
 		};
-		static const manah::byte AND_LINE_20_TO_28[] = {
+		static const uint8_t AND_LINE_20_TO_28[] = {
 			0xff, 0x80, 0x01, 0xff,
 			0xff, 0x00, 0x00, 0xff,
 			0xff, 0x80, 0x01, 0xff,
@@ -1102,7 +1104,7 @@ win32::Object<HCURSOR, ::DestroyCursor> AutoScrollOriginMark::cursorForScrolling
 			0xff, 0xfc, 0x3f, 0xff,
 			0xff, 0xfe, 0x7f, 0xff
 		};
-		static const manah::byte XOR_LINE_20_TO_28[] = {
+		static const uint8_t XOR_LINE_20_TO_28[] = {
 			0x00, 0x7f, 0xfe, 0x00,
 			0x00, 0x80, 0x01, 0x00,
 			0x00, 0x40, 0x02, 0x00,
@@ -1113,7 +1115,7 @@ win32::Object<HCURSOR, ::DestroyCursor> AutoScrollOriginMark::cursorForScrolling
 			0x00, 0x02, 0x40, 0x00,
 			0x00, 0x01, 0x80, 0x00
 		};
-		manah::byte andBits[4 * 32], xorBits[4 * 32];
+		uint8_t andBits[4 * 32], xorBits[4 * 32];
 		// fill canvases
 		memset(andBits, 0xff, 4 * 32);
 		memset(xorBits, 0x00, 4 * 32);
@@ -1128,17 +1130,17 @@ win32::Object<HCURSOR, ::DestroyCursor> AutoScrollOriginMark::cursorForScrolling
 			memcpy(andBits + 4 * 20, AND_LINE_20_TO_28, sizeof(AND_LINE_20_TO_28));
 			memcpy(xorBits + 4 * 20, XOR_LINE_20_TO_28, sizeof(XOR_LINE_20_TO_28));
 		}
-		instances[type].reset(win32::managed(::CreateCursor(::GetModuleHandleW(0), 16, 16, 32, 32, andBits, xorBits)));
+		instances[type].reset(::CreateCursor(::GetModuleHandleW(0), 16, 16, 32, 32, andBits, xorBits), &::DestroyCursor);
 	}
-	return win32::Object<HCURSOR, ::DestroyCursor>(win32::borrowed(instances[type].get()));
+	return instances[type];
 }
 
 /// @see Window#onPaint
-void AutoScrollOriginMark::onPaint(win32::gdi::PaintDC& dc) {
+void AutoScrollOriginMark::paint(PaintContext& context) {
 	const COLORREF color = ::GetSysColor(COLOR_APPWORKSPACE);
 	HPEN pen = ::CreatePen(PS_SOLID, 1, color), oldPen = dc.selectObject(pen);
 	HBRUSH brush = ::CreateSolidBrush(color), oldBrush = dc.selectObject(brush);
-	POINT points[4];
+	Point<> points[4];
 
 	points[0].x = 13; points[0].y = 3;
 	points[1].x = 7; points[1].y = 9;
@@ -1217,10 +1219,10 @@ void DefaultMouseInputStrategy::captureChanged() {
 }
 
 namespace {
-	HRESULT createSelectionImage(const TextViewer& viewer, const POINT& cursorPosition, bool highlightSelection, SHDRAGIMAGE& image) {
+	HRESULT createSelectionImage(const TextViewer& viewer, const Point<>& cursorPosition, bool highlightSelection, SHDRAGIMAGE& image) {
 		using namespace win32::gdi;
 
-		DC dc(win32::managed(::CreateCompatibleDC(0)));
+		win32::Handle<HDC> dc(::CreateCompatibleDC(0), &::DeleteDC);
 		if(dc.get() == 0)
 			return E_FAIL;
 
@@ -1240,15 +1242,14 @@ namespace {
 		viewer.firstVisibleLine(&firstLine, 0, &firstSubline);
 
 		// calculate the size of the image
-		RECT clientRect, selectionBounds;
-		viewer.getClientRect(clientRect);
+		const Rect<> clientBounds(viewer.bounds(false));
 		const TextRenderer& renderer = viewer.textRenderer();
-		selectionBounds.left = numeric_limits<LONG>::max();
-		selectionBounds.right = numeric_limits<LONG>::min();
-		selectionBounds.top = selectionBounds.bottom = 0;
+		Rect<> selectionBounds(
+			Point<>(numeric_limits<Scalar>::max(), 0),
+			Dimension<>(numeric_limits<Scalar>::min(), 0));
 		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
 			selectionBounds.bottom += static_cast<LONG>(renderer.textMetrics().linePitch() * renderer.lineLayout(line).numberOfSublines());
-			if(selectionBounds.bottom - selectionBounds.top > clientRect.bottom - clientRect.top)
+			if(selectionBounds.height() > clientBounds.height())
 				return S_FALSE;	// overflow
 			const LineLayout& layout = renderer.lineLayout(line);
 			const int indent = renderer.lineIndent(line);
@@ -1259,21 +1260,21 @@ namespace {
 						range.beginning(),
 						min(viewer.document().lineLength(line), range.end()));
 					const RECT sublineBounds(layout.bounds(range.beginning(), range.end()));
-					selectionBounds.left = min(sublineBounds.left + indent, selectionBounds.left);
-					selectionBounds.right = max(sublineBounds.right + indent, selectionBounds.right);
-					if(selectionBounds.right - selectionBounds.left > clientRect.right - clientRect.left)
+					selectionBounds.left() = min(sublineBounds.left() + indent, selectionBounds.left());
+					selectionBounds.right() = max(sublineBounds.right() + indent, selectionBounds.right());
+					if(selectionBounds.right - selectionBounds.left > clientRect.width())
 						return S_FALSE;	// overflow
 				}
 			}
 		}
-		bh.bV5Width = selectionBounds.right - selectionBounds.left;
-		bh.bV5Height = selectionBounds.bottom - selectionBounds.top;
+		bh.bV5Width = selectionBounds.width();
+		bh.bV5Height = selectionBounds.height();
 
 		// create a mask
-		Bitmap mask(Bitmap::create(bh.bV5Width, bh.bV5Height, 1, 1, 0));	// monochrome
+		win32::Handle<HBITMAP> mask(::CreateBitmap(bh.bV5Width, bh.bV5Height, 1, 1, 0), &::DeleteObject);	// monochrome
 		if(mask.get() == 0)
 			return E_FAIL;
-		HBITMAP oldBitmap = dc.selectObject(mask.get());
+		HBITMAP oldBitmap = ::SelectObject(dc.get(), mask.get());
 		dc.fillSolidRect(0, 0, bh.bV5Width, bh.bV5Height, RGB(0x00, 0x00, 0x00));
 		int y = 0;
 		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
@@ -1285,17 +1286,17 @@ namespace {
 					range = Range<length_t>(
 						range.beginning(),
 						min(viewer.document().lineLength(line), range.end()));
-					Rgn rgn(layout.blackBoxBounds(range.beginning(), range.end()));
-					rgn.offset(indent - selectionBounds.left, y - selectionBounds.top);
-					dc.fillRgn(rgn.use(), Brush::getStockObject(WHITE_BRUSH).use());
+					win32::Handle<HRGN> rgn(layout.blackBoxBounds(range.beginning(), range.end()));
+					::OffsetRgn(rgn.get(), indent - selectionBounds.left, y - selectionBounds.top);
+					::FillRgn(dc.get(), rgn.get(), Brush::getStockObject(WHITE_BRUSH).use());
 				}
 				y += renderer.textMetrics().linePitch();
 			}
 		}
-		dc.selectObject(oldBitmap);
+		::SelectObject(dc.get(), oldBitmap);
 		BITMAPINFO* bi = 0;
-		manah::AutoBuffer<manah::byte> maskBuffer;
-		manah::byte* maskBits;
+		AutoBuffer<manah::byte> maskBuffer;
+		uint8_t* maskBits;
 		BYTE alphaChunnels[2] = {0xff, 0x01};
 		try {
 			bi = static_cast<BITMAPINFO*>(::operator new(sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * 2));
@@ -1305,7 +1306,7 @@ namespace {
 			if(r == 0 || r == ERROR_INVALID_PARAMETER)
 				throw runtime_error("");
 			assert(bi->bmiHeader.biBitCount == 1 && bi->bmiHeader.biClrUsed == 2);
-			maskBuffer.reset(new manah::byte[bi->bmiHeader.biSizeImage + sizeof(DWORD)]);
+			maskBuffer.reset(new uint8_t[bi->bmiHeader.biSizeImage + sizeof(DWORD)]);
 			maskBits = maskBuffer.get() + sizeof(DWORD) - reinterpret_cast<ULONG_PTR>(maskBuffer.get()) % sizeof(DWORD);
 			r = ::GetDIBits(dc.get(), mask.get(), 0, bh.bV5Height, maskBits, bi, DIB_RGB_COLORS);
 			if(r == 0 || r == ERROR_INVALID_PARAMETER)
@@ -1322,13 +1323,13 @@ namespace {
 
 		// create the result bitmap
 		void* bits;
-		Bitmap bitmap(Bitmap::createDIBSection(dc.get(), *reinterpret_cast<BITMAPINFO*>(&bh), DIB_RGB_COLORS, bits));
+		win32::Handle<HBITMAP> bitmap(::CreateDIBSection(dc.get(), *reinterpret_cast<BITMAPINFO*>(&bh), DIB_RGB_COLORS, bits));
 		if(bitmap.get() == 0)
 			return E_FAIL;
 		// render the lines
-		oldBitmap = dc.selectObject(bitmap.use());
-		RECT selectionExtent(selectionBounds);
-		::OffsetRect(&selectionExtent, -selectionExtent.left, -selectionExtent.top);
+		oldBitmap = ::SelectObject(dc.get(), bitmap.get());
+		Rect<> selectionExtent(selectionBounds);
+		selectionExtent.translate(-selectionExtent.left, -selectionExtent.top);
 		y = selectionBounds.top;
 		const LineLayout::Selection selection(viewer.caret());
 		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
@@ -1337,10 +1338,10 @@ namespace {
 				selectionExtent, selectionExtent, highlightSelection ? &selection : 0);
 			y += static_cast<int>(renderer.textMetrics().linePitch() * renderer.numberOfSublinesOfLine(line));
 		}
-		dc.selectObject(oldBitmap);
+		::SelectObject(dc.get(), oldBitmap);
 
 		// set alpha chunnel
-		const manah::byte* maskByte = maskBits;
+		const uint8_t* maskByte = maskBits;
 		for(LONG y = 0; y < bh.bV5Height; ++y) {
 			for(LONG x = 0; ; ) {
 				RGBQUAD& pixel = static_cast<RGBQUAD*>(bits)[x + bh.bV5Width * y];
@@ -1358,10 +1359,10 @@ namespace {
 		}
 
 		// locate the hotspot of the image based on the cursor position
-		const RECT margins(viewer.textAreaMargins());
-		POINT hotspot(cursorPosition);
-		hotspot.x -= margins.left - viewer.getScrollPosition(SB_HORZ) * renderer.textMetrics().averageCharacterWidth() + selectionBounds.left;
-		hotspot.y -= viewer.clientXYForCharacter(Position(selectedRegion.beginning().line, 0), true).y;
+		const Rect<> margins(viewer.textAreaMargins());
+		Point<> hotspot(cursorPosition);
+		hotspot.x -= margins.left() - viewer.scrollPosition(SB_HORZ) * renderer.textMetrics().averageCharacterWidth() + selectionBounds.left();
+		hotspot.y -= viewer.clientXYForCharacter(k::Position(selectedRegion.beginning().line, 0), true).y;
 
 		memset(&image, 0, sizeof(SHDRAGIMAGE));
 		image.sizeDragImage.cx = bh.bV5Width;
@@ -1375,7 +1376,7 @@ namespace {
 }
 
 HRESULT DefaultMouseInputStrategy::doDragAndDrop() {
-	com::ComPtr<IDataObject> draggingContent;
+	win32::com::ComPtr<IDataObject> draggingContent;
 	const Caret& caret = viewer_->caret();
 	HRESULT hr;
 
@@ -2057,7 +2058,7 @@ bool DefaultMouseInputStrategy::showCursor(const POINT& position) {
 		cursorName = IDC_ARROW;
 	else if(htr == TextViewer::TEXT_AREA) {
 		// on a hyperlink?
-		const Position p(viewer_->characterForClientXY(position, LineLayout::TRAILING, true, locations::UTF16_CODE_UNIT));
+		const Position p(viewer_->characterForClientXY(position, LineLayout::TRAILING, true, k::locations::UTF16_CODE_UNIT));
 		if(p != Position())
 			newlyHoveredHyperlink = getPointedHyperlink(*viewer_, p);
 		if(newlyHoveredHyperlink != 0 && toBoolean(::GetAsyncKeyState(VK_CONTROL) & 0x8000))

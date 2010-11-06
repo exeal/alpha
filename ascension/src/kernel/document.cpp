@@ -5,10 +5,10 @@
  * @date 2006-2010
  */
 
-#include <ascension/document.hpp>
-#include <ascension/point.hpp>
-#include <ascension/unicode.hpp>
-#include <stack>
+#include <ascension/kernel/document.hpp>
+#include <ascension/kernel/document-character-iterator.hpp>
+#include <ascension/kernel/point.hpp>
+#include <ascension/corelib/unicode.hpp>
 #include <algorithm>
 #include <limits>	// std.numeric_limits
 
