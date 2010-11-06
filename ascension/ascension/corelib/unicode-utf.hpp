@@ -9,8 +9,9 @@
 
 #ifndef ASCENSION_UNICODE_UTF_HPP
 #define ASCENSION_UNICODE_UTF_HPP
-#include <ascension/basic-types.hpp>
+
 #include <ascension/internal.hpp>	// internal.Select
+#include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/unicode-surrogates.hpp>
 #include <iterator>
 

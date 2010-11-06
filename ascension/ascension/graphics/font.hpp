@@ -6,6 +6,8 @@
 
 #ifndef ASCENSION_FONT_HPP
 #define ASCENSION_FONT_HPP
+
+#include <ascension/config.hpp>	// ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 #include <ascension/platforms.hpp>
 
 namespace ascension {

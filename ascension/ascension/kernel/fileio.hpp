@@ -8,6 +8,8 @@
 
 #ifndef ASCENSION_FILEIO_HPP
 #define ASCENSION_FILEIO_HPP
+
+#include <ascension/config.hpp>				// ASCENSION_NO_GREP
 #include <ascension/kernel/document.hpp>
 #include <ascension/corelib/encoder.hpp>	// encoding.Encoder.*
 #ifdef ASCENSION_POSIX

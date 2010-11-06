@@ -8,7 +8,8 @@
 
 #ifndef ASCENSION_STRING_PIECE_HPP
 #define ASCENSION_STRING_PIECE_HPP
-#include <ascension/common.hpp>
+#include <ascension/corelib/basic-types.hpp>	// Range
+#include <string>
 
 namespace ascension {
 

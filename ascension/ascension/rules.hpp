@@ -7,10 +7,12 @@
 
 #ifndef ASCENSION_RULES_HPP
 #define ASCENSION_RULES_HPP
+
+#include <ascension/config.hpp>	// ASCENSION_NO_REGEX
 #include "presentation.hpp"
-#include "regex.hpp"
-#include <set>
+#include <ascension/corelib/regex.hpp>
 #include <list>
+#include <set>
 
 namespace ascension {
 

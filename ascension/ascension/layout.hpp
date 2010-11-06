@@ -6,6 +6,8 @@
 
 #ifndef ASCENSION_LAYOUT_HPP
 #define ASCENSION_LAYOUT_HPP
+
+#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include "document.hpp"
 #include "unicode-property.hpp"
 #include "presentation.hpp"

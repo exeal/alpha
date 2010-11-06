@@ -9,6 +9,7 @@
 #ifndef ASCENSION_PRESENTATION_HPP
 #define ASCENSION_PRESENTATION_HPP
 
+#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/kernel/document.hpp>
 #include <ascension/graphics/color.hpp>	// graphics.Color
 

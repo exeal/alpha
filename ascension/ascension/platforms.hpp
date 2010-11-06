@@ -10,7 +10,6 @@
 // platform
 #if defined(_WIN32) || defined(_WIN64) || defined(WIN32) || defined(WIN64)
 #	define ASCENSION_WINDOWS
-#	include "win32/windows.hpp"
 #else
 #	define ASCENSION_POSIX
 #endif
@@ -46,16 +45,5 @@
 #if defined(ASCENSION_WINDOWS)
 #	define ASCENSION_USE_INTRINSIC_WCHAR_T
 #endif
-
-namespace ascension {
-	namespace graphics {
-		typedef
-#ifdef ASCENSION_WINDOWS
-		int
-#else
-#endif
-		Scalar;
-	}
-}
 
 #endif // !ASCENSION_PLATFORMS_HPP

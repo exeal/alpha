@@ -7,12 +7,13 @@
 
 #ifndef ASCENSION_INTERNAL_HPP
 #define ASCENSION_INTERNAL_HPP
-#include <ascension/common.hpp>
+
+#include <ascension/corelib/basic-types.hpp>
+#include <algorithm>
 #include <list>
 #include <stdexcept>
-#include <algorithm>
 #ifdef ASCENSION_WINDOWS
-#include "win32/windows.hpp"	// LoadLibraryA, FreeLibrary, GetProcAddress, HMODULE
+#	include <ascension/win32/windows.hpp>	// LoadLibraryA, FreeLibrary, GetProcAddress, HMODULE
 #endif // ASCENSION_WINDOWS
 
 namespace ascension {

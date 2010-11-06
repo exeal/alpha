@@ -6,6 +6,8 @@
 
 #ifndef ASCENSION_SESSION_HPP
 #define ASCENSION_SESSION_HPP
+
+#include <ascension/config.hpp>	// ASCENSION_NO_MIGEMO
 #include "internal.hpp"
 #include <list>
 #include <vector>
