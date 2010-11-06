@@ -21,7 +21,6 @@ using namespace ascension::kernel;
 using namespace ascension::kernel::fileio;
 using namespace ascension::encoding;
 using namespace std;
-using manah::toBoolean;
 
 
 // free function ////////////////////////////////////////////////////////////
@@ -322,9 +321,9 @@ bool fileio::comparePathNames(const PathCharacter* s1, const PathCharacter* s2) 
 			FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
 		if(f2 != INVALID_HANDLE_VALUE) {
 			BY_HANDLE_FILE_INFORMATION fi1;
-			if(toBoolean(::GetFileInformationByHandle(f1, &fi1))) {
+			if(win32::boole(::GetFileInformationByHandle(f1, &fi1))) {
 				BY_HANDLE_FILE_INFORMATION fi2;
-				if(toBoolean(::GetFileInformationByHandle(f2, &fi2)))
+				if(win32::boole(::GetFileInformationByHandle(f2, &fi2)))
 					eq = fi1.dwVolumeSerialNumber == fi2.dwVolumeSerialNumber
 						&& fi1.nFileIndexHigh == fi2.nFileIndexHigh
 						&& fi1.nFileIndexLow == fi2.nFileIndexLow;
@@ -403,7 +402,7 @@ void fileio::writeRegion(const Document& document, const Region& region,
 	// check if writable
 #ifdef ASCENSION_WINDOWS
 	const DWORD originalAttributes = ::GetFileAttributesW(fileName.c_str());
-	if(originalAttributes != INVALID_FILE_ATTRIBUTES && toBoolean(originalAttributes & FILE_ATTRIBUTE_READONLY))
+	if(originalAttributes != INVALID_FILE_ATTRIBUTES && win32::boole(originalAttributes & FILE_ATTRIBUTE_READONLY))
 		throw IOException(fileName, ERROR_ACCESS_DENIED);
 #else // ASCENSION_POSIX
 	struct stat originalStat;
@@ -601,7 +600,7 @@ void TextFileStreamBuffer::buildInputMapping() {
 	assert(isOpen());
 #ifdef ASCENSION_WINDOWS
 	LARGE_INTEGER fileSize;
-	if(!toBoolean(::GetFileSizeEx(fileHandle_, &fileSize)))
+	if(!win32::boole(::GetFileSizeEx(fileHandle_, &fileSize)))
 		throw IOException(fileName());
 	if(fileSize.QuadPart != 0) {
 		fileMapping_ = ::CreateFileMappingW(fileHandle_, 0, PAGE_READONLY, 0, 0, 0);
@@ -758,7 +757,7 @@ void TextFileStreamBuffer::openForWriting(const string& encoding, bool writeUnic
 				throw IOException(fileName(), e);
 		} else {
 			originalFileEnd_.QuadPart = 0;
-			if(!toBoolean(::SetFilePointerEx(fileHandle_, originalFileEnd_, &originalFileEnd_, FILE_END)))
+			if(!win32::boole(::SetFilePointerEx(fileHandle_, originalFileEnd_, &originalFileEnd_, FILE_END)))
 				throw IOException(fileName());
 			writeUnicodeByteOrderMark = false;
 		}
@@ -1037,7 +1036,7 @@ bool TextFileDocumentInput::FileLocker::unlock() /*throw()*/ {
 	bool succeeded = true;
 	if(hasLock()) {
 #ifdef ASCENSION_WINDOWS
-		succeeded = toBoolean(::CloseHandle(file_));
+		succeeded = win32::boole(::CloseHandle(file_));
 		file_ = INVALID_HANDLE_VALUE;
 #else // ASCENSION_POSIX
 		succeeded = ::close(file_) == 0;
@@ -1472,7 +1471,7 @@ void TextFileDocumentInput::write(const WritingFormat& format, const WritingOpti
 		if(attributes != INVALID_FILE_ATTRIBUTES) {
 			::SetFileAttributesW(tempFileName.c_str(), attributes);
 			if(makeBackup) {
-			} else if(!toBoolean(::DeleteFileW(fileName().c_str()))) {
+			} else if(!win32::boole(::DeleteFileW(fileName().c_str()))) {
 				SystemErrorSaver ses;
 				if(ses.code() != ERROR_FILE_NOT_FOUND) {
 					::DeleteFileW(tempFileName.c_str());
@@ -1480,7 +1479,7 @@ void TextFileDocumentInput::write(const WritingFormat& format, const WritingOpti
 				}
 			}
 		}
-		if(!toBoolean(::MoveFileW(tempFileName.c_str(), fileName().c_str()))) {
+		if(!win32::boole(::MoveFileW(tempFileName.c_str(), fileName().c_str()))) {
 			if(attributes != INVALID_FILE_ATTRIBUTES)
 				throw ios_base::failure("lost the disk file.");
 			SystemErrorSaver ses;
@@ -1665,7 +1664,7 @@ void DirectoryIterator::update(const void* info) {
 #ifdef ASCENSION_WINDOWS
 	const WIN32_FIND_DATAW& data = *static_cast<const WIN32_FIND_DATAW*>(info);
 	current_ = data.cFileName;
-	currentIsDirectory_ = toBoolean(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
+	currentIsDirectory_ = win32::boole(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
 #else // ASCENSION_POSIX
 	if(dirent* entry = ::readdir(handle_)) {
 		current_ = entry->d_name;

@@ -7,11 +7,10 @@
 
 #ifndef ASCENSION_INTERNAL_HPP
 #define ASCENSION_INTERNAL_HPP
-#include "common.hpp"
+#include <ascension/common.hpp>
 #include <list>
 #include <stdexcept>
 #include <algorithm>
-#include <manah/object.hpp>
 #ifdef ASCENSION_WINDOWS
 #include "win32/windows.hpp"	// LoadLibraryA, FreeLibrary, GetProcAddress, HMODULE
 #endif // ASCENSION_WINDOWS

@@ -743,7 +743,7 @@ TextSearcher::Type TextSearcher::type() const /*throw()*/ {
 /// Returns @c true if the pattern uses Unicode canonical equivalents.
 bool TextSearcher::usesCanonicalEquivalents() const /*throw()*/ {
 #ifndef ASCENSION_NO_REGEX
-	if(regexPattern_.get() != 0 && manah::toBoolean(regexPattern_->flags() & regex::Pattern::CANON_EQ))
+	if(regexPattern_.get() != 0 && (regexPattern_->flags() & regex::Pattern::CANON_EQ) != 0)
 		return true;
 #endif  // !ASCENSION_NO_REGEX
 	return false;

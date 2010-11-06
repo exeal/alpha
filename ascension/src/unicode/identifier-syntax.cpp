@@ -1,10 +1,10 @@
 /**
  * @file identifier-syntax.cpp
  * @author exeal
- * @date 2007-2009
+ * @date 2007-2010
  */
 
-#include <ascension/unicode-property.hpp>
+#include <ascension/corelib/unicode-property.hpp>
 #include <vector>
 using namespace ascension;
 using namespace ascension::text;
@@ -76,8 +76,8 @@ namespace {
 } // namespace @0
 
 /**
- * Default constructor.
- * The character classification type is initialized to @c ASCENSION_DEFAULT_CHARACTER_DETECTION_TYPE.
+ * Default constructor. The character classification type is initialized to
+ * @c ASCENSION_DEFAULT_CHARACTER_DETECTION_TYPE.
  */
 IdentifierSyntax::IdentifierSyntax() /*throw()*/ : type_(ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION), caseSensitive_(true)
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
@@ -98,9 +98,9 @@ IdentifierSyntax::IdentifierSyntax(const IdentifierSyntax& rhs) /*throw()*/ : ty
 
 /**
  * Constructor.
- * @param type the classification type
- * @param ignoreCase set true to perform caseless match
- * @param equivalenceType the decomposition type for canonical/compatibility equivalents
+ * @param type The classification type
+ * @param ignoreCase Set @c true to perform caseless match
+ * @param equivalenceType The decomposition type for canonical/compatibility equivalents
  */
 IdentifierSyntax::IdentifierSyntax(CharacterClassification type, bool ignoreCase /* = false */
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
@@ -123,8 +123,8 @@ const IdentifierSyntax& IdentifierSyntax::defaultInstance() /*throw()*/ {
 }
 
 /**
- * Returns true if the specified character is ID_Continue.
- * @param cp the code point of the character
+ * Returns @c true if the specified character is ID_Continue.
+ * @param cp The code point of the character
  * @return true if @a cp is identifier continue character
  */
 bool IdentifierSyntax::isIdentifierContinueCharacter(CodePoint cp) const /*throw()*/ {
@@ -149,8 +149,8 @@ bool IdentifierSyntax::isIdentifierContinueCharacter(CodePoint cp) const /*throw
 }
 
 /**
- * Returns true if the specified character is an ID_Start.
- * @param cp the code point of the character
+ * Returns @c true if the specified character is an ID_Start.
+ * @param cp The code point of the character
  * @return true if @a cp is an identifier start character
  */
 bool IdentifierSyntax::isIdentifierStartCharacter(CodePoint cp) const /*throw()*/ {
@@ -173,9 +173,9 @@ bool IdentifierSyntax::isIdentifierStartCharacter(CodePoint cp) const /*throw()*
 }
 
 /**
- * Returns true if the specified character is a white space.
- * @param cp the code point of the character
- * @param includeTab set true to treat a horizontal tab as a white space
+ * Returns @c true if the specified character is a white space.
+ * @param cp The code point of the character
+ * @param includeTab Set @c true to treat a horizontal tab as a white space
  * @return true if @a cp is a white space
  */
 bool IdentifierSyntax::isWhiteSpace(CodePoint cp, bool includeTab) const /*throw()*/ {
@@ -196,10 +196,10 @@ bool IdentifierSyntax::isWhiteSpace(CodePoint cp, bool includeTab) const /*throw
 
 /**
  * Overrides default identifier start character set.
- * @param adding the set of characters to add to the default ID_Start characters
- * @param subtracting the set of characters to subtract from the default ID_Start characters
- * @throw std#invalid_argument an isolated surrogate is found, or same character was found at both
- * @a adding and @a subtracting
+ * @param adding The set of characters to add to the default ID_Start characters
+ * @param subtracting The set of characters to subtract from the default ID_Start characters
+ * @throw std#invalid_argument An isolated surrogate is found, or same character was found at both
+ *                             @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierStartCharacters(const String& adding, const String& subtracting) {
 	if(adding.end() != surrogates::searchIsolatedSurrogate(adding.begin(), adding.end())
@@ -213,10 +213,10 @@ void IdentifierSyntax::overrideIdentifierStartCharacters(const String& adding, c
 
 /**
  * Overrides default identifier start character set.
- * @param adding the set of characters to add to the default ID_Start characters
- * @param subtracting the set of characters to subtract from the default ID_Start characters
- * @throw std#invalid_argument an isolated surrogate is found, or same character was found at both
- * @a adding and @a subtracting
+ * @param adding The set of characters to add to the default ID_Start characters
+ * @param subtracting The set of characters to subtract from the default ID_Start characters
+ * @throw std#invalid_argument An isolated surrogate is found, or same character was found at both
+ *                             @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierStartCharacters(const set<CodePoint>& adding, const set<CodePoint>& subtracting) {
 	if(adding.end() != find_if(adding.begin(), adding.end(), ptr_fun(surrogates::isSurrogate))
@@ -228,10 +228,10 @@ void IdentifierSyntax::overrideIdentifierStartCharacters(const set<CodePoint>& a
 
 /**
  * Overrides standard identifier only continue character set.
- * @param adding the set of characters to add to standard ID_Continue characters
- * @param subtracting the set of characters to subtract to standard ID_Continue characters
- * @throw std#invalid_argument an isolated surrogate is found, or same character was found at both
- * @a adding and @a subtracting
+ * @param adding The set of characters to add to standard ID_Continue characters
+ * @param subtracting The set of characters to subtract to standard ID_Continue characters
+ * @throw std#invalid_argument An isolated surrogate is found, or same character was found at both
+ *                             @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierNonStartCharacters(const String& adding, const String& subtracting) {
 	if(adding.end() != surrogates::searchIsolatedSurrogate(adding.begin(), adding.end())
@@ -245,10 +245,10 @@ void IdentifierSyntax::overrideIdentifierNonStartCharacters(const String& adding
 
 /**
  * Overrides standard identifier only continue character set.
- * @param adding the set of characters to add to standard ID_Continue characters
- * @param subtracting the set of characters to subtract to standard ID_Continue characters
- * @throw std#invalid_argument an isolated surrogate is found, or same character was found at both
- * @a adding and @a subtracting
+ * @param adding The set of characters to add to standard ID_Continue characters
+ * @param subtracting The set of characters to subtract to standard ID_Continue characters
+ * @throw std#invalid_argument An isolated surrogate is found, or same character was found at both
+ *                             @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierNonStartCharacters(const set<CodePoint>& adding, const set<CodePoint>& subtracting) {
 	if(adding.end() != find_if(adding.begin(), adding.end(), ptr_fun(surrogates::isSurrogate))

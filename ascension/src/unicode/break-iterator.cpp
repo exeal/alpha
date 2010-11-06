@@ -1,18 +1,17 @@
 /**
  * @file break-iterator.cpp
  * @date 2006-2007 (was iterator.cpp)
- * @date 2007-2009
+ * @date 2007-2010
  * @author exeal
  */
 
-#include <ascension/unicode-property.hpp>
+#include <ascension/corelib/unicode-property.hpp>
 #include <memory>	// std.auto_ptr
 using namespace ascension;
 using namespace ascension::text;
 using namespace ascension::text::internal;
 using namespace ascension::text::ucd;
 using namespace std;
-using manah::toBoolean;
 
 #if ASCENSION_UAX29_REVISION_NUMBER > 11
 #error "These codes are based on old version of UAX #29"
@@ -173,9 +172,9 @@ namespace {
 	 * Returns true if the scripts of the two code points are same.
 	 * This method assumes that the two code points are alphabetical
 	 * and treats all ASCII characters as Latin scripts.
-	 * @param preceding the code point of the character
-	 * @param following the code point of the character
-	 * @param lc the locale to detect script of a character
+	 * @param preceding The code point of the character
+	 * @param following The code point of the character
+	 * @param lc The locale to detect script of a character
 	 * @return true if @a preceding and @a following have same script
 	 */
 	bool compareScripts(CodePoint preceding, CodePoint following, const locale& lc) {
@@ -195,9 +194,9 @@ namespace {
 
 /**
  * Protected constructor.
- * @param component the word component to search
- * @param syntax the identifier syntax
- * @param lc the locale
+ * @param component The word component to search
+ * @param syntax The identifier syntax
+ * @param lc The locale
  * @see #setComponent
  */
 AbstractWordBreakIterator::AbstractWordBreakIterator(Component component,
@@ -206,7 +205,7 @@ AbstractWordBreakIterator::AbstractWordBreakIterator(Component component,
 
 void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 	assert(amount > 0);
-#define TRY_RETURN() {if(--amount == 0) return;}
+#define ASCENSION_TRY_RETURN() {if(--amount == 0) return;}
 	// A B | C D -> iteration-direction
 	// ^ ^ ^ ^ ^
 	// | | | | next-next
@@ -234,7 +233,7 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 			/* do nothing */;
 		else if(nextClass == WordBreak::A_LETTER && prevClass == WordBreak::A_LETTER) {	// (WB5+, !WB13)
 			if(!compareScripts(prevCP, nextCP, locale()))
-				TRY_RETURN()
+				ASCENSION_TRY_RETURN()
 		} else if((nextClass == WordBreak::A_LETTER || nextClass == WordBreak::NUMERIC || nextClass == WordBreak::EXTEND_NUM_LET)
 				&& (prevClass == WordBreak::A_LETTER || prevClass == WordBreak::NUMERIC || prevClass == WordBreak::EXTEND_NUM_LET))	// (WB8, WB9, WB10, WB13a+, WB13b+)
 			/* do nothing */;
@@ -245,16 +244,16 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 			nextBase(*nextNext);
 			nextNextClass = WordBreak::of(nextNext->current(), syntax_, locale());
 			if(!nextNext->hasNext())	// (WB14)
-				TRY_RETURN()
+				ASCENSION_TRY_RETURN()
 			if(nextNextClass != prevClass	// (WB6, WB12)
-					&& (!toBoolean(component_ & ALPHA_NUMERIC)
+					&& ((component_ & ALPHA_NUMERIC) == 0
 					|| syntax_.isIdentifierContinueCharacter(prevCP) || syntax_.isIdentifierContinueCharacter(nextCP)))
-				TRY_RETURN()
+				ASCENSION_TRY_RETURN()
 		} else if((prevClass == WordBreak::MID_LETTER && nextClass == WordBreak::A_LETTER)
 				|| (prevClass == WordBreak::MID_NUM && nextClass == WordBreak::NUMERIC)) {	// (WB7, WB11)?
 			// 2 Ç¬ëO (A) Çí≤Ç◊ÇÈ
 			if(!prev->hasPrevious()) {	// (WB14)
-				TRY_RETURN()
+				ASCENSION_TRY_RETURN()
 				break;
 			}
 			if(prevPrevClass == NOT_PROPERTY) {
@@ -265,18 +264,18 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 				prevPrevClass = WordBreak::of(prevPrev->current(), syntax_, locale());
 			}
 			if(prevPrevClass != nextClass
-					&& (!toBoolean(component_ & ALPHA_NUMERIC)
+					&& ((component_ & ALPHA_NUMERIC) == 0
 					|| syntax_.isIdentifierContinueCharacter(prevCP) || syntax_.isIdentifierContinueCharacter(nextCP)))	// (WB7, WB11)
-				TRY_RETURN()
-		} else if((!toBoolean(component_ & END_OF_SEGMENT) && BinaryProperty::is<BinaryProperty::WHITE_SPACE>(nextCP))
-				|| (!toBoolean(component_ & START_OF_SEGMENT) && BinaryProperty::is<BinaryProperty::WHITE_SPACE>(prevCP)))	// (+)
+				ASCENSION_TRY_RETURN()
+		} else if(((component_ & END_OF_SEGMENT) == 0 && BinaryProperty::is<BinaryProperty::WHITE_SPACE>(nextCP))
+				|| ((component_ & START_OF_SEGMENT) == 0 && BinaryProperty::is<BinaryProperty::WHITE_SPACE>(prevCP)))	// (+)
 			/* do nothing */;
-		else if(toBoolean(component_ & ALPHA_NUMERIC)	// (0)
-				&& (!toBoolean(component_ & START_OF_SEGMENT) || !syntax_.isIdentifierContinueCharacter(nextCP))
-				&& (!toBoolean(component_ & END_OF_SEGMENT) || !syntax_.isIdentifierContinueCharacter(prevCP)))	// (+)
+		else if((component_ & ALPHA_NUMERIC) != 0	// (0)
+				&& ((component_ & START_OF_SEGMENT) == 0 || !syntax_.isIdentifierContinueCharacter(nextCP))
+				&& ((component_ & END_OF_SEGMENT) == 0 || !syntax_.isIdentifierContinueCharacter(prevCP)))	// (+)
 			/* do nothing */;
 		else
-			TRY_RETURN()
+			ASCENSION_TRY_RETURN()
 
 		// éüÇ…êiÇﬁ
 		prevPrev = prev;
@@ -295,12 +294,12 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 		} else
 			nextClass = WordBreak::of(nextCP, syntax_, locale());
 	}
-#undef TRY_RETURN
+#undef ASCENSION_TRY_RETURN
 }
 
 void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 	assert(amount > 0);
-#define TRY_RETURN() {if(--amount == 0) return;}
+#define ASCENSION_TRY_RETURN() {if(--amount == 0) return;}
 	// iteration-direction <- A B | C D
 	//                        ^ ^ ^ ^ ^
 	//                next-next | | | |
@@ -331,7 +330,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 			/* do nothing */;
 		else if(prevClass == WordBreak::A_LETTER && nextClass == WordBreak::A_LETTER) {	// (WB5+, !WB13)
 			if(!compareScripts(nextCP, prevCP, locale()))
-				TRY_RETURN()
+				ASCENSION_TRY_RETURN()
 		} else if((prevClass == WordBreak::A_LETTER || prevClass == WordBreak::NUMERIC || prevClass == WordBreak::EXTEND_NUM_LET)
 				&& (nextClass == WordBreak::A_LETTER || nextClass == WordBreak::NUMERIC || nextClass == WordBreak::EXTEND_NUM_LET))	// (WB8, WB9, WB10, WB13a+, WB13b+)
 			/* do nothing */;
@@ -344,44 +343,44 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 					nextBase(*prevPrev);
 				}
 				if(!prevPrev->hasNext()) {	// (WB14)
-					TRY_RETURN()
+					ASCENSION_TRY_RETURN()
 					break;
 				}
 				prevPrevClass = WordBreak::of(prevPrev->current(), syntax_, locale());
 			}
 			if(prevPrevClass != nextClass
-					&& (!toBoolean(component_ & ALPHA_NUMERIC)
+					&& ((component_ & ALPHA_NUMERIC) == 0
 					|| syntax_.isIdentifierContinueCharacter(prevCP) || syntax_.isIdentifierContinueCharacter(nextCP)))	// (WB6, WB12)
-				TRY_RETURN()
+				ASCENSION_TRY_RETURN()
 		} else if((nextClass == WordBreak::MID_LETTER && prevClass == WordBreak::A_LETTER)
 				|| (nextClass == WordBreak::MID_NUM && prevClass == WordBreak::NUMERIC)) {	// (WB7, WB11)?
 			// 2 Ç¬éü (A) Çí≤Ç◊ÇÈ
 			if(!next->hasPrevious()) {	// (WB14)
-				TRY_RETURN()
+				ASCENSION_TRY_RETURN()
 				break;
 			}
 			nextNext.reset(next->clone().release());
 			previousBase(*nextNext);
 			nextNextClass = WordBreak::of(nextNextCP = nextNext->current(), syntax_, locale());
 			if(nextNextClass != prevClass
-					&& (!toBoolean(component_ & ALPHA_NUMERIC)
+					&& ((component_ & ALPHA_NUMERIC) == 0
 					|| syntax_.isIdentifierContinueCharacter(prevCP) || syntax_.isIdentifierContinueCharacter(nextCP)))	// (WB7, WB11)
-				TRY_RETURN()
-		} else if((!toBoolean(component_ & END_OF_SEGMENT) && BinaryProperty::is<BinaryProperty::WHITE_SPACE>(prevCP))
-				|| (!toBoolean(component_ & START_OF_SEGMENT) && BinaryProperty::is<BinaryProperty::WHITE_SPACE>(nextCP)))	// (+)
+				ASCENSION_TRY_RETURN()
+		} else if(((component_ & END_OF_SEGMENT) == 0 && BinaryProperty::is<BinaryProperty::WHITE_SPACE>(prevCP))
+				|| ((component_ & START_OF_SEGMENT) == 0 && BinaryProperty::is<BinaryProperty::WHITE_SPACE>(nextCP)))	// (+)
 			/* do nothing */;
-		else if(toBoolean(component_ & ALPHA_NUMERIC)	// (0)
-				&& (!toBoolean(component_ & START_OF_SEGMENT) || !syntax_.isIdentifierContinueCharacter(prevCP))
-				&& (!toBoolean(component_ & END_OF_SEGMENT) || !syntax_.isIdentifierContinueCharacter(nextCP)))	// (+)
+		else if((component_ & ALPHA_NUMERIC) != 0	// (0)
+				&& ((component_ & START_OF_SEGMENT) == 0 || !syntax_.isIdentifierContinueCharacter(prevCP))
+				&& ((component_ & END_OF_SEGMENT) == 0 || !syntax_.isIdentifierContinueCharacter(nextCP)))	// (+)
 			/* do nothing */;
 		else
-			TRY_RETURN()
+			ASCENSION_TRY_RETURN()
 
 		// éüÇ…êiÇﬁ
 		prevPrev.reset(i.clone().release());
 		previousBase(i);
 		if(!i.hasPrevious())	// (WB1)
-			TRY_RETURN()
+			ASCENSION_TRY_RETURN()
 		next = nextNext;
 		nextNext.reset(0);
 		prevCP = i.current();
@@ -456,7 +455,7 @@ void AbstractWordBreakIterator::next(ptrdiff_t amount) {
 
 /**
  * Sets the word component to search.
- * @param component the new component to set
+ * @param component The new component to set
  * @throw UnknownValueException @a component is invalid
  */
 void AbstractWordBreakIterator::setComponent(Component component) {
@@ -548,9 +547,9 @@ namespace {
 
 /**
  * Protected constructor.
- * @param component the sentence component to search
- * @param syntax the character detector
- * @param lc the locale
+ * @param component The sentence component to search
+ * @param syntax The character detector
+ * @param lc The locale
  */
 AbstractSentenceBreakIterator::AbstractSentenceBreakIterator(Component component,
 		const IdentifierSyntax& syntax, const std::locale& lc) /*throw()*/ : BreakIterator(lc), component_(component), syntax_(syntax) {
@@ -636,7 +635,7 @@ void AbstractSentenceBreakIterator::next(ptrdiff_t amount) {
 
 /**
  * Sets the word component to search.
- * @param component the new component to set
+ * @param component The new component to set
  * @throw UnknownValueException @a component is invalid
  */
 void AbstractSentenceBreakIterator::setComponent(Component component) {
@@ -650,7 +649,7 @@ void AbstractSentenceBreakIterator::setComponent(Component component) {
 
 /**
  * Protected constructor.
- * @param lc the locale
+ * @param lc The locale
  */
 AbstractLineBreakIterator::AbstractLineBreakIterator(const std::locale& lc) /*throw()*/ : BreakIterator(lc) {
 }

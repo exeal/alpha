@@ -17,11 +17,9 @@ using namespace ascension::text;
 using namespace ascension::text::ucd;
 using namespace std;
 using regex::internal::RegexTraits;
-using manah::toBoolean;
-
 
 #ifndef ASCENSION_NO_MIGEMO
-#include "third-party/migemo.h"
+#include "../third-party/migemo.h"
 
 ASCENSION_DEFINE_SHARED_LIB_ENTRIES(CMigemo, 7);
 ASCENSION_SHARED_LIB_ENTRY(CMigemo, 0, "migemo_open", migemo*(*signature)(char*));
@@ -160,7 +158,7 @@ namespace {
 			if(instance_ == 0)
 				return false;
 			else if(CMigemo::Procedure<5>::signature migemoIsEnable = get<5>())
-				return toBoolean(migemoIsEnable(instance_));
+				return migemoIsEnable(instance_) != 0;
 			return false;
 		}
 	private:
@@ -347,8 +345,8 @@ Pattern::Pattern(const String& regex, int flags /* = 0 */) : flags_(flags) {
 		impl_.assign(UTF16To32Iterator<String::const_iterator>(regex.begin(), regex.end()),
 			UTF16To32Iterator<String::const_iterator>(regex.begin(), regex.end(), regex.end()),
 			boost::regex_constants::perl | boost::regex_constants::collate
-			| (toBoolean(flags & CASE_INSENSITIVE) ? boost::regex_constants::icase : 0)
-			| (toBoolean(flags & LITERAL) ? boost::regex_constants::literal : 0));
+			| (((flags & CASE_INSENSITIVE) != 0) ? boost::regex_constants::icase : 0)
+			| (((flags & LITERAL) != 0) ? boost::regex_constants::literal : 0));
 	} catch(const boost::regex_error& e) {
 		throw PatternSyntaxException(e, regex);
 	}
