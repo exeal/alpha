@@ -20,7 +20,7 @@ namespace ascension {
 	namespace graphics {
 
 		// free functions
-		bool getDecorationLineMetrics(const manah::win32::Handle<HDC>& dc, int* baselineOffset,
+		bool getDecorationLineMetrics(const win32::Handle<HDC>& dc, int* baselineOffset,
 			int* underlineOffset, int* underlineThickness, int* strikethroughOffset, int* strikethroughThickness) /*throw()*/;
 		bool supportsComplexScripts() /*throw()*/;
 		bool supportsOpenTypeFeatures() /*throw()*/;
@@ -129,7 +129,7 @@ namespace ascension {
 			};
 			/// Context of the drawing.
 			struct DrawingContext : public LayoutContext {
-				Rect<int> rect;	///< the bounding box to draw.
+				Rect<> rect;	///< the bounding box to draw.
 				/// Constructor.
 				DrawingContext(Context& deviceContext) /*throw()*/ : LayoutContext(renderingContext) {}
 			};
@@ -222,7 +222,7 @@ namespace ascension {
 			TextRenderer* renderer_;
 			COLORREF controlColor_, eolColor_, wrapMarkColor_, whiteSpaceColor_;
 			bool showsEOLs_, showsWhiteSpaces_;
-			manah::win32::Handle<HFONT> font_;	// provides substitution glyphs
+			std::tr1::shared_ptr<const Font> font_;	// provides substitution glyphs
 			enum {LTR_HORIZONTAL_TAB, RTL_HORIZONTAL_TAB, LINE_TERMINATOR, LTR_WRAPPING_MARK, RTL_WRAPPING_MARK, WHITE_SPACE};
 			WORD glyphs_[6];
 			int glyphWidths_[6];
@@ -273,16 +273,17 @@ namespace ascension {
 				ASCENSION_UNASSIGNABLE_TAG(Selection);
 			public:
 				/// Constructor.
-				explicit Selection(const viewers::Caret& caret) /*throw()*/;
-				/// Constructor.
-				Selection(const viewers::Caret& caret, const presentation::Colors& color);
+				Selection(const viewers::Caret& caret,
+					const graphics::Color& foreground, const graphics::Color& background);
 				/// Returns the caret object.
 				const viewers::Caret& caret() const /*throw()*/ {return caret_;}
-				/// Returns the color to render.
-				const presentation::Colors& color() const /*throw()*/ {return color_;}
+				/// Returns the background color to render.
+				const graphics::Color& background() const /*throw()*/ {return background_;}
+				/// Returns the foreground color to render.
+				const graphics::Color& foreground() const /*throw()*/ {return foreground_;}
 			private:
 				const viewers::Caret& caret_;
-				const presentation::Colors color_;
+				const graphics::Color foreground_, background_;
 			};
 #if 0
 			/// Bidirectional iterator enumerates style runs in a line.
@@ -322,15 +323,15 @@ namespace ascension {
 			length_t sublineOffset(length_t subline) const;
 			const length_t* sublineOffsets() const /*throw()*/;
 			// coordinates
-			manah::win32::Handle<HRGN> blackBoxBounds(length_t first, length_t last) const;
-			Dimension<int> bounds() const /*throw()*/;
-			Rect<int> bounds(length_t first, length_t last) const;
-			Point<int> location(length_t column, Edge edge = LEADING) const;
-			std::pair<Point<int>, Point<int> > locations(length_t column) const;
+			win32::Handle<HRGN> blackBoxBounds(length_t first, length_t last) const;
+			Dimension<> bounds() const /*throw()*/;
+			Rect<> bounds(length_t first, length_t last) const;
+			Point<> location(length_t column, Edge edge = LEADING) const;
+			std::pair<Point<>, Point<> > locations(length_t column) const;
 			int longestSublineWidth() const /*throw()*/;
 			std::pair<length_t, length_t> offset(int x, int y, bool* outside = 0) const /*throw()*/;
 			std::pair<length_t, length_t> offset(const Point<int>& pt, bool* outside = 0) const /*throw()*/;
-			Rect<int> sublineBounds(length_t subline) const;
+			Rect<> sublineBounds(length_t subline) const;
 			int sublineIndent(length_t subline) const;
 			int sublineWidth(length_t subline) const;
 			// styled segments
@@ -339,9 +340,9 @@ namespace ascension {
 			presentation::StyledRun styledTextRun(length_t column) const;
 			// operations
 			void draw(Context& context, int x, int y,
-				const Rect<int>& paintRect, const Rect<int>& clipRect, const Selection* selection) const /*throw()*/;
+				const Rect<>& paintRect, const Rect<>& clipRect, const Selection* selection) const /*throw()*/;
 			void draw(length_t subline, Context& context, int x, int y,
-				const Rect<int>& paintRect, const Rect<int>& clipRect, const Selection* selection) const;
+				const Rect<>& paintRect, const Rect<>& clipRect, const Selection* selection) const;
 			String fillToX(int x) const;
 #ifdef _DEBUG
 			void dumpRuns(std::ostream& out) const;
@@ -353,7 +354,7 @@ namespace ascension {
 			std::size_t findRunForPosition(length_t column) const /*throw()*/;
 			void justify() /*throw()*/;
 			int linePitch() const /*throw()*/;
-			void locations(length_t column, Point<int>* leading, Point<int>* trailing) const;
+			void locations(length_t column, Point<>* leading, Point<>* trailing) const;
 			int nextTabStop(int x, Direction direction) const /*throw()*/;
 			const String& text() const /*throw()*/;
 			void reorder() /*throw()*/;
@@ -505,7 +506,7 @@ namespace ascension {
 			void setSpecialCharacterRenderer(ISpecialCharacterRenderer* newRenderer, bool delegateOwnership);
 			// operation
 			void renderLine(length_t line, Context& context, int x, int y,
-				const Rect<int>& paintRect, const Rect<int>& clipRect,
+				const Rect<>& paintRect, const Rect<>& clipRect,
 				const LineLayout::Selection* selection) const /*throw()*/;
 			// ILayoutInformationProvider
 			const FontCollection& fontCollection() const /*throw()*/;
@@ -518,8 +519,8 @@ namespace ascension {
 			presentation::Presentation& presentation_;
 			const FontCollection& fontCollection_;
 			const bool enablesDoubleBuffering_;
-			mutable manah::win32::Handle<HDC> memoryDC_;
-			mutable manah::win32::Handle<HBITMAP> memoryBitmap_;
+			mutable win32::Handle<HDC> memoryDC_;
+			mutable win32::Handle<HBITMAP> memoryBitmap_;
 			std::tr1::shared_ptr<const Font> primaryFont_;
 			ascension::internal::StrategyPointer<ISpecialCharacterRenderer> specialCharacterRenderer_;
 			ascension::internal::Listeners<IDefaultFontListener> listeners_;
@@ -542,8 +543,8 @@ inline length_t LineLayout::lineNumber() const /*throw()*/ {return lineNumber_;}
  *         is relative in the visual lines
  * @throw kernel#BadPositionException @a column is greater than the length of the line
  */
-inline Point<int> LineLayout::location(length_t column, Edge edge /* = LEADING */) const {
-	Point<int> result;
+inline Point<> LineLayout::location(length_t column, Edge edge /* = LEADING */) const {
+	Point<> result;
 	locations(column, (edge == LEADING) ? &result : 0, (edge == TRAILING) ? &result : 0);
 	return result;
 }
@@ -556,8 +557,8 @@ inline Point<int> LineLayout::location(length_t column, Edge edge /* = LEADING *
  *         the left edge of the renderer, y-coordinates are relative in the visual lines
  * @throw kernel#BadPositionException @a column is greater than the length of the line
  */
-inline std::pair<Point<int>, Point<int> > LineLayout::locations(length_t column) const {
-	std::pair<Point<int>, Point<int> > result;
+inline std::pair<Point<>, Point<> > LineLayout::locations(length_t column) const {
+	std::pair<Point<>, Point<> > result;
 	locations(column, &result.first, &result.second);
 	return result;
 }
@@ -573,7 +574,7 @@ inline length_t LineLayout::numberOfSublines() const /*throw()*/ {return numberO
  * @see #location
  */
 inline std::pair<length_t, length_t> LineLayout::offset(
-	const Point<int>& pt, bool* outside /* = 0 */) const /*throw()*/ {return offset(pt.x, pt.y);}
+	const Point<>& pt, bool* outside /* = 0 */) const /*throw()*/ {return offset(pt.x, pt.y);}
 
 /// Returns the text line style.
 inline const presentation::LineStyle& LineLayout::style() const /*throw()*/ {return *style_;}

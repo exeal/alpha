@@ -31,6 +31,21 @@ namespace ascension {
 		template<bool condition, typename T, typename U> struct Select {typedef T Result;};
 		template<typename T, typename U> struct Select<false, T, U> {typedef U Result;};
 
+		/// Returns @c true if the given two types @a T and @a U are same.
+		template<typename T, typename U> struct IsSame {static const bool result = false;};
+		template<typename T> struct IsSame<T, T> {static const bool result = true;};
+
+		/// Returns @c true if the type @a D is derived from the type @a B.
+		template<typename B, typename D> class IsBaseAndDerived {
+			typedef char Y;
+			class N {char padding_[8];};
+			static Y test(const volatile B*);
+			static N test(...);
+			static const volatile D* makeD();
+		public:
+			static const bool result = !IsSame<B, D>::result && sizeof(test(makeD())) == sizeof(Y);
+		};
+
 		/// Generates signed numeral types.
 		template<typename T> struct ToSigned;
 		template<> struct ToSigned<unsigned char> {typedef char Result;};
