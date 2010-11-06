@@ -1,13 +1,15 @@
 /**
  * @file regex.cpp
  * @author exeal
- * @date 2006-2009
+ * @date 2006-2010
  */
 
 #ifndef ASCENSION_NO_REGEX
-#include <ascension/regex.hpp>
+#include <ascension/corelib/regex.hpp>
 #include <ascension/internal.hpp>	// internal.SharedLibrary
-#include <ascension/encoder.hpp>
+#ifndef ASCENSION_NO_MIGEMO
+#	include <ascension/corelib/encoder.hpp>
+#endif // !ASCENSION_NO_MIGEMO
 
 using namespace ascension;
 using namespace ascension::regex;

@@ -2,11 +2,11 @@
  * @file searcher.cpp
  * @author exeal
  * @date 2004-2006 (was TextSearcher.cpp)
- * @date 2006-2009
+ * @date 2006-2010
  */
 
-#include <ascension/searcher.hpp>
-#include <ascension/point.hpp>
+#include <ascension/kernel/searcher.hpp>
+#include <ascension/kernel/point.hpp>
 using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::searcher;
@@ -29,8 +29,9 @@ using namespace std;
  *
  * <h3>Regular expression search (Boost.Regex)</h3>
  *
- * Perl-like regular expression match, search, and replacement are available unless the configuration
- * symbol @c ASCENSION_NO_REGEX. For the details, see the description of @c regex#Pattern class.
+ * Perl-like regular expression match, search, and replacement are available unless the
+ * configuration symbol @c ASCENSION_NO_REGEX. For the details, see the description of
+ * @c regex#Pattern class.
  *
  * <h3>Japanese direct search (C/Migemo)</h3>
  *
@@ -48,10 +49,10 @@ using namespace std;
 
 /**
  * Constructor compiles the pattern.
- * @param pattern the search pattern
- * @param direction the direction to search
- * @param caseSensitive set @c true to perform case-sensitive search
- * @param collator the collator or @c null if not needed
+ * @param pattern The search pattern
+ * @param direction The direction to search
+ * @param caseSensitive Set @c true to perform case-sensitive search
+ * @param collator The collator or @c null if not needed
  * @throw std#invalid_argument @a pattern is empty
  */
 LiteralPattern::LiteralPattern(const String& pattern, bool caseSensitive /* = true */,
@@ -79,12 +80,12 @@ LiteralPattern::~LiteralPattern() /*throw()*/ {
 inline void LiteralPattern::makeShiftTable(Direction direction) /*throw()*/ {
 	if(direction == Direction::FORWARD) {
 		if(lastOccurences_[0] == numeric_limits<ptrdiff_t>::min()) {
-			fill(lastOccurences_, MANAH_ENDOF(lastOccurences_), last_ - first_);
+			fill(lastOccurences_, ASCENSION_ENDOF(lastOccurences_), last_ - first_);
 			for(const int* e = first_; e < last_; ++e)
 				lastOccurences_[*e] = last_ - e - 1;
 		}
 	} else if(firstOccurences_[0] == numeric_limits<ptrdiff_t>::min()) {
-		fill(firstOccurences_, MANAH_ENDOF(firstOccurences_), last_ - first_);
+		fill(firstOccurences_, ASCENSION_ENDOF(firstOccurences_), last_ - first_);
 		for(const int* e = last_ - 1; ; --e) {
 			firstOccurences_[*e] = e - first_;
 			if(e == first_)
@@ -95,7 +96,7 @@ inline void LiteralPattern::makeShiftTable(Direction direction) /*throw()*/ {
 
 /**
  * Returns @c true if the pattern matches the specified character sequence.
- * @param target the character sequence to match
+ * @param target The character sequence to match
  * @return true if matched
  */
 bool LiteralPattern::matches(const CharacterIterator& target) const {
@@ -118,9 +119,9 @@ namespace {
 
 /**
  * Searches in the specified character sequence.
- * @param target the target character sequence
- * @param direction the direction to search. if this is @c Direction#FORWARD, the method finds the
- *                  first occurence of the pattern in @a target. otherwise finds the last one
+ * @param target The target character sequence
+ * @param direction The direction to search. If this is @c Direction#FORWARD, the method finds the
+ *                  first occurence of the pattern in @a target. Otherwise finds the last one
  * @param[out] matchedFirst 
  * @param[out] matchedLast 
  * @return true if the pattern was found
@@ -170,6 +171,15 @@ bool LiteralPattern::search(const CharacterIterator& target, Direction direction
 
 
 // TextSearcher /////////////////////////////////////////////////////////////
+
+namespace {
+	inline DocumentCharacterIterator beginningOfDocument(const Document& document) /*throw()*/ {
+		return DocumentCharacterIterator(document, document.region().first);
+	}
+	inline DocumentCharacterIterator endOfDocument(const Document& document) /*throw()*/ {
+		return DocumentCharacterIterator(document, document.region().second);
+	}
+}
 
 /**
  * @class ascension::searcher::TextSearcher
@@ -233,12 +243,12 @@ bool TextSearcher::isMigemoAvailable() const /*throw()*/ {
 #if 0
 /**
  * Returns @c true if the pattern matches the specified text.
- * @param document the document
- * @param target the target to match
+ * @param document The document
+ * @param target The target to match
  * @return true if matched
- * @throw IllegalStateException the pattern is not specified
- * @throw regex#PatternSyntaxException the speicifed regular expression was invalid
- * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occurred
+ * @throw IllegalStateException The pattern is not specified
+ * @throw regex#PatternSyntaxException The speicifed regular expression was invalid
+ * @throw ... Any exceptions specified by Boost.Regex will be thrown if the regular expression error occurred
  */
 bool TextSearcher::match(const Document& document, const Region& target) const {
 	bool matched = false;
@@ -255,7 +265,7 @@ bool TextSearcher::match(const Document& document, const Region& target) const {
 #endif // !ASCENSION_NO_MIGEMO
 			if(regexMatcher_.get() == 0) {
 				TextSearcher& self = const_cast<TextSearcher&>(*this);
-				self.regexMatcher_ = regexPattern_->matcher(document.begin(), document.end());
+				self.regexMatcher_ = regexPattern_->matcher(beginningOfDocument(document), endOfDocument(document));
 				self.regexMatcher_->useAnchoringBounds(false).useTransparentBounds(true);
 			}
 			const DocumentCharacterIterator oldRegionStart(regexMatcher_->regionStart());
@@ -279,8 +289,8 @@ bool TextSearcher::match(const Document& document, const Region& target) const {
 
 /**
  * Pushes the new string to the stored list.
- * @param s the string to push
- * @param forReplacements set @c true to push to the replacements list
+ * @param s The string to push
+ * @param forReplacements Set @c true to push to the replacements list
  */
 void TextSearcher::pushHistory(const String& s, bool forReplacements) {
 	list<String>& history = forReplacements ? storedReplacements_ : storedPatterns_;
@@ -298,12 +308,12 @@ void TextSearcher::pushHistory(const String& s, bool forReplacements) {
  * <p>If the current search pattern does not match @a target, this method will fail and return @c false.<p>
  * <p>If the stored replacements list is empty, an empty is used as the replacement string.</p>
  * <p>This method does not begin and terminate an edit collection.</p>
- * @param document the document
- * @param target the region to replace
- * @param[out] endOfReplacement the end of the region covers the replacement. can be @c null
+ * @param document The document
+ * @param target The region to replace
+ * @param[out] endOfReplacement The end of the region covers the replacement. can be @c null
  * @return true if replaced
  * @throw kernel#ReadOnlyDocumentException @a document is read only
- * @throw IllegalStateException the pattern is not specified
+ * @throw IllegalStateException The pattern is not specified
  */
 bool TextSearcher::replace(Document& document, const Region& target, Position* endOfReplacement) const {
 	if(document.isReadOnly())
@@ -335,7 +345,7 @@ bool TextSearcher::replace(Document& document, const Region& target, Position* e
 			replacement.assign(regexMatcher_->replaceInplace(replacement));
 			const Point regionEnd(document, regexMatcher_->regionEnd().tell());
 			eor = !replacement.empty() ? document.insert(target.beginning(), replacement) : target.beginning();
-			regexMatcher_->endInplaceReplacement(document.begin(), document.end(),
+			regexMatcher_->endInplaceReplacement(beginningOfDocument(document), endOfDocument(document),
 				regexMatcher_->regionStart(), DocumentCharacterIterator(document, regionEnd),
 				DocumentCharacterIterator(document, eor));
 			break;
@@ -388,19 +398,19 @@ inline bool checkBoundary(const DocumentCharacterIterator& first, const Document
  * If the stored replacements list is empty, an empty is used as the replacement string.
  *
  * This method does not begin and terminate an <em>compound change</em>.
- * @param document the document
- * @param scope the region to search and replace
- * @param replacement the replacement string
- * @param callback the callback object for interactive replacement. if @c null, this method
+ * @param document The document
+ * @param scope The region to search and replace
+ * @param replacement The replacement string
+ * @param callback The callback object for interactive replacement. If @c null, this method
  *                 replaces all the occurences silently
- * @return the number of replaced occurences
- * @throw IllegalStateException the pattern is not specified
+ * @return The number of replaced occurences
+ * @throw IllegalStateException The pattern is not specified
  * @throw ReadOnlyDocumentException @a document is read-only
  * @throw BadRegionException @a scope intersects outside of the document
- * @throw ReplacementInterruptedException&lt;IDocumentInput#ChangeRejectedException&gt; the input
- *        of the document rejected this change. if thrown, the replacement will be interrupted
- * @throw ReplacementInterruptedException&lt;std#bad_alloc&gt; the internal memory allocation
- *        failed. if thrown, the replacement will be interrupted
+ * @throw ReplacementInterruptedException&lt;IDocumentInput#ChangeRejectedException&gt; The input
+ *        of the document rejected this change. If thrown, the replacement will be interrupted
+ * @throw ReplacementInterruptedException&lt;std#bad_alloc&gt; The internal memory allocation
+ *        failed. If thrown, the replacement will be interrupted
  */
 size_t TextSearcher::replaceAll(Document& document, const Region& scope, const String& replacement, IInteractiveReplacementCallback* callback) {
 	if(document.isReadOnly())
@@ -495,7 +505,8 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 		Position lastEOS(endOfScope);
 		DocumentCharacterIterator e(document, endOfScope);
 		DocumentCharacterIterator b(e);
-		auto_ptr<regex::Matcher<DocumentCharacterIterator> > matcher(regexPattern_->matcher(document.begin(), document.end()));
+		auto_ptr<regex::Matcher<DocumentCharacterIterator> > matcher(
+			regexPattern_->matcher(beginningOfDocument(document), endOfDocument(document)));
 		matcher->region(
 			DocumentCharacterIterator(document, scope.beginning()),
 			DocumentCharacterIterator(document, scope.end()))
@@ -549,7 +560,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 					if(!matchedRegion.isEmpty())
 						next = matchedRegion.beginning();
 					if(!replacement.empty()) {
-						matcher->endInplaceReplacement(document.begin(), document.end(),
+						matcher->endInplaceReplacement(beginningOfDocument(document), endOfDocument(document),
 							DocumentCharacterIterator(document, scope.beginning()), DocumentCharacterIterator(document, endOfScope),
 							DocumentCharacterIterator(document, next));
 						documentRevision = document.revisionNumber();
@@ -581,16 +592,16 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 
 /**
  * Searches the pattern in the document.
- * @param document the document
- * @param from the position where the search begins
- * @param scope the region to search
- * @param direction the direction to search
- * @param[out] matchedRegion the matched region. the value is not changed unless the process
+ * @param document The document
+ * @param from The position where the search begins
+ * @param scope The region to search
+ * @param direction The direction to search
+ * @param[out] matchedRegion The matched region. The value is not changed unless the process
  *                           successes
  * @return true if the pattern is found
- * @throw IllegalStateException the pattern is not specified
+ * @throw IllegalStateException The pattern is not specified
  * @throw kernel#BadPositionException @a from is outside of @a scope
- * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression
+ * @throw ... Any exceptions specified by Boost.Regex will be thrown if the regular expression
  *            error occurred
  */
 bool TextSearcher::search(const Document& document,
@@ -624,9 +635,9 @@ bool TextSearcher::search(const Document& document,
 	) {
 		if(regexMatcher_.get() == 0)
 			(const_cast<TextSearcher*>(this)->regexMatcher_ = regexPattern_->matcher(
-				document.begin(), document.end()))->useAnchoringBounds(false).useTransparentBounds(true);
+				beginningOfDocument(document), endOfDocument(document)))->useAnchoringBounds(false).useTransparentBounds(true);
 		else if(!lastResult_.checkDocumentRevision(document) || direction != lastResult_.direction) {
-			const_cast<TextSearcher*>(this)->regexMatcher_->reset(document.begin(), document.end());
+			const_cast<TextSearcher*>(this)->regexMatcher_->reset(beginningOfDocument(document), endOfDocument(document));
 			lastResult_.reset();
 		}
 
@@ -690,10 +701,10 @@ void TextSearcher::setMaximumNumberOfStoredStrings(size_t number) /*throw()*/ {
 /**
  * @fn ascension::searcher::TextSearcher::setPattern
  * @brief Sets the new pattern.
- * @tparam PatternType the pattern type. can be @c LiteralPattern, @c regex#Pattern or
+ * @tparam PatternType The pattern type. Can be @c LiteralPattern, @c regex#Pattern or
  *                     @c regex#MigemoPattern
- * @param pattern the pattern string
- * @param dontRemember set @c true to not add the pattern into the stored list. in this case, the
+ * @param pattern The pattern string
+ * @param dontRemember Set @c true to not add the pattern into the stored list. In this case, the
  *                     following @c #pattern call will not return the pattern set by this
  * @return this object
  */
@@ -701,7 +712,7 @@ void TextSearcher::setMaximumNumberOfStoredStrings(size_t number) /*throw()*/ {
 /**
  * Sets the "whole match" condition.
  * @param newValue the new whole match value to set
- * @return this object
+ * @return This object
  * @throw UnknownValueException @a newValue is invalid
  * @see #wholeMatch
  */
@@ -764,9 +775,9 @@ void IncrementalSearcher::abort() {
 
 /**
  * Appends the specified character to the end of the current search pattern.
- * @param c the character to append
+ * @param c The character to append
  * @return true if the pattern is found
- * @throw IllegalStateException the searcher is not running
+ * @throw IllegalStateException The searcher is not running
  */
 bool IncrementalSearcher::addCharacter(Char c) {
 	checkRunning();
@@ -778,9 +789,9 @@ bool IncrementalSearcher::addCharacter(Char c) {
 
 /**
  * Appends the specified character to the end of the current search pattern.
- * @param c the character to append
+ * @param c The character to append
  * @return true if the pattern is found
- * @throw IllegalStateException the searcher is not running
+ * @throw IllegalStateException The searcher is not running
  */
 bool IncrementalSearcher::addCharacter(CodePoint c) {
 	checkRunning();
@@ -793,13 +804,14 @@ bool IncrementalSearcher::addCharacter(CodePoint c) {
 
 /**
  * Appends the specified string to the end of the search pattern.
- * @param text the string to append
+ * @param text The string to append
  * @return true if the pattern is found
- * @throw IllegalStateException the searcher is not running
- * @throw NotRunningException the searcher is not running
+ * @throw IllegalStateException The searcher is not running
+ * @throw NotRunningException The searcher is not running
  * @throw NullPointerException @a text is @c null
  * @throw std#invalid_argument @a text is empty
- * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occured
+ * @throw ... Any exceptions specified by Boost.Regex will be thrown if the regular expression
+ *            error occured
  */
 bool IncrementalSearcher::addString(const StringPiece& text) {
 	if(text.beginning() == 0 || text.end() == 0)
@@ -857,9 +869,9 @@ void IncrementalSearcher::end() {
 
 /**
  * Search the next match. If the pattern is empty, this method uses the last used pattern.
- * @param direction the new direction of the search
+ * @param direction The new direction of the search
  * @return true if matched after jump
- * @throw IllegalStateException the searcher is not running
+ * @throw IllegalStateException The searcher is not running
  */
 bool IncrementalSearcher::next(Direction direction) {
 	checkRunning();
@@ -890,7 +902,7 @@ bool IncrementalSearcher::next(Direction direction) {
 
 /**
  * Reverts to the initial state.
- * @throw IllegalStateException the searcher is not running
+ * @throw IllegalStateException The searcher is not running
  */
 void IncrementalSearcher::reset() {
 	checkRunning();
@@ -929,12 +941,12 @@ inline void IncrementalSearcher::setPatternToSearcher(bool pushToHistory) {
 
 /**
  * Starts the search.
- * @param document the document to search
- * @param from the position at which the search starts
- * @param searcher the text search object
- * @param type the search type
- * @param direction the initial search direction
- * @param callback the callback object. can be @c null
+ * @param document The document to search
+ * @param from The position at which the search starts
+ * @param searcher The text search object
+ * @param type The search type
+ * @param direction The initial search direction
+ * @param callback The callback object. can be @c null
  */
 void IncrementalSearcher::start(Document& document, const Position& from, TextSearcher& searcher,
 		TextSearcher::Type type, Direction direction, IIncrementalSearchCallback* callback /* = 0 */) {
@@ -958,7 +970,7 @@ void IncrementalSearcher::start(Document& document, const Position& from, TextSe
  * Undoes the last search command. If the last command is typing, the end of the pattern is removed.
  * Otherwise if researching, reverts to the last state.
  * @return true if matched after the undo 
- * @throw IllegalStateException the searcher is not running or the undo buffer is empty
+ * @throw IllegalStateException The searcher is not running or the undo buffer is empty
  */
 bool IncrementalSearcher::undo() {
 	checkRunning();
@@ -994,7 +1006,8 @@ bool IncrementalSearcher::undo() {
 /**
  * Re-searches using the current state.
  * @return true if the pattern is found
- * @throw ... any exceptions specified by Boost.Regex will be thrown if the regular expression error occurred
+ * @throw ... Any exceptions specified by Boost.Regex will be thrown if the regular expression
+ *            error occurred
  */
 bool IncrementalSearcher::update() {
 	const Status& lastStatus = statusHistory_.top();

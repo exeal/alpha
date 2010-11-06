@@ -6,7 +6,7 @@
  */
 
 #include <ascension/rules.hpp>
-#include <ascension/ustring.hpp>
+#include <ascension/corelib/ustring.hpp>
 using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::presentation;

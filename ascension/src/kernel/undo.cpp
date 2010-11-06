@@ -2,10 +2,11 @@
  * @file undo.cpp
  * @author exeal
  * @date 2009 separated from document.cpp
+ * @date 2010
  */
 
-#include <ascension/document.hpp>
-#include <ascension/point.hpp>
+#include <ascension/kernel/document.hpp>
+#include <ascension/kernel/point.hpp>
 #include <stack>
 #include <vector>
 using namespace ascension;
