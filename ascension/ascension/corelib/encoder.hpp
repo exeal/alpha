@@ -331,16 +331,14 @@ namespace ascension {
 
 			static const char ALIASES_SEPARATOR;
 
-			/// A set of @c Flag values.
-			typedef Flags<Flag> Flags;
 		public:
 			virtual ~Encoder() /*throw()*/;
 			// attributes
-			const Flags& flags() const /*throw()*/;
+			int flags() const /*throw()*/;
 			virtual const IEncodingProperties& properties() const /*throw()*/ = 0;
 			virtual Encoder& resetDecodingState() /*throw()*/;
 			virtual Encoder& resetEncodingState() /*throw()*/;
-			Encoder& setFlags(const Flags& newFlags);
+			Encoder& setFlags(const int newFlags);
 			Encoder& setSubstitutionPolicy(SubstitutionPolicy newPolicy);
 			SubstitutionPolicy substitutionPolicy() const /*throw()*/;
 			// conversion
@@ -396,7 +394,7 @@ namespace ascension {
 			static EncoderFactory* find(const std::string& name) /*throw()*/;
 			static std::vector<EncoderFactory*>& registry();
 			SubstitutionPolicy substitutionPolicy_;
-			Flags flags_;
+			int flags_;	// see Flag enums
 		};
 
 		/// A factory class creates @c Encoder instances.
@@ -645,7 +643,7 @@ namespace ascension {
 			for(std::size_t i = 0, c = registry().size(); i < c; ++i, ++out) *out = std::make_pair<std::size_t, const IEncodingProperties*>(i, registry()[i]);}
 
 		/// Returns the miscellaneous flags.
-		inline const Encoder::Flags& Encoder::flags() const /*throw()*/ {return flags_;}
+		inline int Encoder::flags() const /*throw()*/ {return flags_;}
 
 		/// Returns the substitution policy.
 		inline Encoder::SubstitutionPolicy Encoder::substitutionPolicy() const /*throw()*/ {return substitutionPolicy_;}
