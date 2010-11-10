@@ -10,10 +10,10 @@
  * - IBM1165
  * - windows-1258
  * @author exeal
- * @date 2004-2009
+ * @date 2004-2010
  */
 
-#include <ascension/encoder.hpp>
+#include <ascension/corelib/encoder.hpp>
 using namespace ascension;
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
@@ -151,13 +151,13 @@ namespace {
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 	class VIQREncoder : public Encoder {
 	public:
-		VIQREncoder() ASC_NOFAIL;
+		VIQREncoder() /*throw()*/;
 	private:
 		Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext);
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext);
-		const IEncodingProperties& properties() const ASC_NOFAIL;
-		Encoder& resetDecodingState() ASC_NOFAIL;
-		Encoder& resetEncodingState() ASC_NOFAIL;
+		const IEncodingProperties& properties() const /*throw()*/;
+		Encoder& resetDecodingState() /*throw()*/;
+		Encoder& resetEncodingState() /*throw()*/;
 	private:
 		enum {LITERAL_STATE, ENGLISH_STATE, VIETNAMESE_STATE} encodingState_, decodingState_;
 		static const byte CLS = 0x01, COM = 0x5c;
@@ -165,9 +165,9 @@ namespace {
 	};
 	class VIQRFactory : public implementation::EncoderFactoryBase {
 	public:
-		VIQRFactory() ASC_NOFAIL : implementation::EncoderFactoryBase("VIQR", standard::VIQR, "Vietnamese (VIQR)", 3, 1, "csVIQR", 0x1a) {}
+		VIQRFactory() /*throw()*/ : implementation::EncoderFactoryBase("VIQR", standard::VIQR, "Vietnamese (VIQR)", 3, 1, "csVIQR", 0x1a) {}
 	private:
-		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new VIQREncoder);}
+		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new VIQREncoder);}
 	} VIQR;
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 
@@ -195,7 +195,7 @@ namespace {
 
 auto_ptr<sbcs::BidirectionalMap> VIQREncoder::table_;
 
-VIQREncoder::VIQREncoder() ASC_NOFAIL : encodingState_(VIETNAMESE_STATE), decodingState_(VIETNAMESE_STATE) {
+VIQREncoder::VIQREncoder() /*throw()*/ : encodingState_(VIETNAMESE_STATE), decodingState_(VIETNAMESE_STATE) {
 	if(table_.get() == 0)
 		table_.reset(new sbcs::BidirectionalMap(VISCII_BYTE_TABLE::VALUES));
 }
@@ -360,7 +360,7 @@ Encoder::Result VIQREncoder::doToUnicode(Char* to, Char* toEnd,
 			if(mnemonic != 0x80) {
 				// ... got the base character
 				if(from + 1 == fromEnd) {
-					if(flags().has(END_OF_BUFFER)) {
+					if((flags() & END_OF_BUFFER) != 0) {
 						*to++ = *from++;
 						break;
 					}
@@ -378,7 +378,7 @@ Encoder::Result VIQREncoder::doToUnicode(Char* to, Char* toEnd,
 					continue;
 				}
 				if(from + 2 == fromEnd) {
-					if(flags().has(END_OF_BUFFER)) {
+					if((flags() & END_OF_BUFFER) != 0) {
 						*to++ = STATE_TABLE[state2][NONE];
 						break;
 					}
@@ -402,16 +402,16 @@ Encoder::Result VIQREncoder::doToUnicode(Char* to, Char* toEnd,
 	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-const IEncodingProperties& VIQREncoder::properties() const ASC_NOFAIL {
+const IEncodingProperties& VIQREncoder::properties() const /*throw()*/ {
 	return VIQR;
 }
 
-Encoder& VIQREncoder::resetDecodingState() ASC_NOFAIL {
+Encoder& VIQREncoder::resetDecodingState() /*throw()*/ {
 	decodingState_ = VIETNAMESE_STATE;
 	return *this;
 }
 
-Encoder& VIQREncoder::resetEncodingState() ASC_NOFAIL {
+Encoder& VIQREncoder::resetEncodingState() /*throw()*/ {
 	encodingState_ = VIETNAMESE_STATE;
 	return *this;
 }

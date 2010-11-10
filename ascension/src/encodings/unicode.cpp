@@ -11,10 +11,10 @@
  * - UTF-32LE
  * - UTF-5
  * @author exeal
- * @date 2003-2009
+ * @date 2003-2010
  */
 
-#include <ascension/encoder.hpp>
+#include <ascension/corelib/encoder.hpp>
 #include <algorithm>	// std.find_if
 using namespace ascension;
 using namespace ascension::encoding;
@@ -28,15 +28,15 @@ namespace {
 	template<typename Factory>
 	class InternalEncoder : public Encoder {
 	public:
-		explicit InternalEncoder(const Factory& factory) ASC_NOFAIL : props_(factory), encodingState_(0), decodingState_(0) {}
+		explicit InternalEncoder(const Factory& factory) /*throw()*/ : props_(factory), encodingState_(0), decodingState_(0) {}
 	private:
 		Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 			const Char* from, const Char* fromEnd, const Char*& fromNext);
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 			const byte* from, const byte* fromEnd, const byte*& fromNext);
-		const IEncodingProperties& properties() const ASC_NOFAIL {return props_;}
-		Encoder& resetDecodingState() ASC_NOFAIL {decodingState_ = 0; return *this;}
-		Encoder& resetEncodingState() ASC_NOFAIL {encodingState_ = 0; return *this;}
+		const IEncodingProperties& properties() const /*throw()*/ {return props_;}
+		Encoder& resetDecodingState() /*throw()*/ {decodingState_ = 0; return *this;}
+		Encoder& resetEncodingState() /*throw()*/ {encodingState_ = 0; return *this;}
 	private:
 		const IEncodingProperties& props_;
 		byte encodingState_, decodingState_;
@@ -46,38 +46,38 @@ namespace {
 	public:
 		UTF_8() : EncoderFactoryBase("UTF-8", fundamental::UTF_8, "Unicode (UTF-8)", 4) {}
 	private:
-		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<UTF_8>(*this));}
+		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<UTF_8>(*this));}
 	} utf8;
 	class UTF_16LE : public EncoderFactoryBase {
 	public:
 		UTF_16LE() : EncoderFactoryBase("UTF-16LE", fundamental::UTF_16LE, "Unicode (UTF-16LE)", 2) {}
 	private:
-		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<UTF_16LE>(*this));}
+		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<UTF_16LE>(*this));}
 	} utf16le;
 	class UTF_16BE : public EncoderFactoryBase {
 	public:
 		UTF_16BE() : EncoderFactoryBase("UTF-16BE", fundamental::UTF_16BE, "Unicode (UTF-16BE)", 2) {}
 	private:
-		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<UTF_16BE>(*this));}
+		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<UTF_16BE>(*this));}
 	} utf16be;
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 	class UTF_7 : public EncoderFactoryBase {
 	public:
 		UTF_7() : EncoderFactoryBase("UTF-7", standard::UTF_7, "Unicode (UTF-7)", 8) {}
 	private:
-		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<UTF_7>(*this));}
+		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<UTF_7>(*this));}
 	} utf7;
 	class UTF_32LE : public EncoderFactoryBase {
 	public:
 		UTF_32LE() : EncoderFactoryBase("UTF-32LE", standard::UTF_32LE, "Unicode (UTF-32LE)", 4) {}
 	private:
-		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<UTF_32LE>(*this));}
+		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<UTF_32LE>(*this));}
 	} utf32le;
 	class UTF_32BE : public EncoderFactoryBase {
 	public:
 		UTF_32BE() : EncoderFactoryBase("UTF-32BE", standard::UTF_32BE, "Unicode (UTF-32BE)", 4) {}
 	private:
-		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<UTF_32BE>(*this));}
+		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<UTF_32BE>(*this));}
 	} utf32be;
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
@@ -85,18 +85,18 @@ namespace {
 	public:
 		UTF_5() : EncoderFactoryBase("UTF-5", MIB_OTHER, "Unicode (UTF-5)", 6) {}
 	private:
-		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder<UTF_5>(*this));}
+		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<UTF_5>(*this));}
 	} utf5;
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 	class UnicodeDetector : public EncodingDetector {
 	public:
 		UnicodeDetector() : EncodingDetector("UnicodeAutoDetect") {}
 	private:
-		pair<MIBenum, string> doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const ASC_NOFAIL;
+		pair<MIBenum, string> doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/;
 	};
 
 	struct EncoderInstaller {
-		EncoderInstaller() ASC_NOFAIL {
+		EncoderInstaller() /*throw()*/ {
 			Encoder::registerFactory(utf8);
 			Encoder::registerFactory(utf16le);
 			Encoder::registerFactory(utf16be);
@@ -123,16 +123,16 @@ namespace {
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 } // namespace @0
 
-#define ASCENSION_ENCODE_BOM(encoding)												\
-	if(flags().has(BEGINNING_OF_BUFFER) && flags().has(UNICODE_BYTE_ORDER_MARK)) {	\
-		if(to + ASCENSION_COUNTOF(encoding##_BOM) >= toEnd)							\
-			return INSUFFICIENT_BUFFER;												\
-		memcpy(to, encoding##_BOM, ASCENSION_COUNTOF(encoding##_BOM));				\
-		to += ASCENSION_COUNTOF(encoding##_BOM);									\
+#define ASCENSION_ENCODE_BOM(encoding)														\
+	if((flags() & BEGINNING_OF_BUFFER) != 0 && (flags() & UNICODE_BYTE_ORDER_MARK) != 0) {	\
+		if(to + ASCENSION_COUNTOF(encoding##_BOM) >= toEnd)									\
+			return INSUFFICIENT_BUFFER;														\
+		memcpy(to, encoding##_BOM, ASCENSION_COUNTOF(encoding##_BOM));						\
+		to += ASCENSION_COUNTOF(encoding##_BOM);											\
 	}
 
 #define ASCENSION_DECODE_BOM(encoding)																		\
-	if(flags().has(BEGINNING_OF_BUFFER)) {																	\
+	if((flags() & BEGINNING_OF_BUFFER) != 0) {																\
 		if(fromEnd - from >= 3 && memcmp(from, encoding##_BOM, ASCENSION_COUNTOF(encoding##_BOM)) == 0) {	\
 			setFlags(flags() | UNICODE_BYTE_ORDER_MARK);													\
 			from += ASCENSION_COUNTOF(encoding##_BOM);														\
@@ -508,7 +508,7 @@ template<> Encoder::Result InternalEncoder<UTF_7>::doFromUnicode(
 			from += encodables - 1;
 		}
 	}
-	if(from == fromEnd && flags().has(END_OF_BUFFER) && to != toEnd)
+	if(from == fromEnd && (flags() & END_OF_BUFFER) != 0 && to != toEnd)
 		*(to++) = '-';
 	toNext = to;
 	fromNext = from;
@@ -550,7 +550,7 @@ template<> Encoder::Result InternalEncoder<UTF_7>::doToUnicode(
 		if(klass == 2) {
 			// '+'
 			if(from + 1 == fromEnd) {	// the input is terminated by '+'...
-				if(flags().has(END_OF_BUFFER)) {
+				if((flags() & END_OF_BUFFER) != 0) {
 					toNext = to;
 					fromNext = from;
 					return COMPLETED;
@@ -630,7 +630,7 @@ namespace {
 	 * @param[out] the code point of the decoded character
 	 * @return the end of the eaten subsequence
 	 */
-	inline const byte* decodeUTF5Character(const byte* first, const byte* last, CodePoint& cp) ASC_NOFAIL {
+	inline const byte* decodeUTF5Character(const byte* first, const byte* last, CodePoint& cp) /*throw()*/ {
 		if(*first < 'G' || *first > 'V')
 			return 0;
 		cp = *first - 'G';
@@ -782,7 +782,7 @@ template<> Encoder::Result InternalEncoder<UTF_5>::doToUnicode(
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 
 namespace {
-	inline const byte* maybeUTF8(const byte* first, const byte* last) ASC_NOFAIL {
+	inline const byte* maybeUTF8(const byte* first, const byte* last) /*throw()*/ {
 		while(first < last) {
 			if(*first == 0xc0 || *first == 0xc1 || *first >= 0xf5)
 				break;
@@ -817,7 +817,7 @@ namespace {
 }
 
 /// @see EncodingDetector#doDetect
-pair<MIBenum, string> UnicodeDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const ASC_NOFAIL {
+pair<MIBenum, string> UnicodeDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/ {
 	const IEncodingProperties* result = 0;
 	// first, test Unicode byte order marks
 	if(last - first >= 3 && memcmp(first, UTF8_BOM, ASCENSION_COUNTOF(UTF8_BOM)) == 0)
