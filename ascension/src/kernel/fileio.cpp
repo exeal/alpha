@@ -7,6 +7,7 @@
  * @date 2007-2010
  */
 
+#include <ascension/config.hpp>	// ASCENSION_NO_STANDARD_ENCODINGS
 #include <ascension/kernel/fileio.hpp>
 #include <limits>	// std.numeric_limits
 #ifdef ASCENSION_POSIX
@@ -890,7 +891,7 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 
 /// Returns @c true if the internal encoder has @c Encoder#UNICODE_BYTE_ORDER_MARK flag.
 bool TextFileStreamBuffer::unicodeByteOrderMark() const /*throw()*/ {
-	return encoder_->flags().has(Encoder::UNICODE_BYTE_ORDER_MARK);
+	return (encoder_->flags() & Encoder::UNICODE_BYTE_ORDER_MARK) != 0;
 }
 
 
