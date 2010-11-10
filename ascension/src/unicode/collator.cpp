@@ -4,6 +4,7 @@
  * @date 2007-2010
  */
 
+#include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_COLLATION
 #ifndef ASCENSION_NO_UNICODE_COLLATION
 #include <ascension/corelib/unicode-property.hpp>
 using namespace ascension;
