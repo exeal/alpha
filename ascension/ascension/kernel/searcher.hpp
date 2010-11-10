@@ -226,9 +226,9 @@ namespace ascension {
 			virtual void incrementalSearchCompleted() = 0;
 			/**
 			 * The search pattern was changed.
-			 * @param result the result on new pattern.
+			 * @param result The result on new pattern. See @c #WrappingStatus.
 			 */
-			virtual void incrementalSearchPatternChanged(Result result, const Flags<WrappingStatus>& wrappingStatus) = 0;
+			virtual void incrementalSearchPatternChanged(Result result, int wrappingStatus) = 0;
 			/**
 			 * The search was started. @c incrementalSearchPatternChanged is also called with
 			 * @c EMPTY_PATTERN after this.

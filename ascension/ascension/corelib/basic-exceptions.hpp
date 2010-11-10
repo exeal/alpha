@@ -9,6 +9,9 @@
 
 #include <ascension/platforms.hpp>
 #include <stdexcept>
+#ifdef ASCENSION_WINDOWS
+#	include <ascension/win32/windows.hpp>	// DWORD, GetLastError
+#endif // ASCENSION_WINDOWS
 
 namespace ascension {
 
