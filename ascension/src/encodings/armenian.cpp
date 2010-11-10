@@ -6,15 +6,16 @@
  * - ARMSCII-8A
  * This implementation is based on the report of Hovik Melikyan (http://www.freenet.am/armscii/).
  * @author exeal
- * @date 2004-2009
+ * @date 2004-2010
  */
 
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
-#include <ascension/encoder.hpp>
+#include <ascension/corelib/encoder.hpp>
 #include <algorithm>	// std.binary_search
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 #include <bitset>
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
+
 using namespace ascension;
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
@@ -24,18 +25,21 @@ using namespace std;
 namespace {
 	template<int n> class ARMSCII : public EncoderFactoryBase {
 	public:
-		ARMSCII() ASC_NOFAIL;
-		auto_ptr<Encoder> create() const ASC_NOFAIL {return auto_ptr<Encoder>(new InternalEncoder(*this));}
+		ARMSCII() /*throw()*/;
+		auto_ptr<Encoder> create() const /*throw()*/ {
+			return auto_ptr<Encoder>(new InternalEncoder(*this));
+		}
 	private:
 		class InternalEncoder : public Encoder {
 		public:
-			explicit InternalEncoder(const IEncodingProperties& properties) ASC_NOFAIL : props_(properties) {}
+			explicit InternalEncoder(const IEncodingProperties& properties) /*throw()*/ : props_(properties) {
+			}
 		private:
 			Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 				const Char* from, const Char* fromEnd, const Char*& fromNext);
 			Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 				const byte* from, const byte* fromEnd, const byte*& fromNext);
-			const IEncodingProperties& properties() const ASC_NOFAIL {return props_;}
+			const IEncodingProperties& properties() const /*throw()*/ {return props_;}
 		private:
 			const IEncodingProperties& props_;
 		};
@@ -50,7 +54,7 @@ namespace {
 	public:
 		ArmenianDetector() : EncodingDetector("ARMSCIIAutoDetect") {}
 	private:
-		pair<MIBenum, string> doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const ASC_NOFAIL;
+		pair<MIBenum, string> doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/;
 	};
 
 	struct Installer {
@@ -186,7 +190,7 @@ namespace {
 
 // ARMSCII-8 ////////////////////////////////////////////////////////////////
 
-template<> ARMSCII<8>::ARMSCII() ASC_NOFAIL : EncoderFactoryBase("ARMSCII-8", MIB_OTHER, "Armenian (ARMSCII-8)", 1, 2, "", 0x1a) {
+template<> ARMSCII<8>::ARMSCII() /*throw()*/ : EncoderFactoryBase("ARMSCII-8", MIB_OTHER, "Armenian (ARMSCII-8)", 1, 2, "", 0x1a) {
 }
 
 template<> Encoder::Result ARMSCII<8>::InternalEncoder::doFromUnicode(
@@ -258,7 +262,7 @@ template<> Encoder::Result ARMSCII<8>::InternalEncoder::doToUnicode(
 
 // ARMSCII-7 ////////////////////////////////////////////////////////////////
 
-template<> ARMSCII<7>::ARMSCII() ASC_NOFAIL : EncoderFactoryBase("ARMSCII-7", MIB_OTHER, "Armenian (ARMSCII-7)", 1, 2, "", 0x1a) {
+template<> ARMSCII<7>::ARMSCII() /*throw()*/ : EncoderFactoryBase("ARMSCII-7", MIB_OTHER, "Armenian (ARMSCII-7)", 1, 2, "", 0x1a) {
 }
 
 template<> Encoder::Result ARMSCII<7>::InternalEncoder::doFromUnicode(
@@ -326,7 +330,7 @@ template<> Encoder::Result ARMSCII<7>::InternalEncoder::doToUnicode(
 
 // ARMSCII-8A ///////////////////////////////////////////////////////////////
 
-template<> ARMSCII<0x8a>::ARMSCII() ASC_NOFAIL : EncoderFactoryBase("ARMSCII-8A", MIB_OTHER, "Armenian (ARMSCII-8A)", 1, 2, "", 0x1a) {
+template<> ARMSCII<0x8a>::ARMSCII() /*throw()*/ : EncoderFactoryBase("ARMSCII-8A", MIB_OTHER, "Armenian (ARMSCII-8A)", 1, 2, "", 0x1a) {
 }
 
 template<> Encoder::Result ARMSCII<0x8a>::InternalEncoder::doFromUnicode(
@@ -401,7 +405,7 @@ template<> Encoder::Result ARMSCII<0x8a>::InternalEncoder::doToUnicode(
 // ArmenianDetector /////////////////////////////////////////////////////////
 
 /// @see EncodingDetector#doDetect
-pair<MIBenum, string> ArmenianDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const ASC_NOFAIL {
+pair<MIBenum, string> ArmenianDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/ {
 	// first, check if Unicode
 	if(const EncodingDetector* unicodeDetector = forName("UnicodeAutoDetect")) {
 		ptrdiff_t temp;

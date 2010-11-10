@@ -8,10 +8,10 @@
  * - windows-1253
  * - <del>MacGreek</del>
  * @author exeal
- * @date 2007-2009
+ * @date 2007-2010
  */
 
-#include <ascension/encoder.hpp>
+#include <ascension/corelib/encoder.hpp>
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
 using namespace std;
