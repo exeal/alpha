@@ -5,8 +5,10 @@
  * @author exeal
  */
 
+#include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
 #include <ascension/corelib/unicode-property.hpp>
 #include <memory>	// std.auto_ptr
+
 using namespace ascension;
 using namespace ascension::text;
 using namespace ascension::text::internal;

@@ -5,6 +5,7 @@
  */
 
 #include <ascension/corelib/encoder.hpp>
+#include <ascension/corelib/basic-exceptions.hpp>
 #include <algorithm>
 using namespace ascension;
 using namespace ascension::encoding;
@@ -334,11 +335,12 @@ Encoder& Encoder::resetEncodingState() /*throw()*/ {
 
 /**
  * Sets the new miscellaneous flags.
- * @param newFlags The flags to set
+ * @param newFlags The flags to set. See @c #Flag.
+ * @return This encoder
  * @throw The encoder
  * @throw UnknownValueException<Flag> @a newFlags includes unknown value
  */
-Encoder& Encoder::setFlags(const Flags& newFlags) {
+Encoder& Encoder::setFlags(int newFlags) {
 	if((newFlags & ~(BEGINNING_OF_BUFFER | END_OF_BUFFER | UNICODE_BYTE_ORDER_MARK)) != 0)
 		throw UnknownValueException("newFlags");
 	flags_ = newFlags;

@@ -4,6 +4,7 @@
  * @date 2007-2010
  */
 
+#include <ascension/config.hpp>	// ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION
 #include <ascension/corelib/unicode-property.hpp>
 #include <vector>
 using namespace ascension;

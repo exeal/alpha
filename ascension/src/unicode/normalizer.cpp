@@ -4,6 +4,7 @@
  * @date 2007-2010
  */
 
+#include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_*
 #include <ascension/corelib/unicode-property.hpp>
 using namespace ascension;
 using namespace ascension::text;
