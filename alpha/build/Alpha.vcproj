@@ -457,31 +457,7 @@
 				Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 				>
 				<File
-					RelativePath="..\..\ascension\src\caret.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\src\content-assist.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\src\document.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\src\encoder.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\src\fileio.cpp"
-					>
-				</File>
-				<File
 					RelativePath="..\..\ascension\src\layout.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\src\point.cpp"
 					>
 				</File>
 				<File
@@ -489,15 +465,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\src\regex.cpp"
-					>
-				</File>
-				<File
 					RelativePath="..\..\ascension\src\rules.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\src\searcher.cpp"
 					>
 				</File>
 				<File
@@ -505,27 +473,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\src\stream.cpp"
-					>
-				</File>
-				<File
 					RelativePath="..\..\ascension\src\text-editor.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\src\undo.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\src\unicode-property.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\src\user-input.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\src\viewer.cpp"
 					>
 				</File>
 				<Filter
@@ -620,41 +568,93 @@
 						>
 					</File>
 				</Filter>
+				<Filter
+					Name="graphics"
+					>
+					<File
+						RelativePath="..\..\ascension\src\graphics\font-windows.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\src\graphics\graphics-windows.cpp"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="viewer"
+					>
+					<File
+						RelativePath="..\..\ascension\src\viewer\caret.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\src\viewer\content-assist.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\src\viewer\ruler.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\src\viewer\user-input.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\src\viewer\viewer.cpp"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="kernel"
+					>
+					<File
+						RelativePath="..\..\ascension\src\kernel\document.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\src\kernel\fileio.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\src\kernel\point.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\src\kernel\searcher.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\src\kernel\stream.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\src\kernel\undo.cpp"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="corelib"
+					>
+					<File
+						RelativePath="..\..\ascension\src\corelib\encoder.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\src\corelib\regex.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\src\corelib\unicode-property.cpp"
+						>
+					</File>
+				</Filter>
 			</Filter>
 			<Filter
 				Name="Header Files"
 				Filter="h;hpp;hxx;hm;inl"
 				>
 				<File
-					RelativePath="..\..\ascension\ascension\caret.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\ascension\character-iterator.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\ascension\common.hpp"
-					>
-				</File>
-				<File
 					RelativePath="..\..\ascension\ascension\config.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\ascension\content-assist.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\ascension\document.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\ascension\encoder.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\ascension\fileio.hpp"
 					>
 				</File>
 				<File
@@ -666,7 +666,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\ascension\point.hpp"
+					RelativePath="..\..\ascension\ascension\platforms.hpp"
 					>
 				</File>
 				<File
@@ -674,15 +674,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\ascension\regex.hpp"
-					>
-				</File>
-				<File
 					RelativePath="..\..\ascension\ascension\rules.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\ascension\searcher.hpp"
 					>
 				</File>
 				<File
@@ -690,158 +682,254 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\ascension\ascension\stream.hpp"
-					>
-				</File>
-				<File
 					RelativePath="..\..\ascension\ascension\text-editor.hpp"
 					>
 				</File>
-				<File
-					RelativePath="..\..\ascension\ascension\unicode-property.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\ascension\unicode.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\ascension\ustring.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\ascension\viewer.hpp"
-					>
-				</File>
-			</Filter>
-		</Filter>
-		<Filter
-			Name="manah"
-			>
-			<File
-				RelativePath="..\..\manah\gap-buffer.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\manah\memory.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\manah\object.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\manah\small-object.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\manah\type-list.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\manah\types.hpp"
-				>
-			</File>
-			<Filter
-				Name="com"
-				>
-				<File
-					RelativePath="..\..\manah\com\common.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\manah\com\dispatch-impl.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\manah\com\enum-impl.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\manah\com\exception.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\manah\com\ole-type-wrapper.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\manah\com\text-data-object.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\manah\com\unknown-impl.hpp"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="win32"
-				>
-				<File
-					RelativePath="..\..\manah\win32\dc.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\manah\win32\file.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\manah\win32\gdi-object.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\manah\win32\module.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\manah\win32\timer.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\manah\win32\utility.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\manah\win32\windows.hpp"
-					>
-				</File>
 				<Filter
-					Name="ui"
+					Name="win32"
 					>
 					<File
-						RelativePath="..\..\manah\win32\ui\common-controls.hpp"
+						RelativePath="..\..\ascension\ascension\win32\dc.hpp"
 						>
 					</File>
 					<File
-						RelativePath="..\..\manah\win32\ui\dialog.hpp"
+						RelativePath="..\..\ascension\ascension\win32\file.hpp"
 						>
 					</File>
 					<File
-						RelativePath="..\..\manah\win32\ui\link-label.hpp"
+						RelativePath="..\..\ascension\ascension\win32\gdi-object.hpp"
 						>
 					</File>
 					<File
-						RelativePath="..\..\manah\win32\ui\menu.hpp"
+						RelativePath="..\..\ascension\ascension\win32\module.hpp"
 						>
 					</File>
 					<File
-						RelativePath="..\..\manah\win32\ui\splitter.hpp"
+						RelativePath="..\..\ascension\ascension\win32\timer.hpp"
 						>
 					</File>
 					<File
-						RelativePath="..\..\manah\win32\ui\standard-controls.hpp"
+						RelativePath="..\..\ascension\ascension\win32\windows.hpp"
+						>
+					</File>
+					<Filter
+						Name="ui"
+						>
+						<File
+							RelativePath="..\..\ascension\ascension\win32\ui\common-controls.hpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\ascension\ascension\win32\ui\common-controls.inl"
+							>
+						</File>
+						<File
+							RelativePath="..\..\ascension\ascension\win32\ui\dialog.hpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\ascension\ascension\win32\ui\link-label.hpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\ascension\ascension\win32\ui\menu.hpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\ascension\ascension\win32\ui\splitter.hpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\ascension\ascension\win32\ui\standard-controls.hpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\ascension\ascension\win32\ui\standard-controls.inl"
+							>
+						</File>
+						<File
+							RelativePath="..\..\ascension\ascension\win32\ui\theme.hpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\ascension\ascension\win32\ui\wait-cursor.hpp"
+							>
+						</File>
+					</Filter>
+					<Filter
+						Name="com"
+						>
+						<File
+							RelativePath="..\..\ascension\ascension\win32\com\com.hpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\ascension\ascension\win32\com\dispatch-impl.hpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\ascension\ascension\win32\com\enum-impl.hpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\ascension\ascension\win32\com\exception.hpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\ascension\ascension\win32\com\ole-type-wrapper.hpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\ascension\ascension\win32\com\text-data-object.hpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\ascension\ascension\win32\com\unknown-impl.hpp"
+							>
+						</File>
+					</Filter>
+				</Filter>
+				<Filter
+					Name="corelib"
+					>
+					<File
+						RelativePath="..\..\ascension\ascension\corelib\basic-exceptions.hpp"
 						>
 					</File>
 					<File
-						RelativePath="..\..\manah\win32\ui\theme.hpp"
+						RelativePath="..\..\ascension\ascension\corelib\basic-types.hpp"
 						>
 					</File>
 					<File
-						RelativePath="..\..\manah\win32\ui\wait-cursor.hpp"
+						RelativePath="..\..\ascension\ascension\corelib\character-iterator.hpp"
 						>
 					</File>
 					<File
-						RelativePath="..\..\manah\win32\ui\window.hpp"
+						RelativePath="..\..\ascension\ascension\corelib\encoder.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\corelib\gap-vector.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\corelib\memory.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\corelib\regex.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\corelib\string-piece.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\corelib\type-list.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\corelib\unicode-property.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\corelib\unicode-surrogates.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\corelib\unicode-utf.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\corelib\unicode.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\corelib\ustring.hpp"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="viewer"
+					>
+					<File
+						RelativePath="..\..\ascension\ascension\viewer\caret.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\viewer\content-assist.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\viewer\viewer.hpp"
+						>
+					</File>
+					<Filter
+						Name="base"
+						>
+						<File
+							RelativePath="..\..\ascension\ascension\viewer\base\user-input.hpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\ascension\ascension\viewer\base\window-windows.hpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\ascension\ascension\viewer\base\window.hpp"
+							>
+						</File>
+					</Filter>
+				</Filter>
+				<Filter
+					Name="graphics"
+					>
+					<File
+						RelativePath="..\..\ascension\ascension\graphics\color.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\graphics\font.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\graphics\geometry.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\graphics\graphics-windows.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\graphics\graphics.hpp"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="kernel"
+					>
+					<File
+						RelativePath="..\..\ascension\ascension\kernel\document-character-iterator.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\kernel\document-stream.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\kernel\document.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\kernel\fileio.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\kernel\point.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\kernel\searcher.hpp"
 						>
 					</File>
 				</Filter>
