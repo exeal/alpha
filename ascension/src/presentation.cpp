@@ -5,7 +5,7 @@
  * @date 2007-2010
  */
 
-#include <ascension/layout.hpp>
+#include <ascension/layout.hpp>	// TextRenderer
 #include <ascension/presentation.hpp>
 #include <ascension/rules.hpp>
 #ifdef ASCENSION_WINDOWS
@@ -18,7 +18,6 @@ using namespace ascension::presentation;
 using namespace ascension::presentation::hyperlink;
 using namespace ascension::rules;
 using namespace std;
-using ascension::presentation::Colors;
 
 
 // Color ////////////////////////////////////////////////////////////////////
@@ -264,24 +263,25 @@ const IHyperlink* const* Presentation::getHyperlinks(length_t line, size_t& numb
 /**
  * Returns the colors of the specified line.
  * @param line the line
- * @return the colors of the line. unspecified if its members are not valid
+ * @param[out] foreground The foreground color of the line. Unspecified if an invalid value
+ * @param[out] background The background color of the line. Unspecified if an invalid value
  * @throw BadPositionException @a line is outside of the document
  * @see Color#isValid
  */
-Colors Presentation::getLineColor(length_t line) const {
+void Presentation::lineColors(length_t line, Color& foreground, Color& background) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
 	ILineColorDirector::Priority highestPriority = 0, p;
-	Colors result, c;
+	pair<Color, Color> temp;
 	for(list<tr1::shared_ptr<ILineColorDirector> >::const_iterator
 			i(lineColorDirectors_.begin()), e(lineColorDirectors_.end()); i != e; ++i) {
-		p = (*i)->queryLineColor(line, c);
+		p = (*i)->queryLineColors(line, temp.first, temp.second);
 		if(p > highestPriority) {
 			highestPriority = p;
-			result = c;
+			foreground = temp.first;
+			background = temp.second;
 		}
 	}
-	return result;
 }
 
 /// Returns an iterator addresses the location succeeding the last text viewer.

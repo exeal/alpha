@@ -5,6 +5,7 @@
  * @date 2006-2010
  */
 
+#include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
 #include <ascension/caret.hpp>	// Caret.isSelectionRectangle, viewers.selectedRangeOnVisualLine
 #include <ascension/layout.hpp>
 #include <limits>	// std.numeric_limits
