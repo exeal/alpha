@@ -12,6 +12,7 @@
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/kernel/document.hpp>
 #include <ascension/graphics/color.hpp>	// graphics.Color
+#include <ascension/graphics/font.hpp>	// graphics.FontProperties
 
 namespace ascension {
 
@@ -20,20 +21,6 @@ namespace ascension {
 	namespace rules {class URIDetector;}
 
 	namespace presentation {
-
-		/// Foreground color and background.
-		struct Colors {
-			graphics::Color foreground;	///< Color of foreground (text).
-			graphics::Color background;	///< Color of background.
-			/**
-			 * Constructor initializes the each colors.
-			 * @param foregroundColor foreground color
-			 * @param backgroundColor background color
-			 */
-			explicit Colors(const graphics::Color& foregroundColor = graphics::Color(),
-				const graphics::Color& backgroundColor = graphics::Color()) /*throw()*/
-				: foreground(foregroundColor), background(backgroundColor) {}
-		};
 
 		struct Length {
 			double value;	///< Value of the length.
@@ -369,12 +356,16 @@ namespace ascension {
 			virtual ~ILineColorDirector() /*throw()*/ {}
 		private:
 			/**
-			 * Queries the color of the line.
-			 * @param line the line to be queried
-			 * @param[out] the color of the line. if this is invalid color, line color is not set
+			 * Returns the foreground and background colors of the line.
+			 * @param line The line to be queried
+			 * @param[out] foreground The foreground color of the line. If this is invalid color,
+			 *                        line color is not set
+			 * @param[out] background The background color of the line. If this is invalid color,
+			 *                        line color is not set
 			 * @return the priority
 			 */
-			virtual Priority queryLineColor(length_t line, Colors& color) const = 0;
+			virtual Priority queryLineColors(length_t line,
+				graphics::Color& foreground, graphics::Color& background) const = 0;
 			friend class Presentation;
 		};
 
@@ -490,7 +481,7 @@ namespace ascension {
 			// styles
 			std::tr1::shared_ptr<const LineStyle> defaultLineStyle() const /*throw()*/;
 			std::tr1::shared_ptr<const RunStyle> defaultTextRunStyle() const /*throw()*/;
-			Colors getLineColor(length_t line) const;
+			void lineColors(length_t line, graphics::Color& foreground, graphics::Color& background) const;
 			void setDefaultLineStyle(std::tr1::shared_ptr<const LineStyle> newStyle);
 			void setDefaultTextRunStyle(std::tr1::shared_ptr<const RunStyle> newStyle);
 			std::tr1::shared_ptr<const LineStyle> lineStyle(length_t line) const;

@@ -263,7 +263,7 @@ namespace ascension {
 			void operator*=(Coordinate other) {*this = *this * other;}
 			void operator/=(Coordinate other) {*this = *this / other;}
 		private:
-			RectPartProxy(const Rect<Coordinate>& rect, int part) : rect_(const_cast<Rect&>(rect)), part_(part) {}
+			RectPartProxy(const Rect<Coordinate>& rect, int part) : rect_(const_cast<Rect<Coordinate>&>(rect)), part_(part) {}
 			RectPartProxy(const RectPartProxy<Coordinate>&);	// noncopyable
 			Rect<Coordinate>& rect_;
 			const int part_;

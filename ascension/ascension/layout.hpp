@@ -8,10 +8,11 @@
 #define ASCENSION_LAYOUT_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
-#include "document.hpp"
-#include "unicode-property.hpp"
-#include "presentation.hpp"
-#include "graphics.hpp"
+#include <ascension/kernel/document.hpp>
+#include <ascension/corelib/unicode-property.hpp>
+#include <ascension/presentation.hpp>
+#include <ascension/graphics/color.hpp>
+#include <ascension/graphics/graphics.hpp>
 #include <vector>
 
 namespace ascension {
@@ -78,10 +79,10 @@ namespace ascension {
 		 * @see ILayoutInformationProvider#layoutSettings, TextViewer#Configuration
 		 */
 		struct LayoutSettings {
-			/// Color of normal text. Standard setting is {@c COLOR_WINDOWTEXT, @c COLOR_WINDOW}.
-			presentation::Colors color;
-			/// Color of invisible controls. Standard setting is not provided.
-			presentation::Colors invisibleControlColor;
+//			/// Color of normal text. Standard setting is {@c COLOR_WINDOWTEXT, @c COLOR_WINDOW}.
+//			presentation::Colors color;
+//			/// Color of invisible controls. Standard setting is not provided.
+//			presentation::Colors invisibleControlColor;
 			/// Character count of a tab expansion. Default value is 8.
 			int tabWidth;
 			/// Line spacing in pixel. Default value is 1.

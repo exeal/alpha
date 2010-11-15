@@ -9,9 +9,9 @@
 
 #ifndef ASCENSION_CARET_HPP
 #define ASCENSION_CARET_HPP
-#include "point.hpp"
-#include "layout.hpp"	// layout.IVisualLinesListener
-#include "unicode.hpp"	// text.IdentifierSyntax
+#include <ascension/kernel/point.hpp>
+#include <ascension/layout.hpp>				// graphics.IVisualLinesListener
+#include <ascension/corelib/unicode.hpp>	// text.IdentifierSyntax
 #ifdef ASCENSION_GCC
 #	include <unknwn.h>	// IUnknown, OLESTR, ...
 #endif // ASCENSION_GCC

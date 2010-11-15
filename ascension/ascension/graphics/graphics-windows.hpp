@@ -6,8 +6,8 @@
 
 #ifndef ASCENSION_GRAPHICS_WINDOWS_HPP
 #define ASCENSION_GRAPHICS_WINDOWS_HPP
-#include "../graphics.hpp"
-#include "../win32/windows.hpp"	// win32.Handle
+#include <ascension/graphics/graphics.hpp>
+#include <ascension/win32/windows.hpp>	// win32.Handle
 #include <functional>			// std.bind1st, std.ptr_fun
 
 namespace ascension {

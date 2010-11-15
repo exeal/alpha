@@ -10,11 +10,11 @@
 #define ASCENSION_VIEWER_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
-#include "point.hpp"
-#include "presentation.hpp"
-#include "content-assist.hpp"
-#include "platforms/window-windows.hpp"
-#include "win32/com/unknown-impl.hpp"
+#include <ascension/kernel/point.hpp>
+#include <ascension/presentation.hpp>
+#include <ascension/viewer/content-assist.hpp>
+#include <ascension/viewer/base/window-windows.hpp>
+#include <ascension/win32/com/unknown-impl.hpp>
 #include <set>
 #include <algorithm>
 #include <shlobj.h>	// IDragSourceHelper, IDropTargetHelper
@@ -390,12 +390,18 @@ namespace ascension {
 			 * @see TextViewer#getConfigurations, TextViewer#setConfigurations
 			 */
 			struct Configuration : public graphics::LayoutSettings {
-				/// Color of active selected text. Standard setting is {@c COLOR_HIGHLIGHTTEXT, @c COLOR_HIGHLIGHT}.
-				presentation::Colors selectionColor;
-				/// Color of inactive selected text. Standard setting is {@c COLOR_INACTIVECAPTIONTEXT, @c COLOR_INACTIVECAPTION}.
-				presentation::Colors inactiveSelectionColor;
-				/// Color of the inaccessible area. Standard setting is {@c COLOR_GRAYTEXT, @c color.background}.
-				presentation::Colors restrictionColor;
+				/// Foreground color of active selected text. Standard setting is @c COLOR_HIGHLIGHTTEXT.
+				graphics::Color selectionForeground;
+				/// Background color of active selected text. Standard setting is @c COLOR_HIGHLIGHT.
+				graphics::Color selectionBackground;
+				/// Foreground color of inactive selected text. Standard setting is @c COLOR_INACTIVECAPTIONTEXT.
+				graphics::Color inactiveSelectionForeground;
+				/// Background color of inactive selected text. Standard setting is @c COLOR_INACTIVECAPTION.
+				graphics::Color inactiveSelectionBackground;
+				/// Foreground color of the inaccessible area. Standard setting is @c COLOR_GRAYTEXT.
+				graphics::Color restrictionForeground;
+				/// Background color of the inaccessible area. Standard setting is @c color.background.
+				graphics::Color restrictionBackground;
 				/// The reading direction of UI. Can't be @c INHERIT_READING_DIRECTION.
 				presentation::ReadingDirection readingDirection;
 				/// The amount of the leading margin in pixels. Default value is 5. This member will be ignored if the text is center-aligned.
@@ -440,11 +446,20 @@ namespace ascension {
 					int leadingMargin;
 					/// Trailing margin in pixels. Default value is 1.
 					int trailingMargin;
-					/// Color of the text. Default value is invalid color which is fallbacked to
-					/// the color of the system normal text.
-					presentation::Colors textColor;
-					/// Color of the border. Default value is invalid color which is fallbacked to
-					/// the color of the system normal text.
+					/**
+					 * Foreground color of the text. Default value is invalid color which is
+					 * fallbacked to the foreground color of the system normal text.
+					 */
+					graphics::Color foreground;
+					/**
+					 * Background color of the text. Default value is invalid color which is
+					 * fallbacked to the background color of the system normal text.
+					 */
+					graphics::Color background;
+					/**
+					 * Color of the border. Default value is invalid color which is fallbacked to
+					 * the foreground color of the system normal text.
+					 */
 					graphics::Color borderColor;
 					/// Width of the border. Default value is 1.
 					uchar borderWidth;
@@ -895,25 +910,30 @@ namespace ascension {
 			// constant
 			static const ILineColorDirector::Priority LINE_COLOR_PRIORITY;
 			// constructors
-			CurrentLineHighlighter(Caret& caret, const presentation::Colors& color);
+			CurrentLineHighlighter(Caret& caret,
+				const graphics::Color& foreground, const graphics::Color& background);
 			~CurrentLineHighlighter() /*throw()*/;
 			// attributes
-			const presentation::Colors& color() const /*throw()*/;
-			void setColor(const presentation::Colors& color) /*throw()*/;
+			const graphics::Color& background() const /*throw()*/;
+			const graphics::Color& foreground() const /*throw()*/;
+			void setBackground(const graphics::Color& color) /*throw()*/;
+			void setForeground(const graphics::Color& color) /*throw()*/;
 		private:
 			// presentation.ILineColorDirector
-			ILineColorDirector::Priority queryLineColor(length_t line, presentation::Colors& color) const;
+			ILineColorDirector::Priority queryLineColors(length_t line,
+				graphics::Color& foreground, graphics::Color& background) const;
 			// ICaretListener
 			void caretMoved(const Caret& self, const kernel::Region& oldRegion);
 			// ICaretStateListener
-			void matchBracketsChanged(const Caret& self, const std::pair<kernel::Position, kernel::Position>& oldPair, bool outsideOfView);
+			void matchBracketsChanged(const Caret& self,
+				const std::pair<kernel::Position, kernel::Position>& oldPair, bool outsideOfView);
 			void overtypeModeChanged(const Caret& self);
 			void selectionShapeChanged(const Caret& self);
 			// kernel.IPointLifeCycleListener
 			void pointDestroyed();
 		private:
 			Caret* caret_;
-			presentation::Colors color_;
+			graphics::Color foreground_, background_;
 		};
 
 		/// Provides the utility stuffs for viewers.

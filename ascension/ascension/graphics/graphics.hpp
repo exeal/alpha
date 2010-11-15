@@ -6,7 +6,8 @@
 
 #ifndef ASCENSION_GRAPHICS_HPP
 #define ASCENSION_GRAPHICS_HPP
-#include "graphics-datatypes.hpp"
+
+#include <ascension/graphics/geometry.hpp>
 
 namespace ascension {
 	namespace graphics {

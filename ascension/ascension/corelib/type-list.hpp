@@ -7,7 +7,7 @@
 
 #ifndef ASCENSION_TYPE_LIST_HPP
 #define ASCENSION_TYPE_LIST_HPP
-#include "internal.hpp"	// internal.Select
+#include <ascension/internal.hpp>	// internal.Select
 
 namespace ascension {
 	namespace typelist {
