@@ -13,7 +13,6 @@ using namespace ascension::presentation;
 using namespace ascension::rules;
 using namespace ascension::text;
 using namespace std;
-using namespace manah;
 using rules::internal::HashTable;
 
 

@@ -5,7 +5,7 @@
  */
 
 #include <ascension/session.hpp>
-#include <ascension/searcher.hpp>
+#include <ascension/kernel/searcher.hpp>
 #include <algorithm>
 using namespace ascension;
 using namespace ascension::texteditor;

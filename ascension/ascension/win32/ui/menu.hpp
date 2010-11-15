@@ -1,22 +1,23 @@
 /**
  * @file menu.hpp Defines menu-related class.
- * @date 2003-2009 exeal
+ * @date 2003-2010 exeal
  */
 
-#ifndef MANAH_MENU_HPP
-#define MANAH_MENU_HPP
+#ifndef ASCENSION_WIN32_MENU_HPP
+#define ASCENSION_WIN32_MENU_HPP
 
 #ifdef _MSC_VER
 #	pragma warning(disable : 4297)
 #endif // _MSC_VER
 
-#include "../../memory.hpp"
+#include <ascension/win32/windows.hpp>	// Object
+#include <ascension/corelib/memory.hpp>
 #include <commctrl.h>
 #include <set>
 #include <stdexcept>
 #include <memory>
 
-namespace manah {
+namespace ascension {
 namespace win32 {
 namespace ui {
 
@@ -64,7 +65,7 @@ public:
 	};
 
 	// constructors
-	MANAH_WIN32_OBJECT_CONSTRUCTORS(Menu)
+	ASCENSION_WIN32_OBJECT_CONSTRUCTORS(Menu)
 	virtual ~Menu();
 	// constructions
 	static Menu load(HINSTANCE instance, const ResourceID& id);
@@ -138,7 +139,7 @@ public:
 	static UINT	sizeOfMENUITEMINFOW() /*throw()*/;
 
 protected:
-	bool check(HMENU handle) const /*throw()*/ {return toBoolean(::IsMenu(handle));}
+	bool check(HMENU handle) const /*throw()*/ {return boole(::IsMenu(handle));}
 private:
 	enum {TEXT_MARGIN = 2, BUTTON_GAP = 1};
 	std::set<HMENU> managedChildren_;	// for ownership
@@ -177,16 +178,16 @@ template<Menu::ItemIdentificationPolicy idPolicy> inline DWORD Menu::check(UINT 
 	UINT state = getState<idPolicy>(item); state &= ~(MFS_CHECKED | MFS_UNCHECKED); return setState<idPolicy>(item, state | (check ? MFS_CHECKED : MFS_UNCHECKED));}
 
 template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::check(UINT firstItem, UINT lastItem, UINT item) {
-	return toBoolean(::CheckMenuRadioItem(use(), firstItem, lastItem, item, idPolicy == BY_COMMAND ? MF_BYCOMMAND : MF_BYPOSITION));}
+	return boole(::CheckMenuRadioItem(use(), firstItem, lastItem, item, idPolicy == BY_COMMAND ? MF_BYCOMMAND : MF_BYPOSITION));}
 
 inline LRESULT Menu::drawItem(const DRAWITEMSTRUCT& di, const WCHAR* text,
 		const WCHAR* accelerator /* = 0 */, HIMAGELIST icons /* = 0 */, int iconIndex /* = 0 */, HICON icon /* = 0 */) {
 	if(di.CtlType != ODT_MENU)
 		return false;
 	assert(icons == 0 || iconIndex < ::ImageList_GetImageCount(icons));
-	const bool selected = toBoolean(di.itemState & ODS_SELECTED);
-	const bool checked = toBoolean(di.itemState & ODS_CHECKED);
-	const bool disabled = toBoolean(di.itemState & ODS_GRAYED);
+	const bool selected = boole(di.itemState & ODS_SELECTED);
+	const bool checked = boole(di.itemState & ODS_CHECKED);
+	const bool disabled = boole(di.itemState & ODS_GRAYED);
 
 	// detect menu is flat (only XP or later)
 #ifndef SPI_GETFLATMENU
@@ -282,10 +283,10 @@ inline LRESULT Menu::drawItem(const DRAWITEMSTRUCT& di, const WCHAR* text,
 }
 
 template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::enable(UINT item, bool enable /* = true */) {
-	return toBoolean(::EnableMenuItem(use(), item, (idPolicy == BY_COMMAND ? MF_BYCOMMAND : MF_BYPOSITION) | (enable ? MF_ENABLED : MF_GRAYED)));}
+	return boole(::EnableMenuItem(use(), item, (idPolicy == BY_COMMAND ? MF_BYCOMMAND : MF_BYPOSITION) | (enable ? MF_ENABLED : MF_GRAYED)));}
 
 template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::erase(UINT item) {
-	return toBoolean(::DeleteMenu(use(), item, (idPolicy == BY_COMMAND) ? MF_BYCOMMAND : MF_BYPOSITION));}
+	return boole(::DeleteMenu(use(), item, (idPolicy == BY_COMMAND) ? MF_BYCOMMAND : MF_BYPOSITION));}
 
 inline DWORD Menu::getContextHelpID() const {return ::GetMenuContextHelpId(use());}
 
@@ -302,9 +303,9 @@ inline int Menu::getNumberOfItems() const {return ::GetMenuItemCount(use());}
 inline UINT Menu::getID(int index) const {return ::GetMenuItemID(use(), index);}
 
 template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::getItemInformation(UINT item, MENUITEMINFOW& info) const {
-	return toBoolean(::GetMenuItemInfoW(use(), item, idPolicy == Menu::BY_POSITION, &info));}
+	return boole(::GetMenuItemInfoW(use(), item, idPolicy == Menu::BY_POSITION, &info));}
 
-inline bool Menu::getRect(HWND window, UINT index, RECT& rect) const {return toBoolean(::GetMenuItemRect(window, use(), index, &rect));}
+inline bool Menu::getRect(HWND window, UINT index, RECT& rect) const {return boole(::GetMenuItemRect(window, use(), index, &rect));}
 
 template<Menu::ItemIdentificationPolicy idPolicy> inline UINT Menu::getState(UINT item) const {
 	ItemInfo mi; mi.fMask = MIIM_STATE; getItemInformation<idPolicy>(item, mi); return mi.fState;}
@@ -320,7 +321,7 @@ inline LRESULT Menu::handleMenuChar(WCHAR charCode, UINT /*flag*/) {
 	const UINT c = getNumberOfItems();
 //	// search selected item
 //	for(activeItem = 0; activeItem < c; ++activeItem) {
-//		if(toBoolean(getState<BY_POSITION>(activeItem) & MFS_HILITE))
+//		if(boole(getState<BY_POSITION>(activeItem) & MFS_HILITE))
 //			break;
 //	}
 
@@ -344,13 +345,13 @@ inline LRESULT Menu::handleMenuChar(WCHAR charCode, UINT /*flag*/) {
 	return (i != c) ? MAKELONG(i, MNC_EXECUTE) : MAKELONG(0, MNC_IGNORE);
 }
 
-inline bool Menu::hasSubMenu(UINT index) const {return toBoolean(::IsMenu(::GetSubMenu(use(), index)));}
+inline bool Menu::hasSubMenu(UINT index) const {return boole(::IsMenu(::GetSubMenu(use(), index)));}
 
 template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::hilite(HWND window, UINT item, bool hilite /* = true */) {
-	return toBoolean(::HiliteMenuItem(window, use(), item, (idPolicy == Menu::BY_COMMAND ? MF_BYCOMMAND : MF_BYPOSITION) | (hilite ? MF_HILITE : MF_UNHILITE)));}
+	return boole(::HiliteMenuItem(window, use(), item, (idPolicy == Menu::BY_COMMAND ? MF_BYCOMMAND : MF_BYPOSITION) | (hilite ? MF_HILITE : MF_UNHILITE)));}
 
 template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::insert(UINT item, const MENUITEMINFOW& info) {
-	return toBoolean(::InsertMenuItemW(use(), item, idPolicy == Menu::BY_POSITION, &info));}
+	return boole(::InsertMenuItemW(use(), item, idPolicy == Menu::BY_POSITION, &info));}
 
 template<Menu::ItemIdentificationPolicy idPolicy>
 inline bool Menu::insert(UINT item, UINT previousItem, UINT type, UINT state, const WCHAR* caption) {
@@ -359,7 +360,7 @@ inline bool Menu::insert(UINT item, UINT previousItem, UINT type, UINT state, co
 	info.fType = type;
 	info.fState = state;
 	info.wID = item;
-	if(toBoolean(type & MFT_OWNERDRAW) && caption != 0) {
+	if(boole(type & MFT_OWNERDRAW) && caption != 0) {
 		info.fMask |= MIIM_DATA;
 		info.dwItemData = reinterpret_cast<DWORD_PTR>(caption);
 	}
@@ -377,7 +378,7 @@ template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::insertSepara
 	return insert<idPolicy>(item, info);
 }
 
-inline bool Menu::isMenu() const /*throw()*/ {return toBoolean(::IsMenu(get()));}
+inline bool Menu::isMenu() const /*throw()*/ {return boole(::IsMenu(get()));}
 
 inline Menu Menu::load(HINSTANCE instance, const ResourceID& id) {return Menu(managed(::LoadMenuW(instance, id)));}
 
@@ -419,15 +420,15 @@ inline LRESULT Menu::measureItem(MEASUREITEMSTRUCT& mi, const WCHAR* text, const
 	return true;
 }
 
-template<> inline bool Menu::remove<Menu::BY_COMMAND>(UINT item) {return toBoolean(::RemoveMenu(use(), item, MF_BYCOMMAND));}
+template<> inline bool Menu::remove<Menu::BY_COMMAND>(UINT item) {return boole(::RemoveMenu(use(), item, MF_BYCOMMAND));}
 
-template<> inline bool Menu::remove<Menu::BY_POSITION>(UINT item) {return toBoolean(::RemoveMenu(use(), item, MF_BYPOSITION));}
+template<> inline bool Menu::remove<Menu::BY_POSITION>(UINT item) {return boole(::RemoveMenu(use(), item, MF_BYPOSITION));}
 
 template<> inline bool Menu::setBitmaps<Menu::BY_COMMAND>(UINT item, HBITMAP uncheckedBitmap, HBITMAP checkedBitmap) {
-	return toBoolean(::SetMenuItemBitmaps(use(), item, MF_BYCOMMAND, uncheckedBitmap, checkedBitmap));}
+	return boole(::SetMenuItemBitmaps(use(), item, MF_BYCOMMAND, uncheckedBitmap, checkedBitmap));}
 
 template<> inline bool Menu::setBitmaps<Menu::BY_POSITION>(UINT item, HBITMAP uncheckedBitmap, HBITMAP checkedBitmap) {
-	return toBoolean(::SetMenuItemBitmaps(use(), item, MF_BYPOSITION, uncheckedBitmap, checkedBitmap));}
+	return boole(::SetMenuItemBitmaps(use(), item, MF_BYPOSITION, uncheckedBitmap, checkedBitmap));}
 
 template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::setChildPopup(UINT item, Borrowed<HMENU> popup) {
 	ItemInfo info;
@@ -459,13 +460,13 @@ template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::setChildPopu
 		return false;
 }
 
-inline bool Menu::setContextHelpID(DWORD id) {return toBoolean(::SetMenuContextHelpId(use(), id));}
+inline bool Menu::setContextHelpID(DWORD id) {return boole(::SetMenuContextHelpId(use(), id));}
 
 template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::setDefault(UINT item) {
-	return toBoolean(::SetMenuDefaultItem(use(), item, idPolicy == Menu::BY_POSITION));}
+	return boole(::SetMenuDefaultItem(use(), item, idPolicy == Menu::BY_POSITION));}
 
 template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::setItemInformation(UINT item, const MENUITEMINFOW& info) {
-	return toBoolean(::SetMenuItemInfoW(use(), item, idPolicy == Menu::BY_POSITION, &info));}
+	return boole(::SetMenuItemInfoW(use(), item, idPolicy == Menu::BY_POSITION, &info));}
 
 template<Menu::ItemIdentificationPolicy idPolicy> inline bool Menu::setState(UINT item, UINT state) {
 	ItemInfo mi; mi.fMask = MIIM_STATE; mi.fState = state; return setItemInformation<idPolicy>(item, mi);}
@@ -478,15 +479,15 @@ inline UINT Menu::sizeOfMENUITEMINFOW() {
 }
 
 inline bool Menu::trackPopup(UINT flags, int x, int y, HWND window, const RECT* rect /* = 0 */) const {
-	return toBoolean(::TrackPopupMenu(use(), flags, x, y, 0, window, rect));}
+	return boole(::TrackPopupMenu(use(), flags, x, y, 0, window, rect));}
 
 inline bool Menu::trackPopupEx(UINT flags, int x, int y, HWND window, const TPMPARAMS* params /* = 0 */) const {
-	return toBoolean(::TrackPopupMenuEx(use(), flags, x, y, window, const_cast<TPMPARAMS*>(params)));}
+	return boole(::TrackPopupMenuEx(use(), flags, x, y, window, const_cast<TPMPARAMS*>(params)));}
 
 #if(WINVER >= 0x0500)
-inline bool Menu::getInformation(MENUINFO& mi) const {return toBoolean(::GetMenuInfo(use(), &mi));}
+inline bool Menu::getInformation(MENUINFO& mi) const {return boole(::GetMenuInfo(use(), &mi));}
 
-inline bool Menu::setInformation(const MENUINFO& mi) {return toBoolean(::SetMenuInfo(use(), &mi));}
+inline bool Menu::setInformation(const MENUINFO& mi) {return boole(::SetMenuInfo(use(), &mi));}
 #endif // WINVER >= 0x0500
 
 }}} // namespace manah.win32.ui
@@ -495,4 +496,4 @@ inline bool Menu::setInformation(const MENUINFO& mi) {return toBoolean(::SetMenu
 #	pragma warning(default : 4297)
 #endif // _MSC_VER
 
-#endif // !MANAH_MENU_HPP
+#endif // !ASCENSION_WIN32_MENU_HPP
