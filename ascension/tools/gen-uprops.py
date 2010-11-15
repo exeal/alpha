@@ -565,7 +565,7 @@ class CodeGenerator(object):
 
 
 def main():
-    CodeGenerator(sys.argv[1], sys.argv[2], r'../src/generated~/').main()
+    CodeGenerator(sys.argv[1], sys.argv[2], r'../src/generated/').main()
     print('Done.')
 
 if __name__ == '__main__':
