@@ -6,15 +6,16 @@
  * @see viewer.cpp
  */
 
-#include <ascension/viewer.hpp>
+#include <ascension/viewer/viewer.hpp>
 #include <ascension/text-editor.hpp>	// texteditor.commands.*
 #include <ascension/win32/ui/menu.hpp>
 #include <zmouse.h>
+
 using namespace ascension;
 using namespace ascension::graphics;
 using namespace ascension::presentation;
 using namespace ascension::viewers;
-using namespace manah;
+using namespace ascension::viewers::base;
 using namespace std;
 namespace k = ascension::kernel;
 
@@ -42,7 +43,7 @@ namespace {
 				session->incrementalSearcher().end();
 		}
 	}
-	inline const hyperlink::IHyperlink* getPointedHyperlink(const TextViewer& viewer, const Position& at) {
+	inline const hyperlink::IHyperlink* getPointedHyperlink(const TextViewer& viewer, const k::Position& at) {
 		size_t numberOfHyperlinks;
 		if(const hyperlink::IHyperlink* const* hyperlinks = viewer.presentation().getHyperlinks(at.line, numberOfHyperlinks)) {
 			for(size_t i = 0; i < numberOfHyperlinks; ++i) {
@@ -65,6 +66,56 @@ namespace {
 	}
 } // namespace @0
 
+/// @see WindowBase#aboutToLoseFocus
+bool TextViewer::aboutToLoseFocus() {
+	ASCENSION_RESTORE_VANISHED_CURSOR();
+	if(mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->interruptMouseReaction(false);
+/*	if(caret_->getMatchBracketsTrackingMode() != Caret::DONT_TRACK
+			&& getCaret().getMatchBrackets().first != Position::INVALID_POSITION) {	// 対括弧の通知を終了
+		FOR_EACH_LISTENERS()
+			(*it)->onMatchBracketFoundOutOfView(Position::INVALID_POSITION);
+	}
+	if(completionWindow_->isWindow() && newWindow != completionWindow_->getSafeHwnd())
+		closeCompletionProposalsPopup(*this);
+*/	abortIncrementalSearch(*this);
+	if(imeCompositionActivated_) {	// stop IME input
+		win32::Handle<HIMC> imc(::ImmGetContext(handle().get()),
+			bind1st(ptr_fun(&::ImmReleaseContext), handle().get()));
+		::ImmNotifyIME(imc.get(), NI_COMPOSITIONSTR, CPS_CANCEL, 0);
+	}
+//	if(currentWin32WindowMessage().wParam != get()) {
+//		hideCaret();
+//		::DestroyCaret();
+//	}
+	redrawLines(caret().beginning().line(), caret().end().line());
+	redrawScheduledRegion();
+	return true;
+}
+
+/// @see WindowBase#focusGained
+bool TextViewer::focusGained() {
+	// restore the scroll positions
+	setScrollPosition(SB_HORZ, scrollInfo_.horizontal.position, false);
+	setScrollPosition(SB_VERT, scrollInfo_.vertical.position, true);
+
+	// hmm...
+//	if(/*sharedData_->options.appearance[SHOW_CURRENT_UNDERLINE] ||*/ !getCaret().isSelectionEmpty()) {
+		redrawLines(caret().beginning().line(), caret().end().line());
+		redrawScheduledRegion();
+//	}
+
+//	if(currentWin32WindowMessage().wParam != get()) {
+//		// resurrect the caret
+//		recreateCaret();
+//		updateCaretPosition();
+//		if(texteditor::Session* const session = document().session()) {
+//			if(texteditor::InputSequenceCheckers* const isc = session->inputSequenceCheckers())
+//				isc->setKeyboardLayout(::GetKeyboardLayout(::GetCurrentThreadId()));
+//		}
+//	}
+}
+
 /// Handles @c WM_CHAR and @c WM_UNICHAR window messages.
 void TextViewer::handleGUICharacterInput(CodePoint c) {
 	// vanish the cursor when the GUI user began typing
@@ -85,47 +136,41 @@ void TextViewer::handleGUICharacterInput(CodePoint c) {
 	}
 }
 
-/**
- * Translates key down message to a command.
- *
- * This method provides a default implementtation of "key combination to command" map.
- * Default @c #onKeyDown calls this method.
- *
- * This method is not overiddable (not virtual).
- * To customize key bindings, the derevied class must override @c #onKeyDown method instead.
- * @param key the virtual-keycode of the key
- * @param controlPressed true if CTRL key is pressed
- * @param shiftPressed true if SHIFT key is pressed
- * @param altPressed true if ALT key is pressed
- * @return true if the key down was handled
- */
-bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed, bool altPressed) /*throw()*/ {
+/// @see WindowBase#keyPressed
+bool TextViewer::keyPressed(const KeyInput& input) {
+	if(mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->interruptMouseReaction(true);
+
+	// TODO: This code is temporary. The following code provides a default implementation of
+	// TODO: "key combination to command" map.
 	using namespace ascension::texteditor::commands;
-//	if(altPressed) {
-//		if(!shiftPressed || (key != VK_LEFT && key != VK_UP && key != VK_RIGHT && key != VK_DOWN))
+//	if(hasModifier<UserInput::ALT_DOWN>(input)) {
+//		if(!hasModifier<UserInput::SHIFT_DOWN>(input)
+//				|| (input.keyboardCode() != VK_LEFT && input.keyboardCode() != VK_UP
+//				&& input.keyboardCode() != VK_RIGHT && input.keyboardCode() != VK_DOWN))
 //			return false;
 //	}
-	switch(key) {
+	switch(input.keyboardCode()) {
 	case VK_BACK:	// [BackSpace]
 	case VK_F16:	// [F16]
-		if(controlPressed)
+		if(hasModifier<UserInput::CONTROL_DOWN>(input))
 			WordDeletionCommand(*this, Direction::BACKWARD)();
 		else
 			CharacterDeletionCommand(*this, Direction::BACKWARD)();
 		return true;
 	case VK_CLEAR:	// [Clear]
-		if(controlPressed) {
+		if(hasModifier<UserInput::CONTROL_DOWN>(input)) {
 			EntireDocumentSelectionCreationCommand(*this)();
 			return true;
 		}
 		break;
 	case VK_RETURN:	// [Enter]
-		NewlineCommand(*this, controlPressed)();
+		NewlineCommand(*this, hasModifier<UserInput::CONTROL_DOWN>(input))();
 		return true;
 	case VK_SHIFT:	// [Shift]
-		if(controlPressed
-				&& ((toBoolean(::GetAsyncKeyState(VK_LSHIFT) & 0x8000) && configuration_.readingDirection == RIGHT_TO_LEFT)
-				|| (toBoolean(::GetAsyncKeyState(VK_RSHIFT) & 0x8000) && configuration_.readingDirection == LEFT_TO_RIGHT))) {
+		if(hasModifier<UserInput::CONTROL_DOWN>(input)
+				&& (::GetKeyState(VK_LSHIFT) < 0 && configuration_.readingDirection == RIGHT_TO_LEFT)
+				|| (::GetKeyState(VK_RSHIFT) < 0 && configuration_.readingDirection == LEFT_TO_RIGHT)) {
 			toggleOrientation(*this);
 			return true;
 		}
@@ -134,138 +179,197 @@ bool TextViewer::handleKeyDown(UINT key, bool controlPressed, bool shiftPressed,
 		CancelCommand(*this)();
 		return true;
 	case VK_PRIOR:	// [PageUp]
-		if(controlPressed)	onVScroll(SB_PAGEUP, 0, 0);
-		else				CaretMovementCommand(*this, &k::locations::backwardPage, shiftPressed)();
+		if(hasModifier<UserInput::CONTROL_DOWN>(input))
+			onVScroll(SB_PAGEUP, 0, 0);
+		else
+			CaretMovementCommand(*this, &k::locations::backwardPage, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		return true;
 	case VK_NEXT:	// [PageDown]
-		if(controlPressed)	onVScroll(SB_PAGEDOWN, 0, 0);
-		else				CaretMovementCommand(*this, &k::locations::forwardPage, shiftPressed)();
+		if(hasModifier<UserInput::CONTROL_DOWN>(input))
+			onVScroll(SB_PAGEDOWN, 0, 0);
+		else
+			CaretMovementCommand(*this, &k::locations::forwardPage, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		return true;
 	case VK_HOME:	// [Home]
-		if(controlPressed)
-			CaretMovementCommand(*this, &k::locations::beginningOfDocument, shiftPressed)();
+		if(hasModifier<UserInput::CONTROL_DOWN>(input))
+			CaretMovementCommand(*this, &k::locations::beginningOfDocument, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		else
-			CaretMovementCommand(*this, &k::locations::beginningOfVisualLine, shiftPressed)();
+			CaretMovementCommand(*this, &k::locations::beginningOfVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		return true;
 	case VK_END:	// [End]
-		if(controlPressed)
-			CaretMovementCommand(*this, &k::locations::endOfDocument, shiftPressed)();
+		if(hasModifier<UserInput::CONTROL_DOWN>(input))
+			CaretMovementCommand(*this, &k::locations::endOfDocument, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		else
-			CaretMovementCommand(*this, &k::locations::endOfVisualLine, shiftPressed)();
+			CaretMovementCommand(*this, &k::locations::endOfVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		return true;
 	case VK_LEFT:	// [Left]
-		if(altPressed && shiftPressed) {
-			if(controlPressed)
+		if(hasModifier<UserInput::ALT_DOWN>(input) && hasModifier<UserInput::SHIFT_DOWN>(input)) {
+			if(hasModifier<UserInput::CONTROL_DOWN>(input))
 				RowSelectionExtensionCommand(*this, &k::locations::leftWord)();
 			else
 				RowSelectionExtensionCommand(*this, &k::locations::leftCharacter)();
 		} else {
-			if(controlPressed)
-				CaretMovementCommand(*this, &k::locations::leftWord, shiftPressed)();
+			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+				CaretMovementCommand(*this, &k::locations::leftWord, hasModifier<UserInput::SHIFT_DOWN>(input))();
 			else
-				CaretMovementCommand(*this, &k::locations::leftCharacter, shiftPressed)();
+				CaretMovementCommand(*this, &k::locations::leftCharacter, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		}
 		return true;
 	case VK_UP:		// [Up]
-		if(altPressed && shiftPressed && !controlPressed)
+		if(hasModifier<UserInput::ALT_DOWN>(input)
+				&& hasModifier<UserInput::SHIFT_DOWN>(input) && !hasModifier<UserInput::CONTROL_DOWN>(input))
 			RowSelectionExtensionCommand(*this, &k::locations::backwardVisualLine)();
-		else if(controlPressed && !shiftPressed)
+		else if(hasModifier<UserInput::CONTROL_DOWN>(input) && !hasModifier<UserInput::SHIFT_DOWN>(input))
 			scroll(0, -1, true);
 		else
-			CaretMovementCommand(*this, &k::locations::backwardVisualLine, shiftPressed)();
+			CaretMovementCommand(*this, &k::locations::backwardVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		return true;
 	case VK_RIGHT:	// [Right]
-		if(altPressed) {
-			if(shiftPressed) {
-				if(controlPressed)
+		if(hasModifier<UserInput::ALT_DOWN>(input)) {
+			if(hasModifier<UserInput::SHIFT_DOWN>(input)) {
+				if(hasModifier<UserInput::CONTROL_DOWN>(input))
 					RowSelectionExtensionCommand(*this, &k::locations::rightWord)();
 				else
 					RowSelectionExtensionCommand(*this, &k::locations::rightCharacter)();
 			} else
 				CompletionProposalPopupCommand(*this)();
 		} else {
-			if(controlPressed)
-				CaretMovementCommand(*this, &k::locations::rightWord, shiftPressed)();
+			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+				CaretMovementCommand(*this, &k::locations::rightWord, hasModifier<UserInput::SHIFT_DOWN>(input))();
 			else
-				CaretMovementCommand(*this, &k::locations::rightCharacter, shiftPressed)();
+				CaretMovementCommand(*this, &k::locations::rightCharacter, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		}
 		return true;
 	case VK_DOWN:	// [Down]
-		if(altPressed && shiftPressed && !controlPressed)
+		if(hasModifier<UserInput::ALT_DOWN>(input)
+				&& hasModifier<UserInput::SHIFT_DOWN>(input) && !hasModifier<UserInput::CONTROL_DOWN>(input))
 			RowSelectionExtensionCommand(*this, &k::locations::forwardVisualLine)();
-		else if(controlPressed && !shiftPressed)
+		else if(hasModifier<UserInput::CONTROL_DOWN>(input) && !hasModifier<UserInput::SHIFT_DOWN>(input))
 			onVScroll(SB_LINEDOWN, 0, 0);
 		else
-			CaretMovementCommand(*this, &k::locations::forwardVisualLine, shiftPressed)();
+			CaretMovementCommand(*this, &k::locations::forwardVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		return true;
 	case VK_INSERT:	// [Insert]
-		if(altPressed)
+		if(hasModifier<UserInput::ALT_DOWN>(input))
 			break;
-		else if(!shiftPressed) {
-			if(controlPressed)	copySelection(caret(), true);
-			else				OvertypeModeToggleCommand(*this)();
-		} else if(controlPressed)
+		else if(!hasModifier<UserInput::SHIFT_DOWN>(input)) {
+			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+				copySelection(caret(), true);
+			else
+				OvertypeModeToggleCommand(*this)();
+		} else if(hasModifier<UserInput::CONTROL_DOWN>(input))
 			PasteCommand(*this, false)();
-		else						break;
+		else
+			break;
 		return true;
 	case VK_DELETE:	// [Delete]
-		if(!shiftPressed) {
-			if(controlPressed)
+		if(!hasModifier<UserInput::SHIFT_DOWN>(input)) {
+			if(hasModifier<UserInput::CONTROL_DOWN>(input))
 				WordDeletionCommand(*this, Direction::FORWARD)();
 			else
 				CharacterDeletionCommand(*this, Direction::FORWARD)();
-		} else if(!controlPressed)
+		} else if(!hasModifier<UserInput::CONTROL_DOWN>(input))
 			cutSelection(caret(), true);
 		else
 			break;
 		return true;
 	case 'A':	// ^A -> Select All
-		if(controlPressed)
+		if(hasModifier<UserInput::CONTROL_DOWN>(input))
 			return EntireDocumentSelectionCreationCommand(*this)(), true;
 		break;
 	case 'C':	// ^C -> Copy
-		if(controlPressed)
+		if(hasModifier<UserInput::CONTROL_DOWN>(input))
 			return copySelection(caret(), true), true;
 		break;
 	case 'H':	// ^H -> Backspace
-		if(controlPressed)
+		if(hasModifier<UserInput::CONTROL_DOWN>(input))
 			CharacterDeletionCommand(*this, Direction::BACKWARD)(), true;
 		break;
 	case 'I':	// ^I -> Tab
-		if(controlPressed)
+		if(hasModifier<UserInput::CONTROL_DOWN>(input))
 			return CharacterInputCommand(*this, 0x0009u)(), true;
 		break;
 	case 'J':	// ^J -> New Line
 	case 'M':	// ^M -> New Line
-		if(controlPressed)
+		if(hasModifier<UserInput::CONTROL_DOWN>(input))
 			return NewlineCommand(*this, false)(), true;
 		break;
 	case 'V':	// ^V -> Paste
-		if(controlPressed)
+		if(hasModifier<UserInput::CONTROL_DOWN>(input))
 			return PasteCommand(*this, false)(), true;
 		break;
 	case 'X':	// ^X -> Cut
-		if(controlPressed)
+		if(hasModifier<UserInput::CONTROL_DOWN>(input))
 			return cutSelection(caret(), true), true;
 		break;
 	case 'Y':	// ^Y -> Redo
-		if(controlPressed)
+		if(hasModifier<UserInput::CONTROL_DOWN>(input))
 			return UndoCommand(*this, true)(), true;
 		break;
 	case 'Z':	// ^Z -> Undo
-		if(controlPressed)
+		if(hasModifier<UserInput::CONTROL_DOWN>(input))
 			return UndoCommand(*this, false)(), true;
 		break;
 	case VK_NUMPAD5:	// [Number Pad 5]
-		if(controlPressed)
+		if(hasModifier<UserInput::CONTROL_DOWN>(input))
 			return EntireDocumentSelectionCreationCommand(*this)(), true;
 		break;
 	case VK_F12:	// [F12]
-		if(controlPressed && shiftPressed)
+		if(hasModifier<UserInput::CONTROL_DOWN>(input) && hasModifier<UserInput::SHIFT_DOWN>(input))
 			return CodePointToCharacterConversionCommand(*this)(), true;
 		break;
 	}
 	return false;
+}
+
+/// @see WindowBase#keyReleased
+bool TextViewer::keyReleased(const KeyInput& input) {
+	if(hasModifier<UserInput::ALT_DOWN>(input)) {
+		ASCENSION_RESTORE_VANISHED_CURSOR();
+		if(mouseInputStrategy_.get() != 0)
+			mouseInputStrategy_->interruptMouseReaction(true);
+	}
+	return false;
+}
+
+/// @see WindowBase#mouseDoubleClicked
+bool TextViewer::mouseDoubleClicked(const MouseButtonInput& input) {
+	if(!allowsMouseInput() || mouseInputStrategy_.get() == 0)
+		return false;
+	return mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::DOUBLE_CLICKED, input);
+}
+
+/// @see WindowBase#mouseMoved
+bool TextViewer::mouseMoved(const LocatedUserInput& input) {
+	ASCENSION_RESTORE_VANISHED_CURSOR();
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseMoved(input);
+	return true;
+}
+
+/// @see WindowBase#mousePressed
+bool TextViewer::mousePressed(const MouseButtonInput& input) {
+	ASCENSION_RESTORE_VANISHED_CURSOR();
+	if(!allowsMouseInput() || mouseInputStrategy_.get() == 0)
+		return false;
+	return mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::PRESSED, input);
+}
+
+/// @see WindowBase#mouseReleased
+bool TextViewer::mouseReleased(const MouseButtonInput& input) {
+	if(allowsMouseInput() || input.button() == UserInput::BUTTON3_DOWN)
+		ASCENSION_RESTORE_VANISHED_CURSOR();
+	if(!allowsMouseInput() || mouseInputStrategy_.get() == 0)
+		return false;
+	return mouseInputStrategy_->mouseButtonInput(IMouseInputStrategy::RELEASED, input);
+}
+
+/// @see WindowBase#mouseWheelChanged
+bool TextViewer::mouseWheelChanged(const MouseWheelInput& input) {
+	ASCENSION_RESTORE_VANISHED_CURSOR();
+	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+		mouseInputStrategy_->mouseWheelRotated(input);
+	return true;
 }
 
 /// @see WM_CAPTURECHANGED
@@ -554,15 +658,15 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 		WCHAR* reconvert = japanese ? L"\x518d\x5909\x63db(&R)" : L"&Reconvert";
 
 		menu << Menu::SeparatorItem()
-			<< Menu::StringItem(ID_TOGGLEIMESTATUS, toBoolean(::ImmGetOpenStatus(imc)) ? closeIme : openIme);
+			<< Menu::StringItem(ID_TOGGLEIMESTATUS, win32::boole(::ImmGetOpenStatus(imc)) ? closeIme : openIme);
 
-		if(toBoolean(::ImmGetProperty(keyboardLayout, IGP_CONVERSION) & IME_CMODE_SOFTKBD)) {
+		if(win32::boole(::ImmGetProperty(keyboardLayout, IGP_CONVERSION) & IME_CMODE_SOFTKBD)) {
 			DWORD convMode;
 			::ImmGetConversionStatus(imc, &convMode, 0);
-			menu << Menu::StringItem(ID_TOGGLESOFTKEYBOARD, toBoolean(convMode & IME_CMODE_SOFTKBD) ? closeSftKbd : openSftKbd);
+			menu << Menu::StringItem(ID_TOGGLESOFTKEYBOARD, win32::boole(convMode & IME_CMODE_SOFTKBD) ? closeSftKbd : openSftKbd);
 		}
 
-		if(toBoolean(::ImmGetProperty(keyboardLayout, IGP_SETCOMPSTR) & SCS_CAP_SETRECONVERTSTRING))
+		if(win32::boole(::ImmGetProperty(keyboardLayout, IGP_SETCOMPSTR) & SCS_CAP_SETRECONVERTSTRING))
 			menu << Menu::StringItem(ID_RECONVERT, reconvert, (!readOnly && hasSelection) ? MFS_ENABLED : MFS_GRAYED);
 
 		::ImmReleaseContext(handle().get(), imc);
@@ -596,7 +700,7 @@ bool TextViewer::onContextMenu(HWND, const POINT& pt) {
 void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 	if(document().isReadOnly())
 		return;
-	else if(/*lParam == 0 ||*/ toBoolean(lParam & GCS_RESULTSTR)) {	// completed
+	else if(/*lParam == 0 ||*/ win32::boole(lParam & GCS_RESULTSTR)) {	// completed
 		if(HIMC imc = ::ImmGetContext(handle().get())) {
 			if(const length_t len = ::ImmGetCompositionStringW(imc, GCS_RESULTSTR, 0, 0) / sizeof(WCHAR)) {
 				// this was not canceled
@@ -610,7 +714,7 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 					try {
 						doc.insertUndoBoundary();
 						doc.replace(k::Region(*caret_,
-							static_cast<k::DocumentCharacterIterator&>(k:DocumentCharacterIterator(doc, caret()).next()).tell()),
+							static_cast<k::DocumentCharacterIterator&>(k::DocumentCharacterIterator(doc, caret()).next()).tell()),
 							String(1, static_cast<Char>(wParam)));:
 						doc.insertUndoBoundary();
 					} catch(const DocumentCantChangeException&) {
@@ -623,8 +727,8 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 			::ImmReleaseContext(handle().get(), imc);
 			handled = true;	// prevent to be send WM_CHARs
 		}
-	} else if(toBoolean(GCS_COMPSTR & lParam)) {
-		if(toBoolean(lParam & CS_INSERTCHAR)) {
+	} else if(win32::boole(GCS_COMPSTR & lParam)) {
+		if(win32::boole(lParam & CS_INSERTCHAR)) {
 			k::Document& doc = document();
 			const k::Position temp(*caret_);
 			try {
@@ -635,7 +739,7 @@ void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
 				else
 					insert(doc, *caret_, String(1, static_cast<Char>(wParam)));
 				imeComposingCharacter_ = true;
-				if(toBoolean(lParam & CS_NOMOVECARET))
+				if(win32::boole(lParam & CS_NOMOVECARET))
 					caret_->moveTo(temp);
 			} catch(...) {
 			}
@@ -753,171 +857,15 @@ void TextViewer::onIMEStartComposition() {
 	utils::closeCompletionProposalsPopup(*this);
 }
 
-/// @see WM_KEYDOWN
-void TextViewer::onKeyDown(UINT vkey, UINT, bool& handled) {
-	if(mouseInputStrategy_.get() != 0)
-		mouseInputStrategy_->interruptMouseReaction(true);
-	handled = handleKeyDown(vkey, toBoolean(::GetKeyState(VK_CONTROL) & 0x8000), toBoolean(::GetKeyState(VK_SHIFT) & 0x8000), false);
-}
-
-/// @see WM_KILLFOCUS
-void TextViewer::onKillFocus(HWND newWindow) {
-	ASCENSION_RESTORE_VANISHED_CURSOR();
-	if(mouseInputStrategy_.get() != 0)
-		mouseInputStrategy_->interruptMouseReaction(false);
-/*	if(caret_->getMatchBracketsTrackingMode() != Caret::DONT_TRACK
-			&& getCaret().getMatchBrackets().first != Position::INVALID_POSITION) {	// 対括弧の通知を終了
-		FOR_EACH_LISTENERS()
-			(*it)->onMatchBracketFoundOutOfView(Position::INVALID_POSITION);
-	}
-	if(completionWindow_->isWindow() && newWindow != completionWindow_->getSafeHwnd())
-		closeCompletionProposalsPopup(*this);
-*/	abortIncrementalSearch(*this);
-	if(imeCompositionActivated_) {	// stop IME input
-		HIMC imc = ::ImmGetContext(get());
-		::ImmNotifyIME(imc, NI_COMPOSITIONSTR, CPS_CANCEL, 0);
-		::ImmReleaseContext(get(), imc);
-	}
-	if(newWindow != get()) {
-		hideCaret();
-		::DestroyCaret();
-	}
-	redrawLines(caret().beginning().line(), caret().end().line());
-	update();
-}
-
-/// @see WM_LBUTTONDBLCLK
-void TextViewer::onLButtonDblClk(UINT keyState, const POINT& pt, bool& handled) {
-	handled = (allowsMouseInput() && mouseInputStrategy_.get() != 0) ?
-		handled = mouseInputStrategy_->mouseButtonInput(
-			IMouseInputStrategy::LEFT_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState) : false;
-}
-
-/// @see WM_LBUTTONDOWN
-void TextViewer::onLButtonDown(UINT keyState, const POINT& pt, bool& handled) {
-	ASCENSION_RESTORE_VANISHED_CURSOR();
-	handled = (allowsMouseInput() && mouseInputStrategy_.get() != 0) ?
-		handled = mouseInputStrategy_->mouseButtonInput(
-			IMouseInputStrategy::LEFT_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState) : false;
-}
-
-/// @see WM_LBUTTONUP
-void TextViewer::onLButtonUp(UINT keyState, const POINT& pt, bool& handled) {
-	ASCENSION_RESTORE_VANISHED_CURSOR();
-	handled = (allowsMouseInput() && mouseInputStrategy_.get() != 0) ?
-		handled = mouseInputStrategy_->mouseButtonInput(
-			IMouseInputStrategy::LEFT_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState) : false;
-}
-
-/// @see WM_MBUTTONDBLCLK
-void TextViewer::onMButtonDblClk(UINT keyState, const POINT& pt, bool& handled) {
-	handled = (allowsMouseInput() && mouseInputStrategy_.get() != 0) ?
-		mouseInputStrategy_->mouseButtonInput(
-			IMouseInputStrategy::MIDDLE_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState) : false;
-}
-
-/// @see WM_MBUTTONDOWN
-void TextViewer::onMButtonDown(UINT keyState, const POINT& pt, bool& handled) {
-	ASCENSION_RESTORE_VANISHED_CURSOR();
-	handled = (allowsMouseInput() && mouseInputStrategy_.get() != 0) ?
-		mouseInputStrategy_->mouseButtonInput(
-			IMouseInputStrategy::MIDDLE_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState) : false;
-}
-
-/// @see WM_MBUTTONUP
-void TextViewer::onMButtonUp(UINT keyState, const POINT& pt, bool& handled) {
-	ASCENSION_RESTORE_VANISHED_CURSOR();
-	handled = (allowsMouseInput() && mouseInputStrategy_.get() != 0) ? 
-		mouseInputStrategy_->mouseButtonInput(
-			IMouseInputStrategy::MIDDLE_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState) : false;
-}
-
-/// @see WM_MOUSEMOVE
-void TextViewer::onMouseMove(UINT keyState, const POINT& position) {
-	ASCENSION_RESTORE_VANISHED_CURSOR();
-	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
-		mouseInputStrategy_->mouseMoved(position, keyState);
-}
-
-/// @see WM_MOUSEWHEEL
-void TextViewer::onMouseWheel(UINT keyState, short delta, const POINT& pt) {
-	ASCENSION_RESTORE_VANISHED_CURSOR();
-	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
-		mouseInputStrategy_->mouseWheelRotated(delta, pt, keyState);
-}
-
-/// @see WM_RBUTTONDBLCLK
-void TextViewer::onRButtonDblClk(UINT keyState, const POINT& pt, bool& handled) {
-	handled = (allowsMouseInput() && mouseInputStrategy_.get() != 0) ?
-		mouseInputStrategy_->mouseButtonInput(
-			IMouseInputStrategy::RIGHT_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState) : false;
-}
-
-/// @see WM_RBUTTONDOWN
-void TextViewer::onRButtonDown(UINT keyState, const POINT& pt, bool& handled) {
-	ASCENSION_RESTORE_VANISHED_CURSOR();
-	handled = (allowsMouseInput() && mouseInputStrategy_.get() != 0) ?
-		mouseInputStrategy_->mouseButtonInput(
-			IMouseInputStrategy::RIGHT_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState) : false;
-}
-
-/// @see WM_RBUTTONUP
-void TextViewer::onRButtonUp(UINT keyState, const POINT& pt, bool& handled) {
-	if(allowsMouseInput()) {
-		ASCENSION_RESTORE_VANISHED_CURSOR();
-		handled = (mouseInputStrategy_.get() != 0) ? mouseInputStrategy_->mouseButtonInput(
-			IMouseInputStrategy::RIGHT_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState) : false;
-	} else
-		handled = false;
-}
-
 /// @see WM_SETCURSOR
 bool TextViewer::onSetCursor(HWND, UINT, UINT) {
 	ASCENSION_RESTORE_VANISHED_CURSOR();
 	return (mouseInputStrategy_.get() != 0) ? mouseInputStrategy_->showCursor(getCursorPosition()) : false;
 }
 
-/// @see WM_SETFOCUS
-void TextViewer::onSetFocus(HWND oldWindow) {
-	// restore the scroll positions
-	setScrollPosition(SB_HORZ, scrollInfo_.horizontal.position, false);
-	setScrollPosition(SB_VERT, scrollInfo_.vertical.position, true);
-
-	// hmm...
-//	if(/*sharedData_->options.appearance[SHOW_CURRENT_UNDERLINE] ||*/ !getCaret().isSelectionEmpty()) {
-		redrawLines(caret().beginning().line(), caret().end().line());
-		update();
-//	}
-
-	if(oldWindow != get()) {
-		// resurrect the caret
-		recreateCaret();
-		updateCaretPosition();
-		if(texteditor::Session* const session = document().session()) {
-			if(texteditor::InputSequenceCheckers* const isc = session->inputSequenceCheckers())
-				isc->setKeyboardLayout(::GetKeyboardLayout(::GetCurrentThreadId()));
-		}
-	}
-}
-
 /// @see WM_SYSCHAR
 void TextViewer::onSysChar(UINT, UINT) {
 	ASCENSION_RESTORE_VANISHED_CURSOR();
-}
-
-/// @see WM_SYSKEYDOWN
-bool TextViewer::onSysKeyDown(UINT vkey, UINT) {
-	if(mouseInputStrategy_.get() != 0)
-		mouseInputStrategy_->interruptMouseReaction(true);
-	return handleKeyDown(vkey, toBoolean(::GetKeyState(VK_CONTROL) & 0x8000), toBoolean(::GetKeyState(VK_SHIFT) & 0x8000), true);;
-}
-
-/// @see WM_SYSKEYUP
-bool TextViewer::onSysKeyUp(UINT, UINT) {
-	ASCENSION_RESTORE_VANISHED_CURSOR();
-	if(mouseInputStrategy_.get() != 0)
-		mouseInputStrategy_->interruptMouseReaction(true);
-	return false;
 }
 
 #ifdef WM_UNICHAR
@@ -927,32 +875,6 @@ void TextViewer::onUniChar(UINT ch, UINT) {
 		handleGUICharacterInput(ch);
 }
 #endif // WM_UNICHAR
-
-/// @see WM_XBUTTONDBLCLK
-bool TextViewer::onXButtonDblClk(WORD xButton, WORD keyState, const POINT& pt) {
-	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
-		return mouseInputStrategy_->mouseButtonInput((xButton == XBUTTON1) ?
-			IMouseInputStrategy::X1_BUTTON : IMouseInputStrategy::X2_BUTTON, IMouseInputStrategy::DOUBLE_CLICKED, pt, keyState);
-	return false;
-}
-
-/// @see WM_XBUTTONDOWN
-bool TextViewer::onXButtonDown(WORD xButton, WORD keyState, const POINT& pt) {
-	ASCENSION_RESTORE_VANISHED_CURSOR();
-	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
-		return mouseInputStrategy_->mouseButtonInput((xButton == XBUTTON1) ?
-			IMouseInputStrategy::X1_BUTTON : IMouseInputStrategy::X2_BUTTON, IMouseInputStrategy::PRESSED, pt, keyState);
-	return false;
-}
-
-/// @see WM_XBUTTONUP
-bool TextViewer::onXButtonUp(WORD xButton, WORD keyState, const POINT& pt) {
-	ASCENSION_RESTORE_VANISHED_CURSOR();
-	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
-		return mouseInputStrategy_->mouseButtonInput((xButton == XBUTTON1) ?
-			IMouseInputStrategy::X1_BUTTON : IMouseInputStrategy::X2_BUTTON, IMouseInputStrategy::RELEASED, pt, keyState);
-	return false;
-}
 
 /// Moves the IME form to valid position.
 void TextViewer::updateIMECompositionWindowPosition() {
@@ -1003,7 +925,7 @@ namespace {
 		};
 	public:
 		AutoScrollOriginMark() /*throw()*/;
-		bool create(const TextViewer& view);
+		void initialize(const TextViewer& viewer);
 		static const win32::Handle<HCURSOR> cursorForScrolling(CursorType type);
 	private:
 		void paint(graphics::PaintContext& context);
@@ -1014,7 +936,7 @@ namespace {
 		}
 		basic_string<WCHAR> provideClassName() const {return L"AutoScrollOriginMark";}
 	private:
-		static const long WINDOW_WIDTH = 28;
+		static const Scalar WINDOW_WIDTH = 28;
 	};
 } // namespace @0
 
@@ -1024,24 +946,21 @@ AutoScrollOriginMark::AutoScrollOriginMark() /*throw()*/ {
 
 /**
  * Creates the window.
- * @param view the viewer
+ * @param viewer the viewer
  * @return succeeded or not
  * @see Window#create
  */
-bool AutoScrollOriginMark::create(const TextViewer& view) {
-	RECT rc = {0, 0, WINDOW_WIDTH + 1, WINDOW_WIDTH + 1};
+void AutoScrollOriginMark::initialize(const TextViewer& viewer) {
+	// calling CreateWindowExW with WS_EX_LAYERED will fail on NT 4.0
+	win32::Window::initialize(
+		viewer.handle(), Point<>(), Dimension<>(WINDOW_WIDTH + 1, WINDOW_WIDTH + 1),
+		WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_POPUP, WS_EX_TOOLWINDOW);
+	::SetWindowLongW(handle().get(), GWL_EXSTYLE,
+		::GetWindowLongW(handle().get(), GWL_EXSTYLE) | WS_EX_LAYERED);
 
-	if(!win32::ui::CustomControl<AutoScrollOriginMark>::create(view.use(),
-			rc, 0, WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_POPUP, WS_EX_TOOLWINDOW))
-		return false;
-	modifyStyleEx(0, WS_EX_LAYERED);	// いきなり CreateWindowEx(WS_EX_LAYERED) とすると NT 4.0 で失敗する
-
-	HRGN rgn = ::CreateEllipticRgn(0, 0, WINDOW_WIDTH + 1, WINDOW_WIDTH + 1);
-	setRegion(rgn, false);
-	::DeleteObject(rgn);
-	setLayeredAttributes(::GetSysColor(COLOR_WINDOW), 0, LWA_COLORKEY);
-
-	return true;
+	win32::Handle<HRGN> rgn(::CreateEllipticRgn(0, 0, WINDOW_WIDTH + 1, WINDOW_WIDTH + 1), &::DeleteObject);
+	::SetWindowRgn(handle().get(), rgn.get(), false);
+	::SetLayeredWindowAttributes(handle().get(), ::GetSysColor(COLOR_WINDOW), 0, LWA_COLORKEY);
 }
 
 /**
@@ -1237,7 +1156,7 @@ namespace {
 		bh.bV5AlphaMask = 0xff000000ul;
 
 		// determine the range to draw
-		const Region selectedRegion(viewer.caret());
+		const k::Region selectedRegion(viewer.caret());
 		length_t firstLine, firstSubline;
 		viewer.firstVisibleLine(&firstLine, 0, &firstSubline);
 
@@ -1295,7 +1214,7 @@ namespace {
 		}
 		::SelectObject(dc.get(), oldBitmap);
 		BITMAPINFO* bi = 0;
-		AutoBuffer<manah::byte> maskBuffer;
+		AutoBuffer<byte> maskBuffer;
 		uint8_t* maskBits;
 		BYTE alphaChunnels[2] = {0xff, 0x01};
 		try {
