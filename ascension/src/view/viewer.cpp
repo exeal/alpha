@@ -6,7 +6,7 @@
  * @see user-input.cpp
  */
 
-#include <ascension/viewer.hpp>
+#include <ascension/viewer/viewer.hpp>
 #include <ascension/rules.hpp>
 #include <ascension/text-editor.hpp>	// texteditor.commands.*, texteditor.Session
 #include <limits>	// std.numeric_limit
@@ -21,10 +21,10 @@
 
 using namespace ascension;
 using namespace ascension::viewers;
+using namespace ascension::viewers::base;
 using namespace ascension::viewers::internal;
 using namespace ascension::presentation;
 using namespace ascension::graphics;
-using namespace manah;
 using namespace std;
 namespace k = ascension::kernel;
 
@@ -879,7 +879,7 @@ void TextViewer::initialize(const win32::Handle<HWND>& parent,
 		const Point<>& position /* = Point<>(CW_USEDEFAULT, CW_USEDEFAULT) */,
 		const Dimension<>& size /* = Dimension<>(CW_USEDEFAULT, CW_USEDEFAULT) */,
 		DWORD style /* = 0 */, DWORD extendedStyle /* = 0 */) {
-	const bool visible = toBoolean(style & WS_VISIBLE);
+	const bool visible = win32::boole(style & WS_VISIBLE);
 	style &= ~WS_VISIBLE;	// 後で足す
 	win32::Window::initialize(parent, position, size, style, extendedStyle);
 
@@ -911,7 +911,8 @@ void TextViewer::initialize(const win32::Handle<HWND>& parent,
 	VerticalRulerConfiguration vrc;
 	vrc.lineNumbers.visible = true;
 	vrc.indicatorMargin.visible = true;
-	vrc.lineNumbers.textColor = Colors(Color(0x00, 0x80, 0x80), Color(0xff, 0xff, 0xff));
+	vrc.lineNumbers.foreground = Color(0x00, 0x80, 0x80);
+	vrc.lineNumbers.background = Color(0xff, 0xff, 0xff);
 	vrc.lineNumbers.borderColor = Color(0x00, 0x80, 0x80);
 	vrc.lineNumbers.borderStyle = VerticalRulerConfiguration::LineNumbers::DOTTED;
 	vrc.lineNumbers.borderWidth = 1;
@@ -1404,8 +1405,8 @@ void TextViewer::paint(PaintContext& context) {
 
 	// draw horizontal margins
 	const Rect<> margins(textAreaMargins());
-	const Color marginColor((configuration_.color.background != Color()) ?
-		configuration_.color.background : Color::fromCOLORREF(::GetSysColor(COLOR_WINDOW)));
+	const Color marginColor((configuration_.background != Color()) ?
+		configuration_.background : Color::fromCOLORREF(::GetSysColor(COLOR_WINDOW)));
 	if(margins.left() > 0) {
 		const int vrWidth = (utils::computeVerticalRulerAlignment(*this) == ALIGN_LEFT) ? verticalRulerDrawer_->width() : 0;
 		context.fillRectangle(
@@ -1425,9 +1426,9 @@ void TextViewer::paint(PaintContext& context) {
 
 	// draw lines
 	const LineLayout::Selection selection(*caret_,
-		configuration_.selectionColor.foreground != Color() ? configuration_.selectionColor.foreground :
+		configuration_.selectionForeground != Color() ? configuration_.selectionForeground :
 			Color::fromCOLORREF(::GetSysColor(hasFocus() ? COLOR_HIGHLIGHTTEXT : COLOR_INACTIVECAPTIONTEXT)),
-		configuration_.selectionColor.background != Color() ? configuration_.selectionColor.background :
+		configuration_.selectionBackground != Color() ? configuration_.selectionBackground :
 			Color::fromCOLORREF(::GetSysColor(hasFocus() ? COLOR_HIGHLIGHT : COLOR_INACTIVECAPTION)));
 	Rect<> lineBounds(clientBounds);
 	lineBounds.left() += margins.left();
@@ -1470,7 +1471,7 @@ LRESULT TextViewer::preTranslateWindowMessage(UINT message, WPARAM wp, LPARAM lp
 	switch(message) {
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 	case WM_CLEAR:
-		if(toBoolean(::GetKeyState(VK_SHIFT) & 0x8000))
+		if(::GetKeyState(VK_SHIFT) < 0)
 			cutSelection(caret(), true);
 		else
 			CharacterDeletionCommand(*this, Direction::FORWARD)();
@@ -2538,7 +2539,7 @@ TextViewer::Configuration::Configuration() /*throw()*/ :
 #if(_WIN32_WINNT >= 0x0501)
 	BOOL b;
 	if(::SystemParametersInfo(SPI_GETMOUSEVANISH, 0, &b, 0) != 0)
-		vanishesCursor = manah::toBoolean(b);
+		vanishesCursor = win32::boole(b);
 	else
 		vanishesCursor = false;
 #else
@@ -2873,7 +2874,7 @@ void LocaleSensitiveCaretShaper::shape(
 	readingDirection = LEFT_TO_RIGHT;
 
 	HIMC imc = ::ImmGetContext(updater_->textViewer().handle().get());
-	const bool imeOpened = toBoolean(::ImmGetOpenStatus(imc));
+	const bool imeOpened = win32::boole(::ImmGetOpenStatus(imc));
 	::ImmReleaseContext(updater_->textViewer().handle().get(), imc);
 	if(imeOpened) {	// CJK and IME is open
 		static const RGBQUAD red = {0xff, 0xff, 0x80, 0x00};
@@ -2928,10 +2929,12 @@ const ILineColorDirector::Priority CurrentLineHighlighter::LINE_COLOR_PRIORITY =
 
 /**
  * Constructor.
- * @param caret the caret
- * @param color the initial color
+ * @param caret The caret
+ * @param foreground The initial foreground color
+ * @param background The initial background color
  */
-CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret, const Colors& color) : caret_(&caret), color_(color) {
+CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret,
+		const Color& foreground, const Color& background) : caret_(&caret), foreground_(foreground), background_(background) {
 	tr1::shared_ptr<ILineColorDirector> temp(this);
 	caret.textViewer().presentation().addLineColorDirector(temp);
 	caret.addListener(*this);
@@ -2948,6 +2951,11 @@ CurrentLineHighlighter::~CurrentLineHighlighter() /*throw()*/ {
 	}
 }
 
+/// Returns the background color.
+const Color& CurrentLineHighlighter::background() const /*throw()*/ {
+	return background_;
+}
+
 /// @see ICaretListener#caretMoved
 void CurrentLineHighlighter::caretMoved(const Caret&, const k::Region& oldRegion) {
 	if(oldRegion.isEmpty()) {
@@ -2960,9 +2968,9 @@ void CurrentLineHighlighter::caretMoved(const Caret&, const k::Region& oldRegion
 	}
 }
 
-/// Returns the color.
-const Colors& CurrentLineHighlighter::color() const /*throw()*/ {
-	return color_;
+/// Returns the foreground color.
+const Color& CurrentLineHighlighter::foreground() const /*throw()*/ {
+	return foreground_;
 }
 
 /// @see ICaretStateListener#matchBracketsChanged
@@ -2980,13 +2988,14 @@ void CurrentLineHighlighter::pointDestroyed() {
 	caret_ = 0;
 }
 
-/// @see ILineColorDirector#queryLineColor
-ILineColorDirector::Priority CurrentLineHighlighter::queryLineColor(length_t line, Colors& color) const {
+/// @see ILineColorDirector#queryLineColors
+ILineColorDirector::Priority CurrentLineHighlighter::queryLineColors(length_t line, Color& foreground, Color& background) const {
 	if(caret_ != 0 && isSelectionEmpty(*caret_) && caret_->line() == line && caret_->textViewer().hasFocus()) {
-		color = color_;
+		foreground = foreground_;
+		background = background_;
 		return LINE_COLOR_PRIORITY;
 	} else {
-		color = Colors();
+		foreground = background = Color();
 		return 0;
 	}
 }
@@ -2996,11 +3005,19 @@ void CurrentLineHighlighter::selectionShapeChanged(const Caret&) {
 }
 
 /**
- * Sets the color and redraws the window.
- * @param color The color
+ * Sets the background color and redraws the window.
+ * @param color The background color to set
  */
-void CurrentLineHighlighter::setColor(const Colors& color) /*throw()*/ {
-	color_ = color;
+void CurrentLineHighlighter::setBackground(const Color& color) /*throw()*/ {
+	background_ = color;
+}
+
+/**
+ * Sets the foreground color and redraws the window.
+ * @param color The foreground color to set
+ */
+void CurrentLineHighlighter::setForeground(const Color& color) /*throw()*/ {
+	foreground_ = color;
 }
 
 
