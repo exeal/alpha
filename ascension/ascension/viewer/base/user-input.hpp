@@ -18,7 +18,7 @@ namespace ascension {
 			/// Abstract class represents a user input.
 			class UserInput {
 			public:
-				enum Modifiers {
+				enum ModifierKey {
 					/// The Shift key is down.
 					SHIFT_DOWN		= 1 << 0,
 					/// The Ctrl (Control) key is down.
@@ -28,7 +28,12 @@ namespace ascension {
 					/// The AltGraph key is down.
 					ALT_GRAPH_DOWN	= 1 << 3,
 					/// The Command key is down. Only for Mac OS X.
-					COMMAND_DOWN	= 1 << 4,
+					COMMAND_DOWN	= 1 << 4
+				};
+				/**
+				 * @note Defined here because these values also can be used as modifiers.
+				 */
+				enum MouseButton {
 					/// The Mouse Button1 (usually left button) is down.
 					BUTTON1_DOWN	= 1 << 5,
 					/// The Mouse Button2 (usually middle button) is down.
@@ -54,12 +59,20 @@ namespace ascension {
 				std::time_t timeStamp_;
 			};
 
+			/**
+			 * Returns @c true if the given user input is the specified modifier down.
+			 * @tparam modifier The modifier key to test
+			 * @param input The user input
+			 * @return true if @a input has @a modifier
+			 */
+			template<UserInput::ModifierKey modifier>
+			inline bool hasModifier(const UserInput& input) /*throw()*/ {
+				return (input.modifiers() & modifier) != 0;
+			}
+
 			/// Abstract class represents a user input located at a specific position in the screen.
 			class LocatedUserInput : public UserInput {
 			public:
-				/// Returns the location.
-				const graphics::Point<>& location() const /*throw()*/ {return location_;}
-			protected:
 				/**
 				 * Protected constructor.
 				 * @param location The location
@@ -67,19 +80,31 @@ namespace ascension {
 				 */
 				LocatedUserInput(const graphics::Point<>& location, int modifiers) : UserInput(modifiers), location_(location) {
 				}
+				/// Returns the location.
+				const graphics::Point<>& location() const /*throw()*/ {return location_;}
 			private:
 				const graphics::Point<> location_;
 			};
 
-			/// A @c MouseInput represents a general mouse event.
-			class MouseInput : public LocatedUserInput {
+			/// A @c MouseButtonInput represents a mouse button event.
+			class MouseButtonInput : public LocatedUserInput {
 			public:
-				MouseInput(const graphics::Point<>& location, int modifiers) : LocatedUserInput(location, modifiers) {
-				}
+				/**
+				 * Constructor.
+				 * @param location
+				 * @param button
+				 * @param modifiers
+				 */
+				MouseButtonInput(const graphics::Point<>& location, MouseButton button,
+					int modifiers) : LocatedUserInput(location, modifiers), button_(button) {}
+				/// Returns the mouse button.
+				MouseButton button() const /*throw()*/ {return button_;}
+			private:
+				const MouseButton button_;
 			};
 
 			/// A @c MouseWheelEvent represents a mouse wheel event.
-			class MouseWheelInput : public MouseInput {
+			class MouseWheelInput : public LocatedUserInput {
 			public:
 				/**
 				 * Constructor.
@@ -88,21 +113,22 @@ namespace ascension {
 				 * @param rotation
 				 */
 				MouseWheelInput(const graphics::Point<>& location, int modifiers,
-					graphics::Dimension<>& rotation) : MouseInput(location, modifiers), rotation_(rotation) {}
+					graphics::Dimension<>& rotation) : LocatedUserInput(location, modifiers), rotation_(rotation) {}
 				/// Returns the mouse wheel rotation.
 				const graphics::Dimension<>& rotation() const /*throw()*/ {return rotation_;}
 			private:
 				const graphics::Dimension<> rotation_;
 			};
 
-			typedef uint8_t KeyboardCode;
-
 			class KeyInput : public UserInput {
 			public:
-				KeyInput(KeyboardCode code, int modifiers, int repeatCount, int messageFlags)
-					: UserInput(modifiers), keyCode_(code), repeatCount_(repeatCount), messageFlags_(messageFlags) {}
+				typedef uint8_t Code;	///< Keyboard codes.
+			public:
+				KeyInput(Code keyboardCode, int modifiers, int repeatCount, int messageFlags)
+					: UserInput(modifiers), keyboardCode_(keyboardCode), repeatCount_(repeatCount), messageFlags_(messageFlags) {}
+				Code keyboardCode() const /*throw()*/ {return keyboardCode_;}
 			private:
-				const KeyboardCode keyCode_;
+				const Code keyboardCode_;
 				const int repeatCount_, messageFlags_;
 			};
 

@@ -174,31 +174,31 @@ protected:
 private:
 	LRESULT processKeyInput(bool released, WPARAM wp, LPARAM lp, bool& consumed) {
 		int modifiers;
-		if(boole(::GetKeyState(VK_SHIFT) & 0x8000))
+		if(::GetKeyState(VK_SHIFT) < 0)
 			modifiers |= viewers::base::UserInput::SHIFT_DOWN;
-		if(boole(::GetKeyState(VK_CONTROL) & 0x8000))
+		if(::GetKeyState(VK_CONTROL) < 0)
 			modifiers |= viewers::base::UserInput::CONTROL_DOWN;
-		if(boole(::GetKeyState(VK_MENU) & 0x8000))
+		if(::GetKeyState(VK_MENU) < 0)
 			modifiers |= viewers::base::UserInput::ALT_DOWN;
 		const viewers::base::KeyInput input(viewers::base::keyboardCodeFromWin32(wp),
 			modifiers, static_cast<int>(lp & 0xffffu), HIWORD(lp));
 		consumed = !released ? keyReleased(input) : keyPressed(input);
 		return consumed ? 0 : 1;
 	}
-	void processMouseDoubleClicked(viewers::base::UserInput::Modifiers button, WPARAM wpForModifiers, LPARAM lp, bool& consumed) {
-		consumed = mouseDoubleClicked(viewers::base::MouseInput(
+	void processMouseDoubleClicked(viewers::base::UserInput::MouseButton button, WPARAM wpForModifiers, LPARAM lp, bool& consumed) {
+		consumed = mouseDoubleClicked(viewers::base::MouseButtonInput(
 			graphics::Point<>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp)),
-			button | inputModifiersFromNative(wpForModifiers)));
+			button, inputModifiersFromNative(wpForModifiers)));
 	}
-	void processMousePressed(viewers::base::UserInput::Modifiers button, WPARAM wpForModifiers, LPARAM lp, bool& consumed) {
-		consumed = mousePressed(viewers::base::MouseInput(
+	void processMousePressed(viewers::base::UserInput::MouseButton button, WPARAM wpForModifiers, LPARAM lp, bool& consumed) {
+		consumed = mousePressed(viewers::base::MouseButtonInput(
 			graphics::Point<>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp)),
-			button | inputModifiersFromNative(wpForModifiers)));
+			button, inputModifiersFromNative(wpForModifiers)));
 	}
-	void processMouseReleased(viewers::base::UserInput::Modifiers button, WPARAM wpForModifiers, LPARAM lp, bool& consumed) {
-		consumed = mouseReleased(viewers::base::MouseInput(
+	void processMouseReleased(viewers::base::UserInput::MouseButton button, WPARAM wpForModifiers, LPARAM lp, bool& consumed) {
+		consumed = mouseReleased(viewers::base::MouseButtonInput(
 			graphics::Point<>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp)),
-			button | inputModifiersFromNative(wpForModifiers)));
+			button, inputModifiersFromNative(wpForModifiers)));
 	}
 	LRESULT processMouseWheelChanged(bool horizontal, WPARAM wp, LPARAM lp, bool& consumed) {
 		consumed = mouseWheelChanged(viewers::base::MouseWheelInput(
@@ -253,6 +253,8 @@ LRESULT WindowBase::processWindowMessage(UINT message, WPARAM wp, LPARAM lp, boo
 		case WM_KEYDOWN:
 		case WM_KEYUP:
 			return processKeyInput(message == WM_KEYUP, wp, lp, consumed);
+		case WM_KILLFOCUS:
+			return (consumed = aboutToLoseFocus()) ? 0 : 1;
 		case WM_LBUTTONDBLCLK:
 			processMouseDoubleClicked(viewers::base::UserInput::BUTTON1_DOWN, wp, lp, consumed);
 			return consumed ? 0 : 1;
@@ -274,7 +276,7 @@ LRESULT WindowBase::processWindowMessage(UINT message, WPARAM wp, LPARAM lp, boo
 		case WM_MOUSEHWHEEL:
 			return processMouseWheelChanged(true, wp, lp, consumed);
 		case WM_MOUSEMOVE:
-			consumed = mouseMoved(viewers::base::MouseInput(
+			consumed = mouseMoved(viewers::base::LocatedUserInput(
 				graphics::Point<>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp)), static_cast<int>(wp)));
 			return consumed ? 0 : 1;
 		case WM_MOUSEWHEEL:
@@ -288,6 +290,11 @@ LRESULT WindowBase::processWindowMessage(UINT message, WPARAM wp, LPARAM lp, boo
 		case WM_RBUTTONUP:
 			processMouseReleased(viewers::base::UserInput::BUTTON3_DOWN, wp, lp, consumed);
 			return consumed ? 0 : 1;
+		case WM_SETFOCUS:
+			return (consumed = focusGained()) ? 0 : 1;
+		case WM_SYSKEYDOWN:
+		case WM_SYSKEYUP:
+			return processKeyInput(message == WM_KEYUP, wp, lp, consumed);
 		case WM_XBUTTONDBLCLK:
 			processMouseDoubleClicked((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ?
 					viewers::base::UserInput::BUTTON4_DOWN : viewers::base::UserInput::BUTTON5_DOWN,

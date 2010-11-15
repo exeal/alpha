@@ -193,21 +193,13 @@ namespace ascension {
 		/**
 		 * Interface of objects which define how the text editors react to the users' mouse input.
 		 * @note An instance of @c IMouseInputStrategy can't be shared multiple text viewers.
-		 * @see TextViewer#setMouseInputStrategy
+		 * @see user-input.hpp, TextViewer#setMouseInputStrategy
 		 */
 		class IMouseInputStrategy {
 		public:
 			/// Destructor.
 			virtual ~IMouseInputStrategy() /*throw()*/ {}
 		protected:
-			/// Buttons of the mouse.
-			enum Button {
-				LEFT_BUTTON,	///< The left button of the mouse.
-				MIDDLE_BUTTON,	///< The middle button of the mouse.
-				RIGHT_BUTTON,	///< The right button of the mouse.
-				X1_BUTTON,		///< The first X button of the mouse.
-				X2_BUTTON		///< The second X button of the mouse.
-			};
 			/// Actions of the mouse input.
 			enum Action {
 				PRESSED,		///< The button was pressed (down).
@@ -232,31 +224,22 @@ namespace ascension {
 			virtual void interruptMouseReaction(bool forKeyboardInput) = 0;
 			/**
 			 * The mouse input was occurred and the viewer had focus.
-			 * @param button The button of the mouse input
 			 * @param action The action of the input
-			 * @param position The mouse position (client coordinates)
-			 * @param keyState Indicates whether various key are pressed. This value is same as
-			 *                 Win32 WM_*BUTTON*
+			 * @param input The input information
 			 * @return @c true if the strategy processed
 			 */
-			virtual bool mouseButtonInput(Button button,
-				Action action, const graphics::Point<>& position, uint keyState) = 0;
+			virtual bool mouseButtonInput(Action action, const base::MouseButtonInput& input) = 0;
 			/**
 			 * The mouse was moved and the viewer had focus.
-			 * @param position The mouse position (client coordinates)
-			 * @param keyState Indicates whether various key are pressed. This value is same as
-			 *                 Win32 @c WM_MOSEMOVE
+			 * @param input The input information
 			 * @return @c true if the strategy processed
 			 */
-			virtual void mouseMoved(const graphics::Point<>& position, uint keyState) = 0;
+			virtual void mouseMoved(const base::LocatedUserInput& input) = 0;
 			/**
 			 * The mouse wheel was rolated and the viewer had focus.
-			 * @param delta The distance the wheel was rotated
-			 * @param position The mouse position (client coordinates)
-			 * @param keyState Indicates whether various key are pressed. This value is same as
-			 *                 Win32 WM_*BUTTON*
+			 * @param input The input information
 			 */
-			virtual void mouseWheelRotated(short delta, const graphics::Point<>& position, uint keyState) = 0;
+			virtual void mouseWheelRotated(const base::MouseWheelInput& input) = 0;
 			/**
 			 * Shows a cursor on the viewer.
 			 * @param position The cursor position (client coordinates)
@@ -298,26 +281,26 @@ namespace ascension {
 			explicit DefaultMouseInputStrategy(
 				OLEDragAndDropSupport oleDragAndDropSupportLevel = SUPPORT_OLE_DND_WITH_SELECTED_DRAG_IMAGE);
 		private:
-			virtual bool handleLeftButtonDoubleClick(const graphics::Point<>& position, uint keyState);
-			virtual bool handleRightButton(Action action, const graphics::Point<>& position, uint keyState);
-			virtual bool handleX1Button(Action action, const graphics::Point<>& position, uint keyState);
-			virtual bool handleX2Button(Action action, const graphics::Point<>& position, uint keyState);
+			virtual bool handleLeftButtonDoubleClick(const graphics::Point<>& position, int modifiers);
+			virtual bool handleRightButton(Action action, const graphics::Point<>& position, int modifiers);
+			virtual bool handleX1Button(Action action, const graphics::Point<>& position, int modifiers);
+			virtual bool handleX2Button(Action action, const graphics::Point<>& position, int modifiers);
 		private:
 			void beginTimer(UINT interval);
 			HRESULT doDragAndDrop();
 			bool endAutoScroll();
 			void endTimer();
 			void extendSelection(const kernel::Position* to = 0);
-			void handleLeftButtonPressed(const graphics::Point<>& position, uint keyState);
-			void handleLeftButtonReleased(const graphics::Point<>& position, uint keyState);
+			void handleLeftButtonPressed(const graphics::Point<>& position, int modifiers);
+			void handleLeftButtonReleased(const graphics::Point<>& position, int modifiers);
 			static void CALLBACK timeElapsed(HWND window, UINT message, UINT_PTR eventID, DWORD time);
 			// IMouseInputStrategy
 			void captureChanged();
 			void install(TextViewer& viewer);
 			void interruptMouseReaction(bool forKeyboardInput);
-			bool mouseButtonInput(Button button, Action action, const graphics::Point<>& position, uint keyState);
-			void mouseMoved(const graphics::Point<>& position, uint keyState);
-			void mouseWheelRotated(short delta, const graphics::Point<>& position, uint keyState);
+			bool mouseButtonInput(Action action, const base::MouseButtonInput& input);
+			void mouseMoved(const base::LocatedUserInput& input);
+			void mouseWheelRotated(const base::MouseWheelInput& input);
 			bool showCursor(const graphics::Point<>& position);
 			void uninstall();
 			// IDropSource
@@ -417,10 +400,10 @@ namespace ascension {
 			};
 
 			/**
-			 * A vertical ruler's configuration.
-			 * @see TextViewer#verticalRulerConfiguration, TextViewer#setConfiguration
+			 * A ruler's configuration.
+			 * @see TextViewer#rulerConfiguration, TextViewer#setConfiguration
 			 */
-			struct VerticalRulerConfiguration {
+			struct RulerConfiguration {
 				/// Configuration about a line numbers area.
 				struct LineNumbers {
 					/**
@@ -499,13 +482,13 @@ namespace ascension {
 					IndicatorMargin() /*throw()*/;
 				} indicatorMargin;	/// Configuration about the indicator margin.
 				/**
-				 * Alignment of the vertical ruler. Must be either @c presentation#ALIGN_START,
+				 * Alignment of the ruler. Must be either @c presentation#ALIGN_START,
 				 * @c presentation#ALIGN_END, @c presentation#ALIGN_LEFT or
 				 * @c presentation#ALIGN_RIGHT. Default value is @c presentation#ALIGN_START.
 				 */
 				presentation::TextAlignment alignment;
 
-				VerticalRulerConfiguration() /*throw()*/;
+				RulerConfiguration() /*throw()*/;
 			};
 
 			// constructors
@@ -532,12 +515,12 @@ namespace ascension {
 			const kernel::Document& document() const;
 			presentation::Presentation& presentation() /*throw()*/;
 			const presentation::Presentation& presentation() const /*throw()*/;
+			const RulerConfiguration& rulerConfiguration() const /*throw()*/;
 			ulong scrollRate(bool horizontal) const /*throw()*/;
+			void setConfiguration(const Configuration* general,
+				const RulerConfiguration* ruler, bool synchronizeUI);
 			graphics::TextRenderer& textRenderer() /*throw()*/;
 			const graphics::TextRenderer& textRenderer() const /*throw()*/;
-			void setConfiguration(const Configuration* general,
-				const VerticalRulerConfiguration* verticalRuler, bool synchronizeUI);
-			const VerticalRulerConfiguration& verticalRulerConfiguration() const /*throw()*/;
 			// caret
 			Caret& caret() /*throw()*/;
 			const Caret& caret() const /*throw()*/;
@@ -590,7 +573,6 @@ namespace ascension {
 			void checkInitialization() const;
 			virtual void doBeep() /*throw()*/;
 			virtual void drawIndicatorMargin(length_t line, graphics::Context& context, const graphics::Rect<>& rect);
-			bool handleKeyDown(UINT key, bool controlPressed, bool shiftPressed, bool altPressed) /*throw()*/;
 
 			// helpers
 		private:
@@ -599,7 +581,7 @@ namespace ascension {
 			void mapClientYToLine(int y, length_t* logicalLine, length_t* visualSublineOffset, bool* snapped = 0) const /*throw()*/;
 			int mapLineToClientY(length_t line, bool fullSearch) const;
 			void recreateCaret();
-			void redrawVerticalRuler();
+			void repaintRuler();
 			void updateCaretPosition();
 			void updateIMECompositionWindowPosition();
 			void updateScrollBars();
@@ -620,7 +602,17 @@ namespace ascension {
 			virtual void selectionShapeChanged(const Caret& self);
 		private:
 			// WindowBase
+			bool aboutToLoseFocus();
+			bool focusGained();
+			bool keyPressed(const base::KeyInput& input);
+			bool keyReleased(const base::KeyInput& input);
+			bool mouseDoubleClicked(const base::MouseButtonInput& input);
+			bool mouseMoved(const base::LocatedUserInput& input);
+			bool mousePressed(const base::MouseButtonInput& input);
+			bool mouseReleased(const base::MouseButtonInput& input);
+			bool mouseWheelChanged(const base::MouseWheelInput& input);
 			void paint(graphics::PaintContext& context);
+			// win32.Window
 			void provideClassInformation(win32::WindowBase::ClassInformation& classInformation) const;
 			std::basic_string<WCHAR> provideClassName() const;
 			// kernel.IDocumentListener
@@ -657,32 +649,14 @@ namespace ascension {
 			LRESULT onIMENotify(WPARAM command, LPARAM lParam, bool& handled);
 			LRESULT onIMERequest(WPARAM command, LPARAM lParam, bool& handled);
 			void onIMEStartComposition();
-			void onKeyDown(UINT ch, UINT flags, bool& handled);
-			void onKillFocus(HWND newWindow);
-			void onLButtonDblClk(UINT keyState, const POINT& pt, bool& handled);
-			void onLButtonDown(UINT keyState, const POINT& pt, bool& handled);
-			void onLButtonUp(UINT keyState, const POINT& pt, bool& handled);
-			void onMButtonDblClk(UINT keyState, const POINT& pt, bool& handled);
-			void onMButtonDown(UINT keyState, const POINT& pt, bool& handled);
-			void onMButtonUp(UINT keyState, const POINT& pt, bool& handled);
-			void onMouseMove(UINT keyState, const POINT& pt);
-#ifdef WM_MOUSEWHEEL
-			void onMouseWheel(UINT flags, short zDelta, const POINT& pt);
-#endif // WM_MOUSEWHEEL
 			bool onNcCreate(CREATESTRUCTW& cs);
 			bool onNotify(int id, NMHDR& nmhdr);
-			void onRButtonDblClk(UINT keyState, const POINT& pt, bool& handled);
-			void onRButtonDown(UINT keyState, const POINT& pt, bool& handled);
-			void onRButtonUp(UINT keyState, const POINT& pt, bool& handled);
 			bool onSetCursor(HWND window, UINT hitTest, UINT message);
-			void onSetFocus(HWND oldWindow);
 			void onSize(UINT type, int cx, int cy);
 			void onStyleChanged(int type, const STYLESTRUCT& style);
 			void onStyleChanging(int type, STYLESTRUCT& style);
 			void onSysChar(UINT ch, UINT flags);
 			void onSysColorChange();
-			bool onSysKeyDown(UINT ch, UINT flags);
-			bool onSysKeyUp(UINT ch, UINT flags);
 #ifdef WM_THEMECHANGED
 			void onThemeChanged();
 #endif // WM_THEMECHANGED
@@ -691,11 +665,6 @@ namespace ascension {
 			void onUniChar(UINT ch, UINT flags);
 #endif // WM_UNICHAR
 			void onVScroll(UINT sbCode, UINT pos, HWND scrollBar);
-#ifdef WM_XBUTTONDBLCLK
-			bool onXButtonDblClk(WORD xButton, WORD keyState, const POINT& pt);
-			bool onXButtonDown(WORD xButton, WORD keyState, const POINT& pt);
-			bool onXButtonUp(WORD xButton, WORD keyState, const POINT& pt);
-#endif // WM_XBUTTONDBLCLK
 
 			// internal classes
 		private:
@@ -718,22 +687,22 @@ namespace ascension {
 				presentation::ReadingDirection overrideReadingDirection_;
 				presentation::TextAlignment overrideTextAlignment_;
 			};
-			/// @c VerticalRulerDrawer draws the vertical ruler of the @c TextViewer.
-			class VerticalRulerDrawer {
-				ASCENSION_NONCOPYABLE_TAG(VerticalRulerDrawer);
+			/// @c RulerPainter paints the ruler of the @c TextViewer.
+			class RulerPainter {
+				ASCENSION_NONCOPYABLE_TAG(RulerPainter);
 			public:
-				VerticalRulerDrawer(TextViewer& viewer, bool enableDoubleBuffering) /*throw()*/;
-				const VerticalRulerConfiguration& configuration() const /*throw()*/;
-				void draw(graphics::Context& context);
-				void setConfiguration(const VerticalRulerConfiguration& configuration);
+				RulerPainter(TextViewer& viewer, bool enableDoubleBuffering) /*throw()*/;
+				const RulerConfiguration& configuration() const /*throw()*/;
+				void paint(graphics::PaintContext& context);
+				void setConfiguration(const RulerConfiguration& configuration);
 				void update() /*throw()*/;
 				int width() const /*throw()*/;
 			private:
-				uchar getLineNumberMaxDigits() const /*throw()*/;
+				uchar maximumDigitsForLineNumbers() const /*throw()*/;
 				void recalculateWidth() /*throw()*/;
 				void updateGDIObjects() /*throw()*/;
 				TextViewer& viewer_;
-				VerticalRulerConfiguration configuration_;
+				RulerConfiguration configuration_;
 				int width_;
 				uchar lineNumberDigitsCache_;
 				win32::Handle<HPEN> indicatorMarginPen_, lineNumbersPen_;
@@ -824,7 +793,7 @@ namespace ascension {
 			ascension::internal::Listeners<IDisplaySizeListener> displaySizeListeners_;
 			ascension::internal::Listeners<ITextViewerInputStatusListener> inputStatusListeners_;
 			ascension::internal::Listeners<IViewportListener> viewportListeners_;
-			std::auto_ptr<VerticalRulerDrawer> verticalRulerDrawer_;
+			std::auto_ptr<RulerPainter> rulerPainter_;
 			std::auto_ptr<contentassist::IContentAssistant> contentAssistant_;
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 			internal::TextViewerAccessibleProxy* accessibleProxy_;
@@ -887,7 +856,7 @@ namespace ascension {
 
 			friend class VisualPoint;
 			friend class VirtualBox;
-			friend class VerticalRulerDrawer;
+			friend class RulerPainter;
 			friend class CaretShapeUpdater;
 			friend class Renderer;
 		};
@@ -939,8 +908,8 @@ namespace ascension {
 		/// Provides the utility stuffs for viewers.
 		namespace utils {
 			void closeCompletionProposalsPopup(TextViewer& viewer) /*throw()*/;
+			presentation::TextAlignment computeRulerAlignment(const TextViewer& viewer);
 			presentation::ReadingDirection computeUIReadingDirection(const TextViewer& viewer);
-			presentation::TextAlignment computeVerticalRulerAlignment(const TextViewer& viewer);
 		} // namespace utils
 
 
@@ -993,7 +962,7 @@ inline const Caret& TextViewer::caret() const /*throw()*/ {return *caret_;}
 
 /**
  * Returns the general configuration.
- * @see #verticalRulerConfiguration, #setConfiguration
+ * @see #rulerConfiguration, #setConfiguration
  */
 inline const TextViewer::Configuration& TextViewer::configuration() const /*throw()*/ {return configuration_;}
 
@@ -1059,7 +1028,7 @@ inline bool TextViewer::isFrozen() const /*throw()*/ {return freezeInfo_.count !
 inline length_t TextViewer::numberOfVisibleColumns() const /*throw()*/ {
 	const graphics::Rect<> r(bounds(false));
 	return (r.width() == 0) ? 0 :
-		(r.width() - configuration_.leadingMargin - verticalRulerDrawer_->width()) / renderer_->primaryFont()->metrics().averageCharacterWidth();
+		(r.width() - configuration_.leadingMargin - rulerPainter_->width()) / renderer_->primaryFont()->metrics().averageCharacterWidth();
 }
 
 /**
@@ -1119,18 +1088,16 @@ inline graphics::TextRenderer& TextViewer::textRenderer() /*throw()*/ {return *r
 inline const graphics::TextRenderer& TextViewer::textRenderer() const /*throw()*/ {return *renderer_;}
 
 /**
- * Returns the vertical ruler's configuration.
+ * Returns the ruler's configuration.
  * @see #configuration, #setConfiguration
  */
-inline const TextViewer::VerticalRulerConfiguration&
-	TextViewer::verticalRulerConfiguration() const /*throw()*/ {return verticalRulerDrawer_->configuration();}
+inline const TextViewer::RulerConfiguration& TextViewer::rulerConfiguration() const /*throw()*/ {return rulerPainter_->configuration();}
 
-/// Returns the vertical ruler's configurations.
-inline const TextViewer::VerticalRulerConfiguration&
-	TextViewer::VerticalRulerDrawer::configuration() const /*throw()*/ {return configuration_;}
+/// Returns the ruler's configurations.
+inline const TextViewer::RulerConfiguration& TextViewer::RulerPainter::configuration() const /*throw()*/ {return configuration_;}
 
-/// Returns the width of the vertical ruler.
-inline int TextViewer::VerticalRulerDrawer::width() const /*throw()*/ {return width_;}
+/// Returns the width of the ruler.
+inline int TextViewer::RulerPainter::width() const /*throw()*/ {return width_;}
 
 }} // namespace ascension.viewers
 

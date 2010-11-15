@@ -41,12 +41,14 @@ namespace ascension {
 				/// Shows the window without activation.
 				virtual void show() = 0;
 			protected:
+				virtual bool aboutToLoseFocus() {return false;}
+				virtual bool focusGained() {return false;}
 				virtual bool keyPressed(const KeyInput& input) {return false;}
 				virtual bool keyReleased(const KeyInput& input) {return false;}
-				virtual bool mouseDoubleClicked(const MouseInput& input) {return false;}
-				virtual bool mouseMoved(const MouseInput& input) {return false;}
-				virtual bool mousePressed(const MouseInput& input) {return false;}
-				virtual bool mouseReleased(const MouseInput& input) {return false;}
+				virtual bool mouseDoubleClicked(const MouseButtonInput& input) {return false;}
+				virtual bool mouseMoved(const LocatedUserInput& input) {return false;}
+				virtual bool mousePressed(const MouseButtonInput& input) {return false;}
+				virtual bool mouseReleased(const MouseButtonInput& input) {return false;}
 				virtual bool mouseWheelChanged(const MouseWheelInput& input) {return false;}
 				virtual void paint(const graphics::PaintContext& context) = 0;
 			};
