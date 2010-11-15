@@ -6,9 +6,10 @@
 
 #ifndef ASCENSION_TEXT_EDITOR_HPP
 #define ASCENSION_TEXT_EDITOR_HPP
-#include "session.hpp"
-#include "viewer.hpp"
-#include "searcher.hpp"
+
+#include <ascension/session.hpp>
+#include <ascension/kernel/searcher.hpp>
+#include <ascension/viewer/viewer.hpp>
 
 namespace ascension {
 

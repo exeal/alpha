@@ -6,28 +6,59 @@
 
 #ifndef ASCENSION_WINDOW_WINDOWS_HPP
 #define ASCENSION_WINDOW_WINDOWS_HPP
-#include "../window.hpp"
-#include "graphics-windows.hpp"	// win32.PaintContext
+
+#include <ascension/viewer/base/window.hpp>
+#include <ascension/graphics/graphics-windows.hpp>	// win32.PaintContext
 //#include "menu.hpp"
-#include "../memory.hpp"	// AutoBuffer
-#include <shellapi.h>		// DragAcceptFiles
-#include <ole2.h>			// D&D
+#include <ascension/corelib/memory.hpp>	// AutoBuffer
+#include <shellapi.h>	// DragAcceptFiles
+#include <ole2.h>		// D&D
 #include <imm.h>
+#include <windowsx.h>
 #include <string>
 
 // these macros are defined by winuser.h
+#ifndef MK_XBUTTON1
+#	define MK_XBUTTON1 0x0020
+#	define MK_XBUTTON2 0x0040
+#endif // !MK_XBUTTON1
+#ifndef WM_XBUTTONDOWN
+#	define XBUTTON1 0x0001
+#	define XBUTTON2 0x0002
+#	define WM_XBUTTONDOWN 0x020b
+#	define WM_XBUTTONUP 0x020c
+#	define WM_XBUTTONDBLCLK 0x020d
+#	define GET_KEYSTATE_WPARAM(wp) (LOWORD(wp))
+#	define GET_XBUTTON_WPARAM(wp) (HIWORD(wp))
+#endif // !WM_XBUTTONDOWN
+#ifndef WM_MOUSEHWHEEL
+#	define WM_MOUSEHWHEEL 0x020e
+#endif // !WM_MOUSEHWHEEL
 #ifndef GET_KEYSTATE_LPARAM
 #	define GET_KEYSTATE_LPARAM(lp) (LOWORD(lp))
 #endif // !GET_KEYSTATE_LPARAM
-#ifndef GET_KEYSTATE_WPARAM
-#	define GET_KEYSTATE_WPARAM(wp) (LOWORD(wp))
-#endif // !GET_KEYSTATE_WPARAM
-#ifndef GET_XBUTTON_WPARAM
-#	define GET_XBUTTON_WPARAM(wp) (HIWORD(wp))
-#endif // !GET_XBUTTON_WPARAM
 
 namespace ascension {
 	namespace win32 {
+
+		inline int inputModifiersFromNative(WPARAM wp) {
+			int result = 0;
+			if(boole(wp & MK_LBUTTON))
+				result |= viewers::base::UserInput::BUTTON1_DOWN;
+			if(boole(wp & MK_RBUTTON))
+				result |= viewers::base::UserInput::BUTTON3_DOWN;
+			if(boole(wp & MK_SHIFT))
+				result |= viewers::base::UserInput::SHIFT_DOWN;
+			if(boole(wp & MK_CONTROL))
+				result |= viewers::base::UserInput::CONTROL_DOWN;
+			if(boole(wp & MK_MBUTTON))
+				result |= viewers::base::UserInput::BUTTON2_DOWN;
+			if(boole(wp & MK_XBUTTON1))
+				result |= viewers::base::UserInput::BUTTON4_DOWN;
+			if(boole(wp & MK_XBUTTON2))
+				result |= viewers::base::UserInput::BUTTON5_DOWN;
+			return result;
+		}
 
 /// Makes a menu handle parameter from either a menu handle or numeric identifier.
 class MenuHandleOrControlID {
@@ -43,10 +74,16 @@ private:
 };
 
 ///
-class WindowBase {
+class WindowBase : public viewers::base::Window {
 public:
 	static const DWORD defaultWidgetStyle = WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE;
 public:
+	graphics::Point<> clientToScreen(const graphics::Point<>& p) const {
+		POINT temp(toNative(p));
+		if(!boole(::ClientToScreen(handle().get(), &temp)))
+			throw PlatformDependentError<>();
+		return graphics::fromNative(temp);
+	}
 	const Handle<HWND>& handle() const /*throw()*/ {return handle_;}
 	void initialize(const Handle<HWND>& parent,
 			const graphics::Point<>& position = graphics::Point<>(CW_USEDEFAULT, CW_USEDEFAULT),
@@ -82,6 +119,12 @@ public:
 			static_cast<LONG_PTR>(::GetWindowLongW(borrowed, GWL_USERDATA)));
 #endif // _WIN64
 		assert(self == this);
+	}
+	graphics::Point<> screenToClient(const graphics::Point<>& p) const {
+		POINT temp(toNative(p));
+		if(!boole(::ScreenToClient(handle().get(), &temp)))
+			throw PlatformDependentError<>();
+		return graphics::fromNative(temp);
 	}
 protected:
 	struct ClassInformation {
@@ -119,27 +162,56 @@ protected:
 		ClassInformation() : style(0) {}
 	};
 protected:
-	LRESULT fireProcessWindowMessage(UINT message, WPARAM wp, LPARAM lp) {
-		bool handled = false;
-		LRESULT result = processWindowMessage(message, wp, lp, handled);
-		if(!handled)
-			result = ::CallWindowProcW(::DefWindowProcW, handle().get(), message, wp, lp);
-		return result;
-	}
-	virtual void paint(graphics::PaintContext& context) = 0;
 	// old code:
 	// Do not override this directly. Use ASCENSION_WIN32_DECLEAR_WINDOW_MESSAGE_MAP familiy instead.
-	virtual LRESULT processWindowMessage(UINT /* message */, WPARAM wp, LPARAM lp, bool& handled) {return TRUE;}
-	// old code:
-	// Call the implementation of the base class if override this.
+	virtual LRESULT processWindowMessage(UINT /* message */, WPARAM wp, LPARAM lp, bool& handled);
+	/**
+	 * @note If you override this, call from your derived class.
+	 */
 	virtual LRESULT preTranslateWindowMessage(UINT message, WPARAM wp, LPARAM lp, bool& handled) {return TRUE;}
 	virtual void provideClassInformation(ClassInformation& classInfomation) const {}
 	virtual std::basic_string<WCHAR> provideClassName() const = 0;
 private:
+	LRESULT processKeyInput(bool released, WPARAM wp, LPARAM lp, bool& consumed) {
+		int modifiers;
+		if(boole(::GetKeyState(VK_SHIFT) & 0x8000))
+			modifiers |= viewers::base::UserInput::SHIFT_DOWN;
+		if(boole(::GetKeyState(VK_CONTROL) & 0x8000))
+			modifiers |= viewers::base::UserInput::CONTROL_DOWN;
+		if(boole(::GetKeyState(VK_MENU) & 0x8000))
+			modifiers |= viewers::base::UserInput::ALT_DOWN;
+		const viewers::base::KeyInput input(viewers::base::keyboardCodeFromWin32(wp),
+			modifiers, static_cast<int>(lp & 0xffffu), HIWORD(lp));
+		consumed = !released ? keyReleased(input) : keyPressed(input);
+		return consumed ? 0 : 1;
+	}
+	void processMouseDoubleClicked(viewers::base::UserInput::Modifiers button, WPARAM wpForModifiers, LPARAM lp, bool& consumed) {
+		consumed = mouseDoubleClicked(viewers::base::MouseInput(
+			graphics::Point<>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp)),
+			button | inputModifiersFromNative(wpForModifiers)));
+	}
+	void processMousePressed(viewers::base::UserInput::Modifiers button, WPARAM wpForModifiers, LPARAM lp, bool& consumed) {
+		consumed = mousePressed(viewers::base::MouseInput(
+			graphics::Point<>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp)),
+			button | inputModifiersFromNative(wpForModifiers)));
+	}
+	void processMouseReleased(viewers::base::UserInput::Modifiers button, WPARAM wpForModifiers, LPARAM lp, bool& consumed) {
+		consumed = mouseReleased(viewers::base::MouseInput(
+			graphics::Point<>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp)),
+			button | inputModifiersFromNative(wpForModifiers)));
+	}
+	LRESULT processMouseWheelChanged(bool horizontal, WPARAM wp, LPARAM lp, bool& consumed) {
+		consumed = mouseWheelChanged(viewers::base::MouseWheelInput(
+			screenToClient(graphics::Point<>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp))),
+			static_cast<int>(wp), graphics::Dimension<>(
+				horizontal ? GET_WHEEL_DELTA_WPARAM(wp) : 0,
+				horizontal ? 0 : GET_WHEEL_DELTA_WPARAM(wp))));
+	}
 	static LRESULT CALLBACK windowProcedure(HWND window, UINT message, WPARAM wp, LPARAM lp) {
+		WindowBase* self;
+		bool consumed = false;
 		if(message == WM_NCCREATE) {
-			WindowBase* const self = reinterpret_cast<WindowBase*>(
-				reinterpret_cast<CREATESTRUCTW*>(lp)->lpCreateParams);
+			self = reinterpret_cast<WindowBase*>(reinterpret_cast<CREATESTRUCTW*>(lp)->lpCreateParams);
 			assert(self != 0);
 #ifdef _WIN64
 			::SetWindowLongPtr(window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
@@ -147,19 +219,17 @@ private:
 			::SetWindowLong(window, GWL_USERDATA, static_cast<long>(reinterpret_cast<LONG_PTR>(self)));
 #endif // _WIN64
 			self->handle_.reset(window, &::DestroyWindow);
-		return self->fireProcessWindowMessage(message, wp, lp);
-	} else {
-		WindowBase* const self = reinterpret_cast<WindowBase*>(
+		} else {
+			self = reinterpret_cast<WindowBase*>(
 #ifdef _WIN64
-			::GetWindowLongPtrW(window, GWLP_USERDATA));
+				::GetWindowLongPtrW(window, GWLP_USERDATA));
 #else
-			static_cast<LONG_PTR>(::GetWindowLongW(window, GWL_USERDATA)));
+				static_cast<LONG_PTR>(::GetWindowLongW(window, GWL_USERDATA)));
 #endif // _WIN64
 			if(self == 0)
 				return TRUE;
-			bool handled = false;
-			const LRESULT r = self->preTranslateWindowMessage(message, wp, lp, handled);
-			if(handled)
+			const LRESULT r = self->preTranslateWindowMessage(message, wp, lp, consumed);
+			if(consumed)
 				return r;
 			else if(message == WM_PAINT) {
 				Handle<HWND> temp(window);
@@ -167,15 +237,79 @@ private:
 				self->paint(context);
 				return FALSE;
 			}
-			return self->fireProcessWindowMessage(message, wp, lp);
 		}
+
+		LRESULT result = self->processWindowMessage(message, wp, lp, consumed);
+		if(!consumed)
+			result = ::CallWindowProcW(::DefWindowProcW, window, message, wp, lp);
+		return result;
 	}
 private:
 	Handle<HWND> handle_;
 };
 
+LRESULT WindowBase::processWindowMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
+	switch(message) {
+		case WM_KEYDOWN:
+		case WM_KEYUP:
+			return processKeyInput(message == WM_KEYUP, wp, lp, consumed);
+		case WM_LBUTTONDBLCLK:
+			processMouseDoubleClicked(viewers::base::UserInput::BUTTON1_DOWN, wp, lp, consumed);
+			return consumed ? 0 : 1;
+		case WM_LBUTTONDOWN:
+			processMousePressed(viewers::base::UserInput::BUTTON1_DOWN, wp, lp, consumed);
+			return consumed ? 0 : 1;
+		case WM_LBUTTONUP:
+			processMouseReleased(viewers::base::UserInput::BUTTON1_DOWN, wp, lp, consumed);
+			return consumed ? 0 : 1;
+		case WM_MBUTTONDBLCLK:
+			processMouseDoubleClicked(viewers::base::UserInput::BUTTON2_DOWN, wp, lp, consumed);
+			return consumed ? 0 : 1;
+		case WM_MBUTTONDOWN:
+			processMousePressed(viewers::base::UserInput::BUTTON2_DOWN, wp, lp, consumed);
+			return consumed ? 0 : 1;
+		case WM_MBUTTONUP:
+			processMouseReleased(viewers::base::UserInput::BUTTON2_DOWN, wp, lp, consumed);
+			return consumed ? 0 : 1;
+		case WM_MOUSEHWHEEL:
+			return processMouseWheelChanged(true, wp, lp, consumed);
+		case WM_MOUSEMOVE:
+			consumed = mouseMoved(viewers::base::MouseInput(
+				graphics::Point<>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp)), static_cast<int>(wp)));
+			return consumed ? 0 : 1;
+		case WM_MOUSEWHEEL:
+			return processMouseWheelChanged(false, wp, lp, consumed);
+		case WM_RBUTTONDBLCLK:
+			processMouseDoubleClicked(viewers::base::UserInput::BUTTON3_DOWN, wp, lp, consumed);
+			return consumed ? 0 : 1;
+		case WM_RBUTTONDOWN:
+			processMousePressed(viewers::base::UserInput::BUTTON3_DOWN, wp, lp, consumed);
+			return consumed ? 0 : 1;
+		case WM_RBUTTONUP:
+			processMouseReleased(viewers::base::UserInput::BUTTON3_DOWN, wp, lp, consumed);
+			return consumed ? 0 : 1;
+		case WM_XBUTTONDBLCLK:
+			processMouseDoubleClicked((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ?
+					viewers::base::UserInput::BUTTON4_DOWN : viewers::base::UserInput::BUTTON5_DOWN,
+				GET_KEYSTATE_WPARAM(wp), lp, consumed);
+			return consumed ? TRUE : FALSE;
+		case WM_XBUTTONDOWN:
+			processMousePressed((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ?
+					viewers::base::UserInput::BUTTON4_DOWN : viewers::base::UserInput::BUTTON5_DOWN,
+				GET_KEYSTATE_WPARAM(wp), lp, consumed);
+			return consumed ? TRUE : FALSE;
+		case WM_XBUTTONUP:
+			processMouseReleased(
+				(GET_XBUTTON_WPARAM(wp) == XBUTTON1) ?
+					viewers::base::UserInput::BUTTON4_DOWN : viewers::base::UserInput::BUTTON5_DOWN,
+				GET_KEYSTATE_WPARAM(wp), lp, consumed);
+			return consumed ? TRUE : FALSE;
+	}
+	return TRUE;
+}
+
 ///
-class Window : public viewers::Window, public WindowBase {
+class Window : public WindowBase {
 public:
 	// Win32-specific methods
 	bool isWindow() const /*throw()*/ {
@@ -463,100 +597,6 @@ protected:
 		return const_cast<StandardControl*>(this)->sendMessageR<ReturnType>(message, wParam, lParam);
 	}
 };
-
-// Control must define one static method:
-// void getClass(GET_CLASS_PARAM_LIST)
-#define ASCENSION_WIN32_CLASS_PARAM_LIST											\
-	const WCHAR*& name, HINSTANCE& instance, UINT& style,							\
-	ascension::win32::ui::BrushHandleOrColor& bgColor,								\
-	ascension::win32::ui::CursorHandleOrID& cursor,	HICON& icon, HICON& smallIcon,	\
-	int& clsExtraBytes, int& wndExtraBytes
-#define ASCENSION_WIN32_DEFINE_WINDOW_CLASS()	\
-	public: static void getClass(ASCENSION_WIN32_CLASS_PARAM_LIST)
-template<class Control>
-class CustomControl : public Window {
-	ASCENSION_UNASSIGNABLE_TAG(CustomControl);
-public:
-	CustomControl() : Window() {}
-	explicit CustomControl(const Managed<HWND>& handle) : Window(handle) {}
-	explicit CustomControl(const Borrowed<HWND>& handle) : Window(handle) {}
-	virtual ~CustomControl();
-	bool create(HWND parent, const RECT& rect = DefaultWindowRect(),
-		const WCHAR* windowName = 0, DWORD style = 0UL, DWORD exStyle = 0UL);
-protected:
-	CustomControl(const CustomControl<Control>& rhs) : Window() {}
-	static LRESULT CALLBACK	windowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
-	virtual void onPaint(const Handle<HDC>& dc, const PAINTSTRUCT& ps) = 0;	// WM_PAINT
-private:
-	using Window::fireProcessWindowMessage;
-};
-
-
-
-// CustomControl ////////////////////////////////////////////////////////////
-
-template<class Control> inline CustomControl<Control>::~CustomControl() {
-	// prevent to be called as this by windowProcedure
-	if(isWindow())
-		::SetWindowLongPtrW(get(), GWLP_USERDATA, 0);
-}
-
-template<class Control>
-inline bool CustomControl<Control>::create(HWND parent, const RECT& rect /* = DefaultWindowRect() */,
-		const WCHAR* windowName /* = 0 */, DWORD style /* = 0UL */, DWORD exStyle /* = 0UL */) {
-	BrushHandleOrColor bgColor;
-	CursorHandleOrID cursor;
-	AutoZeroSize<WNDCLASSEXW> wc;
-	AutoZeroSize<WNDCLASSEXW> dummy;
-
-	wc.hInstance = ::GetModuleHandleW(0);	// default value
-	wc.lpfnWndProc = CustomControl<Control>::windowProcedure;
-	Control::getClass(wc.lpszClassName, wc.hInstance, wc.style,
-		bgColor, cursor, wc.hIcon, wc.hIconSm, wc.cbClsExtra, wc.cbWndExtra);
-	wc.hbrBackground = bgColor.get();
-	wc.hCursor = cursor.get();
-	if(::GetClassInfoExW(wc.hInstance, wc.lpszClassName, &dummy) == 0)
-		::RegisterClassExW(&wc);
-	return Window::create(wc.lpszClassName, parent, rect, windowName, style, exStyle, 0, this);
-}
-
-template<class Control>
-inline LRESULT CALLBACK CustomControl<Control>::windowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
-	typedef CustomControl<Control> C;
-	if(message == WM_NCCREATE) {
-		C* const p = reinterpret_cast<C*>(reinterpret_cast<CREATESTRUCTW*>(lParam)->lpCreateParams);
-		assert(p != 0);
-		p->reset(borrowed(window));	// ... the handle will be reset by Window.create (no problem)
-#ifdef _WIN64
-		p->setWindowLongPtr(GWLP_USERDATA, reinterpret_cast<LONG_PTR>(p));
-#else
-		p->setWindowLong(GWL_USERDATA, static_cast<long>(reinterpret_cast<LONG_PTR>(p)));
-#endif // _WIN64
-
-		return p->fireProcessWindowMessage(message, wParam, lParam);
-	} else {
-		C* const p = reinterpret_cast<C*>(
-#ifdef _WIN64
-			::GetWindowLongPtrW(window, GWLP_USERDATA));
-#else
-			static_cast<LONG_PTR>(::GetWindowLongW(window, GWL_USERDATA)));
-#endif // _WIN64
-		if(p == 0)
-			return 1;
-		bool handled = false;
-		const LRESULT r = p->preTranslateWindowMessage(message, wParam, lParam, handled);
-		if(handled)
-			return r;
-		else if(message == WM_PAINT) {
-			PAINTSTRUCT ps;
-			Handle<HDC> dc(::BeginPaint(p->get(), &ps));
-			p->onPaint(dc, ps);
-			::EndPaint(p->get(), &ps);
-			return 0;
-		}
-		return p->fireProcessWindowMessage(message, wParam, lParam);
-	}
-}
 
 	}
 } // namespace ascension.win32
