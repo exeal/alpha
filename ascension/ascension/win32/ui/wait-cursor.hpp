@@ -1,22 +1,27 @@
-// wait-cursor.hpp
-// (C) 2003-2008 exeal
+/**
+ * @file wait-cursor.hpp
+ * @date 2003-2008 (manah/win32/ui/wait-cursor.hpp)
+ * @date 2010
+ */
 
-#ifndef MANAH_WAIT_CURSOR_HPP
-#define MANAH_WAIT_CURSOR_HPP
+#ifndef ASCENSION_WAIT_CURSOR_WINDOWS_HPP
+#define ASCENSION_WAIT_CURSOR_WINDOWS_HPP
 #include "../windows.hpp"
 
-namespace manah {
+namespace ascension {
 	namespace win32 {
-		namespace ui {
-			class WaitCursor {
-			public:
-				WaitCursor() throw() : originalCursor_(::GetCursor()) {::SetCursor(::LoadCursorW(0, MAKEINTRESOURCEW(32514)));}
-				virtual ~WaitCursor() throw() {::SetCursor(originalCursor_);}
-			private:
-				HCURSOR originalCursor_;
-			};
-		}
+		class WaitCursor {
+		public:
+			WaitCursor() /*throw()*/ : originalCursor_(::GetCursor()) {
+				::SetCursor(::LoadCursorW(0, MAKEINTRESOURCEW(32514)));
+			}
+			~WaitCursor() /*throw()*/ {
+				::SetCursor(originalCursor_.get());
+			}
+		private:
+			Handle<HCURSOR> originalCursor_;
+		};
 	}
-} // namespace manah.win32.ui
+} // namespace ascension.win32
 
-#endif // !MANAH_WAIT_CURSOR_HPP
+#endif // !ASCENSION_WAIT_CURSOR_WINDOWS_HPP

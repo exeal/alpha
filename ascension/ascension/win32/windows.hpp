@@ -98,23 +98,31 @@ namespace ascension {
 		 */
 		template<typename T> class Handle {
 		public:
+			/// Default constructor.
+			Handle() : handle_(0) {}
 			/**
 			 * Constructor. A @c Handle initialized by this constructor does not get the ownership
 			 * of the handle.
+			 * @tpatam U The type of @a handle. Can be not @c T
 			 * @param handle The handle to hold
 			 */
-			explicit Handle(T handle = 0) : handle_(handle) {}
+			template<typename U>
+			explicit Handle(U handle) : handle_(handle) {}
 			/**
 			 * Constructor. A @c Handle initialized by this constructor gets the ownership of the
 			 * handle and the destructor destroys the handle.
-			 * @tparam Deleter The type of @a deleter
+			 * @tparam U The type of @a handle. Can be not @c T
+			 * @tparam D The type of @a deleter
 			 * @param handle The handle to hold
 			 * @param deleter The function destroys the handle
 			 */
-			template<typename Deleter> Handle(T handle, Deleter deleter) : handle_(handle),
-				deleter_((deleter != 0) ? new internal::HandleDeleter<T, Deleter>(handle, deleter) : 0) {}
+			template<typename U, typename D> Handle(U handle, D deleter) :
+				handle_(handle), deleter_(new internal::HandleDeleter<T, D>(handle, deleter)) {}
 			/// Destructor.
-			~Handle() {reset();}
+			~Handle() {
+				if(deleter_.get() != 0)
+					deleter_->destroy();
+			}
 			/**
 			 * Copy-constructor snatches the ownership of the handle from the source object.
 			 * @param other The source object
@@ -128,13 +136,16 @@ namespace ascension {
 			 * @return This object
 			 */
 			Handle<T>& operator=(Handle<T>& other) {
-				reset(other.handle_, other.deleter_);
-				other.handle_ = 0;
-				other.deleter_.release();
+				Handle<T>(other).swap(*this);
 				return *this;
 			}
 			/// Returns the held handle.
 			T get() const {return handle_;}
+			/***/
+			void swap(Handle<T>& other) {
+				std::swap(handle_, other.handle_);
+				std::swap(deleter_, other.deleter_);
+			}
 			/**
 			 * Releases the held handle without destruction.
 			 * @return The held handle
@@ -145,16 +156,16 @@ namespace ascension {
 				std::swap(handle_, temp);
 				return temp;
 			}
+			/// Resets the handle.
+			void reset() {Handle<T>().swap(*this);}
 			/**
 			 * Resets the handle. This method does not get the ownership of the handle.
 			 * @param handle The handle to hold. Can be @c null
 			 */
-			void reset(T handle = 0) {
-//				return reset(handle, 0);
-				if(deleter_.get() != 0 && handle != handle_)
-					deleter_->destroy();
-				handle_ = handle;
-				deleter_.reset();
+			template<typename U>
+			void reset(U handle) {
+				assert(handle == 0 || handle != get());
+				Handle<T>(handle).swap(*this);
 			}
 			/**
 			 * Resets the handle. This method does not get the ownership of the handle.
@@ -162,13 +173,9 @@ namespace ascension {
 			 * @param handle The handle to hold. Can be @c null
 			 * @param deleter The function destroys the handle
 			 */
-			template<typename Deleter> void reset(T handle, Deleter deleter) {
-				std::auto_ptr<internal::HandleDeleterBase> newDeleter((deleter != 0) ?
-					new internal::HandleDeleter<T, Deleter>(handle, deleter) : 0);
-				if(deleter_.get() != 0 && handle != handle_)
-					deleter_->destroy();
-				handle_ = handle;
-				std::swap(deleter_, newDeleter);
+			template<typename U, typename D> void reset(U handle, D deleter) {
+				assert(handle == 0 || handle != get());
+				Handle<T>(handle, deleter).swap(*this);
 			}
 		private:
 			T handle_;

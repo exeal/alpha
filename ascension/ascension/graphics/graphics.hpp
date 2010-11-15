@@ -7,10 +7,16 @@
 #ifndef ASCENSION_GRAPHICS_HPP
 #define ASCENSION_GRAPHICS_HPP
 
+#include <ascension/corelib/string-piece.hpp>
 #include <ascension/graphics/geometry.hpp>
 
 namespace ascension {
+
+
 	namespace graphics {
+
+		class Color;
+		class Font;
 
 		class Context {
 		public:

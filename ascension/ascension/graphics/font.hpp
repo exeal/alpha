@@ -9,6 +9,11 @@
 
 #include <ascension/config.hpp>	// ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 #include <ascension/platforms.hpp>
+#include <ascension/corelib/basic-types.hpp>	// uint32_t
+#include <cstring>								// std.strlen
+#ifdef ASCENSION_WINDOWS
+#	include <ascension/win32/windows.hpp>		// win32.Handle
+#endif // ASCENSION_WINDOWS
 
 namespace ascension {
 	namespace graphics {
@@ -96,7 +101,7 @@ namespace ascension {
 			virtual ~Font() /*throw()*/ {}
 #ifdef ASCENSION_WINDOWS
 			/// Returns the Win32 @c HFONT handle object.
-			virtual win32::Handle<HFONT> nativeHandle() const /*throw()*/ = 0;
+			virtual const win32::Handle<HFONT>& nativeHandle() const /*throw()*/ = 0;
 #endif // ASCENSION_WINDOWS
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 			virtual bool ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, uint16_t& glyph) const = 0;

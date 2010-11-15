@@ -10,6 +10,9 @@
 
 #include <ascension/corelib/memory.hpp>	// FastArenaObject
 #include <ascension/platforms.hpp>
+#ifdef ASCENSION_WINDOWS
+#	include <ascension/win32/windows.hpp>
+#endif // ASCENSION_WINDOWS
 
 namespace ascension {
 	namespace graphics {

@@ -5,18 +5,16 @@
  */
 
 #include <ascension/text-editor.hpp>
-#include <ascension/content-assist.hpp>
-#include <manah/win32/utility.hpp>
-#include <manah/win32/ui/wait-cursor.hpp>
+#include <ascension/viewer/content-assist.hpp>
+#include <ascension/win32/ui/wait-cursor.hpp>
+
 using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::texteditor;
 using namespace ascension::texteditor::commands;
 using namespace ascension::texteditor::isc;
 using namespace ascension::viewers;
-using namespace manah;
 using namespace std;
-using manah::win32::ui::WaitCursor;
 
 
 // Command //////////////////////////////////////////////////////////////////
@@ -167,7 +165,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Command(viewer), extends_(extendSelection), procedureP_(procedure), procedurePL_(0), procedurePCL_(0),
 		procedureV_(0), procedureVL_(0), procedureVCL_(0), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_P,
-			MANAH_ENDOF(MOVEMENT_PROCEDURES_P), procedure) == MANAH_ENDOF(MOVEMENT_PROCEDURES_P))
+			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_P), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_P))
 		throw invalid_argument("procedure");
 }
 
@@ -182,7 +180,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Command(viewer), extends_(extendSelection), procedureP_(0), procedurePL_(procedure), procedurePCL_(0),
 		procedureV_(0), procedureVL_(0), procedureVCL_(0), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_PL,
-			MANAH_ENDOF(MOVEMENT_PROCEDURES_PL), procedure) == MANAH_ENDOF(MOVEMENT_PROCEDURES_PL))
+			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PL))
 		throw invalid_argument("procedure");
 }
 
@@ -197,7 +195,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Command(viewer), extends_(extendSelection), procedureP_(0), procedurePL_(0), procedurePCL_(procedure),
 		procedureV_(0), procedureVL_(0), procedureVCL_(0), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_PCL,
-			MANAH_ENDOF(MOVEMENT_PROCEDURES_PCL), procedure) == MANAH_ENDOF(MOVEMENT_PROCEDURES_PCL))
+			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PCL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PCL))
 		throw invalid_argument("procedure");
 }
 
@@ -212,7 +210,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Command(viewer), extends_(extendSelection), procedureP_(0), procedurePL_(0), procedurePCL_(0),
 		procedureV_(procedure), procedureVL_(0), procedureVCL_(0), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_V,
-			MANAH_ENDOF(MOVEMENT_PROCEDURES_V), procedure) == MANAH_ENDOF(MOVEMENT_PROCEDURES_V))
+			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_V), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_V))
 		throw invalid_argument("procedure");
 }
 
@@ -227,7 +225,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Command(viewer), extends_(extendSelection), procedureP_(0), procedurePL_(0), procedurePCL_(0),
 		procedureV_(0), procedureVL_(procedure), procedureVCL_(0), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_VL,
-			MANAH_ENDOF(MOVEMENT_PROCEDURES_VL), procedure) == MANAH_ENDOF(MOVEMENT_PROCEDURES_VL))
+			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VL))
 		throw invalid_argument("procedure");
 }
 
@@ -242,7 +240,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Command(viewer), extends_(extendSelection), procedureP_(0), procedurePL_(0), procedurePCL_(0),
 		procedureV_(0), procedureVL_(0), procedureVCL_(procedure), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_VCL,
-			MANAH_ENDOF(MOVEMENT_PROCEDURES_VCL), procedure) == MANAH_ENDOF(MOVEMENT_PROCEDURES_VCL))
+			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VCL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VCL))
 		throw invalid_argument("procedure");
 }
 
@@ -257,7 +255,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Command(viewer), extends_(extendSelection), procedureP_(0), procedurePL_(0), procedurePCL_(0),
 		procedureV_(0), procedureVL_(0), procedureVCL_(0), procedureVLV_(procedure) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_VLV,
-			MANAH_ENDOF(MOVEMENT_PROCEDURES_VLV), procedure) == MANAH_ENDOF(MOVEMENT_PROCEDURES_VLV))
+			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VLV), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VLV))
 		throw invalid_argument("procedure");
 }
 
@@ -521,7 +519,7 @@ bool CharacterToCodePointConversionCommand::perform() {
 #if(_MSC_VER < 1400)
 	swprintf(buffer, L"%lX", cp);
 #else
-	swprintf(buffer, MANAH_COUNTOF(buffer), L"%lX", cp);
+	swprintf(buffer, ASCENSION_COUNTOF(buffer), L"%lX", cp);
 #endif // _MSC_VER < 1400
 	AutoFreeze af(&viewer);
 	caret.select(Position(eos.line(), eos.column() - ((cp > 0xffff) ? 2 : 1)), eos);
@@ -1059,7 +1057,7 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 		Position(*procedure)(const Point&)) : Command(viewer), procedureP_(procedure), procedurePL_(0), procedurePCL_(0),
 		procedureV_(0), procedureVL_(0), procedureVCL_(0), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_P,
-			MANAH_ENDOF(MOVEMENT_PROCEDURES_P), procedure) == MANAH_ENDOF(MOVEMENT_PROCEDURES_P))
+			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_P), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_P))
 		throw invalid_argument("procedure");
 }
 
@@ -1072,7 +1070,7 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 		Position(*procedure)(const Point&, length_t)) : Command(viewer), procedureP_(0), procedurePL_(procedure), procedurePCL_(0),
 		procedureV_(0), procedureVL_(0), procedureVCL_(0), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_PL,
-			MANAH_ENDOF(MOVEMENT_PROCEDURES_PL), procedure) == MANAH_ENDOF(MOVEMENT_PROCEDURES_PL))
+			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PL))
 		throw invalid_argument("procedure");
 }
 
@@ -1085,7 +1083,7 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 		Position(*procedure)(const Point&, locations::CharacterUnit, length_t)) : Command(viewer), procedureP_(0), procedurePL_(0), procedurePCL_(procedure),
 		procedureV_(0), procedureVL_(0), procedureVCL_(0), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_PCL,
-			MANAH_ENDOF(MOVEMENT_PROCEDURES_PCL), procedure) == MANAH_ENDOF(MOVEMENT_PROCEDURES_PCL))
+			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PCL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PCL))
 		throw invalid_argument("procedure");
 }
 
@@ -1098,7 +1096,7 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 		Position(*procedure)(const VisualPoint&)) : Command(viewer), procedureP_(0), procedurePL_(0), procedurePCL_(0),
 		procedureV_(procedure), procedureVL_(0), procedureVCL_(0), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_V,
-			MANAH_ENDOF(MOVEMENT_PROCEDURES_V), procedure) == MANAH_ENDOF(MOVEMENT_PROCEDURES_V))
+			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_V), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_V))
 		throw invalid_argument("procedure");
 }
 
@@ -1111,7 +1109,7 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 		Position(*procedure)(const VisualPoint&, length_t)) : Command(viewer), procedureP_(0), procedurePL_(0), procedurePCL_(0),
 		procedureV_(0), procedureVL_(procedure), procedureVCL_(0), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_VL,
-			MANAH_ENDOF(MOVEMENT_PROCEDURES_VL), procedure) == MANAH_ENDOF(MOVEMENT_PROCEDURES_VL))
+			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VL))
 		throw invalid_argument("procedure");
 }
 
@@ -1124,7 +1122,7 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 		Position(*procedure)(const VisualPoint&, locations::CharacterUnit, length_t)) : Command(viewer), procedureP_(0), procedurePL_(0), procedurePCL_(0),
 		procedureV_(0), procedureVL_(0), procedureVCL_(procedure), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_VCL,
-			MANAH_ENDOF(MOVEMENT_PROCEDURES_VCL), procedure) == MANAH_ENDOF(MOVEMENT_PROCEDURES_VCL))
+			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VCL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VCL))
 		throw invalid_argument("procedure");
 }
 
@@ -1137,7 +1135,7 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 		VerticalDestinationProxy(*procedure)(const VisualPoint&, length_t)) : Command(viewer), procedureP_(0), procedurePL_(0), procedurePCL_(0),
 		procedureV_(0), procedureVL_(0), procedureVCL_(0), procedureVLV_(procedure) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_VLV,
-			MANAH_ENDOF(MOVEMENT_PROCEDURES_VLV), procedure) == MANAH_ENDOF(MOVEMENT_PROCEDURES_VLV))
+			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VLV), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VLV))
 		throw invalid_argument("procedure");
 }
 
@@ -1480,7 +1478,7 @@ bool VietnameseInputSequenceChecker::check(HKL keyboardLayout, const StringPiece
 
 	if(PRIMARYLANGID(LOWORD(keyboardLayout)) != LANG_VIETNAMESE)
 		return true;
-	else if(!preceding.isEmpty() && binary_search(TONE_MARKS, MANAH_ENDOF(TONE_MARKS), c))
-		return binary_search(VOWELS, MANAH_ENDOF(VOWELS), preceding.end()[-1]);
+	else if(!preceding.isEmpty() && binary_search(TONE_MARKS, ASCENSION_ENDOF(TONE_MARKS), c))
+		return binary_search(VOWELS, ASCENSION_ENDOF(VOWELS), preceding.end()[-1]);
 	return true;
 }

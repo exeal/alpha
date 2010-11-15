@@ -6,7 +6,10 @@
 
 #ifndef ASCENSION_GRAPHICS_WINDOWS_HPP
 #define ASCENSION_GRAPHICS_WINDOWS_HPP
+
 #include <ascension/graphics/graphics.hpp>
+#include <ascension/graphics/color.hpp>
+#include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/win32/windows.hpp>	// win32.Handle
 #include <functional>			// std.bind1st, std.ptr_fun
 
@@ -72,13 +75,21 @@ namespace ascension {
 			explicit PaintContext(const Handle<HWND>& window) {
 				if(window.get() == 0)
 					throw NullPointerException("window");
-				Handle<HDC> dc(::BeginPaint(window.get(), &ps_), std::bind1st(std::ptr_fun(&::EndPaint), window.get()));
+				Handle<HDC> dc(::BeginPaint(window.get(), &ps_), X(window.get(), ps_));
 				if(dc.get() == 0)
 					throw PlatformDependentError<>();
 				initialize(dc);
 			}
 			graphics::Rect<> boundsToPaint() const {return graphics::fromNative(ps_.rcPaint);}
 		private:
+			class X {
+			public:
+				X(HWND hwnd, PAINTSTRUCT& ps) : hwnd_(hwnd), ps_(ps) {}
+				void operator()(HDC) {::EndPaint(hwnd_, &ps_);}
+			private:
+				HWND hwnd_;
+				PAINTSTRUCT& ps_;
+			};
 			PAINTSTRUCT ps_;
 		};
 
