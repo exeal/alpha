@@ -193,7 +193,7 @@ namespace ascension {
 				virtual const win32::Handle<HFONT>& nativeHandle() const /*throw()*/ = 0;
 #endif // ASCENSION_WINDOWS
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-				virtual bool ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, uint16_t& glyph) const = 0;
+				virtual bool ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, GlyphCode& glyph) const = 0;
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 				/// Returns the metrics of the font.
 				virtual const Metrics& metrics() const /*throw()*/ = 0;
