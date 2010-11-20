@@ -168,7 +168,7 @@ namespace ascension {
 			/// Font family name. An empty string means inherit the parent.
 			String fontFamily;
 			/// Font properties. See @c graphics#FontProperties.
-			graphics::FontProperties fontProperties;
+			graphics::font::FontProperties fontProperties;
 			/// 'font-size-adjust' property. 0.0 means 'none', negative value means 'inherit'.
 			double fontSizeAdjust;
 			std::locale locale;
