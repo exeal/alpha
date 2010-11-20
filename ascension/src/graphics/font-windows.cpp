@@ -98,7 +98,7 @@ namespace {
 		explicit SystemFont(win32::Handle<HFONT> handle);
 		// Font
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-		bool ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, uint16_t& glyph) const;
+		bool ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, GlyphCode& glyph) const;
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 		const Font::Metrics& metrics() const /*throw()*/ {return *this;}
 		const win32::Handle<HFONT>& nativeHandle() const /*throw()*/ {return handle_;}
@@ -169,7 +169,7 @@ SystemFont::SystemFont(win32::Handle<HFONT> handle) : handle_(handle) {
 }
 
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-bool SystemFont::ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, uint16_t& glyph) const {
+bool SystemFont::ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, GlyphCode& glyph) const {
 	if(!text::isValidCodePoint(baseCharacter))
 		throw invalid_argument("baseCharacter");
 	else if(!text::isValidCodePoint(variationSelector))

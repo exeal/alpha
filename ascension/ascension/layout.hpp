@@ -21,513 +21,514 @@ namespace ascension {
 	namespace viewers {class Caret;}
 
 	namespace graphics {
+		namespace font {
 
-		// free functions
-		bool getDecorationLineMetrics(const win32::Handle<HDC>& dc, int* baselineOffset,
-			int* underlineOffset, int* underlineThickness, int* strikethroughOffset, int* strikethroughThickness) /*throw()*/;
-		bool supportsComplexScripts() /*throw()*/;
-		bool supportsOpenTypeFeatures() /*throw()*/;
+			// free functions
+			bool getDecorationLineMetrics(const win32::Handle<HDC>& dc, int* baselineOffset,
+				int* underlineOffset, int* underlineThickness, int* strikethroughOffset, int* strikethroughThickness) /*throw()*/;
+			bool supportsComplexScripts() /*throw()*/;
+			bool supportsOpenTypeFeatures() /*throw()*/;
 
-		/**
-		 * Configuration about line wrapping.
-		 * @see Presentation#Configurations#lineWrap
-		 */
-		struct LineWrapConfiguration {
 			/**
-			 * Modes for text wrapping. These values are based on "text-wrap" property in
-			 * <a href="http://www.w3.org/TR/2007/WD-css3-text-20070306/">CSS Text Level 3</a>
-			 * working draft of W3C Cascading Style Sheet.
+			 * Configuration about line wrapping.
+			 * @see Presentation#Configurations#lineWrap
 			 */
-			enum Mode {
-				NONE,			///< Lines may not break.
-				NORMAL,			///< Lines may break at allowed points as determined by UAX #14.
-				UNRESTRICTED,	///< Lines may break between any two grapheme clusters.
-				SUPPRESS		///< Line breaking is suppressed within the run.
-			} mode;	///< The mode. Default value is @c NONE.
+			struct LineWrapConfiguration {
+				/**
+				 * Modes for text wrapping. These values are based on "text-wrap" property in
+				 * <a href="http://www.w3.org/TR/2007/WD-css3-text-20070306/">CSS Text Level 3</a>
+				 * working draft of W3C Cascading Style Sheet.
+				 */
+				enum Mode {
+					NONE,			///< Lines may not break.
+					NORMAL,			///< Lines may break at allowed points as determined by UAX #14.
+					UNRESTRICTED,	///< Lines may break between any two grapheme clusters.
+					SUPPRESS		///< Line breaking is suppressed within the run.
+				} mode;	///< The mode. Default value is @c NONE.
 #if 0
-			/**
-			 * Specifies what set of line breaking restrictions are in effect within the run. These
-			 * values are based on "word-break" property in
-			 * <a href="http://www.w3.org/TR/2007/WD-css3-text-20070306/">CSS Text Level 3</a>
-			 * working draft of W3C Cascading Style Sheet.
-			 */
-			enum WordBreak {
-				NORMAL,			///< Same as 'normal'.
-				KEEP_ALL,		///< Same as 'keep-all'.
-				LOOSE,			///< Same as 'loose'.
-				BREAK_STRICT,	///< Same as 'break-strict'.
-				BREAK_ALL		///< Same as 'break-all'
-			} wordBreak;
+				/**
+				 * Specifies what set of line breaking restrictions are in effect within the run. These
+				 * values are based on "word-break" property in
+				 * <a href="http://www.w3.org/TR/2007/WD-css3-text-20070306/">CSS Text Level 3</a>
+				 * working draft of W3C Cascading Style Sheet.
+				 */
+				enum WordBreak {
+					NORMAL,			///< Same as 'normal'.
+					KEEP_ALL,		///< Same as 'keep-all'.
+					LOOSE,			///< Same as 'loose'.
+					BREAK_STRICT,	///< Same as 'break-strict'.
+					BREAK_ALL		///< Same as 'break-all'
+				} wordBreak;
 #endif
-			/**
-			 * The maximum line width. This value must be grater than or equal to zero. If set to
-			 * zero, the lines will be wrapped at the window edge.
-			 */
-			int width;
-			/// Default constructor.
-			LineWrapConfiguration() /*throw()*/ : mode(NONE), width(0) {};
-			/// Returns @c true if the all members are valid.
-			bool verify() const /*throw()*/ {return width >= 0;}
-			/// Returns @c true if @c mode is not @c NONE.
-			bool wraps() const /*throw()*/ {return mode != NONE;}
-			/// Returns @c true if @c algorithm is not @c NO_WRAP and @c width is zero.
-			bool wrapsAtWindowEdge() const /*throw()*/ {return wraps() && width == 0;}
-		};
-
-		/**
-		 * General settings for layout.
-		 * @see ILayoutInformationProvider#layoutSettings, TextViewer#Configuration
-		 */
-		struct LayoutSettings {
-//			/// Color of normal text. Standard setting is {@c COLOR_WINDOWTEXT, @c COLOR_WINDOW}.
-//			presentation::Colors color;
-//			/// Color of invisible controls. Standard setting is not provided.
-//			presentation::Colors invisibleControlColor;
-			/// Character count of a tab expansion. Default value is 8.
-			int tabWidth;
-			/// Line spacing in pixel. Default value is 1.
-			int lineSpacing;
-			/// Line wrap configuration.
-			LineWrapConfiguration lineWrap;
-			/// If set to @c true, zero width control characters are shaped as representative glyphs. Default is @c false.
-			bool displaysShapingControls;
-			/// Set @c true to inhibit from generating mirrored glyphs. Default value is @c false.
-			bool inhibitsSymmetricSwapping;
-			/// Set @c true to make the deprecated format characters (NADS, NODS, ASS, and ISS) not effective. Default value is @c false.
-			bool disablesDeprecatedFormatCharacters;
-			/// Constructor initializes the all members to their default values.
-			LayoutSettings() /*throw()*/ : tabWidth(8), lineSpacing(0),
-				displaysShapingControls(false), inhibitsSymmetricSwapping(false), disablesDeprecatedFormatCharacters(false) {}
-			/// Returns @c true if the all mwmbers are valid.
-			bool verify() const /*throw()*/ {return lineWrap.verify() && tabWidth > 0 && lineSpacing >= 0;}
-		};
-
-		class TextRenderer;
-
-		/*
-		 * Interface for objects which are interested in change of the default font of
-		 * @c TextRenderer.
-		 * @see TextRenderer#addDefaultFontListener, TextRenderer#removeDefaultFontListener
-		 */
-		class IDefaultFontListener {
-		private:
-			/// The font settings was changed.
-			virtual void defaultFontChanged() = 0;
-			friend class TextRenderer;
-		};
-
-		class ISpecialCharacterRenderer {
-		public:
-			/// Destructor.
-			virtual ~ISpecialCharacterRenderer() /*throw()*/ {}
-		protected:
-			/// Context of the layout.
-			struct LayoutContext {
-				ASCENSION_UNASSIGNABLE_TAG(LayoutContext);
-			public:
-				mutable Context& renderingContext;					///< the rendering context.
-				presentation::ReadingDirection readingDirection;	///< the orientation of the character.
-				/// Constructor.
-				explicit LayoutContext(Context& renderingContext) /*throw()*/ : renderingContext(renderingContext) {}
+				/**
+				 * The maximum line width. This value must be grater than or equal to zero. If set to
+				 * zero, the lines will be wrapped at the window edge.
+				 */
+				int width;
+				/// Default constructor.
+				LineWrapConfiguration() /*throw()*/ : mode(NONE), width(0) {};
+				/// Returns @c true if the all members are valid.
+				bool verify() const /*throw()*/ {return width >= 0;}
+				/// Returns @c true if @c mode is not @c NONE.
+				bool wraps() const /*throw()*/ {return mode != NONE;}
+				/// Returns @c true if @c algorithm is not @c NO_WRAP and @c width is zero.
+				bool wrapsAtWindowEdge() const /*throw()*/ {return wraps() && width == 0;}
 			};
-			/// Context of the drawing.
-			struct DrawingContext : public LayoutContext {
-				Rect<> rect;	///< the bounding box to draw.
-				/// Constructor.
-				DrawingContext(Context& deviceContext) /*throw()*/ : LayoutContext(renderingContext) {}
+
+			/**
+			 * General settings for layout.
+			 * @see ILayoutInformationProvider#layoutSettings, TextViewer#Configuration
+			 */
+			struct LayoutSettings {
+//				/// Color of normal text. Standard setting is {@c COLOR_WINDOWTEXT, @c COLOR_WINDOW}.
+//				presentation::Colors color;
+//				/// Color of invisible controls. Standard setting is not provided.
+//				presentation::Colors invisibleControlColor;
+				/// Character count of a tab expansion. Default value is 8.
+				int tabWidth;
+				/// Line spacing in pixel. Default value is 1.
+				int lineSpacing;
+				/// Line wrap configuration.
+				LineWrapConfiguration lineWrap;
+				/// If set to @c true, zero width control characters are shaped as representative glyphs. Default is @c false.
+				bool displaysShapingControls;
+				/// Set @c true to inhibit from generating mirrored glyphs. Default value is @c false.
+				bool inhibitsSymmetricSwapping;
+				/// Set @c true to make the deprecated format characters (NADS, NODS, ASS, and ISS) not effective. Default value is @c false.
+				bool disablesDeprecatedFormatCharacters;
+				/// Constructor initializes the all members to their default values.
+				LayoutSettings() /*throw()*/ : tabWidth(8), lineSpacing(0),
+					displaysShapingControls(false), inhibitsSymmetricSwapping(false), disablesDeprecatedFormatCharacters(false) {}
+				/// Returns @c true if the all mwmbers are valid.
+				bool verify() const /*throw()*/ {return lineWrap.verify() && tabWidth > 0 && lineSpacing >= 0;}
 			};
-		private:
-			/**
-			 * Draws the specified C0 or C1 control character.
-			 * @param context the context
-			 * @param c the code point of the character to draw
-			 */
-			virtual void drawControlCharacter(const DrawingContext& context, CodePoint c) const = 0;
-			/**
-			 * Draws the specified line break indicator.
-			 * @param context the context
-			 * @param newline the newline to draw
-			 */
-			virtual void drawLineTerminator(const DrawingContext& context, kernel::Newline newline) const = 0;
-			/**
-			 * Draws the width of a line wrapping mark.
-			 * @param context the context
-			 */
-			virtual void drawLineWrappingMark(const DrawingContext& context) const = 0;
-			/**
-			 * Draws the specified white space character.
-			 * @param context the context
-			 * @param c the code point of the character to draw
-			 */
-			virtual void drawWhiteSpaceCharacter(const DrawingContext& context, CodePoint c) const = 0;
-			/**
-			 * Returns the width of the specified C0 or C1 control character.
-			 * @param context the context
-			 * @param c the code point of the character to layout
-			 * @return the width or 0 if does not render the character
-			 */
-			virtual int getControlCharacterWidth(const LayoutContext& context, CodePoint c) const = 0;
-			/**
-			 * Returns the width of the specified line break indicator.
-			 * @param context the context
-			 * @param newline the newline to layout
-			 * @return the width or 0 if does not render the indicator
-			 */
-			virtual int getLineTerminatorWidth(const LayoutContext& context, kernel::Newline newline) const = 0;
-			/**
-			 * Returns the width of a line wrapping mark.
-			 * @param context the context
-			 * @return the width or 0 if does not render the mark
-			 */
-			virtual int getLineWrappingMarkWidth(const LayoutContext& context) const = 0;
-			/**
-			 * Installs the drawer.
-			 * @param textRenderer the text renderer
-			 */
-			virtual void install(TextRenderer& textRenderer) = 0;
-			/// Uninstalls the drawer.
-			virtual void uninstall() = 0;
-			friend class LineLayout;
-			friend class TextRenderer;
-		};
 
-		class DefaultSpecialCharacterRenderer : public ISpecialCharacterRenderer, public IDefaultFontListener {
-		public:
-			// constructors
-			DefaultSpecialCharacterRenderer() /*throw()*/;
-			// attributes
-			COLORREF controlCharacterColor() const /*throw()*/;
-			COLORREF lineTerminatorColor() const /*throw()*/;
-			COLORREF lineWrappingMarkColor() const /*throw()*/;
-			void setControlCharacterColor(COLORREF color) /*throw()*/;
-			void setLineTerminatorColor(COLORREF color) /*throw()*/;
-			void setLineWrappingMarkColor(COLORREF color) /*throw()*/;
-			void setWhiteSpaceColor(COLORREF color) /*throw()*/;
-			void showLineTerminators(bool show) /*throw()*/;
-			void showWhiteSpaces(bool show) /*throw()*/;
-			bool showsLineTerminators() const /*throw()*/;
-			bool showsWhiteSpaces() const /*throw()*/;
-			COLORREF whiteSpaceColor() const /*throw()*/;
-		private:
-			// ISpecialCharacterRenderer
-			void drawControlCharacter(const DrawingContext& context, CodePoint c) const;
-			void drawLineTerminator(const DrawingContext& context, kernel::Newline newline) const;
-			void drawLineWrappingMark(const DrawingContext& context) const;
-			void drawWhiteSpaceCharacter(const DrawingContext& context, CodePoint c) const;
-			int getControlCharacterWidth(const LayoutContext& context, CodePoint c) const;
-			int getLineTerminatorWidth(const LayoutContext& context, kernel::Newline newline) const;
-			int getLineWrappingMarkWidth(const LayoutContext& context) const;
-			void install(TextRenderer& textRenderer);
-			void uninstall();
-			// IDefaultFontListener
-			void defaultFontChanged();
-		private:
-			TextRenderer* renderer_;
-			COLORREF controlColor_, eolColor_, wrapMarkColor_, whiteSpaceColor_;
-			bool showsEOLs_, showsWhiteSpaces_;
-			std::tr1::shared_ptr<const Font> font_;	// provides substitution glyphs
-			enum {LTR_HORIZONTAL_TAB, RTL_HORIZONTAL_TAB, LINE_TERMINATOR, LTR_WRAPPING_MARK, RTL_WRAPPING_MARK, WHITE_SPACE};
-			WORD glyphs_[6];
-			int glyphWidths_[6];
-		};
+			class TextRenderer;
 
-		/**
-		 * Defines the stuffs for layout. Clients of Ascension can implement this interface or use
-		 * a higher level @c TextRenderer class.
-		 * @see LineLayout, LineLayoutBuffer
-		 */
-		class ILayoutInformationProvider {
-		public:
-			/// Destructor.
-			virtual ~ILayoutInformationProvider() /*throw()*/ {}
-			/// Returns the font collection.
-			virtual const FontCollection& fontCollection() const /*throw()*/ = 0;
-			/// Returns the layout settings.
-			virtual const LayoutSettings& layoutSettings() const /*throw()*/ = 0;
-			/**
-			 * Returns the default reading direction of UI. The value this method returns is
-			 * treated as "last resort" for resolvement reading direction of text layout. If
-			 * returns @c INHERIT_READING_DIRECTION, the caller should use the value defined by
-			 * @c ASCENSION_DEFAULT_READING_DIRECTION symbol.
-			 * @see presentation#LineStyle#readingDirection
-			 * @see presentation#Presentation#defaultLineStyle
+			/*
+			 * Interface for objects which are interested in change of the default font of
+			 * @c TextRenderer.
+			 * @see TextRenderer#addDefaultFontListener, TextRenderer#removeDefaultFontListener
 			 */
-			virtual presentation::ReadingDirection defaultUIReadingDirection() const /*throw()*/ = 0;
-			/// Returns the presentation object.
-			virtual const presentation::Presentation& presentation() const /*throw()*/ = 0;
-			/// Returns the special character renderer.
-			virtual ISpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/ = 0;
-			/// Returns the text metrics.
-			virtual const Font::Metrics& textMetrics() const /*throw()*/ = 0;
-			/// Returns the width of the rendering area in pixels.
-			virtual int width() const /*throw()*/ = 0;
-		};
-
-		class LineLayout {
-			ASCENSION_NONCOPYABLE_TAG(LineLayout);
-		public:
-			/// Edge of a character.
-			enum Edge {
-				LEADING,	///< Leading edge of a character.
-				TRAILING	///< Trailing edge of a character.
-			};
-			/// Used for @c LineLayout#draw methods.
-			class Selection {
-				ASCENSION_UNASSIGNABLE_TAG(Selection);
-			public:
-				/// Constructor.
-				Selection(const viewers::Caret& caret,
-					const graphics::Color& foreground, const graphics::Color& background);
-				/// Returns the caret object.
-				const viewers::Caret& caret() const /*throw()*/ {return caret_;}
-				/// Returns the background color to render.
-				const graphics::Color& background() const /*throw()*/ {return background_;}
-				/// Returns the foreground color to render.
-				const graphics::Color& foreground() const /*throw()*/ {return foreground_;}
+			class IDefaultFontListener {
 			private:
-				const viewers::Caret& caret_;
-				const graphics::Color foreground_, background_;
+				/// The font settings was changed.
+				virtual void defaultFontChanged() = 0;
+				friend class TextRenderer;
 			};
-#if 0
-			/// Bidirectional iterator enumerates style runs in a line.
-			class StyledSegmentIterator {
+
+			class ISpecialCharacterRenderer {
+			public:
+				/// Destructor.
+				virtual ~ISpecialCharacterRenderer() /*throw()*/ {}
+			protected:
+				/// Context of the layout.
+				struct LayoutContext {
+					ASCENSION_UNASSIGNABLE_TAG(LayoutContext);
+				public:
+					mutable Context& renderingContext;					///< the rendering context.
+					presentation::ReadingDirection readingDirection;	///< the orientation of the character.
+					/// Constructor.
+					explicit LayoutContext(Context& renderingContext) /*throw()*/ : renderingContext(renderingContext) {}
+				};
+				/// Context of the drawing.
+				struct DrawingContext : public LayoutContext {
+					Rect<> rect;	///< the bounding box to draw.
+					/// Constructor.
+					DrawingContext(Context& deviceContext) /*throw()*/ : LayoutContext(renderingContext) {}
+				};
+			private:
+				/**
+				 * Draws the specified C0 or C1 control character.
+				 * @param context the context
+				 * @param c the code point of the character to draw
+				 */
+				virtual void drawControlCharacter(const DrawingContext& context, CodePoint c) const = 0;
+				/**
+				 * Draws the specified line break indicator.
+				 * @param context the context
+				 * @param newline the newline to draw
+				 */
+				virtual void drawLineTerminator(const DrawingContext& context, kernel::Newline newline) const = 0;
+				/**
+				 * Draws the width of a line wrapping mark.
+				 * @param context the context
+				 */
+				virtual void drawLineWrappingMark(const DrawingContext& context) const = 0;
+				/**
+				 * Draws the specified white space character.
+				 * @param context the context
+				 * @param c the code point of the character to draw
+				 */
+				virtual void drawWhiteSpaceCharacter(const DrawingContext& context, CodePoint c) const = 0;
+				/**
+				 * Returns the width of the specified C0 or C1 control character.
+				 * @param context the context
+				 * @param c the code point of the character to layout
+				 * @return the width or 0 if does not render the character
+				 */
+				virtual int getControlCharacterWidth(const LayoutContext& context, CodePoint c) const = 0;
+				/**
+				 * Returns the width of the specified line break indicator.
+				 * @param context the context
+				 * @param newline the newline to layout
+				 * @return the width or 0 if does not render the indicator
+				 */
+				virtual int getLineTerminatorWidth(const LayoutContext& context, kernel::Newline newline) const = 0;
+				/**
+				 * Returns the width of a line wrapping mark.
+				 * @param context the context
+				 * @return the width or 0 if does not render the mark
+				 */
+				virtual int getLineWrappingMarkWidth(const LayoutContext& context) const = 0;
+				/**
+				 * Installs the drawer.
+				 * @param textRenderer the text renderer
+				 */
+				virtual void install(TextRenderer& textRenderer) = 0;
+				/// Uninstalls the drawer.
+				virtual void uninstall() = 0;
+				friend class LineLayout;
+				friend class TextRenderer;
+			};
+
+			class DefaultSpecialCharacterRenderer : public ISpecialCharacterRenderer, public IDefaultFontListener {
 			public:
 				// constructors
-				StyledSegmentIterator(const StyledSegmentIterator& rhs) /*throw()*/;
-				// operators
-				StyledSegmentIterator& operator=(const StyledSegmentIterator& rhs) /*throw()*/;
-				// methods
-				presentation::StyledRun current() const /*throw()*/;
-				bool equals(const StyledSegmentIterator& rhs) const /*throw()*/;
-				StyledSegmentIterator& next() /*throw()*/;
-				StyledSegmentIterator& previous() /*throw()*/;
+				DefaultSpecialCharacterRenderer() /*throw()*/;
+				// attributes
+				COLORREF controlCharacterColor() const /*throw()*/;
+				COLORREF lineTerminatorColor() const /*throw()*/;
+				COLORREF lineWrappingMarkColor() const /*throw()*/;
+				void setControlCharacterColor(COLORREF color) /*throw()*/;
+				void setLineTerminatorColor(COLORREF color) /*throw()*/;
+				void setLineWrappingMarkColor(COLORREF color) /*throw()*/;
+				void setWhiteSpaceColor(COLORREF color) /*throw()*/;
+				void showLineTerminators(bool show) /*throw()*/;
+				void showWhiteSpaces(bool show) /*throw()*/;
+				bool showsLineTerminators() const /*throw()*/;
+				bool showsWhiteSpaces() const /*throw()*/;
+				COLORREF whiteSpaceColor() const /*throw()*/;
 			private:
-				explicit StyledSegmentIterator(const internal::Run*& start) /*throw()*/;
-				const internal::Run** p_;
-				friend class LineLayout;
+				// ISpecialCharacterRenderer
+				void drawControlCharacter(const DrawingContext& context, CodePoint c) const;
+				void drawLineTerminator(const DrawingContext& context, kernel::Newline newline) const;
+				void drawLineWrappingMark(const DrawingContext& context) const;
+				void drawWhiteSpaceCharacter(const DrawingContext& context, CodePoint c) const;
+				int getControlCharacterWidth(const LayoutContext& context, CodePoint c) const;
+				int getLineTerminatorWidth(const LayoutContext& context, kernel::Newline newline) const;
+				int getLineWrappingMarkWidth(const LayoutContext& context) const;
+				void install(TextRenderer& textRenderer);
+				void uninstall();
+				// IDefaultFontListener
+				void defaultFontChanged();
+			private:
+				TextRenderer* renderer_;
+				COLORREF controlColor_, eolColor_, wrapMarkColor_, whiteSpaceColor_;
+				bool showsEOLs_, showsWhiteSpaces_;
+				std::tr1::shared_ptr<const Font> font_;	// provides substitution glyphs
+				enum {LTR_HORIZONTAL_TAB, RTL_HORIZONTAL_TAB, LINE_TERMINATOR, LTR_WRAPPING_MARK, RTL_WRAPPING_MARK, WHITE_SPACE};
+				WORD glyphs_[6];
+				int glyphWidths_[6];
 			};
+
+			/**
+			 * Defines the stuffs for layout. Clients of Ascension can implement this interface or use
+			 * a higher level @c TextRenderer class.
+			 * @see LineLayout, LineLayoutBuffer
+			 */
+			class ILayoutInformationProvider {
+			public:
+				/// Destructor.
+				virtual ~ILayoutInformationProvider() /*throw()*/ {}
+				/// Returns the font collection.
+				virtual const FontCollection& fontCollection() const /*throw()*/ = 0;
+				/// Returns the layout settings.
+				virtual const LayoutSettings& layoutSettings() const /*throw()*/ = 0;
+				/**
+				 * Returns the default reading direction of UI. The value this method returns is
+				 * treated as "last resort" for resolvement reading direction of text layout. If
+				 * returns @c INHERIT_READING_DIRECTION, the caller should use the value defined by
+				 * @c ASCENSION_DEFAULT_READING_DIRECTION symbol.
+				 * @see presentation#LineStyle#readingDirection
+				 * @see presentation#Presentation#defaultLineStyle
+				 */
+				virtual presentation::ReadingDirection defaultUIReadingDirection() const /*throw()*/ = 0;
+				/// Returns the presentation object.
+				virtual const presentation::Presentation& presentation() const /*throw()*/ = 0;
+				/// Returns the special character renderer.
+				virtual ISpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/ = 0;
+				/// Returns the text metrics.
+				virtual const Font::Metrics& textMetrics() const /*throw()*/ = 0;
+				/// Returns the width of the rendering area in pixels.
+				virtual int width() const /*throw()*/ = 0;
+			};
+
+			class LineLayout {
+				ASCENSION_NONCOPYABLE_TAG(LineLayout);
+			public:
+				/// Edge of a character.
+				enum Edge {
+					LEADING,	///< Leading edge of a character.
+					TRAILING	///< Trailing edge of a character.
+				};
+				/// Used for @c LineLayout#draw methods.
+				class Selection {
+					ASCENSION_UNASSIGNABLE_TAG(Selection);
+				public:
+					/// Constructor.
+					Selection(const viewers::Caret& caret,
+						const graphics::Color& foreground, const graphics::Color& background);
+					/// Returns the caret object.
+					const viewers::Caret& caret() const /*throw()*/ {return caret_;}
+					/// Returns the background color to render.
+					const graphics::Color& background() const /*throw()*/ {return background_;}
+					/// Returns the foreground color to render.
+					const graphics::Color& foreground() const /*throw()*/ {return foreground_;}
+				private:
+					const viewers::Caret& caret_;
+					const graphics::Color foreground_, background_;
+				};
+#if 0
+				/// Bidirectional iterator enumerates style runs in a line.
+				class StyledSegmentIterator {
+				public:
+					// constructors
+					StyledSegmentIterator(const StyledSegmentIterator& rhs) /*throw()*/;
+					// operators
+					StyledSegmentIterator& operator=(const StyledSegmentIterator& rhs) /*throw()*/;
+					// methods
+					presentation::StyledRun current() const /*throw()*/;
+					bool equals(const StyledSegmentIterator& rhs) const /*throw()*/;
+					StyledSegmentIterator& next() /*throw()*/;
+					StyledSegmentIterator& previous() /*throw()*/;
+				private:
+					explicit StyledSegmentIterator(const internal::Run*& start) /*throw()*/;
+					const internal::Run** p_;
+					friend class LineLayout;
+				};
 #endif
 
-			// constructors
-			LineLayout(Context& context, const ILayoutInformationProvider& layoutInformation, length_t line);
-			~LineLayout() /*throw()*/;
-			// general attributes
-			presentation::TextAlignment alignment() const /*throw()*/;
-			byte bidiEmbeddingLevel(length_t column) const;
-			bool isBidirectional() const /*throw()*/;
-			bool isDisposed() const /*throw()*/;
-			length_t lineNumber() const /*throw()*/;
-			presentation::ReadingDirection readingDirection() const /*throw()*/;
-			const presentation::LineStyle& style() const /*throw()*/;
-			// subline accesses
-			length_t numberOfSublines() const /*throw()*/;
-			length_t subline(length_t column) const;
-			length_t sublineLength(length_t subline) const;
-			length_t sublineOffset(length_t subline) const;
-			const length_t* sublineOffsets() const /*throw()*/;
-			// coordinates
-			win32::Handle<HRGN> blackBoxBounds(length_t first, length_t last) const;
-			Dimension<> bounds() const /*throw()*/;
-			Rect<> bounds(length_t first, length_t last) const;
-			Point<> location(length_t column, Edge edge = LEADING) const;
-			std::pair<Point<>, Point<> > locations(length_t column) const;
-			int longestSublineWidth() const /*throw()*/;
-			std::pair<length_t, length_t> offset(int x, int y, bool* outside = 0) const /*throw()*/;
-			std::pair<length_t, length_t> offset(const Point<int>& pt, bool* outside = 0) const /*throw()*/;
-			Rect<> sublineBounds(length_t subline) const;
-			int sublineIndent(length_t subline) const;
-			int sublineWidth(length_t subline) const;
-			// styled segments
-//			StyledSegmentIterator firstStyledSegment() const /*throw()*/;
-//			StyledSegmentIterator lastStyledSegment() const /*throw()*/;
-			presentation::StyledRun styledTextRun(length_t column) const;
-			// operations
-			void draw(Context& context, int x, int y,
-				const Rect<>& paintRect, const Rect<>& clipRect, const Selection* selection) const /*throw()*/;
-			void draw(length_t subline, Context& context, int x, int y,
-				const Rect<>& paintRect, const Rect<>& clipRect, const Selection* selection) const;
-			String fillToX(int x) const;
+				// constructors
+				LineLayout(Context& context, const ILayoutInformationProvider& layoutInformation, length_t line);
+				~LineLayout() /*throw()*/;
+				// general attributes
+				presentation::TextAlignment alignment() const /*throw()*/;
+				byte bidiEmbeddingLevel(length_t column) const;
+				bool isBidirectional() const /*throw()*/;
+				bool isDisposed() const /*throw()*/;
+				length_t lineNumber() const /*throw()*/;
+				presentation::ReadingDirection readingDirection() const /*throw()*/;
+				const presentation::LineStyle& style() const /*throw()*/;
+				// subline accesses
+				length_t numberOfSublines() const /*throw()*/;
+				length_t subline(length_t column) const;
+				length_t sublineLength(length_t subline) const;
+				length_t sublineOffset(length_t subline) const;
+				const length_t* sublineOffsets() const /*throw()*/;
+				// coordinates
+				NativePolygon blackBoxBounds(length_t first, length_t last) const;
+				Dimension<> bounds() const /*throw()*/;
+				Rect<> bounds(length_t first, length_t last) const;
+				Point<> location(length_t column, Edge edge = LEADING) const;
+				std::pair<Point<>, Point<> > locations(length_t column) const;
+				int longestSublineWidth() const /*throw()*/;
+				std::pair<length_t, length_t> offset(int x, int y, bool* outside = 0) const /*throw()*/;
+				std::pair<length_t, length_t> offset(const Point<int>& pt, bool* outside = 0) const /*throw()*/;
+				Rect<> sublineBounds(length_t subline) const;
+				int sublineIndent(length_t subline) const;
+				int sublineWidth(length_t subline) const;
+				// styled segments
+//				StyledSegmentIterator firstStyledSegment() const /*throw()*/;
+//				StyledSegmentIterator lastStyledSegment() const /*throw()*/;
+				presentation::StyledRun styledTextRun(length_t column) const;
+				// operations
+				void draw(Context& context, int x, int y,
+					const Rect<>& paintRect, const Rect<>& clipRect, const Selection* selection) const /*throw()*/;
+				void draw(length_t subline, Context& context, int x, int y,
+					const Rect<>& paintRect, const Rect<>& clipRect, const Selection* selection) const;
+				String fillToX(int x) const;
 #ifdef _DEBUG
-			void dumpRuns(std::ostream& out) const;
+				void dumpRuns(std::ostream& out) const;
 #endif // _DEBUG
 
-		private:
-			void dispose() /*throw()*/;
-			void expandTabsWithoutWrapping() /*throw()*/;
-			std::size_t findRunForPosition(length_t column) const /*throw()*/;
-			void justify() /*throw()*/;
-			int linePitch() const /*throw()*/;
-			void locations(length_t column, Point<>* leading, Point<>* trailing) const;
-			int nextTabStop(int x, Direction direction) const /*throw()*/;
-			const String& text() const /*throw()*/;
-			void reorder() /*throw()*/;
-//			void rewrap();
-			int nextTabStopBasedLeftEdge(int x, bool right) const /*throw()*/;
-			void wrap(Context& context) /*throw()*/;
-		private:
-			const ILayoutInformationProvider& lip_;
-			length_t lineNumber_;
-			std::tr1::shared_ptr<const presentation::LineStyle> style_;
-			class TextRun;
-			TextRun** runs_;
-			std::size_t numberOfRuns_;
-			AutoBuffer<presentation::StyledRun> styledRanges_;
-			std::size_t numberOfStyledRanges_;
-			length_t* sublineOffsets_;		// size is numberOfSublines_
-			length_t* sublineFirstRuns_;	// size is numberOfSublines_
-			length_t numberOfSublines_;
-			int longestSublineWidth_;
-			int wrapWidth_;	// -1 if should not wrap
-			friend class LineLayoutBuffer;
-//			friend class StyledSegmentIterator;
-		};
-
-		/**
-		 * Interface for objects which are interested in getting informed about change of visual
-		 * lines of @c TextRenderer.
-		 * @see LineLayoutBuffer#addVisualLinesListener, LineLayoutBuffer#removeVisualLinesListener
-		 */
-		class IVisualLinesListener {
-		private:
-			/**
-			 * Several visual lines were deleted.
-			 * @param first the first of created lines
-			 * @param last the last of created lines (exclusive)
-			 * @param sublines the total number of sublines of created lines
-			 * @param longestLineChanged set @c true if the longest line is changed
-			 */
-			virtual void visualLinesDeleted(length_t first, length_t last,
-				length_t sublines, bool longestLineChanged) /*throw()*/ = 0;
-			/**
-			 * Several visual lines were inserted.
-			 * @param first the first of inserted lines
-			 * @param last the last of inserted lines (exclusive)
-			 */
-			virtual void visualLinesInserted(length_t first, length_t last) /*throw()*/ = 0;
-			/**
-			 * A visual lines were modified.
-			 * @param first the first of modified lines
-			 * @param last the last of modified lines (exclusive)
-			 * @param sublinesDifference the difference of the number of sublines between before and after the modification
-			 * @param documentChanged set @c true if the layouts were modified for the document change
-			 * @param longestLineChanged set @c true if the longest line is changed
-			 */
-			virtual void visualLinesModified(length_t first, length_t last,
-				signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/ = 0;
-			friend class LineLayoutBuffer;
-		};
-
-		/**
-		 * Manages a buffer of layout (@c LineLayout) and holds the longest line and the number of
-		 * the visual lines.
-		 * @see LineLayout, TextRenderer
-		 */
-		class LineLayoutBuffer : public kernel::IDocumentListener/*, public presentation::IPresentationStylistListener*/ {
-			ASCENSION_NONCOPYABLE_TAG(LineLayoutBuffer);
-		public:
-			// constructors
-			LineLayoutBuffer(kernel::Document& document, length_t bufferSize, bool autoRepair);
-			virtual ~LineLayoutBuffer() /*throw()*/;
-			// attributes
-			const kernel::Document& document() const /*throw()*/;
-			const LineLayout& lineLayout(length_t line) const;
-			const LineLayout* lineLayoutIfCached(length_t line) const /*throw()*/;
-			int longestLineWidth() const /*throw()*/;
-			length_t numberOfSublinesOfLine(length_t) const;
-			length_t numberOfVisualLines() const /*throw()*/;
-			// listeners
-			void addVisualLinesListener(IVisualLinesListener& listener);
-			void removeVisualLinesListener(IVisualLinesListener& listener);
-			// strategy
-			void setLayoutInformation(const ILayoutInformationProvider* newProvider, bool delegateOwnership);
-			// position translations
-			length_t mapLogicalLineToVisualLine(length_t line) const;
-			length_t mapLogicalPositionToVisualPosition(const kernel::Position& position, length_t* column) const;
-//			length_t mapVisualLineToLogicalLine(length_t line, length_t* subline) const;
-//			kernel::Position mapVisualPositionToLogicalPosition(const kernel::Position& position) const;
-			void offsetVisualLine(length_t& line, length_t& subline,
-				signed_length_t offset, bool* overflowedOrUnderflowed = 0) const /*throw()*/;
-			// operations
-			void invalidate() /*throw()*/;
-			void invalidate(length_t first, length_t last);
-		protected:
-			void invalidate(length_t line);
-			// enumeration
-			typedef std::list<LineLayout*>::const_iterator Iterator;
-			Iterator firstCachedLine() const /*throw()*/;
-			Iterator lastCachedLine() const /*throw()*/;
-			// abstract
-			virtual std::auto_ptr<Context> renderingContext() const = 0;
-		private:
-			void clearCaches(length_t first, length_t last, bool repair);
-			void createLineLayout(length_t line) /*throw()*/;
-			void deleteLineLayout(length_t line, LineLayout* newLayout = 0) /*throw()*/;
-			void fireVisualLinesDeleted(length_t first, length_t last, length_t sublines);
-			void fireVisualLinesInserted(length_t first, length_t last);
-			void fireVisualLinesModified(length_t first, length_t last,
-				length_t newSublines, length_t oldSublines, bool documentChanged);
-			void presentationStylistChanged();
-			void updateLongestLine(length_t line, int width) /*throw()*/;
-			// kernel.IDocumentListener
-			void documentAboutToBeChanged(const kernel::Document& document);
-			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
-		private:
-			struct CachedLineComparer {
-				bool operator()(const LineLayout*& lhs, length_t rhs) const /*throw()*/ {return lhs->lineNumber() < rhs;}
-				bool operator()(length_t lhs, const LineLayout*& rhs) const /*throw()*/ {return lhs < rhs->lineNumber();}
+			private:
+				void dispose() /*throw()*/;
+				void expandTabsWithoutWrapping() /*throw()*/;
+				std::size_t findRunForPosition(length_t column) const /*throw()*/;
+				void justify() /*throw()*/;
+				int linePitch() const /*throw()*/;
+				void locations(length_t column, Point<>* leading, Point<>* trailing) const;
+				int nextTabStop(int x, Direction direction) const /*throw()*/;
+				const String& text() const /*throw()*/;
+				void reorder() /*throw()*/;
+//				void rewrap();
+				int nextTabStopBasedLeftEdge(int x, bool right) const /*throw()*/;
+				void wrap(Context& context) /*throw()*/;
+			private:
+				const ILayoutInformationProvider& lip_;
+				length_t lineNumber_;
+				std::tr1::shared_ptr<const presentation::LineStyle> style_;
+				class TextRun;
+				TextRun** runs_;
+				std::size_t numberOfRuns_;
+				AutoBuffer<presentation::StyledRun> styledRanges_;
+				std::size_t numberOfStyledRanges_;
+				length_t* sublineOffsets_;		// size is numberOfSublines_
+				length_t* sublineFirstRuns_;	// size is numberOfSublines_
+				length_t numberOfSublines_;
+				int longestSublineWidth_;
+				int wrapWidth_;	// -1 if should not wrap
+				friend class LineLayoutBuffer;
+//				friend class StyledSegmentIterator;
 			};
-			kernel::Document& document_;
-			ascension::internal::StrategyPointer<const ILayoutInformationProvider> lip_;
-			std::list<LineLayout*> layouts_;
-			const std::size_t bufferSize_;
-			const bool autoRepair_;
-			enum {ABOUT_CHANGE, CHANGING, NONE} documentChangePhase_;
-			struct {
-				length_t first, last;
-			} pendingCacheClearance_;	// ドキュメント変更中に呼び出された clearCaches の引数
-			int longestLineWidth_;
-			length_t longestLine_, numberOfVisualLines_;
-			ascension::internal::Listeners<IVisualLinesListener> listeners_;
-		};
 
-		// documentation is layout.cpp
-		class TextRenderer : public LineLayoutBuffer, public ILayoutInformationProvider {
-		public:
-			// constructors
-			TextRenderer(presentation::Presentation& presentation,
-				const FontCollection& fontCollection, bool enableDoubleBuffering);
-			TextRenderer(const TextRenderer& other);
-			virtual ~TextRenderer() /*throw()*/;
-			// text metrics
-			std::tr1::shared_ptr<const Font> primaryFont() const /*throw()*/;
-			int lineIndent(length_t line, length_t subline = 0) const;
-			bool updateTextMetrics();
-			// listener
-			void addDefaultFontListener(IDefaultFontListener& listener);
-			void removeDefaultFontListener(IDefaultFontListener& listener);
-			// strategy
-			void setSpecialCharacterRenderer(ISpecialCharacterRenderer* newRenderer, bool delegateOwnership);
-			// operation
-			void renderLine(length_t line, Context& context, int x, int y,
-				const Rect<>& paintRect, const Rect<>& clipRect,
-				const LineLayout::Selection* selection) const /*throw()*/;
-			// ILayoutInformationProvider
-			const FontCollection& fontCollection() const /*throw()*/;
-			const presentation::Presentation& presentation() const /*throw()*/;
-			ISpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/;
-			const Font::Metrics& textMetrics() const /*throw()*/;
-		private:
-			void fireDefaultFontChanged();
-		private:
-			presentation::Presentation& presentation_;
-			const FontCollection& fontCollection_;
-			const bool enablesDoubleBuffering_;
-			mutable win32::Handle<HDC> memoryDC_;
-			mutable win32::Handle<HBITMAP> memoryBitmap_;
-			std::tr1::shared_ptr<const Font> primaryFont_;
-			ascension::internal::StrategyPointer<ISpecialCharacterRenderer> specialCharacterRenderer_;
-			ascension::internal::Listeners<IDefaultFontListener> listeners_;
-		};
+			/**
+			 * Interface for objects which are interested in getting informed about change of visual
+			 * lines of @c TextRenderer.
+			 * @see LineLayoutBuffer#addVisualLinesListener, LineLayoutBuffer#removeVisualLinesListener
+			 */
+			class IVisualLinesListener {
+			private:
+				/**
+				 * Several visual lines were deleted.
+				 * @param first the first of created lines
+				 * @param last the last of created lines (exclusive)
+				 * @param sublines the total number of sublines of created lines
+				 * @param longestLineChanged set @c true if the longest line is changed
+				 */
+				virtual void visualLinesDeleted(length_t first, length_t last,
+					length_t sublines, bool longestLineChanged) /*throw()*/ = 0;
+				/**
+				 * Several visual lines were inserted.
+				 * @param first the first of inserted lines
+				 * @param last the last of inserted lines (exclusive)
+				 */
+				virtual void visualLinesInserted(length_t first, length_t last) /*throw()*/ = 0;
+				/**
+				 * A visual lines were modified.
+				 * @param first the first of modified lines
+				 * @param last the last of modified lines (exclusive)
+				 * @param sublinesDifference the difference of the number of sublines between before and after the modification
+				 * @param documentChanged set @c true if the layouts were modified for the document change
+				 * @param longestLineChanged set @c true if the longest line is changed
+				 */
+				virtual void visualLinesModified(length_t first, length_t last,
+					signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/ = 0;
+				friend class LineLayoutBuffer;
+			};
+
+			/**
+			 * Manages a buffer of layout (@c LineLayout) and holds the longest line and the number of
+			 * the visual lines.
+			 * @see LineLayout, TextRenderer
+			 */
+			class LineLayoutBuffer : public kernel::IDocumentListener/*, public presentation::IPresentationStylistListener*/ {
+				ASCENSION_NONCOPYABLE_TAG(LineLayoutBuffer);
+			public:
+				// constructors
+				LineLayoutBuffer(kernel::Document& document, length_t bufferSize, bool autoRepair);
+				virtual ~LineLayoutBuffer() /*throw()*/;
+				// attributes
+				const kernel::Document& document() const /*throw()*/;
+				const LineLayout& lineLayout(length_t line) const;
+				const LineLayout* lineLayoutIfCached(length_t line) const /*throw()*/;
+				int longestLineWidth() const /*throw()*/;
+				length_t numberOfSublinesOfLine(length_t) const;
+				length_t numberOfVisualLines() const /*throw()*/;
+				// listeners
+				void addVisualLinesListener(IVisualLinesListener& listener);
+				void removeVisualLinesListener(IVisualLinesListener& listener);
+				// strategy
+				void setLayoutInformation(const ILayoutInformationProvider* newProvider, bool delegateOwnership);
+				// position translations
+				length_t mapLogicalLineToVisualLine(length_t line) const;
+				length_t mapLogicalPositionToVisualPosition(const kernel::Position& position, length_t* column) const;
+//				length_t mapVisualLineToLogicalLine(length_t line, length_t* subline) const;
+//				kernel::Position mapVisualPositionToLogicalPosition(const kernel::Position& position) const;
+				void offsetVisualLine(length_t& line, length_t& subline,
+					signed_length_t offset, bool* overflowedOrUnderflowed = 0) const /*throw()*/;
+				// operations
+				void invalidate() /*throw()*/;
+				void invalidate(length_t first, length_t last);
+			protected:
+				void invalidate(length_t line);
+				// enumeration
+				typedef std::list<LineLayout*>::const_iterator Iterator;
+				Iterator firstCachedLine() const /*throw()*/;
+				Iterator lastCachedLine() const /*throw()*/;
+				// abstract
+				virtual std::auto_ptr<Context> renderingContext() const = 0;
+			private:
+				void clearCaches(length_t first, length_t last, bool repair);
+				void createLineLayout(length_t line) /*throw()*/;
+				void deleteLineLayout(length_t line, LineLayout* newLayout = 0) /*throw()*/;
+				void fireVisualLinesDeleted(length_t first, length_t last, length_t sublines);
+				void fireVisualLinesInserted(length_t first, length_t last);
+				void fireVisualLinesModified(length_t first, length_t last,
+					length_t newSublines, length_t oldSublines, bool documentChanged);
+				void presentationStylistChanged();
+				void updateLongestLine(length_t line, int width) /*throw()*/;
+				// kernel.IDocumentListener
+				void documentAboutToBeChanged(const kernel::Document& document);
+				void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			private:
+				struct CachedLineComparer {
+					bool operator()(const LineLayout*& lhs, length_t rhs) const /*throw()*/ {return lhs->lineNumber() < rhs;}
+					bool operator()(length_t lhs, const LineLayout*& rhs) const /*throw()*/ {return lhs < rhs->lineNumber();}
+				};
+				kernel::Document& document_;
+				ascension::internal::StrategyPointer<const ILayoutInformationProvider> lip_;
+				std::list<LineLayout*> layouts_;
+				const std::size_t bufferSize_;
+				const bool autoRepair_;
+				enum {ABOUT_CHANGE, CHANGING, NONE} documentChangePhase_;
+				struct {
+					length_t first, last;
+				} pendingCacheClearance_;	// ドキュメント変更中に呼び出された clearCaches の引数
+				int longestLineWidth_;
+				length_t longestLine_, numberOfVisualLines_;
+				ascension::internal::Listeners<IVisualLinesListener> listeners_;
+			};
+
+			// documentation is layout.cpp
+			class TextRenderer : public LineLayoutBuffer, public ILayoutInformationProvider {
+			public:
+				// constructors
+				TextRenderer(presentation::Presentation& presentation,
+					const FontCollection& fontCollection, bool enableDoubleBuffering);
+				TextRenderer(const TextRenderer& other);
+				virtual ~TextRenderer() /*throw()*/;
+				// text metrics
+				std::tr1::shared_ptr<const Font> primaryFont() const /*throw()*/;
+				int lineIndent(length_t line, length_t subline = 0) const;
+				bool updateTextMetrics();
+				// listener
+				void addDefaultFontListener(IDefaultFontListener& listener);
+				void removeDefaultFontListener(IDefaultFontListener& listener);
+				// strategy
+				void setSpecialCharacterRenderer(ISpecialCharacterRenderer* newRenderer, bool delegateOwnership);
+				// operation
+				void renderLine(length_t line, Context& context, int x, int y,
+					const Rect<>& paintRect, const Rect<>& clipRect,
+					const LineLayout::Selection* selection) const /*throw()*/;
+				// ILayoutInformationProvider
+				const FontCollection& fontCollection() const /*throw()*/;
+				const presentation::Presentation& presentation() const /*throw()*/;
+				ISpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/;
+				const Font::Metrics& textMetrics() const /*throw()*/;
+			private:
+				void fireDefaultFontChanged();
+			private:
+				presentation::Presentation& presentation_;
+				const FontCollection& fontCollection_;
+				const bool enablesDoubleBuffering_;
+				mutable win32::Handle<HDC> memoryDC_;
+				mutable win32::Handle<HBITMAP> memoryBitmap_;
+				std::tr1::shared_ptr<const Font> primaryFont_;
+				ascension::internal::StrategyPointer<ISpecialCharacterRenderer> specialCharacterRenderer_;
+				ascension::internal::Listeners<IDefaultFontListener> listeners_;
+			};
 
 
 // inlines //////////////////////////////////////////////////////////////////
@@ -745,6 +746,6 @@ inline std::tr1::shared_ptr<const Font> TextRenderer::primaryFont() const /*thro
 /// @see ILayoutInformationProvider#textMetrics
 inline const Font::Metrics& TextRenderer::textMetrics() const /*throw()*/ {return primaryFont()->metrics();}
 
-}} // namespace ascension.graphics
+}}} // namespace ascension.graphics.font
 
 #endif // !ASCENSION_LAYOUT_HPP
