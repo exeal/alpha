@@ -17,12 +17,11 @@
 namespace ascension {
 	namespace graphics {
 
-		typedef
 #ifdef ASCENSION_WINDOWS
-			int
+		typedef int Scalar;
+		typedef win32::Handle<HRGN> NativePolygon;
 #else
 #endif
-			Scalar;
 
 		/**
 		 * A @c Dimension represents the size of a two-dimensional primitive.
