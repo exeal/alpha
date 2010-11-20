@@ -5,14 +5,16 @@
  * @date 2006-2010
  */
 
-#include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
-#include <ascension/caret.hpp>	// Caret.isSelectionRectangle, viewers.selectedRangeOnVisualLine
+#include <ascension/config.hpp>			// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
+#include <ascension/viewer/caret.hpp>	// Caret.isSelectionRectangle, viewers.selectedRangeOnVisualLine
 #include <ascension/layout.hpp>
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate
 #include <usp10.h>
+
 using namespace ascension;
 using namespace ascension::graphics;
+using namespace ascension::graphics::font;
 using namespace ascension::presentation;
 using namespace ascension::text;
 using namespace ascension::text::ucd;
@@ -1901,7 +1903,7 @@ ascension::byte LineLayout::bidiEmbeddingLevel(length_t column) const {
  * @throw std#invalid_argument @a first is greater than @a last
  * @see #bounds(void), #bounds(length_t, length_t), #sublineBounds, #sublineIndent
  */
-win32::Handle<HRGN> LineLayout::blackBoxBounds(length_t first, length_t last) const {
+NativePolygon LineLayout::blackBoxBounds(length_t first, length_t last) const {
 	if(first > last)
 		throw invalid_argument("first is greater than last.");
 	else if(last > text().length())
