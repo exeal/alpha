@@ -43,6 +43,8 @@ namespace ascension {
 			template<typename T> inline int round(T value) {
 				return static_cast<int>(std::floor(value + 0.5));
 			}
+			bool supportsComplexScripts() /*throw()*/;
+			bool supportsOpenTypeFeatures() /*throw()*/;
 
 			typedef uint16_t GlyphCode;
 
