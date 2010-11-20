@@ -16,7 +16,9 @@
 
 namespace ascension {
 
-	namespace graphics {class TextRenderer;}
+	namespace graphics {
+		namespace font{class TextRenderer;}
+	}
 
 	namespace rules {class URIDetector;}
 
@@ -381,9 +383,9 @@ namespace ascension {
 		namespace internal {
 			class ITextRendererCollection {
 			private:
-				virtual void addTextRenderer(graphics::TextRenderer& textRenderer) /*throw()*/ = 0;
-				virtual void removeTextRenderer(graphics::TextRenderer& textRenderer) /*throw()*/ = 0;
-				friend class graphics::TextRenderer;
+				virtual void addTextRenderer(graphics::font::TextRenderer& textRenderer) /*throw()*/ = 0;
+				virtual void removeTextRenderer(graphics::font::TextRenderer& textRenderer) /*throw()*/ = 0;
+				friend class graphics::font::TextRenderer;
 			};
 		}
 
@@ -467,8 +469,8 @@ namespace ascension {
 		class Presentation : public kernel::IDocumentListener, public internal::ITextRendererCollection {
 			ASCENSION_NONCOPYABLE_TAG(Presentation);
 		public:
-			typedef std::set<graphics::TextRenderer*>::iterator TextRendererIterator;
-			typedef std::set<graphics::TextRenderer*>::const_iterator TextRendererConstIterator;
+			typedef std::set<graphics::font::TextRenderer*>::iterator TextRendererIterator;
+			typedef std::set<graphics::font::TextRenderer*>::const_iterator TextRendererConstIterator;
 			// constructors
 			explicit Presentation(kernel::Document& document) /*throw()*/;
 			~Presentation() /*throw()*/;
@@ -504,11 +506,11 @@ namespace ascension {
 			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			// internal.ITextRendererCollection
-			void addTextRenderer(graphics::TextRenderer& textRenderer) /*throw()*/;
-			void removeTextRenderer(graphics::TextRenderer& textRenderer) /*throw()*/;
+			void addTextRenderer(graphics::font::TextRenderer& textRenderer) /*throw()*/;
+			void removeTextRenderer(graphics::font::TextRenderer& textRenderer) /*throw()*/;
 		private:
 			kernel::Document& document_;
-			std::set<graphics::TextRenderer*> textRenderers_;
+			std::set<graphics::font::TextRenderer*> textRenderers_;
 			static std::tr1::shared_ptr<const LineStyle> DEFAULT_LINE_STYLE;
 			std::tr1::shared_ptr<const LineStyle> defaultLineStyle_;
 			std::tr1::shared_ptr<const RunStyle> defaultTextRunStyle_;

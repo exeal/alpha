@@ -16,7 +16,8 @@ namespace ascension {
 	namespace graphics {
 
 		class Color;
-		class Font;
+
+		namespace font {class Font;}
 
 		class Context {
 		public:
@@ -34,7 +35,7 @@ namespace ascension {
 			// attributes
 			BackgroundMode backgroundMode() const;
 			Context& setBackgroundMode(BackgroundMode mode);
-			Context& setFont(const Font& font);
+			Context& setFont(const font::Font& font);
 			// metrics
 			virtual uint logicalDpiX() const = 0;
 			virtual uint logicalDpiY() const = 0;
