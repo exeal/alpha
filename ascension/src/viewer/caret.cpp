@@ -2,23 +2,21 @@
  * @file caret.cpp
  * @author exeal
  * @date 2003-2008 was point.cpp
- * @date 2008-2009 separated from point.cpp
+ * @date 2008-2010 separated from point.cpp
  */
 
 #undef MANAH_OVERRIDDEN_FILE
 static const char MANAH_OVERRIDDEN_FILE[] = __FILE__;
 
-#include <ascension/viewer.hpp>
+#include <ascension/viewer/viewer.hpp>
 #include <ascension/session.hpp>
-#include <manah/win32/utility.hpp>
+
 using namespace ascension;
 using namespace ascension::kernel;
-using namespace ascension::layout;
 using namespace ascension::viewers;
 using namespace ascension::presentation;
 using namespace ascension::text;
 using namespace ascension::text::ucd;
-using namespace manah;
 using namespace std;
 
 
@@ -40,8 +38,8 @@ namespace {
 	// - "Shell Drag/Drop Helper オブジェクト 第 2 部 : IDropSourceHelper"
 	//   (http://www.microsoft.com/japan/msdn/windows/windows2000/ddhelp_pt2.aspx)
 	// ...but these documents have many bugs. Well, there is no interface named "IDropSourceHelper".
-	class GenericDataObject : public manah::com::IUnknownImpl<
-		manah::typelist::Cat<MANAH_INTERFACE_SIGNATURE(IDataObject)>, manah::com::NoReferenceCounting > {
+	class GenericDataObject : public win32::com::IUnknownImpl<
+		typelist::Cat<ASCENSION_WIN32_COM_INTERFACE_SIGNATURE(IDataObject)>, win32::com::NoReferenceCounting> {
 	public:
 		virtual ~GenericDataObject() throw();
 		// IDataObject
@@ -145,7 +143,7 @@ namespace {
 		}
 
 		assert((*entry)->medium.tymed == TYMED_NULL);
-		(*entry)->medium = toBoolean(release) ? *medium : clone;
+		(*entry)->medium = win32::boole(release) ? *medium : clone;
 		return S_OK;
 	}
 	STDMETHODIMP GenericDataObject::EnumFormatEtc(DWORD direction, IEnumFORMATETC** enumerator) {
@@ -197,12 +195,12 @@ namespace {
 
 /**
  * Creates an @c IDataObject represents the selected content.
- * @param caret the caret gives the selection
- * @param rtf set @c true if the content is available as Rich Text Format. this feature is not
+ * @param caret The caret gives the selection
+ * @param rtf Set @c true if the content is available as Rich Text Format. This feature is not
  *            implemented yet and the parameter is ignored
- * @param[out] content the data object
- * @retval S_OK succeeded
- * @retval E_OUTOFMEMORY failed to allocate memory for @a content
+ * @param[out] content The data object
+ * @retval S_OK Succeeded
+ * @retval E_OUTOFMEMORY Failed to allocate memory for @a content
  */
 HRESULT utils::createTextObjectForSelectedString(const Caret& caret, bool rtf, IDataObject*& content) {
 	GenericDataObject* o = new(nothrow) GenericDataObject();
@@ -246,12 +244,12 @@ HRESULT utils::createTextObjectForSelectedString(const Caret& caret, bool rtf, I
 	hr = S_OK;
 	UINT codePage = CP_ACP;
 	wchar_t codePageString[6];
-	if(0 != ::GetLocaleInfoW(caret.clipboardLocale(), LOCALE_IDEFAULTANSICODEPAGE, codePageString, MANAH_COUNTOF(codePageString))) {
+	if(0 != ::GetLocaleInfoW(caret.clipboardLocale(), LOCALE_IDEFAULTANSICODEPAGE, codePageString, ASCENSION_COUNTOF(codePageString))) {
 		wchar_t* eob;
 		codePage = wcstoul(codePageString, &eob, 10);
 		format.cfFormat = CF_TEXT;
 		if(int ansiLength = ::WideCharToMultiByte(codePage, 0, text.c_str(), static_cast<int>(text.length()), 0, 0, 0, 0)) {
-			manah::AutoBuffer<char> ansiBuffer(new(nothrow) char[ansiLength]);
+			AutoBuffer<char> ansiBuffer(new(nothrow) char[ansiLength]);
 			if(ansiBuffer.get() != 0) {
 				ansiLength = ::WideCharToMultiByte(codePage, 0,
 					text.data(), static_cast<int>(text.length()), ansiBuffer.get(), ansiLength, 0, 0);
@@ -294,10 +292,10 @@ HRESULT utils::createTextObjectForSelectedString(const Caret& caret, bool rtf, I
 
 /**
  * Returns the text content from the given data object.
- * @param data the data object
+ * @param data The data object
  * @param[out] rectangle @c true if the data is rectangle format. can be @c null
- * @return a pair of the result HRESULT and the text content. SCODE is one of S_OK, E_OUTOFMEMORY
- *         and DV_E_FORMATETC
+ * @return A pair of the result HRESULT and the text content. @c SCODE is one of @c S_OK,
+ *         @c E_OUTOFMEMORY and @c DV_E_FORMATETC
  */
 pair<HRESULT, String> utils::getTextFromDataObject(IDataObject& data, bool* rectangle /* = 0 */) {
 	pair<HRESULT, String> result;
@@ -330,7 +328,7 @@ pair<HRESULT, String> utils::getTextFromDataObject(IDataObject& data, bool* rect
 						if(S_OK == (result.first = data.GetData(&fe, &locale))) {
 							wchar_t buffer[6];
 							if(0 != ::GetLocaleInfoW(*static_cast<ushort*>(::GlobalLock(locale.hGlobal)),
-									LOCALE_IDEFAULTANSICODEPAGE, buffer, MANAH_COUNTOF(buffer))) {
+									LOCALE_IDEFAULTANSICODEPAGE, buffer, ASCENSION_COUNTOF(buffer))) {
 								wchar_t* eob;
 								codePage = wcstoul(buffer, &eob, 10);
 							}
@@ -343,7 +341,7 @@ pair<HRESULT, String> utils::getTextFromDataObject(IDataObject& data, bool* rect
 					const length_t ucsLength = ::MultiByteToWideChar(
 						codePage, MB_PRECOMPOSED, nativeBuffer, static_cast<int>(nativeLength), 0, 0);
 					if(ucsLength != 0) {
-						manah::AutoBuffer<wchar_t> ucsBuffer(new(nothrow) wchar_t[ucsLength]);
+						AutoBuffer<wchar_t> ucsBuffer(new(nothrow) wchar_t[ucsLength]);
 						if(ucsBuffer.get() != 0) {
 							if(0 != ::MultiByteToWideChar(codePage, MB_PRECOMPOSED,
 									nativeBuffer, static_cast<int>(nativeLength), ucsBuffer.get(), static_cast<int>(ucsLength))) {
@@ -375,7 +373,7 @@ pair<HRESULT, String> utils::getTextFromDataObject(IDataObject& data, bool* rect
 /**
  * Centers the current visual line addressed by the given visual point in the text viewer by
  * vertical scrolling the window.
- * @param p the visual point
+ * @param p The visual point
  * @throw DocumentDisposedException 
  * @throw TextViewerDisposedException 
  */
@@ -385,7 +383,7 @@ void utils::recenter(VisualPoint& p) {
 
 /**
  * Scrolls the text viewer until the given point is visible in the window.
- * @param p the visual point. this position will be normalized before the process
+ * @param p The visual point. this position will be normalized before the process
  * @throw DocumentDisposedException 
  * @throw TextViewerDisposedException 
  */
@@ -448,9 +446,9 @@ ClipboardException::ClipboardException(HRESULT hr) : runtime_error("") {
 
 /**
  * Constructor.
- * @param viewer the viewer
- * @param position the initial position of the point
- * @param listener the listener. can be @c null
+ * @param viewer The viewer
+ * @param position The initial position of the point
+ * @param listener The listener. can be @c null
  * @throw BadPositionException @a position is outside of the document
  */
 VisualPoint::VisualPoint(TextViewer& viewer, const Position& position /* = Position() */, IPointListener* listener /* = 0 */) :
@@ -462,9 +460,9 @@ VisualPoint::VisualPoint(TextViewer& viewer, const Position& position /* = Posit
 
 /**
  * Copy-constructor.
- * @param other the source object
- * @throw DocumentDisposedException the document to which @a other belongs had been disposed
- * @throw TextViewerDisposedException the text viewer to which @a other belongs had been disposed
+ * @param other The source object
+ * @throw DocumentDisposedException The document to which @a other belongs had been disposed
+ * @throw TextViewerDisposedException The text viewer to which @a other belongs had been disposed
  */
 VisualPoint::VisualPoint(const VisualPoint& other) : Point(other), viewer_(other.viewer_),
 		lastX_(other.lastX_), crossingLines_(false), visualLine_(other.visualLine_), visualSubline_(other.visualSubline_) {
@@ -510,11 +508,11 @@ void VisualPoint::moved(const Position& from) {
  * restrictions as the follows:
  * - If the text viewer is line wrap mode, this method inserts text as linear not rectangle.
  * - If the destination line is bidirectional, the insertion may be performed incorrectly.
- * @param first the start of the text
- * @param last the end of the text
+ * @param first The start of the text
+ * @param last The end of the text
  * @throw NullPointerException @a first and/or @a last are @c null
  * @throw std#invalid_argument @a first &gt; @a last
- * @throw ... any exceptions @c Document#insert throws
+ * @throw ... Any exceptions @c Document#insert throws
  * @see kernel#EditPoint#insert
  */
 void VisualPoint::insertRectangle(const Char* first, const Char* last) {
@@ -544,7 +542,7 @@ void VisualPoint::insertRectangle(const Char* first, const Char* last) {
 	const String newline(getNewlineString((documentInput != 0) ? documentInput->newline() : ASCENSION_DEFAULT_NEWLINE));
 	for(const Char* bol = first; ; ++line) {
 		// find the next EOL
-		const Char* const eol = find_first_of(bol, last, NEWLINE_CHARACTERS, MANAH_ENDOF(NEWLINE_CHARACTERS));
+		const Char* const eol = find_first_of(bol, last, NEWLINE_CHARACTERS, ASCENSION_ENDOF(NEWLINE_CHARACTERS));
 
 		// insert text if the source line is not empty
 		if(eol > bol) {
@@ -691,8 +689,8 @@ void VisualPoint::visualLinesModified(length_t first, length_t last, signed_leng
 
 /**
  * Constructor.
- * @param viewer the viewer
- * @param position the initial position of the point
+ * @param viewer The text viewer
+ * @param position The initial position of the point
  * @throw BadPositionException @a position is outside of the document
  */
 Caret::Caret(TextViewer& viewer, const Position& position /* = Position(0, 0) */) /*throw()*/ : VisualPoint(viewer, position, 0),
@@ -720,7 +718,7 @@ void Caret::aboutToMove(Position& to) {
 
 /**
  * Registers the listener.
- * @param listener the listener to be registered
+ * @param listener The listener to be registered
  * @throw std#invalid_argument @a listener is already registered
  */
 void Caret::addListener(ICaretListener& listener) {
@@ -729,7 +727,7 @@ void Caret::addListener(ICaretListener& listener) {
 
 /**
  * Registers the character input listener.
- * @param listener the listener to be registered
+ * @param listener The listener to be registered
  * @throw std#invalid_argument @a listener is already registered
  */
 void Caret::addCharacterInputListener(ICharacterInputListener& listener) {
@@ -738,7 +736,7 @@ void Caret::addCharacterInputListener(ICharacterInputListener& listener) {
 
 /**
  * Registers the state listener.
- * @param listener the listener to be registered
+ * @param listener The listener to be registered
  * @throw std#invalid_argument @a listener is already registered
  */
 void Caret::addStateListener(ICaretStateListener& listener) {
@@ -759,7 +757,7 @@ void Caret::beginRectangleSelection() {
 /**
  * Returns @c true if a paste operation can be performed.
  * @note Even when this method returned @c true, the following @c #paste call can fail.
- * @param useKillRing set @c true to get the content from the kill-ring of the session, not from
+ * @param useKillRing Set @c true to get the content from the kill-ring of the session, not from
  *                    the system clipboard
  * @return true if the clipboard data is pastable
  */
@@ -835,8 +833,8 @@ void Caret::endRectangleSelection() {
 #if 0
 /**
  * Deletes the selected text. This method ends the rectangle selection mode.
- * @throw DocumentAccessViolationException the selected region intersects the inaccesible region
- * @throw ... any exceptions @c Document#erase throws
+ * @throw DocumentAccessViolationException The selected region intersects the inaccesible region
+ * @throw ... Any exceptions @c Document#erase throws
  */
 void Caret::eraseSelection() {
 	verifyViewer();
@@ -913,7 +911,7 @@ void Caret::eraseSelection() {
 #endif
 /**
  * Moves to the specified position without the anchor adapting.
- * @param to the destination position
+ * @param to The destination position
  */
 void Caret::extendSelection(const Position& to) {
 	leaveAnchorNext_ = true;
@@ -928,7 +926,7 @@ void Caret::extendSelection(const Position& to) {
 
 /**
  * Moves to the specified position without the anchor adapting.
- * @param to the destination position
+ * @param to The destination position
  */
 void Caret::extendSelection(const VerticalDestinationProxy& to) {
 	leaveAnchorNext_ = true;
@@ -945,13 +943,13 @@ namespace {
 	/**
 	 * @internal Deletes the forward one character and inserts the specified text.
 	 * This function emulates keyboard overtyping input.
-	 * @param caret the caret
-	 * @param text the text to insert
-	 * @param keepNewline set @c false to overwrite a newline characer
+	 * @param caret The caret
+	 * @param text The text to insert
+	 * @param keepNewline Set @c false to overwrite a newline characer
 	 * @throw NullPointerException @a first is @c null
 	 * @throw DocumentDisposedException
 	 * @throw TextViewerDisposedException
-	 * @throw ... any exceptions @c Document#replace throws
+	 * @throw ... Any exceptions @c Document#replace throws
 	 */
 	void destructiveInsert(Caret& caret, const StringPiece& text, bool keepNewline = true) {
 		if(text.beginning() == 0)
@@ -978,16 +976,16 @@ namespace {
  * <p>If the selection is not empty, replaces the selected region. Otherwise if in overtype mode,
  * replaces a character at current position (but this does not erase newline character).</p>
  * <p>This method may insert undo boundaries for compound typing.</p>
- * @param character the code point of the character to input
- * @param validateSequence set @c true to perform input sequence check using the active ISC. see
+ * @param character The code point of the character to input
+ * @param validateSequence Set @c true to perform input sequence check using the active ISC. See
  *                         @c texteditor#InputSequenceCheckers
- * @param blockControls set @c true to refuse any ASCII control characters except HT (U+0009),
+ * @param blockControls Set @c true to refuse any ASCII control characters except HT (U+0009),
                         RS (U+001E) and US (U+001F)
- * @retval true succeeded
- * @retval false the input was rejected by the input sequence validation (when @a validateSequence
+ * @retval true Succeeded
+ * @retval false The input was rejected by the input sequence validation (when @a validateSequence
  *               was @c true)
  * @return false @c character was control character and blocked (when @a blockControls was @c true)
- * @throw ... any exceptions @c Document#insertUndoBoundary and @c Caret#replaceSelection throw
+ * @throw ... Any exceptions @c Document#insertUndoBoundary and @c Caret#replaceSelection throw
  * @see #isOvertypeMode, #setOvertypeMode, texteditor#commands#TextInputCommand
  */
 bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true */, bool blockControls /* = true */) {
@@ -995,7 +993,7 @@ bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true 
 	static const CodePoint SAFE_CONTROLS[] = {0x0009u, 0x001eu, 0x001fu};
 	if(blockControls && character <= 0x00ffu
 			&& toBoolean(iscntrl(static_cast<int>(character)))
-			&& !binary_search(SAFE_CONTROLS, MANAH_ENDOF(SAFE_CONTROLS), character))
+			&& !binary_search(SAFE_CONTROLS, ASCENSION_ENDOF(SAFE_CONTROLS), character))
 		return false;
 
 	// check the input sequence
@@ -1066,12 +1064,12 @@ void Caret::moved(const Position& from) {
  * Replaces the selected text by the content of the clipboard.
  * This method inserts undo boundaries at the beginning and the end.
  * @note When using the kill-ring, this method may exit in defective condition.
- * @param useKillRing set @c true to use the kill ring
- * @throw ClipboardException the clipboard operation failed
- * @throw ClipboardException(DV_E_FORMATETC) the current clipboard format is not supported
+ * @param useKillRing Set @c true to use the kill ring
+ * @throw ClipboardException The clipboard operation failed
+ * @throw ClipboardException(DV_E_FORMATETC) The current clipboard format is not supported
  * @throw IllegalStateException @a useKillRing was @c true but the kill-ring was not available
- * @throw bad_alloc internal memory allocation failed
- * @throw ... any exceptions @c kernel#Document#replace throws
+ * @throw bad_alloc Internal memory allocation failed
+ * @throw ... Any exceptions @c kernel#Document#replace throws
  */
 void Caret::paste(bool useKillRing) {
 	AutoFreeze af(&textViewer(), true);
@@ -1137,7 +1135,7 @@ inline void Caret::prechangeDocument() {
 
 /**
  * Removes the listener.
- * @param listener the listener to be removed
+ * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered
  */
 void Caret::removeListener(ICaretListener& listener) {
@@ -1146,7 +1144,7 @@ void Caret::removeListener(ICaretListener& listener) {
 
 /**
  * Removes the character input listener
- * @param listener the listener to be removed
+ * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered
  */
 void Caret::removeCharacterInputListener(ICharacterInputListener& listener) {
@@ -1155,7 +1153,7 @@ void Caret::removeCharacterInputListener(ICharacterInputListener& listener) {
 
 /**
  * Removes the state listener
- * @param listener the listener to be removed
+ * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered
  */
 void Caret::removeStateListener(ICaretStateListener& listener) {
@@ -1165,11 +1163,11 @@ void Caret::removeStateListener(ICaretStateListener& listener) {
 /**
  * Replaces the selected region with the specified text.
  * If the selection is empty, inserts the text at current position.
- * @param text the text to insert
- * @param rectangleInsertion set @c true to insert text as rectangle
+ * @param text The text to insert
+ * @param rectangleInsertion Set @c true to insert text as rectangle
  * @throw NullPointerException @a first and/or @last is @c null
  * @throw std#invalid_argument @a first &gt; @a last
- * @throw ... any exceptions @c Document#insert and @c Document#erase throw
+ * @throw ... Any exceptions @c Document#insert and @c Document#erase throw
  */
 void Caret::replaceSelection(const StringPiece& text, bool rectangleInsertion /* = false */) {
 	Position e;
@@ -1184,8 +1182,8 @@ void Caret::replaceSelection(const StringPiece& text, bool rectangleInsertion /*
 
 /**
  * Selects the specified region. The active selection mode will be cleared.
- * @param anchor the position where the anchor moves to
- * @param caret the position where the caret moves to
+ * @param anchor The position where the anchor moves to
+ * @param caret The position where the caret moves to
  * @throw BadPositionException @a anchor or @a caret is outside of the document
  */
 void Caret::select(const Position& anchor, const Position& caret) {
@@ -1219,8 +1217,8 @@ void Caret::select(const Position& anchor, const Position& caret) {
 
 /**
  * Sets the locale used to convert non-Unicode data in the clipboard.
- * @param newLocale the locale identifier
- * @return the identifier of the locale set by the caret
+ * @param newLocale The locale identifier
+ * @return The identifier of the locale set by the caret
  * @throw std#invalid_argument @a newLocale is not installed on the system
  */
 LCID Caret::setClipboardLocale(LCID newLocale) {
@@ -1232,8 +1230,8 @@ LCID Caret::setClipboardLocale(LCID newLocale) {
 
 /**
  * Sets character input mode.
- * @param overtype set @c true to set to overtype mode, @c false to set to insert mode
- * @return this caret
+ * @param overtype Set @c true to set to overtype mode, @c false to set to insert mode
+ * @return This caret
  * @see #inputCharacter, #isOvertypeMode
  */
 Caret& Caret::setOvertypeMode(bool overtype) /*throw()*/ {
@@ -1270,10 +1268,10 @@ inline void Caret::updateVisualAttributes() {
 
 /**
  * Returns @c true if the specified point is over the selection.
- * @param p the client coordinates of the point
+ * @param p The client coordinates of the point
  * @return true if the point is over the selection
- * @throw kernel#DocumentDisposedException the document @a caret connecting to has been disposed
- * @throw TextViewerDisposedException the text viewer @a caret connecting to has been disposed
+ * @throw kernel#DocumentDisposedException The document @a caret connecting to has been disposed
+ * @throw TextViewerDisposedException The text viewer @a caret connecting to has been disposed
  */
 bool viewers::isPointOverSelection(const Caret& caret, const POINT& p) {
 	if(isSelectionEmpty(caret))
@@ -1295,12 +1293,12 @@ bool viewers::isPointOverSelection(const Caret& caret, const POINT& p) {
 /**
  * Returns the selected range on the specified logical line.
  * This function returns a logical range, and does not support rectangular selection.
- * @param caret the caret gives a selection
- * @param line the logical line
- * @param[out] range the selected range. if the selection continued to the next line,
- *             @c range.end() returns the column of the end of line + 1
+ * @param caret The caret gives a selection
+ * @param line The logical line
+ * @param[out] range The selected range. If the selection continued to the next line,
+ *                   @c range.end() returns the column of the end of line + 1
  * @return @c true if there is selected range on the line
- * @throw kernel#DocumentDisposedException the document @a caret connecting to has been disposed
+ * @throw kernel#DocumentDisposedException The document @a caret connecting to has been disposed
  * @throw kernel#BadPositionException @a line is outside of the document
  * @see #selectedRangeOnVisualLine
  */
@@ -1319,14 +1317,14 @@ bool viewers::selectedRangeOnLine(const Caret& caret, length_t line, Range<lengt
 
 /**
  * Returns the selected range on the specified visual line.
- * @param caret the caret gives a selection
- * @param line the logical line
- * @param subline the visual subline
- * @param[out] range the selected range. if the selection continued to the next logical line,
- *             @c range.end() returns the column of the end of line + 1
+ * @param caret The caret gives a selection
+ * @param line The logical line
+ * @param subline The visual subline
+ * @param[out] range The selected range. if the selection continued to the next logical line,
+ *                   @c range.end() returns the column of the end of line + 1
  * @return @c true if there is selected range on the line
- * @throw kernel#DocumentDisposedException the document @a caret connecting to has been disposed
- * @throw TextViewerDisposedException the text viewer @a caret connecting to has been disposed
+ * @throw kernel#DocumentDisposedException The document @a caret connecting to has been disposed
+ * @throw TextViewerDisposedException The text viewer @a caret connecting to has been disposed
  * @throw kernel#BadPositionException @a line or @a subline is outside of the document
  * @see #selectedRangeOnLine
  */
@@ -1346,9 +1344,9 @@ bool viewers::selectedRangeOnVisualLine(const Caret& caret, length_t line, lengt
 
 /**
  * Writes the selected string into the specified output stream.
- * @param caret the caret gives a selection
- * @param[out] out the output stream
- * @param newline the newline representation for multiline selection. if the selection is
+ * @param caret The caret gives a selection
+ * @param[out] out The output stream
+ * @param newline The newline representation for multiline selection. If the selection is
  *                rectangular, this value is ignored and the document's newline is used instead
  * @return @a out
  */
@@ -1398,9 +1396,9 @@ void viewers::selectWord(Caret& caret) {
 
 /**
  * Returns the position returned by N pages.
- * @param p the base position
- * @param pages the number of pages to return
- * @return the destination
+ * @param p The base position
+ * @param pages The number of pages to return
+ * @return The destination
  */
 VerticalDestinationProxy locations::backwardPage(const VisualPoint& p, length_t pages /* = 1 */) {
 	// TODO: calculate exact number of visual lines.
@@ -1409,9 +1407,9 @@ VerticalDestinationProxy locations::backwardPage(const VisualPoint& p, length_t 
 
 /**
  * Returns the position returned by N visual lines.
- * @param p the base position
- * @param lines the number of the visual lines to return
- * @return the destination
+ * @param p The base position
+ * @param lines The number of the visual lines to return
+ * @return The destination
  */
 VerticalDestinationProxy locations::backwardVisualLine(const VisualPoint& p, length_t lines /* = 1 */) {
 	Position np(p.normalized());
@@ -1432,8 +1430,8 @@ VerticalDestinationProxy locations::backwardVisualLine(const VisualPoint& p, len
 
 /**
  * Returns the beginning of the visual line.
- * @param p the base position
- * @return the destination
+ * @param p The base position
+ * @return The destination
  * @see EditPoint#beginningOfLine
  */
 Position locations::beginningOfVisualLine(const VisualPoint& p) {
@@ -1444,8 +1442,8 @@ Position locations::beginningOfVisualLine(const VisualPoint& p) {
 
 /**
  * Returns the beginning of the line or the first printable character in the line by context.
- * @param p the base position
- * @return the destination
+ * @param p The base position
+ * @return The destination
  */
 Position locations::contextualBeginningOfLine(const VisualPoint& p) {
 	return isFirstPrintableCharacterOfLine(p) ? beginningOfLine(p) : firstPrintableCharacterOfLine(p);
@@ -1454,8 +1452,8 @@ Position locations::contextualBeginningOfLine(const VisualPoint& p) {
 /**
  * Moves to the beginning of the visual line or the first printable character in the visual line by
  * context.
- * @param p the base position
- * @return the destination
+ * @param p The base position
+ * @return The destination
  */
 Position locations::contextualBeginningOfVisualLine(const VisualPoint& p) {
 	return isFirstPrintableCharacterOfLine(p) ?
@@ -1464,8 +1462,8 @@ Position locations::contextualBeginningOfVisualLine(const VisualPoint& p) {
 
 /**
  * Moves to the end of the line or the last printable character in the line by context.
- * @param p the base position
- * @return the destination
+ * @param p The base position
+ * @return The destination
  */
 Position locations::contextualEndOfLine(const VisualPoint& p) {
 	return isLastPrintableCharacterOfLine(p) ? endOfLine(p) : lastPrintableCharacterOfLine(p);
@@ -1474,8 +1472,8 @@ Position locations::contextualEndOfLine(const VisualPoint& p) {
 /**
  * Moves to the end of the visual line or the last printable character in the visual line by
  * context.
- * @param p the base position
- * @return the destination
+ * @param p The base position
+ * @return The destination
  */
 Position locations::contextualEndOfVisualLine(const VisualPoint& p) {
 	return isLastPrintableCharacterOfLine(p) ?
@@ -1484,8 +1482,8 @@ Position locations::contextualEndOfVisualLine(const VisualPoint& p) {
 
 /**
  * Returns the end of the visual line.
- * @param p the base position
- * @return the destination
+ * @param p The base position
+ * @return The destination
  * @see EditPoint#endOfLine
  */
 Position locations::endOfVisualLine(const VisualPoint& p) {
@@ -1501,8 +1499,8 @@ Position locations::endOfVisualLine(const VisualPoint& p) {
 
 /**
  * Returns the first printable character in the line.
- * @param p the base position
- * @return the destination
+ * @param p The base position
+ * @return The destination
  */
 Position locations::firstPrintableCharacterOfLine(const VisualPoint& p) {
 	Position np(p.normalized());
@@ -1513,8 +1511,8 @@ Position locations::firstPrintableCharacterOfLine(const VisualPoint& p) {
 
 /**
  * Returns the first printable character in the visual line.
- * @param p the base position
- * @return the destination
+ * @param p The base position
+ * @return The destination
  */
 Position locations::firstPrintableCharacterOfVisualLine(const VisualPoint& p) {
 	Position np(p.normalized());
@@ -1530,9 +1528,9 @@ Position locations::firstPrintableCharacterOfVisualLine(const VisualPoint& p) {
 
 /**
  * Returns the position advanced by N pages.
- * @param p the base position
- * @param pages the number of pages to advance
- * @return the destination
+ * @param p The base position
+ * @param pages The number of pages to advance
+ * @return The destination
  */
 VerticalDestinationProxy locations::forwardPage(const VisualPoint& p, length_t pages /* = 1 */) {
 	// TODO: calculate exact number of visual lines.
@@ -1541,9 +1539,9 @@ VerticalDestinationProxy locations::forwardPage(const VisualPoint& p, length_t p
 
 /**
  * Returns the position advanced by N visual lines.
- * @param p the base position
- * @param lines the number of the visual lines to advance
- * @return the destination
+ * @param p The base position
+ * @param lines The number of the visual lines to advance
+ * @return The destination
  */
 VerticalDestinationProxy locations::forwardVisualLine(const VisualPoint& p, length_t lines /* = 1 */) {
 	Position np(p.normalized());
@@ -1565,7 +1563,7 @@ VerticalDestinationProxy locations::forwardVisualLine(const VisualPoint& p, leng
 
 /**
  * Returns @c true if the point is the beginning of the visual line.
- * @param p the base position
+ * @param p The base position
  * @see EditPoint#isBeginningOfLine
  */
 bool locations::isBeginningOfVisualLine(const VisualPoint& p) {
@@ -1578,7 +1576,7 @@ bool locations::isBeginningOfVisualLine(const VisualPoint& p) {
 
 /**
  * Returns @c true if the point is end of the visual line.
- * @param p the base position
+ * @param p The base position
  * @see kernel#EditPoint#isEndOfLine
  */
 bool locations::isEndOfVisualLine(const VisualPoint& p) {
@@ -1622,8 +1620,8 @@ bool locations::isLastPrintableCharacterOfVisualLine(const VisualPoint& p) {
 
 /**
  * Returns the last printable character in the line.
- * @param p the base position
- * @return the destination
+ * @param p The base position
+ * @return The destination
  */
 Position locations::lastPrintableCharacterOfLine(const VisualPoint& p) {
 	Position np(p.normalized());
@@ -1638,8 +1636,8 @@ Position locations::lastPrintableCharacterOfLine(const VisualPoint& p) {
 
 /**
  * Moves to the last printable character in the visual line.
- * @param p the base position
- * @return the destination
+ * @param p The base position
+ * @return The destination
  */
 Position locations::lastPrintableCharacterOfVisualLine(const VisualPoint& p) {
 	// TODO: not implemented.
@@ -1648,10 +1646,10 @@ Position locations::lastPrintableCharacterOfVisualLine(const VisualPoint& p) {
 
 /**
  * Returns the position advanced to the left by N characters.
- * @param p the base position
- * @param unit defines what a character is
- * @param characters the number of characters to adavance
- * @return the destination
+ * @param p The base position
+ * @param unit Defines what a character is
+ * @param characters The number of characters to adavance
+ * @return The destination
  */
 Position locations::leftCharacter(const VisualPoint& p, CharacterUnit unit, length_t characters /* = 1 */) {
 	return (utils::computeUIReadingDirection(p.textViewer()) == LEFT_TO_RIGHT) ?
@@ -1660,9 +1658,9 @@ Position locations::leftCharacter(const VisualPoint& p, CharacterUnit unit, leng
 
 /**
  * Returns the beginning of the word where advanced to the left by N words.
- * @param p the base position
- * @param words the number of words to adavance
- * @return the destination
+ * @param p The base position
+ * @param words The number of words to adavance
+ * @return The destination
  */
 Position locations::leftWord(const VisualPoint& p, length_t words /* = 1 */) {
 	return (utils::computeUIReadingDirection(p.textViewer()) == LEFT_TO_RIGHT) ? backwardWord(p, words) : forwardWord(p, words);
@@ -1670,9 +1668,9 @@ Position locations::leftWord(const VisualPoint& p, length_t words /* = 1 */) {
 
 /**
  * Returns the end of the word where advanced to the left by N words.
- * @param p the base position
- * @param words the number of words to adavance
- * @return the destination
+ * @param p The base position
+ * @param words The number of words to adavance
+ * @return The destination
  */
 Position locations::leftWordEnd(const VisualPoint& p, length_t words /* = 1 */) {
 	return (utils::computeUIReadingDirection(p.textViewer()) == LEFT_TO_RIGHT) ? backwardWordEnd(p, words) : forwardWordEnd(p, words);
@@ -1680,10 +1678,10 @@ Position locations::leftWordEnd(const VisualPoint& p, length_t words /* = 1 */) 
 
 /**
  * Returns the position advanced to the right by N characters.
- * @param p the base position
- * @param unit defines what a character is
- * @param characters the number of characters to adavance
- * @return the destination
+ * @param p The base position
+ * @param unit Defines what a character is
+ * @param characters The number of characters to adavance
+ * @return The destination
  */
 Position locations::rightCharacter(const VisualPoint& p, CharacterUnit unit, length_t characters /* = 1 */) {
 	return (utils::computeUIReadingDirection(p.textViewer()) == LEFT_TO_RIGHT) ?
@@ -1692,9 +1690,9 @@ Position locations::rightCharacter(const VisualPoint& p, CharacterUnit unit, len
 
 /**
  * Returns the beginning of the word where advanced to the right by N words.
- * @param p the base position
- * @param words the number of words to adavance
- * @return the destination
+ * @param p The base position
+ * @param words The number of words to adavance
+ * @return The destination
  */
 Position locations::rightWord(const VisualPoint& p, length_t words /* = 1 */) {
 	return (utils::computeUIReadingDirection(p.textViewer()) == LEFT_TO_RIGHT) ? forwardWord(p, words) : backwardWord(p, words);
@@ -1702,9 +1700,9 @@ Position locations::rightWord(const VisualPoint& p, length_t words /* = 1 */) {
 
 /**
  * Returns the end of the word where advanced to the right by N words.
- * @param p the base position
- * @param words the number of words to adavance
- * @return the destination
+ * @param p The base position
+ * @param words The number of words to adavance
+ * @return The destination
  */
 Position locations::rightWordEnd(const VisualPoint& p, length_t words /* = 1 */) {
 	return (utils::computeUIReadingDirection(p.textViewer()) == LEFT_TO_RIGHT) ? forwardWordEnd(p, words) : backwardWordEnd(p, words);
@@ -1715,11 +1713,11 @@ Position locations::rightWordEnd(const VisualPoint& p, length_t words /* = 1 */)
 
 /**
  * Breaks the line at the caret position and moves the caret to the end of the inserted string.
- * @param caret the caret
- * @param inheritIndent set @c true to inherit the indent of the line @c{at.line}
- * @param newlines the number of newlines to insert
- * @throw DocumentDisposedException the document @a caret connecting to has been disposed
- * @throw ... any exceptions @c Document#insert throws
+ * @param caret The caret
+ * @param inheritIndent Set @c true to inherit the indent of the line @c{at.line}
+ * @param newlines The number of newlines to insert
+ * @throw DocumentDisposedException The document @a caret connecting to has been disposed
+ * @throw ... Any exceptions @c Document#insert throws
  */
 void viewers::breakLine(Caret& caret, bool inheritIndent, size_t newlines /* = 1 */) {
 	if(newlines == 0)
@@ -1747,10 +1745,10 @@ void viewers::breakLine(Caret& caret, bool inheritIndent, size_t newlines /* = 1
 /**
  * Copies the selected content to the clipboard.
  * If the caret does not have a selection, this function does nothing.
- * @param caret the caret gives the selection
- * @param useKillRing set @c true to send to the kill ring, not only the system clipboard
- * @throw ClipboardException the clipboard operation failed
- * @throw bad_alloc internal memory allocation failed
+ * @param caret The caret gives the selection
+ * @param useKillRing Set @c true to send to the kill ring, not only the system clipboard
+ * @throw ClipboardException The clipboard operation failed
+ * @throw std#bad_alloc Internal memory allocation failed
  */
 void viewers::copySelection(Caret& caret, bool useKillRing) {
 	if(isSelectionEmpty(caret))
@@ -1775,12 +1773,12 @@ void viewers::copySelection(Caret& caret, bool useKillRing) {
 
 /**
  * Copies and deletes the selected text. If the selection is empty, this function does nothing.
- * @param caret the caret gives the selection
- * @param useKillRing set @c true to send also the kill ring
+ * @param caret The caret gives the selection
+ * @param useKillRing Set @c true to send also the kill ring
  * @return false if the change was interrupted
- * @throw ClipboardException the clipboard operation failed
- * @throw bad_alloc internal memory allocation failed
- * @throw ... any exceptions @c Document#replace throws
+ * @throw ClipboardException The clipboard operation failed
+ * @throw std#bad_alloc Internal memory allocation failed
+ * @throw ... Any exceptions @c Document#replace throws
  */
 void viewers::cutSelection(Caret& caret, bool useKillRing) {
 	if(isSelectionEmpty(caret))
@@ -1803,8 +1801,8 @@ void viewers::cutSelection(Caret& caret, bool useKillRing) {
 
 /**
  * Deletes the selected region.
- * @param caret the caret provides a selection
- * @throw ... any exceptions @c Document#insert and @c Document#erase throw
+ * @param caret The caret provides a selection
+ * @throw ... Any exceptions @c Document#insert and @c Document#erase throw
  */
 void viewers::eraseSelection(Caret& caret) {
 	return caret.replaceSelection(0, 0);
@@ -1813,10 +1811,10 @@ void viewers::eraseSelection(Caret& caret) {
 namespace {
 	/**
 	 * @internal Indents the region selected by the caret.
-	 * @param caret the caret gives the region to indent
-	 * @param character a character to make indents
-	 * @param rectangle set @c true for rectangular indents (will be ignored level is negative)
-	 * @param level the level of the indentation
+	 * @param caret The caret gives the region to indent
+	 * @param character A character to make indents
+	 * @param rectangle Set @c true for rectangular indents (will be ignored level is negative)
+	 * @param level The level of the indentation
 	 * @deprecated 0.8
 	 */
 	void indent(Caret& caret, Char character, bool rectangle, long level) {
@@ -1903,9 +1901,9 @@ namespace {
 
 /**
  * Indents the region selected by the caret by using spaces.
- * @param caret the caret gives the region to indent
- * @param rectangle set @c true for rectangular indents (will be ignored level is negative)
- * @param level the level of the indentation
+ * @param caret The caret gives the region to indent
+ * @param rectangle Set @c true for rectangular indents (will be ignored level is negative)
+ * @param level The level of the indentation
  * @throw ...
  * @deprecated 0.8
  */
@@ -1915,9 +1913,9 @@ void viewers::indentBySpaces(Caret& caret, bool rectangle, long level /* = 1 */)
 
 /**
  * Indents the region selected by the caret by using horizontal tabs.
- * @param caret the caret gives the region to indent
- * @param rectangle set @c true for rectangular indents (will be ignored level is negative)
- * @param level the level of the indentation
+ * @param caret The caret gives the region to indent
+ * @param rectangle Set @c true for rectangular indents (will be ignored level is negative)
+ * @param level The level of the indentation
  * @throw ...
  * @deprecated 0.8
  */
@@ -1930,11 +1928,11 @@ void viewers::indentByTabs(Caret& caret, bool rectangle, long level /* = 1 */) {
  * and moves the caret to the end of them.
  * If the characters to transpose are not inside of the accessible region, this method fails and
  * returns @c false
- * @param caret the caret
+ * @param caret The caret
  * @return false if there is not a character to transpose in the line, or the point is not the
  *               beginning of a grapheme
- * @throw DocumentDisposedException the document the caret connecting to has been disposed
- * @throw ... any exceptions @c Document#replace throws other than @c DocumentAccessViolationException
+ * @throw DocumentDisposedException The document the caret connecting to has been disposed
+ * @throw ... Any exceptions @c Document#replace throws other than @c DocumentAccessViolationException
  */
 bool viewers::transposeCharacters(Caret& caret) {
 	// TODO: handle the case when the caret intervened a grapheme cluster.
@@ -2004,10 +2002,10 @@ bool viewers::transposeCharacters(Caret& caret) {
  * The intervening newline character is not moved.
  * If the lines to transpose are not inside of the accessible region, this method fails and returns
  * @c false
- * @param caret the caret
+ * @param caret The caret
  * @return false if there is not a line to transpose
- * @throw DocumentDisposedException the document the caret connecting to has been disposed
- * @throw ... any exceptions @c Document#replace throws other than @c DocumentAccessViolationException
+ * @throw DocumentDisposedException The document the caret connecting to has been disposed
+ * @throw ... Any exceptions @c Document#replace throws other than @c DocumentAccessViolationException
  */
 bool viewers::transposeLines(Caret& caret) {
 	if(caret.document().numberOfLines() == 1)	// there is just one line
@@ -2035,10 +2033,10 @@ bool viewers::transposeLines(Caret& caret) {
  * them.
  * If the words to transpose are not inside of the accessible region, this method fails and returns
  * @c false
- * @param caret the caret
+ * @param caret The caret
  * @return false if there is not a word to transpose
- * @throw DocumentDisposedException the document the caret connecting to has been disposed
- * @throw ... any exceptions @c Document#replace throws other than @c DocumentAccessViolationException
+ * @throw DocumentDisposedException The document the caret connecting to has been disposed
+ * @throw ... Any exceptions @c Document#replace throws other than @c DocumentAccessViolationException
  */
 bool viewers::transposeWords(Caret& caret) {
 	// As transposing words in string "(\w+)[^\w*](\w+)":

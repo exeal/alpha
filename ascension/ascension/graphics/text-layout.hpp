@@ -21,6 +21,7 @@ namespace ascension {
 	namespace graphics {
 
 		class Context;
+		class PaintContext;
 
 		namespace font {
 
@@ -201,17 +202,17 @@ namespace ascension {
 				const presentation::LineStyle& style() const /*throw()*/;
 				// visual line accesses
 				length_t numberOfLines() const /*throw()*/;
-				length_t line(length_t column) const;
+				length_t lineAt(length_t column) const;
 				length_t lineLength(length_t line) const;
 				length_t lineOffset(length_t line) const;
 				const length_t* lineOffsets() const /*throw()*/;
 				// coordinates
-				NativePolygon blackBoxBounds(length_t first, length_t last) const;
+				NativePolygon blackBoxBounds(const Range<length_t>& range) const;
 				Dimension<> bounds() const /*throw()*/;
-				Rect<> bounds(length_t first, length_t last) const;
+				Rect<> bounds(const Range<length_t>& range) const;
 				Point<> location(length_t column, Edge edge = LEADING) const;
 				std::pair<Point<>, Point<> > locations(length_t column) const;
-				Scalar longestSublineWidth() const /*throw()*/;
+				Scalar longestLineWidth() const /*throw()*/;
 				std::pair<length_t, length_t> offset(const Point<>& p, bool* outside = 0) const /*throw()*/;
 				Rect<> lineBounds(length_t line) const;
 				Scalar lineIndent(length_t line) const;
@@ -221,9 +222,9 @@ namespace ascension {
 //				StyledSegmentIterator lastStyledSegment() const /*throw()*/;
 				presentation::StyledRun styledTextRun(length_t column) const;
 				// operations
-				void draw(Context& context, const Point<>& origin,
+				void draw(PaintContext& context, const Point<>& origin,
 					const Rect<>& paintRect, const Rect<>& clipRect, const Selection* selection) const /*throw()*/;
-				void draw(length_t line, Context& context, const Point<>& origin,
+				void draw(length_t line, PaintContext& context, const Point<>& origin,
 					const Rect<>& paintRect, const Rect<>& clipRect, const Selection* selection) const;
 				String fillToX(Scalar x) const;
 #ifdef _DEBUG
@@ -252,8 +253,8 @@ namespace ascension {
 				std::size_t numberOfRuns_;
 				AutoBuffer<presentation::StyledRun> styledRanges_;
 				std::size_t numberOfStyledRanges_;
-				length_t* lineOffsets_;		// size is numberOfSublines_
-				length_t* lineFirstRuns_;	// size is numberOfSublines_
+				length_t* lineOffsets_;		// size is numberOfLines_
+				length_t* lineFirstRuns_;	// size is numberOfLines_
 				length_t numberOfLines_;
 				Scalar longestLineWidth_;
 				Scalar wrapWidth_;	// -1 if should not wrap
@@ -271,7 +272,7 @@ namespace ascension {
 			 * @return The wrapped line
 			 * @throw kernel#BadPositionException @a column is greater than the length of the line
 			 */
-			inline length_t TextLayout::line(length_t column) const {
+			inline length_t TextLayout::lineAt(length_t column) const {
 				if(column > text().length())
 					throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
 				return (numberOfLines() == 1) ? 0 :

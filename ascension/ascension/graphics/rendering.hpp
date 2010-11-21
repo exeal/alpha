@@ -37,46 +37,50 @@ namespace ascension {
 			};
 
 			/**
-			 * Interface for objects which are interested in getting informed about change of visual
-			 * lines of @c TextRenderer.
-			 * @see LineLayoutBuffer#addVisualLinesListener, LineLayoutBuffer#removeVisualLinesListener
+			 * Interface for objects which are interested in getting informed about change of
+			 * visual lines of @c TextRenderer.
+			 * @see LineLayoutBuffer#addVisualLinesListener,
+			 *      LineLayoutBuffer#removeVisualLinesListener
 			 */
 			class IVisualLinesListener {
 			private:
 				/**
 				 * Several visual lines were deleted.
-				 * @param first the first of created lines
-				 * @param last the last of created lines (exclusive)
-				 * @param sublines the total number of sublines of created lines
-				 * @param longestLineChanged set @c true if the longest line is changed
+				 * @param first The first of created lines
+				 * @param last The last of created lines (exclusive)
+				 * @param sublines The total number of sublines of created lines
+				 * @param longestLineChanged Set @c true if the longest line is changed
 				 */
 				virtual void visualLinesDeleted(length_t first, length_t last,
 					length_t sublines, bool longestLineChanged) /*throw()*/ = 0;
 				/**
 				 * Several visual lines were inserted.
-				 * @param first the first of inserted lines
-				 * @param last the last of inserted lines (exclusive)
+				 * @param first The first of inserted lines
+				 * @param last The last of inserted lines (exclusive)
 				 */
 				virtual void visualLinesInserted(length_t first, length_t last) /*throw()*/ = 0;
 				/**
 				 * A visual lines were modified.
-				 * @param first the first of modified lines
-				 * @param last the last of modified lines (exclusive)
-				 * @param sublinesDifference the difference of the number of sublines between before and after the modification
-				 * @param documentChanged set @c true if the layouts were modified for the document change
-				 * @param longestLineChanged set @c true if the longest line is changed
+				 * @param first The first of modified lines
+				 * @param last The last of modified lines (exclusive)
+				 * @param sublinesDifference The difference of the number of sublines between
+				 *        before and after the modification
+				 * @param documentChanged Set @c true if the layouts were modified for the document
+				 *                        change
+				 * @param longestLineChanged Set @c true if the longest line is changed
 				 */
-				virtual void visualLinesModified(length_t first, length_t last,
-					signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/ = 0;
+				virtual void visualLinesModified(
+					length_t first, length_t last, signed_length_t sublinesDifference,
+					bool documentChanged, bool longestLineChanged) /*throw()*/ = 0;
 				friend class LineLayoutBuffer;
 			};
 
 			/**
-			 * Manages a buffer of layout (@c LineLayout) and holds the longest line and the number of
-			 * the visual lines.
+			 * Manages a buffer of layout (@c TextLayout) and holds the longest line and the number
+			 * of the visual lines.
 			 * @see LineLayout, TextRenderer
 			 */
-			class LineLayoutBuffer : public kernel::IDocumentListener/*, public presentation::IPresentationStylistListener*/ {
+			class LineLayoutBuffer : public kernel::IDocumentListener {
 				ASCENSION_NONCOPYABLE_TAG(LineLayoutBuffer);
 			public:
 				// constructors
@@ -93,10 +97,12 @@ namespace ascension {
 				void addVisualLinesListener(IVisualLinesListener& listener);
 				void removeVisualLinesListener(IVisualLinesListener& listener);
 				// strategy
-				void setLayoutInformation(const ILayoutInformationProvider* newProvider, bool delegateOwnership);
+				void setLayoutInformation(
+					const ILayoutInformationProvider* newProvider, bool delegateOwnership);
 				// position translations
 				length_t mapLogicalLineToVisualLine(length_t line) const;
-				length_t mapLogicalPositionToVisualPosition(const kernel::Position& position, length_t* column) const;
+				length_t mapLogicalPositionToVisualPosition(
+					const kernel::Position& position, length_t* column) const;
 //				length_t mapVisualLineToLogicalLine(length_t line, length_t* subline) const;
 //				kernel::Position mapVisualPositionToLogicalPosition(const kernel::Position& position) const;
 				void offsetVisualLine(length_t& line, length_t& subline,
@@ -160,11 +166,12 @@ namespace ascension {
 				void addDefaultFontListener(IDefaultFontListener& listener);
 				void removeDefaultFontListener(IDefaultFontListener& listener);
 				// strategy
-				void setSpecialCharacterRenderer(ISpecialCharacterRenderer* newRenderer, bool delegateOwnership);
+				void setSpecialCharacterRenderer(
+					ISpecialCharacterRenderer* newRenderer, bool delegateOwnership);
 				// operation
-				void renderLine(length_t line, Context& context, int x, int y,
-					const Rect<>& paintRect, const Rect<>& clipRect,
-					const TextLayout::Selection* selection) const /*throw()*/;
+				void renderLine(length_t line, Context& context,
+					const Point<>& origin, const Rect<>& paintRect,
+					const Rect<>& clipRect, const TextLayout::Selection* selection) const /*throw()*/;
 				// ILayoutInformationProvider
 				const FontCollection& fontCollection() const /*throw()*/;
 				const presentation::Presentation& presentation() const /*throw()*/;
@@ -184,61 +191,78 @@ namespace ascension {
 			};
 
 
-// inlines //////////////////////////////////////////////////////////////////
+			/// Returns the document.
+			inline const kernel::Document& LineLayoutBuffer::document() const /*throw()*/ {
+				return document_;
+			}
 
-/// Returns the document.
-inline const kernel::Document& LineLayoutBuffer::document() const /*throw()*/ {return document_;}
+			/// Returns the first cached line layout.
+			inline LineLayoutBuffer::Iterator LineLayoutBuffer::firstCachedLine() const /*throw()*/ {
+				return layouts_.begin();
+			}
 
-/// Returns the first cached line layout.
-inline LineLayoutBuffer::Iterator LineLayoutBuffer::firstCachedLine() const /*throw()*/ {return layouts_.begin();}
+			/// Returns the last cached line layout.
+			inline LineLayoutBuffer::Iterator LineLayoutBuffer::lastCachedLine() const /*throw()*/ {
+				return layouts_.end();
+			}
 
-/// Returns the last cached line layout.
-inline LineLayoutBuffer::Iterator LineLayoutBuffer::lastCachedLine() const /*throw()*/ {return layouts_.end();}
+			/**
+			 * Returns the layout of the specified line.
+			 * @param line The line
+			 * @return The layout or @c null if the layout is not cached
+			 */
+			inline const TextLayout* LineLayoutBuffer::lineLayoutIfCached(length_t line) const /*throw()*/ {
+				if(pendingCacheClearance_.first != INVALID_INDEX
+						&& line >= pendingCacheClearance_.first && line < pendingCacheClearance_.last)
+					return 0;
+				for(std::list<TextLayout*>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
+					if((*i)->lineNumber_ == line)
+						return *i;
+				}
+				return 0;
+			}
 
-/**
- * Returns the layout of the specified line.
- * @param line the line
- * @return the layout or @c null if the layout is not cached
- */
-inline const TextLayout* LineLayoutBuffer::lineLayoutIfCached(length_t line) const /*throw()*/ {
-	if(pendingCacheClearance_.first != INVALID_INDEX && line >= pendingCacheClearance_.first && line < pendingCacheClearance_.last)
-		return 0;
-	for(std::list<TextLayout*>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-		if((*i)->lineNumber_ == line)
-			return *i;
-	}
-	return 0;
-}
+			/// Returns the width of the longest line.
+			inline int LineLayoutBuffer::longestLineWidth() const /*throw()*/ {
+				return longestLineWidth_;
+			}
 
-/// Returns the width of the longest line.
-inline int LineLayoutBuffer::longestLineWidth() const /*throw()*/ {return longestLineWidth_;}
+			/**
+			 * Returns the number of sublines of the specified line.
+			 * If the layout of the line is not calculated, this method returns 1.
+			 * @param line The line
+			 * @return The count of the sublines
+			 * @throw BadPositionException @a line is outside of the document
+			 * @see #lineLayout, TextLayout#numberOfLines
+			 */
+			inline length_t LineLayoutBuffer::numberOfSublinesOfLine(length_t line) const /*throw()*/ {
+				const TextLayout* const layout = lineLayoutIfCached(line);
+				return (layout != 0) ? layout->numberOfLines() : 1;
+			}
 
-/**
- * Returns the number of sublines of the specified line.
- * If the layout of the line is not calculated, this method returns 1.
- * @param line the line
- * @return the count of the sublines
- * @throw BadPositionException @a line is outside of the document
- * @see #lineLayout, TextLayout#numberOfLines
- */
-inline length_t LineLayoutBuffer::numberOfSublinesOfLine(length_t line) const /*throw()*/ {
-	const TextLayout* const layout = lineLayoutIfCached(line); return (layout != 0) ? layout->numberOfLines() : 1;}
+			/// Returns the number of the visual lines.
+			inline length_t LineLayoutBuffer::numberOfVisualLines() const /*throw()*/ {
+				return numberOfVisualLines_;
+			}
 
-/// Returns the number of the visual lines.
-inline length_t LineLayoutBuffer::numberOfVisualLines() const /*throw()*/ {return numberOfVisualLines_;}
+			/**
+			 * Removes the visual lines listener.
+			 * @param listener The listener to be removed
+			 * @throw std#invalid_argument @a listener is not registered
+			 */
+			inline void LineLayoutBuffer::removeVisualLinesListener(IVisualLinesListener& listener) {
+				listeners_.remove(listener);
+			}
 
-/**
- * Removes the visual lines listener.
- * @param listener the listener to be removed
- * @throw std#invalid_argument @a listener is not registered
- */
-inline void LineLayoutBuffer::removeVisualLinesListener(IVisualLinesListener& listener) {listeners_.remove(listener);}
+			/// Returns the primary font.
+			inline std::tr1::shared_ptr<const Font> TextRenderer::primaryFont() const /*throw()*/ {
+				return primaryFont_;
+			}
 
-/// Returns the primary font.
-inline std::tr1::shared_ptr<const Font> TextRenderer::primaryFont() const /*throw()*/ {return primaryFont_;}
-
-/// @see ILayoutInformationProvider#textMetrics
-inline const Font::Metrics& TextRenderer::textMetrics() const /*throw()*/ {return primaryFont()->metrics();}
+			/// @see ILayoutInformationProvider#textMetrics
+			inline const Font::Metrics& TextRenderer::textMetrics() const /*throw()*/ {
+				return primaryFont()->metrics();
+			}
 
 		}
 	}

@@ -10,7 +10,7 @@
 #ifndef ASCENSION_CARET_HPP
 #define ASCENSION_CARET_HPP
 #include <ascension/kernel/point.hpp>
-#include <ascension/layout.hpp>				// graphics.IVisualLinesListener
+#include <ascension/graphics/rendering.hpp>	// graphics.IVisualLinesListener
 #include <ascension/corelib/unicode.hpp>	// text.IdentifierSyntax
 #ifdef ASCENSION_GCC
 #	include <unknwn.h>	// IUnknown, OLESTR, ...
@@ -108,7 +108,7 @@ namespace ascension {
 		 * Extension of @c kernel#Point class for viewer and layout.
 		 * @see kernel#Point, kernel#IPointListener, kernel#DisposedViewException
 		 */
-		class VisualPoint : public kernel::Point, public graphics::IVisualLinesListener {
+		class VisualPoint : public kernel::Point, public graphics::font::IVisualLinesListener {
 			ASCENSION_UNASSIGNABLE_TAG(VisualPoint);
 		public:
 			// constructors

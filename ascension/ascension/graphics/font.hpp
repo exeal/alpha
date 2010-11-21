@@ -149,10 +149,10 @@ namespace ascension {
 				/// Returns the weight.
 				Weight weight() const /*throw()*/ {return weight_;}
 			private:
-				const Weight weight_;
-				const Stretch stretch_;
-				const Style style_;
-				const double size_;
+				Weight weight_;
+				Stretch stretch_;
+				Style style_;
+				double size_;
 			};
 
 			class Font {
