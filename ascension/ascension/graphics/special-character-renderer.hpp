@@ -92,7 +92,7 @@ namespace ascension {
 				virtual void install(TextRenderer& textRenderer) = 0;
 				/// Uninstalls the drawer.
 				virtual void uninstall() = 0;
-				friend class LineLayout;
+				friend class TextLayout;
 				friend class TextRenderer;
 			};
 

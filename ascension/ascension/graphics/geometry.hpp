@@ -174,9 +174,21 @@ namespace ascension {
 			 * @param delta The distance to move
 			 * @return This point
 			 */
-			Point<Coordinate>& translate(const Dimension<Coordinate>& delta) {
+			template<typename Coordinate2>
+			Point<Coordinate>& translate(const Dimension<Coordinate2>& delta) {
 				x += delta.cx;
 				y += delta.cy;
+				return *this;
+			}
+			/**
+			 * Translates the point by @a delta along the x/y axis.
+			 * @param delta The distance to move
+			 * @return This point
+			 */
+			template<typename Coordinate2>
+			Point<Coordinate>& translate(const Point<Coordinate2>& delta) {
+				x += delta.x;
+				y += delta.y;
 				return *this;
 			}
 		};
@@ -256,6 +268,8 @@ namespace ascension {
 						return std::max(rect_.origin().x, rect_.origin().x + rect_.size().cx);
 					case 3:	// bottom
 						return std::max(rect_.origin().y, rect_.origin().y + rect_.size().cy);
+					default:
+						assert(false);
 				}
 			}
 			Coordinate operator+() const {return +(*this);}
@@ -294,16 +308,41 @@ namespace ascension {
 			const RectPartProxy<Coordinate> top() const {return RectPartProxy<Coordinate>(*this, 1);}
 			Coordinate width() const {return std::abs(size().cx);}
 		public:
-			bool includes(const Point<Coordinate>& other) const;
-			bool includes(const Rect<Coordinate>& other) const;
+			template<typename Coordinate2>
+			bool includes(const Point<Coordinate2>& other) const;
+			template<typename Coordinate2>
+			bool includes(const Rect<Coordinate2>& other) const;
+			template<typename Coordinate2>
+			Rect<Coordinate> intersected(const Rect<Coordinate2>& other) const;
+			template<typename Coordinate2>
+			bool intersects(const Rect<Coordinate2>& other) const;
+			template<typename Coordinate2>
+			Rect<Coordinate> united(const Rect<Coordinate2>& other) const;
 		public:
-			Rect<Coordinate>& moveTo();
 			Rect<Coordinate>& normalize();
-			Rect<Coordinate>& resize(const Dimension<Coordinate>& newSize);
+			/**
+			 * Sets the size of the rectangle.
+			 * @param newSize The size to set
+			 * @return This object.
+			 */
+			Rect<Coordinate>& resize(const Dimension<Coordinate>& newSize) {
+				size_ = newSize;
+				return *this;
+			}
 			Rect<Coordinate>& setX(const Range<Coordinate>& newX);
 			Rect<Coordinate>& setY(const Range<Coordinate>& newY);
-			Rect<Coordinate>& translate(const Point<Coordinate>& offset);
-			Rect<Coordinate>& translate(const Dimension<Coordinate>& offset);
+			/**
+			 * Moves the rectangle @a offset.x along x-axis and @a offset.y along y-axis,
+			 * relative to the current origin.
+			 * @tparam Primitive Gives the offset. @c Point or @c Dimension
+			 * @param offset The offset to move
+			 * @return This object
+			 */
+			template<typename Primitive>
+			Rect<Coordinate>& translate(const Primitive& offset) {
+				origin_.translate(offset);
+				return *this;
+			}
 		private:
 			friend class RectPartProxy<Coordinate>;
 			Point<Coordinate> origin_;
