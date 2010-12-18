@@ -9,11 +9,13 @@
 
 #include <ascension/config.hpp>	// ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 #include <ascension/platforms.hpp>
-#include <ascension/corelib/basic-types.hpp>	// uint32_t
+#include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
+#include <ascension/corelib/basic-types.hpp>		// uint32_t
 #include <ascension/graphics/geometry.hpp>
-#include <cstring>								// std.strlen
+#include <cstring>	// std.strlen
+#include <locale>	// std.collate
 #ifdef ASCENSION_WINDOWS
-#	include <ascension/win32/windows.hpp>		// win32.Handle
+#	include <ascension/win32/windows.hpp>	// win32.Handle
 #endif // ASCENSION_WINDOWS
 
 namespace ascension {
@@ -79,6 +81,51 @@ namespace ascension {
 				virtual Dimension<> visualBounds() const = 0;
 			};
 
+			class FontFamily {
+				ASCENSION_NONCOPYABLE_TAG(FontFamily);
+			public:
+				explicit FontFamily(const String& name) : name_(name) {
+					if(name.empty())
+						throw std::length_error("name");
+				}
+				FontFamily& append(std::auto_ptr<FontFamily> family) /*throw()*/ {next_ = family; return *this;}
+				const String& name() const /*throw()*/ {name_;}
+				FontFamily* next() /*throw()*/ {return next_.get();}
+				const FontFamily* next() const /*throw()*/ {return next_.get();}
+			private:
+				const String name_;
+				std::auto_ptr<FontFamily> next_;
+			};
+
+			class FontFamilies : public FontFamily {
+				ASCENSION_NONCOPYABLE_TAG(FontFamilies);
+			public:
+				enum GenericFamily {
+					SERIF,
+					SANS_SERIF,
+					CURSIVE,
+					FANTASY,
+					MONOSPACE,
+					UNSPECIFIED
+				};
+			public:
+				explicit FontFamilies(const String& firstName, GenericFamily genericFamily = UNSPECIFIED) : FontFamily(firstName), genericFamily_(genericFamily) {
+				}
+				GenericFamily genericFamily() const /*throw()*/ {return genericFamily_;}
+				FontFamilies& setGenericFamily(GenericFamily genericFamily) {
+					if(genericFamily < SERIF || genericFamily > UNSPECIFIED)
+						throw UnknownValueException("genericFamily");
+					genericFamily_ = genericFamily;
+					return *this;
+				}
+			private:
+				GenericFamily genericFamily_;
+			};
+
+			/**
+			 * Set of font properties without the family name.
+			 * @see FontDescription
+			 */
 			class FontProperties {
 			public:
 				enum Weight {
@@ -120,17 +167,24 @@ namespace ascension {
 					BACKSLANT,
 					INHERIT_STYLE
 				};
+				enum Orientation {
+					HORIZONTAL,
+					VERTICAL,
+					INHERIT_ORIENTATION
+				};
 			public:
 				/**
 				 * Constructor.
 				 * @param weight
 				 * @param stretch
 				 * @param style
+				 * @param orientation
 				 * @param size
 				 */
-				explicit FontProperties(Weight weight = INHERIT_WEIGHT,
-					Stretch stretch = INHERIT_STRETCH, Style style = INHERIT_STYLE, double size = 0.0)
-					: weight_(weight), stretch_(stretch), style_(style), size_(size) {}
+				explicit FontProperties(
+					Weight weight = INHERIT_WEIGHT, Stretch stretch = INHERIT_STRETCH,
+					Style style = INHERIT_STYLE, Orientation orientation = INHERIT_ORIENTATION, double size = 0.0)
+					: weight_(weight), stretch_(stretch), style_(style), orientation_(orientation), size_(size) {}
 				/// Equality operator.
 				bool operator==(const FontProperties& other) const /*throw()*/ {
 					return weight_ == other.weight_ && stretch_ == other.stretch_
@@ -140,6 +194,16 @@ namespace ascension {
 				bool operator!=(const FontProperties& other) const /*throw()*/ {
 					return !(*this == other);
 				}
+				/// Returns the hash value for this object.
+				std::size_t hash() const /*throw()*/ {
+					const std::collate<char>& coll(std::use_facet<std::collate<char>>(std::locale::classic()));
+					// bad idea :(
+					const char* temp = reinterpret_cast<const char*>(&size_);
+					return coll.hash(temp, temp + sizeof(size_) / sizeof(char))
+						+ (orientation() << 2) + (stretch() << 4) + (style() << 6) + (weight() << 8);
+				}
+				/// Returns the orientation.
+				Orientation orientation() const /*throw()*/ {return orientation_;}
 				/// Returns the size in pixels. Zero means that inherit the parent.
 				double size() const /*throw()*/ {return size_;}
 				/// Returns the stretch.
@@ -149,10 +213,31 @@ namespace ascension {
 				/// Returns the weight.
 				Weight weight() const /*throw()*/ {return weight_;}
 			private:
-				Weight weight_;
-				Stretch stretch_;
-				Style style_;
-				double size_;
+				const Weight weight_;
+				const Stretch stretch_;
+				const Style style_;
+				const Orientation orientation_;
+				const double size_;
+			};
+
+			class FontDescription {
+			public:
+				/**
+				 * Constructor.
+				 * @param families The family names
+				 * @param properties The properties other than the family names
+				 */
+				explicit FontDescription(
+					std::auto_ptr<FontFamilies> families = std::auto_ptr<FontFamilies>(),
+					const FontProperties& properties = FontProperties())
+					: families_(families), properties_(properties) {}
+				/// Returns the family names or @c null.
+				const std::auto_ptr<FontFamilies>& families() const /*throw()*/ {return families_;}
+				/// Returns the properties other than the family names.
+				const FontProperties& properties() const /* throw() */ {return properties_;}
+			private:
+				const std::auto_ptr<FontFamilies> families_;
+				const FontProperties properties_;
 			};
 
 			class Font {
@@ -175,8 +260,6 @@ namespace ascension {
 					/// Returns the external leading in pixels.
 					/// @note In Ascension, external leadings are placed below characters.
 					virtual int externalLeading() const /*throw()*/ = 0;
-					/// Returns the font family name.
-					virtual String familyName() const /*throw()*/ = 0;
 					/// Returns the internal leading in pixels.
 					virtual int internalLeading() const /*throw()*/ = 0;
 					/// Returns the gap of the lines (external leading) in pixels.
