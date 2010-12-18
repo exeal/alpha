@@ -211,6 +211,8 @@ tr1::shared_ptr<const Font> SystemFonts::cache(const String& familyName, const F
 	if(familyName.length() >= LF_FACESIZE)
 		throw length_error("");
 
+	// TODO: handle properties.orientation().
+
 	LOGFONTW lf;
 	memset(&lf, 0, sizeof(LOGFONTW));
 	lf.lfHeight = -round(properties.size());
@@ -241,7 +243,7 @@ tr1::shared_ptr<const Font> SystemFonts::cache(const String& familyName, const F
 					gm.gmptGlyphOrigin.y : round(static_cast<double>(tm.tmAscent) * 0.56);
 			const double aspect = static_cast<double>(xHeight) / static_cast<double>(tm.tmHeight - tm.tmInternalLeading);
 			FontProperties adjustedProperties(properties.weight(),
-				properties.stretch(), properties.style(), max(properties.size() * (sizeAdjust / aspect), 1.0));
+				properties.stretch(), properties.style(), properties.orientation(), max(properties.size() * (sizeAdjust / aspect), 1.0));
 			::SelectObject(dc.get(), oldFont);
 			return cache(familyName, adjustedProperties, 0.0);
 		}
