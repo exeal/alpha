@@ -315,17 +315,17 @@ namespace ascension {
 		public:
 			explicit LexicalPartitionPresentationReconstructor(
 				const presentation::Presentation& presentation, std::auto_ptr<ITokenScanner> tokenScanner,
-				const std::map<Token::Identifier, std::tr1::shared_ptr<const presentation::RunStyle> >& styles,
-				std::tr1::shared_ptr<const presentation::RunStyle> defaultStyle = std::tr1::shared_ptr<const presentation::RunStyle>());
+				const std::map<Token::Identifier, std::tr1::shared_ptr<const presentation::TextRunStyle> >& styles,
+				std::tr1::shared_ptr<const presentation::TextRunStyle> defaultStyle = std::tr1::shared_ptr<const presentation::TextRunStyle>());
 		private:
 			// presentation.IPartitionPresentationReconstructor
-			std::auto_ptr<presentation::IStyledRunIterator> getPresentation(const kernel::Region& region) const /*throw()*/;
+			std::auto_ptr<presentation::IStyledTextRunIterator> getPresentation(const kernel::Region& region) const /*throw()*/;
 		private:
-			class StyledRunIterator;
+			class StyledTextRunIterator;
 			const presentation::Presentation& presentation_;
 			std::auto_ptr<ITokenScanner> tokenScanner_;
-			std::tr1::shared_ptr<const presentation::RunStyle> defaultStyle_;
-			const std::map<Token::Identifier, std::tr1::shared_ptr<const presentation::RunStyle> > styles_;
+			std::tr1::shared_ptr<const presentation::TextRunStyle> defaultStyle_;
+			const std::map<Token::Identifier, std::tr1::shared_ptr<const presentation::TextRunStyle> > styles_;
 		};
 
 
