@@ -5,9 +5,10 @@
  * @date 2006-2010
  */
 
-#include <ascension/content-assist.hpp>
-#include <ascension/viewer.hpp>					// TextViewer
-#include <manah/win32/ui/standard-controls.hpp>	// manah.windows.ui.ListBox
+#include <ascension/viewer/content-assist.hpp>
+#include <ascension/viewer/viewer.hpp>				// TextViewer
+#include <ascension/win32/ui/standard-controls.hpp>	// manah.windows.ui.ListBox
+
 using namespace ascension;
 using namespace ascension::contentassist;
 using namespace ascension::kernel;
@@ -15,34 +16,35 @@ using namespace ascension::presentation;
 using namespace ascension::text;
 using namespace ascension::viewers;
 using namespace std;
-using manah::AutoBuffer;
 
 
 // CompletionProposal ///////////////////////////////////////////////////////
 
 /**
  * Constructor.
- * @param replacementString the actual string to be inserted into the document
- * @param description the description of the proposal
- * @param icon the icon to display for the proposal
- * @param autoInsertable set true to enable auto insertion for the proposal
+ * @param replacementString The actual string to be inserted into the document
+ * @param description The description of the proposal
+ * @param icon The icon to display for the proposal
+ * @param autoInsertable Set @c true to enable auto insertion for the proposal
  */
-CompletionProposal::CompletionProposal(const String& replacementString,
-		const String& description /* = String() */, HICON icon /* = 0 */, bool autoInsertable /* = true */) :
+CompletionProposal::CompletionProposal(
+		const String& replacementString, const String& description /* = String() */,
+		win32::Handle<HICON> icon /* = win32::Handle<HICON>() */, bool autoInsertable /* = true */) :
 		displayString_(replacementString), replacementString_(replacementString), icon_(icon),
 		descriptionString_(description), autoInsertable_(autoInsertable) {
 }
 
 /**
  * Constructor.
- * @param replacementString the actual string to be inserted into the document
- * @param displayString the string to display for the proposal
- * @param description the description of the proposal
- * @param icon the icon to display for the proposal
- * @param autoInsertable set true to enable auto insertion for the proposal
+ * @param replacementString The actual string to be inserted into the document
+ * @param displayString The string to display for the proposal
+ * @param description The description of the proposal
+ * @param icon The icon to display for the proposal
+ * @param autoInsertable Set @c true to enable auto insertion for the proposal
  */
 CompletionProposal::CompletionProposal(const String& replacementString,
-		const String& displayString, const String& description /* = String() */, HICON icon /* = 0 */, bool autoInsertable /* = true */) :
+		const String& displayString, const String& description /* = String() */,
+		win32::Handle<HICON> icon /* = win32::Handle<HICON>() */, bool autoInsertable /* = true */) :
 		displayString_(displayString), replacementString_(replacementString), icon_(icon),
 		descriptionString_(description), autoInsertable_(autoInsertable) {
 }
@@ -58,7 +60,7 @@ String CompletionProposal::getDisplayString() const /*throw()*/ {
 }
 
 /// @see ICompletionProposal#getIcon
-HICON CompletionProposal::getIcon() const /*throw()*/ {
+const win32::Handle<HICON>& CompletionProposal::getIcon() const /*throw()*/ {
 	return icon_;
 }
 
@@ -95,8 +97,8 @@ namespace {
 
 /**
  * Constructor.
- * @param contentType the content type
- * @param syntax the identifier syntax to detect identifiers
+ * @param contentType The content type
+ * @param syntax The identifier syntax to detect identifiers
  */
 IdentifiersProposalProcessor::IdentifiersProposalProcessor(ContentType contentType,
 		const IdentifierSyntax& syntax) /*throw()*/ : contentType_(contentType), syntax_(syntax) {
@@ -236,15 +238,15 @@ MANAH_END_WINDOW_MESSAGE_MAP()
 
 /**
  * Constructor.
- * @param ui the user interface
+ * @param ui The user interface
  */
 ContentAssistant::CompletionProposalPopup::CompletionProposalPopup(IContentAssistant::ICompletionProposalsUI& ui) : ui_(ui), defaultFont_(0) {
 }
 
 /**
  * Creates the list window.
- * @param parent the parent window
- * @return succeeded or not
+ * @param parent The parent window
+ * @return Succeeded or not
  */
 bool ContentAssistant::CompletionProposalPopup::create(HWND parent) {
 	using namespace manah::win32::ui;
@@ -299,7 +301,7 @@ void ContentAssistant::CompletionProposalPopup::onSettingChange(UINT, const WCHA
 
 /**
  * Sets the new font.
- * @param font the font to be set. if set to @c null, default font will be selected
+ * @param font The font to be set. If set to @c null, default font will be selected
  */
 void ContentAssistant::CompletionProposalPopup::setFont(const HFONT font) {
 	ListBox::setFont((font != 0) ? font : defaultFont_);
@@ -323,7 +325,7 @@ void ContentAssistant::CompletionProposalPopup::updateDefaultFont() {
 /**
  * Updates the list's cursel based on the viewer's context.
  * @return true if only one candidate matched
- * @throw IllegalStateException the completion is not running
+ * @throw IllegalStateException The completion is not running
  */
 bool ContentAssistant::CompletionProposalPopup::updateListCursel() {
 	assertValidAsWindow();
@@ -576,7 +578,7 @@ void ContentAssistant::nextProposal(int proposals) {
 
 /**
  * Sets the delay between a character input and the session activation.
- * @param milliseconds the delay amount as milliseconds. if set to zero, the proposals will popup
+ * @param milliseconds The delay amount as milliseconds. if set to zero, the proposals will popup
  * immediately
  */
 void ContentAssistant::setAutoActivationDelay(ulong milliseconds) {
@@ -586,8 +588,8 @@ void ContentAssistant::setAutoActivationDelay(ulong milliseconds) {
 /**
  * Registers the given content assist processor for the specified content type. If there is already
  * a processor registered for the content type, the old processor is unregistered.
- * @param contentType the content type
- * @param processor the new content assist processor to register or @c null to unregister
+ * @param contentType The content type
+ * @param processor The new content assist processor to register or @c null to unregister
  */
 void ContentAssistant::setContentAssistProcessor(ContentType contentType, auto_ptr<IContentAssistProcessor> processor) {
 	map<ContentType, IContentAssistProcessor*>::iterator i(processors_.find(contentType));

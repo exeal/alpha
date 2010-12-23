@@ -22,23 +22,38 @@ namespace ascension {
 	namespace graphics {
 		namespace font {
 
+			/// TrueType/OpenType font tag.
+			typedef uint32_t TrueTypeFontTag;
+
+			template<uint8_t c1, uint8_t c2 = ' ', uint8_t c3 = ' ', uint8_t c4 = ' '>
+			struct MakeTrueTypeFontTag {
+				static const TrueTypeFontTag value = (c1 << 24) | (c2 << 16) | (c3 << 8) | c4;
+			};
+
 			/**
 			 * Returns an 32-bit integer represents the given TrueType tag.
+			 * @tparam Character The character type of @a name
 			 * @param name The TrueType tag name
+			 * @param validate Set @c true to validate characters in @a name
 			 * @return The 32-bit integral TrueType tag value
-			 * @throw std#length_error The length of @a name is greater four
+			 * @throw std#length_error The length of @a name is zero or greater four
+			 * @throw std#invalid_argument @a validate is @c true and any character in @a name was
+			 *                             invalid
 			 */
-			inline uint32_t makeTrueTypeTag(const char name[]) {
-				const size_t len = std::strlen(name);
+			template<typename Character>
+			inline TrueTypeFontTag makeTrueTypeFontTag(const Character name[], bool validate = true) {
+				const std::size_t len = std::char_traits<Character>::length(name);
 				if(len == 0 || len > 4)
 					throw std::length_error("name");
-				uint32_t tag = name[0];
-				if(len > 1)
-					tag |= name[1] << 8;
-				if(len > 2)
-					tag |= name[2] << 16;
-				if(len > 3)
-					tag |= name[3] << 24;
+				TrueTypeFontTag tag = 0;
+				std::size_t i = 0;
+				for(; i < len; ++i) {
+					if(validate && (name[i] < 32 || name[i] > 126))
+						throw std::invalid_argument(std::string("name[") + i + "]");
+					tag[i] |= name[i] << ((3 - i) * 8);
+				}
+				for(; i < 4; ++i)
+					tag[i] |= ' ' << ((3 - i) * 8);
 				return tag;
 			}
 
@@ -196,7 +211,7 @@ namespace ascension {
 				}
 				/// Returns the hash value for this object.
 				std::size_t hash() const /*throw()*/ {
-					const std::collate<char>& coll(std::use_facet<std::collate<char>>(std::locale::classic()));
+					const std::collate<char>& coll(std::use_facet<std::collate<char> >(std::locale::classic()));
 					// bad idea :(
 					const char* temp = reinterpret_cast<const char*>(&size_);
 					return coll.hash(temp, temp + sizeof(size_) / sizeof(char))
@@ -213,11 +228,11 @@ namespace ascension {
 				/// Returns the weight.
 				Weight weight() const /*throw()*/ {return weight_;}
 			private:
-				const Weight weight_;
-				const Stretch stretch_;
-				const Style style_;
-				const Orientation orientation_;
-				const double size_;
+				Weight weight_;
+				Stretch stretch_;
+				Style style_;
+				Orientation orientation_;
+				double size_;
 			};
 
 			class FontDescription {
@@ -297,6 +312,14 @@ namespace ascension {
 				 * @return The font has the requested properties or the default one
 				 */
 				virtual std::tr1::shared_ptr<const Font> get(const String& familyName,
+					const FontProperties& properties, double sizeAdjust = 0.0) const = 0;
+				/**
+				 * Returns the font for last resort fallback.
+				 * @param properties The font properties
+				 * @param sizeAdjust 
+				 * @return The font has the requested property
+				 */
+				virtual std::tr1::shared_ptr<const Font> lastResortFallback(
 					const FontProperties& properties, double sizeAdjust = 0.0) const = 0;
 			};
 

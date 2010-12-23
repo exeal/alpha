@@ -2,13 +2,17 @@
  * @file content-assist.hpp
  * @author exeal
  * @date 2003-2006 (was CompletionWindow.h)
- * @date 2006-2009
+ * @date 2006-2010
  */
 
 #ifndef ASCENSION_CONTENT_ASSIST_HPP
 #define ASCENSION_CONTENT_ASSIST_HPP
-#include "caret.hpp"
+
+#include <ascension/viewer/caret.hpp>
+#include <ascension/win32/windows.hpp>	// win32.Handle
 #include <set>
+
+// TODO: make code cross-platform.
 
 
 namespace ascension {
@@ -37,9 +41,9 @@ namespace ascension {
 			/**
 			 * Returns the icon to be display in the completion proposal list. The icon would be
 			 * shown to the leading of the display string.
-			 * @return the icon or @c null if no image is desired
+			 * @return The icon or @c null if no image is desired
 			 */
-			virtual HICON getIcon() const /*throw()*/ = 0;
+			virtual const win32::Handle<HICON>& getIcon() const /*throw()*/ = 0;
 			/**
 			 * Returns true if the proposal may be automatically inserted if the proposal is the
 			 * only one. In this case, completion proposals will not displayed but the single
@@ -48,8 +52,8 @@ namespace ascension {
 			virtual bool isAutoInsertable() const /*throw()*/ = 0;
 			/**
 			 * Inserts the proposed completion into the given document.
-			 * @param document the document
-			 * @param replacementRegion the region to be replaced by the proposal
+			 * @param document The document
+			 * @param replacementRegion The region to be replaced by the proposal
 			 */
 			virtual void replace(kernel::Document& document, const kernel::Region& replacementRegion) = 0;
 			/// The proposal was selected.
@@ -62,19 +66,21 @@ namespace ascension {
 		class CompletionProposal : public ICompletionProposal {
 			ASCENSION_UNASSIGNABLE_TAG(CompletionProposal);
 		public:
-			explicit CompletionProposal(const String& replacementString,
-				const String& description = String(), HICON icon = 0, bool autoInsertable = true);
-			CompletionProposal(const String& replacementString, const String& displayString,
-				const String& description = String(), HICON icon = 0, bool autoInsertable = true);
+			explicit CompletionProposal(
+				const String& replacementString, const String& description = String(),
+				win32::Handle<HICON> icon = win32::Handle<HICON>(), bool autoInsertable = true);
+			CompletionProposal(const String& replacementString,
+				const String& displayString, const String& description = String(),
+				win32::Handle<HICON> icon = win32::Handle<HICON>(), bool autoInsertable = true);
 		public:
 			String getDescription() const /*throw()*/;
 			String getDisplayString() const /*throw()*/;
-			HICON getIcon() const /*throw()*/;
+			const win32::Handle<HICON>& getIcon() const /*throw()*/;
 			bool isAutoInsertable() const /*throw()*/;
 			void replace(kernel::Document& document, const kernel::Region& replacementRegion);
 		private:
 			const String displayString_, replacementString_, descriptionString_;
-			HICON icon_;
+			const win32::Handle<HICON> icon_;
 			const bool autoInsertable_;
 		};
 
@@ -90,51 +96,51 @@ namespace ascension {
 			virtual void completionSessionClosed() /*throw()*/ {};
 			/**
 			 * Returns a list of completion proposals.
-			 * @param caret the caret whose document is used to compute the proposals and has
-			 * position where the completion is active
-			 * @param[out] incremental true if the content assistant should start an incremental
-			 * completion. false, otherwise
-			 * @param[out] replacementRegion the region to be replaced by the completion
-			 * @param[out] proposals the result. if empty, the completion does not activate
+			 * @param caret The caret whose document is used to compute the proposals and has
+			 *              position where the completion is active
+			 * @param[out] incremental @c true if the content assistant should start an incremental
+			 *                         completion. false, otherwise
+			 * @param[out] replacementRegion The region to be replaced by the completion
+			 * @param[out] proposals The result. If empty, the completion does not activate
 			 * @see #recomputeIncrementalCompletionProposals
 			 */
 			virtual void computeCompletionProposals(const viewers::Caret& caret,
 				bool& incremental, kernel::Region& replacementRegion, std::set<ICompletionProposal*>& proposals) const = 0;
 			/**
 			 * Returns the proposal initially selected in the list.
-			 * @param textViewer the text viewer
-			 * @param replacementRegion the region to be replaced by the completion
-			 * @param proposals the completion proposals listed currently. this list is sorted
-			 * alphabetically
-			 * @param numberOfProposals the number of the current proposals
-			 * @return the proposal or @c null if no proposal should be selected
+			 * @param textViewer The text viewer
+			 * @param replacementRegion The region to be replaced by the completion
+			 * @param proposals The completion proposals listed currently. this list is sorted
+			 *                  alphabetically
+			 * @param numberOfProposals The number of the current proposals
+			 * @return The proposal or @c null if no proposal should be selected
 			 */
 			virtual const ICompletionProposal* getActiveCompletionProposal(
 				const viewers::TextViewer& textViewer, const kernel::Region& replacementRegion,
 				ICompletionProposal* const proposals[], std::size_t numberOfProposals) const /*throw()*/ = 0;
 			/**
-			 * Returns true if the given character automatically activates the completion when the
-			 * user entered.
-			 * @param c the code point of the character
+			 * Returns @c true if the given character automatically activates the completion when
+			 * the user entered.
+			 * @param c The code point of the character
 			 * @return true if @a c automatically activates the completion
 			 */
 			virtual bool isCompletionProposalAutoActivationCharacter(CodePoint c) const = 0;
 			/**
-			 * Returns true if the given character automatically terminates (completes) the active
-			 * incremental completion session.
-			 * @param c the code point of the character
+			 * Returns @c true if the given character automatically terminates (completes) the
+			 * active incremental completion session.
+			 * @param c The code point of the character
 			 * @return true if @a c automatically terminates the incremental completion
 			 */
 			virtual bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const /*throw()*/ = 0;
 			/**
 			 * Returns a list of the running incremental completion proposals.
-			 * @param textViewer the text viewer
-			 * @param replacementRegion the region to be replaced by the completion
-			 * @param currentProposals the completion proposals listed currently. this list is
-			 * sorted alphabetically
-			 * @param numberOfCurrentProposals the number of the current proposals
-			 * @param[out] newProposals the proposals should be newly. if empty, the current
-			 * proposals will be kept
+			 * @param textViewer The text viewer
+			 * @param replacementRegion The region to be replaced by the completion
+			 * @param currentProposals The completion proposals listed currently. this list is
+			 *                         sorted alphabetically
+			 * @param numberOfCurrentProposals The number of the current proposals
+			 * @param[out] newProposals The proposals should be newly. if empty, the current
+			 *                          proposals will be kept
 			 * @see #computeCompletionProposals
 			 */
 			virtual void recomputeIncrementalCompletionProposals(const viewers::TextViewer& textViewer,
@@ -202,8 +208,9 @@ namespace ascension {
 			virtual ICompletionProposalsUI* getCompletionProposalsUI() const /*throw()*/ = 0;
 			/**
 			 * Returns the content assist processor to be used for the specified content type.
-			 * @param contentType the content type
-			 * @return the content assist processor or @c null if none corresponds to @a contentType
+			 * @param contentType The content type
+			 * @return The content assist processor or @c null if none corresponds to
+			 *         @a contentType
 			 */
 			virtual const IContentAssistProcessor* getContentAssistProcessor(kernel::ContentType contentType) const /*throw()*/ = 0;
 			/// Shows all possible completions on the current context.
