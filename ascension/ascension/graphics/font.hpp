@@ -288,15 +288,31 @@ namespace ascension {
 			public:
 				/// Destructor.
 				virtual ~Font() /*throw()*/ {}
-#ifdef ASCENSION_WINDOWS
-				/// Returns the Win32 @c HFONT handle object.
-				virtual const win32::Handle<HFONT>& nativeHandle() const /*throw()*/ = 0;
-#endif // ASCENSION_WINDOWS
+				/**
+				 * Returns the face name (logical name) of this font.
+				 * @param lc The locale for which to get the font face name. If this value is
+				 *           C or unsupported locale, this method returns an unlocalized name
+				 * @return The face name of this font
+				 * @see #familyName
+				 */
+				virtual String faceName(const std::locale& lc = std::locale::classic()) const /*throw()*/ = 0;
+				/**
+				 * Returns the family name of this font.
+				 * @param lc The locale for which to get the font family name. If this value is
+				 *           C or unsupported locale, this method returns an unlocalized name
+				 * @return The family name of this font
+				 * @see #faceName
+				 */
+				virtual String familyName(const std::locale& lc = std::locale::classic()) const /*throw()*/ = 0;
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 				virtual bool ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, GlyphCode& glyph) const = 0;
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 				/// Returns the metrics of the font.
 				virtual const Metrics& metrics() const /*throw()*/ = 0;
+#ifdef ASCENSION_WINDOWS
+				/// Returns the Win32 @c HFONT handle object.
+				virtual const win32::Handle<HFONT>& nativeHandle() const /*throw()*/ = 0;
+#endif // ASCENSION_WINDOWS
 			};
 
 			/// An interface represents an object provides a set of fonts.

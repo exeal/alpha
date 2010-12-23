@@ -868,7 +868,7 @@ namespace {
 			if(defaultStyle.get() != 0)
 				computedFamilyName = lip.presentation().defaultTextRunStyle()->fontFamily;
 			if(computedFamilyName.empty())
-				computedFamilyName = lip.textMetrics().familyName();
+				computedFamilyName = lip.fontCollection().lastResortFallback(FontProperties())->familyName();
 		}
 		// properties
 		computedProperties = (requestedStyle.get() != 0) ? requestedStyle->fontProperties : FontProperties();
@@ -901,8 +901,10 @@ namespace {
 		FontProperties properties;
 		double sizeAdjust;
 		resolveFontSpecifications(lip, requestedStyle, familyName, properties, sizeAdjust);
+#if 1
 		familyName.assign(L"Times New Roman");
 //		properties.style = FontProperties::ITALIC;
+#endif // 1
 		return make_pair(static_cast<const Char*>(0), lip.fontCollection().get(familyName, properties, sizeAdjust));
 	}
 } // namespace @0
