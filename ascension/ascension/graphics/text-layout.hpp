@@ -199,7 +199,7 @@ namespace ascension {
 				bool isDisposed() const /*throw()*/;
 				length_t lineNumber() const /*throw()*/;
 				presentation::ReadingDirection readingDirection() const /*throw()*/;
-				const presentation::LineStyle& style() const /*throw()*/;
+				const presentation::TextLineStyle& style() const /*throw()*/;
 				// visual line accesses
 				length_t numberOfLines() const /*throw()*/;
 				length_t lineAt(length_t column) const;
@@ -220,7 +220,7 @@ namespace ascension {
 				// styled segments
 //				StyledSegmentIterator firstStyledSegment() const /*throw()*/;
 //				StyledSegmentIterator lastStyledSegment() const /*throw()*/;
-				presentation::StyledRun styledTextRun(length_t column) const;
+				presentation::StyledTextRun styledTextRun(length_t column) const;
 				// operations
 				void draw(PaintContext& context, const Point<>& origin,
 					const Rect<>& paintRect, const Rect<>& clipRect, const Selection* selection) const /*throw()*/;
@@ -247,11 +247,11 @@ namespace ascension {
 			private:
 				const ILayoutInformationProvider& lip_;
 				length_t lineNumber_;
-				std::tr1::shared_ptr<const presentation::LineStyle> style_;
+				std::tr1::shared_ptr<const presentation::TextLineStyle> style_;
 				class TextRun;
 				TextRun** runs_;
 				std::size_t numberOfRuns_;
-				AutoBuffer<presentation::StyledRun> styledRanges_;
+				AutoBuffer<presentation::StyledTextRun> styledRanges_;
 				std::size_t numberOfStyledRanges_;
 				length_t* lineOffsets_;		// size is numberOfLines_
 				length_t* lineFirstRuns_;	// size is numberOfLines_
@@ -351,7 +351,7 @@ namespace ascension {
 			inline length_t TextLayout::numberOfLines() const /*throw()*/ {return numberOfLines_;}
 
 			/// Returns the text line style.
-			inline const presentation::LineStyle& TextLayout::style() const /*throw()*/ {return *style_;}
+			inline const presentation::TextLineStyle& TextLayout::style() const /*throw()*/ {return *style_;}
 #if 0
 			/// Asignment operator.
 			inline TextLayout::StyledSegmentIterator&

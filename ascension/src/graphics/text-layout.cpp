@@ -78,7 +78,7 @@ namespace {
 	inline int estimateNumberOfGlyphs(length_t length) {return static_cast<int>(length) * 3 / 2 + 16;}
 	String fallback(int script);
 	inline bool isC0orC1Control(CodePoint c) /*throw()*/ {return c < 0x20 || c == 0x7f || (c >= 0x80 && c < 0xa0);}
-	ReadingDirection lineTerminatorOrientation(const LineStyle& style, tr1::shared_ptr<const LineStyle> defaultStyle) /*throw()*/;
+	ReadingDirection lineTerminatorOrientation(const TextLineStyle& style, tr1::shared_ptr<const TextLineStyle> defaultStyle) /*throw()*/;
 	int pixels(const Context& context, const Length& length, bool vertical, const Font::Metrics& fontMetrics);
 	HRESULT resolveNumberSubstitution(const NumberSubstitution* configuration, SCRIPT_CONTROL& sc, SCRIPT_STATE& ss);
 	bool uniscribeSupportsVSS() /*throw()*/;
@@ -265,7 +265,7 @@ namespace {
 	}
 
 
-	inline ReadingDirection lineTerminatorOrientation(const LineStyle& style, tr1::shared_ptr<const LineStyle> defaultStyle) /*throw()*/ {
+	inline ReadingDirection lineTerminatorOrientation(const TextLineStyle& style, tr1::shared_ptr<const TextLineStyle> defaultStyle) /*throw()*/ {
 		const TextAlignment alignment = (style.alignment != INHERIT_TEXT_ALIGNMENT) ?
 			style.alignment : ((defaultStyle.get() != 0 && defaultStyle->alignment != INHERIT_TEXT_ALIGNMENT) ?
 				defaultStyle->alignment : ASCENSION_DEFAULT_TEXT_ALIGNMENT);
@@ -437,14 +437,14 @@ namespace {
 } // namespace
 
 namespace {
-	class SimpleStyledRunIterator : public IStyledRunIterator {
+	class SimpleStyledTextRunIterator : public IStyledTextRunIterator {
 	public:
-		SimpleStyledRunIterator(const Range<const StyledRun*>& range, length_t start) : range_(range) {
+		SimpleStyledTextRunIterator(const Range<const StyledTextRun*>& range, length_t start) : range_(range) {
 			current_ = range_.beginning() + ascension::internal::searchBound(
-				static_cast<ptrdiff_t>(0), range_.length(), start, BeginningOfStyledRun(range_.beginning()));
+				static_cast<ptrdiff_t>(0), range_.length(), start, BeginningOfStyledTextRun(range_.beginning()));
 		}
-		// presentation.IStyledRunIterator
-		void current(StyledRun& run) const {
+		// presentation.IStyledTextRunIterator
+		void current(StyledTextRun& run) const {
 			if(!hasNext())
 				throw IllegalStateException("");
 			run = *current_;
@@ -458,13 +458,13 @@ namespace {
 			++current_;
 		}
 	private:
-		struct BeginningOfStyledRun {
-			explicit BeginningOfStyledRun(const StyledRun* range) : range(range) {}
+		struct BeginningOfStyledTextRun {
+			explicit BeginningOfStyledTextRun(const StyledTextRun* range) : range(range) {}
 			length_t operator()(ptrdiff_t i) {return range[i].column;}
-			const StyledRun* range;
+			const StyledTextRun* range;
 		};
-		const Range<const StyledRun*> range_;
-		const StyledRun* current_;
+		const Range<const StyledTextRun*> range_;
+		const StyledTextRun* current_;
 	};
 }
 
@@ -495,10 +495,10 @@ public:
 	HRESULT logicalAttributes(const String& layoutString, SCRIPT_LOGATTR attributes[]) const;
 	HRESULT logicalWidths(int widths[]) const;
 	static void mergeScriptsAndStyles(Context& context, const String& layoutString, const SCRIPT_ITEM scriptRuns[],
-		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, auto_ptr<IStyledRunIterator> styles,
-		const ILayoutInformationProvider& lip, vector<TextRun*>& textRuns, vector<const StyledRun>& styledRanges);
+		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, auto_ptr<IStyledTextRunIterator> styles,
+		const ILayoutInformationProvider& lip, vector<TextRun*>& textRuns, vector<const StyledTextRun>& styledRanges);
 	int numberOfGlyphs() const /*throw()*/ {return glyphRange_.length();}
-	void positionGlyphs(const Context& context, const String& layoutString, SimpleStyledRunIterator& styles);
+	void positionGlyphs(const Context& context, const String& layoutString, SimpleStyledTextRunIterator& styles);
 	ReadingDirection readingDirection() const /*throw()*/ {
 		return ((analysis_.s.uBidiLevel & 0x01) == 0x00) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;}
 	void shape(Context& context, const String& layoutString, const ILayoutInformationProvider& lip);
@@ -859,9 +859,9 @@ inline HRESULT TextLayout::TextRun::logicalWidths(int widths[]) const {
 
 namespace {
 	void resolveFontSpecifications(const ILayoutInformationProvider& lip,
-			tr1::shared_ptr<const RunStyle> requestedStyle, String& computedFamilyName,
+			tr1::shared_ptr<const TextRunStyle> requestedStyle, String& computedFamilyName,
 			FontProperties& computedProperties, double& computedSizeAdjust) {
-		tr1::shared_ptr<const RunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
+		tr1::shared_ptr<const TextRunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
 		// family name
 		computedFamilyName = (requestedStyle.get() != 0) ? requestedStyle->fontFamily : String();
 		if(computedFamilyName.empty()) {
@@ -895,7 +895,7 @@ namespace {
 			computedSizeAdjust = (defaultStyle.get() != 0) ? defaultStyle->fontSizeAdjust : 0.0;
 	}
 	pair<const Char*, tr1::shared_ptr<const Font> > findNextFontRun(
-			const Range<const Char*>& text, tr1::shared_ptr<const RunStyle> requestedStyle,
+			const Range<const Char*>& text, tr1::shared_ptr<const TextRunStyle> requestedStyle,
 			tr1::shared_ptr<const Font> previousFont, const ILayoutInformationProvider& lip) {
 		String familyName;
 		FontProperties properties;
@@ -909,19 +909,19 @@ namespace {
 
 /**
  * Merges the given item runs and the given style runs.
- * @param context the graphics context
+ * @param context The graphics context
  * @param layoutString
- * @param items the items itemized by @c #itemize()
- * @param numberOfItems the length of the array @a items
- * @param styles the iterator returns the styled runs in the line. can be @c null
+ * @param items The items itemized by @c #itemize()
+ * @param numberOfItems The length of the array @a items
+ * @param styles The iterator returns the styled runs in the line. Can be @c null
  * @param lip
  * @param[out] textRuns
  * @param[out] styledRanges
  * @see presentation#Presentation#getLineStyle
  */
 void TextLayout::TextRun::mergeScriptsAndStyles(Context& context, const String& layoutString, const SCRIPT_ITEM scriptRuns[],
-		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, auto_ptr<IStyledRunIterator> styles,
-		const ILayoutInformationProvider& lip, vector<TextRun*>& textRuns, vector<const StyledRun>& styledRanges) {
+		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, auto_ptr<IStyledTextRunIterator> styles,
+		const ILayoutInformationProvider& lip, vector<TextRun*>& textRuns, vector<const StyledTextRun>& styledRanges) {
 	if(scriptRuns == 0)
 		throw NullPointerException("scriptRuns");
 	else if(numberOfScriptRuns == 0)
@@ -941,20 +941,20 @@ void TextLayout::TextRun::mergeScriptsAndStyles(Context& context, const String& 
 		runs.push_back(piece);											\
 	}
 
-	pair<vector<TextRun*>, vector<const StyledRun> > results;
+	pair<vector<TextRun*>, vector<const StyledTextRun> > results;
 	results.first.reserve(static_cast<size_t>(numberOfScriptRuns * ((styles.get() != 0) ? 1.2 : 1)));	// hmm...
 
 	const SCRIPT_ITEM* scriptRun = scriptRuns;
 	pair<const SCRIPT_ITEM*, length_t> nextScriptRun;	// 'second' is the beginning position
 	nextScriptRun.first = (numberOfScriptRuns > 1) ? (scriptRuns + 1) : 0;
 	nextScriptRun.second = (nextScriptRun.first != 0) ? nextScriptRun.first->iCharPos : layoutString.length();
-	pair<StyledRun, bool> styleRun;	// 'second' is false if 'first' is invalid
+	pair<StyledTextRun, bool> styleRun;	// 'second' is false if 'first' is invalid
 	if(styleRun.second = styles.get() != 0 && styles->hasNext()) {
 		styles->current(styleRun.first);
 		styles->next();
 		results.second.push_back(styleRun.first);
 	}
-	pair<StyledRun, bool> nextStyleRun;	// 'second' is false if 'first' is invalid
+	pair<StyledTextRun, bool> nextStyleRun;	// 'second' is false if 'first' is invalid
 	if(nextStyleRun.second = styles.get() != 0 && styles->hasNext())
 		styles->current(nextStyleRun.first);
 	length_t beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.column : layoutString.length();
@@ -984,7 +984,7 @@ void TextLayout::TextRun::mergeScriptsAndStyles(Context& context, const String& 
 			const pair<const Char*, tr1::shared_ptr<const Font> > nextFontRun(
 				findNextFontRun(
 					Range<const Char*>(layoutString.data() + previousRunEnd, layoutString.data() + newRunEnd),
-					styleRun.second ? styleRun.first.style : tr1::shared_ptr<const RunStyle>(), font, lip));
+					styleRun.second ? styleRun.first.style : tr1::shared_ptr<const TextRunStyle>(), font, lip));
 			font = nextFontRun.second;
 			if(nextFontRun.first != 0) {
 				forwardGlyphRun = true;
@@ -1042,7 +1042,7 @@ void TextLayout::TextRun::mergeScriptsAndStyles(Context& context, const String& 
  * 
  * @see #merge, #substituteGlyphs
  */
-void TextLayout::TextRun::positionGlyphs(const Context& context, const String& layoutString, SimpleStyledRunIterator& styles) {
+void TextLayout::TextRun::positionGlyphs(const Context& context, const String& layoutString, SimpleStyledTextRunIterator& styles) {
 	assert(glyphs_.get() != 0 && glyphs_.unique());
 	assert(glyphs_->indices.get() != 0 && glyphs_->advances.get() == 0);
 
@@ -1062,7 +1062,7 @@ void TextLayout::TextRun::positionGlyphs(const Context& context, const String& l
 
 	// apply text run styles
 	for(; styles.hasNext(); styles.next()) {
-		StyledRun styledRange;
+		StyledTextRun styledRange;
 		styles.current(styledRange);
 /*
 		// query widths of C0 and C1 controls in this run
@@ -1620,7 +1620,7 @@ namespace {
 			throw UnknownValueException("style");
 		return win32::Handle<HPEN>(pen, &::DeleteObject);
 	}
-	inline void drawDecorationLines(Context& context, const RunStyle& style, const Color& foregroundColor, int x, int y, int width, int height) {
+	inline void drawDecorationLines(Context& context, const TextRunStyle& style, const Color& foregroundColor, int x, int y, int width, int height) {
 		if(style.decorations.underline.style != Decorations::NONE || style.decorations.strikethrough.style != Decorations::NONE) {
 			const win32::Handle<HDC>& dc = context.nativeHandle();
 			int baselineOffset, underlineOffset, underlineThickness, linethroughOffset, linethroughThickness;
@@ -1748,7 +1748,7 @@ namespace {
  * @throw kernel#BadPositionException @a line is invalid
  */
 TextLayout::TextLayout(Context& context, const ILayoutInformationProvider& layoutInformation,
-		length_t line) : lip_(layoutInformation), lineNumber_(line), style_(layoutInformation.presentation().lineStyle(line)),
+		length_t line) : lip_(layoutInformation), lineNumber_(line), style_(layoutInformation.presentation().textLineStyle(line)),
 		runs_(0), numberOfRuns_(0), lineOffsets_(0), lineFirstRuns_(0), numberOfLines_(0), longestLineWidth_(-1), wrapWidth_(-1) {
 	assert(style_.get() != 0);
 
@@ -1822,13 +1822,13 @@ TextLayout::TextLayout(Context& context, const ILayoutInformationProvider& layou
 
 	// 2. split each script runs into text runs with StyledRunIterator
 	vector<TextRun*> textRuns;
-	vector<const StyledRun> styledRanges;
+	vector<const StyledTextRun> styledRanges;
 	TextRun::mergeScriptsAndStyles(context, s.data(),
 		scriptRuns.get(), scriptTags.get(), numberOfScriptRuns,
 		presentation.textRunStyles(lineNumber()), lip_, textRuns, styledRanges);
 	runs_ = new TextRun*[numberOfRuns_ = textRuns.size()];
 	copy(textRuns.begin(), textRuns.end(), runs_);
-	styledRanges_.reset(new StyledRun[numberOfStyledRanges_ = styledRanges.size()]);
+	styledRanges_.reset(new StyledTextRun[numberOfStyledRanges_ = styledRanges.size()]);
 	copy(styledRanges.begin(), styledRanges.end(), styledRanges_.get());
 
 	// 3. generate glyphs for each text runs
@@ -1838,7 +1838,7 @@ TextLayout::TextLayout(Context& context, const ILayoutInformationProvider& layou
 
 	// 4. position glyphs for each text runs
 	for(size_t i = 0; i < numberOfRuns_; ++i)
-		runs_[i]->positionGlyphs(context, s, SimpleStyledRunIterator(Range<const StyledRun*>(
+		runs_[i]->positionGlyphs(context, s, SimpleStyledTextRunIterator(Range<const StyledTextRun*>(
 			styledRanges_.get(), styledRanges_.get() + numberOfStyledRanges_), runs_[i]->beginning()));
 
 	// wrap into visual lines and reorder runs in each lines
@@ -1869,7 +1869,7 @@ TextLayout::~TextLayout() /*throw()*/ {
 TextAlignment TextLayout::alignment() const /*throw()*/ {
 	if(style_.get() != 0 && style_->readingDirection != INHERIT_TEXT_ALIGNMENT)
 		style_->readingDirection;
-	tr1::shared_ptr<const LineStyle> defaultStyle(lip_.presentation().defaultLineStyle());
+	tr1::shared_ptr<const TextLineStyle> defaultStyle(lip_.presentation().defaultTextLineStyle());
 	return (defaultStyle.get() != 0
 		&& defaultStyle->alignment != INHERIT_TEXT_ALIGNMENT) ? defaultStyle->alignment : ASCENSION_DEFAULT_TEXT_ALIGNMENT;
 }
@@ -2081,7 +2081,7 @@ void TextLayout::draw(PaintContext& context, const Point<>& origin,
 	// empty line
 	if(isDisposed()) {
 		Color background, dummy;
-		lip_.presentation().lineColors(lineNumber_, dummy, background);
+		lip_.presentation().textLineColors(lineNumber_, dummy, background);
 		context.fillRectangle(
 			Rect<>(
 				Point<>(
@@ -2134,7 +2134,7 @@ void TextLayout::draw(length_t line, PaintContext& context,
 	const int dy = linePitch();
 	const int lineHeight = lip_.textMetrics().cellHeight();
 	Color lineForeground, lineBackground;
-	lip_.presentation().lineColors(lineNumber_, lineForeground, lineBackground);
+	lip_.presentation().textLineColors(lineNumber_, lineForeground, lineBackground);
 	const Color marginColor(Color::fromCOLORREF(systemColors.serve(lineBackground, COLOR_WINDOW)));
 	ISpecialCharacterRenderer::DrawingContext dc(context);
 	ISpecialCharacterRenderer* specialCharacterRenderer = lip_.specialCharacterRenderer();
@@ -2184,7 +2184,7 @@ void TextLayout::draw(length_t line, PaintContext& context,
 
 		basePoint.x += lineIndent(line);
 
-		tr1::shared_ptr<const RunStyle> defaultStyle(lip_.presentation().defaultTextRunStyle());
+		tr1::shared_ptr<const TextRunStyle> defaultStyle(lip_.presentation().defaultTextRunStyle());
 		const COLORREF defaultForeground =
 			systemColors.serve((defaultStyle.get() != 0) ? defaultStyle->foreground : Color(), COLOR_WINDOWTEXT);
 		const COLORREF defaultBackground =
@@ -2216,8 +2216,8 @@ void TextLayout::draw(length_t line, PaintContext& context,
 						selectedBounds.left(), selectedBounds.top(),
 						selectedBounds.right(), selectedBounds.bottom());
 				} else {
-					StyledRunEnumerator i(auto_ptr<IStyledRunIterator>(
-						new SimpleStyledRunIterator(Range<const StyledRun*>(
+					StyledTextRunEnumerator i(auto_ptr<IStyledTextRunIterator>(
+						new SimpleStyledTextRunIterator(Range<const StyledTextRun*>(
 							styledRanges_.get(), styledRanges_.get() + numberOfStyledRanges_), run.beginning())), run.end());
 					assert(i.hasNext());
 					for(; i.hasNext(); i.next()) {
@@ -2268,8 +2268,8 @@ void TextLayout::draw(length_t line, PaintContext& context,
 		for(size_t i = firstRun; i < lastRun; ++i) {
 			const TextRun& run = *runs_[i];
 			basePoint.y += run.font()->metrics().ascent();
-			StyledRunEnumerator j(auto_ptr<IStyledRunIterator>(
-				new SimpleStyledRunIterator(Range<const StyledRun*>(
+			StyledTextRunEnumerator j(auto_ptr<IStyledTextRunIterator>(
+				new SimpleStyledTextRunIterator(Range<const StyledTextRun*>(
 					styledRanges_.get(), styledRanges_.get() + numberOfStyledRanges_), run.beginning())), run.end());
 			for(; j.hasNext(); j.next())
 				run.drawForeground(context, basePoint, j.currentRange(), j.currentStyle()->foreground, &paintRect, 0);
@@ -2426,7 +2426,7 @@ inline void TextLayout::expandTabsWithoutWrapping() /*throw()*/ {
 	const int fullTabWidth = lip_.textMetrics().averageCharacterWidth() * lip_.layoutSettings().tabWidth;
 	int x = 0;
 
-	if(lineTerminatorOrientation(style(), lip_.presentation().defaultLineStyle()) == LEFT_TO_RIGHT) {	// expand from the left most
+	if(lineTerminatorOrientation(style(), lip_.presentation().defaultTextLineStyle()) == LEFT_TO_RIGHT) {	// expand from the left most
 		for(size_t i = 0; i < numberOfRuns_; ++i) {
 			TextRun& run = *runs_[i];
 			run.expandTabCharacters(s, x, fullTabWidth, numeric_limits<int>::max());
@@ -2722,7 +2722,7 @@ int TextLayout::nextTabStopBasedLeftEdge(int x, bool right) const /*throw()*/ {
 	assert(x >= 0);
 	const LayoutSettings& c = lip_.layoutSettings();
 	const int tabWidth = lip_.textMetrics().averageCharacterWidth() * c.tabWidth;
-	if(lineTerminatorOrientation(style(), lip_.presentation().defaultLineStyle()) == LEFT_TO_RIGHT)
+	if(lineTerminatorOrientation(style(), lip_.presentation().defaultTextLineStyle()) == LEFT_TO_RIGHT)
 		return nextTabStop(x, right ? Direction::FORWARD : Direction::BACKWARD);
 	else
 		return right ? x + (x - longestLineWidth()) % tabWidth : x - (tabWidth - (x - longestLineWidth()) % tabWidth);
@@ -2795,7 +2795,7 @@ ReadingDirection TextLayout::readingDirection() const /*throw()*/ {
 		result = style_->readingDirection;
 	// try the default line style
 	if(result == INHERIT_READING_DIRECTION) {
-		tr1::shared_ptr<const LineStyle> defaultLineStyle(lip_.presentation().defaultLineStyle());
+		tr1::shared_ptr<const TextLineStyle> defaultLineStyle(lip_.presentation().defaultTextLineStyle());
 		if(defaultLineStyle.get() != 0)
 			result = defaultLineStyle->readingDirection;
 	}
