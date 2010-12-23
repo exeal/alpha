@@ -97,6 +97,8 @@ namespace {
 	public:
 		explicit SystemFont(win32::Handle<HFONT> handle);
 		// Font
+		String faceName(const locale& lc /* = std::locale::classic() */) const /*throw()*/ {return familyName_;}
+		String familyName(const locale& lc /* = std::locale::classic() */) const /*throw()*/ {return familyName_;}
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 		bool ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, GlyphCode& glyph) const;
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
@@ -107,7 +109,6 @@ namespace {
 		int averageCharacterWidth() const /*throw()*/ {return averageCharacterWidth_;}
 		int descent() const /*throw()*/ {return descent_;}
 		int externalLeading() const /*throw()*/ {return externalLeading_;}
-		String familyName() const /*throw()*/ {return familyName_;}
 		int internalLeading() const /*throw()*/ {return internalLeading_;}
 		int xHeight() const /*throw()*/ {return xHeight_;}
 	private:
