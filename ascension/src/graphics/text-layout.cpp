@@ -886,6 +886,8 @@ namespace {
 				: ((defaultStyle.get() != 0) ? defaultStyle->fontProperties.stretch() : FontProperties::NORMAL_STRETCH),
 			(computedProperties.style() != FontProperties::INHERIT_STYLE) ? computedProperties.style()
 				: ((defaultStyle.get() != 0) ? defaultStyle->fontProperties.style() : FontProperties::NORMAL_STYLE),
+			(computedProperties.orientation() != FontProperties::INHERIT_ORIENTATION) ? computedProperties.orientation()
+				: ((defaultStyle.get() != 0) ? defaultStyle->fontProperties.orientation() : FontProperties::HORIZONTAL),
 			computedSize);
 		// size-adjust
 		computedSizeAdjust = (requestedStyle.get() != 0) ? requestedStyle->fontSizeAdjust : -1.0;
@@ -2154,7 +2156,7 @@ void TextLayout::draw(length_t line, PaintContext& context,
 			),
 			marginColor);
 	else {
-		const String& s = text();
+//		const String& s = text();
 		Range<length_t> selectedRange;
 		if(selection != 0) {
 			if(!selectedRangeOnVisualLine(selection->caret(), lineNumber_, line, selectedRange))

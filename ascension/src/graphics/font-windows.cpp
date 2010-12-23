@@ -120,13 +120,15 @@ namespace {
 	};
 
 	class SystemFonts : public FontCollection {
+	public:
 		tr1::shared_ptr<const Font> get(const String& familyName, const FontProperties& properties, double sizeAdjust) const;
+		tr1::shared_ptr<const Font> lastResortFallback(const FontProperties& properties, double sizeAdjust) const;
 	private:
 		tr1::shared_ptr<const Font> cache(const String& familyName, const FontProperties& properties, double sizeAdjust);
 		struct Hasher : tr1::hash<String> {
 			size_t operator()(const pair<String, FontProperties>& value) const {
-				return tr1::hash<String>::operator()(value.first)
-					+ value.second.weight() + value.second.stretch() + value.second.style();
+//				tr1::hash_combine(value.second.hash(), value.first);
+				return tr1::hash<String>()(value.first) + value.second.hash();
 			}
 		};
 	private:
@@ -180,7 +182,7 @@ bool SystemFont::ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, 
 		const_cast<SystemFont*>(this)->ivs_.reset(new IdeographicVariationSequences);
 		win32::Handle<HDC> dc(screenDC());
 		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), handle_.get()));
-		static const uint32_t CMAP_TAG = makeTrueTypeTag("cmap");
+		static const TrueTypeFontTag CMAP_TAG = MakeTrueTypeFontTag<'c', 'm', 'a', 'p'>::value;
 		const DWORD bytes = ::GetFontData(dc.get(), CMAP_TAG, 0, 0, 0);
 		if(bytes != GDI_ERROR) {
 			AutoBuffer<uint8_t> data(new uint8_t[bytes]);
@@ -265,6 +267,24 @@ tr1::shared_ptr<const Font> SystemFonts::cache(const String& familyName, const F
 	tr1::shared_ptr<Font> newFont(new SystemFont(font));
 	registry_.insert(make_pair(make_pair(familyName, properties), newFont));
 	return newFont;
+}
+
+tr1::shared_ptr<const Font> SystemFonts::lastResortFallback(const FontProperties& properties, double sizeAdjust) const {
+	static String familyName;
+	// TODO: 'familyName' should update when system property changed.
+	if(familyName.empty()) {
+		LOGFONTW lf;
+		if(::GetObjectW(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)), sizeof(LOGFONTW), &lf) != 0)
+			familyName = lf.lfFaceName;
+		else {
+			win32::AutoZeroSize<NONCLIENTMETRICSW> ncm;
+			if(!win32::boole(::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICSW), &ncm, 0)))
+				throw PlatformDependentError<>();
+			familyName = ncm.lfMessageFont.lfFaceName;
+		}
+	}
+
+	return get(familyName, properties, sizeAdjust);
 }
 
 /// Returns the object implements @c FontCollection interface.

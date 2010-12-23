@@ -12,7 +12,7 @@
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/kernel/document.hpp>
 #include <ascension/graphics/color.hpp>	// graphics.Color
-#include <ascension/graphics/font.hpp>	// graphics.FontProperties
+#include <ascension/graphics/font.hpp>	// graphics.font.FontProperties, ...
 
 namespace ascension {
 
@@ -139,8 +139,6 @@ namespace ascension {
 			boost::any baselineShift;
 */		};
 
-		typedef uint32_t TrueTypeFontTag;
-
 		struct Decorations {
 			enum Style {NONE, SOLID, DOTTED, DAHSED, INHERIT};
 			struct Part {
@@ -168,14 +166,14 @@ namespace ascension {
 			Border border;
 			BaselineAlignment baselineAlignment;
 			/// Font family name. An empty string means inherit the parent.
-			String fontFamily;
+			String fontFamily;	// TODO: replace with graphics.font.FontFamilies.
 			/// Font properties. See @c graphics#FontProperties.
 			graphics::font::FontProperties fontProperties;
 			/// 'font-size-adjust' property. 0.0 means 'none', negative value means 'inherit'.
 			double fontSizeAdjust;
 			std::locale locale;
 			/// Typography features applied to the text. See the description of @c TypographyProperties.
-			std::map<TrueTypeFontTag, uint32_t> typographyProperties;
+			std::map<graphics::font::TrueTypeFontTag, uint32_t> typographyProperties;
 			Decorations decorations;
 			/// Letter spacing in DIP. Default is 0.
 			Length letterSpacing;
@@ -184,10 +182,10 @@ namespace ascension {
 //			TextTransform textTransform;
 //			RubyProperties rubyProperties;
 //			Effects effects;
-			/// Set @c false to disable shaping.
+			/// Set @c false to disable shaping. Default is @c true.
 			bool shapingEnabled;
 
-			/// Default constructor.
+			/// Default constructor initializes the members by their default values.
 			RunStyle() : letterSpacing(0), wordSpacing(0), shapingEnabled(true) {}
 			RunStyle& resolveInheritance(const RunStyle& base);
 		};
