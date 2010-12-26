@@ -126,8 +126,8 @@ namespace {
 			HDC, SCRIPT_CACHE*, SCRIPT_ANALYSIS*, OPENTYPE_TAG, OPENTYPE_TAG, OPENTYPE_TAG, LONG,
 			WORD, WORD*));
 //#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-	auto_ptr<ascension::internal::SharedLibrary<Uniscribe16> > uspLib(
-		new ascension::internal::SharedLibrary<Uniscribe16>("usp10.dll"));
+	auto_ptr<detail::SharedLibrary<Uniscribe16> > uspLib(
+		new detail::SharedLibrary<Uniscribe16>("usp10.dll"));
 } // namespace @0
 
 // file-local free functions ////////////////////////////////////////////////
@@ -440,7 +440,7 @@ namespace {
 	class SimpleStyledTextRunIterator : public IStyledTextRunIterator {
 	public:
 		SimpleStyledTextRunIterator(const Range<const StyledTextRun*>& range, length_t start) : range_(range) {
-			current_ = range_.beginning() + ascension::internal::searchBound(
+			current_ = range_.beginning() + detail::searchBound(
 				static_cast<ptrdiff_t>(0), range_.length(), start, BeginningOfStyledTextRun(range_.beginning()));
 		}
 		// presentation.IStyledTextRunIterator

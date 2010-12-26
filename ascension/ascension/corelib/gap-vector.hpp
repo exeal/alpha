@@ -13,7 +13,7 @@
 #include <algorithm>
 
 namespace ascension {
-	namespace internal {
+	namespace detail {
 
 		/**
 		 * Implements "gap buffer" data structure.
@@ -438,6 +438,6 @@ namespace ascension {
 		};
 
 	}
-} // namespace ascension.internal
+} // namespace ascension.detail
 
 #endif // !ASCENSION_GAP_VECTOR_HPP

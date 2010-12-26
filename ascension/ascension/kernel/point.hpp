@@ -97,7 +97,7 @@ namespace ascension {
 			bool adapting_;
 			Direction gravity_;
 			IPointListener* listener_;
-			ascension::internal::Listeners<IPointLifeCycleListener> lifeCycleListeners_;
+			detail::Listeners<IPointLifeCycleListener> lifeCycleListeners_;
 			friend class Document;
 		};
 

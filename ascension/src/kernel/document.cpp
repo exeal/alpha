@@ -16,7 +16,7 @@ using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::text;
 using namespace std;
-using ascension::internal::GapVector;
+using detail::GapVector;
 
 
 namespace {

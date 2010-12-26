@@ -47,15 +47,15 @@
 
 namespace ascension {
 
-	namespace internal {
+	namespace detail {
 		template<unsigned> struct StaticAssertTest {};
 		template<int> struct StaticAssertionFailureAtLine;
 		template<> struct StaticAssertionFailureAtLine<-1> {};
-	} // namespace internal
+	} // namespace detail
 
 	#define ASCENSION_STATIC_ASSERT(expression)														\
-		typedef ascension::internal::StaticAssertTest<												\
-			sizeof(ascension::internal::StaticAssertionFailureAtLine<(expression) ? -1 : __LINE__>)	\
+		typedef ascension::detail::StaticAssertTest<												\
+			sizeof(ascension::detail::StaticAssertionFailureAtLine<(expression) ? -1 : __LINE__>)	\
 		> oh_static_assertion_shippaidayo_orz
 
 	// sized integer types
@@ -243,16 +243,15 @@ namespace ascension {
 	 */
 	void updateSystemSettings() /*throw()*/;
 
-	namespace texteditor {	// see session.hpp
-		class Session;
-		namespace internal {
-			class ISessionElement {
-			protected:
-				virtual void setSession(Session& session) /*throw()*/ = 0;
-				friend class Session;
-			};
-		}
-	} // namespace texteditor
+	// see session.hpp
+	namespace texteditor {class Session;}
+	namespace detail {
+		class SessionElement {
+		protected:
+			virtual void setSession(texteditor::Session& session) /*throw()*/ = 0;
+			friend class texteditor::Session;
+		};
+	}
 
 } // namespace ascension
 

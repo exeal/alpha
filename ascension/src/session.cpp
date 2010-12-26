@@ -218,7 +218,7 @@ void Session::addDocument(kernel::Document& document) {
 	if(find(documents_.begin(), documents_.end(), &document) != documents_.end())
 		throw invalid_argument("The specified document is already registered.");
 	documents_.push_back(&document);
-	static_cast<internal::ISessionElement&>(document).setSession(*this);
+	static_cast<detail::SessionElement&>(document).setSession(*this);
 }
 
 /// Returns the incremental searcher.

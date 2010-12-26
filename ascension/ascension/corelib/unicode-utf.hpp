@@ -10,7 +10,7 @@
 #ifndef ASCENSION_UNICODE_UTF_HPP
 #define ASCENSION_UNICODE_UTF_HPP
 
-#include <ascension/internal.hpp>					// internal.Select
+#include <ascension/internal.hpp>					// detail.Select
 #include <ascension/corelib/basic-exceptions.hpp>	// IllegalStateException
 #include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/unicode-surrogates.hpp>

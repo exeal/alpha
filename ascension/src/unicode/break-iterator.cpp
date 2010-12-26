@@ -11,7 +11,6 @@
 
 using namespace ascension;
 using namespace ascension::text;
-using namespace ascension::text::internal;
 using namespace ascension::text::ucd;
 using namespace std;
 
@@ -20,11 +19,11 @@ using namespace std;
 #endif
 
 
-// AbstractGraphemeBreakIterator ////////////////////////////////////////////
+// AbstractGraphemeBreakIterator //////////////////////////////////////////////////////////////////
 
 /**
  * Protected constructor.
- * @param lc the locale
+ * @param lc The locale
  */
 AbstractGraphemeBreakIterator::AbstractGraphemeBreakIterator(const std::locale& lc) /*throw()*/ : BreakIterator(lc) {
 }
@@ -129,7 +128,7 @@ void AbstractGraphemeBreakIterator::next(ptrdiff_t amount) {
 }
 
 
-// AbstractWordBreakIterator ////////////////////////////////////////////////
+// AbstractWordBreakIterator //////////////////////////////////////////////////////////////////////
 
 namespace {
 	/// Advances @a i to the next character neither Extend nor Format.
@@ -172,8 +171,8 @@ namespace {
 
 	/**
 	 * Returns true if the scripts of the two code points are same.
-	 * This method assumes that the two code points are alphabetical
-	 * and treats all ASCII characters as Latin scripts.
+	 * This method assumes that the two code points are alphabetical and treats all ASCII
+	 * characters as Latin scripts.
 	 * @param preceding The code point of the character
 	 * @param following The code point of the character
 	 * @param lc The locale to detect script of a character
@@ -467,7 +466,7 @@ void AbstractWordBreakIterator::setComponent(Component component) {
 }
 
 
-// AbstractSentenceBreakIterator ////////////////////////////////////////////
+// AbstractSentenceBreakIterator //////////////////////////////////////////////////////////////////
 
 namespace {
 	/// Tries SB8 rule.
@@ -647,7 +646,7 @@ void AbstractSentenceBreakIterator::setComponent(Component component) {
 }
 
 
-// AbstractLineBreakIterator ////////////////////////////////////////////////
+// AbstractLineBreakIterator //////////////////////////////////////////////////////////////////////
 
 /**
  * Protected constructor.

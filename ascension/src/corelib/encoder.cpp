@@ -800,7 +800,7 @@ namespace {
 	}
 } // namespace @0
 
-auto_ptr<Encoder> sbcs::internal::createSingleByteEncoder(
+auto_ptr<Encoder> detail::createSingleByteEncoder(
 		const Char** byteToCharacterWire, const IEncodingProperties& properties) /*throw()*/ {
 	return auto_ptr<Encoder>(new SingleByteEncoder(byteToCharacterWire, properties));
 }

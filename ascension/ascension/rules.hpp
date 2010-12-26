@@ -17,10 +17,10 @@
 
 namespace ascension {
 
+	namespace detail {class HashTable;}
+
 	/// Provides a framework for rule based text scanning and document partitioning.
 	namespace rules {
-
-		namespace internal {class HashTable;}
 
 		/**
 		 * A @c URIDetector detects and searches URI. This class conforms to the syntaxes of
@@ -43,7 +43,7 @@ namespace ascension {
 			static const URIDetector& defaultGenericInstance() /*throw()*/;
 			static const URIDetector& defaultIANAURIInstance() /*throw()*/;
 		private:
-			internal::HashTable* validSchemes_;
+			detail::HashTable* validSchemes_;
 		};
 
 		/**
@@ -127,7 +127,7 @@ namespace ascension {
 			~WordRule() /*throw()*/;
 			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
 		private:
-			internal::HashTable* words_;
+			detail::HashTable* words_;
 		};
 
 #ifndef ASCENSION_NO_REGEX
@@ -300,7 +300,7 @@ namespace ascension {
 				kernel::Position getTokenEnd() const /*throw()*/ {return kernel::Position(tokenStart.line, tokenStart.column + tokenLength);}
 			};
 			const kernel::Position& getPartitionStart(size_t partition) const /*throw()*/ {return partitions_[partition]->start;}
-			ascension::internal::GapVector<Partition*> partitions_;
+			detail::GapVector<Partition*> partitions_;
 			typedef std::list<const TransitionRule*> TransitionRules;
 			TransitionRules rules_;
 		};

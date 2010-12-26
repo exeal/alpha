@@ -16,7 +16,7 @@ using namespace ascension::regex;
 using namespace ascension::text;
 using namespace ascension::text::ucd;
 using namespace std;
-using regex::internal::RegexTraits;
+using detail::RegexTraits;
 
 #ifndef ASCENSION_NO_MIGEMO
 #include "../third-party/migemo.h"
@@ -32,17 +32,17 @@ ASCENSION_SHARED_LIB_ENTRY(CMigemo, 6, "migemo_set_operator", int(*signature)(mi
 
 namespace {
 	/// Wrapper for C/Migemo.
-	class Migemo : protected ascension::internal::SharedLibrary<CMigemo> {
+	class Migemo : protected detail::SharedLibrary<CMigemo> {
 	public:
 		/**
 		 * Constructor.
-		 * @param runtimeFileName the name of the runtime library
-		 * @param dictionaryPathName the location of the dictionaries
-		 * @throw std#runtime_error the runtime can't load
+		 * @param runtimeFileName The name of the runtime library
+		 * @param dictionaryPathName The location of the dictionaries
+		 * @throw std#runtime_error The runtime can't load
 		 * @throw std#invalid_argument @a dictionaryPathName is empty
 		 */
 		Migemo(const string& runtimeFileName, const string& dictionaryPathName) :
-				ascension::internal::SharedLibrary<CMigemo>(runtimeFileName.c_str()),
+				detail::SharedLibrary<CMigemo>(runtimeFileName.c_str()),
 				instance_(0), lastNativePattern_(0), lastPattern_(0) {
 			if(dictionaryPathName.empty())
 				throw invalid_argument("Dictionary path name is empty.");
@@ -98,11 +98,11 @@ namespace {
 		}
 		/**
 		 * Transforms the specified text into the corresponding regular expression.
-		 * @param first the source text (in native Japanese encoding)
-		 * @param last the end of the source text
-		 * @param[out] outputLength the length of the regular expression includes @c null
-		 * @return the regular expression or @c null if failed
-		 * @throw std#invalid_argument the source text is invalid
+		 * @param first The source text (in native Japanese encoding)
+		 * @param last The end of the source text
+		 * @param[out] outputLength The length of the regular expression includes @c null
+		 * @return The regular expression or @c null if failed
+		 * @throw std#invalid_argument The source text is invalid
 		 */
 		const Char* query(const Char* first, const Char* last, size_t& outputLength) {
 			if(!isEnable())
@@ -172,7 +172,7 @@ namespace {
 } // namespace @0
 
 
-// Matcher //////////////////////////////////////////////////////////////////
+// Matcher ////////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * @class ascension::regex::Matcher regex.hpp
@@ -228,7 +228,7 @@ namespace {
  */
 
 
-// PatternSyntaxException ///////////////////////////////////////////////////
+// PatternSyntaxException /////////////////////////////////////////////////////////////////////////
 
 PatternSyntaxException::PatternSyntaxException(
 		const boost::regex_error& src, const String& pattern) : invalid_argument(""), impl_(src), pattern_(pattern) {
@@ -259,7 +259,7 @@ PatternSyntaxException::Code PatternSyntaxException::getCode() const {
 }
 
 
-// Pattern //////////////////////////////////////////////////////////////////
+// Pattern ////////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * @class ascension::regex::Pattern regex.hpp
@@ -354,11 +354,11 @@ Pattern::Pattern(const String& regex, int flags /* = 0 */) : flags_(flags) {
 
 /**
  * Protected constructor builds regular expression pattern with the Boost.Regex native syntax flags.
- * @param first the start of the pattern string
- * @param last the end of the pattern string
- * @param options the syntax options
- * @param nativeSyntax the syntax flags of @c boost#syntax_option_type
- * @throw PatternSyntaxException the expression's syntax is invalid
+ * @param first The start of the pattern string
+ * @param last The end of the pattern string
+ * @param options The syntax options
+ * @param nativeSyntax The syntax flags of @c boost#syntax_option_type
+ * @throw PatternSyntaxException The expression's syntax is invalid
  */
 Pattern::Pattern(const Char* first, const Char* last, boost::regex_constants::syntax_option_type nativeSyntax) : flags_(0) {
 	if(first == 0 || last == 0)
@@ -375,7 +375,7 @@ Pattern::~Pattern() /*throw()*/ {
 }
 
 
-// internal.RegexTraits /////////////////////////////////////////////////////
+// detail.RegexTraits /////////////////////////////////////////////////////////////////////////////
 
 bool RegexTraits::unixLineMode = false;
 bool RegexTraits::usesExtendedProperties = false;
@@ -520,16 +520,16 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 }
 
 
-// MigemoPattern ////////////////////////////////////////////////////////////
+// MigemoPattern //////////////////////////////////////////////////////////////////////////////////
 
 AutoBuffer<char> MigemoPattern::runtimePathName_;
 AutoBuffer<char> MigemoPattern::dictionaryPathName_;
 
 /**
  * Private constructor.
- * @param first the start of the pattern string
- * @param last the end of the pattern string
- * @param caseSensitive set @c true to enable case-sensitive match
+ * @param first The start of the pattern string
+ * @param last The end of the pattern string
+ * @param caseSensitive Set @c true to enable case-sensitive match
  */
 MigemoPattern::MigemoPattern(const Char* first, const Char* last, bool caseSensitive) :
 		Pattern(first, last, (!caseSensitive ? boost::regex_constants::icase : 0)
@@ -538,10 +538,10 @@ MigemoPattern::MigemoPattern(const Char* first, const Char* last, bool caseSensi
 
 /**
  * Constructor creates new regular expression pattern for Migemo match.
- * @param first the start of the pattern string
- * @param last the end of the pattern string
- * @param caseSensitive set @c true to enable case-sensitive match
- * @return the pattern or @c null if Migemo is not installed
+ * @param first The start of the pattern string
+ * @param last The end of the pattern string
+ * @param caseSensitive Set @c true to enable case-sensitive match
+ * @return The pattern or @c null if Migemo is not installed
  */
 auto_ptr<MigemoPattern> MigemoPattern::compile(const Char* first, const Char* last, bool caseSensitive) {
 	install();
@@ -580,7 +580,7 @@ inline void MigemoPattern::install() {
 	}
 }
 
-/// Returns true if Migemo is installed.
+/// Returns @c true if Migemo is installed.
 bool MigemoPattern::isMigemoInstalled() /*throw()*/ {
 	return migemoLib.get() != 0 && migemoLib->isEnable();
 }

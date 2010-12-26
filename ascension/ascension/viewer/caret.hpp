@@ -294,9 +294,9 @@ namespace ascension {
 				kernel::Position positionBeforeUpdate_;
 			} * anchor_;
 			LCID clipboardLocale_;
-			ascension::internal::Listeners<ICaretListener> listeners_;
-			ascension::internal::Listeners<ICharacterInputListener> characterInputListeners_;
-			ascension::internal::Listeners<ICaretStateListener> stateListeners_;
+			detail::Listeners<ICaretListener> listeners_;
+			detail::Listeners<ICharacterInputListener> characterInputListeners_;
+			detail::Listeners<ICaretStateListener> stateListeners_;
 			bool yanking_;			// true when right after pasted by using clipboard ring, and waiting for next cycle of ring
 			bool leaveAnchorNext_;	// true if should leave the anchor at the next movement
 			bool leadingAnchor_;	// true if in anchor_->moveTo calling, and ignore pointMoved

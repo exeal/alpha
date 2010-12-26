@@ -7,7 +7,7 @@
 
 #ifndef ASCENSION_TYPE_LIST_HPP
 #define ASCENSION_TYPE_LIST_HPP
-#include <ascension/internal.hpp>	// internal.Select
+#include <ascension/internal.hpp>	// detail.Select
 
 namespace ascension {
 	namespace typelist {
@@ -44,31 +44,36 @@ namespace ascension {
 		template<typename Car, typename Cdr, typename T> class MostDerived<Cat<Car, Cdr>, T> {
 			typedef typename MostDerived<Cdr, T>::Result Candidate_;
 		public:
-			typedef typename ascension::internal::Select<
-				ascension::internal::IsBaseAndDerived<Candidate_, Car>::result, Car, Candidate_
+			typedef typename detail::Select<
+				detail::IsBaseAndDerived<Candidate_, Car>::result, Car, Candidate_
 			>::Result Result;
 		};
 		template<typename T> class MostDerived<void, T> {public: typedef T Result;};
 
 		/// Returns true if the type @a T is the most derived in the given type list.
 		template<typename Types, typename T> struct IsMostDerived {
-			static const bool result = ascension::internal::IsSame<typename MostDerived<Types, T>::Result, T>::result;
+			static const bool result = detail::IsSame<typename MostDerived<Types, T>::Result, T>::result;
 		};
 
-		namespace internal {
-			template<typename Types, typename Current> struct RemoveBasesImpl {
-				typedef typename ascension::internal::Select<
-					IsMostDerived<Types, typename Current::Car>::result,
-					Cat<typename Current::Car, typename RemoveBasesImpl<Types, typename Current::Cdr>::Result>,
-					typename RemoveBasesImpl<Types, typename Current::Cdr>::Result
-				>::Result Result;
-			};
-			template<typename Types> struct RemoveBasesImpl<Types, void> {typedef void Result;};
-		}
+	}
+
+	namespace detail {
+		template<typename Types, typename Current> struct RemoveBasesImpl {
+			typedef typename Select<
+				typelist::IsMostDerived<Types, typename Current::Car>::result,
+				typelist::Cat<typename Current::Car, typename RemoveBasesImpl<Types, typename Current::Cdr>::Result>,
+				typename RemoveBasesImpl<Types, typename Current::Cdr>::Result
+			>::Result Result;
+		};
+		template<typename Types> struct RemoveBasesImpl<Types, void> {typedef void Result;};
+	}
+
+	namespace typelist {
 
 		/// Removes the all types not most derived in the given type list.
 		template<typename Types> struct RemoveBases {
-			typedef typename internal::RemoveBasesImpl<Types, Types>::Result Result;};
+			typedef typename detail::RemoveBasesImpl<Types, Types>::Result Result;
+		};
 
 	}
 } // namespace ascension.typelist

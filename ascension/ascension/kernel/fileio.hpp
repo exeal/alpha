@@ -260,7 +260,7 @@ namespace ascension {
 				std::size_t savedDocumentRevision_;
 				Time userLastWriteTime_, internalLastWriteTime_;
 				LockMode desiredLockMode_;
-				ascension::internal::Listeners<IFilePropertyListener> listeners_;
+				detail::Listeners<IFilePropertyListener> listeners_;
 				IUnexpectedFileTimeStampDirector* timeStampDirector_;
 			};
 

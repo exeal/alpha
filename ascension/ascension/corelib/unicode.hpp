@@ -254,36 +254,39 @@ namespace ascension {
 			const std::locale& locale_;
 		};
 
-		/// @internal
-		namespace internal {
-			/**
-			 * Provides standard C++ iterator interface and facilities for the concrete iterator
-			 * class.
-			 * @tparam ConcreteIterator the concrete iterator
-			 */
-			template<class ConcreteIterator>
-			class BreakIteratorFacade : public std::iterator<std::random_access_iterator_tag, Char> {
-			public:
-				reference operator*() const {return *getConcrete().tell();}
-				reference operator[](difference_type index) const {return getConcrete().tell()[index];}
-				ConcreteIterator& operator++() {getConcrete().next(+1); return getConcrete();}
-				const ConcreteIterator operator++(int) {ConcreteIterator temp(getConcrete()); ++*this; return temp;}
-				ConcreteIterator& operator--() {getConcrete().next(-1); return getConcrete();}
-				const ConcreteIterator operator--(int) {ConcreteIterator temp(getConcrete()); --*this; return temp;}
-				ConcreteIterator& operator+=(difference_type offset) {getConcrete().next(+offset); return getConcrete();}
-				ConcreteIterator& operator-=(difference_type offset) {getConcrete().next(-offset); return getConcrete();}
-				const ConcreteIterator operator+(difference_type offset) {ConcreteIterator temp(*this); return temp += offset;}
-				const ConcreteIterator operator-(difference_type offset) {ConcreteIterator temp(*this); return temp -= offset;}
-				bool operator==(const ConcreteIterator& other) const {return getConcrete().tell() == other.tell();}
-				bool operator!=(const ConcreteIterator& other) const {return getConcrete().tell() != other.tell();}
-				bool operator<(const ConcreteIterator& other) const {return getConcrete().tell() < other.tell();}
-				bool operator<=(const ConcreteIterator& other) const {return getConcrete().tell() <= other.tell();}
-				bool operator>(const ConcreteIterator& other) const {return getConcrete().tell() > other.tell();}
-				bool operator>=(const ConcreteIterator& other) const {return getConcrete().tell() >= other.tell();}
-			private:
-				ConcreteIterator& getConcrete() {return *static_cast<ConcreteIterator*>(this);}
-			};
-		} // namespace internal
+	}
+
+	namespace detail {
+		/**
+		 * Provides standard C++ iterator interface and facilities for the concrete iterator
+		 * class.
+		 * @tparam ConcreteIterator The concrete iterator
+		 */
+		template<class ConcreteIterator>
+		class BreakIteratorFacade : public std::iterator<std::random_access_iterator_tag, Char> {
+		public:
+			reference operator*() const {return *getConcrete().tell();}
+			reference operator[](difference_type index) const {return getConcrete().tell()[index];}
+			ConcreteIterator& operator++() {getConcrete().next(+1); return getConcrete();}
+			const ConcreteIterator operator++(int) {ConcreteIterator temp(getConcrete()); ++*this; return temp;}
+			ConcreteIterator& operator--() {getConcrete().next(-1); return getConcrete();}
+			const ConcreteIterator operator--(int) {ConcreteIterator temp(getConcrete()); --*this; return temp;}
+			ConcreteIterator& operator+=(difference_type offset) {getConcrete().next(+offset); return getConcrete();}
+			ConcreteIterator& operator-=(difference_type offset) {getConcrete().next(-offset); return getConcrete();}
+			const ConcreteIterator operator+(difference_type offset) {ConcreteIterator temp(*this); return temp += offset;}
+			const ConcreteIterator operator-(difference_type offset) {ConcreteIterator temp(*this); return temp -= offset;}
+			bool operator==(const ConcreteIterator& other) const {return getConcrete().tell() == other.tell();}
+			bool operator!=(const ConcreteIterator& other) const {return getConcrete().tell() != other.tell();}
+			bool operator<(const ConcreteIterator& other) const {return getConcrete().tell() < other.tell();}
+			bool operator<=(const ConcreteIterator& other) const {return getConcrete().tell() <= other.tell();}
+			bool operator>(const ConcreteIterator& other) const {return getConcrete().tell() > other.tell();}
+			bool operator>=(const ConcreteIterator& other) const {return getConcrete().tell() >= other.tell();}
+		private:
+			ConcreteIterator& getConcrete() {return *static_cast<ConcreteIterator*>(this);}
+		};
+	} // namespace detail
+
+	namespace text {
 
 		/// Base class of @c GraphemeBreakIterator.
 		class AbstractGraphemeBreakIterator : public BreakIterator {
@@ -302,7 +305,7 @@ namespace ascension {
 		/// @c GraphemeBreakIterator locates grapheme cluster (character) boundaries in text.
 		template<class BaseIterator>
 		class GraphemeBreakIterator : public AbstractGraphemeBreakIterator,
-			public internal::BreakIteratorFacade<GraphemeBreakIterator <BaseIterator> > {
+			public detail::BreakIteratorFacade<GraphemeBreakIterator <BaseIterator> > {
 			ASCENSION_UNASSIGNABLE_TAG(GraphemeBreakIterator);
 		public:
 			/**
@@ -369,7 +372,7 @@ namespace ascension {
 		/// @c WordBreakIterator locates word boundaries in text.
 		template<class BaseIterator>
 		class WordBreakIterator : public AbstractWordBreakIterator,
-			public internal::BreakIteratorFacade<WordBreakIterator<BaseIterator> > {
+			public detail::BreakIteratorFacade<WordBreakIterator<BaseIterator> > {
 			ASCENSION_UNASSIGNABLE_TAG(WordBreakIterator);
 		public:
 			/**
@@ -430,7 +433,7 @@ namespace ascension {
 		/// @c SentenceBreakIterator locates sentence boundaries in text.
 		template<class BaseIterator>
 		class SentenceBreakIterator : public AbstractSentenceBreakIterator,
-			public internal::BreakIteratorFacade<SentenceBreakIterator<BaseIterator> > {
+			public detail::BreakIteratorFacade<SentenceBreakIterator<BaseIterator> > {
 			ASCENSION_UNASSIGNABLE_TAG(SentenceBreakIterator);
 		public:
 			/**
@@ -469,7 +472,7 @@ namespace ascension {
 		/// @c LineBreakIterator locates line break opportunities in text.
 		template<class BaseIterator>
 		class LineBreakIterator : public AbstractLineBreakIterator,
-			public internal::BreakIteratorFacade<LineBreakIterator<BaseIterator> > {
+			public detail::BreakIteratorFacade<LineBreakIterator<BaseIterator> > {
 			ASCENSION_UNASSIGNABLE_TAG(LineBreakIterator);
 		public:
 			/**
