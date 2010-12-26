@@ -72,10 +72,16 @@ namespace ascension {
 			static const Length THIN, MEDIUM, THICK;
 			struct Part {
 				/**
-				 * The foreground color of the border. Default value is Color() which means same as
-				 * the foreground color of the text.
+				 * The foreground color of the border. Default value is Color() which means from
+				 * the parent content. This value is ignored if @c #usesCurrentColor member is
+				 * @c true.
 				 */
 				graphics::Color color;
+				/**
+				 * Set @c true if use the value of @c TextRunStyle#foreground, instead of the one
+				 * of @c #color member.
+				 */
+				bool usesCurrentColor;
 				/// Style of the border. Default value is @c NONE.
 				Style style;
 				/// Thickness of the border. Default value is @c MEDIUM.
@@ -187,7 +193,7 @@ namespace ascension {
 
 			/// Default constructor initializes the members by their default values.
 			TextRunStyle() : letterSpacing(0), wordSpacing(0), shapingEnabled(true) {}
-			TextRunStyle& resolveInheritance(const TextRunStyle& base);
+			TextRunStyle& resolveInheritance(const TextRunStyle& base, bool baseIsRoot);
 		};
 
 		struct StyledTextRun {
@@ -369,23 +375,28 @@ namespace ascension {
 			friend class Presentation;
 		};
 
-		/***/
-		class ITextRendererListListener {
-		private:
-			/***/
-			virtual void textRendererListChanged(Presentation& presentation) = 0;
-			friend class Presentation;
+		/**
+		 * Interface for objects which are interested in change of the default style of
+		 * @c Presentation.
+		 * @see Presentation#addDefaultStyleListener, Presentation#removeDefaultStyleListener
+		 */
+		class DefaultTextStyleListener {
+		public:
+			/// Destructor.
+			virtual ~DefaultTextStyleListener() /*throw()*/ {}
+			/**
+			 * The default text line style of @c Presentation was changed.
+			 * @param used The old style used previously
+			 * @see Presentation#defaultTextLineStyle, Presentation#setDefaultTextLineStyle
+			 */
+			virtual void defaultTextLineStyleChanged(std::tr1::shared_ptr<const TextLineStyle> used) = 0;
+			/**
+			 * The default text run style of @c Presentation was changed.
+			 * @param used The old style used previously
+			 * @see Presentation#defaultTextRunStyle, Presentation#setDefaultTextRunStyle
+			 */
+			virtual void defaultTextRunStyleChanged(std::tr1::shared_ptr<const TextRunStyle> used) = 0;
 		};
-
-		/// @internal
-		namespace internal {
-			class ITextRendererCollection {
-			private:
-				virtual void addTextRenderer(graphics::font::TextRenderer& textRenderer) /*throw()*/ = 0;
-				virtual void removeTextRenderer(graphics::font::TextRenderer& textRenderer) /*throw()*/ = 0;
-				friend class graphics::font::TextRenderer;
-			};
-		}
 
 		/**
 		 * Provides support for detecting and presenting hyperlinks in text editors. "Hyperlink" is
@@ -441,7 +452,7 @@ namespace ascension {
 				std::auto_ptr<IHyperlink> nextHyperlink(
 					const kernel::Document& document, length_t line, const Range<length_t>& range) const /*throw()*/;
 			private:
-				ascension::internal::StrategyPointer<const rules::URIDetector> uriDetector_;
+				detail::StrategyPointer<const rules::URIDetector> uriDetector_;
 			};
 
 			/**
@@ -462,25 +473,23 @@ namespace ascension {
 		/**
 		 * A bridge between the document and visual styled text.
 		 * @note This class is not intended to be subclassed.
-		 * @see kernel#Document, kernel#DocumentPartitioner, graphics#TextRenderer
+		 * @see kernel#Document, kernel#DocumentPartitioner
 		 */
-		class Presentation : public kernel::IDocumentListener, public internal::ITextRendererCollection {
+		class Presentation : public kernel::IDocumentListener {
 			ASCENSION_NONCOPYABLE_TAG(Presentation);
 		public:
-			typedef std::set<graphics::font::TextRenderer*>::iterator TextRendererIterator;
-			typedef std::set<graphics::font::TextRenderer*>::const_iterator TextRendererConstIterator;
 			// constructors
 			explicit Presentation(kernel::Document& document) /*throw()*/;
 			~Presentation() /*throw()*/;
 			// attributes
-			void addTextRendererListListener(ITextRendererListListener& listener);
 			kernel::Document& document() /*throw()*/;
 			const kernel::Document& document() const /*throw()*/;
 			const hyperlink::IHyperlink* const* getHyperlinks(length_t line, std::size_t& numberOfHyperlinks) const;
-			void removeTextRendererListListener(ITextRendererListListener& listener);
 			// styles
+			void addDefaultTextStyleListener(DefaultTextStyleListener& listener);
 			std::tr1::shared_ptr<const TextLineStyle> defaultTextLineStyle() const /*throw()*/;
 			std::tr1::shared_ptr<const TextRunStyle> defaultTextRunStyle() const /*throw()*/;
+			void removeDefaultTextStyleListener(DefaultTextStyleListener& listener);
 			void setDefaultTextLineStyle(std::tr1::shared_ptr<const TextLineStyle> newStyle);
 			void setDefaultTextRunStyle(std::tr1::shared_ptr<const TextRunStyle> newStyle);
 			void textLineColors(length_t line, graphics::Color& foreground, graphics::Color& background) const;
@@ -492,23 +501,13 @@ namespace ascension {
 			void setHyperlinkDetector(hyperlink::IHyperlinkDetector* newDetector, bool delegateOwnership) /*throw()*/;
 			void setTextLineStyleDirector(std::tr1::shared_ptr<ITextLineStyleDirector> newDirector) /*throw()*/;
 			void setTextRunStyleDirector(std::tr1::shared_ptr<ITextRunStyleDirector> newDirector) /*throw()*/;
-			// TextRenderer enumeration
-			TextRendererIterator firstTextRenderer() /*throw()*/;
-			TextRendererConstIterator firstTextRenderer() const /*throw()*/;
-			TextRendererIterator lastTextRenderer() /*throw()*/;
-			TextRendererConstIterator lastTextRenderer() const /*throw()*/;
-			std::size_t numberOfTextRenderers() const /*throw()*/;
 		private:
 			void clearHyperlinksCache() /*throw()*/;
 			// kernel.IDocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
-			// internal.ITextRendererCollection
-			void addTextRenderer(graphics::font::TextRenderer& textRenderer) /*throw()*/;
-			void removeTextRenderer(graphics::font::TextRenderer& textRenderer) /*throw()*/;
 		private:
 			kernel::Document& document_;
-			std::set<graphics::font::TextRenderer*> textRenderers_;
 			static std::tr1::shared_ptr<const TextLineStyle> DEFAULT_TEXT_LINE_STYLE;
 			static std::tr1::shared_ptr<const TextRunStyle> DEFAULT_TEXT_RUN_STYLE;
 			std::tr1::shared_ptr<const TextLineStyle> defaultTextLineStyle_;
@@ -516,8 +515,8 @@ namespace ascension {
 			std::tr1::shared_ptr<ITextLineStyleDirector> textLineStyleDirector_;
 			std::tr1::shared_ptr<ITextRunStyleDirector> textRunStyleDirector_;
 			std::list<std::tr1::shared_ptr<ITextLineColorDirector> > textLineColorDirectors_;
-			ascension::internal::Listeners<ITextRendererListListener> textRendererListListeners_;
-			ascension::internal::StrategyPointer<hyperlink::IHyperlinkDetector> hyperlinkDetector_;
+			detail::Listeners<DefaultTextStyleListener> defaultTextStyleListeners_;
+			detail::StrategyPointer<hyperlink::IHyperlinkDetector> hyperlinkDetector_;
 			struct Hyperlinks;
 			mutable std::list<Hyperlinks*> hyperlinks_;
 		};
@@ -558,7 +557,7 @@ namespace ascension {
 		/**
 		 * 
 		 */
-		class PresentationReconstructor : public ITextRunStyleDirector, public kernel::IDocumentPartitioningListener {
+		class PresentationReconstructor : public ITextRunStyleDirector {
 			ASCENSION_UNASSIGNABLE_TAG(PresentationReconstructor);
 		public:
 			// constructors
@@ -570,8 +569,6 @@ namespace ascension {
 		private:
 			// ITextRunStyleDirector
 			std::auto_ptr<IStyledTextRunIterator> queryTextRunStyle(length_t line) const;
-			// kernel.IDocumentPartitioningListener
-			void documentPartitioningChanged(const kernel::Region& changedRegion);
 		private:
 			class StyledTextRunIterator;
 			Presentation& presentation_;
@@ -588,13 +585,6 @@ namespace ascension {
 		inline void Presentation::addTextLineColorDirector(std::tr1::shared_ptr<ITextLineColorDirector> director) {
 			if(director.get() == 0) throw NullPointerException("director"); textLineColorDirectors_.push_back(director);}
 
-		/**
-		 * Registers the text renderer list listener.
-		 * @param listener the listener to be registered
-		 * @throw std#invalid_argument @a listener is already registered
-		 */
-		inline void Presentation::addTextRendererListListener(ITextRendererListListener& listener) {textRendererListListeners_.add(listener);}
-
 		/// Returns the default text line style this object gives.
 		inline std::tr1::shared_ptr<const TextLineStyle> Presentation::defaultTextLineStyle() const /*throw()*/ {return defaultTextLineStyle_;}
 
@@ -609,9 +599,6 @@ namespace ascension {
 			return (style.get() != 0) ? style : defaultTextLineStyle();
 		}
 
-		/// Returns the number of text renderers.
-		inline std::size_t Presentation::numberOfTextRenderers() const /*throw()*/ {return textRenderers_.size();}
-
 		/**
 		 * Removes the specified text line color director.
 		 * @param director the director to remove
@@ -622,13 +609,6 @@ namespace ascension {
 				if(i->get() == &director) {textLineColorDirectors_.erase(i); return;}
 			}
 		}
-
-		/**
-		 * Removes the text renderer list listener.
-		 * @param listener the listener to be removed
-		 * @throw std#invalid_argument @a listener is not registered
-		 */
-		inline void Presentation::removeTextRendererListListener(ITextRendererListListener& listener) {textRendererListListeners_.remove(listener);}
 
 		/// 
 		inline TextAlignment defaultTextAlignment(const Presentation& presentation) {

@@ -276,8 +276,7 @@ namespace ascension {
 				if(column > text().length())
 					throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
 				return (numberOfLines() == 1) ? 0 :
-					ascension::internal::searchBound(
-						static_cast<length_t>(0), numberOfLines(),
+					detail::searchBound(static_cast<length_t>(0), numberOfLines(),
 						column, std::bind1st(std::mem_fun(&TextLayout::lineOffset), this));
 			}
 

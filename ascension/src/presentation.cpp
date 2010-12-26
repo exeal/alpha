@@ -35,6 +35,19 @@ const Length Border::MEDIUM(0.10, Length::EM_HEIGHT);
 const Length Border::THICK(0.20, Length::EM_HEIGHT);
 
 
+// TextRunStyle ///////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * @param base The base style
+ * @param baseIsRoot Set @c true if @a base is the root style
+ * @return This object
+ */
+TextRunStyle& TextRunStyle::resolveInheritance(const TextRunStyle& base, bool baseIsRoot) {
+	// TODO: not implemented.
+	return *this;
+}
+
+
 // StyledTextRunEnumerator ////////////////////////////////////////////////////////////////////////
 
 /**
@@ -147,9 +160,14 @@ Presentation::~Presentation() /*throw()*/ {
 	clearHyperlinksCache();
 }
 
-/// @see internal#ITextRendererCollection#addTextRenderer
-void Presentation::addTextRenderer(TextRenderer& textRenderer) /*throw()*/ {
-	textRenderers_.insert(&textRenderer);
+/**
+ * Registers the default text style listener.
+ * @param listener The listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ * @see #defaultTextLineStyle, #defaultTextRunStyle
+ */
+void Presentation::addDefaultTextStyleListener(DefaultTextStyleListener& listener) {
+	defaultTextStyleListeners_.add(listener);
 }
 
 void Presentation::clearHyperlinksCache() /*throw()*/ {
@@ -197,16 +215,6 @@ void Presentation::documentChanged(const Document&, const DocumentChange& change
 		}
 		++i;
 	}
-}
-
-/// Returns an iterator addresses the first text viewer.
-set<TextRenderer*>::iterator Presentation::firstTextRenderer() /*throw()*/ {
-	return textRenderers_.begin();
-}
-
-/// Returns an iterator addresses the first text viewer.
-set<TextRenderer*>::const_iterator Presentation::firstTextRenderer() const /*throw()*/ {
-	return textRenderers_.begin();
 }
 
 /**
@@ -263,19 +271,14 @@ const IHyperlink* const* Presentation::getHyperlinks(length_t line, size_t& numb
 	return hyperlinks_.front()->hyperlinks.get();
 }
 
-/// Returns an iterator addresses the location succeeding the last text viewer.
-set<TextRenderer*>::iterator Presentation::lastTextRenderer() /*throw()*/ {
-	return textRenderers_.end();
-}
-
-/// Returns an iterator addresses the location succeeding the last text viewer.
-set<TextRenderer*>::const_iterator Presentation::lastTextRenderer() const /*throw()*/ {
-	return textRenderers_.end();
-}
-
-/// @see internal#ITextRendererCollection#removeTextRenderer
-void Presentation::removeTextRenderer(TextRenderer& textRenderer) /*throw()*/ {
-	textRenderers_.erase(&textRenderer);
+/**
+ * Removes the default text style listener.
+ * @param listener The listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ * @see #defaultTextLineStyle, #defaultTextRunStyle
+ */
+void Presentation::removeDefaultTextStyleListener(DefaultTextStyleListener& listener) {
+	defaultTextStyleListeners_.remove(listener);
 }
 
 /**
@@ -284,7 +287,10 @@ void Presentation::removeTextRenderer(TextRenderer& textRenderer) /*throw()*/ {
  * @see #defaultTextLineStyle, #setDefaultTextRunStyle
  */
 void Presentation::setDefaultTextLineStyle(tr1::shared_ptr<const TextLineStyle> newStyle) {
+	const tr1::shared_ptr<const TextLineStyle> used(defaultTextLineStyle_);
 	defaultTextLineStyle_ = (newStyle.get() != 0) ? newStyle : DEFAULT_TEXT_LINE_STYLE;
+	defaultTextStyleListeners_.notify<tr1::shared_ptr<const TextLineStyle> >(
+		&DefaultTextStyleListener::defaultTextLineStyleChanged, used);
 }
 
 /**
@@ -293,9 +299,10 @@ void Presentation::setDefaultTextLineStyle(tr1::shared_ptr<const TextLineStyle> 
  * @see #defaultTextRunStyle, #setDefaultTextLineStyle
  */
 void Presentation::setDefaultTextRunStyle(tr1::shared_ptr<const TextRunStyle> newStyle) {
+	const tr1::shared_ptr<const TextRunStyle> used(defaultTextRunStyle_);
 	defaultTextRunStyle_ = (newStyle.get() != 0) ? newStyle : DEFAULT_TEXT_RUN_STYLE;
-	for(set<TextRenderer*>::iterator i(textRenderers_.begin()), e(textRenderers_.end()); i != e; ++i)
-		(*i)->updateTextMetrics();
+	defaultTextStyleListeners_.notify<tr1::shared_ptr<const TextRunStyle> >(
+		&DefaultTextStyleListener::defaultTextRunStyleChanged, used);
 }
 
 /**
@@ -426,6 +433,9 @@ private:
 
 /**
  * Constructor.
+ * @param presentation
+ * @param reconstructors
+ * @param line
  */
 PresentationReconstructor::StyledTextRunIterator::StyledTextRunIterator(
 		const Presentation& presentation, const map<kernel::ContentType,
@@ -502,25 +512,17 @@ inline void PresentationReconstructor::StyledTextRunIterator::updateSubiterator(
 
 /**
  * Constructor.
- * @param presentation the presentation
+ * @param presentation The presentation
  */
 PresentationReconstructor::PresentationReconstructor(Presentation& presentation) : presentation_(presentation) {
 	presentation_.setTextRunStyleDirector(tr1::shared_ptr<ITextRunStyleDirector>(this));	// TODO: danger call (may delete this).
-	presentation_.document().addPartitioningListener(*this);
 }
 
 /// Destructor.
 PresentationReconstructor::~PresentationReconstructor() /*throw()*/ {
 //	presentation_.setLineStyleDirector(ASCENSION_SHARED_POINTER<ILineStyleDirector>(0));
-	presentation_.document().removePartitioningListener(*this);
 	for(map<ContentType, IPartitionPresentationReconstructor*>::iterator i(reconstructors_.begin()); i != reconstructors_.end(); ++i)
 		delete i->second;
-}
-
-/// @see kernel#IDocumentPartitioningListener#documentPartitioningChanged
-void PresentationReconstructor::documentPartitioningChanged(const Region& changedRegion) {
-	for(Presentation::TextRendererIterator i(presentation_.firstTextRenderer()); i != presentation_.lastTextRenderer(); ++i)
-		(*i)->invalidate(changedRegion.beginning().line, changedRegion.end().line + 1);
 }
 
 /// @see ILineStyleDirector#queryTextRunStyle

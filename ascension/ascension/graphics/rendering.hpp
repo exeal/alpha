@@ -80,7 +80,7 @@ namespace ascension {
 			 * of the visual lines.
 			 * @see LineLayout, TextRenderer
 			 */
-			class LineLayoutBuffer : public kernel::IDocumentListener {
+			class LineLayoutBuffer : public kernel::IDocumentListener, public kernel::IDocumentPartitioningListener {
 				ASCENSION_NONCOPYABLE_TAG(LineLayoutBuffer);
 			public:
 				// constructors
@@ -131,13 +131,15 @@ namespace ascension {
 				// kernel.IDocumentListener
 				void documentAboutToBeChanged(const kernel::Document& document);
 				void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+				// kernel.IDocumentPartitioningListener
+				void documentPartitioningChanged(const kernel::Region& changedRegion);
 			private:
 				struct CachedLineComparer {
 					bool operator()(const TextLayout*& lhs, length_t rhs) const /*throw()*/ {return lhs->lineNumber() < rhs;}
 					bool operator()(length_t lhs, const TextLayout*& rhs) const /*throw()*/ {return lhs < rhs->lineNumber();}
 				};
 				kernel::Document& document_;
-				ascension::internal::StrategyPointer<const ILayoutInformationProvider> lip_;
+				detail::StrategyPointer<const ILayoutInformationProvider> lip_;
 				std::list<TextLayout*> layouts_;
 				const std::size_t bufferSize_;
 				const bool autoRepair_;
@@ -147,11 +149,13 @@ namespace ascension {
 				} pendingCacheClearance_;	// ドキュメント変更中に呼び出された clearCaches の引数
 				int longestLineWidth_;
 				length_t longestLine_, numberOfVisualLines_;
-				ascension::internal::Listeners<IVisualLinesListener> listeners_;
+				detail::Listeners<IVisualLinesListener> listeners_;
 			};
 
 			// documentation is layout.cpp
-			class TextRenderer : public LineLayoutBuffer, public ILayoutInformationProvider {
+			class TextRenderer :
+				public LineLayoutBuffer, public ILayoutInformationProvider,
+				public presentation::DefaultTextStyleListener {
 			public:
 				// constructors
 				TextRenderer(presentation::Presentation& presentation,
@@ -169,14 +173,16 @@ namespace ascension {
 				void setSpecialCharacterRenderer(
 					ISpecialCharacterRenderer* newRenderer, bool delegateOwnership);
 				// operation
-				void renderLine(length_t line, Context& context,
-					const Point<>& origin, const Rect<>& paintRect,
+				void renderLine(length_t line, PaintContext& context, const Point<>& origin,
 					const Rect<>& clipRect, const TextLayout::Selection* selection) const /*throw()*/;
 				// ILayoutInformationProvider
 				const FontCollection& fontCollection() const /*throw()*/;
 				const presentation::Presentation& presentation() const /*throw()*/;
 				ISpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/;
 				const Font::Metrics& textMetrics() const /*throw()*/;
+				// presentation.DefaultTextStyleListener
+				void defaultTextLineStyleChanged(std::tr1::shared_ptr<const presentation::TextLineStyle> used);
+				void defaultTextRunStyleChanged(std::tr1::shared_ptr<const presentation::TextRunStyle> used);
 			private:
 				void fireDefaultFontChanged();
 			private:
@@ -186,8 +192,8 @@ namespace ascension {
 				mutable win32::Handle<HDC> memoryDC_;
 				mutable win32::Handle<HBITMAP> memoryBitmap_;
 				std::tr1::shared_ptr<const Font> primaryFont_;
-				ascension::internal::StrategyPointer<ISpecialCharacterRenderer> specialCharacterRenderer_;
-				ascension::internal::Listeners<IDefaultFontListener> listeners_;
+				detail::StrategyPointer<ISpecialCharacterRenderer> specialCharacterRenderer_;
+				detail::Listeners<IDefaultFontListener> listeners_;
 			};
 
 
