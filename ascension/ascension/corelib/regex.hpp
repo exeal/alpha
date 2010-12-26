@@ -498,7 +498,7 @@ namespace ascension {
 				appendingPosition_(input_.first), replaced_(false), matchedZeroWidth_(false),
 				usesAnchoringBounds_(true), usesTransparentBounds_(false) {}
 			template<typename OutputIterator> void appendReplacement(OutputIterator out,
-					const String& replacement, const ascension::internal::Int2Type<2>&) {
+					const String& replacement, const detail::Int2Type<2>&) {
 				typedef typename boost::match_results<CodePointIterator>::string_type String32;
 				if(appendingPosition_ != input_.second)
 					std::copy(appendingPosition_, Base::impl()[0].first, out);
@@ -509,20 +509,20 @@ namespace ascension {
 					text::UTF32To16Iterator<typename String32::const_iterator>(replaced.end()), out);
 			}
 			template<typename OutputIterator> void appendReplacement(OutputIterator out,
-					const String& replacement, const ascension::internal::Int2Type<4>&) {
+					const String& replacement, const detail::Int2Type<4>&) {
 				if(appendingPosition_ != input_.second)
 					std::copy(appendingPosition_, Base::impl()[0].first, out);
 				const String& replaced(Base::impl().format(replacement));
 				std::copy(replaced.begin(), replaced.end(), out);
 			}
 			template<typename OutputIterator>
-			OutputIterator appendTail(OutputIterator out, const ascension::internal::Int2Type<2>&) const {
+			OutputIterator appendTail(OutputIterator out, const detail::Int2Type<2>&) const {
 				return std::copy(
 					text::UTF32To16Iterator<CodePointIterator>(appendingPosition_),
 					text::UTF32To16Iterator<CodePointIterator>(input_.second), out);
 			}
 			template<typename OutputIterator>
-			OutputIterator appendTail(OutputIterator out, const ascension::internal::Int2Type<4>&) const {
+			OutputIterator appendTail(OutputIterator out, const detail::Int2Type<4>&) const {
 				return std::copy(appendingPosition_, input_.second, out);
 			}
 			bool acceptResult() {const bool b(Base::impl()[0].matched); matchedZeroWidth_ = b && Base::impl().length() == 0; if(b) current_ = Base::end(); return b;}

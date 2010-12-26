@@ -22,7 +22,7 @@ namespace ascension {
 	 * Defines entities the clients of Ascension do not access.
 	 * @internal
 	 */
-	namespace internal {
+	namespace detail {
 
 		/// Generates a type from the constant integer.
 		template<int v> struct Int2Type {static const int value = v;};
@@ -195,10 +195,10 @@ namespace ascension {
 		typedef procedureSignature;															\
 	}
 
-	} // namespace internal
+	} // namespace detail
 
 	/// Signed @c length_t
-	typedef internal::ToSigned<length_t>::Result signed_length_t;
+	typedef detail::ToSigned<length_t>::Result signed_length_t;
 
 } // namespace ascension
 

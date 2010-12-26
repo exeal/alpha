@@ -41,6 +41,7 @@ LineLayoutBuffer::LineLayoutBuffer(k::Document& document, length_t bufferSize, b
 	if(bufferSize == 0)
 		throw invalid_argument("size of the buffer can't be zero.");
 	document_.addPrenotifiedListener(*this);
+	document_.addPartitioningListener(*this);
 }
 
 /// Destructor.
@@ -49,6 +50,7 @@ LineLayoutBuffer::~LineLayoutBuffer() /*throw()*/ {
 	for(list<TextLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i)
 		delete *i;
 	document_.removePrenotifiedListener(*this);
+	document_.removePartitioningListener(*this);
 }
 
 /**
@@ -157,6 +159,11 @@ void LineLayoutBuffer::documentChanged(const kernel::Document&, const kernel::Do
 	}
 }
 
+/// @see kernel#IDocumentPartitioningListener#documentPartitioningChanged
+void LineLayoutBuffer::documentPartitioningChanged(const k::Region& changedRegion) {
+	invalidate(changedRegion.beginning().line, changedRegion.end().line + 1);
+}
+
 void LineLayoutBuffer::fireVisualLinesDeleted(length_t first, length_t last, length_t sublines) {
 	numberOfVisualLines_ -= sublines;
 	const bool widthChanged = longestLine_ >= first && longestLine_ < last;
@@ -185,9 +192,9 @@ void LineLayoutBuffer::fireVisualLinesModified(length_t first, length_t last,
 		int newLongestLineWidth = longestLineWidth_;
 		for(Iterator i(firstCachedLine()), e(lastCachedLine()); i != e; ++i) {
 			const TextLayout& layout = **i;
-			if(layout.longestSublineWidth() > newLongestLineWidth) {
+			if(layout.longestLineWidth() > newLongestLineWidth) {
 				newLongestLine = (*i)->lineNumber();
-				newLongestLineWidth = layout.longestSublineWidth();
+				newLongestLineWidth = layout.longestLineWidth();
 			}
 		}
 		if(longestLineChanged = (newLongestLine != longestLine_))
@@ -326,7 +333,7 @@ length_t LineLayoutBuffer::mapLogicalPositionToVisualPosition(const k::Position&
 		return position.line;
 	}
 	const TextLayout& layout = lineLayout(position.line);
-	const length_t line = layout.line(position.column);
+	const length_t line = layout.lineAt(position.column);
 	if(column != 0)
 		*column = position.column - layout.lineOffset(line);
 	return mapLogicalLineToVisualLine(position.line) + line;
@@ -445,9 +452,9 @@ void LineLayoutBuffer::updateLongestLine(length_t line, int width) /*throw()*/ {
 		longestLine_ = static_cast<length_t>(-1);
 		longestLineWidth_ = 0;
 		for(Iterator i(firstCachedLine()), e(lastCachedLine()); i != e; ++i) {
-			if((*i)->longestSublineWidth() > longestLineWidth_) {
+			if((*i)->longestLineWidth() > longestLineWidth_) {
 				longestLine_ = (*i)->lineNumber();
-				longestLineWidth_ = (*i)->longestSublineWidth();
+				longestLineWidth_ = (*i)->longestLineWidth();
 			}
 		}
 	}
@@ -579,7 +586,7 @@ TextRenderer::TextRenderer(Presentation& presentation, const FontCollection& fon
 		break;
 	}*/
 //	updateViewerSize(); ???
-	static_cast<presentation::internal::ITextRendererCollection&>(presentation).addTextRenderer(*this);
+	presentation_.addDefaultTextStyleListener(*this);
 }
 
 /// Copy-constructor.
@@ -590,12 +597,12 @@ TextRenderer::TextRenderer(const TextRenderer& other) :
 	setLayoutInformation(this, false);
 	updateTextMetrics();
 //	updateViewerSize(); ???
-	static_cast<presentation::internal::ITextRendererCollection&>(presentation_).addTextRenderer(*this);
+	presentation_.addDefaultTextStyleListener(*this);
 }
 
 /// Destructor.
 TextRenderer::~TextRenderer() /*throw()*/ {
-	static_cast<presentation::internal::ITextRendererCollection&>(presentation_).removeTextRenderer(*this);
+	presentation_.removeDefaultTextStyleListener(*this);
 //	getTextViewer().removeDisplaySizeListener(*this);
 //	layouts_.removeVisualLinesListener(*this);
 }
@@ -607,6 +614,15 @@ TextRenderer::~TextRenderer() /*throw()*/ {
  */
 void TextRenderer::addDefaultFontListener(IDefaultFontListener& listener) {
 	listeners_.add(listener);
+}
+
+/// @see DefaultTextStyleListener#defaultTextLineStyleChanged
+void TextRenderer::defaultTextLineStyleChanged(tr1::shared_ptr<const TextLineStyle>) {
+}
+
+/// @see DefaultTextStyleListener#defaultTextRunStyleChanged
+void TextRenderer::defaultTextRunStyleChanged(tr1::shared_ptr<const TextRunStyle>) {
+	updateTextMetrics();
 }
 
 void TextRenderer::fireDefaultFontChanged() {
@@ -670,14 +686,13 @@ void TextRenderer::removeDefaultFontListener(IDefaultFontListener& listener) {
  * @param line The line number
  * @param context The graphics context
  * @param origin The position to draw
- * @param paintRect The region to draw
  * @param clipRect The clipping region
  * @param selection The selection
  */
-void TextRenderer::renderLine(length_t line, Context& context, const Point<>& origin,
-		const Rect<>& paintRect, const Rect<>& clipRect, const TextLayout::Selection* selection) const /*throw()*/ {
+void TextRenderer::renderLine(length_t line, PaintContext& context, const Point<>& origin,
+		const Rect<>& clipRect, const TextLayout::Selection* selection) const /*throw()*/ {
 	if(!enablesDoubleBuffering_) {
-		lineLayout(line).draw(context, origin, paintRect, clipRect, selection);
+		lineLayout(line).draw(context, origin, clipRect, selection);
 		return;
 	}
 
@@ -685,7 +700,7 @@ void TextRenderer::renderLine(length_t line, Context& context, const Point<>& or
 	const Scalar dy = textMetrics().linePitch();
 
 	// skip to the subline needs to draw
-	const Scalar top = max(paintRect.top(), clipRect.top());
+	const Scalar top = max(context.boundsToPaint().top(), clipRect.top());
 	Scalar y = origin.y;
 	length_t subline = (y + dy >= top) ? 0 : (top - (y + dy)) / dy;
 	if(subline >= layout.numberOfLines())
@@ -707,8 +722,8 @@ void TextRenderer::renderLine(length_t line, Context& context, const Point<>& or
 			horizontalResolution, calculateMemoryBitmapSize(dy)), &::DeleteObject);
 	::SelectObject(memoryDC_.get(), memoryBitmap_.get());
 
-	const int left = max(paintRect.left(), clipRect.left());
-	const int right = min(paintRect.right(), clipRect.right());
+	const int left = max(context.boundsToPaint().left(), clipRect.left());
+	const int right = min(context.boundsToPaint().right(), clipRect.right());
 	const Scalar x = origin.x - left;
 	Rect<> offsetedPaintRect(paintRect), offsetedClipRect(clipRect);
 	offsetedPaintRect.translate(Dimension<>(-left, -y));
@@ -743,7 +758,7 @@ ISpecialCharacterRenderer* TextRenderer::specialCharacterRenderer() const /*thro
 
 bool TextRenderer::updateTextMetrics() {
 	// select the primary font
-	tr1::shared_ptr<const RunStyle> defaultStyle(presentation_.defaultTextRunStyle());
+	tr1::shared_ptr<const TextRunStyle> defaultStyle(presentation_.defaultTextRunStyle());
 	if(defaultStyle.get() != 0 && !defaultStyle->fontFamily.empty())
 		primaryFont_ = fontCollection().get(defaultStyle->fontFamily, defaultStyle->fontProperties);
 	else {

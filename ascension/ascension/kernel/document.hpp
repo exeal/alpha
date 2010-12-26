@@ -528,7 +528,7 @@ namespace ascension {
 			explicit Bookmarker(Document& document) /*throw()*/;
 			Document& document_;
 			ascension::internal::GapVector<length_t> markedLines_;
-			ascension::internal::Listeners<IBookmarkListener> listeners_;
+			detail::Listeners<IBookmarkListener> listeners_;
 			friend class Document;
 		};
 
@@ -663,7 +663,7 @@ namespace ascension {
 			};
 
 			texteditor::Session* session_;
-			ascension::internal::StrategyPointer<IDocumentInput> input_;
+			detail::StrategyPointer<IDocumentInput> input_;
 			std::auto_ptr<DocumentPartitioner> partitioner_;
 			std::auto_ptr<Bookmarker> bookmarker_;
 			std::auto_ptr<IContentTypeInformationProvider> contentTypeInformationProvider_;
@@ -679,10 +679,10 @@ namespace ascension {
 			std::pair<Position, Point*>* accessibleArea_;
 
 			std::list<IDocumentListener*> listeners_, prenotifiedListeners_;
-			ascension::internal::Listeners<IDocumentStateListener> stateListeners_;
-//			ascension::internal::Listeners<ICompoundChangeListener> compoundChangeListeners_;
-			ascension::internal::Listeners<IDocumentRollbackListener> rollbackListeners_;
-			ascension::internal::Listeners<IDocumentPartitioningListener> partitioningListeners_;
+			detail::Listeners<IDocumentStateListener> stateListeners_;
+//			detail::Listeners<ICompoundChangeListener> compoundChangeListeners_;
+			detail::Listeners<IDocumentRollbackListener> rollbackListeners_;
+			detail::Listeners<IDocumentPartitioningListener> partitioningListeners_;
 
 			friend class DocumentPartitioner;
 		};
