@@ -61,7 +61,7 @@ Point::Point(Document& document, const Position& position /* = Position() */, IP
 		document_(&document), position_(position), adapting_(true), gravity_(Direction::FORWARD), listener_(listener) {
 	if(position != Position() && !document.region().includes(position))
 		throw BadPositionException(position);
-	static_cast<internal::IPointCollection<Point>&>(document).addNewPoint(*this);
+	static_cast<detail::IPointCollection<Point>&>(document).addNewPoint(*this);
 }
 
 /**
@@ -73,14 +73,14 @@ Point::Point(const Point& other) : document_(other.document_), position_(other.p
 		adapting_(other.adapting_), gravity_(other.gravity_), listener_(other.listener_) {
 	if(document_ == 0)
 		throw DocumentDisposedException();
-	static_cast<internal::IPointCollection<Point>*>(document_)->addNewPoint(*this);
+	static_cast<detail::IPointCollection<Point>*>(document_)->addNewPoint(*this);
 }
 
 /// Destructor.
 Point::~Point() /*throw()*/ {
 	lifeCycleListeners_.notify(&IPointLifeCycleListener::pointDestroyed);
 	if(document_ != 0)
-		static_cast<internal::IPointCollection<Point>*>(document_)->removePoint(*this);
+		static_cast<detail::IPointCollection<Point>*>(document_)->removePoint(*this);
 }
 
 /**

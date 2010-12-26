@@ -27,18 +27,18 @@ namespace ascension {
 
 	namespace text {class IdentifierSyntax;}
 
-	namespace kernel {
+	namespace detail {
+		/// @internal Interface for objects which manage the set of points.
+		template<class PointType> class IPointCollection {
+		public:
+			/// Adds the newly created point.
+			virtual void addNewPoint(PointType& point) = 0;
+			/// Deletes the point about to be destroyed (@a point is in its destructor call).
+			virtual void removePoint(PointType& point) = 0;
+		};
+	} // namespace detail
 
-		namespace internal {
-			/// @internal Interface for objects which manage the set of points.
-			template<class PointType> class IPointCollection {
-			public:
-				/// Adds the newly created point.
-				virtual void addNewPoint(PointType& point) = 0;
-				/// Deletes the point about to be destroyed (@a point is in its destructor call).
-				virtual void removePoint(PointType& point) = 0;
-			};
-		} // namespace internal
+	namespace kernel {
 
 		class Point;
 		class Document;
@@ -499,8 +499,8 @@ namespace ascension {
 				void next() {++impl_;}
 				void previous() {--impl_;}
 			private:
-				Iterator(ascension::internal::GapVector<length_t>::ConstIterator impl) : impl_(impl) {}
-				ascension::internal::GapVector<length_t>::ConstIterator impl_;
+				Iterator(detail::GapVector<length_t>::ConstIterator impl) : impl_(impl) {}
+				detail::GapVector<length_t>::ConstIterator impl_;
 				friend class Bookmarker;
 			};
 			// destructor
@@ -520,20 +520,20 @@ namespace ascension {
 			void mark(length_t line, bool set = true);
 			void toggle(length_t line);
 		private:
-			ascension::internal::GapVector<length_t>::Iterator find(length_t line) const /*throw()*/;
+			detail::GapVector<length_t>::Iterator find(length_t line) const /*throw()*/;
 			// IDocumentListener
 			void documentAboutToBeChanged(const Document& document);
 			void documentChanged(const Document& document, const DocumentChange& change);
 		private:
 			explicit Bookmarker(Document& document) /*throw()*/;
 			Document& document_;
-			ascension::internal::GapVector<length_t> markedLines_;
+			detail::GapVector<length_t> markedLines_;
 			detail::Listeners<IBookmarkListener> listeners_;
 			friend class Document;
 		};
 
 		// the documentation is at document.cpp
-		class Document : public internal::IPointCollection<Point>, public texteditor::internal::ISessionElement {
+		class Document : public detail::IPointCollection<Point>, public detail::SessionElement {
 			ASCENSION_NONCOPYABLE_TAG(Document);
 		public:
 			/// The property key for the title of the document.
@@ -559,7 +559,7 @@ namespace ascension {
 				std::size_t revisionNumber_;
 				friend class Document;
 			};
-			typedef ascension::internal::GapVector<Line*> LineList;	///< List of lines.
+			typedef detail::GapVector<Line*> LineList;	///< List of lines.
 
 			// constructors
 			Document();
@@ -645,9 +645,9 @@ namespace ascension {
 			void initialize();
 			void partitioningChanged(const Region& changedRegion) /*throw()*/;
 			void updatePoints(const DocumentChange& change) /*throw()*/;
-			// internal.ISessionElement
+			// detail.SessionElement
 			void setSession(texteditor::Session& session) /*throw()*/ {session_ = &session;}
-			// internal.IPointCollection<Point>
+			// detail.IPointCollection<Point>
 			void addNewPoint(Point& point) {points_.insert(&point);}
 			void removePoint(Point& point) {points_.erase(&point);}
 

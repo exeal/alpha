@@ -601,11 +601,6 @@ namespace ascension {
 				private:
 					std::auto_ptr<Encoder> create() const /*throw()*/;
 				};
-
-				namespace internal {
-					std::auto_ptr<Encoder> createSingleByteEncoder(
-						const Char** byteToCharacterWire, const IEncodingProperties& properties) /*throw()*/;
-				}
 			} // namespace sbcs
 
 			namespace dbcs {
@@ -630,8 +625,14 @@ namespace ascension {
 					Line4, Line5, Line6, Line7, Line8, Line9, LineA, LineB, LineC, LineD, LineE, LineF> {};
 			} // namespace dbcs
 		}
+	}
 
+	namespace detail {
+		std::auto_ptr<encoding::Encoder> createSingleByteEncoder(
+			const Char** byteToCharacterWire, const encoding::IEncodingProperties& properties) /*throw()*/;
+	}
 
+	namespace encoding {
 		/**
 		 * Returns informations for all available encodings.
 		 * @param[out] out The output iterator to receive pairs consist of the enumeration
@@ -703,7 +704,8 @@ namespace ascension {
 
 		/// @see EncoderFactory#create
 		template<typename MappingTable> std::auto_ptr<Encoder> implementation::sbcs::SingleByteEncoderFactory<MappingTable>::create() const /*throw()*/ {
-			return implementation::sbcs::internal::createSingleByteEncoder(MappingTable::VALUES, *this);}
+			return detail::createSingleByteEncoder(MappingTable::VALUES, *this);
+		}
 	}
 } // namespace ascension.encoding
 

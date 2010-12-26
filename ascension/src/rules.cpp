@@ -13,10 +13,11 @@ using namespace ascension::presentation;
 using namespace ascension::rules;
 using namespace ascension::text;
 using namespace std;
-using rules::internal::HashTable;
+using detail::HashTable;
 
 
 namespace {
+	// bad idea :(
 	template<typename T> inline bool inRange(T v, T b, T e) {return v >= b && v <= e;}
 	template<typename T> struct InRange : unary_function<T, bool> {
 		InRange(T first, T last) : f(first), l(last) {}
@@ -25,46 +26,45 @@ namespace {
 	};
 }
 
-// internal.HashTable ///////////////////////////////////////////////////////
+// detail.HashTable ///////////////////////////////////////////////////////////////////////////////
 
 namespace ascension {
-	namespace rules {
-		namespace internal {
-			class HashTable {
-				ASCENSION_NONCOPYABLE_TAG(HashTable);
-			public:
-				template<typename StringSequence>
-				HashTable(StringSequence first, StringSequence last, bool caseSensitive);
-				~HashTable() /*throw()*/;
-				template<typename CharacterSequence>
-				static ulong hashCode(CharacterSequence first, CharacterSequence last);
-				bool matches(const Char* first, const Char* last) const;
-				size_t maximumLength() const /*throw()*/ {return maxLength_;}
-			private:
-				struct Entry {
-					String data;
-					Entry* next;
-					explicit Entry(const String& str) /*throw()*/ : data(str) {}
-					~Entry() /*throw()*/ {delete next;}
-				};
-				Entry** entries_;
-				size_t numberOfEntries_;
-				size_t maxLength_;	// the length of the longest keyword
-				const bool caseSensitive_;
+	namespace detail {
+		class HashTable {
+			ASCENSION_NONCOPYABLE_TAG(HashTable);
+		public:
+			template<typename StringSequence>
+			HashTable(StringSequence first, StringSequence last, bool caseSensitive);
+			~HashTable() /*throw()*/;
+			template<typename CharacterSequence>
+			static ulong hashCode(CharacterSequence first, CharacterSequence last);
+			bool matches(const Char* first, const Char* last) const;
+			size_t maximumLength() const /*throw()*/ {return maxLength_;}
+		private:
+			struct Entry {
+				String data;
+				Entry* next;
+				explicit Entry(const String& str) /*throw()*/ : data(str) {}
+				~Entry() /*throw()*/ {delete next;}
 			};
-		}
+			Entry** entries_;
+			size_t numberOfEntries_;
+			size_t maxLength_;	// the length of the longest keyword
+			const bool caseSensitive_;
+		};
 	}
-} // namespace ascension.rules.internal
+} // namespace ascension.detail
 
 /**
  * Constructor.
- * @param first the start of the strings
- * @param last the end of the strings
- * @param caseSensitive set @c true to enable case sensitive match
+ * @tparam StringSequence A type of @a first and @a last
+ * @param first The start of the strings
+ * @param last The end of the strings
+ * @param caseSensitive Set @c true to enable case sensitive match
  */
 template<typename StringSequence>
 HashTable::HashTable(StringSequence first, StringSequence last, bool caseSensitive)
-		: numberOfEntries_(distance(first, last)), maxLength_(0), caseSensitive_(caseSensitive) {
+		: numberOfEntries_(std::distance(first, last)), maxLength_(0), caseSensitive_(caseSensitive) {
 	entries_ = new Entry*[numberOfEntries_];
 	fill_n(entries_, numberOfEntries_, static_cast<Entry*>(0));
 	while(first != last) {
@@ -87,11 +87,12 @@ HashTable::~HashTable() /*throw()*/ {
 }
 
 /**
- * Returns the hash value of the specified string. @a CharacterSequence must represent UTF-16
- * character sequence.
- * @param first the start of the character sequence
- * @param last the end of the character sequence
- * @return the hash value
+ * Returns the hash value of the specified string.
+ * @tparam CharacterSequence A type of @a first and @a last. Must represent UTF-16 character
+ *                           sequence.
+ * @param first The start of the character sequence
+ * @param last The end of the character sequence
+ * @return The hash value
  */
 template<typename CharacterSequence>
 inline ulong HashTable::hashCode(CharacterSequence first, CharacterSequence last) {
@@ -107,8 +108,8 @@ inline ulong HashTable::hashCode(CharacterSequence first, CharacterSequence last
 
 /**
  * Searches the specified string.
- * @param first the start of the string
- * @param last the end of the string
+ * @param first The start of the string
+ * @param last The end of the string
  * @return @c true if the specified string is found
  */
 bool HashTable::matches(const Char* first, const Char* last) const {
@@ -132,7 +133,7 @@ bool HashTable::matches(const Char* first, const Char* last) const {
 }
 
 
-// URIDetector //////////////////////////////////////////////////////////////
+// URIDetector ////////////////////////////////////////////////////////////////////////////////////
 
 namespace {
 	// Procedures implement productions of RFC 3986 and RFC 3987.
@@ -555,9 +556,9 @@ const URIDetector& URIDetector::defaultIANAURIInstance() /*throw()*/ {
 
 /**
  * Returns the end of a URL begins at the given position.
- * @param first the beginning of the character sequence
- * @param last the end of the character sequence
- * @return the end of the detected URI, or @a first (not @c null) if not matched
+ * @param first The beginning of the character sequence
+ * @param last The end of the character sequence
+ * @return The end of the detected URI, or @a first (not @c null) if not matched
  * @throw NullPointerException @a first and/or @a last are @c null
  */
 const Char* URIDetector::detect(const Char* first, const Char* last) const {
@@ -588,9 +589,9 @@ const Char* URIDetector::detect(const Char* first, const Char* last) const {
 
 /**
  * Searches a URI in the specified character sequence.
- * @param first the beginning of the character sequence
- * @param last the end of the character sequence
- * @param[out] result the range of the found URI in the target character sequence
+ * @param first The beginning of the character sequence
+ * @param last The end of the character sequence
+ * @param[out] result The range of the found URI in the target character sequence
  * @return @c true if a URI was found
  * @throw NullPointerException @a first and/or @a last are @c null
  */
@@ -629,11 +630,11 @@ bool URIDetector::search(const Char* first, const Char* last, Range<const Char*>
 
 /**
  * Sets the valid schemes.
- * @param scheme the set of the schemes to set
- * @param caseSensitive set @c true to use case-sensitive comparison for scheme name matching.
+ * @param scheme The set of the schemes to set
+ * @param caseSensitive Set @c true to use case-sensitive comparison for scheme name matching.
  *                      However, RFC 3986 Section 3.1 says that schemes are case-insensitive
- * @return the detector
- * @throw std#invalid_argument invalid name as a scheme was found
+ * @return The detector
+ * @throw std#invalid_argument Invalid name as a scheme was found
  */
 URIDetector& URIDetector::setValidSchemes(const set<String>& schemes, bool caseSensitive /* = false */) {
 	// validation
@@ -653,11 +654,11 @@ URIDetector& URIDetector::setValidSchemes(const set<String>& schemes, bool caseS
 
 /**
  * Sets the valid schemes.
- * @param scheme the string contains the schemes separated by @a separator
- * @param caseSensitive set @c true to use case-sensitive comparison for scheme name matching
- * @param separator the character delimits scheme names in @a schemes. this can be a surrogate
- * @return the detector
- * @throw std#invalid_argument invalid name as a scheme was found
+ * @param scheme The string contains the schemes separated by @a separator
+ * @param caseSensitive Set @c true to use case-sensitive comparison for scheme name matching
+ * @param separator The character delimits scheme names in @a schemes. this can be a surrogate
+ * @return The detector
+ * @throw std#invalid_argument Invalid name as a scheme was found
  */
 URIDetector& URIDetector::setValidSchemes(const String& schemes, Char separator, bool caseSensitive /* = false */) {
 	set<String> container;
@@ -672,16 +673,16 @@ URIDetector& URIDetector::setValidSchemes(const String& schemes, Char separator,
 }
 
 
-// Token ////////////////////////////////////////////////////////////////////
+// Token //////////////////////////////////////////////////////////////////////////////////////////
 
 const Token::Identifier Token::UNCALCULATED = static_cast<Token::Identifier>(-1);
 
 
-// Rule /////////////////////////////////////////////////////////////////////
+// Rule ///////////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Protected constructor.
- * @param tokenID the identifier of the token which will be returned by the rule. can't be
+ * @param tokenID The identifier of the token which will be returned by the rule. Can't be
  *                @c Token#UNCALCULATED which is for internal use
  * @throw std#invalid_argument @a tokenID is invalid
  */
@@ -691,15 +692,15 @@ Rule::Rule(Token::Identifier tokenID) : id_(tokenID) {
 }
 
 
-// RegionRule ///////////////////////////////////////////////////////////////
+// RegionRule /////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Constructor.
- * @param id the identifier of the token which will be returned by the rule
- * @param startSequence the pattern's start sequence
- * @param endSequence the pattern's end sequence. if empty, token will end at end of line
- * @param escapeCharacter the character which a character will be ignored
- * @param caseSensitive set @c false to enable caseless match
+ * @param id The identifier of the token which will be returned by the rule
+ * @param startSequence The pattern's start sequence
+ * @param endSequence The pattern's end sequence. if empty, token will end at end of line
+ * @param escapeCharacter The character which a character will be ignored
+ * @param caseSensitive Set @c false to enable caseless match
  * @throw std#invalid_argument @a startSequence is empty
  */
 RegionRule::RegionRule(Token::Identifier id, const String& startSequence, const String& endSequence,
@@ -737,11 +738,11 @@ auto_ptr<Token> RegionRule::parse(const ITokenScanner& scanner, const Char* firs
 }
 
 
-// NumberRule ///////////////////////////////////////////////////////////////
+// NumberRule /////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Constructor.
- * @param id the identifier of the token which will be returned by the rule
+ * @param id The identifier of the token which will be returned by the rule
  */
 NumberRule::NumberRule(Token::Identifier id) /*throw()*/ : Rule(id) {
 }
@@ -813,12 +814,12 @@ auto_ptr<Token> NumberRule::parse(const ITokenScanner& scanner, const Char* firs
 }
 
 
-// URIRule //////////////////////////////////////////////////////////////////
+// URIRule ////////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Constructor.
- * @param id the identifier of the token which will be returned by the rule
- * @param uriDetector the URI detector
+ * @param id The identifier of the token which will be returned by the rule
+ * @param uriDetector The URI detector
  */
 URIRule::URIRule(Token::Identifier id, const URIDetector& uriDetector,
 		bool delegateOwnership) /*throw()*/ : Rule(id), uriDetector_(&uriDetector, delegateOwnership) {
@@ -839,14 +840,14 @@ auto_ptr<Token> URIRule::parse(const ITokenScanner& scanner, const Char* first, 
 }
 
 
-// WordRule /////////////////////////////////////////////////////////////////
+// WordRule ///////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Constructor.
- * @param id the identifier of the token which will be returned by the rule
- * @param first the start of the words
- * @param last the end of the words
- * @param caseSensitive set @c false to enable caseless match
+ * @param id The identifier of the token which will be returned by the rule
+ * @param first The start of the words
+ * @param last The end of the words
+ * @param caseSensitive Set @c false to enable caseless match
  * @throw NullPointerException @a first and/or @a last are @c null
  * @throw std#invalid_argument @a first &gt;= @a last
  */
@@ -862,11 +863,11 @@ WordRule::WordRule(Token::Identifier id, const String* first, const String* last
 
 /**
  * Constructor.
- * @param id the identifier of the token which will be returned by the rule
- * @param first the start of the string
- * @param last the end of the string
- * @param separator the separator character in the string
- * @param caseSensitive set @c false to enable caseless match
+ * @param id The identifier of the token which will be returned by the rule
+ * @param first The start of the string
+ * @param last The end of the string
+ * @param separator The separator character in the string
+ * @param caseSensitive Set @c false to enable caseless match
  * @throw NullPointerException @a first and/or @a last are @c null
  * @throw std#invalid_argument @a first &gt; last, or @a separator is a surrogate
  */
@@ -912,13 +913,13 @@ auto_ptr<Token> WordRule::parse(const ITokenScanner& scanner, const Char* first,
 
 #ifndef ASCENSION_NO_REGEX
 
-// RegexRule ////////////////////////////////////////////////////////////////
+// RegexRule //////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Constructor.
- * @param id the identifier of the token which will be returned by the rule
- * @param pattern the compiled regular expression
- * @throw regex#PatternSyntaxException the specified pattern is invalid
+ * @param id The identifier of the token which will be returned by the rule
+ * @param pattern The compiled regular expression
+ * @throw regex#PatternSyntaxException The specified pattern is invalid
  */
 RegexRule::RegexRule(Token::Identifier id, auto_ptr<const regex::Pattern> pattern) : Rule(id), pattern_(pattern) {
 }
@@ -940,7 +941,7 @@ auto_ptr<Token> RegexRule::parse(const ITokenScanner& scanner, const Char* first
 #endif // !ASCENSION_NO_REGEX
 
 
-// NullTokenScanner /////////////////////////////////////////////////////////
+// NullTokenScanner ///////////////////////////////////////////////////////////////////////////////
 
 /// @see ITokenScanner#getIdentifierSyntax
 const IdentifierSyntax& NullTokenScanner::getIdentifierSyntax() const /*throw()*/ {
@@ -967,11 +968,11 @@ void NullTokenScanner::parse(const Document&, const Region&) {
 }
 
 
-// LexicalTokenScanner //////////////////////////////////////////////////////
+// LexicalTokenScanner ////////////////////////////////////////////////////////////////////////////
 
 /**
  * Constructor.
- * @param contentType the content the scanner parses
+ * @param contentType The content the scanner parses
  */
 LexicalTokenScanner::LexicalTokenScanner(ContentType contentType) /*throw()*/ : contentType_(contentType), current_() {
 }
@@ -991,10 +992,10 @@ const IdentifierSyntax& LexicalTokenScanner::getIdentifierSyntax() const /*throw
 
 /**
  * Adds the new rule to the scanner.
- * @param rule the rule to be added
+ * @param rule The rule to be added
  * @throw NullPointerException @a rule is @c null
  * @throw std#invalid_argument @a rule is already registered
- * @throw BadScannerStateException the scanner is running
+ * @throw BadScannerStateException The scanner is running
  */
 void LexicalTokenScanner::addRule(auto_ptr<const Rule> rule) {
 	if(rule.get() == 0)
@@ -1008,10 +1009,10 @@ void LexicalTokenScanner::addRule(auto_ptr<const Rule> rule) {
 
 /**
  * Adds the new word rule to the scanner.
- * @param rule the rule to be added
+ * @param rule The rule to be added
  * @throw NullPointerException @a rule is @c null
  * @throw std#invalid_argument @a rule is already registered
- * @throw BadScannerStateException the scanner is running
+ * @throw BadScannerStateException The scanner is running
  */
 void LexicalTokenScanner::addWordRule(auto_ptr<const WordRule> rule) {
 	if(rule.get() == 0)
@@ -1078,12 +1079,12 @@ void LexicalTokenScanner::parse(const Document& document, const Region& region) 
 }
 
 
-// TransitionRule ///////////////////////////////////////////////////////////
+// TransitionRule /////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Protected constructor.
- * @param contentType the content type of the transition source
- * @param destination the content type of the transition destination
+ * @param contentType The content type of the transition source
+ * @param destination The content type of the transition destination
  */
 TransitionRule::TransitionRule(ContentType contentType,
 		ContentType destination) : contentType_(contentType), destination_(destination) /*throw()*/ {
@@ -1096,33 +1097,33 @@ TransitionRule::~TransitionRule() /*throw()*/ {
 /**
  * @fn TransitionRule::clone
  * Creates and returns a copy of the object.
- * @return a copy of the object
+ * @return A copy of the object
  */
 
 /**
  * @fn TransitionRule::matches
  * Returns @c true if the rule matches the specified text. Note that an implementation can't use
  * the partitioning of the document to generate the new partition.
- * @param line the target line text
- * @param column the column number at which match starts
- * @return the length of the matched pattern. if and only if the match failed, returns 0.
- *         if matched zero width text, returns 1
- * @todo this documentation is confusable.
+ * @param line The target line text
+ * @param column The column number at which match starts
+ * @return The length of the matched pattern. If and only if the match failed, returns 0.
+ *         If matched zero width text, returns 1
+ * @todo This documentation is confusable.
  */
 
 
-// LiteralTransitionRule ////////////////////////////////////////////////////
+// LiteralTransitionRule //////////////////////////////////////////////////////////////////////////
 
 /**
  * Constructor.
- * @param contentType the content type of the transition source
- * @param destination the content type of the transition destination
- * @param pattern the pattern string to introduce the transition. if empty string is specified, the
+ * @param contentType The content type of the transition source
+ * @param destination The content type of the transition destination
+ * @param pattern The pattern string to introduce the transition. If empty string is specified, the
  *                transition will be occurred at the end of line
- * @param escapeCharacter the character which a character will be ignored. if @c NONCHARACTER is
- *                        specified, the escape character will be not set. this is always
+ * @param escapeCharacter The character which a character will be ignored. If @c NONCHARACTER is
+ *                        specified, the escape character will be not set. This is always
  *                        case-sensitive
- * @param caseSensitive set @c false to enable caseless match
+ * @param caseSensitive Set @c false to enable caseless match
  */
 LiteralTransitionRule::LiteralTransitionRule(ContentType contentType, ContentType destination,
 		const String& pattern, Char escapeCharacter /* = NONCHARACTER */, bool caseSensitive /* = true */) :
@@ -1151,13 +1152,13 @@ length_t LiteralTransitionRule::matches(const String& line, length_t column) con
 
 #ifndef ASCENSION_NO_REGEX
 
-// RegexTransitionRule //////////////////////////////////////////////////////
+// RegexTransitionRule ////////////////////////////////////////////////////////////////////////////
 
 /**
  * Constructor.
- * @param contentType the content type of the transition source
- * @param destination the content type of the transition destination
- * @param pattern the compiled regular expression to introduce the transition
+ * @param contentType The content type of the transition source
+ * @param destination The content type of the transition destination
+ * @param pattern The compiled regular expression to introduce the transition
  * @throw regex#PatternSyntaxException @a pattern is invalid
  */
 RegexTransitionRule::RegexTransitionRule(ContentType contentType, ContentType destination,
@@ -1190,7 +1191,7 @@ length_t RegexTransitionRule::matches(const String& line, length_t column) const
 #endif // !ASCENSION_NO_REGEX
 
 
-// LexicalPartitioner ///////////////////////////////////////////////////////
+// LexicalPartitioner /////////////////////////////////////////////////////////////////////////////
 
 /// Constructor.
 LexicalPartitioner::LexicalPartitioner() /*throw()*/ {
@@ -1211,9 +1212,9 @@ void LexicalPartitioner::deleteRules(list<const TransitionRule*>& rules) /*throw
 
 /**
  * Computes and constructs the partitions on the specified region.
- * @param start the start of the region to compute
- * @param minimalLast the partitioner must scan to this position at least
- * @param[out] changedRegion the region whose content type was changed
+ * @param start The start of the region to compute
+ * @param minimalLast The partitioner must scan to this position at least
+ * @param[out] changedRegion The region whose content type was changed
  */
 void LexicalPartitioner::computePartitioning(const Position& start, const Position& minimalLast, Region& changedRegion) {
 	// TODO: see LexicalPartitioner.documentChanged.
@@ -1401,7 +1402,7 @@ void LexicalPartitioner::erasePartitions(const Position& first, const Position& 
 
 // returns the index of the partition encompasses the given position.
 inline size_t LexicalPartitioner::partitionAt(const Position& at) const /*throw()*/ {
-	size_t result = ascension::internal::searchBound(
+	size_t result = detail::searchBound(
 		static_cast<size_t>(0), partitions_.size(), at, bind1st(mem_fun(&LexicalPartitioner::getPartitionStart), this));
 	if(result == partitions_.size()) {
 		assert(partitions_.front()->start != document()->region().first);	// twilight context
@@ -1420,11 +1421,11 @@ inline size_t LexicalPartitioner::partitionAt(const Position& at) const /*throw(
 /**
  * @fn void ascension::rules::LexicalPartitioner::setRules(InputIterator first, InputIterator last)
  * @brief Sets the new transition rules.
- * @tparam InputIterator input iterator provides transition rules. the deference operator should
+ * @tparam InputIterator Input iterator provides transition rules. The deference operator should
  *                       return a value implicitly convertible to a pointer to @c TransitionRule.
- *                       this method calls @c TransitionRule#clone to copy the values
- * @param first, last the transition rules
- * @throw IllegalStateException this partitioner had already been connected to a document
+ *                       This method calls @c TransitionRule#clone to copy the values
+ * @param first, last The transition rules
+ * @throw IllegalStateException This partitioner had already been connected to a document
  */
 
 // returns the transition state (corresponding content type) at the given position.
@@ -1439,11 +1440,11 @@ inline ContentType LexicalPartitioner::transitionStateAt(const Position& at) con
 
 /**
  *
- * @param line the scanning line text
- * @param column the column number at which match starts
- * @param contentType the current content type
- * @param[out] destination the type of the transition destination content
- * @return the length of the pattern matched or 0 if the all rules did not matched
+ * @param line The scanning line text
+ * @param column The column number at which match starts
+ * @param contentType The current content type
+ * @param[out] destination The type of the transition destination content
+ * @return The length of the pattern matched or 0 if the all rules did not matched
  */
 inline length_t LexicalPartitioner::tryTransition(
 		const String& line, length_t column, ContentType contentType, ContentType& destination) const /*throw()*/ {
@@ -1481,20 +1482,20 @@ inline void LexicalPartitioner::verify() const {
 }
 
 
-// LexicalPartitionPresentationReconstructor ////////////////////////////////
+// LexicalPartitionPresentationReconstructor //////////////////////////////////////////////////////
 
 /**
  * Constructor.
- * @param presentation the presentation which gives the document and default text run style
- * @param tokenScanner the token scanner to use for tokenization
- * @param styles token identifier to its text style map
- * @param defaultStyle the style for the regions out of tokens. can be @c null
+ * @param presentation The presentation which gives the document and default text run style
+ * @param tokenScanner The token scanner to use for tokenization
+ * @param styles Token identifier to its text style map
+ * @param defaultStyle The style for the regions out of tokens. can be @c null
  * @throw NullPointerException @a tokenScanner is @c null
  */
 LexicalPartitionPresentationReconstructor::LexicalPartitionPresentationReconstructor(
 		const Presentation& presentation, auto_ptr<ITokenScanner> tokenScanner,
-		const map<Token::Identifier, tr1::shared_ptr<const presentation::RunStyle> >& styles,
-		tr1::shared_ptr<const presentation::RunStyle> defaultStyle /* = tr1::shared_ptr<const presentation::RunStyle>() */)
+		const map<Token::Identifier, tr1::shared_ptr<const presentation::TextRunStyle> >& styles,
+		tr1::shared_ptr<const presentation::TextRunStyle> defaultStyle /* = tr1::shared_ptr<const presentation::TextRunStyle>() */)
 		: presentation_(presentation), tokenScanner_(tokenScanner), styles_(styles) {
 	if(tokenScanner_.get() == 0)
 		throw NullPointerException("tokenScanner");

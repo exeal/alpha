@@ -561,7 +561,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 	ASCENSION_PREPARE_FIRST_CHANGE(rollbacking_);
 
 	// preprocess. these can't throw
-	ascension::internal::ValueSaver<bool> writeLock(changing_);
+	detail::ValueSaver<bool> writeLock(changing_);
 	changing_ = true;
 	fireDocumentAboutToBeChanged();
 

@@ -99,117 +99,120 @@ namespace ascension {
 		private:
 			ASCENSION_STATIC_ASSERT(text::CodeUnitSizeOf<CodePointIterator>::result == 4);
 		};
+	}
 
-		namespace internal {
-			/// @internal
-			template<typename CodePointIterator>
-			class MatchResultImpl : public MatchResult<CodePointIterator> {
-			public:
-				MatchResultImpl() {}
-				explicit MatchResultImpl(
-					const boost::match_results<CodePointIterator>& src) : impl_(src) {}
-				const CodePointIterator& end() const {return end(0);}
-				const CodePointIterator& end(int group) const {return get(group).second;}
-				String group() const {return group(0);}
-				String group(int group) const {
-					const std::basic_string<CodePoint> s(get(group).str());
-					return String(text::UTF32To16Iterator<>(
-						s.data()), text::UTF32To16Iterator<>(s.data() + s.length()));
-				}
-				std::size_t groupCount() const {return impl_.size();}
-				const CodePointIterator& start() const {return start(0);}
-				const CodePointIterator& start(int group) const {return get(group).first;}
-			protected:
-				boost::match_results<CodePointIterator>& impl() /*throw()*/ {return impl_;}
-				const boost::match_results<CodePointIterator>& impl() const /*throw()*/ {return impl_;}
-			private:
-				const boost::sub_match<CodePointIterator>& get(int group) const {
-					const boost::sub_match<CodePointIterator>& s = impl_[group];
-					if(group != 0 && !impl_[0].matched)
-						throw IllegalStateException("the previous was not performed or failed.");
-					if(group != 0 && !s.matched)
-						throw IndexOutOfBoundsException("the specified sub match group is not exist.");
-					return s;
-				}
-				boost::match_results<CodePointIterator> impl_;
-			};
+	namespace detail {
+		/// @internal
+		template<typename CodePointIterator>
+		class MatchResultImpl : public regex::MatchResult<CodePointIterator> {
+		public:
+			MatchResultImpl() {}
+			explicit MatchResultImpl(
+				const boost::match_results<CodePointIterator>& src) : impl_(src) {}
+			const CodePointIterator& end() const {return end(0);}
+			const CodePointIterator& end(int group) const {return get(group).second;}
+			String group() const {return group(0);}
+			String group(int group) const {
+				const std::basic_string<CodePoint> s(get(group).str());
+				return String(text::UTF32To16Iterator<>(
+					s.data()), text::UTF32To16Iterator<>(s.data() + s.length()));
+			}
+			std::size_t groupCount() const {return impl_.size();}
+			const CodePointIterator& start() const {return start(0);}
+			const CodePointIterator& start(int group) const {return get(group).first;}
+		protected:
+			boost::match_results<CodePointIterator>& impl() /*throw()*/ {return impl_;}
+			const boost::match_results<CodePointIterator>& impl() const /*throw()*/ {return impl_;}
+		private:
+			const boost::sub_match<CodePointIterator>& get(int group) const {
+				const boost::sub_match<CodePointIterator>& s = impl_[group];
+				if(group != 0 && !impl_[0].matched)
+					throw IllegalStateException("the previous was not performed or failed.");
+				if(group != 0 && !s.matched)
+					throw IndexOutOfBoundsException("the specified sub match group is not exist.");
+				return s;
+			}
+			boost::match_results<CodePointIterator> impl_;
+		};
 
-			/**
-			 * Unicode property enabled @c regex_traits for @c boost#basic_regex template class.
-			 * This traits class does not implement "additional optional requirements"
-			 * (http://www.boost.org/libs/regex/doc/concepts.html#traits).
-			 * @note This class is not intended to be subclassed.
-			 */
-			class RegexTraits {
-			private:
-				enum {
-					// POSIX compatible not in Unicode property
-					POSIX_ALNUM = text::ucd::SentenceBreak::LAST_VALUE,
-					POSIX_BLANK, POSIX_GRAPH, POSIX_PRINT, POSIX_PUNCT, POSIX_WORD, POSIX_XDIGIT,
-					// regex specific general category
-					GC_ANY, GC_ASSIGNED, GC_ASCII,
-					CLASS_END
-				};
-			public:
-				// original interface
-				RegexTraits() : collator_(&std::use_facet<std::collate<char_type> >(locale_)) {}
-				static bool unixLineMode, usesExtendedProperties;
-				// minimal requirements for traits
-				typedef CodePoint char_type;
-				typedef std::size_t size_type;
-				typedef std::basic_string<char_type> string_type;
-				typedef std::locale locale_type;
-				typedef std::bitset<CLASS_END> char_class_type;
-				static size_type length(const char_type* p) {size_type i = 0; while(p[i] != 0) ++i; return i;}
-				char_type translate(char_type c) const {
-					if(unixLineMode) return (c == LINE_FEED) ? LINE_SEPARATOR : c;
-					return (c < 0x10000ul && std::binary_search(NEWLINE_CHARACTERS,
-						ASCENSION_ENDOF(NEWLINE_CHARACTERS), static_cast<Char>(c & 0xffffu))) ? LINE_SEPARATOR : c;
-				}
-				char_type translate_nocase(char_type c) const {return text::CaseFolder::fold(translate(c));}
-				string_type transform(const char_type* p1, const char_type* p2) const {return collator_->transform(p1, p2);}
-				string_type transform_primary(const char_type* p1, const char_type* p2) const {return transform(p1, p2);}
-				char_class_type lookup_classname(const char_type* p1, const char_type* p2) const;
-				string_type lookup_collatename(const char_type* p1, const char_type* p2) const {return transform(p1, p2);}
-				bool isctype(char_type c, const char_class_type& f) const;
-				int value(char_type c, int radix) const {
-					switch(radix) {
-					case 8:
-						return (c >= '0' && c <= '7') ? static_cast<int>(c - '0') : -1;
-					case 10:
-						return (c >= '0' && c <= '9') ? static_cast<int>(c - '0') : -1;
-					case 16:
-						if(c >= '0' && c <= '9')		return c - '0';
-						else if(c >= 'A' && c <= 'F')	return c - 'A' + 10;
-						else if(c >= 'a' && c <= 'f')	return c - 'a' + 10;
-					default:
-						return -1;
-					}
-				}
-				locale_type imbue(locale_type l) {
-					locale_type temp = locale_;
-					collator_ = &std::use_facet<std::collate<char_type> >(locale_ = l);
-					return temp;
-				}
-				locale_type getloc() const {return locale_;}
-				std::string error_string(boost::regex_constants::error_type) const {return "Unknown error";}
-			private:
-				static std::size_t findPropertyValue(const String& expression);
-			private:
-				locale_type locale_;
-				const std::collate<char_type>* collator_;
-				static std::map<const Char*, int, text::ucd::PropertyNameComparer<Char> > names_;
-				static void buildNames();
+		/**
+		 * Unicode property enabled @c regex_traits for @c boost#basic_regex template class.
+		 * This traits class does not implement "additional optional requirements"
+		 * (http://www.boost.org/libs/regex/doc/concepts.html#traits).
+		 * @note This class is not intended to be subclassed.
+		 */
+		class RegexTraits {
+		private:
+			enum {
+				// POSIX compatible not in Unicode property
+				POSIX_ALNUM = text::ucd::SentenceBreak::LAST_VALUE,
+				POSIX_BLANK, POSIX_GRAPH, POSIX_PRINT, POSIX_PUNCT, POSIX_WORD, POSIX_XDIGIT,
+				// regex specific general category
+				GC_ANY, GC_ASSIGNED, GC_ASCII,
+				CLASS_END
 			};
-		} // namespace internal
+		public:
+			// original interface
+			RegexTraits() : collator_(&std::use_facet<std::collate<char_type> >(locale_)) {}
+			static bool unixLineMode, usesExtendedProperties;
+			// minimal requirements for traits
+			typedef CodePoint char_type;
+			typedef std::size_t size_type;
+			typedef std::basic_string<char_type> string_type;
+			typedef std::locale locale_type;
+			typedef std::bitset<CLASS_END> char_class_type;
+			static size_type length(const char_type* p) {size_type i = 0; while(p[i] != 0) ++i; return i;}
+			char_type translate(char_type c) const {
+				if(unixLineMode) return (c == LINE_FEED) ? LINE_SEPARATOR : c;
+				return (c < 0x10000ul && std::binary_search(NEWLINE_CHARACTERS,
+					ASCENSION_ENDOF(NEWLINE_CHARACTERS), static_cast<Char>(c & 0xffffu))) ? LINE_SEPARATOR : c;
+			}
+			char_type translate_nocase(char_type c) const {return text::CaseFolder::fold(translate(c));}
+			string_type transform(const char_type* p1, const char_type* p2) const {return collator_->transform(p1, p2);}
+			string_type transform_primary(const char_type* p1, const char_type* p2) const {return transform(p1, p2);}
+			char_class_type lookup_classname(const char_type* p1, const char_type* p2) const;
+			string_type lookup_collatename(const char_type* p1, const char_type* p2) const {return transform(p1, p2);}
+			bool isctype(char_type c, const char_class_type& f) const;
+			int value(char_type c, int radix) const {
+				switch(radix) {
+				case 8:
+					return (c >= '0' && c <= '7') ? static_cast<int>(c - '0') : -1;
+				case 10:
+					return (c >= '0' && c <= '9') ? static_cast<int>(c - '0') : -1;
+				case 16:
+					if(c >= '0' && c <= '9')		return c - '0';
+					else if(c >= 'A' && c <= 'F')	return c - 'A' + 10;
+					else if(c >= 'a' && c <= 'f')	return c - 'a' + 10;
+				default:
+					return -1;
+				}
+			}
+			locale_type imbue(locale_type l) {
+				locale_type temp = locale_;
+				collator_ = &std::use_facet<std::collate<char_type> >(locale_ = l);
+				return temp;
+			}
+			locale_type getloc() const {return locale_;}
+			std::string error_string(boost::regex_constants::error_type) const {return "Unknown error";}
+		private:
+			static std::size_t findPropertyValue(const String& expression);
+		private:
+			locale_type locale_;
+			const std::collate<char_type>* collator_;
+			static std::map<const Char*, int, text::ucd::PropertyNameComparer<Char> > names_;
+			static void buildNames();
+		};
+	} // namespace internal
+
+	namespace regex {
 
 		class Pattern;
 
 		// the documentation is regex.cpp
 		template<typename CodePointIterator>
-		class Matcher : public regex::internal::MatchResultImpl<CodePointIterator> {
+		class Matcher : public detail::MatchResultImpl<CodePointIterator> {
 		private:
-			typedef typename regex::internal::MatchResultImpl<CodePointIterator> Base;
+			typedef typename detail::MatchResultImpl<CodePointIterator> Base;
 		public:
 			/**
 			 * Returns the pattern that is interpreted by this matcher.
@@ -687,7 +690,7 @@ namespace ascension {
 			Pattern(const Char* first, const Char* last, boost::regex_constants::syntax_option_type nativeSyntax);
 		private:
 			Pattern(const String& regex, int flags);
-			boost::basic_regex<CodePoint, regex::internal::RegexTraits> impl_;
+			boost::basic_regex<CodePoint, detail::RegexTraits> impl_;
 			const int flags_;
 			template<typename CodePointIterator> friend class Matcher;
 		};

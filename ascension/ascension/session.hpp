@@ -8,7 +8,7 @@
 #define ASCENSION_SESSION_HPP
 
 #include <ascension/config.hpp>			// ASCENSION_NO_MIGEMO
-#include <ascension/internal.hpp>		// internal.Listeners
+#include <ascension/internal.hpp>		// detail.Listeners
 #include <ascension/kernel/fileio.hpp>	// fileio.PathCharacter
 #include <list>
 #include <vector>
@@ -70,7 +70,7 @@ namespace ascension {
 			Contents contents_;	// plain-text vs. rectangle-flag
 			Contents::iterator yankPointer_;
 			const std::size_t maximumNumberOfKills_;
-			ascension::internal::Listeners<IKillRingListener> listeners_;
+			detail::Listeners<IKillRingListener> listeners_;
 		};
 
 #ifdef ASCENSION_WINDOWS
