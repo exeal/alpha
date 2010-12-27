@@ -190,6 +190,14 @@ namespace ascension {
 #endif
 
 				// constructors
+				TextLayout(
+					const Presentation& presentation,
+					length_t line,
+					ReadingDirection readingDirection,
+					Scalar width,
+					const IFontCollection& fontCollection,
+					const NumberSubstitution& numberSubstitution
+					);
 				TextLayout(Context& context, const ILayoutInformationProvider& layoutInformation, length_t line);
 				~TextLayout() /*throw()*/;
 				// general attributes

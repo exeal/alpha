@@ -202,7 +202,7 @@ namespace ascension {
 			static std::map<const Char*, int, text::ucd::PropertyNameComparer<Char> > names_;
 			static void buildNames();
 		};
-	} // namespace internal
+	} // namespace detail
 
 	namespace regex {
 
@@ -387,7 +387,7 @@ namespace ascension {
 			template<typename OutputIterator>
 			Matcher& appendReplacement(OutputIterator out, const String& replacement) {
 				checkInplaceReplacement(); checkPreviousMatch();
-				appendReplacement(out, replacement, ascension::internal::Int2Type<text::CodeUnitSizeOf<OI>::result>());
+				appendReplacement(out, replacement, detail::Int2Type<text::CodeUnitSizeOf<OI>::result>());
 				appendingPosition_ = Base::impl()[0].second;
 				return *this;
 			}
@@ -404,7 +404,7 @@ namespace ascension {
 			template<typename OutputIterator>
 			OutputIterator appendTail(OutputIterator out) const {
 				checkInplaceReplacement();
-				return appendTail(out, internal::Int2Type<text::CodeUnitSizeOf<OutputIterator>::result>());
+				return appendTail(out, detail::Int2Type<text::CodeUnitSizeOf<OutputIterator>::result>());
 			}
 			// documentation is regex.cpp
 			String replaceAll(const String& replacement) {
@@ -493,7 +493,7 @@ namespace ascension {
 			 * @return A @c MatchResult with the state of this matcher
 			 */
 			std::auto_ptr<MatchResult<CodePointIterator> > toMatchResult() const {
-				return std::auto_ptr<MatchResult<CPI> >(new internal::MatchResultImpl<CPI>(Base::impl()));
+				return std::auto_ptr<MatchResult<CPI> >(new detail::MatchResultImpl<CPI>(Base::impl()));
 			}
 		private:
 			Matcher(const Pattern& pattern, CodePointIterator first, CodePointIterator last) :
