@@ -6,7 +6,7 @@
 
 #ifndef ASCENSION_NO_REGEX
 #include <ascension/corelib/regex.hpp>
-#include <ascension/internal.hpp>	// internal.SharedLibrary
+#include <ascension/internal.hpp>	// detail.SharedLibrary
 #ifndef ASCENSION_NO_MIGEMO
 #	include <ascension/corelib/encoder.hpp>
 #endif // !ASCENSION_NO_MIGEMO

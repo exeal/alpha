@@ -348,7 +348,11 @@ namespace ascension {
 		};
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
+	}
+
 		namespace internal {class TextViewerAccessibleProxy;}
+
+	namespace viewers {
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
 		class TextViewer :
@@ -356,7 +360,7 @@ namespace ascension {
 				public kernel::IDocumentListener, public kernel::IDocumentStateListener,
 				public kernel::IDocumentRollbackListener, public graphics::IDefaultFontListener,
 				public graphics::IVisualLinesListener, public ICaretListener, public ICaretStateListener,
-				public ascension::kernel::internal::IPointCollection<VisualPoint> {
+				public detail::IPointCollection<VisualPoint> {
 		public:
 			/// Result of hit test.
 			enum HitTestResult {
@@ -628,7 +632,7 @@ namespace ascension {
 			void visualLinesInserted(length_t first, length_t last) /*throw()*/;
 			void visualLinesModified(length_t first, length_t last,
 				signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/;
-			// internal.IPointCollection<VisualPoint>
+			// detail.IPointCollection<VisualPoint>
 			void addNewPoint(VisualPoint& point) {points_.insert(&point);}
 			void removePoint(VisualPoint& point) {points_.erase(&point);}
 
@@ -789,14 +793,14 @@ namespace ascension {
 			HWND toolTip_;
 			Char* tipText_;
 			// strategies and listeners
-			ascension::internal::StrategyPointer<IMouseInputStrategy> mouseInputStrategy_;
-			ascension::internal::Listeners<IDisplaySizeListener> displaySizeListeners_;
-			ascension::internal::Listeners<ITextViewerInputStatusListener> inputStatusListeners_;
-			ascension::internal::Listeners<IViewportListener> viewportListeners_;
+			detail::StrategyPointer<IMouseInputStrategy> mouseInputStrategy_;
+			detail::Listeners<IDisplaySizeListener> displaySizeListeners_;
+			detail::Listeners<ITextViewerInputStatusListener> inputStatusListeners_;
+			detail::Listeners<IViewportListener> viewportListeners_;
 			std::auto_ptr<RulerPainter> rulerPainter_;
 			std::auto_ptr<contentassist::IContentAssistant> contentAssistant_;
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-			internal::TextViewerAccessibleProxy* accessibleProxy_;
+			detail::TextViewerAccessibleProxy* accessibleProxy_;
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
 			// modes

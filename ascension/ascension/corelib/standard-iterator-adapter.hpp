@@ -41,7 +41,7 @@ namespace ascension {
 		}
 	};
 
-	namespace internal {
+	namespace detail {
 		template<typename T> struct RemovePointer {typedef T Type;};
 		template<typename T> struct RemovePointer<T*> {typedef T Type;};
 		template<typename T> struct RemoveReference {typedef T Type;};
@@ -84,16 +84,16 @@ namespace ascension {
 		public StandardInputIteratorAdapterBase<ConcreteIterator, Reference>,
 		public StandardIteratorLessGreaterDecoratorBase<ConcreteIterator>,
 		public std::iterator<
-			std::input_iterator_tag, typename internal::RemoveReference<Reference>::Type,
-			Distance, const typename internal::RemoveReference<Reference>::Type*, const Reference> {};
+			std::input_iterator_tag, typename detail::RemoveReference<Reference>::Type,
+			Distance, const typename detail::RemoveReference<Reference>::Type*, const Reference> {};
 
 	template<typename ConcreteIterator, typename Reference, typename Distance = std::ptrdiff_t>
 	class StandardConstBidirectionalIteratorAdapter :
 		public StandardConstBidirectionalIteratorAdapterBase<ConcreteIterator, Reference>,
 		public StandardIteratorLessGreaterDecoratorBase<ConcreteIterator>,
 		public std::iterator<
-			std::bidirectional_iterator_tag, typename internal::RemoveReference<Reference>::Type,
-			Distance, const typename internal::RemoveReference<Reference>::Type*, const Reference> {};
+			std::bidirectional_iterator_tag, typename detail::RemoveReference<Reference>::Type,
+			Distance, const typename detail::RemoveReference<Reference>::Type*, const Reference> {};
 
 	/**
 	 * Converts an Ascension basic bidirectional iterator class into the corresponding C++
