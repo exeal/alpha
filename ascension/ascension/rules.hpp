@@ -319,7 +319,7 @@ namespace ascension {
 				std::tr1::shared_ptr<const presentation::TextRunStyle> defaultStyle = std::tr1::shared_ptr<const presentation::TextRunStyle>());
 		private:
 			// presentation.IPartitionPresentationReconstructor
-			std::auto_ptr<presentation::IStyledTextRunIterator> getPresentation(const kernel::Region& region) const /*throw()*/;
+			std::auto_ptr<presentation::StyledTextRunIterator> getPresentation(const kernel::Region& region) const /*throw()*/;
 		private:
 			class StyledTextRunIterator;
 			const presentation::Presentation& presentation_;

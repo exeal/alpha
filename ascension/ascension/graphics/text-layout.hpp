@@ -12,6 +12,7 @@
 #include <ascension/kernel/document.hpp>
 #include <ascension/presentation.hpp>
 #include <ascension/graphics/color.hpp>
+#include <limits>	// std.numeric_limits
 
 namespace ascension {
 
@@ -144,6 +145,33 @@ namespace ascension {
 				virtual Scalar width() const /*throw()*/ = 0;
 			};
 
+			/**
+			 * @see TextLayout#TextLayout
+			 */
+			class TabExpander {
+			public:
+				/// Destructor.
+				virtual ~TabExpander() {
+				}
+				/**
+				 * Returns the next tab stop position given a reference position.
+				 * @param x The position in pixels
+				 * @param tabOffset The position within the underlying text that the tab occured
+				 * @return The next tab stop. Should be greater than @a x
+				 */
+				virtual Scalar nextTabStop(Scalar x, length_t tabOffset) const = 0;
+			};
+
+			class FixedWidthTabExpander : public TabExpander {
+			public:
+				explicit FixedWidthTabExpander(Scalar width) /*throw()*/;
+				Scalar nextTabStop(Scalar x, length_t tabOffset) const;
+			private:
+				const Scalar width_;
+			};
+
+			class TextColorOverride {};
+
 			class TextLayout {
 				ASCENSION_NONCOPYABLE_TAG(TextLayout);
 			public:
@@ -190,21 +218,24 @@ namespace ascension {
 #endif
 
 				// constructors
-				TextLayout(
-					const Presentation& presentation,
-					length_t line,
-					ReadingDirection readingDirection,
-					Scalar width,
-					const IFontCollection& fontCollection,
-					const NumberSubstitution& numberSubstitution
-					);
-				TextLayout(Context& context, const ILayoutInformationProvider& layoutInformation, length_t line);
+				TextLayout(const String& text,
+					presentation::ReadingDirection readingDirection,
+					presentation::TextAlignment alignment,
+					const FontCollection& fontCollection = systemFonts(),
+					std::tr1::shared_ptr<const presentation::TextRunStyle>
+						defaultTextRunStyle = std::tr1::shared_ptr<const presentation::TextRunStyle>(),
+					std::auto_ptr<presentation::StyledTextRunIterator>
+						textRunStyles = std::auto_ptr<presentation::StyledTextRunIterator>(),
+					const TabExpander* tabExpander = 0, Scalar width = std::numeric_limits<Scalar>::max(),
+					const presentation::NumberSubstitution* numberSubstitution = 0,
+					bool displayShapingControls = false, bool inhibitSymmetricSwapping = false,
+					bool disableDeprecatedFormatCharacters = false);
 				~TextLayout() /*throw()*/;
 				// general attributes
 				presentation::TextAlignment alignment() const /*throw()*/;
 				byte bidiEmbeddingLevel(length_t column) const;
 				bool isBidirectional() const /*throw()*/;
-				bool isDisposed() const /*throw()*/;
+				bool isEmpty() const /*throw()*/;
 				length_t lineNumber() const /*throw()*/;
 				presentation::ReadingDirection readingDirection() const /*throw()*/;
 				const presentation::TextLineStyle& style() const /*throw()*/;
@@ -231,9 +262,9 @@ namespace ascension {
 				presentation::StyledTextRun styledTextRun(length_t column) const;
 				// operations
 				void draw(PaintContext& context, const Point<>& origin,
-					const Rect<>& paintRect, const Rect<>& clipRect, const Selection* selection) const /*throw()*/;
+					const Rect<>& clipRect, const TextColorOverride* colorOverride) const /*throw()*/;
 				void draw(length_t line, PaintContext& context, const Point<>& origin,
-					const Rect<>& paintRect, const Rect<>& clipRect, const Selection* selection) const;
+					const Rect<>& clipRect, const TextColorOverride* colorOverride) const;
 				String fillToX(Scalar x) const;
 #ifdef _DEBUG
 				void dumpRuns(std::ostream& out) const;
@@ -251,11 +282,11 @@ namespace ascension {
 				void reorder() /*throw()*/;
 //				void rewrap();
 				int nextTabStopBasedLeftEdge(Scalar x, bool right) const /*throw()*/;
-				void wrap(Context& context) /*throw()*/;
+				void wrap(const TabExpander& tabExpander) /*throw()*/;
 			private:
-				const ILayoutInformationProvider& lip_;
-				length_t lineNumber_;
-				std::tr1::shared_ptr<const presentation::TextLineStyle> style_;
+				const String& text_;
+				const presentation::ReadingDirection readingDirection_;
+				const presentation::TextAlignment alignment_;
 				class TextRun;
 				TextRun** runs_;
 				std::size_t numberOfRuns_;
@@ -271,8 +302,8 @@ namespace ascension {
 			};
 
 
-			/// Returns @c true if the layout has been disposed.
-			inline bool TextLayout::isDisposed() const /*throw()*/ {return runs_ == 0;}
+			/// Returns @c true if the layout is empty.
+			inline bool TextLayout::isEmpty() const /*throw()*/ {return runs_ == 0;}
 
 			/**
 			 * Returns the wrapped line containing the specified column.
@@ -282,7 +313,7 @@ namespace ascension {
 			 */
 			inline length_t TextLayout::lineAt(length_t column) const {
 				if(column > text().length())
-					throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
+					throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));
 				return (numberOfLines() == 1) ? 0 :
 					detail::searchBound(static_cast<length_t>(0), numberOfLines(),
 						column, std::bind1st(std::mem_fun(&TextLayout::lineOffset), this));
@@ -298,9 +329,6 @@ namespace ascension {
 				return (line < numberOfLines_ - 1 ?
 					lineOffset(line + 1) : text().length()) - lineOffset(line);
 			}
-
-			/// Returns the line number.
-			inline length_t TextLayout::lineNumber() const /*throw()*/ {return lineNumber_;}
 
 			/**
 			 * Returns the offset of the start of the specified visual line from the start of the
@@ -356,27 +384,6 @@ namespace ascension {
 
 			/// Returns the number of the wrapped lines.
 			inline length_t TextLayout::numberOfLines() const /*throw()*/ {return numberOfLines_;}
-
-			/// Returns the text line style.
-			inline const presentation::TextLineStyle& TextLayout::style() const /*throw()*/ {return *style_;}
-#if 0
-			/// Asignment operator.
-			inline TextLayout::StyledSegmentIterator&
-				TextLayout::StyledSegmentIterator::operator=(
-				const StyledSegmentIterator& other) /*throw()*/ {p_ = other.p_; return *this;}
-
-			/// Returns @c true if the two iterators address the same segment.
-			inline bool TextLayout::StyledSegmentIterator::equals(
-				const StyledSegmentIterator& other) const /*throw()*/ {return p_ == other.p_;}
-
-			/// Moves to the next.
-			inline TextLayout::StyledSegmentIterator&
-				TextLayout::StyledSegmentIterator::next() /*throw()*/ {++p_; return *this;}
-
-			/// Moves to the previous.
-			inline TextLayout::StyledSegmentIterator&
-				TextLayout::StyledSegmentIterator::previous() /*throw()*/ {--p_; return *this;}
-#endif
 
 		}
 	}
