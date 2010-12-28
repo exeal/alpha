@@ -136,14 +136,10 @@ namespace {
 		typedef tr1::unordered_map<pair<String, FontProperties>, tr1::shared_ptr<Font>, Hasher> Registry;
 		Registry registry_;
 	};
-
-	inline win32::Handle<HDC> screenDC() {
-		return win32::Handle<HDC>(::GetDC(0), bind1st(ptr_fun(&::ReleaseDC), static_cast<HWND>(0)));
-	}
 } // namespace @0
 
 SystemFont::SystemFont(win32::Handle<HFONT> handle) : handle_(handle) {
-	win32::Handle<HDC> dc(screenDC());
+	win32::Handle<HDC> dc(detail::screenDC());
 	HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), handle_.get()));
 	::SetGraphicsMode(dc.get(), GM_ADVANCED);
 //	const double xdpi = dc.getDeviceCaps(LOGPIXELSX);
@@ -181,7 +177,7 @@ bool SystemFont::ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, 
 		return false;
 	if(ivs_.get() == 0) {
 		const_cast<SystemFont*>(this)->ivs_.reset(new IdeographicVariationSequences);
-		win32::Handle<HDC> dc(screenDC());
+		win32::Handle<HDC> dc(detail::screenDC());
 		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), handle_.get()));
 		static const TrueTypeFontTag CMAP_TAG = MakeTrueTypeFontTag<'c', 'm', 'a', 'p'>::value;
 		const DWORD bytes = ::GetFontData(dc.get(), CMAP_TAG, 0, 0, 0);
@@ -235,7 +231,7 @@ tr1::shared_ptr<const Font> SystemFonts::cache(const String& familyName, const F
 
 	// handle RunStyle.fontSizeAdjust
 	if(!equals(sizeAdjust, 0.0) && sizeAdjust > 0.0) {
-		win32::Handle<HDC> dc(screenDC());
+		win32::Handle<HDC> dc(detail::screenDC());
 		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font.get()));
 		TEXTMETRICW tm;
 		if(::GetTextMetricsW(dc.get(), &tm)) {

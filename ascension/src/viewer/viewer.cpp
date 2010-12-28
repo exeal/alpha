@@ -2720,7 +2720,6 @@ namespace {
 #endif // !LANG_LAO
 		return id == LANG_THAI || id == LANG_LAO;
 	}
-	win32::Handle<HDC> screenDC() {return win32::Handle<HDC>(::GetDC(0), bind1st(ptr_fun(::ReleaseDC), static_cast<HWND>(0)));}
 	/**
 	 * Returns the bitmap has specified size.
 	 * @param dc The device context
@@ -2748,7 +2747,7 @@ namespace {
 	 * @return The bitmap
 	 */
 	inline win32::Handle<HBITMAP> createSolidCaretBitmap(ushort width, ushort height, const RGBQUAD& color) {
-		win32::Handle<HDC> dc(screenDC());
+		win32::Handle<HDC> dc(detail::screenDC());
 		BITMAPINFO* info = prepareCaretBitmap(dc, width, height);
 		uninitialized_fill(info->bmiColors, info->bmiColors + width * height, color);
 		win32::Handle<HBITMAP> result(::CreateDIBitmap(
@@ -2764,7 +2763,7 @@ namespace {
 	 * @return The bitmap
 	 */
 	inline win32::Handle<HBITMAP> createRTLCaretBitmap(ushort height, bool bold, const RGBQUAD& color) {
-		win32::Handle<HDC> dc(screenDC());
+		win32::Handle<HDC> dc(detail::screenDC());
 		const RGBQUAD white = {0x00, 0x00, 0x00, 0x00};
 		BITMAPINFO* info = prepareCaretBitmap(dc, 5, height);
 		assert(height > 3);
@@ -2789,7 +2788,7 @@ namespace {
 	 * @return The bitmap
 	 */
 	inline win32::Handle<HBITMAP> createTISCaretBitmap(ushort height, bool bold, const RGBQUAD& color) {
-		win32::Handle<HDC> dc(screenDC());
+		win32::Handle<HDC> dc(detail::screenDC());
 		const RGBQUAD white = {0x00, 0x00, 0x00, 0x00};
 		const ushort width = max<ushort>(height / 8, 3);
 		BITMAPINFO* info = prepareCaretBitmap(dc, width, height);
