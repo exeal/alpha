@@ -345,10 +345,7 @@ namespace ascension {
 				void expandTabsWithoutWrapping() /*throw()*/;
 				std::size_t findRunForPosition(length_t column) const /*throw()*/;
 				void justify() /*throw()*/;
-				Scalar linePitch() const /*throw()*/;
 				void locations(length_t column, Point<>* leading, Point<>* trailing) const;
-				Scalar nextTabStop(int x, Direction direction) const /*throw()*/;
-				const String& text() const /*throw()*/;
 				void reorder() /*throw()*/;
 //				void rewrap();
 				int nextTabStopBasedLeftEdge(Scalar x, bool right) const /*throw()*/;
@@ -384,7 +381,7 @@ namespace ascension {
 			 * @throw kernel#BadPositionException @a column is greater than the length of the line
 			 */
 			inline length_t TextLayout::lineAt(length_t column) const {
-				if(column > text().length())
+				if(column > text_.length())
 					throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));
 				return (numberOfLines() == 1) ? 0 :
 					detail::searchBound(static_cast<length_t>(0), numberOfLines(),
@@ -411,7 +408,7 @@ namespace ascension {
 			 */
 			inline length_t TextLayout::lineLength(length_t line) const {
 				return (line < numberOfLines_ - 1 ?
-					lineOffset(line + 1) : text().length()) - lineOffset(line);
+					lineOffset(line + 1) : text_.length()) - lineOffset(line);
 			}
 
 			/**
