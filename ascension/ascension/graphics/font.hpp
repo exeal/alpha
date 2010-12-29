@@ -257,7 +257,10 @@ namespace ascension {
 
 			class Font {
 			public:
-				/// Provides physical font metrics information.
+				/**
+				 * Provides physical font metrics information.
+				 * @see LineMetrics
+				 */
 				class Metrics {
 				public:
 					/// Destructor.

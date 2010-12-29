@@ -9,6 +9,7 @@
 #define ASCENSION_TEXT_LAYOUT_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
+#include <ascension/corelib/memory.hpp>	// AutoBuffer
 #include <ascension/kernel/document.hpp>
 #include <ascension/presentation.hpp>
 #include <ascension/graphics/color.hpp>
@@ -146,6 +147,28 @@ namespace ascension {
 			};
 
 			/**
+			 * The @c InlineObject represents an inline object in @c TextLayout.
+			 */
+			class InlineObject {
+			public:
+				virtual ~InlineObject() /*throw()*/ {}
+				/// Returns the advance (width) of this inline object in pixels.
+				virtual Scalar advance() const /*throw()*/ = 0;
+				/// Returns the ascent of this inline object in pixels.
+				virtual Scalar ascent() const /*throw()*/ = 0;
+				/// Returns the descent of this inline object in pixels.
+				virtual Scalar descent() const /*throw()*/ = 0;
+				/**
+				 * Renders this inline object at the specified location.
+				 * @param context The graphic context
+				 * @param origin The location where this inline object is rendered
+				 */
+				virtual void draw(const PaintContext& context, const Point<>& origin) /*throw()*/ = 0;
+				/// Returns the size of this inline object in pixels.
+				Dimension<> size() const /*throw()*/ {return Dimension<>(advance(), ascent() + descent());}
+			};
+
+			/**
 			 * @see TextLayout#TextLayout
 			 */
 			class TabExpander {
@@ -170,7 +193,51 @@ namespace ascension {
 				const Scalar width_;
 			};
 
-			class TextColorOverride {};
+			class TextColorOverrideIterator {
+			public:
+				struct TextSegment {
+					Range<length_t> range;	///< The character range in the line.
+					Color foreground;		///< The foreground color.
+					Color background;		///< The background color.
+				};
+			public:
+				/// Destructor.
+				virtual ~TextColorOverrideIterator() /*throw()*/ {}
+				/**
+				 * Returns the current overriden text segment.
+				 * @param[out] segment
+				 * @throw NoSuchElementException The iterator is end
+				 */
+				virtual void current(TextSegment& segment) const = 0;
+				/// Returns @c false if the iterator has no more elements.
+				virtual bool hasNext() const /*throw()*/ = 0;
+				/**
+				 * Moves the iterator to the next overriden text segment.
+				 * @throw NoSuchElementException The iterator is end
+				 */
+				virtual void next() = 0;
+			};
+
+			/**
+			 * @see Font#Metrics
+			 */
+			class LineMetrics {
+			public:
+				/// Destructor.
+				virtual ~LineMetrics() /*throw()*/ {}
+				/// Returns the ascent of the text in pixels.
+				virtual Scalar ascent() const /*throw()*/ = 0;
+				/// Returns the ascent of the text in pixels.
+				virtual presentation::DominantBaseline baseline() const /*throw()*/ = 0;
+				/// Returns the ascent of the text in pixels.
+				virtual Scalar baselineOffset(presentation::AlignmentBaseline baseline) const /*throw()*/ = 0;
+				/// Returns the descent of the text in pixels.
+				virtual Scalar descent() const /*throw()*/ = 0;
+				/// Returns the height of the text in pixels.
+				Scalar height() const {return ascent() + descent() + leading();}
+				/// Returns the leading of the text in pixels.
+				virtual Scalar leading() const /*throw()*/ = 0;
+			};
 
 			class TextLayout {
 				ASCENSION_NONCOPYABLE_TAG(TextLayout);
@@ -219,8 +286,7 @@ namespace ascension {
 
 				// constructors
 				TextLayout(const String& text,
-					presentation::ReadingDirection readingDirection,
-					presentation::TextAlignment alignment,
+					presentation::ReadingDirection readingDirection, presentation::TextAlignment alignment,
 					const FontCollection& fontCollection = systemFonts(),
 					std::tr1::shared_ptr<const presentation::TextRunStyle>
 						defaultTextRunStyle = std::tr1::shared_ptr<const presentation::TextRunStyle>(),
@@ -249,6 +315,7 @@ namespace ascension {
 				NativePolygon blackBoxBounds(const Range<length_t>& range) const;
 				Dimension<> bounds() const /*throw()*/;
 				Rect<> bounds(const Range<length_t>& range) const;
+				const LineMetrics& lineMetrics(length_t line) const;
 				Point<> location(length_t column, Edge edge = LEADING) const;
 				std::pair<Point<>, Point<> > locations(length_t column) const;
 				Scalar longestLineWidth() const /*throw()*/;
@@ -261,17 +328,20 @@ namespace ascension {
 //				StyledSegmentIterator lastStyledSegment() const /*throw()*/;
 				presentation::StyledTextRun styledTextRun(length_t column) const;
 				// operations
-				void draw(PaintContext& context, const Point<>& origin,
-					const Rect<>& clipRect, const TextColorOverride* colorOverride) const /*throw()*/;
-				void draw(length_t line, PaintContext& context, const Point<>& origin,
-					const Rect<>& clipRect, const TextColorOverride* colorOverride) const;
+				void draw(PaintContext& context,
+					const Point<>& origin, const Rect<>& clipRect,
+					const Color& defaultForeground, const Color& defaultBackground,
+					const Selection* selection) const /*throw()*/;
+				void draw(length_t line, PaintContext& context,
+					const Point<>& origin, const Rect<>& clipRect,
+					const Color& defaultForeground, const Color& defaultBackground,
+					const Selection* selection) const;
 				String fillToX(Scalar x) const;
 #ifdef _DEBUG
 				void dumpRuns(std::ostream& out) const;
 #endif // _DEBUG
 
 			private:
-				void dispose() /*throw()*/;
 				void expandTabsWithoutWrapping() /*throw()*/;
 				std::size_t findRunForPosition(length_t column) const /*throw()*/;
 				void justify() /*throw()*/;
@@ -288,13 +358,14 @@ namespace ascension {
 				const presentation::ReadingDirection readingDirection_;
 				const presentation::TextAlignment alignment_;
 				class TextRun;
-				TextRun** runs_;
+				AutoBuffer<TextRun*> runs_;
 				std::size_t numberOfRuns_;
 				AutoBuffer<presentation::StyledTextRun> styledRanges_;
 				std::size_t numberOfStyledRanges_;
-				length_t* lineOffsets_;		// size is numberOfLines_
-				length_t* lineFirstRuns_;	// size is numberOfLines_
+				AutoBuffer<length_t> lineOffsets_;		// size is numberOfLines_
+				AutoBuffer<length_t> lineFirstRuns_;	// size is numberOfLines_
 				length_t numberOfLines_;
+				AutoBuffer<LineMetrics*> lineMetrics_;
 				Scalar longestLineWidth_;
 				Scalar wrapWidth_;	// -1 if should not wrap
 				friend class LineLayoutBuffer;
@@ -303,7 +374,7 @@ namespace ascension {
 
 
 			/// Returns @c true if the layout is empty.
-			inline bool TextLayout::isEmpty() const /*throw()*/ {return runs_ == 0;}
+			inline bool TextLayout::isEmpty() const /*throw()*/ {return runs_.get() == 0;}
 
 			/**
 			 * Returns the wrapped line containing the specified column.
@@ -320,10 +391,22 @@ namespace ascension {
 			}
 
 			/**
+			 * Returns the metrics for the specified line.
+			 * @param line The line number
+			 * @return The line metrics
+			 * @throw BadPositionException @a line is greater than the count of lines
+			 */
+			inline const LineMetrics& TextLayout::lineMetrics(length_t line) const {
+				if(line >= numberOfLines())
+					throw kernel::BadPositionException(kernel::Position());
+				return *lineMetrics_[line];
+			}
+
+			/**
 			 * Returns the length of the specified visual line.
 			 * @param line The visual line
 			 * @return The length of the line
-			 * @throw BadPositionException @a line is greater than the count of visual lines
+			 * @throw BadPositionException @a line is greater than the count of lines
 			 */
 			inline length_t TextLayout::lineLength(length_t line) const {
 				return (line < numberOfLines_ - 1 ?
@@ -335,22 +418,22 @@ namespace ascension {
 			 * logical line.
 			 * @param line The visual line
 			 * @return The offset
-			 * @throw BadPositionException @a line is greater than the count of visual lines
+			 * @throw BadPositionException @a line is greater than the count of lines
 			 */
 			inline length_t TextLayout::lineOffset(length_t line) const {
 				if(line >= numberOfLines())
 					throw kernel::BadPositionException(kernel::Position());
-				return (lineOffsets_ != 0) ? lineOffsets_[line] : 0;
+				return lineOffsets()[line];
 			}
 
 			/**
 			 * Returns the line offsets.
-			 * @return The line offsets whose length is @c #numberOfLines(), or @c null if the line
-			 *         is empty. Each element in the array is the offset for the first character in
-			 *         a line.
+			 * @return The line offsets whose length is @c #numberOfLines(). Each element in the
+			 *         array is the offset for the first character in a line
 			 */
 			inline const length_t* TextLayout::lineOffsets() const /*throw()*/ {
-				return lineOffsets_;
+				static const length_t offsetsForSingleline = 0;
+				return (numberOfLines() > 1) ? lineOffsets_.get() : &offsetsForSingleline;
 			}
 
 			/**
