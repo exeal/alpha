@@ -1805,7 +1805,7 @@ TextLayout::TextLayout(const String& text, ReadingDirection readingDirection,
 		bool inhibitSymmetricSwapping /* = false */, bool disableDeprecatedFormatCharacters /* = false */)
 		: text_(text), readingDirection_(readingDirection),
 		alignment_(resolveTextAlignment(alignment, readingDirection)), runs_(0), numberOfRuns_(0),
-		lineOffsets_(0), lineFirstRuns_(0), numberOfLines_(0), longestLineWidth_(-1), wrapWidth_(width) {
+		numberOfLines_(0), longestLineWidth_(-1), wrapWidth_(width) {
 
 	// sanity checks...
 	if(readingDirection != LEFT_TO_RIGHT && readingDirection != RIGHT_TO_LEFT)
@@ -1904,8 +1904,8 @@ TextLayout::TextLayout(const String& text, ReadingDirection readingDirection,
 	// wrap into visual lines and reorder runs in each lines
 	if(numberOfRuns_ == 0 || wrapWidth_ == numeric_limits<Scalar>::max()) {
 		numberOfLines_ = 1;
-//		lineFirstRuns_ = new size_t[1];
-//		lineFirstRuns_[0] = 0;
+		lineOffsets_.reset(&SINGLE_LINE_OFFSETS);
+		lineFirstRuns_.reset(&SINGLE_LINE_OFFSETS);
 		reorder();
 		expandTabsWithoutWrapping();
 	} else {
@@ -1931,12 +1931,12 @@ TextLayout::TextLayout(const String& text, ReadingDirection readingDirection,
 TextLayout::~TextLayout() /*throw()*/ {
 	for(size_t i = 0; i < numberOfRuns_; ++i)
 		delete runs_[i];
-//	runs_.reset();
-//	numberOfRuns_ = 0;
-//	lineOffsets_.reset();
-//	lineFirstRuns_.reset();
-//	lineFirstRuns_ = 0;
-//	numberOfLines_ = 0;
+	if(numberOfLines() == 1) {
+		assert(lineOffsets_.get() == &SINGLE_LINE_OFFSETS);
+		lineOffsets_.release();
+		assert(lineFirstRuns_.get() == &SINGLE_LINE_OFFSETS);
+		lineFirstRuns_.release();
+	}
 }
 #if 0
 /**
@@ -2977,7 +2977,7 @@ void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
 	copy(lineFirstRuns.begin(), lineFirstRuns.end(), lineFirstRuns_.get());
 	lineOffsets_.reset(new length_t[numberOfLines()]);
 	for(size_t i = 0; i < numberOfLines(); ++i)
-		lineOffsets_[i] = runs_[lineFirstRuns_[i]]->beginning();
+		const_cast<length_t&>(lineOffsets_[i]) = runs_[lineFirstRuns_[i]]->beginning();
 }
 
 

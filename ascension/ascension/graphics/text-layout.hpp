@@ -362,8 +362,9 @@ namespace ascension {
 				std::size_t numberOfRuns_;
 				AutoBuffer<presentation::StyledTextRun> styledRanges_;
 				std::size_t numberOfStyledRanges_;
-				AutoBuffer<length_t> lineOffsets_;		// size is numberOfLines_
-				AutoBuffer<length_t> lineFirstRuns_;	// size is numberOfLines_
+				AutoBuffer<const length_t> lineOffsets_;	// size is numberOfLines_
+				AutoBuffer<const length_t> lineFirstRuns_;	// size is numberOfLines_
+				static const length_t SINGLE_LINE_OFFSETS;
 				length_t numberOfLines_;
 				AutoBuffer<LineMetrics*> lineMetrics_;
 				Scalar longestLineWidth_;
@@ -431,10 +432,7 @@ namespace ascension {
 			 * @return The line offsets whose length is @c #numberOfLines(). Each element in the
 			 *         array is the offset for the first character in a line
 			 */
-			inline const length_t* TextLayout::lineOffsets() const /*throw()*/ {
-				static const length_t offsetsForSingleline = 0;
-				return (numberOfLines() > 1) ? lineOffsets_.get() : &offsetsForSingleline;
-			}
+			inline const length_t* TextLayout::lineOffsets() const /*throw()*/ {return lineOffsets_.get();}
 
 			/**
 			 * Returns the location for the specified character offset.
