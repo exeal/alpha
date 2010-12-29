@@ -125,14 +125,6 @@ void StyledTextRunEnumerator::next() {
 }
 
 
-// TextLineStyle //////////////////////////////////////////////////////////////////////////////////
-
-/// Default constructor.
-TextLineStyle::TextLineStyle() /*throw()*/ :
-		readingDirection(INHERIT_READING_DIRECTION), alignment(ALIGN_START) {
-}
-
-
 // Presentation ///////////////////////////////////////////////////////////////////////////////////
 
 tr1::shared_ptr<const TextLineStyle> Presentation::DEFAULT_TEXT_LINE_STYLE(new TextLineStyle());
