@@ -273,7 +273,7 @@ namespace ascension {
 					int cellHeight() const /*throw()*/ {return ascent() + descent();}
 					/// Returns the descent of the text in pixels.
 					virtual int descent() const /*throw()*/ = 0;
-					/// Returns the em height.
+					/// Returns the em height in pixels.
 					int emHeight() const /*throw()*/ {return cellHeight() - internalLeading();}
 					/// Returns the external leading in pixels.
 					/// @note In Ascension, external leadings are placed below characters.

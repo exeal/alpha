@@ -125,6 +125,37 @@ void StyledTextRunEnumerator::next() {
 }
 
 
+// WritingMode ////////////////////////////////////////////////////////////////////////////////////
+
+const WritingMode WritingMode::LR_TB();
+
+/// Default constructor creates a writing mode means the properties inherit from the parent.
+WritingMode::Writing() /*throw()*/ : block_(42), inline_(42), inlineAlternating_(true) {
+}
+
+/**
+ * Constructor.
+ * @param blockProgressionDirection The block-progression-direction
+ * @param inlineProgressionDirection The inline-progression-direction
+ * @param inlineAlternating
+ * @throw std#invalid_argument @a blockProgressionDirection and @a inlineProgressionDirection have
+ *                             same dimension
+ */
+WritingMode::WritingMode(ProgressionDirection blockProgressionDirection,
+		ProgressionDirection inlineProgressionDirection, bool inlineAlternating /* = false */)
+		: block_(blockProgressionDirection), inline_(inlineProgressionDirection),
+		inlineAlternating_(inlineAlternating) {
+	if(isHorizontal(blockProgressionDirection)) {
+		if(!isVerticalDirection(inlineProgressionDirection))
+			throw invalid_argument("");
+	} else if(isVertical(blockProgressionDirection)) {
+		if(!isHorizontalDirection(inlineProgressionDirection))
+			throw invalid_argument("");
+	} else
+		throw UnknownValueException("blockProgressionDirection");
+}
+
+
 // Presentation ///////////////////////////////////////////////////////////////////////////////////
 
 tr1::shared_ptr<const TextLineStyle> Presentation::DEFAULT_TEXT_LINE_STYLE(new TextLineStyle());

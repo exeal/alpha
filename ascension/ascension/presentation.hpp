@@ -273,6 +273,54 @@ namespace ascension {
 			INHERIT_READING_DIRECTION	///< 
 		};
 
+		enum ProgressionDirection {
+			LEFT_TO_RIGHT, RIGHT_TO_LEFT, TOP_TO_BOTTOM, BOTTOM_TO_TOP
+		}
+
+		/// Returns @c true if @a direction is horizontal.
+		inline bool isHorizontalDirection(ProgressionDirection direction) {
+			return direction == LEFT_TO_RIGHT || direction == RIGHT_TO_LEFT;
+		}
+
+		/// Returns @c true if @a direction is vertical.
+		inline bool isVerticalDirection(ProgressionDirection direction) {
+			return direction == TOP_TO_BOTTOM || direction == BOTTOM_TO_TOP;
+		}
+
+		class WritingMode {
+		public:
+			static const WritingMode
+				// SVG 1.1
+				LR_TB, RL_TB, TB_RL, LR, RL, TB, INHERIT,
+				// XSL 1.1 additional
+				TB_LR, BT_LR, BT_RL, LR_BT, RL_BT,
+				LR_ALTERNATING_RL_BT, LR_ALTERNATING_RL_TB,
+				/*LR_INVERTING_RL_BT, LR_INVERTING_RL_TB, TB_LR_IN_LR_PAIRS*/;
+		public:
+			WritingMode() /*throw()*/;
+			WritingMode(
+				ProgressionDirection blockProgressionDirection,
+				ProgressionDirection inlineProgressionDirection,
+				bool inlineAlternating = false);
+			/// Returns the block-progression-direction.
+			ProgressionDirection blockProgressionDirection() const /**/ {return block_;}
+			/// Returns the inline-progression-direction.
+			ProgressionDirection inlineProgressionDirection() const /**/ {return inline_;}
+		private:
+			const ProgressionDirection block_, inline_;
+			const bool inlineAlternating_;
+		};
+
+		/// From XSL 1.1, 7.16.5 "line-height-shift-adjustment".
+		enum LineHeightShiftAdjustment {
+			CONSIDER_SHIFTS, DISREGARD_SHIFTS, INHERIT_LINE_HEIGHT_SHIFT_ADJUSTMENT
+		};
+
+		/// From XSL 1.1, 7.16.6 "line-stacking-strategy"
+		enum LineStackingStrategy {
+			LINE_HEIGHT, FONT_HEIGHT, MAX_HEIGHT, INHERIT_LINE_STACKING_STRATEGY
+		};
+
 		struct NumberSubstitution {
 			/// Specifies how to apply number substitution on digits and related punctuation.
 			enum Method {
@@ -314,13 +362,18 @@ namespace ascension {
 			TextAlignment alignment;
 			/// The dominant baseline of the line. Default value is @c DOMINANT_BASELINE_AUTO.
 			DominantBaseline dominantBaseline;
+			/// Default value is @c CONSIDER_SHIFTS.
+			LineHeightShiftAdjustment lineHeightShiftAdjustment;
+			/// Default value is @c MAX_HEIGHT.
+			LineStackingStrategy lineStackingStrategy;
 			/// The number substitution setting. Default value is built by the default constructor.
 			NumberSubstitution numberSubstitution;
 
 			/// Default constructor.
 			TextLineStyle() /*throw()*/ :
 				readingDirection(INHERIT_READING_DIRECTION),
-				alignment(ALIGN_START), dominantBaseline(DOMINANT_BASELINE_AUTO) {}
+				alignment(ALIGN_START), dominantBaseline(DOMINANT_BASELINE_AUTO),
+				lineHeightShiftAdjustment(CONSIDER_SHIFTS), lineStackingStrategy(MAX_HEIGHT) {}
 		};
 
 		/**

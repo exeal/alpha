@@ -1712,9 +1712,17 @@ namespace {
 
 /**
  * @class ascension::layout::TextLayout
- * @c TextLayout represents a layout of styled line text. Provides support for drawing, cursor
- * navigation, hit testing, text wrapping, etc.
+ * @c TextLayout is an immutable graphical representation of styled text. Provides support for
+ * drawing, cursor navigation, hit testing, text wrapping, etc.
  *
+ * <h3>Coordinate system</h3>
+ * All graphical information returned from a @c TextLayout object' method is relative to the origin
+ * of @c TextLayout, which is the intersection of the start edge with the baseline of the first
+ * line of @c TextLayout. The start edge is determined by the reading direction (inline progression
+ * dimension) of the line. Also, coordinates passed into a @c TextLayout object's method are
+ * assumed to be relative to the @c TextLayout object's origin.
+ *
+ * <h3>Constraints by Win32/Uniscribe</h3>
  * <del>A long run will be split into smaller runs automatically because Uniscribe rejects too long
  * text (especially @c ScriptShape and @c ScriptTextOut). For this reason, a combining character
  * will be rendered incorrectly if it is presented at the boundary. The maximum length of a run is
@@ -1722,7 +1730,7 @@ namespace {
  *
  * In present, this class supports only text layout horizontal against the output device.
  *
- * @note This class is not intended to derive.
+ * @note This class is not intended to be derived.
  * @see TextLayoutBuffer#lineLayout, TextLayoutBuffer#lineLayoutIfCached
  */
 
@@ -1772,6 +1780,20 @@ namespace {
 		AutoBuffer<ElementType> allocated_;
 		size_t capacity_;
 		ElementType* p_;
+	};
+
+	// TODO: this implementation is temporary, and should rewrite later
+	class SillyLineMetrics : public LineMetrics {
+	public:
+		void setHeight(Scalar height) /*throw()*/ {height_ = height;}
+	private:
+		Scalar ascent() const /*throw()*/ {return height_;}
+		DominantBaseline baseline() const /*throw()*/ {return DOMINANT_BASELINE_ALPHABETIC;}
+		Scalar baselineOffset(AlignmentBaseline baseline) const /*throw()*/ {return 0;}
+		Scalar descent() const /*throw()*/ {return 0;}
+		Scalar leading() const /*throw()*/ {return 0;}
+	private:
+		Scalar height_;
 	};
 }
 
@@ -1837,6 +1859,9 @@ TextLayout::TextLayout(const String& text, ReadingDirection readingDirection,
 	// 2. split each script runs into atomically-shapable runs (TextRuns) with StyledRunIterator
 	// 3. generate glyphs for each text runs
 	// 4. position glyphs for each text runs
+	// 5. position each text runs
+	// 6. justify each text runs if specified
+	// 7. create the line metrics
 
 	// 1. split the text into script runs by Uniscribe
 	HRESULT hr;
@@ -1901,14 +1926,18 @@ TextLayout::TextLayout(const String& text, ReadingDirection readingDirection,
 		runs_[i]->positionGlyphs(dc, text_, SimpleStyledTextRunIterator(Range<const StyledTextRun*>(
 			styledRanges_.get(), styledRanges_.get() + numberOfStyledRanges_), runs_[i]->beginning()));
 
+	// 5. position each text runs
 	// wrap into visual lines and reorder runs in each lines
 	if(numberOfRuns_ == 0 || wrapWidth_ == numeric_limits<Scalar>::max()) {
 		numberOfLines_ = 1;
 		lineOffsets_.reset(&SINGLE_LINE_OFFSETS);
 		lineFirstRuns_.reset(&SINGLE_LINE_OFFSETS);
+		// 5-2. reorder each text runs
 		reorder();
+		// 5-3. reexpand horizontal tabs
 		expandTabsWithoutWrapping();
 	} else {
+		// 5-1. expand horizontal tabs and wrap into lines
 		auto_ptr<TabExpander> temp;
 		if(tabExpander == 0) {
 			// create default tab expander
@@ -1921,9 +1950,32 @@ TextLayout::TextLayout(const String& text, ReadingDirection readingDirection,
 			tabExpander = temp.get();
 		}
 		wrap(*tabExpander);
+		// 5-2. reorder each text runs
 		reorder();
+		// 5-3. reexpand horizontal tabs
+		// TODO: not implemented.
+		// 6. justify each text runs if specified
 		if(alignment == JUSTIFY)
 			justify();
+	}
+
+	// 7. create line metrics
+	// TODO: this code is temporary. should rewrite later.
+	lineMetrics_.reset(new LineMetrics*[numberOfLines()]);
+	for(length_t line = 0; line < numberOfLines(); ++line) {
+		try {
+			const TextRun* const lastRun = runs_[(line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_];
+			Scalar height = 0;
+			for(const TextRun* run = runs_[lineFirstRuns_[line]]; run != lastRun; ++run)
+				height = max(run->font()->metrics().cellHeight(), height);
+			auto_ptr<SillyLineMetrics> lineMetrics(new SillyLineMetrics);
+			lineMetrics->setHeight(height);
+			lineMetrics_[line] = lineMetrics.release();
+		} catch(...) {
+			while(line > 0)
+				delete lineMetrics_[--line];
+			throw;
+		}
 	}
 }
 
@@ -1937,6 +1989,8 @@ TextLayout::~TextLayout() /*throw()*/ {
 		assert(lineFirstRuns_.get() == &SINGLE_LINE_OFFSETS);
 		lineFirstRuns_.release();
 	}
+	for(size_t i = 0; i < numberOfLines(); ++i)
+		delete lineMetrics_[i];
 }
 #if 0
 /**
@@ -1982,20 +2036,19 @@ ascension::byte TextLayout::bidiEmbeddingLevel(length_t column) const {
  * @see #bounds(void), #bounds(length_t, length_t), #lineBounds, #lineIndent
  */
 NativePolygon TextLayout::blackBoxBounds(const Range<length_t>& range) const {
-	if(range.end() > text().length())
+	if(range.end() > text_.length())
 		throw kernel::BadPositionException(kernel::Position(lineNumber_, range.end()));
 
 	// handle empty line
 	if(numberOfRuns_ == 0)
-		return win32::Handle<HRGN>(::CreateRectRgn(0, 0, 0, linePitch()), &::DeleteObject);
+		return win32::Handle<HRGN>(::CreateRectRgn(0, 0, 0, lineMetrics_[0]->height()), &::DeleteObject);
 
 	const length_t firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
 	vector<RECT> rectangles;
 	RECT rectangle;
 	rectangle.top = 0;
-	rectangle.bottom = rectangle.top + linePitch();
-	for(length_t line = firstLine; line <= lastLine;
-			++line, rectangle.top = rectangle.bottom, rectangle.bottom += linePitch()) {
+	for(length_t line = firstLine; line <= lastLine; ++line, rectangle.top = rectangle.bottom) {
+		rectangle.bottom = rectangle.top + lineMetrics_[line]->height();
 		const size_t endOfRuns = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
 		int cx = lineIndent(line);
 		if(range.beginning() <= lineOffset(line) && range.end() >= lineOffset(line) + lineLength(line)) {
@@ -2039,11 +2092,14 @@ NativePolygon TextLayout::blackBoxBounds(const Range<length_t>& range) const {
 /**
  * Returns the smallest rectangle emcompasses the whole text of the line. It might not coincide
  * exactly the ascent, descent or overhangs of the text.
- * @return the size of the bounds
+ * @return The size of the bounds
  * @see #blackBoxBounds, #bounds(length_t, length_t), #lineBounds
  */
 Dimension<> TextLayout::bounds() const /*throw()*/ {
-	return Dimension<>(longestLineWidth(), static_cast<long>(linePitch() * numberOfLines()));
+	Scalar cy = 0;
+	for(length_t line = 0; line < numberOfLines(); ++line)
+		cy += lineMetrics_[line]->height();
+	return Dimension<>(longestLineWidth(), cy);
 }
 
 /**
@@ -2056,20 +2112,28 @@ Dimension<> TextLayout::bounds() const /*throw()*/ {
  * @see #blackBoxBounds, #bounds(void), #lineBounds, #lineIndent
  */
 Rect<> TextLayout::bounds(const Range<length_t>& range) const {
-	if(range.end() > text().length())
+	if(range.end() > text_.length())
 		throw kernel::BadPositionException(kernel::Position(lineNumber_, range.end()));
 
 	// handle empty line
 	if(numberOfRuns_ == 0)
-		return Rect<>(Point<>(0, 0), Dimension<>(0, linePitch()));
+		return Rect<>(Point<>(0, 0), Dimension<>(0, lineMetrics_[0]->height()));
 
 	// determine the top and the bottom (it's so easy)
 	Rect<> bounds;	// the result
 	const length_t firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
-	bounds.setY(makeRange(
-		static_cast<Scalar>(linePitch() * firstLine), static_cast<Scalar>(linePitch() * (lastLine + 1))));
+	{
+		length_t line = 0;
+		Scalar y = 0;
+		for(; line < firstLine; ++line)
+			y += lineMetrics_[line]->height();
+		bounds.top() = y;
+		for(; line <= lastLine; ++line)
+			y += lineMetrics_[line]->height();
+		bounds.bottom() = y;
+	}
 
-	// find side bounds between 'firstLine' and 'lastLine'
+	// find start and end bounds in [firstLine + 1, lastLine + 1]
 	int left = numeric_limits<LONG>::max(), right = numeric_limits<LONG>::min();
 	for(length_t line = firstLine + 1; line < lastLine; ++line) {
 		const Scalar indent = lineIndent(line);
@@ -2185,7 +2249,7 @@ void TextLayout::draw(length_t line, PaintContext& context, const Point<>& origi
 	// Part 10 - Transparent Text and Selection Highlighting (http://www.catch22.net/tuts/editor10.asp)
 
 	const int dy = linePitch();
-	const int lineHeight = lip_.textMetrics().cellHeight();
+	const int lineHeight = lineMetrics_[line]->height();
 	const Color marginColor(Color::fromCOLORREF(systemColors.serve(defaultBackground, COLOR_WINDOW)));
 
 //	if(specialCharacterRenderer != 0)
@@ -2535,7 +2599,7 @@ String TextLayout::fillToX(int x) const {
  */
 inline size_t TextLayout::findRunForPosition(length_t column) const /*throw()*/ {
 	assert(numberOfRuns_ > 0);
-	if(column == text().length())
+	if(column == text_.length())
 		return numberOfRuns_ - 1;
 	const length_t sl = lineAt(column);
 	const size_t lastRun = (sl + 1 < numberOfLines()) ? lineFirstRuns_[sl + 1] : numberOfRuns_;
@@ -2655,7 +2719,7 @@ int TextLayout::lineWidth(length_t line) const {
 // implements public location methods
 void TextLayout::locations(length_t column, Point<>* leading, Point<>* trailing) const {
 	assert(leading != 0 || trailing != 0);
-	if(column > text().length())
+	if(column > text_.length())
 		throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
 	else if(isEmpty()) {
 		if(leading != 0)
@@ -2774,7 +2838,7 @@ int TextLayout::nextTabStopBasedLeftEdge(int x, bool right) const /*throw()*/ {
  * @see #location
  */
 pair<length_t, length_t> TextLayout::offset(const Point<>& p, bool* outside /* = 0 */) const /*throw()*/ {
-	if(text().empty())
+	if(isEmpty())
 		return make_pair(0, 0);
 
 	// determine the line number
