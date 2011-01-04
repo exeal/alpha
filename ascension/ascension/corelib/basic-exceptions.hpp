@@ -90,6 +90,26 @@ namespace ascension {
 		const Code code_;
 	};
 
+	namespace detail {
+		/// @internal
+		class UnreachableCode : public std::logic_error {	// should derive from std.runtime_error???
+		public:
+			explicit UnreachableCode(const char* file, int line) : std::logic_error() {
+				std::ostringstream temp;
+				temp << file << ":" << line;
+				message_ = temp.str();
+			}
+			const char* what() const {
+				return message_.c_str();
+			}
+		private:
+			std::string message_;
+		};
+	}
+
 }
+
+#define ASCENSION_ASSERT_NOT_REACHED()	\
+	throw ascension::detail::UnreachableCode(__FILE__, __LINE__)
 
 #endif // !ASCENSION_BASIC_EXCEPTIONS_HPP
