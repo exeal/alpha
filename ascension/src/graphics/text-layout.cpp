@@ -75,15 +75,6 @@ namespace {
 		return 0;
 	}
 
-	inline int estimateNumberOfGlyphs(length_t length) {return static_cast<int>(length) * 3 / 2 + 16;}
-	String fallback(int script);
-	inline bool isC0orC1Control(CodePoint c) /*throw()*/ {return c < 0x20 || c == 0x7f || (c >= 0x80 && c < 0xa0);}
-	ReadingDirection lineTerminatorOrientation(const TextLineStyle& style, tr1::shared_ptr<const TextLineStyle> defaultStyle) /*throw()*/;
-	int pixels(const Context& context, const Length& length, bool vertical, const Font::Metrics& fontMetrics);
-	HRESULT resolveNumberSubstitution(const NumberSubstitution* configuration, SCRIPT_CONTROL& sc, SCRIPT_STATE& ss);
-	bool uniscribeSupportsVSS() /*throw()*/;
-	LANGID userCJKLanguage() /*throw()*/;
-
 	// New Uniscribe features (usp10.dll 1.6) dynamic loading
 #if(!defined(UNISCRIBE_OPENTYPE) || UNISCRIBE_OPENTYPE < 0x0100)
 	typedef ULONG OPENTYPE_TAG;
@@ -140,6 +131,10 @@ namespace {
 		layout.dumpRuns(s);
 		::OutputDebugStringA(s.str().c_str());
 #endif // _DEBUG
+	}
+
+	inline int estimateNumberOfGlyphs(length_t length) {
+		return static_cast<int>(length) * 3 / 2 + 16;
 	}
 
 	String fallback(int script) {
@@ -264,20 +259,8 @@ namespace {
 		return true;
 	}
 
-
-	inline ReadingDirection lineTerminatorOrientation(const TextLineStyle& style, tr1::shared_ptr<const TextLineStyle> defaultStyle) /*throw()*/ {
-		const TextAlignment alignment = (style.alignment != INHERIT_TEXT_ALIGNMENT) ?
-			style.alignment : ((defaultStyle.get() != 0 && defaultStyle->alignment != INHERIT_TEXT_ALIGNMENT) ?
-				defaultStyle->alignment : ASCENSION_DEFAULT_TEXT_ALIGNMENT);
-		const ReadingDirection readingDirection = (style.readingDirection != INHERIT_READING_DIRECTION) ?
-			style.readingDirection : ((defaultStyle.get() != 0 && defaultStyle->readingDirection != INHERIT_READING_DIRECTION) ?
-				defaultStyle->readingDirection : ASCENSION_DEFAULT_TEXT_READING_DIRECTION);
-		switch(resolveTextAlignment(alignment, readingDirection)) {
-			case ALIGN_LEFT:	return LEFT_TO_RIGHT;
-			case ALIGN_RIGHT:	return RIGHT_TO_LEFT;
-			case ALIGN_CENTER:
-			default:			return readingDirection;
-		}
+	inline bool isC0orC1Control(CodePoint c) /*throw()*/ {
+		return c < 0x20 || c == 0x7f || (c >= 0x80 && c < 0xa0);
 	}
 
 	int pixels(const Context& context, const Length& length, bool vertical, const Font::Metrics& fontMetrics) {
@@ -314,7 +297,19 @@ namespace {
 		}
 	}
 
-	HRESULT resolveNumberSubstitution(const NumberSubstitution* configuration, SCRIPT_CONTROL& sc, SCRIPT_STATE& ss) {
+	inline Scalar readingDirectionInt(ReadingDirection direction) {
+		switch(direction) {
+			case LEFT_TO_RIGHT:
+				return +1;
+			case RIGHT_TO_LEFT:
+				return -1;
+			default:
+				throw UnknownValueException("direction");
+		}
+	}
+
+	HRESULT resolveNumberSubstitution(
+			const NumberSubstitution* configuration, SCRIPT_CONTROL& sc, SCRIPT_STATE& ss) {
 		if(configuration == 0 || configuration->method == NumberSubstitution::USER_SETTING)
 			return ::ScriptApplyDigitSubstitution(&userSettings.digitSubstitution(
 				(configuration != 0) ? configuration->ignoreUserOverride : false), &sc, &ss);
@@ -1803,8 +1798,10 @@ namespace {
  * @param style The text line style
  * @param readingDirection The reading direction of the text layout. This should be either
  *                         @c LEFT_TO_RIGHT or @c RIGHT_TO_LEFT
- * @param alignment The text alignment. This should be either @c ALIGN_START, @c ALIGN_END,
- *                  @c ALIGN_LEFT, @c ALIGN_RIGHT, @c ALIGN_CENTER or @c JUSTIFY
+ * @param anchor The text anchor. This should be either @c TEXT_ANCHOR_START,
+ *               @c TEXT_ANCHOR_MIDDLE or @c TEXT_ANCHOR_END
+ * @param justification The text justification method
+ * @param dominantBaseline The dominant baseline
  * @param fontCollection The font collection this text layout uses
  * @param defaultTextRunStyle The default text run style. Can be @c null
  * @param textRunStyles The text run styles. Can be @c null
@@ -1816,24 +1813,27 @@ namespace {
  * @param disableDeprecatedFormatCharacters Set @c true to make the deprecated format characters
  *                                          (NADS, NODS, ASS, and ISS) not effective
  * @param inhibitSymmetricSwapping Set c true to inhibit from generating mirrored glyphs
- * @throw UnknownValueException @a readingDirection or @a alignment is invalid
+ * @throw UnknownValueException @a readingDirection or @a anchor is invalid
  */
 TextLayout::TextLayout(const String& text, ReadingDirection readingDirection,
-		TextAlignment alignment, const FontCollection& fontCollection /* = systemFonts() */,
+		TextAnchor anchor /* = TEXT_ANCHOR_START */, 
+		TextJustification justification /* = NO_JUSTIFICATION */,
+		DominantBaseline dominantBaseline /* = DOMINANT_BASELINE_AUTO */,
+		const FontCollection& fontCollection /* = systemFonts() */,
 		tr1::shared_ptr<const presentation::TextRunStyle> defaultTextRunStyle /* = null */,
 		auto_ptr<presentation::StyledTextRunIterator> textRunStyles /* null */,
 		const TabExpander* tabExpander /* = 0 */, Scalar width /* = numeric_limits<Scalar>::max() */,
 		const NumberSubstitution* numberSubstitution /* = 0 */, bool displayShapingControls /* = false */,
 		bool inhibitSymmetricSwapping /* = false */, bool disableDeprecatedFormatCharacters /* = false */)
-		: text_(text), readingDirection_(readingDirection),
-		alignment_(resolveTextAlignment(alignment, readingDirection)), runs_(0), numberOfRuns_(0),
-		numberOfLines_(0), longestLineWidth_(-1), wrapWidth_(width) {
+		: text_(text), readingDirection_(readingDirection), anchor_(anchor),
+		dominantBaseline_(dominantBaseline), runs_(0), numberOfRuns_(0), numberOfLines_(0),
+		longestLineWidth_(-1), wrapWidth_(width) {
 
 	// sanity checks...
 	if(readingDirection != LEFT_TO_RIGHT && readingDirection != RIGHT_TO_LEFT)
 		throw UnknownValueException("readingDirection");
-	if(alignment != ALIGN_LEFT && alignment != ALIGN_RIGHT && alignment != ALIGN_CENTER && alignment != JUSTIFY)
-		throw UnknownValueException("alignment");
+	if(anchor != TEXT_ANCHOR_START && anchor != TEXT_ANCHOR_MIDDLE && anchor != TEXT_ANCHOR_END)
+		throw UnknownValueException("anchor");
 
 	// handle logically empty line
 	if(text_.empty()) {
@@ -1955,8 +1955,8 @@ TextLayout::TextLayout(const String& text, ReadingDirection readingDirection,
 		// 5-3. reexpand horizontal tabs
 		// TODO: not implemented.
 		// 6. justify each text runs if specified
-		if(alignment == JUSTIFY)
-			justify();
+		if(justification != NO_JUSTIFICATION)
+			justify(justification);
 	}
 
 	// 7. create line metrics
@@ -2089,6 +2089,21 @@ NativePolygon TextLayout::blackBoxBounds(const Range<length_t>& range) const {
 		numbersOfVertices.get(), static_cast<int>(rectangles.size()), WINDING), &::DeleteObject);
 }
 
+inline Scalar TextLayout::blockProgressionDistance(length_t from, length_t to) const /*throw()*/ {
+	Scalar result = 0;
+	while(from < to) {
+		result += lineMetrics_[from]->descent();
+		result += lineMetrics_[++from]->leading();
+		result += lineMetrics_[from]->ascent();
+	}
+	while(from > to) {
+		result -= lineMetrics_[from]->ascent();
+		result -= lineMetrics_[from]->leading();
+		result -= lineMetrics_[--from]->descent();
+	}
+	return result;
+}
+
 /**
  * Returns the smallest rectangle emcompasses the whole text of the line. It might not coincide
  * exactly the ascent, descent or overhangs of the text.
@@ -2208,18 +2223,14 @@ void TextLayout::draw(PaintContext& context, const Point<>& origin, const Rect<>
 		const Color& defaultForeground, const Color& defaultBackground, const Selection* selection) const /*throw()*/ {
 	if(isEmpty())
 		return;
-	const int dy = linePitch();
 
-	// skip to the line needs to draw
-	length_t line = (origin.y + dy >= context.boundsToPaint().top()) ? 0 : (context.boundsToPaint().top() - (origin.y + dy)) / dy;
-	if(line >= numberOfLines())
-		return;	// this logical line does not need to draw
-
-	Point<> p(origin.x, origin.y + static_cast<Scalar>(dy * line));
-	for(; line < numberOfLines(); ++line) {
-		draw(line, context, p, clipRect, defaultForeground, defaultBackground, selection);
-		if((p.y += dy) >= context.boundsToPaint().bottom())	// to next line
+	Point<> p(origin);
+	for(length_t line = 0; p.y - lineMetrics_[line]->descent() >= context.boundsToPaint().bottom(); ) {
+		if(p.y + lineMetrics_[line]->ascent() > context.boundsToPaint().top())
+			draw(line, context, p, clipRect, defaultForeground, defaultBackground, selection);
+		if(++line == numberOfLines())
 			break;
+		p.y += lineMetrics_[line - 1]->descent() + lineMetrics_[line]->ascent();
 	}
 }
 
@@ -2248,7 +2259,6 @@ void TextLayout::draw(length_t line, PaintContext& context, const Point<>& origi
 	// Catch 22 : Design and Implementation of a Win32 Text Editor
 	// Part 10 - Transparent Text and Selection Highlighting (http://www.catch22.net/tuts/editor10.asp)
 
-	const int dy = linePitch();
 	const int lineHeight = lineMetrics_[line]->height();
 	const Color marginColor(Color::fromCOLORREF(systemColors.serve(defaultBackground, COLOR_WINDOW)));
 
@@ -2607,8 +2617,7 @@ inline size_t TextLayout::findRunForPosition(length_t column) const /*throw()*/ 
 		if(runs_[i]->beginning() <= column && runs_[i]->end() > column)	// TODO: replace with includes().
 			return i;
 	}
-	assert(false);
-	return lastRun - 1;	// never reachable...
+	ASCENSION_ASSERT_NOT_REACHED();
 }
 #if 0
 /// Returns an iterator addresses the first styled segment.
@@ -2629,7 +2638,7 @@ bool TextLayout::isBidirectional() const /*throw()*/ {
 }
 
 /// Justifies the wrapped visual lines.
-inline void TextLayout::justify() /*throw()*/ {
+inline void TextLayout::justify(TextJustification) /*throw()*/ {
 	assert(wrapWidth_ != -1);
 	for(length_t line = 0; line < numberOfLines(); ++line) {
 		const int w = lineWidth(line);
@@ -2649,49 +2658,47 @@ TextLayout::StyledSegmentIterator TextLayout::lastStyledSegment() const /*throw(
 }
 #endif
 /**
- * Returns the smallest rectangle emcompasses the specified visual line. It might not coincide
- * exactly the ascent, descent or overhangs of the specified line.
- * @param line The wrapped line
- * @return The rectangle whose @c left value is the indentation of the line and @c top value is the
- * distance from the top of the whole line
- * @throw IndexOutOfBoundsException @a line is greater than the number of the wrapped lines
- * @see #lineIndent
+ * Returns the smallest rectangle emcompasses the specified line. It might not coincide exactly the
+ * ascent, descent or overhangs of the specified line.
+ * @param line The line number
+ * @return The line bounds in pixels
+ * @throw IndexOutOfBoundsException @a line is greater than the number of the lines
+ * @see #lineStartIndent
  */
 Rect<> TextLayout::lineBounds(length_t line) const {
 	if(line >= numberOfLines())
 		throw IndexOutOfBoundsException("line");
-	return Rect<>(
-		Point<>(lineIndent(line), linePitch() * static_cast<Scalar>(line)),
-		Dimension<>(lineWidth(line), linePitch()));
+	const Dimension<> size(lineWidth(line), lineMetrics_[line]->height());
+	Scalar x = lineStartIndent(line) * readingDirectionInt(readingDirection());
+	if(readingDirection() == RIGHT_TO_LEFT)
+		x -= size.cx;
+	return Rect<>(Point<>(x, blockProgressionDistance(0, line)), size);
 }
 
 /**
- * Returns the indentation of the specified line. An indent is a horizontal distance from the
- * leftmost of the first line to the leftmost of the given line. If the line is longer than the
- * first line, the result is negative. The first line's indent is always zero.
- * @param line The visual line
- * @return The indentation in pixels
+ * Returns the start-indentation of the specified line.
+ * @par This is distance from the origin (the alignment point of the first line) to @a line in
+ * inline-progression-dimension. Therefore, returns always zero when @a line is zero or the anchor
+ * is @c TEXT_ANCHOR_START.
+ * @par A positive value means positive indentation. For example, if the start-edge of a RTL line
+ * is x = -10, this method returns +10.
+ * @param line The line number
+ * @return The start-indentation in pixels
  * @throw IndexOutOfBoundsException @a line is invalid
  */
-int TextLayout::lineIndent(length_t line) const {
+Scalar TextLayout::lineStartIndent(length_t line) const {
 	if(line == 0)
 		return 0;
-	switch(alignment()) {
-	case ALIGN_LEFT:
-	case JUSTIFY:
+	switch(anchor()) {
+	case TEXT_ANCHOR_START:
 		return 0;
-	case ALIGN_RIGHT:
-		return lineWidth(0) - lineWidth(line);
-	case ALIGN_CENTER:
+	case TEXT_ANCHOR_MIDDLE:
 		return (lineWidth(0) - lineWidth(line)) / 2;
+	case TEXT_ANCHOR_END:
+		return lineWidth(0) - lineWidth(line);
 	default:
-		assert(false);
-//		throw UnreachableCode();
+		ASCENSION_ASSERT_NOT_REACHED();
 	}
-}
-/// Returns the line pitch in pixels.
-inline int TextLayout::linePitch() const /*throw()*/ {
-	return lip_.textMetrics().cellHeight() + max(lip_.layoutSettings().lineSpacing, lip_.textMetrics().lineGap());
 }
 
 /**
@@ -2700,7 +2707,7 @@ inline int TextLayout::linePitch() const /*throw()*/ {
  * @return The width
  * @throw IndexOutOfBoundsException @a line is greater than the number of visual lines
  */
-int TextLayout::lineWidth(length_t line) const {
+Scalar TextLayout::lineWidth(length_t line) const {
 	if(line >= numberOfLines())
 		throw IndexOutOfBoundsException("line");
 	else if(isEmpty())

@@ -285,8 +285,10 @@ namespace ascension {
 #endif
 
 				// constructors
-				TextLayout(const String& text,
-					presentation::ReadingDirection readingDirection, presentation::TextAlignment alignment,
+				TextLayout(const String& text, presentation::ReadingDirection readingDirection,
+					presentation::TextAnchor anchor = presentation::TEXT_ANCHOR_START,
+					presentation::TextJustification justification = presentation::NO_JUSTIFICATION,
+					presentation::DominantBaseline dominantBaseline = presentation::DOMINANT_BASELINE_AUTO,
 					const FontCollection& fontCollection = systemFonts(),
 					std::tr1::shared_ptr<const presentation::TextRunStyle>
 						defaultTextRunStyle = std::tr1::shared_ptr<const presentation::TextRunStyle>(),
@@ -298,7 +300,7 @@ namespace ascension {
 					bool disableDeprecatedFormatCharacters = false);
 				~TextLayout() /*throw()*/;
 				// general attributes
-				presentation::TextAlignment alignment() const /*throw()*/;
+				presentation::TextAnchor anchor() const /*throw()*/;
 				byte bidiEmbeddingLevel(length_t column) const;
 				bool isBidirectional() const /*throw()*/;
 				bool isEmpty() const /*throw()*/;
@@ -321,7 +323,7 @@ namespace ascension {
 				Scalar longestLineWidth() const /*throw()*/;
 				std::pair<length_t, length_t> offset(const Point<>& p, bool* outside = 0) const /*throw()*/;
 				Rect<> lineBounds(length_t line) const;
-				Scalar lineIndent(length_t line) const;
+				Scalar lineStartIndent(length_t line) const;
 				Scalar lineWidth(length_t line) const;
 				// styled segments
 //				StyledSegmentIterator firstStyledSegment() const /*throw()*/;
@@ -342,9 +344,10 @@ namespace ascension {
 #endif // _DEBUG
 
 			private:
+				Scalar blockProgressionDistance(length_t from, length_t to) const /*throw()*/;
 				void expandTabsWithoutWrapping() /*throw()*/;
 				std::size_t findRunForPosition(length_t column) const /*throw()*/;
-				void justify() /*throw()*/;
+				void justify(presentation::TextJustification method) /*throw()*/;
 				void locations(length_t column, Point<>* leading, Point<>* trailing) const;
 				void reorder() /*throw()*/;
 //				void rewrap();
@@ -353,7 +356,8 @@ namespace ascension {
 			private:
 				const String& text_;
 				const presentation::ReadingDirection readingDirection_;
-				const presentation::TextAlignment alignment_;
+				const presentation::TextAnchor anchor_;
+				const presentation::DominantBaseline dominantBaseline_;
 				class TextRun;
 				AutoBuffer<TextRun*> runs_;
 				std::size_t numberOfRuns_;

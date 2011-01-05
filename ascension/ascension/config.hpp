@@ -170,14 +170,13 @@
 #endif	// !ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 
 /**
- * @def ASCENSION_DEFAULT_TEXT_ALIGNMENT
- * Default text alignment for rendering. This must be either @c ALIGN_START, @c ALIGN_END,
- * @c ALIGN_LEFT, @c ALIGN_RIGHT or @c JUSTIFY of @c ascension#presentation#TextAlignment
- * enumeration.
+ * @def ASCENSION_DEFAULT_TEXT_ANCHOR
+ * Default text anchor for rendering. This must be either @c TEXT_ACHOR_START or @c TEXT_ANCHOR_END
+ * of @c ascension#presentation#TextAnchor enumeration.
  */
-#ifndef ASCENSION_DEFAULT_TEXT_ALIGNMENT
-#	define ASCENSION_DEFAULT_TEXT_ALIGNMENT ascension::presentation::ALIGN_START
-#endif	// !ASCENSION_DEFAULT_TEXT_ALIGNMENT
+#ifndef ASCENSION_DEFAULT_TEXT_ANCHOR
+#	define ASCENSION_DEFAULT_TEXT_ANCHOR ascension::presentation::TEXT_ANCHOR_START
+#endif	// !ASCENSION_DEFAULT_TEXT_ANCHOR
 
 /**
  * @def ASCENSION_HYPERLINKS_CACHE_SIZE
