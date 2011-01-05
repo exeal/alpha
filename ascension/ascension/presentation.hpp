@@ -238,29 +238,38 @@ namespace ascension {
 		};
 
 		/**
-		 * @c TextAlignment describes horizontal alignment of a paragraph. This implements
-		 * 'text-align' property in CSS 3
-		 * (http://www.w3.org/TR/2007/WD-css3-text-20070306/#text-align).
+		 * @c TextAnchor describes an alignment of text relative to the given point.
 		 * @see resolveTextAlignment, TextLineStyle#alignment, TextLineStyle#lastSublineAlignment
+		 * @see XSL 1.1, 7.16.9 "text-align"
+		 *      (http://www.w3.org/TR/2006/REC-xsl11-20061205/#text-align)
+		 * @see CSS Text Level 3, 7.1. Text Alignment: the 'text-align' property
+		 *      (http://www.w3.org/TR/2010/WD-css3-text-20101005/#text-align)
+		 * @see SVG 1.1, 10.9.1 Text alignment properties
+		 *      (http://www.w3.org/TR/2010/WD-SVG11-20100622/text.html#TextAlignmentProperties)
 		 */
-		enum TextAlignment {
+		enum TextAnchor {
 			/// The text is aligned to the start edge of the paragraph.
-			ALIGN_START,
+			TEXT_ANCHOR_START,
+			/// The text is aligned to the middle (center) of the paragraph.
+			TEXT_ANCHOR_MIDDLE,
 			/// The text is aligned to the end edge of the paragraph.
-			ALIGN_END,
-			/// The text is aligned to the left of the paragraph.
-			ALIGN_LEFT,
-			/// The text is aligned to the right of the paragraph.
-			ALIGN_RIGHT,
-			/// The text is aligned to the center of the paragraph.
-			/// Some methods which take @c ParagraphAlignment don't accept this value.
-			ALIGN_CENTER,
-			/// The text is justified according to the method specified @c Justification value.
-			JUSTIFY,
-			/// The alignment is automatically determined.
-			/// @note Some methods which take @c TextAlignment don't accept this value.
-			INHERIT_TEXT_ALIGNMENT,
+			TEXT_ANCHOR_END,
+			/// Inherits the parent's setting.
+			/// @note Some methods which take @c TextAnchor don't accept this value.
+			TEXT_ANCHOR_INHERIT
 //			MATCH_PARENT_DIRECTION
+		};
+
+		/**
+		 * @c TextJustification describes the justification method.
+		 * @note This definition is under construction.
+		 * @see CSS Text Level 3, 7.3. Justification Method: the 'text-justify' property
+		 *      (http://www.w3.org/TR/2010/WD-css3-text-20101005/#text-justify)
+		 */
+		enum TextJustification {
+			/// Specifies no justification.
+			NO_JUSTIFICATION,
+//			AUTO_JUSTIFICATION, TRIM, INTER_WORD, INTER_IDEOGRAPH, INTER_CLUSTER, DISTRIBUTE, KASHIDA
 		};
 
 		/**
@@ -272,7 +281,7 @@ namespace ascension {
 			RIGHT_TO_LEFT,				///< The text is right-to-left.
 			INHERIT_READING_DIRECTION	///< 
 		};
-
+#ifdef ASCENSION_WRITING_MODES
 		enum ProgressionDirection {
 			LEFT_TO_RIGHT, RIGHT_TO_LEFT, TOP_TO_BOTTOM, BOTTOM_TO_TOP
 		}
@@ -287,6 +296,7 @@ namespace ascension {
 			return direction == TOP_TO_BOTTOM || direction == BOTTOM_TO_TOP;
 		}
 
+		// documentation is presentation.cpp
 		class WritingMode {
 		public:
 			static const WritingMode
@@ -310,7 +320,7 @@ namespace ascension {
 			const ProgressionDirection block_, inline_;
 			const bool inlineAlternating_;
 		};
-
+#endif // ASCENSION_WRITING_MODES
 		/// From XSL 1.1, 7.16.5 "line-height-shift-adjustment".
 		enum LineHeightShiftAdjustment {
 			CONSIDER_SHIFTS, DISREGARD_SHIFTS, INHERIT_LINE_HEIGHT_SHIFT_ADJUSTMENT
@@ -358,9 +368,15 @@ namespace ascension {
 		struct TextLineStyle {
 			/// The reading direction of the line. Default value is @c INHERIT_READING_DIRECTION.
 			ReadingDirection readingDirection;
-			/// The text alignment of the line. Default value is @c ALIGN_START.
-			TextAlignment alignment;
-			/// The dominant baseline of the line. Default value is @c DOMINANT_BASELINE_AUTO.
+			/**
+			 * The alignment point in inline-progression-dimension. Default value is
+			 * @c TEXT_ANCHOR_START.
+			 */
+			TextAnchor anchor;
+			/**
+			 * The alignment point in block-progression-dimension, which is the dominant baseline
+			 * of the line. Default value is @c DOMINANT_BASELINE_AUTO.
+			 */
 			DominantBaseline dominantBaseline;
 			/// Default value is @c CONSIDER_SHIFTS.
 			LineHeightShiftAdjustment lineHeightShiftAdjustment;
@@ -372,7 +388,7 @@ namespace ascension {
 			/// Default constructor.
 			TextLineStyle() /*throw()*/ :
 				readingDirection(INHERIT_READING_DIRECTION),
-				alignment(ALIGN_START), dominantBaseline(DOMINANT_BASELINE_AUTO),
+				anchor(TEXT_ANCHOR_START), dominantBaseline(DOMINANT_BASELINE_AUTO),
 				lineHeightShiftAdjustment(CONSIDER_SHIFTS), lineStackingStrategy(MAX_HEIGHT) {}
 		};
 
@@ -675,10 +691,10 @@ namespace ascension {
 		}
 
 		/// 
-		inline TextAlignment defaultTextAlignment(const Presentation& presentation) {
+		inline TextAnchor defaultTextAnchor(const Presentation& presentation) {
 			std::tr1::shared_ptr<const TextLineStyle> style(presentation.defaultTextLineStyle());
 			return (style.get() != 0
-				&& style->alignment != INHERIT_TEXT_ALIGNMENT) ? style->alignment : ASCENSION_DEFAULT_TEXT_ALIGNMENT;
+				&& style->anchor != TEXT_ANCHOR_INHERIT) ? style->anchor : ASCENSION_DEFAULT_TEXT_ANCHOR;
 		}
 
 		///
@@ -688,24 +704,7 @@ namespace ascension {
 				&& style->readingDirection != INHERIT_READING_DIRECTION) ? style->readingDirection : ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
 		}
 
-		/**
-		 * Resolve an ambiguous text alignment value (@c ALIGN_START and @c ALIGN_END).
-		 * @param value the text alignment to compute
-		 * @param direction the reading direction
-		 * @return the resolved text alignment
-		 * @note This function does not resolve @c INHERIT_ALIGNMENT.
-		 */
-		inline TextAlignment resolveTextAlignment(TextAlignment value, ReadingDirection direction) {
-			switch(value) {
-				case ALIGN_START:
-					return (direction == LEFT_TO_RIGHT) ? ALIGN_LEFT : ALIGN_RIGHT;
-				case ALIGN_END:
-					return (direction == LEFT_TO_RIGHT) ? ALIGN_RIGHT : ALIGN_LEFT;
-				default:
-					return value;
-			}
-		}
-
-}} // namespace ascension.presentation
+	}
+} // namespace ascension.presentation
 
 #endif // !ASCENSION_PRESENTATION_HPP

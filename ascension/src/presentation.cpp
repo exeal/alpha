@@ -125,7 +125,19 @@ void StyledTextRunEnumerator::next() {
 }
 
 
+#ifdef ASCENSION_WRITING_MODES
+
 // WritingMode ////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * @class ascension::presentation::WritingMode
+ * Specifies the block-progression-direction and the inline-progression-direction of text.
+ * Semantics of these values are different from the same properties in XSL 1.1, SVG 1.1 and CSS 3.
+ * @see Direction
+ * @see XSL 1.1, 7.29 Writing-mode-related Properties (http://www.w3.org/TR/xsl/#writing-mode-related)
+ * @see SVG 1.1, 10.7.2 Setting the inline-progression-direction (http://www.w3.org/TR/SVG/text.html#SettingInlineProgressionDirection)
+ * @see CSS Writing Modes Module Level 3 (http://www.w3.org/TR/2010/WD-css3-writing-modes-20101202/)
+ */
 
 const WritingMode WritingMode::LR_TB();
 
@@ -154,6 +166,7 @@ WritingMode::WritingMode(ProgressionDirection blockProgressionDirection,
 	} else
 		throw UnknownValueException("blockProgressionDirection");
 }
+#endif // ASCENSION_WRITING_MODES
 
 
 // Presentation ///////////////////////////////////////////////////////////////////////////////////

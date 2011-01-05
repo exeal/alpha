@@ -670,7 +670,7 @@ TextFileStreamBuffer* TextFileStreamBuffer::closeAndDiscard() {
 #endif
 		return closeFile();
 	} else
-		return 0;	// unreachable
+		ASCENSION_ASSERT_NOT_REACHED();
 }
 
 TextFileStreamBuffer* TextFileStreamBuffer::closeFile() /*throw()*/ {

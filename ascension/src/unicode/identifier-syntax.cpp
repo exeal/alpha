@@ -145,8 +145,7 @@ bool IdentifierSyntax::isIdentifierContinueCharacter(CodePoint cp) const /*throw
 	case UNICODE_ALTERNATIVE:
 		return !BinaryProperty::is<BinaryProperty::PATTERN_SYNTAX>(cp) && !BinaryProperty::is<BinaryProperty::PATTERN_WHITE_SPACE>(cp);
 	}
-	assert(false);
-	return false;	// unreachable
+	ASCENSION_ASSERT_NOT_REACHED();
 }
 
 /**
@@ -169,8 +168,7 @@ bool IdentifierSyntax::isIdentifierStartCharacter(CodePoint cp) const /*throw()*
 	case UNICODE_ALTERNATIVE:
 		return !BinaryProperty::is<BinaryProperty::PATTERN_SYNTAX>(cp) && !BinaryProperty::is<BinaryProperty::PATTERN_WHITE_SPACE>(cp);
 	}
-	assert(false);
-	return false;	// unreachable
+	ASCENSION_ASSERT_NOT_REACHED();
 }
 
 /**
@@ -191,8 +189,7 @@ bool IdentifierSyntax::isWhiteSpace(CodePoint cp, bool includeTab) const /*throw
 	case UNICODE_ALTERNATIVE:
 		return BinaryProperty::is<BinaryProperty::PATTERN_WHITE_SPACE>(cp);
 	}
-	assert(false);
-	return false;	// unreachable
+	ASCENSION_ASSERT_NOT_REACHED();
 }
 
 /**

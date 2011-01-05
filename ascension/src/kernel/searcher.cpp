@@ -999,8 +999,7 @@ bool IncrementalSearcher::undo() {
 		}
 		return true;
 	}
-	assert(false);
-	return false;	// unreachable
+	ASCENSION_ASSERT_NOT_REACHED();
 }
 
 /**
