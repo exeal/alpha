@@ -1826,7 +1826,7 @@ TextLayout::TextLayout(const String& text, ReadingDirection readingDirection,
 		const NumberSubstitution* numberSubstitution /* = 0 */, bool displayShapingControls /* = false */,
 		bool inhibitSymmetricSwapping /* = false */, bool disableDeprecatedFormatCharacters /* = false */)
 		: text_(text), readingDirection_(readingDirection), anchor_(anchor),
-		dominantBaseline_(dominantBaseline), runs_(0), numberOfRuns_(0), numberOfLines_(0),
+		dominantBaseline_(dominantBaseline), numberOfRuns_(0), numberOfLines_(0),
 		longestLineWidth_(-1), wrapWidth_(width) {
 
 	// sanity checks...
@@ -2121,8 +2121,7 @@ Dimension<> TextLayout::bounds() const /*throw()*/ {
  * Returns the smallest rectangle emcompasses all characters in the range. It might not coincide
  * exactly the ascent, descent or overhangs of the specified region of the text.
  * @param range The range
- * @return The rectangle whose @c left value is the indentation of the bounds and @c top value is
- *         the distance from the top of the whole line
+ * @return The bounds
  * @throw kernel#BadPositionException @a range intersects with the outside of the line
  * @see #blackBoxBounds, #bounds(void), #lineBounds, #lineIndent
  */
@@ -2132,11 +2131,18 @@ Rect<> TextLayout::bounds(const Range<length_t>& range) const {
 
 	Scalar start, end, before, after;
 
-	// handle empty line
-	if(isEmpty()) {
+	// TODO: this implementation can't handle vertical text.
+
+	if(isEmpty()) {	// empty line
 		start = end = 0;
 		before = -lineMetrics_[0]->ascent() - lineMetrics_[0]->leading();
 		after = lineMetrics_[0]->descent();
+	} else if(range.isEmpty()) {	// an empty rectangle for an empty range
+		const Point<> p();
+		const LineMetrics& line = *lineMetrics_[lineAt(range.beginning())];
+		return Rect<>(
+			location(range.beginning()) -= Dimension<>(0, line.ascent() + line.leading()),
+			Dimension<>(0, line.height()));
 	} else {
 		const length_t firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
 
@@ -2147,58 +2153,69 @@ Rect<> TextLayout::bounds(const Range<length_t>& range) const {
 			after = firstBaseline + blockProgressionDistance(firstLine, lastLine) + lineMetrics_[lastLine]->descent();
 		}
 
-		// calculate start-edge and end-edge in range [firstLine + 1, lastLine - 1]
+		// calculate start-edge and end-edge of fully covered lines
+		const bool firstLineIsFullyCovered = range.includes(
+			makeRange(lineOffset(firstLine), lineOffset(firstLine) + lineLength(firstLine)));
+		const bool lastLineIsFullyCovered = range.includes(
+			makeRange(lineOffset(lastLine), lineOffset(lastLine) + lineLength(lastLine)));
 		start = numeric_limits<Scalar>::max();
 		end = numeric_limits<Scalar>::min();
-		for(length_t line = firstLine + 1; line < lastLine; ++line) {
+		for(length_t line = firstLine + firstLineIsFullyCovered ? 0 : 1;
+				line < lastLine + lastLineIsFullyCovered ? 1 : 0; ++line) {
 			const Scalar lineStart = lineStartEdge(line);
 			start = min(lineStart, start);
 			end = max(lineStart + lineWidth(line), end);
 		}
 
-		// calculate start-edge and end-edge in range [firstLine, lastLine]
-		Scalar left = start, right = end;
-		if(readingDirection() == RIGHT_TO_LEFT)
-			swap(left, right);
-		const length_t firstAndLast[2] = {firstLine, lastLine};
-		for(size_t i = 0; i < ASCENSION_COUNTOF(firstAndLast); ++i) {
-			const length_t line = firstAndLast[i];
-			const size_t endOfRuns = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
-			// find left bound
-			Scalar cx = lineIndent(line);
-			for(size_t j = lineFirstRuns_[line]; j < endOfRuns; ++j) {
-				if(cx >= left)
-					break;
-				const TextRun& run = *runs_[j];
-				if(range.beginning() <= run.end() && range.end() >= run.beginning()) {
-					const int x = run.x((
-						(run.readingDirection() == LEFT_TO_RIGHT) ? max(range.beginning(), run.beginning()) : min(range.end(), run.end())), false);
-					left = min(cx + x, left);
-					break;
+		// calculate start and end-edge of partially covered lines
+		vector<length_t> partiallyCoveredLines;
+		if(!firstLineIsFullyCovered)
+			partiallyCoveredLines.push_back(firstLine);
+		if(!lastLineIsFullyCovered && (partiallyCoveredLines.empty() || partiallyCoveredLines[0] != lastLine))
+			partiallyCoveredLines.push_back(lastLine);
+		if(!partiallyCoveredLines.empty()) {
+			Scalar left = (readingDirection() == LEFT_TO_RIGHT) ? start : -end;
+			Scalar right = (readingDirection() == LEFT_TO_RIGHT) ? end : -start;
+			for(vector<length_t>::const_iterator
+					line(partiallyCoveredLines.begin()), e(partiallyCoveredLines.end()); line != e; ++line) {
+				const length_t lastRun = (*line + 1 < numberOfLines()) ? lineFirstRuns_[*line + 1] : numberOfRuns_;
+
+				// find left-edge
+				Scalar x = (readingDirection() == LEFT_TO_RIGHT) ?
+					lineStartEdge(*line) : -lineStartEdge(*line) - lineWidth(*line);
+				for(length_t i = lineFirstRuns_[*line];
+						i < lastRun && x < left; x += runs_[i++]->totalWidth()) {
+					const TextRun& run = *runs_[i];
+					if(range.intersects(run)) {
+						const length_t leftEdge = (run.readingDirection() == LEFT_TO_RIGHT) ?
+							max(range.beginning(), run.beginning()) : min(range.end(), run.end());
+						left = min(x + run.x(leftEdge, false), left);
+						break;
+					}
 				}
-				cx += run.totalWidth();
-			}
-			// find right bound
-			cx = lineIndent(firstLine) + lineWidth(lastLine);
-			for(size_t j = endOfRuns - 1; ; --j) {
-				if(cx <= right)
-					break;
-				const TextRun& run = *runs_[j];
-				if(range.beginning() <= run.end() && range.end() >= run.beginning()) {
-					const int x = run.x((
-						(run.readingDirection() == LEFT_TO_RIGHT) ? min(range.end(), run.end()) : max(range.beginning(), run.beginning())), false);
-					right = max(cx - run.totalWidth() + x, right);
-					break;
+
+				// find right-edge
+				x = (readingDirection() == LEFT_TO_RIGHT) ?
+					lineStartEdge(*line) + lineWidth(*line) : -lineStartEdge(*line);
+				for(length_t i = lastRun - 1; x > right; x -= runs_[i--]->totalWidth()) {
+					const TextRun& run = *runs_[i];
+					if(range.intersects(run)) {
+						const length_t rightEdge = (run.readingDirection() == LEFT_TO_RIGHT) ?
+							min(range.end(), run.end()) : max(range.beginning(), run.beginning());
+						right = max(x - run.totalWidth() + run.x(rightEdge, false), right);
+						break;
+					}
+					if(i == lineFirstRuns_[*line])
+						break;
 				}
-				if(j == lineFirstRuns_[line])
-					break;
-				cx -= run.totalWidth();
 			}
+
+			start = (readingDirection() == LEFT_TO_RIGHT) ? left : -right;
+			end = (readingDirection() == LEFT_TO_RIGHT) ? right : -left;
 		}
-		bounds.setX(Range<int>(left, right));
 	}
 
-	return bounds;
+	return Rect<>(Point<>(start, before), Point<>(end, after));
 }
 
 namespace {
@@ -2766,38 +2783,38 @@ length_t TextLayout::locateLine(Scalar bpd, bool& outside) const /*throw()*/ {
  * @throw IndexOutOfBoundsException @a line is invalid
  */
 pair<length_t, length_t> TextLayout::locateOffsets(length_t line, Scalar ipd, bool& outside) const {
-	assert(numberOfRuns_ > 0);
+	if(isEmpty())
+		return (outside = true), make_pair(static_cast<length_t>(0), static_cast<length_t>(0));
 	const size_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
+
 	if(readingDirection() == LEFT_TO_RIGHT) {
 		Scalar x = lineStartEdge(line);
-		if(ipd < x) {	// beyond the left-edge
-			outside = true;
-			const TextRun& firstRun = *runs_[lineFirstRuns_[line]];
-			const length_t column = firstRun.beginning()
-				+ ((firstRun.readingDirection() == LEFT_TO_RIGHT) ? 0 : firstRun.length());	// TODO: used SCRIPT_ANALYSIS.fRTL past...
-			return make_pair(column, column);
+		if(ipd < x) {	// beyond the left-edge => the start of the first run
+			const length_t column = runs_[lineFirstRuns_[line]]->beginning();
+			return (outside = true), make_pair(column, column);
 		}
 		for(size_t i = lineFirstRuns_[line]; i < lastRun; ++i) {	// scan left to right
 			const TextRun& run = *runs_[i];
 			if(ipd >= x && ipd <= x + run.totalWidth()) {
 				int cp, trailing;
 				run.hitTest(ipd - x, cp, trailing);	// TODO: check the returned value.
-				outside = false;
 				const length_t temp = run.beginning() + static_cast<length_t>(cp);
-				return make_pair(temp, temp + static_cast<length_t>(trailing));
+				return (outside = false), make_pair(temp, temp + static_cast<length_t>(trailing));
 			}
 			x += run.totalWidth();
 		}
-		// beyond the right-edge
-		outside = true;
-		const length_t column = runs_[lastRun - 1]->beginning()
-			+ ((runs_[lastRun - 1]->readingDirection() == LEFT_TO_RIGHT) ? runs_[lastRun - 1]->length() : 0);	// used SCRIPT_ANALYSIS.fRTL past...
-		return make_pair(column, column);
+		// beyond the right-edge => the end of last run
+		const length_t column = runs_[lastRun - 1]->end();
+		return (outside = true), make_pair(column, column);
 	} else {
 		Scalar x = -lineStartEdge(line);
-		if(ipd >= x) {	// beyond the right-edge
-			outside = true;
+		if(ipd > x) {	// beyond the right-edge => the start of the last run
+			const length_t column = runs_[lastRun - 1]->beginning();
+			return (outside = true), make_pair(column, column);
 		}
+		// beyond the left-edge => the end of the first run
+		const length_t column = runs_[lineFirstRuns_[line]]->end();
+		return (outside = true), make_pair(column, column);
 	}
 }
 
