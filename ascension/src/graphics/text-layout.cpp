@@ -2030,10 +2030,9 @@ ascension::byte TextLayout::bidiEmbeddingLevel(length_t column) const {
  * an area consisting of the union of the bounding boxes of the all of the characters in the range.
  * The result region can be disjoint.
  * @param range The character range
- * @return the Win32 GDI region object encompasses the black box bounds. the coordinates are based
- *         on the left-top of the first visual line in the layout
+ * @return The native polygon object encompasses the black box bounds
  * @throw kernel#BadPositionException @a range intersects with the outside of the line
- * @see #bounds(void), #bounds(length_t, length_t), #lineBounds, #lineIndent
+ * @see #bounds(void), #bounds(length_t, length_t), #lineBounds, #lineStartEdge
  */
 NativePolygon TextLayout::blackBoxBounds(const Range<length_t>& range) const {
 	if(range.end() > text_.length())
@@ -2052,7 +2051,7 @@ NativePolygon TextLayout::blackBoxBounds(const Range<length_t>& range) const {
 		const size_t endOfRuns = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
 		int cx = lineIndent(line);
 		if(range.beginning() <= lineOffset(line) && range.end() >= lineOffset(line) + lineLength(line)) {
-			// whole visual line is encompassed by the range
+			// whole line is encompassed by the range
 			rectangle.left = cx;
 			rectangle.right = rectangle.left + lineWidth(line);
 			rectangles.push_back(rectangle);
@@ -2111,6 +2110,7 @@ inline Scalar TextLayout::blockProgressionDistance(length_t from, length_t to) c
  * @see #blackBoxBounds, #bounds(length_t, length_t), #lineBounds
  */
 Dimension<> TextLayout::bounds() const /*throw()*/ {
+	// TODO: this implementation can't handle vertical text.
 	Scalar cy = 0;
 	for(length_t line = 0; line < numberOfLines(); ++line)
 		cy += lineMetrics_[line]->height();
@@ -2130,70 +2130,73 @@ Rect<> TextLayout::bounds(const Range<length_t>& range) const {
 	if(range.end() > text_.length())
 		throw kernel::BadPositionException(kernel::Position(lineNumber_, range.end()));
 
+	Scalar start, end, before, after;
+
 	// handle empty line
-	if(numberOfRuns_ == 0)
-		return Rect<>(Point<>(0, 0), Dimension<>(0, lineMetrics_[0]->height()));
+	if(isEmpty()) {
+		start = end = 0;
+		before = -lineMetrics_[0]->ascent() - lineMetrics_[0]->leading();
+		after = lineMetrics_[0]->descent();
+	} else {
+		const length_t firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
 
-	// determine the top and the bottom (it's so easy)
-	Rect<> bounds;	// the result
-	const length_t firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
-	{
-		length_t line = 0;
-		Scalar y = 0;
-		for(; line < firstLine; ++line)
-			y += lineMetrics_[line]->height();
-		bounds.top() = y;
-		for(; line <= lastLine; ++line)
-			y += lineMetrics_[line]->height();
-		bounds.bottom() = y;
-	}
-
-	// find start and end bounds in [firstLine + 1, lastLine + 1]
-	int left = numeric_limits<LONG>::max(), right = numeric_limits<LONG>::min();
-	for(length_t line = firstLine + 1; line < lastLine; ++line) {
-		const Scalar indent = lineIndent(line);
-		left = min(indent, left);
-		right = max(indent + lineWidth(line), right);
-	}
-
-	// find side bounds in 'firstLine' and 'lastLine'
-	int cx;
-	const length_t firstAndLast[2] = {firstLine, lastLine};
-	for(size_t i = 0; i < ASCENSION_COUNTOF(firstAndLast); ++i) {
-		const length_t line = firstAndLast[i];
-		const size_t endOfRuns = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
-		// find left bound
-		cx = lineIndent(line);
-		for(size_t j = lineFirstRuns_[line]; j < endOfRuns; ++j) {
-			if(cx >= left)
-				break;
-			const TextRun& run = *runs_[j];
-			if(range.beginning() <= run.end() && range.end() >= run.beginning()) {
-				const int x = run.x((
-					(run.readingDirection() == LEFT_TO_RIGHT) ? max(range.beginning(), run.beginning()) : min(range.end(), run.end())), false);
-				left = min(cx + x, left);
-				break;
-			}
-			cx += run.totalWidth();
+		// calculate the block-progression-edges ('before' and 'after'; it's so easy)
+		{
+			const Scalar firstBaseline = blockProgressionDistance(0, firstLine);
+			before = firstBaseline - lineMetrics_[firstLine]->ascent() - lineMetrics_[firstLine]->leading();
+			after = firstBaseline + blockProgressionDistance(firstLine, lastLine) + lineMetrics_[lastLine]->descent();
 		}
-		// find right bound
-		cx = lineIndent(firstLine) + lineWidth(lastLine);
-		for(size_t j = endOfRuns - 1; ; --j) {
-			if(cx <= right)
-				break;
-			const TextRun& run = *runs_[j];
-			if(range.beginning() <= run.end() && range.end() >= run.beginning()) {
-				const int x = run.x((
-					(run.readingDirection() == LEFT_TO_RIGHT) ? min(range.end(), run.end()) : max(range.beginning(), run.beginning())), false);
-				right = max(cx - run.totalWidth() + x, right);
-				break;
-			}
-			if(j == lineFirstRuns_[line])
-				break;
-			cx -= run.totalWidth();
+
+		// calculate start-edge and end-edge in range [firstLine + 1, lastLine - 1]
+		start = numeric_limits<Scalar>::max();
+		end = numeric_limits<Scalar>::min();
+		for(length_t line = firstLine + 1; line < lastLine; ++line) {
+			const Scalar lineStart = lineStartEdge(line);
+			start = min(lineStart, start);
+			end = max(lineStart + lineWidth(line), end);
 		}
+
+		// calculate start-edge and end-edge in range [firstLine, lastLine]
+		Scalar left = start, right = end;
+		if(readingDirection() == RIGHT_TO_LEFT)
+			swap(left, right);
+		const length_t firstAndLast[2] = {firstLine, lastLine};
+		for(size_t i = 0; i < ASCENSION_COUNTOF(firstAndLast); ++i) {
+			const length_t line = firstAndLast[i];
+			const size_t endOfRuns = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
+			// find left bound
+			Scalar cx = lineIndent(line);
+			for(size_t j = lineFirstRuns_[line]; j < endOfRuns; ++j) {
+				if(cx >= left)
+					break;
+				const TextRun& run = *runs_[j];
+				if(range.beginning() <= run.end() && range.end() >= run.beginning()) {
+					const int x = run.x((
+						(run.readingDirection() == LEFT_TO_RIGHT) ? max(range.beginning(), run.beginning()) : min(range.end(), run.end())), false);
+					left = min(cx + x, left);
+					break;
+				}
+				cx += run.totalWidth();
+			}
+			// find right bound
+			cx = lineIndent(firstLine) + lineWidth(lastLine);
+			for(size_t j = endOfRuns - 1; ; --j) {
+				if(cx <= right)
+					break;
+				const TextRun& run = *runs_[j];
+				if(range.beginning() <= run.end() && range.end() >= run.beginning()) {
+					const int x = run.x((
+						(run.readingDirection() == LEFT_TO_RIGHT) ? min(range.end(), run.end()) : max(range.beginning(), run.beginning())), false);
+					right = max(cx - run.totalWidth() + x, right);
+					break;
+				}
+				if(j == lineFirstRuns_[line])
+					break;
+				cx -= run.totalWidth();
+			}
+		}
+		bounds.setX(Range<int>(left, right));
 	}
-	bounds.setX(Range<int>(left, right));
 
 	return bounds;
 }
@@ -2663,20 +2666,26 @@ TextLayout::StyledSegmentIterator TextLayout::lastStyledSegment() const /*throw(
  * @param line The line number
  * @return The line bounds in pixels
  * @throw IndexOutOfBoundsException @a line is greater than the number of the lines
- * @see #lineStartIndent
+ * @see #lineStartEdge
  */
 Rect<> TextLayout::lineBounds(length_t line) const {
 	if(line >= numberOfLines())
 		throw IndexOutOfBoundsException("line");
-	const Dimension<> size(lineWidth(line), lineMetrics_[line]->height());
-	Scalar x = lineStartIndent(line) * readingDirectionInt(readingDirection());
-	if(readingDirection() == RIGHT_TO_LEFT)
-		x -= size.cx;
-	return Rect<>(Point<>(x, blockProgressionDistance(0, line)), size);
+
+	const Scalar start = lineStartEdge(line);
+	const Scalar end = start + lineWidth(line);
+	const Scalar before = blockProgressionDistance(0, line)
+		- lineMetrics_[line]->ascent() - lineMetrics_[line]->leading();
+	const Scalar after = before + lineMetrics_[line]->height();
+
+	// TODO: this implementation can't handle vertical text.
+	const Dimension<> size(end - start, after - before);
+	const Point<> origin((readingDirection() == LEFT_TO_RIGHT) ? start : start - size.cx, before);
+	return Rect<>(origin, size);
 }
 
 /**
- * Returns the start-indentation of the specified line.
+ * Returns the start-edge of the specified line without the start-indent.
  * @par This is distance from the origin (the alignment point of the first line) to @a line in
  * inline-progression-dimension. Therefore, returns always zero when @a line is zero or the anchor
  * is @c TEXT_ANCHOR_START.
@@ -2686,7 +2695,7 @@ Rect<> TextLayout::lineBounds(length_t line) const {
  * @return The start-indentation in pixels
  * @throw IndexOutOfBoundsException @a line is invalid
  */
-Scalar TextLayout::lineStartIndent(length_t line) const {
+Scalar TextLayout::lineStartEdge(length_t line) const {
 	if(line == 0)
 		return 0;
 	switch(anchor()) {
@@ -2702,10 +2711,12 @@ Scalar TextLayout::lineStartIndent(length_t line) const {
 }
 
 /**
- * Returns the width of the specified wrapped line.
- * @param line The visual line
+ * Returns the length in inline-progression-dimension without the indentations (the distance from
+ * the start edge to the end-edge) of the specified line in pixels.
+ * @param line The line number
  * @return The width
- * @throw IndexOutOfBoundsException @a line is greater than the number of visual lines
+ * @throw IndexOutOfBoundsException @a line is greater than the number of lines
+ * @see #longestLineWidth
  */
 Scalar TextLayout::lineWidth(length_t line) const {
 	if(line >= numberOfLines())
@@ -2716,10 +2727,77 @@ Scalar TextLayout::lineWidth(length_t line) const {
 		return longestLineWidth_;
 	else {
 		const size_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
-		int cx = 0;
+		Scalar width = 0;
 		for(size_t i = lineFirstRuns_[line]; i < lastRun; ++i)
-			cx += runs_[i]->totalWidth();
-		return cx;
+			width += runs_[i]->totalWidth();
+		return width;
+	}
+}
+
+/**
+ * @internal Converts a block-progression-dimension into the corresponding line.
+ * @param bpd The block-progression-dimension
+ * @param[out] outside @c true if @a bpd is outside of the line content
+ * @return The line number
+ */
+length_t TextLayout::locateLine(Scalar bpd, bool& outside) const /*throw()*/ {
+	// TODO: this implementation can't handle vertical text.
+
+	// beyond the before-edge ?
+	if(bpd < -lineMetrics_[0]->ascent() - lineMetrics_[0]->leading())
+		return (outside = true), 0;
+
+	length_t line = 0;
+	for(Scalar lineAfter = 0; line < numberOfLines() - 1; ++line) {
+		if(bpd < (lineAfter += lineMetrics_[line]->height()))
+			return (outside = false), line;
+	}
+
+	// beyond the after-edge
+	return (outside = true), numberOfLines() - 1;
+}
+
+/**
+ * @internal Converts an inline-progression-dimension into character offset(s) in the line.
+ * @param line The line number
+ * @param ipd The inline-progression-dimension
+ * @param[out] outside @c true if @a ipd is outside of the line content
+ * @return See the documentation of @c #offset method
+ * @throw IndexOutOfBoundsException @a line is invalid
+ */
+pair<length_t, length_t> TextLayout::locateOffsets(length_t line, Scalar ipd, bool& outside) const {
+	assert(numberOfRuns_ > 0);
+	const size_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
+	if(readingDirection() == LEFT_TO_RIGHT) {
+		Scalar x = lineStartEdge(line);
+		if(ipd < x) {	// beyond the left-edge
+			outside = true;
+			const TextRun& firstRun = *runs_[lineFirstRuns_[line]];
+			const length_t column = firstRun.beginning()
+				+ ((firstRun.readingDirection() == LEFT_TO_RIGHT) ? 0 : firstRun.length());	// TODO: used SCRIPT_ANALYSIS.fRTL past...
+			return make_pair(column, column);
+		}
+		for(size_t i = lineFirstRuns_[line]; i < lastRun; ++i) {	// scan left to right
+			const TextRun& run = *runs_[i];
+			if(ipd >= x && ipd <= x + run.totalWidth()) {
+				int cp, trailing;
+				run.hitTest(ipd - x, cp, trailing);	// TODO: check the returned value.
+				outside = false;
+				const length_t temp = run.beginning() + static_cast<length_t>(cp);
+				return make_pair(temp, temp + static_cast<length_t>(trailing));
+			}
+			x += run.totalWidth();
+		}
+		// beyond the right-edge
+		outside = true;
+		const length_t column = runs_[lastRun - 1]->beginning()
+			+ ((runs_[lastRun - 1]->readingDirection() == LEFT_TO_RIGHT) ? runs_[lastRun - 1]->length() : 0);	// used SCRIPT_ANALYSIS.fRTL past...
+		return make_pair(column, column);
+	} else {
+		Scalar x = -lineStartEdge(line);
+		if(ipd >= x) {	// beyond the right-edge
+			outside = true;
+		}
 	}
 }
 
@@ -2728,59 +2806,72 @@ void TextLayout::locations(length_t column, Point<>* leading, Point<>* trailing)
 	assert(leading != 0 || trailing != 0);
 	if(column > text_.length())
 		throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
-	else if(isEmpty()) {
-		if(leading != 0)
-			leading->x = leading->y = 0;
-		if(trailing != 0)
-			trailing->x = trailing->y = 0;
-		return;
-	}
-	const length_t sl = lineAt(column);
-	const length_t firstRun = lineFirstRuns_[sl];
-	const length_t lastRun = (sl + 1 < numberOfLines()) ? lineFirstRuns_[sl + 1] : numberOfRuns_;
-	// about x
-	if(readingDirection() == LEFT_TO_RIGHT) {	// LTR
-		int x = lineIndent(sl);
-		for(size_t i = firstRun; i < lastRun; ++i) {
-			const TextRun& run = *runs_[i];
-			if(column >= run.beginning() && column <= run.end()) {
-				if(leading != 0)
-					leading->x = x + run.x(column, false);
-				if(trailing != 0)
-					trailing->x = x + run.x(column, true);
-				break;
+
+	Scalar leadingIpd, trailingIpd, bpd = lineMetrics_[0]->ascent() + lineMetrics_[0]->leading();
+	if(isEmpty())
+		leadingIpd = trailingIpd = 0;
+	else {
+		// inline-progression-dimension
+		const length_t line = lineAt(column);
+		const length_t firstRun = lineFirstRuns_[line];
+		const length_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
+		if(readingDirection() == LEFT_TO_RIGHT) {	// LTR
+			Scalar x = lineStartEdge(line);
+			for(size_t i = firstRun; i < lastRun; ++i) {
+				const TextRun& run = *runs_[i];
+				if(column >= run.beginning() && column <= run.end()) {
+					if(leading != 0)
+						leadingIpd = x + run.x(column, false);
+					if(trailing != 0)
+						trailingIpd = x + run.x(column, true);
+					break;
+				}
+				x += run.totalWidth();
 			}
-			x += run.totalWidth();
-		}
-	} else {	// RTL
-		int x = lineIndent(sl) + lineWidth(sl);
-		for(size_t i = lastRun - 1; ; --i) {
-			const TextRun& run = *runs_[i];
-			x -= run.totalWidth();
-			if(column >= run.beginning() && column <= run.end()) {
-				if(leading != 0)
-					leading->x = x + run.x(column, false);
-				if(trailing)
-					trailing->x = x + run.x(column, true);
-				break;
+		} else {	// RTL
+			Scalar x = -lineStartEdge(line);
+			for(size_t i = lastRun - 1; ; --i) {
+				const TextRun& run = *runs_[i];
+				x -= run.totalWidth();
+				if(column >= run.beginning() && column <= run.end()) {
+					if(leading != 0)
+						leadingIpd = -(x + run.x(column, false));
+					if(trailing)
+						trailingIpd = -(x + run.x(column, true));
+					break;
+				}
+				if(i == firstRun) {
+					ASCENSION_ASSERT_NOT_REACHED();
+					break;
+				}
 			}
-			if(i == firstRun)
-				break;
 		}
+
+		// block-progression-dimension
+		bpd += blockProgressionDistance(0, line);
 	}
-	// about y
-	if(leading != 0)
-		leading->y = static_cast<long>(sl * linePitch());
-	if(trailing != 0)
-		trailing->y = static_cast<long>(sl * linePitch());
+		
+	// TODO: this implementation can't handle vertical text.
+	if(leading != 0) {
+		leading->x = leadingIpd;
+		leading->y = bpd;
+	}
+	if(trailing != 0) {
+		trailing->x = trailingIpd;
+		trailing->y = bpd;
+	}
 }
 
-/// Returns the width of the longest line.
-int TextLayout::longestLineWidth() const /*throw()*/ {
+/**
+ * Returns the width of the longest line. For the semantics of line-width, see the documentation of
+ * @c #lineWidth method.
+ * @see #lineWidth
+ */
+Scalar TextLayout::longestLineWidth() const /*throw()*/ {
 	if(longestLineWidth_ == -1) {
-		int width = 0;
+		Scalar width = 0;
 		for(length_t line = 0; line < numberOfLines(); ++line)
-			width = max<long>(lineWidth(line), width);
+			width = max(lineWidth(line), width);
 		const_cast<TextLayout*>(this)->longestLineWidth_ = width;
 	}
 	return longestLineWidth_;
@@ -2834,61 +2925,7 @@ int TextLayout::nextTabStopBasedLeftEdge(int x, bool right) const /*throw()*/ {
 		return right ? x + (x - longestLineWidth()) % tabWidth : x - (tabWidth - (x - longestLineWidth()) % tabWidth);
 }
 #endif
-/**
- * Returns the hit test information corresponding to the specified point.
- * @param x The x offset from the left edge of the first line
- * @param y The y offset from the top edge of the first line
- * @param[out] outside @c true if the specified point is outside of the layout. Optional
- * @return A pair of the character offsets. The first element addresses the character whose black
- *         box (bounding box) encompasses the specified point. The second element addresses the
- *         character whose leading point is the closest to the specified point in the line
- * @see #location
- */
-pair<length_t, length_t> TextLayout::offset(const Point<>& p, bool* outside /* = 0 */) const /*throw()*/ {
-	if(isEmpty())
-		return make_pair(0, 0);
 
-	// determine the line number
-	length_t line = 0;
-	for(; line < numberOfLines() - 1; ++line) {
-		if(static_cast<Scalar>(linePitch() * line) >= p.y)
-			break;
-	}
-
-	pair<length_t, length_t> result;
-
-	// determine the column
-	assert(numberOfRuns_ > 0);
-	const size_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
-	int cx = lineIndent(line);
-	if(p.x <= cx) {	// on the left margin
-		if(outside != 0)
-			*outside = true;
-		const TextRun& firstRun = *runs_[lineFirstRuns_[line]];
-		result.first = result.second = firstRun.beginning()
-			+ ((firstRun.readingDirection() == LEFT_TO_RIGHT) ? 0 : firstRun.length());	// TODO: used SCRIPT_ANALYSIS.fRTL past...
-		return result;
-	}
-	for(size_t i = lineFirstRuns_[line]; i < lastRun; ++i) {
-		const TextRun& run = *runs_[i];
-		if(p.x >= cx && p.x <= cx + run.totalWidth()) {
-			int cp, trailing;
-			run.hitTest(p.x - cx, cp, trailing);	// TODO: check the returned value.
-			if(outside != 0)
-				*outside = false;
-			result.first = run.beginning() + static_cast<length_t>(cp);
-			result.second = result.first + static_cast<length_t>(trailing);
-			return result;
-		}
-		cx += run.totalWidth();
-	}
-	// on the right margin
-	if(outside != 0)
-		*outside = true;
-	result.first = result.second = runs_[lastRun - 1]->beginning()
-		+ ((runs_[lastRun - 1]->readingDirection() == LEFT_TO_RIGHT) ? runs_[lastRun - 1]->length() : 0);	// used SCRIPT_ANALYSIS.fRTL past...
-	return result;
-}
 #if 0
 /**
  * Returns the computed reading direction of the line.
