@@ -323,7 +323,7 @@ namespace ascension {
 				Scalar longestLineWidth() const /*throw()*/;
 				std::pair<length_t, length_t> offset(const Point<>& p, bool* outside = 0) const /*throw()*/;
 				Rect<> lineBounds(length_t line) const;
-				Scalar lineStartIndent(length_t line) const;
+				Scalar lineStartEdge(length_t line) const;
 				Scalar lineWidth(length_t line) const;
 				// styled segments
 //				StyledSegmentIterator firstStyledSegment() const /*throw()*/;
@@ -348,6 +348,9 @@ namespace ascension {
 				void expandTabsWithoutWrapping() /*throw()*/;
 				std::size_t findRunForPosition(length_t column) const /*throw()*/;
 				void justify(presentation::TextJustification method) /*throw()*/;
+				length_t locateLine(Scalar bpd, bool& outside) const /*throw()*/;
+				std::pair<length_t, length_t> locateOffsets(
+					length_t line, Scalar ipd, bool& outside) const /*throw()*/;
 				void locations(length_t column, Point<>* leading, Point<>* trailing) const;
 				void reorder() /*throw()*/;
 //				void rewrap();
@@ -466,6 +469,27 @@ namespace ascension {
 
 			/// Returns the number of the wrapped lines.
 			inline length_t TextLayout::numberOfLines() const /*throw()*/ {return numberOfLines_;}
+
+			/**
+			 * Returns the hit test information corresponding to the specified point.
+			 * @param p The point
+			 * @param[out] outside @c true if the specified point is outside of the layout
+			 * @return A pair of the character offsets. The first element addresses the character
+			 *         whose black box (bounding box) encompasses the specified point. The second
+			 *         element addresses the character whose leading point is the closest to the
+			 *         specified point in the line
+			 * @see #location
+			 */
+			inline std::pair<length_t, length_t> TextLayout::offset(
+					const Point<>& p, bool* outside /* = 0 */) const /*throw()*/ {
+				bool outsides[2];
+				// TODO: this implementation can't handle vertical text.
+				const std::pair<length_t, length_t> result (
+					locateOffsets(locateLine(p.y, outsides[0]), p.x, outsides[1]));
+				if(outside != 0)
+					*outside = outsides[0] | outsides[1];
+				return result;
+			}
 
 		}
 	}

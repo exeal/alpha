@@ -303,7 +303,8 @@ namespace ascension {
 				// SVG 1.1
 				LR_TB, RL_TB, TB_RL, LR, RL, TB, INHERIT,
 				// XSL 1.1 additional
-				TB_LR, BT_LR, BT_RL, LR_BT, RL_BT,
+				TB_LR, BT_LR, BT_RL,
+				LR_BT, RL_BT,
 				LR_ALTERNATING_RL_BT, LR_ALTERNATING_RL_TB,
 				/*LR_INVERTING_RL_BT, LR_INVERTING_RL_TB, TB_LR_IN_LR_PAIRS*/;
 		public:
