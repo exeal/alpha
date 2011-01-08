@@ -490,7 +490,8 @@ namespace ascension {
 			ASCENSION_NONCOPYABLE_TAG(Bookmarker);
 		public:
 			/// A @c Bookmarker#Iterator enumerates the all marked lines.
-			class Iterator : public StandardConstBidirectionalIteratorAdapter<Iterator, length_t> {
+			class Iterator : public detail::IteratorAdapter<
+				Iterator, std::iterator<std::bidirectional_iterator_tag, length_t> > {
 			public:
 				// StandardConstBidirectionalIteratorAdapter requirements
 				value_type current() const {return *impl_;}

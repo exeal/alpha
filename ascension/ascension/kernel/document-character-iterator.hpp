@@ -10,15 +10,20 @@
 #define ASCENSION_DOCUMENT_CHARACTER_ITERATOR_HPP
 
 #include <ascension/kernel/document.hpp>
-#include <ascension/corelib/basic-types.hpp>		// StandardConstBidirectionalIteratorAdapter
-#include <ascension/corelib/character-iterator.hpp>	// text.CharacterIterator
+#include <ascension/corelib/character-iterator.hpp>			// text.CharacterIterator
+#include <ascension/corelib/standard-iterator-adapter.hpp>	// detail.IteratorAdapter
 
 namespace ascension {
 
 	namespace kernel {
 
-		class DocumentCharacterIterator : public text::CharacterIterator,
-			public StandardConstBidirectionalIteratorAdapter<DocumentCharacterIterator, CodePoint> {
+		class DocumentCharacterIterator :
+			public text::CharacterIterator,
+			public detail::IteratorAdapter<
+				DocumentCharacterIterator,
+				std::iterator<std::bidirectional_iterator_tag,
+				CodePoint, std::ptrdiff_t, const CodePoint*, const CodePoint>
+			> {
 		public:
 			// constructors
 			DocumentCharacterIterator() /*throw()*/;

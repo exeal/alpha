@@ -69,7 +69,8 @@ namespace ascension {
 		};
 
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
-		class Normalizer : public StandardConstBidirectionalIteratorAdapter<Normalizer, CodePoint> {
+		class Normalizer : public detail::IteratorAdapter<Normalizer,
+			std::iterator<std::bidirectional_iterator_tag, CodePoint> > {
 		public:
 			/// Normalization forms.
 			enum Form {
