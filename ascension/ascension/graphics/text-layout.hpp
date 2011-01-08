@@ -315,16 +315,16 @@ namespace ascension {
 				const length_t* lineOffsets() const /*throw()*/;
 				// coordinates
 				NativePolygon blackBoxBounds(const Range<length_t>& range) const;
-				Dimension<> bounds() const /*throw()*/;
+				Rect<> bounds() const /*throw()*/;
 				Rect<> bounds(const Range<length_t>& range) const;
+				Rect<> lineBounds(length_t line) const;
+				Scalar lineInlineProgressionDimension(length_t line) const;
 				const LineMetrics& lineMetrics(length_t line) const;
+				Scalar lineStartEdge(length_t line) const;
 				Point<> location(length_t column, Edge edge = LEADING) const;
 				std::pair<Point<>, Point<> > locations(length_t column) const;
-				Scalar longestLineWidth() const /*throw()*/;
+				Scalar maximumInlineProgressionDimension() const /*throw()*/;
 				std::pair<length_t, length_t> offset(const Point<>& p, bool* outside = 0) const /*throw()*/;
-				Rect<> lineBounds(length_t line) const;
-				Scalar lineStartEdge(length_t line) const;
-				Scalar lineWidth(length_t line) const;
 				// styled segments
 //				StyledSegmentIterator firstStyledSegment() const /*throw()*/;
 //				StyledSegmentIterator lastStyledSegment() const /*throw()*/;
@@ -371,7 +371,8 @@ namespace ascension {
 				static const length_t SINGLE_LINE_OFFSETS;
 				length_t numberOfLines_;
 				AutoBuffer<LineMetrics*> lineMetrics_;
-				Scalar longestLineWidth_;
+				AutoBuffer<Scalar> lineInlineProgressionDimensions_;
+				Scalar maximumInlineProgressionDimension_;
 				Scalar wrapWidth_;	// -1 if should not wrap
 				friend class LineLayoutBuffer;
 //				friend class StyledSegmentIterator;
