@@ -283,6 +283,11 @@ namespace ascension {
 					friend class LineLayout;
 				};
 #endif
+				class InlineProgressionDimensionRangeIterator : public detail::IteratorAdapter<
+					InlineProgressionDimensionRangeIterator, std::iterator<
+						std::input_iterator_tag, Range<Scalar>
+					> > {
+				};
 
 				// constructors
 				TextLayout(const String& text, presentation::ReadingDirection readingDirection,

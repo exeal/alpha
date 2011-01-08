@@ -137,8 +137,14 @@ namespace ascension {
 		 * Implementation of @c CharacterIterator for C string or @c String.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class StringCharacterIterator : public CharacterIterator,
-			public StandardConstBidirectionalIteratorAdapter<StringCharacterIterator, CodePoint> {
+		class StringCharacterIterator :
+			public CharacterIterator,
+			public detail::IteratorAdapter<
+				StringCharacterIterator, std::iterator<
+					std::bidirectional_iterator_tag,
+					CodePoint, std::ptrdiff_t, CodePoint*, const CodePoint
+				>
+			> {
 		public:
 			StringCharacterIterator() /*throw()*/;
 			StringCharacterIterator(const StringPiece& text);
