@@ -782,10 +782,11 @@ inline void TextLayout::TextRun::generateDefaultGlyphs(const win32::Handle<HDC>&
 	fill_n(visualAttributes.get(), numberOfGlyphs, va);
 
 	// commit
-	std::swap(glyphs.fontCache, fontCache);
-	std::swap(glyphs.indices, indices);
-	std::swap(glyphs.clusters, clusters);
-	std::swap(glyphs.visualAttributes, visualAttributes);
+	using std::swap;
+	swap(glyphs.fontCache, fontCache);
+	swap(glyphs.indices, indices);
+	swap(glyphs.clusters, clusters);
+	swap(glyphs.visualAttributes, visualAttributes);
 	::ScriptFreeCache(&fontCache);
 }
 
@@ -838,10 +839,11 @@ HRESULT TextLayout::TextRun::generateGlyphs(const win32::Handle<HDC>& dc,
 
 	// commit
 	if(SUCCEEDED(hr)) {
-		std::swap(glyphs.fontCache, fontCache);
-		std::swap(glyphs.indices, indices);
-		std::swap(glyphs.clusters, clusters);
-		std::swap(glyphs.visualAttributes, visualAttributes);
+		using std::swap;
+		swap(glyphs.fontCache, fontCache);
+		swap(glyphs.indices, indices);
+		swap(glyphs.clusters, clusters);
+		swap(glyphs.visualAttributes, visualAttributes);
 	}
 	::ScriptFreeCache(&fontCache);
 	return hr;
@@ -1062,8 +1064,9 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 	} while(scriptRun != 0 || styleRun.second);
 
 	// commit
-	std::swap(textRuns, results.first);
-	std::swap(styledRanges, results.second);
+	using std::swap;
+	swap(textRuns, results.first);
+	swap(styledRanges, results.second);
 
 #undef ASCENSION_SPLIT_LAST_RUN
 }
@@ -1827,7 +1830,7 @@ TextLayout::TextLayout(const String& text, ReadingDirection readingDirection,
 		bool inhibitSymmetricSwapping /* = false */, bool disableDeprecatedFormatCharacters /* = false */)
 		: text_(text), readingDirection_(readingDirection), anchor_(anchor),
 		dominantBaseline_(dominantBaseline), numberOfRuns_(0), numberOfLines_(0),
-		longestLineWidth_(-1), wrapWidth_(width) {
+		maximumInlineProgressionDimension_(-1), wrapWidth_(width) {
 
 	// sanity checks...
 	if(readingDirection != LEFT_TO_RIGHT && readingDirection != RIGHT_TO_LEFT)
@@ -1839,7 +1842,7 @@ TextLayout::TextLayout(const String& text, ReadingDirection readingDirection,
 	if(text_.empty()) {
 		numberOfRuns_ = 0;
 		numberOfLines_ = 1;
-		longestLineWidth_ = 0;
+		maximumInlineProgressionDimension_ = 0;
 		assert(isEmpty());
 		return;
 	}
@@ -2109,12 +2112,19 @@ inline Scalar TextLayout::blockProgressionDistance(length_t from, length_t to) c
  * @return The size of the bounds
  * @see #blackBoxBounds, #bounds(length_t, length_t), #lineBounds
  */
-Dimension<> TextLayout::bounds() const /*throw()*/ {
+Rect<> TextLayout::bounds() const /*throw()*/ {
 	// TODO: this implementation can't handle vertical text.
-	Scalar cy = 0;
-	for(length_t line = 0; line < numberOfLines(); ++line)
-		cy += lineMetrics_[line]->height();
-	return Dimension<>(longestLineWidth(), cy);
+	const Scalar before = -lineMetrics_[0]->leading() - lineMetrics_[0]->ascent();
+	Scalar after = before, start = numeric_limits<Scalar>::max(), end = numeric_limits<Scalar>::min();
+	for(length_t line = 0; line < numberOfLines(); ++line) {
+		after += lineMetrics_[line]->height();
+		const Scalar lineStart = lineStartEdge(line);
+		start = min(lineStart, start);
+		end = max(lineStart + lineInlineProgressionDimension(line), end);
+	}
+	return Rect<>(
+		Point<>((readingDirection() == LEFT_TO_RIGHT) ? start : -end, before),
+		Point<>((readingDirection() == LEFT_TO_RIGHT) ? end : -start, after));
 }
 
 /**
@@ -2164,7 +2174,7 @@ Rect<> TextLayout::bounds(const Range<length_t>& range) const {
 				line < lastLine + lastLineIsFullyCovered ? 1 : 0; ++line) {
 			const Scalar lineStart = lineStartEdge(line);
 			start = min(lineStart, start);
-			end = max(lineStart + lineWidth(line), end);
+			end = max(lineStart + lineInlineProgressionDimension(line), end);
 		}
 
 		// calculate start and end-edge of partially covered lines
@@ -2182,7 +2192,7 @@ Rect<> TextLayout::bounds(const Range<length_t>& range) const {
 
 				// find left-edge
 				Scalar x = (readingDirection() == LEFT_TO_RIGHT) ?
-					lineStartEdge(*line) : -lineStartEdge(*line) - lineWidth(*line);
+					lineStartEdge(*line) : -lineStartEdge(*line) - lineInlineProgressionDimension(*line);
 				for(length_t i = lineFirstRuns_[*line];
 						i < lastRun && x < left; x += runs_[i++]->totalWidth()) {
 					const TextRun& run = *runs_[i];
@@ -2196,7 +2206,7 @@ Rect<> TextLayout::bounds(const Range<length_t>& range) const {
 
 				// find right-edge
 				x = (readingDirection() == LEFT_TO_RIGHT) ?
-					lineStartEdge(*line) + lineWidth(*line) : -lineStartEdge(*line);
+					lineStartEdge(*line) + lineInlineProgressionDimension(*line) : -lineStartEdge(*line);
 				for(length_t i = lastRun - 1; x > right; x -= runs_[i--]->totalWidth()) {
 					const TextRun& run = *runs_[i];
 					if(range.intersects(run)) {
@@ -2661,11 +2671,11 @@ bool TextLayout::isBidirectional() const /*throw()*/ {
 inline void TextLayout::justify(TextJustification) /*throw()*/ {
 	assert(wrapWidth_ != -1);
 	for(length_t line = 0; line < numberOfLines(); ++line) {
-		const int w = lineWidth(line);
+		const int ipd = lineInlineProgressionDimension(line);
 		const size_t last = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
 		for(size_t i = lineFirstRuns_[line]; i < last; ++i) {
 			TextRun& run = *runs_[i];
-			const int newRunWidth = ::MulDiv(run.totalWidth(), wrapWidth_, w);	// TODO: there is more precise way.
+			const int newRunWidth = ::MulDiv(run.totalWidth(), wrapWidth_, ipd);	// TODO: there is more precise way.
 			run.justify(newRunWidth);
 		}
 	}
@@ -2690,7 +2700,7 @@ Rect<> TextLayout::lineBounds(length_t line) const {
 		throw IndexOutOfBoundsException("line");
 
 	const Scalar start = lineStartEdge(line);
-	const Scalar end = start + lineWidth(line);
+	const Scalar end = start + lineInlineProgressionDimension(line);
 	const Scalar before = blockProgressionDistance(0, line)
 		- lineMetrics_[line]->ascent() - lineMetrics_[line]->leading();
 	const Scalar after = before + lineMetrics_[line]->height();
@@ -2699,6 +2709,45 @@ Rect<> TextLayout::lineBounds(length_t line) const {
 	const Dimension<> size(end - start, after - before);
 	const Point<> origin((readingDirection() == LEFT_TO_RIGHT) ? start : start - size.cx, before);
 	return Rect<>(origin, size);
+}
+
+/**
+ * Returns the length in inline-progression-dimension without the indentations (the distance from
+ * the start-edge to the end-edge) of the specified line in pixels.
+ * @param line The line number
+ * @return The width. Must be equal to or greater than zero
+ * @throw IndexOutOfBoundsException @a line is greater than the number of lines
+ * @see #maximumInlineProgressionDimension
+ */
+Scalar TextLayout::lineInlineProgressionDimension(length_t line) const {
+	if(line >= numberOfLines())
+		throw IndexOutOfBoundsException("line");
+	else if(isEmpty())
+		return const_cast<TextLayout*>(this)->maximumInlineProgressionDimension_ = 0;
+	else {
+		TextLayout& self = const_cast<TextLayout&>(*this);
+		if(numberOfLines() == 1) {
+			if(maximumInlineProgressionDimension_ >= 0)
+				return maximumInlineProgressionDimension_;
+		} else {
+			if(lineInlineProgressionDimensions_.get() == 0) {
+				self.lineInlineProgressionDimensions_.reset(new Scalar[numberOfLines()]);
+				fill_n(self.lineInlineProgressionDimensions_.get(), numberOfLines(), -1);
+			}
+			if(lineInlineProgressionDimensions_[line] >= 0)
+				return lineInlineProgressionDimensions_[line];
+		}
+		const size_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
+		Scalar ipd = 0;
+		for(size_t i = lineFirstRuns_[line]; i < lastRun; ++i)
+			ipd += runs_[i]->totalWidth();
+		assert(ipd >= 0);
+		if(numberOfLines() == 1)
+			self.maximumInlineProgressionDimension_ = ipd;
+		else
+			self.lineInlineProgressionDimensions_[line] = ipd;
+		return ipd;
+	}
 }
 
 /**
@@ -2719,35 +2768,11 @@ Scalar TextLayout::lineStartEdge(length_t line) const {
 	case TEXT_ANCHOR_START:
 		return 0;
 	case TEXT_ANCHOR_MIDDLE:
-		return (lineWidth(0) - lineWidth(line)) / 2;
+		return (lineInlineProgressionDimension(0) - lineInlineProgressionDimension(line)) / 2;
 	case TEXT_ANCHOR_END:
-		return lineWidth(0) - lineWidth(line);
+		return lineInlineProgressionDimension(0) - lineInlineProgressionDimension(line);
 	default:
 		ASCENSION_ASSERT_NOT_REACHED();
-	}
-}
-
-/**
- * Returns the length in inline-progression-dimension without the indentations (the distance from
- * the start edge to the end-edge) of the specified line in pixels.
- * @param line The line number
- * @return The width
- * @throw IndexOutOfBoundsException @a line is greater than the number of lines
- * @see #longestLineWidth
- */
-Scalar TextLayout::lineWidth(length_t line) const {
-	if(line >= numberOfLines())
-		throw IndexOutOfBoundsException("line");
-	else if(isEmpty())
-		return 0;
-	else if(numberOfLines() == 1 && longestLineWidth_ != -1)
-		return longestLineWidth_;
-	else {
-		const size_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
-		Scalar width = 0;
-		for(size_t i = lineFirstRuns_[line]; i < lastRun; ++i)
-			width += runs_[i]->totalWidth();
-		return width;
 	}
 }
 
@@ -2880,18 +2905,17 @@ void TextLayout::locations(length_t column, Point<>* leading, Point<>* trailing)
 }
 
 /**
- * Returns the width of the longest line. For the semantics of line-width, see the documentation of
- * @c #lineWidth method.
- * @see #lineWidth
+ * Returns the inline-progression-dimension of the longest line.
+ * @see #lineInlineProgressionDimension
  */
-Scalar TextLayout::longestLineWidth() const /*throw()*/ {
-	if(longestLineWidth_ == -1) {
-		Scalar width = 0;
+Scalar TextLayout::maximumInlineProgressionDimension() const /*throw()*/ {
+	if(maximumInlineProgressionDimension_ < 0) {
+		Scalar ipd = 0;
 		for(length_t line = 0; line < numberOfLines(); ++line)
-			width = max(lineWidth(line), width);
-		const_cast<TextLayout*>(this)->longestLineWidth_ = width;
+			ipd = max(lineInlineProgressionDimension(line), ipd);
+		const_cast<TextLayout*>(this)->maximumInlineProgressionDimension_ = ipd;
 	}
-	return longestLineWidth_;
+	return maximumInlineProgressionDimension_;
 }
 
 /// Reorders the runs in visual order.
