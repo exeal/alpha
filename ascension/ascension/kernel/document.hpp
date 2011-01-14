@@ -14,7 +14,7 @@
 #include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/gap-vector.hpp>	// GapVector
 #include <ascension/corelib/memory.hpp>		// FastArenaObject
-#include <ascension/corelib/standard-iterator-adapter.hpp>	// StandardConstBidirectionalIteratorAdapter
+#include <ascension/corelib/standard-iterator-adapter.hpp>	// detail.IteratorAdapter
 #include <ascension/corelib/string-piece.hpp>
 #ifdef ASCENSION_POSIX
 #	include <sys/stat.h>	// for POSIX environment
@@ -493,7 +493,7 @@ namespace ascension {
 			class Iterator : public detail::IteratorAdapter<
 				Iterator, std::iterator<std::bidirectional_iterator_tag, length_t> > {
 			public:
-				// StandardConstBidirectionalIteratorAdapter requirements
+				// detail.IteratorAdapter requirements
 				value_type current() const {return *impl_;}
 				bool equals(const Iterator& other) const {return impl_ == other.impl_;}
 				bool less(const Iterator& other) const {return impl_ < other.impl_;}

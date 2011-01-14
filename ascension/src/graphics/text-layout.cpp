@@ -8,7 +8,7 @@
 
 #include <ascension/config.hpp>			// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
 #include <ascension/graphics/text-layout.hpp>
-#include <ascension/graphics/graphics.hpp>
+#include <ascension/graphics/graphics-windows.hpp>
 #include <ascension/graphics/special-character-renderer.hpp>
 #include <ascension/corelib/unicode-property.hpp>
 #include <ascension/viewer/caret.hpp>	// Caret.isSelectionRectangle, viewers.selectedRangeOnVisualLine
@@ -136,6 +136,8 @@ namespace {
 	inline int estimateNumberOfGlyphs(length_t length) {
 		return static_cast<int>(length) * 3 / 2 + 16;
 	}
+
+	LANGID userCJKLanguage() /*throw()*/;
 
 	String fallback(int script) {
 		if(script <= Script::FIRST_VALUE || script == Script::INHERITED
@@ -1628,7 +1630,99 @@ inline int TextLayout::TextRun::x(length_t at, bool trailing) const {
 }
 
 
-// TextLayout ///////////////////////////////////////////////////////////////
+// InlineProgressionDimensionRangeIterator file-local class ///////////////////////////////////////
+
+namespace {
+	class InlineProgressionDimensionRangeIterator :
+		public detail::IteratorAdapter<
+			InlineProgressionDimensionRangeIterator, iterator<
+				input_iterator_tag, Range<Scalar>
+			>
+		> {
+	public:
+		InlineProgressionDimensionRangeIterator() /*throw()*/ : currentRun_(0), lastRun_(0) {}
+		InlineProgressionDimensionRangeIterator(
+			const Range<const TextLayout::TextRun* const*>& textRuns, const Range<length_t>& characterRange,
+			ReadingDirection scanningDirection, Scalar initialIpd);
+		const Range<length_t> characterRange() const /*throw()*/ {return characterRange_;}
+		Range<Scalar> current() const;
+		bool equals(const InlineProgressionDimensionRangeIterator& other) const /*throw()*/ {
+			if(currentRun_ == 0)
+				return other.isDone();
+			else if(other.currentRun_ == 0)
+				return isDone();
+			return currentRun_ == other.currentRun_;
+		}
+		void next() {return doNext(false);}
+		ReadingDirection scanningDirection() const /*throw()*/ {
+			return (currentRun_ <= lastRun_) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;
+		}
+	private:
+		void doNext(bool initializing);
+		bool isDone() const /*throw()*/ {return currentRun_ == lastRun_;}
+	private:
+		/*const*/ Range<length_t> characterRange_;
+		const TextLayout::TextRun* const* currentRun_;
+		const TextLayout::TextRun* const* /*const*/ lastRun_;
+		Scalar ipd_;
+	};
+}
+
+InlineProgressionDimensionRangeIterator::InlineProgressionDimensionRangeIterator(
+		const Range<const TextLayout::TextRun* const*>& textRuns, const Range<length_t>& characterRange,
+		ReadingDirection direction, Scalar initialIpd) : characterRange_(characterRange),
+		currentRun_((direction == LEFT_TO_RIGHT) ? textRuns.beginning() - 1 : textRuns.end()),
+		lastRun_((direction == LEFT_TO_RIGHT) ? textRuns.end() : textRuns.beginning() - 1),
+		ipd_(initialIpd) {
+	doNext(true);
+}
+
+Range<Scalar> InlineProgressionDimensionRangeIterator::current() const {
+	if(isDone())
+		throw NoSuchElementException();
+	assert((*currentRun_)->intersects(characterRange()));
+	Scalar start, end;
+	if(characterRange().beginning() > (*currentRun_)->beginning())
+		start = (*currentRun_)->x(characterRange().beginning(), false);
+	else
+		start = ((*currentRun_)->readingDirection() == LEFT_TO_RIGHT) ? 0 : (*currentRun_)->totalWidth();
+	if(characterRange().end() < (*currentRun_)->end())
+		end = (*currentRun_)->x(characterRange().end(), false);
+	else
+		end = ((*currentRun_)->readingDirection() == LEFT_TO_RIGHT) ? (*currentRun_)->totalWidth() : 0;
+
+	if(scanningDirection() == RIGHT_TO_LEFT) {
+		start -= (*currentRun_)->totalWidth();
+		end -= (*currentRun_)->totalWidth();
+	}
+	return Range<Scalar>(start + ipd_, end + ipd_);
+}
+
+void InlineProgressionDimensionRangeIterator::doNext(bool initializing) {
+	if(isDone())
+		throw NoSuchElementException();
+	const TextLayout::TextRun* const* nextRun = currentRun_;
+	Scalar nextIpd = ipd_;
+	while(true) {
+		if(scanningDirection() == LEFT_TO_RIGHT) {
+			if(!initializing)
+				nextIpd += (*nextRun)->totalWidth();
+			++nextRun;
+		} else {
+			if(!initializing)
+				nextIpd -= (*nextRun)->totalWidth();
+			--nextRun;
+		}
+		if(nextRun != lastRun_ || (*nextRun)->intersects(characterRange()))
+			break;
+	}
+	// commit
+	currentRun_ = nextRun;
+	ipd_ = nextIpd;
+}
+
+
+// TextLayout /////////////////////////////////////////////////////////////////////////////////////
 
 // helpers for TextLayout.draw
 namespace {
@@ -1919,7 +2013,7 @@ TextLayout::TextLayout(const String& text, ReadingDirection readingDirection,
 	copy(styledRanges.begin(), styledRanges.end(), styledRanges_.get());
 
 	// 3. generate glyphs for each text runs
-	const win32::Handle<HDC> dc(screenDC());
+	const win32::Handle<HDC> dc(detail::screenDC());
 	for(size_t i = 0; i < numberOfRuns_; ++i)
 		runs_[i]->shape(dc, text_);
 	TextRun::substituteGlyphs(Range<TextRun**>(runs_.get(), runs_.get() + numberOfRuns_), text_);
@@ -2045,35 +2139,26 @@ NativePolygon TextLayout::blackBoxBounds(const Range<length_t>& range) const {
 	if(numberOfRuns_ == 0)
 		return win32::Handle<HRGN>(::CreateRectRgn(0, 0, 0, lineMetrics_[0]->height()), &::DeleteObject);
 
+	// TODO: this implementation can't handle vertical text.
 	const length_t firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
-	vector<RECT> rectangles;
-	RECT rectangle;
-	rectangle.top = 0;
-	for(length_t line = firstLine; line <= lastLine; ++line, rectangle.top = rectangle.bottom) {
-		rectangle.bottom = rectangle.top + lineMetrics_[line]->height();
-		const size_t endOfRuns = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
-		int cx = lineIndent(line);
-		if(range.beginning() <= lineOffset(line) && range.end() >= lineOffset(line) + lineLength(line)) {
-			// whole line is encompassed by the range
-			rectangle.left = cx;
-			rectangle.right = rectangle.left + lineWidth(line);
-			rectangles.push_back(rectangle);
-			continue;
-		}
-		for(size_t i = lineFirstRuns_[line]; i < endOfRuns; ++i) {
-			const TextRun& run = *runs_[i];
-			if(range.beginning() <= run.end() && range.end() >= run.beginning()) {
-				rectangle.left = cx + ((range.beginning() > run.beginning()) ?
-					run.x(range.beginning(), false) : ((run.readingDirection() == LEFT_TO_RIGHT) ? 0 : run.totalWidth()));
-				rectangle.right = cx + ((range.end() < run.end()) ?
-					run.x(range.end(), false) : ((run.readingDirection() == LEFT_TO_RIGHT) ? run.totalWidth() : 0));
-				if(rectangle.left != rectangle.right) {
-					if(rectangle.left > rectangle.right)
-						std::swap(rectangle.left, rectangle.right);
-					rectangles.push_back(rectangle);
-				}
-			}
-			cx += run.totalWidth();
+	vector<Rect<> > rectangles;
+	Scalar before = blockProgressionDistance(0, firstLine)
+		- lineMetrics_[firstLine]->leading() - lineMetrics_[firstLine]->ascent();
+	Scalar after = before + lineMetrics_[firstLine]->height();
+	for(length_t line = firstLine; line <= lastLine; before = after, after += lineMetrics_[++line]->height()) {
+		const size_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
+		const Scalar leftEdge = (readingDirection() == LEFT_TO_RIGHT) ?
+			lineStartEdge(line) : (-lineStartEdge(line) - lineInlineProgressionDimension(line));
+
+		// is the whole line encompassed by the range?
+		if(range.beginning() <= lineOffset(line) && range.end() >= lineOffset(line) + lineLength(line))
+			rectangles.push_back(Rect<>(
+				Point<>(leftEdge, before), Point<>(leftEdge + lineInlineProgressionDimension(line), after)));
+		else {
+			for(InlineProgressionDimensionRangeIterator i(
+					Range<const TextRun* const*>(runs_.get() + lineFirstRuns_[line], runs_.get() + lastRun),
+					range, LEFT_TO_RIGHT, leftEdge), e; i != e; ++i)
+				rectangles.push_back(Rect<>(Point<>(i->beginning(), before), Point<>(i->end(), after)));
 		}
 	}
 
@@ -2081,10 +2166,10 @@ NativePolygon TextLayout::blackBoxBounds(const Range<length_t>& range) const {
 	AutoBuffer<POINT> vertices(new POINT[rectangles.size() * 4]);
 	AutoBuffer<int> numbersOfVertices(new int[rectangles.size()]);
 	for(size_t i = 0, c = rectangles.size(); i < c; ++i) {
-		vertices[i * 4 + 0].x = vertices[i * 4 + 3].x = rectangles[i].left;
-		vertices[i * 4 + 0].y = vertices[i * 4 + 1].y = rectangles[i].top;
-		vertices[i * 4 + 1].x = vertices[i * 4 + 2].x = rectangles[i].right;
-		vertices[i * 4 + 2].y = vertices[i * 4 + 3].y = rectangles[i].bottom;
+		vertices[i * 4 + 0].x = vertices[i * 4 + 3].x = rectangles[i].left();
+		vertices[i * 4 + 0].y = vertices[i * 4 + 1].y = rectangles[i].top();
+		vertices[i * 4 + 1].x = vertices[i * 4 + 2].x = rectangles[i].right();
+		vertices[i * 4 + 2].y = vertices[i * 4 + 3].y = rectangles[i].bottom();
 	}
 	fill_n(numbersOfVertices.get(), rectangles.size(), 4);
 	return win32::Handle<HRGN>(::CreatePolyPolygonRgn(vertices.get(),
@@ -2191,6 +2276,13 @@ Rect<> TextLayout::bounds(const Range<length_t>& range) const {
 				const length_t lastRun = (*line + 1 < numberOfLines()) ? lineFirstRuns_[*line + 1] : numberOfRuns_;
 
 				// find left-edge
+				InlineProgressionDimensionRangeIterator i(
+					Range<const TextRun* const*>(runs_.get() + lineFirstRuns_[*line], runs_.get() + lastRun),
+					range, LEFT_TO_RIGHT, (readingDirection() == LEFT_TO_RIGHT) ?
+						lineStartEdge(*line) : -lineStartEdge(*line) - lineInlineProgressionDimension(*line));
+				assert(i != InlineProgressionDimensionRangeIterator());
+				left = min(i->beginning(), left);
+
 				Scalar x = (readingDirection() == LEFT_TO_RIGHT) ?
 					lineStartEdge(*line) : -lineStartEdge(*line) - lineInlineProgressionDimension(*line);
 				for(length_t i = lineFirstRuns_[*line];
@@ -2205,6 +2297,13 @@ Rect<> TextLayout::bounds(const Range<length_t>& range) const {
 				}
 
 				// find right-edge
+				i = InlineProgressionDimensionRangeIterator(
+					Range<const TextRun* const*>(runs_.get() + lineFirstRuns_[*line], runs_.get() + lastRun),
+					range, RIGHT_TO_LEFT, (readingDirection() == LEFT_TO_RIGHT) ?
+						lineStartEdge(*line) + lineInlineProgressionDimension(*line) : -lineStartEdge(*line));
+				assert(i != InlineProgressionDimensionRangeIterator());
+				right = max(i->end(), right);
+
 				x = (readingDirection() == LEFT_TO_RIGHT) ?
 					lineStartEdge(*line) + lineInlineProgressionDimension(*line) : -lineStartEdge(*line);
 				for(length_t i = lastRun - 1; x > right; x -= runs_[i--]->totalWidth()) {
