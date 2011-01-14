@@ -283,11 +283,7 @@ namespace ascension {
 					friend class LineLayout;
 				};
 #endif
-				class InlineProgressionDimensionRangeIterator : public detail::IteratorAdapter<
-					InlineProgressionDimensionRangeIterator, std::iterator<
-						std::input_iterator_tag, Range<Scalar>
-					> > {
-				};
+				class TextRun;
 
 				// constructors
 				TextLayout(const String& text, presentation::ReadingDirection readingDirection,
@@ -366,7 +362,6 @@ namespace ascension {
 				const presentation::ReadingDirection readingDirection_;
 				const presentation::TextAnchor anchor_;
 				const presentation::DominantBaseline dominantBaseline_;
-				class TextRun;
 				AutoBuffer<TextRun*> runs_;
 				std::size_t numberOfRuns_;
 				AutoBuffer<presentation::StyledTextRun> styledRanges_;
