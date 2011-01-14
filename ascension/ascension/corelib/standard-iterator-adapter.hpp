@@ -15,11 +15,11 @@ namespace ascension {
 		template<typename Derived, typename Base>
 		struct InputOutputIteratorOperators : public Base {
 			/// Dereference operator.
-			typename std::iterator_traits<Base>::reference operator->() {
+			typename std::iterator_traits<Base>::pointer operator->() {
 				return *static_cast<Derived&>(*this);
 			}
 			/// Dereference operator.
-			const typename std::iterator_traits<Base>::reference operator->() const {
+			const typename std::iterator_traits<Base>::pointer operator->() const {
 				return *static_cast<const Derived&>(*this);
 			}
 			/// Inequality operator.
@@ -126,39 +126,31 @@ namespace ascension {
 		template<typename T> struct RemoveReference {typedef T Type;};
 		template<typename T> struct RemoveReference<T&> {typedef T Type;};
 */
-		template<typename Derived, typename Base>
-		class IteratorAdapter :
-			public InputOutputIteratorAdapterBase<Derived, Base>,
-			public BidirectionalIteratorAdapterBase<Derived, Base>,
-			public IteratorLessGreaterDecoratorBase<Derived, Base> {};
-
 		/**
-		 * Converts an Ascension basic bidirectional iterator class into the corresponding C++
+		 * @c IteratorAdapter converts an Ascension-style iterator class into the corresponding C++
 		 * standard-compliant one.
-		 * @tparam ConcreteIterator The iterator class converted. see the next section
-		 * @tparam Type The element type
-		 * @tparam Reference The reference type
-		 * @tparam Pointer The pointer type
-		 * @tparam Distance The distance type
+		 * @tparam Derived The iterator class to convert. See the next section
+		 * @tparam Base @c std#iterator type defines the iterator category, the element, the
+		 *              distance, the pointer and the reference types of the derived iterator
 		 * @note This class is not intended to be subclassed.
 		 * @see StringCharacterIterator, DocumentCharacterIterator
 		 *
-		 * Ascension basic bidirectional iterator classes don't have C++ standard iterator
-		 * interface (operator overloadings). By using this class, you can write the following:
+		 * Ascension-style iterator classes don't have C++ standard iterator interface (operator
+		 * overloadings). By using this class, you can write the following:
 		 *
 		 * @code
 		 * // find the first LF in the document
 		 * const Document& = ...;
-		 * // DocumentCharacterIterator is derived from StandardBidirectionalIteratorAdapter
+		 * // DocumentCharacterIterator is derived from detail.IteratorAdapter
 		 * std::find(
 		 *   document.begin(), document.end(),
 		 *   LINE_SEPARATOR  // DocumentCharacterIterator returns LINE_SEPARATOR at EOL
 		 * );
 		 * @endcode
 		 *
-		 * <h3>Concept -- @a ConcreteIterator requirements</h3>
+		 * <h3>Concept -- @a Derived type requirements</h3>
 		 *
-		 * @a ConcreteIterator template parameter must satisfy some of the following requirements:
+		 * @a Derived template parameter must satisfy some of the following requirements:
 		 * <table border="1">
 		 *   <tr><th>Expression</th><th>Return type</th><th>Assertion / Note / Pre- / Post-condition</th></tr>
 		 *   <tr><td>i.current()</td><td>@a Type</td><td>Returns the current value for @c #operator= and @c #operator-&gt;.</td></tr>
@@ -168,6 +160,11 @@ namespace ascension {
 		 *   <tr><td>i1.less(i2)</td><td>bool</td><td>true if @c i1 is less than @c i2. For @c #operator&lt;, @c #operator&gt;, ... This is not required if you don't use relation operators.</td></tr>
 		 * </table>
 		 */
+		template<typename Derived, typename Base>
+		class IteratorAdapter :
+			public InputOutputIteratorAdapterBase<Derived, Base>,
+			public BidirectionalIteratorAdapterBase<Derived, Base>,
+			public IteratorLessGreaterDecoratorBase<Derived, Base> {};
 
 	}
 } // namespace ascension.detail
