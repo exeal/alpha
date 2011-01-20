@@ -2,7 +2,7 @@
  * @file searcher.hpp
  * @author exeal
  * @date 2004-2006 (was TextSearcher.h)
- * @date 2006-2010
+ * @date 2006-2011
  */
 
 #ifndef ASCENSION_SEARCHER_HPP
@@ -61,9 +61,9 @@ namespace ascension {
 		 * A callback defines reactions about the interactive replacement.
 		 * @see TextSearcher#replaceAll
 		 */
-		class IInteractiveReplacementCallback {
+		class InteractiveReplacementCallback {
 		protected:
-			/// Reactions for @c IInteractiveReplacementCallback#queryReplacementAction method.
+			/// Reactions for @c InteractiveReplacementCallback#queryReplacementAction method.
 			enum Action {
 				REPLACE,			///< Replaces the matched region with the replacement, and continues.
 				SKIP,				///< Skips to the next without replacing.
@@ -159,7 +159,7 @@ namespace ascension {
 			void abortInteractiveReplacement();
 			std::size_t replaceAll(
 				kernel::Document& document, const kernel::Region& scope,
-				const String& replacement, IInteractiveReplacementCallback* callback);
+				const String& replacement, InteractiveReplacementCallback* callback);
 			bool search(const kernel::Document& document, const kernel::Position& from,
 				const kernel::Region& scope, Direction direction, kernel::Region& matchedRegion) const;
 			template<typename InputIterator>
@@ -200,7 +200,7 @@ namespace ascension {
 		 * Represents a callback object observes the state of the incremental searcher.
 		 * @see IncrementalSearcher
 		 */
-		class IIncrementalSearchCallback {
+		class IncrementalSearchCallback {
 		protected:
 			/// Temporary result of an incremental search.
 			enum Result {
@@ -247,7 +247,7 @@ namespace ascension {
 		 * @see TextSearcher, texteditor#Session#getIncrementalSearcher,
 		 * texteditor#commands#IncrementalSearchCommand
 		 */
-		class IncrementalSearcher : public kernel::IDocumentListener, public kernel::IBookmarkListener {
+		class IncrementalSearcher : public kernel::DocumentListener, public kernel::BookmarkListener {
 			ASCENSION_NONCOPYABLE_TAG(IncrementalSearcher);
 		public:
 			// constructor
@@ -269,7 +269,7 @@ namespace ascension {
 			void reset();
 			void start(kernel::Document& document, const kernel::Position& from,
 				TextSearcher& searcher, TextSearcher::Type type, Direction direction,
-				IIncrementalSearchCallback* callback = 0);
+				IncrementalSearchCallback* callback = 0);
 			bool undo();
 		private:
 			void setPatternToSearcher(bool pushToHistory);
@@ -290,7 +290,7 @@ namespace ascension {
 			};
 			kernel::Document* document_;
 			TextSearcher* searcher_;
-			IIncrementalSearchCallback* callback_;
+			IncrementalSearchCallback* callback_;
 			kernel::Region matchedRegion_;
 			std::stack<Operation> operationHistory_;
 			std::stack<Status> statusHistory_;
@@ -300,7 +300,7 @@ namespace ascension {
 		};
 
 
-// inline ///////////////////////////////////////////////////////////////////
+// inline /////////////////////////////////////////////////////////////////////////////////////////
 
 	/// Returns @c true if the pattern performs case-sensitive match.
 	inline bool LiteralPattern::isCaseSensitive() const /*throw()*/ {return caseSensitive_;}

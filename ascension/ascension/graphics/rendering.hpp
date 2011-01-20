@@ -29,7 +29,7 @@ namespace ascension {
 			 * @c TextRenderer.
 			 * @see TextRenderer#addDefaultFontListener, TextRenderer#removeDefaultFontListener
 			 */
-			class IDefaultFontListener {
+			class DefaultFontListener {
 			private:
 				/// The font settings was changed.
 				virtual void defaultFontChanged() = 0;
@@ -42,7 +42,7 @@ namespace ascension {
 			 * @see LineLayoutBuffer#addVisualLinesListener,
 			 *      LineLayoutBuffer#removeVisualLinesListener
 			 */
-			class IVisualLinesListener {
+			class VisualLinesListener {
 			private:
 				/**
 				 * Several visual lines were deleted.
@@ -80,7 +80,7 @@ namespace ascension {
 			 * of the visual lines.
 			 * @see LineLayout, TextRenderer
 			 */
-			class LineLayoutBuffer : public kernel::IDocumentListener, public kernel::IDocumentPartitioningListener {
+			class LineLayoutBuffer : public kernel::DocumentListener, public kernel::DocumentPartitioningListener {
 				ASCENSION_NONCOPYABLE_TAG(LineLayoutBuffer);
 			public:
 				// constructors
@@ -94,11 +94,11 @@ namespace ascension {
 				length_t numberOfSublinesOfLine(length_t) const;
 				length_t numberOfVisualLines() const /*throw()*/;
 				// listeners
-				void addVisualLinesListener(IVisualLinesListener& listener);
-				void removeVisualLinesListener(IVisualLinesListener& listener);
+				void addVisualLinesListener(VisualLinesListener& listener);
+				void removeVisualLinesListener(VisualLinesListener& listener);
 				// strategy
 				void setLayoutInformation(
-					const ILayoutInformationProvider* newProvider, bool delegateOwnership);
+					const LayoutInformationProvider* newProvider, bool delegateOwnership);
 				// position translations
 				length_t mapLogicalLineToVisualLine(length_t line) const;
 				length_t mapLogicalPositionToVisualPosition(
@@ -113,7 +113,8 @@ namespace ascension {
 			protected:
 				void invalidate(length_t line);
 				// enumeration
-				typedef std::list<TextLayout*>::const_iterator Iterator;
+				typedef std::pair<length_t, TextLayout*> LineLayout;
+				typedef std::list<LineLayout>::const_iterator Iterator;
 				Iterator firstCachedLine() const /*throw()*/;
 				Iterator lastCachedLine() const /*throw()*/;
 				// abstract
@@ -128,10 +129,10 @@ namespace ascension {
 					length_t newSublines, length_t oldSublines, bool documentChanged);
 				void presentationStylistChanged();
 				void updateLongestLine(length_t line, int width) /*throw()*/;
-				// kernel.IDocumentListener
+				// kernel.DocumentListener
 				void documentAboutToBeChanged(const kernel::Document& document);
 				void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
-				// kernel.IDocumentPartitioningListener
+				// kernel.DocumentPartitioningListener
 				void documentPartitioningChanged(const kernel::Region& changedRegion);
 			private:
 				struct CachedLineComparer {
@@ -139,22 +140,22 @@ namespace ascension {
 					bool operator()(length_t lhs, const TextLayout*& rhs) const /*throw()*/ {return lhs < rhs->lineNumber();}
 				};
 				kernel::Document& document_;
-				detail::StrategyPointer<const ILayoutInformationProvider> lip_;
-				std::list<TextLayout*> layouts_;
+				detail::StrategyPointer<const LayoutInformationProvider> lip_;
+				std::list<LineLayout> layouts_;
 				const std::size_t bufferSize_;
 				const bool autoRepair_;
 				enum {ABOUT_CHANGE, CHANGING, NONE} documentChangePhase_;
 				struct {
 					length_t first, last;
 				} pendingCacheClearance_;	// ドキュメント変更中に呼び出された clearCaches の引数
-				int longestLineWidth_;
+				Scalar longestLineWidth_;
 				length_t longestLine_, numberOfVisualLines_;
-				detail::Listeners<IVisualLinesListener> listeners_;
+				detail::Listeners<VisualLinesListener> listeners_;
 			};
 
 			// documentation is layout.cpp
 			class TextRenderer :
-				public LineLayoutBuffer, public ILayoutInformationProvider,
+				public LineLayoutBuffer, public LayoutInformationProvider,
 				public presentation::DefaultTextStyleListener {
 			public:
 				// constructors
@@ -167,18 +168,18 @@ namespace ascension {
 				int lineIndent(length_t line, length_t subline = 0) const;
 				bool updateTextMetrics();
 				// listener
-				void addDefaultFontListener(IDefaultFontListener& listener);
-				void removeDefaultFontListener(IDefaultFontListener& listener);
+				void addDefaultFontListener(DefaultFontListener& listener);
+				void removeDefaultFontListener(DefaultFontListener& listener);
 				// strategy
 				void setSpecialCharacterRenderer(
-					ISpecialCharacterRenderer* newRenderer, bool delegateOwnership);
+					SpecialCharacterRenderer* newRenderer, bool delegateOwnership);
 				// operation
 				void renderLine(length_t line, PaintContext& context, const Point<>& origin,
 					const Rect<>& clipRect, const TextLayout::Selection* selection) const /*throw()*/;
-				// ILayoutInformationProvider
+				// LayoutInformationProvider
 				const FontCollection& fontCollection() const /*throw()*/;
 				const presentation::Presentation& presentation() const /*throw()*/;
-				ISpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/;
+				SpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/;
 				const Font::Metrics& textMetrics() const /*throw()*/;
 				// presentation.DefaultTextStyleListener
 				void defaultTextLineStyleChanged(std::tr1::shared_ptr<const presentation::TextLineStyle> used);
@@ -192,8 +193,8 @@ namespace ascension {
 				mutable win32::Handle<HDC> memoryDC_;
 				mutable win32::Handle<HBITMAP> memoryBitmap_;
 				std::tr1::shared_ptr<const Font> primaryFont_;
-				detail::StrategyPointer<ISpecialCharacterRenderer> specialCharacterRenderer_;
-				detail::Listeners<IDefaultFontListener> listeners_;
+				detail::StrategyPointer<SpecialCharacterRenderer> specialCharacterRenderer_;
+				detail::Listeners<DefaultFontListener> listeners_;
 			};
 
 
@@ -221,9 +222,9 @@ namespace ascension {
 				if(pendingCacheClearance_.first != INVALID_INDEX
 						&& line >= pendingCacheClearance_.first && line < pendingCacheClearance_.last)
 					return 0;
-				for(std::list<TextLayout*>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-					if((*i)->lineNumber_ == line)
-						return *i;
+				for(std::list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
+					if(i->first == line)
+						return i->second;
 				}
 				return 0;
 			}
@@ -256,7 +257,7 @@ namespace ascension {
 			 * @param listener The listener to be removed
 			 * @throw std#invalid_argument @a listener is not registered
 			 */
-			inline void LineLayoutBuffer::removeVisualLinesListener(IVisualLinesListener& listener) {
+			inline void LineLayoutBuffer::removeVisualLinesListener(VisualLinesListener& listener) {
 				listeners_.remove(listener);
 			}
 
@@ -265,7 +266,7 @@ namespace ascension {
 				return primaryFont_;
 			}
 
-			/// @see ILayoutInformationProvider#textMetrics
+			/// @see LayoutInformationProvider#textMetrics
 			inline const Font::Metrics& TextRenderer::textMetrics() const /*throw()*/ {
 				return primaryFont()->metrics();
 			}

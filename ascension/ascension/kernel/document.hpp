@@ -2,7 +2,7 @@
  * @file document.hpp
  * @author exeal
  * @date 2003-2006 (was EditDoc.h)
- * @date 2006-2010
+ * @date 2006-2011
  */
 
 #ifndef ASCENSION_DOCUMENT_HPP
@@ -29,7 +29,7 @@ namespace ascension {
 
 	namespace detail {
 		/// @internal Interface for objects which manage the set of points.
-		template<class PointType> class IPointCollection {
+		template<class PointType> class PointCollection {
 		public:
 			/// Adds the newly created point.
 			virtual void addNewPoint(PointType& point) = 0;
@@ -270,7 +270,7 @@ namespace ascension {
 		 * Provides information about a document input.
 		 * @see Document
 		 */
-		class IDocumentInput {
+		class DocumentInput {
 		public:
 			/**
 			 * Thrown if @c IDocumentInput rejected the change of the document. For details, see
@@ -284,7 +284,7 @@ namespace ascension {
 			};
 		public:
 			/// Destructor.
-			virtual ~IDocumentInput() /*throw()*/ {}
+			virtual ~DocumentInput() /*throw()*/ {}
 			/// Returns the character encoding of the document input.
 			virtual std::string encoding() const /*throw()*/ = 0;
 			/// Returns a string represents the location of the document input or an empty string.
@@ -303,10 +303,10 @@ namespace ascension {
 		 * @see DocumentUpdate, Document#addListener, Document#addPrenotifiedListener,
 		 * Document#removeListener, Document#removePrenotifiedListener
 		 */
-		class IDocumentListener {
+		class DocumentListener {
 		public:
 			/// Destructor.
-			virtual ~IDocumentListener() /*throw()*/ {}
+			virtual ~DocumentListener() /*throw()*/ {}
 		private:
 			/**
 			 * The document is about to be changed.
@@ -327,7 +327,7 @@ namespace ascension {
 		 * Interface for objects which are interested in getting informed about changes a document's state.
 		 * @see Document#addStateListener, Document#removeStateListener
 		 */
-		class IDocumentStateListener {
+		class DocumentStateListener {
 		private:
 			/// The accessible region of the document was changed.
 			virtual void documentAccessibleRegionChanged(const Document& document) = 0;
@@ -345,7 +345,7 @@ namespace ascension {
 		 * document's compound change.
 		 * @see Document#beginCompoundChange
 		 */
-		class ICompoundChangeListener {
+		class CompoundChangeListener {
 		private:
 			/**
 			 * The compound change started.
@@ -365,7 +365,7 @@ namespace ascension {
 		 * invocation of document.
 		 * @see Document#beginCompoundChange, Document#undo
 		 */
-		class IDocumentRollbackListener {
+		class DocumentRollbackListener {
 		private:
 			/**
 			 * The undo/redo operation started.
@@ -382,13 +382,13 @@ namespace ascension {
 		};
 
 		/**
-		 * An @c IContentTypeInformationProvider provides the information about the document's content types.
+		 * An @c ContentTypeInformationProvider provides the information about the document's content types.
 		 * @see Document#setContentTypeInformation, Document#setContentTypeInformation
 		 */
-		class IContentTypeInformationProvider {
+		class ContentTypeInformationProvider {
 		public:
 			/// Destructor.
-			virtual ~IContentTypeInformationProvider() /*throw()*/ {}
+			virtual ~ContentTypeInformationProvider() /*throw()*/ {}
 			/**
 			 * Returns the identifier syntax for the specified content type.
 			 * @param contentType the type of content
@@ -401,7 +401,7 @@ namespace ascension {
 		 * Interface for objects which are interested in getting informed about changes of a document's partitioning.
 		 * @see DocumentPartitioner, Document#addPartitioningListener, Document#removePartitioningListener
 		 */
-		class IDocumentPartitioningListener {
+		class DocumentPartitioningListener {
 		private:
 			/**
 			 * Document partitions are changed.
@@ -466,10 +466,11 @@ namespace ascension {
 		};
 
 		/**
-		 * Interface for objects which are interested in getting informed about change of bookmarks of the document.
+		 * Interface for objects which are interested in getting informed about change of bookmarks
+		 * of the document.
 		 * @see Bookmarker, Bookmarker#addListener, Bookmarker#removeListener
 		 */
-		class IBookmarkListener {
+		class BookmarkListener {
 		private:
 			/**
 			 * The bookmark on @a line was set or removed. Note that this is not called when the
@@ -486,7 +487,7 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 * @see Document#bookmarker, EditPoint#forwardBookmark, EditPoint#backwardBookmark
 		 */
-		class Bookmarker : private IDocumentListener {
+		class Bookmarker : private DocumentListener {
 			ASCENSION_NONCOPYABLE_TAG(Bookmarker);
 		public:
 			/// A @c Bookmarker#Iterator enumerates the all marked lines.
@@ -507,8 +508,8 @@ namespace ascension {
 			// destructor
 			~Bookmarker() /*throw()*/;
 			// listeners
-			void addListener(IBookmarkListener& listener);
-			void removeListener(IBookmarkListener& listener);
+			void addListener(BookmarkListener& listener);
+			void removeListener(BookmarkListener& listener);
 			// attributes
 			bool isMarked(length_t line) const;
 			length_t next(length_t from, Direction direction, bool wrapAround = true, std::size_t marks = 1) const;
@@ -529,12 +530,12 @@ namespace ascension {
 			explicit Bookmarker(Document& document) /*throw()*/;
 			Document& document_;
 			detail::GapVector<length_t> markedLines_;
-			detail::Listeners<IBookmarkListener> listeners_;
+			detail::Listeners<BookmarkListener> listeners_;
 			friend class Document;
 		};
 
 		// the documentation is at document.cpp
-		class Document : public detail::IPointCollection<Point>, public detail::SessionElement {
+		class Document : public detail::PointCollection<Point>, public detail::SessionElement {
 			ASCENSION_NONCOPYABLE_TAG(Document);
 		public:
 			/// The property key for the title of the document.
@@ -568,22 +569,22 @@ namespace ascension {
 			// reconstruct
 			virtual void resetContent();
 			// listeners and strategies
-//			void addCompoundChangeListener(ICompoundChangeListener& listener);
-			void addListener(IDocumentListener& listener);
-			void addPartitioningListener(IDocumentPartitioningListener& listener);
-			void addPrenotifiedListener(IDocumentListener& listener);
-			void addRollbackListener(IDocumentRollbackListener& listener);
-			void addStateListener(IDocumentStateListener& listener);
-//			void removeCompoundChangeListener(ICompoundChangeListener& listener);
-			void removeListener(IDocumentListener& listener);
-			void removePartitioningListener(IDocumentPartitioningListener& listener);
-			void removePrenotifiedListener(IDocumentListener& listener);
-			void removeRollbackListener(IDocumentRollbackListener& listener);
-			void removeStateListener(IDocumentStateListener& listener);
+//			void addCompoundChangeListener(CompoundChangeListener& listener);
+			void addListener(DocumentListener& listener);
+			void addPartitioningListener(DocumentPartitioningListener& listener);
+			void addPrenotifiedListener(DocumentListener& listener);
+			void addRollbackListener(DocumentRollbackListener& listener);
+			void addStateListener(DocumentStateListener& listener);
+//			void removeCompoundChangeListener(CompoundChangeListener& listener);
+			void removeListener(DocumentListener& listener);
+			void removePartitioningListener(DocumentPartitioningListener& listener);
+			void removePrenotifiedListener(DocumentListener& listener);
+			void removeRollbackListener(DocumentRollbackListener& listener);
+			void removeStateListener(DocumentStateListener& listener);
 			// attributes
 			Bookmarker& bookmarker() /*throw()*/;
 			const Bookmarker& bookmarker() const /*throw()*/;
-			IDocumentInput* input() const /*throw()*/;
+			DocumentInput* input() const /*throw()*/;
 			bool isModified() const /*throw()*/;
 			bool isReadOnly() const /*throw()*/;
 			void markUnmodified() /*throw()*/;
@@ -591,7 +592,7 @@ namespace ascension {
 			const String* property(const DocumentPropertyKey& key) const /*throw()*/;
 			texteditor::Session* session() /*throw()*/;
 			const texteditor::Session* session() const /*throw()*/;
-			void setInput(IDocumentInput* newInput, bool delegateOwnership) /*throw()*/;
+			void setInput(DocumentInput* newInput, bool delegateOwnership) /*throw()*/;
 			void setModified() /*throw()*/;
 			void setPartitioner(std::auto_ptr<DocumentPartitioner> newPartitioner) /*throw()*/;
 			void setProperty(const DocumentPropertyKey& key, const String& property);
@@ -607,8 +608,8 @@ namespace ascension {
 			Region region() const /*throw()*/;
 			std::size_t revisionNumber() const /*throw()*/;
 			// content type information
-			IContentTypeInformationProvider& contentTypeInformation() const /*throw()*/;
-			void setContentTypeInformation(std::auto_ptr<IContentTypeInformationProvider> newProvider) /*throw()*/;
+			ContentTypeInformationProvider& contentTypeInformation() const /*throw()*/;
+			void setContentTypeInformation(std::auto_ptr<ContentTypeInformationProvider> newProvider) /*throw()*/;
 			// manipulations
 			bool isChanging() const /*throw()*/;
 			void replace(const Region& region, const StringPiece& text, Position* eos = 0);
@@ -654,7 +655,7 @@ namespace ascension {
 
 		private:
 			class UndoManager;
-			class DefaultContentTypeInformationProvider : public IContentTypeInformationProvider {
+			class DefaultContentTypeInformationProvider : public ContentTypeInformationProvider {
 			public:
 				DefaultContentTypeInformationProvider();
 				~DefaultContentTypeInformationProvider() /*throw()*/;
@@ -664,10 +665,10 @@ namespace ascension {
 			};
 
 			texteditor::Session* session_;
-			detail::StrategyPointer<IDocumentInput> input_;
+			detail::StrategyPointer<DocumentInput> input_;
 			std::auto_ptr<DocumentPartitioner> partitioner_;
 			std::auto_ptr<Bookmarker> bookmarker_;
-			std::auto_ptr<IContentTypeInformationProvider> contentTypeInformationProvider_;
+			std::auto_ptr<ContentTypeInformationProvider> contentTypeInformationProvider_;
 			bool readOnly_;
 			LineList lines_;
 			length_t length_;
@@ -679,11 +680,11 @@ namespace ascension {
 
 			std::pair<Position, Point*>* accessibleArea_;
 
-			std::list<IDocumentListener*> listeners_, prenotifiedListeners_;
-			detail::Listeners<IDocumentStateListener> stateListeners_;
-//			detail::Listeners<ICompoundChangeListener> compoundChangeListeners_;
-			detail::Listeners<IDocumentRollbackListener> rollbackListeners_;
-			detail::Listeners<IDocumentPartitioningListener> partitioningListeners_;
+			std::list<DocumentListener*> listeners_, prenotifiedListeners_;
+			detail::Listeners<DocumentStateListener> stateListeners_;
+//			detail::Listeners<CompoundChangeListener> compoundChangeListeners_;
+			detail::Listeners<DocumentRollbackListener> rollbackListeners_;
+			detail::Listeners<DocumentPartitioningListener> partitioningListeners_;
 
 			friend class DocumentPartitioner;
 		};
@@ -951,7 +952,7 @@ inline Bookmarker& Document::bookmarker() /*throw()*/ {return *bookmarker_;}
 inline const Bookmarker& Document::bookmarker() const /*throw()*/ {return *bookmarker_;}
 
 /// Returns the content information provider.
-inline IContentTypeInformationProvider& Document::contentTypeInformation() const /*throw()*/ {return *contentTypeInformationProvider_;}
+inline ContentTypeInformationProvider& Document::contentTypeInformation() const /*throw()*/ {return *contentTypeInformationProvider_;}
 
 /**
  * Returns the information of the specified line.
@@ -972,7 +973,7 @@ inline Document::LineIterator Document::getLineIterator(length_t line) const {
 #endif
 
 /// Returns the document input or @c null.
-inline IDocumentInput* Document::input() const /*throw()*/ {return input_.get();}
+inline DocumentInput* Document::input() const /*throw()*/ {return input_.get();}
 
 /**
  * Returns @c true if the document is changing (this means the document is in @c #insert or
@@ -1041,7 +1042,7 @@ inline const DocumentPartitioner& Document::partitioner() const /*throw()*/ {
  * @param changedRegion the changed region
  */
 inline void Document::partitioningChanged(const Region& changedRegion) /*throw()*/ {
-	partitioningListeners_.notify<const Region&>(&IDocumentPartitioningListener::documentPartitioningChanged, changedRegion);}
+	partitioningListeners_.notify<const Region&>(&DocumentPartitioningListener::documentPartitioningChanged, changedRegion);}
 
 /**
  * Returns the property associated with the document.
@@ -1073,7 +1074,7 @@ inline const texteditor::Session* Document::session() const /*throw()*/ {return 
  * @param newProvider the new content type information provider. the ownership will be transferred
  * to the callee. can be @c null
  */
-inline void Document::setContentTypeInformation(std::auto_ptr<IContentTypeInformationProvider> newProvider) /*throw()*/ {
+inline void Document::setContentTypeInformation(std::auto_ptr<ContentTypeInformationProvider> newProvider) /*throw()*/ {
 	contentTypeInformationProvider_.reset((newProvider.get() != 0) ? newProvider.release() : new DefaultContentTypeInformationProvider);}
 
 /**

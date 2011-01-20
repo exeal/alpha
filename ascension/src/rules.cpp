@@ -2,7 +2,7 @@
  * @file rules.cpp
  * @author exeal
  * @date 2004-2006 (was Lexer.cpp)
- * @date 2006-2010
+ * @date 2006-2011
  */
 
 #include <ascension/rules.hpp>
@@ -711,7 +711,7 @@ RegionRule::RegionRule(Token::Identifier id, const String& startSequence, const 
 }
 
 /// @see Rule#parse
-auto_ptr<Token> RegionRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
+auto_ptr<Token> RegionRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
 	// match the start sequence
 	if(first[0] != startSequence_[0]
 			|| static_cast<size_t>(last - first) < startSequence_.length() + endSequence_.length()
@@ -748,7 +748,7 @@ NumberRule::NumberRule(Token::Identifier id) /*throw()*/ : Rule(id) {
 }
 
 /// @see Rule#parse
-auto_ptr<Token> NumberRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
+auto_ptr<Token> NumberRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
 	assert(first < last);
 	/*
 		This is based on ECMAScript 3 "7.8.3 Numeric Literals" and performs the following regular
@@ -826,7 +826,7 @@ URIRule::URIRule(Token::Identifier id, const URIDetector& uriDetector,
 }
 
 /// @see Rule#parse
-auto_ptr<Token> URIRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
+auto_ptr<Token> URIRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
 	assert(first < last);
 	const Char* const e = uriDetector_->detect(first, last);
 	if(e == first)
@@ -899,7 +899,7 @@ WordRule::~WordRule() /*throw()*/ {
 }
 
 /// @see Rule#parse
-auto_ptr<Token> WordRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const {
+auto_ptr<Token> WordRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const {
 	if(!words_->matches(first, last))
 		return auto_ptr<Token>(0);
 	auto_ptr<Token> result(new Token);
@@ -925,7 +925,7 @@ RegexRule::RegexRule(Token::Identifier id, auto_ptr<const regex::Pattern> patter
 }
 
 /// @see Rule#parse
-auto_ptr<Token> RegexRule::parse(const ITokenScanner& scanner, const Char* first, const Char* last) const {
+auto_ptr<Token> RegexRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const {
 	const UTF16To32Iterator<const Char*> b(first, last), e(first, last, last);
 	auto_ptr<regex::Matcher<UTF16To32Iterator<const Char*> > > matcher(pattern_->matcher(b, e));
 	if(!matcher->lookingAt())
@@ -943,27 +943,27 @@ auto_ptr<Token> RegexRule::parse(const ITokenScanner& scanner, const Char* first
 
 // NullTokenScanner ///////////////////////////////////////////////////////////////////////////////
 
-/// @see ITokenScanner#getIdentifierSyntax
+/// @see TokenScanner#getIdentifierSyntax
 const IdentifierSyntax& NullTokenScanner::getIdentifierSyntax() const /*throw()*/ {
 	return IdentifierSyntax::defaultInstance();
 }
 
-/// @see ITokenScanner#getPosition
+/// @see TokenScanner#getPosition
 Position NullTokenScanner::getPosition() const /*throw()*/ {
 	return Position();
 }
 
-/// @see ITokenScanner#hasNext
+/// @see TokenScanner#hasNext
 bool NullTokenScanner::hasNext() const /*throw()*/ {
 	return false;
 }
 
-/// @see ITokenScanner#nextToken
+/// @see TokenScanner#nextToken
 auto_ptr<Token> NullTokenScanner::nextToken() {
 	return auto_ptr<Token>(0);
 }
 
-/// @see ITokenScanner#parse
+/// @see TokenScanner#parse
 void NullTokenScanner::parse(const Document&, const Region&) {
 }
 
@@ -1493,7 +1493,7 @@ inline void LexicalPartitioner::verify() const {
  * @throw NullPointerException @a tokenScanner is @c null
  */
 LexicalPartitionPresentationReconstructor::LexicalPartitionPresentationReconstructor(
-		const Presentation& presentation, auto_ptr<ITokenScanner> tokenScanner,
+		const Presentation& presentation, auto_ptr<TokenScanner> tokenScanner,
 		const map<Token::Identifier, tr1::shared_ptr<const presentation::TextRunStyle> >& styles,
 		tr1::shared_ptr<const presentation::TextRunStyle> defaultStyle /* = tr1::shared_ptr<const presentation::TextRunStyle>() */)
 		: presentation_(presentation), tokenScanner_(tokenScanner), styles_(styles) {

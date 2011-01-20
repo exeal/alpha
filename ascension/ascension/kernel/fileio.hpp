@@ -3,7 +3,7 @@
  * Defines @c ascension#kernel#fileio namespace.
  * @author exeal
  * @date 2009 separated from document.hpp
- * @date 2009-2010
+ * @date 2009-2011
  */
 
 #ifndef ASCENSION_FILEIO_HPP
@@ -66,15 +66,19 @@ namespace ascension {
 				const Code code_;
 			};
 
-			/// The encoding failed for unmappable character.
-			/// @see encoding#Encoder#UNMAPPABLE_CHARACTER
+			/**
+			 * The encoding failed for unmappable character.
+			 * @see encoding#Encoder#UNMAPPABLE_CHARACTER
+			 */
 			class UnmappableCharacterException : public std::ios_base::failure {
 			public:
 				UnmappableCharacterException();
 			};
 
-			/// The encoding failed for malformed input.
-			/// @see encoding#Encoder#MALFORMED_INPUT
+			/**
+			 * The encoding failed for malformed input.
+			 * @see encoding#Encoder#MALFORMED_INPUT
+			 */
 			class MalformedInputException : public std::ios_base::failure {
 			public:
 				MalformedInputException();
@@ -83,10 +87,11 @@ namespace ascension {
 			class TextFileDocumentInput;
 
 			/**
-			 * Interface for objects which are interested in getting informed about changes of @c FileBinder.
-			 * @see FileBinder#addListener, FileBinder#removeListener
+			 * Interface for objects which are interested in getting informed about changes of
+			 * @c TextFileDocumentInput.
+			 * @see TextFileDocumentInput#addListener, TextFileDocumentInput#removeListener
 			 */
-			class IFilePropertyListener {
+			class FilePropertyListener {
 			private:
 				/// The encoding or newline of the bound file was changed.
 				virtual void fileEncodingChanged(const TextFileDocumentInput& textFile) = 0;
@@ -96,7 +101,7 @@ namespace ascension {
 			};
 
 			/// Interface for objects which should handle the unexpected time stamp of the file.
-			class IUnexpectedFileTimeStampDirector {
+			class UnexpectedFileTimeStampDirector {
 			public:
 				/// Context.
 				enum Context {
@@ -117,7 +122,7 @@ namespace ascension {
 			};
 #if 0
 			/// Interface for objects which are interested in getting informed about progression of file IO.
-			class IFileIOProgressMonitor {
+			class FileIOProgressMonitor {
 			public:
 				enum ProcessType {};
 			private:
@@ -142,8 +147,9 @@ namespace ascension {
 			class TextFileStreamBuffer : public std::basic_streambuf<Char> {
 				ASCENSION_NONCOPYABLE_TAG(TextFileStreamBuffer);
 			public:
-				TextFileStreamBuffer(const PathString& fileName, std::ios_base::openmode mode,
-					const std::string& encoding, encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
+				TextFileStreamBuffer(const PathString& fileName,
+					std::ios_base::openmode mode, const std::string& encoding,
+					encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
 					bool writeUnicodeByteOrderMark);
 				~TextFileStreamBuffer();
 				TextFileStreamBuffer* close();
@@ -187,7 +193,7 @@ namespace ascension {
 				Char ucsBuffer_[8192];
 			};
 
-			class TextFileDocumentInput : public IDocumentInput, public IDocumentStateListener {
+			class TextFileDocumentInput : public DocumentInput, public DocumentStateListener {
 				ASCENSION_NONCOPYABLE_TAG(TextFileDocumentInput);
 			public:
 				/// The structure used to represent a file time.
@@ -217,8 +223,8 @@ namespace ascension {
 				bool checkTimeStamp();
 				const Document& document() const /*throw()*/;
 				// listener
-				void addListener(IFilePropertyListener& listener);
-				void removeListener(IFilePropertyListener& listener);
+				void addListener(FilePropertyListener& listener);
+				void removeListener(FilePropertyListener& listener);
 				// bound file
 				void bind(const PathString& fileName);
 				PathString fileName() const /*throw()*/;
@@ -227,7 +233,7 @@ namespace ascension {
 				LockType lockType() const /*throw()*/;
 				void revert(const std::string& encoding,
 					encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
-					IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = 0);
+					UnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = 0);
 				void unbind() /*throw()*/;
 				void unlockFile();
 				void write(const WritingFormat& format, const WritingOption* options = 0);
@@ -235,16 +241,16 @@ namespace ascension {
 				TextFileDocumentInput& setEncoding(const std::string& encoding);
 				TextFileDocumentInput& setNewline(Newline newline);
 				bool unicodeByteOrderMark() const /*throw()*/;
-				// IDocumentInput
+				// DocumentInput
 				std::string encoding() const /*throw()*/;
 				String location() const /*throw()*/;
 				Newline newline() const /*throw()*/;
 			private:
 				bool verifyTimeStamp(bool internal, Time& newTimeStamp) /*throw()*/;
-				// IDocumentInput
+				// DocumentInput
 				bool isChangeable(const Document& document) const /*throw()*/;
 				void postFirstDocumentChange(const Document& document) /*throw()*/;
-				// IDocumentStateListener
+				// DocumentStateListener
 				void documentAccessibleRegionChanged(const Document& document);
 				void documentModificationSignChanged(const Document& document);
 				void documentPropertyChanged(const Document& document, const DocumentPropertyKey& key);
@@ -260,8 +266,8 @@ namespace ascension {
 				std::size_t savedDocumentRevision_;
 				Time userLastWriteTime_, internalLastWriteTime_;
 				LockMode desiredLockMode_;
-				detail::Listeners<IFilePropertyListener> listeners_;
-				IUnexpectedFileTimeStampDirector* timeStampDirector_;
+				detail::Listeners<FilePropertyListener> listeners_;
+				UnexpectedFileTimeStampDirector* timeStampDirector_;
 			};
 
 #ifndef ASCENSION_NO_GREP

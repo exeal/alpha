@@ -1,7 +1,7 @@
 /**
  * @file point.hpp
  * @author exeal
- * @date 2003-2010
+ * @date 2003-2011
  */
 
 #ifndef ASCENSION_POINT_HPP
@@ -23,14 +23,14 @@ namespace ascension {
 
 		/**
 		 * A listener for @c Point.
-		 * @see IPointLifeCycleListener, viewers#ICaretListener, Point#Point
+		 * @see PointLifeCycleListener, viewers#CaretListener, Point#Point
 		 */
-		class IPointListener {
+		class PointListener {
 		private:
 			/**
 			 * The point was moved.
-			 * @param self the point
-			 * @param oldPosition the position from which the point moved
+			 * @param self The point
+			 * @param oldPosition The position from which the point moved
 			 */
 			virtual void pointMoved(const Point& self, const Position& oldPosition) = 0;
 			friend class Point;
@@ -38,12 +38,12 @@ namespace ascension {
 
 		/**
 		 * Interface for objects which are interested in lifecycle of the point.
-		 * @see Point#addLifeCycleListener, Point#removeLifeCycleListener, IPointListener
+		 * @see Point#addLifeCycleListener, Point#removeLifeCycleListener, PointListener
 		 */
-		class IPointLifeCycleListener {
+		class PointLifeCycleListener {
 		protected:
 			/// Destructor.
-			virtual ~IPointLifeCycleListener() /*throw()*/ {}
+			virtual ~PointLifeCycleListener() /*throw()*/ {}
 		private:
 			/// The point was destroyed. After this, don't call @c Point#addLifeCycleListener.
 			virtual void pointDestroyed() = 0;
@@ -56,7 +56,7 @@ namespace ascension {
 		public:
 			// constructors
 			explicit Point(Document& document,
-				const Position& position = Position(), IPointListener* listener = 0);
+				const Position& position = Position(), PointListener* listener = 0);
 			Point(const Point& rhs);
 			virtual ~Point() /*throw()*/;
 			// operators
@@ -74,8 +74,8 @@ namespace ascension {
 			Direction gravity() const /*throw()*/;
 			Point& setGravity(Direction gravity) /*throw()*/;
 			// listeners
-			void addLifeCycleListener(IPointLifeCycleListener& listener);
-			void removeLifeCycleListener(IPointLifeCycleListener& listener);
+			void addLifeCycleListener(PointLifeCycleListener& listener);
+			void removeLifeCycleListener(PointLifeCycleListener& listener);
 			// short-circuits
 			length_t column() const /*throw()*/;
 			ContentType contentType() const;
@@ -96,8 +96,8 @@ namespace ascension {
 			Position position_;
 			bool adapting_;
 			Direction gravity_;
-			IPointListener* listener_;
-			detail::Listeners<IPointLifeCycleListener> lifeCycleListeners_;
+			PointListener* listener_;
+			detail::Listeners<PointLifeCycleListener> lifeCycleListeners_;
 			friend class Document;
 		};
 
@@ -142,7 +142,7 @@ namespace ascension {
 		} // namespace locations
 
 
-		// inline implementations ///////////////////////////////////////////
+		// inline implementations /////////////////////////////////////////////////////////////////
 
 		/// Equality operator for @c Point objects.
 		inline bool operator==(const Point& lhs, const Point& rhs) /*throw()*/ {return lhs.position() == rhs.position();}

@@ -195,10 +195,19 @@ namespace ascension {
 
 			class TextColorOverrideIterator {
 			public:
-				struct TextSegment {
-					Range<length_t> range;	///< The character range in the line.
-					Color foreground;		///< The foreground color.
-					Color background;		///< The background color.
+				struct TextColors {
+					/// The overridden foreground color.
+					Color foreground;
+					/// The overridden background color.
+					Color background;
+					/**
+					 * Set @c false to paint only the glyphs' bounds with @c #background. Otherwise
+					 * the logical highlight bounds of characters are painted as background.
+					 */
+					bool useLogicalHighlightBounds;
+				};
+				struct TextSegment : public Range<length_t> {
+					std::tr1::shared_ptr<const TextColors> colors;
 				};
 			public:
 				/// Destructor.
@@ -247,6 +256,20 @@ namespace ascension {
 					LEADING,	///< Leading edge of a character.
 					TRAILING	///< Trailing edge of a character.
 				};
+				class ColorOverrideIterator {
+				public:
+					struct Run {
+						length_t length;
+						Color background;
+						Color foreground;
+					};
+				public:
+					/// Destructor.
+					virtual ~ColorOverrideIterator() /*throw()*/ {}
+					virtual void current(Run& run) const = 0;
+					virtual bool hasNext() const /*throw()*/ = 0;
+					virtual void next() = 0;
+				};
 				/// Used for @c LineLayout#draw methods.
 				class Selection {
 					ASCENSION_UNASSIGNABLE_TAG(Selection);
@@ -285,6 +308,7 @@ namespace ascension {
 #endif
 				class TextRun;
 
+			public:
 				// constructors
 				TextLayout(const String& text, presentation::ReadingDirection readingDirection,
 					presentation::TextAnchor anchor = presentation::TEXT_ANCHOR_START,
@@ -330,22 +354,25 @@ namespace ascension {
 //				StyledSegmentIterator firstStyledSegment() const /*throw()*/;
 //				StyledSegmentIterator lastStyledSegment() const /*throw()*/;
 				presentation::StyledTextRun styledTextRun(length_t column) const;
-				// operations
+				// painting
 				void draw(PaintContext& context,
 					const Point<>& origin, const Rect<>& clipRect,
-					const Color& defaultForeground, const Color& defaultBackground,
-					const Selection* selection) const /*throw()*/;
-				void draw(length_t line, PaintContext& context,
-					const Point<>& origin, const Rect<>& clipRect,
-					const Color& defaultForeground, const Color& defaultBackground,
-					const Selection* selection) const;
+					ColorOverrideIterator* colorOverride = 0,
+					const InlineObject* endOfLine = 0,
+					const InlineObject* lineWrappingMark = 0) const /*throw()*/;
 				String fillToX(Scalar x) const;
 #ifdef _DEBUG
+				// debug
 				void dumpRuns(std::ostream& out) const;
 #endif // _DEBUG
 
 			private:
 				Scalar blockProgressionDistance(length_t from, length_t to) const /*throw()*/;
+				void draw(length_t line, PaintContext& context,
+					const Point<>& origin, const Rect<>& clipRect,
+					const std::list<const ColorOverrideIterator::Run>* colorOverrides,
+					std::list<const ColorOverrideIterator::Run>::const_iterator coi,
+					const InlineObject* eol) const;
 				void expandTabsWithoutWrapping() /*throw()*/;
 				std::size_t findRunForPosition(length_t column) const /*throw()*/;
 				void justify(presentation::TextJustification method) /*throw()*/;

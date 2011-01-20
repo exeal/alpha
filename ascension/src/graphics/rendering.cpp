@@ -47,8 +47,8 @@ LineLayoutBuffer::LineLayoutBuffer(k::Document& document, length_t bufferSize, b
 /// Destructor.
 LineLayoutBuffer::~LineLayoutBuffer() /*throw()*/ {
 //	clearCaches(startLine_, startLine_ + bufferSize_, false);
-	for(list<TextLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i)
-		delete *i;
+	for(Iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i)
+		delete i->second;
 	document_.removePrenotifiedListener(*this);
 	document_.removePartitioningListener(*this);
 }
@@ -89,19 +89,17 @@ void LineLayoutBuffer::clearCaches(length_t first, length_t last, bool repair) {
 	if(repair) {
 		auto_ptr<Context> context;
 		length_t newSublines = 0, actualFirst = last, actualLast = first;
-		for(list<TextLayout*>::iterator i(layouts_.begin()); i != layouts_.end(); ++i) {
-			TextLayout*& layout = *i;
-			const length_t lineNumber = layout->lineNumber();
-			if(lineNumber >= first && lineNumber < last) {
-				oldSublines += layout->numberOfLines();
-				delete layout;
+		for(Iterator i(layouts_.begin()); i != layouts_.end(); ++i) {
+			if(i->first >= first && i->first < last) {
+				oldSublines += i->second->numberOfLines();
+				delete i->second;
 				if(context.get() == 0)
 					context = renderingContext();
-				layout = new TextLayout(*context, *lip_, lineNumber);
-				newSublines += layout->numberOfLines();
+				i->second = new TextLayout(*context, *lip_, i->first);
+				newSublines += i->second->numberOfLines();
 				++cachedLines;
-				actualFirst = min(actualFirst, lineNumber);
-				actualLast = max(actualLast, lineNumber);
+				actualFirst = min(actualFirst, i->first);
+				actualLast = max(actualLast, i->first);
 			}
 		}
 		if(actualFirst == last)	// no lines cleared
@@ -110,10 +108,10 @@ void LineLayoutBuffer::clearCaches(length_t first, length_t last, bool repair) {
 		fireVisualLinesModified(actualFirst, actualLast, newSublines += actualLast - actualFirst - cachedLines,
 			oldSublines += actualLast - actualFirst - cachedLines, documentChangePhase_ == CHANGING);
 	} else {
-		for(list<TextLayout*>::iterator i(layouts_.begin()); i != layouts_.end(); ) {
-			if((*i)->lineNumber() >= first && (*i)->lineNumber() < last) {
-				oldSublines += (*i)->numberOfLines();
-				delete *i;
+		for(Iterator i(layouts_.begin()); i != layouts_.end(); ) {
+			if(i->first >= first && i->first < last) {
+				oldSublines += i->second->numberOfLines();
+				delete i->second;
 				i = layouts_.erase(i);
 				++cachedLines;
 			} else
@@ -135,16 +133,16 @@ void LineLayoutBuffer::documentChanged(const kernel::Document&, const kernel::Do
 	if(change.erasedRegion().first.line != change.erasedRegion().second.line) {	// erased region includes newline(s)
 		const k::Region& region = change.erasedRegion();
 		clearCaches(region.first.line + 1, region.second.line + 1, false);
-		for(list<TextLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-			if((*i)->lineNumber() > region.first.line)
-				(*i)->lineNumber_ -= region.second.line - region.first.line;	// $friendly-access
+		for(Iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
+			if(i->first > region.first.line)
+				i->first -= region.second.line - region.first.line;	// $friendly-access
 		}
 	}
 	if(change.insertedRegion().first.line != change.insertedRegion().second.line) {	// inserted text is multiline
 		const k::Region& region = change.insertedRegion();
-		for(list<TextLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-			if((*i)->lineNumber() > region.first.line)
-				(*i)->lineNumber_ += region.second.line - region.first.line;	// $friendly-access
+		for(Iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
+			if(i->first > region.first.line)
+				i->first += region.second.line - region.first.line;	// $friendly-access
 		}
 		fireVisualLinesInserted(region.first.line + 1, region.second.line + 1);
 	}
@@ -191,10 +189,9 @@ void LineLayoutBuffer::fireVisualLinesModified(length_t first, length_t last,
 		length_t newLongestLine = longestLine_;
 		int newLongestLineWidth = longestLineWidth_;
 		for(Iterator i(firstCachedLine()), e(lastCachedLine()); i != e; ++i) {
-			const TextLayout& layout = **i;
-			if(layout.longestLineWidth() > newLongestLineWidth) {
-				newLongestLine = (*i)->lineNumber();
-				newLongestLineWidth = layout.longestLineWidth();
+			if(i->second->longestLineWidth() > newLongestLineWidth) {
+				newLongestLine = i->first;
+				newLongestLineWidth = i->second->longestLineWidth();
 			}
 		}
 		if(longestLineChanged = (newLongestLine != longestLine_))
@@ -229,14 +226,13 @@ void LineLayoutBuffer::invalidate(length_t first, length_t last) {
  */
 inline void LineLayoutBuffer::invalidate(length_t line) {
 	auto_ptr<Context> context(renderingContext());
-	for(list<TextLayout*>::iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-		TextLayout*& p = *i;
-		if(p->lineNumber() == line) {
-			const length_t oldSublines = p->numberOfLines();
-			delete p;
+	for(Iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
+		if(i->first == line) {
+			const length_t oldSublines = i->second->numberOfLines();
+			delete i->second;
 			if(autoRepair_) {
-				p = new TextLayout(*context, *lip_, line);
-				fireVisualLinesModified(line, line + 1, p->numberOfLines(), oldSublines, documentChangePhase_ == CHANGING);
+				i->second = new TextLayout(*context, *lip_, line);
+				fireVisualLinesModified(line, line + 1, i->second->numberOfLines(), oldSublines, documentChangePhase_ == CHANGING);
 			} else {
 				layouts_.erase(i);
 				fireVisualLinesModified(line, line + 1, 1, oldSublines, documentChangePhase_ == CHANGING);
@@ -260,9 +256,9 @@ const TextLayout& LineLayoutBuffer::lineLayout(length_t line) const {
 	if(line > lip_->presentation().document().numberOfLines())
 		throw kernel::BadPositionException(kernel::Position(line, 0));
 	LineLayoutBuffer& self = *const_cast<LineLayoutBuffer*>(this);
-	list<TextLayout*>::iterator i(self.layouts_.begin());
-	for(const list<TextLayout*>::iterator e(self.layouts_.end()); i != e; ++i) {
-		if((*i)->lineNumber_ == line)
+	Iterator i(self.layouts_.begin());
+	for(const Iterator e(self.layouts_.end()); i != e; ++i) {
+		if(i->first == line)
 			break;
 	}
 
@@ -270,27 +266,25 @@ const TextLayout& LineLayoutBuffer::lineLayout(length_t line) const {
 #ifdef ASCENSION_TRACE_LAYOUT_CACHES
 		dout << "... cache found\n";
 #endif
-		TextLayout* layout = *i;
-		if(layout != layouts_.front()) {
+		if(i->second != layouts_.front()) {
 			// bring to the top
 			self.layouts_.erase(i);
 			self.layouts_.push_front(layout);
 		}
-		return *layout;
+		return i->second;
 	} else {
 #ifdef ASCENSION_TRACE_LAYOUT_CACHES
 		dout << "... cache not found\n";
 #endif
 		if(layouts_.size() == bufferSize_) {
 			// delete the last
-			TextLayout* p = layouts_.back();
 			self.layouts_.pop_back();
-			self.fireVisualLinesModified(p->lineNumber(), p->lineNumber() + 1,
-				1, p->numberOfLines(), documentChangePhase_ == CHANGING);
-			delete p;
+			self.fireVisualLinesModified(i->first, i->first + 1,
+				1, i->second->numberOfLines(), documentChangePhase_ == CHANGING);
+			delete i->second;
 		}
 		TextLayout* const layout = new TextLayout(*renderingContext(), *lip_, line);
-		self.layouts_.push_front(layout);
+		self.layouts_.push_front(make_pair(line, layout));
 		self.fireVisualLinesModified(line, line + 1, layout->numberOfLines(), 1, documentChangePhase_ == CHANGING);
 		return *layout;
 	}

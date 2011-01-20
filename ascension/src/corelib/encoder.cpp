@@ -1,7 +1,7 @@
 /**
  * @file encoder.cpp
  * @author exeal
- * @date 2004-2010
+ * @date 2004-2011
  */
 
 #include <ascension/corelib/encoder.hpp>
@@ -558,16 +558,16 @@ namespace {
 	private:
 		class InternalEncoder : public Encoder {
 		public:
-			InternalEncoder(ulong mask, const IEncodingProperties& properties) /*throw()*/ : mask_(mask), props_(properties) {}
+			InternalEncoder(ulong mask, const EncodingProperties& properties) /*throw()*/ : mask_(mask), props_(properties) {}
 		private:
 			Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 				const Char* from, const Char* fromEnd, const Char*& fromNext);
 			Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 				const byte* from, const byte* fromEnd, const byte*& fromNext);
-			const IEncodingProperties& properties() const /*throw()*/ {return props_;}
+			const EncodingProperties& properties() const /*throw()*/ {return props_;}
 		private:
 			const ulong mask_;
-			const IEncodingProperties& props_;
+			const EncodingProperties& props_;
 		};
 	private:
 		const ulong mask_;
@@ -655,37 +655,37 @@ EncoderFactoryBase::EncoderFactoryBase(const string& name, MIBenum mib,
 EncoderFactoryBase::~EncoderFactoryBase() /*throw()*/ {
 }
 
-/// @see IEncodingProperties#aliases
+/// @see EncodingProperties#aliases
 string EncoderFactoryBase::aliases() const /*throw()*/ {
 	return aliases_;
 }
 
-/// @see IEncodingProperties#displayName
+/// @see EncodingProperties#displayName
 string EncoderFactoryBase::displayName(const locale&) const /*throw()*/ {
 	return displayName_;
 }
 
-/// @see IEncodingProperties#maximumNativeBytes
+/// @see EncodingProperties#maximumNativeBytes
 size_t EncoderFactoryBase::maximumNativeBytes() const /*throw()*/ {
 	return maximumNativeBytes_;
 }
 
-/// @see IEncodingProperties#maximumUCSLength
+/// @see EncodingProperties#maximumUCSLength
 size_t EncoderFactoryBase::maximumUCSLength() const /*throw()*/ {
 	return maximumUCSLength_;
 }
 
-/// @see IEncodingProperties#mibEnum
+/// @see EncodingProperties#mibEnum
 MIBenum EncoderFactoryBase::mibEnum() const /*throw()*/ {
 	return mib_;
 }
 
-/// @see IEncodingProperties#name
+/// @see EncodingProperties#name
 string EncoderFactoryBase::name() const /*throw()*/ {
 	return name_;
 }
 
-/// @see IEncodingProperties#substitutionCharacter
+/// @see EncodingProperties#substitutionCharacter
 byte EncoderFactoryBase::substitutionCharacter() const /*throw()*/ {
 	return substitutionCharacter_;
 }
@@ -742,21 +742,21 @@ void sbcs::BidirectionalMap::buildUnicodeToByteTable() {
 namespace {
 	class SingleByteEncoder : public Encoder {
 	public:
-		explicit SingleByteEncoder(const Char** byteToCharacterWire, const IEncodingProperties& properties) /*throw()*/;
+		explicit SingleByteEncoder(const Char** byteToCharacterWire, const EncodingProperties& properties) /*throw()*/;
 	private:
 		// Encoder
 		Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 			const Char* from, const Char* fromEnd, const Char*& fromNext);
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 			const byte* from, const byte* fromEnd, const byte*& fromNext);
-		const IEncodingProperties& properties() const /*throw()*/ {return props_;}
+		const EncodingProperties& properties() const /*throw()*/ {return props_;}
 	private:
 		const sbcs::BidirectionalMap table_;
-		const IEncodingProperties& props_;
+		const EncodingProperties& props_;
 	};
 
 	SingleByteEncoder::SingleByteEncoder(const Char** byteToCharacterWire,
-			const IEncodingProperties& properties) /*throw()*/ : table_(byteToCharacterWire), props_(properties) {
+			const EncodingProperties& properties) /*throw()*/ : table_(byteToCharacterWire), props_(properties) {
 	}
 
 	Encoder::Result SingleByteEncoder::doFromUnicode(byte* to, byte* toEnd,
@@ -801,6 +801,6 @@ namespace {
 } // namespace @0
 
 auto_ptr<Encoder> detail::createSingleByteEncoder(
-		const Char** byteToCharacterWire, const IEncodingProperties& properties) /*throw()*/ {
+		const Char** byteToCharacterWire, const EncodingProperties& properties) /*throw()*/ {
 	return auto_ptr<Encoder>(new SingleByteEncoder(byteToCharacterWire, properties));
 }
