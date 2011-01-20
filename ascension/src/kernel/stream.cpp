@@ -2,7 +2,7 @@
  * @file stream.cpp
  * @author exeal
  * @date 2009 separated from document.cpp
- * @date 2010
+ * @date 2010-2011
  */
 
 #include <ascension/kernel/document-stream.hpp>
@@ -10,14 +10,14 @@ using namespace ascension::kernel;
 using namespace std;
 
 
-// DocumentBuffer ///////////////////////////////////////////////////////////
+// DocumentBuffer /////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Constructor.
- * @param document the document
- * @param initialPosition the initial position of streams
- * @param nlr the newline representation
- * @param streamMode the streaming mode. this can be @c std#ios_base#in and @c std#ios_base#out
+ * @param document The document
+ * @param initialPosition The initial position of streams
+ * @param nlr The newline representation
+ * @param streamMode The streaming mode. this can be @c std#ios_base#in and @c std#ios_base#out
  * @throw UnknownValueException @a streamMode is invalid
  */
 DocumentBuffer::DocumentBuffer(Document& document, const Position& initialPosition /* = Position::ZERO_POSITION */,
@@ -75,7 +75,7 @@ DocumentBuffer::int_type DocumentBuffer::underflow() {
 }
 
 
-// document stream classes //////////////////////////////////////////////////
+// document stream classes ////////////////////////////////////////////////////////////////////////
 
 /// Constructor.
 DocumentInputStream::DocumentInputStream(Document& document, const Position& initialPosition /* = Position::ZERO_POSITION */,

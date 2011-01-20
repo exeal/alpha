@@ -1,7 +1,7 @@
 /**
  * @file session.cpp
  * @author exeal
- * @date 2006-2010
+ * @date 2006-2011
  */
 
 #include <ascension/session.hpp>
@@ -12,7 +12,7 @@ using namespace ascension::texteditor;
 using namespace std;
 
 
-// KillRing /////////////////////////////////////////////////////////////////
+// KillRing ///////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * @class ascension::texteditor::KillRing
@@ -20,8 +20,8 @@ using namespace std;
 
 /**
  * Constructor.
- * @param maximumNumberOfKills initial maximum number of kills. this setting can be change by
- * @c #setMaximumNumberOfKills later
+ * @param maximumNumberOfKills Initial maximum number of kills. This setting can be change by
+ *                             @c #setMaximumNumberOfKills later
  */
 KillRing::KillRing(size_t maximumNumberOfKills /* = ASCENSION_DEFAULT_MAXIMUM_KILLS */) /*throw()*/
 		: yankPointer_(contents_.end()), maximumNumberOfKills_(maximumNumberOfKills) {
@@ -29,19 +29,19 @@ KillRing::KillRing(size_t maximumNumberOfKills /* = ASCENSION_DEFAULT_MAXIMUM_KI
 
 /**
  * Registers the listener.
- * @param listener the listener to be registered
+ * @param listener The listener to be registered
  * @throw std#invalid_argument @a listener is already registered
  */
-void KillRing::addListener(IKillRingListener& listener) {
+void KillRing::addListener(KillRingListener& listener) {
 	listeners_.add(listener);
 }
 
 /**
  * Makes the given content tha latest kill in the kill ring.
- * @param text the content
- * @param rectangle true if the content is a rectangle
- * @param replace set true to replace the front of the kill ring. otherwise the new content will be
- * added
+ * @param text The content
+ * @param rectangle Set to @c true if the content is a rectangle
+ * @param replace Set to @c true to replace the front of the kill ring. Otherwise the new content
+ *                will be added
  */
 void KillRing::addNew(const String& text, bool rectangle, bool replace /* = false */) {
 	if(!contents_.empty() && replace)
@@ -52,7 +52,7 @@ void KillRing::addNew(const String& text, bool rectangle, bool replace /* = fals
 			contents_.pop_back();
 	}
 	yankPointer_ = contents_.begin();
-	listeners_.notify(&IKillRingListener::killRingChanged);
+	listeners_.notify(&KillRingListener::killRingChanged);
 }
 
 /**
@@ -68,7 +68,7 @@ void KillRing::append(const String& text, bool prepend) {
 	else
 		contents_.front().first.insert(0, text);
 	yankPointer_ = contents_.begin();
-	listeners_.notify(&IKillRingListener::killRingChanged);
+	listeners_.notify(&KillRingListener::killRingChanged);
 }
 
 KillRing::Contents::iterator KillRing::at(ptrdiff_t index) const {
@@ -94,7 +94,7 @@ KillRing::Contents::iterator KillRing::at(ptrdiff_t index) const {
  * Returns the content.
  * @param places
  * @return the content
- * @throw IllegalStateException the kill ring is empty
+ * @throw IllegalStateException The kill ring is empty
  */
 const pair<String, bool>& KillRing::get(ptrdiff_t places /* = 0 */) const {
 	return *at(places);
@@ -112,18 +112,18 @@ size_t KillRing::numberOfKills() const /*throw()*/ {
 
 /**
  * Removes the listener.
- * @param listener to be removed
+ * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered
  */
-void KillRing::removeListener(IKillRingListener& listener) {
+void KillRing::removeListener(KillRingListener& listener) {
 	listeners_.remove(listener);
 }
 
 /**
  * Rotates the yanking point by the given number of places.
  * @param places
- * @return the content
- * @throw IllegalStateException the kill ring is empty
+ * @return The content
+ * @throw IllegalStateException The kill ring is empty
  */
 const pair<String, bool>& KillRing::setCurrent(ptrdiff_t places) {
 	yankPointer_ = at(places);
@@ -131,7 +131,7 @@ const pair<String, bool>& KillRing::setCurrent(ptrdiff_t places) {
 }
 
 
-// InputSequenceCheckers ////////////////////////////////////////////////////
+// InputSequenceCheckers //////////////////////////////////////////////////////////////////////////
 
 /// Destructor.
 InputSequenceCheckers::~InputSequenceCheckers() {
@@ -141,7 +141,7 @@ InputSequenceCheckers::~InputSequenceCheckers() {
 
 /**
  * Registers the sequence checker.
- * @param checker the sequence checker to be registered.
+ * @param checker The sequence checker to be registered.
  * @throw std#invalid_argument @a checker is already registered
  */
 void InputSequenceCheckers::add(auto_ptr<InputSequenceChecker> checker) {
@@ -152,10 +152,10 @@ void InputSequenceCheckers::add(auto_ptr<InputSequenceChecker> checker) {
 
 /**
  * Checks the sequence.
- * @param preceding the string preceding the character to be input
- * @param c the code point of the character to be input
+ * @param preceding The string preceding the character to be input
+ * @param c The code point of the character to be input
  * @return true if the input is acceptable
- * @throw NullPointerException preceding is @c null
+ * @throw NullPointerException @a receding is @c null
  */
 bool InputSequenceCheckers::check(const StringPiece& preceding, CodePoint c) const {
 	if(preceding.beginning() == 0 || preceding.end() == 0)
@@ -181,14 +181,14 @@ bool InputSequenceCheckers::isEmpty() const /*throw()*/ {
 
 /**
  * Activates the specified keyboard layout.
- * @param keyboardLayout the keyboard layout
+ * @param keyboardLayout The keyboard layout
  */
 void InputSequenceCheckers::setKeyboardLayout(HKL keyboardLayout) /*throw()*/ {
 	keyboardLayout_ = keyboardLayout;
 }
 
 
-// Session //////////////////////////////////////////////////////////////////
+// Session ////////////////////////////////////////////////////////////////////////////////////////
 
 /// Constructor.
 Session::Session() /*throw()*/ : isearch_(0), textSearcher_(0) {
@@ -211,7 +211,7 @@ Session::~Session() /*throw()*/ {
 
 /**
  * Adds the document.
- * @param document the document to be added
+ * @param document The document to be added
  * @throw std#invalid_argument @a document is already registered
  */
 void Session::addDocument(kernel::Document& document) {
@@ -248,8 +248,8 @@ const KillRing& Session::killRing() const /*throw()*/ {
 #ifndef ASCENSION_NO_MIGEMO
 /**
  * Returns the directory of C/Migemo DLL or dictionary.
- * @param runtime true to get about DLL, false to get about dictionary
- * @return the path name of the directory
+ * @param runtime Set @c true to get about DLL, @c false to get about dictionary
+ * @return The path name of the directory
  */
 const kernel::fileio::PathCharacter* Session::migemoPathName(bool runtime) /*throw()*/ {
 	return runtime ? migemoRuntimePathName_ : migemoDictionaryPathName_;
@@ -258,7 +258,7 @@ const kernel::fileio::PathCharacter* Session::migemoPathName(bool runtime) /*thr
 
 /**
  * Removes the document.
- * @param document the document to be removed
+ * @param document The document to be removed
  * @throw std#invalid_argument @a document is not registered
  */
 void Session::removeDocument(kernel::Document& document) {
@@ -271,8 +271,8 @@ void Session::removeDocument(kernel::Document& document) {
 #ifndef ASCENSION_NO_MIGEMO
 /**
  * Sets the directory of C/Migemo DLL or dictionary.
- * @param pathName the path name of the directory or @c null
- * @param runtime true to set about DLL, false to set about dictionary
+ * @param pathName The path name of the directory or @c null
+ * @param runtime Set @c true to set about DLL, @c false to set about dictionary
  * @param std#length_error @a @pathName is too long
  */
 void Session::setMigemoPathName(const kernel::fileio::PathCharacter* pathName, bool runtime) {

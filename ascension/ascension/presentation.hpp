@@ -404,8 +404,8 @@ namespace ascension {
 		private:
 			/**
 			 * Queries the style of the text line.
-			 * @param line the line to be queried
-			 * @return the style of the line or @c null (filled by the presentation's default style)
+			 * @param line The line to be queried
+			 * @return The style of the line or @c null (filled by the presentation's default style)
 			 * @throw BadPositionException @a line is outside of the document
 			 */
 			virtual std::tr1::shared_ptr<const TextLineStyle> queryTextLineStyle(length_t line) const = 0;
@@ -486,10 +486,10 @@ namespace ascension {
 		 */
 		namespace hyperlink {
 			/// Represents a hyperlink.
-			class IHyperlink {
+			class Hyperlink {
 			public:
 				/// Destructor.
-				virtual ~IHyperlink() /*throw()*/ {}
+				virtual ~Hyperlink() /*throw()*/ {}
 				/// Returns the descriptive text of the hyperlink.
 				virtual String description() const /*throw()*/ = 0;
 				/// Invokes the hyperlink.
@@ -498,25 +498,25 @@ namespace ascension {
 				const Range<length_t>& region() const /*throw()*/ {return region_;}
 			protected:
 				/// Protected constructor takes the region of the hyperlink.
-				explicit IHyperlink(const Range<length_t>& region) /*throw()*/ : region_(region) {}
+				explicit Hyperlink(const Range<length_t>& region) /*throw()*/ : region_(region) {}
 			private:
 				const Range<length_t> region_;
 			};
 
 			/// A @c HyperlinkDetector finds the hyperlinks in the document.
-			class IHyperlinkDetector {
+			class HyperlinkDetector {
 			public:
 				/// Destructor.
-				virtual ~IHyperlinkDetector() /*throw()*/ {}
+				virtual ~HyperlinkDetector() /*throw()*/ {}
 				/**
 				 * Returns the next hyperlink in the specified text line.
-				 * @param document the document
-				 * @param line the line number
-				 * @param range the column range in the line to search. @a range.beginning() can be
-				 * the beginning of the found hyperlink
-				 * @return the found hyperlink, or @c null if not found
+				 * @param document The document
+				 * @param line The line number
+				 * @param range The column range in the line to search. @a range.beginning() can be
+				 *              the beginning of the found hyperlink
+				 * @return The found hyperlink, or @c null if not found
 				 */
-				virtual std::auto_ptr<IHyperlink> nextHyperlink(
+				virtual std::auto_ptr<Hyperlink> nextHyperlink(
 					const kernel::Document& document, length_t line, const Range<length_t>& range) const /*throw()*/ = 0;
 			};
 
@@ -525,12 +525,12 @@ namespace ascension {
 			 * @see rules#URIDetector, rules#URIRule
 			 * @note This class is not intended to be subclassed.
 			 */
-			class URIHyperlinkDetector : public IHyperlinkDetector {
+			class URIHyperlinkDetector : public HyperlinkDetector {
 			public:
 				URIHyperlinkDetector(const rules::URIDetector& uriDetector, bool delegateOwnership) /*throw()*/;
 				~URIHyperlinkDetector() /*throw()*/;
-				// IHyperlinkDetector
-				std::auto_ptr<IHyperlink> nextHyperlink(
+				// HyperlinkDetector
+				std::auto_ptr<Hyperlink> nextHyperlink(
 					const kernel::Document& document, length_t line, const Range<length_t>& range) const /*throw()*/;
 			private:
 				detail::StrategyPointer<const rules::URIDetector> uriDetector_;
@@ -539,15 +539,15 @@ namespace ascension {
 			/**
 			 * @note This class is not intended to be subclassed.
 			 */
-			class CompositeHyperlinkDetector : public hyperlink::IHyperlinkDetector {
+			class CompositeHyperlinkDetector : public hyperlink::HyperlinkDetector {
 			public:
 				~CompositeHyperlinkDetector() /*throw()*/;
-				void setDetector(kernel::ContentType contentType, std::auto_ptr<hyperlink::IHyperlinkDetector> detector);
-				// hyperlink.IHyperlinkDetector
-				std::auto_ptr<IHyperlink> nextHyperlink(
+				void setDetector(kernel::ContentType contentType, std::auto_ptr<hyperlink::HyperlinkDetector> detector);
+				// hyperlink.HyperlinkDetector
+				std::auto_ptr<Hyperlink> nextHyperlink(
 					const kernel::Document& document, length_t line, const Range<length_t>& range) const /*throw()*/;
 			private:
-				std::map<kernel::ContentType, hyperlink::IHyperlinkDetector*> composites_;
+				std::map<kernel::ContentType, hyperlink::HyperlinkDetector*> composites_;
 			};
 		} // namespace hyperlink
 
@@ -556,7 +556,7 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 * @see kernel#Document, kernel#DocumentPartitioner
 		 */
-		class Presentation : public kernel::IDocumentListener {
+		class Presentation : public kernel::DocumentListener {
 			ASCENSION_NONCOPYABLE_TAG(Presentation);
 		public:
 			// constructors
@@ -565,7 +565,7 @@ namespace ascension {
 			// attributes
 			kernel::Document& document() /*throw()*/;
 			const kernel::Document& document() const /*throw()*/;
-			const hyperlink::IHyperlink* const* getHyperlinks(length_t line, std::size_t& numberOfHyperlinks) const;
+			const hyperlink::Hyperlink* const* getHyperlinks(length_t line, std::size_t& numberOfHyperlinks) const;
 			// styles
 			void addDefaultTextStyleListener(DefaultTextStyleListener& listener);
 			std::tr1::shared_ptr<const TextLineStyle> defaultTextLineStyle() const /*throw()*/;
@@ -579,12 +579,12 @@ namespace ascension {
 			// strategies
 			void addTextLineColorDirector(std::tr1::shared_ptr<TextLineColorDirector> director);
 			void removeTextLineColorDirector(TextLineColorDirector& director) /*throw()*/;
-			void setHyperlinkDetector(hyperlink::IHyperlinkDetector* newDetector, bool delegateOwnership) /*throw()*/;
+			void setHyperlinkDetector(hyperlink::HyperlinkDetector* newDetector, bool delegateOwnership) /*throw()*/;
 			void setTextLineStyleDirector(std::tr1::shared_ptr<TextLineStyleDirector> newDirector) /*throw()*/;
 			void setTextRunStyleDirector(std::tr1::shared_ptr<TextRunStyleDirector> newDirector) /*throw()*/;
 		private:
 			void clearHyperlinksCache() /*throw()*/;
-			// kernel.IDocumentListener
+			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 		private:
@@ -597,7 +597,7 @@ namespace ascension {
 			std::tr1::shared_ptr<TextRunStyleDirector> textRunStyleDirector_;
 			std::list<std::tr1::shared_ptr<TextLineColorDirector> > textLineColorDirectors_;
 			detail::Listeners<DefaultTextStyleListener> defaultTextStyleListeners_;
-			detail::StrategyPointer<hyperlink::IHyperlinkDetector> hyperlinkDetector_;
+			detail::StrategyPointer<hyperlink::HyperlinkDetector> hyperlinkDetector_;
 			struct Hyperlinks;
 			mutable std::list<Hyperlinks*> hyperlinks_;
 		};
@@ -607,10 +607,10 @@ namespace ascension {
 		 * @c PresentationReconstructor class to manage the styles in the specified content type.
 		 * @see PresentationReconstructor#setPartitionReconstructor
 		 */
-		class IPartitionPresentationReconstructor {
+		class PartitionPresentationReconstructor {
 		public:
 			/// Destructor.
-			virtual ~IPartitionPresentationReconstructor() /*throw()*/ {}
+			virtual ~PartitionPresentationReconstructor() /*throw()*/ {}
 		private:
 			/**
 			 * Returns the styled text segments for the specified document region.
@@ -622,12 +622,12 @@ namespace ascension {
 		};
 
 		/// Reconstructs document presentation with single text style.
-		class SingleStyledPartitionPresentationReconstructor : public IPartitionPresentationReconstructor {
+		class SingleStyledPartitionPresentationReconstructor : public PartitionPresentationReconstructor {
 			ASCENSION_UNASSIGNABLE_TAG(SingleStyledPartitionPresentationReconstructor);
 		public:
 			explicit SingleStyledPartitionPresentationReconstructor(std::tr1::shared_ptr<const TextRunStyle> style) /*throw()*/;
 		private:
-			// IPartitionPresentationReconstructor
+			// PartitionPresentationReconstructor
 			std::auto_ptr<StyledTextRunIterator>
 				getPresentation(length_t line, const Range<length_t>& columnRange) const /*throw()*/;
 		private:
@@ -646,14 +646,14 @@ namespace ascension {
 			~PresentationReconstructor() /*throw()*/;
 			// attribute
 			void setPartitionReconstructor(kernel::ContentType contentType,
-				std::auto_ptr<IPartitionPresentationReconstructor> reconstructor);
+				std::auto_ptr<PartitionPresentationReconstructor> reconstructor);
 		private:
 			// TextRunStyleDirector
 			std::auto_ptr<StyledTextRunIterator> queryTextRunStyle(length_t line) const;
 		private:
 			class StyledTextRunIterator;
 			Presentation& presentation_;
-			std::map<kernel::ContentType, IPartitionPresentationReconstructor*> reconstructors_;
+			std::map<kernel::ContentType, PartitionPresentationReconstructor*> reconstructors_;
 		};
 
 

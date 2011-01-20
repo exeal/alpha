@@ -1,7 +1,7 @@
 /**
  * @file point.cpp
  * @author exeal
- * @date 2003-2010
+ * @date 2003-2011
  */
 
 #include <ascension/kernel/point.hpp>
@@ -14,7 +14,7 @@ using namespace ascension::text;
 using namespace std;
 
 
-// DocumentDisposedException ////////////////////////////////////////////////
+// DocumentDisposedException //////////////////////////////////////////////////////////////////////
 
 /// Default constructor.
 DocumentDisposedException::DocumentDisposedException() :
@@ -22,7 +22,7 @@ DocumentDisposedException::DocumentDisposedException() :
 }
 
 
-// Point ////////////////////////////////////////////////////////////////////
+// Point //////////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * @class ascension::kernel::Point
@@ -52,43 +52,43 @@ DocumentDisposedException::DocumentDisposedException() :
 
 /**
  * Constructor.
- * @param document the document to which the point attaches
- * @param position the initial position of the point
- * @param listener the listener. can be @c null if not needed
+ * @param document The document to which the point attaches
+ * @param position The initial position of the point
+ * @param listener The listener. Can be @c null if not needed
  * @throw BadPositionException @a position is outside of the document
  */
-Point::Point(Document& document, const Position& position /* = Position() */, IPointListener* listener /* = 0 */) :
+Point::Point(Document& document, const Position& position /* = Position() */, PointListener* listener /* = 0 */) :
 		document_(&document), position_(position), adapting_(true), gravity_(Direction::FORWARD), listener_(listener) {
 	if(position != Position() && !document.region().includes(position))
 		throw BadPositionException(position);
-	static_cast<detail::IPointCollection<Point>&>(document).addNewPoint(*this);
+	static_cast<detail::PointCollection<Point>&>(document).addNewPoint(*this);
 }
 
 /**
  * Copy-constructor.
- * @param other the source object
- * @throw DocumentDisposedException the document to which @a other belongs had been disposed
+ * @param other The source object
+ * @throw DocumentDisposedException The document to which @a other belongs had been disposed
  */
 Point::Point(const Point& other) : document_(other.document_), position_(other.position_),
 		adapting_(other.adapting_), gravity_(other.gravity_), listener_(other.listener_) {
 	if(document_ == 0)
 		throw DocumentDisposedException();
-	static_cast<detail::IPointCollection<Point>*>(document_)->addNewPoint(*this);
+	static_cast<detail::PointCollection<Point>*>(document_)->addNewPoint(*this);
 }
 
 /// Destructor.
 Point::~Point() /*throw()*/ {
-	lifeCycleListeners_.notify(&IPointLifeCycleListener::pointDestroyed);
+	lifeCycleListeners_.notify(&PointLifeCycleListener::pointDestroyed);
 	if(document_ != 0)
-		static_cast<detail::IPointCollection<Point>*>(document_)->removePoint(*this);
+		static_cast<detail::PointCollection<Point>*>(document_)->removePoint(*this);
 }
 
 /**
  * Registers the lifecycle listener.
- * @param listener the listener to be registered
+ * @param listener The listener to be registered
  * @throw std#invalid_argument @a listener is already registered
  */
-void Point::addLifeCycleListener(IPointLifeCycleListener& listener) {
+void Point::addLifeCycleListener(PointLifeCycleListener& listener) {
 	lifeCycleListeners_.add(listener);
 }
 
@@ -101,7 +101,7 @@ void Point::addLifeCycleListener(IPointLifeCycleListener& listener) {
  * - Throw any exceptions to interrupt the movement.
  *
  * @c Point#aboutToMove does nothing.
- * @param to the destination position. implementation can modify this value
+ * @param to The destination position. implementation can modify this value
  * @throw DocumentDisposedException the document to which the point belongs is already disposed
  * @see #moved, moveTo
  */
@@ -114,7 +114,7 @@ void Point::aboutToMove(Position& to) {
  * don't throw any exceptions. Note that this method is not called if @c #aboutToMove threw an
  * exception.
  * @c Point's implementation does nothing.
- * @param from the position before the point moved. this value may equal to the current position
+ * @param from The position before the point moved. This value may equal to the current position
  * @see #aboutToMove, moveTo
  */
 void Point::moved(const Position& from) /*throw()*/ {
@@ -125,9 +125,9 @@ void Point::moved(const Position& from) /*throw()*/ {
  * While this method fails when @a to was outside of the document, whether it depends on the
  * derived class when @a to was outside of the accessible region. @c Point succeeds in the latter
  * case. For other classes, see the documentations of the classes.
- * @param to the destination position
+ * @param to The destination position
  * @throw BadPositionException @a to is outside of the document
- * @throw ... any exceptions @c #aboutToMove implementation of sub-classe throws
+ * @throw ... Any exceptions @c #aboutToMove implementation of sub-classe throws
  */
 void Point::moveTo(const Position& to) {
 	if(isDocumentDisposed())
@@ -150,17 +150,17 @@ void Point::moveTo(const Position& to) {
 
 /**
  * Removes the lifecycle listener
- * @param listener the listener to be removed
+ * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered
  */
-void Point::removeLifeCycleListener(IPointLifeCycleListener& listener) {
+void Point::removeLifeCycleListener(PointLifeCycleListener& listener) {
 	lifeCycleListeners_.remove(listener);
 }
 
 /**
  * Sets the gravity.
- * @param gravity the new gravity value
- * @return this object
+ * @param gravity The new gravity value
+ * @return This object
  */
 Point& Point::setGravity(Direction gravity) /*throw()*/ {
 	if(isDocumentDisposed())
@@ -171,7 +171,7 @@ Point& Point::setGravity(Direction gravity) /*throw()*/ {
 
 /**
  * Called when the document was changed.
- * @param change the content of the document change
+ * @param change The content of the document change
  */
 void Point::update(const DocumentChange& change) {
 	if(document_ == 0 || !adaptsToDocument())
@@ -184,7 +184,7 @@ void Point::update(const DocumentChange& change) {
 }
 
 
-// kernel.locations free functions //////////////////////////////////////////
+// kernel.locations free functions ////////////////////////////////////////////////////////////////
 
 /**
  * @namespace ascension::kernel::locations
@@ -214,8 +214,8 @@ namespace {
 
 /**
  * Returns the beginning of the previous bookmarked line.
- * @param p the base point
- * @return the beginning of the backward bookmarked line or @c Position#INVALID_POSITION if there
+ * @param p The base point
+ * @return The beginning of the backward bookmarked line or @c Position#INVALID_POSITION if there
  *         is no bookmark in the document
  */
 Position locations::backwardBookmark(const Point& p, length_t marks /* = 1 */) {
@@ -225,10 +225,10 @@ Position locations::backwardBookmark(const Point& p, length_t marks /* = 1 */) {
 
 /**
  * Returns the position returned by N characters.
- * @param p the base point
- * @param unit defines what a character is
- * @param characters the number of the characters to return
- * @return the position of the previous character
+ * @param p The base point
+ * @param unit Defines what a character is
+ * @param characters The number of the characters to return
+ * @return The position of the previous character
  */
 Position locations::backwardCharacter(const Point& p, locations::CharacterUnit unit, length_t characters /* = 1 */) {
 	return nextCharacter(p.document(), p.position(), Direction::BACKWARD, unit, characters);
@@ -238,9 +238,9 @@ Position locations::backwardCharacter(const Point& p, locations::CharacterUnit u
  * Returns the position returned by N lines. If the destination position is outside of the
  * accessible region, returns the first line whose column is accessible, rather than the beginning
  * of the accessible region.
- * @param p the base point
- * @param lines the number of the lines to return
- * @return the position of the previous line
+ * @param p The base point
+ * @param lines The number of the lines to return
+ * @return The position of the previous line
  */
 Position locations::backwardLine(const Point& p, length_t lines /* = 1 */) {
 	Position temp(p.normalized());
@@ -253,9 +253,9 @@ Position locations::backwardLine(const Point& p, length_t lines /* = 1 */) {
 
 /**
  * Returns the beginning of the backward N words.
- * @param p the base point
- * @param words the number of words to traverse
- * @return the destination
+ * @param p The base point
+ * @param words The number of words to traverse
+ * @return The destination
  */
 Position locations::backwardWord(const Point& p, length_t words /* = 1 */) {
 	WordBreakIterator<DocumentCharacterIterator> i(
@@ -266,9 +266,9 @@ Position locations::backwardWord(const Point& p, length_t words /* = 1 */) {
 
 /**
  * Returns the the end of the backward N words.
- * @param p the base point
- * @param words the number of words to traverse
- * @return the destination
+ * @param p The base point
+ * @param words The number of words to traverse
+ * @return The destination
  */
 Position locations::backwardWordEnd(const Point& p, length_t words /* = 1 */) {
 	WordBreakIterator<DocumentCharacterIterator> i(
@@ -279,8 +279,8 @@ Position locations::backwardWordEnd(const Point& p, length_t words /* = 1 */) {
 
 /**
  * Returns the beginning of the document.
- * @param p the base point
- * @return the destination
+ * @param p The base point
+ * @return The destination
  */
 Position locations::beginningOfDocument(const Point& p) {
 	return p.document().accessibleRegion().first;
@@ -288,8 +288,8 @@ Position locations::beginningOfDocument(const Point& p) {
 
 /**
  * Returns the beginning of the current line.
- * @param p the base point
- * @return the destination
+ * @param p The base point
+ * @return The destination
  */
 Position locations::beginningOfLine(const Point& p) {
 	return max(Position(p.normalized().line, 0), p.document().accessibleRegion().first);
@@ -297,10 +297,10 @@ Position locations::beginningOfLine(const Point& p) {
 
 /**
  * Returns the code point of the current character.
- * @param p the base point
- * @param useLineFeed set @c true to return LF (U+000A) when the current position is the end of the
- *                    line. otherwise LS (U+2008)
- * @return the code point of the character, or @c INVALID_CODE_POINT if @a p is the end of the
+ * @param p The base point
+ * @param useLineFeed Set @c true to return LF (U+000A) when the current position is the end of the
+ *                    line. Otherwise LS (U+2008)
+ * @return The code point of the character, or @c INVALID_CODE_POINT if @a p is the end of the
  *         document
  */
 CodePoint locations::characterAt(const Point& p, bool useLineFeed /* = false */) {
@@ -312,8 +312,8 @@ CodePoint locations::characterAt(const Point& p, bool useLineFeed /* = false */)
 
 /**
  * Returns the end of the document.
- * @param p the base point
- * @return the destination
+ * @param p The base point
+ * @return The destination
  */
 Position locations::endOfDocument(const Point& p) {
 	return p.document().accessibleRegion().end();
@@ -321,8 +321,8 @@ Position locations::endOfDocument(const Point& p) {
 
 /**
  * Returns the end of the current line.
- * @param p the base point
- * @return the destination
+ * @param p The base point
+ * @return The destination
  */
 Position locations::endOfLine(const Point& p) {
 	const Position temp(p.normalized());
@@ -331,8 +331,8 @@ Position locations::endOfLine(const Point& p) {
 
 /**
  * Returns the beginning of the next bookmarked line.
- * @param p the base point
- * @return the beginning of the forward bookmarked line or @c Position#INVALID_POSITION if there
+ * @param p The base point
+ * @return The beginning of the forward bookmarked line or @c Position#INVALID_POSITION if there
  *         is no bookmark in the document
  */
 Position locations::forwardBookmark(const Point& p, length_t marks /* = 1 */) {
@@ -342,10 +342,10 @@ Position locations::forwardBookmark(const Point& p, length_t marks /* = 1 */) {
 
 /**
  * Returns the position advanced by N characters.
- * @param p the base point
- * @param unit defines what a character is
- * @param characters the number of the characters to advance
- * @return the position of the next character
+ * @param p The base point
+ * @param unit Defines what a character is
+ * @param characters The number of the characters to advance
+ * @return The position of the next character
  */
 Position locations::forwardCharacter(const Point& p, locations::CharacterUnit unit, length_t characters /* = 1 */) {
 	return nextCharacter(p.document(), p.position(), Direction::FORWARD, unit, characters);
@@ -355,9 +355,9 @@ Position locations::forwardCharacter(const Point& p, locations::CharacterUnit un
  * Returns the position advanced by N lines. If the destination position is outside of the
  * inaccessible region, returns the last line whose column is accessible, rather than the end of
  * the accessible region.
- * @param p the base point
- * @param lines the number of the lines to advance
- * @return the position of the next line
+ * @param p The base point
+ * @param lines The number of the lines to advance
+ * @return The position of the next line
  */
 Position locations::forwardLine(const Point& p, length_t lines /* = 1 */) {
 	Position temp(p.normalized());
@@ -370,9 +370,9 @@ Position locations::forwardLine(const Point& p, length_t lines /* = 1 */) {
 
 /**
  * Returns the beginning of the forward N words.
- * @param p the base point
- * @param words the number of words to traverse
- * @return the destination
+ * @param p The base point
+ * @param words The number of words to traverse
+ * @return The destination
  */
 Position locations::forwardWord(const Point& p, length_t words /* = 1 */) {
 	WordBreakIterator<DocumentCharacterIterator> i(
@@ -383,9 +383,9 @@ Position locations::forwardWord(const Point& p, length_t words /* = 1 */) {
 
 /**
  * Returns the end of the forward N words.
- * @param p the base point
- * @param words the number of words to traverse
- * @return the destination
+ * @param p The base point
+ * @param words The number of words to traverse
+ * @return The destination
  */
 Position locations::forwardWordEnd(const Point& p, length_t words /* = 1 */) {
 	WordBreakIterator<DocumentCharacterIterator> i(
@@ -417,12 +417,12 @@ bool locations::isEndOfLine(const Point& p) {
 /**
  * Returns the position offset from the given point with the given character unit.
  * This function considers the accessible region of the document.
- * @param document the document
- * @param position the base position
- * @param direction the direction to offset
- * @param characterUnit the character unit
- * @param offset the amount to offset
- * @return the result position. this must be inside of the accessible region of the document
+ * @param document The document
+ * @param position The base position
+ * @param direction The direction to offset
+ * @param characterUnit The character unit
+ * @param offset The amount to offset
+ * @return The result position. This must be inside of the accessible region of the document
  * @throw BadPositionException @a position is outside of the document
  * @throw UnknownValueException @a characterUnit is invalid
  */
@@ -475,7 +475,7 @@ Position locations::nextCharacter(const Document& document, const Position& posi
 #if 0
 /**
  * Moves to the specified offset.
- * @param offset the offset from the start of the document.
+ * @param offset The offset from the start of the document
  * @deprecated 0.8
  */
 void EditPoint::moveToAbsoluteCharacterOffset(length_t offset) {

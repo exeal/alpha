@@ -2,7 +2,7 @@
  * @file searcher.cpp
  * @author exeal
  * @date 2004-2006 (was TextSearcher.cpp)
- * @date 2006-2010
+ * @date 2006-2011
  */
 
 #include <ascension/kernel/searcher.hpp>
@@ -45,7 +45,7 @@ using namespace std;
  */
 
 
-// LiteralPattern ///////////////////////////////////////////////////////////
+// LiteralPattern /////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Constructor compiles the pattern.
@@ -170,7 +170,7 @@ bool LiteralPattern::search(const CharacterIterator& target, Direction direction
 }
 
 
-// TextSearcher /////////////////////////////////////////////////////////////
+// TextSearcher ///////////////////////////////////////////////////////////////////////////////////
 
 namespace {
 	inline DocumentCharacterIterator beginningOfDocument(const Document& document) /*throw()*/ {
@@ -412,7 +412,7 @@ inline bool checkBoundary(const DocumentCharacterIterator& first, const Document
  * @throw ReplacementInterruptedException&lt;std#bad_alloc&gt; The internal memory allocation
  *        failed. If thrown, the replacement will be interrupted
  */
-size_t TextSearcher::replaceAll(Document& document, const Region& scope, const String& replacement, IInteractiveReplacementCallback* callback) {
+size_t TextSearcher::replaceAll(Document& document, const Region& scope, const String& replacement, InteractiveReplacementCallback* callback) {
 	if(document.isReadOnly())
 		throw ReadOnlyDocumentException();
 	else if(!document.region().encompasses(scope))
@@ -423,8 +423,8 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 	stack<pair<Position, Position> > history;	// for undo (ouch, Region does not support placement new)
 	size_t documentRevision = document.revisionNumber();	// to detect other interruptions
 
-	IInteractiveReplacementCallback::Action action;	// the action the callback returns
-	IInteractiveReplacementCallback* const storedCallback = callback;
+	InteractiveReplacementCallback::Action action;	// the action the callback returns
+	InteractiveReplacementCallback* const storedCallback = callback;
 	if(callback != 0)
 		callback->replacementStarted(document, Region(scope).normalize());
 
@@ -448,8 +448,8 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 				static_cast<DocumentCharacterIterator&>(*matchedLast).tell());
 			while(true) {
 				action = (callback != 0) ?
-					callback->queryReplacementAction(matchedRegion, !history.empty()) : IInteractiveReplacementCallback::REPLACE;
-				if(action != IInteractiveReplacementCallback::UNDO)
+					callback->queryReplacementAction(matchedRegion, !history.empty()) : InteractiveReplacementCallback::REPLACE;
+				if(action != InteractiveReplacementCallback::UNDO)
 					break;
 				if(!history.empty()) {
 					// undo the last replacement
@@ -467,18 +467,18 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 			if(documentRevision != document.revisionNumber())
 				break;
 
-			if(action == IInteractiveReplacementCallback::REPLACE
-					|| action == IInteractiveReplacementCallback::REPLACE_ALL
-					|| action == IInteractiveReplacementCallback::REPLACE_AND_EXIT) {
+			if(action == InteractiveReplacementCallback::REPLACE
+					|| action == InteractiveReplacementCallback::REPLACE_ALL
+					|| action == InteractiveReplacementCallback::REPLACE_AND_EXIT) {
 				// replace? -- yes
-				if(action == IInteractiveReplacementCallback::REPLACE_ALL)
+				if(action == InteractiveReplacementCallback::REPLACE_ALL)
 					callback = 0;
 				if(!matchedRegion.isEmpty() || !replacement.empty()) {
 					Position e;
 					try {
 						document.replace(matchedRegion, replacement, &e);
-					} catch(const IDocumentInput::ChangeRejectedException&) {
-						throw ReplacementInterruptedException<IDocumentInput::ChangeRejectedException>(numberOfReplacements);
+					} catch(const DocumentInput::ChangeRejectedException&) {
+						throw ReplacementInterruptedException<DocumentInput::ChangeRejectedException>(numberOfReplacements);
 					} catch(const bad_alloc& e) {
 						throw ReplacementInterruptedException<bad_alloc>(e.what(), numberOfReplacements);
 					}
@@ -488,9 +488,9 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 				}
 				++numberOfReplacements;
 				history.push(matchedRegion);
-			} else if(action == IInteractiveReplacementCallback::SKIP)
+			} else if(action == InteractiveReplacementCallback::SKIP)
 				i.seek(matchedRegion.second);
-			if(action == IInteractiveReplacementCallback::REPLACE_AND_EXIT || action == IInteractiveReplacementCallback::EXIT)
+			if(action == InteractiveReplacementCallback::REPLACE_AND_EXIT || action == InteractiveReplacementCallback::EXIT)
 				break;
 		}
 	}
@@ -523,8 +523,8 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 				Region matchedRegion(matcher->start().tell(), matcher->end().tell());
 				while(true) {
 					action = (callback != 0) ?
-						callback->queryReplacementAction(matchedRegion, !history.empty()) : IInteractiveReplacementCallback::REPLACE;
-					if(action != IInteractiveReplacementCallback::UNDO)
+						callback->queryReplacementAction(matchedRegion, !history.empty()) : InteractiveReplacementCallback::REPLACE;
+					if(action != InteractiveReplacementCallback::UNDO)
 						break;
 					if(!history.empty()) {
 						// undo the last replacement
@@ -542,18 +542,18 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 				if(documentRevision != document.revisionNumber())
 					break;
 
-				if(action == IInteractiveReplacementCallback::REPLACE
-						|| action == IInteractiveReplacementCallback::REPLACE_ALL
-						|| action == IInteractiveReplacementCallback::REPLACE_AND_EXIT) {
+				if(action == InteractiveReplacementCallback::REPLACE
+						|| action == InteractiveReplacementCallback::REPLACE_ALL
+						|| action == InteractiveReplacementCallback::REPLACE_AND_EXIT) {
 					// replace? -- yes
-					if(action == IInteractiveReplacementCallback::REPLACE_ALL)
+					if(action == InteractiveReplacementCallback::REPLACE_ALL)
 						callback = 0;
 					history.push(matchedRegion);
 					assert(!matchedRegion.isEmpty() || !replacement.empty());
 					try {
 						document.replace(matchedRegion, matcher->replaceInplace(replacement));
-					} catch(const IDocumentInput::ChangeRejectedException&) {
-						throw ReplacementInterruptedException<IDocumentInput::ChangeRejectedException>(numberOfReplacements);
+					} catch(const DocumentInput::ChangeRejectedException&) {
+						throw ReplacementInterruptedException<DocumentInput::ChangeRejectedException>(numberOfReplacements);
 					} catch(const bad_alloc& e) {
 						throw ReplacementInterruptedException<bad_alloc>(e.what(), numberOfReplacements);
 					}
@@ -565,9 +565,9 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 							DocumentCharacterIterator(document, next));
 						documentRevision = document.revisionNumber();
 					}
-				} else if(action == IInteractiveReplacementCallback::SKIP)
+				} else if(action == InteractiveReplacementCallback::SKIP)
 					next = matchedRegion.second;
-				if(action == IInteractiveReplacementCallback::REPLACE_AND_EXIT || action == IInteractiveReplacementCallback::EXIT)
+				if(action == InteractiveReplacementCallback::REPLACE_AND_EXIT || action == InteractiveReplacementCallback::EXIT)
 					break;
 
 				if(matchedRegion.second == e.tell())	// reached the end of the scope
@@ -755,7 +755,7 @@ TextSearcher::WholeMatch TextSearcher::wholeMatch() const /*throw()*/ {
 }
 
 
-// IncrementalSearcher //////////////////////////////////////////////////////
+// IncrementalSearcher ////////////////////////////////////////////////////////////////////////////
 
 /// Constructor.
 IncrementalSearcher::IncrementalSearcher() /*throw()*/ : type_(TextSearcher::LITERAL) {
@@ -881,7 +881,7 @@ bool IncrementalSearcher::next(Direction direction) {
 			return addString(searcher_->pattern());	// use the most recent used
 		else {
 			if(callback_ != 0)
-				callback_->incrementalSearchPatternChanged(IIncrementalSearchCallback::EMPTY_PATTERN, IIncrementalSearchCallback::NO_WRAPPED);
+				callback_->incrementalSearchPatternChanged(IncrementalSearchCallback::EMPTY_PATTERN, IncrementalSearchCallback::NO_WRAPPED);
 			return true;
 		}
 	} else if(!matched_
@@ -912,7 +912,7 @@ void IncrementalSearcher::reset() {
 		statusHistory_.pop();
 	pattern_.erase();
 	if(callback_ != 0)
-		callback_->incrementalSearchPatternChanged(IIncrementalSearchCallback::EMPTY_PATTERN, IIncrementalSearchCallback::NO_WRAPPED);
+		callback_->incrementalSearchPatternChanged(IncrementalSearchCallback::EMPTY_PATTERN, IncrementalSearchCallback::NO_WRAPPED);
 }
 
 inline void IncrementalSearcher::setPatternToSearcher(bool pushToHistory) {
@@ -949,7 +949,7 @@ inline void IncrementalSearcher::setPatternToSearcher(bool pushToHistory) {
  * @param callback The callback object. can be @c null
  */
 void IncrementalSearcher::start(Document& document, const Position& from, TextSearcher& searcher,
-		TextSearcher::Type type, Direction direction, IIncrementalSearchCallback* callback /* = 0 */) {
+		TextSearcher::Type type, Direction direction, IncrementalSearchCallback* callback /* = 0 */) {
 	if(isRunning())
 		end();
 	const Status s = {Region(from, from), direction};
@@ -962,7 +962,7 @@ void IncrementalSearcher::start(Document& document, const Position& from, TextSe
 	matchedRegion_ = statusHistory_.top().matchedRegion;
 	if(0 != (callback_ = callback)) {
 		callback_->incrementalSearchStarted(document);
-		callback_->incrementalSearchPatternChanged(IIncrementalSearchCallback::EMPTY_PATTERN, IIncrementalSearchCallback::NO_WRAPPED);
+		callback_->incrementalSearchPatternChanged(IncrementalSearchCallback::EMPTY_PATTERN, IncrementalSearchCallback::NO_WRAPPED);
 	}
 }
 
@@ -995,7 +995,7 @@ bool IncrementalSearcher::undo() {
 		if(!matched_) {	// ... and should be matched state
 			matched_ = true;
 			if(callback_ != 0)
-				callback_->incrementalSearchPatternChanged(IIncrementalSearchCallback::FOUND, IIncrementalSearchCallback::NO_WRAPPED);
+				callback_->incrementalSearchPatternChanged(IncrementalSearchCallback::FOUND, IncrementalSearchCallback::NO_WRAPPED);
 		}
 		return true;
 	}
@@ -1015,7 +1015,7 @@ bool IncrementalSearcher::update() {
 		matchedRegion_ = lastStatus.matchedRegion;
 		if(callback_ != 0)
 			callback_->incrementalSearchPatternChanged(
-				IIncrementalSearchCallback::EMPTY_PATTERN, IIncrementalSearchCallback::NO_WRAPPED);
+				IncrementalSearchCallback::EMPTY_PATTERN, IncrementalSearchCallback::NO_WRAPPED);
 		return true;
 	}
 	setPatternToSearcher(false);
@@ -1044,11 +1044,11 @@ bool IncrementalSearcher::update() {
 #ifndef ASCENSION_NO_REGEX
 	} catch(boost::regex_error&) {
 		if(callback_ != 0)
-			callback_->incrementalSearchPatternChanged(IIncrementalSearchCallback::BAD_REGEX, IIncrementalSearchCallback::NO_WRAPPED);
+			callback_->incrementalSearchPatternChanged(IncrementalSearchCallback::BAD_REGEX, IncrementalSearchCallback::NO_WRAPPED);
 		return false;
 	} catch(runtime_error&) {
 		if(callback_ != 0)
-			callback_->incrementalSearchPatternChanged(IIncrementalSearchCallback::COMPLEX_REGEX, IIncrementalSearchCallback::NO_WRAPPED);
+			callback_->incrementalSearchPatternChanged(IncrementalSearchCallback::COMPLEX_REGEX, IncrementalSearchCallback::NO_WRAPPED);
 		return false;
 	}
 #endif // !ASCENSION_NO_REGEX
@@ -1057,6 +1057,6 @@ bool IncrementalSearcher::update() {
 		matchedRegion_ = matchedRegion;
 	if(callback_ != 0)
 		callback_->incrementalSearchPatternChanged(matched_ ?
-			IIncrementalSearchCallback::FOUND : IIncrementalSearchCallback::NOT_FOUND, IIncrementalSearchCallback::NO_WRAPPED);
+			IncrementalSearchCallback::FOUND : IncrementalSearchCallback::NOT_FOUND, IncrementalSearchCallback::NO_WRAPPED);
 	return matched_;
 }

@@ -2,7 +2,7 @@
  * @file rules.hpp
  * @author exeal
  * @date 2004-2006 (was Lexer.h)
- * @date 2006-2010
+ * @date 2006-2011
  */
 
 #ifndef ASCENSION_RULES_HPP
@@ -48,7 +48,7 @@ namespace ascension {
 
 		/**
 		 * 
-		 * @see ITokenScanner
+		 * @see TokenScanner
 		 */
 		class BadScannerStateException : public IllegalStateException {
 		public:
@@ -63,7 +63,7 @@ namespace ascension {
 			kernel::Region region;
 		};
 
-		class ITokenScanner;
+		class TokenScanner;
 
 		/**
 		 * Base class for concrete rule classes.
@@ -82,7 +82,7 @@ namespace ascension {
 			 * @return the found token or @c null
 			 */
 			virtual std::auto_ptr<Token> parse(
-				const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ = 0;
+				const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ = 0;
 			/// Returns the identifier of the token.
 			Token::Identifier tokenID() const /*throw()*/ {return id_;}
 		protected:
@@ -96,7 +96,7 @@ namespace ascension {
 		public:
 			RegionRule(Token::Identifier id, const String& startSequence,
 				const String& endSequence, Char escapeCharacter = NONCHARACTER, bool caseSensitive = true);
-			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
+			std::auto_ptr<Token> parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
 		private:
 			const String startSequence_, endSequence_;
 			const Char escapeCharacter_;
@@ -107,14 +107,14 @@ namespace ascension {
 		class NumberRule : public Rule {
 		public:
 			explicit NumberRule(Token::Identifier id) /*throw()*/;
-			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
+			std::auto_ptr<Token> parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
 		};
 
 		/// A concrete rule detects URI strings.
 		class URIRule : public Rule {
 		public:
 			URIRule(Token::Identifier id, const URIDetector& uriDetector, bool delegateOwnership) /*throw()*/;
-			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
+			std::auto_ptr<Token> parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
 		private:
 			detail::StrategyPointer<const URIDetector> uriDetector_;
 		};
@@ -125,7 +125,7 @@ namespace ascension {
 			WordRule(Token::Identifier id, const String* first, const String* last, bool caseSensitive = true);
 			WordRule(Token::Identifier id, const Char* first, const Char* last, Char separator, bool caseSensitive = true);
 			~WordRule() /*throw()*/;
-			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
+			std::auto_ptr<Token> parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
 		private:
 			detail::HashTable* words_;
 		};
@@ -135,22 +135,22 @@ namespace ascension {
 		class RegexRule : public Rule {
 		public:
 			RegexRule(Token::Identifier id, std::auto_ptr<const regex::Pattern> pattern);
-			std::auto_ptr<Token> parse(const ITokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
+			std::auto_ptr<Token> parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
 		private:
 			std::auto_ptr<const regex::Pattern> pattern_;
 		};
 #endif // !ASCENSION_NO_REGEX
 
 		/**
-		 * @c ITokenScanner scans a range of document and returns the tokens it finds. To start
+		 * @c TokenScanner scans a range of document and returns the tokens it finds. To start
 		 * scanning, call @c #parse method with a target document region. And then call
 		 * @c #nextToken method repeatedly to get tokens. When reached the end of the scanning
 		 * region, the scanning is end and @c #hasNext will return @c false.
 		 */
-		class ITokenScanner {
+		class TokenScanner {
 		public:
 			/// Destructor.
-			virtual ~ITokenScanner() /*throw()*/ {}
+			virtual ~TokenScanner() /*throw()*/ {}
 			/// Returns the identifier syntax.
 			virtual const text::IdentifierSyntax& getIdentifierSyntax() const /*throw()*/ = 0;
 			/// Returns the current position.
@@ -165,8 +165,8 @@ namespace ascension {
 			/**
 			 * Starts the scan with the specified range. The current position of the scanner will
 			 * be the top of the specified region.
-			 * @param document the document
-			 * @param region the region to be scanned
+			 * @param document The document
+			 * @param region The region to be scanned
 			 * @throw kernel#BadRegionException @a region intersects outside of the document
 			 */
 			virtual void parse(const kernel::Document& document, const kernel::Region& region) = 0;
@@ -176,7 +176,7 @@ namespace ascension {
 		 * @c NullTokenScanner returns no tokens. @c NullTokenScanner#hasNext returns always
 		 * @c false.
 		 */
-		class NullTokenScanner : public ITokenScanner {
+		class NullTokenScanner : public TokenScanner {
 		public:
 			const text::IdentifierSyntax& getIdentifierSyntax() const /*throw()*/;
 			kernel::Position getPosition() const /*throw()*/;
@@ -192,7 +192,7 @@ namespace ascension {
 		 * not supported by this class.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class LexicalTokenScanner : public ITokenScanner {
+		class LexicalTokenScanner : public TokenScanner {
 			ASCENSION_NONCOPYABLE_TAG(LexicalTokenScanner);
 		public:
 			// constructors
@@ -201,7 +201,7 @@ namespace ascension {
 			// attributes
 			void addRule(std::auto_ptr<const Rule> rule);
 			void addWordRule(std::auto_ptr<const WordRule> rule);
-			// ITokenScanner
+			// TokenScanner
 			const text::IdentifierSyntax& getIdentifierSyntax() const /*throw()*/;
 			kernel::Position getPosition() const /*throw()*/;
 			bool hasNext() const /*throw()*/;
@@ -307,14 +307,14 @@ namespace ascension {
 
 		/**
 		 * Standard implementation of @c presentation#IPartitionPresentationReconstructor. This
-		 * implementation performs rule based lexical tokenization using the given @c ITokenScanner.
+		 * implementation performs rule based lexical tokenization using the given @c TokenScanner.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class LexicalPartitionPresentationReconstructor : public presentation::IPartitionPresentationReconstructor {
+		class LexicalPartitionPresentationReconstructor : public presentation::PartitionPresentationReconstructor {
 			ASCENSION_UNASSIGNABLE_TAG(LexicalPartitionPresentationReconstructor);
 		public:
 			explicit LexicalPartitionPresentationReconstructor(
-				const presentation::Presentation& presentation, std::auto_ptr<ITokenScanner> tokenScanner,
+				const presentation::Presentation& presentation, std::auto_ptr<TokenScanner> tokenScanner,
 				const std::map<Token::Identifier, std::tr1::shared_ptr<const presentation::TextRunStyle> >& styles,
 				std::tr1::shared_ptr<const presentation::TextRunStyle> defaultStyle = std::tr1::shared_ptr<const presentation::TextRunStyle>());
 		private:
@@ -323,7 +323,7 @@ namespace ascension {
 		private:
 			class StyledTextRunIterator;
 			const presentation::Presentation& presentation_;
-			std::auto_ptr<ITokenScanner> tokenScanner_;
+			std::auto_ptr<TokenScanner> tokenScanner_;
 			std::tr1::shared_ptr<const presentation::TextRunStyle> defaultStyle_;
 			const std::map<Token::Identifier, std::tr1::shared_ptr<const presentation::TextRunStyle> > styles_;
 		};

@@ -2112,13 +2112,13 @@ TextAlignment TextLayout::alignment() const /*throw()*/ {
 ascension::byte TextLayout::bidiEmbeddingLevel(length_t column) const {
 	if(numberOfRuns_ == 0) {
 		if(column != 0)
-			throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
+			throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));
 		// use the default level
 		return (readingDirection() == RIGHT_TO_LEFT) ? 1 : 0;
 	}
 	const size_t i = findRunForPosition(column);
 	if(i == numberOfRuns_)
-		throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
+		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));
 	return runs_[i]->bidiEmbeddingLevel();
 }
 
@@ -2133,7 +2133,7 @@ ascension::byte TextLayout::bidiEmbeddingLevel(length_t column) const {
  */
 NativePolygon TextLayout::blackBoxBounds(const Range<length_t>& range) const {
 	if(range.end() > text_.length())
-		throw kernel::BadPositionException(kernel::Position(lineNumber_, range.end()));
+		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, range.end()));
 
 	// handle empty line
 	if(numberOfRuns_ == 0)
@@ -2222,7 +2222,7 @@ Rect<> TextLayout::bounds() const /*throw()*/ {
  */
 Rect<> TextLayout::bounds(const Range<length_t>& range) const {
 	if(range.end() > text_.length())
-		throw kernel::BadPositionException(kernel::Position(lineNumber_, range.end()));
+		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, range.end()));
 
 	Scalar start, end, before, after;
 
@@ -2233,7 +2233,6 @@ Rect<> TextLayout::bounds(const Range<length_t>& range) const {
 		before = -lineMetrics_[0]->ascent() - lineMetrics_[0]->leading();
 		after = lineMetrics_[0]->descent();
 	} else if(range.isEmpty()) {	// an empty rectangle for an empty range
-		const Point<> p();
 		const LineMetrics& line = *lineMetrics_[lineAt(range.beginning())];
 		return Rect<>(
 			location(range.beginning()) -= Dimension<>(0, line.ascent() + line.leading()),
@@ -2349,17 +2348,20 @@ namespace {
  * @param selection Describe the selected character ranges
  */
 void TextLayout::draw(PaintContext& context, const Point<>& origin, const Rect<>& clipRect,
-		const Color& defaultForeground, const Color& defaultBackground, const Selection* selection) const /*throw()*/ {
+		ColorOverrideIterator* colorOverride /* = 0 */, const InlineObject* endOfLine /* = 0*/, const InlineObject* lineWrappingMark /* = 0 */) const /*throw()*/ {
 	if(isEmpty())
 		return;
 
 	Point<> p(origin);
 	for(length_t line = 0; p.y - lineMetrics_[line]->descent() >= context.boundsToPaint().bottom(); ) {
-		if(p.y + lineMetrics_[line]->ascent() > context.boundsToPaint().top())
-			draw(line, context, p, clipRect, defaultForeground, defaultBackground, selection);
+		if(p.y + lineMetrics_[line]->ascent() > context.boundsToPaint().top()) {
+			p.x = origin.x + (readingDirection() == LEFT_TO_RIGHT) ? lineStartEdge(line) : -lineStartEdge(line);
+			draw(line, context, p, clipRect, 0, list<const ColorOverrideIterator::Run>::const_iterator(),
+				(line == numberOfLines() - 1) ? endOfLine : lineWrappingMark);
+		}
 		if(++line == numberOfLines())
 			break;
-		p.y += lineMetrics_[line - 1]->descent() + lineMetrics_[line]->ascent();
+		p.y += blockProgressionDistance(line - 1, line);
 	}
 }
 
@@ -2367,85 +2369,68 @@ void TextLayout::draw(PaintContext& context, const Point<>& origin, const Rect<>
  * Draws the specified line layout to the output device.
  * @param line The visual line
  * @param context The graphics context
- * @param origin The position to draw
+ * @param origin The alignment point of the line
  * @param clipRect The clipping region
  * @param defaultForeground
  * @param defaultBackground
  * @param selection Describe the selected character ranges
  * @throw IndexOutOfBoundsException @a line is invalid
  */
-void TextLayout::draw(length_t line, PaintContext& context, const Point<>& origin, const Rect<>& clipRect,
-		const Color& defaultForeground, const Color& defaultBackground, const Selection* selection) const {
+void TextLayout::draw(length_t line,
+		PaintContext& context, const Point<>& origin, const Rect<>& clipRect,
+		const list<const ColorOverrideIterator::Run>* colorOverrides,
+		list<const ColorOverrideIterator::Run>::const_iterator coi, const InlineObject* eol) const {
 	if(line >= numberOfLines())
 		throw IndexOutOfBoundsException("line");
 
-#ifdef _DEBUG
+#if /*defined(_DEBUG)*/ 0
 	if(DIAGNOSE_INHERENT_DRAWING)
 		win32::DumpContext() << L"@TextLayout.draw draws line " << lineNumber_ << L" (" << line << L")\n";
-#endif // _DEBUG
+#endif // defined(_DEBUG)
 
-	// the following topic describes how to draw a selected text using masking by clipping
+	// this code paints the line in the following steps:
+	// 1. paint backgrounds of the all text runs are specified the background property
+	// 2. paint backgrounds of the all text ranges specified by 'colorOverrides'
+	// 3. paint borders of the all text runs
+	// 4. for each text runs:
+	// 4-1. paint the glyphs of the text run
+	// 4-2. paint the overhanging glyphs of the around text runs
+	// 4-3. paint the text decoration
+	// 5. paint the end of line mark
+	//
+	// the following topics describe how to draw a styled and selected text using masking by clipping
 	// Catch 22 : Design and Implementation of a Win32 Text Editor
-	// Part 10 - Transparent Text and Selection Highlighting (http://www.catch22.net/tuts/editor10.asp)
+	// Part 10 - Transparent Text and Selection Highlighting (http://www.catch22.net/tuts/neatpad/10)
+	// Part 14 - Drawing styled text with Uniscribe (http://www.catch22.net/tuts/neatpad/14)
 
-	const int lineHeight = lineMetrics_[line]->height();
-	const Color marginColor(Color::fromCOLORREF(systemColors.serve(defaultBackground, COLOR_WINDOW)));
-
-//	if(specialCharacterRenderer != 0)
-//		context.boundsToPaint().setY(Range<int>(origin.y, origin.y + lineHeight));
+	const Scalar lineHeight = lineMetrics_[line]->height();
 
 	context.save();
 	::SetTextAlign(context.nativeHandle().get(), TA_TOP | TA_LEFT | TA_NOUPDATECP);
 	if(!isEmpty()) {
-//		const String& s = text();
-		Range<length_t> selectedRange;
-		if(selection != 0) {
-			if(!selectedRangeOnVisualLine(selection->caret(), lineNumber_, line, selectedRange))
-				selection = 0;
+		Range<const TextRun**> runs(runs_ + lineFirstRuns_[line],
+			runs_[(line < numberOfLines() - 1) ? lineFirstRuns_[line + 1] : numberOfRuns_];
+		Scalar leftEdge = origin.x;	// left-edge of runs.beginning()
+		if(readingDirection() == RIGHT_TO_LEFT)
+			leftEdge -= lineInlineProgressionDimension(line);
+
+		// 1. paint backgrounds of the all text runs are specified the background property
+		{
+			Scalar left = leftEdge;
+			const Run** firstRun = runs.beginning();
+			const Run** lastRun = runs.end();
+			for(const TextRun** run = runs.beginning(); run != runs.end(); ++run) {
+				if(basePoint.x + run.totalWidth() < context.boundsToPaint().left()) {
+					// this run does not need to draw => skip to the next
+					++firstRun;
+					leftEdge = (left += run.totalWidth());
+				} else {
+				}
+			}
 		}
-
-		// 1. paint gap of lines
-		// 2. paint the left margin
-		// 3. paint background of the text runs
-		// 4. paint the right margin
-		// 5. draw the foreground glyphs
-
-		// 1. paint gap of lines
-		Point<> basePoint(origin);
-		win32::Handle<HRGN> clipRegion(::CreateRectRgn(
-			clipRect.left(), max<Scalar>(basePoint.y, clipRect.top()),
-			clipRect.right(), min<Scalar>(basePoint.y + dy, clipRect.bottom())), &::DeleteObject);
-//		dc.selectClipRgn(clipRegion.getHandle());
-		if(dy - lineHeight > 0)
-			context.fillRectangle(
-				Rect<>(
-					Point<>(context.boundsToPaint().left(), basePoint.y + lineHeight),
-					Dimension<>(context.boundsToPaint().width(), dy - lineHeight)),
-				marginColor);
-
-		basePoint.x += lineIndent(line);
-
-//		tr1::shared_ptr<const TextRunStyle> defaultStyle(lip_.presentation().defaultTextRunStyle());
-//		const COLORREF defaultForeground =
-//			systemColors.serve((defaultStyle.get() != 0) ? defaultStyle->foreground : Color(), COLOR_WINDOWTEXT);
-//		const COLORREF defaultBackground =
-//			systemColors.serve((defaultStyle.get() != 0) ? defaultStyle->background : Color(), COLOR_WINDOW);
-		size_t firstRun = lineFirstRuns_[line];
-		size_t lastRun = (line < numberOfLines() - 1) ? lineFirstRuns_[line + 1] : numberOfRuns_;
-
-		// 2. paint the left margin
-		if(basePoint.x > context.boundsToPaint().left())
-			context.fillRectangle(
-				Rect<>(
-					Point<>(context.boundsToPaint().left(), basePoint.y),
-					Dimension<>(basePoint.x - context.boundsToPaint().left(), lineHeight)),
-				marginColor);
-
-		// 3. paint background of the text runs
-		int startX = basePoint.x;
-		for(size_t i = firstRun; i < lastRun; ++i) {
-			const TextRun& run = *runs_[i];
-			if(basePoint.x + run.totalWidth() < context.boundsToPaint().left()) {	// this run does not need to draw
+		for(const TextRun** run = runs.beginning(); run != runs.end(); ++run) {
+			if(basePoint.x + run.totalWidth() < context.boundsToPaint().left()) {
+				// this run does not need to draw => skip to the next
 				++firstRun;
 				startX = basePoint.x + run.totalWidth();
 			} else {
@@ -2946,7 +2931,7 @@ pair<length_t, length_t> TextLayout::locateOffsets(length_t line, Scalar ipd, bo
 void TextLayout::locations(length_t column, Point<>* leading, Point<>* trailing) const {
 	assert(leading != 0 || trailing != 0);
 	if(column > text_.length())
-		throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
+		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));
 
 	Scalar leadingIpd, trailingIpd, bpd = lineMetrics_[0]->ascent() + lineMetrics_[0]->leading();
 	if(isEmpty())
@@ -3101,7 +3086,7 @@ ReadingDirection TextLayout::readingDirection() const /*throw()*/ {
  */
 StyledRun TextLayout::styledTextRun(length_t column) const {
 	if(column > text().length())
-		throw kernel::BadPositionException(kernel::Position(lineNumber_, column));
+		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));
 	const TextRun& run = *runs_[findRunForPosition(column)];
 	return StyledRun(run.column(), run.requestedStyle());
 }

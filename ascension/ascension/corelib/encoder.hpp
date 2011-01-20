@@ -1,7 +1,7 @@
 /**
  * @file encoder.hpp
  * @author exeal
- * @date 2004-2010
+ * @date 2004-2011
  */
 
 #ifndef ASCENSION_ENCODER_HPP
@@ -224,7 +224,11 @@ namespace ascension {
 			explicit UnsupportedEncodingException(const std::string& message);
 		};
 
-		class IEncodingProperties {
+		/**
+		 * An interface which describes the properties of a encoding. @c Encoder#properties method
+		 * returns this object.
+		 */
+		class EncodingProperties {
 		public:
 			/**
 			 * Returns the aliases of the encoding. Default implementation returns an empty.
@@ -335,7 +339,7 @@ namespace ascension {
 			virtual ~Encoder() /*throw()*/;
 			// attributes
 			int flags() const /*throw()*/;
-			virtual const IEncodingProperties& properties() const /*throw()*/ = 0;
+			virtual const EncodingProperties& properties() const /*throw()*/ = 0;
 			virtual Encoder& resetDecodingState() /*throw()*/;
 			virtual Encoder& resetEncodingState() /*throw()*/;
 			Encoder& setFlags(const int newFlags);
@@ -398,7 +402,7 @@ namespace ascension {
 		};
 
 		/// A factory class creates @c Encoder instances.
-		class EncoderFactory : public IEncodingProperties {
+		class EncoderFactory : public EncodingProperties {
 		public:
 			/// Destructor.
 			virtual ~EncoderFactory() /*throw()*/ {}
@@ -465,7 +469,7 @@ namespace ascension {
 					std::size_t maximumNativeBytes = 1, std::size_t maximumUCSLength = 1,
 					const std::string& aliases = "", byte substitutionCharacter = 0x1a);
 			protected:
-				// IEncodingProperties
+				// EncodingProperties
 				virtual std::string aliases() const /*throw()*/;
 				virtual std::string displayName(const std::locale& lc) const /*throw()*/;
 				virtual std::size_t maximumNativeBytes() const /*throw()*/;
@@ -629,32 +633,42 @@ namespace ascension {
 
 	namespace detail {
 		std::auto_ptr<encoding::Encoder> createSingleByteEncoder(
-			const Char** byteToCharacterWire, const encoding::IEncodingProperties& properties) /*throw()*/;
+			const Char** byteToCharacterWire, const encoding::EncodingProperties& properties) /*throw()*/;
 	}
 
 	namespace encoding {
 		/**
 		 * Returns informations for all available encodings.
+		 * @tparam OutputIterator The type of @a out
 		 * @param[out] out The output iterator to receive pairs consist of the enumeration
 		 *             identifier and the encoding information. The expected type of the pair is
-		 *             @c std#pair&lt;std::size_t, const IEncodingProperties*&gt;. The enumeration
+		 *             @c std#pair&lt;std::size_t, const EncodingProperties*&gt;. The enumeration
 		 *             identifier can be used with @c #forID method.
 		 */
-		template<typename OutputIterator> inline void Encoder::availableEncodings(OutputIterator out) {
-			for(std::size_t i = 0, c = registry().size(); i < c; ++i, ++out) *out = std::make_pair<std::size_t, const IEncodingProperties*>(i, registry()[i]);}
+		template<typename OutputIterator>
+		inline void Encoder::availableEncodings(OutputIterator out) {
+			for(std::size_t i = 0, c = registry().size(); i < c; ++i, ++out)
+				*out = std::make_pair<std::size_t, const EncodingProperties*>(i, registry()[i]);
+		}
 
 		/// Returns the miscellaneous flags.
 		inline int Encoder::flags() const /*throw()*/ {return flags_;}
 
 		/// Returns the substitution policy.
-		inline Encoder::SubstitutionPolicy Encoder::substitutionPolicy() const /*throw()*/ {return substitutionPolicy_;}
+		inline Encoder::SubstitutionPolicy Encoder::substitutionPolicy() const /*throw()*/ {
+			return substitutionPolicy_;
+		}
 
 		/**
 		 * Returns names for all available encoding detectors.
+		 * @tparam OutputIterator The type of @a out
 		 * @param[out] out The output iterator to receive names
 		 */
-		template<typename OutputIterator> inline void EncodingDetector::availableNames(OutputIterator out) {
-			for(std::vector<EncodingDetector*>::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out) *out = (*i)->name();}
+		template<typename OutputIterator>
+		inline void EncodingDetector::availableNames(OutputIterator out) {
+			for(std::vector<EncodingDetector*>::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out)
+				*out = (*i)->name();
+		}
 
 		template<typename Code,
 			Code c0, Code c1, Code c2, Code c3, Code c4, Code c5, Code c6, Code c7,
@@ -700,10 +714,13 @@ namespace ascension {
 			const std::string& displayName, const std::string& aliases, byte substitutionCharacter) : EncoderFactoryBase(name, mib, displayName, 1, 1, aliases, substitutionCharacter) {}
 
 		/// Destructor.
-		template<typename MappingTable> inline implementation::sbcs::SingleByteEncoderFactory<MappingTable>::~SingleByteEncoderFactory() /*throw()*/ {}
+		template<typename MappingTable>
+		inline implementation::sbcs::SingleByteEncoderFactory<MappingTable>::~SingleByteEncoderFactory() /*throw()*/ {
+		}
 
 		/// @see EncoderFactory#create
-		template<typename MappingTable> std::auto_ptr<Encoder> implementation::sbcs::SingleByteEncoderFactory<MappingTable>::create() const /*throw()*/ {
+		template<typename MappingTable> std::auto_ptr<Encoder>
+		implementation::sbcs::SingleByteEncoderFactory<MappingTable>::create() const /*throw()*/ {
 			return detail::createSingleByteEncoder(MappingTable::VALUES, *this);
 		}
 	}

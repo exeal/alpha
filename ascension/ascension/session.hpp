@@ -1,7 +1,7 @@
 /**
  * @file session.hpp
  * @author exeal
- * @date 2006-2010
+ * @date 2006-2011
  */
 
 #ifndef ASCENSION_SESSION_HPP
@@ -31,7 +31,7 @@ namespace ascension {
 		 * Interface for objects which are interested in changes of the kill ring.
 		 * @see KillRing
 		 */
-		class IKillRingListener {
+		class KillRingListener {
 		private:
 			/// The content of the kill ring was changed.
 			virtual void killRingChanged() = 0;
@@ -44,8 +44,8 @@ namespace ascension {
 			// constructor
 			explicit KillRing(std::size_t maximumNumberOfKills = ASCENSION_DEFAULT_MAXIMUM_KILLS) /*throw()*/;
 			// listeners
-			void addListener(IKillRingListener& listener);
-			void removeListener(IKillRingListener& listener);
+			void addListener(KillRingListener& listener);
+			void removeListener(KillRingListener& listener);
 /*			// kill
 			void copyRegion(const kernel::Document& document, const kernel::Region& region);
 			void killRegion(kernel::Document& document, const kernel::Region& region);
@@ -70,7 +70,7 @@ namespace ascension {
 			Contents contents_;	// plain-text vs. rectangle-flag
 			Contents::iterator yankPointer_;
 			const std::size_t maximumNumberOfKills_;
-			detail::Listeners<IKillRingListener> listeners_;
+			detail::Listeners<KillRingListener> listeners_;
 		};
 
 #ifdef ASCENSION_WINDOWS
@@ -84,9 +84,9 @@ namespace ascension {
 			virtual ~InputSequenceChecker() /*throw()*/ {}
 			/**
 			 * Checks the sequence.
-			 * @param keyboardLayout the active keyboard layout
-			 * @param preceding the string preceding to the input
-			 * @param c the code point of the character to be input
+			 * @param keyboardLayout The active keyboard layout
+			 * @param preceding The string preceding to the input
+			 * @param c The code point of the character to be input
 			 * @return true if the input is acceptable
 			 */
 			virtual bool check(HKL keyboardLayout, const StringPiece& preceding, CodePoint c) const = 0;
@@ -154,10 +154,14 @@ namespace ascension {
 
 
 		/// Returns the input sequence checkers.
-		inline InputSequenceCheckers* Session::inputSequenceCheckers() /*throw()*/ {return inputSequenceCheckers_.get();}
+		inline InputSequenceCheckers* Session::inputSequenceCheckers() /*throw()*/ {
+			return inputSequenceCheckers_.get();
+		}
 
 		/// Returns the input sequence checkers.
-		inline const InputSequenceCheckers* Session::inputSequenceCheckers() const /*throw()*/ {return inputSequenceCheckers_.get();}
+		inline const InputSequenceCheckers* Session::inputSequenceCheckers() const /*throw()*/ {
+			return inputSequenceCheckers_.get();
+		}
 
 	} // namespace texteditor
 

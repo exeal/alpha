@@ -4,7 +4,7 @@
  * @note Currently, this implementation does not support OpenVMS.
  * @author exeal
  * @date 2007 (separated from document.cpp)
- * @date 2007-2010
+ * @date 2007-2011
  */
 
 #include <ascension/config.hpp>	// ASCENSION_NO_STANDARD_ENCODINGS
@@ -24,7 +24,7 @@ using namespace ascension::encoding;
 using namespace std;
 
 
-// free function ////////////////////////////////////////////////////////////
+// free function //////////////////////////////////////////////////////////////////////////////////
 
 namespace {
 #ifdef ASCENSION_WINDOWS
@@ -75,9 +75,9 @@ namespace {
 
 	/**
 	 * Returns the last write time of the specified file.
-	 * @param fileName the name of the file
-	 * @param[out] timeStamp the time
-	 * @throw IOException any I/O error occurred
+	 * @param fileName The name of the file
+	 * @param[out] timeStamp The time
+	 * @throw IOException Any I/O error occurred
 	 */
 	void getFileLastWriteTime(const PathString& fileName, TextFileDocumentInput::Time& timeStamp) {
 #ifdef ASCENSION_WINDOWS
@@ -95,10 +95,10 @@ namespace {
 
 	/**
 	 * Returns the size of the specified file.
-	 * @param fileName the name of the file
-	 * @return the size of the file in bytes or -1 if the file is too large
+	 * @param fileName The name of the file
+	 * @return The size of the file in bytes or -1 if the file is too large
 	 * @throw NullPointerException @a fileName is @c null
-	 * @throw IOException any I/O error occurred
+	 * @throw IOException Any I/O error occurred
 	 */
 	ptrdiff_t getFileSize(const PathCharacter* fileName) {
 		if(fileName == 0)
@@ -120,10 +120,10 @@ namespace {
 
 	/**
 	 * Creates a name for a temporary file.
-	 * @param seed the string contains a directory path and a prefix string
-	 * @return the result string
+	 * @param seed The string contains a directory path and a prefix string
+	 * @return The result string
 	 * @throw std#bad_alloc POSIX @c tempnam failed (only when @c ASCENSION_POSIX was defined)
-	 * @throw IOException any I/O error occurred
+	 * @throw IOException Any I/O error occurred
 	 */
 	PathString makeTemporaryFileName(const PathString& seed) {
 		AutoBuffer<PathCharacter> s(new PathCharacter[seed.length() + 1]);
@@ -149,8 +149,8 @@ namespace {
 
 	/**
 	 * Returns @c true if the specified file is special.
-	 * @param fileName the file name
-	 * @throw IOException any I/O error occurred
+	 * @param fileName The file name
+	 * @throw IOException Any I/O error occurred
 	 */
 	bool isSpecialFile(const PathString& fileName) {
 #ifdef ASCENSION_WINDOWS
@@ -179,8 +179,8 @@ namespace {
 
 	/**
 	 * Verifies if the newline is allowed in the given character encoding.
-	 * @param encoding the character encoding
-	 * @param newline the newline to verify
+	 * @param encoding The character encoding
+	 * @param newline The newline to verify
 	 * @throw encoding#UnsupportedEncodingException @a encoding is not supported
 	 * @throw UnknownValueExcepion @a newline is undefined value
 	 * @throw std#invalid_argument @a newline is not allowed or not a literal value
@@ -213,8 +213,8 @@ namespace {
  * Makes the given path name real. This method will not fail even if the path name is not exist.
  * Win32 target platform: If @a pathName is a UNC, the case of @a pathName will not be fixed. All
  * slashes will be replaced by backslashes.
- * @param pathName the absolute path name
- * @return the result real path name
+ * @param pathName The absolute path name
+ * @return The result real path name
  * @throw NullPointerException @a pathName is @c null
  * @see comparePathNames
  */
@@ -287,10 +287,10 @@ PathString fileio::canonicalizePathName(const PathCharacter* pathName) {
 
 /**
  * Returns @c true if the specified two file path names are equivalent.
- * @param s1 the first path name
- * @param s2 the second path name
+ * @param s1 The first path name
+ * @param s2 The second path name
  * @return @c true if @a s1 and @a s2 are equivalent
- * @throw NullPointerException either file name is @c null
+ * @throw NullPointerException Either file name is @c null
  * @see canonicalizePathName
  */
 bool fileio::comparePathNames(const PathCharacter* s1, const PathCharacter* s2) {
@@ -348,18 +348,18 @@ bool fileio::comparePathNames(const PathCharacter* s1, const PathCharacter* s2) 
 
 /**
  * Inserts the contents of the file into the specified position.
- * @param document the document
- * @param at the position into which the contents is inserted
- * @param fileName the file name
- * @param encoding the character encoding of the input file or auto detection name
- * @param encodingSubstitutionPolicy the substitution policy used in encoding conversion
- * @param[out] endOfInsertedString the position of the end of the inserted text. can be @c null if
+ * @param document The document
+ * @param at The position into which the contents is inserted
+ * @param fileName The file name
+ * @param encoding The character encoding of the input file or auto detection name
+ * @param encodingSubstitutionPolicy The substitution policy used in encoding conversion
+ * @param[out] endOfInsertedString The position of the end of the inserted text. Can be @c null if
  *                                 not needed
- * @return a pair consists of the encoding used to convert and the boolean value means if the input
+ * @return A pair consists of the encoding used to convert and the boolean value means if the input
  *         contained Unicode byte order mark
  * @throw UnmappableCharacterException
  * @throw MalformedInputException
- * @throw ... any exceptions @c TextFileStreamBuffer#TextFileStreamBuffer and @c kernel#insert throw
+ * @throw ... Any exceptions @c TextFileStreamBuffer#TextFileStreamBuffer and @c kernel#insert throw
  */
 pair<string, bool> fileio::insertFileContents(Document& document, const Position& at,
 		const PathString& fileName, const string& encoding, Encoder::SubstitutionPolicy encodingSubstitutionPolicy, Position* endOfInsertedString /* = 0 */) {
@@ -374,18 +374,18 @@ pair<string, bool> fileio::insertFileContents(Document& document, const Position
 
 /**
  * Writes the specified region of the document into the specified file.
- * @param document the document
- * @param region the region to write
- * @param fileName the file name
- * @param format the encoding and the newline
- * @param append set @c true to append to the file. if this is @c true, this function does not
+ * @param document The document
+ * @param region The region to write
+ * @param fileName The file name
+ * @param format The encoding and the newline
+ * @param append Set @c true to append to the file. If this is @c true, this function does not
  *               write a unicode order mark regardless of the value of
- *               @a format.unicodeByteOrderMark. see constructor of TextFileStreamBuffer
- * @throw UnsupportedEncodingException the character encoding specified by @a format.encoding is
+ *               @a format.unicodeByteOrderMark. See constructor of TextFileStreamBuffer
+ * @throw UnsupportedEncodingException The character encoding specified by @a format.encoding is
  *                                     not supported
  * @throw std#invalid_argument @a format.newline is not supported or not allowed in the specified
  *                             character encoding
- * @throw ... any I/O error occurred
+ * @throw ... Any I/O error occurred
  */
 void fileio::writeRegion(const Document& document, const Region& region,
 		const PathString& fileName, const WritingFormat& format, bool append /* = false */) {
@@ -433,7 +433,7 @@ void fileio::writeRegion(const Document& document, const Region& region,
 }
 
 
-// exception classes ////////////////////////////////////////////////////////
+// exception classes //////////////////////////////////////////////////////////////////////////////
 
 namespace {
 	IOException::Code currentSystemError() /*throw()*/ {
@@ -509,7 +509,7 @@ MalformedInputException::MalformedInputException() : ios_base::failure("detected
 }
 
 
-// TextFileStreamBuffer /////////////////////////////////////////////////////
+// TextFileStreamBuffer ///////////////////////////////////////////////////////////////////////////
 
 namespace {
 	class SystemErrorSaver {
@@ -528,8 +528,8 @@ namespace {
 
 /**
  * Constructor opens the specified file.
- * @param fileName the name of the file
- * @param mode the file open mode. valid values are the following:
+ * @param fileName The name of the file
+ * @param mode The file open mode. valid values are the following:
  *   <dl>
  *     <dt>@c std#ios_base#in</dt>
  *     <dd>Opens the existing file for reading.</dd>
@@ -540,13 +540,13 @@ namespace {
  *     <dd>Opens the existing file for appending all writes. If the file was not existing, this is
  *         same as @c std#ios_base#out.</dd>
  *   </dl>
- * @param encoding the file encoding or auto detection name
- * @param encodingSubstitutionPolicy the substitution policy used in encoding conversion
- * @param writeUnicodeByteOrderMark set @c true to write Unicode byte order mark into the file.
- *                                  this parameter is ignored if @a mode contained
+ * @param encoding The file encoding or auto detection name
+ * @param encodingSubstitutionPolicy The substitution policy used in encoding conversion
+ * @param writeUnicodeByteOrderMark Aet @c true to write Unicode byte order mark into the file.
+ *                                  This parameter is ignored if @a mode contained
  *                                  @c std#ios_base#app and the output file was existing
  * @throw UnknownValueException @a mode or @a encodingSubstitutionPolicy is invalid
- * @throw UnsupportedEncodingException the encoding specified by @a encoding is not supported
+ * @throw UnsupportedEncodingException The encoding specified by @a encoding is not supported
  * @throw PlatformDependentIOError
  */
 TextFileStreamBuffer::TextFileStreamBuffer(const PathString& fileName, ios_base::openmode mode,
@@ -638,8 +638,8 @@ void TextFileStreamBuffer::buildInputMapping() {
 
 /**
  * Closes the file.
- * @return this or @c null if the file is not open
- * @throw ... any exceptions @c #sync throws
+ * @return This or @c null if the file is not open
+ * @throw ... Any exceptions @c #sync throws
  */
 TextFileStreamBuffer* TextFileStreamBuffer::close() {
 	sync();
@@ -648,8 +648,8 @@ TextFileStreamBuffer* TextFileStreamBuffer::close() {
 
 /**
  * Closes the file and discard the change.
- * @return this or @c null if the file is not open
- * @throw ... any exceptions @c #close throws when @c #mode returned @c std#ios_base#in
+ * @return This or @c null if the file is not open
+ * @throw ... Any exceptions @c #close throws when @c #mode returned @c std#ios_base#in
  */
 TextFileStreamBuffer* TextFileStreamBuffer::closeAndDiscard() {
 	if(mode() == ios_base::in)
@@ -895,7 +895,7 @@ bool TextFileStreamBuffer::unicodeByteOrderMark() const /*throw()*/ {
 }
 
 
-// TextFileDocumentInput.FileLocker /////////////////////////////////////////
+// TextFileDocumentInput.FileLocker ///////////////////////////////////////////////////////////////
 
 class TextFileDocumentInput::FileLocker {
 	ASCENSION_NONCOPYABLE_TAG(FileLocker);
@@ -943,9 +943,9 @@ inline bool TextFileDocumentInput::FileLocker::hasLock() const /*throw()*/ {
 /**
  * Locks the file.
  * @param fileName
- * @param share set @c true if shared-lock
- * @retval true if locked successfully or the lock mode is @c DONT_LOCK
- * @retval false the current lock mode was @c SHARED_LOCK and an other existing process had already
+ * @param share Set @c true if shared-lock
+ * @retval true If locked successfully or the lock mode is @c DONT_LOCK
+ * @retval false The current lock mode was @c SHARED_LOCK and an other existing process had already
  *               locked the file with same lock mode
  * @throw IOException
  */
@@ -1052,7 +1052,7 @@ bool TextFileDocumentInput::FileLocker::unlock() /*throw()*/ {
 }
 
 
-// TextFileDocumentInput ////////////////////////////////////////////////////
+// TextFileDocumentInput //////////////////////////////////////////////////////////////////////////
 
 /**
  * @class ascension::kernel::fileio::TextFileDocumentInput
@@ -1092,7 +1092,7 @@ bool TextFileDocumentInput::FileLocker::unlock() /*throw()*/ {
 
 /**
  * Constructor.
- * @param document the document
+ * @param document The document
  */
 TextFileDocumentInput::TextFileDocumentInput(Document& document) :
 		fileLocker_(new FileLocker), document_(document), encoding_(Encoder::defaultInstance().properties().name()),
@@ -1112,10 +1112,10 @@ TextFileDocumentInput::~TextFileDocumentInput() /*throw()*/ {
 
 /**
  * Registers the file property listener.
- * @param listener the listener to be registered
+ * @param listener The listener to be registered
  * @throw std#invalid_argument @a listener is already registered
  */
-void TextFileDocumentInput::addListener(IFilePropertyListener& listener) {
+void TextFileDocumentInput::addListener(FilePropertyListener& listener) {
 	listeners_.add(listener);
 }
 
@@ -1143,7 +1143,7 @@ void TextFileDocumentInput::bind(const PathString& fileName) {
 	}
 	document_.setInput(this, false);
 	fileName_ = realName;
-	listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
+	listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileNameChanged, *this);
 	document_.setModified();
 }
 
@@ -1151,7 +1151,7 @@ void TextFileDocumentInput::bind(const PathString& fileName) {
  * Checks the last modified date/time of the bound file and verifies if the other modified the
  * file. If the file is modified, the listener's
  * @c IUnexpectedFileTimeStampDerector#queryAboutUnexpectedDocumentFileTimeStamp will be called.
- * @return the value which the listener returned or @c true if the listener is not set
+ * @return The value which the listener returned or @c true if the listener is not set
  */
 bool TextFileDocumentInput::checkTimeStamp() {
 	Time newTimeStamp;
@@ -1160,7 +1160,7 @@ bool TextFileDocumentInput::checkTimeStamp() {
 		memset(&userLastWriteTime_, 0, sizeof(Time));
 		if(timeStampDirector_ == 0
 				|| timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(
-					document_, IUnexpectedFileTimeStampDirector::CLIENT_INVOCATION)) {
+					document_, UnexpectedFileTimeStampDirector::CLIENT_INVOCATION)) {
 			userLastWriteTime_ = newTimeStamp;
 			return true;
 		}
@@ -1201,7 +1201,7 @@ bool TextFileDocumentInput::isChangeable(const Document&) const {
 			TextFileDocumentInput& self = const_cast<TextFileDocumentInput&>(*this);
 			if(!self.verifyTimeStamp(true, realTimeStamp)) {	// the other overwrote the file
 				if(!timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(
-						document_, IUnexpectedFileTimeStampDirector::FIRST_MODIFICATION))
+						document_, UnexpectedFileTimeStampDirector::FIRST_MODIFICATION))
 					return false;
 				self.internalLastWriteTime_ = self.userLastWriteTime_ = realTimeStamp;
 			}
@@ -1232,7 +1232,7 @@ String TextFileDocumentInput::location() const /*throw()*/ {
 
 /**
  * Locks the bound file.
- * @param mode the lock mode.
+ * @param mode The lock mode.
  */
 void TextFileDocumentInput::lockFile(const LockMode& mode) {
 	if(!isBoundToFile())
@@ -1260,24 +1260,25 @@ void TextFileDocumentInput::postFirstDocumentChange(const Document&) /*throw()*/
 
 /**
  * Removes the file property listener.
- * @param listener the listener to be removed
+ * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered
  */
-void TextFileDocumentInput::removeListener(IFilePropertyListener& listener) {
+void TextFileDocumentInput::removeListener(FilePropertyListener& listener) {
 	listeners_.remove(listener);
 }
 
 /**
  * Replaces the document's content with the text of the bound file on disk.
- * @param encoding the file encoding or auto detection name
- * @param encodingSubstitutionPolicy the substitution policy used in encoding conversion
+ * @param encoding The file encoding or auto detection name
+ * @param encodingSubstitutionPolicy The substitution policy used in encoding conversion
  * @param unexpectedTimeStampDirector
- * @throw IllegalStateException the object was not bound to a file
- * @throw IOException any I/O error occurred. in this case, the document's content will be lost
- * @throw ... any exceptions @c insertFileContents throws
+ * @throw IllegalStateException The object was not bound to a file
+ * @throw IOException Any I/O error occurred. in this case, the document's content will be lost
+ * @throw ... Any exceptions @c insertFileContents throws
  */
-void TextFileDocumentInput::revert(const string& encoding,
-		Encoder::SubstitutionPolicy encodingSubstitutionPolicy, IUnexpectedFileTimeStampDirector* unexpectedTimeStampDirector /* = 0 */) {
+void TextFileDocumentInput::revert(
+		const string& encoding, Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
+		UnexpectedFileTimeStampDirector* unexpectedTimeStampDirector /* = 0 */) {
 	if(!isBoundToFile())
 		throw IllegalStateException("the object is not bound to a file.");
 	document_.resetContent();
@@ -1318,8 +1319,8 @@ void TextFileDocumentInput::revert(const string& encoding,
 #endif
 	encoding_ = resultEncoding.first;
 	newline_ = document().getLineInformation(0).newline();	// use the newline of the first line
-	listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileEncodingChanged, *this);
-	listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
+	listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileEncodingChanged, *this);
+	listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileNameChanged, *this);
 
 	document_.clearUndoBuffer();
 	document_.markUnmodified();
@@ -1335,8 +1336,8 @@ void TextFileDocumentInput::revert(const string& encoding,
 
 /**
  * Sets the character encoding.
- * @param encoding the encoding
- * @return this object
+ * @param encoding The encoding
+ * @return This object
  * @throw encoding#UnsupportedEncodingException @a encoding is not supported
  * @see #encoding
  */
@@ -1344,14 +1345,14 @@ TextFileDocumentInput& TextFileDocumentInput::setEncoding(const string& encoding
 	if(!encoding.empty() && !Encoder::supports(encoding))
 		throw UnsupportedEncodingException("encoding");
 	encoding_ = encoding;
-	listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileEncodingChanged, *this);
+	listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileEncodingChanged, *this);
 	return *this;
 }
 
 /**
  * Sets the newline.
- * @param newline the newline
- * @return this object
+ * @param newline The newline
+ * @return This object
  * @throw UnknownValueException @a newline is invalid
  */
 TextFileDocumentInput& TextFileDocumentInput::setNewline(Newline newline) {
@@ -1359,7 +1360,7 @@ TextFileDocumentInput& TextFileDocumentInput::setNewline(Newline newline) {
 		throw UnknownValueException("newline");
 	else if(newline != newline_) {
 		newline_ = newline;
-		listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileEncodingChanged, *this);
+		listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileEncodingChanged, *this);
 	}
 	return *this;
 }
@@ -1374,7 +1375,7 @@ void TextFileDocumentInput::unbind() /*throw()*/ {
 		if(document().input() == this)
 			document_.setInput(0, false);
 		fileName_.erase();
-		listeners_.notify<const TextFileDocumentInput&>(&IFilePropertyListener::fileNameChanged, *this);
+		listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileNameChanged, *this);
 		setEncoding(Encoder::defaultInstance().properties().name());
 		memset(&userLastWriteTime_, 0, sizeof(Time));
 		memset(&internalLastWriteTime_, 0, sizeof(Time));
@@ -1387,8 +1388,8 @@ void TextFileDocumentInput::unlockFile() {
 
 /**
  * Returns last modified time.
- * @param internal set @c true for @c internalLastWriteTime_, @c false for @c userLastWriteTime_
- * @param[out] newTimeStamp the actual time stamp
+ * @param internal Set @c true for @c internalLastWriteTime_, @c false for @c userLastWriteTime_
+ * @param[out] newTimeStamp The actual time stamp
  * @return @c false if not match
  */
 bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) /*throw()*/ {
@@ -1433,8 +1434,8 @@ void backupAtRecycleBin(const PathString& fileName) {
 
 /**
  * Writes the content of the document into the bound file.
- * @param format the character encoding and the newlines
- * @param options the other options
+ * @param format The character encoding and the newlines
+ * @param options The other options
  * @throw
  */
 void TextFileDocumentInput::write(const WritingFormat& format, const WritingOption* options /* = 0 */) {
@@ -1451,7 +1452,7 @@ void TextFileDocumentInput::write(const WritingFormat& format, const WritingOpti
 		Time realTimeStamp;
 		if(!verifyTimeStamp(true, realTimeStamp)) {
 			if(!timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(
-					document_, IUnexpectedFileTimeStampDirector::OVERWRITE_FILE))
+					document_, UnexpectedFileTimeStampDirector::OVERWRITE_FILE))
 				return;
 		}
 	}
@@ -1558,9 +1559,9 @@ namespace {
 
 /**
  * Constructor.
- * @param directoryName the directory to traverse
+ * @param directoryName The directory to traverse
  * @throw NullPointerException @a directoryName is @c null
- * @throw IOException any I/O error occurred
+ * @throw IOException Any I/O error occurred
  */
 DirectoryIterator::DirectoryIterator(const PathCharacter* directoryName) :
 #ifdef ASCENSION_WINDOWS
@@ -1676,13 +1677,14 @@ void DirectoryIterator::update(const void* info) {
 }
 
 
-// RecursiveDirectoryIterator ///////////////////////////////////////////////
+// RecursiveDirectoryIterator /////////////////////////////////////////////////////////////////////
 
 /**
  * Constructor.
- * @param directoryName the directory to traverse
+ * @param directoryName The directory to traverse
  * @throw NullPointerException @a directoryName is @c null
- * @throw IOException can be @c IOException#FILE_NOT_FOUND or @c IOException#PLATFORM_DEPENDENT_ERROR
+ * @throw IOException Can be @c IOException#FILE_NOT_FOUND or
+ *                    @c IOException#PLATFORM_DEPENDENT_ERROR
  */
 RecursiveDirectoryIterator::RecursiveDirectoryIterator(const PathCharacter* directoryName) : doesntPushNext_(false) {
 	stack_.push(new DirectoryIterator(directoryName));

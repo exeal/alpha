@@ -2,7 +2,7 @@
  * @file undo.cpp
  * @author exeal
  * @date 2009 separated from document.cpp
- * @date 2010
+ * @date 2010-2011
  */
 
 #include <ascension/kernel/document.hpp>
@@ -14,13 +14,13 @@ using namespace ascension::kernel;
 using namespace std;
 
 
-// local entities ///////////////////////////////////////////////////////////
+// local entities /////////////////////////////////////////////////////////////////////////////////
 
 namespace {
-	class IAtomicChange;
+	class AtomicChange;
 
 	// an abstract edit operation
-	class IUndoableChange {
+	class UndoableChange {
 	public:
 		// result of IUndoableChange.perform
 		struct Result {
@@ -31,9 +31,9 @@ namespace {
 		};
 	public:
 		// destructor
-		virtual ~IUndoableChange() /*throw()*/ {}
+		virtual ~UndoableChange() /*throw()*/ {}
 		// appends the "postChange" to this change and returns true, or returns false
-		virtual bool appendChange(IAtomicChange& postChange, const Document& document) = 0;
+		virtual bool appendChange(AtomicChange& postChange, const Document& document) = 0;
 		// returns true if the change can perform
 		virtual bool canPerform(const Document& document) const = 0;
 		// performs the change. this method may fail
@@ -41,18 +41,18 @@ namespace {
 	};
 
 	// base interface of InsertionChange and DeletionChange
-	class IAtomicChange : public IUndoableChange {
+	class AtomicChange : public UndoableChange {
 	public:
 		struct TypeTag {};	// ugly dynamic type system for performance reason
-		virtual ~IAtomicChange() /*throw()*/ {}
+		virtual ~AtomicChange() /*throw()*/ {}
 		virtual const TypeTag& type() const /*throw()*/ = 0;
 	};
 
 	// an atomic insertion change
-	class InsertionChange : public IAtomicChange, public FastArenaObject<InsertionChange> {
+	class InsertionChange : public AtomicChange, public FastArenaObject<InsertionChange> {
 	public:
 		InsertionChange(const Position& position, const String& text) : position_(position), text_(text) {}
-		bool appendChange(IAtomicChange&, const Document&) /*throw()*/ {return false;}
+		bool appendChange(AtomicChange&, const Document&) /*throw()*/ {return false;}
 		bool canPerform(const Document& document) const /*throw()*/ {return !document.isNarrowed() || document.region().includes(position_);}
 		void perform(Document& document, Result& result);
 	private:
@@ -64,10 +64,10 @@ namespace {
 	};
 
 	// an atomic deletion change
-	class DeletionChange : public IAtomicChange, public FastArenaObject<DeletionChange> {
+	class DeletionChange : public AtomicChange, public FastArenaObject<DeletionChange> {
 	public:
 		explicit DeletionChange(const Region& region) /*throw()*/ : region_(region), revisions_(1) {}
-		bool appendChange(IAtomicChange& postChange, const Document&) /*throw()*/;
+		bool appendChange(AtomicChange& postChange, const Document&) /*throw()*/;
 		bool canPerform(const Document& document) const /*throw()*/ {return !document.isNarrowed() || document.region().encompasses(region_);}
 		void perform(Document& document, Result& result);
 	private:
@@ -79,10 +79,10 @@ namespace {
 	};
 
 	// an atomic replacement change
-	class ReplacementChange : public IAtomicChange, public FastArenaObject<ReplacementChange> {
+	class ReplacementChange : public AtomicChange, public FastArenaObject<ReplacementChange> {
 	public:
 		explicit ReplacementChange(const Region& region, const String& text) : region_(region), text_(text) {}
-		bool appendChange(IAtomicChange&, const Document&) /*throw()*/ {return false;}
+		bool appendChange(AtomicChange&, const Document&) /*throw()*/ {return false;}
 		bool canPerform(const Document& document) const /*throw()*/ {return !document.isNarrowed() || document.region().encompasses(region_);}
 		void perform(Document& document, Result& result);
 	private:
@@ -94,20 +94,20 @@ namespace {
 	};
 
 	// a compound change
-	class CompoundChange : public IUndoableChange {
+	class CompoundChange : public UndoableChange {
 	public:
 		~CompoundChange() /*throw()*/;
-		bool appendChange(IAtomicChange& postChange, const Document& document);
+		bool appendChange(AtomicChange& postChange, const Document& document);
 		bool canPerform(const Document& document) const /*throw()*/ {return !changes_.empty() && changes_.back()->canPerform(document);}
 		void perform(Document& document, Result& result);
 	private:
-		vector<IAtomicChange*> changes_;
+		vector<AtomicChange*> changes_;
 	};
 
 	// static members initialization (inherent parens? see "Exceptional C++ Style" item 29)
-	const IAtomicChange::TypeTag InsertionChange::type_((IAtomicChange::TypeTag()));
-	const IAtomicChange::TypeTag DeletionChange::type_((IAtomicChange::TypeTag()));
-	const IAtomicChange::TypeTag ReplacementChange::type_((IAtomicChange::TypeTag()));
+	const AtomicChange::TypeTag InsertionChange::type_((AtomicChange::TypeTag()));
+	const AtomicChange::TypeTag DeletionChange::type_((AtomicChange::TypeTag()));
+	const AtomicChange::TypeTag ReplacementChange::type_((AtomicChange::TypeTag()));
 
 	// implements IUndoableChange.perform
 	inline void InsertionChange::perform(Document& document, Result& result) {
@@ -121,7 +121,7 @@ namespace {
 	}
 
 	// implements IUndoableChange.appendChange
-	inline bool DeletionChange::appendChange(IAtomicChange& postChange, const Document&) {
+	inline bool DeletionChange::appendChange(AtomicChange& postChange, const Document&) {
 		if(&postChange.type() != &type_)
 			return false;
 		const Position& bottom = region_.end();
@@ -159,12 +159,12 @@ namespace {
 	}
 
 	CompoundChange::~CompoundChange() /*throw()*/ {
-		for(vector<IAtomicChange*>::iterator i(changes_.begin()), e(changes_.end()); i != e; ++i)
+		for(vector<AtomicChange*>::iterator i(changes_.begin()), e(changes_.end()); i != e; ++i)
 			delete *i;
 	}
 
 	// implements IUndoableChange.appendChange
-	inline bool CompoundChange::appendChange(IAtomicChange& postChange, const Document& document) {
+	inline bool CompoundChange::appendChange(AtomicChange& postChange, const Document& document) {
 		if(changes_.empty() || !changes_.back()->appendChange(postChange, document))
 			changes_.push_back(&postChange);
 		return true;
@@ -175,7 +175,7 @@ namespace {
 		assert(!changes_.empty());
 		result.reset();
 		Result delta;
-		vector<IAtomicChange*>::iterator i(changes_.end()), e(changes_.begin());
+		vector<AtomicChange*>::iterator i(changes_.end()), e(changes_.begin());
 		for(--i; ; --i) {
 			(*i)->perform(document, delta);
 			result.numberOfRevisions += delta.numberOfRevisions;
@@ -195,7 +195,7 @@ namespace {
 } // namespace @0
 
 
-// Document.UndoManager /////////////////////////////////////////////////////
+// Document.UndoManager ///////////////////////////////////////////////////////////////////////////
 
 // manages undo/redo of the document.
 class Document::UndoManager {
@@ -209,10 +209,10 @@ public:
 	size_t numberOfUndoableChanges() const /*throw()*/ {return undoableChanges_.size() + ((pendingAtomicChange_.get() != 0) ? 1 : 0);}
 	bool isStackingCompoundOperation() const /*throw()*/ {return compoundChangeDepth_ > 0;}
 	// rollbacks
-	void redo(IUndoableChange::Result& result);
-	void undo(IUndoableChange::Result& result);
+	void redo(UndoableChange::Result& result);
+	void undo(UndoableChange::Result& result);
 	// recordings
-	void addUndoableChange(IAtomicChange& c);
+	void addUndoableChange(AtomicChange& c);
 	void beginCompoundChange() /*throw()*/ {++compoundChangeDepth_;}
 	void clear() /*throw()*/;
 	void endCompoundChange() /*throw()*/;
@@ -220,8 +220,8 @@ public:
 private:
 	void commitPendingChange(bool beginCompound);
 	Document& document_;
-	stack<IUndoableChange*> undoableChanges_, redoableChanges_;
-	auto_ptr<IAtomicChange> pendingAtomicChange_;
+	stack<UndoableChange*> undoableChanges_, redoableChanges_;
+	auto_ptr<AtomicChange> pendingAtomicChange_;
 	size_t compoundChangeDepth_;
 	bool rollbacking_;
 	CompoundChange* rollbackingChange_;
@@ -234,7 +234,7 @@ Document::UndoManager::UndoManager(Document& document) /*throw()*/ : document_(d
 }
 
 // pushes the operation into the undo stack
-void Document::UndoManager::addUndoableChange(IAtomicChange& c) {
+void Document::UndoManager::addUndoableChange(AtomicChange& c) {
 	if(!rollbacking_) {
 		if(currentCompoundChange_ != 0)
 			currentCompoundChange_->appendChange(c, document_);	// CompoundChange.appendChange always returns true
@@ -310,13 +310,13 @@ inline void Document::UndoManager::insertBoundary() {
 }
 
 // redoes one change
-void Document::UndoManager::redo(IUndoableChange::Result& result) {
+void Document::UndoManager::redo(UndoableChange::Result& result) {
 	commitPendingChange(false);
 	if(redoableChanges_.empty()) {
 		result.reset();
 		return;
 	}
-	IUndoableChange* c = redoableChanges_.top();
+	UndoableChange* c = redoableChanges_.top();
 	rollbacking_ = true;
 	c->perform(document_, result);
 	if(result.completed)
@@ -331,13 +331,13 @@ void Document::UndoManager::redo(IUndoableChange::Result& result) {
 }
 
 // undoes one change
-void Document::UndoManager::undo(IUndoableChange::Result& result) {
+void Document::UndoManager::undo(UndoableChange::Result& result) {
 	commitPendingChange(false);
 	if(undoableChanges_.empty()) {
 		result.reset();
 		return;
 	}
-	IUndoableChange* c = undoableChanges_.top();
+	UndoableChange* c = undoableChanges_.top();
 	rollbacking_ = true;
 	c->perform(document_, result);
 	if(result.completed)
@@ -352,7 +352,7 @@ void Document::UndoManager::undo(IUndoableChange::Result& result) {
 }
 
 
-// Document /////////////////////////////////////////////////////////////////
+// Document ///////////////////////////////////////////////////////////////////////////////////////
 
 /// Constructor.
 Document::Document() : session_(0), partitioner_(0),
@@ -382,7 +382,7 @@ Document::~Document() {
 
 /**
  * Starts the compound change.
- * @throw ReadOnlyDocumentException the document is read only
+ * @throw ReadOnlyDocumentException The document is read only
  * @see #endCompoundChange, #isCompoundChanging
  */
 void Document::beginCompoundChange() {
@@ -402,7 +402,7 @@ void Document::clearUndoBuffer() /*throw()*/ {
 
 /**
  * Ends the active compound change.
- * @throw IllegalStateException there is no compound change in this document
+ * @throw IllegalStateException There is no compound change in this document
  * @see #beginCompoundChange, #isCompoundChanging
  */
 void Document::endCompoundChange() {
@@ -415,8 +415,8 @@ void Document::endCompoundChange() {
  * Marks a boundary between units of undo.
  * An undo call will stop at this point. However, see the documentation of @c Document. This method
  * does not throw @c DocumentCantChangeException.
- * @throw ReadOnlyDocumentException the document is read only
- * @throw IllegalStateException the method was called in @c{IDocumentListener}s' notification
+ * @throw ReadOnlyDocumentException The document is read only
+ * @throw IllegalStateException The method was called in @c{IDocumentListener}s' notification
  */
 void Document::insertUndoBoundary() {
 	if(changing_)
@@ -447,8 +447,8 @@ size_t Document::numberOfRedoableChanges() const /*throw()*/ {
 /**
  * Sets whether the document records or not the changes for undo/redo. Recording in a newly created
  * document is enabled to start with.
- * @param record if set to true, this method enables the recording and subsequent changes can be
- * undone. if set to false, discards the undo/redo information and disables the recording
+ * @param record If set to @c true, this method enables the recording and subsequent changes can be
+ * undone. If set to @c false, discards the undo/redo information and disables the recording
  * @see #isRecordingChanges, #undo, #redo
  */
 void Document::recordChanges(bool record) /*throw()*/ {
@@ -459,13 +459,13 @@ void Document::recordChanges(bool record) /*throw()*/ {
 namespace {
 	class FirstChangeHolder {
 	public:
-		FirstChangeHolder(const Document& document, IDocumentInput* input,
-			void(IDocumentInput::*post)(const Document&)) : document_(document), input_(input), post_(post) {assert(post_ != 0);}
+		FirstChangeHolder(const Document& document, DocumentInput* input,
+			void(DocumentInput::*post)(const Document&)) : document_(document), input_(input), post_(post) {assert(post_ != 0);}
 		~FirstChangeHolder() {if(input_ != 0) (input_->*post_)(document_);}
 	private:
 		const Document& document_;
-		IDocumentInput* input_;
-		void(IDocumentInput::*post_)(const Document&);
+		DocumentInput* input_;
+		void(DocumentInput::*post_)(const Document&);
 	};
 }
 
@@ -473,16 +473,16 @@ namespace {
 	const bool firstChange = !(skip) && !isModified() && (input_.get() != 0);	\
 	if(firstChange) {															\
 		if(!input_->isChangeable(*this))										\
-			throw IDocumentInput::ChangeRejectedException();					\
+			throw DocumentInput::ChangeRejectedException();						\
 	}																			\
-	FirstChangeHolder fch(*this, firstChange ? input_.get() : 0, &IDocumentInput::postFirstDocumentChange)
+	FirstChangeHolder fch(*this, firstChange ? input_.get() : 0, &DocumentInput::postFirstDocumentChange)
 
 /**
  * Performs the redo. Does nothing if the target region is inaccessible.
- * @param n the repeat count
+ * @param n The repeat count
  * @return @c false if the redo was not completely performed
- * @throw ReadOnlyDocumentException the document is read only
- * @throw IDocumentInput#ChangeRejectedException the change was rejected
+ * @throw ReadOnlyDocumentException The document is read only
+ * @throw IDocumentInput#ChangeRejectedException The change was rejected
  * @std#invalid_argument @a n &gt; #numberOfRedoableChanges()
  * @see #undo
  */
@@ -496,9 +496,9 @@ bool Document::redo(size_t n /* = 1 */) {
 	ASCENSION_PREPARE_FIRST_CHANGE(false);
 
 	const bool modified = isModified();
-	IUndoableChange::Result result;
+	UndoableChange::Result result;
 	result.completed = true;
-	rollbackListeners_.notify<const Document&>(&IDocumentRollbackListener::documentUndoSequenceStarted, *this);
+	rollbackListeners_.notify<const Document&>(&DocumentRollbackListener::documentUndoSequenceStarted, *this);
 
 	for(; n > 0 && result.completed; --n) {
 		beginCompoundChange();
@@ -510,16 +510,16 @@ bool Document::redo(size_t n /* = 1 */) {
 	assert(n == 0 || !result.completed);
 
 	rollbackListeners_.notify<const Document&, const Position&>(
-		&IDocumentRollbackListener::documentUndoSequenceStopped, *this, result.endOfChange);
+		&DocumentRollbackListener::documentUndoSequenceStopped, *this, result.endOfChange);
 	if(isModified() != modified)
-		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
+		stateListeners_.notify<const Document&>(&DocumentStateListener::documentModificationSignChanged, *this);
 	return result.completed;
 }
 
 #if 0
 /**
  * Removes the compound change listener.
- * @param listener the listener to be removed
+ * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered
  */
 void Document::removeCompoundChangeListener(ICompoundChangeListener& listener) {
@@ -531,17 +531,17 @@ void Document::removeCompoundChangeListener(ICompoundChangeListener& listener) {
  * Substitutes the given text for the specified region in the document.
  * This method sets the modification flag and calls the listeners'
  * @c IDocumentListener#documentAboutToBeChanged and @c IDocumentListener#documentChanged.
- * @param region the region to erase. if this is empty, no text is erased
- * @param text the start of the text. if this is @c null, no text is inserted
- * @param[out] eos the position of the end of the inserted text. can be @c null if not needed
- * @throw ReadOnlyDocumentException the document is read only
+ * @param region The region to erase. If this is empty, no text is erased
+ * @param text The start of the text. If this is @c null, no text is inserted
+ * @param[out] eos The position of the end of the inserted text. Can be @c null if not needed
+ * @throw ReadOnlyDocumentException The document is read only
  * @throw DocumentAccessViolationException @a region intersects the inaccesible region
- * @throw NullPointerException either @c text.end() returned @c null but @c text.beginning()
+ * @throw NullPointerException Either @c text.end() returned @c null but @c text.beginning()
  *                             returned not @c null
- * @throw std#invalid_argument either @a first is greater than @a last
- * @throw IllegalStateException the method was called in @c{IDocumentListener}s' notification
- * @throw IDocumentInput#ChangeRejectedException the input of the document rejected this change
- * @throw std#bad_alloc the internal memory allocation failed
+ * @throw std#invalid_argument Either @a first is greater than @a last
+ * @throw IllegalStateException The method was called in @c{IDocumentListener}s' notification
+ * @throw IDocumentInput#ChangeRejectedException The input of the document rejected this change
+ * @throw std#bad_alloc The internal memory allocation failed
  */
 void Document::replace(const Region& region, const StringPiece& text, Position* eos /* = 0 */) {
 	if(text.beginning() != 0 && text.end() == 0)
@@ -708,7 +708,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 	const DocumentChange change(region, Region(beginning, endOfInsertedString));
 	fireDocumentChanged(change);
 	if(!rollbacking_ && !modified)
-		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
+		stateListeners_.notify<const Document&>(&DocumentStateListener::documentModificationSignChanged, *this);
 
 	if(eos != 0)
 		*eos = endOfInsertedString;
@@ -733,10 +733,10 @@ void Document::replace(const Region& region, basic_istream<Char>& in, Position* 
 
 /**
  * Performs the undo. Does nothing if the target region is inaccessible.
- * @param n the repeat count
+ * @param n The repeat count
  * @return @c false if the undo was not completely performed
- * @throw ReadOnlyDocumentException the document is read only
- * @throw IDocumentInput#ChangeRejectedException the change was rejected
+ * @throw ReadOnlyDocumentException The document is read only
+ * @throw IDocumentInput#ChangeRejectedException The change was rejected
  * @std#invalid_argument @a n &gt; #numberOfUndoableChanges()
  * @see #redo
  */
@@ -751,9 +751,9 @@ bool Document::undo(size_t n /* = 1 */) {
 
 	const bool modified = isModified();
 	const size_t oldRevisionNumber = revisionNumber_;
-	IUndoableChange::Result result;
+	UndoableChange::Result result;
 	result.completed = true;
-	rollbackListeners_.notify<const Document&>(&IDocumentRollbackListener::documentUndoSequenceStarted, *this);
+	rollbackListeners_.notify<const Document&>(&DocumentRollbackListener::documentUndoSequenceStarted, *this);
 
 	for(; n > 0 && result.completed; --n) {
 		beginCompoundChange();
@@ -766,8 +766,8 @@ bool Document::undo(size_t n /* = 1 */) {
 	assert(n == 0 || !result.completed);
 
 	rollbackListeners_.notify<const Document&, const Position&>(
-		&IDocumentRollbackListener::documentUndoSequenceStopped, *this, result.endOfChange);
+		&DocumentRollbackListener::documentUndoSequenceStopped, *this, result.endOfChange);
 	if(isModified() != modified)
-		stateListeners_.notify<const Document&>(&IDocumentStateListener::documentModificationSignChanged, *this);
+		stateListeners_.notify<const Document&>(&DocumentStateListener::documentModificationSignChanged, *this);
 	return result.completed;
 }
