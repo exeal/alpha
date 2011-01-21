@@ -16,7 +16,7 @@
 #include <ascension/corelib/memory.hpp>		// FastArenaObject
 #include <ascension/corelib/standard-iterator-adapter.hpp>	// detail.IteratorAdapter
 #include <ascension/corelib/string-piece.hpp>
-#include <ascension/kernel/position.hpp>
+#include <ascension/kernel/partition.hpp>
 #ifdef ASCENSION_POSIX
 #	include <sys/stat.h>	// for POSIX environment
 #endif
@@ -43,25 +43,6 @@ namespace ascension {
 
 		class Point;
 		class Document;
-		struct DocumentPartition;
-
-		/**
-		 * Content type of a document partition.
-		 * The values less than 100 are reserved for library internal use.
-		 */
-		typedef ulong ContentType;
-
-		// special content types
-		const ContentType
-			/// Default content type.
-			DEFAULT_CONTENT_TYPE = 0,
-			/// Type of the parent (means "transition source") content.
-			PARENT_CONTENT_TYPE = 1,
-			/// Type of Undetermined (not calculated) content.
-			UNDETERMINED_CONTENT_TYPE = 2;
-
-		/// Returns @c true if the given content type value @a v is for special use.
-		inline bool isSpecialContentType(ContentType v) {return v < 100;}
 
 		/**
 		 * Value represents a newline in document. @c NLF_RAW_VALUE and @c NLF_DOCUMENT_INPUT are
@@ -87,19 +68,6 @@ namespace ascension {
 			/// Represents any NLF as the value of @c IDocumentInput#newline().
 			NLF_DOCUMENT_INPUT,
 			NLF_COUNT
-		};
-
-		/**
-		 * A document partition.
-		 * @see DocumentPartitioner#partition
-		 */
-		struct DocumentPartition {
-			ContentType contentType;	///< Content type of the partition.
-			Region region;				///< Region of the partition.
-			/// Default constructor.
-			DocumentPartition() /*throw()*/ {}
-			/// Constructor.
-			DocumentPartition(ContentType type, const Region& r) /*throw()*/ : contentType(type), region(r) {}
 		};
 
 		/**
@@ -269,90 +237,6 @@ namespace ascension {
 			 */
 			virtual void documentUndoSequenceStopped(const Document& document, const Position& resultPosition) = 0;
 			friend class Document;
-		};
-
-		/**
-		 * An @c ContentTypeInformationProvider provides the information about the document's content types.
-		 * @see Document#setContentTypeInformation, Document#setContentTypeInformation
-		 */
-		class ContentTypeInformationProvider {
-		public:
-			/// Destructor.
-			virtual ~ContentTypeInformationProvider() /*throw()*/ {}
-			/**
-			 * Returns the identifier syntax for the specified content type.
-			 * @param contentType the type of content
-			 * @return the identifier syntax
-			 */
-			virtual const text::IdentifierSyntax& getIdentifierSyntax(ContentType contentType) const /*throw()*/ = 0;
-		};
-
-		/**
-		 * Interface for objects which are interested in getting informed about changes of a document's partitioning.
-		 * @see DocumentPartitioner, Document#addPartitioningListener, Document#removePartitioningListener
-		 */
-		class DocumentPartitioningListener {
-		private:
-			/**
-			 * Document partitions are changed.
-			 * @param changedRegion the region whose document partition are changed
-			 */
-			virtual void documentPartitioningChanged(const Region& changedRegion) = 0;
-			friend class Document;
-		};
-
-		/**
-		 * A document partitioner devides a document into disjoint text partitions.
-		 * @see ContentType, Document, DocumentPartition, Document#partitioner,
-		 * Document#setPartitioner, NullPartitioner
-		 */
-		class DocumentPartitioner {
-		public:
-			virtual ~DocumentPartitioner() /*throw()*/;
-			ContentType contentType(const Position& at) const;
-			Document* document() /*throw()*/;
-			const Document* document() const /*throw()*/;
-			void partition(const Position& at, DocumentPartition& partition) const;
-		protected:
-			DocumentPartitioner() /*throw()*/;
-			void notifyDocument(const Region& changedRegion);
-		private:
-			/// The document is about to be changed.
-			virtual void documentAboutToBeChanged() /*throw()*/ = 0;
-			/**
-			 * The document was changed.
-			 * @param change the modification content
-			 */
-			virtual void documentChanged(const DocumentChange& change) /*throw()*/ = 0;
-			/**
-			 * Returns the partition contains the specified position.
-			 * @param at the position. this position is guaranteed to be inside of the document
-			 * @param[out] partition the partition
-			 */
-			virtual void doGetPartition(const Position& at, DocumentPartition& partition) const /*throw()*/ = 0;
-			/**
-			 * Called when the partitioner was connected to a document.
-			 * There is not method called @c doUninstall, because a partitioner will be destroyed when disconnected.
-			 */
-			virtual void doInstall() /*throw()*/ = 0;
-		private:
-			void install(Document& document) /*throw()*/ {document_ = &document; doInstall();}
-		private:
-			Document* document_;
-			friend class Document;
-		};
-
-		/// @c NullPartitioner always returns one partition covers a whole document.
-		class NullPartitioner : public DocumentPartitioner {
-		public:
-			NullPartitioner() /*throw()*/;
-		private:
-			void documentAboutToBeChanged() /*throw()*/;
-			void documentChanged(const DocumentChange& change) /*throw()*/;
-			void doGetPartition(const Position& at, DocumentPartition& partition) const /*throw()*/;
-			void doInstall() /*throw()*/;
-		private:
-			DocumentPartition p_;
 		};
 
 		/**
@@ -942,25 +826,6 @@ inline const texteditor::Session* Document::session() const /*throw()*/ {return 
  */
 inline void Document::setContentTypeInformation(std::auto_ptr<ContentTypeInformationProvider> newProvider) /*throw()*/ {
 	contentTypeInformationProvider_.reset((newProvider.get() != 0) ? newProvider.release() : new DefaultContentTypeInformationProvider);}
-
-/**
- * Returns the content type of the partition contains the specified position.
- * @param at the position
- * @throw BadPositionException @a position is outside of the document
- * @throw IllegalStateException the partitioner is not connected to any document
- * @return the content type
- */
-inline ContentType DocumentPartitioner::contentType(const Position& at) const {
-	DocumentPartition p;
-	partition(at, p);
-	return p.contentType;
-}
-
-/// Returns the document to which the partitioner connects or @c null.
-inline Document* DocumentPartitioner::document() /*throw()*/ {return document_;}
-
-/// Returns the document to which the partitioner connects or @c null.
-inline const Document* DocumentPartitioner::document() const /*throw()*/ {return document_;}
 
 /**
  * Notifies the partitioning change to the listeners.
