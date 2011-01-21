@@ -191,53 +191,6 @@ DocumentAccessViolationException::DocumentAccessViolationException() :
 	invalid_argument("The specified position or region is inaccessible.") {
 }
 
-/**
- * Constructor.
- * @param requested The requested position in the document
- */
-BadPositionException::BadPositionException(const Position& requested) : invalid_argument(
-		static_cast<ostringstream&>(ostringstream() << "the position " << requested
-		<< " is outside of the document.").str()), requestedPosition_(requested) {
-}
-
-/**
- * Constructor.
- * @param requested The requested position in the document
- * @param message The message @c #what returns
- */
-BadPositionException::BadPositionException(const Position& requested,
-		const string& message) : invalid_argument(message), requestedPosition_(requested) {
-}
-
-/// Returns the requested position in the document.
-const Position& BadPositionException::requestedPosition() const /*throw()*/ {
-	return requestedPosition_;
-}
-
-/**
- * Constructor.
- * @param requested The requested region in the document
- * @param message The exception message
- */
-BadRegionException::BadRegionException(const Region& requested) : invalid_argument(
-		static_cast<ostringstream&>(ostringstream() << "the region " << requested
-		<< ") intersects with the outside of the document.").str()), requestedRegion_(requested) {
-}
-
-/**
- * Constructor.
- * @param requested The requested region in the document
- * @param message The exception message
- */
-BadRegionException::BadRegionException(const Region& requested,
-		const string& message) : invalid_argument(message), requestedRegion_(requested) {
-}
-
-/// Returns the requested region in the document.
-const Region& BadRegionException::requestedRegion() const /*throw()*/ {
-	return requestedRegion_;
-}
-
 /// Constructor.
 DocumentInput::ChangeRejectedException::ChangeRejectedException() {
 }
