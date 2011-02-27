@@ -22,20 +22,6 @@ namespace ascension {
 	namespace graphics {
 		namespace font {
 
-			class TextRenderer;
-
-			/*
-			 * Interface for objects which are interested in change of the default font of
-			 * @c TextRenderer.
-			 * @see TextRenderer#addDefaultFontListener, TextRenderer#removeDefaultFontListener
-			 */
-			class DefaultFontListener {
-			private:
-				/// The font settings was changed.
-				virtual void defaultFontChanged() = 0;
-				friend class TextRenderer;
-			};
-
 			/**
 			 * Interface for objects which are interested in getting informed about change of
 			 * visual lines of @c TextRenderer.
@@ -90,15 +76,12 @@ namespace ascension {
 				const kernel::Document& document() const /*throw()*/;
 				const TextLayout& lineLayout(length_t line) const;
 				const TextLayout* lineLayoutIfCached(length_t line) const /*throw()*/;
-				int longestLineWidth() const /*throw()*/;
+				Scalar maximumInlineProgressionDimension() const /*throw()*/;
 				length_t numberOfSublinesOfLine(length_t) const;
 				length_t numberOfVisualLines() const /*throw()*/;
 				// listeners
 				void addVisualLinesListener(VisualLinesListener& listener);
 				void removeVisualLinesListener(VisualLinesListener& listener);
-				// strategy
-				void setLayoutInformation(
-					const LayoutInformationProvider* newProvider, bool delegateOwnership);
 				// position translations
 				length_t mapLogicalLineToVisualLine(length_t line) const;
 				length_t mapLogicalPositionToVisualPosition(
@@ -113,22 +96,23 @@ namespace ascension {
 			protected:
 				void invalidate(length_t line);
 				// enumeration
-				typedef std::pair<length_t, TextLayout*> LineLayout;
-				typedef std::list<LineLayout>::const_iterator Iterator;
-				Iterator firstCachedLine() const /*throw()*/;
-				Iterator lastCachedLine() const /*throw()*/;
+				typedef std::pair<length_t, const TextLayout*> LineLayout;
+				typedef std::list<LineLayout>::const_iterator ConstIterator;
+				ConstIterator firstCachedLine() const /*throw()*/;
+				ConstIterator lastCachedLine() const /*throw()*/;
 				// abstract
+				virtual std::auto_ptr<const TextLayout> createLineLayout(length_t line) const = 0;
 				virtual std::auto_ptr<Context> renderingContext() const = 0;
 			private:
+				typedef std::list<LineLayout>::iterator Iterator;
 				void clearCaches(length_t first, length_t last, bool repair);
-				void createLineLayout(length_t line) /*throw()*/;
 				void deleteLineLayout(length_t line, TextLayout* newLayout = 0) /*throw()*/;
 				void fireVisualLinesDeleted(length_t first, length_t last, length_t sublines);
 				void fireVisualLinesInserted(length_t first, length_t last);
 				void fireVisualLinesModified(length_t first, length_t last,
 					length_t newSublines, length_t oldSublines, bool documentChanged);
 				void presentationStylistChanged();
-				void updateLongestLine(length_t line, int width) /*throw()*/;
+				void updateLongestLine(length_t line, Scalar ipd) /*throw()*/;
 				// kernel.DocumentListener
 				void documentAboutToBeChanged(const kernel::Document& document);
 				void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
@@ -140,7 +124,6 @@ namespace ascension {
 					bool operator()(length_t lhs, const TextLayout*& rhs) const /*throw()*/ {return lhs < rhs->lineNumber();}
 				};
 				kernel::Document& document_;
-				detail::StrategyPointer<const LayoutInformationProvider> lip_;
 				std::list<LineLayout> layouts_;
 				const std::size_t bufferSize_;
 				const bool autoRepair_;
@@ -148,53 +131,62 @@ namespace ascension {
 				struct {
 					length_t first, last;
 				} pendingCacheClearance_;	// ドキュメント変更中に呼び出された clearCaches の引数
-				Scalar longestLineWidth_;
+				Scalar maximumIpd_;
 				length_t longestLine_, numberOfVisualLines_;
 				detail::Listeners<VisualLinesListener> listeners_;
 			};
 
+			class TextRenderer;
+
+			/*
+			 * Interface for objects which are interested in change of the default font of
+			 * @c TextRenderer.
+			 * @see TextRenderer#addDefaultFontListener, TextRenderer#removeDefaultFontListener
+			 */
+			class DefaultFontListener {
+			private:
+				/// The font settings was changed.
+				virtual void defaultFontChanged() = 0;
+				friend class TextRenderer;
+			};
+
 			// documentation is layout.cpp
-			class TextRenderer :
-				public LineLayoutBuffer, public LayoutInformationProvider,
-				public presentation::DefaultTextStyleListener {
+			class TextRenderer : public LineLayoutBuffer, public presentation::DefaultTextStyleListener {
 			public:
 				// constructors
 				TextRenderer(presentation::Presentation& presentation,
 					const FontCollection& fontCollection, bool enableDoubleBuffering);
 				TextRenderer(const TextRenderer& other);
 				virtual ~TextRenderer() /*throw()*/;
-				// text metrics
-				std::tr1::shared_ptr<const Font> primaryFont() const /*throw()*/;
-				int lineIndent(length_t line, length_t subline = 0) const;
-				bool updateTextMetrics();
-				// listener
+				// default font
 				void addDefaultFontListener(DefaultFontListener& listener);
+				std::tr1::shared_ptr<const Font> defaultFont() const /*throw()*/;
 				void removeDefaultFontListener(DefaultFontListener& listener);
-				// strategy
-				void setSpecialCharacterRenderer(
-					SpecialCharacterRenderer* newRenderer, bool delegateOwnership);
+				// text metrics
+				int lineIndent(length_t line, length_t subline = 0) const;
 				// operation
 				void renderLine(length_t line, PaintContext& context, const Point<>& origin,
-					const Rect<>& clipRect, const TextLayout::Selection* selection) const /*throw()*/;
+					const Rect<>& clipRect, ColorOverrideIterator* colorOverride = 0,
+					const InlineObject* endOfLine = 0, const InlineObject* lineWrappingMark = 0) const /*throw()*/;
+					
 				// LayoutInformationProvider
 				const FontCollection& fontCollection() const /*throw()*/;
 				const presentation::Presentation& presentation() const /*throw()*/;
-				SpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/;
-				const Font::Metrics& textMetrics() const /*throw()*/;
+//				SpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/;
+//				const Font::Metrics& textMetrics() const /*throw()*/;
+			private:
+				void updateDefaultFont();
 				// presentation.DefaultTextStyleListener
 				void defaultTextLineStyleChanged(std::tr1::shared_ptr<const presentation::TextLineStyle> used);
 				void defaultTextRunStyleChanged(std::tr1::shared_ptr<const presentation::TextRunStyle> used);
 			private:
-				void fireDefaultFontChanged();
-			private:
 				presentation::Presentation& presentation_;
 				const FontCollection& fontCollection_;
 				const bool enablesDoubleBuffering_;
+				std::tr1::shared_ptr<const Font> defaultFont_;
+				detail::Listeners<DefaultFontListener> defaultFontListeners_;
 				mutable win32::Handle<HDC> memoryDC_;
 				mutable win32::Handle<HBITMAP> memoryBitmap_;
-				std::tr1::shared_ptr<const Font> primaryFont_;
-				detail::StrategyPointer<SpecialCharacterRenderer> specialCharacterRenderer_;
-				detail::Listeners<DefaultFontListener> listeners_;
 			};
 
 
@@ -204,12 +196,12 @@ namespace ascension {
 			}
 
 			/// Returns the first cached line layout.
-			inline LineLayoutBuffer::Iterator LineLayoutBuffer::firstCachedLine() const /*throw()*/ {
+			inline LineLayoutBuffer::ConstIterator LineLayoutBuffer::firstCachedLine() const /*throw()*/ {
 				return layouts_.begin();
 			}
 
 			/// Returns the last cached line layout.
-			inline LineLayoutBuffer::Iterator LineLayoutBuffer::lastCachedLine() const /*throw()*/ {
+			inline LineLayoutBuffer::ConstIterator LineLayoutBuffer::lastCachedLine() const /*throw()*/ {
 				return layouts_.end();
 			}
 
@@ -230,8 +222,8 @@ namespace ascension {
 			}
 
 			/// Returns the width of the longest line.
-			inline int LineLayoutBuffer::longestLineWidth() const /*throw()*/ {
-				return longestLineWidth_;
+			inline Scalar LineLayoutBuffer::maximumInlineProgressionDimension() const /*throw()*/ {
+				return maximumIpd_;
 			}
 
 			/**
@@ -262,14 +254,24 @@ namespace ascension {
 			}
 
 			/// Returns the primary font.
-			inline std::tr1::shared_ptr<const Font> TextRenderer::primaryFont() const /*throw()*/ {
-				return primaryFont_;
+			inline std::tr1::shared_ptr<const Font> TextRenderer::defaultFont() const /*throw()*/ {
+				return defaultFont_;
+			}
+
+			/// Returns the font collection used by this object.
+			inline const FontCollection& TextRenderer::fontCollection() const /*throw()*/ {
+				return fontCollection_;
+			}
+
+			/// Returns the presentation used by this object.
+			inline const presentation::Presentation& TextRenderer::presentation() const /*throw()*/ {
+				return presentation_;
 			}
 
 			/// @see LayoutInformationProvider#textMetrics
-			inline const Font::Metrics& TextRenderer::textMetrics() const /*throw()*/ {
-				return primaryFont()->metrics();
-			}
+//			inline const Font::Metrics& TextRenderer::textMetrics() const /*throw()*/ {
+//				return primaryFont()->metrics();
+//			}
 
 		}
 	}
