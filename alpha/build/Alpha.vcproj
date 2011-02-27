@@ -457,10 +457,6 @@
 				Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 				>
 				<File
-					RelativePath="..\..\ascension\src\layout.cpp"
-					>
-				</File>
-				<File
 					RelativePath="..\..\ascension\src\presentation.cpp"
 					>
 				</File>
@@ -572,11 +568,23 @@
 					Name="graphics"
 					>
 					<File
+						RelativePath="..\..\ascension\src\graphics\default-special-character-renderer.cpp"
+						>
+					</File>
+					<File
 						RelativePath="..\..\ascension\src\graphics\font-windows.cpp"
 						>
 					</File>
 					<File
 						RelativePath="..\..\ascension\src\graphics\graphics-windows.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\src\graphics\rendering.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\src\graphics\text-layout.cpp"
 						>
 					</File>
 				</Filter>
@@ -659,10 +667,6 @@
 				</File>
 				<File
 					RelativePath="..\..\ascension\ascension\internal.hpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ascension\ascension\layout.hpp"
 					>
 				</File>
 				<File
@@ -821,6 +825,10 @@
 						>
 					</File>
 					<File
+						RelativePath="..\..\ascension\ascension\corelib\standard-iterator-adapter.hpp"
+						>
+					</File>
+					<File
 						RelativePath="..\..\ascension\ascension\corelib\string-piece.hpp"
 						>
 					</File>
@@ -904,6 +912,14 @@
 						RelativePath="..\..\ascension\ascension\graphics\graphics.hpp"
 						>
 					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\graphics\rendering.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\graphics\text-layout.hpp"
+						>
+					</File>
 				</Filter>
 				<Filter
 					Name="kernel"
@@ -925,7 +941,15 @@
 						>
 					</File>
 					<File
+						RelativePath="..\..\ascension\ascension\kernel\partition.hpp"
+						>
+					</File>
+					<File
 						RelativePath="..\..\ascension\ascension\kernel\point.hpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ascension\ascension\kernel\position.hpp"
 						>
 					</File>
 					<File
