@@ -2,14 +2,14 @@
  * @file rendering.cpp
  * @author exeal
  * @date 2003-2006 (was LineLayout.cpp)
- * @date 2006-2010
+ * @date 2006-2011
  * @date 2010-11-20 separated from ascension/layout.cpp
  */
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
 #include <ascension/graphics/rendering.hpp>
 #include <ascension/graphics/graphics.hpp>
-#include <ascension/graphics/special-character-renderer.hpp>
+//#include <ascension/graphics/special-character-renderer.hpp>
 
 using namespace ascension;
 using namespace ascension::graphics;
@@ -24,7 +24,7 @@ namespace k = ascension::kernel;
 extern bool DIAGNOSE_INHERENT_DRAWING;
 
 
-// LineLayoutBuffer /////////////////////////////////////////////////////////
+// LineLayoutBuffer ///////////////////////////////////////////////////////////////////////////////
 
 /**
  * Constructor.
@@ -36,7 +36,7 @@ extern bool DIAGNOSE_INHERENT_DRAWING;
  */
 LineLayoutBuffer::LineLayoutBuffer(k::Document& document, length_t bufferSize, bool autoRepair) :
 		document_(document), bufferSize_(bufferSize), autoRepair_(autoRepair), documentChangePhase_(NONE),
-		longestLineWidth_(0), longestLine_(INVALID_INDEX), numberOfVisualLines_(document.numberOfLines()) {
+		maximumIpd_(0), longestLine_(INVALID_INDEX), numberOfVisualLines_(document.numberOfLines()) {
 	pendingCacheClearance_.first = pendingCacheClearance_.last = INVALID_INDEX;
 	if(bufferSize == 0)
 		throw invalid_argument("size of the buffer can't be zero.");
@@ -58,7 +58,7 @@ LineLayoutBuffer::~LineLayoutBuffer() /*throw()*/ {
  * @param listener The listener to be registered
  * @throw std#invalid_argument @a listener is already registered
  */
-void LineLayoutBuffer::addVisualLinesListener(IVisualLinesListener& listener) {
+void LineLayoutBuffer::addVisualLinesListener(VisualLinesListener& listener) {
 	listeners_.add(listener);
 	const length_t lines = document_.numberOfLines();
 	if(lines > 1)
@@ -95,7 +95,9 @@ void LineLayoutBuffer::clearCaches(length_t first, length_t last, bool repair) {
 				delete i->second;
 				if(context.get() == 0)
 					context = renderingContext();
-				i->second = new TextLayout(*context, *lip_, i->first);
+				auto_ptr<TextLayout> newLayout(createLineLayout(i->first));
+				assert(newLayout.get() != 0);	// TODO:
+				i->second = newLayout.release();
 				newSublines += i->second->numberOfLines();
 				++cachedLines;
 				actualFirst = min(actualFirst, i->first);
@@ -167,12 +169,13 @@ void LineLayoutBuffer::fireVisualLinesDeleted(length_t first, length_t last, len
 	const bool widthChanged = longestLine_ >= first && longestLine_ < last;
 	if(widthChanged)
 		updateLongestLine(static_cast<length_t>(-1), 0);
-	listeners_.notify<length_t, length_t, length_t>(&IVisualLinesListener::visualLinesDeleted, first, last, sublines, widthChanged);
+	listeners_.notify<length_t, length_t, length_t>(
+		&VisualLinesListener::visualLinesDeleted, first, last, sublines, widthChanged);
 }
 
 void LineLayoutBuffer::fireVisualLinesInserted(length_t first, length_t last) /*throw()*/ {
 	numberOfVisualLines_ += last - first;
-	listeners_.notify<length_t, length_t>(&IVisualLinesListener::visualLinesInserted, first, last);
+	listeners_.notify<length_t, length_t>(&VisualLinesListener::visualLinesInserted, first, last);
 }
 
 void LineLayoutBuffer::fireVisualLinesModified(length_t first, length_t last,
@@ -187,25 +190,25 @@ void LineLayoutBuffer::fireVisualLinesModified(length_t first, length_t last,
 		longestLineChanged = true;
 	} else {
 		length_t newLongestLine = longestLine_;
-		int newLongestLineWidth = longestLineWidth_;
-		for(Iterator i(firstCachedLine()), e(lastCachedLine()); i != e; ++i) {
-			if(i->second->longestLineWidth() > newLongestLineWidth) {
+		Scalar newMaximumIpd = maximumInlineProgressionDimension();
+		for(ConstIterator i(firstCachedLine()), e(lastCachedLine()); i != e; ++i) {
+			if(i->second->maximumInlineProgressionDimension() > newMaximumIpd) {
 				newLongestLine = i->first;
-				newLongestLineWidth = i->second->longestLineWidth();
+				newMaximumIpd = i->second->maximumInlineProgressionDimension();
 			}
 		}
 		if(longestLineChanged = (newLongestLine != longestLine_))
-			updateLongestLine(newLongestLine, newLongestLineWidth);
+			updateLongestLine(newLongestLine, newMaximumIpd);
 	}
 
 	listeners_.notify<length_t, length_t, signed_length_t>(
-		&IVisualLinesListener::visualLinesModified, first, last,
+		&VisualLinesListener::visualLinesModified, first, last,
 		static_cast<signed_length_t>(newSublines) - static_cast<signed_length_t>(oldSublines), documentChanged, longestLineChanged);
 }
 
 /// Invalidates all layouts.
 void LineLayoutBuffer::invalidate() /*throw()*/ {
-	clearCaches(0, lip_->presentation().document().numberOfLines(), autoRepair_);
+	clearCaches(0, document().numberOfLines(), autoRepair_);
 }
 
 /**
@@ -225,17 +228,18 @@ void LineLayoutBuffer::invalidate(length_t first, length_t last) {
  * @param line The line to invalidate layout
  */
 inline void LineLayoutBuffer::invalidate(length_t line) {
-	auto_ptr<Context> context(renderingContext());
 	for(Iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 		if(i->first == line) {
 			const length_t oldSublines = i->second->numberOfLines();
 			delete i->second;
 			if(autoRepair_) {
-				i->second = new TextLayout(*context, *lip_, line);
-				fireVisualLinesModified(line, line + 1, i->second->numberOfLines(), oldSublines, documentChangePhase_ == CHANGING);
+				i->second = createLineLayout(line).release();
+				fireVisualLinesModified(line, line + 1,
+					i->second->numberOfLines(), oldSublines, documentChangePhase_ == CHANGING);
 			} else {
 				layouts_.erase(i);
-				fireVisualLinesModified(line, line + 1, 1, oldSublines, documentChangePhase_ == CHANGING);
+				fireVisualLinesModified(line, line + 1,
+					1, oldSublines, documentChangePhase_ == CHANGING);
 			}
 			break;
 		}
@@ -253,7 +257,7 @@ const TextLayout& LineLayoutBuffer::lineLayout(length_t line) const {
 	manah::win32::DumpContext dout;
 	dout << "finding layout for line " << line;
 #endif
-	if(line > lip_->presentation().document().numberOfLines())
+	if(line > document().numberOfLines())
 		throw kernel::BadPositionException(kernel::Position(line, 0));
 	LineLayoutBuffer& self = *const_cast<LineLayoutBuffer*>(this);
 	Iterator i(self.layouts_.begin());
@@ -266,12 +270,14 @@ const TextLayout& LineLayoutBuffer::lineLayout(length_t line) const {
 #ifdef ASCENSION_TRACE_LAYOUT_CACHES
 		dout << "... cache found\n";
 #endif
-		if(i->second != layouts_.front()) {
+		if(i->second != layouts_.front().second) {
 			// bring to the top
+			const LineLayout temp(*i);
 			self.layouts_.erase(i);
-			self.layouts_.push_front(layout);
+			self.layouts_.push_front(temp);
+			i = self.layouts_.begin();
 		}
-		return i->second;
+		return *i->second;
 	} else {
 #ifdef ASCENSION_TRACE_LAYOUT_CACHES
 		dout << "... cache not found\n";
@@ -283,7 +289,7 @@ const TextLayout& LineLayoutBuffer::lineLayout(length_t line) const {
 				1, i->second->numberOfLines(), documentChangePhase_ == CHANGING);
 			delete i->second;
 		}
-		TextLayout* const layout = new TextLayout(*renderingContext(), *lip_, line);
+		const TextLayout* const layout = createLineLayout(line).release();
 		self.layouts_.push_front(make_pair(line, layout));
 		self.fireVisualLinesModified(line, line + 1, layout->numberOfLines(), 1, documentChangePhase_ == CHANGING);
 		return *layout;
@@ -298,14 +304,14 @@ const TextLayout& LineLayoutBuffer::lineLayout(length_t line) const {
  * @see #mapLogicalPositionToVisualPosition
  */
 length_t LineLayoutBuffer::mapLogicalLineToVisualLine(length_t line) const {
-	if(line >= lip_->presentation().document().numberOfLines())
+	if(line >= document().numberOfLines())
 		throw kernel::BadPositionException(kernel::Position(line, 0));
-	else if(!lip_->layoutSettings().lineWrap.wraps())
-		return line;
+//	else if(!wrapLongLines())
+//		return line;
 	length_t result = 0, cachedLines = 0;
-	for(Iterator i(firstCachedLine()), e(lastCachedLine()); i != e; ++i) {
-		if((*i)->lineNumber() < line) {
-			result += (*i)->numberOfLines();
+	for(ConstIterator i(firstCachedLine()), e(lastCachedLine()); i != e; ++i) {
+		if(i->first < line) {
+			result += i->second->numberOfLines();
 			++cachedLines;
 		}
 	}
@@ -321,11 +327,11 @@ length_t LineLayoutBuffer::mapLogicalLineToVisualLine(length_t line) const {
  * @see #mapLogicalLineToVisualLine
  */
 length_t LineLayoutBuffer::mapLogicalPositionToVisualPosition(const k::Position& position, length_t* column) const {
-	if(!lip_->layoutSettings().lineWrap.wraps()) {
-		if(column != 0)
-			*column = position.column;
-		return position.line;
-	}
+//	if(!wrapsLongLines()) {
+//		if(column != 0)
+//			*column = position.column;
+//		return position.line;
+//	}
 	const TextLayout& layout = lineLayout(position.line);
 	const length_t line = layout.lineAt(position.column);
 	if(column != 0)
@@ -424,31 +430,22 @@ void LineLayoutBuffer::presentationStylistChanged() {
 }
 
 /**
- * Sets the new layout information provider.
- * @param newProvider The layout information provider
- * @param delegateOwnership Set @c true to transfer the ownership of @a newProvider into the callee
- */
-void LineLayoutBuffer::setLayoutInformation(const ILayoutInformationProvider* newProvider, bool delegateOwnership) {
-	lip_.reset(newProvider, delegateOwnership);
-	invalidate();
-}
-
-/**
- * Updates the longest line and invokes @c ILongestLineListener#longestLineChanged.
+ * Updates the longest line.
  * @param line The new longest line. set -1 to recalculate
- * @param width The width of the longest line. If @a line is -1, this value is ignored
+ * @param ipd The inline progression dimension of the longest line. If @a line is -1, this value is
+ *            ignored
  */
-void LineLayoutBuffer::updateLongestLine(length_t line, int width) /*throw()*/ {
+void LineLayoutBuffer::updateLongestLine(length_t line, Scalar ipd) /*throw()*/ {
 	if(line != -1) {
 		longestLine_ = line;
-		longestLineWidth_ = width;
+		maximumIpd_ = ipd;
 	} else {
 		longestLine_ = static_cast<length_t>(-1);
-		longestLineWidth_ = 0;
-		for(Iterator i(firstCachedLine()), e(lastCachedLine()); i != e; ++i) {
-			if((*i)->longestLineWidth() > longestLineWidth_) {
-				longestLine_ = (*i)->lineNumber();
-				longestLineWidth_ = (*i)->longestLineWidth();
+		maximumIpd_ = 0;
+		for(ConstIterator i(firstCachedLine()), e(lastCachedLine()); i != e; ++i) {
+			if(i->second->maximumInlineProgressionDimension() > maximumIpd_) {
+				longestLine_ = i->first;
+				maximumIpd_ = i->second->maximumInlineProgressionDimension();
 			}
 		}
 	}
@@ -570,8 +567,7 @@ namespace {
 TextRenderer::TextRenderer(Presentation& presentation, const FontCollection& fontCollection, bool enableDoubleBuffering) :
 		LineLayoutBuffer(presentation.document(), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
 		presentation_(presentation), fontCollection_(fontCollection), enablesDoubleBuffering_(enableDoubleBuffering) {
-	setLayoutInformation(this, false);
-	updateTextMetrics();
+	updateDefaultFont();
 /*	switch(PRIMARYLANGID(getUserDefaultUILanguage())) {
 	case LANG_CHINESE:
 	case LANG_JAPANESE:
@@ -587,9 +583,8 @@ TextRenderer::TextRenderer(Presentation& presentation, const FontCollection& fon
 TextRenderer::TextRenderer(const TextRenderer& other) :
 		LineLayoutBuffer(other.presentation_.document(), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true),
 		presentation_(other.presentation_), fontCollection_(other.fontCollection_),
-		enablesDoubleBuffering_(other.enablesDoubleBuffering_), primaryFont_() {
-	setLayoutInformation(this, false);
-	updateTextMetrics();
+		enablesDoubleBuffering_(other.enablesDoubleBuffering_), defaultFont_() {
+	updateDefaultFont();
 //	updateViewerSize(); ???
 	presentation_.addDefaultTextStyleListener(*this);
 }
@@ -606,8 +601,8 @@ TextRenderer::~TextRenderer() /*throw()*/ {
  * @param listener the listener to be registered
  * @throw std#invalid_argument @a listener is already registered
  */
-void TextRenderer::addDefaultFontListener(IDefaultFontListener& listener) {
-	listeners_.add(listener);
+void TextRenderer::addDefaultFontListener(DefaultFontListener& listener) {
+	defaultFontListeners_.add(listener);
 }
 
 /// @see DefaultTextStyleListener#defaultTextLineStyleChanged
@@ -616,23 +611,7 @@ void TextRenderer::defaultTextLineStyleChanged(tr1::shared_ptr<const TextLineSty
 
 /// @see DefaultTextStyleListener#defaultTextRunStyleChanged
 void TextRenderer::defaultTextRunStyleChanged(tr1::shared_ptr<const TextRunStyle>) {
-	updateTextMetrics();
-}
-
-void TextRenderer::fireDefaultFontChanged() {
-	invalidate();
-	if(enablesDoubleBuffering_ && memoryBitmap_.get() != 0) {
-		BITMAP temp;
-		::GetObjectW(memoryBitmap_.get(), sizeof(HBITMAP), &temp);
-		if(temp.bmHeight != calculateMemoryBitmapSize(primaryFont()->metrics().linePitch()))
-			memoryBitmap_.reset();
-	}
-	listeners_.notify(&IDefaultFontListener::defaultFontChanged);
-}
-
-/// @see ILayoutInformationProvider#fontCollection
-const FontCollection& TextRenderer::fontCollection() const {
-	return fontCollection_;
+	updateDefaultFont();
 }
 
 /**
@@ -661,18 +640,13 @@ int TextRenderer::lineIndent(length_t line, length_t subline) const {
 	}
 }
 
-/// @see ILayoutInformationProvider#presentation
-const Presentation& TextRenderer::presentation() const /*throw()*/ {
-	return presentation_;
-}
-
 /**
  * Removes the default font selector listener.
  * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered
  */
-void TextRenderer::removeDefaultFontListener(IDefaultFontListener& listener) {
-	listeners_.remove(listener);
+void TextRenderer::removeDefaultFontListener(DefaultFontListener& listener) {
+	defaultFontListeners_.remove(listener);
 }
 
 /**
@@ -681,10 +655,13 @@ void TextRenderer::removeDefaultFontListener(IDefaultFontListener& listener) {
  * @param context The graphics context
  * @param origin The position to draw
  * @param clipRect The clipping region
- * @param selection The selection
+ * @param colorOverride 
+ * @param endOfLine 
+ * @param lineWrappingMark 
  */
-void TextRenderer::renderLine(length_t line, PaintContext& context, const Point<>& origin,
-		const Rect<>& clipRect, const TextLayout::Selection* selection) const /*throw()*/ {
+void TextRenderer::renderLine(length_t line, PaintContext& context,
+		const Point<>& origin, const Rect<>& clipRect, ColorOverrideIterator* colorOverride /* = 0 */,
+		const InlineObject* endOfLine /* = 0 */, const InlineObject* lineWrappingMark /* = 0 */) const /*throw()*/ {
 	if(!enablesDoubleBuffering_) {
 		lineLayout(line).draw(context, origin, clipRect, selection);
 		return;
@@ -729,40 +706,27 @@ void TextRenderer::renderLine(length_t line, PaintContext& context, const Point<
 	}
 }
 
-/**
- * Sets the special character renderer.
- * @param newRenderer The new renderer or @c null
- * @param delegateOwnership Set @c true to transfer the ownership into the callee
- * @throw std#invalid_argument @a newRenderer is already registered
- */
-void TextRenderer::setSpecialCharacterRenderer(ISpecialCharacterRenderer* newRenderer, bool delegateOwnership) {
-	if(newRenderer != 0 && newRenderer == specialCharacterRenderer_.get())
-		throw invalid_argument("the specified renderer is already registered.");
-	if(specialCharacterRenderer_.get() != 0)
-		specialCharacterRenderer_->uninstall();
-	specialCharacterRenderer_.reset(newRenderer, delegateOwnership);
-	newRenderer->install(*this);
-	invalidate();
-}
-
-/// @see ILayoutInformationProvider#specialCharacterRenderer
-ISpecialCharacterRenderer* TextRenderer::specialCharacterRenderer() const /*throw()*/ {
-	return specialCharacterRenderer_.get();
-}
-
-bool TextRenderer::updateTextMetrics() {
-	// select the primary font
+void TextRenderer::updateDefaultFont() {
 	tr1::shared_ptr<const TextRunStyle> defaultStyle(presentation_.defaultTextRunStyle());
 	if(defaultStyle.get() != 0 && !defaultStyle->fontFamily.empty())
-		primaryFont_ = fontCollection().get(defaultStyle->fontFamily, defaultStyle->fontProperties);
+		defaultFont_ = fontCollection().get(defaultStyle->fontFamily, defaultStyle->fontProperties);
 	else {
 		LOGFONTW lf;
 		if(::GetObjectW(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)), sizeof(LOGFONTW), &lf) == 0)
 			throw runtime_error("");
 		FontProperties fps(static_cast<FontProperties::Weight>(lf.lfWeight), FontProperties::INHERIT_STRETCH,
-			(lf.lfItalic != 0) ? FontProperties::ITALIC : FontProperties::NORMAL_STYLE, (lf.lfHeight < 0) ? -lf.lfHeight : 0);
-		primaryFont_ = fontCollection().get(lf.lfFaceName, fps);
+			(lf.lfItalic != 0) ? FontProperties::ITALIC : FontProperties::NORMAL_STYLE,
+			FontProperties::HORIZONTAL,	// TODO: Use lfEscapement and lfOrientation ?
+			(lf.lfHeight < 0) ? -lf.lfHeight : 0);
+		defaultFont_ = fontCollection().get(lf.lfFaceName, fps);
 	}
-	fireDefaultFontChanged();
-	return true;
+
+	invalidate();
+	if(enablesDoubleBuffering_ && memoryBitmap_.get() != 0) {
+		BITMAP temp;
+		::GetObjectW(memoryBitmap_.get(), sizeof(HBITMAP), &temp);
+		if(temp.bmHeight != calculateMemoryBitmapSize(defaultFont()->metrics().linePitch()))
+			memoryBitmap_.reset();
+	}
+	defaultFontListeners_.notify(&DefaultFontListener::defaultFontChanged);
 }

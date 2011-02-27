@@ -113,7 +113,7 @@ namespace ascension {
 				bool verify() const /*throw()*/ {
 					return lineWrap.verify() && tabWidth > 0 && lineSpacing >= 0;}
 			};
-
+#if 0
 			/**
 			 * Defines the stuffs for layout. Clients of Ascension can implement this interface or
 			 * use a higher level @c TextRenderer class.
@@ -145,7 +145,7 @@ namespace ascension {
 				/// Returns the width of the rendering area in pixels.
 				virtual Scalar width() const /*throw()*/ = 0;
 			};
-
+#endif
 			/**
 			 * The @c InlineObject represents an inline object in @c TextLayout.
 			 */
