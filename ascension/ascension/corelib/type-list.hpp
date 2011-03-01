@@ -1,7 +1,7 @@
 /**
  * @file type-list.hpp
  * @author exeal
- * @date 2009-2010
+ * @date 2009-2011
  * @date 2010-10-21 renamed from manah/type-list.hpp
  */
 
@@ -22,7 +22,18 @@ namespace ascension {
 		template<typename Types> struct Length {
 			static const unsigned result = 1 + Length<typename Types::Cdr>::result;};
 		template<> struct Length<void> {static const unsigned result = 0;};
-
+/*
+		/// Searches the type @a T in the given type list.
+		template<typename Types, typename T>
+		struct Find {
+		private:
+			static const int temp = Find<Types::Cdr, T>::result;
+		public:
+			static const int result = (result != -1) ? result + 1 : -1;
+		};
+		template<typename T> struct Find<void, T> {static const int result = -1;};
+		template<typename Cdr, typename T> struct Find<Cat<T, Cdr>, T> {static const int result = 0;};
+*/
 		/// Removes the first type @a T in the given type list.
 		template<typename Types, typename T> struct RemoveFirst;
 		template<typename Cdr, typename T> struct RemoveFirst<Cat<T, Cdr>, T> {typedef Cdr Result;};

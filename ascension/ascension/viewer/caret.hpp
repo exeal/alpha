@@ -108,12 +108,12 @@ namespace ascension {
 		 * Extension of @c kernel#Point class for viewer and layout.
 		 * @see kernel#Point, kernel#IPointListener, kernel#DisposedViewException
 		 */
-		class VisualPoint : public kernel::Point, public graphics::font::IVisualLinesListener {
+		class VisualPoint : public kernel::Point, public graphics::font::VisualLinesListener {
 			ASCENSION_UNASSIGNABLE_TAG(VisualPoint);
 		public:
 			// constructors
 			explicit VisualPoint(TextViewer& viewer,
-				const kernel::Position& position = kernel::Position(), kernel::IPointListener* listener = 0);
+				const kernel::Position& position = kernel::Position(), kernel::PointListener* listener = 0);
 			VisualPoint(const VisualPoint& other);
 			virtual ~VisualPoint() /*throw()*/;
 			// attributes
@@ -209,7 +209,7 @@ namespace ascension {
 		};
 
 		// documentation is caret.cpp
-		class Caret : public VisualPoint, public kernel::IPointListener, public kernel::IDocumentListener {
+		class Caret : public VisualPoint, public kernel::PointListener, public kernel::DocumentListener {
 		public:
 			/// Mode of tracking match brackets.
 			enum MatchBracketsTrackingMode {

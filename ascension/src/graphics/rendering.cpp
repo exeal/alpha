@@ -660,12 +660,14 @@ void TextRenderer::removeDefaultFontListener(DefaultFontListener& listener) {
  * @param lineWrappingMark 
  */
 void TextRenderer::renderLine(length_t line, PaintContext& context,
-		const Point<>& origin, const Rect<>& clipRect, ColorOverrideIterator* colorOverride /* = 0 */,
+		const Point<>& origin, const Rect<>& clipRect, TextLayout::ColorOverrideIterator* colorOverride /* = 0 */,
 		const InlineObject* endOfLine /* = 0 */, const InlineObject* lineWrappingMark /* = 0 */) const /*throw()*/ {
 	if(!enablesDoubleBuffering_) {
-		lineLayout(line).draw(context, origin, clipRect, selection);
+		lineLayout(line).draw(context, origin, clipRect, colorOverride, endOfLine, lineWrappingMark);
 		return;
 	}
+
+	// TODO: this code uses deprecated terminologies for text coordinates.
 
 	const TextLayout& layout = lineLayout(line);
 	const Scalar dy = textMetrics().linePitch();

@@ -155,6 +155,34 @@ namespace ascension {
 		bool value_;
 	};
 
+	namespace detail {
+		template<typename T>
+		class HasDifferenceType {
+			typedef char True;
+			typedef struct {char temp[2];} False;
+			template<typename U> static True test(typename U::difference_type*);
+			template<typename U> static False test(...);
+		public:
+			static const bool result = sizeof(test<T>(0)) == sizeof(True);
+		};
+
+		template<typename Iterator, bool b>
+		struct IteratorDifferenceTypeBase;
+		template<typename Iterator>
+		struct IteratorDifferenceTypeBase<Iterator, true> {
+			typedef typename Iterator::difference_type Type;
+		};
+		template<typename Iterator>
+		struct IteratorDifferenceTypeBase<Iterator, false> {
+			typedef std::ptrdiff_t Type;
+		};
+
+		template<typename Iterator>
+		struct IteratorDifferenceType {
+			typedef IteratorDifferenceTypeBase<Iterator, HasDifferenceType<Iterator>::result> Type;
+		};
+	}
+
 	/**
 	 * Represents an invariant range.
 	 * @tparam T the element type
@@ -217,7 +245,7 @@ namespace ascension {
 		 * Returns the length of the range.
 		 * @note This class does not define a method named "size".
 		 */
-		typename std::iterator_traits<ValueType>::difference_type length() const {
+		typename detail::IteratorDifferenceType<std::iterator_traits<ValueType> >::Type length() const {
 			return end() - beginning();
 		}
 		/**

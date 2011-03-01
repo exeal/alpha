@@ -357,9 +357,9 @@ namespace ascension {
 
 		class TextViewer :
 				public win32::Window,
-				public kernel::IDocumentListener, public kernel::IDocumentStateListener,
-				public kernel::IDocumentRollbackListener, public graphics::IDefaultFontListener,
-				public graphics::IVisualLinesListener, public ICaretListener, public ICaretStateListener,
+				public kernel::DocumentListener, public kernel::DocumentStateListener,
+				public kernel::DocumentRollbackListener, public graphics::DefaultFontListener,
+				public graphics::VisualLinesListener, public ICaretListener, public ICaretStateListener,
 				public detail::IPointCollection<VisualPoint> {
 		public:
 			/// Result of hit test.

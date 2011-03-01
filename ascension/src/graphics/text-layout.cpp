@@ -9,7 +9,7 @@
 #include <ascension/config.hpp>			// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
 #include <ascension/graphics/text-layout.hpp>
 #include <ascension/graphics/graphics-windows.hpp>
-#include <ascension/graphics/special-character-renderer.hpp>
+//#include <ascension/graphics/special-character-renderer.hpp>
 #include <ascension/corelib/unicode-property.hpp>
 #include <ascension/viewer/caret.hpp>	// Caret.isSelectionRectangle, viewers.selectedRangeOnVisualLine
 #include <limits>	// std.numeric_limits
@@ -2408,8 +2408,8 @@ void TextLayout::draw(length_t line,
 	context.save();
 	::SetTextAlign(context.nativeHandle().get(), TA_TOP | TA_LEFT | TA_NOUPDATECP);
 	if(!isEmpty()) {
-		Range<const TextRun**> runs(runs_ + lineFirstRuns_[line],
-			runs_[(line < numberOfLines() - 1) ? lineFirstRuns_[line + 1] : numberOfRuns_];
+		Range<const TextRun**> runs(runs_.get() + lineFirstRuns_[line],
+			runs_[(line < numberOfLines() - 1) ? lineFirstRuns_[line + 1] : numberOfRuns_]);
 		Scalar leftEdge = origin.x;	// left-edge of runs.beginning()
 		if(readingDirection() == RIGHT_TO_LEFT)
 			leftEdge -= lineInlineProgressionDimension(line);
@@ -2417,8 +2417,8 @@ void TextLayout::draw(length_t line,
 		// 1. paint backgrounds of the all text runs are specified the background property
 		{
 			Scalar left = leftEdge;
-			const Run** firstRun = runs.beginning();
-			const Run** lastRun = runs.end();
+			const TextRun** firstRun = runs.beginning();
+			const TextRun** lastRun = runs.end();
 			for(const TextRun** run = runs.beginning(); run != runs.end(); ++run) {
 				if(basePoint.x + run.totalWidth() < context.boundsToPaint().left()) {
 					// this run does not need to draw => skip to the next
