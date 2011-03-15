@@ -51,6 +51,13 @@ TextRunStyle& TextRunStyle::resolveInheritance(const TextRunStyle& base, bool ba
 // StyledTextRunEnumerator ////////////////////////////////////////////////////////////////////////
 
 /**
+ * Default constructor.
+ */
+StyledTextRunEnumerator::StyledTextRunEnumerator() : end_(0) {
+	current_.first = false;
+}
+
+/**
  * Constructor.
  * @param sourceIterator The iterator to encapsulate
  * @param end The end character position
@@ -81,36 +88,26 @@ StyledTextRunEnumerator::StyledTextRunEnumerator(
 }
 
 /**
- * Returns the character range of the current styled run.
+ * Implements @c detail#IteratorAdapter#current.
  * @throw NoSuchElementException The enumerator addresses the end
  */
-Range<length_t> StyledTextRunEnumerator::currentRange() const {
+const StyledTextRunEnumerator::reference StyledTextRunEnumerator::current() const {
 	if(!current_.first)
 		throw NoSuchElementException();
-	return Range<length_t>(current_.second.column, next_.second.column);
+	return make_pair(makeRange(current_.second.column, next_.second.column), current_.second.style);
+}
+
+/// Implements @c detail#IteratorAdapter#equals.
+bool StyledTextRunEnumerator::equals(const StyledTextRunEnumerator& other) const /*throw()*/ {
+	return !current_.first && !other.current_.first;
 }
 
 /**
- * Returns the style of the current styled run.
- * @throw NoSuchElementException The enumerator addresses the end
- */
-tr1::shared_ptr<const TextRunStyle> StyledTextRunEnumerator::currentStyle() const {
-	if(!current_.first)
-		throw NoSuchElementException();
-	return current_.second.style;
-}
-
-/// Returns @c false if the enumerator addresses the end.
-bool StyledTextRunEnumerator::hasNext() const /*throw()*/ {
-	return current_.first;
-}
-
-/**
- * Moves to the next styled run.
+ * Implements @c detail#IteratorAdapter#next.
  * @throw NoSuchElementException The enumerator addresses the end
  */
 void StyledTextRunEnumerator::next() {
-	if(!hasNext())
+	if(!current_.first)
 		throw NoSuchElementException();
 	current_ = next_;
 	if(next_.first = iterator_->hasNext()) {
