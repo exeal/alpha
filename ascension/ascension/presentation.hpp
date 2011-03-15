@@ -3,21 +3,23 @@
  * Provides classes define appearance and presentation of a text editor user interface.
  * @author exeal
  * @date 2003-2006 (was LineLayout.h)
- * @date 2006-2010
+ * @date 2006-2011
  */
 
 #ifndef ASCENSION_PRESENTATION_HPP
 #define ASCENSION_PRESENTATION_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
+#include <ascension/corelib/standard-iterator-adapter.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/graphics/color.hpp>	// graphics.Color
 #include <ascension/graphics/font.hpp>	// graphics.font.FontProperties, ...
+#include <ascension/graphics/paint.hpp>	// graphics.Paint
 
 namespace ascension {
 
 	namespace graphics {
-		namespace font{class TextRenderer;}
+		namespace font {class TextRenderer;}
 	}
 
 	namespace rules {class URIDetector;}
@@ -166,9 +168,9 @@ namespace ascension {
 		 */
 		struct TextRunStyle : public FastArenaObject<TextRunStyle> {
 			/// Foreground color.
-			graphics::Color foreground;
+			graphics::Paint foreground;
 			/// Background color.
-			graphics::Color background;
+			graphics::Paint background;
 			/// Border of the text run. See the description of @c Border.
 			Border border;
 			/// Font family name. An empty string means inherit the parent.
@@ -224,12 +226,22 @@ namespace ascension {
 			virtual void next() = 0;
 		};
 
-		class StyledTextRunEnumerator {
+		class StyledTextRunEnumerator : public detail::IteratorAdapter<
+			StyledTextRunEnumerator,
+			std::iterator<
+				std::input_iterator_tag,
+				std::pair<Range<length_t>, std::tr1::shared_ptr<const TextRunStyle> >,
+				std::ptrdiff_t,
+				std::pair<Range<length_t>, std::tr1::shared_ptr<const TextRunStyle> >*,
+				std::pair<Range<length_t>, std::tr1::shared_ptr<const TextRunStyle> >
+			>
+		> {
 		public:
+			StyledTextRunEnumerator();
 			StyledTextRunEnumerator(std::auto_ptr<StyledTextRunIterator> sourceIterator, length_t end);
-			Range<length_t> currentRange() const;
-			std::tr1::shared_ptr<const TextRunStyle> currentStyle() const;
-			bool hasNext() const /*throw()*/;
+		private:
+			const reference current() const;
+			bool equals(const StyledTextRunEnumerator& other) const /*throw()*/;
 			void next();
 		private:
 			std::auto_ptr<StyledTextRunIterator> iterator_;
