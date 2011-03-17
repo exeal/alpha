@@ -68,19 +68,19 @@ StyledTextRunEnumerator::StyledTextRunEnumerator(
 	if(iterator_.get() == 0)
 		throw NullPointerException("sourceIterator");
 	if(current_.first = iterator_->hasNext()) {
-		iterator_->current(current_.second);
-		if(current_.second.column < end_) {
+		current_.second = iterator_->current();
+		if(current_.second.position() < end_) {
 			iterator_->next();
 			if(next_.first = iterator_->hasNext()) {
-				iterator_->current(next_.second);
-				if(next_.second.column < end_)
+				next_.second = iterator_->current();
+				if(next_.second.position() < end_)
 					iterator_->next();
 				else {
 					next_.first = false;
-					next_.second.column = end_;
+					next_.second = StyledTextRun(end_, next_.second.style());
 				}
 			} else
-				next_.second.column = end_;
+				next_.second = StyledTextRun(end_, next_.second.style());
 		} else
 			current_.first = false;
 	} else
@@ -94,7 +94,7 @@ StyledTextRunEnumerator::StyledTextRunEnumerator(
 const StyledTextRunEnumerator::reference StyledTextRunEnumerator::current() const {
 	if(!current_.first)
 		throw NoSuchElementException();
-	return make_pair(makeRange(current_.second.column, next_.second.column), current_.second.style);
+	return make_pair(makeRange(current_.second.position(), next_.second.position()), current_.second.style());
 }
 
 /// Implements @c detail#IteratorAdapter#equals.
@@ -111,14 +111,14 @@ void StyledTextRunEnumerator::next() {
 		throw NoSuchElementException();
 	current_ = next_;
 	if(next_.first = iterator_->hasNext()) {
-		iterator_->current(next_.second);
-		if(next_.second.column >= end_) {
+		next_.second = iterator_->current();
+		if(next_.second.position() >= end_) {
 			next_.first = false;
-			next_.second.column = end_;
+			next_.second = StyledTextRun(end_, next_.second.style());
 		} else
 			iterator_->next();
 	} else
-		next_.second.column = end_;
+		next_.second = StyledTextRun(end_, next_.second.style());
 }
 
 
@@ -409,17 +409,17 @@ public:
 	StyledTextRunIterator(length_t column, tr1::shared_ptr<const TextRunStyle> style) : run_(column, style), done_(false) {}
 private:
 	// StyledTextRunIterator
-	void current(StyledTextRun& run) const {
+	StyledTextRun current() const {
 		if(done_)
-			throw IllegalStateException("the iterator addresses the end.");
-		run = run_;
+			throw NoSuchElementException("the iterator addresses the end.");
+		return run_;
 	}
 	bool hasNext() const {
 		return !done_;
 	}
 	void next() {
 		if(done_)
-			throw IllegalStateException("the iterator addresses the end.");
+			throw NoSuchElementException("the iterator addresses the end.");
 		done_ = true;
 	}
 private:
@@ -452,7 +452,7 @@ public:
 private:
 	void updateSubiterator();
 	// StyledTextRunIterator
-	void current(StyledTextRun& run) const;
+	StyledTextRun current() const;
 	bool hasNext() const;
 	void next();
 private:
@@ -461,7 +461,7 @@ private:
 	const length_t line_;
 	DocumentPartition currentPartition_;
 	auto_ptr<presentation::StyledTextRunIterator> subiterator_;
-	StyledTextRun current_;
+	pair<length_t, tr1::shared_ptr<const TextRunStyle> > current_;
 };
 
 /**
@@ -490,12 +490,12 @@ PresentationReconstructor::StyledTextRunIterator::StyledTextRunIterator(
 }
 
 /// @see StyledTextRunIterator#current
-void PresentationReconstructor::StyledTextRunIterator::current(StyledTextRun& run) const {
+StyledTextRun PresentationReconstructor::StyledTextRunIterator::current() const {
 	if(subiterator_.get() != 0)
-		subiterator_->current(run);
+		return subiterator_->current();
 	else if(hasNext())
-		run = current_;
-	throw IllegalStateException("the iterator addresses the end.");
+		return StyledTextRun(current_.first, current_.second);
+	throw NoSuchElementException("the iterator addresses the end.");
 }
 
 /// @see StyledTextRunIterator#hasNext
@@ -538,7 +538,7 @@ inline void PresentationReconstructor::StyledTextRunIterator::updateSubiterator(
 	subiterator_ = (r != reconstructors_.end()) ?
 		r->second->getPresentation(currentPartition_.region) : auto_ptr<presentation::StyledTextRunIterator>();
 	if(subiterator_.get() == 0)
-		current_ = StyledTextRun(currentPartition_.region.beginning().column, presentation_.defaultTextRunStyle());
+		current_ = make_pair(currentPartition_.region.beginning().column, presentation_.defaultTextRunStyle());
 }
 
 
@@ -691,7 +691,7 @@ public:
 private:
 	void nextRun();
 	// StyledTextRunIterator
-	void current(StyledTextRun& run) const;
+	StyledTextRun current() const;
 	bool hasNext() const;
 	void next();
 private:
@@ -700,7 +700,7 @@ private:
 	const map<Token::Identifier, tr1::shared_ptr<const TextRunStyle> >& styles_;
 	tr1::shared_ptr<const TextRunStyle> defaultStyle_;
 	Region region_;
-	StyledTextRun current_;
+	pair<length_t, tr1::shared_ptr<const TextRunStyle> > current_;
 	auto_ptr<Token> next_;
 	Position lastTokenEnd_;
 };
@@ -715,10 +715,10 @@ LexicalPartitionPresentationReconstructor::StyledTextRunIterator::StyledTextRunI
 }
 
 /// @see StyledTextRunIterator#current
-void LexicalPartitionPresentationReconstructor::StyledTextRunIterator::current(StyledTextRun& run) const {
+StyledTextRun LexicalPartitionPresentationReconstructor::StyledTextRunIterator::current() const {
 	if(!hasNext())
-		throw IllegalStateException("the iterator addresses the end.");
-	run = current_;
+		throw NoSuchElementException("the iterator addresses the end.");
+	return StyledTextRun(current_.first, current_.second);
 }
 
 /// @see StyledTextRunIterator#hasNext
@@ -729,15 +729,15 @@ bool LexicalPartitionPresentationReconstructor::StyledTextRunIterator::hasNext()
 /// @see StyledTextRunIterator#next
 void LexicalPartitionPresentationReconstructor::StyledTextRunIterator::next() {
 	if(!hasNext())
-		throw IllegalStateException("the iterator addresses the end.");
+		throw NoSuchElementException("the iterator addresses the end.");
 	nextRun();
 }
 
 inline void LexicalPartitionPresentationReconstructor::StyledTextRunIterator::nextRun() {
 	if(next_.get() != 0) {
 		map<Token::Identifier, tr1::shared_ptr<const TextRunStyle> >::const_iterator style(styles_.find(next_->id));
-		current_.column = next_->region.beginning().column;
-		current_.style = (style != styles_.end()) ? style->second : defaultStyle_;
+		current_.first = next_->region.beginning().column;
+		current_.second = (style != styles_.end()) ? style->second : defaultStyle_;
 		lastTokenEnd_ = next_->region.end();
 		next_.reset();
 	} else if(tokenScanner_.hasNext()) {
@@ -745,20 +745,20 @@ inline void LexicalPartitionPresentationReconstructor::StyledTextRunIterator::ne
 		assert(next_.get() != 0);
 		if(next_->region.beginning() != lastTokenEnd_) {
 			// 
-			current_.column = lastTokenEnd_.column;
-			current_.style = defaultStyle_;
+			current_.first = lastTokenEnd_.column;
+			current_.second = defaultStyle_;
 			lastTokenEnd_ = next_->region.beginning();
 		} else {
 			map<Token::Identifier, tr1::shared_ptr<const TextRunStyle> >::const_iterator style(styles_.find(next_->id));
-			current_.column = next_->region.beginning().column;
-			current_.style = (style != styles_.end()) ? style->second : defaultStyle_;
+			current_.first = next_->region.beginning().column;
+			current_.second = (style != styles_.end()) ? style->second : defaultStyle_;
 			lastTokenEnd_ = next_->region.beginning();
 			next_.reset();
 		}
 	} else if(lastTokenEnd_ != region_.end()) {
 		//
-		current_.column = lastTokenEnd_.column;
-		current_.style = defaultStyle_;
+		current_.first = lastTokenEnd_.column;
+		current_.second = defaultStyle_;
 		lastTokenEnd_ = region_.end();
 	}
 }

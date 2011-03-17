@@ -202,30 +202,53 @@ namespace ascension {
 			TextRunStyle& resolveInheritance(const TextRunStyle& base, bool baseIsRoot);
 		};
 
-		struct StyledTextRun {
-			/// The beginning column in the line of the text range which the style applies.
-			length_t column;
-			/// The style of the text run.
-			std::tr1::shared_ptr<const TextRunStyle> style;
+		/**
+		 * Represents a styled text run, with the beginning position (column) in the line and the
+		 * style.
+		 * @note This class does not provides the length of the text run.
+		 * @note This class is not intended to be derived.
+		 * @see StyledTextRunIterator, StyledTextRunEnumerator
+		 */
+		class StyledTextRun {
+		public:
 			/// Default constructor.
-			StyledTextRun() {}
-			/// Constructor initializes the all members.
-			StyledTextRun(length_t column, std::tr1::shared_ptr<const TextRunStyle> style) : column(column), style(style) {}
+			StyledTextRun() /*throw()*/ : position_(INVALID_INDEX) {}
+			/**
+			 * Constructor.
+			 * @param position The beginning position of the text style
+			 * @param style The style of the text run
+			 */
+			StyledTextRun(length_t position,
+				std::tr1::shared_ptr<const TextRunStyle> style) /*throw()*/ : position_(position), style_(style) {}
+			/// Returns the position in the line of the text range which the style applies.
+			length_t position() const /*throw()*/ {return position_;}
+			/// Returns the style of the text run.
+			std::tr1::shared_ptr<const TextRunStyle> style() const /*throw()*/ {return style_;}
+		private:
+			length_t position_;
+			std::tr1::shared_ptr<const TextRunStyle> style_;
 		};
 
-		///
+		/**
+		 *
+		 * @see StyledTextRunEnumerator
+		 */
 		class StyledTextRunIterator {
 		public:
 			/// Destructor.
 			virtual ~StyledTextRunIterator() /*throw()*/ {}
-			/// Returns the current styled text run or throws @c IllegalStateException.
-			virtual void current(StyledTextRun& run) const = 0;
+			/// Returns the current styled text run or throws @c NoSuchElementException.
+			virtual StyledTextRun current() const = 0;
 			/// Returns @c false if the iterator addresses the end of the range.
 			virtual bool hasNext() const = 0;
-			/// Moves the iterator to the next styled run or throws @c IllegalStateException.
+			/// Moves the iterator to the next styled run or throws @c NoSuchElementException.
 			virtual void next() = 0;
 		};
 
+		/**
+		 *
+		 * @see StyledTextRunIterator
+		 */
 		class StyledTextRunEnumerator : public detail::IteratorAdapter<
 			StyledTextRunEnumerator,
 			std::iterator<
