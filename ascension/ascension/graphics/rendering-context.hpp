@@ -1,0 +1,213 @@
+/**
+ * @file rendering-context.hpp
+ * @author exeal
+ * @date 2011-03-06 created
+ */
+
+#ifndef ASCENSION_RENDERING_CONTEXT_HPP
+#define ASCENSION_RENDERING_CONTEXT_HPP
+
+#include <ascension/corelib/basic-types.hpp>	// std.tr1.shared_ptr
+#include <ascension/graphics/color.hpp>
+#include <ascension/graphics/font.hpp>
+#include <ascension/graphics/geometry.hpp>
+#include <ascension/graphics/paint.hpp>
+#include <stack>
+#include <vector>
+
+namespace ascension {
+	namespace graphics {
+
+		enum CompositeOperation {
+			SOURCE_ATOP, SOURCE_IN, SOURCE_OUT, SOURCE_OVER,
+			DESTINATION_ATOP, DESTINATION_IN, DESTINATION_OUT, DESTINATION_OVER,
+			LIGHTER, COPY, XOR
+		};
+
+		class ImageData : public Dimension<> {
+		};
+
+		/**
+		 * @c CanvasRenderingContext2D interface defined in "HTML Canvas 2D Context"
+		 * (http://dev.w3.org/html5/2dcontext/).
+		 */
+		class RenderingContext2D {
+		public:
+			RenderingContext2D() {}
+			virtual ~RenderingContext2D() /*throw()*/ {}
+
+//			virtual ??? canvas() const = 0;
+
+			/// Pushes the current state onto the stack.
+			virtual void save() = 0;
+			/// Pops the top state on the stack, restoring the context to that state.
+			virtual void restore() = 0;
+
+			virtual void scale() = 0;
+			virtual void rotate() = 0;
+			virtual void translate() = 0;
+			virtual void transform() = 0;
+			virtual void setTransform() = 0;
+
+			double globalAlpha() const /*throw()*/ {
+				return states_.top().globalAlpha;
+			}
+			RenderingContext2D& setGlobalAlpha(double value) {
+				if(value < 0.0 || value > 1.0)
+					throw std::invalid_argument("value");
+				states_.top().globalAlpha = value;
+				return *this;
+			}
+			CompositeOperation globalCompositeOperation() const /*throw()*/ {
+				return states_.top().compositeOperation;
+			}
+			RenderingContext2D& setGlobalCompositeOperation(CompositeOperation co) {
+				// TODO: sanity check...
+				states_.top().compositeOperation = co;
+				return *this;
+			}
+
+			const Paint& strokeStyle() const /*throw()*/ {
+				return states_.top().strokeStyle;
+			}
+			RenderingContext2D& setStrokeStyle(const Paint& style) {
+				states_.top().strokeStyle = style;
+				return *this;
+			}
+			const Paint& fillStyle() const /*throw()*/ {
+				return states_.top().fillStyle;
+			}
+			RenderingContext2D& setFillStyle(const Paint& style) {
+				states_.top().fillStyle = style;
+				return *this;
+			}
+//			virtual std::auto_ptr<Gradient> createLinearGradient() = 0;
+//			virtual std::auto_ptr<Gradient> createRadicalGradient() = 0;
+//			virtual Pattern createPattern() = 0;
+
+			FillRule fillRule() const /*throw()*/ {
+				return states_.top().fillRule;
+			}
+			RenderingContext2D& setFillRule(FillRule rule) {
+				states_.top().fillRule = rule;
+				return *this;
+			}
+			LineCap lineCap() const /*throw()*/ {
+				return states_.top().strokeLineCap;
+			}
+			RenderingContext2D& setLineCap(LineCap value) {
+				states_.top().strokeLineCap = value;
+				return *this;
+			}
+			LineJoin lineJoin() const /*throw()*/ {
+				return states_.top().strokeLineJoin;
+			}
+			RenderingContext2D& setLineJoin(LineJoin value) {
+				states_.top().strokeLineJoin = value;
+				return *this;
+			}
+
+			Dimension<> shadowOffset() const /*throw()*/ {
+				return states_.top().shadowOffset;
+			}
+			RenderingContext2D& setShadowOffset(const Dimension<>& offset) /*throw()*/ {
+				states_.top().shadowOffset = offset;
+				return *this;
+			}
+			Scalar shadowBlur() const /*throw()*/ {
+				return states_.top().shadowBlur;
+			}
+			RenderingContext2D& setShadowBlur(Scalar blur) /*throw()*/ {
+				states_.top().shadowBlur = blur;
+				return *this;
+			}
+			Color shadowColor() const /*throw()*/ {
+				return states_.top().shadowColor;
+			}
+			RenderingContext2D& setShadowColor(const Color& color) /*throw()*/ {
+				states_.top().shadowColor = color;
+				return *this;
+			}
+
+			virtual void clearRectangle(const Rect<>&) = 0;
+			virtual void fillRectangle(const Rect<>&) = 0;
+			virtual void strokeRectangle(const Rect<>&) = 0;
+
+			virtual void beginPath() = 0;
+			virtual void closePath() = 0;
+			virtual void moveTo(const Point<>&) = 0;
+			virtual void lineTo(const Point<>&) = 0;
+			virtual void quadraticCurveTo() = 0;
+			virtual void bezierCurveTo() = 0;
+			virtual void arcTo() = 0;
+			virtual void rectangle() = 0;
+			virtual void arc() = 0;
+			virtual void fill() = 0;
+			virtual void stroke() = 0;
+			virtual void clip() = 0;
+			virtual bool isPointInPath() const /*throw()*/ = 0;
+
+			virtual bool drawFocusRing() = 0;
+
+			std::tr1::shared_ptr<const font::Font> font() const /*throw()*/ {
+				return states_.top().font;
+			}
+			RenderingContext2D& setFont(std::tr1::shared_ptr<const font::Font> font) {
+				// TODO: check if null. 
+				states_.top().font = font;
+				return *this;
+			}
+//			virtual TextAnchor& textAnchor() const /*throw()*/ = 0;
+//			virtual Baseline& textBaseline() const /*throw()*/ = 0;
+			virtual void fillText(const String& text, const Point<>& p, Scalar maxWidth) = 0;
+			virtual void strokeText(const String& text, const Point<>& p, Scalar maxWidth) = 0;
+			virtual Dimension<> measureText(const String& text) = 0;
+
+			virtual void drawImage() = 0;
+
+			virtual ImageData createImageData(const Dimension<>&) const = 0;
+			virtual ImageData createImageData(const ImageData&) const = 0;
+			virtual ImageData getImageData() const = 0;
+			virtual ImageData putImageData() = 0;
+
+			virtual uint logicalDpiX() const = 0;
+			virtual uint logicalDpiY() const = 0;
+			virtual Dimension<uint> size() const = 0;
+
+			virtual const win32::Handle<HDC>& nativeHandle() const /*throw()*/ = 0;
+
+		private:
+			struct State {
+				double globalAlpha;
+				CompositeOperation compositeOperation;
+				Paint fillStyle, strokeStyle;
+				FillRule fillRule;
+				LineCap strokeLineCap;
+				LineJoin strokeLineJoin;
+//				std::vector<Scalar> dashArray;
+//				Scalar dashOffset;
+				Color shadowColor;
+				Dimension<> shadowOffset;
+				Scalar shadowBlur;
+				std::tr1::shared_ptr<const font::Font> font;
+			};
+			std::stack<State> states_;
+		};
+
+		class Context : public RenderingContext2D {
+		public:
+			virtual ~Context() /*throw()*/ {}
+		};
+
+		class PaintContext : public Context {
+		public:
+			/// Destructor.
+			virtual ~PaintContext() /*throw()*/ {}
+			/// Returns a rectangle in which the painting is requested.
+			virtual Rect<> boundsToPaint() const = 0;
+		};
+
+	}
+}
+
+#endif //!ASCENSION_RENDERING_CONTEXT_HPP
