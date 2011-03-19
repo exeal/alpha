@@ -307,6 +307,8 @@ namespace ascension {
 			RectPartProxy<Coordinate> top() {return RectPartProxy<Coordinate>(*this, 1);}
 			const RectPartProxy<Coordinate> top() const {return RectPartProxy<Coordinate>(*this, 1);}
 			Coordinate width() const {return std::abs(size().cx);}
+			Range<Coordinate> x() const {return makeRange(origin().x, origin().x + size().cx);}
+			Range<Coordinate> y() const {return makeRange(origin().y, origin().y + size().cy);}
 		public:
 			template<typename Coordinate2>
 			bool includes(const Point<Coordinate2>& other) const;

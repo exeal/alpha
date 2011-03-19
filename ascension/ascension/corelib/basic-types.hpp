@@ -28,6 +28,7 @@
 #include <iterator>	// std.iterator_traits
 #include <string>
 #include <utility>	// std.max, std.min, std.pair
+#include <ascension/corelib/type-traits.hpp>
 
 /// Version of Ascension library
 #define ASCENSION_LIBRARY_VERSION 0x0080	// 0.8.0
@@ -163,23 +164,24 @@ namespace ascension {
 			template<typename U> static True test(typename U::difference_type*);
 			template<typename U> static False test(...);
 		public:
-			static const bool result = sizeof(test<T>(0)) == sizeof(True);
+			static const bool value = sizeof(test<std::iterator_traits<T> >(0)) == sizeof(True);
 		};
 
-		template<typename Iterator, bool b>
-		struct IteratorDifferenceTypeBase;
-		template<typename Iterator>
-		struct IteratorDifferenceTypeBase<Iterator, true> {
-			typedef typename Iterator::difference_type Type;
+		template<typename T, bool b>
+		struct DifferenceTypeBase;
+		template<typename T>
+		struct DifferenceTypeBase<T, true> {
+			typedef typename std::iterator_traits<T>::difference_type Type;
 		};
-		template<typename Iterator>
-		struct IteratorDifferenceTypeBase<Iterator, false> {
-			typedef std::ptrdiff_t Type;
+		template<typename T>
+		struct DifferenceTypeBase<T, false> {
+			typedef T Type;
 		};
 
-		template<typename Iterator>
-		struct IteratorDifferenceType {
-			typedef IteratorDifferenceTypeBase<Iterator, HasDifferenceType<Iterator>::result> Type;
+		template<typename T>
+		struct DifferenceType {
+			typedef typename
+				DifferenceTypeBase<T, HasDifferenceType<T>::value>::Type Type;
 		};
 	}
 
@@ -245,7 +247,7 @@ namespace ascension {
 		 * Returns the length of the range.
 		 * @note This class does not define a method named "size".
 		 */
-		typename detail::IteratorDifferenceType<std::iterator_traits<ValueType> >::Type length() const {
+		typename detail::DifferenceType<ValueType>::Type length() const {
 			return end() - beginning();
 		}
 		/**
