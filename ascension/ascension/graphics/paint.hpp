@@ -44,7 +44,7 @@ namespace ascension {
 		class Paint {
 		public:
 			Paint() /*throw()*/ {}
-			explicit Paint(const Color& color) : color_(color) {}
+			explicit Paint(const Color& color) : color_(color) {if(color == Color()) throw std::invalid_argument("color");}
 			explicit Paint(std::auto_ptr<const Gradient> gradient) : color_(Color::TRANSPARENT_COLOR), gradient_(gradient) {}
 			explicit Paint(const Color& color, std::auto_ptr<const Gradient> gradient) : color_(color), gradient_(gradient) {}
 			explicit Paint(std::auto_ptr<const Pattern> pattern) : color_(Color::TRANSPARENT_COLOR), pattern_(pattern) {}
@@ -57,6 +57,12 @@ namespace ascension {
 			std::tr1::shared_ptr<const Gradient> gradient_;
 			std::tr1::shared_ptr<const Pattern> pattern_;
 		};
+
+		inline bool operator==(const Paint& lhs, const Paint& rhs) /*throw()*/ {
+			return lhs.color() == rhs.color()
+				&& lhs.gradient() == rhs.gradient() && lhs.pattern() == rhs.pattern();
+		}
+		inline bool operator!=(const Paint& lhs, const Paint& rhs) /*throw()*/ {return !(lhs == rhs);}
 
 		enum FillRule {NONZERO, EVENODD};
 
