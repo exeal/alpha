@@ -14,7 +14,6 @@
 #include <ascension/viewer/caret.hpp>	// Caret.isSelectionRectangle, viewers.selectedRangeOnVisualLine
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate
-#include <vector>
 #include <usp10.h>
 
 using namespace ascension;
@@ -363,6 +362,11 @@ namespace {
 		return S_OK;
 	}
 
+	template<typename T> inline T& shrinkToFit(T& v) {
+		swap(v, T(v));
+		return v;
+	}
+
 	inline bool uniscribeSupportsIVS() /*throw()*/ {
 		static bool checked = false, supports = false;
 		if(!checked) {
@@ -433,6 +437,35 @@ Scalar FixedWidthTabExpander::nextTabStop(Scalar x, length_t) const /*throw()*/ 
 }
 
 
+// TextLayout.LineArea ////////////////////////////////////////////////////////////////////////////
+
+class TextLayout::LineArea {
+public:
+	// block-area
+	Scalar endIndent() const;
+	Scalar lineHeight() const;
+	LineStackingStrategy lineStackingStrategy() const;
+	Scalar spaceAfter() const;
+	Scalar spaceBefore() const;
+	Scalar startIndent() const;
+	// line-area
+	Rect<> maximumLineRectangle() const;
+	Rect<> nominalRequestedLineRectangle() const;
+	Rect<> perInlineHeightRectangle() const;
+};
+
+
+// TextLayout.InlineArea //////////////////////////////////////////////////////////////////////////
+
+class TextLayout::InlineArea : public StyledTextRun {
+public:
+	Rect<> allocationRectangle() const;
+	Rect<> borderRectangle() const;
+	Rect<> contentRectangle() const;
+	Rect<> largeAllocationRectangle() const;
+};
+
+
 // TextLayout.TextRun /////////////////////////////////////////////////////////////////////////////
 
 // Uniscribe conventions
@@ -451,18 +484,17 @@ namespace {
 namespace {
 	class SimpleStyledTextRunIterator : public StyledTextRunIterator {
 	public:
-		SimpleStyledTextRunIterator(const Range<const StyledTextRun*>& range, length_t start) : range_(range) {
-			current_ = range_.beginning() + detail::searchBound(
-				static_cast<ptrdiff_t>(0), range_.length(), start, BeginningOfStyledTextRun(range_.beginning()));
+		SimpleStyledTextRunIterator(const vector<const StyledTextRun>& styledRanges, length_t start) : styledRanges_(styledRanges) {
+			current_ = detail::searchBound2(styledRanges_.begin(), styledRanges_.end(), start, BeginningOfStyledTextRun());
 		}
 		// presentation.StyledTextRunIterator
-		void current(StyledTextRun& run) const {
+		StyledTextRun current() const {
 			if(!hasNext())
 				throw IllegalStateException("");
-			run = *current_;
+			return *current_;
 		}
 		bool hasNext() const {
-			return current_ != range_.end();
+			return current_ != styledRanges_.end();
 		}
 		void next() {
 			if(!hasNext())
@@ -471,12 +503,12 @@ namespace {
 		}
 	private:
 		struct BeginningOfStyledTextRun {
-			explicit BeginningOfStyledTextRun(const StyledTextRun* range) : range(range) {}
-			length_t operator()(ptrdiff_t i) {return range[i].column;}
-			const StyledTextRun* range;
+			bool operator()(length_t v, const StyledTextRun& range) const {
+				return v < range.position();
+			}
 		};
-		const Range<const StyledTextRun*> range_;
-		const StyledTextRun* current_;
+		const vector<const StyledTextRun>& styledRanges_;
+		vector<const StyledTextRun>::const_iterator current_;
 	};
 }
 
@@ -492,33 +524,38 @@ public:
 	TextRun(const Range<length_t>& characterRange, const SCRIPT_ANALYSIS& script,
 		tr1::shared_ptr<const Font> font, OPENTYPE_TAG scriptTag) /*throw()*/;
 	virtual ~TextRun() /*throw()*/;
+	// attributes
 	uchar bidiEmbeddingLevel() const /*throw()*/ {return static_cast<uchar>(analysis_.s.uBidiLevel);}
-	auto_ptr<TextRun> breakAt(length_t at, const String& layoutString);
+	tr1::shared_ptr<const Font> font() const {return glyphs_->font;}
+	HRESULT logicalAttributes(const String& layoutString, SCRIPT_LOGATTR attributes[]) const;
+	int numberOfGlyphs() const /*throw()*/ {return glyphRange_.length();}
+	ReadingDirection readingDirection() const /*throw()*/ {
+		return ((analysis_.s.uBidiLevel & 0x01) == 0x00) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;}
+	// geometry
 	void blackBoxBounds(const Range<length_t>& range, Rect<>& bounds) const;
-	void drawBackground(Context& context, const Point<>& p,
-		const Range<length_t>& range, const Color& color, const Rect<>* dirtyRect, Rect<>* bounds) const;
-	void drawForeground(Context& context, const Point<>& p,
-		const Range<length_t>& range, const Color& color, const Rect<>* dirtyRect, const Overlay* overlay) const;
+	HRESULT logicalWidths(int widths[]) const;
+	HRESULT hitTest(int x, int& cp, int& trailing) const;
+	int totalWidth() const /*throw()*/ {return accumulate(advances(), advances() + numberOfGlyphs(), 0);}
+	int x(length_t at, bool trailing) const;
+	// layout
+	auto_ptr<TextRun> breakAt(length_t at, const String& layoutString);
 	bool expandTabCharacters(const TabExpander& tabExpander,
 		const String& layoutString, Scalar x, Scalar maximumWidth);
-	tr1::shared_ptr<const Font> font() const {return glyphs_->font;}
-	HRESULT hitTest(int x, int& cp, int& trailing) const;
 	HRESULT justify(int width);
-	HRESULT logicalAttributes(const String& layoutString, SCRIPT_LOGATTR attributes[]) const;
-	HRESULT logicalWidths(int widths[]) const;
 	static void mergeScriptsAndStyles(const String& layoutString, const SCRIPT_ITEM scriptRuns[],
 		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, const FontCollection& fontCollection,
 		tr1::shared_ptr<const TextRunStyle> defaultStyle, auto_ptr<StyledTextRunIterator> styles,
 		vector<TextRun*>& textRuns, vector<const StyledTextRun>& styledRanges);
-	int numberOfGlyphs() const /*throw()*/ {return glyphRange_.length();}
-	void positionGlyphs(const win32::Handle<HDC>& dc, const String& layoutString, SimpleStyledTextRunIterator& styles);
-	ReadingDirection readingDirection() const /*throw()*/ {
-		return ((analysis_.s.uBidiLevel & 0x01) == 0x00) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;}
 	void shape(const win32::Handle<HDC>& dc, const String& layoutString);
+	void positionGlyphs(const win32::Handle<HDC>& dc, const String& layoutString, SimpleStyledTextRunIterator& styles);
 	auto_ptr<TextRun> splitIfTooLong(const String& layoutString);
 	static void substituteGlyphs(const Range<TextRun**>& runs, const String& layoutString);
-	int totalWidth() const /*throw()*/ {return accumulate(advances(), advances() + numberOfGlyphs(), 0);}
-	int x(length_t at, bool trailing) const;
+	// drawing and painting
+	void drawGlyphs(PaintContext& context, const Point<>& p, const Range<length_t>& range) const;
+	void paintBackground(PaintContext& context, const Point<>& p,
+		const Range<length_t>& range, Rect<>* paintedBounds) const;
+	void paintBorder() const;
+	void paintLineDecorations() const;
 private:
 	struct Glyphs {	// this data is shared text runs separated by (only) line breaks
 		const Range<length_t> characters;	// character range for this glyph arrays in the line
@@ -693,31 +730,14 @@ inline pair<int, HRESULT> TextLayout::TextRun::countMissingGlyphs(
 }
 
 /**
- * Paints the background of the specified character range in this run.
- * @param context the graphics context
- * @param p the base point of this run (, does not corresponds to @c range.beginning())
- * @param range the character range to paint. if the edges addressed outside of this run, they are
+ * Draws the glyphs of the specified character range in this run.
+ * This method uses the stroke and fill styles which are set in @a context.
+ * @param context The graphics context
+ * @param p The base point of this run (, does not corresponds to @c range.beginning())
+ * @param range The character range to paint. If the edges addressed outside of this run, they are
  *              truncated
- * @param color the background color. should be valid
- * @param dirtyRect can be @c null
- * @param[out] bounds the rectangle this method painted. can be @c null
- * @throw std#invalid_argument @a color is not valid
  */
-void TextLayout::TextRun::drawBackground(Context& context, const Point<>& p,
-		const Range<length_t>& range, const Color& color, const Rect<>* dirtyRect, Rect<>* bounds) const {
-	if(color == Color())
-		throw invalid_argument("color");
-	if(range.isEmpty() || (dirtyRect != 0 && p.x + totalWidth() < dirtyRect->left()))
-		return;
-	Rect<> r;
-	blackBoxBounds(range, r);
-	context.fillRectangle(r.translate(p), color);
-	if(bounds != 0)
-		*bounds = r;
-}
-
-void TextLayout::TextRun::drawForeground(Context& context, const Point<>& p,
-		const Range<length_t>& range, const Color& color, const Rect<>* dirtyRect, const Overlay* overlay) const {
+void TextLayout::TextRun::drawGlyphs(PaintContext& context, const Point<>& p, const Range<length_t>& range) const {
 	const Range<length_t> truncatedRange(max(range.beginning(), beginning()), min(range.end(), end()));
 	if(truncatedRange.isEmpty())
 		return;
@@ -725,15 +745,13 @@ void TextLayout::TextRun::drawForeground(Context& context, const Point<>& p,
 		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), truncatedRange.beginning() - beginning(), analysis_),
 		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), truncatedRange.end() - beginning(), analysis_));
 	if(!glyphRange.isEmpty()) {
-		context.setFont(*glyphs_->font);
-		context.setBackgroundMode(Context::TRANSPARENT_MODE);
-		::SetTextColor(context.nativeHandle().get(), color.asCOLORREF());
-		RECT temp;
-		if(dirtyRect != 0)
-			::SetRect(&temp, dirtyRect->left(), dirtyRect->top(), dirtyRect->right(), dirtyRect->bottom());
+		context.setFont(glyphs_->font);
+//		RECT temp;
+//		if(dirtyRect != 0)
+//			::SetRect(&temp, dirtyRect->left(), dirtyRect->top(), dirtyRect->right(), dirtyRect->bottom());
 		const HRESULT hr = ::ScriptTextOut(context.nativeHandle().get(), &glyphs_->fontCache,
 			p.x + x((analysis_.fRTL == 0) ? truncatedRange.beginning() : (truncatedRange.end() - 1), analysis_.fRTL != 0),
-			p.y - glyphs_->font->metrics().ascent(), 0, (dirtyRect != 0) ? &temp : 0, &analysis_, 0, 0,
+			p.y - glyphs_->font->metrics().ascent(), 0, &toNative(context.boundsToPaint()), &analysis_, 0, 0,
 			glyphs() + glyphRange.beginning(), glyphRange.length(), advances() + glyphRange.beginning(),
 			(justifiedAdvances() != 0) ? justifiedAdvances() + glyphRange.beginning() : 0,
 			glyphOffsets() + glyphRange.beginning());
@@ -983,21 +1001,22 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 	nextScriptRun.second = (nextScriptRun.first != 0) ? nextScriptRun.first->iCharPos : layoutString.length();
 	pair<StyledTextRun, bool> styleRun;	// 'second' is false if 'first' is invalid
 	if(styleRun.second = styles.get() != 0 && styles->hasNext()) {
-		styles->current(styleRun.first);
+		styleRun.first = styles->current();
 		styles->next();
 		results.second.push_back(styleRun.first);
 	}
 	pair<StyledTextRun, bool> nextStyleRun;	// 'second' is false if 'first' is invalid
 	if(nextStyleRun.second = styles.get() != 0 && styles->hasNext())
-		styles->current(nextStyleRun.first);
-	length_t beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.column : layoutString.length();
+		nextStyleRun.first = styles->current();
+	length_t beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.position() : layoutString.length();
 	tr1::shared_ptr<const Font> font;	// font for current glyph run
 	do {
-		const length_t previousRunEnd = max<length_t>(scriptRun->iCharPos, styleRun.second ? styleRun.first.column : 0);
+		const length_t previousRunEnd = max<length_t>(
+			scriptRun->iCharPos, styleRun.second ? styleRun.first.position() : 0);
 		assert(
 			(previousRunEnd == 0 && results.first.empty() && results.second.empty())
 			|| (!results.first.empty() && previousRunEnd == results.first.back()->end())
-			|| (!results.second.empty() && previousRunEnd == results.second.back().column));
+			|| (!results.second.empty() && previousRunEnd == results.second.back().position()));
 		length_t newRunEnd;
 		bool forwardScriptRun = false, forwardStyleRun = false, forwardGlyphRun = false;
 
@@ -1017,7 +1036,7 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 			const pair<const Char*, tr1::shared_ptr<const Font> > nextFontRun(
 				findNextFontRun(
 					Range<const Char*>(layoutString.data() + previousRunEnd, layoutString.data() + newRunEnd),
-					fontCollection, styleRun.second ? styleRun.first.style : tr1::shared_ptr<const TextRunStyle>(),
+					fontCollection, styleRun.second ? styleRun.first.style() : tr1::shared_ptr<const TextRunStyle>(),
 					defaultStyle, font));
 			font = nextFontRun.second;
 			if(nextFontRun.first != 0) {
@@ -1059,8 +1078,8 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 				results.second.push_back(styleRun.first);
 				styles->next();
 				if(nextStyleRun.second = styles->hasNext())
-					styles->current(nextStyleRun.first);
-				beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.column : layoutString.length();
+					nextStyleRun.first = styles->current();
+				beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.position() : layoutString.length();
 			}
 		}
 	} while(scriptRun != 0 || styleRun.second);
@@ -1068,9 +1087,29 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 	// commit
 	using std::swap;
 	swap(textRuns, results.first);
-	swap(styledRanges, results.second);
+	styledRanges = results.second;	// will be shrunk to fit
 
 #undef ASCENSION_SPLIT_LAST_RUN
+}
+
+/**
+ * Paints the background of the specified character range in this run.
+ * This method uses the fill style which is set in @a context.
+ * @param context The graphics context
+ * @param p The base point of this run (, does not corresponds to @c range.beginning())
+ * @param range The character range to paint. If the edges addressed outside of this run, they are
+ *              truncated
+ * @param[out] paintedBounds The rectangle this method painted. Can be @c null
+ */
+void TextLayout::TextRun::paintBackground(PaintContext& context,
+		const Point<>& p, const Range<length_t>& range, Rect<>* paintedBounds) const {
+	if(range.isEmpty() || p.x + totalWidth() < context.boundsToPaint().left())
+		return;
+	Rect<> r;
+	blackBoxBounds(range, r);
+	context.fillRectangle(r.translate(p));
+	if(paintedBounds != 0)
+		*paintedBounds = r;
 }
 
 /**
@@ -1097,8 +1136,7 @@ void TextLayout::TextRun::positionGlyphs(const win32::Handle<HDC>& dc, const Str
 
 	// apply text run styles
 	for(; styles.hasNext(); styles.next()) {
-		StyledTextRun styledRange;
-		styles.current(styledRange);
+		StyledTextRun styledRange(styles.current());
 /*
 		// query widths of C0 and C1 controls in this run
 		AutoBuffer<WORD> glyphIndices;
@@ -1636,7 +1674,7 @@ namespace {
 	class InlineProgressionDimensionRangeIterator :
 		public detail::IteratorAdapter<
 			InlineProgressionDimensionRangeIterator, iterator<
-				input_iterator_tag, Range<Scalar>
+				input_iterator_tag, Range<Scalar>, ptrdiff_t, Range<Scalar>*, Range<Scalar>
 			>
 		> {
 	public:
@@ -2009,8 +2047,7 @@ TextLayout::TextLayout(const String& text, ReadingDirection readingDirection,
 		fontCollection, defaultTextRunStyle, textRunStyles, textRuns, styledRanges);
 	runs_.reset(new TextRun*[numberOfRuns_ = textRuns.size()]);
 	copy(textRuns.begin(), textRuns.end(), runs_.get());
-	styledRanges_.reset(new StyledTextRun[numberOfStyledRanges_ = styledRanges.size()]);
-	copy(styledRanges.begin(), styledRanges.end(), styledRanges_.get());
+//	shrinkToFit(styledRanges_);
 
 	// 3. generate glyphs for each text runs
 	const win32::Handle<HDC> dc(detail::screenDC());
@@ -2020,8 +2057,7 @@ TextLayout::TextLayout(const String& text, ReadingDirection readingDirection,
 
 	// 4. position glyphs for each text runs
 	for(size_t i = 0; i < numberOfRuns_; ++i)
-		runs_[i]->positionGlyphs(dc, text_, SimpleStyledTextRunIterator(Range<const StyledTextRun*>(
-			styledRanges_.get(), styledRanges_.get() + numberOfStyledRanges_), runs_[i]->beginning()));
+		runs_[i]->positionGlyphs(dc, text_, SimpleStyledTextRunIterator(styledRanges, runs_[i]->beginning()));
 
 	// 5. position each text runs
 	// wrap into visual lines and reorder runs in each lines
@@ -2339,185 +2375,171 @@ namespace {
 }
 
 /**
- * Draws the layout to the output device.
- * @param context The rendering context
- * @param origin The position to draw
- * @param clipRect The clipping region
- * @param defaultForeground
- * @param defaultBackground
- * @param selection Describe the selected character ranges
- */
-void TextLayout::draw(PaintContext& context, const Point<>& origin, const Rect<>& clipRect,
-		ColorOverrideIterator* colorOverride /* = 0 */, const InlineObject* endOfLine /* = 0*/, const InlineObject* lineWrappingMark /* = 0 */) const /*throw()*/ {
-	if(isEmpty())
-		return;
-
-	Point<> p(origin);
-	for(length_t line = 0; p.y - lineMetrics_[line]->descent() >= context.boundsToPaint().bottom(); ) {
-		if(p.y + lineMetrics_[line]->ascent() > context.boundsToPaint().top()) {
-			p.x = origin.x + (readingDirection() == LEFT_TO_RIGHT) ? lineStartEdge(line) : -lineStartEdge(line);
-			draw(line, context, p, clipRect, 0, list<const ColorOverrideIterator::Run>::const_iterator(),
-				(line == numberOfLines() - 1) ? endOfLine : lineWrappingMark);
-		}
-		if(++line == numberOfLines())
-			break;
-		p.y += blockProgressionDistance(line - 1, line);
-	}
-}
-
-/**
  * Draws the specified line layout to the output device.
- * @param line The visual line
- * @param context The graphics context
- * @param origin The alignment point of the line
- * @param clipRect The clipping region
- * @param defaultForeground
- * @param defaultBackground
- * @param selection Describe the selected character ranges
- * @throw IndexOutOfBoundsException @a line is invalid
+ * @param context The rendering context
+ * @param origin The alignment point of the text layout
+ * @param paintOverride Can be @c null
+ * @param endOfLine The inline object which paints an end-of-line. Can be @c null
+ * @param lineWrappingMark The inline object which paints line-wrapping-mark. Can be @c null
  */
-void TextLayout::draw(length_t line,
-		PaintContext& context, const Point<>& origin, const Rect<>& clipRect,
-		const list<const ColorOverrideIterator::Run>* colorOverrides,
-		list<const ColorOverrideIterator::Run>::const_iterator coi, const InlineObject* eol) const {
-	if(line >= numberOfLines())
-		throw IndexOutOfBoundsException("line");
+void TextLayout::draw(PaintContext& context,
+		const Point<>& origin, const TextPaintOverride* paintOverride /* = 0 */,
+		const InlineObject* endOfLine/* = 0 */, const InlineObject* lineWrappingMark /* = 0 */) const {
 
 #if /*defined(_DEBUG)*/ 0
 	if(DIAGNOSE_INHERENT_DRAWING)
 		win32::DumpContext() << L"@TextLayout.draw draws line " << lineNumber_ << L" (" << line << L")\n";
 #endif // defined(_DEBUG)
 
+	if(isEmpty() || context.boundsToPaint().height() == 0)
+		return;
+
+	// TODO: this code can't handle vertical text.
+
+	// calculate line range to draw
+	Range<length_t> linesToDraw(0, numberOfLines());
+	Point<> p(origin);
+	for(length_t line = linesToDraw.beginning(); line < linesToDraw.end(); ++line) {
+		const Scalar lineBeforeEdge = p.y - lineMetrics_[line]->ascent();
+		const Scalar lineAfterEdge = p.y + lineMetrics_[line]->descent();
+		if(context.boundsToPaint().top() >= lineBeforeEdge && context.boundsToPaint().top() < lineAfterEdge)
+			linesToDraw = makeRange(line, linesToDraw.end());
+		if(context.boundsToPaint().bottom() >= lineBeforeEdge && context.boundsToPaint().bottom() < lineAfterEdge) {
+			linesToDraw = makeRange(linesToDraw.beginning(), line + 1);
+			break;
+		}
+		p.y += blockProgressionDistance(line - 1, line);
+	}
+
+	// calculate inline area range to draw
+	Range<vector<const InlineArea*>::const_iterator> inlineAreasToDraw(inlineAreas_.begin(), inlineAreas_.end());
+	for(vector<const InlineArea*>::const_iterator i(inlineAreasToDraw.beginning()); i != inlineAreasToDraw.end(); ++i) {
+		const length_t endOfInlineArea = (i != inlineAreasToDraw.end()) ? i[1]->position() : text_.length();
+		if(endOfInlineArea > lineOffset(linesToDraw.beginning())) {
+			inlineAreasToDraw = makeRange(i, inlineAreasToDraw.end());
+			break;
+		}
+	}
+	for(vector<const InlineArea*>::const_iterator i(inlineAreasToDraw.beginning()); i != inlineAreasToDraw.end(); ++i) {
+		const length_t endOfInlineArea = (i != inlineAreasToDraw.end()) ? i[1]->position() : text_.length();
+		if(endOfInlineArea >= lineOffset(linesToDraw.beginning())) {
+			inlineAreasToDraw = makeRange(inlineAreasToDraw.beginning(), i + 1);
+			break;
+		}
+	}
+
 	// this code paints the line in the following steps:
-	// 1. paint backgrounds of the all text runs are specified the background property
-	// 2. paint backgrounds of the all text ranges specified by 'colorOverrides'
-	// 3. paint borders of the all text runs
-	// 4. for each text runs:
-	// 4-1. paint the glyphs of the text run
-	// 4-2. paint the overhanging glyphs of the around text runs
-	// 4-3. paint the text decoration
-	// 5. paint the end of line mark
+	// 1. calculate range of runs to paint
+	// 2. paint backgrounds and borders:
+	//   2-1. paint background if the property is specified
+	//   2-2. paint border if the property is specified
+	// 3. for each text runs:
+	//   3-1. calculate range of runs to paint
+	//   3-2. paint the glyphs of the text run
+	//   3-3. paint the overhanging glyphs of the around text runs
+	//   3-4. paint the text decoration
+	// 4. paint the end of line mark
 	//
 	// the following topics describe how to draw a styled and selected text using masking by clipping
 	// Catch 22 : Design and Implementation of a Win32 Text Editor
 	// Part 10 - Transparent Text and Selection Highlighting (http://www.catch22.net/tuts/neatpad/10)
 	// Part 14 - Drawing styled text with Uniscribe (http://www.catch22.net/tuts/neatpad/14)
 
-	const Scalar lineHeight = lineMetrics_[line]->height();
-
 	context.save();
 	::SetTextAlign(context.nativeHandle().get(), TA_TOP | TA_LEFT | TA_NOUPDATECP);
-	if(!isEmpty()) {
-		Range<const TextRun**> runs(runs_.get() + lineFirstRuns_[line],
-			runs_[(line < numberOfLines() - 1) ? lineFirstRuns_[line + 1] : numberOfRuns_]);
-		Scalar leftEdge = origin.x;	// left-edge of runs.beginning()
-		if(readingDirection() == RIGHT_TO_LEFT)
-			leftEdge -= lineInlineProgressionDimension(line);
 
-		// 1. paint backgrounds of the all text runs are specified the background property
-		{
-			Scalar left = leftEdge;
-			const TextRun** firstRun = runs.beginning();
-			const TextRun** lastRun = runs.end();
-			for(const TextRun** run = runs.beginning(); run != runs.end(); ++run) {
-				if(basePoint.x + run.totalWidth() < context.boundsToPaint().left()) {
-					// this run does not need to draw => skip to the next
-					++firstRun;
-					leftEdge = (left += run.totalWidth());
-				} else {
+	// 2. paint backgrounds and borders
+	for(vector<const InlineArea*>::const_iterator i(inlineAreasToDraw.beginning()), e; i != inlineAreasToDraw.end(); ++i) {
+		// TODO: recognize the override.
+		// TODO: this code can't handle sparse inline areas (with bidirectionality).
+		pair<Rect<>, bool> borderRectangle;
+
+		// 2-1. paint background if the property is specified
+		if((*i)->style()->background != Paint()) {
+			borderRectangle = make_pair((*i)->borderRectangle(), true);
+			if(context.boundsToPaint().includes(borderRectangle.first)) {
+				context.setFillStyle((*i)->style()->background);
+				context.fillRectangle(borderRectangle.first);
+			}
+		}
+
+		// 2-2. paint border if the property is specified
+		pair<Color, bool> currentColor;
+		const Border::Part* borders[4] = {
+			&(*i)->style()->border.before, &(*i)->style()->border.after,
+			&(*i)->style()->border.start, &(*i)->style()->border.end};
+		for(const Border::Part** border = border = borders; border != ASCENSION_ENDOF(borders); ++border) {
+			if(!(*border)->hasVisibleStyle() || (*border)->computedWidth().value <= 0.0)
+				continue;
+			if((*border)->color == Color()) {
+				if(!currentColor.second)
+					currentColor = make_pair(Color(), true);
+			}
+			if(!borderRectangle.second)
+				borderRectangle = make_pair((*i)->borderRectangle(), true);
+			if(!context.boundsToPaint().includes(borderRectangle.first))
+				continue;
+//			context.setStrokeStyle();
+//			context.setStrokeDashArray();
+//			context.setStrokeDashOffset();
+			context.beginPath();
+			if(border == &borders[0])	// top
+				context
+					.moveTo(Point<>(borderRectangle.first.left(), borderRectangle.first.top()))
+					.lineTo(Point<>(borderRectangle.first.right() + 1, borderRectangle.first.top()));
+			else if(border == &borders[1])	// bottom
+				context
+					.moveTo(Point<>(borderRectangle.first.left(), borderRectangle.first.bottom()))
+					.lineTo(Point<>(borderRectangle.first.right() + 1, borderRectangle.first.bottom()));
+			else if((readingDirection() == LEFT_TO_RIGHT && border == &borders[2])
+					|| (readingDirection() == RIGHT_TO_LEFT && border == &borders[3]))	// left
+				context
+					.moveTo(Point<>(borderRectangle.first.left(), borderRectangle.first.top()))
+					.lineTo(Point<>(borderRectangle.first.left(), borderRectangle.first.bottom() + 1));
+			else if((readingDirection() == LEFT_TO_RIGHT && border == &borders[3])
+					|| (readingDirection() == RIGHT_TO_LEFT && border == &borders[2]))	// right
+				context
+					.moveTo(Point<>(borderRectangle.first.right(), borderRectangle.first.top()))
+					.lineTo(Point<>(borderRectangle.first.right(), borderRectangle.first.bottom() + 1));
+			context.stroke();
+		}
+
+		::ExcludeClipRect(context.nativeHandle().get(),
+			borderRectangle.first.left(), borderRectangle.first.top(),
+			borderRectangle.first.right(), borderRectangle.first.bottom());
+	}
+
+	// 3. for each text runs
+	for(length_t line = linesToDraw.beginning(); line < linesToDraw.end(); ++line) {
+		if(!isEmpty()) {
+			// 3-1. calculate range of runs to paint
+			Range<const TextRun* const*> runs(runs_.get() + lineFirstRuns_[line],
+				runs_.get() + ((line < numberOfLines() - 1) ? lineFirstRuns_[line + 1] : numberOfRuns_));
+			p = origin;
+			p.x += readingDirectionInt(readingDirection());
+			if(readingDirection() == RIGHT_TO_LEFT)
+				p.x -= lineInlineProgressionDimension(line);
+			Scalar leftEdgeOfFirstRun = p.x, rightEdgeOfLastRun = p.x + lineInlineProgressionDimension(line);
+			for(const TextRun* const* run = runs.beginning(); run < runs.end(); ++run) {
+				if(p.x + (*run)->totalWidth() < context.boundsToPaint().left()) {
+					runs = makeRange(run + 1, runs.end());
+					leftEdgeOfFirstRun = p.x + (*run)->totalWidth();
+				} else if(p.x > context.boundsToPaint().right()) {
+					runs = makeRange(runs.beginning(), run);
+					rightEdgeOfLastRun = p.x;
 				}
 			}
-		}
-		for(const TextRun** run = runs.beginning(); run != runs.end(); ++run) {
-			if(basePoint.x + run.totalWidth() < context.boundsToPaint().left()) {
-				// this run does not need to draw => skip to the next
-				++firstRun;
-				startX = basePoint.x + run.totalWidth();
-			} else {
-				basePoint.y += run.font()->metrics().ascent();
-				if(selection != 0 && selectedRange.includes(static_cast<const Range<length_t>&>(run))) {
-					Rect<> selectedBounds;
-					run.drawBackground(context, basePoint, run, selection->background(), &context.boundsToPaint(), &selectedBounds);
-					::ExcludeClipRect(context.nativeHandle().get(),
-						selectedBounds.left(), selectedBounds.top(),
-						selectedBounds.right(), selectedBounds.bottom());
-				} else {
-					StyledTextRunEnumerator i(auto_ptr<StyledTextRunIterator>(
-						new SimpleStyledTextRunIterator(Range<const StyledTextRun*>(
-							styledRanges_.get(), styledRanges_.get() + numberOfStyledRanges_), run.beginning())), run.end());
-					assert(i.hasNext());
-					for(; i.hasNext(); i.next()) {
-						Range<length_t> range(i.currentRange());
-						if(range.beginning() < run.beginning())
-							range = Range<length_t>(run.beginning(), range.end());
-						if(selection == 0 || range.end() <= selectedRange.beginning() || range.beginning() >= selectedRange.end())
-							run.drawBackground(context, basePoint, range,
-								(i.currentStyle()->background != Color()) ? i.currentStyle()->background : marginColor, &context.boundsToPaint(), 0);
-						else {
-							// paint before selection
-							if(selectedRange.beginning() > range.beginning())
-								run.drawBackground(context, basePoint, Range<length_t>(range.beginning(), selectedRange.beginning()),
-									(i.currentStyle()->background != Color()) ? i.currentStyle()->background : marginColor, &context.boundsToPaint(), 0);
-							// paint selection
-							Rect<> selectedBounds;
-							run.drawBackground(context, basePoint, selectedRange, selection->background(), &context.boundsToPaint(), &selectedBounds);
-							::ExcludeClipRect(context.nativeHandle().get(),
-								selectedBounds.left(), selectedBounds.top(),
-								selectedBounds.right(), selectedBounds.bottom());
-							// paint after selection
-							if(selectedRange.end() < range.end())
-								run.drawBackground(context, basePoint, Range<length_t>(selectedRange.end(), range.end()),
-									(i.currentStyle()->background != Color()) ? i.currentStyle()->background : marginColor, &context.boundsToPaint(), 0);
-						}
-					}
-				}
-				basePoint.y -= run.font()->metrics().ascent();
+			if(!runs.isEmpty()) {
+				const Range<length_t> characterRange(runs.beginning()[0]->beginning(), runs.end()[-1]->end());
+				auto_ptr<TextPaintOverride::Iterator> paintOverrideIterator;
+				if(paintOverride != 0)
+					paintOverrideIterator = paintOverride->queryTextPaintOverride(characterRange);
 			}
-			basePoint.x += run.totalWidth();
-			if(basePoint.x >= context.boundsToPaint().right()) {
-				lastRun = i + 1;
-				break;
-			}
-		}
 
-		// 4. paint the right margin
-		if(basePoint.x < context.boundsToPaint().right())
-			context.fillRectangle(Rect<>(basePoint, Dimension<>(context.boundsToPaint().right() - basePoint.x, dy)), marginColor);
+			// 3-2. paint the glyphs of the text run
 
-		// 5. draw the foreground glyphs
-		basePoint.x = startX;
-		TextRun::Overlay selectionOverlay;
-		if(selection != 0) {
-			selectionOverlay.color = selection->foreground();
-			selectionOverlay.range = selectedRange;
-		}
-		for(size_t i = firstRun; i < lastRun; ++i) {
-			const TextRun& run = *runs_[i];
-			basePoint.y += run.font()->metrics().ascent();
-			StyledTextRunEnumerator j(auto_ptr<StyledTextRunIterator>(
-				new SimpleStyledTextRunIterator(Range<const StyledTextRun*>(
-					styledRanges_.get(), styledRanges_.get() + numberOfStyledRanges_), run.beginning())), run.end());
-			for(; j.hasNext(); j.next())
-				run.drawForeground(context, basePoint, j.currentRange(), j.currentStyle()->foreground, &context.boundsToPaint(), 0);
-			basePoint.y -= run.font()->metrics().ascent();
-			basePoint.x += run.totalWidth();
-		}
+	}
 
-		// 6. draw the selected foreground glyphs
-		if(selection != 0) {
-			basePoint.x = startX;
-			::ExtSelectClipRgn(context.nativeHandle().get(),
-				win32::Handle<HRGN>(::CreateRectRgnIndirect(&toNative(context.boundsToPaint()))).get(), RGN_XOR);
-			for(size_t i = firstRun; i < lastRun; ++i) {
-				const TextRun& run = *runs_[i];
-				if(run.beginning() < selectedRange.end() && run.end() > selectedRange.beginning()) {
-					basePoint.y += run.font()->metrics().ascent();
-					run.drawForeground(context, basePoint, selectedRange, selection->foreground(), &context.boundsToPaint(), 0);
-					basePoint.y -= run.font()->metrics().ascent();
-				}
-				basePoint.x += run.totalWidth();
-			}
-		}
 #if 0
 		// draw outside of the selection
 		Rect<> runRect;
@@ -3211,24 +3233,6 @@ void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
 	lineOffsets_.reset(new length_t[numberOfLines()]);
 	for(size_t i = 0; i < numberOfLines(); ++i)
 		const_cast<length_t&>(lineOffsets_[i]) = runs_[lineFirstRuns_[i]]->beginning();
-}
-
-
-// TextLayout.Selection ///////////////////////////////////////////////////////////////////////////
-
-/**
- * Constructor.
- * @param caret The caret holds a selection
- * @param foreground The foreground color
- * @param background The background color
- * @throw std#invalid_argument @a foreground and/or @c background is invalid
- */
-TextLayout::Selection::Selection(const viewers::Caret& caret,
-		const Color& foreground, const Color& background) /*throw()*/ : caret_(caret), foreground_(background_) {
-	if(foreground == Color())
-		throw invalid_argument("foreground");
-	else if(background == Color())
-		throw invalid_argument("background");
 }
 
 #if 0
