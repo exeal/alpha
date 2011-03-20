@@ -16,11 +16,11 @@ namespace ascension {
 		struct InputOutputIteratorOperators : public Base {
 			/// Dereference operator.
 			typename std::iterator_traits<Base>::pointer operator->() {
-				return *static_cast<Derived&>(*this);
+				return &*static_cast<Derived&>(*this);
 			}
 			/// Dereference operator.
 			const typename std::iterator_traits<Base>::pointer operator->() const {
-				return *static_cast<const Derived&>(*this);
+				return &*static_cast<const Derived&>(*this);
 			}
 			/// Inequality operator.
 			bool operator!=(const Derived& other) const {
@@ -152,12 +152,36 @@ namespace ascension {
 		 *
 		 * @a Derived template parameter must satisfy some of the following requirements:
 		 * <table border="1">
-		 *   <tr><th>Expression</th><th>Return type</th><th>Assertion / Note / Pre- / Post-condition</th></tr>
-		 *   <tr><td>i.current()</td><td>@a Type</td><td>Returns the current value for @c #operator= and @c #operator-&gt;.</td></tr>
-		 *   <tr><td>i.next()</td><td>not used</td><td>Moves the iterator to the next position for @c #operator++ and @c #operator++(int).</td></tr>
-		 *   <tr><td>i.previous()</td><td>not used</td><td>Moves the iterator to the previous position for @c #operator-- and @c #operator--(int).</td></tr>
-		 *   <tr><td>i1.equals(i2)</td><td>bool</td><td>true if @c i1 equals @c i2. For @c #operator==, @c #operator!=, ...</td></tr>
-		 *   <tr><td>i1.less(i2)</td><td>bool</td><td>true if @c i1 is less than @c i2. For @c #operator&lt;, @c #operator&gt;, ... This is not required if you don't use relation operators.</td></tr>
+		 *   <tr>
+		 *     <th>Expression</th>
+		 *     <th>Return type</th>
+		 *     <th>Assertion / Note / Pre- / Post-condition</th>
+		 *   </tr>
+		 *   <tr>
+		 *     <td>i.current()</td>
+		 *     <td>@c IteratorAdapter#reference</td>
+		 *     <td>Returns the current value for @c #operator= and @c #operator-&gt;.</td>
+		 *   </tr>
+		 *   <tr>
+		 *     <td>i.next()</td>
+		 *     <td>not used</td>
+		 *     <td>Moves the iterator to the next position for @c #operator++ and @c #operator++(int).</td>
+		 *   </tr>
+		 *   <tr>
+		 *     <td>i.previous()</td>
+		 *     <td>not used</td>
+		 *     <td>Moves the iterator to the previous position for @c #operator-- and @c #operator--(int).</td>
+		 *   </tr>
+		 *   <tr>
+		 *     <td>i1.equals(i2)</td>
+		 *     <td>convertible to @c bool</td>
+		 *     <td>true if @c i1 equals @c i2. For @c #operator==, @c #operator!=, ...</td>
+		 *   </tr>
+		 *   <tr>
+		 *     <td>i1.less(i2)</td>
+		 *     <td>convertible to @c bool</td>
+		 *     <td>true if @c i1 is less than @c i2. For @c #operator&lt;, @c #operator&gt;, ... This is not required if you don't use relation operators.</td>
+		 *   </tr>
 		 * </table>
 		 */
 		template<typename Derived, typename Base>
