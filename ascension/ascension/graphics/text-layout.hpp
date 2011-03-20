@@ -14,6 +14,7 @@
 #include <ascension/presentation.hpp>
 #include <ascension/graphics/color.hpp>
 #include <limits>	// std.numeric_limits
+#include <vector>
 
 namespace ascension {
 
@@ -22,6 +23,7 @@ namespace ascension {
 
 	namespace graphics {
 
+		class Paint;
 		class Context;
 		class PaintContext;
 
@@ -193,39 +195,72 @@ namespace ascension {
 				const Scalar width_;
 			};
 
-			class TextColorOverrideIterator {
+			class TextPaintOverride {
 			public:
-				struct TextColors {
-					/// The overridden foreground color.
-					Color foreground;
-					/// The overridden background color.
-					Color background;
+				class Iterator {
+				public:
+					/// Destructor.
+					virtual ~Iterator() /*throw()*/ {}
+
 					/**
-					 * Set @c false to paint only the glyphs' bounds with @c #background. Otherwise
-					 * the logical highlight bounds of characters are painted as background.
+					 * Returns the overridden foreground of the current position.
+					 * @return The overridden foreground or @c null if does not override
+					 * @throw NoSuchElementException The iterator is end
 					 */
-					bool useLogicalHighlightBounds;
-				};
-				struct TextSegment : public Range<length_t> {
-					std::tr1::shared_ptr<const TextColors> colors;
+					virtual const Paint* foreground() const = 0;
+					/**
+					 * Returns the overridden transparency of the foreground of the current
+					 * position.
+					 * @return The transparency. This value should be in the range from 0.0 (fully
+					 *         transparent) to 1.0 (no additional transparency)
+					 */
+					virtual double foregroundAlpha() const = 0;
+					/**
+					 * Returns the overridden background of the current position.
+					 * @return The overridden background or @c null if does not override
+					 * @throw NoSuchElementException The iterator is end
+					 */
+					virtual const Paint* background() const = 0;
+					/**
+					 * Returns the transparency of the overridden background of the current
+					 * position.
+					 * @return The transparency. This value should be in the range from 0.0 (fully
+					 *         transparent) to 1.0 (no additional transparency)
+					 */
+					virtual double backgroundAlpha() const = 0;
+					/**
+					 * Returns @c false to paint only the glyphs' bounds with @c #background.
+					 * Otherwise the logical highlight bounds of characters are painted as
+					 * background.
+					 * @throw NoSuchElementException The iterator is end
+					 */
+					virtual bool usesLogicalHighlightBounds() const = 0;
+
+					/// Returns the length of the current text segment.
+					virtual length_t length() const = 0;
+					/// Returns @c true if the iterator has no more elements.
+					virtual bool isDone() const /*throw()*/ = 0;
+					/**
+					 * Moves the iterator to the next overriden text segment.
+					 * @throw NoSuchElementException The iterator is end
+					 */
+					virtual void next() = 0;
+					/// Moves the iterator to the beginning.
+					virtual void reset() /*throw()*/ = 0;
 				};
 			public:
 				/// Destructor.
-				virtual ~TextColorOverrideIterator() /*throw()*/ {}
+				virtual ~TextPaintOverride() /*throw()*/ {}
 				/**
-				 * Returns the current overriden text segment.
-				 * @param[out] segment
-				 * @throw NoSuchElementException The iterator is end
+				 * Returns the iterator which overrides the paints of the specified character
+				 * range in the line.
+				 * @param range The character range in the line
+				 * @return The iterator which generates the overridden paints
 				 */
-				virtual void current(TextSegment& segment) const = 0;
-				/// Returns @c false if the iterator has no more elements.
-				virtual bool hasNext() const /*throw()*/ = 0;
-				/**
-				 * Moves the iterator to the next overriden text segment.
-				 * @throw NoSuchElementException The iterator is end
-				 */
-				virtual void next() = 0;
+				virtual std::auto_ptr<Iterator>
+					queryTextPaintOverride(const Range<length_t>& range) const = 0;
 			};
+
 
 			/**
 			 * @see Font#Metrics
@@ -256,37 +291,6 @@ namespace ascension {
 					LEADING,	///< Leading edge of a character.
 					TRAILING	///< Trailing edge of a character.
 				};
-				class ColorOverrideIterator {
-				public:
-					struct Run {
-						length_t length;
-						Color background;
-						Color foreground;
-					};
-				public:
-					/// Destructor.
-					virtual ~ColorOverrideIterator() /*throw()*/ {}
-					virtual void current(Run& run) const = 0;
-					virtual bool hasNext() const /*throw()*/ = 0;
-					virtual void next() = 0;
-				};
-				/// Used for @c LineLayout#draw methods.
-				class Selection {
-					ASCENSION_UNASSIGNABLE_TAG(Selection);
-				public:
-					/// Constructor.
-					Selection(const viewers::Caret& caret,
-						const Color& foreground, const Color& background);
-					/// Returns the caret object.
-					const viewers::Caret& caret() const /*throw()*/ {return caret_;}
-					/// Returns the background color to render.
-					const Color& background() const /*throw()*/ {return background_;}
-					/// Returns the foreground color to render.
-					const Color& foreground() const /*throw()*/ {return foreground_;}
-				private:
-					const viewers::Caret& caret_;
-					const Color foreground_, background_;
-				};
 #if 0
 				/// Bidirectional iterator enumerates style runs in a line.
 				class StyledSegmentIterator {
@@ -307,6 +311,7 @@ namespace ascension {
 				};
 #endif
 				class TextRun;
+				class InlineArea;
 
 			public:
 				// constructors
@@ -355,11 +360,11 @@ namespace ascension {
 //				StyledSegmentIterator lastStyledSegment() const /*throw()*/;
 				presentation::StyledTextRun styledTextRun(length_t column) const;
 				// painting
-				void draw(PaintContext& context,
-					const Point<>& origin, const Rect<>& clipRect,
-					ColorOverrideIterator* colorOverride = 0,
+				void draw(PaintContext& context, const Point<>& origin,
+					const TextPaintOverride* paintOverride = 0,
 					const InlineObject* endOfLine = 0,
 					const InlineObject* lineWrappingMark = 0) const /*throw()*/;
+				// miscellaneous
 				String fillToX(Scalar x) const;
 #ifdef _DEBUG
 				// debug
@@ -368,11 +373,6 @@ namespace ascension {
 
 			private:
 				Scalar blockProgressionDistance(length_t from, length_t to) const /*throw()*/;
-				void draw(length_t line, PaintContext& context,
-					const Point<>& origin, const Rect<>& clipRect,
-					const std::list<const ColorOverrideIterator::Run>* colorOverrides,
-					std::list<const ColorOverrideIterator::Run>::const_iterator coi,
-					const InlineObject* eol) const;
 				void expandTabsWithoutWrapping() /*throw()*/;
 				std::size_t findRunForPosition(length_t column) const /*throw()*/;
 				void justify(presentation::TextJustification method) /*throw()*/;
@@ -391,8 +391,8 @@ namespace ascension {
 				const presentation::DominantBaseline dominantBaseline_;
 				AutoBuffer<TextRun*> runs_;
 				std::size_t numberOfRuns_;
-				AutoBuffer<presentation::StyledTextRun> styledRanges_;
-				std::size_t numberOfStyledRanges_;
+				class LineArea;
+				std::vector<const InlineArea*> inlineAreas_;
 				AutoBuffer<const length_t> lineOffsets_;	// size is numberOfLines_
 				AutoBuffer<const length_t> lineFirstRuns_;	// size is numberOfLines_
 				static const length_t SINGLE_LINE_OFFSETS;
