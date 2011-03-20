@@ -2,14 +2,14 @@
  * @file internal.hpp
  * @brief Private entries used by Ascension internally.
  * @author exeal
- * @date 2006-2010
+ * @date 2006-2011
  */
 
 #ifndef ASCENSION_INTERNAL_HPP
 #define ASCENSION_INTERNAL_HPP
 
 #include <ascension/corelib/basic-types.hpp>
-#include <algorithm>
+#include <algorithm>	// std.fill, std.find, std.upper_bound
 #include <list>
 #include <stdexcept>
 #ifdef ASCENSION_WINDOWS
@@ -27,32 +27,27 @@ namespace ascension {
 		/// Generates a type from the constant integer.
 		template<int v> struct Int2Type {static const int value = v;};
 
-		/// Returns the type @a T if @a condition is @c true, otherwise type @a U.
-		template<bool condition, typename T, typename U> struct Select {typedef T Result;};
-		template<typename T, typename U> struct Select<false, T, U> {typedef U Result;};
+		/**
+		 * @tparam BidirectionalIterator
+		 * @tparam T
+		 * @tparam Comp
+		 * @param first, last
+		 * @param value
+		 * @param compare
+		 * @return
+		 */
+		template<typename BidirectionalIterator, typename T, typename Comp>
+		inline BidirectionalIterator searchBound2(BidirectionalIterator first, BidirectionalIterator last, const T& value, Comp compare) {
+			BidirectionalIterator temp(std::upper_bound(first, last, value, compare));
+			return (temp != first) ? --temp : last;
+		}
 
-		/// Returns @c true if the given two types @a T and @a U are same.
-		template<typename T, typename U> struct IsSame {static const bool result = false;};
-		template<typename T> struct IsSame<T, T> {static const bool result = true;};
-
-		/// Returns @c true if the type @a D is derived from the type @a B.
-		template<typename B, typename D> class IsBaseAndDerived {
-			typedef char Y;
-			class N {char padding_[8];};
-			static Y test(const volatile B*);
-			static N test(...);
-			static const volatile D* makeD();
-		public:
-			static const bool result = !IsSame<B, D>::result && sizeof(test(makeD())) == sizeof(Y);
-		};
-
-		/// Generates signed numeral types.
-		template<typename T> struct ToSigned;
-		template<> struct ToSigned<unsigned char> {typedef char Result;};
-		template<> struct ToSigned<unsigned short> {typedef short Result;};
-		template<> struct ToSigned<unsigned int> {typedef int Result;};
-		template<> struct ToSigned<unsigned long> {typedef long Result;};
-//		template<> struct ToSigned<unsigned __int64> {typedef __int64 Result;};
+		/// See above.
+		template<typename BidirectionalIterator, typename T>
+		inline BidirectionalIterator searchBound2(BidirectionalIterator first, BidirectionalIterator last, const T& value) {
+			BidirectionalIterator temp(std::upper_bound(first, last, value));
+			return (temp != first) ? --temp : last;
+		}
 
 		/**
 		 * Searches upper or lower bound.
@@ -198,7 +193,7 @@ namespace ascension {
 	} // namespace detail
 
 	/// Signed @c length_t
-	typedef detail::ToSigned<length_t>::Result signed_length_t;
+	typedef detail::RemoveSigned<length_t>::Type signed_length_t;
 
 } // namespace ascension
 
