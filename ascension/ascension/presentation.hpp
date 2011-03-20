@@ -26,6 +26,28 @@ namespace ascension {
 
 	namespace presentation {
 
+		template<typename T>
+		class Inheritable {
+		public:
+			typedef T value_type;
+		public:
+			Inheritable() /*throw()*/ : inherits_(true) {}
+			Inheritable(value_type v) /*throw()*/ : value_(v), inherits_(false) {}
+			operator value_type() const {return get();}
+			value_type get() const {if(inherits()) throw logic_error(""); return value_;}
+			value_type inherit() /*throw()*/ {inherits_ = true;}
+			bool inherits() const /*throw()*/ {return inherits_;}
+			Inheritable<value_type>& set(value_type) /*throw()*/ {value_ = v; inherits_ = false; return *this;}
+		private:
+			value_type value_;
+			bool inherits_;
+		};
+
+		/**
+		 *
+		 * @see "CSS3 Values and Units 3.4 Numbers and units identifiers"
+		 *      (http://www.w3.org/TR/2006/WD-css3-values-20060919/#numbers0)
+		 */
 		struct Length {
 			double value;	///< Value of the length.
 			enum Unit {
@@ -55,35 +77,35 @@ namespace ascension {
 				DIPS,			///< Device independent pixels. 1 DIP is equal to 1/96th of an inch.
 				// percentages (exactly not a length)
 				PERCENTAGE,		///< Percentage.
-				INHERIT			///< Inherits from the parent.
-			} unit;	///< Unit of the length.
+			};
+			Unit unit;	///< Unit of the length.
 
 			/// Default constructor.
-			Length() /*throw()*/ : unit(INHERIT) {}
+			Length() /*throw()*/ {}
 			/// Constructor.
 			explicit Length(double value, Unit unit = PIXELS) : value(value), unit(unit) {}
 		};
 
+		/**
+		 * @see "CSS Backgrounds and Borders Module Level 3"
+		 *      (http://www.w3.org/TR/2011/CR-css3-background-20110215/)
+		 */
 		struct Border {
+			/**
+			 * @see 
+			 */
 			enum Style {
 				NONE, HIDDEN, DOTTED, DASHED, SOLID,
 				DOT_DASH, DOT_DOT_DASH,
-				DOUBLE, GROOVE, RIDGE, INSET, OUTSET,
-				INHERIT
+				DOUBLE, GROOVE, RIDGE, INSET, OUTSET
 			};
 			static const Length THIN, MEDIUM, THICK;
 			struct Part {
 				/**
-				 * The foreground color of the border. Default value is Color() which means from
-				 * the parent content. This value is ignored if @c #usesCurrentColor member is
-				 * @c true.
+				 * The foreground color of the border. Default value is Color() which means that
+				 * the value of @c TextRunStyle#foreground
 				 */
 				graphics::Color color;
-				/**
-				 * Set @c true if use the value of @c TextRunStyle#foreground, instead of the one
-				 * of @c #color member.
-				 */
-				bool usesCurrentColor;
 				/// Style of the border. Default value is @c NONE.
 				Style style;
 				/// Thickness of the border. Default value is @c MEDIUM.
@@ -91,6 +113,10 @@ namespace ascension {
 
 				/// Default constructor.
 				Part() : color(), style(NONE), width(MEDIUM) {}
+				/// Returns the computed width.
+				Length computedWidth() const {return (style != NONE) ? width : Length(0.0, width.unit);}
+				/// Returns @c true if this part is invisible (but may be consumes place).
+				bool hasVisibleStyle() const /*throw()*/ {return style != NONE && style != HIDDEN;}
 			} before, after, start, end;
 		};
 
@@ -108,7 +134,6 @@ namespace ascension {
 			DOMINANT_BASELINE_MIDDLE,
 			DOMINANT_BASELINE_TEXT_AFTER_EDGE,
 			DOMINANT_BASELINE_TEXT_DEFORE_EDGE,
-			DOMINANT_BASELINE_INHERIT
 		};
 
 		/// Alignment baseline from XSL 1.1, 7.14.2 "alignment-baseline".
@@ -149,17 +174,17 @@ namespace ascension {
 		};
 #endif
 		struct Decorations {
-			enum Style {NONE, SOLID, DOTTED, DAHSED, INHERIT};
+			enum Style {NONE, SOLID, DOTTED, DAHSED};
 			struct Part {
 				graphics::Color color;	// if is Color(), same as the foreground
-				Style style;	///< Default value is @c NONE.
+				Inheritable<Style> style;	///< Default value is @c NONE.
 				/// Default constructor.
 				Part() : style(NONE) {}
 			} overline, strikethrough, baseline, underline;
 		};
 
 		enum TextTransform {
-			CAPITALIZE, UPPERCASE, LOWERCASE, NONE, TEXT_TRANSFORM_INHERIT
+			CAPITALIZE, UPPERCASE, LOWERCASE, NONE
 		};
 
 		/**
@@ -180,7 +205,7 @@ namespace ascension {
 			/// 'font-size-adjust' property. 0.0 means 'none', negative value means 'inherit'.
 			double fontSizeAdjust;
 			/// The dominant baseline of the line. Default value is @c DOMINANT_BASELINE_AUTO.
-			DominantBaseline dominantBaseline;
+			Inheritable<DominantBaseline> dominantBaseline;
 			/// The alignment baseline. Default value is @c ALIGNMENT_BASELINE_AUTO.
 			AlignmentBaseline alignmentBaseline;
 			std::locale locale;
@@ -191,7 +216,7 @@ namespace ascension {
 			Length letterSpacing;
 			/// Word spacing in DIP. Default is 0.
 			Length wordSpacing;
-//			TextTransform textTransform;
+//			Inheritable<TextTransform> textTransform;
 //			RubyProperties rubyProperties;
 //			Effects effects;
 			/// Set @c false to disable shaping. Default is @c true.
@@ -288,10 +313,9 @@ namespace ascension {
 			/// The text is aligned to the middle (center) of the paragraph.
 			TEXT_ANCHOR_MIDDLE,
 			/// The text is aligned to the end edge of the paragraph.
-			TEXT_ANCHOR_END,
+			TEXT_ANCHOR_END
 			/// Inherits the parent's setting.
 			/// @note Some methods which take @c TextAnchor don't accept this value.
-			TEXT_ANCHOR_INHERIT
 //			MATCH_PARENT_DIRECTION
 		};
 
@@ -313,8 +337,7 @@ namespace ascension {
 		 */
 		enum ReadingDirection {
 			LEFT_TO_RIGHT,				///< The text is left-to-right.
-			RIGHT_TO_LEFT,				///< The text is right-to-left.
-			INHERIT_READING_DIRECTION	///< 
+			RIGHT_TO_LEFT				///< The text is right-to-left.
 		};
 #ifdef ASCENSION_WRITING_MODES
 		enum ProgressionDirection {
@@ -359,12 +382,12 @@ namespace ascension {
 #endif // ASCENSION_WRITING_MODES
 		/// From XSL 1.1, 7.16.5 "line-height-shift-adjustment".
 		enum LineHeightShiftAdjustment {
-			CONSIDER_SHIFTS, DISREGARD_SHIFTS, INHERIT_LINE_HEIGHT_SHIFT_ADJUSTMENT
+			CONSIDER_SHIFTS, DISREGARD_SHIFTS
 		};
 
 		/// From XSL 1.1, 7.16.6 "line-stacking-strategy"
 		enum LineStackingStrategy {
-			LINE_HEIGHT, FONT_HEIGHT, MAX_HEIGHT, INHERIT_LINE_STACKING_STRATEGY
+			LINE_HEIGHT, FONT_HEIGHT, MAX_HEIGHT
 		};
 
 		struct NumberSubstitution {
@@ -403,27 +426,27 @@ namespace ascension {
 
 		struct TextLineStyle {
 			/// The reading direction of the line. Default value is @c INHERIT_READING_DIRECTION.
-			ReadingDirection readingDirection;
+			Inheritable<ReadingDirection> readingDirection;
 			/**
 			 * The alignment point in inline-progression-dimension. Default value is
 			 * @c TEXT_ANCHOR_START.
 			 */
-			TextAnchor anchor;
+			Inheritable<TextAnchor> anchor;
 			/**
 			 * The alignment point in block-progression-dimension, which is the dominant baseline
 			 * of the line. Default value is @c DOMINANT_BASELINE_AUTO.
 			 */
-			DominantBaseline dominantBaseline;
+			Inheritable<DominantBaseline> dominantBaseline;
 			/// Default value is @c CONSIDER_SHIFTS.
-			LineHeightShiftAdjustment lineHeightShiftAdjustment;
+			Inheritable<LineHeightShiftAdjustment> lineHeightShiftAdjustment;
 			/// Default value is @c MAX_HEIGHT.
-			LineStackingStrategy lineStackingStrategy;
+			Inheritable<LineStackingStrategy> lineStackingStrategy;
 			/// The number substitution setting. Default value is built by the default constructor.
 			NumberSubstitution numberSubstitution;
 
 			/// Default constructor.
 			TextLineStyle() /*throw()*/ :
-				readingDirection(INHERIT_READING_DIRECTION),
+				readingDirection(),
 				anchor(TEXT_ANCHOR_START), dominantBaseline(DOMINANT_BASELINE_AUTO),
 				lineHeightShiftAdjustment(CONSIDER_SHIFTS), lineStackingStrategy(MAX_HEIGHT) {}
 		};
@@ -730,14 +753,14 @@ namespace ascension {
 		inline TextAnchor defaultTextAnchor(const Presentation& presentation) {
 			std::tr1::shared_ptr<const TextLineStyle> style(presentation.defaultTextLineStyle());
 			return (style.get() != 0
-				&& style->anchor != TEXT_ANCHOR_INHERIT) ? style->anchor : ASCENSION_DEFAULT_TEXT_ANCHOR;
+				&& !style->anchor.inherits()) ? style->anchor : ASCENSION_DEFAULT_TEXT_ANCHOR;
 		}
 
 		///
 		inline ReadingDirection defaultReadingDirection(const Presentation& presentation) {
 			std::tr1::shared_ptr<const TextLineStyle> style(presentation.defaultTextLineStyle());
 			return (style.get() != 0
-				&& style->readingDirection != INHERIT_READING_DIRECTION) ? style->readingDirection : ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
+				&& !style->readingDirection.inherits()) ? style->readingDirection : ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
 		}
 
 	}
