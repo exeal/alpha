@@ -14,7 +14,10 @@
 namespace ascension {
 	namespace graphics {
 
-		/// @c Color provides colors based on RGB values.
+		/**
+		 * @c Color provides colors based on RGB values.
+		 * @see "CSS Color Module Level 3" (http://www.w3.org/TR/2010/PR-css3-color-20101028)
+		 */
 		class Color : public FastArenaObject<Color> {
 		public:
 			static const Color TRANSPARENT_COLOR;

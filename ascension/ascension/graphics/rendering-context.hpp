@@ -39,15 +39,15 @@ namespace ascension {
 //			virtual ??? canvas() const = 0;
 
 			/// Pushes the current state onto the stack.
-			virtual void save() = 0;
+			virtual RenderingContext2D& save() = 0;
 			/// Pops the top state on the stack, restoring the context to that state.
-			virtual void restore() = 0;
+			virtual RenderingContext2D& restore() = 0;
 
-			virtual void scale() = 0;
-			virtual void rotate() = 0;
-			virtual void translate() = 0;
-			virtual void transform() = 0;
-			virtual void setTransform() = 0;
+			virtual RenderingContext2D& scale() = 0;
+			virtual RenderingContext2D& rotate() = 0;
+			virtual RenderingContext2D& translate() = 0;
+			virtual RenderingContext2D& transform() = 0;
+			virtual RenderingContext2D& setTransform() = 0;
 
 			double globalAlpha() const /*throw()*/ {
 				return states_.top().globalAlpha;
@@ -129,22 +129,22 @@ namespace ascension {
 				return *this;
 			}
 
-			virtual void clearRectangle(const Rect<>&) = 0;
-			virtual void fillRectangle(const Rect<>&) = 0;
-			virtual void strokeRectangle(const Rect<>&) = 0;
+			virtual RenderingContext2D& clearRectangle(const Rect<>&) = 0;
+			virtual RenderingContext2D& fillRectangle(const Rect<>&) = 0;
+			virtual RenderingContext2D& strokeRectangle(const Rect<>&) = 0;
 
-			virtual void beginPath() = 0;
-			virtual void closePath() = 0;
-			virtual void moveTo(const Point<>&) = 0;
-			virtual void lineTo(const Point<>&) = 0;
-			virtual void quadraticCurveTo() = 0;
-			virtual void bezierCurveTo() = 0;
-			virtual void arcTo() = 0;
-			virtual void rectangle() = 0;
-			virtual void arc() = 0;
-			virtual void fill() = 0;
-			virtual void stroke() = 0;
-			virtual void clip() = 0;
+			virtual RenderingContext2D& beginPath() = 0;
+			virtual RenderingContext2D& closePath() = 0;
+			virtual RenderingContext2D& moveTo(const Point<>&) = 0;
+			virtual RenderingContext2D& lineTo(const Point<>&) = 0;
+			virtual RenderingContext2D& quadraticCurveTo() = 0;
+			virtual RenderingContext2D& bezierCurveTo() = 0;
+			virtual RenderingContext2D& arcTo() = 0;
+			virtual RenderingContext2D& rectangle() = 0;
+			virtual RenderingContext2D& arc() = 0;
+			virtual RenderingContext2D& fill() = 0;
+			virtual RenderingContext2D& stroke() = 0;
+			virtual RenderingContext2D& clip() = 0;
 			virtual bool isPointInPath() const /*throw()*/ = 0;
 
 			virtual bool drawFocusRing() = 0;
@@ -159,11 +159,11 @@ namespace ascension {
 			}
 //			virtual TextAnchor& textAnchor() const /*throw()*/ = 0;
 //			virtual Baseline& textBaseline() const /*throw()*/ = 0;
-			virtual void fillText(const String& text, const Point<>& p, Scalar maxWidth) = 0;
-			virtual void strokeText(const String& text, const Point<>& p, Scalar maxWidth) = 0;
+			virtual RenderingContext2D& fillText(const String& text, const Point<>& p, Scalar maxWidth) = 0;
+			virtual RenderingContext2D& strokeText(const String& text, const Point<>& p, Scalar maxWidth) = 0;
 			virtual Dimension<> measureText(const String& text) = 0;
 
-			virtual void drawImage() = 0;
+			virtual RenderingContext2D& drawImage() = 0;
 
 			virtual ImageData createImageData(const Dimension<>&) const = 0;
 			virtual ImageData createImageData(const ImageData&) const = 0;
