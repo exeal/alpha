@@ -81,6 +81,8 @@ namespace ascension {
 			return temp += rhs;
 		}
 		template<typename Coordinate>
+		inline const Dimension<Coordinate> operator-(const Dimension<Coordinate>& self);
+		template<typename Coordinate>
 		const Dimension<Coordinate> operator-(const Dimension<Coordinate>& lhs, const Dimension<Coordinate>& rhs) {
 			Dimension<Coordinate> temp(lhs);
 			return temp += rhs;
