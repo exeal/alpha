@@ -274,12 +274,22 @@ namespace ascension {
 			template<typename InputIterator>
 			void setRules(InputIterator first, InputIterator last);
 		private:
+			struct Partition {
+				kernel::ContentType contentType;
+				kernel::Position start, tokenStart;
+				length_t tokenLength;
+				Partition(kernel::ContentType type, const kernel::Position& p,
+					const kernel::Position& startOfToken, length_t lengthOfToken) /*throw()*/
+					: contentType(type), start(p), tokenStart(startOfToken), tokenLength(lengthOfToken) {}
+				kernel::Position getTokenEnd() const /*throw()*/ {return kernel::Position(tokenStart.line, tokenStart.column + tokenLength);}
+			};
+		private:
 			void computePartitioning(const kernel::Position& start,
 				const kernel::Position& minimalLast, kernel::Region& changedRegion);
 			static void deleteRules(std::list<const TransitionRule*>& rules) /*throw()*/;
 			void dump() const;
 			void erasePartitions(const kernel::Position& first, const kernel::Position& last);
-			std::size_t partitionAt(const kernel::Position& at) const /*throw()*/;
+			detail::GapVector<Partition*>::const_iterator partitionAt(const kernel::Position& at) const /*throw()*/;
 			kernel::ContentType transitionStateAt(const kernel::Position& at) const /*throw()*/;
 			length_t tryTransition(const String& line, length_t column,
 				kernel::ContentType contentType, kernel::ContentType& destination) const /*throw()*/;
@@ -290,16 +300,6 @@ namespace ascension {
 			void doGetPartition(const kernel::Position& at, kernel::DocumentPartition& partition) const /*throw()*/;
 			void doInstall() /*throw()*/;
 		private:
-			struct Partition {
-				kernel::ContentType contentType;
-				kernel::Position start, tokenStart;
-				length_t tokenLength;
-				Partition(kernel::ContentType type, const kernel::Position& p,
-					const kernel::Position& startOfToken, length_t lengthOfToken) /*throw()*/
-					: contentType(type), start(p), tokenStart(startOfToken), tokenLength(lengthOfToken) {}
-				kernel::Position getTokenEnd() const /*throw()*/ {return kernel::Position(tokenStart.line, tokenStart.column + tokenLength);}
-			};
-			const kernel::Position& getPartitionStart(size_t partition) const /*throw()*/ {return partitions_[partition]->start;}
 			detail::GapVector<Partition*> partitions_;
 			typedef std::list<const TransitionRule*> TransitionRules;
 			TransitionRules rules_;

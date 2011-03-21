@@ -2,7 +2,8 @@
  * @file gap-vector.hpp
  * @author exeal
  * @date 2005-2009 (was gap-buffer.hpp)
- * @date 2010.10.20
+ * @date 2010-10-20 Renamed GapBuffer to GapVector.
+ * @date
  */
 
 #ifndef ASCENSION_GAP_VECTOR_HPP
@@ -25,37 +26,37 @@ namespace ascension {
 		class GapVector {
 		public:
 			/// A type represents the allocator class.
-			typedef Allocator AllocatorType;
+			typedef Allocator allocator_type;
 			/// A type counts the number of elements.
-			typedef typename Allocator::size_type SizeType;
+			typedef typename Allocator::size_type size_type;
 			/// A type provides the difference between two iterators that refer to elements.
-			typedef typename Allocator::difference_type DifferenceType;
+			typedef typename Allocator::difference_type difference_type;
 			/// A type represents the data type.
-			typedef typename Allocator::value_type ValueType;
+			typedef typename Allocator::value_type value_type;
 			/// A type provides a pointer to an element.
-			typedef typename Allocator::pointer Pointer;
+			typedef typename Allocator::pointer pointer;
 			/// A type provides a reference to an element.
-			typedef typename Allocator::reference Reference;
+			typedef typename Allocator::reference reference;
 			/// A type provides a pointer to a const element.
-			typedef typename Allocator::const_pointer ConstPointer;
+			typedef typename Allocator::const_pointer const_pointer;
 			/// A type provides a reference to a const element.
-			typedef typename Allocator::const_reference ConstReference;
-			class Iterator;
-			class ConstIterator;
+			typedef typename Allocator::const_reference const_reference;
+			class iterator;
+			class const_iterator;
 			/// A type provides a random-access iterator can read or modify any element in the reversed content.
-			typedef std::reverse_iterator<Iterator> ReverseIterator;
+			typedef std::reverse_iterator<iterator> reverse_iterator;
 			/// A type provides a random-access iterator can read any element in the content.
-			typedef std::reverse_iterator<ConstIterator> ConstReverseIterator;
+			typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 		public:
 			/**
 			 * Constructor.
 			 * @param initialSize the initial size
 			 * @param allocator The allocator object
 			 */
-			explicit GapVector(SizeType initialSize = 10, const Allocator& allocator = Allocator()) :
+			explicit GapVector(size_type initialSize = 10, const allocator_type& allocator = Allocator()) :
 				allocator_(allocator),
-				first_(allocator_.allocate(std::max<SizeType>(initialSize, 10), 0)),
-				last_(first_ + std::max<SizeType>(initialSize, 10)),
+				first_(allocator_.allocate(std::max<size_type>(initialSize, 10), 0)),
+				last_(first_ + std::max<size_type>(initialSize, 10)),
 				gapFirst_(first_), gapLast_(last_) {}
 			/**
 			 * Constructor specifies repition of a specified number of elements.
@@ -63,19 +64,19 @@ namespace ascension {
 			 * @param value The value of elements in the constructed content
 			 * @param allocator The allocator object
 			 */
-			GapVector(SizeType count, ConstReference value, const Allocator& allocator = Allocator()) : 
+			GapVector(size_type count, const_reference value, const allocator_type& allocator = Allocator()) : 
 				allocator_(allocator),
 				first_(allocator_.allocate(count, 0)), last_(first_ + count),
 				gapFirst_(first_), gapLast_(last_) {insert(0, count, value);}
 			/**
 			 * Constructor copies a range of a gap vector.
-			 * @tparam InputIterator The input iterator
+			 * @tparam Inputiterator The input iterator
 			 * @param first The first element in the range of elements to be copied
 			 * @param last The last element in the range of elements to be copied
 			 * @param allocator The allocator object
 			 */
-			template<typename InputIterator>
-			GapVector(InputIterator first, InputIterator last, const Allocator& allocator = Allocator()) :
+			template<typename Inputiterator>
+			GapVector(Inputiterator first, Inputiterator last, const allocator_type& allocator = allocator_type()) :
 				allocator_(allocator), first_(0), last_(0), gapFirst_(0), gapLast_(0) {insert(0, first, last);}
 			/**
 			 * Copy-constructor.
@@ -92,26 +93,26 @@ namespace ascension {
 			 * @param other The source object
 			 * @return This gap vector.
 			 */
-			GapVector& operator=(const GapVector& other) {GapVector(other).swap(*this); return *this;}
+			GapVector& operator=(const GapVector<T, Allocator>& other) {GapVector(other).swap(*this); return *this;}
 			/// Destructor.
 			~GapVector() {clear(); allocator_.deallocate(first_, capacity());}
 
 			/// Returns a random-access iterator to the beginning of the content.
-			Iterator begin() /*throw()*/ {return Iterator(*this, first_);}
+			iterator begin() /*throw()*/ {return iterator(*this, first_);}
 			/// Returns a const random-access iterator to the beginning of the content.
-			ConstIterator begin() const /*throw()*/ {return ConstIterator(*this, first_);}
+			const_iterator begin() const /*throw()*/ {return const_iterator(*this, first_);}
 			/// Returns a random-access iterator to the end of the content.
-			Iterator end() /*throw()*/ {return Iterator(*this, last_);}
+			iterator end() /*throw()*/ {return iterator(*this, last_);}
 			/// Returns a const random-access iterator to the end of the content.
-			ConstIterator end() const /*throw()*/ {return ConstIterator(*this, last_);}
+			const_iterator end() const /*throw()*/ {return const_iterator(*this, last_);}
 			/// Returns a random-access iterator to the beginning of the reversed content.
-			ReverseIterator rbegin() /*throw()*/ {return ReverseIterator(end());}
+			reverse_iterator rbegin() /*throw()*/ {return reverse_iterator(end());}
 			/// Returns a const random-access iterator to the beginning of the reversed content.
-			ConstReverseIterator rbegin() const /*throw()*/ {return ConstReverseIterator(end());}
+			const_reverse_iterator rbegin() const /*throw()*/ {return const_reverse_iterator(end());}
 			/// Returns a random-access iterator to the end of the reversed content.
-			ReverseIterator rend() /*throw()*/ {return ReverseIterator(begin());}
+			reverse_iterator rend() /*throw()*/ {return reverse_iterator(begin());}
 			/// Returns a const random-access iterator to the end of the reversed content.
-			ConstReverseIterator rend() const /*throw()*/ {return ConstReverseIterator(begin());}
+			const_reverse_iterator rend() const /*throw()*/ {return const_reverse_iterator(begin());}
 
 			/**
 			 * Returns a reference to the element at a specified position.
@@ -119,7 +120,7 @@ namespace ascension {
 			 * @return A reference to the element
 			 * @throw std#out_of_range @a index is greater than the size of the content
 			 */
-			Reference at(SizeType index) {
+			reference at(size_type index) {
 				if(index >= size())
 					throw std::out_of_range("index");
 				return operator[](index);
@@ -130,7 +131,7 @@ namespace ascension {
 			 * @return A reference to the element
 			 * @throw std#out_of_range @a index is greater than the size of the content
 			 */
-			ConstReference at(SizeType index) const {
+			const_reference at(size_type index) const {
 				if(index >= size())
 					throw std::out_of_range("index");
 				return operator[](index);
@@ -140,7 +141,7 @@ namespace ascension {
 			 * @param index The position of the element to retrieve
 			 * @return A reference to the element
 			 */
-			Reference operator[](SizeType index) /*throw()*/ {
+			reference operator[](size_type index) /*throw()*/ {
 				return first_[(first_ + index < gapFirst_) ? index : index + gap()];
 			}
 			/**
@@ -148,46 +149,51 @@ namespace ascension {
 			 * @param index The position of the element to retrieve
 			 * @return A reference to the element
 			 */
-			ConstReference operator[](SizeType index) const /*throw()*/ {
+			const_reference operator[](size_type index) const /*throw()*/ {
 				return first_[(first_ + index < gapFirst_) ? index : index + gap()];
 			}
 			/// Returns @c true if the content is empty.
 			bool empty() const /*throw()*/ {return size() == 0;}
 			/// Returns the number of elements in the content.
-			SizeType size() const /*throw()*/ {return capacity() - gap();}
+			size_type size() const /*throw()*/ {return capacity() - gap();}
 			/// Returns the number of elements that the content could contain without allocating more storage.
-			SizeType capacity() const /*throw()*/ {return last_ - first_;}
+			size_type capacity() const /*throw()*/ {return last_ - first_;}
 			/// Returns the maximum size of the gap vector.
-			SizeType maxSize() const {return allocator_.max_size();}
+			size_type maxSize() const {return allocator_.max_size();}
 			/// Returns a reference to the first element in this gap vector.
-			Reference front() /*throw()*/ {return *begin();}
+			reference front() /*throw()*/ {return *begin();}
 			/// Returns a const reference to the first element in this gap vector.
-			ConstReference front() const /*throw()*/ {return *begin();}
+			const_reference front() const /*throw()*/ {return *begin();}
 			/// Returns a reference to the last element in this gap vector.
-			Reference back() /*throw()*/ {return *--end();}
+			reference back() /*throw()*/ {
+			iterator temp(end());
+			--temp;
+			reference r(*temp);
+return r;
+}
 			/// Returns a const reference to the last element in this gap vector.
-			ConstReference back() const /*throw()*/ {return *--end();}
+			const_reference back() const /*throw()*/ {return *--end();}
 
 			/**
 			 * Assigns a range of elements.
-			 * @tparam InputIterator
+			 * @tparam Inputiterator
 			 * @param first The first element to assign
 			 * @param last The last element to assign
 			 */
-			template<typename InputIterator>
-			void assign(InputIterator first, InputIterator last) {clear(); insert(0, first, last);}
+			template<typename Inputiterator>
+			void assign(Inputiterator first, Inputiterator last) {clear(); insert(0, first, last);}
 			/**
 			 * Assigns a number of elements.
 			 * @param count The number of elements to assign
 			 * @param value The value of element to assign
 			 */
-			void assign(SizeType count, ConstReference value = ValueType()) {clear(); insert(0, count, value);}
+			void assign(size_type count, const_reference value = value_type()) {clear(); insert(0, count, value);}
 			/**
 			 * Inserts an element into the specified position.
 			 * @param index The position in this gap vector where the element is inserted
 			 * @param value The value of the element to insert
 			 */
-			void insert(SizeType index, ConstReference value) {
+			void insert(size_type index, const_reference value) {
 				makeGapAt(first_ + index);
 				*(gapFirst_++) = value;
 				if(gapFirst_ == gapLast_)
@@ -199,8 +205,8 @@ namespace ascension {
 			 * @param value The value of the element to insert
 			 * @return An iterator addresses the new inserted element
 			 */
-			Iterator insert(Iterator position, ConstReference value) {
-				const DifferenceType offset(position.offset());
+			iterator insert(iterator position, const_reference value) {
+				const difference_type offset(position.offset());
 				insert(offset, value);
 				return begin() + offset;
 			}
@@ -210,10 +216,10 @@ namespace ascension {
 			 * @param count The number of elements to insert
 			 * @param value The value of the element to insert
 			 */
-			void insert(SizeType index, SizeType count, ConstReference value) {
+			void insert(size_type index, size_type count, const_reference value) {
 				makeGapAt(first_ + size());
 				makeGapAt(first_ + index);
-				if(static_cast<SizeType>(gap()) <= count)
+				if(static_cast<size_type>(gap()) <= count)
 					reallocate(std::max(capacity() + count + 1, capacity() * 2));
 				std::fill_n(gapFirst_, count, value);
 				gapFirst_ += count;
@@ -224,29 +230,29 @@ namespace ascension {
 			 * @param count The number of elements to insert
 			 * @param value The value of the element to insert
 			 */
-			void insert(Iterator position, SizeType count, ConstReference value) {
+			void insert(iterator position, size_type count, const_reference value) {
 				insert(position.offset(), count, value);
 			}
 			/**
 			 * Inserts a range of elements into the specified position.
-			 * @tparam InputIterator The input iterator
+			 * @tparam Inputiterator The input iterator
 			 * @param index The position in this gap vector where the first element is inserted
 			 * @param first The first element to insert
 			 * @param last The last element to insert
 			 */
-			template<typename InputIterator>
-			void insert(SizeType index, InputIterator first, InputIterator last) {
-				insert(index, first, last, typename PointerType<InputIterator>::Tag());
+			template<typename Inputiterator>
+			void insert(size_type index, Inputiterator first, Inputiterator last) {
+				insert(index, first, last, typename PointerType<Inputiterator>::Tag());
 			}
 			/**
 			 * Inserts a range of elements into the specified position.
-			 * @tparam InputIterator The input iterator
+			 * @tparam Inputiterator The input iterator
 			 * @param position The position in this gap vector where the first element is inserted
 			 * @param first The first element to insert
 			 * @param last The last element to insert
 			 */
-			template<typename InputIterator>
-			void insert(ConstIterator position, InputIterator first, InputIterator last) {
+			template<typename Inputiterator>
+			void insert(const_iterator position, Inputiterator first, Inputiterator last) {
 				insert(position.offset(), first, last);
 			}
 			/// Erases the all element in this gap vector.
@@ -256,7 +262,7 @@ namespace ascension {
 			 * @param index The position of the first element to remove
 			 * @param length The number of elements to remove
 			 */
-			void erase(SizeType index, SizeType length = 1) {
+			void erase(size_type index, size_type length = 1) {
 				if(first_ + index <= gapFirst_ && gapFirst_ <= first_ + index + length) {
 					length -= (gapFirst_ - first_) - index;
 					gapFirst_ = first_ + index;
@@ -269,8 +275,8 @@ namespace ascension {
 			 * @param position The position of the element to remove
 			 * @return An iterator addresses the first element remaining beyond the removed element
 			 */
-			Iterator erase(Iterator position) {
-				const DifferenceType offset(position.offset());
+			iterator erase(iterator position) {
+				const difference_type offset(position.offset());
 				erase(offset);
 				return begin() + offset;
 			}
@@ -281,8 +287,8 @@ namespace ascension {
 			 * @return An iterator addresses the first element remaining beyond any elements
 			 *         removed
 			 */
-			Iterator erase(ConstIterator first, ConstIterator last) {
-				const DifferenceType offset(first.offset());
+			iterator erase(const_iterator first, const_iterator last) {
+				const difference_type offset(first.offset());
 				erase(first.offset(), last - first);
 				return begin() + offset;
 			}
@@ -290,7 +296,7 @@ namespace ascension {
 			 * Exchanges the elements of two gap vectors.
 			 * @param other A gap vector whose elements to be exchanged
 			 */
-			void swap(GapVector<ValueType, Allocator>& other) {
+			void swap(GapVector<value_type, allocator_type>& other) {
 				std::swap(allocator_, other.allocator);
 				std::swap(first_, other.first_);
 				std::swap(last_, other.last_);
@@ -298,127 +304,127 @@ namespace ascension {
 				std::swap(gapLast_, other.gapLast_);
 			}
 
-			class ConstIterator : public std::iterator<
-				std::random_access_iterator_tag, ValueType, DifferenceType, ConstPointer, ConstReference> {
+			class const_iterator : public std::iterator<
+				std::random_access_iterator_tag, value_type, difference_type, const_pointer, const_reference> {
 			public:
-				ConstIterator() : target_(0), current_(0) {}
+				const_iterator() : target_(0), current_(0) {}
 			protected:
-				ConstIterator(const GapVector<ValueType, Allocator>& target,
-					Pointer position) : target_(&target), current_(position) {assert(current_ != 0);}
+				const_iterator(const GapVector<value_type, allocator_type>& target,
+					pointer position) : target_(&target), current_(position) {assert(current_ != 0);}
 			public:
-				ConstReference operator*() const /*throw()*/ {return *current_;}
-				ConstReference operator->() const /*throw()*/ {return **this;}
-				ConstIterator& operator++() /*throw()*/ {
+				const_reference operator*() const /*throw()*/ {return *current_;}
+				const_reference operator->() const /*throw()*/ {return **this;}
+				const_iterator& operator++() /*throw()*/ {
 					if(++current_ == target_->gapFirst_) current_ = target_->gapLast_; return *this;}
-				ConstIterator operator++(int) /*throw()*/ {ConstIterator temp(*this); ++*this; return temp;}
-				ConstIterator& operator--() /*throw()*/ {
+				const_iterator operator++(int) /*throw()*/ {const_iterator temp(*this); ++*this; return temp;}
+				const_iterator& operator--() /*throw()*/ {
 					if(--current_ == target_->gapLast_ - 1) current_ = target_->gapFirst_ - 1; return *this;}
-				ConstIterator operator--(int) /*throw()*/ {ConstIterator temp(*this); --*this; return temp;}
-				ConstIterator& operator+=(DifferenceType n) /*throw()*/ {
+				const_iterator operator--(int) /*throw()*/ {const_iterator temp(*this); --*this; return temp;}
+				const_iterator& operator+=(difference_type n) /*throw()*/ {
 					if(current_ + n >= target_->gapFirst_ && current_ + n < target_->gapLast_)
 						n += target_->gap();
 					current_ += n;
 					return *this;
 				}
-				ConstIterator& operator-=(DifferenceType n) /*throw()*/ {return *this += -n;}
-				ConstIterator operator+(DifferenceType n) const /*throw()*/ {ConstIterator temp(*this); return temp += n;}
-				ConstIterator operator-(DifferenceType n) const /*throw()*/ {ConstIterator temp(*this); return temp -= n;}
-				DifferenceType operator-(const ConstIterator& rhs) const {return offset() - rhs.offset();}
-				bool operator==(const ConstIterator& rhs) const /*throw()*/ {return offset() == rhs.offset();}
-				bool operator!=(const ConstIterator& rhs) const /*throw()*/ {return !(*this == rhs);}
-				bool operator<(const ConstIterator& rhs) const /*throw()*/ {return offset() < rhs.offset();}
-				bool operator<=(const ConstIterator& rhs) const /*throw()*/ {return *this == rhs || *this < rhs;}
-				bool operator>(const ConstIterator& rhs) const /*throw()*/ {return !(*this <= rhs);}
-				bool operator>=(const ConstIterator& rhs) const /*throw()*/ {return !(*this < rhs);}
-				friend ConstIterator operator+(DifferenceType lhs, const ConstIterator& rhs) /*throw()*/ {return rhs + lhs;}
+				const_iterator& operator-=(difference_type n) /*throw()*/ {return *this += -n;}
+				const_iterator operator+(difference_type n) const /*throw()*/ {const_iterator temp(*this); return temp += n;}
+				const_iterator operator-(difference_type n) const /*throw()*/ {const_iterator temp(*this); return temp -= n;}
+				difference_type operator-(const const_iterator& rhs) const {return offset() - rhs.offset();}
+				bool operator==(const const_iterator& rhs) const /*throw()*/ {return offset() == rhs.offset();}
+				bool operator!=(const const_iterator& rhs) const /*throw()*/ {return !(*this == rhs);}
+				bool operator<(const const_iterator& rhs) const /*throw()*/ {return offset() < rhs.offset();}
+				bool operator<=(const const_iterator& rhs) const /*throw()*/ {return *this == rhs || *this < rhs;}
+				bool operator>(const const_iterator& rhs) const /*throw()*/ {return !(*this <= rhs);}
+				bool operator>=(const const_iterator& rhs) const /*throw()*/ {return !(*this < rhs);}
+				friend const_iterator operator+(difference_type lhs, const const_iterator& rhs) /*throw()*/ {return rhs + lhs;}
 			protected:
-				DifferenceType offset() const /*throw()*/ {
+				difference_type offset() const /*throw()*/ {
 					return (current_ <= target_->gapFirst_) ?
 						current_ - target_->first_ : current_ - target_->gapLast_ + target_->gapFirst_ - target_->first_;}
-				const GapVector<ValueType, Allocator>* target_;
-				Pointer current_;
-				friend class GapVector<ValueType, Allocator>;
+				const GapVector<value_type, allocator_type>* target_;
+				pointer current_;
+				friend class GapVector<value_type, allocator_type>;
 			};
-			class Iterator : public ConstIterator {
+			class iterator : public const_iterator {
 			public:
-				Iterator() {}
+				iterator() {}
 			private:
-				Iterator(const GapVector<ValueType, Allocator>& target, Pointer position) : ConstIterator(target, position) {}
+				iterator(const GapVector<value_type, allocator_type>& target, pointer position) : const_iterator(target, position) {}
 			public:
-				typedef Pointer pointer;
-				typedef Reference reference;
-				Reference operator*() const /*throw()*/ {return const_cast<Reference>(*current_);}
-				Reference operator->() const /*throw()*/ {return **this;}
-				Iterator& operator++() /*throw()*/ {
+				typedef typename GapVector<value_type, allocator_type>::pointer pointer;
+				typedef typename GapVector<value_type, allocator_type>::reference reference;
+				reference operator*() const /*throw()*/ {return const_cast<reference>(*current_);}
+				reference operator->() const /*throw()*/ {return **this;}
+				iterator& operator++() /*throw()*/ {
 					if(++current_ == target_->gapFirst_) current_ = target_->gapLast_; return *this;}
-				Iterator operator++(int) /*throw()*/ {Iterator temp(*this); ++*this; return temp;}
-				Iterator& operator--() /*throw()*/ {
+				iterator operator++(int) /*throw()*/ {iterator temp(*this); ++*this; return temp;}
+				iterator& operator--() /*throw()*/ {
 					if(--current_ == target_->gapLast_ - 1) current_ = target_->gapFirst_ - 1; return *this;}
-				Iterator operator--(int) /*throw()*/ {Iterator temp(*this); --*this; return temp;}
-				Iterator& operator+=(DifferenceType n) /*throw()*/ {
+				iterator operator--(int) /*throw()*/ {iterator temp(*this); --*this; return temp;}
+				iterator& operator+=(difference_type n) /*throw()*/ {
 					if(current_ + n >= target_->gapFirst_ && current_ + n < target_->gapLast_)
 						n += target_->gap();
 					current_ += n;
 					return *this;
 				}
-				Iterator& operator-=(DifferenceType n) /*throw()*/ {return *this += -n;}
-				Iterator operator+(DifferenceType n) const /*throw()*/ {Iterator temp(*this); return temp += n;}
-				Iterator operator-(DifferenceType n) const /*throw()*/ {Iterator temp(*this); return temp -= n;}
-				DifferenceType operator-(const Iterator& rhs) const /*throw()*/ {return offset() - rhs.offset();}
-				bool operator==(const Iterator& rhs) const /*throw()*/ {return offset() == rhs.offset();}
-				bool operator!=(const Iterator& rhs) const /*throw()*/ {return !(*this == rhs);}
-				bool operator<(const Iterator& rhs) const /*throw()*/ {return offset() < rhs.offset();}
-				bool operator<=(const Iterator& rhs) const /*throw()*/ {return *this == rhs || *this < rhs;}
-				bool operator>(const Iterator& rhs) const /*throw()*/ {return !(*this <= rhs);}
-				bool operator>=(const Iterator& rhs) const /*throw()*/ {return !(*this < rhs);}
+				iterator& operator-=(difference_type n) /*throw()*/ {return *this += -n;}
+				iterator operator+(difference_type n) const /*throw()*/ {iterator temp(*this); return temp += n;}
+				iterator operator-(difference_type n) const /*throw()*/ {iterator temp(*this); return temp -= n;}
+				difference_type operator-(const iterator& rhs) const /*throw()*/ {return offset() - rhs.offset();}
+				bool operator==(const iterator& rhs) const /*throw()*/ {return offset() == rhs.offset();}
+				bool operator!=(const iterator& rhs) const /*throw()*/ {return !(*this == rhs);}
+				bool operator<(const iterator& rhs) const /*throw()*/ {return offset() < rhs.offset();}
+				bool operator<=(const iterator& rhs) const /*throw()*/ {return *this == rhs || *this < rhs;}
+				bool operator>(const iterator& rhs) const /*throw()*/ {return !(*this <= rhs);}
+				bool operator>=(const iterator& rhs) const /*throw()*/ {return !(*this < rhs);}
 			private:
-				using ConstIterator::target_;
-				using ConstIterator::current_;
-				using ConstIterator::offset;
-				friend Iterator operator+(DifferenceType lhs, const Iterator& rhs) /*throw()*/ {return rhs + lhs;}
-				friend class GapVector<ValueType, Allocator>;
+				using const_iterator::target_;
+				using const_iterator::current_;
+				using const_iterator::offset;
+				friend iterator operator+(difference_type lhs, const iterator& rhs) /*throw()*/ {return rhs + lhs;}
+				friend class GapVector<value_type, allocator_type>;
 			};
 		private:
 			// helpers
 			template<typename U> struct PointerType {typedef void* Tag;};
 			template<typename U> struct PointerType<U*> {typedef int Tag;};
-			DifferenceType gap() const /*throw()*/ {return gapLast_ - gapFirst_;}
-			template<typename InputIterator>
-			void insert(SizeType index, InputIterator first, InputIterator last, int) {
+			difference_type gap() const /*throw()*/ {return gapLast_ - gapFirst_;}
+			template<typename Inputiterator>
+			void insert(size_type index, Inputiterator first, Inputiterator last, int) {
 				makeGapAt(first_ + size());
 				makeGapAt(first_ + index);
-				const SizeType c = last - first;
+				const size_type c = last - first;
 				if(gap() <= c)
 					reallocate(std::max(capacity() + c + 1, capacity() * 2));
-				std::memcpy(gapFirst_, first, c * sizeof(ValueType));
+				std::memcpy(gapFirst_, first, c * sizeof(value_type));
 				gapFirst_ += c;
 			}
-			template<typename InputIterator>
-			void insert(SizeType index, InputIterator first, InputIterator last, void*) {
+			template<typename Inputiterator>
+			void insert(size_type index, Inputiterator first, Inputiterator last, void*) {
 				makeGapAt(first_ + size());
 				makeGapAt(first_ + index);
-				const DifferenceType c = std::distance(first, last);
+				const difference_type c = std::distance(first, last);
 				if(gap() <= c)
 					reallocate(std::max(capacity() + c + 1, capacity() * 2));
 				std::copy(first, first + c, gapFirst_);
 				gapFirst_ += c;
 			}
-			void makeGapAt(Pointer position) /*throw()*/ {
+			void makeGapAt(pointer position) /*throw()*/ {
 				if(position < gapFirst_) {
 					gapLast_ -= gapFirst_ - position;
 					std::memmove(gapLast_, position, (gapFirst_ - position) * sizeof(T));
 				} else if(position > gapFirst_) {
-					const Pointer p = position + gap();
+					const pointer p = position + gap();
 					std::memmove(gapFirst_, gapLast_, (p - gapLast_) * sizeof(T));
 					gapLast_ = p;
 				}
 				gapFirst_ = position;
 			}
-			void reallocate(SizeType newSize) {	// size is not byte-count but element-count
-				Pointer newBuffer = allocator_.allocate(newSize, 0);
-				Pointer old = first_;
-				const DifferenceType tailOffset = gapLast_ - first_;
-				const SizeType tailLength = capacity() - tailOffset;
+			void reallocate(size_type newSize) {	// size is not byte-count but element-count
+				pointer newBuffer = allocator_.allocate(newSize, 0);
+				pointer old = first_;
+				const difference_type tailOffset = gapLast_ - first_;
+				const size_type tailLength = capacity() - tailOffset;
 				std::uninitialized_copy(old, old + (gapFirst_ - first_), newBuffer);
 				std::uninitialized_copy(old + tailOffset,
 					old + tailOffset + tailLength, newBuffer + newSize - tailLength);
@@ -430,11 +436,11 @@ namespace ascension {
 			}
 
 		private:
-			Allocator allocator_;
-			Pointer first_, last_;
-			Pointer gapFirst_, gapLast_;
-			friend class Iterator;
-			friend class ConstIterator;
+			allocator_type allocator_;
+			pointer first_, last_;
+			pointer gapFirst_, gapLast_;
+			friend class iterator;
+			friend class const_iterator;
 		};
 
 	}
