@@ -2116,6 +2116,8 @@ TextLayout::TextLayout(const String& text, ReadingDirection readingDirection,
 TextLayout::~TextLayout() /*throw()*/ {
 	for(size_t i = 0; i < numberOfRuns_; ++i)
 		delete runs_[i];
+	for(vector<const InlineArea*>::const_iterator i(inlineAreas_.begin()), e(inlineAreas_.end()); i != e; ++i)
+		delete *i;
 	if(numberOfLines() == 1) {
 		assert(lineOffsets_.get() == &SINGLE_LINE_OFFSETS);
 		lineOffsets_.release();
@@ -3227,9 +3229,14 @@ void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
 		newRuns.push_back(0);
 	runs_.reset(new TextRun*[numberOfRuns_ = newRuns.size()]);
 	copy(newRuns.begin(), newRuns.end(), runs_.get());
-	assert(numberOfLines() > 1);
-	lineFirstRuns_.reset(new length_t[numberOfLines_ = lineFirstRuns.size()]);
-	copy(lineFirstRuns.begin(), lineFirstRuns.end(), lineFirstRuns_.get());
+
+	{
+		assert(numberOfLines() > 1);
+		AutoBuffer<length_t> temp(new length_t[numberOfLines_ = lineFirstRuns.size()]);
+		copy(lineFirstRuns.begin(), lineFirstRuns.end(), temp.get());
+		lineFirstRuns_.reset(temp.release());
+	}
+
 	lineOffsets_.reset(new length_t[numberOfLines()]);
 	for(size_t i = 0; i < numberOfLines(); ++i)
 		const_cast<length_t&>(lineOffsets_[i]) = runs_[lineFirstRuns_[i]]->beginning();
