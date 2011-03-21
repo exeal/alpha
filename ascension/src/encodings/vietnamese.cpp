@@ -10,7 +10,7 @@
  * - IBM1165
  * - windows-1258
  * @author exeal
- * @date 2004-2010
+ * @date 2004-2011
  */
 
 #include <ascension/corelib/encoder.hpp>
@@ -155,7 +155,7 @@ namespace {
 	private:
 		Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext);
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext);
-		const IEncodingProperties& properties() const /*throw()*/;
+		const EncodingProperties& properties() const /*throw()*/;
 		Encoder& resetDecodingState() /*throw()*/;
 		Encoder& resetEncodingState() /*throw()*/;
 	private:
@@ -402,7 +402,7 @@ Encoder::Result VIQREncoder::doToUnicode(Char* to, Char* toEnd,
 	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-const IEncodingProperties& VIQREncoder::properties() const /*throw()*/ {
+const EncodingProperties& VIQREncoder::properties() const /*throw()*/ {
 	return VIQR;
 }
 

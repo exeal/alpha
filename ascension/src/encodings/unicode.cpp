@@ -11,7 +11,7 @@
  * - UTF-32LE
  * - UTF-5
  * @author exeal
- * @date 2003-2010
+ * @date 2003-2011
  */
 
 #include <ascension/corelib/encoder.hpp>
@@ -34,11 +34,11 @@ namespace {
 			const Char* from, const Char* fromEnd, const Char*& fromNext);
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 			const byte* from, const byte* fromEnd, const byte*& fromNext);
-		const IEncodingProperties& properties() const /*throw()*/ {return props_;}
+		const EncodingProperties& properties() const /*throw()*/ {return props_;}
 		Encoder& resetDecodingState() /*throw()*/ {decodingState_ = 0; return *this;}
 		Encoder& resetEncodingState() /*throw()*/ {encodingState_ = 0; return *this;}
 	private:
-		const IEncodingProperties& props_;
+		const EncodingProperties& props_;
 		byte encodingState_, decodingState_;
 	};
 
@@ -818,7 +818,7 @@ namespace {
 
 /// @see EncodingDetector#doDetect
 pair<MIBenum, string> UnicodeDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/ {
-	const IEncodingProperties* result = 0;
+	const EncodingProperties* result = 0;
 	// first, test Unicode byte order marks
 	if(last - first >= 3 && memcmp(first, UTF8_BOM, ASCENSION_COUNTOF(UTF8_BOM)) == 0)
 		result = &utf8;

@@ -13,7 +13,7 @@
  * - ISO-2022-JP-2004-Compatible
  * - MacJapanese
  * @author exeal
- * @date 2004-2010
+ * @date 2004-2011
  *
  * Following documentation is written in Japanese (HeHe).
  *
@@ -111,11 +111,11 @@ namespace {
 			const Char* from, const Char* fromEnd, const Char*& fromNext);
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 			const byte* from, const byte* fromEnd, const byte*& fromNext);
-		const IEncodingProperties& properties() const /*throw()*/ {return props_;}
+		const EncodingProperties& properties() const /*throw()*/ {return props_;}
 		Encoder& resetDecodingState() /*throw()*/ {decodingState_.reset(); return *this;}
 		Encoder& resetEncodingState() /*throw()*/ {encodingState_.reset(); return *this;}
 	private:
-		const IEncodingProperties& props_;
+		const EncodingProperties& props_;
 		EncodingState encodingState_, decodingState_;
 	};
 
@@ -1472,7 +1472,7 @@ ASCENSION_IMPLEMENT_ISO_2022_JP_X('c', JP_2004_COMPATIBLE)
 // JISAutoDetector //////////////////////////////////////////////////////////
 
 namespace {
-	inline const IEncodingProperties& detectShiftJIS(const byte* from, const byte* last, ptrdiff_t& convertibleBytes, bool& foundKana) {
+	inline const EncodingProperties& detectShiftJIS(const byte* from, const byte* last, ptrdiff_t& convertibleBytes, bool& foundKana) {
 		bool jis2004 = false;
 		foundKana = false;
 		const byte* p;
@@ -1506,9 +1506,9 @@ namespace {
 				break;
 		}
 		convertibleBytes = p - from;
-		return jis2004 ? static_cast<IEncodingProperties&>(shiftjis2004) : static_cast<IEncodingProperties&>(shiftjis);
+		return jis2004 ? static_cast<EncodingProperties&>(shiftjis2004) : static_cast<EncodingProperties&>(shiftjis);
 	}
-	inline const IEncodingProperties& detectEUCJP(const byte* from, const byte* last, ptrdiff_t& convertibleBytes, bool& foundKana) {
+	inline const EncodingProperties& detectEUCJP(const byte* from, const byte* last, ptrdiff_t& convertibleBytes, bool& foundKana) {
 		bool jis2004 = false;
 		foundKana = false;
 		const byte* p;
@@ -1558,9 +1558,9 @@ namespace {
 				break;
 		}
 		convertibleBytes = p - from;
-		return jis2004 ? static_cast<IEncodingProperties&>(eucjis2004) : static_cast<IEncodingProperties&>(eucjp);
+		return jis2004 ? static_cast<EncodingProperties&>(eucjis2004) : static_cast<EncodingProperties&>(eucjp);
 	}
-	inline const IEncodingProperties& detectISO2022JP(const byte* from, const byte* last, ptrdiff_t& convertibleBytes, bool& foundKana) {
+	inline const EncodingProperties& detectISO2022JP(const byte* from, const byte* last, ptrdiff_t& convertibleBytes, bool& foundKana) {
 		char x = '0';	// ISO-2022-JP-X
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 		bool x0208 = false;
@@ -1642,7 +1642,7 @@ namespace {
 		}
 
 		convertibleBytes = p - from;
-		const IEncodingProperties* result = 0;
+		const EncodingProperties* result = 0;
 		switch(x) {
 		case '0': result = &iso2022jp; break;
 		case '2': result = &iso2022jp2; break;
@@ -1675,7 +1675,7 @@ pair<MIBenum, string> JISAutoDetector::doDetect(const byte* first, const byte* l
 
 	bool foundKana;
 	ptrdiff_t cb2;
-	const IEncodingProperties* result2 = &detectShiftJIS(first, last, cb2, foundKana);
+	const EncodingProperties* result2 = &detectShiftJIS(first, last, cb2, foundKana);
 	if(cb2 > cb) {
 		result = make_pair(result2->mibEnum(), result2->name());
 		cb = cb2;
