@@ -271,7 +271,7 @@ namespace ascension {
 					case 3:	// bottom
 						return std::max(rect_.origin().y, rect_.origin().y + rect_.size().cy);
 					default:
-						assert(false);
+						ASCENSION_ASSERT_NOT_REACHED();
 				}
 			}
 			Coordinate operator+() const {return +(*this);}
