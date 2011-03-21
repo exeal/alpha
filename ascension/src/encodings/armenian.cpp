@@ -6,7 +6,7 @@
  * - ARMSCII-8A
  * This implementation is based on the report of Hovik Melikyan (http://www.freenet.am/armscii/).
  * @author exeal
- * @date 2004-2010
+ * @date 2004-2011
  */
 
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
@@ -32,16 +32,16 @@ namespace {
 	private:
 		class InternalEncoder : public Encoder {
 		public:
-			explicit InternalEncoder(const IEncodingProperties& properties) /*throw()*/ : props_(properties) {
+			explicit InternalEncoder(const EncodingProperties& properties) /*throw()*/ : props_(properties) {
 			}
 		private:
 			Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
 				const Char* from, const Char* fromEnd, const Char*& fromNext);
 			Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 				const byte* from, const byte* fromEnd, const byte*& fromNext);
-			const IEncodingProperties& properties() const /*throw()*/ {return props_;}
+			const EncodingProperties& properties() const /*throw()*/ {return props_;}
 		private:
-			const IEncodingProperties& props_;
+			const EncodingProperties& props_;
 		};
 	};
 	ARMSCII<8> ARMSCII_8;
@@ -417,7 +417,7 @@ pair<MIBenum, string> ArmenianDetector::doDetect(const byte* first, const byte* 
 		}
 	}
 
-	const IEncodingProperties* props = 0;
+	const EncodingProperties* props = 0;
 #ifdef ASCENSION_NO_MINORITY_ENCODINGS
 	props = &ARMSCII_8;
 	for(; first < last; ++first) {

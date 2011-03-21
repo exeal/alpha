@@ -6,7 +6,7 @@
  * - JOHAB
  * - ISO-2022-KR
  * @author exeal
- * @date 2007-2010
+ * @date 2007-2011
  */
 
 #include <ascension/corelib/encoder.hpp>
@@ -33,11 +33,11 @@ namespace {
 			const Char* from, const Char* fromEnd, const Char*& fromNext);
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 			const byte* from, const byte* fromEnd, const byte*& fromNext);
-		const IEncodingProperties& properties() const /*throw()*/ {return props_;}
+		const EncodingProperties& properties() const /*throw()*/ {return props_;}
 		Encoder& resetDecodingState() /*throw()*/ {decodingState_ = 0; return *this;}
 		Encoder& resetEncodingState() /*throw()*/ {encodingState_ = 0; return *this;}
 	private:
-		const IEncodingProperties& props_;
+		const EncodingProperties& props_;
 		byte encodingState_, decodingState_;
 	};
 
