@@ -1410,7 +1410,7 @@ inline detail::GapVector<LexicalPartitioner::Partition*>::const_iterator
 	} comp;
 
 	detail::GapVector<Partition*>::const_iterator p(
-		detail::searchBound2(partitions_.begin(), partitions_.end(), at, comp));
+		detail::searchBound(partitions_.begin(), partitions_.end(), at, comp));
 	if(p == partitions_.end()) {
 		assert(partitions_.front()->start != document()->region().first);	// twilight context
 		return partitions_.begin();

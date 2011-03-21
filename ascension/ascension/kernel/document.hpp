@@ -275,8 +275,8 @@ namespace ascension {
 				void next() {++impl_;}
 				void previous() {--impl_;}
 			private:
-				Iterator(detail::GapVector<length_t>::ConstIterator impl) : impl_(impl) {}
-				detail::GapVector<length_t>::ConstIterator impl_;
+				Iterator(detail::GapVector<length_t>::const_iterator impl) : impl_(impl) {}
+				detail::GapVector<length_t>::const_iterator impl_;
 				friend class Bookmarker;
 			};
 			// destructor
@@ -296,7 +296,7 @@ namespace ascension {
 			void mark(length_t line, bool set = true);
 			void toggle(length_t line);
 		private:
-			detail::GapVector<length_t>::Iterator find(length_t line) const /*throw()*/;
+			detail::GapVector<length_t>::iterator find(length_t line) const /*throw()*/;
 			// IDocumentListener
 			void documentAboutToBeChanged(const Document& document);
 			void documentChanged(const Document& document, const DocumentChange& change);
