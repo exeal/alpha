@@ -267,17 +267,17 @@ void Bookmarker::documentChanged(const Document& document, const DocumentChange&
 	if(change.erasedRegion().first.line != change.erasedRegion().second.line) {
 		// remove the marks on the deleted lines
 		const length_t lines = change.erasedRegion().second.line - change.erasedRegion().first.line;
-		const GapVector<length_t>::Iterator e(markedLines_.end());
-		GapVector<length_t>::Iterator top(find(change.erasedRegion().first.line));
+		const GapVector<length_t>::iterator e(markedLines_.end());
+		GapVector<length_t>::iterator top(find(change.erasedRegion().first.line));
 		if(top != e) {
 			if(*top == change.erasedRegion().first.line)
 				++top;
-			GapVector<length_t>::Iterator bottom(find(change.erasedRegion().second.line));
+			GapVector<length_t>::iterator bottom(find(change.erasedRegion().second.line));
 			if(bottom != e && *bottom == change.erasedRegion().second.line)
 				++bottom;
 			// slide the following lines before removing
 			if(bottom != e) {
-				for(GapVector<length_t>::Iterator i(bottom); i != e; ++i)
+				for(GapVector<length_t>::iterator i(bottom); i != e; ++i)
 					*i -= lines;	// ??? C4267@MSVC9
 			}
 			markedLines_.erase(top, bottom);	// GapVector<>.erase does not return an iterator
@@ -285,11 +285,11 @@ void Bookmarker::documentChanged(const Document& document, const DocumentChange&
 	}
 	if(change.insertedRegion().first.line != change.insertedRegion().second.line) {
 		const length_t lines = change.insertedRegion().second.line - change.insertedRegion().first.line;
-		GapVector<length_t>::Iterator i(find(change.insertedRegion().first.line));
+		GapVector<length_t>::iterator i(find(change.insertedRegion().first.line));
 		if(i != markedLines_.end()) {
 			if(*i == change.insertedRegion().first.line && change.insertedRegion().first.column != 0)
 				++i;
-			for(const GapVector<length_t>::Iterator e(markedLines_.end()); i != e; ++i)
+			for(const GapVector<length_t>::iterator e(markedLines_.end()); i != e; ++i)
 				*i += lines;	// ??? - C4267@MSVC9
 		}
 	}
@@ -303,7 +303,7 @@ Bookmarker::Iterator Bookmarker::end() const {
 	return Iterator(markedLines_.end());
 }
 
-inline GapVector<length_t>::Iterator Bookmarker::find(length_t line) const /*throw()*/ {
+inline GapVector<length_t>::iterator Bookmarker::find(length_t line) const /*throw()*/ {
 	// TODO: can write faster implementation (and design) by internal.searchBound().
 	Bookmarker& self = const_cast<Bookmarker&>(*this);
 	return lower_bound(self.markedLines_.begin(), self.markedLines_.end(), line);
@@ -317,7 +317,7 @@ inline GapVector<length_t>::Iterator Bookmarker::find(length_t line) const /*thr
 bool Bookmarker::isMarked(length_t line) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
-	const GapVector<length_t>::ConstIterator i(find(line));
+	const GapVector<length_t>::const_iterator i(find(line));
 	return i != markedLines_.end() && *i == line;
 }
 
@@ -330,7 +330,7 @@ bool Bookmarker::isMarked(length_t line) const {
 void Bookmarker::mark(length_t line, bool set) {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
-	const GapVector<length_t>::Iterator i(find(line));
+	const GapVector<length_t>::iterator i(find(line));
 	if(i != markedLines_.end() && *i == line) {
 		if(!set) {
 			markedLines_.erase(i);
@@ -370,7 +370,7 @@ length_t Bookmarker::next(length_t from, Direction direction, bool wrapAround /*
 			marks = markedLines_.size();
 	}
 
-	size_t i = static_cast<GapVector<length_t>::ConstIterator>(find(from)) - markedLines_.begin();
+	size_t i = static_cast<GapVector<length_t>::const_iterator>(find(from)) - markedLines_.begin();
 	if(direction == Direction::FORWARD) {
 		if(i == markedLines_.size()) {
 			if(!wrapAround)
@@ -419,7 +419,7 @@ void Bookmarker::removeListener(BookmarkListener& listener) {
 void Bookmarker::toggle(length_t line) {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
-	const GapVector<length_t>::Iterator i(find(line));
+	const GapVector<length_t>::iterator i(find(line));
 	if(i == markedLines_.end() || *i != line)
 		markedLines_.insert(i, line);
 	else

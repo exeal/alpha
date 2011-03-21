@@ -485,7 +485,7 @@ namespace {
 	class SimpleStyledTextRunIterator : public StyledTextRunIterator {
 	public:
 		SimpleStyledTextRunIterator(const vector<const StyledTextRun>& styledRanges, length_t start) : styledRanges_(styledRanges) {
-			current_ = detail::searchBound2(styledRanges_.begin(), styledRanges_.end(), start, BeginningOfStyledTextRun());
+			current_ = detail::searchBound(styledRanges_.begin(), styledRanges_.end(), start, BeginningOfStyledTextRun());
 		}
 		// presentation.StyledTextRunIterator
 		StyledTextRun current() const {

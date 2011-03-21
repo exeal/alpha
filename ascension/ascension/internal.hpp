@@ -28,61 +28,28 @@ namespace ascension {
 		template<int v> struct Int2Type {static const int value = v;};
 
 		/**
-		 * @tparam BidirectionalIterator
-		 * @tparam T
-		 * @tparam Comp
-		 * @param first, last
-		 * @param value
-		 * @param compare
-		 * @return
+		 * Returns the iterator addresses the first element in the sorted range which satisfies
+		 * comp(value, *i) (@a i is the iterator).
+		 * @tparam BidirectionalIterator The type of @a first and @a last
+		 * @tparam T The type of @a value
+		 * @tparam Comp The type of @a compare
+		 * @param first, last The bidirectional iterators addresses the beginning and the end of
+		 *                    the sequence
+		 * @param value The value to search
+		 * @param compare The comparison function object
+		 * @return The result, or @a last if comp(value, *first) returned @c true
 		 */
 		template<typename BidirectionalIterator, typename T, typename Comp>
-		inline BidirectionalIterator searchBound2(BidirectionalIterator first, BidirectionalIterator last, const T& value, Comp compare) {
+		inline BidirectionalIterator searchBound(BidirectionalIterator first, BidirectionalIterator last, const T& value, Comp compare) {
 			BidirectionalIterator temp(std::upper_bound(first, last, value, compare));
 			return (temp != first) ? --temp : last;
 		}
 
-		/// See above.
+		/// The overloaded version uses @c operator&lt;.
 		template<typename BidirectionalIterator, typename T>
-		inline BidirectionalIterator searchBound2(BidirectionalIterator first, BidirectionalIterator last, const T& value) {
+		inline BidirectionalIterator searchBound(BidirectionalIterator first, BidirectionalIterator last, const T& value) {
 			BidirectionalIterator temp(std::upper_bound(first, last, value));
 			return (temp != first) ? --temp : last;
-		}
-
-		/**
-		 * Searches upper or lower bound.
-		 * @param first the start of the range to search
-		 * @param last the end of the range to search
-		 * @param value the value to find
-		 * @param get the function takes a @c Index parameter and returns a @c Value
-		 * @param comp the comparation function takes two @c Value parameters and returns a boolean
-		 * @return the bound
-		 */
-		template<typename Index, typename Value, typename Getter, typename Comparer>
-		inline Index searchBound(Index first, Index last, const Value& value, Getter get, Comparer comp) {
-			assert(first <= last);
-			Index c1 = last - first, c2, mid, p = first;
-			while(c1 > 0) {
-				c2 = c1 / 2, mid = p + c2;
-				if(comp(get(mid), value))
-					p = ++mid, c1 -= c2 + 1;
-				else
-					c1 = c2;
-			}
-			return (p != first) ? p - 1 : last;
-		}
-
-		/**
-		 * Searches upper or lower bound.
-		 * @param first the start of the range to search
-		 * @param last the end of the range to search
-		 * @param value the value to find
-		 * @param get the function takes a @c Index parameter and returns a @c Value
-		 * @return the bound
-		 */
-		template<typename Index, typename Value, typename Getter>
-		inline Index searchBound(Index first, Index last, const Value& value, Getter get) {
-			return searchBound(first, last, value, get, std::less_equal<Value>());
 		}
 
 		/// Returns absolute difference of two numerals.
