@@ -1277,7 +1277,7 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()
 		Region(Position(min(change.erasedRegion().beginning().line, change.insertedRegion().beginning().line), 0), doc.region().end()));
 	ContentType contentType, destination;
 	contentType = (i.tell().line == 0) ? DEFAULT_CONTENT_TYPE
-		: partitions_[partitionAt(Position(i.tell().line - 1, doc.lineLength(i.tell().line - 1)))]->contentType;
+		: (*partitionAt(Position(i.tell().line - 1, doc.lineLength(i.tell().line - 1))))->contentType;
 	for(const String* line = &doc.line(i.tell().line); ; ) {	// scan and tokenize into partitions...
 		const bool atEOL = i.tell().column == line->length();
 		length_t tokenLength = tryTransition(*line, i.tell().column, contentType, destination);
@@ -1327,11 +1327,11 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()
 
 /// @see kernel#DocumentPartitioner#doGetPartition
 void LexicalPartitioner::doGetPartition(const Position& at, DocumentPartition& partition) const /*throw()*/ {
-	const size_t i = partitionAt(at);
-	const Partition& p = *partitions_[i];
+	detail::GapVector<Partition*>::const_iterator i(partitionAt(at));
+	const Partition& p = **i;
 	partition.contentType = p.contentType;
 	partition.region.first = p.start;
-	partition.region.second = (i < partitions_.size() - 1) ? partitions_[i + 1]->start : document()->region().second;
+	partition.region.second = (i < partitions_.end() - 1) ? (*++i)->start : document()->region().second;
 }
 
 /// @see kernel#DocumentPartitioner#doInstall
@@ -1361,13 +1361,13 @@ void LexicalPartitioner::dump() const {
 // erases partitions encompassed with the region between the given two positions.
 void LexicalPartitioner::erasePartitions(const Position& first, const Position& last) {
 	// locate the first partition to delete
-	size_t deletedFirst = partitionAt(first);
+	size_t deletedFirst = partitionAt(first) - partitions_.begin();
 	if(first >= partitions_[deletedFirst]->getTokenEnd())
 		++deletedFirst;	// do not delete this partition
 //	else if(deletedFirst < partitions_.getSize() - 1 && partitions_[deletedFirst + 1]->tokenStart < change.getRegion().getBottom())
 //		++deletedFirst;	// delete from the next partition
 	// locate the last partition to delete
-	size_t deletedLast = partitionAt(last) + 1;	// exclusive
+	size_t deletedLast = partitionAt(last) - partitions_.begin() + 1;	// exclusive
 	if(deletedLast < partitions_.size() && partitions_[deletedLast]->tokenStart < last)
 		++deletedLast;
 //	else if(titions_[predeletedLast - 1]->start == change.getRegion().getBottom())
@@ -1401,21 +1401,28 @@ void LexicalPartitioner::erasePartitions(const Position& first, const Position& 
 }
 
 // returns the index of the partition encompasses the given position.
-inline size_t LexicalPartitioner::partitionAt(const Position& at) const /*throw()*/ {
-	size_t result = detail::searchBound(
-		static_cast<size_t>(0), partitions_.size(), at, bind1st(mem_fun(&LexicalPartitioner::getPartitionStart), this));
-	if(result == partitions_.size()) {
+inline detail::GapVector<LexicalPartitioner::Partition*>::const_iterator
+		LexicalPartitioner::partitionAt(const Position& at) const /*throw()*/ {
+	static const struct {
+		bool operator()(const Position& at, const Partition* p) const {
+			return at < p->start;
+		}
+	} comp;
+
+	detail::GapVector<Partition*>::const_iterator p(
+		detail::searchBound2(partitions_.begin(), partitions_.end(), at, comp));
+	if(p == partitions_.end()) {
 		assert(partitions_.front()->start != document()->region().first);	// twilight context
-		return 0;
+		return partitions_.begin();
 	}
 	if(at.line < document()->numberOfLines()
-			&& partitions_[result]->tokenStart == at && result > 0 && at.column == document()->lineLength(at.line))
-		--result;
+			&& (*p)->tokenStart == at && p != partitions_.begin() && at.column == document()->lineLength(at.line))
+		--p;
 //	if(result > 0 && partitions_[result]->start == partitions_[result - 1]->start)
-//		--result;
-	while(result + 1 < partitions_.size() && partitions_[result + 1]->start == partitions_[result]->start)
-		++result;
-	return result;
+//		--p;
+	while(p + 1 < partitions_.end() && (*(p + 1))->start == (*p)->start)
+		++p;
+	return p;
 }
 
 /**
@@ -1432,10 +1439,10 @@ inline size_t LexicalPartitioner::partitionAt(const Position& at) const /*throw(
 inline ContentType LexicalPartitioner::transitionStateAt(const Position& at) const /*throw()*/ {
 	if(at.line == 0 && at.column == 0)
 		return DEFAULT_CONTENT_TYPE;
-	size_t i = partitionAt(at);
-	if(partitions_[i]->start == at)
+	detail::GapVector<Partition*>::const_iterator i(partitionAt(at));
+	if((*i)->start == at)
 		--i;
-	return partitions_[i]->contentType;
+	return (*i)->contentType;
 }
 
 /**
