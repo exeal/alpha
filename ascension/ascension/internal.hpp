@@ -9,6 +9,7 @@
 #define ASCENSION_INTERNAL_HPP
 
 #include <ascension/corelib/basic-types.hpp>
+#include <ascension/corelib/type-traits.hpp>
 #include <algorithm>	// std.fill, std.find, std.upper_bound
 #include <list>
 #include <stdexcept>
