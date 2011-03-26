@@ -1,6 +1,6 @@
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual C++ Express 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Alpha", "Alpha.vcproj", "{B636D539-C324-4DF9-8233-5DEC6094A186}"
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual C++ Express 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Alpha", "Alpha.vcxproj", "{B636D539-C324-4DF9-8233-5DEC6094A186}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
