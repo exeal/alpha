@@ -50,6 +50,21 @@ namespace ascension {
 		template<> struct RemoveSigned<unsigned long> {typedef long Type;};
 //		template<> struct RemoveSigned<unsigned __int64> {typedef __int64 Type;};
 
+		/**
+		 * @def ASCENSION_DEFINE_HAS_METHOD
+		 * @internal
+		 */
+#		define ASCENSION_DEFINE_HAS_METHOD(methodName, methodSignature)							\
+			template<typename T> class Has_##methodName {										\
+				typedef char Yes;																\
+				typedef char(&No)[2];															\
+				template<typename U, U> struct Test;											\
+				template<typename U> static Yes test(Test<methodSignature, &U::methodName>*);	\
+				template<typename U> static No test(...);										\
+			public:																				\
+				static const bool value = sizeof(test<T>(0)) == sizeof(Yes);					\
+			}
+
 	}
 }
 
