@@ -11,7 +11,20 @@
 
 namespace ascension {
 	namespace win32 {
-
+#if 0
+		/// Makes a menu handle parameter from either a menu handle or numeric identifier.
+		class MenuHandleOrControlID {
+		public:
+			/// Constructor takes a menu handle.
+			MenuHandleOrControlID(HMENU handle) /*throw()*/ : handle_(handle) {}
+			/// Constructor takes a numeric identifier.
+			MenuHandleOrControlID(UINT_PTR id) /*throw()*/ : handle_(reinterpret_cast<HMENU>(id)) {}
+			/// Returns the menu handle.
+			HMENU get() const /*throw()*/ {return handle_;}
+		private:
+			HMENU handle_;
+		};
+#endif
 		class WidgetBase : public viewers::base::Widget {
 		public:
 			const Handle<HWND>& handle() const;
@@ -55,18 +68,23 @@ namespace ascension {
 				ClassInformation() : style(0) {}
 			};
 		protected:
-			explicit WidgetBase(LRESULT (*messageDispatcher)(WidgetBase&, UINT, WPARAM, LPARAM, bool&));
+			virtual LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) = 0;
 			virtual void provideClassInformation(ClassInformation& classInfomation) const {}
 			virtual std::basic_string<WCHAR> provideClassName() const = 0;
 		private:
+			graphics::Point<> clientToScreen(const graphics::Point<>& p) const;
+			graphics::Point<> screenToClient(const graphics::Point<>& p) const;
 			static LRESULT CALLBACK windowProcedure(HWND window, UINT message, WPARAM wp, LPARAM lp);
 		private:
 			Handle<HWND> handle_;
-			LRESULT (*messageDispatcher_)(WidgetBase&, UINT, WPARAM, LPARAM, bool&);
 		};
 
 		template<typename Derived>
 		class Widget : public MessageDispatcher<Derived>, public WidgetBase {
+		private:
+			LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
+				MessageDispatcher<Derived>::processMessage(*this, message, wp, lp, consumed);
+			}
 		};
 
 	}
