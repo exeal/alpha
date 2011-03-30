@@ -1,10 +1,11 @@
 /**
  * @file text-editor.cpp
  * @author exeal
- * @date 2006-2010
+ * @date 2006-2011
  */
 
 #include <ascension/text-editor.hpp>
+#include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/content-assist.hpp>
 #include <ascension/win32/ui/wait-cursor.hpp>
 
@@ -17,11 +18,11 @@ using namespace ascension::viewers;
 using namespace std;
 
 
-// Command //////////////////////////////////////////////////////////////////
+// Command ////////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Protected constructor.
- * @param viewer the target text viewer
+ * @param viewer The target text viewer
  */
 Command::Command(TextViewer& viewer) /*throw()*/ : viewer_(&viewer), numericPrefix_(1) {
 }
@@ -31,7 +32,7 @@ Command::~Command() /*throw()*/ {
 }
 
 
-// commands.* ///////////////////////////////////////////////////////////////
+// commands.* /////////////////////////////////////////////////////////////////////////////////////
 
 namespace {
 	inline bool abortIncrementalSearch(TextViewer& target) {
@@ -54,7 +55,7 @@ namespace {
 	}
 }
 
-#define ASCENSION_ASSERT_IFISWINDOW()	assert(target().isWindow())
+#define ASCENSION_ASSERT_IFISWINDOW() assert(target().isWindow())
 
 // the command can't perform and throw if the document is read only
 #define ASCENSION_CHECK_DOCUMENT_READ_ONLY()	\
@@ -89,8 +90,8 @@ namespace {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param region the region to operate on. if empty, the accessible region of the document. this
+ * @param viewer The target text viewer
+ * @param region The region to operate on. If empty, the accessible region of the document. This
  *               region will be shrunk to the accessible region when the command performed
  */
 BookmarkMatchLinesCommand::BookmarkMatchLinesCommand(TextViewer& viewer,
@@ -104,12 +105,12 @@ length_t BookmarkMatchLinesCommand::numberOfMarkedLines() const /*throw()*/ {
 
 /**
  * Implements @c Command#perform.
- * @retval false the pattern to search was not set
- * @throw ... any exceptions specified @c TextSearcher#search other than @c BadPositionException
- *            and @c IllegalStateException. if threw, the marking is interrupted
+ * @retval false The pattern to search was not set
+ * @throw ... Any exceptions specified @c TextSearcher#search other than @c BadPositionException
+ *            and @c IllegalStateException. If threw, the marking is interrupted
  */
 bool BookmarkMatchLinesCommand::perform() {
-	WaitCursor wc;
+	win32::WaitCursor wc;
 	TextViewer& viewer = target();
 	Document& document = viewer.document();
 	const searcher::TextSearcher* s;
@@ -138,7 +139,7 @@ bool BookmarkMatchLinesCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
+ * @param viewer The target text viewer
  */
 CancelCommand::CancelCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
 }
@@ -156,9 +157,9 @@ bool CancelCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param procedure a pointer to the member function defines the destination
- * @param extendSelection set @c true to extend selection
+ * @param viewer The target text viewer
+ * @param procedure A pointer to the member function defines the destination
+ * @param extendSelection Set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Position(*procedure)(const Point&), bool extendSelection /* = false */) :
@@ -171,9 +172,9 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param procedure a pointer to the member function defines the destination
- * @param extendSelection set @c true to extend selection
+ * @param viewer The target text viewer
+ * @param procedure A pointer to the member function defines the destination
+ * @param extendSelection Set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Position(*procedure)(const Point&, length_t), bool extendSelection /* = false */) :
@@ -186,9 +187,9 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param procedure a pointer to the member function defines the destination
- * @param extendSelection set @c true to extend selection
+ * @param viewer The target text viewer
+ * @param procedure A pointer to the member function defines the destination
+ * @param extendSelection Set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Position(*procedure)(const Point&, locations::CharacterUnit, length_t), bool extendSelection /* = false */) :
@@ -201,9 +202,9 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param procedure a pointer to the member function defines the destination
- * @param extendSelection set @c true to extend selection
+ * @param viewer The target text viewer
+ * @param procedure A pointer to the member function defines the destination
+ * @param extendSelection Set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Position(*procedure)(const VisualPoint&), bool extendSelection /* = false */) :
@@ -216,9 +217,9 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param procedure a pointer to the member function defines the destination
- * @param extendSelection set @c true to extend selection
+ * @param viewer The target text viewer
+ * @param procedure A pointer to the member function defines the destination
+ * @param extendSelection Set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Position(*procedure)(const VisualPoint&, length_t), bool extendSelection /* = false */) :
@@ -231,9 +232,9 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param procedure a pointer to the member function defines the destination
- * @param extendSelection set @c true to extend selection
+ * @param viewer The target text viewer
+ * @param procedure A pointer to the member function defines the destination
+ * @param extendSelection Set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		Position(*procedure)(const VisualPoint&, locations::CharacterUnit, length_t), bool extendSelection /* = false */) :
@@ -246,9 +247,9 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param procedure a pointer to the member function defines the destination
- * @param extendSelection set @c true to extend selection
+ * @param viewer The target text viewer
+ * @param procedure A pointer to the member function defines the destination
+ * @param extendSelection Set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
 		VerticalDestinationProxy(*procedure)(const VisualPoint&, length_t), bool extendSelection /* = false */) :
@@ -274,8 +275,8 @@ bool CaretMovementCommand::perform() {
 		if(procedurePL_ == &locations::forwardLine || procedurePL_ == &locations::backwardLine
 				|| procedureVLV_ == &locations::forwardVisualLine || procedureVLV_ == &locations::backwardVisualLine
 				|| procedureVLV_ == &locations::forwardPage || procedureVLV_ == &locations::backwardPage) {
-			if(contentassist::IContentAssistant* const ca = target().contentAssistant()) {
-				if(contentassist::IContentAssistant::ICompletionProposalsUI* const cpui = ca->getCompletionProposalsUI()) {
+			if(contentassist::ContentAssistant* const ca = target().contentAssistant()) {
+				if(contentassist::ContentAssistant::CompletionProposalsUI* const cpui = ca->completionProposalsUI()) {
 					if(procedurePL_ == &locations::forwardLine || procedureVLV_ == &locations::forwardVisualLine)
 						cpui->nextProposal(n);
 					else if(procedurePL_ == &locations::backwardLine || procedureVLV_ == &locations::backwardVisualLine)
@@ -342,8 +343,8 @@ bool CaretMovementCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param direction the direcion to delete
+ * @param viewer The target text viewer
+ * @param direction The direcion to delete
  */
 CharacterDeletionCommand::CharacterDeletionCommand(TextViewer& viewer,
 		Direction direction) /*throw()*/ : Command(viewer), direction_(direction) {
@@ -351,7 +352,7 @@ CharacterDeletionCommand::CharacterDeletionCommand(TextViewer& viewer,
 
 /**
  * Implements @c Command#perform.
- * @retval false if the incremental search was active, couldn't undo. otherwise the document was
+ * @retval false If the incremental search was active, couldn't undo. Otherwise the document was
  *               read only or the region to delete was inaccessible
  */
 bool CharacterDeletionCommand::perform() {
@@ -387,7 +388,7 @@ bool CharacterDeletionCommand::perform() {
 		if(n == 1 && !isSelectionEmpty(caret)) {	// delete only the selected content
 			try {
 				eraseSelection(caret);;
-			} catch(const IDocumentInput::ChangeRejectedException&) {
+			} catch(const DocumentInput::ChangeRejectedException&) {
 				return false;
 			}
 		} else {
@@ -402,7 +403,7 @@ bool CharacterDeletionCommand::perform() {
 					Direction::BACKWARD, locations::UTF32_CODE_UNIT, isSelectionEmpty(caret) ? n : (n - 1));
 			try {
 				erase(document, region);
-			} catch(const IDocumentInput::ChangeRejectedException&) {
+			} catch(const DocumentInput::ChangeRejectedException&) {
 				return false;
 			}
 		}
@@ -412,9 +413,9 @@ bool CharacterDeletionCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param c the code point of the character to input
- * @throw invalid_argument @a c is not valid Unicode scalar value
+ * @param viewer The target text viewer
+ * @param c The code point of the character to input
+ * @throw std#invalid_argument @a c is not valid Unicode scalar value
  */
 CharacterInputCommand::CharacterInputCommand(TextViewer& viewer, CodePoint c) : Command(viewer), c_(c) {
 	if(!text::isScalarValue(c))
@@ -423,8 +424,8 @@ CharacterInputCommand::CharacterInputCommand(TextViewer& viewer, CodePoint c) : 
 
 /**
  * Implements @c Command#perform.
- * @retval false failed and the incremental search is not active
- * @retval 0 otherwise
+ * @retval false Failed and the incremental search is not active
+ * @retval 0 Otherwise
  * @see Caret#inputCharacter, TextViewer#onChar, TextViewer#onUniChar
  */
 bool CharacterInputCommand::perform() {
@@ -432,7 +433,7 @@ bool CharacterInputCommand::perform() {
 		if(Session* const session = target().document().session()) {
 			if(session->incrementalSearcher().isRunning()) {
 				utils::closeCompletionProposalsPopup(target());
-				if(c_ == 0x0009u || !toBoolean(iswcntrl(static_cast<wint_t>(c_))))
+				if(c_ == 0x0009u || iswcntrl(static_cast<wint_t>(c_)) == 0)
 					session->incrementalSearcher().addCharacter(c_);
 				return true;
 			}
@@ -455,8 +456,8 @@ bool CharacterInputCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param fromPreviousLine set @c true to use a character on the previous visual line. otherwise
+ * @param viewer The target text viewer
+ * @param fromPreviousLine Set @c true to use a character on the previous visual line. Otherwise
  *                         one on the next visual line is used
  */
 CharacterInputFromNextLineCommand::CharacterInputFromNextLineCommand(
@@ -465,9 +466,9 @@ CharacterInputFromNextLineCommand::CharacterInputFromNextLineCommand(
 
 /**
  * Implements @c Command#perform.
- * @retval false the caret was the first/last line in the document and couldn't copy a character
- *               from the previous/next line. or the next/previous line was too short to locate the
- *               character to copy. or internal performance of @c CharacterInputCommand failed
+ * @retval false The caret was the first/last line in the document and couldn't copy a character
+ *               from the previous/next line. Or the next/previous line was too short to locate the
+ *               character to copy. Or internal performance of @c CharacterInputCommand failed
  */
 bool CharacterInputFromNextLineCommand::perform() {
 	abortIncrementalSearch(target());
@@ -492,14 +493,14 @@ bool CharacterInputFromNextLineCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
+ * @param viewer The target text viewer
  */
 CharacterToCodePointConversionCommand::CharacterToCodePointConversionCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
 }
 
 /**
  * Implements @c Command#perform.
- * @retval false the end of the selection is the beginning of the line and couldn't find the string
+ * @retval false The end of the selection is the beginning of the line and couldn't find the string
  *               to convert
  */
 bool CharacterToCodePointConversionCommand::perform() {
@@ -525,7 +526,7 @@ bool CharacterToCodePointConversionCommand::perform() {
 	caret.select(Position(eos.line(), eos.column() - ((cp > 0xffff) ? 2 : 1)), eos);
 	try {
 		caret.replaceSelection(buffer, false);
-	} catch(const IDocumentInput::ChangeRejectedException&) {
+	} catch(const DocumentInput::ChangeRejectedException&) {
 		return false;
 	}
 	return true;
@@ -533,14 +534,14 @@ bool CharacterToCodePointConversionCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
+ * @param viewer The target text viewer
  */
 CodePointToCharacterConversionCommand::CodePointToCharacterConversionCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
 }
 
 /**
  * Implements @c Command#perform.
- * @retval false the end of the selection is the beginning of the line and couldn't find the string
+ * @retval false The end of the selection is the beginning of the line and couldn't find the string
  *               to convert
  */
 bool CodePointToCharacterConversionCommand::perform() {
@@ -558,12 +559,12 @@ bool CodePointToCharacterConversionCommand::perform() {
 	const length_t column = eos.column();
 
 	// accept /(?:[Uu]\+)?[0-9A-Fa-f]{1,6}/
-	if(toBoolean(iswxdigit(line[column - 1]))) {
+	if(iswxdigit(line[column - 1]) != 0) {
 		length_t i = column - 1;
 		while(i != 0) {
 			if(column - i == 7)
 				return false;	// too long string
-			else if(!toBoolean(iswxdigit(line[i - 1])))
+			else if(iswxdigit(line[i - 1]) == 0)
 				break;
 			--i;
 		}
@@ -581,7 +582,7 @@ bool CodePointToCharacterConversionCommand::perform() {
 			caret.select(Position(eos.line(), i), eos);
 			try {
 				caret.replaceSelection(StringPiece(buffer, (cp < 0x10000u ? 1 : 2)), false);
-			} catch(const IDocumentInput::ChangeRejectedException&) {
+			} catch(const DocumentInput::ChangeRejectedException&) {
 				return false;
 			}
 			return true;
@@ -592,20 +593,20 @@ bool CodePointToCharacterConversionCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
+ * @param viewer The target text viewer
  */
 CompletionProposalPopupCommand::CompletionProposalPopupCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
 }
 
 /**
  * Implements @c Command#perform.
- * @retval false the text viewer didn't have the content assistant
+ * @retval false The text viewer didn't have the content assistant
  */
 bool CompletionProposalPopupCommand::perform() {
 	ASCENSION_CHECK_DOCUMENT_READ_ONLY();
 //	ASCENSION_CHECK_GUI_EDITABILITY();
 	abortIncrementalSearch(target());
-	if(contentassist::IContentAssistant* ca = target().contentAssistant()) {
+	if(contentassist::ContentAssistant* ca = target().contentAssistant()) {
 		ca->showPossibleCompletions();
 		return true;
 	}
@@ -614,7 +615,7 @@ bool CompletionProposalPopupCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
+ * @param viewer The target text viewer
  */
 EntireDocumentSelectionCreationCommand::EntireDocumentSelectionCreationCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
 }
@@ -632,16 +633,16 @@ bool EntireDocumentSelectionCreationCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param direction the direction to search
+ * @param viewer The target text viewer
+ * @param direction The direction to search
  */
 FindNextCommand::FindNextCommand(TextViewer& viewer, Direction direction) /*throw()*/ : Command(viewer), direction_(direction) {
 }
 
 /**
  * @see Command#perform
- * @return false if no text matched
- * @throw ... any exceptions @c searcher#TextSearcher#search throws
+ * @return false If no text matched
+ * @throw ... Any exceptions @c searcher#TextSearcher#search throws
  */
 bool FindNextCommand::perform() {
 	long n = numericPrefix();
@@ -650,7 +651,7 @@ bool FindNextCommand::perform() {
 	endIncrementalSearch(target());
 	utils::closeCompletionProposalsPopup(target());
 
-	WaitCursor wc;
+	win32::WaitCursor wc;
 	Document& document = target().document();
 	const searcher::TextSearcher* s;
 	if(const Session* const session = document.session())
@@ -683,13 +684,13 @@ bool FindNextCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param type the search type
- * @param direction the direction to search
- * @param callback the callback object for the incremental search. can be @c null
+ * @param viewer The target text viewer
+ * @param type The search type
+ * @param direction The direction to search
+ * @param callback The callback object for the incremental search. Can be @c null
  */
 IncrementalFindCommand::IncrementalFindCommand(TextViewer& viewer, searcher::TextSearcher::Type type,
-		Direction direction, searcher::IIncrementalSearchCallback* callback /* = 0 */) /*throw()*/
+		Direction direction, searcher::IncrementalSearchCallback* callback /* = 0 */) /*throw()*/
 		: Command(viewer), type_(type), direction_(direction), callback_(callback) {
 }
 
@@ -720,15 +721,15 @@ bool IncrementalFindCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param increase set @c true to increase the indentation
+ * @param viewer The target text viewer
+ * @param increase Set @c true to increase the indentation
  */
 IndentationCommand::IndentationCommand(TextViewer& viewer, bool increase) /*throw()*/ : Command(viewer), increases_(increase) {
 }
 
 /**
  * @see Command#perform
- * @retval false the document's input rejected the change
+ * @retval false The document's input rejected the change
  */
 bool IndentationCommand::perform() {
 	const long n = numericPrefix();
@@ -746,7 +747,7 @@ bool IndentationCommand::perform() {
 		AutoFreeze af(&viewer);
 		indentByTabs(caret, caret.isSelectionRectangle(), n);
 		viewer.document().insertUndoBoundary();
-	} catch(const IDocumentInput::ChangeRejectedException&) {
+	} catch(const DocumentInput::ChangeRejectedException&) {
 		return false;
 	}
 
@@ -762,12 +763,12 @@ InputMethodOpenStatusToggleCommand::InputMethodOpenStatusToggleCommand(TextViewe
 
 /**
  * Implements @c Command#perform.
- * @retval false the system didn't support the input method
+ * @retval false The system didn't support the input method
  */
 bool InputMethodOpenStatusToggleCommand::perform() {
-	if(HIMC imc = ::ImmGetContext(target().get())) {
-		const bool succeeded = toBoolean(::ImmSetOpenStatus(imc, !toBoolean(::ImmGetOpenStatus(imc))));
-		::ImmReleaseContext(target().get(), imc);
+	if(HIMC imc = ::ImmGetContext(target().handle().get())) {
+		const bool succeeded = win32::boole(::ImmSetOpenStatus(imc, !win32::boole(::ImmGetOpenStatus(imc))));
+		::ImmReleaseContext(target().handle().get(), imc);
 		return succeeded;
 	}
 	return false;
@@ -775,23 +776,23 @@ bool InputMethodOpenStatusToggleCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
+ * @param viewer The target text viewer
  */
 InputMethodSoftKeyboardModeToggleCommand::InputMethodSoftKeyboardModeToggleCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
 }
 
 /**
  * @see Command#perform
- * @retval false the system didn't support the input method
+ * @retval false The system didn't support the input method
  */
 bool InputMethodSoftKeyboardModeToggleCommand::perform() {
-	if(HIMC imc = ::ImmGetContext(target().get())) {
+	if(HIMC imc = ::ImmGetContext(target().handle().get())) {
 		DWORD conversionMode, sentenceMode;
-		if(toBoolean(::ImmGetConversionStatus(imc, &conversionMode, &sentenceMode))) {
-			conversionMode = toBoolean(conversionMode & IME_CMODE_SOFTKBD) ?
+		if(win32::boole(::ImmGetConversionStatus(imc, &conversionMode, &sentenceMode))) {
+			conversionMode = win32::boole(conversionMode & IME_CMODE_SOFTKBD) ?
 				(conversionMode & ~IME_CMODE_SOFTKBD) : (conversionMode | IME_CMODE_SOFTKBD);
-			const bool succeeded = toBoolean(::ImmSetConversionStatus(imc, conversionMode, sentenceMode));
-			::ImmReleaseContext(target().get(), imc);
+			const bool succeeded = win32::boole(::ImmSetConversionStatus(imc, conversionMode, sentenceMode));
+			::ImmReleaseContext(target().handle().get(), imc);
 			return succeeded;
 		}
 	}
@@ -800,15 +801,15 @@ bool InputMethodSoftKeyboardModeToggleCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param extendSelection set @c true to extend the selection
+ * @param viewer The target text viewer
+ * @param extendSelection Set @c true to extend the selection
  */
 MatchBracketCommand::MatchBracketCommand(TextViewer& viewer, bool extendSelection) /*throw()*/ : Command(viewer), extends_(extendSelection) {
 }
 
 /**
  * Implements @c Command#perform.
- * @retval false the match bracket was not found
+ * @retval false The match bracket was not found
  */
 bool MatchBracketCommand::perform() {
 	endIncrementalSearch(target());
@@ -828,23 +829,23 @@ bool MatchBracketCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param insertPrevious set @c true to insert on previous line. otherwise on the current line
+ * @param viewer The target text viewer
+ * @param insertPrevious Set @c true to insert on previous line. Otherwise on the current line
  */
 NewlineCommand::NewlineCommand(TextViewer& viewer, bool insertPrevious) /*throw()*/ : Command(viewer), insertsPrevious_(insertPrevious) {
 }
 
 /**
  * Implements @c Command#perform.
- * @retval false the document was read only or the change was rejected
+ * @retval false The document was read only or the change was rejected
  */
 bool NewlineCommand::perform() {
 	if(numericPrefix() <= 0)
 		return true;
 	TextViewer& viewer = target();
 
-	if(contentassist::IContentAssistant* const ca = target().contentAssistant()) {
-		if(contentassist::IContentAssistant::ICompletionProposalsUI* cpui = ca->getCompletionProposalsUI()) {
+	if(contentassist::ContentAssistant* const ca = target().contentAssistant()) {
+		if(contentassist::ContentAssistant::CompletionProposalsUI* cpui = ca->completionProposalsUI()) {
 			if(cpui->complete())
 				return true;
 		}
@@ -873,7 +874,7 @@ bool NewlineCommand::perform() {
 	try {
 		viewer.document().insertUndoBoundary();
 		breakLine(caret, false, numericPrefix());
-	} catch(const IDocumentInput::ChangeRejectedException&) {
+	} catch(const DocumentInput::ChangeRejectedException&) {
 		viewer.document().insertUndoBoundary();
 		caret.select(oldSelection);
 		return false;
@@ -885,7 +886,7 @@ bool NewlineCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
+ * @param viewer The target text viewer
  */
 OvertypeModeToggleCommand::OvertypeModeToggleCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
 }
@@ -903,7 +904,7 @@ bool OvertypeModeToggleCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
+ * @param viewer The target text viewer
  */
 PasteCommand::PasteCommand(TextViewer& viewer, bool useKillRing) /*throw()*/ : Command(viewer), usesKillRing_(useKillRing) {
 }
@@ -926,16 +927,16 @@ bool PasteCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
+ * @param viewer The target text viewer
  */
 ReconversionCommand::ReconversionCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
 }
 
 /**
  * Implements @c Command#perform.
- * @return false the selection was empty or rectangle. or the system didn't support IME
+ * @return false The selection was empty or rectangle. Or the system didn't support IME
  *               reconversion
- * @throw std#bad_alloc out of memory
+ * @throw std#bad_alloc Out of memory
  * @see viewers#TextViewer#onIMERequest
  */
 bool ReconversionCommand::perform() {
@@ -947,8 +948,8 @@ bool ReconversionCommand::perform() {
 	bool succeeded = false;
 	Caret& caret = viewer.caret();
 	if(!caret.isSelectionRectangle()) {
-		if(HIMC imc = ::ImmGetContext(viewer.get())) {
-			if(!toBoolean(::ImmGetOpenStatus(imc)))	// without this, IME may ignore us?
+		if(HIMC imc = ::ImmGetContext(viewer.handle().get())) {
+			if(!win32::boole(::ImmGetOpenStatus(imc)))	// without this, IME may ignore us?
 				::ImmSetOpenStatus(imc, true);
 
 			// from NotePadView.pas of TNotePad (http://wantech.ikuto.com/)
@@ -959,7 +960,7 @@ bool ReconversionCommand::perform() {
 			try {
 				rcs = static_cast<RECONVERTSTRING*>(::operator new(bytes));
 			} catch(const bad_alloc&) {
-				::ImmReleaseContext(viewer.get(), imc);
+				::ImmReleaseContext(viewer.handle().get(), imc);
 				throw;	// failed to allocate the memory for RECONVERTSTRING
 			}
 			rcs->dwSize = bytes;
@@ -974,16 +975,16 @@ bool ReconversionCommand::perform() {
 
 			if(isSelectionEmpty(caret)) {
 				// IME selects the composition target automatically if no selection
-				if(toBoolean(::ImmSetCompositionStringW(imc, SCS_QUERYRECONVERTSTRING, rcs, rcs->dwSize, 0, 0))) {
+				if(win32::boole(::ImmSetCompositionStringW(imc, SCS_QUERYRECONVERTSTRING, rcs, rcs->dwSize, 0, 0))) {
 					caret.select(
 						Position(caret.line(), rcs->dwCompStrOffset / sizeof(Char)),
 						Position(caret.line(), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
-					if(toBoolean(::ImmSetCompositionStringW(imc, SCS_SETRECONVERTSTRING, rcs, rcs->dwSize, 0, 0)))
+					if(win32::boole(::ImmSetCompositionStringW(imc, SCS_SETRECONVERTSTRING, rcs, rcs->dwSize, 0, 0)))
 						succeeded = true;
 				}
 			}
 			::operator delete(rcs);
-			::ImmReleaseContext(viewer.get(), imc);
+			::ImmReleaseContext(viewer.handle().get(), imc);
 		}
 	}
 
@@ -993,19 +994,19 @@ bool ReconversionCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
+ * @param viewer The target text viewer
  * @param onlySelection
  * @param callback
  */
 ReplaceAllCommand::ReplaceAllCommand(TextViewer& viewer, bool onlySelection,
-		const String& replacement, searcher::IInteractiveReplacementCallback* callback) /*throw()*/
+		const String& replacement, searcher::InteractiveReplacementCallback* callback) /*throw()*/
 		: Command(viewer), onlySelection_(onlySelection), replacement_(replacement), callback_(callback) {
 }
 
 /**
  * Replaces all matched texts. This does not freeze the text viewer.
- * @return the number of replced strings
- * @throw ... any exceptions @c searcher::TextSearcher::replaceAll throws other than
+ * @return The number of replced strings
+ * @throw ... Any exceptions @c searcher::TextSearcher::replaceAll throws other than
  *            @c ReplacementInterruptedException&lt;IDocumentInput#ChangeRejectedException&gt;
  */
 bool ReplaceAllCommand::perform() {
@@ -1014,7 +1015,7 @@ bool ReplaceAllCommand::perform() {
 		return false;
 
 	using namespace searcher;
-	WaitCursor wc;
+	win32::WaitCursor wc;
 	TextViewer& viewer = target();
 	Document& document = viewer.document();
 	TextSearcher* s;
@@ -1036,7 +1037,7 @@ bool ReplaceAllCommand::perform() {
 	AutoFreeze af(&viewer);
 	try {
 		numberOfLastReplacements_ = s->replaceAll(document, scope, replacement_, callback_);
-	} catch(const ReplacementInterruptedException<IDocumentInput::ChangeRejectedException>& e) {
+	} catch(const ReplacementInterruptedException<DocumentInput::ChangeRejectedException>& e) {
 		numberOfLastReplacements_ = e.numberOfReplacements();
 		throw;
 	} catch(const ReplacementInterruptedException<bad_alloc>& e) {
@@ -1050,8 +1051,8 @@ bool ReplaceAllCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param procedure a pointer to the member function defines the destination
+ * @param viewer The target text viewer
+ * @param procedure A pointer to the member function defines the destination
  */
 RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 		Position(*procedure)(const Point&)) : Command(viewer), procedureP_(procedure), procedurePL_(0), procedurePCL_(0),
@@ -1063,8 +1064,8 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param procedure a pointer to the member function defines the destination
+ * @param viewer The target text viewer
+ * @param procedure A pointer to the member function defines the destination
  */
 RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 		Position(*procedure)(const Point&, length_t)) : Command(viewer), procedureP_(0), procedurePL_(procedure), procedurePCL_(0),
@@ -1076,8 +1077,8 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param procedure a pointer to the member function defines the destination
+ * @param viewer The target text viewer
+ * @param procedure A pointer to the member function defines the destination
  */
 RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 		Position(*procedure)(const Point&, locations::CharacterUnit, length_t)) : Command(viewer), procedureP_(0), procedurePL_(0), procedurePCL_(procedure),
@@ -1089,8 +1090,8 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param procedure a pointer to the member function defines the destination
+ * @param viewer The target text viewer
+ * @param procedure A pointer to the member function defines the destination
  */
 RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 		Position(*procedure)(const VisualPoint&)) : Command(viewer), procedureP_(0), procedurePL_(0), procedurePCL_(0),
@@ -1102,8 +1103,8 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param procedure a pointer to the member function defines the destination
+ * @param viewer The target text viewer
+ * @param procedure A pointer to the member function defines the destination
  */
 RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 		Position(*procedure)(const VisualPoint&, length_t)) : Command(viewer), procedureP_(0), procedurePL_(0), procedurePCL_(0),
@@ -1115,8 +1116,8 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param procedure a pointer to the member function defines the destination
+ * @param viewer The target text viewer
+ * @param procedure A pointer to the member function defines the destination
  */
 RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 		Position(*procedure)(const VisualPoint&, locations::CharacterUnit, length_t)) : Command(viewer), procedureP_(0), procedurePL_(0), procedurePCL_(0),
@@ -1128,8 +1129,8 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param procedure a pointer to the member function defines the destination
+ * @param viewer The target text viewer
+ * @param procedure A pointer to the member function defines the destination
  */
 RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
 		VerticalDestinationProxy(*procedure)(const VisualPoint&, length_t)) : Command(viewer), procedureP_(0), procedurePL_(0), procedurePCL_(0),
@@ -1168,15 +1169,15 @@ bool RowSelectionExtensionCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param untabify set @c true to untabify rather than tabify
+ * @param viewer The target text viewer
+ * @param untabify Set @c true to untabify rather than tabify
  */
 TabifyCommand::TabifyCommand(TextViewer& viewer, bool untabify) /*throw()*/ : Command(viewer), untabify_(untabify) {
 }
 
 /**
  * Implements @c Command#perform.
- * @note not implemented.
+ * @note Not implemented.
  */
 bool TabifyCommand::perform() {
 	ASCENSION_CHECK_DOCUMENT_READ_ONLY();
@@ -1188,8 +1189,8 @@ bool TabifyCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param text the text to input. this can be empty or ill-formed UTF-16 sequence
+ * @param viewer The target text viewer
+ * @param text The text to input. This can be empty or ill-formed UTF-16 sequence
  */
 TextInputCommand::TextInputCommand(TextViewer& viewer, const String& text) /*throw()*/ : Command(viewer), text_(text) {
 }
@@ -1207,8 +1208,8 @@ namespace {
 
 /**
  * Inserts a text. If the incremental search is active, appends a string to the end of the pattern.
- * @retval false the change was rejected
- * @throw ... any exceptions @c searcher#IncrementalSearcher#addString and
+ * @retval false The change was rejected
+ * @throw ... Any exceptions @c searcher#IncrementalSearcher#addString and
  *            @c viewers#replaceSelection throw other than
  *            @c kernel#IDocumentInput#ChangeRejectedException
  */
@@ -1229,13 +1230,13 @@ bool TextInputCommand::perform() {
 	if(n > 1) {
 		try {
 			target().caret().replaceSelection(multiplyString(text_, static_cast<size_t>(n)));
-		} catch(const IDocumentInput::ChangeRejectedException&) {
+		} catch(const DocumentInput::ChangeRejectedException&) {
 			return false;
 		}
 	} else {
 		try {
 			target().caret().replaceSelection(text_);
-		} catch(const IDocumentInput::ChangeRejectedException&) {
+		} catch(const DocumentInput::ChangeRejectedException&) {
 			return false;
 		}
 	}
@@ -1244,9 +1245,10 @@ bool TextInputCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param procedure indicates what to transpose. this must be one of:
- * @c EditPoint#transposeCharacters, @c EditPoint#transposeWords, @c EditPoint#transposeLines
+ * @param viewer The target text viewer
+ * @param procedure Indicates what to transpose. This must be one of:
+ *                  @c EditPoint#transposeCharacters, @c EditPoint#transposeWords,
+ *                  @c EditPoint#transposeLines
  * @throw std#invalid_argument
  */
 TranspositionCommand::TranspositionCommand(TextViewer& viewer, bool(*procedure)(Caret&)) : Command(viewer), procedure_(procedure) {
@@ -1258,8 +1260,8 @@ TranspositionCommand::TranspositionCommand(TextViewer& viewer, bool(*procedure)(
 
 /**
  * Implements @c Command#perform by using a transposition method of @c viewers#Caret class. 
- * @return false the internal transposition method call returned @c false
- * @throw ... any exceptions the transposition method returns other than
+ * @return false The internal transposition method call returned @c false
+ * @throw ... Any exceptions the transposition method returns other than
  *            @c kernel#ReadOnlyDocumentException and @c kernel#DocumentCantChangeException
  */
 bool TranspositionCommand::perform() {
@@ -1276,22 +1278,22 @@ bool TranspositionCommand::perform() {
 		const bool succeeded = (*procedure_)(caret);
 		viewer.document().insertUndoBoundary();
 		return succeeded;
-	} catch(const IDocumentInput::ChangeRejectedException&) {
+	} catch(const DocumentInput::ChangeRejectedException&) {
 		return false;
 	}
 }
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param redo set @c true to perform redo, rather than undo
+ * @param viewer The target text viewer
+ * @param redo Set @c true to perform redo, rather than undo
  */
 UndoCommand::UndoCommand(TextViewer& viewer, bool redo) /*throw()*/ : Command(viewer), redo_(redo), lastResult_(INDETERMINATE) {
 }
 
 /**
  * Returns @c true if the last performance was done incompletely.
- * @throw IllegalStateException the command has never performed
+ * @throw IllegalStateException The command has never performed
  * @see Document#undo, Document#redo
  */
 bool UndoCommand::isLastActionIncompleted() const {
@@ -1302,14 +1304,14 @@ bool UndoCommand::isLastActionIncompleted() const {
 
 /**
  * Undo or redo.
- * @retval false the change was rejected
+ * @retval false The change was rejected
  */
 bool UndoCommand::perform() {
 //	ASCENSION_CHECK_GUI_EDITABILITY(1);
 	if(numericPrefix() < 0)
 		setNumericPrefix(0);	// currently, this is no-op
 
-	WaitCursor wc;
+	win32::WaitCursor wc;
 	Document& document = target().document();
 	bool (Document::*performance)(size_t) = !redo_ ? &Document::undo : &Document::redo;
 	size_t (Document::*number)() const = !redo_ ? &Document::numberOfUndoableChanges : &Document::numberOfRedoableChanges;
@@ -1323,15 +1325,15 @@ bool UndoCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
- * @param direction the direcion to delete
+ * @param viewer The target text viewer
+ * @param direction The direcion to delete
  */
 WordDeletionCommand::WordDeletionCommand(TextViewer& viewer, Direction direction) /*throw()*/ : Command(viewer), direction_(direction) {
 }
 
 /**
  * Implements @c Command#perform.
- * @retval false the document's input rejected the change
+ * @retval false The document's input rejected the change
  */
 bool WordDeletionCommand::perform() {
 	long n = numericPrefix();
@@ -1365,7 +1367,7 @@ bool WordDeletionCommand::perform() {
 			erase(document, from, to.base().tell());
 			caret.moveTo(min(from, to.base().tell()));
 			document.insertUndoBoundary();
-		} catch(const IDocumentInput::ChangeRejectedException&) {
+		} catch(const DocumentInput::ChangeRejectedException&) {
 			return false;
 		}
 	}
@@ -1374,7 +1376,7 @@ bool WordDeletionCommand::perform() {
 
 /**
  * Constructor.
- * @param viewer the target text viewer
+ * @param viewer The target text viewer
  */
 WordSelectionCreationCommand::WordSelectionCreationCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
 }
@@ -1395,7 +1397,7 @@ bool WordSelectionCreationCommand::perform() {
 //#undef ASCENSION_CHECK_GUI_EDITABILITY
 
 
-// isc.AinuInputSequenceChecker /////////////////////////////////////////////
+// isc.AinuInputSequenceChecker ///////////////////////////////////////////////////////////////////
 
 /// @see InputSequenceChecker#check
 bool AinuInputSequenceChecker::check(HKL, const StringPiece& preceding, CodePoint c) const {
@@ -1408,7 +1410,7 @@ bool AinuInputSequenceChecker::check(HKL, const StringPiece& preceding, CodePoin
 }
 
 
-// isc.ThaiInputSequenceChecker /////////////////////////////////////////////
+// isc.ThaiInputSequenceChecker ///////////////////////////////////////////////////////////////////
 
 const ThaiInputSequenceChecker::CharacterClass ThaiInputSequenceChecker::charClasses_[] = {
 	CTRL, CONS, CONS, CONS, CONS, CONS, CONS, CONS,	// U+0E00
@@ -1458,7 +1460,7 @@ bool ThaiInputSequenceChecker::check(HKL, const StringPiece& preceding, CodePoin
 }
 
 
-// isc.VietnameseInputSequenceChecker ///////////////////////////////////////
+// isc.VietnameseInputSequenceChecker /////////////////////////////////////////////////////////////
 
 /// @see InputSequenceChecker#check
 bool VietnameseInputSequenceChecker::check(HKL keyboardLayout, const StringPiece& preceding, CodePoint c) const {

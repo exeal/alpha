@@ -46,7 +46,7 @@ namespace ascension {
 			Handle<HDC> dc_;
 		};
 
-		class ClientAreaGraphicsContext : public GraphicsContext<graphics::Context> {
+		class ClientAreaGraphicsContext : public GraphicsContext<graphics::RenderingContext2D> {
 		public:
 			explicit ClientAreaGraphicsContext(const Handle<HWND>& window) {
 				if(window.get() == 0)
@@ -58,7 +58,7 @@ namespace ascension {
 			}
 		};
 
-		class EntireWindowGraphicsContext : public GraphicsContext<graphics::Context> {
+		class EntireWindowGraphicsContext : public GraphicsContext<graphics::RenderingContext2D> {
 		public:
 			explicit EntireWindowGraphicsContext(const Handle<HWND>& window) {
 				if(window.get() == 0)
