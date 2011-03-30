@@ -27,11 +27,32 @@ namespace ascension {
 #endif
 		class WidgetBase : public viewers::base::Widget {
 		public:
+			static const DWORD defaultStyle = WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE;
+		public:
 			const Handle<HWND>& handle() const;
 			void initialize(const Handle<HWND>& parent,
 				const graphics::Point<>& position = graphics::Point<>(CW_USEDEFAULT, CW_USEDEFAULT),
 				const graphics::Dimension<>& size = graphics::Dimension<>(CW_USEDEFAULT, CW_USEDEFAULT),
 				DWORD style = 0, DWORD extendedStyle = 0);
+			bool isWindow() const /*throw()*/;
+			void scheduleRedraw(bool eraseBackground);
+			void scheduleRedraw(const graphics::Rect<>& rect, bool eraseBackground);
+			// Win32-specific scrolling methods
+			void scrollInformation(int bar, SCROLLINFO& scrollInfo, UINT mask = SIF_ALL) const;
+			int scrollPosition(int bar) const;
+			Range<int> scrollRange(int bar) const;
+			int scrollTrackPosition(int bar) const;
+			void setScrollInformation(int bar, const SCROLLINFO& scrollInfo, bool redraw = true);
+			int setScrollPosition(int bar, int pos, bool redraw = true);
+			void setScrollRange(int bar, const Range<int>& range, bool redraw = true);
+			bool hasFocus() const /*throw()*/;
+			void redrawScheduledRegion();
+			// viewers.base.Widget
+			graphics::Rect<> bounds(bool includeFrame) const;
+			void hide();
+			bool isVisible() const /*throw()*/;
+			void setBounds(const graphics::Rect<>& bounds);
+			void show();
 		protected:
 			struct ClassInformation {
 				UINT style;	// corresponds to WNDCLASSEXW.style
@@ -80,7 +101,7 @@ namespace ascension {
 		};
 
 		template<typename Derived>
-		class Widget : public MessageDispatcher<Derived>, public WidgetBase {
+		class Widget : public WidgetBase {
 		private:
 			LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
 				MessageDispatcher<Derived>::processMessage(*this, message, wp, lp, consumed);

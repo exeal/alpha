@@ -12,8 +12,14 @@
 #endif
 #include <ascension/corelib/basic-exceptions.hpp>	// IllegalStateException
 #include <ascension/graphics/geometry.hpp>
+#include <ascension/graphics/graphics.hpp>			// graphics.Device, ...
 
 namespace ascension {
+
+	namespace graphics {
+		class PaintContext;
+	}
+
 	namespace viewers {
 		namespace base {
 
@@ -34,6 +40,8 @@ namespace ascension {
 
 			class Widget {
 			public:
+				virtual ~Widget();
+
 				virtual void initialize(Widget& parent, const graphics::Rect<>& bounds) = 0;
 
 				virtual graphics::Rect<> bounds(bool includeFrame) const = 0;
@@ -51,6 +59,8 @@ namespace ascension {
 
 				virtual bool isVisible() const = 0;
 				virtual bool isActive() const = 0;
+
+				virtual void paint(graphics::PaintContext& context) = 0;
 			};
 
 		}
