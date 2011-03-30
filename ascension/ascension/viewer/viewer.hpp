@@ -37,7 +37,10 @@
 
 namespace ascension {
 
-	namespace viewers {class TextViewer;}
+	namespace viewers {
+		class VisualPoint;
+		class TextViewer;
+	}
 
 	/// Provides stuffs for source code editors.
 	/// @todo Need refinements.
@@ -124,7 +127,7 @@ namespace ascension {
 		};
 
 		/**
-		 * Default implementation of @c ICaretShapeProvider.
+		 * Default implementation of @c CaretShaper.
 		 * @note This class is not intended to be subclassed.
 		 */
 		class DefaultCaretShaper : public CaretShaper {
@@ -153,14 +156,14 @@ namespace ascension {
 			void shape(win32::Handle<HBITMAP>& bitmap,
 				graphics::Dimension<>& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/;
 			void uninstall() /*throw()*/;
-			// ICaretListener
+			// CaretListener
 			void caretMoved(const class Caret& self, const kernel::Region& oldRegion);
-			// ICaretStateListener
+			// CaretStateListener
 			void matchBracketsChanged(const Caret& self,
 				const std::pair<kernel::Position, kernel::Position>& oldPair, bool outsideOfView);
 			void overtypeModeChanged(const Caret& self);
 			void selectionShapeChanged(const Caret& self);
-			// ITextViewerInputStatusListener
+			// TextViewerInputStatusListener
 			void textViewerIMEOpenStatusChanged() /*throw()*/;
 			void textViewerInputLanguageChanged() /*throw()*/;
 		private:
@@ -175,7 +178,7 @@ namespace ascension {
 		 * @c DefaultKeyboardInputStrategy.
 		 * @see TextViewer#set
 		 */
-		class IKeyboardInputStrategy {
+		class KeyboardInputStrategy {
 		};
 #endif
 
@@ -184,10 +187,10 @@ namespace ascension {
 		 * @note An instance of @c IMouseInputStrategy can't be shared multiple text viewers.
 		 * @see user-input.hpp, TextViewer#setMouseInputStrategy
 		 */
-		class IMouseInputStrategy {
+		class MouseInputStrategy {
 		public:
 			/// Destructor.
-			virtual ~IMouseInputStrategy() /*throw()*/ {}
+			virtual ~MouseInputStrategy() /*throw()*/ {}
 		protected:
 			/// Actions of the mouse input.
 			enum Action {
@@ -242,7 +245,7 @@ namespace ascension {
 		};
 
 		// the documentation is user-input.cpp
-		class DefaultMouseInputStrategy : public IMouseInputStrategy,
+		class DefaultMouseInputStrategy : public MouseInputStrategy,
 				win32::com::IUnknownImpl<
 					typelist::Cat<
 						ASCENSION_WIN32_COM_INTERFACE_SIGNATURE(IDropSource), typelist::Cat<
@@ -337,8 +340,8 @@ namespace ascension {
 				public win32::Window,
 				public kernel::DocumentListener, public kernel::DocumentStateListener,
 				public kernel::DocumentRollbackListener, public graphics::DefaultFontListener,
-				public graphics::VisualLinesListener, public CaretListener, public CaretStateListener,
-				public detail::PointCollection<VisualPoint> {
+				public graphics::font::VisualLinesListener, public CaretListener,
+				public CaretStateListener, public detail::PointCollection<VisualPoint> {
 		public:
 			/// Result of hit test.
 			enum HitTestResult {
@@ -398,11 +401,8 @@ namespace ascension {
 					 * @c presentation#INHERIT_READING_DIRECTION.
 					 */
 					presentation::ReadingDirection readingDirection;
-					/**
-					 * Alignment of the digits. Default value is @c presentation#ALIGN_END. Can't
-					 * be @c presentation#INHERIT_ALIGNMENT.
-					 */
-					presentation::TextAlignment alignment;
+					/// Anchor of the digits. Default value is @c presentation#TEXT_ANCHOR_END.
+					presentation::TextAnchor anchor;
 					/// Start value of the line number. Default value is 1.
 					length_t startValue;
 					/// Minimum number of digits. Default value is 4.
@@ -490,7 +490,7 @@ namespace ascension {
 			void removeInputStatusListener(TextViewerInputStatusListener& listener);
 			void removeViewportListener(ViewportListener& listener);
 			void setCaretShaper(std::tr1::shared_ptr<CaretShaper> shaper) /*throw()*/;
-			void setMouseInputStrategy(IMouseInputStrategy* newStrategy, bool delegateOwnership);
+			void setMouseInputStrategy(MouseInputStrategy* newStrategy, bool delegateOwnership);
 			// attributes
 			const Configuration& configuration() const /*throw()*/;
 			kernel::Document& document();
@@ -501,8 +501,8 @@ namespace ascension {
 			ulong scrollRate(bool horizontal) const /*throw()*/;
 			void setConfiguration(const Configuration* general,
 				const RulerConfiguration* ruler, bool synchronizeUI);
-			graphics::TextRenderer& textRenderer() /*throw()*/;
-			const graphics::TextRenderer& textRenderer() const /*throw()*/;
+			graphics::font::TextRenderer& textRenderer() /*throw()*/;
+			const graphics::font::TextRenderer& textRenderer() const /*throw()*/;
 			// caret
 			Caret& caret() /*throw()*/;
 			const Caret& caret() const /*throw()*/;
@@ -540,10 +540,10 @@ namespace ascension {
 			void enableMouseInput(bool enable);
 			// client coordinates vs. character position mappings
 			kernel::Position characterForClientXY(const graphics::Point<>& pt,
-				graphics::LineLayout::Edge, bool abortNoCharacter = false,
+				graphics::font::TextLayout::Edge, bool abortNoCharacter = false,
 				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER) const;
 			graphics::Point<> clientXYForCharacter(const kernel::Position& position,
-				bool fullSearchY, graphics::LineLayout::Edge edge = graphics::LineLayout::LEADING) const;
+				bool fullSearchY, graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING) const;
 			// utilities
 			void firstVisibleLine(length_t* logicalLine, length_t* visualLine, length_t* visualSubline) const /*throw()*/;
 			HitTestResult hitTest(const graphics::Point<>& pt) const;
@@ -570,14 +570,14 @@ namespace ascension {
 
 			// protected interfaces
 		protected:
-			// kernel.IDocumentStateListener (overridable)
+			// kernel.DocumentStateListener (overridable)
 			virtual void documentAccessibleRegionChanged(const kernel::Document& document);
 			virtual void documentModificationSignChanged(const kernel::Document& document);
 			virtual void documentPropertyChanged(const kernel::Document& document, const kernel::DocumentPropertyKey& key);
 			virtual void documentReadOnlySignChanged(const kernel::Document& document);
-			// ICaretListener (overridable)
+			// CaretListener (overridable)
 			virtual void caretMoved(const Caret& self, const kernel::Region& oldRegion);
-			// ICaretStateListener (overridable)
+			// CaretStateListener (overridable)
 			virtual void matchBracketsChanged(const Caret& self,
 				const std::pair<kernel::Position, kernel::Position>& oldPair, bool outsideOfView);
 			virtual void overtypeModeChanged(const Caret& self);
@@ -651,7 +651,7 @@ namespace ascension {
 			// internal classes
 		private:
 			/// Internal extension of @c graphics#TextRenderer.
-			class Renderer : public graphics::TextRenderer {
+			class Renderer : public graphics::font::TextRenderer {
 				ASCENSION_UNASSIGNABLE_TAG(Renderer);
 			public:
 				explicit Renderer(TextViewer& viewer);
@@ -771,7 +771,7 @@ namespace ascension {
 			HWND toolTip_;
 			Char* tipText_;
 			// strategies and listeners
-			detail::StrategyPointer<IMouseInputStrategy> mouseInputStrategy_;
+			detail::StrategyPointer<MouseInputStrategy> mouseInputStrategy_;
 			detail::Listeners<DisplaySizeListener> displaySizeListeners_;
 			detail::Listeners<TextViewerInputStatusListener> inputStatusListeners_;
 			detail::Listeners<ViewportListener> viewportListeners_;
@@ -854,12 +854,12 @@ namespace ascension {
 		};
 
 		/// Highlights the line on which the caret is put.
-		class CurrentLineHighlighter : public presentation::ILineColorDirector,
+		class CurrentLineHighlighter : public presentation::TextLineColorDirector,
 				public CaretListener, public CaretStateListener, public kernel::PointLifeCycleListener {
 			ASCENSION_NONCOPYABLE_TAG(CurrentLineHighlighter);
 		public:
 			// constant
-			static const ILineColorDirector::Priority LINE_COLOR_PRIORITY;
+			static const TextLineColorDirector::Priority LINE_COLOR_PRIORITY;
 			// constructors
 			CurrentLineHighlighter(Caret& caret,
 				const graphics::Color& foreground, const graphics::Color& background);
@@ -870,17 +870,17 @@ namespace ascension {
 			void setBackground(const graphics::Color& color) /*throw()*/;
 			void setForeground(const graphics::Color& color) /*throw()*/;
 		private:
-			// presentation.ILineColorDirector
-			ILineColorDirector::Priority queryLineColors(length_t line,
+			// presentation.TextLineColorDirector
+			TextLineColorDirector::Priority queryLineColors(length_t line,
 				graphics::Color& foreground, graphics::Color& background) const;
-			// ICaretListener
+			// CaretListener
 			void caretMoved(const Caret& self, const kernel::Region& oldRegion);
-			// ICaretStateListener
+			// CaretStateListener
 			void matchBracketsChanged(const Caret& self,
 				const std::pair<kernel::Position, kernel::Position>& oldPair, bool outsideOfView);
 			void overtypeModeChanged(const Caret& self);
 			void selectionShapeChanged(const Caret& self);
-			// kernel.IPointLifeCycleListener
+			// kernel.PointLifeCycleListener
 			void pointDestroyed();
 		private:
 			Caret* caret_;
@@ -899,8 +899,8 @@ namespace ascension {
 
 /// Returns the UI reading direction of @a object.
 inline presentation::ReadingDirection utils::computeUIReadingDirection(const TextViewer& viewer) {
-	presentation::ReadingDirection result = viewer.textRenderer().defaultUIReadingDirection();
-	if(result == presentation::INHERIT_READING_DIRECTION)
+	presentation::Inheritable<presentation::ReadingDirection> result(viewer.textRenderer().defaultUIReadingDirection());
+	if(result.inherits())
 		result = ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
 	assert(result == presentation::LEFT_TO_RIGHT || result == presentation::RIGHT_TO_LEFT);
 	return result;
@@ -1064,10 +1064,10 @@ inline ulong TextViewer::scrollRate(bool horizontal) const /*throw()*/ {
 inline void TextViewer::setCaretShaper(std::tr1::shared_ptr<CaretShaper> shaper) {caretShape_.shaper = shaper;}
 
 /// Returns the text renderer.
-inline graphics::TextRenderer& TextViewer::textRenderer() /*throw()*/ {return *renderer_;}
+inline graphics::font::TextRenderer& TextViewer::textRenderer() /*throw()*/ {return *renderer_;}
 
 /// Returns the text renderer.
-inline const graphics::TextRenderer& TextViewer::textRenderer() const /*throw()*/ {return *renderer_;}
+inline const graphics::font::TextRenderer& TextViewer::textRenderer() const /*throw()*/ {return *renderer_;}
 
 /**
  * Returns the ruler's configuration.

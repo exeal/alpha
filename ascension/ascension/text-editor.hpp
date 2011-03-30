@@ -13,6 +13,10 @@
 
 namespace ascension {
 
+	namespace viewers {
+		class VerticalDestinationProxy;
+	}
+
 	namespace texteditor {
 
 		/**
