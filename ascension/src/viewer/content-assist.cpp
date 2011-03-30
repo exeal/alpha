@@ -2,7 +2,7 @@
  * @file content-assist.cpp
  * @author exeal
  * @date 2003-2006 (was CompletionWindow.cpp)
- * @date 2006-2010
+ * @date 2006-2011
  */
 
 #include <ascension/viewer/content-assist.hpp>
@@ -18,7 +18,7 @@ using namespace ascension::viewers;
 using namespace std;
 
 
-// CompletionProposal ///////////////////////////////////////////////////////
+// DefaultCompletionProposal //////////////////////////////////////////////////////////////////////
 
 /**
  * Constructor.
@@ -27,7 +27,7 @@ using namespace std;
  * @param icon The icon to display for the proposal
  * @param autoInsertable Set @c true to enable auto insertion for the proposal
  */
-CompletionProposal::CompletionProposal(
+DefaultCompletionProposal::DefaultCompletionProposal(
 		const String& replacementString, const String& description /* = String() */,
 		win32::Handle<HICON> icon /* = win32::Handle<HICON>() */, bool autoInsertable /* = true */) :
 		displayString_(replacementString), replacementString_(replacementString), icon_(icon),
@@ -42,39 +42,39 @@ CompletionProposal::CompletionProposal(
  * @param icon The icon to display for the proposal
  * @param autoInsertable Set @c true to enable auto insertion for the proposal
  */
-CompletionProposal::CompletionProposal(const String& replacementString,
+DefaultCompletionProposal::DefaultCompletionProposal(const String& replacementString,
 		const String& displayString, const String& description /* = String() */,
 		win32::Handle<HICON> icon /* = win32::Handle<HICON>() */, bool autoInsertable /* = true */) :
 		displayString_(displayString), replacementString_(replacementString), icon_(icon),
 		descriptionString_(description), autoInsertable_(autoInsertable) {
 }
 
-/// @see ICompletionProposal#getDescription
-String CompletionProposal::getDescription() const /*throw()*/ {
+/// @see CompletionProposal#description
+String DefaultCompletionProposal::description() const /*throw()*/ {
 	return descriptionString_;
 }
 
-/// @see ICompletionProposal#getDisplayString
-String CompletionProposal::getDisplayString() const /*throw()*/ {
+/// @see CompletionProposal#displayString
+String DefaultCompletionProposal::displayString() const /*throw()*/ {
 	return displayString_;
 }
 
-/// @see ICompletionProposal#getIcon
-const win32::Handle<HICON>& CompletionProposal::getIcon() const /*throw()*/ {
+/// @see CompletionProposal#icon
+const win32::Handle<HICON>& DefaultCompletionProposal::icon() const /*throw()*/ {
 	return icon_;
 }
 
-/// @see ICompletionProposal#isAutoInsertable
-bool CompletionProposal::isAutoInsertable() const /*throw()*/ {
+/// @see CompletionProposal#isAutoInsertable
+bool DefaultCompletionProposal::isAutoInsertable() const /*throw()*/ {
 	return autoInsertable_;
 }
 
 /**
- * Implements @c ICompletionProposal#replace.
+ * Implements @c CompletionProposal#replace.
  * This method may throw any exceptions @c kernel#Document#replace throws other than
  * @c kernel#ReadOnlyDocumentException.
  */
-void CompletionProposal::replace(Document& document, const Region& replacementRegion) {
+void DefaultCompletionProposal::replace(Document& document, const Region& replacementRegion) {
 	if(!document.isReadOnly()) {
 		document.insertUndoBoundary();
 		document.replace(replacementRegion, replacementString_);
@@ -83,15 +83,19 @@ void CompletionProposal::replace(Document& document, const Region& replacementRe
 }
 
 
-// IdentifiersProposalProcessor /////////////////////////////////////////////
+// IdentifiersProposalProcessor ///////////////////////////////////////////////////////////////////
 
 namespace {
 	struct CompletionProposalDisplayStringComparer {
-		bool operator()(const ICompletionProposal* lhs, const ICompletionProposal* rhs) {
-			return CaseFolder::compare(lhs->getDisplayString(), rhs->getDisplayString()) < 0;
+		bool operator()(const CompletionProposal* lhs, const CompletionProposal* rhs) const {
+			return CaseFolder::compare(lhs->displayString(), rhs->displayString()) < 0;
 		}
-		bool operator()(const ICompletionProposal* lhs, const String& rhs) {return CaseFolder::compare(lhs->getDisplayString(), rhs) < 0;}
-		bool operator()(const String& lhs, const ICompletionProposal* rhs) {return CaseFolder::compare(lhs, rhs->getDisplayString()) < 0;}
+		bool operator()(const CompletionProposal* lhs, const String& rhs) const {
+			return CaseFolder::compare(lhs->displayString(), rhs) < 0;
+		}
+		bool operator()(const String& lhs, const CompletionProposal* rhs) const {
+			return CaseFolder::compare(lhs, rhs->displayString()) < 0;
+		}
 	};
 } // namespace @0
 
@@ -108,9 +112,9 @@ IdentifiersProposalProcessor::IdentifiersProposalProcessor(ContentType contentTy
 IdentifiersProposalProcessor::~IdentifiersProposalProcessor() /*throw()*/ {
 }
 
-/// @see IContentAssistProcessor#computCompletionProposals
+/// @see ContentAssistProcessor#computCompletionProposals
 void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret,
-		bool& incremental, Region& replacementRegion, set<ICompletionProposal*>& proposals) const {
+		bool& incremental, Region& replacementRegion, set<CompletionProposal*>& proposals) const {
 	replacementRegion.second = caret;
 
 	// find the preceding identifier
@@ -163,16 +167,16 @@ void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret
 		proposals.insert(new CompletionProposal(*i));
 }
 
-/// @see IContentAssistProcessor#getActiveCompletionProposal
-const ICompletionProposal* IdentifiersProposalProcessor::getActiveCompletionProposal(
+/// @see ContentAssistProcessor#activeCompletionProposal
+const CompletionProposal* IdentifiersProposalProcessor::activeCompletionProposal(
 		const TextViewer& textViewer, const Region& replacementRegion,
-		ICompletionProposal* const currentProposals[], size_t numberOfCurrentProposals) const /*throw()*/ {
+		CompletionProposal* const currentProposals[], size_t numberOfCurrentProposals) const /*throw()*/ {
 	// select the partially matched proposal
 	String precedingIdentifier(textViewer.document().line(replacementRegion.first.line).substr(
 		replacementRegion.beginning().column, replacementRegion.end().column - replacementRegion.beginning().column));
 	if(precedingIdentifier.empty())
 		return 0;
-	const ICompletionProposal* activeProposal = *lower_bound(currentProposals,
+	const CompletionProposal* activeProposal = *lower_bound(currentProposals,
 		currentProposals + numberOfCurrentProposals, precedingIdentifier, CompletionProposalDisplayStringComparer());
 	if(activeProposal == currentProposals[numberOfCurrentProposals]
 			|| CaseFolder::compare(activeProposal->getDisplayString().substr(0, precedingIdentifier.length()), precedingIdentifier) != 0)
@@ -192,25 +196,25 @@ bool IdentifiersProposalProcessor::isIncrementalCompletionAutoTerminationCharact
 
 /// @see IContentAssistProcessor#recomputIncrementalCompletionProposals
 void IdentifiersProposalProcessor::recomputeIncrementalCompletionProposals(
-		const TextViewer&, const Region&, ICompletionProposal* const[], size_t, set<ICompletionProposal*>&) const {
+		const TextViewer&, const Region&, CompletionProposal* const[], size_t, set<CompletionProposal*>&) const {
 	// do nothing
 }
 
 
-// ContentAssistant.CompletionProposalPopup /////////////////////////////////
+// ContentAssistant.CompletionProposalPopup ///////////////////////////////////////////////////////
 
 /// A completion window.
 class ContentAssistant::CompletionProposalPopup : public manah::win32::ui::ListBox {
 	MANAH_NONCOPYABLE_TAG(CompletionProposalPopup);
 public:
 	// constructor
-	CompletionProposalPopup(IContentAssistant::ICompletionProposalsUI& ui) /*throw()*/;
+	CompletionProposalPopup(ContentAssistant::CompletionProposalsUI& ui) /*throw()*/;
 	// construction
 	bool create(HWND parent);
 	// attributes
 	void setFont(const HFONT font);
 	// operations
-	bool start(const std::set<ICompletionProposal*>& proposals);
+	bool start(const std::set<CompletionProposal*>& proposals);
 	bool updateListCursel();
 
 private:
@@ -223,7 +227,7 @@ private:
 	void onSettingChange(UINT, const WCHAR*);
 
 private:
-	IContentAssistant::ICompletionProposalsUI& ui_;
+	ContentAssistant::CompletionProposalsUI& ui_;
 	HFONT defaultFont_;
 	MANAH_DECLEAR_WINDOW_MESSAGE_MAP(CompletionProposalPopup);
 };
@@ -240,7 +244,7 @@ MANAH_END_WINDOW_MESSAGE_MAP()
  * Constructor.
  * @param ui The user interface
  */
-ContentAssistant::CompletionProposalPopup::CompletionProposalPopup(IContentAssistant::ICompletionProposalsUI& ui) : ui_(ui), defaultFont_(0) {
+ContentAssistant::CompletionProposalPopup::CompletionProposalPopup(ContentAssistant::ICompletionProposalsUI& ui) : ui_(ui), defaultFont_(0) {
 }
 
 /**

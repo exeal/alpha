@@ -12,9 +12,33 @@ using namespace ascension::win32;
 using namespace std;
 
 
-WidgetBase::WidgetBase(LRESULT (*messageDispatcher)(WidgetBase&, UINT, WPARAM, LPARAM, bool&)) : messageDispatcher_(messageDispatcher) {
-	if(messageDispatcher == 0)
-		throw NullPointerException("windowProcedure");
+graphics::Rect<> WidgetBase::bounds(bool includeFrame) const {
+	RECT temp;
+	if(includeFrame) {
+		if(!boole(::GetWindowRect(handle().get(), &temp)))
+			throw PlatformDependentError<>();
+	} else {
+		if(!boole(::GetClientRect(handle().get(), &temp)))
+			throw PlatformDependentError<>();
+	}
+	return graphics::fromNative(temp);
+}
+
+bool WidgetBase::hasFocus() const /*throw()*/ {
+	return ::GetFocus() == handle().get();
+}
+
+void WidgetBase::hide() {
+	if(!boole(::SetWindowPos(handle().get(), 0, 0, 0, 0, 0,
+			SWP_HIDEWINDOW | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOREPOSITION | SWP_NOSIZE | SWP_NOZORDER)))
+		throw PlatformDependentError<>();
+}
+
+Point<> WidgetBase::clientToScreen(const Point<>& p) const {
+	POINT temp(toNative(p));
+	if(!boole(::ClientToScreen(handle().get(), &temp)))
+		throw PlatformDependentError<>();
+	return graphics::fromNative(temp);
 }
 
 void WidgetBase::initialize(const Handle<HWND>& parent,
@@ -53,6 +77,86 @@ void WidgetBase::initialize(const Handle<HWND>& parent,
 	assert(self == this);
 }
 
+bool WidgetBase::isVisible() const /*throw()*/ {
+	return boole(::IsWindowVisible(handle().get()));
+}
+
+bool WidgetBase::isWindow() const /*throw()*/ {
+	return boole(::IsWindow(handle().get()));
+}
+
+void WidgetBase::redrawScheduledRegion() {
+	if(!boole(::UpdateWindow(handle().get())))
+		throw PlatformDependentError<>();
+}
+
+void WidgetBase::setBounds(const graphics::Rect<>& bounds) {
+	if(!boole(::SetWindowPos(handle().get(), 0,
+			bounds.origin().x, bounds.origin().y,
+			bounds.size().cx, bounds.size().cy, SWP_NOACTIVATE | SWP_NOZORDER)))
+		throw PlatformDependentError<>();
+}
+
+void WidgetBase::scheduleRedraw(bool eraseBackground) {
+	if(!boole(::InvalidateRect(handle().get(), 0, eraseBackground)))
+		throw PlatformDependentError<>();
+}
+
+void WidgetBase::scheduleRedraw(const graphics::Rect<>& rect, bool eraseBackground) {
+	RECT temp = toNative(rect);
+	if(!boole(::InvalidateRect(handle().get(), &temp, eraseBackground)))
+		throw PlatformDependentError<>();
+}
+
+Point<> WidgetBase::screenToClient(const Point<>& p) const {
+	POINT temp(toNative(p));
+	if(!boole(::ScreenToClient(handle().get(), &temp)))
+		throw PlatformDependentError<>();
+	return graphics::fromNative(temp);
+}
+
+void WidgetBase::scrollInformation(int bar, SCROLLINFO& scrollInfo, UINT mask /* = SIF_ALL */) const {
+	scrollInfo.cbSize = sizeof(SCROLLINFO);
+	scrollInfo.fMask = mask;
+	if(!boole(::GetScrollInfo(handle().get(), bar, &scrollInfo)))
+		throw PlatformDependentError<>();
+}
+
+int WidgetBase::scrollPosition(int bar) const {
+	return ::GetScrollPos(handle().get(), bar);
+}
+
+Range<int> WidgetBase::scrollRange(int bar) const {
+	int minPos, maxPos;
+	if(!boole(::GetScrollRange(handle().get(), bar, &minPos, &maxPos)))
+		throw PlatformDependentError<>();
+	return makeRange(minPos, maxPos);
+}
+
+int WidgetBase::scrollTrackPosition(int bar) const {
+	SCROLLINFO si;
+	scrollInformation(bar, si, SIF_TRACKPOS);
+	return si.nTrackPos;
+}
+
+void WidgetBase::setScrollInformation(int bar, const SCROLLINFO& scrollInfo, bool redraw /* = true */) {
+	if(!boole(::SetScrollInfo(handle().get(), bar, &scrollInfo, redraw)))
+		throw PlatformDependentError<>();
+}
+
+int WidgetBase::setScrollPosition(int bar, int pos, bool redraw /* = true */) {
+	return ::SetScrollPos(handle().get(), bar, pos, redraw);
+}
+
+void WidgetBase::setScrollRange(int bar, const Range<int>& range, bool redraw /* = true */) {
+	::SetScrollRange(handle().get(), bar, range.beginning(), range.end(), redraw);
+}
+
+void WidgetBase::show() {
+	if(!boole(::ShowWindow(handle().get(), SW_SHOWNOACTIVATE)))
+		throw PlatformDependentError<>();
+}
+
 LRESULT CALLBACK WidgetBase::windowProcedure(HWND window, UINT message, WPARAM wp, LPARAM lp) {
 	WidgetBase* self;
 	bool consumed = false;
@@ -85,7 +189,7 @@ LRESULT CALLBACK WidgetBase::windowProcedure(HWND window, UINT message, WPARAM w
 		}
 	}
 
-	LRESULT result = (self->messageDispatcher_)(*self, message, wp, lp, consumed);
+	LRESULT result = self->processMessage(message, wp, lp, consumed);
 	if(!consumed)
 		result = ::CallWindowProcW(::DefWindowProcW, window, message, wp, lp);
 	return result;

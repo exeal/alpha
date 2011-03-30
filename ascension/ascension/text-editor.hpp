@@ -180,12 +180,12 @@ namespace ascension {
 			class IncrementalFindCommand : public Command {
 			public:
 				IncrementalFindCommand(viewers::TextViewer& view, searcher::TextSearcher::Type type,
-					Direction direction, searcher::IIncrementalSearchCallback* callback = 0) /*throw()*/;
+					Direction direction, searcher::IncrementalSearchCallback* callback = 0) /*throw()*/;
 			private:
 				bool perform();
 				searcher::TextSearcher::Type type_;
 				const Direction direction_;
-				searcher::IIncrementalSearchCallback* const callback_;
+				searcher::IncrementalSearchCallback* const callback_;
 			};
 			/**
 			 * Makes/Deletes indents of the selected non-blank lines.
@@ -258,13 +258,13 @@ namespace ascension {
 			class ReplaceAllCommand : public Command {
 			public:
 				ReplaceAllCommand(viewers::TextViewer& viewer, bool onlySelection,
-					const String& replacement, searcher::IInteractiveReplacementCallback* callback) /*throw()*/;
+					const String& replacement, searcher::InteractiveReplacementCallback* callback) /*throw()*/;
 				std::size_t numberOfLastReplacements() const /*throw()*/;
 			private:
 				bool perform();
 				const bool onlySelection_;
 				const String replacement_;
-				searcher::IInteractiveReplacementCallback* const callback_;
+				searcher::InteractiveReplacementCallback* const callback_;
 				std::size_t numberOfLastReplacements_;
 			};
 			/// Extends the selection and begins rectangular selection.

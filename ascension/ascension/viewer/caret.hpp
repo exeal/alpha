@@ -4,7 +4,7 @@
  * @author exeal
  * @date 2003-2008 (was point.hpp)
  * @date 2008 (separated from point.hpp)
- * @date 2009-2010
+ * @date 2009-2011
  */
 
 #ifndef ASCENSION_CARET_HPP
@@ -12,6 +12,7 @@
 #include <ascension/kernel/point.hpp>
 #include <ascension/graphics/rendering.hpp>	// graphics.IVisualLinesListener
 #include <ascension/corelib/unicode.hpp>	// text.IdentifierSyntax
+#include <ascension/viewer/caret-observers.hpp>
 #ifdef ASCENSION_GCC
 #	include <unknwn.h>	// IUnknown, OLESTR, ...
 #endif // ASCENSION_GCC
@@ -29,22 +30,6 @@ namespace ascension {
 		class TextViewer;
 		class VirtualBox;
 		class VisualPoint;
-
-		/**
-		 * Interface for objects which are interested in change of scroll positions of a @c TextViewer.
-		 * @see TextViewer#addViewportListener, TextViewer#removeViewportListener
-		 */
-		class IViewportListener {
-		private:
-			/**
-			 * The scroll positions of the viewer were changed.
-			 * @param horizontal @c true if the vertical scroll position is changed
-			 * @param vertical @c true if the vertical scroll position is changed
-			 * @see TextViewer#firstVisibleLine
-			 */
-			virtual void viewportChanged(bool horizontal, bool vertical) = 0;
-			friend class TextViewer;
-		};
 
 		/**
 		 * The text viewer the object connecting to had been disposed.
@@ -157,57 +142,6 @@ namespace ascension {
 			void show(VisualPoint& p);
 		}	// namespace utils
 
-		/**
-		 * Interface for objects which are interested in getting informed about caret movement.
-		 * @see Caret#addListener, Caret#removeListener
-		 */
-		class ICaretListener {
-		private:
-			/**
-			 * The caret was moved.
-			 * @param self the caret
-			 * @param oldRegion the region which the caret had before. @c first is the anchor, and @c second is the caret
-			 */
-			virtual void caretMoved(const class Caret& self, const kernel::Region& oldRegion) = 0;
-			friend class Caret;
-		};
-
-		/**
-		 * Interface for objects which are interested in character input by a caret.
-		 * @see Caret#addCharacterInputListener, Caret#removeCharacterInputListener
-		 */
-		class ICharacterInputListener {
-		private:
-			/**
-			 * A character was inputted by the caret.
-			 * @param self the caret
-			 * @param c the code point of the inputted character
-			 */
-			virtual void characterInputted(const Caret& self, CodePoint c) = 0;
-			friend class Caret;
-		};
-
-		/**
-		 * Interface for objects which are interested in getting informed about changes of a caret.
-		 * @see IPointListener, Caret#addStateListener, Caret#removeStateListener
-		 */
-		class ICaretStateListener {
-		private:
-			/**
-			 * The matched brackets are changed.
-			 * @param self the caret
-			 * @param oldPair the pair of the brackets previously matched
-			 * @param outsideOfView the brackets newly matched are outside of the view
-			 */
-			virtual void matchBracketsChanged(const Caret& self,
-				const std::pair<kernel::Position, kernel::Position>& oldPair, bool outsideOfView) = 0;
-			/// The overtype mode of the caret is changed.
-			virtual void overtypeModeChanged(const Caret& self) = 0;
-			/// The shape (linear or rectangle) of the selection is changed.
-			virtual void selectionShapeChanged(const Caret& self) = 0;
-			friend class Caret;
-		};
-
 		// documentation is caret.cpp
 		class Caret : public VisualPoint, public kernel::PointListener, public kernel::DocumentListener {
 		public:
@@ -222,12 +156,12 @@ namespace ascension {
 			explicit Caret(TextViewer& viewer, const kernel::Position& position = kernel::Position(0, 0));
 			~Caret();
 			// listeners
-			void addListener(ICaretListener& listener);
-			void addCharacterInputListener(ICharacterInputListener& listener);
-			void addStateListener(ICaretStateListener& listener);
-			void removeListener(ICaretListener& listener);
-			void removeCharacterInputListener(ICharacterInputListener& listener);
-			void removeStateListener(ICaretStateListener& listener);
+			void addListener(CaretListener& listener);
+			void addCharacterInputListener(CharacterInputListener& listener);
+			void addStateListener(CaretStateListener& listener);
+			void removeListener(CaretListener& listener);
+			void removeCharacterInputListener(CharacterInputListener& listener);
+			void removeStateListener(CaretStateListener& listener);
 			// attributes : the anchor and the caret
 			const VisualPoint& anchor() const /*throw()*/;
 			const VisualPoint& beginning() const /*throw()*/;
@@ -294,9 +228,9 @@ namespace ascension {
 				kernel::Position positionBeforeUpdate_;
 			} * anchor_;
 			LCID clipboardLocale_;
-			detail::Listeners<ICaretListener> listeners_;
-			detail::Listeners<ICharacterInputListener> characterInputListeners_;
-			detail::Listeners<ICaretStateListener> stateListeners_;
+			detail::Listeners<CaretListener> listeners_;
+			detail::Listeners<CharacterInputListener> characterInputListeners_;
+			detail::Listeners<CaretStateListener> stateListeners_;
 			bool yanking_;			// true when right after pasted by using clipboard ring, and waiting for next cycle of ring
 			bool leaveAnchorNext_;	// true if should leave the anchor at the next movement
 			bool leadingAnchor_;	// true if in anchor_->moveTo calling, and ignore pointMoved

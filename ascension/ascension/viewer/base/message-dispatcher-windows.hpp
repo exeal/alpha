@@ -8,11 +8,15 @@
 #ifndef ASCENSION_MESSAGE_DISPATCHER_WINDOWS_HPP
 #define ASCENSION_MESSAGE_DISPATCHER_WINDOWS_HPP
 #include <ascension/corelib/type-traits.hpp>	// ASCENSION_DEFINED_HAS_METHOD
+#include <ascension/graphics/geometry.hpp>
 #include <ascension/viewer/base/user-input.hpp>
 #include <ascension/win32/windows.hpp>
 #include <type_traits>	// std.enable_if
 
 // these macros are defined by winuser.h
+#ifndef WM_UNICHAR
+#	define WM_UNICHAR 109
+#endif // !WM_UNICHAR
 #ifndef MK_XBUTTON1
 #	define MK_XBUTTON1 0x0020
 #	define MK_XBUTTON2 0x0040
@@ -29,6 +33,9 @@
 #ifndef WM_MOUSEHWHEEL
 #	define WM_MOUSEHWHEEL 0x020e
 #endif // !WM_MOUSEHWHEEL
+#ifndef WM_THEMECHANGED
+#	define WM_THEMECHANGED 0x031a
+#endif // !WM_THEMECHANGED
 #ifndef GET_KEYSTATE_LPARAM
 #	define GET_KEYSTATE_LPARAM(lp) (LOWORD(lp))
 #endif // !GET_KEYSTATE_LPARAM
@@ -44,9 +51,14 @@
 
 namespace ascension {
 
+	namespace graphics {
+		class PaintContext;
+	}
+
 	namespace detail {
-		ASCENSION_DEFINE_HAS_METHOD(aboutToLoseFocus, bool(T::*)());
 		ASCENSION_DEFINE_HAS_METHOD(focusGained, bool(T::*)());
+		ASCENSION_DEFINE_HAS_METHOD(aboutToLoseFocus, bool(T::*)());
+//		ASCENSION_DEFINE_HAS_METHOD(paint, bool(T::*)(graphics::PaintContext&));
 		ASCENSION_DEFINE_HAS_METHOD(keyPressed, bool(T::*)(const viewers::base::KeyInput&));
 		ASCENSION_DEFINE_HAS_METHOD(keyReleased, bool(T::*)(const viewers::base::KeyInput&));
 		ASCENSION_DEFINE_HAS_METHOD(mouseMoved, bool(T::*)(const viewers::base::LocatedUserInput&));
@@ -54,6 +66,32 @@ namespace ascension {
 		ASCENSION_DEFINE_HAS_METHOD(mouseReleased, bool(T::*)(const viewers::base::MouseButtonInput&));
 		ASCENSION_DEFINE_HAS_METHOD(mouseDoubleClicked, bool(T::*)(const viewers::base::MouseButtonInput&));
 		ASCENSION_DEFINE_HAS_METHOD(mouseWheelChanged, bool(T::*)(const viewers::base::MouseWheelInput&));
+		
+		ASCENSION_DEFINE_HAS_METHOD(onSetCursor, bool(T::*)(const win32::Handle<HWND>&, UINT, UINT));
+		ASCENSION_DEFINE_HAS_METHOD(onNcCreate, bool(T::*)(CREATESTRUCT&));
+		ASCENSION_DEFINE_HAS_METHOD(onDestroy, bool(T::*)());
+		ASCENSION_DEFINE_HAS_METHOD(onSize, bool(T::*)(UINT, const graphics::Dimension<>&));
+		ASCENSION_DEFINE_HAS_METHOD(onEraseBkgnd, bool(T::*)(graphics::PaintContext&));
+		ASCENSION_DEFINE_HAS_METHOD(onSysColorChange, void(T::*)());
+		ASCENSION_DEFINE_HAS_METHOD(onGetFont, const win32::Handle<HFONT>&(T::*)());
+		ASCENSION_DEFINE_HAS_METHOD(onNotify, bool(T::*)(int, const NMHDR&));
+		ASCENSION_DEFINE_HAS_METHOD(onContextMenu, bool(T::*)(const win32::Handle<HWND>&, const graphics::Point<>&));
+		ASCENSION_DEFINE_HAS_METHOD(onStyleChanging, bool(T::*)(int, STYLESTRUCT&));
+		ASCENSION_DEFINE_HAS_METHOD(onStyleChanged, bool(T::*)(int, const STYLESTRUCT&));
+		ASCENSION_DEFINE_HAS_METHOD(onChar, bool(T::*)(UINT, UINT));
+		ASCENSION_DEFINE_HAS_METHOD(onSysChar, bool(T::*)(UINT, UINT));
+		ASCENSION_DEFINE_HAS_METHOD(onUniChar, bool(T::*)(UINT, UINT));
+		ASCENSION_DEFINE_HAS_METHOD(onIMEStartComposition, void(T::*)());
+		ASCENSION_DEFINE_HAS_METHOD(onIMEEndComposition, void(T::*)());
+		ASCENSION_DEFINE_HAS_METHOD(onIMEComposition, void(T::*)(WPARAM, LPARAM, bool&));
+		ASCENSION_DEFINE_HAS_METHOD(onCommand, bool(T::*)(WORD, WORD, const win32::Handle<HWND>&));
+		ASCENSION_DEFINE_HAS_METHOD(onTimer, bool(T::*)(UINT_PTR, TIMERPROC));
+		ASCENSION_DEFINE_HAS_METHOD(onHScroll, bool(T::*)(UINT, UINT, const win32::Handle<HWND>&));
+		ASCENSION_DEFINE_HAS_METHOD(onVScroll, bool(T::*)(UINT, UINT, const win32::Handle<HWND>&));
+		ASCENSION_DEFINE_HAS_METHOD(onCaptureChanged, bool(T::*)(const win32::Handle<HWND>&));
+		ASCENSION_DEFINE_HAS_METHOD(onIMERequest, LRESULT(T::*)(WPARAM, LPARAM, bool&));
+		ASCENSION_DEFINE_HAS_METHOD(onIMENotify, LRESULT(T::*)(WPARAM, LPARAM, bool&));
+		ASCENSION_DEFINE_HAS_METHOD(onThemeChanged, bool(T::*)());
 	}
 
 	namespace win32 {
@@ -90,6 +128,9 @@ namespace ascension {
 				switch(message.message) {
 					ASCENSION_DISPATCH_MESSAGE(WM_SETFOCUS);
 					ASCENSION_DISPATCH_MESSAGE(WM_KILLFOCUS);
+//					ASCENSION_DISPATCH_MESSAGE(WM_PAINT);
+					ASCENSION_DISPATCH_MESSAGE(WM_SETCURSOR);
+					ASCENSION_DISPATCH_MESSAGE(WM_NCCREATE);
 					ASCENSION_DISPATCH_MESSAGE(WM_KEYDOWN);
 					ASCENSION_DISPATCH_MESSAGE(WM_KEYUP);
 					ASCENSION_DISPATCH_MESSAGE(WM_SYSKEYDOWN);
@@ -109,6 +150,30 @@ namespace ascension {
 					ASCENSION_DISPATCH_MESSAGE(WM_XBUTTONUP);
 					ASCENSION_DISPATCH_MESSAGE(WM_XBUTTONDBLCLK);
 					ASCENSION_DISPATCH_MESSAGE(WM_MOUSEHWHEEL);
+					
+					ASCENSION_DISPATCH_MESSAGE(WM_DESTROY);
+					ASCENSION_DISPATCH_MESSAGE(WM_SIZE);
+					ASCENSION_DISPATCH_MESSAGE(WM_ERASEBKGND);
+					ASCENSION_DISPATCH_MESSAGE(WM_SYSCOLORCHANGE);
+					ASCENSION_DISPATCH_MESSAGE(WM_GETFONT);
+					ASCENSION_DISPATCH_MESSAGE(WM_NOTIFY);
+					ASCENSION_DISPATCH_MESSAGE(WM_CONTEXTMENU);
+					ASCENSION_DISPATCH_MESSAGE(WM_STYLECHANGING);
+					ASCENSION_DISPATCH_MESSAGE(WM_STYLECHANGED);
+					ASCENSION_DISPATCH_MESSAGE(WM_CHAR);
+					ASCENSION_DISPATCH_MESSAGE(WM_SYSCHAR);
+					ASCENSION_DISPATCH_MESSAGE(WM_UNICHAR);
+					ASCENSION_DISPATCH_MESSAGE(WM_IME_STARTCOMPOSITION);
+					ASCENSION_DISPATCH_MESSAGE(WM_IME_ENDCOMPOSITION);
+					ASCENSION_DISPATCH_MESSAGE(WM_IME_COMPOSITION);
+					ASCENSION_DISPATCH_MESSAGE(WM_COMMAND);
+					ASCENSION_DISPATCH_MESSAGE(WM_TIMER);
+					ASCENSION_DISPATCH_MESSAGE(WM_HSCROLL);
+					ASCENSION_DISPATCH_MESSAGE(WM_VSCROLL);
+					ASCENSION_DISPATCH_MESSAGE(WM_CAPTURECHANGED);
+					ASCENSION_DISPATCH_MESSAGE(WM_IME_NOTIFY);
+					ASCENSION_DISPATCH_MESSAGE(WM_IME_REQUEST);
+					ASCENSION_DISPATCH_MESSAGE(WM_THEMECHANGED);
 				}
 			}
 		private:
@@ -239,6 +304,85 @@ namespace ascension {
 					GET_KEYSTATE_WPARAM(wp), lp, consumed);
 				return consumed ? TRUE : FALSE;
 			}
+			
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_SETCURSOR, onSetCursor) {
+				return (consumed = widget.onSetCursor(Handle<HWND>(reinterpret_cast<HWND>(wp)), LOWORD(lp), HIWORD(lp))) ? TRUE : FALSE;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_NCCREATE, onNcCreate) {
+				return (consumed = true), widget.onNcCreate();
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_DESTROY, onDestroy) {
+				return (consumed = widget.onDestroy()) ? 0 : 1;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_SIZE, onSize) {
+				return (consumed = widget.onSize(static_cast<UINT>(wp), LOWORD(lp), HIWORD(lp))) ? 0 : 1;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_ERASEBKGND, onEraseBkgnd) {
+				return (consumed = widget.onEraseBkgnd()) ? TRUE : FALSE;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_SYSCOLORCHANGE, onSysColorChange) {
+				return (consumed = true), widget.onSysColorChange();
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_GETFONT, onGetFont) {
+				const Handle<HFONT>& borrowed = widget.onGetFont();
+				return (consumed = true), borrowed.get();
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_NOTIFY, onNotify) {
+				return (consumed = widget.onNotify(static_cast<int>(wp), *reinterpret_cast<NMHDR*>(lp))), 0;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_CONTEXTMENU, onContextMenu) {
+				const POINT temp = {LOWORD(lp), HIWORD(lp)};
+				return (consumed = widget.onContextMenu(Handle<HWND>(reinterpret_cast<HWND>(wp)), graphics::fromNative(temp))), 1;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_STYLECHANGING, onStyleChanging) {
+				return (consumed = widget.onStyleChanging(static_cast<int>(wp), *reinterpret_cast<STYLESTRUCT*>(lp))) ? 0 : 1;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_STYLECHANGED, onStyleChanged) {
+				return (consumed = widget.onStyleChanged(static_cast<int>(wp), *reinterpret_cast<STYLESTRUCT*>(lp))) ? 0 : 1;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_IME_STARTCOMPOSITION, onIMEStartComposition) {
+				return widget.onIMEStartComposition(), 1;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_IME_ENDCOMPOSITION, onIMEEndComposition) {
+				return widget.onIMEEndComposition(), 1;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_IME_COMPOSITION, onIMEComposition) {
+				return widget.onIMEComposition(wp, lp, consumed), 1;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_CHAR, onChar) {
+				return (consumed = widget.onChar(static_cast<UINT>(wp), static_cast<UINT>(lp))) ? 0 : 1;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_SYSCHAR, onSysChar) {
+				return (consumed = widget.onSysChar(static_cast<UINT>(wp), static_cast<UINT>(lp))) ? 0 : 1;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_UNICHAR, onUniChar) {
+				return (consumed = widget.onUniChar(static_cast<UINT>(wp), static_cast<UINT>(lp))) ? 0 : 1;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_COMMAND, onCommand) {
+				return (consumed = widget.onCommand(LOWORD(wp), HIWORD(wp), Handle<HWND>(reinterpret_cast<HWND>(lp)))) ? 0 : 1;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_TIMER, onTimer) {
+				return (consumed = widget.onTimer(static_cast<UINT_PTR>(wp), reinterpret_cast<TIMERPROC>(lp))) ? 0 : 1;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_HSCROLL, onHScroll) {
+				return (consumed = widget.onHScroll(LOWORD(wp), HIWORD(wp), Handle<HWND>(reinterpret_cast<HWND>(lp)))) ? 0 : 1;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_VSCROLL, onVScroll) {
+				return (consumed = widget.onVScroll(LOWORD(wp), HIWORD(wp), Handle<HWND>(reinterpret_cast<HWND>(lp)))) ? 0 : 1;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_CAPTURECHANGED, onCaptureChanged) {
+				return (consumed = widget.onCaptureChanged(Handle<HWND>(reinterpret_cast<HWND>(lp)))) ? 0 : 1;
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_IME_REQUEST, onIMERequest) {
+				return widget.onIMERequest(wp, lp, consumed);
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_IME_NOTIFY, onIMENotify) {
+				return widget.onIMENotify(wp, lp, consumed);
+			}
+			ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(WM_THEMECHANGED, onThemeChanged) {
+				return (consumed = widget.onThemeChanged()) ? 0 : 1;
+			}
+
 			template<typename T> static LRESULT dispatch(T& widget, ...) {return 0;}
 			
 		};

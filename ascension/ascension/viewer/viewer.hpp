@@ -3,7 +3,7 @@
  * This header defines several visual presentation classes.
  * @author exeal
  * @date 2003-2006 (was EditView.h)
- * @date 2006-2010
+ * @date 2006-2011
  */
 
 #ifndef ASCENSION_VIEWER_HPP
@@ -12,7 +12,9 @@
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/kernel/point.hpp>
 #include <ascension/presentation.hpp>
+#include <ascension/viewer/caret-observers.hpp>
 #include <ascension/viewer/content-assist.hpp>
+#include <ascension/viewer/viewer-observers.hpp>
 #include <ascension/viewer/base/window-windows.hpp>
 #include <ascension/win32/com/unknown-impl.hpp>
 #include <set>
@@ -73,19 +75,6 @@ namespace ascension {
 			const Point& end() const /*throw()*/ {return points_[(&beginning() == &points_[0]) ? 1 : 0];}
 			int left() const /*throw()*/ {return std::min(points_[0].x, points_[1].x);}
 			int right() const /*throw()*/ {return std::max(points_[0].x, points_[1].x);}
-		};
-
-		/**
-		 * Interface for objects which are interested in change of input status of a @c TextViewer.
-		 * @see ICaretListener#overtypeModeChanged, TextViewer#addInputStatusListener, TextViewer#removeInputStatusListener
-		 */
-		class ITextViewerInputStatusListener {
-		private:
-			/// The text viewer's IME open status has been changed.
-			virtual void textViewerIMEOpenStatusChanged() /*throw()*/ = 0;
-			/// The text viewer's input language has been changed (@c WM_INPUTLANGCHANGE).
-			virtual void textViewerInputLanguageChanged() /*throw()*/ = 0;
-			friend class TextViewer;
 		};
 
 		/**
@@ -155,7 +144,7 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 */
 		class LocaleSensitiveCaretShaper : public CaretShaper,
-			public ICaretListener, public ICaretStateListener, public ITextViewerInputStatusListener {
+			public CaretListener, public CaretStateListener, public TextViewerInputStatusListener {
 		public:
 			explicit LocaleSensitiveCaretShaper(bool bold = false) /*throw()*/;
 		private:
@@ -331,26 +320,15 @@ namespace ascension {
 				win32::com::ComPtr<IDropTargetHelper> dropTargetHelper;
 			} dnd_;
 			std::auto_ptr<win32::Window> autoScrollOriginMark_;
-			const presentation::hyperlink::IHyperlink* lastHoveredHyperlink_;
+			const presentation::hyperlink::Hyperlink* lastHoveredHyperlink_;
 			static std::map<UINT_PTR, DefaultMouseInputStrategy*> timerTable_;
 			static const UINT SELECTION_EXPANSION_INTERVAL, OLE_DRAGGING_TRACK_INTERVAL;
-		};
-
-		/**
-		 * Interface for objects which are interested in change of size of a @c TextViewer.
-		 * @see TextViewer#addDisplaySizeListener, TextViewer#removeDisplaySizeListener
-		 */
-		class IDisplaySizeListener {
-		private:
-			/// The size of the viewer was changed.
-			virtual void viewerDisplaySizeChanged() = 0;
-			friend class TextViewer;
 		};
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 	}
 
-		namespace internal {class TextViewerAccessibleProxy;}
+	namespace detail {class TextViewerAccessibleProxy;}
 
 	namespace viewers {
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
@@ -359,8 +337,8 @@ namespace ascension {
 				public win32::Window,
 				public kernel::DocumentListener, public kernel::DocumentStateListener,
 				public kernel::DocumentRollbackListener, public graphics::DefaultFontListener,
-				public graphics::VisualLinesListener, public ICaretListener, public ICaretStateListener,
-				public detail::IPointCollection<VisualPoint> {
+				public graphics::VisualLinesListener, public CaretListener, public CaretStateListener,
+				public detail::PointCollection<VisualPoint> {
 		public:
 			/// Result of hit test.
 			enum HitTestResult {
@@ -505,12 +483,12 @@ namespace ascension {
 				const graphics::Dimension<>& size = graphics::Dimension<>(CW_USEDEFAULT, CW_USEDEFAULT),
 				DWORD style = 0, DWORD extendedStyle = 0);
 			// listeners and strategies
-			void addDisplaySizeListener(IDisplaySizeListener& listener);
-			void addInputStatusListener(ITextViewerInputStatusListener& listener);
-			void addViewportListener(IViewportListener& listener);
-			void removeDisplaySizeListener(IDisplaySizeListener& listener);
-			void removeInputStatusListener(ITextViewerInputStatusListener& listener);
-			void removeViewportListener(IViewportListener& listener);
+			void addDisplaySizeListener(DisplaySizeListener& listener);
+			void addInputStatusListener(TextViewerInputStatusListener& listener);
+			void addViewportListener(ViewportListener& listener);
+			void removeDisplaySizeListener(DisplaySizeListener& listener);
+			void removeInputStatusListener(TextViewerInputStatusListener& listener);
+			void removeViewportListener(ViewportListener& listener);
 			void setCaretShaper(std::tr1::shared_ptr<CaretShaper> shaper) /*throw()*/;
 			void setMouseInputStrategy(IMouseInputStrategy* newStrategy, bool delegateOwnership);
 			// attributes
@@ -548,8 +526,8 @@ namespace ascension {
 			HRESULT startTextServices();
 #endif // !ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
 			// content assist
-			contentassist::IContentAssistant* contentAssistant() const /*throw()*/;
-			void setContentAssistant(std::auto_ptr<contentassist::IContentAssistant> newContentAssistant) /*throw()*/;
+			contentassist::ContentAssistant* contentAssistant() const /*throw()*/;
+			void setContentAssistant(std::auto_ptr<contentassist::ContentAssistant> newContentAssistant) /*throw()*/;
 			// redraw
 			void redrawLine(length_t line, bool following = false);
 			void redrawLines(length_t first, length_t last);
@@ -794,11 +772,11 @@ namespace ascension {
 			Char* tipText_;
 			// strategies and listeners
 			detail::StrategyPointer<IMouseInputStrategy> mouseInputStrategy_;
-			detail::Listeners<IDisplaySizeListener> displaySizeListeners_;
-			detail::Listeners<ITextViewerInputStatusListener> inputStatusListeners_;
-			detail::Listeners<IViewportListener> viewportListeners_;
+			detail::Listeners<DisplaySizeListener> displaySizeListeners_;
+			detail::Listeners<TextViewerInputStatusListener> inputStatusListeners_;
+			detail::Listeners<ViewportListener> viewportListeners_;
 			std::auto_ptr<RulerPainter> rulerPainter_;
-			std::auto_ptr<contentassist::IContentAssistant> contentAssistant_;
+			std::auto_ptr<contentassist::ContentAssistant> contentAssistant_;
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 			detail::TextViewerAccessibleProxy* accessibleProxy_;
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
@@ -877,7 +855,7 @@ namespace ascension {
 
 		/// Highlights the line on which the caret is put.
 		class CurrentLineHighlighter : public presentation::ILineColorDirector,
-				public ICaretListener, public ICaretStateListener, public kernel::IPointLifeCycleListener {
+				public CaretListener, public CaretStateListener, public kernel::PointLifeCycleListener {
 			ASCENSION_NONCOPYABLE_TAG(CurrentLineHighlighter);
 		public:
 			// constant
@@ -917,7 +895,7 @@ namespace ascension {
 		} // namespace utils
 
 
-// inlines //////////////////////////////////////////////////////////////////
+// inlines ////////////////////////////////////////////////////////////////////////////////////////
 
 /// Returns the UI reading direction of @a object.
 inline presentation::ReadingDirection utils::computeUIReadingDirection(const TextViewer& viewer) {
@@ -930,24 +908,24 @@ inline presentation::ReadingDirection utils::computeUIReadingDirection(const Tex
 
 /**
  * Registers the display size listener.
- * @param listener the listener to be registered
+ * @param listener The listener to be registered
  * @throw std#invalid_argument @a listener is already registered
  */
-inline void TextViewer::addDisplaySizeListener(IDisplaySizeListener& listener) {displaySizeListeners_.add(listener);}
+inline void TextViewer::addDisplaySizeListener(DisplaySizeListener& listener) {displaySizeListeners_.add(listener);}
 
 /**
  * Registers the input status listener.
- * @param listener the listener to be registered
+ * @param listener The listener to be registered
  * @throw std#invalid_argument @a listener is already registered
  */
-inline void TextViewer::addInputStatusListener(ITextViewerInputStatusListener& listener) {inputStatusListeners_.add(listener);}
+inline void TextViewer::addInputStatusListener(TextViewerInputStatusListener& listener) {inputStatusListeners_.add(listener);}
 
 /**
  * Registers the viewport listener.
- * @param listener the listener to be registered
+ * @param listener The listener to be registered
  * @throw std#invalid_argument @a listener is already registered
  */
-inline void TextViewer::addViewportListener(IViewportListener& listener) {viewportListeners_.add(listener);}
+inline void TextViewer::addViewportListener(ViewportListener& listener) {viewportListeners_.add(listener);}
 
 /**
  * Returns @c true if the viewer allows the mouse operations.
@@ -971,7 +949,7 @@ inline const Caret& TextViewer::caret() const /*throw()*/ {return *caret_;}
 inline const TextViewer::Configuration& TextViewer::configuration() const /*throw()*/ {return configuration_;}
 
 /// Returns the content assistant or @c null if not registered.
-inline contentassist::IContentAssistant* TextViewer::contentAssistant() const /*throw()*/ {return contentAssistant_.get();}
+inline contentassist::ContentAssistant* TextViewer::contentAssistant() const /*throw()*/ {return contentAssistant_.get();}
 
 /// Returns the document.
 inline kernel::Document& TextViewer::document() {return presentation_.document();}
@@ -995,7 +973,7 @@ inline void TextViewer::enableActiveInputMethod(bool enable /* = true */) /*thro
  * inputs are not allowed.
  *
  * These is no way to disable the scroll bars.
- * @param enable set @c false to increment the disabled count, @c true to decrement
+ * @param enable Set @c false to increment the disabled count, @c true to decrement
  * @see #allowsMouseInput
  */
 inline void TextViewer::enableMouseInput(bool enable) {
@@ -1003,9 +981,9 @@ inline void TextViewer::enableMouseInput(bool enable) {
 
 /**
  * Returns the information about the uppermost visible line in the viewer.
- * @param[out] logicalLine the logical index of the line. can be @c null if not needed
- * @param[out] visualLine the visual index of the line. can be @c null if not needed
- * @param[out] visualSubline the offset of @a visualLine from the first line in @a logicalLine. can
+ * @param[out] logicalLine The logical index of the line. can be @c null if not needed
+ * @param[out] visualLine The visual index of the line. can be @c null if not needed
+ * @param[out] visualSubline The offset of @a visualLine from the first line in @a logicalLine. Can
  *                           be @c null if not needed
  */
 inline void TextViewer::firstVisibleLine(length_t* logicalLine, length_t* visualLine, length_t* visualSubline) const /*throw()*/ {
@@ -1027,7 +1005,7 @@ inline bool TextViewer::isFrozen() const /*throw()*/ {return freezeInfo_.count !
 
 /**
  * Returns the number of the drawable columns in the window.
- * @return the number of columns
+ * @return The number of columns
  */
 inline length_t TextViewer::numberOfVisibleColumns() const /*throw()*/ {
 	const graphics::Rect<> r(bounds(false));
@@ -1037,7 +1015,7 @@ inline length_t TextViewer::numberOfVisibleColumns() const /*throw()*/ {
 
 /**
  * Returns the number of the drawable lines in the window.
- * @return the number of lines
+ * @return The number of lines
  */
 inline length_t TextViewer::numberOfVisibleLines() const /*throw()*/ {
 	const graphics::Rect<> r(bounds(false));
@@ -1052,36 +1030,36 @@ inline const presentation::Presentation& TextViewer::presentation() const /*thro
 
 /**
  * Removes the display size listener.
- * @param listener the listener to be removed
+ * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered
  */
-inline void TextViewer::removeDisplaySizeListener(IDisplaySizeListener& listener) {displaySizeListeners_.remove(listener);}
+inline void TextViewer::removeDisplaySizeListener(DisplaySizeListener& listener) {displaySizeListeners_.remove(listener);}
 
 /**
  * Removes the input status listener.
- * @param listener the listener to be removed
+ * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered
  */
-inline void TextViewer::removeInputStatusListener(ITextViewerInputStatusListener& listener) {inputStatusListeners_.remove(listener);}
+inline void TextViewer::removeInputStatusListener(TextViewerInputStatusListener& listener) {inputStatusListeners_.remove(listener);}
 
 /**
  * Removes the viewport listener.
- * @param listener the listener to be removed
+ * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered
  */
-inline void TextViewer::removeViewportListener(IViewportListener& listener) {viewportListeners_.remove(listener);}
+inline void TextViewer::removeViewportListener(ViewportListener& listener) {viewportListeners_.remove(listener);}
 
 /**
  * Returns the ratio to vertical/horizontal scroll amount of line/column numbers.
- * @param horizontal set @c true for horizontal, @c false for vertical
- * @return the rate
+ * @param horizontal Set @c true for horizontal, @c false for vertical
+ * @return The rate
  */
 inline ulong TextViewer::scrollRate(bool horizontal) const /*throw()*/ {
 	return 1/*horizontal ? scrollInfo_.horizontal.rate : scrollInfo_.vertical.rate*/;}
 
 /**
  * Sets the caret shaper.
- * @param shaper the new caret shaper
+ * @param shaper The new caret shaper
  */
 inline void TextViewer::setCaretShaper(std::tr1::shared_ptr<CaretShaper> shaper) {caretShape_.shaper = shaper;}
 
