@@ -8,7 +8,9 @@
 
 #ifndef ASCENSION_STRING_PIECE_HPP
 #define ASCENSION_STRING_PIECE_HPP
+#include <ascension/corelib/basic-types.hpp>	// Char
 #include <ascension/corelib/range.hpp>
+#include <stdexcept>							// std.out_of_range
 #include <string>
 
 namespace ascension {
@@ -69,7 +71,9 @@ namespace ascension {
 		 * @throw std#out_of_range @a i is equal to or greater than the length of the string
 		 */
 		value_type at(size_type i) const {
-			if(i >= length()) throw std::out_of_range("i"); return operator[](i);}
+			if(i >= length())
+				throw std::out_of_range("i"); return operator[](i);
+		}
 	};
 
 	/// Specialization of @c BasicStringPiece for @c Char type.
