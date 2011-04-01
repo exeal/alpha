@@ -2,7 +2,7 @@
  * @file regex.hpp
  * Defines wrappers of Boost.Regex library or std#tr1#regex.
  * @author exeal
- * @date 2006-2010
+ * @date 2006-2011
  */
 
 #include <ascension/config.hpp>	// ASCENSION_NO_REGEX, ASCENSION_NO_MIGEMO
@@ -11,12 +11,14 @@
 #ifndef ASCENSION_REGEX_HPP
 #define ASCENSION_REGEX_HPP
 
+#include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/unicode-property.hpp>
 #include <ascension/corelib/unicode-utf.hpp>	// text.UTF16To32Iterator
 #include <memory>
 #include <map>
 #include <bitset>
 #include <boost/regex.hpp>
+#include <boost/mpl/int.hpp>
 
 namespace ascension {
 
@@ -49,7 +51,8 @@ namespace ascension {
 		 *                           sequence (should be UTF-32)
 		 * @see Matcher
 		 */
-		template<typename CodePointIterator> class MatchResult {
+		template<typename CodePointIterator>
+		class MatchResult {
 		public:
 			/// Destructor.
 			virtual ~MatchResult() /*throw()*/ {}
@@ -97,7 +100,7 @@ namespace ascension {
 			 */
 			virtual const CodePointIterator& start(int group = 0) const = 0;
 		private:
-			ASCENSION_STATIC_ASSERT(text::CodeUnitSizeOf<CodePointIterator>::result == 4);
+			ASCENSION_STATIC_ASSERT(text::CodeUnitSizeOf<CodePointIterator>::value == 4);
 		};
 	}
 
@@ -161,9 +164,15 @@ namespace ascension {
 			typedef std::basic_string<char_type> string_type;
 			typedef std::locale locale_type;
 			typedef std::bitset<CLASS_END> char_class_type;
-			static size_type length(const char_type* p) {size_type i = 0; while(p[i] != 0) ++i; return i;}
+			static size_type length(const char_type* p) {
+				size_type i = 0;
+				while(p[i] != 0)
+					++i;
+				return i;
+			}
 			char_type translate(char_type c) const {
-				if(unixLineMode) return (c == LINE_FEED) ? LINE_SEPARATOR : c;
+				if(unixLineMode)
+					return (c == LINE_FEED) ? LINE_SEPARATOR : c;
 				return (c < 0x10000ul && std::binary_search(NEWLINE_CHARACTERS,
 					ASCENSION_ENDOF(NEWLINE_CHARACTERS), static_cast<Char>(c & 0xffffu))) ? LINE_SEPARATOR : c;
 			}
@@ -195,8 +204,6 @@ namespace ascension {
 			locale_type getloc() const {return locale_;}
 			std::string error_string(boost::regex_constants::error_type) const {return "Unknown error";}
 		private:
-			static std::size_t findPropertyValue(const String& expression);
-		private:
 			locale_type locale_;
 			const std::collate<char_type>* collator_;
 			static std::map<const Char*, int, text::ucd::PropertyNameComparer<Char> > names_;
@@ -227,8 +234,11 @@ namespace ascension {
 			 * @param newPattern The new pattern used by this matcher
 			 * @return This matcher
 			 */
-			Matcher& usePattern(const Pattern& newPattern) {pattern_ = &pattern; Base::impl().reset(); return *this;}
-
+			Matcher& usePattern(const Pattern& newPattern) {
+				pattern_ = &pattern;
+				Base::impl().reset();
+				return *this;
+			}
 			/**
 			 * @brief Sets the limits of this matcher's region. The region is the part of the input
 			 * sequence that will be searched to find a match. Invoking this method resets the
@@ -387,7 +397,7 @@ namespace ascension {
 			template<typename OutputIterator>
 			Matcher& appendReplacement(OutputIterator out, const String& replacement) {
 				checkInplaceReplacement(); checkPreviousMatch();
-				appendReplacement(out, replacement, detail::Int2Type<text::CodeUnitSizeOf<OI>::result>());
+				appendReplacement(out, replacement, boost::mpl::int_<text::CodeUnitSizeOf<OutputIterator>::value>());
 				appendingPosition_ = Base::impl()[0].second;
 				return *this;
 			}
@@ -404,7 +414,7 @@ namespace ascension {
 			template<typename OutputIterator>
 			OutputIterator appendTail(OutputIterator out) const {
 				checkInplaceReplacement();
-				return appendTail(out, detail::Int2Type<text::CodeUnitSizeOf<OutputIterator>::result>());
+				return appendTail(out, boost::mpl::int_<text::CodeUnitSizeOf<OutputIterator>::value>());
 			}
 			// documentation is regex.cpp
 			String replaceAll(const String& replacement) {
@@ -493,7 +503,8 @@ namespace ascension {
 			 * @return A @c MatchResult with the state of this matcher
 			 */
 			std::auto_ptr<MatchResult<CodePointIterator> > toMatchResult() const {
-				return std::auto_ptr<MatchResult<CPI> >(new detail::MatchResultImpl<CPI>(Base::impl()));
+				return std::auto_ptr<MatchResult<CodePointIterator> >(
+					new detail::MatchResultImpl<CodePointIterator>(Base::impl()));
 			}
 		private:
 			Matcher(const Pattern& pattern, CodePointIterator first, CodePointIterator last) :
@@ -501,7 +512,7 @@ namespace ascension {
 				appendingPosition_(input_.first), replaced_(false), matchedZeroWidth_(false),
 				usesAnchoringBounds_(true), usesTransparentBounds_(false) {}
 			template<typename OutputIterator> void appendReplacement(OutputIterator out,
-					const String& replacement, const detail::Int2Type<2>&) {
+					const String& replacement, const boost::mpl::int_<2>&) {
 				typedef typename boost::match_results<CodePointIterator>::string_type String32;
 				if(appendingPosition_ != input_.second)
 					std::copy(appendingPosition_, Base::impl()[0].first, out);
@@ -512,25 +523,37 @@ namespace ascension {
 					text::UTF32To16Iterator<typename String32::const_iterator>(replaced.end()), out);
 			}
 			template<typename OutputIterator> void appendReplacement(OutputIterator out,
-					const String& replacement, const detail::Int2Type<4>&) {
+					const String& replacement, const boost::mpl::int_<4>&) {
 				if(appendingPosition_ != input_.second)
 					std::copy(appendingPosition_, Base::impl()[0].first, out);
 				const String& replaced(Base::impl().format(replacement));
 				std::copy(replaced.begin(), replaced.end(), out);
 			}
 			template<typename OutputIterator>
-			OutputIterator appendTail(OutputIterator out, const detail::Int2Type<2>&) const {
+			OutputIterator appendTail(OutputIterator out, const boost::mpl::int_<2>&) const {
 				return std::copy(
 					text::UTF32To16Iterator<CodePointIterator>(appendingPosition_),
 					text::UTF32To16Iterator<CodePointIterator>(input_.second), out);
 			}
 			template<typename OutputIterator>
-			OutputIterator appendTail(OutputIterator out, const detail::Int2Type<4>&) const {
+			OutputIterator appendTail(OutputIterator out, const boost::mpl::int_<4>&) const {
 				return std::copy(appendingPosition_, input_.second, out);
 			}
-			bool acceptResult() {const bool b(Base::impl()[0].matched); matchedZeroWidth_ = b && Base::impl().length() == 0; if(b) current_ = Base::end(); return b;}
-			void checkInplaceReplacement() const {if(replaced_) throw IllegalStateException("the matcher entered to in-place replacement.");}
-			void checkPreviousMatch() const {if(!Base::impl()[0].matched) throw IllegalStateException("the previous was not performed or failed.");}
+			bool acceptResult() {
+				const bool b(Base::impl()[0].matched);
+				matchedZeroWidth_ = b && Base::impl().length() == 0;
+				if(b)
+					current_ = Base::end();
+				return b;
+			}
+			void checkInplaceReplacement() const {
+				if(replaced_)
+					throw IllegalStateException("the matcher entered to in-place replacement.");
+			}
+			void checkPreviousMatch() const {
+				if(!Base::impl()[0].matched)
+					throw IllegalStateException("the previous was not performed or failed.");
+			}
 			boost::match_flag_type nativeFlags(const CodePointIterator& first,
 					const CodePointIterator& last, bool continuous) const /*throw()*/ {
 				boost::match_flag_type f(boost::regex_constants::match_default);
@@ -638,7 +661,7 @@ namespace ascension {
 			 *                              defined match flags are set in @a flags
 			 * @throw PatternSyntaxException The expression's syntax is invalid
 			 */
-			static std::auto_ptr<const Pattern> compile(const String& regex, int flags = 0) {
+			static std::auto_ptr<const Pattern> compile(const StringPiece& regex, int flags = 0) {
 				return std::auto_ptr<const Pattern>(new Pattern(regex, flags));
 			}
 			/**
@@ -669,7 +692,7 @@ namespace ascension {
 			 * @param input the character sequence to be matched
 			 * @throw PatternSyntaxException the expression's syntax is invalid
 			 */
-			static bool matches(const String& regex, const String& input) {
+			static bool matches(const StringPiece& regex, const StringPiece& input) {
 				return matches(regex,
 					text::StringCharacterIterator(input), text::StringCharacterIterator(input, input.end()));
 			}
@@ -681,15 +704,15 @@ namespace ascension {
 			 * @throw PatternSyntaxException the expression's syntax is invalid
 			 */
 			template<typename CodePointIterator>
-			static bool matches(const String& regex, CodePointIterator first, CodePointIterator last) {
+			static bool matches(const StringPiece& regex, CodePointIterator first, CodePointIterator last) {
 				return compile(regex)->matcher(first, last)->matches();
 			}
 //			template<typename CodePointIterator, typename OutputIterator>
 //			std::size_t split(CodePointIteratorfirst, CodePointIteratorlast, OutputIterator out, std::size_t limit = -1);
 		protected:
-			Pattern(const Char* first, const Char* last, boost::regex_constants::syntax_option_type nativeSyntax);
+			Pattern(const StringPiece& regex, boost::regex_constants::syntax_option_type nativeSyntax);
 		private:
-			Pattern(const String& regex, int flags);
+			Pattern(const StringPiece& regex, int flags);
 			boost::basic_regex<CodePoint, detail::RegexTraits> impl_;
 			const int flags_;
 			template<typename CodePointIterator> friend class Matcher;
@@ -700,11 +723,11 @@ namespace ascension {
 		class MigemoPattern : public Pattern {
 			ASCENSION_UNASSIGNABLE_TAG(MigemoPattern);
 		public:
-			static std::auto_ptr<MigemoPattern> compile(const Char* first, const Char* last, bool caseSensitive);
+			static std::auto_ptr<MigemoPattern> compile(const StringPiece& pattern, bool caseSensitive);
 			static void initialize(const char* runtimePathName, const char* dictionaryPathName);
 			static bool isMigemoInstalled() /*throw()*/;
 		private:
-			MigemoPattern(const Char* first, const Char* last, bool caseSensitive);
+			MigemoPattern(const StringPiece& pattern, bool caseSensitive);
 			static void install();
 			static AutoBuffer<char> runtimePathName_, dictionaryPathName_;
 		};

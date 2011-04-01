@@ -1,12 +1,12 @@
 /**
  * @file regex.cpp
  * @author exeal
- * @date 2006-2010
+ * @date 2006-2011
  */
 
 #ifndef ASCENSION_NO_REGEX
 #include <ascension/corelib/regex.hpp>
-#include <ascension/internal.hpp>	// detail.SharedLibrary
+#include <ascension/corelib/shared-library.hpp>	// detail.SharedLibrary
 #ifndef ASCENSION_NO_MIGEMO
 #	include <ascension/corelib/encoder.hpp>
 #endif // !ASCENSION_NO_MIGEMO
@@ -102,25 +102,26 @@ namespace {
 		 * @param last The end of the source text
 		 * @param[out] outputLength The length of the regular expression includes @c null
 		 * @return The regular expression or @c null if failed
-		 * @throw std#invalid_argument The source text is invalid
+		 * @throw NullPointerException @a s is @c null
 		 */
-		const Char* query(const Char* first, const Char* last, size_t& outputLength) {
+		const Char* query(const StringPiece& s, size_t& outputLength) {
 			if(!isEnable())
 				return 0;
-			else if(first == 0 || last == 0 || first > last)
-				throw invalid_argument("Invalid text.");
+			else if(s.beginning() == 0)
+				throw NullPointerException("s");
 
 			// convert the source text from UTF-16 to native Japanese encoding
 			auto_ptr<encoding::Encoder> encoder(encoding::Encoder::forMIB(encoding::standard::SHIFT_JIS));
 			if(encoder.get() == 0)
 				return 0;
 			else {
-				size_t bufferLength = encoder->properties().maximumNativeBytes() * (last - first);
+				size_t bufferLength = encoder->properties().maximumNativeBytes() * s.length();
 				AutoBuffer<byte> buffer(new byte[bufferLength + 1]);
 				byte* toNext;
 				const Char* fromNext;
 				if(encoding::Encoder::COMPLETED != encoder->fromUnicode(buffer.get(),
-						buffer.get() + bufferLength, toNext, first, last, fromNext), encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTERS)
+						buffer.get() + bufferLength, toNext,
+						s.beginning(), s.end(), fromNext), encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTERS)
 					return 0;
 				*toNext = 0;
 				query(buffer.get());
@@ -139,10 +140,6 @@ namespace {
 				lastPattern_, lastPattern_ + outputLength, toNext, lastNativePattern_, lastNativePattern_ + nativePatternLength, fromNext);
 			outputLength = toNext - lastPattern_;
 			return lastPattern_;
-		}
-		/// @see #query(const Char*, const Char*, size_t&)
-		const Char* query(const String& s, size_t& outputLength) {
-			return query(s.data(), s.data() + s.length(), outputLength);
 		}
 		/// Releases the pattern explicitly.
 		void releasePatterns() throw() {
@@ -338,35 +335,36 @@ PatternSyntaxException::Code PatternSyntaxException::getCode() const {
  */
 
 /// @internal Private constructor.
-Pattern::Pattern(const String& regex, int flags /* = 0 */) : flags_(flags) {
+Pattern::Pattern(const StringPiece& regex, int flags /* = 0 */) : flags_(flags) {
 	if((flags & ~(CANON_EQ | CASE_INSENSITIVE | COMMENTS | DOTALL | LITERAL | MULTILINE | UNICODE_CASE | UNIX_LINES)) != 0)
 		throw UnknownValueException("flags includes illegal bit values.");
 	try {
-		impl_.assign(UTF16To32Iterator<String::const_iterator>(regex.begin(), regex.end()),
-			UTF16To32Iterator<String::const_iterator>(regex.begin(), regex.end(), regex.end()),
+		impl_.assign(UTF16To32Iterator<const Char*>(regex.beginning(), regex.end()),
+			UTF16To32Iterator<const Char*>(regex.beginning(), regex.end(), regex.end()),
 			boost::regex_constants::perl | boost::regex_constants::collate
 			| (((flags & CASE_INSENSITIVE) != 0) ? boost::regex_constants::icase : 0)
 			| (((flags & LITERAL) != 0) ? boost::regex_constants::literal : 0));
 	} catch(const boost::regex_error& e) {
-		throw PatternSyntaxException(e, regex);
+		throw PatternSyntaxException(e, String(regex.beginning(), regex.end()));
 	}
 }
 
 /**
  * Protected constructor builds regular expression pattern with the Boost.Regex native syntax flags.
- * @param first The start of the pattern string
- * @param last The end of the pattern string
+ * @param regex The pattern string
  * @param options The syntax options
  * @param nativeSyntax The syntax flags of @c boost#syntax_option_type
+ * @throw NullPointerException @a regex is @c null
  * @throw PatternSyntaxException The expression's syntax is invalid
  */
-Pattern::Pattern(const Char* first, const Char* last, boost::regex_constants::syntax_option_type nativeSyntax) : flags_(0) {
-	if(first == 0 || last == 0)
-		throw NullPointerException("first and/or last");
+Pattern::Pattern(const StringPiece& regex, boost::regex_constants::syntax_option_type nativeSyntax) : flags_(0) {
+	if(regex.beginning() == 0)
+		throw NullPointerException("regex");
 	try {
-		impl_.assign(UTF16To32Iterator<const Char*>(first, last), UTF16To32Iterator<const Char*>(first, last, last), nativeSyntax);
+		impl_.assign(UTF16To32Iterator<const Char*>(regex.beginning(), regex.end()),
+			UTF16To32Iterator<const Char*>(regex.beginning(), regex.end(), regex.end()), nativeSyntax);
 	} catch(const boost::regex_error& e) {
-		throw PatternSyntaxException(e, String(first, last));
+		throw PatternSyntaxException(e, String(regex.beginning(), regex.end()));
 	}
 }
 
@@ -400,14 +398,6 @@ void RegexTraits::buildNames() {
 	names_[L"ANY"] = GC_ANY;
 	names_[L"ASSIGNED"] = GC_ASSIGNED;
 	names_[L"ASCII"] = GC_ASCII;
-}
-
-inline size_t RegexTraits::findPropertyValue(const String& expression) {
-	static const Char EQ_OPS[] = L"=:";
-	const std::size_t value = expression.find_first_of(EQ_OPS);
-	if(value == String::npos)
-		return 0;
-	return (String::npos == expression.find_first_of(EQ_OPS, value + 1)) ? value + 1 : String::npos;
 }
 
 bool RegexTraits::isctype(char_type c, const char_class_type& f) const {
@@ -466,18 +456,28 @@ bool RegexTraits::isctype(char_type c, const char_class_type& f) const {
 	}
 }
 
+namespace {
+	template<typename InputIterator>
+	inline InputIterator findPropertyValue(InputIterator first, InputIterator last) {
+		static const char EQ_OPS[] = {'=', ':'};
+		InputIterator value(find_first_of(first, last, EQ_OPS, ASCENSION_ENDOF(EQ_OPS)));
+		if(value == last)
+			return last;
+		return (find_first_of(++value, last, EQ_OPS, ASCENSION_ENDOF(EQ_OPS)) == last) ? value : last;
+	}
+}
+
 RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, const char_type* p2) const {
 	if(names_.empty())
 		buildNames();
 	char_class_type klass;
-	const String expression = String(UTF32To16Iterator<>(p1), UTF32To16Iterator<>(p2));
-	const size_t value = findPropertyValue(expression);
-	if(value == String::npos)
+	const char_type* const value = findPropertyValue(p1, p2);
+	if(value == p2)
 		return klass;
 
 	if(value != 0) {	// "name=value" or "name:value"
 		int(*valueNameDetector)(const Char*) = 0;
-		const String name = expression.substr(0, value - 1);
+		const String name(UTF32To16Iterator<>(p1), UTF32To16Iterator<>(value - 1));
 		if(PropertyNameComparer<Char>::compare(name.c_str(), GeneralCategory::LONG_NAME) == 0
 				|| PropertyNameComparer<Char>::compare(name.c_str(), GeneralCategory::SHORT_NAME) == 0)
 			valueNameDetector = GeneralCategory::forName;
@@ -488,12 +488,13 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 				|| PropertyNameComparer<Char>::compare(name.c_str(), Script::SHORT_NAME) == 0)
 			valueNameDetector = Script::forName;
 		if(valueNameDetector != 0) {
-			const int p = valueNameDetector(expression.substr(value).c_str());
+			const int p = valueNameDetector(String(UTF32To16Iterator<>(value), UTF32To16Iterator<>(p2)).c_str());
 			if(p != NOT_PROPERTY)
 				klass.set(p);
 		}
 	} else {	// only "name" or "value"
-		const map<const Char*, int, PropertyNameComparer<Char> >::const_iterator i = names_.find(expression.c_str());
+		const String expression((UTF32To16Iterator<>(p1)), UTF32To16Iterator<>(p2));
+		const map<const Char*, int, PropertyNameComparer<Char> >::const_iterator i(names_.find(expression.c_str()));
 		if(i != names_.end())
 			klass.set(i->second);
 		else {
@@ -527,29 +528,29 @@ AutoBuffer<char> MigemoPattern::dictionaryPathName_;
 
 /**
  * Private constructor.
- * @param first The start of the pattern string
- * @param last The end of the pattern string
+ * @param pattern The pattern string
  * @param caseSensitive Set @c true to enable case-sensitive match
  */
-MigemoPattern::MigemoPattern(const Char* first, const Char* last, bool caseSensitive) :
-		Pattern(first, last, (!caseSensitive ? boost::regex_constants::icase : 0)
-			| boost::regex_constants::no_char_classes | boost::regex_constants::nosubs | boost::regex_constants::perl) {
+MigemoPattern::MigemoPattern(const StringPiece& pattern, bool caseSensitive) :
+		Pattern(pattern, static_cast<boost::regex_constants::syntax_option_type>(
+			!caseSensitive ? boost::regex_constants::icase : 0)
+			| boost::regex_constants::no_char_classes | boost::regex_constants::nosubs
+			| boost::regex_constants::perl) {
 }
 
 /**
  * Constructor creates new regular expression pattern for Migemo match.
- * @param first The start of the pattern string
- * @param last The end of the pattern string
+ * @param pattern The pattern string
  * @param caseSensitive Set @c true to enable case-sensitive match
  * @return The pattern or @c null if Migemo is not installed
  */
-auto_ptr<MigemoPattern> MigemoPattern::compile(const Char* first, const Char* last, bool caseSensitive) {
+auto_ptr<MigemoPattern> MigemoPattern::compile(const StringPiece& pattern, bool caseSensitive) {
 	install();
 	if(isMigemoInstalled()) {
 		size_t len;
-		const Char* const p = migemoLib->query(first, last, len);
+		const Char* const p = migemoLib->query(pattern, len);
 		using namespace boost::regex_constants;
-		return auto_ptr<MigemoPattern>(new MigemoPattern(p, p + len, caseSensitive));
+		return auto_ptr<MigemoPattern>(new MigemoPattern(StringPiece(p, len), caseSensitive));
 	} else
 		return auto_ptr<MigemoPattern>();
 }
