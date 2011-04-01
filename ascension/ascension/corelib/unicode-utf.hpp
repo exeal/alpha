@@ -13,7 +13,7 @@
 
 #include <ascension/corelib/basic-exceptions.hpp>	// IllegalStateException
 #include <ascension/corelib/basic-types.hpp>
-#include <ascension/type-traits.hpp>				// detail.Select
+#include <ascension/corelib/type-traits.hpp>		// detail.Select
 #include <ascension/corelib/unicode-surrogates.hpp>
 #include <iterator>
 
@@ -304,4 +304,4 @@ namespace ascension {
 	}
 } // namespace ascension.text
 
-#endif // !ASCENSION_CHARACTER_ITERATOR_HPP
+#endif // !ASCENSION_UNICODE_UTF_HPP
