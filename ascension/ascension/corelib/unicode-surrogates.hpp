@@ -4,6 +4,7 @@
  * @date 2005-2010 (was unicode.hpp)
  * @date 2010 (was character-iterator.hpp)
  * @date 2010-11-06 separated from character-iterator.hpp
+ * @date 2011
  * @see unicode.hpp
  */
 
@@ -27,19 +28,18 @@ namespace ascension {
 		 * @see ToUTF32Sequence
 		 */
 		template<typename CodeUnitSequence> struct CodeUnitSizeOf {
-			enum {
-				/// Byte size of the code unit.
-				result = sizeof(typename std::iterator_traits<CodeUnitSequence>::value_type)
-			};
+			/// Byte size of the code unit.
+			static const std::size_t value =
+				sizeof(typename std::iterator_traits<CodeUnitSequence>::value_type);
 		};
 		template<typename T> struct CodeUnitSizeOf<std::back_insert_iterator<T> > {
-			enum {result = sizeof(T::value_type)};
+			static const std::size_t value = sizeof(T::value_type);
 		};
 		template<typename T> struct CodeUnitSizeOf<std::front_insert_iterator<T> > {
-			enum {result = sizeof(T::value_type)};
+			static const std::size_t value = sizeof(T::value_type);
 		};
 		template<typename T, typename U> struct CodeUnitSizeOf<std::ostream_iterator<T, U> > {
-			enum {result = sizeof(T)};
+			static const std::size_t value = sizeof(T);
 		};
 
 		/**
@@ -125,7 +125,7 @@ namespace ascension {
 			 */
 			template<typename InputIterator>
 			inline CodePoint decodeFirst(InputIterator first, InputIterator last) /*throw()*/ {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::result == 2);
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::value == 2);
 				assert(first != last);
 				const Char high = *first;
 				return (++first != last) ? decode(high, *first) : high;
@@ -143,7 +143,7 @@ namespace ascension {
 			template<typename BidirectionalIterator>
 			inline CodePoint decodeLast(
 					BidirectionalIterator first, BidirectionalIterator last) /*throw()*/ {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<BidirectionalIterator>::result == 2);
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<BidirectionalIterator>::value == 2);
 				assert(first != last);
 				const Char low = *--last;
 				return (last != first && isLowSurrogate(low)
@@ -162,7 +162,7 @@ namespace ascension {
 			 */
 			template<typename OutputIterator>
 			inline length_t encode(CodePoint c, OutputIterator dest) {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<OutputIterator>::result == 2);
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<OutputIterator>::value == 2);
 				if(c < 0x00010000ul) {
 					*dest = static_cast<Char>(c & 0xffffu);
 					return !isSurrogate(c) ? 1 : 0;
@@ -183,7 +183,7 @@ namespace ascension {
 			 */
 			template<typename InputIterator>
 			inline InputIterator next(InputIterator start, InputIterator last) /*throw()*/ {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::result == 2);
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::value == 2);
 				assert(start != last);
 				return (isHighSurrogate(*(start++))
 					&& (start != last) && isLowSurrogate(*start)) ? ++start : start;
@@ -200,7 +200,7 @@ namespace ascension {
 			template<typename BidirectionalIterator>
 			inline BidirectionalIterator previous(
 					BidirectionalIterator first, BidirectionalIterator start) /*throw()*/ {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<BidirectionalIterator>::result == 2);
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<BidirectionalIterator>::value == 2);
 				assert(first != start);
 				return (!isLowSurrogate(*--start)
 					|| (start == first) || isHighSurrogate(*--start)) ? start : ++start;
@@ -209,7 +209,7 @@ namespace ascension {
 			/**
 			 * Searches an isolated surrogate character in the given UTF-16 code unit sequence.
 			 * @note About UTF-32 code unit sequence, use <code>std#find_if(,,
-			 *       std::ptr_fun(isSurrogate))</code> instead.
+			 *       std#ptr_fun(isSurrogate))</code> instead.
 			 * @tparam InputIterator The input iterator represents a UTF-16 character sequence
 			 * @param first The beginning of the character sequence
 			 * @param last The end of the sequence
@@ -218,7 +218,7 @@ namespace ascension {
 			template<typename InputIterator>
 			inline InputIterator searchIsolatedSurrogate(
 					InputIterator first, InputIterator last) /*throw()*/ {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::result == 2);
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::value == 2);
 				while(first != last) {
 					if(isLowSurrogate(*first))
 						break;
