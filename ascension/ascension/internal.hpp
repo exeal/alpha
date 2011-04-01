@@ -12,10 +12,7 @@
 #include <ascension/corelib/type-traits.hpp>
 #include <algorithm>	// std.fill, std.find, std.upper_bound
 #include <list>
-#include <stdexcept>
-#ifdef ASCENSION_WINDOWS
-#	include <ascension/win32/windows.hpp>	// LoadLibraryA, FreeLibrary, GetProcAddress, HMODULE
-#endif // ASCENSION_WINDOWS
+#include <stdexcept>	// std.invalid_argument
 
 namespace ascension {
 
@@ -123,40 +120,6 @@ namespace ascension {
 			std::list<Listener*> listeners_;
 			typedef typename std::list<Listener*>::iterator Iterator;
 		};
-
-#ifdef ASCENSION_WINDOWS
-		template<class ProcedureEntries> class SharedLibrary {
-			ASCENSION_NONCOPYABLE_TAG(SharedLibrary);
-		public:
-			explicit SharedLibrary(const char* fileName) : dll_(::LoadLibraryA(fileName)) {
-				if(dll_ == 0)
-					throw std::runtime_error("Cannot open the library.");
-				std::fill(procedures_, procedures_ + ProcedureEntries::NUMBER_OF_ENTRIES, reinterpret_cast<FARPROC>(1));
-			}
-			~SharedLibrary() /*throw()*/ {::FreeLibrary(dll_);}
-			template<std::size_t index> typename ProcedureEntries::template Procedure<index>::signature get() const /*throw()*/ {
-				typedef typename ProcedureEntries::template Procedure<index> Procedure;
-				if(procedures_[index] == reinterpret_cast<FARPROC>(1))
-					procedures_[index] = ::GetProcAddress(dll_, Procedure::name());
-				return reinterpret_cast<typename Procedure::signature>(procedures_[index]);
-			}
-		private:
-			HMODULE dll_;
-			mutable FARPROC procedures_[ProcedureEntries::NUMBER_OF_ENTRIES];
-		};
-#else
-#endif
-
-#define ASCENSION_DEFINE_SHARED_LIB_ENTRIES(libraryName, numberOfProcedures)	\
-	struct libraryName {														\
-		enum {NUMBER_OF_ENTRIES = numberOfProcedures};							\
-		template<std::size_t index> struct Procedure;							\
-	}
-#define ASCENSION_SHARED_LIB_ENTRY(libraryName, index, procedureName, procedureSignature)	\
-	template<> struct libraryName::Procedure<index> {										\
-		static const char* name() {return procedureName;}									\
-		typedef procedureSignature;															\
-	}
 
 	} // namespace detail
 
