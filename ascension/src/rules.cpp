@@ -7,6 +7,7 @@
 
 #include <ascension/rules.hpp>
 #include <ascension/corelib/ustring.hpp>
+#include <ascension/corelib/utility.hpp>	// detail.searchBound
 using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::presentation;

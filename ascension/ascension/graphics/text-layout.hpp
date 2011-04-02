@@ -1,7 +1,7 @@
 /**
  * @file text-layout.hpp
  * @date 2003-2006 (was LineLayout.h)
- * @date 2006-2010
+ * @date 2006-2011
  * @date 2010-11-20 renamed from ascension/layout.hpp
  */
 
@@ -9,7 +9,8 @@
 #define ASCENSION_TEXT_LAYOUT_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
-#include <ascension/corelib/memory.hpp>	// AutoBuffer
+#include <ascension/corelib/memory.hpp>		// AutoBuffer
+#include <ascension/corelib/utility.hpp>	// detail.searchBound
 #include <ascension/kernel/document.hpp>
 #include <ascension/presentation.hpp>
 #include <ascension/graphics/color.hpp>

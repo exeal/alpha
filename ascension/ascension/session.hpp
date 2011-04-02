@@ -7,9 +7,9 @@
 #ifndef ASCENSION_SESSION_HPP
 #define ASCENSION_SESSION_HPP
 
-#include <ascension/config.hpp>			// ASCENSION_NO_MIGEMO
-#include <ascension/internal.hpp>		// detail.Listeners
-#include <ascension/kernel/fileio.hpp>	// fileio.PathCharacter
+#include <ascension/config.hpp>				// ASCENSION_NO_MIGEMO
+#include <ascension/corelib/listeners.hpp>	// detail.Listeners
+#include <ascension/kernel/fileio.hpp>		// fileio.PathCharacter
 #include <list>
 #include <vector>
 

@@ -7,7 +7,7 @@
 
 #ifndef ASCENSION_TYPE_LIST_HPP
 #define ASCENSION_TYPE_LIST_HPP
-#include <ascension/internal.hpp>	// detail.Select
+#include <ascension/corelib/type-traits.hpp>	// detail.Select
 
 namespace ascension {
 	namespace typelist {
