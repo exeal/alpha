@@ -181,7 +181,7 @@ namespace ascension {
 			template<typename CharacterSequence>
 			inline CharacterSequence eatIdentifier(
 					CharacterSequence first, CharacterSequence last) const {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::value == 2);
 				UTF16To32Iterator<CharacterSequence> i(first, last);
 				if(!i.hasNext() || !isIdentifierStartCharacter(*i))
 					return first;
@@ -203,7 +203,7 @@ namespace ascension {
 			template<typename CharacterSequence>
 			inline CharacterSequence eatWhiteSpaces(
 					CharacterSequence first, CharacterSequence last, bool includeTab) const {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::value == 2);
 				UTF16To32Iterator<CharacterSequence> i(first, last);
 				while(i.hasNext() && isWhiteSpace(*i, includeTab))
 					++i;

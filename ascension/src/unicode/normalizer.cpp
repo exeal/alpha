@@ -303,7 +303,7 @@ namespace {
 	 * @return true if the sequence is in FCD.
 	 */
 	template<typename CharacterSequence> inline bool isFCD(CharacterSequence first, CharacterSequence last) {
-		ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::result == 2);
+		ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::value == 2);
 		Char buffer[32];
 		length_t len;
 		int ccc, previous = CanonicalCombiningClass::NOT_REORDERED;
