@@ -22,9 +22,6 @@ namespace ascension {
 	 */
 	namespace detail {
 
-		/// Generates a type from the constant integer.
-		template<int v> struct Int2Type {static const int value = v;};
-
 		/**
 		 * Returns the iterator addresses the first element in the sorted range which satisfies
 		 * comp(value, *i) (@a i is the iterator).
