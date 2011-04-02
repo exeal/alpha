@@ -9,10 +9,10 @@
 #define ASCENSION_DOCUMENT_HPP
 
 #include <ascension/config.hpp>				// ASCENSION_DEFAULT_NEWLINE
-#include <ascension/internal.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/gap-vector.hpp>	// detail.GapVector
+#include <ascension/corelib/listeners.hpp>
 #include <ascension/corelib/memory.hpp>		// FastArenaObject
 #include <ascension/corelib/standard-iterator-adapter.hpp>	// detail.IteratorAdapter
 #include <ascension/corelib/string-piece.hpp>

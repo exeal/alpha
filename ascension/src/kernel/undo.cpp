@@ -7,6 +7,7 @@
 
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/point.hpp>
+#include <ascension/corelib/utility.hpp>	// detail.ValueSaver
 #include <stack>
 #include <vector>
 using namespace ascension;

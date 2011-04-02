@@ -9,7 +9,10 @@
 #define ASCENSION_COLOR_HPP
 
 #include <ascension/platforms.hpp>
-#include <ascension/corelib/memory.hpp>	// FastArenaObject
+#include <ascension/corelib/memory.hpp>		// FastArenaObject
+#if defined(ASCENSION_WINDOWS)
+#	include <ascension/win32/windows.hpp>	// COLORREF
+#endif
 
 namespace ascension {
 	namespace graphics {
