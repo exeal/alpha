@@ -73,7 +73,7 @@ namespace ascension {
 			detail::Listeners<KillRingListener> listeners_;
 		};
 
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		/**
 		 * Base class for input sequence checkers.
 		 * @see isc
@@ -109,7 +109,7 @@ namespace ascension {
 			std::list<InputSequenceChecker*> strategies_;
 			HKL keyboardLayout_;
 		};
-#endif // ASCENSION_WINDOWS
+#endif // ASCENSION_OS_WINDOWS
 
 		/**
 		 * @note This class is not derivable.

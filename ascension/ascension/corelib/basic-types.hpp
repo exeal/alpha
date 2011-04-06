@@ -11,15 +11,15 @@
 
 #include <ascension/config.hpp>	// ASCENSION_FILE_NAME_CHARACTER_TYPE
 #include <ascension/platforms.hpp>
-#if !defined(ASCENSION_WINDOWS) || defined(__BORLANDC__) || defined(__MINGW32__)
+#if !defined(ASCENSION_OS_WINDOWS) || defined(__BORLANDC__) || defined(__MINGW32__)
 #	include <cinttypes>
 #	define ASCENSION_HAS_CINTTYPES
 #endif
 #ifdef ASCENSION_CUSTOM_SHARED_PTR_HPP
 #	include ASCENSION_CUSTOM_SHARED_PTR_HPP
-#elif defined(ASCENSION_MSVC) && _MSC_VER >= 1500
+#elif defined(ASCENSION_CC_MSVC) && _MSC_VER >= 1500
 #	include <memory>
-#elif defined(ASCENSION_GCC) && __GNUC__ >= 4
+#elif defined(ASCENSION_CC_GCC) && __GNUC__ >= 4
 #	include <tr1/memory>
 #else
 #	include <boost/tr1/memory.hpp>
@@ -66,7 +66,7 @@ namespace ascension {
 	using std::uint16_t;
 	using std::uint32_t;
 	using std::uint64_t;
-#elif defined(ASCENSION_MSVC)
+#elif defined(ASCENSION_CC_MSVC)
 	typedef signed char int8_t;
 	typedef short int16_t;
 	typedef long int32_t;
@@ -98,6 +98,7 @@ namespace ascension {
 	ASCENSION_STATIC_ASSERT(sizeof(CodePoint) == 4);
 
 	typedef std::size_t length_t;					///< Length of string or index.
+	typedef std::ptrdiff_t signed_length_t;			///< Signed @c length_t.
 	const length_t INVALID_INDEX = 0xfffffffful;	///< Invalid value of @c length_t.
 
 	/// Code point of LINE FEED (U+000A).

@@ -10,11 +10,14 @@
 #define ASCENSION_FILEIO_HPP
 
 #include <ascension/config.hpp>				// ASCENSION_NO_GREP
+#include <ascension/platforms.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/corelib/encoder.hpp>	// encoding.Encoder.*
-#ifdef ASCENSION_POSIX
+#if defined(ASCENSION_OS_WINDOWS)
+#	include <ascension/win32/windows.hpp>
+#elif defined(ASCENSION_OS_POSIX)
 #	include <sys/types.h>
-#endif // ASCENSION_POSIX
+#endif
 #ifndef ASCENSION_NO_GREP
 #	include <stack>
 #endif // !ASCENSION_NO_GREP
@@ -48,9 +51,9 @@ namespace ascension {
 
 			class IOException : public std::ios_base::failure {
 			public:
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 				typedef DWORD Code;	///< Type of the value returned by @c #code method.
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 				typedef int Code;	///< Type of the value returned by @c #code method.
 #endif
 			public:
@@ -172,9 +175,9 @@ namespace ascension {
 				int_type underflow();
 			private:
 				typedef std::basic_streambuf<Char> Base;
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 				HANDLE fileHandle_, fileMapping_;
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 				int fileDescriptor_;
 #endif
 				const PathString fileName_;
@@ -184,9 +187,9 @@ namespace ascension {
 					const byte* last;
 					const byte* current;
 				} inputMapping_;
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 				LARGE_INTEGER originalFileEnd_;
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 				off_t originalFileEnd_;
 #endif
 				std::auto_ptr<encoding::Encoder> encoder_;
@@ -197,9 +200,9 @@ namespace ascension {
 				ASCENSION_NONCOPYABLE_TAG(TextFileDocumentInput);
 			public:
 				/// The structure used to represent a file time.
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 				typedef FILETIME Time;
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 				typedef ::time_t Time;
 #endif
 				/// Lock types for opened file.
@@ -319,9 +322,9 @@ namespace ascension {
 			private:
 				void update(const void* info);
 			private:
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 				HANDLE handle_;
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 				DIR* handle_;
 #endif
 				PathString current_, directory_;

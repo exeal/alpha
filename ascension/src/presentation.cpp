@@ -8,9 +8,9 @@
 #include <ascension/graphics/rendering.hpp>	// TextRenderer
 #include <ascension/presentation.hpp>
 #include <ascension/rules.hpp>
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 #include <shellapi.h>	// ShellExecuteW
-#endif // ASCENSION_WINDOWS
+#endif // ASCENSION_OS_WINDOWS
 using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::graphics;
@@ -594,7 +594,7 @@ namespace {
 		explicit URIHyperlink(const Range<length_t>& region, const String& uri) /*throw()*/ : Hyperlink(region), uri_(uri) {}
 		String description() const /*throw()*/ {return L"\x202a" + uri_ + L"\x202c\nCTRL + click to follow the link.";}
 		void invoke() const /*throw()*/ {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 			::ShellExecuteW(0, 0, uri_.c_str(), 0, 0, SW_SHOWNORMAL);
 #else
 #endif

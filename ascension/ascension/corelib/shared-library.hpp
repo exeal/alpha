@@ -8,7 +8,7 @@
 #define SHARED_LIBRARY_HPP
 #include <ascension/platforms.hpp>
 
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 #	include <ascension/win32/windows.hpp>	// LoadLibraryA, FreeLibrary, GetProcAddress, HMODULE
 #	include <algorithm>	// std.fill
 #	include <stdexcept>	// std.runtime_error
@@ -18,7 +18,7 @@
 namespace ascension {
 	namespace detail {
 
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		template<class ProcedureEntries>
 		class SharedLibrary {
 			ASCENSION_NONCOPYABLE_TAG(SharedLibrary);

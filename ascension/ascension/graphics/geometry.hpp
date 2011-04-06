@@ -11,14 +11,14 @@
 #include <ascension/corelib/memory.hpp>	// FastArenaObject
 #include <ascension/corelib/range.hpp>
 #include <ascension/platforms.hpp>
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 #	include <ascension/win32/windows.hpp>
-#endif // ASCENSION_WINDOWS
+#endif // ASCENSION_OS_WINDOWS
 
 namespace ascension {
 	namespace graphics {
 
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_GS_WIN32_GDI
 		typedef int Scalar;
 		typedef win32::Handle<HRGN> NativePolygon;
 #else
@@ -366,7 +366,7 @@ namespace ascension {
 		}
 
 		// conversions from/to platform-native primitives
-#if defined(ASCENSION_WINDOWS)
+#if defined(ASCENSION_GS_WIN32_GDI)
 		inline Point<> fromNative(const POINT& source) /*throw()*/ {
 			return Point<>(source.x, source.y);
 		}
@@ -391,7 +391,7 @@ namespace ascension {
 			::SetRect(&temp, source.left(), source.top(), source.right(), source.bottom());
 			return temp;
 		}
-#elif defined(ASCENSION_CORE_GRAPHICS)
+#elif defined(ASCENSION_GS_CORE_GRAPHICS)
 		inline Point<> fromNative(const CGPoint& source) /*throw()*/ {
 			return Point<>(source.x, source.y);
 		}
@@ -410,7 +410,7 @@ namespace ascension {
 		inline CGRect toNative(const Rect<>& source) /*throw()*/ {
 			return CGRectMake(source.origin().x, source.origin().y, source.size().cx, source.size().cy);
 		}
-#elif defined(ASCENSION_X11)
+#elif defined(ASCENSION_GS_GTK)
 		inline Rect<> fromNative(const GdkRectangle& source) /*throw()*/ {
 			return Rect<>(Point<>(source.x, source.y), Dimension<>(source.width, source.height));
 		}
@@ -418,6 +418,7 @@ namespace ascension {
 			const GdkRectangle temp = {source.origin().x, source.origin().y, source.size().cx, source.size().cy};
 			return temp;
 		}
+#elif defined(ASCENSION_GS_QT)
 #endif
 
 	}

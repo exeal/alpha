@@ -14,9 +14,9 @@
 #include <ascension/graphics/geometry.hpp>
 #include <cstring>	// std.strlen
 #include <locale>	// std.collate
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_GS_WIN32_GDI
 #	include <ascension/win32/windows.hpp>	// win32.Handle
-#endif // ASCENSION_WINDOWS
+#endif // ASCENSION_GS_WIN32_GDI
 
 namespace ascension {
 	namespace graphics {
@@ -312,10 +312,10 @@ namespace ascension {
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 				/// Returns the metrics of the font.
 				virtual const Metrics& metrics() const /*throw()*/ = 0;
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_GS_WIN32_GDI
 				/// Returns the Win32 @c HFONT handle object.
 				virtual const win32::Handle<HFONT>& nativeHandle() const /*throw()*/ = 0;
-#endif // ASCENSION_WINDOWS
+#endif // ASCENSION_GS_WIN32_GDI
 			};
 
 			/// An interface represents an object provides a set of fonts.

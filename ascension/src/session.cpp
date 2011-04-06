@@ -193,10 +193,10 @@ void InputSequenceCheckers::setKeyboardLayout(HKL keyboardLayout) /*throw()*/ {
 /// Constructor.
 Session::Session() /*throw()*/ : isearch_(0), textSearcher_(0) {
 #ifndef ASCENSION_NO_MIGEMO
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 	wcscpy(migemoRuntimePathName_, L"");
 	wcscpy(migemoDictionaryPathName_, L"");
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	strcpy(migemoRuntimePathName_, "");
 	strcpy(migemoDictionaryPathName_, "");
 #endif
@@ -277,18 +277,18 @@ void Session::removeDocument(kernel::Document& document) {
  */
 void Session::setMigemoPathName(const kernel::fileio::PathCharacter* pathName, bool runtime) {
 	if(pathName == 0)
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		wcscpy(runtime ? migemoRuntimePathName_ : migemoDictionaryPathName_, L"");
 	else if(wcslen(pathName) > MAX_PATH - 1)
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		strcpy(runtime ? migemoRuntimePathName_ : migemoDictionaryPathName_, "");
 	else if(strlen(pathName) > MAX_PATH - 1)
 #endif
 		throw length_error("pathName");
 	else
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		wcscpy(runtime ? migemoRuntimePathName_ : migemoDictionaryPathName_, pathName);
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		strcpy(runtime ? migemoRuntimePathName_ : migemoDictionaryPathName_, pathName);
 #endif
 }
