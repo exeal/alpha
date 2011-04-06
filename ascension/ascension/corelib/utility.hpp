@@ -67,9 +67,6 @@ namespace ascension {
 
 	} // namespace detail
 
-	/// Signed @c length_t
-	typedef detail::RemoveSigned<length_t>::Type signed_length_t;
-
 } // namespace ascension
 
 #endif // !ASCENSION_UTILITY_HPP

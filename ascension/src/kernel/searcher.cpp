@@ -931,8 +931,7 @@ inline void IncrementalSearcher::setPatternToSearcher(bool pushToHistory) {
 		break;
 #ifndef ASCENSION_NO_MIGEMO
 	case TextSearcher::MIGEMO:
-		searcher_->setPattern(regex::MigemoPattern::compile(
-			pattern_.data(), pattern_.data() + pattern_.length(), searcher_->isCaseSensitive()), pushToHistory);
+		searcher_->setPattern(regex::MigemoPattern::compile(pattern_, searcher_->isCaseSensitive()), pushToHistory);
 		break;
 #endif // !ASCENSION_NO_MIGEMO
 #endif // !ASCENSION_NO_REGEX

@@ -9,9 +9,11 @@
 
 #include <ascension/platforms.hpp>
 #include <stdexcept>
-#ifdef ASCENSION_WINDOWS
+#include <sstream>	// std.ostringstream
+#include <string>	// std.string
+#ifdef ASCENSION_OS_WINDOWS
 #	include <ascension/win32/windows.hpp>	// DWORD, GetLastError
-#endif // ASCENSION_WINDOWS
+#endif // ASCENSION_OS_WINDOWS
 
 namespace ascension {
 
@@ -67,7 +69,7 @@ namespace ascension {
 	template<typename Base = std::runtime_error>
 	class PlatformDependentError : public Base {
 	public:
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		typedef DWORD Code;
 #else
 		typedef int Code;
@@ -78,7 +80,7 @@ namespace ascension {
 		 * @param code the error code
 		 */
 		explicit PlatformDependentError(Code code
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 			= ::GetLastError()
 #else
 			= errno

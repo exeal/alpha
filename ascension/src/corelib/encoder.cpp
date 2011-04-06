@@ -160,12 +160,12 @@ bool Encoder::canEncode(const StringPiece& s) {
 
 /// Returns the default encoder.
 Encoder& Encoder::defaultInstance() /*throw()*/ {
-//#ifdef ASCENSION_WINDOWS
+//#ifdef ASCENSION_OS_WINDOWS
 //	return convertWin32CPtoMIB(::GetACP());
 //#else
 	static auto_ptr<Encoder> instance(forMIB(fundamental::UTF_8));
 	return *instance;
-//#endif /* ASCENSION_WINDOWS */
+//#endif // ASCENSION_OS_WINDOWS
 }
 
 EncoderFactory* Encoder::find(MIBenum mib) /*throw()*/ {
@@ -234,7 +234,7 @@ auto_ptr<Encoder> Encoder::forName(const string& name) /*throw()*/ {
 	return (factory != 0) ? factory->create() : auto_ptr<Encoder>(0);
 }
 
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 /**
  * Returns the encoder which has the given Win32 code page.
  * @param codePage The code page
@@ -244,7 +244,7 @@ auto_ptr<Encoder> Encoder::forWindowsCodePage(uint codePage) /*throw()*/ {
 	// TODO: not implemented.
 	return auto_ptr<Encoder>(0);
 }
-#endif // ASCENSION_WINDOWS
+#endif // ASCENSION_OS_WINDOWS
 
 /**
  * Converts the given string from UTF-16 into the native encoding.
@@ -465,7 +465,7 @@ EncodingDetector* EncodingDetector::forName(const string& name) /*throw()*/ {
 	return 0;
 }
 
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 /**
  * Returns the encoding detector which has the given Windows code page.
  * @param codePage The code page
@@ -479,7 +479,7 @@ EncodingDetector* EncodingDetector::forWindowsCodePage(UINT codePage) /*throw()*
 	default:	return 0;
 	}
 }
-#endif // ASCENSION_WINDOWS
+#endif // ASCENSION_OS_WINDOWS
 
 vector<EncodingDetector*>& EncodingDetector::registry() {
 	static struct Registry {

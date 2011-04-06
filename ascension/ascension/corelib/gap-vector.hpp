@@ -3,11 +3,12 @@
  * @author exeal
  * @date 2005-2009 (was gap-buffer.hpp)
  * @date 2010-10-20 Renamed GapBuffer to GapVector.
- * @date
+ * @date 2011
  */
 
 #ifndef ASCENSION_GAP_VECTOR_HPP
 #define ASCENSION_GAP_VECTOR_HPP
+#include <cassert>
 #include <memory>		// std.allocator, std.uninitialized_copy
 #include <iterator>		// std.iterator, ...
 #include <stdexcept>	// std.out_of_range

@@ -10,12 +10,12 @@
 #include <ascension/config.hpp>	// ASCENSION_NO_STANDARD_ENCODINGS
 #include <ascension/kernel/fileio.hpp>
 #include <limits>	// std.numeric_limits
-#ifdef ASCENSION_POSIX
+#ifdef ASCENSION_OS_POSIX
 #	include <errno.h>		// errno
 #	include <fcntl.h>		// fcntl
 #	include <unistd.h>		// fcntl
 #	include <sys/mman.h>	// mmap, munmap, ...
-#endif // !ASCENSION_POSIX
+#endif // !ASCENSION_OS_POSIX
 
 using namespace ascension;
 using namespace ascension::kernel;
@@ -27,9 +27,9 @@ using namespace std;
 // free function //////////////////////////////////////////////////////////////////////////////////
 
 namespace {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 	static const PathCharacter PATH_SEPARATORS[] = L"\\/";
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	static const PathCharacter PATH_SEPARATORS[] = "/";
 #endif
 	static const PathCharacter PREFERRED_PATH_SEPARATOR = PATH_SEPARATORS[0];
@@ -46,7 +46,7 @@ namespace {
 	bool pathExists(const PathCharacter* name) {
 		if(name == 0)
 			throw NullPointerException("name");
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 #ifdef PathFileExists
 		return toBoolean(::PathFileExistsW(name));
 #else
@@ -57,7 +57,7 @@ namespace {
 				|| e == ERROR_INVALID_NAME || e == ERROR_INVALID_PARAMETER || e == ERROR_BAD_NETPATH)
 			return false;
 #endif // PathFileExists
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		struct stat s;
 		if(::stat(name, &s) == 0)
 			return true;
@@ -80,11 +80,11 @@ namespace {
 	 * @throw IOException Any I/O error occurred
 	 */
 	void getFileLastWriteTime(const PathString& fileName, TextFileDocumentInput::Time& timeStamp) {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		WIN32_FILE_ATTRIBUTE_DATA attributes;
 		if(::GetFileAttributesExW(fileName.c_str(), GetFileExInfoStandard, &attributes) != 0)
 			timeStamp = attributes.ftLastWriteTime;
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		struct stat s;
 		if(::stat(fileName.c_str(), &s) == 0)
 			timeStamp = s.st_mtime;
@@ -103,13 +103,13 @@ namespace {
 	ptrdiff_t getFileSize(const PathCharacter* fileName) {
 		if(fileName == 0)
 			throw NullPointerException("fileName");
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		WIN32_FILE_ATTRIBUTE_DATA attributes;
 		if(::GetFileAttributesExW(fileName, GetFileExInfoStandard, &attributes) != 0)
 			return (attributes.nFileSizeHigh == 0
 				&& attributes.nFileSizeLow <= static_cast<DWORD>(numeric_limits<ptrdiff_t>::max())) ?
 					static_cast<ptrdiff_t>(attributes.nFileSizeLow) : -1;
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		struct stat s;
 		if(::stat(fileName, &s) == 0)
 			return s.st_size;
@@ -122,7 +122,7 @@ namespace {
 	 * Creates a name for a temporary file.
 	 * @param seed The string contains a directory path and a prefix string
 	 * @return The result string
-	 * @throw std#bad_alloc POSIX @c tempnam failed (only when @c ASCENSION_POSIX was defined)
+	 * @throw std#bad_alloc POSIX @c tempnam failed (only when @c ASCENSION_OS_POSIX was defined)
 	 * @throw IOException Any I/O error occurred
 	 */
 	PathString makeTemporaryFileName(const PathString& seed) {
@@ -132,11 +132,11 @@ namespace {
 		PathCharacter* const name = s.get() + (findFileName(seed) - seed.begin());
 		if(name != s.get())
 			name[-1] = 0;
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		WCHAR result[MAX_PATH];
 		if(::GetTempFileNameW(s.get(), name, 0, result) != 0)
 			return result;
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		if(char* p = ::tempnam(s.get(), name)) {
 			PathString result(p);
 			::free(p);
@@ -153,7 +153,7 @@ namespace {
 	 * @throw IOException Any I/O error occurred
 	 */
 	bool isSpecialFile(const PathString& fileName) {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		HANDLE file = ::CreateFileW(fileName.c_str(), GENERIC_READ, 0, 0, OPEN_EXISTING, 0, 0);
 		if(file != INVALID_HANDLE_VALUE) {
 			const DWORD fileType = ::GetFileType(file);
@@ -222,7 +222,7 @@ PathString fileio::canonicalizePathName(const PathCharacter* pathName) {
 	if(pathName == 0)
 		throw NullPointerException("pathName");
 
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 
 	if(wcslen(pathName) >= MAX_PATH)	// too long name
 		return pathName;
@@ -277,7 +277,7 @@ PathString fileio::canonicalizePathName(const PathCharacter* pathName) {
 	}
 	return result;
 
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 
 	PathCharacter resolved[PATH_MAX];
 	return (::realpath(pathName, resolved) != 0) ? resolved : pathName;
@@ -297,7 +297,7 @@ bool fileio::comparePathNames(const PathCharacter* s1, const PathCharacter* s2) 
 	if(s1 == 0 || s2 == 0)
 		throw NullPointerException("either file name is null.");
 
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 #ifdef PathMatchSpec
 	if(toBoolean(::PathMatchSpecW(s1, s2)))
 		return true;
@@ -334,7 +334,7 @@ bool fileio::comparePathNames(const PathCharacter* s1, const PathCharacter* s2) 
 		::CloseHandle(f1);
 	}
 	return eq;
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	// by lexicographical comparison
 	if(strcmp(s1, s2) == 0)
 		return true;
@@ -394,18 +394,18 @@ void fileio::writeRegion(const Document& document, const Region& region,
 
 	// check if not special file
 	if(isSpecialFile(fileName))
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		throw IOException(fileName, ERROR_BAD_FILE_TYPE);
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		throw IOException(fileName, ENXIO);
 #endif
 
 	// check if writable
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 	const DWORD originalAttributes = ::GetFileAttributesW(fileName.c_str());
 	if(originalAttributes != INVALID_FILE_ATTRIBUTES && win32::boole(originalAttributes & FILE_ATTRIBUTE_READONLY))
 		throw IOException(fileName, ERROR_ACCESS_DENIED);
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	struct stat originalStat;
 	bool gotStat = ::stat(fileName_.c_str(), &originalStat) == 0;
 #if 1
@@ -437,14 +437,14 @@ void fileio::writeRegion(const Document& document, const Region& region,
 
 namespace {
 	IOException::Code currentSystemError() /*throw()*/ {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		return ::GetLastError();
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		return errno;
 #endif
 	}
 	string errorMessage(IOException::Code code = currentSystemError()) {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		void* buffer;
 		if(0 == ::FormatMessageA(
 				FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -453,7 +453,7 @@ namespace {
 		const string result(static_cast<char*>(buffer));
 		::LocalFree(buffer);
 		return result;
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		const char* const s = ::strerror(code);
 		return (s != 0) ? s : "";
 #endif
@@ -483,19 +483,19 @@ const PathString& IOException::fileName() const /*throw()*/ {
 }
 
 bool IOException::isFileNotFound(const IOException& e) /*throw()*/ {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 	return e.code() == ERROR_FILE_NOT_FOUND || e.code() == ERROR_PATH_NOT_FOUND
 		|| e.code() == ERROR_BAD_NETPATH /*|| e.code() == ERROR_INVALID_PARAMETER*/ || e.code() == ERROR_INVALID_NAME;
 
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	return e.code() == ENOENT || e.code() == ENOTDIR;
 #endif
 }
 
 bool IOException::isPermissionDenied(const IOException& e) /*throw()*/ {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 	return e.code() == ERROR_ACCESS_DENIED || e.code() == ERROR_SHARING_VIOLATION;
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	return e.code() == EACCES;
 #endif
 }
@@ -515,9 +515,9 @@ namespace {
 	class SystemErrorSaver {
 	public:
 		SystemErrorSaver() /*throw()*/ : code_(currentSystemError()) {}
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		~SystemErrorSaver() /*throw()*/ {::SetLastError(code_);}
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		~SystemErrorSaver() /*throw()*/ {errno = e_;}
 #endif
 		IOException::Code code() const /*throw()*/ {return code_;}
@@ -599,7 +599,7 @@ void TextFileStreamBuffer::buildEncoder(const string& encoding, bool detectEncod
 
 void TextFileStreamBuffer::buildInputMapping() {
 	assert(isOpen());
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 	LARGE_INTEGER fileSize;
 	if(!win32::boole(::GetFileSizeEx(fileHandle_, &fileSize)))
 		throw IOException(fileName());
@@ -616,7 +616,7 @@ void TextFileStreamBuffer::buildInputMapping() {
 	} else
 		fileMapping_ = 0;
 	inputMapping_.last = inputMapping_.first + fileSize.QuadPart;
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	inputMapping_.first = static_cast<const byte*>(::mmap(0, fileSize, PROT_READ, MAP_PRIVATE, fileDescriptor_, 0));
 	if(inputMapping_.first == MAP_FAILED)
 		throw IOException(fileName());
@@ -661,10 +661,10 @@ TextFileStreamBuffer* TextFileStreamBuffer::closeAndDiscard() {
 		} else
 			return 0;
 	} else if(mode() == (ios_base::out | ios_base::app)) {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		::SetFilePointerEx(fileHandle_, originalFileEnd_, 0, FILE_BEGIN);
 		::SetEndOfFile(fileHandle_);
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		::lseek(fileDescriptor_, originalFileEnd_, SEEK_SET);
 		::ftruncate(fileDescriptor_, originalFileEnd_);
 #endif
@@ -674,7 +674,7 @@ TextFileStreamBuffer* TextFileStreamBuffer::closeAndDiscard() {
 }
 
 TextFileStreamBuffer* TextFileStreamBuffer::closeFile() /*throw()*/ {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 	if(fileMapping_ != 0) {
 		::UnmapViewOfFile(const_cast<byte*>(inputMapping_.first));
 		::CloseHandle(fileMapping_);
@@ -686,7 +686,7 @@ TextFileStreamBuffer* TextFileStreamBuffer::closeFile() /*throw()*/ {
 		fileHandle_ = INVALID_HANDLE_VALUE;
 		return this;
 	}
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	if(inputMapping_.first != 0) {
 		::munmap(const_cast<byte*>(inputMapping_.first), inputMapping_.last - inputMapping_.first);
 		inputMapping_.first = 0;
@@ -714,9 +714,9 @@ string TextFileStreamBuffer::encoding() const /*throw()*/ {
 
 /// Returns @c true if the file is open.
 bool TextFileStreamBuffer::isOpen() const /*throw()*/ {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 	return fileHandle_ != INVALID_HANDLE_VALUE;
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	return fileDescriptor_ != -1;
 #endif
 }
@@ -724,11 +724,11 @@ bool TextFileStreamBuffer::isOpen() const /*throw()*/ {
 // called by only the constructor
 void TextFileStreamBuffer::openForReading(const string& encoding) {
 	// open the file
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 	fileHandle_ = ::CreateFileW(fileName().c_str(), GENERIC_READ,
 		FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, 0);
 	if(fileHandle_ == INVALID_HANDLE_VALUE)
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	if(-1 == (fileDescriptor_ = ::open(fileName().c_str(), O_RDONLY)))
 #endif
 		throw IOException(fileName());
@@ -747,7 +747,7 @@ void TextFileStreamBuffer::openForReading(const string& encoding) {
 // called by only the constructor
 void TextFileStreamBuffer::openForWriting(const string& encoding, bool writeUnicodeByteOrderMark) {
 	if((mode_ & ios_base::app) != 0) {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		fileHandle_ = ::CreateFileW(fileName_.c_str(), GENERIC_READ | GENERIC_WRITE,
 			0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_SEQUENTIAL_SCAN, 0);
 		if(fileHandle_ == INVALID_HANDLE_VALUE) {
@@ -762,7 +762,7 @@ void TextFileStreamBuffer::openForWriting(const string& encoding, bool writeUnic
 				throw IOException(fileName());
 			writeUnicodeByteOrderMark = false;
 		}
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		fileDescriptor_  = ::open(fileName_.c_str(), O_WRONLY | O_APPEND);
 		if(fileDescriptor_ != -1) {
 			originalFileEnd_ = ::lseek(fileDescriptor_, 0, SEEK_CUR);
@@ -777,11 +777,11 @@ void TextFileStreamBuffer::openForWriting(const string& encoding, bool writeUnic
 #endif
 	}
 	if((mode_ & ~ios_base::trunc) == ios_base::out) {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		fileHandle_ = ::CreateFileW(fileName().c_str(), GENERIC_WRITE, 0, 0,
 			CREATE_ALWAYS, FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_SEQUENTIAL_SCAN, 0);
 		if(fileHandle_ == INVALID_HANDLE_VALUE)
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		fileDescriptor_ = ::open(fileName().c_str(), O_WRONLY | O_CREAT);
 		if(fileDescriptor_ == -1)
 #endif
@@ -845,12 +845,12 @@ int TextFileStreamBuffer::sync() {
 				throw MalformedInputException();
 
 			// write into the file
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 			DWORD writtenBytes;
 			assert(static_cast<size_t>(toNext - nativeBuffer) <= numeric_limits<DWORD>::max());
 			const DWORD bytes = static_cast<DWORD>(toNext - nativeBuffer);
 			if(::WriteFile(fileHandle_, nativeBuffer, bytes, &writtenBytes, 0) == 0 || writtenBytes != bytes)
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 			const size_t bytes = toNext - nativeBuffer;
 			const ssize_t writtenBytes = ::write(fileDescriptor_, nativeBuffer, bytes);
 			if(writtenBytes == -1 || static_cast<size_t>(writtenBytes) != bytes)
@@ -908,9 +908,9 @@ public:
 	bool unlock() /*throw()*/;
 private:
 	LockType type_;
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 	HANDLE file_;
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	int file_;
 	bool deleteFileOnClose_;
 #endif
@@ -919,9 +919,9 @@ private:
 
 /// Default constructor.
 TextFileDocumentInput::FileLocker::FileLocker() /*throw()*/ : type_(NO_LOCK), file_(
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		INVALID_HANDLE_VALUE
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		-1), deleteFileOnClose_(false
 #endif
 		) {
@@ -933,9 +933,9 @@ TextFileDocumentInput::FileLocker::~FileLocker() /*throw()*/ {
 }
 
 inline bool TextFileDocumentInput::FileLocker::hasLock() const /*throw()*/ {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 	return file_ != INVALID_HANDLE_VALUE;
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	return file_ != -1;
 #endif
 }
@@ -951,22 +951,22 @@ inline bool TextFileDocumentInput::FileLocker::hasLock() const /*throw()*/ {
  */
 bool TextFileDocumentInput::FileLocker::lock(const PathString& fileName, bool share) {
 	if(fileName.empty())
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		throw IOException(fileName, ERROR_FILE_NOT_FOUND);
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		throw IOException(fileName, ENOENT);
 #endif
 	bool alreadyShared = false;
-#ifdef ASCENSION_POSIX
+#ifdef ASCENSION_OS_POSIX
 	flock fl;
 	fl.l_whence = SEEK_SET;
 	fl.l_start = 0;
 	fl.l_len = 0;
-#endif // ASCENSION_POSIX
+#endif // ASCENSION_OS_POSIX
 
 	if(share) {
 		// check the file had already been shared-locked
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		HANDLE temp = ::CreateFileW(fileName.c_str(),
 			GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 		if(temp == INVALID_HANDLE_VALUE) {
@@ -974,7 +974,7 @@ bool TextFileDocumentInput::FileLocker::lock(const PathString& fileName, bool sh
 				alreadyShared = true;
 		} else
 			::CloseHandle(temp);
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		int temp = ::open(fileName.c_str(), O_RDONLY);
 		if(temp != -1) {
 			fl.l_type = F_WRLCK;
@@ -989,7 +989,7 @@ bool TextFileDocumentInput::FileLocker::lock(const PathString& fileName, bool sh
 #endif
 	}
 
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 	HANDLE f = ::CreateFileW(fileName.c_str(), GENERIC_READ,
 		share ? FILE_SHARE_READ : 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 	if(f == INVALID_HANDLE_VALUE) {
@@ -1001,7 +1001,7 @@ bool TextFileDocumentInput::FileLocker::lock(const PathString& fileName, bool sh
 		if(f == INVALID_HANDLE_VALUE)
 			throw IOException(fileName);
 	}
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	int f = ::open(fileName.c_str(), O_RDONLY);
 	if(f == -1) {
 		if(errno != ENOENT)
@@ -1036,10 +1036,10 @@ inline TextFileDocumentInput::LockType TextFileDocumentInput::FileLocker::type()
 bool TextFileDocumentInput::FileLocker::unlock() /*throw()*/ {
 	bool succeeded = true;
 	if(hasLock()) {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		succeeded = win32::boole(::CloseHandle(file_));
 		file_ = INVALID_HANDLE_VALUE;
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		succeeded = ::close(file_) == 0;
 		if(deleteFileOnClose_) {
 			::remove(fileName_.c_str());
@@ -1129,9 +1129,9 @@ void TextFileDocumentInput::bind(const PathString& fileName) {
 
 	const PathString realName(canonicalizePathName(fileName.c_str()));
 	if(!pathExists(realName.c_str()))
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		throw IOException(fileName, ERROR_FILE_NOT_FOUND);
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		throw IOException(fileName, ENOENT);
 #endif
 	if(fileLocker_->hasLock()) {
@@ -1217,9 +1217,9 @@ bool TextFileDocumentInput::isChangeable(const Document&) const {
 
 /// @see IDocumentInput#location
 String TextFileDocumentInput::location() const /*throw()*/ {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 	return fileName();
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	const codecvt<Char, PathCharacter, mbstate_t>& converter = use_facet<codecvt<Char, PathCharacter, mbstate_t> >(locale());
 	Char result[PATH_MAX * 2];
 	mbstate_t dummy;
@@ -1301,9 +1301,9 @@ void TextFileDocumentInput::revert(
 	// set the new properties of the document
 	savedDocumentRevision_ = document().revisionNumber();
 	timeStampDirector_ = unexpectedTimeStampDirector;
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 	document_.setProperty(Document::TITLE_PROPERTY, fileName());
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	const PathString title(fileName());
 	const locale lc("");
 	const codecvt<Char, PathCharacter, mbstate_t>& conv = use_facet<codecvt<Char, PathCharacter, mbstate_t> >(lc);
@@ -1409,9 +1409,9 @@ bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) /
 	} catch(IOException&) {
 		return true;
 	}
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 	return ::CompareFileTime(&about, &newTimeStamp) != -1;
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	return about >= newTimeStamp;
 #endif
 }
@@ -1468,7 +1468,7 @@ void TextFileDocumentInput::write(const WritingFormat& format, const WritingOpti
 	try {
 		if(fileLocker_->type() != NO_LOCK)
 			unlockFile();
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		const DWORD attributes = ::GetFileAttributesW(fileName().c_str());
 		if(attributes != INVALID_FILE_ATTRIBUTES) {
 			::SetFileAttributesW(tempFileName.c_str(), attributes);
@@ -1488,7 +1488,7 @@ void TextFileDocumentInput::write(const WritingFormat& format, const WritingOpti
 			::DeleteFileW(tempFileName.c_str());
 			throw IOException(fileName(), ses.code());
 		}
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		struct stat s;
 		bool fileLost = false;
 		if(::stat(fileName().c_str(), &s) != -1) {
@@ -1564,22 +1564,22 @@ namespace {
  * @throw IOException Any I/O error occurred
  */
 DirectoryIterator::DirectoryIterator(const PathCharacter* directoryName) :
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		handle_(INVALID_HANDLE_VALUE),
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		handle_(0),
 #endif
 		done_(false) {
 	if(directoryName == 0)
 		throw NullPointerException("directoryName");
 	else if(directoryName[0] == 0)
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		throw IOException(directoryName, ERROR_PATH_NOT_FOUND);
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		throw IOException(directoryName, ENOENT);
 #endif
 
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 	if(!pathExists(directoryName))
 		throw IOException(directoryName, ERROR_PATH_NOT_FOUND);
 	const size_t len = wcslen(directoryName);
@@ -1593,7 +1593,7 @@ DirectoryIterator::DirectoryIterator(const PathCharacter* directoryName) :
 		throw IOException(directoryName);
 	update(&data);
 	directory_.assign(pattern.get(), isPathSeparator(pattern[len - 1]) ? len - 1 : len);
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	handle_ = ::opendir(directoryName);
 	if(handle_ == 0)
 		throw IOException(directoryName);
@@ -1609,10 +1609,10 @@ DirectoryIterator::DirectoryIterator(const PathCharacter* directoryName) :
 
 /// Destructor.
 DirectoryIterator::~DirectoryIterator() /*throw()*/ {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 	if(handle_ != INVALID_HANDLE_VALUE)
 		::FindClose(handle_);
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	if(handle_ != 0)
 		::closedir(handle_);
 #endif
@@ -1645,7 +1645,7 @@ bool DirectoryIterator::isDirectory() const {
 /// @see DirectoryIteratorBase#next
 void DirectoryIterator::next() {
 	if(!done_) {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		WIN32_FIND_DATAW data;
 		if(::FindNextFileW(handle_, &data) == 0) {
 			if(::GetLastError() == ERROR_NO_MORE_FILES)
@@ -1654,7 +1654,7 @@ void DirectoryIterator::next() {
 				throw IOException(directory_);
 		} else
 			update(&data);
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		update(0);
 #endif
 	}
@@ -1663,11 +1663,11 @@ void DirectoryIterator::next() {
 }
 
 void DirectoryIterator::update(const void* info) {
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 	const WIN32_FIND_DATAW& data = *static_cast<const WIN32_FIND_DATAW*>(info);
 	current_ = data.cFileName;
 	currentIsDirectory_ = win32::boole(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 	if(dirent* entry = ::readdir(handle_)) {
 		current_ = entry->d_name;
 		currentIsDirectory_ = entry->d_type == DT_DIR;

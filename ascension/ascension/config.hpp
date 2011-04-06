@@ -2,7 +2,7 @@
  * @file config.hpp
  * @brief Configure Ascension build settings using this file.
  * @author exeal
- * @date 2005-2010
+ * @date 2005-2011
  */
 
 #ifndef ASCENSION_CONFIG_HPP

@@ -211,10 +211,10 @@ namespace ascension {
 
 		MIBenum convertCCSIDtoMIB(uint ccsid) /*throw()*/;
 		uint convertMIBtoCCSID(MIBenum mib) /*throw()*/;
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 		uint convertMIBtoWinCP(MIBenum mib) /*throw()*/;
 		MIBenum convertWinCPtoMIB(uint codePage) /*throw()*/;
-#endif // ASCENSION_WINDOWS
+#endif // ASCENSION_OS_WINDOWS
 		String getEncodingDisplayName(MIBenum mib);
 		std::string encodingNameFromUnicode(const String& source);
 
@@ -424,9 +424,9 @@ namespace ascension {
 			std::pair<MIBenum, std::string> detect(const byte* first, const byte* last, std::ptrdiff_t* convertibleBytes) const;
 			// factory
 			static EncodingDetector* forName(const std::string& name) /*throw()*/;
-#ifdef ASCENSION_WINDOWS
+#ifdef ASCENSION_OS_WINDOWS
 			static EncodingDetector* forWindowsCodePage(UINT codePage) /*throw()*/;
-#endif /* ASCENSION_WINDOWS */
+#endif // ASCENSION_OS_WINDOWS
 			template<typename OutputIterator> static void availableNames(OutputIterator out);
 			static void registerDetector(std::auto_ptr<EncodingDetector> newDetector);
 		protected:
