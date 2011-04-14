@@ -16,6 +16,7 @@
 	- ASCENSION_OS_HPUX : HP-UX
 	- ASCENSION_OS_LINUX : Linux
 	- ASCENSION_OS_SOLARIS : Sun Solaris
+	- ASCENSION_OS_UNIX : Any Unix-like system
 	- ASCENSION_OS_WINDOWS : Windows
  */
 
@@ -48,6 +49,14 @@
 #	define ASCENSION_OS_BSD4
 #elif defined(_AIX)
 #	define ASCENSION_OS_AIX
+#elif defined(ANDROID)
+/*#	define ASCENSION_OS_ANDROID*/
+#elif defined(__HAIKU__)
+/*#	define ASCENSION_OS_HAIKU*/
+#elif defined(__QNXNTO__)
+/*#	define ASCENSION_OS_QNX*/
+#elif defined(__SYMBIAN32__)
+/*#	define ASCENSION_OS_SYMBIAN*/
 #else
 #	define ASCENSION_OS_POSIX
 #endif
@@ -60,6 +69,20 @@
 #		define ASCENSION_OS_MAC32
 #	endif
 #endif
+
+#if defined(ASCENSION_OS_AIX)			\
+/*	|| defined(ASCENSION_OS_ANDROID)*/	\
+	|| defined(ASCENSION_OS_BSD4)		\
+	|| defined(ASCENSION_OS_DARWIN)		\
+/*	|| defined(ASCENSION_OS_HAIKU)*/	\
+	|| defined(ASCENSION_OS_LINUX)		\
+/*	|| defined(ASCENSION_OS_QNX)*/		\
+	|| defined(ASCENSION_OS_SOLARIS)	\
+/*	|| defined(ASCENSION_OS_SYMBIAN)*/	\
+	|| defined(unix)					\
+	|| defined(__unix)					\
+	|| defined(__unix__)
+#	define ASCENSION_OS_UNIX
 
 #if defined(ASCENSION_OS_WIN64) || defined(ASCENSION_OS_WIN32) || defined(ASCENSION_OS_WINCE)
 #	define ASCENSION_OS_WINDOWS
