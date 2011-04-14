@@ -44,23 +44,28 @@ namespace ascension {
 
 	/**
 	 * Represents an invariant range.
-	 * @tparam T the element type
+	 * @tparam T The element type
 	 * @note This class is not compatible with Boost.Range.
 	 * @see BasicStringPiece, kernel#Region, graphics#Rectangle
 	 */
 	template<typename T> class Range : protected std::pair<T, T> {
 	public:
-		typedef T ValueType;
+		typedef T value_type;
 	public:
 		/// Default constructor.
 		Range() {}
-		/// Constructor.
-		Range(ValueType v1, ValueType v2) :
-			std::pair<ValueType, ValueType>(std::min(v1, v2), std::max(v1, v2)) {}
+		/**
+		 * Constructor takes the beginning and the end of the range.
+		 * @param v1, v2 The beginning and the end. Both std::min(v1, v2) and
+		 *               std::max(v1, v2) should be valid
+		 */
+		Range(value_type v1, value_type v2) :
+//			std::pair<value_type, value_type>(std::minmax(v1, v2)) {}
+			std::pair<value_type, value_type>(std::min(v1, v2), std::max(v1, v2)) {}
 		/// Returns the beginning (minimum) of the range.
-		ValueType beginning() const {return std::pair<T, T>::first;}
+		value_type beginning() const {return std::pair<T, T>::first;}
 		/// Returns the end (maximum) of the range.
-		ValueType end() const {return std::pair<T, T>::second;}
+		value_type end() const {return std::pair<T, T>::second;}
 		/**
 		 * Returns @c true if the given value is included by this range.
 		 * @tparam U The type of @a v
@@ -85,10 +90,10 @@ namespace ascension {
 		 * @return The intersection or empty range
 		 */
 		template<typename Other>
-		Range<ValueType> intersected(const Range<Other>& other) const {
-			const ValueType b(std::max<ValueType>(beginning(), other.beginning()));
-			const ValueType e(std::min<ValueType>(end(), other.end()));
-			return Range<ValueType>(b, std::max(b, e));
+		Range<value_type> intersected(const Range<Other>& other) const {
+			const value_type b(std::max<value_type>(beginning(), other.beginning()));
+			const value_type e(std::min<value_type>(end(), other.end()));
+			return Range<value_type>(b, std::max(b, e));
 		}
 		/**
 		 * Returns @c true if this range intersects with the given one.
@@ -104,7 +109,7 @@ namespace ascension {
 		 * Returns the length of the range.
 		 * @note This class does not define a method named "size".
 		 */
-		typename detail::DifferenceType<ValueType>::Type length() const {
+		typename detail::DifferenceType<value_type>::Type length() const {
 			return end() - beginning();
 		}
 		/**
@@ -113,8 +118,8 @@ namespace ascension {
 		 * @param other The other range
 		 * @return The union or empty range
 		 */
-		template<typename Other> Range<ValueType> united(const Range<Other>& other) const {
-			return Range<ValueType>(
+		template<typename Other> Range<value_type> united(const Range<Other>& other) const {
+			return Range<value_type>(
 				std::min(beginning(), other.beginning()), std::max(end(), other.end()));
 		}
 	};

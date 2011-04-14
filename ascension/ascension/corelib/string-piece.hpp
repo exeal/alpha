@@ -72,7 +72,8 @@ namespace ascension {
 		 */
 		value_type at(size_type i) const {
 			if(i >= length())
-				throw std::out_of_range("i"); return operator[](i);
+				throw std::out_of_range("i");
+			return operator[](i);
 		}
 	};
 

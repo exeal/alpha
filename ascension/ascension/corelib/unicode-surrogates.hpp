@@ -24,7 +24,7 @@ namespace ascension {
 
 		/**
 		 * Returns the size of a code unit of the specified code unit sequence in bytes.
-		 * @tparam CodeUnitSequence the type represents a code unit sequence
+		 * @tparam CodeUnitSequence The type represents a code unit sequence
 		 * @see ToUTF32Sequence
 		 */
 		template<typename CodeUnitSequence> struct CodeUnitSizeOf {
