@@ -13,9 +13,9 @@
 #include <ascension/graphics/rendering.hpp>	// graphics.IVisualLinesListener
 #include <ascension/corelib/unicode.hpp>	// text.IdentifierSyntax
 #include <ascension/viewer/caret-observers.hpp>
-#ifdef ASCENSION_GCC
+#ifdef ASCENSION_CC_GCC
 #	include <unknwn.h>	// IUnknown, OLESTR, ...
-#endif // ASCENSION_GCC
+#endif // ASCENSION_CC_GCC
 #include <objidl.h>		// IDataObject
 
 namespace ascension {

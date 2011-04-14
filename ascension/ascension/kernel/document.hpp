@@ -18,7 +18,7 @@
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/kernel/partition.hpp>
-#ifdef ASCENSION_POSIX
+#ifdef ASCENSION_OS_POSIX
 #	include <sys/stat.h>	// for POSIX environment
 #endif
 #include <iostream>

@@ -168,7 +168,7 @@ namespace {
 				return true;
 			}
 		}
-#else // ASCENSION_POSIX
+#else // ASCENSION_OS_POSIX
 		struct stat s;
 		if(::stat(fileName.c_str(), &s) == 0)
 			return !S_ISREG(s.st_mode);

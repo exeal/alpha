@@ -7,7 +7,7 @@
 #ifndef ASCENSION_WIDGET_HPP
 #define ASCENSION_WIDGET_HPP
 #include <ascension/platforms.hpp>
-#if defined(ASCENSION_WINDOWS)
+#if defined(ASCENSION_OS_WINDOWS)
 #	include <ascension/win32/windows.hpp>
 #endif
 #include <ascension/corelib/basic-exceptions.hpp>	// IllegalStateException
@@ -34,7 +34,7 @@ namespace ascension {
 					: IllegalStateException("this widget is not initialized.") {}
 			};
 
-#if defined(ASCENSION_WINDOWS)
+#if defined(ASCENSION_OS_WINDOWS)
 			typedef win32::Handle<HWND> NativeWidget;
 #endif
 
