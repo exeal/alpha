@@ -7,11 +7,12 @@
  * @author exeal
  * @date 2005-2010 (was manah/memory.hpp)
  * @date 2010-10-21
+ * @date 2011
  */
 
 #ifndef ASCENSION_MEMORY_HPP
 #define ASCENSION_MEMORY_HPP
-#include <ascension/corelib/basic-types.hpp>	// MANAH_NONCOPYABLE_TAG
+#include <ascension/corelib/basic-types.hpp>	// ASCENSION_NONCOPYABLE_TAG
 #include <cassert>
 #include <algorithm>	// std.max
 #include <new>			// new[], delete[], std.bad_alloc, std.nothrow
@@ -25,27 +26,55 @@ namespace ascension {
 	// std.auto_ptr for arrays.
 	template<typename T> class AutoBuffer {
 	public:
-		// type
-		typedef T ElementType;
+		/// The element type.
+		typedef T element_type;
+	public:
 		// constructors
-		explicit AutoBuffer(ElementType* p = 0) /*throw()*/ : buffer_(p) {}
-		AutoBuffer(AutoBuffer& other) /*throw()*/ : buffer_(other.release()) {}
-		template<typename Other> AutoBuffer(AutoBuffer<Other>& other) /*throw()*/ : buffer_(other.release()) {}
+		explicit AutoBuffer(element_type* p = 0) /*throw()*/ : buffer_(p) {}
+		AutoBuffer(AutoBuffer<element_type>& other) /*throw()*/ : buffer_(other.release()) {}
+		template<typename Other>
+		AutoBuffer(AutoBuffer<Other>& other) /*throw()*/ : buffer_(other.release()) {}
+		/// Destructor deallocates the buffer by using @c #reset.
 		~AutoBuffer() /*throw()*/ {delete[] buffer_;}
-		// operators
-		AutoBuffer& operator=(AutoBuffer& other) /*throw()*/ {reset(other.release()); return *this;}
-		template<typename Other> AutoBuffer& operator=(AutoBuffer<Other>& other) /*throw()*/ {reset(other.release()); return *this;}
-		ElementType& operator[](std::ptrdiff_t i) const /*throw()*/ {return buffer_[i];}
-		// methods
-		ElementType* get() const /*throw()*/ {return buffer_;}
-		ElementType* release() /*throw()*/ {ElementType* const temp = buffer_; buffer_ = 0; return temp;}
-		void reset(ElementType* p = 0) {if(p != buffer_) {delete[] buffer_; buffer_ = p;}}
-		void swap(AutoBuffer<ElementType>& other) /*throw()*/ {std::swap(buffer_, other.buffer_);}
+		/// Assignment operator.
+		AutoBuffer& operator=(AutoBuffer& other) /*throw()*/ {
+			reset(other.release());
+			return *this;
+		}
+		/// Assignment operator.
+		template<typename Other>
+		AutoBuffer& operator=(AutoBuffer<Other>& other) /*throw()*/ {
+			reset(other.release());
+			return *this;
+		}
+		element_type& operator[](std::ptrdiff_t i) const /*throw()*/ {return buffer_[i];}
+		/// Returns the pointer to the buffer or @c null.
+		element_type* get() const /*throw()*/ {return buffer_;}
+		/**
+		 * Sets the internal pointer to @c null without deallocation the buffer currently pointed
+		 * by @c AutoBuffer.
+		 * @retval A pointer to the buffer pointed by @c AutoBuffer before.
+		 */
+		element_type* release() /*throw()*/ {
+			element_type* const temp = buffer_;
+			buffer_ = 0;
+			return temp;
+		}
+		/**
+		 * Deallocates the buffer pointed by @c AutoBuffer (if any). And initializes with the given
+		 * new buffer.
+		 * @param p The new buffer or @c null
+		 * @note This method does not destruct the each elements in the buffer.
+		 */
+		void reset(element_type* p = 0) {if(p != buffer_) {delete[] buffer_; buffer_ = p;}}
+		/// Swaps two @c AutoBuffer objects.
+		void swap(AutoBuffer<element_type>& other) /*throw()*/ {std::swap(buffer_, other.buffer_);}
 	private:
-		ElementType* buffer_;
+		element_type* buffer_;
 	};
 
-	template<typename T> inline void swap(AutoBuffer<T>& left, AutoBuffer<T>& right) {return left.swap(right);}
+	template<typename T>
+	inline void swap(AutoBuffer<T>& left, AutoBuffer<T>& right) {return left.swap(right);}
 
 	// Efficient memory pool implementation (from MemoryPool of Efficient C++).
 	class MemoryPool {
