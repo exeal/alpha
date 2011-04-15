@@ -10,7 +10,7 @@
 
 #include <ascension/platforms.hpp>
 #include <ascension/corelib/memory.hpp>		// FastArenaObject
-#if defined(ASCENSION_GS_WIN32_GDI)
+#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
 #	include <ascension/win32/windows.hpp>	// COLORREF
 #endif
 
@@ -30,7 +30,7 @@ namespace ascension {
 			/// Creates a color value based on RGB values.
 			Color(byte red, byte green, byte blue, byte alpha = 255) /*throw()*/
 				: red_(red << 8), green_(green << 8), blue_(blue << 8), alpha_(alpha << 8), valid_(true) {}
-#ifdef ASCENSION_GS_WIN32_GDI
+#ifdef ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI
 			/// Creates an object from Win32 @c COLORREF value.
 			static Color fromCOLORREF(COLORREF value) /*throw()*/ {
 				return Color(
@@ -40,7 +40,7 @@ namespace ascension {
 			}
 			/// Returns a win32 @c COLORREF value represents this color.
 			COLORREF asCOLORREF() const /*throw()*/ {return RGB(red(), green(), blue());}
-#endif // ASCENSION_GS_WIN32_GDI
+#endif // ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI
 			/// Returns the blue color component of this color.
 			byte blue() const /*throw()*/ {return blue_ >> 8;}
 			/// Returns the green color component of this color.
