@@ -17,9 +17,9 @@
 #endif
 #ifdef ASCENSION_CUSTOM_SHARED_PTR_HPP
 #	include ASCENSION_CUSTOM_SHARED_PTR_HPP
-#elif defined(ASCENSION_CC_MSVC) && _MSC_VER >= 1500
+#elif defined(ASCENSION_COMPILER_MSVC) && _MSC_VER >= 1500
 #	include <memory>
-#elif defined(ASCENSION_CC_GCC) && __GNUC__ >= 4
+#elif defined(ASCENSION_COMPILER_GCC) && __GNUC__ >= 4
 #	include <tr1/memory>
 #else
 #	include <boost/tr1/memory.hpp>
@@ -66,7 +66,7 @@ namespace ascension {
 	using std::uint16_t;
 	using std::uint32_t;
 	using std::uint64_t;
-#elif defined(ASCENSION_CC_MSVC)
+#elif defined(ASCENSION_COMPILER_MSVC)
 	typedef signed char int8_t;
 	typedef short int16_t;
 	typedef long int32_t;

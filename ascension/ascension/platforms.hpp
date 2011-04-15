@@ -9,15 +9,15 @@
 
 
 /*
-	operating system (ASCENSION_OS_*)
-	- ASCENSION_OS_AIX : AIX
-	- ASCENSION_OS_BSD4 : Any BSD 4.4 system
-	- ASCENSION_OS_DARWIN : Darwin OS
-	- ASCENSION_OS_HPUX : HP-UX
-	- ASCENSION_OS_LINUX : Linux
-	- ASCENSION_OS_SOLARIS : Sun Solaris
-	- ASCENSION_OS_UNIX : Any Unix-like system
-	- ASCENSION_OS_WINDOWS : Windows
+	Operating system (ASCENSION_OS_*)
+	- AIX : AIX
+	- BSD4 : Any BSD 4.4 system
+	- DARWIN : Darwin OS
+	- HPUX : HP-UX
+	- LINUX : Linux
+	- SOLARIS : Sun Solaris
+	- UNIX : Any Unix-like system
+	- WINDOWS : Windows
  */
 
 #if defined(__APPLE__) && defined(__GNUC__)
@@ -63,12 +63,12 @@
 
 #ifdef ASCENSION_OS_DARWIN
 #	define ASCENSION_OS_MACOSX
-#	if defined(ASCENSION_OS_DARWIN64)
+#	if ASCENSION_OS(DARWIN64)
 #		define ASCENSION_OS_MAC64
-#	elif defined(ASCENSION_OS_DARWIN32)
+#	elif ASCENSION_OS(DARWIN32)
 #		define ASCENSION_OS_MAC32
 #	endif
-#endif
+#endif // ASCENSION_OS_DARWIN
 
 #if defined(ASCENSION_OS_AIX)			\
 /*	|| defined(ASCENSION_OS_ANDROID)*/	\
@@ -83,6 +83,7 @@
 	|| defined(__unix)					\
 	|| defined(__unix__)
 #	define ASCENSION_OS_UNIX
+#endif
 
 #if defined(ASCENSION_OS_WIN64) || defined(ASCENSION_OS_WIN32) || defined(ASCENSION_OS_WINCE)
 #	define ASCENSION_OS_WINDOWS
@@ -90,43 +91,59 @@
 
 
 /*
-	graphics system (ASCENSION_GS_*)
-	- ASCENSION_GS_CORE_GRAPHICS : Mac OS X Core Graphics
-	- ASCENSION_GS_GTK : GTK+ 2
-	- ASCENSION_GS_QT : Nokia Qt
-	- ASCENSION_GS_WIN32_GDI : Windows GDI + Uniscribe
+	Window system (ASCENSION_WINDOW_SYSTEM_*)
+	- GTK : GTK+ 2
+	- QUARTZ : Quartz Compositor of Mac OS X
+	- QT : Nokia Qt
+	- WIN32 : Windows Win32
+	- X : X Window System (not supported directly)
  */
 #if defined(ASCENSION_OS_DARWIN)
-#	define ASCENSION_GS_CORE_GRAPHICS
+#	define ASCENSION_WINDOW_SYSTEM_QUARTZ
 #elif defined(ASCENSION_OS_WINDOWS)
-#	define ASCENSION_GS_WIN32_GDI
-#else
-#	define ASCENSION_GS_GTK
-#	define ASCENSION_GS_QT
+#	define ASCENSION_WINDOW_SYSTEM_WIN32
 #endif
 
 
 /*
-	compiler (ASCENSION_CC_*)
-	- ASCENSION_CC_COMEAU : Comeau C++
-	- ASCENSION_CC_GCC : GNU C++
-	- ASCENSION_CC_MSVC : Microsoft Visual C++
-	- ASCENSION_CC_WATCOM : Watcom C++
+	Graphics system (ASCENSION_GRAPHICS_SYSTEM_*)
+	- CAIRO : Cairo
+	- CORE_GRAPHICS : Mac OS X Core Graphics
+	- QT : Nokia Qt
+	- WIN32_GDI : Windows GDI + Uniscribe
+ */
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#	define ASCENSION_GRAPHICS_SYSTEM_CAIRO
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#	define ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#	define ASCENSION_GRAPHICS_SYSTEM_QT
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#	define ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI
+#endif
+
+
+/*
+	C++ compiler (ASCENSION_COMPILER_*)
+	- COMEAU : Comeau C++
+	- GCC : GNU C++
+	- MSVC : Microsoft Visual C++
+	- WATCOM : Watcom C++
  */
 #if defined(_MSC_VER)
-#	define ASCENSION_CC_MSVC
+#	define ASCENSION_COMPILER_MSVC
 #elif defined(__WATCOMC__)
-#	define ASCENSION_CC_WATCOM
+#	define ASCENSION_COMPILER_WATCOM
 #elif defined(__GNUC__)
-#	define ASCENSION_CC_GCC
+#	define ASCENSION_COMPILER_GCC
 #elif defined(__COMO__)
-#	define ASCENSION_CC_COMEAU
+#	define ASCENSION_COMPILER_COMEAU
 #endif
 
 #if defined(__i386__) || defined(_WIN32) || defined(_WIN32_WCE)
-#	if defined(ASCENSION_CC_GCC) && (__GNUC__ * 100 + __GNUC_MINOR__ + 10 + __GNUC_PATCHLEVEL__ >= 332)
+#	if defined(ASCENSION_COMPILER_GCC) && (__GNUC__ * 100 + __GNUC_MINOR__ + 10 + __GNUC_PATCHLEVEL__ >= 332)
 #		define ASCENSION_FASTCALL __attribute__((regparm(3)))
-#	elif defined(ASCENSION_CC_MSVC) && (_MSC_VER > 1300)
+#	elif defined(ASCENSION_COMPILER_MSVC) && (_MSC_VER > 1300)
 #		define ASCENSION_FASTCALL __fastcall
 #	endif
 #endif
@@ -143,7 +160,7 @@
 #	endif
 #endif // ASCENSION_OS_WINDOWS
 
-#if defined(ASCENSION_OS_WINDOWS)
+#ifdef ASCENSION_OS_WINDOWS
 #	define ASCENSION_USE_INTRINSIC_WCHAR_T
 #endif
 

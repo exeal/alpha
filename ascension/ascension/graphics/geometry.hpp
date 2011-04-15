@@ -18,7 +18,12 @@
 namespace ascension {
 	namespace graphics {
 
-#ifdef ASCENSION_GS_WIN32_GDI
+#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+		typedef double Scalar;
+		typedef cairo_region_t* NativePolygon;
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
 		typedef int Scalar;
 		typedef win32::Handle<HRGN> NativePolygon;
 #else
@@ -365,8 +370,8 @@ namespace ascension {
 			return out << v.origin() << ct.widen(' ') << v.size();
 		}
 
-		// conversions from/to platform-native primitives
-#if defined(ASCENSION_GS_WIN32_GDI)
+		// conversions from/to platform-native primitives (deprecated)
+#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
 		inline Point<> fromNative(const POINT& source) /*throw()*/ {
 			return Point<>(source.x, source.y);
 		}
@@ -391,7 +396,7 @@ namespace ascension {
 			::SetRect(&temp, source.left(), source.top(), source.right(), source.bottom());
 			return temp;
 		}
-#elif defined(ASCENSION_GS_CORE_GRAPHICS)
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
 		inline Point<> fromNative(const CGPoint& source) /*throw()*/ {
 			return Point<>(source.x, source.y);
 		}
@@ -410,7 +415,7 @@ namespace ascension {
 		inline CGRect toNative(const Rect<>& source) /*throw()*/ {
 			return CGRectMake(source.origin().x, source.origin().y, source.size().cx, source.size().cy);
 		}
-#elif defined(ASCENSION_GS_GTK)
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
 		inline Rect<> fromNative(const GdkRectangle& source) /*throw()*/ {
 			return Rect<>(Point<>(source.x, source.y), Dimension<>(source.width, source.height));
 		}
@@ -418,7 +423,7 @@ namespace ascension {
 			const GdkRectangle temp = {source.origin().x, source.origin().y, source.size().cx, source.size().cy};
 			return temp;
 		}
-#elif defined(ASCENSION_GS_QT)
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
 #endif
 
 	}
