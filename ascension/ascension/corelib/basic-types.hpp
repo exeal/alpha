@@ -90,7 +90,7 @@ namespace ascension {
 #ifdef ASCENSION_USE_INTRINSIC_WCHAR_T
 	typedef wchar_t Char;					///< Type for characters as UTF-16 code unit.
 #else
-	typedef uint16_t;						///< Type for characters as UTF-16 code unit.
+	typedef uint16_t Char;					///< Type for characters as UTF-16 code unit.
 #endif
 	typedef uint32_t CodePoint;				///< Unicode code point.
 	typedef std::basic_string<Char> String;	///< Type for strings as UTF-16.
