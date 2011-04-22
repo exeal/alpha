@@ -63,7 +63,7 @@ namespace ascension {
 		 *          greater than the length of the string
 		 * @return The character
 		 */
-		value_type operator[](size_type i) const {Range<const Character*>::beginning() + i;}
+		value_type operator[](size_type i) const {beginning() + i;}
 		/**
 		 * Returns the character at the specified position in the string.
 		 * @param i The index of the position of the character to get
@@ -71,7 +71,7 @@ namespace ascension {
 		 * @throw std#out_of_range @a i is equal to or greater than the length of the string
 		 */
 		value_type at(size_type i) const {
-			if(i >= Range<const Character*>::length())
+			if(i >= length())
 				throw std::out_of_range("i");
 			return operator[](i);
 		}
