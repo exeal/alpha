@@ -54,7 +54,8 @@ namespace ascension {
 		}
 
 		/// @internal
-		template<typename T> class ValueSaver {
+		template<typename T>
+		class ValueSaver {
 		public:
 			/// Constructor saves the value.
 			ValueSaver(T& value) : value_(value), originalValue_(value) {}
