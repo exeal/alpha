@@ -25,14 +25,53 @@ namespace ascension {
 			 * A function object compares Unicode property (value) names based on "Property and
 			 * Property Value Matching"
 			 * (http://www.unicode.org/Public/UNIDATA/UCD.html#Property_and_Property_Value_Matching).
-			 * @param p1 One property name
-			 * @param p2 The other property name
-			 * @return true if p1 &lt; p2
 			 */
-			template<typename CharType>
 			struct PropertyNameComparer {
-				bool operator()(const CharType* p1, const CharType* p2) const;
-				static int compare(const CharType* p1, const CharType* p2);
+				/**
+				 * Compares the given two strings.
+				 * @tparam CharType1 The type of @a p1
+				 * @tparam CharType2 The type of @a p2
+				 * @param p1 One property name
+				 * @param p2 The other property name
+				 * @return true if p1 &lt; p2
+				 */
+				template<typename CharType1, typename CharType2>
+				bool operator()(const CharType1* p1, const CharType2* p2) const {
+					return compare(p1, p2) < 0;
+				}
+				/**
+				 * Compares the given two strings.
+				 * @tparam CharType1 The type of @a p1
+				 * @tparam CharType2 The type of @a p2
+				 * @param p1 One property name
+				 * @param p2 The other property name
+				 * @return &lt; 0 if @a p1 &lt; @a p2
+				 * @return 0 if @a p1 == @a p2
+				 * @return &gt; 0 if @a p1 &gt; @a p2
+				 */
+				template<typename CharType1, typename CharType2>
+				static int compare(const CharType1* p1, const CharType2* p2) {
+					while(*p1 != 0 && *p2 != 0) {
+						if(*p1 == '_' || *p1 == '-' || *p1 == ' ') {
+							++p1;
+							continue;
+						} else if(*p2 == '_' || *p2 == '-' || *p2 == ' ') {
+							++p2;
+							continue;
+						}
+						const int c1 =
+							std::char_traits<CharType1>::to_int_type(
+								std::tolower(*p1, std::locale::classic()));
+						const int c2 =
+							std::char_traits<CharType2>::to_int_type(
+								std::tolower(*p2, std::locale::classic()));
+						if(c1 != c2)
+							return c1 - c2;
+						else
+							++p1, ++p2;
+					}
+					return *p1 - *p2;
+				}
 			};
 
 			/// An invalid property value.
@@ -536,38 +575,6 @@ template<> inline bool BinaryProperty::is<BinaryProperty::UPPERCASE>(CodePoint c
 	// Uppercase :=
 	//   Lu + Other_Uppercase
 	return GeneralCategory::of(cp) == GeneralCategory::UPPERCASE_LETTER || is<OTHER_UPPERCASE>(cp);}
-
-/**
- * Compares the given two strings.
- * @param p1 one property name
- * @param p2 the other property name
- * @return true if p1 &lt; p2
- */
-template<typename CharType>
-inline bool PropertyNameComparer<CharType>::operator()(const CharType* p1, const CharType* p2) const {return compare(p1, p2) < 0;}
-
-/**
- * Compares the given two strings.
- * @param p1 one property name
- * @param p2 the other property name
- * @return &lt; 0 if @a p1 &lt; @a p2
- * @return 0 if @a p1 == @a p2
- * @return &gt; 0 if @a p1 &gt; @a p2
- */
-template<typename CharType>
-inline int PropertyNameComparer<CharType>::compare(const CharType* p1, const CharType* p2) {
-	while(*p1 != 0 && *p2 != 0) {
-		if(*p1 == '_' || *p1 == '-' || *p1 == ' ') {
-			++p1; continue;
-		} else if(*p2 == '_' || *p2 == '-' || *p2 == ' ') {
-			++p2; continue;
-		}
-		const int c1 = std::tolower(*p1, std::locale::classic()), c2 = std::tolower(*p2, std::locale::classic());
-		if(c1 != c2)	return c1 - c2;
-		else			++p1, ++p2;
-	}
-	return *p1 - *p2;
-}
 
 /// Returns the Hangul_Syllable_Type property value of @a cp.
 inline int HangulSyllableType::of(CodePoint c) /*throw()*/ {

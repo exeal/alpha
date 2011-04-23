@@ -209,10 +209,10 @@ class CodeGenerator(object):
                   + '\t\tconst int value;\n'
                   + '\t};\n')
         out.write('\tstruct ValueNameComparer {\n'
-                  + '\t\tbool operator()(const ValueName& lhs, const Char* rhs) const {return PropertyNameComparer<Char>::compare(lhs.name, rhs) < 0;}\n'
-                  + '\t\tbool operator()(const Char* lhs, const ValueName& rhs) const {return PropertyNameComparer<Char>::compare(lhs, rhs.name) < 0;}\n'
+                  + '\t\tbool operator()(const ValueName& lhs, const Char* rhs) const {return PropertyNameComparer::compare(lhs.name, rhs) < 0;}\n'
+                  + '\t\tbool operator()(const Char* lhs, const ValueName& rhs) const {return PropertyNameComparer::compare(lhs, rhs.name) < 0;}\n'
                   + '#if defined(ASCENSION_COMPILER_MSVC) && defined(_SECURE_SCL)\n'
-                  + 'bool operator()(const ValueName& lhs, const ValueName& rhs) const {return PropertyNameComparer<Char>::compare(lhs.name, rhs.name) < 0;}\n'
+                  + 'bool operator()(const ValueName& lhs, const ValueName& rhs) const {return PropertyNameComparer::compare(lhs.name, rhs.name) < 0;}\n'
                   + '#endif\n'
                   + '\t};\n')
         out.write('}\n')
@@ -292,7 +292,7 @@ class CodeGenerator(object):
             + ('inline int %s::forName(const Char* name) {\n' % PropertyNames.cpp_name(long_name))
             + '\tconst ucd::detail::ValueName* const p =\n'
             + ('\t\tstd::lower_bound(NAMES_, NAMES_ + %d, name, ucd::detail::ValueNameComparer());\n') % len(value_names)
-            + ('\treturn (p != NAMES_ + %d && PropertyNameComparer<Char>::compare(name, p->name)) ?\n') % len(value_names)
+            + ('\treturn (p != NAMES_ + %d && PropertyNameComparer::compare(name, p->name)) ?\n') % len(value_names)
             + '\t\tp->value : NOT_PROPERTY;\n}\n')
 
     def _print_partitioned_of_code(self, long_name):
