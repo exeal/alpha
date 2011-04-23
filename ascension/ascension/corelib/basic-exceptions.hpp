@@ -62,35 +62,59 @@ namespace ascension {
 	};
 
 	/**
-	 * A platform-dependent error whose detail can be obtained by POSIX @c errno or Win32
-	 * @c GetLastError.
-	 * @tparam Base the base exception class
+	 * An error whose detail can be identified by an integer (ex. POSIX @c errno, Win32
+	 * @c GetLastError, ...
+	 * @tparam Code The error code type
+	 * @tparam Base The base exception class
 	 */
-	template<typename Base = std::runtime_error>
-	class PlatformDependentError : public Base {
+	template<typename Code, typename Base = std::runtime_error>
+	class IntegralError : public Base {
 	public:
-#ifdef ASCENSION_OS_WINDOWS
-		typedef DWORD Code;
-#else
-		typedef int Code;
-#endif
+		typedef Code value_type;
 	public:
 		/**
 		 * Constructor.
-		 * @param code the error code
+		 * @param code The error code
+		 * @param message The error message
 		 */
-		explicit PlatformDependentError(Code code
-#ifdef ASCENSION_OS_WINDOWS
-			= ::GetLastError()
-#else
-			= errno
-#endif
-			) : Base("platform-dependent error occurred."), code_(code) {}
+		explicit IntegralError(Code code,
+			const std::string& message = "") : Base(message), code_(code) {}
 		/// Returns the error code.
 		Code code() const /*throw()*/;
 	private:
 		const Code code_;
 	};
+
+#if defined(ASCENSION_OS_WINDOWS)
+	template<typename Base = std::runtime_error>
+	class PlatformDependentError : public IntegralError<DWORD, Base> {
+	public:
+		PlatformDependentError(DWORD code = ::GetLastError()) : IntegralError<DWORD, Base>(code) {
+			void* buffer;
+			if(0 != ::FormatMessageA(
+					FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+					0, code, LANG_USER_DEFAULT, reinterpret_cast<char*>(&buffer), 0, 0)) {
+				message_ = static_cast<char*>(buffer);
+				::LocalFree(buffer);
+			}
+		}
+		const char* what() const {return message_.c_str();}
+	private:
+		std::string message_;
+	};
+#elif defined(ASCENSION_OS_POSIX)
+	template<typename Base = std::runtime_error>
+	class PlatformDependentError : public PlatformDependentError<int, Base> {
+	public:
+		PlatformDependentError(int code = errno) : IntegralError<int, Base>(code) {
+			const char* const s = ::strerror(code);
+			message_ = (s != 0) ? s : "";
+		}
+		const char* what() const {return message_.c_str();}
+	private:
+		std::string message_;
+	};
+#endif
 
 	namespace detail {
 		/// @internal
