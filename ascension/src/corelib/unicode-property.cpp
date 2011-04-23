@@ -1,14 +1,14 @@
 /**
  * @file unicode-property.cpp
  * @author exeal
- * @date 2005-2010
+ * @date 2005-2011
  */
 
 #include <ascension/corelib/unicode-property.hpp>
 using namespace ascension;
 using namespace ascension::text;
 using namespace ascension::text::ucd;
-using namespace ascension::text::ucd::internal;
+using namespace ascension::text::ucd::detail;
 using namespace std;
 
 

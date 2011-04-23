@@ -96,9 +96,9 @@ namespace ascension {
 				template<int superCategory> static bool is(int subCategory);
 				static int of(CodePoint c) /*throw()*/;
 			private:
-				static const internal::PropertyPartition VALUES_[];
+				static const detail::PropertyPartition VALUES_[];
 				static const std::size_t NUMBER_;
-				static const internal::ValueName NAMES_[];
+				static const detail::ValueName NAMES_[];
 			};
 		
 			/// Code blocks. These values are based on Blocks.txt obtained from UCD.
@@ -116,9 +116,9 @@ namespace ascension {
 				static int forName(const Char* name);
 				static int of(CodePoint c) /*throw()*/;
 			private:
-				static const internal::PropertyPartition VALUES_[];
+				static const detail::PropertyPartition VALUES_[];
 				static const std::size_t NUMBER_;
-				static const internal::ValueName NAMES_[];
+				static const detail::ValueName NAMES_[];
 			};
 
 			/**
@@ -162,9 +162,9 @@ namespace ascension {
 				static int of(CodePoint cp) /*throw()*/;
 			private:
 				static const CodePoint CHARACTERS_[];
-				static const uchar VALUES_[];
+				static const uint8_t VALUES_[];
 				static const std::size_t NUMBER_;
-				static const internal::ValueName NAMES_[];
+				static const detail::ValueName NAMES_[];
 			};
 
 			/**
@@ -201,9 +201,9 @@ namespace ascension {
 				static int forName(const Char* name);
 				static int of(CodePoint c) /*throw()*/;
 			private:
-				static const internal::PropertyPartition VALUES_[];
+				static const detail::PropertyPartition VALUES_[];
 				static const std::size_t NUMBER_;
-				static const internal::ValueName NAMES_[];
+				static const detail::ValueName NAMES_[];
 			};
 
 			/**
@@ -227,7 +227,7 @@ namespace ascension {
 				static int forName(const Char* name);
 				static int of(CodePoint cp) /*throw()*/;
 			private:
-				static const internal::ValueName NAMES_[];
+				static const detail::ValueName NAMES_[];
 			};
 			
 			/**
@@ -256,7 +256,7 @@ namespace ascension {
 				template<int property>
 				static bool is(CodePoint cp) /*throw()*/;
 			private:
-				static const internal::ValueName NAMES_[];
+				static const detail::ValueName NAMES_[];
 #include "src/generated/uprops-binary-property-values-definition"
 			};
 
@@ -278,9 +278,9 @@ namespace ascension {
 				static int forName(const Char* name);
 				static int of(CodePoint c) /*throw()*/;
 			private:
-				static const internal::PropertyPartition VALUES_[];
+				static const detail::PropertyPartition VALUES_[];
 				static const std::size_t NUMBER_;
-				static const internal::ValueName NAMES_[];
+				static const detail::ValueName NAMES_[];
 			};
 
 			/**
@@ -340,9 +340,9 @@ namespace ascension {
 				static int forName(const Char* name);
 				static int of(CodePoint c) /*throw()*/;
 			private:
-				static const internal::PropertyPartition VALUES_[];
+				static const detail::PropertyPartition VALUES_[];
 				static const std::size_t NUMBER_;
-				static const internal::ValueName NAMES_[];
+				static const detail::ValueName NAMES_[];
 			};
 
 #include "src/generated/uprops-inlines"
@@ -359,7 +359,7 @@ namespace ascension {
 				static const Char LONG_NAME[], SHORT_NAME[];
 				static int of(CodePoint cp) /*throw()*/;
 			private:
-				static const internal::ValueName NAMES_[];
+				static const detail::ValueName NAMES_[];
 			};
 
 			/// Word_Break property. These values are based on UAX #29.
@@ -376,7 +376,7 @@ namespace ascension {
 					const IdentifierSyntax& syntax = IdentifierSyntax(IdentifierSyntax::UNICODE_DEFAULT),
 					const std::locale& lc = std::locale::classic()) /*throw()*/;
 			private:
-				static const internal::ValueName NAMES_[];
+				static const detail::ValueName NAMES_[];
 			};
 
 			/// Sentence_Break property. These values are based on UAX #29.
@@ -391,7 +391,7 @@ namespace ascension {
 				static const Char LONG_NAME[], SHORT_NAME[];
 				static int of(CodePoint cp) /*throw()*/;
 			private:
-				static const internal::ValueName NAMES_[];
+				static const detail::ValueName NAMES_[];
 			};
 
 			/**
