@@ -131,7 +131,7 @@ namespace ascension {
 				};
 				static const int DEFAULT_VALUE;
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int forName(const Char* name);
+				template<typename CharType> static int forName(const CharType* name);
 				template<int superCategory> static bool is(int subCategory);
 				static int of(CodePoint c) /*throw()*/;
 			private:
@@ -151,8 +151,8 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const int DEFAULT_VALUE;
-				static const Char LONG_NAME[], SHORT_NAME[];
-				static int forName(const Char* name);
+				static const Char LONG_NAME[], SHORT_NAME[];				
+				template<typename CharType> static int forName(const CharType* name);
 				static int of(CodePoint c) /*throw()*/;
 			private:
 				static const detail::PropertyPartition VALUES_[];
@@ -197,7 +197,7 @@ namespace ascension {
 				};
 				static const int DEFAULT_VALUE;
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int forName(const Char* name);
+				template<typename CharType> static int forName(const CharType* name);
 				static int of(CodePoint cp) /*throw()*/;
 			private:
 				static const CodePoint CHARACTERS_[];
@@ -237,7 +237,7 @@ namespace ascension {
 				};
 				static const int DEFAULT_VALUE;
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int forName(const Char* name);
+				template<typename CharType> static int forName(const CharType* name);
 				static int of(CodePoint c) /*throw()*/;
 			private:
 				static const detail::PropertyPartition VALUES_[];
@@ -263,7 +263,7 @@ namespace ascension {
 				};
 				static const int DEFAULT_VALUE;
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int forName(const Char* name);
+				template<typename CharType> static int forName(const CharType* name);
 				static int of(CodePoint cp) /*throw()*/;
 			private:
 				static const detail::ValueName NAMES_[];
@@ -290,7 +290,7 @@ namespace ascension {
 					TERMINAL_PUNCTUATION, UNIFIED_IDEOGRAPH, UPPERCASE, VARIATION_SELECTOR, WHITE_SPACE,
 					XID_CONTINUE, XID_START, LAST_VALUE
 				};
-				static int forName(const Char* name);
+				template<typename CharType> static int forName(const CharType* name);
 				static bool is(CodePoint cp, int property);
 				template<int property>
 				static bool is(CodePoint cp) /*throw()*/;
@@ -314,7 +314,7 @@ namespace ascension {
 				};
 				static const int DEFAULT_VALUE;
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int forName(const Char* name);
+				template<typename CharType> static int forName(const CharType* name);
 				static int of(CodePoint c) /*throw()*/;
 			private:
 				static const detail::PropertyPartition VALUES_[];
@@ -376,7 +376,7 @@ namespace ascension {
 				};
 				static const int DEFAULT_VALUE;
 				static const Char LONG_NAME[], SHORT_NAME[];
-				static int forName(const Char* name);
+				template<typename CharType> static int forName(const CharType* name);
 				static int of(CodePoint c) /*throw()*/;
 			private:
 				static const detail::PropertyPartition VALUES_[];
