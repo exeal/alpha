@@ -436,14 +436,14 @@ void fileio::writeRegion(const Document& document, const Region& region,
 // exception classes //////////////////////////////////////////////////////////////////////////////
 
 namespace {
-	IOException::Code currentSystemError() /*throw()*/ {
+	IOException::value_type currentSystemError() /*throw()*/ {
 #ifdef ASCENSION_OS_WINDOWS
 		return ::GetLastError();
 #else // ASCENSION_OS_POSIX
 		return errno;
 #endif
 	}
-	string errorMessage(IOException::Code code = currentSystemError()) {
+	string errorMessage(IOException::value_type code = currentSystemError()) {
 #ifdef ASCENSION_OS_WINDOWS
 		void* buffer;
 		if(0 == ::FormatMessageA(
@@ -463,19 +463,17 @@ namespace {
 /**
  * Constructor.
  */
-IOException::IOException(const PathString& fileName) : ios_base::failure(errorMessage()), fileName_(fileName), code_(currentSystemError()) {
+IOException::IOException(const PathString& fileName) :
+		PlatformDependentError<ios_base::failure>(currentSystemError()), fileName_(fileName) {
 }
 
 /**
  * Constructor.
  */
-IOException::IOException(const PathString& fileName, Code code) : ios_base::failure(errorMessage()), fileName_(fileName), code_(code) {
+IOException::IOException(const PathString& fileName, value_type code) :
+		PlatformDependentError<ios_base::failure>(code), fileName_(fileName) {
 }
 
-/// Returns the platform-dependent error code.
-IOException::Code IOException::code() const /*throw()*/ {
-	return code_;
-}
 
 /// Returns the file name.
 const PathString& IOException::fileName() const /*throw()*/ {
@@ -520,9 +518,9 @@ namespace {
 #else // ASCENSION_OS_POSIX
 		~SystemErrorSaver() /*throw()*/ {errno = e_;}
 #endif
-		IOException::Code code() const /*throw()*/ {return code_;}
+		IOException::value_type code() const /*throw()*/ {return code_;}
 	private:
-		IOException::Code code_;
+		IOException::value_type code_;
 	};
 } // namespace @0
 
