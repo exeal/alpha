@@ -205,12 +205,14 @@ class CodeGenerator(object):
                   + '#endif\n'
                   + '\t};\n')
         out.write('\tstruct ValueName {\n'
-                  + '\t\tconst Char* const name;\n'
+                  + '\t\tconst char* const name;\n'
                   + '\t\tconst int value;\n'
                   + '\t};\n')
         out.write('\tstruct ValueNameComparer {\n'
-                  + '\t\tbool operator()(const ValueName& lhs, const Char* rhs) const {return PropertyNameComparer::compare(lhs.name, rhs) < 0;}\n'
-                  + '\t\tbool operator()(const Char* lhs, const ValueName& rhs) const {return PropertyNameComparer::compare(lhs, rhs.name) < 0;}\n'
+                  + '\t\ttemplate<typename CharType>\n'
+                  + '\t\tbool operator()(const ValueName& lhs, const CharType* rhs) const {return PropertyNameComparer::compare(lhs.name, rhs) < 0;}\n'
+                  + '\t\ttemplate<typename CharType>\n'
+                  + '\t\tbool operator()(const CharType* lhs, const ValueName& rhs) const {return PropertyNameComparer::compare(lhs, rhs.name) < 0;}\n'
                   + '#if defined(ASCENSION_COMPILER_MSVC) && defined(_SECURE_SCL)\n'
                   + 'bool operator()(const ValueName& lhs, const ValueName& rhs) const {return PropertyNameComparer::compare(lhs.name, rhs.name) < 0;}\n'
                   + '#endif\n'
@@ -289,7 +291,8 @@ class CodeGenerator(object):
         out = self._output_files['i']
         out.write(
             '/// Returns the property with the given name.\n'
-            + ('inline int %s::forName(const Char* name) {\n' % PropertyNames.cpp_name(long_name))
+            + 'template<typename CharType>\n'
+            + ('inline int %s::forName(const CharType* name) {\n' % PropertyNames.cpp_name(long_name))
             + '\tconst ucd::detail::ValueName* const p =\n'
             + ('\t\tstd::lower_bound(NAMES_, NAMES_ + %d, name, ucd::detail::ValueNameComparer());\n') % len(value_names)
             + ('\treturn (p != NAMES_ + %d && PropertyNameComparer::compare(name, p->name)) ?\n') % len(value_names)
@@ -310,7 +313,7 @@ class CodeGenerator(object):
         out = self._output_files['vn']
         out.write(r'const ucd::detail::ValueName %s::NAMES_[] = {' % cpp_name)
         for name in names:
-            out.write(r'{L"%s",%s::%s},' % (name[0], cpp_name, name[1]))
+            out.write(r'{"%s",%s::%s},' % (name[0], cpp_name, name[1]))
         out.write('};\n')
         self._print_forname_code(long_name, names)
 
@@ -341,7 +344,7 @@ class CodeGenerator(object):
         out = self._output_files['vn']
         out.write(r'const ucd::detail::ValueName BinaryProperty::NAMES_[] = {')
         for name in names:
-            out.write(r'{L"%s",BinaryProperty::%s},' % name)
+            out.write(r'{"%s",BinaryProperty::%s},' % name)
         out.write('};\n')
         self._print_forname_code('BinaryProperty', names)
 
