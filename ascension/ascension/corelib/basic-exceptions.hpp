@@ -118,9 +118,9 @@ namespace ascension {
 
 	namespace detail {
 		/// @internal
-		class UnreachableCode : public std::logic_error {	// should derive from std.runtime_error???
+		class UnreachableCode /*: public std::logic_error*/ {	// should derive from std.runtime_error???
 		public:
-			explicit UnreachableCode(const char* file, int line) : std::logic_error("") {
+			explicit UnreachableCode(const char* file, int line) /*: std::logic_error("")*/ {
 				std::ostringstream temp;
 				temp << file << ":" << line;
 				message_ = temp.str();
