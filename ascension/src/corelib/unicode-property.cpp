@@ -216,9 +216,9 @@ namespace {
 /// The default value of the property.
 const int GeneralCategory::DEFAULT_VALUE = GeneralCategory::UNASSIGNED;
 /// The long name of the property.
-const Char GeneralCategory::LONG_NAME[] = L"General_Category";
+const char GeneralCategory::LONG_NAME[] = "General_Category";
 /// The short name of the property.
-const Char GeneralCategory::SHORT_NAME[] = L"gc";
+const char GeneralCategory::SHORT_NAME[] = "gc";
 
 
 // Block //////////////////////////////////////////////////////////////////////////////////////////
@@ -226,9 +226,9 @@ const Char GeneralCategory::SHORT_NAME[] = L"gc";
 /// The default value of the property.
 const int Block::DEFAULT_VALUE = Block::NO_BLOCK;
 /// The long name of the property.
-const Char Block::LONG_NAME[] = L"Block";
+const char Block::LONG_NAME[] = "Block";
 /// The short name of the property.
-const Char Block::SHORT_NAME[] = L"blk";
+const char Block::SHORT_NAME[] = "blk";
 
 
 // CanonicalCombiningClass ////////////////////////////////////////////////////////////////////////
@@ -236,9 +236,9 @@ const Char Block::SHORT_NAME[] = L"blk";
 /// The default of the property.
 const int CanonicalCombiningClass::DEFAULT_VALUE = CanonicalCombiningClass::NOT_REORDERED;
 /// The long name of the property.
-const Char CanonicalCombiningClass::LONG_NAME[] = L"Canonical_Combining_Class";
+const char CanonicalCombiningClass::LONG_NAME[] = "Canonical_Combining_Class";
 /// The shoer name of the property.
-const Char CanonicalCombiningClass::SHORT_NAME[] = L"ccc";
+const char CanonicalCombiningClass::SHORT_NAME[] = "ccc";
 
 
 // Script /////////////////////////////////////////////////////////////////////////////////////////
@@ -246,9 +246,9 @@ const Char CanonicalCombiningClass::SHORT_NAME[] = L"ccc";
 /// The default value of the property.
 const int Script::DEFAULT_VALUE = Script::UNKNOWN;
 /// The long name of the property.
-const Char Script::LONG_NAME[] = L"Script";
+const char Script::LONG_NAME[] = "Script";
 /// The short name of the property.
-const Char Script::SHORT_NAME[] = L"sc";
+const char Script::SHORT_NAME[] = "sc";
 
 
 // HangulSyllableType /////////////////////////////////////////////////////////////////////////////
@@ -256,9 +256,9 @@ const Char Script::SHORT_NAME[] = L"sc";
 /// The default value of the property.
 const int HangulSyllableType::DEFAULT_VALUE = HangulSyllableType::NOT_APPLICABLE;
 /// The long name of the property.
-const Char HangulSyllableType::LONG_NAME[] = L"Hangul_Syllable_Type";
+const char HangulSyllableType::LONG_NAME[] = "Hangul_Syllable_Type";
 /// The short name of the property.
-const Char HangulSyllableType::SHORT_NAME[] = L"hst";
+const char HangulSyllableType::SHORT_NAME[] = "hst";
 
 
 // BinaryProperty /////////////////////////////////////////////////////////////////////////////////
@@ -334,9 +334,9 @@ bool BinaryProperty::is(CodePoint cp, int property) {
 /// The default value of the property.
 const int EastAsianWidth::DEFAULT_VALUE = EastAsianWidth::NEUTRAL;
 /// The long name of the property.
-const Char EastAsianWidth::LONG_NAME[] = L"East_Asian_Width";
+const char EastAsianWidth::LONG_NAME[] = "East_Asian_Width";
 /// The short name of the property.
-const Char EastAsianWidth::SHORT_NAME[] = L"ea";
+const char EastAsianWidth::SHORT_NAME[] = "ea";
 
 
 // LineBreak //////////////////////////////////////////////////////////////////////////////////////
@@ -344,9 +344,9 @@ const Char EastAsianWidth::SHORT_NAME[] = L"ea";
 /// The default value of the property.
 const int LineBreak::DEFAULT_VALUE = LineBreak::UNKNOWN;
 /// The long name of the property.
-const Char LineBreak::LONG_NAME[] = L"Line_Break";
+const char LineBreak::LONG_NAME[] = "Line_Break";
 /// The short name of the property.
-const Char LineBreak::SHORT_NAME[] = L"lb";
+const char LineBreak::SHORT_NAME[] = "lb";
 
 
 // GraphemeClusterBreak ///////////////////////////////////////////////////////////////////////////
@@ -354,9 +354,9 @@ const Char LineBreak::SHORT_NAME[] = L"lb";
 /// The default value of the property.
 const int GraphemeClusterBreak::DEFAULT_VALUE = GraphemeClusterBreak::OTHER;
 /// The long name of the property.
-const Char GraphemeClusterBreak::LONG_NAME[] = L"Grapheme_Cluster_Break";
+const char GraphemeClusterBreak::LONG_NAME[] = "Grapheme_Cluster_Break";
 /// The short name of the property.
-const Char GraphemeClusterBreak::SHORT_NAME[] = L"GCB";
+const char GraphemeClusterBreak::SHORT_NAME[] = "GCB";
 
 /// Returns Grapheme_Cluster_Break value of the specified character.
 int GraphemeClusterBreak::of(CodePoint cp) /*throw()*/ {
@@ -390,9 +390,9 @@ int GraphemeClusterBreak::of(CodePoint cp) /*throw()*/ {
 /// The default value of the property.
 const int WordBreak::DEFAULT_VALUE = GraphemeClusterBreak::OTHER;
 /// The long name of the property.
-const Char WordBreak::LONG_NAME[] = L"Word_Break";
+const char WordBreak::LONG_NAME[] = "Word_Break";
 /// The short name of the property.
-const Char WordBreak::SHORT_NAME[] = L"WB";
+const char WordBreak::SHORT_NAME[] = "WB";
 
 /**
  * Returns Word_Break value of the specified character.
@@ -482,9 +482,9 @@ int WordBreak::of(CodePoint c,
 /// The default value of the property.
 const int SentenceBreak::DEFAULT_VALUE = GraphemeClusterBreak::OTHER;
 /// The long name of the property.
-const Char SentenceBreak::LONG_NAME[] = L"Sentence_Break";
+const char SentenceBreak::LONG_NAME[] = "Sentence_Break";
 /// The short name of the property.
-const Char SentenceBreak::SHORT_NAME[] = L"SB";
+const char SentenceBreak::SHORT_NAME[] = "SB";
 
 /// Returns Sentence_Break value of the specified character.
 int SentenceBreak::of(CodePoint c) /*throw()*/ {
