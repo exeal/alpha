@@ -49,24 +49,17 @@ namespace ascension {
 				bool unicodeByteOrderMark;
 			};
 
-			class IOException : public std::ios_base::failure {
-			public:
-#ifdef ASCENSION_OS_WINDOWS
-				typedef DWORD Code;	///< Type of the value returned by @c #code method.
-#else // ASCENSION_OS_POSIX
-				typedef int Code;	///< Type of the value returned by @c #code method.
-#endif
+			class IOException : public PlatformDependentError<std::ios_base::failure> {
 			public:
 				explicit IOException(const PathString& fileName);
-				IOException(const PathString& fileName, Code code);
-				Code code() const /*throw()*/;
+				IOException(const PathString& fileName, value_type code);
+				value_type code() const /*throw()*/;
 				const PathString& fileName() const /*throw()*/;
 			public:
 				static bool isFileNotFound(const IOException& e);
 				static bool isPermissionDenied(const IOException& e);
 			private:
 				const PathString fileName_;
-				const Code code_;
 			};
 
 			/**

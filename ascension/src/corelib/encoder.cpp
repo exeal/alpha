@@ -151,9 +151,9 @@ bool Encoder::canEncode(const StringPiece& s) {
 		throw NullPointerException("s.end()");
 	// TODO: Should be able to implement without heap/free store...
 	const size_t bytes = s.length() * properties().maximumNativeBytes();
-	AutoBuffer<byte> temp(new byte[bytes]);
+	AutoBuffer<Byte> temp(new Byte[bytes]);
 	const Char* fromNext;
-	byte* toNext;
+	Byte* toNext;
 	resetEncodingState();
 	return fromUnicode(temp.get(), temp.get() + bytes, toNext, s.beginning(), s.end(), fromNext) == COMPLETED;
 }
@@ -240,7 +240,7 @@ auto_ptr<Encoder> Encoder::forName(const string& name) /*throw()*/ {
  * @param codePage The code page
  * @return The encoder or @c null if not registered
  */
-auto_ptr<Encoder> Encoder::forWindowsCodePage(uint codePage) /*throw()*/ {
+auto_ptr<Encoder> Encoder::forWindowsCodePage(unsigned int codePage) /*throw()*/ {
 	// TODO: not implemented.
 	return auto_ptr<Encoder>(0);
 }
@@ -259,8 +259,8 @@ auto_ptr<Encoder> Encoder::forWindowsCodePage(uint codePage) /*throw()*/ {
  * @throw NullPointerException @a to, @a toEnd, @a from and/or @a fromEnd is @c null
  * @throw std#invalid_argument @a to &gt; @a toEnd or @a from &gt; @a fromEnd
  */
-Encoder::Result Encoder::fromUnicode(byte* to, byte* toEnd,
-		byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+Encoder::Result Encoder::fromUnicode(Byte* to, Byte* toEnd,
+		Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	if(to == 0 || toEnd == 0 || from == 0 || fromEnd == 0)
 		throw NullPointerException("");
 	else if(to > toEnd)
@@ -281,9 +281,9 @@ Encoder::Result Encoder::fromUnicode(byte* to, byte* toEnd,
  */
 string Encoder::fromUnicode(const String& from) {
 	size_t bytes = properties().maximumNativeBytes() * from.length();
-	AutoBuffer<byte> temp(new byte[bytes]);
+	AutoBuffer<Byte> temp(new Byte[bytes]);
 	const Char* fromNext;
-	byte* toNext;
+	Byte* toNext;
 	Result result;
 	resetEncodingState();
 	while(true) {
@@ -291,7 +291,7 @@ string Encoder::fromUnicode(const String& from) {
 		if(result == COMPLETED)
 			break;
 		else if(result == INSUFFICIENT_BUFFER) {
-			temp.reset(new(nothrow) byte[bytes *= 2]);
+			temp.reset(new(nothrow) Byte[bytes *= 2]);
 			if(temp.get() == 0)
 				throw bad_alloc();
 		} else
@@ -381,7 +381,7 @@ bool Encoder::supports(const string& name) /*throw()*/ {
  * @return The result of the conversion
  */
 Encoder::Result Encoder::toUnicode(Char* to, Char* toEnd,
-		Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+		Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 	if(to == 0 || toEnd == 0 || from == 0 || fromEnd == 0)
 		throw NullPointerException("");
 	else if(to > toEnd)
@@ -401,12 +401,12 @@ Encoder::Result Encoder::toUnicode(Char* to, Char* toEnd,
 String Encoder::toUnicode(const string& from) {
 	size_t chars = properties().maximumUCSLength() * from.length();
 	AutoBuffer<Char> temp(new Char[chars]);
-	const byte* fromNext;
+	const Byte* fromNext;
 	Char* toNext;
 	Result result;
 	while(true) {
 		result = toUnicode(temp.get(), temp.get() + chars, toNext,
-			reinterpret_cast<const byte*>(from.data()), reinterpret_cast<const byte*>(from.data()) + from.length(), fromNext);
+			reinterpret_cast<const Byte*>(from.data()), reinterpret_cast<const Byte*>(from.data()) + from.length(), fromNext);
 		if(result == COMPLETED)
 			break;
 		else if(result == INSUFFICIENT_BUFFER)
@@ -443,7 +443,7 @@ EncodingDetector::~EncodingDetector() /*throw()*/ {
  * @throw NullPointerException @a first or @last is @c null
  * @throw std#invalid_argument @c first is greater than @a last
  */
-pair<MIBenum, string> EncodingDetector::detect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const {
+pair<MIBenum, string> EncodingDetector::detect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const {
 	if(first == 0 || last == 0)
 		throw NullPointerException("first or last");
 	else if(first > last)
@@ -511,14 +511,14 @@ namespace {
 	public:
 		UniversalDetector() : EncodingDetector("UniversalAutoDetect") {}
 	private:
-		pair<MIBenum, string> doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/;
+		pair<MIBenum, string> doDetect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/;
 	};
 //	ASCENSION_DEFINE_ENCODING_DETECTOR(SystemLocaleBasedDetector, "SystemLocaleAutoDetect");
 //	ASCENSION_DEFINE_ENCODING_DETECTOR(UserLocaleBasedDetector, "UserLocaleAutoDetect");
 } // namespace @0
 
 /// @see EncodingDetector#doDetect
-pair<MIBenum, string> UniversalDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/ {
+pair<MIBenum, string> UniversalDetector::doDetect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/ {
 	// try all detectors
 	vector<string> names;
 	availableNames(back_inserter(names));
@@ -552,25 +552,25 @@ namespace {
 	class BasicLatinEncoderFactory : public EncoderFactoryBase {
 	public:
 		BasicLatinEncoderFactory(const string& name, MIBenum mib, const string& displayName,
-			const string& aliases, ulong mask) : EncoderFactoryBase(name, mib, displayName, 1, 1, aliases), mask_(mask) {}
+			const string& aliases, uint32_t mask) : EncoderFactoryBase(name, mib, displayName, 1, 1, aliases), mask_(mask) {}
 		virtual ~BasicLatinEncoderFactory() /*throw()*/ {}
 		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder(mask_, *this));}
 	private:
 		class InternalEncoder : public Encoder {
 		public:
-			InternalEncoder(ulong mask, const EncodingProperties& properties) /*throw()*/ : mask_(mask), props_(properties) {}
+			InternalEncoder(uint32_t mask, const EncodingProperties& properties) /*throw()*/ : mask_(mask), props_(properties) {}
 		private:
-			Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
+			Result doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
 				const Char* from, const Char* fromEnd, const Char*& fromNext);
 			Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-				const byte* from, const byte* fromEnd, const byte*& fromNext);
+				const Byte* from, const Byte* fromEnd, const Byte*& fromNext);
 			const EncodingProperties& properties() const /*throw()*/ {return props_;}
 		private:
-			const ulong mask_;
+			const uint32_t mask_;
 			const EncodingProperties& props_;
 		};
 	private:
-		const ulong mask_;
+		const uint32_t mask_;
 	};
 
 	BasicLatinEncoderFactory US_ASCII("US-ASCII", fundamental::US_ASCII, "",
@@ -588,7 +588,7 @@ namespace {
 	} unused;
 
 	Encoder::Result BasicLatinEncoderFactory::InternalEncoder::doFromUnicode(
-			byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+			Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 		for(; to < toEnd && from < fromEnd; ++to, ++from) {
 			if((*from & ~mask_) != 0) {
 				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
@@ -609,7 +609,7 @@ namespace {
 	}
 
 	Encoder::Result BasicLatinEncoderFactory::InternalEncoder::doToUnicode(
-			Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+			Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 		for(; to < toEnd && from < fromEnd; ++to, ++from) {
 			if((*from & ~mask_) != 0) {
 				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
@@ -645,7 +645,7 @@ namespace {
 EncoderFactoryBase::EncoderFactoryBase(const string& name, MIBenum mib,
 		const string& displayName /* = "" */,
 		size_t maximumNativeBytes /* = 1 */, size_t maximumUCSLength /* = 1 */,
-		const string& aliases /* = "" */, byte substitutionCharacter /* = 0x1a */)
+		const string& aliases /* = "" */, Byte substitutionCharacter /* = 0x1a */)
 		: name_(name), displayName_(displayName.empty() ? name : displayName), aliases_(aliases),
 		maximumNativeBytes_(maximumNativeBytes), maximumUCSLength_(maximumUCSLength),
 		mib_(mib), substitutionCharacter_(substitutionCharacter) {
@@ -686,14 +686,14 @@ string EncoderFactoryBase::name() const /*throw()*/ {
 }
 
 /// @see EncodingProperties#substitutionCharacter
-byte EncoderFactoryBase::substitutionCharacter() const /*throw()*/ {
+Byte EncoderFactoryBase::substitutionCharacter() const /*throw()*/ {
 	return substitutionCharacter_;
 }
 
 
 // implementation.sbcs.BidirectionalMap /////////////////////////////////////
 
-const byte sbcs::BidirectionalMap::UNMAPPABLE_16x16_UNICODE_TABLE[0x100] = {
+const Byte sbcs::BidirectionalMap::UNMAPPABLE_16x16_UNICODE_TABLE[0x100] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -710,7 +710,7 @@ const byte sbcs::BidirectionalMap::UNMAPPABLE_16x16_UNICODE_TABLE[0x100] = {
  *                            16~16-characters
  */
 sbcs::BidirectionalMap::BidirectionalMap(const Char** byteToCharacterWire) /*throw()*/ : byteToUnicode_(byteToCharacterWire) {
-	fill_n(unicodeToByte_, ASCENSION_COUNTOF(unicodeToByte_), static_cast<byte*>(0));
+	fill_n(unicodeToByte_, ASCENSION_COUNTOF(unicodeToByte_), static_cast<Byte*>(0));
 	buildUnicodeToByteTable();	// eager?
 }
 
@@ -724,15 +724,15 @@ sbcs::BidirectionalMap::~BidirectionalMap() /*throw()*/ {
 
 void sbcs::BidirectionalMap::buildUnicodeToByteTable() {
 	assert(unicodeToByte_[0] == 0);
-	fill_n(unicodeToByte_, ASCENSION_COUNTOF(unicodeToByte_), const_cast<byte*>(UNMAPPABLE_16x16_UNICODE_TABLE));
+	fill_n(unicodeToByte_, ASCENSION_COUNTOF(unicodeToByte_), const_cast<Byte*>(UNMAPPABLE_16x16_UNICODE_TABLE));
 	for(int i = 0x00; i < 0xff; ++i) {
-		const Char ucs = wireAt(byteToUnicode_, static_cast<byte>(i));
-		byte*& p = unicodeToByte_[ucs >> 8];
+		const Char ucs = wireAt(byteToUnicode_, static_cast<Byte>(i));
+		Byte*& p = unicodeToByte_[ucs >> 8];
 		if(p == UNMAPPABLE_16x16_UNICODE_TABLE) {
-			p = new byte[0x100];
+			p = new Byte[0x100];
 			fill_n(p, 0x100, UNMAPPABLE_BYTE);
 		}
-		p[mask8Bit(ucs)] = static_cast<byte>(i);
+		p[mask8Bit(ucs)] = static_cast<Byte>(i);
 	}
 }
 
@@ -745,10 +745,10 @@ namespace {
 		explicit SingleByteEncoder(const Char** byteToCharacterWire, const EncodingProperties& properties) /*throw()*/;
 	private:
 		// Encoder
-		Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
+		Result doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
 			const Char* from, const Char* fromEnd, const Char*& fromNext);
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-			const byte* from, const byte* fromEnd, const byte*& fromNext);
+			const Byte* from, const Byte* fromEnd, const Byte*& fromNext);
 		const EncodingProperties& properties() const /*throw()*/ {return props_;}
 	private:
 		const sbcs::BidirectionalMap table_;
@@ -759,8 +759,8 @@ namespace {
 			const EncodingProperties& properties) /*throw()*/ : table_(byteToCharacterWire), props_(properties) {
 	}
 
-	Encoder::Result SingleByteEncoder::doFromUnicode(byte* to, byte* toEnd,
-			byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+	Encoder::Result SingleByteEncoder::doFromUnicode(Byte* to, Byte* toEnd,
+			Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 		for(; to < toEnd && from < fromEnd; ++to, ++from) {
 			*to = table_.toByte(*from);
 			if(*to == sbcs::UNMAPPABLE_BYTE && *from != sbcs::UNMAPPABLE_BYTE) {
@@ -781,7 +781,7 @@ namespace {
 	}
 
 	Encoder::Result SingleByteEncoder::doToUnicode(Char* to, Char* toEnd,
-			Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+			Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 		for(; to < toEnd && from < fromEnd; ++to, ++from) {
 			*to = table_.toCharacter(*from);
 			if(*to == REPLACEMENT_CHARACTER) {

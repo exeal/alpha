@@ -550,7 +550,7 @@ namespace ascension {
 		class CollationKey : public FastArenaObject<CollationKey> {
 		public:
 			CollationKey() /*throw()*/ : length_(0) {}
-			CollationKey(AutoBuffer<const uchar> keyValues,
+			CollationKey(AutoBuffer<const uint8_t> keyValues,
 				std::size_t length) : keyValues_(keyValues), length_(length) {}
 			CollationKey(const CollationKey& other);
 			CollationKey&operator=(const CollationKey& other);
@@ -561,7 +561,7 @@ namespace ascension {
 			bool operator>(const CollationKey& other) const /*throw()*/;
 			bool operator>=(const CollationKey& other) const /*throw()*/;
 		private:
-			const AutoBuffer<const uchar> keyValues_;
+			const AutoBuffer<const uint8_t> keyValues_;
 			const std::size_t length_;
 		};
 

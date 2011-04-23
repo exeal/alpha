@@ -80,11 +80,11 @@ namespace ascension {
 #endif
 
 	// shorten type names
-	typedef unsigned char byte;		///< Another short synonym for @c unsigned @c char.
-	typedef unsigned char uchar;	///< A short synonym for @c unsigned @c char.
-	typedef unsigned short ushort;	///< A short synonym for @c unsigned @c short.
-	typedef unsigned int uint;		///< A short synonym for @c unsigned @c int.
-	typedef unsigned long ulong;	///< A short synonym for @c unsigned @c long.
+	typedef unsigned char Byte;		///< Another short synonym for @c unsigned @c char.
+//	typedef unsigned char uchar;	///< A short synonym for @c unsigned @c char.
+//	typedef unsigned short ushort;	///< A short synonym for @c unsigned @c short.
+//	typedef unsigned int uint;		///< A short synonym for @c unsigned @c int.
+//	typedef unsigned long ulong;	///< A short synonym for @c unsigned @c long.
 
 	// character and string
 #ifdef ASCENSION_USE_INTRINSIC_WCHAR_T
