@@ -130,7 +130,7 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const int DEFAULT_VALUE;
-				static const Char LONG_NAME[], SHORT_NAME[];
+				static const char LONG_NAME[], SHORT_NAME[];
 				template<typename CharType> static int forName(const CharType* name);
 				template<int superCategory> static bool is(int subCategory);
 				static int of(CodePoint c) /*throw()*/;
@@ -151,7 +151,7 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const int DEFAULT_VALUE;
-				static const Char LONG_NAME[], SHORT_NAME[];				
+				static const char LONG_NAME[], SHORT_NAME[];				
 				template<typename CharType> static int forName(const CharType* name);
 				static int of(CodePoint c) /*throw()*/;
 			private:
@@ -196,7 +196,7 @@ namespace ascension {
 					IOTA_SUBSCRIPT			= 240	///< Below (iota subscript) (240).
 				};
 				static const int DEFAULT_VALUE;
-				static const Char LONG_NAME[], SHORT_NAME[];
+				static const char LONG_NAME[], SHORT_NAME[];
 				template<typename CharType> static int forName(const CharType* name);
 				static int of(CodePoint cp) /*throw()*/;
 			private:
@@ -236,7 +236,7 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const int DEFAULT_VALUE;
-				static const Char LONG_NAME[], SHORT_NAME[];
+				static const char LONG_NAME[], SHORT_NAME[];
 				template<typename CharType> static int forName(const CharType* name);
 				static int of(CodePoint c) /*throw()*/;
 			private:
@@ -262,7 +262,7 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const int DEFAULT_VALUE;
-				static const Char LONG_NAME[], SHORT_NAME[];
+				static const char LONG_NAME[], SHORT_NAME[];
 				template<typename CharType> static int forName(const CharType* name);
 				static int of(CodePoint cp) /*throw()*/;
 			private:
@@ -313,7 +313,7 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const int DEFAULT_VALUE;
-				static const Char LONG_NAME[], SHORT_NAME[];
+				static const char LONG_NAME[], SHORT_NAME[];
 				template<typename CharType> static int forName(const CharType* name);
 				static int of(CodePoint c) /*throw()*/;
 			private:
@@ -375,7 +375,7 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const int DEFAULT_VALUE;
-				static const Char LONG_NAME[], SHORT_NAME[];
+				static const char LONG_NAME[], SHORT_NAME[];
 				template<typename CharType> static int forName(const CharType* name);
 				static int of(CodePoint c) /*throw()*/;
 			private:
@@ -395,7 +395,7 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const int DEFAULT_VALUE;
-				static const Char LONG_NAME[], SHORT_NAME[];
+				static const char LONG_NAME[], SHORT_NAME[];
 				static int of(CodePoint cp) /*throw()*/;
 			private:
 				static const detail::ValueName NAMES_[];
@@ -410,7 +410,7 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const int DEFAULT_VALUE;
-				static const Char LONG_NAME[], SHORT_NAME[];
+				static const char LONG_NAME[], SHORT_NAME[];
 				static int of(CodePoint cp,
 					const IdentifierSyntax& syntax = IdentifierSyntax(IdentifierSyntax::UNICODE_DEFAULT),
 					const std::locale& lc = std::locale::classic()) /*throw()*/;
@@ -427,7 +427,7 @@ namespace ascension {
 					LAST_VALUE
 				};
 				static const int DEFAULT_VALUE;
-				static const Char LONG_NAME[], SHORT_NAME[];
+				static const char LONG_NAME[], SHORT_NAME[];
 				static int of(CodePoint cp) /*throw()*/;
 			private:
 				static const detail::ValueName NAMES_[];
