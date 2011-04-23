@@ -11,9 +11,12 @@
 
 #include <ascension/config.hpp>	// ASCENSION_FILE_NAME_CHARACTER_TYPE
 #include <ascension/platforms.hpp>
-#if !defined(ASCENSION_OS_WINDOWS) || defined(__BORLANDC__) || defined(__MINGW32__)
-#	include <cinttypes>
-#	define ASCENSION_HAS_CINTTYPES
+#ifdef ASCENSION_HAS_CSTDINT
+#	if defined(ASCENSION_OS_AIX) || defined(ASCENSION_OS_BSD4) || defined(ASCENSION_OS_HPUX)
+#		include <inttypes.h>
+#	else
+#		include <stdint.h>
+#	endif
 #endif
 #ifdef ASCENSION_CUSTOM_SHARED_PTR_HPP
 #	include ASCENSION_CUSTOM_SHARED_PTR_HPP
@@ -57,15 +60,15 @@ namespace ascension {
 		> oh_static_assertion_shippaidayo_orz
 
 	// sized integer types
-#if defined(ASCENSION_HAS_CINTTYPES)
-	using std::int8_t;
-	using std::int16_t;
-	using std::int32_t;
-	using std::int64_t;
-	using std::uint8_t;
-	using std::uint16_t;
-	using std::uint32_t;
-	using std::uint64_t;
+#if defined(ASCENSION_HAS_CSTDINT)
+	using ::int8_t;
+	using ::int16_t;
+	using ::int32_t;
+	using ::int64_t;
+	using ::uint8_t;
+	using ::uint16_t;
+	using ::uint32_t;
+	using ::uint64_t;
 #elif defined(ASCENSION_COMPILER_MSVC)
 	typedef signed char int8_t;
 	typedef short int16_t;

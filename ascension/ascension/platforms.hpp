@@ -140,6 +140,9 @@
 #	define ASCENSION_COMPILER_COMEAU
 #endif
 
+
+// ASCENSION_FASTCALL
+
 #if defined(__i386__) || defined(_WIN32) || defined(_WIN32_WCE)
 #	if defined(ASCENSION_COMPILER_GCC) && (__GNUC__ * 100 + __GNUC_MINOR__ + 10 + __GNUC_PATCHLEVEL__ >= 332)
 #		define ASCENSION_FASTCALL __attribute__((regparm(3)))
@@ -150,6 +153,46 @@
 #ifndef ASCENSION_FASTCALL
 #	define ASCENSION_FASTCALL
 #endif
+
+
+// ASCENSION_HAS_CSTDINT and ASCENSION_HAS_UNISTD_H
+
+#if defined(ASCENSION_OS_AIX)
+#	define ASCENSION_HAS_CSTDINT
+#	define ASCENSION_HAS_UNISTD_H
+#elif defined(ASCENSION_OS_BSD4)
+#	define ASCENSION_HAS_UNISTD_H
+#elif defined(ASCENSION_OS_HPUX)
+#	if defined(ASCENSION_COMPILER_GCC) && (__GNUC__ >= 3)
+#		define ASCENSION_CSTDINT
+#	endif
+#	define ASCENSION_HAS_UNISTD_H
+#elif defined(ASCENSION_OS_LINUX)
+#	define ASCENSION_HAS_CSTDINT
+#	define ASCENSION_HAS_UNISTD_H
+#elif defined(ASCENSION_OS_MACOSX)
+#	define ASCENSION_HAS_UNISTD_H
+#elif defined(ASCENSION_OS_WINDOWS)
+#	if defined(__MINGW__)
+#		define ASCENSION_HAS_CSTDINT
+#		define ASCENSION_HAS_UNISTD_H
+#	endif
+#elif defined(ASCENSION_OS_SOLARIS)
+#	define ASCENSION_HAS_UNISTD_H
+#endif
+
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901)
+#	define ASCENSION_HAS_CSTDINT
+#elif defined(ASCENSION_COMPILER_MSVC) && (_MSC_VER >= 1600)
+#	define ASCENSION_HAS_CSTDINT
+#elif defined(ASCENSION_HAS_UNISTD_H)
+#	include <unistd.h>
+#	if defined(_POSIX_VERSION) && (_POSIX_VERSION >= 200100)
+#		define ASCENSION_HAS_STDINT_H
+#	endif
+#endif
+
+
 
 #ifdef ASCENSION_OS_WINDOWS
 #	ifndef _GLIBCXX_USE_WCHAR_T
