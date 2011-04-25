@@ -542,7 +542,8 @@ namespace ascension {
 				if(c == 0x0049u) c = 0x0131u; else if(c == 0x0130u) c = 0x0069u; return c;}
 			static const CodePoint COMMON_CASED_[],
 				COMMON_FOLDED_[], SIMPLE_CASED_[], SIMPLE_FOLDED_[], FULL_CASED_[];
-			static const Char* FULL_FOLDED_[];
+			static const Char FULL_FOLDED_[];
+			static const std::ptrdiff_t FULL_FOLDED_OFFSETS_[];
 			static const std::size_t
 				NUMBER_OF_COMMON_CASED_, NUMBER_OF_SIMPLE_CASED_, NUMBER_OF_FULL_CASED_;
 		};
