@@ -1,11 +1,11 @@
 /**
  * @file identifier-syntax.cpp
  * @author exeal
- * @date 2007-2010
+ * @date 2007-2011
  */
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION
-#include <ascension/corelib/unicode-property.hpp>
+#include <ascension/corelib/text/unicode-property.hpp>
 #include <vector>
 using namespace ascension;
 using namespace ascension::text;

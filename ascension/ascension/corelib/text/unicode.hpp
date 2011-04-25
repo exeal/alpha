@@ -1,7 +1,7 @@
 /**
  * @file unicode.hpp
  * @author exeal
- * @date 2005-2010
+ * @date 2005-2011
  * @see ascension#text
  * @see character-iterator.hpp
  * @see break-iterator.cpp, collator.cpp, identifier-syntax.cpp, normalizer.cpp
@@ -13,7 +13,7 @@
 #include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_NORMALIZATION
 #include <ascension/corelib/character-iterator.hpp>
 #include <ascension/corelib/memory.hpp>		// AutoBuffer
-#include <ascension/corelib/unicode-utf.hpp>
+#include <ascension/corelib/text/unicode-utf.hpp>
 #include <ascension/corelib/ustring.hpp>	// ustrlen
 #include <iterator>
 #include <locale>
@@ -696,9 +696,10 @@ namespace ascension {
 				} else {
 					const CodePoint* const p = lower_bound(
 						FULL_CASED_, FULL_CASED_ + NUMBER_OF_FULL_CASED_, c);
-					if(*p == c)
-						s.sputn(FULL_FOLDED_[p - FULL_CASED_],
-							static_cast<std::streamsize>(ustrlen(FULL_FOLDED_[p - FULL_CASED_])));
+					if(*p == c) {
+						const std::ptrdiff_t* const offset = &FULL_FOLDED_OFFSETS_[p - FULL_CASED_];
+						s.sputn(FULL_FOLDED_ + offset[0], offset[1] - offset[0]);
+					}
 					else
 						s.sputc(static_cast<Char>(c & 0xffffu));
 				}
