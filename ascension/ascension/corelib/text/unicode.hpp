@@ -496,58 +496,6 @@ namespace ascension {
 			BaseIterator p_;
 		};
 
-		/**
-		 * @c CaseFolder folds cases of characters and strings. This behavior is based on Default
-		 * Case Algorithm of Unicode, and locale-independent and context-insensitive.
-		 * @see Collator, Normalizer, searcher#LiteralPattern
-		 */
-		class CaseFolder {
-			ASCENSION_NONCOPYABLE_TAG(CaseFolder);
-		public:
-			static const length_t MAXIMUM_EXPANSION_CHARACTERS;
-			static int compare(const CharacterIterator& s1,
-				const CharacterIterator& s2, bool excludeTurkishI = false);
-			/**
-			 * Compares the two character sequences case-insensitively.
-			 * @param s1 the character sequence
-			 * @param s2 the the other
-			 * @param excludeTurkishI set true to perform "Turkish I mapping"
-			 * @retval &lt;0 the first character sequence is less than the second
-			 * @retval 0 the both sequences are same
-			 * @retval &gt;0 the first character sequence is greater than the second
-			 */
-			static int compare(const String& s1, const String& s2, bool excludeTurkishI = false) {
-				return compare(StringCharacterIterator(s1),
-					StringCharacterIterator(s2), excludeTurkishI);
-			}
-			static CodePoint fold(CodePoint c, bool excludeTurkishI = false) /*throw()*/;
-			template<typename CharacterSequence> static String fold(
-				CharacterSequence first, CharacterSequence last, bool excludeTurkishI = false);
-			/**
-			 * Folds case of the specified character sequence. This method performs "full case folding."
-			 * @param text the character sequence
-			 * @param excludeTurkishI set true to perform "Turkish I mapping"
-			 * @return the folded string
-			 */
-			static String fold(const String& text, bool excludeTurkishI = false) {
-				return fold(text.data(), text.data() + text.length(), excludeTurkishI);
-			}
-		private:
-			static CodePoint foldCommon(CodePoint c) /*throw()*/ {
-				const CodePoint* const p = std::lower_bound(
-					COMMON_CASED_, COMMON_CASED_ + NUMBER_OF_COMMON_CASED_, c);
-				return (*p == c) ? COMMON_FOLDED_[p - COMMON_CASED_] : c;}
-			static std::size_t foldFull(CodePoint c, bool excludeTurkishI, CodePoint* dest) /*throw()*/;
-			static CodePoint foldTurkishI(CodePoint c) /*throw()*/ {
-				if(c == 0x0049u) c = 0x0131u; else if(c == 0x0130u) c = 0x0069u; return c;}
-			static const CodePoint COMMON_CASED_[],
-				COMMON_FOLDED_[], SIMPLE_CASED_[], SIMPLE_FOLDED_[], FULL_CASED_[];
-			static const Char FULL_FOLDED_[];
-			static const std::ptrdiff_t FULL_FOLDED_OFFSETS_[];
-			static const std::size_t
-				NUMBER_OF_COMMON_CASED_, NUMBER_OF_SIMPLE_CASED_, NUMBER_OF_FULL_CASED_;
-		};
-
 		class CollationKey : public FastArenaObject<CollationKey> {
 		public:
 			CollationKey() /*throw()*/ : length_(0) {}
@@ -645,68 +593,7 @@ namespace ascension {
 		 */
 		class DefaultCollator : public Collator {};
 
-
-		// inline implementations /////////////////////////////////////////////////////////////////
-
-		/**
-		 * Folds the case of the specified character. This method performs "simple case folding."
-		 * @param c the code point of the character to fold
-		 * @param excludeTurkishI set true to perform "Turkish I mapping"
-		 * @return the case-folded character
-		 */
-		inline CodePoint CaseFolder::fold(CodePoint c, bool excludeTurkishI /* = false */) /*throw()*/ {
-			CodePoint result;
-			// Turkish I
-			if(excludeTurkishI && c != (result = foldTurkishI(c)))
-				return result;
-			// common mapping
-			if(c != (result = foldCommon(c)))
-				return result;
-			// simple mapping
-			const CodePoint* const p = std::lower_bound(SIMPLE_CASED_, SIMPLE_CASED_ + NUMBER_OF_SIMPLE_CASED_, c);
-			return (*p == c) ? SIMPLE_FOLDED_[p - SIMPLE_CASED_] : c;
-		}
-
-		/**
-		 * Folds case of the specified character sequence. This method performs "full case folding."
-		 * @a CharacterSequence must represents a UTF-16 character sequence.
-		 * @tparam CharacterSequence
-		 * @param first the start of the character sequence
-		 * @param last the end of the character sequence
-		 * @param excludeTurkishI set true to perform "Turkish I mapping"
-		 * @return the folded string
-		 */
-		template<typename CharacterSequence>
-		inline String CaseFolder::fold(CharacterSequence first,
-				CharacterSequence last, bool excludeTurkishI /* = false */) {
-			ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::value == 2);
-			using namespace std;
-			std::basic_stringbuf<Char> s(ios_base::out);
-			CodePoint c, f;
-			Char buffer[2];
-			for(UTF16To32Iterator<CharacterSequence> i(first, last); i.hasNext(); ++i) {
-				c = *i;
-				if(!excludeTurkishI || c == (f = foldTurkishI(*i)))
-					f = foldCommon(c);
-				if(f != c || c >= 0x010000u) {
-					if(surrogates::encode(f, buffer) < 2)
-						s.sputc(buffer[0]);
-					else
-						s.sputn(buffer, 2);
-				} else {
-					const CodePoint* const p = lower_bound(
-						FULL_CASED_, FULL_CASED_ + NUMBER_OF_FULL_CASED_, c);
-					if(*p == c) {
-						const std::ptrdiff_t* const offset = &FULL_FOLDED_OFFSETS_[p - FULL_CASED_];
-						s.sputn(FULL_FOLDED_ + offset[0], offset[1] - offset[0]);
-					}
-					else
-						s.sputc(static_cast<Char>(c & 0xffffu));
-				}
-			}
-			return s.str();
-		}
-
-}} // namespace ascension.text
+	}
+} // namespace ascension.text
 
 #endif // !ASCENSION_UNICODE_HPP
