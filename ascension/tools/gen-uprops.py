@@ -416,7 +416,7 @@ class CodeGenerator(object):
         filename = os.path.realpath(os.path.join(self._ucd_input_directory, r'CaseFolding.txt'))
         input = open(filename)
         print('...Loaded %s' % filename)
-        common_map, simple_map, full_map = [], [], []
+        common_map, simple_map, full_map, full_folded_offsets = [], [], [], ['0']
         pattern = re.compile(r'^([\dA-F]{4,6});\s+([CSF]);\s+([^;]+)')  # yes, almost all cased characters are in BMP, but...
         for line in input:
             m = pattern.match(line)
@@ -426,18 +426,25 @@ class CodeGenerator(object):
                 elif m.group(2) == 'S':
                     simple_map.append((m.group(1).lower(), m.group(3).lower()))
                 else:
-                    full_map.append((m.group(1).lower(), r'L"\x%s"' % m.group(3).replace(r' ', r'\x').lower()))
+                    folded_sequence = m.group(3).split(' ')
+                    full_folded_offsets.append(str(int(full_folded_offsets[-1]) + len(folded_sequence)))
+                    full_map.append((m.group(1).lower(), '0x' + ',0x'.join(folded_sequence).lower()))
         input.close()
+
+        self._output_files['ct'].write(
+            ('const std::size_t CaseFolder::NUMBER_OF_COMMON_CASED_ = %d;\n' % len(common_map))
+            + ('const std::size_t CaseFolder::NUMBER_OF_SIMPLE_CASED_ = %d;\n' % len(simple_map))
+            + ('const std::size_t CaseFolder::NUMBER_OF_FULL_CASED_ = %d;\n' % len(full_map)))
         self._output_files['ct'].write(
             'const CodePoint CaseFolder::COMMON_CASED_[] = {0x' + ',0x'.join([m[0] for m in common_map])
             + '};\nconst CodePoint CaseFolder::COMMON_FOLDED_[] = {0x'+ ',0x'.join([m[1] for m in common_map])
             + '};\nconst CodePoint CaseFolder::SIMPLE_CASED_[] = {0x' + ',0x'.join([m[0] for m in simple_map])
             + '};\nconst CodePoint CaseFolder::SIMPLE_FOLDED_[] = {0x' + ',0x'.join([m[1] for m in simple_map])
             + '};\nconst CodePoint CaseFolder::FULL_CASED_[] = {0x' + ',0x'.join([m[0] for m in full_map])
-            + '};\nconst Char* CaseFolder::FULL_FOLDED_[] = {' + ','.join([m[1] for m in full_map])
-            + ('};\nconst std::size_t CaseFolder::NUMBER_OF_COMMON_CASED_ = %d;\n' % len(common_map))
-            + ('const std::size_t CaseFolder::NUMBER_OF_SIMPLE_CASED_ = %d;\n' % len(simple_map))
-            + ('const std::size_t CaseFolder::NUMBER_OF_FULL_CASED_ = %d;\n' % len(full_map)))
+            + '};\nconst Char CaseFolder::FULL_FOLDED_[] = {' + ','.join([m[1] for m in full_map])
+            + '};\nconst std::ptrdiff_t CaseFolder::FULL_FOLDED_OFFSETS_[] = {' + ','.join(full_folded_offsets)
+            + '};\n')
+            
         print('...Processed common case mapping (%d).' % len(common_map))
         print('...Processed simple case mapping (%d).' % len(simple_map))
         print('...Processed full case mapping (%d).' % len(full_map))
