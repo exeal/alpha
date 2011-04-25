@@ -1,12 +1,12 @@
 /**
  * @file break-iterator.cpp
  * @date 2006-2007 (was iterator.cpp)
- * @date 2007-2010
+ * @date 2007-2011
  * @author exeal
  */
 
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
-#include <ascension/corelib/unicode-property.hpp>
+#include <ascension/corelib/text/unicode-property.hpp>
 #include <memory>	// std.auto_ptr
 
 using namespace ascension;

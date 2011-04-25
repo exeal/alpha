@@ -2,7 +2,7 @@
  * @file unicode-property.hpp
  * Defines Unicode property entries and provides methods to retrieve a property of character.
  * @author exeal
- * @date 2007-2010
+ * @date 2007-2011
  */
 
 #ifndef ASCENSION_UNICODE_PROPERTY_HPP
@@ -10,7 +10,7 @@
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #error These class definitions and implementations are based on old version of Unicode.
 #endif
-#include <ascension/corelib/unicode.hpp>
+#include <ascension/corelib/text/unicode.hpp>
 
 namespace ascension {
 	namespace text {

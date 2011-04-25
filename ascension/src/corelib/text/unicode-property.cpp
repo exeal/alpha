@@ -4,7 +4,7 @@
  * @date 2005-2011
  */
 
-#include <ascension/corelib/unicode-property.hpp>
+#include <ascension/corelib/text/unicode-property.hpp>
 using namespace ascension;
 using namespace ascension::text;
 using namespace ascension::text::ucd;
@@ -208,7 +208,7 @@ namespace {
 	}
 } // namespace @0
 
-#include "../generated/uprops-value-names"
+#include "../../generated/uprops-value-names"
 
 
 // GeneralCategory ////////////////////////////////////////////////////////////////////////////////
@@ -263,7 +263,7 @@ const char HangulSyllableType::SHORT_NAME[] = "hst";
 
 // BinaryProperty /////////////////////////////////////////////////////////////////////////////////
 
-#include "../generated/uprops-code-table"
+#include "../../generated/uprops-code-table"
 
 
 /**

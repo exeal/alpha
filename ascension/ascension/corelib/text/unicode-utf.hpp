@@ -14,7 +14,7 @@
 #include <ascension/corelib/basic-exceptions.hpp>	// IllegalStateException
 #include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/type-traits.hpp>		// detail.Select
-#include <ascension/corelib/unicode-surrogates.hpp>
+#include <ascension/corelib/text/unicode-surrogates.hpp>
 #include <iterator>
 
 #if ASCENSION_UNICODE_VERSION > 0x0510

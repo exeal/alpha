@@ -1,11 +1,11 @@
 /**
  * @file normalizer.cpp
  * @author exeal
- * @date 2007-2010
+ * @date 2007-2011
  */
 
 #include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_*
-#include <ascension/corelib/unicode-property.hpp>
+#include <ascension/corelib/text/unicode-property.hpp>
 using namespace ascension;
 using namespace ascension::text;
 using namespace std;
@@ -91,16 +91,16 @@ inline size_t CaseFolder::foldFull(CodePoint c, bool excludeTurkishI, CodePoint*
 		const CodePoint* const p = lower_bound(FULL_CASED_, FULL_CASED_ + NUMBER_OF_FULL_CASED_, c);
 		if(*p != c)
 			return 1;
-		const size_t len = wcslen(FULL_FOLDED_[p - FULL_CASED_]);
-		for(size_t i = 0; i < len; ++i)
-			dest[i] = FULL_FOLDED_[p - FULL_CASED_][i];
-		return len;
+		const ptrdiff_t* const offset = &FULL_FOLDED_OFFSETS_[p - FULL_CASED_];
+		for(ptrdiff_t i = 0; i < offset[1] - offset[0]; ++i)
+			dest[i] = FULL_FOLDED_[*offset + i];
+		return offset[1] - offset[0];
 	}
 }
 
 
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
-#include <ascension/corelib/unicode-property.hpp>
+#include <ascension/corelib/text/unicode-property.hpp>
 
 // Normalizer ///////////////////////////////////////////////////////////////
 
@@ -233,7 +233,7 @@ namespace {
 		}
 	}
 
-#include "../generated/uprops-decomposition-mapping-table"
+#include "../../generated/uprops-decomposition-mapping-table"
 
 	inline void splice(Char* at, Char*& last, size_t eraseLength, const Char* replacement, size_t replacementLength) {
 		last += replacementLength - eraseLength;
