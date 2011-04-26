@@ -11,6 +11,9 @@
 #error These class definitions and implementations are based on old version of Unicode.
 #endif
 #include <ascension/corelib/text/identifier-syntax.hpp>
+#include <algorithm>	// std.binary_search, std.lower_bound, std.upper_bound
+#include <locale>		// std.locale, std.tolower
+#include <string>		// std.char_traits
 
 namespace ascension {
 	namespace text {
