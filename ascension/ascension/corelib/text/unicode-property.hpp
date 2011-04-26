@@ -10,7 +10,7 @@
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #error These class definitions and implementations are based on old version of Unicode.
 #endif
-#include <ascension/corelib/text/unicode.hpp>
+#include <ascension/corelib/text/identifier-syntax.hpp>
 
 namespace ascension {
 	namespace text {

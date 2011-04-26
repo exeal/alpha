@@ -6,6 +6,7 @@
  */
 
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
+#include <ascension/corelib/text/break-iterator.hpp>
 #include <ascension/corelib/text/unicode-property.hpp>
 #include <memory>	// std.auto_ptr
 
@@ -15,7 +16,7 @@ using namespace ascension::text::ucd;
 using namespace std;
 
 #if ASCENSION_UAX29_REVISION_NUMBER > 11
-#error "These codes are based on old version of UAX #29"
+#	error "These codes are based on old version of UAX #29"
 #endif
 
 
