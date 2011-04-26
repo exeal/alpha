@@ -240,9 +240,9 @@ namespace ascension {
 			DefaultContentAssistant() /*throw()*/;
 			~DefaultContentAssistant() /*throw()*/;
 			// attributes
-			ulong autoActivationDelay() const /*throw()*/;
+			uint32_t autoActivationDelay() const /*throw()*/;
 			void enablePrefixCompletion(bool enable);
-			void setAutoActivationDelay(ulong milliseconds);
+			void setAutoActivationDelay(unsigned long milliseconds);
 			void setContentAssistProcessor(kernel::ContentType contentType, std::auto_ptr<ContentAssistProcessor> processor);
 			// operation
 			void showPossibleCompletions();
@@ -275,7 +275,7 @@ namespace ascension {
 			std::map<kernel::ContentType, ContentAssistProcessor*> processors_;
 			class CompletionProposalPopup;
 			CompletionProposalPopup* proposalPopup_;
-			ulong autoActivationDelay_;
+			uint32_t autoActivationDelay_;
 			static std::map<UINT_PTR, ContentAssistant*> timerIDs_;
 			struct CompletionSession {
 				const ContentAssistProcessor* processor;

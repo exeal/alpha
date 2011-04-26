@@ -34,10 +34,11 @@ namespace ascension {
 				}
 				throw PlatformDependentError<>();
 			}
-			uint logicalDpiX() const {return ::GetDeviceCaps(dc_.get(), LOGPIXELSX);}
-			uint logicalDpiY() const {return ::GetDeviceCaps(dc_.get(), LOGPIXELSY);}
-			graphics::Dimension<uint> size() const {
-				return graphics::Dimension<uint>(::GetDeviceCaps(dc_.get(), HORZRES), ::GetDeviceCaps(dc_.get(), VERTRES));
+			unsigned int logicalDpiX() const {return ::GetDeviceCaps(dc_.get(), LOGPIXELSX);}
+			unsigned int logicalDpiY() const {return ::GetDeviceCaps(dc_.get(), LOGPIXELSY);}
+			graphics::Dimension<unsigned int> size() const {
+				return graphics::Dimension<unsigned int>(
+					::GetDeviceCaps(dc_.get(), HORZRES), ::GetDeviceCaps(dc_.get(), VERTRES));
 			}
 		protected:
 			GraphicsContext() /*throw()*/ {}

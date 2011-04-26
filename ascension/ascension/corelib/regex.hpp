@@ -12,8 +12,9 @@
 #define ASCENSION_REGEX_HPP
 
 #include <ascension/corelib/string-piece.hpp>
-#include <ascension/corelib/unicode-property.hpp>
-#include <ascension/corelib/unicode-utf.hpp>	// text.UTF16To32Iterator
+#include <ascension/corelib/text/case-folder.hpp>
+#include <ascension/corelib/text/unicode-property.hpp>
+#include <ascension/corelib/text/unicode-utf.hpp>	// text.UTF16To32Iterator
 #include <memory>
 #include <map>
 #include <bitset>
@@ -206,7 +207,7 @@ namespace ascension {
 		private:
 			locale_type locale_;
 			const std::collate<char_type>* collator_;
-			static std::map<const Char*, int, text::ucd::PropertyNameComparer<Char> > names_;
+			static std::map<const Char*, int, text::ucd::PropertyNameComparer> names_;
 			static void buildNames();
 		};
 	} // namespace detail

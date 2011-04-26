@@ -182,42 +182,42 @@ class CodeGenerator(object):
 
     def _output_data_types_definition(self):
         out = self._open_output_file('data-types')
-        out.write('namespace detail {\n')
-        out.write('\tstruct PropertyPartition {\n'
+        out.write('\t}\n}\nnamespace detail {\n')
+        out.write('\tstruct CharacterPropertyPartition {\n'
                   + '\t\tCodePoint beginning;\n'
                   + '\t\tint property;\n'
                   + '#if defined(ASCENSION_COMPILER_MSVC) && defined(_SECURE_SCL)\n'
-                  + '\t\tbool operator<(const PropertyPartition& other) const {return beginning < other.beginning;}\n'
+                  + '\t\tbool operator<(const CharacterPropertyPartition& other) const {return beginning < other.beginning;}\n'
                   + '#endif\n'
                   + '\t};\n')
-        out.write('\ttemplate<typename CharT> struct PropertyRange {\n'
+        out.write('\ttemplate<typename CharT> struct CharacterPropertyRange {\n'
                   + '\t\tCharT beginning, end;\n'
                   + '\t\tint property;\n'
                   + '#if defined(ASCENSION_COMPILER_MSVC) && defined(_SECURE_SCL)\n'
-                  + '\t\tbool operator<(const PropertyRange& other) const {return beginning < other.beginning;}\n'
+                  + '\t\tbool operator<(const CharacterPropertyRange& other) const {return beginning < other.beginning;}\n'
                   + '#endif\n'
                   + '\t};\n')
-        out.write('\ttemplate<typename T, typename CharT> struct PropertyRangeComparer {\n'
+        out.write('\ttemplate<typename T, typename CharT> struct CharacterPropertyRangeComparer {\n'
                   + '\t\tbool operator()(const T& lhs, CharT rhs) const {return lhs.beginning < rhs;}\n'
                   + '\t\tbool operator()(CharT lhs, const T& rhs) const {return lhs < rhs.beginning;}\n'
                   + '#if defined(ASCENSION_COMPILER_MSVC) && defined(_SECURE_SCL)\n'
                   + '\t\tbool operator()(const T& lhs, const T& rhs) const {return lhs.beginning < rhs.beginning;}\n'
                   + '#endif\n'
                   + '\t};\n')
-        out.write('\tstruct ValueName {\n'
+        out.write('\tstruct CharacterPropertyValueName {\n'
                   + '\t\tconst char* const name;\n'
                   + '\t\tconst int value;\n'
                   + '\t};\n')
-        out.write('\tstruct ValueNameComparer {\n'
+        out.write('\tstruct CharacterPropertyValueNameComparer {\n'
                   + '\t\ttemplate<typename CharType>\n'
-                  + '\t\tbool operator()(const ValueName& lhs, const CharType* rhs) const {return PropertyNameComparer::compare(lhs.name, rhs) < 0;}\n'
+                  + '\t\tbool operator()(const CharacterPropertyValueName& lhs, const CharType* rhs) const {return text::ucd::PropertyNameComparer::compare(lhs.name, rhs) < 0;}\n'
                   + '\t\ttemplate<typename CharType>\n'
-                  + '\t\tbool operator()(const CharType* lhs, const ValueName& rhs) const {return PropertyNameComparer::compare(lhs, rhs.name) < 0;}\n'
+                  + '\t\tbool operator()(const CharType* lhs, const CharacterPropertyValueName& rhs) const {return text::ucd::PropertyNameComparer::compare(lhs, rhs.name) < 0;}\n'
                   + '#if defined(ASCENSION_COMPILER_MSVC) && defined(_SECURE_SCL)\n'
-                  + 'bool operator()(const ValueName& lhs, const ValueName& rhs) const {return PropertyNameComparer::compare(lhs.name, rhs.name) < 0;}\n'
+                  + '\t\tbool operator()(const CharacterPropertyValueName& lhs, const CharacterPropertyValueName& rhs) const {return text::ucd::PropertyNameComparer::compare(lhs.name, rhs.name) < 0;}\n'
                   + '#endif\n'
                   + '\t};\n')
-        out.write('}\n')
+        out.write('}\nnamespace text {\n\tnamespace ucd {\n')
 
     def _open_output_file(self, name):
         acronym = ''.join([x[0] for x in re.split(r'-', name)])
@@ -293,8 +293,8 @@ class CodeGenerator(object):
             '/// Returns the property with the given name.\n'
             + 'template<typename CharType>\n'
             + ('inline int %s::forName(const CharType* name) {\n' % PropertyNames.cpp_name(long_name))
-            + '\tconst ucd::detail::ValueName* const p =\n'
-            + ('\t\tstd::lower_bound(NAMES_, NAMES_ + %d, name, ucd::detail::ValueNameComparer());\n') % len(value_names)
+            + '\tconst detail::CharacterPropertyValueName* const p =\n'
+            + ('\t\tstd::lower_bound(NAMES_, NAMES_ + %d, name, detail::CharacterPropertyValueNameComparer());\n') % len(value_names)
             + ('\treturn (p != NAMES_ + %d && PropertyNameComparer::compare(name, p->name)) ?\n') % len(value_names)
             + '\t\tp->value : NOT_PROPERTY;\n}\n')
 
@@ -303,15 +303,15 @@ class CodeGenerator(object):
         out.write('/// Returns the property of the specified character @a c.\n')
         out.write(('inline int %s::of(CodePoint c) /*throw()*/ {' % PropertyNames.cpp_name(long_name))
                   + 'if(!isValidCodePoint(c)) return DEFAULT_VALUE;'
-                  + ' const detail::PropertyPartition* const p = std::upper_bound('
-                  + 'VALUES_, VALUES_ + NUMBER_, c, detail::PropertyRangeComparer<detail::PropertyPartition, CodePoint>());'
+                  + ' const detail::CharacterPropertyPartition* const p = std::upper_bound('
+                  + 'VALUES_, VALUES_ + NUMBER_, c, detail::CharacterPropertyRangeComparer<detail::CharacterPropertyPartition, CodePoint>());'
                   + ' assert(p != VALUES_); return p[-1].property;}\n')
 
     def _print_value_names(self, long_name):
         names = self._PROPERTY_NAMES.value_names(long_name)
         cpp_name = PropertyNames.cpp_name(long_name)
         out = self._output_files['vn']
-        out.write(r'const ucd::detail::ValueName %s::NAMES_[] = {' % cpp_name)
+        out.write(r'const detail::CharacterPropertyValueName %s::NAMES_[] = {' % cpp_name)
         for name in names:
             out.write(r'{"%s",%s::%s},' % (name[0], cpp_name, name[1]))
         out.write('};\n')
@@ -342,7 +342,7 @@ class CodeGenerator(object):
                 'Other_ID_Start', 'Other_ID_Continue', 'Other_Lowercase', 'Other_Math', 'Other_Uppercase'])
         names = self._PROPERTY_NAMES.binary_value_names()
         out = self._output_files['vn']
-        out.write(r'const ucd::detail::ValueName BinaryProperty::NAMES_[] = {')
+        out.write(r'const detail::CharacterPropertyValueName BinaryProperty::NAMES_[] = {')
         for name in names:
             out.write(r'{"%s",BinaryProperty::%s},' % name)
         out.write('};\n')
@@ -368,9 +368,9 @@ class CodeGenerator(object):
         cpp_name = PropertyNames.cpp_value_name(long_name)
         member_name = r'valuesOf_%s_' % cpp_name
         self._output_files['bpvd'].write(
-            'static const detail::PropertyRange<%s> %s[];\n' % (element_type, member_name))
+            'static const detail::CharacterPropertyRange<%s> %s[];\n' % (element_type, member_name))
         self._output_files['ct'].write(
-            r'const ucd::detail::PropertyRange<%s> BinaryProperty::%s[] = {' % (element_type, member_name))
+            r'const ucd::detail::CharacterPropertyRange<%s> BinaryProperty::%s[] = {' % (element_type, member_name))
         for p in ps:
             self._output_files['ct'].write(r'{0x%x,0x%x},' % p)
         self._output_files['ct'].write('};\n')
@@ -381,14 +381,14 @@ class CodeGenerator(object):
         else:
             self._output_files['i'].write('if(c > 0xffffu) return false; ')
         self._output_files['i'].write(
-            'const detail::PropertyRange<%s>* const p = std::upper_bound(%s, %s + %d, '
+            'const detail::CharacterPropertyRange<%s>* const p = std::upper_bound(%s, %s + %d, '
             % (element_type, member_name, member_name, len(ps)))
         if ucs4:
             self._output_files['i'].write('c, ')
         else:
             self._output_files['i'].write('static_cast<Char>(c), ')
         self._output_files['i'].write(
-            ('detail::PropertyRangeComparer<detail::PropertyRange<%s>, %s>()); ' % (element_type, element_type))
+            ('detail::CharacterPropertyRangeComparer<detail::PropertyRange<%s>, %s>()); ' % (element_type, element_type))
             + ('return p != %s && c <= p[-1].end;}\n' % member_name))
         sys.stdout.write(' ([%d])\n' % len(ps))
 
@@ -540,7 +540,7 @@ class CodeGenerator(object):
                 self._blocks.sort()
                 code_table = self._outer._output_files['ct']
                 value_names = self._outer._output_files['vn']
-                code_table.write(r'const ucd::detail::PropertyPartition Block::VALUES_[] = {')
+                code_table.write(r'const detail::CharacterPropertyPartition Block::VALUES_[] = {')
                 for i, block in enumerate(self._blocks):
                     cpp_name = PropertyNames.cpp_value_name(block[2])
                     self._outer._output_files['bd'].write('%s, ///<%s.\n' % (cpp_name, block[2]))
@@ -560,7 +560,7 @@ class CodeGenerator(object):
         cpp_name = PropertyNames.cpp_name(long_name)
         out_ct = self._output_files['ct']
         out_i = self._output_files['i']
-        out_ct.write(r'const ucd::detail::PropertyPartition %s::VALUES_[] = {' % cpp_name)
+        out_ct.write(r'const detail::CharacterPropertyPartition %s::VALUES_[] = {' % cpp_name)
         short_name = self._PROPERTY_NAMES.short_name(long_name)
         ps = self._make_property_partitions(short_name)
         for p in ps:

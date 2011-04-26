@@ -8,7 +8,6 @@
 using namespace ascension;
 using namespace ascension::text;
 using namespace ascension::text::ucd;
-using namespace ascension::text::ucd::detail;
 using namespace std;
 
 
@@ -263,6 +262,7 @@ const char HangulSyllableType::SHORT_NAME[] = "hst";
 
 // BinaryProperty /////////////////////////////////////////////////////////////////////////////////
 
+#include <ascension/corelib/text/case-folder.hpp>
 #include "../../generated/uprops-code-table"
 
 

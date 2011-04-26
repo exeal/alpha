@@ -107,10 +107,10 @@ namespace {
 	public:
 		explicit InternalEncoder(const Factory& factory) /*throw()*/ : props_(factory) {}
 	private:
-		Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
+		Result doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
 			const Char* from, const Char* fromEnd, const Char*& fromNext);
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-			const byte* from, const byte* fromEnd, const byte*& fromNext);
+			const Byte* from, const Byte* fromEnd, const Byte*& fromNext);
 		const EncodingProperties& properties() const /*throw()*/ {return props_;}
 		Encoder& resetDecodingState() /*throw()*/ {decodingState_.reset(); return *this;}
 		Encoder& resetEncodingState() /*throw()*/ {encodingState_.reset(); return *this;}
@@ -194,7 +194,7 @@ namespace {
 	public:
 		JISAutoDetector() : EncodingDetector("JISAutoDetect") {}
 	private:
-		pair<MIBenum, string> doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/;
+		pair<MIBenum, string> doDetect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/;
 	};
 
 	struct Installer {
@@ -233,13 +233,13 @@ namespace {
 #include "generated/jis.ipp"
 
 	// JIS X 0201 Roman
-	inline Char convertROMANtoUCS(byte c) /*throw()*/ {
+	inline Char convertROMANtoUCS(Byte c) /*throw()*/ {
 		if(c == 0x5c)					return 0x00a5u;					// Yen Sign
 		else if(c == 0x7e)				return 0x203eu;					// Overline
 		else if(c >= 0x20 && c <= 0x7d)	return c;						// 7-bit
 		else							return REPLACEMENT_CHARACTER;	// unmappable
 	}
-	inline byte convertUCStoROMAN(Char c) /*throw()*/ {
+	inline Byte convertUCStoROMAN(Char c) /*throw()*/ {
 		if(c >= 0x0020u && c <= 0x005bu)		return mask8Bit(c);	// 7-bit
 		else if(c >= 0x005du && c <= 0x007du)	return mask8Bit(c);	// 7-bit
 		else if(c == 0x00a5u)					return 0x5c;		// Yen Sign
@@ -248,42 +248,42 @@ namespace {
 	}
 
 	// JIS X 0201 Kana
-	inline Char convertKANAtoUCS(byte c) /*throw()*/ {
+	inline Char convertKANAtoUCS(Byte c) /*throw()*/ {
 		return (c >= 0xa1 && c <= 0xdf) ? c + 0xfec0u : REPLACEMENT_CHARACTER;
 	}
-	inline byte convertUCStoKANA(Char c) /*throw()*/ {
+	inline Byte convertUCStoKANA(Char c) /*throw()*/ {
 		return (c >= 0xff61u && c <= 0xff9fu) ? mask8Bit(c - 0xfec0u) : 0x00;
 	}
 
 	// JIS X 0208:1997
-	inline Char convertX0208toUCS(ushort c) /*throw()*/ {
+	inline Char convertX0208toUCS(uint16_t c) /*throw()*/ {
 		if(const Char** const wire = JIS_X_0208_TO_UCS[mask8Bit(c >> 8)])
 			return wireAt(wire, mask8Bit(c));
 		else
 			return REPLACEMENT_CHARACTER;
 	}
-	inline ushort convertUCStoX0208(Char c) /*throw()*/ {
-		if(const ushort** const wire = UCS_TO_JIS_X_0208[mask8Bit(c >> 8)])
+	inline uint16_t convertUCStoX0208(Char c) /*throw()*/ {
+		if(const uint16_t** const wire = UCS_TO_JIS_X_0208[mask8Bit(c >> 8)])
 			return wireAt(wire, mask8Bit(c));
 		else
 			return 0x0000;
 	}
 
 	// JIS X 0212:1990
-	inline Char convertX0212toUCS(ushort c) /*throw()*/ {
+	inline Char convertX0212toUCS(uint16_t c) /*throw()*/ {
 		if(const Char** const wire = JIS_X_0212_TO_UCS[mask8Bit(c >> 8)])
 			return wireAt(wire, mask8Bit(c));
 		else
 			return REPLACEMENT_CHARACTER;
 	}
-	inline ushort convertUCStoX0212(Char c) /*throw()*/ {
-		if(const ushort** const wire = UCS_TO_JIS_X_0212[mask8Bit(c >> 8)])
+	inline uint16_t convertUCStoX0212(Char c) /*throw()*/ {
+		if(const uint16_t** const wire = UCS_TO_JIS_X_0212[mask8Bit(c >> 8)])
 			return wireAt(wire, mask8Bit(c));
 		else
 			return 0x0000;
 	}
 	// JIS X 0213:2004 plane 1 to UCS
-	inline CodePoint convertX0213Plane1toUCS(ushort c) /*throw()*/ {
+	inline CodePoint convertX0213Plane1toUCS(uint16_t c) /*throw()*/ {
 		const CodePoint ucs = convertX0208toUCS(c);
 		if(ucs == REPLACEMENT_CHARACTER) {
 			if(const CodePoint** const wire = JIS_X_0213_PLANE_1_TO_UCS[mask8Bit(c >> 8)])
@@ -292,7 +292,7 @@ namespace {
 		return convertX0208toUCS(c);
 	}
 	// JIS X 0213:2000 plane 2 to UCS
-	inline CodePoint convertX0213Plane2toUCS(ushort c) /*throw()*/ {
+	inline CodePoint convertX0213Plane2toUCS(uint16_t c) /*throw()*/ {
 		if(const CodePoint** const wire = JIS_X_0213_PLANE_2_TO_UCS[mask8Bit(c >> 8)])
 			return wireAt(wire, mask8Bit(c));
 		else
@@ -300,7 +300,7 @@ namespace {
 	}
 	// UCS to JIS X 0213:2004
 	Encoder::Result convertUCStoX0213(const Char* first, const Char* last,
-			const Char*& next, bool eob, ushort& jis, bool& plane2) /*throw()*/ {
+			const Char*& next, bool eob, uint16_t& jis, bool& plane2) /*throw()*/ {
 		jis = 0;
 		if(binary_search(LEADING_BYTES_TO_JIS_X_0213, ASCENSION_ENDOF(LEADING_BYTES_TO_JIS_X_0213), first[0])) {
 			if(first + 1 == last) {
@@ -372,7 +372,7 @@ namespace {
 				next = first;
 				return Encoder::MALFORMED_INPUT;
 			} else if(c >= 0x20000ul && c < 0x30000ul) {
-				const ushort** wire;
+				const uint16_t** wire;
 				if(0 != (wire = UCS_SIP_TO_JIS_X_0213_PLANE_1[mask8Bit((c - 0x20000ul) >> 8)])) {
 					if(0 != (jis = wireAt(wire, mask8Bit(c - 0x20000ul))))
 						plane2 = false;
@@ -391,7 +391,7 @@ namespace {
 				return Encoder::UNMAPPABLE_CHARACTER;
 			}
 		} else {
-			const ushort** wire;
+			const uint16_t** wire;
 			if(0 != (wire = UCS_BMP_TO_JIS_X_0213_PLANE_1[mask8Bit(first[0] >> 8)])) {
 				if(0 != (jis = wireAt(wire, mask8Bit(first[0]))))
 					plane2 = false;
@@ -416,10 +416,10 @@ namespace {
 
 namespace {
 	// makes JIS code from ku and ten numbers.
-	inline ushort jk(byte ku, byte ten) /*throw()*/ {return ((ku << 8) | ten) + 0x2020;}
+	inline uint16_t jk(Byte ku, Byte ten) /*throw()*/ {return ((ku << 8) | ten) + 0x2020;}
 
 	// "禁止漢字" of ISO-2022-JP-3 (from JIS X 0213:2000 附属書 2 表 1)
-	const ushort PROHIBITED_IDEOGRAPHS_2000[] = {
+	const uint16_t PROHIBITED_IDEOGRAPHS_2000[] = {
 		jk( 3,26), jk( 3,27), jk( 3,28), jk( 3,29), jk( 3,30), jk( 3,31),
 		jk( 3,32),
 		jk( 3,59), jk( 3,60), jk( 3,61), jk( 3,62), jk( 3,63), jk( 3,64),
@@ -467,14 +467,14 @@ namespace {
 		jk(84, 4), jk(84, 5), jk(84, 6)
 	};
 	// "禁止漢字" of ISO-2022-JP-2004 (from JIS X0213:2004 附属書 2 表 2)
-	const ushort PROHIBITED_IDEOGRAPHS_2004[] = {
+	const uint16_t PROHIBITED_IDEOGRAPHS_2004[] = {
 		jk(14, 1), jk(15,94), jk(17,19), jk(22,70), jk(23,50), jk(28,24),
 		jk(33,73), jk(38,61), jk(39,77), jk(47,52), jk(47,94), jk(53,11),
 		jk(54, 2), jk(54,58), jk(84, 7), jk(94,90), jk(94,91), jk(94,92),
 		jk(94,93), jk(94,94)
 	};
 	// returns true if is "禁止漢字" of ISO-2022-JP-3.
-	inline bool isISO2022JP3ProhibitedIdeograph(ushort jis) {
+	inline bool isISO2022JP3ProhibitedIdeograph(uint16_t jis) {
 		return (jis >= jk(6, 57) && jis <= jk(6, 94))
 			|| (jis >= jk(7, 34) && jis <= jk(7, 48))
 			|| (jis >= jk(7, 82) && jis <= jk(8, 62))
@@ -488,13 +488,13 @@ namespace {
 			|| binary_search(PROHIBITED_IDEOGRAPHS_2000, ASCENSION_ENDOF(PROHIBITED_IDEOGRAPHS_2000), jis);
 	}
 	// returns true if is "禁止漢字" added by JIS X 0213:2004.
-	inline bool isISO2022JP2004ProhibitedIdeograph(ushort jis) {
+	inline bool isISO2022JP2004ProhibitedIdeograph(uint16_t jis) {
 		return binary_search(PROHIBITED_IDEOGRAPHS_2004, ASCENSION_ENDOF(PROHIBITED_IDEOGRAPHS_2004), jis);
 	}
 
 	// converts from ISO-2022-JP-X into UTF-16.
 	Encoder::Result convertISO2022JPXtoUTF16(char x, Char* to, Char* toEnd, Char*& toNext,
-			const byte* from, const byte* fromEnd, const byte*& fromNext,
+			const Byte* from, const Byte* fromEnd, const Byte*& fromNext,
 			EncodingState& state, bool eob, Encoder::SubstitutionPolicy substitutionPolicy) {
 		// Acceptable character sets and designate sequence are following. G0, unless described:
 		//
@@ -646,11 +646,11 @@ namespace {
 				}
 				*to = *from;	// SI, SO, SS2 (1 byte) and SS3 (1 byte) are ignored
 			} else if(state.invokedG2) {	// G2
-				const byte c = *from | 0x80;
+				const Byte c = *from | 0x80;
 				if(state.g2 == EncodingState::ISO_8859_1) {	// ISO-8859-1
 					if(iso88591Encoder.get() == 0)
 						(iso88591Encoder = Encoder::forMIB(fundamental::ISO_8859_1))->setSubstitutionPolicy(substitutionPolicy);
-					const byte* next;
+					const Byte* next;
 					const Encoder::Result r = iso88591Encoder->toUnicode(to, toEnd, toNext, &c, &c + 1, next);
 					if(r != Encoder::COMPLETED) {
 						fromNext = from;
@@ -659,7 +659,7 @@ namespace {
 				} else if(state.g2 == EncodingState::ISO_8859_7) {	// ISO-8859-7
 					if(iso88597Encoder.get() == 0)
 						(iso88597Encoder = Encoder::forMIB(standard::ISO_8859_7))->setSubstitutionPolicy(substitutionPolicy);
-					const byte* next;
+					const Byte* next;
 					const Encoder::Result r = iso88597Encoder->toUnicode(to, toEnd, toNext, &c, &c + 1, next);
 					if(r != Encoder::COMPLETED) {
 						fromNext = from;
@@ -695,21 +695,21 @@ namespace {
 				fromNext = from;
 				return Encoder::MALFORMED_INPUT;
 			} else if(state.g0 == EncodingState::JIS_X_0208) {	// JIS X 0208:1978 or :1983
-				const ushort jis = (*from << 8) | from[1];
+				const uint16_t jis = (*from << 8) | from[1];
 				const Char ucs = convertX0208toUCS(jis);
 				if(ucs == REPLACEMENT_CHARACTER)
 					ASCENSION_HANDLE_UNMAPPABLE()
 				++from;
 			} else if(state.g0 == EncodingState::JIS_X_0212) {	// JIS X 0212:1990
-				const ushort jis = (*from << 8) | from[1];
+				const uint16_t jis = (*from << 8) | from[1];
 				const Char ucs = convertX0212toUCS(jis);
 				if(ucs == REPLACEMENT_CHARACTER)
 					ASCENSION_HANDLE_UNMAPPABLE()
 				++from;
 			} else if(state.g0 == EncodingState::GB2312 || state.g0 == EncodingState::KS_C_5601) {	// GB2312:1980 or KSC5601:1987
-				const byte buffer[2] = {*from | 0x80, from[1] | 0x80};
-				const byte* const bufferEnd = ASCENSION_ENDOF(buffer);
-				const byte* next;
+				const Byte buffer[2] = {*from | 0x80, from[1] | 0x80};
+				const Byte* const bufferEnd = ASCENSION_ENDOF(buffer);
+				const Byte* next;
 				const Encoder::Result r = ((state.g0 == EncodingState::GB2312) ?
 					gb2312Encoder : ksc5601Encoder)->toUnicode(to, toEnd, toNext, buffer, bufferEnd, next);
 				if(r != Encoder::COMPLETED) {
@@ -719,7 +719,7 @@ namespace {
 				from = next - 1;
 			} else if(state.g0 == EncodingState::JIS_X_0213_PLANE_1
 					|| state.g0 == EncodingState::JIS_X_0213_PLANE_2) {	// JIS X 0213:2004 or :2000
-				const ushort jis = (*from << 8) | from[1];
+				const uint16_t jis = (*from << 8) | from[1];
 				CodePoint ucs = (state.g0 == EncodingState::JIS_X_0213_PLANE_1) ?
 					convertX0213Plane1toUCS(jis) : convertX0213Plane2toUCS(jis);
 
@@ -760,7 +760,7 @@ namespace {
 	}
 
 	// converts from UTF-16 into ISO-2022-JP-X.
-	Encoder::Result convertUTF16toISO2022JPX(char x, byte* to, byte* toEnd, byte*& toNext,
+	Encoder::Result convertUTF16toISO2022JPX(char x, Byte* to, Byte* toEnd, Byte*& toNext,
 			const Char* from, const Char* fromEnd, const Char*& fromNext,
 			EncodingState& state, bool eob, Encoder::SubstitutionPolicy substitutionPolicy) {
 		const bool jis2004 = x == '4'
@@ -795,9 +795,9 @@ namespace {
 		return Encoder::UNMAPPABLE_CHARACTER;								\
 	}
 
-		ushort jis;
-		byte mbcs[2];
-		byte* dummy1;
+		uint16_t jis;
+		Byte mbcs[2];
+		Byte* dummy1;
 		const Char* dummy2;
 		for(; to < toEnd && from < fromEnd; ++to, ++from) {
 			// first, convert '*from' into 'jis' or 'mbcs' buffer
@@ -941,10 +941,10 @@ namespace {
 	}
 
 	// JIS X 0208 or JIS X 0213 <-> シフト JIS 2 バイト文字の変換
-	inline void shiftCode(ushort jis, byte* dbcs, bool plane2) {
+	inline void shiftCode(uint16_t jis, Byte* dbcs, bool plane2) {
 		assert(dbcs != 0);
-		const byte jk = mask8Bit((jis - 0x2020) >> 8);	// ku
-		const byte jt = mask8Bit((jis - 0x2020) >> 0);	// ten
+		const Byte jk = mask8Bit((jis - 0x2020) >> 8);	// ku
+		const Byte jt = mask8Bit((jis - 0x2020) >> 0);	// ten
 
 		assert(jk >= 1 && jk <= 94 && jt >= 1 && jt <= 94);
 		if(!plane2)	// plane 1
@@ -955,9 +955,9 @@ namespace {
 		if((jk & 0x1) == 0)	dbcs[1] = jt + 0x9e;
 		else				dbcs[1] = jt + ((jt <= 63) ? 0x3f : 0x40);
 	}
-	inline ushort unshiftCodeX0208(const byte dbcs[]) {
+	inline uint16_t unshiftCodeX0208(const Byte dbcs[]) {
 		assert(dbcs != 0);
-		byte jk, jt;
+		Byte jk, jt;
 
 		if(dbcs[0] >= 0x81 && dbcs[0] <= 0x9f)	// ku: 01..62
 			jk = (dbcs[0] - 0x81) * 2 + ((dbcs[1] > 0x9e) ? 2 : 1);	// < leadbyte = (jk - 1) / 2 + 0x81
@@ -971,8 +971,8 @@ namespace {
 			jt = dbcs[1] - 0x40;	// < trailbyte = jt + 0x40
 		return ((jk << 8) | jt) + 0x2020;
 	}
-	inline ushort unshiftCodeX0213(const byte dbcs[], bool& plane2) {
-		byte jk, jt;
+	inline uint16_t unshiftCodeX0213(const Byte dbcs[], bool& plane2) {
+		Byte jk, jt;
 		const bool kuIsEven = dbcs[1] > 0x9e;
 
 		plane2 = dbcs[0] >= 0xf0;
@@ -1006,14 +1006,14 @@ namespace {
 // Shift_JIS ////////////////////////////////////////////////////////////////
 
 template<> Encoder::Result InternalEncoder<SHIFT_JIS>::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+		Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x80)
 			*to = mask8Bit(*from);
 		else {
-			ushort jis = convertUCStoX0208(*from);	// try JIS X 0208
+			uint16_t jis = convertUCStoX0208(*from);	// try JIS X 0208
 			if(jis == 0x00) {
-				if(const byte kana = convertUCStoKANA(*from)) {	// try JIS X 0201 kana
+				if(const Byte kana = convertUCStoKANA(*from)) {	// try JIS X 0201 kana
 					*to = kana;
 					continue;
 				} else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
@@ -1037,7 +1037,7 @@ template<> Encoder::Result InternalEncoder<SHIFT_JIS>::doFromUnicode(
 }
 
 template<> Encoder::Result InternalEncoder<SHIFT_JIS>::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+		Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x80)	// ascii
 			*to = *from;
@@ -1076,8 +1076,8 @@ template<> Encoder::Result InternalEncoder<SHIFT_JIS>::doToUnicode(
 // Shift_JIS-2004 ///////////////////////////////////////////////////////////
 
 template<> Encoder::Result InternalEncoder<SHIFT_JIS_2004>::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-	ushort jis;
+		Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+	uint16_t jis;
 	bool plane2;
 	while(to < toEnd && from < fromEnd) {
 		if(*from < 0x0080) {
@@ -1129,7 +1129,7 @@ template<> Encoder::Result InternalEncoder<SHIFT_JIS_2004>::doFromUnicode(
 }
 
 template<> Encoder::Result InternalEncoder<SHIFT_JIS_2004>::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+		Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 	const Char* const beginning = to;
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x80)	// ASCII
@@ -1149,7 +1149,7 @@ template<> Encoder::Result InternalEncoder<SHIFT_JIS_2004>::doToUnicode(
 		} else {
 			if(from + 1 < fromEnd && (from[1] >= 0x40 && from[1] <= 0xfc && from[1] != 0x7f)) {	// double byte
 				bool plane2;
-				const ushort jis = unshiftCodeX0213(from, plane2);
+				const uint16_t jis = unshiftCodeX0213(from, plane2);
 				const CodePoint ucs = !plane2 ? convertX0213Plane1toUCS(jis) : convertX0213Plane2toUCS(jis);
 
 				if(ucs == REPLACEMENT_CHARACTER) {	// unmappable
@@ -1194,7 +1194,7 @@ template<> Encoder::Result InternalEncoder<SHIFT_JIS_2004>::doToUnicode(
 // EUC-JP ///////////////////////////////////////////////////////////////////
 
 template<> Encoder::Result InternalEncoder<EUC_JP>::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+		Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x0080) {	// ASCII
 			*to = mask8Bit(*from);
@@ -1202,12 +1202,12 @@ template<> Encoder::Result InternalEncoder<EUC_JP>::doFromUnicode(
 		}
 
 		bool x0212 = false;
-		ushort jis = convertUCStoX0208(*from);
+		uint16_t jis = convertUCStoX0208(*from);
 		if(jis == 0x00) {
 			if((jis = convertUCStoX0212(*from)) != 0x00)
 				// JIS X 0212
 				x0212 = true;
-			else if(const byte kana = convertUCStoKANA(*from)) {
+			else if(const Byte kana = convertUCStoKANA(*from)) {
 				// JIS X 0201 Kana
 				if(to + 1 >= toEnd) {
 					toNext = to;
@@ -1252,7 +1252,7 @@ template<> Encoder::Result InternalEncoder<EUC_JP>::doFromUnicode(
 }
 
 template<> Encoder::Result InternalEncoder<EUC_JP>::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+		Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x80)
 			*to = *from;
@@ -1265,10 +1265,10 @@ template<> Encoder::Result InternalEncoder<EUC_JP>::doToUnicode(
 			} else if(*from == SS2_8BIT)	// SS2 -> JIS X 0201 Kana
 				*to = convertKANAtoUCS(from[1]);
 			else if(*from == SS3_8BIT) {	// SS3 -> JIS X 0212
-				const ushort jis = ((from[1] << 8) | from[2]) - 0x8080;
+				const uint16_t jis = ((from[1] << 8) | from[2]) - 0x8080;
 				*to = convertX0212toUCS(jis);
 			} else {	// JIS X 0208
-				const ushort jis = ((*from << 8) | from[1]) - 0x8080;
+				const uint16_t jis = ((*from << 8) | from[1]) - 0x8080;
 				*to = convertX0208toUCS(jis);
 			}
 
@@ -1293,8 +1293,8 @@ template<> Encoder::Result InternalEncoder<EUC_JP>::doToUnicode(
 // EUC-JIS-2004 /////////////////////////////////////////////////////////////
 
 template<> Encoder::Result InternalEncoder<EUC_JIS_2004>::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-	ushort jis;
+		Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+	uint16_t jis;
 	bool plane2 = false;
 	while(to < toEnd && from < fromEnd) {
 		if(*from < 0x0080) {	// ASCII
@@ -1357,7 +1357,7 @@ template<> Encoder::Result InternalEncoder<EUC_JIS_2004>::doFromUnicode(
 }
 
 template<> Encoder::Result InternalEncoder<EUC_JIS_2004>::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+		Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 	const Char* const beginning = to;
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x80)
@@ -1371,7 +1371,7 @@ template<> Encoder::Result InternalEncoder<EUC_JIS_2004>::doToUnicode(
 			} else if(*from == SS2_8BIT)	// SS2 -> JIS X 0201 Kana
 				*to = convertKANAtoUCS(from[1]);
 			else if(*from == SS3_8BIT) {	// SS3 -> plane-2
-				const ushort jis = ((from[1] << 8) | from[2]) - 0x8080;
+				const uint16_t jis = ((from[1] << 8) | from[2]) - 0x8080;
 				const CodePoint ucs = convertX0213Plane2toUCS(jis);
 				if(ucs != REPLACEMENT_CHARACTER) {
 					if(ucs > 0x010000ul && to + 1 >= toEnd)
@@ -1385,7 +1385,7 @@ template<> Encoder::Result InternalEncoder<EUC_JIS_2004>::doToUnicode(
 						*to = maskUCS2(ucs);
 				}
 			} else {	// plane-1
-				const ushort jis = ((*from << 8) | from[1]) - 0x8080;
+				const uint16_t jis = ((*from << 8) | from[1]) - 0x8080;
 				const CodePoint ucs = convertX0213Plane1toUCS(jis);
 				if(ucs != REPLACEMENT_CHARACTER) {
 					if(ucs > 0x0010fffful) {	// a character uses two code points
@@ -1425,12 +1425,12 @@ template<> Encoder::Result InternalEncoder<EUC_JIS_2004>::doToUnicode(
 
 #define ASCENSION_IMPLEMENT_ISO_2022_JP_X(x, suffix)																\
 	template<> Encoder::Result InternalEncoder<ISO_2022_##suffix>::doFromUnicode(									\
-			byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {	\
+			Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {	\
 		return convertUTF16toISO2022JPX(x, to, toEnd, toNext, from, fromEnd, fromNext,								\
 			encodingState_,	(flags() & END_OF_BUFFER) != 0, substitutionPolicy());									\
 	}																												\
 	template<> Encoder::Result InternalEncoder<ISO_2022_##suffix>::doToUnicode(										\
-			Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {	\
+			Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {	\
 		return convertISO2022JPXtoUTF16(x, to, toEnd, toNext, from, fromEnd, fromNext,								\
 			decodingState_, (flags() & END_OF_BUFFER) != 0, substitutionPolicy());									\
 	}
@@ -1472,10 +1472,10 @@ ASCENSION_IMPLEMENT_ISO_2022_JP_X('c', JP_2004_COMPATIBLE)
 // JISAutoDetector //////////////////////////////////////////////////////////
 
 namespace {
-	inline const EncodingProperties& detectShiftJIS(const byte* from, const byte* last, ptrdiff_t& convertibleBytes, bool& foundKana) {
+	inline const EncodingProperties& detectShiftJIS(const Byte* from, const Byte* last, ptrdiff_t& convertibleBytes, bool& foundKana) {
 		bool jis2004 = false;
 		foundKana = false;
-		const byte* p;
+		const Byte* p;
 		for(p = from; p < last; ++p) {
 			if(*p == ESC)	// Shift_JIS can't have an ESC
 				break;
@@ -1492,7 +1492,7 @@ namespace {
 				bool plane2;
 				if(!jis2004) {
 					if(convertX0208toUCS(unshiftCodeX0208(p)) == REPLACEMENT_CHARACTER) {
-						const ushort jis = unshiftCodeX0213(p, plane2);
+						const uint16_t jis = unshiftCodeX0213(p, plane2);
 						if(!plane2 && convertX0213Plane1toUCS(jis) == REPLACEMENT_CHARACTER)
 							break;	// unmappable
 						jis2004 = true;
@@ -1508,10 +1508,10 @@ namespace {
 		convertibleBytes = p - from;
 		return jis2004 ? static_cast<EncodingProperties&>(shiftjis2004) : static_cast<EncodingProperties&>(shiftjis);
 	}
-	inline const EncodingProperties& detectEUCJP(const byte* from, const byte* last, ptrdiff_t& convertibleBytes, bool& foundKana) {
+	inline const EncodingProperties& detectEUCJP(const Byte* from, const Byte* last, ptrdiff_t& convertibleBytes, bool& foundKana) {
 		bool jis2004 = false;
 		foundKana = false;
-		const byte* p;
+		const Byte* p;
 		for(p = from; p < last; ++p) {
 			if(*p == ESC)	// EUC-JP can't have an ESC
 				break;
@@ -1525,7 +1525,7 @@ namespace {
 			} else if(*p == SS3_8BIT) {	// SS3 introduces JIS X 0212 or JIS X 0213 plane2
 				if(p + 2 >= last)
 					break;
-				ushort jis = p[1] << 8 | p[2];
+				uint16_t jis = p[1] << 8 | p[2];
 				if(jis < 0x8080)
 					break;	// unmappable
 				jis -= 0x8080;
@@ -1541,7 +1541,7 @@ namespace {
 					break;
 				from += 2;
 			} else if(from < last - 1) {	// 2-byte character
-				ushort jis = *p << 8 | p[1];
+				uint16_t jis = *p << 8 | p[1];
 				if(jis <= 0x8080)
 					break;
 				jis -= 0x8080;
@@ -1560,13 +1560,13 @@ namespace {
 		convertibleBytes = p - from;
 		return jis2004 ? static_cast<EncodingProperties&>(eucjis2004) : static_cast<EncodingProperties&>(eucjp);
 	}
-	inline const EncodingProperties& detectISO2022JP(const byte* from, const byte* last, ptrdiff_t& convertibleBytes, bool& foundKana) {
+	inline const EncodingProperties& detectISO2022JP(const Byte* from, const Byte* last, ptrdiff_t& convertibleBytes, bool& foundKana) {
 		char x = '0';	// ISO-2022-JP-X
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 		bool x0208 = false;
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 		foundKana = false;
-		const byte* p;
+		const Byte* p;
 		for(p = from; p < last; ++p) {
 			if(*p >= 0x80)	// 8-bit
 				break;
@@ -1659,7 +1659,7 @@ namespace {
 }
 
 /// @see EncodingDetector#doDetector
-pair<MIBenum, string> JISAutoDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/ {
+pair<MIBenum, string> JISAutoDetector::doDetect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/ {
 	pair<MIBenum, string> result(make_pair(fundamental::UTF_8, "UTF-8"));
 	ptrdiff_t cb = 0;
 

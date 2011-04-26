@@ -20,7 +20,7 @@ namespace {
 	const Char** const UCS_TO_UHC[256] = {
 #include "generated/ucs-to-windows-949.dat"
 	};
-	const ushort** const UHC_TO_UCS[256] = {
+	const uint16_t** const UHC_TO_UCS[256] = {
 #include "generated/windows-949-to-ucs.dat"
 	};
 
@@ -29,16 +29,16 @@ namespace {
 	public:
 		explicit InternalEncoder(const Factory& factory) /*throw()*/ : props_(factory), encodingState_(0), decodingState_(0) {}
 	private:
-		Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
+		Result doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
 			const Char* from, const Char* fromEnd, const Char*& fromNext);
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-			const byte* from, const byte* fromEnd, const byte*& fromNext);
+			const Byte* from, const Byte* fromEnd, const Byte*& fromNext);
 		const EncodingProperties& properties() const /*throw()*/ {return props_;}
 		Encoder& resetDecodingState() /*throw()*/ {decodingState_ = 0; return *this;}
 		Encoder& resetEncodingState() /*throw()*/ {encodingState_ = 0; return *this;}
 	private:
 		const EncodingProperties& props_;
-		byte encodingState_, decodingState_;
+		Byte encodingState_, decodingState_;
 	};
 
 	class UHC : public EncoderFactoryBase {
@@ -75,16 +75,16 @@ namespace {
 }
 
 
-// UHC //////////////////////////////////////////////////////////////////////
+// UHC ////////////////////////////////////////////////////////////////////////////////////////////
 
 template<> Encoder::Result InternalEncoder<UHC>::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+		Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	for(; to < toEnd && from < fromEnd; ++from) {
 		if(*from < 0x80)
 			*(to++) = mask8Bit(*from);
 		else {	// double byte character
 			if(const Char** const wire = UCS_TO_UHC[mask8Bit(*from >> 8)]) {
-				if(const ushort dbcs = wireAt(wire, mask8Bit(*from))) {
+				if(const uint16_t dbcs = wireAt(wire, mask8Bit(*from))) {
 					if(to + 1 >= toEnd)
 						break;	// the destnation buffer is insufficient
 					*(to++) = mask8Bit(dbcs >> 8);
@@ -107,7 +107,7 @@ template<> Encoder::Result InternalEncoder<UHC>::doFromUnicode(
 }
 		
 template<> Encoder::Result InternalEncoder<UHC>::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+		Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 	while(to < toEnd && from < fromEnd) {
 		if(*from < 0x80)
 			*(to++) = *(from++);
@@ -116,7 +116,7 @@ template<> Encoder::Result InternalEncoder<UHC>::doToUnicode(
 			fromNext = from;
 			return ((flags() & END_OF_BUFFER) != 0) ? MALFORMED_INPUT : COMPLETED;
 		} else {	// double byte character
-			if(const ushort** const wire = UHC_TO_UCS[mask8Bit(*from)]) {
+			if(const uint16_t** const wire = UHC_TO_UCS[mask8Bit(*from)]) {
 				const Char ucs = wireAt(wire, mask8Bit(from[1]));
 				if(ucs != REPLACEMENT_CHARACTER) {
 					*(to++) = ucs;
@@ -142,17 +142,17 @@ template<> Encoder::Result InternalEncoder<UHC>::doToUnicode(
 }
 
 
-// EUC-KR ///////////////////////////////////////////////////////////////////
+// EUC-KR /////////////////////////////////////////////////////////////////////////////////////////
 
 template<> Encoder::Result InternalEncoder<EUC_KR>::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+		Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	for(; to < toEnd && from < fromEnd; ++from) {
 		if(*from < 0x80)
 			*(to++) = mask8Bit(*from);
 		else {	// double byte character
 			if(const Char** const wire = UCS_TO_UHC[mask8Bit(*from >> 8)]) {
-				if(const ushort dbcs = wireAt(wire, mask8Bit(*from))) {
-					const byte lead = mask8Bit(dbcs >> 8), trail = mask8Bit(dbcs);
+				if(const uint16_t dbcs = wireAt(wire, mask8Bit(*from))) {
+					const Byte lead = mask8Bit(dbcs >> 8), trail = mask8Bit(dbcs);
 					if(lead - 0xa1u < 0x5e && trail - 0xa1 < 0x5e) {
 //					if(lead >= 0xa1 && lead <= 0xfe && trail >= 0xa1 && trail <= 0xfe) {
 						if(to + 1 >= toEnd)
@@ -178,7 +178,7 @@ template<> Encoder::Result InternalEncoder<EUC_KR>::doFromUnicode(
 }
 		
 template<> Encoder::Result InternalEncoder<EUC_KR>::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+		Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 	while(to < toEnd && from < fromEnd) {
 		if(*from < 0x80)
 			*(to++) = *(from++);
@@ -192,7 +192,7 @@ template<> Encoder::Result InternalEncoder<EUC_KR>::doToUnicode(
 				toNext = to;
 				fromNext = from;
 				return MALFORMED_INPUT;
-			} else if(const ushort** const wire = UHC_TO_UCS[mask8Bit(*from)]) {
+			} else if(const uint16_t** const wire = UHC_TO_UCS[mask8Bit(*from)]) {
 				const Char ucs = wireAt(wire, mask8Bit(from[1]));
 				if(ucs != REPLACEMENT_CHARACTER) {
 					*(to++) = ucs;
@@ -218,13 +218,13 @@ template<> Encoder::Result InternalEncoder<EUC_KR>::doToUnicode(
 }
 
 
-// ISO-2022-KR //////////////////////////////////////////////////////////////
+// ISO-2022-KR ////////////////////////////////////////////////////////////////////////////////////
 
 // state definition
 // 0 : initial, 1 : encountered/written escape sequence and ASCII, 2 : KS C 5601 (KS X 1001)
 
 template<> Encoder::Result InternalEncoder<ISO_2022_KR>::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+		Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	if(encodingState_ == 0) {
 		// write an escape sequence
 		if(to + 3 >= toEnd) {
@@ -255,8 +255,8 @@ template<> Encoder::Result InternalEncoder<ISO_2022_KR>::doFromUnicode(
 					break;
 			}
 			if(const Char** const wire = UCS_TO_UHC[mask8Bit(*from >> 8)]) {
-				if(const ushort dbcs = wireAt(wire, mask8Bit(*from))) {
-					const byte lead = mask8Bit(dbcs >> 8), trail = mask8Bit(dbcs);
+				if(const uint16_t dbcs = wireAt(wire, mask8Bit(*from))) {
+					const Byte lead = mask8Bit(dbcs >> 8), trail = mask8Bit(dbcs);
 					if(lead - 0xa1u < 0x5e && trail - 0xa1 < 0x5e) {
 //					if(lead >= 0xa1 && lead <= 0xfe && trail >= 0xa1 && trail <= 0xfe) {
 						if(to + 1 >= toEnd)
@@ -282,7 +282,7 @@ template<> Encoder::Result InternalEncoder<ISO_2022_KR>::doFromUnicode(
 }
 
 template<> Encoder::Result InternalEncoder<ISO_2022_KR>::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+		Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 	if(decodingState_ == 0)
 		++decodingState_;
 	while(to < toEnd && from < fromEnd) {
@@ -319,7 +319,7 @@ template<> Encoder::Result InternalEncoder<ISO_2022_KR>::doToUnicode(
 				toNext = to;
 				fromNext = from;
 				return MALFORMED_INPUT;
-			} else if(const ushort** const wire = UHC_TO_UCS[mask8Bit(*from + 0x80)]) {
+			} else if(const uint16_t** const wire = UHC_TO_UCS[mask8Bit(*from + 0x80)]) {
 				const Char ucs = wireAt(wire, mask8Bit(from[1] + 0x80));
 				if(ucs != REPLACEMENT_CHARACTER) {
 					*(to++) = ucs;

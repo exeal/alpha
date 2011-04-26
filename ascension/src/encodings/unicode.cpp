@@ -30,16 +30,16 @@ namespace {
 	public:
 		explicit InternalEncoder(const Factory& factory) /*throw()*/ : props_(factory), encodingState_(0), decodingState_(0) {}
 	private:
-		Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
+		Result doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
 			const Char* from, const Char* fromEnd, const Char*& fromNext);
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-			const byte* from, const byte* fromEnd, const byte*& fromNext);
+			const Byte* from, const Byte* fromEnd, const Byte*& fromNext);
 		const EncodingProperties& properties() const /*throw()*/ {return props_;}
 		Encoder& resetDecodingState() /*throw()*/ {decodingState_ = 0; return *this;}
 		Encoder& resetEncodingState() /*throw()*/ {encodingState_ = 0; return *this;}
 	private:
 		const EncodingProperties& props_;
-		byte encodingState_, decodingState_;
+		Byte encodingState_, decodingState_;
 	};
 
 	class UTF_8 : public EncoderFactoryBase {
@@ -92,7 +92,7 @@ namespace {
 	public:
 		UnicodeDetector() : EncodingDetector("UnicodeAutoDetect") {}
 	private:
-		pair<MIBenum, string> doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/;
+		pair<MIBenum, string> doDetect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/;
 	};
 
 	struct EncoderInstaller {
@@ -114,12 +114,12 @@ namespace {
 } // namespace @0
 
 namespace {
-	const byte UTF8_BOM[] = {0xef, 0xbb, 0xbf};
-	const byte UTF16LE_BOM[] = {0xff, 0xfe};
-	const byte UTF16BE_BOM[] = {0xfe, 0xff};
+	const Byte UTF8_BOM[] = {0xef, 0xbb, 0xbf};
+	const Byte UTF16LE_BOM[] = {0xff, 0xfe};
+	const Byte UTF16BE_BOM[] = {0xfe, 0xff};
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
-	const byte UTF32LE_BOM[] = {0xff, 0xff, 0x00, 0x00};
-	const byte UTF32BE_BOM[] = {0xfe, 0xff, 0x00, 0x00};
+	const Byte UTF32LE_BOM[] = {0xff, 0xff, 0x00, 0x00};
+	const Byte UTF32BE_BOM[] = {0xfe, 0xff, 0x00, 0x00};
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 } // namespace @0
 
@@ -159,7 +159,7 @@ namespace {
 		48     F4         U+100000..10FFFF  4
 		09     otherwise  ill-formed        (0)
 	 */
-	const byte UTF8_WELL_FORMED_FIRST_BYTES[] = {
+	const Byte UTF8_WELL_FORMED_FIRST_BYTES[] = {
 		0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09,	// 0x80
 		0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09,	// 0x90
 		0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09,	// 0xA0
@@ -170,7 +170,7 @@ namespace {
 		0x46, 0x47, 0x47, 0x47, 0x48, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09	// 0xF0
 	};
 
-	inline bool writeSurrogatePair(byte*& to, byte* toEnd, Char high, Char low) {
+	inline bool writeSurrogatePair(Byte*& to, Byte* toEnd, Char high, Char low) {
 		if(to + 3 >= toEnd)
 			return false;
 		// 0000 0000  000w wwxx  xxxx yyyy  yyzz zzzz -> 1111 0www  10xx xxxx  10yy yyyy 10zz zzzz
@@ -184,7 +184,7 @@ namespace {
 } // namespace @0
 
 template<> Encoder::Result InternalEncoder<UTF_8>::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+		Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	ASCENSION_ENCODE_BOM(UTF8)
 	for(; to < toEnd && from < fromEnd; ++from) {
 		if(*from < 0x0080u)	// 0000 0000  0zzz zzzz -> 0zzz zzzz
@@ -222,13 +222,13 @@ template<> Encoder::Result InternalEncoder<UTF_8>::doFromUnicode(
 }
 
 template<> Encoder::Result InternalEncoder<UTF_8>::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+		Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 	ASCENSION_DECODE_BOM(UTF8)
 	while(to < toEnd && from < fromEnd) {
 		if(*from < 0x80)
 			*(to++) = *(from++);
 		else {
-			const byte v = UTF8_WELL_FORMED_FIRST_BYTES[*from - 0x80];
+			const Byte v = UTF8_WELL_FORMED_FIRST_BYTES[*from - 0x80];
 			// check the source buffer length
 			ptrdiff_t bytes = (v >> 4);
 			if(fromEnd - from < bytes) {
@@ -288,11 +288,11 @@ template<> Encoder::Result InternalEncoder<UTF_8>::doToUnicode(
 // UTF-16LE /////////////////////////////////////////////////////////////////
 
 template<> Encoder::Result InternalEncoder<UTF_16LE>::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+		Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	ASCENSION_ENCODE_BOM(UTF16LE)
 	for(; to < toEnd - 1 && from < fromEnd; ++from) {
-		*(to++) = static_cast<byte>((*from & 0x00ffu) >> 0);
-		*(to++) = static_cast<byte>((*from & 0xff00u) >> 8);
+		*(to++) = static_cast<Byte>((*from & 0x00ffu) >> 0);
+		*(to++) = static_cast<Byte>((*from & 0xff00u) >> 8);
 	}
 	fromNext = from;
 	toNext = to;
@@ -300,7 +300,7 @@ template<> Encoder::Result InternalEncoder<UTF_16LE>::doFromUnicode(
 }
 
 template<> Encoder::Result InternalEncoder<UTF_16LE>::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+		Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 	ASCENSION_DECODE_BOM(UTF16LE)
 	for(; to < toEnd && from < fromEnd - 1; from += 2)
 		*(to++) = *from | maskUCS2(from[1] << 8);
@@ -316,11 +316,11 @@ template<> Encoder::Result InternalEncoder<UTF_16LE>::doToUnicode(
 // UTF-16BE /////////////////////////////////////////////////////////////////
 
 template<> Encoder::Result InternalEncoder<UTF_16BE>::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+		Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	ASCENSION_ENCODE_BOM(UTF16BE)
 	for(; to < toEnd - 1 && from < fromEnd; ++from) {
-		*(to++) = static_cast<byte>((*from & 0xff00u) >> 8);
-		*(to++) = static_cast<byte>((*from & 0x00ffu) >> 0);
+		*(to++) = static_cast<Byte>((*from & 0xff00u) >> 8);
+		*(to++) = static_cast<Byte>((*from & 0x00ffu) >> 0);
 	}
 	fromNext = from;
 	toNext = to;
@@ -328,7 +328,7 @@ template<> Encoder::Result InternalEncoder<UTF_16BE>::doFromUnicode(
 }
 
 template<> Encoder::Result InternalEncoder<UTF_16BE>::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+		Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 	ASCENSION_DECODE_BOM(UTF16BE)
 	for(; to < toEnd && from < fromEnd - 1; from += 2)
 		*(to++) = maskUCS2(*from << 8) | from[1];
@@ -346,7 +346,7 @@ template<> Encoder::Result InternalEncoder<UTF_16BE>::doToUnicode(
 // UTF-32LE /////////////////////////////////////////////////////////////////
 
 template<> Encoder::Result InternalEncoder<UTF_32LE>::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+		Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	ASCENSION_ENCODE_BOM(UTF32LE)
 	for(; to < toEnd - 3 && from < fromEnd; ++from) {
 		const CodePoint c = surrogates::decodeFirst(from, fromEnd);
@@ -370,7 +370,7 @@ template<> Encoder::Result InternalEncoder<UTF_32LE>::doFromUnicode(
 }
 
 template<> Encoder::Result InternalEncoder<UTF_32LE>::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+		Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 	ASCENSION_DECODE_BOM(UTF32LE)
 	for(; to < toEnd && from < fromEnd - 3; from += 4) {
 		const CodePoint c = from[0] + (from[1] << 8) + (from[2] << 16) + (from[3] << 24);
@@ -394,7 +394,7 @@ template<> Encoder::Result InternalEncoder<UTF_32LE>::doToUnicode(
 // UTF-32BE /////////////////////////////////////////////////////////////////
 
 template<> Encoder::Result InternalEncoder<UTF_32BE>::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+		Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	ASCENSION_ENCODE_BOM(UTF32BE)
 	for(; to < toEnd - 3 && from < fromEnd; ++from) {
 		const CodePoint c = surrogates::decodeFirst(from, fromEnd);
@@ -411,7 +411,7 @@ template<> Encoder::Result InternalEncoder<UTF_32BE>::doFromUnicode(
 }
 
 template<> Encoder::Result InternalEncoder<UTF_32BE>::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+		Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 	ASCENSION_DECODE_BOM(UTF32BE)
 	for(; to < toEnd && from < fromEnd - 3; from += 4) {
 		const CodePoint cp = from[3] + (from[2] << 8) + (from[1] << 16) + (from[0] << 24);
@@ -435,8 +435,8 @@ template<> Encoder::Result InternalEncoder<UTF_32BE>::doToUnicode(
 // UTF-7 ////////////////////////////////////////////////////////////////////
 
 template<> Encoder::Result InternalEncoder<UTF_7>::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-	static const byte SET_D[0x80] = {
+		Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+	static const Byte SET_D[0x80] = {
 		// 1 : in set D, 2 : '=', 3 : direct encodable but not set D, 0 : otherwise
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 3, 0, 0,	// 0x00
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	// 0x10
@@ -447,11 +447,11 @@ template<> Encoder::Result InternalEncoder<UTF_7>::doFromUnicode(
 		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,	// 0x60
 		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0	// 0x70
 	};
-	static const byte BASE64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	static const Byte BASE64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 	// encodingState_ == 1 if in BASE64. 0 otherwise
 	for(; to < toEnd && from < fromEnd; ++from) {
-		const byte klass = (*from < 0x80) ? SET_D[*from] : 0;
+		const Byte klass = (*from < 0x80) ? SET_D[*from] : 0;
 		if((klass & 1) == 1) {
 			// encode directly (ascension puts '-' explicitly even if klass is 3)
 			if(encodingState_ == 1) {
@@ -516,8 +516,8 @@ template<> Encoder::Result InternalEncoder<UTF_7>::doFromUnicode(
 }
 		
 template<> Encoder::Result InternalEncoder<UTF_7>::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
-	static const byte SET_B[0x80] = {
+		Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
+	static const Byte SET_B[0x80] = {
 		// 1 : in set B, 2 : '+', 3 : directly appearable in BASE64, 4 : '-', 0 : otherwise
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 3, 0, 0,	// 0x00
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	// 0x10
@@ -528,7 +528,7 @@ template<> Encoder::Result InternalEncoder<UTF_7>::doToUnicode(
 		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,	// 0x60
 		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0	// 0x70
 	};
-	static const byte BASE64[0x80] = {
+	static const Byte BASE64[0x80] = {
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,	// <00>
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,	// <10>
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3e, 0xff, 0xff, 0xff, 0x3f,	//  !"#$%&'()*+,-./
@@ -546,7 +546,7 @@ template<> Encoder::Result InternalEncoder<UTF_7>::doToUnicode(
 			fromNext = from;
 			return MALFORMED_INPUT;
 		}
-		const byte klass = SET_B[*from];
+		const Byte klass = SET_B[*from];
 		if(klass == 2) {
 			// '+'
 			if(from + 1 == fromEnd) {	// the input is terminated by '+'...
@@ -630,7 +630,7 @@ namespace {
 	 * @param[out] the code point of the decoded character
 	 * @return the end of the eaten subsequence
 	 */
-	inline const byte* decodeUTF5Character(const byte* first, const byte* last, CodePoint& cp) /*throw()*/ {
+	inline const Byte* decodeUTF5Character(const Byte* first, const Byte* last, CodePoint& cp) /*throw()*/ {
 		if(*first < 'G' || *first > 'V')
 			return 0;
 		cp = *first - 'G';
@@ -655,7 +655,7 @@ namespace {
 	 * @param[out] toEnd the end of the destination buffer
 	 * @return the end of the eaten subsequence
 	 */
-	inline byte* encodeUTF5Character(const Char* from, const Char* fromEnd, byte* to) {
+	inline Byte* encodeUTF5Character(const Char* from, const Char* fromEnd, Byte* to) {
 #define D2C(n) (mask8Bit(n) < 0x0a) ? (mask8Bit(n) + '0') : (mask8Bit(n) - 0x0a + 'A')
 
 		const CodePoint cp = surrogates::decodeFirst(from, fromEnd);
@@ -710,9 +710,9 @@ namespace {
 } // namespace @0
 
 template<> Encoder::Result InternalEncoder<UTF_5>::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-	byte temp[8];
-	byte* e;
+		Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+	Byte temp[8];
+	Byte* e;
 	for(; to < toEnd && from < fromEnd; ++from) {
 		e = encodeUTF5Character(from, fromEnd, temp);
 		if(e == temp) {
@@ -742,8 +742,8 @@ template<> Encoder::Result InternalEncoder<UTF_5>::doFromUnicode(
 }
 
 template<> Encoder::Result InternalEncoder<UTF_5>::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
-	const byte* e;
+		Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
+	const Byte* e;
 	CodePoint cp;
 	while(to < toEnd && from < fromEnd) {
 		e = decodeUTF5Character(from, fromEnd, cp);
@@ -782,7 +782,7 @@ template<> Encoder::Result InternalEncoder<UTF_5>::doToUnicode(
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 
 namespace {
-	inline const byte* maybeUTF8(const byte* first, const byte* last) /*throw()*/ {
+	inline const Byte* maybeUTF8(const Byte* first, const Byte* last) /*throw()*/ {
 		while(first < last) {
 			if(*first == 0xc0 || *first == 0xc1 || *first >= 0xf5)
 				break;
@@ -791,7 +791,7 @@ namespace {
 		return first;
 	}
 
-	size_t UnicodeDetector(const byte* first, const byte* last, MIBenum& mib) {
+	size_t UnicodeDetector(const Byte* first, const Byte* last, MIBenum& mib) {
 		mib = MIB_UNKNOWN;
 		if(last - first >= 3 && memcmp(first, UTF8_BOM, ASCENSION_COUNTOF(UTF8_BOM)) == 0)
 			mib = fundamental::UTF_8;
@@ -817,7 +817,7 @@ namespace {
 }
 
 /// @see EncodingDetector#doDetect
-pair<MIBenum, string> UnicodeDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/ {
+pair<MIBenum, string> UnicodeDetector::doDetect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/ {
 	const EncodingProperties* result = 0;
 	// first, test Unicode byte order marks
 	if(last - first >= 3 && memcmp(first, UTF8_BOM, ASCENSION_COUNTOF(UTF8_BOM)) == 0)

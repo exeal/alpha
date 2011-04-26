@@ -38,7 +38,7 @@ namespace ascension {
 			HashTable(StringSequence first, StringSequence last, bool caseSensitive);
 			~HashTable() /*throw()*/;
 			template<typename CharacterSequence>
-			static ulong hashCode(CharacterSequence first, CharacterSequence last);
+			static uint32_t hashCode(CharacterSequence first, CharacterSequence last);
 			bool matches(const Char* first, const Char* last) const;
 			size_t maximumLength() const /*throw()*/ {return maxLength_;}
 		private:
@@ -96,9 +96,9 @@ HashTable::~HashTable() /*throw()*/ {
  * @return The hash value
  */
 template<typename CharacterSequence>
-inline ulong HashTable::hashCode(CharacterSequence first, CharacterSequence last) {
+inline uint32_t HashTable::hashCode(CharacterSequence first, CharacterSequence last) {
 	ASCENSION_STATIC_ASSERT(sizeof(*first) == 2);
-	ulong h = 0;
+	uint32_t h = 0;
 	while(first < last) {
 		h *= 2;
 		h += *first;
@@ -1354,7 +1354,7 @@ void LexicalPartitioner::dump() const {
 	for(size_t i = 0; i < partitions_.size(); ++i) {
 		const Partition& p = *partitions_[i];
 		dout << "\t" << p.contentType << " = ("
-			<< static_cast<ulong>(p.start.line) << ", " << static_cast<ulong>(p.start.column) << ")\n";
+			<< static_cast<uint32_t>(p.start.line) << ", " << static_cast<uint32_t>(p.start.column) << ")\n";
 	}
 #endif // _DEBUG
 }

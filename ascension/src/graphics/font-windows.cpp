@@ -10,7 +10,7 @@
 #include <vector>
 
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-#	include <ascension/corelib/unicode.hpp>	// text.isValidCodePoint
+#	include <ascension/corelib/text/unicode.hpp>	// text.isValidCodePoint
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
 using namespace ascension;

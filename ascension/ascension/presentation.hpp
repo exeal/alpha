@@ -496,7 +496,7 @@ namespace ascension {
 		class TextLineColorDirector {
 		public:
 			/// Priority.
-			typedef uchar Priority;
+			typedef uint8_t Priority;
 			/// Destructor.
 			virtual ~TextLineColorDirector() /*throw()*/ {}
 		private:

@@ -176,9 +176,9 @@ namespace ascension {
 				const PathString fileName_;
 				std::ios_base::openmode mode_;
 				struct {
-					const byte* first;
-					const byte* last;
-					const byte* current;
+					const Byte* first;
+					const Byte* last;
+					const Byte* current;
 				} inputMapping_;
 #ifdef ASCENSION_OS_WINDOWS
 				LARGE_INTEGER originalFileEnd_;
