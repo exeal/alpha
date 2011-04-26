@@ -605,7 +605,7 @@ void TextFileStreamBuffer::buildInputMapping() {
 		fileMapping_ = ::CreateFileMappingW(fileHandle_, 0, PAGE_READONLY, 0, 0, 0);
 		if(fileMapping_ == 0)
 			throw IOException(fileName());
-		inputMapping_.first = static_cast<const byte*>(::MapViewOfFile(fileMapping_, FILE_MAP_READ, 0, 0, 0));
+		inputMapping_.first = static_cast<const Byte*>(::MapViewOfFile(fileMapping_, FILE_MAP_READ, 0, 0, 0));
 		if(inputMapping_.first == 0) {
 			SystemErrorSaver ses;
 			::CloseHandle(fileMapping_);
@@ -674,7 +674,7 @@ TextFileStreamBuffer* TextFileStreamBuffer::closeAndDiscard() {
 TextFileStreamBuffer* TextFileStreamBuffer::closeFile() /*throw()*/ {
 #ifdef ASCENSION_OS_WINDOWS
 	if(fileMapping_ != 0) {
-		::UnmapViewOfFile(const_cast<byte*>(inputMapping_.first));
+		::UnmapViewOfFile(const_cast<Byte*>(inputMapping_.first));
 		::CloseHandle(fileMapping_);
 		inputMapping_.first = 0;
 		fileMapping_ = 0;
@@ -827,9 +827,9 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::pbackfail(int_type c) {
 int TextFileStreamBuffer::sync() {
 	// this method converts ucsBuffer_ into the native encoding and writes
 	if(isOpen() && inputMapping_.first == 0 && pptr() > pbase()) {
-		byte* toNext;
+		Byte* toNext;
 		const Char* fromNext;
-		byte nativeBuffer[ASCENSION_COUNTOF(ucsBuffer_)];
+		Byte nativeBuffer[ASCENSION_COUNTOF(ucsBuffer_)];
 		encoder_->setFlags(encoder_->flags() | Encoder::BEGINNING_OF_BUFFER | Encoder::END_OF_BUFFER);
 		while(true) {
 			const Char* const fromEnd = pptr();
@@ -871,7 +871,7 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 		return traits_type::eof();	// not input mode or reached EOF
 
 	Char* toNext;
-	const byte* fromNext;
+	const Byte* fromNext;
 	encoder_->setFlags(encoder_->flags() | Encoder::BEGINNING_OF_BUFFER | Encoder::END_OF_BUFFER);
 	switch(encoder_->toUnicode(ucsBuffer_, ASCENSION_ENDOF(ucsBuffer_), toNext, inputMapping_.current, inputMapping_.last, fromNext)) {
 	case Encoder::UNMAPPABLE_CHARACTER:

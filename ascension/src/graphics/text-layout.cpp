@@ -11,7 +11,7 @@
 #include <ascension/graphics/graphics-windows.hpp>
 //#include <ascension/graphics/special-character-renderer.hpp>
 #include <ascension/corelib/shared-library.hpp>
-#include <ascension/corelib/unicode-property.hpp>
+#include <ascension/corelib/text/unicode-property.hpp>
 #include <ascension/viewer/caret.hpp>	// Caret.isSelectionRectangle, viewers.selectedRangeOnVisualLine
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate
@@ -526,7 +526,7 @@ public:
 		tr1::shared_ptr<const Font> font, OPENTYPE_TAG scriptTag) /*throw()*/;
 	virtual ~TextRun() /*throw()*/;
 	// attributes
-	uchar bidiEmbeddingLevel() const /*throw()*/ {return static_cast<uchar>(analysis_.s.uBidiLevel);}
+	uint8_t bidiEmbeddingLevel() const /*throw()*/ {return static_cast<uchar>(analysis_.s.uBidiLevel);}
 	tr1::shared_ptr<const Font> font() const {return glyphs_->font;}
 	HRESULT logicalAttributes(const String& layoutString, SCRIPT_LOGATTR attributes[]) const;
 	int numberOfGlyphs() const /*throw()*/ {return glyphRange_.length();}
@@ -2148,7 +2148,7 @@ TextAlignment TextLayout::alignment() const /*throw()*/ {
  * @return the embedding level
  * @throw kernel#BadPositionException @a column is greater than the length of the line
  */
-ascension::byte TextLayout::bidiEmbeddingLevel(length_t column) const {
+uint8_t TextLayout::bidiEmbeddingLevel(length_t column) const {
 	if(numberOfRuns_ == 0) {
 		if(column != 0)
 			throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));

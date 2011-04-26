@@ -28,27 +28,27 @@ namespace ascension {
 			/// Creates an invalid @c Color object.
 			Color() /*throw()*/ : valid_(false) {}
 			/// Creates a color value based on RGB values.
-			Color(byte red, byte green, byte blue, byte alpha = 255) /*throw()*/
+			Color(Byte red, Byte green, Byte blue, Byte alpha = 255) /*throw()*/
 				: red_(red << 8), green_(green << 8), blue_(blue << 8), alpha_(alpha << 8), valid_(true) {}
 #ifdef ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI
 			/// Creates an object from Win32 @c COLORREF value.
 			static Color fromCOLORREF(COLORREF value) /*throw()*/ {
 				return Color(
-					static_cast<byte>(value & 0xff),
-					static_cast<byte>((value >> 8) & 0xff),
-					static_cast<byte>((value >> 16) & 0xff));
+					static_cast<Byte>(value & 0xff),
+					static_cast<Byte>((value >> 8) & 0xff),
+					static_cast<Byte>((value >> 16) & 0xff));
 			}
 			/// Returns a win32 @c COLORREF value represents this color.
 			COLORREF asCOLORREF() const /*throw()*/ {return RGB(red(), green(), blue());}
 #endif // ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI
 			/// Returns the blue color component of this color.
-			byte blue() const /*throw()*/ {return blue_ >> 8;}
+			Byte blue() const /*throw()*/ {return blue_ >> 8;}
 			/// Returns the green color component of this color.
-			byte green() const /*throw()*/ {return green_ >> 8;}
+			Byte green() const /*throw()*/ {return green_ >> 8;}
 			/// Returns the red color component of this color.
-			byte red() const /*throw()*/ {return red_ >> 8;}
+			Byte red() const /*throw()*/ {return red_ >> 8;}
 			/// Returns the alpha value of this color.
-			byte alpha() const /*throw()*/ {return alpha_ >> 8;}
+			Byte alpha() const /*throw()*/ {return alpha_ >> 8;}
 			/// Returns @c true if this color is transparent.
 			bool isTransparent() const /**/ {return alpha() == 0;}
 			/// Equality operator.

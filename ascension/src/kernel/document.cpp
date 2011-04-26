@@ -8,7 +8,7 @@
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/kernel/point.hpp>
-#include <ascension/corelib/unicode.hpp>
+#include <ascension/corelib/text/unicode.hpp>
 #include <algorithm>
 #include <limits>	// std.numeric_limits
 

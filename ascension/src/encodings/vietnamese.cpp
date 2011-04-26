@@ -153,14 +153,14 @@ namespace {
 	public:
 		VIQREncoder() /*throw()*/;
 	private:
-		Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext);
-		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext);
+		Result doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext);
+		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext);
 		const EncodingProperties& properties() const /*throw()*/;
 		Encoder& resetDecodingState() /*throw()*/;
 		Encoder& resetEncodingState() /*throw()*/;
 	private:
 		enum {LITERAL_STATE, ENGLISH_STATE, VIETNAMESE_STATE} encodingState_, decodingState_;
-		static const byte CLS = 0x01, COM = 0x5c;
+		static const Byte CLS = 0x01, COM = 0x5c;
 		static auto_ptr<sbcs::BidirectionalMap> table_;
 	};
 	class VIQRFactory : public implementation::EncoderFactoryBase {
@@ -200,9 +200,9 @@ VIQREncoder::VIQREncoder() /*throw()*/ : encodingState_(VIETNAMESE_STATE), decod
 		table_.reset(new sbcs::BidirectionalMap(VISCII_BYTE_TABLE::VALUES));
 }
 
-Encoder::Result VIQREncoder::doFromUnicode(byte* to, byte* toEnd,
-		byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-	static const byte VISCII_TO_VIQR[] =
+Encoder::Result VIQREncoder::doFromUnicode(Byte* to, Byte* toEnd,
+		Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+	static const Byte VISCII_TO_VIQR[] =
 		"\0\001A(?\003\004A(~A^~\007"		"\010\011\012\013\014\015\016\017"
 		"\020\021\022\023Y?\024\025\026"	"\030Y~\031\032\033\034Y.\037"
 		" !\"#$%&'"							"()*+,-./"
@@ -250,7 +250,7 @@ Encoder::Result VIQREncoder::doFromUnicode(byte* to, byte* toEnd,
 		encodingState_ = VIETNAMESE_STATE;
 	}
 	for(; to < toEnd && from < fromEnd; ++from) {
-		byte viscii = table_->toByte(*from);
+		Byte viscii = table_->toByte(*from);
 		if(viscii == sbcs::UNMAPPABLE_BYTE && *from != sbcs::UNMAPPABLE_BYTE) {
 			if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 				continue;
@@ -274,9 +274,9 @@ Encoder::Result VIQREncoder::doFromUnicode(byte* to, byte* toEnd,
 }
 
 Encoder::Result VIQREncoder::doToUnicode(Char* to, Char* toEnd,
-		Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+		Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 	enum {NONE, BREVE, CIRCUMFLEX, HORN, ACUTE, GRAVE, HOOK_ABOVE, TILDE, DOT_BELOW, CAPITAL_D, SMALL_D, DIACRITICALS_COUNT};
-	static const byte MNEMONIC_TABLE[0x80] = {
+	static const Byte MNEMONIC_TABLE[0x80] = {
 		NONE,	NONE,	NONE,	NONE,	NONE,		NONE,	NONE,		NONE,	// 0x00
 		NONE,	NONE,	NONE,	NONE,	NONE,		NONE,	NONE,		NONE,
 		NONE,	NONE,	NONE,	NONE,	NONE,		NONE,	NONE,		NONE,	// 0x10
@@ -294,7 +294,7 @@ Encoder::Result VIQREncoder::doToUnicode(Char* to, Char* toEnd,
 		NONE,	NONE,	NONE,	NONE,	NONE,		NONE,	NONE,		NONE,	// 0x70
 		NONE,	NONE,	NONE,	NONE,	NONE,		NONE,	TILDE,		NONE
 	};
-	static const byte BASE_CHARACTER_TABLE[0x80] = {
+	static const Byte BASE_CHARACTER_TABLE[0x80] = {
 		0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,	// 0x00
 		0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
 		0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
@@ -356,7 +356,7 @@ Encoder::Result VIQREncoder::doToUnicode(Char* to, Char* toEnd,
 		}
 		if(decodingState_ == VIETNAMESE_STATE || (decodingState_ == ENGLISH_STATE && escaped)) {
 			escaped = false;
-			byte mnemonic = BASE_CHARACTER_TABLE[*from];
+			Byte mnemonic = BASE_CHARACTER_TABLE[*from];
 			if(mnemonic != 0x80) {
 				// ... got the base character
 				if(from + 1 == fromEnd) {

@@ -10,8 +10,8 @@
 #ifndef ASCENSION_CARET_HPP
 #define ASCENSION_CARET_HPP
 #include <ascension/kernel/point.hpp>
-#include <ascension/graphics/rendering.hpp>	// graphics.IVisualLinesListener
-#include <ascension/corelib/unicode.hpp>	// text.IdentifierSyntax
+#include <ascension/graphics/rendering.hpp>		// graphics.IVisualLinesListener
+#include <ascension/corelib/text/unicode.hpp>	// text.IdentifierSyntax
 #include <ascension/viewer/caret-observers.hpp>
 #ifdef ASCENSION_COMPILER_GCC
 #	include <unknwn.h>	// IUnknown, OLESTR, ...

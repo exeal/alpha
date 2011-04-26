@@ -406,7 +406,7 @@ namespace ascension {
 					/// Start value of the line number. Default value is 1.
 					length_t startValue;
 					/// Minimum number of digits. Default value is 4.
-					uchar minimumDigits;
+					uint8_t minimumDigits;
 					/// Leading margin in pixels. Default value is 6.
 					int leadingMargin;
 					/// Trailing margin in pixels. Default value is 1.
@@ -427,7 +427,7 @@ namespace ascension {
 					 */
 					graphics::Color borderColor;
 					/// Width of the border. Default value is 1.
-					uchar borderWidth;
+					uint8_t borderWidth;
 					/// Style of the border. Default value is @c SOLID.
 					enum {
 						NONE,			///< No-line.
@@ -449,7 +449,7 @@ namespace ascension {
 					 */
 					bool visible;
 					/// Width of the indicator margin in pixels. Default value is 15.
-					ushort width;
+					unsigned short width;
 					/**
 					 * Background color. Default value is invalid color which is fallbacked to the
 					 * platform-dependent color. On Win32, it is @c COLOR_3DFACE.
@@ -498,7 +498,7 @@ namespace ascension {
 			presentation::Presentation& presentation() /*throw()*/;
 			const presentation::Presentation& presentation() const /*throw()*/;
 			const RulerConfiguration& rulerConfiguration() const /*throw()*/;
-			ulong scrollRate(bool horizontal) const /*throw()*/;
+			unsigned long scrollRate(bool horizontal) const /*throw()*/;
 			void setConfiguration(const Configuration* general,
 				const RulerConfiguration* ruler, bool synchronizeUI);
 			graphics::font::TextRenderer& textRenderer() /*throw()*/;
@@ -521,7 +521,7 @@ namespace ascension {
 			void scroll(int dx, int dy, bool redraw);
 			void scrollTo(int x, int y, bool redraw);
 			void scrollTo(length_t line, bool redraw);
-			void showToolTip(const String& text, ulong timeToWait = -1, ulong timeRemainsVisible = -1);
+			void showToolTip(const String& text, unsigned long timeToWait = -1, unsigned long timeRemainsVisible = -1);
 #ifndef ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
 			HRESULT startTextServices();
 #endif // !ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
@@ -680,13 +680,13 @@ namespace ascension {
 				void update() /*throw()*/;
 				int width() const /*throw()*/;
 			private:
-				uchar maximumDigitsForLineNumbers() const /*throw()*/;
+				uint8_t maximumDigitsForLineNumbers() const /*throw()*/;
 				void recalculateWidth() /*throw()*/;
 				void updateGDIObjects() /*throw()*/;
 				TextViewer& viewer_;
 				RulerConfiguration configuration_;
 				int width_;
-				uchar lineNumberDigitsCache_;
+				uint8_t lineNumberDigitsCache_;
 				win32::Handle<HPEN> indicatorMarginPen_, lineNumbersPen_;
 				win32::Handle<HBRUSH> indicatorMarginBrush_, lineNumbersBrush_;
 				const bool enablesDoubleBuffering_;
@@ -810,15 +810,15 @@ namespace ascension {
 					horizontal.position = vertical.position = 0;
 //					horizontal.rate = vertical.rate = 1;
 				}
-				ulong x() const /*throw()*/ {return horizontal.position/* * horizontal.rate*/;}
-				ulong y() const /*throw()*/ {return vertical.position/* * vertical.rate*/;}
+				unsigned long x() const /*throw()*/ {return horizontal.position/* * horizontal.rate*/;}
+				unsigned long y() const /*throw()*/ {return vertical.position/* * vertical.rate*/;}
 				void resetBars(const TextViewer& viewer, int bars, bool pageSizeChanged) /*throw()*/;
 				void updateVertical(const TextViewer& viewer) /*throw()*/;
 			} scrollInfo_;
 
 			// freeze information
 			struct FreezeInfo {
-				ulong count;								// zero for not frozen
+				unsigned long count;						// zero for not frozen
 				std::pair<length_t, length_t> invalidLines;	// 凍結中に再描画を要求された行。要求が無ければ first == second
 				FreezeInfo() /*throw()*/ : count(0) {invalidLines.first = invalidLines.second = INVALID_INDEX;}
 			} freezeInfo_;
@@ -834,7 +834,7 @@ namespace ascension {
 
 			// input state
 			bool imeCompositionActivated_, imeComposingCharacter_;
-			ulong mouseInputDisabledCount_;
+			unsigned long mouseInputDisabledCount_;
 
 			friend class VisualPoint;
 			friend class VirtualBox;
@@ -1054,7 +1054,7 @@ inline void TextViewer::removeViewportListener(ViewportListener& listener) {view
  * @param horizontal Set @c true for horizontal, @c false for vertical
  * @return The rate
  */
-inline ulong TextViewer::scrollRate(bool horizontal) const /*throw()*/ {
+inline unsigned long TextViewer::scrollRate(bool horizontal) const /*throw()*/ {
 	return 1/*horizontal ? scrollInfo_.horizontal.rate : scrollInfo_.vertical.rate*/;}
 
 /**

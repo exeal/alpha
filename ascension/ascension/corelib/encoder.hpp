@@ -8,7 +8,7 @@
 #define ASCENSION_ENCODER_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_NO_*_ENCODINGS
-#include <ascension/corelib/unicode.hpp>
+#include <ascension/corelib/text/unicode.hpp>
 #include <memory>	// std.auto_ptr
 #include <locale>	// std.locale, std.codecvt
 #include <vector>

@@ -1,6 +1,6 @@
 #!/usr/local/bin/python
 
-# gen-jis-table.py (c) 2008-2010 exeal
+# gen-jis-table.py (c) 2008-2011 exeal
 #
 # Generates the several mapping tables between JIS and UCS at
 # src/encodings/generated/jis.ipp. Two source files are required:
@@ -148,7 +148,7 @@ dump_table(out, x0212_to_ucs, 'Char', UNICODE_REPLACEMENT_CHARACTER)
 out.write('};\n\n')
 
 print('generating UCS to JIS X 0212:1990 mapping table...')
-out.write('\nconst ushort** UCS_TO_JIS_X_0212[256] = {\n')
+out.write('\nconst uint16_t** UCS_TO_JIS_X_0212[256] = {\n')
 dump_table(out, reverse_dictionary(x0212_to_ucs), 'DBCS', NATIVE_REPLACEMENT_BYTES)
 out.write('};\n\n')
 
@@ -158,7 +158,7 @@ dump_table(out, x0208_to_ucs, 'Char', UNICODE_REPLACEMENT_CHARACTER)
 out.write('};\n\n')
 
 print('generating UCS to JIS X 0208:1997 mapping table...')
-out.write('const ushort** const UCS_TO_JIS_X_0208[256] = {\n')
+out.write('const uint16_t** const UCS_TO_JIS_X_0208[256] = {\n')
 dump_table(out, reverse_dictionary(x0208_to_ucs), 'DBCS', NATIVE_REPLACEMENT_BYTES)
 out.write('};\n\n')
 
@@ -168,13 +168,13 @@ dump_table(out, x0213_p1_to_ucs, 'CodePoint', UNICODE_REPLACEMENT_CHARACTER)
 out.write('};\n\n')
 
 print('generating UCS BMP to JIS X 0213:2004 plane 1 mapping table...')
-out.write('const ushort** const UCS_BMP_TO_JIS_X_0213_PLANE_1[256] = {\n')
+out.write('const uint16_t** const UCS_BMP_TO_JIS_X_0213_PLANE_1[256] = {\n')
 ucs_to_x0213_p1 = reverse_dictionary(x0213_p1_to_ucs)
 dump_table(out, ucs_to_x0213_p1, 'DBCS', NATIVE_REPLACEMENT_BYTES)
 out.write('};\n\n')
 
 print('generating UCS SIP to JIS X 0213:2004 plane 1 mapping table...')
-out.write('const ushort** const UCS_SIP_TO_JIS_X_0213_PLANE_1[256] = {\n')
+out.write('const uint16_t** const UCS_SIP_TO_JIS_X_0213_PLANE_1[256] = {\n')
 ucs_to_x0213_p1 = remove_bmp(ucs_to_x0213_p1)
 dump_table(out, ucs_to_x0213_p1, 'DBCS', NATIVE_REPLACEMENT_BYTES)
 out.write('};\n\n')
@@ -185,13 +185,13 @@ dump_table(out, x0213_p2_to_ucs, 'CodePoint', UNICODE_REPLACEMENT_CHARACTER)
 out.write('};\n\n')
 
 print('generating UCS BMP to JIS X 0213:2004 plane 2 mapping table...')
-out.write('const ushort** const UCS_BMP_TO_JIS_X_0213_PLANE_2[256] = {\n')
+out.write('const uint16_t** const UCS_BMP_TO_JIS_X_0213_PLANE_2[256] = {\n')
 ucs_to_x0213_p2 = reverse_dictionary(x0213_p2_to_ucs)
 dump_table(out, ucs_to_x0213_p2, 'DBCS', NATIVE_REPLACEMENT_BYTES)
 out.write('};\n\n')
 
 print('generating UCS SIP to JIS X 0213:2004 plane 2 mapping table...')
-out.write('const ushort** const UCS_SIP_TO_JIS_X_0213_PLANE_2[256] = {\n')
+out.write('const uint16_t** const UCS_SIP_TO_JIS_X_0213_PLANE_2[256] = {\n')
 ucs_to_x0213_p2 = remove_bmp(ucs_to_x0213_p2)
 dump_table(out, ucs_to_x0213_p2, 'DBCS', NATIVE_REPLACEMENT_BYTES)
 out.write('};\n\n')

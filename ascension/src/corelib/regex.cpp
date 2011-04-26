@@ -50,11 +50,13 @@ namespace {
 			CMigemo::Procedure<4>::signature migemoLoad;
 			CMigemo::Procedure<6>::signature migemoSetOperator;
 			if((migemoOpen = get<0>()) && (migemoQuery_ = get<2>())
-					&& (migemoRelease_ = get<3>()) && (migemoLoad = get<4>()) && (migemoSetOperator = get<6>())) {
+					&& (migemoRelease_ = get<3>()) && (migemoLoad = get<4>())
+					&& (migemoSetOperator = get<6>())) {
 				if(0 != (instance_ = migemoOpen(0))) {
 					// load dictionaries
 					size_t directoryLength = dictionaryPathName.length();
-					if(dictionaryPathName[directoryLength - 1] != '/' && dictionaryPathName[directoryLength - 1] != '\\')
+					if(dictionaryPathName[directoryLength - 1] != '/'
+							&& dictionaryPathName[directoryLength - 1] != '\\')
 						++directoryLength;
 					AutoBuffer<char> pathName(new char[directoryLength + 32]);
 					strcpy(pathName.get(), dictionaryPathName.c_str());
@@ -69,11 +71,16 @@ namespace {
 					strcpy(pathName.get() + directoryLength, "han2zen.dat");
 					migemoLoad(instance_, MIGEMO_DICTID_HAN2ZEN, pathName.get());
 					// define some operators
-					migemoSetOperator(instance_, MIGEMO_OPINDEX_OR, const_cast<uchar*>(reinterpret_cast<const uchar*>("|")));
-					migemoSetOperator(instance_, MIGEMO_OPINDEX_NEST_IN, const_cast<uchar*>(reinterpret_cast<const uchar*>("(")));
-					migemoSetOperator(instance_, MIGEMO_OPINDEX_NEST_OUT, const_cast<uchar*>(reinterpret_cast<const uchar*>(")")));
-					migemoSetOperator(instance_, MIGEMO_OPINDEX_SELECT_IN, const_cast<uchar*>(reinterpret_cast<const uchar*>("[")));
-					migemoSetOperator(instance_, MIGEMO_OPINDEX_SELECT_OUT, const_cast<uchar*>(reinterpret_cast<const uchar*>("]")));
+					migemoSetOperator(instance_, MIGEMO_OPINDEX_OR,
+						const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>("|")));
+					migemoSetOperator(instance_, MIGEMO_OPINDEX_NEST_IN,
+						const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>("(")));
+					migemoSetOperator(instance_, MIGEMO_OPINDEX_NEST_OUT,
+						const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(")")));
+					migemoSetOperator(instance_, MIGEMO_OPINDEX_SELECT_IN,
+						const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>("[")));
+					migemoSetOperator(instance_, MIGEMO_OPINDEX_SELECT_OUT,
+						const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>("]")));
 				}
 			}
 		}
@@ -86,15 +93,15 @@ namespace {
 			}
 		}
 		/// @see #query(const Char*, const Char*, size_t&)
-		const uchar* query(const uchar* text) {
+		const unsigned char* query(const unsigned char* text) {
 			if(text == 0)
 				throw invalid_argument("Invalid text.");
 			else if(!isEnable())
 				return 0;
 			if(lastNativePattern_ != 0)
 				migemoRelease_(instance_, lastNativePattern_);
-			lastNativePattern_ = migemoQuery_(instance_, const_cast<uchar*>(text));
-			return reinterpret_cast<uchar*>(lastNativePattern_);
+			lastNativePattern_ = migemoQuery_(instance_, const_cast<unsigned char*>(text));
+			return reinterpret_cast<unsigned char*>(lastNativePattern_);
 		}
 		/**
 		 * Transforms the specified text into the corresponding regular expression.
@@ -116,8 +123,8 @@ namespace {
 				return 0;
 			else {
 				size_t bufferLength = encoder->properties().maximumNativeBytes() * s.length();
-				AutoBuffer<byte> buffer(new byte[bufferLength + 1]);
-				byte* toNext;
+				AutoBuffer<Byte> buffer(new Byte[bufferLength + 1]);
+				Byte* toNext;
 				const Char* fromNext;
 				if(encoding::Encoder::COMPLETED != encoder->fromUnicode(buffer.get(),
 						buffer.get() + bufferLength, toNext,
@@ -135,7 +142,7 @@ namespace {
 			delete[] lastPattern_;
 			lastPattern_ = new Char[outputLength];
 			Char* toNext;
-			const byte* fromNext;
+			const Byte* fromNext;
 			encoder->setSubstitutionPolicy(encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTERS).toUnicode(
 				lastPattern_, lastPattern_ + outputLength, toNext, lastNativePattern_, lastNativePattern_ + nativePatternLength, fromNext);
 			outputLength = toNext - lastPattern_;
@@ -144,7 +151,7 @@ namespace {
 		/// Releases the pattern explicitly.
 		void releasePatterns() throw() {
 			if(lastNativePattern_ != 0) {
-				migemoRelease_(instance_, reinterpret_cast<uchar*>(lastNativePattern_));
+				migemoRelease_(instance_, reinterpret_cast<unsigned char*>(lastNativePattern_));
 				lastNativePattern_ = 0;
 			}
 			delete[] lastPattern_;
@@ -162,7 +169,7 @@ namespace {
 		migemo* instance_;
 		CMigemo::Procedure<2>::signature migemoQuery_;
 		CMigemo::Procedure<3>::signature migemoRelease_;
-		uchar* lastNativePattern_;
+		unsigned char* lastNativePattern_;
 		wchar_t* lastPattern_;
 	};
 	auto_ptr<Migemo> migemoLib;
@@ -377,7 +384,7 @@ Pattern::~Pattern() /*throw()*/ {
 
 bool RegexTraits::unixLineMode = false;
 bool RegexTraits::usesExtendedProperties = false;
-map<const Char*, int, PropertyNameComparer<Char> > RegexTraits::names_;
+map<const Char*, int, PropertyNameComparer> RegexTraits::names_;
 
 void RegexTraits::buildNames() {
 	// POSIX
@@ -476,25 +483,26 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 		return klass;
 
 	if(value != 0) {	// "name=value" or "name:value"
-		int(*valueNameDetector)(const Char*) = 0;
-		const String name(UTF32To16Iterator<>(p1), UTF32To16Iterator<>(value - 1));
-		if(PropertyNameComparer<Char>::compare(name.c_str(), GeneralCategory::LONG_NAME) == 0
-				|| PropertyNameComparer<Char>::compare(name.c_str(), GeneralCategory::SHORT_NAME) == 0)
-			valueNameDetector = GeneralCategory::forName;
-		else if(PropertyNameComparer<Char>::compare(name.c_str(), Block::LONG_NAME) == 0
-				|| PropertyNameComparer<Char>::compare(name.c_str(), Block::SHORT_NAME) == 0)
-			valueNameDetector = Block::forName;
-		else if(PropertyNameComparer<Char>::compare(name.c_str(), Script::LONG_NAME) == 0
-				|| PropertyNameComparer<Char>::compare(name.c_str(), Script::SHORT_NAME) == 0)
-			valueNameDetector = Script::forName;
+		int(*valueNameDetector)(const char_type*) = 0;
+		const basic_string<char_type> name(p1, value - 1);
+		if(PropertyNameComparer::compare(name.c_str(), GeneralCategory::LONG_NAME) == 0
+				|| PropertyNameComparer::compare(name.c_str(), GeneralCategory::SHORT_NAME) == 0)
+			valueNameDetector = &GeneralCategory::forName<char_type>;
+		else if(PropertyNameComparer::compare(name.c_str(), Block::LONG_NAME) == 0
+				|| PropertyNameComparer::compare(name.c_str(), Block::SHORT_NAME) == 0)
+			valueNameDetector = &Block::forName<char_type>;
+		else if(PropertyNameComparer::compare(name.c_str(), Script::LONG_NAME) == 0
+				|| PropertyNameComparer::compare(name.c_str(), Script::SHORT_NAME) == 0)
+			valueNameDetector = &Script::forName<char_type>;
 		if(valueNameDetector != 0) {
-			const int p = valueNameDetector(String(UTF32To16Iterator<>(value), UTF32To16Iterator<>(p2)).c_str());
+			const int p = valueNameDetector(basic_string<char_type>(
+				UTF32To16Iterator<>(value), UTF32To16Iterator<>(p2)).c_str());
 			if(p != NOT_PROPERTY)
 				klass.set(p);
 		}
 	} else {	// only "name" or "value"
 		const String expression((UTF32To16Iterator<>(p1)), UTF32To16Iterator<>(p2));
-		const map<const Char*, int, PropertyNameComparer<Char> >::const_iterator i(names_.find(expression.c_str()));
+		const map<const Char*, int, PropertyNameComparer>::const_iterator i(names_.find(expression.c_str()));
 		if(i != names_.end())
 			klass.set(i->second);
 		else {

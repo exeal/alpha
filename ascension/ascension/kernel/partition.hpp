@@ -22,7 +22,7 @@ namespace ascension {
 		 * Content type of a document partition.
 		 * The values less than 100 are reserved for library internal use.
 		 */
-		typedef ulong ContentType;
+		typedef uint32_t ContentType;
 
 		// special content types
 		const ContentType

@@ -35,10 +35,10 @@ namespace {
 			explicit InternalEncoder(const EncodingProperties& properties) /*throw()*/ : props_(properties) {
 			}
 		private:
-			Result doFromUnicode(byte* to, byte* toEnd, byte*& toNext,
+			Result doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
 				const Char* from, const Char* fromEnd, const Char*& fromNext);
 			Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
-				const byte* from, const byte* fromEnd, const byte*& fromNext);
+				const Byte* from, const Byte* fromEnd, const Byte*& fromNext);
 			const EncodingProperties& properties() const /*throw()*/ {return props_;}
 		private:
 			const EncodingProperties& props_;
@@ -54,7 +54,7 @@ namespace {
 	public:
 		ArmenianDetector() : EncodingDetector("ARMSCIIAutoDetect") {}
 	private:
-		pair<MIBenum, string> doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/;
+		pair<MIBenum, string> doDetect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/;
 	};
 
 	struct Installer {
@@ -71,7 +71,7 @@ namespace {
 
 namespace {
 	const Char RP__CH = REPLACEMENT_CHARACTER;
-	const byte N__A = 0x1a;
+	const Byte N__A = 0x1a;
 	const Char ARMSCII78toUCS_20[] = {
 	/* 0x20 */	0x0020, RP__CH, 0x00a7, 0x0589, 0x0029, 0x0028, 0x00bb, 0x00ab,
 				0x2014, 0x002e, 0x055d, 0x002c, 0x002d, 0x058a, 0x2026, 0x055c,
@@ -87,20 +87,20 @@ namespace {
 				0x0554, 0x0584, 0x0555, 0x0585, 0x0556, 0x0586, 0x055a, 0x007f
 	};
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
-	const byte UCStoARMSCII7_0028[] = {
+	const Byte UCStoARMSCII7_0028[] = {
 					0x25, 0x24, N__A, N__A, 0x2b, 0x2c, 0x29, N__A
 	};
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
-	const byte UCStoARMSCII8_0028[] = {
+	const Byte UCStoARMSCII8_0028[] = {
 					0xa5, 0xa4, 0x2a, 0x2b, 0xab, 0xac, 0xa9, 0x2f
 	};
-	const byte UCStoARMSCII78_00A0[] = {
+	const Byte UCStoARMSCII78_00A0[] = {
 	/* U+00A0 */	0x20, N__A, N__A, N__A, N__A, N__A, N__A, 0x22,
 					N__A, N__A, N__A, 0x27, N__A, N__A, N__A, N__A,
 	/* U+00B0 */	N__A, N__A, N__A, N__A, N__A, N__A, N__A, N__A,
 					N__A, N__A, N__A, 0x26
 	};
-	const byte UCStoARMSCII78_0530[] = {
+	const Byte UCStoARMSCII78_0530[] = {
 	/* U+0530 */	N__A, 0x32, 0x34, 0x36, 0x38, 0x3a, 0x3c, 0x3e,
 					0x40, 0x42, 0x44, 0x46, 0x48, 0x4a, 0x4c, 0x4e,
 	/* U+0540 */	0x50, 0x52, 0x54, 0x56, 0x58, 0x5a, 0x5c, 0x5e,
@@ -114,7 +114,7 @@ namespace {
 	/* U+0580 */	0x71, 0x73, 0x75, 0x77, 0x79, 0x7b, 0x7d, N__A,
 					N__A, 0x23, 0x2D
 	};
-	const byte UCStoARMSCII78_2010[] = {
+	const Byte UCStoARMSCII78_2010[] = {
 	/* U+2010 */	N__A, N__A, N__A, N__A, 0x28, N__A, N__A, N__A,
 					N__A, N__A, N__A, N__A, N__A, N__A, N__A, N__A,
 	/* U+2020 */	N__A, N__A, N__A, N__A, N__A, N__A, 0x2e
@@ -148,12 +148,12 @@ namespace {
 				0x0554, 0x0584, 0x0555, 0x0585, 0x0556, 0x0586, 0x055a, RP__CH
 	};
 
-	const byte UCStoARMSCII8A_00A8[] = {
+	const Byte UCStoARMSCII8A_00A8[] = {
 					N__A, N__A, 0xae, N__A, N__A, N__A, N__A, N__A,
 	/* U+00B0 */	N__A, N__A, N__A, N__A, N__A, N__A, N__A, N__A,
 					N__A, N__A, N__A, 0xaf
 	};
-	const byte UCStoARMSCII8A_0530[] = {
+	const Byte UCStoARMSCII8A_0530[] = {
 	/* U+0530 */	N__A, 0x80, 0x82, 0x84, 0x86, 0x88, 0x8a, 0x8c,
 					0x8e, 0x90, 0x92, 0x94, 0x96, 0x98, 0x9a, 0x9c,
 	/* U+0540 */	0x9e, 0xa0, 0xa2, 0xa4, 0xa6, 0xa8, 0xaa, 0xac,
@@ -167,7 +167,7 @@ namespace {
 	/* U+0580 */	0xf1, 0xf3, 0xf5, 0xf7, 0xf9, 0xfb, 0xfd, 0x3a,
 					N__A, N__A, 0xdd
 	};
-	const byte UCStoARMSCII8A_2010[] = {
+	const Byte UCStoARMSCII8A_2010[] = {
 	/* U+2010 */	N__A, N__A, N__A, N__A, 0x2d, N__A, N__A, N__A,
 					N__A, N__A, N__A, N__A, N__A, N__A, N__A, N__A,
 	/* U+2020 */	N__A, N__A, N__A, N__A, N__A, N__A, 0xde
@@ -194,7 +194,7 @@ template<> ARMSCII<8>::ARMSCII() /*throw()*/ : EncoderFactoryBase("ARMSCII-8", M
 }
 
 template<> Encoder::Result ARMSCII<8>::InternalEncoder::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+		Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x0028) {
 			*to = mask8Bit(*from);
@@ -238,7 +238,7 @@ template<> Encoder::Result ARMSCII<8>::InternalEncoder::doFromUnicode(
 }
 
 template<> Encoder::Result ARMSCII<8>::InternalEncoder::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+		Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0xa1)
 			*to = *from;
@@ -266,7 +266,7 @@ template<> ARMSCII<7>::ARMSCII() /*throw()*/ : EncoderFactoryBase("ARMSCII-7", M
 }
 
 template<> Encoder::Result ARMSCII<7>::InternalEncoder::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+		Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x0028) {
 			*to = mask8Bit(*from);
@@ -308,7 +308,7 @@ template<> Encoder::Result ARMSCII<7>::InternalEncoder::doFromUnicode(
 }
 
 template<> Encoder::Result ARMSCII<7>::InternalEncoder::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+		Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x20)
 			*to = *from;
@@ -334,7 +334,7 @@ template<> ARMSCII<0x8a>::ARMSCII() /*throw()*/ : EncoderFactoryBase("ARMSCII-8A
 }
 
 template<> Encoder::Result ARMSCII<0x8a>::InternalEncoder::doFromUnicode(
-		byte* to, byte* toEnd, byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
+		Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x80) {
 			static const Char invChars[] = {0x0027, 0x003a, 0x005f, 0x0060, 0x007e};
@@ -376,7 +376,7 @@ template<> Encoder::Result ARMSCII<0x8a>::InternalEncoder::doFromUnicode(
 }
 
 template<> Encoder::Result ARMSCII<0x8a>::InternalEncoder::doToUnicode(
-		Char* to, Char* toEnd, Char*& toNext, const byte* from, const byte* fromEnd, const byte*& fromNext) {
+		Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x20)
 			*to = *from;
@@ -405,7 +405,7 @@ template<> Encoder::Result ARMSCII<0x8a>::InternalEncoder::doToUnicode(
 // ArmenianDetector /////////////////////////////////////////////////////////
 
 /// @see EncodingDetector#doDetect
-pair<MIBenum, string> ArmenianDetector::doDetect(const byte* first, const byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/ {
+pair<MIBenum, string> ArmenianDetector::doDetect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/ {
 	// first, check if Unicode
 	if(const EncodingDetector* unicodeDetector = forName("UnicodeAutoDetect")) {
 		ptrdiff_t temp;
@@ -428,7 +428,7 @@ pair<MIBenum, string> ArmenianDetector::doDetect(const byte* first, const byte* 
 	bitset<3> candidates;	// 0:-7, 1:-8, 2:-8A
 	candidates.set();
 	for(; first < last; ++first) {
-		const byte c = *first;
+		const Byte c = *first;
 		if(c >= 0x80)				candidates.reset(0);	// ARMSCII-7 consists of only 7-bits
 		if(c >= 0x80 && c < 0xa0)	candidates.reset(1);	// 8-bit controls (but ARMSCII-8 may contain these)
 		if(c >= 0xb0 && c < 0xdc)	candidates.reset(2);

@@ -1421,7 +1421,7 @@ CharWire<
 };
 
 
-const ushort** UCS_TO_JIS_X_0212[256] = {
+const uint16_t** UCS_TO_JIS_X_0212[256] = {
 DBCSWire<
 	EmptyDBCSLine,
 	EmptyDBCSLine,
@@ -4750,7 +4750,7 @@ CharWire<
 // trail octet range : [\x21-\x7E]
 };
 
-const ushort** const UCS_TO_JIS_X_0208[256] = {
+const uint16_t** const UCS_TO_JIS_X_0208[256] = {
 DBCSWire<
 	EmptyDBCSLine,
 	EmptyDBCSLine,
@@ -7297,7 +7297,7 @@ CodePointWire<
 // trail octet range : [\x21-\x7E]
 };
 
-const ushort** const UCS_BMP_TO_JIS_X_0213_PLANE_1[256] = {
+const uint16_t** const UCS_BMP_TO_JIS_X_0213_PLANE_1[256] = {
 DBCSWire<
 	EmptyDBCSLine,
 	EmptyDBCSLine,
@@ -9548,7 +9548,7 @@ DBCSWire<
 // trail octet range : [\x00-\xFF]
 };
 
-const ushort** const UCS_SIP_TO_JIS_X_0213_PLANE_1[256] = {
+const uint16_t** const UCS_SIP_TO_JIS_X_0213_PLANE_1[256] = {
 DBCSWire<
 	DBCSLine<0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x2E22,0x0000,0x0000,0x0000,0x0000>,
 	EmptyDBCSLine,
@@ -10939,7 +10939,7 @@ CodePointWire<
 // trail octet range : [\x21-\x7E]
 };
 
-const ushort** const UCS_BMP_TO_JIS_X_0213_PLANE_2[256] = {
+const uint16_t** const UCS_BMP_TO_JIS_X_0213_PLANE_2[256] = {
 0,
 0,
 0,
@@ -13054,7 +13054,7 @@ DBCSWire<
 // trail octet range : [\x00-\xFF]
 };
 
-const ushort** const UCS_SIP_TO_JIS_X_0213_PLANE_2[256] = {
+const uint16_t** const UCS_SIP_TO_JIS_X_0213_PLANE_2[256] = {
 DBCSWire<
 	EmptyDBCSLine,
 	EmptyDBCSLine,

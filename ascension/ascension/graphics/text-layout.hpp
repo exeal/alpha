@@ -332,7 +332,7 @@ namespace ascension {
 				~TextLayout() /*throw()*/;
 				// general attributes
 				presentation::TextAnchor anchor() const /*throw()*/;
-				byte bidiEmbeddingLevel(length_t column) const;
+				uint8_t bidiEmbeddingLevel(length_t column) const;
 				bool isBidirectional() const /*throw()*/;
 				bool isEmpty() const /*throw()*/;
 				length_t lineNumber() const /*throw()*/;

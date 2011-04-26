@@ -170,9 +170,9 @@ namespace ascension {
 			virtual ImageData getImageData() const = 0;
 			virtual ImageData putImageData() = 0;
 
-			virtual uint logicalDpiX() const = 0;
-			virtual uint logicalDpiY() const = 0;
-			virtual Dimension<uint> size() const = 0;
+			virtual unsigned int logicalDpiX() const = 0;
+			virtual unsigned int logicalDpiY() const = 0;
+			virtual Dimension<unsigned int> size() const = 0;
 
 			virtual const win32::Handle<HDC>& nativeHandle() const /*throw()*/ = 0;
 

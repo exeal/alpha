@@ -135,9 +135,9 @@ namespace ascension {
 				template<int superCategory> static bool is(int subCategory);
 				static int of(CodePoint c) /*throw()*/;
 			private:
-				static const detail::PropertyPartition VALUES_[];
+				static const detail::CharacterPropertyPartition VALUES_[];
 				static const std::size_t NUMBER_;
-				static const detail::ValueName NAMES_[];
+				static const detail::CharacterPropertyValueName NAMES_[];
 			};
 		
 			/// Code blocks. These values are based on Blocks.txt obtained from UCD.
@@ -155,9 +155,9 @@ namespace ascension {
 				template<typename CharType> static int forName(const CharType* name);
 				static int of(CodePoint c) /*throw()*/;
 			private:
-				static const detail::PropertyPartition VALUES_[];
+				static const detail::CharacterPropertyPartition VALUES_[];
 				static const std::size_t NUMBER_;
-				static const detail::ValueName NAMES_[];
+				static const detail::CharacterPropertyValueName NAMES_[];
 			};
 
 			/**
@@ -203,7 +203,7 @@ namespace ascension {
 				static const CodePoint CHARACTERS_[];
 				static const uint8_t VALUES_[];
 				static const std::size_t NUMBER_;
-				static const detail::ValueName NAMES_[];
+				static const detail::CharacterPropertyValueName NAMES_[];
 			};
 
 			/**
@@ -240,9 +240,9 @@ namespace ascension {
 				template<typename CharType> static int forName(const CharType* name);
 				static int of(CodePoint c) /*throw()*/;
 			private:
-				static const detail::PropertyPartition VALUES_[];
+				static const detail::CharacterPropertyPartition VALUES_[];
 				static const std::size_t NUMBER_;
-				static const detail::ValueName NAMES_[];
+				static const detail::CharacterPropertyValueName NAMES_[];
 			};
 
 			/**
@@ -266,7 +266,7 @@ namespace ascension {
 				template<typename CharType> static int forName(const CharType* name);
 				static int of(CodePoint cp) /*throw()*/;
 			private:
-				static const detail::ValueName NAMES_[];
+				static const detail::CharacterPropertyValueName NAMES_[];
 			};
 			
 			/**
@@ -295,7 +295,7 @@ namespace ascension {
 				template<int property>
 				static bool is(CodePoint cp) /*throw()*/;
 			private:
-				static const detail::ValueName NAMES_[];
+				static const detail::CharacterPropertyValueName NAMES_[];
 #include "src/generated/uprops-binary-property-values-definition"
 			};
 
@@ -317,9 +317,9 @@ namespace ascension {
 				template<typename CharType> static int forName(const CharType* name);
 				static int of(CodePoint c) /*throw()*/;
 			private:
-				static const detail::PropertyPartition VALUES_[];
+				static const detail::CharacterPropertyPartition VALUES_[];
 				static const std::size_t NUMBER_;
-				static const detail::ValueName NAMES_[];
+				static const detail::CharacterPropertyValueName NAMES_[];
 			};
 
 			/**
@@ -379,9 +379,9 @@ namespace ascension {
 				template<typename CharType> static int forName(const CharType* name);
 				static int of(CodePoint c) /*throw()*/;
 			private:
-				static const detail::PropertyPartition VALUES_[];
+				static const detail::CharacterPropertyPartition VALUES_[];
 				static const std::size_t NUMBER_;
-				static const detail::ValueName NAMES_[];
+				static const detail::CharacterPropertyValueName NAMES_[];
 			};
 
 #include "src/generated/uprops-inlines"
@@ -398,7 +398,7 @@ namespace ascension {
 				static const char LONG_NAME[], SHORT_NAME[];
 				static int of(CodePoint cp) /*throw()*/;
 			private:
-				static const detail::ValueName NAMES_[];
+				static const detail::CharacterPropertyValueName NAMES_[];
 			};
 
 			/// Word_Break property. These values are based on UAX #29.
@@ -415,7 +415,7 @@ namespace ascension {
 					const IdentifierSyntax& syntax = IdentifierSyntax(IdentifierSyntax::UNICODE_DEFAULT),
 					const std::locale& lc = std::locale::classic()) /*throw()*/;
 			private:
-				static const detail::ValueName NAMES_[];
+				static const detail::CharacterPropertyValueName NAMES_[];
 			};
 
 			/// Sentence_Break property. These values are based on UAX #29.
@@ -430,7 +430,7 @@ namespace ascension {
 				static const char LONG_NAME[], SHORT_NAME[];
 				static int of(CodePoint cp) /*throw()*/;
 			private:
-				static const detail::ValueName NAMES_[];
+				static const detail::CharacterPropertyValueName NAMES_[];
 			};
 
 			/**
