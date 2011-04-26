@@ -5,6 +5,7 @@
  */
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION
+#include <ascension/corelib/text/identifier-syntax.hpp>
 #include <ascension/corelib/text/unicode-property.hpp>
 #include <vector>
 using namespace ascension;
@@ -13,7 +14,7 @@ using namespace ascension::text::ucd;
 using namespace std;
 
 
-// IdentifierSyntax /////////////////////////////////////////////////////////
+// IdentifierSyntax ///////////////////////////////////////////////////////////////////////////////
 
 /**
  * @class ascension::text::IdentifierSyntax ../unicode.hpp
@@ -125,69 +126,71 @@ const IdentifierSyntax& IdentifierSyntax::defaultInstance() /*throw()*/ {
 
 /**
  * Returns @c true if the specified character is ID_Continue.
- * @param cp The code point of the character
- * @return true if @a cp is identifier continue character
+ * @param c The code point of the character
+ * @return true if @a c is identifier continue character
  */
-bool IdentifierSyntax::isIdentifierContinueCharacter(CodePoint cp) const /*throw()*/ {
-	if(binary_search(addedIDNonStartCharacters_.begin(), addedIDNonStartCharacters_.end(), cp)
-			|| binary_search(addedIDStartCharacters_.begin(), addedIDStartCharacters_.end(), cp))
+bool IdentifierSyntax::isIdentifierContinueCharacter(CodePoint c) const /*throw()*/ {
+	if(binary_search(addedIDNonStartCharacters_.begin(), addedIDNonStartCharacters_.end(), c)
+			|| binary_search(addedIDStartCharacters_.begin(), addedIDStartCharacters_.end(), c))
 		return true;
-	else if(binary_search(subtractedIDStartCharacters_.begin(), subtractedIDStartCharacters_.end(), cp)
-			|| binary_search(subtractedIDNonStartCharacters_.begin(), subtractedIDNonStartCharacters_.end(), cp))
+	else if(binary_search(subtractedIDStartCharacters_.begin(), subtractedIDStartCharacters_.end(), c)
+			|| binary_search(subtractedIDNonStartCharacters_.begin(), subtractedIDNonStartCharacters_.end(), c))
 		return false;
 	switch(type_) {
 	case ASCII:
-		return (cp >= 'A' && cp <= 'Z') || (cp >= 'a' && cp <= 'z') || (cp >= '0' && cp <= '9');
+		return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
 	case LEGACY_POSIX:
-		return legacyctype::isword(cp);
+		return legacyctype::isword(c);
 	case UNICODE_DEFAULT:
-		return BinaryProperty::is<BinaryProperty::ID_CONTINUE>(cp);
+		return BinaryProperty::is<BinaryProperty::ID_CONTINUE>(c);
 	case UNICODE_ALTERNATIVE:
-		return !BinaryProperty::is<BinaryProperty::PATTERN_SYNTAX>(cp) && !BinaryProperty::is<BinaryProperty::PATTERN_WHITE_SPACE>(cp);
+		return !BinaryProperty::is<BinaryProperty::PATTERN_SYNTAX>(c)
+			&& !BinaryProperty::is<BinaryProperty::PATTERN_WHITE_SPACE>(c);
 	}
 	ASCENSION_ASSERT_NOT_REACHED();
 }
 
 /**
  * Returns @c true if the specified character is an ID_Start.
- * @param cp The code point of the character
- * @return true if @a cp is an identifier start character
+ * @param c The code point of the character
+ * @return true if @a c is an identifier start character
  */
-bool IdentifierSyntax::isIdentifierStartCharacter(CodePoint cp) const /*throw()*/ {
-	if(binary_search(addedIDStartCharacters_.begin(), addedIDStartCharacters_.end(), cp))
+bool IdentifierSyntax::isIdentifierStartCharacter(CodePoint c) const /*throw()*/ {
+	if(binary_search(addedIDStartCharacters_.begin(), addedIDStartCharacters_.end(), c))
 		return true;
-	else if(binary_search(subtractedIDStartCharacters_.begin(), subtractedIDStartCharacters_.end(), cp))
+	else if(binary_search(subtractedIDStartCharacters_.begin(), subtractedIDStartCharacters_.end(), c))
 		return false;
 	switch(type_) {
 	case ASCII:
-		return (cp >= 'A' && cp <= 'Z') || (cp >= 'a' && cp <= 'z');
+		return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 	case LEGACY_POSIX:
-		return legacyctype::isalpha(cp);
+		return legacyctype::isalpha(c);
 	case UNICODE_DEFAULT:
-		return BinaryProperty::is<BinaryProperty::ID_START>(cp);
+		return BinaryProperty::is<BinaryProperty::ID_START>(c);
 	case UNICODE_ALTERNATIVE:
-		return !BinaryProperty::is<BinaryProperty::PATTERN_SYNTAX>(cp) && !BinaryProperty::is<BinaryProperty::PATTERN_WHITE_SPACE>(cp);
+		return !BinaryProperty::is<BinaryProperty::PATTERN_SYNTAX>(c)
+			&& !BinaryProperty::is<BinaryProperty::PATTERN_WHITE_SPACE>(c);
 	}
 	ASCENSION_ASSERT_NOT_REACHED();
 }
 
 /**
  * Returns @c true if the specified character is a white space.
- * @param cp The code point of the character
+ * @param c The code point of the character
  * @param includeTab Set @c true to treat a horizontal tab as a white space
- * @return true if @a cp is a white space
+ * @return true if @a c is a white space
  */
-bool IdentifierSyntax::isWhiteSpace(CodePoint cp, bool includeTab) const /*throw()*/ {
-	if(includeTab && cp == 0x0009)
+bool IdentifierSyntax::isWhiteSpace(CodePoint c, bool includeTab) const /*throw()*/ {
+	if(includeTab && c == 0x0009u)
 		return true;
 	switch(type_) {
 	case ASCII:
-		return cp == 0x0020;
+		return c == 0x0020u;
 	case LEGACY_POSIX:
-		return legacyctype::isspace(cp);
+		return legacyctype::isspace(c);
 	case UNICODE_DEFAULT:
 	case UNICODE_ALTERNATIVE:
-		return BinaryProperty::is<BinaryProperty::PATTERN_WHITE_SPACE>(cp);
+		return BinaryProperty::is<BinaryProperty::PATTERN_WHITE_SPACE>(c);
 	}
 	ASCENSION_ASSERT_NOT_REACHED();
 }
