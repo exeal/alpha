@@ -34,8 +34,11 @@ namespace ascension {
 			ASCENSION_NONCOPYABLE_TAG(LiteralPattern);
 		public:
 			// constructors
-			LiteralPattern(const String& pattern, bool caseSensitive = true,
-				std::auto_ptr<const text::Collator> collator = std::auto_ptr<const text::Collator>(0));
+			LiteralPattern(const String& pattern, bool caseSensitive = true
+#ifndef ASCENSION_NO_UNICODE_COLLATION
+				, std::auto_ptr<const text::Collator> collator = std::auto_ptr<const text::Collator>(0)
+#endif // !ASCENSION_NO_UNICODE_COLLATION
+);
 			~LiteralPattern() /*throw()*/;
 			// attributes
 			bool isCaseSensitive() const /*throw()*/;
@@ -43,7 +46,8 @@ namespace ascension {
 			// operations
 			bool matches(const text::CharacterIterator& target) const;
 			bool search(const text::CharacterIterator& target, Direction direction,
-				std::auto_ptr<text::CharacterIterator>& matchedFirst, std::auto_ptr<text::CharacterIterator>& matchedLast) const;
+				std::auto_ptr<text::CharacterIterator>& matchedFirst,
+				std::auto_ptr<text::CharacterIterator>& matchedLast) const;
 		private:
 			void makeShiftTable(Direction direction) /*throw()*/;
 		private:

@@ -7,6 +7,7 @@
 
 #include <ascension/kernel/searcher.hpp>
 #include <ascension/kernel/point.hpp>
+#include <ascension/corelib/text/break-iterator.hpp>
 using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::searcher;
@@ -52,11 +53,15 @@ using namespace std;
  * @param pattern The search pattern
  * @param direction The direction to search
  * @param caseSensitive Set @c true to perform case-sensitive search
- * @param collator The collator or @c null if not needed
+ * @param collator The collator or @c null if not needed. This parameter is not exist if the symbol
+ *                 ASCENSION_NO_UNICODE_COLLATION is defined
  * @throw std#invalid_argument @a pattern is empty
  */
-LiteralPattern::LiteralPattern(const String& pattern, bool caseSensitive /* = true */,
-		auto_ptr<const Collator> collator /* = null */) : pattern_(pattern), caseSensitive_(caseSensitive)
+LiteralPattern::LiteralPattern(const String& pattern, bool caseSensitive /* = true */
+#ifndef ASCENSION_NO_UNICODE_COLLATION
+		, auto_ptr<const Collator> collator /* = null */
+#endif // !ASCENSION_NO_UNICODE_COLLATION
+		) : pattern_(pattern), caseSensitive_(caseSensitive)
 #ifndef ASCENSION_NO_UNICODE_COLLATION
 		, collator_(collator)
 #endif // !ASCENSION_NO_UNICODE_COLLATION
@@ -209,10 +214,14 @@ TextSearcher::TextSearcher() : searchType_(LITERAL),
 
 /**
  * Returns the collation weight level.
- * This feature is not implemented and returns always zero.
+ * @note This feature is not implemented and returns always @c Collator#IDENTICAL (15).
  */
 int TextSearcher::collationWeight() const /*throw()*/ {
+#ifndef ASCENSION_NO_UNICODE_COLLATION
 	return Collator::IDENTICAL;
+#else
+	return 15;
+#endif // !ASCENSION_NO_UNICODE_COLLATION
 }
 
 /// Returns @c false if caseless match is enabled. This setting is obtained from the pattern.
