@@ -94,9 +94,11 @@ namespace ascension {
 		/***/
 		class RegionRule : public Rule {
 		public:
-			RegionRule(Token::Identifier id, const String& startSequence,
-				const String& endSequence, Char escapeCharacter = NONCHARACTER, bool caseSensitive = true);
-			std::auto_ptr<Token> parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
+			RegionRule(Token::Identifier id,
+				const String& startSequence, const String& endSequence,
+				Char escapeCharacter = text::NONCHARACTER, bool caseSensitive = true);
+			std::auto_ptr<Token> parse(const TokenScanner& scanner,
+				const Char* first, const Char* last) const /*throw()*/;
 		private:
 			const String startSequence_, endSequence_;
 			const Char escapeCharacter_;
@@ -107,14 +109,17 @@ namespace ascension {
 		class NumberRule : public Rule {
 		public:
 			explicit NumberRule(Token::Identifier id) /*throw()*/;
-			std::auto_ptr<Token> parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
+			std::auto_ptr<Token> parse(const TokenScanner& scanner,
+				const Char* first, const Char* last) const /*throw()*/;
 		};
 
 		/// A concrete rule detects URI strings.
 		class URIRule : public Rule {
 		public:
-			URIRule(Token::Identifier id, const URIDetector& uriDetector, bool delegateOwnership) /*throw()*/;
-			std::auto_ptr<Token> parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
+			URIRule(Token::Identifier id,
+				const URIDetector& uriDetector, bool delegateOwnership) /*throw()*/;
+			std::auto_ptr<Token> parse(const TokenScanner& scanner,
+				const Char* first, const Char* last) const /*throw()*/;
 		private:
 			detail::StrategyPointer<const URIDetector> uriDetector_;
 		};
@@ -122,10 +127,13 @@ namespace ascension {
 		/// A concrete rule detects the registered words.
 		class WordRule : protected Rule {
 		public:
-			WordRule(Token::Identifier id, const String* first, const String* last, bool caseSensitive = true);
-			WordRule(Token::Identifier id, const Char* first, const Char* last, Char separator, bool caseSensitive = true);
+			WordRule(Token::Identifier id,
+				const String* first, const String* last, bool caseSensitive = true);
+			WordRule(Token::Identifier id,
+				const Char* first, const Char* last, Char separator, bool caseSensitive = true);
 			~WordRule() /*throw()*/;
-			std::auto_ptr<Token> parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
+			std::auto_ptr<Token> parse(const TokenScanner& scanner,
+				const Char* first, const Char* last) const /*throw()*/;
 		private:
 			detail::HashTable* words_;
 		};
@@ -135,7 +143,8 @@ namespace ascension {
 		class RegexRule : public Rule {
 		public:
 			RegexRule(Token::Identifier id, std::auto_ptr<const regex::Pattern> pattern);
-			std::auto_ptr<Token> parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/;
+			std::auto_ptr<Token> parse(const TokenScanner& scanner,
+				const Char* first, const Char* last) const /*throw()*/;
 		private:
 			std::auto_ptr<const regex::Pattern> pattern_;
 		};
@@ -236,7 +245,7 @@ namespace ascension {
 		class LiteralTransitionRule : public TransitionRule {
 		public:
 			LiteralTransitionRule(kernel::ContentType contentType, kernel::ContentType destination,
-				const String& pattern, Char escapeCharacter = NONCHARACTER, bool caseSensitive = true);
+				const String& pattern, Char escapeCharacter = text::NONCHARACTER, bool caseSensitive = true);
 			std::auto_ptr<TransitionRule> clone() const;
 			length_t matches(const String& line, length_t column) const;
 		private:

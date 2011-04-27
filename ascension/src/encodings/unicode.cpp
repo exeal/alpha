@@ -15,6 +15,7 @@
  */
 
 #include <ascension/corelib/encoder.hpp>
+#include <ascension/corelib/text/character.hpp>
 #include <algorithm>	// std.find_if
 using namespace ascension;
 using namespace ascension::encoding;

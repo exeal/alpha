@@ -8,7 +8,8 @@
 #define ASCENSION_ENCODER_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_NO_*_ENCODINGS
-#include <ascension/corelib/text/unicode.hpp>
+#include <ascension/corelib/basic-types.hpp>
+#include <ascension/corelib/string-piece.hpp>
 #include <memory>	// std.auto_ptr
 #include <locale>	// std.locale, std.codecvt
 #include <vector>
@@ -425,7 +426,7 @@ namespace ascension {
 			// factory
 			static EncodingDetector* forName(const std::string& name) /*throw()*/;
 #ifdef ASCENSION_OS_WINDOWS
-			static EncodingDetector* forWindowsCodePage(UINT codePage) /*throw()*/;
+			static EncodingDetector* forWindowsCodePage(unsigned int codePage) /*throw()*/;
 #endif // ASCENSION_OS_WINDOWS
 			template<typename OutputIterator> static void availableNames(OutputIterator out);
 			static void registerDetector(std::auto_ptr<EncodingDetector> newDetector);

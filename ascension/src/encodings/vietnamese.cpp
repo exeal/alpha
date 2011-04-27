@@ -14,6 +14,7 @@
  */
 
 #include <ascension/corelib/encoder.hpp>
+#include <cassert>
 using namespace ascension;
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;

@@ -104,32 +104,6 @@ namespace ascension {
 	typedef std::ptrdiff_t signed_length_t;			///< Signed @c length_t.
 	const length_t INVALID_INDEX = 0xfffffffful;	///< Invalid value of @c length_t.
 
-	/// Code point of LINE FEED (U+000A).
-	const Char LINE_FEED = 0x000au;
-	/// Code point of CARRIAGE RETURN (U+000D).
-	const Char CARRIAGE_RETURN = 0x000du;
-	/// Code point of NEXT LINE (U+0085).
-	const Char NEXT_LINE = 0x0085u;
-	/// Code point of SUBSTITUTE (U+001A).
-	const Char C0_SUBSTITUTE = 0x001au;
-	/// Code point of ZERO WIDTH NON-JOINER (U+200C).
-	const Char ZERO_WIDTH_NON_JOINER = 0x200cu;
-	/// Code point of ZERO WIDTH JOINER (U+200D).
-	const Char ZERO_WIDTH_JOINER = 0x200du;
-	/// Code point of LINE SEPARATOR (U+2028).
-	const Char LINE_SEPARATOR = 0x2028u;
-	/// Code point of PARAGRAPH SEPARATOR (U+2029).
-	const Char PARAGRAPH_SEPARATOR = 0x2029u;
-	/// Code point of REPLACEMENT CHARACTER (U+FFFD).
-	const Char REPLACEMENT_CHARACTER = 0xfffdu;
-	/// Code point of non-character (U+FFFF).
-	const Char NONCHARACTER = 0xffffu;
-	/// Invalid code point value.
-	const CodePoint INVALID_CODE_POINT = 0xfffffffful;
-	/// Set of newline characters.
-	/// @see kernel#Newline
-	const Char NEWLINE_CHARACTERS[] = {LINE_FEED, CARRIAGE_RETURN, NEXT_LINE, LINE_SEPARATOR, PARAGRAPH_SEPARATOR};
-
 	/// Returns @c true if the given floating-point numbers are (approximately) equal.
 	inline bool equals(double n1, double n2, double epsilon = 1.0e-5) {return std::abs(n1 - n2) <= epsilon;}
 

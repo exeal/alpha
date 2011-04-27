@@ -13,6 +13,7 @@
 
 #include <ascension/corelib/basic-types.hpp>	// CodePoint, ASCENSION_STATIC_ASSERT
 #include <cassert>								// assert
+#include <iterator>								// std.*_iterator
 #include <stdexcept>							// std.invalid_argument
 
 #if ASCENSION_UNICODE_VERSION > 0x0510

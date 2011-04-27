@@ -11,10 +11,12 @@
 
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 #include <ascension/corelib/encoder.hpp>
+#include <ascension/corelib/text/character.hpp>	// text.REPLACEMENT_CHARACTER
 #include <algorithm>	// std.binary_search
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 #include <bitset>
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
+#include <cassert>
 
 using namespace ascension;
 using namespace ascension::encoding;
@@ -70,7 +72,7 @@ namespace {
 } // namespace @0
 
 namespace {
-	const Char RP__CH = REPLACEMENT_CHARACTER;
+	const Char RP__CH = text::REPLACEMENT_CHARACTER;
 	const Byte N__A = 0x1a;
 	const Char ARMSCII78toUCS_20[] = {
 	/* 0x20 */	0x0020, RP__CH, 0x00a7, 0x0589, 0x0029, 0x0028, 0x00bb, 0x00ab,
@@ -242,7 +244,7 @@ template<> Encoder::Result ARMSCII<8>::InternalEncoder::doToUnicode(
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0xa1)
 			*to = *from;
-		else if(ARMSCII78toUCS_20[*from - 0x20 - 0x80] != REPLACEMENT_CHARACTER)
+		else if(ARMSCII78toUCS_20[*from - 0x20 - 0x80] != text::REPLACEMENT_CHARACTER)
 			*to = ARMSCII78toUCS_20[*from - 0x20 - 0x80];
 		else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 			--to;
@@ -312,7 +314,8 @@ template<> Encoder::Result ARMSCII<7>::InternalEncoder::doToUnicode(
 	for(; to < toEnd && from < fromEnd; ++to, ++from) {
 		if(*from < 0x20)
 			*to = *from;
-		else if(*from < 0x20 + ASCENSION_COUNTOF(ARMSCII78toUCS_20) && ARMSCII78toUCS_20[*from - 0x20] != REPLACEMENT_CHARACTER)
+		else if(*from < 0x20 + ASCENSION_COUNTOF(ARMSCII78toUCS_20)
+				&& ARMSCII78toUCS_20[*from - 0x20] != text::REPLACEMENT_CHARACTER)
 			*to = ARMSCII78toUCS_20[*from - 0x20];
 		else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 			--to;
@@ -384,7 +387,7 @@ template<> Encoder::Result ARMSCII<0x8a>::InternalEncoder::doToUnicode(
 			*to = ARMSCII8AtoUCS_20[*from - 0x20];
 		else
 			*to = ARMSCII8AtoUCS_D8[*from - 0xd8];
-		if(*to == REPLACEMENT_CHARACTER) {
+		if(*to == text::REPLACEMENT_CHARACTER) {
 			if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 				--to;
 			else if(substitutionPolicy() == DONT_SUBSTITUTE) {

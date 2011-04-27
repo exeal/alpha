@@ -77,6 +77,7 @@
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 
 #include <ascension/corelib/encoder.hpp>
+#include <ascension/corelib/text/character.hpp>
 #include <memory>		// std.auto_ptr
 #include <map>
 #include <algorithm>	// std.binary_search

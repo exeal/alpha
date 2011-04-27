@@ -9,6 +9,7 @@
 #define ASCENSION_SEARCHER_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_COLLATION, ASCENSION_NO_REGEX, ...
+#include <ascension/corelib/text/collator.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #ifndef ASCENSION_NO_REGEX
 #	include <ascension/corelib/regex.hpp>

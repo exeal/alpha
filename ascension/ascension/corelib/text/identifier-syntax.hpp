@@ -9,7 +9,7 @@
 #define ASCENSION_IDENTIFIER_SYNTAX_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_NORMALIZATION
-#include <ascension/corelib/text/unicode.hpp>
+#include <ascension/corelib/text/character.hpp>
 #include <ascension/corelib/text/unicode-utf.hpp>	// UTF16To32Iterator
 #include <set>
 
