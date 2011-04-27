@@ -4,6 +4,7 @@
  * @date 2005-2011
  */
 
+#include <ascension/corelib/character-iterator.hpp>
 #include <ascension/corelib/text/unicode-property.hpp>
 using namespace ascension;
 using namespace ascension::text;

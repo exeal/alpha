@@ -10,6 +10,7 @@
  */
 
 #include <ascension/corelib/encoder.hpp>
+#include <ascension/corelib/text/character.hpp>	// text.REPLACEMENT_CHARACTER
 using namespace ascension;
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
@@ -118,14 +119,14 @@ template<> Encoder::Result InternalEncoder<UHC>::doToUnicode(
 		} else {	// double byte character
 			if(const uint16_t** const wire = UHC_TO_UCS[mask8Bit(*from)]) {
 				const Char ucs = wireAt(wire, mask8Bit(from[1]));
-				if(ucs != REPLACEMENT_CHARACTER) {
+				if(ucs != text::REPLACEMENT_CHARACTER) {
 					*(to++) = ucs;
 					from += 2;
 					continue;
 				}
 			}
 			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS) {
-				*(to++) = REPLACEMENT_CHARACTER;
+				*(to++) = text::REPLACEMENT_CHARACTER;
 				from += 2;
 			} else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 				from += 2;
@@ -194,14 +195,14 @@ template<> Encoder::Result InternalEncoder<EUC_KR>::doToUnicode(
 				return MALFORMED_INPUT;
 			} else if(const uint16_t** const wire = UHC_TO_UCS[mask8Bit(*from)]) {
 				const Char ucs = wireAt(wire, mask8Bit(from[1]));
-				if(ucs != REPLACEMENT_CHARACTER) {
+				if(ucs != text::REPLACEMENT_CHARACTER) {
 					*(to++) = ucs;
 					from += 2;
 					continue;
 				}
 			}
 			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS) {
-				*(to++) = REPLACEMENT_CHARACTER;
+				*(to++) = text::REPLACEMENT_CHARACTER;
 				from += 2;
 			} else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 				from += 2;
@@ -321,14 +322,14 @@ template<> Encoder::Result InternalEncoder<ISO_2022_KR>::doToUnicode(
 				return MALFORMED_INPUT;
 			} else if(const uint16_t** const wire = UHC_TO_UCS[mask8Bit(*from + 0x80)]) {
 				const Char ucs = wireAt(wire, mask8Bit(from[1] + 0x80));
-				if(ucs != REPLACEMENT_CHARACTER) {
+				if(ucs != text::REPLACEMENT_CHARACTER) {
 					*(to++) = ucs;
 					from += 2;
 					continue;
 				}
 			}
 			if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS) {
-				*(to++) = REPLACEMENT_CHARACTER;
+				*(to++) = text::REPLACEMENT_CHARACTER;
 				from += 2;
 			} else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 				from += 2;

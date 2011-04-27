@@ -6,6 +6,8 @@
 
 #include <ascension/corelib/encoder.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>
+#include <ascension/corelib/memory.hpp>			// AutoBuffer
+#include <ascension/corelib/text/character.hpp>	// text.isScalarValue
 #include <algorithm>
 using namespace ascension;
 using namespace ascension::encoding;
@@ -471,7 +473,7 @@ EncodingDetector* EncodingDetector::forName(const string& name) /*throw()*/ {
  * @param codePage The code page
  * @return The encoding detector or @c null if not registered
  */
-EncodingDetector* EncodingDetector::forWindowsCodePage(UINT codePage) /*throw()*/ {
+EncodingDetector* EncodingDetector::forWindowsCodePage(unsigned int codePage) /*throw()*/ {
 	switch(codePage) {
 	case 50001:	return forName("UniversalAutoDetect");
 	case 50932:	return forName("JISAutoDetect");
@@ -615,7 +617,7 @@ namespace {
 				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 					--to;
 				else if(substitutionPolicy() == REPLACE_UNMAPPABLE_CHARACTERS)
-					*to = REPLACEMENT_CHARACTER;
+					*to = text::REPLACEMENT_CHARACTER;
 				else {
 					toNext = to;
 					fromNext = from;
@@ -784,7 +786,7 @@ namespace {
 			Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
 		for(; to < toEnd && from < fromEnd; ++to, ++from) {
 			*to = table_.toCharacter(*from);
-			if(*to == REPLACEMENT_CHARACTER) {
+			if(*to == text::REPLACEMENT_CHARACTER) {
 				if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
 					--to;
 				else if(substitutionPolicy() != REPLACE_UNMAPPABLE_CHARACTERS) {

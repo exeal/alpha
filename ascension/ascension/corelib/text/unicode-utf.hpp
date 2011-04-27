@@ -5,15 +5,15 @@
  * @date 2005-2010 (was unicode.hpp)
  * @date 2010 (was character-iterator.hpp)
  * @date 2011
- * @see unicode.hpp, unicode-surrogates.hpp
+ * @see character.hpp, unicode-surrogates.hpp
  */
 
 #ifndef ASCENSION_UNICODE_UTF_HPP
 #define ASCENSION_UNICODE_UTF_HPP
 
 #include <ascension/corelib/basic-exceptions.hpp>	// IllegalStateException
-#include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/type-traits.hpp>		// detail.Select
+#include <ascension/corelib/text/character.hpp>
 #include <ascension/corelib/text/unicode-surrogates.hpp>
 #include <iterator>
 

@@ -16,6 +16,7 @@
 #include <ascension/corelib/memory.hpp>		// FastArenaObject
 #include <ascension/corelib/standard-iterator-adapter.hpp>	// detail.IteratorAdapter
 #include <ascension/corelib/string-piece.hpp>
+#include <ascension/corelib/text/character.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/kernel/partition.hpp>
 #ifdef ASCENSION_OS_POSIX
@@ -415,7 +416,7 @@ namespace ascension {
 		} // namespace positions
 
 
-// inline implementation ////////////////////////////////////////////////////
+// inline implementation //////////////////////////////////////////////////////////////////////////
 
 /**
  * Returns the number of lines in the specified character sequence.
@@ -430,14 +431,14 @@ inline length_t calculateNumberOfLines(ForwardIterator first, ForwardIterator la
 		return 0;
 	length_t lines = 1;
 	while(true) {
-		first = std::find_first_of(first, last, NEWLINE_CHARACTERS, ASCENSION_ENDOF(NEWLINE_CHARACTERS));
+		first = std::find_first_of(first, last, text::NEWLINE_CHARACTERS, ASCENSION_ENDOF(text::NEWLINE_CHARACTERS));
 		if(first == last)
 			break;
 		++lines;
-		if(*first == CARRIAGE_RETURN) {
+		if(*first == text::CARRIAGE_RETURN) {
 			if(++first == last)
 				break;
-			else if(*first == LINE_FEED)
+			else if(*first == text::LINE_FEED)
 				++first;
 		} else
 			++first;

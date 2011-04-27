@@ -12,6 +12,7 @@
 #include <vector>
 using namespace ascension;
 using namespace ascension::kernel;
+using namespace ascension::text;
 using namespace std;
 
 
