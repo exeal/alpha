@@ -53,7 +53,7 @@ namespace ascension {
 			 * @param excludeTurkishI Set @c true to perform "Turkish I mapping"
 			 * @return The case-folded character
 			 */
-			static CodePoint CaseFolder::fold(CodePoint c, bool excludeTurkishI = false) /*throw()*/ {
+			static CodePoint fold(CodePoint c, bool excludeTurkishI = false) /*throw()*/ {
 				CodePoint result;
 				// Turkish I
 				if(excludeTurkishI && c != (result = foldTurkishI(c)))
