@@ -6,7 +6,6 @@
 
 #include <ascension/kernel/point.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
-#include <ascension/session.hpp>
 #include <ascension/corelib/text/break-iterator.hpp>
 #include <ascension/corelib/text/unicode-property.hpp>	// text.ucd.BinaryProperty
 using namespace ascension;
