@@ -554,11 +554,11 @@ template<> inline bool BinaryProperty::is<BinaryProperty::ID_CONTINUE>(CodePoint
 	if(is<BinaryProperty::ID_START>(cp))
 		return true;
 	const int gc = GeneralCategory::of(cp);
-	return gc == GeneralCategory::NONSPACING_MARK
+	return (gc == GeneralCategory::NONSPACING_MARK
 		|| gc == GeneralCategory::SPACING_MARK
 		|| gc == GeneralCategory::DECIMAL_NUMBER
 		|| gc == GeneralCategory::CONNECTOR_PUNCTUATION
-		|| is<OTHER_ID_CONTINUE>(cp)
+		|| is<OTHER_ID_CONTINUE>(cp))
 		&& !is<PATTERN_SYNTAX>(cp) && !is<PATTERN_WHITE_SPACE>(cp);}
 
 /// Specialization to implement Lowercase property.
@@ -581,7 +581,7 @@ template<> inline bool BinaryProperty::is<BinaryProperty::UPPERCASE>(CodePoint c
 
 /// Returns the Hangul_Syllable_Type property value of @a cp.
 inline int HangulSyllableType::of(CodePoint c) /*throw()*/ {
-	if(c >= 0x1100u && c <= 0x1159u || c == 0x115fu)
+	if((c >= 0x1100u && c <= 0x1159u) || c == 0x115fu)
 		return LEADING_JAMO;
 	else if(c >= 0x1160u && c <= 0x11a2u)
 		return VOWEL_JAMO;
