@@ -22,6 +22,7 @@ using namespace ascension::kernel;
 using namespace ascension::kernel::fileio;
 using namespace ascension::encoding;
 using namespace std;
+using text::Newline;
 
 
 // free function //////////////////////////////////////////////////////////////////////////////////
@@ -186,7 +187,7 @@ namespace {
 	 * @throw std#invalid_argument @a newline is not allowed or not a literal value
 	 */
 	void verifyNewline(const string& encoding, Newline newline) {
-		if(newline == NLF_NEXT_LINE || newline == NLF_LINE_SEPARATOR || newline == NLF_PARAGRAPH_SEPARATOR) {
+		if(newline == text::NLF_NEXT_LINE || newline == text::NLF_LINE_SEPARATOR || newline == text::NLF_PARAGRAPH_SEPARATOR) {
 			auto_ptr<Encoder> encoder(Encoder::forName(encoding));
 			if(encoder.get() == 0)
 				throw UnsupportedEncodingException("the specified encoding is not supported.");
