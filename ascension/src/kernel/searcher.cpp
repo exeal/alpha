@@ -39,8 +39,8 @@ using namespace std;
  * Japanese direct search is available if all of the following conditions are true:
  *
  * - Regular expressions are available
- * - The configuration symbol @c ASCENSION_NO_MIGEMO
- * - Succeeded to load C/Migemo library
+ * - The configuration symbol @c ASCENSION_NO_MIGEMO is not defined
+ * - Succeeded to load C/Migemo library at runtime
  *
  * For the details, see the description of @c regex#MigemoPattern class.
  */
