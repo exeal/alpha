@@ -186,9 +186,17 @@ ReadOnlyDocumentException::ReadOnlyDocumentException() :
 	IllegalStateException("The document is readonly. Any edit process is denied.") {
 }
 
+/// Destructor.
+ReadOnlyDocumentException::~ReadOnlyDocumentException() throw() {
+}
+
 /// Default constructor.
 DocumentAccessViolationException::DocumentAccessViolationException() :
 	invalid_argument("The specified position or region is inaccessible.") {
+}
+
+/// Destructor.
+DocumentAccessViolationException::~DocumentAccessViolationException() throw() {
 }
 
 /// Constructor.
@@ -886,6 +894,7 @@ void Document::unlock(const void* locker) {
  * Informs the document change to the adapting points.
  * @param change The document change
  */
+
 inline void Document::updatePoints(const DocumentChange& change) /*throw()*/ {
 	for(set<Point*>::iterator i = points_.begin(); i != points_.end(); ++i) {
 		if((*i)->adaptsToDocument())

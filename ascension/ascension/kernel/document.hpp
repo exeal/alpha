@@ -115,6 +115,7 @@ namespace ascension {
 		class ReadOnlyDocumentException : public DocumentCantChangeException, public IllegalStateException {
 		public:
 			ReadOnlyDocumentException();
+			~ReadOnlyDocumentException() throw();
 		};
 
 		/**
@@ -124,6 +125,7 @@ namespace ascension {
 		class DocumentAccessViolationException : public DocumentCantChangeException, public std::invalid_argument {
 		public:
 			DocumentAccessViolationException();
+			~DocumentAccessViolationException() throw();
 		};
 
 		/**
