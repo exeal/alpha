@@ -8,11 +8,12 @@
 
 #ifndef ASCENSION_GAP_VECTOR_HPP
 #define ASCENSION_GAP_VECTOR_HPP
+#include <algorithm>	// std.fill_n, std.max, std.swap
 #include <cassert>
+#include <cstring>		// std.memmove
 #include <memory>		// std.allocator, std.uninitialized_copy
 #include <iterator>		// std.iterator, ...
 #include <stdexcept>	// std.out_of_range
-#include <algorithm>
 
 namespace ascension {
 	namespace detail {
@@ -85,7 +86,7 @@ namespace ascension {
 			 */
 			GapVector(const GapVector& other) : allocator_(other.allocator_),
 					first_(allocator_.allocate(last_ - first_)), last_(first_ + (other.last_ - other.first_)),
-					gapFirst_(first_ + (other.gapFirst_ - other.first_)), gapLast_(first_ + (other.gapLast_ - rhs.first_)) {
+					gapFirst_(first_ + (other.gapFirst_ - other.first_)), gapLast_(first_ + (other.gapLast_ - other.first_)) {
 				std::uninitialized_copy(other.first_, other.gapFirst_, first_);
 				std::uninitialized_copy(other.gapLast_, other.last_, gapFirst_);
 			}
