@@ -453,16 +453,21 @@ class CodeGenerator(object):
     def _process_decomposition_mappings(self):
         canonical_mappings, compatibility_mappings = [], []
 
-        def code_point_to_cpp_escape_sequence(cp):
+        def code_point_to_utf_16(cp):
             cp = int(cp, 16)
             if cp < 0x10000:
-                return r'\x%x' % cp
+                return (cp,)
             else:
-                return r'\x%x\x%x' % (((cp >> 10) & 0xffff) + 0xd7c0, (cp & 0x03ff) | 0xdc00)
+                return (((cp >> 10) & 0xffff) + 0xd7c0, (cp & 0x03ff) | 0xdc00)
 
-        def code_point_sequence_to_cpp_literal(s):
-            return 'L"' + ''.join([code_point_to_cpp_escape_sequence(x) for x in s.split()]) + '"'
-            
+        def code_sequence_to_utf_16(cs):
+            result = []
+            for c in cs.split():
+                result.extend(code_point_to_utf_16(c))
+            return result
+
+        def utf_16_to_cpp_literal(a):
+            return ','.join(('static_cast<ascension::Char>(0x%x)' % code_unit) for code_unit in a)
 
         class ContentHandler(xml.sax.ContentHandler):
             def __init__(self, out):
@@ -489,7 +494,7 @@ class CodeGenerator(object):
                         first_cp, last_cp = int(attributes.getValue('first_cp'), 16), int(attributes.getValue('last_cp'), 16)
                     mappings = (canonical_mappings, compatibility_mappings)[dt != 'can']
                     for c in range(first_cp, last_cp + 1):
-                        mappings.append((c, code_point_sequence_to_cpp_literal(dm)))
+                        mappings.append((c, code_sequence_to_utf_16(dm)))
                 elif name == 'group':
                     if 'dt' in attributes:
                         self._current_dt = attributes.getValue('dt')
@@ -507,16 +512,23 @@ class CodeGenerator(object):
         out = self._open_output_file('decomposition-mapping-table')
         canonical_mappings.sort()
         compatibility_mappings.sort()
+        canonical_mappings_offsets, compatibility_mappings_offsets = [0], [0]
+        for m in canonical_mappings:
+            canonical_mappings_offsets.append(canonical_mappings_offsets[-1] + len(m[1]))
+        for m in compatibility_mappings:
+            compatibility_mappings_offsets.append(compatibility_mappings_offsets[-1] + len(m[1]))
         out.write('#ifndef ASCENSION_NO_UNICODE_NORMALIZATION\n'
                   + r'const CodePoint CANONICAL_MAPPING_SOURCE[] = {')
         out.write(','.join([r'0x%x' % x[0] for x in canonical_mappings]))
-        out.write('};\nconst Char* const CANONICAL_MAPPING_DESTINATION[] = {')
-        out.write(','.join([x[1] for x in canonical_mappings]))
+        out.write('};\nconst Char CANONICAL_MAPPING_DESTINATION[] = {')
+        out.write(','.join([utf_16_to_cpp_literal(x[1]) for x in canonical_mappings]))
+        out.write('};\nconst std::ptrdiff_t CANONICAL_MAPPINGS_OFFSETS[] = {' + ','.join(str(x) for x in canonical_mappings_offsets))
         out.write('};\n#ifndef ASCENSION_NO_UNICODE_COMPATIBILITY_MAPPING\n'
                   + r'const CodePoint COMPATIBILITY_MAPPING_SOURCE[] = {')
         out.write(','.join([r'0x%x' % x[0] for x in compatibility_mappings]))
-        out.write('};\nconst Char* const COMPATIBILITY_MAPPING_DESTINATION[] = {')
-        out.write(','.join([x[1] for x in compatibility_mappings]))
+        out.write('};\nconst Char COMPATIBILITY_MAPPING_DESTINATION[] = {')
+        out.write(','.join([utf_16_to_cpp_literal(x[1]) for x in compatibility_mappings]))
+        out.write('};\nconst std::ptrdiff_t COMPATIBILITY_MAPPINGS_OFFSETS[] = {' + ','.join(str(x) for x in compatibility_mappings_offsets))
         out.write('};\n#endif // !ASCENSION_NO_UNICODE_COMPATIBILITY_MAPPING\n'
                   + '#endif // !ASCENSION_NO_UNICODE_NORMALIZATION\n')
         print('...Processed canonical mappings (%d).' % len(canonical_mappings))

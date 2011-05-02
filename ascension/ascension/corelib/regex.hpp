@@ -11,6 +11,7 @@
 #ifndef ASCENSION_REGEX_HPP
 #define ASCENSION_REGEX_HPP
 
+#include <ascension/corelib/memory.hpp>				// AutoBuffer
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/case-folder.hpp>
 #include <ascension/corelib/text/unicode-property.hpp>
@@ -173,9 +174,9 @@ namespace ascension {
 			}
 			char_type translate(char_type c) const {
 				if(unixLineMode)
-					return (c == LINE_FEED) ? LINE_SEPARATOR : c;
-				return (c < 0x10000ul && std::binary_search(NEWLINE_CHARACTERS,
-					ASCENSION_ENDOF(NEWLINE_CHARACTERS), static_cast<Char>(c & 0xffffu))) ? LINE_SEPARATOR : c;
+					return (c == text::LINE_FEED) ? text::LINE_SEPARATOR : c;
+				return (c < 0x10000ul && std::binary_search(text::NEWLINE_CHARACTERS,
+					ASCENSION_ENDOF(text::NEWLINE_CHARACTERS), static_cast<Char>(c & 0xffffu))) ? text::LINE_SEPARATOR : c;
 			}
 			char_type translate_nocase(char_type c) const {return text::CaseFolder::fold(translate(c));}
 			string_type transform(const char_type* p1, const char_type* p2) const {return collator_->transform(p1, p2);}
