@@ -215,7 +215,143 @@ namespace ascension {
 
 	namespace regex {
 
-		class Pattern;
+		/// Unchecked exception thrown to indicate a syntax error in a regular-expression pattern.
+		class PatternSyntaxException : public std::invalid_argument {
+			ASCENSION_UNASSIGNABLE_TAG(PatternSyntaxException);
+		public:
+			/// Error types (corresponds to @c boost#regex_constants#error_type).
+			enum Code {
+				NOT_ERROR,						///< Not an error.
+				INVALID_COLLATION_CHARACTER,	///< An invalid collating element was specified in a [[.name.]] block.
+				INVALID_CHARACTER_CLASS_NAME,	///< An invalid character class name was specified in a [[:name:]] block.
+				TRAILING_BACKSLASH,				///< An invalid or trailing escape was encountered.
+				INVALID_BACK_REFERENCE,			///< A back-reference to a non-existant marked sub-expression was encountered.
+				UNMATCHED_BARCKET,				///< An invalid character set [...] was encounted.
+				UNMATCHED_PAREN,				///< Mismatched '(' abd ')'.
+				UNMATCHED_BRACE,				///< Mismatched '{' and '}'.
+				INVALID_CONTENT_OF_BRACES,		///< Invalid contents of a {...} block.
+				INVALID_RANGE_END,				///< A character range was invalid, for example [d-a].
+				MEMORY_EXHAUSTED,				///< Out of memory.
+				INVALID_REPEATITION,			///< An attempt to repeat something that can not be repeated - for example a*+.
+				TOO_COMPLEX_REGULAR_EXPRESSION,	///< The expression became too complex to handle.
+				STACK_OVERFLOW,					///< Out of program stack space.
+				UNKNOWN_ERROR					///< Other unspecified errors.
+			};
+			/// Constructor.
+			PatternSyntaxException(const boost::regex_error& src, const String& pattern);
+			/// Destructor.
+			~PatternSyntaxException() throw() {}
+			/// Retrieves the error code.
+			Code getCode() const;
+			/// Retrieves the description of the error.
+			std::string getDescription() const;
+			/// Retrieves the error index.
+			std::ptrdiff_t getIndex() const {return impl_.position();}
+			/// Retrieves the erroneous regular-expression pattern.
+			String getPattern() const /*throw()*/ {return pattern_;}
+		private:
+			const boost::regex_error impl_;
+			const String pattern_;
+		};
+		
+		template<typename CodePointIterator> class Matcher;
+
+		// the documentation is regex.cpp
+		class Pattern {
+			ASCENSION_UNASSIGNABLE_TAG(Pattern);
+		public:
+			enum {
+				UNIX_LINES = 0x01,			///< Enables Unix lines mode (not implemented).
+				CASE_INSENSITIVE = 0x02,	///< Enables case-insensitive matching.
+				COMMENTS = 0x04,			///< Permits whitespace and comments in pattern.
+				MULTILINE = 0x08,			///< Enables multiline mode.
+				LITERAL = 0x10,				///< Enables literal parsing of the pattern.
+				DOTALL = 0x20,				///< Enables dotall mode.
+				UNICODE_CASE = 0x40,		///< Enables Unicode-aware case folding (not implemented).
+				CANON_EQ = 0x80				///< Enables canonical equivalence (not implemented).
+			};
+		public:
+			virtual ~Pattern() /*throw()*/;
+
+			/**
+			 * Returns this pattern's match flags.
+			 * @return The match flags specified when this pattern was compiled
+			 */
+			int flags() const /*throw()*/ {return flags_;}
+			/**
+			 * Returns the regular expression from which this pattern was compiled.
+			 * @return The source of this pattern
+			 */
+			String pattern() const {
+				const std::basic_string<CodePoint> s(impl_.str());
+				return String(text::UTF32To16Iterator<>(s.data()), text::UTF32To16Iterator<>(s.data() + s.length()));
+			}
+
+			/**
+			 * Compiles the given regular expression into a pattern with the given flags.
+			 * @param regex The expression to be compiled
+			 * @param flags Match flags
+			 * @throw UnknownValueException Bit values other than those corresponding to the
+			 *                              defined match flags are set in @a flags
+			 * @throw PatternSyntaxException The expression's syntax is invalid
+			 */
+			static std::auto_ptr<const Pattern> compile(const StringPiece& regex, int flags = 0) {
+				return std::auto_ptr<const Pattern>(new Pattern(regex, flags));
+			}
+			/**
+			 * Creates a matcher that will match the given input against this pattern.
+			 * @tparam CodePointIterator A type of the input character sequence
+			 * @param first The beginning of the character sequence to be matched
+			 * @param last The end of the character sequence to be matched
+			 * @return A new matcher for this pattern
+			 */
+			template<typename CodePointIterator>
+			std::auto_ptr<Matcher<CodePointIterator> > matcher(CodePointIterator first, CodePointIterator last) const {
+				return std::auto_ptr<Matcher<CodePointIterator> >(new Matcher<CodePointIterator>(*this, first, last));
+			}
+
+			/**
+			 * Compiles the given regular expression and attempts to match the given input against it.
+			 * An invocation of this convenience method of the form
+			 * @code
+			 * Pattern.matches(regex, input);
+			 * @endcode
+			 * behaves in exactly the same way as the expression
+			 * @code
+			 * Pattern.compile(regex).matcher(input).matches()
+			 * @endcode
+			 * If a pattern is to be used multiple times, compiling it once and reusing it will be
+			 * more efficient than invoking this method each time.
+			 * @param regex the expression to be compiled
+			 * @param input the character sequence to be matched
+			 * @throw PatternSyntaxException the expression's syntax is invalid
+			 */
+			static bool matches(const StringPiece& regex, const StringPiece& input) {
+				return matches(regex,
+					text::StringCharacterIterator(input), text::StringCharacterIterator(input, input.end()));
+			}
+			/**
+			 * Compiles the given regular expression and attempts to match the given input against it.
+			 * @param regex the expression to be compiled
+			 * @param first the character sequence to be matched
+			 * @param last the end of @a first
+
+			 * @throw PatternSyntaxException the expression's syntax is invalid
+			 */
+			template<typename CodePointIterator>
+			static bool matches(const StringPiece& regex, CodePointIterator first, CodePointIterator last) {
+				return compile(regex)->matcher(first, last)->matches();
+			}
+//			template<typename CodePointIterator, typename OutputIterator>
+//			std::size_t split(CodePointIteratorfirst, CodePointIteratorlast, OutputIterator out, std::size_t limit = -1);
+		protected:
+			Pattern(const StringPiece& regex, boost::regex_constants::syntax_option_type nativeSyntax);
+		private:
+			Pattern(const StringPiece& regex, int flags);
+			boost::basic_regex<CodePoint, detail::RegexTraits> impl_;
+			const int flags_;
+			template<typename CodePointIterator> friend class Matcher;
+		};
 
 		// the documentation is regex.cpp
 		template<typename CodePointIterator>
@@ -583,141 +719,6 @@ namespace ascension {
 			bool matchedZeroWidth_;	// true if the previous performance matched a zero width subsequence
 			bool usesAnchoringBounds_, usesTransparentBounds_;
 			friend class Pattern;
-		};
-
-		/// Unchecked exception thrown to indicate a syntax error in a regular-expression pattern.
-		class PatternSyntaxException : public std::invalid_argument {
-			ASCENSION_UNASSIGNABLE_TAG(PatternSyntaxException);
-		public:
-			/// Error types (corresponds to @c boost#regex_constants#error_type).
-			enum Code {
-				NOT_ERROR,						///< Not an error.
-				INVALID_COLLATION_CHARACTER,	///< An invalid collating element was specified in a [[.name.]] block.
-				INVALID_CHARACTER_CLASS_NAME,	///< An invalid character class name was specified in a [[:name:]] block.
-				TRAILING_BACKSLASH,				///< An invalid or trailing escape was encountered.
-				INVALID_BACK_REFERENCE,			///< A back-reference to a non-existant marked sub-expression was encountered.
-				UNMATCHED_BARCKET,				///< An invalid character set [...] was encounted.
-				UNMATCHED_PAREN,				///< Mismatched '(' abd ')'.
-				UNMATCHED_BRACE,				///< Mismatched '{' and '}'.
-				INVALID_CONTENT_OF_BRACES,		///< Invalid contents of a {...} block.
-				INVALID_RANGE_END,				///< A character range was invalid, for example [d-a].
-				MEMORY_EXHAUSTED,				///< Out of memory.
-				INVALID_REPEATITION,			///< An attempt to repeat something that can not be repeated - for example a*+.
-				TOO_COMPLEX_REGULAR_EXPRESSION,	///< The expression became too complex to handle.
-				STACK_OVERFLOW,					///< Out of program stack space.
-				UNKNOWN_ERROR					///< Other unspecified errors.
-			};
-			/// Constructor.
-			PatternSyntaxException(const boost::regex_error& src, const String& pattern);
-			/// Destructor.
-			~PatternSyntaxException() throw() {}
-			/// Retrieves the error code.
-			Code getCode() const;
-			/// Retrieves the description of the error.
-			std::string getDescription() const;
-			/// Retrieves the error index.
-			std::ptrdiff_t getIndex() const {return impl_.position();}
-			/// Retrieves the erroneous regular-expression pattern.
-			String getPattern() const /*throw()*/ {return pattern_;}
-		private:
-			const boost::regex_error impl_;
-			const String pattern_;
-		};
-
-		// the documentation is regex.cpp
-		class Pattern {
-			ASCENSION_UNASSIGNABLE_TAG(Pattern);
-		public:
-			enum {
-				UNIX_LINES = 0x01,			///< Enables Unix lines mode (not implemented).
-				CASE_INSENSITIVE = 0x02,	///< Enables case-insensitive matching.
-				COMMENTS = 0x04,			///< Permits whitespace and comments in pattern.
-				MULTILINE = 0x08,			///< Enables multiline mode.
-				LITERAL = 0x10,				///< Enables literal parsing of the pattern.
-				DOTALL = 0x20,				///< Enables dotall mode.
-				UNICODE_CASE = 0x40,		///< Enables Unicode-aware case folding (not implemented).
-				CANON_EQ = 0x80				///< Enables canonical equivalence (not implemented).
-			};
-		public:
-			virtual ~Pattern() /*throw()*/;
-
-			/**
-			 * Returns this pattern's match flags.
-			 * @return The match flags specified when this pattern was compiled
-			 */
-			int flags() const /*throw()*/ {return flags_;}
-			/**
-			 * Returns the regular expression from which this pattern was compiled.
-			 * @return The source of this pattern
-			 */
-			String pattern() const {
-				const std::basic_string<CodePoint> s(impl_.str());
-				return String(text::UTF32To16Iterator<>(s.data()), text::UTF32To16Iterator<>(s.data() + s.length()));
-			}
-
-			/**
-			 * Compiles the given regular expression into a pattern with the given flags.
-			 * @param regex The expression to be compiled
-			 * @param flags Match flags
-			 * @throw UnknownValueException Bit values other than those corresponding to the
-			 *                              defined match flags are set in @a flags
-			 * @throw PatternSyntaxException The expression's syntax is invalid
-			 */
-			static std::auto_ptr<const Pattern> compile(const StringPiece& regex, int flags = 0) {
-				return std::auto_ptr<const Pattern>(new Pattern(regex, flags));
-			}
-			/**
-			 * Creates a matcher that will match the given input against this pattern.
-			 * @tparam CodePointIterator A type of the input character sequence
-			 * @param first The beginning of the character sequence to be matched
-			 * @param last The end of the character sequence to be matched
-			 * @return A new matcher for this pattern
-			 */
-			template<typename CodePointIterator>
-			std::auto_ptr<Matcher<CodePointIterator> > matcher(CodePointIterator first, CodePointIterator last) const {
-				return std::auto_ptr<Matcher<CodePointIterator> >(new Matcher<CodePointIterator>(*this, first, last));
-			}
-
-			/**
-			 * Compiles the given regular expression and attempts to match the given input against it.
-			 * An invocation of this convenience method of the form
-			 * @code
-			 * Pattern.matches(regex, input);
-			 * @endcode
-			 * behaves in exactly the same way as the expression
-			 * @code
-			 * Pattern.compile(regex).matcher(input).matches()
-			 * @endcode
-			 * If a pattern is to be used multiple times, compiling it once and reusing it will be
-			 * more efficient than invoking this method each time.
-			 * @param regex the expression to be compiled
-			 * @param input the character sequence to be matched
-			 * @throw PatternSyntaxException the expression's syntax is invalid
-			 */
-			static bool matches(const StringPiece& regex, const StringPiece& input) {
-				return matches(regex,
-					text::StringCharacterIterator(input), text::StringCharacterIterator(input, input.end()));
-			}
-			/**
-			 * Compiles the given regular expression and attempts to match the given input against it.
-			 * @param regex the expression to be compiled
-			 * @param first the character sequence to be matched
-			 * @param last the end of @a first
-			 * @throw PatternSyntaxException the expression's syntax is invalid
-			 */
-			template<typename CodePointIterator>
-			static bool matches(const StringPiece& regex, CodePointIterator first, CodePointIterator last) {
-				return compile(regex)->matcher(first, last)->matches();
-			}
-//			template<typename CodePointIterator, typename OutputIterator>
-//			std::size_t split(CodePointIteratorfirst, CodePointIteratorlast, OutputIterator out, std::size_t limit = -1);
-		protected:
-			Pattern(const StringPiece& regex, boost::regex_constants::syntax_option_type nativeSyntax);
-		private:
-			Pattern(const StringPiece& regex, int flags);
-			boost::basic_regex<CodePoint, detail::RegexTraits> impl_;
-			const int flags_;
-			template<typename CodePointIterator> friend class Matcher;
 		};
 
 #ifndef ASCENSION_NO_MIGEMO
