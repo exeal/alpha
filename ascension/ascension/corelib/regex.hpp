@@ -726,7 +726,7 @@ namespace ascension {
 		class MigemoPattern : public Pattern {
 			ASCENSION_UNASSIGNABLE_TAG(MigemoPattern);
 		public:
-			static std::auto_ptr<MigemoPattern> compile(const StringPiece& pattern, bool caseSensitive);
+			static std::auto_ptr<const MigemoPattern> compile(const StringPiece& pattern, bool caseSensitive);
 			static void initialize(const char* runtimePathName, const char* dictionaryPathName);
 			static bool isMigemoInstalled() /*throw()*/;
 		private:

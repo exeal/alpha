@@ -381,7 +381,8 @@ inline bool checkBoundary(const DocumentCharacterIterator& first, const Document
 		case TextSearcher::MATCH_GRAPHEME_CLUSTER: {
 			const GraphemeBreakIterator<DocumentCharacterIterator> bi(first);
 			return bi.isBoundary(first) && bi.isBoundary(last);
-		} case TextSearcher::MATCH_WORD: {
+		}
+		case TextSearcher::MATCH_WORD: {
 			const Document& document = *first.document();
 			const WordBreakIterator<DocumentCharacterIterator> bi1(first, AbstractWordBreakIterator::START_OF_SEGMENT,
 				document.contentTypeInformation().getIdentifierSyntax(document.partitioner().contentType(first.tell())));
@@ -391,8 +392,9 @@ inline bool checkBoundary(const DocumentCharacterIterator& first, const Document
 				document.contentTypeInformation().getIdentifierSyntax(document.partitioner().contentType(last.tell())));
 			return bi2.isBoundary(last);
 		}
+		default:
+			return true;
 	}
-	return true;
 }
 
 /**
@@ -489,7 +491,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 					} catch(const DocumentInput::ChangeRejectedException&) {
 						throw ReplacementInterruptedException<DocumentInput::ChangeRejectedException>(numberOfReplacements);
 					} catch(const bad_alloc& e) {
-						throw ReplacementInterruptedException<bad_alloc>(e.what(), numberOfReplacements);
+						throw ReplacementInterruptedException<bad_alloc>(numberOfReplacements);
 					}
 					i.seek(e);
 					i.setRegion(Region(scope.beginning(), endOfScope));
@@ -564,7 +566,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 					} catch(const DocumentInput::ChangeRejectedException&) {
 						throw ReplacementInterruptedException<DocumentInput::ChangeRejectedException>(numberOfReplacements);
 					} catch(const bad_alloc& e) {
-						throw ReplacementInterruptedException<bad_alloc>(e.what(), numberOfReplacements);
+						throw ReplacementInterruptedException<bad_alloc>(numberOfReplacements);
 					}
 					if(!matchedRegion.isEmpty())
 						next = matchedRegion.beginning();
