@@ -10,13 +10,12 @@
 
 #include <ascension/config.hpp>				// ASCENSION_DEFAULT_NEWLINE
 #include <ascension/corelib/basic-exceptions.hpp>
-#include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/gap-vector.hpp>	// detail.GapVector
 #include <ascension/corelib/listeners.hpp>
 #include <ascension/corelib/memory.hpp>		// FastArenaObject
 #include <ascension/corelib/standard-iterator-adapter.hpp>	// detail.IteratorAdapter
 #include <ascension/corelib/string-piece.hpp>
-#include <ascension/corelib/text/character.hpp>
+#include <ascension/corelib/text/newline.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/kernel/partition.hpp>
 #ifdef ASCENSION_OS_POSIX
@@ -47,34 +46,8 @@ namespace ascension {
 		class Document;
 
 		/**
-		 * Value represents a newline in document. @c NLF_RAW_VALUE and @c NLF_DOCUMENT_INPUT are
-		 * special values indicate how to interpret newlines during any text I/O.
-		 * @see newlineStringLength, newlineString, Document, ASCENSION_DEFAULT_NEWLINE,
-		 *      NEWLINE_CHARACTERS
-		 */
-		enum Newline {
-			/// Line feed. Standard of Unix (Lf, U+000A).
-			NLF_LINE_FEED = 0,
-			/// Carriage return. Old standard of Macintosh (Cr, U+000D).
-			NLF_CARRIAGE_RETURN,
-			/// CR+LF. Standard of Windows (CrLf, U+000D U+000A).
-			NLF_CR_LF,
-			/// Next line. Standard of EBCDIC-based OS (U+0085).
-			NLF_NEXT_LINE,
-			/// Line separator (U+2028).
-			NLF_LINE_SEPARATOR,
-			/// Paragraph separator (U+2029).
-			NLF_PARAGRAPH_SEPARATOR,
-			/// Represents any NLF as the actual newline of the line (@c Document#Line#newline()).
-			NLF_RAW_VALUE,
-			/// Represents any NLF as the value of @c IDocumentInput#newline().
-			NLF_DOCUMENT_INPUT,
-			NLF_COUNT
-		};
-
-		/**
 		 * A changed content of the document.
-		 * @see IDocumentListener, PositionUpdater
+		 * @see DocumentListener, PositionUpdater
 		 */
 		class DocumentChange {
 			ASCENSION_NONCOPYABLE_TAG(DocumentChange);
@@ -152,8 +125,8 @@ namespace ascension {
 			/// Returns a string represents the location of the document input or an empty string.
 			virtual String location() const /*throw()*/ = 0;
 			/// Returns the default newline of the document. The returned value can be neighter
-			/// @c NLF_RAW_VALUE nor @c NLF_DOCUMENT_INPUT.
-			virtual Newline newline() const /*throw()*/ = 0;
+			/// @c text#NLF_RAW_VALUE nor @c text#NLF_DOCUMENT_INPUT.
+			virtual text::Newline newline() const /*throw()*/ = 0;
 		private:
 			virtual bool isChangeable(const Document& document) const /*throw()*/ = 0;
 			virtual void postFirstDocumentChange(const Document& document) /*throw()*/ = 0;
@@ -226,16 +199,16 @@ namespace ascension {
 			class Line : public FastArenaObject<Line> {
 			public:
 				/// Returns the newline of the line.
-				Newline newline() const /*throw()*/ {return newline_;}
+				text::Newline newline() const /*throw()*/ {return newline_;}
 				/// Returns the revision number when this last was changed previously.
 				std::size_t revisionNumber() const /*throw()*/ {return revisionNumber_;}
 				/// Returns the text of the line.
 				const String& text() const /*throw()*/ {return text_;}
 			private:
 				explicit Line(std::size_t revisionNumber) /*throw()*/;
-				Line(std::size_t revisionNumber, const String& text, Newline newline = ASCENSION_DEFAULT_NEWLINE);
+				Line(std::size_t revisionNumber, const String& text, text::Newline newline = ASCENSION_DEFAULT_NEWLINE);
 				String text_;
-				Newline newline_;
+				text::Newline newline_;
 				std::size_t revisionNumber_;
 				friend class Document;
 			};
@@ -278,10 +251,10 @@ namespace ascension {
 			// contents
 			Region accessibleRegion() const /*throw()*/;
 			const Line& getLineInformation(length_t line) const;
-			length_t length(Newline newline = NLF_RAW_VALUE) const;
+			length_t length(text::Newline newline = text::NLF_RAW_VALUE) const;
 			const String& line(length_t line) const;
 			length_t lineLength(length_t line) const;
-			length_t lineOffset(length_t line, Newline newline = NLF_RAW_VALUE) const;
+			length_t lineOffset(length_t line, text::Newline newline = text::NLF_RAW_VALUE) const;
 			length_t numberOfLines() const /*throw()*/;
 			Region region() const /*throw()*/;
 			std::size_t revisionNumber() const /*throw()*/;
@@ -388,14 +361,6 @@ namespace ascension {
 		};
 #endif
 
-		// free functions about newlines
-		template<typename ForwardIterator> length_t calculateNumberOfLines(ForwardIterator first, ForwardIterator last);
-		length_t calculateNumberOfLines(const String& text) /*throw()*/;
-		template<typename ForwardIterator> Newline eatNewline(ForwardIterator first, ForwardIterator last);
-		bool isLiteralNewline(Newline newline);
-		const Char* newlineString(Newline newline);
-		length_t newlineStringLength(Newline newline);
-
 		// free functions to change document
 		void erase(Document& document, const Region& region);
 		void erase(Document& document, const Position& first, const Position& second);
@@ -404,7 +369,7 @@ namespace ascension {
 
 		// other free functions related to document
 		std::basic_ostream<Char>& writeDocumentToStream(std::basic_ostream<Char>& out,
-			const Document& document, const Region& region, Newline newline = NLF_RAW_VALUE);
+			const Document& document, const Region& region, text::Newline newline = text::NLF_RAW_VALUE);
 
 		namespace positions {
 			length_t absoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart);
@@ -420,59 +385,6 @@ namespace ascension {
 
 // inline implementation //////////////////////////////////////////////////////////////////////////
 
-/**
- * Returns the number of lines in the specified character sequence.
- * This method is exception-neutral (does not throw if @a ForwardIterator does not).
- * @param first the beginning of the character sequence
- * @param last the end of the character sequence
- * @return the number of lines. zero if and only if the input sequence is empty
- */
-template<typename ForwardIterator>
-inline length_t calculateNumberOfLines(ForwardIterator first, ForwardIterator last) {
-	if(first == last)
-		return 0;
-	length_t lines = 1;
-	while(true) {
-		first = std::find_first_of(first, last, text::NEWLINE_CHARACTERS, ASCENSION_ENDOF(text::NEWLINE_CHARACTERS));
-		if(first == last)
-			break;
-		++lines;
-		if(*first == text::CARRIAGE_RETURN) {
-			if(++first == last)
-				break;
-			else if(*first == text::LINE_FEED)
-				++first;
-		} else
-			++first;
-	}
-	return lines;
-}
-
-/**
- * Returns the number of lines in the specified text.
- * @param text the text string
- * @return the number of lines
- */
-inline length_t calculateNumberOfLines(const String& text) /*throw()*/ {return calculateNumberOfLines(text.begin(), text.end());}
-
-/**
- * Returns the newline at the beginning of the specified buffer.
- * @param first the beginning of the buffer
- * @param last the end of the buffer
- * @return the newline or @c NLF_RAW_VALUE if the beginning of the buffer is not line break
- */
-template<typename ForwardIterator>
-inline Newline eatNewline(ForwardIterator first, ForwardIterator last) {
-	switch(*first) {
-	case LINE_FEED:				return NLF_LINE_FEED;
-	case CARRIAGE_RETURN:		return (++first != last && *first == LINE_FEED) ? NLF_CR_LF : NLF_CARRIAGE_RETURN;
-	case NEXT_LINE:				return NLF_NEXT_LINE;
-	case LINE_SEPARATOR:		return NLF_LINE_SEPARATOR;
-	case PARAGRAPH_SEPARATOR:	return NLF_PARAGRAPH_SEPARATOR;
-	default:					return NLF_RAW_VALUE;
-	}
-}
-
 /// Calls @c Document#replace.
 inline void erase(Document& document, const Region& region) {return document.replace(region, 0, 0);}
 
@@ -486,67 +398,6 @@ inline void insert(Document& document, const Position& at, const StringPiece& te
 /// Calls @c Document#replace.
 inline void insert(Document& document, const Position& at, std::basic_istream<Char>& in,
 	Position* endOfInsertedString /* = 0 */) {return document.replace(Region(at), in, endOfInsertedString);}
-
-/**
- * Returns @c true if the given newline value is a literal.
- * @throw UnknownValueException @a newline is invalid (undefined value)
- */
-inline bool isLiteralNewline(Newline newline) /*throw()*/ {
-#if NLF_LINE_FEED != 0 //|| NLF_COUNT != 8
-#	error "Check the definition of Newline and revise this code."
-#endif
-	if(newline < NLF_LINE_FEED || newline >= NLF_COUNT)
-		throw UnknownValueException("newline");
-	return newline <= NLF_PARAGRAPH_SEPARATOR;
-}
-
-/**
- * Returns the null-terminated string represents the specified newline.
- * @param newline the newline
- * @return the string
- * @throw std#invalid_argument @a newline is not a literal value
- * @throw UnknownValueException @a newline is undefined
- * @see #newlineStringLength
- */
-inline const Char* newlineString(Newline newline) {
-	switch(newline) {
-	case NLF_LINE_FEED:				return L"\n";
-	case NLF_CARRIAGE_RETURN:		return L"\r";
-	case NLF_CR_LF:					return L"\r\n";
-	case NLF_NEXT_LINE:				return L"\x0085";
-	case NLF_LINE_SEPARATOR:		return L"\x2028";
-	case NLF_PARAGRAPH_SEPARATOR:	return L"\x2029";
-	default:
-		if(newline < NLF_COUNT)		throw std::invalid_argument("newline");
-		else						throw UnknownValueException("newline");
-	}
-}
-
-/**
- * Returns the length of the string represents the specified newline.
- * @param newline the newline
- * @return the length
- * @throw std#invalid_argument @a newline is not a literal value
- * @throw UnknownValueException @a newline is undefined
- * @see #newlineString
- */
-inline length_t newlineStringLength(Newline newline) {
-	switch(newline) {
-	case NLF_LINE_FEED:
-	case NLF_CARRIAGE_RETURN:
-	case NLF_NEXT_LINE:
-	case NLF_LINE_SEPARATOR:
-	case NLF_PARAGRAPH_SEPARATOR:
-		return 1;
-	case NLF_CR_LF:
-		return 2;
-	default:
-		if(newline < NLF_COUNT)
-			throw std::invalid_argument("newline");
-		else
-			throw UnknownValueException("newline");
-	}
-}
 
 /// Returns @c true if the given position is outside of the document.
 inline bool positions::isOutsideOfDocumentRegion(const Document& document, const Position& position) /*throw()*/ {
