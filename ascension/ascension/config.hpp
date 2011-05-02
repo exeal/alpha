@@ -26,9 +26,9 @@
  */
 #ifndef ASCENSION_DEFAULT_NEWLINE
 #	ifdef _WIN32
-#		define ASCENSION_DEFAULT_NEWLINE ascension::kernel::NLF_CR_LF
+#		define ASCENSION_DEFAULT_NEWLINE ascension::text::NLF_CR_LF
 #	else
-#		define ASCENSION_DEFAULT_NEWLINE ascension::kernel::NLF_LINE_FEED
+#		define ASCENSION_DEFAULT_NEWLINE ascension::text::NLF_LINE_FEED
 #	endif
 #endif	// !ASCENSION_DEFAULT_NEWLINE
 
