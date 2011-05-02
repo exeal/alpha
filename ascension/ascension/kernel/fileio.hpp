@@ -41,7 +41,7 @@ namespace ascension {
 				/// The the encoding name.
 				std::string encoding;
 				/// The newline.
-				Newline newline;
+				text::Newline newline;
 				/// The substituion policy of encoding.
 				encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy;
 				/// Set @c true to write a UTF byte order signature. This member is ignored if the
@@ -235,12 +235,12 @@ namespace ascension {
 				void write(const WritingFormat& format, const WritingOption* options = 0);
 				// encodings
 				TextFileDocumentInput& setEncoding(const std::string& encoding);
-				TextFileDocumentInput& setNewline(Newline newline);
+				TextFileDocumentInput& setNewline(text::Newline newline);
 				bool unicodeByteOrderMark() const /*throw()*/;
 				// DocumentInput
 				std::string encoding() const /*throw()*/;
 				String location() const /*throw()*/;
-				Newline newline() const /*throw()*/;
+				text::Newline newline() const /*throw()*/;
 			private:
 				bool verifyTimeStamp(bool internal, Time& newTimeStamp) /*throw()*/;
 				// DocumentInput
@@ -258,7 +258,7 @@ namespace ascension {
 				PathString fileName_;
 				std::string encoding_;
 				bool unicodeByteOrderMark_;
-				Newline newline_;
+				text::Newline newline_;
 				std::size_t savedDocumentRevision_;
 				Time userLastWriteTime_, internalLastWriteTime_;
 				LockMode desiredLockMode_;
@@ -367,7 +367,7 @@ namespace ascension {
 			/// Returns the document.
 			inline const Document& TextFileDocumentInput::document() const /*throw()*/ {return document_;}
 
-			/// @see IDocumentInput#encoding, #setEncoding
+			/// @see DocumentInput#encoding, #setEncoding
 			inline std::string TextFileDocumentInput::encoding() const /*throw()*/ {return encoding_;}
 
 			/// Returns the file full name or an empty string if the document is not bound to any of the files.
@@ -376,8 +376,8 @@ namespace ascension {
 			/// Returns true if the document is bound to any file.
 			inline bool TextFileDocumentInput::isBoundToFile() const /*throw()*/ {return !fileName_.empty();}
 
-			/// @see IDocumentInput#newline, #setNewline
-			inline Newline TextFileDocumentInput::newline() const /*throw()*/ {return newline_;}
+			/// @see DocumentInput#newline, #setNewline
+			inline text::Newline TextFileDocumentInput::newline() const /*throw()*/ {return newline_;}
 
 			/// Returns true if the last opened input file contained Unicode byte order mark, or wrote BOM into
 			/// the last output file.
