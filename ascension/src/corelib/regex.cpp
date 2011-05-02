@@ -552,15 +552,15 @@ MigemoPattern::MigemoPattern(const StringPiece& pattern, bool caseSensitive) :
  * @param caseSensitive Set @c true to enable case-sensitive match
  * @return The pattern or @c null if Migemo is not installed
  */
-auto_ptr<MigemoPattern> MigemoPattern::compile(const StringPiece& pattern, bool caseSensitive) {
+auto_ptr<const MigemoPattern> MigemoPattern::compile(const StringPiece& pattern, bool caseSensitive) {
 	install();
 	if(isMigemoInstalled()) {
 		size_t len;
 		const Char* const p = migemoLib->query(pattern, len);
 		using namespace boost::regex_constants;
-		return auto_ptr<MigemoPattern>(new MigemoPattern(StringPiece(p, len), caseSensitive));
+		return auto_ptr<const MigemoPattern>(new MigemoPattern(StringPiece(p, len), caseSensitive));
 	} else
-		return auto_ptr<MigemoPattern>();
+		return auto_ptr<const MigemoPattern>();
 }
 
 /**

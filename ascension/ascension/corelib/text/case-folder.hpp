@@ -94,7 +94,7 @@ namespace ascension {
 				if(!excludeTurkishI || c == (first = foldTurkishI(c)))
 					first = foldCommon(c);
 				if(first == c && c < 0x010000ul) {
-					const CodePoint* const p = lower_bound(
+					const CodePoint* const p = std::lower_bound(
 						FULL_CASED_, FULL_CASED_ + NUMBER_OF_FULL_CASED_, c);
 					if(*p == c) {
 						const ptrdiff_t* const offset = &FULL_FOLDED_OFFSETS_[p - FULL_CASED_];

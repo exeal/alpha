@@ -8,6 +8,7 @@
 #include <ascension/kernel/document-stream.hpp>
 using namespace ascension::kernel;
 using namespace std;
+using ascension::text::Newline;
 
 
 // DocumentBuffer /////////////////////////////////////////////////////////////////////////////////
