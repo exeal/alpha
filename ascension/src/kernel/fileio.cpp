@@ -11,7 +11,7 @@
 #include <ascension/kernel/fileio.hpp>
 #include <limits>	// std.numeric_limits
 #ifdef ASCENSION_OS_POSIX
-#	include <errno.h>		// errno
+#	include <cstdio>		// std.tempnam
 #	include <fcntl.h>		// fcntl
 #	include <unistd.h>		// fcntl
 #	include <sys/mman.h>	// mmap, munmap, ...
@@ -143,7 +143,7 @@ namespace {
 			::free(p);
 			return result;
 		} else if(errno == ENOMEM)
-			throw bad_alloc("tempnam failed.");
+			throw bad_alloc();	// tempnam failed
 #endif
 		throw IOException(PathString());
 	}
@@ -408,11 +408,11 @@ void fileio::writeRegion(const Document& document, const Region& region,
 		throw IOException(fileName, ERROR_ACCESS_DENIED);
 #else // ASCENSION_OS_POSIX
 	struct stat originalStat;
-	bool gotStat = ::stat(fileName_.c_str(), &originalStat) == 0;
+	bool gotStat = ::stat(fileName.c_str(), &originalStat) == 0;
 #if 1
-	if(::euidaccess(fileName_.c_str(), 2) < 0)
+	if(::euidaccess(fileName.c_str(), 2) < 0)
 #else
-	if(::access(fileName_.c_str(), 2) < 0)
+	if(::access(fileName.c_str(), 2) < 0)
 #endif
 		throw IOException(fileName, EACCES);	// EROFS is an alternative
 #endif
@@ -517,7 +517,7 @@ namespace {
 #ifdef ASCENSION_OS_WINDOWS
 		~SystemErrorSaver() /*throw()*/ {::SetLastError(code_);}
 #else // ASCENSION_OS_POSIX
-		~SystemErrorSaver() /*throw()*/ {errno = e_;}
+		~SystemErrorSaver() /*throw()*/ {errno = code_;}
 #endif
 		IOException::value_type code() const /*throw()*/ {return code_;}
 	private:
@@ -552,18 +552,14 @@ TextFileStreamBuffer::TextFileStreamBuffer(const PathString& fileName, ios_base:
 		const string& encoding, Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
 		bool writeUnicodeByteOrderMark) : fileName_(fileName), mode_(mode) {
 	inputMapping_.first = inputMapping_.last = inputMapping_.current = 0;
-	switch(mode) {
-	case ios_base::in:
+	if(mode == ios_base::in)
 		openForReading(encoding);
-		break;
-	case ios_base::out:
-	case ios_base::out | ios_base::trunc:
-	case ios_base::out | ios_base::app:
+	else if(mode == ios_base::out
+			|| mode == (ios_base::out | ios_base::trunc)
+			|| mode == (ios_base::out | ios_base::app))
 		openForWriting(encoding, writeUnicodeByteOrderMark);
-		break;
-	default:
+	else
 		throw UnknownValueException("mode");
-	}
 	assert(encoder_.get() != 0);
 	encoder_->setSubstitutionPolicy(encodingSubstitutionPolicy);
 }
@@ -598,11 +594,9 @@ void TextFileStreamBuffer::buildEncoder(const string& encoding, bool detectEncod
 
 void TextFileStreamBuffer::buildInputMapping() {
 	assert(isOpen());
+	const ptrdiff_t fileSize = getFileSize(fileName().c_str());
 #ifdef ASCENSION_OS_WINDOWS
-	LARGE_INTEGER fileSize;
-	if(!win32::boole(::GetFileSizeEx(fileHandle_, &fileSize)))
-		throw IOException(fileName());
-	if(fileSize.QuadPart != 0) {
+	if(fileSize != 0) {
 		fileMapping_ = ::CreateFileMappingW(fileHandle_, 0, PAGE_READONLY, 0, 0, 0);
 		if(fileMapping_ == 0)
 			throw IOException(fileName());
@@ -614,9 +608,9 @@ void TextFileStreamBuffer::buildInputMapping() {
 		}
 	} else
 		fileMapping_ = 0;
-	inputMapping_.last = inputMapping_.first + fileSize.QuadPart;
+	inputMapping_.last = inputMapping_.first + fileSize;
 #else // ASCENSION_OS_POSIX
-	inputMapping_.first = static_cast<const byte*>(::mmap(0, fileSize, PROT_READ, MAP_PRIVATE, fileDescriptor_, 0));
+	inputMapping_.first = static_cast<const Byte*>(::mmap(0, fileSize, PROT_READ, MAP_PRIVATE, fileDescriptor_, 0));
 	if(inputMapping_.first == MAP_FAILED)
 		throw IOException(fileName());
 	bool succeeded = false;
@@ -630,7 +624,7 @@ void TextFileStreamBuffer::buildInputMapping() {
 	}
 	if(!succeeded)
 		throw IOException(fileName());
-	inputMapping_.last = first + fileSize;
+	inputMapping_.last = inputMapping_.first + fileSize;
 #endif
 	inputMapping_.current = inputMapping_.first;
 }
@@ -655,7 +649,11 @@ TextFileStreamBuffer* TextFileStreamBuffer::closeAndDiscard() {
 		return close();
 	else if((mode() & ~ios_base::trunc) == ios_base::out) {
 		if(TextFileStreamBuffer* const self = closeFile()) {
+#ifdef ASCENSION_OS_WINDOWS
 			::DeleteFileW(fileName_.c_str());
+#else // ASCENSION_OS_POSIX
+			::unlink(fileName_.c_str());
+#endif
 			return self;
 		} else
 			return 0;
@@ -687,7 +685,7 @@ TextFileStreamBuffer* TextFileStreamBuffer::closeFile() /*throw()*/ {
 	}
 #else // ASCENSION_OS_POSIX
 	if(inputMapping_.first != 0) {
-		::munmap(const_cast<byte*>(inputMapping_.first), inputMapping_.last - inputMapping_.first);
+		::munmap(const_cast<Byte*>(inputMapping_.first), inputMapping_.last - inputMapping_.first);
 		inputMapping_.first = 0;
 	}
 	if(fileDescriptor_ == -1) {
@@ -762,7 +760,7 @@ void TextFileStreamBuffer::openForWriting(const string& encoding, bool writeUnic
 			writeUnicodeByteOrderMark = false;
 		}
 #else // ASCENSION_OS_POSIX
-		fileDescriptor_  = ::open(fileName_.c_str(), O_WRONLY | O_APPEND);
+		fileDescriptor_ = ::open(fileName_.c_str(), O_WRONLY | O_APPEND);
 		if(fileDescriptor_ != -1) {
 			originalFileEnd_ = ::lseek(fileDescriptor_, 0, SEEK_CUR);
 			if(originalFileEnd_ == static_cast<off_t>(-1))
@@ -791,7 +789,7 @@ void TextFileStreamBuffer::openForWriting(const string& encoding, bool writeUnic
 		if((mode() & ios_base::app) != 0)
 			buildInputMapping();
 		else
-			fileMapping_ = 0;
+			inputMapping_.first = 0;
 		buildEncoder(encoding, (mode() & ios_base::app) != 0);
 	} catch(...) {
 		closeFile();
@@ -981,7 +979,7 @@ bool TextFileDocumentInput::FileLocker::lock(const PathString& fileName, bool sh
 				if(errno == EACCES || errno == EAGAIN)
 					alreadyShared = true;
 				fl.l_type = F_UNLCK;
-				::fcntl(temp, &fl);
+				::fcntl(temp, F_SETLK, &fl);
 			}
 			::close(temp);
 		}
@@ -1187,6 +1185,7 @@ void TextFileDocumentInput::documentModificationSignChanged(const Document&) {
 void TextFileDocumentInput::documentPropertyChanged(const Document&, const DocumentPropertyKey&) {
 }
 
+
 /// @see IDocumentStateListener#documentAccessibleRegionChanged
 void TextFileDocumentInput::documentReadOnlySignChanged(const Document&) {
 }
@@ -1219,13 +1218,15 @@ String TextFileDocumentInput::location() const /*throw()*/ {
 #ifdef ASCENSION_OS_WINDOWS
 	return fileName();
 #else // ASCENSION_OS_POSIX
-	const codecvt<Char, PathCharacter, mbstate_t>& converter = use_facet<codecvt<Char, PathCharacter, mbstate_t> >(locale());
+	const codecvt<Char, PathCharacter, mbstate_t>& converter =
+		use_facet<codecvt<Char, PathCharacter, mbstate_t> >(locale());
 	Char result[PATH_MAX * 2];
 	mbstate_t dummy;
 	const PathCharacter* fromNext;
 	Char* toNext;
 	return (converter.in(dummy, fileName().c_str(),
-		fileName().c_str() + fileName().length() + 1, fromNext, result, endof(result), toNext) == codecvt_base::ok) ? result : String();
+		fileName().c_str() + fileName().length() + 1, fromNext,
+		result, ASCENSION_ENDOF(result), toNext) == codecvt_base::ok) ? result : String();
 #endif
 }
 
@@ -1309,7 +1310,7 @@ void TextFileDocumentInput::revert(
 	mbstate_t state;
 	const PathCharacter* fromNext;
 	Char* ucsNext;
-	manah::AutoBuffer<Char> ucs(new Char[title.length() * 2]);
+	AutoBuffer<Char> ucs(new Char[title.length() * 2]);
 	if(codecvt_base::ok == conv.in(state,
 			title.data(), title.data() + title.length(), fromNext, ucs.get(), ucs.get() + title.length() * 2, ucsNext)) {
 		*ucsNext = L'0';
@@ -1597,7 +1598,7 @@ DirectoryIterator::DirectoryIterator(const PathCharacter* directoryName) :
 	if(handle_ == 0)
 		throw IOException(directoryName);
 	update(0);
-	directory_.assign(pattern.get());
+	directory_.assign(directoryName);
 	if(isPathSeparator(directory_[directory_.length() - 1]))
 		directory_.resize(directory_.length() - 1);
 #endif

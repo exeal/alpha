@@ -192,6 +192,9 @@
 #	endif
 #endif
 
+#if defined(ASCENSION_HAS_UNISTD_H) && !defined(ASCENSION_OS_WINDOWS)
+#	define ASCENSION_OS_POSIX
+#endif
 
 
 #ifdef ASCENSION_OS_WINDOWS
