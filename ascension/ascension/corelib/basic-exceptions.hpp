@@ -11,9 +11,12 @@
 #include <stdexcept>
 #include <sstream>	// std.ostringstream
 #include <string>	// std.string
-#ifdef ASCENSION_OS_WINDOWS
+#if defined(ASCENSION_OS_WINDOWS)
 #	include <ascension/win32/windows.hpp>	// DWORD, GetLastError
-#endif // ASCENSION_OS_WINDOWS
+#elif defined(ASCENSION_OS_POSIX)
+#	include <cerrno>
+#	include <cstring>	// std.strerror
+#endif
 
 namespace ascension {
 
@@ -98,19 +101,21 @@ namespace ascension {
 				::LocalFree(buffer);
 			}
 		}
-		const char* what() const {return message_.c_str();}
+		~PlatformDependentError() throw() {}
+		const char* what() const throw() {return message_.c_str();}
 	private:
 		std::string message_;
 	};
 #elif defined(ASCENSION_OS_POSIX)
 	template<typename Base = std::runtime_error>
-	class PlatformDependentError : public PlatformDependentError<int, Base> {
+	class PlatformDependentError : public IntegralError<int, Base> {
 	public:
 		PlatformDependentError(int code = errno) : IntegralError<int, Base>(code) {
-			const char* const s = ::strerror(code);
+			const char* const s = std::strerror(code);
 			message_ = (s != 0) ? s : "";
 		}
-		const char* what() const {return message_.c_str();}
+		~PlatformDependentError() throw() {}
+		const char* what() const throw() {return message_.c_str();}
 	private:
 		std::string message_;
 	};

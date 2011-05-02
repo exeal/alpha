@@ -16,7 +16,7 @@
 #if defined(ASCENSION_OS_WINDOWS)
 #	include <ascension/win32/windows.hpp>
 #elif defined(ASCENSION_OS_POSIX)
-#	include <sys/types.h>
+#	include <dirent.h>						// DIR
 #endif
 #ifndef ASCENSION_NO_GREP
 #	include <stack>
@@ -53,6 +53,7 @@ namespace ascension {
 			public:
 				explicit IOException(const PathString& fileName);
 				IOException(const PathString& fileName, value_type code);
+				~IOException() throw();
 				value_type code() const /*throw()*/;
 				const PathString& fileName() const /*throw()*/;
 			public:
