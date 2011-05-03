@@ -170,7 +170,7 @@ namespace {
 		CMigemo::Procedure<2>::signature migemoQuery_;
 		CMigemo::Procedure<3>::signature migemoRelease_;
 		unsigned char* lastNativePattern_;
-		wchar_t* lastPattern_;
+		Char* lastPattern_;
 	};
 	auto_ptr<Migemo> migemoLib;
 } // namespace @0
@@ -384,27 +384,27 @@ Pattern::~Pattern() /*throw()*/ {
 
 bool RegexTraits::unixLineMode = false;
 bool RegexTraits::usesExtendedProperties = false;
-map<const Char*, int, PropertyNameComparer> RegexTraits::names_;
+map<const char*, int, PropertyNameComparer> RegexTraits::names_;
 
 void RegexTraits::buildNames() {
 	// POSIX
-	names_[L"alpha"] = BinaryProperty::ALPHABETIC;
-	names_[L"lower"] = BinaryProperty::LOWERCASE;
-	names_[L"upper"] = BinaryProperty::UPPERCASE;
-	names_[L"punct"] = GeneralCategory::PUNCTUATION;
-	names_[L"digit"] = names_[L"d"] = GeneralCategory::DECIMAL_NUMBER;
-	names_[L"xdigit"] = POSIX_XDIGIT;
-	names_[L"alnum"] = POSIX_ALNUM;
-	names_[L"space"] = names_[L"s"] = BinaryProperty::WHITE_SPACE;
-	names_[L"blank"] = POSIX_BLANK;
-	names_[L"cntrl"] = GeneralCategory::CONTROL;
-	names_[L"graph"] = POSIX_GRAPH;
-	names_[L"print"] = POSIX_PRINT;
-	names_[L"word"] = names_[L"w"] = POSIX_WORD;
+	names_["alpha"] = BinaryProperty::ALPHABETIC;
+	names_["lower"] = BinaryProperty::LOWERCASE;
+	names_["upper"] = BinaryProperty::UPPERCASE;
+	names_["punct"] = GeneralCategory::PUNCTUATION;
+	names_["digit"] = names_["d"] = GeneralCategory::DECIMAL_NUMBER;
+	names_["xdigit"] = POSIX_XDIGIT;
+	names_["alnum"] = POSIX_ALNUM;
+	names_["space"] = names_["s"] = BinaryProperty::WHITE_SPACE;
+	names_["blank"] = POSIX_BLANK;
+	names_["cntrl"] = GeneralCategory::CONTROL;
+	names_["graph"] = POSIX_GRAPH;
+	names_["print"] = POSIX_PRINT;
+	names_["word"] = names_["w"] = POSIX_WORD;
 	// special GC
-	names_[L"ANY"] = GC_ANY;
-	names_[L"ASSIGNED"] = GC_ASSIGNED;
-	names_[L"ASCII"] = GC_ASCII;
+	names_["ANY"] = GC_ANY;
+	names_["ASSIGNED"] = GC_ASSIGNED;
+	names_["ASCII"] = GC_ASCII;
 }
 
 bool RegexTraits::isctype(char_type c, const char_class_type& f) const {
@@ -475,6 +475,7 @@ namespace {
 }
 
 RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, const char_type* p2) const {
+	assert(p2 >= p1);
 	if(names_.empty())
 		buildNames();
 	char_class_type klass;
@@ -501,8 +502,14 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 				klass.set(p);
 		}
 	} else {	// only "name" or "value"
-		const String expression((UTF32To16Iterator<>(p1)), UTF32To16Iterator<>(p2));
-		const map<const Char*, int, PropertyNameComparer>::const_iterator i(names_.find(expression.c_str()));
+		string expression;
+		expression.reserve(p2 - p1);
+		for(size_t i = 0; i < static_cast<size_t>(p2 - p1); ++i) {
+			if(p1[i] > 0x007fu)
+				return klass;
+			expression[i] = p1[i];
+		}
+		const map<const char*, int, PropertyNameComparer>::const_iterator i(names_.find(expression.c_str()));
 		if(i != names_.end())
 			klass.set(i->second);
 		else {
