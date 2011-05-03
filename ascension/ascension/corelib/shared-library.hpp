@@ -7,41 +7,67 @@
 #ifndef SHARED_LIBRARY_HPP
 #define SHARED_LIBRARY_HPP
 #include <ascension/platforms.hpp>
-
-#ifdef ASCENSION_OS_WINDOWS
+#include <algorithm>	// std.fill
+#if defined(ASCENSION_OS_WINDOWS)
+#	include <ascension/corelib/basic-exceptions.hpp>
 #	include <ascension/win32/windows.hpp>	// LoadLibraryA, FreeLibrary, GetProcAddress, HMODULE
-#	include <algorithm>	// std.fill
-#	include <stdexcept>	// std.runtime_error
-#else
+#elif defined(ASCENSION_OS_POSIX)
+#	include <stdexcept>
+#	include <dlfcn.h>
 #endif
 
 namespace ascension {
 	namespace detail {
 
-#ifdef ASCENSION_OS_WINDOWS
-		template<class ProcedureEntries>
+		template<typename ProcedureEntries>
 		class SharedLibrary {
 			ASCENSION_NONCOPYABLE_TAG(SharedLibrary);
 		public:
-			explicit SharedLibrary(const char* fileName) : dll_(::LoadLibraryA(fileName)) {
-				if(dll_ == 0)
-					throw std::runtime_error("Cannot open the library.");
-				std::fill(procedures_, procedures_ + ProcedureEntries::NUMBER_OF_ENTRIES, reinterpret_cast<FARPROC>(1));
+			explicit SharedLibrary(const char* fileName) : library_(
+#ifdef ASCENSION_OS_WINDOWS
+					::LoadLibraryA(fileName)
+#else	// ASCENSION_OS_POSIX
+					::dlopen(fileName, RTLD_LAZY)
+#endif
+					) {
+				if(library_ == 0)
+#ifdef ASCENSION_OS_WINDOWS
+					throw PlatformDependentError();
+#else	// ASCENSION_OS_POSIX
+					throw std::runtime_error(::dlerror());
+#endif
+				std::fill(procedures_, procedures_ + ProcedureEntries::NUMBER_OF_ENTRIES, reinterpret_cast<NativeProcedure>(1));
 			}
-			~SharedLibrary() /*throw()*/ {::FreeLibrary(dll_);}
+			~SharedLibrary() /*throw()*/ {
+#ifdef ASCENSION_OS_WINDOWS
+				::FreeLibrary(library_);
+#else
+				::dlclose(library_);
+#endif
+			}
 			template<std::size_t index>
 			typename ProcedureEntries::template Procedure<index>::signature get() const /*throw()*/ {
 				typedef typename ProcedureEntries::template Procedure<index> Procedure;
-				if(procedures_[index] == reinterpret_cast<FARPROC>(1))
-					procedures_[index] = ::GetProcAddress(dll_, Procedure::name());
+				if(procedures_[index] == reinterpret_cast<NativeProcedure>(1))
+					procedures_[index] =
+#ifdef ASCENSION_OS_WINDOWS
+						::GetProcAddress
+#else
+						::dlsym
+#endif
+						(library_, Procedure::name());
 				return reinterpret_cast<typename Procedure::signature>(procedures_[index]);
 			}
 		private:
-			HMODULE dll_;
-			mutable FARPROC procedures_[ProcedureEntries::NUMBER_OF_ENTRIES];
-		};
+#ifdef ASCENSION_OS_WINDOWS
+			HMODULE library_;
+			typedef FARPROC NativeProcedure;
 #else
+			void* const library_;
+			typedef void* NativeProcedure;
 #endif
+			mutable NativeProcedure procedures_[ProcedureEntries::NUMBER_OF_ENTRIES];
+		};
 
 #define ASCENSION_DEFINE_SHARED_LIB_ENTRIES(libraryName, numberOfProcedures)	\
 	struct libraryName {														\
