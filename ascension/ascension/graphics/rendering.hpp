@@ -10,8 +10,8 @@
 
 //#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 //#include <ascension/kernel/document.hpp>
-//#include <ascension/presentation.hpp>
 #include <ascension/graphics/text-layout.hpp>
+#include <ascension/presentation/presentation.hpp>
 #include <list>
 
 namespace ascension {

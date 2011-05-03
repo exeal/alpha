@@ -6,7 +6,9 @@
  */
 
 #include <ascension/graphics/rendering.hpp>	// TextRenderer
-#include <ascension/presentation.hpp>
+#include <ascension/presentation/presentation.hpp>
+#include <ascension/presentation/presentation-reconstructor.hpp>
+#include <ascension/presentation/text-style.hpp>
 #include <ascension/rules.hpp>
 #ifdef ASCENSION_OS_WINDOWS
 #include <shellapi.h>	// ShellExecuteW

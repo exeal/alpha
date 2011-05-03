@@ -9,7 +9,7 @@
 #define ASCENSION_RULES_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_NO_REGEX
-#include <ascension/presentation.hpp>
+#include <ascension/presentation/presentation-reconstructor.hpp>
 #include <ascension/corelib/regex.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <list>

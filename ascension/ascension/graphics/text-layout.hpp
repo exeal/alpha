@@ -12,8 +12,8 @@
 #include <ascension/corelib/memory.hpp>		// AutoBuffer
 #include <ascension/corelib/utility.hpp>	// detail.searchBound
 #include <ascension/kernel/document.hpp>
-#include <ascension/presentation.hpp>
 #include <ascension/graphics/color.hpp>
+#include <ascension/presentation/text-style.hpp>
 #include <limits>	// std.numeric_limits
 #include <vector>
 
