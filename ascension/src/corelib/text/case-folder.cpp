@@ -4,7 +4,7 @@
  * @date 2011-04-25 separated from normalizer.cpp
  */
 
-#include <ascension/ascension/corelib/text/case-folder.hpp>
+#include <ascension/corelib/text/case-folder.hpp>
 
 using namespace ascension;
 using namespace ascension::text;

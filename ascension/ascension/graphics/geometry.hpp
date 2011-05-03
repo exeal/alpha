@@ -11,9 +11,11 @@
 #include <ascension/corelib/memory.hpp>	// FastArenaObject
 #include <ascension/corelib/range.hpp>
 #include <ascension/platforms.hpp>
-#ifdef ASCENSION_OS_WINDOWS
+#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
 #	include <ascension/win32/windows.hpp>
-#endif // ASCENSION_OS_WINDOWS
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+#	include <gdk/gdk.h>
+#endif
 
 namespace ascension {
 	namespace graphics {
