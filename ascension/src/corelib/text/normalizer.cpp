@@ -154,7 +154,7 @@ namespace {
 			for(Char* p = last - 1; p >= at + replacementLength; --p)
 				*p = p[eraseLength - replacementLength];
 		}
-		wmemcpy(at, replacement, replacementLength);
+		copy(replacement, replacement + replacementLength, at);
 	}
 
 	/**
