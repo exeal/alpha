@@ -15,6 +15,7 @@
 
 #include <ascension/corelib/encoder.hpp>
 #include <cassert>
+#include <cstring>	// std.memcpy
 using namespace ascension;
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
