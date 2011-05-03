@@ -188,7 +188,7 @@ void StringCharacterIterator::doPrevious() {
 namespace {
 	/// Returns true if the specified character is Line_Break=NU.
 	bool isNU(CodePoint c, int gc) /*throw()*/ {
-		return (gc == GeneralCategory::DECIMAL_NUMBER && c < 0xff00u || c > 0xffefu)
+		return (gc == GeneralCategory::DECIMAL_NUMBER && (c < 0xff00u || c > 0xffefu))
 			|| c == 0x066bu		// Arabic Decimal Separator
 			|| c == 0x066cu;	// Arabic Thousands Separator
 	}

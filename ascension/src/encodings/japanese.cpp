@@ -78,9 +78,10 @@
 
 #include <ascension/corelib/encoder.hpp>
 #include <ascension/corelib/text/character.hpp>
+#include <algorithm>	// std.binary_search
+#include <cstring>		// std.memcpy
 #include <memory>		// std.auto_ptr
 #include <map>
-#include <algorithm>	// std.binary_search
 
 using namespace ascension;
 using namespace ascension::encoding;
@@ -918,6 +919,7 @@ namespace {
 				*++to = 'N';
 				*++to = mask8Bit(mbcs[0]);
 			} else if(charset == EncodingState::ISO_8859_7) {	// ISO-8859-7
+
 				ASCENSION_DESIGNATE_TO_G2("\x1b.F", 3);
 				if(to + 3 >= toEnd)
 					break;	// INSUFFICIENT_BUFFER
