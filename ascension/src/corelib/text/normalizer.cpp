@@ -28,7 +28,7 @@ using text::ucd::CanonicalCombiningClass;
  * incrementally. The following illustrates this:
  *
  * @code
- * String text(L"C\x0301\x0327");
+ * String text(L"C\x0301\x0327");  // as if String is std.wstring...
  * Normalizer n(StringCharacterIterator(text), Normalizer::FORM_NFD);
  * // print all normalized characters of the sequence.
  * while(n.hasNext()) {

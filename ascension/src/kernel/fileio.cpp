@@ -29,7 +29,7 @@ using text::Newline;
 
 namespace {
 #ifdef ASCENSION_OS_WINDOWS
-	static const PathCharacter PATH_SEPARATORS[] = L"\\/";
+	static const PathCharacter PATH_SEPARATORS[] = {0x005cu, 0x002fu, 0};	// \ or /
 #else // ASCENSION_OS_POSIX
 	static const PathCharacter PATH_SEPARATORS[] = "/";
 #endif

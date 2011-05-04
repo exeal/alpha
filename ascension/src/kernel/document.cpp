@@ -480,11 +480,11 @@ DocumentPartitioner::~DocumentPartitioner() /*throw()*/ {
  * "unmodified". For example (parenthesized numbers are the revisions),
  *
  * @code
- * Document d;         // a document is unmodified initially (0)
- * insert(d, L"foo");  // increment the revision (1)
- * d.isModified();     // true
- * d.undo();           // decrement the revision (0)
- * d.isModified();     // false
+ * Document d;       // a document is unmodified initially (0)
+ * insert(d, text);  // increment the revision (1)
+ * d.isModified();   // true
+ * d.undo();         // decrement the revision (0)
+ * d.isModified();   // false
  * @endcode
  *
  * Use @c #markUnmodified method to set the current revision as unmodified.
@@ -494,7 +494,7 @@ DocumentPartitioner::~DocumentPartitioner() /*throw()*/ {
  *
  * @code
  * Document d;
- * insert(d, L"foo");
+ * insert(d, text);
  * d.markUnmodified();  // the revision 1 is as unmodified
  * d.undo();            // modified (0)
  * d.redo();            // unmodified (1)
