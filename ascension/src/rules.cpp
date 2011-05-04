@@ -282,8 +282,8 @@ namespace {
 	// ls32 = ( h16 ":" h16 ) / IPv4address
 	inline const Char* handleLs32(const Char* first, const Char* last) {
 		const Char* p;
-		return (0 != (p = handleH16(first, last)) && p + 2 < last && *++p == ':' && 0 != (p = handleH16(p, last))
-			|| 0 != (p = handleIPv4address(first, last))) ? p : 0;
+		return ((0 != (p = handleH16(first, last)) && p + 2 < last && *++p == ':' && 0 != (p = handleH16(p, last)))
+			|| (0 != (p = handleIPv4address(first, last)))) ? p : 0;
 	}
 
 	// scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
@@ -1403,17 +1403,20 @@ void LexicalPartitioner::erasePartitions(const Position& first, const Position& 
 	}
 }
 
-// returns the index of the partition encompasses the given position.
-inline detail::GapVector<LexicalPartitioner::Partition*>::const_iterator
-		LexicalPartitioner::partitionAt(const Position& at) const /*throw()*/ {
-	static const struct {
+namespace {
+	template<typename Partition>
+	struct PartitionPositionCompare {
 		bool operator()(const Position& at, const Partition* p) const {
 			return at < p->start;
 		}
-	} comp;
+	};
+}
 
+// returns the index of the partition encompasses the given position.
+inline detail::GapVector<LexicalPartitioner::Partition*>::const_iterator
+		LexicalPartitioner::partitionAt(const Position& at) const /*throw()*/ {
 	detail::GapVector<Partition*>::const_iterator p(
-		detail::searchBound(partitions_.begin(), partitions_.end(), at, comp));
+		detail::searchBound(partitions_.begin(), partitions_.end(), at, PartitionPositionCompare<Partition>()));
 	if(p == partitions_.end()) {
 		assert(partitions_.front()->start != document()->region().first);	// twilight context
 		return partitions_.begin();

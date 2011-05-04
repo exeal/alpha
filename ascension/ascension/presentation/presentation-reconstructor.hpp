@@ -49,7 +49,7 @@ namespace ascension {
 			std::auto_ptr<StyledTextRunIterator>
 				getPresentation(length_t line, const Range<length_t>& columnRange) const /*throw()*/;
 		private:
-			class StyledTextRunIterator;
+			class Iterator;
 			const std::tr1::shared_ptr<const TextRunStyle> style_;
 		};
 
@@ -88,7 +88,7 @@ namespace ascension {
 			// TextRunStyleDirector
 			std::auto_ptr<StyledTextRunIterator> queryTextRunStyle(length_t line) const;
 		private:
-			class StyledTextRunIterator;
+			class Iterator;
 			Presentation& presentation_;
 			std::map<kernel::ContentType, PartitionPresentationReconstructor*> reconstructors_;
 		};
