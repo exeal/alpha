@@ -540,18 +540,20 @@ const URIDetector& URIDetector::defaultGenericInstance() /*throw()*/ {
  */
 const URIDetector& URIDetector::defaultIANAURIInstance() /*throw()*/ {
 	static URIDetector singleton;
-	if(singleton.validSchemes_ == 0)
-		singleton.setValidSchemes(
+	if(singleton.validSchemes_ == 0) {
+		const char SCHEMES[] =
 			// permanent URI schemes
-			L"aaa|aaas|acap|cap|cid|crid|data|dav|dict|dns|fax|file|ftp|go|gopher|h323"
-			L"|http|https|icap|im|imap|info|ipp|iris|iris.beep|iris.xpc|iris.xpcs|iris.lwz|ldap|mailto|mid|modem"
-			L"|msrp|msrps|mtqp|mupdate|news|nfs|nntp|opaquelocktoken|pop|pres|rtsp|service|shttp|sip|sips|snmp"
-			L"|soap.beep|soap.beeps|tag|tel|telnet|tftp|thismessage|tip|tv|urn|vemmi|xmlrpc.beep|xmlrpc.beeps|xmpp|z39.50r"
+			"aaa|aaas|acap|cap|cid|crid|data|dav|dict|dns|fax|file|ftp|go|gopher|h323|http|https"
+			"|icap|im|imap|info|ipp|iris|iris.beep|iris.xpc|iris.xpcs|iris.lwz|ldap"
+			"|mailto|mid|modem|msrp|msrps|mtqp|mupdate|news|nfs|nntp|opaquelocktoken|pop|pres|rtsp"
+			"|service|shttp|sip|sips|snmp|soap.beep|soap.beeps|tag|tel|telnet|tftp|thismessage|tip|tv"
+			"|urn|vemmi|xmlrpc.beep|xmlrpc.beeps|xmpp|z39.50r"
 			// provisional URI schemes
-			L"|afs|dtn|iax2|mailserver|pack|tn3270"
+			"|afs|dtn|iax2|mailserver|pack|tn3270"
 			// historical URI schemes
-			L"prospero|wais",
-			'|');
+			"prospero|wais";
+		singleton.setValidSchemes(String(SCHEMES, ASCENSION_ENDOF(SCHEMES)), '|');
+	}
 	return singleton;
 }
 

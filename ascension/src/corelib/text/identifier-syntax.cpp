@@ -49,10 +49,10 @@ using namespace std;
  *
  * @code
  * IdentifierSyntax is;
- * is.overrideIDNonStartCharacters(L"_", L"");
+ * is.overrideIdentifierNonStartCharacters(L"_", L"");  // as if String is std.wstring...
  * @endcode
  *
- * @see kernel#IContentTypeInformationProvider#getIdentifierSyntax
+ * @see kernel#ContentTypeInformationProvider#identifierSyntax
  */
 
 namespace {

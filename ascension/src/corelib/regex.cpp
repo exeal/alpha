@@ -278,7 +278,7 @@ PatternSyntaxException::Code PatternSyntaxException::getCode() const {
  * Standard call sequence is following:
  *
  * @code
- * Pattern p(L"a*b");
+ * Pattern p(patternString);
  * std::auto_ptr<MatchResult<const Char*> > m(p.matches(target, endof(target)));
  * @endcode
  *
@@ -518,11 +518,11 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 	&& (expression[0] == lower[0] || expression[0] == upper[0])	\
 	&& (expression[1] == lower[1] || expression[1] == upper[1])) ? 2 : 0)
 
-			int p = GeneralCategory::forName(expression.c_str() + ASCENSION_CHECK_PREFIX(L"is", L"IS"));
+			int p = GeneralCategory::forName(expression.c_str() + ASCENSION_CHECK_PREFIX("is", "IS"));
 			if(p == NOT_PROPERTY) {
-				p = Block::forName(expression.c_str() + ASCENSION_CHECK_PREFIX(L"in", L"IN"));
+				p = Block::forName(expression.c_str() + ASCENSION_CHECK_PREFIX("in", "IN"));
 				if(p == NOT_PROPERTY) {
-					p = Script::forName(expression.c_str() + ASCENSION_CHECK_PREFIX(L"is", L"IS"));
+					p = Script::forName(expression.c_str() + ASCENSION_CHECK_PREFIX("is", "IS"));
 					if(p == NOT_PROPERTY)
 						p = BinaryProperty::forName(expression.c_str());
 				}
