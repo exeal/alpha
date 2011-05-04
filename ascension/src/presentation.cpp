@@ -404,11 +404,11 @@ auto_ptr<StyledTextRunIterator> Presentation::textRunStyles(length_t line) const
 }
 
 
-// SingleStyledPartitionPresentationReconstructor.StyledTextRunIterator ///////////////////////////
+// SingleStyledPartitionPresentationReconstructor.Iterator ////////////////////////////////////////
 
-class SingleStyledPartitionPresentationReconstructor::StyledTextRunIterator : public presentation::StyledTextRunIterator {
+class SingleStyledPartitionPresentationReconstructor::Iterator : public presentation::StyledTextRunIterator {
 public:
-	StyledTextRunIterator(length_t column, tr1::shared_ptr<const TextRunStyle> style) : run_(column, style), done_(false) {}
+	Iterator(length_t column, tr1::shared_ptr<const TextRunStyle> style) : run_(column, style), done_(false) {}
 private:
 	// StyledTextRunIterator
 	StyledTextRun current() const {
@@ -441,15 +441,15 @@ SingleStyledPartitionPresentationReconstructor::SingleStyledPartitionPresentatio
 
 /// @see PartitionPresentationReconstructor#getPresentation
 auto_ptr<StyledTextRunIterator> SingleStyledPartitionPresentationReconstructor::getPresentation(length_t, const Range<length_t>& columnRange) const /*throw()*/ {
-	return auto_ptr<presentation::StyledTextRunIterator>(new StyledTextRunIterator(columnRange.beginning(), style_));
+	return auto_ptr<presentation::StyledTextRunIterator>(new Iterator(columnRange.beginning(), style_));
 }
 
 
-// PresentationReconstructor.StyledTextRunIterator ////////////////////////////////////////////////
+// PresentationReconstructor.Iterator /////////////////////////////////////////////////////////////
 
-class PresentationReconstructor::StyledTextRunIterator : public presentation::StyledTextRunIterator {
+class PresentationReconstructor::Iterator : public presentation::StyledTextRunIterator {
 public:
-	StyledTextRunIterator(const Presentation& presentation,
+	Iterator(const Presentation& presentation,
 		const map<kernel::ContentType, PartitionPresentationReconstructor*> reconstructors, length_t line);
 private:
 	void updateSubiterator();
@@ -472,7 +472,7 @@ private:
  * @param reconstructors
  * @param line
  */
-PresentationReconstructor::StyledTextRunIterator::StyledTextRunIterator(
+PresentationReconstructor::Iterator::Iterator(
 		const Presentation& presentation, const map<kernel::ContentType,
 		PartitionPresentationReconstructor*> reconstructors, length_t line)
 		: presentation_(presentation), reconstructors_(reconstructors), line_(line) {
@@ -492,7 +492,7 @@ PresentationReconstructor::StyledTextRunIterator::StyledTextRunIterator(
 }
 
 /// @see StyledTextRunIterator#current
-StyledTextRun PresentationReconstructor::StyledTextRunIterator::current() const {
+StyledTextRun PresentationReconstructor::Iterator::current() const {
 	if(subiterator_.get() != 0)
 		return subiterator_->current();
 	else if(hasNext())
@@ -501,12 +501,12 @@ StyledTextRun PresentationReconstructor::StyledTextRunIterator::current() const 
 }
 
 /// @see StyledTextRunIterator#hasNext
-bool PresentationReconstructor::StyledTextRunIterator::hasNext() const {
+bool PresentationReconstructor::Iterator::hasNext() const {
 	return !currentPartition_.region.isEmpty();
 }
 
 /// @see StyledTextRunIterator#next
-void PresentationReconstructor::StyledTextRunIterator::next() {
+void PresentationReconstructor::Iterator::next() {
 	if(subiterator_.get() != 0) {
 		subiterator_->next();
 		if(!subiterator_->hasNext())
@@ -535,7 +535,7 @@ void PresentationReconstructor::StyledTextRunIterator::next() {
 	}
 }
 
-inline void PresentationReconstructor::StyledTextRunIterator::updateSubiterator() {
+inline void PresentationReconstructor::Iterator::updateSubiterator() {
 	map<ContentType, PartitionPresentationReconstructor*>::const_iterator r(reconstructors_.find(currentPartition_.contentType));
 	subiterator_ = (r != reconstructors_.end()) ?
 		r->second->getPresentation(currentPartition_.region) : auto_ptr<presentation::StyledTextRunIterator>();
@@ -564,7 +564,7 @@ PresentationReconstructor::~PresentationReconstructor() /*throw()*/ {
 /// @see LineStyleDirector#queryTextRunStyle
 auto_ptr<StyledTextRunIterator> PresentationReconstructor::queryTextRunStyle(length_t line) const {
 	return auto_ptr<presentation::StyledTextRunIterator>(
-		new StyledTextRunIterator(presentation_, reconstructors_, line));
+		new Iterator(presentation_, reconstructors_, line));
 }
 
 /**
