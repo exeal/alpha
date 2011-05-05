@@ -26,10 +26,10 @@ namespace ascension {
 			Inheritable() /*throw()*/ : inherits_(true) {}
 			Inheritable(value_type v) /*throw()*/ : value_(v), inherits_(false) {}
 			operator value_type() const {return get();}
-			value_type get() const {if(inherits()) throw logic_error(""); return value_;}
+			value_type get() const {if(inherits()) throw std::logic_error(""); return value_;}
 			value_type inherit() /*throw()*/ {inherits_ = true;}
 			bool inherits() const /*throw()*/ {return inherits_;}
-			Inheritable<value_type>& set(value_type) /*throw()*/ {value_ = v; inherits_ = false; return *this;}
+			Inheritable<value_type>& set(value_type v) /*throw()*/ {value_ = v; inherits_ = false; return *this;}
 		private:
 			value_type value_;
 			bool inherits_;
