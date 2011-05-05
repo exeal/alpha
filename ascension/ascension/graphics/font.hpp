@@ -49,11 +49,11 @@ namespace ascension {
 				std::size_t i = 0;
 				for(; i < len; ++i) {
 					if(validate && (name[i] < 32 || name[i] > 126))
-						throw std::invalid_argument(std::string("name[") + i + "]");
-					tag[i] |= name[i] << ((3 - i) * 8);
+						throw std::invalid_argument("name");
+					tag |= name[i] << ((3 - i) * 8);
 				}
 				for(; i < 4; ++i)
-					tag[i] |= ' ' << ((3 - i) * 8);
+					tag |= ' ' << ((3 - i) * 8);
 				return tag;
 			}
 
@@ -82,7 +82,7 @@ namespace ascension {
 			public:
 				/// Destructor.
 				virtual ~GlyphVector() /*throw()*/ {}
-				GlyphCode operator[](std::ptrdiff_t index) const {}
+				GlyphCode operator[](std::ptrdiff_t index) const {return at(index);}
 				virtual GlyphCode at(std::size_t index) const = 0;
 				std::size_t length() const {return size();}
 				virtual Dimension<> logicalBounds() const = 0;
@@ -104,7 +104,7 @@ namespace ascension {
 						throw std::length_error("name");
 				}
 				FontFamily& append(std::auto_ptr<FontFamily> family) /*throw()*/ {next_ = family; return *this;}
-				const String& name() const /*throw()*/ {name_;}
+				const String& name() const /*throw()*/ {return name_;}
 				FontFamily* next() /*throw()*/ {return next_.get();}
 				const FontFamily* next() const /*throw()*/ {return next_.get();}
 			private:
