@@ -291,7 +291,8 @@ namespace ascension {
 
 		/**
 		 * @c TextAnchor describes an alignment of text relative to the given point.
-		 * @see resolveTextAlignment, TextLineStyle#alignment, TextLineStyle#lastSublineAlignment
+		 * @see resolveTextAlignment, TextLineStyle#alignment, TextLineStyle#lastSublineAlignment,
+		 *      defaultTextAnchor
 		 * @see XSL 1.1, 7.16.9 "text-align"
 		 *      (http://www.w3.org/TR/2006/REC-xsl11-20061205/#text-align)
 		 * @see CSS Text Level 3, 7.1. Text Alignment: the 'text-align' property
@@ -311,6 +312,9 @@ namespace ascension {
 //			MATCH_PARENT_DIRECTION
 		};
 
+		class Presentation;
+		TextAnchor defaultTextAnchor(const Presentation& presentation);
+
 		/**
 		 * @c TextJustification describes the justification method.
 		 * @note This definition is under construction.
@@ -325,12 +329,15 @@ namespace ascension {
 
 		/**
 		 * Orientation of the text layout.
-		 * @see TextLineStyle#readingDirection
+		 * @see TextLineStyle#readingDirection, defaultReadingDirection
 		 */
 		enum ReadingDirection {
 			LEFT_TO_RIGHT,				///< The text is left-to-right.
 			RIGHT_TO_LEFT				///< The text is right-to-left.
 		};
+
+		ReadingDirection defaultReadingDirection(const Presentation& presentation);
+
 #ifdef ASCENSION_WRITING_MODES
 		enum ProgressionDirection {
 			LEFT_TO_RIGHT, RIGHT_TO_LEFT, TOP_TO_BOTTOM, BOTTOM_TO_TOP

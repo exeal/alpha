@@ -192,9 +192,9 @@ namespace ascension {
 		template<typename CodeUnitSequence,
 			template<class> class AdaptionIterator = UTF16To32Iterator>
 		struct ToUTF32Sequence {
-			typedef typename std::tr1::conditional<
+			typedef typename detail::Select<
 				CodeUnitSizeOf<CodeUnitSequence>::result == 4,
-				CodeUnitSequence, AdaptionIterator<CodeUnitSequence> >::Result Result;
+				CodeUnitSequence, AdaptionIterator<CodeUnitSequence> >::Type Type;
 		};
 
 		/**

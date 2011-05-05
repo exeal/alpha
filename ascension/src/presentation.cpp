@@ -5,7 +5,7 @@
  * @date 2007-2011
  */
 
-#include <ascension/graphics/rendering.hpp>	// TextRenderer
+//#include <ascension/graphics/rendering.hpp>	// TextRenderer
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/presentation-reconstructor.hpp>
 #include <ascension/presentation/text-style.hpp>
@@ -20,7 +20,7 @@ using namespace ascension::presentation;
 using namespace ascension::presentation::hyperlink;
 using namespace ascension::rules;
 using namespace std;
-using graphics::font::TextRenderer;
+//using graphics::font::TextRenderer;
 
 
 // Color //////////////////////////////////////////////////////////////////////////////////////////
@@ -169,6 +169,20 @@ WritingMode::WritingMode(ProgressionDirection blockProgressionDirection,
 
 
 // Presentation ///////////////////////////////////////////////////////////////////////////////////
+
+/// 
+TextAnchor defaultTextAnchor(const Presentation& presentation) {
+	tr1::shared_ptr<const TextLineStyle> style(presentation.defaultTextLineStyle());
+	return (style.get() != 0
+		&& !style->anchor.inherits()) ? style->anchor.get() : ASCENSION_DEFAULT_TEXT_ANCHOR;
+}
+
+///
+ReadingDirection defaultReadingDirection(const Presentation& presentation) {
+	tr1::shared_ptr<const TextLineStyle> style(presentation.defaultTextLineStyle());
+	return (style.get() != 0 && !style->readingDirection.inherits()) ?
+		style->readingDirection.get() : ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
+}
 
 tr1::shared_ptr<const TextLineStyle> Presentation::DEFAULT_TEXT_LINE_STYLE(new TextLineStyle());
 tr1::shared_ptr<const TextRunStyle> Presentation::DEFAULT_TEXT_RUN_STYLE(new TextRunStyle());
@@ -594,7 +608,15 @@ namespace {
 	class URIHyperlink : public Hyperlink {
 	public:
 		explicit URIHyperlink(const Range<length_t>& region, const String& uri) /*throw()*/ : Hyperlink(region), uri_(uri) {}
-		String description() const /*throw()*/ {return L"\x202a" + uri_ + L"\x202c\nCTRL + click to follow the link.";}
+		String description() const /*throw()*/ {
+			static const Char PRECEDING[] = {0x202au, 0};
+			static const Char FOLLOWING[] = {0x202cu, 0x0a,
+				0x43, 0x54, 0x52, 0x4c, 0x20, 0x2b, 0x20, 0x63, 0x6c, 0x69, 0x63, 0x6b, 0x20,
+				0x74, 0x6f, 0x20, 0x66, 0x6f, 0x6c, 0x6c, 0x6f, 0x77, 0x20, 0x74, 0x68, 0x65,
+				0x20, 0x6c, 0x69, 0x6e, 0x6b, 0x2e, 0
+			};	// "\x202c\nCTRL + click to follow the link."
+			return PRECEDING + uri_ + FOLLOWING;
+		}
 		void invoke() const /*throw()*/ {
 #ifdef ASCENSION_OS_WINDOWS
 			::ShellExecuteW(0, 0, uri_.c_str(), 0, 0, SW_SHOWNORMAL);
