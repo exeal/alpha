@@ -20,7 +20,7 @@ namespace ascension {
 
 	namespace presentation {
 
-		class TextLineStyle;
+		struct TextLineStyle;
 
 		/**
 		 * Interface for objects which direct style of a text line.
@@ -66,7 +66,7 @@ namespace ascension {
 			friend class Presentation;
 		};
 
-		class TextRunStyle;
+		struct TextRunStyle;
 
 		/**
 		 * Interface for objects which are interested in change of the default style of
