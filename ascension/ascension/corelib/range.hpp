@@ -24,22 +24,20 @@ namespace ascension {
 			static const bool value = sizeof(test<std::iterator_traits<T> >(0)) == sizeof(True);
 		};
 
-		template<typename T, bool b>
-		struct DifferenceTypeBase;
-		template<typename T>
-		struct DifferenceTypeBase<T, true> {
-			typedef typename std::iterator_traits<T>::difference_type Type;
-		};
-		template<typename T>
-		struct DifferenceTypeBase<T, false> {
-			typedef T Type;
-		};
+		template<typename T, bool hasDifferenceType>
+		struct IteratorHasDifferenceTypeOrNot {typedef T Type;};
 
 		template<typename T>
-		struct DifferenceType {
-			typedef typename
-				DifferenceTypeBase<T, HasDifferenceType<T>::value>::Type Type;
-		};
+		struct IteratorHasDifferenceTypeOrNot<T, true> {typedef typename std::iterator_traits<T>::difference_type Type;};
+
+		template<typename T, bool isArithmetic>
+		struct ArithmeticOrNot {typedef T Type;};
+
+		template<typename T>
+		struct ArithmeticOrNot<T, false> : IteratorHasDifferenceTypeOrNot<T, HasDifferenceType<T>::value> {};
+
+		template<typename T>
+		struct DifferenceType : ArithmeticOrNot<T, std::tr1::is_arithmetic<T>::value> {};
 	}
 
 	/**

@@ -7,10 +7,22 @@
 #ifndef ASCENSION_TYPE_TRAITS_HPP
 #define ASCENSION_TYPE_TRAITS_HPP
 
+#include <ascension/config.hpp>
+#if defined(ASCENSION_COMPILER_MSVC) && _MSC_VER >= 1500
+#	include <type_traits>
+#elif defined(ASCENSION_COMPILER_GCC) && __GNUC__ >= 4
+#	include <tr1/type_traits>
+#else
+#	include <boost/tr1/type_traits.hpp>
+#endif
+
 namespace ascension {
 	namespace detail {
 
-		/// From @c std#integral_constant.
+		/**
+		 * From @c std#integral_constant.
+		 * @deprecated 0.8 Use @c std#integral_constant.
+		 */
 		template<typename T, T v>
 		struct IntegralConstant {
 			typedef IntegralConstant<T, v> Type;
@@ -18,20 +30,35 @@ namespace ascension {
 			static const ValueType value = v;
 		};
 
-		/// From @c std#true_type.
+		/**
+		 * From @c std#true_type.
+		 * @deprecated 0.8 Use @c std#true_type.
+		 */
 		typedef IntegralConstant<bool, true> TrueType;
-		/// From @c std#false_type.
+		/**
+		 * From @c std#false_type.
+		 * @deprecated 0.8 Use @c std#false_type.
+		 */
 		typedef IntegralConstant<bool, false> FalseType;
 
-		/// Returns the type @a T if @a condition is @c true, otherwise type @a U.
+		/**
+		 * Returns the type @a T if @a condition is @c true, otherwise type @a U.
+		 * @deprecated 0.8 Use @c std#conditional.
+		 */
 		template<bool condition, typename T, typename U> struct Select {typedef T Type;};
 		template<typename T, typename U> struct Select<false, T, U> {typedef U Type;};
 
-		/// Returns @c true if the given two types @a T and @a U are same.
+		/**
+		 * Returns @c true if the given two types @a T and @a U are same.
+		 * @deprecated 0.8 Use @c std#is_same.
+		 */
 		template<typename T, typename U> struct IsSame : FalseType {};
 		template<typename T> struct IsSame<T, T> : TrueType {};
 
-		/// Returns @c true if the type @a D is derived from the type @a B.
+		/**
+		 * Returns @c true if the type @a D is derived from the type @a B.
+		 * @deprecated 0.8 Use @c std#is_base_of.
+		 */
 		template<typename B, typename D> class IsBaseAndDerived {
 			typedef char Y;
 			class N {char padding_[8];};

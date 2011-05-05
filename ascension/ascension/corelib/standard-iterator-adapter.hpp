@@ -89,10 +89,10 @@ namespace ascension {
 		template<typename Iterator>
 		struct IsBidirectionalIterator {
 			static const bool value =
-				IsSame<
+				std::tr1::is_same<
 					typename std::iterator_traits<Iterator>::iterator_category,
 					std::bidirectional_iterator_tag
-				>::result || IsSame<
+				>::result || std::tr1::is_same<
 					typename std::iterator_traits<Iterator>::iterator_category,
 					std::random_access_iterator_tag
 				>::result;
