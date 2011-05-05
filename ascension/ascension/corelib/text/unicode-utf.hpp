@@ -12,7 +12,7 @@
 #define ASCENSION_UNICODE_UTF_HPP
 
 #include <ascension/corelib/basic-exceptions.hpp>	// IllegalStateException
-#include <ascension/corelib/type-traits.hpp>		// detail.Select
+#include <ascension/corelib/type-traits.hpp>		// std.conditional
 #include <ascension/corelib/text/character.hpp>
 #include <ascension/corelib/text/unicode-surrogates.hpp>
 #include <iterator>
@@ -192,7 +192,7 @@ namespace ascension {
 		template<typename CodeUnitSequence,
 			template<class> class AdaptionIterator = UTF16To32Iterator>
 		struct ToUTF32Sequence {
-			typedef typename detail::Select<
+			typedef typename std::tr1::conditional<
 				CodeUnitSizeOf<CodeUnitSequence>::result == 4,
 				CodeUnitSequence, AdaptionIterator<CodeUnitSequence> >::Result Result;
 		};

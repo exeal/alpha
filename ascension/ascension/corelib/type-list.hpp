@@ -7,7 +7,7 @@
 
 #ifndef ASCENSION_TYPE_LIST_HPP
 #define ASCENSION_TYPE_LIST_HPP
-#include <ascension/corelib/type-traits.hpp>	// detail.Select
+#include <ascension/corelib/type-traits.hpp>
 
 namespace ascension {
 	namespace typelist {
@@ -55,22 +55,22 @@ namespace ascension {
 		template<typename Car, typename Cdr, typename T> class MostDerived<Cat<Car, Cdr>, T> {
 			typedef typename MostDerived<Cdr, T>::Type Candidate_;
 		public:
-			typedef typename detail::Select<
-				detail::IsBaseAndDerived<Candidate_, Car>::value, Car, Candidate_
+			typedef typename std::tr1::conditional<
+				std::tr1::is_base_of<Candidate_, Car>::value, Car, Candidate_
 			>::Type Type;
 		};
 		template<typename T> class MostDerived<void, T> {public: typedef T Type;};
 
 		/// Returns true if the type @a T is the most derived in the given type list.
 		template<typename Types, typename T> struct IsMostDerived {
-			static const bool value = detail::IsSame<typename MostDerived<Types, T>::Type, T>::value;
+			static const bool value = std::tr1::is_same<typename MostDerived<Types, T>::Type, T>::value;
 		};
 
 	}
 
 	namespace detail {
 		template<typename Types, typename Current> struct RemoveBasesImpl {
-			typedef typename Select<
+			typedef typename std::tr1::conditional<
 				typelist::IsMostDerived<Types, typename Current::Car>::value,
 				typelist::Cat<typename Current::Car, typename RemoveBasesImpl<Types, typename Current::Cdr>::Type>,
 				typename RemoveBasesImpl<Types, typename Current::Cdr>::Type
