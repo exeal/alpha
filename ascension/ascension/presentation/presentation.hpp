@@ -20,6 +20,8 @@ namespace ascension {
 
 	namespace presentation {
 
+		class TextLineStyle;
+
 		/**
 		 * Interface for objects which direct style of a text line.
 		 * @see Presentation#setTextLineStyleDirector
@@ -63,6 +65,8 @@ namespace ascension {
 				graphics::Color& foreground, graphics::Color& background) const = 0;
 			friend class Presentation;
 		};
+
+		class TextRunStyle;
 
 		/**
 		 * Interface for objects which are interested in change of the default style of
@@ -159,6 +163,7 @@ namespace ascension {
 			};
 		} // namespace hyperlink
 
+		class StyledTextRunIterator;
 		class TextRunStyleDirector;
 
 		/**
@@ -245,20 +250,6 @@ namespace ascension {
 					i(textLineColorDirectors_.begin()), e(textLineColorDirectors_.end()); i != e; ++i) {
 				if(i->get() == &director) {textLineColorDirectors_.erase(i); return;}
 			}
-		}
-
-		/// 
-		inline TextAnchor defaultTextAnchor(const Presentation& presentation) {
-			std::tr1::shared_ptr<const TextLineStyle> style(presentation.defaultTextLineStyle());
-			return (style.get() != 0
-				&& !style->anchor.inherits()) ? style->anchor : ASCENSION_DEFAULT_TEXT_ANCHOR;
-		}
-
-		///
-		inline ReadingDirection defaultReadingDirection(const Presentation& presentation) {
-			std::tr1::shared_ptr<const TextLineStyle> style(presentation.defaultTextLineStyle());
-			return (style.get() != 0
-				&& !style->readingDirection.inherits()) ? style->readingDirection : ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
 		}
 
 	}
