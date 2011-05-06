@@ -8,20 +8,17 @@
 #define ASCENSION_SESSION_HPP
 
 #include <ascension/config.hpp>				// ASCENSION_NO_MIGEMO
-#include <ascension/corelib/string-piece.hpp>
+#include <ascension/corelib/text/character.hpp>
+#include <ascension/text-editor/kill-ring.hpp>
 #ifndef ASCENSION_NO_MIGEMO
 #	include <ascension/kernel/fileio.hpp>	// fileio.PathCharacter
 #endif // !ASCENSION_NO_MIGEMO
-#include <list>
 #include <memory>
 #include <vector>
 
 namespace ascension {
 
-	namespace kernel {
-		class Region;
-		class Document;
-	}
+	namespace kernel {class Document;}
 
 	namespace searcher {
 		class IncrementalSearcher;
@@ -30,44 +27,7 @@ namespace ascension {
 
 	namespace texteditor {
 
-#ifdef ASCENSION_OS_WINDOWS
-		/**
-		 * Base class for input sequence checkers.
-		 * @see isc
-		 */
-		class InputSequenceChecker {
-		public:
-			/// Destructor.
-			virtual ~InputSequenceChecker() /*throw()*/ {}
-			/**
-			 * Checks the sequence.
-			 * @param keyboardLayout The active keyboard layout
-			 * @param preceding The string preceding to the input
-			 * @param c The code point of the character to be input
-			 * @return true if the input is acceptable
-			 */
-			virtual bool check(HKL keyboardLayout, const StringPiece& preceding, CodePoint c) const = 0;
-		};
-
-		/**
-		 * Collection of input sequence checkers.
-		 * @see InputSequenceChecker, Session#getInputSequenceCheckers
-		 */
-		class InputSequenceCheckers {
-			ASCENSION_NONCOPYABLE_TAG(InputSequenceCheckers);
-		public:
-			~InputSequenceCheckers();
-			void add(std::auto_ptr<InputSequenceChecker> checker);
-			bool check(const StringPiece& preceding, CodePoint c) const;
-			void clear();
-			bool isEmpty() const /*throw()*/;
-			void setKeyboardLayout(HKL keyboardLayout) /*throw()*/;
-		private:
-			std::list<InputSequenceChecker*> strategies_;
-			HKL keyboardLayout_;
-		};
-#endif // ASCENSION_OS_WINDOWS
-
+		class InputSequenceCheckers;
 		class KillRing;
 
 		/**
@@ -88,13 +48,13 @@ namespace ascension {
 			KillRing& killRing() /*throw()*/;
 			const KillRing& killRing() const /*throw()*/;
 #ifndef ASCENSION_NO_MIGEMO
-			const kernel::fileio::PathCharacter* migemoPathName(bool runtime) /*throw()*/;
+			const kernel::fileio::PathString& migemoPathName(bool runtime) /*throw()*/;
 #endif // !ASCENSION_NO_MIGEMO
 			searcher::TextSearcher& textSearcher() /*throw()*/;
 			const searcher::TextSearcher& textSearcher() const /*throw()*/;
 			void setInputSequenceCheckers(std::auto_ptr<InputSequenceCheckers> isc) /*throw()*/;
 #ifndef ASCENSION_NO_MIGEMO
-			void setMigemoPathName(const kernel::fileio::PathCharacter* pathName, bool runtime);
+			void setMigemoPathName(const kernel::fileio::PathString& pathName, bool runtime);
 #endif // !ASCENSION_NO_MIGEMO
 			// operations
 			void addDocument(kernel::Document& document);
@@ -103,11 +63,11 @@ namespace ascension {
 		private:
 			std::vector<kernel::Document*> documents_;
 			KillRing killRing_;
-			searcher::IncrementalSearcher* isearch_;
-			searcher::TextSearcher* textSearcher_;
+			std::auto_ptr<searcher::IncrementalSearcher> isearch_;
+			std::auto_ptr<searcher::TextSearcher> textSearcher_;
 			std::auto_ptr<InputSequenceCheckers> inputSequenceCheckers_;
 #ifndef ASCENSION_NO_MIGEMO
-			kernel::fileio::PathCharacter migemoRuntimePathName_[MAX_PATH], migemoDictionaryPathName_[MAX_PATH];
+			kernel::fileio::PathString migemoRuntimePathName_, migemoDictionaryPathName_;
 #endif // !ASCENSION_NO_MIGEMO
 		};
 

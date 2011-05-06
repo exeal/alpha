@@ -1,13 +1,14 @@
 /**
- * @file text-editor.hpp
+ * @file command.hpp
  * @author exeal
- * @date 2006-2010
+ * @date 2006-2011 was text-editor.hpp
+ * @date 2011-05-06
  */
 
-#ifndef ASCENSION_TEXT_EDITOR_HPP
-#define ASCENSION_TEXT_EDITOR_HPP
+#ifndef ASCENSION_COMMAND_HPP
+#define ASCENSION_COMMAND_HPP
 
-#include <ascension/session.hpp>
+#include <ascension/text-editor/session.hpp>
 #include <ascension/kernel/searcher.hpp>
 #include <ascension/viewer/viewer.hpp>
 
@@ -349,54 +350,6 @@ namespace ascension {
 			};
 		} // namespace commands
 
-		/// Standard input sequence checkers.
-		namespace isc {
-			/// I.S.C. for Ainu.
-			class AinuInputSequenceChecker : public InputSequenceChecker {
-			public:
-				bool check(HKL keyboardLayout, const StringPiece& preceding, CodePoint c) const;
-			};
-			/// I.S.C. for Thai.
-			class ThaiInputSequenceChecker : public InputSequenceChecker {
-				ASCENSION_UNASSIGNABLE_TAG(ThaiInputSequenceChecker);
-			public:
-				enum Mode {PASS_THROUGH, BASIC_MODE, STRICT_MODE};
-				ThaiInputSequenceChecker(Mode mode = BASIC_MODE) /*throw()*/ : mode_(mode) {}
-				bool check(HKL keyboardLayout, const StringPiece& preceding, CodePoint c) const;
-			private:
-				enum CharacterClass {
-					CTRL, NON, CONS,	// treat unassigned characters in Thai block as controls
-					LV, FV1, FV2, FV3, BV1, BV2,
-					BD, TONE, AD1, AD2, AD3,
-					AV1, AV2, AV3,
-					CHARCLASS_COUNT
-				};
-				const Mode mode_;
-				static const CharacterClass charClasses_[];
-				static const char checkMap_[];
-				static CharacterClass getCharacterClass(CodePoint cp) /*throw()*/ {
-					if(cp < 0x0020u || cp == 0x007fu)		return CTRL;
-					else if(cp >= 0x0e00u && cp < 0x0e60u)	return charClasses_[cp - 0x0e00u];
-					else if(cp >= 0x0e60u && cp < 0x0e80u)	return CTRL;
-					else									return NON;
-				}
-				static bool doCheck(CharacterClass lead, CharacterClass follow, bool strict) /*throw()*/ {
-					const char result = checkMap_[lead * CHARCLASS_COUNT + follow];
-					if(result == 'A' || result == 'C' || result == 'X')
-						return true;
-					else if(result == 'R')
-						return false;
-					else /* if(result == 'S') */
-						return !strict;
-				}
-			};
-			/// I.S.C. for Vietnamese.
-			class VietnameseInputSequenceChecker : public InputSequenceChecker {
-			public:
-				bool check(HKL keyboardLayout, const StringPiece& preceding, CodePoint c) const;
-			};
-		} // namespace isc
-
 
 		/**
 		 * Performs the command. The command can return the command-specific result value.
@@ -422,4 +375,4 @@ namespace ascension {
 
 } // namespace ascension
 
-#endif // !ASCENSION_TEXT_EDITOR_HPP
+#endif // !ASCENSION_COMMAND_HPP

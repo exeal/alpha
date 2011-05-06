@@ -266,10 +266,13 @@
     <ClCompile Include="..\..\ascension\src\text-editor\session.cpp">
       <Filter>ascension\Source Files\text-editor</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\text-editor\text-editor.cpp">
+    <ClCompile Include="..\..\ascension\src\text-editor\kill-ring.cpp">
       <Filter>ascension\Source Files\text-editor</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\text-editor\kill-ring.cpp">
+    <ClCompile Include="..\..\ascension\src\text-editor\input-sequence-checker.cpp">
+      <Filter>ascension\Source Files\text-editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\text-editor\command.cpp">
       <Filter>ascension\Source Files\text-editor</Filter>
     </ClCompile>
   </ItemGroup>
@@ -562,10 +565,13 @@
     <ClInclude Include="..\..\ascension\ascension\text-editor\session.hpp">
       <Filter>ascension\Header Files\text-editor</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\text-editor\text-editor.hpp">
+    <ClInclude Include="..\..\ascension\ascension\text-editor\kill-ring.hpp">
       <Filter>ascension\Header Files\text-editor</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\text-editor\kill-ring.hpp">
+    <ClInclude Include="..\..\ascension\ascension\text-editor\input-sequence-checker.hpp">
+      <Filter>ascension\Header Files\text-editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\text-editor\command.hpp">
       <Filter>ascension\Header Files\text-editor</Filter>
     </ClInclude>
   </ItemGroup>
