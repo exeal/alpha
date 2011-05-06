@@ -1,11 +1,12 @@
 /**
- * @file unicode-property.cpp
+ * @file character-property.cpp
  * @author exeal
- * @date 2005-2011
+ * @date 2005-2011 was unicode-property.cpp
+ * @date 2011-05-07 renamed from unicode-property.cpp
  */
 
 #include <ascension/corelib/character-iterator.hpp>
-#include <ascension/corelib/text/unicode-property.hpp>
+#include <ascension/corelib/text/character-property.hpp>
 using namespace ascension;
 using namespace ascension::text;
 using namespace ascension::text::ucd;

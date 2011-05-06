@@ -7,7 +7,7 @@
 
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
 #include <ascension/corelib/text/break-iterator.hpp>
-#include <ascension/corelib/text/unicode-property.hpp>
+#include <ascension/corelib/text/character-property.hpp>
 #include <memory>	// std.auto_ptr
 
 using namespace ascension;

@@ -1,12 +1,13 @@
 /**
- * @file unicode-property.hpp
+ * @file character-property.hpp
  * Defines Unicode property entries and provides methods to retrieve a property of character.
  * @author exeal
- * @date 2007-2011
+ * @date 2007-2011 was unicode-property.hpp
+ * @date 2011-05-07 renamed from unicode-property.hpp
  */
 
-#ifndef ASCENSION_UNICODE_PROPERTY_HPP
-#define ASCENSION_UNICODE_PROPERTY_HPP
+#ifndef ASCENSION_CHARACTER_PROPERTY_HPP
+#define ASCENSION_CHARACTER_PROPERTY_HPP
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #error These class definitions and implementations are based on old version of Unicode.
 #endif
@@ -653,4 +654,4 @@ inline bool legacyctype::isxdigit(CodePoint c) {
 
 }}} // namespace ascension.text.ucd
 
-#endif // !ASCENSION_UNICODE_PROPERTY_HPP
+#endif // !ASCENSION_CHARACTER_PROPERTY_HPP

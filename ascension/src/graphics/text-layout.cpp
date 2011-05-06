@@ -12,7 +12,6 @@
 //#include <ascension/graphics/special-character-renderer.hpp>
 #include <ascension/corelib/shared-library.hpp>
 #include <ascension/corelib/text/unicode-property.hpp>
-#include <ascension/viewer/caret.hpp>	// Caret.isSelectionRectangle, viewers.selectedRangeOnVisualLine
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate
 #include <usp10.h>
