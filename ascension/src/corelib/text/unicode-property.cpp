@@ -441,11 +441,14 @@ int WordBreak::of(CodePoint c,
 	static auto_ptr<locale> japanese, swedish;
 	if(!localeInitialized) {
 		localeInitialized = true;
+		static const char* JAPANESE_NAMES[] = {"ja_JP", "ja", "JP"};
+		static const char* SWEDISH_NAMES[] = {"sv_SE", "sv", "SE"};
 		try {
-			japanese.reset(new locale("japanese"));
-			swedish.reset(new locale("swedish"));
-		} catch(...) {
-			japanese.reset(0);
+			for(size_t i = 0; i < ASCENSION_COUNTOF(JAPANESE_NAMES) && japanese.get() == 0; ++i)
+				japanese.reset(new locale(JAPANESE_NAMES[i]));
+			for(size_t i = 0; i < ASCENSION_COUNTOF(SWEDISH_NAMES) && swedish.get() == 0; ++i)
+				swedish.reset(new locale(SWEDISH_NAMES[i]));
+		} catch(const runtime_error&) {
 		}
 	}
 	if(c == CARRIAGE_RETURN)
