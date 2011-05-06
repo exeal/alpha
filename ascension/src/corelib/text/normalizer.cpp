@@ -7,7 +7,7 @@
 #include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_*
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 #include <ascension/corelib/text/normalizer.hpp>
-#include <ascension/corelib/text/unicode-property.hpp>
+#include <ascension/corelib/text/character-property.hpp>
 #include <algorithm>	// std.find_if, std.lower_bound, std.sort
 using namespace ascension;
 using namespace ascension::text;

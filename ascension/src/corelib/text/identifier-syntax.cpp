@@ -6,7 +6,7 @@
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION
 #include <ascension/corelib/text/identifier-syntax.hpp>
-#include <ascension/corelib/text/unicode-property.hpp>
+#include <ascension/corelib/text/character-property.hpp>
 #include <vector>
 using namespace ascension;
 using namespace ascension::text;
