@@ -192,9 +192,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\presentation.cpp" />
+    <ClCompile Include="..\..\ascension\src\text-editor\command.cpp" />
+    <ClCompile Include="..\..\ascension\src\text-editor\input-sequence-checker.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\kill-ring.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\session.cpp" />
-    <ClCompile Include="..\..\ascension\src\text-editor\text-editor.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\base\widget-windows.cpp" />
     <ClCompile Include="..\src\about-dialog.cpp" />
     <ClCompile Include="..\src\ambient.cpp" />
@@ -282,9 +283,10 @@
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation-reconstructor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\text-style.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\text-editor\command.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\text-editor\input-sequence-checker.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\kill-ring.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\session.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\text-editor\text-editor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\message-dispatcher-windows.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\widget-windows.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\widget.hpp" />

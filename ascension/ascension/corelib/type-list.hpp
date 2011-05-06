@@ -55,7 +55,7 @@ namespace ascension {
 		template<typename Car, typename Cdr, typename T> class MostDerived<Cat<Car, Cdr>, T> {
 			typedef typename MostDerived<Cdr, T>::Type Candidate_;
 		public:
-			typedef typename std::tr1::conditional<
+			typedef typename detail::Select<
 				std::tr1::is_base_of<Candidate_, Car>::value, Car, Candidate_
 			>::Type Type;
 		};
@@ -70,7 +70,7 @@ namespace ascension {
 
 	namespace detail {
 		template<typename Types, typename Current> struct RemoveBasesImpl {
-			typedef typename std::tr1::conditional<
+			typedef typename Select<
 				typelist::IsMostDerived<Types, typename Current::Car>::value,
 				typelist::Cat<typename Current::Car, typename RemoveBasesImpl<Types, typename Current::Cdr>::Type>,
 				typename RemoveBasesImpl<Types, typename Current::Cdr>::Type

@@ -11,7 +11,8 @@
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/kernel/point.hpp>
-#include <ascension/presentation.hpp>
+#include <ascension/presentation/presentation.hpp>
+#include <ascension/presentation/text-style.hpp>
 #include <ascension/viewer/caret-observers.hpp>
 #include <ascension/viewer/content-assist.hpp>
 #include <ascension/viewer/viewer-observers.hpp>

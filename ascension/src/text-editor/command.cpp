@@ -1,10 +1,11 @@
 /**
- * @file text-editor.cpp
+ * @file command.cpp
  * @author exeal
- * @date 2006-2011
+ * @date 2006-2011 was text-editor.cpp
+ * @date 2011-05-06
  */
 
-#include <ascension/text-editor.hpp>
+#include <ascension/text-editor/command.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/content-assist.hpp>
 #include <ascension/win32/ui/wait-cursor.hpp>
@@ -13,7 +14,6 @@ using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::texteditor;
 using namespace ascension::texteditor::commands;
-using namespace ascension::texteditor::isc;
 using namespace ascension::viewers;
 using namespace std;
 
@@ -1395,92 +1395,3 @@ bool WordSelectionCreationCommand::perform() {
 #undef ASCENSION_ASSERT_IFISWINDOW
 #undef ASCENSION_CHECK_DOCUMENT_READ_ONLY
 //#undef ASCENSION_CHECK_GUI_EDITABILITY
-
-
-// isc.AinuInputSequenceChecker ///////////////////////////////////////////////////////////////////
-
-/// @see InputSequenceChecker#check
-bool AinuInputSequenceChecker::check(HKL, const StringPiece& preceding, CodePoint c) const {
-	// only check a pair consists of combining semi-voiced sound mark is valid
-	return c != 0x309au || (preceding.beginning() < preceding.end() && (
-		preceding.end()[-1] == L'\x30bb'		// se (セ)
-		|| preceding.end()[-1] == L'\x30c4'		// tu (ツ)
-		|| preceding.end()[-1] == L'\x30c8'		// to (ト)
-		|| preceding.end()[-1] == L'\x31f7'));	// small fu (小さいフ)
-}
-
-
-// isc.ThaiInputSequenceChecker ///////////////////////////////////////////////////////////////////
-
-const ThaiInputSequenceChecker::CharacterClass ThaiInputSequenceChecker::charClasses_[] = {
-	CTRL, CONS, CONS, CONS, CONS, CONS, CONS, CONS,	// U+0E00
-	CONS, CONS, CONS, CONS, CONS, CONS, CONS, CONS,
-	CONS, CONS, CONS, CONS, CONS, CONS, CONS, CONS,	// U+0E10
-	CONS, CONS, CONS, CONS, CONS, CONS, CONS, CONS,
-	CONS, CONS, CONS, CONS, FV3,  CONS, FV3,  CONS,	// U+0E20
-	CONS, CONS, CONS, CONS, CONS, CONS, CONS, NON,
-	FV1,  AV2,  FV1,  FV1,  AV1,  AV3,  AV2,  AV3,	// U+0E30
-	BV1,  BV2,  BD,   CTRL, CTRL, CTRL, CTRL, NON,
-	LV,   LV,   LV,   LV,   LV,   FV2,  NON,  AD2,	// U+0E40
-	TONE, TONE, TONE, TONE, AD1,  AD1,  AD3,  NON,
-	NON,  NON,  NON,  NON,  NON,  NON,  NON,  NON,	// U+0E50
-	NON,  NON,  NON,  NON,  CTRL, CTRL, CTRL, CTRL
-};
-
-const char ThaiInputSequenceChecker::checkMap_[] =
-	"XAAAAAA" "RRRRRRRRRR"	// CTRL
-	"XAAASSA" "RRRRRRRRRR"	// NON
-	"XAAAASA" "CCCCCCCCCC"	// CONS
-	"XSASSSS" "RRRRRRRRRR"	// LV
-	"XSASASA" "RRRRRRRRRR"	// FV1
-	"XAAAASA" "RRRRRRRRRR"	// FV2
-	"XAAASAS" "RRRRRRRRRR"	// FV3
-	"XAAAASA" "RRRCCRRRRR"	// BV1
-	"XAAASSA" "RRRCRRRRRR"	// BV2
-	"XAAASSA" "RRRRRRRRRR"	// BD 
-	"XAAAAAA" "RRRRRRRRRR"	// TONE
-	"XAAASSA" "RRRRRRRRRR"	// AD1	
-	"XAAASSA" "RRRRRRRRRR"	// AD2	
-	"XAAASSA" "RRRRRRRRRR"	// AD3	
-	"XAAASSA" "RRRCCRRRRR"	// AV1	
-	"XAAASSA" "RRRCRRRRRR"	// AV2	
-	"XAAASSA" "RRRCRCRRRR";	// AV3
-
-/// @see InputSequenceChecker#check
-bool ThaiInputSequenceChecker::check(HKL, const StringPiece& preceding, CodePoint c) const {
-	// standardized by WTT 2.0:
-	// - http://mozart.inet.co.th/cyberclub/trin/thairef/wtt2/char-class.pdf
-	// - http://www.nectec.or.th/it-standards/keyboard_layout/thai-key.htm
-	if(mode_ == PASS_THROUGH)
-		return true;
-	return doCheck(
-		!preceding.isEmpty() ? getCharacterClass(preceding.end()[-1]) : CTRL,	// if there is not a preceding character, as if a control is
-		getCharacterClass((c != 0x0e33u) ? c : 0x0e4du),						// Sara Am -> Nikhahit + Sara Aa
-		mode_ == STRICT_MODE);
-}
-
-
-// isc.VietnameseInputSequenceChecker /////////////////////////////////////////////////////////////
-
-/// @see InputSequenceChecker#check
-bool VietnameseInputSequenceChecker::check(HKL keyboardLayout, const StringPiece& preceding, CodePoint c) const {
-	// The Vietnamese alphabet (quốc ngữ) has 12 vowels, 5 tone marks and other consonants. This
-	// code checks if the input is conflicting the pattern <vowel> + <0 or 1 tone mark>. Does not
-	// check when the input locale is not Vietnamese, because Vietnamese does not have own script
-	// Like Uniscribe, ignored if the vowel is a composite.
-	// 
-	// Reference:
-	// - Vietnamese alphabet (http://en.wikipedia.org/wiki/Vietnamese_alphabet)
-	// - Vietnamese Writing System (http://www.cjvlang.com/Writing/writviet.html)
-	static const CodePoint VOWELS[24] = {
-		L'A', L'E', L'I', L'O', L'U', L'Y', L'a', L'e', L'i', L'o', L'u', L'y',
-		0x00c2u, 0x00cau, 0x00d4u, 0x00e2u, 0x00eau, 0x00f4u, 0x0102u, 0x0103u, 0x01a0u, 0x01a1u, 0x01afu, 0x01b0u
-	};
-	static const CodePoint TONE_MARKS[5] = {0x0300u, 0x0301u, 0x0303u, 0x0309u, 0x0323u};
-
-	if(PRIMARYLANGID(LOWORD(keyboardLayout)) != LANG_VIETNAMESE)
-		return true;
-	else if(!preceding.isEmpty() && binary_search(TONE_MARKS, ASCENSION_ENDOF(TONE_MARKS), c))
-		return binary_search(VOWELS, ASCENSION_ENDOF(VOWELS), preceding.end()[-1]);
-	return true;
-}
