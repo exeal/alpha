@@ -44,7 +44,7 @@ bool InputSequenceCheckers::check(const StringPiece& preceding, CodePoint c) con
 	if(preceding.beginning() == 0 || preceding.end() == 0)
 		throw NullPointerException("preceding");
 	for(list<InputSequenceChecker*>::const_iterator i = strategies_.begin(); i != strategies_.end(); ++i) {
-		if(!(*i)->check(keyboardLayout_, preceding, c))
+		if(!(*i)->check(locale_, preceding, c))
 			return false;
 	}
 	return true;
@@ -57,24 +57,33 @@ void InputSequenceCheckers::clear() {
 	strategies_.clear();
 }
 
+/**
+ * Sets the locale of the input
+ * @param lc The locale of the input
+ * @see #locale
+ */
+void InputSequenceCheckers::imbue(const std::locale& lc) /*throw()*/ {
+	locale_ = lc;
+}
+
 /// Returns if no checker is registerd.
 bool InputSequenceCheckers::isEmpty() const /*throw()*/ {
 	return strategies_.empty();
 }
 
 /**
- * Activates the specified keyboard layout.
- * @param keyboardLayout The keyboard layout
+ * Returns the locale.
+ * @see #imbue
  */
-void InputSequenceCheckers::setKeyboardLayout(HKL keyboardLayout) /*throw()*/ {
-	keyboardLayout_ = keyboardLayout;
+const locale& InputSequenceCheckers::locale() const /*throw()*/ {
+	return locale_;
 }
 
 
 // isc.AinuInputSequenceChecker ///////////////////////////////////////////////////////////////////
 
 /// @see InputSequenceChecker#check
-bool AinuInputSequenceChecker::check(HKL, const StringPiece& preceding, CodePoint c) const {
+bool AinuInputSequenceChecker::check(const locale&, const StringPiece& preceding, CodePoint c) const {
 	// only check a pair consists of combining semi-voiced sound mark is valid
 	return c != 0x309au || (preceding.beginning() < preceding.end() && (
 		preceding.end()[-1] == L'\x30bb'		// se (セ)
@@ -121,7 +130,7 @@ const char ThaiInputSequenceChecker::checkMap_[] =
 	"XAAASSA" "RRRCRCRRRR";	// AV3
 
 /// @see InputSequenceChecker#check
-bool ThaiInputSequenceChecker::check(HKL, const StringPiece& preceding, CodePoint c) const {
+bool ThaiInputSequenceChecker::check(const std::locale&, const StringPiece& preceding, CodePoint c) const {
 	// standardized by WTT 2.0:
 	// - http://mozart.inet.co.th/cyberclub/trin/thairef/wtt2/char-class.pdf
 	// - http://www.nectec.or.th/it-standards/keyboard_layout/thai-key.htm
@@ -139,7 +148,7 @@ bool ThaiInputSequenceChecker::check(HKL, const StringPiece& preceding, CodePoin
 // isc.VietnameseInputSequenceChecker /////////////////////////////////////////////////////////////
 
 /// @see InputSequenceChecker#check
-bool VietnameseInputSequenceChecker::check(HKL keyboardLayout, const StringPiece& preceding, CodePoint c) const {
+bool VietnameseInputSequenceChecker::check(const locale& lc, const StringPiece& preceding, CodePoint c) const {
 	// The Vietnamese alphabet (quốc ngữ) has 12 vowels, 5 tone marks and other consonants. This
 	// code checks if the input is conflicting the pattern <vowel> + <0 or 1 tone mark>. Does not
 	// check when the input locale is not Vietnamese, because Vietnamese does not have own script
@@ -155,8 +164,19 @@ bool VietnameseInputSequenceChecker::check(HKL keyboardLayout, const StringPiece
 		0x0102u, 0x0103u, 0x01a0u, 0x01a1u, 0x01afu, 0x01b0u	// Ă ă Ơ ơ Ư ư
 	};
 	static const CodePoint TONE_MARKS[5] = {0x0300u, 0x0301u, 0x0303u, 0x0309u, 0x0323u};
+	static pair<auto_ptr<locale>, bool> vietnamese;
 
-	if(PRIMARYLANGID(LOWORD(keyboardLayout)) != LANG_VIETNAMESE)
+	if(!vietnamese.second) {
+		vietnamese.second = true;
+		static const char* CANDIDATE_NAMES[] = {"vi_VN", "vi", "VN"};
+		try {
+			for(size_t i = 0; i < ASCENSION_COUNTOF(CANDIDATE_NAMES) && vietnamese.first.get() == 0; ++i)
+				vietnamese.first.reset(new locale(CANDIDATE_NAMES[i]));
+		} catch(const runtime_error&) {
+		}
+	}
+
+	if(vietnamese.first.get() == 0 && lc != *vietnamese.first)
 		return true;
 	else if(!preceding.isEmpty() && binary_search(TONE_MARKS, ASCENSION_ENDOF(TONE_MARKS), c))
 		return binary_search(VOWELS, ASCENSION_ENDOF(VOWELS), preceding.end()[-1]);

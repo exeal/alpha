@@ -8,22 +8,14 @@
 #ifndef ASCENSION_INPUT_SEQUENCE_CHECKER_HPP
 #define ASCENSION_INPUT_SEQUENCE_CHECKER_HPP
 
-#include <ascension/config.hpp>
 #include <ascension/corelib/string-piece.hpp>
-#ifdef ASCENSION_OS_WINDOWS
-#	include <ascension/win32/windows.hpp>	// HKL
-#endif
 #include <list>
+#include <locale>
 #include <memory>
 
 
 namespace ascension {
 	namespace texteditor {
-
-#ifdef ASCENSION_OS_WINDOWS
-		typedef HKL NativeKeyboardLayout;
-#else
-#endif
 
 		/**
 		 * Base class for input sequence checkers.
@@ -35,12 +27,12 @@ namespace ascension {
 			virtual ~InputSequenceChecker() /*throw()*/ {}
 			/**
 			 * Checks the sequence.
-			 * @param keyboardLayout The active keyboard layout
+			 * @param lc The locale of the active input
 			 * @param preceding The string preceding to the input
 			 * @param c The code point of the character to be input
 			 * @return true if the input is acceptable
 			 */
-			virtual bool check(NativeKeyboardLayout keyboardLayout, const StringPiece& preceding, CodePoint c) const = 0;
+			virtual bool check(const std::locale& lc, const StringPiece& preceding, CodePoint c) const = 0;
 		};
 
 		/**
@@ -55,10 +47,11 @@ namespace ascension {
 			bool check(const StringPiece& preceding, CodePoint c) const;
 			void clear();
 			bool isEmpty() const /*throw()*/;
-			void setKeyboardLayout(NativeKeyboardLayout keyboardLayout) /*throw()*/;
+			void imbue(const std::locale& lc) /*throw()*/;
+			const std::locale& locale() const /*throw()*/;
 		private:
 			std::list<InputSequenceChecker*> strategies_;
-			NativeKeyboardLayout keyboardLayout_;
+			std::locale locale_;
 		};
 
 		/// Standard input sequence checkers.
@@ -67,7 +60,7 @@ namespace ascension {
 			/// I.S.C. for Ainu.
 			class AinuInputSequenceChecker : public InputSequenceChecker {
 			public:
-				bool check(HKL keyboardLayout, const StringPiece& preceding, CodePoint c) const;
+				bool check(const std::locale& lc, const StringPiece& preceding, CodePoint c) const;
 			};
 
 			/// I.S.C. for Thai.
@@ -76,7 +69,7 @@ namespace ascension {
 			public:
 				enum Mode {PASS_THROUGH, BASIC_MODE, STRICT_MODE};
 				ThaiInputSequenceChecker(Mode mode = BASIC_MODE) /*throw()*/ : mode_(mode) {}
-				bool check(HKL keyboardLayout, const StringPiece& preceding, CodePoint c) const;
+				bool check(const std::locale& lc, const StringPiece& preceding, CodePoint c) const;
 			private:
 				enum CharacterClass {
 					CTRL, NON, CONS,	// treat unassigned characters in Thai block as controls
@@ -108,7 +101,7 @@ namespace ascension {
 			/// I.S.C. for Vietnamese.
 			class VietnameseInputSequenceChecker : public InputSequenceChecker {
 			public:
-				bool check(HKL keyboardLayout, const StringPiece& preceding, CodePoint c) const;
+				bool check(const std::locale& lc, const StringPiece& preceding, CodePoint c) const;
 			};
 		} // namespace isc
 
