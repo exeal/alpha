@@ -1,0 +1,384 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Template|Win32">
+      <Configuration>Template</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{B636D539-C324-4DF9-8233-5DEC6094A186}</ProjectGuid>
+    <RootNamespace>Alpha</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)Release\Objs\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)Debug\Objs\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Midl>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <WarningLevel>4</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TargetEnvironment>Win32</TargetEnvironment>
+      <TypeLibraryName>$(OutDir)ambient.tlb</TypeLibraryName>
+      <OutputDirectory>$(ProjectDir)../src</OutputDirectory>
+      <HeaderFileName>ambient-idl.hpp</HeaderFileName>
+      <InterfaceIdentifierFileName>ambient-iid.hpp</InterfaceIdentifierFileName>
+    </Midl>
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <AdditionalIncludeDirectories>$(ProjectDir)../../ascension;$(ProjectDir)../..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOST_LIB_DIAGNOSTIC;BOOST_PYTHON_NO_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <StructMemberAlignment>Default</StructMemberAlignment>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ProgramDataBaseFileName>$(IntDir)</ProgramDataBaseFileName>
+      <XMLDocumentationFileName>$(IntDir)</XMLDocumentationFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <DisableSpecificWarnings>4819;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0411</Culture>
+    </ResourceCompile>
+    <Link>
+      <AdditionalDependencies>shlwapi.lib;comctl32.lib;imm32.lib;libboost_python3-vc90-mt-s-1_41.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)Alpha.exe</OutputFile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <ManifestFile>$(IntDir)$(TargetFileName).intermediate.manifest</ManifestFile>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)Alpha.pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <Manifest>
+      <OutputManifestFile>$(IntDir)$(TargetFileName).embed.manifest</OutputManifestFile>
+      <AdditionalManifestFiles>$(ProjectDir)../resource/manifest.xml;%(AdditionalManifestFiles)</AdditionalManifestFiles>
+    </Manifest>
+    <ManifestResourceCompile>
+      <ResourceOutputFileName>$(IntDir)$(TargetFileName).embed.manifest.res</ResourceOutputFileName>
+    </ManifestResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Midl>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <WarningLevel>1</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TargetEnvironment>Win32</TargetEnvironment>
+      <TypeLibraryName>$(OutDir)ambient.tlb</TypeLibraryName>
+      <OutputDirectory>$(ProjectDir)../src</OutputDirectory>
+      <HeaderFileName>ambient-idl.hpp</HeaderFileName>
+      <InterfaceIdentifierFileName>ambient-iid.hpp</InterfaceIdentifierFileName>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>$(ProjectDir)../../ascension;$(ProjectDir)../..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOST_LIB_DIAGNOSTIC;BOOST_PYTHON_NO_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <SmallerTypeCheck>true</SmallerTypeCheck>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ProgramDataBaseFileName>$(IntDir)</ProgramDataBaseFileName>
+      <XMLDocumentationFileName>$(IntDir)</XMLDocumentationFileName>
+      <BrowseInformation>true</BrowseInformation>
+      <WarningLevel>Level3</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <DisableSpecificWarnings>4819;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <UndefinePreprocessorDefinitions>BOOST_DYN_LINK;%(UndefinePreprocessorDefinitions)</UndefinePreprocessorDefinitions>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0411</Culture>
+    </ResourceCompile>
+    <Link>
+      <AdditionalDependencies>shlwapi.lib;comctl32.lib;imm32.lib;libboost_python3-vc90-mt-sgd-1_41.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)Alpha.exe</OutputFile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <ManifestFile>$(IntDir)$(TargetFileName).intermediate.manifest</ManifestFile>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)Alpha.pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <Manifest>
+      <OutputManifestFile>$(IntDir)$(TargetFileName).embed.manifest</OutputManifestFile>
+      <AdditionalManifestFiles>$(ProjectDir)../resource/manifest.xml;%(AdditionalManifestFiles)</AdditionalManifestFiles>
+    </Manifest>
+    <ManifestResourceCompile>
+      <ResourceOutputFileName>$(IntDir)$(TargetFileName).embed.manifest.res</ResourceOutputFileName>
+    </ManifestResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\ascension\src\corelib\text\break-iterator.cpp" />
+    <ClCompile Include="..\..\ascension\src\corelib\text\case-folder.cpp" />
+    <ClCompile Include="..\..\ascension\src\corelib\text\collator.cpp" />
+    <ClCompile Include="..\..\ascension\src\corelib\text\identifier-syntax.cpp" />
+    <ClCompile Include="..\..\ascension\src\corelib\text\normalizer.cpp" />
+    <ClCompile Include="..\..\ascension\src\corelib\text\unicode-property.cpp" />
+    <ClCompile Include="..\..\ascension\src\graphics\default-special-character-renderer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\presentation.cpp" />
+    <ClCompile Include="..\..\ascension\src\text-editor\kill-ring.cpp" />
+    <ClCompile Include="..\..\ascension\src\text-editor\session.cpp" />
+    <ClCompile Include="..\..\ascension\src\text-editor\text-editor.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\base\widget-windows.cpp" />
+    <ClCompile Include="..\src\about-dialog.cpp" />
+    <ClCompile Include="..\src\ambient.cpp" />
+    <ClCompile Include="..\src\application.cpp" />
+    <ClCompile Include="..\src\bookmark-dialog.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\src\buffer.cpp">
+      <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</RuntimeTypeInfo>
+    </ClCompile>
+    <ClCompile Include="..\src\editor-window.cpp">
+      <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</RuntimeTypeInfo>
+    </ClCompile>
+    <ClCompile Include="..\src\encodings-dialog.cpp" />
+    <ClCompile Include="..\src\file-dialog.cpp" />
+    <ClCompile Include="..\src\goto-line-dialog.cpp" />
+    <ClCompile Include="..\src\input.cpp" />
+    <ClCompile Include="..\src\intrinsic.cpp" />
+    <ClCompile Include="..\src\menu.cpp" />
+    <ClCompile Include="..\src\message-box.cpp" />
+    <ClCompile Include="..\src\new-file-format-dialog.cpp" />
+    <ClCompile Include="..\src\print.cpp" />
+    <ClCompile Include="..\src\save-some-buffers-dialog.cpp" />
+    <ClCompile Include="..\src\search.cpp" />
+    <ClCompile Include="..\src\style.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules.cpp" />
+    <ClCompile Include="..\..\ascension\src\encodings\arabic.cpp" />
+    <ClCompile Include="..\..\ascension\src\encodings\armenian.cpp" />
+    <ClCompile Include="..\..\ascension\src\encodings\chinese.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\encodings\cyrillic.cpp" />
+    <ClCompile Include="..\..\ascension\src\encodings\greek.cpp" />
+    <ClCompile Include="..\..\ascension\src\encodings\hebrew.cpp" />
+    <ClCompile Include="..\..\ascension\src\encodings\irish.cpp" />
+    <ClCompile Include="..\..\ascension\src\encodings\japanese.cpp" />
+    <ClCompile Include="..\..\ascension\src\encodings\korean.cpp" />
+    <ClCompile Include="..\..\ascension\src\encodings\lao.cpp" />
+    <ClCompile Include="..\..\ascension\src\encodings\latin.cpp" />
+    <ClCompile Include="..\..\ascension\src\encodings\thai.cpp" />
+    <ClCompile Include="..\..\ascension\src\encodings\uncategorized.cpp" />
+    <ClCompile Include="..\..\ascension\src\encodings\unicode.cpp" />
+    <ClCompile Include="..\..\ascension\src\encodings\vietnamese.cpp" />
+    <ClCompile Include="..\..\ascension\src\graphics\font-windows.cpp" />
+    <ClCompile Include="..\..\ascension\src\graphics\graphics-windows.cpp" />
+    <ClCompile Include="..\..\ascension\src\graphics\rendering.cpp" />
+    <ClCompile Include="..\..\ascension\src\graphics\text-layout.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\caret.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\content-assist.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\ruler.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\user-input.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\viewer.cpp" />
+    <ClCompile Include="..\..\ascension\src\kernel\document.cpp" />
+    <ClCompile Include="..\..\ascension\src\kernel\fileio.cpp" />
+    <ClCompile Include="..\..\ascension\src\kernel\point.cpp" />
+    <ClCompile Include="..\..\ascension\src\kernel\searcher.cpp" />
+    <ClCompile Include="..\..\ascension\src\kernel\stream.cpp" />
+    <ClCompile Include="..\..\ascension\src\kernel\undo.cpp" />
+    <ClCompile Include="..\..\ascension\src\corelib\encoder.cpp" />
+    <ClCompile Include="..\..\ascension\src\corelib\regex.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\ascension\ascension\corelib\listeners.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\native-object.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\range.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\shared-library.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\break-iterator.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\case-folder.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\character.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\collator.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\identifier-syntax.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\newline.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\normalizer.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\unicode-property.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\unicode-surrogates.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\unicode-utf.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\type-traits.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\utility.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\paint.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\rendering-context.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\kernel\document-observers.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\presentation-reconstructor.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\presentation.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\text-style.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\text-editor\kill-ring.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\text-editor\session.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\text-editor\text-editor.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\message-dispatcher-windows.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\widget-windows.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\widget.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\caret-observers.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\viewer-observers.hpp" />
+    <ClInclude Include="..\src\alpha.hpp" />
+    <ClInclude Include="..\src\ambient.hpp" />
+    <ClInclude Include="..\src\application.hpp" />
+    <ClInclude Include="..\src\buffer.hpp" />
+    <ClInclude Include="..\src\editor-window.hpp" />
+    <ClInclude Include="..\src\input.hpp" />
+    <ClInclude Include="..\src\intrinsic.hpp" />
+    <ClInclude Include="..\src\new-file-format-dialog.hpp" />
+    <ClInclude Include="..\src\resource.h" />
+    <ClInclude Include="..\src\save-some-buffers-dialog.hpp" />
+    <ClInclude Include="..\src\search.hpp" />
+    <ClInclude Include="..\src\ui.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\config.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\platforms.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\rules.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\dc.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\file.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\gdi-object.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\module.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\timer.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\windows.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\ui\common-controls.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\ui\dialog.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\ui\link-label.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\ui\menu.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\ui\splitter.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\ui\standard-controls.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\ui\theme.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\ui\wait-cursor.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\com\com.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\com\dispatch-impl.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\com\enum-impl.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\com\exception.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\com\ole-type-wrapper.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\com\text-data-object.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\com\unknown-impl.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\basic-exceptions.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\basic-types.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\character-iterator.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\encoder.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\gap-vector.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\memory.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\regex.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\standard-iterator-adapter.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\string-piece.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\type-list.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\ustring.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\caret.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\content-assist.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\viewer.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\user-input.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\window-windows.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\window.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\color.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\font.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\graphics-windows.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\graphics.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\rendering.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\text-layout.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\kernel\document-character-iterator.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\kernel\document-stream.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\kernel\document.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\kernel\fileio.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\kernel\partition.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\kernel\point.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\kernel\position.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\kernel\searcher.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\resource\alpha.ico" />
+    <None Include="..\resource\logo.bmp" />
+    <None Include="..\resource\manifest.xml" />
+    <None Include="..\resource\messages.mc" />
+    <None Include="..\resource\narrowing.ico" />
+    <None Include="..\resource\temp-macro-defining.ico" />
+    <None Include="..\resource\temp-macro-pausing.ico" />
+    <None Include="..\..\ascension\ascension\win32\ui\common-controls.inl" />
+    <None Include="..\..\ascension\ascension\win32\ui\standard-controls.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\resource\alpha.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties RESOURCE_FILE="Alpha.rc" />
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>

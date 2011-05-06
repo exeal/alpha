@@ -1,0 +1,606 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{dd1f19ae-b29b-4b80-a28b-3c6588bf329e}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;rc;def;r;odl;idl;hpj;bat</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{8bf235d7-f9f9-41e7-ba87-0cdf2826faf9}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{c1bbd1fa-9f04-4c5a-b88d-ee695f46a8b9}</UniqueIdentifier>
+      <Extensions>ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe</Extensions>
+    </Filter>
+    <Filter Include="ascension">
+      <UniqueIdentifier>{7eb677c0-11ea-494d-a0f9-811b7e23a261}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Source Files">
+      <UniqueIdentifier>{8d04b074-7d10-4d6c-a2db-d14d0f19d81a}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;rc;def;r;odl;idl;hpj;bat</Extensions>
+    </Filter>
+    <Filter Include="ascension\Source Files\encodings">
+      <UniqueIdentifier>{0a8a4cb5-7421-49f6-a038-84f40625d375}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Source Files\graphics">
+      <UniqueIdentifier>{d468fd41-7a46-4cce-b0bb-ab5984ab495d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Source Files\viewer">
+      <UniqueIdentifier>{b0ba1362-2e80-4129-8725-2f1fb581ae41}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Source Files\kernel">
+      <UniqueIdentifier>{33548809-66ae-400d-9e9c-9b4910d3c8ef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Source Files\corelib">
+      <UniqueIdentifier>{443a4305-92ab-48d4-9003-8a7be14d52c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Header Files">
+      <UniqueIdentifier>{60475c97-7fed-425d-bb2d-0a0170481a95}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl</Extensions>
+    </Filter>
+    <Filter Include="ascension\Header Files\win32">
+      <UniqueIdentifier>{fcdc5239-2c26-4a03-a733-69d4d874196a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Header Files\win32\ui">
+      <UniqueIdentifier>{4e9957c8-5e7d-491c-90c2-f0db3ab6f5b3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Header Files\win32\com">
+      <UniqueIdentifier>{e676b675-27e7-42e7-b71c-213902c1af91}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Header Files\corelib">
+      <UniqueIdentifier>{9d0b5937-161b-439c-9fd4-278b4b021e47}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Header Files\viewer">
+      <UniqueIdentifier>{8abd216a-e01b-48d1-a250-915cdbae00bb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Header Files\viewer\base">
+      <UniqueIdentifier>{06983a2c-8c09-4463-9f14-30e4fa7adfc8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Header Files\graphics">
+      <UniqueIdentifier>{bc93968e-0028-433a-b053-e46944a514f5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Header Files\kernel">
+      <UniqueIdentifier>{6995a354-e31e-4b41-8ba3-3fb762f1a417}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Source Files\viewer\base">
+      <UniqueIdentifier>{551209fd-c20c-45de-a5e9-bb15cb569fd5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Header Files\corelib\text">
+      <UniqueIdentifier>{fff4b6c9-5b7e-4b1d-9a38-d4c005800002}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Source Files\corelib\text">
+      <UniqueIdentifier>{fb6331cd-ae8f-4fb3-b125-014154bfa235}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Header Files\presentation">
+      <UniqueIdentifier>{0226ae65-0d89-46aa-8af3-b4031ee556ed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Header Files\text-editor">
+      <UniqueIdentifier>{c1041e45-74b1-4264-af2a-56649a14ae81}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Source Files\text-editor">
+      <UniqueIdentifier>{bb85bf1b-ff26-4803-b2de-265555e331d4}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\about-dialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ambient.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\application.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\bookmark-dialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\buffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor-window.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\encodings-dialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\file-dialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\goto-line-dialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\input.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\intrinsic.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\menu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\message-box.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\new-file-format-dialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\print.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\save-some-buffers-dialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\search.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\style.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules.cpp">
+      <Filter>ascension\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\encodings\arabic.cpp">
+      <Filter>ascension\Source Files\encodings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\encodings\armenian.cpp">
+      <Filter>ascension\Source Files\encodings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\encodings\chinese.cpp">
+      <Filter>ascension\Source Files\encodings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\encodings\cyrillic.cpp">
+      <Filter>ascension\Source Files\encodings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\encodings\greek.cpp">
+      <Filter>ascension\Source Files\encodings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\encodings\hebrew.cpp">
+      <Filter>ascension\Source Files\encodings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\encodings\irish.cpp">
+      <Filter>ascension\Source Files\encodings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\encodings\japanese.cpp">
+      <Filter>ascension\Source Files\encodings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\encodings\korean.cpp">
+      <Filter>ascension\Source Files\encodings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\encodings\lao.cpp">
+      <Filter>ascension\Source Files\encodings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\encodings\latin.cpp">
+      <Filter>ascension\Source Files\encodings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\encodings\thai.cpp">
+      <Filter>ascension\Source Files\encodings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\encodings\uncategorized.cpp">
+      <Filter>ascension\Source Files\encodings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\encodings\unicode.cpp">
+      <Filter>ascension\Source Files\encodings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\encodings\vietnamese.cpp">
+      <Filter>ascension\Source Files\encodings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\font-windows.cpp">
+      <Filter>ascension\Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\graphics-windows.cpp">
+      <Filter>ascension\Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\rendering.cpp">
+      <Filter>ascension\Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\text-layout.cpp">
+      <Filter>ascension\Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\caret.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\content-assist.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\ruler.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\user-input.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\viewer.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\kernel\document.cpp">
+      <Filter>ascension\Source Files\kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\kernel\fileio.cpp">
+      <Filter>ascension\Source Files\kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\kernel\point.cpp">
+      <Filter>ascension\Source Files\kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\kernel\searcher.cpp">
+      <Filter>ascension\Source Files\kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\kernel\stream.cpp">
+      <Filter>ascension\Source Files\kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\kernel\undo.cpp">
+      <Filter>ascension\Source Files\kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\encoder.cpp">
+      <Filter>ascension\Source Files\corelib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\regex.cpp">
+      <Filter>ascension\Source Files\corelib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\default-special-character-renderer.cpp">
+      <Filter>ascension\Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\base\widget-windows.cpp">
+      <Filter>ascension\Source Files\viewer\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\text\break-iterator.cpp">
+      <Filter>ascension\Source Files\corelib\text</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\text\collator.cpp">
+      <Filter>ascension\Source Files\corelib\text</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\text\identifier-syntax.cpp">
+      <Filter>ascension\Source Files\corelib\text</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\text\normalizer.cpp">
+      <Filter>ascension\Source Files\corelib\text</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\text\unicode-property.cpp">
+      <Filter>ascension\Source Files\corelib\text</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\text\case-folder.cpp">
+      <Filter>ascension\Source Files\corelib\text</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\presentation.cpp">
+      <Filter>ascension\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\text-editor\session.cpp">
+      <Filter>ascension\Source Files\text-editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\text-editor\text-editor.cpp">
+      <Filter>ascension\Source Files\text-editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\text-editor\kill-ring.cpp">
+      <Filter>ascension\Source Files\text-editor</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\alpha.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ambient.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\application.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\buffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor-window.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\input.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\intrinsic.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\new-file-format-dialog.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\save-some-buffers-dialog.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\search.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ui.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\config.hpp">
+      <Filter>ascension\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\platforms.hpp">
+      <Filter>ascension\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\rules.hpp">
+      <Filter>ascension\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\dc.hpp">
+      <Filter>ascension\Header Files\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\file.hpp">
+      <Filter>ascension\Header Files\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\gdi-object.hpp">
+      <Filter>ascension\Header Files\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\module.hpp">
+      <Filter>ascension\Header Files\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\timer.hpp">
+      <Filter>ascension\Header Files\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\windows.hpp">
+      <Filter>ascension\Header Files\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\ui\common-controls.hpp">
+      <Filter>ascension\Header Files\win32\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\ui\dialog.hpp">
+      <Filter>ascension\Header Files\win32\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\ui\link-label.hpp">
+      <Filter>ascension\Header Files\win32\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\ui\menu.hpp">
+      <Filter>ascension\Header Files\win32\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\ui\splitter.hpp">
+      <Filter>ascension\Header Files\win32\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\ui\standard-controls.hpp">
+      <Filter>ascension\Header Files\win32\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\ui\theme.hpp">
+      <Filter>ascension\Header Files\win32\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\ui\wait-cursor.hpp">
+      <Filter>ascension\Header Files\win32\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\com\com.hpp">
+      <Filter>ascension\Header Files\win32\com</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\com\dispatch-impl.hpp">
+      <Filter>ascension\Header Files\win32\com</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\com\enum-impl.hpp">
+      <Filter>ascension\Header Files\win32\com</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\com\exception.hpp">
+      <Filter>ascension\Header Files\win32\com</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\com\ole-type-wrapper.hpp">
+      <Filter>ascension\Header Files\win32\com</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\com\text-data-object.hpp">
+      <Filter>ascension\Header Files\win32\com</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\com\unknown-impl.hpp">
+      <Filter>ascension\Header Files\win32\com</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\basic-exceptions.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\basic-types.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\character-iterator.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\encoder.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\gap-vector.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\memory.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\regex.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\standard-iterator-adapter.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\string-piece.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\type-list.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\ustring.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\caret.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\content-assist.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\viewer.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\user-input.hpp">
+      <Filter>ascension\Header Files\viewer\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\window-windows.hpp">
+      <Filter>ascension\Header Files\viewer\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\window.hpp">
+      <Filter>ascension\Header Files\viewer\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\color.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\graphics-windows.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\graphics.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\rendering.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\text-layout.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\kernel\document-character-iterator.hpp">
+      <Filter>ascension\Header Files\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\kernel\document-stream.hpp">
+      <Filter>ascension\Header Files\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\kernel\document.hpp">
+      <Filter>ascension\Header Files\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\kernel\fileio.hpp">
+      <Filter>ascension\Header Files\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\kernel\partition.hpp">
+      <Filter>ascension\Header Files\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\kernel\point.hpp">
+      <Filter>ascension\Header Files\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\kernel\position.hpp">
+      <Filter>ascension\Header Files\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\kernel\searcher.hpp">
+      <Filter>ascension\Header Files\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\type-traits.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\rendering-context.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\paint.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\range.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\widget-windows.hpp">
+      <Filter>ascension\Header Files\viewer\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\widget.hpp">
+      <Filter>ascension\Header Files\viewer\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\message-dispatcher-windows.hpp">
+      <Filter>ascension\Header Files\viewer\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\caret-observers.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\viewer-observers.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\kernel\document-observers.hpp">
+      <Filter>ascension\Header Files\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\shared-library.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\listeners.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\utility.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\native-object.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\unicode-property.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\unicode-surrogates.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\unicode-utf.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\case-folder.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\identifier-syntax.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\break-iterator.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\collator.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\normalizer.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\character.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\newline.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\presentation.hpp">
+      <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\text-style.hpp">
+      <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\presentation-reconstructor.hpp">
+      <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\text-editor\session.hpp">
+      <Filter>ascension\Header Files\text-editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\text-editor\text-editor.hpp">
+      <Filter>ascension\Header Files\text-editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\text-editor\kill-ring.hpp">
+      <Filter>ascension\Header Files\text-editor</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\resource\alpha.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\resource\logo.bmp">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\resource\manifest.xml">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\resource\messages.mc">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\resource\narrowing.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\resource\temp-macro-defining.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\resource\temp-macro-pausing.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\..\ascension\ascension\win32\ui\common-controls.inl">
+      <Filter>ascension\Header Files\win32\ui</Filter>
+    </None>
+    <None Include="..\..\ascension\ascension\win32\ui\standard-controls.inl">
+      <Filter>ascension\Header Files\win32\ui</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\resource\alpha.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>
