@@ -1,5 +1,5 @@
 /**
- * @file unicode.hpp
+ * @file break-iterator.hpp
  * @author exeal
  * @date 2005-2011 was unicode.hpp
  * @date 2011-04-26 separated from unicode.hpp

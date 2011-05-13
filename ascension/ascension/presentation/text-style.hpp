@@ -36,49 +36,6 @@ namespace ascension {
 		};
 
 		/**
-		 *
-		 * @see "CSS3 Values and Units 3.4 Numbers and units identifiers"
-		 *      (http://www.w3.org/TR/2006/WD-css3-values-20060919/#numbers0)
-		 */
-		struct Length {
-			double value;	///< Value of the length.
-			enum Unit {
-				// relative length units
-				EM_HEIGHT,		///< The font size of the relevant font.
-				X_HEIGHT,		///< The x-height of the relevant font.
-				PIXELS,			///< Pixels, relative to the viewing device.
-				// relative length units introduced by CSS 3
-				GRIDS,				///< The grid.
-				REMS,				///< The font size of the primary font.
-				VIEWPORT_WIDTH,		///< The viewport's width.
-				VIEWPORT_HEIGHT,	///< The viewport's height.
-				VIEWPORT_MINIMUM,	///< The viewport's height or width, whichever is smaller of the two.
-				/**
-				 * The width of the "0" (ZERO, U+0030) glyph found in the font for the font size
-				 * used to render. If the "0" glyph is not found in the font, the average character
-				 * width may be used.
-				 */
-				CHARACTERS,
-				// absolute length units
-				INCHES,			///< Inches -- 1 inch is equal to 2.54 centimeters.
-				CENTIMETERS,	///< Centimeters.
-				MILLIMETERS,	///< Millimeters.
-				POINTS,			///< Points -- the point used by CSS 2.1 are equal to 1/72nd of an inch.
-				PICAS,			///< Picas -- 1 pica is equal to 12 points.
-				// used in DirectWrite
-				DIPS,			///< Device independent pixels. 1 DIP is equal to 1/96th of an inch.
-				// percentages (exactly not a length)
-				PERCENTAGE,		///< Percentage.
-			};
-			Unit unit;	///< Unit of the length.
-
-			/// Default constructor.
-			Length() /*throw()*/ {}
-			/// Constructor.
-			explicit Length(double value, Unit unit = PIXELS) : value(value), unit(unit) {}
-		};
-
-		/**
 		 * @see "CSS Backgrounds and Borders Module Level 3"
 		 *      (http://www.w3.org/TR/2011/CR-css3-background-20110215/)
 		 */

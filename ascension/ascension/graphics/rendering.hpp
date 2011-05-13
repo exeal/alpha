@@ -1,5 +1,5 @@
 /**
- * @file layout.hpp
+ * @file rendering.hpp
  * @date 2003-2006 (was LineLayout.h)
  * @date 2006-2010
  * @date 2010-11-20 separated from ascension/layout.hpp

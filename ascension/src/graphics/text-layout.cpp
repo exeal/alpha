@@ -1,8 +1,8 @@
 /**
- * @file layout.cpp
+ * @file text-layout.cpp
  * @author exeal
  * @date 2003-2006 (was TextLayout.cpp)
- * @date 2006-2010
+ * @date 2006-2011
  * @date 2010-11-20 renamed from ascension/layout.cpp
  */
 
@@ -1841,7 +1841,7 @@ namespace {
 } // namespace @0
 
 /**
- * @class ascension::layout::TextLayout
+ * @class ascension::graphics::font::TextLayout
  * @c TextLayout is an immutable graphical representation of styled text. Provides support for
  * drawing, cursor navigation, hit testing, text wrapping, etc.
  *

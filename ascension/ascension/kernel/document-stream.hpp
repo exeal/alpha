@@ -1,7 +1,8 @@
 /**
- * @file stream.hpp
+ * @file document-stream.hpp
  * @author exeal
  * @date 2009 separated from document.hpp
+ * @date 2003-2011
  */
 
 #ifndef ASCENSION_STREAM_HPP

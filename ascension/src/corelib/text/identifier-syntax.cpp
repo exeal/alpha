@@ -17,7 +17,7 @@ using namespace std;
 // IdentifierSyntax ///////////////////////////////////////////////////////////////////////////////
 
 /**
- * @class ascension::text::IdentifierSyntax ../unicode.hpp
+ * @class ascension::text::IdentifierSyntax identifier-syntax.hpp
  * An @c IdentifierSyntax classifies characters and detects identifiers based on
  * <a href="http://www.unicode.org/reports/tr31/">UAX #31: Identifier and Pattern Syntax</a>.
  *

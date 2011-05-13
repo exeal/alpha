@@ -939,7 +939,7 @@ Document::DefaultContentTypeInformationProvider::~DefaultContentTypeInformationP
 // CompoundChangeSaver ////////////////////////////////////////////////////////////////////////////
 
 /**
- * @class ascension#kernel#CompoundChangeSaver
+ * @class ascension::kernel::CompoundChangeSaver
  *
  * Calls automatically @c Document#beginCompoundChange and @c Document#endCompoundChange.
  *
@@ -1004,7 +1004,7 @@ DocumentLocker::~DocumentLocker() /*throw()*/ {
 // DocumentCharacterIterator //////////////////////////////////////////////////////////////////////
 
 /**
- * @class ascension::text::DocumentCharacterIterator
+ * @class ascension::kernel::DocumentCharacterIterator
  * Bidirectional iterator scans characters in the specified document.
  *
  * @c #current implementation of this class returns a character at which the iterator addresses. A

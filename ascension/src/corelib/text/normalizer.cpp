@@ -18,7 +18,7 @@ using text::ucd::CanonicalCombiningClass;
 // Normalizer /////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * @class ascension::text::Normalizer ../unicode.hpp
+ * @class ascension::text::Normalizer normalizer.hpp
  * @c Nomalizer supports the standard normalization forms described in
  * <a href="http://www.unicode.org/reports/tr15/">UAX #15: Unicode Normalization Forms</a> revision 27.
  * One can use this to normalize text or compare two strings for canonical equivalence for sorting
