@@ -1,5 +1,5 @@
 /**
- * @file widget
+ * @file widget.hpp
  * @author exeal
  * @date 2011-03-27
  */

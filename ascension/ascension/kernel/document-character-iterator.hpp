@@ -1,5 +1,5 @@
 /**
- * @file document-iterator.hpp
+ * @file document-character-iterator.hpp
  * @author exeal
  * @date 2003-2006 (was EditDoc.h)
  * @date 2006-2010 (was document.hpp)
