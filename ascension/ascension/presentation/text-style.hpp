@@ -13,6 +13,7 @@
 #include <ascension/graphics/color.hpp>	// graphics.Color
 #include <ascension/graphics/font.hpp>	// graphics.font.FontProperties, ...
 #include <ascension/graphics/paint.hpp>	// graphics.Paint
+#include <ascension/presentation/length.hpp>
 
 namespace ascension {
 

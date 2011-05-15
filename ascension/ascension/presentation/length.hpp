@@ -11,7 +11,7 @@
 #define ASCENSION_LENGTH_HPP
 
 namespace ascension {
-	namespace graphics {
+	namespace presentation {
 
 		/**
 		 *
@@ -54,13 +54,20 @@ namespace ascension {
 			};
 			Unit unit;	///< Unit of the length.
 
+			enum Mode {
+				WIDTH, HEIGHT, OTHER
+			};
+			Mode mode;	///< Mode of the length.
+
 			/// Default constructor.
 			Length() /*throw()*/ {}
 			/// Constructor.
-			explicit Length(double value, Unit unit = PIXELS) : value(value), unit(unit) {}
+			explicit Length(double value, Unit unit = PIXELS, Mode = OTHER) : value(value), unit(unit), mode(mode) {}
+			///
+			static bool isAbsolute(Unit unit);
 		};
 
 	}
-} // namespace ascension.graphics
+} // namespace ascension.presentation
 
 #endif // !ASCENSION_LENGTH_HPP

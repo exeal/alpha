@@ -30,12 +30,25 @@ namespace ascension {
 				RenderingContext2D& context, const Rect<>& rectangle) const /*throw()*/ = 0;
 		};
 
+		/**
+		 *
+		 * @see CanvasGradient interface in HTML Canvas 2D Context
+		 *      (http://www.w3.org/TR/2dcontext/#canvasgradient)
+		 */
 		class Gradient : public PaintServer {
 		public:
 			virtual ~Gradient() /*throw()*/ {}
 			virtual void addColorStop() = 0;
+			static std::auto_ptr<Gradient> createLinearGradient(const Point<>& p0, const Point<>& p1);
+			static std::auto_ptr<Gradient> createRadialGradient(
+				const Point<>& p0, Scalar r0, const Point<>& p1, Scalar r1);
 		};
 
+		/**
+		 *
+		 * @see CanvasPattern interface in HTML Canvas 2D Context
+		 *      (http://www.w3.org/TR/2dcontext/#canvaspattern)
+		 */
 		class Pattern : public PaintServer {
 		public:
 			virtual ~Pattern() /*throw()*/ {}
