@@ -30,8 +30,6 @@ namespace ascension {
 
 		namespace font {
 
-			class ISpecialCharacterRenderer;
-
 			/**
 			 * Configuration about line wrapping.
 			 * @see Presentation#Configurations#lineWrap
@@ -173,12 +171,12 @@ namespace ascension {
 
 			/**
 			 * @see TextLayout#TextLayout
+			 * @note This interface is designed based on @c TabExpander interface of Java.
 			 */
 			class TabExpander {
 			public:
 				/// Destructor.
-				virtual ~TabExpander() {
-				}
+				virtual ~TabExpander() {}
 				/**
 				 * Returns the next tab stop position given a reference position.
 				 * @param x The position in pixels
@@ -188,6 +186,7 @@ namespace ascension {
 				virtual Scalar nextTabStop(Scalar x, length_t tabOffset) const = 0;
 			};
 
+			/// Standard implementation of @c TabExpander with fixed width tabulations.
 			class FixedWidthTabExpander : public TabExpander {
 			public:
 				explicit FixedWidthTabExpander(Scalar width) /*throw()*/;
@@ -287,7 +286,10 @@ namespace ascension {
 			class TextLayout {
 				ASCENSION_NONCOPYABLE_TAG(TextLayout);
 			public:
-				/// Edge of a character.
+				/**
+				 * Edge of a character.
+				 * @see #location
+				 */
 				enum Edge {
 					LEADING,	///< Leading edge of a character.
 					TRAILING	///< Trailing edge of a character.
@@ -335,7 +337,6 @@ namespace ascension {
 				uint8_t bidiEmbeddingLevel(length_t column) const;
 				bool isBidirectional() const /*throw()*/;
 				bool isEmpty() const /*throw()*/;
-				length_t lineNumber() const /*throw()*/;
 				presentation::ReadingDirection readingDirection() const /*throw()*/;
 				const presentation::TextLineStyle& style() const /*throw()*/;
 				// visual line accesses
@@ -402,7 +403,7 @@ namespace ascension {
 				AutoBuffer<Scalar> lineInlineProgressionDimensions_;
 				Scalar maximumInlineProgressionDimension_;
 				Scalar wrapWidth_;	// -1 if should not wrap
-				friend class LineLayoutBuffer;
+				friend class LineLayoutVector;
 //				friend class StyledSegmentIterator;
 			};
 

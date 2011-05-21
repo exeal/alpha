@@ -183,20 +183,22 @@
   <ItemGroup>
     <ClCompile Include="..\..\ascension\src\corelib\text\break-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\case-folder.cpp" />
+    <ClCompile Include="..\..\ascension\src\corelib\text\character-property.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\collator.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\identifier-syntax.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\normalizer.cpp" />
-    <ClCompile Include="..\..\ascension\src\corelib\text\unicode-property.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\default-special-character-renderer.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\line-layout-vector.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\command.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\input-sequence-checker.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\kill-ring.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\session.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\base\widget-windows.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\viewer-windows.cpp" />
     <ClCompile Include="..\src\about-dialog.cpp" />
     <ClCompile Include="..\src\ambient.cpp" />
     <ClCompile Include="..\src\application.cpp" />
@@ -267,19 +269,21 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\shared-library.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\break-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\case-folder.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\character-property.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\character.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\collator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\identifier-syntax.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\newline.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\normalizer.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\corelib\text\unicode-property.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\unicode-surrogates.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\unicode-utf.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\type-traits.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\utility.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\line-layout-vector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\paint.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-context.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-observers.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\length.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation-reconstructor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\text-style.hpp" />

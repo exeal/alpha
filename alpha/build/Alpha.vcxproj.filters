@@ -254,9 +254,6 @@
     <ClCompile Include="..\..\ascension\src\corelib\text\normalizer.cpp">
       <Filter>ascension\Source Files\corelib\text</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\corelib\text\unicode-property.cpp">
-      <Filter>ascension\Source Files\corelib\text</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\corelib\text\case-folder.cpp">
       <Filter>ascension\Source Files\corelib\text</Filter>
     </ClCompile>
@@ -274,6 +271,15 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\text-editor\command.cpp">
       <Filter>ascension\Source Files\text-editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\text\character-property.cpp">
+      <Filter>ascension\Source Files\corelib\text</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\viewer-windows.cpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\line-layout-vector.cpp">
+      <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -523,9 +529,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\native-object.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\corelib\text\unicode-property.hpp">
-      <Filter>ascension\Header Files\corelib\text</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\text\unicode-surrogates.hpp">
       <Filter>ascension\Header Files\corelib\text</Filter>
     </ClInclude>
@@ -573,6 +576,15 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\text-editor\command.hpp">
       <Filter>ascension\Header Files\text-editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\character-property.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\length.hpp">
+      <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\line-layout-vector.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

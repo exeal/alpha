@@ -72,7 +72,7 @@ namespace ascension {
 		 * Returns the default UI language.
 		 * Wrapper for Win32 @c GetUserDefaultUILanguage API.
 		 */
-		LANGID userDefaultUILanguage() /*throw()*/;
+		LANGID ASCENSION_FASTCALL userDefaultUILanguage() /*throw()*/;
 
 		namespace internal {
 			class HandleDeleterBase {
