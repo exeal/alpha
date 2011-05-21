@@ -251,9 +251,9 @@ namespace ascension {
 		bool isSelectionEmpty(const Caret& caret) /*throw()*/;
 		bool selectedRangeOnLine(const Caret& caret, length_t line, Range<length_t>& range);
 		bool selectedRangeOnVisualLine(const Caret& caret, length_t line, length_t subline, Range<length_t>& range);
-		String selectedString(const Caret& caret, kernel::Newline newline = kernel::NLF_RAW_VALUE);
+		String selectedString(const Caret& caret, text::Newline newline = text::NLF_RAW_VALUE);
 		std::basic_ostream<Char>& selectedString(const Caret& caret,
-			std::basic_ostream<Char>& out, kernel::Newline newline = kernel::NLF_RAW_VALUE);
+			std::basic_ostream<Char>& out, text::Newline newline = text::NLF_RAW_VALUE);
 		void selectWord(Caret& caret);
 
 		// free functions change the document by using Caret class
@@ -354,7 +354,7 @@ namespace ascension {
 		 *                rectangular, this value is ignored and the document's newline is used instead
 		 * @return the text string
 		 */
-		inline String selectedString(const Caret& caret, kernel::Newline newline /* = NLF_RAW_VALUE */) {
+		inline String selectedString(const Caret& caret, text::Newline newline /* = NLF_RAW_VALUE */) {
 			std::basic_ostringstream<Char> ss; selectedString(caret, ss, newline); return ss.str();}
 
 	} // namespace viewers
