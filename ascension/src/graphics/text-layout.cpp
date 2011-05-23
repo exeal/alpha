@@ -10,8 +10,9 @@
 #include <ascension/graphics/text-layout.hpp>
 #include <ascension/graphics/graphics-windows.hpp>
 //#include <ascension/graphics/special-character-renderer.hpp>
+#include <ascension/corelib/character-iterator.hpp>
 #include <ascension/corelib/shared-library.hpp>
-#include <ascension/corelib/text/unicode-property.hpp>
+#include <ascension/corelib/text/character-property.hpp>
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate
 #include <usp10.h>
@@ -525,7 +526,7 @@ public:
 		tr1::shared_ptr<const Font> font, OPENTYPE_TAG scriptTag) /*throw()*/;
 	virtual ~TextRun() /*throw()*/;
 	// attributes
-	uint8_t bidiEmbeddingLevel() const /*throw()*/ {return static_cast<uchar>(analysis_.s.uBidiLevel);}
+	uint8_t bidiEmbeddingLevel() const /*throw()*/ {return static_cast<uint8_t>(analysis_.s.uBidiLevel);}
 	tr1::shared_ptr<const Font> font() const {return glyphs_->font;}
 	HRESULT logicalAttributes(const String& layoutString, SCRIPT_LOGATTR attributes[]) const;
 	int numberOfGlyphs() const /*throw()*/ {return glyphRange_.length();}
@@ -1948,10 +1949,10 @@ namespace {
  * @param disableDeprecatedFormatCharacters Set @c true to make the deprecated format characters
  *                                          (NADS, NODS, ASS, and ISS) not effective
  * @param inhibitSymmetricSwapping Set c true to inhibit from generating mirrored glyphs
- * @throw UnknownValueException @a readingDirection or @a anchor is invalid
+ * @throw UnknownValueException @a writingMode or @a anchor is invalid
  */
-TextLayout::TextLayout(const String& text, ReadingDirection readingDirection,
-		TextAnchor anchor /* = TEXT_ANCHOR_START */, 
+TextLayout::TextLayout(const String& text,
+		const WritingMode& writingMode /* = WritingMode() */, TextAnchor anchor /* = TEXT_ANCHOR_START */,
 		TextJustification justification /* = NO_JUSTIFICATION */,
 		DominantBaseline dominantBaseline /* = DOMINANT_BASELINE_AUTO */,
 		const FontCollection& fontCollection /* = systemFonts() */,
@@ -1960,13 +1961,13 @@ TextLayout::TextLayout(const String& text, ReadingDirection readingDirection,
 		const TabExpander* tabExpander /* = 0 */, Scalar width /* = numeric_limits<Scalar>::max() */,
 		const NumberSubstitution* numberSubstitution /* = 0 */, bool displayShapingControls /* = false */,
 		bool inhibitSymmetricSwapping /* = false */, bool disableDeprecatedFormatCharacters /* = false */)
-		: text_(text), readingDirection_(readingDirection), anchor_(anchor),
+		: text_(text), writingMode_(writingMode), anchor_(anchor),
 		dominantBaseline_(dominantBaseline), numberOfRuns_(0), numberOfLines_(0),
 		maximumInlineProgressionDimension_(-1), wrapWidth_(width) {
 
 	// sanity checks...
-	if(readingDirection != LEFT_TO_RIGHT && readingDirection != RIGHT_TO_LEFT)
-		throw UnknownValueException("readingDirection");
+	if(writingMode.inlineFlowDirection != LEFT_TO_RIGHT && writingMode.inlineFlowDirection != RIGHT_TO_LEFT)
+		throw UnknownValueException("writingMode.inlineFlowDirection");
 	if(anchor != TEXT_ANCHOR_START && anchor != TEXT_ANCHOR_MIDDLE && anchor != TEXT_ANCHOR_END)
 		throw UnknownValueException("anchor");
 
@@ -2004,7 +2005,7 @@ TextLayout::TextLayout(const String& text, ReadingDirection readingDirection,
 	// 1-1. configure Uniscribe's itemize
 	win32::AutoZero<SCRIPT_CONTROL> control;
 	win32::AutoZero<SCRIPT_STATE> initialState;
-	initialState.uBidiLevel = (readingDirection == RIGHT_TO_LEFT) ? 1 : 0;
+	initialState.uBidiLevel = (writingMode.inlineFlowDirection == RIGHT_TO_LEFT) ? 1 : 0;
 //	initialState.fOverrideDirection = 1;
 	initialState.fInhibitSymSwap = inhibitSymmetricSwapping;
 	initialState.fDisplayZWG = displayShapingControls;
@@ -2152,7 +2153,7 @@ uint8_t TextLayout::bidiEmbeddingLevel(length_t column) const {
 		if(column != 0)
 			throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));
 		// use the default level
-		return (readingDirection() == RIGHT_TO_LEFT) ? 1 : 0;
+		return (writingMode().inlineFlowDirection == RIGHT_TO_LEFT) ? 1 : 0;
 	}
 	const size_t i = findRunForPosition(column);
 	if(i == numberOfRuns_)
@@ -2185,7 +2186,7 @@ NativePolygon TextLayout::blackBoxBounds(const Range<length_t>& range) const {
 	Scalar after = before + lineMetrics_[firstLine]->height();
 	for(length_t line = firstLine; line <= lastLine; before = after, after += lineMetrics_[++line]->height()) {
 		const size_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
-		const Scalar leftEdge = (readingDirection() == LEFT_TO_RIGHT) ?
+		const Scalar leftEdge = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ?
 			lineStartEdge(line) : (-lineStartEdge(line) - lineInlineProgressionDimension(line));
 
 		// is the whole line encompassed by the range?
@@ -2246,8 +2247,8 @@ Rect<> TextLayout::bounds() const /*throw()*/ {
 		end = max(lineStart + lineInlineProgressionDimension(line), end);
 	}
 	return Rect<>(
-		Point<>((readingDirection() == LEFT_TO_RIGHT) ? start : -end, before),
-		Point<>((readingDirection() == LEFT_TO_RIGHT) ? end : -start, after));
+		Point<>((writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? start : -end, before),
+		Point<>((writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? end : -start, after));
 }
 
 /**
@@ -2306,8 +2307,8 @@ Rect<> TextLayout::bounds(const Range<length_t>& range) const {
 		if(!lastLineIsFullyCovered && (partiallyCoveredLines.empty() || partiallyCoveredLines[0] != lastLine))
 			partiallyCoveredLines.push_back(lastLine);
 		if(!partiallyCoveredLines.empty()) {
-			Scalar left = (readingDirection() == LEFT_TO_RIGHT) ? start : -end;
-			Scalar right = (readingDirection() == LEFT_TO_RIGHT) ? end : -start;
+			Scalar left = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? start : -end;
+			Scalar right = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? end : -start;
 			for(vector<length_t>::const_iterator
 					line(partiallyCoveredLines.begin()), e(partiallyCoveredLines.end()); line != e; ++line) {
 				const length_t lastRun = (*line + 1 < numberOfLines()) ? lineFirstRuns_[*line + 1] : numberOfRuns_;
@@ -2315,12 +2316,12 @@ Rect<> TextLayout::bounds(const Range<length_t>& range) const {
 				// find left-edge
 				InlineProgressionDimensionRangeIterator i(
 					Range<const TextRun* const*>(runs_.get() + lineFirstRuns_[*line], runs_.get() + lastRun),
-					range, LEFT_TO_RIGHT, (readingDirection() == LEFT_TO_RIGHT) ?
+					range, LEFT_TO_RIGHT, (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ?
 						lineStartEdge(*line) : -lineStartEdge(*line) - lineInlineProgressionDimension(*line));
 				assert(i != InlineProgressionDimensionRangeIterator());
 				left = min(i->beginning(), left);
 
-				Scalar x = (readingDirection() == LEFT_TO_RIGHT) ?
+				Scalar x = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ?
 					lineStartEdge(*line) : -lineStartEdge(*line) - lineInlineProgressionDimension(*line);
 				for(length_t i = lineFirstRuns_[*line];
 						i < lastRun && x < left; x += runs_[i++]->totalWidth()) {
@@ -2336,12 +2337,12 @@ Rect<> TextLayout::bounds(const Range<length_t>& range) const {
 				// find right-edge
 				i = InlineProgressionDimensionRangeIterator(
 					Range<const TextRun* const*>(runs_.get() + lineFirstRuns_[*line], runs_.get() + lastRun),
-					range, RIGHT_TO_LEFT, (readingDirection() == LEFT_TO_RIGHT) ?
+					range, RIGHT_TO_LEFT, (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ?
 						lineStartEdge(*line) + lineInlineProgressionDimension(*line) : -lineStartEdge(*line));
 				assert(i != InlineProgressionDimensionRangeIterator());
 				right = max(i->end(), right);
 
-				x = (readingDirection() == LEFT_TO_RIGHT) ?
+				x = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ?
 					lineStartEdge(*line) + lineInlineProgressionDimension(*line) : -lineStartEdge(*line);
 				for(length_t i = lastRun - 1; x > right; x -= runs_[i--]->totalWidth()) {
 					const TextRun& run = *runs_[i];
@@ -2356,8 +2357,8 @@ Rect<> TextLayout::bounds(const Range<length_t>& range) const {
 				}
 			}
 
-			start = (readingDirection() == LEFT_TO_RIGHT) ? left : -right;
-			end = (readingDirection() == LEFT_TO_RIGHT) ? right : -left;
+			start = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? left : -right;
+			end = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? right : -left;
 		}
 	}
 
@@ -2493,13 +2494,13 @@ void TextLayout::draw(PaintContext& context,
 				context
 					.moveTo(Point<>(borderRectangle.first.left(), borderRectangle.first.bottom()))
 					.lineTo(Point<>(borderRectangle.first.right() + 1, borderRectangle.first.bottom()));
-			else if((readingDirection() == LEFT_TO_RIGHT && border == &borders[2])
-					|| (readingDirection() == RIGHT_TO_LEFT && border == &borders[3]))	// left
+			else if((writingMode().inlineFlowDirection == LEFT_TO_RIGHT && border == &borders[2])
+					|| (writingMode().inlineFlowDirection == RIGHT_TO_LEFT && border == &borders[3]))	// left
 				context
 					.moveTo(Point<>(borderRectangle.first.left(), borderRectangle.first.top()))
 					.lineTo(Point<>(borderRectangle.first.left(), borderRectangle.first.bottom() + 1));
-			else if((readingDirection() == LEFT_TO_RIGHT && border == &borders[3])
-					|| (readingDirection() == RIGHT_TO_LEFT && border == &borders[2]))	// right
+			else if((writingMode().inlineFlowDirection == LEFT_TO_RIGHT && border == &borders[3])
+					|| (writingMode().inlineFlowDirection == RIGHT_TO_LEFT && border == &borders[2]))	// right
 				context
 					.moveTo(Point<>(borderRectangle.first.right(), borderRectangle.first.top()))
 					.lineTo(Point<>(borderRectangle.first.right(), borderRectangle.first.bottom() + 1));
@@ -2518,8 +2519,8 @@ void TextLayout::draw(PaintContext& context,
 			Range<const TextRun* const*> runs(runs_.get() + lineFirstRuns_[line],
 				runs_.get() + ((line < numberOfLines() - 1) ? lineFirstRuns_[line + 1] : numberOfRuns_));
 			p = origin;
-			p.x += readingDirectionInt(readingDirection());
-			if(readingDirection() == RIGHT_TO_LEFT)
+			p.x += readingDirectionInt(writingMode().inlineFlowDirection);
+			if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
 				p.x -= lineInlineProgressionDimension(line);
 			Scalar leftEdgeOfFirstRun = p.x, rightEdgeOfLastRun = p.x + lineInlineProgressionDimension(line);
 			for(const TextRun* const* run = runs.beginning(); run < runs.end(); ++run) {
@@ -2603,7 +2604,7 @@ void TextLayout::draw(PaintContext& context,
 			x = startX;
 			for(size_t i = firstRun; i < lastRun; ++i) {
 				TextRun& run = *runs_[i];
-				context.readingDirection = run.readingDirection();
+				context.readingDirection = run.writingMode().inlineFlowDirection;
 				for(length_t j = run.beginning(); j < run.end(); ++j) {
 					if(BinaryProperty::is(line[j], BinaryProperty::WHITE_SPACE)) {	// IdentifierSyntax.isWhiteSpace() is preferred?
 						context.rect.setX(makeRange(x + run.x(j, false), x + run.x(j, true)));
@@ -2617,7 +2618,7 @@ void TextLayout::draw(PaintContext& context,
 			}
 		}
 		if(line == numberOfLines_ - 1
-				&& resolveTextAlignment(alignment(), readingDirection()) == ALIGN_RIGHT)
+				&& resolveTextAlignment(alignment(), writingMode().inlineFlowDirection) == ALIGN_RIGHT)
 			x = startX;
 	} // end of nonempty line case
 	
@@ -2663,9 +2664,9 @@ void TextLayout::draw(PaintContext& context,
 void TextLayout::dumpRuns(ostream& out) const {
 	for(size_t i = 0; i < numberOfRuns_; ++i) {
 		const TextRun& run = *runs_[i];
-		out << static_cast<uint>(i)
-			<< ":beginning=" << static_cast<uint>(run.beginning())
-			<< ",length=" << static_cast<uint>(run.length()) << endl;
+		out << static_cast<unsigned int>(i)
+			<< ":beginning=" << static_cast<unsigned int>(run.beginning())
+			<< ",length=" << static_cast<unsigned int>(run.length()) << endl;
 	}
 }
 #endif // _DEBUG
@@ -2766,7 +2767,7 @@ TextLayout::StyledSegmentIterator TextLayout::firstStyledSegment() const /*throw
 #endif
 /// Returns if the line contains right-to-left run.
 bool TextLayout::isBidirectional() const /*throw()*/ {
-	if(readingDirection() == RIGHT_TO_LEFT)
+	if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
 		return true;
 	for(size_t i = 0; i < numberOfRuns_; ++i) {
 		if(runs_[i]->readingDirection() == RIGHT_TO_LEFT)
@@ -2815,7 +2816,7 @@ Rect<> TextLayout::lineBounds(length_t line) const {
 
 	// TODO: this implementation can't handle vertical text.
 	const Dimension<> size(end - start, after - before);
-	const Point<> origin((readingDirection() == LEFT_TO_RIGHT) ? start : start - size.cx, before);
+	const Point<> origin((writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? start : start - size.cx, before);
 	return Rect<>(origin, size);
 }
 
@@ -2920,7 +2921,7 @@ pair<length_t, length_t> TextLayout::locateOffsets(length_t line, Scalar ipd, bo
 		return (outside = true), make_pair(static_cast<length_t>(0), static_cast<length_t>(0));
 	const size_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
 
-	if(readingDirection() == LEFT_TO_RIGHT) {
+	if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) {
 		Scalar x = lineStartEdge(line);
 		if(ipd < x) {	// beyond the left-edge => the start of the first run
 			const length_t column = runs_[lineFirstRuns_[line]]->beginning();
@@ -2965,7 +2966,7 @@ void TextLayout::locations(length_t column, Point<>* leading, Point<>* trailing)
 		const length_t line = lineAt(column);
 		const length_t firstRun = lineFirstRuns_[line];
 		const length_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
-		if(readingDirection() == LEFT_TO_RIGHT) {	// LTR
+		if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) {	// LTR
 			Scalar x = lineStartEdge(line);
 			for(size_t i = firstRun; i < lastRun; ++i) {
 				const TextRun& run = *runs_[i];

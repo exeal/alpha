@@ -70,7 +70,13 @@ namespace ascension {
 			} before, after, start, end;
 		};
 
-		/// Dominant baselines from XSL 1.1, 7.14.5 "dominant-baseline".
+		/**
+		 * Dominant baselines from XSL 1.1, 7.14.5 "dominant-baseline".
+		 * @see "CSS3 module: line, 4.4. Dominant baseline: the 'dominant-baseline' property"
+		 *      (http://www.w3.org/TR/css3-linebox/#dominant-baseline-prop)
+		 * @see "SVG 1.1 (Second Edition), 10.9.2 Baseline alignment properties"
+		 *      (http://www.w3.org/TR/SVG/text.html#DominantBaselineProperty)
+		 */
 		enum DominantBaseline {
 			DOMINANT_BASELINE_AUTO,
 			DOMINANT_BASELINE_USE_SCRIPT,
@@ -86,7 +92,14 @@ namespace ascension {
 			DOMINANT_BASELINE_TEXT_DEFORE_EDGE,
 		};
 
-		/// Alignment baseline from XSL 1.1, 7.14.2 "alignment-baseline".
+		/**
+		 * Alignment baseline from XSL 1.1, 7.14.2 "alignment-baseline".
+		 * @see "CSS3 module: line, 4.5. Aligning the alignment point of an element: the
+		 *      'alignment-baseline' property"
+		 *      (http://www.w3.org/TR/css3-linebox/#alignment-baseline-prop)
+		 * @see "SVG 1.1 (Second Edition), 10.9.2 Baseline alignment properties"
+		 *      (http://www.w3.org/TR/SVG/text.html#AlignmentBaselineProperty)
+		 */
 		enum AlignmentBaseline {
 			ALIGNMENT_BASELINE_BASELINE,
 			ALIGNMENT_BASELINE_USE_SCRIPT,
@@ -117,6 +130,10 @@ namespace ascension {
 			ALIGNMENT_ADJUST_MATHEMATICAL
 		};
 
+		/**
+		 * @see "SVG 1.1 (Second Edition), 10.9.2 Baseline alignment properties"
+		 *      (http://www.w3.org/TR/SVG/text.html#BaselineShiftProperty)
+		 */
 		enum BaselineShiftEnums {
 			BASELINE_SHIFT_BASELINE,
 			BASELINE_SHIFT_SUB,
@@ -139,9 +156,10 @@ namespace ascension {
 
 		/**
 		 * Visual style settings of a text run.
-		 * @see StyledTextRun, DefaultTextRunStyleProvider, StyledTextRunIterator, TextLineStyle
+		 * @see TextLineStyle, TextToplevelStyle, StyledTextRun, StyledTextRunIterator
 		 */
-		struct TextRunStyle : public FastArenaObject<TextRunStyle> {
+		struct TextRunStyle :
+				public FastArenaObject<TextRunStyle>, public std::tr1::enable_shared_from_this<TextRunStyle> {
 			/// Foreground color.
 			graphics::Paint foreground;
 			/// Background color.
@@ -253,10 +271,10 @@ namespace ascension {
 		 *      defaultTextAnchor
 		 * @see XSL 1.1, 7.16.9 "text-align"
 		 *      (http://www.w3.org/TR/2006/REC-xsl11-20061205/#text-align)
-		 * @see CSS Text Level 3, 7.1. Text Alignment: the 'text-align' property
+		 * @see "CSS Text Level 3, 7.1. Text Alignment: the 'text-align' property"
 		 *      (http://www.w3.org/TR/2010/WD-css3-text-20101005/#text-align)
-		 * @see SVG 1.1, 10.9.1 Text alignment properties
-		 *      (http://www.w3.org/TR/2010/WD-SVG11-20100622/text.html#TextAlignmentProperties)
+		 * @see "SVG 1.1, 10.9.1 Text alignment properties"
+		 *      (http://www.w3.org/TR/SVG/text.html#TextAlignmentProperties)
 		 */
 		enum TextAnchor {
 			/// The text is aligned to the start edge of the paragraph.
@@ -276,7 +294,7 @@ namespace ascension {
 		/**
 		 * @c TextJustification describes the justification method.
 		 * @note This definition is under construction.
-		 * @see CSS Text Level 3, 7.3. Justification Method: the 'text-justify' property
+		 * @see "CSS Text Level 3, 7.3. Justification Method: the 'text-justify' property"
 		 *      (http://www.w3.org/TR/2010/WD-css3-text-20101005/#text-justify)
 		 */
 		enum TextJustification {
@@ -287,62 +305,30 @@ namespace ascension {
 
 		/**
 		 * Orientation of the text layout.
-		 * @see TextLineStyle#readingDirection, defaultReadingDirection
+		 * @see TextLineStyle#readingDirection, defaultReadingDirection,
+		 * @see "CSS Writing Modes Module Level 3, 2.1. Specifying Directionality: the ÅedirectionÅf
+		 *      property" (http://www.w3.org/TR/css3-writing-modes/#direction)
+		 * @see "SVG 1.1 (Second Edition), 10.7.4 Relationship with bidirectionality"
+		 *      (http://www.w3.org/TR/SVG/text.html#DirectionProperty)
+		 * @see "XSL 1.1, 7.29.1 "direction"" (http://www.w3.org/TR/xsl/#direction)
 		 */
 		enum ReadingDirection {
-			LEFT_TO_RIGHT,				///< The text is left-to-right.
-			RIGHT_TO_LEFT				///< The text is right-to-left.
+			LEFT_TO_RIGHT,	///< Left-to-right directionality.
+			RIGHT_TO_LEFT	///< Right-to-left directionality.
 		};
 
 		ReadingDirection defaultReadingDirection(const Presentation& presentation);
 
-#ifdef ASCENSION_WRITING_MODES
-		enum ProgressionDirection {
-			LEFT_TO_RIGHT, RIGHT_TO_LEFT, TOP_TO_BOTTOM, BOTTOM_TO_TOP
-		}
-
-		/// Returns @c true if @a direction is horizontal.
-		inline bool isHorizontalDirection(ProgressionDirection direction) {
-			return direction == LEFT_TO_RIGHT || direction == RIGHT_TO_LEFT;
-		}
-
-		/// Returns @c true if @a direction is vertical.
-		inline bool isVerticalDirection(ProgressionDirection direction) {
-			return direction == TOP_TO_BOTTOM || direction == BOTTOM_TO_TOP;
-		}
-
-		// documentation is presentation.cpp
-		class WritingMode {
-		public:
-			static const WritingMode
-				// SVG 1.1
-				LR_TB, RL_TB, TB_RL, LR, RL, TB, INHERIT,
-				// XSL 1.1 additional
-				TB_LR, BT_LR, BT_RL,
-				LR_BT, RL_BT,
-				LR_ALTERNATING_RL_BT, LR_ALTERNATING_RL_TB,
-				/*LR_INVERTING_RL_BT, LR_INVERTING_RL_TB, TB_LR_IN_LR_PAIRS*/;
-		public:
-			WritingMode() /*throw()*/;
-			WritingMode(
-				ProgressionDirection blockProgressionDirection,
-				ProgressionDirection inlineProgressionDirection,
-				bool inlineAlternating = false);
-			/// Returns the block-progression-direction.
-			ProgressionDirection blockProgressionDirection() const /**/ {return block_;}
-			/// Returns the inline-progression-direction.
-			ProgressionDirection inlineProgressionDirection() const /**/ {return inline_;}
-		private:
-			const ProgressionDirection block_, inline_;
-			const bool inlineAlternating_;
-		};
-#endif // ASCENSION_WRITING_MODES
-		/// From XSL 1.1, 7.16.5 "line-height-shift-adjustment".
+		/**
+		 * @see XSL 1.1, 7.16.5 "line-height-shift-adjustment".
+		 */
 		enum LineHeightShiftAdjustment {
 			CONSIDER_SHIFTS, DISREGARD_SHIFTS
 		};
 
-		/// From XSL 1.1, 7.16.6 "line-stacking-strategy"
+		/**
+		 * @see XSL 1.1, 7.16.6 "line-stacking-strategy"
+		 */
 		enum LineStackingStrategy {
 			LINE_HEIGHT, FONT_HEIGHT, MAX_HEIGHT
 		};
@@ -381,31 +367,96 @@ namespace ascension {
 			NumberSubstitution() /*throw()*/ : method(USER_SETTING), ignoreUserOverride(false) {}
 		};
 
-		struct TextLineStyle {
-			/// The reading direction of the line. Default value is @c INHERIT_READING_DIRECTION.
+		/**
+		 * Specifies the style of a text line. This object also gives the default text run style.
+		 * @see TextRunStyle, TextToplevelStyle, TextLineStyleDirector
+		 */
+		struct TextLineStyle : public std::tr1::enable_shared_from_this<TextLineStyle> {
+			/// The default text run style. The default value is @c null.
+			std::tr1::shared_ptr<const TextRunStyle> defaultRunStyle;
+			/**
+			 * The reading direction of the line. The default value is
+			 * @c Inheritable&lt;ReadingDirection&gt;() which means to refers to the writing mode
+			 * of the presentation.
+			 */
 			Inheritable<ReadingDirection> readingDirection;
 			/**
-			 * The alignment point in inline-progression-dimension. Default value is
+			 * The alignment point in inline-progression-dimension. The default value is
 			 * @c TEXT_ANCHOR_START.
 			 */
 			Inheritable<TextAnchor> anchor;
 			/**
 			 * The alignment point in block-progression-dimension, which is the dominant baseline
-			 * of the line. Default value is @c DOMINANT_BASELINE_AUTO.
+			 * of the line. The default value is @c DOMINANT_BASELINE_AUTO.
 			 */
 			Inheritable<DominantBaseline> dominantBaseline;
-			/// Default value is @c CONSIDER_SHIFTS.
+			/// The default value is @c CONSIDER_SHIFTS.
 			Inheritable<LineHeightShiftAdjustment> lineHeightShiftAdjustment;
-			/// Default value is @c MAX_HEIGHT.
+			/// The default value is @c MAX_HEIGHT.
 			Inheritable<LineStackingStrategy> lineStackingStrategy;
-			/// The number substitution setting. Default value is built by the default constructor.
+			/// The number substitution setting. The default value is @c NumberSubstitution().
 			NumberSubstitution numberSubstitution;
 
-			/// Default constructor.
+			/// Default constructor initializes the all members with the default values.
 			TextLineStyle() /*throw()*/ :
-				readingDirection(),
 				anchor(TEXT_ANCHOR_START), dominantBaseline(DOMINANT_BASELINE_AUTO),
 				lineHeightShiftAdjustment(CONSIDER_SHIFTS), lineStackingStrategy(MAX_HEIGHT) {}
+		};
+
+		/**
+		 * @see "CSS Writing Modes Module Level 3" (http://www.w3.org/TR/css3-writing-modes/)
+		 * @see "SVG 1.1 (Second Edition), 10.7 Text layout"
+		 *      (http://www.w3.org/TR/SVG/text.html#TextLayout)
+		 * @see "XSL 1.1, 7.29 Writing-mode-related Properties"
+		 *      (http://www.w3.org/TR/xsl/#writing-mode-related)
+		 */
+		struct WritingMode {
+			/**
+			 * Defines block flow directions.
+			 * @see "CSS Writing Modes Module Level 3, 3.1. Block Flow Direction: the Åewriting-modeÅf
+			 *      property" (http://www.w3.org/TR/css3-writing-modes/#writing-mode)
+			 * @see "SVG 1.1 (Second Edition), 10.7.2 Setting the inline-progression-direction"
+			 *      (http://www.w3.org/TR/SVG/text.html#WritingModeProperty)
+			 * @see "XSL 1.1, 7.29.7 "writing-mode"" (http://www.w3.org/TR/xsl/#writing-mode)
+			 */
+			enum BlockFlowDirection {
+				HORIZONTAL_TB,	///< Top-to-bottom block flow. The writing mode is horizontal.
+				VERTICAL_RL,	///< Right-to-left block flow. The writing mode is vertical.
+				VERTICAL_LR		///< Left-to-right block flow. The writing mode is vertical.
+			};
+	
+			/**
+			 * Defines the orientation of characters within a line.
+			 * @see "CSS Writing Modes Module Level 3, 5.1. Orienting Text: the Åetext-orientationÅf
+			 *      property" (http://www.w3.org/TR/css3-writing-modes/#text-orientation)
+			 * @see "SVG 1.1 (Second Edition), 10.7.3 Glyph orientation within a text run"
+			 *      (http://www.w3.org/TR/SVG/text.html#GlyphOrientation)
+			 */
+			enum TextOrientation {
+				VERTICAL_RIGHT, UPRIGHT, ROTATE_RIGHT, ROTATE_LEFT, ROTATE_NORMAL, AUTO
+			};
+
+			ReadingDirection inlineFlowDirection;	///< The inline flow direction.
+			BlockFlowDirection blockFlowDirection;	///< The block flow direction.
+			TextOrientation textOrientation;		///< The text orientation.
+
+			WritingMode(
+				ReadingDirection inlineFlowDirection = LEFT_TO_RIGHT/*ASCENSION_DEFAULT_TEXT_READING_DIRECTION*/,
+				BlockFlowDirection blockFlowDirection = HORIZONTAL_TB,
+				TextOrientation textOrientation = VERTICAL_RIGHT) :
+				inlineFlowDirection(inlineFlowDirection), blockFlowDirection(blockFlowDirection),
+				textOrientation(textOrientation) /*throw()*/ {}
+		};
+
+		/**
+		 * @see TextRunStyle, TextLineStyle, Presentation#globalTextStyle,
+		 *      Presentation#setGlobalTextStyle
+		 */
+		struct TextToplevelStyle : public std::tr1::enable_shared_from_this<TextToplevelStyle> {
+			/// The writing mode.
+			WritingMode writingMode;
+			/// The default text line style. The default value is @c null.
+			std::tr1::shared_ptr<const TextLineStyle> defaultLineStyle;
 		};
 
 	}
