@@ -21,6 +21,7 @@ namespace ascension {
 	namespace presentation {
 
 		struct TextLineStyle;
+		struct TextToplevelStyle;
 
 		/**
 		 * Interface for objects which direct style of a text line.
@@ -69,26 +70,20 @@ namespace ascension {
 		struct TextRunStyle;
 
 		/**
-		 * Interface for objects which are interested in change of the default style of
+		 * Interface for objects which are interested in change of the global text style of
 		 * @c Presentation.
-		 * @see Presentation#addDefaultStyleListener, Presentation#removeDefaultStyleListener
+		 * @see Presentation#addGlobalTextStyleListener, Presentation#removeGlobalTextStyleListener
 		 */
-		class DefaultTextStyleListener {
+		class GlobalTextStyleListener {
 		public:
 			/// Destructor.
-			virtual ~DefaultTextStyleListener() /*throw()*/ {}
+			virtual ~GlobalTextStyleListener() /*throw()*/ {}
 			/**
-			 * The default text line style of @c Presentation was changed.
+			 * The global text style of @c Presentation was changed.
 			 * @param used The old style used previously
-			 * @see Presentation#defaultTextLineStyle, Presentation#setDefaultTextLineStyle
+			 * @see Presentation#globalTextStyle, Presentation#setGlobalTextStyle
 			 */
-			virtual void defaultTextLineStyleChanged(std::tr1::shared_ptr<const TextLineStyle> used) = 0;
-			/**
-			 * The default text run style of @c Presentation was changed.
-			 * @param used The old style used previously
-			 * @see Presentation#defaultTextRunStyle, Presentation#setDefaultTextRunStyle
-			 */
-			virtual void defaultTextRunStyleChanged(std::tr1::shared_ptr<const TextRunStyle> used) = 0;
+			virtual void globalTextStyleChanged(std::tr1::shared_ptr<const TextToplevelStyle> used) = 0;
 		};
 
 		/**
@@ -182,12 +177,10 @@ namespace ascension {
 			const kernel::Document& document() const /*throw()*/;
 			const hyperlink::Hyperlink* const* getHyperlinks(length_t line, std::size_t& numberOfHyperlinks) const;
 			// styles
-			void addDefaultTextStyleListener(DefaultTextStyleListener& listener);
-			std::tr1::shared_ptr<const TextLineStyle> defaultTextLineStyle() const /*throw()*/;
-			std::tr1::shared_ptr<const TextRunStyle> defaultTextRunStyle() const /*throw()*/;
-			void removeDefaultTextStyleListener(DefaultTextStyleListener& listener);
-			void setDefaultTextLineStyle(std::tr1::shared_ptr<const TextLineStyle> newStyle);
-			void setDefaultTextRunStyle(std::tr1::shared_ptr<const TextRunStyle> newStyle);
+			void addGlobalTextStyleListener(GlobalTextStyleListener& listener);
+			std::tr1::shared_ptr<const TextToplevelStyle> globalTextStyle() const /*throw()*/;
+			void removeGlobalTextStyleListener(GlobalTextStyleListener& listener);
+			void setGlobalTextStyle(std::tr1::shared_ptr<const TextToplevelStyle> newStyle);
 			void textLineColors(length_t line, graphics::Color& foreground, graphics::Color& background) const;
 			std::tr1::shared_ptr<const TextLineStyle> textLineStyle(length_t line) const;
 			std::auto_ptr<StyledTextRunIterator> textRunStyles(length_t line) const;
@@ -204,14 +197,12 @@ namespace ascension {
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 		private:
 			kernel::Document& document_;
-			static std::tr1::shared_ptr<const TextLineStyle> DEFAULT_TEXT_LINE_STYLE;
-			static std::tr1::shared_ptr<const TextRunStyle> DEFAULT_TEXT_RUN_STYLE;
-			std::tr1::shared_ptr<const TextLineStyle> defaultTextLineStyle_;
-			std::tr1::shared_ptr<const TextRunStyle> defaultTextRunStyle_;
+			static std::tr1::shared_ptr<const TextToplevelStyle> DEFAULT_GLOBAL_TEXT_STYLE;
+			std::tr1::shared_ptr<const TextToplevelStyle> globalTextStyle_;
 			std::tr1::shared_ptr<TextLineStyleDirector> textLineStyleDirector_;
 			std::tr1::shared_ptr<TextRunStyleDirector> textRunStyleDirector_;
 			std::list<std::tr1::shared_ptr<TextLineColorDirector> > textLineColorDirectors_;
-			detail::Listeners<DefaultTextStyleListener> defaultTextStyleListeners_;
+			detail::Listeners<GlobalTextStyleListener> globalTextStyleListeners_;
 			detail::StrategyPointer<hyperlink::HyperlinkDetector> hyperlinkDetector_;
 			struct Hyperlinks;
 			mutable std::list<Hyperlinks*> hyperlinks_;
@@ -227,19 +218,12 @@ namespace ascension {
 		inline void Presentation::addTextLineColorDirector(std::tr1::shared_ptr<TextLineColorDirector> director) {
 			if(director.get() == 0) throw NullPointerException("director"); textLineColorDirectors_.push_back(director);}
 
-		/// Returns the default text line style this object gives.
-		inline std::tr1::shared_ptr<const TextLineStyle> Presentation::defaultTextLineStyle() const /*throw()*/ {return defaultTextLineStyle_;}
-
-		/// Returns the default text run style this object gives.
-		inline std::tr1::shared_ptr<const TextRunStyle> Presentation::defaultTextRunStyle() const /*throw()*/ {return defaultTextRunStyle_;}
-
-		/// Returns the style of the specified text line.
-		inline std::tr1::shared_ptr<const TextLineStyle> Presentation::textLineStyle(length_t line) const /*throw()*/ {
-			std::tr1::shared_ptr<const TextLineStyle> style;
-			if(textLineStyleDirector_.get() != 0)
-				style = textLineStyleDirector_->queryTextLineStyle(line);
-			return (style.get() != 0) ? style : defaultTextLineStyle();
-		}
+		/**
+		 * Returns the global text style this object gives.
+		 * @return The global text style. This value is never @c null
+		 * @see #setGlobalTextStyle
+		 */
+		inline std::tr1::shared_ptr<const TextToplevelStyle> Presentation::globalTextStyle() const /*throw()*/ {return globalTextStyle_;}
 
 		/**
 		 * Removes the specified text line color director.

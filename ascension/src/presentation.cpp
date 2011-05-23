@@ -124,68 +124,31 @@ void StyledTextRunEnumerator::next() {
 }
 
 
-#ifdef ASCENSION_WRITING_MODES
-
-// WritingMode ////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * @class ascension::presentation::WritingMode
- * Specifies the block-progression-direction and the inline-progression-direction of text.
- * Semantics of these values are different from the same properties in XSL 1.1, SVG 1.1 and CSS 3.
- * @see Direction
- * @see XSL 1.1, 7.29 Writing-mode-related Properties (http://www.w3.org/TR/xsl/#writing-mode-related)
- * @see SVG 1.1, 10.7.2 Setting the inline-progression-direction (http://www.w3.org/TR/SVG/text.html#SettingInlineProgressionDirection)
- * @see CSS Writing Modes Module Level 3 (http://www.w3.org/TR/2010/WD-css3-writing-modes-20101202/)
- */
-
-const WritingMode WritingMode::LR_TB();
-
-/// Default constructor creates a writing mode means the properties inherit from the parent.
-WritingMode::Writing() /*throw()*/ : block_(42), inline_(42), inlineAlternating_(true) {
-}
-
-/**
- * Constructor.
- * @param blockProgressionDirection The block-progression-direction
- * @param inlineProgressionDirection The inline-progression-direction
- * @param inlineAlternating
- * @throw std#invalid_argument @a blockProgressionDirection and @a inlineProgressionDirection have
- *                             same dimension
- */
-WritingMode::WritingMode(ProgressionDirection blockProgressionDirection,
-		ProgressionDirection inlineProgressionDirection, bool inlineAlternating /* = false */)
-		: block_(blockProgressionDirection), inline_(inlineProgressionDirection),
-		inlineAlternating_(inlineAlternating) {
-	if(isHorizontal(blockProgressionDirection)) {
-		if(!isVerticalDirection(inlineProgressionDirection))
-			throw invalid_argument("");
-	} else if(isVertical(blockProgressionDirection)) {
-		if(!isHorizontalDirection(inlineProgressionDirection))
-			throw invalid_argument("");
-	} else
-		throw UnknownValueException("blockProgressionDirection");
-}
-#endif // ASCENSION_WRITING_MODES
-
-
 // Presentation ///////////////////////////////////////////////////////////////////////////////////
 
+namespace {
+	inline tr1::shared_ptr<const TextLineStyle> defaultLineStyle(const Presentation& presentation) {
+		const tr1::shared_ptr<const TextToplevelStyle> globalStyle(presentation.globalTextStyle());
+		assert(globalStyle.get() != 0);
+		return globalStyle->defaultLineStyle;
+	}
+}
+
 /// 
-TextAnchor defaultTextAnchor(const Presentation& presentation) {
-	tr1::shared_ptr<const TextLineStyle> style(presentation.defaultTextLineStyle());
-	return (style.get() != 0
-		&& !style->anchor.inherits()) ? style->anchor.get() : ASCENSION_DEFAULT_TEXT_ANCHOR;
+TextAnchor presentation::defaultTextAnchor(const Presentation& presentation) {
+	const tr1::shared_ptr<const TextLineStyle> lineStyle(defaultLineStyle(presentation));
+	return (lineStyle.get() != 0
+		&& !lineStyle->anchor.inherits()) ? lineStyle->anchor.get() : ASCENSION_DEFAULT_TEXT_ANCHOR;
 }
 
 ///
-ReadingDirection defaultReadingDirection(const Presentation& presentation) {
-	tr1::shared_ptr<const TextLineStyle> style(presentation.defaultTextLineStyle());
-	return (style.get() != 0 && !style->readingDirection.inherits()) ?
-		style->readingDirection.get() : ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
+ReadingDirection presentation::defaultReadingDirection(const Presentation& presentation) {
+	const tr1::shared_ptr<const TextLineStyle> lineStyle(defaultLineStyle(presentation));
+	return (lineStyle.get() != 0 && !lineStyle->readingDirection.inherits()) ?
+		lineStyle->readingDirection.get() : presentation.globalTextStyle()->writingMode.inlineFlowDirection;
 }
 
-tr1::shared_ptr<const TextLineStyle> Presentation::DEFAULT_TEXT_LINE_STYLE(new TextLineStyle());
-tr1::shared_ptr<const TextRunStyle> Presentation::DEFAULT_TEXT_RUN_STYLE(new TextRunStyle());
+tr1::shared_ptr<const TextToplevelStyle> Presentation::DEFAULT_GLOBAL_TEXT_STYLE;
 
 struct Presentation::Hyperlinks {
 	length_t lineNumber;
@@ -198,8 +161,14 @@ struct Presentation::Hyperlinks {
  * @param document The target document
  */
 Presentation::Presentation(Document& document) /*throw()*/ : document_(document) {
-	setDefaultTextLineStyle(tr1::shared_ptr<const TextLineStyle>());
-	setDefaultTextRunStyle(tr1::shared_ptr<const TextRunStyle>());
+	if(DEFAULT_GLOBAL_TEXT_STYLE.get() == 0) {
+		auto_ptr<TextLineStyle> temp1(new TextLineStyle);
+		temp1->defaultRunStyle.reset(new TextRunStyle);
+		auto_ptr<TextToplevelStyle> temp2(new TextToplevelStyle);
+		temp2->defaultLineStyle = temp1;
+		DEFAULT_GLOBAL_TEXT_STYLE = temp2;
+	}
+	setGlobalTextStyle(tr1::shared_ptr<const TextToplevelStyle>());
 	document_.addListener(*this);
 }
 
@@ -210,13 +179,13 @@ Presentation::~Presentation() /*throw()*/ {
 }
 
 /**
- * Registers the default text style listener.
+ * Registers the global text style listener.
  * @param listener The listener to be registered
  * @throw std#invalid_argument @a listener is already registered
- * @see #defaultTextLineStyle, #defaultTextRunStyle
+ * @see #globalTextLineStyle, #removeGlobalTextStyleListener
  */
-void Presentation::addDefaultTextStyleListener(DefaultTextStyleListener& listener) {
-	defaultTextStyleListeners_.add(listener);
+void Presentation::addGlobalTextStyleListener(GlobalTextStyleListener& listener) {
+	globalTextStyleListeners_.add(listener);
 }
 
 void Presentation::clearHyperlinksCache() /*throw()*/ {
@@ -321,37 +290,36 @@ const Hyperlink* const* Presentation::getHyperlinks(length_t line, size_t& numbe
 }
 
 /**
- * Removes the default text style listener.
+ * Returns the style of the specified text line.
+ * @return The text line style. This value is never @c null
+ */
+tr1::shared_ptr<const TextLineStyle> Presentation::textLineStyle(length_t line) const /*throw()*/ {
+	tr1::shared_ptr<const TextLineStyle> style;
+	if(textLineStyleDirector_.get() != 0)
+		style = textLineStyleDirector_->queryTextLineStyle(line);
+	return (style.get() != 0) ? style : DEFAULT_GLOBAL_TEXT_STYLE->defaultLineStyle;
+}
+
+/**
+ * Removes the global text style listener.
  * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered
- * @see #defaultTextLineStyle, #defaultTextRunStyle
+ * @see #globalTextLineStyle, #addGlobalTextStyleListener
  */
-void Presentation::removeDefaultTextStyleListener(DefaultTextStyleListener& listener) {
-	defaultTextStyleListeners_.remove(listener);
+void Presentation::removeGlobalTextStyleListener(GlobalTextStyleListener& listener) {
+	globalTextStyleListeners_.remove(listener);
 }
 
 /**
- * Sets the default text line style.
+ * Sets the global text line style.
  * @param newStyle The style to set
- * @see #defaultTextLineStyle, #setDefaultTextRunStyle
+ * @see #globalTextStyle
  */
-void Presentation::setDefaultTextLineStyle(tr1::shared_ptr<const TextLineStyle> newStyle) {
-	const tr1::shared_ptr<const TextLineStyle> used(defaultTextLineStyle_);
-	defaultTextLineStyle_ = (newStyle.get() != 0) ? newStyle : DEFAULT_TEXT_LINE_STYLE;
-	defaultTextStyleListeners_.notify<tr1::shared_ptr<const TextLineStyle> >(
-		&DefaultTextStyleListener::defaultTextLineStyleChanged, used);
-}
-
-/**
- * Sets the default text run style.
- * @param newStyle The style to set
- * @see #defaultTextRunStyle, #setDefaultTextLineStyle
- */
-void Presentation::setDefaultTextRunStyle(tr1::shared_ptr<const TextRunStyle> newStyle) {
-	const tr1::shared_ptr<const TextRunStyle> used(defaultTextRunStyle_);
-	defaultTextRunStyle_ = (newStyle.get() != 0) ? newStyle : DEFAULT_TEXT_RUN_STYLE;
-	defaultTextStyleListeners_.notify<tr1::shared_ptr<const TextRunStyle> >(
-		&DefaultTextStyleListener::defaultTextRunStyleChanged, used);
+void Presentation::setGlobalTextStyle(tr1::shared_ptr<const TextToplevelStyle> newStyle) {
+	const tr1::shared_ptr<const TextToplevelStyle> used(globalTextStyle_);
+	globalTextStyle_ = (newStyle.get() != 0) ? newStyle : DEFAULT_GLOBAL_TEXT_STYLE;
+	globalTextStyleListeners_.notify<tr1::shared_ptr<const TextToplevelStyle> >(
+		&GlobalTextStyleListener::globalTextStyleChanged, used);
 }
 
 /**
@@ -472,6 +440,7 @@ private:
 	bool hasNext() const;
 	void next();
 private:
+	static const tr1::shared_ptr<const TextRunStyle> DEFAULT_TEXT_RUN_STYLE;
 	const Presentation& presentation_;
 	const map<kernel::ContentType, PartitionPresentationReconstructor*> reconstructors_;
 	const length_t line_;
@@ -479,6 +448,8 @@ private:
 	auto_ptr<presentation::StyledTextRunIterator> subiterator_;
 	pair<length_t, tr1::shared_ptr<const TextRunStyle> > current_;
 };
+
+const tr1::shared_ptr<const TextRunStyle> PresentationReconstructor::Iterator::DEFAULT_TEXT_RUN_STYLE(new TextRunStyle);
 
 /**
  * Constructor.
@@ -553,8 +524,14 @@ inline void PresentationReconstructor::Iterator::updateSubiterator() {
 	map<ContentType, PartitionPresentationReconstructor*>::const_iterator r(reconstructors_.find(currentPartition_.contentType));
 	subiterator_ = (r != reconstructors_.end()) ?
 		r->second->getPresentation(currentPartition_.region) : auto_ptr<presentation::StyledTextRunIterator>();
-	if(subiterator_.get() == 0)
-		current_ = make_pair(currentPartition_.region.beginning().column, presentation_.defaultTextRunStyle());
+	if(subiterator_.get() == 0) {
+		const tr1::shared_ptr<const TextLineStyle> lineStyle(defaultLineStyle(presentation_));
+		assert(lineStyle.get() != 0);
+		tr1::shared_ptr<const TextRunStyle> runStyle(lineStyle->defaultRunStyle);
+		if(runStyle.get() == 0)
+			runStyle = DEFAULT_TEXT_RUN_STYLE;
+		current_ = make_pair(currentPartition_.region.beginning().column, runStyle);
+	}
 }
 
 

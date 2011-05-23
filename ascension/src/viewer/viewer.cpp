@@ -1654,7 +1654,7 @@ TextViewer::RulerConfiguration::IndicatorMargin::IndicatorMargin() /*throw()*/ :
  */
 TextViewer::Renderer::Renderer(TextViewer& viewer) :
 		TextRenderer(viewer.presentation(), systemFonts(), true), viewer_(viewer) {
-	// TODO: other IFontCollection object used?
+	// TODO: other FontCollection object used?
 #if 0
 	// for test
 	setSpecialCharacterRenderer(new DefaultSpecialCharacterRenderer, true);
