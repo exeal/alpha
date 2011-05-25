@@ -108,7 +108,7 @@ void FontSelector::linkPrimaryFont() /*throw()*/ {
 }
 #endif
 
-// TextRenderer /////////////////////////////////////////////////////////////
+// TextRenderer ///////////////////////////////////////////////////////////////////////////////////
 
 namespace {
 	inline int calculateMemoryBitmapSize(int src) /*throw()*/ {
@@ -147,7 +147,7 @@ TextRenderer::TextRenderer(Presentation& presentation,
 		break;
 	}*/
 //	updateViewerSize(); ???
-	presentation_.addDefaultTextStyleListener(*this);
+	presentation_.addGlobalTextStyleListener(*this);
 }
 
 /// Copy-constructor.
@@ -157,12 +157,12 @@ TextRenderer::TextRenderer(const TextRenderer& other) : presentation_(other.pres
 		bind1st(mem_fun(&TextRenderer::generateLineLayout), this), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
 	updateDefaultFont();
 //	updateViewerSize(); ???
-	presentation_.addDefaultTextStyleListener(*this);
+	presentation_.addGlobalTextStyleListener(*this);
 }
 
 /// Destructor.
 TextRenderer::~TextRenderer() /*throw()*/ {
-	presentation_.removeDefaultTextStyleListener(*this);
+	presentation_.removeGlobalTextStyleListener(*this);
 //	getTextViewer().removeDisplaySizeListener(*this);
 //	layouts_.removeVisualLinesListener(*this);
 }
@@ -176,12 +176,24 @@ void TextRenderer::addDefaultFontListener(DefaultFontListener& listener) {
 	defaultFontListeners_.add(listener);
 }
 
-/// @see DefaultTextStyleListener#defaultTextLineStyleChanged
-void TextRenderer::defaultTextLineStyleChanged(tr1::shared_ptr<const TextLineStyle>) {
-}
+/**
+ * @fn ascension::graphics::font::TextRenderer::createLineLayout
+ * Creates and returns the text layout for the specified line.
+ * @param line The line number
+ * @return The generated line layout
+ */
 
-/// @see DefaultTextStyleListener#defaultTextRunStyleChanged
-void TextRenderer::defaultTextRunStyleChanged(tr1::shared_ptr<const TextRunStyle>) {
+/**
+ * @fn ascension::graphics::font::TextRenderer::defaultUIWritingMode
+ * Returns the default writing mode of UI. The value this method returns is
+ * treated as "last resort" for resolution of writing mode of text layout.
+ * @return The default writing mode
+ * @see presentation#TextToplevel#writingMode
+ * @see presentation#Presentation#globalTextStyle
+ */
+
+/// @see GlobalTextStyleListener#GlobalTextStyleChanged
+void TextRenderer::globalTextStyleChanged(tr1::shared_ptr<const TextToplevelStyle>) {
 	updateDefaultFont();
 }
 
