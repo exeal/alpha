@@ -95,10 +95,10 @@ namespace {
 		if(k::locations::isEndOfLine(caret))	// EOL
 			return Dimension<>(viewer.textRenderer().defaultFont()->metrics().averageCharacterWidth(), cy);
 		else {
-			const TextLayout& layout = viewer.textRenderer().lineLayout(caret.line());
-			const int leading = layout.location(caret.column(), TextLayout::LEADING).x;
-			const int trailing = layout.location(caret.column(), TextLayout::TRAILING).x;
-			return Dimension<>(static_cast<int>(detail::distance(leading, trailing)), cy);
+			const TextLayout& layout = viewer.textRenderer().layouts().at(caret.line());
+			const Scalar leading = layout.location(caret.column(), TextLayout::LEADING).x;
+			const Scalar trailing = layout.location(caret.column(), TextLayout::TRAILING).x;
+			return Dimension<>(static_cast<Scalar>(detail::distance(leading, trailing)), cy);
 		}
 	}
 } // namespace @0
@@ -159,7 +159,7 @@ TextViewer::~TextViewer() {
 	document().removeStateListener(*this);
 	document().removeRollbackListener(*this);
 	renderer_->removeDefaultFontListener(*this);
-	renderer_->removeVisualLinesListener(*this);
+	renderer_->layouts().removeVisualLinesListener(*this);
 	caret_->removeListener(*this);
 	caret_->removeStateListener(*this);
 	for(set<VisualPoint*>::iterator it = points_.begin(); it != points_.end(); ++it)
@@ -251,7 +251,7 @@ k::Position TextViewer::characterForClientXY(const Point<>& p, TextLayout::Edge 
 	mapClientYToLine(p.y, &result.line, &subline, &outside);
 	if(abortNoCharacter && outside)
 		return k::Position();
-	const TextLayout& layout = renderer_->lineLayout(result.line);
+	const TextLayout& layout = renderer_->layouts()[result.line];
 
 	// determine the column
 	const Scalar x = p.x - getDisplayXOffset(result.line);
@@ -323,7 +323,7 @@ void TextViewer::checkInitialization() const {
  */
 Point<> TextViewer::clientXYForCharacter(const k::Position& position, bool fullSearchY, TextLayout::Edge edge) const {
 	checkInitialization();
-	const TextLayout& layout = renderer_->lineLayout(position.line);
+	const TextLayout& layout = renderer_->layouts().at(position.line);
 	Point<> p(layout.location(position.column, edge));
 	p.x += getDisplayXOffset(position.line);
 	const int y = mapLineToClientY(position.line, fullSearchY);
@@ -334,7 +334,7 @@ Point<> TextViewer::clientXYForCharacter(const k::Position& position, bool fullS
 	return p;
 }
 
-/// @see IDefaultFontListener#defaultFontChanged
+/// @see DefaultFontListener#defaultFontChanged
 void TextViewer::defaultFontChanged() /*throw()*/ {
 	rulerPainter_->update();
 	scrollInfo_.resetBars(*this, SB_BOTH, true);
@@ -453,15 +453,15 @@ void TextViewer::freeze() {
  */
 int TextViewer::getDisplayXOffset(length_t line) const {
 	const Rect<> margins(textAreaMargins());
-	const TextLayout& layout = renderer_->lineLayout(line);
-	const TextAnchor alignment = resolveTextAlignment(layout.anchor(), layout.readingDirection());
+	const TextLayout& layout = renderer_->layouts().at(line);
+	const TextAnchor alignment = resolveTextAlignment(layout.anchor(), layout.writingMode().inlineFlowDirection);
 	if(alignment == ALIGN_LEFT || alignment == JUSTIFY)	// TODO: this code ignores last visual line with justification.
 		return margins.left() - scrollInfo_.x() * renderer_->defaultFont()->metrics().averageCharacterWidth();
 
 	int indent;
 	const Rect<> clientBounds(bounds(false));
-	if(renderer_->maximumInlineProgressionDimension() + margins.left() + margins.right() > clientBounds.width()) {
-		indent = renderer_->maximumInlineProgressionDimension() - layout.lineInlineProgressionDimension(0) + margins.left();
+	if(renderer_->layouts().maximumInlineProgressionDimension() + margins.left() + margins.right() > clientBounds.width()) {
+		indent = renderer_->layouts().maximumInlineProgressionDimension() - layout.lineInlineProgressionDimension(0) + margins.left();
 		indent += (clientBounds.width() - margins.left() - margins.right()) % renderer_->defaultFont()->metrics().averageCharacterWidth();
 	} else
 		indent = clientBounds.width() - layout.lineInlineProgressionDimension(0) - margins.right();
@@ -810,7 +810,7 @@ void TextViewer::initialize(const win32::Handle<HWND>& parent,
 		tr1::shared_ptr<TextRunStyleDirector>(new ZebraTextRunStyleTest(document())));
 	
 	renderer_->addDefaultFontListener(*this);
-	renderer_->addVisualLinesListener(*this);
+	renderer_->layouts().addVisualLinesListener(*this);
 
 	// placement and display
 //	setBounds(rect);
@@ -873,12 +873,13 @@ int TextViewer::mapLineToClientY(length_t line, bool fullSearch) const {
 			return fullSearch ? margins.top()
 				- static_cast<int>(renderer_->defaultFont()->metrics().linePitch() * scrollInfo_.firstVisibleSubline) : -32768;
 	} else if(line > scrollInfo_.firstVisibleLine) {
-		const int lineSpan = renderer_->defaultFont()->metrics().linePitch();
+		const Scalar lineSpan = renderer_->defaultFont()->metrics().linePitch();
 		const Rect<> clientBounds(bounds(false));
-		int y = margins.top();
-		y += lineSpan * static_cast<int>((renderer_->numberOfSublinesOfLine(scrollInfo_.firstVisibleLine) - scrollInfo_.firstVisibleSubline));
+		Scalar y = margins.top();
+		y += lineSpan * static_cast<Scalar>(
+			renderer_->layouts().numberOfSublinesOfLine(scrollInfo_.firstVisibleLine) - scrollInfo_.firstVisibleSubline);
 		for(length_t i = scrollInfo_.firstVisibleLine + 1; i < line; ++i) {
-			y += lineSpan * static_cast<int>(renderer_->numberOfSublinesOfLine(i));
+			y += lineSpan * static_cast<Scalar>(renderer_->layouts().numberOfSublinesOfLine(i));
 			if(y >= clientBounds.size().cy && !fullSearch)
 				return 32767;
 		}
@@ -886,10 +887,10 @@ int TextViewer::mapLineToClientY(length_t line, bool fullSearch) const {
 	} else if(!fullSearch)
 		return -32768;
 	else {
-		const int linePitch = renderer_->defaultFont()->metrics().linePitch();
-		int y = margins.top() - static_cast<int>(linePitch * scrollInfo_.firstVisibleSubline);
+		const Scalar linePitch = renderer_->defaultFont()->metrics().linePitch();
+		Scalar y = margins.top() - static_cast<Scalar>(linePitch * scrollInfo_.firstVisibleSubline);
 		for(length_t i = scrollInfo_.firstVisibleLine - 1; ; --i) {
-			y -= static_cast<int>(renderer_->numberOfSublinesOfLine(i) * linePitch);
+			y -= static_cast<Scalar>(renderer_->layouts().numberOfSublinesOfLine(i) * linePitch);
 			if(i == line)
 				break;
 		}
@@ -988,12 +989,12 @@ void TextViewer::paint(PaintContext& context) {
 	lineBounds.bottom() -= margins.bottom();
 	length_t line, subline;
 	mapClientYToLine(scheduledBounds.top(), &line, &subline);
-	int y = mapLineToClientY(line, true);
+	Scalar y = mapLineToClientY(line, true);
 	if(line < lines) {
 		while(y < scheduledBounds.bottom() && line < lines) {
 			// draw a logical line
 			renderer_->renderLine(line, context, getDisplayXOffset(line), y, scheduledBounds, lineBounds, &selection);
-			y += linePitch * static_cast<int>(renderer_->numberOfSublinesOfLine(line++));
+			y += linePitch * static_cast<Scalar>(renderer_->layouts().numberOfSublinesOfLine(line++));
 			subline = 0;
 		}
 	}
@@ -1086,7 +1087,7 @@ void TextViewer::redrawLines(length_t first, length_t last) {
 #ifdef _DEBUG
 	if(DIAGNOSE_INHERENT_DRAWING)
 		win32::DumpContext() << L"@TextViewer.redrawLines invalidates lines ["
-			<< static_cast<ulong>(first) << L".." << static_cast<ulong>(last) << L"]\n";
+			<< static_cast<unsigned long>(first) << L".." << static_cast<unsigned long>(last) << L"]\n";
 #endif // _DEBUG
 
 	Rect<> rect(bounds(false));
@@ -1097,9 +1098,11 @@ void TextViewer::redrawLines(length_t first, length_t last) {
 		return;
 	// 下端
 	if(last != numeric_limits<length_t>::max()) {
-		long bottom = rect.top() + static_cast<long>(renderer_->numberOfSublinesOfLine(first) * renderer_->defaultFont()->metrics().linePitch());
+		Scalar bottom = rect.top() + static_cast<Scalar>(
+			renderer_->layouts().numberOfSublinesOfLine(first) * renderer_->defaultFont()->metrics().linePitch());
 		for(length_t line = first + 1; line <= last; ++line) {
-			bottom += static_cast<long>(renderer_->numberOfSublinesOfLine(line) * renderer_->defaultFont()->metrics().linePitch());
+			bottom += static_cast<Scalar>(
+				renderer_->layouts().numberOfSublinesOfLine(line) * renderer_->defaultFont()->metrics().linePitch());
 			if(bottom >= rect.bottom())
 				break;
 		}
@@ -1222,7 +1225,7 @@ void TextViewer::resized(State state, const Dimension<>&) {
 		return;
 
 	if(configuration_.lineWrap.wrapsAtWindowEdge())
-		renderer_->invalidate();
+		renderer_->layouts().invalidate();
 	displaySizeListeners_.notify(&DisplaySizeListener::viewerDisplaySizeChanged);
 	scrollInfo_.resetBars(*this, SB_BOTH, true);
 	updateScrollBars();
@@ -1275,7 +1278,7 @@ void TextViewer::scrollTo(length_t line, bool redraw) {
 		// TODO: this code can be more faster.
 		visualLine = 0;
 		for(length_t i = 0; i < line; ++i)
-			visualLine += renderer_->numberOfSublinesOfLine(i);
+			visualLine += renderer_->layouts().numberOfSublinesOfLine(i);
 	}
 	viewportListeners_.notify<bool, bool>(&ViewportListener::viewportChanged, true, true);
 }
@@ -1303,7 +1306,7 @@ void TextViewer::setConfiguration(const Configuration* general, const RulerConfi
 		assert(!oldReadingDirection.inherits());
 		configuration_ = *general;
 		displaySizeListeners_.notify(&DisplaySizeListener::viewerDisplaySizeChanged);
-		renderer_->invalidate();
+		renderer_->layouts().invalidate();
 
 		if((oldReadingDirection == LEFT_TO_RIGHT && configuration_.readingDirection == RIGHT_TO_LEFT)
 				|| (oldReadingDirection == RIGHT_TO_LEFT && configuration_.readingDirection == LEFT_TO_RIGHT))
@@ -1451,7 +1454,7 @@ void TextViewer::updateCaretPosition() {
 	if(!textArea.includes(p))
 		p.y = -renderer_->defaultFont()->metrics().linePitch();	// "hide" the caret
 	else if(caretShape_.readingDirection == RIGHT_TO_LEFT
-			|| renderer_->lineLayout(caret().line()).bidiEmbeddingLevel(caret().column()) % 2 == 1)
+			|| renderer_->layouts()[caret().line()].bidiEmbeddingLevel(caret().column()) % 2 == 1)
 		p.x -= caretShape_.width;
 	::SetCaretPos(p.x, p.y);
 	updateIMECompositionWindowPosition();
@@ -1650,10 +1653,11 @@ TextViewer::RulerConfiguration::IndicatorMargin::IndicatorMargin() /*throw()*/ :
 
 /**
  * Constructor.
- * @param viewer the text viewer
+ * @param viewer The text viewer
+ * @param writingMode The initial writing mode
  */
-TextViewer::Renderer::Renderer(TextViewer& viewer) :
-		TextRenderer(viewer.presentation(), systemFonts(), true), viewer_(viewer) {
+TextViewer::Renderer::Renderer(TextViewer& viewer, const presentation::WritingMode& writingMode) :
+		TextRenderer(viewer.presentation(), systemFonts(), true), viewer_(viewer), defaultWritingMode_(writingMode) {
 	// TODO: other FontCollection object used?
 #if 0
 	// for test
@@ -1663,50 +1667,41 @@ TextViewer::Renderer::Renderer(TextViewer& viewer) :
 
 /**
  * Copy-constructor with a parameter.
- * @param other the source object
- * @param viewer the text viewer
+ * @param other The source object
+ * @param viewer The text viewer
  */
-TextViewer::Renderer::Renderer(const Renderer& other, TextViewer& viewer) : TextRenderer(other), viewer_(viewer),
-		overrideReadingDirection_(other.overrideReadingDirection_), overrideTextAnchor_(other.overrideTextAnchor_) {
+TextViewer::Renderer::Renderer(const Renderer& other, TextViewer& viewer) :
+		TextRenderer(other), viewer_(viewer), defaultWritingMode_(other.defaultWritingMode_) {
 }
 
-/**
- * Implements @c layout#ILayoutInformationProvider#defaultUIReadingDirection abstract method.
- * This returns the value of @c TextViewer#Configuration#readingDirection.
- */
-Inheritable<ReadingDirection> TextViewer::Renderer::defaultUIReadingDirection() const /*throw()*/ {
-	return viewer_.configuration().readingDirection;
-}
-
-/// @see layout#ILayoutInformationProvider#layoutSettings
-const LayoutSettings& TextViewer::Renderer::layoutSettings() const /*throw()*/ {
-	return viewer_.configuration();
-}
-
-/// @see layout#LineLayoutBuffer#renderingContext
-auto_ptr<Context> TextViewer::Renderer::renderingContext() const {
-	return viewer_.isWindow() ? viewer_.createGraphicContext() : Screen::instance().createGraphicContext();
+/// @see TextRenderer#defaultUIWritingMode
+const WritingMode& TextViewer::Renderer::defaultUIWritingMode() const /*throw()*/ {
+	return defaultWritingMode_;
 }
 
 /// Rewraps the visual lines at the window's edge.
 void TextViewer::Renderer::rewrapAtWindowEdge() {
+	class Local {
+	public:
+		explicit Local(Scalar newWidth) : newWidth_(newWidth) {}
+		bool operator()(const LineLayoutVector::LineLayout& layout) const {
+			return layout.second->numberOfLines() != 1
+				|| layout.second->style().anchor == JUSTIFY
+				|| layout.second->maximumInlineProgressionDimension() > newWidth_;
+		}
+	private:
+		const Scalar newWidth_;
+	};
+
 	if(viewer_.configuration().lineWrap.wrapsAtWindowEdge()) {
 		const Rect<> clientBounds(viewer_.bounds(false));
 		const Rect<> margins(viewer_.textAreaMargins());
-		const int newWidth = clientBounds.width() - margins.left() - margins.right();
-		for(Iterator i(firstCachedLine()), e(lastCachedLine()); i != e; ) {
-			const TextLayout& layout = **i;
-			++i;	// invalidate() may break iterator
-			if(layout.numberOfLines() != 1
-					|| layout.style().anchor == JUSTIFY || layout.maximumInlineProgressionDimension() > newWidth)
-//				layout.rewrap();
-				invalidate(layout.lineNumber(), layout.lineNumber() + 1);
-		}
+		layouts().invalidateIf(Local(clientBounds.width() - margins.left() - margins.right()));
 	}
 }
 
-/// @see layout#ILayoutInformationProvider#width
-int TextViewer::Renderer::width() const /*throw()*/ {
+/// @see TextRenderer#width
+Scalar TextViewer::Renderer::width() const /*throw()*/ {
 	const LineWrapConfiguration& lwc = viewer_.configuration().lineWrap;
 	if(!lwc.wraps()) {
 		win32::AutoZeroSize<SCROLLINFO> si;
@@ -1737,14 +1732,14 @@ TextViewer::RulerPainter::RulerPainter(TextViewer& viewer, bool enableDoubleBuff
 }
 
 /// Returns the maximum number of digits of line numbers.
-uint8_t TextViewer::RulerPainter::maximumDigisForLineNumbers() const /*throw()*/ {
+uint8_t TextViewer::RulerPainter::maximumDigitsForLineNumbers() const /*throw()*/ {
 	uint8_t n = 1;
 	length_t lines = viewer_.document().numberOfLines() + configuration_.lineNumbers.startValue - 1;
 	while(lines >= 10) {
 		lines /= 10;
 		++n;
 	}
-	return static_cast<uchar>(n);	// hmm...
+	return static_cast<uint8_t>(n);	// hmm...
 }
 
 void TextViewer::RulerPainter::setConfiguration(const RulerConfiguration& configuration) {

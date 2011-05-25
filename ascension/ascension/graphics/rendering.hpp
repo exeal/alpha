@@ -34,7 +34,7 @@ namespace ascension {
 			};
 
 			// documentation is layout.cpp
-			class TextRenderer : public presentation::DefaultTextStyleListener {
+			class TextRenderer : public presentation::GlobalTextStyleListener {
 			public:
 				// constructors
 				TextRenderer(presentation::Presentation& presentation,
@@ -43,6 +43,9 @@ namespace ascension {
 				virtual ~TextRenderer() /*throw()*/;
 				// layout
 				virtual std::auto_ptr<const TextLayout> createLineLayout(length_t line) const = 0;
+				virtual const presentation::WritingMode& defaultUIWritingMode() const /*throw()*/ = 0;
+				virtual Scalar width() const /*throw()*/ = 0;
+				LineLayoutVector& layouts() /*throw()*/;
 				const LineLayoutVector& layouts() const /*throw()*/;
 				// default font
 				void addDefaultFontListener(DefaultFontListener& listener);
@@ -63,9 +66,8 @@ namespace ascension {
 			private:
 				std::auto_ptr<const TextLayout> generateLineLayout(length_t line) const;
 				void updateDefaultFont();
-				// presentation.DefaultTextStyleListener
-				void defaultTextLineStyleChanged(std::tr1::shared_ptr<const presentation::TextLineStyle> used);
-				void defaultTextRunStyleChanged(std::tr1::shared_ptr<const presentation::TextRunStyle> used);
+				// presentation.GlobalTextStyleListener
+				void globalTextStyleChanged(std::tr1::shared_ptr<const presentation::TextToplevelStyle> used);
 			private:
 				presentation::Presentation& presentation_;
 				std::auto_ptr<LineLayoutVector> layouts_;

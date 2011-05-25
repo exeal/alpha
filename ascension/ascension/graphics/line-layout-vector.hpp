@@ -9,7 +9,9 @@
 #ifndef ASCENSION_LINE_LAYOUT_VECTOR_HPP
 #define ASCENSION_LINE_LAYOUT_VECTOR_HPP
 #include <ascension/graphics/text-layout.hpp>
+#include <algorithm>	// std.sort
 #include <list>
+#include <vector>
 
 namespace ascension {
 	namespace graphics {
@@ -88,16 +90,13 @@ namespace ascension {
 //				kernel::Position mapVisualPositionToLogicalPosition(const kernel::Position& position) const;
 				void offsetVisualLine(length_t& line, length_t& subline,
 					signed_length_t offset, bool* overflowedOrUnderflowed = 0) const /*throw()*/;
-				// operations
+				// invalidations
+				typedef std::pair<length_t, const TextLayout*> LineLayout;
 				void invalidate() /*throw()*/;
+				template<typename Function> void invalidateIf(Function f);
 				void invalidate(length_t first, length_t last);
 			protected:
 				void invalidate(length_t line);
-				// enumeration
-				typedef std::pair<length_t, const TextLayout*> LineLayout;
-				typedef std::list<LineLayout>::const_iterator ConstIterator;
-				ConstIterator firstCachedLine() const /*throw()*/;
-				ConstIterator lastCachedLine() const /*throw()*/;
 			private:
 				typedef std::list<LineLayout>::iterator Iterator;
 				void clearCaches(length_t first, length_t last, bool repair);
@@ -107,6 +106,7 @@ namespace ascension {
 				void fireVisualLinesModified(length_t first, length_t last,
 					length_t newSublines, length_t oldSublines, bool documentChanged);
 				void initialize();
+				void invalidate(const std::vector<length_t>& lines);
 				void presentationStylistChanged();
 				void updateLongestLine(length_t line, Scalar ipd) /*throw()*/;
 				// kernel.DocumentListener
@@ -200,14 +200,23 @@ namespace ascension {
 				return document_;
 			}
 
-			/// Returns the first cached line layout.
-			inline LineLayoutVector::ConstIterator LineLayoutVector::firstCachedLine() const /*throw()*/ {
-				return layouts_.begin();
-			}
-
-			/// Returns the last cached line layout.
-			inline LineLayoutVector::ConstIterator LineLayoutVector::lastCachedLine() const /*throw()*/ {
-				return layouts_.end();
+			/**
+			 * Invalidates all layouts @a pred returns @c true.
+			 * @tparam Pred The type of @a pred
+			 * @param pred The predicate which takes a parameter of type @c LineLayout and returns
+			 *             @c true if invalidates the layout
+			 */
+			template<typename Pred>
+			inline void LineLayoutVector::invalidateIf(Pred pred) /*throw()*/ {
+				std::vector<length_t> linesToInvalidate;
+				for(std::list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
+					if(pred(*i))
+						linesToInvalidate.push_back(i->first);
+				}
+				if(!linesToInvalidate.empty()) {
+					std::sort(linesToInvalidate.begin(), inesToInvalidate.end());
+					invalidate(linesToInvalidate);
+				}
 			}
 
 			/// Returns the width of the longest line.

@@ -143,12 +143,12 @@ void LineLayoutVector::clearCaches(length_t first, length_t last, bool repair) {
 	}
 }
 
-/// @see kernel#IDocumentListener#documentAboutToBeChanged
+/// @see kernel#DocumentListener#documentAboutToBeChanged
 void LineLayoutVector::documentAboutToBeChanged(const kernel::Document&) {
 	documentChangePhase_ = ABOUT_TO_CHANGE;
 }
 
-/// @see kernel#IDocumentListener#documentChanged
+/// @see kernel#DocumentListener#documentChanged
 void LineLayoutVector::documentChanged(const kernel::Document&, const kernel::DocumentChange& change) {
 	documentChangePhase_ = CHANGING;
 	assert(change.erasedRegion().isNormalized() && change.insertedRegion().isNormalized());
@@ -211,7 +211,7 @@ void LineLayoutVector::fireVisualLinesModified(length_t first, length_t last,
 	} else {
 		length_t newLongestLine = longestLine_;
 		Scalar newMaximumIpd = maximumInlineProgressionDimension();
-		for(ConstIterator i(firstCachedLine()), e(lastCachedLine()); i != e; ++i) {
+		for(list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 			if(i->second->maximumInlineProgressionDimension() > newMaximumIpd) {
 				newLongestLine = i->first;
 				newMaximumIpd = i->second->maximumInlineProgressionDimension();
@@ -252,6 +252,26 @@ void LineLayoutVector::invalidate(length_t first, length_t last) {
 	clearCaches(first, last, autoRepair_);
 }
 
+void LineLayoutVector::invalidate(const vector<length_t>& lines) {
+	vector<length_t> cachedLines;
+	for(list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i)
+		cachedLines.push_back(i->first);
+	sort(cachedLines.begin(), cachedLines.end());
+
+	typedef vector<length_t>::const_iterator Iterator;
+	const vector<length_t>::const_iterator e(cachedLines.end());
+	for(pair<Iterator, Iterator> p(mismatch<Iterator, Iterator>(cachedLines.begin(), e, lines.begin())); ; ) {
+		p.first = find(p.first, e, *p.second);
+		const pair<Iterator, Iterator> next(mismatch(p.first, e, p.second));
+		if(next.second == lines.end()) {
+			clearCaches(*p.second, lines.back() + 1, autoRepair_);
+			break;
+		}
+		clearCaches(*p.second, *next.second, autoRepair_);
+		p = next;
+	}
+}
+
 /**
  * Resets the cached layout of the specified line and repairs if necessary.
  * @param line The line to invalidate layout
@@ -288,7 +308,7 @@ length_t LineLayoutVector::mapLogicalLineToVisualLine(length_t line) const {
 //	else if(!wrapLongLines())
 //		return line;
 	length_t result = 0, cachedLines = 0;
-	for(ConstIterator i(firstCachedLine()), e(lastCachedLine()); i != e; ++i) {
+	for(list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 		if(i->first < line) {
 			result += i->second->numberOfLines();
 			++cachedLines;
@@ -421,7 +441,7 @@ void LineLayoutVector::updateLongestLine(length_t line, Scalar ipd) /*throw()*/ 
 	} else {
 		longestLine_ = static_cast<length_t>(-1);
 		maximumIpd_ = 0;
-		for(ConstIterator i(firstCachedLine()), e(lastCachedLine()); i != e; ++i) {
+		for(list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 			if(i->second->maximumInlineProgressionDimension() > maximumIpd_) {
 				longestLine_ = i->first;
 				maximumIpd_ = i->second->maximumInlineProgressionDimension();

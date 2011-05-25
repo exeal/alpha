@@ -339,7 +339,7 @@ namespace ascension {
 		class TextViewer :
 				public base::Widget,
 				public kernel::DocumentListener, public kernel::DocumentStateListener,
-				public kernel::DocumentRollbackListener, /*public graphics::DefaultFontListener,*/
+				public kernel::DocumentRollbackListener, public graphics::font::DefaultFontListener,
 				public graphics::font::VisualLinesListener, public CaretListener,
 				public CaretStateListener, public detail::PointCollection<VisualPoint> {
 		public:
@@ -594,7 +594,7 @@ namespace ascension {
 			// kernel.DocumentRollbackListener
 			void documentUndoSequenceStarted(const kernel::Document& document);
 			void documentUndoSequenceStopped(const kernel::Document& document, const kernel::Position& resultPosition);
-			// layout.IDefaultFontListener
+			// graphics.font.DefaultFontListener
 			void defaultFontChanged() /*throw()*/;
 			// graphics.font.VisualLinesListener
 			void visualLinesDeleted(length_t first, length_t last, length_t sublines, bool longestLineChanged) /*throw()*/;
@@ -656,20 +656,20 @@ namespace ascension {
 			class Renderer : public graphics::font::TextRenderer {
 				ASCENSION_UNASSIGNABLE_TAG(Renderer);
 			public:
-				explicit Renderer(TextViewer& viewer);
+				explicit Renderer(TextViewer& viewer,
+					const presentation::WritingMode& writingMode = presentation::WritingMode());
 				Renderer(const Renderer& other, TextViewer& viewer);
+				void setDefaultWritingMode(const presentation::WritingMode& writingMode) /*throw()*/;
 				void rewrapAtWindowEdge();
 			private:
 				// TextRenderer
 				std::auto_ptr<const graphics::font::TextLayout> createLineLayout(length_t line) const;
-				// ILayoutInformationProvider
-				const graphics::LayoutSettings& layoutSettings() const /*throw()*/;
-				presentation::Inheritable<presentation::ReadingDirection> defaultUIReadingDirection() const /*throw()*/;
-				int width() const /*throw()*/;
+				const presentation::WritingMode& defaultUIWritingMode() const /*throw()*/;
+				graphics::Scalar width() const /*throw()*/;
 			private:
 				TextViewer& viewer_;
-				presentation::Inheritable<presentation::ReadingDirection> overrideReadingDirection_;
-				presentation::Inheritable<presentation::TextAnchor> overrideTextAnchor_;
+				presentation::WritingMode defaultWritingMode_;
+//				presentation::Inheritable<presentation::TextAnchor> overrideTextAnchor_;
 			};
 			/// @c RulerPainter paints the ruler of the @c TextViewer.
 			class RulerPainter {
@@ -894,20 +894,10 @@ namespace ascension {
 		namespace utils {
 			void closeCompletionProposalsPopup(TextViewer& viewer) /*throw()*/;
 			presentation::TextAnchor computeRulerAlignment(const TextViewer& viewer);
-			presentation::ReadingDirection computeUIReadingDirection(const TextViewer& viewer);
 		} // namespace utils
 
 
 // inlines ////////////////////////////////////////////////////////////////////////////////////////
-
-/// Returns the UI reading direction of @a object.
-inline presentation::ReadingDirection utils::computeUIReadingDirection(const TextViewer& viewer) {
-	presentation::Inheritable<presentation::ReadingDirection> result(viewer.textRenderer().defaultUIReadingDirection());
-	if(result.inherits())
-		result = ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
-	assert(result == presentation::LEFT_TO_RIGHT || result == presentation::RIGHT_TO_LEFT);
-	return result;
-}
 
 /**
  * Registers the display size listener.
