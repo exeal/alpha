@@ -164,9 +164,9 @@ namespace ascension {
 				 * @param context The graphic context
 				 * @param origin The location where this inline object is rendered
 				 */
-				virtual void draw(const PaintContext& context, const Point<>& origin) /*throw()*/ = 0;
+				virtual void draw(const PaintContext& context, const NativePoint& origin) /*throw()*/ = 0;
 				/// Returns the size of this inline object in pixels.
-				Dimension<> size() const /*throw()*/ {return Dimension<>(advance(), ascent() + descent());}
+				NativeSize size() const /*throw()*/ {return geometry::make<NativeSize>(advance(), ascent() + descent());}
 			};
 
 			/**
@@ -347,23 +347,23 @@ namespace ascension {
 				length_t lineOffset(length_t line) const;
 				const length_t* lineOffsets() const /*throw()*/;
 				// coordinates
-				NativePolygon blackBoxBounds(const Range<length_t>& range) const;
-				Rect<> bounds() const /*throw()*/;
-				Rect<> bounds(const Range<length_t>& range) const;
-				Rect<> lineBounds(length_t line) const;
+				NativeRegion blackBoxBounds(const Range<length_t>& range) const;
+				NativeRectangle bounds() const /*throw()*/;
+				NativeRectangle bounds(const Range<length_t>& range) const;
+				NativeRectangle lineBounds(length_t line) const;
 				Scalar lineInlineProgressionDimension(length_t line) const;
 				const LineMetrics& lineMetrics(length_t line) const;
 				Scalar lineStartEdge(length_t line) const;
-				Point<> location(length_t column, Edge edge = LEADING) const;
-				std::pair<Point<>, Point<> > locations(length_t column) const;
+				NativePoint location(length_t column, Edge edge = LEADING) const;
+				std::pair<NativePoint, NativePoint> locations(length_t column) const;
 				Scalar maximumInlineProgressionDimension() const /*throw()*/;
-				std::pair<length_t, length_t> offset(const Point<>& p, bool* outside = 0) const /*throw()*/;
+				std::pair<length_t, length_t> offset(const NativePoint& p, bool* outside = 0) const /*throw()*/;
 				// styled segments
 //				StyledSegmentIterator firstStyledSegment() const /*throw()*/;
 //				StyledSegmentIterator lastStyledSegment() const /*throw()*/;
 				presentation::StyledTextRun styledTextRun(length_t column) const;
 				// painting
-				void draw(PaintContext& context, const Point<>& origin,
+				void draw(PaintContext& context, const NativePoint& origin,
 					const TextPaintOverride* paintOverride = 0,
 					const InlineObject* endOfLine = 0,
 					const InlineObject* lineWrappingMark = 0) const /*throw()*/;
@@ -382,7 +382,7 @@ namespace ascension {
 				length_t locateLine(Scalar bpd, bool& outside) const /*throw()*/;
 				std::pair<length_t, length_t> locateOffsets(
 					length_t line, Scalar ipd, bool& outside) const /*throw()*/;
-				void locations(length_t column, Point<>* leading, Point<>* trailing) const;
+				void locations(length_t column, NativePoint* leading, NativePoint* trailing) const;
 				void reorder() /*throw()*/;
 //				void rewrap();
 				int nextTabStopBasedLeftEdge(Scalar x, bool right) const /*throw()*/;
@@ -476,8 +476,8 @@ namespace ascension {
 			 *         y-coordinate is relative in the visual lines
 			 * @throw kernel#BadPositionException @a column is greater than the length of the line
 			 */
-			inline Point<> TextLayout::location(length_t column, Edge edge /* = LEADING */) const {
-				Point<> result;
+			inline NativePoint TextLayout::location(length_t column, Edge edge /* = LEADING */) const {
+				NativePoint result;
 				locations(column, (edge == LEADING) ? &result : 0, (edge == TRAILING) ? &result : 0);
 				return result;
 			}
@@ -491,8 +491,8 @@ namespace ascension {
 			 *         in the visual lines
 			 * @throw kernel#BadPositionException @a column is greater than the length of the line
 			 */
-			inline std::pair<Point<>, Point<> > TextLayout::locations(length_t column) const {
-				std::pair<Point<>, Point<> > result;
+			inline std::pair<NativePoint, NativePoint> TextLayout::locations(length_t column) const {
+				std::pair<NativePoint, NativePoint> result;
 				locations(column, &result.first, &result.second);
 				return result;
 			}
@@ -511,7 +511,7 @@ namespace ascension {
 			 * @see #location
 			 */
 			inline std::pair<length_t, length_t> TextLayout::offset(
-					const Point<>& p, bool* outside /* = 0 */) const /*throw()*/ {
+					const NativePoint& p, bool* outside /* = 0 */) const /*throw()*/ {
 				bool outsides[2];
 				// TODO: this implementation can't handle vertical text.
 				const std::pair<length_t, length_t> result (

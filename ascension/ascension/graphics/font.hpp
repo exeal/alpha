@@ -73,7 +73,7 @@ namespace ascension {
 			public:
 				virtual Scalar advanceX() const = 0;
 				virtual Scalar advanceY() const = 0;
-				virtual Dimension<> bounds() const = 0;
+				virtual NativeSize bounds() const = 0;
 				virtual Scalar leftTopSideBearing() const = 0;
 				virtual Scalar rightBottomSideBearing() const = 0;
 			};
@@ -85,15 +85,15 @@ namespace ascension {
 				GlyphCode operator[](std::ptrdiff_t index) const {return at(index);}
 				virtual GlyphCode at(std::size_t index) const = 0;
 				std::size_t length() const {return size();}
-				virtual Dimension<> logicalBounds() const = 0;
-				virtual Dimension<> logicalGlyphBounds(std::size_t index) const = 0;
+				virtual NativeSize logicalBounds() const = 0;
+				virtual NativeSize logicalGlyphBounds(std::size_t index) const = 0;
 				virtual std::tr1::shared_ptr<GlyphMetrics> metrics(std::size_t index) const = 0;
 //				virtual std::tr1::shared_ptr<Shape> outline(std::size_t index) const = 0;
-				virtual Point<> position(std::size_t index) const = 0;
+				virtual NativePoint position(std::size_t index) const = 0;
 				/// Returns
 				virtual std::size_t size() const = 0;
-				virtual Dimension<> visualGlyphBounds(std::size_t index) const = 0;
-				virtual Dimension<> visualBounds() const = 0;
+				virtual NativeSize visualGlyphBounds(std::size_t index) const = 0;
+				virtual NativeSize visualBounds() const = 0;
 			};
 
 			class FontFamily {

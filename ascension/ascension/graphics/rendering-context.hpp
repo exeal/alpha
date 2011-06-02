@@ -24,7 +24,7 @@ namespace ascension {
 			LIGHTER, COPY, XOR
 		};
 
-		class ImageData : public Dimension<> {
+		class ImageData : public NativeSize {
 		};
 
 		/**
@@ -107,10 +107,10 @@ namespace ascension {
 				return *this;
 			}
 
-			Dimension<> shadowOffset() const /*throw()*/ {
+			NativeSize shadowOffset() const /*throw()*/ {
 				return states_.top().shadowOffset;
 			}
-			RenderingContext2D& setShadowOffset(const Dimension<>& offset) /*throw()*/ {
+			RenderingContext2D& setShadowOffset(const NativeSize& offset) /*throw()*/ {
 				states_.top().shadowOffset = offset;
 				return *this;
 			}
@@ -129,14 +129,14 @@ namespace ascension {
 				return *this;
 			}
 
-			virtual RenderingContext2D& clearRectangle(const Rect<>&) = 0;
-			virtual RenderingContext2D& fillRectangle(const Rect<>&) = 0;
-			virtual RenderingContext2D& strokeRectangle(const Rect<>&) = 0;
+			virtual RenderingContext2D& clearRectangle(const NativeRectangle&) = 0;
+			virtual RenderingContext2D& fillRectangle(const NativeRectangle&) = 0;
+			virtual RenderingContext2D& strokeRectangle(const NativeRectangle&) = 0;
 
 			virtual RenderingContext2D& beginPath() = 0;
 			virtual RenderingContext2D& closePath() = 0;
-			virtual RenderingContext2D& moveTo(const Point<>&) = 0;
-			virtual RenderingContext2D& lineTo(const Point<>&) = 0;
+			virtual RenderingContext2D& moveTo(const NativePoint&) = 0;
+			virtual RenderingContext2D& lineTo(const NativePoint&) = 0;
 			virtual RenderingContext2D& quadraticCurveTo() = 0;
 			virtual RenderingContext2D& bezierCurveTo() = 0;
 			virtual RenderingContext2D& arcTo() = 0;
@@ -159,20 +159,20 @@ namespace ascension {
 			}
 //			virtual TextAnchor& textAnchor() const /*throw()*/ = 0;
 //			virtual Baseline& textBaseline() const /*throw()*/ = 0;
-			virtual RenderingContext2D& fillText(const String& text, const Point<>& p, Scalar maxWidth) = 0;
-			virtual RenderingContext2D& strokeText(const String& text, const Point<>& p, Scalar maxWidth) = 0;
-			virtual Dimension<> measureText(const String& text) = 0;
+			virtual RenderingContext2D& fillText(const String& text, const NativePoint& p, Scalar maxWidth) = 0;
+			virtual RenderingContext2D& strokeText(const String& text, const NativePoint& p, Scalar maxWidth) = 0;
+			virtual NativeSize measureText(const String& text) = 0;
 
 			virtual RenderingContext2D& drawImage() = 0;
 
-			virtual ImageData createImageData(const Dimension<>&) const = 0;
+			virtual ImageData createImageData(const NativeSize&) const = 0;
 			virtual ImageData createImageData(const ImageData&) const = 0;
 			virtual ImageData getImageData() const = 0;
 			virtual ImageData putImageData() = 0;
 
 			virtual unsigned int logicalDpiX() const = 0;
 			virtual unsigned int logicalDpiY() const = 0;
-			virtual Dimension<unsigned int> size() const = 0;
+			virtual NativeSize size() const = 0;
 
 			virtual const win32::Handle<HDC>& nativeHandle() const /*throw()*/ = 0;
 
@@ -187,7 +187,7 @@ namespace ascension {
 //				std::vector<Scalar> dashArray;
 //				Scalar dashOffset;
 				Color shadowColor;
-				Dimension<> shadowOffset;
+				NativeSize shadowOffset;
 				Scalar shadowBlur;
 				std::tr1::shared_ptr<const font::Font> font;
 			};
@@ -204,7 +204,7 @@ namespace ascension {
 			/// Destructor.
 			virtual ~PaintContext() /*throw()*/ {}
 			/// Returns a rectangle in which the painting is requested.
-			virtual Rect<> boundsToPaint() const = 0;
+			virtual NativeRectangle boundsToPaint() const = 0;
 		};
 
 	}
