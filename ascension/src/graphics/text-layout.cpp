@@ -450,9 +450,9 @@ public:
 	Scalar spaceBefore() const;
 	Scalar startIndent() const;
 	// line-area
-	Rect<> maximumLineRectangle() const;
-	Rect<> nominalRequestedLineRectangle() const;
-	Rect<> perInlineHeightRectangle() const;
+	NativeRectangle maximumLineRectangle() const;
+	NativeRectangle nominalRequestedLineRectangle() const;
+	NativeRectangle perInlineHeightRectangle() const;
 };
 
 
@@ -460,10 +460,10 @@ public:
 
 class TextLayout::InlineArea : public StyledTextRun {
 public:
-	Rect<> allocationRectangle() const;
-	Rect<> borderRectangle() const;
-	Rect<> contentRectangle() const;
-	Rect<> largeAllocationRectangle() const;
+	NativeRectangle allocationRectangle() const;
+	NativeRectangle borderRectangle() const;
+	NativeRectangle contentRectangle() const;
+	NativeRectangle largeAllocationRectangle() const;
 };
 
 
@@ -533,7 +533,7 @@ public:
 	ReadingDirection readingDirection() const /*throw()*/ {
 		return ((analysis_.s.uBidiLevel & 0x01) == 0x00) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;}
 	// geometry
-	void blackBoxBounds(const Range<length_t>& range, Rect<>& bounds) const;
+	void blackBoxBounds(const Range<length_t>& range, NativeRectangle& bounds) const;
 	HRESULT logicalWidths(int widths[]) const;
 	HRESULT hitTest(int x, int& cp, int& trailing) const;
 	int totalWidth() const /*throw()*/ {return accumulate(advances(), advances() + numberOfGlyphs(), 0);}
@@ -552,9 +552,9 @@ public:
 	auto_ptr<TextRun> splitIfTooLong(const String& layoutString);
 	static void substituteGlyphs(const Range<TextRun**>& runs, const String& layoutString);
 	// drawing and painting
-	void drawGlyphs(PaintContext& context, const Point<>& p, const Range<length_t>& range) const;
-	void paintBackground(PaintContext& context, const Point<>& p,
-		const Range<length_t>& range, Rect<>* paintedBounds) const;
+	void drawGlyphs(PaintContext& context, const NativePoint& p, const Range<length_t>& range) const;
+	void paintBackground(PaintContext& context, const NativePoint& p,
+		const Range<length_t>& range, NativeRectangle* paintedBounds) const;
 	void paintBorder() const;
 	void paintLineDecorations() const;
 private:
@@ -674,13 +674,13 @@ TextLayout::TextRun::~TextRun() /*throw()*/ {
 //		::ScriptFreeCache(&cache_);
 }
 
-void TextLayout::TextRun::blackBoxBounds(const Range<length_t>& range, Rect<>& bounds) const {
+void TextLayout::TextRun::blackBoxBounds(const Range<length_t>& range, NativeRectangle& bounds) const {
 	const int left = x(max(range.beginning(), beginning()), false);
 	const int right = x(min(range.end(), end()) - 1, true);
 	const Font::Metrics& fontMetrics = glyphs_->font->metrics();
-	bounds = Rect<>(
-		Point<>(left, -fontMetrics.ascent()),
-		Dimension<>(right - left, fontMetrics.cellHeight())).normalize();
+	bounds = geometry::normalize(geometry::make<NativeRectangle>(
+		geometry::make<NativePoint>(left, -fontMetrics.ascent()),
+		geometry::make<NativeSize>(right - left, fontMetrics.cellHeight())));
 }
 
 auto_ptr<TextLayout::TextRun> TextLayout::TextRun::breakAt(length_t at, const String& layoutString) {
@@ -738,7 +738,7 @@ inline pair<int, HRESULT> TextLayout::TextRun::countMissingGlyphs(
  * @param range The character range to paint. If the edges addressed outside of this run, they are
  *              truncated
  */
-void TextLayout::TextRun::drawGlyphs(PaintContext& context, const Point<>& p, const Range<length_t>& range) const {
+void TextLayout::TextRun::drawGlyphs(PaintContext& context, const NativePoint& p, const Range<length_t>& range) const {
 	const Range<length_t> truncatedRange(max(range.beginning(), beginning()), min(range.end(), end()));
 	if(truncatedRange.isEmpty())
 		return;
@@ -752,7 +752,7 @@ void TextLayout::TextRun::drawGlyphs(PaintContext& context, const Point<>& p, co
 //			::SetRect(&temp, dirtyRect->left(), dirtyRect->top(), dirtyRect->right(), dirtyRect->bottom());
 		const HRESULT hr = ::ScriptTextOut(context.nativeHandle().get(), &glyphs_->fontCache,
 			p.x + x((analysis_.fRTL == 0) ? truncatedRange.beginning() : (truncatedRange.end() - 1), analysis_.fRTL != 0),
-			p.y - glyphs_->font->metrics().ascent(), 0, &toNative(context.boundsToPaint()), &analysis_, 0, 0,
+			p.y - glyphs_->font->metrics().ascent(), 0, &context.boundsToPaint(), &analysis_, 0, 0,
 			glyphs() + glyphRange.beginning(), glyphRange.length(), advances() + glyphRange.beginning(),
 			(justifiedAdvances() != 0) ? justifiedAdvances() + glyphRange.beginning() : 0,
 			glyphOffsets() + glyphRange.beginning());
@@ -1103,12 +1103,12 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
  * @param[out] paintedBounds The rectangle this method painted. Can be @c null
  */
 void TextLayout::TextRun::paintBackground(PaintContext& context,
-		const Point<>& p, const Range<length_t>& range, Rect<>* paintedBounds) const {
-	if(range.isEmpty() || p.x + totalWidth() < context.boundsToPaint().left())
+		const NativePoint& p, const Range<length_t>& range, NativeRectangle* paintedBounds) const {
+	if(range.isEmpty() || p.x + totalWidth() < geometry::left(context.boundsToPaint()))
 		return;
-	Rect<> r;
+	NativeRectangle r;
 	blackBoxBounds(range, r);
-	context.fillRectangle(r.translate(p));
+	context.fillRectangle(geometry::translate(r, p));
 	if(paintedBounds != 0)
 		*paintedBounds = r;
 }
@@ -2170,7 +2170,7 @@ uint8_t TextLayout::bidiEmbeddingLevel(length_t column) const {
  * @throw kernel#BadPositionException @a range intersects with the outside of the line
  * @see #bounds(void), #bounds(length_t, length_t), #lineBounds, #lineStartEdge
  */
-NativePolygon TextLayout::blackBoxBounds(const Range<length_t>& range) const {
+NativeRegion TextLayout::blackBoxBounds(const Range<length_t>& range) const {
 	if(range.end() > text_.length())
 		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, range.end()));
 
@@ -2180,7 +2180,7 @@ NativePolygon TextLayout::blackBoxBounds(const Range<length_t>& range) const {
 
 	// TODO: this implementation can't handle vertical text.
 	const length_t firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
-	vector<Rect<> > rectangles;
+	vector<NativeRectangle> rectangles;
 	Scalar before = blockProgressionDistance(0, firstLine)
 		- lineMetrics_[firstLine]->leading() - lineMetrics_[firstLine]->ascent();
 	Scalar after = before + lineMetrics_[firstLine]->height();
@@ -2191,13 +2191,18 @@ NativePolygon TextLayout::blackBoxBounds(const Range<length_t>& range) const {
 
 		// is the whole line encompassed by the range?
 		if(range.beginning() <= lineOffset(line) && range.end() >= lineOffset(line) + lineLength(line))
-			rectangles.push_back(Rect<>(
-				Point<>(leftEdge, before), Point<>(leftEdge + lineInlineProgressionDimension(line), after)));
+			rectangles.push_back(
+				geometry::make<NativeRectangle>(
+					geometry::make<NativePoint>(leftEdge, before),
+					geometry::make<NativePoint>(leftEdge + lineInlineProgressionDimension(line), after)));
 		else {
 			for(InlineProgressionDimensionRangeIterator i(
 					Range<const TextRun* const*>(runs_.get() + lineFirstRuns_[line], runs_.get() + lastRun),
 					range, LEFT_TO_RIGHT, leftEdge), e; i != e; ++i)
-				rectangles.push_back(Rect<>(Point<>(i->beginning(), before), Point<>(i->end(), after)));
+				rectangles.push_back(
+					geometry::make<NativeRectangle>(
+						geometry::make<NativePoint>(i->beginning(), before),
+						geometry::make<NativePoint>(i->end(), after)));
 		}
 	}
 
@@ -2205,10 +2210,10 @@ NativePolygon TextLayout::blackBoxBounds(const Range<length_t>& range) const {
 	AutoBuffer<POINT> vertices(new POINT[rectangles.size() * 4]);
 	AutoBuffer<int> numbersOfVertices(new int[rectangles.size()]);
 	for(size_t i = 0, c = rectangles.size(); i < c; ++i) {
-		vertices[i * 4 + 0].x = vertices[i * 4 + 3].x = rectangles[i].left();
-		vertices[i * 4 + 0].y = vertices[i * 4 + 1].y = rectangles[i].top();
-		vertices[i * 4 + 1].x = vertices[i * 4 + 2].x = rectangles[i].right();
-		vertices[i * 4 + 2].y = vertices[i * 4 + 3].y = rectangles[i].bottom();
+		vertices[i * 4 + 0].x = vertices[i * 4 + 3].x = geometry::left(rectangles[i]);
+		vertices[i * 4 + 0].y = vertices[i * 4 + 1].y = geometry::top(rectangles[i]);
+		vertices[i * 4 + 1].x = vertices[i * 4 + 2].x = geometry::right(rectangles[i]);
+		vertices[i * 4 + 2].y = vertices[i * 4 + 3].y = geometry::bottom(rectangles[i]);
 	}
 	fill_n(numbersOfVertices.get(), rectangles.size(), 4);
 	return win32::Handle<HRGN>(::CreatePolyPolygonRgn(vertices.get(),
@@ -2236,7 +2241,7 @@ inline Scalar TextLayout::blockProgressionDistance(length_t from, length_t to) c
  * @return The size of the bounds
  * @see #blackBoxBounds, #bounds(length_t, length_t), #lineBounds
  */
-Rect<> TextLayout::bounds() const /*throw()*/ {
+NativeRectangle TextLayout::bounds() const /*throw()*/ {
 	// TODO: this implementation can't handle vertical text.
 	const Scalar before = -lineMetrics_[0]->leading() - lineMetrics_[0]->ascent();
 	Scalar after = before, start = numeric_limits<Scalar>::max(), end = numeric_limits<Scalar>::min();
@@ -2246,9 +2251,9 @@ Rect<> TextLayout::bounds() const /*throw()*/ {
 		start = min(lineStart, start);
 		end = max(lineStart + lineInlineProgressionDimension(line), end);
 	}
-	return Rect<>(
-		Point<>((writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? start : -end, before),
-		Point<>((writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? end : -start, after));
+	return geometry::make<NativeRectangle>(
+		geometry::make<NativePoint>((writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? start : -end, before),
+		geometry::make<NativePoint>((writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? end : -start, after));
 }
 
 /**
@@ -2259,7 +2264,7 @@ Rect<> TextLayout::bounds() const /*throw()*/ {
  * @throw kernel#BadPositionException @a range intersects with the outside of the line
  * @see #blackBoxBounds, #bounds(void), #lineBounds, #lineIndent
  */
-Rect<> TextLayout::bounds(const Range<length_t>& range) const {
+NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 	if(range.end() > text_.length())
 		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, range.end()));
 
@@ -2273,9 +2278,9 @@ Rect<> TextLayout::bounds(const Range<length_t>& range) const {
 		after = lineMetrics_[0]->descent();
 	} else if(range.isEmpty()) {	// an empty rectangle for an empty range
 		const LineMetrics& line = *lineMetrics_[lineAt(range.beginning())];
-		return Rect<>(
-			location(range.beginning()) -= Dimension<>(0, line.ascent() + line.leading()),
-			Dimension<>(0, line.height()));
+		return geometry::make<NativeRectangle>(
+			geometry::subtract(location(range.beginning()), geometry::make<NativeSize>(0, line.ascent() + line.leading())),
+			geometry::make<NativeSize>(0, line.height()));
 	} else {
 		const length_t firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
 
@@ -2362,7 +2367,9 @@ Rect<> TextLayout::bounds(const Range<length_t>& range) const {
 		}
 	}
 
-	return Rect<>(Point<>(start, before), Point<>(end, after));
+	return geometry::make<NativeRectangle>(
+		geometry::make<NativePoint>(start, before),
+		geometry::make<NativePoint>(end, after));
 }
 
 namespace {
@@ -2386,7 +2393,7 @@ namespace {
  * @param lineWrappingMark The inline object which paints line-wrapping-mark. Can be @c null
  */
 void TextLayout::draw(PaintContext& context,
-		const Point<>& origin, const TextPaintOverride* paintOverride /* = 0 */,
+		const NativePoint& origin, const TextPaintOverride* paintOverride /* = 0 */,
 		const InlineObject* endOfLine/* = 0 */, const InlineObject* lineWrappingMark /* = 0 */) const {
 
 #if /*defined(_DEBUG)*/ 0
@@ -2394,20 +2401,20 @@ void TextLayout::draw(PaintContext& context,
 		win32::DumpContext() << L"@TextLayout.draw draws line " << lineNumber_ << L" (" << line << L")\n";
 #endif // defined(_DEBUG)
 
-	if(isEmpty() || context.boundsToPaint().height() == 0)
+	if(isEmpty() || geometry::dy(geometry::size(context.boundsToPaint())) == 0)
 		return;
 
 	// TODO: this code can't handle vertical text.
 
 	// calculate line range to draw
 	Range<length_t> linesToDraw(0, numberOfLines());
-	Point<> p(origin);
+	NativePoint p(origin);
 	for(length_t line = linesToDraw.beginning(); line < linesToDraw.end(); ++line) {
 		const Scalar lineBeforeEdge = p.y - lineMetrics_[line]->ascent();
 		const Scalar lineAfterEdge = p.y + lineMetrics_[line]->descent();
-		if(context.boundsToPaint().top() >= lineBeforeEdge && context.boundsToPaint().top() < lineAfterEdge)
+		if(geometry::top(context.boundsToPaint()) >= lineBeforeEdge && geometry::top(context.boundsToPaint()) < lineAfterEdge)
 			linesToDraw = makeRange(line, linesToDraw.end());
-		if(context.boundsToPaint().bottom() >= lineBeforeEdge && context.boundsToPaint().bottom() < lineAfterEdge) {
+		if(geometry::bottom(context.boundsToPaint()) >= lineBeforeEdge && geometry::bottom(context.boundsToPaint()) < lineAfterEdge) {
 			linesToDraw = makeRange(linesToDraw.beginning(), line + 1);
 			break;
 		}
@@ -2455,12 +2462,12 @@ void TextLayout::draw(PaintContext& context,
 	for(vector<const InlineArea*>::const_iterator i(inlineAreasToDraw.beginning()), e; i != inlineAreasToDraw.end(); ++i) {
 		// TODO: recognize the override.
 		// TODO: this code can't handle sparse inline areas (with bidirectionality).
-		pair<Rect<>, bool> borderRectangle;
+		pair<NativeRectangle, bool> borderRectangle;
 
 		// 2-1. paint background if the property is specified
 		if((*i)->style()->background != Paint()) {
 			borderRectangle = make_pair((*i)->borderRectangle(), true);
-			if(context.boundsToPaint().includes(borderRectangle.first)) {
+			if(geometry::includes(context.boundsToPaint(), borderRectangle.first)) {
 				context.setFillStyle((*i)->style()->background);
 				context.fillRectangle(borderRectangle.first);
 			}
@@ -2480,7 +2487,7 @@ void TextLayout::draw(PaintContext& context,
 			}
 			if(!borderRectangle.second)
 				borderRectangle = make_pair((*i)->borderRectangle(), true);
-			if(!context.boundsToPaint().includes(borderRectangle.first))
+			if(!geometry::includes(context.boundsToPaint(), borderRectangle.first))
 				continue;
 //			context.setStrokeStyle();
 //			context.setStrokeDashArray();
@@ -2488,28 +2495,28 @@ void TextLayout::draw(PaintContext& context,
 			context.beginPath();
 			if(border == &borders[0])	// top
 				context
-					.moveTo(Point<>(borderRectangle.first.left(), borderRectangle.first.top()))
-					.lineTo(Point<>(borderRectangle.first.right() + 1, borderRectangle.first.top()));
+					.moveTo(geometry::make<NativePoint>(geometry::left(borderRectangle.first), geometry::top(borderRectangle.first)))
+					.lineTo(geometry::make<NativePoint>(geometry::right(borderRectangle.first) + 1, geometry::top(borderRectangle.first)));
 			else if(border == &borders[1])	// bottom
 				context
-					.moveTo(Point<>(borderRectangle.first.left(), borderRectangle.first.bottom()))
-					.lineTo(Point<>(borderRectangle.first.right() + 1, borderRectangle.first.bottom()));
+					.moveTo(geometry::make<NativePoint>(geometry::left(borderRectangle.first), geometry::bottom(borderRectangle.first)))
+					.lineTo(geometry::make<NativePoint>(geometry::right(borderRectangle.first) + 1, geometry::bottom(borderRectangle.first)));
 			else if((writingMode().inlineFlowDirection == LEFT_TO_RIGHT && border == &borders[2])
 					|| (writingMode().inlineFlowDirection == RIGHT_TO_LEFT && border == &borders[3]))	// left
 				context
-					.moveTo(Point<>(borderRectangle.first.left(), borderRectangle.first.top()))
-					.lineTo(Point<>(borderRectangle.first.left(), borderRectangle.first.bottom() + 1));
+					.moveTo(geometry::make<NativePoint>(geometry::left(borderRectangle.first), geometry::top(borderRectangle.first)))
+					.lineTo(geometry::make<NativePoint>(geometry::left(borderRectangle.first), geometry::bottom(borderRectangle.first) + 1));
 			else if((writingMode().inlineFlowDirection == LEFT_TO_RIGHT && border == &borders[3])
 					|| (writingMode().inlineFlowDirection == RIGHT_TO_LEFT && border == &borders[2]))	// right
 				context
-					.moveTo(Point<>(borderRectangle.first.right(), borderRectangle.first.top()))
-					.lineTo(Point<>(borderRectangle.first.right(), borderRectangle.first.bottom() + 1));
+					.moveTo(geometry::make<NativePoint>(geometry::right(borderRectangle.first), geometry::top(borderRectangle.first)))
+					.lineTo(geometry::make<NativePoint>(geometry::right(borderRectangle.first), geometry::bottom(borderRectangle.first) + 1));
 			context.stroke();
 		}
 
 		::ExcludeClipRect(context.nativeHandle().get(),
-			borderRectangle.first.left(), borderRectangle.first.top(),
-			borderRectangle.first.right(), borderRectangle.first.bottom());
+			geometry::left(borderRectangle.first), geometry::top(borderRectangle.first),
+			geometry::right(borderRectangle.first), geometry::bottom(borderRectangle.first));
 	}
 
 	// 3. for each text runs
@@ -2524,10 +2531,10 @@ void TextLayout::draw(PaintContext& context,
 				p.x -= lineInlineProgressionDimension(line);
 			Scalar leftEdgeOfFirstRun = p.x, rightEdgeOfLastRun = p.x + lineInlineProgressionDimension(line);
 			for(const TextRun* const* run = runs.beginning(); run < runs.end(); ++run) {
-				if(p.x + (*run)->totalWidth() < context.boundsToPaint().left()) {
+				if(p.x + (*run)->totalWidth() < geometry::left(context.boundsToPaint())) {
 					runs = makeRange(run + 1, runs.end());
 					leftEdgeOfFirstRun = p.x + (*run)->totalWidth();
-				} else if(p.x > context.boundsToPaint().right()) {
+				} else if(p.x > geometry::right(context.boundsToPaint())) {
 					runs = makeRange(runs.beginning(), run);
 					rightEdgeOfLastRun = p.x;
 				}
@@ -2804,7 +2811,7 @@ TextLayout::StyledSegmentIterator TextLayout::lastStyledSegment() const /*throw(
  * @throw IndexOutOfBoundsException @a line is greater than the number of the lines
  * @see #lineStartEdge
  */
-Rect<> TextLayout::lineBounds(length_t line) const {
+NativeRectangle TextLayout::lineBounds(length_t line) const {
 	if(line >= numberOfLines())
 		throw IndexOutOfBoundsException("line");
 
@@ -2815,9 +2822,10 @@ Rect<> TextLayout::lineBounds(length_t line) const {
 	const Scalar after = before + lineMetrics_[line]->height();
 
 	// TODO: this implementation can't handle vertical text.
-	const Dimension<> size(end - start, after - before);
-	const Point<> origin((writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? start : start - size.cx, before);
-	return Rect<>(origin, size);
+	const NativeSize size(geometry::make<NativeSize>(end - start, after - before));
+	const NativePoint origin(geometry::make<NativePoint>(
+		(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? start : start - geometry::dx(size), before));
+	return geometry::make<NativeRectangle>(origin, size);
 }
 
 /**
@@ -2953,7 +2961,7 @@ pair<length_t, length_t> TextLayout::locateOffsets(length_t line, Scalar ipd, bo
 }
 
 // implements public location methods
-void TextLayout::locations(length_t column, Point<>* leading, Point<>* trailing) const {
+void TextLayout::locations(length_t column, NativePoint* leading, NativePoint* trailing) const {
 	assert(leading != 0 || trailing != 0);
 	if(column > text_.length())
 		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));

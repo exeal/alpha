@@ -10,6 +10,7 @@
 
 #include <ascension/corelib/memory.hpp>	// FastArenaObject
 #include <ascension/corelib/range.hpp>
+#include <ascension/corelib/type-traits.hpp>
 #include <ascension/platforms.hpp>
 #if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
 #	include <ascension/win32/windows.hpp>
@@ -18,44 +19,451 @@
 #endif
 
 namespace ascension {
+
 	namespace graphics {
+		namespace geometry {
+			template<typename Geometry> struct Coordinate;
+			template<typename Geometry> struct Tag;
+
+			// Tags define geometry types.
+
+			/// Point identifying tag.
+			struct PointTag {};
+			/// Size identifying tag.
+			struct SizeTag {};
+			/// Rectangle identifying tag.
+			struct RectangleTag {};
+
+/*
+	A point represents a point in the (x, y) coordinate plane.
+	A size represents the size of a two-dimensional primitive.
+ */
+
+			namespace traits {
+				template<typename Tag, typename Geometry>
+				struct Maker {};
+				template<typename Tag, typename Geometry, std::size_t dimension>
+				struct Accessor {};
+			}
 
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
-		typedef double Scalar;
-		typedef cairo_region_t* NativePolygon;
+			typedef double Scalar;
+			typedef GdkRectangle NativeRectangle;
+			typedef cairo_region_t* NativePolygon;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
-		typedef int Scalar;
-		typedef win32::Handle<HRGN> NativePolygon;
+			namespace nativetypes {
+				typedef int Scalar;
+				typedef POINT NativePoint;
+				typedef SIZE NativeSize;
+				typedef RECT NativeRectangle;
+				typedef win32::Handle<HRGN> NativeRegion;
+			}
+
+			template<> struct Coordinate<POINT> {typedef LONG Type;};
+			template<> struct Coordinate<POINTS> {typedef SHORT Type;};
+			template<> struct Coordinate<SIZE> {typedef LONG Type;};
+			template<> struct Coordinate<RECT> {typedef POINT Type;};
+			template<> struct Tag<POINT> {typedef PointTag Type;};
+			template<> struct Tag<POINTS> {typedef PointTag Type;};
+			template<> struct Tag<SIZE> {typedef SizeTag Type;};
+			template<> struct Tag<RECT> {typedef RectangleTag Type;};
+
+			namespace traits {
+				template<typename Point> struct Maker<PointTag, Point> {
+					static Point make(typename Coordinate<Point>::Type x, typename Coordinate<Point>::Type y) {
+						const Point temp = {x, y};
+						return temp;
+					}
+				};
+				template<typename Size> struct Maker<SizeTag, Size> {
+					static Size make(typename Coordinate<Size>::Type dx, typename Coordinate<Size>::Type dy) {
+						const Size temp = {dx, dy};
+						return temp;
+					}
+				};
+				template<typename Rectangle> struct Maker<RectangleTag, Rectangle> {
+					template<typename Size>
+					static Rectangle make(const typename Coordinate<Rectangle>::Type& origin, const Size& size,
+							typename std::tr1::enable_if<std::tr1::is_same<typename Coordinate<Size>::Type, SizeTag>::value>::type* = 0) {
+						const Rectangle temp = {origin.x, origin.y, origin.x + size.cx, origin.y + size.cy};
+						return temp;
+					}
+					template<typename Point>
+					static Rectangle make(const typename Coordinate<Rectangle>::Type& first, const Point& second,
+							typename std::tr1::enable_if<std::tr1::is_same<typename Coordinate<Point>::Type, PointTag>::value>::type* = 0) {
+						const Rectangle temp = {first.x, first.y, second.x, second.y};
+						return temp;
+					}
+				};
+				template<typename Point> struct Accessor<PointTag, Point, 0> {
+					static typename Coordinate<Point>::Type get(const Point& geometry) {return geometry.x;}
+					static void set(Point& geometry, typename Coordinate<Point>::Type value) {geometry.x = value;}
+				};
+				template<typename Point> struct Accessor<PointTag, Point, 1> {
+					static typename Coordinate<Point>::Type get(const Point& geometry) {return geometry.y;}
+					static void set(Point& geometry, typename Coordinate<Point>::Type value) {geometry.y = value;}
+				};
+				template<typename Size> struct Accessor<SizeTag, Size, 0> {
+					static typename Coordinate<Size>::Type get(const Size& geometry) {return geometry.cx;}
+					static void set(Size& geometry, typename Coordinate<Size>::Type value) {geometry.cx = value;}
+				};
+				template<typename Size> struct Accessor<SizeTag, Size, 1> {
+					static typename Coordinate<Size>::Type get(const Size& geometry) {return geometry.cy;}
+					static void set(Size& geometry, typename Coordinate<Size>::Type value) {geometry.cy = value;}
+				};
+				template<typename Rectangle> struct Accessor<RectangleTag, Rectangle, 0> {
+					static typename Coordinate<Rectangle>::Type get(const Rectangle& geometry) {
+						return make<typename Coordinate<Rectangle>::Type>(geometry.left, geometry.top);
+					}
+					static void set(Rectangle& geometry, const typename Coordinate<Rectangle>::Type& value) {
+						geometry.left = value.x;
+						geometry.top = value.y;
+					}
+				};
+				template<typename Rect> struct Accessor<RectangleTag, Rect, 1> {
+					static typename Coordinate<Rect>::Type get(const Rect& geometry) {
+						return make<typename Coordinate<Rect>::Type>(geometry.right, geometry.bottom);
+					}
+					static void set(Rect& geometry, const typename Coordinate<Rect>::Type& value) {
+						geometry.right = value.x;
+						geometry.bottom = value.y;
+					}
+				};
+			}
 #else
 #endif
+		}
+	}
 
-		/**
-		 * A @c Dimension represents the size of a two-dimensional primitive.
-		 * @note This class does not use words "width" and "height".
-		 * @tparam Coordinate The coordinate
-		 * @see Scalar, Point, Rect
-		 */
-		template<typename Coordinate = Scalar>
-		struct Dimension {
-			Coordinate cx;	///< The size of the primitive in x-coordinate. Can be negative.
-			Coordinate cy;	///< The size of the primitive in y-coordinate. Can be negative.
-			/// Default constructor does *not* initialize the coordinates.
-			Dimension();
+	namespace detail {
+		template<typename Geometry, typename GeometryTag, typename T = void>
+		class EnableIfTagIs : std::tr1::enable_if<
+			std::tr1::is_same<
+				typename graphics::geometry::Tag<typename std::tr1::remove_cv<Geometry>::type>::Type,
+				GeometryTag
+			>::value, T> {};
+
+		template<typename Geometry, std::size_t dimension>
+		class AccessProxy {
+		public:
+			AccessProxy(Geometry& geometry) /*throw()*/ : geometry_(geometry) {}
+			void operator=(typename graphics::geometry::Coordinate<Geometry>::Type value) {
+				return graphics::geometry::set<dimension>(geometry_);
+			}
+			void operator=(const AccessProxy& other) {
+				return *this = static_cast<typename graphics::geometry::Coordinate<Geometry>::Type>(other);
+			}
+			operator typename graphics::geometry::Coordinate<Geometry>::Type() const {
+				return graphics::geometry::get<dimension>(geometry_);
+			};
+			typename graphics::geometry::Coordinate<Geometry>::Type operator+() const {return +*this;}
+			typename graphics::geometry::Coordinate<Geometry>::Type operator-() const {return -*this;}
+			void operator+=(typename graphics::geometry::Coordinate<Geometry>::Type other) {return *this = *this + other;}
+			void operator-=(typename graphics::geometry::Coordinate<Geometry>::Type other) {return *this = *this - other;}
+			void operator*=(typename graphics::geometry::Coordinate<Geometry>::Type other) {return *this = *this * other;}
+			void operator/=(typename graphics::geometry::Coordinate<Geometry>::Type other) {return *this = *this / other;}
+//			void operator%=(typename graphics::geometry::Coordinate<Geometry>::Type other) {return *this = *this % other;}
+		private:
+			Geometry& geometry_;
+		};
+	}
+
+	namespace graphics {
+
+		using namespace geometry::nativetypes;
+
+		namespace geometry {
+
+			// fundamental operations
+
+			template<typename Geometry0, typename Geometry1, typename Geometry2>
+			inline Geometry0 make(const Geometry1& geometry1, const Geometry2& geometry2) {
+				return traits::Maker<Geometry0>::make(geometry1, geometry2);
+			}
+
+			template<std::size_t dimension, typename Geometry>
+			inline typename Coordinate<Geometry>::Type get(const Geometry& geometry) {
+				return traits::Accessor<Geometry, dimension>::get(geometry);
+			}
+
+			template<std::size_t dimension, typename Geometry>
+			inline void set(Geometry& geometry, typename Coordinate<Geometry>::Type value) {
+				traits::Accessor<Geometry, dimension>::set(geometry, value);
+			}
+
+			// 'add' for point and size
+
+			// 'divide' for point and size
+
+			// 'dx' for size and rectangle
+
+			/// Returns the size of the @a size in x-coordinate.
+			template<typename Size>
+			inline typename Coordinate<Size>::Type dx(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+				return get<0>(size);
+			}
+
+			template<typename Size>
+			inline detail::AccessProxy<Size, 0> dx(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+				return detail::AccessProxy<Size, 0>(size);
+			}
+
+			// 'dy' for size and rectangle
+
+			/// Returns the size of the @a size in y-coordinate.
+			template<typename Size>
+			inline typename Coordinate<Size>::Type dy(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+				return get<1>(size);
+			}
+
+			template<typename Size>
+			inline detail::AccessProxy<Size, 1> dy(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+				return detail::AccessProxy<Size, 1>(size);
+			}
+
+			// 'equals'
+
+			template<typename Geometry>
+			inline bool equals(const Geometry& geometry1, const Geometry& geometry2,
+					typename std::tr1::enable_if<std::tr1::is_arithmetic<typename Coordinate<Geometry>::Type>::value>::type* = 0) {
+				return get<0>(geometry1) == get<0>(geometry2) && get<1>(geometry1) == get<1>(geometry2);
+			}
+
+			template<typename Geometry>
+			inline bool equals(const Geometry& geometry1, const Geometry& geometry2,
+					typename std::tr1::enable_if<!std::tr1::is_arithmetic<typename Coordinate<Geometry>::Type>::value>::type* = 0) {
+				return equals(get<0>(geometry1), get<0>(geometry2)) && equals(get<1>(geometry1), get<1>(geometry2));
+			}
+
+			// 'intersected' for ...
+
+			// 'intersects' for ...
+
+			// 'includes' for rectangle and region
+
+			template<typename Rectangle, typename Point>
+			inline bool includes(const Rectangle& rectangle, const Point& point,
+					typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0,
+					typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
+				return makeRange(left(rectangle), right(rectangle)).includes(x(point))
+					&& makeRange(top(rectangle), bottom(rectangle)).includes(y(point));
+			}
+
+			template<typename Rectangle1, typename Rectangle2>
+			inline bool includes(const Rectangle1& rectangle1, const Rectangle2& rectangle2,
+					typename detail::EnableIfTagIs<Rectangle1, RectangleTag>::type* = 0,
+					typename detail::EnableIfTagIs<Rectangle2, RectangleTag>::type* = 0) {
+				return makeRange(left(rectangle1), right(rectangle1)).includes(makeRange(left(rectangle2), right(rectangle2)))
+					&& makeRange(top(rectangle1), bottom(rectangle1)).includes(makeRange(top(rectangle2), bottom(rectangle2)));
+			}
+
+			// 'isEmpty' for size, rectangle and region
+
+			template<typename Size>
+			inline bool isEmpty(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+				return dx(size) == 0 && dy(size) == 0;
+			}
+
+			template<typename Rectangle>
+			inline bool isEmpty(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
+				return isEmpty(size(rectangle));
+			}
+
+			// 'isNormalized' for size and rectangle
+
+			template<typename Size>
+			inline bool isNormalized(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+				return dx(size) >= 0 && dy(size) >= 0;
+			}
+
+			template<typename Rectangle>
+			inline bool isNormalized(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
+				return isNormalized(size(rectangle));
+			}
+
+			// 'multiply' for size
+
+			// 'negate' for point and size
+
+			template<typename Point>
+			inline Point& negate(Point& point, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
+				x(point) = -x(point);
+				y(point) = -y(point);
+				return p;
+			}
+
+			template<typename Size>
+			inline Size& negate(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+				dx(size) = -dx(size);
+				dy(size) = -dy(size);
+				return p;
+			}
+
+			// 'normalize' for size and rectangle
+
+			template<typename Size>
+			inline Size& normalize(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+				if(dx(size) < 0)
+					dx(size) = -dx(size);
+				if(dy(size) < 0)
+					dy(size) = -dy(size);
+				return size;
+			}
+
+			template<typename Rectangle>
+			inline Rectangle& normalize(Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
+				typedef typename Coordinate<typename Coordinate<Rectangle>::Type>::Type Scalar;
+				std::pair<Scalar, Scalar> minimumCorner(x(get<0>(rectangle)), y(get<0>(rectangle)));
+				std::pair<Scalar, Scalar> maximumCorner(x(get<1>(rectangle)), y(get<1>(rectangle)));
+				if(minimumCorner.first > maximumCorner.first)
+					std::swap(minimumCorner.first, maximumCorner.first);
+				if(minimumCorner.second > maximumCorner.second)
+					std::swap(minimumCorner.second, maximumCorner.second);
+				return rectangle = make<Rectangle>(minimumCorner, maximumCorner);
+			}
+
+			// 'subtract' for point and size
+
+			template<typename Point1, typename Point2>
+			inline Point1& _subtract(Point1& point1, const Point2& point2, const PointTag&, const PointTag&) {
+				x(point1) -= x(point2);
+				y(point1) -= y(point2);
+				return point1;
+			}
+
+			template<typename Point, typename Size>
+			inline Point& _subtract(Point& point, const Size& size, const PointTag&, const SizeTag&) {
+				x(point) -= dx(size);
+				y(point) -= dy(size);
+				return point;
+			}
+
+			template<typename Size1, typename Size2>
+			inline Size1& _subtract(Size1& size1, const Size2& size2, const SizeTag&, const SizeTag&) {
+				dx(size1) -= dx(size2);
+				dy(size1) -= dy(size2);
+				return size1;
+			}
+
+			template<typename Geometry1, typename Geometry2>
+			inline Geometry1& subtract(Geometry1& geometry1, const Geometry2& geometry2) {
+				return _subtract(geometry1, geometry2, typename Tag<Geometry1>::Type(), typename Tag<Geometry2>::Type());
+			}
+
+			// 'translate' for point, rectangle and region
+
+			template<typename Point, typename Size>
+			inline Point& translate(Point& p, const Size& offset, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
+				x(p) += dx(offset);
+				y(p) += dy(offset);
+				return p;
+			}
+
+			template<typename Rectangle, typename Offset>
+			inline Rectangle& translate(Rectangle& rectangle, const Offset& offset, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
+				return rectangle = make<Rectangle>(translate(get<0>(rectangle), offset), translate(get<1>(rectangle), offset));
+			}
+
+			// 'united' for ...
+
+			// 'x' for point and rectangle
+
+			/// Returns the x-coordinate of @a point.
+			template<typename Point>
+			inline typename Coordinate<Point>::Type x(const Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
+				return get<0>(p);
+			}
+
+			template<typename Point>
+			inline detail::AccessProxy<Point, 0> x(Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
+				return detail::AccessProxy<Point, 0>(p);
+			}
+
+			// 'y' for point and rectangle
+
+			/// Returns the y-coordinate of @a point.
+			template<typename Point>
+			inline typename Coordinate<Point>::Type y(const Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
+				return get<1>(p);
+			}
+
+			template<typename Point>
+			inline detail::AccessProxy<Point, 1> y(Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
+				return detail::AccessProxy<Point, 1>(p);
+			}
+
+			// writing to standard output stream
+
+			template<typename Point, typename Character, typename CharacterTraits>
+			inline std::basic_ostream<Character, CharacterTraits>&
+					write(std::basic_ostream<Character, CharacterTraits>& out, const Point& point, const PointTag&) {
+				const std::ctype<Character>& ct = std::use_facet<std::ctype<Character> >(out.getloc());
+				return out << x(point) << ct.widen(',') << y(point);
+			}
+
+			template<typename Size, typename Character, typename CharacterTraits>
+			inline std::basic_ostream<Character, CharacterTraits>&
+					write(std::basic_ostream<Character, CharacterTraits>& out, const Size& size, const SizeTag&) {
+				const std::ctype<Character>& ct = std::use_facet<std::ctype<Character> >(out.getloc());
+				return out << dx(size) << ct.widen('x') << dy(size);
+			}
+
+			template<typename Rectangle, typename Character, typename CharacterTraits>
+			inline std::basic_ostream<Character, CharacterTraits>&
+					write(std::basic_ostream<Character, CharacterTraits>& out, const Rectangle& rectangle, const RectangleTag&) {
+				const std::ctype<Character>& ct = std::use_facet<std::ctype<Character> >(out.getloc());
+				return out << origin(rectangle) << ct.widen(' ') << size(rectangle);
+			}
+
+			template<typename Geometry, typename Character, typename CharacterTraits>
+			inline std::basic_ostream<Character, CharacterTraits>&
+					operator<<(std::basic_ostream<Character, CharacterTraits>& out, const Geometry& geometry) {
+				return write(out, geometry, typename Tag<Geometry>::Type());
+			}
+
+			// special operations
+
 			/**
-			 * Constructor.
-			 * @param cx The size in x-coordinate
-			 * @param cy The size in y-coordinate
+			 * Returns the y-coordinate of the bottom edge of @a rectangle.
+			 * @note The returned value may less than @c top(rectangle).
 			 */
-			Dimension(Coordinate cx, Coordinate cy) : cx(cx), cy(cy) {}
-			Dimension<Coordinate>& operator+=(const Dimension<Coordinate>& other);
-			Dimension<Coordinate>& operator-=(const Dimension<Coordinate>& other);
-			template<typename Factor> Dimension<Coordinate>& operator*=(Factor other);
-			template<typename Divisor> Dimension<Coordinate>& operator/=(Divisor divisor);
-			Dimension<Coordinate>& boundTo(const Dimension<Coordinate>& other);
-			Dimension<Coordinate>& expandTo(const Dimension<Coordinate>& other);
-			bool isNormalized() const;
+			template<typename Rectangle>
+			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type bottom(const Rectangle& rectangle) {
+				return y(get<1>(rectangle));
+			}
+
+			/// Returns the Manhattan-length of @a point.
+			template<typename Point>
+			inline typename Coordinate<Point>::Type manhattanLength(const Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
+				return std::abs(x(p)) + std::abs(y(p));
+			}
+
+			template<typename Size>
+			inline Size& expandTo(Size&, const Size& other, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0);
+
+			/**
+			 * Returns the x-coordinate of the left edge of @a rectangle.
+			 * @note The returned value may greater than @c right(rectangle).
+			 */
+			template<typename Rectangle>
+			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type left(const Rectangle& rectangle) {
+				return x(get<0>(rectangle));
+			}
+
+			template<typename Size>
+			inline Size& makeBoundedTo(Size&, const Size& other, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0);
+
+			/**
+			 * Returns the x-coordinate of the right edge of @a rectangle.
+			 * @note The returned value may less than @c left(rectangle).
+			 */
+			template<typename Rectangle>
+			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type right(const Rectangle& rectangle) {
+				return x(get<1>(rectangle));
+			}
+
 			/**
 			 * Scales this object to the given rectangle, preserving aspect ratio.
 			 * @code
@@ -71,161 +479,42 @@ namespace ascension {
 			 *                                   rectangle as large as possible inside @a size
 			 * @return This object
 			 */
-			Dimension<Coordinate>& scale(const Dimension<Coordinate>& size, bool keepAspectRatioByExpanding);
-			/**
-			 * Swaps the cx and cy values.
-			 * @return This object
-			 */
-			Dimension<Coordinate>& transpose();
-		};
+			template<typename Size>
+			Size& scale(const Size& size, bool keepAspectRatioByExpanding);
 
-		template<typename Coordinate>
-		inline bool operator==(const Dimension<Coordinate>& lhs, const Dimension<Coordinate>& rhs);
-		template<typename Coordinate>
-		bool operator!=(const Dimension<Coordinate>& lhs, const Dimension<Coordinate>& rhs);
-		template<typename Coordinate>
-		const Dimension<Coordinate> operator+(const Dimension<Coordinate>& lhs, const Dimension<Coordinate>& rhs) {
-			Dimension<Coordinate> temp(lhs);
-			return temp += rhs;
-		}
-		template<typename Coordinate>
-		inline const Dimension<Coordinate> operator-(const Dimension<Coordinate>& self);
-		template<typename Coordinate>
-		const Dimension<Coordinate> operator-(const Dimension<Coordinate>& lhs, const Dimension<Coordinate>& rhs) {
-			Dimension<Coordinate> temp(lhs);
-			return temp += rhs;
-		}
-		template<typename Coordinate, typename Factor>
-		const Dimension<Coordinate> operator*(const Dimension<Coordinate>& point, Factor factor) {
-			Dimension<Coordinate> temp(point);
-			return temp *= factor;
-		}
-		template<typename Coordinate, typename Factor>
-		const Dimension<Coordinate> operator*(Factor factor, const Dimension<Coordinate>& point) {
-			return point * factor;
-		}
-		template<typename Coordinate, typename Divisor>
-		const Dimension<Coordinate> operator/(const Dimension<Coordinate>& point, Divisor divisor) {
-			Dimension<Coordinate> temp(point);
-			return temp /= divisor;
-		}
-		template<typename CharType, typename CharTraits, typename Coordinate>
-		inline std::basic_ostream<CharType, CharTraits>&
-				operator<<(std::basic_ostream<CharType, CharTraits>& out, const Dimension<Coordinate>& v) {
-			const std::ctype<CharType>& ct = std::use_facet<std::ctype<CharType> >(out.getloc());
-			return out << v.cx << ct.widen('x') << v.cy;
-		}
+			/**
+			 * Returns the y-coordinate of the top edge of @a rectangle.
+			 * @note The returned value may greater than @c bottom(rectangle).
+			 */
+			template<typename Rectangle>
+			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type top(const Rectangle& rectangle) {
+				return y(get<0>(rectangle));
+			}
 
-		/**
-		 * A @c Point represents a point in the (x, y) coordinate plane.
-		 * @param Coordinate The coordinate
-		 * @see Scalar, Dimension, Rect
-		 */
-		template<typename Coordinate = Scalar>
-		struct Point {
-			Coordinate x;	///< The x coordinate.
-			Coordinate y;	///< The y coordinate.
-			/// Default constructor does *not* initialize the coordinates.
-			Point() {}
 			/**
-			 * Constructor.
-			 * @param x The x coordinate
-			 * @param y The y coordinate
+			 * Swaps the dx and dy values.
+			 * @return @
 			 */
-			Point(Coordinate x, Coordinate y) : x(x), y(y) {}
-			/**
-			 * 
-			 */
-			Point<Coordinate>& operator+=(const Dimension<Coordinate>& other) {
-				return translate(other);
+			template<typename Size>
+			inline Size& transpose(Size&) {
+				std::swap(dx(size), dy(size));
+				return size;
 			}
-			/**
-			 * 
-			 */
-			Point<Coordinate>& operator+=(const Point<Coordinate>& other) {
-				return translate(Dimension<Coordinate>(other.x, other.y));
-			}
-			/**
-			 * 
-			 */
-			Point<Coordinate>& operator-=(const Dimension<Coordinate>& other) {
-				return *this += -other;
-			}
-			/**
-			 * 
-			 */
-			Point<Coordinate>& operator-=(const Point<Coordinate>& other) {
-				return *this += -other;
-			}
-			/**
-			 * Multiplies both x and y by the given @a factor.
-			 * @tparam Factor A type of @a factor
-			 * @param factor The factor
-			 * @return This object
-			 */
-			template<typename Factor> Point<Coordinate>& operator*=(Factor factor) {
-				x *= factor;
-				y *= factor;
-				return *this;
-			}
-			/**
-			 * Divides both x and y by the given @a divisor.
-			 * @tparam Divisor A type of @a factor
-			 * @param divisor The divisor
-			 * @return This object
-			 */
-			template<typename Divisor> Point<Coordinate>& operator/=(Divisor divisor) {
-				x /= divisor;
-				y /= divisor;
-				return *this;
-			}
-			/**
-			 * Translates the point by @a delta along the x/y axis.
-			 * @param delta The distance to move
-			 * @return This point
-			 */
-			template<typename Coordinate2>
-			Point<Coordinate>& translate(const Dimension<Coordinate2>& delta) {
-				x += delta.cx;
-				y += delta.cy;
-				return *this;
-			}
-			/**
-			 * Translates the point by @a delta along the x/y axis.
-			 * @param delta The distance to move
-			 * @return This point
-			 */
-			template<typename Coordinate2>
-			Point<Coordinate>& translate(const Point<Coordinate2>& delta) {
-				x += delta.x;
-				y += delta.y;
-				return *this;
-			}
-		};
 
-		template<typename Coordinate>
-		bool operator==(const Point<Coordinate>& lhs, const Point<Coordinate>& rhs);
-		template<typename Coordinate>
-		bool operator!=(const Point<Coordinate>& lhs, const Point<Coordinate>& rhs);
-		template<typename Coordinate>
-		const Point<Coordinate> operator+(const Point<Coordinate>& lhs, const Point<Coordinate>& rhs);
-		template<typename Coordinate>
-		const Point<Coordinate> operator-(const Point<Coordinate>& point);
-		template<typename Coordinate>
-		const Point<Coordinate> operator-(const Point<Coordinate>& lhs, const Point<Coordinate>& rhs);
-		template<typename Coordinate, typename Factor>
-		const Point<Coordinate> operator*(const Point<Coordinate>& point, Factor factor);
-		template<typename Coordinate, typename Factor>
-		const Point<Coordinate> operator*(Factor factor, const Point<Coordinate>& point);
-		template<typename Coordinate, typename Factor>
-		const Point<Coordinate> operator/(const Point<Coordinate>& point, Factor factor);
-		template<typename CharType, typename CharTraits, typename Coordinate>
-		inline std::basic_ostream<CharType, CharTraits>&
-				operator<<(std::basic_ostream<CharType, CharTraits>& out, const Point<Coordinate>& v) {
-			const std::ctype<CharType>& ct = std::use_facet<std::ctype<CharType> >(out.getloc());
-			return out << v.x << ct.widen(',') << v.y;
+			/// Returns the origin of the @a rectangle.
+			template<typename Rectangle>
+			inline const typename Coordinate<Rectangle>::Type origin(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
+				return get<0>(rectangle);
+			}
+
+			/// Returns the size of the @a rectangle.
+			template<typename Rectangle>
+			inline const NativeSize size(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
+				const std::pair<typename Coordinate<Rectangle>::Type> points(std::make_pair(get<0>(rectangle), get<1>(rectangle)));
+				return make<NativeSize>(x(points.second) - x(points.first), y(points.second) - y(points.first));
+			}
 		}
-
+#if 0
 		template<typename Coordinate> class Rect;
 
 		template<typename Coordinate>
@@ -295,137 +584,6 @@ namespace ascension {
 			const int part_;
 			friend class Rect<Coordinate>;
 		};
-
-		template<typename Coordinate = Scalar>
-		class Rect {
-		public:
-			Rect();
-			explicit Rect(const Point<Coordinate>& origin);
-			explicit Rect(const Dimension<Coordinate>& size);
-			Rect(const Point<Coordinate>& origin, const Dimension<Coordinate>& size);
-			Rect(const Point<Coordinate>& first, const Point<Coordinate>& second);
-		public:
-			RectPartProxy<Coordinate> bottom() {return RectPartProxy<Coordinate>(*this, 3);}
-			const RectPartProxy<Coordinate> bottom() const {return RectPartProxy<Coordinate>(*this, 3);}
-			Coordinate height() const {return std::abs(size().cy);}
-			RectPartProxy<Coordinate> left() {return RectPartProxy<Coordinate>(*this, 0);}
-			const RectPartProxy<Coordinate> left() const {return RectPartProxy<Coordinate>(*this, 0);}
-			Point<Coordinate> origin() const;
-			RectPartProxy<Coordinate> right() {return RectPartProxy<Coordinate>(*this, 2);}
-			const RectPartProxy<Coordinate> right() const {return RectPartProxy<Coordinate>(*this, 2);}
-			Dimension<Coordinate> size() const;
-			RectPartProxy<Coordinate> top() {return RectPartProxy<Coordinate>(*this, 1);}
-			const RectPartProxy<Coordinate> top() const {return RectPartProxy<Coordinate>(*this, 1);}
-			Coordinate width() const {return std::abs(size().cx);}
-			Range<Coordinate> x() const {return makeRange(origin().x, origin().x + size().cx);}
-			Range<Coordinate> y() const {return makeRange(origin().y, origin().y + size().cy);}
-		public:
-			template<typename Coordinate2>
-			bool includes(const Point<Coordinate2>& other) const;
-			template<typename Coordinate2>
-			bool includes(const Rect<Coordinate2>& other) const;
-			template<typename Coordinate2>
-			Rect<Coordinate> intersected(const Rect<Coordinate2>& other) const;
-			template<typename Coordinate2>
-			bool intersects(const Rect<Coordinate2>& other) const;
-			template<typename Coordinate2>
-			Rect<Coordinate> united(const Rect<Coordinate2>& other) const;
-		public:
-			Rect<Coordinate>& normalize();
-			/**
-			 * Sets the size of the rectangle.
-			 * @param newSize The size to set
-			 * @return This object.
-			 */
-			Rect<Coordinate>& resize(const Dimension<Coordinate>& newSize) {
-				size_ = newSize;
-				return *this;
-			}
-			Rect<Coordinate>& setX(const Range<Coordinate>& newX);
-			Rect<Coordinate>& setY(const Range<Coordinate>& newY);
-			/**
-			 * Moves the rectangle @a offset.x along x-axis and @a offset.y along y-axis,
-			 * relative to the current origin.
-			 * @tparam Primitive Gives the offset. @c Point or @c Dimension
-			 * @param offset The offset to move
-			 * @return This object
-			 */
-			template<typename Primitive>
-			Rect<Coordinate>& translate(const Primitive& offset) {
-				origin_.translate(offset);
-				return *this;
-			}
-		private:
-			friend class RectPartProxy<Coordinate>;
-			Point<Coordinate> origin_;
-			Dimension<Coordinate> size_;
-		};
-
-		template<typename Coordinate>
-		inline Rect<Coordinate> operator|(const Rect<Coordinate>& lhs, const Rect<Coordinate>& rhs);
-		template<typename Coordinate>
-		inline Rect<Coordinate> operator&(const Rect<Coordinate>& lhs, const Rect<Coordinate>& rhs);
-		template<typename CharType, typename CharTraits, typename Coordinate>
-		inline std::basic_ostream<CharType, CharTraits>&
-				operator<<(std::basic_ostream<CharType, CharTraits>& out, const Rect<Coordinate>& v) {
-			const std::ctype<CharType>& ct = std::use_facet<std::ctype<CharType> >(out.getloc());
-			return out << v.origin() << ct.widen(' ') << v.size();
-		}
-
-		// conversions from/to platform-native primitives (deprecated)
-#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
-		inline Point<> fromNative(const POINT& source) /*throw()*/ {
-			return Point<>(source.x, source.y);
-		}
-		inline Dimension<> fromNative(const SIZE& source) /*throw()*/ {
-			return Dimension<>(source.cx, source.cy);
-		}
-		inline Rect<> fromNative(const RECT& source) /*throw()*/ {
-			return Rect<>(
-				Point<>(std::min(source.left, source.right), std::min(source.top, source.bottom)),
-				Point<>(std::max(source.left, source.right), std::max(source.top, source.bottom)));
-		}
-		inline POINT toNative(const Point<>& source) /*throw()*/ {
-			const POINT temp = {source.x, source.y};
-			return temp;
-		}
-		inline SIZE toNative(const Dimension<>& source) /*throw()*/ {
-			const SIZE temp = {source.cx, source.cy};
-			return temp;
-		}
-		inline RECT toNative(const Rect<>& source) /*throw()*/ {
-			RECT temp;
-			::SetRect(&temp, source.left(), source.top(), source.right(), source.bottom());
-			return temp;
-		}
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
-		inline Point<> fromNative(const CGPoint& source) /*throw()*/ {
-			return Point<>(source.x, source.y);
-		}
-		inline Dimension<> fromNative(const CGSize& source) /*throw()*/ {
-			return Dimension<>(source.width, source.height);
-		}
-		inline Rect<> fromNative(const CGRect& source) /*throw()*/ {
-			return Rect<>(fromNative(source.origin), fromNative(source.size));
-		}
-		inline CGPoint toNative(const Point<>& source) /*throw()*/ {
-			return CGPointMake(source.x, source.y);
-		}
-		inline CGSize toNative(const Dimension<>& source) /*throw()*/ {
-			return CGSizeMake(source.cx, source.cy);
-		}
-		inline CGRect toNative(const Rect<>& source) /*throw()*/ {
-			return CGRectMake(source.origin().x, source.origin().y, source.size().cx, source.size().cy);
-		}
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
-		inline Rect<> fromNative(const GdkRectangle& source) /*throw()*/ {
-			return Rect<>(Point<>(source.x, source.y), Dimension<>(source.width, source.height));
-		}
-		inline GdkRectangle toNative(const Rect<>& source) /*throw()*/ {
-			const GdkRectangle temp = {source.origin().x, source.origin().y, source.size().cx, source.size().cy};
-			return temp;
-		}
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
 #endif
 
 	}

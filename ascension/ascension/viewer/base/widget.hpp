@@ -69,6 +69,7 @@ namespace ascension {
 				virtual void setOpacity(double opacity) = 0;
 				virtual void setAlwaysOnTop(bool set) = 0;
 
+				bool hasFocus() const;
 				virtual bool isVisible() const = 0;
 				virtual bool isActive() const = 0;
 

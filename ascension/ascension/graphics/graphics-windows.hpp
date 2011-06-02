@@ -21,7 +21,7 @@ namespace ascension {
 		public:
 			virtual ~GraphicsContext() /*throw()*/ {}
 			const Handle<HDC>& nativeHandle() const {return dc_;}
-			void fillRectangle(const graphics::Rect<>& rect, const graphics::Color& color) {
+			void fillRectangle(const graphics::NativeRectangle& rect, const graphics::Color& color) {
 				const COLORREF oldBackground = ::GetBkColor(dc_.get());
 				if(oldBackground != CLR_INVALID) {
 					if(CLR_INVALID != ::SetBkColor(dc_.get(), color.asCOLORREF())) {
@@ -36,8 +36,8 @@ namespace ascension {
 			}
 			unsigned int logicalDpiX() const {return ::GetDeviceCaps(dc_.get(), LOGPIXELSX);}
 			unsigned int logicalDpiY() const {return ::GetDeviceCaps(dc_.get(), LOGPIXELSY);}
-			graphics::Dimension<unsigned int> size() const {
-				return graphics::Dimension<unsigned int>(
+			graphics::NativeSize size() const {
+				return graphics::make<NativeSize>(
 					::GetDeviceCaps(dc_.get(), HORZRES), ::GetDeviceCaps(dc_.get(), VERTRES));
 			}
 		protected:
@@ -81,7 +81,7 @@ namespace ascension {
 					throw PlatformDependentError<>();
 				initialize(dc);
 			}
-			graphics::Rect<> boundsToPaint() const {return graphics::fromNative(ps_.rcPaint);}
+			graphics::NativeRectangle boundsToPaint() const {return ps_.rcPaint;}
 		private:
 			class X {
 			public:

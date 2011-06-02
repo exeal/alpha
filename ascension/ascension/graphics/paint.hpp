@@ -27,7 +27,7 @@ namespace ascension {
 			 * @param rectangle The rectangle to fill
 			 */
 			virtual void fillRectangle(
-				RenderingContext2D& context, const Rect<>& rectangle) const /*throw()*/ = 0;
+				RenderingContext2D& context, const NativeRectangle& rectangle) const /*throw()*/ = 0;
 		};
 
 		/**
@@ -39,9 +39,9 @@ namespace ascension {
 		public:
 			virtual ~Gradient() /*throw()*/ {}
 			virtual void addColorStop() = 0;
-			static std::auto_ptr<Gradient> createLinearGradient(const Point<>& p0, const Point<>& p1);
+			static std::auto_ptr<Gradient> createLinearGradient(const NativePoint& p0, const NativePoint& p1);
 			static std::auto_ptr<Gradient> createRadialGradient(
-				const Point<>& p0, Scalar r0, const Point<>& p1, Scalar r1);
+				const NativePoint& p0, Scalar r0, const NativePoint& p1, Scalar r1);
 		};
 
 		/**
