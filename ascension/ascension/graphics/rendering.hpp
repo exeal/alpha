@@ -55,7 +55,7 @@ namespace ascension {
 				int lineIndent(length_t line, length_t subline = 0) const;
 				// operation
 				void renderLine(length_t line, PaintContext& context,
-					const Point<>& origin, const TextPaintOverride* paintOverride = 0,
+					const NativePoint& origin, const TextPaintOverride* paintOverride = 0,
 					const InlineObject* endOfLine = 0, const InlineObject* lineWrappingMark = 0) const /*throw()*/;
 					
 				// LayoutInformationProvider

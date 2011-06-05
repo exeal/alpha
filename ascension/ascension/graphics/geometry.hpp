@@ -34,6 +34,9 @@ namespace ascension {
 			/// Rectangle identifying tag.
 			struct RectangleTag {};
 
+			const std::size_t X_COORDINATE = 0;
+			const std::size_t Y_COORDINATE = 1;
+
 /*
 	A point represents a point in the (x, y) coordinate plane.
 	A size represents the size of a two-dimensional primitive.
@@ -65,10 +68,14 @@ namespace ascension {
 			template<> struct Coordinate<POINTS> {typedef SHORT Type;};
 			template<> struct Coordinate<SIZE> {typedef LONG Type;};
 			template<> struct Coordinate<RECT> {typedef POINT Type;};
+			template<> struct Coordinate<RECTL> {typedef POINT Type;};
+			template<> struct Coordinate<SMALL_RECT> {typedef POINTS Type;};
 			template<> struct Tag<POINT> {typedef PointTag Type;};
 			template<> struct Tag<POINTS> {typedef PointTag Type;};
 			template<> struct Tag<SIZE> {typedef SizeTag Type;};
 			template<> struct Tag<RECT> {typedef RectangleTag Type;};
+			template<> struct Tag<RECTL> {typedef RectangleTag Type;};
+			template<> struct Tag<SMALL_RECT> {typedef RectangleTag Type;};
 
 			namespace traits {
 				template<typename Point> struct Maker<PointTag, Point> {
@@ -148,11 +155,12 @@ namespace ascension {
 		template<typename Geometry, std::size_t dimension>
 		class AccessProxy {
 		public:
-			AccessProxy(Geometry& geometry) /*throw()*/ : geometry_(geometry) {}
-			void operator=(typename graphics::geometry::Coordinate<Geometry>::Type value) {
-				return graphics::geometry::set<dimension>(geometry_);
+			explicit AccessProxy(Geometry& geometry) /*throw()*/ : geometry_(geometry) {}
+			const AccessProxy<Geometry, dimension>& operator=(typename graphics::geometry::Coordinate<Geometry>::Type value) {
+				graphics::geometry::set<dimension>(geometry_);
+				return *this;
 			}
-			void operator=(const AccessProxy& other) {
+			const AccessProxy& operator=(const AccessProxy& other) {
 				return *this = static_cast<typename graphics::geometry::Coordinate<Geometry>::Type>(other);
 			}
 			operator typename graphics::geometry::Coordinate<Geometry>::Type() const {
@@ -168,6 +176,27 @@ namespace ascension {
 		private:
 			Geometry& geometry_;
 		};
+
+		template<typename Rectangle, std::size_t dimension>
+		class RectangleRangeProxy {
+		public:
+			explicit RectangleRangeProxy(Rectangle& rectangle) /*throw()*/ : rectangle_(rectangle) {}
+			template<typename T>
+			RectangleRangeProxy<Rectangle, dimension>& operator=(const Range<T>& range) {
+				typename graphics::geometry::Coordinate<Rectangle>::Type
+					b(graphics::geometry::get<0>(rectangle)), e(graphics::geometry::get<1>(rectangle));
+				graphics::geometry::set<dimension>(b, range.beginning());
+				graphics::geometry::set<dimension>(e, range.end());
+				graphics::geometry::set<0>(rectangle_, b);
+				graphics::geometry::set<1>(rectangle_, e);
+				return *this;
+			}
+			operator const Range<typename graphics::geometry::Coordinate<typename graphics::geometry::Coordinate<Rectangle>::Type>::Type>() const {
+				return graphics::geometry::range<dimension>(rectangle_);
+			}
+		private:
+			Rectangle& rectangle_;
+		};
 	}
 
 	namespace graphics {
@@ -180,7 +209,11 @@ namespace ascension {
 
 			template<typename Geometry0, typename Geometry1, typename Geometry2>
 			inline Geometry0 make(const Geometry1& geometry1, const Geometry2& geometry2) {
-				return traits::Maker<Geometry0>::make(geometry1, geometry2);
+//					typename detail::Select<std::tr1::is_scalar<Geometry1>::value, Geometry1,
+//						typename std::tr1::add_const<typename std::tr1::add_reference<Geometry1>::type>::type>::Type geometry1,
+//					typename detail::Select<std::tr1::is_scalar<Geometry2>::value, Geometry2,
+//						typename std::tr1::add_const<typename std::tr1::add_reference<Geometry2>::type>::type>::Type geometry2) {
+				return traits::Maker<typename Tag<Geometry0>::Type, Geometry0>::make(geometry1, geometry2);
 			}
 
 			template<std::size_t dimension, typename Geometry>
@@ -195,6 +228,32 @@ namespace ascension {
 
 			// 'add' for point and size
 
+			template<typename Point1, typename Point2>
+			inline Point1& _add(Point1& point1, const Point2& point2, const PointTag&, const PointTag&) {
+				x(point1) += x(point2);
+				y(point1) += y(point2);
+				return point1;
+			}
+
+			template<typename Point, typename Size>
+			inline Point& _add(Point& point, const Size& size, const PointTag&, const SizeTag&) {
+				x(point) += dx(size);
+				y(point) += dy(size);
+				return point;
+			}
+
+			template<typename Size1, typename Size2>
+			inline Size1& _add(Size1& size1, const Size2& size2, const SizeTag&, const SizeTag&) {
+				dx(size1) += dx(size2);
+				dy(size1) += dy(size2);
+				return size1;
+			}
+
+			template<typename Geometry1, typename Geometry2>
+			inline Geometry1& add(Geometry1& geometry1, const Geometry2& geometry2) {
+				return _add(geometry1, geometry2, typename Tag<Geometry1>::Type(), typename Tag<Geometry2>::Type());
+			}
+
 			// 'divide' for point and size
 
 			// 'dx' for size and rectangle
@@ -202,12 +261,18 @@ namespace ascension {
 			/// Returns the size of the @a size in x-coordinate.
 			template<typename Size>
 			inline typename Coordinate<Size>::Type dx(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
-				return get<0>(size);
+				return get<X_COORDINATE>(size);
 			}
 
 			template<typename Size>
-			inline detail::AccessProxy<Size, 0> dx(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+			inline detail::AccessProxy<Size, X_COORDINATE> dx(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
 				return detail::AccessProxy<Size, 0>(size);
+			}
+
+			/// Returns the size of the @a rectangle in x-coordinate.
+			template<typename Rectangle>
+			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type dx(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
+				return dx(size(rectangle));
 			}
 
 			// 'dy' for size and rectangle
@@ -215,12 +280,18 @@ namespace ascension {
 			/// Returns the size of the @a size in y-coordinate.
 			template<typename Size>
 			inline typename Coordinate<Size>::Type dy(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
-				return get<1>(size);
+				return get<Y_COORDINATE>(size);
 			}
 
 			template<typename Size>
-			inline detail::AccessProxy<Size, 1> dy(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+			inline detail::AccessProxy<Size, Y_COORDINATE> dy(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
 				return detail::AccessProxy<Size, 1>(size);
+			}
+
+			/// Returns the size of the @a rectangle in x-coordinate.
+			template<typename Rectangle>
+			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type dy(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
+				return dy(size(rectangle));
 			}
 
 			// 'equals'
@@ -263,7 +334,7 @@ namespace ascension {
 
 			template<typename Size>
 			inline bool isEmpty(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
-				return dx(size) == 0 && dy(size) == 0;
+				return dx(size) <= 0 || dy(size) <= 0;
 			}
 
 			template<typename Rectangle>
@@ -373,12 +444,12 @@ namespace ascension {
 			/// Returns the x-coordinate of @a point.
 			template<typename Point>
 			inline typename Coordinate<Point>::Type x(const Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
-				return get<0>(p);
+				return get<X_COORDINATE>(p);
 			}
 
 			template<typename Point>
 			inline detail::AccessProxy<Point, 0> x(Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
-				return detail::AccessProxy<Point, 0>(p);
+				return detail::AccessProxy<Point, X_COORDINATE>(p);
 			}
 
 			// 'y' for point and rectangle
@@ -386,12 +457,12 @@ namespace ascension {
 			/// Returns the y-coordinate of @a point.
 			template<typename Point>
 			inline typename Coordinate<Point>::Type y(const Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
-				return get<1>(p);
+				return get<Y_COORDINATE>(p);
 			}
 
 			template<typename Point>
 			inline detail::AccessProxy<Point, 1> y(Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
-				return detail::AccessProxy<Point, 1>(p);
+				return detail::AccessProxy<Point, Y_COORDINATE1>(p);
 			}
 
 			// writing to standard output stream
@@ -427,11 +498,29 @@ namespace ascension {
 
 			/**
 			 * Returns the y-coordinate of the bottom edge of @a rectangle.
-			 * @note The returned value may less than @c top(rectangle).
+			 * @see #bottomLeft, #bottomRight, #top
 			 */
 			template<typename Rectangle>
 			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type bottom(const Rectangle& rectangle) {
-				return y(get<1>(rectangle));
+				return std::max(y(get<0>(rectangle)), y(get<1>(rectangle)));
+			}
+
+			/**
+			 * Returns the bottom-left corner of @a rectangle.
+			 * @see #bottom, #left
+			 */
+			template<typename Rectangle>
+			inline typename Coordinate<Rectangle>::Type bottomLeft(const Rectangle& rectangle) {
+				return make<typename Coordinate<Rectangle>::Type>(left(rectangle), bottom(rectangle));
+			}
+
+			/**
+			 * Returns the bottom-right corner of @a rectangle.
+			 * @see #bottom, #right
+			 */
+			template<typename Rectangle>
+			inline typename Coordinate<Rectangle>::Type bottomRight(const Rectangle& rectangle) {
+				return make<typename Coordinate<Rectangle>::Type>(right(rectangle), bottom(rectangle));
 			}
 
 			/// Returns the Manhattan-length of @a point.
@@ -445,23 +534,39 @@ namespace ascension {
 
 			/**
 			 * Returns the x-coordinate of the left edge of @a rectangle.
-			 * @note The returned value may greater than @c right(rectangle).
+			 * @see #bottomLeft, #right, #topLeft
 			 */
 			template<typename Rectangle>
 			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type left(const Rectangle& rectangle) {
-				return x(get<0>(rectangle));
+				return std::min(x(get<0>(rectangle)), x(get<1>(rectangle)));
 			}
 
 			template<typename Size>
 			inline Size& makeBoundedTo(Size&, const Size& other, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0);
 
+			template<std::size_t dimension, typename Rectangle>
+			inline const Range<typename Coordinate<typename Coordinate<Rectangle>::Type>::Type> range(const Rectangle& rectangle) {
+				return makeRange(get<dimension>(get<0>(rectangle)), get<dimension>(get<1>(rectangle)));
+			}
+
+			template<std::size_t dimension, typename Rectangle>
+			inline detail::RectangleRangeProxy<Rectangle, dimension> range(Rectangle& rectangle) {
+				return detail::RectangleRangeProxy<Rectangle, dimension>(rectangle);
+			}
+
+			template<typename Rectangle, typename Size>
+			inline Rectangle& resize(Rectangle& rectangle, const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+				set<1>(rectangle, translate(get<0>(rectangle), size));
+				return rectangle;
+			}
+
 			/**
 			 * Returns the x-coordinate of the right edge of @a rectangle.
-			 * @note The returned value may less than @c left(rectangle).
+			 * @see #bottomRight, #left, #topRight
 			 */
 			template<typename Rectangle>
 			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type right(const Rectangle& rectangle) {
-				return x(get<1>(rectangle));
+				return std::max(x(get<0>(rectangle)), x(get<1>(rectangle)));
 			}
 
 			/**
@@ -484,11 +589,29 @@ namespace ascension {
 
 			/**
 			 * Returns the y-coordinate of the top edge of @a rectangle.
-			 * @note The returned value may greater than @c bottom(rectangle).
+			 * @see #bottom, #topLeft, #topRight
 			 */
 			template<typename Rectangle>
 			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type top(const Rectangle& rectangle) {
-				return y(get<0>(rectangle));
+				return std::min(y(get<0>(rectangle)), y(get<1>(rectangle)));
+			}
+
+			/**
+			 * Returns the top-left corner of @a rectangle.
+			 * @see #top, #left
+			 */
+			template<typename Rectangle>
+			inline typename Coordinate<Rectangle>::Type topLeft(const Rectangle& rectangle) {
+				return make<typename Coordinate<Rectangle>::Type>(left(rectangle), top(rectangle));
+			}
+
+			/**
+			 * Returns the top-right corner of @a rectangle.
+			 * @see #top, #right
+			 */
+			template<typename Rectangle>
+			inline typename Coordinate<Rectangle>::Type topRight(const Rectangle& rectangle) {
+				return make<typename Coordinate<Rectangle>::Type>(right(rectangle), top(rectangle));
 			}
 
 			/**

@@ -78,12 +78,12 @@ namespace ascension {
 				 * @param location The location
 				 * @param modifiers The modifier flags
 				 */
-				LocatedUserInput(const graphics::Point<>& location, int modifiers) : UserInput(modifiers), location_(location) {
+				LocatedUserInput(const graphics::NativePoint& location, int modifiers) : UserInput(modifiers), location_(location) {
 				}
 				/// Returns the location.
-				const graphics::Point<>& location() const /*throw()*/ {return location_;}
+				const graphics::NativePoint& location() const /*throw()*/ {return location_;}
 			private:
-				const graphics::Point<> location_;
+				const graphics::NativePoint location_;
 			};
 
 			/// A @c MouseButtonInput represents a mouse button event.
@@ -95,7 +95,7 @@ namespace ascension {
 				 * @param button
 				 * @param modifiers
 				 */
-				MouseButtonInput(const graphics::Point<>& location, MouseButton button,
+				MouseButtonInput(const graphics::NativePoint& location, MouseButton button,
 					int modifiers) : LocatedUserInput(location, modifiers), button_(button) {}
 				/// Returns the mouse button.
 				MouseButton button() const /*throw()*/ {return button_;}
@@ -112,12 +112,12 @@ namespace ascension {
 				 * @param modifiers
 				 * @param rotation
 				 */
-				MouseWheelInput(const graphics::Point<>& location, int modifiers,
-					graphics::Dimension<>& rotation) : LocatedUserInput(location, modifiers), rotation_(rotation) {}
+				MouseWheelInput(const graphics::NativePoint& location, int modifiers,
+					graphics::NativeSize& rotation) : LocatedUserInput(location, modifiers), rotation_(rotation) {}
 				/// Returns the mouse wheel rotation.
-				const graphics::Dimension<>& rotation() const /*throw()*/ {return rotation_;}
+				const graphics::NativeSize& rotation() const /*throw()*/ {return rotation_;}
 			private:
-				const graphics::Dimension<> rotation_;
+				const graphics::NativeSize rotation_;
 			};
 
 			class KeyInput : public UserInput {

@@ -751,8 +751,8 @@ void TextLayout::TextRun::drawGlyphs(PaintContext& context, const NativePoint& p
 //		if(dirtyRect != 0)
 //			::SetRect(&temp, dirtyRect->left(), dirtyRect->top(), dirtyRect->right(), dirtyRect->bottom());
 		const HRESULT hr = ::ScriptTextOut(context.nativeHandle().get(), &glyphs_->fontCache,
-			p.x + x((analysis_.fRTL == 0) ? truncatedRange.beginning() : (truncatedRange.end() - 1), analysis_.fRTL != 0),
-			p.y - glyphs_->font->metrics().ascent(), 0, &context.boundsToPaint(), &analysis_, 0, 0,
+			geometry::x(p) + x((analysis_.fRTL == 0) ? truncatedRange.beginning() : (truncatedRange.end() - 1), analysis_.fRTL != 0),
+			geometry::y(p) - glyphs_->font->metrics().ascent(), 0, &context.boundsToPaint(), &analysis_, 0, 0,
 			glyphs() + glyphRange.beginning(), glyphRange.length(), advances() + glyphRange.beginning(),
 			(justifiedAdvances() != 0) ? justifiedAdvances() + glyphRange.beginning() : 0,
 			glyphOffsets() + glyphRange.beginning());
@@ -1104,7 +1104,7 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
  */
 void TextLayout::TextRun::paintBackground(PaintContext& context,
 		const NativePoint& p, const Range<length_t>& range, NativeRectangle* paintedBounds) const {
-	if(range.isEmpty() || p.x + totalWidth() < geometry::left(context.boundsToPaint()))
+	if(range.isEmpty() || geometry::x(p) + totalWidth() < geometry::left(context.boundsToPaint()))
 		return;
 	NativeRectangle r;
 	blackBoxBounds(range, r);
@@ -1832,8 +1832,8 @@ namespace {
 					win32::Handle<HPEN> pen(createPen(
 						((styles[i]->color != Color()) ? styles[i]->color : currentColor), width, styles[i]->style));
 					HPEN oldPen = static_cast<HPEN>(::SelectObject(dc.get(), pen.get()));
-					::MoveToEx(dc.get(), points[i][0].x, points[i][0].y, 0);
-					::LineTo(dc.get(), points[i][1].x, points[i][1].y);
+					::MoveToEx(dc.get(), geometry::x(points[i][0]), geometry::y(points[i][0]), 0);
+					::LineTo(dc.get(), geometry::x(points[i][1]), geometry::y(points[i][1]));
 					::SelectObject(dc.get(), oldPen);
 				}
 			}
@@ -2210,10 +2210,10 @@ NativeRegion TextLayout::blackBoxBounds(const Range<length_t>& range) const {
 	AutoBuffer<POINT> vertices(new POINT[rectangles.size() * 4]);
 	AutoBuffer<int> numbersOfVertices(new int[rectangles.size()]);
 	for(size_t i = 0, c = rectangles.size(); i < c; ++i) {
-		vertices[i * 4 + 0].x = vertices[i * 4 + 3].x = geometry::left(rectangles[i]);
-		vertices[i * 4 + 0].y = vertices[i * 4 + 1].y = geometry::top(rectangles[i]);
-		vertices[i * 4 + 1].x = vertices[i * 4 + 2].x = geometry::right(rectangles[i]);
-		vertices[i * 4 + 2].y = vertices[i * 4 + 3].y = geometry::bottom(rectangles[i]);
+		geometry::x(vertices[i * 4 + 0]) = geometry::x(vertices[i * 4 + 3]) = geometry::left(rectangles[i]);
+		geometry::y(vertices[i * 4 + 0]) = geometry::y(vertices[i * 4 + 1]) = geometry::top(rectangles[i]);
+		geometry::x(vertices[i * 4 + 1]) = geometry::x(vertices[i * 4 + 2]) = geometry::right(rectangles[i]);
+		geometry::y(vertices[i * 4 + 2]) = geometry::y(vertices[i * 4 + 3]) = geometry::bottom(rectangles[i]);
 	}
 	fill_n(numbersOfVertices.get(), rectangles.size(), 4);
 	return win32::Handle<HRGN>(::CreatePolyPolygonRgn(vertices.get(),
@@ -2401,7 +2401,7 @@ void TextLayout::draw(PaintContext& context,
 		win32::DumpContext() << L"@TextLayout.draw draws line " << lineNumber_ << L" (" << line << L")\n";
 #endif // defined(_DEBUG)
 
-	if(isEmpty() || geometry::dy(geometry::size(context.boundsToPaint())) == 0)
+	if(isEmpty() || geometry::dy(context.boundsToPaint()) == 0)
 		return;
 
 	// TODO: this code can't handle vertical text.
@@ -2410,15 +2410,15 @@ void TextLayout::draw(PaintContext& context,
 	Range<length_t> linesToDraw(0, numberOfLines());
 	NativePoint p(origin);
 	for(length_t line = linesToDraw.beginning(); line < linesToDraw.end(); ++line) {
-		const Scalar lineBeforeEdge = p.y - lineMetrics_[line]->ascent();
-		const Scalar lineAfterEdge = p.y + lineMetrics_[line]->descent();
+		const Scalar lineBeforeEdge = geometry::y(p) - lineMetrics_[line]->ascent();
+		const Scalar lineAfterEdge = geometry::y(p) + lineMetrics_[line]->descent();
 		if(geometry::top(context.boundsToPaint()) >= lineBeforeEdge && geometry::top(context.boundsToPaint()) < lineAfterEdge)
 			linesToDraw = makeRange(line, linesToDraw.end());
 		if(geometry::bottom(context.boundsToPaint()) >= lineBeforeEdge && geometry::bottom(context.boundsToPaint()) < lineAfterEdge) {
 			linesToDraw = makeRange(linesToDraw.beginning(), line + 1);
 			break;
 		}
-		p.y += blockProgressionDistance(line - 1, line);
+		geometry::y(p) += blockProgressionDistance(line - 1, line);
 	}
 
 	// calculate inline area range to draw
@@ -2526,17 +2526,17 @@ void TextLayout::draw(PaintContext& context,
 			Range<const TextRun* const*> runs(runs_.get() + lineFirstRuns_[line],
 				runs_.get() + ((line < numberOfLines() - 1) ? lineFirstRuns_[line + 1] : numberOfRuns_));
 			p = origin;
-			p.x += readingDirectionInt(writingMode().inlineFlowDirection);
+			geometry::x(p) += readingDirectionInt(writingMode().inlineFlowDirection);
 			if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
-				p.x -= lineInlineProgressionDimension(line);
-			Scalar leftEdgeOfFirstRun = p.x, rightEdgeOfLastRun = p.x + lineInlineProgressionDimension(line);
+				geometry::x(p) -= lineInlineProgressionDimension(line);
+			Scalar leftEdgeOfFirstRun = geometry::x(p), rightEdgeOfLastRun = geometry::x(p) + lineInlineProgressionDimension(line);
 			for(const TextRun* const* run = runs.beginning(); run < runs.end(); ++run) {
-				if(p.x + (*run)->totalWidth() < geometry::left(context.boundsToPaint())) {
+				if(geometry::x(p) + (*run)->totalWidth() < geometry::left(context.boundsToPaint())) {
 					runs = makeRange(run + 1, runs.end());
-					leftEdgeOfFirstRun = p.x + (*run)->totalWidth();
+					leftEdgeOfFirstRun = geometry::x(p) + (*run)->totalWidth();
 				} else if(p.x > geometry::right(context.boundsToPaint())) {
 					runs = makeRange(runs.beginning(), run);
-					rightEdgeOfLastRun = p.x;
+					rightEdgeOfLastRun = geometry::x(p);
 				}
 			}
 			if(!runs.isEmpty()) {

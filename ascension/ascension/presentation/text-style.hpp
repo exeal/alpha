@@ -460,6 +460,23 @@ namespace ascension {
 		};
 
 	}
+
+	namespace detail {
+		enum PhysicalTextAnchor {LEFT, MIDDLE, RIGHT};
+
+		inline PhysicalTextAnchor computePhysicalTextAnchor(presentation::TextAnchor anchor, presentation::ReadingDirection readingDirection) {
+			switch(anchor) {
+				case presentation::TEXT_ANCHOR_MIDDLE:
+					return MIDDLE;
+				case presentation::TEXT_ANCHOR_START:
+					return (readingDirection == presentation::LEFT_TO_RIGHT) ? LEFT : RIGHT;
+				case presentation::TEXT_ANCHOR_END:
+					return (readingDirection == presentation::LEFT_TO_RIGHT) ? RIGHT : LEFT;
+				default:
+					ASCENSION_ASSERT_NOT_REACHED();
+			}
+		}
+	}
 } // namespace ascension.presentation
 
 #endif // !ASCENSION_TEXT_STYLE_HPP
