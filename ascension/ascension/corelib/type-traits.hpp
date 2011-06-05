@@ -20,54 +20,11 @@ namespace ascension {
 	namespace detail {
 
 		/**
-		 * From @c std#integral_constant.
-		 * @deprecated 0.8 Use @c std#integral_constant.
-		 */
-		template<typename T, T v>
-		struct IntegralConstant {
-			typedef IntegralConstant<T, v> Type;
-			typedef T ValueType;
-			static const ValueType value = v;
-		};
-
-		/**
-		 * From @c std#true_type.
-		 * @deprecated 0.8 Use @c std#true_type.
-		 */
-		typedef IntegralConstant<bool, true> TrueType;
-		/**
-		 * From @c std#false_type.
-		 * @deprecated 0.8 Use @c std#false_type.
-		 */
-		typedef IntegralConstant<bool, false> FalseType;
-
-		/**
 		 * Returns the type @a T if @a condition is @c true, otherwise type @a U.
-		 * @deprecated 0.8 Use @c std#conditional.
+		 * @deprecated 0.8 Use @c std#conditional out of TR1.
 		 */
 		template<bool condition, typename T, typename U> struct Select {typedef T Type;};
 		template<typename T, typename U> struct Select<false, T, U> {typedef U Type;};
-
-		/**
-		 * Returns @c true if the given two types @a T and @a U are same.
-		 * @deprecated 0.8 Use @c std#is_same.
-		 */
-		template<typename T, typename U> struct IsSame : FalseType {};
-		template<typename T> struct IsSame<T, T> : TrueType {};
-
-		/**
-		 * Returns @c true if the type @a D is derived from the type @a B.
-		 * @deprecated 0.8 Use @c std#is_base_of.
-		 */
-		template<typename B, typename D> class IsBaseAndDerived {
-			typedef char Y;
-			class N {char padding_[8];};
-			static Y test(const volatile B*);
-			static N test(...);
-			static const volatile D* makeD();
-		public:
-			static const bool value = !IsSame<B, D>::value && sizeof(test(makeD())) == sizeof(Y);
-		};
 
 		/// Generates signed numeral types.
 		template<typename T> struct RemoveSigned;

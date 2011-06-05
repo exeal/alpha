@@ -51,20 +51,20 @@ namespace ascension {
 
 				const Identifier& identifier() const;
 
-				virtual void initialize(Widget& parent, const graphics::Rect<>& bounds) = 0;
+				virtual void initialize(Widget& parent, const graphics::NativeRectangle& bounds) = 0;
 
-				virtual graphics::Rect<> bounds(bool includeFrame) const = 0;
-				virtual void setBounds(const graphics::Rect<>& bounds) = 0;
-				virtual void setShape(const graphics::NativePolygon& shape) = 0;
+				virtual graphics::NativeRectangle bounds(bool includeFrame) const = 0;
+				virtual void setBounds(const graphics::NativeRectangle& bounds) = 0;
+				virtual void setShape(const graphics::NativeRegion& shape) = 0;
  
 				virtual void close() = 0;
 				virtual void show() = 0;
 				virtual void hide() = 0;
 
-				virtual void forcePaint(const graphics::Rect<>& bounds) = 0;
+				virtual void forcePaint(const graphics::NativeRectangle& bounds) = 0;
 				void redrawScheduledRegion();
 				void scheduleRedraw(bool eraseBackground);
-				void scheduleRedraw(const graphics::Rect<>& rect, bool eraseBackground);
+				void scheduleRedraw(const graphics::NativeRectangle& rect, bool eraseBackground);
 
 				virtual void setOpacity(double opacity) = 0;
 				virtual void setAlwaysOnTop(bool set) = 0;
@@ -91,7 +91,7 @@ namespace ascension {
 				virtual void moved();
 				virtual void moving();
 				virtual void paint(graphics::PaintContext& context) = 0;
-				virtual void resized(State state, const graphics::Dimension<>& newSize);
+				virtual void resized(State state, const graphics::NativeSize& newSize);
 				virtual void resizing();
 				virtual void showContextMenu(const base::LocatedUserInput& input);
 				virtual void visibilityChanged(bool visible);

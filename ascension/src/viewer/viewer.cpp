@@ -89,16 +89,16 @@ bool DIAGNOSE_INHERENT_DRAWING = false;	// 余計な描画を行っていない�
 
 // local helpers
 namespace {
-	inline Dimension<> getCurrentCharacterSize(const TextViewer& viewer) {
+	inline NativeSize getCurrentCharacterSize(const TextViewer& viewer) {
 		const Scalar cy = viewer.textRenderer().defaultFont()->metrics().cellHeight();
 		const Caret& caret = viewer.caret();
 		if(k::locations::isEndOfLine(caret))	// EOL
-			return Dimension<>(viewer.textRenderer().defaultFont()->metrics().averageCharacterWidth(), cy);
+			return geometry::make<NativeSize>(viewer.textRenderer().defaultFont()->metrics().averageCharacterWidth(), cy);
 		else {
 			const TextLayout& layout = viewer.textRenderer().layouts().at(caret.line());
-			const Scalar leading = layout.location(caret.column(), TextLayout::LEADING).x;
-			const Scalar trailing = layout.location(caret.column(), TextLayout::TRAILING).x;
-			return Dimension<>(static_cast<Scalar>(detail::distance(leading, trailing)), cy);
+			const Scalar leading = geometry::x(layout.location(caret.column(), TextLayout::LEADING));
+			const Scalar trailing = geometry::x(layout.location(caret.column(), TextLayout::TRAILING));
+			return geometry::make<NativeSize>(static_cast<Scalar>(detail::distance(leading, trailing)), cy);
 		}
 	}
 } // namespace @0
@@ -241,26 +241,26 @@ void TextViewer::caretMoved(const Caret& self, const k::Region& oldRegion) {
  * @throw UnknownValueException @a edge and/or snapPolicy are invalid
  * @see #clientXYForCharacter, #hitTest, layout#LineLayout#offset
  */
-k::Position TextViewer::characterForClientXY(const Point<>& p, TextLayout::Edge edge,
+k::Position TextViewer::characterForClientXY(const NativePoint& p, TextLayout::Edge edge,
 		bool abortNoCharacter /* = false */, k::locations::CharacterUnit snapPolicy /* = k::locations::GRAPHEME_CLUSTER */) const {
 	k::Position result;
 
 	// determine the logical line
 	length_t subline;
 	bool outside;
-	mapClientYToLine(p.y, &result.line, &subline, &outside);
+	mapClientYToLine(geometry::y(p), &result.line, &subline, &outside);
 	if(abortNoCharacter && outside)
 		return k::Position();
 	const TextLayout& layout = renderer_->layouts()[result.line];
 
 	// determine the column
-	const Scalar x = p.x - getDisplayXOffset(result.line);
+	const Scalar x = geometry::x(p) - getDisplayXOffset(result.line);
 	if(edge == TextLayout::LEADING)
-		result.column = layout.offset(
-			Point<>(x, static_cast<Scalar>(renderer_->defaultFont()->metrics().linePitch() * subline)), &outside).first;
+		result.column = layout.offset(geometry::make<NativePoint>(
+			x, static_cast<Scalar>(renderer_->defaultFont()->metrics().linePitch() * subline)), &outside).first;
 	else if(edge == TextLayout::TRAILING)
-		result.column = layout.offset(
-			Point<>(x, static_cast<Scalar>(renderer_->defaultFont()->metrics().linePitch() * subline)), &outside).second;
+		result.column = layout.offset(geometry::make<NativePoint>(
+			x, static_cast<Scalar>(renderer_->defaultFont()->metrics().linePitch() * subline)), &outside).second;
 	else
 		throw UnknownValueException("edge");
 	if(abortNoCharacter && outside)
@@ -276,8 +276,8 @@ k::Position TextViewer::characterForClientXY(const Point<>& p, TextLayout::Edge 
 			if(interveningSurrogates) {
 				if(edge == TextLayout::LEADING)
 					--result.column;
-				else if(detail::distance(x, layout.location(result.column - 1).x)
-						<= detail::distance(x, layout.location(result.column + 1).x))
+				else if(detail::distance<Scalar>(x, geometry::x(layout.location(result.column - 1)))
+						<= detail::distance<Scalar>(x, geometry::x(layout.location(result.column + 1))))
 					--result.column;
 				else
 					++result.column;
@@ -292,8 +292,8 @@ k::Position TextViewer::characterForClientXY(const Point<>& p, TextLayout::Edge 
 				else {
 					const k::Position backward(i.base().tell());
 					const k::Position forward((++i).base().tell());
-					result.column = ((detail::distance(x, layout.location(backward.column).x)
-						<= detail::distance(x, layout.location(forward.column).x)) ? backward : forward).column;
+					result.column = ((detail::distance<Scalar>(x, geometry::x(layout.location(backward.column)))
+						<= detail::distance<Scalar>(x, geometry::x(layout.location(forward.column)))) ? backward : forward).column;
 				}
 			}
 		} else
@@ -321,16 +321,16 @@ void TextViewer::checkInitialization() const {
  * @throw WindowNotInitialized The window is not initialized
  * @see #characterForClientXY, #hitTest, layout#LineLayout#location
  */
-Point<> TextViewer::clientXYForCharacter(const k::Position& position, bool fullSearchY, TextLayout::Edge edge) const {
+NativePoint TextViewer::clientXYForCharacter(const k::Position& position, bool fullSearchY, TextLayout::Edge edge) const {
 	checkInitialization();
 	const TextLayout& layout = renderer_->layouts().at(position.line);
-	Point<> p(layout.location(position.column, edge));
-	p.x += getDisplayXOffset(position.line);
+	NativePoint p(layout.location(position.column, edge));
+	geometry::x(p) += getDisplayXOffset(position.line);
 	const int y = mapLineToClientY(position.line, fullSearchY);
 	if(y == 32767 || y == -32768)
-		p.y = y;
+		geometry::y(p) = y;
 	else
-		p.y += y;
+		geometry::y(p) += y;
 	return p;
 }
 
@@ -433,7 +433,7 @@ void TextViewer::documentUndoSequenceStopped(const k::Document&, const k::Positi
  * @param context The graphics context
  * @param rect The rectangle to draw
  */
-void TextViewer::drawIndicatorMargin(length_t /* line */, Context& /* context */, const Rect<>& /* rect */) {
+void TextViewer::drawIndicatorMargin(length_t /* line */, Context& /* context */, const NativeRectangle& /* rect */) {
 }
 
 /**
@@ -452,23 +452,24 @@ void TextViewer::freeze() {
  * @return The offset
  */
 int TextViewer::getDisplayXOffset(length_t line) const {
-	const Rect<> margins(textAreaMargins());
+	const Margins margins(textAreaMargins());
 	const TextLayout& layout = renderer_->layouts().at(line);
-	const TextAnchor alignment = resolveTextAlignment(layout.anchor(), layout.writingMode().inlineFlowDirection);
-	if(alignment == ALIGN_LEFT || alignment == JUSTIFY)	// TODO: this code ignores last visual line with justification.
-		return margins.left() - scrollInfo_.x() * renderer_->defaultFont()->metrics().averageCharacterWidth();
+	const detail::PhysicalTextAnchor alignment(
+		detail::computePhysicalTextAnchor(layout.anchor(), layout.writingMode().inlineFlowDirection));
+	if(alignment == detail::LEFT /*|| ... != NO_JUSTIFICATION*/)	// TODO: this code ignores last visual line with justification.
+		return margins.left - scrollInfo_.x() * renderer_->defaultFont()->metrics().averageCharacterWidth();
 
-	int indent;
-	const Rect<> clientBounds(bounds(false));
-	if(renderer_->layouts().maximumInlineProgressionDimension() + margins.left() + margins.right() > clientBounds.width()) {
-		indent = renderer_->layouts().maximumInlineProgressionDimension() - layout.lineInlineProgressionDimension(0) + margins.left();
-		indent += (clientBounds.width() - margins.left() - margins.right()) % renderer_->defaultFont()->metrics().averageCharacterWidth();
+	Scalar indent;
+	const NativeRectangle clientBounds(bounds(false));
+	if(renderer_->layouts().maximumInlineProgressionDimension() + margins.left + margins.right > geometry::dx(clientBounds)) {
+		indent = renderer_->layouts().maximumInlineProgressionDimension() - layout.lineInlineProgressionDimension(0) + margins.left;
+		indent += (geometry::dx(clientBounds) - margins.left - margins.right) % renderer_->defaultFont()->metrics().averageCharacterWidth();
 	} else
-		indent = clientBounds.width() - layout.lineInlineProgressionDimension(0) - margins.right();
-	if(alignment == ALIGN_CENTER)
+		indent = geometry::dx(clientBounds) - layout.lineInlineProgressionDimension(0) - margins.right;
+	if(alignment == detail::MIDDLE)
 		indent /= 2;
 	else
-		assert(alignment == ALIGN_RIGHT);
+		assert(alignment == detail::RIGHT);
 	return indent - static_cast<long>(scrollInfo_.x()) * renderer_->defaultFont()->metrics().averageCharacterWidth();
 }
 
@@ -552,27 +553,27 @@ void TextViewer::hideToolTip() {
  * @return The result
  * @see TextViewer#HitTestResult
  */
-TextViewer::HitTestResult TextViewer::hitTest(const Point<>& p) const {
+TextViewer::HitTestResult TextViewer::hitTest(const NativePoint& p) const {
 	checkInitialization();
-	const Rect<> clientBounds(bounds(false));
-	if(!clientBounds.includes(p))
+	const NativeRectangle clientBounds(bounds(false));
+	if(!geometry::includes(clientBounds, p))
 		return OUT_OF_VIEW;
 
 	const RulerConfiguration& vrc = rulerConfiguration();
-	const TextAnchor rulerAlignment = utils::computeRulerAlignment(*this);
+	const bool rulerIsLeft = utils::isRulerLeftAligned(*this);
 
 	if(vrc.indicatorMargin.visible
-			&& ((verticalRulerAlignment == ALIGN_LEFT && p.x < vrc.indicatorMargin.width)
-			|| (verticalRulerAlignment == ALIGN_RIGHT && p.x >= clientBounds.right() - vrc.indicatorMargin.width)))
+			&& ((rulerIsLeft && geometry::x(p) < vrc.indicatorMargin.width)
+			|| (!rulerIsLeft && geometry::x(p) >= geometry::right(clientBounds) - vrc.indicatorMargin.width)))
 		return INDICATOR_MARGIN;
 	else if(vrc.lineNumbers.visible
-			&& ((verticalRulerAlignment == ALIGN_LEFT && p.x < rulerPainter_->width())
-			|| (verticalRulerAlignment == ALIGN_RIGHT && p.x >= clientBounds.right() - rulerPainter_->width())))
+			&& ((rulerIsLeft && geometry::x(p) < rulerPainter_->width())
+			|| (!rulerIsLeft && geometry::x(p) >= geometry::right(clientBounds) - rulerPainter_->width())))
 		return LINE_NUMBERS;
-	else if((vrc.alignment == ALIGN_LEFT && p.x < rulerPainter_->width() + configuration_.leadingMargin)
-			|| (verticalRulerAlignment == ALIGN_RIGHT && p.x >= clientBounds.right() - rulerPainter_->width() - configuration_.leadingMargin))
+	else if((vrc.alignment == ALIGN_LEFT && geometry::x(p) < rulerPainter_->width() + configuration_.leadingMargin)
+			|| (!rulerIsLeft && geometry::x(p) >= geometry::right(clientBounds) - rulerPainter_->width() - configuration_.leadingMargin))
 		return LEADING_MARGIN;
-	else if(p.y < textAreaMargins().top())
+	else if(geometry::y(p) < textAreaMargins().top)
 		return TOP_MARGIN;
 	else
 		return TEXT_AREA;
@@ -588,8 +589,8 @@ TextViewer::HitTestResult TextViewer::hitTest(const Point<>& p) const {
  * @see manah#windows#controls#Window#create
  */
 void TextViewer::initialize(const win32::Handle<HWND>& parent,
-		const Point<>& position /* = Point<>(CW_USEDEFAULT, CW_USEDEFAULT) */,
-		const Dimension<>& size /* = Dimension<>(CW_USEDEFAULT, CW_USEDEFAULT) */,
+		const NativePoint& position /* = geometry::make<NativePoint>(CW_USEDEFAULT, CW_USEDEFAULT) */,
+		const NativeSize& size /* = geometry::make<NativeSize>(CW_USEDEFAULT, CW_USEDEFAULT) */,
 		DWORD style /* = 0 */, DWORD extendedStyle /* = 0 */) {
 	const bool visible = win32::boole(style & WS_VISIBLE);
 	style &= ~WS_VISIBLE;	// 後で足す
@@ -766,7 +767,7 @@ void TextViewer::initialize(const win32::Handle<HWND>& parent,
 		class Iterator : public StyledTextRunIterator {
 		public:
 			Iterator(length_t lineLength, bool beginningIsBlackBack) : length_(lineLength), beginningIsBlackBack_(beginningIsBlackBack) {
-				current_.column = 0;
+				current_ = StyledTextRun(0, current_.style());
 				update();
 			}
 			void current(StyledTextRun& sr) const {
@@ -780,7 +781,7 @@ void TextViewer::initialize(const win32::Handle<HWND>& parent,
 			void next() {
 				if(!hasNext())
 					throw IllegalStateException("");
-				++current_.column;
+				current_ = StyledTextRun(current_.position() + 1, current_.style());
 				update();
 			}
 		private:
@@ -788,9 +789,11 @@ void TextViewer::initialize(const win32::Handle<HWND>& parent,
 				int temp = beginningIsBlackBack_ ? 0 : 1;
 				temp += (current_.position() % 2 == 0) ? 0 : 1;
 				auto_ptr<TextRunStyle> style(new TextRunStyle);
-				style->foreground = (temp % 2 == 0) ? Color(0xff, 0x00, 0x00) : Color::fromCOLORREF(::GetSysColor(COLOR_WINDOWTEXT));
-				style->background = (temp % 2 == 0) ? Color(0xff, 0xcc, 0xcc) : Color::fromCOLORREF(::GetSysColor(COLOR_WINDOW));
-				current_.style.reset(style.release());
+				style->foreground = Paint((temp % 2 == 0) ?
+					Color(0xff, 0x00, 0x00) : Color::fromCOLORREF(::GetSysColor(COLOR_WINDOWTEXT)));
+				style->background = Paint((temp % 2 == 0) ?
+					Color(0xff, 0xcc, 0xcc) : Color::fromCOLORREF(::GetSysColor(COLOR_WINDOW)));
+				current_ = StyledTextRun(current_.position(), style);
 			}
 		private:
 			const length_t length_;
@@ -839,15 +842,16 @@ void TextViewer::lockScroll(bool unlock /* = false */) {
 void TextViewer::mapClientYToLine(int y, length_t* logicalLine, length_t* visualSublineOffset, bool* snapped /* = 0 */) const /*throw()*/ {
 	if(logicalLine == 0 && visualSublineOffset == 0)
 		return;
-	const Rect<> margins(textAreaMargins());
+	const Margins margins(textAreaMargins());
 	if(snapped != 0) {
-		const Rect<> clientBounds(bounds(false));
-		*snapped = y < clientBounds.top() + margins.top() || y >= clientBounds.bottom() - margins.bottom();
+		const NativeRectangle clientBounds(bounds(false));
+		*snapped = y < geometry::top(clientBounds) + margins.top || y >= geometry::bottom(clientBounds) - margins.bottom;
 	}
-	y -= margins.top();
+	y -= margins.top;
 	length_t line, subline;
 	firstVisibleLine(&line, 0, &subline);
-	renderer_->offsetVisualLine(line, subline, y / renderer_->defaultFont()->metrics().linePitch(), (snapped == 0 || *snapped) ? 0 : snapped);
+	renderer_->layouts().offsetVisualLine(
+		line, subline, y / renderer_->defaultFont()->metrics().linePitch(), (snapped == 0 || *snapped) ? 0 : snapped);
 	if(logicalLine != 0)
 		*logicalLine = line;
 	if(visualSublineOffset != 0)
@@ -865,22 +869,22 @@ void TextViewer::mapClientYToLine(int y, length_t* logicalLine, length_t* visual
  * @see #mapClientYToLine, TextRenderer#offsetVisualLine
  */
 int TextViewer::mapLineToClientY(length_t line, bool fullSearch) const {
-	const Rect<> margins(textAreaMargins());
+	const Margins margins(textAreaMargins());
 	if(line == scrollInfo_.firstVisibleLine) {
 		if(scrollInfo_.firstVisibleSubline == 0)
-			return margins.top();
+			return margins.top;
 		else
-			return fullSearch ? margins.top()
+			return fullSearch ? margins.top
 				- static_cast<int>(renderer_->defaultFont()->metrics().linePitch() * scrollInfo_.firstVisibleSubline) : -32768;
 	} else if(line > scrollInfo_.firstVisibleLine) {
 		const Scalar lineSpan = renderer_->defaultFont()->metrics().linePitch();
-		const Rect<> clientBounds(bounds(false));
-		Scalar y = margins.top();
+		const NativeRectangle clientBounds(bounds(false));
+		Scalar y = margins.top;
 		y += lineSpan * static_cast<Scalar>(
 			renderer_->layouts().numberOfSublinesOfLine(scrollInfo_.firstVisibleLine) - scrollInfo_.firstVisibleSubline);
 		for(length_t i = scrollInfo_.firstVisibleLine + 1; i < line; ++i) {
 			y += lineSpan * static_cast<Scalar>(renderer_->layouts().numberOfSublinesOfLine(i));
-			if(y >= clientBounds.size().cy && !fullSearch)
+			if(y >= geometry::dy(clientBounds) && !fullSearch)
 				return 32767;
 		}
 		return y;
@@ -888,7 +892,7 @@ int TextViewer::mapLineToClientY(length_t line, bool fullSearch) const {
 		return -32768;
 	else {
 		const Scalar linePitch = renderer_->defaultFont()->metrics().linePitch();
-		Scalar y = margins.top() - static_cast<Scalar>(linePitch * scrollInfo_.firstVisibleSubline);
+		Scalar y = margins.top - static_cast<Scalar>(linePitch * scrollInfo_.firstVisibleSubline);
 		for(length_t i = scrollInfo_.firstVisibleLine - 1; ; --i) {
 			y -= static_cast<Scalar>(renderer_->layouts().numberOfSublinesOfLine(i) * linePitch);
 			if(i == line)
@@ -940,12 +944,12 @@ void TextViewer::overtypeModeChanged(const Caret&) {
 void TextViewer::paint(PaintContext& context) {
 	if(isFrozen())	// skip if frozen
 		return;
-	const Rect<> scheduledBounds(context.boundsToPaint());
-	if(scheduledBounds.width() == 0 || scheduledBounds.height() == 0)	// skip if the region to paint is empty
+	const NativeRectangle scheduledBounds(geometry::normalize(context.boundsToPaint()));
+	if(geometry::isEmpty(scheduledBounds))	// skip if the region to paint is empty
 		return;
 
 	const k::Document& doc = document();
-	const Rect<> clientBounds(bounds(false));
+	const NativeRectangle clientBounds(bounds(false));
 
 //	Timer tm(L"onPaint");
 
@@ -956,24 +960,24 @@ void TextViewer::paint(PaintContext& context) {
 	rulerPainter_->paint(context);
 
 	// draw horizontal margins
-	const Rect<> margins(textAreaMargins());
+	const Margins margins(textAreaMargins());
 	const Color marginColor((configuration_.background != Color()) ?
 		configuration_.background : Color::fromCOLORREF(::GetSysColor(COLOR_WINDOW)));
-	if(margins.left() > 0) {
-		const int vrWidth = (utils::computeRulerAlignment(*this) == ALIGN_LEFT) ? rulerPainter_->width() : 0;
+	if(margins.left > 0) {
+		const int vrWidth = utils::isRulerLeftAligned(*this) ? rulerPainter_->width() : 0;
+		context.setFillStyle(Paint(marginColor));
 		context.fillRectangle(
-			Rect<>(
-				Point<>(clientBounds.left() + vrWidth, scheduledBounds.top()),
-				Dimension<>(margins.left() - vrWidth, scheduledBounds.height())),
-			marginColor);
+			geometry::make<NativeRectangle>(
+				geometry::make<NativePoint>(geometry::left(clientBounds) + vrWidth, geometry::top(scheduledBounds)),
+				geometry::make<NativeSize>(margins.left - vrWidth, geometry::dy(scheduledBounds))));
 	}
-	if(margins.right() > 0) {
-		const int vrWidth = (utils::computeRulerAlignment(*this) == ALIGN_RIGHT) ? rulerPainter_->width() : 0;
+	if(margins.right > 0) {
+		const int vrWidth = !utils::isRulerLeftAligned(*this) ? rulerPainter_->width() : 0;
+		context.setFillStyle(Paint(marginColor));
 		context.fillRectangle(
-			Rect<>(
-				Point<>(clientBounds.right() - margins.right(), scheduledBounds.top()),
-				Dimension<>(margins.right() - vrWidth, scheduledBounds.height())),
-			marginColor);
+			geometry::make<NativeRectangle>(
+				geometry::make<NativePoint>(geometry::right(clientBounds) - margins.right, geometry::top(scheduledBounds)),
+				geometry::make<NativeSize>(margins.right - vrWidth, geometry::dy(scheduledBounds))));
 	}
 
 	// draw lines
@@ -982,16 +986,19 @@ void TextViewer::paint(PaintContext& context) {
 			Color::fromCOLORREF(::GetSysColor(hasFocus() ? COLOR_HIGHLIGHTTEXT : COLOR_INACTIVECAPTIONTEXT)),
 		configuration_.selectionBackground != Color() ? configuration_.selectionBackground :
 			Color::fromCOLORREF(::GetSysColor(hasFocus() ? COLOR_HIGHLIGHT : COLOR_INACTIVECAPTION)));
-	Rect<> lineBounds(clientBounds);
-	lineBounds.left() += margins.left();
-	lineBounds.top() += margins.top();
-	lineBounds.right() -= margins.right();
-	lineBounds.bottom() -= margins.bottom();
+	NativeRectangle lineBounds(clientBounds);
+	assert(geometry::isNormalized(lineBounds));
+	geometry::range<geometry::X_COORDINATE>(lineBounds) = makeRange(
+		geometry::left(lineBounds) + margins.left, geometry::right(lineBounds) - margins.right);
+	geometry::range<geometry::Y_COORDINATE>(lineBounds) = makeRange(
+		geometry::top(lineBounds) + margins.top, geometry::bottom(lineBounds) - margins.bottom);
+	if(!geometry::isNormalized(lineBounds))
+		geometry::resize(lineBounds, geometry::make<NativeSize>(0, 0));
 	length_t line, subline;
-	mapClientYToLine(scheduledBounds.top(), &line, &subline);
+	mapClientYToLine(geometry::top(scheduledBounds), &line, &subline);
 	Scalar y = mapLineToClientY(line, true);
 	if(line < lines) {
-		while(y < scheduledBounds.bottom() && line < lines) {
+		while(y < geometry::bottom(scheduledBounds) && line < lines) {
 			// draw a logical line
 			renderer_->renderLine(line, context, getDisplayXOffset(line), y, scheduledBounds, lineBounds, &selection);
 			y += linePitch * static_cast<Scalar>(renderer_->layouts().numberOfSublinesOfLine(line++));
@@ -1000,20 +1007,22 @@ void TextViewer::paint(PaintContext& context) {
 	}
 
 	// paint behind the last
-	if(scheduledBounds.bottom() > y && y > margins.top() + linePitch - 1)
+	if(geometry::bottom(scheduledBounds) > y && y > margins.top + linePitch - 1) {
+		context.setFillStyle(Paint(marginColor));
 		context.fillRectangle(
-			Rect<>(
-				Point<>(clientBounds.left() + margins.left(), y),
-				Dimension<>(clientBounds.width() - margins.left() - margins.right(), scheduledBounds.bottom() - y)),
-			marginColor);
+			geometry::make<NativeRectangle>(
+				geometry::make<NativePoint>(geometry::left(clientBounds) + margins.left, y),
+				geometry::make<NativeSize>(geometry::dx(clientBounds) - margins.left - margins.right, geometry::bottom(scheduledBounds) - y)));
+	}
 
 	// draw top margin
-	if(margins.top() > 0)
+	if(margins.top > 0) {
+		context.setFillStyle(Paint(marginColor));
 		context.fillRectangle(
-			Rect<>(
-				Point<>(clientBounds.left() + margins.left(), clientBounds.top()),
-				Dimension<>(clientBounds.width() - margins.left() - margins.right(), margins.top())),
-			marginColor);
+			geometry::make<NativeRectangle>(
+				geometry::make<NativePoint>(geometry::left(clientBounds) + margins.left, geometry::top(clientBounds)),
+				geometry::make<NativeSize>(geometry::dx(clientBounds) - margins.left - margins.right, margins.top)));
+	}
 }
 
 /// Recreates and shows the caret. If the viewer does not have focus, nothing heppen.
@@ -1023,11 +1032,11 @@ void TextViewer::recreateCaret() {
 	::DestroyCaret();
 	caretShape_.bitmap.reset();
 
-	Dimension<> solidSize(0, 0);
+	NativeSize solidSize(geometry::make<NativeSize>(0, 0));
 	if(imeComposingCharacter_)
 		solidSize = getCurrentCharacterSize(*this);
 	else if(imeCompositionActivated_)
-		solidSize.cx = solidSize.cy = 1;
+		geometry::dx(solidSize) = geometry::dy(solidSize) = 1;
 	else if(caretShape_.shaper.get() != 0)
 		caretShape_.shaper->shape(caretShape_.bitmap, solidSize, caretShape_.readingDirection);
 	else {
@@ -1044,7 +1053,7 @@ void TextViewer::recreateCaret() {
 		::GetObjectW(caretShape_.bitmap.get(), sizeof(HBITMAP), &bitmap);
 		caretShape_.width = bitmap.bmWidth;
 	} else
-		::CreateCaret(identifier().get(), 0, caretShape_.width = solidSize.cx, solidSize.cy);
+		::CreateCaret(identifier().get(), 0, caretShape_.width = geometry::dx(solidSize), geometry::dy(solidSize));
 	::ShowCaret(identifier().get());
 	updateCaretPosition();
 }
@@ -1090,35 +1099,39 @@ void TextViewer::redrawLines(length_t first, length_t last) {
 			<< static_cast<unsigned long>(first) << L".." << static_cast<unsigned long>(last) << L"]\n";
 #endif // _DEBUG
 
-	Rect<> rect(bounds(false));
+	NativeRectangle rect(bounds(false));
+	assert(geometry::isNormalized(rect));
 
 	// 上端
-	rect.top() = max(mapLineToClientY(first, false), configuration_.topMargin);
-	if(rect.size().cy <= 0)
+	geometry::set<0>(rect, geometry::make<NativePoint>(
+		geometry::x(geometry::get<0>(rect)), max(mapLineToClientY(first, false), configuration_.topMargin)));
+	if(geometry::dy(rect) <= 0)
 		return;
 	// 下端
 	if(last != numeric_limits<length_t>::max()) {
-		Scalar bottom = rect.top() + static_cast<Scalar>(
+		Scalar bottom = geometry::top(rect) + static_cast<Scalar>(
 			renderer_->layouts().numberOfSublinesOfLine(first) * renderer_->defaultFont()->metrics().linePitch());
 		for(length_t line = first + 1; line <= last; ++line) {
 			bottom += static_cast<Scalar>(
 				renderer_->layouts().numberOfSublinesOfLine(line) * renderer_->defaultFont()->metrics().linePitch());
-			if(bottom >= rect.bottom())
+			if(bottom >= geometry::bottom(rect))
 				break;
 		}
-		if(bottom < rect.bottom())
-			rect.bottom() = bottom;
+		if(bottom < geometry::bottom(rect))
+			geometry::set<1>(rect, geometry::make<NativePoint>(geometry::x(geometry::get<1>(rect)), bottom));
 	}
 	scheduleRedraw(rect, false);
 }
 
 /// Redraws the ruler.
 void TextViewer::repaintRuler() {
-	Rect<> r(bounds(false));
-	if(rulerPainter_->configuration().alignment == ALIGN_LEFT)
-		r.right() = r.left() + rulerPainter_->width();
+	NativeRectangle r(bounds(false));
+	if(utils::isRulerLeftAligned(*this))
+		geometry::range<geometry::X_COORDINATE>(r) =
+			makeRange(geometry::left(r), geometry::left(r) + rulerPainter_->width());
 	else
-		r.left() = r.right() - rulerPainter_->width();
+		geometry::range<geometry::X_COORDINATE>(r) =
+			makeRange(geometry::right(r) - rulerPainter_->width(), geometry::right(r));
 	scheduleRedraw(r, false);
 }
 
@@ -1148,7 +1161,7 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 		dy = max(dy, -scrollInfo_.vertical.position);
 		if(dy != 0) {
 			scrollInfo_.vertical.position += dy;
-			renderer_->offsetVisualLine(scrollInfo_.firstVisibleLine, scrollInfo_.firstVisibleSubline, dy);
+			renderer_->layouts().offsetVisualLine(scrollInfo_.firstVisibleLine, scrollInfo_.firstVisibleSubline, dy);
 			if(!isFrozen())
 				setScrollPosition(SB_VERT, scrollInfo_.vertical.position, true);
 		}
@@ -1163,40 +1176,38 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 	hideToolTip();
 
 	// scroll
-	const Rect<> margins(textAreaMargins());
-	Rect<> clientBounds(bounds(false));
-	Rect<> clipBounds(clientBounds);
-	clipBounds.top() += margins.top();
-	clipBounds.bottom() -= margins.bottom();
+	const Margins margins(textAreaMargins());
+	NativeRectangle clientBounds(bounds(false));
+	NativeRectangle clipBounds(clientBounds);
+	assert(geometry::isNormalized(clipBounds));
+	geometry::range<geometry::Y_COORDINATE>(clipBounds) = makeRange(
+		geometry::top(clipBounds) + margins.top, geometry::bottom(clipBounds) - margins.bottom);
 	if(static_cast<unsigned int>(abs(dy)) >= numberOfVisibleLines())
 		scheduleRedraw(clipBounds, false);	// redraw all if the amount of the scroll is over a page
 	else if(dx == 0) {	// only vertical
-		const RECT temp(toNative(clipBounds));
 		::ScrollWindowEx(identifier().get(),
-			0, -dy * scrollRate(false) * renderer_->defaultFont()->metrics().linePitch(), 0, &temp, 0, 0, SW_INVALIDATE);
+			0, -dy * scrollRate(false) * renderer_->defaultFont()->metrics().linePitch(), 0, &clipBounds, 0, 0, SW_INVALIDATE);
 	} else {	// process the leading margin and the edit region independently
 		// scroll the edit region
-		clipBounds.left() += margins.left();
-		clipBounds.right() -= margins.right();
+		geometry::range<geometry::X_COORDINATE>(clipBounds) = makeRange(
+			geometry::left(clipBounds) + margins.left, geometry::right(clipBounds) - margins.right);
 		if(static_cast<unsigned int>(abs(dx)) >= numberOfVisibleColumns())
 			scheduleRedraw(clipBounds, false);	// redraw all if the amount of the scroll is over a page
 		else
 			::ScrollWindowEx(identifier().get(),
 				-dx * scrollRate(true) * renderer_->defaultFont()->metrics().averageCharacterWidth(),
 				-dy * scrollRate(false) * renderer_->defaultFont()->metrics().linePitch(),
-				0, &toNative(clipBounds), 0, 0, SW_INVALIDATE);
+				0, &clipBounds, 0, 0, SW_INVALIDATE);
 		// scroll the vertical ruler
 		if(dy != 0) {
-			if(rulerPainter_->configuration().alignment == ALIGN_LEFT) {
-				clipBounds.left() = clientBounds.left();
-				clipBounds.right() = clipBounds.left() + rulerPainter_->width();
-			} else {
-				clipBounds.right() = clientBounds.right();
-				clipBounds.left() = clipBounds.right() - rulerPainter_->width();
-			}
-			const RECT temp(toNative(clipBounds));
+			if(rulerPainter_->configuration().alignment == ALIGN_LEFT)
+				geometry::range<geometry::X_COORDINATE>(clipBounds) = makeRange(
+					geometry::left(clipBounds), geometry::left(clipBounds) + rulerPainter_->width());
+			else
+				geometry::range<geometry::X_COORDINATE>(clipBounds) = makeRange(
+					geometry::right(clipBounds) - rulerPainter_->width(), geometry::right(clientBounds));
 			::ScrollWindowEx(identifier().get(),
-				0, -dy * scrollRate(false) * renderer_->defaultFont()->metrics().linePitch(), 0, &temp, 0, 0, SW_INVALIDATE);
+				0, -dy * scrollRate(false) * renderer_->defaultFont()->metrics().linePitch(), 0, &clipBounds, 0, 0, SW_INVALIDATE);
 		}
 	}
 
@@ -1208,17 +1219,17 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 }
 
 /// @see Widget#resized
-void TextViewer::resized(State state, const Dimension<>&) {
+void TextViewer::resized(State state, const NativeSize&) {
 	utils::closeCompletionProposalsPopup(*this);
 	if(state == MINIMIZED)
 		return;
 
 	// notify the tooltip
 	win32::AutoZeroSize<TOOLINFOW> ti;
-	const Rect<> viewerBounds(bounds(false));
+	const NativeRectangle viewerBounds(bounds(false));
 	ti.hwnd = identifier().get();
 	ti.uId = 1;
-	ti.rect = toNative(viewerBounds);
+	ti.rect = viewerBounds;
 	::SendMessageW(toolTip_, TTM_NEWTOOLRECT, 0, reinterpret_cast<LPARAM>(&ti));
 
 	if(renderer_.get() == 0)
@@ -1370,7 +1381,7 @@ void TextViewer::setMouseInputStrategy(MouseInputStrategy* newStrategy, bool del
  * @param timeToWait the time to wait in milliseconds. -1 to use the system default value
  * @param timeRemainsVisible the time remains visible in milliseconds. -1 to use the system default value
  */
-void TextViewer::showToolTip(const String& text, ulong timeToWait /* = -1 */, ulong timeRemainsVisible /* = -1 */) {
+void TextViewer::showToolTip(const String& text, unsigned long timeToWait /* = -1 */, unsigned long timeRemainsVisible /* = -1 */) {
 	checkInitialization();
 
 	delete[] tipText_;
@@ -1401,18 +1412,18 @@ HRESULT TextViewer::startTextServices() {
 
 /**
  * Returns the margins of text area.
- * @return The rectangle whose members correspond to each margins
+ * @return The margins
  */
-Rect<> TextViewer::textAreaMargins() const /*throw()*/ {
-	Rect<> margins(Point<>(0, 0), Dimension<>(0, 0));
-	((utils::computeRulerAlignment(*this) == ALIGN_LEFT) ? margins.left() : margins.right()) += rulerPainter_->width();
-	const TextAnchor alignment = resolveTextAlignment(
-		defaultTextAlignment(presentation()), configuration_.readingDirection);
-	if(alignment == ALIGN_LEFT)
-		margins.left() += configuration_.leadingMargin;
-	else if(alignment == ALIGN_RIGHT)
-		margins.right() += configuration_.leadingMargin;
-	margins.top() += configuration_.topMargin;
+TextViewer::Margins TextViewer::textAreaMargins() const /*throw()*/ {
+	Margins margins = {0, 0, 0, 0};
+	(utils::isRulerLeftAligned(*this) ? margins.left : margins.right) += rulerPainter_->width();
+	const detail::PhysicalTextAnchor alignment = detail::computePhysicalTextAnchor(
+		presentation().globalTextStyle()->defaultLineStyle->anchor, configuration_.readingDirection);
+	if(alignment == detail::LEFT)
+		margins.left += configuration_.leadingMargin;
+	else if(alignment == detail::RIGHT)
+		margins.right += configuration_.leadingMargin;
+	margins.top += configuration_.topMargin;
 	return margins;
 }
 
@@ -1443,20 +1454,21 @@ void TextViewer::updateCaretPosition() {
 	if(!hasFocus() || isFrozen())
 		return;
 
-	Point<> p(clientXYForCharacter(caret(), false, TextLayout::LEADING));
-	const Rect<> margins(textAreaMargins());
-	Rect<> textArea(bounds(false));
-	textArea.left() += margins.left();
-	textArea.top() += margins.top();
-	textArea.right() -= margins.right() - 1;
-	textArea.bottom() -= margins.bottom();
+	NativePoint p(clientXYForCharacter(caret(), false, TextLayout::LEADING));
+	const Margins margins(textAreaMargins());
+	NativeRectangle textArea(bounds(false));
+	assert(geometry::isNormalized(textArea));
+	geometry::range<geometry::X_COORDINATE>(textArea) = makeRange(
+		geometry::left(textArea) + margins.left, geometry::right(textArea) - margins.right - 1);
+	geometry::range<geometry::Y_COORDINATE>(textArea) = makeRange(
+		geometry::top(textArea) + margins.top, geometry::bottom(textArea) - margins.bottom);
 
-	if(!textArea.includes(p))
-		p.y = -renderer_->defaultFont()->metrics().linePitch();	// "hide" the caret
+	if(!geometry::includes(textArea, p))
+		geometry::y(p) = -renderer_->defaultFont()->metrics().linePitch();	// "hide" the caret
 	else if(caretShape_.readingDirection == RIGHT_TO_LEFT
 			|| renderer_->layouts()[caret().line()].bidiEmbeddingLevel(caret().column()) % 2 == 1)
-		p.x -= caretShape_.width;
-	::SetCaretPos(p.x, p.y);
+		geometry::x(p) -= caretShape_.width;
+	::SetCaretPos(geometry::x(p), geometry::y(p));
 	updateIMECompositionWindowPosition();
 }
 
@@ -1629,7 +1641,7 @@ AutoFreeze::~AutoFreeze() /*throw()*/ {
 // TextViewer.RulerConfiguration //////////////////////////////////////////////////////////////////
 
 /// Default constructor.
-TextViewer::RulerConfiguration::RulerConfiguration() /*throw()*/ : alignment(ANCHOR_START) {
+TextViewer::RulerConfiguration::RulerConfiguration() /*throw()*/ : alignment(TEXT_ANCHOR_START) {
 }
 
 
@@ -1637,7 +1649,7 @@ TextViewer::RulerConfiguration::RulerConfiguration() /*throw()*/ : alignment(ANC
 
 /// Constructor initializes the all members to their default values.
 TextViewer::RulerConfiguration::LineNumbers::LineNumbers() /*throw()*/ : visible(false),
-		anchor(ANCHOR_END), startValue(1), minimumDigits(4), leadingMargin(6), trailingMargin(1),
+		anchor(TEXT_ANCHOR_END), startValue(1), minimumDigits(4), leadingMargin(6), trailingMargin(1),
 		borderColor(Color()), borderWidth(1), borderStyle(SOLID) {
 }
 
@@ -1694,9 +1706,9 @@ void TextViewer::Renderer::rewrapAtWindowEdge() {
 	};
 
 	if(viewer_.configuration().lineWrap.wrapsAtWindowEdge()) {
-		const Rect<> clientBounds(viewer_.bounds(false));
-		const Rect<> margins(viewer_.textAreaMargins());
-		layouts().invalidateIf(Local(clientBounds.width() - margins.left() - margins.right()));
+		const NativeRectangle clientBounds(viewer_.bounds(false));
+		const Margins margins(viewer_.textAreaMargins());
+		layouts().invalidateIf(Local(geometry::dx(clientBounds) - margins.left - margins.right));
 	}
 }
 
@@ -1709,9 +1721,9 @@ Scalar TextViewer::Renderer::width() const /*throw()*/ {
 		viewer_.scrollInformation(SB_HORZ, si);
 		return (si.nMax + 1) * viewer_.textRenderer().defaultFont()->metrics().averageCharacterWidth();
 	} else if(lwc.wrapsAtWindowEdge()) {
-		const Rect<> clientBounds(viewer_.bounds(false));
-		const Rect<> margins(viewer_.textAreaMargins());
-		return clientBounds.width() - margins.left() - margins.right();
+		const NativeRectangle clientBounds(viewer_.bounds(false));
+		const Margins margins(viewer_.textAreaMargins());
+		return geometry::dx(clientBounds) - margins.left - margins.right;
 	} else
 		return lwc.width;
 }
@@ -1743,17 +1755,18 @@ uint8_t TextViewer::RulerPainter::maximumDigitsForLineNumbers() const /*throw()*
 }
 
 void TextViewer::RulerPainter::setConfiguration(const RulerConfiguration& configuration) {
-	if(configuration.alignment != ALIGN_START && configuration.alignment != ALIGN_END
-			&& configuration.alignment != ALIGN_LEFT && configuration.alignment != ALIGN_RIGHT)
-		throw UnknownValueException("verticalRuler->alignment");
-	if(configuration.lineNumbers.alignment != ALIGN_START && configuration.lineNumbers.alignment != ALIGN_END
-			&& configuration.lineNumbers.alignment != ALIGN_LEFT && configuration.lineNumbers.alignment != ALIGN_RIGHT
-			&& configuration.lineNumbers.alignment != ALIGN_CENTER && configuration.lineNumbers.alignment != JUSTIFY)
-		throw UnknownValueException("verticalRuler->lineNumber.alignment");
-	if(configuration.lineNumbers.readingDirection != LEFT_TO_RIGHT
-			&& configuration.lineNumbers.readingDirection != RIGHT_TO_LEFT
-			&& configuration.lineNumbers.readingDirection != INHERIT_READING_DIRECTION)
-		throw UnknownValueException("verticalRuler->lineNumber.readingDirection");
+	if(configuration.alignment != TEXT_ANCHOR_START && configuration.alignment != TEXT_ANCHOR_END)
+		throw UnknownValueException("configuration.alignment");
+	if(configuration.lineNumbers.anchor != TEXT_ANCHOR_START
+			&& configuration.lineNumbers.anchor != TEXT_ANCHOR_MIDDLE
+			&& configuration.lineNumbers.anchor != TEXT_ANCHOR_END)
+		throw UnknownValueException("configuration.lineNumbers.anchor");
+//	if(configuration.lineNumbers.justification != ...)
+//		throw UnknownValueException("");
+	if(!configuration.lineNumbers.readingDirection.inherits()
+			&& configuration.lineNumbers.readingDirection != LEFT_TO_RIGHT
+			&& configuration.lineNumbers.readingDirection != RIGHT_TO_LEFT)
+		throw UnknownValueException("configuration.lineNumbers.readingDirection");
 	configuration_ = configuration;
 	update();
 }
@@ -1794,9 +1807,10 @@ void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, int bars, bool 
 		// テキストが左揃えでない場合は、スクロールボックスの位置を補正する必要がある
 		// (ウィンドウが常に LTR である仕様のため)
 	//	const TextAlignment alignment = resolveTextAlignment(viewer.configuration().alignment, viewer.configuration().readingDirection);
-		const int dx = viewer.textRenderer().textMetrics().averageCharacterWidth();
+		const int dx = viewer.textRenderer().defaultFont()->metrics().averageCharacterWidth();
 		assert(dx > 0);
-		const ulong columns = (!viewer.configuration().lineWrap.wrapsAtWindowEdge()) ? viewer.textRenderer().maximumInlineProgressionDimension() / dx : 0;
+		const unsigned long columns = (!viewer.configuration().lineWrap.wrapsAtWindowEdge()) ?
+			viewer.textRenderer().layouts().maximumInlineProgressionDimension() / dx : 0;
 //		horizontal.rate = columns / numeric_limits<int>::max() + 1;
 //		assert(horizontal.rate != 0);
 		const int oldMaximum = horizontal.maximum;
@@ -1820,7 +1834,7 @@ void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, int bars, bool 
 	}
 	// about vertical
 	if(bars == SB_VERT || bars == SB_BOTH) {
-		const length_t lines = viewer.textRenderer().numberOfVisualLines();
+		const length_t lines = viewer.textRenderer().layouts().numberOfVisualLines();
 		assert(lines > 0);
 //		vertical.rate = static_cast<ulong>(lines) / numeric_limits<int>::max() + 1;
 //		assert(vertical.rate != 0);
@@ -1831,10 +1845,11 @@ void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, int bars, bool 
 }
 
 void TextViewer::ScrollInfo::updateVertical(const TextViewer& viewer) /*throw()*/ {
-	vertical.maximum = static_cast<int>(viewer.textRenderer().numberOfVisualLines());
+	const LineLayoutVector& layouts = viewer.textRenderer().layouts();
+	vertical.maximum = static_cast<int>(layouts.numberOfVisualLines());
 	firstVisibleLine = min(firstVisibleLine, viewer.document().numberOfLines() - 1);
-	firstVisibleSubline = min(viewer.textRenderer().numberOfSublinesOfLine(firstVisibleLine) - 1, firstVisibleSubline);
-	vertical.position = static_cast<int>(viewer.textRenderer().mapLogicalLineToVisualLine(firstVisibleLine) + firstVisibleSubline);
+	firstVisibleSubline = min(layouts.numberOfSublinesOfLine(firstVisibleLine) - 1, firstVisibleSubline);
+	vertical.position = static_cast<int>(layouts.mapLogicalLineToVisualLine(firstVisibleLine) + firstVisibleSubline);
 }
 
 
@@ -1854,19 +1869,19 @@ VirtualBox::VirtualBox(const TextViewer& view, const k::Region& region) /*throw(
  * @param p The client coordinates of the point
  * @return @c true If the point is on the virtual box
  */
-bool VirtualBox::isPointOver(const graphics::Point<>& p) const /*throw()*/ {
+bool VirtualBox::isPointOver(const graphics::NativePoint& p) const /*throw()*/ {
 	assert(view_.isWindow());
 	if(view_.hitTest(p) != TextViewer::TEXT_AREA)	// ignore if not in text area
 		return false;
-	const int leftMargin = view_.textAreaMargins().left();
-	if(p.x < left() + leftMargin || p.x >= right() + leftMargin)	// about x-coordinate
+	const Scalar leftMargin = view_.textAreaMargins().left;
+	if(geometry::x(p) < startEdge() + leftMargin || geometry::x(p) >= endEdge() + leftMargin)	// about x-coordinate
 		return false;
 
 	// about y-coordinate
 	const Point& top = beginning();
 	const Point& bottom = end();
 	length_t line, subline;
-	view_.mapClientYToLine(p.y, &line, &subline);	// $friendly-access
+	view_.mapClientYToLine(geometry::y(p), &line, &subline);	// $friendly-access
 	if(line < top.line || (line == top.line && subline < top.subline))
 		return false;
 	else if(line > bottom.line || (line == bottom.line && subline > bottom.subline))
@@ -1891,12 +1906,12 @@ bool VirtualBox::overlappedSubline(length_t line, length_t subline, Range<length
 		return false;
 	else {
 		const TextRenderer& renderer = view_.textRenderer();
-		const TextLayout& layout = renderer.lineLayout(line);
+		const TextLayout& layout = renderer.layouts().at(line);
 		range = Range<length_t>(
-			layout.offset(points_[0].x - renderer.lineIndent(line, 0),
-				static_cast<Scalar>(renderer.defaultFont()->metrics().linePitch() * subline)).first,
-			layout.offset(points_[1].x - renderer.lineIndent(line, 0),
-				static_cast<Scalar>(renderer.defaultFont()->metrics().linePitch() * subline)).first);
+			layout.offset(geometry::make<NativePoint>(points_[0].ipd - renderer.lineIndent(line, 0),
+				static_cast<Scalar>(renderer.defaultFont()->metrics().linePitch() * subline))).first,
+			layout.offset(geometry::make<NativePoint>(points_[1].ipd - renderer.lineIndent(line, 0),
+				static_cast<Scalar>(renderer.defaultFont()->metrics().linePitch() * subline))).first);
 		return !range.isEmpty();
 	}
 }
@@ -1907,14 +1922,14 @@ bool VirtualBox::overlappedSubline(length_t line, length_t subline, Range<length
  */
 void VirtualBox::update(const k::Region& region) /*throw()*/ {
 	const TextRenderer& r = view_.textRenderer();
-	const TextLayout* layout = &r.lineLayout(points_[0].line = region.first.line);
-	graphics::Point<> location(layout->location(region.first.column));
-	points_[0].x = location.x + r.lineIndent(points_[0].line, 0);
-	points_[0].subline = location.y / r.defaultFont()->metrics().linePitch();
-	layout = &r.lineLayout(points_[1].line = region.second.line);
+	const TextLayout* layout = &r.layouts().at(points_[0].line = region.first.line);
+	graphics::NativePoint location(layout->location(region.first.column));
+	points_[0].ipd = geometry::x(location) + r.lineIndent(points_[0].line, 0);
+	points_[0].subline = geometry::y(location) / r.defaultFont()->metrics().linePitch();
+	layout = &r.layouts().at(points_[1].line = region.second.line);
 	location = layout->location(region.second.column);
-	points_[1].x = location.x + r.lineIndent(points_[1].line, 0);
-	points_[1].subline = location.y / r.defaultFont()->metrics().linePitch();
+	points_[1].ipd = geometry::x(location) + r.lineIndent(points_[1].line, 0);
+	points_[1].subline = geometry::y(location) / r.defaultFont()->metrics().linePitch();
 }
 
 
@@ -1950,12 +1965,11 @@ void DefaultCaretShaper::install(CaretShapeUpdater& updater) /*throw()*/ {
 }
 
 /// @see CaretShaper#shape
-void DefaultCaretShaper::shape(win32::Handle<HBITMAP>&, Dimension<>& solidSize, ReadingDirection& readingDirection) /*throw()*/ {
+void DefaultCaretShaper::shape(win32::Handle<HBITMAP>&, NativeSize& solidSize, ReadingDirection& readingDirection) /*throw()*/ {
 	DWORD width;
 	if(::SystemParametersInfo(SPI_GETCARETWIDTH, 0, &width, 0) == 0)
 		width = 1;	// NT4 does not support SPI_GETCARETWIDTH
-	solidSize.cx = width;
-	solidSize.cy = viewer_->textRenderer().textMetrics().cellHeight();
+	solidSize = geometry::make<NativeSize>(width, viewer_->textRenderer().defaultFont()->metrics().cellHeight());
 	readingDirection = LEFT_TO_RIGHT;	// no matter
 }
 
@@ -1986,7 +2000,7 @@ namespace {
 	 * @param height The height of the bitmap
 	 * @return The bitmap. This value is allocated via the global @c operator @c new
 	 */
-	inline BITMAPINFO* prepareCaretBitmap(const win32::Handle<HDC>& dc, ushort width, ushort height) {
+	inline BITMAPINFO* prepareCaretBitmap(const win32::Handle<HDC>& dc, uint16_t width, uint16_t height) {
 		BITMAPINFO* const info =
 			static_cast<BITMAPINFO*>(::operator new(sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * width * height));
 		BITMAPINFOHEADER& header = info->bmiHeader;
@@ -2005,7 +2019,7 @@ namespace {
 	 * @param color The color
 	 * @return The bitmap
 	 */
-	inline win32::Handle<HBITMAP> createSolidCaretBitmap(ushort width, ushort height, const RGBQUAD& color) {
+	inline win32::Handle<HBITMAP> createSolidCaretBitmap(uint16_t width, uint16_t height, const RGBQUAD& color) {
 		win32::Handle<HDC> dc(detail::screenDC());
 		BITMAPINFO* info = prepareCaretBitmap(dc, width, height);
 		uninitialized_fill(info->bmiColors, info->bmiColors + width * height, color);
@@ -2021,7 +2035,7 @@ namespace {
 	 * @param color The color
 	 * @return The bitmap
 	 */
-	inline win32::Handle<HBITMAP> createRTLCaretBitmap(ushort height, bool bold, const RGBQUAD& color) {
+	inline win32::Handle<HBITMAP> createRTLCaretBitmap(uint16_t height, bool bold, const RGBQUAD& color) {
 		win32::Handle<HDC> dc(detail::screenDC());
 		const RGBQUAD white = {0x00, 0x00, 0x00, 0x00};
 		BITMAPINFO* info = prepareCaretBitmap(dc, 5, height);
@@ -2029,7 +2043,7 @@ namespace {
 		uninitialized_fill(info->bmiColors, info->bmiColors + 5 * height, white);
 		info->bmiColors[0] = info->bmiColors[1] = info->bmiColors[2]
 			= info->bmiColors[6] = info->bmiColors[7] = info->bmiColors[12] = color;
-		for(ushort i = 0; i < height; ++i) {
+		for(uint16_t i = 0; i < height; ++i) {
 			info->bmiColors[i * 5 + 3] = color;
 			if(bold)
 				info->bmiColors[i * 5 + 4] = color;
@@ -2046,21 +2060,21 @@ namespace {
 	 * @param color the color
 	 * @return The bitmap
 	 */
-	inline win32::Handle<HBITMAP> createTISCaretBitmap(ushort height, bool bold, const RGBQUAD& color) {
+	inline win32::Handle<HBITMAP> createTISCaretBitmap(uint16_t height, bool bold, const RGBQUAD& color) {
 		win32::Handle<HDC> dc(detail::screenDC());
 		const RGBQUAD white = {0x00, 0x00, 0x00, 0x00};
-		const ushort width = max<ushort>(height / 8, 3);
+		const uint16_t width = max<uint16_t>(height / 8, 3);
 		BITMAPINFO* info = prepareCaretBitmap(dc, width, height);
 		assert(height > 3);
 		uninitialized_fill(info->bmiColors, info->bmiColors + width * height, white);
-		for(ushort y = 0; y < height - 1; ++y) {
+		for(uint16_t y = 0; y < height - 1; ++y) {
 			info->bmiColors[y * width] = color;
 			if(bold) info->bmiColors[y * width + 1] = color;
 		}
 		if(bold)
-			for(ushort x = 2; x < width; ++x)
+			for(uint16_t x = 2; x < width; ++x)
 				info->bmiColors[width * (height - 2) + x] = color;
-		for(ushort x = 0; x < width; ++x)
+		for(uint16_t x = 0; x < width; ++x)
 			info->bmiColors[width * (height - 1) + x] = color;
 		win32::Handle<HBITMAP> result(::CreateDIBitmap(
 			dc.get(), &info->bmiHeader, CBM_INIT, info->bmiColors, info, DIB_RGB_COLORS), &::DeleteObject);
@@ -2099,13 +2113,13 @@ void LocaleSensitiveCaretShaper::selectionShapeChanged(const Caret&) {
 
 /// @see CaretShaper#shape
 void LocaleSensitiveCaretShaper::shape(
-		win32::Handle<HBITMAP>& bitmap, Dimension<>& solidSize, ReadingDirection& readingDirection) /*throw()*/ {
+		win32::Handle<HBITMAP>& bitmap, NativeSize& solidSize, ReadingDirection& readingDirection) /*throw()*/ {
 	const Caret& caret = updater_->textViewer().caret();
 	const bool overtype = caret.isOvertypeMode() && isSelectionEmpty(caret);
 
 	if(!overtype) {
-		solidSize.cx = bold_ ? 2 : 1;	// this ignores the system setting...
-		solidSize.cy = updater_->textViewer().textRenderer().defaultFont()->metrics().cellHeight();
+		geometry::dx(solidSize) = bold_ ? 2 : 1;	// this ignores the system setting...
+		geometry::dy(solidSize) = updater_->textViewer().textRenderer().defaultFont()->metrics().cellHeight();
 	} else	// use the width of the glyph when overtype mode
 		solidSize = getCurrentCharacterSize(updater_->textViewer());
 	readingDirection = LEFT_TO_RIGHT;
@@ -2115,15 +2129,16 @@ void LocaleSensitiveCaretShaper::shape(
 	::ImmReleaseContext(updater_->textViewer().identifier().get(), imc);
 	if(imeOpened) {	// CJK and IME is open
 		static const RGBQUAD red = {0xff, 0xff, 0x80, 0x00};
-		bitmap = createSolidCaretBitmap(static_cast<uint16_t>(solidSize.cx), static_cast<uint16_t>(solidSize.cy), red);
-	} else if(!overtype && solidSize.cy > 3) {
+		bitmap = createSolidCaretBitmap(
+			static_cast<uint16_t>(geometry::dx(solidSize)), static_cast<uint16_t>(geometry::dy(solidSize)), red);
+	} else if(!overtype && geometry::dy(solidSize) > 3) {
 		static const RGBQUAD black = {0xff, 0xff, 0xff, 0x00};
 		const WORD langID = PRIMARYLANGID(LOWORD(::GetKeyboardLayout(::GetCurrentThreadId())));
 		if(isRTLLanguage(langID)) {	// RTL
-			bitmap = createRTLCaretBitmap(static_cast<uint16_t>(solidSize.cy), bold_, black);
+			bitmap = createRTLCaretBitmap(static_cast<uint16_t>(geometry::dy(solidSize)), bold_, black);
 			readingDirection = RIGHT_TO_LEFT;
 		} else if(isTISLanguage(langID)) {	// Thai relations
-			bitmap = createTISCaretBitmap(static_cast<uint16_t>(solidSize.cy), bold_, black);
+			bitmap = createTISCaretBitmap(static_cast<uint16_t>(geometry::dy(solidSize)), bold_, black);
 		}
 	}
 }
@@ -2162,7 +2177,7 @@ void LocaleSensitiveCaretShaper::uninstall() {
  */
 
 /// The priority value this class returns.
-const ILineColorDirector::Priority CurrentLineHighlighter::LINE_COLOR_PRIORITY = 0x40;
+const TextLineColorDirector::Priority CurrentLineHighlighter::LINE_COLOR_PRIORITY = 0x40;
 
 /**
  * Constructor.
@@ -2172,8 +2187,8 @@ const ILineColorDirector::Priority CurrentLineHighlighter::LINE_COLOR_PRIORITY =
  */
 CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret,
 		const Color& foreground, const Color& background) : caret_(&caret), foreground_(foreground), background_(background) {
-	tr1::shared_ptr<ILineColorDirector> temp(this);
-	caret.textViewer().presentation().addLineColorDirector(temp);
+	tr1::shared_ptr<TextLineColorDirector> temp(this);
+	caret.textViewer().presentation().addTextLineColorDirector(temp);
 	caret.addListener(*this);
 	caret.addStateListener(*this);
 	caret.addLifeCycleListener(*this);
@@ -2184,7 +2199,7 @@ CurrentLineHighlighter::~CurrentLineHighlighter() /*throw()*/ {
 	if(caret_ != 0) {
 		caret_->removeListener(*this);
 		caret_->removeStateListener(*this);
-		caret_->textViewer().presentation().removeLineColorDirector(*this);
+		caret_->textViewer().presentation().removeTextLineColorDirector(*this);
 	}
 }
 
@@ -2226,7 +2241,7 @@ void CurrentLineHighlighter::pointDestroyed() {
 }
 
 /// @see ILineColorDirector#queryLineColors
-ILineColorDirector::Priority CurrentLineHighlighter::queryLineColors(length_t line, Color& foreground, Color& background) const {
+TextLineColorDirector::Priority CurrentLineHighlighter::queryLineColors(length_t line, Color& foreground, Color& background) const {
 	if(caret_ != 0 && isSelectionEmpty(*caret_) && caret_->line() == line && caret_->textViewer().hasFocus()) {
 		foreground = foreground_;
 		background = background_;
@@ -2263,37 +2278,31 @@ void CurrentLineHighlighter::setForeground(const Color& color) /*throw()*/ {
 /// Closes the opened completion proposals popup immediately.
 void utils::closeCompletionProposalsPopup(TextViewer& viewer) /*throw()*/ {
 	if(contentassist::ContentAssistant* ca = viewer.contentAssistant()) {
-		if(contentassist::ContentAssistant::CompletionProposalsUI* cpui = ca->getCompletionProposalsUI())
+		if(contentassist::ContentAssistant::CompletionProposalsUI* cpui = ca->completionProposalsUI())
 			cpui->close();
 	}
 }
 
 /**
- * Computes the alignment of the vertical ruler.
- * @param viewer the text viewer
+ * Computes the alignment of the ruler of the text viewer.
+ * @param viewer The text viewer
  * @return the alignment of the vertical ruler. @c ALIGN_LEFT or @c ALIGN_RIGHT
  */
-TextAnchor utils::computeRulerAlignment(const TextViewer& viewer) {
-	TextAlignment alignment = viewer.rulerConfiguration().alignment;
-	switch(alignment) {
-		case ALIGN_LEFT:
-		case ALIGN_RIGHT:
-			return alignment;
-		case ALIGN_START:
-		case ALIGN_END: {
-			ReadingDirection readingDirection = INHERIT_READING_DIRECTION;
-			tr1::shared_ptr<const LineStyle> defaultLineStyle(viewer.presentation().defaultLineStyle());
-			if(defaultLineStyle.get() != 0)
-				readingDirection = defaultLineStyle->readingDirection;
-			if(readingDirection == INHERIT_READING_DIRECTION)
-				readingDirection = viewer.textRenderer().defaultUIReadingDirection();
-			if(readingDirection == INHERIT_READING_DIRECTION)
-				readingDirection = ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
-			if(readingDirection != INHERIT_READING_DIRECTION)
-				return resolveTextAlignment(alignment, readingDirection);
-		}
-	}
-	throw UnknownValueException("viewer");
+bool utils::isRulerLeftAligned(const TextViewer& viewer) {
+	const TextAnchor alignment = viewer.rulerConfiguration().alignment;
+	if(alignment != TEXT_ANCHOR_START && alignment != TEXT_ANCHOR_END)
+		throw UnknownValueException("viewer");
+
+	Inheritable<ReadingDirection> readingDirection;
+	const tr1::shared_ptr<const TextLineStyle> defaultLineStyle(viewer.presentation().globalTextStyle()->defaultLineStyle);
+	if(defaultLineStyle.get() != 0)
+		readingDirection = defaultLineStyle->readingDirection;
+	if(readingDirection.inherits())
+		readingDirection = viewer.textRenderer().defaultUIWritingMode().inlineFlowDirection;
+	if(readingDirection.inherits())
+		readingDirection = ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
+	if(!readingDirection.inherits())
+		return detail::computePhysicalTextAnchor(alignment, readingDirection) == detail::LEFT;
 }
 
 
@@ -2370,10 +2379,10 @@ bool source::getNearestIdentifier(const k::Document& document, const k::Position
  */
 bool source::getPointedIdentifier(const TextViewer& viewer, k::Position* startPosition, k::Position* endPosition) {
 	if(viewer.isWindow()) {
-		POINT cursorPoint;
+		NativePoint cursorPoint;
 		::GetCursorPos(&cursorPoint);
-		::ScreenToClient(viewer.handle().get(), &cursorPoint);
-		const k::Position cursor = viewer.characterForClientXY(fromNative(cursorPoint), LineLayout::LEADING);
+		::ScreenToClient(viewer.identifier().get(), &cursorPoint);
+		const k::Position cursor = viewer.characterForClientXY(cursorPoint, TextLayout::LEADING);
 		if(source::getNearestIdentifier(viewer.document(), cursor,
 				(startPosition != 0) ? &startPosition->column : 0, (endPosition != 0) ? &endPosition->column : 0)) {
 			if(startPosition != 0)

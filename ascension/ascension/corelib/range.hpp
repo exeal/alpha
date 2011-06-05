@@ -54,6 +54,16 @@ namespace ascension {
 		Range() {}
 		/**
 		 * Constructor takes the beginning and the end of the range.
+		 * @tparam T1, T2 The types for @a pair
+		 * @param pair The beginning and the end. Both std::min(pair.first, pair.second) and
+		 *             std::max(pair.first, pair.second) should be valid
+		 */
+		template<typename T1, typename T2>
+		explicit Range(const std::pair<T1, T2>& pair) :
+//			std::pair<value_type, value_type>(std::minmax(pair.first, pair.second)) {}
+			std::pair<value_type, value_type>(std::min(pair.first, pair.second), std::max(pair.first, pair.second)) {}
+		/**
+		 * Constructor takes the beginning and the end of the range.
 		 * @param v1, v2 The beginning and the end. Both std::min(v1, v2) and
 		 *               std::max(v1, v2) should be valid
 		 */
@@ -121,6 +131,9 @@ namespace ascension {
 				std::min(beginning(), other.beginning()), std::max(end(), other.end()));
 		}
 	};
+
+	/// Returns a @c Range object using the @c std#pair object.
+	template<typename T> inline Range<T> makeRange(const std::pair<T, T>& pair) {return Range<T>(pair);}
 
 	/// Returns a @c Range object using the given two values.
 	template<typename T> inline Range<T> makeRange(T v1, T v2) {return Range<T>(v1, v2);}

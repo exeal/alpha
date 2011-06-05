@@ -205,20 +205,21 @@ void TextRenderer::globalTextStyleChanged(tr1::shared_ptr<const TextToplevelStyl
  * @throw kernel#BadPositionException @a line is invalid
  * @throw IndexOutOfBoundsException @a subline is invalid
  */
-int TextRenderer::lineIndent(length_t line, length_t subline /* = 0 */) const {
+Scalar TextRenderer::lineIndent(length_t line, length_t subline /* = 0 */) const {
 	const TextLayout& layout = layouts().at(line);
-	const TextAlignment resolvedAlignment = resolveTextAlignment(layout.anchor(), layout.readingDirection());
-	if(resolvedAlignment == ALIGN_LEFT || resolvedAlignment == JUSTIFY)	// TODO: recognize the last subline of a justified line.
+	const detail::PhysicalTextAnchor alignment =
+		detail::computePhysicalTextAnchor(layout.anchor(), layout.writingMode().inlineFlowDirection);
+	if(alignment == detail::LEFT /*|| ... != NO_JUSTIFICATION*/)	// TODO: recognize the last subline of a justified line.
 		return 0;
 	else {
-		int w = width();
-		switch(resolvedAlignment) {
-		case ALIGN_RIGHT:
-			return w - layout.lineWidth(subline);
-		case ALIGN_CENTER:
-			return (w - layout.lineWidth(subline)) / 2;
-		default:
-			return 0;
+		Scalar w = width();
+		switch(alignment) {
+			case detail::RIGHT:
+				return w - layout.lineInlineProgressionDimension(subline);
+			case detail::MIDDLE:
+				return (w - layout.lineInlineProgressionDimension(subline)) / 2;
+			default:
+				ASCENSION_ASSERT_NOT_REACHED();
 		}
 	}
 }
@@ -242,7 +243,7 @@ void TextRenderer::removeDefaultFontListener(DefaultFontListener& listener) {
  * @param lineWrappingMark 
  */
 void TextRenderer::renderLine(length_t line, PaintContext& context,
-		const Point<>& origin, const TextPaintOverride* paintOverride /* = 0 */,
+		const NativePoint& origin, const TextPaintOverride* paintOverride /* = 0 */,
 		const InlineObject* endOfLine /* = 0 */, const InlineObject* lineWrappingMark /* = 0 */) const /*throw()*/ {
 	if(!enablesDoubleBuffering_) {
 		layouts().at(line).draw(context, origin, paintOverride, endOfLine, lineWrappingMark);
@@ -252,11 +253,11 @@ void TextRenderer::renderLine(length_t line, PaintContext& context,
 	// TODO: this code uses deprecated terminologies for text coordinates.
 
 	const TextLayout& layout = layouts().at(line);
-	const Scalar dy = textMetrics().linePitch();
+	const Scalar dy = defaultFont()->metrics().linePitch();
 
 	// skip to the subline needs to draw
-	const Scalar top = max(context.boundsToPaint().top(), clipRect.top());
-	Scalar y = origin.y;
+	const Scalar top = max(geometry::top(context.boundsToPaint()), geometry::top(clipRect));
+	Scalar y = geometry::y(origin);
 	length_t subline = (y + dy >= top) ? 0 : (top - (y + dy)) / dy;
 	if(subline >= layout.numberOfLines())
 		return;	// this logical line does not need to draw
@@ -264,7 +265,7 @@ void TextRenderer::renderLine(length_t line, PaintContext& context,
 
 	if(memoryDC_.get() == 0)		
 		memoryDC_.reset(::CreateCompatibleDC(context.nativeHandle().get()), &::DeleteDC);
-	const int horizontalResolution = calculateMemoryBitmapSize(context.device()->size().cx);
+	const int horizontalResolution = calculateMemoryBitmapSize(geometry::dx(context.device()->size()));
 	if(memoryBitmap_.get() != 0) {
 		BITMAP temp;
 		::GetObjectW(memoryBitmap_.get(), sizeof(HBITMAP), &temp);
@@ -277,21 +278,22 @@ void TextRenderer::renderLine(length_t line, PaintContext& context,
 			horizontalResolution, calculateMemoryBitmapSize(dy)), &::DeleteObject);
 	::SelectObject(memoryDC_.get(), memoryBitmap_.get());
 
-	const int left = max(context.boundsToPaint().left(), clipRect.left());
-	const int right = min(context.boundsToPaint().right(), clipRect.right());
-	const Scalar x = origin.x - left;
-	Rect<> offsetedPaintRect(paintRect), offsetedClipRect(clipRect);
-	offsetedPaintRect.translate(Dimension<>(-left, -y));
-	offsetedClipRect.translate(Dimension<>(-left, -y));
-	for(; subline < layout.numberOfLines() && offsetedPaintRect.bottom() >= 0;
-			++subline, y += dy, offsetedPaintRect.translate(Dimension<>(0, -dy)), offsetedClipRect.translate(Dimension<>(0, -dy))) {
-		layout.draw(subline, memoryDC_, Point<>(x, 0), offsetedPaintRect, offsetedClipRect, selection);
+	const int left = max(geometry::left(context.boundsToPaint()), geometry::left(clipRect));
+	const int right = min(geometry::right(context.boundsToPaint()), geometry::right(clipRect));
+	const Scalar x = geometry::x(origin) - left;
+	NativeRectangle offsetedPaintRect(paintRect), offsetedClipRect(clipRect);
+	geometry::translate(offsetedPaintRect, geometry::make<NativeSize>(-left, -y));
+	geometry::translate(offsetedClipRect, geometry::make<NativeSize>(-left, -y));
+	for(; subline < layout.numberOfLines() && geometry::bottom(offsetedPaintRect) >= 0; ++subline, y += dy,
+			geometry::translate(offsetedPaintRect, geometry::make<NativeSize>(0, -dy)),
+			geometry::translate(offsetedClipRect, geometry::make<NativeSize>(0, -dy))) {
+		layout.draw(subline, memoryDC_, geometry::make<NativePoint>(x, 0), offsetedPaintRect, offsetedClipRect, selection);
 		::BitBlt(context.nativeHandle().get(), left, y, right - left, dy, memoryDC_.get(), 0, 0, SRCCOPY);
 	}
 }
 
 void TextRenderer::updateDefaultFont() {
-	tr1::shared_ptr<const TextRunStyle> defaultStyle(presentation_.defaultTextRunStyle());
+	tr1::shared_ptr<const TextRunStyle> defaultStyle(presentation_.globalTextStyle()->defaultLineStyle->defaultRunStyle);
 	if(defaultStyle.get() != 0 && !defaultStyle->fontFamily.empty())
 		defaultFont_ = fontCollection().get(defaultStyle->fontFamily, defaultStyle->fontProperties);
 	else {

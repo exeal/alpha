@@ -64,7 +64,7 @@ namespace ascension {
 			ASCENSION_UNASSIGNABLE_TAG(VirtualBox);
 		public:
 			VirtualBox(const TextViewer& view, const kernel::Region& region) /*throw()*/;
-			bool isPointOver(const graphics::Point<>& p) const /*throw()*/;
+			bool isPointOver(const graphics::NativePoint& p) const /*throw()*/;
 			bool overlappedSubline(length_t line, length_t subline, Range<length_t>& range) const /*throw()*/;
 			void update(const kernel::Region& region) /*throw()*/;
 		private:
@@ -122,7 +122,7 @@ namespace ascension {
 			 *                              hot spot calculation
 			 */
 			virtual void shape(win32::Handle<HBITMAP>& bitmap,
-				graphics::Dimension<>& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/ = 0;
+				graphics::NativeSize& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/ = 0;
 			/// Uninstalls the shaper.
 			virtual void uninstall() /*throw()*/ = 0;
 			friend class TextViewer;
@@ -138,7 +138,7 @@ namespace ascension {
 		private:
 			void install(CaretShapeUpdater& updater) /*throw()*/;
 			void shape(win32::Handle<HBITMAP>& bitmap,
-				graphics::Dimension<>& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/;
+				graphics::NativeSize& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/;
 			void uninstall() /*throw()*/;
 		private:
 			const TextViewer* viewer_;
@@ -156,7 +156,7 @@ namespace ascension {
 			// CaretShaper
 			void install(CaretShapeUpdater& updater) /*throw()*/;
 			void shape(win32::Handle<HBITMAP>& bitmap,
-				graphics::Dimension<>& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/;
+				graphics::NativeSize& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/;
 			void uninstall() /*throw()*/;
 			// CaretListener
 			void caretMoved(const class Caret& self, const kernel::Region& oldRegion);
@@ -240,7 +240,7 @@ namespace ascension {
 			 * @retval @c true if the callee showed a cursor
 			 * @retval @c false if the callee did not know the appropriate cursor
 			 */
-			virtual bool showCursor(const graphics::Point<>& position) = 0;
+			virtual bool showCursor(const graphics::NativePoint& position) = 0;
 			/// Uninstalls the strategy. The window is not destroyed yet at this time.
 			virtual void uninstall() = 0;
 			friend class TextViewer;
@@ -275,27 +275,27 @@ namespace ascension {
 			explicit DefaultMouseInputStrategy(
 				OLEDragAndDropSupport oleDragAndDropSupportLevel = SUPPORT_OLE_DND_WITH_SELECTED_DRAG_IMAGE);
 		private:
-			virtual bool handleLeftButtonDoubleClick(const graphics::Point<>& position, int modifiers);
-			virtual bool handleRightButton(Action action, const graphics::Point<>& position, int modifiers);
-			virtual bool handleX1Button(Action action, const graphics::Point<>& position, int modifiers);
-			virtual bool handleX2Button(Action action, const graphics::Point<>& position, int modifiers);
+			virtual bool handleLeftButtonDoubleClick(const graphics::NativePoint& position, int modifiers);
+			virtual bool handleRightButton(Action action, const graphics::NativePoint& position, int modifiers);
+			virtual bool handleX1Button(Action action, const graphics::NativePoint& position, int modifiers);
+			virtual bool handleX2Button(Action action, const graphics::NativePoint& position, int modifiers);
 		private:
 			void beginTimer(UINT interval);
 			HRESULT doDragAndDrop();
 			bool endAutoScroll();
 			void endTimer();
 			void extendSelection(const kernel::Position* to = 0);
-			void handleLeftButtonPressed(const graphics::Point<>& position, int modifiers);
-			void handleLeftButtonReleased(const graphics::Point<>& position, int modifiers);
+			void handleLeftButtonPressed(const graphics::NativePoint& position, int modifiers);
+			void handleLeftButtonReleased(const graphics::NativePoint& position, int modifiers);
 			static void CALLBACK timeElapsed(HWND window, UINT message, UINT_PTR eventID, DWORD time);
-			// IMouseInputStrategy
+			// MouseInputStrategy
 			void captureChanged();
 			void install(TextViewer& viewer);
 			void interruptMouseReaction(bool forKeyboardInput);
 			bool mouseButtonInput(Action action, const base::MouseButtonInput& input);
 			void mouseMoved(const base::LocatedUserInput& input);
 			void mouseWheelRotated(const base::MouseWheelInput& input);
-			bool showCursor(const graphics::Point<>& position);
+			bool showCursor(const graphics::NativePoint& position);
 			void uninstall();
 			// IDropSource
 			STDMETHODIMP QueryContinueDrag(BOOL escapePressed, DWORD keyState);
@@ -313,7 +313,7 @@ namespace ascension {
 				AUTO_SCROLL_MASK = 0x20, APPROACHING_AUTO_SCROLL, AUTO_SCROLL_DRAGGING, AUTO_SCROLL,
 				OLE_DND_MASK = 0x40, APPROACHING_OLE_DND, OLE_DND_SOURCE, OLE_DND_TARGET
 			} state_;
-			graphics::Point<> dragApproachedPosition_;	// in client coordinates
+			graphics::NativePoint dragApproachedPosition_;	// in client coordinates
 			struct Selection {
 				length_t initialLine;	// line of the anchor when entered the selection extending
 				std::pair<length_t, length_t> initialWordColumns;
@@ -473,14 +473,19 @@ namespace ascension {
 				RulerConfiguration() /*throw()*/;
 			};
 
+			/// @see #textAreaMargins
+			struct Margins {
+				graphics::Scalar left, top, right, bottom;
+			};
+
 			// constructors
 			explicit TextViewer(presentation::Presentation& presentation);
 			TextViewer(const TextViewer& other);
 			virtual ~TextViewer();
 			// window creation
 			virtual void initialize(const win32::Handle<HWND>& parent,
-				const graphics::Point<>& position = graphics::Point<>(CW_USEDEFAULT, CW_USEDEFAULT),
-				const graphics::Dimension<>& size = graphics::Dimension<>(CW_USEDEFAULT, CW_USEDEFAULT),
+				const graphics::NativePoint& position = graphics::geometry::make<graphics::NativePoint>(CW_USEDEFAULT, CW_USEDEFAULT),
+				const graphics::NativeSize& size = graphics::geometry::make<graphics::NativeSize>(CW_USEDEFAULT, CW_USEDEFAULT),
 				DWORD style = 0, DWORD extendedStyle = 0);
 			// listeners and strategies
 			void addDisplaySizeListener(DisplaySizeListener& listener);
@@ -539,22 +544,22 @@ namespace ascension {
 			bool allowsMouseInput() const /*throw()*/;
 			void enableMouseInput(bool enable);
 			// client coordinates vs. character position mappings
-			kernel::Position characterForClientXY(const graphics::Point<>& pt,
+			kernel::Position characterForClientXY(const graphics::NativePoint& pt,
 				graphics::font::TextLayout::Edge, bool abortNoCharacter = false,
 				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER) const;
-			graphics::Point<> clientXYForCharacter(const kernel::Position& position,
+			graphics::NativePoint clientXYForCharacter(const kernel::Position& position,
 				bool fullSearchY, graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING) const;
 			// utilities
 			void firstVisibleLine(length_t* logicalLine, length_t* visualLine, length_t* visualSubline) const /*throw()*/;
-			HitTestResult hitTest(const graphics::Point<>& pt) const;
+			HitTestResult hitTest(const graphics::NativePoint& pt) const;
 			length_t numberOfVisibleLines() const /*throw()*/;
 			length_t numberOfVisibleColumns() const /*throw()*/;
-			graphics::Rect<> textAreaMargins() const /*throw()*/;
+			Margins textAreaMargins() const /*throw()*/;
 
 		protected:
 			void checkInitialization() const;
 			virtual void doBeep() /*throw()*/;
-			virtual void drawIndicatorMargin(length_t line, graphics::Context& context, const graphics::Rect<>& rect);
+			virtual void drawIndicatorMargin(length_t line, graphics::Context& context, const graphics::NativeRectangle& rect);
 
 			// helpers
 		private:
@@ -617,7 +622,7 @@ namespace ascension {
 			void mouseReleased(const base::MouseButtonInput& input);
 			void mouseWheelChanged(const base::MouseWheelInput& input);
 			void paint(graphics::PaintContext& context);
-			void resized(State state, const graphics::Dimension<>& newSize);
+			void resized(State state, const graphics::NativeSize& newSize);
 			void showContextMenu(const base::LocatedUserInput& input);
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 			LRESULT handleWindowSystemEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
@@ -893,7 +898,7 @@ namespace ascension {
 		/// Provides the utility stuffs for viewers.
 		namespace utils {
 			void closeCompletionProposalsPopup(TextViewer& viewer) /*throw()*/;
-			presentation::TextAnchor computeRulerAlignment(const TextViewer& viewer);
+			bool isRulerLeftAligned(const TextViewer& viewer);
 		} // namespace utils
 
 
@@ -1001,9 +1006,9 @@ inline bool TextViewer::isFrozen() const /*throw()*/ {return freezeInfo_.count !
  * @return The number of columns
  */
 inline length_t TextViewer::numberOfVisibleColumns() const /*throw()*/ {
-	const graphics::Rect<> r(bounds(false));
-	return (r.width() == 0) ? 0 :
-		(r.width() - configuration_.leadingMargin - rulerPainter_->width()) / renderer_->defaultFont()->metrics().averageCharacterWidth();
+	const graphics::Scalar dx = graphics::geometry::dx(bounds(false));
+	return (dx == 0) ? 0 :
+		(dx - configuration_.leadingMargin - rulerPainter_->width()) / renderer_->defaultFont()->metrics().averageCharacterWidth();
 }
 
 /**
@@ -1011,8 +1016,8 @@ inline length_t TextViewer::numberOfVisibleColumns() const /*throw()*/ {
  * @return The number of lines
  */
 inline length_t TextViewer::numberOfVisibleLines() const /*throw()*/ {
-	const graphics::Rect<> r(bounds(false));
-	return (r.height() == 0) ? 0 : (r.height() - configuration_.topMargin) / renderer_->defaultFont()->metrics().linePitch();
+	const graphics::Scalar dy = graphics::geometry::dy(bounds(false));
+	return (dy == 0) ? 0 : (dy - configuration_.topMargin) / renderer_->defaultFont()->metrics().linePitch();
 }
 
 /// Returns the presentation object. 
