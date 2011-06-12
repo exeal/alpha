@@ -1638,29 +1638,6 @@ AutoFreeze::~AutoFreeze() /*throw()*/ {
 }
 
 
-// TextViewer.RulerConfiguration //////////////////////////////////////////////////////////////////
-
-/// Default constructor.
-TextViewer::RulerConfiguration::RulerConfiguration() /*throw()*/ : alignment(TEXT_ANCHOR_START) {
-}
-
-
-// TextViewer.RulerConfiguration.LineNumbers //////////////////////////////////////////////////////
-
-/// Constructor initializes the all members to their default values.
-TextViewer::RulerConfiguration::LineNumbers::LineNumbers() /*throw()*/ : visible(false),
-		anchor(TEXT_ANCHOR_END), startValue(1), minimumDigits(4), leadingMargin(6), trailingMargin(1),
-		borderColor(Color()), borderWidth(1), borderStyle(SOLID) {
-}
-
-
-// TextViewer.RulerConfiguration.IndicatorMargin //////////////////////////////////////////////////
-
-/// Constructor initializes the all members to their default values.
-TextViewer::RulerConfiguration::IndicatorMargin::IndicatorMargin() /*throw()*/ : visible(false), width(15) {
-}
-
-
 // TextViewer.Renderer ////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -1727,59 +1704,6 @@ Scalar TextViewer::Renderer::width() const /*throw()*/ {
 	} else
 		return lwc.width;
 }
-
-
-// TextViewer.RulerPainter ////////////////////////////////////////////////////////////////////////
-
-// some methods are defined in layout.cpp
-
-/**
- * Constructor.
- * @param viewer the viewer
- * @param enableDoubleBuffering set @c true to use double-buffering for non-flicker drawing
- */
-TextViewer::RulerPainter::RulerPainter(TextViewer& viewer, bool enableDoubleBuffering)
-		: viewer_(viewer), width_(0), lineNumberDigitsCache_(0), enablesDoubleBuffering_(enableDoubleBuffering) {
-	recalculateWidth();
-}
-
-/// Returns the maximum number of digits of line numbers.
-uint8_t TextViewer::RulerPainter::maximumDigitsForLineNumbers() const /*throw()*/ {
-	uint8_t n = 1;
-	length_t lines = viewer_.document().numberOfLines() + configuration_.lineNumbers.startValue - 1;
-	while(lines >= 10) {
-		lines /= 10;
-		++n;
-	}
-	return static_cast<uint8_t>(n);	// hmm...
-}
-
-void TextViewer::RulerPainter::setConfiguration(const RulerConfiguration& configuration) {
-	if(configuration.alignment != TEXT_ANCHOR_START && configuration.alignment != TEXT_ANCHOR_END)
-		throw UnknownValueException("configuration.alignment");
-	if(configuration.lineNumbers.anchor != TEXT_ANCHOR_START
-			&& configuration.lineNumbers.anchor != TEXT_ANCHOR_MIDDLE
-			&& configuration.lineNumbers.anchor != TEXT_ANCHOR_END)
-		throw UnknownValueException("configuration.lineNumbers.anchor");
-//	if(configuration.lineNumbers.justification != ...)
-//		throw UnknownValueException("");
-	if(!configuration.lineNumbers.readingDirection.inherits()
-			&& configuration.lineNumbers.readingDirection != LEFT_TO_RIGHT
-			&& configuration.lineNumbers.readingDirection != RIGHT_TO_LEFT)
-		throw UnknownValueException("configuration.lineNumbers.readingDirection");
-	configuration_ = configuration;
-	update();
-}
-
-void TextViewer::RulerPainter::update() /*throw()*/ {
-	lineNumberDigitsCache_ = 0;
-	recalculateWidth();
-	updateGDIObjects();
-	if(enablesDoubleBuffering_ && memoryBitmap_.get() != 0)
-		memoryBitmap_.reset();
-}
-
-#undef RESTORE_HIDDEN_CURSOR
 
 
 // TextViewer.Configuration /////////////////////////////////////////////////

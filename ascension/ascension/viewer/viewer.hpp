@@ -16,6 +16,7 @@
 #include <ascension/presentation/text-style.hpp>
 #include <ascension/viewer/caret-observers.hpp>
 #include <ascension/viewer/content-assist.hpp>
+#include <ascension/viewer/ruler.hpp>
 #include <ascension/viewer/viewer-observers.hpp>
 #include <ascension/viewer/base/widget.hpp>
 #include <ascension/win32/com/unknown-impl.hpp>
@@ -384,95 +385,6 @@ namespace ascension {
 				Configuration() /*throw()*/;
 			};
 
-			/**
-			 * A ruler's configuration.
-			 * @see TextViewer#rulerConfiguration, TextViewer#setConfiguration
-			 */
-			struct RulerConfiguration {
-				/// Configuration about a line numbers area.
-				struct LineNumbers {
-					/**
-					 * Whether the area is visible or not. Default value is @c false and the line
-					 * numbers is invisible.
-					 */
-					bool visible;
-					/**
-					 * Reading direction of the digits. Default value is
-					 * @c presentation#Inheritable&lt;presentation#ReadingDirection&gt;().
-					 */
-					presentation::Inheritable<presentation::ReadingDirection> readingDirection;
-					/// Anchor of the digits. Default value is @c presentation#TEXT_ANCHOR_END.
-					presentation::TextAnchor anchor;
-					/// Start value of the line number. Default value is 1.
-					length_t startValue;
-					/// Minimum number of digits. Default value is 4.
-					uint8_t minimumDigits;
-					/// Leading margin in pixels. Default value is 6.
-					int leadingMargin;
-					/// Trailing margin in pixels. Default value is 1.
-					int trailingMargin;
-					/**
-					 * Foreground color of the text. Default value is invalid color which is
-					 * fallbacked to the foreground color of the system normal text.
-					 */
-					graphics::Color foreground;
-					/**
-					 * Background color of the text. Default value is invalid color which is
-					 * fallbacked to the background color of the system normal text.
-					 */
-					graphics::Color background;
-					/**
-					 * Color of the border. Default value is invalid color which is fallbacked to
-					 * the foreground color of the system normal text.
-					 */
-					graphics::Color borderColor;
-					/// Width of the border. Default value is 1.
-					uint8_t borderWidth;
-					/// Style of the border. Default value is @c SOLID.
-					enum {
-						NONE,			///< No-line.
-						SOLID,			///< Solid line.
-						DASHED,			///< Dashed line.
-						DASHED_ROUNDED,	///< Dashed and rounded line.
-						DOTTED			///< Dotted line.
-					} borderStyle;
-					/// Digit substitution type. @c DST_CONTEXTUAL can't set. Default value is @c DST_USER_DEFAULT.
-					presentation::NumberSubstitution numberSubstitution;
-
-					LineNumbers() /*throw()*/;
-				} lineNumbers;	/// Configuration about the line numbers area.
-				/// Configuration about an indicator margin.
-				struct IndicatorMargin {
-					/**
-					 * Whether the indicator margin is visible or not. Default value is @c false
-					 * and the indicator margin is invisible.
-					 */
-					bool visible;
-					/// Width of the indicator margin in pixels. Default value is 15.
-					unsigned short width;
-					/**
-					 * Background color. Default value is invalid color which is fallbacked to the
-					 * platform-dependent color. On Win32, it is @c COLOR_3DFACE.
-					 */
-					graphics::Color color;
-					/**
-					 * Color of the border. Default value is invalid color which is fallbacked to
-					 * the platform-dependent color. On Win32, it is @c COLOR_3DSHADOW.
-					 */
-					graphics::Color borderColor;
-
-					IndicatorMargin() /*throw()*/;
-				} indicatorMargin;	/// Configuration about the indicator margin.
-				/**
-				 * Alignment (anchor) of the ruler. Must be either
-				 * @c presentation#TEXT_ANCHOR_START or @c presentation#TEXT_ANCHOR_END. Default
-				 * value is @c presentation#TEXT_ANCHOR_START.
-				 */
-				presentation::TextAnchor alignment;
-
-				RulerConfiguration() /*throw()*/;
-			};
-
 			/// @see #textAreaMargins
 			struct Margins {
 				graphics::Scalar left, top, right, bottom;
@@ -657,7 +569,7 @@ namespace ascension {
 
 			// internal classes
 		private:
-			/// Internal extension of @c graphics#TextRenderer.
+			/// Internal extension of @c graphics#font#TextRenderer.
 			class Renderer : public graphics::font::TextRenderer {
 				ASCENSION_UNASSIGNABLE_TAG(Renderer);
 			public:
@@ -675,30 +587,6 @@ namespace ascension {
 				TextViewer& viewer_;
 				presentation::WritingMode defaultWritingMode_;
 //				presentation::Inheritable<presentation::TextAnchor> overrideTextAnchor_;
-			};
-			/// @c RulerPainter paints the ruler of the @c TextViewer.
-			class RulerPainter {
-				ASCENSION_NONCOPYABLE_TAG(RulerPainter);
-			public:
-				RulerPainter(TextViewer& viewer, bool enableDoubleBuffering) /*throw()*/;
-				const RulerConfiguration& configuration() const /*throw()*/;
-				void paint(graphics::PaintContext& context);
-				void setConfiguration(const RulerConfiguration& configuration);
-				void update() /*throw()*/;
-				int width() const /*throw()*/;
-			private:
-				uint8_t maximumDigitsForLineNumbers() const /*throw()*/;
-				void recalculateWidth() /*throw()*/;
-				void updateGDIObjects() /*throw()*/;
-				TextViewer& viewer_;
-				RulerConfiguration configuration_;
-				int width_;
-				uint8_t lineNumberDigitsCache_;
-				win32::Handle<HPEN> indicatorMarginPen_, lineNumbersPen_;
-				win32::Handle<HBRUSH> indicatorMarginBrush_, lineNumbersBrush_;
-				const bool enablesDoubleBuffering_;
-				win32::Handle<HDC> memoryDC_;
-				win32::Handle<HBITMAP> memoryBitmap_;
 			};
 
 			// enumerations
@@ -782,7 +670,7 @@ namespace ascension {
 			detail::Listeners<DisplaySizeListener> displaySizeListeners_;
 			detail::Listeners<TextViewerInputStatusListener> inputStatusListeners_;
 			detail::Listeners<ViewportListener> viewportListeners_;
-			std::auto_ptr<RulerPainter> rulerPainter_;
+			std::auto_ptr<detail::RulerPainter> rulerPainter_;
 			std::auto_ptr<contentassist::ContentAssistant> contentAssistant_;
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 			class AccessibleProxy;
@@ -846,7 +734,7 @@ namespace ascension {
 
 			friend class VisualPoint;
 			friend class VirtualBox;
-			friend class RulerPainter;
+			friend class detail::RulerPainter;
 			friend class CaretShapeUpdater;
 			friend class Renderer;
 		};
@@ -1071,13 +959,7 @@ inline const graphics::font::TextRenderer& TextViewer::textRenderer() const /*th
  * Returns the ruler's configuration.
  * @see #configuration, #setConfiguration
  */
-inline const TextViewer::RulerConfiguration& TextViewer::rulerConfiguration() const /*throw()*/ {return rulerPainter_->configuration();}
-
-/// Returns the ruler's configurations.
-inline const TextViewer::RulerConfiguration& TextViewer::RulerPainter::configuration() const /*throw()*/ {return configuration_;}
-
-/// Returns the width of the ruler.
-inline int TextViewer::RulerPainter::width() const /*throw()*/ {return width_;}
+inline const RulerConfiguration& TextViewer::rulerConfiguration() const /*throw()*/ {return rulerPainter_->configuration();}
 
 }} // namespace ascension.viewers
 

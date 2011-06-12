@@ -410,7 +410,7 @@ void ascension::updateSystemSettings() /*throw()*/ {
 }
 
 
-// layout.* free functions ////////////////////////////////////////////////////////////////////////
+// graphics.font.* free functions /////////////////////////////////////////////////////////////////
 
 /// Returns @c true if complex scripts are supported.
 bool font::supportsComplexScripts() /*throw()*/ {
@@ -420,6 +420,21 @@ bool font::supportsComplexScripts() /*throw()*/ {
 /// Returns @c true if OpenType features are supported.
 bool font::supportsOpenTypeFeatures() /*throw()*/ {
 	return uspLib->get<0>() != 0;
+}
+
+
+// detail.* free function /////////////////////////////////////////////////////////////////////////
+
+/**
+ * @internal Paints border.
+ * @param context The graphics context
+ * @param rectangle The border box. This gives the edge surrounds the border
+ * @param border The presentative style
+ * @param writingMode The writing mode used to compute the directions and orientation of @a border
+ */
+void detail::paintBorder(Context& context,
+		const NativeRectangle& rectangle, const Border& border, const WritingMode& writingMode) {
+	// TODO: not implemented.
 }
 
 

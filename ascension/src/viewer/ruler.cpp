@@ -17,14 +17,36 @@ using namespace std;
 extern const bool DIAGNOSE_INHERENT_DRAWING;
 
 
-// TextViewer.RulerPainter ////////////////////////////////////////////////////////////////////////
+// RulerConfiguration /////////////////////////////////////////////////////////////////////////////
+
+/// Default constructor.
+RulerConfiguration::RulerConfiguration() /*throw()*/ : alignment(TEXT_ANCHOR_START) {
+}
+
+
+// RulerConfiguration.LineNumbers /////////////////////////////////////////////////////////////////
+
+/// Constructor initializes the all members to their default values.
+RulerConfiguration::LineNumbers::LineNumbers() /*throw()*/ : visible(false),
+		anchor(TEXT_ANCHOR_END), startValue(1), minimumDigits(4), paddingStart(6), paddingEnd(1) {
+}
+
+
+// RulerConfiguration.IndicatorMargin /////////////////////////////////////////////////////////////
+
+/// Constructor initializes the all members to their default values.
+RulerConfiguration::IndicatorMargin::IndicatorMargin() /*throw()*/ : visible(false)/*, width(15)*/ {
+}
+
+
+// detail.RulerPainter ////////////////////////////////////////////////////////////////////////////
 
 // TODO: support locale-dependent number format.
 
 HRESULT drawLineNumber(Context& context, int x, int y, length_t lineNumber/*, const SCRIPT_CONTROL& control, const SCRIPT_STATE& initialState*/) {
 	// format number string
 	wchar_t s[128];	// oops, is this sufficient?
-#if(_MSC_VER < 1400)
+#if defined(_MSC_VER) && (_MSC_VER < 1400)
 	const int length = swprintf(s, L"%lu", lineNumber);
 #else
 	const int length = swprintf(s, ASCENSION_COUNTOF(s), L"%lu", lineNumber);
@@ -56,10 +78,31 @@ HRESULT drawLineNumber(Context& context, int x, int y, length_t lineNumber/*, co
 }
 
 /**
- * Paints the ruler.
- * @param context the graphics context
+ * Constructor.
+ * @param viewer The text viewer
+ * @param enableDoubleBuffering Set @c true to use double-buffering for non-flicker drawing
  */
-void TextViewer::RulerPainter::paint(PaintContext& context) {
+detail::RulerPainter::RulerPainter(TextViewer& viewer, bool enableDoubleBuffering)
+		: viewer_(viewer), width_(0), lineNumberDigitsCache_(0), enablesDoubleBuffering_(enableDoubleBuffering) {
+	recalculateWidth();
+}
+
+/// Returns the maximum number of digits of line numbers.
+uint8_t detail::RulerPainter::maximumDigitsForLineNumbers() const /*throw()*/ {
+	uint8_t n = 1;
+	length_t lines = viewer_.document().numberOfLines() + configuration_.lineNumbers.startValue - 1;
+	while(lines >= 10) {
+		lines /= 10;
+		++n;
+	}
+	return static_cast<uint8_t>(n);	// hmm...
+}
+
+/**
+ * Paints the ruler.
+ * @param context The graphics context
+ */
+void detail::RulerPainter::paint(PaintContext& context) {
 	if(width() == 0)
 		return;
 
@@ -67,6 +110,8 @@ void TextViewer::RulerPainter::paint(PaintContext& context) {
 	const TextRenderer& renderer = viewer_.textRenderer();
 	const NativeRectangle clientBounds(viewer_.bounds(false));
 	const bool leftAligned = utils::isRulerLeftAligned(viewer_);
+
+	if()
 	if((leftAligned && geometry::left(paintBounds) >= geometry::left(clientBounds) + width())
 			|| (!leftAligned && geometry::right(paintBounds) < geometry::right(clientBounds) - width()))
 		return;
@@ -211,57 +256,117 @@ void TextViewer::RulerPainter::paint(PaintContext& context) {
 	context.restore();
 }
 
-/// Recalculates the width of the ruler.
-void TextViewer::RulerPainter::recalculateWidth() /*throw()*/ {
-	int newWidth = 0;
-	if(configuration_.lineNumbers.visible) {
-		const uint8_t newLineNumberDigits = maximumDigitsForLineNumbers();
-		if(newLineNumberDigits != lineNumberDigitsCache_) {
-			// the width of the line numbers area is determined by the maximum width of glyphs of 0..9
-			win32::Handle<HDC> dc(viewer_.getDC());
-			HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.use(), viewer_.textRenderer().primaryFont()->nativeHandle().get()));
-			SCRIPT_STRING_ANALYSIS ssa;
-			win32::AutoZero<SCRIPT_CONTROL> sc;
-			win32::AutoZero<SCRIPT_STATE> ss;
-			HRESULT hr;
-/*			switch(configuration_.lineNumbers.digitSubstitution) {
-			case DST_CONTEXTUAL:
-			case DST_NOMINAL:
-				break;
-			case DST_NATIONAL:
-				ss.fDigitSubstitute = 1;
-				break;
-			case DST_USER_DEFAULT:
-*/				hr = ::ScriptApplyDigitSubstitution(&userSettings.digitSubstitution(false), &sc, &ss);
-/*				break;
-			}
-*/			::SetTextCharacterExtra(dc.get(), 0);
-			hr = ::ScriptStringAnalyse(dc.get(), L"0123456789", 10,
-				estimateNumberOfGlyphs(10), -1, SSA_FALLBACK | SSA_GLYPHS | SSA_LINK, 0, &sc, &ss, 0, 0, 0, &ssa);
-			::SelectObject(dc.get(), oldFont);
-			int glyphWidths[10];
-			hr = ::ScriptStringGetLogicalWidths(ssa, glyphWidths);
-			int maxGlyphWidth = *max_element(glyphWidths, ASCENSION_ENDOF(glyphWidths));
-			lineNumberDigitsCache_ = newLineNumberDigits;
-			if(maxGlyphWidth != 0) {
-				newWidth += max<uchar>(newLineNumberDigits, configuration_.lineNumbers.minimumDigits) * maxGlyphWidth;
-				newWidth += configuration_.lineNumbers.leadingMargin + configuration_.lineNumbers.trailingMargin;
-				if(configuration_.lineNumbers.borderStyle != RulerConfiguration::LineNumbers::NONE)
-					newWidth += configuration_.lineNumbers.borderWidth;
-			}
-		}
+namespace {
+	Scalar computeMaximumNumberGlyphsExtent(Context& context, tr1::shared_ptr<const Font> font,
+			uint8_t digits, const WritingMode& writingMode, const NumberSubstitution& numberSubstitution) {
+		tr1::shared_ptr<const Font> oldFont(context.font());
+		context.setFont(font);
+/*
+#if defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE)
+		SCRIPT_STRING_ANALYSIS ssa;
+		win32::AutoZero<SCRIPT_CONTROL> sc;
+		win32::AutoZero<SCRIPT_STATE> ss;
+		HRESULT hr;
+//		switch(configuration_.lineNumbers.digitSubstitution) {
+//			case DST_CONTEXTUAL:
+//			case DST_NOMINAL:
+//				break;
+//			case DST_NATIONAL:
+//				ss.fDigitSubstitute = 1;
+//				break;
+//			case DST_USER_DEFAULT:
+				hr = ::ScriptApplyDigitSubstitution(&numberSubstitution.asUniscribe(), &sc, &ss);
+//				break;
+//		}
+		::SetTextCharacterExtra(dc.get(), 0);
+		hr = ::ScriptStringAnalyse(dc.get(), L"0123456789", 10,
+			estimateNumberOfGlyphs(10), -1, SSA_FALLBACK | SSA_GLYPHS | SSA_LINK, 0, &sc, &ss, 0, 0, 0, &ssa);
+		int glyphWidths[10];
+		hr = ::ScriptStringGetLogicalWidths(ssa, glyphWidths);
+		int maxGlyphWidth = *max_element(glyphWidths, ASCENSION_ENDOF(glyphWidths));
+#else
+#endif
+*/
+		Char maximumExtentCharacter;
+		font->missing();
+		const NativeSize stringExtent(context.measureText(String(digits, maximumExtentCharacter)));
+
+		context.setFont(oldFont);
+		return (writingMode.blockFlowDirection == WritingMode::HORIZONTAL_TB) ? geometry::dx(stringExtent) : geometry::dy(stringExtent);
 	}
+}
+
+/// Recalculates the total width of the ruler.
+void detail::RulerPainter::recalculateWidth() /*throw()*/ {
+	// (ruler-total-width) = (line-numbers-width) + (indicator-margin-width)
+	//   (indicator-margin-width) = (indicator-margin-border-width) + (indicator-margin-body-width)
+	//   (line-numbers-width) = (line-numbers-exterior-width) + (line-numbers-interior-width) + (line-numbers-body-width)
+	//     (line-numbers-exterior-width) = (line-numbers-border-width) + (line-numbers-space-width)
+	//     (line-numbers-interior-width) = (line-numbers-padding-start) + (line-numbers-padding-end)
+	//     (line-numbers-body-width) = max((glyphs-extent), (average-glyph-extent) * (minimum-digits-setting))
+
+	Scalar totalWidth = 0;
+	if(configuration_.lineNumbers.visible) {
+		const uint8_t digits = maximumDigitsForLineNumbers();
+		if(digits != lineNumberDigitsCache_) {
+			lineNumberDigitsCache_ = digits;
+		}
+		const Scalar glyphsExtent = computeMaximumNumberGlyphsExtent(
+			viewer_.graphicsContext(), viewer_.textRenderer().defaultFont(), digits,
+			viewer_.presentation().globalTextStyle()->writingMode, configuration().lineNumbers.numberSubstitution);
+		const Scalar minimumExtent = viewer_.textRenderer().defaultFont()->metrics().averageCharacterWidth() * digits;
+		totalWidth += max(glyphsExtent, minimumExtent);
+
+		const Scalar borderWidth = configuration_.lineNumbers.border.hasVisibleStyle() ?
+			configuration_.lineNumbers.border.width.compute() : 0;
+		const Scalar spaceWidth = 0;
+		const Scalar exteriorWidth = borderWidth + spaceWidth;
+		totalWidth += exteriorWidth;
+
+		const Scalar interiorWidth =
+			configuration().lineNumbers.paddingStart.compute() + configuration().lineNumbers.paddingEnd.compute();
+		totalWidth += interiorWidth;
+	}
+
+	// compute the width of the indicator margin
 	if(configuration_.indicatorMargin.visible)
-		newWidth += configuration_.indicatorMargin.width;
-	if(newWidth != width_) {
-		width_ = newWidth;
+		totalWidth_ += configuration().indicatorMargin.width.inherits() ?
+			platformIndicatorMargin() : configuration().indicatorMargin.width.inherits().compute();
+
+	if(totalWidth != width_) {
+		width_ = totalWidth;
 		viewer_.scheduleRedraw(false);
 		viewer_.updateCaretPosition();
 	}
 }
 
+void detail::RulerPainter::setConfiguration(const RulerConfiguration& configuration) {
+	if(configuration.alignment != TEXT_ANCHOR_START && configuration.alignment != TEXT_ANCHOR_END)
+		throw UnknownValueException("configuration.alignment");
+	if(configuration.lineNumbers.anchor != TEXT_ANCHOR_START
+			&& configuration.lineNumbers.anchor != TEXT_ANCHOR_MIDDLE
+			&& configuration.lineNumbers.anchor != TEXT_ANCHOR_END)
+		throw UnknownValueException("configuration.lineNumbers.anchor");
+//	if(configuration.lineNumbers.justification != ...)
+//		throw UnknownValueException("");
+	if(!configuration.lineNumbers.readingDirection.inherits()
+			&& configuration.lineNumbers.readingDirection != LEFT_TO_RIGHT
+			&& configuration.lineNumbers.readingDirection != RIGHT_TO_LEFT)
+		throw UnknownValueException("configuration.lineNumbers.readingDirection");
+	configuration_ = configuration;
+	update();
+}
+
+void detail::RulerPainter::update() /*throw()*/ {
+	lineNumberDigitsCache_ = 0;
+	recalculateWidth();
+	updateGDIObjects();
+	if(enablesDoubleBuffering_ && memoryBitmap_.get() != 0)
+		memoryBitmap_.reset();
+}
+
 ///
-void TextViewer::RulerPainter::updateGDIObjects() /*throw()*/ {
+void detail::RulerPainter::updateGDIObjects() /*throw()*/ {
 	indicatorMarginPen_.reset();
 	indicatorMarginBrush_.reset();
 	if(configuration_.indicatorMargin.visible) {

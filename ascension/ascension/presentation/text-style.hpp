@@ -447,6 +447,17 @@ namespace ascension {
 				inlineFlowDirection(inlineFlowDirection), blockFlowDirection(blockFlowDirection),
 				textOrientation(textOrientation) /*throw()*/ {}
 		};
+	}
+
+	namespace graphics {
+		namespace font {
+			class TextRenderer;
+		}
+	}
+
+	namespace presentation {
+		WritingMode resolveWritingMode(
+			const Presentation& presentation, const graphics::font::TextRenderer& textRenderer);
 
 		/**
 		 * @see TextRunStyle, TextLineStyle, Presentation#globalTextStyle,

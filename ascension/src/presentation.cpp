@@ -126,26 +126,18 @@ void StyledTextRunEnumerator::next() {
 
 // Presentation ///////////////////////////////////////////////////////////////////////////////////
 
-namespace {
-	inline tr1::shared_ptr<const TextLineStyle> defaultLineStyle(const Presentation& presentation) {
-		const tr1::shared_ptr<const TextToplevelStyle> globalStyle(presentation.globalTextStyle());
-		assert(globalStyle.get() != 0);
-		return globalStyle->defaultLineStyle;
-	}
-}
-
 /// 
 TextAnchor presentation::defaultTextAnchor(const Presentation& presentation) {
-	const tr1::shared_ptr<const TextLineStyle> lineStyle(defaultLineStyle(presentation));
+	const tr1::shared_ptr<const TextLineStyle> lineStyle(presentation.globalTextStyle().defaultLineStyle);
 	return (lineStyle.get() != 0
 		&& !lineStyle->anchor.inherits()) ? lineStyle->anchor.get() : ASCENSION_DEFAULT_TEXT_ANCHOR;
 }
 
 ///
 ReadingDirection presentation::defaultReadingDirection(const Presentation& presentation) {
-	const tr1::shared_ptr<const TextLineStyle> lineStyle(defaultLineStyle(presentation));
+	const tr1::shared_ptr<const TextLineStyle> lineStyle(presentation.globalTextStyle().defaultLineStyle);
 	return (lineStyle.get() != 0 && !lineStyle->readingDirection.inherits()) ?
-		lineStyle->readingDirection.get() : presentation.globalTextStyle()->writingMode.inlineFlowDirection;
+		lineStyle->readingDirection.get() : presentation.globalTextStyle().writingMode.inlineFlowDirection;
 }
 
 tr1::shared_ptr<const TextToplevelStyle> Presentation::DEFAULT_GLOBAL_TEXT_STYLE;
@@ -291,13 +283,16 @@ const Hyperlink* const* Presentation::getHyperlinks(length_t line, size_t& numbe
 
 /**
  * Returns the style of the specified text line.
- * @return The text line style. This value is never @c null
+ * @return The text line style
  */
-tr1::shared_ptr<const TextLineStyle> Presentation::textLineStyle(length_t line) const /*throw()*/ {
+const TextLineStyle& Presentation::textLineStyle(length_t line) const /*throw()*/ {
 	tr1::shared_ptr<const TextLineStyle> style;
 	if(textLineStyleDirector_.get() != 0)
 		style = textLineStyleDirector_->queryTextLineStyle(line);
-	return (style.get() != 0) ? style : DEFAULT_GLOBAL_TEXT_STYLE->defaultLineStyle;
+	if(style.get() == 0)
+	style = DEFAULT_GLOBAL_TEXT_STYLE->defaultLineStyle;
+	assert(style.get() != 0);
+	return *style;
 }
 
 /**
@@ -525,7 +520,7 @@ inline void PresentationReconstructor::Iterator::updateSubiterator() {
 	subiterator_ = (r != reconstructors_.end()) ?
 		r->second->getPresentation(currentPartition_.region) : auto_ptr<presentation::StyledTextRunIterator>();
 	if(subiterator_.get() == 0) {
-		const tr1::shared_ptr<const TextLineStyle> lineStyle(defaultLineStyle(presentation_));
+		const tr1::shared_ptr<const TextLineStyle> lineStyle(presentation_.globalTextStyle().defaultLineStyle);
 		assert(lineStyle.get() != 0);
 		tr1::shared_ptr<const TextRunStyle> runStyle(lineStyle->defaultRunStyle);
 		if(runStyle.get() == 0)
