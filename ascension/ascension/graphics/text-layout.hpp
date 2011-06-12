@@ -523,6 +523,12 @@ namespace ascension {
 
 		}
 	}
+
+	namespace detail {
+		void paintBorder(graphics::Context& context,
+			const graphics::NativeRectangle& rectangle,
+			const presentation::Border& style, const presentation::WritingMode& writingMode);
+	}
 } // namespace ascension.graphics.font
 
 #endif // !ASCENSION_TEXT_LAYOUT_HPP

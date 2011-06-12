@@ -174,7 +174,15 @@ namespace ascension {
 			virtual unsigned int logicalDpiY() const = 0;
 			virtual NativeSize size() const = 0;
 
-			virtual const win32::Handle<HDC>& nativeHandle() const /*throw()*/ = 0;
+#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+			const CairoObject<cairo_t>& nativeObject() const /*throw()*/;
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
+			const CGObject<CGContext>& nativeObject() const /*throw()*/;
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+			QPainter& nativeObject() const /*throw()*/;
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+			const win32::Handle<HDC>& nativeObject() const /*throw()*/;
+#endif
 
 		private:
 			struct State {

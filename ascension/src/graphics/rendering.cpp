@@ -316,3 +316,7 @@ void TextRenderer::updateDefaultFont() {
 	}
 	defaultFontListeners_.notify(&DefaultFontListener::defaultFontChanged);
 }
+
+WritingMode resolveWritingMode(const Presentation& presentation, const TextRenderer& textRenderer) {
+	presentation.globalTextStyle()
+}

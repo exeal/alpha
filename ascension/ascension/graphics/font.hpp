@@ -255,7 +255,7 @@ namespace ascension {
 				const FontProperties properties_;
 			};
 
-			class Font {
+			class Font : public std::tr1::enable_shared_from_this<Font> {
 			public:
 				/**
 				 * Provides physical font metrics information.

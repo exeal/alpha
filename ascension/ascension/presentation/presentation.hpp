@@ -178,11 +178,11 @@ namespace ascension {
 			const hyperlink::Hyperlink* const* getHyperlinks(length_t line, std::size_t& numberOfHyperlinks) const;
 			// styles
 			void addGlobalTextStyleListener(GlobalTextStyleListener& listener);
-			std::tr1::shared_ptr<const TextToplevelStyle> globalTextStyle() const /*throw()*/;
+			const TextToplevelStyle& globalTextStyle() const /*throw()*/;
 			void removeGlobalTextStyleListener(GlobalTextStyleListener& listener);
 			void setGlobalTextStyle(std::tr1::shared_ptr<const TextToplevelStyle> newStyle);
 			void textLineColors(length_t line, graphics::Color& foreground, graphics::Color& background) const;
-			std::tr1::shared_ptr<const TextLineStyle> textLineStyle(length_t line) const;
+			const TextLineStyle& textLineStyle(length_t line) const;
 			std::auto_ptr<StyledTextRunIterator> textRunStyles(length_t line) const;
 			// strategies
 			void addTextLineColorDirector(std::tr1::shared_ptr<TextLineColorDirector> director);
@@ -220,10 +220,13 @@ namespace ascension {
 
 		/**
 		 * Returns the global text style this object gives.
-		 * @return The global text style. This value is never @c null
+		 * @return The global text style
 		 * @see #setGlobalTextStyle
 		 */
-		inline std::tr1::shared_ptr<const TextToplevelStyle> Presentation::globalTextStyle() const /*throw()*/ {return globalTextStyle_;}
+		inline const TextToplevelStyle& Presentation::globalTextStyle() const /*throw()*/ {
+			assert(globalTextStyle_ != 0);
+			return *globalTextStyle_;
+		}
 
 		/**
 		 * Removes the specified text line color director.
