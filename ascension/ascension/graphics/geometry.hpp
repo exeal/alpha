@@ -310,7 +310,18 @@ namespace ascension {
 
 			// 'intersected' for ...
 
-			// 'intersects' for ...
+			// 'intersects' for rectangle and region
+
+			template<typename Rectangle1, typename Rectangle2>
+			inline bool _intersects(const Rectangle1& rectangle1, const Rectangle2& rectangle2, const RectangleTag&, const RectangleTag&) {
+				return range<X_COORDINATE>(rectangle1).intersects(range<X_COODINATE>(rectangle2))
+					|| range<Y_COORDINATE>(rectangle1).intersects(range<Y_COODINATE>(rectangle2));
+			}
+
+			template<typename Geometry1, typename Geometry2>
+			inline bool intersects(const Geometry1& geometry1, const Geometry2& geometry2) {
+				return _intersects(geometry1, geometry2, Tag<Geometry1>(), Tag<Geometry2>());
+			}
 
 			// 'includes' for rectangle and region
 

@@ -23,6 +23,7 @@ namespace ascension {
 		class Inheritable {
 		public:
 			typedef T value_type;
+			typedef Inheritable<T> Type;
 		public:
 			Inheritable() /*throw()*/ : inherits_(true) {}
 			Inheritable(value_type v) /*throw()*/ : value_(v), inherits_(false) {}
@@ -34,6 +35,11 @@ namespace ascension {
 		private:
 			value_type value_;
 			bool inherits_;
+		};
+
+		template<bool condition, typename T>
+		struct InheritableIf {
+			typedef typename detail::Select<condition, Inheritable<T>, T>::Type Type;
 		};
 
 		/**
@@ -169,7 +175,7 @@ namespace ascension {
 			/// Font family name. An empty string means inherit the parent.
 			String fontFamily;	// TODO: replace with graphics.font.FontFamilies.
 			/// Font properties. See @c graphics#FontProperties.
-			graphics::font::FontProperties fontProperties;
+			graphics::font::FontProperties<Inheritable> fontProperties;
 			/// 'font-size-adjust' property. 0.0 means 'none', negative value means 'inherit'.
 			double fontSizeAdjust;
 			/// The dominant baseline of the line. Default value is @c DOMINANT_BASELINE_AUTO.
@@ -403,14 +409,7 @@ namespace ascension {
 				lineHeightShiftAdjustment(CONSIDER_SHIFTS), lineStackingStrategy(MAX_HEIGHT) {}
 		};
 
-		/**
-		 * @see "CSS Writing Modes Module Level 3" (http://www.w3.org/TR/css3-writing-modes/)
-		 * @see "SVG 1.1 (Second Edition), 10.7 Text layout"
-		 *      (http://www.w3.org/TR/SVG/text.html#TextLayout)
-		 * @see "XSL 1.1, 7.29 Writing-mode-related Properties"
-		 *      (http://www.w3.org/TR/xsl/#writing-mode-related)
-		 */
-		struct WritingMode {
+		struct WritingModeBase {
 			/**
 			 * Defines block flow directions.
 			 * @see "CSS Writing Modes Module Level 3, 3.1. Block Flow Direction: the Åewriting-modeÅf
@@ -433,19 +432,64 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/SVG/text.html#GlyphOrientation)
 			 */
 			enum TextOrientation {
-				VERTICAL_RIGHT, UPRIGHT, ROTATE_RIGHT, ROTATE_LEFT, ROTATE_NORMAL, AUTO
+				VERTICAL_RIGHT, UPRIGHT, SIDEWAYS_RIGHT, SIDEWAYS_LEFT, SIDEWAYS, USE_GLYPH_ORIENTATION
 			};
 
-			ReadingDirection inlineFlowDirection;	///< The inline flow direction.
-			BlockFlowDirection blockFlowDirection;	///< The block flow direction.
-			TextOrientation textOrientation;		///< The text orientation.
+			/// Returns @c true if @a dir is horizontal direction.
+			static inline bool isHorizontal(BlockFlowDirection dir) {
+				switch(dir) {
+					case HORIZONTAL_TB:
+						return true;
+					case VERTICAL_RL:
+					case VERTICAL_LR:
+						return false;
+					default:
+						throw UnknownValueException("dir");
+				}
+			}
 
-			WritingMode(
-				ReadingDirection inlineFlowDirection = LEFT_TO_RIGHT/*ASCENSION_DEFAULT_TEXT_READING_DIRECTION*/,
-				BlockFlowDirection blockFlowDirection = HORIZONTAL_TB,
-				TextOrientation textOrientation = VERTICAL_RIGHT) :
+			/// Returns @c true if @a dir is vertical direction.
+			static inline bool isVertical(BlockFlowDirection dir) {return !isHorizontal(dir);}
+		};
+
+		/**
+		 * @tparam inheritable All data members are inheritable when set to @c true
+		 * @see WritingModeBase
+		 * @see "CSS Writing Modes Module Level 3" (http://www.w3.org/TR/css3-writing-modes/)
+		 * @see "SVG 1.1 (Second Edition), 10.7 Text layout"
+		 *      (http://www.w3.org/TR/SVG/text.html#TextLayout)
+		 * @see "XSL 1.1, 7.29 Writing-mode-related Properties"
+		 *      (http://www.w3.org/TR/xsl/#writing-mode-related)
+		 */
+		template<bool inheritable>
+		struct WritingMode : public WritingModeBase {
+			/// The inline flow direction.
+			typename InheritableIf<inheritable, ReadingDirection>::Type inlineFlowDirection;
+			/// The block flow direction.
+			typename InheritableIf<inheritable, BlockFlowDirection>::Type blockFlowDirection;
+			/// The text orientation.
+			typename InheritableIf<inheritable, TextOrientation>::Type textOrientation;
+
+			/**
+			 * Constructor initializes the data members with the given values.
+			 * @param inlineFlowDirection
+			 * @param blockFlowDirection
+			 * @param textOrientation
+			 */
+			explicit WritingMode(
+				typename InheritableIf<inheritable, ReadingDirection>::Type
+					inlineFlowDirection = LEFT_TO_RIGHT/*ASCENSION_DEFAULT_TEXT_READING_DIRECTION*/,
+				typename InheritableIf<inheritable, BlockFlowDirection>::Type
+					blockFlowDirection = HORIZONTAL_TB,
+				typename InheritableIf<inheritable, TextOrientation>::Type
+					textOrientation = VERTICAL_RIGHT) :
 				inlineFlowDirection(inlineFlowDirection), blockFlowDirection(blockFlowDirection),
 				textOrientation(textOrientation) /*throw()*/ {}
+			/// Implicit conversion operator.
+			template<bool otherInheritable>
+			inline operator WritingMode<otherInheritable>() const {
+				return WritingMode<otherInheritable>(inlineFlowDirection, blockFlowDirection, textOrientation);
+			}
 		};
 	}
 
@@ -456,7 +500,7 @@ namespace ascension {
 	}
 
 	namespace presentation {
-		WritingMode resolveWritingMode(
+		WritingMode<false> resolveWritingMode(
 			const Presentation& presentation, const graphics::font::TextRenderer& textRenderer);
 
 		/**
@@ -465,7 +509,7 @@ namespace ascension {
 		 */
 		struct TextToplevelStyle : public std::tr1::enable_shared_from_this<TextToplevelStyle> {
 			/// The writing mode.
-			WritingMode writingMode;
+			WritingMode<true> writingMode;
 			/// The default text line style. The default value is @c null.
 			std::tr1::shared_ptr<const TextLineStyle> defaultLineStyle;
 		};

@@ -10,7 +10,7 @@
 #include <ascension/config.hpp>	// ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 #include <ascension/platforms.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
-#include <ascension/corelib/basic-types.hpp>		// uint32_t
+#include <ascension/corelib/basic-types.hpp>		// uint32_t, std.tr1.shared_ptr, ...
 #include <ascension/graphics/geometry.hpp>
 #include <cstring>	// std.strlen
 #include <locale>	// std.collate
@@ -138,10 +138,10 @@ namespace ascension {
 			};
 
 			/**
-			 * Set of font properties without the family name.
-			 * @see FontDescription
+			 * 
+			 * @see FontProperties
 			 */
-			class FontProperties {
+			class FontPropertiesBase {
 			public:
 				enum Weight {
 					NORMAL_WEIGHT = 400,
@@ -158,52 +158,73 @@ namespace ascension {
 					EXTRA_BOLD = 800,
 					ULTRA_BOLD = 800,
 					BLACK = 900,
-					HEAVY = 900,
-					INHERIT_WEIGHT
+					HEAVY = 900
 				};
 				enum Stretch {
-					NORMAL_STRETCH,
+					NORMAL_STRETCH = 1000,
 					WIDER,
 					NARROWER,
-					ULTRA_CONDENSED,
-					EXTRA_CONDENSED,
-					CONDENSED,
-					SEMI_CONDENSED,
-					SEMI_EXPANDED,
-					EXPANDED,
-					EXTRA_EXPANDED,
-					ULTRA_EXPANDED,
-					INHERIT_STRETCH
+					ULTRA_CONDENSED = 500,
+					EXTRA_CONDENSED = 625,
+					CONDENSED = 750,
+					SEMI_CONDENSED = 875,
+					SEMI_EXPANDED = 1125,
+					EXPANDED = 1250,
+					EXTRA_EXPANDED = 1500,
+					ULTRA_EXPANDED = 2000
 				};
 				enum Style {
 					NORMAL_STYLE,
 					ITALIC,
 					OBLIQUE,
-					BACKSLANT,
-					INHERIT_STYLE
+					BACKSLANT
+				};
+				enum Variant {
+					NORMAL_VARIANT,
+					SMALL_CAPS
 				};
 				enum Orientation {
 					HORIZONTAL,
-					VERTICAL,
-					INHERIT_ORIENTATION
+					VERTICAL
 				};
+			};
+
+			/**
+			 * Set of font properties without the family name.
+			 * @see FontDescription
+			 */
+			template<template<typename> class PropertyHolder = detail::Type2Type>
+			class FontProperties : public FontPropertiesBase {
+			public:
+				typedef typename PropertyHolder<Weight>::Type WeightType;
+				typedef typename PropertyHolder<Stretch>::Type StretchType;
+				typedef typename PropertyHolder<Style>::Type StyleType;
+				typedef typename PropertyHolder<Variant>::Type VariantType;
+				typedef typename PropertyHolder<Orientation>::Type OrientationType;
+				typedef typename PropertyHolder<double>::Type PixelSizeType;
 			public:
 				/**
 				 * Constructor.
 				 * @param weight
 				 * @param stretch
 				 * @param style
+				 * @param variant
 				 * @param orientation
 				 * @param size
 				 */
 				explicit FontProperties(
-					Weight weight = INHERIT_WEIGHT, Stretch stretch = INHERIT_STRETCH,
-					Style style = INHERIT_STYLE, Orientation orientation = INHERIT_ORIENTATION, double size = 0.0)
+					WeightType weight = WeightType(), StretchType stretch = StretchType(),
+					StyleType style = StyleType(), VariantType variant = VariantType(),
+					OrientationType orientation = OrientationType(), PixelSizeType pixelSize = PixelSizeType())
 					: weight_(weight), stretch_(stretch), style_(style), orientation_(orientation), size_(size) {}
+				/// Implicit conversion operator.
+				template<template<typename> class T> inline operator FontProperties<T>() const {
+					return FontProperties<T>(weight(), stretch(), style(), variant(), orientation(), pixelSize());
+				}
 				/// Equality operator.
 				bool operator==(const FontProperties& other) const /*throw()*/ {
 					return weight_ == other.weight_ && stretch_ == other.stretch_
-						&& style_ == other.style_ && equals(size_, other.size_);
+						&& style_ == other.style_ && equals(pixelSize_, other.pixelSize_);
 				}
 				/// Inequality operator.
 				bool operator!=(const FontProperties& other) const /*throw()*/ {
@@ -213,28 +234,32 @@ namespace ascension {
 				std::size_t hash() const /*throw()*/ {
 					const std::collate<char>& coll(std::use_facet<std::collate<char> >(std::locale::classic()));
 					// bad idea :(
-					const char* temp = reinterpret_cast<const char*>(&size_);
+					const char* temp = reinterpret_cast<const char*>(&pixelSize_);
 					return coll.hash(temp, temp + sizeof(size_) / sizeof(char))
 						+ (orientation() << 2) + (stretch() << 4) + (style() << 6) + (weight() << 8);
 				}
 				/// Returns the orientation.
-				Orientation orientation() const /*throw()*/ {return orientation_;}
+				OrientationType orientation() const /*throw()*/ {return orientation_;}
 				/// Returns the size in pixels. Zero means that inherit the parent.
-				double size() const /*throw()*/ {return size_;}
+				PixelSizeType pixelSize() const /*throw()*/ {return pixelSize_;}
 				/// Returns the stretch.
-				Stretch stretch() const /*throw()*/ {return stretch_;}
+				StretchType stretch() const /*throw()*/ {return stretch_;}
 				/// Returns the style.
-				Style style() const /*throw()*/ {return style_;}
+				StyleType style() const /*throw()*/ {return style_;}
+				/// Returns the variant.
+				VariantType variant() const /*throw()*/ {return variant_;}
 				/// Returns the weight.
-				Weight weight() const /*throw()*/ {return weight_;}
+				WeightType weight() const /*throw()*/ {return weight_;}
 			private:
-				Weight weight_;
-				Stretch stretch_;
-				Style style_;
-				Orientation orientation_;
-				double size_;
+				WeightType weight_;
+				StretchType stretch_;
+				StyleType style_;
+				VariantType variant_;
+				OrientationType orientation_;
+				PixelSizeType pixelSize_;
 			};
 
+			template<template<typename> class PropertyHolder = detail::Type2Type>
 			class FontDescription {
 			public:
 				/**
@@ -244,15 +269,15 @@ namespace ascension {
 				 */
 				explicit FontDescription(
 					std::auto_ptr<FontFamilies> families = std::auto_ptr<FontFamilies>(),
-					const FontProperties& properties = FontProperties())
+					const FontProperties<PropertyHolder>& properties = FontProperties<PropertyHolder>())
 					: families_(families), properties_(properties) {}
 				/// Returns the family names or @c null.
 				const std::auto_ptr<FontFamilies>& families() const /*throw()*/ {return families_;}
 				/// Returns the properties other than the family names.
-				const FontProperties& properties() const /* throw() */ {return properties_;}
+				const FontProperties<PropertyHolder>& properties() const /* throw() */ {return properties_;}
 			private:
 				const std::auto_ptr<FontFamilies> families_;
-				const FontProperties properties_;
+				const FontProperties<PropertyHolder> properties_;
 			};
 
 			class Font : public std::tr1::enable_shared_from_this<Font> {
@@ -331,7 +356,7 @@ namespace ascension {
 				 * @return The font has the requested properties or the default one
 				 */
 				virtual std::tr1::shared_ptr<const Font> get(const String& familyName,
-					const FontProperties& properties, double sizeAdjust = 0.0) const = 0;
+					const FontProperties<>& properties, double sizeAdjust = 0.0) const = 0;
 				/**
 				 * Returns the font for last resort fallback.
 				 * @param properties The font properties
@@ -339,7 +364,7 @@ namespace ascension {
 				 * @return The font has the requested property
 				 */
 				virtual std::tr1::shared_ptr<const Font> lastResortFallback(
-					const FontProperties& properties, double sizeAdjust = 0.0) const = 0;
+					const FontProperties<>& properties, double sizeAdjust = 0.0) const = 0;
 			};
 
 			const FontCollection& systemFonts() /*throw()*/;

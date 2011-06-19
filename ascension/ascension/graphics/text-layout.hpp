@@ -319,7 +319,7 @@ namespace ascension {
 			public:
 				// constructors
 				TextLayout(const String& text,
-					const presentation::WritingMode& writingMode = presentation::WritingMode(),
+					const presentation::WritingMode<false>& writingMode = presentation::WritingMode<false>(),
 					presentation::TextAnchor anchor = presentation::TEXT_ANCHOR_START,
 					presentation::TextJustification justification = presentation::NO_JUSTIFICATION,
 					presentation::DominantBaseline dominantBaseline = presentation::DOMINANT_BASELINE_AUTO,
@@ -339,7 +339,7 @@ namespace ascension {
 				bool isBidirectional() const /*throw()*/;
 				bool isEmpty() const /*throw()*/;
 				const presentation::TextLineStyle& style() const /*throw()*/;
-				const presentation::WritingMode& writingMode() const /*throw()*/;
+				const presentation::WritingMode<false>& writingMode() const /*throw()*/;
 				// visual line accesses
 				length_t numberOfLines() const /*throw()*/;
 				length_t lineAt(length_t column) const;
@@ -389,7 +389,7 @@ namespace ascension {
 				void wrap(const TabExpander& tabExpander) /*throw()*/;
 			private:
 				const String& text_;
-				const presentation::WritingMode writingMode_;
+				const presentation::WritingMode<false> writingMode_;
 				const presentation::TextAnchor anchor_;
 				const presentation::DominantBaseline dominantBaseline_;
 				AutoBuffer<TextRun*> runs_;
@@ -527,7 +527,7 @@ namespace ascension {
 	namespace detail {
 		void paintBorder(graphics::Context& context,
 			const graphics::NativeRectangle& rectangle,
-			const presentation::Border& style, const presentation::WritingMode& writingMode);
+			const presentation::Border& style, const presentation::WritingMode<false>& writingMode);
 	}
 } // namespace ascension.graphics.font
 
