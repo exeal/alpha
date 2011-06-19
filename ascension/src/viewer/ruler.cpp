@@ -390,6 +390,8 @@ void RulerPainter::recalculateWidth() /*throw()*/ {
 	//     (line-numbers-interior-width) = (line-numbers-padding-start) + (line-numbers-padding-end)
 	//     (line-numbers-content-width) = max((glyphs-extent), (average-glyph-extent) * (minimum-digits-setting))
 
+	Context& context = viewer_.graphicsContext();
+
 	// compute the width of the line numbers
 	Scalar lineNumbersContentWidth = 0, lineNumbersPaddingStartWidth = 0, lineNumbersPaddingEndWidth = 0, lineNumbersBorderWidth = 0;
 	if(configuration_.lineNumbers.visible) {
@@ -398,26 +400,26 @@ void RulerPainter::recalculateWidth() /*throw()*/ {
 			lineNumberDigitsCache_ = digits;
 		}
 		const Scalar glyphsExtent = computeMaximumNumberGlyphsExtent(
-			viewer_.graphicsContext(), viewer_.textRenderer().defaultFont(), digits,
+			context, viewer_.textRenderer().defaultFont(), digits,
 			viewer_.presentation().globalTextStyle().writingMode, configuration().lineNumbers.numberSubstitution);
 		const Scalar minimumExtent = viewer_.textRenderer().defaultFont()->metrics().averageCharacterWidth() * digits;
 		lineNumbersContentWidth = max(glyphsExtent, minimumExtent);
 
-		lineNumbersBorderWidth = configuration_.lineNumbers.border.computedWidth().compute();
+		lineNumbersBorderWidth = static_cast<Scalar>(configuration_.lineNumbers.border.computedWidth().value(context));
 //		const Scalar spaceWidth = 0;
 //		const Scalar exteriorWidth = borderWidth + spaceWidth;
 //		lineNumbersWidth += exteriorWidth;
 
-		lineNumbersPaddingStartWidth = configuration().lineNumbers.paddingStart.compute();
-		lineNumbersPaddingEndWidth = configuration().lineNumbers.paddingEnd.compute();
+		lineNumbersPaddingStartWidth = static_cast<Scalar>(configuration().lineNumbers.paddingStart.value(context));
+		lineNumbersPaddingEndWidth = static_cast<Scalar>(configuration().lineNumbers.paddingEnd.value(context));
 	}
 
 	// compute the width of the indicator margin
 	Scalar indicatorMarginContentWidth = 0, indicatorMarginBorderWidth = 0;
 	if(configuration_.indicatorMargin.visible) {
 		indicatorMarginContentWidth = configuration().indicatorMargin.width.inherits() ?
-			platformIndicatorMargin() : configuration().indicatorMargin.width.get().compute();
-		indicatorMarginBorderWidth = configuration().indicatorMargin.border.computedWidth().compute();
+			platformIndicatorMargin() : static_cast<Scalar>(configuration().indicatorMargin.width.get().value(context));
+		indicatorMarginBorderWidth = static_cast<Scalar>(configuration().indicatorMargin.border.computedWidth().value(context));
 	}
 
 	// commit
