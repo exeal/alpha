@@ -9,8 +9,12 @@
 
 #ifndef ASCENSION_LENGTH_HPP
 #define ASCENSION_LENGTH_HPP
+#include <stdexcept>	// std.invalid_argument
 
 namespace ascension {
+
+	namespace graphics {class RenderingContext2D;}
+
 	namespace presentation {
 
 		/**
@@ -22,8 +26,10 @@ namespace ascension {
 		 * @see "4.5.11 Interface SVGLength - SVG (Second Edition)"
 		 *      (http://www.w3.org/TR/SVG/types.html#InterfaceSVGLength)
 		 */
-		struct Length {
-			double value;	///< Value of the length.
+		class Length {
+		public:
+			typedef std::invalid_argument NotSupportedError;
+
 			enum Unit {
 				// relative length units
 				EM_HEIGHT,		///< The font size of the relevant font.
@@ -52,20 +58,56 @@ namespace ascension {
 				// percentages (exactly not a length)
 				PERCENTAGE,		///< Percentage.
 			};
-			Unit unit;	///< Unit of the length.
 
 			enum Mode {
 				WIDTH, HEIGHT, OTHER
 			};
-			Mode mode;	///< Mode of the length.
 
-			/// Default constructor.
-			Length() /*throw()*/ {}
-			/// Constructor.
-			explicit Length(double value, Unit unit = PIXELS, Mode = OTHER) : value(value), unit(unit), mode(mode) {}
+		public:
+//			Length() /*throw()*/;
+			explicit Length(double valueInSpecifiedUnits, Unit unitType = PIXELS, Mode = OTHER);
+			bool operator==(const Length& other) const /*throw()*/;
+			bool operator!=(const Length& other) const /*throw()*/;
+			void convertToSpecifiedUnits(Unit unitType, const graphics::RenderingContext2D& context);
+			void newValueSpecifiedUnits(Unit unitType, double valueInSpecifiedUnits);
+			void setValue(double value, const graphics::RenderingContext2D& context);
+//			void setValueAsString(const StringPiece&);
+			void setValueInSpecifiedUnits(double value) /*throw()*/;
+			Unit unitType() const /*throw()*/;
+			double value(const graphics::RenderingContext2D& context) const;
+			double valueInSpecifiedUnits() const;
+//			String valueAsString() const;
+
+		private:
+			double valueInSpecifiedUnits_;
+			Unit unit_;
+			Mode mode_;
 			///
 			static bool isAbsolute(Unit unit);
 		};
+
+		/// Equality operator returns @c true if and only if ....
+		bool Length::operator==(const Length& other) const /*throw()*/ {
+			return valueInSpecifiedUnits() == other.valueInSpecifiedUnits()
+				&& unitType() == other.unitType() && mode_ == other.mode_;
+		}
+
+		/// Inequality operator.
+		inline bool Length::operator!=(const Length& other) const /*throw()*/ {return !(*this == other);}
+
+		/**
+		 * [Copied from SVG 1.1 documentation] Sets the value as a floating point value, in the
+		 * units expressed by @c #unitType(). Setting this attribute will cause @c #value() and
+		 * @c #valueAsString() to be updated automatically to reflect this setting.
+		 * @param value The new value
+		 */
+		inline void Length::setValueInSpecifiedUnits(double value) /*throw()*/ {valueInSpecifiedUnits_ = value;}
+
+		/// Returns the type of the value.
+		inline Length::Unit Length::unitType() const /*throw()*/ {return unit_;}
+
+		/// Returns the value as a floating point value, in the units expressed by @c unitType().
+		inline double Length::valueInSpecifiedUnits() const /*throw()*/ {return valueInSpecifiedUnits_;}
 
 	}
 } // namespace ascension.presentation

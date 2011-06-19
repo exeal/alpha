@@ -70,7 +70,7 @@ namespace ascension {
 				/// Default constructor.
 				Part() : color(), style(NONE), width(MEDIUM) {}
 				/// Returns the computed width.
-				Length computedWidth() const {return (style != NONE) ? width : Length(0.0, width.unit);}
+				Length computedWidth() const {return (style != NONE) ? width : Length(0.0, width.unitType());}
 				/// Returns @c true if this part is invisible (but may be consumes place).
 				bool hasVisibleStyle() const /*throw()*/ {return style != NONE && style != HIDDEN;}
 			} before, after, start, end;
