@@ -13,6 +13,7 @@ using namespace ascension::graphics::font;
 using namespace ascension::presentation;
 using namespace ascension::viewers;
 using namespace std;
+using detail::RulerPainter;
 
 extern const bool DIAGNOSE_INHERENT_DRAWING;
 
@@ -43,52 +44,49 @@ RulerConfiguration::IndicatorMargin::IndicatorMargin() /*throw()*/ : visible(fal
 
 // TODO: support locale-dependent number format.
 
-HRESULT drawLineNumber(Context& context, int x, int y, length_t lineNumber/*, const SCRIPT_CONTROL& control, const SCRIPT_STATE& initialState*/) {
+void drawLineNumber(Context& context, const NativePoint& origin, length_t lineNumber, const NumberSubstitution& ns) {
 	// format number string
 	wchar_t s[128];	// oops, is this sufficient?
+	// TODO: std.swprintf may be slow.
+	// TODO: use 'ns' parameter.
 #if defined(_MSC_VER) && (_MSC_VER < 1400)
 	const int length = swprintf(s, L"%lu", lineNumber);
 #else
 	const int length = swprintf(s, ASCENSION_COUNTOF(s), L"%lu", lineNumber);
 #endif // _MSC_VER < 1400
 
-	UINT option;
-#if 0
-	if(!ignoreUserOverride)
-		option = 0;
-	else {
-		switch(???) {
-			case CONTEXTUAL:
-			case NONE:
-				option = ETO_NUMERICSLATIN;
-				break;
-			case FROM_LOCALE:
-			case NATIONAL:
-			case TRADITIONAL:
-				option = ETO_NUMERICSLOCAL;
-				break;
-		}
-	}
-#else
-	option = 0;
-#endif
-	context.drawText(x, y, s);
-	::ExtTextOutW(context.engine()->nativeHandle().get(), x, y, option, 0, s, length, 0);
-	return S_OK;
+	context.fillText(s, origin);
 }
 
 /**
  * Constructor.
  * @param viewer The text viewer
- * @param enableDoubleBuffering Set @c true to use double-buffering for non-flicker drawing
  */
-detail::RulerPainter::RulerPainter(TextViewer& viewer, bool enableDoubleBuffering)
-		: viewer_(viewer), width_(0), lineNumberDigitsCache_(0), enablesDoubleBuffering_(enableDoubleBuffering) {
+RulerPainter::RulerPainter(TextViewer& viewer) :
+		viewer_(viewer), indicatorMarginContentWidth_(0), indicatorMarginBorderWidth_(0),
+		lineNumbersContentWidth_(0), lineNumbersPaddingStartWidth_(0), lineNumbersPaddingEndWidth_(0),
+		lineNumbersBorderWidth_(0), lineNumberDigitsCache_(0) {
 	recalculateWidth();
 }
 
+/**
+ * Computes the alignment of the ruler of the text viewer.
+ * @param viewer The text viewer
+ * @return the alignment of the vertical ruler. @c ALIGN_LEFT or @c ALIGN_RIGHT
+ */
+RulerPainter::SnapAlignment RulerPainter::alignment() const {
+	const WritingMode<false> wm(resolveWritingMode(viewer_.presentation(), viewer_.textRenderer()));
+	const detail::PhysicalTextAnchor pta = detail::computePhysicalTextAnchor(configuration().alignment, wm.inlineFlowDirection);
+	if(pta == detail::LEFT)
+		return WritingModeBase::isHorizontal(wm.blockFlowDirection) ? LEFT : TOP;
+	else if(pta == detail::RIGHT)
+		return WritingModeBase::isHorizontal(wm.blockFlowDirection) ? RIGHT : BOTTOM;
+	else
+		ASCENSION_ASSERT_NOT_REACHED();
+}
+
 /// Returns the maximum number of digits of line numbers.
-uint8_t detail::RulerPainter::maximumDigitsForLineNumbers() const /*throw()*/ {
+uint8_t RulerPainter::maximumDigitsForLineNumbers() const /*throw()*/ {
 	uint8_t n = 1;
 	length_t lines = viewer_.document().numberOfLines() + configuration_.lineNumbers.startValue - 1;
 	while(lines >= 10) {
@@ -102,29 +100,115 @@ uint8_t detail::RulerPainter::maximumDigitsForLineNumbers() const /*throw()*/ {
  * Paints the ruler.
  * @param context The graphics context
  */
-void detail::RulerPainter::paint(PaintContext& context) {
+void RulerPainter::paint(PaintContext& context) {
 	if(width() == 0)
 		return;
 
 	const NativeRectangle paintBounds(context.boundsToPaint());
 	const TextRenderer& renderer = viewer_.textRenderer();
 	const NativeRectangle clientBounds(viewer_.bounds(false));
-	const bool leftAligned = utils::isRulerLeftAligned(viewer_);
+	const SnapAlignment location = alignment();
+	Border::Part Border::*borderPart;
 
-	if()
-	if((leftAligned && geometry::left(paintBounds) >= geometry::left(clientBounds) + width())
-			|| (!leftAligned && geometry::right(paintBounds) < geometry::right(clientBounds) - width()))
+	NativeRectangle indicatorMarginBounds, lineNumbersBounds;
+	switch(location) {
+		case LEFT:
+			indicatorMarginBounds = geometry::make<NativeRectangle>(
+				geometry::topLeft(clientBounds),
+				geometry::make<NativeSize>(indicatorMarginWidth(), geometry::dy(clientBounds)));
+			lineNumbersBounds = geometry::make<NativeRectangle>(
+				geometry::topRight(indicatorMarginBounds),
+				geometry::make<NativeSize>(lineNumbersWidth(), geometry::dy(clientBounds)));
+			borderPart = &Border::end;
+			break;
+		case TOP:
+			indicatorMarginBounds = geometry::make<NativeRectangle>(
+				geometry::topLeft(clientBounds),
+				geometry::make<NativeSize>(geometry::dx(clientBounds), indicatorMarginWidth()));
+			lineNumbersBounds = geometry::make<NativeRectangle>(
+				geometry::bottomLeft(indicatorMarginBounds),
+				geometry::make<NativeSize>(geometry::dx(clientBounds), lineNumbersWidth()));
+			borderPart = &Border::after;
+			break;
+		case RIGHT:
+			geometry::normalize(
+				indicatorMarginBounds = geometry::make<NativeRectangle>(
+					geometry::topRight(clientBounds),
+					geometry::make<NativeSize>(-indicatorMarginWidth(), geometry::dy(clientBounds))));
+			geometry::normalize(
+				lineNumbersBounds = geometry::make<NativeRectangle>(
+					geometry::topLeft(indicatorMarginBounds),
+					geometry::make<NativeSize>(-lineNumbersWidth(), geometry::dy(clientBounds))));
+			borderPart = &Border::start;
+			break;
+		case BOTTOM:
+			geometry::normalize(
+				indicatorMarginBounds = geometry::make<NativeRectangle>(
+					geometry::bottomLeft(clientBounds),
+					geometry::make<NativeSize>(geometry::dx(clientBounds), -indicatorMarginWidth())));
+			geometry::normalize(
+				lineNumbersBounds = geometry::make<NativeRectangle>(
+					geometry::topLeft(indicatorMarginBounds),
+					geometry::make<NativeSize>(geometry::dx(clientBounds), -lineNumbersWidth())));
+			borderPart = &Border::before;
+			break;
+	}
+
+	const bool indicatorMarginToPaint = configuration().indicatorMargin.visible
+		&& !geometry::isEmpty(indicatorMarginBounds) && geometry::intersects(indicatorMarginBounds, paintBounds);
+	const bool lineNumbersToPaint = configuration().lineNumbers.visible
+		&& !geometry::isEmpty(lineNumbersBounds) && geometry::intersects(lineNumbersBounds, paintBounds);
+	if(!indicatorMarginToPaint && !lineNumbersToPaint)
 		return;
 
 #ifdef _DEBUG
 	if(DIAGNOSE_INHERENT_DRAWING)
-		win32::DumpContext() << L"@VerticalRulerDrawer.draw draws y = "
+		win32::DumpContext() << L"@RulerPainter.paint draws y = "
 			<< geometry::top(paintBounds) << L" ~ " << geometry::bottom(paintBounds) << L"\n";
 #endif // _DEBUG
 
 	context.save();
-	const Scalar imWidth = configuration_.indicatorMargin.visible ? configuration_.indicatorMargin.width : 0;
 
+	// paint the indicator margin
+	if(indicatorMarginToPaint) {
+		context.setFillStyle(configuration().indicatorMargin.paint);
+		context.fillRectangle(indicatorMarginBounds);
+		Border borderStyle;
+		(borderStyle.*borderPart) = configuration().indicatorMargin.border;
+		detail::paintBorder(context, indicatorMarginBounds, borderStyle,
+			resolveWritingMode(viewer_.presentation(), viewer_.textRenderer()));
+	}
+
+	// paint the line numbers
+	if(lineNumbersToPaint) {
+		// background and border
+		context.setFillStyle(configuration().lineNumbers.background);
+		context.fillRectangle(lineNumbersBounds);
+		Border borderStyle;
+		(borderStyle.*borderPart) = configuration().lineNumbers.border;
+		detail::paintBorder(context, lineNumbersBounds, borderStyle,
+			resolveWritingMode(viewer_.presentation(), viewer_.textRenderer()));
+
+		// text
+		if(!configuration().lineNumbers.foreground.inherits())
+			context.setFillStyle(configuration().lineNumbers.foreground);
+		else {
+			if(const tr1::shared_ptr<const TextLineStyle> lineStyle = viewer_.presentation().globalTextStyle().defaultLineStyle) {
+				if(const tr1::shared_ptr<const TextRunStyle> runStyle = lineStyle->defaultRunStyle)
+					context.setFillStyle(runStyle->foreground);
+				else
+					context.setFillStyle(Paint());
+			} else
+				context.setFillStyle(Paint());
+		}
+		context.setFont(viewer_.textRenderer().defaultFont());
+//		context.setTextAlign();
+//		context.setTextBaseline();
+
+		// TODO: paint glyphs.
+	}
+
+#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
 	Scalar left;
 	HDC dcex;
 	if(enablesDoubleBuffering_) {
@@ -253,6 +337,8 @@ void detail::RulerPainter::paint(PaintContext& context) {
 		::BitBlt(context.engine()->nativeHandle().get(),
 			leftAligned ? geometry::left(clientBounds) : geometry::right(clientBounds) - width(), geometry::top(paintBounds),
 			right - left, geometry::dy(paintBounds), memoryDC_.get(), 0, geometry::top(paintBounds), SRCCOPY);
+#endif
+
 	context.restore();
 }
 
@@ -288,24 +374,24 @@ namespace {
 #endif
 */
 		Char maximumExtentCharacter;
-		font->missing();
 		const NativeSize stringExtent(context.measureText(String(digits, maximumExtentCharacter)));
 
 		context.setFont(oldFont);
-		return (writingMode.blockFlowDirection == WritingMode::HORIZONTAL_TB) ? geometry::dx(stringExtent) : geometry::dy(stringExtent);
+		return WritingModeBase::isHorizontal(writingMode.blockFlowDirection) ? geometry::dx(stringExtent) : geometry::dy(stringExtent);
 	}
 }
 
 /// Recalculates the total width of the ruler.
-void detail::RulerPainter::recalculateWidth() /*throw()*/ {
+void RulerPainter::recalculateWidth() /*throw()*/ {
 	// (ruler-total-width) = (line-numbers-width) + (indicator-margin-width)
-	//   (indicator-margin-width) = (indicator-margin-border-width) + (indicator-margin-body-width)
-	//   (line-numbers-width) = (line-numbers-exterior-width) + (line-numbers-interior-width) + (line-numbers-body-width)
+	//   (indicator-margin-width) = (indicator-margin-border-width) + (indicator-margin-content-width)
+	//   (line-numbers-width) = (line-numbers-exterior-width) + (line-numbers-interior-width) + (line-numbers-content-width)
 	//     (line-numbers-exterior-width) = (line-numbers-border-width) + (line-numbers-space-width)
 	//     (line-numbers-interior-width) = (line-numbers-padding-start) + (line-numbers-padding-end)
-	//     (line-numbers-body-width) = max((glyphs-extent), (average-glyph-extent) * (minimum-digits-setting))
+	//     (line-numbers-content-width) = max((glyphs-extent), (average-glyph-extent) * (minimum-digits-setting))
 
-	Scalar totalWidth = 0;
+	// compute the width of the line numbers
+	Scalar lineNumbersContentWidth = 0, lineNumbersPaddingStartWidth = 0, lineNumbersPaddingEndWidth = 0, lineNumbersBorderWidth = 0;
 	if(configuration_.lineNumbers.visible) {
 		const uint8_t digits = maximumDigitsForLineNumbers();
 		if(digits != lineNumberDigitsCache_) {
@@ -313,34 +399,42 @@ void detail::RulerPainter::recalculateWidth() /*throw()*/ {
 		}
 		const Scalar glyphsExtent = computeMaximumNumberGlyphsExtent(
 			viewer_.graphicsContext(), viewer_.textRenderer().defaultFont(), digits,
-			viewer_.presentation().globalTextStyle()->writingMode, configuration().lineNumbers.numberSubstitution);
+			viewer_.presentation().globalTextStyle().writingMode, configuration().lineNumbers.numberSubstitution);
 		const Scalar minimumExtent = viewer_.textRenderer().defaultFont()->metrics().averageCharacterWidth() * digits;
-		totalWidth += max(glyphsExtent, minimumExtent);
+		lineNumbersContentWidth = max(glyphsExtent, minimumExtent);
 
-		const Scalar borderWidth = configuration_.lineNumbers.border.hasVisibleStyle() ?
-			configuration_.lineNumbers.border.width.compute() : 0;
-		const Scalar spaceWidth = 0;
-		const Scalar exteriorWidth = borderWidth + spaceWidth;
-		totalWidth += exteriorWidth;
+		lineNumbersBorderWidth = configuration_.lineNumbers.border.computedWidth().compute();
+//		const Scalar spaceWidth = 0;
+//		const Scalar exteriorWidth = borderWidth + spaceWidth;
+//		lineNumbersWidth += exteriorWidth;
 
-		const Scalar interiorWidth =
-			configuration().lineNumbers.paddingStart.compute() + configuration().lineNumbers.paddingEnd.compute();
-		totalWidth += interiorWidth;
+		lineNumbersPaddingStartWidth = configuration().lineNumbers.paddingStart.compute();
+		lineNumbersPaddingEndWidth = configuration().lineNumbers.paddingEnd.compute();
 	}
 
 	// compute the width of the indicator margin
-	if(configuration_.indicatorMargin.visible)
-		totalWidth_ += configuration().indicatorMargin.width.inherits() ?
-			platformIndicatorMargin() : configuration().indicatorMargin.width.inherits().compute();
+	Scalar indicatorMarginContentWidth = 0, indicatorMarginBorderWidth = 0;
+	if(configuration_.indicatorMargin.visible) {
+		indicatorMarginContentWidth = configuration().indicatorMargin.width.inherits() ?
+			platformIndicatorMargin() : configuration().indicatorMargin.width.get().compute();
+		indicatorMarginBorderWidth = configuration().indicatorMargin.border.computedWidth().compute();
+	}
 
-	if(totalWidth != width_) {
-		width_ = totalWidth;
+	// commit
+	const Scalar oldWidth = width();
+	lineNumbersContentWidth_ = lineNumbersContentWidth;
+	lineNumbersPaddingStartWidth_ = lineNumbersPaddingStartWidth;
+	lineNumbersPaddingEndWidth_ = lineNumbersPaddingEndWidth;
+	lineNumbersBorderWidth_ = lineNumbersBorderWidth;
+	indicatorMarginContentWidth_ = indicatorMarginContentWidth;
+	indicatorMarginBorderWidth_ = indicatorMarginBorderWidth;
+	if(width() != oldWidth) {
 		viewer_.scheduleRedraw(false);
 		viewer_.updateCaretPosition();
 	}
 }
 
-void detail::RulerPainter::setConfiguration(const RulerConfiguration& configuration) {
+void RulerPainter::setConfiguration(const RulerConfiguration& configuration) {
 	if(configuration.alignment != TEXT_ANCHOR_START && configuration.alignment != TEXT_ANCHOR_END)
 		throw UnknownValueException("configuration.alignment");
 	if(configuration.lineNumbers.anchor != TEXT_ANCHOR_START
@@ -357,16 +451,19 @@ void detail::RulerPainter::setConfiguration(const RulerConfiguration& configurat
 	update();
 }
 
-void detail::RulerPainter::update() /*throw()*/ {
+void RulerPainter::update() /*throw()*/ {
 	lineNumberDigitsCache_ = 0;
 	recalculateWidth();
+#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
 	updateGDIObjects();
 	if(enablesDoubleBuffering_ && memoryBitmap_.get() != 0)
 		memoryBitmap_.reset();
+#endif
 }
 
+#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
 ///
-void detail::RulerPainter::updateGDIObjects() /*throw()*/ {
+void RulerPainter::updateGDIObjects() /*throw()*/ {
 	indicatorMarginPen_.reset();
 	indicatorMarginBrush_.reset();
 	if(configuration_.indicatorMargin.visible) {
@@ -400,3 +497,4 @@ void detail::RulerPainter::updateGDIObjects() /*throw()*/ {
 			systemColors.serve(configuration_.lineNumbers.textColor.background, COLOR_WINDOW)), &::DeleteObject);
 	}
 }
+#endif

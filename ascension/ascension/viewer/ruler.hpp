@@ -47,21 +47,21 @@ namespace ascension {
 				/// Padding width at the end. Default value is 1-pixel.
 				presentation::Length paddingEnd;
 				/**
-				 * Foreground color of the text. Default value is invalid color which is
-				 * fallbacked to the foreground color of the system normal text.
+				 * Color or style of the text. Default value is
+				 * @c resentation#Inheritable&lt;graphics#Paint&gt;() which is fallbacked to the
+				 * foreground of the text run style of the viewer's presentation global text style.
 				 */
-				graphics::Color foreground;
+				presentation::Inheritable<graphics::Paint> foreground;
 				/**
-				 * Background color of the text. Default value is invalid color which is
-				 * fallbacked to the background color of the system normal text.
+				 * Color or style of the background. Default value is 
+				 * @c resentation#Inheritable&lt;graphics#Paint&gt;() which is fallbacked to the
+				 * background of the text run style of the viewer's presentation global text style.
 				 */
-				graphics::Color background;
+				presentation::Inheritable<graphics::Paint> background;
 				/**
-				 * Color of the border. Default value is invalid color which is fallbacked to
-				 * the foreground color of the system normal text.
+				 * Style of the border. If the @c color is default value, fallbacked to the color
+				 * of @c #foreground member. Default value is @c presentation#Border#Part().
 				 */
-				graphics::Color borderColor;
-				/// Border style.
 				presentation::Border::Part border;
 				/// Digit substitution type. @c DST_CONTEXTUAL can't set. Default value is @c DST_USER_DEFAULT.
 				presentation::NumberSubstitution numberSubstitution;
@@ -83,13 +83,13 @@ namespace ascension {
 				 */
 				presentation::Inheritable<presentation::Length> width;
 				/**
-				 * Background color. Default value is invalid color which is fallbacked to the
-				 * platform-dependent color. On Win32, it is @c COLOR_3DFACE.
+				 * Color or style of the content. If @c color is default value, fallbacked to the
+				 * platform-dependent color. Default value is @c graphics#Paint().
 				 */
 				graphics::Paint paint;
 				/**
-				 * Color of the border. Default value is invalid color which is fallbacked to
-				 * the platform-dependent color. On Win32, it is @c COLOR_3DSHADOW.
+				 * Style of the border. If @c color is default value, fallbacked to the
+				 * platform-dependent color. Default value is @c presentation#Border#Part().
 				 */
 				presentation::Border::Part border;
 
@@ -111,32 +111,55 @@ namespace ascension {
 		class RulerPainter {
 			ASCENSION_NONCOPYABLE_TAG(RulerPainter);
 		public:
-			RulerPainter(viewers::TextViewer& viewer, bool enableDoubleBuffering) /*throw()*/;
+			enum SnapAlignment {LEFT, TOP, RIGHT, BOTTOM};
+		public:
+			explicit RulerPainter(viewers::TextViewer& viewer) /*throw()*/;
+			SnapAlignment alignment() const /*throw()*/;
 			const viewers::RulerConfiguration& configuration() const /*throw()*/;
 			void paint(graphics::PaintContext& context);
 			void setConfiguration(const viewers::RulerConfiguration& configuration);
 			void update() /*throw()*/;
-			int width() const /*throw()*/;
+			graphics::Scalar width() const /*throw()*/;
 		private:
+			graphics::Scalar indicatorMarginWidth() const /*throw()*/;
+			graphics::Scalar lineNumbersWidth() const /*throw()*/;
 			uint8_t maximumDigitsForLineNumbers() const /*throw()*/;
 			void recalculateWidth() /*throw()*/;
+#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
 			void updateGDIObjects() /*throw()*/;
+#endif
+		private:
 			viewers::TextViewer& viewer_;
 			viewers::RulerConfiguration configuration_;
-			graphics::Scalar width_;
+			graphics::Scalar indicatorMarginContentWidth_, indicatorMarginBorderWidth_,
+				lineNumbersContentWidth_, lineNumbersPaddingStartWidth_, lineNumbersPaddingEndWidth_, lineNumbersBorderWidth_;
 			uint8_t lineNumberDigitsCache_;
+#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
 			win32::Handle<HPEN> indicatorMarginPen_, lineNumbersPen_;
 			win32::Handle<HBRUSH> indicatorMarginBrush_, lineNumbersBrush_;
 			const bool enablesDoubleBuffering_;
 			win32::Handle<HDC> memoryDC_;
 			win32::Handle<HBITMAP> memoryBitmap_;
+#endif
 		};
 
 		/// Returns the ruler's configurations.
-		inline const viewers::RulerConfiguration& RulerPainter::configuration() const /*throw()*/ {return configuration_;}
+		inline const viewers::RulerConfiguration& RulerPainter::configuration() const /*throw()*/ {
+			return configuration_;
+		}
+
+		inline graphics::Scalar RulerPainter::indicatorMarginWidth() const /*throw()*/ {
+			return indicatorMarginContentWidth_ + indicatorMarginBorderWidth_;
+		}
+
+		inline graphics::Scalar RulerPainter::lineNumbersWidth() const /*throw()*/ {
+			return lineNumbersContentWidth_ + lineNumbersPaddingStartWidth_ + lineNumbersPaddingEndWidth_, lineNumbersBorderWidth_;
+		}
 
 		/// Returns the width of the ruler.
-		inline graphics::Scalar RulerPainter::width() const /*throw()*/ {return width_;}
+		inline graphics::Scalar RulerPainter::width() const /*throw()*/ {
+			return indicatorMarginWidth() + lineNumbersWidth();
+		}
 	}
 
 }

@@ -118,7 +118,7 @@ TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation)
 	caret_.reset(new Caret(*this));
 	caret_->addListener(*this);
 	caret_->addStateListener(*this);
-	rulerPainter_.reset(new RulerPainter(*this, true));
+	rulerPainter_.reset(new detail::RulerPainter(*this, true));
 
 	document().addListener(*this);
 	document().addStateListener(*this);
@@ -142,7 +142,7 @@ TextViewer::TextViewer(const TextViewer& other) : presentation_(other.presentati
 	caret_.reset(new Caret(*this));
 	caret_->addListener(*this);
 	caret_->addStateListener(*this);
-	rulerPainter_.reset(new RulerPainter(*this, true));
+	rulerPainter_.reset(new detail::RulerPainter(*this, true));
 
 	modeState_ = other.modeState_;
 
@@ -2205,28 +2205,6 @@ void utils::closeCompletionProposalsPopup(TextViewer& viewer) /*throw()*/ {
 		if(contentassist::ContentAssistant::CompletionProposalsUI* cpui = ca->completionProposalsUI())
 			cpui->close();
 	}
-}
-
-/**
- * Computes the alignment of the ruler of the text viewer.
- * @param viewer The text viewer
- * @return the alignment of the vertical ruler. @c ALIGN_LEFT or @c ALIGN_RIGHT
- */
-bool utils::isRulerLeftAligned(const TextViewer& viewer) {
-	const TextAnchor alignment = viewer.rulerConfiguration().alignment;
-	if(alignment != TEXT_ANCHOR_START && alignment != TEXT_ANCHOR_END)
-		throw UnknownValueException("viewer");
-
-	Inheritable<ReadingDirection> readingDirection;
-	const tr1::shared_ptr<const TextLineStyle> defaultLineStyle(viewer.presentation().globalTextStyle()->defaultLineStyle);
-	if(defaultLineStyle.get() != 0)
-		readingDirection = defaultLineStyle->readingDirection;
-	if(readingDirection.inherits())
-		readingDirection = viewer.textRenderer().defaultUIWritingMode().inlineFlowDirection;
-	if(readingDirection.inherits())
-		readingDirection = ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
-	if(!readingDirection.inherits())
-		return detail::computePhysicalTextAnchor(alignment, readingDirection) == detail::LEFT;
 }
 
 

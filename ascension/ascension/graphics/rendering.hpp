@@ -43,7 +43,7 @@ namespace ascension {
 				virtual ~TextRenderer() /*throw()*/;
 				// layout
 				virtual std::auto_ptr<const TextLayout> createLineLayout(length_t line) const = 0;
-				virtual const presentation::WritingMode& defaultUIWritingMode() const /*throw()*/ = 0;
+				virtual const presentation::WritingMode<false>& defaultUIWritingMode() const /*throw()*/ = 0;
 				virtual Scalar width() const /*throw()*/ = 0;
 				LineLayoutVector& layouts() /*throw()*/;
 				const LineLayoutVector& layouts() const /*throw()*/;

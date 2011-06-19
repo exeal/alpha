@@ -26,6 +26,10 @@ namespace ascension {
 		template<bool condition, typename T, typename U> struct Select {typedef T Type;};
 		template<typename T, typename U> struct Select<false, T, U> {typedef U Type;};
 
+		/// @c Type2Type type form Loki library.
+		template<typename T>
+		struct Type2Type {typedef T Type;};
+
 		/// Generates signed numeral types.
 		template<typename T> struct RemoveSigned;
 		template<> struct RemoveSigned<unsigned char> {typedef char Type;};

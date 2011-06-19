@@ -8,10 +8,12 @@
 #define ASCENSION_RENDERING_CONTEXT_HPP
 
 #include <ascension/corelib/basic-types.hpp>	// std.tr1.shared_ptr
+#include <ascension/corelib/string-piece.hpp>
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/font.hpp>
 #include <ascension/graphics/geometry.hpp>
 #include <ascension/graphics/paint.hpp>
+#include <ascension/presentation/text-style.hpp>	// presentation.AlignmentBaseline, presentation.TextAnchor
 #include <stack>
 #include <vector>
 
@@ -157,11 +159,27 @@ namespace ascension {
 				states_.top().font = font;
 				return *this;
 			}
-//			virtual TextAnchor& textAnchor() const /*throw()*/ = 0;
-//			virtual Baseline& textBaseline() const /*throw()*/ = 0;
-			virtual RenderingContext2D& fillText(const String& text, const NativePoint& p, Scalar maxWidth) = 0;
-			virtual RenderingContext2D& strokeText(const String& text, const NativePoint& p, Scalar maxWidth) = 0;
-			virtual NativeSize measureText(const String& text) = 0;
+			presentation::TextAnchor textAlign() const /*throw()*/ {
+				return states_.top().textAlign;
+			}
+			RenderingContext2D& setTextAlign(presentation::TextAnchor textAlign) {
+				// TODO: check if unknown value 
+				states_.top().textAlign = textAlign;
+				return *this;
+			}
+			presentation::AlignmentBaseline textBaseline() const /*throw()*/ {
+				return states_.top().textBaseline;
+			}
+			RenderingContext2D& setTextBaseline(presentation::AlignmentBaseline textBaseline) {
+				// TODO: check if unknown value. 
+				states_.top().textBaseline = textBaseline;
+				return *this;
+			}
+			virtual RenderingContext2D& fillText(
+				const StringPiece& text, const NativePoint& p, Scalar* maxWidth = 0) = 0;
+			virtual RenderingContext2D& strokeText(
+				const StringPiece& text, const NativePoint& p, Scalar* maxWidth = 0) = 0;
+			virtual NativeSize measureText(const StringPiece& text) = 0;
 
 			virtual RenderingContext2D& drawImage() = 0;
 
@@ -198,6 +216,8 @@ namespace ascension {
 				NativeSize shadowOffset;
 				Scalar shadowBlur;
 				std::tr1::shared_ptr<const font::Font> font;
+				presentation::TextAnchor textAlign;
+				presentation::AlignmentBaseline textBaseline;
 			};
 			std::stack<State> states_;
 		};

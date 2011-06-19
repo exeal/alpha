@@ -293,16 +293,17 @@ void TextRenderer::renderLine(length_t line, PaintContext& context,
 }
 
 void TextRenderer::updateDefaultFont() {
-	tr1::shared_ptr<const TextRunStyle> defaultStyle(presentation_.globalTextStyle()->defaultLineStyle->defaultRunStyle);
+	tr1::shared_ptr<const TextRunStyle> defaultStyle(presentation_.globalTextStyle().defaultLineStyle->defaultRunStyle);
 	if(defaultStyle.get() != 0 && !defaultStyle->fontFamily.empty())
 		defaultFont_ = fontCollection().get(defaultStyle->fontFamily, defaultStyle->fontProperties);
 	else {
 		LOGFONTW lf;
 		if(::GetObjectW(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)), sizeof(LOGFONTW), &lf) == 0)
 			throw runtime_error("");
-		FontProperties fps(static_cast<FontProperties::Weight>(lf.lfWeight), FontProperties::INHERIT_STRETCH,
-			(lf.lfItalic != 0) ? FontProperties::ITALIC : FontProperties::NORMAL_STYLE,
-			FontProperties::HORIZONTAL,	// TODO: Use lfEscapement and lfOrientation ?
+		FontProperties<> fps(static_cast<FontPropertiesBase::Weight>(lf.lfWeight), FontPropertiesBase::NORMAL_STRETCH,
+			(lf.lfItalic != 0) ? FontPropertiesBase::ITALIC : FontPropertiesBase::NORMAL_STYLE,
+			FontPropertiesBase::NORMAL_VARIANT,
+			FontPropertiesBase::HORIZONTAL,	// TODO: Use lfEscapement and lfOrientation ?
 			(lf.lfHeight < 0) ? -lf.lfHeight : 0);
 		defaultFont_ = fontCollection().get(lf.lfFaceName, fps);
 	}
@@ -317,6 +318,11 @@ void TextRenderer::updateDefaultFont() {
 	defaultFontListeners_.notify(&DefaultFontListener::defaultFontChanged);
 }
 
-WritingMode resolveWritingMode(const Presentation& presentation, const TextRenderer& textRenderer) {
-	presentation.globalTextStyle()
+WritingMode<false> resolveWritingMode(const Presentation& presentation, const TextRenderer& textRenderer) {
+	const pair<const WritingMode<true>&, const WritingMode<false>&> wm(
+		presentation.globalTextStyle().writingMode, textRenderer.defaultUIWritingMode());
+	return WritingMode<false>(
+		wm.first.inlineFlowDirection.inherits() ? wm.second.inlineFlowDirection : wm.first.inlineFlowDirection,
+		wm.first.blockFlowDirection.inherits() ? wm.second.blockFlowDirection : wm.first.blockFlowDirection,
+		wm.first.textOrientation.inherits() ? wm.second.textOrientation : wm.first.textOrientation);
 }

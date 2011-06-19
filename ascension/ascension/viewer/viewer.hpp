@@ -574,18 +574,18 @@ namespace ascension {
 				ASCENSION_UNASSIGNABLE_TAG(Renderer);
 			public:
 				explicit Renderer(TextViewer& viewer,
-					const presentation::WritingMode& writingMode = presentation::WritingMode());
+					const presentation::WritingMode<false>& writingMode = presentation::WritingMode<false>());
 				Renderer(const Renderer& other, TextViewer& viewer);
-				void setDefaultWritingMode(const presentation::WritingMode& writingMode) /*throw()*/;
+				void setDefaultWritingMode(const presentation::WritingMode<false>& writingMode) /*throw()*/;
 				void rewrapAtWindowEdge();
 			private:
 				// TextRenderer
 				std::auto_ptr<const graphics::font::TextLayout> createLineLayout(length_t line) const;
-				const presentation::WritingMode& defaultUIWritingMode() const /*throw()*/;
+				const presentation::WritingMode<false>& defaultUIWritingMode() const /*throw()*/;
 				graphics::Scalar width() const /*throw()*/;
 			private:
 				TextViewer& viewer_;
-				presentation::WritingMode defaultWritingMode_;
+				presentation::WritingMode<false> defaultWritingMode_;
 //				presentation::Inheritable<presentation::TextAnchor> overrideTextAnchor_;
 			};
 

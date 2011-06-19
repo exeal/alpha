@@ -19,7 +19,7 @@ namespace ascension {
 
 		/**
 		 * @c Color provides colors based on RGB values.
-		 * @see "CSS Color Module Level 3" (http://www.w3.org/TR/2010/PR-css3-color-20101028)
+		 * @see "CSS Color Module Level 3" (http://www.w3.org/TR/css3-color/)
 		 */
 		class Color : public FastArenaObject<Color> {
 		public:
@@ -62,6 +62,46 @@ namespace ascension {
 		private:
 			uint16_t red_, green_, blue_, alpha_;
 			bool valid_;
+		};
+
+		/**
+		 *
+		 * @see "CSS Color Module Level3, 4.5. CSS system colors"
+		 *      (http://www.w3.org/TR/css3-color/#css-system)
+		 */
+		class SystemColors {
+		public:
+			enum Value {
+				ACTIVE_BORDER,
+				ACTIVE_CAPTION,
+				APP_WORKSPACE,
+				BACKGROUND,
+				BUTTON_FACE,
+				BUTTON_HIGHLIGHT,
+				BUTTON_SHADOW,
+				BUTTON_TEXT,
+				CAPTION_TEXT,
+				GRAY_TEXT,
+				HIGHLIGHT,
+				HIGHLIGHT_TEXT,
+				INACTIVE_BORDER,
+				ANACTIVE_CAPTION,
+				INACTIVE_CAPTION_TEXT,
+				INFO_BACKGROUND,
+				INFO_TEXT,
+				MENU,
+				MENU_TEXT,
+				SCROLLBAR,
+				THREE_D_DARK_SHADOW,
+				THREE_D_FACE,
+				THREE_D_HIGHLIGHT,
+				THREE_D_LIGHT_SHADOW,
+				THREE_D_SHADOW,
+				WINDOW,
+				WINDOW_FRAME,
+				WINDOW_TEXT
+			};
+			static Color get(Value value);
 		};
 
 	}
