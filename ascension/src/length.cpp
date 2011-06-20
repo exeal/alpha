@@ -9,6 +9,7 @@
 using namespace ascension;
 using namespace ascension::graphics;
 using namespace ascension::presentation;
+using namespace std;
 
 
 namespace {
@@ -19,10 +20,6 @@ namespace {
 		return (mode != Length::HEIGHT) ? context.logicalDpiX() : context.logicalDpiY();
 #endif
 	}
-}
-
-/// Default constructor.
-Length::Length() /*throw()*/ {
 }
 
 /**
@@ -45,14 +42,15 @@ Length::Length(double valueInSpecifiedUnits, Unit unitType /* = PIXELS */, Mode 
  * would be changed to the numeric value 5 and @c #valueAsString() would be changed to "5mm".
  * @param unitType The unit type to switch to
  * @param context The rendering context used to resolve relative value
+ * @param contextSize The size used to resolve percentage value
  * @throw NotSupportedError @a unitType is not a valid unit type constant (one of the other
  *                          @c #Unit constants defined on this class)
  */
-void Length::convertToSpecifiedUnits(Unit unitType, const RenderingContext2D& context) {
+void Length::convertToSpecifiedUnits(Unit unitType, const RenderingContext2D& context, const NativeSize* contextSize) {
 	if(unitType > PERCENTAGE)
 		throw NotSupportedError("unitType");
 	Length temp(0, unitType, mode_);
-	temp.setValue(value(context), context);
+	temp.setValue(value(context, contextSize), context, contextSize);
 	*this = temp;
 }
 
@@ -77,8 +75,9 @@ void Length::newValueSpecifiedUnits(Unit unitType, double valueInSpecifiedUnits)
  * updated automatically to reflect this setting.
  * @param value The new value
  * @param context The rendering context used to resolve relative value
+ * @param contextSize The size used to resolve percentage value
  */
-void Length::setValue(double value, const RenderingContext2D& context) {
+void Length::setValue(double value, const RenderingContext2D& context, const NativeSize* contextSize) {
 	switch(unitType()) {
 		case EM_HEIGHT:
 			valueInSpecifiedUnits_ = value / context.font()->metrics().emHeight();
@@ -88,12 +87,14 @@ void Length::setValue(double value, const RenderingContext2D& context) {
 			break;
 		case PIXELS:
 			valueInSpecifiedUnits_ = value;
-//		case VIEWPORT_WIDTH:
-//			valueInSpecifiedUnits_ = value / geometry::dx(context.device().viewportSize()).
-//		case VIEWPORT_HEIGHT:
-//			valueInSpecifiedUnits_ = value / geometry::dy(context.device().viewportSize()).
-//		case VIEWPORT_MINIMUM:
-//			valueInSpecifiedUnits_ = value / min(geometry::dx(context.device().viewportSize()), geometry::dy(context.device().viewportSize())).
+//		case GRIDS:
+//		case REMS:
+		case VIEWPORT_WIDTH:
+			valueInSpecifiedUnits_ = value / geometry::dx(context.device().viewportSize());
+		case VIEWPORT_HEIGHT:
+			valueInSpecifiedUnits_ = value / geometry::dy(context.device().viewportSize());
+		case VIEWPORT_MINIMUM:
+			valueInSpecifiedUnits_ = value / min(geometry::dx(context.device().viewportSize()), geometry::dy(context.device().viewportSize()));
 		case CHARACTERS:
 			valueInSpecifiedUnits_ = value / context.font()->metrics().averageCharacterWidth();
 		case INCHES:
@@ -108,15 +109,16 @@ void Length::setValue(double value, const RenderingContext2D& context) {
 			valueInSpecifiedUnits_ = value / pixelsPerInch(context, mode_) * 72 / 12;
 		case DIPS:
 			valueInSpecifiedUnits_ = value / pixelsPerInch(context, mode_) * 96;
-		case PERCENTAGE:
+		case PERCENTAGE: {
+			const NativeSize size((contextSize != 0) ? *contextSize : context.device().viewportSize());
 			if(mode_ == WIDTH)
-				return valueInSpecifiedUnits() / geometry::dx(context.device().size()) * 100;
+				valueInSpecifiedUnits_ = value / geometry::dx(size) * 100;
 			else if(mode_ == HEIGHT)
-				return valueInSpecifiedUnits() / geometry::dy(context.device().size()) * 100;
-			else if(mode_ == OTHER) {
-				const Size s(context.device().size());
-				return valueInSpecifiedUnits() / sqrt(geometry::dx(s) * geometry::dx(s) + geometry::dy(s) * geometry::dy(s) / 2) * 100;
-			}
+				valueInSpecifiedUnits_ = value / geometry::dy(size) * 100;
+			else if(mode_ == OTHER)
+				valueInSpecifiedUnits_ = value / sqrt(static_cast<double>(
+					geometry::dx(size) * geometry::dx(size) + geometry::dy(size) * geometry::dy(size)) / 2) * 100;
+		}
 	}
 	ASCENSION_ASSERT_NOT_REACHED();
 }
@@ -124,8 +126,9 @@ void Length::setValue(double value, const RenderingContext2D& context) {
 /**
  * [Copied from SVG 1.1 documentation] Returns the value as a floating point value, in user units.
  * @param context The rendering context used to resolve relative value
+ * @param contextSize The size used to resolve percentage value
  */
-double Length::value(const RenderingContext2D& context) const {
+double Length::value(const RenderingContext2D& context, const NativeSize* contextSize) const {
 	switch(unitType()) {
 		case EM_HEIGHT:
 			return valueInSpecifiedUnits() * context.font()->metrics().emHeight();
@@ -135,12 +138,12 @@ double Length::value(const RenderingContext2D& context) const {
 			return valueInSpecifiedUnits();
 //		case GRIDS:
 //		case REMS:
-//		case VIEWPORT_WIDTH:
-//			return valueInSpecifiedUnits() * geometry::dx(context.device().viewportSize()).
-//		case VIEWPORT_HEIGHT:
-//			return valueInSpecifiedUnits() * geometry::dy(context.device().viewportSize()).
-//		case VIEWPORT_MINIMUM:
-//			return valueInSpecifiedUnits() * min(geometry::dx(context.device().viewportSize()), geometry::dy(context.device().viewportSize())).
+		case VIEWPORT_WIDTH:
+			return valueInSpecifiedUnits() * geometry::dx(context.device().viewportSize());
+		case VIEWPORT_HEIGHT:
+			return valueInSpecifiedUnits() * geometry::dy(context.device().viewportSize());
+		case VIEWPORT_MINIMUM:
+			return valueInSpecifiedUnits() * min(geometry::dx(context.device().viewportSize()), geometry::dy(context.device().viewportSize()));
 		case CHARACTERS:
 			return valueInSpecifiedUnits() * context.font()->metrics().averageCharacterWidth();
 		case INCHES:
@@ -155,15 +158,16 @@ double Length::value(const RenderingContext2D& context) const {
 			return valueInSpecifiedUnits() * pixelsPerInch(context, mode_) / 72 * 12;
 		case DIPS:
 			return valueInSpecifiedUnits() * pixelsPerInch(context, mode_) / 96;
-		case PERCENTAGE:
+		case PERCENTAGE: {
+			const NativeSize size((contextSize != 0) ? *contextSize : context.device().viewportSize());
 			if(mode_ == WIDTH)
-				return valueInSpecifiedUnits() * geometry::dx(context.device().size());
+				return valueInSpecifiedUnits() * geometry::dx(size);
 			else if(mode_ == HEIGHT)
-				return valueInSpecifiedUnits() * geometry::dy(context.device().size());
-			else if(mode_ == OTHER) {
-				const Size s(context.device().size());
-				return valueInSpecifiedUnits() * sqrt((geometry::dx(s) * geometry::dx(s) + geometry::dy(s) * geometry::dy(s)) / 2);
-			}
+				return valueInSpecifiedUnits() * geometry::dy(size);
+			else if(mode_ == OTHER)
+				return valueInSpecifiedUnits() * sqrt(static_cast<double>(
+					geometry::dx(size) * geometry::dx(size) + geometry::dy(size) * geometry::dy(size)) / 2);
+		}
 	}
 	ASCENSION_ASSERT_NOT_REACHED();
 }
