@@ -14,9 +14,9 @@
 #include <ascension/graphics/geometry.hpp>
 #include <cstring>	// std.strlen
 #include <locale>	// std.collate
-#ifdef ASCENSION_GS_WIN32_GDI
+#if defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
 #	include <ascension/win32/windows.hpp>	// win32.Handle
-#endif // ASCENSION_GS_WIN32_GDI
+#endif
 
 namespace ascension {
 	namespace graphics {
@@ -216,7 +216,7 @@ namespace ascension {
 					WeightType weight = WeightType(), StretchType stretch = StretchType(),
 					StyleType style = StyleType(), VariantType variant = VariantType(),
 					OrientationType orientation = OrientationType(), PixelSizeType pixelSize = PixelSizeType())
-					: weight_(weight), stretch_(stretch), style_(style), orientation_(orientation), size_(size) {}
+					: weight_(weight), stretch_(stretch), style_(style), orientation_(orientation), pixelSize_(pixelSize) {}
 				/// Implicit conversion operator.
 				template<template<typename> class T> inline operator FontProperties<T>() const {
 					return FontProperties<T>(weight(), stretch(), style(), variant(), orientation(), pixelSize());
@@ -280,6 +280,22 @@ namespace ascension {
 				const FontProperties<PropertyHolder> properties_;
 			};
 
+#if defined(ASCENSION_SHAPING_ENGINE_CORE_GRAPHICS)
+			typedef CGFontRef NativeFont;
+#elif defined(ASCENSION_SHAPING_ENGINE_CORE_TEXT)
+			typedef CTFontRef NativeFont;
+#elif defined(ASCENSION_SHAPING_ENGINE_DIRECT_WRITE)
+			typedef win32::com::ComPtr<IDWriteFont> NativeFont;
+#elif defined(ASCENSION_SHAPING_ENGINE_HARFBUZZ)
+			typedef hb_font_t* NativeFont;
+#elif defined(ASCENSION_SHAPING_ENGINE_PANGO)
+			typedef PangoFont* NativeFont;
+#elif defined(ASCENSION_SHAPING_ENGINE_QT)
+			typedef QFont* NativeFont;
+#elif defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
+			typedef win32::Handle<HFONT> NativeFont;
+#endif
+
 			class Font : public std::tr1::enable_shared_from_this<Font> {
 			public:
 				/**
@@ -337,10 +353,8 @@ namespace ascension {
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 				/// Returns the metrics of the font.
 				virtual const Metrics& metrics() const /*throw()*/ = 0;
-#ifdef ASCENSION_GS_WIN32_GDI
-				/// Returns the Win32 @c HFONT handle object.
-				virtual const win32::Handle<HFONT>& nativeHandle() const /*throw()*/ = 0;
-#endif // ASCENSION_GS_WIN32_GDI
+				/// Returns the platform-dependent native object.
+				virtual const NativeFont nativeObject() const /*throw()*/ = 0;
 			};
 
 			/// An interface represents an object provides a set of fonts.

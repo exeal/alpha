@@ -265,40 +265,6 @@ namespace {
 		return c < 0x20 || c == 0x7f || (c >= 0x80 && c < 0xa0);
 	}
 
-	int pixels(const Context& context, const Length& length, bool vertical, const Font::Metrics& fontMetrics) {
-		if(equals(length.value, 0.0))
-			return 0;
-		switch(length.unit) {
-			case Length::EM_HEIGHT:
-				return static_cast<int>(static_cast<double>(fontMetrics.emHeight()) * length.value);
-			case Length::X_HEIGHT:
-				return static_cast<int>(static_cast<double>(fontMetrics.xHeight()) * length.value);
-			case Length::PIXELS:
-				return round(length.value);
-			case Length::INCHES:	case Length::CENTIMETERS:	case Length::MILLIMETERS:
-			case Length::POINTS:	case Length::PICAS:			case Length::DIPS: {
-				const double dpi = vertical ? context.logicalDpiY() : context.logicalDpiX();
-				const double inches = length.value * dpi;
-				switch(length.unit) {
-					case Length::INCHES:
-						return round(inches);
-					case Length::CENTIMETERS:
-						return round(inches / 2.54);
-					case Length::MILLIMETERS:
-						return round(inches / 25.4);
-					case Length::POINTS:
-						return round(inches / 72.0);
-					case Length::PICAS:
-						return round(inches / 6.0);
-					case Length::DIPS:
-						return round(inches / 96.0);
-				}
-			}
-			default:
-				throw UnknownValueException("length.unit");
-		}
-	}
-
 	inline Scalar readingDirectionInt(ReadingDirection direction) {
 		switch(direction) {
 			case LEFT_TO_RIGHT:
@@ -432,8 +398,8 @@ bool font::supportsOpenTypeFeatures() /*throw()*/ {
  * @param border The presentative style
  * @param writingMode The writing mode used to compute the directions and orientation of @a border
  */
-void detail::paintBorder(Context& context,
-		const NativeRectangle& rectangle, const Border& border, const WritingMode& writingMode) {
+void detail::paintBorder(Context& context, const NativeRectangle& rectangle,
+		const Border& border, const Color& currentColor, const WritingMode<false>& writingMode) {
 	// TODO: not implemented.
 }
 
@@ -626,7 +592,7 @@ void TextLayout::TextRun::Glyphs::vanish(const Font& font, size_t at) {
 	WORD blankGlyph;
 	HRESULT hr = ::ScriptGetCMap(dc.get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
 	if(hr == E_PENDING) {
-		oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font.nativeHandle().get()));
+		oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font.nativeObject().get()));
 		hr = ::ScriptGetCMap(dc.get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
 	}
 	if(hr == S_OK) {
@@ -727,7 +693,7 @@ inline pair<int, HRESULT> TextLayout::TextRun::countMissingGlyphs(
 		const Context& context, const Char* text) const /*throw()*/ {
 	SCRIPT_FONTPROPERTIES fp;
 	fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-	const HRESULT hr = ::ScriptGetFontProperties(context.nativeHandle().get(), &glyphs_->fontCache, &fp);
+	const HRESULT hr = ::ScriptGetFontProperties(context.nativeObject().get(), &glyphs_->fontCache, &fp);
 	if(FAILED(hr))
 		return make_pair(0, hr);	// can't handle
 	// following is not offical way, but from Mozilla (gfxWindowsFonts.cpp)
@@ -765,7 +731,7 @@ void TextLayout::TextRun::drawGlyphs(PaintContext& context, const NativePoint& p
 //		RECT temp;
 //		if(dirtyRect != 0)
 //			::SetRect(&temp, dirtyRect->left(), dirtyRect->top(), dirtyRect->right(), dirtyRect->bottom());
-		const HRESULT hr = ::ScriptTextOut(context.nativeHandle().get(), &glyphs_->fontCache,
+		const HRESULT hr = ::ScriptTextOut(context.nativeObject().get(), &glyphs_->fontCache,
 			geometry::x(p) + x((analysis_.fRTL == 0) ? truncatedRange.beginning() : (truncatedRange.end() - 1), analysis_.fRTL != 0),
 			geometry::y(p) - glyphs_->font->metrics().ascent(), 0, &context.boundsToPaint(), &analysis_, 0, 0,
 			glyphs() + glyphRange.beginning(), glyphRange.length(), advances() + glyphRange.beginning(),
@@ -919,7 +885,7 @@ namespace {
 	void resolveFontSpecifications(const FontCollection& fontCollection,
 			tr1::shared_ptr<const TextRunStyle> requestedStyle,
 			tr1::shared_ptr<const TextRunStyle> defaultStyle, String* computedFamilyName,
-			FontProperties* computedProperties, double* computedSizeAdjust) {
+			FontProperties<>* computedProperties, double* computedSizeAdjust) {
 		// family name
 		if(computedFamilyName != 0) {
 			*computedFamilyName = (requestedStyle.get() != 0) ? requestedStyle->fontFamily : String();
@@ -927,28 +893,32 @@ namespace {
 				if(defaultStyle.get() != 0)
 					*computedFamilyName = defaultStyle->fontFamily;
 				if(computedFamilyName->empty())
-					*computedFamilyName = fontCollection.lastResortFallback(FontProperties())->familyName();
+					*computedFamilyName = fontCollection.lastResortFallback(FontProperties<>())->familyName();
 			}
 		}
 		// properties
 		if(computedProperties != 0) {
-			*computedProperties = (requestedStyle.get() != 0) ? requestedStyle->fontProperties : FontProperties();
-			double computedSize = computedProperties->size();
-			if(computedSize == 0.0f) {
+			FontProperties<Inheritable> result;
+			if(requestedStyle.get() != 0)
+				result = requestedStyle->fontProperties;
+			Inheritable<double> computedSize(computedProperties->pixelSize());
+			if(computedSize.inherits()) {
 				if(defaultStyle.get() != 0)
-					computedSize = defaultStyle->fontProperties.size();
-				if(computedSize == 0.0f)
-					computedSize = fontCollection.lastResortFallback(FontProperties())->metrics().emHeight();
+					computedSize = defaultStyle->fontProperties.pixelSize();
+				if(computedSize.inherits())
+					computedSize = fontCollection.lastResortFallback(FontProperties<>())->metrics().emHeight();
 			}
-			*computedProperties = FontProperties(
-				(computedProperties->weight() != FontProperties::INHERIT_WEIGHT) ? computedProperties->weight()
-					: ((defaultStyle.get() != 0) ? defaultStyle->fontProperties.weight() : FontProperties::NORMAL_WEIGHT),
-				(computedProperties->stretch() != FontProperties::INHERIT_STRETCH) ? computedProperties->stretch()
-					: ((defaultStyle.get() != 0) ? defaultStyle->fontProperties.stretch() : FontProperties::NORMAL_STRETCH),
-				(computedProperties->style() != FontProperties::INHERIT_STYLE) ? computedProperties->style()
-					: ((defaultStyle.get() != 0) ? defaultStyle->fontProperties.style() : FontProperties::NORMAL_STYLE),
-				(computedProperties->orientation() != FontProperties::INHERIT_ORIENTATION) ? computedProperties->orientation()
-					: ((defaultStyle.get() != 0) ? defaultStyle->fontProperties.orientation() : FontProperties::HORIZONTAL),
+			*computedProperties = FontProperties<>(
+				!result.weight().inherits() ? result.weight()
+					: ((defaultStyle.get() != 0) ? defaultStyle->fontProperties.weight() : FontPropertiesBase::NORMAL_WEIGHT),
+				!result.stretch().inherits() ? result.stretch()
+					: ((defaultStyle.get() != 0) ? defaultStyle->fontProperties.stretch() : FontPropertiesBase::NORMAL_STRETCH),
+				!result.style().inherits() ? result.style()
+					: ((defaultStyle.get() != 0) ? defaultStyle->fontProperties.style() : FontPropertiesBase::NORMAL_STYLE),
+				!result.variant().inherits() ? result.variant()
+					: ((defaultStyle.get() != 0) ? defaultStyle->fontProperties.variant() : FontPropertiesBase::NORMAL_VARIANT),
+				!result.orientation().inherits() ? result.orientation()
+					: ((defaultStyle.get() != 0) ? defaultStyle->fontProperties.orientation() : FontPropertiesBase::HORIZONTAL),
 				computedSize);
 		}
 		// size-adjust
@@ -962,7 +932,7 @@ namespace {
 			const FontCollection& fontCollection, tr1::shared_ptr<const TextRunStyle> requestedStyle,
 			tr1::shared_ptr<const TextRunStyle> defaultStyle, tr1::shared_ptr<const Font> previousFont) {
 		String familyName;
-		FontProperties properties;
+		FontProperties<> properties;
 		double sizeAdjust;
 		resolveFontSpecifications(fontCollection, requestedStyle, defaultStyle, &familyName, &properties, &sizeAdjust);
 #if 1
@@ -1142,7 +1112,7 @@ void TextLayout::TextRun::positionGlyphs(const win32::Handle<HDC>& dc, const Str
 	HRESULT hr = ::ScriptPlace(0, &glyphs_->fontCache, glyphs_->indices.get(), numberOfGlyphs(),
 		glyphs_->visualAttributes.get(), &analysis_, advances.get(), offsets.get(), 0/*&width*/);
 	if(hr == E_PENDING) {
-		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), glyphs_->font->nativeHandle().get()));
+		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), glyphs_->font->nativeObject().get()));
 		hr = ::ScriptPlace(dc.get(), &glyphs_->fontCache, glyphs_->indices.get(), numberOfGlyphs(),
 			glyphs_->visualAttributes.get(), &analysis_, advances.get(), offsets.get(), 0/*&width*/);
 		::SelectObject(dc.get(), oldFont);
@@ -1248,7 +1218,7 @@ void TextLayout::TextRun::shape(const win32::Handle<HDC>& dc, const String& layo
 
 	// TODO: check if the requested style (or the default one) disables shaping.
 
-	HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), glyphs_->font->nativeHandle().get()));
+	HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), glyphs_->font->nativeObject().get()));
 	const StringPiece text(layoutString.data() + beginning(), layoutString.data() + end());
 	int numberOfGlyphs;
 	HRESULT hr = generateGlyphs(dc, text, analysis_, *glyphs_, numberOfGlyphs);
@@ -1803,7 +1773,7 @@ namespace {
 	}
 	inline void drawDecorationLines(Context& context, const TextRunStyle& style, const Color& foregroundColor, int x, int y, int width, int height) {
 		if(style.decorations.underline.style != Decorations::NONE || style.decorations.strikethrough.style != Decorations::NONE) {
-			const win32::Handle<HDC>& dc = context.nativeHandle();
+			const win32::Handle<HDC>& dc = context.nativeObject();
 			int baselineOffset, underlineOffset, underlineThickness, linethroughOffset, linethroughThickness;
 			if(getDecorationLineMetrics(dc, &baselineOffset, &underlineOffset, &underlineThickness, &linethroughOffset, &linethroughThickness)) {
 				// draw underline
@@ -1824,31 +1794,6 @@ namespace {
 					const int strikeoutY = y + baselineOffset - linethroughOffset + linethroughThickness / 2;
 					::MoveToEx(dc.get(), x, strikeoutY, 0);
 					::LineTo(dc.get(), x + width, strikeoutY);
-					::SelectObject(dc.get(), oldPen);
-				}
-			}
-		}
-	}
-	inline void drawBorder(Context& context, const Border& style,
-			const Font::Metrics& fontMetrics, const Color& currentColor, int start, int before, int end, int after) {
-		// TODO: rewrite later.
-		const win32::Handle<HDC>& dc = context.nativeHandle();
-		const Border::Part* const styles[] = {&style.before, &style.after, &style.start, &style.end};
-		const POINT points[4][2] = {
-			{{start, before}, {end, before}},
-			{{start, after}, {end, after}},
-			{{start, before}, {start, after}},
-			{{end, before}, {end, after}}
-		};
-		for(size_t i = 0; i < ASCENSION_COUNTOF(styles); ++i) {
-			if(styles[i]->style != Border::NONE && styles[i]->style != Border::HIDDEN) {
-				const int width = pixels(context, styles[i]->width, true, fontMetrics);
-				if(width != 0) {
-					win32::Handle<HPEN> pen(createPen(
-						((styles[i]->color != Color()) ? styles[i]->color : currentColor), width, styles[i]->style));
-					HPEN oldPen = static_cast<HPEN>(::SelectObject(dc.get(), pen.get()));
-					::MoveToEx(dc.get(), geometry::x(points[i][0]), geometry::y(points[i][0]), 0);
-					::LineTo(dc.get(), geometry::x(points[i][1]), geometry::y(points[i][1]));
 					::SelectObject(dc.get(), oldPen);
 				}
 			}
@@ -1967,7 +1912,7 @@ namespace {
  * @throw UnknownValueException @a writingMode or @a anchor is invalid
  */
 TextLayout::TextLayout(const String& text,
-		const WritingMode& writingMode /* = WritingMode() */, TextAnchor anchor /* = TEXT_ANCHOR_START */,
+		const WritingMode<false>& writingMode /* = WritingMode<false>() */, TextAnchor anchor /* = TEXT_ANCHOR_START */,
 		TextJustification justification /* = NO_JUSTIFICATION */,
 		DominantBaseline dominantBaseline /* = DOMINANT_BASELINE_AUTO */,
 		const FontCollection& fontCollection /* = systemFonts() */,
@@ -2091,7 +2036,7 @@ TextLayout::TextLayout(const String& text,
 		if(tabExpander == 0) {
 			// create default tab expander
 			String fontFamilyName;
-			FontProperties fontProperties;
+			FontProperties<> fontProperties;
 			resolveFontSpecifications(fontCollection,
 				tr1::shared_ptr<const TextRunStyle>(), defaultTextRunStyle, &fontFamilyName, &fontProperties, 0);
 			temp.reset(new FixedWidthTabExpander(
@@ -2471,7 +2416,9 @@ void TextLayout::draw(PaintContext& context,
 	// Part 14 - Drawing styled text with Uniscribe (http://www.catch22.net/tuts/neatpad/14)
 
 	context.save();
-	::SetTextAlign(context.nativeHandle().get(), TA_TOP | TA_LEFT | TA_NOUPDATECP);
+//	context.setTextAlign();
+//	context.setTextBaseline();
+//	::SetTextAlign(context.nativeObject().get(), TA_TOP | TA_LEFT | TA_NOUPDATECP);
 
 	// 2. paint backgrounds and borders
 	for(vector<const InlineArea*>::const_iterator i(inlineAreasToDraw.beginning()), e; i != inlineAreasToDraw.end(); ++i) {
@@ -2494,7 +2441,7 @@ void TextLayout::draw(PaintContext& context,
 			&(*i)->style()->border.before, &(*i)->style()->border.after,
 			&(*i)->style()->border.start, &(*i)->style()->border.end};
 		for(const Border::Part** border = border = borders; border != ASCENSION_ENDOF(borders); ++border) {
-			if(!(*border)->hasVisibleStyle() || (*border)->computedWidth().value <= 0.0)
+			if(!(*border)->hasVisibleStyle() || (*border)->computedWidth().valueInSpecifiedUnits() <= 0.0)
 				continue;
 			if((*border)->color == Color()) {
 				if(!currentColor.second)
@@ -2529,7 +2476,7 @@ void TextLayout::draw(PaintContext& context,
 			context.stroke();
 		}
 
-		::ExcludeClipRect(context.nativeHandle().get(),
+		::ExcludeClipRect(context.nativeObject().get(),
 			geometry::left(borderRectangle.first), geometry::top(borderRectangle.first),
 			geometry::right(borderRectangle.first), geometry::bottom(borderRectangle.first));
 	}

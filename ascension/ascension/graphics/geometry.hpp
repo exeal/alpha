@@ -218,12 +218,12 @@ namespace ascension {
 
 			template<std::size_t dimension, typename Geometry>
 			inline typename Coordinate<Geometry>::Type get(const Geometry& geometry) {
-				return traits::Accessor<Geometry, dimension>::get(geometry);
+				return traits::Accessor<typename Tag<Geometry>::Type, Geometry, dimension>::get(geometry);
 			}
 
 			template<std::size_t dimension, typename Geometry>
 			inline void set(Geometry& geometry, typename Coordinate<Geometry>::Type value) {
-				traits::Accessor<Geometry, dimension>::set(geometry, value);
+				traits::Accessor<typename Tag<Geometry>::Type, Geometry, dimension>::set(geometry, value);
 			}
 
 			// 'add' for point and size

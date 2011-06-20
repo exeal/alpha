@@ -13,6 +13,7 @@
 #include <ascension/graphics/font.hpp>
 #include <ascension/graphics/geometry.hpp>
 #include <ascension/graphics/paint.hpp>
+#include <ascension/graphics/rendering-device.hpp>
 #include <ascension/presentation/text-style.hpp>	// presentation.AlignmentBaseline, presentation.TextAnchor
 #include <stack>
 #include <vector>
@@ -39,6 +40,7 @@ namespace ascension {
 			virtual ~RenderingContext2D() /*throw()*/ {}
 
 //			virtual ??? canvas() const = 0;
+			virtual const RenderingDevice& device() const = 0;
 
 			/// Pushes the current state onto the stack.
 			virtual RenderingContext2D& save() = 0;

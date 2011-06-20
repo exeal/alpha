@@ -9,6 +9,7 @@
 
 #ifndef ASCENSION_LENGTH_HPP
 #define ASCENSION_LENGTH_HPP
+#include <ascension/graphics/geometry.hpp>	// graphics.NativeSize
 #include <stdexcept>	// std.invalid_argument
 
 namespace ascension {
@@ -68,13 +69,15 @@ namespace ascension {
 			explicit Length(double valueInSpecifiedUnits, Unit unitType = PIXELS, Mode = OTHER);
 			bool operator==(const Length& other) const /*throw()*/;
 			bool operator!=(const Length& other) const /*throw()*/;
-			void convertToSpecifiedUnits(Unit unitType, const graphics::RenderingContext2D& context);
+			void convertToSpecifiedUnits(Unit unitType,
+				const graphics::RenderingContext2D& context, const graphics::NativeSize* contextSize);
 			void newValueSpecifiedUnits(Unit unitType, double valueInSpecifiedUnits);
-			void setValue(double value, const graphics::RenderingContext2D& context);
+			void setValue(double value,
+				const graphics::RenderingContext2D& context, const graphics::NativeSize* contextSize);
 //			void setValueAsString(const StringPiece&);
 			void setValueInSpecifiedUnits(double value) /*throw()*/;
 			Unit unitType() const /*throw()*/;
-			double value(const graphics::RenderingContext2D& context) const;
+			double value(const graphics::RenderingContext2D& context, const graphics::NativeSize* contextSize) const;
 			double valueInSpecifiedUnits() const;
 //			String valueAsString() const;
 

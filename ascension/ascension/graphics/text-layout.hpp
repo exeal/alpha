@@ -526,8 +526,8 @@ namespace ascension {
 
 	namespace detail {
 		void paintBorder(graphics::Context& context,
-			const graphics::NativeRectangle& rectangle,
-			const presentation::Border& style, const presentation::WritingMode<false>& writingMode);
+			const graphics::NativeRectangle& rectangle, const presentation::Border& style,
+			const graphics::Color& currentColor, const presentation::WritingMode<false>& writingMode);
 	}
 } // namespace ascension.graphics.font
 
