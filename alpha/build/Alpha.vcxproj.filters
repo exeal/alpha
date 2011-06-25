@@ -275,11 +275,14 @@
     <ClCompile Include="..\..\ascension\src\corelib\text\character-property.cpp">
       <Filter>ascension\Source Files\corelib\text</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\viewer\viewer-windows.cpp">
-      <Filter>ascension\Header Files\viewer</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\graphics\line-layout-vector.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\length.cpp">
+      <Filter>ascension\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\viewer-windows.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -454,9 +457,6 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\graphics-windows.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\graphics.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
@@ -585,6 +585,15 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\line-layout-vector.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\ruler.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\rendering-device.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\cursor.hpp">
+      <Filter>ascension\Header Files\viewer\base</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -192,6 +192,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\graphics\line-layout-vector.cpp" />
+    <ClCompile Include="..\..\ascension\src\length.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\command.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\input-sequence-checker.cpp" />
@@ -282,6 +283,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\line-layout-vector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\paint.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-context.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\rendering-device.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-observers.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\length.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation-reconstructor.hpp" />
@@ -291,10 +293,12 @@
     <ClInclude Include="..\..\ascension\ascension\text-editor\input-sequence-checker.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\kill-ring.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\session.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\cursor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\message-dispatcher-windows.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\widget-windows.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\widget.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\caret-observers.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\ruler.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\viewer-observers.hpp" />
     <ClInclude Include="..\src\alpha.hpp" />
     <ClInclude Include="..\src\ambient.hpp" />
@@ -353,7 +357,6 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\graphics-windows.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\graphics\graphics.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\text-layout.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-character-iterator.hpp" />
