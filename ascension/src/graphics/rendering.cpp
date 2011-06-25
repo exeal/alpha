@@ -8,7 +8,7 @@
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
 #include <ascension/graphics/rendering.hpp>
-#include <ascension/graphics/graphics.hpp>
+#include <ascension/graphics/rendering-context.hpp>
 
 using namespace ascension;
 using namespace ascension::graphics;
@@ -245,11 +245,12 @@ void TextRenderer::removeDefaultFontListener(DefaultFontListener& listener) {
 void TextRenderer::renderLine(length_t line, PaintContext& context,
 		const NativePoint& origin, const TextPaintOverride* paintOverride /* = 0 */,
 		const InlineObject* endOfLine /* = 0 */, const InlineObject* lineWrappingMark /* = 0 */) const /*throw()*/ {
-	if(!enablesDoubleBuffering_) {
+//	if(!enablesDoubleBuffering_) {
 		layouts().at(line).draw(context, origin, paintOverride, endOfLine, lineWrappingMark);
 		return;
-	}
+//	}
 
+#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
 	// TODO: this code uses deprecated terminologies for text coordinates.
 
 	const TextLayout& layout = layouts().at(line);
@@ -264,8 +265,8 @@ void TextRenderer::renderLine(length_t line, PaintContext& context,
 	y += static_cast<Scalar>(dy * subline);
 
 	if(memoryDC_.get() == 0)		
-		memoryDC_.reset(::CreateCompatibleDC(context.nativeHandle().get()), &::DeleteDC);
-	const int horizontalResolution = calculateMemoryBitmapSize(geometry::dx(context.device()->size()));
+		memoryDC_.reset(::CreateCompatibleDC(context.nativeObject().get()), &::DeleteDC);
+	const int horizontalResolution = calculateMemoryBitmapSize(geometry::dx(context.device()->viewportSize()));
 	if(memoryBitmap_.get() != 0) {
 		BITMAP temp;
 		::GetObjectW(memoryBitmap_.get(), sizeof(HBITMAP), &temp);
@@ -274,7 +275,7 @@ void TextRenderer::renderLine(length_t line, PaintContext& context,
 	}
 	if(memoryBitmap_.get() == 0)
 		memoryBitmap_.reset(::CreateCompatibleBitmap(
-			context.nativeHandle().get(),
+			context.nativeObject().get(),
 			horizontalResolution, calculateMemoryBitmapSize(dy)), &::DeleteObject);
 	::SelectObject(memoryDC_.get(), memoryBitmap_.get());
 
@@ -288,8 +289,9 @@ void TextRenderer::renderLine(length_t line, PaintContext& context,
 			geometry::translate(offsetedPaintRect, geometry::make<NativeSize>(0, -dy)),
 			geometry::translate(offsetedClipRect, geometry::make<NativeSize>(0, -dy))) {
 		layout.draw(subline, memoryDC_, geometry::make<NativePoint>(x, 0), offsetedPaintRect, offsetedClipRect, selection);
-		::BitBlt(context.nativeHandle().get(), left, y, right - left, dy, memoryDC_.get(), 0, 0, SRCCOPY);
+		::BitBlt(context.nativeObject().get(), left, y, right - left, dy, memoryDC_.get(), 0, 0, SRCCOPY);
 	}
+#endif
 }
 
 void TextRenderer::updateDefaultFont() {

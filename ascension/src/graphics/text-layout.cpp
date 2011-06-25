@@ -9,6 +9,7 @@
 #include <ascension/config.hpp>			// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
 #include <ascension/graphics/text-layout.hpp>
 #include <ascension/graphics/graphics-windows.hpp>
+#include <ascension/graphics/rendering-context.hpp>
 //#include <ascension/graphics/special-character-renderer.hpp>
 #include <ascension/corelib/character-iterator.hpp>
 #include <ascension/corelib/shared-library.hpp>

@@ -9,11 +9,13 @@
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/viewer.hpp>
 #include <ascension/text-editor/command.hpp>
-#include <msctf.h>
+#include <ascension/win32/ui/menu.hpp>
 #include <ascension/win32/ui/wait-cursor.hpp>
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 #	include <ascension/win32/com/dispatch-impl.hpp>
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
+#include <msctf.h>
+#include <zmouse.h>
 #ifndef ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
 #	include <Textstor.h>
 #endif // !ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
@@ -502,6 +504,29 @@ HRESULT TextViewer::accessibleObject(IAccessible*& acc) const /*throw()*/ {
 }
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
+/// Implementation of @c #beep method. The subclasses can override to customize the behavior.
+void TextViewer::doBeep() /*throw()*/ {
+	::MessageBeep(MB_OK);
+}
+
+/// Handles @c WM_CHAR and @c WM_UNICHAR window messages.
+void TextViewer::handleGUICharacterInput(CodePoint c) {
+	// vanish the cursor when the GUI user began typing
+	if(texteditor::commands::CharacterInputCommand(*this, c)() != 0
+			&& !modeState_.cursorVanished
+			&& configuration_.vanishesCursor
+			&& hasFocus()) {
+		// ignore if the cursor is not over a window belongs to the same thread
+		HWND pointedWindow = ::WindowFromPoint(Cursor::position());
+		if(pointedWindow != 0
+				&& ::GetWindowThreadProcessId(pointedWindow, 0) == ::GetWindowThreadProcessId(identifier().get(), 0)) {
+			modeState_.cursorVanished = true;
+			::ShowCursor(false);
+			grabInput();
+		}
+	}
+}
+
 /// @see Widget#handleWindowSystemEvent
 LRESULT TextViewer::handleWindowSystemEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
 	using namespace ascension::texteditor::commands;
@@ -636,6 +661,126 @@ LRESULT TextViewer::handleWindowSystemEvent(UINT message, WPARAM wp, LPARAM lp, 
 	return Widget::handleWindowSystemEvent(message, wp, lp, consumed);
 }
 
+/// Hides the tool tip.
+void TextViewer::hideToolTip() {
+	checkInitialization();
+	if(tipText_ == 0)
+		tipText_ = new Char[1];
+	wcscpy(tipText_, L"");
+	::KillTimer(identifier().get(), TIMERID_CALLTIP);	// ”O‚Ì‚½‚ß...
+	::SendMessageW(toolTip_, TTM_UPDATE, 0, 0L);
+}
+
+/// @see WM_CAPTURECHANGED
+void TextViewer::onCaptureChanged(const win32::Handle<HWND>&, bool& consumed) {
+	if(consumed = (mouseInputStrategy_.get() != 0))
+		mouseInputStrategy_->captureChanged();
+}
+
+/// @see WM_CHAR
+void TextViewer::onChar(UINT ch, UINT, bool& consumed) {
+	handleGUICharacterInput(ch);
+	consumed = true;
+}
+
+/// @see Window#onCommand
+void TextViewer::onCommand(WORD id, WORD, const win32::Handle<HWND>&, bool& consumed) {
+	using namespace ascension::texteditor::commands;
+	switch(id) {
+	case WM_UNDO:	// "Undo"
+		UndoCommand(*this, false)();
+		break;
+	case WM_REDO:	// "Redo"
+		UndoCommand(*this, true)();
+		break;
+	case WM_CUT:	// "Cut"
+		cutSelection(caret(), true);
+		break;
+	case WM_COPY:	// "Copy"
+		copySelection(caret(), true);
+		break;
+	case WM_PASTE:	// "Paste"
+		PasteCommand(*this, false)();
+		break;
+	case WM_CLEAR:	// "Delete"
+		CharacterDeletionCommand(*this, Direction::FORWARD)();
+		break;
+	case WM_SELECTALL:	// "Select All"
+		EntireDocumentSelectionCreationCommand(*this)();
+		break;
+	case ID_RTLREADING:	// "Right to left Reading order"
+		toggleOrientation(*this);
+		break;
+	case ID_DISPLAYSHAPINGCONTROLS: {	// "Show Unicode control characters"
+		Configuration c(configuration());
+		c.displaysShapingControls = !c.displaysShapingControls;
+		setConfiguration(&c, 0, false);
+		break;
+	}
+	case ID_INSERT_LRM:		CharacterInputCommand(*this, 0x200eu)();	break;
+	case ID_INSERT_RLM:		CharacterInputCommand(*this, 0x200fu)();	break;
+	case ID_INSERT_ZWJ:		CharacterInputCommand(*this, 0x200du)();	break;
+	case ID_INSERT_ZWNJ:	CharacterInputCommand(*this, 0x200cu)();	break;
+	case ID_INSERT_LRE:		CharacterInputCommand(*this, 0x202au)();	break;
+	case ID_INSERT_RLE:		CharacterInputCommand(*this, 0x202bu)();	break;
+	case ID_INSERT_LRO:		CharacterInputCommand(*this, 0x202du)();	break;
+	case ID_INSERT_RLO:		CharacterInputCommand(*this, 0x202eu)();	break;
+	case ID_INSERT_PDF:		CharacterInputCommand(*this, 0x202cu)();	break;
+	case ID_INSERT_WJ:		CharacterInputCommand(*this, 0x2060u)();	break;
+	case ID_INSERT_NADS:	CharacterInputCommand(*this, 0x206eu)();	break;
+	case ID_INSERT_NODS:	CharacterInputCommand(*this, 0x206fu)();	break;
+	case ID_INSERT_ASS:		CharacterInputCommand(*this, 0x206bu)();	break;
+	case ID_INSERT_ISS:		CharacterInputCommand(*this, 0x206au)();	break;
+	case ID_INSERT_AAFS:	CharacterInputCommand(*this, 0x206du)();	break;
+	case ID_INSERT_IAFS:	CharacterInputCommand(*this, 0x206cu)();	break;
+	case ID_INSERT_RS:		CharacterInputCommand(*this, 0x001eu)();	break;
+	case ID_INSERT_US:		CharacterInputCommand(*this, 0x001fu)();	break;
+	case ID_INSERT_IAA:		CharacterInputCommand(*this, 0xfff9u)();	break;
+	case ID_INSERT_IAT:		CharacterInputCommand(*this, 0xfffau)();	break;
+	case ID_INSERT_IAS:		CharacterInputCommand(*this, 0xfffbu)();	break;
+	case ID_INSERT_U0020:	CharacterInputCommand(*this, 0x0020u)();	break;
+	case ID_INSERT_NBSP:	CharacterInputCommand(*this, 0x00a0u)();	break;
+	case ID_INSERT_U1680:	CharacterInputCommand(*this, 0x1680u)();	break;
+	case ID_INSERT_MVS:		CharacterInputCommand(*this, 0x180eu)();	break;
+	case ID_INSERT_U2000:	CharacterInputCommand(*this, 0x2000u)();	break;
+	case ID_INSERT_U2001:	CharacterInputCommand(*this, 0x2001u)();	break;
+	case ID_INSERT_U2002:	CharacterInputCommand(*this, 0x2002u)();	break;
+	case ID_INSERT_U2003:	CharacterInputCommand(*this, 0x2003u)();	break;
+	case ID_INSERT_U2004:	CharacterInputCommand(*this, 0x2004u)();	break;
+	case ID_INSERT_U2005:	CharacterInputCommand(*this, 0x2005u)();	break;
+	case ID_INSERT_U2006:	CharacterInputCommand(*this, 0x2006u)();	break;
+	case ID_INSERT_U2007:	CharacterInputCommand(*this, 0x2007u)();	break;
+	case ID_INSERT_U2008:	CharacterInputCommand(*this, 0x2008u)();	break;
+	case ID_INSERT_U2009:	CharacterInputCommand(*this, 0x2009u)();	break;
+	case ID_INSERT_U200A:	CharacterInputCommand(*this, 0x200au)();	break;
+	case ID_INSERT_ZWSP:	CharacterInputCommand(*this, 0x200bu)();	break;
+	case ID_INSERT_NNBSP:	CharacterInputCommand(*this, 0x202fu)();	break;
+	case ID_INSERT_MMSP:	CharacterInputCommand(*this, 0x205fu)();	break;
+	case ID_INSERT_U3000:	CharacterInputCommand(*this, 0x3000u)();	break;
+	case ID_INSERT_NEL:		CharacterInputCommand(*this, text::NEXT_LINE)();	break;
+	case ID_INSERT_LS:		CharacterInputCommand(*this, text::LINE_SEPARATOR)();	break;
+	case ID_INSERT_PS:		CharacterInputCommand(*this, text::PARAGRAPH_SEPARATOR)();	break;
+	case ID_TOGGLEIMESTATUS:	// "Open IME" / "Close IME"
+		InputMethodOpenStatusToggleCommand(*this)();
+		break;
+	case ID_TOGGLESOFTKEYBOARD:	// "Open soft keyboard" / "Close soft keyboard"
+		InputMethodSoftKeyboardModeToggleCommand(*this)();
+		break;
+	case ID_RECONVERT:	// "Reconvert"
+		ReconversionCommand(*this)();
+		break;
+	case ID_INVOKE_HYPERLINK:	// "Open <hyperlink>"
+		if(const hyperlink::Hyperlink* const link = getPointedHyperlink(*this, caret()))
+			link->invoke();
+		break;
+	default:
+//		getParent()->sendMessage(WM_COMMAND, MAKEWPARAM(id, notifyCode), reinterpret_cast<LPARAM>(control));
+		consumed = false;
+		return;
+	}
+	consumed = true;
+}
+
 /// @see WM_DESTROY
 void TextViewer::onDestroy(bool& consumed) {
 	if(mouseInputStrategy_.get() != 0) {
@@ -690,6 +835,183 @@ void TextViewer::onHScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
 //	consumed = false;
 }
 
+namespace {
+	// replaces single "&" with "&&".
+	template<typename CharType>
+	basic_string<CharType> escapeAmpersands(const basic_string<CharType>& s) {
+		static const ctype<CharType>& ct = use_facet<ctype<CharType> >(locale::classic());
+		basic_string<CharType> result;
+		result.reserve(s.length() * 2);
+		for(basic_string<CharType>::size_type i = 0; i < s.length(); ++i) {
+			result += s[i];
+			if(s[i] == ct.widen('&'))
+				result += s[i];
+		}
+		return result;
+	}
+} // namespace 0@
+
+/// @see WM_IME_COMPOSITION
+void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
+	if(document().isReadOnly())
+		return;
+	else if(/*lParam == 0 ||*/ win32::boole(lParam & GCS_RESULTSTR)) {	// completed
+		if(HIMC imc = ::ImmGetContext(identifier().get())) {
+			if(const length_t len = ::ImmGetCompositionStringW(imc, GCS_RESULTSTR, 0, 0) / sizeof(WCHAR)) {
+				// this was not canceled
+				const AutoBuffer<Char> text(new Char[len + 1]);
+				::ImmGetCompositionStringW(imc, GCS_RESULTSTR, text.get(), static_cast<DWORD>(len * sizeof(WCHAR)));
+				text[len] = 0;
+				if(!imeComposingCharacter_)
+					texteditor::commands::TextInputCommand(*this, text.get())();
+				else {
+					k::Document& doc = document();
+					try {
+						doc.insertUndoBoundary();
+						doc.replace(k::Region(*caret_,
+							static_cast<k::DocumentCharacterIterator&>(k::DocumentCharacterIterator(doc, caret()).next()).tell()),
+							String(1, static_cast<Char>(wParam)));
+						doc.insertUndoBoundary();
+					} catch(const k::DocumentCantChangeException&) {
+					}
+					imeComposingCharacter_ = false;
+					recreateCaret();
+				}
+			}
+//			updateIMECompositionWindowPosition();
+			::ImmReleaseContext(identifier().get(), imc);
+			handled = true;	// prevent to be send WM_CHARs
+		}
+	} else if(win32::boole(GCS_COMPSTR & lParam)) {
+		if(win32::boole(lParam & CS_INSERTCHAR)) {
+			k::Document& doc = document();
+			const k::Position temp(*caret_);
+			try {
+				if(imeComposingCharacter_)
+					doc.replace(k::Region(*caret_,
+						static_cast<k::DocumentCharacterIterator&>(k::DocumentCharacterIterator(doc, caret()).next()).tell()),
+						String(1, static_cast<Char>(wParam)));
+				else
+					insert(doc, *caret_, String(1, static_cast<Char>(wParam)));
+				imeComposingCharacter_ = true;
+				if(win32::boole(lParam & CS_NOMOVECARET))
+					caret_->moveTo(temp);
+			} catch(...) {
+			}
+			handled = true;
+			recreateCaret();
+		}
+	}
+}
+
+/// @see WM_IME_ENDCOMPOSITION
+void TextViewer::onIMEEndComposition() {
+	imeCompositionActivated_ = false;
+	recreateCaret();
+}
+
+/// @see WM_IME_NOTIFY
+LRESULT TextViewer::onIMENotify(WPARAM command, LPARAM, bool&) {
+	if(command == IMN_SETOPENSTATUS)
+		inputStatusListeners_.notify(&TextViewerInputStatusListener::textViewerIMEOpenStatusChanged);
+	return 0L;
+}
+
+/// @see WM_IME_REQUEST
+LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
+	const k::Document& doc = document();
+
+	// this command will be sent two times when reconversion is invoked
+	if(command == IMR_RECONVERTSTRING) {
+		if(doc.isReadOnly() || caret().isSelectionRectangle()) {
+			beep();
+			return 0L;
+		}
+		handled = true;
+		if(isSelectionEmpty(*caret_)) {	// IME selects the composition target automatically if no selection
+			if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lParam)) {
+				const String& line = doc.line(caret().line());
+				rcs->dwStrLen = static_cast<DWORD>(line.length());
+				rcs->dwStrOffset = sizeof(RECONVERTSTRING);
+				rcs->dwTargetStrOffset = rcs->dwCompStrOffset = static_cast<DWORD>(sizeof(Char) * caret().column());
+				rcs->dwTargetStrLen = rcs->dwCompStrLen = 0;
+				line.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
+			}
+			return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(caret().line());
+		} else {
+			const String selection(selectedString(caret(), text::NLF_RAW_VALUE));
+			if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lParam)) {
+				rcs->dwStrLen = rcs->dwTargetStrLen = rcs->dwCompStrLen = static_cast<DWORD>(selection.length());
+				rcs->dwStrOffset = sizeof(RECONVERTSTRING);
+				rcs->dwTargetStrOffset = rcs->dwCompStrOffset = 0;
+				selection.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
+			}
+			return sizeof(RECONVERTSTRING) + sizeof(Char) * selection.length();
+		}
+	}
+
+	// before reconversion. a RECONVERTSTRING contains the ranges of the composition
+	else if(command == IMR_CONFIRMRECONVERTSTRING) {
+		if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lParam)) {
+			const k::Region region(doc.accessibleRegion());
+			if(!isSelectionEmpty(caret())) {
+				// reconvert the selected region. the selection may be multi-line
+				if(rcs->dwCompStrLen < rcs->dwStrLen)	// the composition region was truncated.
+					rcs->dwCompStrLen = rcs->dwStrLen;	// IME will alert and reconversion will not be happen if do this
+														// (however, NotePad narrows the selection...)
+			} else {
+				// reconvert the region IME passed if no selection (and create the new selection).
+				// in this case, reconversion across multi-line (prcs->dwStrXxx represents the entire line)
+				if(doc.isNarrowed() && caret().line() == region.first.line) {	// the document is narrowed
+					if(rcs->dwCompStrOffset / sizeof(Char) < region.first.column) {
+						rcs->dwCompStrLen += static_cast<DWORD>(sizeof(Char) * region.first.column - rcs->dwCompStrOffset);
+						rcs->dwTargetStrLen = rcs->dwCompStrOffset;
+						rcs->dwCompStrOffset = rcs->dwTargetStrOffset = static_cast<DWORD>(sizeof(Char) * region.first.column);
+					} else if(rcs->dwCompStrOffset / sizeof(Char) > region.second.column) {
+						rcs->dwCompStrOffset -= rcs->dwCompStrOffset - sizeof(Char) * region.second.column;
+						rcs->dwTargetStrOffset = rcs->dwCompStrOffset;
+						rcs->dwCompStrLen = rcs->dwTargetStrLen
+							= static_cast<DWORD>(sizeof(Char) * region.second.column - rcs->dwCompStrOffset);
+					}
+				}
+				caret().select(
+					k::Position(caret().line(), rcs->dwCompStrOffset / sizeof(Char)),
+					k::Position(caret().line(), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
+			}
+			handled = true;
+			return true;
+		}
+	}
+
+	// queried position of the composition window
+	else if(command == IMR_QUERYCHARPOSITION)
+		return false;	// handled by updateIMECompositionWindowPosition...
+
+	// queried document content for higher conversion accuracy
+	else if(command == IMR_DOCUMENTFEED) {
+		if(caret().line() == caret().anchor().line()) {
+			handled = true;
+			if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lParam)) {
+				rcs->dwStrLen = static_cast<DWORD>(doc.lineLength(caret().line()));
+				rcs->dwStrOffset = sizeof(RECONVERTSTRING);
+				rcs->dwCompStrLen = rcs->dwTargetStrLen = 0;
+				rcs->dwCompStrOffset = rcs->dwTargetStrOffset = sizeof(Char) * static_cast<DWORD>(caret().beginning().column());
+				doc.line(caret().line()).copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
+			}
+			return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(caret().line());
+		}
+	}
+
+	return 0L;
+}
+
+/// @see WM_IME_STARTCOMPOSITION
+void TextViewer::onIMEStartComposition() {
+	imeCompositionActivated_ = true;
+	updateIMECompositionWindowPosition();
+	utils::closeCompletionProposalsPopup(*this);
+}
+
 /// @see WM_NCCREATE
 bool TextViewer::onNcCreate(CREATESTRUCTW&) {
 	const LONG s = ::GetWindowLongW(identifier().get(), GWL_EXSTYLE);
@@ -706,6 +1028,13 @@ void TextViewer::onNotify(int, NMHDR& nmhdr, bool& consumed) {
 		consumed = true;
 	} else
 		consumed = false;
+}
+
+/// @see WM_SETCURSOR
+void TextViewer::onSetCursor(const win32::Handle<HWND>&, UINT, UINT, bool& consumed) {
+	ASCENSION_RESTORE_VANISHED_CURSOR();
+	if(consumed = (mouseInputStrategy_.get() != 0))
+		mouseInputStrategy_->showCursor(mapFromGlobal(Cursor::position()));
 }
 
 /// @see WM_STYLECHANGED
@@ -747,6 +1076,14 @@ void TextViewer::onTimer(UINT_PTR eventID, TIMERPROC) {
 	}
 }
 
+#ifdef WM_UNICHAR
+/// @see WM_UNICHAR
+void TextViewer::onUniChar(UINT ch, UINT, bool& consumed) {
+	if(consumed = (ch != UNICODE_NOCHAR))
+		handleGUICharacterInput(ch);
+}
+#endif // WM_UNICHAR
+
 /// @see Window#onVScroll
 void TextViewer::onVScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
 	switch(sbCode) {
@@ -777,4 +1114,232 @@ void TextViewer::provideClassInformation(Widget::ClassInformation& classInformat
 
 basic_string<WCHAR> TextViewer::provideClassName() const {
 	return L"ascension.TextViewer";
+}
+
+/// @see Widget#showContextMenu
+void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKeyboard) {
+	using namespace win32::ui;
+
+	if(!allowsMouseInput() && !byKeyboard)	// however, may be invoked by other than the mouse...
+		return;
+	utils::closeCompletionProposalsPopup(*this);
+	abortIncrementalSearch(*this);
+
+	NativePoint menuPosition;
+
+	// invoked by the keyboard
+	if(byKeyboard/*geometry::x(input.location()) == 0xffff && geometry::y(input.location()) == 0xffff*/) {
+		// MSDN says "the application should display the context menu at the location of the current selection."
+		menuPosition = clientXYForCharacter(caret(), false);
+		geometry::y(menuPosition) += textRenderer().defaultFont()->metrics().cellHeight() + 1;
+		NativeRectangle clientBounds(bounds(false));
+		const Margins margins(textAreaMargins());
+		clientBounds = geometry::make<NativeRectangle>(
+			geometry::translate(geometry::topLeft(clientBounds), geometry::make<NativeSize>(margins.left, margins.top)),
+			geometry::translate(geometry::bottomRight(clientBounds), geometry::make<NativeSize>(-margins.right + 1, -margins.bottom)));
+		if(!geometry::includes(clientBounds, menuPosition))
+			menuPosition = geometry::make<NativePoint>(1, 1);
+		mapToGlobal(menuPosition);
+	} else
+		menuPosition = input.location();
+
+	// ignore if the point is over the scroll bars
+	const NativeRectangle clientBounds(bounds(false));
+	mapToGlobal(clientBounds);
+	if(!geometry::includes(clientBounds, menuPosition))
+		return;
+
+	const k::Document& doc = document();
+	const bool hasSelection = !isSelectionEmpty(caret());
+	const bool readOnly = doc.isReadOnly();
+	const bool japanese = PRIMARYLANGID(userDefaultUILanguage()) == LANG_JAPANESE;
+
+	static PopupMenu menu;
+	static const WCHAR* captions[] = {
+		L"&Undo",									L"\x5143\x306b\x623b\x3059(&U)",
+		L"&Redo",									L"\x3084\x308a\x76f4\x3057(&R)",
+		0,											0,
+		L"Cu&t",									L"\x5207\x308a\x53d6\x308a(&T)",
+		L"&Copy",									L"\x30b3\x30d4\x30fc(&C)",
+		L"&Paste",									L"\x8cbc\x308a\x4ed8\x3051(&P)",
+		L"&Delete",									L"\x524a\x9664(&D)",
+		0,											0,
+		L"Select &All",								L"\x3059\x3079\x3066\x9078\x629e(&A)",
+		0,											0,
+		L"&Right to left Reading order",			L"\x53f3\x304b\x3089\x5de6\x306b\x8aad\x3080(&R)",
+		L"&Show Unicode control characters",		L"Unicode \x5236\x5fa1\x6587\x5b57\x306e\x8868\x793a(&S)",
+		L"&Insert Unicode control character",		L"Unicode \x5236\x5fa1\x6587\x5b57\x306e\x633f\x5165(&I)",
+		L"Insert Unicode &white space character",	L"Unicode \x7a7a\x767d\x6587\x5b57\x306e\x633f\x5165(&W)",
+	};																	
+#define GET_CAPTION(index)	captions[(index) * 2 + (japanese ? 1 : 0)]
+
+	if(menu.getNumberOfItems() == 0) {	// first initialization
+		menu << Menu::StringItem(WM_UNDO, GET_CAPTION(0))
+			<< Menu::StringItem(WM_REDO, GET_CAPTION(1))
+			<< Menu::SeparatorItem()
+			<< Menu::StringItem(WM_CUT, GET_CAPTION(3))
+			<< Menu::StringItem(WM_COPY, GET_CAPTION(4))
+			<< Menu::StringItem(WM_PASTE, GET_CAPTION(5))
+			<< Menu::StringItem(WM_CLEAR, GET_CAPTION(6))
+			<< Menu::SeparatorItem()
+			<< Menu::StringItem(WM_SELECTALL, GET_CAPTION(8))
+			<< Menu::SeparatorItem()
+			<< Menu::StringItem(ID_RTLREADING, GET_CAPTION(10))
+			<< Menu::StringItem(ID_DISPLAYSHAPINGCONTROLS, GET_CAPTION(11))
+			<< Menu::StringItem(0, GET_CAPTION(12))
+			<< Menu::StringItem(0, GET_CAPTION(13));
+
+		// under "Insert Unicode control character"
+		PopupMenu subMenu;
+		subMenu << Menu::StringItem(ID_INSERT_LRM, L"LRM\t&Left-To-Right Mark")
+			<< Menu::StringItem(ID_INSERT_RLM, L"RLM\t&Right-To-Left Mark")
+			<< Menu::StringItem(ID_INSERT_ZWJ, L"ZWJ\t&Zero Width Joiner")
+			<< Menu::StringItem(ID_INSERT_ZWNJ, L"ZWNJ\tZero Width &Non-Joiner")
+			<< Menu::StringItem(ID_INSERT_LRE, L"LRE\tLeft-To-Right &Embedding")
+			<< Menu::StringItem(ID_INSERT_RLE, L"RLE\tRight-To-Left E&mbedding")
+			<< Menu::StringItem(ID_INSERT_LRO, L"LRO\tLeft-To-Right &Override")
+			<< Menu::StringItem(ID_INSERT_RLO, L"RLO\tRight-To-Left O&verride")
+			<< Menu::StringItem(ID_INSERT_PDF, L"PDF\t&Pop Directional Formatting")
+			<< Menu::StringItem(ID_INSERT_WJ, L"WJ\t&Word Joiner")
+			<< Menu::StringItem(ID_INSERT_NADS, L"NADS\tN&ational Digit Shapes (deprecated)")
+			<< Menu::StringItem(ID_INSERT_NODS, L"NODS\tNominal &Digit Shapes (deprecated)")
+			<< Menu::StringItem(ID_INSERT_ASS, L"ASS\tActivate &Symmetric Swapping (deprecated)")
+			<< Menu::StringItem(ID_INSERT_ISS, L"ISS\tInhibit S&ymmetric Swapping (deprecated)")
+			<< Menu::StringItem(ID_INSERT_AAFS, L"AAFS\tActivate Arabic &Form Shaping (deprecated)")
+			<< Menu::StringItem(ID_INSERT_IAFS, L"IAFS\tInhibit Arabic Form S&haping (deprecated)")
+			<< Menu::StringItem(ID_INSERT_RS, L"RS\tRe&cord Separator")
+			<< Menu::StringItem(ID_INSERT_US, L"US\tUnit &Separator")
+			<< Menu::SeparatorItem()
+			<< Menu::StringItem(ID_INSERT_IAA, L"IAA\tInterlinear Annotation Anchor")
+			<< Menu::StringItem(ID_INSERT_IAT, L"IAT\tInterlinear Annotation Terminator")
+			<< Menu::StringItem(ID_INSERT_IAS, L"IAS\tInterlinear Annotation Separator");
+		menu.setChildPopup<Menu::BY_POSITION>(12, subMenu);
+
+		// under "Insert Unicode white space character"
+		subMenu.reset(win32::managed(::CreatePopupMenu()));
+		subMenu << Menu::StringItem(ID_INSERT_U0020, L"U+0020\tSpace")
+			<< Menu::StringItem(ID_INSERT_NBSP, L"NBSP\tNo-Break Space")
+			<< Menu::StringItem(ID_INSERT_U1680, L"U+1680\tOgham Space Mark")
+			<< Menu::StringItem(ID_INSERT_MVS, L"MVS\tMongolian Vowel Separator")
+			<< Menu::StringItem(ID_INSERT_U2000, L"U+2000\tEn Quad")
+			<< Menu::StringItem(ID_INSERT_U2001, L"U+2001\tEm Quad")
+			<< Menu::StringItem(ID_INSERT_U2002, L"U+2002\tEn Space")
+			<< Menu::StringItem(ID_INSERT_U2003, L"U+2003\tEm Space")
+			<< Menu::StringItem(ID_INSERT_U2004, L"U+2004\tThree-Per-Em Space")
+			<< Menu::StringItem(ID_INSERT_U2005, L"U+2005\tFour-Per-Em Space")
+			<< Menu::StringItem(ID_INSERT_U2006, L"U+2006\tSix-Per-Em Space")
+			<< Menu::StringItem(ID_INSERT_U2007, L"U+2007\tFigure Space")
+			<< Menu::StringItem(ID_INSERT_U2008, L"U+2008\tPunctuation Space")
+			<< Menu::StringItem(ID_INSERT_U2009, L"U+2009\tThin Space")
+			<< Menu::StringItem(ID_INSERT_U200A, L"U+200A\tHair Space")
+			<< Menu::StringItem(ID_INSERT_ZWSP, L"ZWSP\tZero Width Space")
+			<< Menu::StringItem(ID_INSERT_NNBSP, L"NNBSP\tNarrow No-Break Space")
+			<< Menu::StringItem(ID_INSERT_MMSP, L"MMSP\tMedium Mathematical Space")
+			<< Menu::StringItem(ID_INSERT_U3000, L"U+3000\tIdeographic Space")
+			<< Menu::SeparatorItem()
+			<< Menu::StringItem(ID_INSERT_NEL, L"NEL\tNext Line")
+			<< Menu::StringItem(ID_INSERT_LS, L"LS\tLine Separator")
+			<< Menu::StringItem(ID_INSERT_PS, L"PS\tParagraph Separator");
+		menu.setChildPopup<Menu::BY_POSITION>(13, subMenu);
+
+		// check if the system supports bidi
+		if(!supportsComplexScripts()) {
+			menu.enable<Menu::BY_COMMAND>(ID_RTLREADING, false);
+			menu.enable<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, false);
+			menu.enable<Menu::BY_POSITION>(12, false);
+			menu.enable<Menu::BY_POSITION>(13, false);
+		}
+	}
+#undef GET_CAPTION
+
+	// modify menu items
+	menu.enable<Menu::BY_COMMAND>(WM_UNDO, !readOnly && doc.numberOfUndoableChanges() != 0);
+	menu.enable<Menu::BY_COMMAND>(WM_REDO, !readOnly && doc.numberOfRedoableChanges() != 0);
+	menu.enable<Menu::BY_COMMAND>(WM_CUT, !readOnly && hasSelection);
+	menu.enable<Menu::BY_COMMAND>(WM_COPY, hasSelection);
+	menu.enable<Menu::BY_COMMAND>(WM_PASTE, !readOnly && caret_->canPaste(false));
+	menu.enable<Menu::BY_COMMAND>(WM_CLEAR, !readOnly && hasSelection);
+	menu.enable<Menu::BY_COMMAND>(WM_SELECTALL, doc.numberOfLines() > 1 || doc.lineLength(0) > 0);
+	menu.check<Menu::BY_COMMAND>(ID_RTLREADING, configuration_.readingDirection == RIGHT_TO_LEFT);
+	menu.check<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, configuration_.displaysShapingControls);
+
+	// IME commands
+	HKL keyboardLayout = ::GetKeyboardLayout(::GetCurrentThreadId());
+	if(//toBoolean(::ImmIsIME(keyboardLayout)) &&
+			::ImmGetProperty(keyboardLayout, IGP_SENTENCE) != IME_SMODE_NONE) {
+		HIMC imc = ::ImmGetContext(identifier().get());
+		WCHAR* openIme = japanese ? L"IME \x3092\x958b\x304f(&O)" : L"&Open IME";
+		WCHAR* closeIme = japanese ? L"IME \x3092\x9589\x3058\x308b(&L)" : L"C&lose IME";
+		WCHAR* openSftKbd = japanese ? L"\x30bd\x30d5\x30c8\x30ad\x30fc\x30dc\x30fc\x30c9\x3092\x958b\x304f(&E)" : L"Op&en soft keyboard";
+		WCHAR* closeSftKbd = japanese ? L"\x30bd\x30d5\x30c8\x30ad\x30fc\x30dc\x30fc\x30c9\x3092\x9589\x3058\x308b(&F)" : L"Close so&ft keyboard";
+		WCHAR* reconvert = japanese ? L"\x518d\x5909\x63db(&R)" : L"&Reconvert";
+
+		menu << Menu::SeparatorItem()
+			<< Menu::StringItem(ID_TOGGLEIMESTATUS, win32::boole(::ImmGetOpenStatus(imc)) ? closeIme : openIme);
+
+		if(win32::boole(::ImmGetProperty(keyboardLayout, IGP_CONVERSION) & IME_CMODE_SOFTKBD)) {
+			DWORD convMode;
+			::ImmGetConversionStatus(imc, &convMode, 0);
+			menu << Menu::StringItem(ID_TOGGLESOFTKEYBOARD, win32::boole(convMode & IME_CMODE_SOFTKBD) ? closeSftKbd : openSftKbd);
+		}
+
+		if(win32::boole(::ImmGetProperty(keyboardLayout, IGP_SETCOMPSTR) & SCS_CAP_SETRECONVERTSTRING))
+			menu << Menu::StringItem(ID_RECONVERT, reconvert, (!readOnly && hasSelection) ? MFS_ENABLED : MFS_GRAYED);
+
+		::ImmReleaseContext(identifier().get(), imc);
+	}
+
+	// hyperlink
+	if(const hyperlink::Hyperlink* link = getPointedHyperlink(*this, caret())) {
+		const length_t len = (link->region().end() - link->region().beginning()) * 2 + 8;
+		AutoBuffer<WCHAR> caption(new WCHAR[len]);	// TODO: this code can have buffer overflow in future
+		swprintf(caption.get(),
+#if(_MSC_VER < 1400)
+#else
+			len,
+#endif // _MSC_VER < 1400
+			japanese ? L"\x202a%s\x202c \x3092\x958b\x304f" : L"Open \x202a%s\x202c", escapeAmpersands(doc.line(
+				caret().line()).substr(link->region().beginning(), link->region().end() - link->region().beginning())).c_str());
+		menu << Menu::SeparatorItem() << Menu::StringItem(ID_INVOKE_HYPERLINK, caption.get());
+	}
+
+	menu.trackPopup(TPM_LEFTALIGN, geometry::x(menuPosition), geometry::y(menuPosition), identifier().get());
+
+	// ...finally erase all items
+	int c = menu.getNumberOfItems();
+	while(c > 13)
+		menu.erase<Menu::BY_POSITION>(c--);
+}
+
+/// Moves the IME form to valid position.
+void TextViewer::updateIMECompositionWindowPosition() {
+	check();
+	if(!imeCompositionActivated_)
+		return;
+	else if(HIMC imc = ::ImmGetContext(identifier().get())) {
+		// composition window placement
+		COMPOSITIONFORM cf;
+		cf.rcArea = bounds(false);
+		const Margins margins(textAreaMargins());
+		cf.rcArea.left += margins.left;
+		cf.rcArea.top += margins.top;
+		cf.rcArea.right -= margins.right;
+		cf.rcArea.bottom -= margins.bottom;
+		cf.dwStyle = CFS_POINT;
+		cf.ptCurrentPos = clientXYForCharacter(caret().beginning(), false, TextLayout::LEADING);
+		if(cf.ptCurrentPos.y == numeric_limits<Scalar>::max() || cf.ptCurrentPos.y == numeric_limits<Scalar>::min())
+			cf.ptCurrentPos.y = (cf.ptCurrentPos.y == numeric_limits<Scalar>::min()) ? cf.rcArea.top : cf.rcArea.bottom;
+		else
+			cf.ptCurrentPos.y = max(cf.ptCurrentPos.y, cf.rcArea.top);
+		::ImmSetCompositionWindow(imc, &cf);
+		cf.dwStyle = CFS_RECT;
+		::ImmSetCompositionWindow(imc, &cf);
+
+		// composition font
+		LOGFONTW font;
+		::GetObjectW(renderer_->defaultFont()->nativeObject().get(), sizeof(LOGFONTW), &font);
+		::ImmSetCompositionFontW(imc, &font);	// this may be ineffective for IME settings
+		
+		::ImmReleaseContext(identifier().get(), imc);
+	}
 }
