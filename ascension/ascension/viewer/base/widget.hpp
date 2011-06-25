@@ -12,7 +12,7 @@
 #endif
 #include <ascension/corelib/basic-exceptions.hpp>	// IllegalStateException
 #include <ascension/graphics/geometry.hpp>
-#include <ascension/graphics/graphics.hpp>			// graphics.Device, ...
+#include <ascension/graphics/rendering-device.hpp>	// graphics.RenderingDevice, ...
 #include <ascension/viewer/base/user-input.hpp>
 
 namespace ascension {
@@ -36,7 +36,7 @@ namespace ascension {
 			};
 
 
-			class Widget {
+			class Widget : public graphics::RenderingDevice {
 			public:
 				enum State {
 					NORMAL, MAXIMIZED, MINIMIZED
@@ -46,6 +46,15 @@ namespace ascension {
 					win32::Handle<HWND>
 #endif
 					Identifier;
+
+				class InputGrabLocker {
+				public:
+					~InputGrabLocker() {widget_.releaseInput();}
+				private:
+					explicit InputGrabLocker(Widget& widget) : widget_(widget) {}
+					Widget& widget_;
+					friend class Widget;
+				};
 			public:
 				virtual ~Widget();
 
@@ -54,6 +63,10 @@ namespace ascension {
 				virtual void initialize(Widget& parent, const graphics::NativeRectangle& bounds) = 0;
 
 				virtual graphics::NativeRectangle bounds(bool includeFrame) const = 0;
+				virtual graphics::NativePoint mapFromGlobal(const graphics::NativePoint& position) const = 0;
+				graphics::NativeRectangle mapFromGlobal(const graphics::NativeRectangle& rectangle) const;
+				virtual graphics::NativePoint mapToGlobal(const graphics::NativePoint& position) const = 0;
+				graphics::NativeRectangle mapToGlobal(const graphics::NativeRectangle& rectangle) const;
 				virtual void setBounds(const graphics::NativeRectangle& bounds) = 0;
 				virtual void setShape(const graphics::NativeRegion& shape) = 0;
  
@@ -72,6 +85,9 @@ namespace ascension {
 				bool hasFocus() const;
 				virtual bool isVisible() const = 0;
 				virtual bool isActive() const = 0;
+
+				virtual std::auto_ptr<InputGrabLocker> grabInput() = 0;
+				virtual void releaseInput() = 0;
 
 			protected:
 				// message handlers
@@ -93,7 +109,7 @@ namespace ascension {
 				virtual void paint(graphics::PaintContext& context) = 0;
 				virtual void resized(State state, const graphics::NativeSize& newSize);
 				virtual void resizing();
-				virtual void showContextMenu(const base::LocatedUserInput& input);
+				virtual void showContextMenu(const base::LocatedUserInput& input, bool byKeyboard);
 				virtual void visibilityChanged(bool visible);
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 				virtual LRESULT handleWindowSystemEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed);

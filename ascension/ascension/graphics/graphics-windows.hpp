@@ -7,8 +7,8 @@
 #ifndef ASCENSION_GRAPHICS_WINDOWS_HPP
 #define ASCENSION_GRAPHICS_WINDOWS_HPP
 
-#include <ascension/graphics/graphics.hpp>
 #include <ascension/graphics/color.hpp>
+#include <ascension/graphics/rendering-device.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/win32/windows.hpp>	// win32.Handle
 #include <functional>			// std.bind1st, std.ptr_fun

@@ -123,7 +123,7 @@ namespace ascension {
 				class Generator : public GeneratorBase {
 				public:
 					Generator(Function function) : function_(function) {}
-					std::auto_ptr<const TextLayout> generate(length_t line) const {return function(line);}
+					std::auto_ptr<const TextLayout> generate(length_t line) const {return function_(line);}
 				private:
 					const Function function_;
 				};

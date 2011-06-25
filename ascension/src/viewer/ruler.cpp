@@ -4,8 +4,8 @@
  * @date 2010-10-27 created (separated code from layout.cpp)
  */
 
+#include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/viewer.hpp>
-#include <usp10.h>
 
 using namespace ascension;
 using namespace ascension::graphics;
@@ -44,7 +44,7 @@ RulerConfiguration::IndicatorMargin::IndicatorMargin() /*throw()*/ : visible(fal
 
 // TODO: support locale-dependent number format.
 
-void drawLineNumber(Context& context, const NativePoint& origin, length_t lineNumber, const NumberSubstitution& ns) {
+void drawLineNumber(PaintContext& context, const NativePoint& origin, length_t lineNumber, const NumberSubstitution& ns) {
 	// format number string
 	wchar_t s[128];	// oops, is this sufficient?
 	// TODO: std.swprintf may be slow.
@@ -171,36 +171,42 @@ void RulerPainter::paint(PaintContext& context) {
 
 	// paint the indicator margin
 	if(indicatorMarginToPaint) {
-		context.setFillStyle(configuration().indicatorMargin.paint);
+		context.setFillStyle((configuration().indicatorMargin.paint != Paint()) ?
+			configuration().indicatorMargin.paint : Paint(SystemColors::get(SystemColors::THREE_D_FACE)));
 		context.fillRectangle(indicatorMarginBounds);
 		Border borderStyle;
 		(borderStyle.*borderPart) = configuration().indicatorMargin.border;
+		if((borderStyle.*borderPart).color == Color())
+			(borderStyle.*borderPart).color = SystemColors::get(SystemColors::THREE_D_SHADOW);
 		detail::paintBorder(context, indicatorMarginBounds, borderStyle,
-			resolveWritingMode(viewer_.presentation(), viewer_.textRenderer()));
+			Color(), resolveWritingMode(viewer_.presentation(), viewer_.textRenderer()));
 	}
 
 	// paint the line numbers
 	if(lineNumbersToPaint) {
+		// compute foreground
+		Paint foreground;
+		if(!configuration().lineNumbers.foreground.inherits())
+			foreground = configuration().lineNumbers.foreground;
+		else {
+			if(const tr1::shared_ptr<const TextLineStyle> lineStyle = viewer_.presentation().globalTextStyle().defaultLineStyle) {
+				if(const tr1::shared_ptr<const TextRunStyle> runStyle = lineStyle->defaultRunStyle)
+					foreground = runStyle->foreground;
+			}
+		}
+		if(foreground == Paint())
+			foreground = Paint(SystemColors::get(SystemColors::WINDOW_TEXT));
+
 		// background and border
 		context.setFillStyle(configuration().lineNumbers.background);
 		context.fillRectangle(lineNumbersBounds);
 		Border borderStyle;
 		(borderStyle.*borderPart) = configuration().lineNumbers.border;
 		detail::paintBorder(context, lineNumbersBounds, borderStyle,
-			resolveWritingMode(viewer_.presentation(), viewer_.textRenderer()));
+			foreground.color(), resolveWritingMode(viewer_.presentation(), viewer_.textRenderer()));
 
 		// text
-		if(!configuration().lineNumbers.foreground.inherits())
-			context.setFillStyle(configuration().lineNumbers.foreground);
-		else {
-			if(const tr1::shared_ptr<const TextLineStyle> lineStyle = viewer_.presentation().globalTextStyle().defaultLineStyle) {
-				if(const tr1::shared_ptr<const TextRunStyle> runStyle = lineStyle->defaultRunStyle)
-					context.setFillStyle(runStyle->foreground);
-				else
-					context.setFillStyle(Paint());
-			} else
-				context.setFillStyle(Paint());
-		}
+		context.setFillStyle(foreground);
 		context.setFont(viewer_.textRenderer().defaultFont());
 //		context.setTextAlign();
 //		context.setTextBaseline();
@@ -343,8 +349,8 @@ void RulerPainter::paint(PaintContext& context) {
 }
 
 namespace {
-	Scalar computeMaximumNumberGlyphsExtent(Context& context, tr1::shared_ptr<const Font> font,
-			uint8_t digits, const WritingMode& writingMode, const NumberSubstitution& numberSubstitution) {
+	Scalar computeMaximumNumberGlyphsExtent(RenderingContext2D& context, tr1::shared_ptr<const Font> font,
+			uint8_t digits, const WritingMode<false>& writingMode, const NumberSubstitution& numberSubstitution) {
 		tr1::shared_ptr<const Font> oldFont(context.font());
 		context.setFont(font);
 /*
@@ -379,6 +385,12 @@ namespace {
 		context.setFont(oldFont);
 		return WritingModeBase::isHorizontal(writingMode.blockFlowDirection) ? geometry::dx(stringExtent) : geometry::dy(stringExtent);
 	}
+	
+	Scalar platformIndicatorMarginWidth() {
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		return ::GetSystemMetrics(SM_CYHSCROLL);
+#endif
+	}
 }
 
 /// Recalculates the total width of the ruler.
@@ -390,7 +402,7 @@ void RulerPainter::recalculateWidth() /*throw()*/ {
 	//     (line-numbers-interior-width) = (line-numbers-padding-start) + (line-numbers-padding-end)
 	//     (line-numbers-content-width) = max((glyphs-extent), (average-glyph-extent) * (minimum-digits-setting))
 
-	Context& context = viewer_.graphicsContext();
+	auto_ptr<RenderingContext2D> context(viewer_.createGraphicContext());
 
 	// compute the width of the line numbers
 	Scalar lineNumbersContentWidth = 0, lineNumbersPaddingStartWidth = 0, lineNumbersPaddingEndWidth = 0, lineNumbersBorderWidth = 0;
@@ -400,26 +412,27 @@ void RulerPainter::recalculateWidth() /*throw()*/ {
 			lineNumberDigitsCache_ = digits;
 		}
 		const Scalar glyphsExtent = computeMaximumNumberGlyphsExtent(
-			context, viewer_.textRenderer().defaultFont(), digits,
-			viewer_.presentation().globalTextStyle().writingMode, configuration().lineNumbers.numberSubstitution);
+			*context, viewer_.textRenderer().defaultFont(), digits,
+			resolveWritingMode(viewer_.presentation(), viewer_.textRenderer()), configuration().lineNumbers.numberSubstitution);
 		const Scalar minimumExtent = viewer_.textRenderer().defaultFont()->metrics().averageCharacterWidth() * digits;
 		lineNumbersContentWidth = max(glyphsExtent, minimumExtent);
 
-		lineNumbersBorderWidth = static_cast<Scalar>(configuration_.lineNumbers.border.computedWidth().value(context));
+		const NativeSize referenceBox(geometry::make<NativeSize>(lineNumbersContentWidth, lineNumbersContentWidth));
+		lineNumbersPaddingStartWidth = static_cast<Scalar>(configuration().lineNumbers.paddingStart.value(*context, &referenceBox));
+		lineNumbersPaddingEndWidth = static_cast<Scalar>(configuration().lineNumbers.paddingEnd.value(*context, &referenceBox));
+		lineNumbersBorderWidth = static_cast<Scalar>(configuration_.lineNumbers.border.computedWidth().value(*context, &referenceBox));
 //		const Scalar spaceWidth = 0;
 //		const Scalar exteriorWidth = borderWidth + spaceWidth;
-//		lineNumbersWidth += exteriorWidth;
-
-		lineNumbersPaddingStartWidth = static_cast<Scalar>(configuration().lineNumbers.paddingStart.value(context));
-		lineNumbersPaddingEndWidth = static_cast<Scalar>(configuration().lineNumbers.paddingEnd.value(context));
 	}
 
 	// compute the width of the indicator margin
 	Scalar indicatorMarginContentWidth = 0, indicatorMarginBorderWidth = 0;
 	if(configuration_.indicatorMargin.visible) {
 		indicatorMarginContentWidth = configuration().indicatorMargin.width.inherits() ?
-			platformIndicatorMargin() : static_cast<Scalar>(configuration().indicatorMargin.width.get().value(context));
-		indicatorMarginBorderWidth = static_cast<Scalar>(configuration().indicatorMargin.border.computedWidth().value(context));
+			platformIndicatorMarginWidth() : static_cast<Scalar>(configuration().indicatorMargin.width.get().value(*context, 0));
+		indicatorMarginBorderWidth = static_cast<Scalar>(
+			configuration().indicatorMargin.border.computedWidth().value(*context,
+				&geometry::make<NativeSize>(indicatorMarginContentWidth, indicatorMarginContentWidth)));
 	}
 
 	// commit

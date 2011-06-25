@@ -475,10 +475,10 @@ namespace ascension {
 
 			// helpers
 		private:
-			int getDisplayXOffset(length_t line) const;
+			graphics::Scalar getDisplayXOffset(length_t line) const;
 			void handleGUICharacterInput(CodePoint c);
-			void mapClientYToLine(int y, length_t* logicalLine, length_t* visualSublineOffset, bool* snapped = 0) const /*throw()*/;
-			int mapLineToClientY(length_t line, bool fullSearch) const;
+			void mapClientYToLine(graphics::Scalar y, length_t* logicalLine, length_t* visualSublineOffset, bool* snapped = 0) const /*throw()*/;
+			graphics::Scalar mapLineToClientY(length_t line, bool fullSearch) const;
 			void recreateCaret();
 			void repaintRuler();
 			void updateCaretPosition();
@@ -535,7 +535,7 @@ namespace ascension {
 			void mouseWheelChanged(const base::MouseWheelInput& input);
 			void paint(graphics::PaintContext& context);
 			void resized(State state, const graphics::NativeSize& newSize);
-			void showContextMenu(const base::LocatedUserInput& input);
+			void showContextMenu(const base::LocatedUserInput& input, bool byKeyboard);
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 			LRESULT handleWindowSystemEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
 			void onCaptureChanged(const win32::Handle<HWND>& newWindow, bool& consumed);
@@ -708,7 +708,7 @@ namespace ascension {
 				}
 				unsigned long x() const /*throw()*/ {return horizontal.position/* * horizontal.rate*/;}
 				unsigned long y() const /*throw()*/ {return vertical.position/* * vertical.rate*/;}
-				void resetBars(const TextViewer& viewer, int bars, bool pageSizeChanged) /*throw()*/;
+				void resetBars(const TextViewer& viewer, char bars, bool pageSizeChanged) /*throw()*/;
 				void updateVertical(const TextViewer& viewer) /*throw()*/;
 			} scrollInfo_;
 
