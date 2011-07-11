@@ -2142,7 +2142,7 @@ NativeRegion TextLayout::blackBoxBounds(const Range<length_t>& range) const {
 	// TODO: this implementation can't handle vertical text.
 	const length_t firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
 	vector<NativeRectangle> rectangles;
-	Scalar before = blockProgressionDistance(0, firstLine)
+	Scalar before = baseline(firstLine)
 		- lineMetrics_[firstLine]->leading() - lineMetrics_[firstLine]->ascent();
 	Scalar after = before + lineMetrics_[firstLine]->height();
 	for(length_t line = firstLine; line <= lastLine; before = after, after += lineMetrics_[++line]->height()) {
@@ -2181,6 +2181,7 @@ NativeRegion TextLayout::blackBoxBounds(const Range<length_t>& range) const {
 		numbersOfVertices.get(), static_cast<int>(rectangles.size()), WINDING), &::DeleteObject);
 }
 
+#if 0
 inline Scalar TextLayout::blockProgressionDistance(length_t from, length_t to) const /*throw()*/ {
 	Scalar result = 0;
 	while(from < to) {
@@ -2195,6 +2196,7 @@ inline Scalar TextLayout::blockProgressionDistance(length_t from, length_t to) c
 	}
 	return result;
 }
+#endif
 
 /**
  * Returns the smallest rectangle emcompasses the whole text of the line. It might not coincide
@@ -2229,14 +2231,14 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 	if(range.end() > text_.length())
 		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, range.end()));
 
-	Scalar start, end, before, after;
+	AbstractFourSides<Scalar> result;
 
 	// TODO: this implementation can't handle vertical text.
 
 	if(isEmpty()) {	// empty line
-		start = end = 0;
-		before = -lineMetrics_[0]->ascent() - lineMetrics_[0]->leading();
-		after = lineMetrics_[0]->descent();
+		result.start = result.end = 0;
+		result.before = -lineMetrics_[0]->ascent() - lineMetrics_[0]->leading();
+		result.after = lineMetrics_[0]->descent();
 	} else if(range.isEmpty()) {	// an empty rectangle for an empty range
 		const LineMetrics& line = *lineMetrics_[lineAt(range.beginning())];
 		return geometry::make<NativeRectangle>(
@@ -2246,24 +2248,21 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 		const length_t firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
 
 		// calculate the block-progression-edges ('before' and 'after'; it's so easy)
-		{
-			const Scalar firstBaseline = blockProgressionDistance(0, firstLine);
-			before = firstBaseline - lineMetrics_[firstLine]->ascent() - lineMetrics_[firstLine]->leading();
-			after = firstBaseline + blockProgressionDistance(firstLine, lastLine) + lineMetrics_[lastLine]->descent();
-		}
+		result.before = baseline(firstLine) - lineMetrics_[firstLine]->ascent() - lineMetrics_[firstLine]->leading();
+		result.after = baseline(lastLine) + lineMetrics_[lastLine]->descent();
 
 		// calculate start-edge and end-edge of fully covered lines
 		const bool firstLineIsFullyCovered = range.includes(
 			makeRange(lineOffset(firstLine), lineOffset(firstLine) + lineLength(firstLine)));
 		const bool lastLineIsFullyCovered = range.includes(
 			makeRange(lineOffset(lastLine), lineOffset(lastLine) + lineLength(lastLine)));
-		start = numeric_limits<Scalar>::max();
-		end = numeric_limits<Scalar>::min();
+		result.start = numeric_limits<Scalar>::max();
+		result.end = numeric_limits<Scalar>::min();
 		for(length_t line = firstLine + firstLineIsFullyCovered ? 0 : 1;
 				line < lastLine + lastLineIsFullyCovered ? 1 : 0; ++line) {
 			const Scalar lineStart = lineStartEdge(line);
-			start = min(lineStart, start);
-			end = max(lineStart + lineInlineProgressionDimension(line), end);
+			result.start = min(lineStart, result.start);
+			result.end = max(lineStart + lineInlineProgressionDimension(line), result.end);
 		}
 
 		// calculate start and end-edge of partially covered lines
@@ -2273,8 +2272,8 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 		if(!lastLineIsFullyCovered && (partiallyCoveredLines.empty() || partiallyCoveredLines[0] != lastLine))
 			partiallyCoveredLines.push_back(lastLine);
 		if(!partiallyCoveredLines.empty()) {
-			Scalar left = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? start : -end;
-			Scalar right = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? end : -start;
+			Scalar left = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? result.start : -result.end;
+			Scalar right = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? result.end : -result.start;
 			for(vector<length_t>::const_iterator
 					line(partiallyCoveredLines.begin()), e(partiallyCoveredLines.end()); line != e; ++line) {
 				const length_t lastRun = (*line + 1 < numberOfLines()) ? lineFirstRuns_[*line + 1] : numberOfRuns_;
@@ -2323,14 +2322,14 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 				}
 			}
 
-			start = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? left : -right;
-			end = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? right : -left;
+			result.start = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? left : -right;
+			result.end = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? right : -left;
 		}
 	}
 
 	return geometry::make<NativeRectangle>(
-		geometry::make<NativePoint>(start, before),
-		geometry::make<NativePoint>(end, after));
+		geometry::make<NativePoint>(result.start, result.before),
+		geometry::make<NativePoint>(result.end, result.after));
 }
 
 namespace {
@@ -2371,6 +2370,7 @@ void TextLayout::draw(PaintContext& context,
 	Range<length_t> linesToDraw(0, numberOfLines());
 	NativePoint p(origin);
 	for(length_t line = linesToDraw.beginning(); line < linesToDraw.end(); ++line) {
+		geometry::y(p) = baseline(line);
 		const Scalar lineBeforeEdge = geometry::y(p) - lineMetrics_[line]->ascent();
 		const Scalar lineAfterEdge = geometry::y(p) + lineMetrics_[line]->descent();
 		if(geometry::top(context.boundsToPaint()) >= lineBeforeEdge && geometry::top(context.boundsToPaint()) < lineAfterEdge)
@@ -2379,7 +2379,6 @@ void TextLayout::draw(PaintContext& context,
 			linesToDraw = makeRange(linesToDraw.beginning(), line + 1);
 			break;
 		}
-		geometry::y(p) += blockProgressionDistance(line - 1, line);
 	}
 
 	// calculate inline area range to draw
@@ -2439,8 +2438,8 @@ void TextLayout::draw(PaintContext& context,
 		// 2-2. paint border if the property is specified
 		pair<Color, bool> currentColor;
 		const Border::Part* borders[4] = {
-			&(*i)->style()->border.before, &(*i)->style()->border.after,
-			&(*i)->style()->border.start, &(*i)->style()->border.end};
+			&(*i)->style()->border.sides.before, &(*i)->style()->border.sides.after,
+			&(*i)->style()->border.sides.start, &(*i)->style()->border.sides.end};
 		for(const Border::Part** border = border = borders; border != ASCENSION_ENDOF(borders); ++border) {
 			if(!(*border)->hasVisibleStyle() || (*border)->computedWidth().valueInSpecifiedUnits() <= 0.0)
 				continue;
@@ -2780,8 +2779,7 @@ NativeRectangle TextLayout::lineBounds(length_t line) const {
 
 	const Scalar start = lineStartEdge(line);
 	const Scalar end = start + lineInlineProgressionDimension(line);
-	const Scalar before = blockProgressionDistance(0, line)
-		- lineMetrics_[line]->ascent() - lineMetrics_[line]->leading();
+	const Scalar before = baseline(line) - lineMetrics_[line]->ascent() - lineMetrics_[line]->leading();
 	const Scalar after = before + lineMetrics_[line]->height();
 
 	// TODO: this implementation can't handle vertical text.
@@ -2970,7 +2968,7 @@ void TextLayout::locations(length_t column, NativePoint* leading, NativePoint* t
 		}
 
 		// block-progression-dimension
-		bpd += blockProgressionDistance(0, line);
+		bpd += baseline(line);
 	}
 		
 	// TODO: this implementation can't handle vertical text.

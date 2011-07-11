@@ -347,6 +347,7 @@ namespace ascension {
 				length_t lineOffset(length_t line) const;
 				const length_t* lineOffsets() const /*throw()*/;
 				// coordinates
+				Scalar baseline(length_t line) const;
 				NativeRegion blackBoxBounds(const Range<length_t>& range) const;
 				NativeRectangle bounds() const /*throw()*/;
 				NativeRectangle bounds(const Range<length_t>& range) const;
@@ -375,7 +376,7 @@ namespace ascension {
 #endif // _DEBUG
 
 			private:
-				Scalar blockProgressionDistance(length_t from, length_t to) const /*throw()*/;
+//				Scalar blockProgressionDistance(length_t from, length_t to) const /*throw()*/;
 				void expandTabsWithoutWrapping() /*throw()*/;
 				std::size_t findRunForPosition(length_t column) const /*throw()*/;
 				void justify(presentation::TextJustification method) /*throw()*/;
@@ -400,6 +401,7 @@ namespace ascension {
 				AutoBuffer<const length_t> lineFirstRuns_;	// size is numberOfLines_
 				static const length_t SINGLE_LINE_OFFSETS;
 				length_t numberOfLines_;
+				AutoBuffer<const Scalar> baselines_;	// size is numberOfLines_ - 1
 				AutoBuffer<LineMetrics*> lineMetrics_;
 				AutoBuffer<Scalar> lineInlineProgressionDimensions_;
 				Scalar maximumInlineProgressionDimension_;
@@ -408,6 +410,19 @@ namespace ascension {
 //				friend class StyledSegmentIterator;
 			};
 
+
+			/**
+			 * Returns distance from the baseline of the first line to the baseline of the
+			 * specified line in pixels.
+			 * @param line The line number
+			 * @return The baseline position 
+			 * @throw BadPositionException @a line is greater than the count of lines
+			 */
+			inline Scalar TextLayout::baseline(length_t line) const {
+				if(line >= numberOfLines())
+					throw kernel::BadPositionException(kernel::Position());
+				return (numberOfLines() != 1 && line != 0) ? baselines_[line - 1] : 0;
+			}
 
 			/// Returns @c true if the layout is empty.
 			inline bool TextLayout::isEmpty() const /*throw()*/ {return runs_.get() == 0;}
