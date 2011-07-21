@@ -122,7 +122,7 @@ namespace ascension {
 
 			class KeyInput : public UserInput {
 			public:
-				typedef uint8_t Code;	///< Keyboard codes.
+				typedef uint32_t Code;	///< Keyboard codes.
 			public:
 				KeyInput(Code keyboardCode, int modifiers, int repeatCount, int messageFlags)
 					: UserInput(modifiers), keyboardCode_(keyboardCode), repeatCount_(repeatCount), messageFlags_(messageFlags) {}
@@ -131,6 +131,32 @@ namespace ascension {
 				const Code keyboardCode_;
 				const int repeatCount_, messageFlags_;
 			};
+
+			namespace keyboardcodes {
+				static const KeyInput::Code
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+					BACK_SPACE = VK_BACK, TAB = VK_TAB, CLEAR = VK_CLEAR, ENTER_OR_RETURN = VK_RETURN,
+					SHIFT = VK_SHIFT, CONTROL = VK_CONTROL, ALT_OR_MENU = VK_MENU, PAUSE = VK_PAUSE, CAPITAL = VK_CAPITAL,
+					KANA = VK_KANA, HANGUL = VK_HANGUL, JUNJA = VK_JUNJA, FINAL = VK_FINAL, HANJA = VK_HANJA, KANJI = VK_KANJI,
+					ESCAPE = VK_ESCAPE, CONVERT = VK_CONVERT, NON_CONVERT = VK_NONCONVERT, ACCEPT = VK_ACCEPT, MODE_CHANGE = VK_MODECHANGE,
+					SPACE = VK_SPACE, PRIOR_OR_PAGE_UP = VK_PRIOR, NEXT_OR_PAGE_DOWN = VK_NEXT,
+					END = VK_END, HOME = VK_HOME, LEFT = VK_LEFT, UP = VK_UP, RIGHT = VK_RIGHT, DOWN = VK_DOWN,
+					SELECT = VK_SELECT, PRINT = VK_PRINT, EXECUTE = VK_EXECUTE,
+					SNAPSHOT = VK_SNAPSHOT, INSERT = VK_INSERT, DEL_OR_DELETE = VK_DELETE, HELP = VK_HELP,
+					LEFT_WINDOWS = VK_LWIN, COMMAND = LEFT_WINDOWS, RIGHT_WINDOWS = VK_RWIN, APPLICATIONS = VK_APPS, SLEEP = VK_SLEEP,
+					NUMBER_PAD_0 = VK_NUMPAD0, NUMBER_PAD_1 = VK_NUMPAD1, NUMBER_PAD_2 = VK_NUMPAD2, NUMBER_PAD_3 = VK_NUMPAD3,
+					NUMBER_PAD_4 = VK_NUMPAD4, NUMBER_PAD_5 = VK_NUMPAD5, NUMBER_PAD_6 = VK_NUMPAD6, NUMBER_PAD_7 = VK_NUMPAD7,
+					NUMBER_PAD_8 = VK_NUMPAD8, NUMBER_PAD_9 = VK_NUMPAD9,
+					MULTIPLAY = VK_MULTIPLY, ADD = VK_ADD, SEPARATOR = VK_SEPARATOR, SUBTRACT = VK_SUBTRACT,
+					DECIMAL = VK_DECIMAL, DIVIDE = VK_DIVIDE,
+					F1 = VK_F1, F2 = VK_F2, F3 = VK_F3, F4 = VK_F4, F5 = VK_F5, F6 = VK_F6, F7 = VK_F7, F8 = VK_F8,
+					F9 = VK_F9, F10 = VK_F10, F11 = VK_F11, F12 = VK_F12, F13 = VK_F13, F14 = VK_F14, F15 = VK_F15, F16 = VK_F16,
+					F17 = VK_F17, F18 = VK_F18, F19 = VK_F19, F20 = VK_F20, F21 = VK_F21, F22 = VK_F22, F23 = VK_F23, F24 = VK_F24,
+					NUMBER_LOCK = VK_NUMLOCK, SCROLL_LOCK = VK_SCROLL, LEFT_SHIFT = VK_LSHIFT, RIGHT_SHIFT = VK_RSHIFT,
+					LEFT_CONTROL = VK_LCONTROL, RIGHT_CONTROL = VK_RCONTROL, LEFT_ALT_OR_MENU = VK_LMENU, RIGHT_ALT_OR_MENU = VK_RMENU;
+#else
+#endif
+			}
 
 		}
 	}

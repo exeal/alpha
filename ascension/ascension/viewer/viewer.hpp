@@ -64,7 +64,7 @@ namespace ascension {
 		class VirtualBox {
 			ASCENSION_UNASSIGNABLE_TAG(VirtualBox);
 		public:
-			VirtualBox(const TextViewer& view, const kernel::Region& region) /*throw()*/;
+			VirtualBox(const TextViewer& viewer, const kernel::Region& region) /*throw()*/;
 			bool isPointOver(const graphics::NativePoint& p) const /*throw()*/;
 			bool overlappedSubline(length_t line, length_t subline, Range<length_t>& range) const /*throw()*/;
 			void update(const kernel::Region& region) /*throw()*/;
@@ -74,7 +74,7 @@ namespace ascension {
 				length_t subline;		// line 行内の折り返し行オフセット
 				graphics::Scalar ipd;	// distance from left side of layout
 			} points_[2];
-			const TextViewer& view_;
+			const TextViewer& viewer_;
 			const Point& beginning() const /*throw()*/ {
 				return points_[(points_[0].line < points_[1].line
 					|| (points_[0].line == points_[1].line && points_[0].subline <= points_[1].subline)) ? 0 : 1];}
@@ -249,46 +249,49 @@ namespace ascension {
 
 		// the documentation is user-input.cpp
 		class DefaultMouseInputStrategy : public MouseInputStrategy,
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 				win32::com::IUnknownImpl<
 					typelist::Cat<
 						ASCENSION_WIN32_COM_INTERFACE_SIGNATURE(IDropSource), typelist::Cat<
 							ASCENSION_WIN32_COM_INTERFACE_SIGNATURE(IDropTarget)
 						>
 					>, win32::com::NoReferenceCounting
-				> {
+				>,
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+				private HasTimer {
 			ASCENSION_UNASSIGNABLE_TAG(DefaultMouseInputStrategy);
 		public:
 			/**
-			 * Defines OLE drag-and-drop support levels.
+			 * Defines drag-and-drop support levels.
 			 * @see DefaultMouseInputStrategy#DefaultMouseInputStrategy
 			 */
-			enum OLEDragAndDropSupport {
-				/// Disables OLE drag-and-drop.
-				DONT_SUPPORT_OLE_DND,
-				/// Enables OLE drag-and-drop.
-				SUPPORT_OLE_DND,
-				/// Enables OLE drag-and-drop and shows a drag-image.
-				SUPPORT_OLE_DND_WITH_DRAG_IMAGE,
-				/// Enables OLE drag-and-drop and shows a selection-highlighted drag-image.
-				SUPPORT_OLE_DND_WITH_SELECTED_DRAG_IMAGE
+			enum DragAndDropSupport {
+				/// Disables drag-and-drop.
+				DONT_SUPPORT_DND,
+				/// Enables drag-and-drop.
+				SUPPORT_DND,
+				/// Enables drag-and-drop and shows a drag-image.
+				SUPPORT_DND_WITH_DRAG_IMAGE,
+				/// Enables drag-and-drop and shows a selection-highlighted drag-image.
+				SUPPORT_DND_WITH_SELECTED_DRAG_IMAGE
 			};
 		public:
 			explicit DefaultMouseInputStrategy(
-				OLEDragAndDropSupport oleDragAndDropSupportLevel = SUPPORT_OLE_DND_WITH_SELECTED_DRAG_IMAGE);
+				DragAndDropSupport dragAndDropSupportLevel = SUPPORT_DND_WITH_SELECTED_DRAG_IMAGE);
 		private:
 			virtual bool handleLeftButtonDoubleClick(const graphics::NativePoint& position, int modifiers);
 			virtual bool handleRightButton(Action action, const graphics::NativePoint& position, int modifiers);
 			virtual bool handleX1Button(Action action, const graphics::NativePoint& position, int modifiers);
 			virtual bool handleX2Button(Action action, const graphics::NativePoint& position, int modifiers);
 		private:
-			void beginTimer(UINT interval);
+			static graphics::NativeSize calculateDnDScrollOffset(const TextViewer& viewer);
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 			HRESULT doDragAndDrop();
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32
 			bool endAutoScroll();
-			void endTimer();
 			void extendSelection(const kernel::Position* to = 0);
 			void handleLeftButtonPressed(const graphics::NativePoint& position, int modifiers);
 			void handleLeftButtonReleased(const graphics::NativePoint& position, int modifiers);
-			static void CALLBACK timeElapsed(HWND window, UINT message, UINT_PTR eventID, DWORD time);
 			// MouseInputStrategy
 			void captureChanged();
 			void install(TextViewer& viewer);
@@ -298,6 +301,9 @@ namespace ascension {
 			void mouseWheelRotated(const base::MouseWheelInput& input);
 			bool showCursor(const graphics::NativePoint& position);
 			void uninstall();
+			// HasTimer
+			void timeElapsed(Timer& timer);
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 			// IDropSource
 			STDMETHODIMP QueryContinueDrag(BOOL escapePressed, DWORD keyState);
 			STDMETHODIMP GiveFeedback(DWORD effect);
@@ -306,13 +312,14 @@ namespace ascension {
 			STDMETHODIMP DragOver(DWORD keyState, POINTL pt, DWORD* effect);
 			STDMETHODIMP DragLeave();
 			STDMETHODIMP Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect);
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32
 		private:
 			TextViewer* viewer_;
 			enum {
 				NONE = 0x00,
 				SELECTION_EXTENDING_MASK = 0x10, EXTENDING_CHARACTER_SELECTION, EXTENDING_WORD_SELECTION, EXTENDING_LINE_SELECTION,
 				AUTO_SCROLL_MASK = 0x20, APPROACHING_AUTO_SCROLL, AUTO_SCROLL_DRAGGING, AUTO_SCROLL,
-				OLE_DND_MASK = 0x40, APPROACHING_OLE_DND, OLE_DND_SOURCE, OLE_DND_TARGET
+				DND_MASK = 0x40, APPROACHING_DND, DND_SOURCE, DND_TARGET
 			} state_;
 			graphics::NativePoint dragApproachedPosition_;	// in client coordinates
 			struct Selection {
@@ -320,15 +327,17 @@ namespace ascension {
 				std::pair<length_t, length_t> initialWordColumns;
 			} selection_;
 			struct DragAndDrop {
-				OLEDragAndDropSupport supportLevel;
+				DragAndDropSupport supportLevel;
 				length_t numberOfRectangleLines;
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 				win32::com::ComPtr<IDragSourceHelper> dragSourceHelper;
 				win32::com::ComPtr<IDropTargetHelper> dropTargetHelper;
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32
 			} dnd_;
 			std::auto_ptr<base::Widget> autoScrollOriginMark_;
 			const presentation::hyperlink::Hyperlink* lastHoveredHyperlink_;
-			static std::map<UINT_PTR, DefaultMouseInputStrategy*> timerTable_;
-			static const UINT SELECTION_EXPANSION_INTERVAL, OLE_DRAGGING_TRACK_INTERVAL;
+			Timer timer_;
+			static const unsigned int SELECTION_EXPANSION_INTERVAL, DRAGGING_TRACK_INTERVAL;
 		};
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
@@ -338,7 +347,7 @@ namespace ascension {
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
 		class TextViewer :
-				public base::Widget,
+				public base::ScrollableWidget,
 				public kernel::DocumentListener, public kernel::DocumentStateListener,
 				public kernel::DocumentRollbackListener, public graphics::font::DefaultFontListener,
 				public graphics::font::VisualLinesListener, public CaretListener,
@@ -348,10 +357,9 @@ namespace ascension {
 			enum HitTestResult {
 				INDICATOR_MARGIN,	///< The point is on the indicator margin.
 				LINE_NUMBERS,		///< The point is on the line numbers area.
-				LEADING_MARGIN,		///< The point is on the leading margin.
-				TOP_MARGIN,			///< The point is on the top margin.
-				TEXT_AREA,			///< The point is on the text area.
-				OUT_OF_VIEW			///< The point is outside of the client area.
+				SIDE_SPACE,			///< The point is on the either four side spaces.
+				CONTENT_AREA,		///< The point is on the text content area.
+				OUT_OF_VIEWPORT		///< The point is outside of the viewport.
 			};
 
 			/**
@@ -373,10 +381,11 @@ namespace ascension {
 				graphics::Color restrictionBackground;
 				/// The reading direction of UI.
 				presentation::ReadingDirection readingDirection;
-				/// The amount of the leading margin in pixels. Default value is 5. This member will be ignored if the text is center-aligned.
-				int leadingMargin;
-				/// The amount of the top margin in pixels. Default value is 1.
-				int topMargin;
+				/**
+				 * Distances between the window edges and text area. Start is 5 pixels, before is 1
+				 * pixel, and the others are 0 in default.
+				 */
+				presentation::AbstractFourSides<presentation::Length> spaces;
 				/// Set @c true to vanish the cursor when the user types. Default value depends on system setting.
 				bool vanishesCursor;
 				/// Set @c true to use also Rich Text Format for clipboard operations. Default value is @c false.
@@ -385,20 +394,55 @@ namespace ascension {
 				Configuration() /*throw()*/;
 			};
 
-			/// @see #textAreaMargins
-			struct Margins {
-				graphics::Scalar left, top, right, bottom;
+			class BaselineIterator : public detail::IteratorAdapter<
+				BaselineIterator, std::iterator<
+					std::random_access_iterator_tag, graphics::Scalar
+				>
+			> {
+			public:
+				BaselineIterator(TextViewer& viewer, length_t line, bool trackOutOfViewport);
+				length_t line() const /*throw()*/;
+				bool tracksOutOfViewport() const /*throw()*/;
+			private:
+				void advance(difference_type n);
+				void initializeWithFirstVisibleLine();
+				void invalidate() /*throw()*/;
+				bool isValid() const /*throw()*/;
+				void move(length_t line);
+				// detail.IteratorAdapter
+				const reference current() const;
+				bool equals(BaselineIterator& other);
+				void next();
+			private:
+				TextViewer& viewer_;
+				const bool tracksOutOfViewport_;
+				length_t line_, subline_;
+				std::pair<graphics::Scalar, graphics::NativePoint> baseline_;
+			};
+
+			/// Implementation of @c graphics#font#TextRenderer for @c TextViewer.
+			class Renderer : public graphics::font::TextRenderer {
+				ASCENSION_UNASSIGNABLE_TAG(Renderer);
+			public:
+				explicit Renderer(TextViewer& viewer,
+					const presentation::WritingMode<false>& writingMode = presentation::WritingMode<false>());
+				Renderer(const Renderer& other, TextViewer& viewer);
+				void setDefaultWritingMode(const presentation::WritingMode<false>& writingMode) /*throw()*/;
+				void rewrapAtWindowEdge();
+				// TextRenderer
+				std::auto_ptr<const graphics::font::TextLayout> createLineLayout(length_t line) const;
+				const presentation::WritingMode<false>& defaultUIWritingMode() const /*throw()*/;
+				graphics::Scalar width() const /*throw()*/;
+			private:
+				TextViewer& viewer_;
+				presentation::WritingMode<false> defaultWritingMode_;
+//				presentation::Inheritable<presentation::TextAnchor> overrideTextAnchor_;
 			};
 
 			// constructors
-			explicit TextViewer(presentation::Presentation& presentation);
+			explicit TextViewer(presentation::Presentation& presentation, Widget* parent = 0, Style styles = WIDGET);
 			TextViewer(const TextViewer& other);
 			virtual ~TextViewer();
-			// window creation
-			virtual void initialize(const win32::Handle<HWND>& parent,
-				const graphics::NativePoint& position = graphics::geometry::make<graphics::NativePoint>(CW_USEDEFAULT, CW_USEDEFAULT),
-				const graphics::NativeSize& size = graphics::geometry::make<graphics::NativeSize>(CW_USEDEFAULT, CW_USEDEFAULT),
-				DWORD style = 0, DWORD extendedStyle = 0);
 			// listeners and strategies
 			void addDisplaySizeListener(DisplaySizeListener& listener);
 			void addInputStatusListener(TextViewerInputStatusListener& listener);
@@ -418,8 +462,8 @@ namespace ascension {
 			unsigned long scrollRate(bool horizontal) const /*throw()*/;
 			void setConfiguration(const Configuration* general,
 				const RulerConfiguration* ruler, bool synchronizeUI);
-			graphics::font::TextRenderer& textRenderer() /*throw()*/;
-			const graphics::font::TextRenderer& textRenderer() const /*throw()*/;
+			Renderer& textRenderer() /*throw()*/;
+			const Renderer& textRenderer() const /*throw()*/;
 			// caret
 			Caret& caret() /*throw()*/;
 			const Caret& caret() const /*throw()*/;
@@ -460,16 +504,16 @@ namespace ascension {
 				graphics::font::TextLayout::Edge, bool abortNoCharacter = false,
 				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER) const;
 			graphics::NativePoint clientXYForCharacter(const kernel::Position& position,
-				bool fullSearchY, graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING) const;
-			// utilities
+				bool fullSearchBpd, graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING) const;
+			// viewport
+			graphics::NativeRectangle contentRectangle() const /*throw()*/;
 			void firstVisibleLine(length_t* logicalLine, length_t* visualLine, length_t* visualSubline) const /*throw()*/;
 			HitTestResult hitTest(const graphics::NativePoint& pt) const;
 			length_t numberOfVisibleLines() const /*throw()*/;
 			length_t numberOfVisibleColumns() const /*throw()*/;
-			Margins textAreaMargins() const /*throw()*/;
+			const graphics::PhysicalFourSides<graphics::Scalar>& spaceWidths() const /*throw()*/;
 
 		protected:
-			void checkInitialization() const;
 			virtual void doBeep() /*throw()*/;
 			virtual void drawIndicatorMargin(length_t line, graphics::Context& context, const graphics::NativeRectangle& rect);
 
@@ -477,8 +521,10 @@ namespace ascension {
 		private:
 			graphics::Scalar getDisplayXOffset(length_t line) const;
 			void handleGUICharacterInput(CodePoint c);
-			void mapClientYToLine(graphics::Scalar y, length_t* logicalLine, length_t* visualSublineOffset, bool* snapped = 0) const /*throw()*/;
-			graphics::Scalar mapLineToClientY(length_t line, bool fullSearch) const;
+			void initialize();
+			graphics::Scalar mapLineToViewportBpd(length_t line, bool fullSearch) const;
+			void mapViewportBpdToLine(graphics::Scalar bpd,
+				length_t* line, length_t* subline, bool* snapped = 0) const /*throw()*/;
 			void recreateCaret();
 			void repaintRuler();
 			void updateCaretPosition();
@@ -569,24 +615,28 @@ namespace ascension {
 
 			// internal classes
 		private:
-			/// Internal extension of @c graphics#font#TextRenderer.
-			class Renderer : public graphics::font::TextRenderer {
-				ASCENSION_UNASSIGNABLE_TAG(Renderer);
+			class CursorVanisher {
 			public:
-				explicit Renderer(TextViewer& viewer,
-					const presentation::WritingMode<false>& writingMode = presentation::WritingMode<false>());
-				Renderer(const Renderer& other, TextViewer& viewer);
-				void setDefaultWritingMode(const presentation::WritingMode<false>& writingMode) /*throw()*/;
-				void rewrapAtWindowEdge();
+				CursorVanisher() /*throw()*/;
+				~CursorVanisher();
+				void install(TextViewer& viewer);
+				void restore();
+				void vanish();
+				bool vanished() const;
 			private:
-				// TextRenderer
-				std::auto_ptr<const graphics::font::TextLayout> createLineLayout(length_t line) const;
-				const presentation::WritingMode<false>& defaultUIWritingMode() const /*throw()*/;
-				graphics::Scalar width() const /*throw()*/;
+				TextViewer* viewer_;
+				bool vanished_;
+			} cursorVanisher_;
+
+			class SpacePainter {
+			public:
+				SpacePainter();
+				void paint(graphics::PaintContext& context);
+				const graphics::PhysicalFourSides<graphics::Scalar>& spaces() const;
+				void update(const TextViewer& viewer, const presentation::AbstractFourSides<presentation::Space>& spaces);
 			private:
-				TextViewer& viewer_;
-				presentation::WritingMode<false> defaultWritingMode_;
-//				presentation::Inheritable<presentation::TextAnchor> overrideTextAnchor_;
+				graphics::NativeRectangle viewerBounds_;
+				graphics::PhysicalFourSides<graphics::Scalar> computedValues_;
 			};
 
 			// enumerations
@@ -679,14 +729,13 @@ namespace ascension {
 
 			// modes
 			struct ModeState {
-				bool cursorVanished;			// the cursor is vanished for user is inputting
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 				bool activeInputMethodEnabled;	// true if uses Global IME (deprecated)
 #endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 
-				ModeState() /*throw()*/ : cursorVanished(false)
+				ModeState() /*throw()*/
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
-					, activeInputMethodEnabled(true)
+					: activeInputMethodEnabled(true)
 #endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 				{}
 			} modeState_;
@@ -694,10 +743,10 @@ namespace ascension {
 			// scroll information
 			struct ScrollInfo {
 				struct {
-					int position;		// SCROLLINFO.nPos
-					int maximum;		// SCROLLINFO.nMax
-					UINT pageSize;	// SCROLLINFO.nPage
-//					ulong rate;			// 最小スクロール量が何文字 (何行) に相当するか (普通は 1)
+					int position;			// SCROLLINFO.nPos
+					int maximum;			// SCROLLINFO.nMax
+					unsigned int pageSize;	// SCROLLINFO.nPage
+//					unsigned long rate;		// 最小スクロール量が何文字 (何行) に相当するか (普通は 1)
 				} horizontal, vertical;
 				length_t firstVisibleLine, firstVisibleSubline;
 				bool changed;
@@ -786,7 +835,12 @@ namespace ascension {
 		/// Provides the utility stuffs for viewers.
 		namespace utils {
 			void closeCompletionProposalsPopup(TextViewer& viewer) /*throw()*/;
+			const presentation::hyperlink::Hyperlink* getPointedHyperlink(const TextViewer& viewer, const kernel::Position& at);
 			bool isRulerLeftAligned(const TextViewer& viewer);
+			void toggleOrientation(TextViewer& viewer) /*throw()*/;
+			inline presentation::WritingMode<false> writingMode(const TextViewer& viewer) {
+				return presentation::resolveWritingMode(viewer.presentation(), viewer.textRenderer());
+			}
 		} // namespace utils
 
 
@@ -889,25 +943,6 @@ inline bool TextViewer::isActiveInputMethodEnabled() const /*throw()*/ {return m
 /// Returns @c true if the viewer is frozen.
 inline bool TextViewer::isFrozen() const /*throw()*/ {return freezeInfo_.count != 0;}
 
-/**
- * Returns the number of the drawable columns in the window.
- * @return The number of columns
- */
-inline length_t TextViewer::numberOfVisibleColumns() const /*throw()*/ {
-	const graphics::Scalar dx = graphics::geometry::dx(bounds(false));
-	return (dx == 0) ? 0 :
-		(dx - configuration_.leadingMargin - rulerPainter_->width()) / renderer_->defaultFont()->metrics().averageCharacterWidth();
-}
-
-/**
- * Returns the number of the drawable lines in the window.
- * @return The number of lines
- */
-inline length_t TextViewer::numberOfVisibleLines() const /*throw()*/ {
-	const graphics::Scalar dy = graphics::geometry::dy(bounds(false));
-	return (dy == 0) ? 0 : (dy - configuration_.topMargin) / renderer_->defaultFont()->metrics().linePitch();
-}
-
 /// Returns the presentation object. 
 inline presentation::Presentation& TextViewer::presentation() /*throw()*/ {return presentation_;}
 
@@ -950,10 +985,10 @@ inline unsigned long TextViewer::scrollRate(bool horizontal) const /*throw()*/ {
 inline void TextViewer::setCaretShaper(std::tr1::shared_ptr<CaretShaper> shaper) {caretShape_.shaper = shaper;}
 
 /// Returns the text renderer.
-inline graphics::font::TextRenderer& TextViewer::textRenderer() /*throw()*/ {return *renderer_;}
+inline TextViewer::Renderer& TextViewer::textRenderer() /*throw()*/ {return *renderer_;}
 
 /// Returns the text renderer.
-inline const graphics::font::TextRenderer& TextViewer::textRenderer() const /*throw()*/ {return *renderer_;}
+inline const TextViewer::Renderer& TextViewer::textRenderer() const /*throw()*/ {return *renderer_;}
 
 /**
  * Returns the ruler's configuration.

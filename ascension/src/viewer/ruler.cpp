@@ -36,7 +36,15 @@ RulerConfiguration::LineNumbers::LineNumbers() /*throw()*/ : visible(false),
 // RulerConfiguration.IndicatorMargin /////////////////////////////////////////////////////////////
 
 /// Constructor initializes the all members to their default values.
-RulerConfiguration::IndicatorMargin::IndicatorMargin() /*throw()*/ : visible(false)/*, width(15)*/ {
+RulerConfiguration::IndicatorMargin::IndicatorMargin() /*throw()*/ : visible(false), width(Length(0)) {
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+	// TODO: This code is not suitable when the indicator margin top or bottom of the viewer?
+	win32::AutoZeroSize<NONCLIENTMETRICSW> ncm;
+	if(win32::boole(::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICSW), &ncm, 0)))
+		width = Length(ncm.iScrollWidth, Length::PIXELS);
+	else
+		width = Length(15, Length::PIXELS);
+#endif
 }
 
 
@@ -85,6 +93,64 @@ RulerPainter::SnapAlignment RulerPainter::alignment() const {
 		ASCENSION_ASSERT_NOT_REACHED();
 }
 
+/// Returns the bounds of the indicator margin in the viewer-local coordinates.
+NativeRectangle RulerPainter::indicatorMarginBounds() const /*throw()*/ {
+	const NativeRectangle clientBounds(viewer_.bounds(false));
+	switch(alignment()) {
+		case LEFT:
+			return geometry::make<NativeRectangle>(
+				geometry::topLeft(clientBounds),
+				geometry::make<NativeSize>(indicatorMarginWidth(), geometry::dy(clientBounds)));
+		case TOP:
+			return geometry::make<NativeRectangle>(
+				geometry::topLeft(clientBounds),
+				geometry::make<NativeSize>(geometry::dx(clientBounds), indicatorMarginWidth()));
+		case RIGHT:
+			return geometry::normalize(
+				geometry::make<NativeRectangle>(
+					geometry::topRight(clientBounds),
+					geometry::make<NativeSize>(-indicatorMarginWidth(), geometry::dy(clientBounds))));
+		case BOTTOM:
+			return geometry::normalize(
+				geometry::make<NativeRectangle>(
+					geometry::bottomLeft(clientBounds),
+					geometry::make<NativeSize>(geometry::dx(clientBounds), -indicatorMarginWidth())));
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+}
+
+/// Returns the bounds of the line numbers in the viewer-local coordinates.
+NativeRectangle RulerPainter::lineNumbersBounds() const /*throw()*/ {
+	const NativeRectangle clientBounds(viewer_.bounds(false));
+	switch(alignment()) {
+		case LEFT:
+			return geometry::make<NativeRectangle>(
+				geometry::translate(
+					geometry::topLeft(clientBounds), geometry::make<NativeSize>(indicatorMarginWidth(), 0)),
+				geometry::make<NativeSize>(lineNumbersWidth(), geometry::dy(clientBounds)));
+		case TOP:
+			return geometry::make<NativeRectangle>(
+				geometry::translate(
+					geometry::topLeft(clientBounds), geometry::make<NativeSize>(0, indicatorMarginWidth())),
+				geometry::make<NativeSize>(geometry::dx(clientBounds), lineNumbersWidth()));
+		case RIGHT:
+			return geometry::normalize(
+				geometry::make<NativeRectangle>(
+					geometry::translate(
+						geometry::topRight(clientBounds), geometry::make<NativeSize>(-indicatorMarginWidth(), 0)),
+					geometry::make<NativeSize>(-lineNumbersWidth(), geometry::dy(clientBounds))));
+		case BOTTOM:
+			return geometry::normalize(
+				geometry::make<NativeRectangle>(
+					geometry::translate(
+						geometry::bottomLeft(clientBounds), geometry::make<NativeSize>(0, -indicatorMarginWidth())),				
+					geometry::make<NativeSize>(geometry::dx(clientBounds), -lineNumbersWidth())));
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+}
+
 /// Returns the maximum number of digits of line numbers.
 uint8_t RulerPainter::maximumDigitsForLineNumbers() const /*throw()*/ {
 	uint8_t n = 1;
@@ -106,58 +172,30 @@ void RulerPainter::paint(PaintContext& context) {
 
 	const NativeRectangle paintBounds(context.boundsToPaint());
 	const TextRenderer& renderer = viewer_.textRenderer();
-	const NativeRectangle clientBounds(viewer_.bounds(false));
 	const SnapAlignment location = alignment();
-	Border::Part Border::*borderPart;
+	Border::Part AbstractFourSides<Border::Part>::*borderPart;
 
-	NativeRectangle indicatorMarginBounds, lineNumbersBounds;
+	const NativeRectangle indicatorMarginRectangle(indicatorMarginBounds());
+	const NativeRectangle lineNumbersRectangle(lineNumbersBounds());
 	switch(location) {
 		case LEFT:
-			indicatorMarginBounds = geometry::make<NativeRectangle>(
-				geometry::topLeft(clientBounds),
-				geometry::make<NativeSize>(indicatorMarginWidth(), geometry::dy(clientBounds)));
-			lineNumbersBounds = geometry::make<NativeRectangle>(
-				geometry::topRight(indicatorMarginBounds),
-				geometry::make<NativeSize>(lineNumbersWidth(), geometry::dy(clientBounds)));
-			borderPart = &Border::end;
+			borderPart = &AbstractFourSides<Border::Part>::end;
 			break;
 		case TOP:
-			indicatorMarginBounds = geometry::make<NativeRectangle>(
-				geometry::topLeft(clientBounds),
-				geometry::make<NativeSize>(geometry::dx(clientBounds), indicatorMarginWidth()));
-			lineNumbersBounds = geometry::make<NativeRectangle>(
-				geometry::bottomLeft(indicatorMarginBounds),
-				geometry::make<NativeSize>(geometry::dx(clientBounds), lineNumbersWidth()));
-			borderPart = &Border::after;
+			borderPart = &AbstractFourSides<Border::Part>::after;
 			break;
 		case RIGHT:
-			geometry::normalize(
-				indicatorMarginBounds = geometry::make<NativeRectangle>(
-					geometry::topRight(clientBounds),
-					geometry::make<NativeSize>(-indicatorMarginWidth(), geometry::dy(clientBounds))));
-			geometry::normalize(
-				lineNumbersBounds = geometry::make<NativeRectangle>(
-					geometry::topLeft(indicatorMarginBounds),
-					geometry::make<NativeSize>(-lineNumbersWidth(), geometry::dy(clientBounds))));
-			borderPart = &Border::start;
+			borderPart = &AbstractFourSides<Border::Part>::start;
 			break;
 		case BOTTOM:
-			geometry::normalize(
-				indicatorMarginBounds = geometry::make<NativeRectangle>(
-					geometry::bottomLeft(clientBounds),
-					geometry::make<NativeSize>(geometry::dx(clientBounds), -indicatorMarginWidth())));
-			geometry::normalize(
-				lineNumbersBounds = geometry::make<NativeRectangle>(
-					geometry::topLeft(indicatorMarginBounds),
-					geometry::make<NativeSize>(geometry::dx(clientBounds), -lineNumbersWidth())));
-			borderPart = &Border::before;
+			borderPart = &AbstractFourSides<Border::Part>::before;
 			break;
 	}
 
 	const bool indicatorMarginToPaint = configuration().indicatorMargin.visible
-		&& !geometry::isEmpty(indicatorMarginBounds) && geometry::intersects(indicatorMarginBounds, paintBounds);
+		&& !geometry::isEmpty(indicatorMarginRectangle) && geometry::intersects(indicatorMarginRectangle, paintBounds);
 	const bool lineNumbersToPaint = configuration().lineNumbers.visible
-		&& !geometry::isEmpty(lineNumbersBounds) && geometry::intersects(lineNumbersBounds, paintBounds);
+		&& !geometry::isEmpty(lineNumbersRectangle) && geometry::intersects(lineNumbersRectangle, paintBounds);
 	if(!indicatorMarginToPaint && !lineNumbersToPaint)
 		return;
 
@@ -173,12 +211,12 @@ void RulerPainter::paint(PaintContext& context) {
 	if(indicatorMarginToPaint) {
 		context.setFillStyle((configuration().indicatorMargin.paint != Paint()) ?
 			configuration().indicatorMargin.paint : Paint(SystemColors::get(SystemColors::THREE_D_FACE)));
-		context.fillRectangle(indicatorMarginBounds);
+		context.fillRectangle(indicatorMarginRectangle);
 		Border borderStyle;
-		(borderStyle.*borderPart) = configuration().indicatorMargin.border;
-		if((borderStyle.*borderPart).color == Color())
-			(borderStyle.*borderPart).color = SystemColors::get(SystemColors::THREE_D_SHADOW);
-		detail::paintBorder(context, indicatorMarginBounds, borderStyle,
+		(borderStyle.sides.*borderPart) = configuration().indicatorMargin.border;
+		if((borderStyle.sides.*borderPart).color == Color())
+			(borderStyle.sides.*borderPart).color = SystemColors::get(SystemColors::THREE_D_SHADOW);
+		detail::paintBorder(context, indicatorMarginRectangle, borderStyle,
 			Color(), resolveWritingMode(viewer_.presentation(), viewer_.textRenderer()));
 	}
 
@@ -199,10 +237,10 @@ void RulerPainter::paint(PaintContext& context) {
 
 		// background and border
 		context.setFillStyle(configuration().lineNumbers.background);
-		context.fillRectangle(lineNumbersBounds);
+		context.fillRectangle(lineNumbersRectangle);
 		Border borderStyle;
-		(borderStyle.*borderPart) = configuration().lineNumbers.border;
-		detail::paintBorder(context, lineNumbersBounds, borderStyle,
+		(borderStyle.sides.*borderPart) = configuration().lineNumbers.border;
+		detail::paintBorder(context, lineNumbersRectangle, borderStyle,
 			foreground.color(), resolveWritingMode(viewer_.presentation(), viewer_.textRenderer()));
 
 		// text
@@ -380,6 +418,15 @@ namespace {
 #endif
 */
 		Char maximumExtentCharacter;
+		Scalar maximumAdvance = 0;
+		for(Char c = '0'; c <= '9'; ++c) {
+			const GlyphMetrics gm(font->glyphMetrics(c));
+			const Scalar advance = WritingModeBase::isHorizontal(writingMode.blockFlowDirection) ? gm.advanceX() : gm.advanceY();
+			if(advance > maximumAdvance) {
+				maximumExtentCharacter = c;
+				maximumAdvance = advance;
+			}
+		}
 		const NativeSize stringExtent(context.measureText(String(digits, maximumExtentCharacter)));
 
 		context.setFont(oldFont);

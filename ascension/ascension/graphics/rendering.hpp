@@ -52,7 +52,8 @@ namespace ascension {
 				std::tr1::shared_ptr<const Font> defaultFont() const /*throw()*/;
 				void removeDefaultFontListener(DefaultFontListener& listener);
 				// text metrics
-				int lineIndent(length_t line, length_t subline = 0) const;
+				Scalar baselineDistance(const Range<length_t>& lines) const;
+				Scalar lineIndent(length_t line, length_t subline = 0) const;
 				// operation
 				void renderLine(length_t line, PaintContext& context,
 					const NativePoint& origin, const TextPaintOverride* paintOverride = 0,

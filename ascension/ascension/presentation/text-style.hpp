@@ -43,6 +43,21 @@ namespace ascension {
 			typedef typename detail::Select<condition, Inheritable<T>, T>::Type Type;
 		};
 
+		template<typename T>
+		struct AbstractFourSides {
+			T before, after, start, end;
+		};
+
+#if 0
+		struct Space {
+			Length minimum, optimum, maximum;
+			boost::optional<int> precedence;
+			enum Conditionality {DISCARD, RETAIN} conditionality;
+		};
+#else
+		typedef Length Space;
+#endif
+
 		/**
 		 * @see "CSS Backgrounds and Borders Module Level 3"
 		 *      (http://www.w3.org/TR/2011/CR-css3-background-20110215/)
@@ -74,7 +89,8 @@ namespace ascension {
 				Length computedWidth() const {return (style != NONE) ? width : Length(0.0, width.unitType());}
 				/// Returns @c true if this part is invisible (but may be consumes place).
 				bool hasVisibleStyle() const /*throw()*/ {return style != NONE && style != HIDDEN;}
-			} before, after, start, end;
+			};
+			AbstractFourSides<Part> sides;
 		};
 
 		/**
@@ -315,9 +331,9 @@ namespace ascension {
 		 * @see TextLineStyle#readingDirection, defaultReadingDirection,
 		 * @see "CSS Writing Modes Module Level 3, 2.1. Specifying Directionality: the ÅedirectionÅf
 		 *      property" (http://www.w3.org/TR/css3-writing-modes/#direction)
-		 * @see "SVG 1.1 (Second Edition), 10.7.4 Relationship with bidirectionality"
+		 * @see SVG 1.1 (Second Edition), 10.7.4 Relationship with bidirectionality
 		 *      (http://www.w3.org/TR/SVG/text.html#DirectionProperty)
-		 * @see "XSL 1.1, 7.29.1 "direction"" (http://www.w3.org/TR/xsl/#direction)
+		 * @see XSL 1.1, 7.29.1 "direction" (http://www.w3.org/TR/xsl/#direction)
 		 */
 		enum ReadingDirection {
 			LEFT_TO_RIGHT,	///< Left-to-right directionality.
@@ -327,17 +343,26 @@ namespace ascension {
 		ReadingDirection defaultReadingDirection(const Presentation& presentation);
 
 		/**
-		 * @see XSL 1.1, 7.16.5 "line-height-shift-adjustment".
+		 * @see XSL 1.1, 7.16.5 "line-height-shift-adjustment"
+		 *      (http://www.w3.org/TR/xsl/#line-height-shift-adjustment)
 		 */
 		enum LineHeightShiftAdjustment {
 			CONSIDER_SHIFTS, DISREGARD_SHIFTS
 		};
 
 		/**
+		 * [Copied from XSL 1.1 documentation] Selects the strategy for positioning adjacent lines,
+		 * relative to each other.
 		 * @see XSL 1.1, 7.16.6 "line-stacking-strategy"
+		 *      (http://www.w3.org/TR/xsl/#line-stacking-strategy)
 		 */
 		enum LineStackingStrategy {
-			LINE_HEIGHT, FONT_HEIGHT, MAX_HEIGHT
+			/// [Copied from XSL 1.1 documentation] Uses the per-inline-height-rectangle.
+			LINE_HEIGHT,
+			/// [Copied from XSL 1.1 documentation] Uses the nominal-requested-line-rectangle.
+			FONT_HEIGHT,
+			/// [Copied from XSL 1.1 documentation] Uses the maximal-line-rectangle.
+			MAX_HEIGHT
 		};
 
 		struct NumberSubstitution {
@@ -491,7 +516,75 @@ namespace ascension {
 			inline operator WritingMode<otherInheritable>() const {
 				return WritingMode<otherInheritable>(inlineFlowDirection, blockFlowDirection, textOrientation);
 			}
+			/// Equality operator.
+			template<bool otherInheritable>
+			inline bool operator==(const WritingMode<otherInheritable>& other) const {
+				return inlineFlowDirection == other.inlineFlowDirection
+					&& blockFlowDirection == other.blockFlowDirection && textOrientation == other.textOrientation;
+			}
+			/// Inequality operator.
+			template<bool otherInheritable>
+			inline bool operator!=(const WritingMode<otherInheritable>& other) const {return !(*this == other);}
 		};
+
+		/**
+		 * Performs abstract-to-physical mappings according to the given writing mode.
+		 * @tparam From The type for @a from
+		 * @tparam To The type for @a to
+		 * @param writingMode The writing mode
+		 * @param from The abstract value to map
+		 * @param[out] to The result physical value
+		 */
+		template<typename From, typename To>
+		inline graphics::PhysicalFourSides<To>& mapAbstractToPhysical(
+				const WritingMode<false>& writingMode,
+				const AbstractFourSides<From>& from, graphics::PhysicalFourSides<To>& to) {
+			const WritingModeBase::TextOrientation textOrientation(resolveTextOrientation(writingMode));
+			switch(writingMode.blockFlowDirection) {
+				case WritingModeBase::HORIZONTAL_TB:
+					to.top = from.before;
+					to.bottom = from.after;
+					to.left = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? from.start : from.end;
+					to.right = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? from.end : from.start;
+					break;
+				case WritingModeBase::VERTICAL_RL:
+				case WritingModeBase::VERTICAL_LR:
+					to.left = (writingMode.blockFlowDirection == WritingModeBase::VERTICAL_LR) ? from.before : from.after;
+					to.right = (writingMode.blockFlowDirection == WritingModeBase::VERTICAL_RL) ? from.before : from.after;
+					{
+						int n = (textOrientation == WritingModeBase::SIDEWAYS_LEFT) ? 1 : 0;
+						n += (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? 1 : 0;
+						to.top = (n == 1) ? from.start : from.end;
+						to.bottom = (n == 1) ? from.start : from.end;
+					}
+		 			break;			
+				default:
+					throw UnknownValueException("writingMode.blockFlowDirection");
+			}
+			return to;
+		}
+
+		/***/
+		template<typename From, typename To>
+		AbstractFourSides<To>& mapPhysicalToAbstract(
+			const graphics::PhysicalFourSides<From>& from, AbstractFourSides<To>& to);
+
+		/***/
+		inline WritingModeBase::TextOrientation resolveTextOrientation(const WritingMode<false>& writingMode) {
+			switch(writingMode.textOrientation) {
+				case WritingModeBase::SIDEWAYS:
+					if(writingMode.blockFlowDirection == WritingModeBase::VERTICAL_RL)
+						return WritingModeBase::SIDEWAYS_RIGHT;
+					else if(writingMode.blockFlowDirection == WritingModeBase::VERTICAL_LR)
+						return WritingModeBase::SIDEWAYS_LEFT;
+					else
+						return WritingModeBase::SIDEWAYS;
+				case WritingModeBase::USE_GLYPH_ORIENTATION:
+					return WritingModeBase::VERTICAL_RIGHT;
+				default:
+					return writingMode.textOrientation;
+			}
+		}
 	}
 
 	namespace graphics {

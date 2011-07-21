@@ -15,8 +15,10 @@ namespace ascension {
 
 			class Cursor {
 			public:
+				static void hide();
 				static graphics::NativePoint position();
 				static void setPosition(const graphics::NativePoint& p);
+				static void show();
 			};
 
 		}
