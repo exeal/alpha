@@ -6,9 +6,14 @@
  * @date 2011-05-16 separated from viewer.cpp
  */
 
+#define ASCENSION_TEST_TEXT_STYLES
+
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/base/cursor.hpp>
 #include <ascension/text-editor/command.hpp>
+#include <ascension/text-editor/input-sequence-checker.hpp>
+#include <ascension/win32/windows.hpp>
 #include <ascension/win32/ui/menu.hpp>
 #include <ascension/win32/ui/wait-cursor.hpp>
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
@@ -21,7 +26,14 @@
 #endif // !ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
 #pragma comment(lib, "version.lib")
 
+#ifdef ASCENSION_TEST_TEXT_STYLES
+#	include <ascension/presentation/presentation-reconstructor.hpp>
+#endif
+
 using namespace ascension;
+using namespace ascension::graphics;
+using namespace ascension::graphics::font;
+using namespace ascension::presentation;
 using namespace ascension::viewers;
 using namespace std;
 namespace k = ascension::kernel;
@@ -51,7 +63,7 @@ LANGID ASCENSION_FASTCALL ascension::win32::userDefaultUILanguage() /*throw()*/ 
 	::GetVersionExW(&version);
 	assert(version.dwPlatformId == VER_PLATFORM_WIN32_NT);
 
-	// 2000/XP/Server 2003 以降の場合 -> kernel32.dll の GetUserDefaultUILanguage に転送
+	// forward to GetUserDefaultUILanguage (kernel32.dll) if after 2000/XP/Server 2003
 	if(version.dwMajorVersion >= 5) {
 		if(HMODULE dll = ::LoadLibraryW(L"kernel32.dll")) {
 			if(LANGID(WINAPI *function)(void) = reinterpret_cast<LANGID(WINAPI*)(void)>(::GetProcAddress(dll, "GetUserDefaultUILanguage")))
@@ -60,7 +72,7 @@ LANGID ASCENSION_FASTCALL ascension::win32::userDefaultUILanguage() /*throw()*/ 
 		}
 	}
 
-	// NT 3.51-4.0 の場合 -> ntdll.dll のバージョン情報の言語
+	// use language of version information of ntdll.dll if on NT 3.51-4.0
 	else if(HMODULE dll = ::LoadLibraryW(L"ntdll.dll")) {
 		::EnumResourceLanguagesW(dll, MAKEINTRESOURCEW(16)/*RT_VERSION*/,
 			MAKEINTRESOURCEW(1), enumResLangProc, reinterpret_cast<LONG_PTR>(&id));
@@ -76,7 +88,7 @@ LANGID ASCENSION_FASTCALL ascension::win32::userDefaultUILanguage() /*throw()*/ 
 		}
 	}
 
-	return id;	// ちなみに Win 95/98 では HKCU\Control Panel\Desktop\ResourceLocale の値を使う
+	return id;	// (... or use value of HKCU\Control Panel\Desktop\ResourceLocale if on Win 9x
 }
 
 
@@ -136,7 +148,7 @@ class TextViewer::AccessibleProxy :
 			>,
 			win32::com::ole::TypeInformationFromRegistry<&LIBID_Accessibility, &IID_IAccessible>
 		> {
-	// IAccessible の実装については以下を参考にした:
+	// references about implementation of IAccessible:
 	//   MSAA サーバーを実装する - 開発者のための実用的助言と、 Mozilla による MSAA サーバーの実装方法
 	//   (http://www.geocities.jp/nobu586/archive/msaa-server.html)
 	//   Mozilla アクセシビリティ・アーキテクチャー
@@ -148,7 +160,7 @@ class TextViewer::AccessibleProxy :
 	ASCENSION_UNASSIGNABLE_TAG(AccessibleProxy);
 public:
 	// constructor
-	AccessibleProxy(TextViewer& view);
+	explicit AccessibleProxy(TextViewer& viewer);
 	// method
 	void dispose();
 	// IAccessible
@@ -177,11 +189,11 @@ public:
 	STDMETHODIMP GetWindow(HWND* phwnd);
 	STDMETHODIMP ContextSensitiveHelp(BOOL fEnterMode);
 private:
-	// IDocumentListener
+	// DocumentListener
 	void documentAboutToBeChanged(const k::Document& document);
 	void documentChanged(const k::Document& document, const k::DocumentChange& change);
 private:
-	TextViewer& view_;
+	TextViewer& viewer_;
 	bool available_;
 	win32::com::ComPtr<IAccessible> defaultServer_;
 //	enum {CHILDID_SELECTION = 1};
@@ -194,9 +206,9 @@ private:
  * Constructor.
  * @param view the viewer
  */
-TextViewer::AccessibleProxy::AccessibleProxy(TextViewer& view) /*throw()*/ : view_(view), available_(true) {
+TextViewer::AccessibleProxy::AccessibleProxy(TextViewer& viewer) /*throw()*/ : viewer_(viewer), available_(true) {
 	assert(accLib.isAvailable());
-	accLib.createStdAccessibleObject(view.identifier().get(), OBJID_CLIENT, IID_IAccessible, defaultServer_.initializePPV());
+	accLib.createStdAccessibleObject(viewer.identifier().get(), OBJID_CLIENT, IID_IAccessible, defaultServer_.initializePPV());
 }
 
 /// @see IAccessible#accDoDefaultAction
@@ -210,11 +222,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::accHitTest(long xLeft, long yTop, VARI
 	ASCENSION_VERIFY_AVAILABILITY();
 	// ウィンドウが矩形であることを前提としている
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pvarChild);
-	POINT p = {xLeft, yTop};
-	::ScreenToClient(view_.identifier().get(), &p);
-	RECT clientBounds;
-	::GetClientRect(view_.identifier().get(), &clientBounds);
-	if(win32::boole(::PtInRect(&clientBounds, p))) {
+	if(geometry::includes(viewer_.bounds(false), viewer_.mapFromGlobal(geometry::make<NativePoint>(xLeft, yTop)))) {
 		pvarChild->vt = VT_I4;
 		pvarChild->lVal = CHILDID_SELF;
 		return S_OK;
@@ -233,14 +241,12 @@ STDMETHODIMP TextViewer::AccessibleProxy::accLocation(long* pxLeft, long* pyTop,
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pcyHeight);
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
-	RECT clientBounds;
-	::GetClientRect(view_.identifier().get(), &clientBounds);
-	POINT origin = {clientBounds.left, clientBounds.top};
-	::ClientToScreen(view_.identifier().get(), &origin);
-	*pxLeft = origin.x;
-	*pyTop = origin.y;
-	*pcxWidth = clientBounds.right - clientBounds.left;
-	*pcyHeight = clientBounds.bottom - clientBounds.top;
+	const NativeRectangle clientBounds(viewer_.bounds(false));
+	const NativePoint origin(viewer_.mapToGlobal(geometry::topLeft(clientBounds)));
+	*pxLeft = geometry::x(origin);
+	*pyTop = geometry::y(origin);
+	*pcxWidth = geometry::dx(clientBounds);
+	*pcyHeight = geometry::dy(clientBounds);
 	return S_OK;
 }
 
@@ -277,7 +283,7 @@ void TextViewer::AccessibleProxy::documentAboutToBeChanged(const k::Document&) {
 /// @see Document#IListener#documentChanged
 void TextViewer::AccessibleProxy::documentChanged(const k::Document&, const k::DocumentChange&) {
 	assert(accLib.isAvailable());
-	accLib.notifyWinEvent(EVENT_OBJECT_VALUECHANGE, view_.identifier().get(), OBJID_CLIENT, CHILDID_SELF);
+	accLib.notifyWinEvent(EVENT_OBJECT_VALUECHANGE, viewer_.identifier().get(), OBJID_CLIENT, CHILDID_SELF);
 }
 
 /// @see IAccessible#get_accChild
@@ -353,7 +359,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accName(VARIANT varChild, BSTR* ps
 STDMETHODIMP TextViewer::AccessibleProxy::get_accParent(IDispatch** ppdispParent) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	if(accLib.isAvailable())
-		return accLib.accessibleObjectFromWindow(view_.identifier().get(),
+		return accLib.accessibleObjectFromWindow(viewer_.identifier().get(),
 			OBJID_WINDOW, IID_IAccessible, reinterpret_cast<void**>(ppdispParent));
 	return defaultServer_->get_accParent(ppdispParent);
 }
@@ -384,13 +390,13 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accState(VARIANT varChild, VARIANT
 		return E_INVALIDARG;
 	pvarState->vt = VT_I4;
 	pvarState->lVal = 0;	// STATE_SYSTEM_NORMAL;
-	if(!view_.isVisible())
+	if(!viewer_.isVisible())
 		pvarState->lVal |= STATE_SYSTEM_INVISIBLE;
-	if(::GetTopWindow(view_.identifier().get()) == ::GetActiveWindow())
+	if(::GetTopWindow(viewer_.identifier().get()) == ::GetActiveWindow())
 		pvarState->lVal |= STATE_SYSTEM_FOCUSABLE;
-	if(view_.hasFocus())
+	if(viewer_.hasFocus())
 		pvarState->lVal |= STATE_SYSTEM_FOCUSED;
-	if(view_.document().isReadOnly())
+	if(viewer_.document().isReadOnly())
 		pvarState->lVal |= STATE_SYSTEM_READONLY;
 	return S_OK;
 }
@@ -402,7 +408,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accValue(VARIANT varChild, BSTR* p
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
 	basic_ostringstream<Char> s;
-	writeDocumentToStream(s, view_.document(), view_.document().region());
+	writeDocumentToStream(s, viewer_.document(), viewer_.document().region());
 	*pszValue = ::SysAllocString(s.str().c_str());
 	return (*pszValue != 0) ? S_OK : E_OUTOFMEMORY;
 }
@@ -411,7 +417,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accValue(VARIANT varChild, BSTR* p
 STDMETHODIMP TextViewer::AccessibleProxy::GetWindow(HWND* phwnd) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	ASCENSION_WIN32_VERIFY_COM_POINTER(phwnd);
-	*phwnd = view_.identifier().get();
+	*phwnd = viewer_.identifier().get();
 	return S_OK;
 }
 
@@ -426,9 +432,9 @@ STDMETHODIMP TextViewer::AccessibleProxy::put_accValue(VARIANT varChild, BSTR sz
 	ASCENSION_VERIFY_AVAILABILITY();
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
-	else if(view_.document().isReadOnly())
+	else if(viewer_.document().isReadOnly())
 		return E_ACCESSDENIED;
-	view_.caret().replaceSelection((szValue != 0) ? szValue : L"");
+	viewer_.caret().replaceSelection((szValue != 0) ? szValue : L"");
 	return S_OK;
 }
 
@@ -490,7 +496,7 @@ namespace {
 HRESULT TextViewer::accessibleObject(IAccessible*& acc) const /*throw()*/ {
 	TextViewer& self = *const_cast<TextViewer*>(this);
 	acc = 0;
-	if(accessibleProxy_ == 0 && isWindow() && accLib.isAvailable()) {
+	if(accessibleProxy_ == 0 && win32::boole(::IsWindow(identifier().get())) && accLib.isAvailable()) {
 		if(self.accessibleProxy_ = new AccessibleProxy(self)) {
 			self.accessibleProxy_->AddRef();
 //			accLib.notifyWinEvent(EVENT_OBJECT_CREATE, *this, OBJID_CLIENT, CHILDID_SELF);
@@ -512,18 +518,12 @@ void TextViewer::doBeep() /*throw()*/ {
 /// Handles @c WM_CHAR and @c WM_UNICHAR window messages.
 void TextViewer::handleGUICharacterInput(CodePoint c) {
 	// vanish the cursor when the GUI user began typing
-	if(texteditor::commands::CharacterInputCommand(*this, c)() != 0
-			&& !modeState_.cursorVanished
-			&& configuration_.vanishesCursor
-			&& hasFocus()) {
+	if(texteditor::commands::CharacterInputCommand(*this, c)() != 0) {
 		// ignore if the cursor is not over a window belongs to the same thread
-		HWND pointedWindow = ::WindowFromPoint(Cursor::position());
+		HWND pointedWindow = ::WindowFromPoint(base::Cursor::position());
 		if(pointedWindow != 0
-				&& ::GetWindowThreadProcessId(pointedWindow, 0) == ::GetWindowThreadProcessId(identifier().get(), 0)) {
-			modeState_.cursorVanished = true;
-			::ShowCursor(false);
-			grabInput();
-		}
+				&& ::GetWindowThreadProcessId(pointedWindow, 0) == ::GetWindowThreadProcessId(identifier().get(), 0))
+			cursorVanisher_.vanish();
 	}
 }
 
@@ -561,20 +561,21 @@ LRESULT TextViewer::handleWindowSystemEvent(UINT message, WPARAM wp, LPARAM lp, 
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 	case WM_GETTEXT: {
 		basic_ostringstream<Char> s;
-		writeDocumentToStream(s, document(), document().region(), k::NLF_CR_LF);
+		writeDocumentToStream(s, document(), document().region(), text::NLF_CR_LF);
 		consumed = true;
 		return reinterpret_cast<LRESULT>(s.str().c_str());
 	}
 	case WM_GETTEXTLENGTH:
 		// ウィンドウ関係だし改行は CRLF でいいか。NLR_RAW_VALUE だと遅いし
 		consumed = true;
-		return document().length(k::NLF_CR_LF);
+		return document().length(text::NLF_CR_LF);
 	case WM_INPUTLANGCHANGE:
+		// TODO: This code should not depend on Win32.
 		inputStatusListeners_.notify(&TextViewerInputStatusListener::textViewerInputLanguageChanged);
 		if(hasFocus()) {
 			if(texteditor::Session* const session = document().session()) {
 				if(texteditor::InputSequenceCheckers* const isc = session->inputSequenceCheckers())
-					isc->setKeyboardLayout(::GetKeyboardLayout(::GetCurrentThreadId()));
+					isc->imbue(::GetKeyboardLayout(::GetCurrentThreadId()));
 			}
 		}
 		break;
@@ -663,12 +664,236 @@ LRESULT TextViewer::handleWindowSystemEvent(UINT message, WPARAM wp, LPARAM lp, 
 
 /// Hides the tool tip.
 void TextViewer::hideToolTip() {
-	checkInitialization();
+	assert(::IsWindow(identifier().get()));
 	if(tipText_ == 0)
 		tipText_ = new Char[1];
 	wcscpy(tipText_, L"");
 	::KillTimer(identifier().get(), TIMERID_CALLTIP);	// 念のため...
 	::SendMessageW(toolTip_, TTM_UPDATE, 0, 0L);
+}
+
+/// @internal Initializes the window of the viewer.
+void TextViewer::initialize() {
+	scrollInfo_.updateVertical(*this);
+	updateScrollBars();
+
+	// create the tooltip belongs to the window
+	toolTip_ = ::CreateWindowExW(
+		WS_EX_TOOLWINDOW | WS_EX_TOPMOST, TOOLTIPS_CLASSW, 0, WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX,
+		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, identifier().get(), 0,
+		reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLongPtr(identifier().get(), GWLP_HINSTANCE))), 0);
+	if(toolTip_ != 0) {
+		win32::AutoZeroSize<TOOLINFOW> ti;
+		RECT margins = {1, 1, 1, 1};
+		ti.hwnd = identifier().get();
+		ti.lpszText = LPSTR_TEXTCALLBACKW;
+		ti.uFlags = TTF_SUBCLASS;
+		ti.uId = 1;
+		::SetRect(&ti.rect, 0, 0, 0, 0);
+		::SendMessageW(toolTip_, TTM_ADDTOOLW, 0, reinterpret_cast<LPARAM>(&ti));
+		::SendMessageW(toolTip_, TTM_SETDELAYTIME, TTDT_AUTOPOP, 30000);	// 30 秒間 (根拠なし) 表示されるように
+//		::SendMessageW(toolTip_, TTM_SETDELAYTIME, TTDT_INITIAL, 1500);
+		::SendMessageW(toolTip_, TTM_SETMARGIN, 0, reinterpret_cast<LPARAM>(&margins));
+		::SendMessageW(toolTip_, TTM_ACTIVATE, true, 0L);
+	}
+
+	setMouseInputStrategy(0, true);
+
+#ifdef ASCENSION_TEST_TEXT_STYLES
+	RulerConfiguration rc;
+	rc.lineNumbers.visible = true;
+	rc.indicatorMargin.visible = true;
+	rc.lineNumbers.foreground = Paint(Color(0x00, 0x80, 0x80));
+	rc.lineNumbers.background = Paint(Color(0xff, 0xff, 0xff));
+	rc.lineNumbers.border.color = Color(0x00, 0x80, 0x80);
+	rc.lineNumbers.border.style = Border::DOTTED;
+	rc.lineNumbers.border.width = Length(1);
+	setConfiguration(0, &rc, false);
+
+#if 0
+	// this is JavaScript partitioning and lexing settings for test
+	using namespace contentassist;
+	using namespace rules;
+	using namespace text;
+
+	static const ContentType JS_MULTILINE_DOC_COMMENT = 140,
+		JS_MULTILINE_COMMENT = 142, JS_SINGLELINE_COMMENT = 143, JS_DQ_STRING = 144, JS_SQ_STRING = 145;
+
+	class JSContentTypeInformation : public IContentTypeInformationProvider {
+	public:
+		JSContentTypeInformation()  {
+			jsIDs_.overrideIdentifierStartCharacters(L"_", L""); jsdocIDs_.overrideIdentifierStartCharacters(L"$@", L"");}
+		const IdentifierSyntax& getIdentifierSyntax(ContentType contentType) const {
+			return (contentType != JS_MULTILINE_DOC_COMMENT) ? jsIDs_ : jsdocIDs_;}
+	private:
+		IdentifierSyntax jsIDs_, jsdocIDs_;
+	};
+	JSContentTypeInformation* cti = new JSContentTypeInformation;
+
+	TransitionRule* rules[12];
+	rules[0] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_MULTILINE_DOC_COMMENT, L"/**");
+	rules[1] = new LiteralTransitionRule(JS_MULTILINE_DOC_COMMENT, DEFAULT_CONTENT_TYPE, L"*/");
+	rules[2] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_MULTILINE_COMMENT, L"/*");
+	rules[3] = new LiteralTransitionRule(JS_MULTILINE_COMMENT, DEFAULT_CONTENT_TYPE, L"*/");
+	rules[4] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_SINGLELINE_COMMENT, L"//");
+	rules[5] = new LiteralTransitionRule(JS_SINGLELINE_COMMENT, DEFAULT_CONTENT_TYPE, L"", L'\\');
+	rules[6] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_DQ_STRING, L"\"");
+	rules[7] = new LiteralTransitionRule(JS_DQ_STRING, DEFAULT_CONTENT_TYPE, L"\"", L'\\');
+	rules[8] = new LiteralTransitionRule(JS_DQ_STRING, DEFAULT_CONTENT_TYPE, L"");
+	rules[9] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_SQ_STRING, L"\'");
+	rules[10] = new LiteralTransitionRule(JS_SQ_STRING, DEFAULT_CONTENT_TYPE, L"\'", L'\\');
+	rules[11] = new LiteralTransitionRule(JS_SQ_STRING, DEFAULT_CONTENT_TYPE, L"");
+	LexicalPartitioner* p = new LexicalPartitioner();
+	p->setRules(rules, ASCENSION_ENDOF(rules));
+	for(size_t i = 0; i < ASCENSION_COUNTOF(rules); ++i)
+		delete rules[i];
+	document().setPartitioner(auto_ptr<DocumentPartitioner>(p));
+
+	PresentationReconstructor* pr = new PresentationReconstructor(presentation());
+
+	// JSDoc syntax highlight test
+	static const Char JSDOC_ATTRIBUTES[] = L"@addon @argument @author @base @class @constructor @deprecated @exception @exec @extends"
+		L" @fileoverview @final @ignore @link @member @param @private @requires @return @returns @see @throws @type @version";
+	{
+		auto_ptr<const WordRule> jsdocAttributes(new WordRule(220, JSDOC_ATTRIBUTES, ASCENSION_ENDOF(JSDOC_ATTRIBUTES) - 1, L' ', true));
+		auto_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(JS_MULTILINE_DOC_COMMENT));
+		scanner->addWordRule(jsdocAttributes);
+		scanner->addRule(auto_ptr<Rule>(new URIRule(219, URIDetector::defaultIANAURIInstance(), false)));
+		map<Token::ID, const TextStyle> jsdocStyles;
+		jsdocStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle(Colors(Color(0x00, 0x80, 0x00)))));
+		jsdocStyles.insert(make_pair(219, TextStyle(Colors(Color(0x00, 0x80, 0x00)), false, false, false, SOLID_UNDERLINE)));
+		jsdocStyles.insert(make_pair(220, TextStyle(Colors(Color(0x00, 0x80, 0x00)), true)));
+		auto_ptr<IPartitionPresentationReconstructor> ppr(
+			new LexicalPartitionPresentationReconstructor(document(), auto_ptr<ITokenScanner>(scanner.release()), jsdocStyles));
+		pr->setPartitionReconstructor(JS_MULTILINE_DOC_COMMENT, ppr);
+	}
+
+	// JavaScript syntax highlight test
+	static const Char JS_KEYWORDS[] = L"Infinity break case catch continue default delete do else false finally for function"
+		L" if in instanceof new null return switch this throw true try typeof undefined var void while with";
+	static const Char JS_FUTURE_KEYWORDS[] = L"abstract boolean byte char class double enum extends final float goto"
+		L" implements int interface long native package private protected public short static super synchronized throws transient volatile";
+	{
+		auto_ptr<const WordRule> jsKeywords(new WordRule(221, JS_KEYWORDS, ASCENSION_ENDOF(JS_KEYWORDS) - 1, L' ', true));
+		auto_ptr<const WordRule> jsFutureKeywords(new WordRule(222, JS_FUTURE_KEYWORDS, ASCENSION_ENDOF(JS_FUTURE_KEYWORDS) - 1, L' ', true));
+		auto_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(DEFAULT_CONTENT_TYPE));
+		scanner->addWordRule(jsKeywords);
+		scanner->addWordRule(jsFutureKeywords);
+		scanner->addRule(auto_ptr<const Rule>(new NumberRule(223)));
+		map<Token::ID, const TextStyle> jsStyles;
+		jsStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle()));
+		jsStyles.insert(make_pair(221, TextStyle(Colors(Color(0x00, 0x00, 0xff)))));
+		jsStyles.insert(make_pair(222, TextStyle(Colors(Color(0x00, 0x00, 0xff)), false, false, false, DASHED_UNDERLINE)));
+		jsStyles.insert(make_pair(223, TextStyle(Colors(Color(0x80, 0x00, 0x00)))));
+		pr->setPartitionReconstructor(DEFAULT_CONTENT_TYPE,
+			auto_ptr<IPartitionPresentationReconstructor>(new LexicalPartitionPresentationReconstructor(document(),
+				auto_ptr<ITokenScanner>(scanner.release()), jsStyles)));
+	}
+
+	// other contents
+	pr->setPartitionReconstructor(JS_MULTILINE_COMMENT, auto_ptr<IPartitionPresentationReconstructor>(
+		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(Color(0x00, 0x80, 0x00))))));
+	pr->setPartitionReconstructor(JS_SINGLELINE_COMMENT, auto_ptr<IPartitionPresentationReconstructor>(
+		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(Color(0x00, 0x80, 0x00))))));
+	pr->setPartitionReconstructor(JS_DQ_STRING, auto_ptr<IPartitionPresentationReconstructor>(
+		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(Color(0x00, 0x00, 0x80))))));
+	pr->setPartitionReconstructor(JS_SQ_STRING, auto_ptr<IPartitionPresentationReconstructor>(
+		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(Color(0x00, 0x00, 0x80))))));
+	new CurrentLineHighlighter(*caret_, Colors(Color(), Color::fromCOLORREF(::GetSysColor(COLOR_INFOBK))));
+
+	// URL hyperlinks test
+	auto_ptr<hyperlink::CompositeHyperlinkDetector> hld(new hyperlink::CompositeHyperlinkDetector);
+	hld->setDetector(JS_MULTILINE_DOC_COMMENT, auto_ptr<hyperlink::IHyperlinkDetector>(
+		new hyperlink::URIHyperlinkDetector(URIDetector::defaultIANAURIInstance(), false)));
+	presentation().setHyperlinkDetector(hld.release(), true);
+
+	// content assist test
+	class JSDocProposals : public IdentifiersProposalProcessor {
+	public:
+		JSDocProposals(const IdentifierSyntax& ids) : IdentifiersProposalProcessor(JS_MULTILINE_DOC_COMMENT, ids) {}
+		void computeCompletionProposals(const Caret& caret, bool& incremental,
+				Region& replacementRegion, set<ICompletionProposal*>& proposals) const {
+			basic_istringstream<Char> s(JSDOC_ATTRIBUTES);
+			String p;
+			while(s >> p)
+				proposals.insert(new CompletionProposal(p));
+			IdentifiersProposalProcessor::computeCompletionProposals(caret, incremental = true, replacementRegion, proposals);
+		}
+		bool isCompletionProposalAutoActivationCharacter(CodePoint c) const /*throw()*/ {return c == L'@';}
+	};
+	class JSProposals : public IdentifiersProposalProcessor {
+	public:
+		JSProposals(const IdentifierSyntax& ids) : IdentifiersProposalProcessor(DEFAULT_CONTENT_TYPE, ids) {}
+		void computeCompletionProposals(const Caret& caret, bool& incremental,
+				Region& replacementRegion, set<ICompletionProposal*>& proposals) const {
+			basic_istringstream<Char> s(JS_KEYWORDS);
+			String p;
+			while(s >> p)
+				proposals.insert(new CompletionProposal(p));
+			IdentifiersProposalProcessor::computeCompletionProposals(caret, incremental = true, replacementRegion, proposals);
+		}
+		bool isCompletionProposalAutoActivationCharacter(CodePoint c) const /*throw()*/ {return c == L'.';}
+	};
+	auto_ptr<contentassist::ContentAssistant> ca(new contentassist::ContentAssistant());
+	ca->setContentAssistProcessor(JS_MULTILINE_DOC_COMMENT, auto_ptr<contentassist::IContentAssistProcessor>(new JSDocProposals(cti->getIdentifierSyntax(JS_MULTILINE_DOC_COMMENT))));
+	ca->setContentAssistProcessor(DEFAULT_CONTENT_TYPE, auto_ptr<contentassist::IContentAssistProcessor>(new JSProposals(cti->getIdentifierSyntax(DEFAULT_CONTENT_TYPE))));
+	setContentAssistant(auto_ptr<contentassist::IContentAssistant>(ca));
+	document().setContentTypeInformation(auto_ptr<IContentTypeInformationProvider>(cti));
+#endif // 1
+
+	class ZebraTextRunStyleTest : public TextRunStyleDirector {
+	private:
+		class Iterator : public StyledTextRunIterator {
+		public:
+			Iterator(length_t lineLength, bool beginningIsBlackBack) : length_(lineLength), beginningIsBlackBack_(beginningIsBlackBack) {
+				current_ = StyledTextRun(0, current_.style());
+				update();
+			}
+			StyledTextRun current() const {
+				if(!hasNext())
+					throw IllegalStateException("");
+				return current_;
+			}
+			bool hasNext() const {
+				return current_.position() != length_;
+			}
+			void next() {
+				if(!hasNext())
+					throw IllegalStateException("");
+				current_ = StyledTextRun(current_.position() + 1, current_.style());
+				update();
+			}
+		private:
+			void update() {
+				int temp = beginningIsBlackBack_ ? 0 : 1;
+				temp += (current_.position() % 2 == 0) ? 0 : 1;
+				auto_ptr<TextRunStyle> style(new TextRunStyle);
+				style->foreground = Paint((temp % 2 == 0) ?
+					Color(0xff, 0x00, 0x00) : SystemColors::get(SystemColors::WINDOW_TEXT));
+				style->background = Paint((temp % 2 == 0) ?
+					Color(0xff, 0xcc, 0xcc) : SystemColors::get(SystemColors::WINDOW));
+				current_ = StyledTextRun(current_.position(), style);
+			}
+		private:
+			const length_t length_;
+			const bool beginningIsBlackBack_;
+			StyledTextRun current_;
+		};
+	public:
+		ZebraTextRunStyleTest(const k::Document& document) : document_(document) {
+		}
+		auto_ptr<StyledTextRunIterator> queryTextRunStyle(length_t line) const {
+			return auto_ptr<StyledTextRunIterator>(new Iterator(document_.lineLength(line), line % 2 == 0));
+		}
+	private:
+		const k::Document& document_;
+	};
+	presentation().setTextRunStyleDirector(
+		tr1::shared_ptr<TextRunStyleDirector>(new ZebraTextRunStyleTest(document())));
+#endif // ASCENSION_TEST_TEXT_STYLES
+	
+	renderer_->addDefaultFontListener(*this);
+	renderer_->layouts().addVisualLinesListener(*this);
 }
 
 /// @see WM_CAPTURECHANGED
@@ -709,14 +934,11 @@ void TextViewer::onCommand(WORD id, WORD, const win32::Handle<HWND>&, bool& cons
 		EntireDocumentSelectionCreationCommand(*this)();
 		break;
 	case ID_RTLREADING:	// "Right to left Reading order"
-		toggleOrientation(*this);
+		utils::toggleOrientation(*this);
 		break;
-	case ID_DISPLAYSHAPINGCONTROLS: {	// "Show Unicode control characters"
-		Configuration c(configuration());
-		c.displaysShapingControls = !c.displaysShapingControls;
-		setConfiguration(&c, 0, false);
+	case ID_DISPLAYSHAPINGCONTROLS:	// "Show Unicode control characters"
+		textRenderer().displayShapingControls(!textRenderer().displaysShapingControls());
 		break;
-	}
 	case ID_INSERT_LRM:		CharacterInputCommand(*this, 0x200eu)();	break;
 	case ID_INSERT_RLM:		CharacterInputCommand(*this, 0x200fu)();	break;
 	case ID_INSERT_ZWJ:		CharacterInputCommand(*this, 0x200du)();	break;
@@ -770,7 +992,7 @@ void TextViewer::onCommand(WORD id, WORD, const win32::Handle<HWND>&, bool& cons
 		ReconversionCommand(*this)();
 		break;
 	case ID_INVOKE_HYPERLINK:	// "Open <hyperlink>"
-		if(const hyperlink::Hyperlink* const link = getPointedHyperlink(*this, caret()))
+		if(const hyperlink::Hyperlink* const link = utils::getPointedHyperlink(*this, caret()))
 			link->invoke();
 		break;
 	default:
@@ -793,8 +1015,10 @@ void TextViewer::onDestroy(bool& consumed) {
 	::DestroyWindow(toolTip_);
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-	if(accessibleProxy_ != 0)
+	if(accessibleProxy_ != 0) {
 		accessibleProxy_->dispose();
+		accessibleProxy_->Release();
+	}
 //	if(accLib.isAvailable())
 //		accLib.notifyWinEvent(EVENT_OBJECT_DESTROY, *this, OBJID_CLIENT, CHILDID_SELF);
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
@@ -808,7 +1032,7 @@ void TextViewer::onEraseBkgnd(const win32::Handle<HDC>&, bool& consumed) {
 
 /// @see WM_GETFONT
 const win32::Handle<HFONT>& TextViewer::onGetFont() {
-	return renderer_->defaultFont()->nativeHandle().get();
+	return textRenderer().defaultFont()->nativeObject();
 }
 
 /// @see WM_HSCROLL
@@ -824,13 +1048,17 @@ void TextViewer::onHScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
 			scroll(+static_cast<int>(numberOfVisibleColumns()), 0, true); break;
 		case SB_LEFT:		// 左端
 		case SB_RIGHT: {	// 右端
-			const Range<int> range(scrollRange(SB_HORZ));
+			const Range<int> range(horizontalScrollBar().range());
 			scrollTo((sbCode == SB_LEFT) ? range.beginning() : range.end(), -1, true);
 			break;
 		}
-		case SB_THUMBTRACK:	// by drag or wheel
-			scrollTo(scrollTrackPosition(SB_HORZ), -1, false);	// use 32-bit value
+		case SB_THUMBTRACK: {	// by drag or wheel
+			win32::AutoZeroSize<SCROLLINFO> si;
+			si.fMask = SIF_TRACKPOS;
+			if(win32::boole(::GetScrollInfo(identifier().get(), SB_HORZ, &si)))
+				scrollTo(si.nTrackPos, -1, false);
 			break;
+		}
 	}
 //	consumed = false;
 }
@@ -1032,9 +1260,9 @@ void TextViewer::onNotify(int, NMHDR& nmhdr, bool& consumed) {
 
 /// @see WM_SETCURSOR
 void TextViewer::onSetCursor(const win32::Handle<HWND>&, UINT, UINT, bool& consumed) {
-	ASCENSION_RESTORE_VANISHED_CURSOR();
+	cursorVanisher_.restore();
 	if(consumed = (mouseInputStrategy_.get() != 0))
-		mouseInputStrategy_->showCursor(mapFromGlobal(Cursor::position()));
+		mouseInputStrategy_->showCursor(mapFromGlobal(base::Cursor::position()));
 }
 
 /// @see WM_STYLECHANGED
@@ -1097,12 +1325,16 @@ void TextViewer::onVScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
 			scroll(0, +static_cast<int>(numberOfVisibleLines()), true); break;
 		case SB_TOP:		// 上端
 		case SB_BOTTOM: {	// 下端
-			const Range<int> range(scrollRange(SB_VERT));
+			const Range<int> range(verticalScrollBar().range());
 			scrollTo(-1, (sbCode == SB_TOP) ? range.beginning() : range.end(), true); break;
 		}
-		case SB_THUMBTRACK:	// by drag or wheel
-			scrollTo(-1, scrollTrackPosition(SB_VERT), true);	// use 32-bit value
+		case SB_THUMBTRACK: {	// by drag or wheel
+			win32::AutoZeroSize<SCROLLINFO> si;
+			si.fMask = SIF_TRACKPOS;
+			if(win32::boole(::GetScrollInfo(identifier().get(), SB_VERT, &si)))
+				scrollTo(-1, si.nTrackPos, true);
 			break;
+		}
 	}
 }
 
@@ -1243,7 +1475,7 @@ void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKey
 		menu.setChildPopup<Menu::BY_POSITION>(13, subMenu);
 
 		// check if the system supports bidi
-		if(!supportsComplexScripts()) {
+		if(!font::supportsComplexScripts()) {
 			menu.enable<Menu::BY_COMMAND>(ID_RTLREADING, false);
 			menu.enable<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, false);
 			menu.enable<Menu::BY_POSITION>(12, false);
@@ -1261,7 +1493,7 @@ void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKey
 	menu.enable<Menu::BY_COMMAND>(WM_CLEAR, !readOnly && hasSelection);
 	menu.enable<Menu::BY_COMMAND>(WM_SELECTALL, doc.numberOfLines() > 1 || doc.lineLength(0) > 0);
 	menu.check<Menu::BY_COMMAND>(ID_RTLREADING, configuration_.readingDirection == RIGHT_TO_LEFT);
-	menu.check<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, configuration_.displaysShapingControls);
+	menu.check<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, textRenderer().displaysShapingControls());
 
 	// IME commands
 	HKL keyboardLayout = ::GetKeyboardLayout(::GetCurrentThreadId());
@@ -1290,7 +1522,7 @@ void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKey
 	}
 
 	// hyperlink
-	if(const hyperlink::Hyperlink* link = getPointedHyperlink(*this, caret())) {
+	if(const hyperlink::Hyperlink* link = utils::getPointedHyperlink(*this, caret())) {
 		const length_t len = (link->region().end() - link->region().beginning()) * 2 + 8;
 		AutoBuffer<WCHAR> caption(new WCHAR[len]);	// TODO: this code can have buffer overflow in future
 		swprintf(caption.get(),
@@ -1313,7 +1545,7 @@ void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKey
 
 /// Moves the IME form to valid position.
 void TextViewer::updateIMECompositionWindowPosition() {
-	check();
+	assert(win32::boole(::IsWindow(identifier().get())));
 	if(!imeCompositionActivated_)
 		return;
 	else if(HIMC imc = ::ImmGetContext(identifier().get())) {
@@ -1342,4 +1574,447 @@ void TextViewer::updateIMECompositionWindowPosition() {
 		
 		::ImmReleaseContext(identifier().get(), imc);
 	}
+}
+
+
+// DefaultMouseInputStrategy //////////////////////////////////////////////////////////////////////
+
+namespace {
+	HRESULT createSelectionImage(const TextViewer& viewer, const NativePoint& cursorPosition, bool highlightSelection, SHDRAGIMAGE& image) {
+		win32::Handle<HDC> dc(::CreateCompatibleDC(0), &::DeleteDC);
+		if(dc.get() == 0)
+			return E_FAIL;
+
+		win32::AutoZero<BITMAPV5HEADER> bh;
+		bh.bV5Size = sizeof(BITMAPV5HEADER);
+		bh.bV5Planes = 1;
+		bh.bV5BitCount = 32;
+		bh.bV5Compression = BI_BITFIELDS;
+		bh.bV5RedMask = 0x00ff0000ul;
+		bh.bV5GreenMask = 0x0000ff00ul;
+		bh.bV5BlueMask = 0x000000fful;
+		bh.bV5AlphaMask = 0xff000000ul;
+
+		// determine the range to draw
+		const k::Region selectedRegion(viewer.caret());
+		length_t firstLine, firstSubline;
+		viewer.firstVisibleLine(&firstLine, 0, &firstSubline);
+
+		// calculate the size of the image
+		const NativeRectangle clientBounds(viewer.bounds(false));
+		const TextRenderer& renderer = viewer.textRenderer();
+		NativeRectangle selectionBounds(geometry::make<NativeRectangle>(
+			geometry::make<NativePoint>(numeric_limits<Scalar>::max(), 0),
+			geometry::make<NativeSize>(numeric_limits<Scalar>::min(), 0)));
+		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
+			selectionBounds.bottom += static_cast<LONG>(renderer.defaultFont()->metrics().linePitch() * renderer.layouts()[line].numberOfLines());
+			if(geometry::dy(selectionBounds) > geometry::dy(clientBounds))
+				return S_FALSE;	// overflow
+			const TextLayout& layout = renderer.layouts()[line];
+			const Scalar indent = renderer.lineIndent(line);
+			Range<length_t> range;
+			for(length_t subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
+				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range)) {
+					range = Range<length_t>(
+						range.beginning(),
+						min(viewer.document().lineLength(line), range.end()));
+					const NativeRectangle sublineBounds(layout.bounds(range));
+					selectionBounds.left() = min(geometry::left(sublineBounds) + indent, geometry::left(selectionBounds));
+					selectionBounds.right() = max(geometry::right(sublineBounds) + indent, geometry::right(selectionBounds));
+					if(geometry::dx(selectionBounds) > geometry::dx(clientBounds))
+						return S_FALSE;	// overflow
+				}
+			}
+		}
+		bh.bV5Width = geometry::dx(selectionBounds);
+		bh.bV5Height = geometry::dy(selectionBounds);
+
+		// create a mask
+		win32::Handle<HBITMAP> mask(::CreateBitmap(bh.bV5Width, bh.bV5Height, 1, 1, 0), &::DeleteObject);	// monochrome
+		if(mask.get() == 0)
+			return E_FAIL;
+		HBITMAP oldBitmap = ::SelectObject(dc.get(), mask.get());
+		dc.fillSolidRect(0, 0, bh.bV5Width, bh.bV5Height, RGB(0x00, 0x00, 0x00));
+		int y = 0;
+		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
+			const TextLayout& layout = renderer.layouts()[line];
+			const int indent = renderer.lineIndent(line);
+			Range<length_t> range;
+			for(length_t subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
+				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range)) {
+					range = Range<length_t>(
+						range.beginning(),
+						min(viewer.document().lineLength(line), range.end()));
+					NativeRegion rgn(layout.blackBoxBounds(range));
+					::OffsetRgn(rgn.get(), indent - geometry::left(selectionBounds), y - geometry::top(selectionBounds));
+					::FillRgn(dc.get(), rgn.get(), ::GetStockObject(WHITE_BRUSH));
+				}
+				y += renderer.defaultFont()->metrics().linePitch();
+			}
+		}
+		::SelectObject(dc.get(), oldBitmap);
+		BITMAPINFO* bi = 0;
+		AutoBuffer<byte> maskBuffer;
+		uint8_t* maskBits;
+		BYTE alphaChunnels[2] = {0xff, 0x01};
+		try {
+			bi = static_cast<BITMAPINFO*>(::operator new(sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * 2));
+			memset(&bi->bmiHeader, 0, sizeof(BITMAPINFOHEADER));
+			bi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+			int r = ::GetDIBits(dc.get(), mask.get(), 0, bh.bV5Height, 0, bi, DIB_RGB_COLORS);
+			if(r == 0 || r == ERROR_INVALID_PARAMETER)
+				throw runtime_error("");
+			assert(bi->bmiHeader.biBitCount == 1 && bi->bmiHeader.biClrUsed == 2);
+			maskBuffer.reset(new uint8_t[bi->bmiHeader.biSizeImage + sizeof(DWORD)]);
+			maskBits = maskBuffer.get() + sizeof(DWORD) - reinterpret_cast<ULONG_PTR>(maskBuffer.get()) % sizeof(DWORD);
+			r = ::GetDIBits(dc.get(), mask.get(), 0, bh.bV5Height, maskBits, bi, DIB_RGB_COLORS);
+			if(r == 0 || r == ERROR_INVALID_PARAMETER)
+				throw runtime_error("");
+			if(bi->bmiColors[0].rgbRed == 0xff && bi->bmiColors[0].rgbGreen == 0xff && bi->bmiColors[0].rgbBlue == 0xff)
+				swap(alphaChunnels[0], alphaChunnels[1]);
+		} catch(const bad_alloc&) {
+			return E_OUTOFMEMORY;
+		} catch(const runtime_error&) {
+			::operator delete(bi);
+			return E_FAIL;
+		}
+		::operator delete(bi);
+
+		// create the result bitmap
+		void* bits;
+		win32::Handle<HBITMAP> bitmap(::CreateDIBSection(dc.get(), *reinterpret_cast<BITMAPINFO*>(&bh), DIB_RGB_COLORS, bits));
+		if(bitmap.get() == 0)
+			return E_FAIL;
+		// render the lines
+		oldBitmap = ::SelectObject(dc.get(), bitmap.get());
+		NativeRectangle selectionExtent(selectionBounds);
+		geometry::translate(selectionExtent, geometry::negate(geometry::topLeft(selectionExtent)));
+		y = selectionBounds.top;
+		const TextLayout::Selection selection(viewer.caret());
+		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
+			renderer.renderLine(line, dc,
+				renderer.lineIndent(line) - geometry::left(selectionBounds), y,
+				selectionExtent, selectionExtent, highlightSelection ? &selection : 0);
+			y += static_cast<int>(renderer.defaultFont()->metrics().linePitch() * renderer.numberOfLinesOfLine(line));
+		}
+		::SelectObject(dc.get(), oldBitmap);
+
+		// set alpha chunnel
+		const uint8_t* maskByte = maskBits;
+		for(LONG y = 0; y < bh.bV5Height; ++y) {
+			for(LONG x = 0; ; ) {
+				RGBQUAD& pixel = static_cast<RGBQUAD*>(bits)[x + bh.bV5Width * y];
+				pixel.rgbReserved = alphaChunnels[(*maskByte & (1 << ((8 - x % 8) - 1))) ? 0 : 1];
+				if(x % 8 == 7)
+					++maskByte;
+				if(++x == bh.bV5Width) {
+					if(x % 8 != 0)
+						++maskByte;
+					break;
+				}
+			}
+			if(reinterpret_cast<ULONG_PTR>(maskByte) % sizeof(DWORD) != 0)
+				maskByte += sizeof(DWORD) - reinterpret_cast<ULONG_PTR>(maskByte) % sizeof(DWORD);
+		}
+
+		// locate the hotspot of the image based on the cursor position
+		const TextViewer::Margins margins(viewer.textAreaMargins());
+		NativePoint hotspot(cursorPosition);
+		geometry::x(hotspot) -= margins.left - viewer.horizontalScrollBar().position() * renderer.defaultFont()->metrics().averageCharacterWidth() + geometry::left(selectionBounds);
+		geometry::y(hotspot) -= geometry::y(viewer.clientXYForCharacter(k::Position(selectedRegion.beginning().line, 0), true));
+
+		memset(&image, 0, sizeof(SHDRAGIMAGE));
+		image.sizeDragImage.cx = bh.bV5Width;
+		image.sizeDragImage.cy = bh.bV5Height;
+		image.ptOffset = hotspot;
+		image.hbmpDragImage = static_cast<HBITMAP>(bitmap.release());
+		image.crColorKey = CLR_NONE;
+
+		return S_OK;
+	}
+}
+
+HRESULT DefaultMouseInputStrategy::doDragAndDrop() {
+	win32::com::ComPtr<IDataObject> draggingContent;
+	const Caret& caret = viewer_->caret();
+	HRESULT hr;
+
+	if(FAILED(hr = utils::createTextObjectForSelectedString(viewer_->caret(), true, *draggingContent.initialize())))
+		return hr;
+	if(!caret.isSelectionRectangle())
+		dnd_.numberOfRectangleLines = 0;
+	else {
+		const k::Region selection(caret.selectedRegion());
+		dnd_.numberOfRectangleLines = selection.end().line - selection.beginning().line + 1;
+	}
+
+	// setup drag-image
+	if(dnd_.dragSourceHelper.get() != 0) {
+		SHDRAGIMAGE image;
+		if(SUCCEEDED(hr = createSelectionImage(*viewer_,
+				dragApproachedPosition_, dnd_.supportLevel >= SUPPORT_DND_WITH_SELECTED_DRAG_IMAGE, image))) {
+			if(FAILED(hr = dnd_.dragSourceHelper->InitializeFromBitmap(&image, draggingContent.get())))
+				::DeleteObject(image.hbmpDragImage);
+		}
+	}
+
+	// operation
+	state_ = DND_SOURCE;
+	DWORD effectOwn;	// dummy
+	hr = ::DoDragDrop(draggingContent.get(), this, DROPEFFECT_COPY | DROPEFFECT_MOVE | DROPEFFECT_SCROLL, &effectOwn);
+	state_ = NONE;
+	if(viewer_->isVisible())
+		viewer_->setFocus();
+	return hr;
+}
+
+/// @see IDropTarget#DragEnter
+STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) {
+	if(data == 0)
+		return E_INVALIDARG;
+	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
+	*effect = DROPEFFECT_NONE;
+
+	HRESULT hr;
+
+#ifdef _DEBUG
+	{
+		win32::DumpContext dout;
+		win32::com::ComPtr<IEnumFORMATETC> formats;
+		if(SUCCEEDED(hr = data->EnumFormatEtc(DATADIR_GET, formats.initialize()))) {
+			FORMATETC format;
+			ULONG fetched;
+			dout << L"DragEnter received a data object exposes the following formats.\n";
+			for(formats->Reset(); formats->Next(1, &format, &fetched) == S_OK; ) {
+				WCHAR name[256];
+				if(::GetClipboardFormatNameW(format.cfFormat, name, ASCENSION_COUNTOF(name) - 1) != 0)
+					dout << L"\t" << name << L"\n";
+				else
+					dout << L"\t" << L"(unknown format : " << format.cfFormat << L")\n";
+				if(format.ptd != 0)
+					::CoTaskMemFree(format.ptd);
+			}
+		}
+	}
+#endif // _DEBUG
+
+	if(dnd_.supportLevel == DONT_SUPPORT_DND || viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
+		return S_OK;
+
+	// validate the dragged data if can drop
+	FORMATETC fe = {CF_UNICODETEXT, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+	if((hr = data->QueryGetData(&fe)) != S_OK) {
+		fe.cfFormat = CF_TEXT;
+		if(SUCCEEDED(hr = data->QueryGetData(&fe) != S_OK))
+			return S_OK;	// can't accept
+	}
+
+	if(state_ != DND_SOURCE) {
+		assert(state_ == NONE);
+		// retrieve number of lines if text is rectangle
+		dnd_.numberOfRectangleLines = 0;
+		fe.cfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
+		if(fe.cfFormat != 0 && data->QueryGetData(&fe) == S_OK) {
+			const TextAlignment alignment = defaultTextAlignment(viewer_->presentation());
+			const ReadingDirection readingDirection = defaultReadingDirection(viewer_->presentation());
+			if(alignment == ALIGN_END
+					|| (alignment == ALIGN_LEFT && readingDirection == RIGHT_TO_LEFT)
+					|| (alignment == ALIGN_RIGHT && readingDirection == LEFT_TO_RIGHT))
+				return S_OK;	// TODO: support alignments other than ALIGN_LEFT.
+			pair<HRESULT, String> text(utils::getTextFromDataObject(*data));
+			if(SUCCEEDED(text.first))
+				dnd_.numberOfRectangleLines = text::calculateNumberOfLines(text.second) - 1;
+		}
+		state_ = DND_TARGET;
+	}
+
+	viewer_->setFocus();
+	timer_.start(DRAGGING_TRACK_INTERVAL, *this);
+	if(dnd_.dropTargetHelper.get() != 0) {
+		POINT p = {pt.x, pt.y};
+		hr = dnd_.dropTargetHelper->DragEnter(viewer_->identifier().get(), data, &p, *effect);
+	}
+	return DragOver(keyState, pt, effect);
+}
+
+/// @see IDropTarget#DragLeave
+STDMETHODIMP DefaultMouseInputStrategy::DragLeave() {
+	::SetFocus(0);
+	timer_.stop();
+	if(dnd_.supportLevel >= SUPPORT_DND) {
+		if(state_ == DND_TARGET)
+			state_ = NONE;
+		if(dnd_.dropTargetHelper.get() != 0)
+			dnd_.dropTargetHelper->DragLeave();
+	}
+	return S_OK;
+}
+
+/// @see IDropTarget#DragOver
+STDMETHODIMP DefaultMouseInputStrategy::DragOver(DWORD keyState, POINTL pt, DWORD* effect) {
+	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
+	*effect = DROPEFFECT_NONE;
+	bool acceptable = true;
+
+	if((state_ != DND_SOURCE && state_ != DND_TARGET) || viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
+		acceptable = false;
+	else {
+		const NativePoint caretPoint(viewer_->mapFromGlobal(geometry::make<NativePoint>(pt.x, pt.y)));
+		const k::Position p(viewer_->characterForClientXY(caretPoint, TextLayout::TRAILING));
+		viewer_->setCaretPosition(viewer_->clientXYForCharacter(p, true, TextLayout::LEADING));
+
+		// drop rectangle text into bidirectional line is not supported...
+		if(dnd_.numberOfRectangleLines != 0) {
+			const length_t lines = min(viewer_->document().numberOfLines(), p.line + dnd_.numberOfRectangleLines);
+			for(length_t line = p.line; line < lines; ++line) {
+				if(viewer_->textRenderer().layouts()[line].isBidirectional()) {
+					acceptable = false;
+					break;
+				}
+			}
+		}
+	}
+
+	if(acceptable) {
+		*effect = ((keyState & MK_CONTROL) != 0) ? DROPEFFECT_COPY : DROPEFFECT_MOVE;
+		const NativeSize scrollOffset(calculateDnDScrollOffset(*viewer_));
+		if(geometry::dx(scrollOffset) != 0 || geometry::dy(scrollOffset) != 0) {
+			*effect |= DROPEFFECT_SCROLL;
+			// only one direction to scroll
+			if(geometry::dy(scrollOffset) != 0)
+				viewer_->scroll(0, geometry::dy(scrollOffset), true);
+			else
+				viewer_->scroll(geometry::dx(scrollOffset), 0, true);
+		}
+	}
+	if(dnd_.dropTargetHelper.get() != 0) {
+		viewer_->lockScroll();
+		dnd_.dropTargetHelper->DragOver(&geometry::make<NativePoint>(pt.x, pt.y), *effect);	// damn! IDropTargetHelper scrolls the view
+		viewer_->lockScroll(true);
+	}
+	return S_OK;
+}
+
+/// @see IDropTarget#Drop
+STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) {
+	if(dnd_.dropTargetHelper.get() != 0) {
+		POINT p = {pt.x, pt.y};
+		dnd_.dropTargetHelper->Drop(data, &p, *effect);
+	}
+	if(data == 0)
+		return E_INVALIDARG;
+	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
+	*effect = DROPEFFECT_NONE;
+/*
+	FORMATETC fe = {::RegisterClipboardFormatA("Rich Text Format"), 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+	STGMEDIUM stg;
+	data->GetData(&fe, &stg);
+	const char* bytes = static_cast<char*>(::GlobalLock(stg.hGlobal));
+	manah::win32::DumpContext dout;
+	dout << bytes;
+	::GlobalUnlock(stg.hGlobal);
+	::ReleaseStgMedium(&stg);
+*/
+	k::Document& document = viewer_->document();
+	if(dnd_.supportLevel == DONT_SUPPORT_DND || document.isReadOnly() || !viewer_->allowsMouseInput())
+		return S_OK;
+	Caret& ca = viewer_->caret();
+	const NativePoint caretPoint(viewer_->mapFromGlobal(geometry::make<NativePoint>(pt.x, pt.y)));
+	const k::Position destination(viewer_->characterForClientXY(caretPoint, TextLayout::TRAILING));
+
+	if(!document.accessibleRegion().includes(destination))
+		return S_OK;
+
+	if(state_ == DND_TARGET) {	// dropped from the other widget
+		timer_.stop();
+		ca.moveTo(destination);
+
+		bool rectangle;
+		pair<HRESULT, String> content(utils::getTextFromDataObject(*data, &rectangle));
+		if(SUCCEEDED(content.first)) {
+			AutoFreeze af(viewer_);
+			bool failed = false;
+			ca.moveTo(destination);
+			try {
+				ca.replaceSelection(content.second, rectangle);
+			} catch(...) {
+				failed = true;
+			}
+			if(!failed) {
+				if(rectangle)
+					ca.beginRectangleSelection();
+				ca.select(destination, ca);
+				*effect = DROPEFFECT_COPY;
+			}
+		}
+		state_ = NONE;
+	} else {	// drop from the same widget
+		assert(state_ == DND_SOURCE);
+		String text(selectedString(ca, text::NLF_RAW_VALUE));
+
+		// can't drop into the selection
+		if(isPointOverSelection(ca, caretPoint)) {
+			ca.moveTo(destination);
+			state_ = NONE;
+		} else {
+			const bool rectangle = ca.isSelectionRectangle();
+			document.insertUndoBoundary();
+			AutoFreeze af(viewer_);
+			if(win32::boole(keyState & MK_CONTROL)) {	// copy
+//				viewer_->redrawLines(ca.beginning().line(), ca.end().line());
+				bool failed = false;
+				ca.enableAutoShow(false);
+				ca.moveTo(destination);
+				try {
+					ca.replaceSelection(text, rectangle);
+				} catch(...) {
+					failed = true;
+				}
+				ca.enableAutoShow(true);
+				if(!failed) {
+					ca.select(destination, ca);
+					*effect = DROPEFFECT_COPY;
+				}
+			} else {	// move as a rectangle or linear
+				bool failed = false;
+				pair<k::Point, k::Point> oldSelection(make_pair(k::Point(ca.anchor()), k::Point(ca)));
+				ca.enableAutoShow(false);
+				ca.moveTo(destination);
+				try {
+					ca.replaceSelection(text, rectangle);
+				} catch(...) {
+					failed = true;
+				}
+				if(!failed) {
+					ca.select(destination, ca);
+					if(rectangle)
+						ca.beginRectangleSelection();
+					try {
+						erase(ca.document(), oldSelection.first, oldSelection.second);
+					} catch(...) {
+						failed = true;
+					}
+				}
+				ca.enableAutoShow(true);
+				if(!failed)
+					*effect = DROPEFFECT_MOVE;
+			}
+			document.insertUndoBoundary();
+		}
+	}
+	return S_OK;
+}
+
+/// @see IDropSource#GiveFeedback
+STDMETHODIMP DefaultMouseInputStrategy::GiveFeedback(DWORD) {
+	return DRAGDROP_S_USEDEFAULTCURSORS;	// use the system default cursor
+}
+
+/// @see IDropSource#QueryContinueDrag
+STDMETHODIMP DefaultMouseInputStrategy::QueryContinueDrag(BOOL escapePressed, DWORD keyState) {
+	if(win32::boole(escapePressed) || win32::boole(keyState & MK_RBUTTON))	// cancel
+		return DRAGDROP_S_CANCEL;
+	if(!win32::boole(keyState & MK_LBUTTON))	// drop
+		return DRAGDROP_S_DROP;
+	return S_OK;
 }

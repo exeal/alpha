@@ -271,16 +271,16 @@ namespace ascension {
 				virtual ~LineMetrics() /*throw()*/ {}
 				/// Returns the ascent of the text in pixels.
 				virtual Scalar ascent() const /*throw()*/ = 0;
-				/// Returns the ascent of the text in pixels.
+				/// Returns the dominant baseline of the text.
 				virtual presentation::DominantBaseline baseline() const /*throw()*/ = 0;
-				/// Returns the ascent of the text in pixels.
+				/// Returns the baseline offset od the text, relative to the baseline of the text.
 				virtual Scalar baselineOffset(presentation::AlignmentBaseline baseline) const /*throw()*/ = 0;
 				/// Returns the descent of the text in pixels.
 				virtual Scalar descent() const /*throw()*/ = 0;
 				/// Returns the height of the text in pixels.
-				Scalar height() const {return ascent() + descent() + leading();}
-				/// Returns the leading of the text in pixels.
-				virtual Scalar leading() const /*throw()*/ = 0;
+				Scalar height() const {return ascent() + descent()/* + leading()*/;}
+//				/// Returns the leading of the text in pixels.
+//				virtual Scalar leading() const /*throw()*/ = 0;
 			};
 
 			class TextLayout {
@@ -323,6 +323,8 @@ namespace ascension {
 					presentation::TextAnchor anchor = presentation::TEXT_ANCHOR_START,
 					presentation::TextJustification justification = presentation::NO_JUSTIFICATION,
 					presentation::DominantBaseline dominantBaseline = presentation::DOMINANT_BASELINE_AUTO,
+					presentation::LineStackingStrategy lineStackingStrategy = presentation::MAX_HEIGHT,
+					Scalar lineHeight = 0,
 					const FontCollection& fontCollection = systemFonts(),
 					std::tr1::shared_ptr<const presentation::TextRunStyle>
 						defaultTextRunStyle = std::tr1::shared_ptr<const presentation::TextRunStyle>(),
@@ -355,6 +357,7 @@ namespace ascension {
 				Scalar lineInlineProgressionDimension(length_t line) const;
 				const LineMetrics& lineMetrics(length_t line) const;
 				Scalar lineStartEdge(length_t line) const;
+				length_t locateLine(Scalar bpd, bool& outside) const /*throw()*/;
 				NativePoint location(length_t column, Edge edge = LEADING) const;
 				std::pair<NativePoint, NativePoint> locations(length_t column) const;
 				Scalar maximumInlineProgressionDimension() const /*throw()*/;
@@ -380,13 +383,15 @@ namespace ascension {
 				void expandTabsWithoutWrapping() /*throw()*/;
 				std::size_t findRunForPosition(length_t column) const /*throw()*/;
 				void justify(presentation::TextJustification method) /*throw()*/;
-				length_t locateLine(Scalar bpd, bool& outside) const /*throw()*/;
 				std::pair<length_t, length_t> locateOffsets(
 					length_t line, Scalar ipd, bool& outside) const /*throw()*/;
 				void locations(length_t column, NativePoint* leading, NativePoint* trailing) const;
+				int nextTabStopBasedLeftEdge(Scalar x, bool right) const /*throw()*/;
 				void reorder() /*throw()*/;
 //				void rewrap();
-				int nextTabStopBasedLeftEdge(Scalar x, bool right) const /*throw()*/;
+				void stackLines(
+					presentation::LineStackingStrategy lineStackingStrategy,
+					const Font& nominalFont, Scalar lineHeight);
 				void wrap(const TabExpander& tabExpander) /*throw()*/;
 			private:
 				const String& text_;
@@ -401,7 +406,6 @@ namespace ascension {
 				AutoBuffer<const length_t> lineFirstRuns_;	// size is numberOfLines_
 				static const length_t SINGLE_LINE_OFFSETS;
 				length_t numberOfLines_;
-				AutoBuffer<const Scalar> baselines_;	// size is numberOfLines_ - 1
 				AutoBuffer<LineMetrics*> lineMetrics_;
 				AutoBuffer<Scalar> lineInlineProgressionDimensions_;
 				Scalar maximumInlineProgressionDimension_;
@@ -410,19 +414,6 @@ namespace ascension {
 //				friend class StyledSegmentIterator;
 			};
 
-
-			/**
-			 * Returns distance from the baseline of the first line to the baseline of the
-			 * specified line in pixels.
-			 * @param line The line number
-			 * @return The baseline position 
-			 * @throw BadPositionException @a line is greater than the count of lines
-			 */
-			inline Scalar TextLayout::baseline(length_t line) const {
-				if(line >= numberOfLines())
-					throw kernel::BadPositionException(kernel::Position());
-				return (numberOfLines() != 1 && line != 0) ? baselines_[line - 1] : 0;
-			}
 
 			/// Returns @c true if the layout is empty.
 			inline bool TextLayout::isEmpty() const /*throw()*/ {return runs_.get() == 0;}
@@ -514,27 +505,6 @@ namespace ascension {
 
 			/// Returns the number of the wrapped lines.
 			inline length_t TextLayout::numberOfLines() const /*throw()*/ {return numberOfLines_;}
-
-			/**
-			 * Returns the hit test information corresponding to the specified point.
-			 * @param p The point
-			 * @param[out] outside @c true if the specified point is outside of the layout
-			 * @return A pair of the character offsets. The first element addresses the character
-			 *         whose black box (bounding box) encompasses the specified point. The second
-			 *         element addresses the character whose leading point is the closest to the
-			 *         specified point in the line
-			 * @see #location
-			 */
-			inline std::pair<length_t, length_t> TextLayout::offset(
-					const NativePoint& p, bool* outside /* = 0 */) const /*throw()*/ {
-				bool outsides[2];
-				// TODO: this implementation can't handle vertical text.
-				const std::pair<length_t, length_t> result (
-					locateOffsets(locateLine(p.y, outsides[0]), p.x, outsides[1]));
-				if(outside != 0)
-					*outside = outsides[0] | outsides[1];
-				return result;
-			}
 
 		}
 	}

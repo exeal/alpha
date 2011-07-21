@@ -136,7 +136,7 @@ namespace ascension {
 		/**
 		 * A @c Bookmarker manages bookmarks of the document.
 		 * @note This class is not intended to be subclassed.
-		 * @see Document#bookmarker, EditPoint#forwardBookmark, EditPoint#backwardBookmark
+		 * @see Document#bookmarker, locations#forwardBookmark, locations#backwardBookmark
 		 */
 		class Bookmarker : private DocumentListener {
 			ASCENSION_NONCOPYABLE_TAG(Bookmarker);
@@ -144,17 +144,17 @@ namespace ascension {
 			/// A @c Bookmarker#Iterator enumerates the all marked lines.
 			class Iterator : public detail::IteratorAdapter<
 				Iterator, std::iterator<std::bidirectional_iterator_tag, length_t> > {
-			public:
+			private:
+				Iterator(detail::GapVector<length_t>::const_iterator impl) : impl_(impl) {}
+				detail::GapVector<length_t>::const_iterator impl_;
 				// detail.IteratorAdapter requirements
 				value_type current() const {return *impl_;}
 				bool equals(const Iterator& other) const {return impl_ == other.impl_;}
 				bool less(const Iterator& other) const {return impl_ < other.impl_;}
 				void next() {++impl_;}
 				void previous() {--impl_;}
-			private:
-				Iterator(detail::GapVector<length_t>::const_iterator impl) : impl_(impl) {}
-				detail::GapVector<length_t>::const_iterator impl_;
 				friend class Bookmarker;
+				friend class detail::IteratorCoreAccess;
 			};
 			// destructor
 			~Bookmarker() /*throw()*/;

@@ -41,6 +41,7 @@ namespace ascension {
 				enum State {
 					NORMAL, MAXIMIZED, MINIMIZED
 				};
+				enum Style {WIDGET = 0};
 				typedef
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 					win32::Handle<HWND>
@@ -56,23 +57,26 @@ namespace ascension {
 					friend class Widget;
 				};
 			public:
+				Widget(Widget* parent = 0, Style styles = WIDGET);
 				virtual ~Widget();
 
 				const Identifier& identifier() const;
-
-				virtual void initialize(Widget& parent, const graphics::NativeRectangle& bounds) = 0;
 
 				virtual graphics::NativeRectangle bounds(bool includeFrame) const = 0;
 				virtual graphics::NativePoint mapFromGlobal(const graphics::NativePoint& position) const = 0;
 				graphics::NativeRectangle mapFromGlobal(const graphics::NativeRectangle& rectangle) const;
 				virtual graphics::NativePoint mapToGlobal(const graphics::NativePoint& position) const = 0;
 				graphics::NativeRectangle mapToGlobal(const graphics::NativeRectangle& rectangle) const;
+				void move(const graphics::NativePoint& newOrigin);
+				void resize(const graphics::NativeSize& newSize);
 				virtual void setBounds(const graphics::NativeRectangle& bounds) = 0;
 				virtual void setShape(const graphics::NativeRegion& shape) = 0;
  
 				virtual void close() = 0;
-				virtual void show() = 0;
 				virtual void hide() = 0;
+				void lower();
+				void raise();
+				virtual void show() = 0;
 
 				virtual void forcePaint(const graphics::NativeRectangle& bounds) = 0;
 				void redrawScheduledRegion();
@@ -85,6 +89,7 @@ namespace ascension {
 				bool hasFocus() const;
 				virtual bool isVisible() const = 0;
 				virtual bool isActive() const = 0;
+				void setFocus();
 
 				virtual std::auto_ptr<InputGrabLocker> grabInput() = 0;
 				virtual void releaseInput() = 0;
@@ -156,6 +161,23 @@ namespace ascension {
 
 			private:
 				Identifier identifier_;
+			};
+
+			class ScrollBar {
+			public:
+				int pageStep() const;
+				int position() const;
+				Range<int> range() const;
+				void setPageStep(int pageStep);
+				void setPosition(int position);
+				void setRange(const Range<int>& range);
+			};
+
+			class ScrollableWidget : public Widget {
+			public:
+				ScrollableWidget(Widget* parent = 0, Style styles = WIDGET);
+				ScrollBar& horizontalScrollBar() const;
+				ScrollBar& verticalScrollBar() const;
 			};
 
 		}

@@ -1877,28 +1877,28 @@ namespace {
 	// TODO: this implementation is temporary, and should rewrite later
 	class SillyLineMetrics : public LineMetrics {
 	public:
-		void setHeight(Scalar height) /*throw()*/ {height_ = height;}
+		SillyLineMetrics(Scalar ascent, Scalar descent) /*throw()*/ : ascent_(ascent), descent_(descent) {}
 	private:
-		Scalar ascent() const /*throw()*/ {return height_;}
+		Scalar ascent() const /*throw()*/ {return ascent_;}
 		DominantBaseline baseline() const /*throw()*/ {return DOMINANT_BASELINE_ALPHABETIC;}
 		Scalar baselineOffset(AlignmentBaseline baseline) const /*throw()*/ {return 0;}
-		Scalar descent() const /*throw()*/ {return 0;}
-		Scalar leading() const /*throw()*/ {return 0;}
+		Scalar descent() const /*throw()*/ {return descent_;}
+//		Scalar leading() const /*throw()*/ {return 0;}
 	private:
-		Scalar height_;
+		Scalar ascent_, descent_;
 	};
 }
 
 /**
  * Constructor.
  * @param text The text string to display
- * @param style The text line style
- * @param readingDirection The reading direction of the text layout. This should be either
- *                         @c LEFT_TO_RIGHT or @c RIGHT_TO_LEFT
+ * @param writingMode The writing mode of the text layout
  * @param anchor The text anchor. This should be either @c TEXT_ANCHOR_START,
  *               @c TEXT_ANCHOR_MIDDLE or @c TEXT_ANCHOR_END
  * @param justification The text justification method
  * @param dominantBaseline The dominant baseline
+ * @param lineStackingStrategy The line stacking strategy
+ * @param lineHeight The height used in determining the half-leading value
  * @param fontCollection The font collection this text layout uses
  * @param defaultTextRunStyle The default text run style. Can be @c null
  * @param textRunStyles The text run styles. Can be @c null
@@ -1916,6 +1916,8 @@ TextLayout::TextLayout(const String& text,
 		const WritingMode<false>& writingMode /* = WritingMode<false>() */, TextAnchor anchor /* = TEXT_ANCHOR_START */,
 		TextJustification justification /* = NO_JUSTIFICATION */,
 		DominantBaseline dominantBaseline /* = DOMINANT_BASELINE_AUTO */,
+		LineStackingStrategy lineStackingStrategy /* = MAX_HEIGHT */,
+		Scalar lineHeight /* = 0 */,
 		const FontCollection& fontCollection /* = systemFonts() */,
 		tr1::shared_ptr<const presentation::TextRunStyle> defaultTextRunStyle /* = null */,
 		auto_ptr<presentation::StyledTextRunIterator> textRunStyles /* null */,
@@ -1958,7 +1960,7 @@ TextLayout::TextLayout(const String& text,
 	// 4. position glyphs for each text runs
 	// 5. position each text runs
 	// 6. justify each text runs if specified
-	// 7. create the line metrics
+	// 7. stack the lines
 
 	// 1. split the text into script runs by Uniscribe
 	HRESULT hr;
@@ -2022,6 +2024,11 @@ TextLayout::TextLayout(const String& text,
 		runs_[i]->positionGlyphs(dc, text_, SimpleStyledTextRunIterator(styledRanges, runs_[i]->beginning()));
 
 	// 5. position each text runs
+	String nominalFontFamilyName;
+	FontProperties<> nominalFontProperties;
+	resolveFontSpecifications(fontCollection,
+		tr1::shared_ptr<const TextRunStyle>(), defaultTextRunStyle, &nominalFontFamilyName, &nominalFontProperties, 0);
+	const tr1::shared_ptr<const Font> nominalFont(fontCollection.get(nominalFontFamilyName, nominalFontProperties));
 	// wrap into visual lines and reorder runs in each lines
 	if(numberOfRuns_ == 0 || wrapWidth_ == numeric_limits<Scalar>::max()) {
 		numberOfLines_ = 1;
@@ -2036,12 +2043,7 @@ TextLayout::TextLayout(const String& text,
 		auto_ptr<TabExpander> temp;
 		if(tabExpander == 0) {
 			// create default tab expander
-			String fontFamilyName;
-			FontProperties<> fontProperties;
-			resolveFontSpecifications(fontCollection,
-				tr1::shared_ptr<const TextRunStyle>(), defaultTextRunStyle, &fontFamilyName, &fontProperties, 0);
-			temp.reset(new FixedWidthTabExpander(
-				fontCollection.get(fontFamilyName, fontProperties)->metrics().averageCharacterWidth() * 8));
+			temp.reset(new FixedWidthTabExpander(nominalFont->metrics().averageCharacterWidth() * 8));
 			tabExpander = temp.get();
 		}
 		wrap(*tabExpander);
@@ -2054,24 +2056,8 @@ TextLayout::TextLayout(const String& text,
 			justify(justification);
 	}
 
-	// 7. create line metrics
-	// TODO: this code is temporary. should rewrite later.
-	lineMetrics_.reset(new LineMetrics*[numberOfLines()]);
-	for(length_t line = 0; line < numberOfLines(); ++line) {
-		try {
-			const TextRun* const lastRun = runs_[(line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_];
-			Scalar height = 0;
-			for(const TextRun* run = runs_[lineFirstRuns_[line]]; run != lastRun; ++run)
-				height = max(run->font()->metrics().cellHeight(), height);
-			auto_ptr<SillyLineMetrics> lineMetrics(new SillyLineMetrics);
-			lineMetrics->setHeight(height);
-			lineMetrics_[line] = lineMetrics.release();
-		} catch(...) {
-			while(line > 0)
-				delete lineMetrics_[--line];
-			throw;
-		}
-	}
+	// 7. stack the lines
+	stackLines(lineStackingStrategy, *nominalFont, lineHeight);
 }
 
 /// Destructor.
@@ -2103,6 +2089,26 @@ TextAlignment TextLayout::alignment() const /*throw()*/ {
 		&& defaultStyle->alignment != INHERIT_TEXT_ALIGNMENT) ? defaultStyle->alignment : ASCENSION_DEFAULT_TEXT_ALIGNMENT;
 }
 #endif
+/**
+ * Returns distance from the baseline of the first line to the baseline of the
+ * specified line in pixels.
+ * @param line The line number
+ * @return The baseline position 
+ * @throw BadPositionException @a line is greater than the count of lines
+ */
+Scalar TextLayout::baseline(length_t line) const {
+	if(line >= numberOfLines())
+		throw kernel::BadPositionException(kernel::Position());
+	else if(line == 0)
+		return 0;
+	Scalar result;
+	for(length_t i = 1; i <= line; ++i) {
+		result += lineMetrics_[i - 1]->descent();
+		result += lineMetrics_[i]->ascent();
+	}
+	return result;
+}
+
 /**
  * Returns the bidirectional embedding level at specified position.
  * @param column the column
@@ -2143,7 +2149,7 @@ NativeRegion TextLayout::blackBoxBounds(const Range<length_t>& range) const {
 	const length_t firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
 	vector<NativeRectangle> rectangles;
 	Scalar before = baseline(firstLine)
-		- lineMetrics_[firstLine]->leading() - lineMetrics_[firstLine]->ascent();
+		/*- lineMetrics_[firstLine]->leading()*/ - lineMetrics_[firstLine]->ascent();
 	Scalar after = before + lineMetrics_[firstLine]->height();
 	for(length_t line = firstLine; line <= lastLine; before = after, after += lineMetrics_[++line]->height()) {
 		const size_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
@@ -2181,23 +2187,6 @@ NativeRegion TextLayout::blackBoxBounds(const Range<length_t>& range) const {
 		numbersOfVertices.get(), static_cast<int>(rectangles.size()), WINDING), &::DeleteObject);
 }
 
-#if 0
-inline Scalar TextLayout::blockProgressionDistance(length_t from, length_t to) const /*throw()*/ {
-	Scalar result = 0;
-	while(from < to) {
-		result += lineMetrics_[from]->descent();
-		result += lineMetrics_[++from]->leading();
-		result += lineMetrics_[from]->ascent();
-	}
-	while(from > to) {
-		result -= lineMetrics_[from]->ascent();
-		result -= lineMetrics_[from]->leading();
-		result -= lineMetrics_[--from]->descent();
-	}
-	return result;
-}
-#endif
-
 /**
  * Returns the smallest rectangle emcompasses the whole text of the line. It might not coincide
  * exactly the ascent, descent or overhangs of the text.
@@ -2206,7 +2195,7 @@ inline Scalar TextLayout::blockProgressionDistance(length_t from, length_t to) c
  */
 NativeRectangle TextLayout::bounds() const /*throw()*/ {
 	// TODO: this implementation can't handle vertical text.
-	const Scalar before = -lineMetrics_[0]->leading() - lineMetrics_[0]->ascent();
+	const Scalar before = /*-lineMetrics_[0]->leading()*/ - lineMetrics_[0]->ascent();
 	Scalar after = before, start = numeric_limits<Scalar>::max(), end = numeric_limits<Scalar>::min();
 	for(length_t line = 0; line < numberOfLines(); ++line) {
 		after += lineMetrics_[line]->height();
@@ -2237,18 +2226,18 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 
 	if(isEmpty()) {	// empty line
 		result.start = result.end = 0;
-		result.before = -lineMetrics_[0]->ascent() - lineMetrics_[0]->leading();
+		result.before = -lineMetrics_[0]->ascent()/* - lineMetrics_[0]->leading()*/;
 		result.after = lineMetrics_[0]->descent();
 	} else if(range.isEmpty()) {	// an empty rectangle for an empty range
 		const LineMetrics& line = *lineMetrics_[lineAt(range.beginning())];
 		return geometry::make<NativeRectangle>(
-			geometry::subtract(location(range.beginning()), geometry::make<NativeSize>(0, line.ascent() + line.leading())),
+			geometry::subtract(location(range.beginning()), geometry::make<NativeSize>(0, line.ascent()/* + line.leading()*/)),
 			geometry::make<NativeSize>(0, line.height()));
 	} else {
 		const length_t firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
 
 		// calculate the block-progression-edges ('before' and 'after'; it's so easy)
-		result.before = baseline(firstLine) - lineMetrics_[firstLine]->ascent() - lineMetrics_[firstLine]->leading();
+		result.before = baseline(firstLine) - lineMetrics_[firstLine]->ascent()/* - lineMetrics_[firstLine]->leading()*/;
 		result.after = baseline(lastLine) + lineMetrics_[lastLine]->descent();
 
 		// calculate start-edge and end-edge of fully covered lines
@@ -2779,7 +2768,7 @@ NativeRectangle TextLayout::lineBounds(length_t line) const {
 
 	const Scalar start = lineStartEdge(line);
 	const Scalar end = start + lineInlineProgressionDimension(line);
-	const Scalar before = baseline(line) - lineMetrics_[line]->ascent() - lineMetrics_[line]->leading();
+	const Scalar before = baseline(line) - lineMetrics_[line]->ascent()/* - lineMetrics_[line]->leading()*/;
 	const Scalar after = before + lineMetrics_[line]->height();
 
 	// TODO: this implementation can't handle vertical text.
@@ -2855,16 +2844,17 @@ Scalar TextLayout::lineStartEdge(length_t line) const {
 }
 
 /**
- * @internal Converts a block-progression-dimension into the corresponding line.
- * @param bpd The block-progression-dimension
+ * Converts a position in the block-progression-direction into the corresponding line.
+ * @param bpd The position in block-progression-dimension in pixels
  * @param[out] outside @c true if @a bpd is outside of the line content
  * @return The line number
+ * @see #basline, #lineAt, #offset
  */
 length_t TextLayout::locateLine(Scalar bpd, bool& outside) const /*throw()*/ {
-	// TODO: this implementation can't handle vertical text.
+	// TODO: This implementation can't handle tricky 'text-orientation'.
 
 	// beyond the before-edge ?
-	if(bpd < -lineMetrics_[0]->ascent() - lineMetrics_[0]->leading())
+	if(bpd < -lineMetrics_[0]->ascent()/* - lineMetrics_[0]->leading()*/)
 		return (outside = true), 0;
 
 	length_t line = 0;
@@ -2927,7 +2917,7 @@ void TextLayout::locations(length_t column, NativePoint* leading, NativePoint* t
 	if(column > text_.length())
 		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));
 
-	Scalar leadingIpd, trailingIpd, bpd = lineMetrics_[0]->ascent() + lineMetrics_[0]->leading();
+	Scalar leadingIpd, trailingIpd, bpd = lineMetrics_[0]->ascent()/* + lineMetrics_[0]->leading()*/;
 	if(isEmpty())
 		leadingIpd = trailingIpd = 0;
 	else {
@@ -2994,6 +2984,25 @@ Scalar TextLayout::maximumInlineProgressionDimension() const /*throw()*/ {
 		const_cast<TextLayout*>(this)->maximumInlineProgressionDimension_ = ipd;
 	}
 	return maximumInlineProgressionDimension_;
+}
+
+/**
+ * Returns the hit test information corresponding to the specified point.
+ * @param p The point
+ * @param[out] outside @c true if the specified point is outside of the layout
+ * @return A pair of the character offsets. The first element addresses the character whose black
+ *         box (bounding box) encompasses the specified point. The second element addresses the
+ *         character whose leading point is the closest to the specified point in the line
+ * @see #locateLine, #location
+ */
+pair<length_t, length_t> TextLayout::offset(const NativePoint& p, bool* outside /* = 0 */) const /*throw()*/ {
+	const bool vertical = WritingModeBase::isVertical(writingMode().blockFlowDirection);
+	bool outsides[2];
+	const std::pair<length_t, length_t> result(locateOffsets(locateLine(
+		vertical ? geometry::x(p) : geometry::y(p), outsides[0]), vertical ? geometry::y(p) : geometry::x(p), outsides[1]));
+	if(outside != 0)
+		*outside = outsides[0] | outsides[1];
+	return result;
 }
 
 /// Reorders the runs in visual order.
@@ -3071,6 +3080,70 @@ ReadingDirection TextLayout::readingDirection() const /*throw()*/ {
 	return result;
 }
 #endif
+
+/**
+ * Stacks the line boxes and compute the line metrics.
+ * @param lineStackingStrategy
+ * @param nominalFont
+ * @param lineHeight
+ */
+void TextLayout::stackLines(LineStackingStrategy lineStackingStrategy, const Font& nominalFont, Scalar lineHeight) {
+	// TODO: this code is temporary. should rewrite later.
+	// calculate allocation-rectangle of the lines according to line-stacking-strategy
+	const Scalar textAltitude = nominalFont.metrics().ascent();
+	const Scalar textDepth = nominalFont.metrics().descent();
+	vector<pair<Scalar, Scalar> > v;
+	for(length_t line = 0; line < numberOfLines(); ++line) {
+		// calculate extent of the line in block-progression-direction
+		Scalar ascent, descent;
+		switch(lineStackingStrategy) {
+			case LINE_HEIGHT: {
+				// allocation-rectangle of line is per-inline-height-rectangle
+				Scalar leading = lineHeight - (textAltitude + textDepth);
+				ascent = textAltitude + (leading - leading / 2);
+				descent = textDepth + leading / 2;
+				const TextRun* const lastRun = runs_[(line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_];
+				for(const TextRun* run = runs_[lineFirstRuns_[line]]; run != lastRun; ++run) {
+					leading = lineHeight - nominalFont.metrics().cellHeight();
+					ascent = max(run->font()->metrics().ascent() - (leading - leading / 2), ascent);
+					descent = max(run->font()->metrics().descent() - leading / 2, descent);
+				}
+				break;
+			}
+			case FONT_HEIGHT:
+				// allocation-rectangle of line is nominal-requested-line-rectangle
+				ascent = textAltitude;
+				descent = textDepth;
+				break;
+			case MAX_HEIGHT:
+				// allocation-rectangle of line is maximum-line-rectangle
+				ascent = textAltitude;
+				descent = textDepth;
+				const TextRun* const lastRun = runs_[(line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_];
+				for(const TextRun* run = runs_[lineFirstRuns_[line]]; run != lastRun; ++run) {
+					ascent = max(run->font()->metrics().ascent(), ascent);
+					descent = max(run->font()->metrics().descent(), descent);
+				}
+				break;
+			default:
+				ASCENSION_ASSERT_NOT_REACHED();
+		}
+		v.push_back(make_pair(ascent, descent));
+	}
+
+	lineMetrics_.reset(new LineMetrics*[numberOfLines()]);
+	for(size_t line = 0; line != v.size(); ++line) {
+		try {
+			auto_ptr<SillyLineMetrics> lineMetrics(new SillyLineMetrics(v[line].first, v[line].second));
+			lineMetrics_[line] = lineMetrics.release();
+		} catch(...) {
+			while(line > 0)
+				delete lineMetrics_[--line];
+			throw;
+		}
+	}
+}
+
 #if 0
 /**
  * Returns the styled text run containing the specified column.

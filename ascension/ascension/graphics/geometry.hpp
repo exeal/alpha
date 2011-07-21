@@ -21,6 +21,12 @@
 namespace ascension {
 
 	namespace graphics {
+
+		template<typename T>
+		struct PhysicalFourSides {
+			T left, top, right, bottom;
+		};
+
 		namespace geometry {
 			template<typename Geometry> struct Coordinate;
 			template<typename Geometry> struct Tag;
@@ -93,13 +99,13 @@ namespace ascension {
 				template<typename Rectangle> struct Maker<RectangleTag, Rectangle> {
 					template<typename Size>
 					static Rectangle make(const typename Coordinate<Rectangle>::Type& origin, const Size& size,
-							typename std::tr1::enable_if<std::tr1::is_same<typename Coordinate<Size>::Type, SizeTag>::value>::type* = 0) {
+							typename std::tr1::enable_if<std::tr1::is_same<typename Tag<Size>::Type, SizeTag>::value>::type* = 0) {
 						const Rectangle temp = {origin.x, origin.y, origin.x + size.cx, origin.y + size.cy};
 						return temp;
 					}
 					template<typename Point>
 					static Rectangle make(const typename Coordinate<Rectangle>::Type& first, const Point& second,
-							typename std::tr1::enable_if<std::tr1::is_same<typename Coordinate<Point>::Type, PointTag>::value>::type* = 0) {
+							typename std::tr1::enable_if<std::tr1::is_same<typename Tag<Point>::Type, PointTag>::value>::type* = 0) {
 						const Rectangle temp = {first.x, first.y, second.x, second.y};
 						return temp;
 					}
@@ -157,7 +163,7 @@ namespace ascension {
 		public:
 			explicit AccessProxy(Geometry& geometry) /*throw()*/ : geometry_(geometry) {}
 			const AccessProxy<Geometry, dimension>& operator=(typename graphics::geometry::Coordinate<Geometry>::Type value) {
-				graphics::geometry::set<dimension>(geometry_);
+				graphics::geometry::set<dimension>(geometry_, value);
 				return *this;
 			}
 			const AccessProxy& operator=(const AccessProxy& other) {
@@ -168,11 +174,11 @@ namespace ascension {
 			};
 			typename graphics::geometry::Coordinate<Geometry>::Type operator+() const {return +*this;}
 			typename graphics::geometry::Coordinate<Geometry>::Type operator-() const {return -*this;}
-			void operator+=(typename graphics::geometry::Coordinate<Geometry>::Type other) {return *this = *this + other;}
-			void operator-=(typename graphics::geometry::Coordinate<Geometry>::Type other) {return *this = *this - other;}
-			void operator*=(typename graphics::geometry::Coordinate<Geometry>::Type other) {return *this = *this * other;}
-			void operator/=(typename graphics::geometry::Coordinate<Geometry>::Type other) {return *this = *this / other;}
-//			void operator%=(typename graphics::geometry::Coordinate<Geometry>::Type other) {return *this = *this % other;}
+			AccessProxy<Geometry, dimension>& operator+=(typename graphics::geometry::Coordinate<Geometry>::Type other) {*this = *this + other; return *this;}
+			AccessProxy<Geometry, dimension>& operator-=(typename graphics::geometry::Coordinate<Geometry>::Type other) {*this = *this - other; return *this;}
+			AccessProxy<Geometry, dimension>& operator*=(typename graphics::geometry::Coordinate<Geometry>::Type other) {*this = *this * other; return *this;}
+			AccessProxy<Geometry, dimension>& operator/=(typename graphics::geometry::Coordinate<Geometry>::Type other) {*this = *this / other; return *this;}
+//			AccessProxy<Geometry, dimension>& operator%=(typename graphics::geometry::Coordinate<Geometry>::Type other) {*this = *this % other; return *this;}
 		private:
 			Geometry& geometry_;
 		};
@@ -314,13 +320,13 @@ namespace ascension {
 
 			template<typename Rectangle1, typename Rectangle2>
 			inline bool _intersects(const Rectangle1& rectangle1, const Rectangle2& rectangle2, const RectangleTag&, const RectangleTag&) {
-				return range<X_COORDINATE>(rectangle1).intersects(range<X_COODINATE>(rectangle2))
-					|| range<Y_COORDINATE>(rectangle1).intersects(range<Y_COODINATE>(rectangle2));
+				return range<X_COORDINATE>(rectangle1).intersects(range<X_COORDINATE>(rectangle2))
+					|| range<Y_COORDINATE>(rectangle1).intersects(range<Y_COORDINATE>(rectangle2));
 			}
 
 			template<typename Geometry1, typename Geometry2>
 			inline bool intersects(const Geometry1& geometry1, const Geometry2& geometry2) {
-				return _intersects(geometry1, geometry2, Tag<Geometry1>(), Tag<Geometry2>());
+				return _intersects(geometry1, geometry2, Tag<Geometry1>::Type(), Tag<Geometry2>::Type());
 			}
 
 			// 'includes' for rectangle and region
@@ -403,7 +409,9 @@ namespace ascension {
 					std::swap(minimumCorner.first, maximumCorner.first);
 				if(minimumCorner.second > maximumCorner.second)
 					std::swap(minimumCorner.second, maximumCorner.second);
-				return rectangle = make<Rectangle>(minimumCorner, maximumCorner);
+				return rectangle = make<Rectangle>(
+					make<Coordinate<Rectangle>::Type>(minimumCorner.first, minimumCorner.second),
+					make<Coordinate<Rectangle>::Type>(maximumCorner.first, maximumCorner.second));
 			}
 
 			// 'subtract' for point and size
@@ -473,7 +481,7 @@ namespace ascension {
 
 			template<typename Point>
 			inline detail::AccessProxy<Point, 1> y(Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
-				return detail::AccessProxy<Point, Y_COORDINATE1>(p);
+				return detail::AccessProxy<Point, Y_COORDINATE>(p);
 			}
 
 			// writing to standard output stream
@@ -644,7 +652,8 @@ namespace ascension {
 			/// Returns the size of the @a rectangle.
 			template<typename Rectangle>
 			inline const NativeSize size(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
-				const std::pair<typename Coordinate<Rectangle>::Type> points(std::make_pair(get<0>(rectangle), get<1>(rectangle)));
+				const std::pair<typename Coordinate<Rectangle>::Type,
+					typename Coordinate<Rectangle>::Type> points(std::make_pair(get<0>(rectangle), get<1>(rectangle)));
 				return make<NativeSize>(x(points.second) - x(points.first), y(points.second) - y(points.first));
 			}
 		}

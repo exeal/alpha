@@ -116,13 +116,15 @@ namespace ascension {
 			explicit RulerPainter(viewers::TextViewer& viewer) /*throw()*/;
 			SnapAlignment alignment() const /*throw()*/;
 			const viewers::RulerConfiguration& configuration() const /*throw()*/;
+			graphics::NativeRectangle indicatorMarginBounds() const /*throw()*/;
+			graphics::Scalar indicatorMarginWidth() const /*throw()*/;
+			graphics::NativeRectangle lineNumbersBounds() const /*throw()*/;
+			graphics::Scalar lineNumbersWidth() const /*throw()*/;
 			void paint(graphics::PaintContext& context);
 			void setConfiguration(const viewers::RulerConfiguration& configuration);
 			void update() /*throw()*/;
 			graphics::Scalar width() const /*throw()*/;
 		private:
-			graphics::Scalar indicatorMarginWidth() const /*throw()*/;
-			graphics::Scalar lineNumbersWidth() const /*throw()*/;
 			uint8_t maximumDigitsForLineNumbers() const /*throw()*/;
 			void recalculateWidth() /*throw()*/;
 #if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
@@ -148,15 +150,17 @@ namespace ascension {
 			return configuration_;
 		}
 
+		/// Returns the width of the indicator margin in pixels.
 		inline graphics::Scalar RulerPainter::indicatorMarginWidth() const /*throw()*/ {
 			return indicatorMarginContentWidth_ + indicatorMarginBorderWidth_;
 		}
 
+		/// Returns the width of the line numbers in pixels.
 		inline graphics::Scalar RulerPainter::lineNumbersWidth() const /*throw()*/ {
 			return lineNumbersContentWidth_ + lineNumbersPaddingStartWidth_ + lineNumbersPaddingEndWidth_, lineNumbersBorderWidth_;
 		}
 
-		/// Returns the width of the ruler.
+		/// Returns the width of the ruler in pixels.
 		inline graphics::Scalar RulerPainter::width() const /*throw()*/ {
 			return indicatorMarginWidth() + lineNumbersWidth();
 		}

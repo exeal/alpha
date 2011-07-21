@@ -177,6 +177,19 @@ void TextRenderer::addDefaultFontListener(DefaultFontListener& listener) {
 }
 
 /**
+ * Returns the distance from the baseline of the line @a from to the baseline of the line @a to in
+ * block progression direction in pixels.
+ * @param lines The first and second lines
+ * @return The distance between the two baselines in pixels
+ */
+Scalar TextRenderer::baselineDistance(const Range<length_t>& lines) const {
+	if(lines.isEmpty())
+		return 0;
+	// TODO: This code does not consider 'line-stacking-strategy'.
+	return defaultFont()->metrics().linePitch * lines.length();
+}
+
+/**
  * @fn ascension::graphics::font::TextRenderer::createLineLayout
  * Creates and returns the text layout for the specified line.
  * @param line The line number
