@@ -534,6 +534,7 @@ namespace ascension {
 		 * @param writingMode The writing mode
 		 * @param from The abstract value to map
 		 * @param[out] to The result physical value
+		 * @see mapPhysicalToAbstract
 		 */
 		template<typename From, typename To>
 		inline graphics::PhysicalFourSides<To>& mapAbstractToPhysical(
@@ -564,10 +565,43 @@ namespace ascension {
 			return to;
 		}
 
-		/***/
+		/**
+		 * Performs abstract-to-physical mappings according to the given writing mode.
+		 * @tparam From The type for @a from
+		 * @tparam To The type for @a to
+		 * @param writingMode The writing mode
+		 * @param from The physical value to map
+		 * @param[out] to The result abstract value
+		 * @see #mapAbstractToPhysical
+		 */
 		template<typename From, typename To>
 		AbstractFourSides<To>& mapPhysicalToAbstract(
-			const graphics::PhysicalFourSides<From>& from, AbstractFourSides<To>& to);
+				const WritingMode<false>& writingMode,
+				const graphics::PhysicalFourSides<From>& from, AbstractFourSides<To>& to) {
+			const WritingModeBase::TextOrientation textOrientation(resolveTextOrientation(writingMode));
+			switch(writingMode.blockFlowDirection) {
+				case WritingModeBase::HORIZONTAL_TB:
+					to.before = from.top;
+					to.after = from.bottom;
+					to.start = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? from.left : from.right;
+					to.end = (writingMode.inlineFlowDirection == RIGHT_TO_LRFT) ? from.left : from.right;
+					break;
+				case WritingModeBase::VERTICAL_RL:
+				case WritingModeBase::VERTICAL_LR:
+					to.before = (writingMode.blockFlowDirection == WritingModeBase::VERTICAL_LR) ? from.left : from.right;
+					to.after = (writingMode.blockFlowDirection == WritingModeBase::VERTICAL_RL) ? from.left : from.right;
+					{
+						int n = (textOrientation == WritingModeBase::SIDEWAYS_LEFT) ? 1 : 0;
+						n += (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? 1 : 0;
+						to.start = (n == 1) ? from.top : from.bottom;
+						to.end = (n == 1) ? from.top : from.bottom;
+					}
+		 			break;			
+				default:
+					throw UnknownValueException("writingMode.blockFlowDirection");
+			}
+			return to;
+		}
 
 		/***/
 		inline WritingModeBase::TextOrientation resolveTextOrientation(const WritingMode<false>& writingMode) {
