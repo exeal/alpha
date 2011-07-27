@@ -188,10 +188,10 @@ namespace ascension {
 					to.left = (writingMode.blockFlowDirection == WritingModeBase::VERTICAL_LR) ? from.before : from.after;
 					to.right = (writingMode.blockFlowDirection == WritingModeBase::VERTICAL_RL) ? from.before : from.after;
 					{
-						int n = (textOrientation == WritingModeBase::SIDEWAYS_LEFT) ? 1 : 0;
-						n += (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? 1 : 0;
-						to.top = (n == 1) ? from.start : from.end;
-						to.bottom = (n == 1) ? from.start : from.end;
+						bool ttb = textOrientation == WritingModeBase::SIDEWAYS_LEFT;
+						ttb = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? !ttb : ttb;
+						to.top = ttb ? from.start : from.end;
+						to.bottom = ttb ? from.start : from.end;
 					}
 		 			break;			
 				default:
@@ -207,10 +207,11 @@ namespace ascension {
 		 * @param writingMode The writing mode
 		 * @param from The physical value to map
 		 * @param[out] to The result abstract value
+		 * @return @a to
 		 * @see #mapAbstractToPhysical
 		 */
 		template<typename From, typename To>
-		AbstractFourSides<To>& mapPhysicalToAbstract(
+		inline AbstractFourSides<To>& mapPhysicalToAbstract(
 				const WritingMode<false>& writingMode,
 				const graphics::PhysicalFourSides<From>& from, AbstractFourSides<To>& to) {
 			const WritingModeBase::TextOrientation textOrientation(resolveTextOrientation(writingMode));
@@ -226,12 +227,55 @@ namespace ascension {
 					to.before = (writingMode.blockFlowDirection == WritingModeBase::VERTICAL_LR) ? from.left : from.right;
 					to.after = (writingMode.blockFlowDirection == WritingModeBase::VERTICAL_RL) ? from.left : from.right;
 					{
-						int n = (textOrientation == WritingModeBase::SIDEWAYS_LEFT) ? 1 : 0;
-						n += (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? 1 : 0;
-						to.start = (n == 1) ? from.top : from.bottom;
-						to.end = (n == 1) ? from.top : from.bottom;
+						bool ttb = textOrientation == WritingModeBase::SIDEWAYS_LEFT;
+						ttb = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? !ttb : ttb;
+						to.start = ttb ? from.top : from.bottom;
+						to.end = ttb ? from.top : from.bottom;
 					}
 		 			break;			
+				default:
+					throw UnknownValueException("writingMode.blockFlowDirection");
+			}
+			return to;
+		}
+
+		/**
+		 * 
+		 * @tparam Rectangle1 The type for @a viewport
+		 * @tparam Rectangle2 The type for @a from
+		 * @tparam To The type for @a to
+		 * @param writingMode The writing mode
+		 * @param viewport The base physical rectangle
+		 * @param from The physical rectangle to map
+		 * @param[out] to The result abstract value
+		 * @return @a to
+		 */
+		template<typename Rectangle1, typename Rectangle2, typename To>
+		inline AbstractFourSides<To>& mapPhysicalToAbstract(
+				const WritingMode<false>& writingMode, const Rectangle1& viewport,
+				const Rectangle2& from, AbstractFourSides<To>& to) {
+			using namespace graphics;
+			const WritingModeBase::TextOrientation textOrientation(resolveTextOrientation(writingMode));
+			switch(writingMode.blockFlowDirection) {
+				case WritingModeBase::HORIZONTAL_TB:
+					to.before = geometry::top(from) - geometry::top(viewport);
+					to.after = geometry::bottom(from) - geometry::top(viewport);
+					to.start = geometry::left(from) - geometry::left(viewport);
+					to.end = geometry::right(from) - geometry::left(viewport);
+					break;
+				case WritingModeBase::VERTICAL_RL:
+				case WritingModeBase::VERTICAL_LR:
+					to.before = (writingMode.blockFlowDirection == WritingModeBase::VERTICAL_LR) ?
+						(geometry::left(from) - geometry::left(viewport)) : (geometry::right(viewport) - geometry::right(from));
+					to.after = (writingMode.blockFlowDirection == WritingModeBase::VERTICAL_LR) ?
+						(geometry::right(from) - geometry::left(viewport)) : (geometry::right(viewport) - geometry::left(from));
+					{
+						bool ttb = textOrientation == WritingModeBase::SIDEWAYS_LEFT;
+						ttb = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? !ttb : ttb;
+						to.start = ttb ? (geometry::top(from) - geometry::top(viewport)) : (geometry::bottom(viewport) - geometry::bottom(from));
+						to.end = ttb ? (geometry::bottom(from) - geometry::top(viewport)) : (geometry::bottom(viewport) - geometry::top(from));
+					}
+					break;
 				default:
 					throw UnknownValueException("writingMode.blockFlowDirection");
 			}
