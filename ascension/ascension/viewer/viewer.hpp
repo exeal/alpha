@@ -400,8 +400,9 @@ namespace ascension {
 				>
 			> {
 			public:
-				BaselineIterator(TextViewer& viewer, length_t line, bool trackOutOfViewport);
+				BaselineIterator(const TextViewer& viewer, length_t line, bool trackOutOfViewport);
 				length_t line() const /*throw()*/;
+				const graphics::NativePoint& position() const;
 				bool tracksOutOfViewport() const /*throw()*/;
 			private:
 				void advance(difference_type n);
@@ -413,6 +414,7 @@ namespace ascension {
 				const reference current() const;
 				bool equals(BaselineIterator& other);
 				void next();
+				void previous();
 			private:
 				TextViewer& viewer_;
 				const bool tracksOutOfViewport_;
@@ -499,11 +501,11 @@ namespace ascension {
 			// mouse input
 			bool allowsMouseInput() const /*throw()*/;
 			void enableMouseInput(bool enable);
-			// client coordinates vs. character position mappings
-			kernel::Position characterForClientXY(const graphics::NativePoint& pt,
-				graphics::font::TextLayout::Edge, bool abortNoCharacter = false,
+			// viewer local coordinates vs. character position mappings
+			kernel::Position characterForLocalPoint(const graphics::NativePoint& pt,
+				graphics::font::TextLayout::Edge edge, bool abortNoCharacter = false,
 				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER) const;
-			graphics::NativePoint clientXYForCharacter(const kernel::Position& position,
+			graphics::NativePoint localPointForCharacter(const kernel::Position& position,
 				bool fullSearchBpd, graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING) const;
 			// viewport
 			graphics::NativeRectangle contentRectangle() const /*throw()*/;
@@ -522,7 +524,9 @@ namespace ascension {
 			graphics::Scalar getDisplayXOffset(length_t line) const;
 			void handleGUICharacterInput(CodePoint c);
 			void initialize();
-			graphics::Scalar mapLineToViewportBpd(length_t line, bool fullSearch) const;
+//			graphics::Scalar mapLineToViewportBpd(length_t line, bool fullSearch) const;
+			void mapLocalPointToLine(const graphics::NativePoint& p,
+				length_t* line, length_t* subline, bool* snapped = 0) const /*throw()*/;
 			void mapViewportBpdToLine(graphics::Scalar bpd,
 				length_t* line, length_t* subline, bool* snapped = 0) const /*throw()*/;
 			void recreateCaret();
@@ -920,7 +924,7 @@ inline void TextViewer::enableMouseInput(bool enable) {
 	if(mouseInputDisabledCount_ != 0 || !enable) mouseInputDisabledCount_ += !enable ? 1 : -1;}
 
 /**
- * Returns the information about the uppermost visible line in the viewer.
+ * Returns the line first visible in the viewport without before-space.
  * @param[out] logicalLine The logical index of the line. can be @c null if not needed
  * @param[out] visualLine The visual index of the line. can be @c null if not needed
  * @param[out] visualSubline The offset of @a visualLine from the first line in @a logicalLine. Can
