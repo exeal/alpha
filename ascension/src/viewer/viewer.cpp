@@ -277,16 +277,16 @@ void TextViewer::caretMoved(const Caret& self, const k::Region& oldRegion) {
  * @param snapPolicy Which character boundary the returned position snapped to
  * @return The document position
  * @throw UnknownValueException @a edge and/or snapPolicy are invalid
- * @see #clientXYForCharacter, #hitTest, layout#LineLayout#offset
+ * @see #localPointForCharacter, #hitTest, graphics#font#LineLayout#offset
  */
-k::Position TextViewer::characterForClientXY(const NativePoint& p, TextLayout::Edge edge,
+k::Position TextViewer::characterForLocalPoint(const NativePoint& p, TextLayout::Edge edge,
 		bool abortNoCharacter /* = false */, k::locations::CharacterUnit snapPolicy /* = k::locations::GRAPHEME_CLUSTER */) const {
 	k::Position result;
 
 	// determine the logical line
 	length_t subline;
 	bool outside;
-	mapClientYToLine(geometry::y(p), &result.line, &subline, &outside);
+	mapViewportBpdToLine(geometry::y(p), &result.line, &subline, &outside);
 	if(abortNoCharacter && outside)
 		return k::Position();
 	const TextLayout& layout = renderer_->layouts()[result.line];
@@ -338,35 +338,6 @@ k::Position TextViewer::characterForClientXY(const NativePoint& p, TextLayout::E
 			throw UnknownValueException("snapPolicy");
 	}
 	return result;
-}
-
-/**
- * Returns the point nearest from the specified document position.
- * @param position The document position. can be outside of the window
- * @param fullSearchBpd If this is @c false, this method stops at before- or after-edge of the
- *                      viewport. Otherwise, the calculation in block-progression-direction is
- *                      performed completely. But in this case, may be very slow. See the
- *                      description of return value
- * @param edge The edge of the character
- * @return The point in local coordinates. About the block-progression-direction coordinate of the
- *         point, if @a fullSearchBpd is @c false and @a position.line is outside of the viewport,
- *         the result is @c std#numeric_limits&lt;Scalar&gt;::max() (for beforeward) or
- *         @c std#numeric_limits&lt;Scalar&gt;::min() (for afterward)
- * @throw BadPositionException @a position is outside of the document
- * @throw WindowNotInitialized The window is not initialized
- * @see #characterForClientXY, #hitTest, layout#LineLayout#location
- */
-NativePoint TextViewer::clientXYForCharacter(const k::Position& position, bool fullSearchBpd, TextLayout::Edge edge) const {
-//	checkInitialization();
-	const TextLayout& layout = renderer_->layouts().at(position.line);
-	NativePoint p(layout.location(position.column, edge));
-	geometry::x(p) += getDisplayXOffset(position.line);
-	const Scalar y = mapLineToClientY(position.line, fullSearchBpd);
-	if(y == numeric_limits<Scalar>::max() || y == numeric_limits<Scalar>::min())
-		geometry::y(p) = y;
-	else
-		geometry::y(p) += y;
-	return p;
 }
 
 /**
@@ -842,6 +813,38 @@ void TextViewer::keyReleased(const KeyInput& input) {
 }
 
 /**
+ * Converts the specified location in the document to a point in the viewport-local coordinates.
+ * @param position The document position
+ * @param fullSearchBpd If this is @c false, this method stops at before- or after-edge of the
+ *                      viewport. If this happened, the block-progression-dimension of the returned
+ *                      point is @c std#numeric_limits&lt;Scalar&gt;::max() (for the before-edge)
+ *                      or @c std#numeric_limits&lt;Scalar&gt;::min() (for the after-edge). If this
+ *                      is @c true, the calculation is performed completely and returns an exact
+ *                      location will (may be very slow)
+ * @param edge The edge of the character. If this is @c graphics#font#TextLayout#LEADING, the
+ *             returned point is the leading edge if the character (left if the character is
+ *             left-to-right), otherwise returned point is the trailing edge (right if the
+ *             character is left-to-right)
+ * @return The point in local coordinates. The block-progression-dimension addresses the baseline
+ *         of the line
+ * @throw BadPositionException @a position is outside of the document
+ * @see #characterForLocalPoint, #hitTest, graphics#font#LineLayout#location
+ */
+NativePoint TextViewer::localPointForCharacter(const k::Position& position,
+		bool fullSearchBpd, TextLayout::Edge edge /* = TextLayout::LEADING */) const {
+//	checkInitialization();
+	const bool horizontal = WritingModeBase::isHorizontal(utils::writingMode(*this).blockFlowDirection);
+	const TextLayout& layout = renderer_->layouts().at(position.line);
+	const NativePoint offset(layout.location(position.column, edge));
+	const Scalar ipd = (horizontal ? geometry::x(offset) : geometry::y(offset)) + displayOffset(position.line);
+	const NativePoint alignmentPoint(BaselineIterator(*this, position.line, fullSearchBpd).position());
+	Scalar bpd = horizontal ? geometry::y(alignmentPoint) : geometry::x(alignmentPoint);
+	if(fullSearchBpd || (bpd != numeric_limits<Scalar>::max() && bpd != numeric_limits<Scalar>::min()))
+		bpd += horizontal ? geometry::y(offset) : geometry::x(offset);
+	return geometry::make<NativePoint>(horizontal ? ipd : bpd, horizontal ? bpd : ipd);
+}
+
+/**
  * @param unlock
  */
 void TextViewer::lockScroll(bool unlock /* = false */) {
@@ -850,20 +853,20 @@ void TextViewer::lockScroll(bool unlock /* = false */) {
 	else if(scrollInfo_.lockCount != 0)
 		--scrollInfo_.lockCount;
 }
-
+#if 0
 /**
- * Returns the client y-coordinate of the logical line.
+ * Returns the distance from the before-edge of the viewport to the baseline of the specified line.
  * @param line The logical line number
- * @param fullSearch @c false to return special value for the line outside of the client area
- * @return The y-coordinate of the top of the line
+ * @param fullSearch @c false to return special value for the line outside of the viewport
+ * @return The distance from the viewport's edge to the line in pixels
  * @retval std#numeric_limits&lt;Scalar&gt;::max() @a fullSearch is @c false and @a line is outside
- *                                                 of the client area upward
+ *                                                 of the after-edge of the viewport
  * @retval std#numeric_limits&lt;Scalar&gt;::min() @a fullSearch is @c false and @a line is outside
- *                                                 of the client area downward
- * @throw BadPositionException @a line is outside of the document
- * @see #mapClientYToLine, TextRenderer#offsetVisualLine
+ *                                                 of the before-edge of the viewport
+ * @throw kernel#BadPositionException @a line is outside of the document
+ * @see #BaseIterator, #mapViewportBpdToLine, TextRenderer#offsetVisualLine
  */
-Scalar TextViewer::mapLineToClientY(length_t line, bool fullSearch) const {
+Scalar TextViewer::mapLineToViewportBpd(length_t line, bool fullSearch) const {
 	const PhysicalFourSides<Scalar> spaces(spaceWidths());
 	if(line == scrollInfo_.firstVisibleLine) {
 		if(scrollInfo_.firstVisibleSubline == 0)
@@ -896,7 +899,7 @@ Scalar TextViewer::mapLineToClientY(length_t line, bool fullSearch) const {
 		return y;
 	}
 }
-
+#endif
 /**
  * Converts the distance from the before-edge of the viewport into the logical line and visual
  * subline offset.
@@ -906,44 +909,78 @@ Scalar TextViewer::mapLineToClientY(length_t line, bool fullSearch) const {
  * @param[out] snapped @c true if there was not a line at @a bpd. Optional
  * @see #BaselineIterator, #mapLineToViewportBpd, TextRenderer#offsetVisualLine
  */
-void TextViewer::mapViewportBpdToLine(Scalar bpd, length_t* line, length_t* subline, bool* snapped /* = 0 */) const /*throw()*/ {
-	if(line == 0 && subline == 0)
-		return;	// nothing to do...
-	const PhysicalFourSides<Scalar>& spaces(spaceWidths());
-	Scalar spaceBefore, spaceAfter;
+void TextViewer::mapLocalPointToLine(
+		const graphics::NativePoint& p, length_t* line, length_t* subline, bool* snapped /* = 0 */) const /*throw()*/ {
+	const NativeRectangle localBounds(bounds(false));
 	switch(utils::writingMode(*this).blockFlowDirection) {
 		case WritingModeBase::HORIZONTAL_TB:
-			spaceBefore = spaces.top;
-			spaceAfter = spaces.bottom;
-			break;
+			return mapViewportBpdToLine(geometry::y(p) - localBounds.top, line, subline, snapped);
 		case WritingModeBase::VERTICAL_RL:
-			spaceBefore = spaces.right;
-			spaceAfter = spaces.left;
-			break;
+			return mapViewportBpdToLine(localBounds.right - geometry::x(p), line, subline, snapped);
 		case WritingModeBase::VERTICAL_LR:
-			spaceBefore = spaces.left;
-			spaceAfter = spaces.right;
-			break;
+			return mapViewportBpdToLine(geometry::x(p) - localBounds.left, line, subline, snapped);
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
-	if(snapped != 0) {
-		const NativeRectangle clientBounds(bounds(false));
-		*snapped = y < geometry::top(clientBounds) + spaces.top || y >= geometry::bottom(clientBounds) - spaces.bottom;
-	}
-	y -= spaces.top;
-	pair<length_t, length_t> result;
+}
+
+/**
+ * Converts the distance from the before-edge of the viewport into the logical line and visual
+ * subline offset. The results are snapped to the first/last visible line in the viewport (this
+ * includes partially visible line) if the given distance addresses outside of the viewport.
+ * @param bpd The distance from the before-edge of the viewport in pixels
+ * @param[out] line The logical line index. Can be @c null if not needed
+ * @param[out] subline The offset from the first line in @a line. Can be @c null if not needed
+ * @param[out] snapped @c true if there was not a line at @a bpd. Optional
+ * @throw NullPointerException Both @a line and @a subline are @c null
+ * @see #BaselineIterator, TextRenderer#offsetVisualLine
+ */
+void TextViewer::mapViewportBpdToLine(Scalar bpd, length_t* line, length_t* subline, bool* snapped /* = 0 */) const /*throw()*/ {
+	if(line == 0 && subline == 0)
+		throw NullPointerException("line and subline");
+	const WritingMode<false> writingMode(utils::writingMode(*this));
+	const PhysicalFourSides<Scalar>& physicalSpaces = spaceWidths();
+	AbstractFourSides<Scalar> abstractSpaces;
+	mapPhysicalToAbstract(writingMode, physicalSpaces, abstractSpaces);
+	const Scalar before = abstractSpaces.before;
+	const Scalar after = (WritingModeBase::isHorizontal(writingMode.blockFlowDirection) ?
+		geometry::dy(bounds(false)) : geometry::dx(bounds(false))) - abstractSpaces.after;
+
+	pair<length_t, length_t> result;	// 'first' for 'line', 'second' for 'subline'
+	bool outside;						// for 'snapped'
 	firstVisibleLine(&result.first, 0, &result.second);
-	for() {
-		const TextLayout& layout = textRenderer().layouts()[result.first];
-		layout.locateLine(, outside);
+	if(bpd <= before)
+		outside = bpd != before;
+	else {
+		const bool beyondAfter = bpd >= after;
+		if(beyondAfter)
+			bpd = after;
+		Scalar lineBefore = before;
+		const TextLayout* layout = &textRenderer().layouts()[result.first];
+		while(result.second > 0)	// back to the first subline
+			lineBefore -= layout->lineMetrics(--result.second).height();
+		while(true) {
+			assert(bpd >= lineBefore);
+			Scalar lineAfter = lineBefore;
+			for(length_t sl = 0; sl < layout->numberOfLines(); ++sl)
+				lineAfter += layout->lineMetrics(sl).height();
+			if(bpd < lineAfter) {
+				result.second = layout->locateLine(bpd - lineBefore, outside);
+				if(!outside)
+					break;	// bpd is this line
+				assert(result.second == layout->numberOfLines() - 1);
+			}
+			layout = &textRenderer().layouts()[++result.first];
+			lineBefore = lineAfter;
+		}
+		outside = beyondAfter;
 	}
-	renderer_->layouts().offsetVisualLine(
-		line, subline, y / renderer_->defaultFont()->metrics().linePitch(), (snapped == 0 || *snapped) ? 0 : snapped);
 	if(line != 0)
 		*line = result.first;
 	if(subline != 0)
 		*subline = result.second;
+	if(snapped != 0)
+		*snapped = outside;
 }
 
 /// @see CaretStateListener#matchBracketsChanged
@@ -1104,8 +1141,8 @@ void TextViewer::paint(PaintContext& context) {
 	if(!geometry::isNormalized(lineBounds))
 		geometry::resize(lineBounds, geometry::make<NativeSize>(0, 0));
 	length_t line, subline;
-	mapClientYToLine(geometry::top(scheduledBounds), &line, &subline);
-	Scalar y = mapLineToClientY(line, true);
+	mapViewportBpdToLine(mapPhysicalToAbstract(utils::writingMode(*this), bounds(false), scheduledBounds, temp).before), &line, &subline);
+	Scalar y = BaselineIterator(line, true).position();
 	if(line < lines) {
 		while(y < geometry::bottom(scheduledBounds) && line < lines) {
 			// paint a logical line
@@ -1748,12 +1785,13 @@ AutoFreeze::~AutoFreeze() /*throw()*/ {
  * @param line
  * @param trackOutOfViewport
  */
-TextViewer::BaselineIterator::BaselineIterator(TextViewer& viewer, length_t line,
+TextViewer::BaselineIterator::BaselineIterator(const TextViewer& viewer, length_t line,
 		bool trackOutOfViewport) : viewer_(viewer), tracksOutOfViewport_(trackOutOfViewport) {
-	invalidate();
-	move(line);
+	initializeWithFirstVisibleLine();
+	advance(line - this->line());
 }
 
+/// @see detail#IteratorAdapter#advance
 void TextViewer::BaselineIterator::advance(difference_type n) {
 	if(n == 0)
 		return;
@@ -1767,14 +1805,11 @@ void TextViewer::BaselineIterator::advance(difference_type n) {
 			&& (baseline_.first == numeric_limits<Scalar>::min() || baseline_.first == numeric_limits<Scalar>::max())) {
 		if((n > 0 && baseline_.first == numeric_limits<Scalar>::max())
 				|| (n < 0 && baseline_.first == numeric_limits<Scalar>::min())) {
-			line_ += destination;
+			line_ = destination;
 			subline_ = 0;
 			return;
 		}
-		BaselineIterator temp(viewer_, tracksOutOfViewport());
-		temp.initializeWithFirstVisibleLine();
-		temp.advance(n - (temp.line() - line()));
-		swap(*this, temp);
+		swap(*this, BaselineIterator(viewer_, destination, tracksOutOfViewport()));
 		return;
 	}
 
@@ -1854,10 +1889,12 @@ void TextViewer::BaselineIterator::advance(difference_type n) {
 	baseline_ = make_pair(newBaseline, newAxis);
 }
 
+/// @see detail#IteratorAdapter#current
 const TextViewer::BaselineIterator::reference TextViewer::BaselineIterator::current() const {
-	return baseline_;
+	return baseline_.first;
 }
 
+/// @internal Moves this iterator to the first visible line in the viewport.
 void TextViewer::BaselineIterator::initializeWithFirstVisibleLine() {
 	length_t firstVisibleLine, firstVisibleSubline;
 	viewer_.firstVisibleLine(&firstVisibleLine, 0, &firstVisibleSubline);
@@ -1885,13 +1922,13 @@ void TextViewer::BaselineIterator::initializeWithFirstVisibleLine() {
 }
 
 inline void TextViewer::BaselineIterator::invalidate() /*throw()*/ {
-	geometry::x(baseline_) = geometry::y(baseline_) = 1;
+	geometry::x(baseline_.second) = geometry::y(baseline_.second) = 1;
 }
 
 inline bool TextViewer::BaselineIterator::isValid() const /*throw()*/ {
-	return geometry::x(baseline_) != 0 && geometry::y(baseline_) != 0;
+	return geometry::x(baseline_.second) != 0 && geometry::y(baseline_.second) != 0;
 }
-
+#if 0
 void TextViewer::BaselineIterator::move(length_t line) {
 	if(line >= viewer_.document().numberOfLines())
 		throw k::BadPositionException(k::Position(line, 0));
@@ -1966,9 +2003,16 @@ void TextViewer::BaselineIterator::move(length_t line) {
 		}
 	}
 }
+#endif
 
+/// @see detail#IteratorAdapter#next
 void TextViewer::BaselineIterator::next() {
-	viewer_.textRenderer().baselineDistance(line_, line_ + 1);
+	return advance(+1);
+}
+
+/// @see detail#IteratorAdapter#previous
+void TextViewer::BaselineIterator::previous() {
+	return advance(-1);
 }
 
 
@@ -2009,7 +2053,8 @@ bool TextViewer::CursorVanisher::vanished() const {
 
 // TextViewer.SpacePainter ////////////////////////////////////////////////////////////////////////
 
-TextViewer::SpacePainter::SpacePainter() /*throw()*/ : viewerBounds_(geometry::make<NativePoint>(0, 0), geometry::make<NativeSize>(0, 0)) {
+TextViewer::SpacePainter::SpacePainter() /*throw()*/ : viewerBounds_(
+		geometry::make<NativeRectangle>(geometry::make<NativePoint>(0, 0), geometry::make<NativeSize>(0, 0))) {
 	computedValues_.left = computedValues_.top = computedValues_.right = computedValues_.bottom = 0;
 }
 
@@ -2101,7 +2146,7 @@ Scalar TextViewer::Renderer::width() const /*throw()*/ {
 
 /// Default constructor.
 TextViewer::Configuration::Configuration() /*throw()*/ :
-		readingDirection(LEFT_TO_RIGHT), leadingMargin(5), topMargin(1), usesRichTextClipboardFormat(false) {
+		readingDirection(LEFT_TO_RIGHT), usesRichTextClipboardFormat(false) {
 #if(_WIN32_WINNT >= 0x0501)
 	BOOL b;
 	if(::SystemParametersInfo(SPI_GETMOUSEVANISH, 0, &b, 0) != 0)
