@@ -2651,6 +2651,7 @@ inline void TextLayout::expandTabsWithoutWrapping() /*throw()*/ {
 	longestLineWidth_ = x;
 }
 #endif
+
 /**
  * Returns the space string added to the end of the specified line to reach the specified virtual
  * point. If the end of the line is over @a virtualX, the result is an empty string.
