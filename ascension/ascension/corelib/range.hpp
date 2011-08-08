@@ -127,6 +127,10 @@ namespace ascension {
 		 * @return The union or empty range
 		 */
 		template<typename Other> Range<value_type> united(const Range<Other>& other) const {
+			if(other.isEmpty())
+				return *this;
+			else if(isEmpty())
+				return other;
 			return Range<value_type>(
 				std::min(beginning(), other.beginning()), std::max(end(), other.end()));
 		}
