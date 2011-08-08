@@ -436,7 +436,7 @@ namespace ascension {
 			inline Range<Scalar> TextLayout::extent(const Range<length_t>& lines) const {
 				if(lines.end() >= numberOfLines())
 					throw kernel::BadRegionException(kernel::Region(
-						kernel::Position(lines.beginning(), 0), kernel::Position(lines.end());
+						kernel::Position(lines.beginning(), 0), kernel::Position(lines.end(), 0)));
 				return makeRange(
 					baseline(lines.beginning()) - lineMetrics_[lines.beginning()]->ascent(),
 					baseline(lines.end() - 1) + lineMetrics_[lines.end() - 1]->descent());

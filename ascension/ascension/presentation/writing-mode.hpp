@@ -200,6 +200,11 @@ namespace ascension {
 			return to;
 		}
 
+		template<typename Rectangle1, typename From, typename Rectangle2>
+		inline Rectangle2& mapAbstractToPhysical(
+				const WritingMode<false>& writingMode, const Rectangle1& viewport,
+				const AbstractFourSides<From>& from, Rectangle2& to);
+
 		/**
 		 * Performs abstract-to-physical mappings according to the given writing mode.
 		 * @tparam From The type for @a from

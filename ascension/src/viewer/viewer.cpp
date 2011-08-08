@@ -208,7 +208,7 @@ void TextViewer::aboutToLoseFocus() {
 //		hideCaret();
 //		::DestroyCaret();
 //	}
-	redrawLines(caret().beginning().line(), caret().end().line());
+	redrawLines(makeRange(caret().beginning().line(), caret().end().line() + 1));
 	redrawScheduledRegion();
 }
 
@@ -226,36 +226,36 @@ void TextViewer::caretMoved(const Caret& self, const k::Region& oldRegion) {
 	// redraw the selected region
 	if(self.isSelectionRectangle()) {	// rectangle
 		if(!oldRegion.isEmpty())
-			redrawLines(oldRegion.beginning().line, oldRegion.end().line);
+			redrawLines(makeRange(oldRegion.beginning().line, oldRegion.end().line + 1));
 		if(!newRegion.isEmpty())
-			redrawLines(newRegion.beginning().line, newRegion.end().line);
+			redrawLines(makeRange(newRegion.beginning().line, newRegion.end().line + 1));
 	} else if(newRegion != oldRegion) {	// the selection actually changed
 		if(oldRegion.isEmpty()) {	// the selection was empty...
 			if(!newRegion.isEmpty())	// the selection is not empty now
-				redrawLines(newRegion.beginning().line, newRegion.end().line);
+				redrawLines(makeRange(newRegion.beginning().line, newRegion.end().line + 1));
 		} else {	// ...if the there is selection
 			if(newRegion.isEmpty()) {	// the selection became empty
-				redrawLines(oldRegion.beginning().line, oldRegion.end().line);
+				redrawLines(makeRange(oldRegion.beginning().line, oldRegion.end().line + 1));
 				if(!isFrozen())
 					redrawScheduledRegion();
 			} else if(oldRegion.beginning() == newRegion.beginning()) {	// the beginning point didn't change
 				const length_t i[2] = {oldRegion.end().line, newRegion.end().line};
-				redrawLines(min(i[0], i[1]), max(i[0], i[1]));
+				redrawLines(makeRange(min(i[0], i[1]), max(i[0], i[1]) + 1));
 			} else if(oldRegion.end() == newRegion.end()) {	// the end point didn't change
 				const length_t i[2] = {oldRegion.beginning().line, newRegion.beginning().line};
-				redrawLines(min(i[0], i[1]), max(i[0], i[1]));
+				redrawLines(makeRange(min(i[0], i[1]), max(i[0], i[1]) + 1));
 			} else {	// the both points changed
 				if((oldRegion.beginning().line >= newRegion.beginning().line && oldRegion.beginning().line <= newRegion.end().line)
 						|| (oldRegion.end().line >= newRegion.beginning().line && oldRegion.end().line <= newRegion.end().line)) {
 					const length_t i[2] = {
 						min(oldRegion.beginning().line, newRegion.beginning().line), max(oldRegion.end().line, newRegion.end().line)
 					};
-					redrawLines(min(i[0], i[1]), max(i[0], i[1]));
+					redrawLines(makeRange(min(i[0], i[1]), max(i[0], i[1]) + 1));
 				} else {
-					redrawLines(oldRegion.beginning().line, oldRegion.end().line);
+					redrawLines(makeRange(oldRegion.beginning().line, oldRegion.end().line + 1));
 					if(!isFrozen())
 						redrawScheduledRegion();
-					redrawLines(newRegion.beginning().line, newRegion.end().line);
+					redrawLines(makeRange(newRegion.beginning().line, newRegion.end().line + 1));
 				}
 			}
 		}
@@ -401,27 +401,30 @@ void TextViewer::documentChanged(const k::Document&, const k::DocumentChange& ch
 	}
 
 	// slide the frozen lines to be drawn
-	if(isFrozen() && freezeInfo_.invalidLines.first != INVALID_INDEX) {
+	if(isFrozen() && !freezeRegister_.linesToRedraw().isEmpty()) {
+		length_t b = freezeRegister_.linesToRedraw().beginning();
+		length_t e = freezeRegister_.linesToRedraw().end();
 		if(change.erasedRegion().first.line != change.erasedRegion().second.line) {
 			const length_t first = change.erasedRegion().first.line + 1, last = change.erasedRegion().second.line;
-			if(freezeInfo_.invalidLines.first > last)
-				freezeInfo_.invalidLines.first -= last - first + 1;
-			else if(freezeInfo_.invalidLines.first > first)
-				freezeInfo_.invalidLines.first = first;
-			if(freezeInfo_.invalidLines.second != numeric_limits<length_t>::max()) {
-				if(freezeInfo_.invalidLines.second > last)
-					freezeInfo_.invalidLines.second -= last - first + 1;
-				else if(freezeInfo_.invalidLines.second > first)
-					freezeInfo_.invalidLines.second = first;
+			if(b > last)
+				b -= last - first + 1;
+			else if(b > first)
+				b = first;
+			if(e != numeric_limits<length_t>::max()) {
+				if(e > last)
+					e -= last - first + 1;
+				else if(e > first)
+					e = first;
 			}
 		}
 		if(change.insertedRegion().first.line != change.insertedRegion().second.line) {
 			const length_t first = change.insertedRegion().first.line + 1, last = change.insertedRegion().second.line;
-			if(freezeInfo_.invalidLines.first >= first)
-				freezeInfo_.invalidLines.first += last - first + 1;
-			if(freezeInfo_.invalidLines.second >= first && freezeInfo_.invalidLines.second != numeric_limits<length_t>::max())
-				freezeInfo_.invalidLines.second += last - first + 1;
+			if(b >= first)
+				b += last - first + 1;
+			if(e >= first && e != numeric_limits<length_t>::max())
+				e += last - first + 1;
 		}
+		freezeRegister_.resetLinesToRedraw(makeRange(b, e));
 	}
 //	invalidateLines(region.beginning().line, !multiLine ? region.end().line : INVALID_INDEX);
 	if(!isFrozen())
@@ -475,7 +478,7 @@ void TextViewer::drawIndicatorMargin(length_t /* line */, Context& /* context */
  */
 void TextViewer::freeze() {
 //	checkInitialization();
-	++freezeInfo_.count;
+	freezeRegister_.freeze();
 }
 
 /**
@@ -579,7 +582,7 @@ void TextViewer::focusGained() {
 
 	// hmm...
 //	if(/*sharedData_->options.appearance[SHOW_CURRENT_UNDERLINE] ||*/ !getCaret().isSelectionEmpty()) {
-		redrawLines(caret().beginning().line(), caret().end().line());
+		redrawLines(makeRange(caret().beginning().line(), caret().end().line() + 1));
 		redrawScheduledRegion();
 //	}
 
@@ -1207,68 +1210,58 @@ void TextViewer::recreateCaret() {
 /**
  * Redraws the specified line on the view.
  * If the viewer is frozen, redraws after unfrozen.
- * @param line the line to be redrawn
- * @param following @c true to redraw also the all lines follow to @a line
+ * @param line The line to be redrawn
+ * @param following Set @c true to redraw also the all lines follow to @a line
  */
 void TextViewer::redrawLine(length_t line, bool following) {
-	redrawLines(line, following ? numeric_limits<length_t>::max() : line);
+	redrawLines(makeRange(line, following ? numeric_limits<length_t>::max() : line + 1));
 }
 
 /**
  * Redraws the specified lines on the view. If the viewer is frozen, redraws after unfrozen.
- * @param first The start of the lines to be redrawn
- * @param last The end of the lines to be redrawn. This value is inclusive and this line will be
- *             redrawn. If this value is @c std#numeric_limits<length_t>#max(), redraws the
- *             @a first line and the below lines
- * @throw std#invalid_argument @a first is gretaer than @a last
+ * @param lines The lines to be redrawn. The last line (@a lines.end()) is exclusive and this line
+ *              will not be redrawn. If this value is @c std#numeric_limits<length_t>#max(), this
+ *              method redraws the first line (@a lines.beginning()) and the following all lines
+ * @throw kernel#BadRegionException @a lines intersects outside of the document
  */
-void TextViewer::redrawLines(length_t first, length_t last) {
-	if(first > last)
-		throw invalid_argument("first is greater than last.");
+void TextViewer::redrawLines(const Range<length_t>& lines) {
 //	checkInitialization();
 
+	if(lines.end() != numeric_limits<length_t>::max() && lines.end() >= document().numberOfLines())
+		throw k::BadRegionException(k::Region(k::Position(lines.beginning(), 0), k::Position(lines.end(), 0)));
+
 	if(isFrozen()) {
-		freezeInfo_.invalidLines.first =
-			(freezeInfo_.invalidLines.first == INVALID_INDEX) ? first : min(first, freezeInfo_.invalidLines.first);
-		freezeInfo_.invalidLines.second = 
-			(freezeInfo_.invalidLines.second == INVALID_INDEX) ? last : max(last, freezeInfo_.invalidLines.second);
+		freezeRegister_.addLinesToRedraw(lines);
 		return;
 	}
 
-	const length_t lines = document().numberOfLines();
-	if(first >= lines || last < scrollInfo_.firstVisibleLine)
+	if(lines.end() - 1 < scrollInfo_.firstVisibleLine)
 		return;
 
 #ifdef _DEBUG
 	if(DIAGNOSE_INHERENT_DRAWING)
-		win32::DumpContext() << L"@TextViewer.redrawLines invalidates lines ["
-			<< static_cast<unsigned long>(first) << L".." << static_cast<unsigned long>(last) << L"]\n";
+		win32::DumpContext()
+			<< L"@TextViewer.redrawLines invalidates lines ["
+			<< static_cast<unsigned long>(lines.beginning())
+			<< L".." << static_cast<unsigned long>(lines.end()) << L"]\n";
 #endif // _DEBUG
 
-	NativeRectangle rect(bounds(false));
-	assert(geometry::isNormalized(rect));
+	const WritingMode<false> writingMode = utils::writingMode(*this);
+	const NativeRectangle viewport(bounds(false));
+	AbstractFourSides<Scalar> abstractBounds;
+	mapPhysicalToAbstract(writingMode, viewport, viewport, abstractBounds);
 
-	// TODO: This code can't handle vertical writing mode correctly.
+	// calculate before and after edges of a rectangle to redraw
+	BaselineIterator baseline(*this, lines.beginning(), false);
+	if(*baseline != numeric_limits<Scalar>::min())
+		abstractBounds.before = *baseline - textRenderer().layouts().at(lines.beginning()).lineMetrics(0).ascent();
+	baseline += lines.length();
+	if(*baseline != numeric_limits<Scalar>::max())
+		abstractBounds.after = *baseline + textRenderer().layouts().at(baseline.line()).extent().end();
+	NativeRectangle boundsToRedraw(viewport);
+	mapAbstractToPhysical(utils::writingMode(*this), viewport, abstractBounds, boundsToRedraw);
 
-	// 上端
-	geometry::set<0>(rect, geometry::make<NativePoint>(
-		geometry::x(geometry::get<0>(rect)), max(mapLineToClientY(first, false), configuration_.topMargin)));
-	if(geometry::dy(rect) <= 0)
-		return;
-	// 下端
-	if(last != numeric_limits<length_t>::max()) {
-		Scalar bottom = geometry::top(rect) + static_cast<Scalar>(
-			renderer_->layouts().numberOfSublinesOfLine(first) * renderer_->defaultFont()->metrics().linePitch());
-		for(length_t line = first + 1; line <= last; ++line) {
-			bottom += static_cast<Scalar>(
-				renderer_->layouts().numberOfSublinesOfLine(line) * renderer_->defaultFont()->metrics().linePitch());
-			if(bottom >= geometry::bottom(rect))
-				break;
-		}
-		if(bottom < geometry::bottom(rect))
-			geometry::set<1>(rect, geometry::make<NativePoint>(geometry::x(geometry::get<1>(rect)), bottom));
-	}
-	scheduleRedraw(rect, false);
+	scheduleRedraw(boundsToRedraw, false);
 }
 
 /// Redraws the ruler.
@@ -1565,18 +1558,20 @@ HRESULT TextViewer::startTextServices() {
  */
 void TextViewer::unfreeze() {
 //	checkInitialization();
-	if(freezeInfo_.count > 0 && --freezeInfo_.count == 0) {
-		if(scrollInfo_.changed) {
-			updateScrollBars();
-			scheduleRedraw(false);
-		} else if(freezeInfo_.invalidLines.first != INVALID_INDEX)
-			redrawLines(freezeInfo_.invalidLines.first, freezeInfo_.invalidLines.second);
-		freezeInfo_.invalidLines.first = freezeInfo_.invalidLines.second = INVALID_INDEX;
+	if(freezeRegister_.isFrozen()) {
+		const Range<length_t> linesToRedraw(freezeRegister_.unfreeze());
+		if(!freezeRegister_.isFrozen()) {
+			if(scrollInfo_.changed) {
+				updateScrollBars();
+				scheduleRedraw(false);
+			} else if(!linesToRedraw.isEmpty)())
+				redrawLines(linesToRedraw);
 
-		rulerPainter_->update();
+			rulerPainter_->update();
 
-		caretMoved(caret(), caret().selectedRegion());
-		redrawScheduledRegion();
+			caretMoved(caret(), caret().selectedRegion());
+			redrawScheduledRegion();
+		}
 	}
 }
 
