@@ -493,7 +493,7 @@ namespace ascension {
 			void setContentAssistant(std::auto_ptr<contentassist::ContentAssistant> newContentAssistant) /*throw()*/;
 			// redraw
 			void redrawLine(length_t line, bool following = false);
-			void redrawLines(length_t first, length_t last);
+			void redrawLines(const Range<length_t>& lines);
 			// freeze
 			void freeze();
 			bool isFrozen() const /*throw()*/;
@@ -766,11 +766,25 @@ namespace ascension {
 			} scrollInfo_;
 
 			// freeze information
-			struct FreezeInfo {
-				unsigned long count;						// zero for not frozen
-				std::pair<length_t, length_t> invalidLines;	// 凍結中に再描画を要求された行。要求が無ければ first == second
-				FreezeInfo() /*throw()*/ : count(0) {invalidLines.first = invalidLines.second = INVALID_INDEX;}
-			} freezeInfo_;
+			class FreezeRegister {
+			public:
+				FreezeRegister() /*throw()*/ : count_(0) {freeze(); unfreeze();}
+				void freeze() /*throw()*/ {++count_;}
+				void addLinesToRedraw(const Range<length_t>& lines) {assert(isFrozen()); linesToRedraw_ = linesToRedraw_.united(lines);}
+				bool isFrozen() const /*throw()*/ {return count_ != 0;}
+				const Range<length_t>& linesToRedraw() const /*throw()*/ {return linesToRedraw_;}
+				void resetLinesToRedraw(const Range<length_t>& lines) {assert(isFrozen()); linesToRedraw_ = lines;}
+				Range<length_t> unfreeze() {
+					assert(isFrozen());
+					const Range<length_t> temp(linesToRedraw());
+					--count_;
+					linesToRedraw_ = Range<length_t>(0, 0);
+					return temp;
+				}
+			private:
+				unsigned long count_;
+				Range<length_t> linesToRedraw_;
+			} freezeRegister_;
 
 			// a bitmap for caret presentation
 			struct CaretShape {
@@ -945,7 +959,7 @@ inline bool TextViewer::isActiveInputMethodEnabled() const /*throw()*/ {return m
 #endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 
 /// Returns @c true if the viewer is frozen.
-inline bool TextViewer::isFrozen() const /*throw()*/ {return freezeInfo_.count != 0;}
+inline bool TextViewer::isFrozen() const /*throw()*/ {return freezeRegister_.isFrozen();}
 
 /// Returns the presentation object. 
 inline presentation::Presentation& TextViewer::presentation() /*throw()*/ {return presentation_;}
