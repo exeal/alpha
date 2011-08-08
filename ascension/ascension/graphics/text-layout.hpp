@@ -353,6 +353,8 @@ namespace ascension {
 				NativeRegion blackBoxBounds(const Range<length_t>& range) const;
 				NativeRectangle bounds() const /*throw()*/;
 				NativeRectangle bounds(const Range<length_t>& range) const;
+				Range<Scalar> extent() /*throw()*/ const;
+				Range<Scalar> extent(const Range<length_t>& lines) const;
 				NativeRectangle lineBounds(length_t line) const;
 				Scalar lineInlineProgressionDimension(length_t line) const;
 				const LineMetrics& lineMetrics(length_t line) const;
@@ -414,6 +416,31 @@ namespace ascension {
 //				friend class StyledSegmentIterator;
 			};
 
+
+			/**
+			 * Returns extent (block-progression-dimension) of the line.
+			 * @return A range of block-progression-dimension relative to the alignment-point
+			 */
+			inline Range<Scalar> TextLayout::extent() const /*throw()*/ {
+				return makeRange(
+					baseline(0) - lineMetrics_[0]->ascent(),
+					baseline(numberOfLines() - 1) + lineMetrics_[numberOfLines() - 1]->descent());
+			}
+
+			/**
+			 * Returns extent (block-progression-dimension) of the specified lines.
+			 * @param lines A range of the lines. @a lines.end() is exclusive
+			 * @return A range of block-progression-dimension relative to the alignment-point
+			 * @throw kernel#BadRegionException
+			 */
+			inline Range<Scalar> TextLayout::extent(const Range<length_t>& lines) const {
+				if(lines.end() >= numberOfLines())
+					throw kernel::BadRegionException(kernel::Region(
+						kernel::Position(lines.beginning(), 0), kernel::Position(lines.end());
+				return makeRange(
+					baseline(lines.beginning()) - lineMetrics_[lines.beginning()]->ascent(),
+					baseline(lines.end() - 1) + lineMetrics_[lines.end() - 1]->descent());
+			}
 
 			/// Returns @c true if the layout is empty.
 			inline bool TextLayout::isEmpty() const /*throw()*/ {return runs_.get() == 0;}
