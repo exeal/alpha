@@ -142,6 +142,8 @@ namespace ascension {
 			bool isEmpty() const /*throw()*/ {return first == second;}
 			/// Returns @c true if the region is normalized.
 			bool isNormalized() const /*throw()*/ {return first <= second;}
+			/// Returns a range of lines.
+			Range<length_t> lines() const /*throw()*/ {return makeRange(beginning().line, end().line + 1);}
 			/// Normalizes the region.
 			Region& normalize() /*throw()*/ {
 				if(!isNormalized())
