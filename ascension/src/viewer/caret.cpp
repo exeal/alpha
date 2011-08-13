@@ -612,28 +612,28 @@ length_t VisualPoint::visualLine() const {
 }
 
 /// @see IVisualLinesListener#visualLinesDeleted
-void VisualPoint::visualLinesDeleted(length_t first, length_t last, length_t, bool) /*throw()*/ {
-	if(!adaptsToDocument() && line() >= first && line() < last)
+void VisualPoint::visualLinesDeleted(const Range<length_t>& lines, length_t, bool) /*throw()*/ {
+	if(!adaptsToDocument() && lines.includes(line()))
 		visualLine_ = INVALID_INDEX;
 }
 
 /// @see IVisualLinesListener#visualLinesInserted
-void VisualPoint::visualLinesInserted(length_t first, length_t last) /*throw()*/ {
-	if(!adaptsToDocument() && line() >= first && line() < last)
+void VisualPoint::visualLinesInserted(const Range<length_t>& lines) /*throw()*/ {
+	if(!adaptsToDocument() && lines.includes(line()))
 		visualLine_ = INVALID_INDEX;
 }
 
 /// @see IVisualLinesListener#visualLinesModified
-void VisualPoint::visualLinesModified(length_t first, length_t last, signed_length_t sublineDifference, bool, bool) /*throw()*/ {
+void VisualPoint::visualLinesModified(const Range<length_t>& lines, signed_length_t sublineDifference, bool, bool) /*throw()*/ {
 	if(visualLine_ != INVALID_INDEX) {
 		// adjust visualLine_ and visualSubine_ according to the visual lines modification
-		if(last <= line())
+		if(lines.end() <= line())
 			visualLine_ += sublineDifference;
-		else if(first == line()) {
+		else if(lines.beginning() == line()) {
 			visualLine_ -= visualSubline_;
 			visualSubline_ = textViewer().textRenderer().lineLayout(line()).subline(min(column(), document().lineLength(line())));
 			visualLine_ += visualSubline_;
-		} else if(first < line())
+		} else if(lines.beginning() < line())
 			visualLine_ = INVALID_INDEX;
 	}
 }

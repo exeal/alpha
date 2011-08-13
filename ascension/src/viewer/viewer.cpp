@@ -1278,9 +1278,9 @@ void TextViewer::repaintRuler() {
 
 /**
  * Scrolls the viewer.
- * @param dx The number of columns to scroll horizontally
- * @param dy The number of visual lines to scroll vertically
- * @param redraw Set @c true if redraws after scroll
+ * @param dx The number of units to scroll horizontally. A positive value means rightward
+ * @param dy The number of units to scroll vertically. A positive value means bottomward
+ * @param redraw Set @c true if redraws the viewport after scroll
  */
 void TextViewer::scroll(int dx, int dy, bool redraw) {
 //	checkInitialization();
@@ -1316,13 +1316,38 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 //	closeCompletionProposalsPopup(*this);
 	hideToolTip();
 
-	// scroll
+	// calculate pixels to scroll
 	const PhysicalFourSides<Scalar>& spaces = spaceWidths();
-	NativeRectangle clientBounds(bounds(false));
-	NativeRectangle clipBounds(clientBounds);
+	const NativeRectangle viewport(bounds(false));
+	NativeRectangle clipBounds(viewport);
 	assert(geometry::isNormalized(clipBounds));
 	geometry::range<geometry::Y_COORDINATE>(clipBounds) = makeRange(
 		geometry::top(clipBounds) + spaces.top, geometry::bottom(clipBounds) - spaces.bottom);
+	const WritingMode<false> writingMode(utils::writingMode(*this));
+	NativeSize pixelsToScroll;
+	// inline-progression-direction
+	if(WritingModeBase::isHorizontal(writingMode.blockFlowDirection))
+		geometry::dx(pixelsToScroll) = dx * scrollRate(true) * textRenderer().defaultFont()->metrics().averageCharacterWidth();
+	else
+		geometry::dy(pixelsToScroll) = dy * scrollRate(false) * textRenderer().defaultFont()->metrics().averageCharacterWidth();
+	// block-progression-direction
+	signed_length_t linesToScroll;
+	if(WritingModeBase::isHorizontal(writingMode.blockFlowDirection))
+		linesToScroll = dy;
+	else {
+		assert(WritingModeBase::isVertical(writingMode.blockFlowDirection));
+		if(writingMode.blockFlowDirection == WritingModeBase::VERTICAL_RL)
+			linesToScroll = -dx;
+		else if(writingMode.blockFlowDirection == WritingModeBase::VERTICAL_LR)
+			linesToScroll = +dx;
+		else
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+	int dbpd = 0;
+	while(linesToScroll > 0) {
+	}
+
+	// scroll
 	if(static_cast<unsigned int>(abs(dy)) >= numberOfVisibleLines())
 		scheduleRedraw(clipBounds, false);	// redraw all if the amount of the scroll is over a page
 	else if(dx == 0) {	// only vertical
@@ -1665,63 +1690,63 @@ void TextViewer::updateScrollBars() {
 }
 
 /// @see VisualLinesListener#visualLinesDeleted
-void TextViewer::visualLinesDeleted(length_t first, length_t last, length_t sublines, bool longestLineChanged) /*throw()*/ {
+void TextViewer::visualLinesDeleted(const Range<length_t>& lines, length_t sublines, bool longestLineChanged) /*throw()*/ {
 	scrollInfo_.changed = true;
-	if(last < scrollInfo_.firstVisibleLine) {	// 可視領域より前が削除された
-		scrollInfo_.firstVisibleLine -= last - first;
+	if(lines.end() < scrollInfo_.firstVisibleLine) {	// 可視領域より前が削除された
+		scrollInfo_.firstVisibleLine -= lines.length();
 		scrollInfo_.vertical.position -= static_cast<int>(sublines);
 		scrollInfo_.vertical.maximum -= static_cast<int>(sublines);
 		repaintRuler();
-	} else if(first > scrollInfo_.firstVisibleLine
-			|| (first == scrollInfo_.firstVisibleLine && scrollInfo_.firstVisibleSubline == 0)) {	// 可視先頭行以降が削除された
+	} else if(lines.beginning() > scrollInfo_.firstVisibleLine
+			|| (lines.beginning() == scrollInfo_.firstVisibleLine && scrollInfo_.firstVisibleSubline == 0)) {	// 可視先頭行以降が削除された
 		scrollInfo_.vertical.maximum -= static_cast<int>(sublines);
-		redrawLine(first, true);
+		redrawLine(lines.beginning(), true);
 	} else {	// 可視先頭行を含む範囲が削除された
-		scrollInfo_.firstVisibleLine = first;
+		scrollInfo_.firstVisibleLine = lines.beginning();
 		scrollInfo_.updateVertical(*this);
-		redrawLine(first, true);
+		redrawLine(lines.beginning(), true);
 	}
 	if(longestLineChanged)
 		scrollInfo_.resetBars(*this, 'h', false);
 }
 
 /// @see VisualLinesListener#visualLinesInserted
-void TextViewer::visualLinesInserted(length_t first, length_t last) /*throw()*/ {
+void TextViewer::visualLinesInserted(const Range<length_t>& lines) /*throw()*/ {
 	scrollInfo_.changed = true;
-	if(last < scrollInfo_.firstVisibleLine) {	// 可視領域より前に挿入された
-		scrollInfo_.firstVisibleLine += last - first;
-		scrollInfo_.vertical.position += static_cast<int>(last - first);
-		scrollInfo_.vertical.maximum += static_cast<int>(last - first);
+	if(lines.end() < scrollInfo_.firstVisibleLine) {	// 可視領域より前に挿入された
+		scrollInfo_.firstVisibleLine += lines.length();
+		scrollInfo_.vertical.position += static_cast<int>(lines.length());
+		scrollInfo_.vertical.maximum += static_cast<int>(lines.length());
 		repaintRuler();
-	} else if(first > scrollInfo_.firstVisibleLine
-			|| (first == scrollInfo_.firstVisibleLine && scrollInfo_.firstVisibleSubline == 0)) {	// 可視先頭行以降に挿入された
-		scrollInfo_.vertical.maximum += static_cast<int>(last - first);
-		redrawLine(first, true);
+	} else if(lines.beginning() > scrollInfo_.firstVisibleLine
+			|| (lines.beginning() == scrollInfo_.firstVisibleLine && scrollInfo_.firstVisibleSubline == 0)) {	// 可視先頭行以降に挿入された
+		scrollInfo_.vertical.maximum += static_cast<int>(lines.length());
+		redrawLine(lines.beginning(), true);
 	} else {	// 可視先頭行の前後に挿入された
-		scrollInfo_.firstVisibleLine += last - first;
+		scrollInfo_.firstVisibleLine += lines.length();
 		scrollInfo_.updateVertical(*this);
-		redrawLine(first, true);
+		redrawLine(lines.beginning(), true);
 	}
 }
 
 /// @see VisualLinesListener#visualLinesModified
-void TextViewer::visualLinesModified(length_t first, length_t last,
+void TextViewer::visualLinesModified(const Range<length_t>& lines,
 		signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/ {
 	if(sublinesDifference == 0)	// 表示上の行数が変化しなかった
-		redrawLines(first, last - 1);
+		redrawLines(lines);
 	else {
 		scrollInfo_.changed = true;
-		if(last < scrollInfo_.firstVisibleLine) {	// 可視領域より前が変更された
+		if(lines.end() < scrollInfo_.firstVisibleLine) {	// 可視領域より前が変更された
 			scrollInfo_.vertical.position += sublinesDifference;
 			scrollInfo_.vertical.maximum += sublinesDifference;
 			repaintRuler();
-		} else if(first > scrollInfo_.firstVisibleLine
-				|| (first == scrollInfo_.firstVisibleLine && scrollInfo_.firstVisibleSubline == 0)) {	// 可視先頭行以降が変更された
+		} else if(lines.beginning() > scrollInfo_.firstVisibleLine
+				|| (lines.beginning() == scrollInfo_.firstVisibleLine && scrollInfo_.firstVisibleSubline == 0)) {	// 可視先頭行以降が変更された
 			scrollInfo_.vertical.maximum += sublinesDifference;
-			redrawLine(first, true);
+			redrawLine(lines.beginning(), true);
 		} else {	// 可視先頭行を含む範囲が変更された
 			scrollInfo_.updateVertical(*this);
-			redrawLine(first, true);
+			redrawLine(lines.beginning(), true);
 		}
 	}
 	if(longestLineChanged) {
