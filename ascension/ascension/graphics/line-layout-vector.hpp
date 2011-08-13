@@ -27,23 +27,20 @@ namespace ascension {
 			private:
 				/**
 				 * Several visual lines were deleted.
-				 * @param first The first of created lines
-				 * @param last The last of created lines (exclusive)
+				 * @param lines The range of created lines. @a lines.end() is exclusive
 				 * @param sublines The total number of sublines of created lines
 				 * @param longestLineChanged Set @c true if the longest line is changed
 				 */
-				virtual void visualLinesDeleted(length_t first, length_t last,
+				virtual void visualLinesDeleted(const Range<length_t>& lines,
 					length_t sublines, bool longestLineChanged) /*throw()*/ = 0;
 				/**
 				 * Several visual lines were inserted.
-				 * @param first The first of inserted lines
-				 * @param last The last of inserted lines (exclusive)
+				 * @param lines The range of inserted lines. @a lines.end() is exclusive
 				 */
-				virtual void visualLinesInserted(length_t first, length_t last) /*throw()*/ = 0;
+				virtual void visualLinesInserted(const Range<length_t>& lines) /*throw()*/ = 0;
 				/**
 				 * A visual lines were modified.
-				 * @param first The first of modified lines
-				 * @param last The last of modified lines (exclusive)
+				 * @param lines The range of modified lines. @a lines.end() is exclusive
 				 * @param sublinesDifference The difference of the number of sublines between
 				 *        before and after the modification
 				 * @param documentChanged Set @c true if the layouts were modified for the document
@@ -51,7 +48,7 @@ namespace ascension {
 				 * @param longestLineChanged Set @c true if the longest line is changed
 				 */
 				virtual void visualLinesModified(
-					length_t first, length_t last, signed_length_t sublinesDifference,
+					const Range<length_t>& lines, signed_length_t sublinesDifference,
 					bool documentChanged, bool longestLineChanged) /*throw()*/ = 0;
 				friend class LineLayoutVector;
 			};
@@ -94,16 +91,16 @@ namespace ascension {
 				typedef std::pair<length_t, const TextLayout*> LineLayout;
 				void invalidate() /*throw()*/;
 				template<typename Function> void invalidateIf(Function f);
-				void invalidate(length_t first, length_t last);
+				void invalidate(const Range<length_t>& lines);
 			protected:
 				void invalidate(length_t line);
 			private:
 				typedef std::list<LineLayout>::iterator Iterator;
-				void clearCaches(length_t first, length_t last, bool repair);
+				void clearCaches(const Range<length_t>& lines, bool repair);
 				void deleteLineLayout(length_t line, TextLayout* newLayout = 0) /*throw()*/;
-				void fireVisualLinesDeleted(length_t first, length_t last, length_t sublines);
-				void fireVisualLinesInserted(length_t first, length_t last);
-				void fireVisualLinesModified(length_t first, length_t last,
+				void fireVisualLinesDeleted(const Range<length_t>& lines, length_t sublines);
+				void fireVisualLinesInserted(const Range<length_t>& lines);
+				void fireVisualLinesModified(const Range<length_t>& lines,
 					length_t newSublines, length_t oldSublines, bool documentChanged);
 				void initialize();
 				void invalidate(const std::vector<length_t>& lines);
@@ -134,9 +131,7 @@ namespace ascension {
 				const std::size_t bufferSize_;
 				const bool autoRepair_;
 				enum {ABOUT_TO_CHANGE, CHANGING, NONE} documentChangePhase_;
-				struct {
-					length_t first, last;
-				} pendingCacheClearance_;	// ドキュメント変更中に呼び出された clearCaches の引数
+				Range<length_t> pendingCacheClearance_;	// ドキュメント変更中に呼び出された clearCaches の引数
 				Scalar maximumIpd_;
 				length_t longestLine_, numberOfVisualLines_;
 				detail::Listeners<VisualLinesListener> listeners_;
@@ -185,8 +180,7 @@ namespace ascension {
 			 * @see #oprator[], #at
 			 */
 			inline const TextLayout* LineLayoutVector::atIfCached(length_t line) const /*throw()*/ {
-				if(pendingCacheClearance_.first != INVALID_INDEX
-						&& line >= pendingCacheClearance_.first && line < pendingCacheClearance_.last)
+				if(pendingCacheClearance_.beginning() != INVALID_INDEX && pendingCacheClearance_.includes(line))
 					return 0;
 				for(std::list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 					if(i->first == line)

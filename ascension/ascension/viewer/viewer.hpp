@@ -564,9 +564,9 @@ namespace ascension {
 			// graphics.font.DefaultFontListener
 			void defaultFontChanged() /*throw()*/;
 			// graphics.font.VisualLinesListener
-			void visualLinesDeleted(length_t first, length_t last, length_t sublines, bool longestLineChanged) /*throw()*/;
-			void visualLinesInserted(length_t first, length_t last) /*throw()*/;
-			void visualLinesModified(length_t first, length_t last,
+			void visualLinesDeleted(const Range<length_t>& lines, length_t sublines, bool longestLineChanged) /*throw()*/;
+			void visualLinesInserted(const Range<length_t>& lines) /*throw()*/;
+			void visualLinesModified(const Range<length_t>& lines,
 				signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/;
 			// detail.PointCollection<VisualPoint>
 			void addNewPoint(VisualPoint& point) {points_.insert(&point);}
