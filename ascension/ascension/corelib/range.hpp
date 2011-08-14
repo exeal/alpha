@@ -42,11 +42,12 @@ namespace ascension {
 
 	/**
 	 * Represents an invariant range.
-	 * @tparam T The element type
+	 * @tparam T The element type. This type shall be @c LessThanComparable
+	 * @tparam Comp The type for comparisons
 	 * @note This class is not compatible with Boost.Range.
-	 * @see BasicStringPiece, kernel#Region, graphics#Rectangle
+	 * @see BasicStringPiece, kernel#Region
 	 */
-	template<typename T> class Range : protected std::pair<T, T> {
+	template<typename T, typename Comp = std::less<T> > class Range : protected std::pair<T, T> {
 	public:
 		typedef T value_type;
 	public:
@@ -60,16 +61,17 @@ namespace ascension {
 		 */
 		template<typename T1, typename T2>
 		explicit Range(const std::pair<T1, T2>& pair) :
-//			std::pair<value_type, value_type>(std::minmax(pair.first, pair.second)) {}
-			std::pair<value_type, value_type>(std::min(pair.first, pair.second), std::max(pair.first, pair.second)) {}
+//			std::pair<value_type, value_type>(std::minmax(pair.first, pair.second, Comp())) {}
+			std::pair<value_type, value_type>(
+				std::min(pair.first, pair.second, Comp()), std::max(pair.first, pair.second, Comp())) {}
 		/**
 		 * Constructor takes the beginning and the end of the range.
-		 * @param v1, v2 The beginning and the end. Both std::min(v1, v2) and
-		 *               std::max(v1, v2) should be valid
+		 * @param v1, v2 The beginning and the end. Both std::min(v1, v2, Comp()) and
+		 *               std::max(v1, v2, Comp()) should be valid
 		 */
 		Range(value_type v1, value_type v2) :
-//			std::pair<value_type, value_type>(std::minmax(v1, v2)) {}
-			std::pair<value_type, value_type>(std::min(v1, v2), std::max(v1, v2)) {}
+//			std::pair<value_type, value_type>(std::minmax(v1, v2, Comp())) {}
+			std::pair<value_type, value_type>(std::min(v1, v2, Comp()), std::max(v1, v2, Comp())) {}
 		/// Returns the beginning (minimum) of the range.
 		value_type beginning() const {return std::pair<T, T>::first;}
 		/// Returns the end (maximum) of the range.
@@ -81,7 +83,10 @@ namespace ascension {
 		 * @return true if @a v is included by this range
 		 */
 		template<typename U>
-		bool includes(const U& v) const {return v >= beginning() && v < end();}
+		bool includes(const U& v) const {
+			const Comp lessThan;
+			return !lessThan(beginning(), v) && lessThan(v, end());	// beginning() >= v && v < end
+		}
 		/**
 		 * Returns @c true if the given range is included by this range.
 		 * @tparam The type of @a other
@@ -89,7 +94,8 @@ namespace ascension {
 		 * @return true if @a other is included by this range
 		 */
 		template<typename Other> bool includes(const Range<Other>& other) const {
-			return other.beginning() >= beginning() && other.end() <= end();
+			const Comp lessThan;
+			return !lessThan(other.beginning(), beginning()) && !lessThan(end(), other.end());	// other.beginning() >= beginning() && other.end() <= end()
 		}
 		/**
 		 * Returns the intersection of this range and the given one.
@@ -99,9 +105,10 @@ namespace ascension {
 		 */
 		template<typename Other>
 		Range<value_type> intersected(const Range<Other>& other) const {
-			const value_type b(std::max<value_type>(beginning(), other.beginning()));
-			const value_type e(std::min<value_type>(end(), other.end()));
-			return Range<value_type>(b, std::max(b, e));
+			const Comp lessThan;
+			const value_type b(std::max<value_type, Comp>(beginning(), other.beginning(), lessThan));
+			const value_type e(std::min<value_type, Comp>(end(), other.end(), lessThan));
+			return Range<value_type>(b, std::max(b, e, lessThan));
 		}
 		/**
 		 * Returns @c true if this range intersects with the given one.
@@ -112,7 +119,7 @@ namespace ascension {
 		template<typename Other>
 		bool intersects(const Range<Other>& other) const {return !intersected(other).isEmpty();}
 		/// Returns @c true if the range is empty.
-		bool isEmpty() const {return beginning() == end();}
+		bool isEmpty() const {return internalIsEmpty<Comp>();}
 		/**
 		 * Returns the length of the range.
 		 * @note This class does not define a method named "size".
@@ -132,15 +139,35 @@ namespace ascension {
 			else if(isEmpty())
 				return other;
 			return Range<value_type>(
-				std::min(beginning(), other.beginning()), std::max(end(), other.end()));
+				std::min(beginning(), other.beginning(), Comp()), std::max(end(), other.end(), Comp()));
 		}
+		private:
+			template<typename X>
+			bool internalIsEmpty(typename std::tr1::enable_if<std::tr1::is_same<X, std::less<T> >::value>::type* = 0) const {
+				return beginning() == end();
+			}
+			template<typename X>
+			bool internalIsEmpty(typename std::tr1::enable_if<!std::tr1::is_same<X, std::less<T> >::value>::type* = 0) const {
+				const Comp lessThan;
+				return !lessThan(beginning(), end()) && !lessThan(end(), beginning());
+			}
 	};
 
 	/// Returns a @c Range object using the @c std#pair object.
-	template<typename T> inline Range<T> makeRange(const std::pair<T, T>& pair) {return Range<T>(pair);}
+	template<typename T>
+	inline Range<T> makeRange(const std::pair<T, T>& pair) {return Range<T>(pair);}
+
+	/// Returns a @c Range object using the @c std#pair object.
+	template<typename T, typename Comp>
+	inline Range<T, Comp> makeRange(const std::pair<T, T>& pair, const Comp&) {return Range<T, Comp>(pair);}
 
 	/// Returns a @c Range object using the given two values.
-	template<typename T> inline Range<T> makeRange(T v1, T v2) {return Range<T>(v1, v2);}
+	template<typename T>
+	inline Range<T> makeRange(T v1, T v2) {return Range<T>(v1, v2);}
+
+	/// Returns a @c Range object using the given two values.
+	template<typename T, typename Comp>
+	inline Range<T, Comp> makeRange(T v1, T v2, const Comp&) {return Range<T, Comp>(v1, v2);}
 
 } // namespace ascension
 
