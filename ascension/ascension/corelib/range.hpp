@@ -93,7 +93,7 @@ namespace ascension {
 		 * @param other The other range to test
 		 * @return true if @a other is included by this range
 		 */
-		template<typename Other> bool includes(const Range<Other>& other) const {
+		template<typename Other> bool includes(const Range<Other, Comp>& other) const {
 			const Comp lessThan;
 			return !lessThan(other.beginning(), beginning()) && !lessThan(end(), other.end());	// other.beginning() >= beginning() && other.end() <= end()
 		}
@@ -104,7 +104,7 @@ namespace ascension {
 		 * @return The intersection or empty range
 		 */
 		template<typename Other>
-		Range<value_type> intersected(const Range<Other>& other) const {
+		Range<value_type> intersected(const Range<Other, Comp>& other) const {
 			const Comp lessThan;
 			const value_type b(std::max<value_type, Comp>(beginning(), other.beginning(), lessThan));
 			const value_type e(std::min<value_type, Comp>(end(), other.end(), lessThan));
@@ -117,7 +117,7 @@ namespace ascension {
 		 * @return true if this range intersects with @a other
 		 */
 		template<typename Other>
-		bool intersects(const Range<Other>& other) const {return !intersected(other).isEmpty();}
+		bool intersects(const Range<Other, Comp>& other) const {return !intersected(other).isEmpty();}
 		/// Returns @c true if the range is empty.
 		bool isEmpty() const {return internalIsEmpty<Comp>();}
 		/**
@@ -133,12 +133,12 @@ namespace ascension {
 		 * @param other The other range
 		 * @return The union or empty range
 		 */
-		template<typename Other> Range<value_type> united(const Range<Other>& other) const {
+		template<typename Other> Range<value_type> united(const Range<Other, Comp>& other) const {
 			if(other.isEmpty())
 				return *this;
 			else if(isEmpty())
 				return other;
-			return Range<value_type>(
+			return Range<value_type, Comp>(
 				std::min(beginning(), other.beginning(), Comp()), std::max(end(), other.end(), Comp()));
 		}
 		private:
