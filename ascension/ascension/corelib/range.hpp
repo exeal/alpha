@@ -7,8 +7,9 @@
 
 #ifndef ASCENSION_RANGE_HPP
 #define ASCENSION_RANGE_HPP
-#include <iterator>	// std.iterator_traits
-#include <utility>	// std.max, std.min, std.pair
+#include <functional>	// std.less
+#include <iterator>		// std.iterator_traits
+#include <utility>		// std.max, std.min, std.pair
 #include <ascension/corelib/type-traits.hpp>
 
 namespace ascension {
@@ -47,7 +48,8 @@ namespace ascension {
 	 * @note This class is not compatible with Boost.Range.
 	 * @see BasicStringPiece, kernel#Region
 	 */
-	template<typename T, typename Comp = std::less<T> > class Range : protected std::pair<T, T> {
+	template<typename T, typename Comp = std::less<T> >
+	class Range : protected std::pair<T, T> {
 	public:
 		typedef T value_type;
 	public:
@@ -76,82 +78,110 @@ namespace ascension {
 		value_type beginning() const {return std::pair<T, T>::first;}
 		/// Returns the end (maximum) of the range.
 		value_type end() const {return std::pair<T, T>::second;}
-		/**
-		 * Returns @c true if the given value is included by this range.
-		 * @tparam U The type of @a v
-		 * @param v The value to test
-		 * @return true if @a v is included by this range
-		 */
-		template<typename U>
-		bool includes(const U& v) const {
-			const Comp lessThan;
-			return !lessThan(beginning(), v) && lessThan(v, end());	// beginning() >= v && v < end
-		}
-		/**
-		 * Returns @c true if the given range is included by this range.
-		 * @tparam The type of @a other
-		 * @param other The other range to test
-		 * @return true if @a other is included by this range
-		 */
-		template<typename Other> bool includes(const Range<Other, Comp>& other) const {
-			const Comp lessThan;
-			return !lessThan(other.beginning(), beginning()) && !lessThan(end(), other.end());	// other.beginning() >= beginning() && other.end() <= end()
-		}
-		/**
-		 * Returns the intersection of this range and the given one.
-		 * @tparam Other The type of @a other
-		 * @param other The other range
-		 * @return The intersection or empty range
-		 */
-		template<typename Other>
-		Range<value_type> intersected(const Range<Other, Comp>& other) const {
-			const Comp lessThan;
-			const value_type b(std::max<value_type, Comp>(beginning(), other.beginning(), lessThan));
-			const value_type e(std::min<value_type, Comp>(end(), other.end(), lessThan));
-			return Range<value_type>(b, std::max(b, e, lessThan));
-		}
-		/**
-		 * Returns @c true if this range intersects with the given one.
-		 * @tparam Other The type of @a other
-		 * @param other The other range to test
-		 * @return true if this range intersects with @a other
-		 */
-		template<typename Other>
-		bool intersects(const Range<Other, Comp>& other) const {return !intersected(other).isEmpty();}
-		/// Returns @c true if the range is empty.
-		bool isEmpty() const {return internalIsEmpty<Comp>();}
-		/**
-		 * Returns the length of the range.
-		 * @note This class does not define a method named "size".
-		 */
-		typename detail::DifferenceType<value_type>::Type length() const {
-			return end() - beginning();
-		}
-		/**
-		 * Returns the union of this range and the given one.
-		 * @tparam Other The type of @a other
-		 * @param other The other range
-		 * @return The union or empty range
-		 */
-		template<typename Other> Range<value_type> united(const Range<Other, Comp>& other) const {
-			if(other.isEmpty())
-				return *this;
-			else if(isEmpty())
-				return other;
-			return Range<value_type, Comp>(
-				std::min(beginning(), other.beginning(), Comp()), std::max(end(), other.end(), Comp()));
-		}
-		private:
-			template<typename X>
-			bool internalIsEmpty(typename std::tr1::enable_if<std::tr1::is_same<X, std::less<T> >::value>::type* = 0) const {
-				return beginning() == end();
-			}
-			template<typename X>
-			bool internalIsEmpty(typename std::tr1::enable_if<!std::tr1::is_same<X, std::less<T> >::value>::type* = 0) const {
-				const Comp lessThan;
-				return !lessThan(beginning(), end()) && !lessThan(end(), beginning());
-			}
 	};
+
+	/**
+	 * Returns @c true if the given value is included by the range.
+	 * @tparam T The element type of the range
+	 * @tparam Comp The comparison type of the range
+	 * @tparam U The type of @a value
+	 * @param range The range
+	 * @param value The value to test
+	 * @return true if @a value is included by @a range
+	 */
+	template<typename T, typename Comp, typename U>
+	inline bool includes(const Range<T, Comp>& range, const U& value) {
+		const Comp lessThan;
+//		return range.beginning() >= value && value < range.end();
+		return !lessThan(range.beginning(), value) && lessThan(value, range.end());
+	}
+
+	/**
+	 * Returns @c true if the given range is included by the range.
+	 * @tparam T The element type of the range
+	 * @tparam Comp The comparison type of the range
+	 * @tparam Other The type of @a other
+	 * @param range The range
+	 * @param other The other range to test
+	 * @return true if @a other is included by the range
+	 */
+	template<typename T, typename Comp, typename Other>
+	inline bool includes(const Range<T, Comp>& range, const Range<Other, Comp>& other) {
+		const Comp lessThan;
+//		return other.beginning() >= range.beginning() && other.end() <= range.end();
+		return !lessThan(other.beginning(), range.beginning()) && !lessThan(range.end(), other.end());
+	}
+
+	/**
+	 * Returns the intersection of the two ranges.
+	 * @tparam T The element type of the range
+	 * @tparam Comp The comparison type of the range
+	 * @tparam Other The type of @a other
+	 * @param range The range
+	 * @param other The other range
+	 * @return The intersection or empty range
+	 */
+	template<typename T, typename Comp, typename Other>
+	inline Range<T, Comp> intersected(const Range<T, Comp>& range, const Range<Other, Comp>& other) {
+		const Comp lessThan;
+		const T b(std::max<T, Comp>(range.beginning(), other.beginning(), lessThan));
+		const T e(std::min<T, Comp>(range.end(), other.end(), lessThan));
+		return Range<T, Comp>(b, std::max(b, e, lessThan));
+	}
+
+	/**
+	 * Returns @c true if the range intersects with the other.
+	 * @tparam T The element type of the range
+	 * @tparam Comp The comparison type of the range
+	 * @tparam Other The type of @a other
+	 * @param range The range
+	 * @param other The other range to test
+	 * @return true if @a range intersects with @a other
+	 */
+	template<typename T, typename Comp, typename Other>
+	inline bool intersects(const Range<T, Comp>& range, const Range<Other, Comp>& other) {
+		return !isEmpty(intersected(range, other));
+	}
+
+	/**
+	 * Returns @c true if the range is empty.
+	 * @tparam T The element type of the range
+	 * @tparam Comp The comparison type of the range
+	 * @param range The range to test
+	 * @return true if @a range is empty
+	 */
+	template<typename T, typename Comp>
+	inline bool isEmpty(const Range<T, Comp>& range,
+			typename std::tr1::enable_if<std::tr1::is_same<Comp, std::less<T> >::value>::type* = 0) {
+		return range.beginning() == range.end();
+	}
+
+	/**
+	 * Returns @c true if the range is empty.
+	 * @tparam T The element type of the range
+	 * @tparam Comp The comparison type of the range
+	 * @param range The range to test
+	 * @return true if @a range is empty
+	 */
+	template<typename T, typename Comp>
+	inline bool isEmpty(const Range<T, Comp>& range,
+			typename std::tr1::enable_if<!std::tr1::is_same<Comp, std::less<T> >::value>::type* = 0) {
+		const Comp lessThan;
+		return !lessThan(range.beginning(), range.end()) && !lessThan(range.end(), range.beginning());
+	}
+
+	/**
+	 * Returns the length of the range.
+	 * @tparam T The element type of the range
+	 * @tparam Comp The comparison type of the range
+	 * @param range The range to test
+	 * @return The length of @a range
+	 * @note This class does not define a method named "size".
+	 */
+	template<typename T, typename Comp>
+	inline typename detail::DifferenceType<T>::Type length(const Range<T, Comp>& range) {
+		return range.end() - range.beginning();
+	}
 
 	/// Returns a @c Range object using the @c std#pair object.
 	template<typename T>
@@ -168,6 +198,25 @@ namespace ascension {
 	/// Returns a @c Range object using the given two values.
 	template<typename T, typename Comp>
 	inline Range<T, Comp> makeRange(T v1, T v2, const Comp&) {return Range<T, Comp>(v1, v2);}
+
+	/**
+	 * Returns the union of this range and the given one.
+	 * @tparam T The element type of the range
+	 * @tparam Comp The comparison type of the range
+	 * @tparam Other The type of @a other
+	 * @param range The range
+	 * @param other The other range
+	 * @return The union or empty range
+	 */
+	template<typename T, typename Comp, typename Other>
+	inline Range<T, Comp> united(const Range<T, Comp>& range, const Range<Other, Comp>& other) {
+		if(isEmpty(other))
+			return range;
+		else if(isEmpty(range))
+			return other;
+		return Range<T, Comp>(
+			std::min(range.beginning(), other.beginning(), Comp()), std::max(range.end(), other.end(), Comp()));
+	}
 
 } // namespace ascension
 

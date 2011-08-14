@@ -828,7 +828,7 @@ bool IncrementalSearcher::addString(const StringPiece& text) {
 	if(text.beginning() == 0 || text.end() == 0)
 		throw NullPointerException("text");
 	checkRunning();
-	if(text.isEmpty())
+	if(isEmpty(text))
 		throw invalid_argument("Added string is empty.");
 	pattern_.append(text.beginning(), text.end());
 	for(const Char* p = text.beginning(); p < text.end(); ++p)

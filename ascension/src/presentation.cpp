@@ -211,17 +211,17 @@ void Presentation::documentChanged(const Document&, const DocumentChange& change
 		insertedLines(change.insertedRegion().first.line, change.insertedRegion().second.line);
 	for(list<Hyperlinks*>::iterator i(hyperlinks_.begin()), e(hyperlinks_.end()); i != e; ) {
 		const length_t line = (*i)->lineNumber;
-		if(line == insertedLines.beginning() || erasedLines.includes(line)) {
+		if(line == insertedLines.beginning() || includes(erasedLines, line)) {
 			for(size_t j = 0; j < (*i)->numberOfHyperlinks; ++j)
 				delete (*i)->hyperlinks[j];
 			delete *i;
 			i = hyperlinks_.erase(i);
 			continue;
 		} else {
-			if(line >= erasedLines.end() && !erasedLines.isEmpty())
-				(*i)->lineNumber -= erasedLines.length();
-			if(line >= insertedLines.end() && !insertedLines.isEmpty())
-				(*i)->lineNumber += insertedLines.length();
+			if(line >= erasedLines.end() && !isEmpty(erasedLines))
+				(*i)->lineNumber -= length(erasedLines);
+			if(line >= insertedLines.end() && !isEmpty(insertedLines))
+				(*i)->lineNumber += length(insertedLines);
 		}
 		++i;
 	}

@@ -182,11 +182,21 @@ void TextRenderer::addDefaultFontListener(DefaultFontListener& listener) {
  * @param lines The first and second lines
  * @return The distance between the two baselines in pixels
  */
-Scalar TextRenderer::baselineDistance(const Range<length_t>& lines) const {
-	if(lines.isEmpty())
-		return 0;
+Scalar TextRenderer::baselineDistance(const Range<VisualLine>& lines) const {
 	// TODO: This code does not consider 'line-stacking-strategy'.
-	return defaultFont()->metrics().linePitch * lines.length();
+	if(lines.beginning().line == lines.end().line) {
+		if(lines.beginning().subline == lines.end().subline)
+			return 0;
+		const TextLayout& layout = layouts().at(lines.beginning().line);
+		return layout.baseline(lines.end().subline) - layout.baseline(lines.beginning().subline);
+	} else {
+		const TextLayout* layout = &layouts().at(lines.beginning().line);
+		Scalar bpd = layout->extent().end() - layout->baseline(lines.beginning().subline);
+		for(length_t line = lines.beginning().line + 1; line < lines.end().line; ++line)
+			bpd += length(layouts().at(line).extent());
+		layout = &layouts().at(lines.end().line);
+		return bpd += layout->baseline(lines.end().subline) - layout->extent().beginning();
+	}
 }
 
 /**
