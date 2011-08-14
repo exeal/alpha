@@ -286,7 +286,11 @@ k::Position TextViewer::characterForLocalPoint(const NativePoint& p, TextLayout:
 	// determine the logical line
 	length_t subline;
 	bool outside;
-	mapViewportBpdToLine(geometry::y(p), &result.line, &subline, &outside);
+	{
+		const VisualLine temp(mapViewportBpdToLine(geometry::y(p), &outside));
+		result.line = temp.line;
+		subline = temp.subline;
+	}
 	if(abortNoCharacter && outside)
 		return k::Position();
 	const TextLayout& layout = renderer_->layouts()[result.line];
@@ -401,7 +405,7 @@ void TextViewer::documentChanged(const k::Document&, const k::DocumentChange& ch
 	}
 
 	// slide the frozen lines to be drawn
-	if(isFrozen() && !freezeRegister_.linesToRedraw().isEmpty()) {
+	if(isFrozen() && !isEmpty(freezeRegister_.linesToRedraw())) {
 		length_t b = freezeRegister_.linesToRedraw().beginning();
 		length_t e = freezeRegister_.linesToRedraw().end();
 		if(change.erasedRegion().first.line != change.erasedRegion().second.line) {
@@ -871,19 +875,19 @@ void TextViewer::lockScroll(bool unlock /* = false */) {
  */
 Scalar TextViewer::mapLineToViewportBpd(length_t line, bool fullSearch) const {
 	const PhysicalFourSides<Scalar> spaces(spaceWidths());
-	if(line == scrollInfo_.firstVisibleLine) {
-		if(scrollInfo_.firstVisibleSubline == 0)
+	if(line == scrollInfo_.firstVisibleLine.line) {
+		if(scrollInfo_.firstVisibleLine.subline == 0)
 			return spaces.top;
 		else
 			return fullSearch ? spaces.top
-				- static_cast<Scalar>(renderer_->defaultFont()->metrics().linePitch() * scrollInfo_.firstVisibleSubline) : numeric_limits<Scalar>::min();
-	} else if(line > scrollInfo_.firstVisibleLine) {
+				- static_cast<Scalar>(renderer_->defaultFont()->metrics().linePitch() * scrollInfo_.firstVisibleLine.subline) : numeric_limits<Scalar>::min();
+	} else if(line > scrollInfo_.firstVisibleLine.line) {
 		const Scalar lineSpan = renderer_->defaultFont()->metrics().linePitch();
 		const NativeRectangle clientBounds(bounds(false));
 		Scalar y = spaces.top;
 		y += lineSpan * static_cast<Scalar>(
-			renderer_->layouts().numberOfSublinesOfLine(scrollInfo_.firstVisibleLine) - scrollInfo_.firstVisibleSubline);
-		for(length_t i = scrollInfo_.firstVisibleLine + 1; i < line; ++i) {
+			renderer_->layouts().numberOfSublinesOfLine(scrollInfo_.firstVisibleLine.line) - scrollInfo_.firstVisibleLine.subline);
+		for(length_t i = scrollInfo_.firstVisibleLine.line + 1; i < line; ++i) {
 			y += lineSpan * static_cast<Scalar>(renderer_->layouts().numberOfSublinesOfLine(i));
 			if(y >= geometry::dy(clientBounds) && !fullSearch)
 				return numeric_limits<Scalar>::max();
@@ -893,8 +897,8 @@ Scalar TextViewer::mapLineToViewportBpd(length_t line, bool fullSearch) const {
 		return numeric_limits<Scalar>::min();
 	else {
 		const Scalar linePitch = renderer_->defaultFont()->metrics().linePitch();
-		Scalar y = spaces.top - static_cast<Scalar>(linePitch * scrollInfo_.firstVisibleSubline);
-		for(length_t i = scrollInfo_.firstVisibleLine - 1; ; --i) {
+		Scalar y = spaces.top - static_cast<Scalar>(linePitch * scrollInfo_.firstVisibleLine.subline);
+		for(length_t i = scrollInfo_.firstVisibleLine.line - 1; ; --i) {
 			y -= static_cast<Scalar>(renderer_->layouts().numberOfSublinesOfLine(i) * linePitch);
 			if(i == line)
 				break;
@@ -912,16 +916,15 @@ Scalar TextViewer::mapLineToViewportBpd(length_t line, bool fullSearch) const {
  * @param[out] snapped @c true if there was not a line at @a bpd. Optional
  * @see #BaselineIterator, #mapLineToViewportBpd, TextRenderer#offsetVisualLine
  */
-void TextViewer::mapLocalPointToLine(
-		const graphics::NativePoint& p, length_t* line, length_t* subline, bool* snapped /* = 0 */) const /*throw()*/ {
+VisualLine TextViewer::mapLocalPointToLine(const graphics::NativePoint& p, bool* snapped /* = 0 */) const /*throw()*/ {
 	const NativeRectangle localBounds(bounds(false));
 	switch(utils::writingMode(*this).blockFlowDirection) {
 		case WritingModeBase::HORIZONTAL_TB:
-			return mapViewportBpdToLine(geometry::y(p) - localBounds.top, line, subline, snapped);
+			return mapViewportBpdToLine(geometry::y(p) - localBounds.top, snapped);
 		case WritingModeBase::VERTICAL_RL:
-			return mapViewportBpdToLine(localBounds.right - geometry::x(p), line, subline, snapped);
+			return mapViewportBpdToLine(localBounds.right - geometry::x(p), snapped);
 		case WritingModeBase::VERTICAL_LR:
-			return mapViewportBpdToLine(geometry::x(p) - localBounds.left, line, subline, snapped);
+			return mapViewportBpdToLine(geometry::x(p) - localBounds.left, snapped);
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
@@ -932,15 +935,11 @@ void TextViewer::mapLocalPointToLine(
  * subline offset. The results are snapped to the first/last visible line in the viewport (this
  * includes partially visible line) if the given distance addresses outside of the viewport.
  * @param bpd The distance from the before-edge of the viewport in pixels
- * @param[out] line The logical line index. Can be @c null if not needed
- * @param[out] subline The offset from the first line in @a line. Can be @c null if not needed
  * @param[out] snapped @c true if there was not a line at @a bpd. Optional
- * @throw NullPointerException Both @a line and @a subline are @c null
+ * @return The logical and visual line numbers
  * @see #BaselineIterator, TextRenderer#offsetVisualLine
  */
-void TextViewer::mapViewportBpdToLine(Scalar bpd, length_t* line, length_t* subline, bool* snapped /* = 0 */) const /*throw()*/ {
-	if(line == 0 && subline == 0)
-		throw NullPointerException("line and subline");
+VisualLine TextViewer::mapViewportBpdToLine(Scalar bpd, bool* snapped /* = 0 */) const /*throw()*/ {
 	const WritingMode<false> writingMode(utils::writingMode(*this));
 	const PhysicalFourSides<Scalar>& physicalSpaces = spaceWidths();
 	AbstractFourSides<Scalar> abstractSpaces;
@@ -949,9 +948,9 @@ void TextViewer::mapViewportBpdToLine(Scalar bpd, length_t* line, length_t* subl
 	const Scalar after = (WritingModeBase::isHorizontal(writingMode.blockFlowDirection) ?
 		geometry::dy(bounds(false)) : geometry::dx(bounds(false))) - abstractSpaces.after;
 
-	pair<length_t, length_t> result;	// 'first' for 'line', 'second' for 'subline'
-	bool outside;						// for 'snapped'
-	firstVisibleLine(&result.first, 0, &result.second);
+	VisualLine result;
+	bool outside;	// for 'snapped'
+	firstVisibleLine(&result, 0);
 	if(bpd <= before)
 		outside = bpd != before;
 	else {
@@ -959,31 +958,28 @@ void TextViewer::mapViewportBpdToLine(Scalar bpd, length_t* line, length_t* subl
 		if(beyondAfter)
 			bpd = after;
 		Scalar lineBefore = before;
-		const TextLayout* layout = &textRenderer().layouts()[result.first];
-		while(result.second > 0)	// back to the first subline
-			lineBefore -= layout->lineMetrics(--result.second).height();
+		const TextLayout* layout = &textRenderer().layouts()[result.line];
+		while(result.subline > 0)	// back to the first subline
+			lineBefore -= layout->lineMetrics(--result.subline).height();
 		while(true) {
 			assert(bpd >= lineBefore);
 			Scalar lineAfter = lineBefore;
 			for(length_t sl = 0; sl < layout->numberOfLines(); ++sl)
 				lineAfter += layout->lineMetrics(sl).height();
 			if(bpd < lineAfter) {
-				result.second = layout->locateLine(bpd - lineBefore, outside);
+				result.subline = layout->locateLine(bpd - lineBefore, outside);
 				if(!outside)
 					break;	// bpd is this line
-				assert(result.second == layout->numberOfLines() - 1);
+				assert(result.subline == layout->numberOfLines() - 1);
 			}
-			layout = &textRenderer().layouts()[++result.first];
+			layout = &textRenderer().layouts()[++result.line];
 			lineBefore = lineAfter;
 		}
 		outside = beyondAfter;
 	}
-	if(line != 0)
-		*line = result.first;
-	if(subline != 0)
-		*subline = result.second;
 	if(snapped != 0)
 		*snapped = outside;
+	return result;
 }
 
 /// @see CaretStateListener#matchBracketsChanged
@@ -1235,7 +1231,7 @@ void TextViewer::redrawLines(const Range<length_t>& lines) {
 		return;
 	}
 
-	if(lines.end() - 1 < scrollInfo_.firstVisibleLine)
+	if(lines.end() - 1 < scrollInfo_.firstVisibleLine.line)
 		return;
 
 #ifdef _DEBUG
@@ -1255,7 +1251,7 @@ void TextViewer::redrawLines(const Range<length_t>& lines) {
 	BaselineIterator baseline(*this, lines.beginning(), false);
 	if(*baseline != numeric_limits<Scalar>::min())
 		abstractBounds.before = *baseline - textRenderer().layouts().at(lines.beginning()).lineMetrics(0).ascent();
-	baseline += lines.length();
+	baseline += length(lines);
 	if(*baseline != numeric_limits<Scalar>::max())
 		abstractBounds.after = *baseline + textRenderer().layouts().at(baseline.line()).extent().end();
 	NativeRectangle boundsToRedraw(viewport);
@@ -1302,7 +1298,7 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 		dy = max(dy, -scrollInfo_.vertical.position);
 		if(dy != 0) {
 			scrollInfo_.vertical.position += dy;
-			renderer_->layouts().offsetVisualLine(scrollInfo_.firstVisibleLine, scrollInfo_.firstVisibleSubline, dy);
+			renderer_->layouts().offsetVisualLine(scrollInfo_.firstVisibleLine, dy);
 			if(!isFrozen())
 				verticalScrollBar().setPosition(scrollInfo_.vertical.position);
 		}
@@ -1367,10 +1363,10 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 		// scroll the vertical ruler
 		if(dy != 0) {
 			if(rulerPainter_->configuration().alignment == ALIGN_LEFT)
-				geometry::range<geometry::X_COORDINATE>(clipBounds) = makeRange(
+				geometry::range<geometry::X_COORDINATE>(clipBounds) = makeRange<Scalar>(
 					geometry::left(clipBounds), geometry::left(clipBounds) + rulerPainter_->width());
 			else
-				geometry::range<geometry::X_COORDINATE>(clipBounds) = makeRange(
+				geometry::range<geometry::X_COORDINATE>(clipBounds) = makeRange<Scalar>(
 					geometry::right(clipBounds) - rulerPainter_->width(), geometry::right(clientBounds));
 			::ScrollWindowEx(identifier().get(),
 				0, -dy * scrollRate(false) * renderer_->defaultFont()->metrics().linePitch(), 0, &clipBounds, 0, 0, SW_INVALIDATE);
@@ -1446,8 +1442,7 @@ void TextViewer::scrollTo(length_t line, bool redraw) {
 		return;
 	if(line >= document().numberOfLines())
 		throw k::BadPositionException(k::Position(line, 0));
-	scrollInfo_.firstVisibleLine = line;
-	scrollInfo_.firstVisibleSubline = 0;
+	scrollInfo_.firstVisibleLine = VisualLine(line, 0);
 	length_t visualLine;
 	if(configuration_.lineWrap.wraps())
 		visualLine = line;
@@ -1589,7 +1584,7 @@ void TextViewer::unfreeze() {
 			if(scrollInfo_.changed) {
 				updateScrollBars();
 				scheduleRedraw(false);
-			} else if(!linesToRedraw.isEmpty)())
+			} else if(!isEmpty(linesToRedraw))
 				redrawLines(linesToRedraw);
 
 			rulerPainter_->update();
@@ -1646,7 +1641,7 @@ void TextViewer::updateScrollBars() {
 	assert(ASCENSION_GET_SCROLL_MINIMUM(scrollInfo_.horizontal) > 0 || scrollInfo_.horizontal.position == 0);
 	if(!isFrozen()) {
 		ScrollBar& scrollBar = horizontalScrollBar();
-		scrollBar.setRange(makeRange(0, configuration_.lineWrap.wrapsAtWindowEdge() ? 0 : scrollInfo_.horizontal.maximum));
+		scrollBar.setRange(makeRange<int>(0, configuration_.lineWrap.wrapsAtWindowEdge() ? 0 : scrollInfo_.horizontal.maximum));
 		scrollBar.setPageStep(scrollInfo_.horizontal.pageSize);
 		scrollBar.setPosition(scrollInfo_.horizontal.position);
 //		win32::AutoZeroSize<SCROLLINFO> scroll;
@@ -1663,7 +1658,7 @@ void TextViewer::updateScrollBars() {
 	// validate scroll position
 	if(minimum <= 0) {
 		scrollInfo_.vertical.position = 0;
-		scrollInfo_.firstVisibleLine = scrollInfo_.firstVisibleSubline = 0;
+		scrollInfo_.firstVisibleLine = VisualLine(0, 0);
 		if(!isFrozen()) {
 			scheduleRedraw(false);
 			updateCaretPosition();
@@ -1692,17 +1687,17 @@ void TextViewer::updateScrollBars() {
 /// @see VisualLinesListener#visualLinesDeleted
 void TextViewer::visualLinesDeleted(const Range<length_t>& lines, length_t sublines, bool longestLineChanged) /*throw()*/ {
 	scrollInfo_.changed = true;
-	if(lines.end() < scrollInfo_.firstVisibleLine) {	// 可視領域より前が削除された
-		scrollInfo_.firstVisibleLine -= lines.length();
+	if(lines.end() < scrollInfo_.firstVisibleLine.line) {	// 可視領域より前が削除された
+		scrollInfo_.firstVisibleLine.line -= length(lines);
 		scrollInfo_.vertical.position -= static_cast<int>(sublines);
 		scrollInfo_.vertical.maximum -= static_cast<int>(sublines);
 		repaintRuler();
-	} else if(lines.beginning() > scrollInfo_.firstVisibleLine
-			|| (lines.beginning() == scrollInfo_.firstVisibleLine && scrollInfo_.firstVisibleSubline == 0)) {	// 可視先頭行以降が削除された
+	} else if(lines.beginning() > scrollInfo_.firstVisibleLine.line
+			|| (lines.beginning() == scrollInfo_.firstVisibleLine.line && scrollInfo_.firstVisibleLine.subline == 0)) {	// 可視先頭行以降が削除された
 		scrollInfo_.vertical.maximum -= static_cast<int>(sublines);
 		redrawLine(lines.beginning(), true);
 	} else {	// 可視先頭行を含む範囲が削除された
-		scrollInfo_.firstVisibleLine = lines.beginning();
+		scrollInfo_.firstVisibleLine.line = lines.beginning();
 		scrollInfo_.updateVertical(*this);
 		redrawLine(lines.beginning(), true);
 	}
@@ -1713,17 +1708,17 @@ void TextViewer::visualLinesDeleted(const Range<length_t>& lines, length_t subli
 /// @see VisualLinesListener#visualLinesInserted
 void TextViewer::visualLinesInserted(const Range<length_t>& lines) /*throw()*/ {
 	scrollInfo_.changed = true;
-	if(lines.end() < scrollInfo_.firstVisibleLine) {	// 可視領域より前に挿入された
-		scrollInfo_.firstVisibleLine += lines.length();
-		scrollInfo_.vertical.position += static_cast<int>(lines.length());
-		scrollInfo_.vertical.maximum += static_cast<int>(lines.length());
+	if(lines.end() < scrollInfo_.firstVisibleLine.line) {	// 可視領域より前に挿入された
+		scrollInfo_.firstVisibleLine.line += length(lines);
+		scrollInfo_.vertical.position += static_cast<int>(length(lines));
+		scrollInfo_.vertical.maximum += static_cast<int>(length(lines));
 		repaintRuler();
-	} else if(lines.beginning() > scrollInfo_.firstVisibleLine
-			|| (lines.beginning() == scrollInfo_.firstVisibleLine && scrollInfo_.firstVisibleSubline == 0)) {	// 可視先頭行以降に挿入された
-		scrollInfo_.vertical.maximum += static_cast<int>(lines.length());
+	} else if(lines.beginning() > scrollInfo_.firstVisibleLine.line
+			|| (lines.beginning() == scrollInfo_.firstVisibleLine.line && scrollInfo_.firstVisibleLine.subline == 0)) {	// 可視先頭行以降に挿入された
+		scrollInfo_.vertical.maximum += static_cast<int>(length(lines));
 		redrawLine(lines.beginning(), true);
 	} else {	// 可視先頭行の前後に挿入された
-		scrollInfo_.firstVisibleLine += lines.length();
+		scrollInfo_.firstVisibleLine.line += length(lines);
 		scrollInfo_.updateVertical(*this);
 		redrawLine(lines.beginning(), true);
 	}
@@ -1736,12 +1731,12 @@ void TextViewer::visualLinesModified(const Range<length_t>& lines,
 		redrawLines(lines);
 	else {
 		scrollInfo_.changed = true;
-		if(lines.end() < scrollInfo_.firstVisibleLine) {	// 可視領域より前が変更された
+		if(lines.end() < scrollInfo_.firstVisibleLine.line) {	// 可視領域より前が変更された
 			scrollInfo_.vertical.position += sublinesDifference;
 			scrollInfo_.vertical.maximum += sublinesDifference;
 			repaintRuler();
-		} else if(lines.beginning() > scrollInfo_.firstVisibleLine
-				|| (lines.beginning() == scrollInfo_.firstVisibleLine && scrollInfo_.firstVisibleSubline == 0)) {	// 可視先頭行以降が変更された
+		} else if(lines.beginning() > scrollInfo_.firstVisibleLine.line
+				|| (lines.beginning() == scrollInfo_.firstVisibleLine.line && scrollInfo_.firstVisibleLine.subline == 0)) {	// 可視先頭行以降が変更された
 			scrollInfo_.vertical.maximum += sublinesDifference;
 			redrawLine(lines.beginning(), true);
 		} else {	// 可視先頭行を含む範囲が変更された
@@ -1825,8 +1820,7 @@ void TextViewer::BaselineIterator::advance(difference_type n) {
 			&& (baseline_.first == numeric_limits<Scalar>::min() || baseline_.first == numeric_limits<Scalar>::max())) {
 		if((n > 0 && baseline_.first == numeric_limits<Scalar>::max())
 				|| (n < 0 && baseline_.first == numeric_limits<Scalar>::min())) {
-			line_ = destination;
-			subline_ = 0;
+			line_ = VisualLine(destination, 0);
 			return;
 		}
 		swap(*this, BaselineIterator(viewer_, destination, tracksOutOfViewport()));
@@ -1841,12 +1835,12 @@ void TextViewer::BaselineIterator::advance(difference_type n) {
 			(geometry::dy(clientBounds) - spaces.top - spaces.bottom) : (geometry::dx(clientBounds) - spaces.left - spaces.right);
 	}
 
-	length_t ln = line(), subline = subline_;
+	VisualLine i(line_);
 	Scalar newBaseline = baseline_.first;
 	const TextLayout* layout = &viewer_.textRenderer().layouts()[line()];
 	if(n > 0) {
-		newBaseline += layout->lineMetrics(subline_).descent();
-		for(length_t ln = line(), subline = subline_; ; ) {
+		newBaseline += layout->lineMetrics(line_.subline).descent();
+		for(length_t ln = line(), subline = line_.subline; ; ) {
 			if(++subline == layout->numberOfLines()) {
 				subline = 0;
 				if(++ln == viewer_.document().numberOfLines()) {
@@ -1865,8 +1859,8 @@ void TextViewer::BaselineIterator::advance(difference_type n) {
 			}
 		}
 	} else {	// n < 0
-		newBaseline -= layout->lineMetrics(subline_).ascent();
-		for(length_t ln = line(), subline = subline_; ; ) {
+		newBaseline -= layout->lineMetrics(line_.subline).ascent();
+		for(length_t ln = line(), subline = line_.subline; ; ) {
 			if(subline == 0) {
 				if(ln-- == 0) {
 					subline = 0;
@@ -1904,8 +1898,7 @@ void TextViewer::BaselineIterator::advance(difference_type n) {
 	}
 
 	// commit
-	line_ = destination;
-	subline_ = 0;
+	line_ = VisualLine(destination, 0);
 	baseline_ = make_pair(newBaseline, newAxis);
 }
 
@@ -1916,9 +1909,9 @@ const TextViewer::BaselineIterator::reference TextViewer::BaselineIterator::curr
 
 /// @internal Moves this iterator to the first visible line in the viewport.
 void TextViewer::BaselineIterator::initializeWithFirstVisibleLine() {
-	length_t firstVisibleLine, firstVisibleSubline;
-	viewer_.firstVisibleLine(&firstVisibleLine, 0, &firstVisibleSubline);
-	const Scalar baseline = viewer_.textRenderer().layouts().at(firstVisibleLine).lineMetrics(firstVisibleSubline).ascent();
+	VisualLine firstVisibleLine;
+	viewer_.firstVisibleLine(&firstVisibleLine, 0);
+	const Scalar baseline = viewer_.textRenderer().layouts().at(firstVisibleLine.line).lineMetrics(firstVisibleLine.subline).ascent();
 	NativePoint axis;
 	const NativeRectangle clientBounds(viewer_.bounds(false));
 	switch(utils::writingMode(viewer_).blockFlowDirection) {
@@ -1937,7 +1930,6 @@ void TextViewer::BaselineIterator::initializeWithFirstVisibleLine() {
 
 	// commit
 	line_ = firstVisibleLine;
-	subline_ = firstVisibleSubline;
 	baseline_ = make_pair(baseline, axis);
 }
 
@@ -2078,7 +2070,7 @@ TextViewer::SpacePainter::SpacePainter() /*throw()*/ : viewerBounds_(
 	computedValues_.left = computedValues_.top = computedValues_.right = computedValues_.bottom = 0;
 }
 
-TextViewer::SpacePainter::update() {
+void TextViewer::SpacePainter::update() {
 }
 
 
@@ -2227,9 +2219,9 @@ void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, char bars, bool
 void TextViewer::ScrollInfo::updateVertical(const TextViewer& viewer) /*throw()*/ {
 	const LineLayoutVector& layouts = viewer.textRenderer().layouts();
 	vertical.maximum = static_cast<int>(layouts.numberOfVisualLines());
-	firstVisibleLine = min(firstVisibleLine, viewer.document().numberOfLines() - 1);
-	firstVisibleSubline = min(layouts.numberOfSublinesOfLine(firstVisibleLine) - 1, firstVisibleSubline);
-	vertical.position = static_cast<int>(layouts.mapLogicalLineToVisualLine(firstVisibleLine) + firstVisibleSubline);
+	firstVisibleLine.line = min(firstVisibleLine.line, viewer.document().numberOfLines() - 1);
+	firstVisibleLine.subline = min(layouts.numberOfSublinesOfLine(firstVisibleLine.line) - 1, firstVisibleLine.subline);
+	vertical.position = static_cast<int>(layouts.mapLogicalLineToVisualLine(firstVisibleLine.line) + firstVisibleLine.subline);
 }
 
 
@@ -2250,6 +2242,7 @@ VirtualBox::VirtualBox(const TextViewer& viewer, const k::Region& region) /*thro
  * @return @c true If the point is on the virtual box
  */
 bool VirtualBox::isPointOver(const graphics::NativePoint& p) const /*throw()*/ {
+	// TODO: This code can't handle vertical writing-mode.
 //	assert(viewer_.isWindow());
 	if(viewer_.hitTest(p) != TextViewer::CONTENT_AREA)	// ignore if not in content area
 		return false;
@@ -2260,11 +2253,10 @@ bool VirtualBox::isPointOver(const graphics::NativePoint& p) const /*throw()*/ {
 	// about y-coordinate
 	const Point& top = beginning();
 	const Point& bottom = end();
-	length_t line, subline;
-	viewer_.mapClientYToLine(geometry::y(p), &line, &subline);	// $friendly-access
-	if(line < top.line || (line == top.line && subline < top.subline))
+	const VisualLine line(viewer_.mapViewportBpdToLine(geometry::y(p)));	// $friendly-access
+	if(line < top.line)
 		return false;
-	else if(line > bottom.line || (line == bottom.line && subline > bottom.subline))
+	else if(line > bottom.line)
 		return false;
 	else
 		return true;
@@ -2272,27 +2264,25 @@ bool VirtualBox::isPointOver(const graphics::NativePoint& p) const /*throw()*/ {
 
 /**
  * Returns the range which the box overlaps with in specified visual line.
- * @param line the logical line
- * @param subline the visual subline
+ * @param line The line
  * @param[out] range the range
  * @return @c true if the box and the visual line overlap
  */
-bool VirtualBox::overlappedSubline(length_t line, length_t subline, Range<length_t>& range) const /*throw()*/ {
+bool VirtualBox::overlappedSubline(const VisualLine& line, Range<length_t>& range) const /*throw()*/ {
 	assert(viewer_.isWindow());
 	const Point& top = beginning();
 	const Point& bottom = end();
-	if(line < top.line || (line == top.line && subline < top.subline)	// out of the region
-			|| line > bottom.line || (line == bottom.line && subline > bottom.subline))
+	if(line < top.line || line > bottom.line)	// out of the region
 		return false;
 	else {
 		const TextRenderer& renderer = viewer_.textRenderer();
-		const TextLayout& layout = renderer.layouts().at(line);
+		const TextLayout& layout = renderer.layouts().at(line.line);
 		range = Range<length_t>(
-			layout.offset(geometry::make<NativePoint>(points_[0].ipd - renderer.lineIndent(line, 0),
-				static_cast<Scalar>(renderer.defaultFont()->metrics().linePitch() * subline))).first,
-			layout.offset(geometry::make<NativePoint>(points_[1].ipd - renderer.lineIndent(line, 0),
-				static_cast<Scalar>(renderer.defaultFont()->metrics().linePitch() * subline))).first);
-		return !range.isEmpty();
+			layout.offset(geometry::make<NativePoint>(points_[0].ipd - renderer.lineIndent(line.line, 0),
+				static_cast<Scalar>(renderer.defaultFont()->metrics().linePitch() * line.subline))).first,
+			layout.offset(geometry::make<NativePoint>(points_[1].ipd - renderer.lineIndent(line.line, 0),
+				static_cast<Scalar>(renderer.defaultFont()->metrics().linePitch() * line.subline))).first);
+		return !isEmpty(range);
 	}
 }
 
@@ -2302,14 +2292,14 @@ bool VirtualBox::overlappedSubline(length_t line, length_t subline, Range<length
  */
 void VirtualBox::update(const k::Region& region) /*throw()*/ {
 	const TextRenderer& r = viewer_.textRenderer();
-	const TextLayout* layout = &r.layouts().at(points_[0].line = region.first.line);
+	const TextLayout* layout = &r.layouts().at(points_[0].line.line = region.first.line);
 	graphics::NativePoint location(layout->location(region.first.column));
-	points_[0].ipd = geometry::x(location) + r.lineIndent(points_[0].line, 0);
-	points_[0].subline = geometry::y(location) / r.defaultFont()->metrics().linePitch();
-	layout = &r.layouts().at(points_[1].line = region.second.line);
+	points_[0].ipd = geometry::x(location) + r.lineIndent(points_[0].line.line, 0);
+	points_[0].line.subline = geometry::y(location) / r.defaultFont()->metrics().linePitch();
+	layout = &r.layouts().at(points_[1].line.line = region.second.line);
 	location = layout->location(region.second.column);
-	points_[1].ipd = geometry::x(location) + r.lineIndent(points_[1].line, 0);
-	points_[1].subline = geometry::y(location) / r.defaultFont()->metrics().linePitch();
+	points_[1].ipd = geometry::x(location) + r.lineIndent(points_[1].line.line, 0);
+	points_[1].line.subline = geometry::y(location) / r.defaultFont()->metrics().linePitch();
 }
 
 
@@ -2781,11 +2771,11 @@ NativeSize DefaultMouseInputStrategy::calculateDnDScrollOffset(const TextViewer&
 	// On Win32, oleidl.h defines the value named DD_DEFSCROLLINSET, but...
 
 	geometry::Coordinate<NativeSize>::Type dx = 0, dy = 0;
-	if(makeRange(geometry::top(clientBounds), geometry::top(clientBounds) + spaces.top).includes(geometry::y(p)))
+	if(includes(makeRange(geometry::top(clientBounds), geometry::top(clientBounds) + spaces.top), geometry::y(p)))
 		dy = -1;
 	else if(geometry::y(p) >= geometry::bottom(clientBounds) - spaces.bottom && geometry::y(p) < geometry::bottom(clientBounds))
 		dy = +1;
-	if(makeRange(geometry::left(clientBounds), geometry::left(clientBounds) + spaces.left).includes(geometry::x(p)))
+	if(includes(makeRange(geometry::left(clientBounds), geometry::left(clientBounds) + spaces.left), geometry::x(p)))
 		dx = -3;	// viewer_->numberOfVisibleColumns()
 	else if(geometry::x(p) >= geometry::right(clientBounds) - spaces.right && geometry::x(p) < geometry::right(clientBounds))
 		dx = +3;	// viewer_->numberOfVisibleColumns()
