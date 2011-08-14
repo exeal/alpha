@@ -53,6 +53,17 @@ namespace ascension {
 				friend class LineLayoutVector;
 			};
 
+			struct VisualLine : private detail::LessThanComparable<VisualLine>, private detail::EqualityComparable<VisualLine> {
+				length_t line;		///< The logical line number.
+				length_t subline;	///< The visual offset in the logical line.
+			};
+			inline bool operator==(const VisualLine& lhs, const VisualLine& rhs) /*throw()*/ {
+				return lhs.line == rhs.line && lhs.subline == rhs.subline;
+			}
+			inline bool operator<(const VisualLine& lhs, const VisualLine& rhs) /*throw()*/ {
+				return lhs.line < rhs.line || (lhs.line == rhs.line && lhs.subline < rhs.subline);
+			}
+
 			/**
 			 * Manages a vector of layout (@c TextLayout) and holds the longest line and the number
 			 * of the visual lines.
@@ -85,8 +96,7 @@ namespace ascension {
 					const kernel::Position& position, length_t* column) const;
 //				length_t mapVisualLineToLogicalLine(length_t line, length_t* subline) const;
 //				kernel::Position mapVisualPositionToLogicalPosition(const kernel::Position& position) const;
-				void offsetVisualLine(length_t& line, length_t& subline,
-					signed_length_t offset, bool* overflowedOrUnderflowed = 0) const /*throw()*/;
+				bool offsetVisualLine(VisualLine& line, signed_length_t offset) const /*throw()*/;
 				// invalidations
 				typedef std::pair<length_t, const TextLayout*> LineLayout;
 				void invalidate() /*throw()*/;
