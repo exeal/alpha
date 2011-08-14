@@ -66,18 +66,15 @@ namespace ascension {
 		public:
 			VirtualBox(const TextViewer& viewer, const kernel::Region& region) /*throw()*/;
 			bool isPointOver(const graphics::NativePoint& p) const /*throw()*/;
-			bool overlappedSubline(length_t line, length_t subline, Range<length_t>& range) const /*throw()*/;
+			bool overlappedSubline(const graphics::font::VisualLine& line, Range<length_t>& range) const /*throw()*/;
 			void update(const kernel::Region& region) /*throw()*/;
 		private:
 			struct Point {
-				length_t line;			// logical line number
-				length_t subline;		// line 行内の折り返し行オフセット
+				graphics::font::VisualLine line;
 				graphics::Scalar ipd;	// distance from left side of layout
 			} points_[2];
 			const TextViewer& viewer_;
-			const Point& beginning() const /*throw()*/ {
-				return points_[(points_[0].line < points_[1].line
-					|| (points_[0].line == points_[1].line && points_[0].subline <= points_[1].subline)) ? 0 : 1];}
+			const Point& beginning() const /*throw()*/ {return points_[(points_[0].line <= points_[1].line) ? 0 : 1];}
 			const Point& end() const /*throw()*/ {return points_[(&beginning() == &points_[0]) ? 1 : 0];}
 			graphics::Scalar startEdge() const /*throw()*/ {return std::min(points_[0].ipd, points_[1].ipd);}
 			graphics::Scalar endEdge() const /*throw()*/ {return std::max(points_[0].ipd, points_[1].ipd);}
@@ -418,7 +415,7 @@ namespace ascension {
 			private:
 				TextViewer& viewer_;
 				const bool tracksOutOfViewport_;
-				length_t line_, subline_;
+				graphics::font::VisualLine line_;
 				std::pair<graphics::Scalar, graphics::NativePoint> baseline_;
 			};
 
@@ -509,7 +506,7 @@ namespace ascension {
 				bool fullSearchBpd, graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING) const;
 			// viewport
 			graphics::NativeRectangle contentRectangle() const /*throw()*/;
-			void firstVisibleLine(length_t* logicalLine, length_t* visualLine, length_t* visualSubline) const /*throw()*/;
+			void firstVisibleLine(graphics::font::VisualLine* line, length_t* viewportOffset) const /*throw()*/;
 			HitTestResult hitTest(const graphics::NativePoint& pt) const;
 			length_t numberOfVisibleLines() const /*throw()*/;
 			length_t numberOfVisibleColumns() const /*throw()*/;
@@ -525,10 +522,10 @@ namespace ascension {
 			void handleGUICharacterInput(CodePoint c);
 			void initialize();
 //			graphics::Scalar mapLineToViewportBpd(length_t line, bool fullSearch) const;
-			void mapLocalPointToLine(const graphics::NativePoint& p,
-				length_t* line, length_t* subline, bool* snapped = 0) const /*throw()*/;
-			void mapViewportBpdToLine(graphics::Scalar bpd,
-				length_t* line, length_t* subline, bool* snapped = 0) const /*throw()*/;
+			graphics::font::VisualLine mapLocalPointToLine(
+				const graphics::NativePoint& p, bool* snapped = 0) const /*throw()*/;
+			graphics::font::VisualLine mapViewportBpdToLine(
+				graphics::Scalar bpd, bool* snapped = 0) const /*throw()*/;
 			void recreateCaret();
 			void repaintRuler();
 			void updateCaretPosition();
@@ -752,10 +749,10 @@ namespace ascension {
 					unsigned int pageSize;	// SCROLLINFO.nPage
 //					unsigned long rate;		// 最小スクロール量が何文字 (何行) に相当するか (普通は 1)
 				} horizontal, vertical;
-				length_t firstVisibleLine, firstVisibleSubline;
+				graphics::font::VisualLine firstVisibleLine;
 				bool changed;
 				std::size_t lockCount;	// see TextViewer.lockScroll
-				ScrollInfo() /*throw()*/ : firstVisibleLine(0), firstVisibleSubline(0), changed(false), lockCount(0) {
+				ScrollInfo() /*throw()*/ : firstVisibleLine(0, 0), changed(false), lockCount(0) {
 					horizontal.position = vertical.position = 0;
 //					horizontal.rate = vertical.rate = 1;
 				}
@@ -770,7 +767,7 @@ namespace ascension {
 			public:
 				FreezeRegister() /*throw()*/ : count_(0) {freeze(); unfreeze();}
 				void freeze() /*throw()*/ {++count_;}
-				void addLinesToRedraw(const Range<length_t>& lines) {assert(isFrozen()); linesToRedraw_ = linesToRedraw_.united(lines);}
+				void addLinesToRedraw(const Range<length_t>& lines) {assert(isFrozen()); linesToRedraw_ = united(linesToRedraw_, lines);}
 				bool isFrozen() const /*throw()*/ {return count_ != 0;}
 				const Range<length_t>& linesToRedraw() const /*throw()*/ {return linesToRedraw_;}
 				void resetLinesToRedraw(const Range<length_t>& lines) {assert(isFrozen()); linesToRedraw_ = lines;}
@@ -939,18 +936,14 @@ inline void TextViewer::enableMouseInput(bool enable) {
 
 /**
  * Returns the line first visible in the viewport without before-space.
- * @param[out] logicalLine The logical index of the line. can be @c null if not needed
- * @param[out] visualLine The visual index of the line. can be @c null if not needed
- * @param[out] visualSubline The offset of @a visualLine from the first line in @a logicalLine. Can
- *                           be @c null if not needed
+ * @param[out] line The first visible logical and visual lines. Can be @c null if not needed
+ * @param[out] viewportOffset The visual index of the line. Can be @c null if not needed
  */
-inline void TextViewer::firstVisibleLine(length_t* logicalLine, length_t* visualLine, length_t* visualSubline) const /*throw()*/ {
-	if(logicalLine != 0)
-		*logicalLine = scrollInfo_.firstVisibleLine;
-	if(visualSubline != 0)
-		*visualSubline = scrollInfo_.firstVisibleSubline;
-	if(visualLine != 0)
-		*visualLine = scrollInfo_.y();
+inline void TextViewer::firstVisibleLine(graphics::font::VisualLine* line, length_t* viewportOffset) const /*throw()*/ {
+	if(line != 0)
+		*line = scrollInfo_.firstVisibleLine;
+	if(viewportOffset != 0)
+		*viewportOffset = scrollInfo_.y();	// TODO: This code can't handle vertical writing-mode.
 }
 
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
