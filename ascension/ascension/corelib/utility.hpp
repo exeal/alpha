@@ -66,6 +66,20 @@ namespace ascension {
 			T originalValue_;
 		};
 
+		/// @internal Produces @c operator&gt;, @c operator&lt;= and @c operator&gt;= from @c operator&lt;.
+		template<typename Derived>
+		struct LessThanComparable {
+			friend bool operator>(const Derived& lhs, const Derived& rhs) {return rhs < lhs;}
+			friend bool operator<=(const Derived& lhs, const Derived& rhs) {return !(rhs < lhs);}
+			friend bool operator>=(const Derived& lhs, const Derived& rhs) {return !(lhs < rhs);}
+		};
+
+		/// @internal Produces @c operator!= from @c operator==.
+		template<typename Derived>
+		struct EqualityComparable {
+			friend bool operator!=(const Derived& lhs, const Derived& rhs) {return !(lhs == rhs);}
+		};
+
 	} // namespace detail
 
 } // namespace ascension

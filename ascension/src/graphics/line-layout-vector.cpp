@@ -384,41 +384,38 @@ k::Position LineLayoutVector::mapVisualPositionToLogicalPosition(const k::Positi
 
 /**
  * Offsets visual line.
- * @param[in,out] line The logical line
- * @param[in,out] subline The visual subline
+ * @param[in,out] line The visual line
  * @param[in] offset The offset
- * @param[out] overflowedOrUnderflowed @c true if absolute value of @a offset is too large so that
- *                                     the results were snapped to the beginning or the end of the
- *                                     document. Optional
+ * @return @c false if absolute value of @a offset is too large so that the results were snapped to
+ *         the beginning or the end of the document
  */
-void LineLayoutVector::offsetVisualLine(length_t& line, length_t& subline,
-		signed_length_t offset, bool* overflowedOrUnderflowed) const /*throw()*/ {
+bool LineLayoutVector::offsetVisualLine(VisualLine& line, signed_length_t offset) const /*throw()*/ {
+	bool overflowedOrUnderflowed = false;
 	if(offset > 0) {
-		if(subline + offset < numberOfSublinesOfLine(line))
-			subline += offset;
+		if(line.subline + offset < numberOfSublinesOfLine(line.line))
+			line.subline += offset;
 		else {
 			const length_t lines = document().numberOfLines();
-			offset -= static_cast<signed_length_t>(numberOfSublinesOfLine(line) - subline) - 1;
-			while(offset > 0 && line < lines - 1)
-				offset -= static_cast<signed_length_t>(numberOfSublinesOfLine(++line));
-			subline = numberOfSublinesOfLine(line) - 1;
+			offset -= static_cast<signed_length_t>(numberOfSublinesOfLine(line.line) - line.subline) - 1;
+			while(offset > 0 && line.line < lines - 1)
+				offset -= static_cast<signed_length_t>(numberOfSublinesOfLine(++line.line));
+			line.subline = numberOfSublinesOfLine(line.line) - 1;
 			if(offset < 0)
-				subline += offset;
-			if(overflowedOrUnderflowed != 0)
-				*overflowedOrUnderflowed = offset > 0;
+				line.subline += offset;
+			overflowedOrUnderflowed = offset > 0;
 		}
 	} else if(offset < 0) {
-		if(static_cast<length_t>(-offset) <= subline)
-			subline += offset;
+		if(static_cast<length_t>(-offset) <= line.subline)
+			line.subline += offset;
 		else {
-			offset += static_cast<signed_length_t>(subline);
-			while(offset < 0 && line > 0)
-				offset += static_cast<signed_length_t>(numberOfSublinesOfLine(--line));
-			subline = (offset > 0) ? offset : 0;
-			if(overflowedOrUnderflowed != 0)
-				*overflowedOrUnderflowed = offset > 0;
+			offset += static_cast<signed_length_t>(line.subline);
+			while(offset < 0 && line.line > 0)
+				offset += static_cast<signed_length_t>(numberOfSublinesOfLine(--line.line));
+			line.subline = (offset > 0) ? offset : 0;
+			overflowedOrUnderflowed = offset > 0;
 		}
 	}
+	return !overflowedOrUnderflowed;
 }
 
 /// @see presentation#IPresentationStylistListener
