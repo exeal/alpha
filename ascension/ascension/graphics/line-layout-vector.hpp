@@ -54,6 +54,8 @@ namespace ascension {
 			};
 
 			struct VisualLine : private detail::LessThanComparable<VisualLine>, private detail::EqualityComparable<VisualLine> {
+				VisualLine() /*throw()*/ {}
+				VisualLine(length_t line, length_t subline) /*throw()*/ : line(line), subline(subline) {}
 				length_t line;		///< The logical line number.
 				length_t subline;	///< The visual offset in the logical line.
 			};
@@ -190,7 +192,7 @@ namespace ascension {
 			 * @see #oprator[], #at
 			 */
 			inline const TextLayout* LineLayoutVector::atIfCached(length_t line) const /*throw()*/ {
-				if(pendingCacheClearance_.beginning() != INVALID_INDEX && pendingCacheClearance_.includes(line))
+				if(pendingCacheClearance_.beginning() != INVALID_INDEX && includes(pendingCacheClearance_, line))
 					return 0;
 				for(std::list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 					if(i->first == line)

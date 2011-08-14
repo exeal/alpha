@@ -152,7 +152,7 @@ bool Encoder::canEncode(const StringPiece& s) {
 	else if(s.end() == 0)
 		throw NullPointerException("s.end()");
 	// TODO: Should be able to implement without heap/free store...
-	const size_t bytes = s.length() * properties().maximumNativeBytes();
+	const size_t bytes = length(s) * properties().maximumNativeBytes();
 	AutoBuffer<Byte> temp(new Byte[bytes]);
 	const Char* fromNext;
 	Byte* toNext;

@@ -122,7 +122,7 @@ namespace {
 			if(encoder.get() == 0)
 				return 0;
 			else {
-				size_t bufferLength = encoder->properties().maximumNativeBytes() * s.length();
+				size_t bufferLength = encoder->properties().maximumNativeBytes() * length(s);
 				AutoBuffer<Byte> buffer(new Byte[bufferLength + 1]);
 				Byte* toNext;
 				const Char* fromNext;

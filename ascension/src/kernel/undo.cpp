@@ -558,7 +558,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 		throw BadRegionException(region);
 	else if(isNarrowed() && !accessibleRegion().encompasses(region))
 		throw DocumentAccessViolationException();
-	else if(region.isEmpty() && (text.beginning() == 0 || text.isEmpty()))
+	else if(region.isEmpty() && (text.beginning() == 0 || isEmpty(text)))
 		return;	// nothing to do
 	ASCENSION_PREPARE_FIRST_CHANGE(rollbacking_);
 
@@ -570,32 +570,32 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 	// change the content
 	const Position& beginning = region.beginning();
 	const Position& end = region.end();
-	const Char* nextNewline = (text.beginning() != 0 && !text.isEmpty()) ?
+	const Char* nextNewline = (text.beginning() != 0 && !isEmpty(text)) ?
 		find_first_of(text.beginning(), text.end(), NEWLINE_CHARACTERS, ASCENSION_ENDOF(NEWLINE_CHARACTERS)) : 0;
 	basic_stringbuf<Char> erasedString;
 	length_t erasedStringLength = 0, insertedStringLength = 0;
 	Position endOfInsertedString;
 	try {
 		// simple cases: both erased region and inserted string are single line
-		if(beginning.line == end.line && (text.beginning() == 0 || text.isEmpty())) {	// erase in single line
+		if(beginning.line == end.line && (text.beginning() == 0 || isEmpty(text))) {	// erase in single line
 			Line& line = *lines_[beginning.line];
 			erasedString.sputn(line.text().data() + beginning.column, static_cast<streamsize>(end.column - beginning.column));
 			line.text_.erase(beginning.column, end.column - beginning.column);
 			erasedStringLength += end.column - beginning.column;
 			endOfInsertedString = beginning;
 		} else if(region.isEmpty() && nextNewline == text.end()) {	// insert single line
-			lines_[beginning.line]->text_.insert(beginning.column, text.beginning(), text.length());
-			insertedStringLength += text.length();
+			lines_[beginning.line]->text_.insert(beginning.column, text.beginning(), ascension::length(text));
+			insertedStringLength += ascension::length(text);
 			endOfInsertedString.line = beginning.line;
-			endOfInsertedString.column = beginning.column + text.length();
+			endOfInsertedString.column = beginning.column + ascension::length(text);
 		} else if(beginning.line == end.line && nextNewline == text.end()) {	// replace in single line
 			Line& line = *lines_[beginning.line];
 			erasedString.sputn(line.text().data() + beginning.column, static_cast<streamsize>(end.column - beginning.column));
-			line.text_.replace(beginning.column, end.column - beginning.column, text.beginning(), text.length());
+			line.text_.replace(beginning.column, end.column - beginning.column, text.beginning(), ascension::length(text));
 			erasedStringLength += end.column - beginning.column;
-			insertedStringLength += text.length();
+			insertedStringLength += ascension::length(text);
 			endOfInsertedString.line = beginning.line;
-			endOfInsertedString.column = beginning.column + text.length();
+			endOfInsertedString.column = beginning.column + ascension::length(text);
 		}
 		// complex case: erased region and/or inserted string are/is multi-line
 		else {
@@ -697,7 +697,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 	if(isRecordingChanges()) {
 		if(region.isEmpty())
 			undoManager_->addUndoableChange(*(new DeletionChange(Region(beginning, endOfInsertedString))));
-		else if(text.beginning() == 0 || text.isEmpty())
+		else if(text.beginning() == 0 || isEmpty(text))
 			undoManager_->addUndoableChange(*(new InsertionChange(beginning, erasedString.str())));
 		else
 			undoManager_->addUndoableChange(*(new ReplacementChange(Region(beginning, endOfInsertedString), erasedString.str())));

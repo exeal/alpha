@@ -106,7 +106,7 @@ void LineLayoutVector::clearCaches(const Range<length_t>& lines, bool repair) {
 				lines.end() : max(lines.end(), pendingCacheClearance_.end()));
 		return;
 	}
-	if(lines.isEmpty())
+	if(isEmpty(lines))
 		return;
 
 //	const size_t originalSize = layouts_.size();
@@ -114,7 +114,7 @@ void LineLayoutVector::clearCaches(const Range<length_t>& lines, bool repair) {
 	if(repair) {
 		length_t newSublines = 0, actualFirst = lines.end(), actualLast = lines.beginning();
 		for(Iterator i(layouts_.begin()); i != layouts_.end(); ++i) {
-			if(lines.includes(i->first)) {
+			if(includes(lines, i->first)) {
 				oldSublines += i->second->numberOfLines();
 				delete i->second;
 				auto_ptr<const TextLayout> newLayout(layoutGenerator_->generate(i->first));
@@ -133,7 +133,7 @@ void LineLayoutVector::clearCaches(const Range<length_t>& lines, bool repair) {
 			oldSublines += actualLast - actualFirst - cachedLines, documentChangePhase_ == CHANGING);
 	} else {
 		for(Iterator i(layouts_.begin()); i != layouts_.end(); ) {
-			if(lines.includes(i->first)) {
+			if(includes(lines, i->first)) {
 				oldSublines += i->second->numberOfLines();
 				delete i->second;
 				i = layouts_.erase(i);
@@ -141,7 +141,7 @@ void LineLayoutVector::clearCaches(const Range<length_t>& lines, bool repair) {
 			} else
 				++i;
 		}
-		fireVisualLinesDeleted(lines, oldSublines += lines.length() - cachedLines);
+		fireVisualLinesDeleted(lines, oldSublines += length(lines) - cachedLines);
 	}
 }
 
@@ -171,7 +171,7 @@ void LineLayoutVector::documentChanged(const kernel::Document&, const kernel::Do
 		fireVisualLinesInserted(makeRange(region.first.line + 1, region.second.line + 1));
 	}
 	const length_t firstLine = min(change.erasedRegion().first.line, change.insertedRegion().first.line);
-	if(pendingCacheClearance_.beginning() == INVALID_INDEX || !pendingCacheClearance_.includes(firstLine))
+	if(pendingCacheClearance_.beginning() == INVALID_INDEX || !includes(pendingCacheClearance_, firstLine))
 		invalidate(firstLine);
 	documentChangePhase_ = NONE;
 	if(pendingCacheClearance_.beginning() != INVALID_INDEX) {
@@ -187,7 +187,7 @@ void LineLayoutVector::documentPartitioningChanged(const k::Region& changedRegio
 
 void LineLayoutVector::fireVisualLinesDeleted(const Range<length_t>& lines, length_t sublines) {
 	numberOfVisualLines_ -= sublines;
-	const bool widthChanged = lines.includes(longestLine_);
+	const bool widthChanged = includes(lines, longestLine_);
 	if(widthChanged)
 		updateLongestLine(static_cast<length_t>(-1), 0);
 	listeners_.notify<const Range<length_t>&, length_t>(
@@ -195,7 +195,7 @@ void LineLayoutVector::fireVisualLinesDeleted(const Range<length_t>& lines, leng
 }
 
 void LineLayoutVector::fireVisualLinesInserted(const Range<length_t>& lines) /*throw()*/ {
-	numberOfVisualLines_ += lines.length();
+	numberOfVisualLines_ += length(lines);
 	listeners_.notify<const Range<length_t>&>(&VisualLinesListener::visualLinesInserted, lines);
 }
 
@@ -206,7 +206,7 @@ void LineLayoutVector::fireVisualLinesModified(const Range<length_t>& lines,
 
 	// update the longest line
 	bool longestLineChanged = false;
-	if(lines.includes(longestLine_)) {
+	if(includes(lines, longestLine_)) {
 		updateLongestLine(static_cast<length_t>(-1), 0);
 		longestLineChanged = true;
 	} else {

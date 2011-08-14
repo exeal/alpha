@@ -139,7 +139,7 @@ bool ThaiInputSequenceChecker::check(const std::locale&, const StringPiece& prec
 	// if there is not a preceding character, as if a control is
 	// Sara Am -> Nikhahit + Sara Aa
 	return doCheck(
-		!preceding.isEmpty() ? getCharacterClass(preceding.end()[-1]) : CTRL,
+		!isEmpty(preceding) ? getCharacterClass(preceding.end()[-1]) : CTRL,
 		getCharacterClass((c != 0x0e33u) ? c : 0x0e4du),
 		mode_ == STRICT_MODE);
 }
@@ -178,7 +178,7 @@ bool VietnameseInputSequenceChecker::check(const locale& lc, const StringPiece& 
 
 	if(vietnamese.first.get() == 0 && lc != *vietnamese.first)
 		return true;
-	else if(!preceding.isEmpty() && binary_search(TONE_MARKS, ASCENSION_ENDOF(TONE_MARKS), c))
+	else if(!isEmpty(preceding) && binary_search(TONE_MARKS, ASCENSION_ENDOF(TONE_MARKS), c))
 		return binary_search(VOWELS, ASCENSION_ENDOF(VOWELS), preceding.end()[-1]);
 	return true;
 }

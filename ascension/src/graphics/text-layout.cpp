@@ -511,7 +511,7 @@ public:
 	uint8_t bidiEmbeddingLevel() const /*throw()*/ {return static_cast<uint8_t>(analysis_.s.uBidiLevel);}
 	tr1::shared_ptr<const Font> font() const {return glyphs_->font;}
 	HRESULT logicalAttributes(const String& layoutString, SCRIPT_LOGATTR attributes[]) const;
-	int numberOfGlyphs() const /*throw()*/ {return glyphRange_.length();}
+	int numberOfGlyphs() const /*throw()*/ {return length(glyphRange_);}
 	ReadingDirection readingDirection() const /*throw()*/ {
 		return ((analysis_.s.uBidiLevel & 0x01) == 0x00) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;}
 	// geometry
@@ -639,7 +639,7 @@ TextLayout::TextRun::TextRun(TextRun& leading, length_t characterBoundary) /*thr
 		Range<length_t>(characterBoundary, leading.end()), analysis_(leading.analysis_), glyphs_(leading.glyphs_) {
 	if(leading.glyphs_.get() == 0)
 		throw invalid_argument("leading has not been shaped");
-	if(characterBoundary >= leading.length())
+	if(characterBoundary >= length(leading))
 		throw out_of_range("firstCharacter");
 
 	// compute 'glyphRange_'
@@ -699,7 +699,7 @@ inline pair<int, HRESULT> TextLayout::TextRun::countMissingGlyphs(
 		return make_pair(0, hr);	// can't handle
 	// following is not offical way, but from Mozilla (gfxWindowsFonts.cpp)
 	int result = 0;
-	for(StringCharacterIterator i(StringPiece(text + beginning(), length())); i.hasNext(); i.next()) {
+	for(StringCharacterIterator i(StringPiece(text + beginning(), length(*this))); i.hasNext(); i.next()) {
 		if(!BinaryProperty::is<BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(i.current())) {
 			const WORD glyph = glyphs_->indices[glyphs_->clusters[i.tell() - i.beginning()]];
 			if(glyph == fp.wgDefault || (glyph == fp.wgInvalid && glyph != fp.wgBlank))
@@ -722,12 +722,12 @@ inline pair<int, HRESULT> TextLayout::TextRun::countMissingGlyphs(
  */
 void TextLayout::TextRun::drawGlyphs(PaintContext& context, const NativePoint& p, const Range<length_t>& range) const {
 	const Range<length_t> truncatedRange(max(range.beginning(), beginning()), min(range.end(), end()));
-	if(truncatedRange.isEmpty())
+	if(ascension::isEmpty(truncatedRange))
 		return;
 	const Range<size_t> glyphRange(
-		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), truncatedRange.beginning() - beginning(), analysis_),
-		characterPositionToGlyphPosition(clusters(), length(), numberOfGlyphs(), truncatedRange.end() - beginning(), analysis_));
-	if(!glyphRange.isEmpty()) {
+		characterPositionToGlyphPosition(clusters(), length(*this), numberOfGlyphs(), truncatedRange.beginning() - beginning(), analysis_),
+		characterPositionToGlyphPosition(clusters(), length(*this), numberOfGlyphs(), truncatedRange.end() - beginning(), analysis_));
+	if(!ascension::isEmpty(glyphRange)) {
 		context.setFont(glyphs_->font);
 //		RECT temp;
 //		if(dirtyRect != 0)
@@ -735,7 +735,7 @@ void TextLayout::TextRun::drawGlyphs(PaintContext& context, const NativePoint& p
 		const HRESULT hr = ::ScriptTextOut(context.nativeObject().get(), &glyphs_->fontCache,
 			geometry::x(p) + x((analysis_.fRTL == 0) ? truncatedRange.beginning() : (truncatedRange.end() - 1), analysis_.fRTL != 0),
 			geometry::y(p) - glyphs_->font->metrics().ascent(), 0, &context.boundsToPaint(), &analysis_, 0, 0,
-			glyphs() + glyphRange.beginning(), glyphRange.length(), advances() + glyphRange.beginning(),
+			glyphs() + glyphRange.beginning(), length(glyphRange), advances() + glyphRange.beginning(),
 			(justifiedAdvances() != 0) ? justifiedAdvances() + glyphRange.beginning() : 0,
 			glyphOffsets() + glyphRange.beginning());
 	}
@@ -756,7 +756,7 @@ inline bool TextLayout::TextRun::expandTabCharacters(
 		throw invalid_argument("maximumWidth");
 	if(layoutString[beginning()] != L'\t')
 		return false;
-	assert(length() == 1 && glyphs_.unique());
+	assert(length(*this) == 1 && glyphs_.unique());
 	glyphs_->advances[0] = min(tabExpander.nextTabStop(x, beginning()), maximumWidth);
 	glyphs_->justifiedAdvances.reset();
 	return true;
@@ -773,13 +773,13 @@ inline void TextLayout::TextRun::generateDefaultGlyphs(const win32::Handle<HDC>&
 
 	AutoBuffer<WORD> indices, clusters;
 	AutoBuffer<SCRIPT_VISATTR> visualAttributes;
-	const int numberOfGlyphs = static_cast<int>(text.length());
+	const int numberOfGlyphs = static_cast<int>(length(text));
 	indices.reset(new WORD[numberOfGlyphs]);
-	clusters.reset(new WORD[text.length()]);
+	clusters.reset(new WORD[length(text)]);
 	visualAttributes.reset(new SCRIPT_VISATTR[numberOfGlyphs]);
 	fill_n(indices.get(), numberOfGlyphs, fp.wgDefault);
 	const bool ltr = analysis.fRTL == 0 || analysis.fLogicalOrder == 1;
-	for(size_t i = 0, c = text.length(); i < c; ++i)
+	for(size_t i = 0, c = length(text); i < c; ++i)
 		clusters[i] = static_cast<WORD>(ltr ? i : (c - i));
 	const SCRIPT_VISATTR va = {SCRIPT_JUSTIFY_NONE, 1, 0, 0, 0, 0};
 	fill_n(visualAttributes.get(), numberOfGlyphs, va);
@@ -821,14 +821,14 @@ HRESULT TextLayout::TextRun::generateGlyphs(const win32::Handle<HDC>& dc,
 	SCRIPT_CACHE fontCache(0);	// TODO: this object should belong to a font, not glyph run???
 	AutoBuffer<WORD> indices, clusters;
 	AutoBuffer<SCRIPT_VISATTR> visualAttributes;
-	clusters.reset(new WORD[text.length()]);
-	numberOfGlyphs = estimateNumberOfGlyphs(text.length());
+	clusters.reset(new WORD[length(text)]);
+	numberOfGlyphs = estimateNumberOfGlyphs(length(text));
 	HRESULT hr;
 	while(true) {
 		indices.reset(new WORD[numberOfGlyphs]);
 		visualAttributes.reset(new SCRIPT_VISATTR[numberOfGlyphs]);
 		hr = ::ScriptShape(dc.get(), &fontCache,
-			text.beginning(), static_cast<int>(text.length()),
+			text.beginning(), static_cast<int>(length(text)),
 			numberOfGlyphs, const_cast<SCRIPT_ANALYSIS*>(&analysis),
 			indices.get(), clusters.get(), visualAttributes.get(), &numberOfGlyphs);
 		if(hr != E_OUTOFMEMORY)
@@ -853,7 +853,7 @@ HRESULT TextLayout::TextRun::generateGlyphs(const win32::Handle<HDC>& dc,
 }
 
 inline HRESULT TextLayout::TextRun::hitTest(int x, int& cp, int& trailing) const {
-	return ::ScriptXtoCP(x, static_cast<int>(length()), numberOfGlyphs(), clusters(),
+	return ::ScriptXtoCP(x, static_cast<int>(length(*this)), numberOfGlyphs(), clusters(),
 		visualAttributes(), (justifiedAdvances() == 0) ? advances() : justifiedAdvances(), &analysis_, &cp, &trailing);
 }
 
@@ -872,13 +872,13 @@ inline HRESULT TextLayout::TextRun::justify(int width) {
 inline HRESULT TextLayout::TextRun::logicalAttributes(const String& layoutString, SCRIPT_LOGATTR attributes[]) const {
 	if(attributes == 0)
 		throw NullPointerException("attributes");
-	return ::ScriptBreak(layoutString.data() + beginning(), static_cast<int>(length()), &analysis_, attributes);
+	return ::ScriptBreak(layoutString.data() + beginning(), static_cast<int>(length(*this)), &analysis_, attributes);
 }
 
 inline HRESULT TextLayout::TextRun::logicalWidths(int widths[]) const {
 	if(widths == 0)
 		throw NullPointerException("widths");
-	return ::ScriptGetLogicalWidths(&analysis_, static_cast<int>(length()),
+	return ::ScriptGetLogicalWidths(&analysis_, static_cast<int>(length(*this)),
 		numberOfGlyphs(), advances(), clusters(), visualAttributes(), widths);
 }
 
@@ -1090,7 +1090,7 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
  */
 void TextLayout::TextRun::paintBackground(PaintContext& context,
 		const NativePoint& p, const Range<length_t>& range, NativeRectangle* paintedBounds) const {
-	if(range.isEmpty() || geometry::x(p) + totalWidth() < geometry::left(context.boundsToPaint()))
+	if(ascension::isEmpty(range) || geometry::x(p) + totalWidth() < geometry::left(context.boundsToPaint()))
 		return;
 	NativeRectangle r;
 	blackBoxBounds(range, r);
@@ -1543,13 +1543,13 @@ void TextLayout::TextRun::shape(DC& dc, const String& layoutString, const ILayou
 }
 #endif
 auto_ptr<TextLayout::TextRun> TextLayout::TextRun::splitIfTooLong(const String& layoutString) {
-	if(estimateNumberOfGlyphs(length()) <= 65535)
+	if(estimateNumberOfGlyphs(length(*this)) <= 65535)
 		return auto_ptr<TextRun>();
 
 	// split this run, because the length would cause ScriptShape to fail (see also Mozilla bug 366643).
 	static const length_t MAXIMUM_RUN_LENGTH = 43680;	// estimateNumberOfGlyphs(43680) == 65536
 	length_t opportunity = 0;
-	AutoBuffer<SCRIPT_LOGATTR> la(new SCRIPT_LOGATTR[length()]);
+	AutoBuffer<SCRIPT_LOGATTR> la(new SCRIPT_LOGATTR[length(*this)]);
 	const HRESULT hr = logicalAttributes(layoutString, la.get());
 	if(SUCCEEDED(hr)) {
 		for(length_t i = MAXIMUM_RUN_LENGTH; i > 0; --i) {
@@ -1569,7 +1569,7 @@ auto_ptr<TextLayout::TextRun> TextLayout::TextRun::splitIfTooLong(const String& 
 	}
 
 	auto_ptr<TextRun> following(new TextRun(Range<length_t>(
-		opportunity, length() - opportunity), analysis_, glyphs_->font, glyphs_->scriptTag));
+		opportunity, length(*this) - opportunity), analysis_, glyphs_->font, glyphs_->scriptTag));
 	static_cast<Range<length_t>&>(*this) = Range<length_t>(0, opportunity);
 	analysis_.fLinkAfter = following->analysis_.fLinkBefore = 0;
 	return following;
@@ -1599,11 +1599,11 @@ void TextLayout::TextRun::substituteGlyphs(const Range<TextRun**>& runs, const S
 			TextRun& run = **p;
 
 			// process IVSes in a glyph run
-			if(run.analysis_.eScript != SCRIPT_UNDEFINED && run.length() > 3
+			if(run.analysis_.eScript != SCRIPT_UNDEFINED && length(run) > 3
 					&& surrogates::isHighSurrogate(layoutString[run.beginning()])
 					&& surrogates::isLowSurrogate(layoutString[run.beginning() + 1])) {
 				for(StringCharacterIterator i(StringPiece(layoutString.data() + run.beginning(),
-						run.length()), layoutString.data() + run.beginning() + 2); i.hasNext(); i.next()) {
+						length(run)), layoutString.data() + run.beginning() + 2); i.hasNext(); i.next()) {
 					const CodePoint variationSelector = i.current();
 					if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
 						StringCharacterIterator baseCharacter(i);
@@ -1619,7 +1619,7 @@ void TextLayout::TextRun::substituteGlyphs(const Range<TextRun**>& runs, const S
 			}
 
 			// process an IVS across two glyph runs
-			if(p + 1 != runs.end() && p[1]->length() > 1) {
+			if(p + 1 != runs.end() && length(*p[1]) > 1) {
 				TextRun& next = *p[1];
 				const CodePoint variationSelector = surrogates::decodeFirst(
 					layoutString.begin() + next.beginning(), layoutString.begin() + next.beginning() + 2);
@@ -1627,7 +1627,7 @@ void TextLayout::TextRun::substituteGlyphs(const Range<TextRun**>& runs, const S
 					const CodePoint baseCharacter = surrogates::decodeLast(
 						layoutString.data() + run.beginning(), layoutString.data() + run.end());
 					if(run.glyphs_->font->ivsGlyph(baseCharacter, variationSelector,
-							run.glyphs_->indices[run.glyphs_->clusters[run.length() - 1]])) {
+							run.glyphs_->indices[run.glyphs_->clusters[length(run) - 1]])) {
 						next.glyphs_->vanish(*run.glyphs_->font, 0);
 						next.glyphs_->vanish(*run.glyphs_->font, 1);
 					}
@@ -1644,7 +1644,7 @@ inline int TextLayout::TextRun::x(length_t at, bool trailing) const {
 		throw k::BadPositionException(k::Position(INVALID_INDEX, at));
 	int result;
 	const HRESULT hr = ::ScriptCPtoX(static_cast<int>(at - beginning()), trailing,
-		static_cast<int>(length()), numberOfGlyphs(), clusters(), visualAttributes(),
+		static_cast<int>(length(*this)), numberOfGlyphs(), clusters(), visualAttributes(),
 		((justifiedAdvances() == 0) ? advances() : justifiedAdvances()), &analysis_, &result);
 	if(FAILED(hr))
 		throw hr;
@@ -1705,7 +1705,7 @@ InlineProgressionDimensionRangeIterator::InlineProgressionDimensionRangeIterator
 Range<Scalar> InlineProgressionDimensionRangeIterator::current() const {
 	if(isDone())
 		throw NoSuchElementException();
-	assert((*currentRun_)->intersects(characterRange()));
+	assert(intersects(**currentRun_, characterRange()));
 	Scalar start, end;
 	if(characterRange().beginning() > (*currentRun_)->beginning())
 		start = (*currentRun_)->x(characterRange().beginning(), false);
@@ -1738,7 +1738,7 @@ void InlineProgressionDimensionRangeIterator::doNext(bool initializing) {
 				nextIpd -= (*nextRun)->totalWidth();
 			--nextRun;
 		}
-		if(nextRun != lastRun_ || (*nextRun)->intersects(characterRange()))
+		if(nextRun != lastRun_ || intersects(**nextRun, characterRange()))
 			break;
 	}
 	// commit
@@ -2228,7 +2228,7 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 		result.start = result.end = 0;
 		result.before = -lineMetrics_[0]->ascent()/* - lineMetrics_[0]->leading()*/;
 		result.after = lineMetrics_[0]->descent();
-	} else if(range.isEmpty()) {	// an empty rectangle for an empty range
+	} else if(ascension::isEmpty(range)) {	// an empty rectangle for an empty range
 		const LineMetrics& line = *lineMetrics_[lineAt(range.beginning())];
 		return geometry::make<NativeRectangle>(
 			geometry::subtract(location(range.beginning()), geometry::make<NativeSize>(0, line.ascent()/* + line.leading()*/)),
@@ -2241,9 +2241,9 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 		result.after = baseline(lastLine) + lineMetrics_[lastLine]->descent();
 
 		// calculate start-edge and end-edge of fully covered lines
-		const bool firstLineIsFullyCovered = range.includes(
+		const bool firstLineIsFullyCovered = includes(range,
 			makeRange(lineOffset(firstLine), lineOffset(firstLine) + lineLength(firstLine)));
-		const bool lastLineIsFullyCovered = range.includes(
+		const bool lastLineIsFullyCovered = includes(range,
 			makeRange(lineOffset(lastLine), lineOffset(lastLine) + lineLength(lastLine)));
 		result.start = numeric_limits<Scalar>::max();
 		result.end = numeric_limits<Scalar>::min();
@@ -2280,7 +2280,7 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 				for(length_t i = lineFirstRuns_[*line];
 						i < lastRun && x < left; x += runs_[i++]->totalWidth()) {
 					const TextRun& run = *runs_[i];
-					if(range.intersects(run)) {
+					if(intersects(range, run)) {
 						const length_t leftEdge = (run.readingDirection() == LEFT_TO_RIGHT) ?
 							max(range.beginning(), run.beginning()) : min(range.end(), run.end());
 						left = min(x + run.x(leftEdge, false), left);
@@ -2300,7 +2300,7 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 					lineStartEdge(*line) + lineInlineProgressionDimension(*line) : -lineStartEdge(*line);
 				for(length_t i = lastRun - 1; x > right; x -= runs_[i--]->totalWidth()) {
 					const TextRun& run = *runs_[i];
-					if(range.intersects(run)) {
+					if(intersects(range, run)) {
 						const length_t rightEdge = (run.readingDirection() == LEFT_TO_RIGHT) ?
 							min(range.end(), run.end()) : max(range.beginning(), run.beginning());
 						right = max(x - run.totalWidth() + run.x(rightEdge, false), right);
@@ -2490,7 +2490,7 @@ void TextLayout::draw(PaintContext& context,
 					rightEdgeOfLastRun = geometry::x(p);
 				}
 			}
-			if(!runs.isEmpty()) {
+			if(!ascension::isEmpty(runs)) {
 				const Range<length_t> characterRange(runs.beginning()[0]->beginning(), runs.end()[-1]->end());
 				auto_ptr<TextPaintOverride::Iterator> paintOverrideIterator;
 				if(paintOverride != 0)
@@ -2624,7 +2624,7 @@ void TextLayout::dumpRuns(ostream& out) const {
 		const TextRun& run = *runs_[i];
 		out << static_cast<unsigned int>(i)
 			<< ":beginning=" << static_cast<unsigned int>(run.beginning())
-			<< ",length=" << static_cast<unsigned int>(run.length()) << endl;
+			<< ",length=" << static_cast<unsigned int>(length(run)) << endl;
 	}
 }
 #endif // _DEBUG
@@ -3192,8 +3192,8 @@ void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
 		}
 
 		// obtain logical widths and attributes for all characters in this run to determine line break positions
-		if(run->length() > longestRunLength) {
-			longestRunLength = run->length();
+		if(length(*run) > longestRunLength) {
+			longestRunLength = length(*run);
 			longestRunLength += 16 - longestRunLength % 16;
 			logicalWidths.reset(new int[longestRunLength]);
 			logicalAttributes.reset(new SCRIPT_LOGATTR[longestRunLength]);
