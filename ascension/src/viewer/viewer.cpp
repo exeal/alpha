@@ -485,33 +485,6 @@ void TextViewer::freeze() {
 	freezeRegister_.freeze();
 }
 
-/**
- * Returns the horizontal display offset from @c LineLayout coordinates to client coordinates.
- * @param line The line number
- * @return The offset
- */
-Scalar TextViewer::getDisplayXOffset(length_t line) const {
-	const PhysicalFourSides<Scalar>& spaces = spaceWidths();
-	const TextLayout& layout = renderer_->layouts().at(line);
-	const detail::PhysicalTextAnchor alignment(
-		detail::computePhysicalTextAnchor(layout.anchor(), layout.writingMode().inlineFlowDirection));
-	if(alignment == detail::LEFT /*|| ... != NO_JUSTIFICATION*/)	// TODO: this code ignores last visual line with justification.
-		return spaces.left - scrollInfo_.x() * renderer_->defaultFont()->metrics().averageCharacterWidth();
-
-	Scalar indent;
-	const NativeRectangle clientBounds(bounds(false));
-	if(renderer_->layouts().maximumInlineProgressionDimension() + spaces.left + spaces.right > geometry::dx(clientBounds)) {
-		indent = renderer_->layouts().maximumInlineProgressionDimension() - layout.lineInlineProgressionDimension(0) + spaces.left;
-		indent += (geometry::dx(clientBounds) - spaces.left - spaces.right) % renderer_->defaultFont()->metrics().averageCharacterWidth();
-	} else
-		indent = geometry::dx(clientBounds) - layout.lineInlineProgressionDimension(0) - spaces.right;
-	if(alignment == detail::MIDDLE)
-		indent /= 2;
-	else
-		assert(alignment == detail::RIGHT);
-	return indent - static_cast<Scalar>(scrollInfo_.x()) * renderer_->defaultFont()->metrics().averageCharacterWidth();
-}
-
 #if 0
 /**
  * Returns the text and the region of a link near the cursor.
@@ -627,6 +600,36 @@ TextViewer::HitTestResult TextViewer::hitTest(const NativePoint& p) const {
 		return SIDE_SPACE;
 	else
 		return CONTENT_AREA;
+}
+
+/**
+ * Returns an offset from left-edge or top-edge of local-bounds to start-edge of the specified line
+ * in pixels. This algorithm considers the ruler, the scroll position and spaces around the content
+ * box.
+ * @param line The line number
+ * @return The offset
+ * @throw kernel#BadPositionException @a line is invalid
+ */
+Scalar TextViewer::inlineProgressionOffsetInViewport(length_t line) const {
+	const PhysicalFourSides<Scalar>& spaces = spaceWidths();
+	const TextLayout& layout = renderer_->layouts().at(line);	// this may throw kernel.BadPositionException
+	const detail::PhysicalTextAnchor alignment(
+		detail::computePhysicalTextAnchor(layout.anchor(), layout.writingMode().inlineFlowDirection));
+	if(alignment == detail::LEFT /*|| ... != NO_JUSTIFICATION*/)	// TODO: this code ignores last visual line with justification.
+		return spaces.left - scrollInfo_.x() * renderer_->defaultFont()->metrics().averageCharacterWidth();
+
+	Scalar indent;
+	const NativeRectangle clientBounds(bounds(false));
+	if(renderer_->layouts().maximumMeasure() + spaces.left + spaces.right > geometry::dx(clientBounds)) {
+		indent = renderer_->layouts().maximumMeasure() - layout.measure(0) + spaces.left;
+		indent += (geometry::dx(clientBounds) - spaces.left - spaces.right) % renderer_->defaultFont()->metrics().averageCharacterWidth();
+	} else
+		indent = geometry::dx(clientBounds) - layout.measure(0) - spaces.right;
+	if(alignment == detail::MIDDLE)
+		indent /= 2;
+	else
+		assert(alignment == detail::RIGHT);
+	return indent - static_cast<Scalar>(scrollInfo_.x()) * renderer_->defaultFont()->metrics().averageCharacterWidth();
 }
 
 /// @see Widget#keyPressed
@@ -2124,7 +2127,7 @@ void TextViewer::Renderer::rewrapAtWindowEdge() {
 		bool operator()(const LineLayoutVector::LineLayout& layout) const {
 			return layout.second->numberOfLines() != 1
 				|| layout.second->style().justification == NO_JUSTIFICATION
-				|| layout.second->maximumInlineProgressionDimension() > newMeasure_;
+				|| layout.second->measure() > newMeasure_;
 		}
 	private:
 		const Scalar newMeasure_;
@@ -2194,7 +2197,7 @@ void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, char bars, bool
 		const int dx = viewer.textRenderer().defaultFont()->metrics().averageCharacterWidth();
 		assert(dx > 0);
 		const unsigned long columns = (!viewer.configuration().lineWrap.wrapsAtWindowEdge()) ?
-			viewer.textRenderer().layouts().maximumInlineProgressionDimension() / dx : 0;
+			viewer.textRenderer().layouts().maximumMeasure() / dx : 0;
 //		horizontal.rate = columns / numeric_limits<int>::max() + 1;
 //		assert(horizontal.rate != 0);
 		const int oldMaximum = horizontal.maximum;

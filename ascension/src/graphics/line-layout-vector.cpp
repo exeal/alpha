@@ -211,11 +211,11 @@ void LineLayoutVector::fireVisualLinesModified(const Range<length_t>& lines,
 		longestLineChanged = true;
 	} else {
 		length_t newLongestLine = longestLine_;
-		Scalar newMaximumIpd = maximumInlineProgressionDimension();
+		Scalar newMaximumIpd = maximumMeasure();
 		for(list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-			if(i->second->maximumInlineProgressionDimension() > newMaximumIpd) {
+			if(i->second->measure() > newMaximumIpd) {
 				newLongestLine = i->first;
-				newMaximumIpd = i->second->maximumInlineProgressionDimension();
+				newMaximumIpd = i->second->measure();
 			}
 		}
 		if(longestLineChanged = (newLongestLine != longestLine_))
@@ -426,20 +426,20 @@ void LineLayoutVector::presentationStylistChanged() {
 /**
  * Updates the longest line.
  * @param line The new longest line. set -1 to recalculate
- * @param ipd The inline progression dimension of the longest line. If @a line is -1, this value is
- *            ignored
+ * @param measure The measure (inline-progression-dimension) of the longest line. If @a line is -1,
+ *                this value is ignored
  */
-void LineLayoutVector::updateLongestLine(length_t line, Scalar ipd) /*throw()*/ {
+void LineLayoutVector::updateLongestLine(length_t line, Scalar measure) /*throw()*/ {
 	if(line != -1) {
 		longestLine_ = line;
-		maximumIpd_ = ipd;
+		maximumMeasure_ = measure;
 	} else {
 		longestLine_ = static_cast<length_t>(-1);
-		maximumIpd_ = 0;
+		maximumMeasure_ = 0;
 		for(list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-			if(i->second->maximumInlineProgressionDimension() > maximumIpd_) {
+			if(i->second->measure() > maximumMeasure_) {
 				longestLine_ = i->first;
-				maximumIpd_ = i->second->maximumInlineProgressionDimension();
+				maximumMeasure_ = i->second->measure();
 			}
 		}
 	}

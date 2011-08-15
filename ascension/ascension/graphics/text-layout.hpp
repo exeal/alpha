@@ -356,13 +356,13 @@ namespace ascension {
 				Range<Scalar> extent() /*throw()*/ const;
 				Range<Scalar> extent(const Range<length_t>& lines) const;
 				NativeRectangle lineBounds(length_t line) const;
-				Scalar lineInlineProgressionDimension(length_t line) const;
 				const LineMetrics& lineMetrics(length_t line) const;
 				Scalar lineStartEdge(length_t line) const;
 				length_t locateLine(Scalar bpd, bool& outside) const /*throw()*/;
 				NativePoint location(length_t column, Edge edge = LEADING) const;
 				std::pair<NativePoint, NativePoint> locations(length_t column) const;
-				Scalar maximumInlineProgressionDimension() const /*throw()*/;
+				Scalar measure() const /*throw()*/;
+				Scalar measure(length_t line) const;
 				std::pair<length_t, length_t> offset(const NativePoint& p, bool* outside = 0) const /*throw()*/;
 				// styled segments
 //				StyledSegmentIterator firstStyledSegment() const /*throw()*/;
@@ -409,8 +409,8 @@ namespace ascension {
 				static const length_t SINGLE_LINE_OFFSETS;
 				length_t numberOfLines_;
 				AutoBuffer<LineMetrics*> lineMetrics_;
-				AutoBuffer<Scalar> lineInlineProgressionDimensions_;
-				Scalar maximumInlineProgressionDimension_;
+				AutoBuffer<Scalar> measures_;
+				Scalar maximumMeasure_;
 				Scalar wrapWidth_;	// -1 if should not wrap
 				friend class LineLayoutVector;
 //				friend class StyledSegmentIterator;
