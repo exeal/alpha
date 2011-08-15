@@ -2190,7 +2190,7 @@ NativeRegion TextLayout::blackBoxBounds(const Range<length_t>& range) const {
  * Returns the smallest rectangle emcompasses the whole text of the line. It might not coincide
  * exactly the ascent, descent or overhangs of the text.
  * @return The size of the bounds
- * @see #blackBoxBounds, #bounds(length_t, length_t), #lineBounds
+ * @see #blackBoxBounds, #bounds(const Range&lt;length_t&gt;&amp;), #lineBounds
  */
 NativeRectangle TextLayout::bounds() const /*throw()*/ {
 	// TODO: this implementation can't handle vertical text.
@@ -2213,7 +2213,7 @@ NativeRectangle TextLayout::bounds() const /*throw()*/ {
  * @param range The range
  * @return The bounds
  * @throw kernel#BadPositionException @a range intersects with the outside of the line
- * @see #blackBoxBounds, #bounds(void), #lineBounds, #lineIndent
+ * @see #blackBoxBounds, #bounds(void), #lineBounds
  */
 NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 	if(range.end() > text_.length())

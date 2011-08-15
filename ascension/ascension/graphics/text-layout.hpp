@@ -348,21 +348,22 @@ namespace ascension {
 				length_t lineLength(length_t line) const;
 				length_t lineOffset(length_t line) const;
 				const length_t* lineOffsets() const /*throw()*/;
-				// coordinates
-				Scalar baseline(length_t line) const;
+				// bounds, extents and measures
 				NativeRegion blackBoxBounds(const Range<length_t>& range) const;
 				NativeRectangle bounds() const /*throw()*/;
 				NativeRectangle bounds(const Range<length_t>& range) const;
 				Range<Scalar> extent() /*throw()*/ const;
 				Range<Scalar> extent(const Range<length_t>& lines) const;
 				NativeRectangle lineBounds(length_t line) const;
+				Scalar measure() const /*throw()*/;
+				Scalar measure(length_t line) const;
+				// other coordinates
+				Scalar baseline(length_t line) const;
 				const LineMetrics& lineMetrics(length_t line) const;
 				Scalar lineStartEdge(length_t line) const;
 				length_t locateLine(Scalar bpd, bool& outside) const /*throw()*/;
 				NativePoint location(length_t column, Edge edge = LEADING) const;
 				std::pair<NativePoint, NativePoint> locations(length_t column) const;
-				Scalar measure() const /*throw()*/;
-				Scalar measure(length_t line) const;
 				std::pair<length_t, length_t> offset(const NativePoint& p, bool* outside = 0) const /*throw()*/;
 				// styled segments
 //				StyledSegmentIterator firstStyledSegment() const /*throw()*/;
@@ -381,7 +382,6 @@ namespace ascension {
 #endif // _DEBUG
 
 			private:
-//				Scalar blockProgressionDistance(length_t from, length_t to) const /*throw()*/;
 				void expandTabsWithoutWrapping() /*throw()*/;
 				std::size_t findRunForPosition(length_t column) const /*throw()*/;
 				void justify(presentation::TextJustification method) /*throw()*/;
