@@ -840,15 +840,27 @@ void TextViewer::keyReleased(const KeyInput& input) {
 NativePoint TextViewer::localPointForCharacter(const k::Position& position,
 		bool fullSearchBpd, TextLayout::Edge edge /* = TextLayout::LEADING */) const {
 //	checkInitialization();
+
+	// get alignment-point
+	const BaselineIterator baseline(*this, position.line, fullSearchBpd);
+	NativePoint p(baseline.position());
 	const bool horizontal = WritingModeBase::isHorizontal(utils::writingMode(*this).blockFlowDirection);
-	const TextLayout& layout = renderer_->layouts().at(position.line);
-	const NativePoint offset(layout.location(position.column, edge));
-	const Scalar ipd = (horizontal ? geometry::x(offset) : geometry::y(offset)) + displayOffset(position.line);
-	const NativePoint alignmentPoint(BaselineIterator(*this, position.line, fullSearchBpd).position());
-	Scalar bpd = horizontal ? geometry::y(alignmentPoint) : geometry::x(alignmentPoint);
-	if(fullSearchBpd || (bpd != numeric_limits<Scalar>::max() && bpd != numeric_limits<Scalar>::min()))
-		bpd += horizontal ? geometry::y(offset) : geometry::x(offset);
-	return geometry::make<NativePoint>(horizontal ? ipd : bpd, horizontal ? bpd : ipd);
+
+	// apply offset in line layout
+	const NativePoint offset(renderer_->layouts().at(position.line).location(position.column, edge));
+	if(fullSearchBpd || horizontal || (*baseline != numeric_limits<Scalar>::max() && *baseline != numeric_limits<Scalar>::min())) {
+//		assert(geometry::x(p) != numeric_limits<Scalar>::max() && geometry::x(p) != numeric_limits<Scalar>::min());
+		geometry::x(p) += geometry::x(offset);
+	}
+	if(fullSearchBpd || !horizontal || (*baseline != numeric_limits<Scalar>::max() && *baseline != numeric_limits<Scalar>::min())) {
+//		assert(geometry::y(p) != numeric_limits<Scalar>::max() && geometry::y(p) != numeric_limits<Scalar>::min()));
+		geometry::y(p) += geometry::y(offset);
+	}
+
+	// apply viewport offset in inline-progression-direction
+	(horizontal ? geometry::x(p) : geometry::y(p)) += displayOffset(position.line);
+
+	return p;
 }
 
 /**
