@@ -150,17 +150,29 @@ namespace ascension {
 			return configuration_;
 		}
 
-		/// Returns the width of the indicator margin in pixels.
+		/**
+		 * Returns the width of the indicator margin in pixels.
+		 * @return The width of the indicator margin or zero if not visible
+		 * @see #lineNumbersWidth, #width
+		 */
 		inline graphics::Scalar RulerPainter::indicatorMarginWidth() const /*throw()*/ {
 			return indicatorMarginContentWidth_ + indicatorMarginBorderWidth_;
 		}
 
-		/// Returns the width of the line numbers in pixels.
+		/**
+		 * Returns the width of the line numbers in pixels.
+		 * @return The width of the line numbers or zero if not visible
+		 * @see #indicatorMarginWidth, #width
+		 */
 		inline graphics::Scalar RulerPainter::lineNumbersWidth() const /*throw()*/ {
 			return lineNumbersContentWidth_ + lineNumbersPaddingStartWidth_ + lineNumbersPaddingEndWidth_, lineNumbersBorderWidth_;
 		}
 
-		/// Returns the width of the ruler in pixels.
+		/**
+		 * Returns the width of the ruler in pixels.
+		 * @return The width of the ruler or zero if not visible
+		 * @see #indicatorMarginWidth, #lineNumbersWidth
+		 */
 		inline graphics::Scalar RulerPainter::width() const /*throw()*/ {
 			return indicatorMarginWidth() + lineNumbersWidth();
 		}
