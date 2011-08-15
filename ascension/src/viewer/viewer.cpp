@@ -611,8 +611,25 @@ TextViewer::HitTestResult TextViewer::hitTest(const NativePoint& p) const {
  * @throw kernel#BadPositionException @a line is invalid
  */
 Scalar TextViewer::inlineProgressionOffsetInViewport(length_t line) const {
+	const TextLayout& layout = textRenderer().layouts().at(line);	// this may throw kernel.BadPositionException
+	const bool horizontal = WritingModeBase::isHorizontal(layout.writingMode().blockFlowDirection);
+
+	// space width
 	const PhysicalFourSides<Scalar>& spaces = spaceWidths();
-	const TextLayout& layout = renderer_->layouts().at(line);	// this may throw kernel.BadPositionException
+	Scalar offset = horizontal ? spaces.left : spaces.top;
+
+	// scroll position
+	offset -= (horizontal ? scrollInfo_.x() : scrollInfo_.y())
+		* textRenderer().defaultFont()->metrics().averageCharacterWidth();
+
+	// ruler width
+	if((horizontal && rulerPainter_->alignment() == detail::RulerPainter::LEFT)
+			|| (!horizontal && rulerPainter_->alignment() == detail::RulerPainter::TOP))
+		offset += rulerPainter_->width();
+
+	return offset;
+
+#if 0
 	const detail::PhysicalTextAnchor alignment(
 		detail::computePhysicalTextAnchor(layout.anchor(), layout.writingMode().inlineFlowDirection));
 	if(alignment == detail::LEFT /*|| ... != NO_JUSTIFICATION*/)	// TODO: this code ignores last visual line with justification.
@@ -630,6 +647,7 @@ Scalar TextViewer::inlineProgressionOffsetInViewport(length_t line) const {
 	else
 		assert(alignment == detail::RIGHT);
 	return indent - static_cast<Scalar>(scrollInfo_.x()) * renderer_->defaultFont()->metrics().averageCharacterWidth();
+#endif
 }
 
 /// @see Widget#keyPressed
