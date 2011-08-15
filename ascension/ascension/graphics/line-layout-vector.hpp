@@ -86,7 +86,7 @@ namespace ascension {
 				const TextLayout* atIfCached(length_t line) const /*throw()*/;
 				// attributes
 				const kernel::Document& document() const /*throw()*/;
-				Scalar maximumInlineProgressionDimension() const /*throw()*/;
+				Scalar maximumMeasure() const /*throw()*/;
 				length_t numberOfSublinesOfLine(length_t) const;
 				length_t numberOfVisualLines() const /*throw()*/;
 				// listeners
@@ -117,7 +117,7 @@ namespace ascension {
 				void initialize();
 				void invalidate(const std::vector<length_t>& lines);
 				void presentationStylistChanged();
-				void updateLongestLine(length_t line, Scalar ipd) /*throw()*/;
+				void updateLongestLine(length_t line, Scalar measure) /*throw()*/;
 				// kernel.DocumentListener
 				void documentAboutToBeChanged(const kernel::Document& document);
 				void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
@@ -144,7 +144,7 @@ namespace ascension {
 				const bool autoRepair_;
 				enum {ABOUT_TO_CHANGE, CHANGING, NONE} documentChangePhase_;
 				Range<length_t> pendingCacheClearance_;	// ドキュメント変更中に呼び出された clearCaches の引数
-				Scalar maximumIpd_;
+				Scalar maximumMeasure_;
 				length_t longestLine_, numberOfVisualLines_;
 				detail::Listeners<VisualLinesListener> listeners_;
 			};
@@ -225,9 +225,9 @@ namespace ascension {
 				}
 			}
 
-			/// Returns the width of the longest line.
-			inline Scalar LineLayoutVector::maximumInlineProgressionDimension() const /*throw()*/ {
-				return maximumIpd_;
+			/// Returns the measure (inline-progression-dimension) of the longest line.
+			inline Scalar LineLayoutVector::maximumMeasure() const /*throw()*/ {
+				return maximumMeasure_;
 			}
 
 			/**

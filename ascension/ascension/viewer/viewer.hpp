@@ -518,7 +518,7 @@ namespace ascension {
 
 			// helpers
 		private:
-			graphics::Scalar getDisplayXOffset(length_t line) const;
+			graphics::Scalar inlineProgressionOffsetInViewport(length_t line) const;
 			void handleGUICharacterInput(CodePoint c);
 			void initialize();
 //			graphics::Scalar mapLineToViewportBpd(length_t line, bool fullSearch) const;
