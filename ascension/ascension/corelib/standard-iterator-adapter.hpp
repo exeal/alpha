@@ -115,7 +115,7 @@ namespace ascension {
 			}
 			/// Dereference operator.
 			const reference operator*() const {
-				return IteratorCoreAccess(derived());
+				return IteratorCoreAccess::dereference(derived());
 			}
 			/// Dereference operator.
 			typename pointer operator->() {
