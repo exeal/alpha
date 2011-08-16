@@ -2779,8 +2779,8 @@ NativeRectangle TextLayout::lineBounds(length_t line) const {
 }
 
 /**
- * Returns the start-edge of the specified line without the start-indent.
- * @par This is distance from the origin (the alignment point of the first line) to @a line in
+ * Returns the start-edge of the specified line without the start-indent in pixels.
+ * @par This is distance from the start-edge of the first line to the one of @a line in
  * inline-progression-dimension. Therefore, returns always zero when @a line is zero or the anchor
  * is @c TEXT_ANCHOR_START.
  * @par A positive value means positive indentation. For example, if the start-edge of a RTL line
@@ -2788,6 +2788,7 @@ NativeRectangle TextLayout::lineBounds(length_t line) const {
  * @param line The line number
  * @return The start-indentation in pixels
  * @throw IndexOutOfBoundsException @a line is invalid
+ * @see TextRenderer#lineStartEdge
  */
 Scalar TextLayout::lineStartEdge(length_t line) const {
 	if(line == 0)

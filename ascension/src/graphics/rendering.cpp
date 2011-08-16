@@ -248,6 +248,29 @@ Scalar TextRenderer::lineIndent(length_t line, length_t subline /* = 0 */) const
 }
 
 /**
+ * Returns distance from left/top-edge of the content-area to start-edge of the specified line in
+ * pixels.
+ * @param line The line
+ * @return Distance from left/top-edge of the content-area to start-edge of @a line in pixels
+ * @throw kernel#BadPositionException @a line is invalid
+ * @see TextLayout#lineStartEdge, TextViewer#inlineProgressionOffsetInViewport
+ */
+Scalar TextRenderer::lineStartEdge(length_t line) const {
+	const TextLayout& layout = layouts().at(line);	// this may throw kernel.BadPositionException
+	const bool ltr = layout.writingMode().inlineFlowDirection == LEFT_TO_RIGHT;
+	switch(layout.anchor()) {
+		case TEXT_ANCHOR_START:
+			return ltr ? 0 : width();
+		case TEXT_ANCHOR_MIDDLE:
+			return ltr ? (width() - layout.measure(0) / 2) : (width() + layout.measure(0)) / 2;
+		case TEXT_ANCHOR_END:
+			return ltr ? width() - layout.measure(0) : layout.measure(0);
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+}
+
+/**
  * Removes the default font selector listener.
  * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered

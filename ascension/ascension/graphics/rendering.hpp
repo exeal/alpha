@@ -54,6 +54,7 @@ namespace ascension {
 				// text metrics
 				Scalar baselineDistance(const Range<VisualLine>& lines) const;
 				Scalar lineIndent(length_t line, length_t subline = 0) const;
+				Scalar lineStartEdge(length_t line) const;
 				// operation
 				void renderLine(length_t line, PaintContext& context,
 					const NativePoint& origin, const TextPaintOverride* paintOverride = 0,
