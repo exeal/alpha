@@ -287,22 +287,28 @@ k::Position TextViewer::characterForLocalPoint(const NativePoint& p, TextLayout:
 	length_t subline;
 	bool outside;
 	{
-		const VisualLine temp(mapViewportBpdToLine(geometry::y(p), &outside));
+		const VisualLine temp(mapLocalPointToLine(p, &outside));
 		result.line = temp.line;
 		subline = temp.subline;
 	}
 	if(abortNoCharacter && outside)
 		return k::Position();
 	const TextLayout& layout = renderer_->layouts()[result.line];
+	const BaselineIterator baseline(*this, result.line, true);
 
 	// determine the column
-	const Scalar x = geometry::x(p) - getDisplayXOffset(result.line);
+	const bool horizontal = WritingModeBase::isHorizontal(layout.writingMode().blockFlowDirection);
+	NativePoint lineLocalPoint(p);
+	if(horizontal)
+		geometry::translate(lineLocalPoint, geometry::make<NativeSize>(
+			inlineProgressionOffsetInViewport(result.line), geometry::y(baseline.position())));
+	else
+		geometry::translate(lineLocalPoint, geometry::make<NativeSize>(
+			geometry::x(baseline.position()), inlineProgressionOffsetInViewport(result.line)));
 	if(edge == TextLayout::LEADING)
-		result.column = layout.offset(geometry::make<NativePoint>(
-			x, static_cast<Scalar>(renderer_->defaultFont()->metrics().linePitch() * subline)), &outside).first;
+		result.column = layout.offset(lineLocalPoint, &outside).first;
 	else if(edge == TextLayout::TRAILING)
-		result.column = layout.offset(geometry::make<NativePoint>(
-			x, static_cast<Scalar>(renderer_->defaultFont()->metrics().linePitch() * subline)), &outside).second;
+		result.column = layout.offset(lineLocalPoint, &outside).second;
 	else
 		throw UnknownValueException("edge");
 	if(abortNoCharacter && outside)
@@ -314,15 +320,19 @@ k::Position TextViewer::characterForLocalPoint(const NativePoint& p, TextLayout:
 		const String& s = document().line(result.line);
 		const bool interveningSurrogates =
 			surrogates::isLowSurrogate(s[result.column]) && surrogates::isHighSurrogate(s[result.column - 1]);
+		const Scalar ipd = horizontal ? static_cast<Scalar>(geometry::x(lineLocalPoint)) : geometry::y(lineLocalPoint);
 		if(snapPolicy == k::locations::UTF32_CODE_UNIT) {
 			if(interveningSurrogates) {
 				if(edge == TextLayout::LEADING)
 					--result.column;
-				else if(detail::distance<Scalar>(x, geometry::x(layout.location(result.column - 1)))
-						<= detail::distance<Scalar>(x, geometry::x(layout.location(result.column + 1))))
-					--result.column;
-				else
-					++result.column;
+				else {
+					const NativePoint leading(layout.location(result.column - 1));
+					const NativePoint trailing(layout.location(result.column + 1));
+					const Scalar leadingIpd = horizontal ? geometry::x(leading) : geometry::y(leading);
+					const Scalar trailingIpd = horizontal ? geometry::x(trailing) : geometry::y(trailing);
+					(detail::distance<Scalar>(ipd, leadingIpd)
+						<= detail::distance<Scalar>(ipd, trailingIpd)) ? --result.column : ++result.column;
+				}
 			}
 		} else if(snapPolicy == k::locations::GRAPHEME_CLUSTER) {
 			text::GraphemeBreakIterator<k::DocumentCharacterIterator> i(
@@ -332,10 +342,12 @@ k::Position TextViewer::characterForLocalPoint(const NativePoint& p, TextLayout:
 				if(edge == TextLayout::LEADING)
 					result.column = i.base().tell().column;
 				else {
-					const k::Position backward(i.base().tell());
-					const k::Position forward((++i).base().tell());
-					result.column = ((detail::distance<Scalar>(x, geometry::x(layout.location(backward.column)))
-						<= detail::distance<Scalar>(x, geometry::x(layout.location(forward.column)))) ? backward : forward).column;
+					const k::Position backward(i.base().tell()), forward((++i).base().tell());
+					const NativePoint leading(layout.location(backward.column)), trailing(layout.location(forward.column));
+					const Scalar backwardIpd = horizontal ? geometry::x(leading) : geometry::y(leading);
+					const Scalar forwardIpd = horizontal ? geometry::x(trailing) : geometry::y(trailing);
+					result.column = ((detail::distance<Scalar>(ipd, backwardIpd)
+						<= detail::distance<Scalar>(ipd, forwardIpd)) ? backward : forward).column;
 				}
 			}
 		} else
@@ -879,7 +891,10 @@ NativePoint TextViewer::localPointForCharacter(const k::Position& position,
 	}
 
 	// apply viewport offset in inline-progression-direction
-	(horizontal ? geometry::x(p) : geometry::y(p)) += displayOffset(position.line);
+	if(horizontal)
+		geometry::x(p) += inlineProgressionOffsetInViewport(position.line);
+	else
+		geometry::y(p) += inlineProgressionOffsetInViewport(position.line);
 
 	return p;
 }
@@ -1174,7 +1189,7 @@ void TextViewer::paint(PaintContext& context) {
 		geometry::resize(lineBounds, geometry::make<NativeSize>(0, 0));
 	length_t line, subline;
 	mapViewportBpdToLine(mapPhysicalToAbstract(utils::writingMode(*this), bounds(false), scheduledBounds, temp).before), &line, &subline);
-	Scalar y = BaselineIterator(line, true).position();
+	Scalar y = BaselineIterator(*this, line, true).position();
 	if(line < lines) {
 		while(y < geometry::bottom(scheduledBounds) && line < lines) {
 			// paint a logical line
@@ -2103,7 +2118,9 @@ TextViewer::SpacePainter::SpacePainter() /*throw()*/ : viewerBounds_(
 	computedValues_.left = computedValues_.top = computedValues_.right = computedValues_.bottom = 0;
 }
 
-void TextViewer::SpacePainter::update() {
+void TextViewer::SpacePainter::update(const TextViewer& viewer, const AbstractFourSides<Space>& spaces) {
+	viewerBounds_ = viewer.bounds(false);
+	mapAbstractToPhysical(utils::writingMode(viewer), spaces, computedValues_);
 }
 
 
