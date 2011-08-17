@@ -71,7 +71,7 @@ namespace ascension {
 		private:
 			struct Point {
 				graphics::font::VisualLine line;
-				graphics::Scalar ipd;	// distance from left side of layout
+				graphics::Scalar ipd;	// distance from left/top-edge of content-area
 			} points_[2];
 			const TextViewer& viewer_;
 			const Point& beginning() const /*throw()*/ {return points_[(points_[0].line <= points_[1].line) ? 0 : 1];}
@@ -518,12 +518,14 @@ namespace ascension {
 
 			// helpers
 		private:
-			graphics::Scalar inlineProgressionOffsetInViewport(length_t line) const;
+			graphics::Scalar inlineProgressionOffsetInViewport() const;
 			void handleGUICharacterInput(CodePoint c);
 			void initialize();
+			graphics::Scalar mapLineLayoutIpdToViewport(length_t line, graphics::Scalar ipd) const;
 //			graphics::Scalar mapLineToViewportBpd(length_t line, bool fullSearch) const;
 			graphics::font::VisualLine mapLocalPointToLine(
 				const graphics::NativePoint& p, bool* snapped = 0) const /*throw()*/;
+			graphics::Scalar mapViewportIpdToLineLayout(length_t line, graphics::Scalar ipd) const;
 			graphics::font::VisualLine mapViewportBpdToLine(
 				graphics::Scalar bpd, bool* snapped = 0) const /*throw()*/;
 			void recreateCaret();
