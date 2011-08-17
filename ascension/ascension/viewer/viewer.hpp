@@ -65,7 +65,7 @@ namespace ascension {
 			ASCENSION_UNASSIGNABLE_TAG(VirtualBox);
 		public:
 			VirtualBox(const TextViewer& viewer, const kernel::Region& region) /*throw()*/;
-			bool isPointOver(const graphics::NativePoint& p) const /*throw()*/;
+			bool includes(const graphics::NativePoint& p) const /*throw()*/;
 			bool overlappedSubline(const graphics::font::VisualLine& line, Range<length_t>& range) const /*throw()*/;
 			void update(const kernel::Region& region) /*throw()*/;
 		private:
