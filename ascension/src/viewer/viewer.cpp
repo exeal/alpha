@@ -2132,6 +2132,44 @@ TextViewer::SpacePainter::SpacePainter() /*throw()*/ : viewerBounds_(
 	computedValues_.left = computedValues_.top = computedValues_.right = computedValues_.bottom = 0;
 }
 
+void TextViewer::SpacePainter::paint(PaintContext& context) {
+	const NativeRectangle boundsToPaint(context.boundsToPaint());
+
+	// space-top
+	NativeRectangle r(geometry::make<NativeRectangle>(
+		geometry::topLeft(viewerBounds_), geometry::make<NativeSize>(geometry::dx(viewerBounds_), computedValues_.top)));
+	r = geometry::intersected(r, boundsToPaint);
+	if(!geometry::isEmpty(r))
+		context.fillRectangle(r);
+
+	// space-bottom
+	r = geometry::make<NativeRectangle>(
+		geometry::bottomLeft(viewerBounds_), geometry::make<NativeSize>(geometry::dx(viewerBounds_), -computedValues_.bottom));
+	r = geometry::intersected(r, boundsToPaint);
+	if(!geometry::isEmpty(r))
+		context.fillRectangle(r);
+
+	// space-left
+	r = geometry::make<NativeRectangle>(
+		makeRange(geometry::left(viewerBounds_), geometry::left(viewerBounds_) + computedValues_.left),
+		makeRange(geometry::top(viewerBounds_) + computedValues_.top, geometry::bottom(viewerBounds_) - computedValues_.bottom));
+	r = geometry::intersected(r, boundsToPaint);
+	if(!geometry::isEmpty(r))
+		context.fillRectangle(r);
+
+	// space-right
+	r = geometry::make<NativeRectangle>(
+		makeRange(geometry::right(viewerBounds_), geometry::right(viewerBounds_) - computedValues_.right),
+		makeRange(geometry::top(viewerBounds_) + computedValues_.top, geometry::bottom(viewerBounds_) - computedValues_.bottom));
+	r = geometry::intersected(r, boundsToPaint);
+	if(!geometry::isEmpty(r))
+		context.fillRectangle(r);
+}
+
+inline const PhysicalFourSides<Scalar>& TextViewer::SpacePainter::spaces() const {
+	return computedValues_;
+}
+
 void TextViewer::SpacePainter::update(const TextViewer& viewer, const AbstractFourSides<Space>& spaces) {
 	viewerBounds_ = viewer.bounds(false);
 	mapAbstractToPhysical(utils::writingMode(viewer), spaces, computedValues_);
