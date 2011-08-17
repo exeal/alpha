@@ -298,13 +298,13 @@ k::Position TextViewer::characterForLocalPoint(const NativePoint& p, TextLayout:
 
 	// determine the column
 	const bool horizontal = WritingModeBase::isHorizontal(layout.writingMode().blockFlowDirection);
-	NativePoint lineLocalPoint(p);
-	if(horizontal)
-		geometry::translate(lineLocalPoint, geometry::make<NativeSize>(
-			inlineProgressionOffsetInViewport(result.line), geometry::y(baseline.position())));
-	else
-		geometry::translate(lineLocalPoint, geometry::make<NativeSize>(
-			geometry::x(baseline.position()), inlineProgressionOffsetInViewport(result.line)));
+	NativePoint lineLocalPoint(horizontal ?
+		geometry::make<NativePoint>(
+			mapViewportIpdToLineLayout(result.line, geometry::x(p)),
+			geometry::y(p) + geometry::y(baseline.position()))
+		: geometry::make<NativePoint>(
+			geometry::x(p) + geometry::x(baseline.position()),
+			mapViewportIpdToLineLayout(result.line, geometry::y(p))));
 	if(edge == TextLayout::LEADING)
 		result.column = layout.offset(lineLocalPoint, &outside).first;
 	else if(edge == TextLayout::TRAILING)
@@ -615,16 +615,13 @@ TextViewer::HitTestResult TextViewer::hitTest(const NativePoint& p) const {
 }
 
 /**
- * Returns an offset from left-edge or top-edge of local-bounds to start-edge of the specified line
- * in pixels. This algorithm considers the ruler, the scroll position and spaces around the content
- * box.
- * @param line The line number
+ * Returns an offset from left/top-edge of local-bounds to one of the content-area in pixels. This
+ * algorithm considers the ruler, the scroll position and spaces around the content box.
  * @return The offset
- * @throw kernel#BadPositionException @a line is invalid
+ * @see TextLayout#lineStartEdge, TextRenderer#lineStartEdge
  */
-Scalar TextViewer::inlineProgressionOffsetInViewport(length_t line) const {
-	const TextLayout& layout = textRenderer().layouts().at(line);	// this may throw kernel.BadPositionException
-	const bool horizontal = WritingModeBase::isHorizontal(layout.writingMode().blockFlowDirection);
+Scalar TextViewer::inlineProgressionOffsetInViewport() const {
+	const bool horizontal = WritingModeBase::isHorizontal(utils::writingMode(*this).blockFlowDirection);
 
 	// space width
 	const PhysicalFourSides<Scalar>& spaces = spaceWidths();
@@ -892,9 +889,9 @@ NativePoint TextViewer::localPointForCharacter(const k::Position& position,
 
 	// apply viewport offset in inline-progression-direction
 	if(horizontal)
-		geometry::x(p) += inlineProgressionOffsetInViewport(position.line);
+		geometry::x(p) = mapLineLayoutIpdToViewport(position.line, geometry::x(p));
 	else
-		geometry::y(p) += inlineProgressionOffsetInViewport(position.line);
+		geometry::y(p) = mapLineLayoutIpdToViewport(position.line, geometry::y(p));
 
 	return p;
 }
@@ -908,6 +905,23 @@ void TextViewer::lockScroll(bool unlock /* = false */) {
 	else if(scrollInfo_.lockCount != 0)
 		--scrollInfo_.lockCount;
 }
+
+/**
+ * @internal
+ * @see #mapViewportIpdToLineLayout
+ */
+inline Scalar TextViewer::mapLineLayoutIpdToViewport(length_t line, Scalar ipd) const {
+	return ipd + textRenderer().lineStartEdge(line) + inlineProgressionOffsetInViewport();
+}
+
+/**
+ * @internal
+ * @see #mapLineLayoutIpdToViewport
+ */
+inline Scalar TextViewer::mapViewportIpdToLineLayout(length_t line, Scalar ipd) const {
+	return ipd - textRenderer().lineStartEdge(line) - inlineProgressionOffsetInViewport();
+}
+
 #if 0
 /**
  * Returns the distance from the before-edge of the viewport to the baseline of the specified line.
@@ -2296,6 +2310,8 @@ bool VirtualBox::isPointOver(const graphics::NativePoint& p) const /*throw()*/ {
 //	assert(viewer_.isWindow());
 	if(viewer_.hitTest(p) != TextViewer::CONTENT_AREA)	// ignore if not in content area
 		return false;
+	const bool horizontal = WritingModeBase::isHorizontal(utils::writingMode(viewer_));
+	const Scalar ipd = (horizontal ? geometry::x(p) : geometry::y(p)) - viewer_.inlineProgressionOffsetInViewport();
 	const Scalar leftMargin = viewer_.textAreaMargins().left;
 	if(geometry::x(p) < startEdge() + leftMargin || geometry::x(p) >= endEdge() + leftMargin)	// about x-coordinate
 		return false;
@@ -2859,7 +2875,7 @@ void DefaultMouseInputStrategy::extendSelection(const k::Position* to /* = 0 */)
 		throw IllegalStateException("not extending the selection.");
 	k::Position destination;
 	if(to == 0) {
-		const NativeRectangle clientBounds(viewer_->bounds(false));
+		const NativeRectangle viewport(viewer_->bounds(false));
 		const PhysicalFourSides<Scalar> spaces(viewer_->spaceWidths());
 		NativePoint p(viewer_->mapFromGlobal(Cursor::position()));
 		Caret& caret = viewer_->caret();
@@ -2870,13 +2886,13 @@ void DefaultMouseInputStrategy::extendSelection(const k::Position* to /* = 0 */)
 				state_ = EXTENDING_CHARACTER_SELECTION;
 		}
 		p = geometry::make<NativePoint>(
-			min<Scalar>(
-				max<Scalar>(geometry::x(p), geometry::left(clientBounds) + spaces.left),
-				geometry::right(clientBounds) - spaces.right),
-			min<Scalar>(
-				max<Scalar>(geometry::y(p), geometry::top(clientBounds) + spaces.top),
-				geometry::bottom(clientBounds) - spaces.bottom));
-		destination = viewer_->characterForClientXY(p, TextLayout::TRAILING);
+				min<Scalar>(
+					max<Scalar>(geometry::x(p), geometry::left(viewport) + spaces.left),
+					geometry::right(viewport) - spaces.right),
+				min<Scalar>(
+					max<Scalar>(geometry::y(p), geometry::top(viewport) + spaces.top),
+					geometry::bottom(viewport) - spaces.bottom));
+		destination = viewer_->characterForLocalPoint(p, TextLayout::TRAILING);
 	} else
 		destination = *to;
 
@@ -2940,7 +2956,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 
 	// select line(s)
 	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS) {
-		const k::Position to(viewer_->characterForClientXY(position, TextLayout::LEADING));
+		const k::Position to(viewer_->characterForLocalPoint(position, TextLayout::LEADING));
 		const bool extend = win32::boole(modifiers & MK_SHIFT) && to.line != caret.anchor().line();
 		state_ = EXTENDING_LINE_SELECTION;
 		selection_.initialLine = extend ? caret.anchor().line() : to.line;
@@ -2963,7 +2979,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 		bool hyperlinkInvoked = false;
 		if(win32::boole(modifiers & MK_CONTROL)) {
 			if(!isPointOverSelection(caret, position)) {
-				const k::Position p(viewer_->characterForClientXY(position, TextLayout::TRAILING, true));
+				const k::Position p(viewer_->characterForLocalPoint(position, TextLayout::TRAILING, true));
 				if(p != k::Position()) {
 					if(const hyperlink::Hyperlink* link = utils::getPointedHyperlink(*viewer_, p)) {
 						link->invoke();
@@ -3015,7 +3031,7 @@ void DefaultMouseInputStrategy::handleLeftButtonReleased(const NativePoint& posi
 			&& (state_ == APPROACHING_DND
 			|| state_ == DND_SOURCE)) {	// TODO: this should handle only case APPROACHING_DND?
 		state_ = NONE;
-		viewer_->caret().moveTo(viewer_->characterForClientXY(position, TextLayout::TRAILING));
+		viewer_->caret().moveTo(viewer_->characterForLocalPoint(position, TextLayout::TRAILING));
 		::SetCursor(::LoadCursor(0, IDC_IBEAM));	// hmm...
 	}
 
