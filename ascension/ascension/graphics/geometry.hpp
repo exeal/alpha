@@ -222,6 +222,16 @@ namespace ascension {
 				return traits::Maker<typename Tag<Geometry0>::Type, Geometry0>::make(geometry1, geometry2);
 			}
 
+			template<typename Rectangle>
+			inline Rectangle make(
+					const Range<typename Coordinate<typename Coordinate<Rectangle>::Type>::Type>& xrange,
+					const Range<typename Coordinate<typename Coordinate<Rectangle>::Type>::Type>& yrange,
+					typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
+				return make<Rectangle>(
+					make<Coordinate<Rectangle>::Type>(xrange.beginning(), yrange.beginning()),
+					make<Coordinate<Rectangle>::Type>(xrange.end(), yrange.end()));
+			}
+
 			template<std::size_t dimension, typename Geometry>
 			inline typename Coordinate<Geometry>::Type get(const Geometry& geometry) {
 				return traits::Accessor<typename Tag<Geometry>::Type, Geometry, dimension>::get(geometry);
@@ -314,14 +324,23 @@ namespace ascension {
 				return equals(get<0>(geometry1), get<0>(geometry2)) && equals(get<1>(geometry1), get<1>(geometry2));
 			}
 
-			// 'intersected' for ...
+			// 'intersected' for rectangle and region
+
+			template<typename Rectangle1, typename Rectangle2>
+			inline Rectangle1 intersected(const Rectangle1& rectangle1, const Rectangle2& rectangle2,
+					typename detail::EnableIfTagIs<Rectangle1, RectangleTag>::type* = 0,
+					typename detail::EnableIfTagIs<Rectangle2, RectangleTag>::type* = 0) {
+				return make<Rectangle1>(
+					ascension::intersected(range<X_COORDINATE>(rectangle1), range<X_COORDINATE>(rectangle2)),
+					ascension::intersected(range<Y_COORDINATE>(rectangle1), range<Y_COORDINATE>(rectangle2)));
+			}
 
 			// 'intersects' for rectangle and region
 
 			template<typename Rectangle1, typename Rectangle2>
 			inline bool _intersects(const Rectangle1& rectangle1, const Rectangle2& rectangle2, const RectangleTag&, const RectangleTag&) {
-				return range<X_COORDINATE>(rectangle1).intersects(range<X_COORDINATE>(rectangle2))
-					|| range<Y_COORDINATE>(rectangle1).intersects(range<Y_COORDINATE>(rectangle2));
+				return ascension::intersects(range<X_COORDINATE>(rectangle1), range<X_COORDINATE>(rectangle2))
+					&& ascension::intersects(range<Y_COORDINATE>(rectangle1), range<Y_COORDINATE>(rectangle2));
 			}
 
 			template<typename Geometry1, typename Geometry2>
