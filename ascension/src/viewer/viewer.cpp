@@ -2305,27 +2305,23 @@ VirtualBox::VirtualBox(const TextViewer& viewer, const k::Region& region) /*thro
  * @param p The point in local coordinates
  * @return @c true If the point is on the virtual box
  */
-bool VirtualBox::isPointOver(const graphics::NativePoint& p) const /*throw()*/ {
+bool VirtualBox::includes(const graphics::NativePoint& p) const /*throw()*/ {
 	// TODO: This code can't handle vertical writing-mode.
 //	assert(viewer_.isWindow());
 	if(viewer_.hitTest(p) != TextViewer::CONTENT_AREA)	// ignore if not in content area
 		return false;
-	const bool horizontal = WritingModeBase::isHorizontal(utils::writingMode(viewer_));
-	const Scalar ipd = (horizontal ? geometry::x(p) : geometry::y(p)) - viewer_.inlineProgressionOffsetInViewport();
-	const Scalar leftMargin = viewer_.textAreaMargins().left;
-	if(geometry::x(p) < startEdge() + leftMargin || geometry::x(p) >= endEdge() + leftMargin)	// about x-coordinate
+
+	// about inline-progression-direction
+	const bool horizontal = WritingModeBase::isHorizontal(utils::writingMode(viewer_).blockFlowDirection);
+	const Scalar ipd = (horizontal ? geometry::x(p) : geometry::y(p)) - viewer_.inlineProgressionOffsetInViewport();	// $friendly-access
+	if(ipd < startEdge() || ipd >= endEdge())
 		return false;
 
-	// about y-coordinate
+	// about block-progression-direction
 	const Point& top = beginning();
 	const Point& bottom = end();
-	const VisualLine line(viewer_.mapViewportBpdToLine(geometry::y(p)));	// $friendly-access
-	if(line < top.line)
-		return false;
-	else if(line > bottom.line)
-		return false;
-	else
-		return true;
+	const VisualLine line(viewer_.mapLocalPointToLine(p));	// $friendly-access
+	return line >= top.line && line <= bottom.line;
 }
 
 /**
@@ -2335,7 +2331,7 @@ bool VirtualBox::isPointOver(const graphics::NativePoint& p) const /*throw()*/ {
  * @return @c true if the box and the visual line overlap
  */
 bool VirtualBox::overlappedSubline(const VisualLine& line, Range<length_t>& range) const /*throw()*/ {
-	assert(viewer_.isWindow());
+//	assert(viewer_.isWindow());
 	const Point& top = beginning();
 	const Point& bottom = end();
 	if(line < top.line || line > bottom.line)	// out of the region
