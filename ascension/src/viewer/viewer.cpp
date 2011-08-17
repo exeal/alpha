@@ -2289,7 +2289,7 @@ void TextViewer::ScrollInfo::updateVertical(const TextViewer& viewer) /*throw()*
 }
 
 
-// VirtualBox ///////////////////////////////////////////////////////////////
+// VirtualBox /////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Constructor.
@@ -2301,9 +2301,36 @@ VirtualBox::VirtualBox(const TextViewer& viewer, const k::Region& region) /*thro
 }
 
 /**
+ * Returns the character range in specified visual line overlaps with the box.
+ * @param line The line
+ * @param[out] range The character range in @a line.line
+ * @return @c true if the box and the visual line overlap
+ * @see #includes
+ */
+bool VirtualBox::characterRangeInVisualLine(const VisualLine& line, Range<length_t>& range) const /*throw()*/ {
+//	assert(viewer_.isWindow());
+	const Point& top = beginning();
+	const Point& bottom = end();
+	if(line < top.line || line > bottom.line)	// out of the region
+		return false;
+	else {
+		const TextRenderer& renderer = viewer_.textRenderer();
+		const TextLayout& layout = renderer.layouts().at(line.line);
+		const Scalar bpd = layout.baseline(line.subline);
+		range = makeRange(
+			layout.offset(geometry::make<NativePoint>(
+				viewer_.mapViewportIpdToLineLayout(line.line, points_[0].ipd), bpd)).first,
+			layout.offset(geometry::make<NativePoint>(
+				viewer_.mapViewportIpdToLineLayout(line.line, points_[1].ipd), bpd)).first);
+		return !isEmpty(range);
+	}
+}
+
+/**
  * Returns if the specified point is on the virtual box.
  * @param p The point in local coordinates
  * @return @c true If the point is on the virtual box
+ * @see #characterRangeInVisualLine
  */
 bool VirtualBox::includes(const graphics::NativePoint& p) const /*throw()*/ {
 	// TODO: This code can't handle vertical writing-mode.
@@ -2322,30 +2349,6 @@ bool VirtualBox::includes(const graphics::NativePoint& p) const /*throw()*/ {
 	const Point& bottom = end();
 	const VisualLine line(viewer_.mapLocalPointToLine(p));	// $friendly-access
 	return line >= top.line && line <= bottom.line;
-}
-
-/**
- * Returns the range which the box overlaps with in specified visual line.
- * @param line The line
- * @param[out] range the range
- * @return @c true if the box and the visual line overlap
- */
-bool VirtualBox::overlappedSubline(const VisualLine& line, Range<length_t>& range) const /*throw()*/ {
-//	assert(viewer_.isWindow());
-	const Point& top = beginning();
-	const Point& bottom = end();
-	if(line < top.line || line > bottom.line)	// out of the region
-		return false;
-	else {
-		const TextRenderer& renderer = viewer_.textRenderer();
-		const TextLayout& layout = renderer.layouts().at(line.line);
-		range = Range<length_t>(
-			layout.offset(geometry::make<NativePoint>(points_[0].ipd - renderer.lineIndent(line.line, 0),
-				static_cast<Scalar>(renderer.defaultFont()->metrics().linePitch() * line.subline))).first,
-			layout.offset(geometry::make<NativePoint>(points_[1].ipd - renderer.lineIndent(line.line, 0),
-				static_cast<Scalar>(renderer.defaultFont()->metrics().linePitch() * line.subline))).first);
-		return !isEmpty(range);
-	}
 }
 
 /**
