@@ -2353,18 +2353,30 @@ bool VirtualBox::includes(const graphics::NativePoint& p) const /*throw()*/ {
 
 /**
  * Updates the rectangle of the virtual box.
- * @param region the region consists the rectangle
+ * @param region The region consists the rectangle
  */
 void VirtualBox::update(const k::Region& region) /*throw()*/ {
+	Point newPoints[2];
 	const TextRenderer& r = viewer_.textRenderer();
-	const TextLayout* layout = &r.layouts().at(points_[0].line.line = region.first.line);
+	const bool horizontal = WritingModeBase::isHorizontal(utils::writingMode(viewer_).blockFlowDirection);
+
+	// first
+	const TextLayout* layout = &r.layouts().at(newPoints[0].line.line = region.first.line);
 	graphics::NativePoint location(layout->location(region.first.column));
-	points_[0].ipd = geometry::x(location) + r.lineIndent(points_[0].line.line, 0);
-	points_[0].line.subline = geometry::y(location) / r.defaultFont()->metrics().linePitch();
-	layout = &r.layouts().at(points_[1].line.line = region.second.line);
+	newPoints[0].ipd = viewer_.mapLineLayoutIpdToViewport(
+		newPoints[0].line.line, horizontal ? static_cast<Scalar>(geometry::x(location)) : geometry::y(location));
+	newPoints[0].line.subline = layout->lineAt(region.first.column);
+
+	// second
+	layout = &r.layouts().at(newPoints[1].line.line = region.second.line);
 	location = layout->location(region.second.column);
-	points_[1].ipd = geometry::x(location) + r.lineIndent(points_[1].line.line, 0);
-	points_[1].line.subline = geometry::y(location) / r.defaultFont()->metrics().linePitch();
+	newPoints[1].ipd = viewer_.mapLineLayoutIpdToViewport(
+		newPoints[1].line.line, horizontal ? static_cast<Scalar>(geometry::x(location)) : geometry::y(location));
+	newPoints[1].line.subline = layout->lineAt(region.second.column);
+
+	// commit
+	points_[0] = newPoints[0];
+	points_[1] = newPoints[1];
 }
 
 
