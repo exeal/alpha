@@ -641,7 +641,7 @@ namespace ascension {
 			private:
 				graphics::NativeRectangle viewerBounds_;
 				graphics::PhysicalFourSides<graphics::Scalar> computedValues_;
-			};
+			} spacePainter_;
 
 			// enumerations
 		private:
