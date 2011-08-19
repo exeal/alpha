@@ -252,7 +252,6 @@
     <ClCompile Include="..\..\ascension\src\viewer\caret.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\content-assist.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\ruler.cpp" />
-    <ClCompile Include="..\..\ascension\src\viewer\user-input.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\viewer.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\document.cpp" />
     <ClCompile Include="..\..\ascension\src\kernel\fileio.cpp" />
@@ -278,6 +277,8 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\text\normalizer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\unicode-surrogates.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\unicode-utf.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\utf-8.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\timer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\type-traits.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\utility.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\line-layout-vector.hpp" />
@@ -289,12 +290,14 @@
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation-reconstructor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\text-style.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\writing-mode.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\command.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\input-sequence-checker.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\kill-ring.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\session.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\cursor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\message-dispatcher-windows.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\user-input.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\widget-windows.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\widget.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\caret-observers.hpp" />
@@ -350,7 +353,6 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\caret.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\content-assist.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\viewer.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\viewer\base\user-input.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\window-windows.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\window.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\color.hpp" />

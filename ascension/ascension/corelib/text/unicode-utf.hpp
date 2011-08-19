@@ -47,9 +47,9 @@ namespace ascension {
 		> {
 		public:
 			/// Assignment operator.
-			Derived& operator=(const UTF16To32IteratorBase& other) {
+			Derived& operator=(const UTF16To32IteratorBase<Derived, BaseIterator, UChar32>& other) {
 				p_ = other.p_;
-				return getConcrete();
+				return derived();
 			}
 			/// Returns the current position.
 			BaseIterator tell() const {return p_;}
@@ -57,7 +57,7 @@ namespace ascension {
 			/// Default constructor.
 			UTF16To32IteratorBase() {}
 			/// Copy-constructor.
-			UTF16To32IteratorBase(const UTF16To32IteratorBase& other) : p_(other.p_) {}
+			UTF16To32IteratorBase(const UTF16To32IteratorBase<Derived, BaseIterator, UChar32>& other) : p_(other.p_) {}
 			/// Constructor takes a position to start iteration.
 			UTF16To32IteratorBase(BaseIterator start) : p_(start) {}
 		private:

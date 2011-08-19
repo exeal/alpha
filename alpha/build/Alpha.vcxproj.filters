@@ -206,9 +206,6 @@
     <ClCompile Include="..\..\ascension\src\viewer\ruler.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\viewer\user-input.cpp">
-      <Filter>ascension\Source Files\viewer</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\viewer.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
@@ -436,9 +433,6 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\viewer.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\base\user-input.hpp">
-      <Filter>ascension\Header Files\viewer\base</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\base\window-windows.hpp">
       <Filter>ascension\Header Files\viewer\base</Filter>
     </ClInclude>
@@ -594,6 +588,18 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\base\cursor.hpp">
       <Filter>ascension\Header Files\viewer\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\user-input.hpp">
+      <Filter>ascension\Header Files\viewer\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\timer.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\writing-mode.hpp">
+      <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\utf-8.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
