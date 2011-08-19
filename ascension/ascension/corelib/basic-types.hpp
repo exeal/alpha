@@ -28,6 +28,7 @@
 #	include <boost/tr1/memory.hpp>
 #endif
 #include <cmath>	// std.abs(double)
+#include <iterator>	// std.back_insert_iterator, std.front_insert_iterator, std.ostream_iterator
 #include <string>
 
 /// Version of Ascension library
@@ -99,6 +100,27 @@ namespace ascension {
 	typedef std::basic_string<Char> String;	///< Type for strings as UTF-16.
 	ASCENSION_STATIC_ASSERT(sizeof(Char) == 2);
 	ASCENSION_STATIC_ASSERT(sizeof(CodePoint) == 4);
+
+	namespace text {
+		/**
+		 * Returns the size of a code unit of the specified code unit sequence in bytes.
+		 * @tparam CodeUnitSequence The type represents a code unit sequence
+		 */
+		template<typename CodeUnitSequence> struct CodeUnitSizeOf {
+			/// Byte size of the code unit.
+			static const std::size_t value =
+				sizeof(typename std::iterator_traits<CodeUnitSequence>::value_type);
+		};
+		template<typename T> struct CodeUnitSizeOf<std::back_insert_iterator<T> > {
+			static const std::size_t value = sizeof(T::value_type);
+		};
+		template<typename T> struct CodeUnitSizeOf<std::front_insert_iterator<T> > {
+			static const std::size_t value = sizeof(T::value_type);
+		};
+		template<typename T, typename U> struct CodeUnitSizeOf<std::ostream_iterator<T, U> > {
+			static const std::size_t value = sizeof(T);
+		};
+	}
 
 	typedef std::size_t length_t;					///< Length of string or index.
 	typedef std::ptrdiff_t signed_length_t;			///< Signed @c length_t.

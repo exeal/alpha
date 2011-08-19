@@ -24,26 +24,6 @@ namespace ascension {
 	namespace text {
 
 		/**
-		 * Returns the size of a code unit of the specified code unit sequence in bytes.
-		 * @tparam CodeUnitSequence The type represents a code unit sequence
-		 * @see ToUTF32Sequence
-		 */
-		template<typename CodeUnitSequence> struct CodeUnitSizeOf {
-			/// Byte size of the code unit.
-			static const std::size_t value =
-				sizeof(typename std::iterator_traits<CodeUnitSequence>::value_type);
-		};
-		template<typename T> struct CodeUnitSizeOf<std::back_insert_iterator<T> > {
-			static const std::size_t value = sizeof(T::value_type);
-		};
-		template<typename T> struct CodeUnitSizeOf<std::front_insert_iterator<T> > {
-			static const std::size_t value = sizeof(T::value_type);
-		};
-		template<typename T, typename U> struct CodeUnitSizeOf<std::ostream_iterator<T, U> > {
-			static const std::size_t value = sizeof(T);
-		};
-
-		/**
 		 * @c surrogates namespace collects low level procedures handle UTF-16 surrogate pair.
 		 * @see UTF16To32Iterator, UTF32To16Iterator
 		 */
