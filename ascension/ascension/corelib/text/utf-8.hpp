@@ -9,6 +9,10 @@
 #include <ascension/corelib/standard-iterator-adapter.hpp>
 #include <ascension/corelib/text/character.hpp>
 
+#if ASCENSION_UNICODE_VERSION > 0x0510
+#error These class definitions and implementations are based on old version of Unicode.
+#endif
+
 namespace ascension {
 
 	namespace detail {
@@ -40,6 +44,11 @@ namespace ascension {
 	}
 
 	namespace text {
+
+		/**
+		 * @c utf8 namespace provides low level procedures handle UTF-8 character sequence.
+		 * @see utf16
+		 */
 		namespace utf8 {
 			inline bool isValidByte(uint8_t byte) {
 			}
@@ -49,7 +58,7 @@ namespace ascension {
 			}
 
 			inline bool isLeadingByte(uint8_t byte) {
-				return byte < 0x80 || ((detail::UTF8_WELL_FORMED_FIRST_BYTES[byte - 0x80] & 0xf0 != 0);
+				return byte < 0x80 || ((detail::UTF8_WELL_FORMED_FIRST_BYTES[byte - 0x80] & 0xf0) != 0);
 			}
 
 			inline bool isTrailingByte(uint8_t byte) {
