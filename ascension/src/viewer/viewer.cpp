@@ -1214,22 +1214,8 @@ void TextViewer::paint(PaintContext& context) {
 	}
 
 	// paint 'margin-after'
-	if(geometry::bottom(scheduledBounds) > y && y > spaces.top + linePitch - 1) {
-		context.setFillStyle(marginPaint);
-		context.fillRectangle(
-			geometry::make<NativeRectangle>(
-				geometry::make<NativePoint>(geometry::left(clientBounds) + spaces.left, y),
-				geometry::make<NativeSize>(geometry::dx(clientBounds) - spaces.left - spaces.right, geometry::bottom(scheduledBounds) - y)));
-	}
-
-	// paint 'margin-before'
-	if(spaces.top > 0) {
-		context.setFillStyle(marginPaint);
-		context.fillRectangle(
-			geometry::make<NativeRectangle>(
-				geometry::make<NativePoint>(geometry::left(clientBounds) + spaces.left, geometry::top(clientBounds)),
-				geometry::make<NativeSize>(geometry::dx(clientBounds) - spaces.left - spaces.right, spaces.top)));
-	}
+	context.setFillStyle(marginPaint);
+	spacePainter_.paint(context);
 }
 
 /// Recreates and shows the caret. If the viewer does not have focus, nothing heppen.
@@ -2261,6 +2247,9 @@ Scalar TextViewer::Renderer::width() const /*throw()*/ {
 /// Default constructor.
 TextViewer::Configuration::Configuration() /*throw()*/ :
 		readingDirection(LEFT_TO_RIGHT), usesRichTextClipboardFormat(false) {
+	spaces.before = Length(1, Length::PIXELS);
+	spaces.start = Length(5, Length::PIXELS);
+	spaces.after = spaces.end = Length(0, Length::PIXELS);
 #if(_WIN32_WINNT >= 0x0501)
 	BOOL b;
 	if(::SystemParametersInfo(SPI_GETMOUSEVANISH, 0, &b, 0) != 0)
