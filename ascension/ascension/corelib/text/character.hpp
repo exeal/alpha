@@ -152,30 +152,6 @@ namespace ascension {
 			}
 
 			/**
-			 * Converts the specified code point to a corresponding surrogate pair.
-			 * @tparam OutputIterator The output iterator represents a UTF-16 character sequence
-			 * @param c The code point
-			 * @param[out] dest The surrogate pair
-			 * @retval 0 @a c is a surrogate. in this case, @a *dest will be @a c
-			 * @retval 1 @a c is in BMP
-			 * @retval 2 @a c is out of BMP
-			 * @throw std#invalid_argument @a c can't be expressed by UTF-16
-			 */
-			template<typename OutputIterator>
-			inline length_t encode(CodePoint c, OutputIterator dest) {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<OutputIterator>::value == 2);
-				if(c < 0x00010000ul) {
-					*dest = static_cast<Char>(c & 0xffffu);
-					return !isSurrogate(c) ? 1 : 0;
-				} else if(c <= 0x0010fffful) {
-					*dest = highSurrogate(c);
-					*++dest = lowSurrogate(c);
-					return 2;
-				}
-				throw std::invalid_argument("the specified code point is not valid.");
-			}
-
-			/**
 			 * Searches an isolated surrogate character in the given UTF-16 code unit sequence.
 			 * @note About UTF-32 code unit sequence, use <code>std#find_if(,,
 			 *       std#ptr_fun(isSurrogate))</code> instead.

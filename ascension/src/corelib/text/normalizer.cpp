@@ -165,7 +165,7 @@ namespace {
 	 * @return The length of the decomposition
 	 */
 	length_t internalDecompose(CodePoint c, bool compatibility, Char* destination) {
-		Char* last = destination + (surrogates::encode(c, destination) < 2 ? 1 : 2);
+		Char* last = destination + (utf16::encode(c, destination) < 2 ? 1 : 2);
 		length_t len;
 		CodePoint current;
 		Char decomposedHangul[4];
@@ -428,7 +428,7 @@ String Normalizer::normalize(const CharacterIterator& text, Form form) {
 		if(c < 0x010000ul)
 			buffer.sputc(static_cast<Char>(c & 0xffffu));
 		else {
-			surrogates::encode(c, surrogate);
+			utf16::encode(c, surrogate);
 			buffer.sputn(surrogate, 2);
 		}
 	}

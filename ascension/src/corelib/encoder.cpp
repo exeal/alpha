@@ -6,8 +6,8 @@
 
 #include <ascension/corelib/encoder.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>
-#include <ascension/corelib/memory.hpp>			// AutoBuffer
-#include <ascension/corelib/text/character.hpp>	// text.isScalarValue
+#include <ascension/corelib/memory.hpp>		// AutoBuffer
+#include <ascension/corelib/text/utf-16.hpp>	// text.isScalarValue, text.utf16.encode
 #include <algorithm>
 using namespace ascension;
 using namespace ascension::encoding;
@@ -136,8 +136,9 @@ Encoder::~Encoder() /*throw()*/ {
 bool Encoder::canEncode(CodePoint c) {
 	if(!text::isScalarValue(c))
 		throw invalid_argument("the code point is not a scalar value.");
-	Char temp[2];
-	return canEncode(StringPiece(temp, temp + text::surrogates::encode(c, temp)));
+	Char buffer[2];
+	Char* p = buffer;
+	return canEncode(StringPiece(buffer, buffer + text::utf16::encode(c, p)));
 }
 
 /**

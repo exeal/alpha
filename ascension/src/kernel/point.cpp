@@ -307,7 +307,7 @@ CodePoint locations::characterAt(const Point& p, bool useLineFeed /* = false */)
 	const String& line = p.document().line(p.line());
 	if(p.column() == line.length())
 		return (p.line() == p.document().numberOfLines() - 1) ? INVALID_CODE_POINT : (useLineFeed ? LINE_FEED : LINE_SEPARATOR);
-	return surrogates::decodeFirst(line.begin() + p.column(), line.end());
+	return utf16::decodeFirst(line.begin() + p.column(), line.end());
 }
 
 /**
