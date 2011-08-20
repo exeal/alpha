@@ -4,14 +4,14 @@
  * @author exeal
  * @date 2005-2010 (was unicode.hpp)
  * @date 2010-2011
- * @see unicode.hpp
+ * @see utf-16.hpp
  */
 
 #ifndef ASCENSION_CHARACTER_ITERATOR_HPP
 #define ASCENSION_CHARACTER_ITERATOR_HPP
-#include <ascension/corelib/standard-iterator-adapter.hpp>	// StandardConstBidirectionalIteratorAdapter
+#include <ascension/corelib/standard-iterator-adapter.hpp>
 #include <ascension/corelib/string-piece.hpp>
-#include <ascension/corelib/text/unicode-surrogates.hpp>
+#include <ascension/corelib/text/utf-16.hpp>	// text.surrogates.decodeFirst
 #include <stdexcept>
 #include <iterator>
 

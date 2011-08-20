@@ -10,7 +10,7 @@
 
 #include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_NORMALIZATION
 #include <ascension/corelib/text/character.hpp>
-#include <ascension/corelib/text/unicode-utf.hpp>	// UTF16To32Iterator
+#include <ascension/corelib/text/utf-16.hpp>	// UTF16To32Iterator
 #include <set>
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
