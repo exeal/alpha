@@ -9,7 +9,7 @@
 #define ASCENSION_CASE_FOLDER_HPP
 
 #include <ascension/corelib/character-iterator.hpp>
-#include <ascension/corelib/text/unicode-utf.hpp>
+#include <ascension/corelib/text/utf-16.hpp>	// UTF16To32Iterator, surrogates.encode
 #include <algorithm>	// std.lower_bound
 #include <sstream>		// std.basic_stringbuf
 

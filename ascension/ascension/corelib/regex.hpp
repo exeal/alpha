@@ -11,11 +11,11 @@
 #ifndef ASCENSION_REGEX_HPP
 #define ASCENSION_REGEX_HPP
 
-#include <ascension/corelib/memory.hpp>				// AutoBuffer
+#include <ascension/corelib/memory.hpp>			// AutoBuffer
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/case-folder.hpp>
 #include <ascension/corelib/text/character-property.hpp>
-#include <ascension/corelib/text/unicode-utf.hpp>	// text.UTF16To32Iterator
+#include <ascension/corelib/text/utf-16.hpp>	// text.UTF16To32Iterator
 #include <memory>
 #include <map>
 #include <bitset>

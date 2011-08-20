@@ -275,8 +275,7 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\text\identifier-syntax.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\newline.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\normalizer.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\corelib\text\unicode-surrogates.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\corelib\text\unicode-utf.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\utf-16.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\utf-8.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\timer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\type-traits.hpp" />

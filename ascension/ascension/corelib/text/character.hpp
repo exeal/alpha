@@ -9,7 +9,7 @@
 #define ASCENSION_CHARACTER_HPP
 
 #include <ascension/corelib/basic-types.hpp>
-#include <ascension/corelib/text/unicode-surrogates.hpp>
+#include <ascension/corelib/text/utf-16.hpp>	// surrogates.isSurrogate
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #	error These class definitions and implementations are based on old version of Unicode.

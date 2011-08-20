@@ -523,12 +523,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\native-object.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\corelib\text\unicode-surrogates.hpp">
-      <Filter>ascension\Header Files\corelib\text</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\corelib\text\unicode-utf.hpp">
-      <Filter>ascension\Header Files\corelib\text</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\text\case-folder.hpp">
       <Filter>ascension\Header Files\corelib\text</Filter>
     </ClInclude>
@@ -599,6 +593,9 @@
       <Filter>ascension\Header Files\presentation</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\text\utf-8.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\utf-16.hpp">
       <Filter>ascension\Header Files\corelib\text</Filter>
     </ClInclude>
   </ItemGroup>
