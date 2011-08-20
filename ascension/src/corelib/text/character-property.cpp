@@ -174,7 +174,7 @@ void StringCharacterIterator::doNext() {
 	if(current_ == last_)
 //		throw out_of_range("the iterator is the last.");
 		return;
-	current_ = surrogates::next(current_, last_);
+	current_ = utf16::next(current_, last_);
 }
 
 /// @see CharacterIterator#doPrevious
@@ -182,7 +182,7 @@ void StringCharacterIterator::doPrevious() {
 	if(current_ == first_)
 //		throw out_of_range("the iterator is the first.");
 		return;
-	current_ = surrogates::previous(first_, current_);
+	current_ = utf16::previous(first_, current_);
 }
 
 

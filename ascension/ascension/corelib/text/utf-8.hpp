@@ -6,6 +6,7 @@
 
 #ifndef ASCENSION_UTF_8_HPP
 #define ASCENSION_UTF_8_HPP
+
 #include <ascension/corelib/standard-iterator-adapter.hpp>
 #include <ascension/corelib/text/character.hpp>
 

@@ -163,7 +163,7 @@ namespace ascension {
 			// CharacterIterator
 			/// @see CharacterIterator#current
 			CodePoint current() const /*throw()*/ {
-				return (current_ != last_) ? surrogates::decodeFirst(current_, last_) : DONE;
+				return (current_ != last_) ? utf16::decodeFirst(current_, last_) : DONE;
 			}
 			/// @see CharacterIterator#hasNext
 			bool hasNext() const /*throw()*/ {return current_ != last_;}
