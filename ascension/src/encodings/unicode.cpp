@@ -15,8 +15,9 @@
  */
 
 #include <ascension/corelib/encoder.hpp>
-#include <ascension/corelib/text/character.hpp>
+#include <ascension/corelib/text/utf-16.hpp>
 #include <algorithm>	// std.find_if
+#include <cassert>
 #include <cstring>		// std.memcmp, std.memcpy
 using namespace ascension;
 using namespace ascension::encoding;
@@ -278,7 +279,7 @@ namespace {
 					toNext = to;
 					return INSUFFICIENT_BUFFER;
 				}
-				surrogates::encode(cp, to);
+				utf16::encode(cp, to);
 				to += surrogates::isSupplemental(cp) ? 2 : 1;
 				from += bytes;
 			}
@@ -360,7 +361,7 @@ namespace {
 			Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 		ASCENSION_ENCODE_BOM(UTF32LE)
 		for(; to < toEnd - 3 && from < fromEnd; ++from) {
-			const CodePoint c = surrogates::decodeFirst(from, fromEnd);
+			const CodePoint c = utf16::decodeFirst(from, fromEnd);
 			if(!isScalarValue(c)) {
 				toNext = to;
 				fromNext = from;
@@ -394,7 +395,7 @@ namespace {
 					return UNMAPPABLE_CHARACTER;
 				}
 			} else
-				to += surrogates::encode(c, to);
+				to += utf16::encode(c, to);
 		}
 		fromNext = from;
 		toNext = to;
@@ -410,7 +411,7 @@ namespace {
 			Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
 		ASCENSION_ENCODE_BOM(UTF32BE)
 		for(; to < toEnd - 3 && from < fromEnd; ++from) {
-			const CodePoint c = surrogates::decodeFirst(from, fromEnd);
+			const CodePoint c = utf16::decodeFirst(from, fromEnd);
 			*(to++) = mask8Bit((c & 0xff000000ul) >> 24);
 			*(to++) = mask8Bit((c & 0x00ff0000ul) >> 16);
 			*(to++) = mask8Bit((c & 0x0000ff00ul) >> 8);
@@ -437,7 +438,7 @@ namespace {
 					return UNMAPPABLE_CHARACTER;
 				}
 			} else
-				to += surrogates::encode(cp, to);
+				to += utf16::encode(cp, to);
 		}
 		fromNext = from;
 		toNext = to;
@@ -674,7 +675,7 @@ namespace {
 	inline Byte* encodeUTF5Character(const Char* from, const Char* fromEnd, Byte* to) {
 #define D2C(n) (mask8Bit(n) < 0x0a) ? (mask8Bit(n) + '0') : (mask8Bit(n) - 0x0a + 'A')
 
-		const CodePoint cp = surrogates::decodeFirst(from, fromEnd);
+		const CodePoint cp = utf16::decodeFirst(from, fromEnd);
 		if(cp < 0x00000010ul)
 			*(to++) = mask8Bit((cp & 0x0000000ful) >> 0) + 'G';
 		else if(cp < 0x00000100ul) {
@@ -786,7 +787,7 @@ namespace {
 				return INSUFFICIENT_BUFFER;
 			}
 			from = e;
-			surrogates::encode(cp, to);
+			utf16::encode(cp, to);
 			to += surrogates::isSupplemental(cp) ? 2 : 1;
 		}
 		fromNext = from;

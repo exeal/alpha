@@ -77,8 +77,9 @@
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 
 #include <ascension/corelib/encoder.hpp>
-#include <ascension/corelib/text/character.hpp>
+#include <ascension/corelib/text/utf-16.hpp>
 #include <algorithm>	// std.binary_search
+#include <cassert>
 #include <cstring>		// std.memcpy
 #include <memory>		// std.auto_ptr
 #include <map>
@@ -369,7 +370,7 @@ namespace {
 				next = first;
 				return eob ? Encoder::MALFORMED_INPUT : Encoder::COMPLETED;
 			}
-			const CodePoint c = surrogates::decodeFirst(first, last);
+			const CodePoint c = utf16::decodeFirst(first, last);
 			if(c < 0x10000ul) {
 				next = first;
 				return Encoder::MALFORMED_INPUT;
@@ -743,7 +744,7 @@ namespace {
 						*to = maskUCS2(ucs >> 16);
 						*++to = maskUCS2(ucs);
 					} else
-						surrogates::encode(ucs, to++);
+						utf16::encode(ucs, to++);
 				} else {
 					if(to > beginning && ((to[-1] == L'\x02e9' && ucs == 0x02e5u) || (to[-1] == L'\x02e5' && ucs == 0x02e9u))) {
 						if(to + 1 >= toEnd)
@@ -1174,7 +1175,7 @@ namespace {
 						*to = maskUCS2(ucs >> 16);
 						*++to = maskUCS2(ucs);
 					} else if(ucs >= 0x00010000ul)	// out of BMP
-						surrogates::encode(ucs, to++);
+						utf16::encode(ucs, to++);
 					else {
 						if(to > beginning && (to[-1] == L'\x02e9' && ucs == 0x02e5u) || (to[-1] == L'\x02e5' && ucs == 0x02e9u)) {
 							if(to + 1 >= toEnd)
@@ -1390,7 +1391,7 @@ namespace {
 							*to = maskUCS2(ucs >> 16);
 							*++to = maskUCS2(ucs >> 0);
 						} else if(ucs >= 0x00010000ul)	// out of BMP
-							surrogates::encode(ucs, to++);
+							utf16::encode(ucs, to++);
 						else
 							*to = maskUCS2(ucs);
 					}
@@ -1402,7 +1403,7 @@ namespace {
 							*to = maskUCS2(ucs >> 16);
 							*++to = maskUCS2(ucs >> 0);
 						} else if(ucs >= 0x00010000ul)	// out of BMP
-							surrogates::encode(ucs, to++);
+							utf16::encode(ucs, to++);
 						else {
 							if(to > beginning
 									&& ((to[-1] == L'\x02e9' && ucs == 0x02e5u)

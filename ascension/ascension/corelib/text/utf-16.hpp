@@ -61,6 +61,30 @@ namespace ascension {
 			}
 
 			/**
+			 * Converts the specified code point to a corresponding surrogate pair.
+			 * @tparam OutputIterator The output iterator represents a UTF-16 character sequence
+			 * @param c The code point
+			 * @param[out] out The output iterator
+			 * @retval 0 @a c is a surrogate. in this case, @a *out will be @a c
+			 * @retval 1 @a c is in BMP
+			 * @retval 2 @a c is out of BMP
+			 * @throw std#invalid_argument @a c can't be expressed by UTF-16
+			 */
+			template<typename OutputIterator>
+			inline length_t encode(CodePoint c, OutputIterator out) {
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<OutputIterator>::value == 2);
+				if(c < 0x00010000ul) {
+					*out = static_cast<Char>(c & 0xffffu);
+					return !surrogates::isSurrogate(c) ? 1 : 0;
+				} else if(c <= 0x0010fffful) {
+					*out = surrogates::highSurrogate(c);
+					*++out = surrogates::lowSurrogate(c);
+					return 2;
+				}
+				throw std::invalid_argument("the specified code point is not valid.");
+			}
+
+			/**
 			 * Searches the next high-surrogate in the given character sequence.
 			 * @tparam InputIterator The input iterator represents a UTF-16 character sequence
 			 * @param start The start position to search
@@ -300,7 +324,7 @@ namespace ascension {
 					return static_cast<value_type>(*p_ & 0xffffu);
 				else {
 					value_type text[2];
-					surrogates::encode(*p_, text);
+					utf16::encode(*p_, text);
 					return text[high_ ? 0 : 1];
 				}
 			}

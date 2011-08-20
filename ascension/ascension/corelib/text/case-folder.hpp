@@ -145,7 +145,7 @@ namespace ascension {
 				if(!excludeTurkishI || c == (f = foldTurkishI(*i)))
 					f = foldCommon(c);
 				if(f != c || c >= 0x010000u) {
-					if(surrogates::encode(f, buffer) < 2)
+					if(utf16::encode(f, buffer) < 2)
 						s.sputc(buffer[0]);
 					else
 						s.sputn(buffer, 2);

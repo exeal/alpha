@@ -51,17 +51,40 @@ namespace ascension {
 		 * @see utf16
 		 */
 		namespace utf8 {
+			/**
+			 * Returns @c true if the given code unit is UTF-8 valid byte (which can be any
+			 * component of valid UTF-8 byte sequence).
+			 * @param byte The code unit to test
+			 * @return true if @a byte is valid byte
+			 */
 			inline bool isValidByte(uint8_t byte) {
+				return byte < 0xc0 || (byte > 0xc1 && byte < 0xf5);
 			}
 
+			/**
+			 * Returns @c true if the given code unit is UTF-8 single byte (which encodes a code
+			 * point by itself).
+			 * @param byte The code unit to test
+			 * @return true if @a byte is single byte
+			 */
 			inline bool isSingleByte(uint8_t byte) {
 				return (byte & 0x80) == 0;
 			}
 
-			inline bool isLeadingByte(uint8_t byte) {
+			/**
+			 * Returns @c true if the given code unit is UTF-8 leading byte.
+			 * @param byte The code unit to test
+			 * @return true if @a byte is leading byte
+			 */
+			inline bool isLeadingByte(uint8_t byte) /*throw()*/ {
 				return byte < 0x80 || ((detail::UTF8_WELL_FORMED_FIRST_BYTES[byte - 0x80] & 0xf0) != 0);
 			}
 
+			/**
+			 * Returns @c true if the given code unit is UTF-8 trailing byte.
+			 * @param byte The code unit to test
+			 * @return true if @a byte is trailing byte
+			 */
 			inline bool isTrailingByte(uint8_t byte) {
 				return (byte & 0xc0) == 0x80;
 			}
@@ -95,6 +118,39 @@ namespace ascension {
 				default:
 					ASCENSION_ASSERT_NOT_REACHED();
 				}
+			}
+
+			/**
+			 * Writes a character into the specified output iterator as UTF-8 character sequence
+			 * and advances the iterator to end of written bytes.
+			 * @tparam OutputIterator The type for @a out
+			 * @param c The code point of the character
+			 * @param[out] out The output iterator
+			 * @return The number of bytes written to @a out or 0 if failed
+			 */
+			template<typename OutputIterator>
+			inline length_t encode(CodePoint c, OutputIterator& out) {
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<OutputIterator>::value == 1);
+				if(c < 0x0080u) {	// 00000000 0xxxxxxx -> 0xxxxxxx
+					*(out++) = static_cast<uint8_t>(c);
+					return 1;
+				} else if(c < 0x0800u) {	// 00000yyy yyxxxxxx -> 110yyyyy 10xxxxxx
+					*(out++) = static_cast<uint8_t>((c >> 6) | 0xc0);
+					*(out++) = static_cast<uint8_t>((c & 0x3f) | 0x80);
+					return 2;
+				} else if(c < 0x10000u) {	// zzzzyyyy yyxxxxxx -> 1110zzzz 10yyyyyy 10xxxxxx
+					*(out++) = static_cast<uint8_t>((c >> 12) | 0xe0);
+					*(out++) = static_cast<uint8_t>(((c >> 6) & 0x3f) | 0x80);
+					*(out++) = static_cast<uint8_t>((c & 0x3f) | 0x80);
+					return 3;
+				} else if(c < 0x110000u) {	// 000uuuuu zzzzyyyy yyxxxxxx <- 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
+					*(out++) = static_cast<uint8_t>((c >> 18) | 0xf0);
+					*(out++) = static_cast<uint8_t>(((c >> 12) & 0x3f) | 0x80);
+					*(out++) = static_cast<uint8_t>(((c >> 6) & 0x3f) | 0x80);
+					*(out++) = static_cast<uint8_t>((c & 0x3f) | 0x80);
+					return 4;
+				}
+				return 0;	// invalid code point
 			}
 
 			template<typename InputIterator>

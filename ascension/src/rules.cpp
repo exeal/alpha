@@ -303,7 +303,7 @@ namespace {
 		if(first < last) {
 			if(inRange<Char>(*first, 0xe000, 0xf8ff))
 				return ++first;
-			const CodePoint c = surrogates::decodeFirst(first, last);
+			const CodePoint c = utf16::decodeFirst(first, last);
 			if(inRange<CodePoint>(c, 0xf0000u, 0xffffdu) || inRange<CodePoint>(c, 0x100000u, 0x10fffdu))
 				return first += 2;
 		}
@@ -320,7 +320,7 @@ namespace {
 		if(first < last) {
 			if(inRange<Char>(*first, 0x00a0, 0xd7ff) || inRange<Char>(*first, 0xf900, 0xfdcf) || inRange<Char>(*first, 0xfdf0, 0xffef))
 				return ++first;
-			const CodePoint c = surrogates::decodeFirst(first, last);
+			const CodePoint c = utf16::decodeFirst(first, last);
 			if(c >= 0x10000 && c < 0xf0000 && (c & 0xffff) >= 0x0000 && (c & 0xffff) <= 0xfffd) {
 				if((c & 0xf0000) != 0xe || (c & 0xffff) >= 0x1000)
 					return first += 2;
@@ -805,7 +805,7 @@ auto_ptr<Token> NumberRule::parse(const TokenScanner& scanner, const Char* first
 	// e points the end of the found token
 	assert(e > first);
 	// "The source character immediately following a NumericLiteral must not be an IdentifierStart or DecimalDigit."
-	if(e < last && (inRange<Char>(*e, '0', '9') || scanner.getIdentifierSyntax().isIdentifierStartCharacter(surrogates::decodeFirst(e, last))))
+	if(e < last && (inRange<Char>(*e, '0', '9') || scanner.getIdentifierSyntax().isIdentifierStartCharacter(utf16::decodeFirst(e, last))))
 		return auto_ptr<Token>(0);
 
 	auto_ptr<Token> temp(new Token);
