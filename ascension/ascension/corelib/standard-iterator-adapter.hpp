@@ -139,7 +139,7 @@ namespace ascension {
 				return derived();
 			}
 			/// Post-fix increment operator.
-			Derived& operator++(int) {
+			Derived operator++(int) {
 				Derived temp(derived());
 				++*this;
 				return temp;
@@ -153,7 +153,7 @@ namespace ascension {
 				return derived();
 			}
 			/// Post-fix decrement operator.
-			Derived& operator--(int) {
+			Derived operator--(int) {
 				Derived temp(derived());
 				--*this;
 				return temp;

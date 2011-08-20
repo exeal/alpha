@@ -101,27 +101,6 @@ namespace ascension {
 	ASCENSION_STATIC_ASSERT(sizeof(Char) == 2);
 	ASCENSION_STATIC_ASSERT(sizeof(CodePoint) == 4);
 
-	namespace text {
-		/**
-		 * Returns the size of a code unit of the specified code unit sequence in bytes.
-		 * @tparam CodeUnitSequence The type represents a code unit sequence
-		 */
-		template<typename CodeUnitSequence> struct CodeUnitSizeOf {
-			/// Byte size of the code unit.
-			static const std::size_t value =
-				sizeof(typename std::iterator_traits<CodeUnitSequence>::value_type);
-		};
-		template<typename T> struct CodeUnitSizeOf<std::back_insert_iterator<T> > {
-			static const std::size_t value = sizeof(T::value_type);
-		};
-		template<typename T> struct CodeUnitSizeOf<std::front_insert_iterator<T> > {
-			static const std::size_t value = sizeof(T::value_type);
-		};
-		template<typename T, typename U> struct CodeUnitSizeOf<std::ostream_iterator<T, U> > {
-			static const std::size_t value = sizeof(T);
-		};
-	}
-
 	typedef std::size_t length_t;					///< Length of string or index.
 	typedef std::ptrdiff_t signed_length_t;			///< Signed @c length_t.
 	const length_t INVALID_INDEX = 0xfffffffful;	///< Invalid value of @c length_t.

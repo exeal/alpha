@@ -224,10 +224,10 @@ namespace {
 		int ccc, previous = CanonicalCombiningClass::NOT_REORDERED;
 		for(UTF16To32Iterator<CharacterSequence> i(first, last); i.hasNext(); ++i) {
 			len = internalDecompose(*i, false, buffer);
-			ccc = CanonicalCombiningClass::of(surrogates::decodeFirst(buffer, buffer + len));
+			ccc = CanonicalCombiningClass::of(utf16::decodeFirst(buffer, buffer + len));
 			if(ccc != CanonicalCombiningClass::NOT_REORDERED && ccc < previous)
 				return false;
-			previous = CanonicalCombiningClass::of(surrogates::decodeLast(buffer, buffer + len));
+			previous = CanonicalCombiningClass::of(utf16::decodeLast(buffer, buffer + len));
 		}
 		return true;
 	}
