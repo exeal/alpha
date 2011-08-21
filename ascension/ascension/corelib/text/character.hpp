@@ -178,13 +178,55 @@ namespace ascension {
 			}
 		} // namespace surrogates
 
-		/// Returns @c true if the specified code point is in Unicode codespace (0..10FFFF).
+		/**
+		 * Returns @c true if the specified code point is in Unicode codespace (0..10FFFF).
+		 * @see InvalidCodePointException
+		 */
 		inline bool isValidCodePoint(CodePoint c) /*throw()*/ {return c <= 0x10fffful;}
 
-		/// Returns @c true if the specified code point is Unicode scalar value.
+		/**
+		 * Returns @c true if the specified code point is Unicode scalar value.
+		 * @see InvalidScalarValueException
+		 */
 		inline bool isScalarValue(CodePoint c) /*throw()*/ {
 			return isValidCodePoint(c) && !surrogates::isSurrogate(c);
 		}
+
+		/**
+		 * Faced an invalid code point.
+		 * @see isValidCodePoint
+		 */
+		class InvalidCodePointException : public std::out_of_range {
+		public:
+			/**
+			 * Constructor.
+			 * @param c The code point
+			 */
+			explicit InvalidCodePointException(CodePoint c)
+				: std::out_of_range("Found an invalid code point."), c_(c) {}
+			/// Returns the code point.
+			CodePoint codePoint() const /*throw()*/ {return c_;}
+		private:
+			const CodePoint c_;
+		};
+
+		/**
+		 * Faced an invalid scalar value.
+		 * @see isScalarValue
+		 */
+		class InvalidScalarValueException : public std::out_of_range {
+		public:
+			/**
+			 * Constructor.
+			 * @param c The code point
+			 */
+			explicit InvalidScalarValueException(CodePoint c)
+				: std::out_of_range("Found an invalid code point."), c_(c) {}
+			/// Returns the code point.
+			CodePoint codePoint() const /*throw()*/ {return c_;}
+		private:
+			const CodePoint c_;
+		};
 
 		/// Case sensitivities for caseless-match.
 		enum CaseSensitivity {
