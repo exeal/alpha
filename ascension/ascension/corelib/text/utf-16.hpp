@@ -54,7 +54,7 @@ namespace ascension {
 				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::value == 2);
 				assert(first != last);
 				const Char high = *first;
-				return (++first != last) ? surrogates::decode(high, *first) : high;
+				return (++first != last) ? surrogates::checkedDecode(high, *first) : high;
 			}
 
 			/**

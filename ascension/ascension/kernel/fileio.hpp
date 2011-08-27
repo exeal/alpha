@@ -65,20 +65,11 @@ namespace ascension {
 
 			/**
 			 * The encoding failed for unmappable character.
-			 * @see encoding#Encoder#UNMAPPABLE_CHARACTER
+			 * @see encoding#Encoder#UNMAPPABLE_CHARACTER, text#MalformedInputException
 			 */
 			class UnmappableCharacterException : public std::ios_base::failure {
 			public:
 				UnmappableCharacterException();
-			};
-
-			/**
-			 * The encoding failed for malformed input.
-			 * @see encoding#Encoder#MALFORMED_INPUT
-			 */
-			class MalformedInputException : public std::ios_base::failure {
-			public:
-				MalformedInputException();
 			};
 
 			class TextFileDocumentInput;

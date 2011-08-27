@@ -177,7 +177,7 @@ namespace {
 		if(to + 3 >= toEnd)
 			return false;
 		// 0000 0000  000w wwxx  xxxx yyyy  yyzz zzzz -> 1111 0www  10xx xxxx  10yy yyyy 10zz zzzz
-		const CodePoint c = surrogates::decode(high, low);
+		const CodePoint c = surrogates::checkedDecode(high, low);
 		(*to++) = 0xf0 | mask8Bit((c & 0x001c0000ul) >> 18);
 		(*to++) = 0x80 | mask8Bit((c & 0x0003f000ul) >> 12);
 		(*to++) = 0x80 | mask8Bit((c & 0x00000fc0ul) >> 6);

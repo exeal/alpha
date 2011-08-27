@@ -87,7 +87,7 @@ namespace ascension {
 						Derived low(derived());
 						++low.base_;
 						if(low.canIncrement() && surrogates::isLowSurrogate(*low.base_))
-							c = surrogates::uncheckedDecode(static_cast<Char>(c), *low.base_);
+							c = surrogates::decode(static_cast<Char>(c), *low.base_);
 //						else
 //							c = REPLACEMENT_CHARACTER;
 					}

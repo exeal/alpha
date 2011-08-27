@@ -16,19 +16,6 @@
 
 namespace ascension {
 
-	namespace detail {
-		template<bool check>
-		inline CodePoint decodeSurrogates(Char high, Char low) {
-			if(check) {
-				if(!text::surrogates::isHighSurrogate(high))
-					throw text::InvalidScalarValueException(high);
-				if(!text::surrogates::isLowSurrogate(low))
-					throw text::InvalidScalarValueException(low);
-			}
-			return 0x10000ul + (high - 0xd800u) * 0x0400u + low - 0xdc00u;
-		}
-	}
-	
 	/**
 	 * Provides stuffs implement some of the Unicode standard. This includes:
 	 * - @c Normalizer class implements <a href="http://www.unicode.org/reports/tr15/">UAX #15:
@@ -90,6 +77,29 @@ namespace ascension {
 		};
 		template<typename T, typename U> struct CodeUnitSizeOf<std::ostream_iterator<T, U> > {
 			static const std::size_t value = sizeof(T);
+		};
+
+		/**
+		 * The encoding failed for malformed input.
+		 * @tparam CodeUnit The type of input code unit.
+		 * @see encoding#Encoder#MALFORMED_INPUT, kernel#fileio#UnmappableCharacterException,
+		 *      InvalidCodePointException, InvalidScalarValueException
+		 */
+		template<typename CodeUnit>
+		class MalformedInputException : public std::ios_base::failure {
+			// TODO: std.ios_base.failure is derived from std.system_error after C++0x.
+		public:
+			/**
+			 * Constructor.
+			 * @param codeUnit The code unit
+			 */
+			explicit MalformedInputException(CodeUnit codeUnit = 0) :
+				ios_base::failure("Detected malformed input in encoding/decoding."),
+				codeUnit_(codeUnit) {}
+			/// Returns the code unit, or zero if the input is unknown.
+			CodeUnit codeUnit() const {return codeUnit_;}
+		private:
+			const CodeUnit codeUnit_;
 		};
 
 		/**
@@ -155,23 +165,30 @@ namespace ascension {
 
 			/**
 			 * Converts the specified surrogate pair to a corresponding code point.
-			 * @param high The high-surrogate
-			 * @param low The low-surrogate
-			 * @return The code point or the value of @a high if the pair is not valid
-			 * @throw InvalidScalarValueException @a high and/or @a low is not surrogate
+			 * This function does not check the input code units.
+			 * @param high A UTF-16 code unit for the high-surrogate
+			 * @param low A UTF-16 code unit for the low-surrogate
+			 * @return The code point
+			 * @see #checkedDecode
 			 */
-			inline CodePoint decode(Char high, Char low) /*throw()*/ {
-				return detail::decodeSurrogates<true>(high, low);
+			inline CodePoint decode(uint16_t high, uint16_t low) /*throw()*/ {
+				return 0x10000ul + (high - 0xd800u) * 0x0400u + low - 0xdc00u;
 			}
 
 			/**
 			 * Converts the specified surrogate pair to a corresponding code point.
-			 * @param high The high-surrogate
-			 * @param low The low-surrogate
-			 * @return The code point or the value of @a high if the pair is not valid
+			 * @param high A UTF-16 code unit for the high-surrogate
+			 * @param low A UTF-16 code unit for the low-surrogate
+			 * @return The code point
+			 * @throw MalformedInputException&lt;uint16_t&gt; @a high and/or @a low are invalid
+			 * @see #decode
 			 */
-			inline CodePoint uncheckedDecode(Char high, Char low) /*throw()*/ {
-				return detail::decodeSurrogates<false>(high, low);
+			inline CodePoint checkedDecode(uint16_t high, uint16_t low) {
+				if(!text::surrogates::isHighSurrogate(high))
+					throw MalformedInputException<uint16_t>(high);
+				if(!text::surrogates::isLowSurrogate(low))
+					throw MalformedInputException<uint16_t>(low);
+				return decode(high, low);
 			}
 
 			/**
