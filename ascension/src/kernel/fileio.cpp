@@ -503,10 +503,6 @@ bool IOException::isPermissionDenied(const IOException& e) /*throw()*/ {
 UnmappableCharacterException::UnmappableCharacterException() : ios_base::failure("encountered an unmappable character in encoding/decoding.") {
 }
 
-/// Default constructor.
-MalformedInputException::MalformedInputException() : ios_base::failure("detected malformed input in encoding/decoding.") {
-}
-
 
 // TextFileStreamBuffer ///////////////////////////////////////////////////////////////////////////
 
@@ -839,7 +835,7 @@ int TextFileStreamBuffer::sync() {
 			if(encodingResult == Encoder::UNMAPPABLE_CHARACTER)
 				throw UnmappableCharacterException();
 			else if(encodingResult == Encoder::MALFORMED_INPUT)
-				throw MalformedInputException();
+				throw text::MalformedInputException<Char>(*fromNext);
 
 			// write into the file
 #ifdef ASCENSION_OS_WINDOWS
@@ -876,7 +872,7 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 	case Encoder::UNMAPPABLE_CHARACTER:
 		throw UnmappableCharacterException();
 	case Encoder::MALFORMED_INPUT:
-		throw MalformedInputException();
+		throw text::MalformedInputException<Byte>(*fromNext);
 	default:
 		break;
 	}
