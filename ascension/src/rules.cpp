@@ -929,8 +929,8 @@ RegexRule::RegexRule(Token::Identifier id, auto_ptr<const regex::Pattern> patter
 
 /// @see Rule#parse
 auto_ptr<Token> RegexRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const {
-	const UTF16To32Iterator<const Char*> b(first, last), e(first, last, last);
-	auto_ptr<regex::Matcher<UTF16To32Iterator<const Char*> > > matcher(pattern_->matcher(b, e));
+	const utf::CharacterDecodeIterator<const Char*> b(first, last), e(first, last, last);
+	auto_ptr<regex::Matcher<utf::CharacterDecodeIterator<const Char*> > > matcher(pattern_->matcher(b, e));
 	if(!matcher->lookingAt())
 		return auto_ptr<Token>(0);
 	auto_ptr<Token> token(new Token);
@@ -1181,7 +1181,7 @@ auto_ptr<TransitionRule> RegexTransitionRule::clone() const {
 /// @see TransitionRule#matches
 length_t RegexTransitionRule::matches(const String& line, length_t column) const {
 	try {
-		typedef UTF16To32Iterator<String::const_iterator> I;
+		typedef utf::CharacterDecodeIterator<String::const_iterator> I;
 		auto_ptr<regex::Matcher<I> > matcher(pattern_->matcher(I(line.begin(), line.end()), I(line.begin(), line.end(), line.end())));
 		matcher->region(I(line.begin(), line.end(), line.begin() + column), matcher->regionEnd());
 		matcher->useAnchoringBounds(false).useTransparentBounds(true);

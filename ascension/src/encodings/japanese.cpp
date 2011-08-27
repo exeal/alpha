@@ -744,9 +744,9 @@ namespace {
 						*to = maskUCS2(ucs >> 16);
 						*++to = maskUCS2(ucs);
 					} else
-						utf16::encode(ucs, to++);
+						utf16::uncheckedEncode(ucs, to++);
 				} else {
-					if(to > beginning && ((to[-1] == L'\x02e9' && ucs == 0x02e5u) || (to[-1] == L'\x02e5' && ucs == 0x02e9u))) {
+					if(to > beginning && ((to[-1] == 0x02e9u && ucs == 0x02e5u) || (to[-1] == 0x02e5u && ucs == 0x02e9u))) {
 						if(to + 1 >= toEnd)
 							break;	// INSUFFICIENT_BUFFER
 						*(to++) = ZERO_WIDTH_NON_JOINER;
@@ -1175,9 +1175,9 @@ namespace {
 						*to = maskUCS2(ucs >> 16);
 						*++to = maskUCS2(ucs);
 					} else if(ucs >= 0x00010000ul)	// out of BMP
-						utf16::encode(ucs, to++);
+						utf16::uncheckedEncode(ucs, to++);
 					else {
-						if(to > beginning && (to[-1] == L'\x02e9' && ucs == 0x02e5u) || (to[-1] == L'\x02e5' && ucs == 0x02e9u)) {
+						if(to > beginning && (to[-1] == 0x02e9u && ucs == 0x02e5u) || (to[-1] == 0x02e5u && ucs == 0x02e9u)) {
 							if(to + 1 >= toEnd)
 								break;	// INSUFFICIENT_BUFFER
 							*(to++) = ZERO_WIDTH_NON_JOINER;
@@ -1391,7 +1391,7 @@ namespace {
 							*to = maskUCS2(ucs >> 16);
 							*++to = maskUCS2(ucs >> 0);
 						} else if(ucs >= 0x00010000ul)	// out of BMP
-							utf16::encode(ucs, to++);
+							utf16::uncheckedEncode(ucs, to++);
 						else
 							*to = maskUCS2(ucs);
 					}
@@ -1403,11 +1403,11 @@ namespace {
 							*to = maskUCS2(ucs >> 16);
 							*++to = maskUCS2(ucs >> 0);
 						} else if(ucs >= 0x00010000ul)	// out of BMP
-							utf16::encode(ucs, to++);
+							utf16::uncheckedEncode(ucs, to++);
 						else {
 							if(to > beginning
-									&& ((to[-1] == L'\x02e9' && ucs == 0x02e5u)
-									|| (to[-1] == L'\x02e5' && ucs == 0x02e9u))) {
+									&& ((to[-1] == 0x02e9u && ucs == 0x02e5u)
+									|| (to[-1] == 0x02e5u && ucs == 0x02e9u))) {
 								if(to + 1 >= toEnd)
 									break;	// INSUFFICIENT_BUFFER
 								*(to++) = ZERO_WIDTH_NON_JOINER;

@@ -53,10 +53,10 @@ namespace ascension {
 			// classification for sequence
 			/**
 			 * Checks whether the specified character sequence starts with an identifier.
-			 * The type @a CharacterSequence the bidirectional iterator expresses a UTF-16
+			 * The type @a CharacterSequence the bidirectional iterator expresses a UTF-n
 			 * character sequence. This method is exception-neutral (does not throw if
 			 * @a CharacterSequence does not).
-			 * @tparam CharacterSequence UTF-16 character sequence
+			 * @tparam CharacterSequence UTF-n character sequence
 			 * @param first The start of the character sequence
 			 * @param last The end of the character sequence
 			 * @return The end of the detected identifier or @a first if an identifier not found
@@ -64,20 +64,19 @@ namespace ascension {
 			template<typename CharacterSequence>
 			inline CharacterSequence eatIdentifier(
 					CharacterSequence first, CharacterSequence last) const {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::value == 2);
-				UTF16To32Iterator<CharacterSequence> i(first, last);
-				if(!i.hasNext() || !isIdentifierStartCharacter(*i))
+				utf::CharacterDecodeIterator<CharacterSequence> i(first, last);
+				if(i.tell() == last || !isIdentifierStartCharacter(*i))
 					return first;
-				while(i.hasNext() && isIdentifierContinueCharacter(*i))
+				while(i.tell() != last && isIdentifierContinueCharacter(*i))
 					++i;
 				return i.tell();
 			}
 			/**
 			 * Checks whether the specified character sequence starts with white space characters.
-			 * The type @a CharacterSequence is the bidirectional iterator expresses a UTF-16
+			 * The type @a CharacterSequence is the bidirectional iterator expresses a UTF-n
 			 * character sequence. This method is exception-neutral (does not throw if
 			 * @a CharacterSequence does not).
-			 * @tparam CharacterSequence UTF-16 character sequence
+			 * @tparam CharacterSequence UTF-n character sequence
 			 * @param first The start of the character sequence
 			 * @param last The end of the character sequence
 			 * @param includeTab Set @c true to treat a horizontal tab as a white space
@@ -86,9 +85,8 @@ namespace ascension {
 			template<typename CharacterSequence>
 			inline CharacterSequence eatWhiteSpaces(
 					CharacterSequence first, CharacterSequence last, bool includeTab) const {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::value == 2);
-				UTF16To32Iterator<CharacterSequence> i(first, last);
-				while(i.hasNext() && isWhiteSpace(*i, includeTab))
+				utf::CharacterDecodeIterator<CharacterSequence> i(first, last);
+				while(i.tell() != last && isWhiteSpace(*i, includeTab))
 					++i;
 				return i.tell();
 			}

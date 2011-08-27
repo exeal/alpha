@@ -131,14 +131,14 @@ Encoder::~Encoder() /*throw()*/ {
  * @c #resetEncodingState method.
  * @param c The code point of the character
  * @return Succeeded or not
- * @throw std#invalid_argument @a c is not a Unicode scalar value
+ * @throw text#InvalidScalarValueException @a c is not a Unicode scalar value
  */
 bool Encoder::canEncode(CodePoint c) {
 	if(!text::isScalarValue(c))
-		throw invalid_argument("the code point is not a scalar value.");
+		throw text::InvalidScalarValueException(c);
 	Char buffer[2];
 	Char* p = buffer;
-	return canEncode(StringPiece(buffer, buffer + text::utf16::encode(c, p)));
+	return canEncode(StringPiece(buffer, buffer + text::utf16::uncheckedEncode(c, p)));
 }
 
 /**

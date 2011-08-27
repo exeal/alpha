@@ -279,7 +279,7 @@ namespace {
 					toNext = to;
 					return INSUFFICIENT_BUFFER;
 				}
-				utf16::encode(cp, to);
+				utf16::uncheckedEncode(cp, to);
 				to += surrogates::isSupplemental(cp) ? 2 : 1;
 				from += bytes;
 			}
@@ -395,7 +395,7 @@ namespace {
 					return UNMAPPABLE_CHARACTER;
 				}
 			} else
-				to += utf16::encode(c, to);
+				to += utf16::uncheckedEncode(c, to);
 		}
 		fromNext = from;
 		toNext = to;
@@ -438,7 +438,7 @@ namespace {
 					return UNMAPPABLE_CHARACTER;
 				}
 			} else
-				to += utf16::encode(cp, to);
+				to += utf16::uncheckedEncode(cp, to);
 		}
 		fromNext = from;
 		toNext = to;
@@ -787,7 +787,7 @@ namespace {
 				return INSUFFICIENT_BUFFER;
 			}
 			from = e;
-			utf16::encode(cp, to);
+			utf16::uncheckedEncode(cp, to);
 			to += surrogates::isSupplemental(cp) ? 2 : 1;
 		}
 		fromNext = from;

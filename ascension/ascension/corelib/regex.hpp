@@ -11,11 +11,11 @@
 #ifndef ASCENSION_REGEX_HPP
 #define ASCENSION_REGEX_HPP
 
-#include <ascension/corelib/memory.hpp>			// AutoBuffer
+#include <ascension/corelib/memory.hpp>				// AutoBuffer
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/case-folder.hpp>
 #include <ascension/corelib/text/character-property.hpp>
-#include <ascension/corelib/text/utf-16.hpp>	// text.UTF16To32Iterator
+#include <ascension/corelib/text/utf-iterator.hpp>	// text.utf.*
 #include <memory>
 #include <map>
 #include <bitset>
@@ -119,8 +119,9 @@ namespace ascension {
 			String group() const {return group(0);}
 			String group(int group) const {
 				const std::basic_string<CodePoint> s(get(group).str());
-				return String(text::UTF32To16Iterator<>(
-					s.data()), text::UTF32To16Iterator<>(s.data() + s.length()));
+				return String(
+					text::utf::makeCharacterEncodeIterator(s.data()),
+					text::utf::makeCharacterEncodeIterator(s.data() + s.length()));
 			}
 			std::size_t groupCount() const {return impl_.size();}
 			const CodePointIterator& start() const {return start(0);}
@@ -284,7 +285,8 @@ namespace ascension {
 			 */
 			String pattern() const {
 				const std::basic_string<CodePoint> s(impl_.str());
-				return String(text::UTF32To16Iterator<>(s.data()), text::UTF32To16Iterator<>(s.data() + s.length()));
+				return String(text::utf::makeCharacterEncodeIterator(s.data()),
+					text::utf::makeCharacterEncodeIterator(s.data() + s.length()));
 			}
 
 			/**
@@ -594,14 +596,16 @@ namespace ascension {
 					throw IllegalStateException("the previous was failed or not performed.");
 				else if(replaced_)
 					throw IllegalStateException("this matcher already entered in in-place replacement.");
-				const std::basic_string<CodePoint> temp(Base::impl().format(std::basic_string<CodePoint>(
-					text::UTF16To32Iterator<String::const_iterator>(
-						replacement.begin(), replacement.end()),
-					text::UTF16To32Iterator<String::const_iterator>(
-						replacement.begin(), replacement.end(), replacement.end()))));
+				const std::basic_string<CodePoint> temp(
+					Base::impl().format(std::basic_string<CodePoint>(
+						text::utf::makeCharacterDecodeIterator(
+							replacement.begin(), replacement.end()),
+						text::utf::makeCharacterDecodeIterator(
+							replacement.begin(), replacement.end(), replacement.end()))));
 				replaced_ = true;
-				return String(text::UTF32To16Iterator<>(
-					temp.data()), text::UTF32To16Iterator<>(temp.data() + temp.length()));
+				return String(
+					text::utf::makeCharacterEncodeIterator(temp.data()),
+					text::utf::makeCharacterEncodeIterator(temp.data() + temp.length()));
 			}
 
 			/**
