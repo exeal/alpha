@@ -5,8 +5,10 @@
  */
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION
+#include <ascension/corelib/basic-exceptions.hpp>	// ASCENSION_ASSERT_NOT_REACHED
 #include <ascension/corelib/text/identifier-syntax.hpp>
 #include <ascension/corelib/text/character-property.hpp>
+#include <ascension/corelib/text/utf-iterator.hpp>	// utf.CharacterDecodeIterator
 #include <vector>
 using namespace ascension;
 using namespace ascension::text;
@@ -206,7 +208,7 @@ void IdentifierSyntax::overrideIdentifierStartCharacters(const String& adding, c
 	if(adding.end() != surrogates::searchIsolatedSurrogate(adding.begin(), adding.end())
 			|| subtracting.end() != surrogates::searchIsolatedSurrogate(subtracting.begin(), subtracting.end()))
 		throw invalid_argument("an isolated surrogate found.");
-	typedef UTF16To32Iterator<String::const_iterator> I;
+	typedef utf::CharacterDecodeIterator<String::const_iterator> I;
 	implementOverrides(I(adding.begin(), adding.end()), I(adding.begin(), adding.end(), adding.end()),
 		I(subtracting.begin(), subtracting.end()), I(subtracting.begin(), subtracting.end(), subtracting.end()),
 		addedIDStartCharacters_, subtractedIDStartCharacters_);
@@ -238,7 +240,7 @@ void IdentifierSyntax::overrideIdentifierNonStartCharacters(const String& adding
 	if(adding.end() != surrogates::searchIsolatedSurrogate(adding.begin(), adding.end())
 			|| subtracting.end() != surrogates::searchIsolatedSurrogate(subtracting.begin(), subtracting.end()))
 		throw invalid_argument("an isolated surrogate found.");
-	typedef UTF16To32Iterator<String::const_iterator> I;
+	typedef utf::CharacterDecodeIterator<String::const_iterator> I;
 	implementOverrides(I(adding.begin(), adding.end()), I(adding.begin(), adding.end(), adding.end()),
 		I(subtracting.begin(), subtracting.end()), I(subtracting.begin(), subtracting.end(), subtracting.end()),
 		addedIDNonStartCharacters_, subtractedIDNonStartCharacters_);

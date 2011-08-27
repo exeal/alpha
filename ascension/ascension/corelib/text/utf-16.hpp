@@ -11,17 +11,33 @@
 #ifndef ASCENSION_UTF_16_HPP
 #define ASCENSION_UTF_16_HPP
 
-#include <ascension/corelib/basic-exceptions.hpp>	// IllegalStateException
-#include <ascension/corelib/standard-iterator-adapter.hpp>
-#include <ascension/corelib/type-traits.hpp>		// detail.Select
-#include <ascension/corelib/text/character.hpp>		// CodePoint, ASCENSION_STATIC_ASSERT, surrogates.*
-#include <cassert>									// assert
+#include <ascension/corelib/text/character.hpp>	// CodePoint, ASCENSION_STATIC_ASSERT, surrogates.*
+#include <cassert>								// assert
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #error These class definitions and implementations are based on old version of Unicode.
 #endif
 
 namespace ascension {
+
+	namespace detail {
+		template<bool check, typename OutputIterator>
+		inline std::size_t encodeUTF16(CodePoint c, OutputIterator& out) {
+			ASCENSION_STATIC_ASSERT(text::CodeUnitSizeOf<OutputIterator>::value == 2);
+			if(c < 0x00010000ul) {
+				if(check && text::surrogates::isSurrogate(c))
+					throw text::InvalidScalarValueException(c);
+				*(out++) = static_cast<Char>(c & 0xffffu);
+				return 1;
+			} else if(!check || c < 0x00110000ul) {
+				*(out++) = text::surrogates::highSurrogate(c);
+				*(out++) = text::surrogates::lowSurrogate(c);
+				return 2;
+			}
+			throw text::InvalidCodePointException(c);
+		} 
+	}
+
 	namespace text {
 		namespace utf16 {
 
@@ -63,25 +79,28 @@ namespace ascension {
 			/**
 			 * Converts the specified code point to a corresponding surrogate pair.
 			 * @tparam OutputIterator The output iterator represents a UTF-16 character sequence
-			 * @param c The code point
+			 * @param c The code point to encode
 			 * @param[out] out The output iterator
-			 * @retval 0 @a c is a surrogate. in this case, @a *out will be @a c
-			 * @retval 1 @a c is in BMP
-			 * @retval 2 @a c is out of BMP
-			 * @throw std#invalid_argument @a c can't be expressed by UTF-16
+			 * @return The number of code unit written into @a out (either 1 or 2)
+			 * @throw InvalidCodePoint @a c is invalid
+			 * @throw InvalidScalarValue @a c is invalid
 			 */
 			template<typename OutputIterator>
-			inline length_t encode(CodePoint c, OutputIterator out) {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<OutputIterator>::value == 2);
-				if(c < 0x00010000ul) {
-					*out = static_cast<Char>(c & 0xffffu);
-					return !surrogates::isSurrogate(c) ? 1 : 0;
-				} else if(c <= 0x0010fffful) {
-					*out = surrogates::highSurrogate(c);
-					*++out = surrogates::lowSurrogate(c);
-					return 2;
-				}
-				throw std::invalid_argument("the specified code point is not valid.");
+			inline std::size_t checkedEncode(CodePoint c, OutputIterator& out) {
+				return detail::encodeUTF16<true>(c, out);
+			}
+
+			/**
+			 * Converts the specified code point to a corresponding surrogate pair.
+			 * This function does not check if @a c is valid at all.
+			 * @tparam OutputIterator The output iterator represents a UTF-16 character sequence
+			 * @param c The code point to encode
+			 * @param[out] out The output iterator
+			 * @return The number of code unit written into @a out (either 1 or 2)
+			 */
+			template<typename OutputIterator>
+			inline std::size_t uncheckedEncode(CodePoint c, OutputIterator& out) {
+				return detail::encodeUTF16<false>(c, out);
 			}
 
 			/**
@@ -117,245 +136,6 @@ namespace ascension {
 			}
 
 		} // namespace utf16
-
-		/**
-		 * Base class for @c UTF16To32Iterator bidirectional iterator scans a UTF-16 character
-		 * sequence as UTF-32.
-		 * @par Scanned UTF-16 sequence is given by the template parameter @a BaseIterator.
-		 * @par This supports four relation operators general bidirectional iterators don't have.
-		 *      These are available if @a BaseIterator have these facilities.
-		 * @tparam Derived Set to @c UTF16To32Iterator template class
-		 * @tparam BaseIterator The base bidirectional iterator presents UTF-16 character sequence
-		 * @tparam UChar32 The type of 32-bit code unit
-		 * @see UTF16To32Iterator, UTF16To32IteratorUnsafe, UTF32To16Iterator, ToUTF32Sequence
-		 */
-		template<typename Derived, typename BaseIterator, typename UChar32 = CodePoint>
-		class UTF16To32IteratorBase : public detail::IteratorAdapter<
-			Derived,
-			std::iterator<
-				std::bidirectional_iterator_tag, UChar32,
-				typename std::iterator_traits<BaseIterator>::difference_type,
-				const UChar32*, const UChar32
-			>
-		> {
-		public:
-			/// Assignment operator.
-			Derived& operator=(const UTF16To32IteratorBase<Derived, BaseIterator, UChar32>& other) {
-				p_ = other.p_;
-				return derived();
-			}
-			/// Returns the current position.
-			BaseIterator tell() const {return p_;}
-		protected:
-			/// Default constructor.
-			UTF16To32IteratorBase() {}
-			/// Copy-constructor.
-			UTF16To32IteratorBase(const UTF16To32IteratorBase<Derived, BaseIterator, UChar32>& other) : p_(other.p_) {}
-			/// Constructor takes a position to start iteration.
-			UTF16To32IteratorBase(BaseIterator start) : p_(start) {}
-		private:
-			// detail.IteratorAdapter
-			friend class detail::IteratorCoreAccess;
-			value_type current() const {
-				if(!derived().hasNext())
-					throw IllegalStateException("The iterator is last.");
-				if(!surrogates::isHighSurrogate(*p_))
-					return *p_;
-				++const_cast<UTF16To32IteratorBase<Derived, BaseIterator, UChar32>*>(this)->p_;
-				const value_type next = derived().hasNext() ? *p_ : INVALID_CODE_POINT;
-				--const_cast<UTF16To32IteratorBase<Derived, BaseIterator, UChar32>*>(this)->p_;
-				return (next != INVALID_CODE_POINT) ?
-					surrogates::decode(*p_, static_cast<Char>(next & 0xffffu)) : *p_;
-			}
-			void next() {
-				if(!derived().hasNext())
-					throw IllegalStateException("The iterator is last.");
-				++p_;
-				if(derived().hasNext() && surrogates::isLowSurrogate(*p_))
-					++p_;
-			}
-			void previous() {
-				if(!derived().hasPrevious())
-					throw IllegalStateException("The iterator is first.");
-				--p_;
-				if(derived().hasPrevious() && surrogates::isLowSurrogate(*p_))
-					--p_;
-			}
-			bool equals(const UTF16To32IteratorBase<Derived, BaseIterator, UChar32>& other) const {
-				return p_ == other.p_;
-			}
-			bool less(const UTF16To32IteratorBase<Derived, BaseIterator, UChar32>& other) const {
-				return p_ < other.p_;
-			}
-		private:
-			Derived& derived() /*throw()*/ {return *static_cast<Derived*>(this);}
-			const Derived& derived() const /*throw()*/ {return *static_cast<const Derived*>(this);}
-			BaseIterator p_;
-		};
-
-		/// Concrete class derived from @c UTF16To32IteratorBase does not check boundary at all.
-		template<typename BaseIterator = const Char*, typename UChar32 = CodePoint>
-		class UTF16To32IteratorUnsafe : public UTF16To32IteratorBase<
-			UTF16To32IteratorUnsafe<BaseIterator, UChar32>, BaseIterator, UChar32> {
-		public:
-			/// Default constructor.
-			UTF16To32IteratorUnsafe() {}
-			/// Copy-constructor.
-			UTF16To32IteratorUnsafe(const UTF16To32IteratorUnsafe<BaseIterator, UChar32>& other) :
-				UTF16To32IteratorBase<UTF16To32IteratorUnsafe<BaseIterator, UChar32>, BaseIterator, UChar32>(other) {}
-			/**
-			 * Constructor takes a position to start iteration. The ownership of the target text
-			 * will not be transferred to this.
-			 */
-			UTF16To32IteratorUnsafe(BaseIterator i) :
-				UTF16To32IteratorBase<UTF16To32IteratorUnsafe<BaseIterator, UChar32>, BaseIterator, UChar32>(i) {}
-			/// Returns true.
-			bool hasNext() const /*throw()*/ {return true;}
-			/// Returns true.
-			bool hasPrevious() const /*throw()*/ {return true;}
-		};
-
-		/**
-		 * Concrete class derived from @c UTF16To32IteratorBase.
-		 * @see makeUTF16To32Iterator
-		 */
-		template<typename BaseIterator = const Char*, typename UChar32 = CodePoint>
-		class UTF16To32Iterator :
-			public UTF16To32IteratorBase<UTF16To32Iterator<BaseIterator, UChar32>, BaseIterator, UChar32> {
-		private:
-			typedef UTF16To32IteratorBase<UTF16To32Iterator<BaseIterator, UChar32>, BaseIterator, UChar32> Base;
-		public:
-			/// Default constructor.
-			UTF16To32Iterator() {}
-			/**
-			 * Constructor takes a position to start iteration. The ownership of the target text
-			 * will not be transferred to this.
-			 */
-			UTF16To32Iterator(BaseIterator first, BaseIterator last) :
-				Base(first), first_(first), last_(last) {}
-			/**
-			 * Constructor takes a position to start iteration. The ownership of the target text
-			 * will not be transferred to this.
-			 */
-			UTF16To32Iterator(BaseIterator first, BaseIterator last,
-				BaseIterator start) : Base(start), first_(first), last_(last) {}
-			/// Copy constructor.
-			UTF16To32Iterator(const UTF16To32Iterator<BaseIterator, UChar32>& other) :
-				Base(other), first_(other.first_), last_(other.last_) {}
-			/// Assignment operator.
-			UTF16To32Iterator& operator=(const UTF16To32Iterator<BaseIterator, UChar32>& other) {
-				Base::operator=(other);
-				first_ = other.first_;
-				last_ = other.last_;
-				return *this;
-			}
-			/// Returns @c true if the iterator is not at the last.
-			bool hasNext() const {return Base::tell() != last_;}
-			/// Returns @c true if the iterator is not at the first.
-			bool hasPrevious() const {return Base::tell() != first_;}
-		private:
-			BaseIterator first_, last_;
-		};
-
-		/// Returns a @c UTF16To32Iterator instance iterates elements of the given container.
-		template<typename Container>
-		inline UTF16To32Iterator<typename Container::const_iterator>
-			makeUTF16To32Iterator(const Container& c) {
-			return UTF16To32Iterator<typename Container::const_iterator>(c.begin(), c.end());
-		}
-		/// Returns a @c UTF16To32Iterator instance iterates elements of the given container.
-		template<typename Container>
-		inline UTF16To32Iterator<typename Container::const_iterator> makeUTF16To32Iterator(
-				const Container& c, typename Container::const_iterator start) {
-			return UTF16To32Iterator<typename Container::const_iterator>(c.begin(), c.end(), start);
-		}
-
-		/// Converts the code unit sequence into UTF-32. This does not accept UTF-8.
-		template<typename CodeUnitSequence,
-			template<class, class> class AdaptionIterator = UTF16To32Iterator, typename UChar32 = CodePoint>
-		struct ToUTF32Sequence {
-			typedef typename detail::Select<
-				CodeUnitSizeOf<CodeUnitSequence>::result == 4,
-				CodeUnitSequence, AdaptionIterator<CodeUnitSequence, UChar32> >::Type Type;
-		};
-
-		/**
-		 * Bidirectional iterator scans UTF-32 character sequence as UTF-16.
-		 * @par UTF-32 sequence scanned by this is given by the template parameter @a BaseIterator.
-		 * @par This supports four relation operators general bidirectional iterators don't have.
-		 *      These are available if @a BaseIterator have these facilities.
-		 * @tparam BaseIterator The base bidirectional iterator presents UTF-32 character sequence
-		 * @tparam UChar16 The type of 16-bit character
-		 * @see UTF16To32Iterator
-		 */
-		template<class BaseIterator = const CodePoint*, typename UChar16 = Char
-//			, typename std::tr1::enable_if<CodeUnitSizeOf<BaseIterator>::value == 4 && sizeof(UChar16) == 2>::type* = 0
-		>
-		class UTF32To16Iterator : public detail::IteratorAdapter<
-			UTF32To16Iterator<BaseIterator, UChar16>,
-			std::iterator<
-				std::bidirectional_iterator_tag, UChar16,
-				typename std::iterator_traits<BaseIterator>::difference_type,
-				const UChar16*, const UChar16
-			>
-		> {
-			ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<BaseIterator>::value == 4);
-			ASCENSION_STATIC_ASSERT(sizeof(UChar16) == 2);
-		public:
-			/// Default constructor.
-			UTF32To16Iterator() {}
-			/**
-			 * Constructor takes a position to start iteration.
-			 * The ownership of the target text will not be transferred to this.
-			 */
-			UTF32To16Iterator(BaseIterator start) : p_(start), high_(true) {}
-			/// Assignment operator.
-			UTF32To16Iterator& operator=(const UTF32To16Iterator<BaseIterator, UChar16>& other) {
-				p_ = other.p_;
-				high_ = other.high_;
-			}
-			/// Returns the current position.
-			BaseIterator tell() const {return p_;}
-		private:
-			// detail.IteratorAdapter
-			friend class detail::IteratorCoreAccess;
-			value_type current() const {
-				if(*p_ < 0x10000ul)
-					return static_cast<value_type>(*p_ & 0xffffu);
-				else {
-					value_type text[2];
-					utf16::encode(*p_, text);
-					return text[high_ ? 0 : 1];
-				}
-			}
-			void next() {
-				if(!high_) {
-					high_ = true;
-					++p_;
-				} else if(*p_ < 0x10000ul)
-					++p_;
-				else
-					high_ = false;
-			}
-			void previous() {
-				if(!high_)
-					high_ = true;
-				else {
-					--p_;
-					high_ = *p_ < 0x10000ul;
-				}
-			}
-			bool equals(const UTF32To16Iterator<BaseIterator, UChar16>& other) const {
-				return p_ == other.p_ && high_ == other.high_;
-			}
-			bool less(const UTF32To16Iterator<BaseIterator, UChar16>& other) const {
-				return p_ < other.p_ || (p_ == other.p_ && high_ && !other.high_);
-			}
-		private:
-			BaseIterator p_;
-			bool high_;
-		};
-
 	}
 } // namespace ascension.text
 

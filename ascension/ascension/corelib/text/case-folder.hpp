@@ -9,7 +9,7 @@
 #define ASCENSION_CASE_FOLDER_HPP
 
 #include <ascension/corelib/character-iterator.hpp>
-#include <ascension/corelib/text/utf-16.hpp>	// UTF16To32Iterator, surrogates.encode
+#include <ascension/corelib/text/utf-iterator.hpp>	// CharacterDecodeIterator, surrogates.encode
 #include <algorithm>	// std.lower_bound
 #include <sstream>		// std.basic_stringbuf
 
@@ -140,12 +140,12 @@ namespace ascension {
 			std::basic_stringbuf<Char> s(ios_base::out);
 			CodePoint c, f;
 			Char buffer[2];
-			for(UTF16To32Iterator<CharacterSequence> i(first, last); i.hasNext(); ++i) {
+			for(utf::CharacterDecodeIterator<CharacterSequence> i(first, last), e(last, last); i != e; ++i) {
 				c = *i;
 				if(!excludeTurkishI || c == (f = foldTurkishI(*i)))
 					f = foldCommon(c);
 				if(f != c || c >= 0x010000u) {
-					if(utf16::encode(f, buffer) < 2)
+					if(utf16::checkedEncode(f, buffer) < 2)
 						s.sputc(buffer[0]);
 					else
 						s.sputn(buffer, 2);

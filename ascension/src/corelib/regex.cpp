@@ -346,8 +346,8 @@ Pattern::Pattern(const StringPiece& regex, int flags /* = 0 */) : flags_(flags) 
 	if((flags & ~(CANON_EQ | CASE_INSENSITIVE | COMMENTS | DOTALL | LITERAL | MULTILINE | UNICODE_CASE | UNIX_LINES)) != 0)
 		throw UnknownValueException("flags includes illegal bit values.");
 	try {
-		impl_.assign(UTF16To32Iterator<const Char*>(regex.beginning(), regex.end()),
-			UTF16To32Iterator<const Char*>(regex.beginning(), regex.end(), regex.end()),
+		impl_.assign(utf::CharacterDecodeIterator<const Char*>(regex.beginning(), regex.end()),
+			utf::CharacterDecodeIterator<const Char*>(regex.beginning(), regex.end(), regex.end()),
 			boost::regex_constants::perl | boost::regex_constants::collate
 			| (((flags & CASE_INSENSITIVE) != 0) ? boost::regex_constants::icase : 0)
 			| (((flags & LITERAL) != 0) ? boost::regex_constants::literal : 0));
@@ -368,8 +368,8 @@ Pattern::Pattern(const StringPiece& regex, boost::regex_constants::syntax_option
 	if(regex.beginning() == 0)
 		throw NullPointerException("regex");
 	try {
-		impl_.assign(UTF16To32Iterator<const Char*>(regex.beginning(), regex.end()),
-			UTF16To32Iterator<const Char*>(regex.beginning(), regex.end(), regex.end()), nativeSyntax);
+		impl_.assign(utf::CharacterDecodeIterator<const Char*>(regex.beginning(), regex.end()),
+			utf::CharacterDecodeIterator<const Char*>(regex.beginning(), regex.end(), regex.end()), nativeSyntax);
 	} catch(const boost::regex_error& e) {
 		throw PatternSyntaxException(e, String(regex.beginning(), regex.end()));
 	}
@@ -497,7 +497,7 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 			valueNameDetector = &Script::forName<char_type>;
 		if(valueNameDetector != 0) {
 			const int p = valueNameDetector(basic_string<char_type>(
-				UTF32To16Iterator<>(value), UTF32To16Iterator<>(p2)).c_str());
+				utf::makeCharacterEncodeIterator(value), utf::makeCharacterEncodeIterator(p2)).c_str());
 			if(p != NOT_PROPERTY)
 				klass.set(p);
 		}

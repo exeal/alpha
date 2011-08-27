@@ -8,6 +8,7 @@
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 #include <ascension/corelib/text/normalizer.hpp>
 #include <ascension/corelib/text/character-property.hpp>
+#include <ascension/corelib/text/utf-iterator.hpp>
 #include <algorithm>	// std.find_if, std.lower_bound, std.sort
 using namespace ascension;
 using namespace ascension::text;
@@ -84,14 +85,15 @@ namespace {
 		return (t != T_BASE) ? ((*destination = t), 3) : 2;
 	}
 
-	basic_string<CodePoint> composeHangul(UTF16To32Iterator<const Char*> i) {
+	basic_string<CodePoint> composeHangul(
+			utf::CharacterDecodeIterator<const Char*> i, utf::CharacterDecodeIterator<const Char*> e) {
 		// from The Unicode Standard 5.0 pp.1356~1357
-		if(!i.hasNext())
+		if(i == e)
 			return basic_string<CodePoint>();
 		basic_stringbuf<CodePoint> result;
 		CodePoint last = *i;
 
-		while((++i).hasNext()) {
+		while(++i != e) {
 			const CodePoint c = *i;
 
 			// 1. check to see if two current characters are L and V
@@ -165,12 +167,12 @@ namespace {
 	 * @return The length of the decomposition
 	 */
 	length_t internalDecompose(CodePoint c, bool compatibility, Char* destination) {
-		Char* last = destination + (utf16::encode(c, destination) < 2 ? 1 : 2);
+		Char* last = destination + (utf16::checkedEncode(c, destination) < 2 ? 1 : 2);
 		length_t len;
 		CodePoint current;
 		Char decomposedHangul[4];
 		const CodePoint* src;
-		for(UTF16To32IteratorUnsafe<Char*> i(destination); i.tell() < last; ) {
+		for(utf::CharacterDecodeIteratorUnsafe<Char*> i(destination); i.tell() < last; ) {
 			current = *i;
 			if(current < 0x010000ul && (0 != (len = decomposeHangul(static_cast<Char>(current & 0xffffu), decomposedHangul)))) {
 				splice(i.tell(), last, 1, decomposedHangul, len);
@@ -222,7 +224,7 @@ namespace {
 		Char buffer[32];
 		length_t len;
 		int ccc, previous = CanonicalCombiningClass::NOT_REORDERED;
-		for(UTF16To32Iterator<CharacterSequence> i(first, last); i.hasNext(); ++i) {
+		for(utf::CharacterDecodeIterator<CharacterSequence> i(first, last); i.tell() < last; ++i) {
 			len = internalDecompose(*i, false, buffer);
 			ccc = CanonicalCombiningClass::of(utf16::decodeFirst(buffer, buffer + len));
 			if(ccc != CanonicalCombiningClass::NOT_REORDERED && ccc < previous)
@@ -246,7 +248,7 @@ namespace {
 		basic_stringbuf<CodePoint> buffer(ios_base::out);
 		for(auto_ptr<CharacterIterator> i(first.clone()); i->offset() < last.offset(); i->next()) {
 			len = internalDecompose(i->current(), form == Normalizer::FORM_KD || form == Normalizer::FORM_KC, room);
-			for(UTF16To32Iterator<const Char*> j(room, room + len); j.hasNext(); ++j)
+			for(utf::CharacterDecodeIterator<const Char*> j(room, room + len); j.tell() < room + len; ++j)
 				buffer.sputc(*j);
 		}
 		// reorder combining marks
@@ -428,7 +430,8 @@ String Normalizer::normalize(const CharacterIterator& text, Form form) {
 		if(c < 0x010000ul)
 			buffer.sputc(static_cast<Char>(c & 0xffffu));
 		else {
-			utf16::encode(c, surrogate);
+			assert(isScalarValue(c));
+			utf16::uncheckedEncode(c, surrogate);
 			buffer.sputn(surrogate, 2);
 		}
 	}

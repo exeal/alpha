@@ -16,6 +16,19 @@
 
 namespace ascension {
 
+	namespace detail {
+		template<bool check>
+		inline CodePoint decodeSurrogates(Char high, Char low) {
+			if(check) {
+				if(!text::surrogates::isHighSurrogate(high))
+					throw text::InvalidScalarValueException(high);
+				if(!text::surrogates::isLowSurrogate(low))
+					throw text::InvalidScalarValueException(low);
+			}
+			return 0x10000ul + (high - 0xd800u) * 0x0400u + low - 0xdc00u;
+		}
+	}
+	
 	/**
 	 * Provides stuffs implement some of the Unicode standard. This includes:
 	 * - @c Normalizer class implements <a href="http://www.unicode.org/reports/tr15/">UAX #15:
@@ -145,10 +158,20 @@ namespace ascension {
 			 * @param high The high-surrogate
 			 * @param low The low-surrogate
 			 * @return The code point or the value of @a high if the pair is not valid
+			 * @throw InvalidScalarValueException @a high and/or @a low is not surrogate
 			 */
 			inline CodePoint decode(Char high, Char low) /*throw()*/ {
-				return (isHighSurrogate(high) && isLowSurrogate(low)) ?
-					0x10000ul + (high - 0xd800u) * 0x0400u + low - 0xdc00u : high;
+				return detail::decodeSurrogates<true>(high, low);
+			}
+
+			/**
+			 * Converts the specified surrogate pair to a corresponding code point.
+			 * @param high The high-surrogate
+			 * @param low The low-surrogate
+			 * @return The code point or the value of @a high if the pair is not valid
+			 */
+			inline CodePoint uncheckedDecode(Char high, Char low) /*throw()*/ {
+				return detail::decodeSurrogates<false>(high, low);
 			}
 
 			/**
