@@ -77,7 +77,7 @@
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 
 #include <ascension/corelib/encoder.hpp>
-#include <ascension/corelib/text/utf-16.hpp>
+#include <ascension/corelib/text/utf.hpp>
 #include <algorithm>	// std.binary_search
 #include <cassert>
 #include <cstring>		// std.memcpy
@@ -370,7 +370,7 @@ namespace {
 				next = first;
 				return eob ? Encoder::MALFORMED_INPUT : Encoder::COMPLETED;
 			}
-			const CodePoint c = utf16::decodeFirst(first, last);
+			const CodePoint c = utf::decodeFirst(first, last);
 			if(c < 0x10000ul) {
 				next = first;
 				return Encoder::MALFORMED_INPUT;
@@ -743,8 +743,10 @@ namespace {
 					if(ucs > 0x0010fffful) {	// two UCS characters
 						*to = maskUCS2(ucs >> 16);
 						*++to = maskUCS2(ucs);
-					} else
-						utf16::uncheckedEncode(ucs, to++);
+					} else {
+						Char* temp = to++;
+						utf::encode(ucs, temp);
+					}
 				} else {
 					if(to > beginning && ((to[-1] == 0x02e9u && ucs == 0x02e5u) || (to[-1] == 0x02e5u && ucs == 0x02e9u))) {
 						if(to + 1 >= toEnd)
@@ -1174,9 +1176,10 @@ namespace {
 					if(ucs > 0x0010fffful) {	// a character uses two code points
 						*to = maskUCS2(ucs >> 16);
 						*++to = maskUCS2(ucs);
-					} else if(ucs >= 0x00010000ul)	// out of BMP
-						utf16::uncheckedEncode(ucs, to++);
-					else {
+					} else if(ucs >= 0x00010000ul) {	// out of BMP
+						Char* temp = to++;
+						utf::encode(ucs, temp);
+					} else {
 						if(to > beginning && (to[-1] == 0x02e9u && ucs == 0x02e5u) || (to[-1] == 0x02e5u && ucs == 0x02e9u)) {
 							if(to + 1 >= toEnd)
 								break;	// INSUFFICIENT_BUFFER
@@ -1390,9 +1393,10 @@ namespace {
 						if(ucs > 0x0010fffful) {	// a character uses two code points
 							*to = maskUCS2(ucs >> 16);
 							*++to = maskUCS2(ucs >> 0);
-						} else if(ucs >= 0x00010000ul)	// out of BMP
-							utf16::uncheckedEncode(ucs, to++);
-						else
+						} else if(ucs >= 0x00010000ul) {	// out of BMP
+							Char* temp = to++;
+							utf::encode(ucs, temp);
+						} else
 							*to = maskUCS2(ucs);
 					}
 				} else {	// plane-1
@@ -1402,9 +1406,10 @@ namespace {
 						if(ucs > 0x0010fffful) {	// a character uses two code points
 							*to = maskUCS2(ucs >> 16);
 							*++to = maskUCS2(ucs >> 0);
-						} else if(ucs >= 0x00010000ul)	// out of BMP
-							utf16::uncheckedEncode(ucs, to++);
-						else {
+						} else if(ucs >= 0x00010000ul) {	// out of BMP
+							Char* temp = to++;
+							utf::encode(ucs, temp);
+						} else {
 							if(to > beginning
 									&& ((to[-1] == 0x02e9u && ucs == 0x02e5u)
 									|| (to[-1] == 0x02e5u && ucs == 0x02e9u))) {

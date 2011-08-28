@@ -4,14 +4,14 @@
  * @author exeal
  * @date 2005-2010 (was unicode.hpp)
  * @date 2010-2011
- * @see utf-16.hpp
+ * @see character.hpp
  */
 
 #ifndef ASCENSION_CHARACTER_ITERATOR_HPP
 #define ASCENSION_CHARACTER_ITERATOR_HPP
 #include <ascension/corelib/standard-iterator-adapter.hpp>
 #include <ascension/corelib/string-piece.hpp>
-#include <ascension/corelib/text/utf-16.hpp>	// text.surrogates.decodeFirst
+#include <ascension/corelib/text/utf.hpp>
 #include <stdexcept>
 #include <iterator>
 
@@ -163,7 +163,7 @@ namespace ascension {
 			// CharacterIterator
 			/// @see CharacterIterator#current
 			CodePoint current() const /*throw()*/ {
-				return (current_ != last_) ? utf16::decodeFirst(current_, last_) : DONE;
+				return (current_ != last_) ? utf::checkedDecodeFirst(current_, last_) : DONE;
 			}
 			/// @see CharacterIterator#hasNext
 			bool hasNext() const /*throw()*/ {return current_ != last_;}
