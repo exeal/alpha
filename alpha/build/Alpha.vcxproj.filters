@@ -592,10 +592,10 @@
     <ClInclude Include="..\..\ascension\ascension\presentation\writing-mode.hpp">
       <Filter>ascension\Header Files\presentation</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\corelib\text\utf-8.hpp">
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\utf-iterator.hpp">
       <Filter>ascension\Header Files\corelib\text</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\corelib\text\utf-16.hpp">
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\utf.hpp">
       <Filter>ascension\Header Files\corelib\text</Filter>
     </ClInclude>
   </ItemGroup>

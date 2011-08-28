@@ -196,13 +196,14 @@ namespace ascension {
 			 * @throw InvalidScalarValueException @a c is invalid
 			 */
 			template<typename OutputIterator>
-			inline std::size_t checkedEncode(CodePoint c, OutputIterator& out) {
+			inline std::size_t checkedEncode(CodePoint c, OutputIterator& out,
+					typename std::enable_if<CodeUnitSizeOf<OutputIterator>::value == 1>::type* = 0) {
 				return detail::encodeUTF8<true>(c, out);
 			}
 
 			template<typename InputIterator>
-			inline InputIterator nextUnsafe(InputIterator i) {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::value == 1);
+			inline InputIterator nextUnsafe(InputIterator i,
+					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 1>::type* = 0) {
 				const std::size_t n = length(*i);
 				std::advance(i, (n != 0) ? n : 1);
 				return i;
@@ -219,13 +220,13 @@ namespace ascension {
 			 * @return The code point
 			 */
 			template<typename InputIterator>
-			inline CodePoint decodeFirst(InputIterator& first, const InputIterator& last,
+			inline CodePoint decodeFirst(InputIterator first, InputIterator last,
 					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 2>::type* = 0) {
 				assert(first != last);
 				const uint16_t high = *first;
 				if(surrogates::isHighSurrogate(high))
-					return (++first != last) ? surrogates::decode(high, *(first++)) : high;
-				return ++first, high;
+					return (++first != last) ? surrogates::decode(high, *first) : high;
+				return high;
 			}
 
 			/**
@@ -239,21 +240,20 @@ namespace ascension {
 			 *                                                ill-formed UTF-16
 			 */
 			template<typename InputIterator>
-			inline CodePoint checkedDecodeFirst(InputIterator& first, const InputIterator& last,
+			inline CodePoint checkedDecodeFirst(InputIterator first, InputIterator last,
 					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 2>::type* = 0) {
 				assert(first != last);
 				const uint16_t high = *first;
 				if(surrogates::isHighSurrogate(high)) {
-					InputIterator next(first);
-					if(++next == last)
+					if(++first == last)
 						throw MalformedInputException<uint16_t>(high);
-					const uint16_t low = *next;
+					const uint16_t low = *first;
 					if(!surrogates::isLowSurrogate(low))
 						throw MalformedInputException<uint16_t>(low);
-					return (first = ++next), surrogates::decode(high, low);
+					return surrogates::decode(high, low);
 				} else if(surrogates::isLowSurrogate(high))
 					throw MalformedInputException<uint16_t>(high);
-				return ++first, high;
+				return high;
 			}
 
 			/**
@@ -272,7 +272,7 @@ namespace ascension {
 				assert(first != last);
 				const uint16_t low = *--last;
 				if(surrogates::isLowSurrogate(low))
-					return (--last != first) ? surrogates::decode(*last, low) : (++last, low);
+					return (--last != first) ? surrogates::decode(*last, low) : low;
 				return low;
 			}
 
@@ -290,18 +290,17 @@ namespace ascension {
 					BidirectionalIterator first, BidirectionalIterator last,
 					typename std::enable_if<CodeUnitSizeOf<BidirectionalIterator>::value == 2>::type* = 0) {
 				assert(first != last);
-				InputIterator previous(last);
-				const uint16_t low = *--previous;
+				const uint16_t low = *--last;
 				if(surrogates::isLowSurrogate(low)) {
-					if(previous == first)
+					if(last == first)
 						throw MalformedInputException<uint16_t>(low);
-					const uint16_t high = *--previous;
+					const uint16_t high = *--last;
 					if(!surrogates::isHighSurrogate(high))
 						throw MalformedInputException<uint16_t>(high);
-					return (last = previous), surrogates::decode(high, low);
+					return surrogates::decode(high, low);
 				} else if(surrogates::isHighSurrogate(low))
 					throw MalformedInputException<uint16_t>(low);
-				return (last = previous), low;
+				return low;
 			}
 
 			/**
@@ -378,10 +377,10 @@ namespace ascension {
 			 * @return The code point
 			 */
 			template<typename InputIterator>
-			inline CodePoint decodeFirst(InputIterator& first, const InputIterator& last,
+			inline CodePoint decodeFirst(InputIterator first, InputIterator last,
 					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 4>::type* = 0) {
 				assert(first != last);
-				return static_cast<CodePoint>(*(first++));
+				return static_cast<CodePoint>(*first);
 			}
 
 			/**
@@ -395,7 +394,7 @@ namespace ascension {
 			 *                                                ill-formed UTF-32
 			 */
 			template<typename InputIterator>
-			inline CodePoint checkedDecodeFirst(InputIterator& first, const InputIterator& last,
+			inline CodePoint checkedDecodeFirst(InputIterator first, InputIterator last,
 					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 4>::type* = 0) {
 				assert(first != last);
 				if(!isScalarValueException(*first))
@@ -413,7 +412,7 @@ namespace ascension {
 			 * @return The code point
 			 */
 			template<typename BidirectionalIterator>
-			inline CodePoint decodeLast(const BidirectionalIterator& first, BidirectionalIterator& last,
+			inline CodePoint decodeLast(BidirectionalIterator first, BidirectionalIterator last,
 					typename std::enable_if<CodeUnitSizeOf<BidirectionalIterator>::value == 4>::type* = 0) {
 				assert(first != last);
 				return static_cast<CodePoint>(*--last);
@@ -429,14 +428,12 @@ namespace ascension {
 			 * @return The code point
 			 */
 			template<typename BidirectionalIterator>
-			inline CodePoint checkedDecodeLast(const BidirectionalIterator& first, BidirectionalIterator& last,
+			inline CodePoint checkedDecodeLast(BidirectionalIterator first, BidirectionalIterator last,
 					typename std::enable_if<CodeUnitSizeOf<BidirectionalIterator>::value == 4>::type* = 0) {
 				assert(first != last);
 				const uint32_t c = *--last;
-				if(!isScalarValue(c)) {
-					++last;
+				if(!isScalarValue(c))
 					throw MalformedInputException<uint32_t>(c);
-				}
 				return static_cast<CodePoint>(c);
 			}
 

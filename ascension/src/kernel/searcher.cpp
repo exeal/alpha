@@ -809,7 +809,8 @@ bool IncrementalSearcher::addCharacter(CodePoint c) {
 	if(c < 0x010000u)
 		return addCharacter(static_cast<Char>(c & 0xffffu));
 	Char surrogates[2];
-	const length_t n = utf16::checkedEncode(c, surrogates);
+	Char* temp = surrogates;
+	const size_t n = utf::checkedEncode(c, temp);
 	return addString(StringPiece(surrogates, n));
 }
 

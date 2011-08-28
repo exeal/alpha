@@ -10,8 +10,7 @@
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/corelib/standard-iterator-adapter.hpp>	// IllegalStateException
 #include <ascension/corelib/text/character.hpp>
-#include <ascension/corelib/text/utf-8.hpp>
-#include <ascension/corelib/text/utf-16.hpp>
+#include <ascension/corelib/text/utf.hpp>
 
 namespace ascension {
 	namespace text {
