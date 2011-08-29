@@ -16,15 +16,28 @@ namespace ascension {
 	namespace text {
 		namespace utf {
 
+			class CharacterIteratorBase {
+			public:
+				/// Default constructor.
+				CharacterIteratorBase() /*throw()*/ : usesCheckedAlgorithms_(true) {}
+				/// Sets if this iterator uses checked version algorithms or not.
+				void useCheckedAlgorithms(bool use) /*throw()*/ {usesCheckedAlgorithms_ = use;}
+				/// Returns @c true if this iterator uses checked version algorithms.
+				bool usesCheckedAlgorithms() const /*throw()*/ {return usesCheckedAlgorithms_;}
+			private:
+				bool usesCheckedAlgorithms_;
+			};
+
 			template<typename Derived, typename BaseIterator, typename UChar32 = CodePoint>
-			class CharacterDecodeIteratorBase : public detail::IteratorAdapter<
-				Derived,
-				std::iterator<
-					std::bidirectional_iterator_tag, UChar32,
-					typename std::iterator_traits<BaseIterator>::difference_type,
-					const UChar32*, const UChar32
-				>
-			> {
+			class CharacterDecodeIteratorBase : public CharacterIteratorBase,
+				public detail::IteratorAdapter<
+					Derived,
+					std::iterator<
+						std::bidirectional_iterator_tag, UChar32,
+						typename std::iterator_traits<BaseIterator>::difference_type,
+						const UChar32*, const UChar32
+					>
+				> {
 			public:
 				/// Default constructor.
 				CharacterDecodeIteratorBase() : extractedBytes_(0) {}
@@ -195,14 +208,15 @@ namespace ascension {
 
 			template<typename BaseIterator,
 				typename Byte = typename DefaultByte<CodeUnitSizeOf<BaseIterator>::value>::Type>
-			class CharacterEncodeIterator : public detail::IteratorAdapter<
-				CharacterEncodeIterator<BaseIterator, Byte>,
-				std::iterator<
-					std::bidirectional_iterator_tag, Byte,
-					typename std::iterator_traits<BaseIterator>::difference_type,
-					const Byte*, const Byte
-				>
-			> {
+			class CharacterEncodeIterator : public CharacterIteratorBase,
+				public detail::IteratorAdapter<
+					CharacterEncodeIterator<BaseIterator, Byte>,
+					std::iterator<
+						std::bidirectional_iterator_tag, Byte,
+						typename std::iterator_traits<BaseIterator>::difference_type,
+						const Byte*, const Byte
+					>
+				> {
 				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<BaseIterator>::value == 4);
 			public:
 				/// Default constructor.
@@ -230,7 +244,7 @@ namespace ascension {
 #else
 					if(isValidCodePoint())
 #endif
-						extractedBytes = utf16::uncheckedEncode(c, cache_);
+						extractedBytes = utf::encode(c, cache_);
 					else {
 						cache_[0] = REPLACEMENT_CHARACTER;
 						extractedBytes = 1;
@@ -282,10 +296,11 @@ namespace ascension {
 			};
 
 			template<typename BaseIterator>
-			class CharacterOutputIterator : public detail::IteratorAdapter<
-				CharacterOutputIterator<BaseIterator>,
-				std::iterator<std::output_iterator_tag, void, void, CodePoint*, CodePoint&>
-			> {
+			class CharacterOutputIterator : public CharacterIteratorBase,
+				public detail::IteratorAdapter<
+					CharacterOutputIterator<BaseIterator>,
+					std::iterator<std::output_iterator_tag, void, void, CodePoint*, CodePoint&>
+				> {
 			public:
 				/// Constructor takes base output iterator.
 				CharacterOutputIterator(const BaseIterator& base) : base_(base) {}
@@ -297,14 +312,15 @@ namespace ascension {
 					return *this;
 				}
 				/// Assignment operator.
-				void operator=(CodePoint c) {write<CodeUnitSizeOf<BaseIterator>::value>();}
+				void operator=(CodePoint c) {
+					if(usesCheckedAlgorithms())
+						utf::checkedEncode(c, base_);
+					else
+						utf::encode(c, base_);
+				}
 				/// Returns the current position.
 				BaseIterator tell() const {return base_;}
 			private:
-				template<std::size_t codeUnitSize> void write(CodePoint c);
-				template<> void write<1>(CodePoint c) {utf8::encode(c, base_);}
-				template<> void write<2>(CodePoint c) {utf16::encode(c, base_);}
-				template<> void write<4>(CodePoint c) {*base_ = c; ++base_;}
 				// detail.IteratorAdapter
 				friend class detail::IteratorCoreAccess;
 				CharacterOutputIterator& current() const {return *this;}
