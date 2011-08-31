@@ -14,6 +14,7 @@
 #ifndef ASCENSION_UTF_HPP
 #define ASCENSION_UTF_HPP
 
+#include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/corelib/text/character.hpp>	// CodePoint, ASCENSION_STATIC_ASSERT, surrogates.*
 #include <cassert>								// assert
 
@@ -25,7 +26,7 @@ namespace ascension {
 
 	namespace detail {
 		/*
-			well-formed UTF-8 first byte distribution (based on Unicode 5.0 Table 3.7)
+			well-formed UTF-8 first byte distribution (based on Unicode 6.0 Table 3.7)
 			value  1st-byte   code points       byte count
 			----------------------------------------------
 			10     00..7F     U+0000..007F      1
@@ -50,9 +51,63 @@ namespace ascension {
 			0x46, 0x47, 0x47, 0x47, 0x48, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09, 0x09	// 0xF0
 		};
 
+		inline CodePoint decodeUTF8(const uint8_t bytes[], std::size_t nbytes, bool checkMalformedInput) {
+			// this function never checks bytes[0] value
+			switch(nbytes) {
+			case 1:	// 00000000 0xxxxxxx <- 0xxxxxxx
+				return bytes[0];
+			case 2:	// 00000yyy yyxxxxxx <- 110yyyyy 10xxxxxx
+				if(checkMalformedInput && (bytes[1] & 0xc0) == 0x80)	// <C2..DF 80..BF>
+					throw text::MalformedInputException<uint8_t>(bytes[1], 1);
+				return ((bytes[0] & 0x1f) << 6) | (bytes[1] & 0x3f);
+			case 3:	// zzzzyyyy yyxxxxxx <- 1110zzzz 10yyyyyy 10xxxxxx
+				if(checkMalformedInput) {
+					if((bytes[0] == 0xe0 && (bytes[1] & 0xe0) != 0xa0)	// <E0 A0..BF XX>
+							|| (bytes[0] == 0xed && (bytes[1] & 0xe0) != 0x80)	// <ED 80..9F XX>
+							|| ((bytes[1] & 0xc0) != 0x80))	// <XX 80..BF XX>
+						throw text::MalformedInputException<uint8_t>(bytes[1], 1);
+					if((bytes[2] & 0xc0) != 0x80)	// <XX XX 80..BF>
+						throw text::MalformedInputException<uint8_t>(bytes[2], 2);
+				}
+				return ((bytes[0] & 0x0f) << 12) | ((bytes[1] & 0x3f) << 6) | (bytes[2] & 0x3f);
+			case 4:	// 000uuuuu zzzzyyyy yyxxxxxx <- 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
+				if(checkMalformedInput) {
+					if((bytes[0] == 0xf0 && (bytes[1] < 0x90 || bytes[1] > 0xbf))	// <F0 90..BF XX XX>
+							|| (bytes[0] == 0xf4 && (bytes[1] & 0xf0) != 0x80)	// <F4 80..8F XX XX>
+							|| ((bytes[1] & 0xc0) != 0x80))	// <F1..F3 80..BF XX XX>
+						throw text::MalformedInputException<uint8_t>(bytes[1], 1);
+					if((bytes[2] & 0xc0) != 0x80)	// <XX XX 80..BF XX>
+						throw text::MalformedInputException<uint8_t>(bytes[2], 2);
+					if((bytes[3] & 0xc0) != 0x80)	// <XX XX XX 80..BF>
+						throw text::MalformedInputException<uint8_t>(bytes[3], 3);
+				}
+				return ((bytes[0] & 0x07) << 18) | ((bytes[1] & 0x3f) << 12) | ((bytes[2] & 0x3f) << 6) | (bytes[3] & 0x3f);
+			case 0:	// bad leading byte
+				throw text::MalformedInputException<uint8_t>(bytes[0], 1);
+			default:
+				ASCENSION_ASSERT_NOT_REACHED();
+			}
+		}
+
+		template<typename InputIterator>
+		inline CodePoint decodeUTF8(InputIterator first, InputIterator last, bool checkMalformedInput) {
+			ASCENSION_STATIC_ASSERT(text::CodeUnitSizeOf<InputIterator>::value == 1);
+			assert(first != last);
+			uint8_t bytes[4] = {*i};
+			std::size_t nbytes = length(bytes[0]);
+			for(std::size_t i = 1; i < nbytes; ++i) {
+				if(++first == last) {
+					nbytes = i;
+					break;
+				}
+				bytes[i] = *first;
+			}
+			decodeUTF8(bytes, nbytes, checkMalformedInput);
+		}
+
 		template<bool check, typename OutputIterator>
 		inline std::size_t encodeUTF8(CodePoint c, OutputIterator& out) {
-			ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<OutputIterator>::value == 1);
+			ASCENSION_STATIC_ASSERT(text::CodeUnitSizeOf<OutputIterator>::value == 1);
 			if(c < 0x0080u) {	// 00000000 0xxxxxxx -> 0xxxxxxx
 				*(out++) = static_cast<uint8_t>(c);
 				return 1;
@@ -150,24 +205,39 @@ namespace ascension {
 
 			// UTF-8 //////////////////////////////////////////////////////////////////////////////
 
+			/**
+			 * Converts the first character in the given UTF-8 code unit sequence to the
+			 * corresponding code point.
+			 * @tparam InputIterator The input iterator represents a UTF-8 code unit sequence
+			 * @param first The beginning of the code unit sequence
+			 * @param last The end of the code unit sequence
+			 * @return The code point
+			 * @throw MalformedInputException&lt;uint8_t&gt;@c *first
+			 */
 			template<typename InputIterator>
-			inline CodePoint decodeUnsafe(InputIterator i) {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::value == 1);
-				const uint8_t leadingByte = *i;
-				switch(length(leadingByte)) {
-				case 1:	// 00000000 0xxxxxxx <- 0xxxxxxx
-					return leadingByte;
-				case 2:	// 00000yyy yyxxxxxx <- 110yyyyy 10xxxxxx
-					return ((leadingByte & 0x1f) << 6) | (*++i & 0x3f);
-				case 3:	// zzzzyyyy yyxxxxxx <- 1110zzzz 10yyyyyy 10xxxxxx
-					return ((leadingByte & 0x0f) << 12) | ((*++i & 0x3f) << 6) | (*++i & 0x3f);
-				case 4:	// 000uuuuu zzzzyyyy yyxxxxxx <- 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
-					return ((leadingByte & 0x07) << 18) | ((*++i & 0x3f) << 12) | ((*++i & 0x3f) << 6) | (*++i & 0x3f);
-				case 0:
+			inline CodePoint decodeFirst(InputIterator first, InputIterator last,
+					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 1>::type* = 0) {
+				try {
+					return detail::decodeUTF8(first, last, false);
+				} catch(const MalformedInputException<uint8_t>& e) {
+					assert(e.maximalSubpartLength() == 1);
 					return REPLACEMENT_CHARACTER;
-				default:
-					ASCENSION_ASSERT_NOT_REACHED();
 				}
+			}
+
+			/**
+			 * Converts the first character in the given UTF-8 code unit sequence to the
+			 * corresponding code point.
+			 * @tparam InputIterator The input iterator represents a UTF-8 code unit sequence
+			 * @param first The beginning of the code unit sequence
+			 * @param last The end of the code unit sequence
+			 * @return The code point
+			 * @throw MalformedInputException&lt;uint8_t&gt;@c *first
+			 */
+			template<typename InputIterator>
+			inline CodePoint checkedDecodeFirst(InputIterator first, InputIterator last,
+					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 1>::type* = 0) {
+				return detail::decodeUTF8(first, last, true);
 			}
 
 			/**
@@ -246,13 +316,13 @@ namespace ascension {
 				const uint16_t high = *first;
 				if(surrogates::isHighSurrogate(high)) {
 					if(++first == last)
-						throw MalformedInputException<uint16_t>(high);
+						throw MalformedInputException<uint16_t>(high, 1);
 					const uint16_t low = *first;
 					if(!surrogates::isLowSurrogate(low))
-						throw MalformedInputException<uint16_t>(low);
+						throw MalformedInputException<uint16_t>(low, 1);
 					return surrogates::decode(high, low);
 				} else if(surrogates::isLowSurrogate(high))
-					throw MalformedInputException<uint16_t>(high);
+					throw MalformedInputException<uint16_t>(high, 1);
 				return high;
 			}
 
@@ -284,22 +354,23 @@ namespace ascension {
 			 * @param first The beginning of the code unit sequence
 			 * @param last The end of the code unit sequence
 			 * @return The code point
+			 * @throw MalformedInputException&lt;uint16_t&gt; The input code unit sequence is
+			 *                                                ill-formed UTF-16
 			 */
 			template<typename BidirectionalIterator>
-			inline CodePoint checkedDecodeLast(
-					BidirectionalIterator first, BidirectionalIterator last,
+			inline CodePoint checkedDecodeLast(BidirectionalIterator first, BidirectionalIterator last,
 					typename std::enable_if<CodeUnitSizeOf<BidirectionalIterator>::value == 2>::type* = 0) {
 				assert(first != last);
 				const uint16_t low = *--last;
 				if(surrogates::isLowSurrogate(low)) {
 					if(last == first)
-						throw MalformedInputException<uint16_t>(low);
+						throw MalformedInputException<uint16_t>(low, 1);
 					const uint16_t high = *--last;
 					if(!surrogates::isHighSurrogate(high))
-						throw MalformedInputException<uint16_t>(high);
+						throw MalformedInputException<uint16_t>(high, 1);
 					return surrogates::decode(high, low);
 				} else if(surrogates::isHighSurrogate(low))
-					throw MalformedInputException<uint16_t>(low);
+					throw MalformedInputException<uint16_t>(low, 1);
 				return low;
 			}
 
@@ -398,7 +469,7 @@ namespace ascension {
 					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 4>::type* = 0) {
 				assert(first != last);
 				if(!isScalarValueException(*first))
-					throw MalformedInputException<uint32_t>(*first);
+					throw MalformedInputException<uint32_t>(*first, 1);
 				return decodeFirst32(first, last);
 			}
 
@@ -425,6 +496,8 @@ namespace ascension {
 			 *                               code unit sequence
 			 * @param first The beginning of the code unit sequence
 			 * @param last The end of the code unit sequence
+			 * @throw MalformedInputException&lt;uint16_t&gt; The input code unit sequence is
+			 *                                                ill-formed UTF-32
 			 * @return The code point
 			 */
 			template<typename BidirectionalIterator>
@@ -433,7 +506,7 @@ namespace ascension {
 				assert(first != last);
 				const uint32_t c = *--last;
 				if(!isScalarValue(c))
-					throw MalformedInputException<uint32_t>(c);
+					throw MalformedInputException<uint32_t>(c, 1);
 				return static_cast<CodePoint>(c);
 			}
 

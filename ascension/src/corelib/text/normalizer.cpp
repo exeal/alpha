@@ -167,7 +167,7 @@ namespace {
 	 * @return The length of the decomposition
 	 */
 	length_t internalDecompose(CodePoint c, bool compatibility, Char* destination) {
-		Char* last = destination + (utf16::checkedEncode(c, destination) < 2 ? 1 : 2);
+		Char* last = destination + (utf::checkedEncode(c, destination) < 2 ? 1 : 2);
 		length_t len;
 		CodePoint current;
 		Char decomposedHangul[4];
@@ -226,10 +226,10 @@ namespace {
 		int ccc, previous = CanonicalCombiningClass::NOT_REORDERED;
 		for(utf::CharacterDecodeIterator<CharacterSequence> i(first, last); i.tell() < last; ++i) {
 			len = internalDecompose(*i, false, buffer);
-			ccc = CanonicalCombiningClass::of(utf16::decodeFirst(buffer, buffer + len));
+			ccc = CanonicalCombiningClass::of(utf::decodeFirst(buffer, buffer + len));
 			if(ccc != CanonicalCombiningClass::NOT_REORDERED && ccc < previous)
 				return false;
-			previous = CanonicalCombiningClass::of(utf16::decodeLast(buffer, buffer + len));
+			previous = CanonicalCombiningClass::of(utf::decodeLast(buffer, buffer + len));
 		}
 		return true;
 	}
@@ -424,15 +424,16 @@ String Normalizer::normalize(const CharacterIterator& text, Form form) {
 	Normalizer n(text, form);
 	basic_stringbuf<Char> buffer(ios_base::out);
 	CodePoint c;
-	Char surrogate[2];
+	Char surrogates[2];
 	for(Normalizer n(text, form); n.hasNext(); n.next()) {
 		c = n.current();
 		if(c < 0x010000ul)
 			buffer.sputc(static_cast<Char>(c & 0xffffu));
 		else {
 			assert(isScalarValue(c));
-			utf16::uncheckedEncode(c, surrogate);
-			buffer.sputn(surrogate, 2);
+			Char* temp = surrogates;
+			utf::encode(c, temp);
+			buffer.sputn(surrogates, 2);
 		}
 	}
 	return buffer.str();

@@ -233,27 +233,12 @@ namespace ascension {
 				/// Returns the current position.
 				BaseIterator tell() const {return base_;}
 			private:
-				template<std::size_t codeUnitSize> void doExtract() const;
-				template<> void doExtract<1>() const {
-				}
-				template<> void doExtract<2>() const {
-					const CodePoint c = *base_;
-					std::size_t extractedBytes;
-#if 0
-					if(isScalarValue(c))
-#else
-					if(isValidCodePoint())
-#endif
-						extractedBytes = utf::encode(c, cache_);
-					else {
-						cache_[0] = REPLACEMENT_CHARACTER;
-						extractedBytes = 1;
-					}
-					std::fill(cache_ + extractedBytes, ASCENSION_ENDOF(cache_), 0);
-				}
-				template<> void doExtract<4>() const {cache_[0] = *base_;}
 				void extract() const {
-					doExtract<CodeUnitSizeOf<BaseIterator>::value>();
+					Byte* out = cache_;
+					const std::size_t extractedBytes =
+						usesCheckedAlgorithms() ? checkedEncode(*base_, out) : encode(*base_, out);
+					if(CodeUnitSizeOf<BaseIterator>::value != 4)
+						std::fill(cache_ + extractedBytes, ASCENSION_ENDOF(cache_), 0);
 					positionInCache_ = cache_;
 				}
 			private:

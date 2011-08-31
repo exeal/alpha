@@ -80,10 +80,10 @@ namespace ascension {
 		};
 
 		/**
-		 * The encoding failed for malformed input.
+		 * The Unicode decoding failed for malformed input.
 		 * @tparam CodeUnit The type of input code unit.
 		 * @see encoding#Encoder#MALFORMED_INPUT, kernel#fileio#UnmappableCharacterException,
-		 *      InvalidCodePointException, InvalidScalarValueException
+		 *      REPLACEMENT_CHARACTER
 		 */
 		template<typename CodeUnit>
 		class MalformedInputException : public std::ios_base::failure {
@@ -92,14 +92,23 @@ namespace ascension {
 			/**
 			 * Constructor.
 			 * @param codeUnit The code unit
+			 * @param maximalSubpartLength "Maximal subpart of an ill-formed subsequence" in
+			 *                             Unicode Standard 6.0, D39b
+			 * @throw std#length_error @a maximalSubpartLength is zero
 			 */
-			explicit MalformedInputException(CodeUnit codeUnit = 0) :
-				ios_base::failure("Detected malformed input in encoding/decoding."),
-				codeUnit_(codeUnit) {}
+			explicit MalformedInputException(CodeUnit codeUnit = 0, std::size_t maximalSubpartLength = 1) :
+					ios_base::failure("Detected malformed input in decoding."),
+					codeUnit_(codeUnit), maximalSubpartLength_(maximalSubpartLength) {
+				if(maximalSubpartLength == 0)
+					throw std::length_error("maximalSubpartLength");
+			}
 			/// Returns the code unit, or zero if the input is unknown.
-			CodeUnit codeUnit() const {return codeUnit_;}
+			CodeUnit codeUnit() const /*throw()*/ {return codeUnit_;}
+			/// Returns the length of the maximal subpart.
+			std::size_t maximalSubpartLength() const /*throw()*/ {return maximalSubpartLength_;}
 		private:
 			const CodeUnit codeUnit_;
+			const std::size_t maximalSubpartLength_;	// see Unicode 6.0, D39b
 		};
 
 		/**
