@@ -7,6 +7,7 @@
 
 #include <ascension/corelib/character-iterator.hpp>
 #include <ascension/corelib/text/character-property.hpp>
+#include <ascension/corelib/text/utf-iterator.hpp>	// utf.makeCharacterDecodeIterator
 using namespace ascension;
 using namespace ascension::text;
 using namespace ascension::text::ucd;
@@ -174,7 +175,7 @@ void StringCharacterIterator::doNext() {
 	if(current_ == last_)
 //		throw out_of_range("the iterator is the last.");
 		return;
-	current_ = utf::next(current_, last_);
+	current_ = (++utf::makeCharacterDecodeIterator(current_, last_)).tell();
 }
 
 /// @see CharacterIterator#doPrevious
@@ -182,7 +183,7 @@ void StringCharacterIterator::doPrevious() {
 	if(current_ == first_)
 //		throw out_of_range("the iterator is the first.");
 		return;
-	current_ = utf::previous(first_, current_);
+	current_ = (--utf::makeCharacterDecodeIterator(first_, current_)).tell();
 }
 
 

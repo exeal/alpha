@@ -16,114 +16,147 @@ namespace ascension {
 	namespace text {
 		namespace utf {
 
-			class CharacterIteratorBase {
-			public:
-				/// Default constructor.
-				CharacterIteratorBase() /*throw()*/ : usesCheckedAlgorithms_(true) {}
-				/// Sets if this iterator uses checked version algorithms or not.
-				void useCheckedAlgorithms(bool use) /*throw()*/ {usesCheckedAlgorithms_ = use;}
-				/// Returns @c true if this iterator uses checked version algorithms.
-				bool usesCheckedAlgorithms() const /*throw()*/ {return usesCheckedAlgorithms_;}
-			private:
-				bool usesCheckedAlgorithms_;
-			};
+			template<std::size_t codeUnitSize> struct DefaultByte;
+			template<> struct DefaultByte<1> {typedef uint8_t Type;};
+			template<> struct DefaultByte<2> {typedef Char Type;};
+			template<> struct DefaultByte<4> {typedef CodePoint Type;};
 
-			template<typename Derived, typename BaseIterator, typename UChar32 = CodePoint>
-			class CharacterDecodeIteratorBase : public CharacterIteratorBase,
-				public detail::IteratorAdapter<
-					Derived,
-					std::iterator<
-						std::bidirectional_iterator_tag, UChar32,
-						typename std::iterator_traits<BaseIterator>::difference_type,
-						const UChar32*, const UChar32
-					>
-				> {
+			template<typename BaseIterator, typename UChar32 = CodePoint>
+			class CharacterDecodeIterator : public detail::IteratorAdapter<
+				CharacterDecodeIterator<BaseIterator, UChar32>,
+				std::iterator<
+					std::bidirectional_iterator_tag, UChar32,
+					typename std::iterator_traits<BaseIterator>::difference_type,
+					const UChar32*, const UChar32
+				>
+			> {
 			public:
 				/// Default constructor.
-				CharacterDecodeIteratorBase() : extractedBytes_(0) {}
-				/// Copy-constructor.
-				CharacterDecodeIteratorBase(const CharacterDecodeIteratorBase& other) :
-					base_(other.base_), extractedBytes_(other.extractedBytes_), cache_(other.cache_) {}
-				/// Constructor takes a position to start iteration.
-				CharacterDecodeIteratorBase(BaseIterator start) : base_(start), extractedBytes_(0) {}
+				CharacterDecodeIterator() : extractedBytes_(0) {}
+				/**
+				 * Constructor takes a position to start iteration. The ownership of the target text
+				 * will not be transferred to this.
+				 */
+				CharacterDecodeIterator(BaseIterator first, BaseIterator last) :
+					base_(first), first_(first), last_(last), extractedBytes_(0) {}
+				/**
+				 * Constructor takes a position to start iteration. The ownership of the target text
+				 * will not be transferred to this.
+				 */
+				CharacterDecodeIterator(BaseIterator first, BaseIterator last,
+					BaseIterator start) : base_(start), first_(first), last_(last), extractedBytes_(0) {}
+				/// Copy constructor.
+				CharacterDecodeIterator(const CharacterDecodeIterator& other) :
+					base_(other.base_), first_(other.first_), last_(other.last_),
+					extractedBytes_(other.extractedBytes_), cache_(other.cache_) {}
 				/// Assignment operator.
-				CharacterDecodeIteratorBase& operator=(const CharacterDecodeIteratorBase& other) {
+				CharacterDecodeIterator& operator=(const CharacterDecodeIterator& other) {
 					base_ = other.base_;
+					first_ = other.first_;
+					last_ = other.last_;
 					extractedBytes_ = other.extractedBytes_;
 					cache_ = other.cache_;
 					return *this;
 				}
+				/// Returns beginning of the range this iterator can address.
+				const BaseIterator& first() const /*throw()*/ {return first_;}
+				/// Returns end of the range this iterator can address.
+				const BaseIterator& last() const /*throw()*/ {return first_;}
+				/// Sets if this iterator replaces the ill-formed code unit (sub)sequence.
+				CharacterDecodeIterator& replaceMalformedInput(bool replace) /*throw()*/ {
+					replacesMalformedInput_ = replace;
+					return *this;
+				}
+				/**
+				 * Returns @c true if this iterator replaces the ill-formed code unit
+				 * (sub)sequence. The default value is @c false.
+				 */
+				bool replacesMalformedInput() const /*throw()*/ {return replacesMalformedInput_;}
 				/// Returns the current position.
 				BaseIterator tell() const {return base_;}
 			private:
 				template<std::size_t codeUnitSize> void decrement();
 				template<> void decrement<1>() {
+					BaseIterator i(base_);
+					--i;
+					std::size_t numberOfReadBytes = 1;
+					for(; numberOfReadBytes 4; ++numberOfReadBytes, --i) {
+						if(isLeadingByte(*i))
+							break;
+						else if(isValidByte(*i) != 0) {
+							if(!replacesMalformedInput())
+								throw MalformedInputException<BaseIterator>(i, 1);
+							--base_;
+							extractedBytes_ = 1;
+							cache_ = REPLACEMENT_CHARACTER;
+							return;
+						}
+						assert(maybeTrailingByte(*i));
+					}
+					if(length(*i) != numberOfReadBytes) {
+						if(!replacesMalformedInput())
+							throw MalformedInputException<BaseIterator>(i, numberOfReadBytes);
+						base_ = i;
+						extractedBytes_ = numberOfReadBytes;
+						cache_ = REPLACEMENT_CHARACTER;
+					} else
+						base_ = i;
 				}
 				template<> void decrement<2>() {
-					if(surrogates::isLowSurrogate(*--base_) && derived().canDecrement())
-						--base_;
+					if(replacesMalformedInput()) {
+						if(surrogates::isLowSurrogate(*--base_) && base_ != first()) {
+							BaseIterator i(base_);
+							if(surrogates::isHighSurrogate(*--i))
+								base_ = i;
+						}
+					} else {
+						BaseIterator i(base_);
+						if(surrogates::isLowSurrogate(*--i)) {
+							if(i == first() || !surrogates::isHighSurrogate(*--i))
+								throw MalformedInputException<BaseIterator>(i, 1);
+						}
+						base_ = i;
+					}
 					extractedBytes_ = 0;
 				}
 				template<> void decrement<4>() {
-					--base_;
+					if(replacesMalformedInput())
+						--base_;
+					else {
+						BaseIterator previous(base_);
+						if(!isScalarValueException(*--previous))
+							throw MalformedInputException<BaseIterator>(previous, 1);
+						base_ = previous;
+					}
 					extractedBytes_ = 0;
 				}
-				Derived& derived() {return *static_cast<Derived*>(this);}
-				const Derived& derived() const {return *static_cast<const Derived*>(this);}
-				template<std::size_t codeUnitSize> void extract() const;
-				template<> void extract<1>() const {	// UTF-8
-					uint8_t bytes[4];
-					std::size_t nbytes = utf8::length(bytes[0] = *base_);
-					if(nbytes != 0) {
-						Derived p(derived());
-						for(std::size_t i = 1; i < nbytes; ++i) {
-							++p.base_;
-							if(!p.canIncrement()) {
-								nbytes = 0;
-								break;
-							}
-							bytes[i] = *p.base_;
-						}
-					}
-					if(nbytes == 0) {	// ill-formed
-						extractedBytes_ = 1;
+				void extract() const {
+					static const std::size_t CODE_UNIT_SIZE = CodeUnitSizeOf<BaseIterator>::value;
+					try {
+						cache_ = checkedDecodeFirst(base_, last_);
+					} catch(const MalformedInputException<BaseIterator>& e) {
+						if(!replacesMalformedInput())
+							throw;
+						extractedBytes_ = e.maximalSubpartLength();
 						cache_ = REPLACEMENT_CHARACTER;
 						return;
 					}
-					cache_ = utf8::decodeUnsafe(bytes);
-					extractedBytes_ = nbytes;
-				}
-				template<> void extract<2>() const {	// UTF-16
-					value_type c(*base_);
-					if(surrogates::isHighSurrogate(c)) {
-						Derived low(derived());
-						++low.base_;
-						if(low.canIncrement() && surrogates::isLowSurrogate(*low.base_))
-							c = surrogates::decode(static_cast<Char>(c), *low.base_);
-//						else
-//							c = REPLACEMENT_CHARACTER;
-					}
-					cache_ = c;
-					extractedBytes_ = (c < 0x10000ul) ? 1 : 2;
-				}
-				template<> void extract<4>() const {	// UTF-32
-					extractedBytes_ = 1;
-					cache_ = *base_;
+					extractedBytes_ = numberOfEncodedBytes<CODE_UNIT_SIZE>(cache_);
 				}
 				// detail.IteratorAdapter
 				friend class detail::IteratorCoreAccess;
 				value_type current() const {
 					if(extractedBytes_ == 0) {
-						if(!derived().canIncrement())
+						if(base_ == last_)
 							throw IllegalStateException("The iterator is last.");
-						extract<CodeUnitSizeOf<BaseIterator>::value>();
+						extract();
 					}
 					return cache_;
 				}
-				bool equals(const CharacterDecodeIteratorBase<Derived, BaseIterator, UChar32>& other) const {
+				bool equals(const CharacterDecodeIterator<BaseIterator, UChar32>& other) const {
 					return base_ == other.base_;
 				}
-				bool less(const CharacterDecodeIteratorBase<Derived, BaseIterator, UChar32>& other) const {
+				bool less(const CharacterDecodeIterator<BaseIterator, UChar32>& other) const {
 					return base_ < other.base_;
 				}
 				void next() {
@@ -133,90 +166,27 @@ namespace ascension {
 					extractedBytes_ = 0;
 				}
 				void previous() {
-					if(!derived().canDecrement())
+					if(base_ == first_)
 						throw IllegalStateException("The iterator is first.");
 					decrement<CodeUnitSizeOf<BaseIterator>::value>();
 				}
 			private:
-				BaseIterator base_;
+				BaseIterator base_, first_, last_;
+				bool replacesMalformedInput_ : 1;
 				mutable uint8_t extractedBytes_ : 3;
-				mutable UChar32 cache_ : 29;
+				mutable UChar32 cache_ : 28;
 			};
-
-			template<typename BaseIterator, typename UChar32 = CodePoint>
-			class CharacterDecodeIteratorUnsafe : public CharacterDecodeIteratorBase<
-				CharacterDecodeIteratorUnsafe<BaseIterator, UChar32>, BaseIterator, UChar32> {
-			private:
-				typedef CharacterDecodeIteratorBase<
-					CharacterDecodeIteratorUnsafe<BaseIterator, UChar32>, BaseIterator, UChar32> Base;
-			public:
-				/// Default constructor.
-				CharacterDecodeIteratorUnsafe() {}
-				/// Constructor takes a position to start iteration.
-				CharacterDecodeIteratorUnsafe(BaseIterator start) : Base(start) {}
-				/// Copy-constructor.
-				CharacterDecodeIteratorUnsafe(const CharacterDecodeIteratorUnsafe& other) : Base(other) {}
-			private:
-				friend class Base;
-				bool canDecrement() const /*throw()*/ {return true;}
-				bool canIncrement() const /*throw()*/ {return true;}
-			};
-
-			template<typename BaseIterator, typename UChar32 = CodePoint>
-			class CharacterDecodeIterator : public CharacterDecodeIteratorBase<
-				CharacterDecodeIterator<BaseIterator, UChar32>, BaseIterator, UChar32> {
-			private:
-				typedef CharacterDecodeIteratorBase<
-					CharacterDecodeIterator<BaseIterator, UChar32>, BaseIterator, UChar32> Base;
-			public:
-				/// Default constructor.
-				CharacterDecodeIterator() {}
-				/**
-				 * Constructor takes a position to start iteration. The ownership of the target text
-				 * will not be transferred to this.
-				 */
-				CharacterDecodeIterator(BaseIterator first, BaseIterator last) :
-					Base(first), first_(first), last_(last) {}
-				/**
-				 * Constructor takes a position to start iteration. The ownership of the target text
-				 * will not be transferred to this.
-				 */
-				CharacterDecodeIterator(BaseIterator first, BaseIterator last,
-					BaseIterator start) : Base(start), first_(first), last_(last) {}
-				/// Copy constructor.
-				CharacterDecodeIterator(const CharacterDecodeIterator& other) :
-					Base(other), first_(other.first_), last_(other.last_) {}
-				/// Assignment operator.
-				CharacterDecodeIterator& operator=(const CharacterDecodeIterator& other) {
-					Base::operator=(other);
-					first_ = other.first_;
-					last_ = other.last_;
-					return *this;
-				}
-			private:
-				friend class Base;
-				bool canDecrement() const {return tell() != first_;}
-				bool canIncrement() const {return tell() != last_;}
-			private:
-				BaseIterator first_, last_;
-			};
-
-			template<std::size_t codeUnitSize> struct DefaultByte;
-			template<> struct DefaultByte<1> {typedef uint8_t Type;};
-			template<> struct DefaultByte<2> {typedef Char Type;};
-			template<> struct DefaultByte<4> {typedef CodePoint Type;};
 
 			template<typename BaseIterator,
 				typename Byte = typename DefaultByte<CodeUnitSizeOf<BaseIterator>::value>::Type>
-			class CharacterEncodeIterator : public CharacterIteratorBase,
-				public detail::IteratorAdapter<
-					CharacterEncodeIterator<BaseIterator, Byte>,
-					std::iterator<
-						std::bidirectional_iterator_tag, Byte,
-						typename std::iterator_traits<BaseIterator>::difference_type,
-						const Byte*, const Byte
-					>
-				> {
+			class CharacterEncodeIterator : public detail::IteratorAdapter<
+				CharacterEncodeIterator<BaseIterator, Byte>,
+				std::iterator<
+					std::bidirectional_iterator_tag, Byte,
+					typename std::iterator_traits<BaseIterator>::difference_type,
+					const Byte*, const Byte
+				>
+			> {
 				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<BaseIterator>::value == 4);
 			public:
 				/// Default constructor.
@@ -235,8 +205,7 @@ namespace ascension {
 			private:
 				void extract() const {
 					Byte* out = cache_;
-					const std::size_t extractedBytes =
-						usesCheckedAlgorithms() ? checkedEncode(*base_, out) : encode(*base_, out);
+					const std::size_t extractedBytes = checkedEncode(*base_, out);
 					if(CodeUnitSizeOf<BaseIterator>::value != 4)
 						std::fill(cache_ + extractedBytes, ASCENSION_ENDOF(cache_), 0);
 					positionInCache_ = cache_;
@@ -281,11 +250,10 @@ namespace ascension {
 			};
 
 			template<typename BaseIterator>
-			class CharacterOutputIterator : public CharacterIteratorBase,
-				public detail::IteratorAdapter<
-					CharacterOutputIterator<BaseIterator>,
-					std::iterator<std::output_iterator_tag, void, void, CodePoint*, CodePoint&>
-				> {
+			class CharacterOutputIterator : public detail::IteratorAdapter<
+				CharacterOutputIterator<BaseIterator>,
+				std::iterator<std::output_iterator_tag, void, void, CodePoint*, CodePoint&>
+			> {
 			public:
 				/// Constructor takes base output iterator.
 				CharacterOutputIterator(const BaseIterator& base) : base_(base) {}
@@ -296,13 +264,13 @@ namespace ascension {
 					base_ = other.base_;
 					return *this;
 				}
-				/// Assignment operator.
-				void operator=(CodePoint c) {
-					if(usesCheckedAlgorithms())
-						utf::checkedEncode(c, base_);
-					else
-						utf::encode(c, base_);
-				}
+				/**
+				 * Assignment operator.
+				 * @param c The code point of the character to write
+				 * @throw InvalidCodePointException @a c is invalid
+				 * @throw InvalidScalarValueException @a c is invalid
+				 */
+				void operator=(CodePoint c) {utf::checkedEncode(c, base_);}
 				/// Returns the current position.
 				BaseIterator tell() const {return base_;}
 			private:
@@ -321,10 +289,6 @@ namespace ascension {
 			template<typename BaseIterator>
 			inline CharacterDecodeIterator<BaseIterator> makeCharacterDecodeIterator(BaseIterator first, BaseIterator last, BaseIterator start) {
 				return CharacterDecodeIterator<BaseIterator>(first, last, start);
-			}
-			template<typename BaseIterator>
-			inline CharacterDecodeIteratorUnsafe<BaseIterator> makeCharacterDecodeIteratorUnsafe(BaseIterator start) {
-				return CharacterDecodeIteratorUnsafe<BaseIterator>(start);
 			}
 			template<typename BaseIterator>
 			inline CharacterEncodeIterator<BaseIterator> makeCharacterEncodeIterator(BaseIterator start) {
