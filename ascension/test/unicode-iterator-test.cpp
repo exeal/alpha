@@ -1,36 +1,49 @@
 // unicode-iterator-test.cpp
 
-#include "../unicode.hpp"
+#include <ascension/corelib/text/utf-iterator.hpp>
 #include <boost/test/included/test_exec_monitor.hpp>
 #include <vector>
 #include <algorithm>
 namespace a = ascension;
-namespace t = ascension::text;
+namespace x = ascension::text;
 
 // from boost/libs/regex/test/unicode/unicode_iterator_test.cpp
-void testUTFIterator() {
-	// spot checks
-	a::CodePoint spot16[] = {0x10302U};
-	t::UTF32To16Iterator<> it(spot16);
-	BOOST_CHECK_EQUAL(*it++, 0xD800U);
-	BOOST_CHECK_EQUAL(*it++, 0xDF02U);
-	BOOST_CHECK_EQUAL(*--it, 0xDF02U);
-	BOOST_CHECK_EQUAL(*--it, 0xD800U);
+void spotChecks() {
+	a::CodePoint spot16[] = {0x10302u};
+	x::utf::CharacterEncodeIterator<a::uint16_t> i(spot16, ASCENSION_END_OF(spot16));
 
-	std::vector<a::CodePoint> v;
-	v.push_back(0);
-	v.push_back(0xD7FF);
-	v.push_back(0xE000);
-	v.push_back(0xFFFF);
-	v.push_back(0x10000);
-	v.push_back(0x10FFFF);
-	v.push_back(0x80U);
-	v.push_back(0x80U - 1);
-	v.push_back(0x800U);
-	v.push_back(0x800U - 1);
-	v.push_back(0x10000U);
-	v.push_back(0x10000U - 1);
+	BOOST_CHECK_EQUAL(*i++, 0xd800u);
+	BOOST_CHECK_EQUAL(*i++, 0xdf02u);
+	BOOST_CHECK_EQUAL(*--i, 0xdf02u);
+	BOOST_CHECK_EQUAL(*--i, 0xd800u);
 
+	a::CodePoint spot8[] = {0x004du, 0x0430u, 0x4e8cu, 0x10302u};
+	x::utf::CharacterEncodeIterator<a::uint8_t> i8(spot8, ASCENSION_END_OF(spot8));
+
+	BOOST_CHECK_EQUAL(*i8++, 0x4du);
+	BOOST_CHECK_EQUAL(*i8++, 0xd0u);
+	BOOST_CHECK_EQUAL(*i8++, 0xb0u);
+	BOOST_CHECK_EQUAL(*i8++, 0xe4u);
+	BOOST_CHECK_EQUAL(*i8++, 0xbau);
+	BOOST_CHECK_EQUAL(*i8++, 0x8cu);
+	BOOST_CHECK_EQUAL(*i8++, 0xf0u);
+	BOOST_CHECK_EQUAL(*i8++, 0x90u);
+	BOOST_CHECK_EQUAL(*i8++, 0x8cu);
+	BOOST_CHECK_EQUAL(*i8++, 0x82u);
+	
+	BOOST_CHECK_EQUAL(*--i8, 0x82u);
+	BOOST_CHECK_EQUAL(*--i8, 0x8cu);
+	BOOST_CHECK_EQUAL(*--i8, 0x90u);
+	BOOST_CHECK_EQUAL(*--i8, 0xf0u);
+	BOOST_CHECK_EQUAL(*--i8, 0x8cu);
+	BOOST_CHECK_EQUAL(*--i8, 0xbau);
+	BOOST_CHECK_EQUAL(*--i8, 0xe4u);
+	BOOST_CHECK_EQUAL(*--i8, 0xb0u);
+	BOOST_CHECK_EQUAL(*--i8, 0xd0u);
+	BOOST_CHECK_EQUAL(*--i8, 0x4du);
+}
+
+void testBoundaries(const std::vector<a::uint32_t>& v) {
 	typedef t::UTF32To16Iterator<std::vector<a::CodePoint>::const_iterator> U32to16;
 	typedef t::UTF16To32IteratorUnsafe<std::vector<a::Char>::const_iterator> U16to32;
 	std::vector<a::Char> v16(U32to16(v.begin()), U32to16(v.end()));
@@ -59,47 +72,27 @@ void testUTFIterator() {
 	BOOST_CHECK_EQUAL_COLLECTIONS(v.begin(), v.end(), v32.begin(), v32.end());
 }
 
-void testStringCharacterIterator() {
-	// simple test
-	const a::String s1(L"test");
-	t::StringCharacterIterator i1(s1);
-	BOOST_CHECK(!i1.hasPrevious());
-	BOOST_CHECK_EQUAL(i1.getOffset(), 0);
-	BOOST_CHECK_EQUAL(i1.current(), L't');
-	i1.next();
-	BOOST_CHECK(i1.hasNext() && i1.hasPrevious());
-	BOOST_CHECK_EQUAL(i1.getOffset(), 1);
-	BOOST_CHECK_EQUAL(*i1, L'e');
-	i1.last();
-	BOOST_CHECK(!i1.hasNext());
-	BOOST_CHECK_EQUAL(i1.getOffset(), 0);
-	BOOST_CHECK_EQUAL(i1.current(), t::CharacterIterator::DONE);
-
-	// out of BMP
-	const a::String s2(L"\xD800\xDC00");
-	t::StringCharacterIterator i2(s2);
-	BOOST_CHECK_EQUAL(i2.current(), 0x010000);
-	++i2;
-	BOOST_CHECK(!i2.hasNext());
-	BOOST_CHECK_EQUAL(i2.getOffset(), 1);
-	--i2;
-	BOOST_CHECK(!i2.hasPrevious());
-
-	// malformed UTF-16 input
-	const a::Char s3[] = L"\xDC00\xD800";
-	t::StringCharacterIterator i3(s3, s3 + 2);
-	BOOST_CHECK_EQUAL(*i3, 0xDC00);
-	BOOST_CHECK(i3.hasNext());
-	++i3;
-	BOOST_CHECK_EQUAL(*i3, 0xD800);
-	++i3;
-	BOOST_CHECK_EQUAL(*i3, t::CharacterIterator::DONE);
-	std::advance(i3, -2);
-	BOOST_CHECK(!i3.hasPrevious());
-}
+void testMalformedInputs() {}
 
 int test_main(int, char*[]) {
-	testUTFIterator();
-	testStringCharacterIterator();
+	spotChecks();
+
+	std::vector<a::CodePoint> v;
+	v.push_back(0);
+	v.push_back(0xd7ffu);
+	v.push_back(0xe000u);
+	v.push_back(0xffffu);
+	v.push_back(0x10000u);
+	v.push_back(0x10ffffu);
+	v.push_back(0x80u);
+	v.push_back(0x80u - 1);
+	v.push_back(0x800u);
+	v.push_back(0x800u - 1);
+	v.push_back(0x10000u);
+	v.push_back(0x10000u - 1);
+	testBoundaries(v);
+
+	testMalformedInputs();
+
 	return 0;
 }
