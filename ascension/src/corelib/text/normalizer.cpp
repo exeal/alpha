@@ -172,7 +172,7 @@ namespace {
 		CodePoint current;
 		Char decomposedHangul[4];
 		const CodePoint* src;
-		for(utf::CharacterDecodeIteratorUnsafe<Char*> i(destination); i.tell() < last; ) {
+		for(utf::CharacterDecodeIterator<Char*> i(destination, last); i.tell() < i.last(); ) {
 			current = *i;
 			if(current < 0x010000ul && (0 != (len = decomposeHangul(static_cast<Char>(current & 0xffffu), decomposedHangul)))) {
 				splice(i.tell(), last, 1, decomposedHangul, len);
