@@ -30,6 +30,7 @@ namespace ascension {
 					const UChar32*, const UChar32
 				>
 			> {
+				ASCENSION_STATIC_ASSERT(sizeof(UChar32) == 4);
 			public:
 				/// Default constructor.
 				CharacterDecodeIterator() : extractedBytes_(0) {}
@@ -80,7 +81,7 @@ namespace ascension {
 					BaseIterator i(base_);
 					--i;
 					std::size_t numberOfReadBytes = 1;
-					for(; numberOfReadBytes 4; ++numberOfReadBytes, --i) {
+					for(; numberOfReadBytes <= 4; ++numberOfReadBytes, --i) {
 						if(isLeadingByte(*i))
 							break;
 						else if(isValidByte(*i) != 0) {
@@ -177,14 +178,13 @@ namespace ascension {
 				mutable UChar32 cache_ : 28;
 			};
 
-			template<typename BaseIterator,
-				typename Byte = typename DefaultByte<CodeUnitSizeOf<BaseIterator>::value>::Type>
+			template<typename BaseIterator, typename CodeUnit>
 			class CharacterEncodeIterator : public detail::IteratorAdapter<
-				CharacterEncodeIterator<BaseIterator, Byte>,
+				CharacterEncodeIterator<BaseIterator, CodeUnit>,
 				std::iterator<
-					std::bidirectional_iterator_tag, Byte,
+					std::bidirectional_iterator_tag, CodeUnit,
 					typename std::iterator_traits<BaseIterator>::difference_type,
-					const Byte*, const Byte
+					const CodeUnit*, const CodeUnit
 				>
 			> {
 				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<BaseIterator>::value == 4);
@@ -200,13 +200,26 @@ namespace ascension {
 				CharacterEncodeIterator(BaseIterator start) : base_(start), positionInCache_(0) {
 					std::fill(cache_, ASCENSION_ENDOF(cache_), 0);
 				}
+				/// Copy-constructor.
+				CharacterEncodeIterator(const CharacterEncodeIterator& other) : base_(other.base_) {
+					std::copy(other.cache_, ASCENSION_ENDOF(other.cache_), cache_);
+					positionInCache_ = (other.positionInCache_ != 0) ?
+						cache_ + (other.positionInCache_ - other.cache_) : 0;
+				}
+				/// Assignment operator.
+				CharacterEncodeIterator& operator=(const CharacterEncodeIterator& other) {
+					base_ = other.base_;
+					std::copy(other.cache_, ASCENSION_ENDOF(other.cache_), cache_);
+					positionInCache_ = (other.positionInCache_ != 0) ?
+						cache_ + (other.positionInCache_ - other.cache_) : 0;
+				}
 				/// Returns the current position.
 				BaseIterator tell() const {return base_;}
 			private:
 				void extract() const {
-					Byte* out = cache_;
+					CodeUnit* out = cache_;
 					const std::size_t extractedBytes = checkedEncode(*base_, out);
-					if(CodeUnitSizeOf<BaseIterator>::value != 4)
+					if(sizeof(CodeUnit) != 4)
 						std::fill(cache_ + extractedBytes, ASCENSION_ENDOF(cache_), 0);
 					positionInCache_ = cache_;
 				}
@@ -219,7 +232,11 @@ namespace ascension {
 					return *positionInCache_;
 				}
 				bool equals(const CharacterEncodeIterator& other) const {
-					return base_ == other.base_ && positionInCache_ == other.positionInCache_;
+					if(base_ != other.base_)
+						return false;
+					return (positionInCache_ == other.positionInCache_)
+						|| (positionInCache_ == 0 && other.positionInCache_ == other.cache_)
+						|| (positionInCache_ == cache_ && other.positionInCache_ == 0);
 				}
 				bool less(const CharacterEncodeIterator& other) const {
 					return base_ < other.base_ || (base_ == other.base_ && positionInCache_ < other.positionInCache_);
@@ -245,8 +262,8 @@ namespace ascension {
 				}
 			private:
 				BaseIterator base_;
-				mutable Byte cache_[4 / CodeUnitSizeOf<BaseIterator>::value + 1];
-				mutable Byte* positionInCache_;
+				mutable CodeUnit cache_[4 / sizeof(CodeUnit) + 1];
+				mutable CodeUnit* positionInCache_;
 			};
 
 			template<typename BaseIterator>
@@ -290,9 +307,9 @@ namespace ascension {
 			inline CharacterDecodeIterator<BaseIterator> makeCharacterDecodeIterator(BaseIterator first, BaseIterator last, BaseIterator start) {
 				return CharacterDecodeIterator<BaseIterator>(first, last, start);
 			}
-			template<typename BaseIterator>
-			inline CharacterEncodeIterator<BaseIterator> makeCharacterEncodeIterator(BaseIterator start) {
-				return CharacterEncodeIterator<BaseIterator>(start);
+			template<typename BaseIterator, typename CodeUnit>
+			inline CharacterEncodeIterator<BaseIterator, CodeUnit> makeCharacterEncodeIterator(BaseIterator start) {
+				return CharacterEncodeIterator<BaseIterator, CodeUnit>(start);
 			}
 
 		}

@@ -159,7 +159,8 @@ namespace std {
 		char digits[5];
 		for(ascension::String::const_iterator i(value.begin()), e(value.end()); i != e; ++i) {
 			sprintf(digits, "%04x", *i);
-			out.write(prefix, MANAH_COUNTOF(prefix)).write(digits, 4);
+			out.write(prefix, ASCENSION_COUNTOF(prefix));
+			out.write(digits, 4);
 		}
 		return out;
 	}
