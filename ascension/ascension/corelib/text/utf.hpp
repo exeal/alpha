@@ -106,8 +106,8 @@ namespace ascension {
 			ASCENSION_STATIC_ASSERT(text::CodeUnitSizeOf<InputIterator>::value == 1);
 			assert(first != last);
 			InputIterator p(first);	// for throw
-			uint8_t bytes[4] = {*i};
-			std::size_t nbytes = length(bytes[0]);
+			uint8_t bytes[4] = {*first};
+			std::size_t nbytes = text::utf::length(bytes[0]);
 			for(std::size_t i = 1; i < nbytes; ++i) {
 				if(++first == last) {
 					nbytes = i;
@@ -116,10 +116,10 @@ namespace ascension {
 				bytes[i] = *first;
 			}
 			try {
-				decodeUTF8(bytes, nbytes, checkMalformedInput);
-			} catch(const MalformedInputException<const uint8_t*>& e) {
+				return decodeUTF8(bytes, nbytes, checkMalformedInput);
+			} catch(const text::MalformedInputException<const uint8_t*>& e) {
 				std::advance(p, e.position() - bytes);
-				throw MalformedInputException<InputIterator>(p, e.maximalSubpartLength());
+				throw text::MalformedInputException<InputIterator>(p, e.maximalSubpartLength());
 			}
 		}
 

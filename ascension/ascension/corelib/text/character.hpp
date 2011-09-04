@@ -9,6 +9,7 @@
 #define ASCENSION_CHARACTER_HPP
 
 #include <ascension/corelib/basic-types.hpp>
+#include <ios>	// std.ios_base.failure
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #	error These class definitions and implementations are based on old version of Unicode.
@@ -98,7 +99,7 @@ namespace ascension {
 			 */
 			explicit MalformedInputException(
 					InputIterator position = InputIterator(), std::size_t maximalSubpartLength = 1) :
-					ios_base::failure("Detected malformed input in decoding."),
+					std::ios_base::failure("Detected malformed input in decoding."),
 					position_(position), maximalSubpartLength_(maximalSubpartLength) {
 				if(maximalSubpartLength == 0)
 					throw std::length_error("maximalSubpartLength");
