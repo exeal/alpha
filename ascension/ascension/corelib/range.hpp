@@ -9,6 +9,8 @@
 #define ASCENSION_RANGE_HPP
 #include <functional>	// std.less
 #include <iterator>		// std.iterator_traits
+#include <locale>		// std.use_facet, ...
+#include <sstream>		// std.basic_ostream, std.ostringstream
 #include <utility>		// std.max, std.min, std.pair
 #include <ascension/corelib/type-traits.hpp>
 
@@ -74,6 +76,10 @@ namespace ascension {
 		Range(value_type v1, value_type v2) :
 //			std::pair<value_type, value_type>(std::minmax(v1, v2, Comp())) {}
 			std::pair<value_type, value_type>(std::min(v1, v2, Comp()), std::max(v1, v2, Comp())) {}
+		bool operator==(const Range& other) const {
+			return static_cast<const std::pair<T, T>&>(*this) == static_cast<const std::pair<T, T>&>(other);}
+		/// Inequality operator.
+		bool operator!=(const Range& other) const {return !(*this == other);}
 		/// Returns the beginning (minimum) of the range.
 		value_type beginning() const {return std::pair<T, T>::first;}
 		/// Returns the end (maximum) of the range.
@@ -92,8 +98,8 @@ namespace ascension {
 	template<typename T, typename Comp, typename U>
 	inline bool includes(const Range<T, Comp>& range, const U& value) {
 		const Comp lessThan;
-//		return range.beginning() >= value && value < range.end();
-		return !lessThan(range.beginning(), value) && lessThan(value, range.end());
+//		return value >= range.beginning() && value < range.end();
+		return !lessThan(value, range.beginning()) && lessThan(value, range.end());
 	}
 
 	/**
@@ -216,6 +222,25 @@ namespace ascension {
 			return other;
 		return Range<T, Comp>(
 			std::min(range.beginning(), other.beginning(), Comp()), std::max(range.end(), other.end(), Comp()));
+	}
+
+	/**
+	 * Writes the into the given output stream.
+	 * @tparam T The element type of the range
+	 * @tparam Comp The comparison type of the range
+	 * @tparam CharType The character type of the output stream
+	 * @tparam CharTraits The character traits type of the output stream
+	 */
+	template<typename T, typename Comp, typename CharType, typename CharTraits>
+	inline std::basic_ostream<CharType, CharTraits>& operator<<(
+			std::basic_ostream<CharType, CharTraits>& out, const Range<T, Comp>& range) {
+		const std::ctype<CharType>& ct = std::use_facet<std::ctype<CharType> >(out.getloc());
+		std::basic_ostringstream<CharType, CharTraits> s;
+		s.flags(out.flags());
+		s.imbue(out.getloc());
+		s.precision(out.precision());
+		s << ct.widen('[') << range.beginning() << ct.widen(',') << range.end() << ct.widen(')');
+		return out << s.str().c_str();
 	}
 
 } // namespace ascension
