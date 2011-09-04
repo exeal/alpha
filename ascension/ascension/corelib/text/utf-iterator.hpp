@@ -84,7 +84,7 @@ namespace ascension {
 					for(; numberOfReadBytes <= 4; ++numberOfReadBytes, --i) {
 						if(isLeadingByte(*i))
 							break;
-						else if(isValidByte(*i) != 0) {
+						else if(!isValidByte(*i)) {
 							if(!replacesMalformedInput())
 								throw MalformedInputException<BaseIterator>(i, 1);
 							--base_;
