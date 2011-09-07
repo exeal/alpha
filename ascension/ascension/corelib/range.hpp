@@ -206,16 +206,16 @@ namespace ascension {
 	inline Range<T, Comp> makeRange(T v1, T v2, const Comp&) {return Range<T, Comp>(v1, v2);}
 
 	/**
-	 * Returns the union of this range and the given one.
+	 * Returns the new merged range of this and the given ones.
 	 * @tparam T The element type of the range
 	 * @tparam Comp The comparison type of the range
 	 * @tparam Other The type of @a other
 	 * @param range The range
 	 * @param other The other range
-	 * @return The union or empty range
+	 * @return The merged or empty range
 	 */
 	template<typename T, typename Comp, typename Other>
-	inline Range<T, Comp> united(const Range<T, Comp>& range, const Range<Other, Comp>& other) {
+	inline Range<T, Comp> merged(const Range<T, Comp>& range, const Range<Other, Comp>& other) {
 		if(isEmpty(other))
 			return range;
 		else if(isEmpty(range))
