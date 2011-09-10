@@ -125,7 +125,8 @@ namespace ascension {
 	 * @tparam Other The type of @a other
 	 * @param range The range
 	 * @param other The other range
-	 * @return The intersection or empty range
+	 * @return The intersection, or empty range if the two ranges were not intersected
+	 * @see intersected, merged
 	 */
 	template<typename T, typename Comp, typename Other>
 	inline Range<T, Comp> intersected(const Range<T, Comp>& range, const Range<Other, Comp>& other) {
@@ -143,6 +144,7 @@ namespace ascension {
 	 * @param range The range
 	 * @param other The other range to test
 	 * @return true if @a range intersects with @a other
+	 * @see intersected
 	 */
 	template<typename T, typename Comp, typename Other>
 	inline bool intersects(const Range<T, Comp>& range, const Range<Other, Comp>& other) {
