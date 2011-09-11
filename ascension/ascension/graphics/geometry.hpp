@@ -161,24 +161,26 @@ namespace ascension {
 		template<typename Geometry, std::size_t dimension>
 		class AccessProxy {
 		public:
+			typedef typename graphics::geometry::Coordinate<Geometry>::Type CoordinateType;
+		public:
 			explicit AccessProxy(Geometry& geometry) /*throw()*/ : geometry_(geometry) {}
-			const AccessProxy<Geometry, dimension>& operator=(typename graphics::geometry::Coordinate<Geometry>::Type value) {
+			const AccessProxy<Geometry, dimension>& operator=(CoordinateType value) {
 				graphics::geometry::set<dimension>(geometry_, value);
 				return *this;
 			}
 			const AccessProxy& operator=(const AccessProxy& other) {
-				return *this = static_cast<typename graphics::geometry::Coordinate<Geometry>::Type>(other);
+				return *this = static_cast<CoordinateType>(other);
 			}
-			operator typename graphics::geometry::Coordinate<Geometry>::Type() const {
+			operator CoordinateType() const {
 				return graphics::geometry::get<dimension>(geometry_);
 			};
-			typename graphics::geometry::Coordinate<Geometry>::Type operator+() const {return +*this;}
-			typename graphics::geometry::Coordinate<Geometry>::Type operator-() const {return -*this;}
-			AccessProxy<Geometry, dimension>& operator+=(typename graphics::geometry::Coordinate<Geometry>::Type other) {*this = *this + other; return *this;}
-			AccessProxy<Geometry, dimension>& operator-=(typename graphics::geometry::Coordinate<Geometry>::Type other) {*this = *this - other; return *this;}
-			AccessProxy<Geometry, dimension>& operator*=(typename graphics::geometry::Coordinate<Geometry>::Type other) {*this = *this * other; return *this;}
-			AccessProxy<Geometry, dimension>& operator/=(typename graphics::geometry::Coordinate<Geometry>::Type other) {*this = *this / other; return *this;}
-//			AccessProxy<Geometry, dimension>& operator%=(typename graphics::geometry::Coordinate<Geometry>::Type other) {*this = *this % other; return *this;}
+			CoordinateType operator+() const {return +static_cast<CoordinateType>(*this);}
+			CoordinateType operator-() const {return -static_cast<CoordinateType>(*this);}
+			AccessProxy<Geometry, dimension>& operator+=(CoordinateType other) {*this = *this + other; return *this;}
+			AccessProxy<Geometry, dimension>& operator-=(CoordinateType other) {*this = *this - other; return *this;}
+			AccessProxy<Geometry, dimension>& operator*=(CoordinateType other) {*this = *this * other; return *this;}
+			AccessProxy<Geometry, dimension>& operator/=(CoordinateType other) {*this = *this / other; return *this;}
+//			AccessProxy<Geometry, dimension>& operator%=(CoordinateType other) {*this = *this % other; return *this;}
 		private:
 			Geometry& geometry_;
 		};
