@@ -246,30 +246,18 @@ namespace ascension {
 
 			// 'add' for point and size
 
-			template<typename Point1, typename Point2>
-			inline Point1& _add(Point1& point1, const Point2& point2, const PointTag&, const PointTag&) {
+			template<typename Point>
+			inline Point& add(Point& point1, const Point& point2, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
 				x(point1) += x(point2);
 				y(point1) += y(point2);
 				return point1;
 			}
 
-			template<typename Point, typename Size>
-			inline Point& _add(Point& point, const Size& size, const PointTag&, const SizeTag&) {
-				x(point) += dx(size);
-				y(point) += dy(size);
-				return point;
-			}
-
-			template<typename Size1, typename Size2>
-			inline Size1& _add(Size1& size1, const Size2& size2, const SizeTag&, const SizeTag&) {
+			template<typename Size>
+			inline Size& add(Size& size1, const Size& size2, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
 				dx(size1) += dx(size2);
 				dy(size1) += dy(size2);
 				return size1;
-			}
-
-			template<typename Geometry1, typename Geometry2>
-			inline Geometry1& add(Geometry1& geometry1, const Geometry2& geometry2) {
-				return _add(geometry1, geometry2, typename Tag<Geometry1>::Type(), typename Tag<Geometry2>::Type());
 			}
 
 			// 'divide' for point and size
@@ -437,30 +425,18 @@ namespace ascension {
 
 			// 'subtract' for point and size
 
-			template<typename Point1, typename Point2>
-			inline Point1& _subtract(Point1& point1, const Point2& point2, const PointTag&, const PointTag&) {
+			template<typename Point>
+			inline Point& subtract(Point& point1, const Point& point2, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
 				x(point1) -= x(point2);
 				y(point1) -= y(point2);
 				return point1;
 			}
 
-			template<typename Point, typename Size>
-			inline Point& _subtract(Point& point, const Size& size, const PointTag&, const SizeTag&) {
-				x(point) -= dx(size);
-				y(point) -= dy(size);
-				return point;
-			}
-
-			template<typename Size1, typename Size2>
-			inline Size1& _subtract(Size1& size1, const Size2& size2, const SizeTag&, const SizeTag&) {
+			template<typename Size>
+			inline Size& subtract(Size& size1, const Size& size2, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
 				dx(size1) -= dx(size2);
 				dy(size1) -= dy(size2);
 				return size1;
-			}
-
-			template<typename Geometry1, typename Geometry2>
-			inline Geometry1& subtract(Geometry1& geometry1, const Geometry2& geometry2) {
-				return _subtract(geometry1, geometry2, typename Tag<Geometry1>::Type(), typename Tag<Geometry2>::Type());
 			}
 
 			// 'translate' for point, rectangle and region
@@ -678,77 +654,6 @@ namespace ascension {
 				return make<NativeSize>(x(points.second) - x(points.first), y(points.second) - y(points.first));
 			}
 		}
-#if 0
-		template<typename Coordinate> class Rect;
-
-		template<typename Coordinate>
-		class RectPartProxy {
-		public:
-			void operator=(Coordinate other) {
-				switch(part_) {
-					case 0:	// left
-						if(rect_.size().cx >= 0) {
-							rect_.size_.cx += rect_.origin().x - other;	// $friendly-access$
-							rect_.origin_.x = other;	// $friendly-access$
-						} else
-							rect_.size_.cx = other - rect_.origin().x;	// $friendly-access$
-						break;
-					case 1:	// top
-						if(rect_.size().cy >= 0) {
-							rect_.size_.cy += rect_.origin().y - other;	// $friendly-access$
-							rect_.origin_.y = other;	// $friendly-access$
-						} else
-							rect_.size_.cy = other - rect_.origin().y;	// $friendly-access$
-						break;
-					case 2:	// right
-						if(rect_.size().cx >= 0)
-							rect_.size_.cx = other - rect_.origin().x;	// $friendly-access$
-						else {
-							rect_.size_.cx += rect_.origin().x - other;	// $friendly-access$
-							rect_.origin_.x = other - rect_.origin().x;	// $friendly-access$
-						}
-						break;
-					case 3:	// bottom
-						if(rect_.size().cy >= 0)
-							rect_.size_.cy = other - rect_.origin().y;	// $friendly-access$
-						else {
-							rect_.size_.cy += rect_.origin().y - other;	// $friendly-access$
-							rect_.origin_.y = other - rect_.origin().y;	// $friendly-access$
-						}
-						break;
-				}
-			}
-			void operator=(const RectPartProxy<Coordinate>& other) {
-				return *this = static_cast<Coordinate>(other);
-			}
-			operator Coordinate() const {
-				switch(part_) {
-					case 0:	// left
-						return std::min(rect_.origin().x, rect_.origin().x + rect_.size().cx);
-					case 1:	// top
-						return std::min(rect_.origin().y, rect_.origin().y + rect_.size().cy);
-					case 2:	// right
-						return std::max(rect_.origin().x, rect_.origin().x + rect_.size().cx);
-					case 3:	// bottom
-						return std::max(rect_.origin().y, rect_.origin().y + rect_.size().cy);
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
-				}
-			}
-			Coordinate operator+() const {return +(*this);}
-			Coordinate operator-() const {return -(*this);}
-			void operator+=(Coordinate other) {*this = *this + other;}
-			void operator-=(Coordinate other) {*this = *this - other;}
-			void operator*=(Coordinate other) {*this = *this * other;}
-			void operator/=(Coordinate other) {*this = *this / other;}
-		private:
-			RectPartProxy(const Rect<Coordinate>& rect, int part) : rect_(const_cast<Rect<Coordinate>&>(rect)), part_(part) {}
-			RectPartProxy(const RectPartProxy<Coordinate>&);	// noncopyable
-			Rect<Coordinate>& rect_;
-			const int part_;
-			friend class Rect<Coordinate>;
-		};
-#endif
 
 	}
 }
