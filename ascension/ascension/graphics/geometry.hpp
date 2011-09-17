@@ -344,16 +344,16 @@ namespace ascension {
 			inline bool includes(const Rectangle& rectangle, const Point& point,
 					typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0,
 					typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
-				return makeRange(left(rectangle), right(rectangle)).includes(x(point))
-					&& makeRange(top(rectangle), bottom(rectangle)).includes(y(point));
+				return ascension::includes(makeRange(left(rectangle), right(rectangle)), x(point))
+					&& ascension::includes(makeRange(top(rectangle), bottom(rectangle)), y(point));
 			}
 
 			template<typename Rectangle1, typename Rectangle2>
 			inline bool includes(const Rectangle1& rectangle1, const Rectangle2& rectangle2,
 					typename detail::EnableIfTagIs<Rectangle1, RectangleTag>::type* = 0,
 					typename detail::EnableIfTagIs<Rectangle2, RectangleTag>::type* = 0) {
-				return makeRange(left(rectangle1), right(rectangle1)).includes(makeRange(left(rectangle2), right(rectangle2)))
-					&& makeRange(top(rectangle1), bottom(rectangle1)).includes(makeRange(top(rectangle2), bottom(rectangle2)));
+				return ascension::includes(range<X_COORDINATE>(rectangle1), range<X_COORDINATE>(rectangle2))
+					&& ascension::includes(range<Y_COORDINATE>(rectangle1), range<Y_COORDINATE>(rectangle2));
 			}
 
 			// 'isEmpty' for size, rectangle and region
