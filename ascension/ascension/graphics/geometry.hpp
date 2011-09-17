@@ -388,14 +388,14 @@ namespace ascension {
 			inline Point& negate(Point& point, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
 				x(point) = -x(point);
 				y(point) = -y(point);
-				return p;
+				return point;
 			}
 
 			template<typename Size>
 			inline Size& negate(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
 				dx(size) = -dx(size);
 				dy(size) = -dy(size);
-				return p;
+				return size;
 			}
 
 			// 'normalize' for size and rectangle
@@ -450,7 +450,8 @@ namespace ascension {
 
 			template<typename Rectangle, typename Offset>
 			inline Rectangle& translate(Rectangle& rectangle, const Offset& offset, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
-				return rectangle = make<Rectangle>(translate(get<0>(rectangle), offset), translate(get<1>(rectangle), offset));
+				Coordinate<Rectangle>::Type p[2] = {get<0>(rectangle), get<1>(rectangle)};
+				return rectangle = make<Rectangle>(translate(p[0], offset), translate(p[1], offset));
 			}
 
 			// 'united' for ...
@@ -572,7 +573,8 @@ namespace ascension {
 
 			template<typename Rectangle, typename Size>
 			inline Rectangle& resize(Rectangle& rectangle, const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
-				set<1>(rectangle, translate(get<0>(rectangle), size));
+				Coordinate<Rectangle>::Type o(get<0>(rectangle));
+				set<1>(rectangle, translate(o, size));
 				return rectangle;
 			}
 
@@ -635,9 +637,8 @@ namespace ascension {
 			 * @return @
 			 */
 			template<typename Size>
-			inline Size& transpose(Size&) {
-				std::swap(dx(size), dy(size));
-				return size;
+			inline Size& transpose(Size& size) {
+				return size = make<Size>(dy(size), dx(size));
 			}
 
 			/// Returns the origin of the @a rectangle.

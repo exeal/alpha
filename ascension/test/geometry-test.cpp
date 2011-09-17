@@ -63,6 +63,11 @@ void testRectangleConstruction() {
 	BOOST_CHECK_CLOSE(g::get<1>(p2), 4.0, 0.0001);
 }
 
+template<typename PointCoordinate, typename SizeCoordinate>
+inline gfx::NativeRectangle rectangle(PointCoordinate x, PointCoordinate y, SizeCoordinate dx, SizeCoordinate dy) {
+	return g::make<gfx::NativeRectangle>(g::make<gfx::NativePoint>(x, y), g::make<gfx::NativeSize>(dx, dy));
+}
+
 void testXY() {
 	typedef g::Coordinate<gfx::NativePoint>::Type Scalar;
 
@@ -132,14 +137,192 @@ void testDxDy() {
 
 	// rectangle
 	{
-		gfx::NativeRectangle r(g::make<gfx::NativeRectangle>(
-			g::make<gfx::NativePoint>(0, 0), g::make<gfx::NativeSize>(Scalar(1), Scalar(2))));
+		gfx::NativeRectangle r(rectangle(0, 0, Scalar(1), Scalar(2)));
 		BOOST_CHECK_CLOSE(static_cast<Scalar>(g::dx(r)), 1.0, 0.0001);
 		BOOST_CHECK_CLOSE(static_cast<Scalar>(g::dy(r)), 2.0, 0.0001);
 	}
 }
 
+void testEquals() {
+	typedef g::Coordinate<gfx::NativePoint>::Type PointCoordinate;
+	typedef g::Coordinate<gfx::NativeSize>::Type SizeCoordinate;
+
+	const gfx::NativePoint p(g::make<gfx::NativePoint>(PointCoordinate(1), PointCoordinate(1)));
+	BOOST_CHECK(g::equals(p,
+		g::make<gfx::NativePoint>(PointCoordinate(1), PointCoordinate(1))));
+	BOOST_CHECK(!g::equals(p,
+		g::make<gfx::NativePoint>(PointCoordinate(1), PointCoordinate(2))));
+
+	const gfx::NativeSize s(g::make<gfx::NativeSize>(SizeCoordinate(1), SizeCoordinate(1)));
+	BOOST_CHECK(g::equals(s,
+		g::make<gfx::NativeSize>(SizeCoordinate(1), SizeCoordinate(1))));
+	BOOST_CHECK(!g::equals(s,
+		g::make<gfx::NativeSize>(SizeCoordinate(1), SizeCoordinate(2))));
+	BOOST_CHECK(!g::equals(s,
+		g::make<gfx::NativeSize>(SizeCoordinate(-1), SizeCoordinate(-1))));
+
+	const gfx::NativeRectangle r(rectangle(
+		PointCoordinate(1), PointCoordinate(1), SizeCoordinate(1), SizeCoordinate(1)));
+	BOOST_CHECK(g::equals(r, rectangle(
+		PointCoordinate(1), PointCoordinate(1), SizeCoordinate(1), SizeCoordinate(1))));
+	BOOST_CHECK(!g::equals(r, rectangle(
+		PointCoordinate(1), PointCoordinate(1), SizeCoordinate(1), SizeCoordinate(2))));
+	BOOST_CHECK(!g::equals(r, rectangle(
+		PointCoordinate(1), PointCoordinate(2), SizeCoordinate(1), SizeCoordinate(1))));
+	BOOST_CHECK(!g::equals(r, rectangle(
+		PointCoordinate(2), PointCoordinate(2), SizeCoordinate(-1), SizeCoordinate(-1))));
+}
+
+template<typename Geometry1, typename Geometry2>
+void testIfEqual(const Geometry1& geometry1, const Geometry2& geometry2, bool expected) {
+	if(expected)
+		BOOST_CHECK(g::equals(geometry1, geometry2));
+	else
+		BOOST_CHECK(!g::equals(geometry1, geometry2));
+}
+
 void testAlgorithms() {
+	gfx::NativePoint p(g::make<gfx::NativePoint>(1, 1));
+	gfx::NativeSize s(g::make<gfx::NativeSize>(1, 1));
+
+	// add
+	testIfEqual(g::add(p, g::make<gfx::NativePoint>(2, 3)), g::make<gfx::NativePoint>(3, 4), true);
+	testIfEqual(g::add(s, g::make<gfx::NativeSize>(2, 3)), g::make<gfx::NativeSize>(3, 4), true);
+
+	// bottom
+	BOOST_CHECK_CLOSE(g::bottom(rectangle(1, 2, 3, 4)), 6.0, 0.0001);
+	BOOST_CHECK_CLOSE(g::bottom(rectangle(1, 2, -3, -4)), 2.0, 0.0001);
+
+	// bottomLeft
+	BOOST_CHECK(g::equals(g::bottomLeft(rectangle(1, 2, 3, 4)), g::make<gfx::NativePoint>(1, 6)));
+	BOOST_CHECK(g::equals(g::bottomLeft(rectangle(1, 2, -3, -4)), g::make<gfx::NativePoint>(-2, 2)));
+
+	// bottomRight
+	BOOST_CHECK(g::equals(g::bottomRight(rectangle(1, 2, 3, 4)), g::make<gfx::NativePoint>(4, 6)));
+	BOOST_CHECK(g::equals(g::bottomRight(rectangle(1, 2, -3, -4)), g::make<gfx::NativePoint>(1, 2)));
+
+	// divide
+
+	// expandTo
+
+	// includes
+
+	// intersected
+	gfx::NativeRectangle r(rectangle(0, 0, 3, 4));
+	g::intersected(r, rectangle(0, 0, 0, 0));
+
+	// intersects
+
+	// isEmpty
+
+	// isNormalized
+	BOOST_CHECK(g::isNormalized(g::make<gfx::NativeSize>(0, 0)));
+	BOOST_CHECK(g::isNormalized(g::make<gfx::NativeSize>(1, 2)));
+	BOOST_CHECK(!g::isNormalized(g::make<gfx::NativeSize>(-1, 2)));
+	BOOST_CHECK(!g::isNormalized(g::make<gfx::NativeSize>(1, -2)));
+	BOOST_CHECK(!g::isNormalized(g::make<gfx::NativeSize>(-1, -2)));
+	BOOST_CHECK(g::isNormalized(rectangle(0, 0, 0, 0)));
+	BOOST_CHECK(g::isNormalized(rectangle(1, 2, 3, 4)));
+	BOOST_CHECK(g::isNormalized(rectangle(-1, -2, 3, 4)));
+	BOOST_CHECK(g::isNormalized(rectangle(-1, -2, 3, 4)));
+	BOOST_CHECK(!g::isNormalized(rectangle(1, 2, -3, 4)));
+	BOOST_CHECK(!g::isNormalized(rectangle(1, 2, 3, -4)));
+	BOOST_CHECK(!g::isNormalized(rectangle(1, 2, -3, -4)));
+
+	// left
+	BOOST_CHECK_CLOSE(g::left(rectangle(1, 2, 3, 4)), 1.0, 0.0001);
+	BOOST_CHECK_CLOSE(g::left(rectangle(1, 2, -3, -4)), -2.0, 0.0001);
+
+	// makeBoundedTo
+
+	// manhattanLength
+	BOOST_CHECK_CLOSE(g::manhattanLength(g::make<gfx::NativePoint>(0, 0)), 0.0, 0.0001);
+	BOOST_CHECK_CLOSE(g::manhattanLength(g::make<gfx::NativePoint>(1, 2)), 3.0, 0.0001);
+	BOOST_CHECK_CLOSE(g::manhattanLength(g::make<gfx::NativePoint>(-3, -4)), 7.0, 0.0001);
+
+	// multiply
+
+	// negate
+	p = g::make<gfx::NativePoint>(1, 2);
+	BOOST_CHECK(g::equals(g::negate(p), g::make<gfx::NativePoint>(-1, -2)));
+	BOOST_CHECK(g::equals(g::negate(p), g::make<gfx::NativePoint>(1, 2)));
+	s = g::make<gfx::NativeSize>(1, 2);
+	BOOST_CHECK(g::equals(g::negate(s), g::make<gfx::NativeSize>(-1, -2)));
+	BOOST_CHECK(g::equals(g::negate(s), g::make<gfx::NativeSize>(1, 2)));
+
+	// normalize
+	s = g::make<gfx::NativeSize>(0, 0);
+	BOOST_CHECK(g::equals(g::normalize(s), g::make<gfx::NativeSize>(0, 0)));
+	s = g::make<gfx::NativeSize>(1, 2);
+	BOOST_CHECK(g::equals(g::normalize(s), g::make<gfx::NativeSize>(1, 2)));
+	s = g::make<gfx::NativeSize>(-1, -2);
+	BOOST_CHECK(g::equals(g::normalize(s), g::make<gfx::NativeSize>(1, 2)));
+	r = rectangle(0, 0, 0, 0);
+	BOOST_CHECK(g::equals(g::normalize(r), rectangle(0, 0, 0, 0)));
+	r = rectangle(1, 2, 3, 4);
+	BOOST_CHECK(g::equals(g::normalize(r), rectangle(1, 2, 3, 4)));
+	r = rectangle(-1, -2, -3, -4);
+	BOOST_CHECK(g::equals(g::normalize(r), rectangle(-4, -6, 3, 4)));
+
+	// origin
+	BOOST_CHECK(g::equals(g::origin(rectangle(1, 2, 3, 4)), g::make<gfx::NativePoint>(1, 2)));
+	BOOST_CHECK(g::equals(g::origin(rectangle(-1, -2, 0, 0)), g::make<gfx::NativePoint>(-1, -2)));
+
+	// range
+
+	// resize
+	r = rectangle(1, 2, 3, 4);
+	BOOST_CHECK(g::equals(g::resize(r, g::make<gfx::NativeSize>(5, 6)), rectangle(1, 2, 5, 6)));
+	r = rectangle(-1, -2, -3, -4);
+	BOOST_CHECK(g::equals(g::resize(r, g::make<gfx::NativeSize>(-5, -6)), rectangle(-1, -2, -5, -6)));
+
+	// right
+	BOOST_CHECK_CLOSE(g::right(rectangle(1, 2, 3, 4)), 4.0, 0.0001);
+	BOOST_CHECK_CLOSE(g::right(rectangle(1, 2, -3, -4)), 1.0, 0.0001);
+
+	// size
+	BOOST_CHECK(g::equals(g::size(rectangle(0, 0, 1, 2)), g::make<gfx::NativeSize>(1, 2)));
+	BOOST_CHECK(g::equals(g::size(rectangle(-1, -2, -3, -4)), g::make<gfx::NativeSize>(-3, -4)));
+
+	// scale
+
+	// subtract
+	p = g::make<gfx::NativePoint>(1, 2);
+	BOOST_CHECK(g::equals(g::subtract(p, g::make<gfx::NativePoint>(3, 4)), g::make<gfx::NativePoint>(-2, -2)));
+	p = g::make<gfx::NativePoint>(-1, -2);
+	BOOST_CHECK(g::equals(g::subtract(p, g::make<gfx::NativePoint>(-3, -4)), g::make<gfx::NativePoint>(2, 2)));
+	s = g::make<gfx::NativeSize>(1, 2);
+	BOOST_CHECK(g::equals(g::subtract(s, g::make<gfx::NativeSize>(3, 4)), g::make<gfx::NativeSize>(-2, -2)));
+	s = g::make<gfx::NativeSize>(-1, -2);
+	BOOST_CHECK(g::equals(g::subtract(s, g::make<gfx::NativeSize>(-3, -4)), g::make<gfx::NativeSize>(2, 2)));
+
+	// top
+	BOOST_CHECK_CLOSE(g::top(rectangle(1, 2, 3, 4)), 2.0, 0.0001);
+	BOOST_CHECK_CLOSE(g::top(rectangle(1, 2, -3, -4)), -2.0, 0.0001);
+
+	// topLeft
+	BOOST_CHECK(g::equals(g::topLeft(rectangle(1, 2, 3, 4)), g::make<gfx::NativePoint>(1, 2)));
+	BOOST_CHECK(g::equals(g::topLeft(rectangle(1, 2, -3, -4)), g::make<gfx::NativePoint>(-2, -2)));
+
+	// topRight
+	BOOST_CHECK(g::equals(g::topRight(rectangle(1, 2, 3, 4)), g::make<gfx::NativePoint>(4, 2)));
+	BOOST_CHECK(g::equals(g::topRight(rectangle(1, 2, -3, -4)), g::make<gfx::NativePoint>(1, -2)));
+
+	// translate
+	p = g::make<gfx::NativePoint>(1, 2);
+	BOOST_CHECK(g::equals(g::translate(p, g::make<gfx::NativeSize>(3, 4)), g::make<gfx::NativePoint>(4, 6)));
+	p = g::make<gfx::NativePoint>(1, 2);
+	BOOST_CHECK(g::equals(g::translate(p, g::make<gfx::NativeSize>(-3, -4)), g::make<gfx::NativePoint>(-2, -2)));
+	r = rectangle(1, 2, 3, 4);
+	BOOST_CHECK(g::equals(g::translate(r, g::make<gfx::NativeSize>(5, 6)), rectangle(6, 8, 3, 4)));
+	r = rectangle(-1, -2, -3, -4);
+	BOOST_CHECK(g::equals(g::translate(r, g::make<gfx::NativeSize>(-5, -6)), rectangle(-6, -8, -3, -4)));
+
+	// transpose
+	s = g::make<gfx::NativeSize>(1, 2);
+	BOOST_CHECK(g::equals(g::transpose(s), g::make<gfx::NativeSize>(2, 1)));
+
+	// united
 }
 
 int test_main(int, char*[]) {
@@ -154,6 +337,7 @@ int test_main(int, char*[]) {
 	testRectangleConstruction();
 	testXY();
 	testDxDy();
+	testEquals();
 	testAlgorithms();
 
 	return 0;
