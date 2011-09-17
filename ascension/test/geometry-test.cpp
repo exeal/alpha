@@ -206,6 +206,13 @@ void testAlgorithms() {
 	// expandTo
 
 	// includes
+	BOOST_CHECK(!g::includes(rectangle(0, 0, 0, 0), g::make<gfx::NativePoint>(0, 0)));
+	BOOST_CHECK(g::includes(rectangle(1, 2, 3, 4), g::make<gfx::NativePoint>(2, 3)));
+	BOOST_CHECK(!g::includes(rectangle(1, 2, 3, 4), g::make<gfx::NativePoint>(4, 3)));
+	BOOST_CHECK(!g::includes(rectangle(1, 2, 3, 4), g::make<gfx::NativePoint>(2, 6)));
+	BOOST_CHECK(g::includes(rectangle(1, 2, -3, -4), g::make<gfx::NativePoint>(0, 0)));
+	BOOST_CHECK(g::includes(rectangle(0, 0, 0, 0), rectangle(0, 0, 0, 0)));
+	BOOST_CHECK(g::includes(rectangle(1, 2, 3, 4), rectangle(1, 2, 3, 4)));
 
 	// intersected
 	gfx::NativeRectangle r(rectangle(0, 0, 3, 4));
