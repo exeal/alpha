@@ -143,7 +143,7 @@ namespace ascension {
 		public:
 			/// A @c Bookmarker#Iterator enumerates the all marked lines.
 			class Iterator : public detail::IteratorAdapter<
-				Iterator, std::iterator<std::bidirectional_iterator_tag, length_t> > {
+				Iterator, std::iterator<std::bidirectional_iterator_tag, length_t, std::ptrdiff_t, length_t*, length_t> > {
 			private:
 				Iterator(detail::GapVector<length_t>::const_iterator impl) : impl_(impl) {}
 				detail::GapVector<length_t>::const_iterator impl_;

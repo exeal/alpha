@@ -318,7 +318,7 @@ class CodeGenerator(object):
         self._print_forname_code(long_name, names)
 
     def _process_binary_properties(self):
-        map(self._process_binary_property, [
+        list(map(self._process_binary_property, [
                 # general
                 'White_Space', 'Noncharacter_Code_Point', 'Deprecated', 'Logical_Order_Exception', 'Variation_Selector',
                 # case
@@ -339,7 +339,7 @@ class CodeGenerator(object):
                 'Quotation_Mark', 'Dash', 'Hyphen', 'STerm', 'Terminal_Punctuation', 'Diacritic', 'Extender',
                 # contributory properties
                 'Other_Alphabetic', 'Other_Default_Ignorable_Code_Point', 'Other_Grapheme_Extend',
-                'Other_ID_Start', 'Other_ID_Continue', 'Other_Lowercase', 'Other_Math', 'Other_Uppercase'])
+                'Other_ID_Start', 'Other_ID_Continue', 'Other_Lowercase', 'Other_Math', 'Other_Uppercase']))
         names = self._PROPERTY_NAMES.binary_value_names()
         out = self._output_files['vn']
         out.write(r'const detail::CharacterPropertyValueName BinaryProperty::NAMES_[] = {')
@@ -388,7 +388,7 @@ class CodeGenerator(object):
         else:
             self._output_files['i'].write('static_cast<Char>(c), ')
         self._output_files['i'].write(
-            ('detail::CharacterPropertyRangeComparer<detail::PropertyRange<%s>, %s>()); ' % (element_type, element_type))
+            ('detail::CharacterPropertyRangeComparer<detail::CharacterPropertyRange<%s>, %s>()); ' % (element_type, element_type))
             + ('return p != %s && c <= p[-1].end;}\n' % member_name))
         sys.stdout.write(' ([%d])\n' % len(ps))
 
