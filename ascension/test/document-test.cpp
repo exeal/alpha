@@ -28,8 +28,8 @@ void testSimpleChange() {
 
 	// initial state
 	BOOST_CHECK_EQUAL(d.length(), 0);
-	BOOST_CHECK_EQUAL(d.accessibleRegion(), k::Region());
-	BOOST_CHECK_EQUAL(d.region(), k::Region());
+	BOOST_CHECK_EQUAL(d.accessibleRegion(), k::Region(k::Position(0, 0)));
+	BOOST_CHECK_EQUAL(d.region(), k::Region(k::Position(0, 0)));
 	BOOST_CHECK(d.region().isEmpty());
 	BOOST_CHECK_EQUAL(d.input(), static_cast<k::DocumentInput*>(0));
 	BOOST_CHECK(!d.isChanging());
@@ -44,7 +44,7 @@ void testSimpleChange() {
 	BOOST_CHECK_EQUAL(d.session(), static_cast<a::texteditor::Session*>(0));
 
 	// simple change
-	k::insert(d, k::Position(), a::String(L"abcde"));
+	k::insert(d, k::Position(0, 0), a::String(L"abcde"));
 	BOOST_CHECK(d.isModified());
 	BOOST_CHECK_EQUAL(d.line(0), a::String(L"abcde"));
 	BOOST_CHECK_EQUAL(d.length(), 5);
@@ -72,14 +72,14 @@ void testSimpleChange() {
 void testUndoBoundary() {
 	k::Document d;
 
-	k::insert(d, k::Position(), a::String(L"a"));
+	k::insert(d, k::Position(0, 0), a::String(L"a"));
 	k::insert(d, k::Position(0, 1), a::String(L"b"));
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 1);
 	BOOST_CHECK_EQUAL(d.revisionNumber(), 2);
 	d.undo();
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 0);
 	BOOST_CHECK_EQUAL(d.revisionNumber(), 0);
-	k::insert(d, k::Position(), a::String(L"a"));
+	k::insert(d, k::Position(0, 0), a::String(L"a"));
 	d.insertUndoBoundary();
 	k::insert(d, k::Position(0, 1), a::String(L"b"));
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 2);
