@@ -22,6 +22,15 @@
 #include <boost/regex.hpp>
 #include <boost/mpl/int.hpp>
 
+// workaround for UCS-4
+namespace boost {
+	namespace re_detail {
+		template<> inline bool is_separator<ascension::CodePoint>(ascension::CodePoint c) {
+			return (c > 0x0009u && c < 0x000eu) || c == 0x0085u || c == 0x2028u || c == 0x2029u;
+		}
+	}
+}
+
 namespace ascension {
 
 	/**
