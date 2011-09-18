@@ -319,8 +319,6 @@ void testAlgorithms() {
 	BOOST_CHECK(g::equals(g::origin(rectangle(1, 2, 3, 4)), g::make<gfx::NativePoint>(1, 2)));
 	BOOST_CHECK(g::equals(g::origin(rectangle(-1, -2, 0, 0)), g::make<gfx::NativePoint>(-1, -2)));
 
-	// range
-
 	// resize
 	r = rectangle(1, 2, 3, 4);
 	BOOST_CHECK(g::equals(g::resize(r, g::make<gfx::NativeSize>(5, 6)), rectangle(1, 2, 5, 6)));

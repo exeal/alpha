@@ -1,6 +1,6 @@
 // regex-test.cpp
 
-#include "../regex.hpp"
+#include <ascension/corelib/regex.hpp>
 #include <boost/test/included/test_exec_monitor.hpp>
 
 namespace a = ascension;

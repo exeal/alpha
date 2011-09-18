@@ -1,24 +1,26 @@
 // document-test.cpp
 
-#include <ascension/document.hpp>
-#include <ascension/stream.hpp>
+#include <ascension/kernel/document.hpp>
+#include <ascension/kernel/document-character-iterator.hpp>
+#include <ascension/kernel/document-stream.hpp>
 #include <boost/test/included/test_exec_monitor.hpp>
 namespace a = ascension;
 namespace k = ascension::kernel;
+namespace x = ascension::text;
 
 void testMiscellaneousFunctions() {
 	const a::String s(L"abc\ndef\r\n\rghi\x2028\x2029");
 	// newlines:           ^    ^   ^    ^     ^
 
-	BOOST_CHECK_EQUAL(k::getNumberOfLines(s), 6);
-	BOOST_CHECK_EQUAL(k::eatNewline(s.begin(), s.end()), k::NLF_RAW_VALUE);
-	BOOST_CHECK_EQUAL(k::eatNewline(s.begin() + 3, s.end()), k::NLF_LINE_FEED);
-	BOOST_CHECK_EQUAL(k::eatNewline(s.begin() + 7, s.end()), k::NLF_CR_LF);
-	BOOST_CHECK_EQUAL(k::eatNewline(s.begin() + 8, s.end()), k::NLF_LINE_FEED);
-	BOOST_CHECK_EQUAL(k::eatNewline(s.begin() + 9, s.end()), k::NLF_CARRIAGE_RETURN);
-	BOOST_CHECK_EQUAL(k::eatNewline(s.begin() + 13, s.end()), k::NLF_LINE_SEPARATOR);
-	BOOST_CHECK_EQUAL(k::eatNewline(s.begin() + 14, s.end()), k::NLF_PARAGRAPH_SEPARATOR);
-//	BOOST_CHECK_EQUAL(k::eatNewline(s.begin() + 15, s.end()), k::NLF_RAW_VALUE);
+	BOOST_CHECK_EQUAL(x::calculateNumberOfLines(s), 6);
+	BOOST_CHECK_EQUAL(x::eatNewline(s.begin(), s.end()), x::NLF_RAW_VALUE);
+	BOOST_CHECK_EQUAL(x::eatNewline(s.begin() + 3, s.end()), x::NLF_LINE_FEED);
+	BOOST_CHECK_EQUAL(x::eatNewline(s.begin() + 7, s.end()), x::NLF_CR_LF);
+	BOOST_CHECK_EQUAL(x::eatNewline(s.begin() + 8, s.end()), x::NLF_LINE_FEED);
+	BOOST_CHECK_EQUAL(x::eatNewline(s.begin() + 9, s.end()), x::NLF_CARRIAGE_RETURN);
+	BOOST_CHECK_EQUAL(x::eatNewline(s.begin() + 13, s.end()), x::NLF_LINE_SEPARATOR);
+	BOOST_CHECK_EQUAL(x::eatNewline(s.begin() + 14, s.end()), x::NLF_PARAGRAPH_SEPARATOR);
+//	BOOST_CHECK_EQUAL(x::eatNewline(s.begin() + 15, s.end()), x::NLF_RAW_VALUE);
 }
 
 void testSimpleChange() {
@@ -28,8 +30,8 @@ void testSimpleChange() {
 	BOOST_CHECK_EQUAL(d.length(), 0);
 	BOOST_CHECK_EQUAL(d.accessibleRegion(), k::Region());
 	BOOST_CHECK_EQUAL(d.region(), k::Region());
-	BOOST_CHECK_EQUAL(d.begin().tell(), d.end().tell());
-	BOOST_CHECK_EQUAL(d.input(), static_cast<k::IDocumentInput*>(0));
+	BOOST_CHECK(d.region().isEmpty());
+	BOOST_CHECK_EQUAL(d.input(), static_cast<k::DocumentInput*>(0));
 	BOOST_CHECK(!d.isChanging());
 	BOOST_CHECK(!d.isModified());
 	BOOST_CHECK(!d.isNarrowed());
@@ -110,16 +112,16 @@ void testIterators() {
 	k::Document d;
 	k::insert(d, d.region().end(), L"This is the first line.\nThis is the second line.\r\nAnd this is the last line.");
 
-	k::DocumentCharacterIterator i(d.begin());
+	k::DocumentCharacterIterator i(d, d.region().beginning());
 	BOOST_CHECK_EQUAL(i.document(), &d);
 	BOOST_CHECK_EQUAL(i.tell(), d.region().beginning());
 	BOOST_CHECK(i.hasNext());
 	BOOST_CHECK(!i.hasPrevious());
 	BOOST_CHECK_EQUAL(*i, 'T');
-	i = std::find(i, d.end(), a::LINE_SEPARATOR);
-	BOOST_CHECK_EQUAL(*i, a::LINE_SEPARATOR);
+	i = std::find(i, k::DocumentCharacterIterator(d, d.region().end()), x::LINE_SEPARATOR);
+	BOOST_CHECK_EQUAL(*i, x::LINE_SEPARATOR);
 	std::advance(i, +25);
-	BOOST_CHECK_EQUAL(*i, a::LINE_SEPARATOR);
+	BOOST_CHECK_EQUAL(*i, x::LINE_SEPARATOR);
 	++i;
 	BOOST_CHECK_EQUAL(*i, 'A');
 
