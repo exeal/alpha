@@ -469,6 +469,8 @@ namespace {
 		static const char EQ_OPS[] = {'=', ':'};
 		InputIterator value(find_first_of(first, last, EQ_OPS, ASCENSION_ENDOF(EQ_OPS)));
 		if(value == last)
+			return first;
+		else if(value == first)
 			return last;
 		return (find_first_of(++value, last, EQ_OPS, ASCENSION_ENDOF(EQ_OPS)) == last) ? value : last;
 	}
@@ -483,7 +485,7 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 	if(value == p2)
 		return klass;
 
-	if(value != 0) {	// "name=value" or "name:value"
+	if(value != p1) {	// "name=value" or "name:value"
 		int(*valueNameDetector)(const char_type*) = 0;
 		const basic_string<char_type> name(p1, value - 1);
 		if(PropertyNameComparer::compare(name.c_str(), GeneralCategory::LONG_NAME) == 0
@@ -506,7 +508,7 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 		for(size_t i = 0; i < static_cast<size_t>(p2 - p1); ++i) {
 			if(p1[i] > 0x007fu)
 				return klass;
-			expression[i] = static_cast<char>(p1[i] & 0xff);
+			expression += static_cast<char>(p1[i] & 0xff);
 		}
 		const map<const char*, int, PropertyNameComparer>::const_iterator i(names_.find(expression.c_str()));
 		if(i != names_.end())
