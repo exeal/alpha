@@ -307,7 +307,7 @@ namespace ascension {
 			inline CharacterDecodeIterator<BaseIterator> makeCharacterDecodeIterator(BaseIterator first, BaseIterator last, BaseIterator start) {
 				return CharacterDecodeIterator<BaseIterator>(first, last, start);
 			}
-			template<typename BaseIterator, typename CodeUnit>
+			template<typename CodeUnit, typename BaseIterator>
 			inline CharacterEncodeIterator<BaseIterator, CodeUnit> makeCharacterEncodeIterator(BaseIterator start) {
 				return CharacterEncodeIterator<BaseIterator, CodeUnit>(start);
 			}

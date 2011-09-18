@@ -370,7 +370,7 @@ class CodeGenerator(object):
         self._output_files['bpvd'].write(
             'static const detail::CharacterPropertyRange<%s> %s[];\n' % (element_type, member_name))
         self._output_files['ct'].write(
-            r'const ucd::detail::CharacterPropertyRange<%s> BinaryProperty::%s[] = {' % (element_type, member_name))
+            r'const detail::CharacterPropertyRange<%s> BinaryProperty::%s[] = {' % (element_type, member_name))
         for p in ps:
             self._output_files['ct'].write(r'{0x%x,0x%x},' % p)
         self._output_files['ct'].write('};\n')
@@ -555,7 +555,7 @@ class CodeGenerator(object):
                 code_table.write(r'const detail::CharacterPropertyPartition Block::VALUES_[] = {')
                 for i, block in enumerate(self._blocks):
                     cpp_name = PropertyNames.cpp_value_name(block[2])
-                    self._outer._output_files['bd'].write('%s, ///<%s.\n' % (cpp_name, block[2]))
+                    self._outer._output_files['bd'].write('%s, ///< %s.\n' % (cpp_name, block[2]))
                     if i != 0 and self._blocks[i - 1][1] != block[0]:
                         code_table.write('{0x%x,Block::NO_BLOCK},' % self._blocks[i - 1][0])
                     code_table.write(r'{0x%x,Block::%s},' % (block[0], cpp_name))

@@ -120,8 +120,8 @@ namespace ascension {
 			String group(int group) const {
 				const std::basic_string<CodePoint> s(get(group).str());
 				return String(
-					text::utf::makeCharacterEncodeIterator(s.data()),
-					text::utf::makeCharacterEncodeIterator(s.data() + s.length()));
+					text::utf::makeCharacterEncodeIterator<Char>(s.data()),
+					text::utf::makeCharacterEncodeIterator<Char>(s.data() + s.length()));
 			}
 			std::size_t groupCount() const {return impl_.size();}
 			const CodePointIterator& start() const {return start(0);}
@@ -285,8 +285,8 @@ namespace ascension {
 			 */
 			String pattern() const {
 				const std::basic_string<CodePoint> s(impl_.str());
-				return String(text::utf::makeCharacterEncodeIterator(s.data()),
-					text::utf::makeCharacterEncodeIterator(s.data() + s.length()));
+				return String(text::utf::makeCharacterEncodeIterator<Char>(s.data()),
+					text::utf::makeCharacterEncodeIterator<Char>(s.data() + s.length()));
 			}
 
 			/**
@@ -659,10 +659,10 @@ namespace ascension {
 				if(appendingPosition_ != input_.second)
 					std::copy(appendingPosition_, Base::impl()[0].first, out);
 				const String32 replaced(Base::impl().format(String32(
-					text::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end()),
-					text::UTF16To32Iterator<String::const_iterator>(replacement.begin(), replacement.end(), replacement.end()))));
-				std::copy(text::UTF32To16Iterator<typename String32::const_iterator>(replaced.begin()),
-					text::UTF32To16Iterator<typename String32::const_iterator>(replaced.end()), out);
+					text::utf::makeCharacterDecodeIterator(replacement.begin(), replacement.end()),
+					text::utf::makeCharacterDecodeIterator(replacement.begin(), replacement.end(), replacement.end()))));
+				std::copy(text::utf::makeCharacterEncodeIterator<Char>(replaced.begin()),
+					text::utf::makeCharacterEncodeIterator<Char>(replaced.end()), out);
 			}
 			template<typename OutputIterator> void appendReplacement(OutputIterator out,
 					const String& replacement, const boost::mpl::int_<4>&) {
@@ -674,8 +674,8 @@ namespace ascension {
 			template<typename OutputIterator>
 			OutputIterator appendTail(OutputIterator out, const boost::mpl::int_<2>&) const {
 				return std::copy(
-					text::UTF32To16Iterator<CodePointIterator>(appendingPosition_),
-					text::UTF32To16Iterator<CodePointIterator>(input_.second), out);
+					text::utf::makeCharacterEncodeIterator<Char>(appendingPosition_),
+					text::utf::makeCharacterEncodeIterator<Char>(input_.second), out);
 			}
 			template<typename OutputIterator>
 			OutputIterator appendTail(OutputIterator out, const boost::mpl::int_<4>&) const {
