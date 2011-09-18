@@ -175,7 +175,7 @@ void StringCharacterIterator::doNext() {
 	if(current_ == last_)
 //		throw out_of_range("the iterator is the last.");
 		return;
-	current_ = (++utf::makeCharacterDecodeIterator(current_, last_)).tell();
+	current_ = (++utf::makeCharacterDecodeIterator(first_, last_, current_)).tell();
 }
 
 /// @see CharacterIterator#doPrevious
@@ -183,7 +183,7 @@ void StringCharacterIterator::doPrevious() {
 	if(current_ == first_)
 //		throw out_of_range("the iterator is the first.");
 		return;
-	current_ = (--utf::makeCharacterDecodeIterator(first_, current_)).tell();
+	current_ = (--utf::makeCharacterDecodeIterator(first_, last_, current_)).tell();
 }
 
 
