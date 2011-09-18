@@ -181,6 +181,30 @@ void testIfEqual(const Geometry1& geometry1, const Geometry2& geometry2, bool ex
 		BOOST_CHECK(!g::equals(geometry1, geometry2));
 }
 
+void testRange() {
+	typedef g::Coordinate<g::Coordinate<gfx::NativeRectangle>::Type>::Type Scalar;
+
+	gfx::NativeRectangle r(rectangle(Scalar(0), Scalar(0), Scalar(0), Scalar(0)));
+	BOOST_CHECK_CLOSE(g::range<g::X_COORDINATE>(r).beginning(), 0.0, 0.0001);
+	BOOST_CHECK_CLOSE(g::range<g::X_COORDINATE>(r).end(), 0.0, 0.0001);
+	BOOST_CHECK_CLOSE(g::range<g::Y_COORDINATE>(r).beginning(), 0.0, 0.0001);
+	BOOST_CHECK_CLOSE(g::range<g::Y_COORDINATE>(r).end(), 0.0, 0.0001);
+
+	g::range<g::X_COORDINATE>(r) = a::makeRange(Scalar(1), Scalar(3));
+	BOOST_CHECK_CLOSE(g::x(g::get<0>(r)), 1.0, 0.0001);
+	BOOST_CHECK_CLOSE(g::x(g::get<1>(r)), 3.0, 0.0001);
+
+	g::range<g::Y_COORDINATE>(r) = a::makeRange(Scalar(-2), Scalar(4));
+	BOOST_CHECK_CLOSE(g::y(g::get<0>(r)), -2.0, 0.0001);
+	BOOST_CHECK_CLOSE(g::y(g::get<1>(r)), 4.0, 0.0001);
+
+	g::range<g::X_COORDINATE>(r) = g::range<g::Y_COORDINATE>(r) = a::makeRange(Scalar(5), Scalar(10));
+	BOOST_CHECK_CLOSE(g::range<g::X_COORDINATE>(r).beginning(), 5.0, 0.0001);
+	BOOST_CHECK_CLOSE(g::range<g::X_COORDINATE>(r).end(), 10.0, 0.0001);
+	BOOST_CHECK_CLOSE(g::range<g::Y_COORDINATE>(r).beginning(), 5.0, 0.0001);
+	BOOST_CHECK_CLOSE(g::range<g::Y_COORDINATE>(r).end(), 10.0, 0.0001);
+}
+
 void testAlgorithms() {
 	gfx::NativePoint p(g::make<gfx::NativePoint>(1, 1));
 	gfx::NativeSize s(g::make<gfx::NativeSize>(1, 1));
@@ -213,6 +237,12 @@ void testAlgorithms() {
 	BOOST_CHECK(g::includes(rectangle(1, 2, -3, -4), g::make<gfx::NativePoint>(0, 0)));
 	BOOST_CHECK(g::includes(rectangle(0, 0, 0, 0), rectangle(0, 0, 0, 0)));
 	BOOST_CHECK(g::includes(rectangle(1, 2, 3, 4), rectangle(1, 2, 3, 4)));
+	BOOST_CHECK(g::includes(rectangle(1, 2, 3, 4), rectangle(1, 2, 1, 2)));
+	BOOST_CHECK(g::includes(rectangle(1, 2, 3, 4), rectangle(3, 4, 1, 2)));
+	BOOST_CHECK(g::includes(rectangle(1, 2, 3, 4), rectangle(3, 3, 1, 1)));
+	BOOST_CHECK(!g::includes(rectangle(1, 2, 3, 4), rectangle(3, 3, 10, 1)));
+	BOOST_CHECK(!g::includes(rectangle(1, 2, 3, 4), rectangle(3, 3, 1, 10)));
+	BOOST_CHECK(g::includes(rectangle(-1, -2, 3, 4), rectangle(-1, -2, 1, 1)));
 
 	// intersected
 	gfx::NativeRectangle r(rectangle(0, 0, 3, 4));
@@ -221,6 +251,20 @@ void testAlgorithms() {
 	// intersects
 
 	// isEmpty
+	BOOST_CHECK(g::isEmpty(g::make<gfx::NativeSize>(0, 0)));
+	BOOST_CHECK(g::isEmpty(g::make<gfx::NativeSize>(1, 0)));
+	BOOST_CHECK(g::isEmpty(g::make<gfx::NativeSize>(0, 1)));
+	BOOST_CHECK(!g::isEmpty(g::make<gfx::NativeSize>(1, 1)));
+	BOOST_CHECK(g::isEmpty(g::make<gfx::NativeSize>(-1, 0)));
+	BOOST_CHECK(g::isEmpty(g::make<gfx::NativeSize>(0, -1)));
+	BOOST_CHECK(g::isEmpty(g::make<gfx::NativeSize>(-1, -1)));
+	BOOST_CHECK(g::isEmpty(rectangle(0, 0, 0, 0)));
+	BOOST_CHECK(g::isEmpty(rectangle(0, 0, 1, 0)));
+	BOOST_CHECK(g::isEmpty(rectangle(0, 0, 0, 1)));
+	BOOST_CHECK(!g::isEmpty(rectangle(0, 0, 1, 1)));
+	BOOST_CHECK(g::isEmpty(rectangle(0, 0, -1, 0)));
+	BOOST_CHECK(g::isEmpty(rectangle(0, 0, 0, -1)));
+	BOOST_CHECK(g::isEmpty(rectangle(0, 0, -1, -1)));
 
 	// isNormalized
 	BOOST_CHECK(g::isNormalized(g::make<gfx::NativeSize>(0, 0)));
@@ -345,6 +389,7 @@ int test_main(int, char*[]) {
 	testXY();
 	testDxDy();
 	testEquals();
+	testRange();
 	testAlgorithms();
 
 	return 0;

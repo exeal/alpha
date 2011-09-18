@@ -186,21 +186,26 @@ namespace ascension {
 		};
 
 		template<typename Rectangle, std::size_t dimension>
-		class RectangleRangeProxy {
+		class RectangleRangeProxy : public Range<
+			typename graphics::geometry::Coordinate<
+				typename graphics::geometry::Coordinate<Rectangle>::Type
+			>::Type
+		> {
+		private:
+			typedef typename graphics::geometry::Coordinate<Rectangle>::Type Point;
+			typedef typename graphics::geometry::Coordinate<Point>::Type Scalar;
 		public:
-			explicit RectangleRangeProxy(Rectangle& rectangle) /*throw()*/ : rectangle_(rectangle) {}
+			explicit RectangleRangeProxy(Rectangle& rectangle) /*throw()*/ :
+				Range<Scalar>(graphics::geometry::range<dimension>(const_cast<const Rectangle&>(rectangle))), rectangle_(rectangle) {}
 			template<typename T>
 			RectangleRangeProxy<Rectangle, dimension>& operator=(const Range<T>& range) {
-				typename graphics::geometry::Coordinate<Rectangle>::Type
-					b(graphics::geometry::get<0>(rectangle)), e(graphics::geometry::get<1>(rectangle));
+				Point b(graphics::geometry::get<0>(rectangle_)), e(graphics::geometry::get<1>(rectangle_));
 				graphics::geometry::set<dimension>(b, range.beginning());
 				graphics::geometry::set<dimension>(e, range.end());
 				graphics::geometry::set<0>(rectangle_, b);
 				graphics::geometry::set<1>(rectangle_, e);
+				Range<Scalar>::operator=(range);
 				return *this;
-			}
-			operator const Range<typename graphics::geometry::Coordinate<typename graphics::geometry::Coordinate<Rectangle>::Type>::Type>() const {
-				return graphics::geometry::range<dimension>(rectangle_);
 			}
 		private:
 			Rectangle& rectangle_;
