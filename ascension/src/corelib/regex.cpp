@@ -496,8 +496,7 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 				|| PropertyNameComparer::compare(name.c_str(), Script::SHORT_NAME) == 0)
 			valueNameDetector = &Script::forName<char_type>;
 		if(valueNameDetector != 0) {
-			const int p = valueNameDetector(basic_string<char_type>(
-				utf::makeCharacterEncodeIterator(value), utf::makeCharacterEncodeIterator(p2)).c_str());
+			const int p = valueNameDetector(basic_string<char_type>(value, p2).c_str());
 			if(p != NOT_PROPERTY)
 				klass.set(p);
 		}
@@ -507,7 +506,7 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 		for(size_t i = 0; i < static_cast<size_t>(p2 - p1); ++i) {
 			if(p1[i] > 0x007fu)
 				return klass;
-			expression[i] = p1[i];
+			expression[i] = static_cast<char>(p1[i] & 0xff);
 		}
 		const map<const char*, int, PropertyNameComparer>::const_iterator i(names_.find(expression.c_str()));
 		if(i != names_.end())
