@@ -181,6 +181,7 @@
     </ManifestResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\ascension\src\corelib\character-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\break-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\case-folder.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\character-property.cpp" />
