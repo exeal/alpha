@@ -1,22 +1,22 @@
 // case-folder-test.cpp
 
-#include "../unicode.hpp"
+#include <ascension/corelib/text/case-folder.hpp>
 #include <boost/test/included/test_exec_monitor.hpp>
 namespace a = ascension;
-namespace t = ascension::text;
+namespace x = ascension::text;
 
 namespace {
 	void testEqual(const a::String& s1, const a::String& s2) {
-		BOOST_CHECK_EQUAL(t::CaseFolder::compare(s1, s2), 0);
-		BOOST_CHECK_EQUAL(t::CaseFolder::compare(s2, s1), 0);
-		BOOST_CHECK_EQUAL(t::CaseFolder::fold(s1).compare(t::CaseFolder::fold(s2)), 0);
+		BOOST_CHECK_EQUAL(x::CaseFolder::compare(s1, s2), 0);
+		BOOST_CHECK_EQUAL(x::CaseFolder::compare(s2, s1), 0);
+		BOOST_CHECK_EQUAL(x::CaseFolder::fold(s1).compare(x::CaseFolder::fold(s2)), 0);
 	}
 } // namespace @0
 
 void testCaseFolder() {
 	testEqual(L"", L"");
 	// Turkish I
-	BOOST_CHECK_EQUAL(t::CaseFolder::compare(L"Ii", L"\x0131\x0130", true), 0);
+	BOOST_CHECK_EQUAL(x::CaseFolder::compare(L"Ii", L"\x0131\x0130", true), 0);
 	// Latin
 	testEqual(L"ABCDEFGHIJKLMNOPQRSTUVWXYZ", L"abcdefghijklmnopqrstuvwxyz");
 	testEqual(L"\x00B5\x00C6\x00D0\x00DE\x00DF", L"\x03BC\x00E6\x00F0\x00FESS");
