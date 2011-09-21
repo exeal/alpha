@@ -281,6 +281,9 @@
     <ClCompile Include="..\..\ascension\src\viewer\viewer-windows.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\corelib\character-iterator.cpp">
+      <Filter>ascension\Source Files\corelib</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alpha.hpp">

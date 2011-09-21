@@ -30,9 +30,6 @@ namespace {
 	}
 } // namespace @0
 
-const Direction Direction::FORWARD(true);
-const Direction Direction::BACKWARD(false);
-
 
 // kernel free functions //////////////////////////////////////////////////////////////////////////
 
