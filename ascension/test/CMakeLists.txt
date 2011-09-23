@@ -12,6 +12,9 @@ endif()
 add_executable(range-test range-test.cpp)
 add_executable(geometry-test geometry-test.cpp)
 
+add_executable(string-test string-test.cpp)
+add_executable(character-iterator-test character-iterator-test.cpp ${SRCDIR}/corelib/character-iterator.cpp)
+
 add_executable(utf-iterator-test utf-iterator-test.cpp)
 
 add_executable(break-iterator-test break-iterator-test.cpp ${SRCDIR}/corelib/text/break-iterator.cpp ${SRCDIR}/corelib/text/identifier-syntax.cpp ${SRCDIR}/corelib/text/character-property.cpp)
