@@ -16,11 +16,21 @@ namespace ascension {
 	namespace text {
 		namespace utf {
 
+			/**
+			 * Provides the default type for Unicode code unit.
+			 * @tparam codeUnitSize The byte size of code unit
+			 */
 			template<std::size_t codeUnitSize> struct DefaultByte;
 			template<> struct DefaultByte<1> {typedef uint8_t Type;};
 			template<> struct DefaultByte<2> {typedef Char Type;};
 			template<> struct DefaultByte<4> {typedef CodePoint Type;};
 
+			/**
+			 * Converts UTF-x character sequence into UCS-4.
+			 * @tparam BaseIterator The base iterator represents UTF-x character sequence
+			 * @tparam UChar32 The returned UCS-4 character type
+			 * @see CharacterEncodeIterator, CharacterOutputIterator, makeCharacterDecodeIterator
+			 */
 			template<typename BaseIterator, typename UChar32 = CodePoint>
 			class CharacterDecodeIterator : public detail::IteratorAdapter<
 				CharacterDecodeIterator<BaseIterator, UChar32>,
@@ -178,6 +188,13 @@ namespace ascension {
 				mutable UChar32 cache_ : 28;
 			};
 
+			/**
+			 * Converts UCS-4 into UTF-x character sequence.
+			 * @tparam BaseIterator The base iterator. This should represents UCS-4 or UTF-32
+			 *                      character sequence
+			 * @tparam CodeUnit The returned code unit type
+			 * @see CharacterDecodeIterator, CharacterOutputIterator, makeCharacterEncodeIterator
+			 */
 			template<typename BaseIterator, typename CodeUnit>
 			class CharacterEncodeIterator : public detail::IteratorAdapter<
 				CharacterEncodeIterator<BaseIterator, CodeUnit>,
@@ -266,6 +283,11 @@ namespace ascension {
 				mutable CodeUnit* positionInCache_;
 			};
 
+			/**
+			 * Writes code point sequence into UTF-x character sequence.
+			 * @tparam BaseIterator The base output iterator represents UTF-x character sequence
+			 * @see CharacterEncodeIterator, CharacterDecodeIterator
+			 */
 			template<typename BaseIterator>
 			class CharacterOutputIterator : public detail::IteratorAdapter<
 				CharacterOutputIterator<BaseIterator>,
@@ -299,17 +321,30 @@ namespace ascension {
 				BaseIterator base_;
 			};
 
+			/// Makes and returns @c CharacterDecodeIterator from the base iterators.
 			template<typename BaseIterator>
 			inline CharacterDecodeIterator<BaseIterator> makeCharacterDecodeIterator(BaseIterator first, BaseIterator last) {
 				return CharacterDecodeIterator<BaseIterator>(first, last);
 			}
+
+			/// Makes and returns @c CharacterDecodeIterator from the base iterators and the start position.
 			template<typename BaseIterator>
 			inline CharacterDecodeIterator<BaseIterator> makeCharacterDecodeIterator(BaseIterator first, BaseIterator last, BaseIterator start) {
 				return CharacterDecodeIterator<BaseIterator>(first, last, start);
 			}
+
+			/// Makes and returns @c CharacterEncodeIterator from the base iterator.
 			template<typename CodeUnit, typename BaseIterator>
 			inline CharacterEncodeIterator<BaseIterator, CodeUnit> makeCharacterEncodeIterator(BaseIterator start) {
 				return CharacterEncodeIterator<BaseIterator, CodeUnit>(start);
+			}
+
+			/// Converts UTF-8 into UTF-16
+			template<std::size_t length>
+			inline String decode(const char(&source)[length]) {
+				return String(
+					makeCharacterDecodeIterator(source, source + length - 1),
+					makeCharacterDecodeIterator(source, source + length - 1, source + length - 1));
 			}
 
 		}
