@@ -3,14 +3,17 @@
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/kernel/document-stream.hpp>
+#include <ascension/corelib/text/utf-iterator.hpp>	// text.utf.decode
 #include <boost/test/included/test_exec_monitor.hpp>
 namespace a = ascension;
 namespace k = ascension::kernel;
 namespace x = ascension::text;
 
 void testMiscellaneousFunctions() {
-	const a::String s(L"abc\ndef\r\n\rghi\x2028\x2029");
-	// newlines:           ^    ^   ^    ^     ^
+	// U+2028 is <E2 80 A8> in UTF-8
+	// U+2029 is <E2 80 A9> in UTF-8
+	const a::String s(x::utf::decode("abc\ndef\r\n\rghi\xe2\x80\xa8\xe2\x80\xa9"));
+	// newlines:                         ^    ^   ^    ^           ^
 
 	BOOST_CHECK_EQUAL(x::calculateNumberOfLines(s), 6);
 	BOOST_CHECK_EQUAL(x::eatNewline(s.begin(), s.end()), x::NLF_RAW_VALUE);
@@ -44,25 +47,25 @@ void testSimpleChange() {
 	BOOST_CHECK_EQUAL(d.session(), static_cast<a::texteditor::Session*>(0));
 
 	// simple change
-	k::insert(d, k::Position(0, 0), a::String(L"abcde"));
+	k::insert(d, k::Position(0, 0), x::utf::decode("abcde"));
 	BOOST_CHECK(d.isModified());
-	BOOST_CHECK_EQUAL(d.line(0), a::String(L"abcde"));
+	BOOST_CHECK_EQUAL(d.line(0), x::utf::decode("abcde"));
 	BOOST_CHECK_EQUAL(d.length(), 5);
 	BOOST_CHECK_EQUAL(d.region(), k::Region(k::Position(0, 0), k::Position(0, 5)));
 	BOOST_CHECK_EQUAL(d.revisionNumber(), 1);
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 1);
 	k::erase(d, k::Position(0, 0), k::Position(0, 3));
-	BOOST_CHECK_EQUAL(d.line(0), a::String(L"de"));
+	BOOST_CHECK_EQUAL(d.line(0), x::utf::decode("de"));
 	BOOST_CHECK_EQUAL(d.revisionNumber(), 2);
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 1);
 	d.undo();
-	BOOST_CHECK_EQUAL(d.line(0), a::String(L""));
+	BOOST_CHECK_EQUAL(d.line(0), a::String());
 	BOOST_CHECK_EQUAL(d.revisionNumber(), 0);
 	BOOST_CHECK(!d.isModified());
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 0);
 	BOOST_CHECK_EQUAL(d.numberOfRedoableChanges(), 1);
 	d.redo();
-	BOOST_CHECK_EQUAL(d.line(0), a::String(L"de"));
+	BOOST_CHECK_EQUAL(d.line(0), x::utf::decode("de"));
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 1);
 	BOOST_CHECK_EQUAL(d.numberOfRedoableChanges(), 0);
 	d.undo();
@@ -72,16 +75,16 @@ void testSimpleChange() {
 void testUndoBoundary() {
 	k::Document d;
 
-	k::insert(d, k::Position(0, 0), a::String(L"a"));
-	k::insert(d, k::Position(0, 1), a::String(L"b"));
+	k::insert(d, k::Position(0, 0), x::utf::decode("a"));
+	k::insert(d, k::Position(0, 1), x::utf::decode("b"));
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 1);
 	BOOST_CHECK_EQUAL(d.revisionNumber(), 2);
 	d.undo();
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 0);
 	BOOST_CHECK_EQUAL(d.revisionNumber(), 0);
-	k::insert(d, k::Position(0, 0), a::String(L"a"));
+	k::insert(d, k::Position(0, 0), x::utf::decode("a"));
 	d.insertUndoBoundary();
-	k::insert(d, k::Position(0, 1), a::String(L"b"));
+	k::insert(d, k::Position(0, 1), x::utf::decode("b"));
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 2);
 	d.undo();
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 1);
@@ -93,11 +96,11 @@ void testCompoundChange() {
 	k::Document d;
 
 	d.beginCompoundChange();
-	k::insert(d, d.region().end(), a::String(L"This "));
-	k::insert(d, d.region().end(), a::String(L"is a "));
-	k::insert(d, d.region().end(), a::String(L"compound."));
+	k::insert(d, d.region().end(), x::utf::decode("This "));
+	k::insert(d, d.region().end(), x::utf::decode("is a "));
+	k::insert(d, d.region().end(), x::utf::decode("compound."));
 	d.endCompoundChange();
-	BOOST_CHECK_EQUAL(d.line(0), a::String(L"This is a compound."));
+	BOOST_CHECK_EQUAL(d.line(0), x::utf::decode("This is a compound."));
 	BOOST_CHECK_EQUAL(d.revisionNumber(), 3);
 	BOOST_CHECK_EQUAL(d.numberOfUndoableChanges(), 1);
 	d.undo();
@@ -110,7 +113,7 @@ void testCompoundChange() {
 
 void testIterators() {
 	k::Document d;
-	k::insert(d, d.region().end(), L"This is the first line.\nThis is the second line.\r\nAnd this is the last line.");
+	k::insert(d, d.region().end(), x::utf::decode("This is the first line.\nThis is the second line.\r\nAnd this is the last line."));
 
 	k::DocumentCharacterIterator i(d, d.region().beginning());
 	BOOST_CHECK_EQUAL(i.document(), &d);
@@ -139,20 +142,20 @@ void testStreams() {
 
 	k::DocumentOutputStream os(d);
 	os << 0 << 1 << 2 << std::endl;
-	BOOST_CHECK_EQUAL(d.line(0), a::String(L"012"));
+	BOOST_CHECK_EQUAL(d.line(0), x::utf::decode("012"));
 }
 
 void testBookmarks() {
 	k::Document d;
-	k::insert(d, d.region().end(),
-		L"m\n"
-		L"\n"
-		L"m\n"
-		L"m\n"
-		L"\n"
-		L"\n"
-		L"m\n"
-		L"");
+	k::insert(d, d.region().end(), x::utf::decode(
+		"m\n"
+		"\n"
+		"m\n"
+		"m\n"
+		"\n"
+		"\n"
+		"m\n"
+		""));
 	// this document has bookmarks at lines: 0, 2, 3, 6
 	k::Bookmarker& b = d.bookmarker();
 	b.mark(0);
@@ -203,7 +206,7 @@ void testBookmarks() {
 	BOOST_CHECK_EQUAL(b.next(1, a::Direction::BACKWARD, true, 0), a::INVALID_INDEX);
 
 	// update
-	k::insert(d, d.region().beginning(), L"\n");
+	k::insert(d, d.region().beginning(), x::utf::decode("\n"));
 	BOOST_CHECK(!b.isMarked(0));
 	BOOST_CHECK(b.isMarked(1));
 	BOOST_CHECK(!b.isMarked(2));
