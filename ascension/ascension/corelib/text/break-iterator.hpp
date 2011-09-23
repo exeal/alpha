@@ -8,7 +8,7 @@
 #ifndef ASCENSION_BREAK_ITERATOR_HPP
 #define ASCENSION_BREAK_ITERATOR_HPP
 
-#include <ascension/corelib/character-iterator.hpp>	// CharacterIterator
+#include <ascension/corelib/text/character-iterator.hpp>	// CharacterIterator
 #include <iterator>
 #include <locale>
 

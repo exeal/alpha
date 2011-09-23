@@ -11,8 +11,8 @@
 #include <ascension/graphics/graphics-windows.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 //#include <ascension/graphics/special-character-renderer.hpp>
-#include <ascension/corelib/character-iterator.hpp>
 #include <ascension/corelib/shared-library.hpp>
+#include <ascension/corelib/text/character-iterator.hpp>
 #include <ascension/corelib/text/character-property.hpp>
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate

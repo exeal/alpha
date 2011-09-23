@@ -6,7 +6,7 @@
  * @date 2011-09-21 split from character-property.cpp
  */
 
-#include <ascension/corelib/character-iterator.hpp>
+#include <ascension/corelib/text/character-iterator.hpp>
 #include <ascension/corelib/text/utf-iterator.hpp>	// utf.makeCharacterDecodeIterator
 using namespace ascension;
 using namespace ascension::text;

@@ -281,8 +281,8 @@
     <ClCompile Include="..\..\ascension\src\viewer\viewer-windows.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\corelib\character-iterator.cpp">
-      <Filter>ascension\Source Files\corelib</Filter>
+    <ClCompile Include="..\..\ascension\src\corelib\text\character-iterator.cpp">
+      <Filter>ascension\Source Files\corelib\text</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -398,9 +398,6 @@
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\basic-types.hpp">
-      <Filter>ascension\Header Files\corelib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\corelib\character-iterator.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\encoder.hpp">
@@ -599,6 +596,9 @@
       <Filter>ascension\Header Files\corelib\text</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\text\utf.hpp">
+      <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\character-iterator.hpp">
       <Filter>ascension\Header Files\corelib\text</Filter>
     </ClInclude>
   </ItemGroup>
