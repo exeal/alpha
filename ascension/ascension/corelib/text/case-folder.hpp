@@ -8,7 +8,7 @@
 #ifndef ASCENSION_CASE_FOLDER_HPP
 #define ASCENSION_CASE_FOLDER_HPP
 
-#include <ascension/corelib/character-iterator.hpp>
+#include <ascension/corelib/text/character-iterator.hpp>
 #include <ascension/corelib/text/utf-iterator.hpp>	// CharacterDecodeIterator, surrogates.encode
 #include <algorithm>	// std.lower_bound
 #include <sstream>		// std.basic_stringbuf

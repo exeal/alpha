@@ -11,7 +11,7 @@
 #include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_NORMALIZATION
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 #include <ascension/corelib/standard-iterator-adapter.hpp>
-#include <ascension/corelib/character-iterator.hpp>	// CharacterIterator
+#include <ascension/corelib/text/character-iterator.hpp>	// CharacterIterator
 #include <ascension/corelib/text/character.hpp>
 #include <memory>		// std.auto_ptr
 #include <stdexcept>	// std.out_of_range

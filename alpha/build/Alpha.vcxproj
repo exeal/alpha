@@ -181,9 +181,9 @@
     </ManifestResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\ascension\src\corelib\character-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\break-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\case-folder.cpp" />
+    <ClCompile Include="..\..\ascension\src\corelib\text\character-iterator.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\character-property.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\collator.cpp" />
     <ClCompile Include="..\..\ascension\src\corelib\text\identifier-syntax.cpp" />
@@ -270,6 +270,7 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\shared-library.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\break-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\case-folder.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\text\character-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\character-property.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\character.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\collator.hpp" />
@@ -341,7 +342,6 @@
     <ClInclude Include="..\..\ascension\ascension\win32\com\unknown-impl.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\basic-exceptions.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\basic-types.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\corelib\character-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\encoder.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\gap-vector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\memory.hpp" />

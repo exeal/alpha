@@ -10,7 +10,7 @@
 #define ASCENSION_DOCUMENT_CHARACTER_ITERATOR_HPP
 
 #include <ascension/kernel/document.hpp>
-#include <ascension/corelib/character-iterator.hpp>			// text.CharacterIterator
+#include <ascension/corelib/text/character-iterator.hpp>			// text.CharacterIterator
 #include <ascension/corelib/standard-iterator-adapter.hpp>	// detail.IteratorAdapter
 
 namespace ascension {
