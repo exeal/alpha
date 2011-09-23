@@ -78,7 +78,7 @@ void testBoundaries(const std::vector<a::uint32_t>& v) {
 	k = v32.begin();
 	BOOST_CHECK_EQUAL_COLLECTIONS(v.begin(), v.end(), v32.begin(), v32.end());
 
-	// Test forward iteration, of 32-8 bit interconversions
+	// test forward iteration, of 32-8 bit interconversions
 	std::vector<a::uint8_t> v8(U32to8(v.begin()), U32to8(v.end()));
 	BOOST_CHECK_EQUAL(std::distance(U32to8(v.begin()), U32to8(v.end())), v8.size());
 	v32.assign(U8to32(v8.begin(), v8.end()), U8to32(v8.begin(), v8.end(), v8.end()));
@@ -105,6 +105,12 @@ void testBoundaries(const std::vector<a::uint32_t>& v) {
 	BOOST_CHECK_EQUAL_COLLECTIONS(v.begin(), v.end(), v32.begin(), v32.end());
 }
 
+void testUtf8Decode() {
+	static const char UTF_8[] = "abcdef";
+	a::String utf16(x::utf::decode(UTF_8));
+	BOOST_CHECK_EQUAL_COLLECTIONS(utf16.begin(), utf16.end(), UTF_8, ASCENSION_ENDOF(UTF_8) - 1);
+}
+
 void testMalformedInputs() {}
 
 int test_main(int, char*[]) {
@@ -124,6 +130,7 @@ int test_main(int, char*[]) {
 	v.push_back(0x10000u);
 	v.push_back(0x10000u - 1);
 	testBoundaries(v);
+	testUtf8Decode();
 
 	testMalformedInputs();
 
