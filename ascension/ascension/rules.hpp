@@ -11,6 +11,7 @@
 #include <ascension/config.hpp>	// ASCENSION_NO_REGEX
 #include <ascension/presentation/presentation-reconstructor.hpp>
 #include <ascension/corelib/regex.hpp>
+#include <ascension/corelib/string-piece.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <list>
 #include <set>
@@ -130,7 +131,7 @@ namespace ascension {
 			WordRule(Token::Identifier id,
 				const String* first, const String* last, bool caseSensitive = true);
 			WordRule(Token::Identifier id,
-				const Char* first, const Char* last, Char separator, bool caseSensitive = true);
+				const StringPiece& words, Char separator, bool caseSensitive = true);
 			~WordRule() /*throw()*/;
 			std::auto_ptr<Token> parse(const TokenScanner& scanner,
 				const Char* first, const Char* last) const /*throw()*/;
