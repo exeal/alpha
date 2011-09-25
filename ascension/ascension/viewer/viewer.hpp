@@ -15,6 +15,7 @@
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/text-style.hpp>
 #include <ascension/viewer/caret-observers.hpp>
+#include <ascension/viewer/caret-shaper.hpp>
 #include <ascension/viewer/content-assist.hpp>
 #include <ascension/viewer/ruler.hpp>
 #include <ascension/viewer/viewer-observers.hpp>
@@ -22,19 +23,21 @@
 #include <ascension/win32/com/unknown-impl.hpp>
 #include <set>
 #include <algorithm>
-#include <shlobj.h>	// IDragSourceHelper, IDropTargetHelper
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#	include <shlobj.h>	// IDragSourceHelper, IDropTargetHelper
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32
 
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
-#include <dimm.h>
+#	include <dimm.h>
 #endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-#include <Oleacc.h>
-#include <MSAAtext.h>
+#	include <Oleacc.h>
+#	include <MSAAtext.h>
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
 #ifndef ASCENSION_NO_TEXT_OBJECT_MODEL
-#include <tom.h>
+#	include <tom.h>
 #endif // !ASCENSION_NO_TEXT_OBJECT_MODEL
 
 
@@ -80,98 +83,6 @@ namespace ascension {
 			graphics::Scalar startEdge() const /*throw()*/ {return std::min(points_[0].ipd, points_[1].ipd);}
 			graphics::Scalar endEdge() const /*throw()*/ {return std::max(points_[0].ipd, points_[1].ipd);}
 		};
-
-		/**
-		 * @c CaretShapeUpdater updates the caret of the text viewer.
-		 * @see TextViewer, CaretShaper
-		 */
-		class CaretShapeUpdater {
-			ASCENSION_UNASSIGNABLE_TAG(CaretShapeUpdater);
-		public:
-			TextViewer& textViewer() /*throw()*/;
-			void update() /*throw()*/;
-		private:
-			CaretShapeUpdater(TextViewer& viewer) /*throw()*/;
-			TextViewer& viewer_;
-			friend class TextViewer;
-		};
-
-		/**
-		 * Interface for objects which define the shape of the text viewer's caret.
-		 * @see TextViewer#setCaretShaper, CaretShapeUpdater, DefaultCaretShaper,
-		 *      LocaleSensitiveCaretShaper
-		 */
-		class CaretShaper {
-		public:
-			/// Destructor.
-			virtual ~CaretShaper() /*throw()*/ {}
-		private:
-			/**
-			 * Installs the shaper.
-			 * @param updater The caret updater which notifies the text viewer to update the caret
-			 */
-			virtual void install(CaretShapeUpdater& updater) /*throw()*/ = 0;
-			/**
-			 * Returns the bitmap or the solid size defines caret shape.
-			 * @param[out] bitmap The bitmap defines caret shape. if @c null, @a solidSize is used
-			 *                    and the shape is solid
-			 * @param[out] solidSize The size of solid caret. If @a bitmap is not @c null, this
-			 *                       parameter is ignored
-			 * @param[out] readingDirection The orientation of the caret. this value is used for
-			 *                              hot spot calculation
-			 */
-			virtual void shape(win32::Handle<HBITMAP>& bitmap,
-				graphics::NativeSize& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/ = 0;
-			/// Uninstalls the shaper.
-			virtual void uninstall() /*throw()*/ = 0;
-			friend class TextViewer;
-		};
-
-		/**
-		 * Default implementation of @c CaretShaper.
-		 * @note This class is not intended to be subclassed.
-		 */
-		class DefaultCaretShaper : public CaretShaper {
-		public:
-			DefaultCaretShaper() /*throw()*/;
-		private:
-			void install(CaretShapeUpdater& updater) /*throw()*/;
-			void shape(win32::Handle<HBITMAP>& bitmap,
-				graphics::NativeSize& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/;
-			void uninstall() /*throw()*/;
-		private:
-			const TextViewer* viewer_;
-		};
-
-		/**
-		 * @c LocaleSensitiveCaretShaper defines caret shape based on active keyboard layout.
-		 * @note This class is not intended to be subclassed.
-		 */
-		class LocaleSensitiveCaretShaper : public CaretShaper,
-			public CaretListener, public CaretStateListener, public TextViewerInputStatusListener {
-		public:
-			explicit LocaleSensitiveCaretShaper(bool bold = false) /*throw()*/;
-		private:
-			// CaretShaper
-			void install(CaretShapeUpdater& updater) /*throw()*/;
-			void shape(win32::Handle<HBITMAP>& bitmap,
-				graphics::NativeSize& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/;
-			void uninstall() /*throw()*/;
-			// CaretListener
-			void caretMoved(const class Caret& self, const kernel::Region& oldRegion);
-			// CaretStateListener
-			void matchBracketsChanged(const Caret& self,
-				const std::pair<kernel::Position, kernel::Position>& oldPair, bool outsideOfView);
-			void overtypeModeChanged(const Caret& self);
-			void selectionShapeChanged(const Caret& self);
-			// TextViewerInputStatusListener
-			void textViewerIMEOpenStatusChanged() /*throw()*/;
-			void textViewerInputLanguageChanged() /*throw()*/;
-		private:
-			CaretShapeUpdater* updater_;	// weak ref.
-			bool bold_;
-		};
-
 #if 0
 		/**
 		 * Interface of objects which define how the text editors react to the users' keyboard
@@ -182,7 +93,6 @@ namespace ascension {
 		class KeyboardInputStrategy {
 		};
 #endif
-
 		/**
 		 * Interface of objects which define how the text editors react to the users' mouse input.
 		 * @note An instance of @c IMouseInputStrategy can't be shared multiple text viewers.
