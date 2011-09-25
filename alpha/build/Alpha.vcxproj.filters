@@ -284,6 +284,9 @@
     <ClCompile Include="..\..\ascension\src\corelib\text\character-iterator.cpp">
       <Filter>ascension\Source Files\corelib\text</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\caret-shaper.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alpha.hpp">
@@ -600,6 +603,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\text\character-iterator.hpp">
       <Filter>ascension\Header Files\corelib\text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\caret-shaper.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
