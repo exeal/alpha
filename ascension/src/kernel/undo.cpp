@@ -540,7 +540,6 @@ void Document::removeCompoundChangeListener(ICompoundChangeListener& listener) {
  * @throw DocumentAccessViolationException @a region intersects the inaccesible region
  * @throw NullPointerException Either @c text.end() returned @c null but @c text.beginning()
  *                             returned not @c null
- * @throw std#invalid_argument Either @a first is greater than @a last
  * @throw IllegalStateException The method was called in @c{IDocumentListener}s' notification
  * @throw IDocumentInput#ChangeRejectedException The input of the document rejected this change
  * @throw std#bad_alloc The internal memory allocation failed

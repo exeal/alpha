@@ -872,7 +872,8 @@ WordRule::WordRule(Token::Identifier id, const String* first, const String* last
  * @param separator The separator character in the string
  * @param caseSensitive Set @c false to enable caseless match
  * @throw NullPointerException @a first and/or @a last are @c null
- * @throw std#invalid_argument @a first &gt; last, or @a separator is a surrogate
+ * @throw text#InvalidScalarValueException @a separator is a surrogate
+ * @throw std#invalid_argument @a first &gt; last,
  */
 WordRule::WordRule(Token::Identifier id, const Char* first, const Char* last, Char separator, bool caseSensitive) : Rule(id) {
 	if(first == 0)
@@ -882,7 +883,7 @@ WordRule::WordRule(Token::Identifier id, const Char* first, const Char* last, Ch
 	else if(first >= last)
 		throw invalid_argument("first >= last");
 	else if(surrogates::isSurrogate(separator))
-		throw invalid_argument("the separator is a surrogate character.");
+		throw InvalidScalarValueException(separator);
 	list<String> words;
 	first = find_if(first, last, not1(bind1st(equal_to<Char>(), separator)));
 	for(const Char* p = first; p < last; first = ++p) {

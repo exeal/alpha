@@ -201,13 +201,16 @@ bool IdentifierSyntax::isWhiteSpace(CodePoint c, bool includeTab) const /*throw(
  * Overrides default identifier start character set.
  * @param adding The set of characters to add to the default ID_Start characters
  * @param subtracting The set of characters to subtract from the default ID_Start characters
- * @throw std#invalid_argument An isolated surrogate is found, or same character was found at both
- *                             @a adding and @a subtracting
+ * @throw InvalidScalarValueException An isolated surrogate is found, or same character was found
+ *                                    at both @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierStartCharacters(const String& adding, const String& subtracting) {
-	if(adding.end() != surrogates::searchIsolatedSurrogate(adding.begin(), adding.end())
-			|| subtracting.end() != surrogates::searchIsolatedSurrogate(subtracting.begin(), subtracting.end()))
-		throw invalid_argument("an isolated surrogate found.");
+	String::const_iterator isolatedSurrogate(surrogates::searchIsolatedSurrogate(adding.begin(), adding.end()));
+	if(isolatedSurrogate != adding.end())
+		throw InvalidScalarValueException(*isolatedSurrogate);
+	isolatedSurrogate = surrogates::searchIsolatedSurrogate(subtracting.begin(), subtracting.end());
+	if(isolatedSurrogate != subtracting.end())
+		throw InvalidScalarValueException(*isolatedSurrogate);
 	typedef utf::CharacterDecodeIterator<String::const_iterator> I;
 	implementOverrides(I(adding.begin(), adding.end()), I(adding.begin(), adding.end(), adding.end()),
 		I(subtracting.begin(), subtracting.end()), I(subtracting.begin(), subtracting.end(), subtracting.end()),
@@ -218,13 +221,16 @@ void IdentifierSyntax::overrideIdentifierStartCharacters(const String& adding, c
  * Overrides default identifier start character set.
  * @param adding The set of characters to add to the default ID_Start characters
  * @param subtracting The set of characters to subtract from the default ID_Start characters
- * @throw std#invalid_argument An isolated surrogate is found, or same character was found at both
- *                             @a adding and @a subtracting
+ * @throw InvalidScalarValueException An isolated surrogate is found, or same character was found
+ *                                    at both @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierStartCharacters(const set<CodePoint>& adding, const set<CodePoint>& subtracting) {
-	if(adding.end() != find_if(adding.begin(), adding.end(), ptr_fun(surrogates::isSurrogate))
-			|| subtracting.end() != find_if(subtracting.begin(), subtracting.end(), ptr_fun(surrogates::isSurrogate)))
-		throw invalid_argument("an isolated surrogate found.");
+	set<CodePoint>::const_iterator isolatedSurrogate(find_if(adding.begin(), adding.end(), ptr_fun(surrogates::isSurrogate)));
+	if(isolatedSurrogate != adding.end())
+		throw InvalidScalarValueException(*isolatedSurrogate);
+	isolatedSurrogate = find_if(subtracting.begin(), subtracting.end(), ptr_fun(surrogates::isSurrogate));
+	if(isolatedSurrogate != subtracting.end())
+		throw InvalidScalarValueException(*isolatedSurrogate);
 	implementOverrides(adding.begin(), adding.end(),
 		subtracting.begin(), subtracting.end(), addedIDStartCharacters_, subtractedIDStartCharacters_);
 }
@@ -233,13 +239,16 @@ void IdentifierSyntax::overrideIdentifierStartCharacters(const set<CodePoint>& a
  * Overrides standard identifier only continue character set.
  * @param adding The set of characters to add to standard ID_Continue characters
  * @param subtracting The set of characters to subtract to standard ID_Continue characters
- * @throw std#invalid_argument An isolated surrogate is found, or same character was found at both
- *                             @a adding and @a subtracting
+ * @throw InvalidScalarValueException An isolated surrogate is found, or same character was found
+ *                                    at both @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierNonStartCharacters(const String& adding, const String& subtracting) {
-	if(adding.end() != surrogates::searchIsolatedSurrogate(adding.begin(), adding.end())
-			|| subtracting.end() != surrogates::searchIsolatedSurrogate(subtracting.begin(), subtracting.end()))
-		throw invalid_argument("an isolated surrogate found.");
+	String::const_iterator isolatedSurrogate(surrogates::searchIsolatedSurrogate(adding.begin(), adding.end()));
+	if(isolatedSurrogate != adding.end())
+		throw InvalidScalarValueException(*isolatedSurrogate);
+	isolatedSurrogate = surrogates::searchIsolatedSurrogate(subtracting.begin(), subtracting.end());
+	if(isolatedSurrogate != subtracting.end())
+		throw InvalidScalarValueException(*isolatedSurrogate);
 	typedef utf::CharacterDecodeIterator<String::const_iterator> I;
 	implementOverrides(I(adding.begin(), adding.end()), I(adding.begin(), adding.end(), adding.end()),
 		I(subtracting.begin(), subtracting.end()), I(subtracting.begin(), subtracting.end(), subtracting.end()),
@@ -250,13 +259,16 @@ void IdentifierSyntax::overrideIdentifierNonStartCharacters(const String& adding
  * Overrides standard identifier only continue character set.
  * @param adding The set of characters to add to standard ID_Continue characters
  * @param subtracting The set of characters to subtract to standard ID_Continue characters
- * @throw std#invalid_argument An isolated surrogate is found, or same character was found at both
- *                             @a adding and @a subtracting
+ * @throw InvalidScalarValueException An isolated surrogate is found, or same character was found
+ *                                    at both @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierNonStartCharacters(const set<CodePoint>& adding, const set<CodePoint>& subtracting) {
-	if(adding.end() != find_if(adding.begin(), adding.end(), ptr_fun(surrogates::isSurrogate))
-			|| subtracting.end() != find_if(subtracting.begin(), subtracting.end(), ptr_fun(surrogates::isSurrogate)))
-		throw invalid_argument("an isolated surrogate found.");
+	set<CodePoint>::const_iterator isolatedSurrogate(find_if(adding.begin(), adding.end(), ptr_fun(surrogates::isSurrogate)));
+	if(isolatedSurrogate != adding.end())
+		throw InvalidScalarValueException(*isolatedSurrogate);
+	isolatedSurrogate = find_if(subtracting.begin(), subtracting.end(), ptr_fun(surrogates::isSurrogate));
+	if(isolatedSurrogate != subtracting.end())
+		throw InvalidScalarValueException(*isolatedSurrogate);
 	implementOverrides(adding.begin(), adding.end(),
 		subtracting.begin(), subtracting.end(), addedIDNonStartCharacters_, subtractedIDNonStartCharacters_);
 }
