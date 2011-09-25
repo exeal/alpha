@@ -415,11 +415,11 @@ bool CharacterDeletionCommand::perform() {
  * Constructor.
  * @param viewer The target text viewer
  * @param c The code point of the character to input
- * @throw std#invalid_argument @a c is not valid Unicode scalar value
+ * @throw text#InvalidScalarValueException @a c is not valid Unicode scalar value
  */
 CharacterInputCommand::CharacterInputCommand(TextViewer& viewer, CodePoint c) : Command(viewer), c_(c) {
 	if(!text::isScalarValue(c))
-		throw invalid_argument("the given code point is not valid Unicode scalar value.");
+		throw text::InvalidScalarValueException(c);
 }
 
 /**
