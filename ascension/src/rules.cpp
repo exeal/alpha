@@ -867,34 +867,30 @@ WordRule::WordRule(Token::Identifier id, const String* first, const String* last
 /**
  * Constructor.
  * @param id The identifier of the token which will be returned by the rule
- * @param first The start of the string
- * @param last The end of the string
+ * @param words The string contains the words separated by @a separator
  * @param separator The separator character in the string
  * @param caseSensitive Set @c false to enable caseless match
  * @throw NullPointerException @a first and/or @a last are @c null
  * @throw text#InvalidScalarValueException @a separator is a surrogate
- * @throw std#invalid_argument @a first &gt; last,
  */
-WordRule::WordRule(Token::Identifier id, const Char* first, const Char* last, Char separator, bool caseSensitive) : Rule(id) {
-	if(first == 0)
-		throw NullPointerException("first");
-	if(last == 0)
-		throw NullPointerException("last");
-	else if(first >= last)
-		throw invalid_argument("first >= last");
+WordRule::WordRule(Token::Identifier id, const StringPiece& words, Char separator, bool caseSensitive) : Rule(id) {
+	if(words.beginning() == 0 || words.end() == 0)
+		throw NullPointerException("words");
 	else if(surrogates::isSurrogate(separator))
 		throw InvalidScalarValueException(separator);
-	list<String> words;
-	first = find_if(first, last, not1(bind1st(equal_to<Char>(), separator)));
-	for(const Char* p = first; p < last; first = ++p) {
-		p = find(first, last, separator);
-		if(p == first)
+	list<String> wordList;
+	const Char* p = find_if(words.beginning(), words.end(), not1(bind1st(equal_to<Char>(), separator)));
+	for(const Char* next; ; p = ++next) {
+		next = find(p, words.end(), separator);
+		if(next == p)
 			continue;
-		words.push_back(String(first, p));
+		wordList.push_back(String(p, next));
+		if(next == words.end())
+			break;
 	}
-	if(words.empty())
+	if(wordList.empty())
 		throw invalid_argument("the input string includes no words.");
-	words_ = new HashTable(words.begin(), words.end(), caseSensitive);
+	words_ = new HashTable(wordList.begin(), wordList.end(), caseSensitive);
 }
 
 /// Destructor.
