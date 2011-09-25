@@ -414,7 +414,7 @@ namespace ascension {
 				void next();
 				void previous();
 			private:
-				TextViewer& viewer_;
+				const TextViewer& viewer_;
 				const bool tracksOutOfViewport_;
 				graphics::font::VisualLine line_;
 				std::pair<graphics::Scalar, graphics::NativePoint> baseline_;
@@ -768,12 +768,21 @@ namespace ascension {
 			// freeze information
 			class FreezeRegister {
 			public:
-				FreezeRegister() /*throw()*/ : count_(0) {freeze(); unfreeze();}
+				FreezeRegister() /*throw()*/ : count_(0) {
+					freeze();
+					unfreeze();
+				}
 				void freeze() /*throw()*/ {++count_;}
-				void addLinesToRedraw(const Range<length_t>& lines) {assert(isFrozen()); linesToRedraw_ = united(linesToRedraw_, lines);}
+				void addLinesToRedraw(const Range<length_t>& lines) {
+					assert(isFrozen());
+					linesToRedraw_ = merged(linesToRedraw_, lines);
+				}
 				bool isFrozen() const /*throw()*/ {return count_ != 0;}
 				const Range<length_t>& linesToRedraw() const /*throw()*/ {return linesToRedraw_;}
-				void resetLinesToRedraw(const Range<length_t>& lines) {assert(isFrozen()); linesToRedraw_ = lines;}
+				void resetLinesToRedraw(const Range<length_t>& lines) {
+					assert(isFrozen());
+					linesToRedraw_ = lines;
+				}
 				Range<length_t> unfreeze() {
 					assert(isFrozen());
 					const Range<length_t> temp(linesToRedraw());
