@@ -96,18 +96,6 @@ namespace {
 				session->incrementalSearcher().abort();
 		}
 	}
-	inline NativeSize getCurrentCharacterSize(const TextViewer& viewer) {
-		const Scalar cy = viewer.textRenderer().defaultFont()->metrics().cellHeight();
-		const Caret& caret = viewer.caret();
-		if(k::locations::isEndOfLine(caret))	// EOL
-			return geometry::make<NativeSize>(viewer.textRenderer().defaultFont()->metrics().averageCharacterWidth(), cy);
-		else {
-			const TextLayout& layout = viewer.textRenderer().layouts().at(caret.line());
-			const Scalar leading = geometry::x(layout.location(caret.column(), TextLayout::LEADING));
-			const Scalar trailing = geometry::x(layout.location(caret.column(), TextLayout::TRAILING));
-			return geometry::make<NativeSize>(static_cast<Scalar>(detail::distance(leading, trailing)), cy);
-		}
-	}
 	inline void endIncrementalSearch(TextViewer& viewer) /*throw()*/ {
 		if(texteditor::Session* session = viewer.document().session()) {
 			if(session->incrementalSearcher().isRunning())
@@ -1227,7 +1215,7 @@ void TextViewer::recreateCaret() {
 
 	NativeSize solidSize(geometry::make<NativeSize>(0, 0));
 	if(imeComposingCharacter_)
-		solidSize = getCurrentCharacterSize(*this);
+		solidSize = currentCharacterSize(*this);
 	else if(imeCompositionActivated_)
 		geometry::dx(solidSize) = geometry::dy(solidSize) = 1;
 	else if(caretShape_.shaper.get() != 0)

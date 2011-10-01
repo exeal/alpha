@@ -287,6 +287,12 @@
     <ClCompile Include="..\..\ascension\src\viewer\caret-shaper.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\base\scrollable-windows.cpp">
+      <Filter>ascension\Source Files\viewer\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\image-windows.cpp">
+      <Filter>ascension\Source Files\graphics</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alpha.hpp">
@@ -606,6 +612,12 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\caret-shaper.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\scrollable.hpp">
+      <Filter>ascension\Header Files\viewer\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\image.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

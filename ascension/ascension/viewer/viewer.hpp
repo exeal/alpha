@@ -710,7 +710,7 @@ namespace ascension {
 				std::tr1::shared_ptr<CaretShaper> shaper;
 				presentation::ReadingDirection readingDirection;
 				int width;
-				win32::Handle<HBITMAP> bitmap;
+				std::auto_ptr<graphics::Image> bitmap;
 				CaretShape() /*throw()*/ : readingDirection(presentation::LEFT_TO_RIGHT), width(0) {}
 			} caretShape_;
 
