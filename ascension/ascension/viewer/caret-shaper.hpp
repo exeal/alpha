@@ -10,6 +10,7 @@
 #ifndef ASCENSION_CARET_SHAPER_HPP
 #define ASCENSION_CARET_SHAPER_HPP
 #include <ascension/graphics/geometry.hpp>			// graphics.NativeSize
+#include <ascension/graphics/image.hpp>				// graphics.Image
 #include <ascension/kernel/position.hpp>			// kernel.Position, kernel.Region
 #include <ascension/presentation/writing-mode.hpp>	// presentation.ReadDirection
 #include <ascension/viewer/caret-observers.hpp>		// CaretListener, CaretStateListener
@@ -23,6 +24,8 @@ namespace ascension {
 		// these classes are also declared by *-observers.hpp
 		class Caret;
 		class TextViewer;
+
+		graphics::NativeSize currentCharacterSize(const TextViewer& viewer);
 
 		/**
 		 * @c CaretShapeUpdater updates the caret of the text viewer.
@@ -56,14 +59,14 @@ namespace ascension {
 			virtual void install(CaretShapeUpdater& updater) /*throw()*/ = 0;
 			/**
 			 * Returns the bitmap or the solid size defines caret shape.
-			 * @param[out] bitmap The bitmap defines caret shape. if @c null, @a solidSize is used
-			 *                    and the shape is solid
-			 * @param[out] solidSize The size of solid caret. If @a bitmap is not @c null, this
+			 * @param[out] image The bitmap defines caret shape. If @c null, @a solidSize is used
+			 *                   and the shape is solid
+			 * @param[out] solidSize The size of solid caret. If @a image is not @c null, this
 			 *                       parameter is ignored
 			 * @param[out] readingDirection The orientation of the caret. this value is used for
 			 *                              hot spot calculation
 			 */
-			virtual void shape(win32::Handle<HBITMAP>& bitmap,
+			virtual void shape(graphics::Image& image,
 				graphics::NativeSize& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/ = 0;
 			/// Uninstalls the shaper.
 			virtual void uninstall() /*throw()*/ = 0;
@@ -79,7 +82,7 @@ namespace ascension {
 			DefaultCaretShaper() /*throw()*/;
 		private:
 			void install(CaretShapeUpdater& updater) /*throw()*/;
-			void shape(win32::Handle<HBITMAP>& bitmap,
+			void shape(graphics::Image& image,
 				graphics::NativeSize& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/;
 			void uninstall() /*throw()*/;
 		private:
@@ -97,7 +100,7 @@ namespace ascension {
 		private:
 			// CaretShaper
 			void install(CaretShapeUpdater& updater) /*throw()*/;
-			void shape(win32::Handle<HBITMAP>& bitmap,
+			void shape(graphics::Image& image,
 				graphics::NativeSize& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/;
 			void uninstall() /*throw()*/;
 			// CaretListener

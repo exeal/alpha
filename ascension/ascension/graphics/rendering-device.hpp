@@ -20,15 +20,45 @@ namespace ascension {
 		public:
 			/// Destructor.
 			virtual ~RenderingDevice() /*throw()*/ {}
-			virtual std::auto_ptr<RenderingContext2D> createGraphicContext() const = 0;
-			virtual NativeSize viewportSize() const = 0;
+
+			/// Creates and returns the rendering context.
+			virtual std::auto_ptr<RenderingContext2D> createRenderingContext() const = 0;
+
+			/// Returns the bit depth (number of bit planes) of the device.
+			virtual int depth() = 0;
+			/// Returns the number of colors available for the rendering device or
+			/// @c std#numeric_limits&lt;uint32_t&gt;::max().
+			virtual uint32_t numberOfColors() = 0;
+
+			/// Returns the width of the rendering device in device units.
+			virtual geometry::Coordinate<NativeSize>::Type height() const = 0;
+			/// Returns the height of the rendering device in millimeters.
+			virtual geometry::Coordinate<NativeSize>::Type heightInMillimeters() const = 0;
+			/// Returns the horizontal resolution of the device in dots per inch.
+			virtual geometry::Coordinate<NativeSize>::Type logicalDpiX() const = 0;
+			/// Returns the vertical resolution of the device in dots per inch.
+			virtual geometry::Coordinate<NativeSize>::Type logicalDpiY() const = 0;
+			/// Returns the width of the rendering device in device units.
+			virtual geometry::Coordinate<NativeSize>::Type width() const = 0;
+			/// Returns the width of the rendering device in millimeters.
+			virtual geometry::Coordinate<NativeSize>::Type widthInMillimeters() const = 0;
+			/// Returns the horizontal resolution of the device in dots per inch.
+			virtual geometry::Coordinate<NativeSize>::Type physicalDpiX() const = 0;
+			/// Returns the vertical resolution of the device in dots per inch.
+			virtual geometry::Coordinate<NativeSize>::Type physicalDpiY() const = 0;
+
+			NativeSize size() const {
+				return geometry::make<NativeSize>(width(), height());
+			}
+			NativeSize sizeInMillimeters() const {
+				return geometry::make<NativeSize>(widthInMillimeters(), heightInMillimeters());
+			}
 		};
 
 		class Screen : public RenderingDevice {
 		public:
 			static Screen& instance();
 			std::auto_ptr<RenderingContext2D> createGraphicContext() const;
-			NativeSize viewportSize() const = 0;
 		};
 
 	}

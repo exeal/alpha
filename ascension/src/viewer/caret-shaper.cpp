@@ -20,6 +20,20 @@ using namespace std;
 namespace k = ascension::kernel;
 
 
+inline NativeSize viewers::currentCharacterSize(const TextViewer& viewer) {
+	const Scalar cy = viewer.textRenderer().defaultFont()->metrics().cellHeight();
+	const Caret& caret = viewer.caret();
+	if(k::locations::isEndOfLine(caret))	// EOL
+		return geometry::make<NativeSize>(viewer.textRenderer().defaultFont()->metrics().averageCharacterWidth(), cy);
+	else {
+		const TextLayout& layout = viewer.textRenderer().layouts().at(caret.line());
+		const Scalar leading = geometry::x(layout.location(caret.column(), TextLayout::LEADING));
+		const Scalar trailing = geometry::x(layout.location(caret.column(), TextLayout::TRAILING));
+		return geometry::make<NativeSize>(static_cast<Scalar>(detail::distance(leading, trailing)), cy);
+	}
+}
+
+
 // CaretShapeUpdater ////////////////////////////////////////////////////////
 
 /**
@@ -52,7 +66,7 @@ void DefaultCaretShaper::install(CaretShapeUpdater& updater) /*throw()*/ {
 }
 
 /// @see CaretShaper#shape
-void DefaultCaretShaper::shape(win32::Handle<HBITMAP>&, NativeSize& solidSize, ReadingDirection& readingDirection) /*throw()*/ {
+void DefaultCaretShaper::shape(Image&, NativeSize& solidSize, ReadingDirection& readingDirection) /*throw()*/ {
 	DWORD width;
 	if(::SystemParametersInfo(SPI_GETCARETWIDTH, 0, &width, 0) == 0)
 		width = 1;	// NT4 does not support SPI_GETCARETWIDTH
@@ -80,24 +94,8 @@ namespace {
 #endif // !LANG_LAO
 		return id == LANG_THAI || id == LANG_LAO;
 	}
-	/**
-	 * Returns the bitmap has specified size.
-	 * @param dc The device context
-	 * @param width The width of the bitmap
-	 * @param height The height of the bitmap
-	 * @return The bitmap. This value is allocated via the global @c operator @c new
-	 */
-	inline BITMAPINFO* prepareCaretBitmap(const win32::Handle<HDC>& dc, uint16_t width, uint16_t height) {
-		BITMAPINFO* const info =
-			static_cast<BITMAPINFO*>(::operator new(sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * width * height));
-		BITMAPINFOHEADER& header = info->bmiHeader;
-		memset(&header, 0, sizeof(BITMAPINFOHEADER));
-		header.biSize = sizeof(BITMAPINFOHEADER);
-		header.biWidth = width;
-		header.biHeight = -height;
-		header.biBitCount = sizeof(RGBQUAD) * 8;//::GetDeviceCaps(dc.get(), BITSPIXEL);
-		header.biPlanes = static_cast<WORD>(::GetDeviceCaps(dc.get(), PLANES));
-		return info;
+	inline uint32_t packColor(const Color& color) {
+		return (0xff << 12) | (color.red() << 8) | (color.green() << 4) | color.blue();
 	}
 	/**
 	 * Creates the bitmap for solid caret.
@@ -106,14 +104,11 @@ namespace {
 	 * @param color The color
 	 * @return The bitmap
 	 */
-	inline win32::Handle<HBITMAP> createSolidCaretBitmap(uint16_t width, uint16_t height, const RGBQUAD& color) {
-		win32::Handle<HDC> dc(detail::screenDC());
-		BITMAPINFO* info = prepareCaretBitmap(dc, width, height);
-		uninitialized_fill(info->bmiColors, info->bmiColors + width * height, color);
-		win32::Handle<HBITMAP> result(::CreateDIBitmap(
-			dc.get(), &info->bmiHeader, CBM_INIT, info->bmiColors, info, DIB_RGB_COLORS), &::DeleteObject);
-		::operator delete(info);
-		return result;
+	inline auto_ptr<Image> createSolidCaretBitmap(uint16_t width, uint16_t height, const Color& color) {
+		const AutoBuffer<uint32_t> pattern(new uint32_t[width * height]);
+		uninitialized_fill(pattern.get(), pattern.get() + (width * height), packColor(color));
+		return auto_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(
+			pattern.get()), geometry::make<NativeSize>(width, height), Image::ARGB_32));
 	}
 	/**
 	 * Creates the bitmap for RTL caret.
@@ -122,51 +117,45 @@ namespace {
 	 * @param color The color
 	 * @return The bitmap
 	 */
-	inline win32::Handle<HBITMAP> createRTLCaretBitmap(uint16_t height, bool bold, const RGBQUAD& color) {
-		win32::Handle<HDC> dc(detail::screenDC());
-		const RGBQUAD white = {0x00, 0x00, 0x00, 0x00};
-		BITMAPINFO* info = prepareCaretBitmap(dc, 5, height);
+	inline auto_ptr<Image> createRTLCaretBitmap(uint16_t height, bool bold, const Color& color) {
+		const uint32_t white = 0, black = packColor(color);
+		AutoBuffer<uint32_t> pattern(new uint32_t[5 * height]);
 		assert(height > 3);
-		uninitialized_fill(info->bmiColors, info->bmiColors + 5 * height, white);
-		info->bmiColors[0] = info->bmiColors[1] = info->bmiColors[2]
-			= info->bmiColors[6] = info->bmiColors[7] = info->bmiColors[12] = color;
+		uninitialized_fill(pattern.get(), pattern.get() + 5 * height, white);
+		pattern[0] = pattern[1] = pattern[2] = pattern[6] = pattern[7] = pattern[12] = black;
 		for(uint16_t i = 0; i < height; ++i) {
-			info->bmiColors[i * 5 + 3] = color;
+			pattern[i * 5 + 3] = black;
 			if(bold)
-				info->bmiColors[i * 5 + 4] = color;
+				pattern[i * 5 + 4] = black;
 		}
-		win32::Handle<HBITMAP> result(::CreateDIBitmap(
-			dc.get(), &info->bmiHeader, CBM_INIT, info->bmiColors, info, DIB_RGB_COLORS), &::DeleteObject);
-		::operator delete(info);
-		return result;
+		return auto_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(
+			pattern.get()), geometry::make<NativeSize>(5, height), Image::ARGB_32));
 	}
 	/**
 	 * Creates the bitmap for Thai or Lao caret.
-	 * @param height the height of the image in pixels
-	 * @param bold set @c true to create a bold shape
-	 * @param color the color
+	 * @param height The height of the image in pixels
+	 * @param bold Set @c true to create a bold shape
+	 * @param color The color
 	 * @return The bitmap
 	 */
-	inline win32::Handle<HBITMAP> createTISCaretBitmap(uint16_t height, bool bold, const RGBQUAD& color) {
-		win32::Handle<HDC> dc(detail::screenDC());
-		const RGBQUAD white = {0x00, 0x00, 0x00, 0x00};
+	inline auto_ptr<Image> createTISCaretBitmap(uint16_t height, bool bold, const Color& color) {
+		const uint32_t white = 0, black = packColor(color);
 		const uint16_t width = max<uint16_t>(height / 8, 3);
-		BITMAPINFO* info = prepareCaretBitmap(dc, width, height);
+		AutoBuffer<uint32_t> pattern(new uint32_t[width * height]);
 		assert(height > 3);
-		uninitialized_fill(info->bmiColors, info->bmiColors + width * height, white);
+		uninitialized_fill(pattern.get(), pattern.get() + width * height, white);
 		for(uint16_t y = 0; y < height - 1; ++y) {
-			info->bmiColors[y * width] = color;
-			if(bold) info->bmiColors[y * width + 1] = color;
+			pattern[y * width] = black;
+			if(bold)
+				pattern[y * width + 1] = black;
 		}
 		if(bold)
 			for(uint16_t x = 2; x < width; ++x)
-				info->bmiColors[width * (height - 2) + x] = color;
+				pattern[width * (height - 2) + x] = black;
 		for(uint16_t x = 0; x < width; ++x)
-			info->bmiColors[width * (height - 1) + x] = color;
-		win32::Handle<HBITMAP> result(::CreateDIBitmap(
-			dc.get(), &info->bmiHeader, CBM_INIT, info->bmiColors, info, DIB_RGB_COLORS), &::DeleteObject);
-		::operator delete(info);
-		return result;
+			pattern[width * (height - 1) + x] = black;
+		return auto_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(
+			pattern.get()), geometry::make<NativeSize>(width, height), Image::ARGB_32));
 	}
 } // namespace @0
 
@@ -200,7 +189,7 @@ void LocaleSensitiveCaretShaper::selectionShapeChanged(const Caret&) {
 
 /// @see CaretShaper#shape
 void LocaleSensitiveCaretShaper::shape(
-		win32::Handle<HBITMAP>& bitmap, NativeSize& solidSize, ReadingDirection& readingDirection) /*throw()*/ {
+		Image& image, NativeSize& solidSize, ReadingDirection& readingDirection) /*throw()*/ {
 	const Caret& caret = updater_->textViewer().caret();
 	const bool overtype = caret.isOvertypeMode() && isSelectionEmpty(caret);
 
@@ -208,7 +197,7 @@ void LocaleSensitiveCaretShaper::shape(
 		geometry::dx(solidSize) = bold_ ? 2 : 1;	// this ignores the system setting...
 		geometry::dy(solidSize) = updater_->textViewer().textRenderer().defaultFont()->metrics().cellHeight();
 	} else	// use the width of the glyph when overtype mode
-		solidSize = getCurrentCharacterSize(updater_->textViewer());
+		solidSize = currentCharacterSize(updater_->textViewer());
 	readingDirection = LEFT_TO_RIGHT;
 
 	HIMC imc = ::ImmGetContext(updater_->textViewer().identifier().get());
