@@ -19,7 +19,7 @@
 #include <ascension/viewer/content-assist.hpp>
 #include <ascension/viewer/ruler.hpp>
 #include <ascension/viewer/viewer-observers.hpp>
-#include <ascension/viewer/base/widget.hpp>
+#include <ascension/viewer/base/scrollable.hpp>
 #include <ascension/win32/com/unknown-impl.hpp>
 #include <set>
 #include <algorithm>
