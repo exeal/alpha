@@ -1206,39 +1206,6 @@ void TextViewer::paint(PaintContext& context) {
 	spacePainter_.paint(context);
 }
 
-/// Recreates and shows the caret. If the viewer does not have focus, nothing heppen.
-void TextViewer::recreateCaret() {
-	if(!hasFocus())
-		return;
-	::DestroyCaret();
-	caretShape_.bitmap.reset();
-
-	NativeSize solidSize(geometry::make<NativeSize>(0, 0));
-	if(imeComposingCharacter_)
-		solidSize = currentCharacterSize(*this);
-	else if(imeCompositionActivated_)
-		geometry::dx(solidSize) = geometry::dy(solidSize) = 1;
-	else if(caretShape_.shaper.get() != 0)
-		caretShape_.shaper->shape(caretShape_.bitmap, solidSize, caretShape_.readingDirection);
-	else {
-		DefaultCaretShaper s;
-		CaretShapeUpdater u(*this);
-		static_cast<CaretShaper&>(s).install(u);
-		static_cast<CaretShaper&>(s).shape(caretShape_.bitmap, solidSize, caretShape_.readingDirection);
-		static_cast<CaretShaper&>(s).uninstall();
-	}
-
-	if(caretShape_.bitmap.get() != 0) {
-		::CreateCaret(identifier().get(), caretShape_.bitmap.get(), 0, 0);
-		BITMAP bitmap;
-		::GetObjectW(caretShape_.bitmap.get(), sizeof(HBITMAP), &bitmap);
-		caretShape_.width = bitmap.bmWidth;
-	} else
-		::CreateCaret(identifier().get(), 0, caretShape_.width = geometry::dx(solidSize), geometry::dy(solidSize));
-	::ShowCaret(identifier().get());
-	updateCaretPosition();
-}
-
 /**
  * Redraws the specified line on the view.
  * If the viewer is frozen, redraws after unfrozen.
@@ -1631,29 +1598,6 @@ void TextViewer::unfreeze() {
 	}
 }
 
-/// Moves the caret to valid position with current position, scroll context, and the fonts.
-void TextViewer::updateCaretPosition() {
-	if(!hasFocus() || isFrozen())
-		return;
-
-	NativePoint p(clientXYForCharacter(caret(), false, TextLayout::LEADING));
-	const PhysicalFourSides<Scalar> spaces(xspaceWidths());
-	NativeRectangle textArea(bounds(false));
-	assert(geometry::isNormalized(textArea));
-	geometry::range<geometry::X_COORDINATE>(textArea) = makeRange(
-		geometry::left(textArea) + spaces.left, geometry::right(textArea) - spaces.right - 1);
-	geometry::range<geometry::Y_COORDINATE>(textArea) = makeRange(
-		geometry::top(textArea) + spaces.top, geometry::bottom(textArea) - spaces.bottom);
-
-	if(!geometry::includes(textArea, p))
-		geometry::y(p) = -renderer_->defaultFont()->metrics().linePitch();	// "hide" the caret
-	else if(caretShape_.readingDirection == RIGHT_TO_LEFT
-			|| renderer_->layouts()[caret().line()].bidiEmbeddingLevel(caret().column()) % 2 == 1)
-		geometry::x(p) -= caretShape_.width;
-	::SetCaretPos(geometry::x(p), geometry::y(p));
-	updateIMECompositionWindowPosition();
-}
-
 /// Updates the scroll information.
 void TextViewer::updateScrollBars() {
 //	checkInitialization();
@@ -1676,7 +1620,7 @@ void TextViewer::updateScrollBars() {
 		scrollTo(minimum, -1, true);
 	assert(ASCENSION_GET_SCROLL_MINIMUM(scrollInfo_.horizontal) > 0 || scrollInfo_.horizontal.position == 0);
 	if(!isFrozen()) {
-		ScrollBar& scrollBar = horizontalScrollBar();
+		ScrollProperties<int>& scrollBar = horizontalScrollBar();
 		scrollBar.setRange(makeRange<int>(0, configuration_.lineWrap.wrapsAtWindowEdge() ? 0 : scrollInfo_.horizontal.maximum));
 		scrollBar.setPageStep(scrollInfo_.horizontal.pageSize);
 		scrollBar.setPosition(scrollInfo_.horizontal.position);
@@ -1703,7 +1647,7 @@ void TextViewer::updateScrollBars() {
 		scrollTo(-1, minimum, true);
 	assert(ASCENSION_GET_SCROLL_MINIMUM(scrollInfo_.vertical) > 0 || scrollInfo_.vertical.position == 0);
 	if(!isFrozen()) {
-		ScrollBar& scrollBar = verticalScrollBar();
+		ScrollProperties<int>& scrollBar = verticalScrollBar();
 		scrollBar.setRange(makeRange(0, scrollInfo_.vertical.maximum));
 		scrollBar.setPageStep(scrollInfo_.vertical.pageSize);
 		scrollBar.setPosition(scrollInfo_.vertical.position);
@@ -2795,7 +2739,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 			// shift => keep the anchor and move the caret to the cursor position
 			// ctrl  => begin word selection
 			// alt   => begin rectangle selection
-			const k::Position to(viewer_->characterForClientXY(position, TextLayout::TRAILING));
+			const k::Position to(viewer_->characterForLocalPoint(position, TextLayout::TRAILING));
 			state_ = EXTENDING_CHARACTER_SELECTION;
 			if((modifiers & (UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN)) != 0) {
 				if((modifiers & UserInput::CONTROL_DOWN) != 0) {

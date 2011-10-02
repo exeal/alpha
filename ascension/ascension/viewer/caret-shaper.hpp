@@ -25,21 +25,21 @@ namespace ascension {
 		class Caret;
 		class TextViewer;
 
-		graphics::NativeSize currentCharacterSize(const TextViewer& viewer);
+		graphics::NativeSize currentCharacterSize(const Caret& caret);
 
 		/**
 		 * @c CaretShapeUpdater updates the caret of the text viewer.
-		 * @see TextViewer, CaretShaper
+		 * @see Caret, CaretShaper
 		 */
 		class CaretShapeUpdater {
 			ASCENSION_UNASSIGNABLE_TAG(CaretShapeUpdater);
 		public:
-			TextViewer& textViewer() /*throw()*/;
+			Caret& caret() /*throw()*/;
 			void update() /*throw()*/;
 		private:
-			CaretShapeUpdater(TextViewer& viewer) /*throw()*/;
-			TextViewer& viewer_;
-			friend class TextViewer;
+			explicit CaretShapeUpdater(Caret& caret) /*throw()*/;
+			Caret& caret_;
+			friend class Caret;
 		};
 
 		/**
@@ -51,12 +51,6 @@ namespace ascension {
 		public:
 			/// Destructor.
 			virtual ~CaretShaper() /*throw()*/ {}
-		private:
-			/**
-			 * Installs the shaper.
-			 * @param updater The caret updater which notifies the text viewer to update the caret
-			 */
-			virtual void install(CaretShapeUpdater& updater) /*throw()*/ = 0;
 			/**
 			 * Returns the bitmap or the solid size defines caret shape.
 			 * @param[out] image The bitmap defines caret shape. If @c null, @a solidSize is used
@@ -66,11 +60,18 @@ namespace ascension {
 			 * @param[out] readingDirection The orientation of the caret. this value is used for
 			 *                              hot spot calculation
 			 */
-			virtual void shape(graphics::Image& image,
-				graphics::NativeSize& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/ = 0;
+			virtual void shape(
+				std::auto_ptr<graphics::Image>& image, graphics::NativeSize& solidSize,
+				presentation::ReadingDirection& readingDirection) const /*throw()*/ = 0;
+		private:
+			/**
+			 * Installs the shaper.
+			 * @param updater The caret updater which notifies the text viewer to update the caret
+			 */
+			virtual void install(CaretShapeUpdater& updater) /*throw()*/ = 0;
 			/// Uninstalls the shaper.
 			virtual void uninstall() /*throw()*/ = 0;
-			friend class TextViewer;
+			friend class Caret;
 		};
 
 		/**
@@ -82,8 +83,9 @@ namespace ascension {
 			DefaultCaretShaper() /*throw()*/;
 		private:
 			void install(CaretShapeUpdater& updater) /*throw()*/;
-			void shape(graphics::Image& image,
-				graphics::NativeSize& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/;
+			void shape(
+				std::auto_ptr<graphics::Image>& image, graphics::NativeSize& solidSize,
+				presentation::ReadingDirection& readingDirection) const /*throw()*/;
 			void uninstall() /*throw()*/;
 		private:
 			const TextViewer* viewer_;
@@ -100,8 +102,9 @@ namespace ascension {
 		private:
 			// CaretShaper
 			void install(CaretShapeUpdater& updater) /*throw()*/;
-			void shape(graphics::Image& image,
-				graphics::NativeSize& solidSize, presentation::ReadingDirection& readingDirection) /*throw()*/;
+			void shape(
+				std::auto_ptr<graphics::Image>& image, graphics::NativeSize& solidSize,
+				presentation::ReadingDirection& readingDirection) const /*throw()*/;
 			void uninstall() /*throw()*/;
 			// CaretListener
 			void caretMoved(const class Caret& self, const kernel::Region& oldRegion);

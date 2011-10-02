@@ -15,7 +15,6 @@
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/text-style.hpp>
 #include <ascension/viewer/caret-observers.hpp>
-#include <ascension/viewer/caret-shaper.hpp>
 #include <ascension/viewer/content-assist.hpp>
 #include <ascension/viewer/ruler.hpp>
 #include <ascension/viewer/viewer-observers.hpp>
@@ -360,7 +359,6 @@ namespace ascension {
 			void removeDisplaySizeListener(DisplaySizeListener& listener);
 			void removeInputStatusListener(TextViewerInputStatusListener& listener);
 			void removeViewportListener(ViewportListener& listener);
-			void setCaretShaper(std::tr1::shared_ptr<CaretShaper> shaper) /*throw()*/;
 			void setMouseInputStrategy(MouseInputStrategy* newStrategy, bool delegateOwnership);
 			// attributes
 			const Configuration& configuration() const /*throw()*/;
@@ -439,9 +437,7 @@ namespace ascension {
 			graphics::Scalar mapViewportIpdToLineLayout(length_t line, graphics::Scalar ipd) const;
 			graphics::font::VisualLine mapViewportBpdToLine(
 				graphics::Scalar bpd, bool* snapped = 0) const /*throw()*/;
-			void recreateCaret();
 			void repaintRuler();
-			void updateCaretPosition();
 			void updateIMECompositionWindowPosition();
 			void updateScrollBars();
 
@@ -705,15 +701,6 @@ namespace ascension {
 				Range<length_t> linesToRedraw_;
 			} freezeRegister_;
 
-			// a bitmap for caret presentation
-			struct CaretShape {
-				std::tr1::shared_ptr<CaretShaper> shaper;
-				presentation::ReadingDirection readingDirection;
-				int width;
-				std::auto_ptr<graphics::Image> bitmap;
-				CaretShape() /*throw()*/ : readingDirection(presentation::LEFT_TO_RIGHT), width(0) {}
-			} caretShape_;
-
 			// input state
 			bool imeCompositionActivated_, imeComposingCharacter_;
 			unsigned long mouseInputDisabledCount_;
@@ -910,12 +897,6 @@ inline void TextViewer::removeViewportListener(ViewportListener& listener) {view
  */
 inline unsigned long TextViewer::scrollRate(bool horizontal) const /*throw()*/ {
 	return 1/*horizontal ? scrollInfo_.horizontal.rate : scrollInfo_.vertical.rate*/;}
-
-/**
- * Sets the caret shaper.
- * @param shaper The new caret shaper
- */
-inline void TextViewer::setCaretShaper(std::tr1::shared_ptr<CaretShaper> shaper) {caretShape_.shaper = shaper;}
 
 /// Returns the text renderer.
 inline TextViewer::Renderer& TextViewer::textRenderer() /*throw()*/ {return *renderer_;}
