@@ -293,6 +293,9 @@
     <ClCompile Include="..\..\ascension\src\graphics\image-windows.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\visual-point.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alpha.hpp">
@@ -618,6 +621,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\image.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\visual-point.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
