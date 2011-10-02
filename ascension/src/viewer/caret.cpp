@@ -5,13 +5,17 @@
  * @date 2008-2010 separated from point.cpp
  */
 
-#undef MANAH_OVERRIDDEN_FILE
-static const char MANAH_OVERRIDDEN_FILE[] = __FILE__;
-
+#include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/viewer.hpp>
-#include <ascension/session.hpp>
+#include <ascension/corelib/text/break-iterator.hpp>
+#include <ascension/corelib/text/character-property.hpp>
+#include <ascension/corelib/text/utf.hpp>
+#include <ascension/kernel/document-character-iterator.hpp>
+#include <ascension/text-editor/input-sequence-checker.hpp>
+#include <ascension/text-editor/session.hpp>
 
 using namespace ascension;
+using namespace ascension::graphics;
 using namespace ascension::kernel;
 using namespace ascension::viewers;
 using namespace ascension::presentation;
@@ -390,31 +394,29 @@ void utils::recenter(VisualPoint& p) {
 void utils::show(VisualPoint& p) {
 	TextViewer& viewer = p.textViewer();
 	const Position np(p.normalized());
-	const TextRenderer& renderer = viewer.textRenderer();
+	const font::TextRenderer& renderer = viewer.textRenderer();
 	const length_t visibleLines = viewer.numberOfVisibleLines();
 	win32::AutoZeroSize<SCROLLINFO> si;
 	POINT to = {-1, -1};
 
 	// for vertical direction
-	si.fMask = SIF_POS;
-	viewer.getScrollInformation(SB_VERT, si);
-	if(p.visualLine() < si.nPos * viewer.scrollRate(false))	// 画面より上
+	if(p.visualLine() < viewer.verticalScrollBar().position() * viewer.scrollRate(false))	// 画面より上
 		to.y = static_cast<long>(p.visualLine() * viewer.scrollRate(false));
-	else if(p.visualLine() - si.nPos * viewer.scrollRate(false) > visibleLines - 1)	// 画面より下
+	else if(p.visualLine() - viewer.verticalScrollBar().position() * viewer.scrollRate(false) > visibleLines - 1)	// 画面より下
 		to.y = static_cast<long>((p.visualLine() - visibleLines + 1) * viewer.scrollRate(false));
 	if(to.y < -1)
 		to.y = 0;
 
 	// for horizontal direction
 	if(!viewer.configuration().lineWrap.wrapsAtWindowEdge()) {
+		const font::Font::Metrics& fontMetrics = renderer.defaultFont()->metrics();
 		const length_t visibleColumns = viewer.numberOfVisibleColumns();
-		const ulong x = renderer.lineLayout(np.line).location(np.column, LineLayout::LEADING).x + renderer.lineIndent(np.line, 0);
-		viewer.getScrollInformation(SB_HORZ, si);
-		const ulong scrollOffset = si.nPos * viewer.scrollRate(true) * renderer.textMetrics().averageCharacterWidth();
+		const Scalar x = geometry::x(renderer.layouts().at(np.line).location(np.column, font::TextLayout::LEADING)) + renderer.lineIndent(np.line, 0);
+		const Scalar scrollOffset = viewer.horizontalScrollBar().position() * viewer.scrollRate(true) * fontMetrics.averageCharacterWidth();
 		if(x <= scrollOffset)	// 画面より左
-			to.x = x / renderer.textMetrics().averageCharacterWidth() - visibleColumns / 4;
-		else if(x >= (si.nPos * viewer.scrollRate(true) + visibleColumns) * renderer.textMetrics().averageCharacterWidth())	// 画面より右
-			to.x = x / renderer.textMetrics().averageCharacterWidth() - visibleColumns * 3 / 4;
+			to.x = x / fontMetrics.averageCharacterWidth() - visibleColumns / 4;
+		else if(x >= (viewer.horizontalScrollBar().position() * viewer.scrollRate(true) + visibleColumns) * fontMetrics.averageCharacterWidth())	// 画面より右
+			to.x = x / fontMetrics.averageCharacterWidth() - visibleColumns * 3 / 4;
 		if(to.x < -1)
 			to.x = 0;
 	}
@@ -423,14 +425,14 @@ void utils::show(VisualPoint& p) {
 }
 
 
-// TextViewerDisposedException //////////////////////////////////////////////
+// TextViewerDisposedException ////////////////////////////////////////////////////////////////////
 
 TextViewerDisposedException::TextViewerDisposedException() :
 		logic_error("The text viewer the object connecting to has been disposed.") {
 }
 
 
-// ClipboardException ///////////////////////////////////////////////////////
+// ClipboardException /////////////////////////////////////////////////////////////////////////////
 
 ClipboardException::ClipboardException(HRESULT hr) : runtime_error("") {
 	void* buffer = 0;
@@ -442,7 +444,7 @@ ClipboardException::ClipboardException(HRESULT hr) : runtime_error("") {
 }
 
 
-// VisualPoint //////////////////////////////////////////////////////////////
+// VisualPoint ////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Constructor.
@@ -451,11 +453,11 @@ ClipboardException::ClipboardException(HRESULT hr) : runtime_error("") {
  * @param listener The listener. can be @c null
  * @throw BadPositionException @a position is outside of the document
  */
-VisualPoint::VisualPoint(TextViewer& viewer, const Position& position /* = Position() */, IPointListener* listener /* = 0 */) :
+VisualPoint::VisualPoint(TextViewer& viewer, const Position& position /* = Position() */, PointListener* listener /* = 0 */) :
 		Point(viewer.document(), position, listener), viewer_(&viewer),
 		lastX_(-1), crossingLines_(false), visualLine_(INVALID_INDEX), visualSubline_(0) {
-	static_cast<kernel::internal::IPointCollection<VisualPoint>&>(viewer).addNewPoint(*this);
-	viewer_->textRenderer().addVisualLinesListener(*this);
+	static_cast<detail::PointCollection<VisualPoint>&>(viewer).addNewPoint(*this);
+	viewer_->textRenderer().layouts().addVisualLinesListener(*this);
 }
 
 /**
@@ -468,15 +470,15 @@ VisualPoint::VisualPoint(const VisualPoint& other) : Point(other), viewer_(other
 		lastX_(other.lastX_), crossingLines_(false), visualLine_(other.visualLine_), visualSubline_(other.visualSubline_) {
 	if(viewer_ == 0)
 		throw TextViewerDisposedException();
-	static_cast<kernel::internal::IPointCollection<VisualPoint>*>(viewer_)->addNewPoint(*this);
-	viewer_->textRenderer().addVisualLinesListener(*this);
+	static_cast<detail::PointCollection<VisualPoint>*>(viewer_)->addNewPoint(*this);
+	viewer_->textRenderer().layouts().addVisualLinesListener(*this);
 }
 
 /// Destructor.
 VisualPoint::~VisualPoint() /*throw()*/ {
 	if(viewer_ != 0) {
-		static_cast<kernel::internal::IPointCollection<VisualPoint>*>(viewer_)->removePoint(*this);
-		viewer_->textRenderer().removeVisualLinesListener(*this);
+		static_cast<detail::PointCollection<VisualPoint>*>(viewer_)->removePoint(*this);
+		viewer_->textRenderer().layouts().removeVisualLinesListener(*this);
 	}
 }
 
@@ -492,9 +494,9 @@ void VisualPoint::moved(const Position& from) {
 	if(isTextViewerDisposed())
 		return;
 	if(position() != Position() && from.line == line() && visualLine_ != INVALID_INDEX) {
-		const LineLayout* layout = viewer_->textRenderer().lineLayoutIfCached(line());
+		const font::TextLayout* const layout = viewer_->textRenderer().layouts().atIfCached(line());
 		visualLine_ -= visualSubline_;
-		visualSubline_ = (layout != 0) ? layout->subline(column()) : 0;
+		visualSubline_ = (layout != 0) ? layout->lineAt(column()) : 0;
 		visualLine_ += visualSubline_;
 	} else
 		visualLine_ = INVALID_INDEX;
@@ -581,8 +583,8 @@ inline void VisualPoint::updateLastX() {
 	if(isTextViewerDisposed())
 		throw TextViewerDisposedException();
 	if(!isDocumentDisposed()) {
-		const LineLayout& layout = textViewer().textRenderer().lineLayout(line());
-		lastX_ = layout.location(column(), LineLayout::LEADING).x;
+		const font::TextLayout& layout = textViewer().textRenderer().layouts().at(line());
+		lastX_ = layout.location(column(), font::TextLayout::LEADING).x;
 		lastX_ += textViewer().textRenderer().lineIndent(line(), 0);
 	}
 }
@@ -592,9 +594,9 @@ length_t VisualPoint::visualColumn() const {
 	if(lastX_ == -1)
 		const_cast<VisualPoint*>(this)->updateLastX();
 	const TextViewer::Configuration& c = viewer_->configuration();
-	const TextRenderer& renderer = viewer_->textRenderer();
+	const font::TextRenderer& renderer = viewer_->textRenderer();
 //	if(resolveTextAlignment(c.alignment, c.readingDirection) != ALIGN_RIGHT)
-		return lastX_ / renderer.textMetrics().averageCharacterWidth();
+		return lastX_ / renderer.defaultFont()->metrics().averageCharacterWidth();
 //	else
 //		return (renderer.width() - lastX_) / renderer.averageCharacterWidth();
 }
@@ -604,26 +606,26 @@ length_t VisualPoint::visualLine() const {
 	if(visualLine_ == INVALID_INDEX) {
 		VisualPoint& self = const_cast<VisualPoint&>(*this);
 		const Position p(normalized());
-		self.visualLine_ = textViewer().textRenderer().mapLogicalLineToVisualLine(p.line);
-		self.visualSubline_ = textViewer().textRenderer().lineLayout(p.line).subline(p.column);
+		self.visualLine_ = textViewer().textRenderer().layouts().mapLogicalLineToVisualLine(p.line);
+		self.visualSubline_ = textViewer().textRenderer().layouts().at(p.line).lineAt(p.column);
 		self.visualLine_ += visualSubline_;
 	}
 	return visualLine_;
 }
 
-/// @see IVisualLinesListener#visualLinesDeleted
+/// @see VisualLinesListener#visualLinesDeleted
 void VisualPoint::visualLinesDeleted(const Range<length_t>& lines, length_t, bool) /*throw()*/ {
-	if(!adaptsToDocument() && lines.includes(line()))
+	if(!adaptsToDocument() && includes(lines, line()))
 		visualLine_ = INVALID_INDEX;
 }
 
-/// @see IVisualLinesListener#visualLinesInserted
+/// @see VisualLinesListener#visualLinesInserted
 void VisualPoint::visualLinesInserted(const Range<length_t>& lines) /*throw()*/ {
-	if(!adaptsToDocument() && lines.includes(line()))
+	if(!adaptsToDocument() && includes(lines, line()))
 		visualLine_ = INVALID_INDEX;
 }
 
-/// @see IVisualLinesListener#visualLinesModified
+/// @see VisualLinesListener#visualLinesModified
 void VisualPoint::visualLinesModified(const Range<length_t>& lines, signed_length_t sublineDifference, bool, bool) /*throw()*/ {
 	if(visualLine_ != INVALID_INDEX) {
 		// adjust visualLine_ and visualSubine_ according to the visual lines modification
@@ -631,34 +633,33 @@ void VisualPoint::visualLinesModified(const Range<length_t>& lines, signed_lengt
 			visualLine_ += sublineDifference;
 		else if(lines.beginning() == line()) {
 			visualLine_ -= visualSubline_;
-			visualSubline_ = textViewer().textRenderer().lineLayout(line()).subline(min(column(), document().lineLength(line())));
+			visualSubline_ = textViewer().textRenderer().layouts().at(line()).lineAt(min(column(), document().lineLength(line())));
 			visualLine_ += visualSubline_;
 		} else if(lines.beginning() < line())
 			visualLine_ = INVALID_INDEX;
 	}
 }
 
-// Caret ////////////////////////////////////////////////////////////////////
+// Caret //////////////////////////////////////////////////////////////////////////////////////////
 
 // TODO: rewrite this documentation.
 
 /**
  * @class ascension::viewers::Caret
  *
- * @c Caret is an extension of @c VisualPoint. A caret has a selection on the text viewer.
- * And supports line selection, word selection, rectangle (box) selection, tracking match
- * brackets, and clipboard enhancement.
+ * @c Caret is an extension of @c VisualPoint. A caret has a selection on the text viewer. And
+ * supports line selection, word selection, rectangle (box) selection, tracking match brackets, and
+ * clipboard enhancement.
  *
- * A caret has one another point called "anchor" (or "mark"). The selection is a region
- * between the caret and the anchor. Anchor is @c VisualPoint but client can't operate
- * this directly.
+ * A caret has one another point called "anchor" (or "mark"). The selection is a region between the
+ * caret and the anchor. Anchor is @c VisualPoint but client can't operate this directly.
  *
- * Usually, the anchor will move adapting to the caret automatically. If you want to move
- * the anchor isolately, create the selection by using @c #select method or call
- * @c #extendSelection method.
+ * Usually, the anchor will move adapting to the caret automatically. If you want to move the
+ * anchor isolately, create the selection by using @c #select method or call @c #extendSelection
+ * method.
  *
- * When the caret moves, the text viewer will scroll automatically to show the caret. See
- * the description of @c #enableAutoShow and @c #isAutoShowEnabled.
+ * When the caret moves, the text viewer will scroll automatically to show the caret. See the
+ * description of @c #enableAutoShow and @c #isAutoShowEnabled.
  *
  * @c Caret hides @c Point#excludeFromRestriction and can't enter the inaccessible region of the
  * document. @c #isExcludedFromRestriction always returns @c true.
@@ -678,9 +679,9 @@ void VisualPoint::visualLinesModified(const Range<length_t>& lines, signed_lengt
  * 対括弧の検索はプログラムを編集しているときに役立つ機能で、キャレット位置に括弧があれば対応する括弧を検索する。
  * 括弧のペアを強調表示するのは、現時点ではビューの責任である
  *
- * To enter rectangle selection mode, call @c #beginRectangleSelection method. To exit,
- * call @c #endRectangleSelection method. You can get the information of the current
- * rectangle selection by using @c #boxForRectangleSelection method.
+ * To enter rectangle selection mode, call @c #beginRectangleSelection method. To exit, call
+ * @c #endRectangleSelection method. You can get the information of the current rectangle selection
+ * by using @c #boxForRectangleSelection method.
  *
  * This class does not accept @c IPointListener. Use @c ICaretListener interface instead.
  *
@@ -721,7 +722,7 @@ void Caret::aboutToMove(Position& to) {
  * @param listener The listener to be registered
  * @throw std#invalid_argument @a listener is already registered
  */
-void Caret::addListener(ICaretListener& listener) {
+void Caret::addListener(CaretListener& listener) {
 	listeners_.add(listener);
 }
 
@@ -730,7 +731,7 @@ void Caret::addListener(ICaretListener& listener) {
  * @param listener The listener to be registered
  * @throw std#invalid_argument @a listener is already registered
  */
-void Caret::addCharacterInputListener(ICharacterInputListener& listener) {
+void Caret::addCharacterInputListener(CharacterInputListener& listener) {
 	characterInputListeners_.add(listener);
 }
 
@@ -739,7 +740,7 @@ void Caret::addCharacterInputListener(ICharacterInputListener& listener) {
  * @param listener The listener to be registered
  * @throw std#invalid_argument @a listener is already registered
  */
-void Caret::addStateListener(ICaretStateListener& listener) {
+void Caret::addStateListener(CaretStateListener& listener) {
 	stateListeners_.add(listener);
 }
 
@@ -750,7 +751,7 @@ void Caret::addStateListener(ICaretStateListener& listener) {
 void Caret::beginRectangleSelection() {
 	if(box_ == 0) {
 		box_ = new VirtualBox(textViewer(), selectedRegion());
-		stateListeners_.notify<const Caret&>(&ICaretStateListener::selectionShapeChanged, *this);
+		stateListeners_.notify<const Caret&>(&CaretStateListener::selectionShapeChanged, *this);
 	}
 }
 
@@ -764,9 +765,9 @@ void Caret::beginRectangleSelection() {
 bool Caret::canPaste(bool useKillRing) const {
 	if(!useKillRing) {
 		const UINT rectangleClipFormat = ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT);
-		if(rectangleClipFormat != 0 && toBoolean(::IsClipboardFormatAvailable(rectangleClipFormat)))
+		if(rectangleClipFormat != 0 && win32::boole(::IsClipboardFormatAvailable(rectangleClipFormat)))
 			return true;
-		else if(toBoolean(::IsClipboardFormatAvailable(CF_UNICODETEXT)) || toBoolean(::IsClipboardFormatAvailable(CF_TEXT)))
+		else if(win32::boole(::IsClipboardFormatAvailable(CF_UNICODETEXT)) || win32::boole(::IsClipboardFormatAvailable(CF_TEXT)))
 			return true;
 	} else {
 		if(const texteditor::Session* const session = document().session())
@@ -795,7 +796,7 @@ void Caret::checkMatchBrackets() {
 */	// TODO: check if the pair is out of view.
 	if(matchBrackets_ != oldPair)
 		stateListeners_.notify<const Caret&, const pair<Position,
-			Position>&, bool>(&ICaretStateListener::matchBracketsChanged, *this, oldPair, false);
+			Position>&, bool>(&CaretStateListener::matchBracketsChanged, *this, oldPair, false);
 }
 
 /// Clears the selection. The anchor will move to the caret.
@@ -827,7 +828,7 @@ void Caret::endRectangleSelection() {
 	if(box_ != 0) {
 		delete box_;
 		box_ = 0;
-		stateListeners_.notify<const Caret&>(&ICaretStateListener::selectionShapeChanged, *this);
+		stateListeners_.notify<const Caret&>(&CaretStateListener::selectionShapeChanged, *this);
 	}
 }
 #if 0
@@ -992,7 +993,7 @@ bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true 
 	// check blockable control character
 	static const CodePoint SAFE_CONTROLS[] = {0x0009u, 0x001eu, 0x001fu};
 	if(blockControls && character <= 0x00ffu
-			&& toBoolean(iscntrl(static_cast<int>(character)))
+			&& (iscntrl(static_cast<int>(character)) != 0)
 			&& !binary_search(SAFE_CONTROLS, ASCENSION_ENDOF(SAFE_CONTROLS), character))
 		return false;
 
@@ -1011,7 +1012,10 @@ bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true 
 	}
 
 	Char buffer[2];
-	surrogates::encode(character, buffer);
+	{
+		Char* out = buffer;
+		utf::checkedEncode(character, out);
+	}
 	if(!isSelectionEmpty(*this)) {	// just replace if the selection is not empty
 		doc.insertUndoBoundary();
 		replaceSelection(StringPiece(buffer, (character < 0x10000u) ? 1 : 2));
@@ -1032,7 +1036,7 @@ bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true 
 			// (re)start sequential typing
 			doc.insertUndoBoundary();
 
-		ascension::internal::ValueSaver<bool> lock(typing_);
+		detail::ValueSaver<bool> lock(typing_);
 		typing_ = true;
 		replaceSelection(StringPiece(buffer, (character < 0x10000u) ? 1 : 2));	// this may throw
 		if(alpha)
@@ -1040,7 +1044,7 @@ bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true 
 	}
 
 	characterInputListeners_.notify<const Caret&, CodePoint>(
-		&ICharacterInputListener::characterInputted, *this, character);
+		&CharacterInputListener::characterInput, *this, character);
 	return true;
 }
 
@@ -1072,7 +1076,7 @@ void Caret::moved(const Position& from) {
  * @throw ... Any exceptions @c kernel#Document#replace throws
  */
 void Caret::paste(bool useKillRing) {
-	AutoFreeze af(&textViewer(), true);
+	AutoFreeze af(&textViewer());
 	if(!useKillRing) {
 		com::ComPtr<IDataObject> content;
 		HRESULT hr = tryOleClipboard(::OleGetClipboard, content.initialize());
@@ -1122,7 +1126,7 @@ void Caret::pointMoved(const Point& self, const Position& oldPosition) {
 		return;
 	if((oldPosition == position()) != isSelectionEmpty(*this))
 		checkMatchBrackets();
-	listeners_.notify<const Caret&, const Region&>(&ICaretListener::caretMoved, *this, Region(oldPosition, position()));
+	listeners_.notify<const Caret&, const Region&>(&CaretListener::caretMoved, *this, Region(oldPosition, position()));
 }
 
 /// @internal Should be called before change the document.
@@ -1138,7 +1142,7 @@ inline void Caret::prechangeDocument() {
  * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered
  */
-void Caret::removeListener(ICaretListener& listener) {
+void Caret::removeListener(CaretListener& listener) {
 	listeners_.remove(listener);
 }
 
@@ -1147,7 +1151,7 @@ void Caret::removeListener(ICaretListener& listener) {
  * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered
  */
-void Caret::removeCharacterInputListener(ICharacterInputListener& listener) {
+void Caret::removeCharacterInputListener(CharacterInputListener& listener) {
 	characterInputListeners_.remove(listener);
 }
 
@@ -1156,7 +1160,7 @@ void Caret::removeCharacterInputListener(ICharacterInputListener& listener) {
  * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered
  */
-void Caret::removeStateListener(ICaretStateListener& listener) {
+void Caret::removeStateListener(CaretStateListener& listener) {
 	stateListeners_.remove(listener);
 }
 
@@ -1210,7 +1214,7 @@ void Caret::select(const Position& anchor, const Position& caret) {
 			box_->update(selectedRegion());
 		if(autoShow_)
 			utils::show(*this);
-		listeners_.notify<const Caret&, const Region&>(&ICaretListener::caretMoved, *this, oldRegion);
+		listeners_.notify<const Caret&, const Region&>(&CaretListener::caretMoved, *this, oldRegion);
 	}
 	checkMatchBrackets();
 }
@@ -1222,9 +1226,9 @@ void Caret::select(const Position& anchor, const Position& caret) {
  * @throw std#invalid_argument @a newLocale is not installed on the system
  */
 LCID Caret::setClipboardLocale(LCID newLocale) {
-	if(!toBoolean(::IsValidLocale(newLocale, LCID_INSTALLED)))
+	if(!win32::boole(::IsValidLocale(newLocale, LCID_INSTALLED)))
 		throw invalid_argument("newLocale");
-	swap(clipboardLocale_, newLocale);
+	std::swap(clipboardLocale_, newLocale);
 	return newLocale;
 }
 
@@ -1237,7 +1241,7 @@ LCID Caret::setClipboardLocale(LCID newLocale) {
 Caret& Caret::setOvertypeMode(bool overtype) /*throw()*/ {
 	if(overtype != overtypeMode_) {
 		overtypeMode_ = overtype;
-		stateListeners_.notify<const Caret&>(&ICaretStateListener::overtypeModeChanged, *this);
+		stateListeners_.notify<const Caret&>(&CaretStateListener::overtypeModeChanged, *this);
 	}
 	return *this;
 }
@@ -1256,7 +1260,7 @@ inline void Caret::updateVisualAttributes() {
 	if(isSelectionRectangle())
 		box_->update(selectedRegion());
 	if((regionBeforeMoved_.first != position() || regionBeforeMoved_.second != position()))
-		listeners_.notify<const Caret&, const Region&>(&ICaretListener::caretMoved, *this, regionBeforeMoved_);
+		listeners_.notify<const Caret&, const Region&>(&CaretListener::caretMoved, *this, regionBeforeMoved_);
 	if(autoShow_)
 		utils::show(*this);
 	checkMatchBrackets();
@@ -1264,7 +1268,7 @@ inline void Caret::updateVisualAttributes() {
 }
 
 
-// viewers free functions ///////////////////////////////////////////////////
+// viewers free functions /////////////////////////////////////////////////////////////////////////
 
 /**
  * Returns @c true if the specified point is over the selection.
@@ -1273,19 +1277,18 @@ inline void Caret::updateVisualAttributes() {
  * @throw kernel#DocumentDisposedException The document @a caret connecting to has been disposed
  * @throw TextViewerDisposedException The text viewer @a caret connecting to has been disposed
  */
-bool viewers::isPointOverSelection(const Caret& caret, const POINT& p) {
+bool viewers::isPointOverSelection(const Caret& caret, const NativePoint& p) {
 	if(isSelectionEmpty(caret))
 		return false;
 	else if(caret.isSelectionRectangle())
-		return caret.boxForRectangleSelection().isPointOver(p);
+		return caret.boxForRectangleSelection().includes(p);
 	else {
-		if(caret.textViewer().hitTest(p) != TextViewer::TEXT_AREA)	// ignore if on the margin
+		if(caret.textViewer().hitTest(p) != TextViewer::CONTENT_AREA)	// ignore if on the margin
 			return false;
-		RECT rect;
-		caret.textViewer().getClientRect(rect);
-		if(p.x > rect.right || p.y > rect.bottom)
+		const NativeRectangle viewerBounds(caret.textViewer().bounds(false));
+		if(geometry::x(p) > geometry::right(viewerBounds) || geometry::y(p) > geometry::bottom(viewerBounds))
 			return false;
-		const Position pos(caret.textViewer().characterForClientXY(p, LineLayout::TRAILING));
+		const Position pos(caret.textViewer().characterForLocalPoint(p, font::TextLayout::TRAILING));
 		return pos >= caret.beginning() && pos <= caret.end();
 	}
 }
@@ -1332,14 +1335,14 @@ bool viewers::selectedRangeOnVisualLine(const Caret& caret, length_t line, lengt
 	if(!caret.isSelectionRectangle()) {
 		if(!selectedRangeOnLine(caret, line, range))
 			return false;
-		const LineLayout& layout = caret.textViewer().textRenderer().lineLayout(line);
-		const length_t sublineOffset = layout.sublineOffset(subline);
+		const font::TextLayout& layout = caret.textViewer().textRenderer().layouts().at(line);
+		const length_t sublineOffset = layout.lineOffset(subline);
 		range = Range<length_t>(
 			max(range.beginning(), sublineOffset),
-			min(range.end(), sublineOffset + layout.sublineLength(subline) + ((subline < layout.numberOfSublines() - 1) ? 0 : 1)));
-		return !range.isEmpty();
+			min(range.end(), sublineOffset + layout.lineLength(subline) + ((subline < layout.numberOfLines() - 1) ? 0 : 1)));
+		return !isEmpty(range);
 	} else
-		return caret.boxForRectangleSelection().overlappedSubline(line, subline, range);
+		return caret.boxForRectangleSelection().characterRangeInVisualLine(font::VisualLine(line, subline), range);
 }
 
 /**
@@ -1360,8 +1363,8 @@ basic_ostream<Char>& viewers::selectedString(const Caret& caret, basic_ostream<C
 			Range<length_t> selection;
 			for(length_t line = caret.beginning().line(); line <= lastLine; ++line) {
 				const Document::Line& ln = document.getLineInformation(line);
-				caret.boxForRectangleSelection().overlappedSubline(line, 0, selection);	// TODO: recognize wrap (second parameter).
-				out.write(ln.text().data() + selection.beginning(), static_cast<streamsize>(selection.length()));
+				caret.boxForRectangleSelection().characterRangeInVisualLine(font::VisualLine(line, 0), selection);	// TODO: recognize wrap (second parameter).
+				out.write(ln.text().data() + selection.beginning(), static_cast<streamsize>(length(selection)));
 				out.write(newlineString(ln.newline()), static_cast<streamsize>(newlineStringLength(ln.newline())));
 			}
 		}
@@ -1392,7 +1395,7 @@ void viewers::selectWord(Caret& caret) {
 }
 
 
-// viewers.locations free functions /////////////////////////////////////////
+// viewers.locations free functions ///////////////////////////////////////////////////////////////
 
 /**
  * Returns the position returned by N pages.
@@ -1413,17 +1416,21 @@ VerticalDestinationProxy locations::backwardPage(const VisualPoint& p, length_t 
  */
 VerticalDestinationProxy locations::backwardVisualLine(const VisualPoint& p, length_t lines /* = 1 */) {
 	Position np(p.normalized());
-	const TextRenderer& renderer = p.textViewer().textRenderer();
-	length_t subline = renderer.lineLayout(np.line).subline(np.column);
+	const font::TextRenderer& renderer = p.textViewer().textRenderer();
+	length_t subline = renderer.layouts().at(np.line).lineAt(np.column);
 	if(np.line == 0 && subline == 0)
 		return VisualPoint::makeVerticalDestinationProxy(np);
-	renderer.offsetVisualLine(np.line, subline, -static_cast<signed_length_t>(lines));
-	const LineLayout& layout = renderer.lineLayout(np.line);
+	font::VisualLine visualLine(np.line, subline);
+	renderer.layouts().offsetVisualLine(visualLine, -static_cast<signed_length_t>(lines));
+	const font::TextLayout& layout = renderer.layouts().at(visualLine.line);
 	if(p.lastX_ == -1)
 		const_cast<VisualPoint&>(p).updateLastX();
 	np.column = layout.offset(
-		p.lastX_ - renderer.lineIndent(np.line), renderer.textMetrics().linePitch() * static_cast<long>(subline)).second;
-	if(layout.subline(np.column) != subline)
+		geometry::make<NativePoint>(
+			p.lastX_ - renderer.lineIndent(np.line),
+			renderer.defaultFont()->metrics().linePitch() * static_cast<long>(subline)
+		)).second;
+	if(layout.lineAt(np.column) != visualLine.subline)
 		np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
 	return VisualPoint::makeVerticalDestinationProxy(np);
 }
@@ -1436,8 +1443,8 @@ VerticalDestinationProxy locations::backwardVisualLine(const VisualPoint& p, len
  */
 Position locations::beginningOfVisualLine(const VisualPoint& p) {
 	const Position np(p.normalized());
-	const LineLayout& layout = p.textViewer().textRenderer().lineLayout(np.line);
-	return Position(np.line, layout.sublineOffset(layout.subline(np.column)));
+	const font::TextLayout& layout = p.textViewer().textRenderer().layouts().at(np.line);
+	return Position(np.line, layout.lineOffset(layout.lineAt(np.column)));
 }
 
 /**
@@ -1488,11 +1495,11 @@ Position locations::contextualEndOfVisualLine(const VisualPoint& p) {
  */
 Position locations::endOfVisualLine(const VisualPoint& p) {
 	Position np(p.normalized());
-	const LineLayout& layout = p.textViewer().textRenderer().lineLayout(np.line);
-	const length_t subline = layout.subline(np.column);
-	np.column = (subline < layout.numberOfSublines() - 1) ?
-		layout.sublineOffset(subline + 1) : p.document().lineLength(np.line);
-	if(layout.subline(np.column) != subline)
+	const font::TextLayout& layout = p.textViewer().textRenderer().layouts().at(np.line);
+	const length_t subline = layout.lineAt(np.column);
+	np.column = (subline < layout.numberOfLines() - 1) ?
+		layout.lineOffset(subline + 1) : p.document().lineLength(np.line);
+	if(layout.lineAt(np.column) != subline)
 		np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
 	return np;
 }
@@ -1517,12 +1524,12 @@ Position locations::firstPrintableCharacterOfLine(const VisualPoint& p) {
 Position locations::firstPrintableCharacterOfVisualLine(const VisualPoint& p) {
 	Position np(p.normalized());
 	const String& s = p.document().line(np.line);
-	const LineLayout& layout = p.textViewer().textRenderer().lineLayout(np.line);
-	const length_t subline = layout.subline(np.column);
+	const font::TextLayout& layout = p.textViewer().textRenderer().layouts().at(np.line);
+	const length_t subline = layout.lineAt(np.column);
 	np.column = identifierSyntax(p).eatWhiteSpaces(
-		s.begin() + layout.sublineOffset(subline),
-		s.begin() + ((subline < layout.numberOfSublines() - 1) ?
-			layout.sublineOffset(subline + 1) : s.length()), true) - s.begin();
+		s.begin() + layout.lineOffset(subline),
+		s.begin() + ((subline < layout.numberOfLines() - 1) ?
+			layout.lineOffset(subline + 1) : s.length()), true) - s.begin();
 	return np;
 }
 
@@ -1545,18 +1552,22 @@ VerticalDestinationProxy locations::forwardPage(const VisualPoint& p, length_t p
  */
 VerticalDestinationProxy locations::forwardVisualLine(const VisualPoint& p, length_t lines /* = 1 */) {
 	Position np(p.normalized());
-	const TextRenderer& renderer = p.textViewer().textRenderer();
-	const LineLayout* layout = &renderer.lineLayout(np.line);
-	length_t subline = layout->subline(np.column);
-	if(np.line == p.document().numberOfLines() - 1 && subline == layout->numberOfSublines() - 1)
+	const font::TextRenderer& renderer = p.textViewer().textRenderer();
+	const font::TextLayout* layout = &renderer.layouts().at(np.line);
+	length_t subline = layout->lineAt(np.column);
+	if(np.line == p.document().numberOfLines() - 1 && subline == layout->numberOfLines() - 1)
 		return VisualPoint::makeVerticalDestinationProxy(np);
-	renderer.offsetVisualLine(np.line, subline, static_cast<signed_length_t>(lines));
-	layout = &renderer.lineLayout(np.line);
+	font::VisualLine visualLine(np.line, subline);
+	renderer.layouts().offsetVisualLine(visualLine, static_cast<signed_length_t>(lines));
+	layout = &renderer.layouts().at(visualLine.line);
 	if(p.lastX_ == -1)
 		const_cast<VisualPoint&>(p).updateLastX();
 	np.column = layout->offset(
-		p.lastX_ - renderer.lineIndent(np.line), renderer.textMetrics().linePitch() * static_cast<long>(subline)).second;
-	if(layout->subline(np.column) != subline)
+		geometry::make<NativePoint>(
+			p.lastX_ - renderer.lineIndent(visualLine.line),
+			renderer.defaultFont()->metrics().linePitch() * static_cast<long>(visualLine.subline)
+		)).second;
+	if(layout->lineAt(np.column) != visualLine.subline)
 		np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
 	return VisualPoint::makeVerticalDestinationProxy(np);
 }
@@ -1570,8 +1581,8 @@ bool locations::isBeginningOfVisualLine(const VisualPoint& p) {
 	if(isBeginningOfLine(p))	// this considers narrowing
 		return true;
 	const Position np(p.normalized());
-	const LineLayout& layout = p.textViewer().textRenderer().lineLayout(np.line);
-	return np.column == layout.sublineOffset(layout.subline(np.column));
+	const font::TextLayout& layout = p.textViewer().textRenderer().layouts().at(np.line);
+	return np.column == layout.lineOffset(layout.lineAt(np.column));
 }
 
 /**
@@ -1583,9 +1594,9 @@ bool locations::isEndOfVisualLine(const VisualPoint& p) {
 	if(isEndOfLine(p))	// this considers narrowing
 		return true;
 	const Position np(p.normalized());
-	const LineLayout& layout = p.textViewer().textRenderer().lineLayout(np.line);
-	const length_t subline = layout.subline(np.column);
-	return np.column == layout.sublineOffset(subline) + layout.sublineLength(subline);
+	const font::TextLayout& layout = p.textViewer().textRenderer().layouts().at(np.line);
+	const length_t subline = layout.lineAt(np.column);
+	return np.column == layout.lineOffset(subline) + layout.lineLength(subline);
 }
 
 /// Returns @c true if the given position is the first printable character in the line.
@@ -1644,6 +1655,12 @@ Position locations::lastPrintableCharacterOfVisualLine(const VisualPoint& p) {
 	return p.normalized();
 }
 
+namespace {
+	inline ReadingDirection defaultUIReadingDirection(const VisualPoint& p) {
+		return p.textViewer().textRenderer().defaultUIWritingMode().inlineFlowDirection;
+	}
+}
+
 /**
  * Returns the position advanced to the left by N characters.
  * @param p The base position
@@ -1652,7 +1669,8 @@ Position locations::lastPrintableCharacterOfVisualLine(const VisualPoint& p) {
  * @return The destination
  */
 Position locations::leftCharacter(const VisualPoint& p, CharacterUnit unit, length_t characters /* = 1 */) {
-	return (utils::computeUIReadingDirection(p.textViewer()) == LEFT_TO_RIGHT) ?
+	
+	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ?
 		backwardCharacter(p, unit, characters) : forwardCharacter(p, unit, characters);
 }
 
@@ -1663,7 +1681,7 @@ Position locations::leftCharacter(const VisualPoint& p, CharacterUnit unit, leng
  * @return The destination
  */
 Position locations::leftWord(const VisualPoint& p, length_t words /* = 1 */) {
-	return (utils::computeUIReadingDirection(p.textViewer()) == LEFT_TO_RIGHT) ? backwardWord(p, words) : forwardWord(p, words);
+	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? backwardWord(p, words) : forwardWord(p, words);
 }
 
 /**
@@ -1673,7 +1691,7 @@ Position locations::leftWord(const VisualPoint& p, length_t words /* = 1 */) {
  * @return The destination
  */
 Position locations::leftWordEnd(const VisualPoint& p, length_t words /* = 1 */) {
-	return (utils::computeUIReadingDirection(p.textViewer()) == LEFT_TO_RIGHT) ? backwardWordEnd(p, words) : forwardWordEnd(p, words);
+	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? backwardWordEnd(p, words) : forwardWordEnd(p, words);
 }
 
 /**
@@ -1684,7 +1702,7 @@ Position locations::leftWordEnd(const VisualPoint& p, length_t words /* = 1 */) 
  * @return The destination
  */
 Position locations::rightCharacter(const VisualPoint& p, CharacterUnit unit, length_t characters /* = 1 */) {
-	return (utils::computeUIReadingDirection(p.textViewer()) == LEFT_TO_RIGHT) ?
+	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ?
 		forwardCharacter(p, unit, characters) : backwardCharacter(p, unit, characters);
 }
 
@@ -1695,7 +1713,7 @@ Position locations::rightCharacter(const VisualPoint& p, CharacterUnit unit, len
  * @return The destination
  */
 Position locations::rightWord(const VisualPoint& p, length_t words /* = 1 */) {
-	return (utils::computeUIReadingDirection(p.textViewer()) == LEFT_TO_RIGHT) ? forwardWord(p, words) : backwardWord(p, words);
+	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? forwardWord(p, words) : backwardWord(p, words);
 }
 
 /**
@@ -1705,11 +1723,11 @@ Position locations::rightWord(const VisualPoint& p, length_t words /* = 1 */) {
  * @return The destination
  */
 Position locations::rightWordEnd(const VisualPoint& p, length_t words /* = 1 */) {
-	return (utils::computeUIReadingDirection(p.textViewer()) == LEFT_TO_RIGHT) ? forwardWordEnd(p, words) : backwardWordEnd(p, words);
+	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? forwardWordEnd(p, words) : backwardWordEnd(p, words);
 }
 
 
-// viewers free functions ///////////////////////////////////////////////////
+// viewers free functions /////////////////////////////////////////////////////////////////////////
 
 /**
  * Breaks the line at the caret position and moves the caret to the end of the inserted string.
@@ -1723,7 +1741,7 @@ void viewers::breakLine(Caret& caret, bool inheritIndent, size_t newlines /* = 1
 	if(newlines == 0)
 		return;
 
-	const IDocumentInput* const di = caret.document().input();
+	const DocumentInput* const di = caret.document().input();
 	String s(newlineString((di != 0) ? di->newline() : ASCENSION_DEFAULT_NEWLINE));
 
 	if(inheritIndent) {	// simple auto-indent
@@ -1867,7 +1885,7 @@ namespace {
 					length_t insertPosition = 0;
 					if(rectangle) {
 						Range<length_t> dummy;
-						caret.boxForRectangleSelection().overlappedSubline(line, 0, dummy);	// TODO: recognize wrap (second parameter).
+						caret.boxForRectangleSelection().characterRangeInVisualLine(font::VisualLine(line, 0), dummy);	// TODO: recognize wrap (second parameter).
 						insertPosition = dummy.beginning();
 					}
 					insert(document, Position(line, insertPosition), indent);

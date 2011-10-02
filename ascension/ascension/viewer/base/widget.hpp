@@ -163,23 +163,6 @@ namespace ascension {
 				Identifier identifier_;
 			};
 
-			class ScrollBar {
-			public:
-				int pageStep() const;
-				int position() const;
-				Range<int> range() const;
-				void setPageStep(int pageStep);
-				void setPosition(int position);
-				void setRange(const Range<int>& range);
-			};
-
-			class ScrollableWidget : public Widget {
-			public:
-				ScrollableWidget(Widget* parent = 0, Style styles = WIDGET);
-				ScrollBar& horizontalScrollBar() const;
-				ScrollBar& verticalScrollBar() const;
-			};
-
 		}
 	}
 }

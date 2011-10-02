@@ -203,12 +203,13 @@ void LocaleSensitiveCaretShaper::shape(
 	HIMC imc = ::ImmGetContext(updater_->textViewer().identifier().get());
 	const bool imeOpened = win32::boole(::ImmGetOpenStatus(imc));
 	::ImmReleaseContext(updater_->textViewer().identifier().get(), imc);
+	auto_ptr<Image> bitmap;
 	if(imeOpened) {	// CJK and IME is open
-		static const RGBQUAD red = {0xff, 0xff, 0x80, 0x00};
+		static const Color red(0x80, 0x00, 0x00);
 		bitmap = createSolidCaretBitmap(
 			static_cast<uint16_t>(geometry::dx(solidSize)), static_cast<uint16_t>(geometry::dy(solidSize)), red);
 	} else if(!overtype && geometry::dy(solidSize) > 3) {
-		static const RGBQUAD black = {0xff, 0xff, 0xff, 0x00};
+		static const Color black(0x00, 0x00, 0x00);
 		const WORD langID = PRIMARYLANGID(LOWORD(::GetKeyboardLayout(::GetCurrentThreadId())));
 		if(isRTLLanguage(langID)) {	// RTL
 			bitmap = createRTLCaretBitmap(static_cast<uint16_t>(geometry::dy(solidSize)), bold_, black);
@@ -217,6 +218,7 @@ void LocaleSensitiveCaretShaper::shape(
 			bitmap = createTISCaretBitmap(static_cast<uint16_t>(geometry::dy(solidSize)), bold_, black);
 		}
 	}
+	image = *bitmap.release();
 }
 
 /// @see TextViewerInputStatusListener#textViewerIMEOpenStatusChanged

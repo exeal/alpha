@@ -10,7 +10,7 @@
 #ifndef ASCENSION_CARET_HPP
 #define ASCENSION_CARET_HPP
 #include <ascension/kernel/point.hpp>
-#include <ascension/graphics/rendering.hpp>				// graphics.IVisualLinesListener
+#include <ascension/graphics/rendering.hpp>				// graphics.VisualLinesListener
 #include <ascension/corelib/text/identifier-syntax.hpp>	// text.IdentifierSyntax
 #include <ascension/viewer/caret-observers.hpp>
 #ifdef ASCENSION_COMPILER_GCC
@@ -247,7 +247,7 @@ namespace ascension {
 		// free functions related to selection of Caret class
 		void copySelection(Caret& caret, bool useKillRing);
 		void cutSelection(Caret& caret, bool useKillRing);
-		bool isPointOverSelection(const Caret& caret, const POINT& p);
+		bool isPointOverSelection(const Caret& caret, const graphics::NativePoint& p);
 		bool isSelectionEmpty(const Caret& caret) /*throw()*/;
 		bool selectedRangeOnLine(const Caret& caret, length_t line, Range<length_t>& range);
 		bool selectedRangeOnVisualLine(const Caret& caret, length_t line, length_t subline, Range<length_t>& range);
