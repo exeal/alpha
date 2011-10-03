@@ -25,366 +25,11 @@ using namespace std;
 
 
 namespace {
-#pragma comment(lib, "urlmon.lib")
-	// IDataObject implementation for OLE image drag-and-drop. Caret.createTextObject returns this
-	// object as a result.
-	//
-	// This does not support any device-specific renderings. All methods can be overridden.
-	//
-	// References:
-	// - "The Shell Drag/Drop Helper Object Part 1: IDropTargetHelper"
-	//   (http://msdn.microsoft.com/en-us/library/ms997500.aspx)
-	// - "The Shell Drag/Drop Helper Object Part 2: IDropSourceHelper"
-	//   (http://msdn.microsoft.com/en-us/library/ms997502.aspx)
-	// and their Japanese translations
-	// - "Shell Drag/Drop Helper オブジェクト 第 1 部 : IDropTargetHelper"
-	//   (http://www.microsoft.com/japan/msdn/windows/windows2000/ddhelp_pt1.aspx)
-	// - "Shell Drag/Drop Helper オブジェクト 第 2 部 : IDropSourceHelper"
-	//   (http://www.microsoft.com/japan/msdn/windows/windows2000/ddhelp_pt2.aspx)
-	// ...but these documents have many bugs. Well, there is no interface named "IDropSourceHelper".
-	class GenericDataObject : public win32::com::IUnknownImpl<
-		typelist::Cat<ASCENSION_WIN32_COM_INTERFACE_SIGNATURE(IDataObject)>, win32::com::NoReferenceCounting> {
-	public:
-		virtual ~GenericDataObject() throw();
-		// IDataObject
-		virtual STDMETHODIMP GetData(FORMATETC* format, STGMEDIUM* medium);
-		virtual STDMETHODIMP GetDataHere(FORMATETC*, STGMEDIUM*) {return E_NOTIMPL;}
-		virtual STDMETHODIMP QueryGetData(FORMATETC* format);
-		virtual STDMETHODIMP GetCanonicalFormatEtc(FORMATETC* in, FORMATETC* out);
-		virtual STDMETHODIMP SetData(FORMATETC* format, STGMEDIUM* medium, BOOL release);
-		virtual STDMETHODIMP EnumFormatEtc(DWORD direction, IEnumFORMATETC** enumerator);
-		virtual STDMETHODIMP DAdvise(LPFORMATETC, DWORD, LPADVISESINK, LPDWORD) {return OLE_E_ADVISENOTSUPPORTED;}
-		virtual STDMETHODIMP DUnadvise(DWORD) {return OLE_E_ADVISENOTSUPPORTED;}
-		virtual STDMETHODIMP EnumDAdvise(LPENUMSTATDATA*) {return OLE_E_ADVISENOTSUPPORTED;}
-	private:
-		struct Entry {
-			FORMATETC format;
-			STGMEDIUM medium;
-		};
-		list<Entry*>::iterator find(const FORMATETC& format, list<Entry*>::iterator initial) const /*throw()*/;
-	private:
-		list<Entry*> entries_;
-	};
-
-	GenericDataObject::~GenericDataObject() /*throw()*/ {
-		for(list<Entry*>::iterator i(entries_.begin()), e(entries_.end()); i != e; ++i) {
-			::CoTaskMemFree((*i)->format.ptd);
-			::ReleaseStgMedium(&(*i)->medium);
-		}
-	}
-	list<GenericDataObject::Entry*>::iterator GenericDataObject::find(
-			const FORMATETC& format, list<Entry*>::iterator initial) const /*throw()*/ {
-		const list<Entry*>::iterator e(const_cast<GenericDataObject*>(this)->entries_.end());
-		if(format.ptd == 0) {	// this does not support DVTARGETDEVICE
-			for(list<Entry*>::iterator i(initial); i != e; ++i) {
-				const FORMATETC& other = (*i)->format;
-				if(other.cfFormat == format.cfFormat && other.dwAspect == format.dwAspect && other.lindex == format.lindex)
-					return i;
-			}
-		}
-		return e;
-	}
-	STDMETHODIMP GenericDataObject::GetData(FORMATETC* format, STGMEDIUM* medium) {
-		if(format == 0 || medium == 0)
-			return E_INVALIDARG;
-		else if(format->lindex != -1)
-			return DV_E_LINDEX;
-		list<Entry*>::const_iterator entry(find(*format, entries_.begin()));
-		if(entry == entries_.end())
-			return DV_E_FORMATETC;
-		else if(((*entry)->format.tymed & format->tymed) == 0)
-			return DV_E_TYMED;
-		const HRESULT hr = ::CopyStgMedium(&(*entry)->medium, medium);
-		if(SUCCEEDED(hr))
-			medium->pUnkForRelease = 0;
-		return hr;
-	}
-	STDMETHODIMP GenericDataObject::QueryGetData(LPFORMATETC format) {
-		if(format == 0)
-			return E_INVALIDARG;
-		else if(format->lindex != -1)
-			return DV_E_LINDEX;
-		list<Entry*>::const_iterator entry(find(*format, entries_.begin()));
-		if(entry == entries_.end())
-			return DV_E_FORMATETC;
-		return (((*entry)->format.tymed & format->tymed) != 0) ? S_OK : DV_E_TYMED;
-	}
-	STDMETHODIMP GenericDataObject::GetCanonicalFormatEtc(FORMATETC* in, FORMATETC* out) {
-		if(in == 0 || out == 0)
-			return E_INVALIDARG;
-		else if(in->lindex != -1)
-			return DV_E_LINDEX;
-		else if(in->ptd != 0)
-			return DV_E_FORMATETC;
-		*out = *in;
-		return DATA_S_SAMEFORMATETC;
-	}
-	STDMETHODIMP GenericDataObject::SetData(FORMATETC* format, STGMEDIUM* medium, BOOL release) {
-		if(format == 0 || medium == 0)
-			return E_INVALIDARG;
-		STGMEDIUM clone;
-		if(!release) {
-			if(FAILED(::CopyStgMedium(medium, &clone)))
-				return E_FAIL;
-		}
-		list<Entry*>::iterator entry(entries_.begin());
-		while(true) {
-			entry = find(*format, entry);
-			if(entry == entries_.end() || ((*entry)->format.tymed & format->tymed) != 0)
-				break;
-		}
-		if(entry == entries_.end()) {	// a entry has the given format does not exist
-			Entry* const newEntry = static_cast<Entry*>(::CoTaskMemAlloc(sizeof(Entry)));
-			if(newEntry == 0)
-				return E_OUTOFMEMORY;
-			newEntry->format = *format;
-			memset(&newEntry->medium, 0, sizeof(STGMEDIUM));
-			entries_.push_back(newEntry);
-			entry = --entries_.end();
-		} else if((*entry)->medium.tymed != TYMED_NULL) {
-			::ReleaseStgMedium(&(*entry)->medium);
-			memset(&(*entry)->medium, 0, sizeof(STGMEDIUM));
-		}
-
-		assert((*entry)->medium.tymed == TYMED_NULL);
-		(*entry)->medium = win32::boole(release) ? *medium : clone;
-		return S_OK;
-	}
-	STDMETHODIMP GenericDataObject::EnumFormatEtc(DWORD direction, IEnumFORMATETC** enumerator) {
-		if(direction == DATADIR_SET)
-			return E_NOTIMPL;
-		else if(direction != DATADIR_GET)
-			return E_INVALIDARG;
-		else if(enumerator == 0)
-			return E_INVALIDARG;
-		FORMATETC* buffer = static_cast<FORMATETC*>(::CoTaskMemAlloc(sizeof(FORMATETC) * entries_.size()));
-		if(buffer == 0)
-			return E_OUTOFMEMORY;
-		size_t j = 0;
-		for(list<Entry*>::const_iterator i(entries_.begin()), e(entries_.end()); i != e; ++i, ++j)
-			buffer[j] = (*i)->format;
-		const HRESULT hr = ::CreateFormatEnumerator(static_cast<UINT>(entries_.size()), buffer, enumerator);
-		::CoTaskMemFree(buffer);
-		return hr;
-	}
-
-	template<typename Procedure>
-	inline HRESULT tryOleClipboard(Procedure procedure) {
-		HRESULT hr;
-		for(int i = 0; i < 100; ++i) {
-			if(CLIPBRD_E_CANT_OPEN != (hr = procedure()))
-				break;
-			::Sleep(0);
-		}
-		return hr;
-	}
-	template<typename Procedure, typename Parameter>
-	inline HRESULT tryOleClipboard(Procedure procedure, Parameter parameter) {
-		HRESULT hr;
-		for(int i = 0; i < 100; ++i) {
-			if(CLIPBRD_E_CANT_OPEN != (hr = procedure(parameter)))
-				break;
-			::Sleep(0);
-		}
-		return hr;
-	}
-} // namespace @0
-
-namespace {
 	// copied from point.cpp
 	inline const IdentifierSyntax& identifierSyntax(const Point& p) {
 		return p.document().contentTypeInformation().getIdentifierSyntax(p.contentType());
 	}
 } // namespace @0
-
-/**
- * Creates an @c IDataObject represents the selected content.
- * @param caret The caret gives the selection
- * @param rtf Set @c true if the content is available as Rich Text Format. This feature is not
- *            implemented yet and the parameter is ignored
- * @param[out] content The data object
- * @retval S_OK Succeeded
- * @retval E_OUTOFMEMORY Failed to allocate memory for @a content
- */
-HRESULT utils::createTextObjectForSelectedString(const Caret& caret, bool rtf, IDataObject*& content) {
-	GenericDataObject* o = new(nothrow) GenericDataObject();
-	if(o == 0)
-		return E_OUTOFMEMORY;
-	o->AddRef();
-
-	// get text on the given region
-	const String text(selectedString(caret, NLF_CR_LF));
-
-	// register datas...
-	FORMATETC format;
-	format.ptd = 0;
-	format.dwAspect = DVASPECT_CONTENT;
-	format.lindex = -1;
-	format.tymed = TYMED_HGLOBAL;
-	STGMEDIUM medium;
-	medium.tymed = TYMED_HGLOBAL;
-	medium.pUnkForRelease = 0;
-
-	// Unicode text format
-	format.cfFormat = CF_UNICODETEXT;
-	medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(Char) * (text.length() + 1));
-	if(medium.hGlobal == 0) {
-		o->Release();
-		return E_OUTOFMEMORY;
-	}
-	wcscpy(static_cast<wchar_t*>(::GlobalLock(medium.hGlobal)), text.c_str());
-	::GlobalUnlock(medium.hGlobal);
-	HRESULT hr = o->SetData(&format, &medium, false);
-
-	// rectangle text format
-	if(caret.isSelectionRectangle()) {
-		if(0 != (format.cfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT))))
-			hr = o->SetData(&format, &medium, false);
-	}
-
-	::GlobalFree(medium.hGlobal);
-
-	// ANSI text format and locale
-	hr = S_OK;
-	UINT codePage = CP_ACP;
-	wchar_t codePageString[6];
-	if(0 != ::GetLocaleInfoW(caret.clipboardLocale(), LOCALE_IDEFAULTANSICODEPAGE, codePageString, ASCENSION_COUNTOF(codePageString))) {
-		wchar_t* eob;
-		codePage = wcstoul(codePageString, &eob, 10);
-		format.cfFormat = CF_TEXT;
-		if(int ansiLength = ::WideCharToMultiByte(codePage, 0, text.c_str(), static_cast<int>(text.length()), 0, 0, 0, 0)) {
-			AutoBuffer<char> ansiBuffer(new(nothrow) char[ansiLength]);
-			if(ansiBuffer.get() != 0) {
-				ansiLength = ::WideCharToMultiByte(codePage, 0,
-					text.data(), static_cast<int>(text.length()), ansiBuffer.get(), ansiLength, 0, 0);
-				if(ansiLength != 0) {
-					if(0 != (medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(char) * (ansiLength + 1)))) {
-						if(char* const temp = static_cast<char*>(::GlobalLock(medium.hGlobal))) {
-							memcpy(temp, ansiBuffer.get(), sizeof(char) * ansiLength);
-							temp[ansiLength] = 0;
-							::GlobalUnlock(medium.hGlobal);
-							hr = o->SetData(&format, &medium, false);
-						} else
-							hr = E_FAIL;
-						::GlobalFree(medium.hGlobal);
-						if(SUCCEEDED(hr)) {
-							format.cfFormat = CF_LOCALE;
-							if(0 != (medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(LCID)))) {
-								if(LCID* const lcid = static_cast<LCID*>(::GlobalLock(medium.hGlobal))) {
-									*lcid = caret.clipboardLocale();
-									hr = o->SetData(&format, &medium, false);
-								}
-								::GlobalUnlock(medium.hGlobal);
-								::GlobalFree(medium.hGlobal);
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if(rtf) {
-		const CLIPFORMAT rtfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(L"Rich Text Format"));	// CF_RTF
-		const CLIPFORMAT rtfWithoutObjectsFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(L"Rich Text Format Without Objects"));	// CF_RTFNOOBJS
-		// TODO: implement the follow...
-	}
-
-	content = o;
-	return S_OK;
-}
-
-/**
- * Returns the text content from the given data object.
- * @param data The data object
- * @param[out] rectangle @c true if the data is rectangle format. can be @c null
- * @return A pair of the result HRESULT and the text content. @c SCODE is one of @c S_OK,
- *         @c E_OUTOFMEMORY and @c DV_E_FORMATETC
- */
-pair<HRESULT, String> utils::getTextFromDataObject(IDataObject& data, bool* rectangle /* = 0 */) {
-	pair<HRESULT, String> result;
-	FORMATETC fe = {CF_UNICODETEXT, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
-	STGMEDIUM stm = {TYMED_HGLOBAL, 0};
-	if(S_OK == (result.first = data.QueryGetData(&fe))) {	// the data suppports CF_UNICODETEXT ?
-		if(SUCCEEDED(result.first = data.GetData(&fe, &stm))) {
-			if(const Char* buffer = static_cast<Char*>(::GlobalLock(stm.hGlobal))) {
-				try {
-					result.second = String(buffer);
-				} catch(...) {
-					result.first = E_OUTOFMEMORY;
-				}
-				::GlobalUnlock(stm.hGlobal);
-				::ReleaseStgMedium(&stm);
-			}
-		}
-	}
-
-	if(FAILED(result.first)) {
-		fe.cfFormat = CF_TEXT;
-		if(S_OK == (result.first = data.QueryGetData(&fe))) {	// the data supports CF_TEXT ?
-			if(SUCCEEDED(result.first = data.GetData(&fe, &stm))) {
-				if(const char* nativeBuffer = static_cast<char*>(::GlobalLock(stm.hGlobal))) {
-					// determine the encoding of the content of the clipboard
-					UINT codePage = ::GetACP();
-					fe.cfFormat = CF_LOCALE;
-					if(S_OK == (result.first = data.QueryGetData(&fe))) {
-						STGMEDIUM locale = {TYMED_HGLOBAL, 0};
-						if(S_OK == (result.first = data.GetData(&fe, &locale))) {
-							wchar_t buffer[6];
-							if(0 != ::GetLocaleInfoW(*static_cast<ushort*>(::GlobalLock(locale.hGlobal)),
-									LOCALE_IDEFAULTANSICODEPAGE, buffer, ASCENSION_COUNTOF(buffer))) {
-								wchar_t* eob;
-								codePage = wcstoul(buffer, &eob, 10);
-							}
-						}
-						::ReleaseStgMedium(&locale);
-					}
-					// convert ANSI text into Unicode by the code page
-					const length_t nativeLength = min<length_t>(
-						strlen(nativeBuffer), ::GlobalSize(stm.hGlobal) / sizeof(char)) + 1;
-					const length_t ucsLength = ::MultiByteToWideChar(
-						codePage, MB_PRECOMPOSED, nativeBuffer, static_cast<int>(nativeLength), 0, 0);
-					if(ucsLength != 0) {
-						AutoBuffer<wchar_t> ucsBuffer(new(nothrow) wchar_t[ucsLength]);
-						if(ucsBuffer.get() != 0) {
-							if(0 != ::MultiByteToWideChar(codePage, MB_PRECOMPOSED,
-									nativeBuffer, static_cast<int>(nativeLength), ucsBuffer.get(), static_cast<int>(ucsLength))) {
-								try {
-									result.second = String(ucsBuffer.get(), ucsLength - 1);
-								} catch(...) {
-									result.first = E_OUTOFMEMORY;
-								}
-							}
-						}
-					}
-					::GlobalUnlock(stm.hGlobal);
-					::ReleaseStgMedium(&stm);
-				}
-			}
-		}
-	}
-
-	if(FAILED(result.first))
-		result.first = DV_E_FORMATETC;
-	if(SUCCEEDED(result.first) && rectangle != 0) {
-		fe.cfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
-		*rectangle = fe.cfFormat != 0 && data.QueryGetData(&fe) == S_OK;
-	}
-
-	return result;
-}
-
-
-// ClipboardException /////////////////////////////////////////////////////////////////////////////
-
-ClipboardException::ClipboardException(HRESULT hr) : runtime_error("") {
-	void* buffer = 0;
-	::FormatMessageA(
-		FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-		0, hr, 0, reinterpret_cast<char*>(&buffer), 0, 0);
-	runtime_error(static_cast<char*>(buffer));
-	::LocalFree(buffer);
-}
 
 
 // Caret //////////////////////////////////////////////////////////////////////////////////////////
@@ -394,7 +39,8 @@ Caret::Shape::Shape() /*throw()*/ : readingDirection(LEFT_TO_RIGHT), measure(0) 
 }
 
 /// @internal Default constructor.
-Caret::Context::Context() /*throw()*/ : yanking(false), leaveAnchorNext(false), leadingAnchor(false), typing(false) {
+Caret::Context::Context() /*throw()*/ : yanking(false), leaveAnchorNext(false), leadingAnchor(false),
+		typing(false), inputMethodCompositionActivated(false), inputMethodComposingCharacter(false) {
 }
 
 // TODO: rewrite this documentation.
@@ -450,15 +96,24 @@ Caret::Context::Context() /*throw()*/ : yanking(false), leaveAnchorNext(false), 
  * @throw BadPositionException @a position is outside of the document
  */
 Caret::Caret(TextViewer& viewer, const Position& position /* = Position(0, 0) */) /*throw()*/ : VisualPoint(viewer, position, 0),
-		anchor_(new SelectionAnchor(viewer, position)), clipboardLocale_(::GetUserDefaultLCID()),
+		anchor_(new SelectionAnchor(viewer, position)),
+#ifdef ASCENSION_OS_WINDOWS
+		clipboardLocale_(::GetUserDefaultLCID()),
+#endif // ASCENSION_OS_WINDOWS
 		overtypeMode_(false), autoShow_(true), matchBracketsTrackingMode_(DONT_TRACK) {
 	document().addListener(*this);
+	textViewer().addDisplaySizeListener(*this);
+	textViewer().addViewportListener(*this);
 }
 
 /// Destructor.
 Caret::~Caret() /*throw()*/ {
 	if(!isDocumentDisposed())
 		document().removeListener(*this);
+	if(!isTextViewerDisposed()) {
+		textViewer().removeDisplaySizeListener(*this);
+		textViewer().removeViewportListener(*this);
+	}
 	delete anchor_;
 }
 
@@ -815,60 +470,6 @@ void Caret::moved(const Position& from) {
 		updateVisualAttributes();
 }
 
-/**
- * Replaces the selected text by the content of the clipboard.
- * This method inserts undo boundaries at the beginning and the end.
- * @note When using the kill-ring, this method may exit in defective condition.
- * @param useKillRing Set @c true to use the kill ring
- * @throw ClipboardException The clipboard operation failed
- * @throw ClipboardException(DV_E_FORMATETC) The current clipboard format is not supported
- * @throw IllegalStateException @a useKillRing was @c true but the kill-ring was not available
- * @throw std#bad_alloc Internal memory allocation failed
- * @throw ... Any exceptions @c kernel#Document#replace throws
- */
-void Caret::paste(bool useKillRing) {
-	AutoFreeze af(&textViewer());
-	if(!useKillRing) {
-		com::ComPtr<IDataObject> content;
-		HRESULT hr = tryOleClipboard(::OleGetClipboard, content.initialize());
-		if(hr == E_OUTOFMEMORY)
-			throw bad_alloc("::OleGetClipboard returned E_OUTOFMEMORY.");
-		else if(FAILED(hr))
-			throw ClipboardException(hr);
-		bool rectangle;
-		const pair<HRESULT, String> text(utils::getTextFromDataObject(*content, &rectangle));
-		if(text.first == E_OUTOFMEMORY)
-			throw bad_alloc("ascension.viewers.utils.getTextFromDataObject returned E_OUTOFMEMORY.");
-		else if(FAILED(text.first))
-			throw ClipboardException(text.first);
-		document().insertUndoBoundary();
-		replaceSelection(text.second, rectangle);
-	} else {
-		texteditor::Session* const session = document().session();
-		if(session == 0 || session->killRing().numberOfKills() == 0)
-			throw IllegalStateException("the kill-ring is not available.");
-		texteditor::KillRing& killRing = session->killRing();
-		const pair<String, bool>& text = context_.yanking ? killRing.setCurrent(+1) : killRing.get();
-
-		const Position temp(beginning());
-		try {
-			if(!isSelectionEmpty(*this) && context_.yanking)
-				document().undo();
-			replaceSelection(text.first, text.second);
-		} catch(...) {
-			killRing.setCurrent(-1);
-			throw;
-		}
-		if(!text.second)
-			endRectangleSelection();
-		else
-			beginRectangleSelection();
-		select(temp, position());
-		context_.yanking = true;
-	}
-	document().insertUndoBoundary();
-}
-
 /// @see PointListener#pointMoved
 void Caret::pointMoved(const Point& self, const Position& oldPosition) {
 	assert(&self == &*anchor_);
@@ -948,9 +549,9 @@ void Caret::resetVisualization() {
 	NativeSize solidSize(geometry::make<NativeSize>(0, 0));
 	ReadingDirection readingDirection;
 
-	if(imeComposingCharacter_)
+	if(context_.inputMethodComposingCharacter)
 		solidSize = currentCharacterSize(*this);
-	else if(imeCompositionActivated_)
+	else if(context_.inputMethodCompositionActivated)
 		geometry::dx(solidSize) = geometry::dy(solidSize) = 1;
 	else if(shaper_.get() != 0)
 		shaper_->shape(image, solidSize, readingDirection);
@@ -1010,19 +611,6 @@ void Caret::select(const Position& anchor, const Position& caret) {
 }
 
 /**
- * Sets the locale used to convert non-Unicode data in the clipboard.
- * @param newLocale The locale identifier
- * @return The identifier of the locale set by the caret
- * @throw std#invalid_argument @a newLocale is not installed on the system
- */
-LCID Caret::setClipboardLocale(LCID newLocale) {
-	if(!win32::boole(::IsValidLocale(newLocale, LCID_INSTALLED)))
-		throw invalid_argument("newLocale");
-	std::swap(clipboardLocale_, newLocale);
-	return newLocale;
-}
-
-/**
  * Sets character input mode.
  * @param overtype Set @c true to set to overtype mode, @c false to set to insert mode
  * @return This caret
@@ -1070,7 +658,7 @@ void Caret::updateLocation() {
 			|| viewer.textRenderer().layouts()[line()].bidiEmbeddingLevel(column()) % 2 == 1)
 		geometry::x(p) -= shapeCache_.measure;
 	::SetCaretPos(geometry::x(p), geometry::y(p));
-	updateIMECompositionWindowPosition();
+	adjustInputMethodCompositionWindow();
 }
 
 inline void Caret::updateVisualAttributes() {
@@ -1082,6 +670,17 @@ inline void Caret::updateVisualAttributes() {
 		utils::show(*this);
 	checkMatchBrackets();
 	context_.regionBeforeMoved.first = context_.regionBeforeMoved.second = Position();
+}
+
+/// @see DisplaySizeListener#viewerDisplaySizeChanged
+void Caret::viewerDisplaySizeChanged() {
+	if(textViewer().rulerConfiguration().alignment != ALIGN_LEFT)
+		resetVisualization();
+}
+
+/// @see ViewportListener#viewportChanged
+void Caret::viewportChanged(bool, bool) {
+	updateLocation();
 }
 
 
@@ -1243,63 +842,6 @@ void viewers::breakLine(Caret& caret, bool inheritIndent, size_t newlines /* = 1
 		s.assign(sb.str());
 	}
 	return caret.replaceSelection(s);
-}
-
-/**
- * Copies the selected content to the clipboard.
- * If the caret does not have a selection, this function does nothing.
- * @param caret The caret gives the selection
- * @param useKillRing Set @c true to send to the kill ring, not only the system clipboard
- * @throw ClipboardException The clipboard operation failed
- * @throw std#bad_alloc Internal memory allocation failed
- */
-void viewers::copySelection(Caret& caret, bool useKillRing) {
-	if(isSelectionEmpty(caret))
-		return;
-
-	IDataObject* content;
-	HRESULT hr = utils::createTextObjectForSelectedString(caret, true, content);
-	if(hr == E_OUTOFMEMORY)
-		throw bad_alloc("Caret.createTextObject returned E_OUTOFMEMORY.");
-	hr = tryOleClipboard(::OleSetClipboard, content);
-	if(FAILED(hr)) {
-		content->Release();
-		throw ClipboardException(hr);
-	}
-	hr = tryOleClipboard(::OleFlushClipboard);
-	content->Release();
-	if(useKillRing) {
-		if(texteditor::Session* const session = caret.document().session())
-			session->killRing().addNew(selectedString(caret, NLF_RAW_VALUE), caret.isSelectionRectangle());
-	}
-}
-
-/**
- * Copies and deletes the selected text. If the selection is empty, this function does nothing.
- * @param caret The caret gives the selection
- * @param useKillRing Set @c true to send also the kill ring
- * @return false if the change was interrupted
- * @throw ClipboardException The clipboard operation failed
- * @throw std#bad_alloc Internal memory allocation failed
- * @throw ... Any exceptions @c Document#replace throws
- */
-void viewers::cutSelection(Caret& caret, bool useKillRing) {
-	if(isSelectionEmpty(caret))
-		return;
-
-	com::ComPtr<IDataObject> previousContent;
-	HRESULT hr = tryOleClipboard(::OleGetClipboard, previousContent.initialize());
-	if(hr == E_OUTOFMEMORY)
-		throw bad_alloc("::OleGetClipboard returned E_OUTOFMEMORY.");
-	else if(FAILED(hr))
-		throw ClipboardException(hr);
-	copySelection(caret, useKillRing);	// this may throw
-	try {
-		viewers::eraseSelection(caret);
-	} catch(...) {
-		hr = tryOleClipboard(::OleSetClipboard, previousContent.get());
-		throw;
-	}
 }
 
 /**

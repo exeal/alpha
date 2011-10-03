@@ -96,7 +96,7 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 */
 		class LocaleSensitiveCaretShaper : public CaretShaper,
-			public CaretListener, public CaretStateListener, public TextViewerInputStatusListener {
+			public CaretListener, public CaretStateListener, public InputStatusListener {
 		public:
 			explicit LocaleSensitiveCaretShaper(bool bold = false) /*throw()*/;
 		private:
@@ -113,9 +113,6 @@ namespace ascension {
 				const std::pair<kernel::Position, kernel::Position>& oldPair, bool outsideOfView);
 			void overtypeModeChanged(const Caret& self);
 			void selectionShapeChanged(const Caret& self);
-			// TextViewerInputStatusListener
-			void textViewerIMEOpenStatusChanged() /*throw()*/;
-			void textViewerInputLanguageChanged() /*throw()*/;
 		private:
 			CaretShapeUpdater* updater_;	// weak ref.
 			bool bold_;

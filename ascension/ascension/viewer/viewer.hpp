@@ -354,10 +354,10 @@ namespace ascension {
 			virtual ~TextViewer();
 			// listeners and strategies
 			void addDisplaySizeListener(DisplaySizeListener& listener);
-			void addInputStatusListener(TextViewerInputStatusListener& listener);
+			void addInputStatusListener(InputStatusListener& listener);
 			void addViewportListener(ViewportListener& listener);
 			void removeDisplaySizeListener(DisplaySizeListener& listener);
-			void removeInputStatusListener(TextViewerInputStatusListener& listener);
+			void removeInputStatusListener(InputStatusListener& listener);
 			void removeViewportListener(ViewportListener& listener);
 			void setMouseInputStrategy(MouseInputStrategy* newStrategy, bool delegateOwnership);
 			// attributes
@@ -428,7 +428,6 @@ namespace ascension {
 			// helpers
 		private:
 			graphics::Scalar inlineProgressionOffsetInViewport() const;
-			void handleGUICharacterInput(CodePoint c);
 			void initialize();
 			graphics::Scalar mapLineLayoutIpdToViewport(length_t line, graphics::Scalar ipd) const;
 //			graphics::Scalar mapLineToViewportBpd(length_t line, bool fullSearch) const;
@@ -438,7 +437,6 @@ namespace ascension {
 			graphics::font::VisualLine mapViewportBpdToLine(
 				graphics::Scalar bpd, bool* snapped = 0) const /*throw()*/;
 			void repaintRuler();
-			void updateIMECompositionWindowPosition();
 			void updateScrollBars();
 
 			// protected interfaces
@@ -495,31 +493,21 @@ namespace ascension {
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 			LRESULT handleWindowSystemEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
 			void onCaptureChanged(const win32::Handle<HWND>& newWindow, bool& consumed);
-			void onChar(UINT ch, UINT flags, bool& consumed);
 			void onCommand(WORD id, WORD notifyCode, const win32::Handle<HWND>& control, bool& consumed);
 			void onDestroy(bool& consumed);
 			void onEraseBkgnd(const win32::Handle<HDC>& dc, bool& consumed);
 			const win32::Handle<HFONT>& onGetFont();
 			void onHScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>& scrollBar);
-			void onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled);
-			void onIMEEndComposition();
-			LRESULT onIMENotify(WPARAM command, LPARAM lParam, bool& handled);
-			LRESULT onIMERequest(WPARAM command, LPARAM lParam, bool& handled);
-			void onIMEStartComposition();
 			bool onNcCreate(CREATESTRUCTW& cs);
 			void onNotify(int id, NMHDR& nmhdr, bool& consumed);
 			void onSetCursor(const win32::Handle<HWND>& window, UINT hitTest, UINT message, bool& consumed);
 			void onStyleChanged(int type, const STYLESTRUCT& style);
 			void onStyleChanging(int type, STYLESTRUCT& style);
-			void onSysChar(UINT ch, UINT flags, bool& consumed);
 			void onSysColorChange();
 #ifdef WM_THEMECHANGED
 			void onThemeChanged();
 #endif // WM_THEMECHANGED
 			void onTimer(UINT_PTR eventId, TIMERPROC timerProc);
-#ifdef WM_UNICHAR
-			void onUniChar(UINT ch, UINT flags, bool& consumed);
-#endif // WM_UNICHAR
 			void onVScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>& scrollBar);
 #endif
 
@@ -628,7 +616,7 @@ namespace ascension {
 			// strategies and listeners
 			detail::StrategyPointer<MouseInputStrategy> mouseInputStrategy_;
 			detail::Listeners<DisplaySizeListener> displaySizeListeners_;
-			detail::Listeners<TextViewerInputStatusListener> inputStatusListeners_;
+			detail::Listeners<InputStatusListener> inputStatusListeners_;
 			detail::Listeners<ViewportListener> viewportListeners_;
 			std::auto_ptr<detail::RulerPainter> rulerPainter_;
 			std::auto_ptr<contentassist::ContentAssistant> contentAssistant_;
@@ -702,7 +690,6 @@ namespace ascension {
 			} freezeRegister_;
 
 			// input state
-			bool imeCompositionActivated_, imeComposingCharacter_;
 			unsigned long mouseInputDisabledCount_;
 
 			friend class VisualPoint;
@@ -769,27 +756,6 @@ namespace ascension {
 
 
 // inlines ////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * Registers the display size listener.
- * @param listener The listener to be registered
- * @throw std#invalid_argument @a listener is already registered
- */
-inline void TextViewer::addDisplaySizeListener(DisplaySizeListener& listener) {displaySizeListeners_.add(listener);}
-
-/**
- * Registers the input status listener.
- * @param listener The listener to be registered
- * @throw std#invalid_argument @a listener is already registered
- */
-inline void TextViewer::addInputStatusListener(TextViewerInputStatusListener& listener) {inputStatusListeners_.add(listener);}
-
-/**
- * Registers the viewport listener.
- * @param listener The listener to be registered
- * @throw std#invalid_argument @a listener is already registered
- */
-inline void TextViewer::addViewportListener(ViewportListener& listener) {viewportListeners_.add(listener);}
 
 /**
  * Returns @c true if the viewer allows the mouse operations.
@@ -868,27 +834,6 @@ inline presentation::Presentation& TextViewer::presentation() /*throw()*/ {retur
 
 /// Returns the presentation object. 
 inline const presentation::Presentation& TextViewer::presentation() const /*throw()*/ {return presentation_;}
-
-/**
- * Removes the display size listener.
- * @param listener The listener to be removed
- * @throw std#invalid_argument @a listener is not registered
- */
-inline void TextViewer::removeDisplaySizeListener(DisplaySizeListener& listener) {displaySizeListeners_.remove(listener);}
-
-/**
- * Removes the input status listener.
- * @param listener The listener to be removed
- * @throw std#invalid_argument @a listener is not registered
- */
-inline void TextViewer::removeInputStatusListener(TextViewerInputStatusListener& listener) {inputStatusListeners_.remove(listener);}
-
-/**
- * Removes the viewport listener.
- * @param listener The listener to be removed
- * @throw std#invalid_argument @a listener is not registered
- */
-inline void TextViewer::removeViewportListener(ViewportListener& listener) {viewportListeners_.remove(listener);}
 
 /**
  * Returns the ratio to vertical/horizontal scroll amount of line/column numbers.

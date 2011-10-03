@@ -515,148 +515,145 @@ void TextViewer::doBeep() /*throw()*/ {
 	::MessageBeep(MB_OK);
 }
 
-/// Handles @c WM_CHAR and @c WM_UNICHAR window messages.
-void TextViewer::handleGUICharacterInput(CodePoint c) {
-	// vanish the cursor when the GUI user began typing
-	if(texteditor::commands::CharacterInputCommand(*this, c)() != 0) {
-		// ignore if the cursor is not over a window belongs to the same thread
-		HWND pointedWindow = ::WindowFromPoint(base::Cursor::position());
-		if(pointedWindow != 0
-				&& ::GetWindowThreadProcessId(pointedWindow, 0) == ::GetWindowThreadProcessId(identifier().get(), 0))
-			cursorVanisher_.vanish();
-	}
-}
-
 /// @see Widget#handleWindowSystemEvent
 LRESULT TextViewer::handleWindowSystemEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
 	using namespace ascension::texteditor::commands;
 
 	switch(message) {
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
-	case WM_CLEAR:
-		if(::GetKeyState(VK_SHIFT) < 0)
+		case WM_CLEAR:
+			if(::GetKeyState(VK_SHIFT) < 0)
+				cutSelection(caret(), true);
+			else
+				CharacterDeletionCommand(*this, Direction::FORWARD)();
+			consumed = true;
+			return 0L;
+		case WM_COPY:
+			copySelection(caret(), true);
+			consumed = true;
+			return 0L;
+		case WM_CUT:
 			cutSelection(caret(), true);
-		else
-			CharacterDeletionCommand(*this, Direction::FORWARD)();
-		consumed = true;
-		return 0L;
-	case WM_COPY:
-		copySelection(caret(), true);
-		consumed = true;
-		return 0L;
-	case WM_CUT:
-		cutSelection(caret(), true);
-		consumed = true;
-		return 0L;
+			consumed = true;
+			return 0L;
 #endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-	case WM_GETOBJECT:
-		if(lp == OBJID_CLIENT) {
-			win32::com::ComPtr<IAccessible> acc;
-			if(SUCCEEDED(accessibleObject(*acc.initialize())) && accLib.isAvailable())
-				return accLib.lresultFromObject(IID_IAccessible, wp, acc.get());
-		} else if(lp == OBJID_WINDOW) {
-		}
-		return 0;
-#endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
-	case WM_GETTEXT: {
-		basic_ostringstream<Char> s;
-		writeDocumentToStream(s, document(), document().region(), text::NLF_CR_LF);
-		consumed = true;
-		return reinterpret_cast<LRESULT>(s.str().c_str());
-	}
-	case WM_GETTEXTLENGTH:
-		// ウィンドウ関係だし改行は CRLF でいいか。NLR_RAW_VALUE だと遅いし
-		consumed = true;
-		return document().length(text::NLF_CR_LF);
-	case WM_INPUTLANGCHANGE:
-		// TODO: This code should not depend on Win32.
-		inputStatusListeners_.notify(&TextViewerInputStatusListener::textViewerInputLanguageChanged);
-		if(hasFocus()) {
-			if(texteditor::Session* const session = document().session()) {
-				if(texteditor::InputSequenceCheckers* const isc = session->inputSequenceCheckers())
-					isc->imbue(::GetKeyboardLayout(::GetCurrentThreadId()));
+		case WM_GETOBJECT:
+			if(lp == OBJID_CLIENT) {
+				win32::com::ComPtr<IAccessible> acc;
+				if(SUCCEEDED(accessibleObject(*acc.initialize())) && accLib.isAvailable())
+					return accLib.lresultFromObject(IID_IAccessible, wp, acc.get());
+			} else if(lp == OBJID_WINDOW) {
 			}
+			return 0;
+#endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
+		case WM_GETTEXT: {
+			basic_ostringstream<Char> s;
+			writeDocumentToStream(s, document(), document().region(), text::NLF_CR_LF);
+			consumed = true;
+			return reinterpret_cast<LRESULT>(s.str().c_str());
 		}
-		break;
-//	case WM_NCPAINT:
-//		return 0;
+		case WM_GETTEXTLENGTH:
+			// ウィンドウ関係だし改行は CRLF でいいか。NLR_RAW_VALUE だと遅いし
+			consumed = true;
+			return document().length(text::NLF_CR_LF);
+		case WM_INPUTLANGCHANGE:
+			// TODO: This code should not depend on Win32.
+			inputStatusListeners_.notify(&TextViewerInputStatusListener::textViewerInputLanguageChanged);
+			if(hasFocus()) {
+				if(texteditor::Session* const session = document().session()) {
+					if(texteditor::InputSequenceCheckers* const isc = session->inputSequenceCheckers())
+						isc->imbue(::GetKeyboardLayout(::GetCurrentThreadId()));
+				}
+			}
+			break;
+//		case WM_NCPAINT:
+//			return 0;
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
-	case WM_PASTE:
-		PasteCommand(*this, false)();
-		consumed = true;
-		return 0L;
+		case WM_PASTE:
+			PasteCommand(*this, false)();
+			consumed = true;
+			return 0L;
 #endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
-	case WM_SETTEXT:
-		EntireDocumentSelectionCreationCommand(*this)();
-		caret().replaceSelection(String(reinterpret_cast<const wchar_t*>(lp)), false);
-		consumed = true;
-		return 0L;
+		case WM_SETTEXT:
+			EntireDocumentSelectionCreationCommand(*this)();
+			caret().replaceSelection(String(reinterpret_cast<const wchar_t*>(lp)), false);
+			consumed = true;
+			return 0L;
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
-	case WM_UNDO:
-		UndoCommand(*this, false)();
-		consumed = true;
-		return 0L;
+		case WM_UNDO:
+			UndoCommand(*this, false)();
+			consumed = true;
+			return 0L;
 #endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
-		// dispatch message into handler
-	case WM_CAPTURECHANGED:
-		onCaptureChanged(win32::Handle<HWND>(reinterpret_cast<HWND>(lp)), consumed);
-		return consumed ? 0 : 1;
-	case WM_CHAR:
-		onChar(static_cast<UINT>(wp), static_cast<UINT>(lp), consumed);
-		return consumed ? 0 : 1;
-	case WM_COMMAND:
-		onCommand(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp)), consumed);
-		return consumed ? 0 : 1;
-	case WM_DESTROY:
-		onDestroy(consumed);
-		return consumed ? 0 : 1;
-	case WM_ERASEBKGND:
-		onEraseBkgnd(win32::Handle<HDC>(reinterpret_cast<HDC>(wp)), consumed);
-		return consumed ? TRUE : FALSE;
-	case WM_GETFONT:
-		return (consumed = true), reinterpret_cast<LRESULT>(onGetFont().get());
-	case WM_HSCROLL:
-		return (consumed = true), onHScroll(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp))), 0;
-	case WM_IME_COMPOSITION:
-		return onIMEComposition(wp, lp, consumed), 1;
-	case WM_IME_ENDCOMPOSITION:
-		return onIMEEndComposition(), 1;
-	case WM_IME_NOTIFY:
-		return onIMENotify(wp, lp, consumed);
-	case WM_IME_REQUEST:
-		return onIMERequest(wp, lp, consumed);
-	case WM_IME_STARTCOMPOSITION:
-		return onIMEStartComposition(), 1;
-	case WM_NCCREATE:
-		return (consumed = true), onNcCreate(*reinterpret_cast<CREATESTRUCTW*>(lp));
-	case WM_NOTIFY:
-		return onNotify(static_cast<int>(wp), *reinterpret_cast<NMHDR*>(lp), consumed), 0;
-	case WM_SETCURSOR:
-		onSetCursor(win32::Handle<HWND>(reinterpret_cast<HWND>(wp)), LOWORD(lp), HIWORD(lp), consumed);
-		return consumed ? TRUE : FALSE;
-	case WM_STYLECHANGED:
-		return (consumed = true), onStyleChanged(static_cast<int>(wp), *reinterpret_cast<STYLESTRUCT*>(lp)), 0;
-	case WM_STYLECHANGING:
-		return (consumed = true), onStyleChanging(static_cast<int>(wp), *reinterpret_cast<STYLESTRUCT*>(lp)), 0;
-	case WM_SYSCHAR:
-		onSysChar(static_cast<UINT>(wp), static_cast<UINT>(lp), consumed);
-		return consumed ? 0 : 1;
-	case WM_SYSCOLORCHANGE:
-		return (consumed = true), onSysColorChange(), 0;
-#ifdef WM_THEMECHANGED
-	case WM_THEMECHANGED:
-		return (consumed = true), onThemeChanged(), 0;
-#endif // WM_THEMECHANGED
-	case WM_TIMER:
-		return (consumed = true), onTimer(static_cast<UINT_PTR>(wp), reinterpret_cast<TIMERPROC>(lp)), 0;
-#ifdef WM_UNICHAR
-	case WM_UNICHAR:
-		onUniChar(static_cast<UINT>(wp), static_cast<UINT>(lp), consumed);
-		return consumed ? 0 : 1;
+			// dispatch message into handler
+		case WM_CAPTURECHANGED:
+			onCaptureChanged(win32::Handle<HWND>(reinterpret_cast<HWND>(lp)), consumed);
+			return consumed ? 0 : 1;
+		case WM_CHAR:
+		case WM_SYSCHAR:
+#ifdef WM_UNICHAR:
+		case WM_UNICHAR:
 #endif // WM_UNICHAR
-	case WM_VSCROLL:
-		return (consumed = true), onVScroll(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp))), 0;
+		{
+			static_cast<detail::InputEventHandler&>(caret()).handleInputEvent(message, wp, lp, consumed);	// $friendly-access
+			// vanish the cursor when the GUI user began typing
+			if(consumed) {
+				// ignore if the cursor is not over a window belongs to the same thread
+				HWND pointedWindow = ::WindowFromPoint(base::Cursor::position());
+				if(pointedWindow != 0
+						&& ::GetWindowThreadProcessId(pointedWindow, 0) == ::GetWindowThreadProcessId(identifier().get(), 0))
+					cursorVanisher_.vanish();
+			}
+			return consumed ? 0 : 1;
+		}
+		case WM_COMMAND:
+			onCommand(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp)), consumed);
+			return consumed ? 0 : 1;
+		case WM_DESTROY:
+			onDestroy(consumed);
+			return consumed ? 0 : 1;
+		case WM_ERASEBKGND:
+			onEraseBkgnd(win32::Handle<HDC>(reinterpret_cast<HDC>(wp)), consumed);
+			return consumed ? TRUE : FALSE;
+		case WM_GETFONT:
+			return (consumed = true), reinterpret_cast<LRESULT>(onGetFont().get());
+		case WM_HSCROLL:
+			return (consumed = true), onHScroll(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp))), 0;
+		case WM_IME_CHAR:
+		case WM_IME_COMPOSITION:
+		case WM_IME_COMPOSITIONFULL:
+		case WM_IME_CONTROL:
+		case WM_IME_ENDCOMPOSITION:
+		case WM_IME_KEYDOWN:
+		case WM_IME_KEYUP:
+		case WM_IME_NOTIFY:
+		case WM_IME_REQUEST:
+		case WM_IME_SELECT:
+		case WM_IME_SETCONTEXT:
+		case WM_IME_STARTCOMPOSITION:
+			return static_cast<detail::InputEventHandler&>(caret()).handleInputEvent(message, wp, lp, consumed);	// $friendly-access
+		case WM_NCCREATE:
+			return (consumed = true), onNcCreate(*reinterpret_cast<CREATESTRUCTW*>(lp));
+		case WM_NOTIFY:
+			return onNotify(static_cast<int>(wp), *reinterpret_cast<NMHDR*>(lp), consumed), 0;
+		case WM_SETCURSOR:
+			onSetCursor(win32::Handle<HWND>(reinterpret_cast<HWND>(wp)), LOWORD(lp), HIWORD(lp), consumed);
+			return consumed ? TRUE : FALSE;
+		case WM_STYLECHANGED:
+			return (consumed = true), onStyleChanged(static_cast<int>(wp), *reinterpret_cast<STYLESTRUCT*>(lp)), 0;
+		case WM_STYLECHANGING:
+			return (consumed = true), onStyleChanging(static_cast<int>(wp), *reinterpret_cast<STYLESTRUCT*>(lp)), 0;
+		case WM_SYSCOLORCHANGE:
+			return (consumed = true), onSysColorChange(), 0;
+#ifdef WM_THEMECHANGED
+		case WM_THEMECHANGED:
+			return (consumed = true), onThemeChanged(), 0;
+#endif // WM_THEMECHANGED
+		case WM_TIMER:
+			return (consumed = true), onTimer(static_cast<UINT_PTR>(wp), reinterpret_cast<TIMERPROC>(lp)), 0;
+		case WM_VSCROLL:
+			return (consumed = true), onVScroll(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp))), 0;
 	}
 
 	return Widget::handleWindowSystemEvent(message, wp, lp, consumed);
@@ -902,12 +899,6 @@ void TextViewer::onCaptureChanged(const win32::Handle<HWND>&, bool& consumed) {
 		mouseInputStrategy_->captureChanged();
 }
 
-/// @see WM_CHAR
-void TextViewer::onChar(UINT ch, UINT, bool& consumed) {
-	handleGUICharacterInput(ch);
-	consumed = true;
-}
-
 /// @see Window#onCommand
 void TextViewer::onCommand(WORD id, WORD, const win32::Handle<HWND>&, bool& consumed) {
 	using namespace ascension::texteditor::commands;
@@ -1079,167 +1070,6 @@ namespace {
 	}
 } // namespace 0@
 
-/// @see WM_IME_COMPOSITION
-void TextViewer::onIMEComposition(WPARAM wParam, LPARAM lParam, bool& handled) {
-	if(document().isReadOnly())
-		return;
-	else if(/*lParam == 0 ||*/ win32::boole(lParam & GCS_RESULTSTR)) {	// completed
-		if(HIMC imc = ::ImmGetContext(identifier().get())) {
-			if(const length_t len = ::ImmGetCompositionStringW(imc, GCS_RESULTSTR, 0, 0) / sizeof(WCHAR)) {
-				// this was not canceled
-				const AutoBuffer<Char> text(new Char[len + 1]);
-				::ImmGetCompositionStringW(imc, GCS_RESULTSTR, text.get(), static_cast<DWORD>(len * sizeof(WCHAR)));
-				text[len] = 0;
-				if(!imeComposingCharacter_)
-					texteditor::commands::TextInputCommand(*this, text.get())();
-				else {
-					k::Document& doc = document();
-					try {
-						doc.insertUndoBoundary();
-						doc.replace(k::Region(*caret_,
-							static_cast<k::DocumentCharacterIterator&>(k::DocumentCharacterIterator(doc, caret()).next()).tell()),
-							String(1, static_cast<Char>(wParam)));
-						doc.insertUndoBoundary();
-					} catch(const k::DocumentCantChangeException&) {
-					}
-					imeComposingCharacter_ = false;
-					recreateCaret();
-				}
-			}
-//			updateIMECompositionWindowPosition();
-			::ImmReleaseContext(identifier().get(), imc);
-			handled = true;	// prevent to be send WM_CHARs
-		}
-	} else if(win32::boole(GCS_COMPSTR & lParam)) {
-		if(win32::boole(lParam & CS_INSERTCHAR)) {
-			k::Document& doc = document();
-			const k::Position temp(*caret_);
-			try {
-				if(imeComposingCharacter_)
-					doc.replace(k::Region(*caret_,
-						static_cast<k::DocumentCharacterIterator&>(k::DocumentCharacterIterator(doc, caret()).next()).tell()),
-						String(1, static_cast<Char>(wParam)));
-				else
-					insert(doc, *caret_, String(1, static_cast<Char>(wParam)));
-				imeComposingCharacter_ = true;
-				if(win32::boole(lParam & CS_NOMOVECARET))
-					caret_->moveTo(temp);
-			} catch(...) {
-			}
-			handled = true;
-			recreateCaret();
-		}
-	}
-}
-
-/// @see WM_IME_ENDCOMPOSITION
-void TextViewer::onIMEEndComposition() {
-	imeCompositionActivated_ = false;
-	recreateCaret();
-}
-
-/// @see WM_IME_NOTIFY
-LRESULT TextViewer::onIMENotify(WPARAM command, LPARAM, bool&) {
-	if(command == IMN_SETOPENSTATUS)
-		inputStatusListeners_.notify(&TextViewerInputStatusListener::textViewerIMEOpenStatusChanged);
-	return 0L;
-}
-
-/// @see WM_IME_REQUEST
-LRESULT TextViewer::onIMERequest(WPARAM command, LPARAM lParam, bool& handled) {
-	const k::Document& doc = document();
-
-	// this command will be sent two times when reconversion is invoked
-	if(command == IMR_RECONVERTSTRING) {
-		if(doc.isReadOnly() || caret().isSelectionRectangle()) {
-			beep();
-			return 0L;
-		}
-		handled = true;
-		if(isSelectionEmpty(*caret_)) {	// IME selects the composition target automatically if no selection
-			if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lParam)) {
-				const String& line = doc.line(caret().line());
-				rcs->dwStrLen = static_cast<DWORD>(line.length());
-				rcs->dwStrOffset = sizeof(RECONVERTSTRING);
-				rcs->dwTargetStrOffset = rcs->dwCompStrOffset = static_cast<DWORD>(sizeof(Char) * caret().column());
-				rcs->dwTargetStrLen = rcs->dwCompStrLen = 0;
-				line.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
-			}
-			return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(caret().line());
-		} else {
-			const String selection(selectedString(caret(), text::NLF_RAW_VALUE));
-			if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lParam)) {
-				rcs->dwStrLen = rcs->dwTargetStrLen = rcs->dwCompStrLen = static_cast<DWORD>(selection.length());
-				rcs->dwStrOffset = sizeof(RECONVERTSTRING);
-				rcs->dwTargetStrOffset = rcs->dwCompStrOffset = 0;
-				selection.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
-			}
-			return sizeof(RECONVERTSTRING) + sizeof(Char) * selection.length();
-		}
-	}
-
-	// before reconversion. a RECONVERTSTRING contains the ranges of the composition
-	else if(command == IMR_CONFIRMRECONVERTSTRING) {
-		if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lParam)) {
-			const k::Region region(doc.accessibleRegion());
-			if(!isSelectionEmpty(caret())) {
-				// reconvert the selected region. the selection may be multi-line
-				if(rcs->dwCompStrLen < rcs->dwStrLen)	// the composition region was truncated.
-					rcs->dwCompStrLen = rcs->dwStrLen;	// IME will alert and reconversion will not be happen if do this
-														// (however, NotePad narrows the selection...)
-			} else {
-				// reconvert the region IME passed if no selection (and create the new selection).
-				// in this case, reconversion across multi-line (prcs->dwStrXxx represents the entire line)
-				if(doc.isNarrowed() && caret().line() == region.first.line) {	// the document is narrowed
-					if(rcs->dwCompStrOffset / sizeof(Char) < region.first.column) {
-						rcs->dwCompStrLen += static_cast<DWORD>(sizeof(Char) * region.first.column - rcs->dwCompStrOffset);
-						rcs->dwTargetStrLen = rcs->dwCompStrOffset;
-						rcs->dwCompStrOffset = rcs->dwTargetStrOffset = static_cast<DWORD>(sizeof(Char) * region.first.column);
-					} else if(rcs->dwCompStrOffset / sizeof(Char) > region.second.column) {
-						rcs->dwCompStrOffset -= rcs->dwCompStrOffset - sizeof(Char) * region.second.column;
-						rcs->dwTargetStrOffset = rcs->dwCompStrOffset;
-						rcs->dwCompStrLen = rcs->dwTargetStrLen
-							= static_cast<DWORD>(sizeof(Char) * region.second.column - rcs->dwCompStrOffset);
-					}
-				}
-				caret().select(
-					k::Position(caret().line(), rcs->dwCompStrOffset / sizeof(Char)),
-					k::Position(caret().line(), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
-			}
-			handled = true;
-			return true;
-		}
-	}
-
-	// queried position of the composition window
-	else if(command == IMR_QUERYCHARPOSITION)
-		return false;	// handled by updateIMECompositionWindowPosition...
-
-	// queried document content for higher conversion accuracy
-	else if(command == IMR_DOCUMENTFEED) {
-		if(caret().line() == caret().anchor().line()) {
-			handled = true;
-			if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lParam)) {
-				rcs->dwStrLen = static_cast<DWORD>(doc.lineLength(caret().line()));
-				rcs->dwStrOffset = sizeof(RECONVERTSTRING);
-				rcs->dwCompStrLen = rcs->dwTargetStrLen = 0;
-				rcs->dwCompStrOffset = rcs->dwTargetStrOffset = sizeof(Char) * static_cast<DWORD>(caret().beginning().column());
-				doc.line(caret().line()).copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
-			}
-			return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(caret().line());
-		}
-	}
-
-	return 0L;
-}
-
-/// @see WM_IME_STARTCOMPOSITION
-void TextViewer::onIMEStartComposition() {
-	imeCompositionActivated_ = true;
-	updateIMECompositionWindowPosition();
-	utils::closeCompletionProposalsPopup(*this);
-}
-
 /// @see WM_NCCREATE
 bool TextViewer::onNcCreate(CREATESTRUCTW&) {
 	const LONG s = ::GetWindowLongW(identifier().get(), GWL_EXSTYLE);
@@ -1303,14 +1133,6 @@ void TextViewer::onTimer(UINT_PTR eventID, TIMERPROC) {
 		::SendMessageW(toolTip_, TTM_UPDATE, 0, 0L);
 	}
 }
-
-#ifdef WM_UNICHAR
-/// @see WM_UNICHAR
-void TextViewer::onUniChar(UINT ch, UINT, bool& consumed) {
-	if(consumed = (ch != UNICODE_NOCHAR))
-		handleGUICharacterInput(ch);
-}
-#endif // WM_UNICHAR
 
 /// @see Window#onVScroll
 void TextViewer::onVScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
@@ -1541,39 +1363,6 @@ void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKey
 	int c = menu.getNumberOfItems();
 	while(c > 13)
 		menu.erase<Menu::BY_POSITION>(c--);
-}
-
-/// Moves the IME form to valid position.
-void TextViewer::updateIMECompositionWindowPosition() {
-	assert(win32::boole(::IsWindow(identifier().get())));
-	if(!imeCompositionActivated_)
-		return;
-	else if(HIMC imc = ::ImmGetContext(identifier().get())) {
-		// composition window placement
-		COMPOSITIONFORM cf;
-		cf.rcArea = bounds(false);
-		const Margins margins(textAreaMargins());
-		cf.rcArea.left += margins.left;
-		cf.rcArea.top += margins.top;
-		cf.rcArea.right -= margins.right;
-		cf.rcArea.bottom -= margins.bottom;
-		cf.dwStyle = CFS_POINT;
-		cf.ptCurrentPos = clientXYForCharacter(caret().beginning(), false, TextLayout::LEADING);
-		if(cf.ptCurrentPos.y == numeric_limits<Scalar>::max() || cf.ptCurrentPos.y == numeric_limits<Scalar>::min())
-			cf.ptCurrentPos.y = (cf.ptCurrentPos.y == numeric_limits<Scalar>::min()) ? cf.rcArea.top : cf.rcArea.bottom;
-		else
-			cf.ptCurrentPos.y = max(cf.ptCurrentPos.y, cf.rcArea.top);
-		::ImmSetCompositionWindow(imc, &cf);
-		cf.dwStyle = CFS_RECT;
-		::ImmSetCompositionWindow(imc, &cf);
-
-		// composition font
-		LOGFONTW font;
-		::GetObjectW(renderer_->defaultFont()->nativeObject().get(), sizeof(LOGFONTW), &font);
-		::ImmSetCompositionFontW(imc, &font);	// this may be ineffective for IME settings
-		
-		::ImmReleaseContext(identifier().get(), imc);
-	}
 }
 
 
