@@ -40,23 +40,17 @@ namespace ascension {
 			friend class TextViewer;
 		};
 
-		/**
-		 * Interface for objects which are interested in change of input status of a @c TextViewer.
-		 * @see ICaretListener#overtypeModeChanged, TextViewer#addInputStatusListener,
-		 *      TextViewer#removeInputStatusListener
-		 */
-		class TextViewerInputStatusListener {
-		private:
-			/// The text viewer's input method open status has been changed.
-			virtual void textViewerIMEOpenStatusChanged() /*throw()*/ = 0;
-			/**
-			 * The text viewer's input language has been changed (ex. @c WM_INPUTLANGCHANGE of
-			 * Win32).
-			 */
-			virtual void textViewerInputLanguageChanged() /*throw()*/ = 0;
-			friend class TextViewer;
-		};
+	}
 
+	namespace detail {
+		class InputEventHandler {	// this is not an observer of caret...
+		private:
+			virtual void abortInput() = 0;
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+			virtual LRESULT handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed) = 0;
+#endif
+			friend class viewers::TextViewer;
+		};
 	}
 }
 

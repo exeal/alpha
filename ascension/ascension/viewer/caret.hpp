@@ -13,6 +13,7 @@
 #include <ascension/corelib/text/identifier-syntax.hpp>	// text.IdentifierSyntax
 #include <ascension/viewer/caret-observers.hpp>
 #include <ascension/viewer/caret-shaper.hpp>
+#include <ascension/viewer/viewer-observers.hpp>
 #include <ascension/viewer/visual-point.hpp>
 #ifdef ASCENSION_COMPILER_GCC
 #	include <unknwn.h>	// IUnknown, OLESTR, ...
@@ -40,7 +41,9 @@ namespace ascension {
 	namespace viewers {
 
 		// documentation is caret.cpp
-		class Caret : public VisualPoint, public kernel::PointListener, public kernel::DocumentListener {
+		class Caret : public VisualPoint, public detail::InputEventHandler,
+			public kernel::PointListener, public kernel::DocumentListener,
+			public DisplaySizeListener, public ViewportListener {
 		public:
 			/// Mode of tracking match brackets.
 			enum MatchBracketsTrackingMode {
@@ -76,8 +79,10 @@ namespace ascension {
 			Caret& setOvertypeMode(bool overtype) /*throw()*/;
 			// attributes : clipboard
 			bool canPaste(bool useKillRing) const /*throw()*/;
+#ifdef ASCENSION_OS_WINDOWS
 			LCID clipboardLocale() const /*throw()*/;
 			LCID setClipboardLocale(LCID newLocale);
+#endif // SCENSION_OS_WINDOWS
 			// attributes : matched braces
 			const std::pair<kernel::Position, kernel::Position>& matchBrackets() const /*throw()*/;
 			MatchBracketsTrackingMode matchBracketsTrackingMode() const /*throw()*/;
@@ -99,6 +104,7 @@ namespace ascension {
 			void updateLocation();
 
 		private:
+			void adjustInputMethodCompositionWindow();
 			void checkMatchBrackets();
 			void internalExtendSelection(void (*algorithm)(void));
 			void prechangeDocument();
@@ -107,11 +113,23 @@ namespace ascension {
 			// VisualPoint
 			void aboutToMove(kernel::Position& to);
 			void moved(const kernel::Position& from) /*throw()*/;
+			// detail.InputEventHandler
+			void abortInput();
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+			LRESULT handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
+			void onChar(CodePoint c, bool& consumed);
+			void onImeComposition(WPARAM wp, LPARAM lp, bool& consumed);
+			LRESULT onImeRequest(WPARAM command, LPARAM lp, bool& consumed);
+#endif
 			// kernel.PointListener
 			void pointMoved(const kernel::Point& self, const kernel::Position& oldPosition);
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			// DisplaySizeListener
+			void viewerDisplaySizeChanged();
+			// ViewportListener
+			void viewportChanged(bool horizontal, bool vertical);
 		private:
 			class SelectionAnchor : public VisualPoint {
 			public:
@@ -129,7 +147,9 @@ namespace ascension {
 				using kernel::Point::adaptToDocument;
 				kernel::Position positionBeforeUpdate_;
 			} * anchor_;
+#ifdef ASCENSION_OS_WINDOWS
 			LCID clipboardLocale_;
+#endif // SCENSION_OS_WIND
 			detail::Listeners<CaretListener> listeners_;
 			detail::Listeners<CharacterInputListener> characterInputListeners_;
 			detail::Listeners<CaretStateListener> stateListeners_;
@@ -149,6 +169,7 @@ namespace ascension {
 				bool leadingAnchor;		// true if in anchor_->moveTo calling, and ignore pointMoved
 				std::auto_ptr<VirtualBox> selectedRectangle;	// for rectangular selection. null when the selection is linear
 				bool typing;			// true when inputCharacter called (see prechangeDocument)
+				bool inputMethodCompositionActivated, inputMethodComposingCharacter;
 				kernel::Position lastTypedPosition;	// the position the caret input character previously or INVALID_POSITION
 				kernel::Region regionBeforeMoved;
 				std::pair<kernel::Position, kernel::Position> matchBrackets;	// matched brackets' positions. Position() for none
@@ -203,9 +224,6 @@ namespace ascension {
 				throw IllegalStateException("The selection is not rectangle.");
 			 return *context_.selectedRectangle;
 		}
-
-		/// Returns the locale identifier used to convert non-Unicode text.
-		inline LCID Caret::clipboardLocale() const /*throw()*/ {return clipboardLocale_;}
 
 		/**
 		 * Sets the new auto-show mode.

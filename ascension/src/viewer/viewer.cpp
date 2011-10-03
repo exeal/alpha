@@ -113,7 +113,7 @@ TextViewer::TextViewer(Presentation& presentation, Widget* parent /* = 0 */, Sty
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		accessibleProxy_(0),
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
-		imeCompositionActivated_(false), imeComposingCharacter_(false), mouseInputDisabledCount_(0) {
+		mouseInputDisabledCount_(0) {
 	renderer_.reset(new Renderer(*this));
 //	renderer_->addFontListener(*this);
 //	renderer_->addVisualLinesListener(*this);
@@ -148,7 +148,6 @@ TextViewer::TextViewer(const TextViewer& other) : presentation_(other.presentati
 
 	modeState_ = other.modeState_;
 
-	imeCompositionActivated_ = imeComposingCharacter_ = false;
 	mouseInputDisabledCount_ = 0;
 	document().addListener(*this);
 	document().addStateListener(*this);
@@ -185,19 +184,40 @@ void TextViewer::aboutToLoseFocus() {
 	if(completionWindow_->isWindow() && newWindow != completionWindow_->getSafeHwnd())
 		closeCompletionProposalsPopup(*this);
 */	abortIncrementalSearch(*this);
-	if(imeCompositionActivated_) {	// stop IME input
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-		win32::Handle<HIMC> imc(::ImmGetContext(identifier().get()),
-			bind1st(ptr_fun(&::ImmReleaseContext), identifier().get()));
-		::ImmNotifyIME(imc.get(), NI_COMPOSITIONSTR, CPS_CANCEL, 0);
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
-	}
+	static_cast<detail::InputEventHandler&>(caret()).abortInput();
 //	if(currentWin32WindowMessage().wParam != get()) {
 //		hideCaret();
 //		::DestroyCaret();
 //	}
 	redrawLines(makeRange(caret().beginning().line(), caret().end().line() + 1));
 	redrawScheduledRegion();
+}
+
+/**
+ * Registers the display size listener.
+ * @param listener The listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ */
+void TextViewer::addDisplaySizeListener(DisplaySizeListener& listener) {
+	displaySizeListeners_.add(listener);
+}
+
+/**
+ * Registers the input status listener.
+ * @param listener The listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ */
+void TextViewer::addInputStatusListener(InputStatusListener& listener) {
+	inputStatusListeners_.add(listener);
+}
+
+/**
+ * Registers the viewport listener.
+ * @param listener The listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ */
+void TextViewer::addViewportListener(ViewportListener& listener) {
+	viewportListeners_.add(listener);
 }
 
 /// @see CaretListener#caretMoved
@@ -380,7 +400,7 @@ void TextViewer::defaultFontChanged() /*throw()*/ {
 	rulerPainter_->update();
 	scrollInfo_.resetBars(*this, 'b', true);
 	updateScrollBars();
-	recreateCaret();
+	caret().resetVisualization();
 	redrawLine(0, true);
 }
 
@@ -1263,6 +1283,33 @@ void TextViewer::redrawLines(const Range<length_t>& lines) {
 	scheduleRedraw(boundsToRedraw, false);
 }
 
+/**
+ * Removes the display size listener.
+ * @param listener The listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+void TextViewer::removeDisplaySizeListener(DisplaySizeListener& listener) {
+	displaySizeListeners_.remove(listener);
+}
+
+/**
+ * Removes the input status listener.
+ * @param listener The listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+void TextViewer::removeInputStatusListener(InputStatusListener& listener) {
+	inputStatusListeners_.remove(listener);
+}
+
+/**
+ * Removes the viewport listener.
+ * @param listener The listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+void TextViewer::removeViewportListener(ViewportListener& listener) {
+	viewportListeners_.remove(listener);
+}
+
 /// Redraws the ruler.
 void TextViewer::repaintRuler() {
 	NativeRectangle r(bounds(false));
@@ -1377,7 +1424,6 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 	}
 
 	// postprocess
-	updateCaretPosition();
 	if(redraw)
 		redrawScheduledRegion();
 	viewportListeners_.notify<bool, bool>(&ViewportListener::viewportChanged, dx != 0, dy != 0);
@@ -1407,7 +1453,7 @@ void TextViewer::resized(State state, const NativeSize&) {
 	updateScrollBars();
 	rulerPainter_->update();
 	if(rulerPainter_->configuration().alignment != ALIGN_LEFT) {
-		recreateCaret();
+//		recreateCaret();
 //		redrawVerticalRuler();
 		scheduleRedraw(false);	// hmm...
 	}
