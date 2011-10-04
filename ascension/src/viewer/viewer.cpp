@@ -227,10 +227,6 @@ void TextViewer::caretMoved(const Caret& self, const k::Region& oldRegion) {
 	const k::Region newRegion(self.selectedRegion());
 	bool changed = false;
 
-	// adjust the caret
-	if(!isFrozen() && (hasFocus() /*|| completionWindow_->hasFocus()*/))
-		updateCaretPosition();
-
 	// redraw the selected region
 	if(self.isSelectionRectangle()) {	// rectangle
 		if(!oldRegion.isEmpty())
@@ -1537,8 +1533,8 @@ void TextViewer::setConfiguration(const Configuration* general, const RulerConfi
 		updateScrollBars();
 
 		if(!isFrozen() && (hasFocus() /*|| getHandle() == Viewer::completionWindow_->getSafeHwnd()*/)) {
-			recreateCaret();
-			updateCaretPosition();
+			caret().resetVisualization();
+			caret().updateLocation();
 		}
 		if(synchronizeUI) {
 			LONG style = ::GetWindowLongW(identifier().get(), GWL_EXSTYLE);
@@ -1660,7 +1656,7 @@ void TextViewer::updateScrollBars() {
 		scrollInfo_.horizontal.position = 0;
 		if(!isFrozen()) {
 			scheduleRedraw(false);
-			updateCaretPosition();
+			caret().updateLocation();
 		}
 	} else if(scrollInfo_.horizontal.position > minimum)
 		scrollTo(minimum, -1, true);
@@ -1687,7 +1683,7 @@ void TextViewer::updateScrollBars() {
 		scrollInfo_.firstVisibleLine = VisualLine(0, 0);
 		if(!isFrozen()) {
 			scheduleRedraw(false);
-			updateCaretPosition();
+			caret().updateLocation();
 		}
 	} else if(scrollInfo_.vertical.position > minimum)
 		scrollTo(-1, minimum, true);
@@ -3003,7 +2999,7 @@ bool DefaultMouseInputStrategy::showCursor(const NativePoint& position) {
 		cursorName = IDC_ARROW;
 	else if(htr == TextViewer::CONTENT_AREA) {
 		// on a hyperlink?
-		const k::Position p(viewer_->characterForClientXY(position, TextLayout::TRAILING, true, k::locations::UTF16_CODE_UNIT));
+		const k::Position p(viewer_->characterForLocalPoint(position, TextLayout::TRAILING, true, k::locations::UTF16_CODE_UNIT));
 		if(p != k::Position())
 			newlyHoveredHyperlink = utils::getPointedHyperlink(*viewer_, p);
 		if(newlyHoveredHyperlink != 0 && win32::boole(::GetAsyncKeyState(VK_CONTROL) & 0x8000))
@@ -3311,7 +3307,7 @@ bool source::getPointedIdentifier(const TextViewer& viewer, k::Position* startPo
 		NativePoint cursorPoint;
 		::GetCursorPos(&cursorPoint);
 		viewer.mapFromGlobal(cursorPoint);
-		const k::Position cursor = viewer.characterForClientXY(cursorPoint, TextLayout::LEADING);
+		const k::Position cursor = viewer.characterForLocalPoint(cursorPoint, TextLayout::LEADING);
 		if(source::getNearestIdentifier(viewer.document(), cursor,
 				(startPosition != 0) ? &startPosition->column : 0, (endPosition != 0) ? &endPosition->column : 0)) {
 			if(startPosition != 0)
