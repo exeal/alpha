@@ -106,6 +106,7 @@ namespace ascension {
 		private:
 			void adjustInputMethodCompositionWindow();
 			void checkMatchBrackets();
+			void fireCaretMoved(const kernel::Region& oldRegion);
 			void internalExtendSelection(void (*algorithm)(void));
 			void prechangeDocument();
 			void update(const kernel::DocumentChange& change);

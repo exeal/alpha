@@ -346,6 +346,12 @@ void Caret::extendSelection(const VerticalDestinationProxy& to) {
 	context_.leaveAnchorNext = false;
 }
 
+inline void Caret::fireCaretMoved(const Region& oldRegion) {
+	if(!isTextViewerDisposed() && !textViewer().isFrozen() && (textViewer().hasFocus() /*|| completionWindow_->hasFocus()*/))
+		updateLocation();
+	listeners_.notify<const Caret&, const Region&>(&CaretListener::caretMoved, *this, oldRegion);
+}
+
 namespace {
 	/**
 	 * @internal Deletes the forward one character and inserts the specified text.
@@ -478,7 +484,7 @@ void Caret::pointMoved(const Point& self, const Position& oldPosition) {
 		return;
 	if((oldPosition == position()) != isSelectionEmpty(*this))
 		checkMatchBrackets();
-	listeners_.notify<const Caret&, const Region&>(&CaretListener::caretMoved, *this, Region(oldPosition, position()));
+	fireCaretMoved(Region(oldPosition, position()));
 }
 
 /// @internal Should be called before change the document.
@@ -605,7 +611,7 @@ void Caret::select(const Position& anchor, const Position& caret) {
 			context_.selectedRectangle->update(selectedRegion());
 		if(autoShow_)
 			utils::show(*this);
-		listeners_.notify<const Caret&, const Region&>(&CaretListener::caretMoved, *this, oldRegion);
+		fireCaretMoved(oldRegion);
 	}
 	checkMatchBrackets();
 }
@@ -665,7 +671,7 @@ inline void Caret::updateVisualAttributes() {
 	if(isSelectionRectangle())
 		context_.selectedRectangle->update(selectedRegion());
 	if((context_.regionBeforeMoved.first != position() || context_.regionBeforeMoved.second != position()))
-		listeners_.notify<const Caret&, const Region&>(&CaretListener::caretMoved, *this, context_.regionBeforeMoved);
+		fireCaretMoved(context_.regionBeforeMoved);
 	if(autoShow_)
 		utils::show(*this);
 	checkMatchBrackets();
