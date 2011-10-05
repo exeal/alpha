@@ -89,22 +89,6 @@ bool DIAGNOSE_INHERENT_DRAWING = false;	// 余計な描画を行っていない�
  * @see presentation#Presentation, Caret
  */
 
-// local helpers
-namespace {
-	inline void abortIncrementalSearch(TextViewer& viewer) /*throw()*/ {
-		if(texteditor::Session* session = viewer.document().session()) {
-			if(session->incrementalSearcher().isRunning())
-				session->incrementalSearcher().abort();
-		}
-	}
-	inline void endIncrementalSearch(TextViewer& viewer) /*throw()*/ {
-		if(texteditor::Session* session = viewer.document().session()) {
-			if(session->incrementalSearcher().isRunning())
-				session->incrementalSearcher().end();
-		}
-	}
-} // namespace @0
-
 /**
  * Constructor.
  * @param presentation the presentation
@@ -416,10 +400,7 @@ void TextViewer::documentAboutToBeChanged(const k::Document&) {
 /// @see kernel#DocumentListener#documentChanged
 void TextViewer::documentChanged(const k::Document&, const k::DocumentChange& change) {
 	// cancel the active incremental search
-	if(texteditor::Session* session = document().session()) {	// TODO: should TextViewer handle this? (I.S. would...)
-		if(session->incrementalSearcher().isRunning())
-			session->incrementalSearcher().abort();
-	}
+	texteditor::abortIncrementalSearch(*this);	// TODO: should TextViewer handle this? (I.S. would...)
 
 	// slide the frozen lines to be drawn
 	if(isFrozen() && !isEmpty(freezeRegister_.linesToRedraw())) {
@@ -2534,7 +2515,7 @@ void utils::toggleOrientation(TextViewer& viewer) /*throw()*/ {
 }
 
 
-// ascension.source free functions //////////////////////////////////////////
+// free functions /////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Returns the identifier near the specified position in the document.
@@ -2621,4 +2602,20 @@ bool source::getPointedIdentifier(const TextViewer& viewer, k::Position* startPo
 		}
 //	}
 	return false;
+}
+
+/// Calls @c IncrementalSearcher#abort from @a viewer.
+void texteditor::abortIncrementalSearch(TextViewer& viewer) /*throw()*/ {
+	if(texteditor::Session* session = viewer.document().session()) {
+		if(session->incrementalSearcher().isRunning())
+			session->incrementalSearcher().abort();
+	}
+}
+
+/// Calls @c IncrementalSearcher#end from @a viewer.
+void texteditor::endIncrementalSearch(TextViewer& viewer) /*throw()*/ {
+	if(texteditor::Session* session = viewer.document().session()) {
+		if(session->incrementalSearcher().isRunning())
+			session->incrementalSearcher().end();
+	}
 }

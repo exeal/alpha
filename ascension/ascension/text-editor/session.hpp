@@ -25,6 +25,8 @@ namespace ascension {
 		class TextSearcher;
 	}
 
+	namespace viewers {class TextViewer;}
+
 	namespace texteditor {
 
 		class InputSequenceCheckers;
@@ -70,6 +72,9 @@ namespace ascension {
 			kernel::fileio::PathString migemoRuntimePathName_, migemoDictionaryPathName_;
 #endif // !ASCENSION_NO_MIGEMO
 		};
+
+		void abortIncrementalSearch(viewers::TextViewer& viewer) /*throw()*/;
+		void endIncrementalSearch(viewers::TextViewer& viewer) /*throw()*/;
 
 
 		/// Returns the input sequence checkers.
