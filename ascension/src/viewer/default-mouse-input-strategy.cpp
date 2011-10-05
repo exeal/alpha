@@ -9,6 +9,7 @@
 #include <ascension/corelib/text/break-iterator.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
+#include <ascension/text-editor/session.hpp>	// texteditor.xxxIncrementalSearch
 #include <ascension/viewer/base/cursor.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/default-mouse-input-strategy.hpp>
@@ -382,7 +383,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 	const TextViewer::HitTestResult htr = viewer_->hitTest(position);
 
 	utils::closeCompletionProposalsPopup(*viewer_);
-	endIncrementalSearch(*viewer_);
+	texteditor::endIncrementalSearch(*viewer_);
 
 	// select line(s)
 	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS) {
@@ -537,7 +538,7 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Action action, const base::Mous
 		else if(action == RELEASED)
 			handleLeftButtonReleased(input.location(), input.modifiers());
 		else if(action == DOUBLE_CLICKED) {
-			abortIncrementalSearch(*viewer_);
+			texteditor::abortIncrementalSearch(*viewer_);
 			if(handleLeftButtonDoubleClick(input.location(), input.modifiers()))
 				return true;
 			const TextViewer::HitTestResult htr = viewer_->hitTest(viewer_->mapFromGlobal(Cursor::position()));
