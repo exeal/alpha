@@ -8,9 +8,9 @@
 #ifndef ASCENSION_IDENTIFIER_SYNTAX_HPP
 #define ASCENSION_IDENTIFIER_SYNTAX_HPP
 
-#include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_NORMALIZATION
+#include <ascension/config.hpp>						// ASCENSION_NO_UNICODE_NORMALIZATION
 #include <ascension/corelib/text/character.hpp>
-#include <ascension/corelib/text/utf.hpp>	// text.utf.CharacterDecodeIterator
+#include <ascension/corelib/text/utf-iterator.hpp>	// text.utf.CharacterDecodeIterator
 #include <set>
 
 #if ASCENSION_UNICODE_VERSION > 0x0510

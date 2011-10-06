@@ -569,15 +569,17 @@ void Caret::resetVisualization() {
 		static_cast<CaretShaper&>(s).uninstall();
 	}
 
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 	::DestroyCaret();
 	if(image.get() != 0) {
-		::CreateCaret(viewer.identifier().get(), image.get(), 0, 0);
+		::CreateCaret(viewer.identifier().get(), image->asNativeObject().get(), 0, 0);
 		BITMAP bitmap;
 		::GetObjectW(image.get(), sizeof(HBITMAP), &bitmap);
 		shapeCache_.measure = bitmap.bmWidth;
 	} else
 		::CreateCaret(viewer.identifier().get(), 0, shapeCache_.measure = geometry::dx(solidSize), geometry::dy(solidSize));
 	::ShowCaret(viewer.identifier().get());
+#endif
 	updateLocation();
 }
 
@@ -650,7 +652,7 @@ void Caret::updateLocation() {
 		return;
 
 	NativePoint p(viewer.localPointForCharacter(*this, false, font::TextLayout::LEADING));
-	const PhysicalFourSides<Scalar> spaces(xspaceWidths());
+	const PhysicalFourSides<Scalar> spaces(textViewer().spaceWidths());
 	NativeRectangle textArea(viewer.bounds(false));
 	assert(geometry::isNormalized(textArea));
 	geometry::range<geometry::X_COORDINATE>(textArea) = makeRange(
@@ -658,12 +660,21 @@ void Caret::updateLocation() {
 	geometry::range<geometry::Y_COORDINATE>(textArea) = makeRange(
 		geometry::top(textArea) + spaces.top, geometry::bottom(textArea) - spaces.bottom);
 
-	if(!geometry::includes(textArea, p))
-		geometry::y(p) = -viewer.textRenderer().defaultFont()->metrics().linePitch();	// "hide" the caret
-	else if(shapeCache_.readingDirection == RIGHT_TO_LEFT
-			|| viewer.textRenderer().layouts()[line()].bidiEmbeddingLevel(column()) % 2 == 1)
+	const WritingMode<false> writingMode(utils::writingMode(textViewer()));
+	if(!geometry::includes(textArea, p)) {
+		// "hide" the caret
+		const Scalar linePitch = viewer.textRenderer().defaultFont()->metrics().linePitch();
+		if(WritingModeBase::isHorizontal(writingMode.blockFlowDirection))
+			geometry::y(p) = -linePitch;
+		else
+			geometry::x(p) = -linePitch;
+	} else if(WritingModeBase::isHorizontal(writingMode.blockFlowDirection)
+			&& (shapeCache_.readingDirection == RIGHT_TO_LEFT
+			|| viewer.textRenderer().layouts()[line()].bidiEmbeddingLevel(column()) % 2 == 1))
 		geometry::x(p) -= shapeCache_.measure;
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 	::SetCaretPos(geometry::x(p), geometry::y(p));
+#endif
 	adjustInputMethodCompositionWindow();
 }
 
@@ -680,7 +691,7 @@ inline void Caret::updateVisualAttributes() {
 
 /// @see DisplaySizeListener#viewerDisplaySizeChanged
 void Caret::viewerDisplaySizeChanged() {
-	if(textViewer().rulerConfiguration().alignment != ALIGN_LEFT)
+//	if(textViewer().rulerConfiguration().alignment != ALIGN_LEFT)
 		resetVisualization();
 }
 
