@@ -80,12 +80,12 @@ AutoScrollOriginMark::AutoScrollOriginMark(const TextViewer& viewer) /*throw()*/
 
 /**
  * Returns the cursor should be shown when the auto-scroll is active.
- * @param type the type of the cursor to obtain
- * @return the cursor. do not destroy the returned value
+ * @param type The type of the cursor to obtain
+ * @return The cursor. Do not destroy the returned value
  * @throw UnknownValueException @a type is unknown
  */
 const base::Cursor& AutoScrollOriginMark::cursorForScrolling(CursorType type) {
-	static Cursor instances[3];
+	static auto_ptr<Cursor> instances[3];
 	if(type >= ASCENSION_COUNTOF(instances))
 		throw UnknownValueException("type");
 	if(instances[type].get() == 0) {
@@ -165,11 +165,12 @@ const base::Cursor& AutoScrollOriginMark::cursorForScrolling(CursorType type) {
 			memcpy(xorBits + 4 * 20, XOR_LINE_20_TO_28, sizeof(XOR_LINE_20_TO_28));
 		}
 #if defined(ASCENSION_OS_WINDOWS)
-		instances[type].reset(::CreateCursor(::GetModuleHandleW(0), 16, 16, 32, 32, andBits, xorBits), &::DestroyCursor);
+		instances[type].reset(new base::Cursor(win32::Handle<HCURSOR>(::CreateCursor(::GetModuleHandleW(0), 16, 16, 32, 32, andBits, xorBits), &::DestroyCursor)));
 #else
+		instances[type].reset(new base::Cursor(bitmap));
 #endif
 	}
-	return instances[type];
+	return *instances[type];
 }
 
 /// @see Widget#paint

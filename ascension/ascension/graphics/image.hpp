@@ -20,6 +20,18 @@
 
 namespace ascension {
 	namespace graphics {
+		typedef
+#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+			Cairo::RefPtr<Cairo::ImageSurface>
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
+			CGImageRef
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+			QImage
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+			win32::Handle<HBITMAP>
+#endif
+			NativeImage;
+
 		class Image : public RenderingDevice {
 		public:
 			enum Format {
@@ -28,18 +40,11 @@ namespace ascension {
 		public:
 			Image(const NativeSize& size, Format format);
 			Image(const uint8_t* data, const NativeSize& size, Format format);
+			const NativeImage& asNativeObject() const /*throw()*/ {return impl_;}
 			std::auto_ptr<RenderingContext2D> createRenderingContext() const;
 			static int depth(Format format);
 		private:
- #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
-			Cairo::RefPtr<Cairo::ImageSurface> impl_;
- #elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
-			CGImageRef impl_;
- #elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
-			QImage impl_;
- #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
-			win32::Handle<HBITMAP> impl_;
- #endif
+			NativeImage impl_;
 		};
 	}
 }
