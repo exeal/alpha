@@ -134,13 +134,13 @@ namespace ascension {
 			 */
 			class URIHyperlinkDetector : public HyperlinkDetector {
 			public:
-				URIHyperlinkDetector(const rules::URIDetector& uriDetector, bool delegateOwnership) /*throw()*/;
+				URIHyperlinkDetector(std::tr1::shared_ptr<const rules::URIDetector> uriDetector) /*throw()*/;
 				~URIHyperlinkDetector() /*throw()*/;
 				// HyperlinkDetector
 				std::auto_ptr<Hyperlink> nextHyperlink(
 					const kernel::Document& document, length_t line, const Range<length_t>& range) const /*throw()*/;
 			private:
-				detail::StrategyPointer<const rules::URIDetector> uriDetector_;
+				std::tr1::shared_ptr<const rules::URIDetector> uriDetector_;
 			};
 
 			/**
@@ -187,7 +187,7 @@ namespace ascension {
 			// strategies
 			void addTextLineColorDirector(std::tr1::shared_ptr<TextLineColorDirector> director);
 			void removeTextLineColorDirector(TextLineColorDirector& director) /*throw()*/;
-			void setHyperlinkDetector(hyperlink::HyperlinkDetector* newDetector, bool delegateOwnership) /*throw()*/;
+			void setHyperlinkDetector(std::tr1::shared_ptr<hyperlink::HyperlinkDetector> newDetector) /*throw()*/;
 			void setTextLineStyleDirector(std::tr1::shared_ptr<TextLineStyleDirector> newDirector) /*throw()*/;
 			void setTextRunStyleDirector(std::tr1::shared_ptr<TextRunStyleDirector> newDirector) /*throw()*/;
 		private:
@@ -203,7 +203,7 @@ namespace ascension {
 			std::tr1::shared_ptr<TextRunStyleDirector> textRunStyleDirector_;
 			std::list<std::tr1::shared_ptr<TextLineColorDirector> > textLineColorDirectors_;
 			detail::Listeners<GlobalTextStyleListener> globalTextStyleListeners_;
-			detail::StrategyPointer<hyperlink::HyperlinkDetector> hyperlinkDetector_;
+			std::tr1::shared_ptr<hyperlink::HyperlinkDetector> hyperlinkDetector_;
 			struct Hyperlinks;
 			mutable std::list<Hyperlinks*> hyperlinks_;
 		};

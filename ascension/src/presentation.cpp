@@ -319,11 +319,10 @@ void Presentation::setGlobalTextStyle(tr1::shared_ptr<const TextToplevelStyle> n
 
 /**
  * Sets the hyperlink detector.
- * @param newDirector The director. @c null to unregister
- * @param delegateOwnership Set @c true to transfer the ownership of @a newDirector to the callee
+ * @param newDirector The director. Set @c null to unregister
  */
-void Presentation::setHyperlinkDetector(HyperlinkDetector* newDetector, bool delegateOwnership) /*throw()*/ {
-	hyperlinkDetector_.reset(newDetector, delegateOwnership);
+void Presentation::setHyperlinkDetector(tr1::shared_ptr<HyperlinkDetector> newDetector) /*throw()*/ {
+	hyperlinkDetector_ = newDetector;
 	clearHyperlinksCache();
 }
 
@@ -602,11 +601,12 @@ namespace {
 
 /**
  * Constructor.
- * @param uriDetector
- * @param delegateOwnership
+ * @param uriDetector Can't be @c null
+ * @throw NullPointerException @a uriDetector is @c null
  */
-URIHyperlinkDetector::URIHyperlinkDetector(const URIDetector& uriDetector,
-		bool delegateOwnership) : uriDetector_(&uriDetector, delegateOwnership) {
+URIHyperlinkDetector::URIHyperlinkDetector(tr1::shared_ptr<const URIDetector> uriDetector) : uriDetector_(uriDetector) {
+	if(uriDetector.get() == 0)
+		throw NullPointerException("uriDetector");
 }
 
 /// Destructor.
