@@ -174,7 +174,7 @@ namespace ascension {
 			void toggle(length_t line);
 		private:
 			detail::GapVector<length_t>::iterator find(length_t line) const /*throw()*/;
-			// IDocumentListener
+			// DocumentListener
 			void documentAboutToBeChanged(const Document& document);
 			void documentChanged(const Document& document, const DocumentChange& change);
 		private:
@@ -243,7 +243,7 @@ namespace ascension {
 			const String* property(const DocumentPropertyKey& key) const /*throw()*/;
 			texteditor::Session* session() /*throw()*/;
 			const texteditor::Session* session() const /*throw()*/;
-			void setInput(DocumentInput* newInput, bool delegateOwnership) /*throw()*/;
+			void setInput(std::tr1::shared_ptr<DocumentInput> newInput) /*throw()*/;
 			void setModified() /*throw()*/;
 			void setPartitioner(std::auto_ptr<DocumentPartitioner> newPartitioner) /*throw()*/;
 			void setProperty(const DocumentPropertyKey& key, const String& property);
@@ -316,7 +316,7 @@ namespace ascension {
 			};
 
 			texteditor::Session* session_;
-			detail::StrategyPointer<DocumentInput> input_;
+			std::tr1::shared_ptr<DocumentInput> input_;
 			std::auto_ptr<DocumentPartitioner> partitioner_;
 			std::auto_ptr<Bookmarker> bookmarker_;
 			std::auto_ptr<ContentTypeInformationProvider> contentTypeInformationProvider_;

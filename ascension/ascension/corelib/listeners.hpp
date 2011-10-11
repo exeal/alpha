@@ -18,6 +18,7 @@ namespace ascension {
 		/**
 		 * @internal Manages a strategy object.
 		 * @tparam Strategy The type of strategy object
+		 * @deprecated 0.8 Use @c std#shared_ptr instead.
 		 */
 		template<typename Strategy>
 		class StrategyPointer {

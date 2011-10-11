@@ -118,11 +118,11 @@ namespace ascension {
 		class URIRule : public Rule {
 		public:
 			URIRule(Token::Identifier id,
-				const URIDetector& uriDetector, bool delegateOwnership) /*throw()*/;
+				std::tr1::shared_ptr<const URIDetector> uriDetector) /*throw()*/;
 			std::auto_ptr<Token> parse(const TokenScanner& scanner,
 				const Char* first, const Char* last) const /*throw()*/;
 		private:
-			detail::StrategyPointer<const URIDetector> uriDetector_;
+			std::tr1::shared_ptr<const URIDetector> uriDetector_;
 		};
 
 		/// A concrete rule detects the registered words.

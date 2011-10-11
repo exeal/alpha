@@ -723,3 +723,12 @@ void DefaultMouseInputStrategy::uninstall() {
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 	viewer_ = 0;
 }
+
+
+// window system-dependent implementations ////////////////////////////////////////////////////////
+
+#if defined(ASCENSION_WINDOWS_SYSTEM_GTK)
+#elif defined(ASCENSION_WINDOWS_SYSTEM_QT)
+#elif defined(ASCENSION_WINDOWS_SYSTEM_QUARTZ)
+#elif defined(ASCENSION_WINDOWS_SYSTEM_WIN32)
+#endif

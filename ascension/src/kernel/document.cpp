@@ -812,11 +812,10 @@ void Document::resetContent() {
 
 /**
  * Sets the new document input.
- * @param newInput The new document input. can be @c null
- * @param delegateOwnership Set @c true to transfer the ownership into the callee
+ * @param newInput The new document input. Can be @c null
  */
-void Document::setInput(DocumentInput* newInput, bool delegateOwnership) /*throw()*/ {
-	input_.reset(newInput, delegateOwnership);
+void Document::setInput(tr1::shared_ptr<DocumentInput> newInput) /*throw()*/ {
+	input_ = newInput;
 }
 
 /**

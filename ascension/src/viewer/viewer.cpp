@@ -1546,18 +1546,18 @@ void TextViewer::setContentAssistant(auto_ptr<contentassist::ContentAssistant> n
 /**
  * Sets the mouse input strategy. An instance of @c TextViewer has the default strategy implemented
  * by @c DefaultMouseInputStrategy class as the construction.
- * @param newStrategy the new strategy or @c null
- * @param delegateOwnership set @c true to transfer the ownership into the callee
- * @throw IllegalStateException the window is not created yet
+ * @param newStrategy The new strategy or @c null
+ * @param delegateOwnership Set @c true to transfer the ownership into the callee
+ * @throw IllegalStateException The window is not created yet
  */
-void TextViewer::setMouseInputStrategy(MouseInputStrategy* newStrategy, bool delegateOwnership) {
+void TextViewer::setMouseInputStrategy(tr1::shared_ptr<MouseInputStrategy> newStrategy) {
 //	checkInitialization();
 	if(mouseInputStrategy_.get() != 0) {
 		mouseInputStrategy_->interruptMouseReaction(false);
 		mouseInputStrategy_->uninstall();
 	}
 	if(newStrategy != 0)
-		mouseInputStrategy_.reset(newStrategy, delegateOwnership);
+		mouseInputStrategy_ = newStrategy;
 	else
 		mouseInputStrategy_.reset(new DefaultMouseInputStrategy(), true);	// TODO: the two parameters don't have rationales.
 	mouseInputStrategy_->install(*this);

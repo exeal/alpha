@@ -822,10 +822,12 @@ auto_ptr<Token> NumberRule::parse(const TokenScanner& scanner, const Char* first
 /**
  * Constructor.
  * @param id The identifier of the token which will be returned by the rule
- * @param uriDetector The URI detector
+ * @param uriDetector The URI detector. Can't be @c null
+ * @throw NullPointerException @a uriDetector is @c null
  */
-URIRule::URIRule(Token::Identifier id, const URIDetector& uriDetector,
-		bool delegateOwnership) /*throw()*/ : Rule(id), uriDetector_(&uriDetector, delegateOwnership) {
+URIRule::URIRule(Token::Identifier id, tr1::shared_ptr<const URIDetector> uriDetector) /*throw()*/ : Rule(id), uriDetector_(uriDetector) {
+	if(uriDetector.get() == 0)
+		throw NullPointerException("uriDetector");
 }
 
 /// @see Rule#parse
