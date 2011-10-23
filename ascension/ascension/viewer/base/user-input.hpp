@@ -15,10 +15,21 @@ namespace ascension {
 	namespace viewers {
 		namespace base {
 
-			/// Abstract class represents a user input.
-			class UserInput {
+			class Event {
 			public:
-				enum ModifierKey {
+				Event() /*throw()*/ : consumed_(false) {}
+				void consume() /*throw()*/ {consumed_ = true;}
+				void ignore() /*throw()*/ {consumed_ = false;}
+				bool isConsumed() const /*throw()*/ {return consumed_;}
+			private:
+				bool consumed_;
+			};
+
+			/// Abstract class represents a user input.
+			class UserInput : public Event {
+			public:
+				typedef uint16_t ModifierKey;
+				static const ModifierKey
 					/// The Shift key is down.
 					SHIFT_DOWN		= 1 << 0,
 					/// The Ctrl (Control) key is down.
@@ -28,12 +39,12 @@ namespace ascension {
 					/// The AltGraph key is down.
 					ALT_GRAPH_DOWN	= 1 << 3,
 					/// The Command key is down. Only for Mac OS X.
-					COMMAND_DOWN	= 1 << 4
-				};
+					COMMAND_DOWN	= 1 << 4;
 				/**
 				 * @note Defined here because these values also can be used as modifiers.
 				 */
-				enum MouseButton {
+				typedef uint16_t MouseButton;
+				static const MouseButton
 					/// The Mouse Button1 (usually left button) is down.
 					BUTTON1_DOWN	= 1 << 5,
 					/// The Mouse Button2 (usually middle button) is down.
@@ -43,19 +54,18 @@ namespace ascension {
 					/// The Mouse Button4 (usually X1 button) is down.
 					BUTTON4_DOWN	= 1 << 8,
 					/// The Mouse Button5 (usually X2 button) is down.
-					BUTTON5_DOWN	= 1 << 9
-				};
+					BUTTON5_DOWN	= 1 << 9;
 			public:
-				int modifiers() const /*throw()*/ {return modifiers_;}
+				ModifierKey modifiers() const /*throw()*/ {return modifiers_;}
 				const std::time_t& timeStamp() const /*throw()*/ {return timeStamp_;}
 			protected:
 				/**
 				 * Protected constructor.
 				 * @param modifiers The modifier flags
 				 */
-				explicit UserInput(int modifiers) : modifiers_(modifiers) {std::time(&timeStamp_);}
+				explicit UserInput(ModifierKey modifiers) : modifiers_(modifiers) {std::time(&timeStamp_);}
 			private:
-				const int modifiers_;
+				const ModifierKey modifiers_;
 				std::time_t timeStamp_;
 			};
 
@@ -78,7 +88,7 @@ namespace ascension {
 				 * @param location The location
 				 * @param modifiers The modifier flags
 				 */
-				LocatedUserInput(const graphics::NativePoint& location, int modifiers) : UserInput(modifiers), location_(location) {
+				LocatedUserInput(const graphics::NativePoint& location, ModifierKey modifiers) : UserInput(modifiers), location_(location) {
 				}
 				/// Returns the location.
 				const graphics::NativePoint& location() const /*throw()*/ {return location_;}
@@ -96,7 +106,7 @@ namespace ascension {
 				 * @param modifiers
 				 */
 				MouseButtonInput(const graphics::NativePoint& location, MouseButton button,
-					int modifiers) : LocatedUserInput(location, modifiers), button_(button) {}
+					ModifierKey modifiers) : LocatedUserInput(location, modifiers), button_(button) {}
 				/// Returns the mouse button.
 				MouseButton button() const /*throw()*/ {return button_;}
 			private:
@@ -112,7 +122,7 @@ namespace ascension {
 				 * @param modifiers
 				 * @param rotation
 				 */
-				MouseWheelInput(const graphics::NativePoint& location, int modifiers,
+				MouseWheelInput(const graphics::NativePoint& location, ModifierKey modifiers,
 					graphics::NativeSize& rotation) : LocatedUserInput(location, modifiers), rotation_(rotation) {}
 				/// Returns the mouse wheel rotation.
 				const graphics::NativeSize& rotation() const /*throw()*/ {return rotation_;}
@@ -124,7 +134,7 @@ namespace ascension {
 			public:
 				typedef uint32_t Code;	///< Keyboard codes.
 			public:
-				KeyInput(Code keyboardCode, int modifiers, int repeatCount, int messageFlags)
+				KeyInput(Code keyboardCode, ModifierKey modifiers, int repeatCount, int messageFlags)
 					: UserInput(modifiers), keyboardCode_(keyboardCode), repeatCount_(repeatCount), messageFlags_(messageFlags) {}
 				Code keyboardCode() const /*throw()*/ {return keyboardCode_;}
 			private:

@@ -304,6 +304,7 @@
     <ClInclude Include="..\..\ascension\ascension\text-editor\kill-ring.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\session.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\cursor.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\drag-and-drop.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\message-dispatcher-windows.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\scrollable.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\user-input.hpp" />

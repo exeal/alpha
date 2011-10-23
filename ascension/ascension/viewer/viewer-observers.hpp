@@ -55,6 +55,7 @@ namespace ascension {
 		};
 #endif
 		namespace base {
+			class DropTarget;
 			class LocatedUserInput;
 			class MouseButtonInput;
 			class MouseWheelInput;
@@ -62,7 +63,7 @@ namespace ascension {
 
 		/**
 		 * Interface of objects which define how the text editors react to the users' mouse input.
-		 * @note An instance of @c IMouseInputStrategy can't be shared multiple text viewers.
+		 * @note An instance of @c MouseInputStrategy can't be shared multiple text viewers.
 		 * @see TextViewer#setMouseInputStrategy
 		 */
 		class MouseInputStrategy {
@@ -79,6 +80,8 @@ namespace ascension {
 		private:
 			/// The viewer lost the mouse capture.
 			virtual void captureChanged() = 0;
+			/// Returns @c DropTarget if this object supports the interface, or @c null.
+			virtual std::tr1::shared_ptr<base::DropTarget> handleDropTarget() const = 0;
 			/**
 			 * Installs the strategy.
 			 * @param viewer The text viewer uses the strategy. The window had been created at this

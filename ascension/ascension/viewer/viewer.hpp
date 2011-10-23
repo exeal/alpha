@@ -295,6 +295,11 @@ namespace ascension {
 			void provideClassInformation(ClassInformation& classInformation) const;
 			std::basic_string<WCHAR> provideClassName() const;
 #endif	// defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+			// base.DropTarget
+			void dragEntered(base::DragEnterInput& input);
+			void dragLeft(base::DragLeaveInput& input);
+			void dragMoved(base::DragMoveInput& input);
+			void dropped(base::DropInput& input);
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
@@ -451,6 +456,7 @@ namespace ascension {
 			Char* tipText_;
 			// strategies and listeners
 			std::tr1::shared_ptr<MouseInputStrategy> mouseInputStrategy_;
+			std::tr1::shared_ptr<base::DropTarget> dropTargetHandler_;
 			detail::Listeners<DisplaySizeListener> displaySizeListeners_;
 			detail::Listeners<InputStatusListener> inputStatusListeners_;
 			detail::Listeners<ViewportListener> viewportListeners_;

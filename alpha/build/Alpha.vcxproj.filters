@@ -634,6 +634,9 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\default-mouse-input-strategy.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\base\drag-and-drop.hpp">
+      <Filter>ascension\Header Files\viewer\base</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
