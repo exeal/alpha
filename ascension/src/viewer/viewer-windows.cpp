@@ -1626,19 +1626,6 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 	return DragOver(keyState, pt, effect);
 }
 
-/// @see IDropTarget#DragLeave
-STDMETHODIMP DefaultMouseInputStrategy::DragLeave() {
-	::SetFocus(0);
-	timer_.stop();
-	if(dnd_.supportLevel >= SUPPORT_DND) {
-		if(state_ == DND_TARGET)
-			state_ = NONE;
-		if(dnd_.dropTargetHelper.get() != 0)
-			dnd_.dropTargetHelper->DragLeave();
-	}
-	return S_OK;
-}
-
 /// @see IDropTarget#DragOver
 STDMETHODIMP DefaultMouseInputStrategy::DragOver(DWORD keyState, POINTL pt, DWORD* effect) {
 	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);

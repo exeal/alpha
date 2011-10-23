@@ -464,6 +464,27 @@ void TextViewer::documentUndoSequenceStopped(const k::Document&, const k::Positi
 	}
 }
 
+/// @see Widget#dragEntered
+void TextViewer::dragEntered(DragEnterInput& input) {
+	if(dropTargetHandler_.get() == 0)
+		return base::Widget::dragEntered(input);
+	return dropTargetHandler_->dragEntered(input);
+}
+
+/// @see Widget#dragLeft
+void TextViewer::dragLeft(DragLeaveInput& input) {
+	if(dropTargetHandler_.get() == 0)
+		return base::Widget::dragLeft(input);
+	return dropTargetHandler_->dragLeft(input);
+}
+
+/// @see Widget#dragMoved
+void TextViewer::dragMoved(DragMoveInput& input) {
+	if(dropTargetHandler_.get() == 0)
+		return base::Widget::dragMoved(input);
+	return dropTargetHandler_->dragMoved(input);
+}
+
 /**
  * Additionally draws the indicator margin on the vertical ruler.
  * @param line The line number
@@ -471,6 +492,13 @@ void TextViewer::documentUndoSequenceStopped(const k::Document&, const k::Positi
  * @param rect The rectangle to draw
  */
 void TextViewer::drawIndicatorMargin(length_t /* line */, Context& /* context */, const NativeRectangle& /* rect */) {
+}
+
+/// @see Widget#dropped
+void TextViewer::dropped(DropInput& input) {
+	if(dropTargetHandler_.get() == 0)
+		return base::Widget::dropped(input);
+	return dropTargetHandler_->dropped(input);
 }
 
 /**
@@ -1555,12 +1583,14 @@ void TextViewer::setMouseInputStrategy(tr1::shared_ptr<MouseInputStrategy> newSt
 	if(mouseInputStrategy_.get() != 0) {
 		mouseInputStrategy_->interruptMouseReaction(false);
 		mouseInputStrategy_->uninstall();
+		dropTargetHandler_.reset();
 	}
 	if(newStrategy != 0)
 		mouseInputStrategy_ = newStrategy;
 	else
 		mouseInputStrategy_.reset(new DefaultMouseInputStrategy(), true);	// TODO: the two parameters don't have rationales.
 	mouseInputStrategy_->install(*this);
+	dropTargetHandler_ = mouseInputStrategy_->handleDropTarget();
 }
 
 /**

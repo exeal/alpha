@@ -4,41 +4,149 @@
  * @date 2011-03-27 created
  */
 
-#include <ascension/viewer/base/widget-windows.hpp>
+#include <ascension/viewer/base/widget.hpp>
+#include <ascension/win32/com/com.hpp>
 
 using namespace ascension;
 using namespace ascension::graphics;
-using namespace ascension::win32;
+using namespace ascension::viewers::base;
 using namespace std;
 
 
-graphics::Rect<> WidgetBase::bounds(bool includeFrame) const {
+NativeRectangle Widget::bounds(bool includeFrame) const {
 	RECT temp;
 	if(includeFrame) {
-		if(!boole(::GetWindowRect(handle().get(), &temp)))
+		if(!win32::boole(::GetWindowRect(identifier().get(), &temp)))
 			throw PlatformDependentError<>();
 	} else {
-		if(!boole(::GetClientRect(handle().get(), &temp)))
+		if(!win32::boole(::GetClientRect(identifier().get(), &temp)))
 			throw PlatformDependentError<>();
 	}
-	return graphics::fromNative(temp);
+	return NativeRectangle(temp);
 }
 
-bool WidgetBase::hasFocus() const /*throw()*/ {
-	return ::GetFocus() == handle().get();
+namespace {
+	inline DropAction translateDropActions(DWORD effect) {
+		DropAction result = DROP_ACTION_IGNORE;
+		if(win32::boole(effect & DROPEFFECT_COPY))
+			result |= DROP_ACTION_COPY;
+		if(win32::boole(effect & DROPEFFECT_MOVE))
+			result |= DROP_ACTION_MOVE;
+		if(win32::boole(effect & DROPEFFECT_LINK))
+			result |= DROP_ACTION_LINK;
+		return result;
+	}
+
+	inline UserInput::MouseButton translateMouseButton(DWORD keyState) {
+		UserInput::MouseButton result = 0;
+		if(win32::boole(keyState & MK_LBUTTON))
+			result |= UserInput::BUTTON1_DOWN;
+		if(win32::boole(keyState & MK_RBUTTON))
+			result |= UserInput::BUTTON3_DOWN;
+		if(win32::boole(keyState & MK_MBUTTON))
+			result |= UserInput::BUTTON2_DOWN;
+		if(win32::boole(keyState & MK_XBUTTON1))
+			result |= UserInput::BUTTON4_DOWN;
+		if(win32::boole(keyState & MK_XBUTTON2))
+			result |= UserInput::BUTTON5_DOWN;
+		return result;
+	}
+
+	inline UserInput::ModifierKey translateModifierKey(DWORD keyState) {
+		UserInput::ModifierKey result = 0;
+		if(win32::boole(keyState & MK_SHIFT))
+			result |= UserInput::SHIFT_DOWN;
+		if(win32::boole(keyState & MK_CONTROL))
+			result |= UserInput::CONTROL_DOWN;
+		if(win32::boole(keyState & MK_ALT))
+			result |= UserInput::ALT_DOWN;
+		return result;
+	}
+
+	template<typename Point>
+	inline MouseButtonInput makeMouseButtonInput(const Point& location, DWORD keyState) {
+		return MouseButtonInput(
+			geometry::make<NativePoint>(location.x, location.y),
+			translateMouseButton(keyState), translateModifierKey(keyState));
+	}
 }
 
-void WidgetBase::hide() {
-	if(!boole(::SetWindowPos(handle().get(), 0, 0, 0, 0, 0,
+/// Implements @c IDropTarget#DragEnter method.
+STDMETHODIMP Widget::DragEnter(IDataObject* data, DWORD keyState, POINTL position, DWORD* effect) {
+	if(data == 0)
+		return E_INVALIDARG;
+	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
+
+#ifdef _DEBUG
+	{
+		win32::DumpContext dout;
+		win32::com::ComPtr<IEnumFORMATETC> formats;
+		HRESULT hr;
+		if(SUCCEEDED(hr = data->EnumFormatEtc(DATADIR_GET, formats.initialize()))) {
+			FORMATETC format;
+			ULONG fetched;
+			dout << L"DragEnter received a data object exposes the following formats.\n";
+			for(formats->Reset(); formats->Next(1, &format, &fetched) == S_OK; ) {
+				WCHAR name[256];
+				if(::GetClipboardFormatNameW(format.cfFormat, name, ASCENSION_COUNTOF(name) - 1) != 0)
+					dout << L"\t" << name << L"\n";
+				else
+					dout << L"\t" << L"(unknown format : " << format.cfFormat << L")\n";
+				if(format.ptd != 0)
+					::CoTaskMemFree(format.ptd);
+			}
+		}
+	}
+#endif // _DEBUG
+
+	DragEnterInput input(makeMouseButtonInput(position, keyState), translateDropActions(*effect));
+	dragEntered(input);
+	return S_OK;
+}
+
+/// Implements @c IDropTarget#DragOver method.
+STDMETHODIMP Widget::DragOver(DWORD keyState, POINTL position, DWORD* effect) {
+	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
+
+	DragMoveInput input(makeMouseButtonInput(position, keyState), translateDropActions(*effect));
+	dragMoved(input);
+	return S_OK;
+}
+
+/// Implements @c IDropTarget#DragLeave method.
+STDMETHODIMP Widget::DragLeave() {
+	try {
+		dragLeft(DragLeaveInput());
+	} catch(const bad_alloc&) {
+		return E_OUTOFMEMORY;
+	}
+	return S_OK;
+}
+
+/// Implements @c IDropTarget#Drop method.
+STDMETHODIMP Widget::Drop(IDataObject* data, DWORD keyState, POINTL position, DWORD* effect) {
+	if(data == 0)
+		return E_INVALIDARG;
+	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
+
+	DropInput input(makeMouseButtonInput(position, keyState), translateDropActions(*effect));
+	dropped(input);
+	return S_OK;
+}
+
+auto_ptr<Widget::InputGrabLocker> Widget::grabInput() {
+	::SetCapture(identifier().get());
+	return auto_ptr<InputGrabLocker>(new InputGrabLocker(*this));
+}
+
+bool Widget::hasFocus() const /*throw()*/ {
+	return ::GetFocus() == identifier().get();
+}
+
+void Widget::hide() {
+	if(!win32::boole(::SetWindowPos(identifier().get(), 0, 0, 0, 0, 0,
 			SWP_HIDEWINDOW | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOREPOSITION | SWP_NOSIZE | SWP_NOZORDER)))
 		throw PlatformDependentError<>();
-}
-
-Point<> WidgetBase::clientToScreen(const Point<>& p) const {
-	POINT temp(toNative(p));
-	if(!boole(::ClientToScreen(handle().get(), &temp)))
-		throw PlatformDependentError<>();
-	return graphics::fromNative(temp);
 }
 
 void WidgetBase::initialize(const Handle<HWND>& parent,
@@ -77,42 +185,54 @@ void WidgetBase::initialize(const Handle<HWND>& parent,
 	assert(self == this);
 }
 
-bool WidgetBase::isVisible() const /*throw()*/ {
-	return boole(::IsWindowVisible(handle().get()));
+bool Widget::isVisible() const /*throw()*/ {
+	return win32::boole(::IsWindowVisible(identifier().get()));
 }
 
-bool WidgetBase::isWindow() const /*throw()*/ {
-	return boole(::IsWindow(handle().get()));
+bool Widget::isWindow() const /*throw()*/ {
+	return win32::boole(::IsWindow(identifier().get()));
 }
 
-void WidgetBase::redrawScheduledRegion() {
-	if(!boole(::UpdateWindow(handle().get())))
+NativePoint Widget::mapFromGlobal(const NativePoint& position) const {
+	POINT temp(position);
+	if(!win32::boole(::ScreenToClient(identifier().get(), &temp)))
+		throw PlatformDependentError<>();
+	return NativePoint(temp);
+}
+
+NativePoint Widget::mapToGlobal(const NativePoint& position) const {
+	POINT temp(position);
+	if(!win32::boole(::ClientToScreen(identifier().get(), &temp)))
+		throw PlatformDependentError<>();
+	return NativePoint(temp);
+}
+
+void Widget::redrawScheduledRegion() {
+	if(!win32::boole(::UpdateWindow(identifier().get())))
 		throw PlatformDependentError<>();
 }
 
-void WidgetBase::setBounds(const graphics::Rect<>& bounds) {
-	if(!boole(::SetWindowPos(handle().get(), 0,
-			bounds.origin().x, bounds.origin().y,
-			bounds.size().cx, bounds.size().cy, SWP_NOACTIVATE | SWP_NOZORDER)))
+void Widget::releaseInput() {
+	if(!win32::boole(::ReleaseCapture()))
 		throw PlatformDependentError<>();
 }
 
-void WidgetBase::scheduleRedraw(bool eraseBackground) {
-	if(!boole(::InvalidateRect(handle().get(), 0, eraseBackground)))
+void Widget::setBounds(const NativeRectangle& bounds) {
+	if(!win32::boole(::SetWindowPos(identifier().get(), 0,
+			geometry::left(bounds), geometry::top(bounds),
+			geometry::dx(bounds), geometry::dy(bounds), SWP_NOACTIVATE | SWP_NOZORDER)))
 		throw PlatformDependentError<>();
 }
 
-void WidgetBase::scheduleRedraw(const graphics::Rect<>& rect, bool eraseBackground) {
-	RECT temp = toNative(rect);
-	if(!boole(::InvalidateRect(handle().get(), &temp, eraseBackground)))
+void Widget::scheduleRedraw(bool eraseBackground) {
+	if(!win32::boole(::InvalidateRect(identifier().get(), 0, eraseBackground)))
 		throw PlatformDependentError<>();
 }
 
-Point<> WidgetBase::screenToClient(const Point<>& p) const {
-	POINT temp(toNative(p));
-	if(!boole(::ScreenToClient(handle().get(), &temp)))
+void Widget::scheduleRedraw(const NativeRectangle& rect, bool eraseBackground) {
+	RECT temp(rect);
+	if(!win32::boole(::InvalidateRect(identifier().get(), &temp, eraseBackground)))
 		throw PlatformDependentError<>();
-	return graphics::fromNative(temp);
 }
 
 void WidgetBase::scrollInformation(int bar, SCROLLINFO& scrollInfo, UINT mask /* = SIF_ALL */) const {
@@ -152,8 +272,8 @@ void WidgetBase::setScrollRange(int bar, const Range<int>& range, bool redraw /*
 	::SetScrollRange(handle().get(), bar, range.beginning(), range.end(), redraw);
 }
 
-void WidgetBase::show() {
-	if(!boole(::ShowWindow(handle().get(), SW_SHOWNOACTIVATE)))
+void Widget::show() {
+	if(!win32::boole(::ShowWindow(identifier().get(), SW_SHOWNOACTIVATE)))
 		throw PlatformDependentError<>();
 }
 

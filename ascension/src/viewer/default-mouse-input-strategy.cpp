@@ -286,6 +286,23 @@ void DefaultMouseInputStrategy::captureChanged() {
 	state_ = NONE;
 }
 
+/// @see DropTarget#dragLeft
+void DefaultMouseInputStrategy::dragLeft(base::DragLeaveInput& input) {
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+	::SetFocus(0);
+#endif
+	timer_.stop();
+	if(dnd_.supportLevel >= SUPPORT_DND) {
+		if(state_ == DND_TARGET)
+			state_ = NONE;
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+		if(dnd_.dropTargetHelper.get() != 0)
+			dnd_.dropTargetHelper->DragLeave();
+#endif
+	}
+	input.consume();
+}
+
 /**
  * Ends the auto scroll.
  * @return true if the auto scroll was active
@@ -364,6 +381,11 @@ void DefaultMouseInputStrategy::extendSelection(const k::Position* to /* = 0 */)
 			caret.select(k::Position(selection_.initialLine, selection_.initialWordColumns.first),
 				k::Position(selection_.initialLine, selection_.initialWordColumns.second));
 	}
+}
+
+/// @see MouseInputStrategy#handleDropTarget
+tr1::shared_ptr<base::DropTarget> DefaultMouseInputStrategy::handleDropTarget() const {
+	return tr1::make_shared<base::DropTarget>(this, 0);
 }
 
 /**

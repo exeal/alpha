@@ -48,7 +48,7 @@ namespace ascension {
 					>, win32::com::NoReferenceCounting
 				>,
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
-				private HasTimer {
+				private HasTimer, private base::DropTarget {
 			ASCENSION_UNASSIGNABLE_TAG(DefaultMouseInputStrategy);
 		public:
 			/**
@@ -84,6 +84,7 @@ namespace ascension {
 			void handleLeftButtonReleased(const graphics::NativePoint& position, int modifiers);
 			// MouseInputStrategy
 			void captureChanged();
+			std::tr1::shared_ptr<base::DropTarget> handleDropTarget() const;
 			void install(TextViewer& viewer);
 			void interruptMouseReaction(bool forKeyboardInput);
 			bool mouseButtonInput(Action action, const base::MouseButtonInput& input);
@@ -93,6 +94,11 @@ namespace ascension {
 			void uninstall();
 			// HasTimer
 			void timeElapsed(Timer& timer);
+			// base.DropTarget
+			void dragEntered(base::DragEnterInput& input);
+			void dragLeft(base::DragLeaveInput& input);
+			void dragMoved(base::DragMoveInput& input);
+			void dropped(base::DropInput& input);
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 			// IDropSource
 			STDMETHODIMP QueryContinueDrag(BOOL escapePressed, DWORD keyState);

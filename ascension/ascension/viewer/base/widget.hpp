@@ -7,13 +7,20 @@
 #ifndef ASCENSION_WIDGET_HPP
 #define ASCENSION_WIDGET_HPP
 #include <ascension/platforms.hpp>
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-#	include <ascension/win32/windows.hpp>
-#endif
 #include <ascension/corelib/basic-exceptions.hpp>	// IllegalStateException
 #include <ascension/graphics/geometry.hpp>
 #include <ascension/graphics/rendering-device.hpp>	// graphics.RenderingDevice, ...
+#include <ascension/viewer/base/drag-and-drop.hpp>
 #include <ascension/viewer/base/user-input.hpp>
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#	include <gtkmm/widget.h>
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#	include <QWidget>
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#	include <ascension/win32/windows.hpp>
+#	include <ObjIdl.h>	// IDataObject
+#endif
 
 namespace ascension {
 
@@ -36,7 +43,7 @@ namespace ascension {
 			};
 
 
-			class Widget : public graphics::RenderingDevice {
+			class Widget : protected DropTarget, public graphics::RenderingDevice {
 			public:
 				enum State {
 					NORMAL, MAXIMIZED, MINIMIZED
@@ -62,39 +69,55 @@ namespace ascension {
 
 				const Identifier& identifier() const;
 
-				virtual graphics::NativeRectangle bounds(bool includeFrame) const = 0;
-				virtual graphics::NativePoint mapFromGlobal(const graphics::NativePoint& position) const = 0;
-				graphics::NativeRectangle mapFromGlobal(const graphics::NativeRectangle& rectangle) const;
-				virtual graphics::NativePoint mapToGlobal(const graphics::NativePoint& position) const = 0;
-				graphics::NativeRectangle mapToGlobal(const graphics::NativeRectangle& rectangle) const;
+				graphics::NativeRectangle bounds(bool includeFrame) const;
+				graphics::NativePoint mapFromGlobal(const graphics::NativePoint& position) const;
+				graphics::NativeRectangle mapFromGlobal(const graphics::NativeRectangle& rectangle) const {
+					return graphics::geometry::make<graphics::NativeRectangle>(
+						mapFromGlobal(graphics::geometry::get<0>(rectangle)),
+						mapFromGlobal(graphics::geometry::get<1>(rectangle)));
+				}
+				graphics::NativePoint mapToGlobal(const graphics::NativePoint& position) const;
+				graphics::NativeRectangle mapToGlobal(const graphics::NativeRectangle& rectangle) const {
+					return graphics::geometry::make<graphics::NativeRectangle>(
+						mapToGlobal(graphics::geometry::get<0>(rectangle)),
+						mapToGlobal(graphics::geometry::get<1>(rectangle)));
+				}
 				void move(const graphics::NativePoint& newOrigin);
 				void resize(const graphics::NativeSize& newSize);
-				virtual void setBounds(const graphics::NativeRectangle& bounds) = 0;
-				virtual void setShape(const graphics::NativeRegion& shape) = 0;
+				void setBounds(const graphics::NativeRectangle& bounds);
+				void setShape(const graphics::NativeRegion& shape);
  
-				virtual void close() = 0;
-				virtual void hide() = 0;
+				void close();
+				void hide();
 				void lower();
 				void raise();
-				virtual void show() = 0;
+				void show();
 
-				virtual void forcePaint(const graphics::NativeRectangle& bounds) = 0;
+				void forcePaint(const graphics::NativeRectangle& bounds);
 				void redrawScheduledRegion();
 				void scheduleRedraw(bool eraseBackground);
 				void scheduleRedraw(const graphics::NativeRectangle& rect, bool eraseBackground);
 
-				virtual void setOpacity(double opacity) = 0;
-				virtual void setAlwaysOnTop(bool set) = 0;
+				void setOpacity(double opacity);
+				void setAlwaysOnTop(bool set);
 
 				bool hasFocus() const;
-				virtual bool isVisible() const = 0;
-				virtual bool isActive() const = 0;
+				bool isVisible() const;
+				bool isActive() const;
 				void setFocus();
 
-				virtual std::auto_ptr<InputGrabLocker> grabInput() = 0;
-				virtual void releaseInput() = 0;
+				std::auto_ptr<InputGrabLocker> grabInput();
+				void releaseInput();
+
+				void acceptDrops(bool accept = true);
+				bool acceptsDrops() const;
 
 			protected:
+				// DropTarget (default implementations do nothing)
+				virtual void dragEntered(DragEnterInput& input) {}
+				virtual void dragLeft(DragLeaveInput& input) {}
+				virtual void dragMoved(DragMoveInput& input) {}
+				virtual void dropped(DropInput& input) {}
 				// message handlers
 				// TODO: these methods should not be virtual?
 				virtual void aboutToClose(bool& reject);
@@ -158,9 +181,33 @@ namespace ascension {
 				virtual void provideClassInformation(ClassInformation& classInfomation) const {}
 				virtual std::basic_string<WCHAR> provideClassName() const = 0;
 #endif
+			private:
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+				// Gtk.Widget
+				virtual void on_drag_leave(const Glib::RefPtr<Gdk::DragContext>& context, guint time);
+				virtual bool on_drag_motion(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
+				virtual bool on_drag_drop(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
+				virtual void on_drag_data_received(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, const SelectionData& selection_data, guint info, guint time);
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+				// QWidget
+				virtual void dragEnterEvent(QDragEnterEvent* event);
+				virtual void dragLeaveEvent(QDragLeaveEvent* event);
+				virtual void dragMoveEvent(QDragMoveEvent* event);
+				virtual void dropEvent(QDropEvent* event);
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+				// IDropTarget
+				virtual STDMETHODIMP DragEnter(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect);
+				virtual STDMETHODIMP DragOver(DWORD keyState, POINTL pt, DWORD* effect);
+				virtual STDMETHODIMP DragLeave();
+				virtual STDMETHODIMP Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect);
+#endif
 
 			private:
 				Identifier identifier_;
+#ifndef ASCENSION_WINDOW_SYSTEM_QT
+				bool acceptsDrops_;
+#endif // !ASCENSION_WINDOW_SYSTEM_QT
 			};
 
 		}
