@@ -303,6 +303,57 @@ void DefaultMouseInputStrategy::dragLeft(base::DragLeaveInput& input) {
 	input.consume();
 }
 
+/// @see DropTarget#dragMoved
+void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
+	DropAction dropAction = DROP_ACTION_IGNORE;
+	bool acceptable = true;
+
+	if((state_ != DND_SOURCE && state_ != DND_TARGET) || viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
+		acceptable = false;
+	else {
+		const NativePoint caretPoint(viewer_->mapFromGlobal(input.location()));
+		const k::Position p(viewer_->characterForLocalPoint(caretPoint, TextLayout::TRAILING));
+		viewer_->setCaretPosition(viewer_->localPointForCharacter(p, true, TextLayout::LEADING));
+
+		// drop rectangle text into bidirectional line is not supported...
+		if(dnd_.numberOfRectangleLines != 0) {
+			const length_t lines = min(viewer_->document().numberOfLines(), p.line + dnd_.numberOfRectangleLines);
+			for(length_t line = p.line; line < lines; ++line) {
+				if(viewer_->textRenderer().layouts()[line].isBidirectional()) {
+					acceptable = false;
+					break;
+				}
+			}
+		}
+	}
+
+	if(acceptable) {
+		dropAction = base::hasModifier<UserInput::CONTROL_DOWN>(input.modifiers()) ? DROP_ACTION_COPY : DROP_ACTION_MOVE;
+		const NativeSize scrollOffset(calculateDnDScrollOffset(*viewer_));
+		if(geometry::dx(scrollOffset) != 0 || geometry::dy(scrollOffset) != 0) {
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+			dropAction |= DROP_ACTION_WIN32_SCROLL;
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+			// only one direction to scroll
+			if(geometry::dy(scrollOffset) != 0)
+				viewer_->scroll(0, geometry::dy(scrollOffset), true);
+			else
+				viewer_->scroll(geometry::dx(scrollOffset), 0, true);
+		}
+	}
+	input.setDropAction(dropAction);
+	input.consume();
+
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+	if(dnd_.dropTargetHelper.get() != 0) {
+		viewer_->lockScroll();
+		POINT location(input.location())
+		dnd_.dropTargetHelper->DragOver(&location, *effect);	// damn! IDropTargetHelper scrolls the view
+		viewer_->lockScroll(true);
+	}
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+}
+
 /**
  * Ends the auto scroll.
  * @return true if the auto scroll was active

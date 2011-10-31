@@ -1626,51 +1626,6 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 	return DragOver(keyState, pt, effect);
 }
 
-/// @see IDropTarget#DragOver
-STDMETHODIMP DefaultMouseInputStrategy::DragOver(DWORD keyState, POINTL pt, DWORD* effect) {
-	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
-	*effect = DROPEFFECT_NONE;
-	bool acceptable = true;
-
-	if((state_ != DND_SOURCE && state_ != DND_TARGET) || viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
-		acceptable = false;
-	else {
-		const NativePoint caretPoint(viewer_->mapFromGlobal(geometry::make<NativePoint>(pt.x, pt.y)));
-		const k::Position p(viewer_->characterForClientXY(caretPoint, TextLayout::TRAILING));
-		viewer_->setCaretPosition(viewer_->clientXYForCharacter(p, true, TextLayout::LEADING));
-
-		// drop rectangle text into bidirectional line is not supported...
-		if(dnd_.numberOfRectangleLines != 0) {
-			const length_t lines = min(viewer_->document().numberOfLines(), p.line + dnd_.numberOfRectangleLines);
-			for(length_t line = p.line; line < lines; ++line) {
-				if(viewer_->textRenderer().layouts()[line].isBidirectional()) {
-					acceptable = false;
-					break;
-				}
-			}
-		}
-	}
-
-	if(acceptable) {
-		*effect = ((keyState & MK_CONTROL) != 0) ? DROPEFFECT_COPY : DROPEFFECT_MOVE;
-		const NativeSize scrollOffset(calculateDnDScrollOffset(*viewer_));
-		if(geometry::dx(scrollOffset) != 0 || geometry::dy(scrollOffset) != 0) {
-			*effect |= DROPEFFECT_SCROLL;
-			// only one direction to scroll
-			if(geometry::dy(scrollOffset) != 0)
-				viewer_->scroll(0, geometry::dy(scrollOffset), true);
-			else
-				viewer_->scroll(geometry::dx(scrollOffset), 0, true);
-		}
-	}
-	if(dnd_.dropTargetHelper.get() != 0) {
-		viewer_->lockScroll();
-		dnd_.dropTargetHelper->DragOver(&geometry::make<NativePoint>(pt.x, pt.y), *effect);	// damn! IDropTargetHelper scrolls the view
-		viewer_->lockScroll(true);
-	}
-	return S_OK;
-}
-
 /// @see IDropTarget#Drop
 STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) {
 	if(dnd_.dropTargetHelper.get() != 0) {
