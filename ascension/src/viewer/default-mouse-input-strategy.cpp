@@ -303,6 +303,23 @@ void DefaultMouseInputStrategy::dragLeft(base::DragLeaveInput& input) {
 	input.consume();
 }
 
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+namespace {
+	inline DWORD translateDropAction(DropAction dropAction) {
+		DWORD effect = DROPEFFECT_NONE;
+		if((dropAction & DROP_ACTION_COPY) != 0)
+			effect |= DROPEFFECT_COPY;
+		if((dropAction & DROP_ACTION_MOVE) != 0)
+			effect |= DROPEFFECT_MOVE;
+		if((dropAction & DROP_ACTION_LINK) != 0)
+			effect |= DROPEFFECT_LINK;
+		if((dropAction & DROP_ACTION_WIN32_SCROLL) != 0)
+			effect |= DROPEFFECT_SCROLL;
+		return effect;
+	}
+}
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+
 /// @see DropTarget#dragMoved
 void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
 	DropAction dropAction = DROP_ACTION_IGNORE;
@@ -328,7 +345,7 @@ void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
 	}
 
 	if(acceptable) {
-		dropAction = base::hasModifier<UserInput::CONTROL_DOWN>(input.modifiers()) ? DROP_ACTION_COPY : DROP_ACTION_MOVE;
+		dropAction = base::hasModifier<UserInput::CONTROL_DOWN>(input) ? DROP_ACTION_COPY : DROP_ACTION_MOVE;
 		const NativeSize scrollOffset(calculateDnDScrollOffset(*viewer_));
 		if(geometry::dx(scrollOffset) != 0 || geometry::dy(scrollOffset) != 0) {
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
@@ -347,8 +364,8 @@ void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 	if(dnd_.dropTargetHelper.get() != 0) {
 		viewer_->lockScroll();
-		POINT location(input.location())
-		dnd_.dropTargetHelper->DragOver(&location, *effect);	// damn! IDropTargetHelper scrolls the view
+		POINT location(input.location());
+		dnd_.dropTargetHelper->DragOver(&location, translateDropAction(dropAction));	// damn! IDropTargetHelper scrolls the view
 		viewer_->lockScroll(true);
 	}
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
