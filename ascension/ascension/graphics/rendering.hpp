@@ -21,6 +21,13 @@ namespace ascension {
 
 			class TextRenderer;
 
+			/***/
+			class ComputedWritingModeListener {
+			private:
+				virtual void computedWritingModeChanged(const presentation::WritingMode<false>& used) = 0;
+				friend class TextRenderer;
+			};
+
 			/*
 			 * Interface for objects which are interested in change of the default font of
 			 * @c TextRenderer.
@@ -43,10 +50,14 @@ namespace ascension {
 				virtual ~TextRenderer() /*throw()*/;
 				// layout
 				virtual std::auto_ptr<const TextLayout> createLineLayout(length_t line) const = 0;
-				virtual const presentation::WritingMode<false>& defaultUIWritingMode() const /*throw()*/ = 0;
-				virtual Scalar width() const /*throw()*/ = 0;
 				LineLayoutVector& layouts() /*throw()*/;
 				const LineLayoutVector& layouts() const /*throw()*/;
+				virtual Scalar width() const /*throw()*/ = 0;
+				// writing modes
+				void addComputedWritingModeListener(ComputedWritingModeListener& listener);
+				const presentation::WritingMode<false>& defaultUIWritingMode() const /*throw()*/;
+				void removeComputedWritingModeListener(ComputedWritingModeListener& listener);
+				presentation::WritingMode<false> writingMode() const /*throw()*/;
 				// default font
 				void addDefaultFontListener(DefaultFontListener& listener);
 				std::tr1::shared_ptr<const Font> defaultFont() const /*throw()*/;
@@ -65,17 +76,24 @@ namespace ascension {
 				const presentation::Presentation& presentation() const /*throw()*/;
 //				SpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/;
 //				const Font::Metrics& textMetrics() const /*throw()*/;
+			protected:
+				void setDefaultUIWritingMode(const presentation::WritingMode<false>& writingMode);
 			private:
+				void fireComputedWritingModeChanged(
+					const presentation::TextToplevelStyle& globalTextStyle,
+					const presentation::WritingMode<false>& defaultUI);
 				std::auto_ptr<const TextLayout> generateLineLayout(length_t line) const;
 				void updateDefaultFont();
 				// presentation.GlobalTextStyleListener
 				void globalTextStyleChanged(std::tr1::shared_ptr<const presentation::TextToplevelStyle> used);
 			private:
 				presentation::Presentation& presentation_;
+				presentation::WritingMode<false> defaultUIWritingMode_;
 				std::auto_ptr<LineLayoutVector> layouts_;
 				const FontCollection& fontCollection_;
 				const bool enablesDoubleBuffering_;
 				std::tr1::shared_ptr<const Font> defaultFont_;
+				detail::Listeners<ComputedWritingModeListener> computedWritingModeListeners_;
 				detail::Listeners<DefaultFontListener> defaultFontListeners_;
 				mutable win32::Handle<HDC> memoryDC_;
 				mutable win32::Handle<HBITMAP> memoryBitmap_;
@@ -85,6 +103,18 @@ namespace ascension {
 			/// Returns the primary font.
 			inline std::tr1::shared_ptr<const Font> TextRenderer::defaultFont() const /*throw()*/ {
 				return defaultFont_;
+			}
+
+			/**
+			 * Returns the default writing mode for user interface. This setting is used to resolve
+			 * ambiguous properties specified by @c presentation#Presentation#writingMode method.
+			 * Derived classes can reset this value by calling @c #setDefaultUIWritingMode method.
+			 * The default value is initialized by the default constructor of
+			 * @c presentation#WritingMode class.
+			 * @see #setDefaultUIWritingMode, #writingMode
+			 */
+			inline const presentation::WritingMode<false>& TextRenderer::defaultUIWritingMode() const /*throw()*/ {
+				return defaultUIWritingMode_;
 			}
 
 			/// Returns the font collection used by this object.

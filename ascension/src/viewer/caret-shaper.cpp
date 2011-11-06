@@ -20,27 +20,35 @@ using namespace std;
 namespace k = ascension::kernel;
 
 
-inline NativeSize viewers::currentCharacterSize(const TextViewer& viewer) {
-	const Scalar cy = viewer.textRenderer().defaultFont()->metrics().cellHeight();
-	const Caret& caret = viewer.caret();
+inline NativeSize viewers::currentCharacterSize(const Caret& caret) {
+	const TextRenderer& textRenderer = caret.textViewer().textRenderer();
+	const Scalar extent = textRenderer.defaultFont()->metrics().cellHeight();
+	Scalar measure;
 	if(k::locations::isEndOfLine(caret))	// EOL
-		return geometry::make<NativeSize>(viewer.textRenderer().defaultFont()->metrics().averageCharacterWidth(), cy);
+		measure = textRenderer.defaultFont()->metrics().averageCharacterWidth();
 	else {
-		const TextLayout& layout = viewer.textRenderer().layouts().at(caret.line());
+		const TextLayout& layout = textRenderer.layouts().at(caret.line());
 		const Scalar leading = geometry::x(layout.location(caret.column(), TextLayout::LEADING));
 		const Scalar trailing = geometry::x(layout.location(caret.column(), TextLayout::TRAILING));
-		return geometry::make<NativeSize>(static_cast<Scalar>(detail::distance(leading, trailing)), cy);
+		measure = static_cast<Scalar>(detail::distance(leading, trailing));
 	}
+	const bool horizontal = WritingModeBase::isHorizontal(utils::writingMode(caret.textViewer()).blockFlowDirection);
+	return geometry::make<NativeSize>(horizontal ? measure : extent, horizontal ? extent : measure);
 }
 
 
-// CaretShapeUpdater ////////////////////////////////////////////////////////
+// CaretShapeUpdater //////////////////////////////////////////////////////////////////////////////
 
 /**
  * Private constructor.
- * @param viewer the text viewer
+ * @param caret The caret
  */
-CaretShapeUpdater::CaretShapeUpdater(TextViewer& viewer) /*throw()*/ : viewer_(viewer) {
+CaretShapeUpdater::CaretShapeUpdater(const Caret& caret) /*throw()*/ : caret_(caret) {
+}
+
+/// Returns the caret.
+const Caret& CaretShapeUpdater::caret() const /*throw()*/ {
+	return caret_;
 }
 
 /// Notifies the text viewer to update the shape of the caret.
@@ -48,13 +56,8 @@ void CaretShapeUpdater::update() /*throw()*/ {
 	viewer_.recreateCaret();	// $friendly-access
 }
 
-/// Returns the text viewer.
-TextViewer& CaretShapeUpdater::textViewer() /*throw()*/ {
-	return viewer_;
-}
 
-
-// DefaultCaretShaper ///////////////////////////////////////////////////////
+// DefaultCaretShaper /////////////////////////////////////////////////////////////////////////////
 
 /// Constructor.
 DefaultCaretShaper::DefaultCaretShaper() /*throw()*/ : viewer_(0) {
@@ -66,10 +69,18 @@ void DefaultCaretShaper::install(CaretShapeUpdater& updater) /*throw()*/ {
 }
 
 /// @see CaretShaper#shape
-void DefaultCaretShaper::shape(Image&, NativeSize& solidSize, ReadingDirection& readingDirection) /*throw()*/ {
+void DefaultCaretShaper::shape(Image& image, NativePoint& alignmentPoint) /*throw()*/ {
+	Scalar measure;
+#if defined(ASCENSION_OS_WINDOWS)
 	DWORD width;
 	if(::SystemParametersInfo(SPI_GETCARETWIDTH, 0, &width, 0) == 0)
 		width = 1;	// NT4 does not support SPI_GETCARETWIDTH
+	measure = width;
+#else
+#endif
+
+	viewer_.
+
 	solidSize = geometry::make<NativeSize>(width, viewer_->textRenderer().defaultFont()->metrics().cellHeight());
 	readingDirection = LEFT_TO_RIGHT;	// no matter
 }
@@ -80,7 +91,7 @@ void DefaultCaretShaper::uninstall() /*throw()*/ {
 }
 
 
-// LocaleSensitiveCaretShaper ///////////////////////////////////////////////
+// LocaleSensitiveCaretShaper /////////////////////////////////////////////////////////////////////
 
 namespace {
 	/// Returns @c true if the specified language is RTL.
@@ -188,8 +199,7 @@ void LocaleSensitiveCaretShaper::selectionShapeChanged(const Caret&) {
 }
 
 /// @see CaretShaper#shape
-void LocaleSensitiveCaretShaper::shape(
-		Image& image, NativeSize& solidSize, ReadingDirection& readingDirection) /*throw()*/ {
+void LocaleSensitiveCaretShaper::shape(Image& image, NativePoint& alignmentPoint) /*throw()*/ {
 	const Caret& caret = updater_->textViewer().caret();
 	const bool overtype = caret.isOvertypeMode() && isSelectionEmpty(caret);
 
