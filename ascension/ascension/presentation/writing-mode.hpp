@@ -45,6 +45,11 @@ namespace ascension {
 			typedef typename detail::Select<condition, Inheritable<T>, T>::Type Type;
 		};
 
+		template<typename T>
+		inline T resolveInheritance(const Inheritable<T>& inheritable, const T& defaultValue) {
+			 return inheritable.inherits() ? defaultValue : inheritable.get();
+		}
+
 		/**
 		 * Orientation of the text layout.
 		 * @see TextLineStyle#readingDirection, defaultReadingDirection,
@@ -158,9 +163,6 @@ namespace ascension {
 			template<bool otherInheritable>
 			inline bool operator!=(const WritingMode<otherInheritable>& other) const {return !(*this == other);}
 		};
-
-		WritingMode<false> resolveWritingMode(
-			const Presentation& presentation, const graphics::font::TextRenderer& textRenderer);
 
 		/**
 		 * Performs abstract-to-physical mappings according to the given writing mode.

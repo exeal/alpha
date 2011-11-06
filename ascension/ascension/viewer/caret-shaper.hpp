@@ -28,17 +28,18 @@ namespace ascension {
 		graphics::NativeSize currentCharacterSize(const Caret& caret);
 
 		/**
-		 * @c CaretShapeUpdater updates the caret of the text viewer.
+		 * A @c CaretShapeUpdater gives a @c CaretShaper the trigger to update the visualization of
+		 * the caret of the text viewer.
 		 * @see Caret, CaretShaper
 		 */
 		class CaretShapeUpdater {
 			ASCENSION_UNASSIGNABLE_TAG(CaretShapeUpdater);
 		public:
-			Caret& caret() /*throw()*/;
+			const Caret& caret() const /*throw()*/;
 			void update() /*throw()*/;
 		private:
-			explicit CaretShapeUpdater(Caret& caret) /*throw()*/;
-			Caret& caret_;
+			explicit CaretShapeUpdater(const Caret& caret) /*throw()*/;
+			const Caret& caret_;
 			friend class Caret;
 		};
 
@@ -52,17 +53,17 @@ namespace ascension {
 			/// Destructor.
 			virtual ~CaretShaper() /*throw()*/ {}
 			/**
-			 * Returns the bitmap or the solid size defines caret shape.
-			 * @param[out] image The bitmap defines caret shape. If @c null, @a solidSize is used
-			 *                   and the shape is solid
-			 * @param[out] solidSize The size of solid caret. If @a image is not @c null, this
-			 *                       parameter is ignored
-			 * @param[out] readingDirection The orientation of the caret. this value is used for
-			 *                              hot spot calculation
+			 * Returns the bitmap defines caret shape.
+			 * @param[out] image The bitmap defines caret shape. If @c null, the @c Caret ignores
+			 *                   the all result and uses default implementation by
+			 *                   @c DefaultCaretShaper class
+			 * @param[out] alignmentPoint The alignment-point of @a image in pixels, which matches
+			 *                            the alignment-point (a point on the start-edge of the
+			 *                            glyph on the the baseline of the line (not the glyph)) of
+			 *                            the character addressed by the caret
 			 */
-			virtual void shape(
-				std::auto_ptr<graphics::Image>& image, graphics::NativeSize& solidSize,
-				presentation::ReadingDirection& readingDirection) const /*throw()*/ = 0;
+			virtual void shape(std::auto_ptr<graphics::Image>& image,
+				graphics::NativePoint& alignmentPoint) const /*throw()*/ = 0;
 		private:
 			/**
 			 * Installs the shaper.
@@ -76,6 +77,8 @@ namespace ascension {
 
 		/**
 		 * Default implementation of @c CaretShaper.
+		 * @c DefaultCaretShaper returns system-defined caret shape (color, width) which depends on
+		 * the writing mode of the text viewer and the line metrics.
 		 * @note This class is not intended to be subclassed.
 		 */
 		class DefaultCaretShaper : public CaretShaper {
@@ -83,9 +86,8 @@ namespace ascension {
 			DefaultCaretShaper() /*throw()*/;
 		private:
 			void install(CaretShapeUpdater& updater) /*throw()*/;
-			void shape(
-				std::auto_ptr<graphics::Image>& image, graphics::NativeSize& solidSize,
-				presentation::ReadingDirection& readingDirection) const /*throw()*/;
+			void shape(std::auto_ptr<graphics::Image>& image,
+				graphics::NativePoint& alignmentPoint) const /*throw()*/;
 			void uninstall() /*throw()*/;
 		private:
 			const TextViewer* viewer_;
@@ -102,9 +104,8 @@ namespace ascension {
 		private:
 			// CaretShaper
 			void install(CaretShapeUpdater& updater) /*throw()*/;
-			void shape(
-				std::auto_ptr<graphics::Image>& image, graphics::NativeSize& solidSize,
-				presentation::ReadingDirection& readingDirection) const /*throw()*/;
+			void shape(std::auto_ptr<graphics::Image>& image,
+				graphics::NativePoint& alignmentPoint) const /*throw()*/;
 			void uninstall() /*throw()*/;
 			// CaretListener
 			void caretMoved(const class Caret& self, const kernel::Region& oldRegion);

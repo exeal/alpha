@@ -168,7 +168,7 @@ namespace ascension {
 					LayoutGenerator layoutGenerator, length_t bufferSize, bool autoRepair) :
 					document_(document), layoutGenerator_(new Generator<LayoutGenerator>(layoutGenerator)),
 					bufferSize_(bufferSize), autoRepair_(autoRepair), documentChangePhase_(NONE),
-					maximumIpd_(0), longestLine_(INVALID_INDEX), numberOfVisualLines_(document.numberOfLines()) {
+					maximumMeasure_(0), longestLine_(INVALID_INDEX), numberOfVisualLines_(document.numberOfLines()) {
 				initialize();
 			}
 

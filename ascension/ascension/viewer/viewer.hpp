@@ -591,9 +591,6 @@ namespace ascension {
 			const presentation::hyperlink::Hyperlink* getPointedHyperlink(const TextViewer& viewer, const kernel::Position& at);
 			bool isRulerLeftAligned(const TextViewer& viewer);
 			void toggleOrientation(TextViewer& viewer) /*throw()*/;
-			inline presentation::WritingMode<false> writingMode(const TextViewer& viewer) {
-				return presentation::resolveWritingMode(viewer.presentation(), viewer.textRenderer());
-			}
 		} // namespace utils
 
 

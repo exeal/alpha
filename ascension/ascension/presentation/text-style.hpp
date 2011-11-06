@@ -395,7 +395,11 @@ namespace ascension {
 		 *      Presentation#setGlobalTextStyle
 		 */
 		struct TextToplevelStyle : public std::tr1::enable_shared_from_this<TextToplevelStyle> {
-			/// The writing mode.
+			/**
+			 * The writing mode specified by the presentation. May be overridden by
+			 * @c graphics#font#TextRenderer class.
+			 * @see graphics#font#TextRenderer#writingMode
+			 */
 			WritingMode<true> writingMode;
 			/// The default text line style. The default value is @c null.
 			std::tr1::shared_ptr<const TextLineStyle> defaultLineStyle;

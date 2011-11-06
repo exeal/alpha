@@ -215,8 +215,23 @@ Scalar TextRenderer::baselineDistance(const Range<VisualLine>& lines) const {
  * @see presentation#Presentation#globalTextStyle
  */
 
+namespace {
+	inline void computeWritingMode(const WritingMode<true>& primary, const WritingMode<false>& secondary, WritingMode<false>& result) {
+		result.inlineFlowDirection = resolveInheritance(primary.inlineFlowDirection, secondary.inlineFlowDirection);
+		result.blockFlowDirection = resolveInheritance(primary.blockFlowDirection, secondary.blockFlowDirection);
+		result.textOrientation = resolveInheritance(primary.textOrientation, secondary.textOrientation);
+	}
+}
+
+inline void TextRenderer::fireComputedWritingModeChanged(const TextToplevelStyle& textStyle, const WritingMode<false>& defaultUI) {
+	WritingMode<false> used;
+	computeWritingMode(textStyle.writingMode, defaultUI, used);
+	computedWritingModeListeners_.notify<const WritingMode<false>&>(&ComputedWritingModeListener::computedWritingModeChanged, used);
+}
+
 /// @see GlobalTextStyleListener#GlobalTextStyleChanged
-void TextRenderer::globalTextStyleChanged(tr1::shared_ptr<const TextToplevelStyle>) {
+void TextRenderer::globalTextStyleChanged(tr1::shared_ptr<const TextToplevelStyle> used) {
+	fireComputedWritingModeChanged(*used, defaultUIWritingMode());
 	updateDefaultFont();
 }
 
@@ -238,9 +253,9 @@ Scalar TextRenderer::lineIndent(length_t line, length_t subline /* = 0 */) const
 		Scalar w = width();
 		switch(alignment) {
 			case detail::RIGHT:
-				return w - layout.lineInlineProgressionDimension(subline);
+				return w - layout.measure(subline);
 			case detail::MIDDLE:
-				return (w - layout.lineInlineProgressionDimension(subline)) / 2;
+				return (w - layout.measure(subline)) / 2;
 			default:
 				ASCENSION_ASSERT_NOT_REACHED();
 		}
@@ -340,6 +355,16 @@ void TextRenderer::renderLine(length_t line, PaintContext& context,
 #endif
 }
 
+/**
+ * 
+ * @param writingMode 
+ */
+void TextRenderer::setDefaultUIWritingMode(const WritingMode<false>& writingMode) {
+	const WritingMode<false> used(defaultUIWritingMode());
+	defaultUIWritingMode_ = writingMode;
+	fireComputedWritingModeChanged(presentation().globalTextStyle(), used);
+}
+
 void TextRenderer::updateDefaultFont() {
 	tr1::shared_ptr<const TextRunStyle> defaultStyle(presentation_.globalTextStyle().defaultLineStyle->defaultRunStyle);
 	if(defaultStyle.get() != 0 && !defaultStyle->fontFamily.empty())
@@ -366,11 +391,11 @@ void TextRenderer::updateDefaultFont() {
 	defaultFontListeners_.notify(&DefaultFontListener::defaultFontChanged);
 }
 
-WritingMode<false> resolveWritingMode(const Presentation& presentation, const TextRenderer& textRenderer) {
-	const pair<const WritingMode<true>&, const WritingMode<false>&> wm(
-		presentation.globalTextStyle().writingMode, textRenderer.defaultUIWritingMode());
-	return WritingMode<false>(
-		wm.first.inlineFlowDirection.inherits() ? wm.second.inlineFlowDirection : wm.first.inlineFlowDirection,
-		wm.first.blockFlowDirection.inherits() ? wm.second.blockFlowDirection : wm.first.blockFlowDirection,
-		wm.first.textOrientation.inherits() ? wm.second.textOrientation : wm.first.textOrientation);
+/**
+ * Returns the computed writing mode.
+ */
+WritingMode<false> TextRenderer::writingMode() const /*throw()*/ {
+	WritingMode<false> computed;
+	computeWritingMode(presentation().globalTextStyle().writingMode, defaultUIWritingMode(), computed);
+	return computed;
 }
