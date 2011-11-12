@@ -10,7 +10,7 @@
 #define ASCENSION_VIEWER_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
-#include <ascension/graphics/rendering.hpp>
+#include <ascension/graphics/text-renderer.hpp>
 #include <ascension/kernel/point.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/text-style.hpp>

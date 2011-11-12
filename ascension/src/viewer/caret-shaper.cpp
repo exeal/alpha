@@ -43,7 +43,12 @@ inline NativeSize viewers::currentCharacterSize(const Caret& caret) {
  * Private constructor.
  * @param caret The caret
  */
-CaretShapeUpdater::CaretShapeUpdater(const Caret& caret) /*throw()*/ : caret_(caret) {
+CaretShapeUpdater::CaretShapeUpdater(Caret& caret) /*throw()*/ : caret_(caret) {
+}
+
+/// Returns the caret.
+Caret& CaretShapeUpdater::caret() /*throw()*/ {
+	return caret_;
 }
 
 /// Returns the caret.
@@ -60,12 +65,30 @@ void CaretShapeUpdater::update() /*throw()*/ {
 // DefaultCaretShaper /////////////////////////////////////////////////////////////////////////////
 
 /// Constructor.
-DefaultCaretShaper::DefaultCaretShaper() /*throw()*/ : caret_(0) {
+DefaultCaretShaper::DefaultCaretShaper() /*throw()*/ : updater_(0) {
+}
+
+/// @see CaretListener#caretMoved
+void DefaultCaretShaper::caretMoved(const Caret& caret, const k::Region& oldRegion) {
+	if(updater_ != 0) {
+		assert(&updater_->caret() == &caret);	// sanity check...
+		if(caret.line() != oldRegion.second.line)
+			updater_->update();
+	}
+}
+
+/// @see graphics#font#ComputedWritingModeListener#computedWritingModeChanged
+void DefaultCaretShaper::computedWritingModeChanged(const WritingMode<false>& used) {
+	if(updater_ != 0)
+		updater_->update();
 }
 
 /// @see CaretShaper#install
 void DefaultCaretShaper::install(CaretShapeUpdater& updater) /*throw()*/ {
-	caret_ = &updater.caret();
+	updater_ = &updater;
+	updater_->caret().addListener(*this);
+	updater_->caret().textViewer().textRenderer().addComputedWritingModeListener(*this);
+	updater_->caret().textViewer().textRenderer().layouts().addVisualLinesListener(*this);
 }
 
 namespace {
@@ -99,15 +122,16 @@ void DefaultCaretShaper::shape(auto_ptr<Image>& image, NativePoint& alignmentPoi
 	// TODO: Write codes in other platforms.
 #endif
 
-	const TextRenderer& renderer = caret_->textViewer().textRenderer();
-	const TextLayout& layout = renderer.layouts().at(caret_->line());
-	const LineMetrics& lineMetrics = layout.lineMetrics(layout.lineAt(caret_->column()));
+	const Caret& caret = updater_->caret();
+	const TextRenderer& renderer = caret.textViewer().textRenderer();
+	const TextLayout& layout = renderer.layouts().at(caret.line());
+	const LineMetrics& lineMetrics = layout.lineMetrics(layout.lineAt(updater_->caret().column()));
 	const Scalar extent = lineMetrics.height();
 	const bool horizontal = WritingModeBase::isHorizontal(layout.writingMode().blockFlowDirection);
 	image = createSolidCaretImage(horizontal ? measure : extent, horizontal ? extent : measure, Color(0, 0, 0));
 	switch(layout.writingMode().blockFlowDirection) {
 		case WritingModeBase::HORIZONTAL_TB:
-			geometry::x(alignmentPoint) = (layout.bidiEmbeddingLevel(caret_->column()) % 2 == 0) ? 0 : measure - 1;
+			geometry::x(alignmentPoint) = (layout.bidiEmbeddingLevel(caret.column()) % 2 == 0) ? 0 : measure - 1;
 			geometry::y(alignmentPoint) = lineMetrics.ascent();
 			break;
 		case WritingModeBase::VERTICAL_RL:
@@ -123,7 +147,24 @@ void DefaultCaretShaper::shape(auto_ptr<Image>& image, NativePoint& alignmentPoi
 
 /// @see CaretShaper#uninstall
 void DefaultCaretShaper::uninstall() /*throw()*/ {
-	caret_ = 0;
+	updater_->caret().removeListener(*this);
+	updater_->caret().textViewer().textRenderer().removeComputedWritingModeListener(*this);
+	updater_->caret().textViewer().textRenderer().layouts().removeVisualLinesListener(*this);
+	updater_ = 0;
+}
+
+/// @see CaretShaper#visualLinesModified
+void DefaultCaretShaper::visualLinesDeleted(const Range<length_t>&, length_t, bool) /*throw()*/ {
+}
+
+/// @see CaretShaper#visualLinesModified
+void DefaultCaretShaper::visualLinesInserted(const Range<length_t>& lines) /*throw()*/ {
+}
+
+/// @see CaretShaper#visualLinesModified
+void DefaultCaretShaper::visualLinesModified(const Range<length_t>& lines, signed_length_t, bool, bool) /*throw()*/ {
+	if(updater_ != 0 && includes(lines, updater_->caret().line()))
+		updater_->update();
 }
 
 

@@ -191,9 +191,6 @@
     <ClCompile Include="..\..\ascension\src\graphics\graphics-windows.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\graphics\rendering.cpp">
-      <Filter>ascension\Source Files\graphics</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\graphics\text-layout.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
@@ -301,6 +298,9 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\default-mouse-input-strategy.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\text-renderer.cpp">
+      <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -469,9 +469,6 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\graphics-windows.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\rendering.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\text-layout.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
@@ -636,6 +633,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\base\drag-and-drop.hpp">
       <Filter>ascension\Header Files\viewer\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\text-renderer.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
