@@ -83,12 +83,12 @@ RulerPainter::RulerPainter(TextViewer& viewer) :
  * @return the alignment of the vertical ruler. @c ALIGN_LEFT or @c ALIGN_RIGHT
  */
 RulerPainter::SnapAlignment RulerPainter::alignment() const {
-	const WritingMode<false> wm(resolveWritingMode(viewer_.presentation(), viewer_.textRenderer()));
-	const detail::PhysicalTextAnchor pta = detail::computePhysicalTextAnchor(configuration().alignment, wm.inlineFlowDirection);
-	if(pta == detail::LEFT)
-		return WritingModeBase::isHorizontal(wm.blockFlowDirection) ? LEFT : TOP;
-	else if(pta == detail::RIGHT)
-		return WritingModeBase::isHorizontal(wm.blockFlowDirection) ? RIGHT : BOTTOM;
+	const WritingMode<false> writingMode(viewer_.textRenderer().writingMode());
+	const detail::PhysicalTextAnchor anchor = detail::computePhysicalTextAnchor(configuration().alignment, writingMode.inlineFlowDirection);
+	if(anchor == detail::LEFT)
+		return WritingModeBase::isHorizontal(writingMode.blockFlowDirection) ? LEFT : TOP;
+	else if(anchor == detail::RIGHT)
+		return WritingModeBase::isHorizontal(writingMode.blockFlowDirection) ? RIGHT : BOTTOM;
 	else
 		ASCENSION_ASSERT_NOT_REACHED();
 }
@@ -216,8 +216,7 @@ void RulerPainter::paint(PaintContext& context) {
 		(borderStyle.sides.*borderPart) = configuration().indicatorMargin.border;
 		if((borderStyle.sides.*borderPart).color == Color())
 			(borderStyle.sides.*borderPart).color = SystemColors::get(SystemColors::THREE_D_SHADOW);
-		detail::paintBorder(context, indicatorMarginRectangle, borderStyle,
-			Color(), resolveWritingMode(viewer_.presentation(), viewer_.textRenderer()));
+		detail::paintBorder(context, indicatorMarginRectangle, borderStyle, Color(), viewer_.textRenderer().writingMode());
 	}
 
 	// paint the line numbers
@@ -240,8 +239,7 @@ void RulerPainter::paint(PaintContext& context) {
 		context.fillRectangle(lineNumbersRectangle);
 		Border borderStyle;
 		(borderStyle.sides.*borderPart) = configuration().lineNumbers.border;
-		detail::paintBorder(context, lineNumbersRectangle, borderStyle,
-			foreground.color(), resolveWritingMode(viewer_.presentation(), viewer_.textRenderer()));
+		detail::paintBorder(context, lineNumbersRectangle, borderStyle, foreground.color(), viewer_.textRenderer().writingMode());
 
 		// text
 		context.setFillStyle(foreground);
@@ -460,7 +458,7 @@ void RulerPainter::recalculateWidth() /*throw()*/ {
 		}
 		const Scalar glyphsExtent = computeMaximumNumberGlyphsExtent(
 			*context, viewer_.textRenderer().defaultFont(), digits,
-			resolveWritingMode(viewer_.presentation(), viewer_.textRenderer()), configuration().lineNumbers.numberSubstitution);
+			viewer_.textRenderer().writingMode(), configuration().lineNumbers.numberSubstitution);
 		const Scalar minimumExtent = viewer_.textRenderer().defaultFont()->metrics().averageCharacterWidth() * digits;
 		lineNumbersContentWidth = max(glyphsExtent, minimumExtent);
 

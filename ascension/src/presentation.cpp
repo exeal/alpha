@@ -5,7 +5,6 @@
  * @date 2007-2011
  */
 
-//#include <ascension/graphics/rendering.hpp>	// TextRenderer
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/presentation-reconstructor.hpp>
 #include <ascension/presentation/text-style.hpp>
