@@ -194,6 +194,7 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\graphics\image-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\line-layout-vector.cpp" />
+    <ClCompile Include="..\..\ascension\src\graphics\text-renderer.cpp" />
     <ClCompile Include="..\..\ascension\src\length.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\command.cpp" />
@@ -254,7 +255,6 @@
     <ClCompile Include="..\..\ascension\src\encodings\vietnamese.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\graphics-windows.cpp" />
-    <ClCompile Include="..\..\ascension\src\graphics\rendering.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\text-layout.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\caret.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\content-assist.cpp" />
@@ -293,6 +293,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\paint.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-context.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-device.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\text-renderer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-observers.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\length.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation-reconstructor.hpp" />
@@ -371,7 +372,6 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\graphics-windows.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\graphics\rendering.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\text-layout.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-character-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-stream.hpp" />

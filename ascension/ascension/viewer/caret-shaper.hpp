@@ -11,8 +11,8 @@
 #define ASCENSION_CARET_SHAPER_HPP
 #include <ascension/graphics/geometry.hpp>			// graphics.NativeSize
 #include <ascension/graphics/image.hpp>				// graphics.Image
+#include <ascension/graphics/text-renderer.hpp>		// graphics.font.ComputedWritingModeListener
 #include <ascension/kernel/position.hpp>			// kernel.Position, kernel.Region
-#include <ascension/presentation/writing-mode.hpp>	// presentation.ReadDirection
 #include <ascension/viewer/caret-observers.hpp>		// CaretListener, CaretStateListener
 #include <ascension/viewer/viewer-observers.hpp>	// TextViewerInputStatusListener
 #include <utility>	// std.pair
@@ -35,11 +35,12 @@ namespace ascension {
 		class CaretShapeUpdater {
 			ASCENSION_UNASSIGNABLE_TAG(CaretShapeUpdater);
 		public:
+			Caret& caret() /*throw()*/;
 			const Caret& caret() const /*throw()*/;
 			void update() /*throw()*/;
 		private:
-			explicit CaretShapeUpdater(const Caret& caret) /*throw()*/;
-			const Caret& caret_;
+			explicit CaretShapeUpdater(Caret& caret) /*throw()*/;
+			Caret& caret_;
 			friend class Caret;
 		};
 
@@ -81,16 +82,31 @@ namespace ascension {
 		 * the writing mode of the text viewer and the line metrics.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class DefaultCaretShaper : public CaretShaper, public graphics {
+		class DefaultCaretShaper : public CaretShaper, public CaretListener,
+			public graphics::font::ComputedWritingModeListener,
+			public graphics::font::VisualLinesListener {
 		public:
 			DefaultCaretShaper() /*throw()*/;
 		private:
+			void triggerUpdate() /*throw()*/;
+			// CaretShaper
 			void install(CaretShapeUpdater& updater) /*throw()*/;
 			void shape(std::auto_ptr<graphics::Image>& image,
 				graphics::NativePoint& alignmentPoint) const /*throw()*/;
 			void uninstall() /*throw()*/;
+			// CaretListener
+			void caretMoved(const Caret& caret, const kernel::Region& oldRegion);
+			// graphics.font.ComputedWritingModeListener
+			void computedWritingModeChanged(const presentation::WritingMode<false>& used);
+			// graphics.font.VisualLinesListener
+			void visualLinesDeleted(const Range<length_t>& lines,
+				length_t sublines, bool longestLineChanged) /*throw()*/;
+			void visualLinesInserted(const Range<length_t>& lines) /*throw()*/;
+			void visualLinesModified(
+				const Range<length_t>& lines, signed_length_t sublinesDifference,
+				bool documentChanged, bool longestLineChanged) /*throw()*/;
 		private:
-			const Caret* caret_;
+			CaretShapeUpdater* updater_;
 		};
 
 		/**

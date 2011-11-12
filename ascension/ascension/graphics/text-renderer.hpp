@@ -21,7 +21,10 @@ namespace ascension {
 
 			class TextRenderer;
 
-			/***/
+			/**
+			 * @see TextRenderer#addComputedWritingModeListener,
+			 *      TextRenderer#removeComputedWritingModeListener
+			 */
 			class ComputedWritingModeListener {
 			private:
 				virtual void computedWritingModeChanged(const presentation::WritingMode<false>& used) = 0;
