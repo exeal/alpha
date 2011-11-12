@@ -9,7 +9,6 @@
 
 #ifndef ASCENSION_CARET_HPP
 #define ASCENSION_CARET_HPP
-//#include <ascension/graphics/rendering.hpp>				// graphics.VisualLinesListener
 #include <ascension/corelib/text/identifier-syntax.hpp>	// text.IdentifierSyntax
 #include <ascension/viewer/caret-observers.hpp>
 #include <ascension/viewer/caret-shaper.hpp>

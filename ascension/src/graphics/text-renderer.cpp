@@ -1,9 +1,10 @@
 /**
- * @file rendering.cpp
+ * @file text-renderer.cpp
  * @author exeal
  * @date 2003-2006 (was LineLayout.cpp)
  * @date 2006-2011
  * @date 2010-11-20 separated from ascension/layout.cpp
+ * @date 2011-11-12 renamed from rendering.cpp
  */
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...

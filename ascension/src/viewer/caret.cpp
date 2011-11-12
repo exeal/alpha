@@ -660,7 +660,7 @@ void Caret::updateLocation() {
 	geometry::range<geometry::Y_COORDINATE>(textArea) = makeRange(
 		geometry::top(textArea) + spaces.top, geometry::bottom(textArea) - spaces.bottom);
 
-	const WritingMode<false> writingMode(utils::writingMode(textViewer()));
+	const WritingMode<false> writingMode(textViewer().textRenderer().writingMode());
 	if(!geometry::includes(textArea, p)) {
 		// "hide" the caret
 		const Scalar linePitch = viewer.textRenderer().defaultFont()->metrics().linePitch();
