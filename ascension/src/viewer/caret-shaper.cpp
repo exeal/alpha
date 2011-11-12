@@ -32,7 +32,7 @@ inline NativeSize viewers::currentCharacterSize(const Caret& caret) {
 		const Scalar trailing = geometry::x(layout.location(caret.column(), TextLayout::TRAILING));
 		measure = static_cast<Scalar>(detail::distance(leading, trailing));
 	}
-	const bool horizontal = WritingModeBase::isHorizontal(utils::writingMode(caret.textViewer()).blockFlowDirection);
+	const bool horizontal = WritingModeBase::isHorizontal(caret.textViewer().textRenderer().writingMode().blockFlowDirection);
 	return geometry::make<NativeSize>(horizontal ? measure : extent, horizontal ? extent : measure);
 }
 
@@ -60,16 +60,35 @@ void CaretShapeUpdater::update() /*throw()*/ {
 // DefaultCaretShaper /////////////////////////////////////////////////////////////////////////////
 
 /// Constructor.
-DefaultCaretShaper::DefaultCaretShaper() /*throw()*/ : viewer_(0) {
+DefaultCaretShaper::DefaultCaretShaper() /*throw()*/ : caret_(0) {
 }
 
 /// @see CaretShaper#install
 void DefaultCaretShaper::install(CaretShapeUpdater& updater) /*throw()*/ {
-	viewer_ = &updater.textViewer();
+	caret_ = &updater.caret();
+}
+
+namespace {
+	inline uint32_t packColor(const Color& color) {
+		return (0xff << 12) | (color.red() << 8) | (color.green() << 4) | color.blue();
+	}
+	/**
+	 * Creates the image for solid (rectangular) caret.
+	 * @param width The width of the rectangle in pixels
+	 * @param height The height of the rectangle in pixels
+	 * @param color The color
+	 * @return The image
+	 */
+	inline auto_ptr<Image> createSolidCaretImage(uint16_t width, uint16_t height, const Color& color) {
+		const AutoBuffer<uint32_t> pattern(new uint32_t[width * height]);
+		uninitialized_fill(pattern.get(), pattern.get() + (width * height), packColor(color));
+		return auto_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(
+			pattern.get()), geometry::make<NativeSize>(width, height), Image::ARGB_32));
+	}
 }
 
 /// @see CaretShaper#shape
-void DefaultCaretShaper::shape(Image& image, NativePoint& alignmentPoint) /*throw()*/ {
+void DefaultCaretShaper::shape(auto_ptr<Image>& image, NativePoint& alignmentPoint) const /*throw()*/ {
 	Scalar measure;
 #if defined(ASCENSION_OS_WINDOWS)
 	DWORD width;
@@ -77,17 +96,34 @@ void DefaultCaretShaper::shape(Image& image, NativePoint& alignmentPoint) /*thro
 		width = 1;	// NT4 does not support SPI_GETCARETWIDTH
 	measure = width;
 #else
+	// TODO: Write codes in other platforms.
 #endif
 
-	viewer_.
-
-	solidSize = geometry::make<NativeSize>(width, viewer_->textRenderer().defaultFont()->metrics().cellHeight());
-	readingDirection = LEFT_TO_RIGHT;	// no matter
+	const TextRenderer& renderer = caret_->textViewer().textRenderer();
+	const TextLayout& layout = renderer.layouts().at(caret_->line());
+	const LineMetrics& lineMetrics = layout.lineMetrics(layout.lineAt(caret_->column()));
+	const Scalar extent = lineMetrics.height();
+	const bool horizontal = WritingModeBase::isHorizontal(layout.writingMode().blockFlowDirection);
+	image = createSolidCaretImage(horizontal ? measure : extent, horizontal ? extent : measure, Color(0, 0, 0));
+	switch(layout.writingMode().blockFlowDirection) {
+		case WritingModeBase::HORIZONTAL_TB:
+			geometry::x(alignmentPoint) = (layout.bidiEmbeddingLevel(caret_->column()) % 2 == 0) ? 0 : measure - 1;
+			geometry::y(alignmentPoint) = lineMetrics.ascent();
+			break;
+		case WritingModeBase::VERTICAL_RL:
+			// TODO: Not implemented.
+			break;
+		case WritingModeBase::VERTICAL_LR:
+			// TODO: Not implemented.
+			break;
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
 }
 
 /// @see CaretShaper#uninstall
 void DefaultCaretShaper::uninstall() /*throw()*/ {
-	viewer_ = 0;
+	caret_ = 0;
 }
 
 
@@ -105,22 +141,6 @@ namespace {
 #endif // !LANG_LAO
 		return id == LANG_THAI || id == LANG_LAO;
 	}
-	inline uint32_t packColor(const Color& color) {
-		return (0xff << 12) | (color.red() << 8) | (color.green() << 4) | color.blue();
-	}
-	/**
-	 * Creates the bitmap for solid caret.
-	 * @param width The width of the rectangle in pixels
-	 * @param height The height of the rectangle in pixels
-	 * @param color The color
-	 * @return The bitmap
-	 */
-	inline auto_ptr<Image> createSolidCaretBitmap(uint16_t width, uint16_t height, const Color& color) {
-		const AutoBuffer<uint32_t> pattern(new uint32_t[width * height]);
-		uninitialized_fill(pattern.get(), pattern.get() + (width * height), packColor(color));
-		return auto_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(
-			pattern.get()), geometry::make<NativeSize>(width, height), Image::ARGB_32));
-	}
 	/**
 	 * Creates the bitmap for RTL caret.
 	 * @param height The height of the image in pixels
@@ -128,7 +148,7 @@ namespace {
 	 * @param color The color
 	 * @return The bitmap
 	 */
-	inline auto_ptr<Image> createRTLCaretBitmap(uint16_t height, bool bold, const Color& color) {
+	inline auto_ptr<Image> createRTLCaretImage(uint16_t height, bool bold, const Color& color) {
 		const uint32_t white = 0, black = packColor(color);
 		AutoBuffer<uint32_t> pattern(new uint32_t[5 * height]);
 		assert(height > 3);
@@ -149,7 +169,7 @@ namespace {
 	 * @param color The color
 	 * @return The bitmap
 	 */
-	inline auto_ptr<Image> createTISCaretBitmap(uint16_t height, bool bold, const Color& color) {
+	inline auto_ptr<Image> createTISCaretImage(uint16_t height, bool bold, const Color& color) {
 		const uint32_t white = 0, black = packColor(color);
 		const uint16_t width = max<uint16_t>(height / 8, 3);
 		AutoBuffer<uint32_t> pattern(new uint32_t[width * height]);
@@ -199,7 +219,7 @@ void LocaleSensitiveCaretShaper::selectionShapeChanged(const Caret&) {
 }
 
 /// @see CaretShaper#shape
-void LocaleSensitiveCaretShaper::shape(Image& image, NativePoint& alignmentPoint) /*throw()*/ {
+void LocaleSensitiveCaretShaper::shape(auto_ptr<Image>& image, NativePoint& alignmentPoint) const /*throw()*/ {
 	const Caret& caret = updater_->textViewer().caret();
 	const bool overtype = caret.isOvertypeMode() && isSelectionEmpty(caret);
 
