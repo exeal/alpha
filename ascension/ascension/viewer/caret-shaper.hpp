@@ -81,7 +81,7 @@ namespace ascension {
 		 * the writing mode of the text viewer and the line metrics.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class DefaultCaretShaper : public CaretShaper {
+		class DefaultCaretShaper : public CaretShaper, public graphics {
 		public:
 			DefaultCaretShaper() /*throw()*/;
 		private:
@@ -90,7 +90,7 @@ namespace ascension {
 				graphics::NativePoint& alignmentPoint) const /*throw()*/;
 			void uninstall() /*throw()*/;
 		private:
-			const TextViewer* viewer_;
+			const Caret* caret_;
 		};
 
 		/**
