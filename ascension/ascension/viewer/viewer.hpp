@@ -190,10 +190,8 @@ namespace ascension {
 			virtual ~TextViewer();
 			// listeners and strategies
 			void addDisplaySizeListener(DisplaySizeListener& listener);
-			void addInputStatusListener(InputStatusListener& listener);
 			void addViewportListener(ViewportListener& listener);
 			void removeDisplaySizeListener(DisplaySizeListener& listener);
-			void removeInputStatusListener(InputStatusListener& listener);
 			void removeViewportListener(ViewportListener& listener);
 			void setMouseInputStrategy(std::tr1::shared_ptr<MouseInputStrategy> newStrategy);
 			// attributes
@@ -458,7 +456,6 @@ namespace ascension {
 			std::tr1::shared_ptr<MouseInputStrategy> mouseInputStrategy_;
 			std::tr1::shared_ptr<base::DropTarget> dropTargetHandler_;
 			detail::Listeners<DisplaySizeListener> displaySizeListeners_;
-			detail::Listeners<InputStatusListener> inputStatusListeners_;
 			detail::Listeners<ViewportListener> viewportListeners_;
 			std::auto_ptr<detail::RulerPainter> rulerPainter_;
 			std::auto_ptr<contentassist::ContentAssistant> contentAssistant_;

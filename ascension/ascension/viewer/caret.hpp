@@ -55,11 +55,13 @@ namespace ascension {
 			explicit Caret(TextViewer& viewer, const kernel::Position& position = kernel::Position(0, 0));
 			~Caret();
 			// listeners
-			void addListener(CaretListener& listener);
 			void addCharacterInputListener(CharacterInputListener& listener);
+			void addInputPropertyListener(InputPropertyListener& listener);
+			void addListener(CaretListener& listener);
 			void addStateListener(CaretStateListener& listener);
-			void removeListener(CaretListener& listener);
 			void removeCharacterInputListener(CharacterInputListener& listener);
+			void removeInputPropertyListener(InputPropertyListener& listener);
+			void removeListener(CaretListener& listener);
 			void removeStateListener(CaretStateListener& listener);
 			// attributes : the anchor and the caret
 			const VisualPoint& anchor() const /*throw()*/;
@@ -153,6 +155,7 @@ namespace ascension {
 			detail::Listeners<CaretListener> listeners_;
 			detail::Listeners<CharacterInputListener> characterInputListeners_;
 			detail::Listeners<CaretStateListener> stateListeners_;
+			detail::Listeners<InputPropertyListener> inputPropertyListeners_;
 			bool overtypeMode_;
 			bool autoShow_;		// true if show itself when movements
 			MatchBracketsTrackingMode matchBracketsTrackingMode_;

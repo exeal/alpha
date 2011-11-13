@@ -125,21 +125,30 @@ void Caret::aboutToMove(Position& to) {
 }
 
 /**
- * Registers the listener.
- * @param listener The listener to be registered
- * @throw std#invalid_argument @a listener is already registered
- */
-void Caret::addListener(CaretListener& listener) {
-	listeners_.add(listener);
-}
-
-/**
  * Registers the character input listener.
  * @param listener The listener to be registered
  * @throw std#invalid_argument @a listener is already registered
  */
 void Caret::addCharacterInputListener(CharacterInputListener& listener) {
 	characterInputListeners_.add(listener);
+}
+
+/**
+ * Registers the input property listener.
+ * @param listener The listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ */
+void Caret::addInputPropertyListener(InputPropertyListener& listener) {
+	inputPropertyListeners_.add(listener);
+}
+
+/**
+ * Registers the listener.
+ * @param listener The listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ */
+void Caret::addListener(CaretListener& listener) {
+	listeners_.add(listener);
 }
 
 /**
@@ -496,21 +505,30 @@ inline void Caret::prechangeDocument() {
 }
 
 /**
- * Removes the listener.
- * @param listener The listener to be removed
- * @throw std#invalid_argument @a listener is not registered
- */
-void Caret::removeListener(CaretListener& listener) {
-	listeners_.remove(listener);
-}
-
-/**
  * Removes the character input listener
  * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered
  */
 void Caret::removeCharacterInputListener(CharacterInputListener& listener) {
 	characterInputListeners_.remove(listener);
+}
+
+/**
+ * Removes the input property listener
+ * @param listener The listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+void Caret::removeInputPropertyListener(InputPropertyListener& listener) {
+	inputPropertyListeners_.remove(listener);
+}
+
+/**
+ * Removes the listener.
+ * @param listener The listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+void Caret::removeListener(CaretListener& listener) {
+	listeners_.remove(listener);
 }
 
 /**

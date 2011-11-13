@@ -73,17 +73,20 @@ namespace ascension {
 		};
 
 		/**
-		 * Interface for objects which are interested in change of input status of a @c TextViewer.
-		 * @see CaretListener#overtypeModeChanged, TextViewer#addInputStatusListener,
-		 *      TextViewer#removeInputStatusListener
+		 * Interface for objects which are interested in change of input's properties of a
+		 * @c TextViewer.
+		 * @see CaretListener#overtypeModeChanged, TextViewer#addInputPropertyListener,
+		 *      TextViewer#removeInputPropertyListener
 		 */
-		class InputStatusListener {
+		class InputPropertyListener {
 		private:
 			/**
-			 * The text viewer's input language has been changed (ex. @c WM_INPUTLANGCHANGE of
+			 * The text viewer's input locale had been changed (ex. @c WM_INPUTLANGCHANGE of
 			 * Win32).
 			 */
-			virtual void inputLanguageChanged() /*throw()*/ = 0;
+			virtual void inputLocaleChanged() /*throw()*/ = 0;
+			/// The text viewer's input method open status had been changed.
+			virtual void inputMethodOpenStatusChanged() /*throw()*/ = 0;
 			friend class Caret;
 		};
 	}

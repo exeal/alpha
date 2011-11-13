@@ -557,16 +557,6 @@ LRESULT TextViewer::handleWindowSystemEvent(UINT message, WPARAM wp, LPARAM lp, 
 			// ウィンドウ関係だし改行は CRLF でいいか。NLR_RAW_VALUE だと遅いし
 			consumed = true;
 			return document().length(text::NLF_CR_LF);
-		case WM_INPUTLANGCHANGE:
-			// TODO: This code should not depend on Win32.
-			inputStatusListeners_.notify(&TextViewerInputStatusListener::textViewerInputLanguageChanged);
-			if(hasFocus()) {
-				if(texteditor::Session* const session = document().session()) {
-					if(texteditor::InputSequenceCheckers* const isc = session->inputSequenceCheckers())
-						isc->imbue(::GetKeyboardLayout(::GetCurrentThreadId()));
-				}
-			}
-			break;
 //		case WM_NCPAINT:
 //			return 0;
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
@@ -632,6 +622,7 @@ LRESULT TextViewer::handleWindowSystemEvent(UINT message, WPARAM wp, LPARAM lp, 
 		case WM_IME_SELECT:
 		case WM_IME_SETCONTEXT:
 		case WM_IME_STARTCOMPOSITION:
+		case WM_INPUTLANGCHANGE:
 			return static_cast<detail::InputEventHandler&>(caret()).handleInputEvent(message, wp, lp, consumed);	// $friendly-access
 		case WM_NCCREATE:
 			return (consumed = true), onNcCreate(*reinterpret_cast<CREATESTRUCTW*>(lp));

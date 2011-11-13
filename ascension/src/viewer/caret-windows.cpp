@@ -475,12 +475,19 @@ LRESULT Caret::handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consum
 			context_.inputMethodCompositionActivated = false;
 			resetVisualization();
 			break;
+		case WM_IME_NOTIFY:
+			if(wp == IMN_SETOPENSTATUS)
+				inputPropertyListeners_.notify(&InputPropertyListener::inputMethodOpenStatusChanged);
+			break;
 		case WM_IME_REQUEST:
 			return onImeRequest(wp, lp, consumed);
 		case WM_IME_STARTCOMPOSITION:
 			context_.inputMethodCompositionActivated = true;
 			adjustInputMethodCompositionWindow();
 			utils::closeCompletionProposalsPopup(textViewer());
+			break;
+		case WM_INPUTLANGCHANGE:
+			inputPropertyListeners_.notify(&InputPropertyListener::inputLocaleChanged);
 			break;
 		case WM_SYSCHAR:
 			break;
