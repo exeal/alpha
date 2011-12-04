@@ -85,17 +85,19 @@ namespace ascension {
 		class DefaultCaretShaper : public CaretShaper, public CaretListener,
 			public graphics::font::ComputedWritingModeListener,
 			public graphics::font::VisualLinesListener {
+			ASCENSION_NONCOPYABLE_TAG(DefaultCaretShaper);
 		public:
 			DefaultCaretShaper() /*throw()*/;
-		private:
-			void triggerUpdate() /*throw()*/;
+		protected:
+			CaretShapeUpdater* updater() /*throw()*/ {return updater_;}
+			const CaretShapeUpdater* updater() const /*throw()*/ {return updater_;}
 			// CaretShaper
-			void install(CaretShapeUpdater& updater) /*throw()*/;
-			void shape(std::auto_ptr<graphics::Image>& image,
+			virtual void install(CaretShapeUpdater& updater) /*throw()*/;
+			virtual void shape(std::auto_ptr<graphics::Image>& image,
 				graphics::NativePoint& alignmentPoint) const /*throw()*/;
-			void uninstall() /*throw()*/;
+			virtual void uninstall() /*throw()*/;
 			// CaretListener
-			void caretMoved(const Caret& caret, const kernel::Region& oldRegion);
+			virtual void caretMoved(const Caret& caret, const kernel::Region& oldRegion);
 			// graphics.font.ComputedWritingModeListener
 			void computedWritingModeChanged(const presentation::WritingMode<false>& used);
 			// graphics.font.VisualLinesListener
@@ -113,10 +115,10 @@ namespace ascension {
 		 * @c LocaleSensitiveCaretShaper defines caret shape based on active keyboard layout.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class LocaleSensitiveCaretShaper : public CaretShaper,
-			public CaretListener, public CaretStateListener, public InputPropertyListener {
+		class LocaleSensitiveCaretShaper : public DefaultCaretShaper,
+			public CaretStateListener, public InputPropertyListener {
 		public:
-			explicit LocaleSensitiveCaretShaper(bool bold = false) /*throw()*/;
+			explicit LocaleSensitiveCaretShaper() /*throw()*/;
 		private:
 			// CaretShaper
 			void install(CaretShapeUpdater& updater) /*throw()*/;
@@ -124,7 +126,7 @@ namespace ascension {
 				graphics::NativePoint& alignmentPoint) const /*throw()*/;
 			void uninstall() /*throw()*/;
 			// CaretListener
-			void caretMoved(const class Caret& self, const kernel::Region& oldRegion);
+			void caretMoved(const Caret& caret, const kernel::Region& oldRegion);
 			// CaretStateListener
 			void matchBracketsChanged(const Caret& self,
 				const std::pair<kernel::Position, kernel::Position>& oldPair, bool outsideOfView);
@@ -133,9 +135,6 @@ namespace ascension {
 			// InputPropertyListener
 			void inputLocaleChanged() /*throw()*/;
 			void inputMethodOpenStatusChanged() /*throw()*/;
-		private:
-			CaretShapeUpdater* updater_;	// weak ref.
-			bool bold_;
 		};
 
 	}
