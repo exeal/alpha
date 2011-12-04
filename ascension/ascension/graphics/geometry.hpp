@@ -110,23 +110,23 @@ namespace ascension {
 						return temp;
 					}
 				};
-				template<typename Point> struct Accessor<PointTag, Point, 0> {
+				template<typename Point> struct Accessor<PointTag, Point, X_COORDINATE> {
 					static typename Coordinate<Point>::Type get(const Point& geometry) {return geometry.x;}
 					static void set(Point& geometry, typename Coordinate<Point>::Type value) {geometry.x = value;}
 				};
-				template<typename Point> struct Accessor<PointTag, Point, 1> {
+				template<typename Point> struct Accessor<PointTag, Point, Y_COORDINATE> {
 					static typename Coordinate<Point>::Type get(const Point& geometry) {return geometry.y;}
 					static void set(Point& geometry, typename Coordinate<Point>::Type value) {geometry.y = value;}
 				};
-				template<typename Size> struct Accessor<SizeTag, Size, 0> {
+				template<typename Size> struct Accessor<SizeTag, Size, X_COORDINATE> {
 					static typename Coordinate<Size>::Type get(const Size& geometry) {return geometry.cx;}
 					static void set(Size& geometry, typename Coordinate<Size>::Type value) {geometry.cx = value;}
 				};
-				template<typename Size> struct Accessor<SizeTag, Size, 1> {
+				template<typename Size> struct Accessor<SizeTag, Size, Y_COORDINATE> {
 					static typename Coordinate<Size>::Type get(const Size& geometry) {return geometry.cy;}
 					static void set(Size& geometry, typename Coordinate<Size>::Type value) {geometry.cy = value;}
 				};
-				template<typename Rectangle> struct Accessor<RectangleTag, Rectangle, 0> {
+				template<typename Rectangle> struct Accessor<RectangleTag, Rectangle, X_COORDINATE> {
 					static typename Coordinate<Rectangle>::Type get(const Rectangle& geometry) {
 						return make<typename Coordinate<Rectangle>::Type>(geometry.left, geometry.top);
 					}
@@ -135,7 +135,7 @@ namespace ascension {
 						geometry.top = value.y;
 					}
 				};
-				template<typename Rect> struct Accessor<RectangleTag, Rect, 1> {
+				template<typename Rect> struct Accessor<RectangleTag, Rect, Y_COORDINATE> {
 					static typename Coordinate<Rect>::Type get(const Rect& geometry) {
 						return make<typename Coordinate<Rect>::Type>(geometry.right, geometry.bottom);
 					}
