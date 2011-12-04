@@ -108,25 +108,27 @@ namespace {
 		return auto_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(
 			pattern.get()), geometry::make<NativeSize>(width, height), Image::ARGB_32));
 	}
+	inline Scalar systemDefinedCaretMeasure() {
+#if defined(ASCENSION_OS_WINDOWS)
+		DWORD width;
+		if(::SystemParametersInfo(SPI_GETCARETWIDTH, 0, &width, 0) == 0)
+			width = 1;	// NT4 does not support SPI_GETCARETWIDTH
+		return width;
+#else
+		// TODO: Write codes in other platforms.
+#endif
+	}
 }
 
 /// @see CaretShaper#shape
 void DefaultCaretShaper::shape(auto_ptr<Image>& image, NativePoint& alignmentPoint) const /*throw()*/ {
 	Scalar measure;
-#if defined(ASCENSION_OS_WINDOWS)
-	DWORD width;
-	if(::SystemParametersInfo(SPI_GETCARETWIDTH, 0, &width, 0) == 0)
-		width = 1;	// NT4 does not support SPI_GETCARETWIDTH
-	measure = width;
-#else
-	// TODO: Write codes in other platforms.
-#endif
 
 	const Caret& caret = updater_->caret();
 	const TextRenderer& renderer = caret.textViewer().textRenderer();
 	const TextLayout& layout = renderer.layouts().at(caret.line());
 	const LineMetrics& lineMetrics = layout.lineMetrics(layout.lineAt(updater_->caret().column()));
-	const Scalar extent = lineMetrics.height();
+	const Scalar extent = lineMetrics.height(), measure = systemDefinedCaretMeasure();
 	const bool horizontal = WritingModeBase::isHorizontal(layout.writingMode().blockFlowDirection);
 	image = createSolidCaretImage(horizontal ? measure : extent, horizontal ? extent : measure, Color(0, 0, 0));
 	switch(layout.writingMode().blockFlowDirection) {
@@ -231,19 +233,31 @@ namespace {
 	}
 } // namespace @0
 
-/// Constructor.
-LocaleSensitiveCaretShaper::LocaleSensitiveCaretShaper(bool bold /* = false */) /*throw()*/ : updater_(0), bold_(bold) {
+/// @see CaretListener#caretMoved
+void LocaleSensitiveCaretShaper::caretMoved(const Caret& caret, const k::Region& oldRegion) {
+	if(updater() != 0 && caret.isOvertypeMode())
+		updater()->update();
+	else
+		DefaultCaretShaper::caretMoved(caret, oldRegion);
 }
 
-/// @see CaretListener#caretMoved
-void LocaleSensitiveCaretShaper::caretMoved(const Caret& self, const k::Region&) {
-	if(self.isOvertypeMode())
-		updater_->update();
+/// @see TextViewerInputStatusListener#inputLocaleChanged
+void LocaleSensitiveCaretShaper::inputLocaleChanged() /*throw()*/ {
+	if(updater() != 0)
+		updater()->update();
+}
+
+/// @see InputPropertyListener#inputMethodOpenStatusChanged
+void LocaleSensitiveCaretShaper::inputMethodOpenStatusChanged() /*throw()*/ {
+	if(updater() != 0)
+		updater()->update();
 }
 
 /// @see CaretShaper#install
 void LocaleSensitiveCaretShaper::install(CaretShapeUpdater& updater) {
-	updater_ = &updater;
+	DefaultCaretShaper::install(updater);
+	updater.caret().addStateListener(*this);
+	updater.caret().addInputPropertyListener(*this);
 }
 
 /// @see CaretStateListener#matchBracketsChanged
@@ -252,7 +266,8 @@ void LocaleSensitiveCaretShaper::matchBracketsChanged(const Caret&, const std::p
 
 /// @see CaretStateListener#overtypeModeChanged
 void LocaleSensitiveCaretShaper::overtypeModeChanged(const Caret&) {
-	updater_->update();
+	if(updater() != 0)
+		updater()->update();
 }
 
 /// @see CaretShapeListener#selectionShapeChanged
@@ -261,7 +276,7 @@ void LocaleSensitiveCaretShaper::selectionShapeChanged(const Caret&) {
 
 /// @see CaretShaper#shape
 void LocaleSensitiveCaretShaper::shape(auto_ptr<Image>& image, NativePoint& alignmentPoint) const /*throw()*/ {
-	const Caret& caret = updater_->textViewer().caret();
+	const Caret& caret = updater()->caret();
 	const bool overtype = caret.isOvertypeMode() && isSelectionEmpty(caret);
 
 	if(!overtype) {
@@ -292,17 +307,10 @@ void LocaleSensitiveCaretShaper::shape(auto_ptr<Image>& image, NativePoint& alig
 	image = *bitmap.release();
 }
 
-/// @see TextViewerInputStatusListener#textViewerIMEOpenStatusChanged
-void LocaleSensitiveCaretShaper::textViewerIMEOpenStatusChanged() /*throw()*/ {
-	updater_->update();
-}
-
-/// @see TextViewerInputStatusListener#textViewerInputLanguageChanged
-void LocaleSensitiveCaretShaper::textViewerInputLanguageChanged() /*throw()*/ {
-	updater_->update();
-}
-
 /// @see CaretShapeProvider#uninstall
 void LocaleSensitiveCaretShaper::uninstall() {
-	updater_ = 0;
+	assert(updater() != 0);
+	updater()->caret().removeStateListener(*this);
+	updater()->caret().removeInputPropertyListener(*this);
+	DefaultCaretShaper::uninstall();
 }
