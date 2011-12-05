@@ -637,6 +637,9 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\text-renderer.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\affine-transform.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
