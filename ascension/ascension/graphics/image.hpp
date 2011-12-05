@@ -41,8 +41,19 @@ namespace ascension {
 			Image(const NativeSize& size, Format format);
 			Image(const uint8_t* data, const NativeSize& size, Format format);
 			const NativeImage& asNativeObject() const /*throw()*/ {return impl_;}
-			std::auto_ptr<RenderingContext2D> createRenderingContext() const;
 			static int depth(Format format);
+			// RenderingDevice
+			std::auto_ptr<RenderingContext2D> createRenderingContext() const;
+			int depth();
+			uint32_t numberOfColors();
+			geometry::Coordinate<NativeSize>::Type height() const;
+			geometry::Coordinate<NativeSize>::Type heightInMillimeters() const;
+			geometry::Coordinate<NativeSize>::Type logicalDpiX() const;
+			geometry::Coordinate<NativeSize>::Type logicalDpiY() const;
+			geometry::Coordinate<NativeSize>::Type width() const;
+			geometry::Coordinate<NativeSize>::Type widthInMillimeters() const;
+			geometry::Coordinate<NativeSize>::Type physicalDpiX() const;
+			geometry::Coordinate<NativeSize>::Type physicalDpiY() const;
 		private:
 			NativeImage impl_;
 		};

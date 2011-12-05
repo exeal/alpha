@@ -25,7 +25,7 @@ namespace ascension {
 		class Caret;
 		class TextViewer;
 
-		graphics::NativeSize currentCharacterSize(const Caret& caret);
+		void currentCharacterSize(const Caret& caret, graphics::Scalar* measure, graphics::Scalar* extent);
 
 		/**
 		 * A @c CaretShapeUpdater gives a @c CaretShaper the trigger to update the visualization of

@@ -7,7 +7,6 @@
 #ifndef ASCENSION_AFFINE_TRANSFORM_HPP
 #define ASCENSION_AFFINE_TRANSFORM_HPP
 #include <ascension/graphics/geometry.hpp>
-#include <ascension/corelib/memory.hpp>	// FastArenaObject
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
 #	include <cairomm/matrix.h>
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)

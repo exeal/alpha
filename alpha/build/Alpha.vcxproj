@@ -288,6 +288,7 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\timer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\type-traits.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\utility.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\affine-transform.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\image.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\line-layout-vector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\paint.hpp" />
