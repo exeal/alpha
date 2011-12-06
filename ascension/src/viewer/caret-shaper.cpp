@@ -67,7 +67,7 @@ const Caret& CaretShapeUpdater::caret() const /*throw()*/ {
 
 /// Notifies the text viewer to update the shape of the caret.
 void CaretShapeUpdater::update() /*throw()*/ {
-	viewer_.recreateCaret();	// $friendly-access
+	caret().resetVisualization();	// $friendly-access
 }
 
 
@@ -215,7 +215,8 @@ namespace {
 		const bool horizontal = WritingModeBase::isHorizontal(layout.writingMode().blockFlowDirection);
 		static const Color black(0, 0, 0);
 		if(localeSensitive) {
-			win32::Handle<HIMC> imc(::ImmGetContext(caret.textViewer().identifier().get()), &::ImmReleaseContext);
+			const Widget::Identifier& wid = caret.textViewer().identifier();
+			win32::Handle<HIMC> imc(::ImmGetContext(wid.get()), bind1st(ptr_fun(&::ImmReleaseContext), wid.get()));
 			if(win32::boole(::ImmGetOpenStatus(imc.get()))) {
 				static const Color red(0x80, 0x00, 0x00);
 				image = createSolidCaretImage(horizontal ? measure : extent, horizontal ? extent : measure, red);
