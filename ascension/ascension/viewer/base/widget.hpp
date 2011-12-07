@@ -112,6 +112,19 @@ namespace ascension {
 				void acceptDrops(bool accept = true);
 				bool acceptsDrops() const;
 
+				// graphics.RenderingDevice
+				std::auto_ptr<graphics::RenderingContext2D> createRenderingContext() const;
+				int depth();
+				uint32_t numberOfColors();
+				graphics::geometry::Coordinate<graphics::NativeSize>::Type height() const;
+				graphics::geometry::Coordinate<graphics::NativeSize>::Type heightInMillimeters() const;
+				graphics::geometry::Coordinate<graphics::NativeSize>::Type logicalDpiX() const;
+				graphics::geometry::Coordinate<graphics::NativeSize>::Type logicalDpiY() const;
+				graphics::geometry::Coordinate<graphics::NativeSize>::Type width() const;
+				graphics::geometry::Coordinate<graphics::NativeSize>::Type widthInMillimeters() const;
+				graphics::geometry::Coordinate<graphics::NativeSize>::Type physicalDpiX() const;
+				graphics::geometry::Coordinate<graphics::NativeSize>::Type physicalDpiY() const;
+
 			protected:
 				// DropTarget (default implementations do nothing)
 				virtual void dragEntered(DragEnterInput& input) {}
