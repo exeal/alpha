@@ -35,7 +35,8 @@ namespace {
 // Caret //////////////////////////////////////////////////////////////////////////////////////////
 
 /// @internal Default constructor.
-Caret::Shape::Shape() /*throw()*/ : readingDirection(LEFT_TO_RIGHT), measure(0) {
+Caret::Shape::Shape() /*throw()*/ : alignmentPoint() {
+	// oh, this does nothing
 }
 
 /// @internal Default constructor.
@@ -570,34 +571,35 @@ void Caret::resetVisualization() {
 		return;
 
 	auto_ptr<Image> image;
-	NativeSize solidSize(geometry::make<NativeSize>(0, 0));
-	ReadingDirection readingDirection;
+	NativePoint alignmentPoint;
 
-	if(context_.inputMethodComposingCharacter)
-		solidSize = currentCharacterSize(*this);
-	else if(context_.inputMethodCompositionActivated)
-		geometry::dx(solidSize) = geometry::dy(solidSize) = 1;
-	else if(shaper_.get() != 0)
-		shaper_->shape(image, solidSize, readingDirection);
+	if(context_.inputMethodComposingCharacter) {
+		Scalar dx, dy;
+		const bool horizontal = WritingModeBase::isHorizontal(textViewer().textRenderer().writingMode().blockFlowDirection);
+		currentCharacterSize(*this, horizontal ? &dx : &dy, horizontal ? &dy : &dx);
+		image.reset(new Image(geometry::make<NativeSize>(dx, dy), Image::RGB_16));
+	} else if(context_.inputMethodCompositionActivated) {
+		image.reset(new Image(geometry::make<NativeSize>(0, 0), Image::RGB_16));
+		alignmentPoint = geometry::make<NativePoint>(0, 0);
+	} else if(shaper_.get() != 0)
+		shaper_->shape(image, alignmentPoint);
 	else {
 		DefaultCaretShaper s;
 		CaretShapeUpdater u(*this);
 		static_cast<CaretShaper&>(s).install(u);
-		static_cast<CaretShaper&>(s).shape(image, solidSize, readingDirection);
+		static_cast<CaretShaper&>(s).shape(image, alignmentPoint);
 		static_cast<CaretShaper&>(s).uninstall();
 	}
+	assert(image.get() != 0);
 
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 	::DestroyCaret();
-	if(image.get() != 0) {
-		::CreateCaret(viewer.identifier().get(), image->asNativeObject().get(), 0, 0);
-		BITMAP bitmap;
-		::GetObjectW(image.get(), sizeof(HBITMAP), &bitmap);
-		shapeCache_.measure = bitmap.bmWidth;
-	} else
-		::CreateCaret(viewer.identifier().get(), 0, shapeCache_.measure = geometry::dx(solidSize), geometry::dy(solidSize));
+	::CreateCaret(viewer.identifier().get(), image->asNativeObject().get(), 0, 0);
 	::ShowCaret(viewer.identifier().get());
 #endif
+
+	shapeCache_.image = image;
+	shapeCache_.alignmentPoint = alignmentPoint;
 	updateLocation();
 }
 
@@ -686,10 +688,9 @@ void Caret::updateLocation() {
 			geometry::y(p) = -linePitch;
 		else
 			geometry::x(p) = -linePitch;
-	} else if(WritingModeBase::isHorizontal(writingMode.blockFlowDirection)
-			&& (shapeCache_.readingDirection == RIGHT_TO_LEFT
-			|| viewer.textRenderer().layouts()[line()].bidiEmbeddingLevel(column()) % 2 == 1))
-		geometry::x(p) -= shapeCache_.measure;
+	} else
+		geometry::translate(p, geometry::make<NativeSize>(
+			-geometry::x(shapeCache_.alignmentPoint), -geometry::y(shapeCache_.alignmentPoint)));
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 	::SetCaretPos(geometry::x(p), geometry::y(p));
 #endif
