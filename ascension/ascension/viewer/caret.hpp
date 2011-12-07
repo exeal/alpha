@@ -162,8 +162,7 @@ namespace ascension {
 			std::tr1::shared_ptr<CaretShaper> shaper_;
 			struct Shape {
 				std::auto_ptr<graphics::Image> image;
-				presentation::ReadingDirection readingDirection;
-				graphics::Scalar measure;
+				graphics::NativePoint alignmentPoint;
 				Shape() /*throw()*/;
 			} shapeCache_;
 			struct Context {
