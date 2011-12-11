@@ -461,23 +461,30 @@ void Document::recordChanges(bool record) /*throw()*/ {
 namespace {
 	class FirstChangeHolder {
 	public:
-		FirstChangeHolder(const Document& document, DocumentInput* input,
-			void(DocumentInput::*post)(const Document&)) : document_(document), input_(input), post_(post) {assert(post_ != 0);}
-		~FirstChangeHolder() {if(input_ != 0) (input_->*post_)(document_);}
+		FirstChangeHolder(const Document& document, tr1::weak_ptr<DocumentInput> input,
+				void(DocumentInput::*post)(const Document&)) : document_(document), input_(input), post_(post) {
+			assert(post_ != 0);
+		}
+		~FirstChangeHolder() {
+			if(tr1::shared_ptr<DocumentInput> input = input_.lock())
+				(input.get()->*post_)(document_);
+		}
 	private:
 		const Document& document_;
-		DocumentInput* input_;
+		tr1::weak_ptr<DocumentInput> input_;
 		void(DocumentInput::*post_)(const Document&);
 	};
 }
 
-#define ASCENSION_PREPARE_FIRST_CHANGE(skip)									\
-	const bool firstChange = !(skip) && !isModified() && (input_.get() != 0);	\
-	if(firstChange) {															\
-		if(!input_->isChangeable(*this))										\
-			throw DocumentInput::ChangeRejectedException();						\
-	}																			\
-	FirstChangeHolder fch(*this, firstChange ? input_.get() : 0, &DocumentInput::postFirstDocumentChange)
+#define ASCENSION_PREPARE_FIRST_CHANGE(skip)								\
+	const bool firstChange = !(skip) && !isModified() && !input_.expired();	\
+	if(firstChange) {														\
+		if(const tr1::shared_ptr<DocumentInput> p = input_.lock()) {		\
+			if(!p->isChangeable(*this))										\
+				throw DocumentInput::ChangeRejectedException();				\
+		}																	\
+	}																		\
+	FirstChangeHolder fch(*this, firstChange ? input_ : tr1::weak_ptr<DocumentInput>(), &DocumentInput::postFirstDocumentChange)
 
 /**
  * Performs the redo. Does nothing if the target region is inaccessible.

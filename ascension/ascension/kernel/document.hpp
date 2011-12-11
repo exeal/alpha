@@ -75,7 +75,7 @@ namespace ascension {
 		/**
 		 * Base class of the exceptions represent @c Document#replace could not change the document
 		 * because of its property.
-		 * @see ReadOnlyDocumentException, IDocumentInput#ChangeRejectedException
+		 * @see ReadOnlyDocumentException, DocumentInput#ChangeRejectedException
 		 */
 		class DocumentCantChangeException {
 		public:
@@ -108,10 +108,10 @@ namespace ascension {
 		class DocumentInput {
 		public:
 			/**
-			 * Thrown if @c IDocumentInput rejected the change of the document. For details, see
-			 * the documentation of @c Document class.
+			 * Thrown if @c DocumentInput rejected the change of the document. For details, see the
+			 * documentation of @c Document class.
 			 * @see Document#redo, Document#replace, Document#resetContent, Document#undo,
-			 *      IDocumentInput#documentAboutToBeChanged
+			 *      DocumentInput#documentAboutToBeChanged
 			 */
 			class ChangeRejectedException : public DocumentCantChangeException {
 			public:
@@ -235,7 +235,7 @@ namespace ascension {
 			// attributes
 			Bookmarker& bookmarker() /*throw()*/;
 			const Bookmarker& bookmarker() const /*throw()*/;
-			DocumentInput* input() const /*throw()*/;
+			std::tr1::weak_ptr<DocumentInput> input() const /*throw()*/;
 			bool isModified() const /*throw()*/;
 			bool isReadOnly() const /*throw()*/;
 			void markUnmodified() /*throw()*/;
@@ -243,7 +243,7 @@ namespace ascension {
 			const String* property(const DocumentPropertyKey& key) const /*throw()*/;
 			texteditor::Session* session() /*throw()*/;
 			const texteditor::Session* session() const /*throw()*/;
-			void setInput(std::tr1::shared_ptr<DocumentInput> newInput) /*throw()*/;
+			void setInput(std::tr1::weak_ptr<DocumentInput> newInput) /*throw()*/;
 			void setModified() /*throw()*/;
 			void setPartitioner(std::auto_ptr<DocumentPartitioner> newPartitioner) /*throw()*/;
 			void setProperty(const DocumentPropertyKey& key, const String& property);
@@ -316,7 +316,7 @@ namespace ascension {
 			};
 
 			texteditor::Session* session_;
-			std::tr1::shared_ptr<DocumentInput> input_;
+			std::tr1::weak_ptr<DocumentInput> input_;
 			std::auto_ptr<DocumentPartitioner> partitioner_;
 			std::auto_ptr<Bookmarker> bookmarker_;
 			std::auto_ptr<ContentTypeInformationProvider> contentTypeInformationProvider_;
@@ -478,7 +478,7 @@ inline Document::LineIterator Document::getLineIterator(length_t line) const {
 #endif
 
 /// Returns the document input or @c null.
-inline DocumentInput* Document::input() const /*throw()*/ {return input_.get();}
+inline std::tr1::weak_ptr<DocumentInput> Document::input() const /*throw()*/ {return input_;}
 
 /**
  * Returns @c true if the document is changing (this means the document is in @c #insert or
