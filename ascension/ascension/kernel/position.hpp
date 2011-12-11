@@ -9,6 +9,7 @@
 
 #include <ascension/corelib/basic-types.hpp>	// length_t
 #include <ascension/corelib/memory.hpp>			// FastArenaObject
+#include <ascension/corelib/range.hpp>
 #include <locale>	// std.use_facet, ...
 #include <sstream>	// std.basic_ostream, std.ostringstream
 #include <utility>	// std.pair

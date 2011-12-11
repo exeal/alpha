@@ -90,11 +90,11 @@ void Length::setValue(double value, const RenderingContext2D& context, const Nat
 //		case GRIDS:
 //		case REMS:
 		case VIEWPORT_WIDTH:
-			valueInSpecifiedUnits_ = value / geometry::dx(context.device().viewportSize());
+			valueInSpecifiedUnits_ = value / geometry::dx(context.device().size());
 		case VIEWPORT_HEIGHT:
-			valueInSpecifiedUnits_ = value / geometry::dy(context.device().viewportSize());
+			valueInSpecifiedUnits_ = value / geometry::dy(context.device().size());
 		case VIEWPORT_MINIMUM:
-			valueInSpecifiedUnits_ = value / min(geometry::dx(context.device().viewportSize()), geometry::dy(context.device().viewportSize()));
+			valueInSpecifiedUnits_ = value / min(geometry::dx(context.device().size()), geometry::dy(context.device().size()));
 		case CHARACTERS:
 			valueInSpecifiedUnits_ = value / context.font()->metrics().averageCharacterWidth();
 		case INCHES:
@@ -110,7 +110,7 @@ void Length::setValue(double value, const RenderingContext2D& context, const Nat
 		case DIPS:
 			valueInSpecifiedUnits_ = value / pixelsPerInch(context, mode_) * 96;
 		case PERCENTAGE: {
-			const NativeSize size((contextSize != 0) ? *contextSize : context.device().viewportSize());
+			const NativeSize size((contextSize != 0) ? *contextSize : context.device().size());
 			if(mode_ == WIDTH)
 				valueInSpecifiedUnits_ = value / geometry::dx(size) * 100;
 			else if(mode_ == HEIGHT)
@@ -139,11 +139,11 @@ double Length::value(const RenderingContext2D& context, const NativeSize* contex
 //		case GRIDS:
 //		case REMS:
 		case VIEWPORT_WIDTH:
-			return valueInSpecifiedUnits() * geometry::dx(context.device().viewportSize());
+			return valueInSpecifiedUnits() * geometry::dx(context.device().size());
 		case VIEWPORT_HEIGHT:
-			return valueInSpecifiedUnits() * geometry::dy(context.device().viewportSize());
+			return valueInSpecifiedUnits() * geometry::dy(context.device().size());
 		case VIEWPORT_MINIMUM:
-			return valueInSpecifiedUnits() * min(geometry::dx(context.device().viewportSize()), geometry::dy(context.device().viewportSize()));
+			return valueInSpecifiedUnits() * min(geometry::dx(context.device().size()), geometry::dy(context.device().size()));
 		case CHARACTERS:
 			return valueInSpecifiedUnits() * context.font()->metrics().averageCharacterWidth();
 		case INCHES:
@@ -159,7 +159,7 @@ double Length::value(const RenderingContext2D& context, const NativeSize* contex
 		case DIPS:
 			return valueInSpecifiedUnits() * pixelsPerInch(context, mode_) / 96;
 		case PERCENTAGE: {
-			const NativeSize size((contextSize != 0) ? *contextSize : context.device().viewportSize());
+			const NativeSize size((contextSize != 0) ? *contextSize : context.device().size());
 			if(mode_ == WIDTH)
 				return valueInSpecifiedUnits() * geometry::dx(size);
 			else if(mode_ == HEIGHT)
