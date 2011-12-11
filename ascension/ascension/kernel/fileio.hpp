@@ -244,6 +244,7 @@ namespace ascension {
 				void documentPropertyChanged(const Document& document, const DocumentPropertyKey& key);
 				void documentReadOnlySignChanged(const Document& document);
 			private:
+				std::tr1::shared_ptr<TextFileDocumentInput> weakSelf_;	// for Document.setInput call
 				class FileLocker;
 				FileLocker* fileLocker_;
 				Document& document_;

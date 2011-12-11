@@ -50,6 +50,7 @@
 namespace ascension {
 
 	namespace detail {
+		struct NullDeleter {void operator()(const void*) {}};
 		template<unsigned> struct StaticAssertTest {};
 		template<int> struct StaticAssertionFailureAtLine;
 		template<> struct StaticAssertionFailureAtLine<-1> {};
