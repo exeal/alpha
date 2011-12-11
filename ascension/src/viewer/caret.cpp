@@ -861,8 +861,12 @@ void viewers::breakLine(Caret& caret, bool inheritIndent, size_t newlines /* = 1
 	if(newlines == 0)
 		return;
 
-	const DocumentInput* const di = caret.document().input();
-	String s(newlineString((di != 0) ? di->newline() : ASCENSION_DEFAULT_NEWLINE));
+	Newline newline;
+	if(const tr1::shared_ptr<DocumentInput> documentInput = caret.document().input().lock())
+		newline = documentInput->newline();
+	else
+		newline = ASCENSION_DEFAULT_NEWLINE;
+	String s(newlineString(newline));
 
 	if(inheritIndent) {	// simple auto-indent
 		const String& currentLine = caret.document().line(caret.line());
