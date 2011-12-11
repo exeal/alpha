@@ -613,8 +613,8 @@ namespace ascension {
 							replacement.begin(), replacement.end(), replacement.end()))));
 				replaced_ = true;
 				return String(
-					text::utf::makeCharacterEncodeIterator(temp.data()),
-					text::utf::makeCharacterEncodeIterator(temp.data() + temp.length()));
+					text::utf::makeCharacterEncodeIterator<Char>(temp.data()),
+					text::utf::makeCharacterEncodeIterator<Char>(temp.data() + temp.length()));
 			}
 
 			/**
