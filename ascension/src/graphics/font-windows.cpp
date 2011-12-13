@@ -10,7 +10,7 @@
 #include <vector>
 
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-#	include <ascension/corelib/text/unicode.hpp>	// text.isValidCodePoint
+#	include <ascension/corelib/text/character.hpp>	// text.isValidCodePoint
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
 using namespace ascension;
@@ -122,18 +122,18 @@ namespace {
 
 	class SystemFonts : public FontCollection {
 	public:
-		tr1::shared_ptr<const Font> get(const String& familyName, const FontProperties& properties, double sizeAdjust) const;
-		tr1::shared_ptr<const Font> lastResortFallback(const FontProperties& properties, double sizeAdjust) const;
+		tr1::shared_ptr<const Font> get(const String& familyName, const FontProperties<>& properties, double sizeAdjust) const;
+		tr1::shared_ptr<const Font> lastResortFallback(const FontProperties<>& properties, double sizeAdjust) const;
 	private:
-		tr1::shared_ptr<const Font> cache(const String& familyName, const FontProperties& properties, double sizeAdjust);
+		tr1::shared_ptr<const Font> cache(const String& familyName, const FontProperties<>& properties, double sizeAdjust);
 		struct Hasher : tr1::hash<String> {
-			size_t operator()(const pair<String, FontProperties>& value) const {
+			size_t operator()(const pair<String, FontProperties<> >& value) const {
 //				tr1::hash_combine(value.second.hash(), value.first);
 				return tr1::hash<String>()(value.first) + value.second.hash();
 			}
 		};
 	private:
-		typedef tr1::unordered_map<pair<String, FontProperties>, tr1::shared_ptr<Font>, Hasher> Registry;
+		typedef tr1::unordered_map<pair<String, FontProperties<> >, tr1::shared_ptr<Font>, Hasher> Registry;
 		Registry registry_;
 	};
 } // namespace @0
@@ -199,14 +199,14 @@ bool SystemFont::ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, 
 }
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
-tr1::shared_ptr<const Font> SystemFonts::get(const String& familyName, const FontProperties& properties, double sizeAdjust) const {
+tr1::shared_ptr<const Font> SystemFonts::get(const String& familyName, const FontProperties<>& properties, double sizeAdjust) const {
 	Registry::const_iterator i(registry_.find(make_pair(familyName, properties)));
 	if(i != registry_.end())
 		return i->second;
 	return const_cast<SystemFonts*>(this)->cache(familyName, properties, sizeAdjust);
 }
 
-tr1::shared_ptr<const Font> SystemFonts::cache(const String& familyName, const FontProperties& properties, double sizeAdjust) {
+tr1::shared_ptr<const Font> SystemFonts::cache(const String& familyName, const FontProperties<>& properties, double sizeAdjust) {
 	if(familyName.length() >= LF_FACESIZE)
 		throw length_error("");
 
@@ -214,9 +214,9 @@ tr1::shared_ptr<const Font> SystemFonts::cache(const String& familyName, const F
 
 	LOGFONTW lf;
 	memset(&lf, 0, sizeof(LOGFONTW));
-	lf.lfHeight = -round(properties.size());
+	lf.lfHeight = -round(properties.pixelSize());
 	lf.lfWeight = properties.weight();
-	lf.lfItalic = (properties.style() == FontProperties::ITALIC) || (properties.style() == FontProperties::OBLIQUE);
+	lf.lfItalic = (properties.style() == FontPropertiesBase::ITALIC) || (properties.style() == FontPropertiesBase::OBLIQUE);
 	wcscpy(lf.lfFaceName, familyName.c_str());
 	win32::Handle<HFONT> font(::CreateFontIndirectW(&lf), &::DeleteObject);
 #ifdef _DEBUG
@@ -241,8 +241,8 @@ tr1::shared_ptr<const Font> SystemFonts::cache(const String& familyName, const F
 				(::GetGlyphOutlineW(dc.get(), L'x', GGO_METRICS, &gm, 0, 0, 0) != GDI_ERROR && gm.gmptGlyphOrigin.y > 0) ?
 					gm.gmptGlyphOrigin.y : round(static_cast<double>(tm.tmAscent) * 0.56);
 			const double aspect = static_cast<double>(xHeight) / static_cast<double>(tm.tmHeight - tm.tmInternalLeading);
-			FontProperties adjustedProperties(properties.weight(),
-				properties.stretch(), properties.style(), properties.orientation(), max(properties.size() * (sizeAdjust / aspect), 1.0));
+			FontProperties<> adjustedProperties(properties.weight(), properties.stretch(), properties.style(),
+				properties.variant(), properties.orientation(), max(properties.pixelSize() * (sizeAdjust / aspect), 1.0));
 			::SelectObject(dc.get(), oldFont);
 			return cache(familyName, adjustedProperties, 0.0);
 		}
@@ -250,7 +250,7 @@ tr1::shared_ptr<const Font> SystemFonts::cache(const String& familyName, const F
 	}
 
 	// handle 'font-stretch'
-	if(properties.stretch() != FontProperties::NORMAL_STRETCH) {
+	if(properties.stretch() != FontPropertiesBase::NORMAL_STRETCH) {
 		// TODO: this implementation is too simple...
 		if(::GetObjectW(font.get(), sizeof(LOGFONTW), &lf) > 0) {
 			static const int WIDTH_RATIOS[] = {1000, 1000, 1000, 500, 625, 750, 875, 1125, 1250, 1500, 2000, 1000};
@@ -266,7 +266,7 @@ tr1::shared_ptr<const Font> SystemFonts::cache(const String& familyName, const F
 	return newFont;
 }
 
-tr1::shared_ptr<const Font> SystemFonts::lastResortFallback(const FontProperties& properties, double sizeAdjust) const {
+tr1::shared_ptr<const Font> SystemFonts::lastResortFallback(const FontProperties<>& properties, double sizeAdjust) const {
 	static String familyName;
 	// TODO: 'familyName' should update when system property changed.
 	if(familyName.empty()) {

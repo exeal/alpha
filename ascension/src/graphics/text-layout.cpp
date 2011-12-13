@@ -1018,8 +1018,8 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 			forwardStyleRun = true;
 		}
 
-		if(surrogates::next(layoutString.data() + previousRunEnd,
-				layoutString.data() + newRunEnd) < layoutString.data() + newRunEnd || font.get() == 0) {
+		if((++utf::makeCharacterDecodeIterator(layoutString.data() + previousRunEnd,
+				layoutString.data() + newRunEnd)).tell() < layoutString.data() + newRunEnd || font.get() == 0) {
 			const pair<const Char*, tr1::shared_ptr<const Font> > nextFontRun(
 				findNextFontRun(
 					Range<const Char*>(layoutString.data() + previousRunEnd, layoutString.data() + newRunEnd),
@@ -1621,10 +1621,10 @@ void TextLayout::TextRun::substituteGlyphs(const Range<TextRun**>& runs, const S
 			// process an IVS across two glyph runs
 			if(p + 1 != runs.end() && length(*p[1]) > 1) {
 				TextRun& next = *p[1];
-				const CodePoint variationSelector = surrogates::decodeFirst(
+				const CodePoint variationSelector = utf::decodeFirst(
 					layoutString.begin() + next.beginning(), layoutString.begin() + next.beginning() + 2);
 				if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
-					const CodePoint baseCharacter = surrogates::decodeLast(
+					const CodePoint baseCharacter = utf::decodeLast(
 						layoutString.data() + run.beginning(), layoutString.data() + run.end());
 					if(run.glyphs_->font->ivsGlyph(baseCharacter, variationSelector,
 							run.glyphs_->indices[run.glyphs_->clusters[length(run) - 1]])) {
@@ -2230,7 +2230,7 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 	} else if(ascension::isEmpty(range)) {	// an empty rectangle for an empty range
 		const LineMetrics& line = *lineMetrics_[lineAt(range.beginning())];
 		return geometry::make<NativeRectangle>(
-			geometry::subtract(location(range.beginning()), geometry::make<NativeSize>(0, line.ascent()/* + line.leading()*/)),
+			geometry::subtract(location(range.beginning()), geometry::make<NativePoint>(0, line.ascent()/* + line.leading()*/)),
 			geometry::make<NativeSize>(0, line.height()));
 	} else {
 		const length_t firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
@@ -3116,7 +3116,7 @@ void TextLayout::stackLines(LineStackingStrategy lineStackingStrategy, const Fon
 				ascent = textAltitude;
 				descent = textDepth;
 				break;
-			case MAX_HEIGHT:
+			case MAX_HEIGHT: {
 				// allocation-rectangle of line is maximum-line-rectangle
 				ascent = textAltitude;
 				descent = textDepth;
@@ -3126,6 +3126,7 @@ void TextLayout::stackLines(LineStackingStrategy lineStackingStrategy, const Fon
 					descent = max(run->font()->metrics().descent(), descent);
 				}
 				break;
+			}
 			default:
 				ASCENSION_ASSERT_NOT_REACHED();
 		}

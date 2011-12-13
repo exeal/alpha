@@ -46,6 +46,7 @@ namespace ascension {
 					VISIBLE_AS_NEEDED
 				};
 			public:
+				ScrollableWidget(Widget* parent = 0, Style styles = WIDGET);
 				virtual ScrollProperties<int>& horizontalScrollBar() const = 0;
 				virtual ScrollBarPolicy horizontalScrollBarPolicy() const = 0;
 				virtual void setHorizontalScrollBarPolicy(ScrollBarPolicy policy) = 0;
