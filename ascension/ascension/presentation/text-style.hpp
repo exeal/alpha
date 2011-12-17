@@ -260,6 +260,54 @@ namespace ascension {
 		};
 
 		/**
+		 * @see CSS Text Level 3 - 4.1. Line Breaking Strictness: the 'line-break' property
+		 *      (http://www.w3.org/TR/css3-text/#line-break)
+		 */
+		enum LineBreak {
+			LINE_BREAK_AUTO,
+			LINE_BREAK_LOOSE,
+			LINE_BREAK_NORMAL,
+			LINE_BREAK_STRICT
+		};
+
+		/**
+		 * @see CSS Text Level 3 - 4.2. Word Breaking Rules: the 'word-break' property
+		 *      (http://www.w3.org/TR/css3-text/#word-break)
+		 */
+		enum WordBreak {
+			WORD_BREAK_NORMAL,
+			WORD_BREAK_KEEP_ALL,
+			WORD_BREAK_BREAK_ALL
+		};
+
+		/**
+		 * @see CSS Text Level 3 - 6.1. Text Wrap Settings: 'text-wrap' property
+		 *      (http://www.w3.org/TR/css3-text/#text-wrap)
+		 */
+		enum TextWrap {
+			TEXT_WRAP_NORMAL,
+			TEXT_WRAP_NONE,
+			TEXT_WRAP_AVOID
+		};
+
+		/**
+		 * @see CSS Text Level 3 - 6.2. Emergency Wrapping: the 'overflow-wrap' property
+		 *      (http://www.w3.org/TR/css3-text/#overflow-wrap)
+		 */
+		enum OverflowWrap {
+			OVERFLOW_WRAP_NORMAL = 0,
+			OVERFLOW_WRAP_BREAK_WORD = 1,
+			OVERFLOW_WRAP_HYPHENATE = 2
+		};
+
+		template<typename Measure>
+		struct TextWrapping {
+			TextWrap textWrap;
+			OverflowWrap overflowWrap;
+			Measure measure;
+		};
+
+		/**
 		 * @c TextAnchor describes an alignment of text relative to the given point.
 		 * @see resolveTextAlignment, TextLineStyle#alignment, TextLineStyle#lastSublineAlignment,
 		 *      defaultTextAnchor
