@@ -448,7 +448,7 @@ namespace ascension {
 			 * @c graphics#font#TextRenderer class.
 			 * @see graphics#font#TextRenderer#writingMode
 			 */
-			WritingMode<true> writingMode;
+			Inheritable<WritingMode> writingMode;
 			/// The default text line style. The default value is @c null.
 			std::tr1::shared_ptr<const TextLineStyle> defaultLineStyle;
 		};

@@ -400,7 +400,7 @@ bool font::supportsOpenTypeFeatures() /*throw()*/ {
  * @param writingMode The writing mode used to compute the directions and orientation of @a border
  */
 void detail::paintBorder(Context& context, const NativeRectangle& rectangle,
-		const Border& border, const Color& currentColor, const WritingMode<false>& writingMode) {
+		const Border& border, const Color& currentColor, const WritingMode& writingMode) {
 	// TODO: not implemented.
 }
 
@@ -1892,46 +1892,20 @@ namespace {
 /**
  * Constructor.
  * @param text The text string to display
- * @param writingMode The writing mode of the text layout
- * @param anchor The text anchor. This should be either @c TEXT_ANCHOR_START,
- *               @c TEXT_ANCHOR_MIDDLE or @c TEXT_ANCHOR_END
- * @param justification The text justification method
- * @param dominantBaseline The dominant baseline
- * @param lineStackingStrategy The line stacking strategy
- * @param lineHeight The height used in determining the half-leading value
- * @param fontCollection The font collection this text layout uses
- * @param defaultTextRunStyle The default text run style. Can be @c null
- * @param textRunStyles The text run styles. Can be @c null
- * @param tabExpander The tab expander object. If this is @c null, the default object is used
- * @param width The maximum width
- * @param numberSubstitution Defines number substitution process. Can be @c null
- * @param displayShapingControls Set @c true to shape zero width control characters as
- *                               representative glyphs
- * @param disableDeprecatedFormatCharacters Set @c true to make the deprecated format characters
- *                                          (NADS, NODS, ASS, and ISS) not effective
- * @param inhibitSymmetricSwapping Set c true to inhibit from generating mirrored glyphs
- * @throw UnknownValueException @a writingMode or @a anchor is invalid
+ * @param otherParameters The other parameters
+ * @throw UnknownValueException @a writingMode or @a otherParameters.anchor is invalid
  */
 TextLayout::TextLayout(const String& text,
-		const WritingMode<false>& writingMode /* = WritingMode<false>() */, TextAnchor anchor /* = TEXT_ANCHOR_START */,
-		TextJustification justification /* = NO_JUSTIFICATION */,
-		DominantBaseline dominantBaseline /* = DOMINANT_BASELINE_AUTO */,
-		LineStackingStrategy lineStackingStrategy /* = MAX_HEIGHT */,
-		Scalar lineHeight /* = 0 */,
-		const FontCollection& fontCollection /* = systemFonts() */,
-		tr1::shared_ptr<const presentation::TextRunStyle> defaultTextRunStyle /* = null */,
-		auto_ptr<presentation::StyledTextRunIterator> textRunStyles /* null */,
-		const TabExpander* tabExpander /* = 0 */, Scalar width /* = numeric_limits<Scalar>::max() */,
-		const NumberSubstitution* numberSubstitution /* = 0 */, bool displayShapingControls /* = false */,
-		bool inhibitSymmetricSwapping /* = false */, bool disableDeprecatedFormatCharacters /* = false */)
-		: text_(text), writingMode_(writingMode), anchor_(anchor),
-		dominantBaseline_(dominantBaseline), numberOfRuns_(0), numberOfLines_(0), maximumMeasure_(-1), wrapWidth_(width) {
+		const TextLayout::ConstructionParameters& otherParameters /* = TextLayout::ConstructionParameters() */)
+		: text_(text), writingMode_(otherParameters.writingMode), anchor_(otherParameters.anchor),
+		dominantBaseline_(otherParameters.dominantBaseline), numberOfRuns_(0), numberOfLines_(0),
+		maximumMeasure_(-1), wrappingMeasure_(otherParameters.textWrapping.measure) {
 
 	// sanity checks...
-	if(writingMode.inlineFlowDirection != LEFT_TO_RIGHT && writingMode.inlineFlowDirection != RIGHT_TO_LEFT)
+	if(writingMode_.inlineFlowDirection != LEFT_TO_RIGHT && writingMode_.inlineFlowDirection != RIGHT_TO_LEFT)
 		throw UnknownValueException("writingMode.inlineFlowDirection");
-	if(anchor != TEXT_ANCHOR_START && anchor != TEXT_ANCHOR_MIDDLE && anchor != TEXT_ANCHOR_END)
-		throw UnknownValueException("anchor");
+	if(anchor_ != TEXT_ANCHOR_START && anchor_ != TEXT_ANCHOR_MIDDLE && anchor_ != TEXT_ANCHOR_END)
+		throw UnknownValueException("otherParameters.anchor");
 
 	// handle logically empty line
 	if(text_.empty()) {
@@ -1967,11 +1941,11 @@ TextLayout::TextLayout(const String& text,
 	// 1-1. configure Uniscribe's itemize
 	win32::AutoZero<SCRIPT_CONTROL> control;
 	win32::AutoZero<SCRIPT_STATE> initialState;
-	initialState.uBidiLevel = (writingMode.inlineFlowDirection == RIGHT_TO_LEFT) ? 1 : 0;
+	initialState.uBidiLevel = (writingMode_.inlineFlowDirection == RIGHT_TO_LEFT) ? 1 : 0;
 //	initialState.fOverrideDirection = 1;
-	initialState.fInhibitSymSwap = inhibitSymmetricSwapping;
-	initialState.fDisplayZWG = displayShapingControls;
-	resolveNumberSubstitution(numberSubstitution, control, initialState);	// ignore result...
+	initialState.fInhibitSymSwap = otherParameters.inhibitSymmetricSwapping;
+	initialState.fDisplayZWG = otherParameters.displayShapingControls;
+	resolveNumberSubstitution(otherParameters.numberSubstitution, control, initialState);	// ignore result...
 
 	// 1-2. itemize
 	// note that ScriptItemize can cause a buffer overflow (see Mozilla bug 366643)
@@ -1993,7 +1967,7 @@ TextLayout::TextLayout(const String& text,
 			break;
 		estimatedNumberOfScriptRuns *= 2;
 	}
-	if(disableDeprecatedFormatCharacters) {
+	if(otherParameters.disableDeprecatedFormatCharacters) {
 		for(int i = 0; i < numberOfScriptRuns; ++i) {
 			scriptRuns[i].a.s.fInhibitSymSwap = initialState.fInhibitSymSwap;
 			scriptRuns[i].a.s.fDigitSubstitute = initialState.fDigitSubstitute;
@@ -2005,9 +1979,10 @@ TextLayout::TextLayout(const String& text,
 	// 2. split each script runs into text runs with StyledRunIterator
 	vector<TextRun*> textRuns;
 	vector<const StyledTextRun> styledRanges;
+	const FontCollection& fontCollection = (otherParameters.fontCollection != 0) ? *otherParameters.fontCollection : systemFonts();
 	TextRun::mergeScriptsAndStyles(text_.data(),
 		scriptRuns.get(), scriptTags.get(), numberOfScriptRuns,
-		fontCollection, defaultTextRunStyle, textRunStyles, textRuns, styledRanges);
+		fontCollection, otherParameters.defaultTextRunStyle, otherParameters.textRunStyles, textRuns, styledRanges);
 	runs_.reset(new TextRun*[numberOfRuns_ = textRuns.size()]);
 	copy(textRuns.begin(), textRuns.end(), runs_.get());
 //	shrinkToFit(styledRanges_);
@@ -2026,10 +2001,10 @@ TextLayout::TextLayout(const String& text,
 	String nominalFontFamilyName;
 	FontProperties<> nominalFontProperties;
 	resolveFontSpecifications(fontCollection,
-		tr1::shared_ptr<const TextRunStyle>(), defaultTextRunStyle, &nominalFontFamilyName, &nominalFontProperties, 0);
+		tr1::shared_ptr<const TextRunStyle>(), otherParameters.defaultTextRunStyle, &nominalFontFamilyName, &nominalFontProperties, 0);
 	const tr1::shared_ptr<const Font> nominalFont(fontCollection.get(nominalFontFamilyName, nominalFontProperties));
 	// wrap into visual lines and reorder runs in each lines
-	if(numberOfRuns_ == 0 || wrapWidth_ == numeric_limits<Scalar>::max()) {
+	if(numberOfRuns_ == 0 || wrappingMeasure_ == numeric_limits<Scalar>::max()) {
 		numberOfLines_ = 1;
 		lineOffsets_.reset(&SINGLE_LINE_OFFSETS);
 		lineFirstRuns_.reset(&SINGLE_LINE_OFFSETS);
@@ -2039,6 +2014,7 @@ TextLayout::TextLayout(const String& text,
 		expandTabsWithoutWrapping();
 	} else {
 		// 5-1. expand horizontal tabs and wrap into lines
+		const TabExpander* tabExpander = otherParameters.tabExpander;
 		auto_ptr<TabExpander> temp;
 		if(tabExpander == 0) {
 			// create default tab expander
@@ -2051,12 +2027,12 @@ TextLayout::TextLayout(const String& text,
 		// 5-3. reexpand horizontal tabs
 		// TODO: not implemented.
 		// 6. justify each text runs if specified
-		if(justification != NO_JUSTIFICATION)
-			justify(justification);
+		if(otherParameters.justification != NO_JUSTIFICATION)
+			justify(otherParameters.justification);
 	}
 
 	// 7. stack the lines
-	stackLines(lineStackingStrategy, *nominalFont, lineHeight);
+	stackLines(otherParameters.lineStackingStrategy, *nominalFont, otherParameters.lineHeight);
 }
 
 /// Destructor.
@@ -2736,14 +2712,14 @@ bool TextLayout::isBidirectional() const /*throw()*/ {
 
 /// Justifies the wrapped visual lines.
 inline void TextLayout::justify(TextJustification) /*throw()*/ {
-	assert(wrapWidth_ != -1);
+	assert(wrappingMeasure_ != -1);
 	for(length_t line = 0; line < numberOfLines(); ++line) {
 		const int ipd = measure(line);
 		const size_t last = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
 		for(size_t i = lineFirstRuns_[line]; i < last; ++i) {
 			TextRun& run = *runs_[i];
-			const int newRunWidth = ::MulDiv(run.totalWidth(), wrapWidth_, ipd);	// TODO: there is more precise way.
-			run.justify(newRunWidth);
+			const int newRunMeasure = ::MulDiv(run.totalWidth(), wrappingMeasure_, ipd);	// TODO: there is more precise way.
+			run.justify(newRunMeasure);
 		}
 	}
 }
@@ -2997,7 +2973,7 @@ Scalar TextLayout::measure(length_t line) const {
  * @see #locateLine, #location
  */
 pair<length_t, length_t> TextLayout::offset(const NativePoint& p, bool* outside /* = 0 */) const /*throw()*/ {
-	const bool vertical = WritingModeBase::isVertical(writingMode().blockFlowDirection);
+	const bool vertical = isVertical(writingMode().blockFlowDirection);
 	bool outsides[2];
 	const std::pair<length_t, length_t> result(locateOffsets(locateLine(
 		vertical ? geometry::x(p) : geometry::y(p), outsides[0]), vertical ? geometry::y(p) : geometry::x(p), outsides[1]));
@@ -3163,7 +3139,7 @@ StyledRun TextLayout::styledTextRun(length_t column) const {
 
 /// Locates the wrap points and resolves tab expansions.
 void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
-	assert(numberOfRuns_ != 0 && wrapWidth_ != numeric_limits<Scalar>::max());
+	assert(numberOfRuns_ != 0 && wrappingMeasure_ != numeric_limits<Scalar>::max());
 	assert(numberOfLines_ == 0 && lineOffsets_.get() == 0 && lineFirstRuns_.get() == 0);
 
 	vector<length_t> lineFirstRuns;
@@ -3180,8 +3156,8 @@ void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
 
 		// if the run is a tab, expand and calculate actual width
 		if(run->expandTabCharacters(tabExpander, text_,
-				(x1 < wrapWidth_) ? x1 : 0, wrapWidth_ - (x1 < wrapWidth_) ? x1 : 0)) {
-			if(x1 < wrapWidth_) {
+				(x1 < wrappingMeasure_) ? x1 : 0, wrappingMeasure_ - (x1 < wrappingMeasure_) ? x1 : 0)) {
+			if(x1 < wrappingMeasure_) {
 				x1 += run->totalWidth();
 				newRuns.push_back(run);
 			} else {
@@ -3219,7 +3195,7 @@ void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
 				}
 			}
 			// break if the width of the visual line overs the wrap width
-			if(x2 + logicalWidths[j - originalRunPosition] > wrapWidth_) {
+			if(x2 + logicalWidths[j - originalRunPosition] > wrappingMeasure_) {
 				// the opportunity is the start of this run
 				if(lastBreakable == run->beginning()) {
 					// break at the last glyph boundary if no opportunities
