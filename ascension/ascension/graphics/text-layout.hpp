@@ -177,6 +177,70 @@ namespace ascension {
 					LEADING,	///< Leading edge of a character.
 					TRAILING	///< Trailing edge of a character.
 				};
+
+				/**
+				 * A parameter set for the constructor of @c TextLayout class.
+				 * @see TextLayout#TextLayout
+				 */
+				struct ConstructionParameters {
+					/// The writing mode of the text layout.
+					presentation::WritingMode writingMode;
+					/**
+					 * The text anchor. This should be either @c TEXT_ANCHOR_START,
+					 * @c TEXT_ANCHOR_MIDDLE or @c TEXT_ANCHOR_END. The default value is
+					 * @c TEXT_ANCHOR_START.
+					 */
+					presentation::TextAnchor anchor;
+					/// The text justification method. The default value is @c NO_JUSTIFICATION.
+					presentation::DominantBaseline dominantBaseline;
+					/// The dominant baseline. The default value is @c DOMINANT_BASELINE_AUTO.
+					presentation::TextJustification justification;
+					/// The line stacking strategy. The default value is @c MAX_HEIGHT.
+					presentation::LineStackingStrategy lineStackingStrategy;
+					/**
+					 * The height used in determining the 'half-leading' value. The default value
+					 * is 0.
+					 */
+					Scalar lineHeight;
+					/// The text wrapping settings.
+					presentation::TextWrapping<Scalar> textWrapping;
+					/// The line breaking strictness. The default value is 
+					presentation::LineBreak lineBreak;
+					presentation::WordBreak wordBreak;
+					/**
+					 * The font collection this text layout uses. If this is @c null,
+					 * @c TextLayout uses @c systemFonts. The default value is @c null.
+					 */
+					const FontCollection* fontCollection;
+					/// The default text run style. The default value is @c null.
+					std::tr1::shared_ptr<const presentation::TextRunStyle> defaultTextRunStyle;
+					/// The text run styles. The default value is @c null.
+					mutable std::auto_ptr<presentation::StyledTextRunIterator> textRunStyles;
+					/**
+					 * The tab expander object. If this is @c null, the default object is used. The
+					 * default value is @c null.
+					 */
+					const TabExpander* tabExpander;
+					/// Defines number substitution process. The default value is @c null.
+					const presentation::NumberSubstitution* numberSubstitution;
+					/**
+					 * Set @c true to shape zero width control characters as representative glyphs.
+					 * The default value is @c false.
+					 */
+					bool displayShapingControls;
+					/**
+					 * Set @c true to make the deprecated format characters (NADS, NODS, ASS and
+					 * ISS) not effective. The default value is @c false.
+					 */
+					bool disableDeprecatedFormatCharacters;
+					/**
+					 * Set @c true to inhibit from generating mirrored glyphs. The default value is
+					 * @c false.
+					 */
+					bool inhibitSymmetricSwapping;
+					/// Default constructor.
+					ConstructionParameters() {}
+				};
 #if 0
 				/// Bidirectional iterator enumerates style runs in a line.
 				class StyledSegmentIterator {
@@ -202,21 +266,7 @@ namespace ascension {
 			public:
 				// constructors
 				TextLayout(const String& text,
-					const presentation::WritingMode<false>& writingMode = presentation::WritingMode<false>(),
-					presentation::TextAnchor anchor = presentation::TEXT_ANCHOR_START,
-					presentation::TextJustification justification = presentation::NO_JUSTIFICATION,
-					presentation::DominantBaseline dominantBaseline = presentation::DOMINANT_BASELINE_AUTO,
-					presentation::LineStackingStrategy lineStackingStrategy = presentation::MAX_HEIGHT,
-					Scalar lineHeight = 0,
-					const FontCollection& fontCollection = systemFonts(),
-					std::tr1::shared_ptr<const presentation::TextRunStyle>
-						defaultTextRunStyle = std::tr1::shared_ptr<const presentation::TextRunStyle>(),
-					std::auto_ptr<presentation::StyledTextRunIterator>
-						textRunStyles = std::auto_ptr<presentation::StyledTextRunIterator>(),
-					const TabExpander* tabExpander = 0, Scalar width = std::numeric_limits<Scalar>::max(),
-					const presentation::NumberSubstitution* numberSubstitution = 0,
-					bool displayShapingControls = false, bool inhibitSymmetricSwapping = false,
-					bool disableDeprecatedFormatCharacters = false);
+					const ConstructionParameters& otherParameters = ConstructionParameters());
 				~TextLayout() /*throw()*/;
 				// general attributes
 				presentation::TextAnchor anchor() const /*throw()*/;
@@ -224,7 +274,7 @@ namespace ascension {
 				bool isBidirectional() const /*throw()*/;
 				bool isEmpty() const /*throw()*/;
 				const presentation::TextLineStyle& style() const /*throw()*/;
-				const presentation::WritingMode<false>& writingMode() const /*throw()*/;
+				const presentation::WritingMode& writingMode() const /*throw()*/;
 				// visual line accesses
 				length_t numberOfLines() const /*throw()*/;
 				length_t lineAt(length_t column) const;
@@ -280,7 +330,7 @@ namespace ascension {
 				void wrap(const TabExpander& tabExpander) /*throw()*/;
 			private:
 				const String& text_;
-				const presentation::WritingMode<false> writingMode_;
+				const presentation::WritingMode writingMode_;
 				const presentation::TextAnchor anchor_;
 				const presentation::DominantBaseline dominantBaseline_;
 				AutoBuffer<TextRun*> runs_;
@@ -294,7 +344,7 @@ namespace ascension {
 				AutoBuffer<LineMetrics*> lineMetrics_;
 				AutoBuffer<Scalar> measures_;
 				Scalar maximumMeasure_;
-				Scalar wrapWidth_;	// -1 if should not wrap
+				Scalar wrappingMeasure_;	// -1 if should not wrap
 				friend class LineLayoutVector;
 //				friend class StyledSegmentIterator;
 			};
@@ -422,7 +472,7 @@ namespace ascension {
 	namespace detail {
 		void paintBorder(graphics::Context& context,
 			const graphics::NativeRectangle& rectangle, const presentation::Border& style,
-			const graphics::Color& currentColor, const presentation::WritingMode<false>& writingMode);
+			const graphics::Color& currentColor, const presentation::WritingMode& writingMode);
 	}
 } // namespace ascension.graphics.font
 

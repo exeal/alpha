@@ -72,52 +72,50 @@ namespace ascension {
 			T before, after, start, end;
 		};
 
-		struct WritingModeBase {
-			/**
-			 * Defines block flow directions.
-			 * @see "CSS Writing Modes Module Level 3, 3.1. Block Flow Direction: the Åewriting-modeÅf
-			 *      property" (http://www.w3.org/TR/css3-writing-modes/#writing-mode)
-			 * @see "SVG 1.1 (Second Edition), 10.7.2 Setting the inline-progression-direction"
-			 *      (http://www.w3.org/TR/SVG/text.html#WritingModeProperty)
-			 * @see "XSL 1.1, 7.29.7 "writing-mode"" (http://www.w3.org/TR/xsl/#writing-mode)
-			 */
-			enum BlockFlowDirection {
-				HORIZONTAL_TB,	///< Top-to-bottom block flow. The writing mode is horizontal.
-				VERTICAL_RL,	///< Right-to-left block flow. The writing mode is vertical.
-				VERTICAL_LR		///< Left-to-right block flow. The writing mode is vertical.
-			};
-	
-			/**
-			 * Defines the orientation of characters within a line.
-			 * @see "CSS Writing Modes Module Level 3, 5.1. Orienting Text: the Åetext-orientationÅf
-			 *      property" (http://www.w3.org/TR/css3-writing-modes/#text-orientation)
-			 * @see "SVG 1.1 (Second Edition), 10.7.3 Glyph orientation within a text run"
-			 *      (http://www.w3.org/TR/SVG/text.html#GlyphOrientation)
-			 */
-			enum TextOrientation {
-				VERTICAL_RIGHT, UPRIGHT, SIDEWAYS_RIGHT, SIDEWAYS_LEFT, SIDEWAYS, USE_GLYPH_ORIENTATION
-			};
+		/**
+		 * Defines block flow directions.
+		 * @see "CSS Writing Modes Module Level 3, 3.1. Block Flow Direction: the Åewriting-modeÅf
+		 *      property" (http://www.w3.org/TR/css3-writing-modes/#writing-mode)
+		 * @see "SVG 1.1 (Second Edition), 10.7.2 Setting the inline-progression-direction"
+		 *      (http://www.w3.org/TR/SVG/text.html#WritingModeProperty)
+		 * @see "XSL 1.1, 7.29.7 "writing-mode"" (http://www.w3.org/TR/xsl/#writing-mode)
+		 */
+		enum BlockFlowDirection {
+			HORIZONTAL_TB,	///< Top-to-bottom block flow. The writing mode is horizontal.
+			VERTICAL_RL,	///< Right-to-left block flow. The writing mode is vertical.
+			VERTICAL_LR		///< Left-to-right block flow. The writing mode is vertical.
+		};
 
-			/// Returns @c true if @a dir is horizontal direction.
-			static inline bool isHorizontal(BlockFlowDirection dir) {
-				switch(dir) {
-					case HORIZONTAL_TB:
-						return true;
-					case VERTICAL_RL:
-					case VERTICAL_LR:
-						return false;
-					default:
-						throw UnknownValueException("dir");
-				}
+		/// Returns @c true if @a dir is horizontal direction.
+		inline bool isHorizontal(BlockFlowDirection dir) {
+			switch(dir) {
+				case HORIZONTAL_TB:
+					return true;
+				case VERTICAL_RL:
+				case VERTICAL_LR:
+					return false;
+				default:
+					throw UnknownValueException("dir");
 			}
+		}
 
-			/// Returns @c true if @a dir is vertical direction.
-			static inline bool isVertical(BlockFlowDirection dir) {return !isHorizontal(dir);}
+		/// Returns @c true if @a dir is vertical direction.
+		inline bool isVertical(BlockFlowDirection dir) {return !isHorizontal(dir);}
+
+		/**
+		 * Defines the orientation of characters within a line.
+		 * @see "CSS Writing Modes Module Level 3, 5.1. Orienting Text: the Åetext-orientationÅf
+		 *      property" (http://www.w3.org/TR/css3-writing-modes/#text-orientation)
+		 * @see "SVG 1.1 (Second Edition), 10.7.3 Glyph orientation within a text run"
+		 *      (http://www.w3.org/TR/SVG/text.html#GlyphOrientation)
+		 */
+		enum TextOrientation {
+			VERTICAL_RIGHT, UPRIGHT, SIDEWAYS_RIGHT, SIDEWAYS_LEFT, SIDEWAYS, USE_GLYPH_ORIENTATION
 		};
 
 		/**
+		 * Base type of @c WritingMode.
 		 * @tparam inheritable All data members are inheritable when set to @c true
-		 * @see WritingModeBase
 		 * @see "CSS Writing Modes Module Level 3" (http://www.w3.org/TR/css3-writing-modes/)
 		 * @see "SVG 1.1 (Second Edition), 10.7 Text layout"
 		 *      (http://www.w3.org/TR/SVG/text.html#TextLayout)
@@ -125,7 +123,7 @@ namespace ascension {
 		 *      (http://www.w3.org/TR/xsl/#writing-mode-related)
 		 */
 		template<bool inheritable>
-		struct WritingMode : public WritingModeBase {
+		struct WritingModeBase {
 			/// The inline flow direction.
 			typename InheritableIf<inheritable, ReadingDirection>::Type inlineFlowDirection;
 			/// The block flow direction.
@@ -139,7 +137,7 @@ namespace ascension {
 			 * @param blockFlowDirection
 			 * @param textOrientation
 			 */
-			explicit WritingMode(
+			explicit WritingModeBase(
 				typename InheritableIf<inheritable, ReadingDirection>::Type
 					inlineFlowDirection = LEFT_TO_RIGHT/*ASCENSION_DEFAULT_TEXT_READING_DIRECTION*/,
 				typename InheritableIf<inheritable, BlockFlowDirection>::Type
@@ -150,19 +148,30 @@ namespace ascension {
 				textOrientation(textOrientation) /*throw()*/ {}
 			/// Implicit conversion operator.
 			template<bool otherInheritable>
-			inline operator WritingMode<otherInheritable>() const {
-				return WritingMode<otherInheritable>(inlineFlowDirection, blockFlowDirection, textOrientation);
+			inline operator WritingModeBase<otherInheritable>() const {
+				return WritingModeBase<otherInheritable>(inlineFlowDirection, blockFlowDirection, textOrientation);
 			}
 			/// Equality operator.
 			template<bool otherInheritable>
-			inline bool operator==(const WritingMode<otherInheritable>& other) const {
+			inline bool operator==(const WritingModeBase<otherInheritable>& other) const {
 				return inlineFlowDirection == other.inlineFlowDirection
 					&& blockFlowDirection == other.blockFlowDirection && textOrientation == other.textOrientation;
 			}
 			/// Inequality operator.
 			template<bool otherInheritable>
-			inline bool operator!=(const WritingMode<otherInheritable>& other) const {return !(*this == other);}
+			inline bool operator!=(const WritingModeBase<otherInheritable>& other) const {return !(*this == other);}
 		};
+
+		struct WritingMode : public WritingModeBase<false> {
+			explicit WritingMode(
+				ReadingDirection inlineFlowDirection
+					= LEFT_TO_RIGHT/*ASCENSION_DEFAULT_TEXT_READING_DIRECTION*/,
+				BlockFlowDirection blockFlowDirection = HORIZONTAL_TB,
+				TextOrientation textOrientation = VERTICAL_RIGHT) :
+				WritingModeBase(inlineFlowDirection, blockFlowDirection, textOrientation) /*throw()*/ {}
+		};
+
+		template<> class Inheritable<WritingMode> : public WritingModeBase<true> {};
 
 		/**
 		 * Performs abstract-to-physical mappings according to the given writing mode.
@@ -175,22 +184,22 @@ namespace ascension {
 		 */
 		template<typename From, typename To>
 		inline graphics::PhysicalFourSides<To>& mapAbstractToPhysical(
-				const WritingMode<false>& writingMode,
+				const WritingMode& writingMode,
 				const AbstractFourSides<From>& from, graphics::PhysicalFourSides<To>& to) {
-			const WritingModeBase::TextOrientation textOrientation(resolveTextOrientation(writingMode));
+			const TextOrientation textOrientation(resolveTextOrientation(writingMode));
 			switch(writingMode.blockFlowDirection) {
-				case WritingModeBase::HORIZONTAL_TB:
+				case HORIZONTAL_TB:
 					to.top = from.before;
 					to.bottom = from.after;
 					to.left = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? from.start : from.end;
 					to.right = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? from.end : from.start;
 					break;
-				case WritingModeBase::VERTICAL_RL:
-				case WritingModeBase::VERTICAL_LR:
-					to.left = (writingMode.blockFlowDirection == WritingModeBase::VERTICAL_LR) ? from.before : from.after;
-					to.right = (writingMode.blockFlowDirection == WritingModeBase::VERTICAL_RL) ? from.before : from.after;
+				case VERTICAL_RL:
+				case VERTICAL_LR:
+					to.left = (writingMode.blockFlowDirection == VERTICAL_LR) ? from.before : from.after;
+					to.right = (writingMode.blockFlowDirection == VERTICAL_RL) ? from.before : from.after;
 					{
-						bool ttb = textOrientation == WritingModeBase::SIDEWAYS_LEFT;
+						bool ttb = textOrientation == SIDEWAYS_LEFT;
 						ttb = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? !ttb : ttb;
 						to.top = ttb ? from.start : from.end;
 						to.bottom = ttb ? from.start : from.end;
@@ -204,7 +213,7 @@ namespace ascension {
 
 		template<typename Rectangle1, typename From, typename Rectangle2>
 		inline Rectangle2& mapAbstractToPhysical(
-				const WritingMode<false>& writingMode, const Rectangle1& viewport,
+				const WritingMode& writingMode, const Rectangle1& viewport,
 				const AbstractFourSides<From>& from, Rectangle2& to);
 
 		/**
@@ -218,23 +227,22 @@ namespace ascension {
 		 * @see #mapAbstractToPhysical
 		 */
 		template<typename From, typename To>
-		inline AbstractFourSides<To>& mapPhysicalToAbstract(
-				const WritingMode<false>& writingMode,
+		inline AbstractFourSides<To>& mapPhysicalToAbstract(const WritingMode& writingMode,
 				const graphics::PhysicalFourSides<From>& from, AbstractFourSides<To>& to) {
 			const WritingModeBase::TextOrientation textOrientation(resolveTextOrientation(writingMode));
 			switch(writingMode.blockFlowDirection) {
-				case WritingModeBase::HORIZONTAL_TB:
+				case HORIZONTAL_TB:
 					to.before = from.top;
 					to.after = from.bottom;
 					to.start = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? from.left : from.right;
 					to.end = (writingMode.inlineFlowDirection == RIGHT_TO_LRFT) ? from.left : from.right;
 					break;
-				case WritingModeBase::VERTICAL_RL:
-				case WritingModeBase::VERTICAL_LR:
-					to.before = (writingMode.blockFlowDirection == WritingModeBase::VERTICAL_LR) ? from.left : from.right;
-					to.after = (writingMode.blockFlowDirection == WritingModeBase::VERTICAL_RL) ? from.left : from.right;
+				case VERTICAL_RL:
+				case VERTICAL_LR:
+					to.before = (writingMode.blockFlowDirection == VERTICAL_LR) ? from.left : from.right;
+					to.after = (writingMode.blockFlowDirection == VERTICAL_RL) ? from.left : from.right;
 					{
-						bool ttb = textOrientation == WritingModeBase::SIDEWAYS_LEFT;
+						bool ttb = textOrientation == SIDEWAYS_LEFT;
 						ttb = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? !ttb : ttb;
 						to.start = ttb ? from.top : from.bottom;
 						to.end = ttb ? from.top : from.bottom;
@@ -259,25 +267,25 @@ namespace ascension {
 		 */
 		template<typename Rectangle1, typename Rectangle2, typename To>
 		inline AbstractFourSides<To>& mapPhysicalToAbstract(
-				const WritingMode<false>& writingMode, const Rectangle1& viewport,
+				const WritingMode& writingMode, const Rectangle1& viewport,
 				const Rectangle2& from, AbstractFourSides<To>& to) {
 			using namespace graphics;
-			const WritingModeBase::TextOrientation textOrientation(resolveTextOrientation(writingMode));
+			const TextOrientation textOrientation(resolveTextOrientation(writingMode));
 			switch(writingMode.blockFlowDirection) {
-				case WritingModeBase::HORIZONTAL_TB:
+				case HORIZONTAL_TB:
 					to.before = geometry::top(from) - geometry::top(viewport);
 					to.after = geometry::bottom(from) - geometry::top(viewport);
 					to.start = geometry::left(from) - geometry::left(viewport);
 					to.end = geometry::right(from) - geometry::left(viewport);
 					break;
-				case WritingModeBase::VERTICAL_RL:
-				case WritingModeBase::VERTICAL_LR:
-					to.before = (writingMode.blockFlowDirection == WritingModeBase::VERTICAL_LR) ?
+				case VERTICAL_RL:
+				case VERTICAL_LR:
+					to.before = (writingMode.blockFlowDirection == VERTICAL_LR) ?
 						(geometry::left(from) - geometry::left(viewport)) : (geometry::right(viewport) - geometry::right(from));
-					to.after = (writingMode.blockFlowDirection == WritingModeBase::VERTICAL_LR) ?
+					to.after = (writingMode.blockFlowDirection == VERTICAL_LR) ?
 						(geometry::right(from) - geometry::left(viewport)) : (geometry::right(viewport) - geometry::left(from));
 					{
-						bool ttb = textOrientation == WritingModeBase::SIDEWAYS_LEFT;
+						bool ttb = textOrientation == SIDEWAYS_LEFT;
 						ttb = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? !ttb : ttb;
 						to.start = ttb ? (geometry::top(from) - geometry::top(viewport)) : (geometry::bottom(viewport) - geometry::bottom(from));
 						to.end = ttb ? (geometry::bottom(from) - geometry::top(viewport)) : (geometry::bottom(viewport) - geometry::top(from));
@@ -290,17 +298,17 @@ namespace ascension {
 		}
 
 		/***/
-		inline WritingModeBase::TextOrientation resolveTextOrientation(const WritingMode<false>& writingMode) {
+		inline TextOrientation resolveTextOrientation(const WritingMode& writingMode) {
 			switch(writingMode.textOrientation) {
-				case WritingModeBase::SIDEWAYS:
-					if(writingMode.blockFlowDirection == WritingModeBase::VERTICAL_RL)
-						return WritingModeBase::SIDEWAYS_RIGHT;
-					else if(writingMode.blockFlowDirection == WritingModeBase::VERTICAL_LR)
-						return WritingModeBase::SIDEWAYS_LEFT;
+				case SIDEWAYS:
+					if(writingMode.blockFlowDirection == VERTICAL_RL)
+						return SIDEWAYS_RIGHT;
+					else if(writingMode.blockFlowDirection == VERTICAL_LR)
+						return SIDEWAYS_LEFT;
 					else
-						return WritingModeBase::SIDEWAYS;
-				case WritingModeBase::USE_GLYPH_ORIENTATION:
-					return WritingModeBase::VERTICAL_RIGHT;
+						return SIDEWAYS;
+				case USE_GLYPH_ORIENTATION:
+					return VERTICAL_RIGHT;
 				default:
 					return writingMode.textOrientation;
 			}
