@@ -13,11 +13,11 @@ using namespace std;
 
 
 namespace {
-	inline double pixelsPerInch(const RenderingContext2D& context, Length::Mode mode) {
+	inline double pixelsPerInch(const RenderingContext2D* context, Length::Mode mode) {
 #if 1
 		return 96.0;
 #else
-		return (mode != Length::HEIGHT) ? context.logicalDpiX() : context.logicalDpiY();
+		return (mode != Length::HEIGHT) ? context->logicalDpiX() : context->logicalDpiY();
 #endif
 	}
 }
@@ -41,16 +41,20 @@ Length::Length(double valueInSpecifiedUnits, Unit unitType /* = PIXELS */, Mode 
  * millimeters, then the unitType would be changed to @c #MILIMIETERS, @c #valueInSpecifiedUnits()
  * would be changed to the numeric value 5 and @c #valueAsString() would be changed to "5mm".
  * @param unitType The unit type to switch to
- * @param context The rendering context used to resolve relative value
- * @param contextSize The size used to resolve percentage value
+ * @param context The rendering context used to resolve relative value. Can be @c null if both
+ *                @c #unitType() and @a unitType are absolute
+ * @param contextSize The size used to resolve percentage value. Can be @c null
  * @throw NotSupportedError @a unitType is not a valid unit type constant (one of the other
  *                          @c #Unit constants defined on this class)
+ * @throw NullPointerException @a context is @c null although @c #unitType() and/or @a unitType is
+ *                             relative
+ * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__convertToSpecifiedUnits
  */
-void Length::convertToSpecifiedUnits(Unit unitType, const RenderingContext2D& context, const NativeSize* contextSize) {
+void Length::convertToSpecifiedUnits(Unit unitType, const RenderingContext2D* context, const NativeSize* contextSize) {
 	if(unitType > PERCENTAGE)
 		throw NotSupportedError("unitType");
 	Length temp(0, unitType, mode_);
-	temp.setValue(value(context, contextSize), context, contextSize);
+	temp.setValue(value(context, contextSize), context, contextSize);	// this may throw NullPointerException
 	*this = temp;
 }
 
@@ -61,6 +65,7 @@ void Length::convertToSpecifiedUnits(Unit unitType, const RenderingContext2D& co
  * @param valueInSpecifiedUnits The new value
  * @throw NotSupportedError @a unitType is not a valid unit type constant (one of the other
  *                          @c #Unit constants defined on this class)
+ * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__newValueSpecifiedUnits
  */
 void Length::newValueSpecifiedUnits(Unit unitType, double valueInSpecifiedUnits) {
 	if(unitType > PERCENTAGE)
@@ -74,29 +79,44 @@ void Length::newValueSpecifiedUnits(Unit unitType, double valueInSpecifiedUnits)
  * Setting this attribute will cause @c #valueInSpecifiedUnits() and @c #valueAsString() to be
  * updated automatically to reflect this setting.
  * @param value The new value
- * @param context The rendering context used to resolve relative value
- * @param contextSize The size used to resolve percentage value
+ * @param context The rendering context used to resolve relative value. Can be @c null if
+ *                @c #unitType() is absolute
+ * @param contextSize The size used to resolve percentage value. Can be @c null
+ * @throw NullPointerException @a context is @c null although @c #unitType() is relative
+ * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__value
  */
-void Length::setValue(double value, const RenderingContext2D& context, const NativeSize* contextSize) {
+void Length::setValue(double value, const RenderingContext2D* context, const NativeSize* contextSize) {
 	switch(unitType()) {
 		case EM_HEIGHT:
-			valueInSpecifiedUnits_ = value / context.font()->metrics().emHeight();
+			if(context == 0)
+				throw NullPointerException("context");
+			valueInSpecifiedUnits_ = value / context->font()->metrics().emHeight();
 			break;
 		case X_HEIGHT:
-			valueInSpecifiedUnits_ = value / context.font()->metrics().xHeight();
+			if(context == 0)
+				throw NullPointerException("context");
+			valueInSpecifiedUnits_ = value / context->font()->metrics().xHeight();
 			break;
 		case PIXELS:
 			valueInSpecifiedUnits_ = value;
 //		case GRIDS:
 //		case REMS:
 		case VIEWPORT_WIDTH:
-			valueInSpecifiedUnits_ = value / geometry::dx(context.device().size());
+			if(context == 0)
+				throw NullPointerException("context");
+			valueInSpecifiedUnits_ = value / geometry::dx(context->device().size());
 		case VIEWPORT_HEIGHT:
-			valueInSpecifiedUnits_ = value / geometry::dy(context.device().size());
+			if(context == 0)
+				throw NullPointerException("context");
+			valueInSpecifiedUnits_ = value / geometry::dy(context->device().size());
 		case VIEWPORT_MINIMUM:
-			valueInSpecifiedUnits_ = value / min(geometry::dx(context.device().size()), geometry::dy(context.device().size()));
+			if(context == 0)
+				throw NullPointerException("context");
+			valueInSpecifiedUnits_ = value / min(geometry::dx(context->device().size()), geometry::dy(context->device().size()));
 		case CHARACTERS:
-			valueInSpecifiedUnits_ = value / context.font()->metrics().averageCharacterWidth();
+			if(context == 0)
+				throw NullPointerException("context");
+			valueInSpecifiedUnits_ = value / context->font()->metrics().averageCharacterWidth();
 		case INCHES:
 			valueInSpecifiedUnits_ = value / pixelsPerInch(context, mode_);
 		case CENTIMETERS:
@@ -110,7 +130,9 @@ void Length::setValue(double value, const RenderingContext2D& context, const Nat
 		case DIPS:
 			valueInSpecifiedUnits_ = value / pixelsPerInch(context, mode_) * 96;
 		case PERCENTAGE: {
-			const NativeSize size((contextSize != 0) ? *contextSize : context.device().size());
+			if(context == 0)
+				throw NullPointerException("context");
+			const NativeSize size((contextSize != 0) ? *contextSize : context->device().size());
 			if(mode_ == WIDTH)
 				valueInSpecifiedUnits_ = value / geometry::dx(size) * 100;
 			else if(mode_ == HEIGHT)
@@ -125,27 +147,42 @@ void Length::setValue(double value, const RenderingContext2D& context, const Nat
 
 /**
  * [Copied from SVG 1.1 documentation] Returns the value as a floating point value, in user units.
- * @param context The rendering context used to resolve relative value
+ * @param context The rendering context used to resolve relative value. Can be @c null if
+ *                @c #unitType() is absolute
  * @param contextSize The size used to resolve percentage value
+ * @throw NullPointerException @a context is @c null although @c #unitType() is relative
+ * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__value
  */
-double Length::value(const RenderingContext2D& context, const NativeSize* contextSize) const {
+double Length::value(const RenderingContext2D* context, const NativeSize* contextSize) const {
 	switch(unitType()) {
 		case EM_HEIGHT:
-			return valueInSpecifiedUnits() * context.font()->metrics().emHeight();
+			if(context == 0)
+				throw NullPointerException("context");
+			return valueInSpecifiedUnits() * context->font()->metrics().emHeight();
 		case X_HEIGHT:
-			return valueInSpecifiedUnits() * context.font()->metrics().xHeight();
+			if(context == 0)
+				throw NullPointerException("context");
+			return valueInSpecifiedUnits() * context->font()->metrics().xHeight();
 		case PIXELS:
 			return valueInSpecifiedUnits();
 //		case GRIDS:
 //		case REMS:
 		case VIEWPORT_WIDTH:
-			return valueInSpecifiedUnits() * geometry::dx(context.device().size());
+			if(context == 0)
+				throw NullPointerException("context");
+			return valueInSpecifiedUnits() * geometry::dx(context->device().size());
 		case VIEWPORT_HEIGHT:
-			return valueInSpecifiedUnits() * geometry::dy(context.device().size());
+			if(context == 0)
+				throw NullPointerException("context");
+			return valueInSpecifiedUnits() * geometry::dy(context->device().size());
 		case VIEWPORT_MINIMUM:
-			return valueInSpecifiedUnits() * min(geometry::dx(context.device().size()), geometry::dy(context.device().size()));
+			if(context == 0)
+				throw NullPointerException("context");
+			return valueInSpecifiedUnits() * min(geometry::dx(context->device().size()), geometry::dy(context->device().size()));
 		case CHARACTERS:
-			return valueInSpecifiedUnits() * context.font()->metrics().averageCharacterWidth();
+			if(context == 0)
+				throw NullPointerException("context");
+			return valueInSpecifiedUnits() * context->font()->metrics().averageCharacterWidth();
 		case INCHES:
 			return valueInSpecifiedUnits() * pixelsPerInch(context, mode_);
 		case CENTIMETERS:
@@ -159,7 +196,9 @@ double Length::value(const RenderingContext2D& context, const NativeSize* contex
 		case DIPS:
 			return valueInSpecifiedUnits() * pixelsPerInch(context, mode_) / 96;
 		case PERCENTAGE: {
-			const NativeSize size((contextSize != 0) ? *contextSize : context.device().size());
+			if(context == 0)
+				throw NullPointerException("context");
+			const NativeSize size((contextSize != 0) ? *contextSize : context->device().size());
 			if(mode_ == WIDTH)
 				return valueInSpecifiedUnits() * geometry::dx(size);
 			else if(mode_ == HEIGHT)

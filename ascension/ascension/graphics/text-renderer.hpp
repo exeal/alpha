@@ -63,8 +63,11 @@ namespace ascension {
 				void removeComputedWritingModeListener(ComputedWritingModeListener& listener);
 				presentation::WritingMode writingMode() const /*throw()*/;
 				// text wrappings
-				void setTextWrapping(const presentation::TextWrapping<Scalar>& newValue);
-				const presentation::TextWrapping<Scalar>& textWrapping() const /*throw()*/;
+				void setTextWrapping(
+					const presentation::TextWrapping<presentation::Length>& newValue,
+					const RenderingContext2D* renderingContext);
+				const presentation::TextWrapping<presentation::Length>& textWrapping() const /*throw()*/;
+				Scalar textWrappingMeaureInPixels() const /*throw()*/;
 				// default font
 				void addDefaultFontListener(DefaultFontListener& listener);
 				std::tr1::shared_ptr<const Font> defaultFont() const /*throw()*/;
@@ -96,7 +99,8 @@ namespace ascension {
 			private:
 				presentation::Presentation& presentation_;
 				presentation::WritingMode defaultUIWritingMode_;
-				presentation::TextWrapping<Scalar> textWrapping_;
+				presentation::TextWrapping<presentation::Length> textWrapping_;
+				Scalar textWrappingMeasureInPixels_;
 				std::auto_ptr<LineLayoutVector> layouts_;
 				const FontCollection& fontCollection_;
 				const bool enablesDoubleBuffering_;
@@ -139,6 +143,22 @@ namespace ascension {
 //			inline const Font::Metrics& TextRenderer::textMetrics() const /*throw()*/ {
 //				return primaryFont()->metrics();
 //			}
+
+			/**
+			 * Returns the text wrapping settings.
+			 * @see #setTextWrapping, #textWrappingMeasureInPixels
+			 */
+			inline const presentation::TextWrapping<presentation::Length>& TextRenderer::textWrapping() const /*throw()*/ {
+				return textWrapping_;
+			}
+
+			/**
+			 * Returns the text wrapping measure in pixels or zero if no wrap.
+			 * @see #setTextWrapping, #textWrapping
+			 */
+			inline Scalar TextRenderer::textWrappingMeasureInPixels() const /*throw()*/ {
+				return textWrappingMeasureInPixels_;
+			}
 
 		}
 	}
