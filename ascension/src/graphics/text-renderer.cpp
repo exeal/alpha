@@ -367,6 +367,18 @@ void TextRenderer::setDefaultUIWritingMode(const WritingMode& writingMode) {
 	fireComputedWritingModeChanged(presentation().globalTextStyle(), used);
 }
 
+/**
+ * Sets the text wrapping settings.
+ * @param newValue The new settings
+ * @param renderingContext The rendering context used to calculate the logical value of
+ *                         @a newValue.measure. This can be @c null if @a newValue.measure has
+ *                         absolute value
+ * @see #setTextWrapping, #textWrappingMeasureInPixels
+ */
+void  TextRenderer::setTextWrapping(const TextWrapping<presentation::Length>& newValue, const RenderingContext2D* renderingContext) {
+	newValue.measure.value();
+}
+
 void TextRenderer::updateDefaultFont() {
 	tr1::shared_ptr<const TextRunStyle> defaultStyle(presentation_.globalTextStyle().defaultLineStyle->defaultRunStyle);
 	if(defaultStyle.get() != 0 && !defaultStyle->fontFamily.empty())

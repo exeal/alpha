@@ -70,14 +70,14 @@ namespace ascension {
 			bool operator==(const Length& other) const /*throw()*/;
 			bool operator!=(const Length& other) const /*throw()*/;
 			void convertToSpecifiedUnits(Unit unitType,
-				const graphics::RenderingContext2D& context, const graphics::NativeSize* contextSize);
+				const graphics::RenderingContext2D* context, const graphics::NativeSize* contextSize);
 			void newValueSpecifiedUnits(Unit unitType, double valueInSpecifiedUnits);
 			void setValue(double value,
-				const graphics::RenderingContext2D& context, const graphics::NativeSize* contextSize);
+				const graphics::RenderingContext2D* context, const graphics::NativeSize* contextSize);
 //			void setValueAsString(const StringPiece&);
 			void setValueInSpecifiedUnits(double value) /*throw()*/;
 			Unit unitType() const /*throw()*/;
-			double value(const graphics::RenderingContext2D& context, const graphics::NativeSize* contextSize) const;
+			double value(const graphics::RenderingContext2D* context, const graphics::NativeSize* contextSize) const;
 			double valueInSpecifiedUnits() const;
 //			String valueAsString() const;
 
@@ -103,13 +103,21 @@ namespace ascension {
 		 * units expressed by @c #unitType(). Setting this attribute will cause @c #value() and
 		 * @c #valueAsString() to be updated automatically to reflect this setting.
 		 * @param value The new value
+		 * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__valueInSpecifiedUnits
 		 */
 		inline void Length::setValueInSpecifiedUnits(double value) /*throw()*/ {valueInSpecifiedUnits_ = value;}
 
-		/// Returns the type of the value.
+		/**
+		 * Returns the type of the value.
+		 * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__unitType
+		 */
 		inline Length::Unit Length::unitType() const /*throw()*/ {return unit_;}
 
-		/// Returns the value as a floating point value, in the units expressed by @c unitType().
+		/**
+		 * Returns the value as a floating point value, in the units expressed by @c unitType().
+		 * @see #setValueInSpecifiedUnits
+		 * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__valueInSpecifiedUnits
+		 */
 		inline double Length::valueInSpecifiedUnits() const /*throw()*/ {return valueInSpecifiedUnits_;}
 
 	}
