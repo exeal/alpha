@@ -137,6 +137,7 @@ namespace {
 TextRenderer::TextRenderer(Presentation& presentation,
 		const FontCollection& fontCollection, bool enableDoubleBuffering) : presentation_(presentation),
 		fontCollection_(fontCollection), enablesDoubleBuffering_(enableDoubleBuffering) {
+//	textWrapping_.measure = 0;
 	layouts_.reset(new LineLayoutVector(presentation.document(),
 		bind1st(mem_fun(&TextRenderer::generateLineLayout), this), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
 	updateDefaultFont();
@@ -217,17 +218,17 @@ Scalar TextRenderer::baselineDistance(const Range<VisualLine>& lines) const {
  */
 
 namespace {
-	inline void computeWritingMode(const WritingMode<true>& primary, const WritingMode<false>& secondary, WritingMode<false>& result) {
+	inline void computeWritingMode(const Inheritable<WritingMode>& primary, const WritingMode& secondary, WritingMode& result) {
 		result.inlineFlowDirection = resolveInheritance(primary.inlineFlowDirection, secondary.inlineFlowDirection);
 		result.blockFlowDirection = resolveInheritance(primary.blockFlowDirection, secondary.blockFlowDirection);
 		result.textOrientation = resolveInheritance(primary.textOrientation, secondary.textOrientation);
 	}
 }
 
-inline void TextRenderer::fireComputedWritingModeChanged(const TextToplevelStyle& textStyle, const WritingMode<false>& defaultUI) {
-	WritingMode<false> used;
+inline void TextRenderer::fireComputedWritingModeChanged(const TextToplevelStyle& textStyle, const WritingMode& defaultUI) {
+	WritingMode used;
 	computeWritingMode(textStyle.writingMode, defaultUI, used);
-	computedWritingModeListeners_.notify<const WritingMode<false>&>(&ComputedWritingModeListener::computedWritingModeChanged, used);
+	computedWritingModeListeners_.notify<const WritingMode&>(&ComputedWritingModeListener::computedWritingModeChanged, used);
 }
 
 /// @see GlobalTextStyleListener#GlobalTextStyleChanged
@@ -360,8 +361,8 @@ void TextRenderer::renderLine(length_t line, PaintContext& context,
  * 
  * @param writingMode 
  */
-void TextRenderer::setDefaultUIWritingMode(const WritingMode<false>& writingMode) {
-	const WritingMode<false> used(defaultUIWritingMode());
+void TextRenderer::setDefaultUIWritingMode(const WritingMode& writingMode) {
+	const WritingMode used(defaultUIWritingMode());
 	defaultUIWritingMode_ = writingMode;
 	fireComputedWritingModeChanged(presentation().globalTextStyle(), used);
 }
@@ -395,8 +396,8 @@ void TextRenderer::updateDefaultFont() {
 /**
  * Returns the computed writing mode.
  */
-WritingMode<false> TextRenderer::writingMode() const /*throw()*/ {
-	WritingMode<false> computed;
+WritingMode TextRenderer::writingMode() const /*throw()*/ {
+	WritingMode computed;
 	computeWritingMode(presentation().globalTextStyle().writingMode, defaultUIWritingMode(), computed);
 	return computed;
 }
