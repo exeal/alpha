@@ -28,7 +28,7 @@ namespace ascension {
 			 */
 			class ComputedWritingModeListener {
 			private:
-				virtual void computedWritingModeChanged(const presentation::WritingMode<false>& used) = 0;
+				virtual void computedWritingModeChanged(const presentation::WritingMode& used) = 0;
 				friend class TextRenderer;
 			};
 
@@ -59,9 +59,12 @@ namespace ascension {
 				virtual Scalar width() const /*throw()*/ = 0;
 				// writing modes
 				void addComputedWritingModeListener(ComputedWritingModeListener& listener);
-				const presentation::WritingMode<false>& defaultUIWritingMode() const /*throw()*/;
+				const presentation::WritingMode& defaultUIWritingMode() const /*throw()*/;
 				void removeComputedWritingModeListener(ComputedWritingModeListener& listener);
-				presentation::WritingMode<false> writingMode() const /*throw()*/;
+				presentation::WritingMode writingMode() const /*throw()*/;
+				// text wrappings
+				void setTextWrapping(const presentation::TextWrapping<Scalar>& newValue);
+				const presentation::TextWrapping<Scalar>& textWrapping() const /*throw()*/;
 				// default font
 				void addDefaultFontListener(DefaultFontListener& listener);
 				std::tr1::shared_ptr<const Font> defaultFont() const /*throw()*/;
@@ -81,18 +84,19 @@ namespace ascension {
 //				SpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/;
 //				const Font::Metrics& textMetrics() const /*throw()*/;
 			protected:
-				void setDefaultUIWritingMode(const presentation::WritingMode<false>& writingMode);
+				void setDefaultUIWritingMode(const presentation::WritingMode& writingMode);
 			private:
 				void fireComputedWritingModeChanged(
 					const presentation::TextToplevelStyle& globalTextStyle,
-					const presentation::WritingMode<false>& defaultUI);
+					const presentation::WritingMode& defaultUI);
 				std::auto_ptr<const TextLayout> generateLineLayout(length_t line) const;
 				void updateDefaultFont();
 				// presentation.GlobalTextStyleListener
 				void globalTextStyleChanged(std::tr1::shared_ptr<const presentation::TextToplevelStyle> used);
 			private:
 				presentation::Presentation& presentation_;
-				presentation::WritingMode<false> defaultUIWritingMode_;
+				presentation::WritingMode defaultUIWritingMode_;
+				presentation::TextWrapping<Scalar> textWrapping_;
 				std::auto_ptr<LineLayoutVector> layouts_;
 				const FontCollection& fontCollection_;
 				const bool enablesDoubleBuffering_;
@@ -117,7 +121,7 @@ namespace ascension {
 			 * @c presentation#WritingMode class.
 			 * @see #setDefaultUIWritingMode, #writingMode
 			 */
-			inline const presentation::WritingMode<false>& TextRenderer::defaultUIWritingMode() const /*throw()*/ {
+			inline const presentation::WritingMode& TextRenderer::defaultUIWritingMode() const /*throw()*/ {
 				return defaultUIWritingMode_;
 			}
 

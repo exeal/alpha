@@ -277,7 +277,7 @@ k::Position TextViewer::characterForLocalPoint(const NativePoint& p, TextLayout:
 	const BaselineIterator baseline(*this, result.line, true);
 
 	// determine the column
-	const bool horizontal = WritingModeBase::isHorizontal(layout.writingMode().blockFlowDirection);
+	const bool horizontal = isHorizontal(layout.writingMode().blockFlowDirection);
 	NativePoint lineLocalPoint(horizontal ?
 		geometry::make<NativePoint>(
 			mapViewportIpdToLineLayout(result.line, geometry::x(p)),
@@ -626,7 +626,7 @@ TextViewer::HitTestResult TextViewer::hitTest(const NativePoint& p) const {
  * @see TextLayout#lineStartEdge, TextRenderer#lineStartEdge
  */
 Scalar TextViewer::inlineProgressionOffsetInViewport() const {
-	const bool horizontal = WritingModeBase::isHorizontal(textRenderer().writingMode().blockFlowDirection);
+	const bool horizontal = isHorizontal(textRenderer().writingMode().blockFlowDirection);
 
 	// space width
 	const PhysicalFourSides<Scalar>& spaces = spaceWidths();
@@ -879,7 +879,7 @@ NativePoint TextViewer::localPointForCharacter(const k::Position& position,
 	// get alignment-point
 	const BaselineIterator baseline(*this, position.line, fullSearchBpd);
 	NativePoint p(baseline.position());
-	const bool horizontal = WritingModeBase::isHorizontal(textRenderer().writingMode().blockFlowDirection);
+	const bool horizontal = isHorizontal(textRenderer().writingMode().blockFlowDirection);
 
 	// apply offset in line layout
 	const NativePoint offset(renderer_->layouts().at(position.line).location(position.column, edge));
@@ -986,11 +986,11 @@ Scalar TextViewer::mapLineToViewportBpd(length_t line, bool fullSearch) const {
 VisualLine TextViewer::mapLocalPointToLine(const graphics::NativePoint& p, bool* snapped /* = 0 */) const /*throw()*/ {
 	const NativeRectangle localBounds(bounds(false));
 	switch(textRenderer().writingMode().blockFlowDirection) {
-		case WritingModeBase::HORIZONTAL_TB:
+		case HORIZONTAL_TB:
 			return mapViewportBpdToLine(geometry::y(p) - localBounds.top, snapped);
-		case WritingModeBase::VERTICAL_RL:
+		case VERTICAL_RL:
 			return mapViewportBpdToLine(localBounds.right - geometry::x(p), snapped);
-		case WritingModeBase::VERTICAL_LR:
+		case VERTICAL_LR:
 			return mapViewportBpdToLine(geometry::x(p) - localBounds.left, snapped);
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
@@ -1007,12 +1007,12 @@ VisualLine TextViewer::mapLocalPointToLine(const graphics::NativePoint& p, bool*
  * @see #BaselineIterator, TextRenderer#offsetVisualLine
  */
 VisualLine TextViewer::mapViewportBpdToLine(Scalar bpd, bool* snapped /* = 0 */) const /*throw()*/ {
-	const WritingMode<false> writingMode(textRenderer().writingMode());
+	const WritingMode writingMode(textRenderer().writingMode());
 	const PhysicalFourSides<Scalar>& physicalSpaces = spaceWidths();
 	AbstractFourSides<Scalar> abstractSpaces;
 	mapPhysicalToAbstract(writingMode, physicalSpaces, abstractSpaces);
 	const Scalar before = abstractSpaces.before;
-	const Scalar after = (WritingModeBase::isHorizontal(writingMode.blockFlowDirection) ?
+	const Scalar after = (isHorizontal(writingMode.blockFlowDirection) ?
 		geometry::dy(bounds(false)) : geometry::dx(bounds(false))) - abstractSpaces.after;
 
 	VisualLine result;
@@ -1123,7 +1123,7 @@ void TextViewer::mouseWheelChanged(const MouseWheelInput& input) {
  * @return The number of columns
  */
 length_t TextViewer::numberOfVisibleColumns() const /*throw()*/ {
-	const bool horizontalBlockFlow = presentation::WritingModeBase::isHorizontal(textRenderer().writingMode().blockFlowDirection);
+	const bool horizontalBlockFlow = presentation::isHorizontal(textRenderer().writingMode().blockFlowDirection);
 	graphics::Scalar ipd(horizontalBlockFlow ? graphics::geometry::dx(bounds(false)) : graphics::geometry::dy(bounds(false)));
 	if(ipd == 0)
 		return 0;
@@ -1137,7 +1137,7 @@ length_t TextViewer::numberOfVisibleColumns() const /*throw()*/ {
  * @return The number of lines
  */
 length_t TextViewer::numberOfVisibleLines() const /*throw()*/ {
-	const bool horizontalBlockFlow = presentation::WritingModeBase::isHorizontal(textRenderer().writingMode().blockFlowDirection);
+	const bool horizontalBlockFlow = presentation::isHorizontal(textRenderer().writingMode().blockFlowDirection);
 	graphics::Scalar bpd(horizontalBlockFlow ? graphics::geometry::dy(bounds(false)) : graphics::geometry::dx(bounds(false)));
 	if(bpd == 0)
 		return 0;
@@ -1262,7 +1262,7 @@ void TextViewer::redrawLines(const Range<length_t>& lines) {
 			<< L".." << static_cast<unsigned long>(lines.end()) << L"]\n";
 #endif // _DEBUG
 
-	const WritingMode<false> writingMode = textRenderer().writingMode();
+	const WritingMode writingMode(textRenderer().writingMode());
 	const NativeRectangle viewport(bounds(false));
 	AbstractFourSides<Scalar> abstractBounds;
 	mapPhysicalToAbstract(writingMode, viewport, viewport, abstractBounds);
@@ -1357,22 +1357,22 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 	assert(geometry::isNormalized(clipBounds));
 	geometry::range<geometry::Y_COORDINATE>(clipBounds) = makeRange(
 		geometry::top(clipBounds) + spaces.top, geometry::bottom(clipBounds) - spaces.bottom);
-	const WritingMode<false> writingMode(textRenderer().writingMode());
+	const WritingMode writingMode(textRenderer().writingMode());
 	NativeSize pixelsToScroll;
 	// inline-progression-direction
-	if(WritingModeBase::isHorizontal(writingMode.blockFlowDirection))
+	if(isHorizontal(writingMode.blockFlowDirection))
 		geometry::dx(pixelsToScroll) = dx * scrollRate(true) * textRenderer().defaultFont()->metrics().averageCharacterWidth();
 	else
 		geometry::dy(pixelsToScroll) = dy * scrollRate(false) * textRenderer().defaultFont()->metrics().averageCharacterWidth();
 	// block-progression-direction
 	signed_length_t linesToScroll;
-	if(WritingModeBase::isHorizontal(writingMode.blockFlowDirection))
+	if(isHorizontal(writingMode.blockFlowDirection))
 		linesToScroll = dy;
 	else {
-		assert(WritingModeBase::isVertical(writingMode.blockFlowDirection));
-		if(writingMode.blockFlowDirection == WritingModeBase::VERTICAL_RL)
+		assert(isVertical(writingMode.blockFlowDirection));
+		if(writingMode.blockFlowDirection == VERTICAL_RL)
 			linesToScroll = -dx;
-		else if(writingMode.blockFlowDirection == WritingModeBase::VERTICAL_LR)
+		else if(writingMode.blockFlowDirection == VERTICAL_LR)
 			linesToScroll = +dx;
 		else
 			ASCENSION_ASSERT_NOT_REACHED();
@@ -1843,12 +1843,12 @@ void TextViewer::BaselineIterator::advance(difference_type n) {
 		return;
 	}
 
-	const WritingMode<false> writingMode(viewer_.textRenderer().writingMode());
+	const WritingMode writingMode(viewer_.textRenderer().writingMode());
 	Scalar viewportExtent;
 	if(!tracksOutOfViewport() && n > 0) {
 		const NativeRectangle clientBounds(viewer_.bounds(false));
 		const PhysicalFourSides<Scalar> spaces(viewer_.spaceWidths());
-		viewportExtent = WritingModeBase::isHorizontal(writingMode.blockFlowDirection) ?
+		viewportExtent = isHorizontal(writingMode.blockFlowDirection) ?
 			(geometry::dy(clientBounds) - spaces.top - spaces.bottom) : (geometry::dx(clientBounds) - spaces.left - spaces.right);
 	}
 
@@ -1901,13 +1901,13 @@ void TextViewer::BaselineIterator::advance(difference_type n) {
 
 	NativePoint newAxis(baseline_.second);
 	switch(writingMode.blockFlowDirection) {
-		case WritingModeBase::HORIZONTAL_TB:
+		case HORIZONTAL_TB:
 			geometry::y(newAxis) += newBaseline - baseline_.first;
 			break;
-		case WritingModeBase::VERTICAL_RL:
+		case VERTICAL_RL:
 			geometry::x(newAxis) -= newBaseline - baseline_.first;
 			break;
-		case WritingModeBase::VERTICAL_LR:
+		case VERTICAL_LR:
 			geometry::x(newAxis) += newBaseline - baseline_.first;
 			break;
 		default:
@@ -1932,13 +1932,13 @@ void TextViewer::BaselineIterator::initializeWithFirstVisibleLine() {
 	NativePoint axis;
 	const NativeRectangle clientBounds(viewer_.bounds(false));
 	switch(viewer_.textRenderer().writingMode().blockFlowDirection) {
-		case WritingModeBase::HORIZONTAL_TB:
+		case HORIZONTAL_TB:
 			axis = geometry::make<NativePoint>(0, geometry::top(clientBounds) + viewer_.spaceWidths().top + baseline);
 			break;
-		case WritingModeBase::VERTICAL_RL:
+		case VERTICAL_RL:
 			axis = geometry::make<NativePoint>(geometry::right(clientBounds) - viewer_.spaceWidths().right - baseline, 0);
 			break;
-		case WritingModeBase::VERTICAL_LR:
+		case VERTICAL_LR:
 			axis = geometry::make<NativePoint>(geometry::left(clientBounds) + viewer_.spaceWidths().left + baseline, 0);
 			break;
 		default:
@@ -2138,7 +2138,7 @@ void TextViewer::SpacePainter::update(const TextViewer& viewer, const AbstractFo
  * @param viewer The text viewer
  * @param writingMode The initial writing mode
  */
-TextViewer::Renderer::Renderer(TextViewer& viewer, const WritingMode<false>& writingMode) :
+TextViewer::Renderer::Renderer(TextViewer& viewer, const WritingMode& writingMode) :
 		TextRenderer(viewer.presentation(), systemFonts(), true), viewer_(viewer), defaultWritingMode_(writingMode) {
 	// TODO: other FontCollection object used?
 #if 0
@@ -2157,7 +2157,7 @@ TextViewer::Renderer::Renderer(const Renderer& other, TextViewer& viewer) :
 }
 
 /// @see TextRenderer#defaultUIWritingMode
-const WritingMode<false>& TextViewer::Renderer::defaultUIWritingMode() const /*throw()*/ {
+const WritingMode& TextViewer::Renderer::defaultUIWritingMode() const /*throw()*/ {
 	return defaultWritingMode_;
 }
 
@@ -2178,7 +2178,7 @@ void TextViewer::Renderer::rewrapAtWindowEdge() {
 	if(viewer_.configuration().lineWrap.wrapsAtWindowEdge()) {
 		const NativeRectangle clientBounds(viewer_.bounds(false));
 		const PhysicalFourSides<Scalar>& spaces(viewer_.spaceWidths());
-		if(WritingModeBase::isHorizontal(viewer_.textRenderer().writingMode().blockFlowDirection))
+		if(isHorizontal(viewer_.textRenderer().writingMode().blockFlowDirection))
 			layouts().invalidateIf(Local(geometry::dx(clientBounds) - spaces.left - spaces.right));
 		else
 			layouts().invalidateIf(Local(geometry::dy(clientBounds) - spaces.top - spaces.bottom));
@@ -2189,7 +2189,7 @@ void TextViewer::Renderer::rewrapAtWindowEdge() {
  * Sets the default UI writing mode.
  * @param writingMode The writing mode
  */
-void TextViewer::Renderer::setDefaultWritingMode(const WritingMode<false>& writingMode) /*throw()*/ {
+void TextViewer::Renderer::setDefaultWritingMode(const WritingMode& writingMode) /*throw()*/ {
 	if(writingMode != defaultWritingMode_) {
 		defaultWritingMode_ = writingMode;
 		layouts().invalidate();
@@ -2335,7 +2335,7 @@ bool VirtualBox::includes(const graphics::NativePoint& p) const /*throw()*/ {
 		return false;
 
 	// about inline-progression-direction
-	const bool horizontal = WritingModeBase::isHorizontal(viewer_.textRenderer().writingMode().blockFlowDirection);
+	const bool horizontal = isHorizontal(viewer_.textRenderer().writingMode().blockFlowDirection);
 	const Scalar ipd = (horizontal ? geometry::x(p) : geometry::y(p)) - viewer_.inlineProgressionOffsetInViewport();	// $friendly-access
 	if(ipd < startEdge() || ipd >= endEdge())
 		return false;
@@ -2516,9 +2516,10 @@ const hyperlink::Hyperlink* utils::getPointedHyperlink(const TextViewer& viewer,
  * @param viewer The text viewer
  */
 void utils::toggleOrientation(TextViewer& viewer) /*throw()*/ {
-	WritingMode<false> wm(viewer.textRenderer().defaultUIWritingMode());
-	wm.inlineFlowDirection = (wm.inlineFlowDirection == LEFT_TO_RIGHT) ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
-	viewer.textRenderer().setDefaultWritingMode(wm);
+	WritingMode writingMode(viewer.textRenderer().defaultUIWritingMode());
+	writingMode.inlineFlowDirection =
+		(writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
+	viewer.textRenderer().setDefaultWritingMode(writingMode);
 	viewer.synchronizeWritingModeUI();
 //	if(config.lineWrap.wrapsAtWindowEdge()) {
 //		win32::AutoZeroSize<SCROLLINFO> scroll;

@@ -99,7 +99,7 @@ namespace ascension {
 			// CaretListener
 			virtual void caretMoved(const Caret& caret, const kernel::Region& oldRegion);
 			// graphics.font.ComputedWritingModeListener
-			void computedWritingModeChanged(const presentation::WritingMode<false>& used);
+			void computedWritingModeChanged(const presentation::WritingMode& used);
 			// graphics.font.VisualLinesListener
 			void visualLinesDeleted(const Range<length_t>& lines,
 				length_t sublines, bool longestLineChanged) /*throw()*/;

@@ -762,7 +762,8 @@ void DefaultMouseInputStrategy::timeElapsed(Timer& timer) {
 		const NativePoint p(viewer_->mapFromGlobal(Cursor::position()));
 		const NativeRectangle rc(viewer_->bounds(false));
 		const PhysicalFourSides<Scalar> spaces(viewer_->spaceWidths());
-		// 以下のスクロール量には根拠は無い
+
+		// no rationale about these scroll amounts
 		if(geometry::y(p) < geometry::top(rc) + spaces.top)
 			viewer_->scroll(0, (geometry::y(p) - (geometry::top(rc) + spaces.top)) / viewer_->textRenderer().defaultFont()->metrics().linePitch() - 1, true);
 		else if(geometry::y(p) >= geometry::bottom(rc) - spaces.bottom)

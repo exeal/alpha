@@ -305,6 +305,8 @@ namespace ascension {
 			TextWrap textWrap;
 			OverflowWrap overflowWrap;
 			Measure measure;
+			/// Default constructor.
+			TextWrapping() : textWrap(TEXT_WRAP_NONE), overflowWrap(OVERFLOW_WRAP_NORMAL) {}
 		};
 
 		/**

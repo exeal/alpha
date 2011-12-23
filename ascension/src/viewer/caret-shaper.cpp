@@ -87,7 +87,7 @@ void DefaultCaretShaper::caretMoved(const Caret& caret, const k::Region& oldRegi
 }
 
 /// @see graphics#font#ComputedWritingModeListener#computedWritingModeChanged
-void DefaultCaretShaper::computedWritingModeChanged(const WritingMode<false>& used) {
+void DefaultCaretShaper::computedWritingModeChanged(const WritingMode& used) {
 	if(updater_ != 0)
 		updater_->update();
 }
@@ -198,21 +198,21 @@ namespace {
 			measure = systemDefinedCaretMeasure();
 		}
 		switch(layout.writingMode().blockFlowDirection) {
-			case WritingModeBase::HORIZONTAL_TB:
+			case HORIZONTAL_TB:
 				geometry::x(alignmentPoint) = (layout.bidiEmbeddingLevel(caret.column()) % 2 == 0) ? 0 : measure - 1;
 				geometry::y(alignmentPoint) = lineMetrics.ascent();
 				break;
-			case WritingModeBase::VERTICAL_RL:
+			case VERTICAL_RL:
 				// TODO: Not implemented.
 				break;
-			case WritingModeBase::VERTICAL_LR:
+			case VERTICAL_LR:
 				// TODO: Not implemented.
 				break;
 			default:
 				ASCENSION_ASSERT_NOT_REACHED();
 		}
 
-		const bool horizontal = WritingModeBase::isHorizontal(layout.writingMode().blockFlowDirection);
+		const bool horizontal = isHorizontal(layout.writingMode().blockFlowDirection);
 		static const Color black(0, 0, 0);
 		if(localeSensitive) {
 			const Widget::Identifier& wid = caret.textViewer().identifier();

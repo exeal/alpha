@@ -83,12 +83,12 @@ RulerPainter::RulerPainter(TextViewer& viewer) :
  * @return the alignment of the vertical ruler. @c ALIGN_LEFT or @c ALIGN_RIGHT
  */
 RulerPainter::SnapAlignment RulerPainter::alignment() const {
-	const WritingMode<false> writingMode(viewer_.textRenderer().writingMode());
+	const WritingMode writingMode(viewer_.textRenderer().writingMode());
 	const detail::PhysicalTextAnchor anchor = detail::computePhysicalTextAnchor(configuration().alignment, writingMode.inlineFlowDirection);
 	if(anchor == detail::LEFT)
-		return WritingModeBase::isHorizontal(writingMode.blockFlowDirection) ? LEFT : TOP;
+		return isHorizontal(writingMode.blockFlowDirection) ? LEFT : TOP;
 	else if(anchor == detail::RIGHT)
-		return WritingModeBase::isHorizontal(writingMode.blockFlowDirection) ? RIGHT : BOTTOM;
+		return isHorizontal(writingMode.blockFlowDirection) ? RIGHT : BOTTOM;
 	else
 		ASCENSION_ASSERT_NOT_REACHED();
 }
@@ -386,7 +386,7 @@ void RulerPainter::paint(PaintContext& context) {
 
 namespace {
 	Scalar computeMaximumNumberGlyphsExtent(RenderingContext2D& context, tr1::shared_ptr<const Font> font,
-			uint8_t digits, const WritingMode<false>& writingMode, const NumberSubstitution& numberSubstitution) {
+			uint8_t digits, const WritingMode& writingMode, const NumberSubstitution& numberSubstitution) {
 		tr1::shared_ptr<const Font> oldFont(context.font());
 		context.setFont(font);
 /*
@@ -419,7 +419,7 @@ namespace {
 		Scalar maximumAdvance = 0;
 		for(Char c = '0'; c <= '9'; ++c) {
 			const GlyphMetrics gm(font->glyphMetrics(c));
-			const Scalar advance = WritingModeBase::isHorizontal(writingMode.blockFlowDirection) ? gm.advanceX() : gm.advanceY();
+			const Scalar advance = isHorizontal(writingMode.blockFlowDirection) ? gm.advanceX() : gm.advanceY();
 			if(advance > maximumAdvance) {
 				maximumExtentCharacter = c;
 				maximumAdvance = advance;
@@ -428,7 +428,7 @@ namespace {
 		const NativeSize stringExtent(context.measureText(String(digits, maximumExtentCharacter)));
 
 		context.setFont(oldFont);
-		return WritingModeBase::isHorizontal(writingMode.blockFlowDirection) ? geometry::dx(stringExtent) : geometry::dy(stringExtent);
+		return isHorizontal(writingMode.blockFlowDirection) ? geometry::dx(stringExtent) : geometry::dy(stringExtent);
 	}
 	
 	Scalar platformIndicatorMarginWidth() {

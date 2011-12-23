@@ -575,7 +575,7 @@ void Caret::resetVisualization() {
 
 	if(context_.inputMethodComposingCharacter) {
 		Scalar dx, dy;
-		const bool horizontal = WritingModeBase::isHorizontal(textViewer().textRenderer().writingMode().blockFlowDirection);
+		const bool horizontal = isHorizontal(textViewer().textRenderer().writingMode().blockFlowDirection);
 		currentCharacterSize(*this, horizontal ? &dx : &dy, horizontal ? &dy : &dx);
 		image.reset(new Image(geometry::make<NativeSize>(dx, dy), Image::RGB_16));
 	} else if(context_.inputMethodCompositionActivated) {
@@ -680,11 +680,11 @@ void Caret::updateLocation() {
 	geometry::range<geometry::Y_COORDINATE>(textArea) = makeRange(
 		geometry::top(textArea) + spaces.top, geometry::bottom(textArea) - spaces.bottom);
 
-	const WritingMode<false> writingMode(textViewer().textRenderer().writingMode());
+	const WritingMode writingMode(textViewer().textRenderer().writingMode());
 	if(!geometry::includes(textArea, p)) {
 		// "hide" the caret
 		const Scalar linePitch = viewer.textRenderer().defaultFont()->metrics().linePitch();
-		if(WritingModeBase::isHorizontal(writingMode.blockFlowDirection))
+		if(isHorizontal(writingMode.blockFlowDirection))
 			geometry::y(p) = -linePitch;
 		else
 			geometry::x(p) = -linePitch;
