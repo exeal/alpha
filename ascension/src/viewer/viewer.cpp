@@ -1434,8 +1434,8 @@ void TextViewer::resized(State state, const NativeSize&) {
 	if(renderer_.get() == 0)
 		return;
 
-	if(configuration_.lineWrap.wrapsAtWindowEdge())
-		renderer_->layouts().invalidate();
+	renderer_->setTextWrapping(textRenderer().textWrapping(), createRenderingContext().get());
+
 	displaySizeListeners_.notify(&DisplaySizeListener::viewerDisplaySizeChanged);
 	scrollInfo_.resetBars(*this, 'b', true);
 	updateScrollBars();
@@ -2204,7 +2204,7 @@ Scalar TextViewer::Renderer::width() const /*throw()*/ {
 	else if(lwc.wrapsAtWindowEdge()) {
 		const NativeRectangle clientBounds(viewer_.bounds(false));
 		const PhysicalFourSides<Scalar>& spaces(viewer_.spaceWidths());
-		return WritingModeBase::isHorizontal(viewer_.textRenderer().writingMode().blockFlowDirection) ?
+		return isHorizontal(viewer_.textRenderer().writingMode().blockFlowDirection) ?
 			(geometry::dx(clientBounds) - spaces.left - spaces.right) : (geometry::dy(clientBounds) - spaces.top - spaces.bottom);
 	} else
 		return lwc.width;

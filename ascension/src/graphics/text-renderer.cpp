@@ -375,8 +375,14 @@ void TextRenderer::setDefaultUIWritingMode(const WritingMode& writingMode) {
  *                         absolute value
  * @see #setTextWrapping, #textWrappingMeasureInPixels
  */
-void  TextRenderer::setTextWrapping(const TextWrapping<presentation::Length>& newValue, const RenderingContext2D* renderingContext) {
-	newValue.measure.value();
+void TextRenderer::setTextWrapping(const TextWrapping<presentation::Length>& newValue, const RenderingContext2D* renderingContext) {
+	const Scalar newTextWrappingMeasureInPixels = static_cast<Scalar>(newValue.measure.value(renderingContext, 0));
+	const bool resetLayouts = textWrapping_.textWrap != newValue.textWrap
+		|| textWrapping_.overflowWrap != newValue.overflowWrap || textWrappingMeasureInPixels_ != newTextWrappingMeasureInPixels;
+	textWrapping_ = newValue;
+	textWrappingMeasureInPixels_ = newTextWrappingMeasureInPixels;
+	if(resetLayouts)
+		layouts().invalidate();
 }
 
 void TextRenderer::updateDefaultFont() {

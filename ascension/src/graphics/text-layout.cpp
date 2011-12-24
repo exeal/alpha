@@ -1094,7 +1094,7 @@ void TextLayout::TextRun::paintBackground(PaintContext& context,
 		return;
 	NativeRectangle r;
 	blackBoxBounds(range, r);
-	context.fillRectangle(geometry::translate(r, p));
+	context.fillRectangle(geometry::translate(r, geometry::make<NativeSize>(geometry::x(p), geometry::y(p))));
 	if(paintedBounds != 0)
 		*paintedBounds = r;
 }
@@ -2076,7 +2076,7 @@ Scalar TextLayout::baseline(length_t line) const {
 		throw kernel::BadPositionException(kernel::Position());
 	else if(line == 0)
 		return 0;
-	Scalar result;
+	Scalar result = 0;
 	for(length_t i = 1; i <= line; ++i) {
 		result += lineMetrics_[i - 1]->descent();
 		result += lineMetrics_[i]->ascent();

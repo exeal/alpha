@@ -67,7 +67,7 @@ namespace ascension {
 					const presentation::TextWrapping<presentation::Length>& newValue,
 					const RenderingContext2D* renderingContext);
 				const presentation::TextWrapping<presentation::Length>& textWrapping() const /*throw()*/;
-				Scalar textWrappingMeaureInPixels() const /*throw()*/;
+				Scalar textWrappingMeasureInPixels() const /*throw()*/;
 				// default font
 				void addDefaultFontListener(DefaultFontListener& listener);
 				std::tr1::shared_ptr<const Font> defaultFont() const /*throw()*/;
