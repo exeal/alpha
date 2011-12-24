@@ -8,6 +8,7 @@
 #define ASCENSION_GRAPHICS_WINDOWS_HPP
 
 #include <ascension/graphics/color.hpp>
+#include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/win32/windows.hpp>	// win32.Handle
@@ -37,7 +38,7 @@ namespace ascension {
 			unsigned int logicalDpiX() const {return ::GetDeviceCaps(dc_.get(), LOGPIXELSX);}
 			unsigned int logicalDpiY() const {return ::GetDeviceCaps(dc_.get(), LOGPIXELSY);}
 			graphics::NativeSize size() const {
-				return graphics::make<NativeSize>(
+				return graphics::geometry::make<NativeSize>(
 					::GetDeviceCaps(dc_.get(), HORZRES), ::GetDeviceCaps(dc_.get(), VERTRES));
 			}
 		protected:
