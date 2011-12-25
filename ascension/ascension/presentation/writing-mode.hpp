@@ -1,5 +1,5 @@
 /**
- * @file text-style.hpp
+ * @file writing-mode.hpp
  * @author exeal
  * @date 2003-2006 was LineLayout.h
  * @date 2006-2011 was presentation.hpp
@@ -12,6 +12,7 @@
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException, std.logic_error
 #include <ascension/corelib/type-traits.hpp>		// detail.Select
 #include <ascension/graphics/geometry.hpp>			// PhysicalFourSides
+#include <ascension/presentation/inheritable.hpp>	// Inheritable
 
 namespace ascension {
 
@@ -22,33 +23,6 @@ namespace ascension {
 	}
 
 	namespace presentation {
-		template<typename T>
-		class Inheritable {
-		public:
-			typedef T value_type;
-			typedef Inheritable<T> Type;
-		public:
-			Inheritable() /*throw()*/ : inherits_(true) {}
-			Inheritable(value_type v) /*throw()*/ : value_(v), inherits_(false) {}
-			operator value_type() const {return get();}
-			value_type get() const {if(inherits()) throw std::logic_error(""); return value_;}
-			value_type inherit() /*throw()*/ {inherits_ = true;}
-			bool inherits() const /*throw()*/ {return inherits_;}
-			Inheritable<value_type>& set(value_type v) /*throw()*/ {value_ = v; inherits_ = false; return *this;}
-		private:
-			value_type value_;
-			bool inherits_;
-		};
-
-		template<bool condition, typename T>
-		struct InheritableIf {
-			typedef typename detail::Select<condition, Inheritable<T>, T>::Type Type;
-		};
-
-		template<typename T>
-		inline T resolveInheritance(const Inheritable<T>& inheritable, const T& defaultValue) {
-			 return inheritable.inherits() ? defaultValue : inheritable.get();
-		}
 
 		/**
 		 * Orientation of the text layout.
