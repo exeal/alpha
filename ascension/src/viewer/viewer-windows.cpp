@@ -685,7 +685,7 @@ void TextViewer::initialize() {
 		::SendMessageW(toolTip_, TTM_ACTIVATE, true, 0L);
 	}
 
-	setMouseInputStrategy(0, true);
+	setMouseInputStrategy(tr1::shared_ptr<MouseInputStrategy>());
 
 #ifdef ASCENSION_TEST_TEXT_STYLES
 	RulerConfiguration rc;
@@ -1168,20 +1168,20 @@ void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKey
 	if(!allowsMouseInput() && !byKeyboard)	// however, may be invoked by other than the mouse...
 		return;
 	utils::closeCompletionProposalsPopup(*this);
-	abortIncrementalSearch(*this);
+	texteditor::abortIncrementalSearch(*this);
 
 	NativePoint menuPosition;
 
 	// invoked by the keyboard
 	if(byKeyboard/*geometry::x(input.location()) == 0xffff && geometry::y(input.location()) == 0xffff*/) {
 		// MSDN says "the application should display the context menu at the location of the current selection."
-		menuPosition = clientXYForCharacter(caret(), false);
+		menuPosition = localPointForCharacter(caret(), false);
 		geometry::y(menuPosition) += textRenderer().defaultFont()->metrics().cellHeight() + 1;
 		NativeRectangle clientBounds(bounds(false));
-		const Margins margins(textAreaMargins());
+		const PhysicalFourSides<Scalar> spaces(spaceWidths());
 		clientBounds = geometry::make<NativeRectangle>(
-			geometry::translate(geometry::topLeft(clientBounds), geometry::make<NativeSize>(margins.left, margins.top)),
-			geometry::translate(geometry::bottomRight(clientBounds), geometry::make<NativeSize>(-margins.right + 1, -margins.bottom)));
+			geometry::translate(geometry::topLeft(clientBounds), geometry::make<NativeSize>(spaces.left, spaces.top)),
+			geometry::translate(geometry::bottomRight(clientBounds), geometry::make<NativeSize>(-spaces.right + 1, -spaces.bottom)));
 		if(!geometry::includes(clientBounds, menuPosition))
 			menuPosition = geometry::make<NativePoint>(1, 1);
 		mapToGlobal(menuPosition);
@@ -1413,7 +1413,7 @@ namespace {
 		win32::Handle<HBITMAP> mask(::CreateBitmap(bh.bV5Width, bh.bV5Height, 1, 1, 0), &::DeleteObject);	// monochrome
 		if(mask.get() == 0)
 			return E_FAIL;
-		HBITMAP oldBitmap = ::SelectObject(dc.get(), mask.get());
+		HBITMAP oldBitmap = static_cast<HBITMAP>(::SelectObject(dc.get(), mask.get()));
 		dc.fillSolidRect(0, 0, bh.bV5Width, bh.bV5Height, RGB(0x00, 0x00, 0x00));
 		int y = 0;
 		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
@@ -1427,7 +1427,7 @@ namespace {
 						min(viewer.document().lineLength(line), range.end()));
 					NativeRegion rgn(layout.blackBoxBounds(range));
 					::OffsetRgn(rgn.get(), indent - geometry::left(selectionBounds), y - geometry::top(selectionBounds));
-					::FillRgn(dc.get(), rgn.get(), ::GetStockObject(WHITE_BRUSH));
+					::FillRgn(dc.get(), rgn.get(), static_cast<HBRUSH>(::GetStockObject(WHITE_BRUSH)));
 				}
 				y += renderer.defaultFont()->metrics().linePitch();
 			}
@@ -1498,7 +1498,7 @@ namespace {
 		}
 
 		// locate the hotspot of the image based on the cursor position
-		const TextViewer::Margins margins(viewer.textAreaMargins());
+		const PhysicalFourSides<Scalar> spaces(viewer.spaceWidths());
 		NativePoint hotspot(cursorPosition);
 		geometry::x(hotspot) -= margins.left - viewer.horizontalScrollBar().position() * renderer.defaultFont()->metrics().averageCharacterWidth() + geometry::left(selectionBounds);
 		geometry::y(hotspot) -= geometry::y(viewer.clientXYForCharacter(k::Position(selectedRegion.beginning().line, 0), true));

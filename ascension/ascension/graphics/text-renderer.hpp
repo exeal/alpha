@@ -56,7 +56,9 @@ namespace ascension {
 				virtual std::auto_ptr<const TextLayout> createLineLayout(length_t line) const = 0;
 				LineLayoutVector& layouts() /*throw()*/;
 				const LineLayoutVector& layouts() const /*throw()*/;
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				virtual Scalar width() const /*throw()*/ = 0;
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 				// writing modes
 				void addComputedWritingModeListener(ComputedWritingModeListener& listener);
 				const presentation::WritingMode& defaultUIWritingMode() const /*throw()*/;
@@ -87,6 +89,8 @@ namespace ascension {
 //				SpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/;
 //				const Font::Metrics& textMetrics() const /*throw()*/;
 			protected:
+				void buildLineLayoutConstructionParameters(length_t line,
+					TextLayout::ConstructionParameters& parameters) const;
 				void setDefaultUIWritingMode(const presentation::WritingMode& writingMode);
 			private:
 				void fireComputedWritingModeChanged(

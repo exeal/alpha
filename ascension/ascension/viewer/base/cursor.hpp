@@ -45,6 +45,7 @@ namespace ascension {
 				explicit Cursor(Shape shape);
 				explicit Cursor(const graphics::Image& shape);
 				Cursor(const graphics::Image& shape, const graphics::NativePoint& hotspot);
+				explicit Cursor(const NativeCursor&);
 				Cursor(const Cursor& other);
 				Cursor& operator=(const Cursor& other);
 				const NativeCursor& asNativeObject() const /*throw()*/;

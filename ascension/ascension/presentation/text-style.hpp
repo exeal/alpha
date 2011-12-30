@@ -301,14 +301,19 @@ namespace ascension {
 			OVERFLOW_WRAP_HYPHENATE = 2
 		};
 
-		template<typename Measure>
-		struct TextWrapping {
-			TextWrap textWrap;
-			OverflowWrap overflowWrap;
+		template<typename Measure, bool inheritable>
+		struct TextWrappingBase {
+			typename InheritableIf<inheritable, TextWrap>::Type textWrap;
+			typename InheritableIf<inheritable, OverflowWrap>::Type overflowWrap;
 			Measure measure;
 			/// Default constructor.
-			TextWrapping() : textWrap(TEXT_WRAP_NONE), overflowWrap(OVERFLOW_WRAP_NORMAL), measure(0) {}
+			TextWrappingBase() : textWrap(TEXT_WRAP_NONE), overflowWrap(OVERFLOW_WRAP_NORMAL), measure(0) {}
 		};
+
+		template<typename Measure>
+		struct TextWrapping : public TextWrappingBase<Measure, false> {};
+		template<typename Measure>
+		struct Inheritable<TextWrapping<Measure> > : public TextWrappingBase<Measure, true> {};
 
 		/**
 		 * @c TextAnchor describes an alignment of text relative to the given point.
@@ -340,12 +345,11 @@ namespace ascension {
 		 * @c TextJustification describes the justification method.
 		 * @note This definition is under construction.
 		 * @see "CSS Text Level 3, 7.3. Justification Method: the 'text-justify' property"
-		 *      (http://www.w3.org/TR/2010/WD-css3-text-20101005/#text-justify)
+		 *      (http://www.w3.org/TR/2011/WD-css3-text-20110901/#text-justify)
 		 */
 		enum TextJustification {
 			/// Specifies no justification.
-			NO_JUSTIFICATION,
-//			AUTO_JUSTIFICATION, TRIM, INTER_WORD, INTER_IDEOGRAPH, INTER_CLUSTER, DISTRIBUTE, KASHIDA
+			AUTO_JUSTIFICATION, NONE_JUSTIFICATION, INTER_WORD, INTER_IDEOGRAPH, INTER_CLUSTER, DISTRIBUTE, KASHIDA
 		};
 
 		/**
@@ -409,37 +413,45 @@ namespace ascension {
 		 * Specifies the style of a text line. This object also gives the default text run style.
 		 * @see TextRunStyle, TextToplevelStyle, TextLineStyleDirector
 		 */
-		struct TextLineStyle : public std::tr1::enable_shared_from_this<TextLineStyle> {
+		template<bool inheritable>
+		struct TextLineStyleBase {
 			/// The default text run style. The default value is @c null.
 			std::tr1::shared_ptr<const TextRunStyle> defaultRunStyle;
-			/**
-			 * The reading direction of the line. The default value is
-			 * @c Inheritable&lt;ReadingDirection&gt;() which means to refers to the writing mode
-			 * of the presentation.
-			 */
-			Inheritable<ReadingDirection> readingDirection;
+			/// The line breaking strictness. The default value is @c LINE_BREAK_AUTO.
+			typename InheritableIf<inheritable, LineBreak>::Type lineBreak;
+			/// The word breaking rules. The default value is @c WORD_BREAK_NORMAL.
+			typename InheritableIf<inheritable, WordBreak>::Type wordBreak;
 			/**
 			 * The alignment point in inline-progression-dimension. The default value is
 			 * @c TEXT_ANCHOR_START.
 			 */
-			Inheritable<TextAnchor> anchor;
+			typename InheritableIf<inheritable, TextAnchor>::Type anchor;
 			/**
 			 * The alignment point in block-progression-dimension, which is the dominant baseline
 			 * of the line. The default value is @c DOMINANT_BASELINE_AUTO.
 			 */
-			Inheritable<DominantBaseline> dominantBaseline;
+			typename InheritableIf<inheritable, DominantBaseline>::Type dominantBaseline;
 			/// The default value is @c CONSIDER_SHIFTS.
-			Inheritable<LineHeightShiftAdjustment> lineHeightShiftAdjustment;
-			/// The default value is @c MAX_HEIGHT.
-			Inheritable<LineStackingStrategy> lineStackingStrategy;
-			/// The number substitution setting. The default value is @c NumberSubstitution().
+			typename InheritableIf<inheritable, LineHeightShiftAdjustment>::Type lineHeightShiftAdjustment;
+			/// The line stacking strategy. The default value is @c MAX_HEIGHT.
+			typename InheritableIf<inheritable, LineStackingStrategy>::Type lineStackingStrategy;
+			/// The text justification method. The default value is @c AUTO_JUSTIFICATION.
+			typename InheritableIf<inheritable, TextJustification>::Type textJustification;
+			/// The number substitution process. The default value is @c NumberSubstitution().
 			NumberSubstitution numberSubstitution;
 
 			/// Default constructor initializes the all members with the default values.
-			TextLineStyle() /*throw()*/ :
+			TextLineStyleBase() /*throw()*/ :
+				lineBreak(LINE_BREAK_AUTO), wordBreak(WORD_BREAK_NORMAL),
 				anchor(TEXT_ANCHOR_START), dominantBaseline(DOMINANT_BASELINE_AUTO),
-				lineHeightShiftAdjustment(CONSIDER_SHIFTS), lineStackingStrategy(MAX_HEIGHT) {}
+				lineHeightShiftAdjustment(CONSIDER_SHIFTS), lineStackingStrategy(MAX_HEIGHT),
+				textJustification(AUTO_JUSTIFICATION) {}
 		};
+
+		struct TextLineStyle : public TextLineStyleBase<false>,
+			public std::tr1::enable_shared_from_this<TextLineStyle> {};
+		template<> struct Inheritable<TextLineStyle> : public TextLineStyleBase<true>,
+			public std::tr1::enable_shared_from_this<Inheritable<TextLineStyle> > {};
 
 		/**
 		 * @see TextRunStyle, TextLineStyle, Presentation#globalTextStyle,

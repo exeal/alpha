@@ -22,6 +22,7 @@ namespace ascension {
 
 		struct TextLineStyle;
 		struct TextToplevelStyle;
+		template<typename T> class Inheritable;
 
 		/**
 		 * Interface for objects which direct style of a text line.
@@ -38,7 +39,7 @@ namespace ascension {
 			 * @return The style of the line or @c null (filled by the presentation's default style)
 			 * @throw BadPositionException @a line is outside of the document
 			 */
-			virtual std::tr1::shared_ptr<const TextLineStyle> queryTextLineStyle(length_t line) const = 0;
+			virtual std::tr1::shared_ptr<const Inheritable<TextLineStyle> > queryTextLineStyle(length_t line) const = 0;
 			friend class Presentation;
 		};
 
@@ -182,7 +183,7 @@ namespace ascension {
 			void removeGlobalTextStyleListener(GlobalTextStyleListener& listener);
 			void setGlobalTextStyle(std::tr1::shared_ptr<const TextToplevelStyle> newStyle);
 			void textLineColors(length_t line, graphics::Color& foreground, graphics::Color& background) const;
-			const TextLineStyle& textLineStyle(length_t line) const;
+			TextLineStyle& textLineStyle(length_t line, TextLineStyle& style) const;
 			std::auto_ptr<StyledTextRunIterator> textRunStyles(length_t line) const;
 			// strategies
 			void addTextLineColorDirector(std::tr1::shared_ptr<TextLineColorDirector> director);

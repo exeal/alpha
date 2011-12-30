@@ -202,10 +202,22 @@ Scalar TextRenderer::baselineDistance(const Range<VisualLine>& lines) const {
 }
 
 /**
+ * Builds construction parameters for @c TextLayout object.
+ * @param[in] line The line number
+ * @param[out] parameters
+ * @see #createLineLayout
+ */
+void TextRenderer::buildLineLayoutConstructionParameters(length_t line, TextLayout::ConstructionParameters& parameters) const {
+	presentation_.textLineStyle(line, parameters);
+	parameters.writingMode = writingMode();
+}
+
+/**
  * @fn ascension::graphics::font::TextRenderer::createLineLayout
  * Creates and returns the text layout for the specified line.
  * @param line The line number
  * @return The generated line layout
+ * @see #buildLineLayoutConstructionParameters
  */
 
 /**
