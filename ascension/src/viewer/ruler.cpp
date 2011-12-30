@@ -5,6 +5,7 @@
  */
 
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/viewer.hpp>
 
 using namespace ascension;
@@ -418,8 +419,9 @@ namespace {
 		Char maximumExtentCharacter;
 		Scalar maximumAdvance = 0;
 		for(Char c = '0'; c <= '9'; ++c) {
-			const GlyphMetrics gm(font->glyphMetrics(c));
-			const Scalar advance = isHorizontal(writingMode.blockFlowDirection) ? gm.advanceX() : gm.advanceY();
+			auto_ptr<const GlyphVector> glyphs(font->createGlyphVector(String(1, c)));
+			shared_ptr<GlyphMetrics> gm(glyphs->metrics(0));
+			const Scalar advance = isHorizontal(writingMode.blockFlowDirection) ? gm->advanceX() : gm->advanceY();
 			if(advance > maximumAdvance) {
 				maximumExtentCharacter = c;
 				maximumAdvance = advance;
@@ -447,7 +449,7 @@ void RulerPainter::recalculateWidth() /*throw()*/ {
 	//     (line-numbers-interior-width) = (line-numbers-padding-start) + (line-numbers-padding-end)
 	//     (line-numbers-content-width) = max((glyphs-extent), (average-glyph-extent) * (minimum-digits-setting))
 
-	auto_ptr<RenderingContext2D> context(viewer_.createGraphicContext());
+	auto_ptr<RenderingContext2D> context(viewer_.createRenderingContext());
 
 	// compute the width of the line numbers
 	Scalar lineNumbersContentWidth = 0, lineNumbersPaddingStartWidth = 0, lineNumbersPaddingEndWidth = 0, lineNumbersBorderWidth = 0;
@@ -463,9 +465,9 @@ void RulerPainter::recalculateWidth() /*throw()*/ {
 		lineNumbersContentWidth = max(glyphsExtent, minimumExtent);
 
 		const NativeSize referenceBox(geometry::make<NativeSize>(lineNumbersContentWidth, lineNumbersContentWidth));
-		lineNumbersPaddingStartWidth = static_cast<Scalar>(configuration().lineNumbers.paddingStart.value(*context, &referenceBox));
-		lineNumbersPaddingEndWidth = static_cast<Scalar>(configuration().lineNumbers.paddingEnd.value(*context, &referenceBox));
-		lineNumbersBorderWidth = static_cast<Scalar>(configuration_.lineNumbers.border.computedWidth().value(*context, &referenceBox));
+		lineNumbersPaddingStartWidth = static_cast<Scalar>(configuration().lineNumbers.paddingStart.value(context.get(), &referenceBox));
+		lineNumbersPaddingEndWidth = static_cast<Scalar>(configuration().lineNumbers.paddingEnd.value(context.get(), &referenceBox));
+		lineNumbersBorderWidth = static_cast<Scalar>(configuration_.lineNumbers.border.computedWidth().value(context.get(), &referenceBox));
 //		const Scalar spaceWidth = 0;
 //		const Scalar exteriorWidth = borderWidth + spaceWidth;
 	}
@@ -474,9 +476,9 @@ void RulerPainter::recalculateWidth() /*throw()*/ {
 	Scalar indicatorMarginContentWidth = 0, indicatorMarginBorderWidth = 0;
 	if(configuration_.indicatorMargin.visible) {
 		indicatorMarginContentWidth = configuration().indicatorMargin.width.inherits() ?
-			platformIndicatorMarginWidth() : static_cast<Scalar>(configuration().indicatorMargin.width.get().value(*context, 0));
+			platformIndicatorMarginWidth() : static_cast<Scalar>(configuration().indicatorMargin.width.get().value(context.get(), 0));
 		indicatorMarginBorderWidth = static_cast<Scalar>(
-			configuration().indicatorMargin.border.computedWidth().value(*context,
+			configuration().indicatorMargin.border.computedWidth().value(context.get(),
 				&geometry::make<NativeSize>(indicatorMarginContentWidth, indicatorMarginContentWidth)));
 	}
 
@@ -490,7 +492,7 @@ void RulerPainter::recalculateWidth() /*throw()*/ {
 	indicatorMarginBorderWidth_ = indicatorMarginBorderWidth;
 	if(width() != oldWidth) {
 		viewer_.scheduleRedraw(false);
-		viewer_.updateCaretPosition();
+		viewer_.caret().updateLocation();
 	}
 }
 

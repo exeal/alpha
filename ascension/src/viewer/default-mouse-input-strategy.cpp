@@ -40,7 +40,7 @@ namespace {
 			CURSOR_DOWNWARD	///< Indicates scrolling downward.
 		};
 	public:
-		explicit AutoScrollOriginMark(const TextViewer& viewer) /*throw()*/;
+		explicit AutoScrollOriginMark(TextViewer& viewer) /*throw()*/;
 		void initialize(const TextViewer& viewer);
 		static const Cursor& cursorForScrolling(CursorType type);
 	private:
@@ -60,9 +60,9 @@ namespace {
 
 /**
  * Constructor.
- * @param viewer The text viewer
+ * @param viewer The text viewer. The widget becomes the child of this viewer
  */
-AutoScrollOriginMark::AutoScrollOriginMark(const TextViewer& viewer) /*throw()*/ : Widget(viewer) {
+AutoScrollOriginMark::AutoScrollOriginMark(TextViewer& viewer) /*throw()*/ : Widget(&viewer) {
 	// TODO: Set transparency on window system other than Win32.
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 	// calling CreateWindowExW with WS_EX_LAYERED will fail on NT 4.0
@@ -330,7 +330,7 @@ void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
 	else {
 		const NativePoint caretPoint(viewer_->mapFromGlobal(input.location()));
 		const k::Position p(viewer_->characterForLocalPoint(caretPoint, TextLayout::TRAILING));
-		viewer_->setCaretPosition(viewer_->localPointForCharacter(p, true, TextLayout::LEADING));
+//		viewer_->setCaretPosition(viewer_->localPointForCharacter(p, true, TextLayout::LEADING));
 
 		// drop rectangle text into bidirectional line is not supported...
 		if(dnd_.numberOfRectangleLines != 0) {
@@ -453,7 +453,8 @@ void DefaultMouseInputStrategy::extendSelection(const k::Position* to /* = 0 */)
 
 /// @see MouseInputStrategy#handleDropTarget
 tr1::shared_ptr<base::DropTarget> DefaultMouseInputStrategy::handleDropTarget() const {
-	return tr1::make_shared<base::DropTarget>(this, 0);
+	const base::DropTarget* const self = this;
+	return tr1::shared_ptr<base::DropTarget>(const_cast<base::DropTarget*>(self), detail::NullDeleter());
 }
 
 /**
@@ -788,10 +789,10 @@ void DefaultMouseInputStrategy::timeElapsed(Timer& timer) {
 		if(yScrollDegree != 0) {
 			timer_.start(500 / static_cast<unsigned int>((pow(2.0f, abs(yScrollDegree) / 2))), *this);
 			::SetCursor(AutoScrollOriginMark::cursorForScrolling(
-				(yScrollDegree > 0) ? AutoScrollOriginMark::CURSOR_DOWNWARD : AutoScrollOriginMark::CURSOR_UPWARD).get());
+				(yScrollDegree > 0) ? AutoScrollOriginMark::CURSOR_DOWNWARD : AutoScrollOriginMark::CURSOR_UPWARD).asNativeObject().get());
 		} else {
 			timer_.start(300, *this);
-			::SetCursor(AutoScrollOriginMark::cursorForScrolling(AutoScrollOriginMark::CURSOR_NEUTRAL).get());
+			::SetCursor(AutoScrollOriginMark::cursorForScrolling(AutoScrollOriginMark::CURSOR_NEUTRAL).asNativeObject().get());
 		}
 #if 0
 	} else if(self.dnd_.enabled && (self.state_ & DND_MASK) == DND_MASK) {	// scroll automatically during dragging

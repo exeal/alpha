@@ -333,6 +333,16 @@ namespace ascension {
 				/// Destructor.
 				virtual ~Font() /*throw()*/ {}
 				/**
+				 * Creates a @c GlyphVector by mapping characters to glyphs one-to-one based on the
+				 * Unicode cmap in this font. This method does no other processing besides the
+				 * mapping of glyphs to characters. This means that this method is not useful for
+				 * some scripts, such as Arabic, Hebrew, Thai, and Indic, that require reordering,
+				 * shaping, or ligature substitution.
+				 * @param text The text string
+				 * @return A new @c GlyphVector created with the specified string
+				 */
+				std::auto_ptr<const GlyphVector> createGlyphVector(const String& text) const;
+				/**
 				 * Returns the face name (logical name) of this font.
 				 * @param lc The locale for which to get the font face name. If this value is
 				 *           C or unsupported locale, this method returns an unlocalized name

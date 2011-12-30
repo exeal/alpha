@@ -182,21 +182,9 @@ namespace ascension {
 				 * A parameter set for the constructor of @c TextLayout class.
 				 * @see TextLayout#TextLayout
 				 */
-				struct ConstructionParameters {
+				struct ConstructionParameters : public presentation::TextLineStyle {
 					/// The writing mode of the text layout.
 					presentation::WritingMode writingMode;
-					/**
-					 * The text anchor. This should be either @c TEXT_ANCHOR_START,
-					 * @c TEXT_ANCHOR_MIDDLE or @c TEXT_ANCHOR_END. The default value is
-					 * @c TEXT_ANCHOR_START.
-					 */
-					presentation::TextAnchor anchor;
-					/// The text justification method. The default value is @c NO_JUSTIFICATION.
-					presentation::DominantBaseline dominantBaseline;
-					/// The dominant baseline. The default value is @c DOMINANT_BASELINE_AUTO.
-					presentation::TextJustification justification;
-					/// The line stacking strategy. The default value is @c MAX_HEIGHT.
-					presentation::LineStackingStrategy lineStackingStrategy;
 					/**
 					 * The height used in determining the 'half-leading' value. The default value
 					 * is 0.
@@ -204,9 +192,6 @@ namespace ascension {
 					Scalar lineHeight;
 					/// The text wrapping settings.
 					presentation::TextWrapping<Scalar> textWrapping;
-					/// The line breaking strictness. The default value is 
-					presentation::LineBreak lineBreak;
-					presentation::WordBreak wordBreak;
 					/**
 					 * The font collection this text layout uses. If this is @c null,
 					 * @c TextLayout uses @c systemFonts. The default value is @c null.
@@ -221,8 +206,6 @@ namespace ascension {
 					 * default value is @c null.
 					 */
 					const TabExpander* tabExpander;
-					/// Defines number substitution process. The default value is @c null.
-					const presentation::NumberSubstitution* numberSubstitution;
 					/**
 					 * Set @c true to shape zero width control characters as representative glyphs.
 					 * The default value is @c false.

@@ -139,7 +139,7 @@ namespace ascension {
 
 			class BaselineIterator : public detail::IteratorAdapter<
 				BaselineIterator, std::iterator<
-					std::random_access_iterator_tag, graphics::Scalar
+					std::random_access_iterator_tag, graphics::Scalar, std::ptrdiff_t, graphics::Scalar*, graphics::Scalar
 				>
 			> {
 			public:
@@ -173,11 +173,15 @@ namespace ascension {
 					const presentation::WritingMode& writingMode = presentation::WritingMode());
 				Renderer(const Renderer& other, TextViewer& viewer);
 				void setDefaultWritingMode(const presentation::WritingMode& writingMode) /*throw()*/;
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				void rewrapAtWindowEdge();
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 				// TextRenderer
 				std::auto_ptr<const graphics::font::TextLayout> createLineLayout(length_t line) const;
 				const presentation::WritingMode& defaultUIWritingMode() const /*throw()*/;
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				graphics::Scalar width() const /*throw()*/;
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 			private:
 				TextViewer& viewer_;
 				presentation::WritingMode defaultWritingMode_;

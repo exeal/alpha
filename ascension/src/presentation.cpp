@@ -128,15 +128,7 @@ void StyledTextRunEnumerator::next() {
 /// 
 TextAnchor presentation::defaultTextAnchor(const Presentation& presentation) {
 	const tr1::shared_ptr<const TextLineStyle> lineStyle(presentation.globalTextStyle().defaultLineStyle);
-	return (lineStyle.get() != 0
-		&& !lineStyle->anchor.inherits()) ? lineStyle->anchor.get() : ASCENSION_DEFAULT_TEXT_ANCHOR;
-}
-
-///
-ReadingDirection presentation::defaultReadingDirection(const Presentation& presentation) {
-	const tr1::shared_ptr<const TextLineStyle> lineStyle(presentation.globalTextStyle().defaultLineStyle);
-	return (lineStyle.get() != 0 && !lineStyle->readingDirection.inherits()) ?
-		lineStyle->readingDirection.get() : presentation.globalTextStyle().writingMode.inlineFlowDirection;
+	return (lineStyle.get() != 0) ? lineStyle->anchor : ASCENSION_DEFAULT_TEXT_ANCHOR;
 }
 
 tr1::shared_ptr<const TextToplevelStyle> Presentation::DEFAULT_GLOBAL_TEXT_STYLE;
@@ -282,16 +274,26 @@ const Hyperlink* const* Presentation::getHyperlinks(length_t line, size_t& numbe
 
 /**
  * Returns the style of the specified text line.
- * @return The text line style
+ * @param[in] line The line number
+ * @param[out] style The text line style
+ * @return @a style
  */
-const TextLineStyle& Presentation::textLineStyle(length_t line) const /*throw()*/ {
-	tr1::shared_ptr<const TextLineStyle> style;
+TextLineStyle& Presentation::textLineStyle(length_t line, TextLineStyle& style) const /*throw()*/ {
+	tr1::shared_ptr<const Inheritable<TextLineStyle> > p;
 	if(textLineStyleDirector_.get() != 0)
-		style = textLineStyleDirector_->queryTextLineStyle(line);
-	if(style.get() == 0)
-	style = DEFAULT_GLOBAL_TEXT_STYLE->defaultLineStyle;
-	assert(style.get() != 0);
-	return *style;
+		p = textLineStyleDirector_->queryTextLineStyle(line);
+	if(p.get() == 0)
+		style = *DEFAULT_GLOBAL_TEXT_STYLE->defaultLineStyle;
+	else {
+		style.anchor = resolveInheritance(p->anchor, DEFAULT_GLOBAL_TEXT_STYLE->defaultLineStyle->anchor);
+		style.dominantBaseline = resolveInheritance(
+			p->dominantBaseline, DEFAULT_GLOBAL_TEXT_STYLE->defaultLineStyle->dominantBaseline);
+		style.lineHeightShiftAdjustment = resolveInheritance(
+			p->lineHeightShiftAdjustment, DEFAULT_GLOBAL_TEXT_STYLE->defaultLineStyle->lineHeightShiftAdjustment);
+		style.lineStackingStrategy = resolveInheritance(
+			p->lineStackingStrategy, DEFAULT_GLOBAL_TEXT_STYLE->defaultLineStyle->lineStackingStrategy);
+	}
+	return style;
 }
 
 /**

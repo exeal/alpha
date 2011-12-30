@@ -1945,7 +1945,7 @@ TextLayout::TextLayout(const String& text,
 //	initialState.fOverrideDirection = 1;
 	initialState.fInhibitSymSwap = otherParameters.inhibitSymmetricSwapping;
 	initialState.fDisplayZWG = otherParameters.displayShapingControls;
-	resolveNumberSubstitution(otherParameters.numberSubstitution, control, initialState);	// ignore result...
+	resolveNumberSubstitution(&otherParameters.numberSubstitution, control, initialState);	// ignore result...
 
 	// 1-2. itemize
 	// note that ScriptItemize can cause a buffer overflow (see Mozilla bug 366643)
@@ -2027,8 +2027,8 @@ TextLayout::TextLayout(const String& text,
 		// 5-3. reexpand horizontal tabs
 		// TODO: not implemented.
 		// 6. justify each text runs if specified
-		if(otherParameters.justification != NO_JUSTIFICATION)
-			justify(otherParameters.justification);
+		if(otherParameters.textJustification != NONE_JUSTIFICATION)
+			justify(otherParameters.textJustification);
 	}
 
 	// 7. stack the lines
