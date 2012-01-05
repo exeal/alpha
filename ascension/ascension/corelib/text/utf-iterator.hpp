@@ -11,6 +11,8 @@
 #include <ascension/corelib/standard-iterator-adapter.hpp>	// IllegalStateException
 #include <ascension/corelib/text/character.hpp>
 #include <ascension/corelib/text/utf.hpp>
+#include <array>
+#include <utility>	// std.advance
 
 namespace ascension {
 	namespace text {
@@ -207,80 +209,85 @@ namespace ascension {
 				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<BaseIterator>::value == 4);
 			public:
 				/// Default constructor.
-				CharacterEncodeIterator() : positionInCache_(0) {
-					std::fill(cache_, ASCENSION_ENDOF(cache)_, 0);
+				CharacterEncodeIterator() {
+					cache_.fill(0);
+					positionInCache_ = cache_.end();
 				}
 				/**
 				 * Constructor takes a position to start iteration. The ownership of the target text
 				 * will not be transferred to this.
 				 */
-				CharacterEncodeIterator(BaseIterator start) : base_(start), positionInCache_(0) {
-					std::fill(cache_, ASCENSION_ENDOF(cache_), 0);
+				CharacterEncodeIterator(BaseIterator start) : base_(start) {
+					cache_.fill(0);
+					positionInCache_ = cache_.end();
 				}
 				/// Copy-constructor.
-				CharacterEncodeIterator(const CharacterEncodeIterator& other) : base_(other.base_) {
-					std::copy(other.cache_, ASCENSION_ENDOF(other.cache_), cache_);
-					positionInCache_ = (other.positionInCache_ != 0) ?
-						cache_ + (other.positionInCache_ - other.cache_) : 0;
+				CharacterEncodeIterator(const CharacterEncodeIterator& other) : base_(other.base_), cache_(other.cache_) {
+					positionInCache_ = (other.positionInCache_ != other.cache_.end()) ?
+						cache_.begin() + (other.positionInCache_ - other.cache_.begin()) : cache_.end();
 				}
 				/// Assignment operator.
 				CharacterEncodeIterator& operator=(const CharacterEncodeIterator& other) {
 					base_ = other.base_;
-					std::copy(other.cache_, ASCENSION_ENDOF(other.cache_), cache_);
-					positionInCache_ = (other.positionInCache_ != 0) ?
-						cache_ + (other.positionInCache_ - other.cache_) : 0;
+					cache_ = other.cache_;
+					positionInCache_ = (other.positionInCache_ != other.cache_.end()) ?
+						cache_.begin() + (other.positionInCache_ - other.cache_) : 0;
 				}
 				/// Returns the current position.
 				BaseIterator tell() const {return base_;}
 			private:
 				void extract() const {
-					CodeUnit* out = cache_;
+					CodeUnit* out = cache_.data();
 					const std::size_t extractedBytes = checkedEncode(*base_, out);
 					if(sizeof(CodeUnit) != 4)
-						std::fill(cache_ + extractedBytes, ASCENSION_ENDOF(cache_), 0);
-					positionInCache_ = cache_;
+						std::fill(cache_.begin() + extractedBytes, cache_.end(), 0);
+					positionInCache_ = cache_.begin();
 				}
 			private:
 				// detail.IteratorAdapter
 				friend class detail::IteratorCoreAccess;
 				value_type current() const {
-					if(positionInCache_ == 0)
+					if(positionInCache_ == cache_.end())
 						extract();
 					return *positionInCache_;
 				}
 				bool equals(const CharacterEncodeIterator& other) const {
 					if(base_ != other.base_)
 						return false;
-					return (positionInCache_ == other.positionInCache_)
-						|| (positionInCache_ == 0 && other.positionInCache_ == other.cache_)
-						|| (positionInCache_ == cache_ && other.positionInCache_ == 0);
+					const std::ptrdiff_t offsets[2] = {
+						(positionInCache_ != cache_.end()) ? positionInCache_ - cache_.begin() : 2,
+						(other.positionInCache_ != other.cache_.end()) ? other.positionInCache_ - other.cache_.begin() : 2
+					};
+					return ((offsets[0] - offsets[1]) & 1) == 0;
 				}
 				bool less(const CharacterEncodeIterator& other) const {
-					return base_ < other.base_ || (base_ == other.base_ && positionInCache_ < other.positionInCache_);
+					return base_ < other.base_
+						|| (base_ == other.base_ && positionInCache_ - cache_.begin() < other.positionInCache_ - other.cache_.begin());
 				}
 				void next() {
-					if(positionInCache_ == 0)
+					if(positionInCache_ == cache_.end())
 						extract();
 					if(*++positionInCache_ == 0) {
 						++base_;
-						positionInCache_ = 0;
+						positionInCache_ = cache_.end();
 					}
 				}
 				void previous() {
-					if(positionInCache_ != 0 && positionInCache_ != cache_)
+					if(positionInCache_ != cache_.end() && positionInCache_ != cache_.begin())
 						--positionInCache_;
 					else {
 						--base_;
 						extract();
-						positionInCache_ = ASCENSION_ENDOF(cache_) - 1;
-						while(positionInCache_ > cache_ && *positionInCache_ == 0)
+						positionInCache_ = --cache_.end();
+						while(positionInCache_ != cache_.begin() && *positionInCache_ == 0)
 							--positionInCache_;
 					}
 				}
 			private:
 				BaseIterator base_;
-				mutable CodeUnit cache_[4 / sizeof(CodeUnit) + 1];
-				mutable CodeUnit* positionInCache_;
+				typedef std::array<CodeUnit, 4 / sizeof(CodeUnit) + 1> CacheType;
+				mutable CacheType cache_;
+				mutable typename CacheType::iterator positionInCache_;
 			};
 
 			/**
