@@ -2,7 +2,7 @@
  * @file searcher.cpp
  * @author exeal
  * @date 2004-2006 (was TextSearcher.cpp)
- * @date 2006-2011
+ * @date 2006-2012
  */
 
 #include <ascension/kernel/searcher.hpp>
@@ -85,12 +85,14 @@ LiteralPattern::~LiteralPattern() /*throw()*/ {
 inline void LiteralPattern::makeShiftTable(Direction direction) /*throw()*/ {
 	if(direction == Direction::FORWARD) {
 		if(lastOccurences_[0] == numeric_limits<ptrdiff_t>::min()) {
-			fill(lastOccurences_, ASCENSION_ENDOF(lastOccurences_), last_ - first_);
+			lastOccurences_.fill(last_ - first_);
+//			fill(lastOccurences_, ASCENSION_ENDOF(lastOccurences_), last_ - first_);
 			for(const int* e = first_; e < last_; ++e)
 				lastOccurences_[*e] = last_ - e - 1;
 		}
 	} else if(firstOccurences_[0] == numeric_limits<ptrdiff_t>::min()) {
-		fill(firstOccurences_, ASCENSION_ENDOF(firstOccurences_), last_ - first_);
+		firstOccurences_.fill(last_ - first_);
+//		fill(firstOccurences_, ASCENSION_ENDOF(firstOccurences_), last_ - first_);
 		for(const int* e = last_ - 1; ; --e) {
 			firstOccurences_[*e] = e - first_;
 			if(e == first_)
@@ -490,7 +492,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 						document.replace(matchedRegion, replacement, &e);
 					} catch(const DocumentInput::ChangeRejectedException&) {
 						throw ReplacementInterruptedException<DocumentInput::ChangeRejectedException>(numberOfReplacements);
-					} catch(const bad_alloc& e) {
+					} catch(const bad_alloc&) {
 						throw ReplacementInterruptedException<bad_alloc>(numberOfReplacements);
 					}
 					i.seek(e);
@@ -565,7 +567,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 						document.replace(matchedRegion, matcher->replaceInplace(replacement));
 					} catch(const DocumentInput::ChangeRejectedException&) {
 						throw ReplacementInterruptedException<DocumentInput::ChangeRejectedException>(numberOfReplacements);
-					} catch(const bad_alloc& e) {
+					} catch(const bad_alloc&) {
 						throw ReplacementInterruptedException<bad_alloc>(numberOfReplacements);
 					}
 					if(!matchedRegion.isEmpty())
