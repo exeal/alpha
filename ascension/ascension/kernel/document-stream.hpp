@@ -7,9 +7,10 @@
 
 #ifndef ASCENSION_STREAM_HPP
 #define ASCENSION_STREAM_HPP
-#include "document.hpp"
-#include <streambuf>	// std.basic_streambuf
+#include <ascension/kernel/document.hpp>
+#include <array>
 #include <iostream>		// std.basic_istream, std.basic_istream, std.basic_iostream
+#include <streambuf>	// std.basic_streambuf
 
 namespace ascension {
 	namespace kernel {
@@ -41,7 +42,7 @@ namespace ascension {
 			const text::Newline newline_;
 			const std::ios_base::openmode mode_;
 			Position current_;
-			char_type buffer_[8192];
+			std::array<char_type, 8192> buffer_;
 		};
 
 		/// Input stream for @c Document.
