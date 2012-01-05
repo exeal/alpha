@@ -2,7 +2,7 @@
  * @file stream.cpp
  * @author exeal
  * @date 2009 separated from document.cpp
- * @date 2010-2011
+ * @date 2010-2012
  */
 
 #include <ascension/kernel/document-stream.hpp>
@@ -26,7 +26,7 @@ DocumentBuffer::DocumentBuffer(Document& document, const Position& initialPositi
 		document_(document), newline_(newline), mode_(streamMode), current_(initialPosition) {
 	if((mode_ & ~(ios_base::in | ios_base::out)) != 0)
 		throw UnknownValueException("streamMode");
-	setp(buffer_, ASCENSION_ENDOF(buffer_) - 1);
+	setp(buffer_.data(), buffer_.data() + buffer_.size()/*tuple_size<decltype(buffer_)>::value*/ - 1);
 }
 
 /// Destructor.
@@ -46,9 +46,9 @@ DocumentBuffer::int_type DocumentBuffer::overflow(int_type c) {
 	char_type* p = pptr();
 	if(!traits_type::eq_int_type(c, traits_type::eof()))
 		*p++ = traits_type::to_char_type(c);
-	setp(buffer_, ASCENSION_ENDOF(buffer_) - 1);
-	if(buffer_ < p)
-		insert(document_, current_, StringPiece(buffer_, p), &current_);
+	setp(buffer_.data(), buffer_.data() + buffer_.size()/*tuple_size<decltype(buffer_)>::value*/ - 1);
+	if(buffer_.data() < p)
+		insert(document_, current_, StringPiece(buffer_.data(), p), &current_);
 	return traits_type::not_eof(c);
 }
 
