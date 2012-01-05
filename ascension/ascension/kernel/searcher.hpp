@@ -14,6 +14,7 @@
 #ifndef ASCENSION_NO_REGEX
 #	include <ascension/corelib/regex.hpp>
 #endif // !ASCENSION_NO_REGEX
+#include <array>
 #include <list>
 #include <stack>
 
@@ -56,8 +57,8 @@ namespace ascension {
 #ifndef ASCENSION_NO_UNICODE_COLLATION
 			const std::auto_ptr<const text::Collator> collator_;
 #endif // !ASCENSION_NO_UNICODE_COLLATION
-			std::ptrdiff_t lastOccurences_[65536];	// for forward search
-			std::ptrdiff_t firstOccurences_[65536];	// for backward search
+			std::array<std::ptrdiff_t, 65536> lastOccurences_;	// for forward search
+			std::array<std::ptrdiff_t, 65536> firstOccurences_;	// for backward search
 			int* first_;	// collation elements of the pattern
 			int* last_;
 		};
