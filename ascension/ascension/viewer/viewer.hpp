@@ -20,8 +20,9 @@
 #include <ascension/viewer/viewer-observers.hpp>
 #include <ascension/viewer/base/scrollable.hpp>
 #include <ascension/win32/com/unknown-impl.hpp>
-#include <set>
 #include <algorithm>
+#include <array>
+#include <set>
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 #	include <shlobj.h>	// IDragSourceHelper, IDropTargetHelper
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
@@ -75,7 +76,8 @@ namespace ascension {
 			struct Point {
 				graphics::font::VisualLine line;
 				graphics::Scalar ipd;	// distance from left/top-edge of content-area
-			} points_[2];
+			};
+			std::array<Point, 2> points_;
 			const TextViewer& viewer_;
 			const Point& beginning() const /*throw()*/ {return points_[(points_[0].line <= points_[1].line) ? 0 : 1];}
 			const Point& end() const /*throw()*/ {return points_[(&beginning() == &points_[0]) ? 1 : 0];}
