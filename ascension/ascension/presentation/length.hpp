@@ -65,8 +65,7 @@ namespace ascension {
 			};
 
 		public:
-//			Length() /*throw()*/;
-			explicit Length(double valueInSpecifiedUnits, Unit unitType = PIXELS, Mode = OTHER);
+			explicit Length(double valueInSpecifiedUnits = 0.0, Unit unitType = PIXELS, Mode = OTHER);
 			bool operator==(const Length& other) const /*throw()*/;
 			bool operator!=(const Length& other) const /*throw()*/;
 			void convertToSpecifiedUnits(Unit unitType,
