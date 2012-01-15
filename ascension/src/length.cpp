@@ -29,7 +29,7 @@ namespace {
  * @param mode
  * @throw NotSupportedError
  */
-Length::Length(double valueInSpecifiedUnits, Unit unitType /* = PIXELS */, Mode mode /* = OTHER */) : mode_(mode) {
+Length::Length(double valueInSpecifiedUnits /* = 0.0 */, Unit unitType /* = PIXELS */, Mode mode /* = OTHER */) : mode_(mode) {
 	newValueSpecifiedUnits(unitType, valueInSpecifiedUnits);
 }
 
