@@ -13,6 +13,7 @@
 #include <ascension/corelib/type-traits.hpp>		// detail.Select
 #include <ascension/graphics/geometry.hpp>			// PhysicalFourSides
 #include <ascension/presentation/inheritable.hpp>	// Inheritable
+#include <array>
 
 namespace ascension {
 
@@ -41,9 +42,20 @@ namespace ascension {
 		class Presentation;
 		ReadingDirection defaultReadingDirection(const Presentation& presentation);
 
+		/**
+		 * @see graphics#PhysicalFourSides
+		 */
 		template<typename T>
-		struct AbstractFourSides {
-			T before, after, start, end;
+		class AbstractFourSides : public std::array<T, 4> {
+		public:
+			reference before() {return (*this)[0];}
+			const_reference before() const {return (*this)[0];}
+			reference after() {return (*this)[1];}
+			const_reference after() const {return (*this)[1];}
+			reference start() {return (*this)[2];}
+			const_reference start() const {return (*this)[2];}
+			reference end() {return (*this)[3];}
+			const_reference end() const {return (*this)[3];}
 		};
 
 		/**
@@ -163,20 +175,20 @@ namespace ascension {
 			const TextOrientation textOrientation(resolveTextOrientation(writingMode));
 			switch(writingMode.blockFlowDirection) {
 				case HORIZONTAL_TB:
-					to.top = from.before;
-					to.bottom = from.after;
-					to.left = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? from.start : from.end;
-					to.right = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? from.end : from.start;
+					to.top() = from.before();
+					to.bottom() = from.after();
+					to.left() = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? from.start() : from.end();
+					to.right() = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? from.end() : from.start();
 					break;
 				case VERTICAL_RL:
 				case VERTICAL_LR:
-					to.left = (writingMode.blockFlowDirection == VERTICAL_LR) ? from.before : from.after;
-					to.right = (writingMode.blockFlowDirection == VERTICAL_RL) ? from.before : from.after;
+					to.left() = (writingMode.blockFlowDirection == VERTICAL_LR) ? from.before() : from.after();
+					to.right() = (writingMode.blockFlowDirection == VERTICAL_RL) ? from.before() : from.after();
 					{
 						bool ttb = textOrientation == SIDEWAYS_LEFT;
 						ttb = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? !ttb : ttb;
-						to.top = ttb ? from.start : from.end;
-						to.bottom = ttb ? from.start : from.end;
+						to.top() = ttb ? from.start() : from.end();
+						to.bottom() = ttb ? from.start() : from.end();
 					}
 		 			break;			
 				default:
