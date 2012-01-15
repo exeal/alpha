@@ -676,9 +676,9 @@ void Caret::updateLocation() {
 	NativeRectangle textArea(viewer.bounds(false));
 	assert(geometry::isNormalized(textArea));
 	geometry::range<geometry::X_COORDINATE>(textArea) = makeRange(
-		geometry::left(textArea) + spaces.left, geometry::right(textArea) - spaces.right - 1);
+		geometry::left(textArea) + spaces.left(), geometry::right(textArea) - spaces.right() - 1);
 	geometry::range<geometry::Y_COORDINATE>(textArea) = makeRange(
-		geometry::top(textArea) + spaces.top, geometry::bottom(textArea) - spaces.bottom);
+		geometry::top(textArea) + spaces.top(), geometry::bottom(textArea) - spaces.bottom());
 
 	const WritingMode writingMode(textViewer().textRenderer().writingMode());
 	if(!geometry::includes(textArea, p)) {

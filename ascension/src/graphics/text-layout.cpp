@@ -2200,9 +2200,9 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 	// TODO: this implementation can't handle vertical text.
 
 	if(isEmpty()) {	// empty line
-		result.start = result.end = 0;
-		result.before = -lineMetrics_[0]->ascent()/* - lineMetrics_[0]->leading()*/;
-		result.after = lineMetrics_[0]->descent();
+		result.start() = result.end() = 0;
+		result.before() = -lineMetrics_[0]->ascent()/* - lineMetrics_[0]->leading()*/;
+		result.after() = lineMetrics_[0]->descent();
 	} else if(ascension::isEmpty(range)) {	// an empty rectangle for an empty range
 		const LineMetrics& line = *lineMetrics_[lineAt(range.beginning())];
 		return geometry::make<NativeRectangle>(
@@ -2212,21 +2212,21 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 		const length_t firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
 
 		// calculate the block-progression-edges ('before' and 'after'; it's so easy)
-		result.before = baseline(firstLine) - lineMetrics_[firstLine]->ascent()/* - lineMetrics_[firstLine]->leading()*/;
-		result.after = baseline(lastLine) + lineMetrics_[lastLine]->descent();
+		result.before() = baseline(firstLine) - lineMetrics_[firstLine]->ascent()/* - lineMetrics_[firstLine]->leading()*/;
+		result.after() = baseline(lastLine) + lineMetrics_[lastLine]->descent();
 
 		// calculate start-edge and end-edge of fully covered lines
 		const bool firstLineIsFullyCovered = includes(range,
 			makeRange(lineOffset(firstLine), lineOffset(firstLine) + lineLength(firstLine)));
 		const bool lastLineIsFullyCovered = includes(range,
 			makeRange(lineOffset(lastLine), lineOffset(lastLine) + lineLength(lastLine)));
-		result.start = numeric_limits<Scalar>::max();
-		result.end = numeric_limits<Scalar>::min();
+		result.start() = numeric_limits<Scalar>::max();
+		result.end() = numeric_limits<Scalar>::min();
 		for(length_t line = firstLine + firstLineIsFullyCovered ? 0 : 1;
 				line < lastLine + lastLineIsFullyCovered ? 1 : 0; ++line) {
 			const Scalar lineStart = lineStartEdge(line);
-			result.start = min(lineStart, result.start);
-			result.end = max(lineStart + measure(line), result.end);
+			result.start() = min(lineStart, result.start());
+			result.end() = max(lineStart + measure(line), result.end());
 		}
 
 		// calculate start and end-edge of partially covered lines
@@ -2236,8 +2236,8 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 		if(!lastLineIsFullyCovered && (partiallyCoveredLines.empty() || partiallyCoveredLines[0] != lastLine))
 			partiallyCoveredLines.push_back(lastLine);
 		if(!partiallyCoveredLines.empty()) {
-			Scalar left = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? result.start : -result.end;
-			Scalar right = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? result.end : -result.start;
+			Scalar left = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? result.start() : -result.end();
+			Scalar right = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? result.end() : -result.start();
 			for(vector<length_t>::const_iterator
 					line(partiallyCoveredLines.begin()), e(partiallyCoveredLines.end()); line != e; ++line) {
 				const length_t lastRun = (*line + 1 < numberOfLines()) ? lineFirstRuns_[*line + 1] : numberOfRuns_;
@@ -2286,14 +2286,14 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 				}
 			}
 
-			result.start = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? left : -right;
-			result.end = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? right : -left;
+			result.start() = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? left : -right;
+			result.end() = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? right : -left;
 		}
 	}
 
 	return geometry::make<NativeRectangle>(
-		geometry::make<NativePoint>(result.start, result.before),
-		geometry::make<NativePoint>(result.end, result.after));
+		geometry::make<NativePoint>(result.start(), result.before()),
+		geometry::make<NativePoint>(result.end(), result.after()));
 }
 
 namespace {
@@ -2402,8 +2402,8 @@ void TextLayout::draw(PaintContext& context,
 		// 2-2. paint border if the property is specified
 		pair<Color, bool> currentColor;
 		const Border::Part* borders[4] = {
-			&(*i)->style()->border.sides.before, &(*i)->style()->border.sides.after,
-			&(*i)->style()->border.sides.start, &(*i)->style()->border.sides.end};
+			&(*i)->style()->border.sides.before(), &(*i)->style()->border.sides.after(),
+			&(*i)->style()->border.sides.start(), &(*i)->style()->border.sides.end()};
 		for(const Border::Part** border = border = borders; border != ASCENSION_ENDOF(borders); ++border) {
 			if(!(*border)->hasVisibleStyle() || (*border)->computedWidth().valueInSpecifiedUnits() <= 0.0)
 				continue;

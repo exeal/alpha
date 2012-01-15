@@ -414,10 +414,10 @@ void Caret::adjustInputMethodCompositionWindow() {
 		COMPOSITIONFORM cf;
 		cf.rcArea = viewer.bounds(false);
 		const PhysicalFourSides<Scalar> margins(viewer.spaceWidths());
-		cf.rcArea.left += margins.left;
-		cf.rcArea.top += margins.top;
-		cf.rcArea.right -= margins.right;
-		cf.rcArea.bottom -= margins.bottom;
+		cf.rcArea.left += margins.left();
+		cf.rcArea.top += margins.top();
+		cf.rcArea.right -= margins.right();
+		cf.rcArea.bottom -= margins.bottom();
 		cf.dwStyle = CFS_POINT;
 		cf.ptCurrentPos = viewer.localPointForCharacter(beginning(), false, font::TextLayout::LEADING);
 		if(cf.ptCurrentPos.y == numeric_limits<Scalar>::max() || cf.ptCurrentPos.y == numeric_limits<Scalar>::min())
