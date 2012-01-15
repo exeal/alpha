@@ -109,6 +109,73 @@ void FontSelector::linkPrimaryFont() /*throw()*/ {
 }
 #endif
 
+
+// TextRenderer.SpacePainter ////////////////////////////////////////////////////////////////////////
+
+class TextRenderer::SpacePainter {
+public:
+	SpacePainter();
+	void paint(PaintContext& context);
+	const PhysicalFourSides<Scalar>& spaces() const;
+	void update(const TextRenderer& textRenderer, const NativeSize& size, const AbstractFourSides<Space>& spaces);
+private:
+	NativeSize canvasSize_;
+	PhysicalFourSides<Scalar> computedValues_;
+};
+
+TextRenderer::SpacePainter::SpacePainter() /*throw()*/ : canvasSize_(geometry::make<NativeSize>(0, 0)) {
+	computedValues_.left() = computedValues_.top() = computedValues_.right() = computedValues_.bottom() = 0;
+}
+
+void TextRenderer::SpacePainter::paint(PaintContext& context) {
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+	const NativeRectangle boundsToPaint(context.boundsToPaint());
+
+	// space-top
+	NativeRectangle r(geometry::make<NativeRectangle>(
+		geometry::topLeft(canvasBounds_), geometry::make<NativeSize>(geometry::dx(canvasBounds_), computedValues_.top)));
+	r = geometry::intersected(r, boundsToPaint);
+	if(!geometry::isEmpty(r))
+		context.fillRectangle(r);
+
+	// space-bottom
+	r = geometry::make<NativeRectangle>(
+		geometry::bottomLeft(canvasBounds_), geometry::make<NativeSize>(geometry::dx(canvasBounds_), -computedValues_.bottom));
+	r = geometry::intersected(r, boundsToPaint);
+	if(!geometry::isEmpty(r))
+		context.fillRectangle(r);
+
+	// space-left
+	r = geometry::make<NativeRectangle>(
+		makeRange(geometry::left(canvasBounds_), geometry::left(canvasBounds_) + computedValues_.left),
+		makeRange(geometry::top(canvasBounds_) + computedValues_.top, geometry::bottom(canvasBounds_) - computedValues_.bottom));
+	r = geometry::intersected(r, boundsToPaint);
+	if(!geometry::isEmpty(r))
+		context.fillRectangle(r);
+
+	// space-right
+	r = geometry::make<NativeRectangle>(
+		makeRange(geometry::right(canvasBounds_), geometry::right(canvasBounds_) - computedValues_.right),
+		makeRange(geometry::top(canvasBounds_) + computedValues_.top, geometry::bottom(canvasBounds_) - computedValues_.bottom));
+	r = geometry::intersected(r, boundsToPaint);
+	if(!geometry::isEmpty(r))
+		context.fillRectangle(r);
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
+}
+
+inline const PhysicalFourSides<Scalar>& TextRenderer::SpacePainter::spaces() const {
+	return computedValues_;
+}
+
+void TextRenderer::SpacePainter::update(const TextRenderer& textRenderer, const NativeSize& size, const AbstractFourSides<Space>& spaces) {
+	canvasSize_ = size;
+	AbstractFourSides<Scalar> spacesInPixels;
+	for(size_t i = 0; i < spaces.size(); ++i)
+		spacesInPixels[i] = static_cast<Scalar>(spaces[i].value(0, 0));
+	mapAbstractToPhysical(textRenderer.writingMode(), spacesInPixels, computedValues_);
+}
+
+
 // TextRenderer ///////////////////////////////////////////////////////////////////////////////////
 
 namespace {
@@ -135,12 +202,15 @@ namespace {
  * @param enableDoubleBuffering Set @c true to use double-buffering for non-flicker drawing
  */
 TextRenderer::TextRenderer(Presentation& presentation,
-		const FontCollection& fontCollection, bool enableDoubleBuffering) : presentation_(presentation),
-		fontCollection_(fontCollection), enablesDoubleBuffering_(enableDoubleBuffering) {
+		const FontCollection& fontCollection, const NativeSize& initialSize)
+		: presentation_(presentation), fontCollection_(fontCollection), spacePainter_(new SpacePainter) {
 //	textWrapping_.measure = 0;
 	layouts_.reset(new LineLayoutVector(presentation.document(),
 		bind1st(mem_fun(&TextRenderer::generateLineLayout), this), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
 	updateDefaultFont();
+	AbstractFourSides<Space> zeroSpaces;
+	zeroSpaces.fill(Length(0));
+	spacePainter_->update(*this, initialSize, zeroSpaces);
 /*	switch(PRIMARYLANGID(getUserDefaultUILanguage())) {
 	case LANG_CHINESE:
 	case LANG_JAPANESE:
@@ -153,8 +223,8 @@ TextRenderer::TextRenderer(Presentation& presentation,
 }
 
 /// Copy-constructor.
-TextRenderer::TextRenderer(const TextRenderer& other) : presentation_(other.presentation_), layouts_(),
-		fontCollection_(other.fontCollection_), enablesDoubleBuffering_(other.enablesDoubleBuffering_), defaultFont_() {
+TextRenderer::TextRenderer(const TextRenderer& other) :
+		presentation_(other.presentation_), layouts_(), fontCollection_(other.fontCollection_), defaultFont_() {
 	layouts_.reset(new LineLayoutVector(other.presentation_.document(),
 		bind1st(mem_fun(&TextRenderer::generateLineLayout), this), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
 	updateDefaultFont();
@@ -176,6 +246,22 @@ TextRenderer::~TextRenderer() /*throw()*/ {
  */
 void TextRenderer::addDefaultFontListener(DefaultFontListener& listener) {
 	defaultFontListeners_.add(listener);
+}
+
+/**
+ * Returns the measure of the 'allocation-rectangle'.
+ * @return The measure of the 'allocation-rectangle' in pixels
+ * @see #contentMeasure
+ */
+Scalar TextRenderer::allocationMeasure() const /*throw()*/ {
+	const bool horizontal = isHorizontal(writingMode().blockFlowDirection);
+	const Scalar spaces = horizontal ?
+		spacePainter_->spaces().left() + spacePainter_->spaces().right()
+		: spacePainter_->spaces().top() + spacePainter_->spaces().bottom();
+	const Scalar borders = 0;
+	const Scalar paddings = 0;
+	return max(layouts().maximumMeasure() + spaces + borders + paddings,
+		static_cast<Scalar>(horizontal ? geometry::dx(size()) : geometry::dy(size())));
 }
 
 /**
@@ -210,6 +296,16 @@ Scalar TextRenderer::baselineDistance(const Range<VisualLine>& lines) const {
 void TextRenderer::buildLineLayoutConstructionParameters(length_t line, TextLayout::ConstructionParameters& parameters) const {
 	presentation_.textLineStyle(line, parameters);
 	parameters.writingMode = writingMode();
+}
+
+/**
+ * Returns the measure of the 'content-rectangle'.
+ * @return The measure of the 'content-rectangle' in pixels
+ * @see #allocationMeasure
+ */
+Scalar TextRenderer::contentMeasure() const /*throw()*/ {
+	return max(layouts().maximumMeasure(),
+		static_cast<Scalar>(isHorizontal(writingMode().blockFlowDirection) ? geometry::dx(size()) : geometry::dy(size())));
 }
 
 /**
@@ -264,7 +360,7 @@ Scalar TextRenderer::lineIndent(length_t line, length_t subline /* = 0 */) const
 	if(alignment == detail::LEFT /*|| ... != NO_JUSTIFICATION*/)	// TODO: recognize the last subline of a justified line.
 		return 0;
 	else {
-		Scalar w = width();
+		Scalar w = contentMeasure();
 		switch(alignment) {
 			case detail::RIGHT:
 				return w - layout.measure(subline);
@@ -289,43 +385,41 @@ Scalar TextRenderer::lineStartEdge(length_t line) const {
 	const bool ltr = layout.writingMode().inlineFlowDirection == LEFT_TO_RIGHT;
 	switch(layout.anchor()) {
 		case TEXT_ANCHOR_START:
-			return ltr ? 0 : width();
+			return ltr ? 0 : contentMeasure();
 		case TEXT_ANCHOR_MIDDLE:
-			return ltr ? (width() - layout.measure(0) / 2) : (width() + layout.measure(0)) / 2;
+			return ltr ? (contentMeasure() - layout.measure(0) / 2) : (contentMeasure() + layout.measure(0)) / 2;
 		case TEXT_ANCHOR_END:
-			return ltr ? width() - layout.measure(0) : layout.measure(0);
+			return ltr ? contentMeasure() - layout.measure(0) : layout.measure(0);
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
 }
 
 /**
- * Removes the default font selector listener.
- * @param listener The listener to be removed
- * @throw std#invalid_argument @a listener is not registered
+ * Paints the specified output device with text layout. The line rendering options provided by
+ * @c #setLineRenderingOptions method is considered.
+ * @param context The graphics context
  */
-void TextRenderer::removeDefaultFontListener(DefaultFontListener& listener) {
-	defaultFontListeners_.remove(listener);
+void TextRenderer::paint(PaintContext& context) const {
 }
 
 /**
- * Renders the specified logical line to the output device.
+ * Paints the specified output device with text layout of the specified line. The line rendering
+ * options provided by @c #setLineRenderingOptions method is considered.
  * @param line The line number
  * @param context The graphics context
- * @param origin The position to draw
- * @param colorOverride 
- * @param endOfLine 
- * @param lineWrappingMark 
+ * @param alignmentPoint The alignment point of the text layout of the line to draw
  */
-void TextRenderer::renderLine(length_t line, PaintContext& context,
-		const NativePoint& origin, const TextPaintOverride* paintOverride /* = 0 */,
-		const InlineObject* endOfLine /* = 0 */, const InlineObject* lineWrappingMark /* = 0 */) const /*throw()*/ {
+void TextRenderer::paint(length_t line, PaintContext& context, const NativePoint& alignmentPoint) const /*throw()*/ {
 //	if(!enablesDoubleBuffering_) {
-		layouts().at(line).draw(context, origin, paintOverride, endOfLine, lineWrappingMark);
+		layouts().at(line).draw(context, alignmentPoint,
+			(lineRenderingOptions_.get() != 0) ? lineRenderingOptions_->textPaintOverride(line) : 0,
+			(lineRenderingOptions_.get() != 0) ? lineRenderingOptions_->endOfLine(line) : 0,
+			(lineRenderingOptions_.get() != 0) ? lineRenderingOptions_->textWrappingMark(line) : 0);
 		return;
 //	}
 
-#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
+#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && ASCENSION_ABANDONED_AT_VERSION_08
 	// TODO: this code uses deprecated terminologies for text coordinates.
 
 	const TextLayout& layout = layouts().at(line);
@@ -367,6 +461,15 @@ void TextRenderer::renderLine(length_t line, PaintContext& context,
 		::BitBlt(context.nativeObject().get(), left, y, right - left, dy, memoryDC_.get(), 0, 0, SRCCOPY);
 	}
 #endif
+}
+
+/**
+ * Removes the default font selector listener.
+ * @param listener The listener to be removed
+ * @throw std#invalid_argument @a listener is not registered
+ */
+void TextRenderer::removeDefaultFontListener(DefaultFontListener& listener) {
+	defaultFontListeners_.remove(listener);
 }
 
 /**
@@ -414,7 +517,7 @@ void TextRenderer::updateDefaultFont() {
 	}
 
 	layouts().invalidate();
-	if(enablesDoubleBuffering_ && memoryBitmap_.get() != 0) {
+	if(/*enablesDoubleBuffering_ &&*/ memoryBitmap_.get() != 0) {
 		BITMAP temp;
 		::GetObjectW(memoryBitmap_.get(), sizeof(HBITMAP), &temp);
 		if(temp.bmHeight != calculateMemoryBitmapSize(defaultFont()->metrics().linePitch()))

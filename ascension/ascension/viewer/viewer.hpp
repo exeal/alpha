@@ -371,17 +371,6 @@ namespace ascension {
 				bool vanished_;
 			} cursorVanisher_;
 
-			class SpacePainter {
-			public:
-				SpacePainter();
-				void paint(graphics::PaintContext& context);
-				const graphics::PhysicalFourSides<graphics::Scalar>& spaces() const;
-				void update(const TextViewer& viewer, const presentation::AbstractFourSides<presentation::Space>& spaces);
-			private:
-				graphics::NativeRectangle viewerBounds_;
-				graphics::PhysicalFourSides<graphics::Scalar> computedValues_;
-			} spacePainter_;
-
 			// enumerations
 		private:
 			// timer identifiers
