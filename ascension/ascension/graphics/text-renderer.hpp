@@ -10,6 +10,7 @@
 #define ASCENSION_RENDERING_HPP
 
 //#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
+#include <ascension/kernel/point.hpp>	// kernel.locations
 #include <ascension/graphics/line-layout-vector.hpp>
 #include <ascension/presentation/presentation.hpp>
 
@@ -44,12 +45,41 @@ namespace ascension {
 				friend class TextRenderer;
 			};
 
+			/**
+			 * Options for line rendering of @c TextRenderer object.
+			 * @see TextRenderer#setLineRenderingOptions
+			 */
+			class LineRenderingOptions {
+			private:
+				/**
+				 * Returns the inline object renders the end of line.
+				 * @param line The line to render
+				 * @return The inline object renders the end of line, or @c null
+				 */
+				virtual const InlineObject* endOfLine(length_t line) const /*throw()*/ = 0;
+				/**
+				 * Returns the object overrides text paint properties for line rendering. For the
+				 * detail semantics of paint override, see the documentation of
+				 * @c TextPaintOverride class.
+				 * @param line The line to render
+				 * @return The object overrides text paint properties for line rendering, or @c null
+				 */
+				virtual const TextPaintOverride* textPaintOverride(length_t line) const /*throw()*/ = 0;
+				/**
+				 * Returns the inline object renders the mark of text wrapping.
+				 * @param line The line to render
+				 * @return The inline object renders the mark of text wrapping, or @c null
+				 */
+				virtual const InlineObject* textWrappingMark(length_t line) const /*throw()*/ = 0;
+				friend class TextRenderer;
+			};
+
 			// documentation is layout.cpp
 			class TextRenderer : public presentation::GlobalTextStyleListener {
 			public:
 				// constructors
 				TextRenderer(presentation::Presentation& presentation,
-					const FontCollection& fontCollection, bool enableDoubleBuffering);
+					const FontCollection& fontCollection, const NativeSize& initialSize);
 				TextRenderer(const TextRenderer& other);
 				virtual ~TextRenderer() /*throw()*/;
 				// layout
@@ -74,15 +104,35 @@ namespace ascension {
 				void addDefaultFontListener(DefaultFontListener& listener);
 				std::tr1::shared_ptr<const Font> defaultFont() const /*throw()*/;
 				void removeDefaultFontListener(DefaultFontListener& listener);
+				// content- or allocation-rectangles
+				Scalar allocationMeasure() const /*throw()*/;
+				Scalar contentMeasure() const /*throw()*/;
+				// viewport
+				kernel::Position characterForPoint(
+					const NativePoint& at, TextLayout::Edge edge, bool abortNoCharacter = false,
+					kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER) const;
+				length_t firstVisibleLineInLogicalNumber() const /*throw()*/;
+				length_t firstVisibleLineInVisualNumber() const /*throw()*/;
+				length_t firstVisibleSublineInLogicalLine() const /*throw()*/;
+				NativePoint localPointForCharacter(
+					const kernel::Position& position, bool fullSearchBpd,
+					graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING) const;
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+				float numberOfVisibleCharactersInLine() const /*throw()*/;
+				float numberOfVisibleLines() const /*throw()*/;
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
+				void resize(const NativeSize& newSize);
+				const NativeSize& size() const /*throw()*/;
+				const PhysicalFourSides<Scalar>& spaceWidths() const /*throw()*/;
 				// text metrics
 				Scalar baselineDistance(const Range<VisualLine>& lines) const;
 				Scalar lineIndent(length_t line, length_t subline = 0) const;
 				Scalar lineStartEdge(length_t line) const;
-				// operation
-				void renderLine(length_t line, PaintContext& context,
-					const NativePoint& origin, const TextPaintOverride* paintOverride = 0,
-					const InlineObject* endOfLine = 0, const InlineObject* lineWrappingMark = 0) const /*throw()*/;
-					
+				// paint
+				void paint(PaintContext& context) const;
+				void paint(length_t line, PaintContext& context, const NativePoint& alignmentPoint) const;
+				void setLineRenderingOptions(const std::tr1::shared_ptr<LineRenderingOptions> options);
+
 				// LayoutInformationProvider
 				const FontCollection& fontCollection() const /*throw()*/;
 				const presentation::Presentation& presentation() const /*throw()*/;
@@ -107,8 +157,10 @@ namespace ascension {
 				Scalar textWrappingMeasureInPixels_;
 				std::auto_ptr<LineLayoutVector> layouts_;
 				const FontCollection& fontCollection_;
-				const bool enablesDoubleBuffering_;
 				std::tr1::shared_ptr<const Font> defaultFont_;
+				std::tr1::shared_ptr<const LineRenderingOptions> lineRenderingOptions_;
+				class SpacePainter;
+				std::auto_ptr<SpacePainter> spacePainter_;
 				detail::Listeners<ComputedWritingModeListener> computedWritingModeListeners_;
 				detail::Listeners<DefaultFontListener> defaultFontListeners_;
 				mutable win32::Handle<HDC> memoryDC_;
