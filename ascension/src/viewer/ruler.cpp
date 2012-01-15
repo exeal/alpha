@@ -174,7 +174,7 @@ void RulerPainter::paint(PaintContext& context) {
 	const NativeRectangle paintBounds(context.boundsToPaint());
 	const TextRenderer& renderer = viewer_.textRenderer();
 	const SnapAlignment location = alignment();
-	Border::Part AbstractFourSides<Border::Part>::*borderPart;
+	AbstractFourSides<Border::Part>::reference (AbstractFourSides<Border::Part>::*borderPart)();
 
 	const NativeRectangle indicatorMarginRectangle(indicatorMarginBounds());
 	const NativeRectangle lineNumbersRectangle(lineNumbersBounds());
@@ -214,9 +214,9 @@ void RulerPainter::paint(PaintContext& context) {
 			configuration().indicatorMargin.paint : Paint(SystemColors::get(SystemColors::THREE_D_FACE)));
 		context.fillRectangle(indicatorMarginRectangle);
 		Border borderStyle;
-		(borderStyle.sides.*borderPart) = configuration().indicatorMargin.border;
-		if((borderStyle.sides.*borderPart).color == Color())
-			(borderStyle.sides.*borderPart).color = SystemColors::get(SystemColors::THREE_D_SHADOW);
+		(borderStyle.sides.*borderPart)() = configuration().indicatorMargin.border;
+		if((borderStyle.sides.*borderPart)().color == Color())
+			(borderStyle.sides.*borderPart)().color = SystemColors::get(SystemColors::THREE_D_SHADOW);
 		detail::paintBorder(context, indicatorMarginRectangle, borderStyle, Color(), viewer_.textRenderer().writingMode());
 	}
 
@@ -239,7 +239,7 @@ void RulerPainter::paint(PaintContext& context) {
 		context.setFillStyle(configuration().lineNumbers.background);
 		context.fillRectangle(lineNumbersRectangle);
 		Border borderStyle;
-		(borderStyle.sides.*borderPart) = configuration().lineNumbers.border;
+		(borderStyle.sides.*borderPart)() = configuration().lineNumbers.border;
 		detail::paintBorder(context, lineNumbersRectangle, borderStyle, foreground.color(), viewer_.textRenderer().writingMode());
 
 		// text
