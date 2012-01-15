@@ -261,21 +261,21 @@ NativeSize DefaultMouseInputStrategy::calculateDnDScrollOffset(const TextViewer&
 	const NativeRectangle clientBounds(viewer.bounds(false));
 	PhysicalFourSides<Scalar> spaces(viewer.spaceWidths());
 	const Font::Metrics& fontMetrics = viewer.textRenderer().defaultFont()->metrics();
-	spaces.left = max<Scalar>(fontMetrics.averageCharacterWidth(), spaces.left);
-	spaces.top = max<Scalar>(fontMetrics.linePitch() / 2, spaces.top);
-	spaces.right = max<Scalar>(fontMetrics.averageCharacterWidth(), spaces.right);
-	spaces.bottom = max<Scalar>(fontMetrics.linePitch() / 2, spaces.bottom);
+	spaces.left() = max<Scalar>(fontMetrics.averageCharacterWidth(), spaces.left());
+	spaces.top() = max<Scalar>(fontMetrics.linePitch() / 2, spaces.top());
+	spaces.right() = max<Scalar>(fontMetrics.averageCharacterWidth(), spaces.right());
+	spaces.bottom() = max<Scalar>(fontMetrics.linePitch() / 2, spaces.bottom());
 
 	// On Win32, oleidl.h defines the value named DD_DEFSCROLLINSET, but...
 
 	geometry::Coordinate<NativeSize>::Type dx = 0, dy = 0;
-	if(includes(makeRange(geometry::top(clientBounds), geometry::top(clientBounds) + spaces.top), geometry::y(p)))
+	if(includes(makeRange(geometry::top(clientBounds), geometry::top(clientBounds) + spaces.top()), geometry::y(p)))
 		dy = -1;
-	else if(geometry::y(p) >= geometry::bottom(clientBounds) - spaces.bottom && geometry::y(p) < geometry::bottom(clientBounds))
+	else if(geometry::y(p) >= geometry::bottom(clientBounds) - spaces.bottom() && geometry::y(p) < geometry::bottom(clientBounds))
 		dy = +1;
-	if(includes(makeRange(geometry::left(clientBounds), geometry::left(clientBounds) + spaces.left), geometry::x(p)))
+	if(includes(makeRange(geometry::left(clientBounds), geometry::left(clientBounds) + spaces.left()), geometry::x(p)))
 		dx = -3;	// viewer_->numberOfVisibleColumns()
-	else if(geometry::x(p) >= geometry::right(clientBounds) - spaces.right && geometry::x(p) < geometry::right(clientBounds))
+	else if(geometry::x(p) >= geometry::right(clientBounds) - spaces.right() && geometry::x(p) < geometry::right(clientBounds))
 		dx = +3;	// viewer_->numberOfVisibleColumns()
 	return geometry::make<NativeSize>(dx, dy);
 }
@@ -404,11 +404,11 @@ void DefaultMouseInputStrategy::extendSelection(const k::Position* to /* = 0 */)
 		}
 		p = geometry::make<NativePoint>(
 				min<Scalar>(
-					max<Scalar>(geometry::x(p), geometry::left(viewport) + spaces.left),
-					geometry::right(viewport) - spaces.right),
+					max<Scalar>(geometry::x(p), geometry::left(viewport) + spaces.left()),
+					geometry::right(viewport) - spaces.right()),
 				min<Scalar>(
-					max<Scalar>(geometry::y(p), geometry::top(viewport) + spaces.top),
-					geometry::bottom(viewport) - spaces.bottom));
+					max<Scalar>(geometry::y(p), geometry::top(viewport) + spaces.top()),
+					geometry::bottom(viewport) - spaces.bottom()));
 		destination = viewer_->characterForLocalPoint(p, TextLayout::TRAILING);
 	} else
 		destination = *to;
@@ -765,14 +765,14 @@ void DefaultMouseInputStrategy::timeElapsed(Timer& timer) {
 		const PhysicalFourSides<Scalar> spaces(viewer_->spaceWidths());
 
 		// no rationale about these scroll amounts
-		if(geometry::y(p) < geometry::top(rc) + spaces.top)
-			viewer_->scroll(0, (geometry::y(p) - (geometry::top(rc) + spaces.top)) / viewer_->textRenderer().defaultFont()->metrics().linePitch() - 1, true);
-		else if(geometry::y(p) >= geometry::bottom(rc) - spaces.bottom)
-			viewer_->scroll(0, (geometry::y(p) - (geometry::bottom(rc) - spaces.bottom)) / viewer_->textRenderer().defaultFont()->metrics().linePitch() + 1, true);
-		else if(geometry::x(p) < geometry::left(rc) + spaces.left)
-			viewer_->scroll((geometry::x(p) - (geometry::left(rc) + spaces.left)) / viewer_->textRenderer().defaultFont()->metrics().averageCharacterWidth() - 1, 0, true);
-		else if(geometry::x(p) >= geometry::right(rc) - spaces.right)
-			viewer_->scroll((geometry::x(p) - (geometry::right(rc) - spaces.right)) / viewer_->textRenderer().defaultFont()->metrics().averageCharacterWidth() + 1, 0, true);
+		if(geometry::y(p) < geometry::top(rc) + spaces.top())
+			viewer_->scroll(0, (geometry::y(p) - (geometry::top(rc) + spaces.top())) / viewer_->textRenderer().defaultFont()->metrics().linePitch() - 1, true);
+		else if(geometry::y(p) >= geometry::bottom(rc) - spaces.bottom())
+			viewer_->scroll(0, (geometry::y(p) - (geometry::bottom(rc) - spaces.bottom())) / viewer_->textRenderer().defaultFont()->metrics().linePitch() + 1, true);
+		else if(geometry::x(p) < geometry::left(rc) + spaces.left())
+			viewer_->scroll((geometry::x(p) - (geometry::left(rc) + spaces.left())) / viewer_->textRenderer().defaultFont()->metrics().averageCharacterWidth() - 1, 0, true);
+		else if(geometry::x(p) >= geometry::right(rc) - spaces.right())
+			viewer_->scroll((geometry::x(p) - (geometry::right(rc) - spaces.right())) / viewer_->textRenderer().defaultFont()->metrics().averageCharacterWidth() + 1, 0, true);
 		extendSelection();
 	} else if(state_ == AUTO_SCROLL_DRAGGING || state_ == AUTO_SCROLL) {
 		timer.stop();
