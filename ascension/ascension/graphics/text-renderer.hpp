@@ -114,7 +114,7 @@ namespace ascension {
 				length_t firstVisibleLineInLogicalNumber() const /*throw()*/;
 				length_t firstVisibleLineInVisualNumber() const /*throw()*/;
 				length_t firstVisibleSublineInLogicalLine() const /*throw()*/;
-				NativePoint localPointForCharacter(
+				NativePoint location(
 					const kernel::Position& position, bool fullSearchBpd,
 					graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING) const;
 				VisualLine mapBpdToLine(Scalar bpd, bool* snapped = 0) const /*throw()*/;
@@ -166,6 +166,35 @@ namespace ascension {
 				detail::Listeners<DefaultFontListener> defaultFontListeners_;
 				mutable win32::Handle<HDC> memoryDC_;
 				mutable win32::Handle<HBITMAP> memoryBitmap_;
+			};
+
+			class BaselineIterator : public detail::IteratorAdapter<
+				BaselineIterator, std::iterator<
+					std::random_access_iterator_tag, Scalar, std::ptrdiff_t, Scalar*, Scalar
+				>
+			> {
+			public:
+				BaselineIterator(const TextRenderer& textRenderer, length_t line, bool trackOutOfViewport);
+				length_t line() const /*throw()*/;
+				const NativePoint& position() const;
+				const TextRenderer& textRenderer() const /*throw()*/;
+				bool tracksOutOfViewport() const /*throw()*/;
+			private:
+				void advance(difference_type n);
+				void initializeWithFirstVisibleLine();
+				void invalidate() /*throw()*/;
+				bool isValid() const /*throw()*/;
+				void move(length_t line);
+				// detail.IteratorAdapter
+				const reference current() const;
+				bool equals(BaselineIterator& other);
+				void next();
+				void previous();
+			private:
+				const TextRenderer* textRenderer_;	// this is not a reference, for operator=
+				bool tracksOutOfViewport_;			// this is not const, for operator=
+				graphics::font::VisualLine line_;
+				std::pair<Scalar, NativePoint> baseline_;
 			};
 
 

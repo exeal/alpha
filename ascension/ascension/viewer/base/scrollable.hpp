@@ -27,15 +27,17 @@ namespace ascension {
 			template<typename Position>
 			class ScrollProperties {
 			public:
+				typedef Position ScrollPosition;
+			public:
 				virtual void command(ScrollCommands::Value ) = 0;
-				virtual Range<Position> range() const = 0;
-				virtual Position pageStep() const = 0;
-				virtual Position position() const = 0;
-				virtual void setRange(const Range<Position>& newRange) = 0;
-				virtual void setPageStep(Position newPageStep) = 0;
-				virtual void setPosition(Position newPosition) = 0;
-				virtual void setSingleStep(Position newSingleStep) = 0;
-				virtual Position singleStep() const = 0;
+				virtual Range<ScrollPosition> range() const = 0;
+				virtual ScrollPosition pageStep() const = 0;
+				virtual ScrollPosition position() const = 0;
+				virtual void setRange(const Range<ScrollPosition>& newRange) = 0;
+				virtual void setPageStep(ScrollPosition newPageStep) = 0;
+				virtual void setPosition(ScrollPosition newPosition) = 0;
+				virtual void setSingleStep(ScrollPosition newSingleStep) = 0;
+				virtual ScrollPosition singleStep() const = 0;
 			};
 
 			class ScrollableWidget : public ScrollProperties<int>, public Widget {
@@ -47,11 +49,11 @@ namespace ascension {
 				};
 			public:
 				ScrollableWidget(Widget* parent = 0, Style styles = WIDGET);
-				virtual ScrollProperties<int>& horizontalScrollBar() const = 0;
+				virtual ScrollProperties<ScrollPosition>& horizontalScrollBar() const = 0;
 				virtual ScrollBarPolicy horizontalScrollBarPolicy() const = 0;
 				virtual void setHorizontalScrollBarPolicy(ScrollBarPolicy policy) = 0;
 				virtual void setVerticalScrollBarPolicy(ScrollBarPolicy policy) = 0;
-				virtual ScrollProperties<int>& verticalScrollBar() const = 0;
+				virtual ScrollProperties<ScrollPosition>& verticalScrollBar() const = 0;
 				virtual ScrollBarPolicy verticalScrollBarPolicy() const = 0;
 			};
 
