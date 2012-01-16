@@ -215,23 +215,23 @@ namespace ascension {
 		template<typename From, typename To>
 		inline AbstractFourSides<To>& mapPhysicalToAbstract(const WritingMode& writingMode,
 				const graphics::PhysicalFourSides<From>& from, AbstractFourSides<To>& to) {
-			const WritingModeBase::TextOrientation textOrientation(resolveTextOrientation(writingMode));
+			const TextOrientation textOrientation(resolveTextOrientation(writingMode));
 			switch(writingMode.blockFlowDirection) {
 				case HORIZONTAL_TB:
-					to.before = from.top;
-					to.after = from.bottom;
-					to.start = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? from.left : from.right;
-					to.end = (writingMode.inlineFlowDirection == RIGHT_TO_LRFT) ? from.left : from.right;
+					to.before() = from.top();
+					to.after() = from.bottom();
+					to.start() = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? from.left() : from.right();
+					to.end() = (writingMode.inlineFlowDirection == RIGHT_TO_LEFT) ? from.left() : from.right();
 					break;
 				case VERTICAL_RL:
 				case VERTICAL_LR:
-					to.before = (writingMode.blockFlowDirection == VERTICAL_LR) ? from.left : from.right;
-					to.after = (writingMode.blockFlowDirection == VERTICAL_RL) ? from.left : from.right;
+					to.before() = (writingMode.blockFlowDirection == VERTICAL_LR) ? from.left() : from.right();
+					to.after() = (writingMode.blockFlowDirection == VERTICAL_RL) ? from.left() : from.right();
 					{
 						bool ttb = textOrientation == SIDEWAYS_LEFT;
 						ttb = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? !ttb : ttb;
-						to.start = ttb ? from.top : from.bottom;
-						to.end = ttb ? from.top : from.bottom;
+						to.start() = ttb ? from.top() : from.bottom();
+						to.end() = ttb ? from.top() : from.bottom();
 					}
 		 			break;			
 				default:
@@ -259,22 +259,22 @@ namespace ascension {
 			const TextOrientation textOrientation(resolveTextOrientation(writingMode));
 			switch(writingMode.blockFlowDirection) {
 				case HORIZONTAL_TB:
-					to.before = geometry::top(from) - geometry::top(viewport);
-					to.after = geometry::bottom(from) - geometry::top(viewport);
-					to.start = geometry::left(from) - geometry::left(viewport);
-					to.end = geometry::right(from) - geometry::left(viewport);
+					to.before() = geometry::top(from) - geometry::top(viewport);
+					to.after() = geometry::bottom(from) - geometry::top(viewport);
+					to.start() = geometry::left(from) - geometry::left(viewport);
+					to.end() = geometry::right(from) - geometry::left(viewport);
 					break;
 				case VERTICAL_RL:
 				case VERTICAL_LR:
-					to.before = (writingMode.blockFlowDirection == VERTICAL_LR) ?
+					to.before() = (writingMode.blockFlowDirection == VERTICAL_LR) ?
 						(geometry::left(from) - geometry::left(viewport)) : (geometry::right(viewport) - geometry::right(from));
-					to.after = (writingMode.blockFlowDirection == VERTICAL_LR) ?
+					to.after() = (writingMode.blockFlowDirection == VERTICAL_LR) ?
 						(geometry::right(from) - geometry::left(viewport)) : (geometry::right(viewport) - geometry::left(from));
 					{
 						bool ttb = textOrientation == SIDEWAYS_LEFT;
 						ttb = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? !ttb : ttb;
-						to.start = ttb ? (geometry::top(from) - geometry::top(viewport)) : (geometry::bottom(viewport) - geometry::bottom(from));
-						to.end = ttb ? (geometry::bottom(from) - geometry::top(viewport)) : (geometry::bottom(viewport) - geometry::top(from));
+						to.start() = ttb ? (geometry::top(from) - geometry::top(viewport)) : (geometry::bottom(viewport) - geometry::bottom(from));
+						to.end() = ttb ? (geometry::bottom(from) - geometry::top(viewport)) : (geometry::bottom(viewport) - geometry::top(from));
 					}
 					break;
 				default:

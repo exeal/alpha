@@ -2,7 +2,7 @@
  * @file viewer.cpp
  * @author exeal
  * @date 2003-2006 was EditView.cpp and EditViewWindowMessages.cpp
- * @date 2006-2011
+ * @date 2006-2012
  */
 
 #include <ascension/rules.hpp>
@@ -336,37 +336,6 @@ k::Position TextViewer::characterForLocalPoint(const NativePoint& p, TextLayout:
 	return result;
 }
 
-/**
- * Returns the content-rectangle, the portion in which the text content is placed.
- * @see #bounds, #spaceWidths
- */
-NativeRectangle TextViewer::contentRectangle() const /*throw()*/ {
-	const NativeRectangle window(bounds(false));
-	const PhysicalFourSides<Scalar>& spaces = spaceWidths();
-	PhysicalFourSides<Scalar> result = {
-		geometry::left(window) + spaces.left, geometry::top(window) + spaces.top,
-		geometry::right(window) + spaces.right, geometry::bottom(window) + spaces.bottom};
-	switch(rulerPainter_->alignment()) {
-		case detail::RulerPainter::LEFT:
-			result.left += rulerPainter_->width();
-			break;
-		case detail::RulerPainter::TOP:
-			result.top += rulerPainter_->width();
-			break;
-		case detail::RulerPainter::RIGHT:
-			result.right -= rulerPainter_->width();
-			break;
-		case detail::RulerPainter::BOTTOM:
-			result.bottom -= rulerPainter_->width();
-			break;
-		default:
-			ASCENSION_ASSERT_NOT_REACHED();
-	}
-	return geometry::make<NativeRectangle>(
-		geometry::make<NativePoint>(result.left, result.top),
-		geometry::make<NativeSize>(result.right - result.left, result.bottom - result.top));
-}
-
 /// @see DefaultFontListener#defaultFontChanged
 void TextViewer::defaultFontChanged() /*throw()*/ {
 	rulerPainter_->update();
@@ -608,13 +577,6 @@ TextViewer::HitTestResult TextViewer::hitTest(const NativePoint& p) const {
 		return INDICATOR_MARGIN;
 	else if(rc.lineNumbers.visible && geometry::includes(rulerPainter_->lineNumbersBounds(), p))
 		return LINE_NUMBERS;
-
-	const PhysicalFourSides<Scalar>& spaces = spaceWidths();
-	if(geometry::x(p) < geometry::left(localBounds) + spaces.left
-			|| geometry::x(p) >= geometry::right(localBounds) - spaces.right
-			|| geometry::y(p) < geometry::top(localBounds) + spaces.top
-			|| geometry::y(p) >= geometry::bottom(localBounds) + spaces.bottom)
-		return SIDE_SPACE;
 	else
 		return CONTENT_AREA;
 }
@@ -627,10 +589,7 @@ TextViewer::HitTestResult TextViewer::hitTest(const NativePoint& p) const {
  */
 Scalar TextViewer::inlineProgressionOffsetInViewport() const {
 	const bool horizontal = isHorizontal(textRenderer().writingMode().blockFlowDirection);
-
-	// space width
-	const PhysicalFourSides<Scalar>& spaces = spaceWidths();
-	Scalar offset = horizontal ? spaces.left : spaces.top;
+	Scalar offset = 0;
 
 	// scroll position
 	offset -= (horizontal ? scrollInfo_.x() : scrollInfo_.y())
@@ -974,6 +933,28 @@ Scalar TextViewer::mapLineToViewportBpd(length_t line, bool fullSearch) const {
 	}
 }
 #endif
+
+/**
+ * Converts the distance from the before-edge of the local bounds into the logical line and visual
+ * subline offset. The results are snapped to the first/last visible line in the local bounds (this
+ * includes partially visible line) if the given distance addresses outside of the view.
+ * @param bpd The distance from the before-edge of the local bounds in pixels
+ * @param[out] snapped @c true if there was not a line at @a bpd. Optional
+ * @return The logical and visual line numbers
+ * @see #BaselineIterator, TextRenderer#mapBpdToLine
+ */
+VisualLine TextViewer::mapLocalBpdToLine(Scalar bpd, bool* snapped /* = 0 */) const /*throw()*/ {
+	const NativeRectangle textArea(textAllocationRectangle());
+	PhysicalFourSides<Scalar> physicalBounds;
+	physicalBounds.top() = geometry::top(textArea);
+	physicalBounds.right() = geometry::right(textArea);
+	physicalBounds.bottom() = geometry::bottom(textArea);
+	physicalBounds.left() = geometry::left(textArea);
+	AbstractFourSides<Scalar> abstractBounds;
+	mapPhysicalToAbstract(textRenderer().writingMode(), physicalBounds, abstractBounds);
+	return textRenderer().mapBpdToLine(bpd -= abstractBounds.before(), snapped);
+}
+
 /**
  * Converts the distance from the before-edge of the viewport into the logical line and visual
  * subline offset.
@@ -987,66 +968,14 @@ VisualLine TextViewer::mapLocalPointToLine(const graphics::NativePoint& p, bool*
 	const NativeRectangle localBounds(bounds(false));
 	switch(textRenderer().writingMode().blockFlowDirection) {
 		case HORIZONTAL_TB:
-			return mapViewportBpdToLine(geometry::y(p) - localBounds.top, snapped);
+			return mapLocalBpdToLine(geometry::y(p) - localBounds.top, snapped);
 		case VERTICAL_RL:
-			return mapViewportBpdToLine(localBounds.right - geometry::x(p), snapped);
+			return mapLocalBpdToLine(localBounds.right - geometry::x(p), snapped);
 		case VERTICAL_LR:
-			return mapViewportBpdToLine(geometry::x(p) - localBounds.left, snapped);
+			return mapLocalBpdToLine(geometry::x(p) - localBounds.left, snapped);
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
-}
-
-/**
- * Converts the distance from the before-edge of the viewport into the logical line and visual
- * subline offset. The results are snapped to the first/last visible line in the viewport (this
- * includes partially visible line) if the given distance addresses outside of the viewport.
- * @param bpd The distance from the before-edge of the viewport in pixels
- * @param[out] snapped @c true if there was not a line at @a bpd. Optional
- * @return The logical and visual line numbers
- * @see #BaselineIterator, TextRenderer#offsetVisualLine
- */
-VisualLine TextViewer::mapViewportBpdToLine(Scalar bpd, bool* snapped /* = 0 */) const /*throw()*/ {
-	const WritingMode writingMode(textRenderer().writingMode());
-	const PhysicalFourSides<Scalar>& physicalSpaces = spaceWidths();
-	AbstractFourSides<Scalar> abstractSpaces;
-	mapPhysicalToAbstract(writingMode, physicalSpaces, abstractSpaces);
-	const Scalar before = abstractSpaces.before;
-	const Scalar after = (isHorizontal(writingMode.blockFlowDirection) ?
-		geometry::dy(bounds(false)) : geometry::dx(bounds(false))) - abstractSpaces.after;
-
-	VisualLine result;
-	bool outside;	// for 'snapped'
-	firstVisibleLine(&result, 0);
-	if(bpd <= before)
-		outside = bpd != before;
-	else {
-		const bool beyondAfter = bpd >= after;
-		if(beyondAfter)
-			bpd = after;
-		Scalar lineBefore = before;
-		const TextLayout* layout = &textRenderer().layouts()[result.line];
-		while(result.subline > 0)	// back to the first subline
-			lineBefore -= layout->lineMetrics(--result.subline).height();
-		while(true) {
-			assert(bpd >= lineBefore);
-			Scalar lineAfter = lineBefore;
-			for(length_t sl = 0; sl < layout->numberOfLines(); ++sl)
-				lineAfter += layout->lineMetrics(sl).height();
-			if(bpd < lineAfter) {
-				result.subline = layout->locateLine(bpd - lineBefore, outside);
-				if(!outside)
-					break;	// bpd is this line
-				assert(result.subline == layout->numberOfLines() - 1);
-			}
-			layout = &textRenderer().layouts()[++result.line];
-			lineBefore = lineAfter;
-		}
-		outside = beyondAfter;
-	}
-	if(snapped != 0)
-		*snapped = outside;
-	return result;
 }
 
 /// @see CaretStateListener#matchBracketsChanged
@@ -1118,33 +1047,6 @@ void TextViewer::mouseWheelChanged(const MouseWheelInput& input) {
 		mouseInputStrategy_->mouseWheelRotated(input);
 }
 
-/**
- * Returns the number of the drawable columns in the window.
- * @return The number of columns
- */
-length_t TextViewer::numberOfVisibleColumns() const /*throw()*/ {
-	const bool horizontalBlockFlow = presentation::isHorizontal(textRenderer().writingMode().blockFlowDirection);
-	graphics::Scalar ipd(horizontalBlockFlow ? graphics::geometry::dx(bounds(false)) : graphics::geometry::dy(bounds(false)));
-	if(ipd == 0)
-		return 0;
-	ipd -= horizontalBlockFlow ? (spaceWidths().left + spaceWidths().right) : (spaceWidths().top + spaceWidths().bottom);
-	ipd -= rulerPainter_->width();
-	return ipd /= renderer_->defaultFont()->metrics().averageCharacterWidth();
-}
-
-/**
- * Returns the number of the drawable lines in the window.
- * @return The number of lines
- */
-length_t TextViewer::numberOfVisibleLines() const /*throw()*/ {
-	const bool horizontalBlockFlow = presentation::isHorizontal(textRenderer().writingMode().blockFlowDirection);
-	graphics::Scalar bpd(horizontalBlockFlow ? graphics::geometry::dy(bounds(false)) : graphics::geometry::dx(bounds(false)));
-	if(bpd == 0)
-		return 0;
-	bpd -= horizontalBlockFlow ? (spaceWidths().top + spaceWidths().bottom) : (spaceWidths().left + spaceWidths().right);
-	return bpd /= renderer_->defaultFont()->metrics().linePitch();
-}
-
 /// @see CaretStateListener#overtypeModeChanged
 void TextViewer::overtypeModeChanged(const Caret&) {
 }
@@ -1158,9 +1060,7 @@ void TextViewer::paint(PaintContext& context) {
 		return;
 
 	const k::Document& doc = document();
-	const NativeRectangle clientBounds(bounds(false));
-
-//	Timer tm(L"onPaint");
+//	Timer tm(L"TextViewer.paint");
 
 	const length_t lines = doc.numberOfLines();
 	const int linePitch = renderer_->defaultFont()->metrics().linePitch();
@@ -1168,59 +1068,8 @@ void TextViewer::paint(PaintContext& context) {
 	// paint the ruler
 	rulerPainter_->paint(context);
 
-	// draw horizontal margins
-	Paint marginPaint;
-	{
-		if(tr1::shared_ptr<const TextLineStyle> lineStyle = presentation().globalTextStyle().defaultLineStyle) {
-			if(lineStyle->defaultRunStyle.get() != 0)
-				marginPaint = lineStyle->defaultRunStyle->background;
-		}
-		if(marginPaint == Paint())
-			marginPaint = Paint(SystemColors::get(SystemColors::WINDOW));
-	}
-	const PhysicalFourSides<Scalar>& spaces = spaceWidths();
-	// TODO: This code can't handle vertical writing mode correctly.
-/*	if(margins.left > 0) {
-		const int vrWidth = utils::isRulerLeftAligned(*this) ? rulerPainter_->width() : 0;
-		context.setFillStyle(Paint(marginColor));
-		context.fillRectangle(
-			geometry::make<NativeRectangle>(
-				geometry::make<NativePoint>(geometry::left(clientBounds) + vrWidth, geometry::top(scheduledBounds)),
-				geometry::make<NativeSize>(margins.left - vrWidth, geometry::dy(scheduledBounds))));
-	}
-	if(margins.right > 0) {
-		const int vrWidth = !utils::isRulerLeftAligned(*this) ? rulerPainter_->width() : 0;
-		context.setFillStyle(Paint(marginColor));
-		context.fillRectangle(
-			geometry::make<NativeRectangle>(
-				geometry::make<NativePoint>(geometry::right(clientBounds) - margins.right, geometry::top(scheduledBounds)),
-				geometry::make<NativeSize>(margins.right - vrWidth, geometry::dy(scheduledBounds))));
-	}
-*/
-	// paint lines
-	NativeRectangle lineBounds(clientBounds);
-	assert(geometry::isNormalized(lineBounds));
-	geometry::range<geometry::X_COORDINATE>(lineBounds) = makeRange(
-		geometry::left(lineBounds) + spaces.left, geometry::right(lineBounds) - spaces.right);
-	geometry::range<geometry::Y_COORDINATE>(lineBounds) = makeRange(
-		geometry::top(lineBounds) + spaces.top, geometry::bottom(lineBounds) - spaces.bottom);
-	if(!geometry::isNormalized(lineBounds))
-		geometry::resize(lineBounds, geometry::make<NativeSize>(0, 0));
-	length_t line, subline;
-	mapViewportBpdToLine(mapPhysicalToAbstract(textRenderer().writingMode(), bounds(false), scheduledBounds, temp).before), &line, &subline);
-	Scalar y = BaselineIterator(*this, line, true).position();
-	if(line < lines) {
-		while(y < geometry::bottom(scheduledBounds) && line < lines) {
-			// paint a logical line
-			renderer_->renderLine(line, context, geometry::make<NativePoint>(getDisplayXOffset(line), y), &selectionAndMatchHighlighter, &eol, &lwm);
-			y += linePitch * static_cast<Scalar>(renderer_->layouts().numberOfSublinesOfLine(line++));
-			subline = 0;
-		}
-	}
-
-	// paint 'margin-after'
-	context.setFillStyle(marginPaint);
-	spacePainter_.paint(context);
+	// paint the text area
+	textRenderer().paint(context);
 }
 
 /**
@@ -1645,6 +1494,38 @@ HRESULT TextViewer::startTextServices() {
 	...
 }
 #endif // !ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
+
+/**
+ * Returns the allocation-rectangle of the text editing area, in local-coordinates.
+ * @see #bounds
+ */
+NativeRectangle TextViewer::textAllocationRectangle() const /*throw()*/ {
+	const NativeRectangle window(bounds(false));
+	PhysicalFourSides<Scalar> result;
+	result.left() = geometry::left(window);
+	result.top() = geometry::top(window);
+	result.right() = geometry::right(window);
+	result.bottom() = geometry::bottom(window);
+	switch(rulerPainter_->alignment()) {
+		case detail::RulerPainter::LEFT:
+			result.left() += rulerPainter_->width();
+			break;
+		case detail::RulerPainter::TOP:
+			result.top() += rulerPainter_->width();
+			break;
+		case detail::RulerPainter::RIGHT:
+			result.right() -= rulerPainter_->width();
+			break;
+		case detail::RulerPainter::BOTTOM:
+			result.bottom() -= rulerPainter_->width();
+			break;
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+	return geometry::make<NativeRectangle>(
+		geometry::make<NativePoint>(result.left(), result.top()),
+		geometry::make<NativeSize>(result.right() - result.left(), result.bottom() - result.top()));
+}
 
 /**
  * Revokes the frozen state of the viewer.

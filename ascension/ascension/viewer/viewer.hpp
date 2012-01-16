@@ -3,7 +3,7 @@
  * This header defines several visual presentation classes.
  * @author exeal
  * @date 2003-2006 (was EditView.h)
- * @date 2006-2011
+ * @date 2006-2012
  */
 
 #ifndef ASCENSION_VIEWER_HPP
@@ -102,7 +102,6 @@ namespace ascension {
 			enum HitTestResult {
 				INDICATOR_MARGIN,	///< The point is on the indicator margin.
 				LINE_NUMBERS,		///< The point is on the line numbers area.
-				SIDE_SPACE,			///< The point is on the either four side spaces.
 				CONTENT_AREA,		///< The point is on the text content area.
 				OUT_OF_VIEWPORT		///< The point is outside of the viewport.
 			};
@@ -254,12 +253,9 @@ namespace ascension {
 			graphics::NativePoint localPointForCharacter(const kernel::Position& position,
 				bool fullSearchBpd, graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING) const;
 			// viewport
-			graphics::NativeRectangle contentRectangle() const /*throw()*/;
 			void firstVisibleLine(graphics::font::VisualLine* line, length_t* viewportOffset) const /*throw()*/;
 			HitTestResult hitTest(const graphics::NativePoint& pt) const;
-			length_t numberOfVisibleLines() const /*throw()*/;
-			length_t numberOfVisibleColumns() const /*throw()*/;
-			const graphics::PhysicalFourSides<graphics::Scalar>& spaceWidths() const /*throw()*/;
+			graphics::NativeRectangle textAllocationRectangle() const /*throw()*/;
 
 		protected:
 			virtual void doBeep() /*throw()*/;
@@ -274,7 +270,7 @@ namespace ascension {
 			graphics::font::VisualLine mapLocalPointToLine(
 				const graphics::NativePoint& p, bool* snapped = 0) const /*throw()*/;
 			graphics::Scalar mapViewportIpdToLineLayout(length_t line, graphics::Scalar ipd) const;
-			graphics::font::VisualLine mapViewportBpdToLine(
+			graphics::font::VisualLine mapLocalBpdToLine(
 				graphics::Scalar bpd, bool* snapped = 0) const /*throw()*/;
 			void repaintRuler();
 			void updateScrollBars();

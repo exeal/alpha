@@ -2,7 +2,7 @@
  * @file text-renderer.cpp
  * @author exeal
  * @date 2003-2006 (was LineLayout.cpp)
- * @date 2006-2011
+ * @date 2006-2012
  * @date 2010-11-20 separated from ascension/layout.cpp
  * @date 2011-11-12 renamed from rendering.cpp
  */
@@ -394,6 +394,90 @@ Scalar TextRenderer::lineStartEdge(length_t line) const {
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
 }
+
+/**
+ * Converts the distance from the 'before-edge' of the 'allocation-rectangle' into the logical line
+ * and visual subline offset. The results are snapped to the first/last visible line in the
+ * viewport (this includes partially visible line) if the given distance addresses outside of the
+ * viewport.
+ * @param bpd The distance from the 'before-edge' of the 'allocation-rectangle' in pixels
+ * @param[out] snapped @c true if there was not a line at @a bpd. Optional
+ * @return The logical and visual line numbers
+ * @see #BaselineIterator, TextViewer#mapLocalBpdToLine
+ */
+VisualLine TextRenderer::mapBpdToLine(Scalar bpd, bool* snapped /* = 0 */) const /*throw()*/ {
+	const WritingMode writingMode(writingMode());
+	const PhysicalFourSides<Scalar>& physicalSpaces = spaceWidths();
+	AbstractFourSides<Scalar> abstractSpaces;
+	mapPhysicalToAbstract(writingMode, physicalSpaces, abstractSpaces);
+	const Scalar spaceBefore = abstractSpaces.before();
+	const Scalar spaceAfter = abstractSpaces.after();
+	const Scalar borderBefore = 0, borderAfter = 0, paddingBefore = 0, paddingAfter = 0;
+	const Scalar before = spaceBefore + borderBefore + paddingBefore;
+	const Scalar after = (isHorizontal(writingMode.blockFlowDirection) ?
+		geometry::dy(size()) : geometry::dx(size())) - spaceAfter - borderAfter - paddingBefore;
+
+	VisualLine result(firstVisibleLineInLogicalNumber(), firstVisibleSublineInLogicalLine());
+	bool outside;	// for 'snapped'
+	if(bpd <= before)
+		outside = bpd != before;
+	else {
+		const bool beyondAfter = bpd >= after;
+		if(beyondAfter)
+			bpd = after;
+		Scalar lineBefore = before;
+		const TextLayout* layout = &layouts()[result.line];
+		while(result.subline > 0)	// back to the first subline
+			lineBefore -= layout->lineMetrics(--result.subline).height();
+		while(true) {
+			assert(bpd >= lineBefore);
+			Scalar lineAfter = lineBefore;
+			for(length_t sl = 0; sl < layout->numberOfLines(); ++sl)
+				lineAfter += layout->lineMetrics(sl).height();
+			if(bpd < lineAfter) {
+				result.subline = layout->locateLine(bpd - lineBefore, outside);
+				if(!outside)
+					break;	// bpd is this line
+				assert(result.subline == layout->numberOfLines() - 1);
+			}
+			layout = &layouts()[++result.line];
+			lineBefore = lineAfter;
+		}
+		outside = beyondAfter;
+	}
+	if(snapped != 0)
+		*snapped = outside;
+	return result;
+}
+
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+/**
+ * Returns the number of the drawable columns in the window.
+ * @return The number of columns
+ */
+float TextRenderer::numberOfVisibleCharactersInLine() const /*throw()*/ {
+	const bool horizontalBlockFlow = isHorizontal(writingMode().blockFlowDirection);
+	Scalar ipd(horizontalBlockFlow ? geometry::dx(size()) : geometry::dy(size()));
+	if(ipd == 0)
+		return 0;
+//	ipd -= horizontalBlockFlow ? (spaceWidths().left + spaceWidths().right) : (spaceWidths().top + spaceWidths().bottom);
+//	ipd -= rulerPainter_->width();
+	return ipd /= defaultFont()->metrics().averageCharacterWidth();
+}
+
+/**
+ * Returns the number of the drawable lines in the window.
+ * @return The number of lines
+ */
+float TextRenderer::numberOfVisibleLines() const /*throw()*/ {
+	const bool horizontalBlockFlow = isHorizontal(writingMode().blockFlowDirection);
+	Scalar bpd(horizontalBlockFlow ? geometry::dy(size()) : geometry::dx(size()));
+	if(bpd == 0)
+		return 0;
+//	bpd -= horizontalBlockFlow ? (spaceWidths().top + spaceWidths().bottom) : (spaceWidths().left + spaceWidths().right);
+	return bpd /= defaultFont()->metrics().linePitch();
+}
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 /**
  * Paints the specified output device with text layout. The line rendering options provided by
