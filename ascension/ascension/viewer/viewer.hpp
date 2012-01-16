@@ -125,45 +125,12 @@ namespace ascension {
 				graphics::Color restrictionBackground;
 				/// The reading direction of UI.
 				presentation::ReadingDirection readingDirection;
-				/**
-				 * Distances between the window edges and text area. Start is 5 pixels, before is 1
-				 * pixel, and the others are 0 in default.
-				 */
-				presentation::AbstractFourSides<presentation::Length> spaces;
 				/// Set @c true to vanish the cursor when the user types. Default value depends on system setting.
 				bool vanishesCursor;
 				/// Set @c true to use also Rich Text Format for clipboard operations. Default value is @c false.
 				bool usesRichTextClipboardFormat;
 
 				Configuration() /*throw()*/;
-			};
-
-			class BaselineIterator : public detail::IteratorAdapter<
-				BaselineIterator, std::iterator<
-					std::random_access_iterator_tag, graphics::Scalar, std::ptrdiff_t, graphics::Scalar*, graphics::Scalar
-				>
-			> {
-			public:
-				BaselineIterator(const TextViewer& viewer, length_t line, bool trackOutOfViewport);
-				length_t line() const /*throw()*/;
-				const graphics::NativePoint& position() const;
-				bool tracksOutOfViewport() const /*throw()*/;
-			private:
-				void advance(difference_type n);
-				void initializeWithFirstVisibleLine();
-				void invalidate() /*throw()*/;
-				bool isValid() const /*throw()*/;
-				void move(length_t line);
-				// detail.IteratorAdapter
-				const reference current() const;
-				bool equals(BaselineIterator& other);
-				void next();
-				void previous();
-			private:
-				const TextViewer& viewer_;
-				const bool tracksOutOfViewport_;
-				graphics::font::VisualLine line_;
-				std::pair<graphics::Scalar, graphics::NativePoint> baseline_;
 			};
 
 			/// Implementation of @c graphics#font#TextRenderer for @c TextViewer.
@@ -471,9 +438,9 @@ namespace ascension {
 			// scroll information
 			struct ScrollInfo {
 				struct {
-					int position;			// SCROLLINFO.nPos
-					int maximum;			// SCROLLINFO.nMax
-					unsigned int pageSize;	// SCROLLINFO.nPage
+					ScrollPosition position;
+					ScrollPosition maximum;
+					ScrollPosition pageSize;
 //					unsigned long rate;		// 最小スクロール量が何文字 (何行) に相当するか (普通は 1)
 				} horizontal, vertical;
 				graphics::font::VisualLine firstVisibleLine;

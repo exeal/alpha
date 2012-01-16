@@ -30,8 +30,31 @@ bool DIAGNOSE_INHERENT_DRAWING = false;	// 余計な描画を行っていない�
 //#define TRACE_DRAWING_STRING	// テキスト (代替グリフ以外) のレンダリングをトレース
 #endif // _DEBUG
 
+namespace {
+	inline Scalar mapLocalBpdToTextArea(const TextViewer& viewer, Scalar bpd) {
+		const NativeRectangle textArea(viewer.textAllocationRectangle());
+		AbstractFourSides<Scalar> abstractBounds;
+		mapPhysicalToAbstract(viewer.textRenderer().writingMode(), textArea, textArea, abstractBounds);
+		return bpd -= abstractBounds.before();
+	}
+	inline Scalar mapTextAreaBpdToLocal(const TextViewer& viewer, Scalar bpd) {
+		const NativeRectangle textArea(viewer.textAllocationRectangle());
+		AbstractFourSides<Scalar> abstractBounds;
+		mapPhysicalToAbstract(viewer.textRenderer().writingMode(), textArea, textArea, abstractBounds);
+		return bpd += abstractBounds.before();
+	}
+	inline NativePoint mapLocalToTextArea(const TextViewer& viewer, const NativePoint& p) {
+		const NativeRectangle textArea(viewer.textAllocationRectangle());
+		return geometry::translate(p, geometry::make<NativeSize>(-geometry::left(textArea), -geometry::top(textArea)));
+	}
+	inline NativePoint mapTextAreaToLocal(const TextViewer& viewer, const NativePoint& p) {
+		const NativeRectangle textArea(viewer.textAllocationRectangle());
+		return geometry::translate(p, geometry::make<NativeSize>(+geometry::left(textArea), +geometry::top(textArea)));
+	}
+}
 
-// TextViewer ///////////////////////////////////////////////////////////////
+
+// TextViewer /////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * @class ascension::viewers::TextViewer
@@ -274,16 +297,16 @@ k::Position TextViewer::characterForLocalPoint(const NativePoint& p, TextLayout:
 	if(abortNoCharacter && outside)
 		return k::Position();
 	const TextLayout& layout = renderer_->layouts()[result.line];
-	const BaselineIterator baseline(*this, result.line, true);
+	const BaselineIterator baseline(textRenderer(), result.line, true);
 
 	// determine the column
 	const bool horizontal = isHorizontal(layout.writingMode().blockFlowDirection);
 	NativePoint lineLocalPoint(horizontal ?
 		geometry::make<NativePoint>(
 			mapViewportIpdToLineLayout(result.line, geometry::x(p)),
-			geometry::y(p) + geometry::y(baseline.position()))
+			geometry::y(p) + geometry::y(mapTextAreaToLocal(*this, baseline.position())))
 		: geometry::make<NativePoint>(
-			geometry::x(p) + geometry::x(baseline.position()),
+			geometry::x(p) + geometry::x(mapTextAreaToLocal(*this, baseline.position())),
 			mapViewportIpdToLineLayout(result.line, geometry::y(p))));
 	if(edge == TextLayout::LEADING)
 		result.column = layout.offset(lineLocalPoint, &outside).first;
@@ -834,30 +857,7 @@ void TextViewer::keyReleased(const KeyInput& input) {
 NativePoint TextViewer::localPointForCharacter(const k::Position& position,
 		bool fullSearchBpd, TextLayout::Edge edge /* = TextLayout::LEADING */) const {
 //	checkInitialization();
-
-	// get alignment-point
-	const BaselineIterator baseline(*this, position.line, fullSearchBpd);
-	NativePoint p(baseline.position());
-	const bool horizontal = isHorizontal(textRenderer().writingMode().blockFlowDirection);
-
-	// apply offset in line layout
-	const NativePoint offset(renderer_->layouts().at(position.line).location(position.column, edge));
-	if(fullSearchBpd || horizontal || (*baseline != numeric_limits<Scalar>::max() && *baseline != numeric_limits<Scalar>::min())) {
-//		assert(geometry::x(p) != numeric_limits<Scalar>::max() && geometry::x(p) != numeric_limits<Scalar>::min());
-		geometry::x(p) += geometry::x(offset);
-	}
-	if(fullSearchBpd || !horizontal || (*baseline != numeric_limits<Scalar>::max() && *baseline != numeric_limits<Scalar>::min())) {
-//		assert(geometry::y(p) != numeric_limits<Scalar>::max() && geometry::y(p) != numeric_limits<Scalar>::min()));
-		geometry::y(p) += geometry::y(offset);
-	}
-
-	// apply viewport offset in inline-progression-direction
-	if(horizontal)
-		geometry::x(p) = mapLineLayoutIpdToViewport(position.line, geometry::x(p));
-	else
-		geometry::y(p) = mapLineLayoutIpdToViewport(position.line, geometry::y(p));
-
-	return p;
+	return mapTextAreaToLocal(*this, textRenderer().location(position, fullSearchBpd, edge));
 }
 
 /**
@@ -944,15 +944,7 @@ Scalar TextViewer::mapLineToViewportBpd(length_t line, bool fullSearch) const {
  * @see #BaselineIterator, TextRenderer#mapBpdToLine
  */
 VisualLine TextViewer::mapLocalBpdToLine(Scalar bpd, bool* snapped /* = 0 */) const /*throw()*/ {
-	const NativeRectangle textArea(textAllocationRectangle());
-	PhysicalFourSides<Scalar> physicalBounds;
-	physicalBounds.top() = geometry::top(textArea);
-	physicalBounds.right() = geometry::right(textArea);
-	physicalBounds.bottom() = geometry::bottom(textArea);
-	physicalBounds.left() = geometry::left(textArea);
-	AbstractFourSides<Scalar> abstractBounds;
-	mapPhysicalToAbstract(textRenderer().writingMode(), physicalBounds, abstractBounds);
-	return textRenderer().mapBpdToLine(bpd -= abstractBounds.before(), snapped);
+	return textRenderer().mapBpdToLine(mapLocalBpdToTextArea(*this, bpd), snapped);
 }
 
 /**
@@ -1059,11 +1051,7 @@ void TextViewer::paint(PaintContext& context) {
 	if(geometry::isEmpty(scheduledBounds))	// skip if the region to paint is empty
 		return;
 
-	const k::Document& doc = document();
 //	Timer tm(L"TextViewer.paint");
-
-	const length_t lines = doc.numberOfLines();
-	const int linePitch = renderer_->defaultFont()->metrics().linePitch();
 
 	// paint the ruler
 	rulerPainter_->paint(context);
@@ -1117,12 +1105,14 @@ void TextViewer::redrawLines(const Range<length_t>& lines) {
 	mapPhysicalToAbstract(writingMode, viewport, viewport, abstractBounds);
 
 	// calculate before and after edges of a rectangle to redraw
-	BaselineIterator baseline(*this, lines.beginning(), false);
+	BaselineIterator baseline(textRenderer(), lines.beginning(), false);
 	if(*baseline != numeric_limits<Scalar>::min())
-		abstractBounds.before = *baseline - textRenderer().layouts().at(lines.beginning()).lineMetrics(0).ascent();
+		abstractBounds.before() = mapTextAreaBpdToLocal(*this, *baseline)
+			- textRenderer().layouts().at(lines.beginning()).lineMetrics(0).ascent();
 	baseline += length(lines);
 	if(*baseline != numeric_limits<Scalar>::max())
-		abstractBounds.after = *baseline + textRenderer().layouts().at(baseline.line()).extent().end();
+		abstractBounds.after() = mapTextAreaBpdToLocal(*this, *baseline)
+			+ textRenderer().layouts().at(baseline.line()).extent().end();
 	NativeRectangle boundsToRedraw(viewport);
 	mapAbstractToPhysical(writingMode, viewport, abstractBounds, boundsToRedraw);
 
@@ -1725,243 +1715,6 @@ AutoFreeze::~AutoFreeze() /*throw()*/ {
 }
 
 
-// TextViewer.BaselineIterator ////////////////////////////////////////////////////////////////////
-
-/**
- * Constructor.
- * @param viewer
- * @param line
- * @param trackOutOfViewport
- */
-TextViewer::BaselineIterator::BaselineIterator(const TextViewer& viewer, length_t line,
-		bool trackOutOfViewport) : viewer_(viewer), tracksOutOfViewport_(trackOutOfViewport) {
-	initializeWithFirstVisibleLine();
-	advance(line - this->line());
-}
-
-/// @see detail#IteratorAdapter#advance
-void TextViewer::BaselineIterator::advance(difference_type n) {
-	if(n == 0)
-		return;
-	else if(n > 0 && line() + n > viewer_.document().numberOfLines())
-		throw invalid_argument("n");
-	else if(n < 0 && static_cast<length_t>(-n) - 1 > line())
-		throw invalid_argument("n");
-
-	const length_t destination = line() + n;
-	if(!tracksOutOfViewport()
-			&& (baseline_.first == numeric_limits<Scalar>::min() || baseline_.first == numeric_limits<Scalar>::max())) {
-		if((n > 0 && baseline_.first == numeric_limits<Scalar>::max())
-				|| (n < 0 && baseline_.first == numeric_limits<Scalar>::min())) {
-			line_ = VisualLine(destination, 0);
-			return;
-		}
-		swap(*this, BaselineIterator(viewer_, destination, tracksOutOfViewport()));
-		return;
-	}
-
-	const WritingMode writingMode(viewer_.textRenderer().writingMode());
-	Scalar viewportExtent;
-	if(!tracksOutOfViewport() && n > 0) {
-		const NativeRectangle clientBounds(viewer_.bounds(false));
-		const PhysicalFourSides<Scalar> spaces(viewer_.spaceWidths());
-		viewportExtent = isHorizontal(writingMode.blockFlowDirection) ?
-			(geometry::dy(clientBounds) - spaces.top - spaces.bottom) : (geometry::dx(clientBounds) - spaces.left - spaces.right);
-	}
-
-	VisualLine i(line_);
-	Scalar newBaseline = baseline_.first;
-	const TextLayout* layout = &viewer_.textRenderer().layouts()[line()];
-	if(n > 0) {
-		newBaseline += layout->lineMetrics(line_.subline).descent();
-		for(length_t ln = line(), subline = line_.subline; ; ) {
-			if(++subline == layout->numberOfLines()) {
-				subline = 0;
-				if(++ln == viewer_.document().numberOfLines()) {
-					newBaseline = numeric_limits<Scalar>::max();
-					break;
-				}
-				layout = &viewer_.textRenderer().layouts()[++ln];
-			}
-			newBaseline += layout->lineMetrics(subline).ascent();
-			if(ln == destination && subline == 0)
-				break;
-			newBaseline += layout->lineMetrics(subline).descent();
-			if(!tracksOutOfViewport() && newBaseline >= viewportExtent) {
-				newBaseline = numeric_limits<Scalar>::max();
-				break;
-			}
-		}
-	} else {	// n < 0
-		newBaseline -= layout->lineMetrics(line_.subline).ascent();
-		for(length_t ln = line(), subline = line_.subline; ; ) {
-			if(subline == 0) {
-				if(ln-- == 0) {
-					subline = 0;
-					newBaseline = numeric_limits<Scalar>::min();
-					break;
-				}
-				layout = &viewer_.textRenderer().layouts()[ln];
-				subline = layout->numberOfLines() - 1;
-			} else
-				--subline;
-			newBaseline -= layout->lineMetrics(subline).descent();
-			if(ln == destination && subline == 0)
-				break;
-			newBaseline -= layout->lineMetrics(subline).ascent();
-			if(!tracksOutOfViewport() && newBaseline < 0) {
-				newBaseline = numeric_limits<Scalar>::min();
-				break;
-			}
-		}
-	}
-
-	NativePoint newAxis(baseline_.second);
-	switch(writingMode.blockFlowDirection) {
-		case HORIZONTAL_TB:
-			geometry::y(newAxis) += newBaseline - baseline_.first;
-			break;
-		case VERTICAL_RL:
-			geometry::x(newAxis) -= newBaseline - baseline_.first;
-			break;
-		case VERTICAL_LR:
-			geometry::x(newAxis) += newBaseline - baseline_.first;
-			break;
-		default:
-			ASCENSION_ASSERT_NOT_REACHED();
-	}
-
-	// commit
-	line_ = VisualLine(destination, 0);
-	baseline_ = make_pair(newBaseline, newAxis);
-}
-
-/// @see detail#IteratorAdapter#current
-const TextViewer::BaselineIterator::reference TextViewer::BaselineIterator::current() const {
-	return baseline_.first;
-}
-
-/// @internal Moves this iterator to the first visible line in the viewport.
-void TextViewer::BaselineIterator::initializeWithFirstVisibleLine() {
-	VisualLine firstVisibleLine;
-	viewer_.firstVisibleLine(&firstVisibleLine, 0);
-	const Scalar baseline = viewer_.textRenderer().layouts().at(firstVisibleLine.line).lineMetrics(firstVisibleLine.subline).ascent();
-	NativePoint axis;
-	const NativeRectangle clientBounds(viewer_.bounds(false));
-	switch(viewer_.textRenderer().writingMode().blockFlowDirection) {
-		case HORIZONTAL_TB:
-			axis = geometry::make<NativePoint>(0, geometry::top(clientBounds) + viewer_.spaceWidths().top + baseline);
-			break;
-		case VERTICAL_RL:
-			axis = geometry::make<NativePoint>(geometry::right(clientBounds) - viewer_.spaceWidths().right - baseline, 0);
-			break;
-		case VERTICAL_LR:
-			axis = geometry::make<NativePoint>(geometry::left(clientBounds) + viewer_.spaceWidths().left + baseline, 0);
-			break;
-		default:
-			ASCENSION_ASSERT_NOT_REACHED();
-	}
-
-	// commit
-	line_ = firstVisibleLine;
-	baseline_ = make_pair(baseline, axis);
-}
-
-inline void TextViewer::BaselineIterator::invalidate() /*throw()*/ {
-	geometry::x(baseline_.second) = geometry::y(baseline_.second) = 1;
-}
-
-inline bool TextViewer::BaselineIterator::isValid() const /*throw()*/ {
-	return geometry::x(baseline_.second) != 0 && geometry::y(baseline_.second) != 0;
-}
-#if 0
-void TextViewer::BaselineIterator::move(length_t line) {
-	if(line >= viewer_.document().numberOfLines())
-		throw k::BadPositionException(k::Position(line, 0));
-	Scalar newBaseline;
-	if(!isValid()) {
-		length_t firstVisibleLine, firstVisibleSubline;
-		viewer_.firstVisibleLine(&firstVisibleLine, 0, &firstVisibleSubline);
-		const PhysicalFourSides<Scalar> spaces(viewer_.spaceWidths());
-		Scalar spaceBefore;
-		switch(utils::writingMode(viewer_).blockFlowDirection) {
-			case WritingModeBase::HORIZONTAL_TB:
-				spaceBefore = spaces.top;
-				break;
-			case WritingModeBase::VERTICAL_RL:
-				spaceBefore = spaces.right;
-				break;
-			case WritingModeBase::VERTICAL_LR:
-				spaceBefore = spaces.left;
-				break;
-			default:
-				ASCENSION_ASSERT_NOT_REACHED();
-		}
-		if(line == firstVisibleLine) {
-			if(firstVisibleSubline == 0)
-				newBaseline = viewer_.textRenderer().layouts()[line].lineMetrics(0).ascent();
-			else if(!tracksOutOfViewport())
-				newBaseline = numeric_limits<Scalar>::min();
-			else {
-				const TextLayout& layout = viewer_.textRenderer().layouts()[line];
-				newBaseline = 0;
-				for(length_t subline = firstVisibleSubline - 1; ; --subline) {
-					newBaseline -= layout.lineMetrics(subline).descent();
-					if(subline == 0)
-						break;
-					newBaseline -= layout.lineMetrics(subline).ascent();
-				}
-			}
-		} else if(line > firstVisibleLine) {
-			const NativeRectangle clientBounds(viewer_.bounds(false));
-			const Scalar viewportExtent = WritingModeBase::isHorizontal(utils::writingMode(viewer_).blockFlowDirection) ?
-				(geometry::dy(clientBounds) - spaces.top - spaces.bottom) : (geometry::dx(clientBounds) - spaces.left - spaces.right);
-			newBaseline = 0;
-			const TextLayout* layout = &viewer_.textRenderer().layouts()[firstVisibleLine];
-			for(length_t ln = firstVisibleLine, subline = firstVisibleLine; ; ) {
-				newBaseline += layout->lineMetrics(subline).ascent();
-				if(ln == line && subline == 0)
-					break;
-				newBaseline += layout->lineMetrics(subline).descent();
-				if(!tracksOutOfViewport() && newBaseline >= viewportExtent) {
-					newBaseline = numeric_limits<Scalar>::max();
-					break;
-				}
-				if(++subline == layout->numberOfLines()) {
-					layout = &viewer_.textRenderer().layouts()[++ln];
-					subline = 0;
-				}
-			}
-		} else if(!tracksOutOfViewport())
-			newBaseline = numeric_limits<Scalar>::min();
-		else {
-			const TextLayout* layout = &viewer_.textRenderer().layouts()[firstVisibleLine];
-			for(length_t ln = firstVisibleLine, subline = firstVisibleSubline; ; --subline) {
-				newBaseline -= layout->lineMetrics(subline).descent();
-				if(subline == 0 && ln == line)
-					break;
-				newBaseline -= layout->lineMetrics(subline).ascent();
-				if(subline == 0) {
-					layout = &viewer_.textRenderer().layouts()[--ln];
-					subline = layout->numberOfLines();
-				}
-			}
-		}
-	}
-}
-#endif
-
-/// @see detail#IteratorAdapter#next
-void TextViewer::BaselineIterator::next() {
-	return advance(+1);
-}
-
-/// @see detail#IteratorAdapter#previous
-void TextViewer::BaselineIterator::previous() {
-	return advance(-1);
-}
-
-
 // TextViewer.CursorVanisher //////////////////////////////////////////////////////////////////////
 
 TextViewer::CursorVanisher::CursorVanisher() /*throw()*/ : viewer_(0) {
@@ -2005,7 +1758,8 @@ bool TextViewer::CursorVanisher::vanished() const {
  * @param writingMode The initial writing mode
  */
 TextViewer::Renderer::Renderer(TextViewer& viewer, const WritingMode& writingMode) :
-		TextRenderer(viewer.presentation(), systemFonts(), true), viewer_(viewer), defaultWritingMode_(writingMode) {
+		TextRenderer(viewer.presentation(), systemFonts(),
+		geometry::size(viewer.textAllocationRectangle())), viewer_(viewer), defaultWritingMode_(writingMode) {
 	// TODO: other FontCollection object used?
 #if 0
 	// for test
@@ -2086,9 +1840,6 @@ Scalar TextViewer::Renderer::width() const /*throw()*/ {
 /// Default constructor.
 TextViewer::Configuration::Configuration() /*throw()*/ :
 		readingDirection(LEFT_TO_RIGHT), usesRichTextClipboardFormat(false) {
-	spaces.before = Length(1, Length::PIXELS);
-	spaces.start = Length(5, Length::PIXELS);
-	spaces.after = spaces.end = Length(0, Length::PIXELS);
 #if(_WIN32_WINNT >= 0x0501)
 	BOOL b;
 	if(::SystemParametersInfo(SPI_GETMOUSEVANISH, 0, &b, 0) != 0)
@@ -2114,7 +1865,7 @@ void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, char bars, bool
 		const unsigned long columns = viewer.textRenderer().layouts().maximumMeasure() / dx;
 //		horizontal.rate = columns / numeric_limits<int>::max() + 1;
 //		assert(horizontal.rate != 0);
-		const int oldMaximum = horizontal.maximum;
+		const TextViewer::ScrollPosition oldMaximum = horizontal.maximum;
 		horizontal.maximum = max(static_cast<int>(columns/* / horizontal.rate*/), static_cast<int>(viewer.numberOfVisibleColumns() - 1));
 	//	if(alignment == ALIGN_RIGHT)
 	//		horizontal.position += horizontal.maximum - oldMaximum;
@@ -2123,8 +1874,8 @@ void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, char bars, bool
 	//		horizontal.position += horizontal.maximum / 2 - oldMaximum / 2;
 		horizontal.position = max(horizontal.position, 0);
 		if(pageSizeChanged) {
-			const UINT oldPageSize = horizontal.pageSize;
-			horizontal.pageSize = static_cast<UINT>(viewer.numberOfVisibleColumns());
+			const TextViewer::ScrollPosition oldPageSize = horizontal.pageSize;
+			horizontal.pageSize = static_cast<TextViewer::ScrollPosition>(viewer.numberOfVisibleColumns());
 	//		if(alignment == ALIGN_RIGHT)
 	//			horizontal.position -= horizontal.pageSize - oldPageSize;
 	//		else if(alignment == ALIGN_CENTER)
@@ -2139,9 +1890,9 @@ void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, char bars, bool
 		assert(lines > 0);
 //		vertical.rate = static_cast<ulong>(lines) / numeric_limits<int>::max() + 1;
 //		assert(vertical.rate != 0);
-		vertical.maximum = max(static_cast<int>((lines - 1)/* / vertical.rate*/), 0/*static_cast<int>(viewer.numberOfVisibleLines() - 1)*/);
+		vertical.maximum = max(static_cast<TextViewer::ScrollPosition>((lines - 1)/* / vertical.rate*/), 0/*static_cast<TextViewer::ScrollPosition>(viewer.numberOfVisibleLines() - 1)*/);
 		if(pageSizeChanged)
-			vertical.pageSize = static_cast<UINT>(viewer.numberOfVisibleLines());
+			vertical.pageSize = static_cast<TextViewer::ScrollPosition>(viewer.numberOfVisibleLines());
 	}
 }
 

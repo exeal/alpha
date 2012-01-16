@@ -396,6 +396,53 @@ Scalar TextRenderer::lineStartEdge(length_t line) const {
 }
 
 /**
+ * Converts the specified position in the document to a point in the viewport-coordinates.
+ * @param position The document position
+ * @param fullSearchBpd If this is @c false, this method stops at before- or after-edge of the
+ *                      viewport. If this happened, the block-progression-dimension of the returned
+ *                      point is @c std#numeric_limits&lt;Scalar&gt;::max() (for the before-edge)
+ *                      or @c std#numeric_limits&lt;Scalar&gt;::min() (for the after-edge). If this
+ *                      is @c true, the calculation is performed completely and returns an exact
+ *                      location will (may be very slow)
+ * @param edge The edge of the character. If this is @c graphics#font#TextLayout#LEADING, the
+ *             returned point is the leading edge if the character (left if the character is
+ *             left-to-right), otherwise returned point is the trailing edge (right if the
+ *             character is left-to-right)
+ * @return The point in viewport-coordinates in pixels. The block-progression-dimension addresses
+ *         the baseline of the line
+ * @throw BadPositionException @a position is outside of the document
+ * @see #characterForLocalPoint, TextLayout#location
+ */
+NativePoint TextRenderer::location(const k::Position& position,
+		bool fullSearchBpd, TextLayout::Edge edge /* = TextLayout::LEADING */) const {
+//	checkInitialization();
+
+	// get alignment-point
+	const BaselineIterator baseline(*this, position.line, fullSearchBpd);
+	NativePoint p(baseline.position());
+	const bool horizontal = isHorizontal(writingMode().blockFlowDirection);
+
+	// apply offset in line layout
+	const NativePoint offset(layouts().at(position.line).location(position.column, edge));
+	if(fullSearchBpd || horizontal || (*baseline != numeric_limits<Scalar>::max() && *baseline != numeric_limits<Scalar>::min())) {
+//		assert(geometry::x(p) != numeric_limits<Scalar>::max() && geometry::x(p) != numeric_limits<Scalar>::min());
+		geometry::x(p) += geometry::x(offset);
+	}
+	if(fullSearchBpd || !horizontal || (*baseline != numeric_limits<Scalar>::max() && *baseline != numeric_limits<Scalar>::min())) {
+//		assert(geometry::y(p) != numeric_limits<Scalar>::max() && geometry::y(p) != numeric_limits<Scalar>::min()));
+		geometry::y(p) += geometry::y(offset);
+	}
+
+	// apply viewport offset in inline-progression-direction
+	if(horizontal)
+		geometry::x(p) = mapLineLayoutIpdToViewport(position.line, geometry::x(p));
+	else
+		geometry::y(p) = mapLineLayoutIpdToViewport(position.line, geometry::y(p));
+
+	return p;
+}
+
+/**
  * Converts the distance from the 'before-edge' of the 'allocation-rectangle' into the logical line
  * and visual subline offset. The results are snapped to the first/last visible line in the
  * viewport (this includes partially visible line) if the given distance addresses outside of the
@@ -617,4 +664,238 @@ WritingMode TextRenderer::writingMode() const /*throw()*/ {
 	WritingMode computed;
 	computeWritingMode(presentation().globalTextStyle().writingMode, defaultUIWritingMode(), computed);
 	return computed;
+}
+
+
+// BaselineIterator ///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Constructor.
+ * @param textRenderer The text renderer provides the viewport
+ * @param line The line number this iterator addresses
+ * @param trackOutOfViewport Set @c true to 
+ */
+BaselineIterator::BaselineIterator(const TextRenderer& textRenderer, length_t line,
+		bool trackOutOfViewport) : textRenderer_(&textRenderer), tracksOutOfViewport_(trackOutOfViewport) {
+	initializeWithFirstVisibleLine();
+	advance(line - this->line());
+}
+
+/// @see detail#IteratorAdapter#advance
+void BaselineIterator::advance(BaselineIterator::difference_type n) {
+	if(n == 0)
+		return;
+	else if(n > 0 && line() + n > textRenderer().presentation().document().numberOfLines())
+		throw invalid_argument("n");
+	else if(n < 0 && static_cast<length_t>(-n) - 1 > line())
+		throw invalid_argument("n");
+
+	const length_t destination = line() + n;
+	if(!tracksOutOfViewport()
+			&& (baseline_.first == numeric_limits<Scalar>::min() || baseline_.first == numeric_limits<Scalar>::max())) {
+		if((n > 0 && baseline_.first == numeric_limits<Scalar>::max())
+				|| (n < 0 && baseline_.first == numeric_limits<Scalar>::min())) {
+			line_ = VisualLine(destination, 0);
+			return;
+		}
+		swap(*this, BaselineIterator(textRenderer(), destination, tracksOutOfViewport()));
+		return;
+	}
+
+	const WritingMode writingMode(textRenderer().writingMode());
+	Scalar viewportExtent;
+	if(!tracksOutOfViewport() && n > 0)
+		viewportExtent = isHorizontal(writingMode.blockFlowDirection) ?
+			(geometry::dy(textRenderer().size())) : (geometry::dx(textRenderer().size()));
+
+	VisualLine i(line_);
+	Scalar newBaseline = baseline_.first;
+	const TextLayout* layout = &textRenderer().layouts()[line()];
+	if(n > 0) {
+		newBaseline += layout->lineMetrics(line_.subline).descent();
+		for(length_t ln = line(), subline = line_.subline; ; ) {
+			if(++subline == layout->numberOfLines()) {
+				subline = 0;
+				if(++ln == textRenderer().presentation().document().numberOfLines()) {
+					newBaseline = numeric_limits<Scalar>::max();
+					break;
+				}
+				layout = &textRenderer().layouts()[++ln];
+			}
+			newBaseline += layout->lineMetrics(subline).ascent();
+			if(ln == destination && subline == 0)
+				break;
+			newBaseline += layout->lineMetrics(subline).descent();
+			if(!tracksOutOfViewport() && newBaseline >= viewportExtent) {
+				newBaseline = numeric_limits<Scalar>::max();
+				break;
+			}
+		}
+	} else {	// n < 0
+		newBaseline -= layout->lineMetrics(line_.subline).ascent();
+		for(length_t ln = line(), subline = line_.subline; ; ) {
+			if(subline == 0) {
+				if(ln-- == 0) {
+					subline = 0;
+					newBaseline = numeric_limits<Scalar>::min();
+					break;
+				}
+				layout = &textRenderer().layouts()[ln];
+				subline = layout->numberOfLines() - 1;
+			} else
+				--subline;
+			newBaseline -= layout->lineMetrics(subline).descent();
+			if(ln == destination && subline == 0)
+				break;
+			newBaseline -= layout->lineMetrics(subline).ascent();
+			if(!tracksOutOfViewport() && newBaseline < 0) {
+				newBaseline = numeric_limits<Scalar>::min();
+				break;
+			}
+		}
+	}
+
+	NativePoint newAxis(baseline_.second);
+	switch(writingMode.blockFlowDirection) {
+		case HORIZONTAL_TB:
+			geometry::y(newAxis) += newBaseline - baseline_.first;
+			break;
+		case VERTICAL_RL:
+			geometry::x(newAxis) -= newBaseline - baseline_.first;
+			break;
+		case VERTICAL_LR:
+			geometry::x(newAxis) += newBaseline - baseline_.first;
+			break;
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+
+	// commit
+	line_ = VisualLine(destination, 0);
+	baseline_ = make_pair(newBaseline, newAxis);
+}
+
+/// @see detail#IteratorAdapter#current
+const BaselineIterator::reference BaselineIterator::current() const {
+	return baseline_.first;
+}
+
+/// @internal Moves this iterator to the first visible line in the viewport.
+void BaselineIterator::initializeWithFirstVisibleLine() {
+	const VisualLine firstVisibleLine(
+		textRenderer().firstVisibleLineInLogicalNumber(), textRenderer().firstVisibleSublineInLogicalLine());
+	const Scalar baseline = textRenderer().layouts().at(firstVisibleLine.line).lineMetrics(firstVisibleLine.subline).ascent();
+	NativePoint axis;
+	const NativeRectangle viewport(geometry::make<NativeRectangle>(geometry::make<NativePoint>(0, 0), textRenderer().size()));
+	switch(textRenderer().writingMode().blockFlowDirection) {
+		case HORIZONTAL_TB:
+			axis = geometry::make<NativePoint>(0, geometry::top(viewport) + baseline);
+			break;
+		case VERTICAL_RL:
+			axis = geometry::make<NativePoint>(geometry::right(viewport) - baseline, 0);
+			break;
+		case VERTICAL_LR:
+			axis = geometry::make<NativePoint>(geometry::left(viewport) + baseline, 0);
+			break;
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+
+	// commit
+	line_ = firstVisibleLine;
+	baseline_ = make_pair(baseline, axis);
+}
+
+inline void BaselineIterator::invalidate() /*throw()*/ {
+	geometry::x(baseline_.second) = geometry::y(baseline_.second) = 1;
+}
+
+inline bool BaselineIterator::isValid() const /*throw()*/ {
+	return geometry::x(baseline_.second) != 0 && geometry::y(baseline_.second) != 0;
+}
+#if 0
+void TextViewer::BaselineIterator::move(length_t line) {
+	if(line >= viewer_.document().numberOfLines())
+		throw k::BadPositionException(k::Position(line, 0));
+	Scalar newBaseline;
+	if(!isValid()) {
+		length_t firstVisibleLine, firstVisibleSubline;
+		viewer_.firstVisibleLine(&firstVisibleLine, 0, &firstVisibleSubline);
+		const PhysicalFourSides<Scalar> spaces(viewer_.spaceWidths());
+		Scalar spaceBefore;
+		switch(utils::writingMode(viewer_).blockFlowDirection) {
+			case WritingModeBase::HORIZONTAL_TB:
+				spaceBefore = spaces.top;
+				break;
+			case WritingModeBase::VERTICAL_RL:
+				spaceBefore = spaces.right;
+				break;
+			case WritingModeBase::VERTICAL_LR:
+				spaceBefore = spaces.left;
+				break;
+			default:
+				ASCENSION_ASSERT_NOT_REACHED();
+		}
+		if(line == firstVisibleLine) {
+			if(firstVisibleSubline == 0)
+				newBaseline = textRenderer().layouts()[line].lineMetrics(0).ascent();
+			else if(!tracksOutOfViewport())
+				newBaseline = numeric_limits<Scalar>::min();
+			else {
+				const TextLayout& layout = textRenderer().layouts()[line];
+				newBaseline = 0;
+				for(length_t subline = firstVisibleSubline - 1; ; --subline) {
+					newBaseline -= layout.lineMetrics(subline).descent();
+					if(subline == 0)
+						break;
+					newBaseline -= layout.lineMetrics(subline).ascent();
+				}
+			}
+		} else if(line > firstVisibleLine) {
+			const NativeRectangle clientBounds(viewer_.bounds(false));
+			const Scalar viewportExtent = WritingModeBase::isHorizontal(utils::writingMode(viewer_).blockFlowDirection) ?
+				(geometry::dy(clientBounds) - spaces.top - spaces.bottom) : (geometry::dx(clientBounds) - spaces.left - spaces.right);
+			newBaseline = 0;
+			const TextLayout* layout = &viewer_.textRenderer().layouts()[firstVisibleLine];
+			for(length_t ln = firstVisibleLine, subline = firstVisibleLine; ; ) {
+				newBaseline += layout->lineMetrics(subline).ascent();
+				if(ln == line && subline == 0)
+					break;
+				newBaseline += layout->lineMetrics(subline).descent();
+				if(!tracksOutOfViewport() && newBaseline >= viewportExtent) {
+					newBaseline = numeric_limits<Scalar>::max();
+					break;
+				}
+				if(++subline == layout->numberOfLines()) {
+					layout = &viewer_.textRenderer().layouts()[++ln];
+					subline = 0;
+				}
+			}
+		} else if(!tracksOutOfViewport())
+			newBaseline = numeric_limits<Scalar>::min();
+		else {
+			const TextLayout* layout = &viewer_.textRenderer().layouts()[firstVisibleLine];
+			for(length_t ln = firstVisibleLine, subline = firstVisibleSubline; ; --subline) {
+				newBaseline -= layout->lineMetrics(subline).descent();
+				if(subline == 0 && ln == line)
+					break;
+				newBaseline -= layout->lineMetrics(subline).ascent();
+				if(subline == 0) {
+					layout = &viewer_.textRenderer().layouts()[--ln];
+					subline = layout->numberOfLines();
+				}
+			}
+		}
+	}
+}
+#endif
+
+/// @see detail#IteratorAdapter#next
+void BaselineIterator::next() {
+	return advance(+1);
+}
+
+/// @see detail#IteratorAdapter#previous
+void BaselineIterator::previous() {
+	return advance(-1);
 }
