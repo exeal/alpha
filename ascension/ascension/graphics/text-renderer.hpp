@@ -1,7 +1,7 @@
 /**
  * @file text-renderer.hpp
  * @date 2003-2006 (was LineLayout.h)
- * @date 2006-2010
+ * @date 2006-2012
  * @date 2010-11-20 separated from ascension/layout.hpp
  * @date 2011-11-12 renamed from rendering.hpp
  */
@@ -117,6 +117,7 @@ namespace ascension {
 				NativePoint localPointForCharacter(
 					const kernel::Position& position, bool fullSearchBpd,
 					graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING) const;
+				VisualLine mapBpdToLine(Scalar bpd, bool* snapped = 0) const /*throw()*/;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				float numberOfVisibleCharactersInLine() const /*throw()*/;
 				float numberOfVisibleLines() const /*throw()*/;
