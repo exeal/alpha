@@ -104,31 +104,9 @@ namespace ascension {
 				void addDefaultFontListener(DefaultFontListener& listener);
 				std::tr1::shared_ptr<const Font> defaultFont() const /*throw()*/;
 				void removeDefaultFontListener(DefaultFontListener& listener);
-				// content- or allocation-rectangles
-				Scalar allocationMeasure() const /*throw()*/;
-				Scalar contentMeasure() const /*throw()*/;
-				// viewport
-				kernel::Position characterForPoint(
-					const NativePoint& at, TextLayout::Edge edge, bool abortNoCharacter = false,
-					kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER) const;
-				length_t firstVisibleLineInLogicalNumber() const /*throw()*/;
-				length_t firstVisibleLineInVisualNumber() const /*throw()*/;
-				length_t firstVisibleSublineInLogicalLine() const /*throw()*/;
-				NativePoint location(
-					const kernel::Position& position, bool fullSearchBpd,
-					graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING) const;
-				VisualLine mapBpdToLine(Scalar bpd, bool* snapped = 0) const /*throw()*/;
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-				float numberOfVisibleCharactersInLine() const /*throw()*/;
-				float numberOfVisibleLines() const /*throw()*/;
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
-				void resize(const NativeSize& newSize);
-				const NativeSize& size() const /*throw()*/;
-				const PhysicalFourSides<Scalar>& spaceWidths() const /*throw()*/;
 				// text metrics
 				Scalar baselineDistance(const Range<VisualLine>& lines) const;
-				Scalar lineIndent(length_t line, length_t subline = 0) const;
-				Scalar lineStartEdge(length_t line) const;
+				const PhysicalFourSides<Scalar>& spaceWidths() const /*throw()*/;
 				// paint
 				void paint(PaintContext& context) const;
 				void paint(length_t line, PaintContext& context, const NativePoint& alignmentPoint) const;
@@ -168,16 +146,52 @@ namespace ascension {
 				mutable win32::Handle<HBITMAP> memoryBitmap_;
 			};
 
+			class TextViewport {
+			public:
+				TextRenderer& textRenderer() /*throw()*/;
+				const TextRenderer& textRenderer() const /*throw()*/;
+				// extents
+				float numberOfVisibleCharactersInLine() const /*throw()*/;
+				float numberOfVisibleLines() const /*throw()*/;
+				void resize(const NativeSize& newSize);
+				const NativeSize& size() const /*throw()*/;
+				// content- or allocation-rectangles
+				Scalar allocationMeasure() const /*throw()*/;
+				Scalar contentMeasure() const /*throw()*/;
+				// view positions
+				length_t firstVisibleLineInLogicalNumber() const /*throw()*/;
+				length_t firstVisibleLineInVisualNumber() const /*throw()*/;
+				length_t firstVisibleSublineInLogicalLine() const /*throw()*/;
+				length_t inlineProgressionOffset() const /*throw()*/;
+				// scrolls
+				void scrollTo();
+				// model-view mapping
+				kernel::Position characterForPoint(
+					const NativePoint& at, TextLayout::Edge edge, bool abortNoCharacter = false,
+					kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER) const;
+				NativePoint location(
+					const kernel::Position& position, bool fullSearchBpd,
+					graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING) const;
+				VisualLine mapBpdToLine(Scalar bpd, bool* snapped = 0) const /*throw()*/;
+			private:
+				TextRenderer& textRenderer_;
+				NativeSize size_;
+				VisualLine firstVisibleLine_;
+				struct ScrollOffsets {
+					length_t ipd, bpd;
+				} scrollOffsets_;
+			};
+
 			class BaselineIterator : public detail::IteratorAdapter<
 				BaselineIterator, std::iterator<
 					std::random_access_iterator_tag, Scalar, std::ptrdiff_t, Scalar*, Scalar
 				>
 			> {
 			public:
-				BaselineIterator(const TextRenderer& textRenderer, length_t line, bool trackOutOfViewport);
+				BaselineIterator(const TextViewport& viewport, length_t line, bool trackOutOfViewport);
 				length_t line() const /*throw()*/;
 				const NativePoint& position() const;
-				const TextRenderer& textRenderer() const /*throw()*/;
+				const TextViewport& viewport() const /*throw()*/;
 				bool tracksOutOfViewport() const /*throw()*/;
 			private:
 				void advance(difference_type n);
@@ -191,11 +205,15 @@ namespace ascension {
 				void next();
 				void previous();
 			private:
-				const TextRenderer* textRenderer_;	// this is not a reference, for operator=
-				bool tracksOutOfViewport_;			// this is not const, for operator=
+				const TextViewport* viewport_;	// this is not a reference, for operator=
+				bool tracksOutOfViewport_;		// this is not const, for operator=
 				graphics::font::VisualLine line_;
 				std::pair<Scalar, NativePoint> baseline_;
 			};
+
+			// free functions
+			Scalar lineIndent(const TextLayout& layout, Scalar contentMeasure, length_t subline = 0);
+			Scalar lineStartEdge(const TextLayout& layout, Scalar contentMeasure);
 
 
 			/// Returns the primary font.

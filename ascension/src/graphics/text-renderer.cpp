@@ -249,22 +249,6 @@ void TextRenderer::addDefaultFontListener(DefaultFontListener& listener) {
 }
 
 /**
- * Returns the measure of the 'allocation-rectangle'.
- * @return The measure of the 'allocation-rectangle' in pixels
- * @see #contentMeasure
- */
-Scalar TextRenderer::allocationMeasure() const /*throw()*/ {
-	const bool horizontal = isHorizontal(writingMode().blockFlowDirection);
-	const Scalar spaces = horizontal ?
-		spacePainter_->spaces().left() + spacePainter_->spaces().right()
-		: spacePainter_->spaces().top() + spacePainter_->spaces().bottom();
-	const Scalar borders = 0;
-	const Scalar paddings = 0;
-	return max(layouts().maximumMeasure() + spaces + borders + paddings,
-		static_cast<Scalar>(horizontal ? geometry::dx(size()) : geometry::dy(size())));
-}
-
-/**
  * Returns the distance from the baseline of the line @a from to the baseline of the line @a to in
  * block progression direction in pixels.
  * @param lines The first and second lines
@@ -296,16 +280,6 @@ Scalar TextRenderer::baselineDistance(const Range<VisualLine>& lines) const {
 void TextRenderer::buildLineLayoutConstructionParameters(length_t line, TextLayout::ConstructionParameters& parameters) const {
 	presentation_.textLineStyle(line, parameters);
 	parameters.writingMode = writingMode();
-}
-
-/**
- * Returns the measure of the 'content-rectangle'.
- * @return The measure of the 'content-rectangle' in pixels
- * @see #allocationMeasure
- */
-Scalar TextRenderer::contentMeasure() const /*throw()*/ {
-	return max(layouts().maximumMeasure(),
-		static_cast<Scalar>(isHorizontal(writingMode().blockFlowDirection) ? geometry::dx(size()) : geometry::dy(size())));
 }
 
 /**
@@ -344,187 +318,6 @@ void TextRenderer::globalTextStyleChanged(tr1::shared_ptr<const TextToplevelStyl
 	fireComputedWritingModeChanged(*used, defaultUIWritingMode());
 	updateDefaultFont();
 }
-
-/**
- * Returns the indentation of the specified visual line from the left most.
- * @param line The line number
- * @param subline The visual subline number
- * @return The indentation in pixel
- * @throw kernel#BadPositionException @a line is invalid
- * @throw IndexOutOfBoundsException @a subline is invalid
- */
-Scalar TextRenderer::lineIndent(length_t line, length_t subline /* = 0 */) const {
-	const TextLayout& layout = layouts().at(line);
-	const detail::PhysicalTextAnchor alignment =
-		detail::computePhysicalTextAnchor(layout.anchor(), layout.writingMode().inlineFlowDirection);
-	if(alignment == detail::LEFT /*|| ... != NO_JUSTIFICATION*/)	// TODO: recognize the last subline of a justified line.
-		return 0;
-	else {
-		Scalar w = contentMeasure();
-		switch(alignment) {
-			case detail::RIGHT:
-				return w - layout.measure(subline);
-			case detail::MIDDLE:
-				return (w - layout.measure(subline)) / 2;
-			default:
-				ASCENSION_ASSERT_NOT_REACHED();
-		}
-	}
-}
-
-/**
- * Returns distance from left/top-edge of the content-area to start-edge of the specified line in
- * pixels.
- * @param line The line
- * @return Distance from left/top-edge of the content-area to start-edge of @a line in pixels
- * @throw kernel#BadPositionException @a line is invalid
- * @see TextLayout#lineStartEdge, TextViewer#inlineProgressionOffsetInViewport
- */
-Scalar TextRenderer::lineStartEdge(length_t line) const {
-	const TextLayout& layout = layouts().at(line);	// this may throw kernel.BadPositionException
-	const bool ltr = layout.writingMode().inlineFlowDirection == LEFT_TO_RIGHT;
-	switch(layout.anchor()) {
-		case TEXT_ANCHOR_START:
-			return ltr ? 0 : contentMeasure();
-		case TEXT_ANCHOR_MIDDLE:
-			return ltr ? (contentMeasure() - layout.measure(0) / 2) : (contentMeasure() + layout.measure(0)) / 2;
-		case TEXT_ANCHOR_END:
-			return ltr ? contentMeasure() - layout.measure(0) : layout.measure(0);
-		default:
-			ASCENSION_ASSERT_NOT_REACHED();
-	}
-}
-
-/**
- * Converts the specified position in the document to a point in the viewport-coordinates.
- * @param position The document position
- * @param fullSearchBpd If this is @c false, this method stops at before- or after-edge of the
- *                      viewport. If this happened, the block-progression-dimension of the returned
- *                      point is @c std#numeric_limits&lt;Scalar&gt;::max() (for the before-edge)
- *                      or @c std#numeric_limits&lt;Scalar&gt;::min() (for the after-edge). If this
- *                      is @c true, the calculation is performed completely and returns an exact
- *                      location will (may be very slow)
- * @param edge The edge of the character. If this is @c graphics#font#TextLayout#LEADING, the
- *             returned point is the leading edge if the character (left if the character is
- *             left-to-right), otherwise returned point is the trailing edge (right if the
- *             character is left-to-right)
- * @return The point in viewport-coordinates in pixels. The block-progression-dimension addresses
- *         the baseline of the line
- * @throw BadPositionException @a position is outside of the document
- * @see #characterForLocalPoint, TextLayout#location
- */
-NativePoint TextRenderer::location(const k::Position& position,
-		bool fullSearchBpd, TextLayout::Edge edge /* = TextLayout::LEADING */) const {
-//	checkInitialization();
-
-	// get alignment-point
-	const BaselineIterator baseline(*this, position.line, fullSearchBpd);
-	NativePoint p(baseline.position());
-	const bool horizontal = isHorizontal(writingMode().blockFlowDirection);
-
-	// apply offset in line layout
-	const NativePoint offset(layouts().at(position.line).location(position.column, edge));
-	if(fullSearchBpd || horizontal || (*baseline != numeric_limits<Scalar>::max() && *baseline != numeric_limits<Scalar>::min())) {
-//		assert(geometry::x(p) != numeric_limits<Scalar>::max() && geometry::x(p) != numeric_limits<Scalar>::min());
-		geometry::x(p) += geometry::x(offset);
-	}
-	if(fullSearchBpd || !horizontal || (*baseline != numeric_limits<Scalar>::max() && *baseline != numeric_limits<Scalar>::min())) {
-//		assert(geometry::y(p) != numeric_limits<Scalar>::max() && geometry::y(p) != numeric_limits<Scalar>::min()));
-		geometry::y(p) += geometry::y(offset);
-	}
-
-	// apply viewport offset in inline-progression-direction
-	if(horizontal)
-		geometry::x(p) = mapLineLayoutIpdToViewport(position.line, geometry::x(p));
-	else
-		geometry::y(p) = mapLineLayoutIpdToViewport(position.line, geometry::y(p));
-
-	return p;
-}
-
-/**
- * Converts the distance from the 'before-edge' of the 'allocation-rectangle' into the logical line
- * and visual subline offset. The results are snapped to the first/last visible line in the
- * viewport (this includes partially visible line) if the given distance addresses outside of the
- * viewport.
- * @param bpd The distance from the 'before-edge' of the 'allocation-rectangle' in pixels
- * @param[out] snapped @c true if there was not a line at @a bpd. Optional
- * @return The logical and visual line numbers
- * @see #BaselineIterator, TextViewer#mapLocalBpdToLine
- */
-VisualLine TextRenderer::mapBpdToLine(Scalar bpd, bool* snapped /* = 0 */) const /*throw()*/ {
-	const WritingMode writingMode(writingMode());
-	const PhysicalFourSides<Scalar>& physicalSpaces = spaceWidths();
-	AbstractFourSides<Scalar> abstractSpaces;
-	mapPhysicalToAbstract(writingMode, physicalSpaces, abstractSpaces);
-	const Scalar spaceBefore = abstractSpaces.before();
-	const Scalar spaceAfter = abstractSpaces.after();
-	const Scalar borderBefore = 0, borderAfter = 0, paddingBefore = 0, paddingAfter = 0;
-	const Scalar before = spaceBefore + borderBefore + paddingBefore;
-	const Scalar after = (isHorizontal(writingMode.blockFlowDirection) ?
-		geometry::dy(size()) : geometry::dx(size())) - spaceAfter - borderAfter - paddingBefore;
-
-	VisualLine result(firstVisibleLineInLogicalNumber(), firstVisibleSublineInLogicalLine());
-	bool outside;	// for 'snapped'
-	if(bpd <= before)
-		outside = bpd != before;
-	else {
-		const bool beyondAfter = bpd >= after;
-		if(beyondAfter)
-			bpd = after;
-		Scalar lineBefore = before;
-		const TextLayout* layout = &layouts()[result.line];
-		while(result.subline > 0)	// back to the first subline
-			lineBefore -= layout->lineMetrics(--result.subline).height();
-		while(true) {
-			assert(bpd >= lineBefore);
-			Scalar lineAfter = lineBefore;
-			for(length_t sl = 0; sl < layout->numberOfLines(); ++sl)
-				lineAfter += layout->lineMetrics(sl).height();
-			if(bpd < lineAfter) {
-				result.subline = layout->locateLine(bpd - lineBefore, outside);
-				if(!outside)
-					break;	// bpd is this line
-				assert(result.subline == layout->numberOfLines() - 1);
-			}
-			layout = &layouts()[++result.line];
-			lineBefore = lineAfter;
-		}
-		outside = beyondAfter;
-	}
-	if(snapped != 0)
-		*snapped = outside;
-	return result;
-}
-
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-/**
- * Returns the number of the drawable columns in the window.
- * @return The number of columns
- */
-float TextRenderer::numberOfVisibleCharactersInLine() const /*throw()*/ {
-	const bool horizontalBlockFlow = isHorizontal(writingMode().blockFlowDirection);
-	Scalar ipd(horizontalBlockFlow ? geometry::dx(size()) : geometry::dy(size()));
-	if(ipd == 0)
-		return 0;
-//	ipd -= horizontalBlockFlow ? (spaceWidths().left + spaceWidths().right) : (spaceWidths().top + spaceWidths().bottom);
-//	ipd -= rulerPainter_->width();
-	return ipd /= defaultFont()->metrics().averageCharacterWidth();
-}
-
-/**
- * Returns the number of the drawable lines in the window.
- * @return The number of lines
- */
-float TextRenderer::numberOfVisibleLines() const /*throw()*/ {
-	const bool horizontalBlockFlow = isHorizontal(writingMode().blockFlowDirection);
-	Scalar bpd(horizontalBlockFlow ? geometry::dy(size()) : geometry::dx(size()));
-	if(bpd == 0)
-		return 0;
-//	bpd -= horizontalBlockFlow ? (spaceWidths().top + spaceWidths().bottom) : (spaceWidths().left + spaceWidths().right);
-	return bpd /= defaultFont()->metrics().linePitch();
-}
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 /**
  * Paints the specified output device with text layout. The line rendering options provided by
@@ -671,21 +464,22 @@ WritingMode TextRenderer::writingMode() const /*throw()*/ {
 
 /**
  * Constructor.
- * @param textRenderer The text renderer provides the viewport
+ * @param viewport The text viewport
  * @param line The line number this iterator addresses
  * @param trackOutOfViewport Set @c true to 
  */
-BaselineIterator::BaselineIterator(const TextRenderer& textRenderer, length_t line,
-		bool trackOutOfViewport) : textRenderer_(&textRenderer), tracksOutOfViewport_(trackOutOfViewport) {
+BaselineIterator::BaselineIterator(const TextViewport& viewport, length_t line,
+		bool trackOutOfViewport) : viewport_(&viewport), tracksOutOfViewport_(trackOutOfViewport) {
 	initializeWithFirstVisibleLine();
 	advance(line - this->line());
 }
 
 /// @see detail#IteratorAdapter#advance
 void BaselineIterator::advance(BaselineIterator::difference_type n) {
+	const TextRenderer& renderer = viewport().textRenderer();
 	if(n == 0)
 		return;
-	else if(n > 0 && line() + n > textRenderer().presentation().document().numberOfLines())
+	else if(n > 0 && line() + n > renderer.presentation().document().numberOfLines())
 		throw invalid_argument("n");
 	else if(n < 0 && static_cast<length_t>(-n) - 1 > line())
 		throw invalid_argument("n");
@@ -698,29 +492,29 @@ void BaselineIterator::advance(BaselineIterator::difference_type n) {
 			line_ = VisualLine(destination, 0);
 			return;
 		}
-		swap(*this, BaselineIterator(textRenderer(), destination, tracksOutOfViewport()));
+		swap(*this, BaselineIterator(viewport(), destination, tracksOutOfViewport()));
 		return;
 	}
 
-	const WritingMode writingMode(textRenderer().writingMode());
+	const WritingMode writingMode(renderer.writingMode());
 	Scalar viewportExtent;
 	if(!tracksOutOfViewport() && n > 0)
 		viewportExtent = isHorizontal(writingMode.blockFlowDirection) ?
-			(geometry::dy(textRenderer().size())) : (geometry::dx(textRenderer().size()));
+			(geometry::dy(viewport().size())) : (geometry::dx(viewport().size()));
 
 	VisualLine i(line_);
 	Scalar newBaseline = baseline_.first;
-	const TextLayout* layout = &textRenderer().layouts()[line()];
+	const TextLayout* layout = &renderer.layouts()[line()];
 	if(n > 0) {
 		newBaseline += layout->lineMetrics(line_.subline).descent();
 		for(length_t ln = line(), subline = line_.subline; ; ) {
 			if(++subline == layout->numberOfLines()) {
 				subline = 0;
-				if(++ln == textRenderer().presentation().document().numberOfLines()) {
+				if(++ln == renderer.presentation().document().numberOfLines()) {
 					newBaseline = numeric_limits<Scalar>::max();
 					break;
 				}
-				layout = &textRenderer().layouts()[++ln];
+				layout = &renderer.layouts()[++ln];
 			}
 			newBaseline += layout->lineMetrics(subline).ascent();
 			if(ln == destination && subline == 0)
@@ -740,7 +534,7 @@ void BaselineIterator::advance(BaselineIterator::difference_type n) {
 					newBaseline = numeric_limits<Scalar>::min();
 					break;
 				}
-				layout = &textRenderer().layouts()[ln];
+				layout = &renderer.layouts()[ln];
 				subline = layout->numberOfLines() - 1;
 			} else
 				--subline;
@@ -783,19 +577,19 @@ const BaselineIterator::reference BaselineIterator::current() const {
 /// @internal Moves this iterator to the first visible line in the viewport.
 void BaselineIterator::initializeWithFirstVisibleLine() {
 	const VisualLine firstVisibleLine(
-		textRenderer().firstVisibleLineInLogicalNumber(), textRenderer().firstVisibleSublineInLogicalLine());
-	const Scalar baseline = textRenderer().layouts().at(firstVisibleLine.line).lineMetrics(firstVisibleLine.subline).ascent();
+		viewport().firstVisibleLineInLogicalNumber(), viewport().firstVisibleSublineInLogicalLine());
+	const Scalar baseline = viewport().textRenderer().layouts().at(firstVisibleLine.line).lineMetrics(firstVisibleLine.subline).ascent();
 	NativePoint axis;
-	const NativeRectangle viewport(geometry::make<NativeRectangle>(geometry::make<NativePoint>(0, 0), textRenderer().size()));
-	switch(textRenderer().writingMode().blockFlowDirection) {
+	const NativeRectangle bounds(geometry::make<NativeRectangle>(geometry::make<NativePoint>(0, 0), viewport().size()));
+	switch(viewport().textRenderer().writingMode().blockFlowDirection) {
 		case HORIZONTAL_TB:
-			axis = geometry::make<NativePoint>(0, geometry::top(viewport) + baseline);
+			axis = geometry::make<NativePoint>(0, geometry::top(bounds) + baseline);
 			break;
 		case VERTICAL_RL:
-			axis = geometry::make<NativePoint>(geometry::right(viewport) - baseline, 0);
+			axis = geometry::make<NativePoint>(geometry::right(bounds) - baseline, 0);
 			break;
 		case VERTICAL_LR:
-			axis = geometry::make<NativePoint>(geometry::left(viewport) + baseline, 0);
+			axis = geometry::make<NativePoint>(geometry::left(bounds) + baseline, 0);
 			break;
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
@@ -898,4 +692,230 @@ void BaselineIterator::next() {
 /// @see detail#IteratorAdapter#previous
 void BaselineIterator::previous() {
 	return advance(-1);
+}
+
+
+// TextViewport ///////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Returns the measure of the 'allocation-rectangle'.
+ * @return The measure of the 'allocation-rectangle' in pixels
+ * @see #contentMeasure
+ */
+Scalar TextViewport::allocationMeasure() const /*throw()*/ {
+	const TextRenderer& renderer = textRenderer();
+	const bool horizontal = isHorizontal(renderer.writingMode().blockFlowDirection);
+	const Scalar spaces = horizontal ?
+		renderer.spaceWidths().left() + renderer.spaceWidths().right()
+		: renderer.spaceWidths().top() + renderer.spaceWidths().bottom();
+	const Scalar borders = 0;
+	const Scalar paddings = 0;
+	return max(renderer.layouts().maximumMeasure() + spaces + borders + paddings,
+		static_cast<Scalar>(horizontal ? geometry::dx(size()) : geometry::dy(size())));
+}
+
+/**
+ * Returns the measure of the 'content-rectangle'.
+ * @return The measure of the 'content-rectangle' in pixels
+ * @see #allocationMeasure
+ */
+Scalar TextViewport::contentMeasure() const /*throw()*/ {
+	return max(
+		textRenderer().layouts().maximumMeasure(),
+		static_cast<Scalar>(isHorizontal(textRenderer().writingMode().blockFlowDirection) ?
+			geometry::dx(size()) : geometry::dy(size())));
+}
+
+/**
+ * Converts the specified position in the document to a point in the viewport-coordinates.
+ * @param position The document position
+ * @param fullSearchBpd If this is @c false, this method stops at before- or after-edge of the
+ *                      viewport. If this happened, the block-progression-dimension of the returned
+ *                      point is @c std#numeric_limits&lt;Scalar&gt;::max() (for the before-edge)
+ *                      or @c std#numeric_limits&lt;Scalar&gt;::min() (for the after-edge). If this
+ *                      is @c true, the calculation is performed completely and returns an exact
+ *                      location will (may be very slow)
+ * @param edge The edge of the character. If this is @c graphics#font#TextLayout#LEADING, the
+ *             returned point is the leading edge if the character (left if the character is
+ *             left-to-right), otherwise returned point is the trailing edge (right if the
+ *             character is left-to-right)
+ * @return The point in viewport-coordinates in pixels. The block-progression-dimension addresses
+ *         the baseline of the line
+ * @throw BadPositionException @a position is outside of the document
+ * @see #characterForLocalPoint, TextLayout#location
+ */
+NativePoint TextViewport::location(const k::Position& position,
+		bool fullSearchBpd, TextLayout::Edge edge /* = TextLayout::LEADING */) const {
+//	checkInitialization();
+
+	// get alignment-point
+	const BaselineIterator baseline(*this, position.line, fullSearchBpd);
+	NativePoint p(baseline.position());
+	const bool horizontal = isHorizontal(textRenderer().writingMode().blockFlowDirection);
+
+	// apply offset in line layout
+	const NativePoint offset(textRenderer().layouts().at(position.line).location(position.column, edge));
+	if(fullSearchBpd || horizontal || (*baseline != numeric_limits<Scalar>::max() && *baseline != numeric_limits<Scalar>::min())) {
+//		assert(geometry::x(p) != numeric_limits<Scalar>::max() && geometry::x(p) != numeric_limits<Scalar>::min());
+		geometry::x(p) += geometry::x(offset);
+	}
+	if(fullSearchBpd || !horizontal || (*baseline != numeric_limits<Scalar>::max() && *baseline != numeric_limits<Scalar>::min())) {
+//		assert(geometry::y(p) != numeric_limits<Scalar>::max() && geometry::y(p) != numeric_limits<Scalar>::min()));
+		geometry::y(p) += geometry::y(offset);
+	}
+
+	// apply viewport offset in inline-progression-direction
+	if(horizontal)
+		geometry::x(p) = mapLineLayoutIpdToViewport(position.line, geometry::x(p));
+	else
+		geometry::y(p) = mapLineLayoutIpdToViewport(position.line, geometry::y(p));
+
+	return p;
+}
+
+/**
+ * Converts the distance from the 'before-edge' of the 'allocation-rectangle' into the logical line
+ * and visual subline offset. The results are snapped to the first/last visible line in the
+ * viewport (this includes partially visible line) if the given distance addresses outside of the
+ * viewport.
+ * @param bpd The distance from the 'before-edge' of the 'allocation-rectangle' in pixels
+ * @param[out] snapped @c true if there was not a line at @a bpd. Optional
+ * @return The logical and visual line numbers
+ * @see #BaselineIterator, TextViewer#mapLocalBpdToLine
+ */
+VisualLine TextViewport::mapBpdToLine(Scalar bpd, bool* snapped /* = 0 */) const /*throw()*/ {
+	const WritingMode writingMode(textRenderer().writingMode());
+	const PhysicalFourSides<Scalar>& physicalSpaces = textRenderer().spaceWidths();
+	AbstractFourSides<Scalar> abstractSpaces;
+	mapPhysicalToAbstract(writingMode, physicalSpaces, abstractSpaces);
+	const Scalar spaceBefore = abstractSpaces.before();
+	const Scalar spaceAfter = abstractSpaces.after();
+	const Scalar borderBefore = 0, borderAfter = 0, paddingBefore = 0, paddingAfter = 0;
+	const Scalar before = spaceBefore + borderBefore + paddingBefore;
+	const Scalar after = (isHorizontal(writingMode.blockFlowDirection) ?
+		geometry::dy(size()) : geometry::dx(size())) - spaceAfter - borderAfter - paddingBefore;
+
+	VisualLine result(firstVisibleLineInLogicalNumber(), firstVisibleSublineInLogicalLine());
+	bool outside;	// for 'snapped'
+	if(bpd <= before)
+		outside = bpd != before;
+	else {
+		const bool beyondAfter = bpd >= after;
+		if(beyondAfter)
+			bpd = after;
+		Scalar lineBefore = before;
+		const TextLayout* layout = &textRenderer().layouts()[result.line];
+		while(result.subline > 0)	// back to the first subline
+			lineBefore -= layout->lineMetrics(--result.subline).height();
+		while(true) {
+			assert(bpd >= lineBefore);
+			Scalar lineAfter = lineBefore;
+			for(length_t sl = 0; sl < layout->numberOfLines(); ++sl)
+				lineAfter += layout->lineMetrics(sl).height();
+			if(bpd < lineAfter) {
+				result.subline = layout->locateLine(bpd - lineBefore, outside);
+				if(!outside)
+					break;	// bpd is this line
+				assert(result.subline == layout->numberOfLines() - 1);
+			}
+			layout = &textRenderer().layouts()[++result.line];
+			lineBefore = lineAfter;
+		}
+		outside = beyondAfter;
+	}
+	if(snapped != 0)
+		*snapped = outside;
+	return result;
+}
+
+/**
+ * Returns the number of the drawable columns in the window.
+ * @return The number of columns
+ */
+float TextViewport::numberOfVisibleCharactersInLine() const /*throw()*/ {
+	const bool horizontal = isHorizontal(textRenderer().writingMode().blockFlowDirection);
+	Scalar ipd(horizontal ? geometry::dx(size()) : geometry::dy(size()));
+	if(ipd == 0)
+		return 0;
+//	ipd -= horizontal ? (spaceWidths().left() + spaceWidths().right()) : (spaceWidths().top() + spaceWidths().bottom());
+	return static_cast<float>(ipd) / textRenderer().defaultFont()->metrics().averageCharacterWidth();
+}
+
+/**
+ * Returns the number of the drawable visual lines in the viewport.
+ * @return The number of visual lines
+ */
+float TextViewport::numberOfVisibleLines() const /*throw()*/ {
+	const bool horizontal = isHorizontal(textRenderer().writingMode().blockFlowDirection);
+	Scalar bpd(horizontal ? geometry::dy(size()) : geometry::dx(size()));
+	if(bpd <= 0)
+		return 0;
+//	bpd -= horizontal ? (spaceWidths().top() + spaceWidths().bottom()) : (spaceWidths().left() + spaceWidths().right());
+
+	VisualLine line(firstVisibleLineInLogicalNumber(), firstVisibleSublineInLogicalLine());
+	const TextLayout* layout = &textRenderer().layouts().at(line.line);
+	float lines = 0;
+	while(true) {
+		const Scalar lineHeight = layout->lineMetrics(line.subline).height();
+		if(lineHeight >= bpd)
+			return lines += bpd / lineHeight;
+		bpd -= lineHeight;
+		++lines;
+		if(line.subline == layout->numberOfLines() - 1) {
+			if(line.line == textRenderer().presentation().document().numberOfLines() - 1)
+				return lines;
+			layout = &textRenderer().layouts()[++line.line];
+			line.subline = 0;
+		} else
+			++line.subline;
+	}
+}
+
+
+// free functions /////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Returns the indentation of the specified visual line from the left most.
+ * @param layout The layout of the line
+ * @param contentMeasure The measure of 'content-rectangle' of the viewport
+ * @param subline The visual subline number
+ * @return The indentation in pixels
+ * @throw IndexOutOfBoundsException @a subline is invalid
+ */
+Scalar font::lineIndent(const TextLayout& layout, Scalar contentMeasure, length_t subline /* = 0 */) {
+	const detail::PhysicalTextAnchor alignment =
+		detail::computePhysicalTextAnchor(layout.anchor(), layout.writingMode().inlineFlowDirection);
+	if(alignment == detail::LEFT /*|| ... != NO_JUSTIFICATION*/)	// TODO: recognize the last subline of a justified line.
+		return 0;
+	else {
+		switch(alignment) {
+			case detail::RIGHT:
+				return contentMeasure - layout.measure(subline);
+			case detail::MIDDLE:
+				return (contentMeasure - layout.measure(subline)) / 2;
+			default:
+				ASCENSION_ASSERT_NOT_REACHED();
+		}
+	}
+}
+
+/**
+ * Returns distance from left/top-edge of the content-area to start-edge of the specified line in
+ * pixels.
+ * @param layout The layout of the line
+ * @return Distance from left/top-edge of the content-area to start-edge of @a line in pixels
+ * @see TextLayout#lineStartEdge, TextViewer#inlineProgressionOffsetInViewport
+ */
+Scalar font::lineStartEdge(const TextLayout& layout, Scalar contentMeasure) {
+	const bool ltr = layout.writingMode().inlineFlowDirection == LEFT_TO_RIGHT;
+	switch(layout.anchor()) {
+		case TEXT_ANCHOR_START:
+			return ltr ? 0 : contentMeasure;
+		case TEXT_ANCHOR_MIDDLE:
+			return ltr ? (contentMeasure - layout.measure(0) / 2) : (contentMeasure + layout.measure(0)) / 2;
+		case TEXT_ANCHOR_END:
+			return ltr ? contentMeasure - layout.measure(0) : layout.measure(0);
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
 }
