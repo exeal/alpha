@@ -161,6 +161,8 @@ namespace ascension {
 		}
 	}
 
+	ASCENSION_STATIC_ASSERT(std::tr1::is_signed<graphics::geometry::nativetypes::Scalar>::value);
+
 	namespace detail {
 		template<typename Geometry, typename GeometryTag, typename T = void>
 		class EnableIfTagIs : std::tr1::enable_if<
