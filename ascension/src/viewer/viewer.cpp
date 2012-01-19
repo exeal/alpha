@@ -362,7 +362,7 @@ k::Position TextViewer::characterForLocalPoint(const NativePoint& p, TextLayout:
 /// @see DefaultFontListener#defaultFontChanged
 void TextViewer::defaultFontChanged() /*throw()*/ {
 	rulerPainter_->update();
-	scrollInfo_.resetBars(*this, 'b', true);
+	scrolls_.resetBars(*this, 'a', true);
 	updateScrollBars();
 	caret().resetVisualization();
 	redrawLine(0, true);
@@ -414,7 +414,7 @@ void TextViewer::documentChanged(const k::Document&, const k::DocumentChange& ch
 //	invalidateLines(region.beginning().line, !multiLine ? region.end().line : INVALID_INDEX);
 	if(!isFrozen())
 		rulerPainter_->update();
-	if(scrollInfo_.changed)
+	if(scrolls_.changed)
 		updateScrollBars();
 }
 
@@ -562,8 +562,8 @@ bool TextViewer::getPointedLinkText(Region& region, AutoBuffer<Char>& text) cons
 void TextViewer::focusGained() {
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 	// restore the scroll positions
-	horizontalScrollBar().setPosition(scrollInfo_.horizontal.position);
-	verticalScrollBar().setPosition(scrollInfo_.vertical.position);
+	horizontalScrollBar().setPosition(scrolls_.horizontal.position);
+	verticalScrollBar().setPosition(scrolls_.vertical.position);
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 
 	// hmm...
@@ -615,7 +615,7 @@ Scalar TextViewer::inlineProgressionOffsetInViewport() const {
 	Scalar offset = 0;
 
 	// scroll position
-	offset -= (horizontal ? scrollInfo_.x() : scrollInfo_.y())
+	offset -= (horizontal ? scrolls_.x() : scrolls_.y())
 		* textRenderer().defaultFont()->metrics().averageCharacterWidth();
 
 	// ruler width
@@ -629,7 +629,7 @@ Scalar TextViewer::inlineProgressionOffsetInViewport() const {
 	const detail::PhysicalTextAnchor alignment(
 		detail::computePhysicalTextAnchor(layout.anchor(), layout.writingMode().inlineFlowDirection));
 	if(alignment == detail::LEFT /*|| ... != NO_JUSTIFICATION*/)	// TODO: this code ignores last visual line with justification.
-		return spaces.left - scrollInfo_.x() * renderer_->defaultFont()->metrics().averageCharacterWidth();
+		return spaces.left - scrolls_.x() * renderer_->defaultFont()->metrics().averageCharacterWidth();
 
 	Scalar indent;
 	const NativeRectangle clientBounds(bounds(false));
@@ -642,7 +642,7 @@ Scalar TextViewer::inlineProgressionOffsetInViewport() const {
 		indent /= 2;
 	else
 		assert(alignment == detail::RIGHT);
-	return indent - static_cast<Scalar>(scrollInfo_.x()) * renderer_->defaultFont()->metrics().averageCharacterWidth();
+	return indent - static_cast<Scalar>(scrolls_.x()) * renderer_->defaultFont()->metrics().averageCharacterWidth();
 #endif
 }
 
@@ -865,9 +865,9 @@ NativePoint TextViewer::localPointForCharacter(const k::Position& position,
  */
 void TextViewer::lockScroll(bool unlock /* = false */) {
 	if(!unlock)
-		++scrollInfo_.lockCount;
-	else if(scrollInfo_.lockCount != 0)
-		--scrollInfo_.lockCount;
+		++scrolls_.lockCount;
+	else if(scrolls_.lockCount != 0)
+		--scrolls_.lockCount;
 }
 
 /**
@@ -901,19 +901,19 @@ inline Scalar TextViewer::mapViewportIpdToLineLayout(length_t line, Scalar ipd) 
  */
 Scalar TextViewer::mapLineToViewportBpd(length_t line, bool fullSearch) const {
 	const PhysicalFourSides<Scalar> spaces(spaceWidths());
-	if(line == scrollInfo_.firstVisibleLine.line) {
-		if(scrollInfo_.firstVisibleLine.subline == 0)
+	if(line == scrolls_.firstVisibleLine.line) {
+		if(scrolls_.firstVisibleLine.subline == 0)
 			return spaces.top;
 		else
 			return fullSearch ? spaces.top
-				- static_cast<Scalar>(renderer_->defaultFont()->metrics().linePitch() * scrollInfo_.firstVisibleLine.subline) : numeric_limits<Scalar>::min();
-	} else if(line > scrollInfo_.firstVisibleLine.line) {
+				- static_cast<Scalar>(renderer_->defaultFont()->metrics().linePitch() * scrolls_.firstVisibleLine.subline) : numeric_limits<Scalar>::min();
+	} else if(line > scrolls_.firstVisibleLine.line) {
 		const Scalar lineSpan = renderer_->defaultFont()->metrics().linePitch();
 		const NativeRectangle clientBounds(bounds(false));
 		Scalar y = spaces.top;
 		y += lineSpan * static_cast<Scalar>(
-			renderer_->layouts().numberOfSublinesOfLine(scrollInfo_.firstVisibleLine.line) - scrollInfo_.firstVisibleLine.subline);
-		for(length_t i = scrollInfo_.firstVisibleLine.line + 1; i < line; ++i) {
+			renderer_->layouts().numberOfSublinesOfLine(scrolls_.firstVisibleLine.line) - scrolls_.firstVisibleLine.subline);
+		for(length_t i = scrolls_.firstVisibleLine.line + 1; i < line; ++i) {
 			y += lineSpan * static_cast<Scalar>(renderer_->layouts().numberOfSublinesOfLine(i));
 			if(y >= geometry::dy(clientBounds) && !fullSearch)
 				return numeric_limits<Scalar>::max();
@@ -923,8 +923,8 @@ Scalar TextViewer::mapLineToViewportBpd(length_t line, bool fullSearch) const {
 		return numeric_limits<Scalar>::min();
 	else {
 		const Scalar linePitch = renderer_->defaultFont()->metrics().linePitch();
-		Scalar y = spaces.top - static_cast<Scalar>(linePitch * scrollInfo_.firstVisibleLine.subline);
-		for(length_t i = scrollInfo_.firstVisibleLine.line - 1; ; --i) {
+		Scalar y = spaces.top - static_cast<Scalar>(linePitch * scrolls_.firstVisibleLine.subline);
+		for(length_t i = scrolls_.firstVisibleLine.line - 1; ; --i) {
 			y -= static_cast<Scalar>(renderer_->layouts().numberOfSublinesOfLine(i) * linePitch);
 			if(i == line)
 				break;
@@ -1088,7 +1088,7 @@ void TextViewer::redrawLines(const Range<length_t>& lines) {
 		return;
 	}
 
-	if(lines.end() - 1 < scrollInfo_.firstVisibleLine.line)
+	if(lines.end() - 1 < scrolls_.firstVisibleLine.line)
 		return;
 
 #ifdef _DEBUG
@@ -1157,33 +1157,33 @@ void TextViewer::repaintRuler() {
  */
 void TextViewer::scroll(int dx, int dy, bool redraw) {
 //	checkInitialization();
-	if(scrollInfo_.lockCount != 0)
+	if(scrolls_.lockCount != 0)
 		return;
 
 	// 1. preprocess and update the scroll bars
 	if(dx != 0) {
-		dx = min<int>(dx, scrollInfo_.horizontal.maximum - scrollInfo_.horizontal.pageSize - scrollInfo_.horizontal.position + 1);
-		dx = max(dx, -scrollInfo_.horizontal.position);
+		dx = min<int>(dx, scrolls_.horizontal.maximum - scrolls_.horizontal.pageSize - scrolls_.horizontal.position + 1);
+		dx = max(dx, -scrolls_.horizontal.position);
 		if(dx != 0) {
-			scrollInfo_.horizontal.position += dx;
+			scrolls_.horizontal.position += dx;
 			if(!isFrozen())
-				horizontalScrollBar().setPosition(scrollInfo_.horizontal.position);
+				horizontalScrollBar().setPosition(scrolls_.horizontal.position);
 		}
 	}
 	if(dy != 0) {
-		dy = min<int>(dy, scrollInfo_.vertical.maximum - scrollInfo_.vertical.pageSize - scrollInfo_.vertical.position + 1);
-		dy = max(dy, -scrollInfo_.vertical.position);
+		dy = min<int>(dy, scrolls_.vertical.maximum - scrolls_.vertical.pageSize - scrolls_.vertical.position + 1);
+		dy = max(dy, -scrolls_.vertical.position);
 		if(dy != 0) {
-			scrollInfo_.vertical.position += dy;
-			renderer_->layouts().offsetVisualLine(scrollInfo_.firstVisibleLine, dy);
+			scrolls_.vertical.position += dy;
+			renderer_->layouts().offsetVisualLine(scrolls_.firstVisibleLine, dy);
 			if(!isFrozen())
-				verticalScrollBar().setPosition(scrollInfo_.vertical.position);
+				verticalScrollBar().setPosition(scrolls_.vertical.position);
 		}
 	}
 	if(dx == 0 && dy == 0)
 		return;
 	else if(isFrozen()) {
-		scrollInfo_.changed = true;
+		scrolls_.changed = true;
 		return;
 	}
 //	closeCompletionProposalsPopup(*this);
@@ -1312,7 +1312,7 @@ void TextViewer::resized(State state, const NativeSize&) {
 	renderer_->setTextWrapping(textRenderer().textWrapping(), createRenderingContext().get());
 
 	displaySizeListeners_.notify(&DisplaySizeListener::viewerDisplaySizeChanged);
-	scrollInfo_.resetBars(*this, 'b', true);
+	scrolls_.resetBars(*this, 'a', true);
 	updateScrollBars();
 	rulerPainter_->update();
 	if(rulerPainter_->alignment() != detail::RulerPainter::LEFT && rulerPainter_->alignment() != detail::RulerPainter::TOP) {
@@ -1332,11 +1332,11 @@ void TextViewer::resized(State state, const NativeSize&) {
 void TextViewer::scrollTo(int x, int y, bool redraw) {
 //	checkInitialization();
 	if(x != -1)
-		x = max(min<int>(x, scrollInfo_.horizontal.maximum - scrollInfo_.horizontal.pageSize + 1), 0);
+		x = max(min<int>(x, scrolls_.horizontal.maximum - scrolls_.horizontal.pageSize + 1), 0);
 	if(y != -1)
-		y = max(min<int>(y, scrollInfo_.vertical.maximum - scrollInfo_.vertical.pageSize + 1), 0);
-	const int dx = (x != -1) ? x - scrollInfo_.horizontal.position : 0;
-	const int dy = (y != -1) ? y - scrollInfo_.vertical.position : 0;
+		y = max(min<int>(y, scrolls_.vertical.maximum - scrolls_.vertical.pageSize + 1), 0);
+	const int dx = (x != -1) ? x - scrolls_.horizontal.position : 0;
+	const int dy = (y != -1) ? y - scrolls_.vertical.position : 0;
 	if(dx != 0 || dy != 0)
 		scroll(dx, dy, redraw);	// does not work if scroll is lock
 }
@@ -1350,11 +1350,11 @@ void TextViewer::scrollTo(int x, int y, bool redraw) {
 void TextViewer::scrollTo(length_t line, bool redraw) {
 	// TODO: not implemented.
 //	checkInitialization();
-	if(scrollInfo_.lockCount != 0)
+	if(scrolls_.lockCount != 0)
 		return;
 	if(line >= document().numberOfLines())
 		throw k::BadPositionException(k::Position(line, 0));
-	scrollInfo_.firstVisibleLine = VisualLine(line, 0);
+	scrolls_.firstVisibleLine = VisualLine(line, 0);
 	length_t visualLine;
 	if(textRenderer().layouts().numberOfVisualLines() != document().numberOfLines())
 		visualLine = line;
@@ -1394,9 +1394,9 @@ void TextViewer::setConfiguration(const Configuration* general, const RulerConfi
 
 		if((oldReadingDirection == LEFT_TO_RIGHT && configuration_.readingDirection == RIGHT_TO_LEFT)
 				|| (oldReadingDirection == RIGHT_TO_LEFT && configuration_.readingDirection == LEFT_TO_RIGHT))
-			scrollInfo_.horizontal.position = scrollInfo_.horizontal.maximum
-				- scrollInfo_.horizontal.pageSize - scrollInfo_.horizontal.position + 1;
-		scrollInfo_.resetBars(*this, 'b', false);
+			scrolls_.horizontal.position = scrolls_.horizontal.maximum
+				- scrolls_.horizontal.pageSize - scrolls_.horizontal.position + 1;
+		scrolls_.resetBars(*this, 'a', false);
 		updateScrollBars();
 
 		if(!isFrozen() && (hasFocus() /*|| getHandle() == Viewer::completionWindow_->getSafeHwnd()*/)) {
@@ -1527,7 +1527,7 @@ void TextViewer::unfreeze() {
 	if(freezeRegister_.isFrozen()) {
 		const Range<length_t> linesToRedraw(freezeRegister_.unfreeze());
 		if(!freezeRegister_.isFrozen()) {
-			if(scrollInfo_.changed) {
+			if(scrolls_.changed) {
 				updateScrollBars();
 				scheduleRedraw(false);
 			} else if(!isEmpty(linesToRedraw))
@@ -1550,99 +1550,99 @@ void TextViewer::updateScrollBars() {
 #define ASCENSION_GET_SCROLL_MINIMUM(s)	(s.maximum/* * s.rate*/ - s.pageSize + 1)
 
 	// about horizontal scroll bar
-	bool wasNeededScrollbar = ASCENSION_GET_SCROLL_MINIMUM(scrollInfo_.horizontal) > 0;
+	bool wasNeededScrollbar = ASCENSION_GET_SCROLL_MINIMUM(scrolls_.horizontal) > 0;
 	// scroll to leftmost/rightmost before the scroll bar vanishes
-	long minimum = ASCENSION_GET_SCROLL_MINIMUM(scrollInfo_.horizontal);
+	long minimum = ASCENSION_GET_SCROLL_MINIMUM(scrolls_.horizontal);
 	if(wasNeededScrollbar && minimum <= 0) {
-		scrollInfo_.horizontal.position = 0;
+		scrolls_.horizontal.position = 0;
 		if(!isFrozen()) {
 			scheduleRedraw(false);
 			caret().updateLocation();
 		}
-	} else if(scrollInfo_.horizontal.position > minimum)
+	} else if(scrolls_.horizontal.position > minimum)
 		scrollTo(minimum, -1, true);
-	assert(ASCENSION_GET_SCROLL_MINIMUM(scrollInfo_.horizontal) > 0 || scrollInfo_.horizontal.position == 0);
+	assert(ASCENSION_GET_SCROLL_MINIMUM(scrolls_.horizontal) > 0 || scrolls_.horizontal.position == 0);
 	if(!isFrozen()) {
 		ScrollProperties<int>& scrollBar = horizontalScrollBar();
-		scrollBar.setRange(makeRange<int>(0, scrollInfo_.horizontal.maximum));
-		scrollBar.setPageStep(scrollInfo_.horizontal.pageSize);
-		scrollBar.setPosition(scrollInfo_.horizontal.position);
+		scrollBar.setRange(makeRange<int>(0, scrolls_.horizontal.maximum));
+		scrollBar.setPageStep(scrolls_.horizontal.pageSize);
+		scrollBar.setPosition(scrolls_.horizontal.position);
 //		win32::AutoZeroSize<SCROLLINFO> scroll;
 //		scroll.fMask = SIF_PAGE | SIF_POS | SIF_RANGE;
-//		scroll.nMax = configuration_.lineWrap.wrapsAtWindowEdge() ? 0 : scrollInfo_.horizontal.maximum;
-//		scroll.nPage = scrollInfo_.horizontal.pageSize;
-//		scroll.nPos = scrollInfo_.horizontal.position;
+//		scroll.nMax = configuration_.lineWrap.wrapsAtWindowEdge() ? 0 : scrolls_.horizontal.maximum;
+//		scroll.nPage = scrolls_.horizontal.pageSize;
+//		scroll.nPos = scrolls_.horizontal.position;
 //		setScrollInformation(SB_HORZ, scroll, true);
 	}
 
 	// about vertical scroll bar
-	wasNeededScrollbar = ASCENSION_GET_SCROLL_MINIMUM(scrollInfo_.vertical) > 0;
-	minimum = ASCENSION_GET_SCROLL_MINIMUM(scrollInfo_.vertical);
+	wasNeededScrollbar = ASCENSION_GET_SCROLL_MINIMUM(scrolls_.vertical) > 0;
+	minimum = ASCENSION_GET_SCROLL_MINIMUM(scrolls_.vertical);
 	// validate scroll position
 	if(minimum <= 0) {
-		scrollInfo_.vertical.position = 0;
-		scrollInfo_.firstVisibleLine = VisualLine(0, 0);
+		scrolls_.vertical.position = 0;
+		scrolls_.firstVisibleLine = VisualLine(0, 0);
 		if(!isFrozen()) {
 			scheduleRedraw(false);
 			caret().updateLocation();
 		}
-	} else if(scrollInfo_.vertical.position > minimum)
+	} else if(scrolls_.vertical.position > minimum)
 		scrollTo(-1, minimum, true);
-	assert(ASCENSION_GET_SCROLL_MINIMUM(scrollInfo_.vertical) > 0 || scrollInfo_.vertical.position == 0);
+	assert(ASCENSION_GET_SCROLL_MINIMUM(scrolls_.vertical) > 0 || scrolls_.vertical.position == 0);
 	if(!isFrozen()) {
 		ScrollProperties<int>& scrollBar = verticalScrollBar();
-		scrollBar.setRange(makeRange(0, scrollInfo_.vertical.maximum));
-		scrollBar.setPageStep(scrollInfo_.vertical.pageSize);
-		scrollBar.setPosition(scrollInfo_.vertical.position);
+		scrollBar.setRange(makeRange(0, scrolls_.vertical.maximum));
+		scrollBar.setPageStep(scrolls_.vertical.pageSize);
+		scrollBar.setPosition(scrolls_.vertical.position);
 //		win32::AutoZeroSize<SCROLLINFO> scroll;
 //		scroll.fMask = SIF_DISABLENOSCROLL | SIF_PAGE | SIF_POS | SIF_RANGE;
-//		scroll.nMax = scrollInfo_.vertical.maximum;
-//		scroll.nPage = scrollInfo_.vertical.pageSize;
-//		scroll.nPos = scrollInfo_.vertical.position;
+//		scroll.nMax = scrolls_.vertical.maximum;
+//		scroll.nPage = scrolls_.vertical.pageSize;
+//		scroll.nPos = scrolls_.vertical.position;
 //		setScrollInformation(SB_VERT, scroll, true);
 	}
 
-	scrollInfo_.changed = isFrozen();
+	scrolls_.changed = isFrozen();
 
 #undef ASCENSION_GET_SCROLL_MINIMUM
 }
 
 /// @see VisualLinesListener#visualLinesDeleted
 void TextViewer::visualLinesDeleted(const Range<length_t>& lines, length_t sublines, bool longestLineChanged) /*throw()*/ {
-	scrollInfo_.changed = true;
-	if(lines.end() < scrollInfo_.firstVisibleLine.line) {	// deleted before visible area
-		scrollInfo_.firstVisibleLine.line -= length(lines);
-		scrollInfo_.vertical.position -= static_cast<int>(sublines);
-		scrollInfo_.vertical.maximum -= static_cast<int>(sublines);
+	scrolls_.changed = true;
+	if(lines.end() < scrolls_.firstVisibleLine.line) {	// deleted before visible area
+		scrolls_.firstVisibleLine.line -= length(lines);
+		scrolls_.vertical.position -= static_cast<int>(sublines);
+		scrolls_.vertical.maximum -= static_cast<int>(sublines);
 		repaintRuler();
-	} else if(lines.beginning() > scrollInfo_.firstVisibleLine.line	// deleted the first visible line and/or after it
-			|| (lines.beginning() == scrollInfo_.firstVisibleLine.line && scrollInfo_.firstVisibleLine.subline == 0)) {
-		scrollInfo_.vertical.maximum -= static_cast<int>(sublines);
+	} else if(lines.beginning() > scrolls_.firstVisibleLine.line	// deleted the first visible line and/or after it
+			|| (lines.beginning() == scrolls_.firstVisibleLine.line && scrolls_.firstVisibleLine.subline == 0)) {
+		scrolls_.vertical.maximum -= static_cast<int>(sublines);
 		redrawLine(lines.beginning(), true);
 	} else {	// deleted lines contain the first visible line
-		scrollInfo_.firstVisibleLine.line = lines.beginning();
-		scrollInfo_.updateVertical(*this);
+		scrolls_.firstVisibleLine.line = lines.beginning();
+		scrolls_.updateVertical(*this);
 		redrawLine(lines.beginning(), true);
 	}
 	if(longestLineChanged)
-		scrollInfo_.resetBars(*this, 'h', false);
+		scrolls_.resetBars(*this, 'i', false);
 }
 
 /// @see VisualLinesListener#visualLinesInserted
 void TextViewer::visualLinesInserted(const Range<length_t>& lines) /*throw()*/ {
-	scrollInfo_.changed = true;
-	if(lines.end() < scrollInfo_.firstVisibleLine.line) {	// inserted before visible area
-		scrollInfo_.firstVisibleLine.line += length(lines);
-		scrollInfo_.vertical.position += static_cast<int>(length(lines));
-		scrollInfo_.vertical.maximum += static_cast<int>(length(lines));
+	scrolls_.changed = true;
+	if(lines.end() < scrolls_.firstVisibleLine.line) {	// inserted before visible area
+		scrolls_.firstVisibleLine.line += length(lines);
+		scrolls_.vertical.position += static_cast<int>(length(lines));
+		scrolls_.vertical.maximum += static_cast<int>(length(lines));
 		repaintRuler();
-	} else if(lines.beginning() > scrollInfo_.firstVisibleLine.line	// inserted at or after the first visible line
-			|| (lines.beginning() == scrollInfo_.firstVisibleLine.line && scrollInfo_.firstVisibleLine.subline == 0)) {
-		scrollInfo_.vertical.maximum += static_cast<int>(length(lines));
+	} else if(lines.beginning() > scrolls_.firstVisibleLine.line	// inserted at or after the first visible line
+			|| (lines.beginning() == scrolls_.firstVisibleLine.line && scrolls_.firstVisibleLine.subline == 0)) {
+		scrolls_.vertical.maximum += static_cast<int>(length(lines));
 		redrawLine(lines.beginning(), true);
 	} else {	// inserted around the first visible line
-		scrollInfo_.firstVisibleLine.line += length(lines);
-		scrollInfo_.updateVertical(*this);
+		scrolls_.firstVisibleLine.line += length(lines);
+		scrolls_.updateVertical(*this);
 		redrawLine(lines.beginning(), true);
 	}
 }
@@ -1653,25 +1653,25 @@ void TextViewer::visualLinesModified(const Range<length_t>& lines,
 	if(sublinesDifference == 0)	// number of visual lines was not changed
 		redrawLines(lines);
 	else {
-		scrollInfo_.changed = true;
-		if(lines.end() < scrollInfo_.firstVisibleLine.line) {	// changed before visible area
-			scrollInfo_.vertical.position += sublinesDifference;
-			scrollInfo_.vertical.maximum += sublinesDifference;
+		scrolls_.changed = true;
+		if(lines.end() < scrolls_.firstVisibleLine.line) {	// changed before visible area
+			scrolls_.vertical.position += sublinesDifference;
+			scrolls_.vertical.maximum += sublinesDifference;
 			repaintRuler();
-		} else if(lines.beginning() > scrollInfo_.firstVisibleLine.line	// changed at or after the first visible line
-				|| (lines.beginning() == scrollInfo_.firstVisibleLine.line && scrollInfo_.firstVisibleLine.subline == 0)) {
-			scrollInfo_.vertical.maximum += sublinesDifference;
+		} else if(lines.beginning() > scrolls_.firstVisibleLine.line	// changed at or after the first visible line
+				|| (lines.beginning() == scrolls_.firstVisibleLine.line && scrolls_.firstVisibleLine.subline == 0)) {
+			scrolls_.vertical.maximum += sublinesDifference;
 			redrawLine(lines.beginning(), true);
 		} else {	// changed lines contain the first visible line
-			scrollInfo_.updateVertical(*this);
+			scrolls_.updateVertical(*this);
 			redrawLine(lines.beginning(), true);
 		}
 	}
 	if(longestLineChanged) {
-		scrollInfo_.resetBars(*this, 'h', false);
-		scrollInfo_.changed = true;
+		scrolls_.resetBars(*this, 'i', false);
+		scrolls_.changed = true;
 	}
-	if(!documentChanged && scrollInfo_.changed)
+	if(!documentChanged && scrolls_.changed)
 		updateScrollBars();
 }
 
@@ -1852,51 +1852,62 @@ TextViewer::Configuration::Configuration() /*throw()*/ :
 }
 
 
-// TextViewer.ScrollInfo ////////////////////////////////////////////////////
+// TextViewer.Scrolls /////////////////////////////////////////////////////////////////////////////
 
-void TextViewer::ScrollInfo::resetBars(const TextViewer& viewer, char bars, bool pageSizeChanged) /*throw()*/ {
-	// about horizontal
-	if(bars == 'h' || bars == 'b') {
+void TextViewer::Scrolls::resetBars(const TextViewer& viewer, char bars, bool pageSizeChanged) /*throw()*/ {
+	const BlockFlowDirection direction = viewer.textRenderer().writingMode().blockFlowDirection;
+
+	// about inline-progression-dimension
+	if(bars == 'i' || bars == 'a') {
+		Axis& target = isHorizontal(direction) ? horizontal : vertical;
 		// テキストが左揃えでない場合は、スクロールボックスの位置を補正する必要がある
 		// (ウィンドウが常に LTR である仕様のため)
 	//	const TextAlignment alignment = resolveTextAlignment(viewer.configuration().alignment, viewer.configuration().readingDirection);
 		const Scalar dx = viewer.textRenderer().defaultFont()->metrics().averageCharacterWidth();
 		assert(dx > 0);
-		const unsigned long columns = viewer.textRenderer().layouts().maximumMeasure() / dx;
-//		horizontal.rate = columns / numeric_limits<int>::max() + 1;
-//		assert(horizontal.rate != 0);
-		const TextViewer::ScrollPosition oldMaximum = horizontal.maximum;
-		horizontal.maximum = max(static_cast<int>(columns/* / horizontal.rate*/), static_cast<int>(viewer.numberOfVisibleColumns() - 1));
+		const TextViewer::ScrollPosition n = viewer.textRenderer().layouts().maximumMeasure() / dx;
+//		target.rate = columns / numeric_limits<int>::max() + 1;
+//		assert(target.rate != 0);
+//		const TextViewer::ScrollPosition oldMaximum = target.maximum;
+		target.maximum = max(
+			static_cast<int>(n/* / target.rate*/),
+			static_cast<int>(viewer.textRenderer().numberOfVisibleCharactersInLine() - 1));
 	//	if(alignment == ALIGN_RIGHT)
 	//		horizontal.position += horizontal.maximum - oldMaximum;
 	//	else if(alignment == ALIGN_CENTER)
 //	//		horizontal.position += (horizontal.maximum - oldMaximum) / 2;
 	//		horizontal.position += horizontal.maximum / 2 - oldMaximum / 2;
-		horizontal.position = max(horizontal.position, 0);
+		target.position = max(target.position, 0);
 		if(pageSizeChanged) {
-			const TextViewer::ScrollPosition oldPageSize = horizontal.pageSize;
-			horizontal.pageSize = static_cast<TextViewer::ScrollPosition>(viewer.numberOfVisibleColumns());
+	//		const TextViewer::ScrollPosition oldPageSize = horizontal.pageSize;
+			target.pageSize = static_cast<TextViewer::ScrollPosition>(viewer.textRenderer().numberOfVisibleCharactersInLine());
 	//		if(alignment == ALIGN_RIGHT)
 	//			horizontal.position -= horizontal.pageSize - oldPageSize;
 	//		else if(alignment == ALIGN_CENTER)
 //	//			horizontal.position -= (horizontal.pageSize - oldPageSize) / 2;
 	//			horizontal.position -= horizontal.pageSize / 2 - oldPageSize / 2;
-			horizontal.position = max(horizontal.position, 0);
+	//		target.position = max(target.position, 0);
 		}
+
+		// commit
 	}
-	// about vertical
-	if(bars == 'v' || bars == 'b') {
+
+	// about block-progression-dimension
+	if(bars == 'b' || bars == 'a') {
+		Axis& target = isHorizontal(direction) ? vertical : horizontal;
 		const length_t lines = viewer.textRenderer().layouts().numberOfVisualLines();
 		assert(lines > 0);
-//		vertical.rate = static_cast<ulong>(lines) / numeric_limits<int>::max() + 1;
-//		assert(vertical.rate != 0);
-		vertical.maximum = max(static_cast<TextViewer::ScrollPosition>((lines - 1)/* / vertical.rate*/), 0/*static_cast<TextViewer::ScrollPosition>(viewer.numberOfVisibleLines() - 1)*/);
+//		target.rate = static_cast<ulong>(lines) / numeric_limits<int>::max() + 1;
+//		assert(target.rate != 0);
+		target.maximum = max(
+			static_cast<TextViewer::ScrollPosition>((lines - 1)/* / rate*/),
+			0/*static_cast<TextViewer::ScrollPosition>(viewer.textRenderer().numberOfVisibleLines() - 1)*/);
 		if(pageSizeChanged)
-			vertical.pageSize = static_cast<TextViewer::ScrollPosition>(viewer.numberOfVisibleLines());
+			target.pageSize = static_cast<TextViewer::ScrollPosition>(viewer.textRenderer().numberOfVisibleLines());
 	}
 }
 
-void TextViewer::ScrollInfo::updateVertical(const TextViewer& viewer) /*throw()*/ {
+void TextViewer::Scrolls::updateVertical(const TextViewer& viewer) /*throw()*/ {
 	const LineLayoutVector& layouts = viewer.textRenderer().layouts();
 	vertical.maximum = static_cast<int>(layouts.numberOfVisualLines());
 	firstVisibleLine.line = min(firstVisibleLine.line, viewer.document().numberOfLines() - 1);

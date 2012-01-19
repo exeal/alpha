@@ -436,8 +436,8 @@ namespace ascension {
 			} modeState_;
 
 			// scroll information
-			struct ScrollInfo {
-				struct {
+			struct Scrolls {
+				struct Axis {
 					ScrollPosition position;
 					ScrollPosition maximum;
 					ScrollPosition pageSize;
@@ -446,7 +446,7 @@ namespace ascension {
 				graphics::font::VisualLine firstVisibleLine;
 				bool changed;
 				std::size_t lockCount;	// see TextViewer.lockScroll
-				ScrollInfo() /*throw()*/ : firstVisibleLine(0, 0), changed(false), lockCount(0) {
+				Scrolls() /*throw()*/ : firstVisibleLine(0, 0), changed(false), lockCount(0) {
 					horizontal.position = vertical.position = 0;
 //					horizontal.rate = vertical.rate = 1;
 				}
@@ -454,7 +454,7 @@ namespace ascension {
 				unsigned long y() const /*throw()*/ {return vertical.position/* * vertical.rate*/;}
 				void resetBars(const TextViewer& viewer, char bars, bool pageSizeChanged) /*throw()*/;
 				void updateVertical(const TextViewer& viewer) /*throw()*/;
-			} scrollInfo_;
+			} scrolls_;
 
 			// freeze information
 			class FreezeRegister {
@@ -610,9 +610,9 @@ inline void TextViewer::enableMouseInput(bool enable) {
  */
 inline void TextViewer::firstVisibleLine(graphics::font::VisualLine* line, length_t* viewportOffset) const /*throw()*/ {
 	if(line != 0)
-		*line = scrollInfo_.firstVisibleLine;
+		*line = scrolls_.firstVisibleLine;
 	if(viewportOffset != 0)
-		*viewportOffset = scrollInfo_.y();	// TODO: This code can't handle vertical writing-mode.
+		*viewportOffset = scrolls_.y();	// TODO: This code can't handle vertical writing-mode.
 }
 
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
