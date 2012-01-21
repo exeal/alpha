@@ -13,6 +13,7 @@
 #include <ascension/kernel/point.hpp>	// kernel.locations
 #include <ascension/graphics/line-layout-vector.hpp>
 #include <ascension/presentation/presentation.hpp>
+#include <memory>	// std.auto_ptr, std.shared_ptr, std.weak_ptr
 
 namespace ascension {
 
@@ -74,6 +75,8 @@ namespace ascension {
 				friend class TextRenderer;
 			};
 
+			class TextViewport;
+
 			// documentation is layout.cpp
 			class TextRenderer : public presentation::GlobalTextStyleListener {
 			public:
@@ -82,6 +85,8 @@ namespace ascension {
 					const FontCollection& fontCollection, const NativeSize& initialSize);
 				TextRenderer(const TextRenderer& other);
 				virtual ~TextRenderer() /*throw()*/;
+				// viewport
+				std::weak_ptr<TextViewport> viewport() const /*throw()*/;
 				// layout
 				virtual std::auto_ptr<const TextLayout> createLineLayout(length_t line) const = 0;
 				LineLayoutVector& layouts() /*throw()*/;
@@ -102,7 +107,7 @@ namespace ascension {
 				Scalar textWrappingMeasureInPixels() const /*throw()*/;
 				// default font
 				void addDefaultFontListener(DefaultFontListener& listener);
-				std::tr1::shared_ptr<const Font> defaultFont() const /*throw()*/;
+				std::shared_ptr<const Font> defaultFont() const /*throw()*/;
 				void removeDefaultFontListener(DefaultFontListener& listener);
 				// text metrics
 				Scalar baselineDistance(const Range<VisualLine>& lines) const;
@@ -110,7 +115,7 @@ namespace ascension {
 				// paint
 				void paint(PaintContext& context) const;
 				void paint(length_t line, PaintContext& context, const NativePoint& alignmentPoint) const;
-				void setLineRenderingOptions(const std::tr1::shared_ptr<LineRenderingOptions> options);
+				void setLineRenderingOptions(const std::shared_ptr<LineRenderingOptions> options);
 
 				// LayoutInformationProvider
 				const FontCollection& fontCollection() const /*throw()*/;
@@ -128,7 +133,7 @@ namespace ascension {
 				std::auto_ptr<const TextLayout> generateLineLayout(length_t line) const;
 				void updateDefaultFont();
 				// presentation.GlobalTextStyleListener
-				void globalTextStyleChanged(std::tr1::shared_ptr<const presentation::TextToplevelStyle> used);
+				void globalTextStyleChanged(std::shared_ptr<const presentation::TextToplevelStyle> used);
 			private:
 				presentation::Presentation& presentation_;
 				presentation::WritingMode defaultUIWritingMode_;
@@ -136,8 +141,9 @@ namespace ascension {
 				Scalar textWrappingMeasureInPixels_;
 				std::auto_ptr<LineLayoutVector> layouts_;
 				const FontCollection& fontCollection_;
-				std::tr1::shared_ptr<const Font> defaultFont_;
-				std::tr1::shared_ptr<const LineRenderingOptions> lineRenderingOptions_;
+				std::shared_ptr<const Font> defaultFont_;
+				std::shared_ptr<const LineRenderingOptions> lineRenderingOptions_;
+				std::shared_ptr<TextViewport> viewport_;
 				class SpacePainter;
 				std::auto_ptr<SpacePainter> spacePainter_;
 				detail::Listeners<ComputedWritingModeListener> computedWritingModeListeners_;
@@ -217,7 +223,7 @@ namespace ascension {
 
 
 			/// Returns the primary font.
-			inline std::tr1::shared_ptr<const Font> TextRenderer::defaultFont() const /*throw()*/ {
+			inline std::shared_ptr<const Font> TextRenderer::defaultFont() const /*throw()*/ {
 				return defaultFont_;
 			}
 

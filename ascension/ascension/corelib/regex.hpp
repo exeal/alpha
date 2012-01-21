@@ -12,6 +12,7 @@
 #define ASCENSION_REGEX_HPP
 
 #include <ascension/corelib/memory.hpp>				// AutoBuffer
+#include <ascension/corelib/type-traits.hpp>		// std.tr1.integral_constant
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/case-folder.hpp>
 #include <ascension/corelib/text/character-property.hpp>
@@ -20,7 +21,6 @@
 #include <map>
 #include <bitset>
 #include <boost/regex.hpp>
-#include <boost/mpl/int.hpp>
 
 // workaround for UCS-4
 namespace boost {
@@ -546,7 +546,8 @@ namespace ascension {
 			template<typename OutputIterator>
 			Matcher& appendReplacement(OutputIterator out, const String& replacement) {
 				checkInplaceReplacement(); checkPreviousMatch();
-				appendReplacement(out, replacement, boost::mpl::int_<text::CodeUnitSizeOf<OutputIterator>::value>());
+				appendReplacement(out, replacement,
+					std::tr1::integral_constant<std::size_t, text::CodeUnitSizeOf<OutputIterator>::value>());
 				appendingPosition_ = Base::impl()[0].second;
 				return *this;
 			}
@@ -563,7 +564,8 @@ namespace ascension {
 			template<typename OutputIterator>
 			OutputIterator appendTail(OutputIterator out) const {
 				checkInplaceReplacement();
-				return appendTail(out, boost::mpl::int_<text::CodeUnitSizeOf<OutputIterator>::value>());
+				return appendTail(out,
+					std::tr1::integral_constant<std::size_t, text::CodeUnitSizeOf<OutputIterator>::value>());
 			}
 			// documentation is regex.cpp
 			String replaceAll(const String& replacement) {
@@ -663,7 +665,7 @@ namespace ascension {
 				appendingPosition_(input_.first), replaced_(false), matchedZeroWidth_(false),
 				usesAnchoringBounds_(true), usesTransparentBounds_(false) {}
 			template<typename OutputIterator> void appendReplacement(OutputIterator out,
-					const String& replacement, const boost::mpl::int_<2>&) {
+					const String& replacement, const std::tr1::integral_constant<std::size_t, 2>&) {
 				typedef typename boost::match_results<CodePointIterator>::string_type String32;
 				if(appendingPosition_ != input_.second)
 					std::copy(appendingPosition_, Base::impl()[0].first, out);
@@ -674,20 +676,20 @@ namespace ascension {
 					text::utf::makeCharacterEncodeIterator<Char>(replaced.end()), out);
 			}
 			template<typename OutputIterator> void appendReplacement(OutputIterator out,
-					const String& replacement, const boost::mpl::int_<4>&) {
+					const String& replacement, const std::tr1::integral_constant<std::size_t, 4>&) {
 				if(appendingPosition_ != input_.second)
 					std::copy(appendingPosition_, Base::impl()[0].first, out);
 				const String& replaced(Base::impl().format(replacement));
 				std::copy(replaced.begin(), replaced.end(), out);
 			}
 			template<typename OutputIterator>
-			OutputIterator appendTail(OutputIterator out, const boost::mpl::int_<2>&) const {
+			OutputIterator appendTail(OutputIterator out, const std::tr1::integral_constant<std::size_t, 2>&) const {
 				return std::copy(
 					text::utf::makeCharacterEncodeIterator<Char>(appendingPosition_),
 					text::utf::makeCharacterEncodeIterator<Char>(input_.second), out);
 			}
 			template<typename OutputIterator>
-			OutputIterator appendTail(OutputIterator out, const boost::mpl::int_<4>&) const {
+			OutputIterator appendTail(OutputIterator out, const std::tr1::integral_constant<std::size_t, 4>&) const {
 				return std::copy(appendingPosition_, input_.second, out);
 			}
 			bool acceptResult() {
