@@ -242,15 +242,15 @@ void TextViewer::caretMoved(const Caret& self, const k::Region& oldRegion) {
 				if(!isFrozen())
 					redrawScheduledRegion();
 			} else if(oldRegion.beginning() == newRegion.beginning()) {	// the beginning point didn't change
-				const length_t i[2] = {oldRegion.end().line, newRegion.end().line};
+				const Index i[2] = {oldRegion.end().line, newRegion.end().line};
 				redrawLines(makeRange(min(i[0], i[1]), max(i[0], i[1]) + 1));
 			} else if(oldRegion.end() == newRegion.end()) {	// the end point didn't change
-				const length_t i[2] = {oldRegion.beginning().line, newRegion.beginning().line};
+				const Index i[2] = {oldRegion.beginning().line, newRegion.beginning().line};
 				redrawLines(makeRange(min(i[0], i[1]), max(i[0], i[1]) + 1));
 			} else {	// the both points changed
 				if((oldRegion.beginning().line >= newRegion.beginning().line && oldRegion.beginning().line <= newRegion.end().line)
 						|| (oldRegion.end().line >= newRegion.beginning().line && oldRegion.end().line <= newRegion.end().line)) {
-					const length_t i[2] = {
+					const Index i[2] = {
 						min(oldRegion.beginning().line, newRegion.beginning().line), max(oldRegion.end().line, newRegion.end().line)
 					};
 					redrawLines(makeRange(min(i[0], i[1]), max(i[0], i[1]) + 1));
@@ -287,7 +287,7 @@ k::Position TextViewer::characterForLocalPoint(const NativePoint& p, TextLayout:
 	k::Position result;
 
 	// determine the logical line
-	length_t subline;
+	Index subline;
 	bool outside;
 	{
 		const VisualLine temp(mapLocalPointToLine(p, &outside));
@@ -387,15 +387,15 @@ void TextViewer::documentChanged(const k::Document&, const k::DocumentChange& ch
 
 	// slide the frozen lines to be drawn
 	if(isFrozen() && !isEmpty(freezeRegister_.linesToRedraw())) {
-		length_t b = freezeRegister_.linesToRedraw().beginning();
-		length_t e = freezeRegister_.linesToRedraw().end();
+		Index b = freezeRegister_.linesToRedraw().beginning();
+		Index e = freezeRegister_.linesToRedraw().end();
 		if(change.erasedRegion().first.line != change.erasedRegion().second.line) {
-			const length_t first = change.erasedRegion().first.line + 1, last = change.erasedRegion().second.line;
+			const Index first = change.erasedRegion().first.line + 1, last = change.erasedRegion().second.line;
 			if(b > last)
 				b -= last - first + 1;
 			else if(b > first)
 				b = first;
-			if(e != numeric_limits<length_t>::max()) {
+			if(e != numeric_limits<Index>::max()) {
 				if(e > last)
 					e -= last - first + 1;
 				else if(e > first)
@@ -403,10 +403,10 @@ void TextViewer::documentChanged(const k::Document&, const k::DocumentChange& ch
 			}
 		}
 		if(change.insertedRegion().first.line != change.insertedRegion().second.line) {
-			const length_t first = change.insertedRegion().first.line + 1, last = change.insertedRegion().second.line;
+			const Index first = change.insertedRegion().first.line + 1, last = change.insertedRegion().second.line;
 			if(b >= first)
 				b += last - first + 1;
-			if(e >= first && e != numeric_limits<length_t>::max())
+			if(e >= first && e != numeric_limits<Index>::max())
 				e += last - first + 1;
 		}
 		freezeRegister_.resetLinesToRedraw(makeRange(b, e));
@@ -474,7 +474,7 @@ void TextViewer::dragMoved(DragMoveInput& input) {
  * @param context The graphics context
  * @param rect The rectangle to draw
  */
-void TextViewer::drawIndicatorMargin(length_t /* line */, Context& /* context */, const NativeRectangle& /* rect */) {
+void TextViewer::drawIndicatorMargin(Index /* line */, Context& /* context */, const NativeRectangle& /* rect */) {
 }
 
 /// @see Widget#dropped
@@ -511,12 +511,12 @@ bool TextViewer::getPointedLinkText(Region& region, AutoBuffer<Char>& text) cons
 		return false;
 
 	const LineLayout& layout = renderer_->getLineLayout(pos.line);
-	const length_t subline = layout.getSubline(pos.column);
+	const Index subline = layout.getSubline(pos.column);
 	const Char* const line = document.getLine(pos.line).data();
 	const Char* const first = line + layout.getSublineOffset(subline);
 	const Char* const last =
 		line + ((subline < layout.getNumberOfSublines() - 1) ? layout.getSublineOffset(subline + 1) : document.getLineLength(pos.line));
-	length_t linkLength;	// URIDetector の eatMailAddress 、eatUrlString で見つけたリンクテキストの長さ
+	Index linkLength;	// URIDetector の eatMailAddress 、eatUrlString で見つけたリンクテキストの長さ
 
 	for(const Char* p = (pos.column > 200) ? first + pos.column - 200 : first; p <= first + pos.column; ) {
 		if(p != first) {
@@ -874,7 +874,7 @@ void TextViewer::lockScroll(bool unlock /* = false */) {
  * @internal
  * @see #mapViewportIpdToLineLayout
  */
-inline Scalar TextViewer::mapLineLayoutIpdToViewport(length_t line, Scalar ipd) const {
+inline Scalar TextViewer::mapLineLayoutIpdToViewport(Index line, Scalar ipd) const {
 	return ipd + textRenderer().lineStartEdge(line) + inlineProgressionOffsetInViewport();
 }
 
@@ -882,7 +882,7 @@ inline Scalar TextViewer::mapLineLayoutIpdToViewport(length_t line, Scalar ipd) 
  * @internal
  * @see #mapLineLayoutIpdToViewport
  */
-inline Scalar TextViewer::mapViewportIpdToLineLayout(length_t line, Scalar ipd) const {
+inline Scalar TextViewer::mapViewportIpdToLineLayout(Index line, Scalar ipd) const {
 	return ipd - textRenderer().lineStartEdge(line) - inlineProgressionOffsetInViewport();
 }
 
@@ -899,7 +899,7 @@ inline Scalar TextViewer::mapViewportIpdToLineLayout(length_t line, Scalar ipd) 
  * @throw kernel#BadPositionException @a line is outside of the document
  * @see #BaseIterator, #mapViewportBpdToLine, TextRenderer#offsetVisualLine
  */
-Scalar TextViewer::mapLineToViewportBpd(length_t line, bool fullSearch) const {
+Scalar TextViewer::mapLineToViewportBpd(Index line, bool fullSearch) const {
 	const PhysicalFourSides<Scalar> spaces(spaceWidths());
 	if(line == scrolls_.firstVisibleLine.line) {
 		if(scrolls_.firstVisibleLine.subline == 0)
@@ -913,7 +913,7 @@ Scalar TextViewer::mapLineToViewportBpd(length_t line, bool fullSearch) const {
 		Scalar y = spaces.top;
 		y += lineSpan * static_cast<Scalar>(
 			renderer_->layouts().numberOfSublinesOfLine(scrolls_.firstVisibleLine.line) - scrolls_.firstVisibleLine.subline);
-		for(length_t i = scrolls_.firstVisibleLine.line + 1; i < line; ++i) {
+		for(Index i = scrolls_.firstVisibleLine.line + 1; i < line; ++i) {
 			y += lineSpan * static_cast<Scalar>(renderer_->layouts().numberOfSublinesOfLine(i));
 			if(y >= geometry::dy(clientBounds) && !fullSearch)
 				return numeric_limits<Scalar>::max();
@@ -924,7 +924,7 @@ Scalar TextViewer::mapLineToViewportBpd(length_t line, bool fullSearch) const {
 	else {
 		const Scalar linePitch = renderer_->defaultFont()->metrics().linePitch();
 		Scalar y = spaces.top - static_cast<Scalar>(linePitch * scrolls_.firstVisibleLine.subline);
-		for(length_t i = scrolls_.firstVisibleLine.line - 1; ; --i) {
+		for(Index i = scrolls_.firstVisibleLine.line - 1; ; --i) {
 			y -= static_cast<Scalar>(renderer_->layouts().numberOfSublinesOfLine(i) * linePitch);
 			if(i == line)
 				break;
@@ -1066,21 +1066,21 @@ void TextViewer::paint(PaintContext& context) {
  * @param line The line to be redrawn
  * @param following Set @c true to redraw also the all lines follow to @a line
  */
-void TextViewer::redrawLine(length_t line, bool following) {
-	redrawLines(makeRange(line, following ? numeric_limits<length_t>::max() : line + 1));
+void TextViewer::redrawLine(Index line, bool following) {
+	redrawLines(makeRange(line, following ? numeric_limits<Index>::max() : line + 1));
 }
 
 /**
  * Redraws the specified lines on the view. If the viewer is frozen, redraws after unfrozen.
  * @param lines The lines to be redrawn. The last line (@a lines.end()) is exclusive and this line
- *              will not be redrawn. If this value is @c std#numeric_limits<length_t>#max(), this
+ *              will not be redrawn. If this value is @c std#numeric_limits<Index>#max(), this
  *              method redraws the first line (@a lines.beginning()) and the following all lines
  * @throw kernel#BadRegionException @a lines intersects outside of the document
  */
-void TextViewer::redrawLines(const Range<length_t>& lines) {
+void TextViewer::redrawLines(const Range<Index>& lines) {
 //	checkInitialization();
 
-	if(lines.end() != numeric_limits<length_t>::max() && lines.end() >= document().numberOfLines())
+	if(lines.end() != numeric_limits<Index>::max() && lines.end() >= document().numberOfLines())
 		throw k::BadRegionException(k::Region(k::Position(lines.beginning(), 0), k::Position(lines.end(), 0)));
 
 	if(isFrozen()) {
@@ -1212,7 +1212,7 @@ void TextViewer::scroll(int dx, int dy, bool redraw) {
 		geometry::dy(pixelsToScroll) = dy * scrollRate(false) * textRenderer().defaultFont()->metrics().averageCharacterWidth();
 
 	// 2-2. block-progression-direction
-	signed_length_t linesToScroll;
+	SignedIndex linesToScroll;
 	if(inlineProgressionIsHorizontal)
 		linesToScroll = dy;
 	else {
@@ -1340,7 +1340,7 @@ void TextViewer::scrollTo(int x, int y, bool redraw) {
  * @param redraw set @c true to redraw the window after scroll
  * @throw BadPositionException @a line is outside of the document
  */
-void TextViewer::scrollTo(length_t line, bool redraw) {
+void TextViewer::scrollTo(Index line, bool redraw) {
 	// TODO: not implemented.
 //	checkInitialization();
 	if(scrolls_.lockCount != 0)
@@ -1348,13 +1348,13 @@ void TextViewer::scrollTo(length_t line, bool redraw) {
 	if(line >= document().numberOfLines())
 		throw k::BadPositionException(k::Position(line, 0));
 	scrolls_.firstVisibleLine = VisualLine(line, 0);
-	length_t visualLine;
+	Index visualLine;
 	if(textRenderer().layouts().numberOfVisualLines() != document().numberOfLines())
 		visualLine = line;
 	else {
 		// TODO: this code can be more faster.
 		visualLine = 0;
-		for(length_t i = 0; i < line; ++i)
+		for(Index i = 0; i < line; ++i)
 			visualLine += textRenderer().layouts().numberOfSublinesOfLine(i);
 	}
 	viewportListeners_.notify<bool, bool>(&ViewportListener::viewportChanged, true, true);
@@ -1518,7 +1518,7 @@ NativeRectangle TextViewer::textAllocationRectangle() const /*throw()*/ {
 void TextViewer::unfreeze() {
 //	checkInitialization();
 	if(freezeRegister_.isFrozen()) {
-		const Range<length_t> linesToRedraw(freezeRegister_.unfreeze());
+		const Range<Index> linesToRedraw(freezeRegister_.unfreeze());
 		if(!freezeRegister_.isFrozen()) {
 			if(scrolls_.changed) {
 				updateScrollBars();
@@ -1601,7 +1601,7 @@ void TextViewer::updateScrollBars() {
 }
 
 /// @see VisualLinesListener#visualLinesDeleted
-void TextViewer::visualLinesDeleted(const Range<length_t>& lines, length_t sublines, bool longestLineChanged) /*throw()*/ {
+void TextViewer::visualLinesDeleted(const Range<Index>& lines, Index sublines, bool longestLineChanged) /*throw()*/ {
 	scrolls_.changed = true;
 	if(lines.end() < scrolls_.firstVisibleLine.line) {	// deleted before visible area
 		scrolls_.firstVisibleLine.line -= length(lines);
@@ -1622,7 +1622,7 @@ void TextViewer::visualLinesDeleted(const Range<length_t>& lines, length_t subli
 }
 
 /// @see VisualLinesListener#visualLinesInserted
-void TextViewer::visualLinesInserted(const Range<length_t>& lines) /*throw()*/ {
+void TextViewer::visualLinesInserted(const Range<Index>& lines) /*throw()*/ {
 	scrolls_.changed = true;
 	if(lines.end() < scrolls_.firstVisibleLine.line) {	// inserted before visible area
 		scrolls_.firstVisibleLine.line += length(lines);
@@ -1641,8 +1641,8 @@ void TextViewer::visualLinesInserted(const Range<length_t>& lines) /*throw()*/ {
 }
 
 /// @see VisualLinesListener#visualLinesModified
-void TextViewer::visualLinesModified(const Range<length_t>& lines,
-		signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/ {
+void TextViewer::visualLinesModified(const Range<Index>& lines,
+		SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/ {
 	if(sublinesDifference == 0)	// number of visual lines was not changed
 		redrawLines(lines);
 	else {
@@ -1888,7 +1888,7 @@ void TextViewer::Scrolls::resetBars(const TextViewer& viewer, char bars, bool pa
 	// about block-progression-dimension
 	if(bars == 'b' || bars == 'a') {
 		Axis& target = isHorizontal(direction) ? vertical : horizontal;
-		const length_t lines = viewer.textRenderer().layouts().numberOfVisualLines();
+		const Index lines = viewer.textRenderer().layouts().numberOfVisualLines();
 		assert(lines > 0);
 //		target.rate = static_cast<ulong>(lines) / numeric_limits<int>::max() + 1;
 //		assert(target.rate != 0);
@@ -1927,7 +1927,7 @@ VirtualBox::VirtualBox(const TextViewer& viewer, const k::Region& region) /*thro
  * @return @c true if the box and the visual line overlap
  * @see #includes
  */
-bool VirtualBox::characterRangeInVisualLine(const VisualLine& line, Range<length_t>& range) const /*throw()*/ {
+bool VirtualBox::characterRangeInVisualLine(const VisualLine& line, Range<Index>& range) const /*throw()*/ {
 //	assert(viewer_.isWindow());
 	const Point& top = beginning();
 	const Point& bottom = end();
@@ -2082,7 +2082,7 @@ void CurrentLineHighlighter::pointDestroyed() {
 }
 
 /// @see ILineColorDirector#queryLineColors
-TextLineColorDirector::Priority CurrentLineHighlighter::queryLineColors(length_t line, Color& foreground, Color& background) const {
+TextLineColorDirector::Priority CurrentLineHighlighter::queryLineColors(Index line, Color& foreground, Color& background) const {
 	if(caret_ != 0 && isSelectionEmpty(*caret_) && caret_->line() == line && caret_->textViewer().hasFocus()) {
 		foreground = foreground_;
 		background = background_;
@@ -2130,7 +2130,7 @@ void TextViewport::resize(const NativeSize& newSize, Widget* widget) {
 void TextViewport::scroll(const NativeSize& offset, Widget* widget) {
 }
 
-void TextViewport::scroll(length_t dbpd, length_t dipd, Widget* widget) {
+void TextViewport::scroll(Index dbpd, Index dipd, Widget* widget) {
 }
 
 
@@ -2185,14 +2185,14 @@ void utils::toggleOrientation(TextViewer& viewer) /*throw()*/ {
  *         parameters are undefined)
  * @see #getPointedIdentifier
  */
-bool source::getNearestIdentifier(const k::Document& document, const k::Position& position, length_t* startColumn, length_t* endColumn) {
+bool source::getNearestIdentifier(const k::Document& document, const k::Position& position, Index* startColumn, Index* endColumn) {
 	using namespace text;
-	static const length_t MAXIMUM_IDENTIFIER_HALF_LENGTH = 100;
+	static const Index MAXIMUM_IDENTIFIER_HALF_LENGTH = 100;
 
 	k::DocumentPartition partition;
 	document.partitioner().partition(position, partition);
 	const IdentifierSyntax& syntax = document.contentTypeInformation().getIdentifierSyntax(partition.contentType);
-	length_t start = position.column, end = position.column;
+	Index start = position.column, end = position.column;
 
 	// find the start of the identifier
 	if(startColumn != 0) {

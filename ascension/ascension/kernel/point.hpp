@@ -1,7 +1,7 @@
 /**
  * @file point.hpp
  * @author exeal
- * @date 2003-2011
+ * @date 2003-2012
  */
 
 #ifndef ASCENSION_POINT_HPP
@@ -77,12 +77,12 @@ namespace ascension {
 			void addLifeCycleListener(PointLifeCycleListener& listener);
 			void removeLifeCycleListener(PointLifeCycleListener& listener);
 			// short-circuits
-			length_t column() const /*throw()*/;
+			Index column() const /*throw()*/;
 			ContentType contentType() const;
-			length_t line() const /*throw()*/;
+			Index line() const /*throw()*/;
 			// operations
 			void moveTo(const Position& to);
-			void moveTo(length_t line, length_t column);
+			void moveTo(Index line, Index column);
 
 		protected:
 			Point& operator=(const Position& other) /*throw()*/;
@@ -118,27 +118,27 @@ namespace ascension {
 				GLYPH_CLUSTER		///< A glyph is a character (not implemented).
 			};
 
-			Position backwardBookmark(const Point& p, length_t marks = 1);
-			Position backwardCharacter(const Point& p, CharacterUnit unit, length_t characters = 1);
-			Position backwardLine(const Point& p, length_t lines = 1);
-			Position backwardWord(const Point& p, length_t words = 1);
-			Position backwardWordEnd(const Point& p, length_t words = 1);
+			Position backwardBookmark(const Point& p, Index marks = 1);
+			Position backwardCharacter(const Point& p, CharacterUnit unit, Index characters = 1);
+			Position backwardLine(const Point& p, Index lines = 1);
+			Position backwardWord(const Point& p, Index words = 1);
+			Position backwardWordEnd(const Point& p, Index words = 1);
 			Position beginningOfDocument(const Point& p);
 			Position beginningOfLine(const Point& p);
 			CodePoint characterAt(const Point& p, bool useLineFeed = false);
 			Position endOfDocument(const Point& p);
 			Position endOfLine(const Point& p);
-			Position forwardBookmark(const Point& p, length_t marks = 1);
-			Position forwardCharacter(const Point& p, CharacterUnit unit, length_t characters = 1);
-			Position forwardLine(const Point& p, length_t lines = 1);
-			Position forwardWord(const Point& p, length_t words = 1);
-			Position forwardWordEnd(const Point& p, length_t words = 1);
+			Position forwardBookmark(const Point& p, Index marks = 1);
+			Position forwardCharacter(const Point& p, CharacterUnit unit, Index characters = 1);
+			Position forwardLine(const Point& p, Index lines = 1);
+			Position forwardWord(const Point& p, Index words = 1);
+			Position forwardWordEnd(const Point& p, Index words = 1);
 			bool isBeginningOfDocument(const Point& p);
 			bool isBeginningOfLine(const Point& p);
 			bool isEndOfDocument(const Point& p);
 			bool isEndOfLine(const Point& p);
 			Position nextCharacter(const Document& document, const Position& p,
-				Direction direction, CharacterUnit characterUnit, length_t offset = 1);
+				Direction direction, CharacterUnit characterUnit, Index offset = 1);
 		} // namespace locations
 
 
@@ -171,7 +171,7 @@ namespace ascension {
 		/// Adapts the point to the document change.
 		inline Point& Point::adaptToDocument(bool adapt) /*throw()*/ {adapting_ = adapt; return *this;}
 		/// Returns the column number.
-		inline length_t Point::column() const /*throw()*/ {return position_.column;}
+		inline Index Point::column() const /*throw()*/ {return position_.column;}
 		/// Returns the content type of the document partition contains the point.
 		inline ContentType Point::contentType() const {return document().partitioner().contentType(*this);}
 		/// Returns the document or throw @c DocumentDisposedException if the document is already disposed.
@@ -185,9 +185,9 @@ namespace ascension {
 		/// Returns @c true if the document is already disposed.
 		inline bool Point::isDocumentDisposed() const /*throw()*/ {return document_ == 0;}
 		/// Returns the line number.
-		inline length_t Point::line() const /*throw()*/ {return position_.line;}
+		inline Index Point::line() const /*throw()*/ {return position_.line;}
 		/// Moves to the specified position.
-		inline void Point::moveTo(length_t line, length_t column) {moveTo(Position(line, column));}
+		inline void Point::moveTo(Index line, Index column) {moveTo(Position(line, column));}
 		/**
 		 * Normalizes the position of the point.
 		 * This method does <strong>not</strong> inform to the listeners about any movement.

@@ -4,6 +4,7 @@
  * @date 2003-2006 was LineLayout.h
  * @date 2006-2011 was presentation.hpp
  * @date 2011-05-04 separated from presentation.hpp
+ * @date 2012
  */
 
 #ifndef ASCENSION_PRESENTATION_RECONSTRUCTOR_HPP
@@ -47,7 +48,7 @@ namespace ascension {
 		private:
 			// PartitionPresentationReconstructor
 			std::auto_ptr<StyledTextRunIterator>
-				getPresentation(length_t line, const Range<length_t>& columnRange) const /*throw()*/;
+				getPresentation(Index line, const Range<Index>& columnRange) const /*throw()*/;
 		private:
 			class Iterator;
 			const std::tr1::shared_ptr<const TextRunStyle> style_;
@@ -68,7 +69,7 @@ namespace ascension {
 			 * @return The style of the line or @c null (filled by the presentation's default style)
 			 * @throw BadPositionException @a line is outside of the document
 			 */
-			virtual std::auto_ptr<StyledTextRunIterator> queryTextRunStyle(length_t line) const = 0;
+			virtual std::auto_ptr<StyledTextRunIterator> queryTextRunStyle(Index line) const = 0;
 			friend class Presentation;
 		};
 
@@ -86,7 +87,7 @@ namespace ascension {
 				std::auto_ptr<PartitionPresentationReconstructor> reconstructor);
 		private:
 			// TextRunStyleDirector
-			std::auto_ptr<StyledTextRunIterator> queryTextRunStyle(length_t line) const;
+			std::auto_ptr<StyledTextRunIterator> queryTextRunStyle(Index line) const;
 		private:
 			class Iterator;
 			Presentation& presentation_;

@@ -4,6 +4,7 @@
  * @date 2003-2006 was EditView.cpp and EditViewWindowMessages.cpp
  * @date 2006-2011 was viewer.cpp
  * @date 2011-10-04 separated from viewer.cpp
+ * @date 2011-2012
  */
 
 #include <ascension/corelib/text/break-iterator.hpp>
@@ -334,8 +335,8 @@ void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
 
 		// drop rectangle text into bidirectional line is not supported...
 		if(dnd_.numberOfRectangleLines != 0) {
-			const length_t lines = min(viewer_->document().numberOfLines(), p.line + dnd_.numberOfRectangleLines);
-			for(length_t line = p.line; line < lines; ++line) {
+			const Index lines = min(viewer_->document().numberOfLines(), p.line + dnd_.numberOfRectangleLines);
+			for(Index line = p.line; line < lines; ++line) {
 				if(viewer_->textRenderer().layouts()[line].isBidirectional()) {
 					acceptable = false;
 					break;
@@ -418,7 +419,7 @@ void DefaultMouseInputStrategy::extendSelection(const k::Position* to /* = 0 */)
 	if(state_ == EXTENDING_CHARACTER_SELECTION)
 		caret.extendSelection(destination);
 	else if(state_ == EXTENDING_LINE_SELECTION) {
-		const length_t lines = document.numberOfLines();
+		const Index lines = document.numberOfLines();
 		k::Region s;
 		s.first.line = (destination.line >= selection_.initialLine) ? selection_.initialLine : selection_.initialLine + 1;
 		s.first.column = (s.first.line > lines - 1) ? document.lineLength(--s.first.line) : 0;

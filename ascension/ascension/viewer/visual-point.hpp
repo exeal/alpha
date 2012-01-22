@@ -6,6 +6,7 @@
  * @date 2008 (separated from point.hpp)
  * @date 2009-2011 was caret.hpp
  * @date 2011-10-02 separated from caret.hpp
+ * @date 2011-2012
  */
 
 #ifndef ASCENSION_VISUAL_POINT_HPP
@@ -46,8 +47,8 @@ namespace ascension {
 			bool isLastPrintableCharacterOfLine(const viewers::VisualPoint& p);
 			bool isLastPrintableCharacterOfVisualLine(const viewers::VisualPoint& p);
 			bool isBeginningOfVisualLine(const viewers::VisualPoint& p);
-			viewers::VerticalDestinationProxy backwardPage(const viewers::VisualPoint& p, length_t pages = 1);
-			viewers::VerticalDestinationProxy backwardVisualLine(const viewers::VisualPoint& p, length_t lines = 1);
+			viewers::VerticalDestinationProxy backwardPage(const viewers::VisualPoint& p, Index pages = 1);
+			viewers::VerticalDestinationProxy backwardVisualLine(const viewers::VisualPoint& p, Index lines = 1);
 			kernel::Position beginningOfVisualLine(const viewers::VisualPoint& p);
 			kernel::Position contextualBeginningOfLine(const viewers::VisualPoint& p);
 			kernel::Position contextualBeginningOfVisualLine(const viewers::VisualPoint& p);
@@ -56,16 +57,16 @@ namespace ascension {
 			kernel::Position endOfVisualLine(const viewers::VisualPoint& p);
 			kernel::Position firstPrintableCharacterOfLine(const viewers::VisualPoint& p);
 			kernel::Position firstPrintableCharacterOfVisualLine(const viewers::VisualPoint& p);
-			viewers::VerticalDestinationProxy forwardPage(const viewers::VisualPoint& p, length_t pages = 1);
-			viewers::VerticalDestinationProxy forwardVisualLine(const viewers::VisualPoint& p, length_t lines = 1);
+			viewers::VerticalDestinationProxy forwardPage(const viewers::VisualPoint& p, Index pages = 1);
+			viewers::VerticalDestinationProxy forwardVisualLine(const viewers::VisualPoint& p, Index lines = 1);
 			kernel::Position lastPrintableCharacterOfLine(const viewers::VisualPoint& p);
 			kernel::Position lastPrintableCharacterOfVisualLine(const viewers::VisualPoint& p);
-			kernel::Position leftCharacter(const viewers::VisualPoint& p, CharacterUnit unit, length_t characters = 1);
-			kernel::Position leftWord(const viewers::VisualPoint& p, length_t words = 1);
-			kernel::Position leftWordEnd(const viewers::VisualPoint& p, length_t words = 1);
-			kernel::Position rightCharacter(const viewers::VisualPoint& p, CharacterUnit unit, length_t characters = 1);
-			kernel::Position rightWord(const viewers::VisualPoint& p, length_t words = 1);
-			kernel::Position rightWordEnd(const viewers::VisualPoint& p, length_t words = 1);
+			kernel::Position leftCharacter(const viewers::VisualPoint& p, CharacterUnit unit, Index characters = 1);
+			kernel::Position leftWord(const viewers::VisualPoint& p, Index words = 1);
+			kernel::Position leftWordEnd(const viewers::VisualPoint& p, Index words = 1);
+			kernel::Position rightCharacter(const viewers::VisualPoint& p, CharacterUnit unit, Index characters = 1);
+			kernel::Position rightWord(const viewers::VisualPoint& p, Index words = 1);
+			kernel::Position rightWordEnd(const viewers::VisualPoint& p, Index words = 1);
 		} // namespace locations
 	} // namespace kernel
 
@@ -87,9 +88,9 @@ namespace ascension {
 			bool isTextViewerDisposed() const /*throw()*/;
 			TextViewer& textViewer();
 			const TextViewer& textViewer() const;
-			length_t visualColumn() const;
-			length_t visualLine() const;
-			length_t visualSubline() const;
+			Index visualColumn() const;
+			Index visualLine() const;
+			Index visualSubline() const;
 			// movement
 			using kernel::Point::moveTo;
 			void moveTo(const VerticalDestinationProxy& to);
@@ -103,19 +104,19 @@ namespace ascension {
 			void updateLastX();
 			void viewerDisposed() /*throw()*/;
 			// layout.VisualLinesListener
-			void visualLinesDeleted(const Range<length_t>& lines, length_t sublines, bool longestLineChanged) /*throw()*/;
-			void visualLinesInserted(const Range<length_t>& lines) /*throw()*/;
-			void visualLinesModified(const Range<length_t>& lines,
-				signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/;
+			void visualLinesDeleted(const Range<Index>& lines, Index sublines, bool longestLineChanged) /*throw()*/;
+			void visualLinesInserted(const Range<Index>& lines) /*throw()*/;
+			void visualLinesModified(const Range<Index>& lines,
+				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/;
 
 		private:
 			TextViewer* viewer_;
 			int lastX_;				// distance from left edge and saved during crossing visual lines. -1 if not calculated
 			bool crossingLines_;	// true only when the point is moving across the different lines
-			length_t visualLine_, visualSubline_;	// caches
+			Index visualLine_, visualSubline_;	// caches
 			friend class TextViewer;
-			friend VerticalDestinationProxy kernel::locations::backwardVisualLine(const VisualPoint& p, length_t lines);
-			friend VerticalDestinationProxy kernel::locations::forwardVisualLine(const VisualPoint& p, length_t lines);
+			friend VerticalDestinationProxy kernel::locations::backwardVisualLine(const VisualPoint& p, Index lines);
+			friend VerticalDestinationProxy kernel::locations::forwardVisualLine(const VisualPoint& p, Index lines);
 		};
 
 		namespace utils {
@@ -146,7 +147,7 @@ namespace ascension {
 		inline void VisualPoint::viewerDisposed() /*throw()*/ {viewer_ = 0;}
 
 		/// Returns the visual subline number.
-		inline length_t VisualPoint::visualSubline() const {
+		inline Index VisualPoint::visualSubline() const {
 			if(visualLine_ == INVALID_INDEX)
 				visualLine();
 			return visualSubline_;

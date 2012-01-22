@@ -2,7 +2,7 @@
  * @file searcher.hpp
  * @author exeal
  * @date 2004-2006 (was TextSearcher.h)
- * @date 2006-2011
+ * @date 2006-2012
  */
 
 #ifndef ASCENSION_SEARCHER_HPP
@@ -284,7 +284,7 @@ namespace ascension {
 			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 			// kernel.IBookmarkListener
-			void bookmarkChanged(length_t line);
+			void bookmarkChanged(Index line);
 			void bookmarkCleared();
 
 		private:

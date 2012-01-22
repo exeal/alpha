@@ -122,7 +122,7 @@ namespace ascension {
 				 */
 				virtual void onProgress(ProcessType type, ULONGLONG processedAmount, ULONGLONG totalAmount) = 0;
 				/// Returns the internal number of lines.
-				virtual length_t queryIntervalLineCount() const = 0;
+				virtual Index queryIntervalLineCount() const = 0;
 				/// Releases the object.
 				virtual void release() = 0;
 				friend class Document;

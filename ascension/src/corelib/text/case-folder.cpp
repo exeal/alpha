@@ -2,6 +2,7 @@
  * @file case-folder.cpp
  * @date 2007-2011
  * @date 2011-04-25 separated from normalizer.cpp
+ * @date 2011-2012
  */
 
 #include <ascension/corelib/text/case-folder.hpp>
@@ -12,7 +13,7 @@ using namespace std;
 
 
 /// The maximum number of characters folded from one character.
-const length_t CaseFolder::MAXIMUM_EXPANSION_CHARACTERS = 3;
+const Index CaseFolder::MAXIMUM_EXPANSION_CHARACTERS = 3;
 
 /**
  * Compares the two character sequences case-insensitively.

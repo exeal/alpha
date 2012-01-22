@@ -5,6 +5,7 @@
  * @date 2003-2006 was EditView.h
  * @date 2006-2011 was viewer.hpp
  * @date 2011-10-04 separated from viewer.hpp
+ * @date 2012
  */
 
 #ifndef ASCENSION_DEFAULT_MOUSE_INPUT_STRATEGY_HPP
@@ -119,12 +120,12 @@ namespace ascension {
 			} state_;
 			graphics::NativePoint dragApproachedPosition_;	// in client coordinates
 			struct Selection {
-				length_t initialLine;	// line of the anchor when entered the selection extending
-				std::pair<length_t, length_t> initialWordColumns;
+				Index initialLine;	// line of the anchor when entered the selection extending
+				std::pair<Index, Index> initialWordColumns;
 			} selection_;
 			struct DragAndDrop {
 				DragAndDropSupport supportLevel;
-				length_t numberOfRectangleLines;
+				Index numberOfRectangleLines;
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 				win32::com::ComPtr<IDragSourceHelper> dragSourceHelper;
 				win32::com::ComPtr<IDropTargetHelper> dropTargetHelper;

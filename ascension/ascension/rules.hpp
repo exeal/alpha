@@ -2,7 +2,7 @@
  * @file rules.hpp
  * @author exeal
  * @date 2004-2006 (was Lexer.h)
- * @date 2006-2011
+ * @date 2006-2012
  */
 
 #ifndef ASCENSION_RULES_HPP
@@ -235,7 +235,7 @@ namespace ascension {
 			virtual std::auto_ptr<TransitionRule> clone() const = 0;
 			kernel::ContentType contentType() const /*throw()*/;
 			kernel::ContentType destination() const /*throw()*/;
-			virtual length_t matches(const String& line, length_t column) const = 0;
+			virtual Index matches(const String& line, Index column) const = 0;
 		protected:
 			TransitionRule(kernel::ContentType contentType, kernel::ContentType destination) /*throw()*/;
 		private:
@@ -248,7 +248,7 @@ namespace ascension {
 			LiteralTransitionRule(kernel::ContentType contentType, kernel::ContentType destination,
 				const String& pattern, Char escapeCharacter = text::NONCHARACTER, bool caseSensitive = true);
 			std::auto_ptr<TransitionRule> clone() const;
-			length_t matches(const String& line, length_t column) const;
+			Index matches(const String& line, Index column) const;
 		private:
 			const String pattern_;
 			const Char escapeCharacter_;
@@ -263,7 +263,7 @@ namespace ascension {
 				kernel::ContentType destination, std::auto_ptr<const regex::Pattern> pattern);
 			RegexTransitionRule(const RegexTransitionRule& other);
 			std::auto_ptr<TransitionRule> clone() const;
-			length_t matches(const String& line, length_t column) const;
+			Index matches(const String& line, Index column) const;
 		private:
 			std::auto_ptr<const regex::Pattern> pattern_;
 		};
@@ -287,9 +287,9 @@ namespace ascension {
 			struct Partition {
 				kernel::ContentType contentType;
 				kernel::Position start, tokenStart;
-				length_t tokenLength;
+				Index tokenLength;
 				Partition(kernel::ContentType type, const kernel::Position& p,
-					const kernel::Position& startOfToken, length_t lengthOfToken) /*throw()*/
+					const kernel::Position& startOfToken, Index lengthOfToken) /*throw()*/
 					: contentType(type), start(p), tokenStart(startOfToken), tokenLength(lengthOfToken) {}
 				kernel::Position getTokenEnd() const /*throw()*/ {return kernel::Position(tokenStart.line, tokenStart.column + tokenLength);}
 			};
@@ -301,7 +301,7 @@ namespace ascension {
 			void erasePartitions(const kernel::Position& first, const kernel::Position& last);
 			detail::GapVector<Partition*>::const_iterator partitionAt(const kernel::Position& at) const /*throw()*/;
 			kernel::ContentType transitionStateAt(const kernel::Position& at) const /*throw()*/;
-			length_t tryTransition(const String& line, length_t column,
+			Index tryTransition(const String& line, Index column,
 				kernel::ContentType contentType, kernel::ContentType& destination) const /*throw()*/;
 			void verify() const;
 			// DocumentPartitioner

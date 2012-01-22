@@ -1,7 +1,7 @@
 /**
  * @file point.cpp
  * @author exeal
- * @date 2003-2011
+ * @date 2003-2012
  */
 
 #include <ascension/kernel/point.hpp>
@@ -218,8 +218,8 @@ namespace {
  * @return The beginning of the backward bookmarked line or @c Position#INVALID_POSITION if there
  *         is no bookmark in the document
  */
-Position locations::backwardBookmark(const Point& p, length_t marks /* = 1 */) {
-	const length_t line = p.document().bookmarker().next(p.normalized().line, Direction::BACKWARD, true, marks);
+Position locations::backwardBookmark(const Point& p, Index marks /* = 1 */) {
+	const Index line = p.document().bookmarker().next(p.normalized().line, Direction::BACKWARD, true, marks);
 	return (line != INVALID_INDEX) ? Position(line, 0) : Position();
 }
 
@@ -230,7 +230,7 @@ Position locations::backwardBookmark(const Point& p, length_t marks /* = 1 */) {
  * @param characters The number of the characters to return
  * @return The position of the previous character
  */
-Position locations::backwardCharacter(const Point& p, locations::CharacterUnit unit, length_t characters /* = 1 */) {
+Position locations::backwardCharacter(const Point& p, locations::CharacterUnit unit, Index characters /* = 1 */) {
 	return nextCharacter(p.document(), p.position(), Direction::BACKWARD, unit, characters);
 }
 
@@ -242,10 +242,10 @@ Position locations::backwardCharacter(const Point& p, locations::CharacterUnit u
  * @param lines The number of the lines to return
  * @return The position of the previous line
  */
-Position locations::backwardLine(const Point& p, length_t lines /* = 1 */) {
+Position locations::backwardLine(const Point& p, Index lines /* = 1 */) {
 	Position temp(p.normalized());
 	const Position bob(p.document().accessibleRegion().first);
-	length_t line = (temp.line > bob.line + lines) ? temp.line - lines : bob.line;
+	Index line = (temp.line > bob.line + lines) ? temp.line - lines : bob.line;
 	if(line == bob.line && temp.column < bob.column)
 		++line;
 	return temp.line = line, temp;
@@ -257,7 +257,7 @@ Position locations::backwardLine(const Point& p, length_t lines /* = 1 */) {
  * @param words The number of words to traverse
  * @return The destination
  */
-Position locations::backwardWord(const Point& p, length_t words /* = 1 */) {
+Position locations::backwardWord(const Point& p, Index words /* = 1 */) {
 	WordBreakIterator<DocumentCharacterIterator> i(
 		DocumentCharacterIterator(p.document(), p.document().accessibleRegion(), p.normalized()),
 		AbstractWordBreakIterator::START_OF_SEGMENT, identifierSyntax(p));
@@ -270,7 +270,7 @@ Position locations::backwardWord(const Point& p, length_t words /* = 1 */) {
  * @param words The number of words to traverse
  * @return The destination
  */
-Position locations::backwardWordEnd(const Point& p, length_t words /* = 1 */) {
+Position locations::backwardWordEnd(const Point& p, Index words /* = 1 */) {
 	WordBreakIterator<DocumentCharacterIterator> i(
 		DocumentCharacterIterator(p.document(), p.document().accessibleRegion(), p.normalized()),
 		AbstractWordBreakIterator::END_OF_SEGMENT, identifierSyntax(p));
@@ -335,8 +335,8 @@ Position locations::endOfLine(const Point& p) {
  * @return The beginning of the forward bookmarked line or @c Position#INVALID_POSITION if there
  *         is no bookmark in the document
  */
-Position locations::forwardBookmark(const Point& p, length_t marks /* = 1 */) {
-	const length_t line = p.document().bookmarker().next(p.normalized().line, Direction::FORWARD, true, marks);
+Position locations::forwardBookmark(const Point& p, Index marks /* = 1 */) {
+	const Index line = p.document().bookmarker().next(p.normalized().line, Direction::FORWARD, true, marks);
 	return (line != INVALID_INDEX) ? Position(line, 0) : Position();
 }
 
@@ -347,7 +347,7 @@ Position locations::forwardBookmark(const Point& p, length_t marks /* = 1 */) {
  * @param characters The number of the characters to advance
  * @return The position of the next character
  */
-Position locations::forwardCharacter(const Point& p, locations::CharacterUnit unit, length_t characters /* = 1 */) {
+Position locations::forwardCharacter(const Point& p, locations::CharacterUnit unit, Index characters /* = 1 */) {
 	return nextCharacter(p.document(), p.position(), Direction::FORWARD, unit, characters);
 }
 
@@ -359,10 +359,10 @@ Position locations::forwardCharacter(const Point& p, locations::CharacterUnit un
  * @param lines The number of the lines to advance
  * @return The position of the next line
  */
-Position locations::forwardLine(const Point& p, length_t lines /* = 1 */) {
+Position locations::forwardLine(const Point& p, Index lines /* = 1 */) {
 	Position temp(p.normalized());
 	const Position eob(p.document().accessibleRegion().second);
-	length_t line = (temp.line + lines < eob.line) ? temp.line + lines : eob.line;
+	Index line = (temp.line + lines < eob.line) ? temp.line + lines : eob.line;
 	if(line == eob.line && temp.column > eob.column)
 		--line;
 	return temp.line = line, temp;
@@ -374,7 +374,7 @@ Position locations::forwardLine(const Point& p, length_t lines /* = 1 */) {
  * @param words The number of words to traverse
  * @return The destination
  */
-Position locations::forwardWord(const Point& p, length_t words /* = 1 */) {
+Position locations::forwardWord(const Point& p, Index words /* = 1 */) {
 	WordBreakIterator<DocumentCharacterIterator> i(
 		DocumentCharacterIterator(p.document(), p.document().accessibleRegion(), p.normalized()),
 		AbstractWordBreakIterator::START_OF_SEGMENT, identifierSyntax(p));
@@ -387,7 +387,7 @@ Position locations::forwardWord(const Point& p, length_t words /* = 1 */) {
  * @param words The number of words to traverse
  * @return The destination
  */
-Position locations::forwardWordEnd(const Point& p, length_t words /* = 1 */) {
+Position locations::forwardWordEnd(const Point& p, Index words /* = 1 */) {
 	WordBreakIterator<DocumentCharacterIterator> i(
 		DocumentCharacterIterator(p.document(), p.document().accessibleRegion(), p.normalized()),
 		AbstractWordBreakIterator::END_OF_SEGMENT, identifierSyntax(p));
@@ -427,7 +427,7 @@ bool locations::isEndOfLine(const Point& p) {
  * @throw UnknownValueException @a characterUnit is invalid
  */
 Position locations::nextCharacter(const Document& document, const Position& position,
-		Direction direction, locations::CharacterUnit characterUnit, length_t offset /* = 1 */) {
+		Direction direction, locations::CharacterUnit characterUnit, Index offset /* = 1 */) {
 	if(offset == 0)
 		return position;
 	else if(characterUnit == locations::UTF16_CODE_UNIT) {
@@ -463,7 +463,7 @@ Position locations::nextCharacter(const Document& document, const Position& posi
 	} else if(characterUnit == locations::GRAPHEME_CLUSTER) {
 		GraphemeBreakIterator<DocumentCharacterIterator> i(
 			DocumentCharacterIterator(document, document.accessibleRegion(), position));
-		i.next((direction == Direction::FORWARD) ? offset : -static_cast<signed_length_t>(offset));
+		i.next((direction == Direction::FORWARD) ? offset : -static_cast<SignedIndex>(offset));
 		return i.base().tell();
 	} else if(characterUnit == locations::GLYPH_CLUSTER) {
 		// TODO: not implemented.
@@ -478,10 +478,10 @@ Position locations::nextCharacter(const Document& document, const Position& posi
  * @param offset The offset from the start of the document
  * @deprecated 0.8
  */
-void EditPoint::moveToAbsoluteCharacterOffset(length_t offset) {
+void EditPoint::moveToAbsoluteCharacterOffset(Index offset) {
 	verifyDocument();
 
-	length_t readCount = 0;
+	Index readCount = 0;
 	const Region region(document()->region());
 
 	if(document()->lineLength(region.first.line) + 1 - region.first.column >= offset) {
@@ -489,8 +489,8 @@ void EditPoint::moveToAbsoluteCharacterOffset(length_t offset) {
 		return;
 	}
 	readCount += document()->lineLength(region.first.line) + 1 - region.first.column;
-	for(length_t line = region.first.line + 1; line <= region.second.line; ++line) {
-		const length_t lineLength = document()->lineLength(line) + 1;	// +1 is for a newline
+	for(Index line = region.first.line + 1; line <= region.second.line; ++line) {
+		const Index lineLength = document()->lineLength(line) + 1;	// +1 is for a newline
 		if(readCount + lineLength >= offset) {
 			moveTo(Position(line, readCount + lineLength - offset));
 			return;

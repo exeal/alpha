@@ -2,7 +2,7 @@
  * @file undo.cpp
  * @author exeal
  * @date 2009 separated from document.cpp
- * @date 2010-2011
+ * @date 2010-2012
  */
 
 #include <ascension/kernel/document.hpp>
@@ -579,7 +579,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 	const Char* nextNewline = (text.beginning() != 0 && !isEmpty(text)) ?
 		find_first_of(text.beginning(), text.end(), NEWLINE_CHARACTERS, ASCENSION_ENDOF(NEWLINE_CHARACTERS)) : 0;
 	basic_stringbuf<Char> erasedString;
-	length_t erasedStringLength = 0, insertedStringLength = 0;
+	Index erasedStringLength = 0, insertedStringLength = 0;
 	Position endOfInsertedString;
 	try {
 		// simple cases: both erased region and inserted string are single line
@@ -610,7 +610,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 				for(Position p(beginning); ; ++p.line, p.column = 0) {
 					const Line& line = *lines_[p.line];
 					const bool last = p.line == end.line;
-					const length_t e = !last ? line.text().length() : end.column;
+					const Index e = !last ? line.text().length() : end.column;
 					if(recordingChanges_) {
 						erasedString.sputn(line.text().data() + p.column, static_cast<streamsize>(e - p.column));
 						if(!last)
@@ -658,8 +658,8 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 					lines_.insert(end.line + 1, allocatedLines.begin(), allocatedLines.end());
 				// 4. replace first line
 				Line& firstLine = *lines_[beginning.line];
-				const length_t erasedLength = firstLine.text().length() - beginning.column;
-				const length_t insertedLength = firstNewline - text.beginning();
+				const Index erasedLength = firstLine.text().length() - beginning.column;
+				const Index insertedLength = firstNewline - text.beginning();
 				try {
 					if(!allocatedLines.empty())
 						firstLine.text_.replace(beginning.column, erasedLength, text.beginning(), insertedLength);

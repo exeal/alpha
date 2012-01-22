@@ -4,6 +4,7 @@
  * @date 2003-2006 was EditView.cpp and EditViewWindowMessages.cpp
  * @date 2006-2011 was viewer.cpp
  * @date 2011-05-16 separated from viewer.cpp
+ * @date 2011-2012
  */
 
 #define ASCENSION_TEST_TEXT_STYLES
@@ -833,7 +834,7 @@ void TextViewer::initialize() {
 	private:
 		class Iterator : public StyledTextRunIterator {
 		public:
-			Iterator(length_t lineLength, bool beginningIsBlackBack) : length_(lineLength), beginningIsBlackBack_(beginningIsBlackBack) {
+			Iterator(Index lineLength, bool beginningIsBlackBack) : length_(lineLength), beginningIsBlackBack_(beginningIsBlackBack) {
 				current_ = StyledTextRun(0, current_.style());
 				update();
 			}
@@ -863,14 +864,14 @@ void TextViewer::initialize() {
 				current_ = StyledTextRun(current_.position(), style);
 			}
 		private:
-			const length_t length_;
+			const Index length_;
 			const bool beginningIsBlackBack_;
 			StyledTextRun current_;
 		};
 	public:
 		ZebraTextRunStyleTest(const k::Document& document) : document_(document) {
 		}
-		auto_ptr<StyledTextRunIterator> queryTextRunStyle(length_t line) const {
+		auto_ptr<StyledTextRunIterator> queryTextRunStyle(Index line) const {
 			return auto_ptr<StyledTextRunIterator>(new Iterator(document_.lineLength(line), line % 2 == 0));
 		}
 	private:
@@ -1336,7 +1337,7 @@ void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKey
 
 	// hyperlink
 	if(const hyperlink::Hyperlink* link = utils::getPointedHyperlink(*this, caret())) {
-		const length_t len = (link->region().end() - link->region().beginning()) * 2 + 8;
+		const Index len = (link->region().end() - link->region().beginning()) * 2 + 8;
 		AutoBuffer<WCHAR> caption(new WCHAR[len]);	// TODO: this code can have buffer overflow in future
 		swprintf(caption.get(),
 #if(_MSC_VER < 1400)
@@ -1377,7 +1378,7 @@ namespace {
 
 		// determine the range to draw
 		const k::Region selectedRegion(viewer.caret());
-		length_t firstLine, firstSubline;
+		Index firstLine, firstSubline;
 		viewer.firstVisibleLine(&firstLine, 0, &firstSubline);
 
 		// calculate the size of the image
@@ -1386,16 +1387,16 @@ namespace {
 		NativeRectangle selectionBounds(geometry::make<NativeRectangle>(
 			geometry::make<NativePoint>(numeric_limits<Scalar>::max(), 0),
 			geometry::make<NativeSize>(numeric_limits<Scalar>::min(), 0)));
-		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
+		for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
 			selectionBounds.bottom += static_cast<LONG>(renderer.defaultFont()->metrics().linePitch() * renderer.layouts()[line].numberOfLines());
 			if(geometry::dy(selectionBounds) > geometry::dy(clientBounds))
 				return S_FALSE;	// overflow
 			const TextLayout& layout = renderer.layouts()[line];
 			const Scalar indent = renderer.lineIndent(line);
-			Range<length_t> range;
-			for(length_t subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
+			Range<Index> range;
+			for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
 				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range)) {
-					range = Range<length_t>(
+					range = Range<Index>(
 						range.beginning(),
 						min(viewer.document().lineLength(line), range.end()));
 					const NativeRectangle sublineBounds(layout.bounds(range));
@@ -1416,13 +1417,13 @@ namespace {
 		HBITMAP oldBitmap = static_cast<HBITMAP>(::SelectObject(dc.get(), mask.get()));
 		dc.fillSolidRect(0, 0, bh.bV5Width, bh.bV5Height, RGB(0x00, 0x00, 0x00));
 		int y = 0;
-		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
+		for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
 			const TextLayout& layout = renderer.layouts()[line];
 			const int indent = renderer.lineIndent(line);
-			Range<length_t> range;
-			for(length_t subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
+			Range<Index> range;
+			for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
 				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range)) {
-					range = Range<length_t>(
+					range = Range<Index>(
 						range.beginning(),
 						min(viewer.document().lineLength(line), range.end()));
 					NativeRegion rgn(layout.blackBoxBounds(range));
@@ -1471,7 +1472,7 @@ namespace {
 		geometry::translate(selectionExtent, geometry::negate(geometry::topLeft(selectionExtent)));
 		y = selectionBounds.top;
 		const TextLayout::Selection selection(viewer.caret());
-		for(length_t line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
+		for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
 			renderer.renderLine(line, dc,
 				renderer.lineIndent(line) - geometry::left(selectionBounds), y,
 				selectionExtent, selectionExtent, highlightSelection ? &selection : 0);

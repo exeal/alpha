@@ -4,6 +4,7 @@
  * @date 2003-2006 was EditView.h
  * @date 2006-2011 was viewer.hpp
  * @date 2011-06-06 separated from viewer.hpp
+ * @date 2011-2012
  */
 
 #ifndef ASCENSION_RULER_HPP
@@ -38,7 +39,7 @@ namespace ascension {
 				/// Anchor of the digits. Default value is @c presentation#TEXT_ANCHOR_END.
 				presentation::TextAnchor anchor;
 				/// Start value of the line number. Default value is 1.
-				length_t startValue;
+				Index startValue;
 				/// Minimum number of digits. Default value is 4.
 				uint8_t minimumDigits;
 				/// Padding width at the start. Default value is 6-pixel.

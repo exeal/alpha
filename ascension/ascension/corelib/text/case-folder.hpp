@@ -3,6 +3,7 @@
  * @author exeal
  * @date 2005-2011
  * @date 2011-04-25 deparated from unicode.hpp
+ * @date 2012
  */
 
 #ifndef ASCENSION_CASE_FOLDER_HPP
@@ -28,7 +29,7 @@ namespace ascension {
 		class CaseFolder {
 			ASCENSION_NONCOPYABLE_TAG(CaseFolder);
 		public:
-			static const length_t MAXIMUM_EXPANSION_CHARACTERS;
+			static const Index MAXIMUM_EXPANSION_CHARACTERS;
 			static int compare(const CharacterIterator& s1,
 				const CharacterIterator& s2, bool excludeTurkishI = false);
 

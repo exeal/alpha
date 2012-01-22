@@ -3,6 +3,7 @@
  * @author exeal
  * @date 2006-2011 was text-editor.hpp
  * @date 2011-05-06
+ * @date 2011-2012
  */
 
 #ifndef ASCENSION_COMMAND_HPP
@@ -55,11 +56,11 @@ namespace ascension {
 			public:
 				explicit BookmarkMatchLinesCommand(viewers::TextViewer& viewer,
 					const kernel::Region& region = kernel::Region()) /*throw()*/;
-				length_t numberOfMarkedLines() const /*throw()*/;
+				Index numberOfMarkedLines() const /*throw()*/;
 			private:
 				bool perform();
 				const kernel::Region region_;
-				length_t numberOfMarkedLines_;
+				Index numberOfMarkedLines_;
 			};
 			/// Clears the selection, or aborts the active incremental search and exits the content assist.
 			class CancelCommand : public Command {
@@ -78,26 +79,26 @@ namespace ascension {
 				CaretMovementCommand(viewers::TextViewer& viewer,
 					kernel::Position(*procedure)(const kernel::Point&), bool extendSelection = false);
 				CaretMovementCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const kernel::Point&, length_t), bool extendSelection = false);
+					kernel::Position(*procedure)(const kernel::Point&, Index), bool extendSelection = false);
 				CaretMovementCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const kernel::Point&, kernel::locations::CharacterUnit, length_t), bool extendSelection = false);
+					kernel::Position(*procedure)(const kernel::Point&, kernel::locations::CharacterUnit, Index), bool extendSelection = false);
 				CaretMovementCommand(viewers::TextViewer& viewer,
 					kernel::Position(*procedure)(const viewers::VisualPoint&), bool extendSelection = false);
 				CaretMovementCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const viewers::VisualPoint&, length_t), bool extendSelection = false);
+					kernel::Position(*procedure)(const viewers::VisualPoint&, Index), bool extendSelection = false);
 				CaretMovementCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, length_t), bool extendSelection = false);
+					kernel::Position(*procedure)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, Index), bool extendSelection = false);
 				CaretMovementCommand(viewers::TextViewer& viewer,
-					viewers::VerticalDestinationProxy(*procedure)(const viewers::VisualPoint&, length_t), bool extendSelection = false);
+					viewers::VerticalDestinationProxy(*procedure)(const viewers::VisualPoint&, Index), bool extendSelection = false);
 			private:
 				bool perform();
 				kernel::Position(*procedureP_)(const kernel::Point&);
-				kernel::Position(*procedurePL_)(const kernel::Point&, length_t);
-				kernel::Position(*procedurePCL_)(const kernel::Point&, kernel::locations::CharacterUnit, length_t);
+				kernel::Position(*procedurePL_)(const kernel::Point&, Index);
+				kernel::Position(*procedurePCL_)(const kernel::Point&, kernel::locations::CharacterUnit, Index);
 				kernel::Position(*procedureV_)(const viewers::VisualPoint&);
-				kernel::Position(*procedureVL_)(const viewers::VisualPoint&, length_t);
-				kernel::Position(*procedureVCL_)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, length_t);
-				viewers::VerticalDestinationProxy(*procedureVLV_)(const viewers::VisualPoint&, length_t);
+				kernel::Position(*procedureVL_)(const viewers::VisualPoint&, Index);
+				kernel::Position(*procedureVCL_)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, Index);
+				viewers::VerticalDestinationProxy(*procedureVLV_)(const viewers::VisualPoint&, Index);
 				const bool extends_;
 			};
 			/**
@@ -278,26 +279,26 @@ namespace ascension {
 				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
 					kernel::Position(*procedure)(const kernel::Point&));
 				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const kernel::Point&, length_t));
+					kernel::Position(*procedure)(const kernel::Point&, Index));
 				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const kernel::Point&, kernel::locations::CharacterUnit, length_t));
+					kernel::Position(*procedure)(const kernel::Point&, kernel::locations::CharacterUnit, Index));
 				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
 					kernel::Position(*procedure)(const viewers::VisualPoint&));
 				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const viewers::VisualPoint&, length_t));
+					kernel::Position(*procedure)(const viewers::VisualPoint&, Index));
 				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, length_t));
+					kernel::Position(*procedure)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, Index));
 				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
-					viewers::VerticalDestinationProxy(*procedure)(const viewers::VisualPoint&, length_t));
+					viewers::VerticalDestinationProxy(*procedure)(const viewers::VisualPoint&, Index));
 				bool perform();
 			private:
 				kernel::Position(*procedureP_)(const kernel::Point&);
-				kernel::Position(*procedurePL_)(const kernel::Point&, length_t);
-				kernel::Position(*procedurePCL_)(const kernel::Point&, kernel::locations::CharacterUnit, length_t);
+				kernel::Position(*procedurePL_)(const kernel::Point&, Index);
+				kernel::Position(*procedurePCL_)(const kernel::Point&, kernel::locations::CharacterUnit, Index);
 				kernel::Position(*procedureV_)(const viewers::VisualPoint&);
-				kernel::Position(*procedureVL_)(const viewers::VisualPoint&, length_t);
-				kernel::Position(*procedureVCL_)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, length_t);
-				viewers::VerticalDestinationProxy(*procedureVLV_)(const viewers::VisualPoint&, length_t);
+				kernel::Position(*procedureVL_)(const viewers::VisualPoint&, Index);
+				kernel::Position(*procedureVCL_)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, Index);
+				viewers::VerticalDestinationProxy(*procedureVLV_)(const viewers::VisualPoint&, Index);
 			};
 			/// Tabifies (exchanges tabs and spaces).
 			class TabifyCommand : public Command {

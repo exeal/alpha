@@ -141,7 +141,7 @@ bool LiteralPattern::search(const CharacterIterator& target, Direction direction
 	if(direction == Direction::FORWARD) {
 		orzAdvance(*t, last_ - first_ - 1);
 		for(const int* pattern; t->hasNext(); orzAdvance(*t,
-				max<length_t>(lastOccurences_[caseSensitive_ ? t->current() : CaseFolder::fold(t->current())], last_ - pattern))) {
+				max<Index>(lastOccurences_[caseSensitive_ ? t->current() : CaseFolder::fold(t->current())], last_ - pattern))) {
 			for(pattern = last_ - 1;
 				(caseSensitive_ ? t->current() : CaseFolder::fold(t->current())) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
 				t->previous(), --pattern) {
@@ -840,7 +840,7 @@ bool IncrementalSearcher::addString(const StringPiece& text) {
 }
 
 /// @see kernel#IBookmarkListener#bookmarkChanged
-void IncrementalSearcher::bookmarkChanged(length_t) {
+void IncrementalSearcher::bookmarkChanged(Index) {
 	abort();
 }
 

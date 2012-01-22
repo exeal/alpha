@@ -264,7 +264,7 @@ Scalar TextRenderer::baselineDistance(const Range<VisualLine>& lines) const {
 	} else {
 		const TextLayout* layout = &layouts().at(lines.beginning().line);
 		Scalar bpd = layout->extent().end() - layout->baseline(lines.beginning().subline);
-		for(length_t line = lines.beginning().line + 1; line < lines.end().line; ++line)
+		for(Index line = lines.beginning().line + 1; line < lines.end().line; ++line)
 			bpd += length(layouts().at(line).extent());
 		layout = &layouts().at(lines.end().line);
 		return bpd += layout->baseline(lines.end().subline) - layout->extent().beginning();
@@ -277,7 +277,7 @@ Scalar TextRenderer::baselineDistance(const Range<VisualLine>& lines) const {
  * @param[out] parameters
  * @see #createLineLayout
  */
-void TextRenderer::buildLineLayoutConstructionParameters(length_t line, TextLayout::ConstructionParameters& parameters) const {
+void TextRenderer::buildLineLayoutConstructionParameters(Index line, TextLayout::ConstructionParameters& parameters) const {
 	presentation_.textLineStyle(line, parameters);
 	parameters.writingMode = writingMode();
 }
@@ -334,7 +334,7 @@ void TextRenderer::paint(PaintContext& context) const {
  * @param context The graphics context
  * @param alignmentPoint The alignment point of the text layout of the line to draw
  */
-void TextRenderer::paint(length_t line, PaintContext& context, const NativePoint& alignmentPoint) const /*throw()*/ {
+void TextRenderer::paint(Index line, PaintContext& context, const NativePoint& alignmentPoint) const /*throw()*/ {
 //	if(!enablesDoubleBuffering_) {
 		layouts().at(line).draw(context, alignmentPoint,
 			(lineRenderingOptions_.get() != 0) ? lineRenderingOptions_->textPaintOverride(line) : 0,
@@ -352,7 +352,7 @@ void TextRenderer::paint(length_t line, PaintContext& context, const NativePoint
 	// skip to the subline needs to draw
 	const Scalar top = max(geometry::top(context.boundsToPaint()), geometry::top(clipRect));
 	Scalar y = geometry::y(origin);
-	length_t subline = (y + dy >= top) ? 0 : (top - (y + dy)) / dy;
+	Index subline = (y + dy >= top) ? 0 : (top - (y + dy)) / dy;
 	if(subline >= layout.numberOfLines())
 		return;	// this logical line does not need to draw
 	y += static_cast<Scalar>(dy * subline);
@@ -468,7 +468,7 @@ WritingMode TextRenderer::writingMode() const /*throw()*/ {
  * @param line The line number this iterator addresses
  * @param trackOutOfViewport Set @c true to 
  */
-BaselineIterator::BaselineIterator(const TextViewport& viewport, length_t line,
+BaselineIterator::BaselineIterator(const TextViewport& viewport, Index line,
 		bool trackOutOfViewport) : viewport_(&viewport), tracksOutOfViewport_(trackOutOfViewport) {
 	initializeWithFirstVisibleLine();
 	advance(line - this->line());
@@ -481,10 +481,10 @@ void BaselineIterator::advance(BaselineIterator::difference_type n) {
 		return;
 	else if(n > 0 && line() + n > renderer.presentation().document().numberOfLines())
 		throw invalid_argument("n");
-	else if(n < 0 && static_cast<length_t>(-n) - 1 > line())
+	else if(n < 0 && static_cast<Index>(-n) - 1 > line())
 		throw invalid_argument("n");
 
-	const length_t destination = line() + n;
+	const Index destination = line() + n;
 	if(!tracksOutOfViewport()
 			&& (baseline_.first == numeric_limits<Scalar>::min() || baseline_.first == numeric_limits<Scalar>::max())) {
 		if((n > 0 && baseline_.first == numeric_limits<Scalar>::max())
@@ -507,7 +507,7 @@ void BaselineIterator::advance(BaselineIterator::difference_type n) {
 	const TextLayout* layout = &renderer.layouts()[line()];
 	if(n > 0) {
 		newBaseline += layout->lineMetrics(line_.subline).descent();
-		for(length_t ln = line(), subline = line_.subline; ; ) {
+		for(Index ln = line(), subline = line_.subline; ; ) {
 			if(++subline == layout->numberOfLines()) {
 				subline = 0;
 				if(++ln == renderer.presentation().document().numberOfLines()) {
@@ -527,7 +527,7 @@ void BaselineIterator::advance(BaselineIterator::difference_type n) {
 		}
 	} else {	// n < 0
 		newBaseline -= layout->lineMetrics(line_.subline).ascent();
-		for(length_t ln = line(), subline = line_.subline; ; ) {
+		for(Index ln = line(), subline = line_.subline; ; ) {
 			if(subline == 0) {
 				if(ln-- == 0) {
 					subline = 0;
@@ -608,12 +608,12 @@ inline bool BaselineIterator::isValid() const /*throw()*/ {
 	return geometry::x(baseline_.second) != 0 && geometry::y(baseline_.second) != 0;
 }
 #if 0
-void TextViewer::BaselineIterator::move(length_t line) {
+void TextViewer::BaselineIterator::move(Index line) {
 	if(line >= viewer_.document().numberOfLines())
 		throw k::BadPositionException(k::Position(line, 0));
 	Scalar newBaseline;
 	if(!isValid()) {
-		length_t firstVisibleLine, firstVisibleSubline;
+		Index firstVisibleLine, firstVisibleSubline;
 		viewer_.firstVisibleLine(&firstVisibleLine, 0, &firstVisibleSubline);
 		const PhysicalFourSides<Scalar> spaces(viewer_.spaceWidths());
 		Scalar spaceBefore;
@@ -638,7 +638,7 @@ void TextViewer::BaselineIterator::move(length_t line) {
 			else {
 				const TextLayout& layout = textRenderer().layouts()[line];
 				newBaseline = 0;
-				for(length_t subline = firstVisibleSubline - 1; ; --subline) {
+				for(Index subline = firstVisibleSubline - 1; ; --subline) {
 					newBaseline -= layout.lineMetrics(subline).descent();
 					if(subline == 0)
 						break;
@@ -651,7 +651,7 @@ void TextViewer::BaselineIterator::move(length_t line) {
 				(geometry::dy(clientBounds) - spaces.top - spaces.bottom) : (geometry::dx(clientBounds) - spaces.left - spaces.right);
 			newBaseline = 0;
 			const TextLayout* layout = &viewer_.textRenderer().layouts()[firstVisibleLine];
-			for(length_t ln = firstVisibleLine, subline = firstVisibleLine; ; ) {
+			for(Index ln = firstVisibleLine, subline = firstVisibleLine; ; ) {
 				newBaseline += layout->lineMetrics(subline).ascent();
 				if(ln == line && subline == 0)
 					break;
@@ -669,7 +669,7 @@ void TextViewer::BaselineIterator::move(length_t line) {
 			newBaseline = numeric_limits<Scalar>::min();
 		else {
 			const TextLayout* layout = &viewer_.textRenderer().layouts()[firstVisibleLine];
-			for(length_t ln = firstVisibleLine, subline = firstVisibleSubline; ; --subline) {
+			for(Index ln = firstVisibleLine, subline = firstVisibleSubline; ; --subline) {
 				newBaseline -= layout->lineMetrics(subline).descent();
 				if(subline == 0 && ln == line)
 					break;
@@ -810,7 +810,7 @@ VisualLine TextViewport::mapBpdToLine(Scalar bpd, bool* snapped /* = 0 */) const
 		while(true) {
 			assert(bpd >= lineBefore);
 			Scalar lineAfter = lineBefore;
-			for(length_t sl = 0; sl < layout->numberOfLines(); ++sl)
+			for(Index sl = 0; sl < layout->numberOfLines(); ++sl)
 				lineAfter += layout->lineMetrics(sl).height();
 			if(bpd < lineAfter) {
 				result.subline = layout->locateLine(bpd - lineBefore, outside);
@@ -890,22 +890,22 @@ void TextViewport::scrollTo(const NativePoint& position, viewers::base::Widget* 
  * @param ipd
  * @param widget
  */
-void TextViewport::scrollTo(length_t bpd, length_t ipd, viewers::base::Widget* widget) {
-	const length_t maximumBpd =
-		textRenderer().layouts().numberOfVisualLines() - static_cast<length_t>(numberOfVisibleLines()) + 1;
-	const length_t maximumIpd =
-		static_cast<length_t>(contentMeasure()
+void TextViewport::scrollTo(Index bpd, Index ipd, viewers::base::Widget* widget) {
+	const Index maximumBpd =
+		textRenderer().layouts().numberOfVisualLines() - static_cast<Index>(numberOfVisibleLines()) + 1;
+	const Index maximumIpd =
+		static_cast<Index>(contentMeasure()
 			/ textRenderer().defaultFont()->metrics().averageCharacterWidth())
-			- static_cast<length_t>(numberOfVisibleCharactersInLine()) + 1;
-	bpd = max<length_t>(min(bpd, maximumBpd), 0);
-	ipd = max<length_t>(min(ipd, maximumIpd), 0);
+			- static_cast<Index>(numberOfVisibleCharactersInLine()) + 1;
+	bpd = max<Index>(min(bpd, maximumBpd), 0);
+	ipd = max<Index>(min(ipd, maximumIpd), 0);
 	const ptrdiff_t dbpd = bpd - firstVisibleLineInVisualNumber();
 	const ptrdiff_t dipd = ipd - inlineProgressionOffset();
 	if(dbpd != 0 || dipd != 0)
 		scroll(dbpd, dipd, widget);
 }
 
-void TextViewport::scrollTo(const VisualLine& line, length_t ipd, viewers::base::Widget* widget) {
+void TextViewport::scrollTo(const VisualLine& line, Index ipd, viewers::base::Widget* widget) {
 	// TODO: not implemented.
 }
 
@@ -920,7 +920,7 @@ void TextViewport::scrollTo(const VisualLine& line, length_t ipd, viewers::base:
  * @return The indentation in pixels
  * @throw IndexOutOfBoundsException @a subline is invalid
  */
-Scalar font::lineIndent(const TextLayout& layout, Scalar contentMeasure, length_t subline /* = 0 */) {
+Scalar font::lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline /* = 0 */) {
 	const detail::PhysicalTextAnchor alignment =
 		detail::computePhysicalTextAnchor(layout.anchor(), layout.writingMode().inlineFlowDirection);
 	if(alignment == detail::LEFT /*|| ... != NO_JUSTIFICATION*/)	// TODO: recognize the last subline of a justified line.

@@ -2,7 +2,7 @@
  * @file document.cpp
  * @author exeal
  * @date 2003-2006 (was EditDoc.h)
- * @date 2006-2011
+ * @date 2006-2012
  */
 
 #include <ascension/kernel/document.hpp>
@@ -61,10 +61,10 @@ basic_ostream<Char>& kernel::writeDocumentToStream(basic_ostream<Char>& out,
 		const String eol(isLiteralNewline(newline) ? newlineString(newline) : String());
 		if(eol.empty() && newline != NLF_RAW_VALUE)
 			throw UnknownValueException("newline");
-		for(length_t i = beginning.line; out; ++i) {
+		for(Index i = beginning.line; out; ++i) {
 			const Document::Line& line = document.getLineInformation(i);
-			const length_t first = (i == beginning.line) ? beginning.column : 0;
-			const length_t last = (i == end.line) ? end.column : line.text().length();
+			const Index first = (i == beginning.line) ? beginning.column : 0;
+			const Index last = (i == end.line) ? end.column : line.text().length();
 			out.write(line.text().data() + first, static_cast<streamsize>(last - first));
 			if(i == end.line)
 				break;
@@ -87,12 +87,12 @@ basic_ostream<Char>& kernel::writeDocumentToStream(basic_ostream<Char>& out,
  * @param fromAccessibleStart
  * @throw BadPositionException @a at is outside of the document
  */
-length_t positions::absoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart) {
+Index positions::absoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart) {
 	if(at > document.region().second)
 		throw BadPositionException(at);
-	length_t offset = 0;
+	Index offset = 0;
 	const Position start((fromAccessibleStart ? document.accessibleRegion() : document.region()).first);
-	for(length_t line = start.line; ; ++line) {
+	for(Index line = start.line; ; ++line) {
 		if(line == at.line) {
 			offset += at.column;
 			break;
@@ -158,10 +158,10 @@ Position positions::updatePosition(const Position& position, const DocumentChang
 namespace {
 #ifdef _DEBUG
 	// for Document.length_ diagnostic
-	length_t calculateDocumentLength(const Document& document) {
-		length_t c = 0;
-		const length_t lines = document.numberOfLines();
-		for(length_t i = 0; i < lines; ++i)
+	Index calculateDocumentLength(const Document& document) {
+		Index c = 0;
+		const Index lines = document.numberOfLines();
+		for(Index i = 0; i < lines; ++i)
 			c += document.lineLength(i);
 		return c;
 	}
@@ -272,30 +272,30 @@ void Bookmarker::documentChanged(const Document& document, const DocumentChange&
 		return;
 	if(change.erasedRegion().first.line != change.erasedRegion().second.line) {
 		// remove the marks on the deleted lines
-		const length_t lines = change.erasedRegion().second.line - change.erasedRegion().first.line;
-		const GapVector<length_t>::iterator e(markedLines_.end());
-		GapVector<length_t>::iterator top(find(change.erasedRegion().first.line));
+		const Index lines = change.erasedRegion().second.line - change.erasedRegion().first.line;
+		const GapVector<Index>::iterator e(markedLines_.end());
+		GapVector<Index>::iterator top(find(change.erasedRegion().first.line));
 		if(top != e) {
 			if(*top == change.erasedRegion().first.line)
 				++top;
-			GapVector<length_t>::iterator bottom(find(change.erasedRegion().second.line));
+			GapVector<Index>::iterator bottom(find(change.erasedRegion().second.line));
 			if(bottom != e && *bottom == change.erasedRegion().second.line)
 				++bottom;
 			// slide the following lines before removing
 			if(bottom != e) {
-				for(GapVector<length_t>::iterator i(bottom); i != e; ++i)
+				for(GapVector<Index>::iterator i(bottom); i != e; ++i)
 					*i -= lines;	// ??? C4267@MSVC9
 			}
 			markedLines_.erase(top, bottom);	// GapVector<>.erase does not return an iterator
 		}
 	}
 	if(change.insertedRegion().first.line != change.insertedRegion().second.line) {
-		const length_t lines = change.insertedRegion().second.line - change.insertedRegion().first.line;
-		GapVector<length_t>::iterator i(find(change.insertedRegion().first.line));
+		const Index lines = change.insertedRegion().second.line - change.insertedRegion().first.line;
+		GapVector<Index>::iterator i(find(change.insertedRegion().first.line));
 		if(i != markedLines_.end()) {
 			if(*i == change.insertedRegion().first.line && change.insertedRegion().first.column != 0)
 				++i;
-			for(const GapVector<length_t>::iterator e(markedLines_.end()); i != e; ++i)
+			for(const GapVector<Index>::iterator e(markedLines_.end()); i != e; ++i)
 				*i += lines;	// ??? - C4267@MSVC9
 		}
 	}
@@ -309,7 +309,7 @@ Bookmarker::Iterator Bookmarker::end() const {
 	return Iterator(markedLines_.end());
 }
 
-inline GapVector<length_t>::iterator Bookmarker::find(length_t line) const /*throw()*/ {
+inline GapVector<Index>::iterator Bookmarker::find(Index line) const /*throw()*/ {
 	// TODO: can write faster implementation (and design) by internal.searchBound().
 	Bookmarker& self = const_cast<Bookmarker&>(*this);
 	return lower_bound(self.markedLines_.begin(), self.markedLines_.end(), line);
@@ -320,10 +320,10 @@ inline GapVector<length_t>::iterator Bookmarker::find(length_t line) const /*thr
  * @param line The line
  * @throw BadPositionException @a line is outside of the document
  */
-bool Bookmarker::isMarked(length_t line) const {
+bool Bookmarker::isMarked(Index line) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
-	const GapVector<length_t>::const_iterator i(find(line));
+	const GapVector<Index>::const_iterator i(find(line));
 	return i != markedLines_.end() && *i == line;
 }
 
@@ -333,19 +333,19 @@ bool Bookmarker::isMarked(length_t line) const {
  * @param set @c true to set bookmark, @c false to clear
  * @throw BadPositionException @a line is outside of the document
  */
-void Bookmarker::mark(length_t line, bool set) {
+void Bookmarker::mark(Index line, bool set) {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
-	const GapVector<length_t>::iterator i(find(line));
+	const GapVector<Index>::iterator i(find(line));
 	if(i != markedLines_.end() && *i == line) {
 		if(!set) {
 			markedLines_.erase(i);
-			listeners_.notify<length_t>(&BookmarkListener::bookmarkChanged, line);
+			listeners_.notify<Index>(&BookmarkListener::bookmarkChanged, line);
 		}
 	} else {
 		if(set) {
 			markedLines_.insert(i, line);
-			listeners_.notify<length_t>(&BookmarkListener::bookmarkChanged, line);
+			listeners_.notify<Index>(&BookmarkListener::bookmarkChanged, line);
 		}
 	}
 }
@@ -362,7 +362,7 @@ void Bookmarker::mark(length_t line, bool set) {
  * @throw BadPositionException @a line is outside of the document
  * @see #begin, #end
  */
-length_t Bookmarker::next(length_t from, Direction direction, bool wrapAround /* = true */, size_t marks /* = 1 */) const {
+Index Bookmarker::next(Index from, Direction direction, bool wrapAround /* = true */, size_t marks /* = 1 */) const {
 	// this code is tested by 'test/document-test.cpp'
 	if(from >= document_.numberOfLines())
 		throw BadPositionException(Position(from, 0));
@@ -376,7 +376,7 @@ length_t Bookmarker::next(length_t from, Direction direction, bool wrapAround /*
 			marks = markedLines_.size();
 	}
 
-	size_t i = static_cast<GapVector<length_t>::const_iterator>(find(from)) - markedLines_.begin();
+	size_t i = static_cast<GapVector<Index>::const_iterator>(find(from)) - markedLines_.begin();
 	if(direction == Direction::FORWARD) {
 		if(i == markedLines_.size()) {
 			if(!wrapAround)
@@ -422,15 +422,15 @@ void Bookmarker::removeListener(BookmarkListener& listener) {
  * @param line The line
  * @throw BadPositionException @a line is outside of the document
  */
-void Bookmarker::toggle(length_t line) {
+void Bookmarker::toggle(Index line) {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
-	const GapVector<length_t>::iterator i(find(line));
+	const GapVector<Index>::iterator i(find(line));
 	if(i == markedLines_.end() || *i != line)
 		markedLines_.insert(i, line);
 	else
 		markedLines_.erase(i);
-	listeners_.notify<length_t>(&BookmarkListener::bookmarkChanged, line);
+	listeners_.notify<Index>(&BookmarkListener::bookmarkChanged, line);
 }
 
 
@@ -614,15 +614,15 @@ void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints
  * @return The number of characters
  * @throw UnknownValueException @a newline is invalid
  */
-length_t Document::length(Newline newline /* = NLF_RAW_VALUE */) const {
+Index Document::length(Newline newline /* = NLF_RAW_VALUE */) const {
 	newline = resolveNewline(*this, newline);
 	if(isLiteralNewline(newline))
 		return length_ + (numberOfLines() - 1) * ((newline != NLF_CR_LF) ? 1 : 2);
 	else if(newline == NLF_RAW_VALUE) {
-		length_t len = length_;
-		const length_t lines = numberOfLines();
+		Index len = length_;
+		const Index lines = numberOfLines();
 		assert(lines > 0);
-		for(length_t i = 0; i < lines - 1; ++i)
+		for(Index i = 0; i < lines - 1; ++i)
 			len += newlineStringLength(lines_[i]->newline_);
 		return len;
 	} else
@@ -636,15 +636,15 @@ length_t Document::length(Newline newline /* = NLF_RAW_VALUE */) const {
  * @throw BadPostionException @a line is outside of the document
  * @throw UnknownValueException @a newline is invalid
  */
-length_t Document::lineOffset(length_t line, Newline newline) const {
+Index Document::lineOffset(Index line, Newline newline) const {
 	if(line >= numberOfLines())
 		throw BadPositionException(Position(line, 0));
 	newline = resolveNewline(*this, newline);
 
-	length_t offset = 0, eolLength = isLiteralNewline(newline) ? newlineStringLength(newline) : 0;
+	Index offset = 0, eolLength = isLiteralNewline(newline) ? newlineStringLength(newline) : 0;
 	if(eolLength == 0 && newline != NLF_RAW_VALUE)
 		throw UnknownValueException("newline");
-	for(length_t i = 0; i < line; ++i) {
+	for(Index i = 0; i < line; ++i) {
 		const Line& ln = *lines_[i];
 		offset += ln.text_.length();
 		if(newline == NLF_RAW_VALUE)

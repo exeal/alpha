@@ -4,6 +4,7 @@
  * @date 2003-2008 was point.cpp
  * @date 2008-2010 separated from point.cpp
  * @date 2011-10-03 separated from caret.cpp
+ * @date 2011-2012
  */
 
 #include <ascension/viewer/caret.hpp>
@@ -340,9 +341,9 @@ pair<HRESULT, String> utils::getTextFromDataObject(IDataObject& data, bool* rect
 						::ReleaseStgMedium(&locale);
 					}
 					// convert ANSI text into Unicode by the code page
-					const length_t nativeLength = min<length_t>(
+					const Index nativeLength = min<Index>(
 						strlen(nativeBuffer), ::GlobalSize(stm.hGlobal) / sizeof(char)) + 1;
-					const length_t ucsLength = ::MultiByteToWideChar(
+					const Index ucsLength = ::MultiByteToWideChar(
 						codePage, MB_PRECOMPOSED, nativeBuffer, static_cast<int>(nativeLength), 0, 0);
 					if(ucsLength != 0) {
 						AutoBuffer<wchar_t> ucsBuffer(new(nothrow) wchar_t[ucsLength]);
@@ -513,7 +514,7 @@ void Caret::onImeComposition(WPARAM wp, LPARAM lp, bool& consumed) {
 	else if(/*event.lParam == 0 ||*/ win32::boole(lp & GCS_RESULTSTR)) {	// completed
 		win32::Handle<HIMC> imc(inputMethod(textViewer()));
 		if(imc.get() != 0) {
-			if(const length_t len = ::ImmGetCompositionStringW(imc.get(), GCS_RESULTSTR, 0, 0) / sizeof(WCHAR)) {
+			if(const Index len = ::ImmGetCompositionStringW(imc.get(), GCS_RESULTSTR, 0, 0) / sizeof(WCHAR)) {
 				// this was not canceled
 				const AutoBuffer<Char> text(new Char[len + 1]);
 				::ImmGetCompositionStringW(imc.get(), GCS_RESULTSTR, text.get(), static_cast<DWORD>(len * sizeof(WCHAR)));
