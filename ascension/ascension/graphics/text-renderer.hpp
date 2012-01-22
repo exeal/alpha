@@ -17,7 +17,12 @@
 
 namespace ascension {
 
-	namespace viewers {class Caret;}
+	namespace viewers {
+		class Caret;
+		namespace base {
+			class Widget;
+		}
+	}
 
 	namespace graphics {
 		namespace font {
@@ -152,14 +157,30 @@ namespace ascension {
 				mutable win32::Handle<HBITMAP> memoryBitmap_;
 			};
 
+			/**
+			 * Interface for objects which are interested in change of scroll positions of a
+			 * @c TextViewport.
+			 * @see TextViewport#addListener, TextViewport#removeListener
+			 */
+			class TextViewportListener {
+			private:
+				virtual void viewportPositionChanged(
+					const VisualLine& oldLine, length_t oldInlineProgressionOffset) /*throw()*/ = 0;
+				virtual void viewportSizeChanged(const NativeSize& oldSize) /*throw()*/ = 0;
+				friend class TextViewport;
+			};
+
 			class TextViewport {
 			public:
 				TextRenderer& textRenderer() /*throw()*/;
 				const TextRenderer& textRenderer() const /*throw()*/;
+				// observers
+				void addListener(TextViewportListener& listener);
+				void removeListener(TextViewportListener& listener);
 				// extents
 				float numberOfVisibleCharactersInLine() const /*throw()*/;
 				float numberOfVisibleLines() const /*throw()*/;
-				void resize(const NativeSize& newSize);
+				void resize(const NativeSize& newSize, viewers::base::Widget* widget);
 				const NativeSize& size() const /*throw()*/;
 				// content- or allocation-rectangles
 				Scalar allocationMeasure() const /*throw()*/;
@@ -170,7 +191,11 @@ namespace ascension {
 				length_t firstVisibleSublineInLogicalLine() const /*throw()*/;
 				length_t inlineProgressionOffset() const /*throw()*/;
 				// scrolls
-				void scrollTo();
+				void scroll(const NativeSize& offset, viewers::base::Widget* widget);
+				void scroll(length_t bpd, length_t ipd, viewers::base::Widget* widget);
+				void scrollTo(const NativePoint& position, viewers::base::Widget* widget);
+				void scrollTo(length_t dbpd, length_t dipd, viewers::base::Widget* widget);
+				void scrollTo(const VisualLine& line, length_t ipd, viewers::base::Widget* widget);
 				// model-view mapping
 				kernel::Position characterForPoint(
 					const NativePoint& at, TextLayout::Edge edge, bool abortNoCharacter = false,
@@ -186,6 +211,7 @@ namespace ascension {
 				struct ScrollOffsets {
 					length_t ipd, bpd;
 				} scrollOffsets_;
+				detail::Listeners<TextViewportListener> listeners_;
 			};
 
 			class BaselineIterator : public detail::IteratorAdapter<

@@ -1330,15 +1330,8 @@ void TextViewer::resized(State state, const NativeSize&) {
  * @see #scroll
  */
 void TextViewer::scrollTo(int x, int y, bool redraw) {
-//	checkInitialization();
-	if(x != -1)
-		x = max(min<int>(x, scrolls_.horizontal.maximum - scrolls_.horizontal.pageSize + 1), 0);
-	if(y != -1)
-		y = max(min<int>(y, scrolls_.vertical.maximum - scrolls_.vertical.pageSize + 1), 0);
-	const int dx = (x != -1) ? x - scrolls_.horizontal.position : 0;
-	const int dy = (y != -1) ? y - scrolls_.vertical.position : 0;
-	if(dx != 0 || dy != 0)
-		scroll(dx, dy, redraw);	// does not work if scroll is lock
+	if(shared_ptr<TextViewport> viewport = textRenderer().viewport().lock())
+		viewport->scrollTo(geometry::make<NativePoint>(x, y), redraw ? this : 0);
 }
 
 /**
@@ -2118,6 +2111,26 @@ void CurrentLineHighlighter::setBackground(const Color& color) /*throw()*/ {
  */
 void CurrentLineHighlighter::setForeground(const Color& color) /*throw()*/ {
 	foreground_ = color;
+}
+
+
+// graphics.font.TextViewport /////////////////////////////////////////////////////////////////////
+
+/**
+ * Resets the size of the viewport.
+ * @param newSize The new size to set
+ * @param widget
+ */
+void TextViewport::resize(const NativeSize& newSize, Widget* widget) {
+	const NativeSize oldSize(size());
+	// TODO: not implemented.
+	listeners_.notify<const NativeSize&>(&TextViewportListener::viewportSizeChanged, oldSize);
+}
+
+void TextViewport::scroll(const NativeSize& offset, Widget* widget) {
+}
+
+void TextViewport::scroll(length_t dbpd, length_t dipd, Widget* widget) {
 }
 
 
