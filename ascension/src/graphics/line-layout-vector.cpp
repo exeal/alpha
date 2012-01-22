@@ -383,7 +383,7 @@ k::Position LineLayoutVector::mapVisualPositionToLogicalPosition(const k::Positi
 #endif // 0
 
 /**
- * Offsets visual line.
+ * Offsets visual line. The line whose layout not calculated is treat as single visual line.
  * @param[in,out] line The visual line
  * @param[in] offset The offset
  * @return @c false if absolute value of @a offset is too large so that the results were snapped to

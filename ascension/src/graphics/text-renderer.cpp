@@ -871,6 +871,44 @@ float TextViewport::numberOfVisibleLines() const /*throw()*/ {
 	}
 }
 
+/**
+ * Scrolls the viewport to the specified position.
+ * @param position
+ * @param widget
+ */
+void TextViewport::scrollTo(const NativePoint& position, viewers::base::Widget* widget) {
+	const bool horizontal = isHorizontal(textRenderer().writingMode().blockFlowDirection);
+	return scrollTo(
+		horizontal ? geometry::y(position) : geometry::x(position),
+		horizontal ? geometry::x(position) : geometry::y(position),
+		widget);
+}
+
+/**
+ * Scrolls the viewport to the specified position.
+ * @param bpd
+ * @param ipd
+ * @param widget
+ */
+void TextViewport::scrollTo(length_t bpd, length_t ipd, viewers::base::Widget* widget) {
+	const length_t maximumBpd =
+		textRenderer().layouts().numberOfVisualLines() - static_cast<length_t>(numberOfVisibleLines()) + 1;
+	const length_t maximumIpd =
+		static_cast<length_t>(contentMeasure()
+			/ textRenderer().defaultFont()->metrics().averageCharacterWidth())
+			- static_cast<length_t>(numberOfVisibleCharactersInLine()) + 1;
+	bpd = max<length_t>(min(bpd, maximumBpd), 0);
+	ipd = max<length_t>(min(ipd, maximumIpd), 0);
+	const ptrdiff_t dbpd = bpd - firstVisibleLineInVisualNumber();
+	const ptrdiff_t dipd = ipd - inlineProgressionOffset();
+	if(dbpd != 0 || dipd != 0)
+		scroll(dbpd, dipd, widget);
+}
+
+void TextViewport::scrollTo(const VisualLine& line, length_t ipd, viewers::base::Widget* widget) {
+	// TODO: not implemented.
+}
+
 
 // free functions /////////////////////////////////////////////////////////////////////////////////
 

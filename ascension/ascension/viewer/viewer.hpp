@@ -95,8 +95,8 @@ namespace ascension {
 				public base::ScrollableWidget,
 				public kernel::DocumentListener, public kernel::DocumentStateListener,
 				public kernel::DocumentRollbackListener, public graphics::font::DefaultFontListener,
-				public graphics::font::VisualLinesListener, public CaretListener,
-				public CaretStateListener, public detail::PointCollection<VisualPoint> {
+				public graphics::font::VisualLinesListener, public graphics::font::TextViewportListener,
+				public CaretListener, public CaretStateListener, public detail::PointCollection<VisualPoint> {
 		public:
 			/// Result of hit test.
 			enum HitTestResult {
@@ -280,6 +280,10 @@ namespace ascension {
 			void visualLinesInserted(const Range<length_t>& lines) /*throw()*/;
 			void visualLinesModified(const Range<length_t>& lines,
 				signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/;
+			// graphics.font.TextViewportListener
+			void viewportPositionChanged(
+				const graphics::font::VisualLine& oldLine, length_t oldInlineProgressionOffset) /*throw()*/;
+			void viewportSizeChanged(const graphics::NativeSize& oldSize) /*throw()*/;
 			// detail.PointCollection<VisualPoint>
 			void addNewPoint(VisualPoint& point) {points_.insert(&point);}
 			void removePoint(VisualPoint& point) {points_.erase(&point);}
