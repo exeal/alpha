@@ -1,9 +1,10 @@
 /**
  * @file basic-types.hpp
  * @author exeal
- * @date 2004-2011
+ * @date 2004-2010
  * @date 2010-10-21 separated from common.hpp
  * @date 2010-11-07 joined with common.hpp
+ * @date 2011-2012
  */
 
 #ifndef ASCENSION_BASIC_TYPES_HPP
@@ -102,9 +103,15 @@ namespace ascension {
 	ASCENSION_STATIC_ASSERT(sizeof(Char) == 2);
 	ASCENSION_STATIC_ASSERT(sizeof(CodePoint) == 4);
 
-	typedef std::size_t length_t;					///< Length of string or index.
-	typedef std::ptrdiff_t signed_length_t;			///< Signed @c length_t.
-	const length_t INVALID_INDEX = 0xfffffffful;	///< Invalid value of @c length_t.
+	typedef std::size_t Index;			///< Length of string or index.
+	typedef std::ptrdiff_t SignedIndex;	///< Signed @c Index.
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+	// use boost::optional<Index>, instead
+	const Index INVALID_INDEX = 0xfffffffful;	///< Invalid value of @c Index.
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
+	ASCENSION_STATIC_ASSERT(sizeof(Index) == sizeof(SignedIndex));
+//	ASCENSION_STATIC_ASSERT(std::is_unsigned<Index>::value);
+//	ASCENSION_STATIC_ASSERT(std::is_signed<SignedIndex>::value);
 
 	/// Returns @c true if the given floating-point numbers are (approximately) equal.
 	inline bool equals(double n1, double n2, double epsilon = 1.0e-5) {return std::abs(n1 - n2) <= epsilon;}

@@ -4,7 +4,8 @@
  * @date 2003-2006 was LineLayout.cpp
  * @date 2006-2011 was rendering.cpp
  * @date 2010-11-20 separated from ascension/layout.cpp
- * @date separated from rendering.cpp
+ * @date 2011-??-?? separated from rendering.cpp
+ * @date 2011-2012
  */
 
 #include <ascension/graphics/line-layout-vector.hpp>
@@ -34,7 +35,7 @@ LineLayoutVector::~LineLayoutVector() /*throw()*/ {
  * @return The layout
  * @see #at, atIfCached
  */
-const TextLayout& LineLayoutVector::operator[](length_t line) const {
+const TextLayout& LineLayoutVector::operator[](Index line) const {
 #ifdef ASCENSION_TRACE_LAYOUT_CACHES
 	manah::win32::DumpContext dout;
 	dout << "finding layout for line " << line;
@@ -83,9 +84,9 @@ const TextLayout& LineLayoutVector::operator[](length_t line) const {
  */
 void LineLayoutVector::addVisualLinesListener(VisualLinesListener& listener) {
 	listeners_.add(listener);
-	const length_t lines = document_.numberOfLines();
+	const Index lines = document_.numberOfLines();
 	if(lines > 1)
-		listener.visualLinesInserted(makeRange<length_t>(1, lines));
+		listener.visualLinesInserted(makeRange<Index>(1, lines));
 }
 
 /**
@@ -95,7 +96,7 @@ void LineLayoutVector::addVisualLinesListener(VisualLinesListener& listener) {
  *               @c #layoutModified. Otherwise calls @c #layoutDeleted
  * @throw std#invalid_argument @a first and/or @a last are invalid
  */
-void LineLayoutVector::clearCaches(const Range<length_t>& lines, bool repair) {
+void LineLayoutVector::clearCaches(const Range<Index>& lines, bool repair) {
 	if(false /*|| lines.end() > viewer_.document().numberOfLines()*/)
 		throw invalid_argument("either line number is invalid.");
 	if(documentChangePhase_ == ABOUT_TO_CHANGE) {
@@ -110,9 +111,9 @@ void LineLayoutVector::clearCaches(const Range<length_t>& lines, bool repair) {
 		return;
 
 //	const size_t originalSize = layouts_.size();
-	length_t oldSublines = 0, cachedLines = 0;
+	Index oldSublines = 0, cachedLines = 0;
 	if(repair) {
-		length_t newSublines = 0, actualFirst = lines.end(), actualLast = lines.beginning();
+		Index newSublines = 0, actualFirst = lines.end(), actualLast = lines.beginning();
 		for(Iterator i(layouts_.begin()); i != layouts_.end(); ++i) {
 			if(includes(lines, i->first)) {
 				oldSublines += i->second->numberOfLines();
@@ -170,7 +171,7 @@ void LineLayoutVector::documentChanged(const kernel::Document&, const kernel::Do
 		}
 		fireVisualLinesInserted(makeRange(region.first.line + 1, region.second.line + 1));
 	}
-	const length_t firstLine = min(change.erasedRegion().first.line, change.insertedRegion().first.line);
+	const Index firstLine = min(change.erasedRegion().first.line, change.insertedRegion().first.line);
 	if(pendingCacheClearance_.beginning() == INVALID_INDEX || !includes(pendingCacheClearance_, firstLine))
 		invalidate(firstLine);
 	documentChangePhase_ = NONE;
@@ -185,32 +186,32 @@ void LineLayoutVector::documentPartitioningChanged(const k::Region& changedRegio
 	invalidate(makeRange(changedRegion.beginning().line, changedRegion.end().line + 1));
 }
 
-void LineLayoutVector::fireVisualLinesDeleted(const Range<length_t>& lines, length_t sublines) {
+void LineLayoutVector::fireVisualLinesDeleted(const Range<Index>& lines, Index sublines) {
 	numberOfVisualLines_ -= sublines;
 	const bool widthChanged = includes(lines, longestLine_);
 	if(widthChanged)
-		updateLongestLine(static_cast<length_t>(-1), 0);
-	listeners_.notify<const Range<length_t>&, length_t>(
+		updateLongestLine(static_cast<Index>(-1), 0);
+	listeners_.notify<const Range<Index>&, Index>(
 		&VisualLinesListener::visualLinesDeleted, lines, sublines, widthChanged);
 }
 
-void LineLayoutVector::fireVisualLinesInserted(const Range<length_t>& lines) /*throw()*/ {
+void LineLayoutVector::fireVisualLinesInserted(const Range<Index>& lines) /*throw()*/ {
 	numberOfVisualLines_ += length(lines);
-	listeners_.notify<const Range<length_t>&>(&VisualLinesListener::visualLinesInserted, lines);
+	listeners_.notify<const Range<Index>&>(&VisualLinesListener::visualLinesInserted, lines);
 }
 
-void LineLayoutVector::fireVisualLinesModified(const Range<length_t>& lines,
-		length_t newSublines, length_t oldSublines, bool documentChanged) /*throw()*/ {
+void LineLayoutVector::fireVisualLinesModified(const Range<Index>& lines,
+		Index newSublines, Index oldSublines, bool documentChanged) /*throw()*/ {
 	numberOfVisualLines_ += newSublines;
 	numberOfVisualLines_ -= oldSublines;
 
 	// update the longest line
 	bool longestLineChanged = false;
 	if(includes(lines, longestLine_)) {
-		updateLongestLine(static_cast<length_t>(-1), 0);
+		updateLongestLine(static_cast<Index>(-1), 0);
 		longestLineChanged = true;
 	} else {
-		length_t newLongestLine = longestLine_;
+		Index newLongestLine = longestLine_;
 		Scalar newMaximumIpd = maximumMeasure();
 		for(list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 			if(i->second->measure() > newMaximumIpd) {
@@ -222,9 +223,9 @@ void LineLayoutVector::fireVisualLinesModified(const Range<length_t>& lines,
 			updateLongestLine(newLongestLine, newMaximumIpd);
 	}
 
-	listeners_.notify<const Range<length_t>&, signed_length_t>(
+	listeners_.notify<const Range<Index>&, SignedIndex>(
 		&VisualLinesListener::visualLinesModified, lines,
-		static_cast<signed_length_t>(newSublines) - static_cast<signed_length_t>(oldSublines),
+		static_cast<SignedIndex>(newSublines) - static_cast<SignedIndex>(oldSublines),
 		documentChanged, longestLineChanged);
 }
 
@@ -239,25 +240,25 @@ void LineLayoutVector::initialize() /*throw()*/ {
 
 /// Invalidates all layouts.
 void LineLayoutVector::invalidate() /*throw()*/ {
-	clearCaches(makeRange<length_t>(0, document().numberOfLines()), autoRepair_);
+	clearCaches(makeRange<Index>(0, document().numberOfLines()), autoRepair_);
 }
 
 /**
  * Invalidates the layouts of the specified lines.
  * @param lines The range of the lines. @a lines.end() is exclusive and will not be cleared
  */
-void LineLayoutVector::invalidate(const Range<length_t>& lines) {
+void LineLayoutVector::invalidate(const Range<Index>& lines) {
 	clearCaches(lines, autoRepair_);
 }
 
-void LineLayoutVector::invalidate(const vector<length_t>& lines) {
-	vector<length_t> cachedLines;
+void LineLayoutVector::invalidate(const vector<Index>& lines) {
+	vector<Index> cachedLines;
 	for(list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i)
 		cachedLines.push_back(i->first);
 	sort(cachedLines.begin(), cachedLines.end());
 
-	typedef vector<length_t>::const_iterator Iterator;
-	const vector<length_t>::const_iterator e(cachedLines.end());
+	typedef vector<Index>::const_iterator Iterator;
+	const vector<Index>::const_iterator e(cachedLines.end());
 	for(pair<Iterator, Iterator> p(mismatch<Iterator, Iterator>(cachedLines.begin(), e, lines.begin())); ; ) {
 		p.first = find(p.first, e, *p.second);
 		const pair<Iterator, Iterator> next(mismatch(p.first, e, p.second));
@@ -274,10 +275,10 @@ void LineLayoutVector::invalidate(const vector<length_t>& lines) {
  * Resets the cached layout of the specified line and repairs if necessary.
  * @param line The line to invalidate layout
  */
-inline void LineLayoutVector::invalidate(length_t line) {
+inline void LineLayoutVector::invalidate(Index line) {
 	for(Iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 		if(i->first == line) {
-			const length_t oldSublines = i->second->numberOfLines();
+			const Index oldSublines = i->second->numberOfLines();
 			delete i->second;
 			if(autoRepair_) {
 				i->second = layoutGenerator_->generate(line).release();
@@ -300,12 +301,12 @@ inline void LineLayoutVector::invalidate(length_t line) {
  * @throw kernel#BadPositionException @a line is outside of the document
  * @see #mapLogicalPositionToVisualPosition
  */
-length_t LineLayoutVector::mapLogicalLineToVisualLine(length_t line) const {
+Index LineLayoutVector::mapLogicalLineToVisualLine(Index line) const {
 	if(line >= document().numberOfLines())
 		throw kernel::BadPositionException(kernel::Position(line, 0));
 //	else if(!wrapLongLines())
 //		return line;
-	length_t result = 0, cachedLines = 0;
+	Index result = 0, cachedLines = 0;
 	for(list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 		if(i->first < line) {
 			result += i->second->numberOfLines();
@@ -323,14 +324,14 @@ length_t LineLayoutVector::mapLogicalLineToVisualLine(length_t line) const {
  * @throw kernel#BadPositionException @a position is outside of the document
  * @see #mapLogicalLineToVisualLine
  */
-length_t LineLayoutVector::mapLogicalPositionToVisualPosition(const k::Position& position, length_t* column) const {
+Index LineLayoutVector::mapLogicalPositionToVisualPosition(const k::Position& position, Index* column) const {
 //	if(!wrapsLongLines()) {
 //		if(column != 0)
 //			*column = position.column;
 //		return position.line;
 //	}
 	const TextLayout& layout = at(position.line);
-	const length_t line = layout.lineAt(position.column);
+	const Index line = layout.lineAt(position.column);
 	if(column != 0)
 		*column = position.column - layout.lineOffset(line);
 	return mapLogicalLineToVisualLine(position.line) + line;
@@ -345,14 +346,14 @@ length_t LineLayoutVector::mapLogicalPositionToVisualPosition(const k::Position&
  * @throw kernel#BadPositionException @a line is outside of the document
  * @see #mapLogicalLineToVisualLine, #mapVisualPositionToLogicalPosition
  */
-length_t LineLayoutVector::mapVisualLineToLogicalLine(length_t line, length_t* subline) const {
+Index LineLayoutVector::mapVisualLineToLogicalLine(Index line, Index* subline) const {
 	if(!getTextViewer().getConfiguration().lineWrap.wraps()) {
 		if(subline != 0)
 			*subline = 0;
 		return line;
 	}
-	length_t c = getCacheFirstLine();
-	for(length_t i = getCacheFirstLine(); ; ++i) {
+	Index c = getCacheFirstLine();
+	for(Index i = getCacheFirstLine(); ; ++i) {
 		if(c + getNumberOfSublinesOfLine(i) > line) {
 			if(subline != 0)
 				*subline = line - c;
@@ -375,7 +376,7 @@ k::Position LineLayoutVector::mapVisualPositionToLogicalPosition(const k::Positi
 	if(!getTextViewer().getConfiguration().lineWrap.wraps())
 		return position;
 	k::Position result;
-	length_t subline;
+	Index subline;
 	result.line = mapVisualLineToLogicalLine(position.line, &subline);
 	result.column = getLineLayout(result.line).getSublineOffset(subline) + position.column;
 	return result;
@@ -389,28 +390,28 @@ k::Position LineLayoutVector::mapVisualPositionToLogicalPosition(const k::Positi
  * @return @c false if absolute value of @a offset is too large so that the results were snapped to
  *         the beginning or the end of the document
  */
-bool LineLayoutVector::offsetVisualLine(VisualLine& line, signed_length_t offset) const /*throw()*/ {
+bool LineLayoutVector::offsetVisualLine(VisualLine& line, SignedIndex offset) const /*throw()*/ {
 	bool overflowedOrUnderflowed = false;
 	if(offset > 0) {
 		if(line.subline + offset < numberOfSublinesOfLine(line.line))
 			line.subline += offset;
 		else {
-			const length_t lines = document().numberOfLines();
-			offset -= static_cast<signed_length_t>(numberOfSublinesOfLine(line.line) - line.subline) - 1;
+			const Index lines = document().numberOfLines();
+			offset -= static_cast<SignedIndex>(numberOfSublinesOfLine(line.line) - line.subline) - 1;
 			while(offset > 0 && line.line < lines - 1)
-				offset -= static_cast<signed_length_t>(numberOfSublinesOfLine(++line.line));
+				offset -= static_cast<SignedIndex>(numberOfSublinesOfLine(++line.line));
 			line.subline = numberOfSublinesOfLine(line.line) - 1;
 			if(offset < 0)
 				line.subline += offset;
 			overflowedOrUnderflowed = offset > 0;
 		}
 	} else if(offset < 0) {
-		if(static_cast<length_t>(-offset) <= line.subline)
+		if(static_cast<Index>(-offset) <= line.subline)
 			line.subline += offset;
 		else {
-			offset += static_cast<signed_length_t>(line.subline);
+			offset += static_cast<SignedIndex>(line.subline);
 			while(offset < 0 && line.line > 0)
-				offset += static_cast<signed_length_t>(numberOfSublinesOfLine(--line.line));
+				offset += static_cast<SignedIndex>(numberOfSublinesOfLine(--line.line));
 			line.subline = (offset > 0) ? offset : 0;
 			overflowedOrUnderflowed = offset > 0;
 		}
@@ -429,12 +430,12 @@ void LineLayoutVector::presentationStylistChanged() {
  * @param measure The measure (inline-progression-dimension) of the longest line. If @a line is -1,
  *                this value is ignored
  */
-void LineLayoutVector::updateLongestLine(length_t line, Scalar measure) /*throw()*/ {
+void LineLayoutVector::updateLongestLine(Index line, Scalar measure) /*throw()*/ {
 	if(line != -1) {
 		longestLine_ = line;
 		maximumMeasure_ = measure;
 	} else {
-		longestLine_ = static_cast<length_t>(-1);
+		longestLine_ = static_cast<Index>(-1);
 		maximumMeasure_ = 0;
 		for(list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 			if(i->second->measure() > maximumMeasure_) {

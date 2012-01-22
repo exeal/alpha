@@ -4,7 +4,7 @@
  * @author exeal
  * @date 2003-2008 (was point.hpp)
  * @date 2008 (separated from point.hpp)
- * @date 2009-2011
+ * @date 2009-2012
  */
 
 #ifndef ASCENSION_CARET_HPP
@@ -184,8 +184,8 @@ namespace ascension {
 		void cutSelection(Caret& caret, bool useKillRing);
 		bool isPointOverSelection(const Caret& caret, const graphics::NativePoint& p);
 		bool isSelectionEmpty(const Caret& caret) /*throw()*/;
-		bool selectedRangeOnLine(const Caret& caret, length_t line, Range<length_t>& range);
-		bool selectedRangeOnVisualLine(const Caret& caret, length_t line, length_t subline, Range<length_t>& range);
+		bool selectedRangeOnLine(const Caret& caret, Index line, Range<Index>& range);
+		bool selectedRangeOnVisualLine(const Caret& caret, Index line, Index subline, Range<Index>& range);
 		String selectedString(const Caret& caret, text::Newline newline = text::NLF_RAW_VALUE);
 		std::basic_ostream<Char>& selectedString(const Caret& caret,
 			std::basic_ostream<Char>& out, text::Newline newline = text::NLF_RAW_VALUE);

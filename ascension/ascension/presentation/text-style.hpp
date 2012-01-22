@@ -154,7 +154,7 @@ namespace ascension {
 		 * @see TextLineStyle, TextToplevelStyle, StyledTextRun, StyledTextRunIterator
 		 */
 		struct TextRunStyle :
-				public FastArenaObject<TextRunStyle>, public std::tr1::enable_shared_from_this<TextRunStyle> {
+				public FastArenaObject<TextRunStyle>, public std::enable_shared_from_this<TextRunStyle> {
 			/// Foreground color.
 			graphics::Paint foreground;
 			/// Background color.
@@ -199,22 +199,22 @@ namespace ascension {
 		 */
 		class StyledTextRun {
 		public:
-			/// Default constructor.
-			StyledTextRun() /*throw()*/ : position_(INVALID_INDEX) {}
+//			/// Default constructor.
+//			StyledTextRun() /*throw()*/ : position_(INVALID_INDEX) {}
 			/**
 			 * Constructor.
 			 * @param position The beginning position of the text style
 			 * @param style The style of the text run
 			 */
-			StyledTextRun(length_t position,
-				std::tr1::shared_ptr<const TextRunStyle> style) /*throw()*/ : position_(position), style_(style) {}
+			StyledTextRun(Index position,
+				std::shared_ptr<const TextRunStyle> style) /*throw()*/ : position_(position), style_(style) {}
 			/// Returns the position in the line of the text range which the style applies.
-			length_t position() const /*throw()*/ {return position_;}
+			Index position() const /*throw()*/ {return position_;}
 			/// Returns the style of the text run.
-			std::tr1::shared_ptr<const TextRunStyle> style() const /*throw()*/ {return style_;}
+			std::shared_ptr<const TextRunStyle> style() const /*throw()*/ {return style_;}
 		private:
-			length_t position_;
-			std::tr1::shared_ptr<const TextRunStyle> style_;
+			Index position_;
+			std::shared_ptr<const TextRunStyle> style_;
 		};
 
 		/**
@@ -241,15 +241,15 @@ namespace ascension {
 			StyledTextRunEnumerator,
 			std::iterator<
 				std::input_iterator_tag,
-				std::pair<Range<length_t>, std::tr1::shared_ptr<const TextRunStyle> >,
+				std::pair<Range<Index>, std::shared_ptr<const TextRunStyle> >,
 				std::ptrdiff_t,
-				std::pair<Range<length_t>, std::tr1::shared_ptr<const TextRunStyle> >*,
-				std::pair<Range<length_t>, std::tr1::shared_ptr<const TextRunStyle> >
+				std::pair<Range<Index>, std::shared_ptr<const TextRunStyle> >*,
+				std::pair<Range<Index>, std::shared_ptr<const TextRunStyle> >
 			>
 		> {
 		public:
 			StyledTextRunEnumerator();
-			StyledTextRunEnumerator(std::auto_ptr<StyledTextRunIterator> sourceIterator, length_t end);
+			StyledTextRunEnumerator(std::auto_ptr<StyledTextRunIterator> sourceIterator, Index end);
 		private:
 			const reference current() const;
 			bool equals(const StyledTextRunEnumerator& other) const /*throw()*/;
@@ -257,7 +257,7 @@ namespace ascension {
 		private:
 			std::auto_ptr<StyledTextRunIterator> iterator_;
 			std::pair<bool, StyledTextRun> current_, next_;
-			const length_t end_;
+			const Index end_;
 		};
 
 		/**
@@ -416,7 +416,7 @@ namespace ascension {
 		template<bool inheritable>
 		struct TextLineStyleBase {
 			/// The default text run style. The default value is @c null.
-			std::tr1::shared_ptr<const TextRunStyle> defaultRunStyle;
+			std::shared_ptr<const TextRunStyle> defaultRunStyle;
 			/// The line breaking strictness. The default value is @c LINE_BREAK_AUTO.
 			typename InheritableIf<inheritable, LineBreak>::Type lineBreak;
 			/// The word breaking rules. The default value is @c WORD_BREAK_NORMAL.
@@ -449,15 +449,15 @@ namespace ascension {
 		};
 
 		struct TextLineStyle : public TextLineStyleBase<false>,
-			public std::tr1::enable_shared_from_this<TextLineStyle> {};
+			public std::enable_shared_from_this<TextLineStyle> {};
 		template<> struct Inheritable<TextLineStyle> : public TextLineStyleBase<true>,
-			public std::tr1::enable_shared_from_this<Inheritable<TextLineStyle> > {};
+			public std::enable_shared_from_this<Inheritable<TextLineStyle> > {};
 
 		/**
 		 * @see TextRunStyle, TextLineStyle, Presentation#globalTextStyle,
 		 *      Presentation#setGlobalTextStyle
 		 */
-		struct TextToplevelStyle : public std::tr1::enable_shared_from_this<TextToplevelStyle> {
+		struct TextToplevelStyle : public std::enable_shared_from_this<TextToplevelStyle> {
 			/**
 			 * The writing mode specified by the presentation. May be overridden by
 			 * @c graphics#font#TextRenderer class.
@@ -465,7 +465,7 @@ namespace ascension {
 			 */
 			Inheritable<WritingMode> writingMode;
 			/// The default text line style. The default value is @c null.
-			std::tr1::shared_ptr<const TextLineStyle> defaultLineStyle;
+			std::shared_ptr<const TextLineStyle> defaultLineStyle;
 		};
 	}
 

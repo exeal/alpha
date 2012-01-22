@@ -2,7 +2,7 @@
  * @file document.hpp
  * @author exeal
  * @date 2003-2006 (was EditDoc.h)
- * @date 2006-2011
+ * @date 2006-2012
  */
 
 #ifndef ASCENSION_DOCUMENT_HPP
@@ -143,10 +143,10 @@ namespace ascension {
 		public:
 			/// A @c Bookmarker#Iterator enumerates the all marked lines.
 			class Iterator : public detail::IteratorAdapter<
-				Iterator, std::iterator<std::bidirectional_iterator_tag, length_t, std::ptrdiff_t, length_t*, length_t> > {
+				Iterator, std::iterator<std::bidirectional_iterator_tag, Index, std::ptrdiff_t, Index*, Index> > {
 			private:
-				Iterator(detail::GapVector<length_t>::const_iterator impl) : impl_(impl) {}
-				detail::GapVector<length_t>::const_iterator impl_;
+				Iterator(detail::GapVector<Index>::const_iterator impl) : impl_(impl) {}
+				detail::GapVector<Index>::const_iterator impl_;
 				// detail.IteratorAdapter requirements
 				value_type current() const {return *impl_;}
 				bool equals(const Iterator& other) const {return impl_ == other.impl_;}
@@ -162,25 +162,25 @@ namespace ascension {
 			void addListener(BookmarkListener& listener);
 			void removeListener(BookmarkListener& listener);
 			// attributes
-			bool isMarked(length_t line) const;
-			length_t next(length_t from, Direction direction, bool wrapAround = true, std::size_t marks = 1) const;
+			bool isMarked(Index line) const;
+			Index next(Index from, Direction direction, bool wrapAround = true, std::size_t marks = 1) const;
 			std::size_t numberOfMarks() const /*throw()*/;
 			// enumerations
 			Iterator begin() const;
 			Iterator end() const;
 			// operations
 			void clear() /*throw()*/;
-			void mark(length_t line, bool set = true);
-			void toggle(length_t line);
+			void mark(Index line, bool set = true);
+			void toggle(Index line);
 		private:
-			detail::GapVector<length_t>::iterator find(length_t line) const /*throw()*/;
+			detail::GapVector<Index>::iterator find(Index line) const /*throw()*/;
 			// DocumentListener
 			void documentAboutToBeChanged(const Document& document);
 			void documentChanged(const Document& document, const DocumentChange& change);
 		private:
 			explicit Bookmarker(Document& document) /*throw()*/;
 			Document& document_;
-			detail::GapVector<length_t> markedLines_;
+			detail::GapVector<Index> markedLines_;
 			detail::Listeners<BookmarkListener> listeners_;
 			friend class Document;
 		};
@@ -235,7 +235,7 @@ namespace ascension {
 			// attributes
 			Bookmarker& bookmarker() /*throw()*/;
 			const Bookmarker& bookmarker() const /*throw()*/;
-			std::tr1::weak_ptr<DocumentInput> input() const /*throw()*/;
+			std::weak_ptr<DocumentInput> input() const /*throw()*/;
 			bool isModified() const /*throw()*/;
 			bool isReadOnly() const /*throw()*/;
 			void markUnmodified() /*throw()*/;
@@ -243,19 +243,19 @@ namespace ascension {
 			const String* property(const DocumentPropertyKey& key) const /*throw()*/;
 			texteditor::Session* session() /*throw()*/;
 			const texteditor::Session* session() const /*throw()*/;
-			void setInput(std::tr1::weak_ptr<DocumentInput> newInput) /*throw()*/;
+			void setInput(std::weak_ptr<DocumentInput> newInput) /*throw()*/;
 			void setModified() /*throw()*/;
 			void setPartitioner(std::auto_ptr<DocumentPartitioner> newPartitioner) /*throw()*/;
 			void setProperty(const DocumentPropertyKey& key, const String& property);
 			void setReadOnly(bool readOnly = true) /*throw()*/;
 			// contents
 			Region accessibleRegion() const /*throw()*/;
-			const Line& getLineInformation(length_t line) const;
-			length_t length(text::Newline newline = text::NLF_RAW_VALUE) const;
-			const String& line(length_t line) const;
-			length_t lineLength(length_t line) const;
-			length_t lineOffset(length_t line, text::Newline newline = text::NLF_RAW_VALUE) const;
-			length_t numberOfLines() const /*throw()*/;
+			const Line& getLineInformation(Index line) const;
+			Index length(text::Newline newline = text::NLF_RAW_VALUE) const;
+			const String& line(Index line) const;
+			Index lineLength(Index line) const;
+			Index lineOffset(Index line, text::Newline newline = text::NLF_RAW_VALUE) const;
+			Index numberOfLines() const /*throw()*/;
 			Region region() const /*throw()*/;
 			std::size_t revisionNumber() const /*throw()*/;
 			// content type information
@@ -316,13 +316,13 @@ namespace ascension {
 			};
 
 			texteditor::Session* session_;
-			std::tr1::weak_ptr<DocumentInput> input_;
+			std::weak_ptr<DocumentInput> input_;
 			std::auto_ptr<DocumentPartitioner> partitioner_;
 			std::auto_ptr<Bookmarker> bookmarker_;
 			std::auto_ptr<ContentTypeInformationProvider> contentTypeInformationProvider_;
 			bool readOnly_;
 			LineList lines_;
-			length_t length_;
+			Index length_;
 			std::size_t revisionNumber_, lastUnmodifiedRevisionNumber_;
 			std::set<Point*> points_;
 			UndoManager* undoManager_;
@@ -372,7 +372,7 @@ namespace ascension {
 			const Document& document, const Region& region, text::Newline newline = text::NLF_RAW_VALUE);
 
 		namespace positions {
-			length_t absoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart);
+			Index absoluteOffset(const Document& document, const Position& at, bool fromAccessibleStart);
 //			bool isOutsideOfAccessibleRegion(const Document& document, const Position& position) /*throw()*/;
 			bool isOutsideOfDocumentRegion(const Document& document, const Position& position) /*throw()*/;
 			Position shrinkToAccessibleRegion(const Document& document, const Position& position) /*throw()*/;
@@ -465,11 +465,11 @@ inline ContentTypeInformationProvider& Document::contentTypeInformation() const 
  * @return the information about @a line
  * @throw BadPostionException @a line is outside of the document
  */
-inline const Document::Line& Document::getLineInformation(length_t line) const {
+inline const Document::Line& Document::getLineInformation(Index line) const {
 	if(line >= lines_.size()) throw BadPositionException(Position(line, 0)); return *lines_[line];}
 
 #if 0
-inline Document::LineIterator Document::getLineIterator(length_t line) const {
+inline Document::LineIterator Document::getLineIterator(Index line) const {
 	assertValid();
 	if(line >= lines_.getSize())
 		throw BadPositionException();
@@ -478,7 +478,7 @@ inline Document::LineIterator Document::getLineIterator(length_t line) const {
 #endif
 
 /// Returns the document input or @c null.
-inline std::tr1::weak_ptr<DocumentInput> Document::input() const /*throw()*/ {return input_;}
+inline std::weak_ptr<DocumentInput> Document::input() const /*throw()*/ {return input_;}
 
 /**
  * Returns @c true if the document is changing (this means the document is in @c #insert or
@@ -516,7 +516,7 @@ inline bool Document::isRecordingChanges() const /*throw()*/ {return recordingCh
  * @return the text
  * @throw BadPostionException @a line is outside of the document
  */
-inline const String& Document::line(length_t line) const {return getLineInformation(line).text_;}
+inline const String& Document::line(Index line) const {return getLineInformation(line).text_;}
 
 /**
  * Returns the length of the specified line. The line break is not included.
@@ -524,13 +524,13 @@ inline const String& Document::line(length_t line) const {return getLineInformat
  * @return the length of @a line
  * @throw BadLocationException @a line is outside of the document
  */
-inline length_t Document::lineLength(length_t line) const {return this->line(line).length();}
+inline Index Document::lineLength(Index line) const {return this->line(line).length();}
 #if 0
 /// Returns the object locks the document or @c null if the document is not locked.
 inline const void* Document::locker() const /*throw()*/ {return locker_;}
 #endif
 /// Returns the number of lines in the document.
-inline length_t Document::numberOfLines() const /*throw()*/ {return lines_.size();}
+inline Index Document::numberOfLines() const /*throw()*/ {return lines_.size();}
 
 /// Returns the document partitioner of the document.
 inline const DocumentPartitioner& Document::partitioner() const /*throw()*/ {

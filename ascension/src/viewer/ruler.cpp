@@ -2,6 +2,7 @@
  * @file ruler.cpp
  * @author exeal
  * @date 2010-10-27 created (separated code from layout.cpp)
+ * @date 2010-2012
  */
 
 #include <ascension/graphics/rendering-context.hpp>
@@ -53,7 +54,7 @@ RulerConfiguration::IndicatorMargin::IndicatorMargin() /*throw()*/ : visible(fal
 
 // TODO: support locale-dependent number format.
 
-void drawLineNumber(PaintContext& context, const NativePoint& origin, length_t lineNumber, const NumberSubstitution& ns) {
+void drawLineNumber(PaintContext& context, const NativePoint& origin, Index lineNumber, const NumberSubstitution& ns) {
 	// format number string
 	wchar_t s[128];	// oops, is this sufficient?
 	// TODO: std.swprintf may be slow.
@@ -155,7 +156,7 @@ NativeRectangle RulerPainter::lineNumbersBounds() const /*throw()*/ {
 /// Returns the maximum number of digits of line numbers.
 uint8_t RulerPainter::maximumDigitsForLineNumbers() const /*throw()*/ {
 	uint8_t n = 1;
-	length_t lines = viewer_.document().numberOfLines() + configuration_.lineNumbers.startValue - 1;
+	Index lines = viewer_.document().numberOfLines() + configuration_.lineNumbers.startValue - 1;
 	while(lines >= 10) {
 		lines /= 10;
 		++n;
@@ -345,8 +346,8 @@ void RulerPainter::paint(PaintContext& context) {
 	}
 
 	// 1 行ずつ細かい描画
-	length_t line, visualSublineOffset;
-	const length_t lines = viewer_.document().numberOfLines();
+	Index line, visualSublineOffset;
+	const Index lines = viewer_.document().numberOfLines();
 	viewer_.mapClientYToLine(geometry::top(paintBounds), &line, &visualSublineOffset);	// $friendly-access
 	if(visualSublineOffset > 0)	// 描画開始は次の論理行から...
 		++line;

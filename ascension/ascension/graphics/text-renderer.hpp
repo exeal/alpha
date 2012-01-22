@@ -62,7 +62,7 @@ namespace ascension {
 				 * @param line The line to render
 				 * @return The inline object renders the end of line, or @c null
 				 */
-				virtual const InlineObject* endOfLine(length_t line) const /*throw()*/ = 0;
+				virtual const InlineObject* endOfLine(Index line) const /*throw()*/ = 0;
 				/**
 				 * Returns the object overrides text paint properties for line rendering. For the
 				 * detail semantics of paint override, see the documentation of
@@ -70,13 +70,13 @@ namespace ascension {
 				 * @param line The line to render
 				 * @return The object overrides text paint properties for line rendering, or @c null
 				 */
-				virtual const TextPaintOverride* textPaintOverride(length_t line) const /*throw()*/ = 0;
+				virtual const TextPaintOverride* textPaintOverride(Index line) const /*throw()*/ = 0;
 				/**
 				 * Returns the inline object renders the mark of text wrapping.
 				 * @param line The line to render
 				 * @return The inline object renders the mark of text wrapping, or @c null
 				 */
-				virtual const InlineObject* textWrappingMark(length_t line) const /*throw()*/ = 0;
+				virtual const InlineObject* textWrappingMark(Index line) const /*throw()*/ = 0;
 				friend class TextRenderer;
 			};
 
@@ -93,7 +93,7 @@ namespace ascension {
 				// viewport
 				std::weak_ptr<TextViewport> viewport() const /*throw()*/;
 				// layout
-				virtual std::auto_ptr<const TextLayout> createLineLayout(length_t line) const = 0;
+				virtual std::auto_ptr<const TextLayout> createLineLayout(Index line) const = 0;
 				LineLayoutVector& layouts() /*throw()*/;
 				const LineLayoutVector& layouts() const /*throw()*/;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -119,7 +119,7 @@ namespace ascension {
 				const PhysicalFourSides<Scalar>& spaceWidths() const /*throw()*/;
 				// paint
 				void paint(PaintContext& context) const;
-				void paint(length_t line, PaintContext& context, const NativePoint& alignmentPoint) const;
+				void paint(Index line, PaintContext& context, const NativePoint& alignmentPoint) const;
 				void setLineRenderingOptions(const std::shared_ptr<LineRenderingOptions> options);
 
 				// LayoutInformationProvider
@@ -128,14 +128,14 @@ namespace ascension {
 //				SpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/;
 //				const Font::Metrics& textMetrics() const /*throw()*/;
 			protected:
-				void buildLineLayoutConstructionParameters(length_t line,
+				void buildLineLayoutConstructionParameters(Index line,
 					TextLayout::ConstructionParameters& parameters) const;
 				void setDefaultUIWritingMode(const presentation::WritingMode& writingMode);
 			private:
 				void fireComputedWritingModeChanged(
 					const presentation::TextToplevelStyle& globalTextStyle,
 					const presentation::WritingMode& defaultUI);
-				std::auto_ptr<const TextLayout> generateLineLayout(length_t line) const;
+				std::auto_ptr<const TextLayout> generateLineLayout(Index line) const;
 				void updateDefaultFont();
 				// presentation.GlobalTextStyleListener
 				void globalTextStyleChanged(std::shared_ptr<const presentation::TextToplevelStyle> used);
@@ -165,7 +165,7 @@ namespace ascension {
 			class TextViewportListener {
 			private:
 				virtual void viewportPositionChanged(
-					const VisualLine& oldLine, length_t oldInlineProgressionOffset) /*throw()*/ = 0;
+					const VisualLine& oldLine, Index oldInlineProgressionOffset) /*throw()*/ = 0;
 				virtual void viewportSizeChanged(const NativeSize& oldSize) /*throw()*/ = 0;
 				friend class TextViewport;
 			};
@@ -186,16 +186,16 @@ namespace ascension {
 				Scalar allocationMeasure() const /*throw()*/;
 				Scalar contentMeasure() const /*throw()*/;
 				// view positions
-				length_t firstVisibleLineInLogicalNumber() const /*throw()*/;
-				length_t firstVisibleLineInVisualNumber() const /*throw()*/;
-				length_t firstVisibleSublineInLogicalLine() const /*throw()*/;
-				length_t inlineProgressionOffset() const /*throw()*/;
+				Index firstVisibleLineInLogicalNumber() const /*throw()*/;
+				Index firstVisibleLineInVisualNumber() const /*throw()*/;
+				Index firstVisibleSublineInLogicalLine() const /*throw()*/;
+				Index inlineProgressionOffset() const /*throw()*/;
 				// scrolls
 				void scroll(const NativeSize& offset, viewers::base::Widget* widget);
-				void scroll(length_t bpd, length_t ipd, viewers::base::Widget* widget);
+				void scroll(SignedIndex dbpd, SignedIndex dipd, viewers::base::Widget* widget);
 				void scrollTo(const NativePoint& position, viewers::base::Widget* widget);
-				void scrollTo(length_t dbpd, length_t dipd, viewers::base::Widget* widget);
-				void scrollTo(const VisualLine& line, length_t ipd, viewers::base::Widget* widget);
+				void scrollTo(Index bpd, Index ipd, viewers::base::Widget* widget);
+				void scrollTo(const VisualLine& line, Index ipd, viewers::base::Widget* widget);
 				// model-view mapping
 				kernel::Position characterForPoint(
 					const NativePoint& at, TextLayout::Edge edge, bool abortNoCharacter = false,
@@ -209,7 +209,7 @@ namespace ascension {
 				NativeSize size_;
 				VisualLine firstVisibleLine_;
 				struct ScrollOffsets {
-					length_t ipd, bpd;
+					Index ipd, bpd;
 				} scrollOffsets_;
 				detail::Listeners<TextViewportListener> listeners_;
 			};
@@ -220,8 +220,8 @@ namespace ascension {
 				>
 			> {
 			public:
-				BaselineIterator(const TextViewport& viewport, length_t line, bool trackOutOfViewport);
-				length_t line() const /*throw()*/;
+				BaselineIterator(const TextViewport& viewport, Index line, bool trackOutOfViewport);
+				Index line() const /*throw()*/;
 				const NativePoint& position() const;
 				const TextViewport& viewport() const /*throw()*/;
 				bool tracksOutOfViewport() const /*throw()*/;
@@ -230,7 +230,7 @@ namespace ascension {
 				void initializeWithFirstVisibleLine();
 				void invalidate() /*throw()*/;
 				bool isValid() const /*throw()*/;
-				void move(length_t line);
+				void move(Index line);
 				// detail.IteratorAdapter
 				const reference current() const;
 				bool equals(BaselineIterator& other);
@@ -244,7 +244,7 @@ namespace ascension {
 			};
 
 			// free functions
-			Scalar lineIndent(const TextLayout& layout, Scalar contentMeasure, length_t subline = 0);
+			Scalar lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline = 0);
 			Scalar lineStartEdge(const TextLayout& layout, Scalar contentMeasure);
 
 

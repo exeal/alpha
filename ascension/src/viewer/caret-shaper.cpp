@@ -4,6 +4,7 @@
  * @date 2003-2006 was EditView.cpp and EditViewWindowMessages.cpp
  * @date 2006-2011 was viewer.cpp
  * @date 2011-09-25 separated from viewer.cpp
+ * @date 2011-2012
  */
 
 #include <ascension/viewer/caret.hpp>
@@ -250,15 +251,15 @@ void DefaultCaretShaper::uninstall() /*throw()*/ {
 }
 
 /// @see CaretShaper#visualLinesModified
-void DefaultCaretShaper::visualLinesDeleted(const Range<length_t>&, length_t, bool) /*throw()*/ {
+void DefaultCaretShaper::visualLinesDeleted(const Range<Index>&, Index, bool) /*throw()*/ {
 }
 
 /// @see CaretShaper#visualLinesModified
-void DefaultCaretShaper::visualLinesInserted(const Range<length_t>& lines) /*throw()*/ {
+void DefaultCaretShaper::visualLinesInserted(const Range<Index>& lines) /*throw()*/ {
 }
 
 /// @see CaretShaper#visualLinesModified
-void DefaultCaretShaper::visualLinesModified(const Range<length_t>& lines, signed_length_t, bool, bool) /*throw()*/ {
+void DefaultCaretShaper::visualLinesModified(const Range<Index>& lines, SignedIndex, bool, bool) /*throw()*/ {
 	if(updater_ != 0 && includes(lines, updater_->caret().line()))
 		updater_->update();
 }

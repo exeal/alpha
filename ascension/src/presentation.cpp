@@ -2,7 +2,7 @@
  * @file presentation.cpp
  * @author exeal
  * @date 2003-2007 (was LineLayout.cpp)
- * @date 2007-2011
+ * @date 2007-2012
  */
 
 #include <ascension/presentation/presentation.hpp>
@@ -65,7 +65,7 @@ StyledTextRunEnumerator::StyledTextRunEnumerator() : end_(0) {
  * @throw NullPointerException @a sourceIterator is @c null
  */
 StyledTextRunEnumerator::StyledTextRunEnumerator(
-		auto_ptr<StyledTextRunIterator> sourceIterator, length_t end) : iterator_(sourceIterator), end_(end) {
+		auto_ptr<StyledTextRunIterator> sourceIterator, Index end) : iterator_(sourceIterator), end_(end) {
 	if(iterator_.get() == 0)
 		throw NullPointerException("sourceIterator");
 	if(current_.first = iterator_->hasNext()) {
@@ -134,7 +134,7 @@ TextAnchor presentation::defaultTextAnchor(const Presentation& presentation) {
 tr1::shared_ptr<const TextToplevelStyle> Presentation::DEFAULT_GLOBAL_TEXT_STYLE;
 
 struct Presentation::Hyperlinks {
-	length_t lineNumber;
+	Index lineNumber;
 	AutoBuffer<Hyperlink*> hyperlinks;
 	size_t numberOfHyperlinks;
 };
@@ -197,11 +197,11 @@ void Presentation::documentAboutToBeChanged(const Document& document) {
 
 /// @see kernel#DocumentListener#documentChanged
 void Presentation::documentChanged(const Document&, const DocumentChange& change) {
-	const Range<length_t>
+	const Range<Index>
 		erasedLines(change.erasedRegion().first.line, change.erasedRegion().second.line),
 		insertedLines(change.insertedRegion().first.line, change.insertedRegion().second.line);
 	for(list<Hyperlinks*>::iterator i(hyperlinks_.begin()), e(hyperlinks_.end()); i != e; ) {
-		const length_t line = (*i)->lineNumber;
+		const Index line = (*i)->lineNumber;
 		if(line == insertedLines.beginning() || includes(erasedLines, line)) {
 			for(size_t j = 0; j < (*i)->numberOfHyperlinks; ++j)
 				delete (*i)->hyperlinks[j];
@@ -225,7 +225,7 @@ void Presentation::documentChanged(const Document&, const DocumentChange& change
  * @return the hyperlinks or @c null
  * @throw BadPositionException @a line is outside of the document
  */
-const Hyperlink* const* Presentation::getHyperlinks(length_t line, size_t& numberOfHyperlinks) const {
+const Hyperlink* const* Presentation::getHyperlinks(Index line, size_t& numberOfHyperlinks) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
 	else if(hyperlinkDetector_.get() == 0) {
@@ -253,12 +253,12 @@ const Hyperlink* const* Presentation::getHyperlinks(length_t line, size_t& numbe
 		hyperlinks_.pop_back();
 	}
 	vector<Hyperlink*> temp;
-	for(length_t column = 0, eol = document_.lineLength(line); column < eol; ) {
-		auto_ptr<Hyperlink> h(hyperlinkDetector_->nextHyperlink(document_, line, Range<length_t>(column, eol)));
+	for(Index column = 0, eol = document_.lineLength(line); column < eol; ) {
+		auto_ptr<Hyperlink> h(hyperlinkDetector_->nextHyperlink(document_, line, Range<Index>(column, eol)));
 		if(h.get() == 0)
 			break;
 		// check result
-		const Range<length_t>& r(h->region());
+		const Range<Index>& r(h->region());
 		if(r.beginning() < column)
 			break;
 		column = r.end();
@@ -278,7 +278,7 @@ const Hyperlink* const* Presentation::getHyperlinks(length_t line, size_t& numbe
  * @param[out] style The text line style
  * @return @a style
  */
-TextLineStyle& Presentation::textLineStyle(length_t line, TextLineStyle& style) const /*throw()*/ {
+TextLineStyle& Presentation::textLineStyle(Index line, TextLineStyle& style) const /*throw()*/ {
 	tr1::shared_ptr<const Inheritable<TextLineStyle> > p;
 	if(textLineStyleDirector_.get() != 0)
 		p = textLineStyleDirector_->queryTextLineStyle(line);
@@ -351,7 +351,7 @@ void Presentation::setTextRunStyleDirector(tr1::shared_ptr<TextRunStyleDirector>
  * @param[out] background The background color of the line. Unspecified if an invalid value
  * @throw BadPositionException @a line is outside of the document
  */
-void Presentation::textLineColors(length_t line, Color& foreground, Color& background) const {
+void Presentation::textLineColors(Index line, Color& foreground, Color& background) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
 	TextLineColorDirector::Priority highestPriority = 0, p;
@@ -374,7 +374,7 @@ void Presentation::textLineColors(length_t line, Color& foreground, Color& backg
  *         has no styled text runs
  * @throw BadPositionException @a line is outside of the document
  */
-auto_ptr<StyledTextRunIterator> Presentation::textRunStyles(length_t line) const {
+auto_ptr<StyledTextRunIterator> Presentation::textRunStyles(Index line) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
 	return (textRunStyleDirector_.get() != 0) ? textRunStyleDirector_->queryTextRunStyle(line) : auto_ptr<StyledTextRunIterator>();
@@ -385,7 +385,7 @@ auto_ptr<StyledTextRunIterator> Presentation::textRunStyles(length_t line) const
 
 class SingleStyledPartitionPresentationReconstructor::Iterator : public presentation::StyledTextRunIterator {
 public:
-	Iterator(length_t column, tr1::shared_ptr<const TextRunStyle> style) : run_(column, style), done_(false) {}
+	Iterator(Index column, tr1::shared_ptr<const TextRunStyle> style) : run_(column, style), done_(false) {}
 private:
 	// StyledTextRunIterator
 	StyledTextRun current() const {
@@ -417,7 +417,7 @@ SingleStyledPartitionPresentationReconstructor::SingleStyledPartitionPresentatio
 }
 
 /// @see PartitionPresentationReconstructor#getPresentation
-auto_ptr<StyledTextRunIterator> SingleStyledPartitionPresentationReconstructor::getPresentation(length_t, const Range<length_t>& columnRange) const /*throw()*/ {
+auto_ptr<StyledTextRunIterator> SingleStyledPartitionPresentationReconstructor::getPresentation(Index, const Range<Index>& columnRange) const /*throw()*/ {
 	return auto_ptr<presentation::StyledTextRunIterator>(new Iterator(columnRange.beginning(), style_));
 }
 
@@ -427,7 +427,7 @@ auto_ptr<StyledTextRunIterator> SingleStyledPartitionPresentationReconstructor::
 class PresentationReconstructor::Iterator : public presentation::StyledTextRunIterator {
 public:
 	Iterator(const Presentation& presentation,
-		const map<kernel::ContentType, PartitionPresentationReconstructor*> reconstructors, length_t line);
+		const map<kernel::ContentType, PartitionPresentationReconstructor*> reconstructors, Index line);
 private:
 	void updateSubiterator();
 	// StyledTextRunIterator
@@ -438,10 +438,10 @@ private:
 	static const tr1::shared_ptr<const TextRunStyle> DEFAULT_TEXT_RUN_STYLE;
 	const Presentation& presentation_;
 	const map<kernel::ContentType, PartitionPresentationReconstructor*> reconstructors_;
-	const length_t line_;
+	const Index line_;
 	DocumentPartition currentPartition_;
 	auto_ptr<presentation::StyledTextRunIterator> subiterator_;
-	pair<length_t, tr1::shared_ptr<const TextRunStyle> > current_;
+	pair<Index, tr1::shared_ptr<const TextRunStyle> > current_;
 };
 
 const tr1::shared_ptr<const TextRunStyle> PresentationReconstructor::Iterator::DEFAULT_TEXT_RUN_STYLE(new TextRunStyle);
@@ -454,11 +454,11 @@ const tr1::shared_ptr<const TextRunStyle> PresentationReconstructor::Iterator::D
  */
 PresentationReconstructor::Iterator::Iterator(
 		const Presentation& presentation, const map<kernel::ContentType,
-		PartitionPresentationReconstructor*> reconstructors, length_t line)
+		PartitionPresentationReconstructor*> reconstructors, Index line)
 		: presentation_(presentation), reconstructors_(reconstructors), line_(line) {
 	const DocumentPartitioner& partitioner = presentation_.document().partitioner();
-	length_t column = 0;
-	for(const length_t lineLength = presentation_.document().lineLength(line);;) {
+	Index column = 0;
+	for(const Index lineLength = presentation_.document().lineLength(line);;) {
 		partitioner.partition(Position(line, column), currentPartition_);	// this may throw BadPositionException
 		if(!currentPartition_.region.isEmpty())
 			break;
@@ -494,7 +494,7 @@ void PresentationReconstructor::Iterator::next() {
 	}
 	if(subiterator_.get() == 0) {
 		const Document& document = presentation_.document();
-		const length_t lineLength = document.lineLength(line_);
+		const Index lineLength = document.lineLength(line_);
 		if(currentPartition_.region.end() >= Position(line_, lineLength)) {
 			// done
 			currentPartition_.region = Region(currentPartition_.region.end());
@@ -502,7 +502,7 @@ void PresentationReconstructor::Iterator::next() {
 		}
 		// find the next partition
 		const DocumentPartitioner& partitioner = document.partitioner();
-		for(length_t column = currentPartition_.region.end().column; ; ) {
+		for(Index column = currentPartition_.region.end().column; ; ) {
 			partitioner.partition(Position(line_, column), currentPartition_);
 			if(!currentPartition_.region.isEmpty())
 				break;
@@ -548,7 +548,7 @@ PresentationReconstructor::~PresentationReconstructor() /*throw()*/ {
 }
 
 /// @see LineStyleDirector#queryTextRunStyle
-auto_ptr<StyledTextRunIterator> PresentationReconstructor::queryTextRunStyle(length_t line) const {
+auto_ptr<StyledTextRunIterator> PresentationReconstructor::queryTextRunStyle(Index line) const {
 	return auto_ptr<presentation::StyledTextRunIterator>(
 		new Iterator(presentation_, reconstructors_, line));
 }
@@ -579,7 +579,7 @@ void PresentationReconstructor::setPartitionReconstructor(
 namespace {
 	class URIHyperlink : public Hyperlink {
 	public:
-		explicit URIHyperlink(const Range<length_t>& region, const String& uri) /*throw()*/ : Hyperlink(region), uri_(uri) {}
+		explicit URIHyperlink(const Range<Index>& region, const String& uri) /*throw()*/ : Hyperlink(region), uri_(uri) {}
 		String description() const /*throw()*/ {
 			static const Char PRECEDING[] = {0x202au, 0};
 			static const Char FOLLOWING[] = {0x202cu, 0x0a,
@@ -616,14 +616,14 @@ URIHyperlinkDetector::~URIHyperlinkDetector() /*throw()*/ {
 
 /// @see HyperlinkDetector#nextHyperlink
 auto_ptr<Hyperlink> URIHyperlinkDetector::nextHyperlink(
-		const Document& document, length_t line, const Range<length_t>& range) const /*throw()*/ {
+		const Document& document, Index line, const Range<Index>& range) const /*throw()*/ {
 	// TODO: ??? range is not used???
 	const String& s = document.line(line);
 	const Char* p = s.data();
 	Range<const Char*> result;
 	if(uriDetector_->search(p, p + s.length(), result))
 		return auto_ptr<Hyperlink>(new URIHyperlink(
-			Range<length_t>(result.beginning() - p, result.end() - p), String(result.beginning(), result.end())));
+			Range<Index>(result.beginning() - p, result.end() - p), String(result.beginning(), result.end())));
 	else
 		return auto_ptr<Hyperlink>(0);
 }
@@ -639,7 +639,7 @@ CompositeHyperlinkDetector::~CompositeHyperlinkDetector() /*throw()*/ {
 
 /// @see HyperlinkDetector#nextHyperlink
 auto_ptr<Hyperlink> CompositeHyperlinkDetector::nextHyperlink(
-		const Document& document, length_t line, const Range<length_t>& range) const /*throw()*/ {
+		const Document& document, Index line, const Range<Index>& range) const /*throw()*/ {
 	const DocumentPartitioner& partitioner = document.partitioner();
 	DocumentPartition partition;
 	for(Position p(line, range.beginning()), e(line, range.end()); p < e;) {
@@ -648,7 +648,7 @@ auto_ptr<Hyperlink> CompositeHyperlinkDetector::nextHyperlink(
 		map<ContentType, HyperlinkDetector*>::const_iterator detector(composites_.find(partition.contentType));
 		if(detector != composites_.end()) {
 			auto_ptr<Hyperlink> found = detector->second->nextHyperlink(
-				document, line, Range<length_t>(p.column, min(partition.region.end(), e).column));
+				document, line, Range<Index>(p.column, min(partition.region.end(), e).column));
 			if(found.get() != 0)
 				return found;
 		}
@@ -697,7 +697,7 @@ private:
 	const map<Token::Identifier, tr1::shared_ptr<const TextRunStyle> >& styles_;
 	tr1::shared_ptr<const TextRunStyle> defaultStyle_;
 	Region region_;
-	pair<length_t, tr1::shared_ptr<const TextRunStyle> > current_;
+	pair<Index, tr1::shared_ptr<const TextRunStyle> > current_;
 	auto_ptr<Token> next_;
 	Position lastTokenEnd_;
 };

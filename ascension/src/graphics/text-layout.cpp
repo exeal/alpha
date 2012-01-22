@@ -4,9 +4,10 @@
  * @date 2003-2006 (was TextLayout.cpp)
  * @date 2006-2011
  * @date 2010-11-20 renamed from ascension/layout.cpp
+ * @date 2012
  */
 
-#include <ascension/config.hpp>			// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
+#include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
 #include <ascension/graphics/text-layout.hpp>
 #include <ascension/graphics/graphics-windows.hpp>
 #include <ascension/graphics/rendering-context.hpp>
@@ -134,7 +135,7 @@ namespace {
 #endif // _DEBUG
 	}
 
-	inline int estimateNumberOfGlyphs(length_t length) {
+	inline int estimateNumberOfGlyphs(Index length) {
 		return static_cast<int>(length) * 3 / 2 + 16;
 	}
 
@@ -415,7 +416,7 @@ FixedWidthTabExpander::FixedWidthTabExpander(Scalar width) /*throw()*/ : width_(
 }
 
 /// @see TabExpander#nextTabStop
-Scalar FixedWidthTabExpander::nextTabStop(Scalar x, length_t) const /*throw()*/ {
+Scalar FixedWidthTabExpander::nextTabStop(Scalar x, Index) const /*throw()*/ {
 	return x - x % width_ + width_;
 }
 
@@ -467,7 +468,7 @@ namespace {
 namespace {
 	class SimpleStyledTextRunIterator : public StyledTextRunIterator {
 	public:
-		SimpleStyledTextRunIterator(const vector<const StyledTextRun>& styledRanges, length_t start) : styledRanges_(styledRanges) {
+		SimpleStyledTextRunIterator(const vector<const StyledTextRun>& styledRanges, Index start) : styledRanges_(styledRanges) {
 			current_ = detail::searchBound(styledRanges_.begin(), styledRanges_.end(), start, BeginningOfStyledTextRun());
 		}
 		// presentation.StyledTextRunIterator
@@ -486,7 +487,7 @@ namespace {
 		}
 	private:
 		struct BeginningOfStyledTextRun {
-			bool operator()(length_t v, const StyledTextRun& range) const {
+			bool operator()(Index v, const StyledTextRun& range) const {
 				return v < range.position();
 			}
 		};
@@ -496,15 +497,15 @@ namespace {
 }
 
 /// TextRun class represents minimum text run whose characters can shaped by single font.
-class TextLayout::TextRun : public Range<length_t> {	// beginning() and end() return position in the line
+class TextLayout::TextRun : public Range<Index> {	// beginning() and end() return position in the line
 	ASCENSION_NONCOPYABLE_TAG(TextRun);
 public:
 	struct Overlay {
 		Color color;
-		Range<length_t> range;
+		Range<Index> range;
 	};
 public:
-	TextRun(const Range<length_t>& characterRange, const SCRIPT_ANALYSIS& script,
+	TextRun(const Range<Index>& characterRange, const SCRIPT_ANALYSIS& script,
 		tr1::shared_ptr<const Font> font, OPENTYPE_TAG scriptTag) /*throw()*/;
 	virtual ~TextRun() /*throw()*/;
 	// attributes
@@ -515,13 +516,13 @@ public:
 	ReadingDirection readingDirection() const /*throw()*/ {
 		return ((analysis_.s.uBidiLevel & 0x01) == 0x00) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;}
 	// geometry
-	void blackBoxBounds(const Range<length_t>& range, NativeRectangle& bounds) const;
+	void blackBoxBounds(const Range<Index>& range, NativeRectangle& bounds) const;
 	HRESULT logicalWidths(int widths[]) const;
 	HRESULT hitTest(int x, int& cp, int& trailing) const;
 	int totalWidth() const /*throw()*/ {return accumulate(advances(), advances() + numberOfGlyphs(), 0);}
-	int x(length_t at, bool trailing) const;
+	int x(Index at, bool trailing) const;
 	// layout
-	auto_ptr<TextRun> breakAt(length_t at, const String& layoutString);
+	auto_ptr<TextRun> breakAt(Index at, const String& layoutString);
 	bool expandTabCharacters(const TabExpander& tabExpander,
 		const String& layoutString, Scalar x, Scalar maximumWidth);
 	HRESULT justify(int width);
@@ -534,14 +535,14 @@ public:
 	auto_ptr<TextRun> splitIfTooLong(const String& layoutString);
 	static void substituteGlyphs(const Range<TextRun**>& runs, const String& layoutString);
 	// drawing and painting
-	void drawGlyphs(PaintContext& context, const NativePoint& p, const Range<length_t>& range) const;
+	void drawGlyphs(PaintContext& context, const NativePoint& p, const Range<Index>& range) const;
 	void paintBackground(PaintContext& context, const NativePoint& p,
-		const Range<length_t>& range, NativeRectangle* paintedBounds) const;
+		const Range<Index>& range, NativeRectangle* paintedBounds) const;
 	void paintBorder() const;
 	void paintLineDecorations() const;
 private:
 	struct Glyphs {	// this data is shared text runs separated by (only) line breaks
-		const Range<length_t> characters;	// character range for this glyph arrays in the line
+		const Range<Index> characters;	// character range for this glyph arrays in the line
 		const tr1::shared_ptr<const Font> font;
 		const OPENTYPE_TAG scriptTag;
 		mutable SCRIPT_CACHE fontCache;
@@ -550,7 +551,7 @@ private:
 		AutoBuffer<SCRIPT_VISATTR> visualAttributes;
 		AutoBuffer<int> advances, justifiedAdvances;
 		AutoBuffer<GOFFSET> offsets;
-		Glyphs(const Range<length_t>& characters, tr1::shared_ptr<const Font> font,
+		Glyphs(const Range<Index>& characters, tr1::shared_ptr<const Font> font,
 				OPENTYPE_TAG scriptTag) : characters(characters), font(font), scriptTag(scriptTag), fontCache(0) {
 			if(font.get() == 0)
 				throw NullPointerException("font");
@@ -559,7 +560,7 @@ private:
 		void vanish(const Font& font, size_t at);	// 'at' is distance from the beginning of this run
 	};
 private:
-	TextRun(TextRun& leading, length_t characterBoundary) /*throw()*/;
+	TextRun(TextRun& leading, Index characterBoundary) /*throw()*/;
 	const int* advances() const /*throw()*/ {
 		if(const int* const p = glyphs_->advances.get()) return p + glyphRange_.beginning(); return 0;}
 	const WORD* clusters() const /*throw()*/ {
@@ -619,9 +620,9 @@ void TextLayout::TextRun::Glyphs::vanish(const Font& font, size_t at) {
  * @param scriptTag an OpenType script tag describes the script of this text run
  * @throw NullPointerException @a font is @c null
  */
-TextLayout::TextRun::TextRun(const Range<length_t>& characterRange,
+TextLayout::TextRun::TextRun(const Range<Index>& characterRange,
 		const SCRIPT_ANALYSIS& script, tr1::shared_ptr<const Font> font, OPENTYPE_TAG scriptTag) /*throw()*/
-		: Range<length_t>(characterRange), analysis_(script) {
+		: Range<Index>(characterRange), analysis_(script) {
 	glyphs_.reset(new Glyphs(*this, font, scriptTag));
 	if(font.get() == 0)
 		throw NullPointerException("font");
@@ -635,8 +636,8 @@ TextLayout::TextRun::TextRun(const Range<length_t>& characterRange,
  * @throw std#out_of_range @a characterBoundary is outside of the character range @a leading covers
  * @see #splitIfTooLong
  */
-TextLayout::TextRun::TextRun(TextRun& leading, length_t characterBoundary) /*throw()*/ :
-		Range<length_t>(characterBoundary, leading.end()), analysis_(leading.analysis_), glyphs_(leading.glyphs_) {
+TextLayout::TextRun::TextRun(TextRun& leading, Index characterBoundary) /*throw()*/ :
+		Range<Index>(characterBoundary, leading.end()), analysis_(leading.analysis_), glyphs_(leading.glyphs_) {
 	if(leading.glyphs_.get() == 0)
 		throw invalid_argument("leading has not been shaped");
 	if(characterBoundary >= length(leading))
@@ -656,7 +657,7 @@ TextLayout::TextRun::~TextRun() /*throw()*/ {
 //		::ScriptFreeCache(&cache_);
 }
 
-void TextLayout::TextRun::blackBoxBounds(const Range<length_t>& range, NativeRectangle& bounds) const {
+void TextLayout::TextRun::blackBoxBounds(const Range<Index>& range, NativeRectangle& bounds) const {
 	const int left = x(max(range.beginning(), beginning()), false);
 	const int right = x(min(range.end(), end()) - 1, true);
 	const Font::Metrics& fontMetrics = glyphs_->font->metrics();
@@ -665,13 +666,13 @@ void TextLayout::TextRun::blackBoxBounds(const Range<length_t>& range, NativeRec
 		geometry::make<NativeSize>(right - left, fontMetrics.cellHeight())));
 }
 
-auto_ptr<TextLayout::TextRun> TextLayout::TextRun::breakAt(length_t at, const String& layoutString) {
+auto_ptr<TextLayout::TextRun> TextLayout::TextRun::breakAt(Index at, const String& layoutString) {
 	// 'at' is from the beginning of the line
 	assert(at > beginning() && at < end());
 	assert(glyphs_->clusters[at - beginning()] != glyphs_->clusters[at - beginning() - 1]);
 
 	const bool ltr = readingDirection() == LEFT_TO_RIGHT;
-	const length_t newLength = at - beginning();
+	const Index newLength = at - beginning();
 	assert(ltr == (analysis_.fRTL == 0));
 
 	// create the new following run
@@ -720,8 +721,8 @@ inline pair<int, HRESULT> TextLayout::TextRun::countMissingGlyphs(
  * @param range The character range to paint. If the edges addressed outside of this run, they are
  *              truncated
  */
-void TextLayout::TextRun::drawGlyphs(PaintContext& context, const NativePoint& p, const Range<length_t>& range) const {
-	const Range<length_t> truncatedRange(max(range.beginning(), beginning()), min(range.end(), end()));
+void TextLayout::TextRun::drawGlyphs(PaintContext& context, const NativePoint& p, const Range<Index>& range) const {
+	const Range<Index> truncatedRange(max(range.beginning(), beginning()), min(range.end(), end()));
 	if(ascension::isEmpty(truncatedRange))
 		return;
 	const Range<size_t> glyphRange(
@@ -969,7 +970,7 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 	while(runs.back()->length() > MAXIMUM_RUN_LENGTH) {					\
 		TextRun& back = *runs.back();									\
 		TextRun* piece = new SimpleRun(back.style);						\
-		length_t pieceLength = MAXIMUM_RUN_LENGTH;						\
+		Index pieceLength = MAXIMUM_RUN_LENGTH;							\
 		if(surrogates::isLowSurrogate(line[back.column + pieceLength]))	\
 			--pieceLength;												\
 		piece->analysis = back.analysis;								\
@@ -983,7 +984,7 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 	results.first.reserve(static_cast<size_t>(numberOfScriptRuns * ((styles.get() != 0) ? 1.2 : 1)));	// hmm...
 
 	const SCRIPT_ITEM* scriptRun = scriptRuns;
-	pair<const SCRIPT_ITEM*, length_t> nextScriptRun;	// 'second' is the beginning position
+	pair<const SCRIPT_ITEM*, Index> nextScriptRun;	// 'second' is the beginning position
 	nextScriptRun.first = (numberOfScriptRuns > 1) ? (scriptRuns + 1) : 0;
 	nextScriptRun.second = (nextScriptRun.first != 0) ? nextScriptRun.first->iCharPos : layoutString.length();
 	pair<StyledTextRun, bool> styleRun;	// 'second' is false if 'first' is invalid
@@ -995,16 +996,16 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 	pair<StyledTextRun, bool> nextStyleRun;	// 'second' is false if 'first' is invalid
 	if(nextStyleRun.second = styles.get() != 0 && styles->hasNext())
 		nextStyleRun.first = styles->current();
-	length_t beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.position() : layoutString.length();
+	Index beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.position() : layoutString.length();
 	tr1::shared_ptr<const Font> font;	// font for current glyph run
 	do {
-		const length_t previousRunEnd = max<length_t>(
+		const Index previousRunEnd = max<Index>(
 			scriptRun->iCharPos, styleRun.second ? styleRun.first.position() : 0);
 		assert(
 			(previousRunEnd == 0 && results.first.empty() && results.second.empty())
 			|| (!results.first.empty() && previousRunEnd == results.first.back()->end())
 			|| (!results.second.empty() && previousRunEnd == results.second.back().position()));
-		length_t newRunEnd;
+		Index newRunEnd;
 		bool forwardScriptRun = false, forwardStyleRun = false, forwardGlyphRun = false;
 
 		if(nextScriptRun.second == beginningOfNextStyleRun) {
@@ -1040,7 +1041,7 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 			if(breakScriptRun)
 				const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkAfter = 0;
 			results.first.push_back(
-				new TextRun(Range<length_t>(!results.first.empty() ? results.first.back()->end() : 0, newRunEnd),
+				new TextRun(Range<Index>(!results.first.empty() ? results.first.back()->end() : 0, newRunEnd),
 					scriptRun->a, font,
 					(scriptTags != 0) ? scriptTags[scriptRun - scriptRuns] : SCRIPT_TAG_UNKNOWN));	// TODO: 'DFLT' is preferred?
 			while(true) {
@@ -1089,7 +1090,7 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
  * @param[out] paintedBounds The rectangle this method painted. Can be @c null
  */
 void TextLayout::TextRun::paintBackground(PaintContext& context,
-		const NativePoint& p, const Range<length_t>& range, NativeRectangle* paintedBounds) const {
+		const NativePoint& p, const Range<Index>& range, NativeRectangle* paintedBounds) const {
 	if(ascension::isEmpty(range) || geometry::x(p) + totalWidth() < geometry::left(context.boundsToPaint()))
 		return;
 	NativeRectangle r;
@@ -1133,7 +1134,7 @@ void TextLayout::TextRun::positionGlyphs(const win32::Handle<HDC>& dc, const Str
 			dc.selectObject(glyphs_->font->handle().get());
 			SCRIPT_FONTPROPERTIES fp;
 			fp.cBytes = 0;
-			for(length_t i = beginning(); i < end(); ++i) {
+			for(Index i = beginning(); i < end(); ++i) {
 				if(isC0orC1Control(layoutString[i])) {
 					if(const int w = scr->getControlCharacterWidth(context, layoutString[i])) {
 						// substitute the glyph
@@ -1547,12 +1548,12 @@ auto_ptr<TextLayout::TextRun> TextLayout::TextRun::splitIfTooLong(const String& 
 		return auto_ptr<TextRun>();
 
 	// split this run, because the length would cause ScriptShape to fail (see also Mozilla bug 366643).
-	static const length_t MAXIMUM_RUN_LENGTH = 43680;	// estimateNumberOfGlyphs(43680) == 65536
-	length_t opportunity = 0;
+	static const Index MAXIMUM_RUN_LENGTH = 43680;	// estimateNumberOfGlyphs(43680) == 65536
+	Index opportunity = 0;
 	AutoBuffer<SCRIPT_LOGATTR> la(new SCRIPT_LOGATTR[length(*this)]);
 	const HRESULT hr = logicalAttributes(layoutString, la.get());
 	if(SUCCEEDED(hr)) {
-		for(length_t i = MAXIMUM_RUN_LENGTH; i > 0; --i) {
+		for(Index i = MAXIMUM_RUN_LENGTH; i > 0; --i) {
 			if(la[i].fCharStop != 0) {
 				if(legacyctype::isspace(layoutString[i]) || legacyctype::isspace(layoutString[i - 1])) {
 					opportunity = i;
@@ -1568,9 +1569,9 @@ auto_ptr<TextLayout::TextRun> TextLayout::TextRun::splitIfTooLong(const String& 
 			--opportunity;
 	}
 
-	auto_ptr<TextRun> following(new TextRun(Range<length_t>(
+	auto_ptr<TextRun> following(new TextRun(Range<Index>(
 		opportunity, length(*this) - opportunity), analysis_, glyphs_->font, glyphs_->scriptTag));
-	static_cast<Range<length_t>&>(*this) = Range<length_t>(0, opportunity);
+	static_cast<Range<Index>&>(*this) = Range<Index>(0, opportunity);
 	analysis_.fLinkAfter = following->analysis_.fLinkBefore = 0;
 	return following;
 }
@@ -1639,7 +1640,7 @@ void TextLayout::TextRun::substituteGlyphs(const Range<TextRun**>& runs, const S
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 }
 
-inline int TextLayout::TextRun::x(length_t at, bool trailing) const {
+inline int TextLayout::TextRun::x(Index at, bool trailing) const {
 	if(at < beginning() || at > end())
 		throw k::BadPositionException(k::Position(INVALID_INDEX, at));
 	int result;
@@ -1667,9 +1668,9 @@ namespace {
 	public:
 		InlineProgressionDimensionRangeIterator() /*throw()*/ : currentRun_(0), lastRun_(0) {}
 		InlineProgressionDimensionRangeIterator(
-			const Range<const TextLayout::TextRun* const*>& textRuns, const Range<length_t>& characterRange,
+			const Range<const TextLayout::TextRun* const*>& textRuns, const Range<Index>& characterRange,
 			ReadingDirection scanningDirection, Scalar initialIpd);
-		const Range<length_t> characterRange() const /*throw()*/ {return characterRange_;}
+		const Range<Index> characterRange() const /*throw()*/ {return characterRange_;}
 		Range<Scalar> current() const;
 		bool equals(const InlineProgressionDimensionRangeIterator& other) const /*throw()*/ {
 			if(currentRun_ == 0)
@@ -1686,7 +1687,7 @@ namespace {
 		void doNext(bool initializing);
 		bool isDone() const /*throw()*/ {return currentRun_ == lastRun_;}
 	private:
-		/*const*/ Range<length_t> characterRange_;
+		/*const*/ Range<Index> characterRange_;
 		const TextLayout::TextRun* const* currentRun_;
 		const TextLayout::TextRun* const* /*const*/ lastRun_;
 		Scalar ipd_;
@@ -1694,7 +1695,7 @@ namespace {
 }
 
 InlineProgressionDimensionRangeIterator::InlineProgressionDimensionRangeIterator(
-		const Range<const TextLayout::TextRun* const*>& textRuns, const Range<length_t>& characterRange,
+		const Range<const TextLayout::TextRun* const*>& textRuns, const Range<Index>& characterRange,
 		ReadingDirection direction, Scalar initialIpd) : characterRange_(characterRange),
 		currentRun_((direction == LEFT_TO_RIGHT) ? textRuns.beginning() - 1 : textRuns.end()),
 		lastRun_((direction == LEFT_TO_RIGHT) ? textRuns.end() : textRuns.beginning() - 1),
@@ -2071,13 +2072,13 @@ TextAlignment TextLayout::alignment() const /*throw()*/ {
  * @return The baseline position 
  * @throw BadPositionException @a line is greater than the count of lines
  */
-Scalar TextLayout::baseline(length_t line) const {
+Scalar TextLayout::baseline(Index line) const {
 	if(line >= numberOfLines())
 		throw kernel::BadPositionException(kernel::Position());
 	else if(line == 0)
 		return 0;
 	Scalar result = 0;
-	for(length_t i = 1; i <= line; ++i) {
+	for(Index i = 1; i <= line; ++i) {
 		result += lineMetrics_[i - 1]->descent();
 		result += lineMetrics_[i]->ascent();
 	}
@@ -2090,7 +2091,7 @@ Scalar TextLayout::baseline(length_t line) const {
  * @return the embedding level
  * @throw kernel#BadPositionException @a column is greater than the length of the line
  */
-uint8_t TextLayout::bidiEmbeddingLevel(length_t column) const {
+uint8_t TextLayout::bidiEmbeddingLevel(Index column) const {
 	if(numberOfRuns_ == 0) {
 		if(column != 0)
 			throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));
@@ -2110,9 +2111,9 @@ uint8_t TextLayout::bidiEmbeddingLevel(length_t column) const {
  * @param range The character range
  * @return The native polygon object encompasses the black box bounds
  * @throw kernel#BadPositionException @a range intersects with the outside of the line
- * @see #bounds(void), #bounds(length_t, length_t), #lineBounds, #lineStartEdge
+ * @see #bounds(void), #bounds(Index, Index), #lineBounds, #lineStartEdge
  */
-NativeRegion TextLayout::blackBoxBounds(const Range<length_t>& range) const {
+NativeRegion TextLayout::blackBoxBounds(const Range<Index>& range) const {
 	if(range.end() > text_.length())
 		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, range.end()));
 
@@ -2121,12 +2122,12 @@ NativeRegion TextLayout::blackBoxBounds(const Range<length_t>& range) const {
 		return win32::Handle<HRGN>(::CreateRectRgn(0, 0, 0, lineMetrics_[0]->height()), &::DeleteObject);
 
 	// TODO: this implementation can't handle vertical text.
-	const length_t firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
+	const Index firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
 	vector<NativeRectangle> rectangles;
 	Scalar before = baseline(firstLine)
 		/*- lineMetrics_[firstLine]->leading()*/ - lineMetrics_[firstLine]->ascent();
 	Scalar after = before + lineMetrics_[firstLine]->height();
-	for(length_t line = firstLine; line <= lastLine; before = after, after += lineMetrics_[++line]->height()) {
+	for(Index line = firstLine; line <= lastLine; before = after, after += lineMetrics_[++line]->height()) {
 		const size_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
 		const Scalar leftEdge = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ?
 			lineStartEdge(line) : (-lineStartEdge(line) - measure(line));
@@ -2166,13 +2167,13 @@ NativeRegion TextLayout::blackBoxBounds(const Range<length_t>& range) const {
  * Returns the smallest rectangle emcompasses the whole text of the line. It might not coincide
  * exactly the ascent, descent or overhangs of the text.
  * @return The size of the bounds
- * @see #blackBoxBounds, #bounds(const Range&lt;length_t&gt;&amp;), #lineBounds
+ * @see #blackBoxBounds, #bounds(const Range&lt;Index&gt;&amp;), #lineBounds
  */
 NativeRectangle TextLayout::bounds() const /*throw()*/ {
 	// TODO: this implementation can't handle vertical text.
 	const Scalar before = /*-lineMetrics_[0]->leading()*/ - lineMetrics_[0]->ascent();
 	Scalar after = before, start = numeric_limits<Scalar>::max(), end = numeric_limits<Scalar>::min();
-	for(length_t line = 0; line < numberOfLines(); ++line) {
+	for(Index line = 0; line < numberOfLines(); ++line) {
 		after += lineMetrics_[line]->height();
 		const Scalar lineStart = lineStartEdge(line);
 		start = min(lineStart, start);
@@ -2191,7 +2192,7 @@ NativeRectangle TextLayout::bounds() const /*throw()*/ {
  * @throw kernel#BadPositionException @a range intersects with the outside of the line
  * @see #blackBoxBounds, #bounds(void), #lineBounds
  */
-NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
+NativeRectangle TextLayout::bounds(const Range<Index>& range) const {
 	if(range.end() > text_.length())
 		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, range.end()));
 
@@ -2209,7 +2210,7 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 			geometry::subtract(location(range.beginning()), geometry::make<NativePoint>(0, line.ascent()/* + line.leading()*/)),
 			geometry::make<NativeSize>(0, line.height()));
 	} else {
-		const length_t firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
+		const Index firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
 
 		// calculate the block-progression-edges ('before' and 'after'; it's so easy)
 		result.before() = baseline(firstLine) - lineMetrics_[firstLine]->ascent()/* - lineMetrics_[firstLine]->leading()*/;
@@ -2222,7 +2223,7 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 			makeRange(lineOffset(lastLine), lineOffset(lastLine) + lineLength(lastLine)));
 		result.start() = numeric_limits<Scalar>::max();
 		result.end() = numeric_limits<Scalar>::min();
-		for(length_t line = firstLine + firstLineIsFullyCovered ? 0 : 1;
+		for(Index line = firstLine + firstLineIsFullyCovered ? 0 : 1;
 				line < lastLine + lastLineIsFullyCovered ? 1 : 0; ++line) {
 			const Scalar lineStart = lineStartEdge(line);
 			result.start() = min(lineStart, result.start());
@@ -2230,7 +2231,7 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 		}
 
 		// calculate start and end-edge of partially covered lines
-		vector<length_t> partiallyCoveredLines;
+		vector<Index> partiallyCoveredLines;
 		if(!firstLineIsFullyCovered)
 			partiallyCoveredLines.push_back(firstLine);
 		if(!lastLineIsFullyCovered && (partiallyCoveredLines.empty() || partiallyCoveredLines[0] != lastLine))
@@ -2238,9 +2239,9 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 		if(!partiallyCoveredLines.empty()) {
 			Scalar left = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? result.start() : -result.end();
 			Scalar right = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? result.end() : -result.start();
-			for(vector<length_t>::const_iterator
+			for(vector<Index>::const_iterator
 					line(partiallyCoveredLines.begin()), e(partiallyCoveredLines.end()); line != e; ++line) {
-				const length_t lastRun = (*line + 1 < numberOfLines()) ? lineFirstRuns_[*line + 1] : numberOfRuns_;
+				const Index lastRun = (*line + 1 < numberOfLines()) ? lineFirstRuns_[*line + 1] : numberOfRuns_;
 
 				// find left-edge
 				InlineProgressionDimensionRangeIterator i(
@@ -2252,11 +2253,11 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 
 				Scalar x = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ?
 					lineStartEdge(*line) : -lineStartEdge(*line) - measure(*line);
-				for(length_t i = lineFirstRuns_[*line];
+				for(Index i = lineFirstRuns_[*line];
 						i < lastRun && x < left; x += runs_[i++]->totalWidth()) {
 					const TextRun& run = *runs_[i];
 					if(intersects(range, run)) {
-						const length_t leftEdge = (run.readingDirection() == LEFT_TO_RIGHT) ?
+						const Index leftEdge = (run.readingDirection() == LEFT_TO_RIGHT) ?
 							max(range.beginning(), run.beginning()) : min(range.end(), run.end());
 						left = min(x + run.x(leftEdge, false), left);
 						break;
@@ -2273,10 +2274,10 @@ NativeRectangle TextLayout::bounds(const Range<length_t>& range) const {
 
 				x = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ?
 					lineStartEdge(*line) + measure(*line) : -lineStartEdge(*line);
-				for(length_t i = lastRun - 1; x > right; x -= runs_[i--]->totalWidth()) {
+				for(Index i = lastRun - 1; x > right; x -= runs_[i--]->totalWidth()) {
 					const TextRun& run = *runs_[i];
 					if(intersects(range, run)) {
-						const length_t rightEdge = (run.readingDirection() == LEFT_TO_RIGHT) ?
+						const Index rightEdge = (run.readingDirection() == LEFT_TO_RIGHT) ?
 							min(range.end(), run.end()) : max(range.beginning(), run.beginning());
 						right = max(x - run.totalWidth() + run.x(rightEdge, false), right);
 						break;
@@ -2331,9 +2332,9 @@ void TextLayout::draw(PaintContext& context,
 	// TODO: this code can't handle vertical text.
 
 	// calculate line range to draw
-	Range<length_t> linesToDraw(0, numberOfLines());
+	Range<Index> linesToDraw(0, numberOfLines());
 	NativePoint p(origin);
-	for(length_t line = linesToDraw.beginning(); line < linesToDraw.end(); ++line) {
+	for(Index line = linesToDraw.beginning(); line < linesToDraw.end(); ++line) {
 		geometry::y(p) = baseline(line);
 		const Scalar lineBeforeEdge = geometry::y(p) - lineMetrics_[line]->ascent();
 		const Scalar lineAfterEdge = geometry::y(p) + lineMetrics_[line]->descent();
@@ -2348,14 +2349,14 @@ void TextLayout::draw(PaintContext& context,
 	// calculate inline area range to draw
 	Range<vector<const InlineArea*>::const_iterator> inlineAreasToDraw(inlineAreas_.begin(), inlineAreas_.end());
 	for(vector<const InlineArea*>::const_iterator i(inlineAreasToDraw.beginning()); i != inlineAreasToDraw.end(); ++i) {
-		const length_t endOfInlineArea = (i != inlineAreasToDraw.end()) ? i[1]->position() : text_.length();
+		const Index endOfInlineArea = (i != inlineAreasToDraw.end()) ? i[1]->position() : text_.length();
 		if(endOfInlineArea > lineOffset(linesToDraw.beginning())) {
 			inlineAreasToDraw = makeRange(i, inlineAreasToDraw.end());
 			break;
 		}
 	}
 	for(vector<const InlineArea*>::const_iterator i(inlineAreasToDraw.beginning()); i != inlineAreasToDraw.end(); ++i) {
-		const length_t endOfInlineArea = (i != inlineAreasToDraw.end()) ? i[1]->position() : text_.length();
+		const Index endOfInlineArea = (i != inlineAreasToDraw.end()) ? i[1]->position() : text_.length();
 		if(endOfInlineArea >= lineOffset(linesToDraw.beginning())) {
 			inlineAreasToDraw = makeRange(inlineAreasToDraw.beginning(), i + 1);
 			break;
@@ -2446,7 +2447,7 @@ void TextLayout::draw(PaintContext& context,
 	}
 
 	// 3. for each text runs
-	for(length_t line = linesToDraw.beginning(); line < linesToDraw.end(); ++line) {
+	for(Index line = linesToDraw.beginning(); line < linesToDraw.end(); ++line) {
 		if(!isEmpty()) {
 			// 3-1. calculate range of runs to paint
 			Range<const TextRun* const*> runs(runs_.get() + lineFirstRuns_[line],
@@ -2466,7 +2467,7 @@ void TextLayout::draw(PaintContext& context,
 				}
 			}
 			if(!ascension::isEmpty(runs)) {
-				const Range<length_t> characterRange(runs.beginning()[0]->beginning(), runs.end()[-1]->end());
+				const Range<Index> characterRange(runs.beginning()[0]->beginning(), runs.end()[-1]->end());
 				auto_ptr<TextPaintOverride::Iterator> paintOverrideIterator;
 				if(paintOverride != 0)
 					paintOverrideIterator = paintOverride->queryTextPaintOverride(characterRange);
@@ -2538,7 +2539,7 @@ void TextLayout::draw(PaintContext& context,
 			for(size_t i = firstRun; i < lastRun; ++i) {
 				TextRun& run = *runs_[i];
 				context.readingDirection = run.writingMode().inlineFlowDirection;
-				for(length_t j = run.beginning(); j < run.end(); ++j) {
+				for(Index j = run.beginning(); j < run.end(); ++j) {
 					if(BinaryProperty::is(line[j], BinaryProperty::WHITE_SPACE)) {	// IdentifierSyntax.isWhiteSpace() is preferred?
 						context.rect.setX(makeRange(x + run.x(j, false), x + run.x(j, true)));
 						specialCharacterRenderer->drawWhiteSpaceCharacter(context, line[j]);
@@ -2680,11 +2681,11 @@ String TextLayout::fillToX(int x) const {
  * @param column the column
  * @return the index of the run
  */
-inline size_t TextLayout::findRunForPosition(length_t column) const /*throw()*/ {
+inline size_t TextLayout::findRunForPosition(Index column) const /*throw()*/ {
 	assert(numberOfRuns_ > 0);
 	if(column == text_.length())
 		return numberOfRuns_ - 1;
-	const length_t sl = lineAt(column);
+	const Index sl = lineAt(column);
 	const size_t lastRun = (sl + 1 < numberOfLines()) ? lineFirstRuns_[sl + 1] : numberOfRuns_;
 	for(size_t i = lineFirstRuns_[sl]; i < lastRun; ++i) {
 		if(runs_[i]->beginning() <= column && runs_[i]->end() > column)	// TODO: replace with includes().
@@ -2713,7 +2714,7 @@ bool TextLayout::isBidirectional() const /*throw()*/ {
 /// Justifies the wrapped visual lines.
 inline void TextLayout::justify(TextJustification) /*throw()*/ {
 	assert(wrappingMeasure_ != -1);
-	for(length_t line = 0; line < numberOfLines(); ++line) {
+	for(Index line = 0; line < numberOfLines(); ++line) {
 		const int ipd = measure(line);
 		const size_t last = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
 		for(size_t i = lineFirstRuns_[line]; i < last; ++i) {
@@ -2738,7 +2739,7 @@ TextLayout::StyledSegmentIterator TextLayout::lastStyledSegment() const /*throw(
  * @throw IndexOutOfBoundsException @a line is greater than the number of the lines
  * @see #lineStartEdge
  */
-NativeRectangle TextLayout::lineBounds(length_t line) const {
+NativeRectangle TextLayout::lineBounds(Index line) const {
 	if(line >= numberOfLines())
 		throw IndexOutOfBoundsException("line");
 
@@ -2766,7 +2767,7 @@ NativeRectangle TextLayout::lineBounds(length_t line) const {
  * @throw IndexOutOfBoundsException @a line is invalid
  * @see TextRenderer#lineStartEdge
  */
-Scalar TextLayout::lineStartEdge(length_t line) const {
+Scalar TextLayout::lineStartEdge(Index line) const {
 	if(line == 0)
 		return 0;
 	switch(anchor()) {
@@ -2788,14 +2789,14 @@ Scalar TextLayout::lineStartEdge(length_t line) const {
  * @return The line number
  * @see #basline, #lineAt, #offset
  */
-length_t TextLayout::locateLine(Scalar bpd, bool& outside) const /*throw()*/ {
+Index TextLayout::locateLine(Scalar bpd, bool& outside) const /*throw()*/ {
 	// TODO: This implementation can't handle tricky 'text-orientation'.
 
 	// beyond the before-edge ?
 	if(bpd < -lineMetrics_[0]->ascent()/* - lineMetrics_[0]->leading()*/)
 		return (outside = true), 0;
 
-	length_t line = 0;
+	Index line = 0;
 	for(Scalar lineAfter = 0; line < numberOfLines() - 1; ++line) {
 		if(bpd < (lineAfter += lineMetrics_[line]->height()))
 			return (outside = false), line;
@@ -2813,15 +2814,15 @@ length_t TextLayout::locateLine(Scalar bpd, bool& outside) const /*throw()*/ {
  * @return See the documentation of @c #offset method
  * @throw IndexOutOfBoundsException @a line is invalid
  */
-pair<length_t, length_t> TextLayout::locateOffsets(length_t line, Scalar ipd, bool& outside) const {
+pair<Index, Index> TextLayout::locateOffsets(Index line, Scalar ipd, bool& outside) const {
 	if(isEmpty())
-		return (outside = true), make_pair(static_cast<length_t>(0), static_cast<length_t>(0));
+		return (outside = true), make_pair(static_cast<Index>(0), static_cast<Index>(0));
 	const size_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
 
 	if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) {
 		Scalar x = lineStartEdge(line);
 		if(ipd < x) {	// beyond the left-edge => the start of the first run
-			const length_t column = runs_[lineFirstRuns_[line]]->beginning();
+			const Index column = runs_[lineFirstRuns_[line]]->beginning();
 			return (outside = true), make_pair(column, column);
 		}
 		for(size_t i = lineFirstRuns_[line]; i < lastRun; ++i) {	// scan left to right
@@ -2829,28 +2830,28 @@ pair<length_t, length_t> TextLayout::locateOffsets(length_t line, Scalar ipd, bo
 			if(ipd >= x && ipd <= x + run.totalWidth()) {
 				int cp, trailing;
 				run.hitTest(ipd - x, cp, trailing);	// TODO: check the returned value.
-				const length_t temp = run.beginning() + static_cast<length_t>(cp);
-				return (outside = false), make_pair(temp, temp + static_cast<length_t>(trailing));
+				const Index temp = run.beginning() + static_cast<Index>(cp);
+				return (outside = false), make_pair(temp, temp + static_cast<Index>(trailing));
 			}
 			x += run.totalWidth();
 		}
 		// beyond the right-edge => the end of last run
-		const length_t column = runs_[lastRun - 1]->end();
+		const Index column = runs_[lastRun - 1]->end();
 		return (outside = true), make_pair(column, column);
 	} else {
 		Scalar x = -lineStartEdge(line);
 		if(ipd > x) {	// beyond the right-edge => the start of the last run
-			const length_t column = runs_[lastRun - 1]->beginning();
+			const Index column = runs_[lastRun - 1]->beginning();
 			return (outside = true), make_pair(column, column);
 		}
 		// beyond the left-edge => the end of the first run
-		const length_t column = runs_[lineFirstRuns_[line]]->end();
+		const Index column = runs_[lineFirstRuns_[line]]->end();
 		return (outside = true), make_pair(column, column);
 	}
 }
 
 // implements public location methods
-void TextLayout::locations(length_t column, NativePoint* leading, NativePoint* trailing) const {
+void TextLayout::locations(Index column, NativePoint* leading, NativePoint* trailing) const {
 	assert(leading != 0 || trailing != 0);
 	if(column > text_.length())
 		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));
@@ -2860,9 +2861,9 @@ void TextLayout::locations(length_t column, NativePoint* leading, NativePoint* t
 		leadingIpd = trailingIpd = 0;
 	else {
 		// inline-progression-dimension
-		const length_t line = lineAt(column);
-		const length_t firstRun = lineFirstRuns_[line];
-		const length_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
+		const Index line = lineAt(column);
+		const Index firstRun = lineFirstRuns_[line];
+		const Index lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
 		if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) {	// LTR
 			Scalar x = lineStartEdge(line);
 			for(size_t i = firstRun; i < lastRun; ++i) {
@@ -2912,12 +2913,12 @@ void TextLayout::locations(length_t column, NativePoint* leading, NativePoint* t
 
 /**
  * Returns the inline-progression-dimension of the longest line.
- * @see #measure(length_t)
+ * @see #measure(Index)
  */
 Scalar TextLayout::measure() const /*throw()*/ {
 	if(maximumMeasure_ < 0) {
 		Scalar ipd = 0;
-		for(length_t line = 0; line < numberOfLines(); ++line)
+		for(Index line = 0; line < numberOfLines(); ++line)
 			ipd = max(measure(line), ipd);
 		const_cast<TextLayout*>(this)->maximumMeasure_ = ipd;
 	}
@@ -2932,7 +2933,7 @@ Scalar TextLayout::measure() const /*throw()*/ {
  * @throw IndexOutOfBoundsException @a line is greater than the number of lines
  * @see #measure(void)
  */
-Scalar TextLayout::measure(length_t line) const {
+Scalar TextLayout::measure(Index line) const {
 	if(line >= numberOfLines())
 		throw IndexOutOfBoundsException("line");
 	else if(isEmpty())
@@ -2972,10 +2973,10 @@ Scalar TextLayout::measure(length_t line) const {
  *         character whose leading point is the closest to the specified point in the line
  * @see #locateLine, #location
  */
-pair<length_t, length_t> TextLayout::offset(const NativePoint& p, bool* outside /* = 0 */) const /*throw()*/ {
+pair<Index, Index> TextLayout::offset(const NativePoint& p, bool* outside /* = 0 */) const /*throw()*/ {
 	const bool vertical = isVertical(writingMode().blockFlowDirection);
 	bool outsides[2];
-	const std::pair<length_t, length_t> result(locateOffsets(locateLine(
+	const std::pair<Index, Index> result(locateOffsets(locateLine(
 		vertical ? geometry::x(p) : geometry::y(p), outsides[0]), vertical ? geometry::y(p) : geometry::x(p), outsides[1]));
 	if(outside != 0)
 		*outside = outsides[0] | outsides[1];
@@ -2988,7 +2989,7 @@ inline void TextLayout::reorder() /*throw()*/ {
 		return;
 	AutoBuffer<TextRun*> temp(new TextRun*[numberOfRuns_]);
 	copy(runs_.get(), runs_.get() + numberOfRuns_, temp.get());
-	for(length_t line = 0; line < numberOfLines(); ++line) {
+	for(Index line = 0; line < numberOfLines(); ++line) {
 		const size_t numberOfRunsInLine = ((line < numberOfLines() - 1) ?
 			lineFirstRuns_[line + 1] : numberOfRuns_) - lineFirstRuns_[line];
 		const AutoBuffer<BYTE> levels(new BYTE[numberOfRunsInLine]);
@@ -3070,7 +3071,7 @@ void TextLayout::stackLines(LineStackingStrategy lineStackingStrategy, const Fon
 	const Scalar textAltitude = nominalFont.metrics().ascent();
 	const Scalar textDepth = nominalFont.metrics().descent();
 	vector<pair<Scalar, Scalar> > v;
-	for(length_t line = 0; line < numberOfLines(); ++line) {
+	for(Index line = 0; line < numberOfLines(); ++line) {
 		// calculate extent of the line in block-progression-direction
 		Scalar ascent, descent;
 		switch(lineStackingStrategy) {
@@ -3129,7 +3130,7 @@ void TextLayout::stackLines(LineStackingStrategy lineStackingStrategy, const Fon
  * @return the styled segment
  * @throw kernel#BadPositionException @a column is greater than the length of the line
  */
-StyledRun TextLayout::styledTextRun(length_t column) const {
+StyledRun TextLayout::styledTextRun(Index column) const {
 	if(column > text().length())
 		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));
 	const TextRun& run = *runs_[findRunForPosition(column)];
@@ -3142,12 +3143,12 @@ void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
 	assert(numberOfRuns_ != 0 && wrappingMeasure_ != numeric_limits<Scalar>::max());
 	assert(numberOfLines_ == 0 && lineOffsets_.get() == 0 && lineFirstRuns_.get() == 0);
 
-	vector<length_t> lineFirstRuns;
+	vector<Index> lineFirstRuns;
 	lineFirstRuns.push_back(0);
 	int x1 = 0;	// addresses the beginning of the run. see x2
 	AutoBuffer<int> logicalWidths;
 	AutoBuffer<SCRIPT_LOGATTR> logicalAttributes;
-	length_t longestRunLength = 0;	// for efficient allocation
+	Index longestRunLength = 0;	// for efficient allocation
 	vector<TextRun*> newRuns;
 	newRuns.reserve(numberOfRuns_ * 3 / 2);
 	// for each runs... (at this time, runs_ is in logical order)
@@ -3177,12 +3178,12 @@ void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
 		}
 		HRESULT hr = run->logicalWidths(logicalWidths.get());
 		hr = run->logicalAttributes(text_, logicalAttributes.get());
-		const length_t originalRunPosition = run->beginning();
+		const Index originalRunPosition = run->beginning();
 		int widthInThisRun = 0;
-		length_t lastBreakable = run->beginning(), lastGlyphEnd = run->beginning();
+		Index lastBreakable = run->beginning(), lastGlyphEnd = run->beginning();
 		int lastBreakableX = x1, lastGlyphEndX = x1;
 		// for each characters in the run...
-		for(length_t j = run->beginning(); j < run->end(); ) {	// j is position in the LOGICAL line
+		for(Index j = run->beginning(); j < run->end(); ) {	// j is position in the LOGICAL line
 			const int x2 = x1 + widthInThisRun;
 			// remember this opportunity
 			if(logicalAttributes[j - originalRunPosition].fCharStop != 0) {
@@ -3253,14 +3254,14 @@ void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
 
 	{
 		assert(numberOfLines() > 1);
-		AutoBuffer<length_t> temp(new length_t[numberOfLines_ = lineFirstRuns.size()]);
+		AutoBuffer<Index> temp(new Index[numberOfLines_ = lineFirstRuns.size()]);
 		copy(lineFirstRuns.begin(), lineFirstRuns.end(), temp.get());
 		lineFirstRuns_.reset(temp.release());
 	}
 
-	lineOffsets_.reset(new length_t[numberOfLines()]);
+	lineOffsets_.reset(new Index[numberOfLines()]);
 	for(size_t i = 0; i < numberOfLines(); ++i)
-		const_cast<length_t&>(lineOffsets_[i]) = runs_[lineFirstRuns_[i]]->beginning();
+		const_cast<Index&>(lineOffsets_[i]) = runs_[lineFirstRuns_[i]]->beginning();
 }
 
 #if 0

@@ -2,11 +2,12 @@
  * @file document-observers.hpp
  * @author exeal
  * @date 2011-03-30 separated from document.hpp
+ * @date 2011-2012
  */
 
 #ifndef ASCENSION_DOCUMENT_OBSERVERS_HPP
 #define ASCENSION_DOCUMENT_OBSERVERS_HPP
-#include <ascension/corelib/basic-types.hpp>	// length_t
+#include <ascension/corelib/basic-types.hpp>	// Index
 
 namespace ascension {
 	namespace kernel {
@@ -113,7 +114,7 @@ namespace ascension {
 			 * The bookmark on @a line was set or removed. Note that this is not called when the
 			 * bookmarks were changed by the document's change.
 			 */
-			virtual void bookmarkChanged(length_t line) = 0;
+			virtual void bookmarkChanged(Index line) = 0;
 			/// All bookmarks were removed.
 			virtual void bookmarkCleared() = 0;
 			friend class Bookmarker;

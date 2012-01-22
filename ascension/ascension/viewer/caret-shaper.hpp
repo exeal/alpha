@@ -5,6 +5,7 @@
  * @date 2003-2006 was EditView.h
  * @date 2006-2011 was viewer.hpp
  * @date 2011-09-25 separated from viewer.hpp
+ * @date 2012
  */
 
 #ifndef ASCENSION_CARET_SHAPER_HPP
@@ -101,11 +102,11 @@ namespace ascension {
 			// graphics.font.ComputedWritingModeListener
 			void computedWritingModeChanged(const presentation::WritingMode& used);
 			// graphics.font.VisualLinesListener
-			void visualLinesDeleted(const Range<length_t>& lines,
-				length_t sublines, bool longestLineChanged) /*throw()*/;
-			void visualLinesInserted(const Range<length_t>& lines) /*throw()*/;
+			void visualLinesDeleted(const Range<Index>& lines,
+				Index sublines, bool longestLineChanged) /*throw()*/;
+			void visualLinesInserted(const Range<Index>& lines) /*throw()*/;
 			void visualLinesModified(
-				const Range<length_t>& lines, signed_length_t sublinesDifference,
+				const Range<Index>& lines, SignedIndex sublinesDifference,
 				bool documentChanged, bool longestLineChanged) /*throw()*/;
 		private:
 			CaretShapeUpdater* updater_;

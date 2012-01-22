@@ -4,6 +4,7 @@
  * @date 2003-2008 was point.cpp
  * @date 2008-2010 separated from point.cpp
  * @date 2011-10-02 separated from caret.cpp
+ * @date 2011-2012
  */
 
 #include <ascension/viewer/viewer.hpp>
@@ -47,11 +48,11 @@ void utils::show(VisualPoint& p) {
 	TextViewer& viewer = p.textViewer();
 	const Position np(p.normalized());
 	const font::TextRenderer& renderer = viewer.textRenderer();
-	const length_t visibleLines = viewer.numberOfVisibleLines();
+	const Index visibleLines = viewer.numberOfVisibleLines();
 	NativePoint to(geometry::make<NativePoint>(-1, -1));
 
 	// for vertical direction
-	const length_t verticalScrollPosition = viewer.verticalScrollBar().position() * viewer.scrollRate(false);
+	const Index verticalScrollPosition = viewer.verticalScrollBar().position() * viewer.scrollRate(false);
 	if(p.visualLine() < verticalScrollPosition)	// point is beyond top side of the viewport
 		geometry::y(to) = static_cast<Scalar>(p.visualLine() * viewer.scrollRate(false));
 	else if(p.visualLine() - verticalScrollPosition > visibleLines - 1)	// point is beyond bottom side of the viewport
@@ -62,7 +63,7 @@ void utils::show(VisualPoint& p) {
 	// for horizontal direction
 //	if(!viewer.configuration().lineWrap.wrapsAtWindowEdge()) {
 		const font::Font::Metrics& fontMetrics = renderer.defaultFont()->metrics();
-		const length_t visibleColumns = viewer.numberOfVisibleColumns();
+		const Index visibleColumns = viewer.numberOfVisibleColumns();
 		const Scalar x = geometry::x(renderer.layouts().at(np.line).location(np.column, font::TextLayout::LEADING)) + renderer.lineIndent(np.line, 0);
 		const Scalar scrollOffset = viewer.horizontalScrollBar().position() * viewer.scrollRate(true) * fontMetrics.averageCharacterWidth();
 		if(x <= scrollOffset)	// point is beyond left side of the viewport
@@ -177,8 +178,8 @@ void VisualPoint::insertRectangle(const Char* first, const Char* last) {
 	Document& doc = *document();
 	DocumentLocker lock(doc);
 
-	const length_t numberOfLines = doc.numberOfLines();
-	length_t line = lineNumber();
+	const Index numberOfLines = doc.numberOfLines();
+	Index line = lineNumber();
 	const TextRenderer& renderer = textViewer().textRenderer();
 	const int x = renderer.lineLayout(line).location(columnNumber()).x + renderer.lineIndent(line, 0);
 	const DocumentInput* const documentInput = doc.input();
@@ -190,7 +191,7 @@ void VisualPoint::insertRectangle(const Char* first, const Char* last) {
 		// insert text if the source line is not empty
 		if(eol > bol) {
 			const LineLayout& layout = renderer.lineLayout(line);
-			const length_t column = layout.offset(x - renderer.lineIndent(line), 0);
+			const Index column = layout.offset(x - renderer.lineIndent(line), 0);
 			String s(layout.fillToX(x));
 			s.append(bol, eol);
 			if(line >= numberOfLines - 1)
@@ -231,7 +232,7 @@ inline void VisualPoint::updateLastX() {
 }
 
 /// Returns the visual column of the point.
-length_t VisualPoint::visualColumn() const {
+Index VisualPoint::visualColumn() const {
 	if(lastX_ == -1)
 		const_cast<VisualPoint*>(this)->updateLastX();
 	const TextViewer::Configuration& c = viewer_->configuration();
@@ -243,7 +244,7 @@ length_t VisualPoint::visualColumn() const {
 }
 
 /// Returns the visual line number.
-length_t VisualPoint::visualLine() const {
+Index VisualPoint::visualLine() const {
 	if(visualLine_ == INVALID_INDEX) {
 		VisualPoint& self = const_cast<VisualPoint&>(*this);
 		const Position p(normalized());
@@ -255,19 +256,19 @@ length_t VisualPoint::visualLine() const {
 }
 
 /// @see VisualLinesListener#visualLinesDeleted
-void VisualPoint::visualLinesDeleted(const Range<length_t>& lines, length_t, bool) /*throw()*/ {
+void VisualPoint::visualLinesDeleted(const Range<Index>& lines, Index, bool) /*throw()*/ {
 	if(!adaptsToDocument() && includes(lines, line()))
 		visualLine_ = INVALID_INDEX;
 }
 
 /// @see VisualLinesListener#visualLinesInserted
-void VisualPoint::visualLinesInserted(const Range<length_t>& lines) /*throw()*/ {
+void VisualPoint::visualLinesInserted(const Range<Index>& lines) /*throw()*/ {
 	if(!adaptsToDocument() && includes(lines, line()))
 		visualLine_ = INVALID_INDEX;
 }
 
 /// @see VisualLinesListener#visualLinesModified
-void VisualPoint::visualLinesModified(const Range<length_t>& lines, signed_length_t sublineDifference, bool, bool) /*throw()*/ {
+void VisualPoint::visualLinesModified(const Range<Index>& lines, SignedIndex sublineDifference, bool, bool) /*throw()*/ {
 	if(visualLine_ != INVALID_INDEX) {
 		// adjust visualLine_ and visualSubine_ according to the visual lines modification
 		if(lines.end() <= line())
@@ -290,7 +291,7 @@ void VisualPoint::visualLinesModified(const Range<length_t>& lines, signed_lengt
  * @param pages The number of pages to return
  * @return The destination
  */
-VerticalDestinationProxy locations::backwardPage(const VisualPoint& p, length_t pages /* = 1 */) {
+VerticalDestinationProxy locations::backwardPage(const VisualPoint& p, Index pages /* = 1 */) {
 	// TODO: calculate exact number of visual lines.
 	return backwardVisualLine(p, p.textViewer().numberOfVisibleLines() * pages);
 }
@@ -301,14 +302,14 @@ VerticalDestinationProxy locations::backwardPage(const VisualPoint& p, length_t 
  * @param lines The number of the visual lines to return
  * @return The destination
  */
-VerticalDestinationProxy locations::backwardVisualLine(const VisualPoint& p, length_t lines /* = 1 */) {
+VerticalDestinationProxy locations::backwardVisualLine(const VisualPoint& p, Index lines /* = 1 */) {
 	Position np(p.normalized());
 	const font::TextRenderer& renderer = p.textViewer().textRenderer();
-	length_t subline = renderer.layouts().at(np.line).lineAt(np.column);
+	Index subline = renderer.layouts().at(np.line).lineAt(np.column);
 	if(np.line == 0 && subline == 0)
 		return VisualPoint::makeVerticalDestinationProxy(np);
 	font::VisualLine visualLine(np.line, subline);
-	renderer.layouts().offsetVisualLine(visualLine, -static_cast<signed_length_t>(lines));
+	renderer.layouts().offsetVisualLine(visualLine, -static_cast<SignedIndex>(lines));
 	const font::TextLayout& layout = renderer.layouts().at(visualLine.line);
 	if(p.lastX_ == -1)
 		const_cast<VisualPoint&>(p).updateLastX();
@@ -383,7 +384,7 @@ Position locations::contextualEndOfVisualLine(const VisualPoint& p) {
 Position locations::endOfVisualLine(const VisualPoint& p) {
 	Position np(p.normalized());
 	const font::TextLayout& layout = p.textViewer().textRenderer().layouts().at(np.line);
-	const length_t subline = layout.lineAt(np.column);
+	const Index subline = layout.lineAt(np.column);
 	np.column = (subline < layout.numberOfLines() - 1) ?
 		layout.lineOffset(subline + 1) : p.document().lineLength(np.line);
 	if(layout.lineAt(np.column) != subline)
@@ -412,7 +413,7 @@ Position locations::firstPrintableCharacterOfVisualLine(const VisualPoint& p) {
 	Position np(p.normalized());
 	const String& s = p.document().line(np.line);
 	const font::TextLayout& layout = p.textViewer().textRenderer().layouts().at(np.line);
-	const length_t subline = layout.lineAt(np.column);
+	const Index subline = layout.lineAt(np.column);
 	np.column = identifierSyntax(p).eatWhiteSpaces(
 		s.begin() + layout.lineOffset(subline),
 		s.begin() + ((subline < layout.numberOfLines() - 1) ?
@@ -426,7 +427,7 @@ Position locations::firstPrintableCharacterOfVisualLine(const VisualPoint& p) {
  * @param pages The number of pages to advance
  * @return The destination
  */
-VerticalDestinationProxy locations::forwardPage(const VisualPoint& p, length_t pages /* = 1 */) {
+VerticalDestinationProxy locations::forwardPage(const VisualPoint& p, Index pages /* = 1 */) {
 	// TODO: calculate exact number of visual lines.
 	return forwardVisualLine(p, p.textViewer().numberOfVisibleLines() * pages);
 }
@@ -437,15 +438,15 @@ VerticalDestinationProxy locations::forwardPage(const VisualPoint& p, length_t p
  * @param lines The number of the visual lines to advance
  * @return The destination
  */
-VerticalDestinationProxy locations::forwardVisualLine(const VisualPoint& p, length_t lines /* = 1 */) {
+VerticalDestinationProxy locations::forwardVisualLine(const VisualPoint& p, Index lines /* = 1 */) {
 	Position np(p.normalized());
 	const font::TextRenderer& renderer = p.textViewer().textRenderer();
 	const font::TextLayout* layout = &renderer.layouts().at(np.line);
-	length_t subline = layout->lineAt(np.column);
+	Index subline = layout->lineAt(np.column);
 	if(np.line == p.document().numberOfLines() - 1 && subline == layout->numberOfLines() - 1)
 		return VisualPoint::makeVerticalDestinationProxy(np);
 	font::VisualLine visualLine(np.line, subline);
-	renderer.layouts().offsetVisualLine(visualLine, static_cast<signed_length_t>(lines));
+	renderer.layouts().offsetVisualLine(visualLine, static_cast<SignedIndex>(lines));
 	layout = &renderer.layouts().at(visualLine.line);
 	if(p.lastX_ == -1)
 		const_cast<VisualPoint&>(p).updateLastX();
@@ -482,14 +483,14 @@ bool locations::isEndOfVisualLine(const VisualPoint& p) {
 		return true;
 	const Position np(p.normalized());
 	const font::TextLayout& layout = p.textViewer().textRenderer().layouts().at(np.line);
-	const length_t subline = layout.lineAt(np.column);
+	const Index subline = layout.lineAt(np.column);
 	return np.column == layout.lineOffset(subline) + layout.lineLength(subline);
 }
 
 /// Returns @c true if the given position is the first printable character in the line.
 bool locations::isFirstPrintableCharacterOfLine(const VisualPoint& p) {
 	const Position np(p.normalized()), bob(p.document().accessibleRegion().first);
-	const length_t offset = (bob.line == np.line) ? bob.column : 0;
+	const Index offset = (bob.line == np.line) ? bob.column : 0;
 	const String& line = p.document().line(np.line);
 	return line.data() + np.column - offset
 		== identifierSyntax(p).eatWhiteSpaces(line.data() + offset, line.data() + line.length(), true);
@@ -505,7 +506,7 @@ bool locations::isFirstPrintableCharacterOfVisualLine(const VisualPoint& p) {
 bool locations::isLastPrintableCharacterOfLine(const VisualPoint& p) {
 	const Position np(p.normalized()), eob(p.document().accessibleRegion().second);
 	const String& line = p.document().line(np.line);
-	const length_t lineLength = (eob.line == np.line) ? eob.column : line.length();
+	const Index lineLength = (eob.line == np.line) ? eob.column : line.length();
 	return line.data() + lineLength - np.column
 		== identifierSyntax(p).eatWhiteSpaces(line.data() + np.column, line.data() + lineLength, true);
 }
@@ -525,7 +526,7 @@ Position locations::lastPrintableCharacterOfLine(const VisualPoint& p) {
 	Position np(p.normalized());
 	const String& s(p.document().line(np.line));
 	const IdentifierSyntax& syntax = identifierSyntax(p);
-	for(length_t spaceLength = 0; spaceLength < s.length(); ++spaceLength) {
+	for(Index spaceLength = 0; spaceLength < s.length(); ++spaceLength) {
 		if(syntax.isWhiteSpace(s[s.length() - spaceLength - 1], true))
 			return np.column = s.length() - spaceLength, np;
 	}
@@ -555,7 +556,7 @@ namespace {
  * @param characters The number of characters to adavance
  * @return The destination
  */
-Position locations::leftCharacter(const VisualPoint& p, CharacterUnit unit, length_t characters /* = 1 */) {
+Position locations::leftCharacter(const VisualPoint& p, CharacterUnit unit, Index characters /* = 1 */) {
 	
 	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ?
 		backwardCharacter(p, unit, characters) : forwardCharacter(p, unit, characters);
@@ -567,7 +568,7 @@ Position locations::leftCharacter(const VisualPoint& p, CharacterUnit unit, leng
  * @param words The number of words to adavance
  * @return The destination
  */
-Position locations::leftWord(const VisualPoint& p, length_t words /* = 1 */) {
+Position locations::leftWord(const VisualPoint& p, Index words /* = 1 */) {
 	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? backwardWord(p, words) : forwardWord(p, words);
 }
 
@@ -577,7 +578,7 @@ Position locations::leftWord(const VisualPoint& p, length_t words /* = 1 */) {
  * @param words The number of words to adavance
  * @return The destination
  */
-Position locations::leftWordEnd(const VisualPoint& p, length_t words /* = 1 */) {
+Position locations::leftWordEnd(const VisualPoint& p, Index words /* = 1 */) {
 	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? backwardWordEnd(p, words) : forwardWordEnd(p, words);
 }
 
@@ -588,7 +589,7 @@ Position locations::leftWordEnd(const VisualPoint& p, length_t words /* = 1 */) 
  * @param characters The number of characters to adavance
  * @return The destination
  */
-Position locations::rightCharacter(const VisualPoint& p, CharacterUnit unit, length_t characters /* = 1 */) {
+Position locations::rightCharacter(const VisualPoint& p, CharacterUnit unit, Index characters /* = 1 */) {
 	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ?
 		forwardCharacter(p, unit, characters) : backwardCharacter(p, unit, characters);
 }
@@ -599,7 +600,7 @@ Position locations::rightCharacter(const VisualPoint& p, CharacterUnit unit, len
  * @param words The number of words to adavance
  * @return The destination
  */
-Position locations::rightWord(const VisualPoint& p, length_t words /* = 1 */) {
+Position locations::rightWord(const VisualPoint& p, Index words /* = 1 */) {
 	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? forwardWord(p, words) : backwardWord(p, words);
 }
 
@@ -609,6 +610,6 @@ Position locations::rightWord(const VisualPoint& p, length_t words /* = 1 */) {
  * @param words The number of words to adavance
  * @return The destination
  */
-Position locations::rightWordEnd(const VisualPoint& p, length_t words /* = 1 */) {
+Position locations::rightWordEnd(const VisualPoint& p, Index words /* = 1 */) {
 	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? forwardWordEnd(p, words) : backwardWordEnd(p, words);
 }

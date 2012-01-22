@@ -1,8 +1,9 @@
 /**
  * @file text-layout.hpp
  * @date 2003-2006 (was LineLayout.h)
- * @date 2006-2011
+ * @date 2006-2010
  * @date 2010-11-20 renamed from ascension/layout.hpp
+ * @date 2011-2012
  */
 
 #ifndef ASCENSION_TEXT_LAYOUT_HPP
@@ -66,14 +67,14 @@ namespace ascension {
 				 * @param tabOffset The position within the underlying text that the tab occured
 				 * @return The next tab stop. Should be greater than @a x
 				 */
-				virtual Scalar nextTabStop(Scalar x, length_t tabOffset) const = 0;
+				virtual Scalar nextTabStop(Scalar x, Index tabOffset) const = 0;
 			};
 
 			/// Standard implementation of @c TabExpander with fixed width tabulations.
 			class FixedWidthTabExpander : public TabExpander {
 			public:
 				explicit FixedWidthTabExpander(Scalar width) /*throw()*/;
-				Scalar nextTabStop(Scalar x, length_t tabOffset) const;
+				Scalar nextTabStop(Scalar x, Index tabOffset) const;
 			private:
 				const Scalar width_;
 			};
@@ -120,7 +121,7 @@ namespace ascension {
 					virtual bool usesLogicalHighlightBounds() const = 0;
 
 					/// Returns the length of the current text segment.
-					virtual length_t length() const = 0;
+					virtual Index length() const = 0;
 					/// Returns @c true if the iterator has no more elements.
 					virtual bool isDone() const /*throw()*/ = 0;
 					/**
@@ -141,7 +142,7 @@ namespace ascension {
 				 * @return The iterator which generates the overridden paints
 				 */
 				virtual std::auto_ptr<Iterator>
-					queryTextPaintOverride(const Range<length_t>& range) const = 0;
+					queryTextPaintOverride(const Range<Index>& range) const = 0;
 			};
 
 
@@ -253,38 +254,38 @@ namespace ascension {
 				~TextLayout() /*throw()*/;
 				// general attributes
 				presentation::TextAnchor anchor() const /*throw()*/;
-				uint8_t bidiEmbeddingLevel(length_t column) const;
+				uint8_t bidiEmbeddingLevel(Index column) const;
 				bool isBidirectional() const /*throw()*/;
 				bool isEmpty() const /*throw()*/;
 				const presentation::TextLineStyle& style() const /*throw()*/;
 				const presentation::WritingMode& writingMode() const /*throw()*/;
 				// visual line accesses
-				length_t numberOfLines() const /*throw()*/;
-				length_t lineAt(length_t column) const;
-				length_t lineLength(length_t line) const;
-				length_t lineOffset(length_t line) const;
-				const length_t* lineOffsets() const /*throw()*/;
+				Index numberOfLines() const /*throw()*/;
+				Index lineAt(Index column) const;
+				Index lineLength(Index line) const;
+				Index lineOffset(Index line) const;
+				const Index* lineOffsets() const /*throw()*/;
 				// bounds, extents and measures
-				NativeRegion blackBoxBounds(const Range<length_t>& range) const;
+				NativeRegion blackBoxBounds(const Range<Index>& range) const;
 				NativeRectangle bounds() const /*throw()*/;
-				NativeRectangle bounds(const Range<length_t>& range) const;
+				NativeRectangle bounds(const Range<Index>& range) const;
 				Range<Scalar> extent() /*throw()*/ const;
-				Range<Scalar> extent(const Range<length_t>& lines) const;
-				NativeRectangle lineBounds(length_t line) const;
+				Range<Scalar> extent(const Range<Index>& lines) const;
+				NativeRectangle lineBounds(Index line) const;
 				Scalar measure() const /*throw()*/;
-				Scalar measure(length_t line) const;
+				Scalar measure(Index line) const;
 				// other coordinates
-				Scalar baseline(length_t line) const;
-				const LineMetrics& lineMetrics(length_t line) const;
-				Scalar lineStartEdge(length_t line) const;
-				length_t locateLine(Scalar bpd, bool& outside) const /*throw()*/;
-				NativePoint location(length_t column, Edge edge = LEADING) const;
-				std::pair<NativePoint, NativePoint> locations(length_t column) const;
-				std::pair<length_t, length_t> offset(const NativePoint& p, bool* outside = 0) const /*throw()*/;
+				Scalar baseline(Index line) const;
+				const LineMetrics& lineMetrics(Index line) const;
+				Scalar lineStartEdge(Index line) const;
+				Index locateLine(Scalar bpd, bool& outside) const /*throw()*/;
+				NativePoint location(Index column, Edge edge = LEADING) const;
+				std::pair<NativePoint, NativePoint> locations(Index column) const;
+				std::pair<Index, Index> offset(const NativePoint& p, bool* outside = 0) const /*throw()*/;
 				// styled segments
 //				StyledSegmentIterator firstStyledSegment() const /*throw()*/;
 //				StyledSegmentIterator lastStyledSegment() const /*throw()*/;
-				presentation::StyledTextRun styledTextRun(length_t column) const;
+				presentation::StyledTextRun styledTextRun(Index column) const;
 				// painting
 				void draw(PaintContext& context, const NativePoint& origin,
 					const TextPaintOverride* paintOverride = 0,
@@ -299,11 +300,11 @@ namespace ascension {
 
 			private:
 				void expandTabsWithoutWrapping() /*throw()*/;
-				std::size_t findRunForPosition(length_t column) const /*throw()*/;
+				std::size_t findRunForPosition(Index column) const /*throw()*/;
 				void justify(presentation::TextJustification method) /*throw()*/;
-				std::pair<length_t, length_t> locateOffsets(
-					length_t line, Scalar ipd, bool& outside) const /*throw()*/;
-				void locations(length_t column, NativePoint* leading, NativePoint* trailing) const;
+				std::pair<Index, Index> locateOffsets(
+					Index line, Scalar ipd, bool& outside) const /*throw()*/;
+				void locations(Index column, NativePoint* leading, NativePoint* trailing) const;
 				int nextTabStopBasedLeftEdge(Scalar x, bool right) const /*throw()*/;
 				void reorder() /*throw()*/;
 //				void rewrap();
@@ -320,10 +321,10 @@ namespace ascension {
 				std::size_t numberOfRuns_;
 				class LineArea;
 				std::vector<const InlineArea*> inlineAreas_;
-				AutoBuffer<const length_t> lineOffsets_;	// size is numberOfLines_
-				AutoBuffer<const length_t> lineFirstRuns_;	// size is numberOfLines_
-				static const length_t SINGLE_LINE_OFFSETS;
-				length_t numberOfLines_;
+				AutoBuffer<const Index> lineOffsets_;	// size is numberOfLines_
+				AutoBuffer<const Index> lineFirstRuns_;	// size is numberOfLines_
+				static const Index SINGLE_LINE_OFFSETS;
+				Index numberOfLines_;
 				AutoBuffer<LineMetrics*> lineMetrics_;
 				AutoBuffer<Scalar> measures_;
 				Scalar maximumMeasure_;
@@ -349,7 +350,7 @@ namespace ascension {
 			 * @return A range of block-progression-dimension relative to the alignment-point
 			 * @throw kernel#BadRegionException
 			 */
-			inline Range<Scalar> TextLayout::extent(const Range<length_t>& lines) const {
+			inline Range<Scalar> TextLayout::extent(const Range<Index>& lines) const {
 				if(lines.end() >= numberOfLines())
 					throw kernel::BadRegionException(kernel::Region(
 						kernel::Position(lines.beginning(), 0), kernel::Position(lines.end(), 0)));
@@ -367,7 +368,7 @@ namespace ascension {
 			 * @return The wrapped line
 			 * @throw kernel#BadPositionException @a column is greater than the length of the line
 			 */
-			inline length_t TextLayout::lineAt(length_t column) const {
+			inline Index TextLayout::lineAt(Index column) const {
 				if(column > text_.length())
 					throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));
 				return (numberOfLines() == 1) ? 0 :
@@ -380,7 +381,7 @@ namespace ascension {
 			 * @return The line metrics
 			 * @throw BadPositionException @a line is greater than the count of lines
 			 */
-			inline const LineMetrics& TextLayout::lineMetrics(length_t line) const {
+			inline const LineMetrics& TextLayout::lineMetrics(Index line) const {
 				if(line >= numberOfLines())
 					throw kernel::BadPositionException(kernel::Position());
 				return *lineMetrics_[line];
@@ -392,7 +393,7 @@ namespace ascension {
 			 * @return The length of the line
 			 * @throw BadPositionException @a line is greater than the count of lines
 			 */
-			inline length_t TextLayout::lineLength(length_t line) const {
+			inline Index TextLayout::lineLength(Index line) const {
 				return (line < numberOfLines_ - 1 ?
 					lineOffset(line + 1) : text_.length()) - lineOffset(line);
 			}
@@ -404,7 +405,7 @@ namespace ascension {
 			 * @return The offset
 			 * @throw BadPositionException @a line is greater than the count of lines
 			 */
-			inline length_t TextLayout::lineOffset(length_t line) const {
+			inline Index TextLayout::lineOffset(Index line) const {
 				if(line >= numberOfLines())
 					throw kernel::BadPositionException(kernel::Position());
 				return lineOffsets()[line];
@@ -415,7 +416,7 @@ namespace ascension {
 			 * @return The line offsets whose length is @c #numberOfLines(). Each element in the
 			 *         array is the offset for the first character in a line
 			 */
-			inline const length_t* TextLayout::lineOffsets() const /*throw()*/ {return lineOffsets_.get();}
+			inline const Index* TextLayout::lineOffsets() const /*throw()*/ {return lineOffsets_.get();}
 
 			/**
 			 * Returns the location for the specified character offset.
@@ -425,7 +426,7 @@ namespace ascension {
 			 *         y-coordinate is relative in the visual lines
 			 * @throw kernel#BadPositionException @a column is greater than the length of the line
 			 */
-			inline NativePoint TextLayout::location(length_t column, Edge edge /* = LEADING */) const {
+			inline NativePoint TextLayout::location(Index column, Edge edge /* = LEADING */) const {
 				NativePoint result;
 				locations(column, (edge == LEADING) ? &result : 0, (edge == TRAILING) ? &result : 0);
 				return result;
@@ -440,14 +441,14 @@ namespace ascension {
 			 *         in the visual lines
 			 * @throw kernel#BadPositionException @a column is greater than the length of the line
 			 */
-			inline std::pair<NativePoint, NativePoint> TextLayout::locations(length_t column) const {
+			inline std::pair<NativePoint, NativePoint> TextLayout::locations(Index column) const {
 				std::pair<NativePoint, NativePoint> result;
 				locations(column, &result.first, &result.second);
 				return result;
 			}
 
 			/// Returns the number of the wrapped lines.
-			inline length_t TextLayout::numberOfLines() const /*throw()*/ {return numberOfLines_;}
+			inline Index TextLayout::numberOfLines() const /*throw()*/ {return numberOfLines_;}
 
 		}
 	}

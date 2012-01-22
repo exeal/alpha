@@ -3,6 +3,7 @@
  * @author exeal
  * @date 2006-2011 was text-editor.cpp
  * @date 2011-05-06
+ * @date 2011-2012
  */
 
 #include <ascension/text-editor/command.hpp>
@@ -63,12 +64,12 @@ namespace {
 
 namespace {
 	typedef Position(*MovementProcedureP)(const Point&);
-	typedef Position(*MovementProcedurePL)(const Point&, length_t);
-	typedef Position(*MovementProcedurePCL)(const Point&, locations::CharacterUnit, length_t);
+	typedef Position(*MovementProcedurePL)(const Point&, Index);
+	typedef Position(*MovementProcedurePCL)(const Point&, locations::CharacterUnit, Index);
 	typedef Position(*MovementProcedureV)(const VisualPoint&);
-	typedef Position(*MovementProcedureVL)(const VisualPoint&, length_t);
-	typedef Position(*MovementProcedureVCL)(const VisualPoint&, locations::CharacterUnit, length_t);
-	typedef VerticalDestinationProxy(*MovementProcedureVLV)(const VisualPoint&, length_t);
+	typedef Position(*MovementProcedureVL)(const VisualPoint&, Index);
+	typedef Position(*MovementProcedureVCL)(const VisualPoint&, locations::CharacterUnit, Index);
+	typedef VerticalDestinationProxy(*MovementProcedureVLV)(const VisualPoint&, Index);
 
 	static MovementProcedureP MOVEMENT_PROCEDURES_P[] = {
 		&locations::beginningOfDocument, &locations::beginningOfLine, &locations::endOfDocument, &locations::endOfLine};
@@ -99,7 +100,7 @@ BookmarkMatchLinesCommand::BookmarkMatchLinesCommand(TextViewer& viewer,
 }
 
 /// Returns the number of the previously marked lines.
-length_t BookmarkMatchLinesCommand::numberOfMarkedLines() const /*throw()*/ {
+Index BookmarkMatchLinesCommand::numberOfMarkedLines() const /*throw()*/ {
 	return numberOfMarkedLines_;
 }
 
@@ -177,7 +178,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
  * @param extendSelection Set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
-		Position(*procedure)(const Point&, length_t), bool extendSelection /* = false */) :
+		Position(*procedure)(const Point&, Index), bool extendSelection /* = false */) :
 		Command(viewer), extends_(extendSelection), procedureP_(0), procedurePL_(procedure), procedurePCL_(0),
 		procedureV_(0), procedureVL_(0), procedureVCL_(0), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_PL,
@@ -192,7 +193,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
  * @param extendSelection Set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
-		Position(*procedure)(const Point&, locations::CharacterUnit, length_t), bool extendSelection /* = false */) :
+		Position(*procedure)(const Point&, locations::CharacterUnit, Index), bool extendSelection /* = false */) :
 		Command(viewer), extends_(extendSelection), procedureP_(0), procedurePL_(0), procedurePCL_(procedure),
 		procedureV_(0), procedureVL_(0), procedureVCL_(0), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_PCL,
@@ -222,7 +223,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
  * @param extendSelection Set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
-		Position(*procedure)(const VisualPoint&, length_t), bool extendSelection /* = false */) :
+		Position(*procedure)(const VisualPoint&, Index), bool extendSelection /* = false */) :
 		Command(viewer), extends_(extendSelection), procedureP_(0), procedurePL_(0), procedurePCL_(0),
 		procedureV_(0), procedureVL_(procedure), procedureVCL_(0), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_VL,
@@ -237,7 +238,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
  * @param extendSelection Set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
-		Position(*procedure)(const VisualPoint&, locations::CharacterUnit, length_t), bool extendSelection /* = false */) :
+		Position(*procedure)(const VisualPoint&, locations::CharacterUnit, Index), bool extendSelection /* = false */) :
 		Command(viewer), extends_(extendSelection), procedureP_(0), procedurePL_(0), procedurePCL_(0),
 		procedureV_(0), procedureVL_(0), procedureVCL_(procedure), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_VCL,
@@ -252,7 +253,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
  * @param extendSelection Set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
-		VerticalDestinationProxy(*procedure)(const VisualPoint&, length_t), bool extendSelection /* = false */) :
+		VerticalDestinationProxy(*procedure)(const VisualPoint&, Index), bool extendSelection /* = false */) :
 		Command(viewer), extends_(extendSelection), procedureP_(0), procedurePL_(0), procedurePCL_(0),
 		procedureV_(0), procedureVL_(0), procedureVCL_(0), procedureVLV_(procedure) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_VLV,
@@ -556,11 +557,11 @@ bool CodePointToCharacterConversionCommand::perform() {
 
 	Caret& caret = viewer.caret();
 	const Char* const line = document.line(eos.line()).data();
-	const length_t column = eos.column();
+	const Index column = eos.column();
 
 	// accept /(?:[Uu]\+)?[0-9A-Fa-f]{1,6}/
 	if(iswxdigit(line[column - 1]) != 0) {
-		length_t i = column - 1;
+		Index i = column - 1;
 		while(i != 0) {
 			if(column - i == 7)
 				return false;	// too long string
@@ -1068,7 +1069,7 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
  * @param procedure A pointer to the member function defines the destination
  */
 RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
-		Position(*procedure)(const Point&, length_t)) : Command(viewer), procedureP_(0), procedurePL_(procedure), procedurePCL_(0),
+		Position(*procedure)(const Point&, Index)) : Command(viewer), procedureP_(0), procedurePL_(procedure), procedurePCL_(0),
 		procedureV_(0), procedureVL_(0), procedureVCL_(0), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_PL,
 			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PL))
@@ -1081,7 +1082,7 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
  * @param procedure A pointer to the member function defines the destination
  */
 RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
-		Position(*procedure)(const Point&, locations::CharacterUnit, length_t)) : Command(viewer), procedureP_(0), procedurePL_(0), procedurePCL_(procedure),
+		Position(*procedure)(const Point&, locations::CharacterUnit, Index)) : Command(viewer), procedureP_(0), procedurePL_(0), procedurePCL_(procedure),
 		procedureV_(0), procedureVL_(0), procedureVCL_(0), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_PCL,
 			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PCL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PCL))
@@ -1107,7 +1108,7 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
  * @param procedure A pointer to the member function defines the destination
  */
 RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
-		Position(*procedure)(const VisualPoint&, length_t)) : Command(viewer), procedureP_(0), procedurePL_(0), procedurePCL_(0),
+		Position(*procedure)(const VisualPoint&, Index)) : Command(viewer), procedureP_(0), procedurePL_(0), procedurePCL_(0),
 		procedureV_(0), procedureVL_(procedure), procedureVCL_(0), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_VL,
 			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VL))
@@ -1120,7 +1121,7 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
  * @param procedure A pointer to the member function defines the destination
  */
 RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
-		Position(*procedure)(const VisualPoint&, locations::CharacterUnit, length_t)) : Command(viewer), procedureP_(0), procedurePL_(0), procedurePCL_(0),
+		Position(*procedure)(const VisualPoint&, locations::CharacterUnit, Index)) : Command(viewer), procedureP_(0), procedurePL_(0), procedurePCL_(0),
 		procedureV_(0), procedureVL_(0), procedureVCL_(procedure), procedureVLV_(0) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_VCL,
 			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VCL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VCL))
@@ -1133,7 +1134,7 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
  * @param procedure A pointer to the member function defines the destination
  */
 RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
-		VerticalDestinationProxy(*procedure)(const VisualPoint&, length_t)) : Command(viewer), procedureP_(0), procedurePL_(0), procedurePCL_(0),
+		VerticalDestinationProxy(*procedure)(const VisualPoint&, Index)) : Command(viewer), procedureP_(0), procedurePL_(0), procedurePCL_(0),
 		procedureV_(0), procedureVL_(0), procedureVCL_(0), procedureVLV_(procedure) {
 	if(procedure == 0 || find(MOVEMENT_PROCEDURES_VLV,
 			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VLV), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VLV))

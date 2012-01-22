@@ -1,7 +1,7 @@
 /**
  * @file normalizer.cpp
  * @author exeal
- * @date 2007-2011
+ * @date 2007-2012
  */
 
 #include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_*
@@ -74,7 +74,7 @@ namespace {
 	 * @param[out] destination The destination buffer. the size must be greater than 2
 	 * @return The number of the characters written to @a destination. either 0, 2, or 3
 	 */
-	length_t decomposeHangul(Char c, Char* destination) {
+	Index decomposeHangul(Char c, Char* destination) {
 		// from The Unicode Standard 5.0 pp.1356
 		const Char s = c - S_BASE;
 		if(c < S_BASE || s >= S_COUNT)
@@ -166,9 +166,9 @@ namespace {
 	 * @param[out] destination The destination buffer
 	 * @return The length of the decomposition
 	 */
-	length_t internalDecompose(CodePoint c, bool compatibility, Char* destination) {
+	Index internalDecompose(CodePoint c, bool compatibility, Char* destination) {
 		Char* last = destination + (utf::checkedEncode(c, destination) < 2 ? 1 : 2);
-		length_t len;
+		Index len;
 		CodePoint current;
 		Char decomposedHangul[4];
 		const CodePoint* src;
@@ -222,7 +222,7 @@ namespace {
 	template<typename CharacterSequence> inline bool isFCD(CharacterSequence first, CharacterSequence last) {
 		ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::value == 2);
 		Char buffer[32];
-		length_t len;
+		Index len;
 		int ccc, previous = CanonicalCombiningClass::NOT_REORDERED;
 		for(utf::CharacterDecodeIterator<CharacterSequence> i(first, last); i.tell() < last; ++i) {
 			len = internalDecompose(*i, false, buffer);
@@ -243,7 +243,7 @@ namespace {
 	 */
 	basic_string<CodePoint> internalNormalize(const CharacterIterator& first, const CharacterIterator& last, Normalizer::Form form) {
 		Char room[128];
-		length_t len;	// length of room
+		Index len;	// length of room
 		// decompose
 		basic_stringbuf<CodePoint> buffer(ios_base::out);
 		for(auto_ptr<CharacterIterator> i(first.clone()); i->offset() < last.offset(); i->next()) {

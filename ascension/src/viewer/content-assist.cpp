@@ -2,7 +2,7 @@
  * @file content-assist.cpp
  * @author exeal
  * @date 2003-2006 (was CompletionWindow.cpp)
- * @date 2006-2011
+ * @date 2006-2012
  */
 
 #include <ascension/viewer/content-assist.hpp>
@@ -118,7 +118,7 @@ void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret
 	replacementRegion.second = caret;
 
 	// find the preceding identifier
-	static const length_t MAXIMUM_IDENTIFIER_LENGTH = 100;
+	static const Index MAXIMUM_IDENTIFIER_LENGTH = 100;
 	if(!incremental || locations::isBeginningOfLine(caret))
 		replacementRegion.first = caret;
 	else if(source::getNearestIdentifier(caret.document(), caret, &replacementRegion.first.column, 0))
@@ -127,7 +127,7 @@ void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret
 		replacementRegion.first = caret;
 
 	// collect identifiers in the document
-	static const length_t MAXIMUM_BACKTRACKING_LINES = 500;
+	static const Index MAXIMUM_BACKTRACKING_LINES = 500;
 	const Document& document = caret.document();
 	DocumentCharacterIterator i(document, Region(Position(
 		(caret.line() > MAXIMUM_BACKTRACKING_LINES) ?

@@ -2,12 +2,13 @@
  * @file position.hpp
  * @author exeal
  * @date 2011-01-21 separated from document.hpp
+ * @date 2011-2012
  */
 
 #ifndef ASCENSION_POSITION_HPP
 #define ASCENSION_POSITION_HPP
 
-#include <ascension/corelib/basic-types.hpp>	// length_t
+#include <ascension/corelib/basic-types.hpp>	// Index
 #include <ascension/corelib/memory.hpp>			// FastArenaObject
 #include <ascension/corelib/range.hpp>
 #include <locale>	// std.use_facet, ...
@@ -26,15 +27,15 @@ namespace ascension {
 		class Position : public FastArenaObject<Position> {
 		public:
 			/// Line number. Zero means that the position is the first line in the document.
-			length_t line;
+			Index line;
 			/// Position in the line. Zero means that the position is the beginning of the line.
-			length_t column;
+			Index column;
 		public:
 			/// Default constructor creates an invalid or unused position.
 			Position() /*throw()*/ : line(INVALID_INDEX), column(INVALID_INDEX) {
 			}
 			/// Constructor.
-			explicit Position(length_t line, length_t column) /*throw()*/ : line(line), column(column) {
+			Position(Index line, Index column) /*throw()*/ : line(line), column(column) {
 			}
 			/// Equality operator.
 			bool operator==(const Position& other) const /*throw()*/ {
@@ -98,7 +99,7 @@ namespace ascension {
 			Region(const Position& first, const Position& second) /*throw()*/
 				: std::pair<Position, Position>(first, second) {}
 			/// Constructor creates a region in a line.
-			Region(length_t line, const std::pair<length_t, length_t>& columns) /*throw()*/
+			Region(Index line, const std::pair<Index, Index>& columns) /*throw()*/
 				: std::pair<Position, Position>(Position(line, columns.first), Position(line, columns.second)) {}
 			/// Returns an intersection of the two regions. Same as @c #getIntersection.
 			Region operator&(const Region& other) const /*throw()*/ {
@@ -144,7 +145,7 @@ namespace ascension {
 			/// Returns @c true if the region is normalized.
 			bool isNormalized() const /*throw()*/ {return first <= second;}
 			/// Returns a range of lines.
-			Range<length_t> lines() const /*throw()*/ {return makeRange(beginning().line, end().line + 1);}
+			Range<Index> lines() const /*throw()*/ {return makeRange(beginning().line, end().line + 1);}
 			/// Normalizes the region.
 			Region& normalize() /*throw()*/ {
 				if(!isNormalized())

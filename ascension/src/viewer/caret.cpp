@@ -3,6 +3,7 @@
  * @author exeal
  * @date 2003-2008 was point.cpp
  * @date 2008-2010 separated from point.cpp
+ * @date 2010-2012
  */
 
 #include <ascension/viewer/caret.hpp>
@@ -267,8 +268,8 @@ void Caret::eraseSelection() {
 		const Position resultPosition(beginning());
 		const bool adapts = adaptsToDocument();
 		adaptToDocument(false);
-		const length_t firstLine = beginning().lineNumber(), lastLine = end().lineNumber();
-		pair<length_t, length_t> rangeInLine;
+		const Index firstLine = beginning().lineNumber(), lastLine = end().lineNumber();
+		pair<Index, Index> rangeInLine;
 		bool interrupted = false;
 
 		// rectangle deletion can't delete newline characters
@@ -277,13 +278,13 @@ void Caret::eraseSelection() {
 			if(textViewer().configuration().lineWrap.wraps()) {	// ...and the lines are wrapped
 				// hmmm..., this is heavy work
 				vector<Point*> points;
-				vector<length_t> sizes;
+				vector<Index> sizes;
 				points.reserve((lastLine - firstLine) * 2);
 				sizes.reserve((lastLine - firstLine) * 2);
 				const TextRenderer& renderer = textViewer().textRenderer();
-				for(length_t line = resultPosition.line; line <= lastLine; ++line) {
+				for(Index line = resultPosition.line; line <= lastLine; ++line) {
 					const LineLayout& layout = renderer.lineLayout(line);
-					for(length_t subline = 0; subline < layout.numberOfSublines(); ++subline) {
+					for(Index subline = 0; subline < layout.numberOfSublines(); ++subline) {
 						box_->overlappedSubline(line, subline, rangeInLine.first, rangeInLine.second);
 						points.push_back(new Point(doc, Position(line, rangeInLine.first)));
 						sizes.push_back(rangeInLine.second - rangeInLine.first);
@@ -307,7 +308,7 @@ void Caret::eraseSelection() {
 					delete points[i];
 				}
 			} else {
-				for(length_t line = resultPosition.line; line <= lastLine; ++line) {
+				for(Index line = resultPosition.line; line <= lastLine; ++line) {
 					box_->overlappedSubline(line, 0, rangeInLine.first, rangeInLine.second);
 					try {
 						doc.erase(Position(line, rangeInLine.first), Position(line, rangeInLine.second));
@@ -757,14 +758,14 @@ bool viewers::isPointOverSelection(const Caret& caret, const NativePoint& p) {
  * @throw kernel#BadPositionException @a line is outside of the document
  * @see #selectedRangeOnVisualLine
  */
-bool viewers::selectedRangeOnLine(const Caret& caret, length_t line, Range<length_t>& range) {
+bool viewers::selectedRangeOnLine(const Caret& caret, Index line, Range<Index>& range) {
 	const Position bos(caret.beginning());
 	if(bos.line > line)
 		return false;
 	const Position eos(caret.end());
 	if(eos.line < line)
 		return false;
-	range = Range<length_t>(
+	range = Range<Index>(
 		(line == bos.line) ? bos.column : 0,
 		(line == eos.line) ? eos.column : caret.document().lineLength(line) + 1);
 	return true;
@@ -783,13 +784,13 @@ bool viewers::selectedRangeOnLine(const Caret& caret, length_t line, Range<lengt
  * @throw kernel#BadPositionException @a line or @a subline is outside of the document
  * @see #selectedRangeOnLine
  */
-bool viewers::selectedRangeOnVisualLine(const Caret& caret, length_t line, length_t subline, Range<length_t>& range) {
+bool viewers::selectedRangeOnVisualLine(const Caret& caret, Index line, Index subline, Range<Index>& range) {
 	if(!caret.isSelectionRectangle()) {
 		if(!selectedRangeOnLine(caret, line, range))
 			return false;
 		const font::TextLayout& layout = caret.textViewer().textRenderer().layouts().at(line);
-		const length_t sublineOffset = layout.lineOffset(subline);
-		range = Range<length_t>(
+		const Index sublineOffset = layout.lineOffset(subline);
+		range = Range<Index>(
 			max(range.beginning(), sublineOffset),
 			min(range.end(), sublineOffset + layout.lineLength(subline) + ((subline < layout.numberOfLines() - 1) ? 0 : 1)));
 		return !isEmpty(range);
@@ -811,9 +812,9 @@ basic_ostream<Char>& viewers::selectedString(const Caret& caret, basic_ostream<C
 			writeDocumentToStream(out, caret.document(), caret.selectedRegion(), newline);
 		else {
 			const Document& document = caret.document();
-			const length_t lastLine = caret.end().line();
-			Range<length_t> selection;
-			for(length_t line = caret.beginning().line(); line <= lastLine; ++line) {
+			const Index lastLine = caret.end().line();
+			Range<Index> selection;
+			for(Index line = caret.beginning().line(); line <= lastLine; ++line) {
 				const Document::Line& ln = document.getLineInformation(line);
 				caret.boxForRectangleSelection().characterRangeInVisualLine(font::VisualLine(line, 0), selection);	// TODO: recognize wrap (second parameter).
 				out.write(ln.text().data() + selection.beginning(), static_cast<streamsize>(length(selection)));
@@ -870,7 +871,7 @@ void viewers::breakLine(Caret& caret, bool inheritIndent, size_t newlines /* = 1
 
 	if(inheritIndent) {	// simple auto-indent
 		const String& currentLine = caret.document().line(caret.line());
-		const length_t len = identifierSyntax(caret).eatWhiteSpaces(
+		const Index len = identifierSyntax(caret).eatWhiteSpaces(
 			currentLine.data(), currentLine.data() + caret.column(), true) - currentLine.data();
 		s += currentLine.substr(0, len);
 	}
@@ -917,7 +918,7 @@ namespace {
 
 		const Position oldPosition(caret.position());
 		Position otherResult(caret.anchor());
-		length_t line = region.beginning().line;
+		Index line = region.beginning().line;
 
 		// indent/unindent the first line
 		Document& document = caret.document();
@@ -929,14 +930,14 @@ namespace {
 				caret.moveTo(caret.line(), caret.column() + level);
 		} else {
 			const String& s = document.line(line);
-			length_t indentLength;
+			Index indentLength;
 			for(indentLength = 0; indentLength < s.length(); ++indentLength) {
 				// this assumes that all white space characters belong to BMP
 				if(s[indentLength] == '\t' && GeneralCategory::of(s[indentLength]) != GeneralCategory::SPACE_SEPARATOR)
 					break;
 			}
 			if(indentLength > 0) {
-				const length_t deleteLength = min<length_t>(-level, indentLength);
+				const Index deleteLength = min<Index>(-level, indentLength);
 				erase(document, Position(line, 0), Position(line, deleteLength));
 				if(line == otherResult.line && otherResult.column != 0)
 					otherResult.column -= deleteLength;
@@ -949,9 +950,9 @@ namespace {
 		if(level > 0) {
 			for(++line; line <= region.end().line; ++line) {
 				if(document.lineLength(line) != 0 && (line != region.end().line || region.end().column > 0)) {
-					length_t insertPosition = 0;
+					Index insertPosition = 0;
 					if(rectangle) {
-						Range<length_t> dummy;
+						Range<Index> dummy;
 						caret.boxForRectangleSelection().characterRangeInVisualLine(font::VisualLine(line, 0), dummy);	// TODO: recognize wrap (second parameter).
 						insertPosition = dummy.beginning();
 					}
@@ -965,14 +966,14 @@ namespace {
 		} else {
 			for(++line; line <= region.end().line; ++line) {
 				const String& s = document.line(line);
-				length_t indentLength;
+				Index indentLength;
 				for(indentLength = 0; indentLength < s.length(); ++indentLength) {
 				// this assumes that all white space characters belong to BMP
 					if(s[indentLength] == '\t' && GeneralCategory::of(s[indentLength]) != GeneralCategory::SPACE_SEPARATOR)
 						break;
 				}
 				if(indentLength > 0) {
-					const length_t deleteLength = min<length_t>(-level, indentLength);
+					const Index deleteLength = min<Index>(-level, indentLength);
 					erase(document, Position(line, 0), Position(line, deleteLength));
 					if(line == otherResult.line && otherResult.column != 0)
 						otherResult.column -= deleteLength;
@@ -1098,7 +1099,7 @@ bool viewers::transposeLines(Caret& caret) {
 
 	Document& document = caret.document();
 	const Position old(caret.position());
-	const length_t firstLine = (old.line != document.numberOfLines() - 1) ? old.line : old.line - 1;
+	const Index firstLine = (old.line != document.numberOfLines() - 1) ? old.line : old.line - 1;
 	String s(document.line(firstLine + 1));
 	s += newlineString(document.getLineInformation(firstLine).newline());
 	s += document.line(firstLine);

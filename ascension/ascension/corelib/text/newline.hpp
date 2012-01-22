@@ -4,6 +4,7 @@
  * @date 2003-2006 was EditDoc.h
  * @date 2006-2011 was document.hpp
  * @date 2011-05-02 separated from document.hpp
+ * @date 2011-2012
  * @see kernel/document.hpp
  */
 
@@ -54,10 +55,10 @@ namespace ascension {
 		 * @return The number of lines. Zero if and only if the input sequence is empty
 		 */
 		template<typename ForwardIterator>
-		inline length_t calculateNumberOfLines(ForwardIterator first, ForwardIterator last) {
+		inline Index calculateNumberOfLines(ForwardIterator first, ForwardIterator last) {
 			if(first == last)
 				return 0;
-			length_t lines = 1;
+			Index lines = 1;
 			while(true) {
 				first = std::find_first_of(first, last, NEWLINE_CHARACTERS, ASCENSION_ENDOF(NEWLINE_CHARACTERS));
 				if(first == last)
@@ -79,7 +80,7 @@ namespace ascension {
 		 * @param text The text string
 		 * @return The number of lines
 		 */
-		inline length_t calculateNumberOfLines(const StringPiece& text) /*throw()*/ {
+		inline Index calculateNumberOfLines(const StringPiece& text) /*throw()*/ {
 			return calculateNumberOfLines(text.beginning(), text.end());
 		}
 
@@ -154,7 +155,7 @@ namespace ascension {
 		 * @throw UnknownValueException @a newline is undefined
 		 * @see #newlineString
 		 */
-		inline length_t newlineStringLength(Newline newline) {
+		inline Index newlineStringLength(Newline newline) {
 			switch(newline) {
 			case NLF_LINE_FEED:
 			case NLF_CARRIAGE_RETURN:

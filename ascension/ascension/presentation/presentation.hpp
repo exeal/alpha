@@ -3,7 +3,7 @@
  * Provides classes define appearance and presentation of a text editor user interface.
  * @author exeal
  * @date 2003-2006 (was LineLayout.h)
- * @date 2006-2011
+ * @date 2006-2012
  */
 
 #ifndef ASCENSION_PRESENTATION_HPP
@@ -39,7 +39,7 @@ namespace ascension {
 			 * @return The style of the line or @c null (filled by the presentation's default style)
 			 * @throw BadPositionException @a line is outside of the document
 			 */
-			virtual std::tr1::shared_ptr<const Inheritable<TextLineStyle> > queryTextLineStyle(length_t line) const = 0;
+			virtual std::shared_ptr<const Inheritable<TextLineStyle> > queryTextLineStyle(Index line) const = 0;
 			friend class Presentation;
 		};
 
@@ -63,7 +63,7 @@ namespace ascension {
 			 *                        color, line color is not set
 			 * @return the priority
 			 */
-			virtual Priority queryTextLineColors(length_t line,
+			virtual Priority queryTextLineColors(Index line,
 				graphics::Color& foreground, graphics::Color& background) const = 0;
 			friend class Presentation;
 		};
@@ -84,7 +84,7 @@ namespace ascension {
 			 * @param used The old style used previously
 			 * @see Presentation#globalTextStyle, Presentation#setGlobalTextStyle
 			 */
-			virtual void globalTextStyleChanged(std::tr1::shared_ptr<const TextToplevelStyle> used) = 0;
+			virtual void globalTextStyleChanged(std::shared_ptr<const TextToplevelStyle> used) = 0;
 		};
 
 		/**
@@ -103,12 +103,12 @@ namespace ascension {
 				/// Invokes the hyperlink.
 				virtual void invoke() const /*throw()*/ = 0;
 				/// Returns the columns of the region of the hyperlink.
-				const Range<length_t>& region() const /*throw()*/ {return region_;}
+				const Range<Index>& region() const /*throw()*/ {return region_;}
 			protected:
 				/// Protected constructor takes the region of the hyperlink.
-				explicit Hyperlink(const Range<length_t>& region) /*throw()*/ : region_(region) {}
+				explicit Hyperlink(const Range<Index>& region) /*throw()*/ : region_(region) {}
 			private:
-				const Range<length_t> region_;
+				const Range<Index> region_;
 			};
 
 			/// A @c HyperlinkDetector finds the hyperlinks in the document.
@@ -125,7 +125,7 @@ namespace ascension {
 				 * @return The found hyperlink, or @c null if not found
 				 */
 				virtual std::auto_ptr<Hyperlink> nextHyperlink(
-					const kernel::Document& document, length_t line, const Range<length_t>& range) const /*throw()*/ = 0;
+					const kernel::Document& document, Index line, const Range<Index>& range) const /*throw()*/ = 0;
 			};
 
 			/**
@@ -135,13 +135,13 @@ namespace ascension {
 			 */
 			class URIHyperlinkDetector : public HyperlinkDetector {
 			public:
-				URIHyperlinkDetector(std::tr1::shared_ptr<const rules::URIDetector> uriDetector) /*throw()*/;
+				URIHyperlinkDetector(std::shared_ptr<const rules::URIDetector> uriDetector) /*throw()*/;
 				~URIHyperlinkDetector() /*throw()*/;
 				// HyperlinkDetector
 				std::auto_ptr<Hyperlink> nextHyperlink(
-					const kernel::Document& document, length_t line, const Range<length_t>& range) const /*throw()*/;
+					const kernel::Document& document, Index line, const Range<Index>& range) const /*throw()*/;
 			private:
-				std::tr1::shared_ptr<const rules::URIDetector> uriDetector_;
+				std::shared_ptr<const rules::URIDetector> uriDetector_;
 			};
 
 			/**
@@ -153,7 +153,7 @@ namespace ascension {
 				void setDetector(kernel::ContentType contentType, std::auto_ptr<hyperlink::HyperlinkDetector> detector);
 				// hyperlink.HyperlinkDetector
 				std::auto_ptr<Hyperlink> nextHyperlink(
-					const kernel::Document& document, length_t line, const Range<length_t>& range) const /*throw()*/;
+					const kernel::Document& document, Index line, const Range<Index>& range) const /*throw()*/;
 			private:
 				std::map<kernel::ContentType, hyperlink::HyperlinkDetector*> composites_;
 			};
@@ -176,21 +176,21 @@ namespace ascension {
 			// attributes
 			kernel::Document& document() /*throw()*/;
 			const kernel::Document& document() const /*throw()*/;
-			const hyperlink::Hyperlink* const* getHyperlinks(length_t line, std::size_t& numberOfHyperlinks) const;
+			const hyperlink::Hyperlink* const* getHyperlinks(Index line, std::size_t& numberOfHyperlinks) const;
 			// styles
 			void addGlobalTextStyleListener(GlobalTextStyleListener& listener);
 			const TextToplevelStyle& globalTextStyle() const /*throw()*/;
 			void removeGlobalTextStyleListener(GlobalTextStyleListener& listener);
-			void setGlobalTextStyle(std::tr1::shared_ptr<const TextToplevelStyle> newStyle);
-			void textLineColors(length_t line, graphics::Color& foreground, graphics::Color& background) const;
-			TextLineStyle& textLineStyle(length_t line, TextLineStyle& style) const;
-			std::auto_ptr<StyledTextRunIterator> textRunStyles(length_t line) const;
+			void setGlobalTextStyle(std::shared_ptr<const TextToplevelStyle> newStyle);
+			void textLineColors(Index line, graphics::Color& foreground, graphics::Color& background) const;
+			TextLineStyle& textLineStyle(Index line, TextLineStyle& style) const;
+			std::auto_ptr<StyledTextRunIterator> textRunStyles(Index line) const;
 			// strategies
-			void addTextLineColorDirector(std::tr1::shared_ptr<TextLineColorDirector> director);
+			void addTextLineColorDirector(std::shared_ptr<TextLineColorDirector> director);
 			void removeTextLineColorDirector(TextLineColorDirector& director) /*throw()*/;
-			void setHyperlinkDetector(std::tr1::shared_ptr<hyperlink::HyperlinkDetector> newDetector) /*throw()*/;
-			void setTextLineStyleDirector(std::tr1::shared_ptr<TextLineStyleDirector> newDirector) /*throw()*/;
-			void setTextRunStyleDirector(std::tr1::shared_ptr<TextRunStyleDirector> newDirector) /*throw()*/;
+			void setHyperlinkDetector(std::shared_ptr<hyperlink::HyperlinkDetector> newDetector) /*throw()*/;
+			void setTextLineStyleDirector(std::shared_ptr<TextLineStyleDirector> newDirector) /*throw()*/;
+			void setTextRunStyleDirector(std::shared_ptr<TextRunStyleDirector> newDirector) /*throw()*/;
 		private:
 			void clearHyperlinksCache() /*throw()*/;
 			// kernel.DocumentListener
@@ -198,13 +198,13 @@ namespace ascension {
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 		private:
 			kernel::Document& document_;
-			static std::tr1::shared_ptr<const TextToplevelStyle> DEFAULT_GLOBAL_TEXT_STYLE;
-			std::tr1::shared_ptr<const TextToplevelStyle> globalTextStyle_;
-			std::tr1::shared_ptr<TextLineStyleDirector> textLineStyleDirector_;
-			std::tr1::shared_ptr<TextRunStyleDirector> textRunStyleDirector_;
-			std::list<std::tr1::shared_ptr<TextLineColorDirector> > textLineColorDirectors_;
+			static std::shared_ptr<const TextToplevelStyle> DEFAULT_GLOBAL_TEXT_STYLE;
+			std::shared_ptr<const TextToplevelStyle> globalTextStyle_;
+			std::shared_ptr<TextLineStyleDirector> textLineStyleDirector_;
+			std::shared_ptr<TextRunStyleDirector> textRunStyleDirector_;
+			std::list<std::shared_ptr<TextLineColorDirector> > textLineColorDirectors_;
 			detail::Listeners<GlobalTextStyleListener> globalTextStyleListeners_;
-			std::tr1::shared_ptr<hyperlink::HyperlinkDetector> hyperlinkDetector_;
+			std::shared_ptr<hyperlink::HyperlinkDetector> hyperlinkDetector_;
 			struct Hyperlinks;
 			mutable std::list<Hyperlinks*> hyperlinks_;
 		};
@@ -216,7 +216,7 @@ namespace ascension {
 		 * @param director the director to register
 		 * @throw NullPointerException @a director is @c null
 		 */
-		inline void Presentation::addTextLineColorDirector(std::tr1::shared_ptr<TextLineColorDirector> director) {
+		inline void Presentation::addTextLineColorDirector(std::shared_ptr<TextLineColorDirector> director) {
 			if(director.get() == 0) throw NullPointerException("director"); textLineColorDirectors_.push_back(director);}
 
 		/**
@@ -234,7 +234,7 @@ namespace ascension {
 		 * @param director the director to remove
 		 */
 		inline void Presentation::removeTextLineColorDirector(TextLineColorDirector& director) /*throw()*/ {
-			for(std::list<std::tr1::shared_ptr<TextLineColorDirector> >::iterator
+			for(std::list<std::shared_ptr<TextLineColorDirector> >::iterator
 					i(textLineColorDirectors_.begin()), e(textLineColorDirectors_.end()); i != e; ++i) {
 				if(i->get() == &director) {textLineColorDirectors_.erase(i); return;}
 			}

@@ -54,7 +54,7 @@ namespace ascension {
 		bool getPointedIdentifier(const viewers::TextViewer& viewer,
 				kernel::Position* startPosition, kernel::Position* endPosition);
 		bool getNearestIdentifier(const kernel::Document& document,
-				const kernel::Position& position, length_t* startColumn, length_t* endColumn);
+				const kernel::Position& position, Index* startColumn, Index* endColumn);
 	}
 
 	namespace viewers {
@@ -69,7 +69,7 @@ namespace ascension {
 		public:
 			VirtualBox(const TextViewer& viewer, const kernel::Region& region) /*throw()*/;
 			bool characterRangeInVisualLine(
-				const graphics::font::VisualLine& line, Range<length_t>& range) const /*throw()*/;
+				const graphics::font::VisualLine& line, Range<Index>& range) const /*throw()*/;
 			bool includes(const graphics::NativePoint& p) const /*throw()*/;
 			void update(const kernel::Region& region) /*throw()*/;
 		private:
@@ -145,7 +145,7 @@ namespace ascension {
 				void rewrapAtWindowEdge();
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 				// TextRenderer
-				std::auto_ptr<const graphics::font::TextLayout> createLineLayout(length_t line) const;
+				std::auto_ptr<const graphics::font::TextLayout> createLineLayout(Index line) const;
 				const presentation::WritingMode& defaultUIWritingMode() const /*throw()*/;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				graphics::Scalar width() const /*throw()*/;
@@ -195,7 +195,7 @@ namespace ascension {
 			void lockScroll(bool unlock = false);
 			void scroll(int dx, int dy, bool redraw);
 			void scrollTo(int x, int y, bool redraw);
-			void scrollTo(length_t line, bool redraw);
+			void scrollTo(Index line, bool redraw);
 			void showToolTip(const String& text, unsigned long timeToWait = -1, unsigned long timeRemainsVisible = -1);
 #ifndef ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
 			HRESULT startTextServices();
@@ -204,8 +204,8 @@ namespace ascension {
 			contentassist::ContentAssistant* contentAssistant() const /*throw()*/;
 			void setContentAssistant(std::auto_ptr<contentassist::ContentAssistant> newContentAssistant) /*throw()*/;
 			// redraw
-			void redrawLine(length_t line, bool following = false);
-			void redrawLines(const Range<length_t>& lines);
+			void redrawLine(Index line, bool following = false);
+			void redrawLines(const Range<Index>& lines);
 			// freeze
 			void freeze();
 			bool isFrozen() const /*throw()*/;
@@ -220,23 +220,23 @@ namespace ascension {
 			graphics::NativePoint localPointForCharacter(const kernel::Position& position,
 				bool fullSearchBpd, graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING) const;
 			// viewport
-			void firstVisibleLine(graphics::font::VisualLine* line, length_t* viewportOffset) const /*throw()*/;
+			void firstVisibleLine(graphics::font::VisualLine* line, Index* viewportOffset) const /*throw()*/;
 			HitTestResult hitTest(const graphics::NativePoint& pt) const;
 			graphics::NativeRectangle textAllocationRectangle() const /*throw()*/;
 
 		protected:
 			virtual void doBeep() /*throw()*/;
-			virtual void drawIndicatorMargin(length_t line, graphics::Context& context, const graphics::NativeRectangle& rect);
+			virtual void drawIndicatorMargin(Index line, graphics::Context& context, const graphics::NativeRectangle& rect);
 
 			// helpers
 		private:
 			graphics::Scalar inlineProgressionOffsetInViewport() const;
 			void initialize();
-			graphics::Scalar mapLineLayoutIpdToViewport(length_t line, graphics::Scalar ipd) const;
-//			graphics::Scalar mapLineToViewportBpd(length_t line, bool fullSearch) const;
+			graphics::Scalar mapLineLayoutIpdToViewport(Index line, graphics::Scalar ipd) const;
+//			graphics::Scalar mapLineToViewportBpd(Index line, bool fullSearch) const;
 			graphics::font::VisualLine mapLocalPointToLine(
 				const graphics::NativePoint& p, bool* snapped = 0) const /*throw()*/;
-			graphics::Scalar mapViewportIpdToLineLayout(length_t line, graphics::Scalar ipd) const;
+			graphics::Scalar mapViewportIpdToLineLayout(Index line, graphics::Scalar ipd) const;
 			graphics::font::VisualLine mapLocalBpdToLine(
 				graphics::Scalar bpd, bool* snapped = 0) const /*throw()*/;
 			void repaintRuler();
@@ -276,13 +276,13 @@ namespace ascension {
 			// graphics.font.DefaultFontListener
 			void defaultFontChanged() /*throw()*/;
 			// graphics.font.VisualLinesListener
-			void visualLinesDeleted(const Range<length_t>& lines, length_t sublines, bool longestLineChanged) /*throw()*/;
-			void visualLinesInserted(const Range<length_t>& lines) /*throw()*/;
-			void visualLinesModified(const Range<length_t>& lines,
-				signed_length_t sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/;
+			void visualLinesDeleted(const Range<Index>& lines, Index sublines, bool longestLineChanged) /*throw()*/;
+			void visualLinesInserted(const Range<Index>& lines) /*throw()*/;
+			void visualLinesModified(const Range<Index>& lines,
+				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/;
 			// graphics.font.TextViewportListener
 			void viewportPositionChanged(
-				const graphics::font::VisualLine& oldLine, length_t oldInlineProgressionOffset) /*throw()*/;
+				const graphics::font::VisualLine& oldLine, Index oldInlineProgressionOffset) /*throw()*/;
 			void viewportSizeChanged(const graphics::NativeSize& oldSize) /*throw()*/;
 			// detail.PointCollection<VisualPoint>
 			void addNewPoint(VisualPoint& point) {points_.insert(&point);}
@@ -468,26 +468,26 @@ namespace ascension {
 					unfreeze();
 				}
 				void freeze() /*throw()*/ {++count_;}
-				void addLinesToRedraw(const Range<length_t>& lines) {
+				void addLinesToRedraw(const Range<Index>& lines) {
 					assert(isFrozen());
 					linesToRedraw_ = merged(linesToRedraw_, lines);
 				}
 				bool isFrozen() const /*throw()*/ {return count_ != 0;}
-				const Range<length_t>& linesToRedraw() const /*throw()*/ {return linesToRedraw_;}
-				void resetLinesToRedraw(const Range<length_t>& lines) {
+				const Range<Index>& linesToRedraw() const /*throw()*/ {return linesToRedraw_;}
+				void resetLinesToRedraw(const Range<Index>& lines) {
 					assert(isFrozen());
 					linesToRedraw_ = lines;
 				}
-				Range<length_t> unfreeze() {
+				Range<Index> unfreeze() {
 					assert(isFrozen());
-					const Range<length_t> temp(linesToRedraw());
+					const Range<Index> temp(linesToRedraw());
 					--count_;
-					linesToRedraw_ = Range<length_t>(0, 0);
+					linesToRedraw_ = Range<Index>(0, 0);
 					return temp;
 				}
 			private:
 				unsigned long count_;
-				Range<length_t> linesToRedraw_;
+				Range<Index> linesToRedraw_;
 			} freezeRegister_;
 
 			// input state
@@ -528,7 +528,7 @@ namespace ascension {
 			void setForeground(const graphics::Color& color) /*throw()*/;
 		private:
 			// presentation.TextLineColorDirector
-			TextLineColorDirector::Priority queryLineColors(length_t line,
+			TextLineColorDirector::Priority queryLineColors(Index line,
 				graphics::Color& foreground, graphics::Color& background) const;
 			// CaretListener
 			void caretMoved(const Caret& self, const kernel::Region& oldRegion);
@@ -612,7 +612,7 @@ inline void TextViewer::enableMouseInput(bool enable) {
  * @param[out] line The first visible logical and visual lines. Can be @c null if not needed
  * @param[out] viewportOffset The visual index of the line. Can be @c null if not needed
  */
-inline void TextViewer::firstVisibleLine(graphics::font::VisualLine* line, length_t* viewportOffset) const /*throw()*/ {
+inline void TextViewer::firstVisibleLine(graphics::font::VisualLine* line, Index* viewportOffset) const /*throw()*/ {
 	if(line != 0)
 		*line = scrolls_.firstVisibleLine;
 	if(viewportOffset != 0)

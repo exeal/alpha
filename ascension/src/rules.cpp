@@ -2,7 +2,7 @@
  * @file rules.cpp
  * @author exeal
  * @date 2004-2006 (was Lexer.cpp)
- * @date 2006-2011
+ * @date 2006-2012
  */
 
 #include <ascension/rules.hpp>
@@ -665,7 +665,7 @@ URIDetector& URIDetector::setValidSchemes(const set<String>& schemes, bool caseS
  */
 URIDetector& URIDetector::setValidSchemes(const String& schemes, Char separator, bool caseSensitive /* = false */) {
 	set<String> container;
-	for(length_t previous = 0, next; previous < schemes.length(); previous = next + 1) {
+	for(Index previous = 0, next; previous < schemes.length(); previous = next + 1) {
 		next = schemes.find(separator, previous);
 		if(next == String::npos)
 			next = schemes.length();
@@ -1138,7 +1138,7 @@ auto_ptr<TransitionRule> LiteralTransitionRule::clone() const {
 }
 
 /// @see TransitionRule#matches
-length_t LiteralTransitionRule::matches(const String& line, length_t column) const {
+Index LiteralTransitionRule::matches(const String& line, Index column) const {
 	if(escapeCharacter_ != NONCHARACTER && column > 0 && line[column - 1] == escapeCharacter_)
 		return 0;
 	else if(pattern_.empty() && column == line.length())	// matches EOL
@@ -1178,7 +1178,7 @@ auto_ptr<TransitionRule> RegexTransitionRule::clone() const {
 }
 
 /// @see TransitionRule#matches
-length_t RegexTransitionRule::matches(const String& line, length_t column) const {
+Index RegexTransitionRule::matches(const String& line, Index column) const {
 	try {
 		typedef utf::CharacterDecodeIterator<String::const_iterator> I;
 		auto_ptr<regex::Matcher<I> > matcher(pattern_->matcher(I(line.begin(), line.end()), I(line.begin(), line.end(), line.end())));
@@ -1282,7 +1282,7 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()
 		: (*partitionAt(Position(i.tell().line - 1, doc.lineLength(i.tell().line - 1))))->contentType;
 	for(const String* line = &doc.line(i.tell().line); ; ) {	// scan and tokenize into partitions...
 		const bool atEOL = i.tell().column == line->length();
-		length_t tokenLength = tryTransition(*line, i.tell().column, contentType, destination);
+		Index tokenLength = tryTransition(*line, i.tell().column, contentType, destination);
 		if(tokenLength != 0) {	// a token was found
 			if(atEOL)
 				tokenLength = 0;	// a line terminator is zero-length...
@@ -1458,11 +1458,11 @@ inline ContentType LexicalPartitioner::transitionStateAt(const Position& at) con
  * @param[out] destination The type of the transition destination content
  * @return The length of the pattern matched or 0 if the all rules did not matched
  */
-inline length_t LexicalPartitioner::tryTransition(
-		const String& line, length_t column, ContentType contentType, ContentType& destination) const /*throw()*/ {
+inline Index LexicalPartitioner::tryTransition(
+		const String& line, Index column, ContentType contentType, ContentType& destination) const /*throw()*/ {
 	for(TransitionRules::const_iterator rule(rules_.begin()), e(rules_.end()); rule != e; ++rule) {
 		if((*rule)->contentType() == contentType) {
-			if(const length_t c = (*rule)->matches(line, column)) {
+			if(const Index c = (*rule)->matches(line, column)) {
 				destination = (*rule)->destination();
 				return c;
 			}
