@@ -233,8 +233,6 @@ namespace ascension {
 			void initialize();
 			graphics::Scalar mapLineLayoutIpdToViewport(Index line, graphics::Scalar ipd) const;
 //			graphics::Scalar mapLineToViewportBpd(Index line, bool fullSearch) const;
-			graphics::font::VisualLine mapLocalPointToLine(
-				const graphics::NativePoint& p, bool* snapped = 0) const /*throw()*/;
 			graphics::Scalar mapViewportIpdToLineLayout(Index line, graphics::Scalar ipd) const;
 			graphics::font::VisualLine mapLocalBpdToLine(
 				graphics::Scalar bpd, bool* snapped = 0) const /*throw()*/;

@@ -180,7 +180,7 @@ namespace ascension {
 				// extents
 				float numberOfVisibleCharactersInLine() const /*throw()*/;
 				float numberOfVisibleLines() const /*throw()*/;
-				void resize(const NativeSize& newSize, viewers::base::Widget* widget);
+				void resize(const NativeSize& newSize, viewers::base::Widget* widget, const NativePoint* origin);
 				const NativeSize& size() const /*throw()*/;
 				// content- or allocation-rectangles
 				Scalar allocationMeasure() const /*throw()*/;
@@ -201,8 +201,9 @@ namespace ascension {
 				void unlockScroll();
 				// model-view mapping
 				kernel::Position characterForPoint(
-					const NativePoint& at, TextLayout::Edge edge, bool abortNoCharacter = false,
+					const NativePoint& p, TextLayout::Edge edge, bool abortNoCharacter = false,
 					kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER) const;
+				VisualLine locateLine(const NativePoint& p, bool* snapped = 0) const /*throw()*/;
 				NativePoint location(
 					const kernel::Position& position, bool fullSearchBpd,
 					graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING) const;
