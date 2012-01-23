@@ -871,17 +871,31 @@ float TextViewport::numberOfVisibleLines() const /*throw()*/ {
 	}
 }
 
+void TextViewport::scroll(const NativeSize& offset, viewers::base::Widget* widget, const NativePoint* origin) {
+	switch(textRenderer().writingMode().blockFlowDirection) {
+		case HORIZONTAL_TB:
+			return scroll(geometry::dy(offset), geometry::dx(offset), widget, origin);
+		case VERTICAL_RL:
+			return scroll(-geometry::dx(offset), geometry::dy(offset), widget, origin);
+		case VERTICAL_LR:
+			return scroll(+geometry::dx(offset), geometry::dy(offset), widget, origin);
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+}
+
 /**
  * Scrolls the viewport to the specified position.
  * @param position
  * @param widget
+ * @param origin
  */
-void TextViewport::scrollTo(const NativePoint& position, viewers::base::Widget* widget) {
+void TextViewport::scrollTo(const NativePoint& position, viewers::base::Widget* widget, const NativePoint* origin) {
 	const bool horizontal = isHorizontal(textRenderer().writingMode().blockFlowDirection);
 	return scrollTo(
 		horizontal ? geometry::y(position) : geometry::x(position),
 		horizontal ? geometry::x(position) : geometry::y(position),
-		widget);
+		widget, origin);
 }
 
 /**
@@ -889,8 +903,9 @@ void TextViewport::scrollTo(const NativePoint& position, viewers::base::Widget* 
  * @param bpd
  * @param ipd
  * @param widget
+ * @param origin
  */
-void TextViewport::scrollTo(Index bpd, Index ipd, viewers::base::Widget* widget) {
+void TextViewport::scrollTo(Index bpd, Index ipd, viewers::base::Widget* widget, const NativePoint* origin) {
 	const Index maximumBpd =
 		textRenderer().layouts().numberOfVisualLines() - static_cast<Index>(numberOfVisibleLines()) + 1;
 	const Index maximumIpd =
@@ -902,10 +917,10 @@ void TextViewport::scrollTo(Index bpd, Index ipd, viewers::base::Widget* widget)
 	const ptrdiff_t dbpd = bpd - firstVisibleLineInVisualNumber();
 	const ptrdiff_t dipd = ipd - inlineProgressionOffset();
 	if(dbpd != 0 || dipd != 0)
-		scroll(dbpd, dipd, widget);
+		scroll(dbpd, dipd, widget, origin);
 }
 
-void TextViewport::scrollTo(const VisualLine& line, Index ipd, viewers::base::Widget* widget) {
+void TextViewport::scrollTo(const VisualLine& line, Index ipd, viewers::base::Widget* widget, const NativePoint* origin) {
 	// TODO: not implemented.
 }
 

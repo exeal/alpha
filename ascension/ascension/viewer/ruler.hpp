@@ -121,6 +121,7 @@ namespace ascension {
 			graphics::NativeRectangle lineNumbersBounds() const /*throw()*/;
 			graphics::Scalar lineNumbersWidth() const /*throw()*/;
 			void paint(graphics::PaintContext& context);
+			void scroll(const graphics::font::VisualLine& from);
 			void setConfiguration(const viewers::RulerConfiguration& configuration);
 			void update() /*throw()*/;
 			graphics::Scalar width() const /*throw()*/;

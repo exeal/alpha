@@ -497,6 +497,9 @@ void RulerPainter::recalculateWidth() /*throw()*/ {
 	}
 }
 
+void RulerPainter::scroll(const VisualLine& from) {
+}
+
 void RulerPainter::setConfiguration(const RulerConfiguration& configuration) {
 	if(configuration.alignment != TEXT_ANCHOR_START && configuration.alignment != TEXT_ANCHOR_END)
 		throw UnknownValueException("configuration.alignment");
