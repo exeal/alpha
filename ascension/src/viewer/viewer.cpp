@@ -280,83 +280,11 @@ void TextViewer::caretMoved(const Caret& self, const k::Region& oldRegion) {
  * @param snapPolicy Which character boundary the returned position snapped to
  * @return The document position
  * @throw UnknownValueException @a edge and/or snapPolicy are invalid
- * @see #localPointForCharacter, #hitTest, graphics#font#LineLayout#offset
+ * @see #localPointForCharacter, #hitTest, TextViewport#characterForPoint
  */
 k::Position TextViewer::characterForLocalPoint(const NativePoint& p, TextLayout::Edge edge,
 		bool abortNoCharacter /* = false */, k::locations::CharacterUnit snapPolicy /* = k::locations::GRAPHEME_CLUSTER */) const {
-	k::Position result;
-
-	// determine the logical line
-	Index subline;
-	bool outside;
-	{
-		const VisualLine temp(mapLocalPointToLine(p, &outside));
-		result.line = temp.line;
-		subline = temp.subline;
-	}
-	if(abortNoCharacter && outside)
-		return k::Position();
-	const TextLayout& layout = renderer_->layouts()[result.line];
-	const BaselineIterator baseline(textRenderer(), result.line, true);
-
-	// determine the column
-	const bool horizontal = isHorizontal(layout.writingMode().blockFlowDirection);
-	NativePoint lineLocalPoint(horizontal ?
-		geometry::make<NativePoint>(
-			mapViewportIpdToLineLayout(result.line, geometry::x(p)),
-			geometry::y(p) + geometry::y(mapTextAreaToLocal(*this, baseline.position())))
-		: geometry::make<NativePoint>(
-			geometry::x(p) + geometry::x(mapTextAreaToLocal(*this, baseline.position())),
-			mapViewportIpdToLineLayout(result.line, geometry::y(p))));
-	if(edge == TextLayout::LEADING)
-		result.column = layout.offset(lineLocalPoint, &outside).first;
-	else if(edge == TextLayout::TRAILING)
-		result.column = layout.offset(lineLocalPoint, &outside).second;
-	else
-		throw UnknownValueException("edge");
-	if(abortNoCharacter && outside)
-		return k::Position();
-
-	// snap intervening position to the boundary
-	if(result.column != 0 && snapPolicy != k::locations::UTF16_CODE_UNIT) {
-		using namespace text;
-		const String& s = document().line(result.line);
-		const bool interveningSurrogates =
-			surrogates::isLowSurrogate(s[result.column]) && surrogates::isHighSurrogate(s[result.column - 1]);
-		const Scalar ipd = horizontal ? static_cast<Scalar>(geometry::x(lineLocalPoint)) : geometry::y(lineLocalPoint);
-		if(snapPolicy == k::locations::UTF32_CODE_UNIT) {
-			if(interveningSurrogates) {
-				if(edge == TextLayout::LEADING)
-					--result.column;
-				else {
-					const NativePoint leading(layout.location(result.column - 1));
-					const NativePoint trailing(layout.location(result.column + 1));
-					const Scalar leadingIpd = horizontal ? geometry::x(leading) : geometry::y(leading);
-					const Scalar trailingIpd = horizontal ? geometry::x(trailing) : geometry::y(trailing);
-					(detail::distance<Scalar>(ipd, leadingIpd)
-						<= detail::distance<Scalar>(ipd, trailingIpd)) ? --result.column : ++result.column;
-				}
-			}
-		} else if(snapPolicy == k::locations::GRAPHEME_CLUSTER) {
-			text::GraphemeBreakIterator<k::DocumentCharacterIterator> i(
-				k::DocumentCharacterIterator(document(), k::Region(result.line, make_pair(0, s.length())), result));
-			if(interveningSurrogates || !i.isBoundary(i.base())) {
-				--i;
-				if(edge == TextLayout::LEADING)
-					result.column = i.base().tell().column;
-				else {
-					const k::Position backward(i.base().tell()), forward((++i).base().tell());
-					const NativePoint leading(layout.location(backward.column)), trailing(layout.location(forward.column));
-					const Scalar backwardIpd = horizontal ? geometry::x(leading) : geometry::y(leading);
-					const Scalar forwardIpd = horizontal ? geometry::x(trailing) : geometry::y(trailing);
-					result.column = ((detail::distance<Scalar>(ipd, backwardIpd)
-						<= detail::distance<Scalar>(ipd, forwardIpd)) ? backward : forward).column;
-				}
-			}
-		} else
-			throw UnknownValueException("snapPolicy");
-	}
-	return result;
+	return textRenderer().viewport().lock()->characterForPoint(mapLocalToTextArea(*this, p), edge, abortNoCharacter, snapPolicy);
 }
 
 /// @see DefaultFontListener#defaultFontChanged
@@ -857,7 +785,7 @@ void TextViewer::keyReleased(const KeyInput& input) {
 NativePoint TextViewer::localPointForCharacter(const k::Position& position,
 		bool fullSearchBpd, TextLayout::Edge edge /* = TextLayout::LEADING */) const {
 //	checkInitialization();
-	return mapTextAreaToLocal(*this, textRenderer().location(position, fullSearchBpd, edge));
+	return mapTextAreaToLocal(*this, textRenderer().viewport().lock()->location(position, fullSearchBpd, edge));
 }
 
 /**
@@ -865,7 +793,7 @@ NativePoint TextViewer::localPointForCharacter(const k::Position& position,
  * @see #mapViewportIpdToLineLayout
  */
 inline Scalar TextViewer::mapLineLayoutIpdToViewport(Index line, Scalar ipd) const {
-	return ipd + textRenderer().lineStartEdge(line) + inlineProgressionOffsetInViewport();
+	return ipd + lineStartEdge(textRenderer().layouts().at(line), ) + inlineProgressionOffsetInViewport();
 }
 
 /**
@@ -873,7 +801,7 @@ inline Scalar TextViewer::mapLineLayoutIpdToViewport(Index line, Scalar ipd) con
  * @see #mapLineLayoutIpdToViewport
  */
 inline Scalar TextViewer::mapViewportIpdToLineLayout(Index line, Scalar ipd) const {
-	return ipd - textRenderer().lineStartEdge(line) - inlineProgressionOffsetInViewport();
+	return ipd - lineStartEdge(textRenderer().layouts().at(line), ) - inlineProgressionOffsetInViewport();
 }
 
 #if 0
@@ -935,29 +863,6 @@ Scalar TextViewer::mapLineToViewportBpd(Index line, bool fullSearch) const {
  */
 VisualLine TextViewer::mapLocalBpdToLine(Scalar bpd, bool* snapped /* = 0 */) const /*throw()*/ {
 	return textRenderer().mapBpdToLine(mapLocalBpdToTextArea(*this, bpd), snapped);
-}
-
-/**
- * Converts the distance from the before-edge of the viewport into the logical line and visual
- * subline offset.
- * @param bpd The distance from the before-edge of the viewport in pixels
- * @param[out] line The logical line index. Can be @c null if not needed
- * @param[out] subline The offset from the first line in @a line. Can be @c null if not needed
- * @param[out] snapped @c true if there was not a line at @a bpd. Optional
- * @see #BaselineIterator, #mapLineToViewportBpd, TextRenderer#offsetVisualLine
- */
-VisualLine TextViewer::mapLocalPointToLine(const graphics::NativePoint& p, bool* snapped /* = 0 */) const /*throw()*/ {
-	const NativeRectangle localBounds(bounds(false));
-	switch(textRenderer().writingMode().blockFlowDirection) {
-		case HORIZONTAL_TB:
-			return mapLocalBpdToLine(geometry::y(p) - localBounds.top, snapped);
-		case VERTICAL_RL:
-			return mapLocalBpdToLine(localBounds.right - geometry::x(p), snapped);
-		case VERTICAL_LR:
-			return mapLocalBpdToLine(geometry::x(p) - localBounds.left, snapped);
-		default:
-			ASCENSION_ASSERT_NOT_REACHED();
-	}
 }
 
 /// @see CaretStateListener#matchBracketsChanged
@@ -1155,28 +1060,11 @@ void TextViewer::resized(State state, const NativeSize&) {
 	utils::closeCompletionProposalsPopup(*this);
 	if(state == MINIMIZED)
 		return;
-
-	// notify the tooltip
-	win32::AutoZeroSize<TOOLINFOW> ti;
-	const NativeRectangle viewerBounds(bounds(false));
-	ti.hwnd = identifier().get();
-	ti.uId = 1;
-	ti.rect = viewerBounds;
-	::SendMessageW(toolTip_, TTM_NEWTOOLRECT, 0, reinterpret_cast<LPARAM>(&ti));
-
 	if(renderer_.get() == 0)
 		return;
-
-	renderer_->setTextWrapping(textRenderer().textWrapping(), createRenderingContext().get());
-
-	displaySizeListeners_.notify(&DisplaySizeListener::viewerDisplaySizeChanged);
-	scrolls_.resetBars(*this, 'a', true);
-	updateScrollBars();
-	rulerPainter_->update();
-	if(rulerPainter_->alignment() != detail::RulerPainter::LEFT && rulerPainter_->alignment() != detail::RulerPainter::TOP) {
-//		recreateCaret();
-//		redrawVerticalRuler();
-		scheduleRedraw(false);	// hmm...
+	if(const shared_ptr<TextViewport> viewport = textRenderer().viewport().lock()) {
+		const NativeRectangle textArea(textAllocationRectangle());
+		viewport->resize(geometry::size(textArea), this, &geometry::topLeft(textArea));
 	}
 }
 
@@ -1502,6 +1390,24 @@ void TextViewer::viewportPositionChanged(const VisualLine& oldLine, Index oldInl
 
 /// @see TextViewportListener#viewportSizeChanged
 void TextViewer::viewportSizeChanged(const NativeSize& oldSize) {
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+	// notify the tooltip
+	win32::AutoZeroSize<TOOLINFOW> ti;
+	const NativeRectangle viewerBounds(bounds(false));
+	ti.hwnd = identifier().get();
+	ti.uId = 1;
+	ti.rect = viewerBounds;
+	::SendMessageW(toolTip_, TTM_NEWTOOLRECT, 0, reinterpret_cast<LPARAM>(&ti));
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+	textRenderer().setTextWrapping(textRenderer().textWrapping(), createRenderingContext().get());
+	scrolls_.resetBars(*this, 'a', true);
+	updateScrollBars();
+	rulerPainter_->update();
+	if(rulerPainter_->alignment() != detail::RulerPainter::LEFT && rulerPainter_->alignment() != detail::RulerPainter::TOP) {
+//		recreateCaret();
+//		redrawVerticalRuler();
+		scheduleRedraw(false);	// hmm...
+	}
 }
 
 /// @see VisualLinesListener#visualLinesDeleted
@@ -1875,7 +1781,7 @@ bool VirtualBox::includes(const graphics::NativePoint& p) const /*throw()*/ {
 	// about block-progression-direction
 	const Point& top = beginning();
 	const Point& bottom = end();
-	const VisualLine line(viewer_.mapLocalPointToLine(p));	// $friendly-access
+	const VisualLine line(viewer_.textRenderer().viewport().lock()->locateLine(mapLocalToTextArea(viewer_, p)));
 	return line >= top.line && line <= bottom.line;
 }
 
@@ -2028,8 +1934,9 @@ void CurrentLineHighlighter::setForeground(const Color& color) /*throw()*/ {
  * Resets the size of the viewport.
  * @param newSize The new size to set
  * @param widget
+ * @param origin
  */
-void TextViewport::resize(const NativeSize& newSize, Widget* widget) {
+void TextViewport::resize(const NativeSize& newSize, Widget* widget, const NativePoint* origin) {
 	const NativeSize oldSize(size());
 	// TODO: not implemented.
 	listeners_.notify<const NativeSize&>(&TextViewportListener::viewportSizeChanged, oldSize);

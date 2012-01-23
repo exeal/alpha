@@ -8,8 +8,10 @@
  */
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
+#include <ascension/corelib/text/break-iterator.hpp>	// text.GraphemeBreakIterator
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/text-renderer.hpp>
+#include <ascension/kernel/document-character-iterator.hpp>
 
 using namespace ascension;
 using namespace ascension::graphics;
@@ -714,6 +716,85 @@ Scalar TextViewport::allocationMeasure() const /*throw()*/ {
 		static_cast<Scalar>(horizontal ? geometry::dx(size()) : geometry::dy(size())));
 }
 
+k::Position TextViewport::characterForPoint(const NativePoint& p,
+		TextLayout::Edge edge, bool abortNoCharacter /* = false */,
+		k::locations::CharacterUnit snapPolicy /* = k::locations::GRAPHEME_CLUSTER */) const {
+	k::Position result;
+
+	// locate the logical line
+	Index subline;
+	bool outside;
+	{
+		const VisualLine temp(locateLine(p, &outside));
+		result.line = temp.line;
+		subline = temp.subline;
+	}
+	if(abortNoCharacter && outside)
+		return k::Position();
+	const TextLayout& layout = textRenderer().layouts()[result.line];
+	const BaselineIterator baseline(*this, result.line, true);
+
+	// locate the position in the line
+	const bool horizontal = isHorizontal(layout.writingMode().blockFlowDirection);
+	NativePoint lineLocalPoint(horizontal ?
+		geometry::make<NativePoint>(
+			mapViewportIpdToLineLayout(result.line, geometry::x(p)),
+			geometry::y(p) + geometry::y(mapTextAreaToLocal(*this, baseline.position())))
+		: geometry::make<NativePoint>(
+			geometry::x(p) + geometry::x(mapTextAreaToLocal(*this, baseline.position())),
+			mapViewportIpdToLineLayout(result.line, geometry::y(p))));
+	if(edge == TextLayout::LEADING)
+		result.column = layout.offset(lineLocalPoint, &outside).first;
+	else if(edge == TextLayout::TRAILING)
+		result.column = layout.offset(lineLocalPoint, &outside).second;
+	else
+		throw UnknownValueException("edge");
+	if(abortNoCharacter && outside)
+		return k::Position();
+
+	// snap intervening position to the boundary
+	if(result.column != 0 && snapPolicy != k::locations::UTF16_CODE_UNIT) {
+		using namespace text;
+		const k::Document& document = textRenderer().presentation().document();
+		const String& s = document.line(result.line);
+		const bool interveningSurrogates =
+			surrogates::isLowSurrogate(s[result.column]) && surrogates::isHighSurrogate(s[result.column - 1]);
+		const Scalar ipd = horizontal ? static_cast<Scalar>(geometry::x(lineLocalPoint)) : geometry::y(lineLocalPoint);
+		if(snapPolicy == k::locations::UTF32_CODE_UNIT) {
+			if(interveningSurrogates) {
+				if(edge == TextLayout::LEADING)
+					--result.column;
+				else {
+					const NativePoint leading(layout.location(result.column - 1));
+					const NativePoint trailing(layout.location(result.column + 1));
+					const Scalar leadingIpd = horizontal ? geometry::x(leading) : geometry::y(leading);
+					const Scalar trailingIpd = horizontal ? geometry::x(trailing) : geometry::y(trailing);
+					(detail::distance<Scalar>(ipd, leadingIpd)
+						<= detail::distance<Scalar>(ipd, trailingIpd)) ? --result.column : ++result.column;
+				}
+			}
+		} else if(snapPolicy == k::locations::GRAPHEME_CLUSTER) {
+			text::GraphemeBreakIterator<k::DocumentCharacterIterator> i(
+				k::DocumentCharacterIterator(document, k::Region(result.line, make_pair(0, s.length())), result));
+			if(interveningSurrogates || !i.isBoundary(i.base())) {
+				--i;
+				if(edge == TextLayout::LEADING)
+					result.column = i.base().tell().column;
+				else {
+					const k::Position backward(i.base().tell()), forward((++i).base().tell());
+					const NativePoint leading(layout.location(backward.column)), trailing(layout.location(forward.column));
+					const Scalar backwardIpd = horizontal ? geometry::x(leading) : geometry::y(leading);
+					const Scalar forwardIpd = horizontal ? geometry::x(trailing) : geometry::y(trailing);
+					result.column = ((detail::distance<Scalar>(ipd, backwardIpd)
+						<= detail::distance<Scalar>(ipd, forwardIpd)) ? backward : forward).column;
+				}
+			}
+		} else
+			throw UnknownValueException("snapPolicy");
+	}
+	return result;
+}
+
 /**
  * Returns the measure of the 'content-rectangle'.
  * @return The measure of the 'content-rectangle' in pixels
@@ -724,6 +805,26 @@ Scalar TextViewport::contentMeasure() const /*throw()*/ {
 		textRenderer().layouts().maximumMeasure(),
 		static_cast<Scalar>(isHorizontal(textRenderer().writingMode().blockFlowDirection) ?
 			geometry::dx(size()) : geometry::dy(size())));
+}
+
+/**
+ * Converts the point in the viewport into the logical line number and visual subline offset.
+ * @param p The point in the viewport in pixels
+ * @param[out] snapped @c true if there was not a line at @a p. Optional
+ * @see #location, #mapBpdToLine, TextLayout#locateLine, TextLayout#offset
+ */
+VisualLine TextViewport::locateLine(const NativePoint& p, bool* snapped /* = 0 */) const /*throw()*/ {
+	const NativeRectangle bounds(geometry::make<NativeRectangle>(geometry::make<NativePoint>(0, 0), size()));
+	switch(textRenderer().writingMode().blockFlowDirection) {
+		case HORIZONTAL_TB:
+			return mapBpdToLine(geometry::y(p) - geometry::top(bounds), snapped);
+		case VERTICAL_RL:
+			return mapBpdToLine(geometry::right(bounds) - geometry::x(p), snapped);
+		case VERTICAL_LR:
+			return mapBpdToLine(geometry::x(p) - geometry::left(bounds), snapped);
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
 }
 
 /**
