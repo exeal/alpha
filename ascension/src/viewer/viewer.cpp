@@ -861,16 +861,6 @@ NativePoint TextViewer::localPointForCharacter(const k::Position& position,
 }
 
 /**
- * @param unlock
- */
-void TextViewer::lockScroll(bool unlock /* = false */) {
-	if(!unlock)
-		++scrolls_.lockCount;
-	else if(scrolls_.lockCount != 0)
-		--scrolls_.lockCount;
-}
-
-/**
  * @internal
  * @see #mapViewportIpdToLineLayout
  */
@@ -1156,140 +1146,8 @@ void TextViewer::repaintRuler() {
  * @param redraw Set @c true if redraws the viewport after scroll
  */
 void TextViewer::scroll(int dx, int dy, bool redraw) {
-//	checkInitialization();
-	if(scrolls_.lockCount != 0)
-		return;
-
-	// 1. preprocess and update the scroll bars
-	if(dx != 0) {
-		dx = min<int>(dx, scrolls_.horizontal.maximum - scrolls_.horizontal.pageSize - scrolls_.horizontal.position + 1);
-		dx = max(dx, -scrolls_.horizontal.position);
-		if(dx != 0) {
-			scrolls_.horizontal.position += dx;
-			if(!isFrozen())
-				horizontalScrollBar().setPosition(scrolls_.horizontal.position);
-		}
-	}
-	if(dy != 0) {
-		dy = min<int>(dy, scrolls_.vertical.maximum - scrolls_.vertical.pageSize - scrolls_.vertical.position + 1);
-		dy = max(dy, -scrolls_.vertical.position);
-		if(dy != 0) {
-			scrolls_.vertical.position += dy;
-			renderer_->layouts().offsetVisualLine(scrolls_.firstVisibleLine, dy);
-			if(!isFrozen())
-				verticalScrollBar().setPosition(scrolls_.vertical.position);
-		}
-	}
-	if(dx == 0 && dy == 0)
-		return;
-	else if(isFrozen()) {
-		scrolls_.changed = true;
-		return;
-	}
-//	closeCompletionProposalsPopup(*this);
-	hideToolTip();
-
-	// 2. calculate numbers of pixels to scroll
-	const PhysicalFourSides<Scalar>& spaces = spaceWidths();
-	const NativeRectangle viewport(bounds(false));
-	NativeRectangle boundsToScroll(viewport);
-	assert(geometry::isNormalized(boundsToScroll));
-	const WritingMode writingMode(textRenderer().writingMode());
-	const bool inlineProgressionIsHorizontal = isHorizontal(writingMode.blockFlowDirection);
-	assert(inlineProgressionIsHorizontal || isVertical(writingMode.blockFlowDirection));	// sanity check
-	if(inlineProgressionIsHorizontal)
-		geometry::range<geometry::Y_COORDINATE>(boundsToScroll) = makeRange(
-			geometry::top(boundsToScroll) + spaces.top, geometry::bottom(boundsToScroll) - spaces.bottom);
-	else
-		geometry::range<geometry::X_COORDINATE>(boundsToScroll) = makeRange(
-			geometry::left(boundsToScroll) + spaces.left, geometry::right(boundsToScroll) - spaces.right);
-	NativeSize pixelsToScroll;
-
-	// 2-1. inline-progression-direction
-	if(inlineProgressionIsHorizontal)
-		geometry::dx(pixelsToScroll) = dx * scrollRate(true) * textRenderer().defaultFont()->metrics().averageCharacterWidth();
-	else
-		geometry::dy(pixelsToScroll) = dy * scrollRate(false) * textRenderer().defaultFont()->metrics().averageCharacterWidth();
-
-	// 2-2. block-progression-direction
-	SignedIndex linesToScroll;
-	if(inlineProgressionIsHorizontal)
-		linesToScroll = dy;
-	else {
-		if(writingMode.blockFlowDirection == VERTICAL_RL)
-			linesToScroll = -dx;
-		else if(writingMode.blockFlowDirection == VERTICAL_LR)
-			linesToScroll = +dx;
-		else
-			ASCENSION_ASSERT_NOT_REACHED();
-	}
-	int dbpd = 0;
-	while(linesToScroll > 0) {
-	}
-
-	// 3. scroll the viewport
-	if((inlineProgressionIsHorizontal && static_cast<unsigned int>(abs(dy)) >= numberOfVisibleLines())
-			|| (!inlineProgressionIsHorizontal && static_cast<unsigned int>(abs(dx)) >= numberOfVisibleLines()))
-		scheduleRedraw(boundsToScroll, false);	// redraw all if the amount of the scroll is over a page
-	else if((inlineProgressionIsHorizontal && geometry::dx(pixelsToScroll) == 0)
-			|| (!inlineProgressionIsHorizontal && geometry::dy(pixelsToScroll) == 0))	// only block-progression-direction
-		// TODO: direct call of Win32 API.
-		::ScrollWindowEx(identifier().get(),
-			-geometry::dx(pixelsToScroll), -geometry::dy(pixelsToScroll), 0, &boundsToScroll, 0, 0, SW_INVALIDATE);
-	else {	// process the ruler and the content area independently
-		// scroll the content rectangle
-		if(inlineProgressionIsHorizontal)
-			geometry::range<geometry::X_COORDINATE>(boundsToScroll) = makeRange(
-				geometry::left(boundsToScroll) + spaces.left, geometry::right(boundsToScroll) - spaces.right);
-		else
-			geometry::range<geometry::Y_COORDINATE>(boundsToScroll) = makeRange(
-				geometry::top(boundsToScroll) + spaces.top, geometry::bottom(boundsToScroll) - spaces.bottom);
-		assert(geometry::equals(boundsToScroll, contentRectangle()));
-		if((inlineProgressionIsHorizontal && geometry::dx(pixelsToScroll) >= geometry::dx(boundsToScroll))
-				|| (!inlineProgressionIsHorizontal && geometry::dy(pixelsToScroll) >= geometry::dy(boundsToScroll)))
-			scheduleRedraw(boundsToScroll, false);	// redraw all if the amount of the scroll is over a page
-		else
-			::ScrollWindowEx(identifier().get(),
-				-geometry::dx(pixelsToScroll), -geometry::dy(pixelsToScroll), 0, &boundsToScroll, 0, 0, SW_INVALIDATE);
-		// scroll the ruler
-		if(const Scalar rulerWidth = rulerPainter_->width()) {
-			bool scrollRuler = false;
-			const detail::RulerPainter::SnapAlignment alignment = rulerPainter_->alignment();
-			switch(alignment) {
-				case detail::RulerPainter::LEFT:
-				case detail::RulerPainter::RIGHT:
-					if(scrollRuler = geometry::dy(boundsToScroll) != 0) {
-						geometry::range<geometry::X_COORDINATE>(boundsToScroll) =
-							(alignment == detail::RulerPainter::LEFT) ?
-								makeRange(geometry::left(viewport), geometry::left(viewport) + rulerWidth)
-								: makeRange(geometry::right(viewport) - rulerWidth, geometry::right(viewport));
-						geometry::dx(pixelsToScroll) = 0;
-					}
-					break;
-				case detail::RulerPainter::TOP:
-				case detail::RulerPainter::BOTTOM:
-					if(scrollRuler = geometry::dx(boundsToScroll) != 0) {
-						geometry::range<geometry::Y_COORDINATE>(boundsToScroll) =
-							(alignment == detail::RulerPainter::TOP) ?
-								makeRange(geometry::top(viewport), geometry::top(viewport) + rulerWidth)
-								: makeRange(geometry::bottom(viewport) - rulerWidth, geometry::bottom(viewport));
-						geometry::dx(pixelsToScroll) = 0;
-					}
-					break;
-				default:
-					ASCENSION_ASSERT_NOT_REACHED();
-			}
-			if(scrollRuler)
-				// TODO: direct call of Win32 API.
-				::ScrollWindowEx(identifier().get(),
-					-geometry::dx(pixelsToScroll), -geometry::dy(pixelsToScroll), 0, &boundsToScroll, 0, 0, SW_INVALIDATE);
-		}
-	}
-
-	// 4. postprocess
-	if(redraw)
-		redrawScheduledRegion();
-	viewportListeners_.notify<bool, bool>(&ViewportListener::viewportChanged, dx != 0, dy != 0);
+	if(shared_ptr<TextViewport> viewport = textRenderer().viewport().lock())
+		viewport->scroll();
 }
 
 /// @see Widget#resized
@@ -1330,8 +1188,14 @@ void TextViewer::resized(State state, const NativeSize&) {
  * @see #scroll
  */
 void TextViewer::scrollTo(int x, int y, bool redraw) {
-	if(shared_ptr<TextViewport> viewport = textRenderer().viewport().lock())
-		viewport->scrollTo(geometry::make<NativePoint>(x, y), redraw ? this : 0);
+	if(shared_ptr<TextViewport> viewport = textRenderer().viewport().lock()) {
+		const NativePoint destination(geometry::make<NativePoint>(x, y));
+		if(redraw) {
+			const NativePoint o(geometry::topLeft(textAllocationRectangle()));
+			viewport->scrollTo(destination, this, &o);
+		} else
+			viewport->scrollTo(destination, 0, 0);
+	}
 }
 
 /**
@@ -1600,6 +1464,46 @@ void TextViewer::updateScrollBars() {
 #undef ASCENSION_GET_SCROLL_MINIMUM
 }
 
+/// @see TextViewportListener#viewportPositionChanged
+void TextViewer::viewportPositionChanged(const VisualLine& oldLine, Index oldInlineProgressionOffset) {
+	if(const shared_ptr<TextViewport> viewport = textRenderer().viewport().lock()) {
+		switch(textRenderer().writingMode().blockFlowDirection) {
+			case HORIZONTAL_TB:
+				scrolls_.horizontal.position = viewport->inlineProgressionOffset();
+				scrolls_.vertical.position = viewport->firstVisibleLineInVisualNumber();
+				break;
+			case VERTICAL_RL:
+				scrolls_.horizontal.position = scrolls_.horizontal.maximum
+					- scrolls_.horizontal.pageSize - viewport->firstVisibleLineInVisualNumber();
+				scrolls_.vertical.position = viewport->inlineProgressionOffset();
+			case VERTICAL_LR:
+				scrolls_.horizontal.position = viewport->firstVisibleLineInVisualNumber();
+				scrolls_.vertical.position = viewport->inlineProgressionOffset();
+			default:
+				ASCENSION_ASSERT_NOT_REACHED();
+		}
+		if(isFrozen()) {
+			scrolls_.changed = true;
+			return;
+		}
+
+		horizontalScrollBar().setPosition(scrolls_.horizontal.position);
+		verticalScrollBar().setPosition(scrolls_.vertical.position);
+//		closeCompletionProposalsPopup(*this);
+		hideToolTip();
+
+		// scroll the ruler
+		rulerPainter_->scroll(oldLine);
+
+		// repaint
+		redrawScheduledRegion();
+	}
+}
+
+/// @see TextViewportListener#viewportSizeChanged
+void TextViewer::viewportSizeChanged(const NativeSize& oldSize) {
+}
+
 /// @see VisualLinesListener#visualLinesDeleted
 void TextViewer::visualLinesDeleted(const Range<Index>& lines, Index sublines, bool longestLineChanged) /*throw()*/ {
 	scrolls_.changed = true;
@@ -1852,34 +1756,36 @@ void TextViewer::Scrolls::resetBars(const TextViewer& viewer, char bars, bool pa
 
 	// about inline-progression-dimension
 	if(bars == 'i' || bars == 'a') {
-		Axis& target = isHorizontal(direction) ? horizontal : vertical;
-		// テキストが左揃えでない場合は、スクロールボックスの位置を補正する必要がある
-		// (ウィンドウが常に LTR である仕様のため)
-	//	const TextAlignment alignment = resolveTextAlignment(viewer.configuration().alignment, viewer.configuration().readingDirection);
-		const Scalar dx = viewer.textRenderer().defaultFont()->metrics().averageCharacterWidth();
-		assert(dx > 0);
-		const TextViewer::ScrollPosition n = viewer.textRenderer().layouts().maximumMeasure() / dx;
-//		target.rate = columns / numeric_limits<int>::max() + 1;
-//		assert(target.rate != 0);
-//		const TextViewer::ScrollPosition oldMaximum = target.maximum;
-		target.maximum = max(
-			static_cast<int>(n/* / target.rate*/),
-			static_cast<int>(viewer.textRenderer().numberOfVisibleCharactersInLine() - 1));
-	//	if(alignment == ALIGN_RIGHT)
-	//		horizontal.position += horizontal.maximum - oldMaximum;
-	//	else if(alignment == ALIGN_CENTER)
-//	//		horizontal.position += (horizontal.maximum - oldMaximum) / 2;
-	//		horizontal.position += horizontal.maximum / 2 - oldMaximum / 2;
-		target.position = max(target.position, 0);
-		if(pageSizeChanged) {
-	//		const TextViewer::ScrollPosition oldPageSize = horizontal.pageSize;
-			target.pageSize = static_cast<TextViewer::ScrollPosition>(viewer.textRenderer().numberOfVisibleCharactersInLine());
-	//		if(alignment == ALIGN_RIGHT)
-	//			horizontal.position -= horizontal.pageSize - oldPageSize;
-	//		else if(alignment == ALIGN_CENTER)
-//	//			horizontal.position -= (horizontal.pageSize - oldPageSize) / 2;
-	//			horizontal.position -= horizontal.pageSize / 2 - oldPageSize / 2;
-	//		target.position = max(target.position, 0);
+		if(const shared_ptr<const TextViewport> viewport = viewer.textRenderer().viewport().lock()) {
+			Axis& target = isHorizontal(direction) ? horizontal : vertical;
+			// テキストが左揃えでない場合は、スクロールボックスの位置を補正する必要がある
+			// (ウィンドウが常に LTR である仕様のため)
+		//	const TextAlignment alignment = resolveTextAlignment(viewer.configuration().alignment, viewer.configuration().readingDirection);
+			const Scalar dx = viewer.textRenderer().defaultFont()->metrics().averageCharacterWidth();
+			assert(dx > 0);
+			const TextViewer::ScrollPosition n = viewer.textRenderer().layouts().maximumMeasure() / dx;
+//			target.rate = columns / numeric_limits<int>::max() + 1;
+//			assert(target.rate != 0);
+//			const TextViewer::ScrollPosition oldMaximum = target.maximum;
+			target.maximum = max(
+				static_cast<TextViewer::ScrollPosition>(n/* / target.rate*/),
+				static_cast<TextViewer::ScrollPosition>(viewport->numberOfVisibleCharactersInLine() - 1));
+		//	if(alignment == ALIGN_RIGHT)
+		//		horizontal.position += horizontal.maximum - oldMaximum;
+		//	else if(alignment == ALIGN_CENTER)
+//		//		horizontal.position += (horizontal.maximum - oldMaximum) / 2;
+		//		horizontal.position += horizontal.maximum / 2 - oldMaximum / 2;
+			target.position = max(target.position, 0);
+			if(pageSizeChanged) {
+		//		const TextViewer::ScrollPosition oldPageSize = horizontal.pageSize;
+				target.pageSize = static_cast<TextViewer::ScrollPosition>(viewport->numberOfVisibleCharactersInLine());
+		//		if(alignment == ALIGN_RIGHT)
+		//			horizontal.position -= horizontal.pageSize - oldPageSize;
+		//		else if(alignment == ALIGN_CENTER)
+//		//			horizontal.position -= (horizontal.pageSize - oldPageSize) / 2;
+		//			horizontal.position -= horizontal.pageSize / 2 - oldPageSize / 2;
+		//		target.position = max(target.position, 0);
+			}
 		}
 
 		// commit
@@ -1887,16 +1793,18 @@ void TextViewer::Scrolls::resetBars(const TextViewer& viewer, char bars, bool pa
 
 	// about block-progression-dimension
 	if(bars == 'b' || bars == 'a') {
-		Axis& target = isHorizontal(direction) ? vertical : horizontal;
-		const Index lines = viewer.textRenderer().layouts().numberOfVisualLines();
-		assert(lines > 0);
-//		target.rate = static_cast<ulong>(lines) / numeric_limits<int>::max() + 1;
-//		assert(target.rate != 0);
-		target.maximum = max(
-			static_cast<TextViewer::ScrollPosition>((lines - 1)/* / rate*/),
-			0/*static_cast<TextViewer::ScrollPosition>(viewer.textRenderer().numberOfVisibleLines() - 1)*/);
-		if(pageSizeChanged)
-			target.pageSize = static_cast<TextViewer::ScrollPosition>(viewer.textRenderer().numberOfVisibleLines());
+		if(const shared_ptr<const TextViewport> viewport = viewer.textRenderer().viewport().lock()) {
+			Axis& target = isHorizontal(direction) ? vertical : horizontal;
+			const Index lines = viewer.textRenderer().layouts().numberOfVisualLines();
+			assert(lines > 0);
+//			target.rate = static_cast<ulong>(lines) / numeric_limits<int>::max() + 1;
+//			assert(target.rate != 0);
+			target.maximum = max(
+				static_cast<TextViewer::ScrollPosition>((lines - 1)/* / rate*/),
+				0/*static_cast<TextViewer::ScrollPosition>(viewport->numberOfVisibleLines() - 1)*/);
+			if(pageSizeChanged)
+				target.pageSize = static_cast<TextViewer::ScrollPosition>(viewport->numberOfVisibleLines());
+		}
 	}
 }
 
@@ -2127,10 +2035,96 @@ void TextViewport::resize(const NativeSize& newSize, Widget* widget) {
 	listeners_.notify<const NativeSize&>(&TextViewportListener::viewportSizeChanged, oldSize);
 }
 
-void TextViewport::scroll(const NativeSize& offset, Widget* widget) {
-}
+/**
+ * 
+ * @param dbpd
+ * @param dipd
+ * @param widget
+ * @param origin
+ * @throw NullPointerException
+ */
+void TextViewport::scroll(SignedIndex dbpd, SignedIndex dipd, Widget* widget, const NativePoint* origin) {
+	if(widget == 0 && origin != 0)
+		throw NullPointerException("widget");
+	else if(widget != 0 && origin == 0)
+		throw NullPointerException("origin");
+	else if(lockCount_ != 0)
+		return;
 
-void TextViewport::scroll(Index dbpd, Index dipd, Widget* widget) {
+	// 1. preprocess parameters and update positions
+	const VisualLine oldLine = firstVisibleLine_;
+	const Index oldInlineProgressionOffset = inlineProgressionOffset();
+	if(dbpd != 0) {
+		const Index maximumBpd = textRenderer().layouts().numberOfVisualLines() - static_cast<Index>(numberOfVisibleLines());
+		dbpd = max(min(dbpd,
+			static_cast<SignedIndex>(maximumBpd - firstVisibleLineInVisualNumber()) + 1),
+				-static_cast<SignedIndex>(firstVisibleLineInVisualNumber()));
+		if(dbpd != 0) {
+			scrollOffsets_.bpd += dbpd;
+			textRenderer().layouts().offsetVisualLine(firstVisibleLine_, dbpd);
+		}
+	}
+	if(dipd != 0) {
+		const Index maximumIpd = contentMeasure()
+			/ textRenderer().defaultFont()->metrics().averageCharacterWidth()
+			- static_cast<Index>(numberOfVisibleCharactersInLine());
+		dipd = max(min(dipd,
+			static_cast<SignedIndex>(maximumIpd - inlineProgressionOffset()) + 1),
+			-static_cast<SignedIndex>(inlineProgressionOffset()));
+		if(dipd != 0)
+			scrollOffsets_.ipd += dipd;
+	}
+	if(dbpd == 0 && dipd == 0)
+		return;
+	listeners_.notify<const VisualLine&, Index>(&TextViewportListener::viewportPositionChanged, oldLine, oldInlineProgressionOffset);
+
+	// 2. calculate numbers of pixels to scroll
+	if(widget == 0)
+		return;
+	dipd *= textRenderer().defaultFont()->metrics().averageCharacterWidth();
+	NativeSize pixelsToScroll;
+	switch(textRenderer().writingMode().blockFlowDirection) {
+		case HORIZONTAL_TB:
+			pixelsToScroll = geometry::make<NativeSize>(dipd * textRenderer().defaultFont()->metrics().averageCharacterWidth(), dbpd);
+			break;
+		case VERTICAL_RL:
+			pixelsToScroll = geometry::make<NativeSize>(-dbpd, dipd * textRenderer().defaultFont()->metrics().averageCharacterWidth());
+			break;
+		case VERTICAL_LR:
+			pixelsToScroll = geometry::make<NativeSize>(+dbpd, dipd * textRenderer().defaultFont()->metrics().averageCharacterWidth());
+			break;
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+
+	// 3. scroll the graphics device
+	const NativeRectangle boundsToScroll(geometry::make<NativeRectangle>(*origin, size()));
+	if(abs(dbpd) >= static_cast<SignedIndex>(numberOfVisibleLines())
+			|| abs(dipd) >= static_cast<SignedIndex>(numberOfVisibleCharactersInLine()))
+		widget->scheduleRedraw(boundsToScroll, false);	// repaint all if the amount of the scroll is over a page
+	else {
+		// scroll image by BLIT
+		// TODO: direct call of Win32 API.
+		::ScrollWindowEx(widget->identifier().get(),
+			-geometry::dx(pixelsToScroll), -geometry::dy(pixelsToScroll), 0, &boundsToScroll, 0, 0, SW_INVALIDATE);
+		// invalidate bounds newly entered into the viewport
+		if(geometry::dx(pixelsToScroll) > 0)
+			widget->scheduleRedraw(geometry::make<NativeRectangle>(
+				geometry::topLeft(boundsToScroll),
+				geometry::make<NativeSize>(geometry::dx(pixelsToScroll), geometry::dy(boundsToScroll))), false);
+		else if(geometry::dx(pixelsToScroll) < 0)
+			widget->scheduleRedraw(geometry::make<NativeRectangle>(
+				geometry::topRight(boundsToScroll),
+				geometry::make<NativeSize>(geometry::dx(pixelsToScroll), geometry::dy(boundsToScroll))), false);
+		if(geometry::dy(pixelsToScroll) > 0)
+			widget->scheduleRedraw(geometry::make<NativeRectangle>(
+				geometry::topLeft(boundsToScroll),
+				geometry::make<NativeSize>(geometry::dx(boundsToScroll), geometry::dy(pixelsToScroll))), false);
+		else if(geometry::dy(pixelsToScroll) < 0)
+			widget->scheduleRedraw(geometry::make<NativeRectangle>(
+				geometry::bottomLeft(boundsToScroll),
+				geometry::make<NativeSize>(geometry::dx(boundsToScroll), geometry::dy(pixelsToScroll))), false);
+	}
 }
 
 

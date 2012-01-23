@@ -191,11 +191,14 @@ namespace ascension {
 				Index firstVisibleSublineInLogicalLine() const /*throw()*/;
 				Index inlineProgressionOffset() const /*throw()*/;
 				// scrolls
-				void scroll(const NativeSize& offset, viewers::base::Widget* widget);
-				void scroll(SignedIndex dbpd, SignedIndex dipd, viewers::base::Widget* widget);
-				void scrollTo(const NativePoint& position, viewers::base::Widget* widget);
-				void scrollTo(Index bpd, Index ipd, viewers::base::Widget* widget);
-				void scrollTo(const VisualLine& line, Index ipd, viewers::base::Widget* widget);
+				bool isScrollLocked() const /*throw()*/;
+				void lockScroll();
+				void scroll(const NativeSize& offset, viewers::base::Widget* widget, const NativePoint* origin);
+				void scroll(SignedIndex dbpd, SignedIndex dipd, viewers::base::Widget* widget, const NativePoint* origin);
+				void scrollTo(const NativePoint& position, viewers::base::Widget* widget, const NativePoint* origin);
+				void scrollTo(Index bpd, Index ipd, viewers::base::Widget* widget, const NativePoint* origin);
+				void scrollTo(const VisualLine& line, Index ipd, viewers::base::Widget* widget, const NativePoint* origin);
+				void unlockScroll();
 				// model-view mapping
 				kernel::Position characterForPoint(
 					const NativePoint& at, TextLayout::Edge edge, bool abortNoCharacter = false,
@@ -211,6 +214,7 @@ namespace ascension {
 				struct ScrollOffsets {
 					Index ipd, bpd;
 				} scrollOffsets_;
+				std::size_t lockCount_;
 				detail::Listeners<TextViewportListener> listeners_;
 			};
 
