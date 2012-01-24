@@ -180,37 +180,38 @@ namespace ascension {
 				// extents
 				float numberOfVisibleCharactersInLine() const /*throw()*/;
 				float numberOfVisibleLines() const /*throw()*/;
-				void resize(const NativeSize& newSize, viewers::base::Widget* widget, const NativePoint* origin);
-				const NativeSize& size() const /*throw()*/;
 				// content- or allocation-rectangles
 				Scalar allocationMeasure() const /*throw()*/;
 				Scalar contentMeasure() const /*throw()*/;
 				// view positions
+				const NativeRectangle& boundsInView() const /*throw()*/;
 				Index firstVisibleLineInLogicalNumber() const /*throw()*/;
 				Index firstVisibleLineInVisualNumber() const /*throw()*/;
 				Index firstVisibleSublineInLogicalLine() const /*throw()*/;
 				Index inlineProgressionOffset() const /*throw()*/;
+				void setBoundsInView(const NativeRectangle& bounds);
 				// scrolls
 				bool isScrollLocked() const /*throw()*/;
 				void lockScroll();
-				void scroll(const NativeSize& offset, viewers::base::Widget* widget, const NativePoint* origin);
-				void scroll(SignedIndex dbpd, SignedIndex dipd, viewers::base::Widget* widget, const NativePoint* origin);
-				void scrollTo(const NativePoint& position, viewers::base::Widget* widget, const NativePoint* origin);
-				void scrollTo(Index bpd, Index ipd, viewers::base::Widget* widget, const NativePoint* origin);
-				void scrollTo(const VisualLine& line, Index ipd, viewers::base::Widget* widget, const NativePoint* origin);
+				void scroll(const NativeSize& offset, viewers::base::Widget* widget);
+				void scroll(SignedIndex dbpd, SignedIndex dipd, viewers::base::Widget* widget);
+				void scrollTo(const NativePoint& position, viewers::base::Widget* widget);
+				void scrollTo(Index bpd, Index ipd, viewers::base::Widget* widget);
+				void scrollTo(const VisualLine& line, Index ipd, viewers::base::Widget* widget);
 				void unlockScroll();
 				// model-view mapping
 				kernel::Position characterForPoint(
-					const NativePoint& p, TextLayout::Edge edge, bool abortNoCharacter = false,
+					const NativePoint& pointInView, TextLayout::Edge edge, bool abortNoCharacter = false,
 					kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER) const;
-				VisualLine locateLine(const NativePoint& p, bool* snapped = 0) const /*throw()*/;
 				NativePoint location(
 					const kernel::Position& position, bool fullSearchBpd,
 					graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING) const;
+			private:
+				VisualLine locateLine(const NativePoint& p, bool* snapped = 0) const /*throw()*/;
 				VisualLine mapBpdToLine(Scalar bpd, bool* snapped = 0) const /*throw()*/;
 			private:
 				TextRenderer& textRenderer_;
-				NativeSize size_;
+				NativeRectangle boundsInView_;
 				VisualLine firstVisibleLine_;
 				struct ScrollOffsets {
 					Index ipd, bpd;

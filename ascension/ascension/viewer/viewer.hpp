@@ -234,8 +234,6 @@ namespace ascension {
 			graphics::Scalar mapLineLayoutIpdToViewport(Index line, graphics::Scalar ipd) const;
 //			graphics::Scalar mapLineToViewportBpd(Index line, bool fullSearch) const;
 			graphics::Scalar mapViewportIpdToLineLayout(Index line, graphics::Scalar ipd) const;
-			graphics::font::VisualLine mapLocalBpdToLine(
-				graphics::Scalar bpd, bool* snapped = 0) const /*throw()*/;
 			void repaintRuler();
 			void updateScrollBars();
 

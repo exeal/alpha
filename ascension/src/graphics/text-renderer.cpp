@@ -502,7 +502,7 @@ void BaselineIterator::advance(BaselineIterator::difference_type n) {
 	Scalar viewportExtent;
 	if(!tracksOutOfViewport() && n > 0)
 		viewportExtent = isHorizontal(writingMode.blockFlowDirection) ?
-			(geometry::dy(viewport().size())) : (geometry::dx(viewport().size()));
+			(geometry::dy(viewport().boundsInView())) : (geometry::dx(viewport().boundsInView()));
 
 	VisualLine i(line_);
 	Scalar newBaseline = baseline_.first;
@@ -582,7 +582,8 @@ void BaselineIterator::initializeWithFirstVisibleLine() {
 		viewport().firstVisibleLineInLogicalNumber(), viewport().firstVisibleSublineInLogicalLine());
 	const Scalar baseline = viewport().textRenderer().layouts().at(firstVisibleLine.line).lineMetrics(firstVisibleLine.subline).ascent();
 	NativePoint axis;
-	const NativeRectangle bounds(geometry::make<NativeRectangle>(geometry::make<NativePoint>(0, 0), viewport().size()));
+	const NativeRectangle bounds(geometry::make<NativeRectangle>(
+		geometry::make<NativePoint>(0, 0), geometry::size(viewport().boundsInView())));
 	switch(viewport().textRenderer().writingMode().blockFlowDirection) {
 		case HORIZONTAL_TB:
 			axis = geometry::make<NativePoint>(0, geometry::top(bounds) + baseline);
@@ -699,6 +700,17 @@ void BaselineIterator::previous() {
 
 // TextViewport ///////////////////////////////////////////////////////////////////////////////////
 
+namespace {
+	inline Scalar mapLineLayoutIpdToViewport(const TextViewport& viewport, Index line, Scalar ipd) {
+		return ipd + viewport.inlineProgressionOffset()
+			+ lineStartEdge(viewport.textRenderer().layouts().at(line), viewport.contentMeasure());
+	}
+	inline Scalar mapViewportIpdToLineLayout(const TextViewport& viewport, Index line, Scalar ipd) {
+		return ipd - viewport.inlineProgressionOffset()
+			- lineStartEdge(viewport.textRenderer().layouts().at(line), viewport.contentMeasure());
+	}
+}
+
 /**
  * Returns the measure of the 'allocation-rectangle'.
  * @return The measure of the 'allocation-rectangle' in pixels
@@ -713,12 +725,28 @@ Scalar TextViewport::allocationMeasure() const /*throw()*/ {
 	const Scalar borders = 0;
 	const Scalar paddings = 0;
 	return max(renderer.layouts().maximumMeasure() + spaces + borders + paddings,
-		static_cast<Scalar>(horizontal ? geometry::dx(size()) : geometry::dy(size())));
+		static_cast<Scalar>(horizontal ? geometry::dx(boundsInView()) : geometry::dy(boundsInView())));
 }
 
-k::Position TextViewport::characterForPoint(const NativePoint& p,
-		TextLayout::Edge edge, bool abortNoCharacter /* = false */,
+/**
+ * Returns the document position nearest from the specified point.
+ * @param pointInView The point in view-coordinates (not viewport-coordinates). This can be outside
+ *                    of the view
+ * @param edge If set @c TextLayout#LEADING, the result is the leading of the character at @a p.
+ *             Otherwise the result is the position nearest @a p
+ * @param abortNoCharacter If set to @c true, this method returns @c Position#INVALID_POSITION
+ *                         immediately when @a p hovered outside of the text layout (e.g. far left
+ *                         or right of the line, beyond the last line, ...)
+ * @param snapPolicy Which character boundary the returned position snapped to
+ * @return The document position
+ * @throw UnknownValueException @a edge and/or snapPolicy are invalid
+ * @see #location, TextLayout#offset
+ */
+k::Position TextViewport::characterForPoint(
+		const NativePoint& pointInView, TextLayout::Edge edge, bool abortNoCharacter /* = false */,
 		k::locations::CharacterUnit snapPolicy /* = k::locations::GRAPHEME_CLUSTER */) const {
+	NativePoint p(pointInView);
+	geometry::translate(p, geometry::origin(boundsInView()));
 	k::Position result;
 
 	// locate the logical line
@@ -738,11 +766,11 @@ k::Position TextViewport::characterForPoint(const NativePoint& p,
 	const bool horizontal = isHorizontal(layout.writingMode().blockFlowDirection);
 	NativePoint lineLocalPoint(horizontal ?
 		geometry::make<NativePoint>(
-			mapViewportIpdToLineLayout(result.line, geometry::x(p)),
+			mapViewportIpdToLineLayout(*this, result.line, geometry::x(p)),
 			geometry::y(p) + geometry::y(mapTextAreaToLocal(*this, baseline.position())))
 		: geometry::make<NativePoint>(
 			geometry::x(p) + geometry::x(mapTextAreaToLocal(*this, baseline.position())),
-			mapViewportIpdToLineLayout(result.line, geometry::y(p))));
+			mapViewportIpdToLineLayout(*this, result.line, geometry::y(p))));
 	if(edge == TextLayout::LEADING)
 		result.column = layout.offset(lineLocalPoint, &outside).first;
 	else if(edge == TextLayout::TRAILING)
@@ -814,7 +842,8 @@ Scalar TextViewport::contentMeasure() const /*throw()*/ {
  * @see #location, #mapBpdToLine, TextLayout#locateLine, TextLayout#offset
  */
 VisualLine TextViewport::locateLine(const NativePoint& p, bool* snapped /* = 0 */) const /*throw()*/ {
-	const NativeRectangle bounds(geometry::make<NativeRectangle>(geometry::make<NativePoint>(0, 0), size()));
+	const NativeRectangle bounds(geometry::make<NativeRectangle>(
+		geometry::make<NativePoint>(0, 0), geometry::size(boundsInView())));
 	switch(textRenderer().writingMode().blockFlowDirection) {
 		case HORIZONTAL_TB:
 			return mapBpdToLine(geometry::y(p) - geometry::top(bounds), snapped);
@@ -828,7 +857,7 @@ VisualLine TextViewport::locateLine(const NativePoint& p, bool* snapped /* = 0 *
 }
 
 /**
- * Converts the specified position in the document to a point in the viewport-coordinates.
+ * Converts the specified position in the document to a point in the view-coordinates.
  * @param position The document position
  * @param fullSearchBpd If this is @c false, this method stops at before- or after-edge of the
  *                      viewport. If this happened, the block-progression-dimension of the returned
@@ -840,8 +869,8 @@ VisualLine TextViewport::locateLine(const NativePoint& p, bool* snapped /* = 0 *
  *             returned point is the leading edge if the character (left if the character is
  *             left-to-right), otherwise returned point is the trailing edge (right if the
  *             character is left-to-right)
- * @return The point in viewport-coordinates in pixels. The block-progression-dimension addresses
- *         the baseline of the line
+ * @return The point in view-coordinates (not viewport-coordinates) in pixels. The
+ *         block-progression-dimension addresses the baseline of the line
  * @throw BadPositionException @a position is outside of the document
  * @see #characterForLocalPoint, TextLayout#location
  */
@@ -871,7 +900,7 @@ NativePoint TextViewport::location(const k::Position& position,
 	else
 		geometry::y(p) = mapLineLayoutIpdToViewport(position.line, geometry::y(p));
 
-	return p;
+	return geometry::translate(p, geometry::origin(boundsInView()));
 }
 
 /**
@@ -972,14 +1001,14 @@ float TextViewport::numberOfVisibleLines() const /*throw()*/ {
 	}
 }
 
-void TextViewport::scroll(const NativeSize& offset, viewers::base::Widget* widget, const NativePoint* origin) {
+void TextViewport::scroll(const NativeSize& offset, viewers::base::Widget* widget) {
 	switch(textRenderer().writingMode().blockFlowDirection) {
 		case HORIZONTAL_TB:
-			return scroll(geometry::dy(offset), geometry::dx(offset), widget, origin);
+			return scroll(geometry::dy(offset), geometry::dx(offset), widget);
 		case VERTICAL_RL:
-			return scroll(-geometry::dx(offset), geometry::dy(offset), widget, origin);
+			return scroll(-geometry::dx(offset), geometry::dy(offset), widget);
 		case VERTICAL_LR:
-			return scroll(+geometry::dx(offset), geometry::dy(offset), widget, origin);
+			return scroll(+geometry::dx(offset), geometry::dy(offset), widget);
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
@@ -989,14 +1018,13 @@ void TextViewport::scroll(const NativeSize& offset, viewers::base::Widget* widge
  * Scrolls the viewport to the specified position.
  * @param position
  * @param widget
- * @param origin
  */
-void TextViewport::scrollTo(const NativePoint& position, viewers::base::Widget* widget, const NativePoint* origin) {
+void TextViewport::scrollTo(const NativePoint& position, viewers::base::Widget* widget) {
 	const bool horizontal = isHorizontal(textRenderer().writingMode().blockFlowDirection);
 	return scrollTo(
 		horizontal ? geometry::y(position) : geometry::x(position),
 		horizontal ? geometry::x(position) : geometry::y(position),
-		widget, origin);
+		widget);
 }
 
 /**
@@ -1004,9 +1032,8 @@ void TextViewport::scrollTo(const NativePoint& position, viewers::base::Widget* 
  * @param bpd
  * @param ipd
  * @param widget
- * @param origin
  */
-void TextViewport::scrollTo(Index bpd, Index ipd, viewers::base::Widget* widget, const NativePoint* origin) {
+void TextViewport::scrollTo(Index bpd, Index ipd, viewers::base::Widget* widget) {
 	const Index maximumBpd =
 		textRenderer().layouts().numberOfVisualLines() - static_cast<Index>(numberOfVisibleLines()) + 1;
 	const Index maximumIpd =
@@ -1018,10 +1045,10 @@ void TextViewport::scrollTo(Index bpd, Index ipd, viewers::base::Widget* widget,
 	const ptrdiff_t dbpd = bpd - firstVisibleLineInVisualNumber();
 	const ptrdiff_t dipd = ipd - inlineProgressionOffset();
 	if(dbpd != 0 || dipd != 0)
-		scroll(dbpd, dipd, widget, origin);
+		scroll(dbpd, dipd, widget);
 }
 
-void TextViewport::scrollTo(const VisualLine& line, Index ipd, viewers::base::Widget* widget, const NativePoint* origin) {
+void TextViewport::scrollTo(const VisualLine& line, Index ipd, viewers::base::Widget* widget) {
 	// TODO: not implemented.
 }
 
