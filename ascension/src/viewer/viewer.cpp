@@ -269,24 +269,6 @@ void TextViewer::caretMoved(const Caret& self, const k::Region& oldRegion) {
 		redrawScheduledRegion();
 }
 
-/**
- * Returns the document position nearest from the specified point.
- * @param p The coordinates of the point. Can be outside of the window
- * @param edge If set @c TextLayout#LEADING, the result is the leading of the character at @a pt.
- *             Otherwise the result is the position nearest @a pt
- * @param abortNoCharacter If set to @c true, this method returns @c Position#INVALID_POSITION
- *                         immediately when @a pt hovered outside of the text layout (e.g. far left
- *                         or right of the line, beyond the last line, ...)
- * @param snapPolicy Which character boundary the returned position snapped to
- * @return The document position
- * @throw UnknownValueException @a edge and/or snapPolicy are invalid
- * @see #localPointForCharacter, #hitTest, TextViewport#characterForPoint
- */
-k::Position TextViewer::characterForLocalPoint(const NativePoint& p, TextLayout::Edge edge,
-		bool abortNoCharacter /* = false */, k::locations::CharacterUnit snapPolicy /* = k::locations::GRAPHEME_CLUSTER */) const {
-	return textRenderer().viewport().lock()->characterForPoint(mapLocalToTextArea(*this, p), edge, abortNoCharacter, snapPolicy);
-}
-
 /// @see DefaultFontListener#defaultFontChanged
 void TextViewer::defaultFontChanged() /*throw()*/ {
 	rulerPainter_->update();
@@ -851,19 +833,6 @@ Scalar TextViewer::mapLineToViewportBpd(Index line, bool fullSearch) const {
 	}
 }
 #endif
-
-/**
- * Converts the distance from the before-edge of the local bounds into the logical line and visual
- * subline offset. The results are snapped to the first/last visible line in the local bounds (this
- * includes partially visible line) if the given distance addresses outside of the view.
- * @param bpd The distance from the before-edge of the local bounds in pixels
- * @param[out] snapped @c true if there was not a line at @a bpd. Optional
- * @return The logical and visual line numbers
- * @see #BaselineIterator, TextRenderer#mapBpdToLine
- */
-VisualLine TextViewer::mapLocalBpdToLine(Scalar bpd, bool* snapped /* = 0 */) const /*throw()*/ {
-	return textRenderer().mapBpdToLine(mapLocalBpdToTextArea(*this, bpd), snapped);
-}
 
 /// @see CaretStateListener#matchBracketsChanged
 void TextViewer::matchBracketsChanged(const Caret& self, const pair<k::Position, k::Position>& oldPair, bool outsideOfView) {
