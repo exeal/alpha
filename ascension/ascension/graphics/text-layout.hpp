@@ -199,7 +199,7 @@ namespace ascension {
 					 */
 					const FontCollection* fontCollection;
 					/// The default text run style. The default value is @c null.
-					std::tr1::shared_ptr<const presentation::TextRunStyle> defaultTextRunStyle;
+					std::shared_ptr<const presentation::TextRunStyle> defaultTextRunStyle;
 					/// The text run styles. The default value is @c null.
 					mutable std::auto_ptr<presentation::StyledTextRunIterator> textRunStyles;
 					/**

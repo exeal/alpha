@@ -56,14 +56,14 @@ namespace ascension {
 			typedef typename MostDerived<Cdr, T>::Type Candidate_;
 		public:
 			typedef typename detail::Select<
-				std::tr1::is_base_of<Candidate_, Car>::value, Car, Candidate_
+				std::is_base_of<Candidate_, Car>::value, Car, Candidate_
 			>::Type Type;
 		};
 		template<typename T> class MostDerived<void, T> {public: typedef T Type;};
 
 		/// Returns true if the type @a T is the most derived in the given type list.
 		template<typename Types, typename T> struct IsMostDerived {
-			static const bool value = std::tr1::is_same<typename MostDerived<Types, T>::Type, T>::value;
+			static const bool value = std::is_same<typename MostDerived<Types, T>::Type, T>::value;
 		};
 
 	}

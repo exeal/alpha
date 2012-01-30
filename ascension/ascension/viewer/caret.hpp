@@ -279,7 +279,7 @@ namespace ascension {
 		 * Sets the caret shaper.
 		 * @param shaper The new caret shaper
 		 */
-		inline void Caret::setShaper(std::tr1::shared_ptr<CaretShaper> shaper) {shaper_ = shaper;}
+		inline void Caret::setShaper(std::shared_ptr<CaretShaper> shaper) {shaper_ = shaper;}
 
 		/**
 		 * Tracks the match bracket.

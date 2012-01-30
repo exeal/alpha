@@ -825,7 +825,7 @@ auto_ptr<Token> NumberRule::parse(const TokenScanner& scanner, const Char* first
  * @param uriDetector The URI detector. Can't be @c null
  * @throw NullPointerException @a uriDetector is @c null
  */
-URIRule::URIRule(Token::Identifier id, tr1::shared_ptr<const URIDetector> uriDetector) /*throw()*/ : Rule(id), uriDetector_(uriDetector) {
+URIRule::URIRule(Token::Identifier id, shared_ptr<const URIDetector> uriDetector) /*throw()*/ : Rule(id), uriDetector_(uriDetector) {
 	if(uriDetector.get() == 0)
 		throw NullPointerException("uriDetector");
 }
@@ -1510,8 +1510,8 @@ inline void LexicalPartitioner::verify() const {
  */
 LexicalPartitionPresentationReconstructor::LexicalPartitionPresentationReconstructor(
 		const Presentation& presentation, auto_ptr<TokenScanner> tokenScanner,
-		const map<Token::Identifier, tr1::shared_ptr<const presentation::TextRunStyle> >& styles,
-		tr1::shared_ptr<const presentation::TextRunStyle> defaultStyle /* = tr1::shared_ptr<const presentation::TextRunStyle>() */)
+		const map<Token::Identifier, shared_ptr<const presentation::TextRunStyle>>& styles,
+		shared_ptr<const presentation::TextRunStyle> defaultStyle /* = shared_ptr<const presentation::TextRunStyle>() */)
 		: presentation_(presentation), tokenScanner_(tokenScanner), styles_(styles) {
 	if(tokenScanner_.get() == 0)
 		throw NullPointerException("tokenScanner");

@@ -67,8 +67,8 @@ namespace ascension {
 			const Pattern* pattern() const /*throw()*/ {return pattern_.get();}
 		private:
 			Color color_;
-			std::tr1::shared_ptr<const Gradient> gradient_;
-			std::tr1::shared_ptr<const Pattern> pattern_;
+			std::shared_ptr<const Gradient> gradient_;
+			std::shared_ptr<const Pattern> pattern_;
 		};
 
 		inline bool operator==(const Paint& lhs, const Paint& rhs) /*throw()*/ {

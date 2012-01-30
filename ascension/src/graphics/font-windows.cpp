@@ -23,7 +23,7 @@ namespace {
 
 	struct IdeographicVariationSequences {
 		vector<uint32_t> defaultMappings;
-		tr1::unordered_map<uint32_t, uint16_t> nonDefaultMappings;
+		unordered_map<uint32_t, uint16_t> nonDefaultMappings;
 	};
 
 	template<size_t bytes> uint32_t readBytes(const uint8_t*& p);
@@ -122,18 +122,18 @@ namespace {
 
 	class SystemFonts : public FontCollection {
 	public:
-		tr1::shared_ptr<const Font> get(const String& familyName, const FontProperties<>& properties, double sizeAdjust) const;
-		tr1::shared_ptr<const Font> lastResortFallback(const FontProperties<>& properties, double sizeAdjust) const;
+		shared_ptr<const Font> get(const String& familyName, const FontProperties<>& properties, double sizeAdjust) const;
+		shared_ptr<const Font> lastResortFallback(const FontProperties<>& properties, double sizeAdjust) const;
 	private:
-		tr1::shared_ptr<const Font> cache(const String& familyName, const FontProperties<>& properties, double sizeAdjust);
-		struct Hasher : tr1::hash<String> {
+		shared_ptr<const Font> cache(const String& familyName, const FontProperties<>& properties, double sizeAdjust);
+		struct Hasher : hash<String> {
 			size_t operator()(const pair<String, FontProperties<> >& value) const {
-//				tr1::hash_combine(value.second.hash(), value.first);
-				return tr1::hash<String>()(value.first) + value.second.hash();
+//				hash_combine(value.second.hash(), value.first);
+				return hash<String>()(value.first) + value.second.hash();
 			}
 		};
 	private:
-		typedef tr1::unordered_map<pair<String, FontProperties<> >, tr1::shared_ptr<Font>, Hasher> Registry;
+		typedef unordered_map<pair<String, FontProperties<>>, shared_ptr<Font>, Hasher> Registry;
 		Registry registry_;
 	};
 } // namespace @0
@@ -192,21 +192,21 @@ bool SystemFont::ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, 
 	const uint32_t v = ((variationSelector - 0x0e0100ul) << 24) | baseCharacter;
 	if(binary_search(ivs_->defaultMappings.begin(), ivs_->defaultMappings.end(), v))
 		return true;
-	tr1::unordered_map<uint32_t, uint16_t>::const_iterator i(ivs_->nonDefaultMappings.find(v));
+	unordered_map<uint32_t, uint16_t>::const_iterator i(ivs_->nonDefaultMappings.find(v));
 	if(i == ivs_->nonDefaultMappings.end())
 		return false;
 	return (glyph = i->second), true;
 }
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
-tr1::shared_ptr<const Font> SystemFonts::get(const String& familyName, const FontProperties<>& properties, double sizeAdjust) const {
+shared_ptr<const Font> SystemFonts::get(const String& familyName, const FontProperties<>& properties, double sizeAdjust) const {
 	Registry::const_iterator i(registry_.find(make_pair(familyName, properties)));
 	if(i != registry_.end())
 		return i->second;
 	return const_cast<SystemFonts*>(this)->cache(familyName, properties, sizeAdjust);
 }
 
-tr1::shared_ptr<const Font> SystemFonts::cache(const String& familyName, const FontProperties<>& properties, double sizeAdjust) {
+shared_ptr<const Font> SystemFonts::cache(const String& familyName, const FontProperties<>& properties, double sizeAdjust) {
 	if(familyName.length() >= LF_FACESIZE)
 		throw length_error("");
 
@@ -261,12 +261,12 @@ tr1::shared_ptr<const Font> SystemFonts::cache(const String& familyName, const F
 		}
 	}
 
-	tr1::shared_ptr<Font> newFont(new SystemFont(font));
+	shared_ptr<Font> newFont(new SystemFont(font));
 	registry_.insert(make_pair(make_pair(familyName, properties), newFont));
 	return newFont;
 }
 
-tr1::shared_ptr<const Font> SystemFonts::lastResortFallback(const FontProperties<>& properties, double sizeAdjust) const {
+shared_ptr<const Font> SystemFonts::lastResortFallback(const FontProperties<>& properties, double sizeAdjust) const {
 	static String familyName;
 	// TODO: 'familyName' should update when system property changed.
 	if(familyName.empty()) {

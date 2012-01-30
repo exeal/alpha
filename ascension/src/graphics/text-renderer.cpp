@@ -316,7 +316,7 @@ inline void TextRenderer::fireComputedWritingModeChanged(const TextToplevelStyle
 }
 
 /// @see GlobalTextStyleListener#GlobalTextStyleChanged
-void TextRenderer::globalTextStyleChanged(tr1::shared_ptr<const TextToplevelStyle> used) {
+void TextRenderer::globalTextStyleChanged(shared_ptr<const TextToplevelStyle> used) {
 	fireComputedWritingModeChanged(*used, defaultUIWritingMode());
 	updateDefaultFont();
 }
@@ -427,7 +427,7 @@ void TextRenderer::setTextWrapping(const TextWrapping<presentation::Length>& new
 }
 
 void TextRenderer::updateDefaultFont() {
-	tr1::shared_ptr<const TextRunStyle> defaultStyle(presentation_.globalTextStyle().defaultLineStyle->defaultRunStyle);
+	shared_ptr<const TextRunStyle> defaultStyle(presentation_.globalTextStyle().defaultLineStyle->defaultRunStyle);
 	if(defaultStyle.get() != 0 && !defaultStyle->fontFamily.empty())
 		defaultFont_ = fontCollection().get(defaultStyle->fontFamily, defaultStyle->fontProperties);
 	else {

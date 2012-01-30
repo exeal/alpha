@@ -453,9 +453,9 @@ void DefaultMouseInputStrategy::extendSelection(const k::Position* to /* = 0 */)
 }
 
 /// @see MouseInputStrategy#handleDropTarget
-tr1::shared_ptr<base::DropTarget> DefaultMouseInputStrategy::handleDropTarget() const {
+shared_ptr<base::DropTarget> DefaultMouseInputStrategy::handleDropTarget() const {
 	const base::DropTarget* const self = this;
-	return tr1::shared_ptr<base::DropTarget>(const_cast<base::DropTarget*>(self), detail::NullDeleter());
+	return shared_ptr<base::DropTarget>(const_cast<base::DropTarget*>(self), detail::NullDeleter());
 }
 
 /**

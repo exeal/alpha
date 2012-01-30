@@ -686,7 +686,7 @@ void TextViewer::initialize() {
 		::SendMessageW(toolTip_, TTM_ACTIVATE, true, 0L);
 	}
 
-	setMouseInputStrategy(tr1::shared_ptr<MouseInputStrategy>());
+	setMouseInputStrategy(shared_ptr<MouseInputStrategy>());
 
 #ifdef ASCENSION_TEST_TEXT_STYLES
 	RulerConfiguration rc;
@@ -878,7 +878,7 @@ void TextViewer::initialize() {
 		const k::Document& document_;
 	};
 	presentation().setTextRunStyleDirector(
-		tr1::shared_ptr<TextRunStyleDirector>(new ZebraTextRunStyleTest(document())));
+		shared_ptr<TextRunStyleDirector>(new ZebraTextRunStyleTest(document())));
 #endif // ASCENSION_TEST_TEXT_STYLES
 	
 	renderer_->addDefaultFontListener(*this);

@@ -1147,7 +1147,7 @@ void TextViewer::setContentAssistant(auto_ptr<contentassist::ContentAssistant> n
  * @param delegateOwnership Set @c true to transfer the ownership into the callee
  * @throw IllegalStateException The window is not created yet
  */
-void TextViewer::setMouseInputStrategy(tr1::shared_ptr<MouseInputStrategy> newStrategy) {
+void TextViewer::setMouseInputStrategy(shared_ptr<MouseInputStrategy> newStrategy) {
 //	checkInitialization();
 	if(mouseInputStrategy_.get() != 0) {
 		mouseInputStrategy_->interruptMouseReaction(false);
@@ -1809,7 +1809,7 @@ const TextLineColorDirector::Priority CurrentLineHighlighter::LINE_COLOR_PRIORIT
  */
 CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret,
 		const Color& foreground, const Color& background) : caret_(&caret), foreground_(foreground), background_(background) {
-	tr1::shared_ptr<TextLineColorDirector> temp(this);
+	shared_ptr<TextLineColorDirector> temp(this);
 	caret.textViewer().presentation().addTextLineColorDirector(temp);
 	caret.addListener(*this);
 	caret.addStateListener(*this);

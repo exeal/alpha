@@ -153,10 +153,10 @@ namespace ascension {
 
 			virtual bool drawFocusRing() = 0;
 
-			std::tr1::shared_ptr<const font::Font> font() const /*throw()*/ {
+			std::shared_ptr<const font::Font> font() const /*throw()*/ {
 				return states_.top().font;
 			}
-			RenderingContext2D& setFont(std::tr1::shared_ptr<const font::Font> font) {
+			RenderingContext2D& setFont(std::shared_ptr<const font::Font> font) {
 				// TODO: check if null. 
 				states_.top().font = font;
 				return *this;
@@ -217,7 +217,7 @@ namespace ascension {
 				Color shadowColor;
 				NativeSize shadowOffset;
 				Scalar shadowBlur;
-				std::tr1::shared_ptr<const font::Font> font;
+				std::shared_ptr<const font::Font> font;
 				presentation::TextAnchor textAlign;
 				presentation::AlignmentBaseline textBaseline;
 			};

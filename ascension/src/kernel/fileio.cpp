@@ -1137,7 +1137,7 @@ void TextFileDocumentInput::bind(const PathString& fileName) {
 
 	if(weakSelf_.get() == 0)
 		weakSelf_.reset(this, detail::NullDeleter());
-	document_.setInput(tr1::weak_ptr<DocumentInput>(weakSelf_));
+	document_.setInput(weak_ptr<DocumentInput>(weakSelf_));
 	fileName_ = realName;
 	listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileNameChanged, *this);
 	document_.setModified();
@@ -1371,9 +1371,9 @@ TextFileDocumentInput& TextFileDocumentInput::setNewline(Newline newline) {
 void TextFileDocumentInput::unbind() /*throw()*/ {
 	if(isBoundToFile()) {
 		fileLocker_->unlock();	// this may return false
-		if(const tr1::shared_ptr<DocumentInput> input = document().input().lock()) {
+		if(const shared_ptr<DocumentInput> input = document().input().lock()) {
 			if(input.get() == static_cast<const DocumentInput*>(this))
-				document_.setInput(tr1::weak_ptr<DocumentInput>());
+				document_.setInput(weak_ptr<DocumentInput>());
 		}
 		fileName_.erase();
 		listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileNameChanged, *this);

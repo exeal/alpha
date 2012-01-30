@@ -40,7 +40,7 @@ namespace ascension {
 		struct ArithmeticOrNot<T, false> : IteratorHasDifferenceTypeOrNot<T, HasDifferenceType<T>::value> {};
 
 		template<typename T>
-		struct DifferenceType : ArithmeticOrNot<T, std::tr1::is_arithmetic<T>::value> {};
+		struct DifferenceType : ArithmeticOrNot<T, std::is_arithmetic<T>::value> {};
 	}
 
 	/**
@@ -160,7 +160,7 @@ namespace ascension {
 	 */
 	template<typename T, typename Comp>
 	inline bool isEmpty(const Range<T, Comp>& range,
-			typename std::tr1::enable_if<std::tr1::is_same<Comp, std::less<T> >::value>::type* = 0) {
+			typename std::tr1::enable_if<std::is_same<Comp, std::less<T> >::value>::type* = 0) {
 		return range.beginning() == range.end();
 	}
 
@@ -173,7 +173,7 @@ namespace ascension {
 	 */
 	template<typename T, typename Comp>
 	inline bool isEmpty(const Range<T, Comp>& range,
-			typename std::tr1::enable_if<!std::tr1::is_same<Comp, std::less<T> >::value>::type* = 0) {
+			typename std::tr1::enable_if<!std::is_same<Comp, std::less<T> >::value>::type* = 0) {
 		const Comp lessThan;
 		return !lessThan(range.beginning(), range.end()) && !lessThan(range.end(), range.beginning());
 	}

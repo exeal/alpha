@@ -101,7 +101,7 @@ DefaultSpecialCharacterRenderer::DefaultSpecialCharacterRenderer() /*throw()*/ :
 /// @see ISpecialCharacterRenderer#drawControlCharacter
 void DefaultSpecialCharacterRenderer::drawControlCharacter(const DrawingContext& context, CodePoint c) const {
 	const win32::Handle<HDC>& dc = context.renderingContext.nativeHandle();
-	tr1::shared_ptr<const Font> primaryFont(renderer_->primaryFont());
+	shared_ptr<const Font> primaryFont(renderer_->primaryFont());
 	HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), primaryFont->nativeHandle().get()));
 	::SetTextColor(dc.get(), controlColor_.asCOLORREF());
 	Char buffer[2];
@@ -114,7 +114,7 @@ void DefaultSpecialCharacterRenderer::drawControlCharacter(const DrawingContext&
 void DefaultSpecialCharacterRenderer::drawLineTerminator(const DrawingContext& context, k::Newline) const {
 	if(showsEOLs_ && glyphs_[LINE_TERMINATOR] != 0xffffu) {
 		const win32::Handle<HDC>& dc = context.renderingContext.nativeHandle();
-		tr1::shared_ptr<const Font> primaryFont(renderer_->primaryFont());
+		shared_ptr<const Font> primaryFont(renderer_->primaryFont());
 		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(),
 			(((glyphWidths_[LINE_TERMINATOR] & 0x80000000ul) != 0) ? font_ : primaryFont)->nativeHandle().get()));
 		::SetTextColor(dc.get(), eolColor_.asCOLORREF());
@@ -131,7 +131,7 @@ void DefaultSpecialCharacterRenderer::drawLineWrappingMark(const DrawingContext&
 	const WCHAR glyph = glyphs_[id];
 	if(glyph != 0xffffu) {
 		const win32::Handle<HDC>& dc = context.renderingContext.nativeHandle();
-		tr1::shared_ptr<const Font> primaryFont(renderer_->primaryFont());
+		shared_ptr<const Font> primaryFont(renderer_->primaryFont());
 		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(),
 			(win32::boole(glyphWidths_[id] & 0x80000000ul) ? font_ : primaryFont)->nativeHandle().get()));
 		::SetTextColor(dc.get(), wrapMarkColor_.asCOLORREF());
@@ -151,7 +151,7 @@ void DefaultSpecialCharacterRenderer::drawWhiteSpaceCharacter(const DrawingConte
 		const WCHAR glyph = glyphs_[id];
 		if(glyph != 0xffffu) {
 			const win32::Handle<HDC>& dc = context.renderingContext.nativeHandle();
-			tr1::shared_ptr<const Font> primaryFont(renderer_->primaryFont());
+			shared_ptr<const Font> primaryFont(renderer_->primaryFont());
 			HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(),
 				(win32::boole(glyphWidths_[id] & 0x80000000ul) ? font_ : primaryFont)->nativeHandle().get()));
 			const int glyphWidth = glyphWidths_[id] & 0x7ffffffful;
@@ -167,7 +167,7 @@ void DefaultSpecialCharacterRenderer::drawWhiteSpaceCharacter(const DrawingConte
 		}
 	} else if(glyphs_[WHITE_SPACE] != 0xffffu) {
 		const win32::Handle<HDC>& dc = context.renderingContext.nativeHandle();
-		tr1::shared_ptr<const Font> primaryFont(renderer_->primaryFont());
+		shared_ptr<const Font> primaryFont(renderer_->primaryFont());
 		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(),
 			(win32::boole(glyphWidths_[WHITE_SPACE] & 0x80000000ul) ? font_ : primaryFont)->nativeHandle().get()));
 		::SetTextColor(dc.get(), whiteSpaceColor_.asCOLORREF());
