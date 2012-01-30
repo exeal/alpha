@@ -10,7 +10,7 @@
 #define ASCENSION_DOCUMENT_CHARACTER_ITERATOR_HPP
 
 #include <ascension/kernel/document.hpp>
-#include <ascension/corelib/text/character-iterator.hpp>			// text.CharacterIterator
+#include <ascension/corelib/text/character-iterator.hpp>	// text.CharacterIterator
 #include <ascension/corelib/standard-iterator-adapter.hpp>	// detail.IteratorAdapter
 
 namespace ascension {
@@ -61,32 +61,48 @@ namespace ascension {
 		};
 
 
-// inline implementation ////////////////////////////////////////////////////
-
-/// Returns the document.
-inline const Document* DocumentCharacterIterator::document() const /*throw()*/ {return document_;}
-
-/// @see text#CharacterIterator#hasNext
-inline bool DocumentCharacterIterator::hasNext() const /*throw()*/ {return p_ != region_.second;}
-
-/// @see text#CharacterIterator#hasPrevious
-inline bool DocumentCharacterIterator::hasPrevious() const /*throw()*/ {return p_ != region_.first;}
-
-/// Returns the line.
-inline const String& DocumentCharacterIterator::line() const /*throw()*/ {return *line_;}
-
-/// Returns the iteration region.
-inline const Region& DocumentCharacterIterator::region() const /*throw()*/ {return region_;}
-
-/**
- * Moves to the specified position.
- * @param to the position. if this is outside of the iteration region, the start/end of the region will be used
- */
-inline DocumentCharacterIterator& DocumentCharacterIterator::seek(const Position& to) {
-	line_ = &document_->line((p_ = std::max(std::min(to, region_.second), region_.first)).line); return *this;}
-
-/// Returns the document position the iterator addresses.
-inline const Position& DocumentCharacterIterator::tell() const /*throw()*/ {return p_;}
+		// inline implementation //////////////////////////////////////////////////////////////////
+		
+		/// Returns the document.
+		inline const Document* DocumentCharacterIterator::document() const /*throw()*/ {
+			return document_;
+		}
+		
+		/// @see text#CharacterIterator#hasNext
+		inline bool DocumentCharacterIterator::hasNext() const /*throw()*/ {
+			return tell() != region().second;
+		}
+		
+		/// @see text#CharacterIterator#hasPrevious
+		inline bool DocumentCharacterIterator::hasPrevious() const /*throw()*/ {
+			return tell() != region().first;
+		}
+		
+		/// Returns the line.
+		inline const String& DocumentCharacterIterator::line() const /*throw()*/ {
+			return *line_;
+		}
+		
+		/// Returns the iteration region.
+		inline const Region& DocumentCharacterIterator::region() const /*throw()*/ {
+			return region_;
+		}
+		
+		/**
+		 * Moves to the specified position.
+		 * @param to The position. if this is outside of the iteration region, the start/end of the
+		 *           region will be used
+		 * @return This iterator
+		 */
+		inline DocumentCharacterIterator& DocumentCharacterIterator::seek(const Position& to) {
+			line_ = &document_->line((p_ = std::max(std::min(to, region().second), region().first)).line);
+			return *this;
+		}
+		
+		/// Returns the document position the iterator addresses.
+		inline const Position& DocumentCharacterIterator::tell() const /*throw()*/ {
+			return p_;
+		}
 
 	}
 } // namespace ascension.kernel

@@ -28,7 +28,7 @@ using namespace std;
 namespace {
 	// copied from point.cpp
 	inline const IdentifierSyntax& identifierSyntax(const Point& p) {
-		return p.document().contentTypeInformation().getIdentifierSyntax(p.contentType());
+		return p.document().contentTypeInformation().getIdentifierSyntax(contentType(p));
 	}
 } // namespace @0
 
@@ -197,7 +197,7 @@ bool Caret::canPaste(bool useKillRing) const {
 /// 対括弧の追跡を更新する
 void Caret::checkMatchBrackets() {
 //	bool matched;
-	pair<Position, Position> oldPair(context_.matchBrackets);
+	boost::optional<pair<Position, Position>> oldPair(context_.matchBrackets);
 	// TODO: implement matching brackets checking
 /*	if(!isSelectionEmpty() || matchBracketsTrackingMode_ == DONT_TRACK)
 		matched = false;
@@ -213,8 +213,8 @@ void Caret::checkMatchBrackets() {
 		matchBrackets_.first = matchBrackets_.second = Position::INVALID_POSITION;
 */	// TODO: check if the pair is out of view.
 	if(context_.matchBrackets != oldPair)
-		stateListeners_.notify<const Caret&, const pair<Position,
-			Position>&, bool>(&CaretStateListener::matchBracketsChanged, *this, oldPair, false);
+		stateListeners_.notify<const Caret&, const boost::optional<pair<Position,
+			Position>>&, bool>(&CaretStateListener::matchBracketsChanged, *this, oldPair, false);
 }
 
 /// Clears the selection. The anchor will move to the caret.
@@ -232,7 +232,7 @@ void Caret::documentAboutToBeChanged(const Document&) {
 /// @see kernel#IDocumentListener#documentChanged
 void Caret::documentChanged(const Document&, const DocumentChange&) {
 	context_.yanking = false;
-	if(context_.regionBeforeMoved.first != Position())
+	if(context_.regionBeforeMoved)
 		updateVisualAttributes();
 }
 
@@ -357,10 +357,10 @@ void Caret::extendSelection(const VerticalDestinationProxy& to) {
 	context_.leaveAnchorNext = false;
 }
 
-inline void Caret::fireCaretMoved(const Region& oldRegion) {
+inline void Caret::fireCaretMoved(const boost::optional<Region>& oldRegion) {
 	if(!isTextViewerDisposed() && !textViewer().isFrozen() && (textViewer().hasFocus() /*|| completionWindow_->hasFocus()*/))
 		updateLocation();
-	listeners_.notify<const Caret&, const Region&>(&CaretListener::caretMoved, *this, oldRegion);
+	listeners_.notify<const Caret&, const boost::optional<Region>&>(&CaretListener::caretMoved, *this, oldRegion);
 }
 
 namespace {
@@ -375,23 +375,24 @@ namespace {
 	 * @throw TextViewerDisposedException
 	 * @throw ... Any exceptions @c Document#replace throws
 	 */
-	void destructiveInsert(Caret& caret, const StringPiece& text, bool keepNewline = true) {
+	void destructiveInsert(Somewhere<Caret> caret, const StringPiece& text, bool keepNewline = true) {
 		if(text.beginning() == 0)
 			throw NullPointerException("text");
-		const bool adapts = caret.adaptsToDocument();
-		caret.adaptToDocument(false);
-		Position e((keepNewline && locations::isEndOfLine(caret)) ?
-			caret.position() : locations::forwardCharacter(caret, locations::GRAPHEME_CLUSTER));
-		if(e != caret.position()) {
+		Caret& c = caret.get();
+		const bool adapts = c.adaptsToDocument();
+		c.adaptToDocument(false);
+		Position e((keepNewline && locations::isEndOfLine(c)) ?
+			*c.position() : locations::forwardCharacter(c, locations::GRAPHEME_CLUSTER));
+		if(e != c.position()) {
 			try {
-				caret.document().replace(Region(caret.position(), e), text, &e);
+				c.document().replace(Region(*c.position(), e), text, &e);
 			} catch(...) {
-				caret.adaptToDocument(adapts);
+				c.adaptToDocument(adapts);
 				throw;
 			}
-			caret.moveTo(e);
+			c.moveTo(e);
 		}
-		caret.adaptToDocument(adapts);
+		c.adaptToDocument(adapts);
 	}
 } // namespace @0
 
@@ -425,8 +426,8 @@ bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true 
 	if(validateSequence) {
 		if(const texteditor::Session* const session = doc.session()) {
 			if(const texteditor::InputSequenceCheckers* const checker = session->inputSequenceCheckers()) {
-				const Char* const line = doc.line(beginning().line()).data();
-				if(!checker->check(StringPiece(line, beginning().column()), character)) {
+				const Char* const lineString = doc.line(line(beginning())).data();
+				if(!checker->check(StringPiece(lineString, offsetInLine(beginning())), character)) {
 					eraseSelection(*this);
 					return false;	// invalid sequence
 				}
@@ -450,12 +451,12 @@ bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true 
 		doc.insertUndoBoundary();
 	} else {
 		const bool alpha = identifierSyntax(*this).isIdentifierContinueCharacter(character);
-		if(context_.lastTypedPosition != Position() && (!alpha || context_.lastTypedPosition != position())) {
+		if(context_.lastTypedPosition && (!alpha || context_.lastTypedPosition != position())) {
 			// end sequential typing
 			doc.insertUndoBoundary();
-			context_.lastTypedPosition = Position();
+			context_.lastTypedPosition = boost::none;
 		}
-		if(alpha && context_.lastTypedPosition == Position())
+		if(alpha && !context_.lastTypedPosition)
 			// (re)start sequential typing
 			doc.insertUndoBoundary();
 
@@ -472,14 +473,19 @@ bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true 
 }
 
 /// @see VisualPoint#moved
-void Caret::moved(const Position& from) {
-	context_.regionBeforeMoved = Region(anchor_->isInternalUpdating() ?
-		anchor_->positionBeforeInternalUpdate() : anchor_->position(), from);
+void Caret::moved(const boost::optional<Position>& from) {
+	const boost::optional<Position> anchorFrom(
+		anchor_->isInternalUpdating() ? anchor_->positionBeforeInternalUpdate() : anchor_->position());
+	assert(static_cast<bool>(anchorFrom) == static_cast<bool>(from));
+	context_.regionBeforeMoved = from ? boost::make_optional(Region(*anchorFrom, *from)) : boost::none;
 	if(context_.leaveAnchorNext)
 		context_.leaveAnchorNext = false;
 	else {
 		context_.leadingAnchor = true;
-		anchor_->moveTo(position());
+		if(position())
+			anchor_->moveTo(*position());
+		else
+			anchor_->moveToNowhere();
 		context_.leadingAnchor = false;
 	}
 	VisualPoint::moved(from);
@@ -488,21 +494,21 @@ void Caret::moved(const Position& from) {
 }
 
 /// @see PointListener#pointMoved
-void Caret::pointMoved(const Point& self, const Position& oldPosition) {
+void Caret::pointMoved(const Point& self, const boost::optional<Position>& oldPosition) {
 	assert(&self == &*anchor_);
 	context_.yanking = false;
 	if(context_.leadingAnchor)	// calling anchor_->moveTo in this->moved
 		return;
 	if((oldPosition == position()) != isSelectionEmpty(*this))
 		checkMatchBrackets();
-	fireCaretMoved(Region(oldPosition, position()));
+	fireCaretMoved(oldPosition ? boost::make_optional(Region(*oldPosition, *position())) : boost::none);
 }
 
 /// @internal Should be called before change the document.
 inline void Caret::prechangeDocument() {
-	if(context_.lastTypedPosition != Position() && !context_.typing) {
+	if(context_.lastTypedPosition && !context_.typing) {
 		document().insertUndoBoundary();
-		context_.lastTypedPosition = Position();
+		context_.lastTypedPosition = boost::none;
 	}
 }
 
@@ -672,8 +678,8 @@ void Caret::updateLocation() {
 	if(!viewer.hasFocus() || viewer.isFrozen())
 		return;
 
-	NativePoint p(viewer.localPointForCharacter(*this, false, font::TextLayout::LEADING));
-	const PhysicalFourSides<Scalar> spaces(textViewer().spaceWidths());
+	NativePoint p(modelToView(viewer.textRenderer(), *this, false, font::TextLayout::LEADING));
+	const PhysicalFourSides<Scalar> spaces(viewer.spaceWidths());
 	NativeRectangle textArea(viewer.bounds(false));
 	assert(geometry::isNormalized(textArea));
 	geometry::range<geometry::X_COORDINATE>(textArea) = makeRange(
@@ -701,12 +707,12 @@ void Caret::updateLocation() {
 inline void Caret::updateVisualAttributes() {
 	if(isSelectionRectangle())
 		context_.selectedRectangle->update(selectedRegion());
-	if((context_.regionBeforeMoved.first != position() || context_.regionBeforeMoved.second != position()))
-		fireCaretMoved(context_.regionBeforeMoved);
+	if((context_.regionBeforeMoved->first != position() || context_.regionBeforeMoved->second != position()))
+		fireCaretMoved(*context_.regionBeforeMoved);
 	if(autoShow_)
 		utils::show(*this);
 	checkMatchBrackets();
-	context_.regionBeforeMoved.first = context_.regionBeforeMoved.second = Position();
+	context_.regionBeforeMoved = boost::none;
 }
 
 /// @see DisplaySizeListener#viewerDisplaySizeChanged
@@ -731,7 +737,7 @@ void Caret::viewportChanged(bool, bool) {
  * @throw TextViewerDisposedException The text viewer @a caret connecting to has been disposed
  */
 bool viewers::isPointOverSelection(const Caret& caret, const NativePoint& p) {
-	if(isSelectionEmpty(caret))
+	if(!caret.position() || isSelectionEmpty(caret))
 		return false;
 	else if(caret.isSelectionRectangle())
 		return caret.boxForRectangleSelection().includes(p);
@@ -752,7 +758,7 @@ bool viewers::isPointOverSelection(const Caret& caret, const NativePoint& p) {
  * @param caret The caret gives a selection
  * @param line The logical line
  * @param[out] range The selected range. If the selection continued to the next line,
- *                   @c range.end() returns the column of the end of line + 1
+ *                   @c range.end() returns the position of the end of line + 1
  * @return @c true if there is selected range on the line
  * @throw kernel#DocumentDisposedException The document @a caret connecting to has been disposed
  * @throw kernel#BadPositionException @a line is outside of the document
@@ -766,8 +772,8 @@ bool viewers::selectedRangeOnLine(const Caret& caret, Index line, Range<Index>& 
 	if(eos.line < line)
 		return false;
 	range = Range<Index>(
-		(line == bos.line) ? bos.column : 0,
-		(line == eos.line) ? eos.column : caret.document().lineLength(line) + 1);
+		(line == bos.line) ? bos.offsetInLine : 0,
+		(line == eos.line) ? eos.offsetInLine : caret.document().lineLength(line) + 1);
 	return true;
 }
 
@@ -777,7 +783,7 @@ bool viewers::selectedRangeOnLine(const Caret& caret, Index line, Range<Index>& 
  * @param line The logical line
  * @param subline The visual subline
  * @param[out] range The selected range. if the selection continued to the next logical line,
- *                   @c range.end() returns the column of the end of line + 1
+ *                   @c range.end() returns the position of the end of line + 1
  * @return @c true if there is selected range on the line
  * @throw kernel#DocumentDisposedException The document @a caret connecting to has been disposed
  * @throw TextViewerDisposedException The text viewer @a caret connecting to has been disposed
@@ -812,9 +818,9 @@ basic_ostream<Char>& viewers::selectedString(const Caret& caret, basic_ostream<C
 			writeDocumentToStream(out, caret.document(), caret.selectedRegion(), newline);
 		else {
 			const Document& document = caret.document();
-			const Index lastLine = caret.end().line();
+			const Index lastLine = line(caret.end());
 			Range<Index> selection;
-			for(Index line = caret.beginning().line(); line <= lastLine; ++line) {
+			for(Index line = kernel::line(caret.beginning()); line <= lastLine; ++line) {
 				const Document::Line& ln = document.getLineInformation(line);
 				caret.boxForRectangleSelection().characterRangeInVisualLine(font::VisualLine(line, 0), selection);	// TODO: recognize wrap (second parameter).
 				out.write(ln.text().data() + selection.beginning(), static_cast<streamsize>(length(selection)));
@@ -827,10 +833,13 @@ basic_ostream<Char>& viewers::selectedString(const Caret& caret, basic_ostream<C
 
 /**
  * Selects the word at the caret position. This creates a linear selection.
+ * If the caret is nowhere, this function does nothing.
  */
 void viewers::selectWord(Caret& caret) {
+	if(!caret.position())
+		return;
 	WordBreakIterator<DocumentCharacterIterator> i(
-		DocumentCharacterIterator(caret.document(), caret.position()),
+		DocumentCharacterIterator(caret.document(), *caret.position()),
 		AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, identifierSyntax(caret));
 	caret.endRectangleSelection();
 	if(locations::isEndOfLine(caret)) {
@@ -842,7 +851,7 @@ void viewers::selectWord(Caret& caret) {
 		caret.select(caret, (++i).base().tell());
 	else {
 		const Position p((++i).base().tell());
-		i.base().seek(Position(caret.line(), caret.column() + 1));
+		i.base().seek(Position(line(caret), offsetInLine(caret) + 1));
 		caret.select((--i).base().tell(), p);
 	}
 }
@@ -858,21 +867,22 @@ void viewers::selectWord(Caret& caret) {
  * @throw DocumentDisposedException The document @a caret connecting to has been disposed
  * @throw ... Any exceptions @c Document#insert throws
  */
-void viewers::breakLine(Caret& caret, bool inheritIndent, size_t newlines /* = 1 */) {
+void viewers::breakLine(Somewhere<Caret> caret, bool inheritIndent, size_t newlines /* = 1 */) {
 	if(newlines == 0)
 		return;
 
+	Caret& c = caret.get();
 	Newline newline;
-	if(const tr1::shared_ptr<DocumentInput> documentInput = caret.document().input().lock())
+	if(const shared_ptr<DocumentInput> documentInput = c.document().input().lock())
 		newline = documentInput->newline();
 	else
 		newline = ASCENSION_DEFAULT_NEWLINE;
 	String s(newlineString(newline));
 
 	if(inheritIndent) {	// simple auto-indent
-		const String& currentLine = caret.document().line(caret.line());
-		const Index len = identifierSyntax(caret).eatWhiteSpaces(
-			currentLine.data(), currentLine.data() + caret.column(), true) - currentLine.data();
+		const String& currentLine = c.document().line(line(c));
+		const Index len = identifierSyntax(c).eatWhiteSpaces(
+			currentLine.data(), currentLine.data() + offsetInLine(c), true) - currentLine.data();
 		s += currentLine.substr(0, len);
 	}
 
@@ -882,16 +892,18 @@ void viewers::breakLine(Caret& caret, bool inheritIndent, size_t newlines /* = 1
 			sb.sputn(s.data(), static_cast<streamsize>(s.length()));
 		s.assign(sb.str());
 	}
-	return caret.replaceSelection(s);
+	return c.replaceSelection(s);
 }
 
 /**
  * Deletes the selected region.
+ * If @a caret is nowhere, this function does nothing.
  * @param caret The caret provides a selection
  * @throw ... Any exceptions @c Document#insert and @c Document#erase throw
  */
 void viewers::eraseSelection(Caret& caret) {
-	return caret.replaceSelection(0, 0);
+	if(caret.position())
+		return caret.replaceSelection(0, 0);
 }
 
 namespace {
@@ -903,31 +915,32 @@ namespace {
 	 * @param level The level of the indentation
 	 * @deprecated 0.8
 	 */
-	void indent(Caret& caret, Char character, bool rectangle, long level) {
+	void indent(Somewhere<Caret> caret, Char character, bool rectangle, long level) {
 		// TODO: this code is not exception-safe.
 		if(level == 0)
 			return;
+		Caret& c = caret.get();
 		const String indent(abs(level), character);
-		const Region region(caret.selectedRegion());
+		const Region region(c.selectedRegion());
 
 		if(region.beginning().line == region.end().line) {
 			// number of selected lines is one -> just insert tab character(s)
-			caret.replaceSelection(indent);
+			c.replaceSelection(indent);
 			return;
 		}
 
-		const Position oldPosition(caret.position());
-		Position otherResult(caret.anchor());
+		const Position oldPosition(*c.position());
+		Position otherResult(c.anchor());
 		Index line = region.beginning().line;
 
 		// indent/unindent the first line
-		Document& document = caret.document();
+		Document& document = c.document();
 		if(level > 0) {
-			insert(document, Position(line, rectangle ? region.beginning().column : 0), indent);
-			if(line == otherResult.line && otherResult.column != 0)
-				otherResult.column += level;
-			if(line == caret.line() && caret.column() != 0)
-				caret.moveTo(caret.line(), caret.column() + level);
+			insert(document, Position(line, rectangle ? region.beginning().offsetInLine : 0), indent);
+			if(line == otherResult.line && otherResult.offsetInLine != 0)
+				otherResult.offsetInLine += level;
+			if(line == kernel::line(c) && offsetInLine(c) != 0)
+				c.moveTo(Position(kernel::line(c), offsetInLine(c) + level));
 		} else {
 			const String& s = document.line(line);
 			Index indentLength;
@@ -939,28 +952,28 @@ namespace {
 			if(indentLength > 0) {
 				const Index deleteLength = min<Index>(-level, indentLength);
 				erase(document, Position(line, 0), Position(line, deleteLength));
-				if(line == otherResult.line && otherResult.column != 0)
-					otherResult.column -= deleteLength;
-				if(line == caret.line() && caret.column() != 0)
-					caret.moveTo(caret.line(), caret.column() - deleteLength);
+				if(line == otherResult.line && otherResult.offsetInLine != 0)
+					otherResult.offsetInLine -= deleteLength;
+				if(line == kernel::line(c) && offsetInLine(c) != 0)
+					c.moveTo(Position(kernel::line(c), offsetInLine(c) - deleteLength));
 			}
 		}
 
 		// indent/unindent the following selected lines
 		if(level > 0) {
 			for(++line; line <= region.end().line; ++line) {
-				if(document.lineLength(line) != 0 && (line != region.end().line || region.end().column > 0)) {
+				if(document.lineLength(line) != 0 && (line != region.end().line || region.end().offsetInLine > 0)) {
 					Index insertPosition = 0;
 					if(rectangle) {
 						Range<Index> dummy;
-						caret.boxForRectangleSelection().characterRangeInVisualLine(font::VisualLine(line, 0), dummy);	// TODO: recognize wrap (second parameter).
+						c.boxForRectangleSelection().characterRangeInVisualLine(font::VisualLine(line, 0), dummy);	// TODO: recognize wrap (second parameter).
 						insertPosition = dummy.beginning();
 					}
 					insert(document, Position(line, insertPosition), indent);
-					if(line == otherResult.line && otherResult.column != 0)
-						otherResult.column += level;
-					if(line == caret.line() && caret.column() != 0)
-						caret.moveTo(caret.line(), caret.column() + level);
+					if(line == otherResult.line && otherResult.offsetInLine != 0)
+						otherResult.offsetInLine += level;
+					if(line == kernel::line(c) && offsetInLine(c) != 0)
+						c.moveTo(Position(kernel::line(c), offsetInLine(c) + level));
 				}
 			}
 		} else {
@@ -975,10 +988,10 @@ namespace {
 				if(indentLength > 0) {
 					const Index deleteLength = min<Index>(-level, indentLength);
 					erase(document, Position(line, 0), Position(line, deleteLength));
-					if(line == otherResult.line && otherResult.column != 0)
-						otherResult.column -= deleteLength;
-					if(line == caret.line() && caret.column() != 0)
-						caret.moveTo(caret.line(), caret.column() - deleteLength);
+					if(line == otherResult.line && otherResult.offsetInLine != 0)
+						otherResult.offsetInLine -= deleteLength;
+					if(line == kernel::line(c) && offsetInLine(c) != 0)
+						c.moveTo(Position(kernel::line(c), offsetInLine(c) - deleteLength));
 				}
 			}
 		}
@@ -993,7 +1006,7 @@ namespace {
  * @throw ...
  * @deprecated 0.8
  */
-void viewers::indentBySpaces(Caret& caret, bool rectangle, long level /* = 1 */) {
+void viewers::indentBySpaces(Somewhere<Caret> caret, bool rectangle, long level /* = 1 */) {
 	return indent(caret, ' ', rectangle, level);
 }
 
@@ -1005,7 +1018,7 @@ void viewers::indentBySpaces(Caret& caret, bool rectangle, long level /* = 1 */)
  * @throw ...
  * @deprecated 0.8
  */
-void viewers::indentByTabs(Caret& caret, bool rectangle, long level /* = 1 */) {
+void viewers::indentByTabs(Somewhere<Caret> caret, bool rectangle, long level /* = 1 */) {
 	return indent(caret, '\t', rectangle, level);
 }
 
@@ -1039,7 +1052,7 @@ bool viewers::transposeCharacters(Caret& caret) {
 	else if(!region.includes(caret.position()))	// inaccessible
 		return false;
 
-	if(caret.column() == 0 || caret.position() == region.first) {
+	if(offsetInLine(caret) == 0 || caret.position() == region.first) {
 		GraphemeBreakIterator<DocumentCharacterIterator> i(
 			DocumentCharacterIterator(caret.document(), pos[0] = caret.position()));
 		pos[1] = (++i).base().tell();
@@ -1048,7 +1061,7 @@ bool viewers::transposeCharacters(Caret& caret) {
 		pos[2] = (++i).base().tell();
 		if(pos[2].line != pos[1].line || pos[2] == pos[1] || !region.includes(pos[2]))
 			return false;
-	} else if(caret.column() == caret.document().lineLength(caret.line()) || caret.position() == region.second) {
+	} else if(offsetInLine(caret) == caret.document().lineLength(line(caret)) || caret.position() == region.second) {
 		GraphemeBreakIterator<DocumentCharacterIterator> i(
 			DocumentCharacterIterator(caret.document(), pos[2] = caret.position()));
 		pos[1] = (--i).base().tell();
@@ -1083,7 +1096,7 @@ bool viewers::transposeCharacters(Caret& caret) {
 
 /**
  * Transposes the line addressed by the caret and the next line, and moves the caret to the same
- * column in the next line.
+ * offset in the next line.
  * If the caret is the last line in the document, transposes with the previous line.
  * The intervening newline character is not moved.
  * If the lines to transpose are not inside of the accessible region, this method fails and returns
@@ -1107,7 +1120,7 @@ bool viewers::transposeLines(Caret& caret) {
 	try {
 		document.replace(Region(
 			Position(firstLine, 0), Position(firstLine + 1, document.lineLength(firstLine + 1))), s);
-		caret.moveTo((old.line != document.numberOfLines() - 1) ? firstLine + 1 : firstLine, old.column);
+		caret.moveTo((old.line != document.numberOfLines() - 1) ? firstLine + 1 : firstLine, old.offsetInLine);
 	} catch(const DocumentAccessViolationException&) {
 		return false;
 	}

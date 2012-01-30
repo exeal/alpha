@@ -96,7 +96,7 @@ namespace ascension {
 				// position translations
 				Index mapLogicalLineToVisualLine(Index line) const;
 				Index mapLogicalPositionToVisualPosition(
-					const kernel::Position& position, Index* column) const;
+					const kernel::Position& position, Index* offsetInVisualLine) const;
 //				Index mapVisualLineToLogicalLine(Index line, Index* subline) const;
 //				kernel::Position mapVisualPositionToLogicalPosition(const kernel::Position& position) const;
 				bool offsetVisualLine(VisualLine& line, SignedIndex offset) const /*throw()*/;
@@ -144,9 +144,10 @@ namespace ascension {
 				const std::size_t bufferSize_;
 				const bool autoRepair_;
 				enum {ABOUT_TO_CHANGE, CHANGING, NONE} documentChangePhase_;
-				Range<Index> pendingCacheClearance_;	// ドキュメント変更中に呼び出された clearCaches の引数
+				boost::optional<Range<Index>> pendingCacheClearance_;	// parameters of clearCaches called when document changed
 				Scalar maximumMeasure_;
-				Index longestLine_, numberOfVisualLines_;
+				boost::optional<Index> longestLine_;
+				Index numberOfVisualLines_;
 				detail::Listeners<VisualLinesListener> listeners_;
 			};
 
@@ -169,7 +170,7 @@ namespace ascension {
 					LayoutGenerator layoutGenerator, Index bufferSize, bool autoRepair) :
 					document_(document), layoutGenerator_(new Generator<LayoutGenerator>(layoutGenerator)),
 					bufferSize_(bufferSize), autoRepair_(autoRepair), documentChangePhase_(NONE),
-					maximumMeasure_(0), longestLine_(INVALID_INDEX), numberOfVisualLines_(document.numberOfLines()) {
+					maximumMeasure_(0), numberOfVisualLines_(document.numberOfLines()) {
 				initialize();
 			}
 
@@ -193,7 +194,7 @@ namespace ascension {
 			 * @see #oprator[], #at
 			 */
 			inline const TextLayout* LineLayoutVector::atIfCached(Index line) const /*throw()*/ {
-				if(pendingCacheClearance_.beginning() != INVALID_INDEX && includes(pendingCacheClearance_, line))
+				if(pendingCacheClearance_ && includes(*pendingCacheClearance_, line))
 					return 0;
 				for(std::list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 					if(i->first == line)

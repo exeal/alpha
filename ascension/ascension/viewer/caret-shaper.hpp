@@ -98,7 +98,8 @@ namespace ascension {
 				graphics::NativePoint& alignmentPoint) const /*throw()*/;
 			virtual void uninstall() /*throw()*/;
 			// CaretListener
-			virtual void caretMoved(const Caret& caret, const kernel::Region& oldRegion);
+			virtual void caretMoved(const Caret& caret,
+				const boost::optional<kernel::Region>& oldRegion);
 			// graphics.font.ComputedWritingModeListener
 			void computedWritingModeChanged(const presentation::WritingMode& used);
 			// graphics.font.VisualLinesListener

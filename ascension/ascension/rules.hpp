@@ -164,7 +164,7 @@ namespace ascension {
 			/// Returns the identifier syntax.
 			virtual const text::IdentifierSyntax& getIdentifierSyntax() const /*throw()*/ = 0;
 			/// Returns the current position.
-			virtual kernel::Position getPosition() const /*throw()*/ = 0;
+			virtual kernel::Position getPosition() const = 0;
 			/// Returns @c false if the scanning is done.
 			virtual bool hasNext() const /*throw()*/ = 0;
 			/**
@@ -189,10 +189,12 @@ namespace ascension {
 		class NullTokenScanner : public TokenScanner {
 		public:
 			const text::IdentifierSyntax& getIdentifierSyntax() const /*throw()*/;
-			kernel::Position getPosition() const /*throw()*/;
+			kernel::Position getPosition() const;
 			bool hasNext() const /*throw()*/;
 			std::auto_ptr<Token> nextToken();
 			void parse(const kernel::Document& document, const kernel::Region& region);
+		private:
+			boost::optional<kernel::Position> position_;
 		};
 
 		/**
@@ -235,7 +237,7 @@ namespace ascension {
 			virtual std::auto_ptr<TransitionRule> clone() const = 0;
 			kernel::ContentType contentType() const /*throw()*/;
 			kernel::ContentType destination() const /*throw()*/;
-			virtual Index matches(const String& line, Index column) const = 0;
+			virtual Index matches(const String& line, Index offsetInLine) const = 0;
 		protected:
 			TransitionRule(kernel::ContentType contentType, kernel::ContentType destination) /*throw()*/;
 		private:
@@ -248,7 +250,7 @@ namespace ascension {
 			LiteralTransitionRule(kernel::ContentType contentType, kernel::ContentType destination,
 				const String& pattern, Char escapeCharacter = text::NONCHARACTER, bool caseSensitive = true);
 			std::auto_ptr<TransitionRule> clone() const;
-			Index matches(const String& line, Index column) const;
+			Index matches(const String& line, Index offsetInLine) const;
 		private:
 			const String pattern_;
 			const Char escapeCharacter_;
@@ -263,7 +265,7 @@ namespace ascension {
 				kernel::ContentType destination, std::auto_ptr<const regex::Pattern> pattern);
 			RegexTransitionRule(const RegexTransitionRule& other);
 			std::auto_ptr<TransitionRule> clone() const;
-			Index matches(const String& line, Index column) const;
+			Index matches(const String& line, Index offsetInLine) const;
 		private:
 			std::auto_ptr<const regex::Pattern> pattern_;
 		};
@@ -291,7 +293,9 @@ namespace ascension {
 				Partition(kernel::ContentType type, const kernel::Position& p,
 					const kernel::Position& startOfToken, Index lengthOfToken) /*throw()*/
 					: contentType(type), start(p), tokenStart(startOfToken), tokenLength(lengthOfToken) {}
-				kernel::Position getTokenEnd() const /*throw()*/ {return kernel::Position(tokenStart.line, tokenStart.column + tokenLength);}
+				kernel::Position getTokenEnd() const /*throw()*/ {
+					return kernel::Position(tokenStart.line, tokenStart.offsetInLine + tokenLength);
+				}
 			};
 		private:
 			void computePartitioning(const kernel::Position& start,
@@ -301,7 +305,7 @@ namespace ascension {
 			void erasePartitions(const kernel::Position& first, const kernel::Position& last);
 			detail::GapVector<Partition*>::const_iterator partitionAt(const kernel::Position& at) const /*throw()*/;
 			kernel::ContentType transitionStateAt(const kernel::Position& at) const /*throw()*/;
-			Index tryTransition(const String& line, Index column,
+			Index tryTransition(const String& line, Index offsetInLine,
 				kernel::ContentType contentType, kernel::ContentType& destination) const /*throw()*/;
 			void verify() const;
 			// DocumentPartitioner

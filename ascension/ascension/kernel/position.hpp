@@ -14,13 +14,14 @@
 #include <locale>	// std.use_facet, ...
 #include <sstream>	// std.basic_ostream, std.ostringstream
 #include <utility>	// std.pair
+#include <boost/optional.hpp>
 
 namespace ascension {
 	namespace kernel {
 
 		/**
-		 * @c Position represents a position in the document by a line number and distance from
-		 * beginning of line.
+		 * @c Position represents a position in the document by a line number and an offset in the
+		 * line.
 		 * @note This class is not intended to be subclassed.
 		 * @see Region, Point, viewers#VisualPoint, viewers#Caret
 		 */
@@ -28,26 +29,30 @@ namespace ascension {
 		public:
 			/// Line number. Zero means that the position is the first line in the document.
 			Index line;
-			/// Position in the line. Zero means that the position is the beginning of the line.
-			Index column;
+			/// Offset in the line (column) in UTF-16 code units.
+			/// Zero means that the position is the beginning of the line.
+			Index offsetInLine;
 		public:
-			/// Default constructor creates an invalid or unused position.
-			Position() /*throw()*/ : line(INVALID_INDEX), column(INVALID_INDEX) {
-			}
-			/// Constructor.
-			Position(Index line, Index column) /*throw()*/ : line(line), column(column) {
+			/// Default constructor does not initialize the members at all.
+			Position() /*throw()*/ {}
+			/**
+			 * Constructor.
+			 * @param line The initial value for @c #line
+			 * @param offsetInLine The initial value for @c #offsetInLine
+			 */
+			Position(Index line, Index offsetInLine) /*throw()*/ : line(line), offsetInLine(offsetInLine) {
 			}
 			/// Equality operator.
 			bool operator==(const Position& other) const /*throw()*/ {
-				return line == other.line && column == other.column;
+				return line == other.line && offsetInLine == other.offsetInLine;
 			}
 			/// Unequality operator.
 			bool operator!=(const Position& other) const /*throw()*/ {
-				return line != other.line || column != other.column;
+				return line != other.line || offsetInLine != other.offsetInLine;
 			}
 			/// Relational operator.
 			bool operator<(const Position& other) const /*throw()*/ {
-				return line < other.line || (line == other.line && column < other.column);
+				return line < other.line || (line == other.line && offsetInLine < other.offsetInLine);
 			}
 			/// Relational operator.
 			bool operator<=(const Position& other) const /*throw()*/ {
@@ -55,7 +60,7 @@ namespace ascension {
 			}
 			/// Relational operator.
 			bool operator>(const Position& other) const /*throw()*/ {
-				return line > other.line || (line == other.line && column > other.column);
+				return line > other.line || (line == other.line && offsetInLine > other.offsetInLine);
 			}
 			/// Relational operator.
 			bool operator>=(const Position& other) const /*throw()*/ {
@@ -79,7 +84,7 @@ namespace ascension {
 			s.flags(out.flags());
 			s.imbue(out.getloc());
 			s.precision(out.precision());
-			s << ct.widen('(') << value.line << ct.widen(',') << value.column << ct.widen(')');
+			s << ct.widen('(') << value.line << ct.widen(',') << value.offsetInLine << ct.widen(')');
 			return out << s.str().c_str();
 		}
 
@@ -92,8 +97,10 @@ namespace ascension {
 		 */
 		class Region : public std::pair<Position, Position>, public FastArenaObject<Region> {
 		public:
+			/// Default constructor does not initialize the two positions.
+			Region() /*throw()*/ {}
 			/// Constructor creates an empty region.
-			explicit Region(const Position& p = Position()) /*throw()*/
+			explicit Region(const Position& p) /*throw()*/
 				: std::pair<Position, Position>(p, p) {}
 			/// Constructor.
 			Region(const Position& first, const Position& second) /*throw()*/
@@ -180,6 +187,9 @@ namespace ascension {
 		 */
 		class BadPositionException : public std::invalid_argument {
 		public:
+			/// Default constructor.
+			BadPositionException() /*throw()*/ : std::invalid_argument(
+				"the position <not-initialized> is outside of the document or invalid.") {}
 			/**
 			 * Constructor.
 			 * @param requested The requested position in the document
@@ -195,9 +205,11 @@ namespace ascension {
 			BadPositionException(const Position& requested, const std::string& message)
 				: std::invalid_argument(message), requestedPosition_(requested) {}
 			/// Returns the requested position in the document.
-			const Position& requestedPosition() const /*throw()*/ {return requestedPosition_;}
+			const boost::optional<Position>& requestedPosition() const /*throw()*/ {
+				return requestedPosition_;
+			}
 		private:
-			const Position requestedPosition_;
+			const boost::optional<Position> requestedPosition_;
 		};
 
 		/**
@@ -206,6 +218,9 @@ namespace ascension {
 		 */
 		class BadRegionException : public std::invalid_argument {
 		public:
+			/// Default constructor.
+			BadRegionException() /*throw()*/ : std::invalid_argument(
+				"the region <not-initialized> intersects outside of the document or invalid") {}
 			/**
 			 * Constructor.
 			 * @param requested The requested region in the document
@@ -222,9 +237,11 @@ namespace ascension {
 			BadRegionException(const Region& requested, const std::string& message)
 				: std::invalid_argument(message), requestedRegion_(requested) {}
 			/// Returns the requested region in the document.
-			const Region& requestedRegion() const /*throw()*/ {return requestedRegion_;}
+			const boost::optional<Region>& requestedRegion() const /*throw()*/ {
+				return requestedRegion_;
+			}
 		private:
-			const Region requestedRegion_;
+			const boost::optional<Region> requestedRegion_;
 		};
 
 	}

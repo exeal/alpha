@@ -254,14 +254,14 @@ namespace ascension {
 				~TextLayout() /*throw()*/;
 				// general attributes
 				presentation::TextAnchor anchor() const /*throw()*/;
-				uint8_t bidiEmbeddingLevel(Index column) const;
+				uint8_t bidiEmbeddingLevel(Index offsetInLine) const;
 				bool isBidirectional() const /*throw()*/;
 				bool isEmpty() const /*throw()*/;
 				const presentation::TextLineStyle& style() const /*throw()*/;
 				const presentation::WritingMode& writingMode() const /*throw()*/;
 				// visual line accesses
 				Index numberOfLines() const /*throw()*/;
-				Index lineAt(Index column) const;
+				Index lineAt(Index offsetInLine) const;
 				Index lineLength(Index line) const;
 				Index lineOffset(Index line) const;
 				const Index* lineOffsets() const /*throw()*/;
@@ -279,13 +279,13 @@ namespace ascension {
 				const LineMetrics& lineMetrics(Index line) const;
 				Scalar lineStartEdge(Index line) const;
 				Index locateLine(Scalar bpd, bool& outside) const /*throw()*/;
-				NativePoint location(Index column, Edge edge = LEADING) const;
-				std::pair<NativePoint, NativePoint> locations(Index column) const;
+				NativePoint location(Index offsetInLine, Edge edge = LEADING) const;
+				std::pair<NativePoint, NativePoint> locations(Index offsetInLine) const;
 				std::pair<Index, Index> offset(const NativePoint& p, bool* outside = 0) const /*throw()*/;
 				// styled segments
 //				StyledSegmentIterator firstStyledSegment() const /*throw()*/;
 //				StyledSegmentIterator lastStyledSegment() const /*throw()*/;
-				presentation::StyledTextRun styledTextRun(Index column) const;
+				presentation::StyledTextRun styledTextRun(Index offsetInLine) const;
 				// painting
 				void draw(PaintContext& context, const NativePoint& origin,
 					const TextPaintOverride* paintOverride = 0,
@@ -300,11 +300,11 @@ namespace ascension {
 
 			private:
 				void expandTabsWithoutWrapping() /*throw()*/;
-				std::size_t findRunForPosition(Index column) const /*throw()*/;
+				std::size_t findRunForPosition(Index offsetInLine) const /*throw()*/;
 				void justify(presentation::TextJustification method) /*throw()*/;
 				std::pair<Index, Index> locateOffsets(
 					Index line, Scalar ipd, bool& outside) const /*throw()*/;
-				void locations(Index column, NativePoint* leading, NativePoint* trailing) const;
+				void locations(Index offsetInLine, NativePoint* leading, NativePoint* trailing) const;
 				int nextTabStopBasedLeftEdge(Scalar x, bool right) const /*throw()*/;
 				void reorder() /*throw()*/;
 //				void rewrap();
@@ -363,16 +363,16 @@ namespace ascension {
 			inline bool TextLayout::isEmpty() const /*throw()*/ {return runs_.get() == 0;}
 
 			/**
-			 * Returns the wrapped line containing the specified column.
-			 * @param column The column
+			 * Returns the wrapped line containing the specified offset in the logical line.
+			 * @param offsetInLine The offset in the line
 			 * @return The wrapped line
-			 * @throw kernel#BadPositionException @a column is greater than the length of the line
+			 * @throw kernel#BadPositionException @a offsetInLine is greater than the length of the line
 			 */
-			inline Index TextLayout::lineAt(Index column) const {
-				if(column > text_.length())
-					throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));
+			inline Index TextLayout::lineAt(Index offsetInLine) const {
+				if(offsetInLine > text_.length())
+					throw kernel::BadPositionException(kernel::Position(0, offsetInLine));
 				return (numberOfLines() == 1) ? 0 :
-					*detail::searchBound(lineOffsets(), lineOffsets() + numberOfLines(), column);
+					*detail::searchBound(lineOffsets(), lineOffsets() + numberOfLines(), offsetInLine);
 			}
 
 			/**
@@ -383,7 +383,7 @@ namespace ascension {
 			 */
 			inline const LineMetrics& TextLayout::lineMetrics(Index line) const {
 				if(line >= numberOfLines())
-					throw kernel::BadPositionException(kernel::Position());
+					throw kernel::BadPositionException(kernel::Position(line, 0));
 				return *lineMetrics_[line];
 			}
 
@@ -407,7 +407,7 @@ namespace ascension {
 			 */
 			inline Index TextLayout::lineOffset(Index line) const {
 				if(line >= numberOfLines())
-					throw kernel::BadPositionException(kernel::Position());
+					throw kernel::BadPositionException(kernel::Position(line, 0));
 				return lineOffsets()[line];
 			}
 
@@ -420,30 +420,32 @@ namespace ascension {
 
 			/**
 			 * Returns the location for the specified character offset.
-			 * @param column The character offset from the beginning of the line
+			 * @param offsetInLine The character offset in the line
 			 * @param edge The edge of the character to locate
 			 * @return The location. X-coordinate is distance from the left edge of the renderer,
 			 *         y-coordinate is relative in the visual lines
-			 * @throw kernel#BadPositionException @a column is greater than the length of the line
+			 * @throw kernel#BadPositionException @a offsetInLine is greater than the length of the
+			 *                                    line
 			 */
-			inline NativePoint TextLayout::location(Index column, Edge edge /* = LEADING */) const {
+			inline NativePoint TextLayout::location(Index offsetInLine, Edge edge /* = LEADING */) const {
 				NativePoint result;
-				locations(column, (edge == LEADING) ? &result : 0, (edge == TRAILING) ? &result : 0);
+				locations(offsetInLine, (edge == LEADING) ? &result : 0, (edge == TRAILING) ? &result : 0);
 				return result;
 			}
 
 			/**
 			 * Returns the locations for the specified character offset.
-			 * @param column The character offset from the beginning of the line
+			 * @param offsetInLine The character offset in the line
 			 * @return A pair consists of the locations. The first element means the leading, the
 			 *         second element means the trailing position of the character. X-coordinates
 			 *         are distances from the left edge of the renderer, y-coordinates are relative
 			 *         in the visual lines
-			 * @throw kernel#BadPositionException @a column is greater than the length of the line
+			 * @throw kernel#BadPositionException @a offsetInLine is greater than the length of the
+			 *                                    line
 			 */
-			inline std::pair<NativePoint, NativePoint> TextLayout::locations(Index column) const {
+			inline std::pair<NativePoint, NativePoint> TextLayout::locations(Index offsetInLine) const {
 				std::pair<NativePoint, NativePoint> result;
-				locations(column, &result.first, &result.second);
+				locations(offsetInLine, &result.first, &result.second);
 				return result;
 			}
 

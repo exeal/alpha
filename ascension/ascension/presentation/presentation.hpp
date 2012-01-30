@@ -120,8 +120,8 @@ namespace ascension {
 				 * Returns the next hyperlink in the specified text line.
 				 * @param document The document
 				 * @param line The line number
-				 * @param range The column range in the line to search. @a range.beginning() can be
-				 *              the beginning of the found hyperlink
+				 * @param range The range of offsets in the line to search. @a range.beginning()
+				 *              can be the beginning of the found hyperlink
 				 * @return The found hyperlink, or @c null if not found
 				 */
 				virtual std::auto_ptr<Hyperlink> nextHyperlink(

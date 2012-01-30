@@ -55,7 +55,6 @@ TextRunStyle& TextRunStyle::resolveInheritance(const TextRunStyle& base, bool ba
  * Default constructor.
  */
 StyledTextRunEnumerator::StyledTextRunEnumerator() : end_(0) {
-	current_.first = false;
 }
 
 /**
@@ -68,24 +67,20 @@ StyledTextRunEnumerator::StyledTextRunEnumerator(
 		auto_ptr<StyledTextRunIterator> sourceIterator, Index end) : iterator_(sourceIterator), end_(end) {
 	if(iterator_.get() == 0)
 		throw NullPointerException("sourceIterator");
-	if(current_.first = iterator_->hasNext()) {
-		current_.second = iterator_->current();
-		if(current_.second.position() < end_) {
+	if(iterator_->hasNext()) {
+		current_ = iterator_->current();
+		if(current_->position() < end_) {
 			iterator_->next();
-			if(next_.first = iterator_->hasNext()) {
-				next_.second = iterator_->current();
-				if(next_.second.position() < end_)
+			if(iterator_->hasNext()) {
+				next_ = iterator_->current();
+				if(next_->position() < end_)
 					iterator_->next();
-				else {
-					next_.first = false;
-					next_.second = StyledTextRun(end_, next_.second.style());
-				}
-			} else
-				next_.second = StyledTextRun(end_, next_.second.style());
+				else
+					next_ = boost::none;
+			}
 		} else
-			current_.first = false;
-	} else
-		next_.first = false;
+			current_ = boost::none;
+	}
 }
 
 /**
@@ -93,14 +88,14 @@ StyledTextRunEnumerator::StyledTextRunEnumerator(
  * @throw NoSuchElementException The enumerator addresses the end
  */
 const StyledTextRunEnumerator::reference StyledTextRunEnumerator::current() const {
-	if(!current_.first)
+	if(!current_)
 		throw NoSuchElementException();
-	return make_pair(makeRange(current_.second.position(), next_.second.position()), current_.second.style());
+	return make_pair(makeRange(current_->position(), next_ ? next_->position() : end_), current_->style());
 }
 
 /// Implements @c detail#IteratorAdapter#equals.
 bool StyledTextRunEnumerator::equals(const StyledTextRunEnumerator& other) const /*throw()*/ {
-	return !current_.first && !other.current_.first;
+	return !current_ && !other.current_;
 }
 
 /**
@@ -108,18 +103,17 @@ bool StyledTextRunEnumerator::equals(const StyledTextRunEnumerator& other) const
  * @throw NoSuchElementException The enumerator addresses the end
  */
 void StyledTextRunEnumerator::next() {
-	if(!current_.first)
+	if(!current_)
 		throw NoSuchElementException();
 	current_ = next_;
-	if(next_.first = iterator_->hasNext()) {
-		next_.second = iterator_->current();
-		if(next_.second.position() >= end_) {
-			next_.first = false;
-			next_.second = StyledTextRun(end_, next_.second.style());
-		} else
+	if(iterator_->hasNext()) {
+		next_ = iterator_->current();
+		if(next_->position() >= end_)
+			next_ = boost::none;
+		else
 			iterator_->next();
 	} else
-		next_.second = StyledTextRun(end_, next_.second.style());
+		next_ = boost::none;
 }
 
 
@@ -253,15 +247,15 @@ const Hyperlink* const* Presentation::getHyperlinks(Index line, size_t& numberOf
 		hyperlinks_.pop_back();
 	}
 	vector<Hyperlink*> temp;
-	for(Index column = 0, eol = document_.lineLength(line); column < eol; ) {
-		auto_ptr<Hyperlink> h(hyperlinkDetector_->nextHyperlink(document_, line, Range<Index>(column, eol)));
+	for(Index offsetInLine = 0, eol = document_.lineLength(line); offsetInLine < eol; ) {
+		auto_ptr<Hyperlink> h(hyperlinkDetector_->nextHyperlink(document_, line, Range<Index>(offsetInLine, eol)));
 		if(h.get() == 0)
 			break;
 		// check result
 		const Range<Index>& r(h->region());
-		if(r.beginning() < column)
+		if(r.beginning() < offsetInLine)
 			break;
-		column = r.end();
+		offsetInLine = r.end();
 		temp.push_back(h.release());
 	}
 	auto_ptr<Hyperlinks> newItem(new Hyperlinks);
@@ -385,7 +379,7 @@ auto_ptr<StyledTextRunIterator> Presentation::textRunStyles(Index line) const {
 
 class SingleStyledPartitionPresentationReconstructor::Iterator : public presentation::StyledTextRunIterator {
 public:
-	Iterator(Index column, tr1::shared_ptr<const TextRunStyle> style) : run_(column, style), done_(false) {}
+	Iterator(Index offsetInLine, tr1::shared_ptr<const TextRunStyle> style) : run_(offsetInLine, style), done_(false) {}
 private:
 	// StyledTextRunIterator
 	StyledTextRun current() const {
@@ -457,12 +451,12 @@ PresentationReconstructor::Iterator::Iterator(
 		PartitionPresentationReconstructor*> reconstructors, Index line)
 		: presentation_(presentation), reconstructors_(reconstructors), line_(line) {
 	const DocumentPartitioner& partitioner = presentation_.document().partitioner();
-	Index column = 0;
+	Index offsetInLine = 0;
 	for(const Index lineLength = presentation_.document().lineLength(line);;) {
-		partitioner.partition(Position(line, column), currentPartition_);	// this may throw BadPositionException
+		partitioner.partition(Position(line, offsetInLine), currentPartition_);	// this may throw BadPositionException
 		if(!currentPartition_.region.isEmpty())
 			break;
-		if(++column >= lineLength) {	// rare case...
+		if(++offsetInLine >= lineLength) {	// rare case...
 			currentPartition_.contentType = DEFAULT_CONTENT_TYPE;
 			currentPartition_.region = Region(line, make_pair(0, lineLength));
 			break;
@@ -502,13 +496,13 @@ void PresentationReconstructor::Iterator::next() {
 		}
 		// find the next partition
 		const DocumentPartitioner& partitioner = document.partitioner();
-		for(Index column = currentPartition_.region.end().column; ; ) {
-			partitioner.partition(Position(line_, column), currentPartition_);
+		for(Index offsetInLine = currentPartition_.region.end().offsetInLine; ; ) {
+			partitioner.partition(Position(line_, offsetInLine), currentPartition_);
 			if(!currentPartition_.region.isEmpty())
 				break;
-			if(++column >= lineLength) {	// rare case...
+			if(++offsetInLine >= lineLength) {	// rare case...
 				currentPartition_.contentType = DEFAULT_CONTENT_TYPE;
-				currentPartition_.region = Region(line_, make_pair(column, lineLength));
+				currentPartition_.region = Region(line_, make_pair(offsetInLine, lineLength));
 			}
 		}
 		updateSubiterator();
@@ -525,7 +519,7 @@ inline void PresentationReconstructor::Iterator::updateSubiterator() {
 		tr1::shared_ptr<const TextRunStyle> runStyle(lineStyle->defaultRunStyle);
 		if(runStyle.get() == 0)
 			runStyle = DEFAULT_TEXT_RUN_STYLE;
-		current_ = make_pair(currentPartition_.region.beginning().column, runStyle);
+		current_ = make_pair(currentPartition_.region.beginning().offsetInLine, runStyle);
 	}
 }
 
@@ -648,7 +642,7 @@ auto_ptr<Hyperlink> CompositeHyperlinkDetector::nextHyperlink(
 		map<ContentType, HyperlinkDetector*>::const_iterator detector(composites_.find(partition.contentType));
 		if(detector != composites_.end()) {
 			auto_ptr<Hyperlink> found = detector->second->nextHyperlink(
-				document, line, Range<Index>(p.column, min(partition.region.end(), e).column));
+				document, line, Range<Index>(p.offsetInLine, min(partition.region.end(), e).offsetInLine));
 			if(found.get() != 0)
 				return found;
 		}
@@ -720,7 +714,7 @@ StyledTextRun LexicalPartitionPresentationReconstructor::StyledTextRunIterator::
 
 /// @see StyledTextRunIterator#hasNext
 bool LexicalPartitionPresentationReconstructor::StyledTextRunIterator::hasNext() const {
-	return lastTokenEnd_.column != region_.end().column;
+	return lastTokenEnd_.offsetInLine != region_.end().offsetInLine;
 }
 
 /// @see StyledTextRunIterator#next
@@ -733,7 +727,7 @@ void LexicalPartitionPresentationReconstructor::StyledTextRunIterator::next() {
 inline void LexicalPartitionPresentationReconstructor::StyledTextRunIterator::nextRun() {
 	if(next_.get() != 0) {
 		map<Token::Identifier, tr1::shared_ptr<const TextRunStyle> >::const_iterator style(styles_.find(next_->id));
-		current_.first = next_->region.beginning().column;
+		current_.first = next_->region.beginning().offsetInLine;
 		current_.second = (style != styles_.end()) ? style->second : defaultStyle_;
 		lastTokenEnd_ = next_->region.end();
 		next_.reset();
@@ -742,19 +736,19 @@ inline void LexicalPartitionPresentationReconstructor::StyledTextRunIterator::ne
 		assert(next_.get() != 0);
 		if(next_->region.beginning() != lastTokenEnd_) {
 			// 
-			current_.first = lastTokenEnd_.column;
+			current_.first = lastTokenEnd_.offsetInLine;
 			current_.second = defaultStyle_;
 			lastTokenEnd_ = next_->region.beginning();
 		} else {
 			map<Token::Identifier, tr1::shared_ptr<const TextRunStyle> >::const_iterator style(styles_.find(next_->id));
-			current_.first = next_->region.beginning().column;
+			current_.first = next_->region.beginning().offsetInLine;
 			current_.second = (style != styles_.end()) ? style->second : defaultStyle_;
 			lastTokenEnd_ = next_->region.beginning();
 			next_.reset();
 		}
 	} else if(lastTokenEnd_ != region_.end()) {
 		//
-		current_.first = lastTokenEnd_.column;
+		current_.first = lastTokenEnd_.offsetInLine;
 		current_.second = defaultStyle_;
 		lastTokenEnd_ = region_.end();
 	}

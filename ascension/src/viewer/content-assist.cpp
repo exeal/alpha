@@ -121,7 +121,7 @@ void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret
 	static const Index MAXIMUM_IDENTIFIER_LENGTH = 100;
 	if(!incremental || locations::isBeginningOfLine(caret))
 		replacementRegion.first = caret;
-	else if(source::getNearestIdentifier(caret.document(), caret, &replacementRegion.first.column, 0))
+	else if(source::getNearestIdentifier(caret.document(), caret, &replacementRegion.first.offsetInLine, 0))
 		replacementRegion.first.line = caret.line();
 	else
 		replacementRegion.first = caret;

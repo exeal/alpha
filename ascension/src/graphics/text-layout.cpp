@@ -966,18 +966,18 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 	else if(numberOfScriptRuns == 0)
 		throw invalid_argument("numberOfScriptRuns");
 
-#define ASCENSION_SPLIT_LAST_RUN()										\
-	while(runs.back()->length() > MAXIMUM_RUN_LENGTH) {					\
-		TextRun& back = *runs.back();									\
-		TextRun* piece = new SimpleRun(back.style);						\
-		Index pieceLength = MAXIMUM_RUN_LENGTH;							\
-		if(surrogates::isLowSurrogate(line[back.column + pieceLength]))	\
-			--pieceLength;												\
-		piece->analysis = back.analysis;								\
-		piece->column = back.column + pieceLength;						\
-		piece->setLength(back.length() - pieceLength);					\
-		back.setLength(pieceLength);									\
-		runs.push_back(piece);											\
+#define ASCENSION_SPLIT_LAST_RUN()												\
+	while(runs.back()->length() > MAXIMUM_RUN_LENGTH) {							\
+		TextRun& back = *runs.back();											\
+		TextRun* piece = new SimpleRun(back.style);								\
+		Index pieceLength = MAXIMUM_RUN_LENGTH;									\
+		if(surrogates::isLowSurrogate(line[back.offsetInLine + pieceLength]))	\
+			--pieceLength;														\
+		piece->analysis = back.analysis;										\
+		piece->offsetInLine = back.offsetInLine + pieceLength;					\
+		piece->setLength(back.length() - pieceLength);							\
+		back.setLength(pieceLength);											\
+		runs.push_back(piece);													\
 	}
 
 	pair<vector<TextRun*>, vector<const StyledTextRun> > results;
@@ -987,20 +987,20 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 	pair<const SCRIPT_ITEM*, Index> nextScriptRun;	// 'second' is the beginning position
 	nextScriptRun.first = (numberOfScriptRuns > 1) ? (scriptRuns + 1) : 0;
 	nextScriptRun.second = (nextScriptRun.first != 0) ? nextScriptRun.first->iCharPos : layoutString.length();
-	pair<StyledTextRun, bool> styleRun;	// 'second' is false if 'first' is invalid
-	if(styleRun.second = styles.get() != 0 && styles->hasNext()) {
-		styleRun.first = styles->current();
+	boost::optional<StyledTextRun> styleRun;
+	if(styles.get() != 0 && styles->hasNext()) {
+		styleRun = styles->current();
 		styles->next();
-		results.second.push_back(styleRun.first);
+		results.second.push_back(*styleRun);
 	}
-	pair<StyledTextRun, bool> nextStyleRun;	// 'second' is false if 'first' is invalid
-	if(nextStyleRun.second = styles.get() != 0 && styles->hasNext())
-		nextStyleRun.first = styles->current();
-	Index beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.position() : layoutString.length();
+	boost::optional<StyledTextRun> nextStyleRun;
+	if(styles.get() != 0 && styles->hasNext())
+		nextStyleRun = styles->current();
+	Index beginningOfNextStyleRun = nextStyleRun ? nextStyleRun->position() : layoutString.length();
 	tr1::shared_ptr<const Font> font;	// font for current glyph run
 	do {
 		const Index previousRunEnd = max<Index>(
-			scriptRun->iCharPos, styleRun.second ? styleRun.first.position() : 0);
+			scriptRun->iCharPos, styleRun ? styleRun->position() : 0);
 		assert(
 			(previousRunEnd == 0 && results.first.empty() && results.second.empty())
 			|| (!results.first.empty() && previousRunEnd == results.first.back()->end())
@@ -1024,7 +1024,7 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 			const pair<const Char*, tr1::shared_ptr<const Font> > nextFontRun(
 				findNextFontRun(
 					Range<const Char*>(layoutString.data() + previousRunEnd, layoutString.data() + newRunEnd),
-					fontCollection, styleRun.second ? styleRun.first.style() : tr1::shared_ptr<const TextRunStyle>(),
+					fontCollection, styleRun ? styleRun->style() : tr1::shared_ptr<const TextRunStyle>(),
 					defaultStyle, font));
 			font = nextFontRun.second;
 			if(nextFontRun.first != 0) {
@@ -1061,16 +1061,16 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 			}
 		}
 		if(forwardStyleRun) {
-			if(styleRun.second = nextStyleRun.second) {
-				styleRun.first = nextStyleRun.first;
-				results.second.push_back(styleRun.first);
+			if(nextStyleRun) {
+				styleRun = nextStyleRun;
+				results.second.push_back(*styleRun);
 				styles->next();
-				if(nextStyleRun.second = styles->hasNext())
-					nextStyleRun.first = styles->current();
-				beginningOfNextStyleRun = nextStyleRun.second ? nextStyleRun.first.position() : layoutString.length();
+				if(styles->hasNext())
+					nextStyleRun = styles->current();
+				beginningOfNextStyleRun = nextStyleRun ? nextStyleRun->position() : layoutString.length();
 			}
 		}
-	} while(scriptRun != 0 || styleRun.second);
+	} while(scriptRun != 0 || styleRun);
 
 	// commit
 	using std::swap;
@@ -1642,7 +1642,7 @@ void TextLayout::TextRun::substituteGlyphs(const Range<TextRun**>& runs, const S
 
 inline int TextLayout::TextRun::x(Index at, bool trailing) const {
 	if(at < beginning() || at > end())
-		throw k::BadPositionException(k::Position(INVALID_INDEX, at));
+		throw k::BadPositionException(k::Position(0, at));
 	int result;
 	const HRESULT hr = ::ScriptCPtoX(static_cast<int>(at - beginning()), trailing,
 		static_cast<int>(length(*this)), numberOfGlyphs(), clusters(), visualAttributes(),
@@ -2074,7 +2074,7 @@ TextAlignment TextLayout::alignment() const /*throw()*/ {
  */
 Scalar TextLayout::baseline(Index line) const {
 	if(line >= numberOfLines())
-		throw kernel::BadPositionException(kernel::Position());
+		throw kernel::BadPositionException(k::Position(line, 0));
 	else if(line == 0)
 		return 0;
 	Scalar result = 0;
@@ -2087,20 +2087,20 @@ Scalar TextLayout::baseline(Index line) const {
 
 /**
  * Returns the bidirectional embedding level at specified position.
- * @param column the column
- * @return the embedding level
- * @throw kernel#BadPositionException @a column is greater than the length of the line
+ * @param offsetInLine The offset in the line
+ * @return The embedding level
+ * @throw kernel#BadPositionException @a offsetInLine is greater than the length of the line
  */
-uint8_t TextLayout::bidiEmbeddingLevel(Index column) const {
+uint8_t TextLayout::bidiEmbeddingLevel(Index offsetInLine) const {
 	if(numberOfRuns_ == 0) {
-		if(column != 0)
-			throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));
+		if(offsetInLine != 0)
+			throw kernel::BadPositionException(kernel::Position(0, offsetInLine));
 		// use the default level
 		return (writingMode().inlineFlowDirection == RIGHT_TO_LEFT) ? 1 : 0;
 	}
-	const size_t i = findRunForPosition(column);
+	const size_t i = findRunForPosition(offsetInLine);
 	if(i == numberOfRuns_)
-		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));
+		throw kernel::BadPositionException(kernel::Position(0, offsetInLine));
 	return runs_[i]->bidiEmbeddingLevel();
 }
 
@@ -2115,7 +2115,7 @@ uint8_t TextLayout::bidiEmbeddingLevel(Index column) const {
  */
 NativeRegion TextLayout::blackBoxBounds(const Range<Index>& range) const {
 	if(range.end() > text_.length())
-		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, range.end()));
+		throw kernel::BadPositionException(kernel::Position(0, range.end()));
 
 	// handle empty line
 	if(numberOfRuns_ == 0)
@@ -2194,7 +2194,7 @@ NativeRectangle TextLayout::bounds() const /*throw()*/ {
  */
 NativeRectangle TextLayout::bounds(const Range<Index>& range) const {
 	if(range.end() > text_.length())
-		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, range.end()));
+		throw kernel::BadPositionException(kernel::Position(0, range.end()));
 
 	AbstractFourSides<Scalar> result;
 
@@ -2677,18 +2677,18 @@ String TextLayout::fillToX(int x) const {
 }
 
 /**
- * Returns the index of run containing the specified column.
- * @param column the column
- * @return the index of the run
+ * Returns the index of run containing the specified offset in the line.
+ * @param offsetInLine The offset in the line
+ * @return The index of the run
  */
-inline size_t TextLayout::findRunForPosition(Index column) const /*throw()*/ {
+inline size_t TextLayout::findRunForPosition(Index offsetInLine) const /*throw()*/ {
 	assert(numberOfRuns_ > 0);
-	if(column == text_.length())
+	if(offsetInLine == text_.length())
 		return numberOfRuns_ - 1;
-	const Index sl = lineAt(column);
+	const Index sl = lineAt(offsetInLine);
 	const size_t lastRun = (sl + 1 < numberOfLines()) ? lineFirstRuns_[sl + 1] : numberOfRuns_;
 	for(size_t i = lineFirstRuns_[sl]; i < lastRun; ++i) {
-		if(runs_[i]->beginning() <= column && runs_[i]->end() > column)	// TODO: replace with includes().
+		if(runs_[i]->beginning() <= offsetInLine && runs_[i]->end() > offsetInLine)	// TODO: replace with includes().
 			return i;
 	}
 	ASCENSION_ASSERT_NOT_REACHED();
@@ -2822,8 +2822,8 @@ pair<Index, Index> TextLayout::locateOffsets(Index line, Scalar ipd, bool& outsi
 	if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) {
 		Scalar x = lineStartEdge(line);
 		if(ipd < x) {	// beyond the left-edge => the start of the first run
-			const Index column = runs_[lineFirstRuns_[line]]->beginning();
-			return (outside = true), make_pair(column, column);
+			const Index offsetInLine = runs_[lineFirstRuns_[line]]->beginning();
+			return (outside = true), make_pair(offsetInLine, offsetInLine);
 		}
 		for(size_t i = lineFirstRuns_[line]; i < lastRun; ++i) {	// scan left to right
 			const TextRun& run = *runs_[i];
@@ -2836,43 +2836,43 @@ pair<Index, Index> TextLayout::locateOffsets(Index line, Scalar ipd, bool& outsi
 			x += run.totalWidth();
 		}
 		// beyond the right-edge => the end of last run
-		const Index column = runs_[lastRun - 1]->end();
-		return (outside = true), make_pair(column, column);
+		const Index offsetInLine = runs_[lastRun - 1]->end();
+		return (outside = true), make_pair(offsetInLine, offsetInLine);
 	} else {
 		Scalar x = -lineStartEdge(line);
 		if(ipd > x) {	// beyond the right-edge => the start of the last run
-			const Index column = runs_[lastRun - 1]->beginning();
-			return (outside = true), make_pair(column, column);
+			const Index offsetInLine = runs_[lastRun - 1]->beginning();
+			return (outside = true), make_pair(offsetInLine, offsetInLine);
 		}
 		// beyond the left-edge => the end of the first run
-		const Index column = runs_[lineFirstRuns_[line]]->end();
-		return (outside = true), make_pair(column, column);
+		const Index offsetInLine = runs_[lineFirstRuns_[line]]->end();
+		return (outside = true), make_pair(offsetInLine, offsetInLine);
 	}
 }
 
 // implements public location methods
-void TextLayout::locations(Index column, NativePoint* leading, NativePoint* trailing) const {
+void TextLayout::locations(Index offsetInLine, NativePoint* leading, NativePoint* trailing) const {
 	assert(leading != 0 || trailing != 0);
-	if(column > text_.length())
-		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));
+	if(offsetInLine > text_.length())
+		throw kernel::BadPositionException(kernel::Position(0, offsetInLine));
 
 	Scalar leadingIpd, trailingIpd, bpd = lineMetrics_[0]->ascent()/* + lineMetrics_[0]->leading()*/;
 	if(isEmpty())
 		leadingIpd = trailingIpd = 0;
 	else {
 		// inline-progression-dimension
-		const Index line = lineAt(column);
+		const Index line = lineAt(offsetInLine);
 		const Index firstRun = lineFirstRuns_[line];
 		const Index lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
 		if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) {	// LTR
 			Scalar x = lineStartEdge(line);
 			for(size_t i = firstRun; i < lastRun; ++i) {
 				const TextRun& run = *runs_[i];
-				if(column >= run.beginning() && column <= run.end()) {
+				if(offsetInLine >= run.beginning() && offsetInLine <= run.end()) {
 					if(leading != 0)
-						leadingIpd = x + run.x(column, false);
+						leadingIpd = x + run.x(offsetInLine, false);
 					if(trailing != 0)
-						trailingIpd = x + run.x(column, true);
+						trailingIpd = x + run.x(offsetInLine, true);
 					break;
 				}
 				x += run.totalWidth();
@@ -2882,11 +2882,11 @@ void TextLayout::locations(Index column, NativePoint* leading, NativePoint* trai
 			for(size_t i = lastRun - 1; ; --i) {
 				const TextRun& run = *runs_[i];
 				x -= run.totalWidth();
-				if(column >= run.beginning() && column <= run.end()) {
+				if(offsetInLine >= run.beginning() && offsetInLine <= run.end()) {
 					if(leading != 0)
-						leadingIpd = -(x + run.x(column, false));
+						leadingIpd = -(x + run.x(offsetInLine, false));
 					if(trailing)
-						trailingIpd = -(x + run.x(column, true));
+						trailingIpd = -(x + run.x(offsetInLine, true));
 					break;
 				}
 				if(i == firstRun) {
@@ -3125,16 +3125,16 @@ void TextLayout::stackLines(LineStackingStrategy lineStackingStrategy, const Fon
 
 #if 0
 /**
- * Returns the styled text run containing the specified column.
- * @param column the column
+ * Returns the styled text run containing the specified offset in the line.
+ * @param offsetInLine The offset in the line
  * @return the styled segment
- * @throw kernel#BadPositionException @a column is greater than the length of the line
+ * @throw kernel#BadPositionException @a offsetInLine is greater than the length of the line
  */
-StyledRun TextLayout::styledTextRun(Index column) const {
-	if(column > text().length())
-		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, column));
-	const TextRun& run = *runs_[findRunForPosition(column)];
-	return StyledRun(run.column(), run.requestedStyle());
+StyledRun TextLayout::styledTextRun(Index offsetInLine) const {
+	if(offsetInLine > text().length())
+		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, offsetInLine));
+	const TextRun& run = *runs_[findRunForPosition(offsetInLine)];
+	return StyledRun(run.offsetInLine(), run.requestedStyle());
 }
 #endif
 
@@ -3281,6 +3281,6 @@ TextLayout::StyledSegmentIterator::StyledSegmentIterator(const StyledSegmentIter
 /// Returns the current segment.
 StyledRun TextLayout::StyledSegmentIterator::current() const /*throw()*/ {
 	const TextRun& run = **p_;
-	return StyledRun(run.column, run.style);
+	return StyledRun(run.offsetInLine, run.style);
 }
 #endif

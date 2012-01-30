@@ -735,8 +735,8 @@ auto_ptr<Token> RegionRule::parse(const TokenScanner& scanner, const Char* first
 	auto_ptr<Token> result(new Token);
 	result->id = tokenID();
 	result->region.first.line = result->region.second.line = scanner.getPosition().line;
-	result->region.first.column = scanner.getPosition().line;
-	result->region.second.column = result->region.first.column + (end - first);
+	result->region.first.offsetInLine = scanner.getPosition().line;
+	result->region.second.offsetInLine = result->region.first.offsetInLine + (end - first);
 	return result;
 }
 
@@ -762,7 +762,7 @@ auto_ptr<Token> NumberRule::parse(const TokenScanner& scanner, const Char* first
 		Octal integer literals are not supported. See "B.1.1 Numeric Literals" in the same specification.
 	*/
 	// ISSUE: this implementation accepts some illegal format like as "0.1.2".
-	if(scanner.getPosition().column > 0	// see below
+	if(scanner.getPosition().offsetInLine > 0	// see below
 			&& (inRange<Char>(first[-1], '0', '9') || inRange<Char>(first[-1], 'A', 'F') || inRange<Char>(first[-1], 'a', 'f')))
 		return auto_ptr<Token>(0);
 	const Char* e;
@@ -811,8 +811,8 @@ auto_ptr<Token> NumberRule::parse(const TokenScanner& scanner, const Char* first
 	auto_ptr<Token> temp(new Token);
 	temp->id = tokenID();
 	temp->region.first.line = temp->region.second.line = scanner.getPosition().line;
-	temp->region.first.column = scanner.getPosition().column;
-	temp->region.second.column = temp->region.first.column + e - first;
+	temp->region.first.offsetInLine = scanner.getPosition().offsetInLine;
+	temp->region.second.offsetInLine = temp->region.first.offsetInLine + e - first;
 	return temp;
 }
 
@@ -839,8 +839,8 @@ auto_ptr<Token> URIRule::parse(const TokenScanner& scanner, const Char* first, c
 	auto_ptr<Token> temp(new Token);
 	temp->id = tokenID();
 	temp->region.first.line = temp->region.second.line = scanner.getPosition().line;
-	temp->region.first.column = scanner.getPosition().column;
-	temp->region.second.column = temp->region.first.column + e - first;
+	temp->region.first.offsetInLine = scanner.getPosition().offsetInLine;
+	temp->region.second.offsetInLine = temp->region.first.offsetInLine + e - first;
 	return temp;
 }
 
@@ -907,8 +907,8 @@ auto_ptr<Token> WordRule::parse(const TokenScanner& scanner, const Char* first, 
 	auto_ptr<Token> result(new Token);
 	result->id = tokenID();
 	result->region.first.line = result->region.second.line = scanner.getPosition().line;
-	result->region.first.column = scanner.getPosition().column;
-	result->region.second.column = result->region.first.column + (last - first);
+	result->region.first.offsetInLine = scanner.getPosition().offsetInLine;
+	result->region.second.offsetInLine = result->region.first.offsetInLine + (last - first);
 	return result;
 }
 
@@ -935,8 +935,8 @@ auto_ptr<Token> RegexRule::parse(const TokenScanner& scanner, const Char* first,
 	auto_ptr<Token> token(new Token);
 	token->id = tokenID();
 	token->region.first.line = token->region.second.line = scanner.getPosition().line;
-	token->region.first.column = scanner.getPosition().column;
-	token->region.second.column = token->region.first.column + (matcher->end().tell() - matcher->start().tell());
+	token->region.first.offsetInLine = scanner.getPosition().offsetInLine;
+	token->region.second.offsetInLine = token->region.first.offsetInLine + (matcher->end().tell() - matcher->start().tell());
 	return token;
 }
 
@@ -951,8 +951,10 @@ const IdentifierSyntax& NullTokenScanner::getIdentifierSyntax() const /*throw()*
 }
 
 /// @see TokenScanner#getPosition
-Position NullTokenScanner::getPosition() const /*throw()*/ {
-	return Position();
+Position NullTokenScanner::getPosition() const {
+	if(!position_)
+		throw BadScannerStateException();
+	return *position_;
 }
 
 /// @see TokenScanner#hasNext
@@ -1027,7 +1029,9 @@ void LexicalTokenScanner::addWordRule(auto_ptr<const WordRule> rule) {
 }
 
 /// @see ITokenScanner#getPosition
-Position LexicalTokenScanner::getPosition() const /*throw()*/ {
+Position LexicalTokenScanner::getPosition() const {
+	if(current_ == DocumentCharacterIterator())
+		throw BadScannerStateException();
 	return current_.tell();
 }
 
@@ -1048,7 +1052,7 @@ auto_ptr<Token> LexicalTokenScanner::nextToken() {
 			if(!current_.hasNext())
 				break;
 		}
-		const Char* const p = line->data() + current_.tell().column;
+		const Char* const p = line->data() + current_.tell().offsetInLine;
 		const Char* const last = line->data() + line->length();
 		for(list<const Rule*>::const_iterator i = rules_.begin(); i != rules_.end(); ++i) {
 			result = (*i)->parse(*this, p, last);
@@ -1107,7 +1111,7 @@ TransitionRule::~TransitionRule() /*throw()*/ {
  * Returns @c true if the rule matches the specified text. Note that an implementation can't use
  * the partitioning of the document to generate the new partition.
  * @param line The target line text
- * @param column The column number at which match starts
+ * @param offsetInLine The offset in the line at which match starts
  * @return The length of the matched pattern. If and only if the match failed, returns 0.
  *         If matched zero width text, returns 1
  * @todo This documentation is confusable.
@@ -1138,17 +1142,17 @@ auto_ptr<TransitionRule> LiteralTransitionRule::clone() const {
 }
 
 /// @see TransitionRule#matches
-Index LiteralTransitionRule::matches(const String& line, Index column) const {
-	if(escapeCharacter_ != NONCHARACTER && column > 0 && line[column - 1] == escapeCharacter_)
+Index LiteralTransitionRule::matches(const String& line, Index offsetInLine) const {
+	if(escapeCharacter_ != NONCHARACTER && offsetInLine > 0 && line[offsetInLine - 1] == escapeCharacter_)
 		return 0;
-	else if(pattern_.empty() && column == line.length())	// matches EOL
+	else if(pattern_.empty() && offsetInLine == line.length())	// matches EOL
 		return 1;
-	else if(line.length() - column < pattern_.length())
+	else if(line.length() - offsetInLine < pattern_.length())
 		return 0;
 	else if(caseSensitive_)
-		return (umemcmp(pattern_.data(), line.data() + column, pattern_.length()) == 0) ? pattern_.length() : 0;
+		return (umemcmp(pattern_.data(), line.data() + offsetInLine, pattern_.length()) == 0) ? pattern_.length() : 0;
 	return (CaseFolder::compare(StringCharacterIterator(pattern_),
-		StringCharacterIterator(line, line.begin() + column)) == 0) ? pattern_.length() : 0;
+		StringCharacterIterator(line, line.begin() + offsetInLine)) == 0) ? pattern_.length() : 0;
 }
 
 
@@ -1178,11 +1182,11 @@ auto_ptr<TransitionRule> RegexTransitionRule::clone() const {
 }
 
 /// @see TransitionRule#matches
-Index RegexTransitionRule::matches(const String& line, Index column) const {
+Index RegexTransitionRule::matches(const String& line, Index offsetInLine) const {
 	try {
 		typedef utf::CharacterDecodeIterator<String::const_iterator> I;
 		auto_ptr<regex::Matcher<I> > matcher(pattern_->matcher(I(line.begin(), line.end()), I(line.begin(), line.end(), line.end())));
-		matcher->region(I(line.begin(), line.end(), line.begin() + column), matcher->regionEnd());
+		matcher->region(I(line.begin(), line.end(), line.begin() + offsetInLine), matcher->regionEnd());
 		matcher->useAnchoringBounds(false).useTransparentBounds(true);
 		return matcher->lookingAt() ? max(matcher->end().tell() - matcher->start().tell(), 1) : 0;
 	} catch(runtime_error&) {
@@ -1281,12 +1285,12 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()
 	contentType = (i.tell().line == 0) ? DEFAULT_CONTENT_TYPE
 		: (*partitionAt(Position(i.tell().line - 1, doc.lineLength(i.tell().line - 1))))->contentType;
 	for(const String* line = &doc.line(i.tell().line); ; ) {	// scan and tokenize into partitions...
-		const bool atEOL = i.tell().column == line->length();
-		Index tokenLength = tryTransition(*line, i.tell().column, contentType, destination);
+		const bool atEOL = i.tell().offsetInLine == line->length();
+		Index tokenLength = tryTransition(*line, i.tell().offsetInLine, contentType, destination);
 		if(tokenLength != 0) {	// a token was found
 			if(atEOL)
 				tokenLength = 0;	// a line terminator is zero-length...
-			const Position tokenEnd(i.tell().line, i.tell().column + tokenLength);
+			const Position tokenEnd(i.tell().line, i.tell().offsetInLine + tokenLength);
 			// insert the new partition behind the current
 			assert(destination != contentType);
 			newPartitions.push_back(new Partition(
@@ -1308,7 +1312,7 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()
 		// go to the next character if no transition occurred
 		if(tokenLength == 0) {
 			i.next();
-			if(i.tell().column == 0)	// entered the next line
+			if(i.tell().offsetInLine == 0)	// entered the next line
 				line = &doc.line(i.tell().line);
 		}
 	}
@@ -1355,7 +1359,7 @@ void LexicalPartitioner::dump() const {
 	for(size_t i = 0; i < partitions_.size(); ++i) {
 		const Partition& p = *partitions_[i];
 		dout << "\t" << p.contentType << " = ("
-			<< static_cast<uint32_t>(p.start.line) << ", " << static_cast<uint32_t>(p.start.column) << ")\n";
+			<< static_cast<uint32_t>(p.start.line) << ", " << static_cast<uint32_t>(p.start.offsetInLine) << ")\n";
 	}
 #endif // _DEBUG
 }
@@ -1421,7 +1425,7 @@ inline detail::GapVector<LexicalPartitioner::Partition*>::const_iterator
 		return partitions_.begin();
 	}
 	if(at.line < document()->numberOfLines()
-			&& (*p)->tokenStart == at && p != partitions_.begin() && at.column == document()->lineLength(at.line))
+			&& (*p)->tokenStart == at && p != partitions_.begin() && at.offsetInLine == document()->lineLength(at.line))
 		--p;
 //	if(result > 0 && partitions_[result]->start == partitions_[result - 1]->start)
 //		--p;
@@ -1442,7 +1446,7 @@ inline detail::GapVector<LexicalPartitioner::Partition*>::const_iterator
 
 // returns the transition state (corresponding content type) at the given position.
 inline ContentType LexicalPartitioner::transitionStateAt(const Position& at) const /*throw()*/ {
-	if(at.line == 0 && at.column == 0)
+	if(at.line == 0 && at.offsetInLine == 0)
 		return DEFAULT_CONTENT_TYPE;
 	detail::GapVector<Partition*>::const_iterator i(partitionAt(at));
 	if((*i)->start == at)
@@ -1453,16 +1457,16 @@ inline ContentType LexicalPartitioner::transitionStateAt(const Position& at) con
 /**
  *
  * @param line The scanning line text
- * @param column The column number at which match starts
+ * @param offsetInLine The offset in the line at which match starts
  * @param contentType The current content type
  * @param[out] destination The type of the transition destination content
  * @return The length of the pattern matched or 0 if the all rules did not matched
  */
 inline Index LexicalPartitioner::tryTransition(
-		const String& line, Index column, ContentType contentType, ContentType& destination) const /*throw()*/ {
+		const String& line, Index offsetInLine, ContentType contentType, ContentType& destination) const /*throw()*/ {
 	for(TransitionRules::const_iterator rule(rules_.begin()), e(rules_.end()); rule != e; ++rule) {
 		if((*rule)->contentType() == contentType) {
-			if(const Index c = (*rule)->matches(line, column)) {
+			if(const Index c = (*rule)->matches(line, offsetInLine)) {
 				destination = (*rule)->destination();
 				return c;
 			}
