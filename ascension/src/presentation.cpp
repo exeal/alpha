@@ -273,7 +273,7 @@ const Hyperlink* const* Presentation::getHyperlinks(Index line, size_t& numberOf
  * @return @a style
  */
 TextLineStyle& Presentation::textLineStyle(Index line, TextLineStyle& style) const /*throw()*/ {
-	shared_ptr<const Inheritable<TextLineStyle> > p;
+	shared_ptr<const Inheritable<TextLineStyle>> p;
 	if(textLineStyleDirector_.get() != 0)
 		p = textLineStyleDirector_->queryTextLineStyle(line);
 	if(p.get() == 0)

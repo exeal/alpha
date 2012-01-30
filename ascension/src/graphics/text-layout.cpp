@@ -119,7 +119,7 @@ namespace {
 			HDC, SCRIPT_CACHE*, SCRIPT_ANALYSIS*, OPENTYPE_TAG, OPENTYPE_TAG, OPENTYPE_TAG, LONG,
 			WORD, WORD*));
 //#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-	unique_ptr<detail::SharedLibrary<Uniscribe16> > uspLib(
+	unique_ptr<detail::SharedLibrary<Uniscribe16>> uspLib(
 		new detail::SharedLibrary<Uniscribe16>("usp10.dll"));
 } // namespace @0
 
@@ -980,7 +980,7 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 		runs.push_back(piece);													\
 	}
 
-	pair<vector<TextRun*>, vector<const StyledTextRun> > results;
+	pair<vector<TextRun*>, vector<const StyledTextRun>> results;
 	results.first.reserve(static_cast<size_t>(numberOfScriptRuns * ((styles.get() != 0) ? 1.2 : 1)));	// hmm...
 
 	const SCRIPT_ITEM* scriptRun = scriptRuns;
@@ -3070,7 +3070,7 @@ void TextLayout::stackLines(LineStackingStrategy lineStackingStrategy, const Fon
 	// calculate allocation-rectangle of the lines according to line-stacking-strategy
 	const Scalar textAltitude = nominalFont.metrics().ascent();
 	const Scalar textDepth = nominalFont.metrics().descent();
-	vector<pair<Scalar, Scalar> > v;
+	vector<pair<Scalar, Scalar>> v;
 	for(Index line = 0; line < numberOfLines(); ++line) {
 		// calculate extent of the line in block-progression-direction
 		Scalar ascent, descent;

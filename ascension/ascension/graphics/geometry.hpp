@@ -505,21 +505,21 @@ namespace ascension {
 			template<typename Point, typename Character, typename CharacterTraits>
 			inline std::basic_ostream<Character, CharacterTraits>&
 					write(std::basic_ostream<Character, CharacterTraits>& out, const Point& point, const PointTag&) {
-				const std::ctype<Character>& ct = std::use_facet<std::ctype<Character> >(out.getloc());
+				const std::ctype<Character>& ct = std::use_facet<std::ctype<Character>>(out.getloc());
 				return out << x(point) << ct.widen(',') << y(point);
 			}
 
 			template<typename Size, typename Character, typename CharacterTraits>
 			inline std::basic_ostream<Character, CharacterTraits>&
 					write(std::basic_ostream<Character, CharacterTraits>& out, const Size& size, const SizeTag&) {
-				const std::ctype<Character>& ct = std::use_facet<std::ctype<Character> >(out.getloc());
+				const std::ctype<Character>& ct = std::use_facet<std::ctype<Character>>(out.getloc());
 				return out << dx(size) << ct.widen('x') << dy(size);
 			}
 
 			template<typename Rectangle, typename Character, typename CharacterTraits>
 			inline std::basic_ostream<Character, CharacterTraits>&
 					write(std::basic_ostream<Character, CharacterTraits>& out, const Rectangle& rectangle, const RectangleTag&) {
-				const std::ctype<Character>& ct = std::use_facet<std::ctype<Character> >(out.getloc());
+				const std::ctype<Character>& ct = std::use_facet<std::ctype<Character>>(out.getloc());
 				return out << origin(rectangle) << ct.widen(' ') << size(rectangle);
 			}
 

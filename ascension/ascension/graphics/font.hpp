@@ -236,7 +236,7 @@ namespace ascension {
 				}
 				/// Returns the hash value for this object.
 				std::size_t hash() const /*throw()*/ {
-					const std::collate<char>& coll(std::use_facet<std::collate<char> >(std::locale::classic()));
+					const std::collate<char>& coll(std::use_facet<std::collate<char>>(std::locale::classic()));
 					// bad idea :(
 					const char* temp = reinterpret_cast<const char*>(&pixelSize_);
 					return coll.hash(temp, temp + sizeof(size_) / sizeof(char))

@@ -168,7 +168,7 @@ namespace ascension {
 			};
 		public:
 			// original interface
-			RegexTraits() : collator_(&std::use_facet<std::collate<char_type> >(locale_)) {}
+			RegexTraits() : collator_(&std::use_facet<std::collate<char_type>>(locale_)) {}
 			static bool unixLineMode, usesExtendedProperties;
 			// minimal requirements for traits
 			typedef CodePoint char_type;
@@ -210,7 +210,7 @@ namespace ascension {
 			}
 			locale_type imbue(locale_type l) {
 				locale_type temp = locale_;
-				collator_ = &std::use_facet<std::collate<char_type> >(locale_ = l);
+				collator_ = &std::use_facet<std::collate<char_type>>(locale_ = l);
 				return temp;
 			}
 			locale_type getloc() const {return locale_;}
@@ -317,8 +317,8 @@ namespace ascension {
 			 * @return A new matcher for this pattern
 			 */
 			template<typename CodePointIterator>
-			std::unique_ptr<Matcher<CodePointIterator> > matcher(CodePointIterator first, CodePointIterator last) const {
-				return std::unique_ptr<Matcher<CodePointIterator> >(new Matcher<CodePointIterator>(*this, first, last));
+			std::unique_ptr<Matcher<CodePointIterator>> matcher(CodePointIterator first, CodePointIterator last) const {
+				return std::unique_ptr<Matcher<CodePointIterator>>(new Matcher<CodePointIterator>(*this, first, last));
 			}
 
 			/**
@@ -655,8 +655,8 @@ namespace ascension {
 			 * The result is unaffected by subsequent operations performed upon the matcher.
 			 * @return A @c MatchResult with the state of this matcher
 			 */
-			std::unique_ptr<MatchResult<CodePointIterator> > toMatchResult() const {
-				return std::unique_ptr<MatchResult<CodePointIterator> >(
+			std::unique_ptr<MatchResult<CodePointIterator>> toMatchResult() const {
+				return std::unique_ptr<MatchResult<CodePointIterator>>(
 					new detail::MatchResultImpl<CodePointIterator>(Base::impl()));
 			}
 		private:

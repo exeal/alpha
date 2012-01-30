@@ -433,7 +433,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 
 //	const String replacement(!storedReplacements_.empty() ? storedReplacements_.front() : String());
 	size_t numberOfMatches = 0, numberOfReplacements = 0;
-	stack<pair<Position, Position> > history;	// for undo (ouch, Region does not support placement new)
+	stack<pair<Position, Position>> history;	// for undo (ouch, Region does not support placement new)
 	size_t documentRevision = document.revisionNumber();	// to detect other interruptions
 
 	InteractiveReplacementCallback::Action action;	// the action the callback returns
@@ -518,7 +518,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 		Position lastEOS(endOfScope);
 		DocumentCharacterIterator e(document, endOfScope);
 		DocumentCharacterIterator b(e);
-		unique_ptr<regex::Matcher<DocumentCharacterIterator> > matcher(
+		unique_ptr<regex::Matcher<DocumentCharacterIterator>> matcher(
 			regexPattern_->matcher(beginningOfDocument(document), endOfDocument(document)));
 		matcher->region(
 			DocumentCharacterIterator(document, scope.beginning()),

@@ -177,7 +177,7 @@ namespace ascension {
 #ifndef ASCENSION_NO_REGEX
 			std::unique_ptr<const regex::Pattern> regexPattern_;
 			std::unique_ptr<const regex::MigemoPattern> migemoPattern_;
-			std::unique_ptr<regex::Matcher<kernel::DocumentCharacterIterator> > regexMatcher_;
+			std::unique_ptr<regex::Matcher<kernel::DocumentCharacterIterator>> regexMatcher_;
 #endif // !ASCENSION_NO_REGEX
 			mutable struct LastResult {
 				const kernel::Document* document;

@@ -242,10 +242,10 @@ namespace ascension {
 			StyledTextRunEnumerator,
 			std::iterator<
 				std::input_iterator_tag,
-				std::pair<Range<Index>, std::shared_ptr<const TextRunStyle> >,
+				std::pair<Range<Index>, std::shared_ptr<const TextRunStyle>>,
 				std::ptrdiff_t,
-				std::pair<Range<Index>, std::shared_ptr<const TextRunStyle> >*,
-				std::pair<Range<Index>, std::shared_ptr<const TextRunStyle> >
+				std::pair<Range<Index>, std::shared_ptr<const TextRunStyle>>*,
+				std::pair<Range<Index>, std::shared_ptr<const TextRunStyle>>
 			>
 		> {
 		public:
@@ -314,7 +314,7 @@ namespace ascension {
 		template<typename Measure>
 		struct TextWrapping : public TextWrappingBase<Measure, false> {};
 		template<typename Measure>
-		struct Inheritable<TextWrapping<Measure> > : public TextWrappingBase<Measure, true> {};
+		struct Inheritable<TextWrapping<Measure>> : public TextWrappingBase<Measure, true> {};
 
 		/**
 		 * @c TextAnchor describes an alignment of text relative to the given point.
@@ -452,7 +452,7 @@ namespace ascension {
 		struct TextLineStyle : public TextLineStyleBase<false>,
 			public std::enable_shared_from_this<TextLineStyle> {};
 		template<> struct Inheritable<TextLineStyle> : public TextLineStyleBase<true>,
-			public std::enable_shared_from_this<Inheritable<TextLineStyle> > {};
+			public std::enable_shared_from_this<Inheritable<TextLineStyle>> {};
 
 		/**
 		 * @see TextRunStyle, TextLineStyle, Presentation#globalTextStyle,
