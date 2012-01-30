@@ -165,7 +165,7 @@ namespace ascension {
 			void addViewportListener(ViewportListener& listener);
 			void removeDisplaySizeListener(DisplaySizeListener& listener);
 			void removeViewportListener(ViewportListener& listener);
-			void setMouseInputStrategy(std::tr1::shared_ptr<MouseInputStrategy> newStrategy);
+			void setMouseInputStrategy(std::shared_ptr<MouseInputStrategy> newStrategy);
 			// attributes
 			const Configuration& configuration() const /*throw()*/;
 			kernel::Document& document();
@@ -405,8 +405,8 @@ namespace ascension {
 			HWND toolTip_;
 			Char* tipText_;
 			// strategies and listeners
-			std::tr1::shared_ptr<MouseInputStrategy> mouseInputStrategy_;
-			std::tr1::shared_ptr<base::DropTarget> dropTargetHandler_;
+			std::shared_ptr<MouseInputStrategy> mouseInputStrategy_;
+			std::shared_ptr<base::DropTarget> dropTargetHandler_;
 			detail::Listeners<DisplaySizeListener> displaySizeListeners_;
 			detail::Listeners<ViewportListener> viewportListeners_;
 			std::auto_ptr<detail::RulerPainter> rulerPainter_;

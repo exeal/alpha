@@ -110,13 +110,13 @@ namespace ascension {
 				template<typename Rectangle> struct Maker<RectangleTag, Rectangle> {
 					template<typename Size>
 					static Rectangle make(const typename Coordinate<Rectangle>::Type& origin, const Size& size,
-							typename std::tr1::enable_if<std::tr1::is_same<typename Tag<Size>::Type, SizeTag>::value>::type* = 0) {
+							typename std::enable_if<std::is_same<typename Tag<Size>::Type, SizeTag>::value>::type* = 0) {
 						const Rectangle temp = {origin.x, origin.y, origin.x + size.cx, origin.y + size.cy};
 						return temp;
 					}
 					template<typename Point>
 					static Rectangle make(const typename Coordinate<Rectangle>::Type& first, const Point& second,
-							typename std::tr1::enable_if<std::tr1::is_same<typename Tag<Point>::Type, PointTag>::value>::type* = 0) {
+							typename std::enable_if<std::is_same<typename Tag<Point>::Type, PointTag>::value>::type* = 0) {
 						const Rectangle temp = {first.x, first.y, second.x, second.y};
 						return temp;
 					}
@@ -161,13 +161,13 @@ namespace ascension {
 		}
 	}
 
-	ASCENSION_STATIC_ASSERT(std::tr1::is_signed<graphics::geometry::nativetypes::Scalar>::value);
+	ASCENSION_STATIC_ASSERT(std::is_signed<graphics::geometry::nativetypes::Scalar>::value);
 
 	namespace detail {
 		template<typename Geometry, typename GeometryTag, typename T = void>
-		class EnableIfTagIs : std::tr1::enable_if<
-			std::tr1::is_same<
-				typename graphics::geometry::Tag<typename std::tr1::remove_cv<Geometry>::type>::Type,
+		class EnableIfTagIs : std::enable_if<
+			std::is_same<
+				typename graphics::geometry::Tag<typename std::remove_cv<Geometry>::type>::Type,
 				GeometryTag
 			>::value, T> {};
 
@@ -235,10 +235,10 @@ namespace ascension {
 
 			template<typename Geometry0, typename Geometry1, typename Geometry2>
 			inline Geometry0 make(const Geometry1& geometry1, const Geometry2& geometry2) {
-//					typename detail::Select<std::tr1::is_scalar<Geometry1>::value, Geometry1,
-//						typename std::tr1::add_const<typename std::tr1::add_reference<Geometry1>::type>::type>::Type geometry1,
-//					typename detail::Select<std::tr1::is_scalar<Geometry2>::value, Geometry2,
-//						typename std::tr1::add_const<typename std::tr1::add_reference<Geometry2>::type>::type>::Type geometry2) {
+//					typename detail::Select<std::is_scalar<Geometry1>::value, Geometry1,
+//						typename std::add_const<typename std::add_reference<Geometry1>::type>::type>::Type geometry1,
+//					typename detail::Select<std::is_scalar<Geometry2>::value, Geometry2,
+//						typename std::add_const<typename std::add_reference<Geometry2>::type>::type>::Type geometry2) {
 				return traits::Maker<typename Tag<Geometry0>::Type, Geometry0>::make(geometry1, geometry2);
 			}
 
@@ -322,13 +322,13 @@ namespace ascension {
 
 			template<typename Geometry>
 			inline bool equals(const Geometry& geometry1, const Geometry& geometry2,
-					typename std::tr1::enable_if<std::tr1::is_arithmetic<typename Coordinate<Geometry>::Type>::value>::type* = 0) {
+					typename std::enable_if<std::is_arithmetic<typename Coordinate<Geometry>::Type>::value>::type* = 0) {
 				return get<0>(geometry1) == get<0>(geometry2) && get<1>(geometry1) == get<1>(geometry2);
 			}
 
 			template<typename Geometry>
 			inline bool equals(const Geometry& geometry1, const Geometry& geometry2,
-					typename std::tr1::enable_if<!std::tr1::is_arithmetic<typename Coordinate<Geometry>::Type>::value>::type* = 0) {
+					typename std::enable_if<!std::is_arithmetic<typename Coordinate<Geometry>::Type>::value>::type* = 0) {
 				return equals(get<0>(geometry1), get<0>(geometry2)) && equals(get<1>(geometry1), get<1>(geometry2));
 			}
 

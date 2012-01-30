@@ -87,8 +87,8 @@ namespace ascension {
 				std::size_t length() const {return size();}
 				virtual NativeSize logicalBounds() const = 0;
 				virtual NativeSize logicalGlyphBounds(std::size_t index) const = 0;
-				virtual std::tr1::shared_ptr<GlyphMetrics> metrics(std::size_t index) const = 0;
-//				virtual std::tr1::shared_ptr<Shape> outline(std::size_t index) const = 0;
+				virtual std::shared_ptr<GlyphMetrics> metrics(std::size_t index) const = 0;
+//				virtual std::shared_ptr<Shape> outline(std::size_t index) const = 0;
 				virtual NativePoint position(std::size_t index) const = 0;
 				/// Returns
 				virtual std::size_t size() const = 0;
@@ -296,7 +296,7 @@ namespace ascension {
 			typedef win32::Handle<HFONT> NativeFont;
 #endif
 
-			class Font : public std::tr1::enable_shared_from_this<Font> {
+			class Font : public std::enable_shared_from_this<Font> {
 			public:
 				/**
 				 * Provides physical font metrics information.
@@ -379,7 +379,7 @@ namespace ascension {
 				 * @param sizeAdjust 
 				 * @return The font has the requested properties or the default one
 				 */
-				virtual std::tr1::shared_ptr<const Font> get(const String& familyName,
+				virtual std::shared_ptr<const Font> get(const String& familyName,
 					const FontProperties<>& properties, double sizeAdjust = 0.0) const = 0;
 				/**
 				 * Returns the font for last resort fallback.
@@ -387,7 +387,7 @@ namespace ascension {
 				 * @param sizeAdjust 
 				 * @return The font has the requested property
 				 */
-				virtual std::tr1::shared_ptr<const Font> lastResortFallback(
+				virtual std::shared_ptr<const Font> lastResortFallback(
 					const FontProperties<>& properties, double sizeAdjust = 0.0) const = 0;
 			};
 

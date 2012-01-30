@@ -23,7 +23,7 @@ namespace {
 	inline Newline resolveNewline(const Document& document, Newline newline) {
 		if(newline == NLF_DOCUMENT_INPUT) {
 			// fallback
-			tr1::shared_ptr<DocumentInput> input(document.input().lock());
+			shared_ptr<DocumentInput> input(document.input().lock());
 			newline = (input.get() != 0) ? input->newline() : ASCENSION_DEFAULT_NEWLINE;
 			assert(isLiteralNewline(newline));
 		}
@@ -809,7 +809,7 @@ void Document::resetContent() {
  * Sets the new document input.
  * @param newInput The new document input. Can be @c null
  */
-void Document::setInput(tr1::weak_ptr<DocumentInput> newInput) /*throw()*/ {
+void Document::setInput(weak_ptr<DocumentInput> newInput) /*throw()*/ {
 	input_ = newInput;
 }
 

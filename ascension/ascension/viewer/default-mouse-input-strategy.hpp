@@ -85,7 +85,7 @@ namespace ascension {
 			void handleLeftButtonReleased(const graphics::NativePoint& position, int modifiers);
 			// MouseInputStrategy
 			void captureChanged();
-			std::tr1::shared_ptr<base::DropTarget> handleDropTarget() const;
+			std::shared_ptr<base::DropTarget> handleDropTarget() const;
 			void install(TextViewer& viewer);
 			void interruptMouseReaction(bool forKeyboardInput);
 			bool mouseButtonInput(Action action, const base::MouseButtonInput& input);

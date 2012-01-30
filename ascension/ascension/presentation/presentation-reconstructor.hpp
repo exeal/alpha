@@ -44,14 +44,14 @@ namespace ascension {
 		class SingleStyledPartitionPresentationReconstructor : public PartitionPresentationReconstructor {
 			ASCENSION_UNASSIGNABLE_TAG(SingleStyledPartitionPresentationReconstructor);
 		public:
-			explicit SingleStyledPartitionPresentationReconstructor(std::tr1::shared_ptr<const TextRunStyle> style) /*throw()*/;
+			explicit SingleStyledPartitionPresentationReconstructor(std::shared_ptr<const TextRunStyle> style) /*throw()*/;
 		private:
 			// PartitionPresentationReconstructor
 			std::auto_ptr<StyledTextRunIterator>
 				getPresentation(Index line, const Range<Index>& columnRange) const /*throw()*/;
 		private:
 			class Iterator;
-			const std::tr1::shared_ptr<const TextRunStyle> style_;
+			const std::shared_ptr<const TextRunStyle> style_;
 		};
 
 		/**

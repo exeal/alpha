@@ -505,12 +505,12 @@ public:
 		Range<Index> range;
 	};
 public:
-	TextRun(const Range<Index>& characterRange, const SCRIPT_ANALYSIS& script,
-		tr1::shared_ptr<const Font> font, OPENTYPE_TAG scriptTag) /*throw()*/;
+	TextRun(const Range<Index>& characterRange,
+		const SCRIPT_ANALYSIS& script, shared_ptr<const Font> font, OPENTYPE_TAG scriptTag) /*throw()*/;
 	virtual ~TextRun() /*throw()*/;
 	// attributes
 	uint8_t bidiEmbeddingLevel() const /*throw()*/ {return static_cast<uint8_t>(analysis_.s.uBidiLevel);}
-	tr1::shared_ptr<const Font> font() const {return glyphs_->font;}
+	shared_ptr<const Font> font() const {return glyphs_->font;}
 	HRESULT logicalAttributes(const String& layoutString, SCRIPT_LOGATTR attributes[]) const;
 	int numberOfGlyphs() const /*throw()*/ {return length(glyphRange_);}
 	ReadingDirection readingDirection() const /*throw()*/ {
@@ -528,7 +528,7 @@ public:
 	HRESULT justify(int width);
 	static void mergeScriptsAndStyles(const String& layoutString, const SCRIPT_ITEM scriptRuns[],
 		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, const FontCollection& fontCollection,
-		tr1::shared_ptr<const TextRunStyle> defaultStyle, auto_ptr<StyledTextRunIterator> styles,
+		shared_ptr<const TextRunStyle> defaultStyle, auto_ptr<StyledTextRunIterator> styles,
 		vector<TextRun*>& textRuns, vector<const StyledTextRun>& styledRanges);
 	void shape(const win32::Handle<HDC>& dc, const String& layoutString);
 	void positionGlyphs(const win32::Handle<HDC>& dc, const String& layoutString, SimpleStyledTextRunIterator& styles);
@@ -543,7 +543,7 @@ public:
 private:
 	struct Glyphs {	// this data is shared text runs separated by (only) line breaks
 		const Range<Index> characters;	// character range for this glyph arrays in the line
-		const tr1::shared_ptr<const Font> font;
+		const shared_ptr<const Font> font;
 		const OPENTYPE_TAG scriptTag;
 		mutable SCRIPT_CACHE fontCache;
 		// only 'clusters' is character-base. others are glyph-base
@@ -551,7 +551,7 @@ private:
 		AutoBuffer<SCRIPT_VISATTR> visualAttributes;
 		AutoBuffer<int> advances, justifiedAdvances;
 		AutoBuffer<GOFFSET> offsets;
-		Glyphs(const Range<Index>& characters, tr1::shared_ptr<const Font> font,
+		Glyphs(const Range<Index>& characters, shared_ptr<const Font> font,
 				OPENTYPE_TAG scriptTag) : characters(characters), font(font), scriptTag(scriptTag), fontCache(0) {
 			if(font.get() == 0)
 				throw NullPointerException("font");
@@ -581,7 +581,7 @@ private:
 		if(const SCRIPT_VISATTR* const p = glyphs_->visualAttributes.get()) return p + glyphRange_.beginning(); return 0;}
 private:
 	SCRIPT_ANALYSIS analysis_;	// fLogicalOrder member is always 0 (however see shape())
-	tr1::shared_ptr<Glyphs> glyphs_;
+	shared_ptr<Glyphs> glyphs_;
 	Range<WORD> glyphRange_;	// range of this run in 'glyphs_' arrays
 	int width_ : sizeof(int) - 1;
 	bool mayOverhang_ : 1;
@@ -621,7 +621,7 @@ void TextLayout::TextRun::Glyphs::vanish(const Font& font, size_t at) {
  * @throw NullPointerException @a font is @c null
  */
 TextLayout::TextRun::TextRun(const Range<Index>& characterRange,
-		const SCRIPT_ANALYSIS& script, tr1::shared_ptr<const Font> font, OPENTYPE_TAG scriptTag) /*throw()*/
+		const SCRIPT_ANALYSIS& script, shared_ptr<const Font> font, OPENTYPE_TAG scriptTag) /*throw()*/
 		: Range<Index>(characterRange), analysis_(script) {
 	glyphs_.reset(new Glyphs(*this, font, scriptTag));
 	if(font.get() == 0)
@@ -885,8 +885,8 @@ inline HRESULT TextLayout::TextRun::logicalWidths(int widths[]) const {
 
 namespace {
 	void resolveFontSpecifications(const FontCollection& fontCollection,
-			tr1::shared_ptr<const TextRunStyle> requestedStyle,
-			tr1::shared_ptr<const TextRunStyle> defaultStyle, String* computedFamilyName,
+			shared_ptr<const TextRunStyle> requestedStyle,
+			shared_ptr<const TextRunStyle> defaultStyle, String* computedFamilyName,
 			FontProperties<>* computedProperties, double* computedSizeAdjust) {
 		// family name
 		if(computedFamilyName != 0) {
@@ -930,9 +930,9 @@ namespace {
 				*computedSizeAdjust = (defaultStyle.get() != 0) ? defaultStyle->fontSizeAdjust : 0.0;
 		}
 	}
-	pair<const Char*, tr1::shared_ptr<const Font> > findNextFontRun(const Range<const Char*>& text,
-			const FontCollection& fontCollection, tr1::shared_ptr<const TextRunStyle> requestedStyle,
-			tr1::shared_ptr<const TextRunStyle> defaultStyle, tr1::shared_ptr<const Font> previousFont) {
+	pair<const Char*, shared_ptr<const Font>> findNextFontRun(const Range<const Char*>& text,
+			const FontCollection& fontCollection, shared_ptr<const TextRunStyle> requestedStyle,
+			shared_ptr<const TextRunStyle> defaultStyle, shared_ptr<const Font> previousFont) {
 		String familyName;
 		FontProperties<> properties;
 		double sizeAdjust;
@@ -958,7 +958,7 @@ namespace {
 void TextLayout::TextRun::mergeScriptsAndStyles(
 		const String& layoutString, const SCRIPT_ITEM scriptRuns[],
 		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns,
-		const FontCollection& fontCollection, tr1::shared_ptr<const TextRunStyle> defaultStyle,
+		const FontCollection& fontCollection, shared_ptr<const TextRunStyle> defaultStyle,
 		auto_ptr<StyledTextRunIterator> styles, vector<TextRun*>& textRuns,
 		vector<const StyledTextRun>& styledRanges) {
 	if(scriptRuns == 0)
@@ -997,7 +997,7 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 	if(styles.get() != 0 && styles->hasNext())
 		nextStyleRun = styles->current();
 	Index beginningOfNextStyleRun = nextStyleRun ? nextStyleRun->position() : layoutString.length();
-	tr1::shared_ptr<const Font> font;	// font for current glyph run
+	shared_ptr<const Font> font;	// font for current glyph run
 	do {
 		const Index previousRunEnd = max<Index>(
 			scriptRun->iCharPos, styleRun ? styleRun->position() : 0);
@@ -1021,10 +1021,10 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 
 		if((++utf::makeCharacterDecodeIterator(layoutString.data() + previousRunEnd,
 				layoutString.data() + newRunEnd)).tell() < layoutString.data() + newRunEnd || font.get() == 0) {
-			const pair<const Char*, tr1::shared_ptr<const Font> > nextFontRun(
+			const pair<const Char*, shared_ptr<const Font>> nextFontRun(
 				findNextFontRun(
 					Range<const Char*>(layoutString.data() + previousRunEnd, layoutString.data() + newRunEnd),
-					fontCollection, styleRun ? styleRun->style() : tr1::shared_ptr<const TextRunStyle>(),
+					fontCollection, styleRun ? styleRun->style() : shared_ptr<const TextRunStyle>(),
 					defaultStyle, font));
 			font = nextFontRun.second;
 			if(nextFontRun.first != 0) {
@@ -1243,7 +1243,7 @@ void TextLayout::TextRun::shape(DC& dc, const String& layoutString, const ILayou
 		if(!requestedStyle()->shapingEnabled)
 			analysis_.eScript = SCRIPT_UNDEFINED;
 	} else {
-		tr1::shared_ptr<const RunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
+		shared_ptr<const RunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
 		if(defaultStyle.get() != 0 && !defaultStyle->shapingEnabled)
 			analysis_.eScript = SCRIPT_UNDEFINED;
 	}
@@ -1256,7 +1256,7 @@ void TextLayout::TextRun::shape(DC& dc, const String& layoutString, const ILayou
 	String computedFontFamily((requestedStyle().get() != 0) ? requestedStyle()->fontFamily : String(L"\x5c0f\x585a\x660e\x671d Pr6N R"));
 	FontProperties computedFontProperties((requestedStyle().get() != 0) ? requestedStyle()->fontProperties : FontProperties());
 	double computedFontSizeAdjust = (requestedStyle().get() != 0) ? requestedStyle()->fontSizeAdjust : -1.0;
-	tr1::shared_ptr<const RunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
+	shared_ptr<const RunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
 	if(computedFontFamily.empty()) {
 		if(defaultStyle.get() != 0)
 			computedFontFamily = lip.presentation().defaultTextRunStyle()->fontFamily;
@@ -1290,7 +1290,7 @@ void TextLayout::TextRun::shape(DC& dc, const String& layoutString, const ILayou
 		// bidirectional format controls
 		FontProperties fp;
 		fp.size = computedFontProperties.size;
-		tr1::shared_ptr<const Font> font(lip.fontCollection().get(L"Arial", fp, computedFontSizeAdjust));
+		shared_ptr<const Font> font(lip.fontCollection().get(L"Arial", fp, computedFontSizeAdjust));
 		oldFont = dc.selectObject((font_ = font)->handle().get());
 		if(USP_E_SCRIPT_NOT_IN_FONT == (hr = buildGlyphs(dc, layoutString.data()))) {
 			analysis_.eScript = SCRIPT_UNDEFINED;
@@ -1316,7 +1316,7 @@ void TextLayout::TextRun::shape(DC& dc, const String& layoutString, const ILayou
 		// fonts returned USP_E_SCRIPT_NOT_IN_FONT with shaping)
 
 		int script = NOT_PROPERTY;	// script of the run for fallback
-		typedef vector<pair<tr1::shared_ptr<const Font>, int> > FailedFonts;
+		typedef vector<pair<shared_ptr<const Font>, int>> FailedFonts;
 		FailedFonts failedFonts;	// failed fonts (font handle vs. # of missings)
 		int numberOfMissingGlyphs;
 
@@ -2002,8 +2002,8 @@ TextLayout::TextLayout(const String& text,
 	String nominalFontFamilyName;
 	FontProperties<> nominalFontProperties;
 	resolveFontSpecifications(fontCollection,
-		tr1::shared_ptr<const TextRunStyle>(), otherParameters.defaultTextRunStyle, &nominalFontFamilyName, &nominalFontProperties, 0);
-	const tr1::shared_ptr<const Font> nominalFont(fontCollection.get(nominalFontFamilyName, nominalFontProperties));
+		shared_ptr<const TextRunStyle>(), otherParameters.defaultTextRunStyle, &nominalFontFamilyName, &nominalFontProperties, 0);
+	const shared_ptr<const Font> nominalFont(fontCollection.get(nominalFontFamilyName, nominalFontProperties));
 	// wrap into visual lines and reorder runs in each lines
 	if(numberOfRuns_ == 0 || wrappingMeasure_ == numeric_limits<Scalar>::max()) {
 		numberOfLines_ = 1;
@@ -2060,7 +2060,7 @@ TextLayout::~TextLayout() /*throw()*/ {
 TextAlignment TextLayout::alignment() const /*throw()*/ {
 	if(style_.get() != 0 && style_->readingDirection != INHERIT_TEXT_ALIGNMENT)
 		style_->readingDirection;
-	tr1::shared_ptr<const TextLineStyle> defaultStyle(lip_.presentation().defaultTextLineStyle());
+	shared_ptr<const TextLineStyle> defaultStyle(lip_.presentation().defaultTextLineStyle());
 	return (defaultStyle.get() != 0
 		&& defaultStyle->alignment != INHERIT_TEXT_ALIGNMENT) ? defaultStyle->alignment : ASCENSION_DEFAULT_TEXT_ALIGNMENT;
 }
@@ -3044,7 +3044,7 @@ ReadingDirection TextLayout::readingDirection() const /*throw()*/ {
 		result = style_->readingDirection;
 	// try the default line style
 	if(result == INHERIT_READING_DIRECTION) {
-		tr1::shared_ptr<const TextLineStyle> defaultLineStyle(lip_.presentation().defaultTextLineStyle());
+		shared_ptr<const TextLineStyle> defaultLineStyle(lip_.presentation().defaultTextLineStyle());
 		if(defaultLineStyle.get() != 0)
 			result = defaultLineStyle->readingDirection;
 	}

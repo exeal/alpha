@@ -121,11 +121,11 @@ void StyledTextRunEnumerator::next() {
 
 /// 
 TextAnchor presentation::defaultTextAnchor(const Presentation& presentation) {
-	const tr1::shared_ptr<const TextLineStyle> lineStyle(presentation.globalTextStyle().defaultLineStyle);
+	const shared_ptr<const TextLineStyle> lineStyle(presentation.globalTextStyle().defaultLineStyle);
 	return (lineStyle.get() != 0) ? lineStyle->anchor : ASCENSION_DEFAULT_TEXT_ANCHOR;
 }
 
-tr1::shared_ptr<const TextToplevelStyle> Presentation::DEFAULT_GLOBAL_TEXT_STYLE;
+shared_ptr<const TextToplevelStyle> Presentation::DEFAULT_GLOBAL_TEXT_STYLE;
 
 struct Presentation::Hyperlinks {
 	Index lineNumber;
@@ -145,7 +145,7 @@ Presentation::Presentation(Document& document) /*throw()*/ : document_(document)
 		temp2->defaultLineStyle = temp1;
 		DEFAULT_GLOBAL_TEXT_STYLE = temp2;
 	}
-	setGlobalTextStyle(tr1::shared_ptr<const TextToplevelStyle>());
+	setGlobalTextStyle(shared_ptr<const TextToplevelStyle>());
 	document_.addListener(*this);
 }
 
@@ -273,7 +273,7 @@ const Hyperlink* const* Presentation::getHyperlinks(Index line, size_t& numberOf
  * @return @a style
  */
 TextLineStyle& Presentation::textLineStyle(Index line, TextLineStyle& style) const /*throw()*/ {
-	tr1::shared_ptr<const Inheritable<TextLineStyle> > p;
+	shared_ptr<const Inheritable<TextLineStyle> > p;
 	if(textLineStyleDirector_.get() != 0)
 		p = textLineStyleDirector_->queryTextLineStyle(line);
 	if(p.get() == 0)
@@ -305,10 +305,10 @@ void Presentation::removeGlobalTextStyleListener(GlobalTextStyleListener& listen
  * @param newStyle The style to set
  * @see #globalTextStyle
  */
-void Presentation::setGlobalTextStyle(tr1::shared_ptr<const TextToplevelStyle> newStyle) {
-	const tr1::shared_ptr<const TextToplevelStyle> used(globalTextStyle_);
+void Presentation::setGlobalTextStyle(shared_ptr<const TextToplevelStyle> newStyle) {
+	const shared_ptr<const TextToplevelStyle> used(globalTextStyle_);
 	globalTextStyle_ = (newStyle.get() != 0) ? newStyle : DEFAULT_GLOBAL_TEXT_STYLE;
-	globalTextStyleListeners_.notify<tr1::shared_ptr<const TextToplevelStyle> >(
+	globalTextStyleListeners_.notify<shared_ptr<const TextToplevelStyle>>(
 		&GlobalTextStyleListener::globalTextStyleChanged, used);
 }
 
@@ -316,7 +316,7 @@ void Presentation::setGlobalTextStyle(tr1::shared_ptr<const TextToplevelStyle> n
  * Sets the hyperlink detector.
  * @param newDirector The director. Set @c null to unregister
  */
-void Presentation::setHyperlinkDetector(tr1::shared_ptr<HyperlinkDetector> newDetector) /*throw()*/ {
+void Presentation::setHyperlinkDetector(shared_ptr<HyperlinkDetector> newDetector) /*throw()*/ {
 	hyperlinkDetector_ = newDetector;
 	clearHyperlinksCache();
 }
@@ -325,7 +325,7 @@ void Presentation::setHyperlinkDetector(tr1::shared_ptr<HyperlinkDetector> newDe
  * Sets the line style director.
  * @param newDirector The director. @c null to unregister
  */
-void Presentation::setTextLineStyleDirector(tr1::shared_ptr<TextLineStyleDirector> newDirector) /*throw()*/ {
+void Presentation::setTextLineStyleDirector(shared_ptr<TextLineStyleDirector> newDirector) /*throw()*/ {
 	textLineStyleDirector_ = newDirector;
 }
 
@@ -334,7 +334,7 @@ void Presentation::setTextLineStyleDirector(tr1::shared_ptr<TextLineStyleDirecto
  * This method does not call @c TextRenderer#invalidate and the layout is not updated.
  * @param newDirector The director. @c null to unregister
  */
-void Presentation::setTextRunStyleDirector(tr1::shared_ptr<TextRunStyleDirector> newDirector) /*throw()*/ {
+void Presentation::setTextRunStyleDirector(shared_ptr<TextRunStyleDirector> newDirector) /*throw()*/ {
 	textRunStyleDirector_ = newDirector;
 }
 
@@ -350,7 +350,7 @@ void Presentation::textLineColors(Index line, Color& foreground, Color& backgrou
 		throw BadPositionException(Position(line, 0));
 	TextLineColorDirector::Priority highestPriority = 0, p;
 	pair<Color, Color> temp;
-	for(list<tr1::shared_ptr<TextLineColorDirector> >::const_iterator
+	for(list<shared_ptr<TextLineColorDirector>>::const_iterator
 			i(textLineColorDirectors_.begin()), e(textLineColorDirectors_.end()); i != e; ++i) {
 		p = (*i)->queryTextLineColors(line, temp.first, temp.second);
 		if(p > highestPriority) {
@@ -379,7 +379,7 @@ auto_ptr<StyledTextRunIterator> Presentation::textRunStyles(Index line) const {
 
 class SingleStyledPartitionPresentationReconstructor::Iterator : public presentation::StyledTextRunIterator {
 public:
-	Iterator(Index offsetInLine, tr1::shared_ptr<const TextRunStyle> style) : run_(offsetInLine, style), done_(false) {}
+	Iterator(Index offsetInLine, shared_ptr<const TextRunStyle> style) : run_(offsetInLine, style), done_(false) {}
 private:
 	// StyledTextRunIterator
 	StyledTextRun current() const {
@@ -407,7 +407,7 @@ private:
  * Constructor.
  * @param style The style
  */
-SingleStyledPartitionPresentationReconstructor::SingleStyledPartitionPresentationReconstructor(tr1::shared_ptr<const TextRunStyle> style) /*throw()*/ : style_(style) {
+SingleStyledPartitionPresentationReconstructor::SingleStyledPartitionPresentationReconstructor(shared_ptr<const TextRunStyle> style) /*throw()*/ : style_(style) {
 }
 
 /// @see PartitionPresentationReconstructor#getPresentation
@@ -429,16 +429,16 @@ private:
 	bool hasNext() const;
 	void next();
 private:
-	static const tr1::shared_ptr<const TextRunStyle> DEFAULT_TEXT_RUN_STYLE;
+	static const shared_ptr<const TextRunStyle> DEFAULT_TEXT_RUN_STYLE;
 	const Presentation& presentation_;
 	const map<kernel::ContentType, PartitionPresentationReconstructor*> reconstructors_;
 	const Index line_;
 	DocumentPartition currentPartition_;
 	auto_ptr<presentation::StyledTextRunIterator> subiterator_;
-	pair<Index, tr1::shared_ptr<const TextRunStyle> > current_;
+	pair<Index, shared_ptr<const TextRunStyle>> current_;
 };
 
-const tr1::shared_ptr<const TextRunStyle> PresentationReconstructor::Iterator::DEFAULT_TEXT_RUN_STYLE(new TextRunStyle);
+const shared_ptr<const TextRunStyle> PresentationReconstructor::Iterator::DEFAULT_TEXT_RUN_STYLE(new TextRunStyle);
 
 /**
  * Constructor.
@@ -514,9 +514,9 @@ inline void PresentationReconstructor::Iterator::updateSubiterator() {
 	subiterator_ = (r != reconstructors_.end()) ?
 		r->second->getPresentation(currentPartition_.region) : auto_ptr<presentation::StyledTextRunIterator>();
 	if(subiterator_.get() == 0) {
-		const tr1::shared_ptr<const TextLineStyle> lineStyle(presentation_.globalTextStyle().defaultLineStyle);
+		const shared_ptr<const TextLineStyle> lineStyle(presentation_.globalTextStyle().defaultLineStyle);
 		assert(lineStyle.get() != 0);
-		tr1::shared_ptr<const TextRunStyle> runStyle(lineStyle->defaultRunStyle);
+		shared_ptr<const TextRunStyle> runStyle(lineStyle->defaultRunStyle);
 		if(runStyle.get() == 0)
 			runStyle = DEFAULT_TEXT_RUN_STYLE;
 		current_ = make_pair(currentPartition_.region.beginning().offsetInLine, runStyle);
@@ -531,7 +531,7 @@ inline void PresentationReconstructor::Iterator::updateSubiterator() {
  * @param presentation The presentation
  */
 PresentationReconstructor::PresentationReconstructor(Presentation& presentation) : presentation_(presentation) {
-	presentation_.setTextRunStyleDirector(tr1::shared_ptr<TextRunStyleDirector>(this));	// TODO: danger call (may delete this).
+	presentation_.setTextRunStyleDirector(shared_ptr<TextRunStyleDirector>(this));	// TODO: danger call (may delete this).
 }
 
 /// Destructor.
@@ -599,7 +599,7 @@ namespace {
  * @param uriDetector Can't be @c null
  * @throw NullPointerException @a uriDetector is @c null
  */
-URIHyperlinkDetector::URIHyperlinkDetector(tr1::shared_ptr<const URIDetector> uriDetector) : uriDetector_(uriDetector) {
+URIHyperlinkDetector::URIHyperlinkDetector(shared_ptr<const URIDetector> uriDetector) : uriDetector_(uriDetector) {
 	if(uriDetector.get() == 0)
 		throw NullPointerException("uriDetector");
 }
@@ -677,8 +677,8 @@ void CompositeHyperlinkDetector::setDetector(ContentType contentType, auto_ptr<H
 class LexicalPartitionPresentationReconstructor::StyledTextRunIterator : public presentation::StyledTextRunIterator {
 public:
 	StyledTextRunIterator(const Document& document, TokenScanner& tokenScanner,
-		const map<Token::Identifier, tr1::shared_ptr<const TextRunStyle> >& styles,
-		tr1::shared_ptr<const TextRunStyle> defaultStyle, const Region& region);
+		const map<Token::Identifier, shared_ptr<const TextRunStyle>>& styles,
+		shared_ptr<const TextRunStyle> defaultStyle, const Region& region);
 private:
 	void nextRun();
 	// StyledTextRunIterator
@@ -688,18 +688,18 @@ private:
 private:
 //	const LexicalPartitionPresentationReconstructor& reconstructor_;
 	TokenScanner& tokenScanner_;
-	const map<Token::Identifier, tr1::shared_ptr<const TextRunStyle> >& styles_;
-	tr1::shared_ptr<const TextRunStyle> defaultStyle_;
+	const map<Token::Identifier, shared_ptr<const TextRunStyle>>& styles_;
+	shared_ptr<const TextRunStyle> defaultStyle_;
 	Region region_;
-	pair<Index, tr1::shared_ptr<const TextRunStyle> > current_;
+	pair<Index, shared_ptr<const TextRunStyle>> current_;
 	auto_ptr<Token> next_;
 	Position lastTokenEnd_;
 };
 
 LexicalPartitionPresentationReconstructor::StyledTextRunIterator::StyledTextRunIterator(
 		const Document& document, TokenScanner& tokenScanner,
-		const map<Token::Identifier, tr1::shared_ptr<const TextRunStyle> >& styles,
-		tr1::shared_ptr<const TextRunStyle> defaultStyle, const Region& region) :
+		const map<Token::Identifier, shared_ptr<const TextRunStyle>>& styles,
+		shared_ptr<const TextRunStyle> defaultStyle, const Region& region) :
 		tokenScanner_(tokenScanner), styles_(styles), defaultStyle_(defaultStyle), region_(region), lastTokenEnd_(region.beginning()) {
 	tokenScanner_.parse(document, region);
 	nextRun();
@@ -726,7 +726,7 @@ void LexicalPartitionPresentationReconstructor::StyledTextRunIterator::next() {
 
 inline void LexicalPartitionPresentationReconstructor::StyledTextRunIterator::nextRun() {
 	if(next_.get() != 0) {
-		map<Token::Identifier, tr1::shared_ptr<const TextRunStyle> >::const_iterator style(styles_.find(next_->id));
+		map<Token::Identifier, shared_ptr<const TextRunStyle>>::const_iterator style(styles_.find(next_->id));
 		current_.first = next_->region.beginning().offsetInLine;
 		current_.second = (style != styles_.end()) ? style->second : defaultStyle_;
 		lastTokenEnd_ = next_->region.end();
@@ -740,7 +740,7 @@ inline void LexicalPartitionPresentationReconstructor::StyledTextRunIterator::ne
 			current_.second = defaultStyle_;
 			lastTokenEnd_ = next_->region.beginning();
 		} else {
-			map<Token::Identifier, tr1::shared_ptr<const TextRunStyle> >::const_iterator style(styles_.find(next_->id));
+			map<Token::Identifier, shared_ptr<const TextRunStyle>>::const_iterator style(styles_.find(next_->id));
 			current_.first = next_->region.beginning().offsetInLine;
 			current_.second = (style != styles_.end()) ? style->second : defaultStyle_;
 			lastTokenEnd_ = next_->region.beginning();

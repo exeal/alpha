@@ -228,8 +228,8 @@ void RulerPainter::paint(PaintContext& context) {
 		if(!configuration().lineNumbers.foreground.inherits())
 			foreground = configuration().lineNumbers.foreground;
 		else {
-			if(const tr1::shared_ptr<const TextLineStyle> lineStyle = viewer_.presentation().globalTextStyle().defaultLineStyle) {
-				if(const tr1::shared_ptr<const TextRunStyle> runStyle = lineStyle->defaultRunStyle)
+			if(const shared_ptr<const TextLineStyle> lineStyle = viewer_.presentation().globalTextStyle().defaultLineStyle) {
+				if(const shared_ptr<const TextRunStyle> runStyle = lineStyle->defaultRunStyle)
 					foreground = runStyle->foreground;
 			}
 		}
@@ -310,7 +310,7 @@ void RulerPainter::paint(PaintContext& context) {
 	if(configuration_.lineNumbers.visible) {
 		// compute reading direction of the line numbers from 'configuration_.lineNumbers.readingDirection'
 		if(configuration_.lineNumbers.readingDirection.inherits()) {
-			const tr1::shared_ptr<const TextLineStyle> defaultLineStyle(viewer_.presentation().globalTextStyle()->defaultLineStyle);
+			const shared_ptr<const TextLineStyle> defaultLineStyle(viewer_.presentation().globalTextStyle()->defaultLineStyle);
 			if(defaultLineStyle.get() != 0)
 				lineNumbersReadingDirection = defaultLineStyle->readingDirection;
 			if(lineNumbersReadingDirection.inherits())
@@ -387,9 +387,9 @@ void RulerPainter::paint(PaintContext& context) {
 }
 
 namespace {
-	Scalar computeMaximumNumberGlyphsExtent(RenderingContext2D& context, tr1::shared_ptr<const Font> font,
+	Scalar computeMaximumNumberGlyphsExtent(RenderingContext2D& context, shared_ptr<const Font> font,
 			uint8_t digits, const WritingMode& writingMode, const NumberSubstitution& numberSubstitution) {
-		tr1::shared_ptr<const Font> oldFont(context.font());
+		shared_ptr<const Font> oldFont(context.font());
 		context.setFont(font);
 /*
 #if defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE)

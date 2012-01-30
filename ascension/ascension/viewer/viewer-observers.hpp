@@ -81,7 +81,7 @@ namespace ascension {
 			/// The viewer lost the mouse capture.
 			virtual void captureChanged() = 0;
 			/// Returns @c DropTarget if this object supports the interface, or @c null.
-			virtual std::tr1::shared_ptr<base::DropTarget> handleDropTarget() const = 0;
+			virtual std::shared_ptr<base::DropTarget> handleDropTarget() const = 0;
 			/**
 			 * Installs the strategy.
 			 * @param viewer The text viewer uses the strategy. The window had been created at this

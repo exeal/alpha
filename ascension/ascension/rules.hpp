@@ -118,11 +118,11 @@ namespace ascension {
 		class URIRule : public Rule {
 		public:
 			URIRule(Token::Identifier id,
-				std::tr1::shared_ptr<const URIDetector> uriDetector) /*throw()*/;
+				std::shared_ptr<const URIDetector> uriDetector) /*throw()*/;
 			std::auto_ptr<Token> parse(const TokenScanner& scanner,
 				const Char* first, const Char* last) const /*throw()*/;
 		private:
-			std::tr1::shared_ptr<const URIDetector> uriDetector_;
+			std::shared_ptr<const URIDetector> uriDetector_;
 		};
 
 		/// A concrete rule detects the registered words.
@@ -329,8 +329,8 @@ namespace ascension {
 		public:
 			explicit LexicalPartitionPresentationReconstructor(
 				const presentation::Presentation& presentation, std::auto_ptr<TokenScanner> tokenScanner,
-				const std::map<Token::Identifier, std::tr1::shared_ptr<const presentation::TextRunStyle> >& styles,
-				std::tr1::shared_ptr<const presentation::TextRunStyle> defaultStyle = std::tr1::shared_ptr<const presentation::TextRunStyle>());
+				const std::map<Token::Identifier, std::shared_ptr<const presentation::TextRunStyle> >& styles,
+				std::shared_ptr<const presentation::TextRunStyle> defaultStyle = std::shared_ptr<const presentation::TextRunStyle>());
 		private:
 			// presentation.IPartitionPresentationReconstructor
 			std::auto_ptr<presentation::StyledTextRunIterator> getPresentation(const kernel::Region& region) const /*throw()*/;
@@ -338,8 +338,8 @@ namespace ascension {
 			class StyledTextRunIterator;
 			const presentation::Presentation& presentation_;
 			std::auto_ptr<TokenScanner> tokenScanner_;
-			std::tr1::shared_ptr<const presentation::TextRunStyle> defaultStyle_;
-			const std::map<Token::Identifier, std::tr1::shared_ptr<const presentation::TextRunStyle> > styles_;
+			std::shared_ptr<const presentation::TextRunStyle> defaultStyle_;
+			const std::map<Token::Identifier, std::shared_ptr<const presentation::TextRunStyle> > styles_;
 		};
 
 
