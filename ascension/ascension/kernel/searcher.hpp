@@ -181,15 +181,15 @@ namespace ascension {
 #endif // !ASCENSION_NO_REGEX
 			mutable struct LastResult {
 				const kernel::Document* document;
-				kernel::Region matchedRegion;
+				boost::optional<kernel::Region> matchedRegion;
 				Direction direction;
 				std::size_t documentRevisionNumber;
-				LastResult() /*throw()*/ : document(0), matchedRegion(), direction(Direction::FORWARD) {}
+				LastResult() /*throw()*/ : document(0), direction(Direction::FORWARD) {}
 				~LastResult() /*throw()*/ {reset();}
 				bool checkDocumentRevision(const kernel::Document& current) const /*throw()*/ {
 					return document == &current && documentRevisionNumber == current.revisionNumber();}
-				bool matched() const /*throw()*/ {return matchedRegion.first != kernel::Position();}
-				void reset() /*throw()*/ {matchedRegion.first = matchedRegion.second = kernel::Position();}
+				bool matched() const /*throw()*/ {return matchedRegion;}
+				void reset() /*throw()*/ {matchedRegion = boost::none;}
 				void updateDocumentRevision(const kernel::Document& document) /*throw()*/ {
 					this->document = &document; documentRevisionNumber = document.revisionNumber();}
 			} lastResult_;

@@ -422,16 +422,16 @@ void DefaultMouseInputStrategy::extendSelection(const k::Position* to /* = 0 */)
 		const Index lines = document.numberOfLines();
 		k::Region s;
 		s.first.line = (destination.line >= selection_.initialLine) ? selection_.initialLine : selection_.initialLine + 1;
-		s.first.column = (s.first.line > lines - 1) ? document.lineLength(--s.first.line) : 0;
+		s.first.offsetInLine = (s.first.line > lines - 1) ? document.lineLength(--s.first.line) : 0;
 		s.second.line = (destination.line >= selection_.initialLine) ? destination.line + 1 : destination.line;
-		s.second.column = (s.second.line > lines - 1) ? document.lineLength(--s.second.line) : 0;
+		s.second.offsetInLine = (s.second.line > lines - 1) ? document.lineLength(--s.second.line) : 0;
 		caret.select(s);
 	} else if(state_ == EXTENDING_WORD_SELECTION) {
 		using namespace text;
-		const IdentifierSyntax& id = document.contentTypeInformation().getIdentifierSyntax(caret.contentType());
+		const IdentifierSyntax& id = document.contentTypeInformation().getIdentifierSyntax(contentType(caret));
 		if(destination.line < selection_.initialLine
 				|| (destination.line == selection_.initialLine
-					&& destination.column < selection_.initialWordColumns.first)) {
+					&& destination.offsetInLine < selection_.initialWordColumns.first)) {
 			WordBreakIterator<k::DocumentCharacterIterator> i(
 				k::DocumentCharacterIterator(document, destination), text::AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, id);
 			--i;
@@ -439,7 +439,7 @@ void DefaultMouseInputStrategy::extendSelection(const k::Position* to /* = 0 */)
 				(i.base().tell().line == destination.line) ? i.base().tell() : k::Position(destination.line, 0));
 		} else if(destination.line > selection_.initialLine
 				|| (destination.line == selection_.initialLine
-					&& destination.column > selection_.initialWordColumns.second)) {
+					&& destination.offsetInLine > selection_.initialWordColumns.second)) {
 			text::WordBreakIterator<k::DocumentCharacterIterator> i(
 				k::DocumentCharacterIterator(document, destination), text::AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, id);
 			++i;
@@ -481,9 +481,9 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 	// select line(s)
 	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS) {
 		const k::Position to(viewer_->characterForLocalPoint(position, TextLayout::LEADING));
-		const bool extend = win32::boole(modifiers & MK_SHIFT) && to.line != caret.anchor().line();
+		const bool extend = win32::boole(modifiers & MK_SHIFT) && to.line != line(caret.anchor());
 		state_ = EXTENDING_LINE_SELECTION;
-		selection_.initialLine = extend ? caret.anchor().line() : to.line;
+		selection_.initialLine = extend ? line(caret.anchor()) : to.line;
 		viewer_->caret().endRectangleSelection();
 		extendSelection(&to);
 		viewer_->grabInput();
@@ -503,11 +503,12 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 		bool hyperlinkInvoked = false;
 		if(win32::boole(modifiers & MK_CONTROL)) {
 			if(!isPointOverSelection(caret, position)) {
-				const k::Position p(viewer_->characterForLocalPoint(position, TextLayout::TRAILING, true));
-				if(p != k::Position()) {
-					if(const hyperlink::Hyperlink* link = utils::getPointedHyperlink(*viewer_, p)) {
-						link->invoke();
-						hyperlinkInvoked = true;
+				if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
+					if(const boost::optional<k::Position> p = viewport->characterForPoint(position, TextLayout::TRAILING, true)) {
+						if(const hyperlink::Hyperlink* link = utils::getPointedHyperlink(*viewer_, *p)) {
+							link->invoke();
+							hyperlinkInvoked = true;
+						}
 					}
 				}
 			}
@@ -519,27 +520,30 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 			// shift => keep the anchor and move the caret to the cursor position
 			// ctrl  => begin word selection
 			// alt   => begin rectangle selection
-			const k::Position to(viewer_->characterForLocalPoint(position, TextLayout::TRAILING));
-			state_ = EXTENDING_CHARACTER_SELECTION;
-			if((modifiers & (UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN)) != 0) {
-				if((modifiers & UserInput::CONTROL_DOWN) != 0) {
-					// begin word selection
-					state_ = EXTENDING_WORD_SELECTION;
-					caret.moveTo((modifiers & UserInput::SHIFT_DOWN) != 0 ? caret.anchor() : to);
-					selectWord(caret);
-					selection_.initialLine = caret.line();
-					selection_.initialWordColumns = make_pair(caret.beginning().column(), caret.end().column());
+			if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
+				if(const boost::optional<k::Position> to = viewport->characterForPoint(position, TextLayout::TRAILING)) {
+					state_ = EXTENDING_CHARACTER_SELECTION;
+					if((modifiers & (UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN)) != 0) {
+						if((modifiers & UserInput::CONTROL_DOWN) != 0) {
+							// begin word selection
+							state_ = EXTENDING_WORD_SELECTION;
+							caret.moveTo((modifiers & UserInput::SHIFT_DOWN) != 0 ? caret.anchor() : *to);
+							selectWord(caret);
+							selection_.initialLine = line(caret);
+							selection_.initialWordColumns = make_pair(offsetInLine(caret.beginning()), offsetInLine(caret.end()));
+						}
+						if((modifiers & UserInput::SHIFT_DOWN) != 0)
+							extendSelection(&*to);
+					} else
+						caret.moveTo(*to);
+					if((modifiers & UserInput::ALT_DOWN) != 0)	// make the selection reactangle
+						caret.beginRectangleSelection();
+					else
+						caret.endRectangleSelection();
+					viewer_->grabInput();
+					timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
 				}
-				if((modifiers & UserInput::SHIFT_DOWN) != 0)
-					extendSelection(&to);
-			} else
-				caret.moveTo(to);
-			if((modifiers & UserInput::ALT_DOWN) != 0)	// make the selection reactangle
-				caret.beginRectangleSelection();
-			else
-				caret.endRectangleSelection();
-			viewer_->grabInput();
-			timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
+			}
 		}
 	}
 
@@ -640,8 +644,8 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Action action, const base::Mous
 				Caret& caret = viewer_->caret();
 				selectWord(caret);
 				state_ = EXTENDING_WORD_SELECTION;
-				selection_.initialLine = caret.line();
-				selection_.initialWordColumns = make_pair(caret.anchor().column(), caret.column());
+				selection_.initialLine = line(caret);
+				selection_.initialWordColumns = make_pair(offsetInLine(caret.anchor()), offsetInLine(caret));
 				viewer_->grabInput();
 				timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
 				return true;
@@ -737,9 +741,9 @@ bool DefaultMouseInputStrategy::showCursor(const NativePoint& position) {
 		cursorName = IDC_ARROW;
 	else if(htr == TextViewer::CONTENT_AREA) {
 		// on a hyperlink?
-		const k::Position p(viewer_->characterForLocalPoint(position, TextLayout::TRAILING, true, k::locations::UTF16_CODE_UNIT));
-		if(p != k::Position())
-			newlyHoveredHyperlink = utils::getPointedHyperlink(*viewer_, p);
+		if(const boost::optional<k::Position> p =
+				characterForPoint(viewer_->textRenderer(), position, TextLayout::TRAILING, true, k::locations::UTF16_CODE_UNIT))
+			newlyHoveredHyperlink = utils::getPointedHyperlink(*viewer_, *p);
 		if(newlyHoveredHyperlink != 0 && win32::boole(::GetAsyncKeyState(VK_CONTROL) & 0x8000))
 			cursorName = IDC_HAND;
 	}

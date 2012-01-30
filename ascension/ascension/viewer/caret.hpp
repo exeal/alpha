@@ -72,9 +72,9 @@ namespace ascension {
 			// attributes : selection
 			const VirtualBox& boxForRectangleSelection() const;
 			bool isSelectionRectangle() const /*throw()*/;
-			kernel::Region selectedRegion() const /*throw()*/;
+			boost::optional<kernel::Region> selectedRegion() const /*throw()*/;
 			// attribute : shape
-			void setShaper(std::tr1::shared_ptr<CaretShaper> shaper) /*throw()*/;
+			void setShaper(std::shared_ptr<CaretShaper> shaper) /*throw()*/;
 			// attributes : character input
 			bool isOvertypeMode() const /*throw()*/;
 			Caret& setOvertypeMode(bool overtype) /*throw()*/;
@@ -85,7 +85,7 @@ namespace ascension {
 			LCID setClipboardLocale(LCID newLocale);
 #endif // SCENSION_OS_WINDOWS
 			// attributes : matched braces
-			const std::pair<kernel::Position, kernel::Position>& matchBrackets() const /*throw()*/;
+			const boost::optional<std::pair<kernel::Position, kernel::Position>>& matchBrackets() const /*throw()*/;
 			MatchBracketsTrackingMode matchBracketsTrackingMode() const /*throw()*/;
 			Caret& trackMatchBrackets(MatchBracketsTrackingMode mode);
 			// selection manipulations
@@ -107,14 +107,14 @@ namespace ascension {
 		private:
 			void adjustInputMethodCompositionWindow();
 			void checkMatchBrackets();
-			void fireCaretMoved(const kernel::Region& oldRegion);
+			void fireCaretMoved(const boost::optional<kernel::Region>& oldRegion);
 			void internalExtendSelection(void (*algorithm)(void));
 			void prechangeDocument();
 			void update(const kernel::DocumentChange& change);
 			void updateVisualAttributes();
 			// VisualPoint
 			void aboutToMove(kernel::Position& to);
-			void moved(const kernel::Position& from) /*throw()*/;
+			void moved(const boost::optional<kernel::Position>& from) /*throw()*/;
 			// detail.InputEventHandler
 			void abortInput();
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
@@ -124,7 +124,7 @@ namespace ascension {
 			LRESULT onImeRequest(WPARAM command, LPARAM lp, bool& consumed);
 #endif
 			// kernel.PointListener
-			void pointMoved(const kernel::Point& self, const kernel::Position& oldPosition);
+			void pointMoved(const kernel::Point& self, const boost::optional<kernel::Position>& oldPosition);
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
@@ -141,13 +141,13 @@ namespace ascension {
 					assert(!isInternalUpdating()); positionBeforeUpdate_ = position();
 					adaptToDocument(true); update(change); adaptToDocument(false);}
 				void endInternalUpdate() /*throw()*/ {
-					assert(isInternalUpdating()); positionBeforeUpdate_ = kernel::Position();}
-				bool isInternalUpdating() const /*throw()*/ {return positionBeforeUpdate_ != kernel::Position();}
+					assert(isInternalUpdating()); positionBeforeUpdate_ = boost::none;}
+				bool isInternalUpdating() const /*throw()*/ {return positionBeforeUpdate_;}
 				const kernel::Position& positionBeforeInternalUpdate() const /*throw()*/ {
-					assert(isInternalUpdating()); return positionBeforeUpdate_;}
+					assert(isInternalUpdating()); return *positionBeforeUpdate_;}
 			private:
 				using kernel::Point::adaptToDocument;
-				kernel::Position positionBeforeUpdate_;
+				boost::optional<kernel::Position> positionBeforeUpdate_;
 			} * anchor_;
 #ifdef ASCENSION_OS_WINDOWS
 			LCID clipboardLocale_;
@@ -159,7 +159,7 @@ namespace ascension {
 			bool overtypeMode_;
 			bool autoShow_;		// true if show itself when movements
 			MatchBracketsTrackingMode matchBracketsTrackingMode_;
-			std::tr1::shared_ptr<CaretShaper> shaper_;
+			std::shared_ptr<CaretShaper> shaper_;
 			struct Shape {
 				std::auto_ptr<graphics::Image> image;
 				graphics::NativePoint alignmentPoint;
@@ -172,9 +172,9 @@ namespace ascension {
 				std::auto_ptr<VirtualBox> selectedRectangle;	// for rectangular selection. null when the selection is linear
 				bool typing;			// true when inputCharacter called (see prechangeDocument)
 				bool inputMethodCompositionActivated, inputMethodComposingCharacter;
-				kernel::Position lastTypedPosition;	// the position the caret input character previously or INVALID_POSITION
-				kernel::Region regionBeforeMoved;
-				std::pair<kernel::Position, kernel::Position> matchBrackets;	// matched brackets' positions. Position() for none
+				boost::optional<kernel::Position> lastTypedPosition;	// the position the caret input character previously
+				boost::optional<kernel::Region> regionBeforeMoved;
+				boost::optional<std::pair<kernel::Position, kernel::Position> > matchBrackets;	// matched brackets' positions. boost.none for none
 				Context() /*throw()*/;
 			} context_;
 		};
@@ -192,12 +192,12 @@ namespace ascension {
 		void selectWord(Caret& caret);
 
 		// free functions change the document by using Caret class
-		void breakLine(Caret& at, bool inheritIndent, std::size_t newlines /* = 1 */);
+		void breakLine(kernel::Somewhere<Caret> at, bool inheritIndent, std::size_t newlines /* = 1 */);
 		void eraseSelection(Caret& caret);
 		void insertRectangle(Caret& caret, const Char* first, const Char* last);
 		void insertRectangle(Caret& caret, const String& text);
-		void indentBySpaces(Caret& caret, bool rectangle, long level = 1);
-		void indentByTabs(Caret& caret, bool rectangle, long level = 1);
+		void indentBySpaces(kernel::Somewhere<Caret> caret, bool rectangle, long level = 1);
+		void indentByTabs(kernel::Somewhere<Caret> caret, bool rectangle, long level = 1);
 		void newLine(Caret& caret, std::size_t newlines = 1);
 		bool transposeCharacters(Caret& caret);
 		bool transposeLines(Caret& caret);
@@ -255,10 +255,14 @@ namespace ascension {
 		}
 
 		/// キャレット位置の括弧と対応する括弧の位置を返す (@a first が対括弧、@a second がキャレット周辺の括弧)
-		inline const std::pair<kernel::Position, kernel::Position>& Caret::matchBrackets() const /*throw()*/ {return context_.matchBrackets;}
+		inline const boost::optional<std::pair<kernel::Position, kernel::Position>>& Caret::matchBrackets() const /*throw()*/ {
+			return context_.matchBrackets;
+		}
 
 		/// Returns the matched braces tracking mode.
-		inline Caret::MatchBracketsTrackingMode Caret::matchBracketsTrackingMode() const /*throw()*/ {return matchBracketsTrackingMode_;}
+		inline Caret::MatchBracketsTrackingMode Caret::matchBracketsTrackingMode() const /*throw()*/ {
+			return matchBracketsTrackingMode_;
+		}
 
 		/**
 		 * Selects the specified region.
@@ -267,7 +271,9 @@ namespace ascension {
 		inline void Caret::select(const kernel::Region& region) {select(region.first, region.second);}
 
 		/// Returns the selected region.
-		inline kernel::Region Caret::selectedRegion() const /*throw()*/ {return kernel::Region(*anchor_, position());}
+		inline kernel::Region Caret::selectedRegion() const /*throw()*/ {
+			return kernel::Region(*anchor_, *position());
+		}
 
 		/**
 		 * Sets the caret shaper.

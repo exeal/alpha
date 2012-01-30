@@ -74,21 +74,22 @@ namespace ascension {
 
 		/**
 		 * Extension of @c kernel#Point class for viewer and layout.
-		 * @see kernel#Point, kernel#IPointListener, kernel#DisposedViewException
+		 * @see kernel#Point, kernel#PointListener, kernel#DisposedViewException
 		 */
 		class VisualPoint : public kernel::Point, public graphics::font::VisualLinesListener {
 			ASCENSION_UNASSIGNABLE_TAG(VisualPoint);
 		public:
 			// constructors
-			explicit VisualPoint(TextViewer& viewer,
-				const kernel::Position& position = kernel::Position(), kernel::PointListener* listener = 0);
+			explicit VisualPoint(TextViewer& viewer, kernel::PointListener* listener = 0);
+			VisualPoint(TextViewer& viewer, const kernel::Position& position, kernel::PointListener* listener = 0);
 			VisualPoint(const VisualPoint& other);
 			virtual ~VisualPoint() /*throw()*/;
 			// attributes
 			bool isTextViewerDisposed() const /*throw()*/;
 			TextViewer& textViewer();
 			const TextViewer& textViewer() const;
-			Index visualColumn() const;
+			// visual positions
+			Index offsetInVisualLine() const;
 			Index visualLine() const;
 			Index visualSubline() const;
 			// movement
@@ -99,7 +100,7 @@ namespace ascension {
 			static VerticalDestinationProxy makeVerticalDestinationProxy(const kernel::Position& source);
 			// kernel.Point
 			virtual void aboutToMove(kernel::Position& to);
-			virtual void moved(const kernel::Position& from) /*throw()*/;
+			virtual void moved(const boost::optional<kernel::Position>& from) /*throw()*/;
 		private:
 			void updateLastX();
 			void viewerDisposed() /*throw()*/;
@@ -111,9 +112,12 @@ namespace ascension {
 
 		private:
 			TextViewer* viewer_;
-			int lastX_;				// distance from left edge and saved during crossing visual lines. -1 if not calculated
-			bool crossingLines_;	// true only when the point is moving across the different lines
-			Index visualLine_, visualSubline_;	// caches
+			boost::optional<graphics::Scalar> lastX_;	// distance from left edge and saved during crossing visual lines
+			bool crossingLines_;						// true only when the point is moving across the different lines
+			struct LineNumberCaches {
+				Index visualLine, visualSubline;
+			};
+			boost::optional<LineNumberCaches> lineNumberCaches_;	// caches
 			friend class TextViewer;
 			friend VerticalDestinationProxy kernel::locations::backwardVisualLine(const VisualPoint& p, Index lines);
 			friend VerticalDestinationProxy kernel::locations::forwardVisualLine(const VisualPoint& p, Index lines);
@@ -148,9 +152,9 @@ namespace ascension {
 
 		/// Returns the visual subline number.
 		inline Index VisualPoint::visualSubline() const {
-			if(visualLine_ == INVALID_INDEX)
+			if(!lineNumberCaches_)
 				visualLine();
-			return visualSubline_;
+			return lineNumberCaches_->visualSubline;
 		}
 
 	} // namespace viewers

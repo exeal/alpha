@@ -17,6 +17,7 @@
 #include <ascension/presentation/length.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <map>
+#include <boost/optional.hpp>
 
 namespace ascension {
 	namespace presentation {
@@ -191,7 +192,7 @@ namespace ascension {
 		};
 
 		/**
-		 * Represents a styled text run, with the beginning position (column) in the line and the
+		 * Represents a styled text run, with the beginning position (offset) in the line and the
 		 * style.
 		 * @note This class does not provides the length of the text run.
 		 * @note This class is not intended to be derived.
@@ -256,7 +257,7 @@ namespace ascension {
 			void next();
 		private:
 			std::auto_ptr<StyledTextRunIterator> iterator_;
-			std::pair<bool, StyledTextRun> current_, next_;
+			boost::optional<StyledTextRun> current_, next_;
 			const Index end_;
 		};
 

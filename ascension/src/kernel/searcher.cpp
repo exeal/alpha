@@ -658,7 +658,7 @@ bool TextSearcher::search(const Document& document,
 			&& direction == lastResult_.direction && lastResult_.checkDocumentRevision(document);
 		if(direction == Direction::FORWARD) {
 			const DocumentCharacterIterator eob(document, scope.end());
-			if(!maybeContinuous || from != lastResult_.matchedRegion.second)
+			if(!maybeContinuous || from != lastResult_.matchedRegion->second)
 				regexMatcher_->region(DocumentCharacterIterator(document, from), eob);
 			while(regexMatcher_->find()) {
 				if(matched = checkBoundary(regexMatcher_->start(), regexMatcher_->end(), wholeMatch_))
@@ -667,8 +667,8 @@ bool TextSearcher::search(const Document& document,
 			}
 		} else {
 			// ascension.regex does not support backward searches...
-			const bool continuous = maybeContinuous && from == lastResult_.matchedRegion.first;
-			const DocumentCharacterIterator e(document, continuous ? lastResult_.matchedRegion.second : from);
+			const bool continuous = maybeContinuous && from == lastResult_.matchedRegion->first;
+			const DocumentCharacterIterator e(document, continuous ? lastResult_.matchedRegion->second : from);
 			DocumentCharacterIterator b(document, from);	// position from where the match should start
 			if(!continuous || b.tell() > scope.beginning()) {
 				if(continuous)

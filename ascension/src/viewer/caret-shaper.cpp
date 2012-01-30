@@ -28,8 +28,8 @@ void viewers::currentCharacterSize(const Caret& caret, Scalar* measure, Scalar* 
 	const TextRenderer& textRenderer = caret.textViewer().textRenderer();
 	const TextLayout* layout = 0;
 	if(extent != 0) {
-		layout = &textRenderer.layouts().at(caret.line());
-		const LineMetrics& lineMetrics = layout->lineMetrics(layout->lineAt(caret.column()));
+		layout = &textRenderer.layouts().at(line(caret));
+		const LineMetrics& lineMetrics = layout->lineMetrics(layout->lineAt(offsetInLine(caret)));
 		*extent = lineMetrics.height();
 	}
 	if(measure != 0) {
@@ -37,9 +37,9 @@ void viewers::currentCharacterSize(const Caret& caret, Scalar* measure, Scalar* 
 			*measure = textRenderer.defaultFont()->metrics().averageCharacterWidth();
 		else {
 			if(layout == 0)
-				layout = &textRenderer.layouts().at(caret.line());
-			const Scalar leading = geometry::x(layout->location(caret.column(), TextLayout::LEADING));
-			const Scalar trailing = geometry::x(layout->location(caret.column(), TextLayout::TRAILING));
+				layout = &textRenderer.layouts().at(line(caret));
+			const Scalar leading = geometry::x(layout->location(offsetInLine(caret), TextLayout::LEADING));
+			const Scalar trailing = geometry::x(layout->location(offsetInLine(caret), TextLayout::TRAILING));
 			*measure = static_cast<Scalar>(detail::distance(leading, trailing));
 		}
 	}
@@ -79,10 +79,11 @@ DefaultCaretShaper::DefaultCaretShaper() /*throw()*/ : updater_(0) {
 }
 
 /// @see CaretListener#caretMoved
-void DefaultCaretShaper::caretMoved(const Caret& caret, const k::Region& oldRegion) {
+void DefaultCaretShaper::caretMoved(const Caret& caret, const boost::optional<k::Region>& oldRegion) {
 	if(updater_ != 0) {
 		assert(&updater_->caret() == &caret);	// sanity check...
-		if(caret.line() != oldRegion.second.line)
+		if(static_cast<bool>(oldRegion) == static_cast<bool>(caret.position())
+				|| (caret.position() && oldRegion && line(caret) != oldRegion->second.line))
 			updater_->update();
 	}
 }
@@ -188,8 +189,8 @@ namespace {
 	void shapeCaret(const Caret& caret, bool localeSensitive, auto_ptr<Image>& image, NativePoint& alignmentPoint) {
 		const bool overtype = caret.isOvertypeMode() && isSelectionEmpty(caret);
 		const TextRenderer& renderer = caret.textViewer().textRenderer();
-		const TextLayout& layout = renderer.layouts().at(caret.line());
-		const LineMetrics& lineMetrics = layout.lineMetrics(layout.lineAt(caret.column()));
+		const TextLayout& layout = renderer.layouts().at(line(caret));
+		const LineMetrics& lineMetrics = layout.lineMetrics(layout.lineAt(offsetInLine(caret)));
 
 		Scalar extent, measure;
 		if(localeSensitive && overtype)
@@ -200,7 +201,7 @@ namespace {
 		}
 		switch(layout.writingMode().blockFlowDirection) {
 			case HORIZONTAL_TB:
-				geometry::x(alignmentPoint) = (layout.bidiEmbeddingLevel(caret.column()) % 2 == 0) ? 0 : measure - 1;
+				geometry::x(alignmentPoint) = (layout.bidiEmbeddingLevel(offsetInLine(caret)) % 2 == 0) ? 0 : measure - 1;
 				geometry::y(alignmentPoint) = lineMetrics.ascent();
 				break;
 			case VERTICAL_RL:
@@ -260,7 +261,7 @@ void DefaultCaretShaper::visualLinesInserted(const Range<Index>& lines) /*throw(
 
 /// @see CaretShaper#visualLinesModified
 void DefaultCaretShaper::visualLinesModified(const Range<Index>& lines, SignedIndex, bool, bool) /*throw()*/ {
-	if(updater_ != 0 && includes(lines, updater_->caret().line()))
+	if(updater_ != 0 && includes(lines, line(updater_->caret())))
 		updater_->update();
 }
 

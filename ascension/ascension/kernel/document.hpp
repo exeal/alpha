@@ -24,6 +24,7 @@
 #include <iostream>
 #include <map>
 #include <set>
+#include <boost/optional.hpp>
 
 namespace ascension {
 
@@ -163,7 +164,7 @@ namespace ascension {
 			void removeListener(BookmarkListener& listener);
 			// attributes
 			bool isMarked(Index line) const;
-			Index next(Index from, Direction direction, bool wrapAround = true, std::size_t marks = 1) const;
+			boost::optional<Index> next(Index from, Direction direction, bool wrapAround = true, std::size_t marks = 1) const;
 			std::size_t numberOfMarks() const /*throw()*/;
 			// enumerations
 			Iterator begin() const;
@@ -265,12 +266,12 @@ namespace ascension {
 			bool isChanging() const /*throw()*/;
 			void replace(const Region& region, const StringPiece& text, Position* eos = 0);
 			void replace(const Region& region, std::basic_istream<Char>& in, Position* eos = 0);
-#if 0
+#if ASCENSION_ABANDONED_AT_VERSION_08
 			// locks
 			bool lock(const void* locker);
 			const void* locker() const /*throw()*/;
 			void unlock(const void* locker);
-#endif
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 			// undo/redo & compound changes
 			void beginCompoundChange();
 			void clearUndoBuffer() /*throw()*/;
@@ -329,7 +330,7 @@ namespace ascension {
 			std::map<const DocumentPropertyKey*, String*> properties_;
 			bool onceUndoBufferCleared_, recordingChanges_, changing_, rollbacking_;
 
-			std::pair<Position, Point*>* accessibleArea_;
+			std::unique_ptr<std::pair<Position, std::unique_ptr<Point>>> accessibleRegion_;
 
 			std::list<DocumentListener*> listeners_, prenotifiedListeners_;
 			detail::Listeners<DocumentStateListener> stateListeners_;
@@ -386,63 +387,72 @@ namespace ascension {
 // inline implementation //////////////////////////////////////////////////////////////////////////
 
 /// Calls @c Document#replace.
-inline void erase(Document& document, const Region& region) {return document.replace(region, 0, 0);}
+inline void erase(Document& document, const Region& region) {
+	return document.replace(region, 0, 0);
+}
 
 /// Calls @c Document#replace.
-inline void erase(Document& document, const Position& first, const Position& second) {return erase(document, Region(first, second));}
+inline void erase(Document& document, const Position& first, const Position& second) {
+	return erase(document, Region(first, second));
+}
 
 /// Calls @c Document#replace.
-inline void insert(Document& document, const Position& at, const StringPiece& text,
-	Position* endOfInsertedString /* = 0 */) {return document.replace(Region(at), text, endOfInsertedString);}
+inline void insert(Document& document, const Position& at,
+		const StringPiece& text, Position* endOfInsertedString /* = 0 */) {
+	return document.replace(Region(at), text, endOfInsertedString);
+}
 
 /// Calls @c Document#replace.
-inline void insert(Document& document, const Position& at, std::basic_istream<Char>& in,
-	Position* endOfInsertedString /* = 0 */) {return document.replace(Region(at), in, endOfInsertedString);}
+inline void insert(Document& document, const Position& at,
+		std::basic_istream<Char>& in, Position* endOfInsertedString /* = 0 */) {
+	return document.replace(Region(at), in, endOfInsertedString);
+}
 
 /// Returns @c true if the given position is outside of the document.
-inline bool positions::isOutsideOfDocumentRegion(const Document& document, const Position& position) /*throw()*/ {
-	return position.line >= document.numberOfLines() || position.column > document.lineLength(position.line);}
+inline bool positions::isOutsideOfDocumentRegion(
+		const Document& document, const Position& position) /*throw()*/ {
+	return position.line >= document.numberOfLines()
+		|| position.offsetInLine > document.lineLength(position.line);
+}
 
 /** 
  * Shrinks the given position into the accessible region of the document.
- * @param document the document
- * @param position the source position. this value can be outside of the document
- * @return the result
+ * @param document The document
+ * @param position The source position. This value can be outside of the document
+ * @return The result
  */
 inline Position positions::shrinkToAccessibleRegion(const Document& document, const Position& position) /*throw()*/ {
-	if(position == Position())
-		return position;
-	else if(!document.isNarrowed())
+	if(!document.isNarrowed())
 		return shrinkToDocumentRegion(document, position);
 	const Region accessibleRegion(document.accessibleRegion());
 	if(position < accessibleRegion.first)
 		return accessibleRegion.first;
 	else if(position > accessibleRegion.second)
 		return accessibleRegion.second;
-	return Position(position.line, std::min(position.column, document.lineLength(position.line)));
+	return Position(position.line, std::min(position.offsetInLine, document.lineLength(position.line)));
 }
 
 /** 
  * Shrinks the given region into the accessible region of the document.
- * @param document the document
- * @param region the source region. this value can intersect with outside of the document
- * @return the result. this may not be normalized
+ * @param document The document
+ * @param region The source region. This value can intersect with outside of the document
+ * @return The result. This may not be normalized
  */
 inline Region positions::shrinkToAccessibleRegion(const Document& document, const Region& region) /*throw()*/ {
-	return Region(shrinkToAccessibleRegion(document, region.first), shrinkToAccessibleRegion(document, region.second));}
+	return Region(shrinkToAccessibleRegion(document, region.first), shrinkToAccessibleRegion(document, region.second));
+}
 
 /// Shrinks the given position into the document region.
 inline Position positions::shrinkToDocumentRegion(const Document& document, const Position& position) /*throw()*/ {
-	if(position == Position())
-		return position;
 	Position p(std::min(position.line, document.numberOfLines() - 1), 0);
-	p.column = std::min(position.column, document.lineLength(p.line));
+	p.offsetInLine = std::min(position.offsetInLine, document.lineLength(p.line));
 	return p;
 }
 
 /// Shrinks the given region into the document region. The result may not be normalized.
 inline Region positions::shrinkToDocumentRegion(const Document& document, const Region& region) /*throw()*/ {
-	return Region(shrinkToDocumentRegion(document, region.first), shrinkToDocumentRegion(document, region.second));}
+	return Region(shrinkToDocumentRegion(document, region.first), shrinkToDocumentRegion(document, region.second));
+}
 
 /// Returns the erased region in the change. The returned region is normalized. Empty if no content was erased.
 inline const Region& DocumentChange::erasedRegion() const /*throw()*/ {return erasedRegion_;}
@@ -496,7 +506,7 @@ inline bool Document::isModified() const /*throw()*/ {return revisionNumber() !=
  * Returns @c true if the document is narrowed.
  * @see #narrow, #widen
  */
-inline bool Document::isNarrowed() const /*throw()*/ {return accessibleArea_ != 0;}
+inline bool Document::isNarrowed() const /*throw()*/ {return accessibleRegion_.get() != 0;}
 
 /**
  * Returns @c true if the document is read only.

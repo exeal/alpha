@@ -7,9 +7,9 @@
 #ifndef ASCENSION_POINT_HPP
 #define ASCENSION_POINT_HPP
 #include <ascension/kernel/document.hpp>
+#include <boost/optional.hpp>
 
 namespace ascension {
-
 	namespace kernel {
 
 		/**
@@ -55,13 +55,12 @@ namespace ascension {
 			ASCENSION_UNASSIGNABLE_TAG(Point);
 		public:
 			// constructors
-			explicit Point(Document& document,
-				const Position& position = Position(), PointListener* listener = 0);
-			Point(const Point& rhs);
+//			explicit Point(Document& document, PointListener* listener = 0);
+			Point(Document& document, const Position& position, PointListener* listener = 0);
+			Point(const Point& other);
 			virtual ~Point() /*throw()*/;
 			// operators
-			operator Position() /*throw()*/;
-			operator const Position() const /*throw()*/;
+			operator Position() const /*throw()*/;
 			// core attributes
 			Document& document();
 			const Document& document() const;
@@ -76,13 +75,8 @@ namespace ascension {
 			// listeners
 			void addLifeCycleListener(PointLifeCycleListener& listener);
 			void removeLifeCycleListener(PointLifeCycleListener& listener);
-			// short-circuits
-			Index column() const /*throw()*/;
-			ContentType contentType() const;
-			Index line() const /*throw()*/;
 			// operations
-			void moveTo(const Position& to);
-			void moveTo(Index line, Index column);
+			Point& moveTo(const Position& to);
 
 		protected:
 			Point& operator=(const Position& other) /*throw()*/;
@@ -92,7 +86,7 @@ namespace ascension {
 			void normalize() const;
 			virtual void update(const DocumentChange& change);
 		private:
-			Document* document_;
+			Document* document_;	// weak reference
 			Position position_;
 			bool adapting_;
 			Direction gravity_;
@@ -100,13 +94,6 @@ namespace ascension {
 			detail::Listeners<PointLifeCycleListener> lifeCycleListeners_;
 			friend class Document;
 		};
-
-		bool operator==(const Point& lhs, const Point& rhs) /*throw()*/;
-		bool operator!=(const Point& lhs, const Point& rhs) /*throw()*/;
-		bool operator<(const Point& lhs, const Point& rhs) /*throw()*/;
-		bool operator<=(const Point& lhs, const Point& rhs) /*throw()*/;
-		bool operator>(const Point& lhs, const Point& rhs) /*throw()*/;
-		bool operator>=(const Point& lhs, const Point& rhs) /*throw()*/;
 
 		// documentation is point.cpp
 		namespace locations {
@@ -118,7 +105,7 @@ namespace ascension {
 				GLYPH_CLUSTER		///< A glyph is a character (not implemented).
 			};
 
-			Position backwardBookmark(const Point& p, Index marks = 1);
+			boost::optional<Position> backwardBookmark(const Point& p, Index marks = 1);
 			Position backwardCharacter(const Point& p, CharacterUnit unit, Index characters = 1);
 			Position backwardLine(const Point& p, Index lines = 1);
 			Position backwardWord(const Point& p, Index words = 1);
@@ -128,7 +115,7 @@ namespace ascension {
 			CodePoint characterAt(const Point& p, bool useLineFeed = false);
 			Position endOfDocument(const Point& p);
 			Position endOfLine(const Point& p);
-			Position forwardBookmark(const Point& p, Index marks = 1);
+			boost::optional<Position> forwardBookmark(const Point& p, Index marks = 1);
 			Position forwardCharacter(const Point& p, CharacterUnit unit, Index characters = 1);
 			Position forwardLine(const Point& p, Index lines = 1);
 			Position forwardWord(const Point& p, Index words = 1);
@@ -142,52 +129,83 @@ namespace ascension {
 		} // namespace locations
 
 
-		// inline implementations /////////////////////////////////////////////////////////////////
+		// non-member functions ///////////////////////////////////////////////////////////////////
 
 		/// Equality operator for @c Point objects.
-		inline bool operator==(const Point& lhs, const Point& rhs) /*throw()*/ {return lhs.position() == rhs.position();}
+		inline bool operator==(const Point& lhs, const Point& rhs) /*throw()*/ {
+			return lhs.position() == rhs.position();
+		}
 		/// Unequality operator for @c Point objects.
-		inline bool operator!=(const Point& lhs, const Point& rhs) /*throw()*/ {return !(lhs == rhs);}
+		inline bool operator!=(const Point& lhs, const Point& rhs) /*throw()*/ {
+			return !(lhs == rhs);
+		}
 		/// Less-than operator for @c Point objects.
-		inline bool operator<(const Point& lhs, const Point& rhs) /*throw()*/ {return lhs.position() < rhs.position();}
+		inline bool operator<(const Point& lhs, const Point& rhs) /*throw()*/ {
+			return lhs.position() < rhs.position();
+		}
 		/// Less-than-or-equal-to operator for @c Point objects.
-		inline bool operator<=(const Point& lhs, const Point& rhs) /*throw()*/ {return lhs < rhs || lhs == rhs;}
+		inline bool operator<=(const Point& lhs, const Point& rhs) /*throw()*/ {
+			return lhs < rhs || lhs == rhs;
+		}
 		/// Greater-than operator for @c Point objects.
-		inline bool operator>(const Point& lhs, const Point& rhs) /*throw()*/ {return !(lhs >= rhs);}
+		inline bool operator>(const Point& lhs, const Point& rhs) /*throw()*/ {
+			return !(lhs <= rhs);
+		}
 		/// Greater-than-or-equal-to operator for @c Point objects.
-		inline bool operator>=(const Point& lhs, const Point& rhs) /*throw()*/ {return !(lhs > rhs);}
+		inline bool operator>=(const Point& lhs, const Point& rhs) /*throw()*/ {
+			return !(lhs < rhs);
+		}
+		/// Returns the content type of the document partition contains the point.
+		inline ContentType contentType(const Point& p) {
+			return p.document().partitioner().contentType(p);
+		}
+		/// Returns the line number of @a p.
+		inline Index line(const Point& p) /*throw()*/ {
+			return p.position().line;
+		}
+		/// Returns the offset in the line of @a p.
+		inline Index offsetInLine(const Point& p) /*throw()*/ {
+			return p.position().offsetInLine;
+		}
+
+
+		// Point method inline implementation /////////////////////////////////////////////////////
 
 		/// Conversion operator for convenience.
-		inline Point::operator Position() /*throw()*/ {return position_;}
-		/// Conversion operator for convenience.
-		inline Point::operator const Position() const /*throw()*/ {return position_;}
+		inline Point::operator Position() const {return position();}
 		/**
 		 * Protected assignment operator moves the point to @a other.
 		 * @see #moveTo
 		 */
-		inline Point& Point::operator=(const Position& other) /*throw()*/ {position_ = other; return *this;}
+		inline Point& Point::operator=(const Position& other) /*throw()*/ {
+			position_ = other;
+			return *this;
+		}
 		/// Returns @c true if the point is adapting to the document change.
 		inline bool Point::adaptsToDocument() const /*throw()*/ {return adapting_;}
 		/// Adapts the point to the document change.
-		inline Point& Point::adaptToDocument(bool adapt) /*throw()*/ {adapting_ = adapt; return *this;}
-		/// Returns the column number.
-		inline Index Point::column() const /*throw()*/ {return position_.column;}
-		/// Returns the content type of the document partition contains the point.
-		inline ContentType Point::contentType() const {return document().partitioner().contentType(*this);}
+		inline Point& Point::adaptToDocument(bool adapt) /*throw()*/ {
+			adapting_ = adapt;
+			return *this;
+		}
 		/// Returns the document or throw @c DocumentDisposedException if the document is already disposed.
-		inline Document& Point::document() {if(document_ == 0) throw DocumentDisposedException(); return *document_;}
+		inline Document& Point::document() {
+			if(document_ == 0)
+				throw DocumentDisposedException();
+			return *document_;
+		}
 		/// Returns the document or throw @c DocumentDisposedException if the document is already disposed.
-		inline const Document& Point::document() const {if(document_ == 0) throw DocumentDisposedException(); return *document_;}
+		inline const Document& Point::document() const {
+			if(document_ == 0)
+				throw DocumentDisposedException();
+			return *document_;
+		}
 		/// Called when the document is disposed.
 		inline void Point::documentDisposed() /*throw()*/ {document_ = 0;}
 		/// Returns the gravity.
 		inline Direction Point::gravity() const /*throw()*/ {return gravity_;}
 		/// Returns @c true if the document is already disposed.
 		inline bool Point::isDocumentDisposed() const /*throw()*/ {return document_ == 0;}
-		/// Returns the line number.
-		inline Index Point::line() const /*throw()*/ {return position_.line;}
-		/// Moves to the specified position.
-		inline void Point::moveTo(Index line, Index column) {moveTo(Position(line, column));}
 		/**
 		 * Normalizes the position of the point.
 		 * This method does <strong>not</strong> inform to the listeners about any movement.

@@ -132,7 +132,7 @@ bool BookmarkMatchLinesCommand::perform() {
 			scope, Direction::FORWARD, matchedRegion)) {
 		bookmarker.mark(matchedRegion.first.line);
 		scope.first.line = matchedRegion.first.line + 1;
-		scope.first.column = 0;
+		scope.first.offsetInLine = 0;
 		++numberOfMarkedLines_;
 	}
 	return true;
@@ -486,10 +486,10 @@ bool CharacterInputFromNextLineCommand::perform() {
 	
 	const Position p((fromPreviousLine_ ? locations::backwardVisualLine(caret) : locations::forwardVisualLine(caret)).position());
 	const String& line = document.line(caret.line() + (fromPreviousLine_ ? -1 : 1));
-	if(p.column >= line.length())
+	if(p.offsetInLine >= line.length())
 		return false;
 	setNumericPrefix(1);
-	return CharacterInputCommand(target(), text::surrogates::decodeFirst(line.begin() + p.column, line.end()))();
+	return CharacterInputCommand(target(), text::surrogates::decodeFirst(line.begin() + p.offsetInLine, line.end()))();
 }
 
 /**
@@ -516,7 +516,7 @@ bool CharacterToCodePointConversionCommand::perform() {
 
 	Caret& caret = viewer.caret();
 	const Char* const line = document.line(eos.line()).data();
-	const CodePoint cp = text::surrogates::decodeLast(line, line + eos.column());
+	const CodePoint cp = text::surrogates::decodeLast(line, line + eos.offsetInLine());
 	Char buffer[7];
 #if(_MSC_VER < 1400)
 	swprintf(buffer, L"%lX", cp);
@@ -524,7 +524,7 @@ bool CharacterToCodePointConversionCommand::perform() {
 	swprintf(buffer, ASCENSION_COUNTOF(buffer), L"%lX", cp);
 #endif // _MSC_VER < 1400
 	AutoFreeze af(&viewer);
-	caret.select(Position(eos.line(), eos.column() - ((cp > 0xffff) ? 2 : 1)), eos);
+	caret.select(Position(eos.line(), eos.offsetInLine() - ((cp > 0xffff) ? 2 : 1)), eos);
 	try {
 		caret.replaceSelection(buffer, false);
 	} catch(const DocumentInput::ChangeRejectedException&) {
@@ -557,13 +557,13 @@ bool CodePointToCharacterConversionCommand::perform() {
 
 	Caret& caret = viewer.caret();
 	const Char* const line = document.line(eos.line()).data();
-	const Index column = eos.column();
+	const Index offsetInLine = eos.offsetInLine();
 
 	// accept /(?:[Uu]\+)?[0-9A-Fa-f]{1,6}/
-	if(iswxdigit(line[column - 1]) != 0) {
-		Index i = column - 1;
+	if(iswxdigit(line[offsetInLine - 1]) != 0) {
+		Index i = offsetInLine - 1;
 		while(i != 0) {
-			if(column - i == 7)
+			if(offsetInLine - i == 7)
 				return false;	// too long string
 			else if(iswxdigit(line[i - 1]) == 0)
 				break;
@@ -571,8 +571,8 @@ bool CodePointToCharacterConversionCommand::perform() {
 		}
 
 		Char buffer[7];
-		wcsncpy(buffer, line + i, column - i);
-		buffer[column - i] = 0;
+		wcsncpy(buffer, line + i, offsetInLine - i);
+		buffer[offsetInLine - i] = 0;
 		const CodePoint cp = wcstoul(buffer, 0, 16);
 		if(text::isValidCodePoint(cp)) {
 			buffer[1] = buffer[2] = 0;
@@ -822,9 +822,9 @@ bool MatchBracketCommand::perform() {
 	if(!extends_)
 		caret.moveTo(matchBracket);
 	else if(matchBracket > caret)
-		caret.select(caret, Position(matchBracket.line, matchBracket.column + 1));
+		caret.select(caret, Position(matchBracket.line, matchBracket.offsetInLine + 1));
 	else
-		caret.select(Position(caret.line(), caret.column() + 1), matchBracket);
+		caret.select(Position(caret.line(), caret.offsetInLine() + 1), matchBracket);
 	return true;
 }
 
@@ -969,9 +969,9 @@ bool ReconversionCommand::perform() {
 			rcs->dwStrLen = static_cast<DWORD>(s.length());
 			rcs->dwStrOffset = sizeof(RECONVERTSTRING);
 			rcs->dwCompStrLen = rcs->dwTargetStrLen =
-				static_cast<DWORD>(multilineSelection ? s.length() : (caret.end().column() - caret.beginning().column()));
+				static_cast<DWORD>(multilineSelection ? s.length() : (caret.end().offsetInLine() - caret.beginning().offsetInLine()));
 			rcs->dwCompStrOffset = rcs->dwTargetStrOffset =
-				multilineSelection ? 0 : static_cast<DWORD>(sizeof(Char) * caret.beginning().column());
+				multilineSelection ? 0 : static_cast<DWORD>(sizeof(Char) * caret.beginning().offsetInLine());
 			s.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), s.length());
 
 			if(isSelectionEmpty(caret)) {

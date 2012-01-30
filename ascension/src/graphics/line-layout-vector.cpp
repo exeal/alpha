@@ -101,10 +101,10 @@ void LineLayoutVector::clearCaches(const Range<Index>& lines, bool repair) {
 		throw invalid_argument("either line number is invalid.");
 	if(documentChangePhase_ == ABOUT_TO_CHANGE) {
 		pendingCacheClearance_ = makeRange(
-			(pendingCacheClearance_.beginning() == INVALID_INDEX) ?
-				lines.beginning() : min(lines.beginning(), pendingCacheClearance_.beginning()),
-			(pendingCacheClearance_.end() == INVALID_INDEX) ?
-				lines.end() : max(lines.end(), pendingCacheClearance_.end()));
+			!pendingCacheClearance_ ?
+				lines.beginning() : min(lines.beginning(), pendingCacheClearance_->beginning()),
+			!pendingCacheClearance_ ?
+				lines.end() : max(lines.end(), pendingCacheClearance_->end()));
 		return;
 	}
 	if(isEmpty(lines))
@@ -172,12 +172,12 @@ void LineLayoutVector::documentChanged(const kernel::Document&, const kernel::Do
 		fireVisualLinesInserted(makeRange(region.first.line + 1, region.second.line + 1));
 	}
 	const Index firstLine = min(change.erasedRegion().first.line, change.insertedRegion().first.line);
-	if(pendingCacheClearance_.beginning() == INVALID_INDEX || !includes(pendingCacheClearance_, firstLine))
+	if(!pendingCacheClearance_ || !includes(*pendingCacheClearance_, firstLine))
 		invalidate(firstLine);
 	documentChangePhase_ = NONE;
-	if(pendingCacheClearance_.beginning() != INVALID_INDEX) {
-		clearCaches(pendingCacheClearance_, autoRepair_);
-		pendingCacheClearance_ = makeRange(INVALID_INDEX, INVALID_INDEX);
+	if(pendingCacheClearance_) {
+		clearCaches(*pendingCacheClearance_, autoRepair_);
+		pendingCacheClearance_ = boost::none;
 	}
 }
 
@@ -188,7 +188,7 @@ void LineLayoutVector::documentPartitioningChanged(const k::Region& changedRegio
 
 void LineLayoutVector::fireVisualLinesDeleted(const Range<Index>& lines, Index sublines) {
 	numberOfVisualLines_ -= sublines;
-	const bool widthChanged = includes(lines, longestLine_);
+	const bool widthChanged = includes(lines, *longestLine_);
 	if(widthChanged)
 		updateLongestLine(static_cast<Index>(-1), 0);
 	listeners_.notify<const Range<Index>&, Index>(
@@ -207,11 +207,11 @@ void LineLayoutVector::fireVisualLinesModified(const Range<Index>& lines,
 
 	// update the longest line
 	bool longestLineChanged = false;
-	if(includes(lines, longestLine_)) {
+	if(includes(lines, *longestLine_)) {
 		updateLongestLine(static_cast<Index>(-1), 0);
 		longestLineChanged = true;
 	} else {
-		Index newLongestLine = longestLine_;
+		Index newLongestLine = *longestLine_;
 		Scalar newMaximumIpd = maximumMeasure();
 		for(list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 			if(i->second->measure() > newMaximumIpd) {
@@ -231,7 +231,7 @@ void LineLayoutVector::fireVisualLinesModified(const Range<Index>& lines,
 
 /// @internal Only called by constructor.
 void LineLayoutVector::initialize() /*throw()*/ {
-	pendingCacheClearance_ = makeRange(INVALID_INDEX, INVALID_INDEX);
+	pendingCacheClearance_ = boost::none;
 	if(bufferSize_ == 0)
 		throw invalid_argument("size of the buffer can't be zero.");
 	document_.addPrenotifiedListener(*this);
@@ -317,23 +317,25 @@ Index LineLayoutVector::mapLogicalLineToVisualLine(Index line) const {
 }
 
 /**
- * Returns the visual line number and the visual column number of the specified logical position.
+ * Returns the visual line number and the offset in the visual line of the specified logical
+ * position.
  * @param position The logical coordinates of the position to be mapped
- * @param[out] column The visual column of @a position. Can be @c null if not needed
+ * @param[out] offsetInVisualLine The offset of @a position in visual line. Can be @c null if not
+ *                                needed
  * @return The visual line of @a position
  * @throw kernel#BadPositionException @a position is outside of the document
  * @see #mapLogicalLineToVisualLine
  */
-Index LineLayoutVector::mapLogicalPositionToVisualPosition(const k::Position& position, Index* column) const {
+Index LineLayoutVector::mapLogicalPositionToVisualPosition(const k::Position& position, Index* offsetInVisualLine) const {
 //	if(!wrapsLongLines()) {
-//		if(column != 0)
-//			*column = position.column;
+//		if(offsetInVisualLine != 0)
+//			*offsetInVisualLine = position.offsetInLine;
 //		return position.line;
 //	}
 	const TextLayout& layout = at(position.line);
-	const Index line = layout.lineAt(position.column);
-	if(column != 0)
-		*column = position.column - layout.lineOffset(line);
+	const Index line = layout.lineAt(position.offsetInLine);
+	if(offsetInVisualLine != 0)
+		*offsetInVisualLine = position.offsetInLine - layout.lineOffset(line);
 	return mapLogicalLineToVisualLine(position.line) + line;
 }
 
@@ -366,7 +368,8 @@ Index LineLayoutVector::mapVisualLineToLogicalLine(Index line, Index* subline) c
 }
 
 /**
- * Returns the logical line number and the logical column number of the specified visual position.
+ * Returns the logical line number and the offset in the logical line of the specified visual
+ * position.
  * @param position The visual coordinates of the position to be mapped
  * @return The logical coordinates of @a position
  * @throw kernel#BadPositionException @a position is outside of the document
@@ -378,7 +381,7 @@ k::Position LineLayoutVector::mapVisualPositionToLogicalPosition(const k::Positi
 	k::Position result;
 	Index subline;
 	result.line = mapVisualLineToLogicalLine(position.line, &subline);
-	result.column = getLineLayout(result.line).getSublineOffset(subline) + position.column;
+	result.offsetInLine = getLineLayout(result.line).getSublineOffset(subline) + position.offsetInLine;
 	return result;
 }
 #endif // 0
@@ -435,7 +438,7 @@ void LineLayoutVector::updateLongestLine(Index line, Scalar measure) /*throw()*/
 		longestLine_ = line;
 		maximumMeasure_ = measure;
 	} else {
-		longestLine_ = static_cast<Index>(-1);
+		longestLine_ = boost::none;
 		maximumMeasure_ = 0;
 		for(list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 			if(i->second->measure() > maximumMeasure_) {

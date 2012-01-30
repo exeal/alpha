@@ -50,6 +50,18 @@ DocumentDisposedException::DocumentDisposedException() :
  * @see Position, Document, locations, viewers#VisualPoint, viewers#Caret
  */
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+/**
+ * Constructor.
+ * @param document The document to which the point attaches
+ * @param listener The listener. Can be @c null if not needed
+ */
+Point::Point(Document& document, PointListener* listener /* = 0 */) :
+		document_(&document), position_(), adapting_(true), gravity_(Direction::FORWARD), listener_(listener) {
+	static_cast<detail::PointCollection<Point>&>(document).addNewPoint(*this);
+}
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
+
 /**
  * Constructor.
  * @param document The document to which the point attaches
@@ -57,9 +69,9 @@ DocumentDisposedException::DocumentDisposedException() :
  * @param listener The listener. Can be @c null if not needed
  * @throw BadPositionException @a position is outside of the document
  */
-Point::Point(Document& document, const Position& position /* = Position() */, PointListener* listener /* = 0 */) :
+Point::Point(Document& document, const Position& position, PointListener* listener /* = 0 */) :
 		document_(&document), position_(position), adapting_(true), gravity_(Direction::FORWARD), listener_(listener) {
-	if(position != Position() && !document.region().includes(position))
+	if(!document.region().includes(position))
 		throw BadPositionException(position);
 	static_cast<detail::PointCollection<Point>&>(document).addNewPoint(*this);
 }
@@ -100,10 +112,12 @@ void Point::addLifeCycleListener(PointLifeCycleListener& listener) {
  * - Call @c #aboutToMove method of the super class with the same parameter.
  * - Throw any exceptions to interrupt the movement.
  *
+ * Note that @c #moveToNowhere method does not call this method.
+ *
  * @c Point#aboutToMove does nothing.
  * @param to The destination position. implementation can modify this value
  * @throw DocumentDisposedException the document to which the point belongs is already disposed
- * @see #moved, moveTo
+ * @see #moved, #moveTo, #moveToNowhere
  */
 void Point::aboutToMove(Position& to) {
 }
@@ -113,6 +127,7 @@ void Point::aboutToMove(Position& to) {
  * If you override this, call @c #moved method of the super class with the same parameter. And
  * don't throw any exceptions. Note that this method is not called if @c #aboutToMove threw an
  * exception.
+ *
  * @c Point's implementation does nothing.
  * @param from The position before the point moved. This value may equal to the current position
  * @see #aboutToMove, moveTo
@@ -128,24 +143,22 @@ void Point::moved(const Position& from) /*throw()*/ {
  * @param to The destination position
  * @throw BadPositionException @a to is outside of the document
  * @throw ... Any exceptions @c #aboutToMove implementation of sub-classe throws
+ * @return This point
  */
-void Point::moveTo(const Position& to) {
+Point& Point::moveTo(const Position& to) {
 	if(isDocumentDisposed())
 		throw DocumentDisposedException();
-	else if(to != Position() && to > document().region().end())
+	else if(to > document().region().end())
 		throw BadPositionException(to);
-//	if(to != position()) {
-		Position destination(to);
-		aboutToMove(destination);
-		destination = positions::shrinkToDocumentRegion(document(), destination);
-//		if(destination != position()) {
-			const Position from(position());
-			position_ = destination;
-			moved(from);
-			if(listener_ != 0 && destination != from)
-				listener_->pointMoved(*this, from);
-//		}
-//	}
+	Position destination(to);
+	aboutToMove(destination);
+	destination = positions::shrinkToDocumentRegion(document(), destination);
+	const Position from(position());
+	position_ = destination;
+	moved(from);
+	if(listener_ != 0 && destination != from)
+		listener_->pointMoved(*this, from);
+	return *this;
 }
 
 /**
@@ -176,7 +189,6 @@ Point& Point::setGravity(Direction gravity) /*throw()*/ {
 void Point::update(const DocumentChange& change) {
 	if(document_ == 0 || !adaptsToDocument())
 		return;
-
 //	normalize();
 	const Position newPosition(positions::updatePosition(position(), change, gravity()));
 	if(newPosition != position())
@@ -208,19 +220,19 @@ void Point::update(const DocumentChange& change) {
 namespace {
 	/// @internal Returns the @c IdentifierSyntax object corresponds to the given point.
 	inline const IdentifierSyntax& identifierSyntax(const Point& p) {
-		return p.document().contentTypeInformation().getIdentifierSyntax(p.contentType());
+		return p.document().contentTypeInformation().getIdentifierSyntax(contentType(p));
 	}
 } // namespace @0
 
 /**
  * Returns the beginning of the previous bookmarked line.
  * @param p The base point
- * @return The beginning of the backward bookmarked line or @c Position#INVALID_POSITION if there
- *         is no bookmark in the document
+ * @return The beginning of the backward bookmarked line or @c boost#none if there is no bookmark
+ *         in the document
  */
-Position locations::backwardBookmark(const Point& p, Index marks /* = 1 */) {
-	const Index line = p.document().bookmarker().next(p.normalized().line, Direction::BACKWARD, true, marks);
-	return (line != INVALID_INDEX) ? Position(line, 0) : Position();
+boost::optional<Position> locations::backwardBookmark(const Point& p, Index marks /* = 1 */) {
+	const boost::optional<Index> line(p.document().bookmarker().next(p.normalized().line, Direction::BACKWARD, true, marks));
+	return (line != boost::none) ? boost::make_optional(Position(*line, 0)) : boost::none;
 }
 
 /**
@@ -236,7 +248,7 @@ Position locations::backwardCharacter(const Point& p, locations::CharacterUnit u
 
 /**
  * Returns the position returned by N lines. If the destination position is outside of the
- * accessible region, returns the first line whose column is accessible, rather than the beginning
+ * accessible region, returns the first line whose offset is accessible, rather than the beginning
  * of the accessible region.
  * @param p The base point
  * @param lines The number of the lines to return
@@ -246,7 +258,7 @@ Position locations::backwardLine(const Point& p, Index lines /* = 1 */) {
 	Position temp(p.normalized());
 	const Position bob(p.document().accessibleRegion().first);
 	Index line = (temp.line > bob.line + lines) ? temp.line - lines : bob.line;
-	if(line == bob.line && temp.column < bob.column)
+	if(line == bob.line && temp.offsetInLine < bob.offsetInLine)
 		++line;
 	return temp.line = line, temp;
 }
@@ -304,10 +316,10 @@ Position locations::beginningOfLine(const Point& p) {
  *         document
  */
 CodePoint locations::characterAt(const Point& p, bool useLineFeed /* = false */) {
-	const String& line = p.document().line(p.line());
-	if(p.column() == line.length())
-		return (p.line() == p.document().numberOfLines() - 1) ? INVALID_CODE_POINT : (useLineFeed ? LINE_FEED : LINE_SEPARATOR);
-	return utf::decodeFirst(line.begin() + p.column(), line.end());
+	const String& lineString = p.document().line(line(p));
+	if(offsetInLine(p) == lineString.length())
+		return (line(p) == p.document().numberOfLines() - 1) ? INVALID_CODE_POINT : (useLineFeed ? LINE_FEED : LINE_SEPARATOR);
+	return utf::decodeFirst(lineString.begin() + offsetInLine(p), lineString.end());
 }
 
 /**
@@ -332,12 +344,12 @@ Position locations::endOfLine(const Point& p) {
 /**
  * Returns the beginning of the next bookmarked line.
  * @param p The base point
- * @return The beginning of the forward bookmarked line or @c Position#INVALID_POSITION if there
- *         is no bookmark in the document
+ * @return The beginning of the forward bookmarked line or @c boost#none if there is no bookmark in
+ *         the document
  */
-Position locations::forwardBookmark(const Point& p, Index marks /* = 1 */) {
-	const Index line = p.document().bookmarker().next(p.normalized().line, Direction::FORWARD, true, marks);
-	return (line != INVALID_INDEX) ? Position(line, 0) : Position();
+boost::optional<Position> locations::forwardBookmark(const Point& p, Index marks /* = 1 */) {
+	const boost::optional<Index> line(p.document().bookmarker().next(p.normalized().line, Direction::FORWARD, true, marks));
+	return (line != boost::none) ? boost::make_optional(Position(*line, 0)) : boost::none;
 }
 
 /**
@@ -353,7 +365,7 @@ Position locations::forwardCharacter(const Point& p, locations::CharacterUnit un
 
 /**
  * Returns the position advanced by N lines. If the destination position is outside of the
- * inaccessible region, returns the last line whose column is accessible, rather than the end of
+ * inaccessible region, returns the last line whose offset is accessible, rather than the end of
  * the accessible region.
  * @param p The base point
  * @param lines The number of the lines to advance
@@ -363,7 +375,7 @@ Position locations::forwardLine(const Point& p, Index lines /* = 1 */) {
 	Position temp(p.normalized());
 	const Position eob(p.document().accessibleRegion().second);
 	Index line = (temp.line + lines < eob.line) ? temp.line + lines : eob.line;
-	if(line == eob.line && temp.column > eob.column)
+	if(line == eob.line && temp.offsetInLine > eob.offsetInLine)
 		--line;
 	return temp.line = line, temp;
 }
@@ -401,7 +413,8 @@ bool locations::isBeginningOfDocument(const Point& p) {
 
 /// Returns @c true if the given point @a p is the beginning of the line.
 bool locations::isBeginningOfLine(const Point& p) {
-	return p.column() == 0 || (p.document().isNarrowed() && p.position() == p.document().accessibleRegion().first);
+	return offsetInLine(p) == 0
+		|| (p.document().isNarrowed() && p.position() == p.document().accessibleRegion().first);
 }
 
 /// Returns @c true if the given point @a p is the end of the document.
@@ -411,7 +424,8 @@ bool locations::isEndOfDocument(const Point& p) {
 
 /// Returns @c true if the given point @a p is the end of the line.
 bool locations::isEndOfLine(const Point& p) {
-	return p.column() == p.document().lineLength(p.line()) || p.position() == p.document().accessibleRegion().second;
+	return offsetInLine(p) == p.document().lineLength(line(p))
+		|| p.position() == p.document().accessibleRegion().second;
 }
 
 /**
@@ -435,21 +449,21 @@ Position locations::nextCharacter(const Document& document, const Position& posi
 			const Position e(document.accessibleRegion().second);
 			if(position >= e)
 				return e;
-			for(Position p(position); ; offset -= document.lineLength(p.line++) + 1, p.column = 0) {
+			for(Position p(position); ; offset -= document.lineLength(p.line++) + 1, p.offsetInLine = 0) {
 				if(p.line == e.line)
-					return min(Position(p.line, p.column + offset), e);
-				else if(p.column + offset <= document.lineLength(p.line))
-					return p.column += offset, p;
+					return min(Position(p.line, p.offsetInLine + offset), e);
+				else if(p.offsetInLine + offset <= document.lineLength(p.line))
+					return p.offsetInLine += offset, p;
 			}
 		} else {
 			const Position e(document.accessibleRegion().first);
 			if(position <= e)
 				return e;
-			for(Position p(position); ; offset -= document.lineLength(p.line) + 1, p.column = document.lineLength(--p.line)) {
+			for(Position p(position); ; offset -= document.lineLength(p.line) + 1, p.offsetInLine = document.lineLength(--p.line)) {
 				if(p.line == e.line)
-					return (p.column <= e.column + offset) ? e : (p.column -= offset, p);
-				else if(p.column >= offset)
-					return p.column -= offset, p;
+					return (p.offsetInLine <= e.offsetInLine + offset) ? e : (p.offsetInLine -= offset, p);
+				else if(p.offsetInLine >= offset)
+					return p.offsetInLine -= offset, p;
 			}
 		}
 	} else if(characterUnit == locations::UTF32_CODE_UNIT) {
@@ -484,11 +498,11 @@ void EditPoint::moveToAbsoluteCharacterOffset(Index offset) {
 	Index readCount = 0;
 	const Region region(document()->region());
 
-	if(document()->lineLength(region.first.line) + 1 - region.first.column >= offset) {
-		moveTo(Position(region.first.line, region.first.column + offset));
+	if(document()->lineLength(region.first.line) + 1 - region.first.offsetInLine >= offset) {
+		moveTo(Position(region.first.line, region.first.offsetInLine + offset));
 		return;
 	}
-	readCount += document()->lineLength(region.first.line) + 1 - region.first.column;
+	readCount += document()->lineLength(region.first.line) + 1 - region.first.offsetInLine;
 	for(Index line = region.first.line + 1; line <= region.second.line; ++line) {
 		const Index lineLength = document()->lineLength(line) + 1;	// +1 is for a newline
 		if(readCount + lineLength >= offset) {

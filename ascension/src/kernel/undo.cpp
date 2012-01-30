@@ -29,7 +29,11 @@ namespace {
 			bool completed;				// true if the change was *completely* performed
 			size_t numberOfRevisions;	// the number of the performed changes
 			Position endOfChange;		// the end position of the change
-			void reset() /*throw()*/ {completed = false; numberOfRevisions = 0; endOfChange = Position();}
+			void reset() /*throw()*/ {
+				completed = false;
+				numberOfRevisions = 0;
+//				endOfChange = Position();
+			}
 		};
 	public:
 		// destructor
@@ -127,7 +131,7 @@ namespace {
 		if(&postChange.type() != &type_)
 			return false;
 		const Position& bottom = region_.end();
-		if(bottom.column == 0 || bottom != static_cast<DeletionChange&>(postChange).region_.beginning())
+		if(bottom.offsetInLine == 0 || bottom != static_cast<DeletionChange&>(postChange).region_.beginning())
 			return false;
 		else {
 			region_.end() = static_cast<DeletionChange&>(postChange).region_.end();
@@ -360,7 +364,7 @@ void Document::UndoManager::undo(UndoableChange::Result& result) {
 Document::Document() : session_(0), partitioner_(0),
 		contentTypeInformationProvider_(new DefaultContentTypeInformationProvider),
 		readOnly_(false), length_(0), revisionNumber_(0), lastUnmodifiedRevisionNumber_(0),
-		onceUndoBufferCleared_(false), recordingChanges_(true), changing_(false), rollbacking_(false), /*locker_(0),*/ accessibleArea_(0) {
+		onceUndoBufferCleared_(false), recordingChanges_(true), changing_(false), rollbacking_(false)/*, locker_(0)*/ {
 	bookmarker_.reset(new Bookmarker(*this));
 	undoManager_ = new UndoManager(*this);
 	resetContent();
@@ -370,10 +374,7 @@ Document::Document() : session_(0), partitioner_(0),
 Document::~Document() {
 	for(set<Point*>::iterator i(points_.begin()), e(points_.end()); i != e; ++i)
 		(*i)->documentDisposed();
-	if(accessibleArea_ != 0) {
-		delete accessibleArea_->second;
-		delete accessibleArea_;
-	}
+	accessibleRegion_.reset();
 	for(map<const DocumentPropertyKey*, String*>::iterator i(properties_.begin()), e(properties_.end()); i != e; ++i)
 		delete i->second;
 	delete undoManager_;
@@ -559,8 +560,8 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 	else if(isReadOnly())
 		throw ReadOnlyDocumentException();
 	else if(region.end().line >= numberOfLines()
-			|| region.first.column > lineLength(region.first.line)
-			|| region.second.column > lineLength(region.second.line))
+			|| region.first.offsetInLine > lineLength(region.first.line)
+			|| region.second.offsetInLine > lineLength(region.second.line))
 		throw BadRegionException(region);
 	else if(isNarrowed() && !accessibleRegion().encompasses(region))
 		throw DocumentAccessViolationException();
@@ -585,39 +586,39 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 		// simple cases: both erased region and inserted string are single line
 		if(beginning.line == end.line && (text.beginning() == 0 || isEmpty(text))) {	// erase in single line
 			Line& line = *lines_[beginning.line];
-			erasedString.sputn(line.text().data() + beginning.column, static_cast<streamsize>(end.column - beginning.column));
-			line.text_.erase(beginning.column, end.column - beginning.column);
-			erasedStringLength += end.column - beginning.column;
+			erasedString.sputn(line.text().data() + beginning.offsetInLine, static_cast<streamsize>(end.offsetInLine - beginning.offsetInLine));
+			line.text_.erase(beginning.offsetInLine, end.offsetInLine - beginning.offsetInLine);
+			erasedStringLength += end.offsetInLine - beginning.offsetInLine;
 			endOfInsertedString = beginning;
 		} else if(region.isEmpty() && nextNewline == text.end()) {	// insert single line
-			lines_[beginning.line]->text_.insert(beginning.column, text.beginning(), ascension::length(text));
+			lines_[beginning.line]->text_.insert(beginning.offsetInLine, text.beginning(), ascension::length(text));
 			insertedStringLength += ascension::length(text);
 			endOfInsertedString.line = beginning.line;
-			endOfInsertedString.column = beginning.column + ascension::length(text);
+			endOfInsertedString.offsetInLine = beginning.offsetInLine + ascension::length(text);
 		} else if(beginning.line == end.line && nextNewline == text.end()) {	// replace in single line
 			Line& line = *lines_[beginning.line];
-			erasedString.sputn(line.text().data() + beginning.column, static_cast<streamsize>(end.column - beginning.column));
-			line.text_.replace(beginning.column, end.column - beginning.column, text.beginning(), ascension::length(text));
-			erasedStringLength += end.column - beginning.column;
+			erasedString.sputn(line.text().data() + beginning.offsetInLine, static_cast<streamsize>(end.offsetInLine - beginning.offsetInLine));
+			line.text_.replace(beginning.offsetInLine, end.offsetInLine - beginning.offsetInLine, text.beginning(), ascension::length(text));
+			erasedStringLength += end.offsetInLine - beginning.offsetInLine;
 			insertedStringLength += ascension::length(text);
 			endOfInsertedString.line = beginning.line;
-			endOfInsertedString.column = beginning.column + ascension::length(text);
+			endOfInsertedString.offsetInLine = beginning.offsetInLine + ascension::length(text);
 		}
 		// complex case: erased region and/or inserted string are/is multi-line
 		else {
 			// 1. save undo information
 			if(!region.isEmpty()) {
-				for(Position p(beginning); ; ++p.line, p.column = 0) {
+				for(Position p(beginning); ; ++p.line, p.offsetInLine = 0) {
 					const Line& line = *lines_[p.line];
 					const bool last = p.line == end.line;
-					const Index e = !last ? line.text().length() : end.column;
+					const Index e = !last ? line.text().length() : end.offsetInLine;
 					if(recordingChanges_) {
-						erasedString.sputn(line.text().data() + p.column, static_cast<streamsize>(e - p.column));
+						erasedString.sputn(line.text().data() + p.offsetInLine, static_cast<streamsize>(e - p.offsetInLine));
 						if(!last)
 							erasedString.sputn(newlineString(line.newline()),
 								static_cast<streamsize>(newlineStringLength(line.newline())));
 					}
-//					erasedStringLength += e - p.column;
+//					erasedStringLength += e - p.offsetInLine;
 					if(last)
 						break;
 				}
@@ -641,9 +642,9 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 					// merge last line
 					Line& lastAllocatedLine = *allocatedLines.back();
 					endOfInsertedString.line = beginning.line + allocatedLines.size();
-					endOfInsertedString.column = lastAllocatedLine.text().length();
+					endOfInsertedString.offsetInLine = lastAllocatedLine.text().length();
 					const Line& lastLine = *lines_[end.line];
-					lastAllocatedLine.text_.append(lastLine.text(), end.column, lastLine.text().length() - end.column);
+					lastAllocatedLine.text_.append(lastLine.text(), end.offsetInLine, lastLine.text().length() - end.offsetInLine);
 					lastAllocatedLine.newline_ = lastLine.newline();
 				} catch(...) {
 					for(vector<Line*>::iterator i(allocatedLines.begin()), e(allocatedLines.end()); i != e; ++i)
@@ -658,18 +659,18 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 					lines_.insert(end.line + 1, allocatedLines.begin(), allocatedLines.end());
 				// 4. replace first line
 				Line& firstLine = *lines_[beginning.line];
-				const Index erasedLength = firstLine.text().length() - beginning.column;
+				const Index erasedLength = firstLine.text().length() - beginning.offsetInLine;
 				const Index insertedLength = firstNewline - text.beginning();
 				try {
 					if(!allocatedLines.empty())
-						firstLine.text_.replace(beginning.column, erasedLength, text.beginning(), insertedLength);
+						firstLine.text_.replace(beginning.offsetInLine, erasedLength, text.beginning(), insertedLength);
 					else {
 						// join the first line, inserted string and the last line
 						String temp(text.beginning(), insertedLength);
 						const Line& lastLine = *lines_[end.line];
-						temp.append(lastLine.text(), end.column, lastLine.text().length() - end.column);
-						firstLine.text_.replace(beginning.column, erasedLength, temp);
-						endOfInsertedString.column += insertedLength;
+						temp.append(lastLine.text(), end.offsetInLine, lastLine.text().length() - end.offsetInLine);
+						firstLine.text_.replace(beginning.offsetInLine, erasedLength, temp);
+						endOfInsertedString.offsetInLine += insertedLength;
 					}
 				} catch(...) {
 					for(size_t i = end.line + 1, c = i + allocatedLines.size(); i < c; ++i)

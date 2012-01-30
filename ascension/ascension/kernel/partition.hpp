@@ -131,30 +131,31 @@ namespace ascension {
 			void doInstall() /*throw()*/;
 		private:
 			DocumentPartition p_;
+			mutable bool changed_;
 		};
 
 
-// inline implementation ////////////////////////////////////////////////////
-
-/**
- * Returns the content type of the partition contains the specified position.
- * @param at the position
- * @throw BadPositionException @a position is outside of the document
- * @throw IllegalStateException the partitioner is not connected to any document
- * @return the content type
- */
-inline ContentType DocumentPartitioner::contentType(const Position& at) const {
-	DocumentPartition p;
-	partition(at, p);
-	return p.contentType;
-}
-
-/// Returns the document to which the partitioner connects or @c null.
-inline Document* DocumentPartitioner::document() /*throw()*/ {return document_;}
-
-/// Returns the document to which the partitioner connects or @c null.
-inline const Document* DocumentPartitioner::document() const /*throw()*/ {return document_;}
-
+		// inline implementation //////////////////////////////////////////////////////////////////
+		
+		/**
+		 * Returns the content type of the partition contains the specified position.
+		 * @param at The position
+		 * @throw BadPositionException @a position is outside of the document
+		 * @throw IllegalStateException The partitioner is not connected to any document
+		 * @return the content type
+		 */
+		inline ContentType DocumentPartitioner::contentType(const Position& at) const {
+			DocumentPartition p;
+			partition(at, p);
+			return p.contentType;
+		}
+		
+		/// Returns the document to which the partitioner connects or @c null.
+		inline Document* DocumentPartitioner::document() /*throw()*/ {return document_;}
+		
+		/// Returns the document to which the partitioner connects or @c null.
+		inline const Document* DocumentPartitioner::document() const /*throw()*/ {return document_;}
+		
 	}
 } // namespace ascension.kernel
 

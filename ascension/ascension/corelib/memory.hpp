@@ -159,8 +159,10 @@ namespace ascension {
 				pool_.reset(new(std::nothrow) MemoryPool(sizeof(T)));
 			return (pool_.get() != 0) ? pool_->allocate(std::nothrow) : 0;
 		}
-		static void* operator new(std::size_t bytes, void* p) /*throw()*/ {return ::operator new(bytes, p);}
+		static void* operator new(std::size_t bytes, void* where) /*throw()*/ {return ::operator new(bytes, where);}
 		static void operator delete(void* p) /*throw()*/ {if(pool_.get() != 0) pool_->deallocate(p);}
+		static void operator delete(void* p, const std::nothrow_t&) /*throw()*/ {return operator delete(p);}
+		static void operator delete(void* p, void* where) /*throw()*/ {return ::operator delete(p, where);}
 	private:
 		static std::auto_ptr<MemoryPool> pool_;
 	};

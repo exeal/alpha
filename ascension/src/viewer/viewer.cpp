@@ -351,7 +351,7 @@ void TextViewer::documentUndoSequenceStarted(const k::Document&) {
 /// @see kernel#DocumentRollbackListener#documentUndoSequenceStopped
 void TextViewer::documentUndoSequenceStopped(const k::Document&, const k::Position& resultPosition) {
 	unfreeze();	// TODO: replace with AutoFreeze.
-	if(resultPosition != k::Position() && hasFocus()) {
+	if(/*resultPosition != k::Position() &&*/ hasFocus()) {
 		utils::closeCompletionProposalsPopup(*this);
 		caret_->moveTo(resultPosition);
 	}
@@ -417,18 +417,18 @@ bool TextViewer::getPointedLinkText(Region& region, AutoBuffer<Char>& text) cons
 	const Document& document = document();
 	const Position pos = getCharacterForClientXY(getCursorPosition(), false);	// カーソル位置に最も近い文字位置
 
-	if(pos.column == document.getLineLength(pos.line))	// 指定位置に文字が無い
+	if(pos.offsetInLine == document.getLineLength(pos.line))	// 指定位置に文字が無い
 		return false;
 
 	const LineLayout& layout = renderer_->getLineLayout(pos.line);
-	const Index subline = layout.getSubline(pos.column);
+	const Index subline = layout.getSubline(pos.offsetInLine);
 	const Char* const line = document.getLine(pos.line).data();
 	const Char* const first = line + layout.getSublineOffset(subline);
 	const Char* const last =
 		line + ((subline < layout.getNumberOfSublines() - 1) ? layout.getSublineOffset(subline + 1) : document.getLineLength(pos.line));
 	Index linkLength;	// URIDetector の eatMailAddress 、eatUrlString で見つけたリンクテキストの長さ
 
-	for(const Char* p = (pos.column > 200) ? first + pos.column - 200 : first; p <= first + pos.column; ) {
+	for(const Char* p = (pos.offsetInLine > 200) ? first + pos.offsetInLine - 200 : first; p <= first + pos.offsetInLine; ) {
 		if(p != first) {
 			if((p[-1] >= L'A' && p[-1] <= L'Z')
 					|| (p[-1] >= L'a' && p[-1] <= L'z')
@@ -438,10 +438,10 @@ bool TextViewer::getPointedLinkText(Region& region, AutoBuffer<Char>& text) cons
 			}
 		}
 		if(0 != (linkLength = rules::URIDetector::eatURL(p, last, true) - p)) {
-			if(p - first + linkLength > pos.column) {	// カーソル位置を越えた
+			if(p - first + linkLength > pos.offsetInLine) {	// カーソル位置を越えた
 				region.first.line = region.second.line = pos.line;
-				region.first.column = p - line;
-				region.second.column = region.first.column + linkLength;
+				region.first.offsetInLine = p - line;
+				region.second.offsetInLine = region.first.offsetInLine + linkLength;
 				text.reset(new Char[linkLength + 1]);
 				wmemcpy(text.get(), p, linkLength);
 				text[linkLength] = 0;
@@ -449,11 +449,11 @@ bool TextViewer::getPointedLinkText(Region& region, AutoBuffer<Char>& text) cons
 			}
 			p += linkLength;	// 届かない場合は続行
 		} else if(0 != (linkLength = rules::URIDetector::eatMailAddress(p, last, true) - p)) {
-			if(p - first + linkLength > pos.column) {	// カーソル位置を越えた
+			if(p - first + linkLength > pos.offsetInLine) {	// カーソル位置を越えた
 				static const wchar_t MAILTO_PREFIX[] = L"mailto:";
 				region.first.line = region.second.line = pos.line;
-				region.first.column = p - line;
-				region.second.column = region.first.column + linkLength;
+				region.first.offsetInLine = p - line;
+				region.second.offsetInLine = region.first.offsetInLine + linkLength;
 				text.reset(new Char[linkLength + 7 + 1]);
 				wmemcpy(text.get(), MAILTO_PREFIX, countof(MAILTO_PREFIX) - 1);
 				wmemcpy(text.get() + countof(MAILTO_PREFIX) - 1, p, linkLength);
@@ -835,35 +835,33 @@ Scalar TextViewer::mapLineToViewportBpd(Index line, bool fullSearch) const {
 #endif
 
 /// @see CaretStateListener#matchBracketsChanged
-void TextViewer::matchBracketsChanged(const Caret& self, const pair<k::Position, k::Position>& oldPair, bool outsideOfView) {
-	const pair<k::Position, k::Position>& newPair = self.matchBrackets();
-	if(newPair.first != k::Position()) {
-		assert(newPair.second != k::Position());
-		redrawLine(newPair.first.line);
+void TextViewer::matchBracketsChanged(const Caret& self, const boost::optional<pair<k::Position, k::Position>>& oldPair, bool outsideOfView) {
+	const boost::optional<pair<k::Position, k::Position>>& newPair = self.matchBrackets();
+	if(newPair) {
+		redrawLine(newPair->first.line);
 		if(!isFrozen())
 			redrawScheduledRegion();
-		if(newPair.second.line != newPair.first.line) {
-			redrawLine(newPair.second.line);
+		if(newPair->second.line != newPair->first.line) {
+			redrawLine(newPair->second.line);
 			if(!isFrozen())
 				redrawScheduledRegion();
 		}
-		if(oldPair.first != k::Position()	// clear the previous highlight
-				&& oldPair.first.line != newPair.first.line && oldPair.first.line != newPair.second.line) {
-			redrawLine(oldPair.first.line);
+		if(oldPair	// clear the previous highlight
+				&& oldPair->first.line != newPair->first.line && oldPair->first.line != newPair->second.line) {
+			redrawLine(oldPair->first.line);
 			if(!isFrozen())
 				redrawScheduledRegion();
 		}
-		if(oldPair.second != k::Position() && oldPair.second.line != newPair.first.line
-				&& oldPair.second.line != newPair.second.line && oldPair.second.line != oldPair.first.line)
-			redrawLine(oldPair.second.line);
+		if(oldPair && oldPair->second.line != newPair->first.line
+				&& oldPair->second.line != newPair->second.line && oldPair->second.line != oldPair->first.line)
+			redrawLine(oldPair->second.line);
 	} else {
-		if(oldPair.first != k::Position()) {	// clear the previous highlight
-			assert(oldPair.second != k::Position());
-			redrawLine(oldPair.first.line);
+		if(oldPair) {	// clear the previous highlight
+			redrawLine(oldPair->first.line);
 			if(!isFrozen())
 				redrawScheduledRegion();
-			if(oldPair.second.line != oldPair.first.line)
-				redrawLine(oldPair.second.line);
+			if(oldPair->second.line != oldPair->first.line)
+				redrawLine(oldPair->second.line);
 		}
 	}
 }
@@ -1765,17 +1763,17 @@ void VirtualBox::update(const k::Region& region) /*throw()*/ {
 
 	// first
 	const TextLayout* layout = &r.layouts().at(newPoints[0].line.line = region.first.line);
-	graphics::NativePoint location(layout->location(region.first.column));
+	graphics::NativePoint location(layout->location(region.first.offsetInLine));
 	newPoints[0].ipd = viewer_.mapLineLayoutIpdToViewport(
 		newPoints[0].line.line, horizontal ? static_cast<Scalar>(geometry::x(location)) : geometry::y(location));
-	newPoints[0].line.subline = layout->lineAt(region.first.column);
+	newPoints[0].line.subline = layout->lineAt(region.first.offsetInLine);
 
 	// second
 	layout = &r.layouts().at(newPoints[1].line.line = region.second.line);
-	location = layout->location(region.second.column);
+	location = layout->location(region.second.offsetInLine);
 	newPoints[1].ipd = viewer_.mapLineLayoutIpdToViewport(
 		newPoints[1].line.line, horizontal ? static_cast<Scalar>(geometry::x(location)) : geometry::y(location));
-	newPoints[1].line.subline = layout->lineAt(region.second.column);
+	newPoints[1].line.subline = layout->lineAt(region.second.offsetInLine);
 
 	// commit
 	points_[0] = newPoints[0];
@@ -2018,7 +2016,7 @@ const hyperlink::Hyperlink* utils::getPointedHyperlink(const TextViewer& viewer,
 	size_t numberOfHyperlinks;
 	if(const hyperlink::Hyperlink* const* hyperlinks = viewer.presentation().getHyperlinks(at.line, numberOfHyperlinks)) {
 		for(size_t i = 0; i < numberOfHyperlinks; ++i) {
-			if(at.column >= hyperlinks[i]->region().beginning() && at.column <= hyperlinks[i]->region().end())
+			if(at.offsetInLine >= hyperlinks[i]->region().beginning() && at.offsetInLine <= hyperlinks[i]->region().end())
 				return hyperlinks[i];
 		}
 	}
@@ -2062,7 +2060,7 @@ bool source::getNearestIdentifier(const k::Document& document, const k::Position
 	k::DocumentPartition partition;
 	document.partitioner().partition(position, partition);
 	const IdentifierSyntax& syntax = document.contentTypeInformation().getIdentifierSyntax(partition.contentType);
-	Index start = position.column, end = position.column;
+	Index start = position.offsetInLine, end = position.offsetInLine;
 
 	// find the start of the identifier
 	if(startColumn != 0) {
@@ -2072,13 +2070,13 @@ bool source::getNearestIdentifier(const k::Document& document, const k::Position
 			i.previous();
 			if(!syntax.isIdentifierContinueCharacter(i.current())) {
 				i.next();
-				start = i.tell().column;
+				start = i.tell().offsetInLine;
 				break;
-			} else if(position.column - i.tell().column > MAXIMUM_IDENTIFIER_HALF_LENGTH)	// too long identifier
+			} else if(position.offsetInLine - i.tell().offsetInLine > MAXIMUM_IDENTIFIER_HALF_LENGTH)	// too long identifier
 				return false;
 		} while(i.hasPrevious());
 		if(!i.hasPrevious())
-			start = i.tell().column;
+			start = i.tell().offsetInLine;
 		if(startColumn!= 0)
 			*startColumn = start;
 	}
@@ -2089,15 +2087,15 @@ bool source::getNearestIdentifier(const k::Document& document, const k::Position
 			min(partition.region.end(), k::Position(position.line, document.lineLength(position.line)))), position);
 		while(i.hasNext()) {
 			if(!syntax.isIdentifierContinueCharacter(i.current())) {
-				end = i.tell().column;
+				end = i.tell().offsetInLine;
 				break;
 			}
 			i.next();
-			if(i.tell().column - position.column > MAXIMUM_IDENTIFIER_HALF_LENGTH)	// too long identifier
+			if(i.tell().offsetInLine - position.offsetInLine > MAXIMUM_IDENTIFIER_HALF_LENGTH)	// too long identifier
 				return false;
 		}
 		if(!i.hasNext())
-			end = i.tell().column;
+			end = i.tell().offsetInLine;
 		if(endColumn != 0)
 			*endColumn = end;
 	}
@@ -2121,7 +2119,7 @@ bool source::getPointedIdentifier(const TextViewer& viewer, k::Position* startPo
 		viewer.mapFromGlobal(cursorPoint);
 		const k::Position cursor = viewer.characterForLocalPoint(cursorPoint, TextLayout::LEADING);
 		if(source::getNearestIdentifier(viewer.document(), cursor,
-				(startPosition != 0) ? &startPosition->column : 0, (endPosition != 0) ? &endPosition->column : 0)) {
+				(startPosition != 0) ? &startPosition->offsetInLine : 0, (endPosition != 0) ? &endPosition->column : 0)) {
 			if(startPosition != 0)
 				startPosition->line = cursor.line;
 			if(endPosition != 0)

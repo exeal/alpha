@@ -212,12 +212,6 @@ namespace ascension {
 			// mouse input
 			bool allowsMouseInput() const /*throw()*/;
 			void enableMouseInput(bool enable);
-			// viewer local coordinates vs. character position mappings
-			kernel::Position characterForLocalPoint(const graphics::NativePoint& pt,
-				graphics::font::TextLayout::Edge edge, bool abortNoCharacter = false,
-				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER) const;
-			graphics::NativePoint localPointForCharacter(const kernel::Position& position,
-				bool fullSearchBpd, graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING) const;
 			// viewport
 			void firstVisibleLine(graphics::font::VisualLine* line, Index* viewportOffset) const /*throw()*/;
 			HitTestResult hitTest(const graphics::NativePoint& pt) const;
@@ -248,7 +242,8 @@ namespace ascension {
 			virtual void caretMoved(const Caret& self, const kernel::Region& oldRegion);
 			// CaretStateListener (overridable)
 			virtual void matchBracketsChanged(const Caret& self,
-				const std::pair<kernel::Position, kernel::Position>& oldPair, bool outsideOfView);
+				const boost::optional<std::pair<kernel::Position, kernel::Position>>& oldPair,
+				bool outsideOfView);
 			virtual void overtypeModeChanged(const Caret& self);
 			virtual void selectionShapeChanged(const Caret& self);
 		private:
@@ -528,7 +523,8 @@ namespace ascension {
 			void caretMoved(const Caret& self, const kernel::Region& oldRegion);
 			// CaretStateListener
 			void matchBracketsChanged(const Caret& self,
-				const std::pair<kernel::Position, kernel::Position>& oldPair, bool outsideOfView);
+				const boost::optional<std::pair<kernel::Position, kernel::Position>>& oldPair,
+				bool outsideOfView);
 			void overtypeModeChanged(const Caret& self);
 			void selectionShapeChanged(const Caret& self);
 			// kernel.PointLifeCycleListener

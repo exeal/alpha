@@ -200,7 +200,7 @@ namespace ascension {
 				void scrollTo(const VisualLine& line, Index ipd, viewers::base::Widget* widget);
 				void unlockScroll();
 				// model-view mapping
-				kernel::Position characterForPoint(
+				boost::optional<kernel::Position> characterForPoint(
 					const NativePoint& pointInView, TextLayout::Edge edge, bool abortNoCharacter = false,
 					kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER) const;
 				NativePoint location(
@@ -228,7 +228,8 @@ namespace ascension {
 			public:
 				BaselineIterator(const TextViewport& viewport, Index line, bool trackOutOfViewport);
 				Index line() const /*throw()*/;
-				const NativePoint& position() const;
+				NativePoint positionInView() const;
+				const NativePoint& positionInViewport() const;
 				const TextViewport& viewport() const /*throw()*/;
 				bool tracksOutOfViewport() const /*throw()*/;
 			private:
@@ -242,14 +243,22 @@ namespace ascension {
 				bool equals(BaselineIterator& other);
 				void next();
 				void previous();
+				friend class detail::IteratorCoreAccess;
 			private:
 				const TextViewport* viewport_;	// this is not a reference, for operator=
 				bool tracksOutOfViewport_;		// this is not const, for operator=
 				graphics::font::VisualLine line_;
-				std::pair<Scalar, NativePoint> baseline_;
+				Scalar distanceFromViewportBeforeEdge_;
+				NativePoint positionInViewport_;
 			};
 
 			// free functions
+			NativePoint modelToView(const TextRenderer& textRenderer,
+				const kernel::Position& position, bool fullSearchBpd,
+				graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING);
+			boost::optional<kernel::Position> viewToModel(const TextRenderer& textRenderer,
+				const NativePoint& pointInView, TextLayout::Edge edge, bool abortNoCharacter = false,
+				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
 			Scalar lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline = 0);
 			Scalar lineStartEdge(const TextLayout& layout, Scalar contentMeasure);
 
