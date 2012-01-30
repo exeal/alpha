@@ -127,7 +127,7 @@ namespace {
 	private:
 		shared_ptr<const Font> cache(const String& familyName, const FontProperties<>& properties, double sizeAdjust);
 		struct Hasher : hash<String> {
-			size_t operator()(const pair<String, FontProperties<> >& value) const {
+			size_t operator()(const pair<String, FontProperties<>>& value) const {
 //				hash_combine(value.second.hash(), value.first);
 				return hash<String>()(value.first) + value.second.hash();
 			}

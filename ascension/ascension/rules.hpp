@@ -329,7 +329,7 @@ namespace ascension {
 		public:
 			explicit LexicalPartitionPresentationReconstructor(
 				const presentation::Presentation& presentation, std::unique_ptr<TokenScanner> tokenScanner,
-				const std::map<Token::Identifier, std::shared_ptr<const presentation::TextRunStyle> >& styles,
+				const std::map<Token::Identifier, std::shared_ptr<const presentation::TextRunStyle>>& styles,
 				std::shared_ptr<const presentation::TextRunStyle> defaultStyle = std::shared_ptr<const presentation::TextRunStyle>());
 		private:
 			// presentation.IPartitionPresentationReconstructor
@@ -339,7 +339,7 @@ namespace ascension {
 			const presentation::Presentation& presentation_;
 			std::unique_ptr<TokenScanner> tokenScanner_;
 			std::shared_ptr<const presentation::TextRunStyle> defaultStyle_;
-			const std::map<Token::Identifier, std::shared_ptr<const presentation::TextRunStyle> > styles_;
+			const std::map<Token::Identifier, std::shared_ptr<const presentation::TextRunStyle>> styles_;
 		};
 
 

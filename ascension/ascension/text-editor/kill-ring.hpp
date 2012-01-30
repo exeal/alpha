@@ -56,7 +56,7 @@ namespace ascension {
 			std::size_t numberOfKills() const /*throw()*/;
 //			void setMaximumNumberOfKills(std::size_t capacity) /*throw()*/;
 		private:
-			typedef std::list<std::pair<String, bool> > Contents;
+			typedef std::list<std::pair<String, bool>> Contents;
 			Contents::iterator at(ptrdiff_t index) const;
 			void interprogramCopy(const String& text, bool rectangle);
 			std::pair<String, bool> interprogramPaste();

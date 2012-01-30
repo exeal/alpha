@@ -279,7 +279,7 @@ PatternSyntaxException::Code PatternSyntaxException::getCode() const {
  *
  * @code
  * Pattern p(patternString);
- * std::unique_ptr<MatchResult<const Char*> > m(p.matches(target, endof(target)));
+ * std::unique_ptr<MatchResult<const Char*>> m(p.matches(target, endof(target)));
  * @endcode
  *
  * @note Following sections are draft and subject to change.

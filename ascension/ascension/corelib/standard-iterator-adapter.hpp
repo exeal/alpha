@@ -148,7 +148,7 @@ namespace ascension {
 			/// Pre-fix decrement operator.
 			Derived& operator--() {
 //				ASCENSION_STATIC_ASSERT((
-//					IsBidirectionalIterator<BidirectionalIteratorAdapterBase<Derived, Base> >::value));
+//					IsBidirectionalIterator<BidirectionalIteratorAdapterBase<Derived, Base>>::value));
 				IteratorCoreAccess::decrement(derived());
 				return derived();
 			}
@@ -186,7 +186,7 @@ namespace ascension {
 			/// Relational operator.
 			bool operator<(const IteratorAdapter<Derived, Base>& other) const {
 //				ASCENSION_STATIC_ASSERT((
-//					IsBidirectionalIterator<IteratorLessGreaterDecoratorBase<Derived, Base> >::value));
+//					IsBidirectionalIterator<IteratorLessGreaterDecoratorBase<Derived, Base>>::value));
 				return IteratorCoreAccess::less(derived(), other.derived());
 			}
 			/// Relational operator.

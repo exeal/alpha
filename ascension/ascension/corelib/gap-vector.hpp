@@ -24,7 +24,7 @@ namespace ascension {
 		 * @tparam Allocator The allocator class.
 		 * @note This class is not intended to be derived.
 		 */
-		template<typename T, typename Allocator = std::allocator<T> >
+		template<typename T, typename Allocator = std::allocator<T>>
 		class GapVector {
 		public:
 			/// A type represents the allocator class.

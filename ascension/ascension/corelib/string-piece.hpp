@@ -22,7 +22,7 @@ namespace ascension {
 	 *                         length of a string
 	 * @note Constructors do <strong>not</strong> check if their parameters are @c null.
 	 */
-	template<typename Character, typename CharacterTraits = std::char_traits<Character> >
+	template<typename Character, typename CharacterTraits = std::char_traits<Character>>
 	class BasicStringPiece : public Range<const Character*> {
 	public:
 		typedef Character value_type;

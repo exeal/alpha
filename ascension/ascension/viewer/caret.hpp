@@ -174,7 +174,7 @@ namespace ascension {
 				bool inputMethodCompositionActivated, inputMethodComposingCharacter;
 				boost::optional<kernel::Position> lastTypedPosition;	// the position the caret input character previously
 				boost::optional<kernel::Region> regionBeforeMoved;
-				boost::optional<std::pair<kernel::Position, kernel::Position> > matchBrackets;	// matched brackets' positions. boost.none for none
+				boost::optional<std::pair<kernel::Position, kernel::Position>> matchBrackets;	// matched brackets' positions. boost.none for none
 				Context() /*throw()*/;
 			} context_;
 		};

@@ -79,7 +79,7 @@ namespace ascension {
 		template<typename Element, typename Traits>
 		inline std::basic_ostream<Element, Traits>& operator<<(
 				std::basic_ostream<Element, Traits>& out, const Position& value) {
-			const std::ctype<Element>& ct = std::use_facet<std::ctype<Element> >(out.getloc());
+			const std::ctype<Element>& ct = std::use_facet<std::ctype<Element>>(out.getloc());
 			std::basic_ostringstream<Element, Traits> s;
 			s.flags(out.flags());
 			s.imbue(out.getloc());
@@ -172,7 +172,7 @@ namespace ascension {
 		template<typename Element, typename Traits>
 		inline std::basic_ostream<Element, Traits>& operator<<(
 				std::basic_ostream<Element, Traits>& out, const Region& value) {
-			const std::ctype<Element>& ct = std::use_facet<std::ctype<Element> >(out.getloc());
+			const std::ctype<Element>& ct = std::use_facet<std::ctype<Element>>(out.getloc());
 			std::basic_ostringstream<Element, Traits> s;
 			s.flags(out.flags());
 			s.imbue(out.getloc());

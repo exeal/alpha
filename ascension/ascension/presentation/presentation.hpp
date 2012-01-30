@@ -39,7 +39,7 @@ namespace ascension {
 			 * @return The style of the line or @c null (filled by the presentation's default style)
 			 * @throw BadPositionException @a line is outside of the document
 			 */
-			virtual std::shared_ptr<const Inheritable<TextLineStyle> > queryTextLineStyle(Index line) const = 0;
+			virtual std::shared_ptr<const Inheritable<TextLineStyle>> queryTextLineStyle(Index line) const = 0;
 			friend class Presentation;
 		};
 
@@ -202,7 +202,7 @@ namespace ascension {
 			std::shared_ptr<const TextToplevelStyle> globalTextStyle_;
 			std::shared_ptr<TextLineStyleDirector> textLineStyleDirector_;
 			std::shared_ptr<TextRunStyleDirector> textRunStyleDirector_;
-			std::list<std::shared_ptr<TextLineColorDirector> > textLineColorDirectors_;
+			std::list<std::shared_ptr<TextLineColorDirector>> textLineColorDirectors_;
 			detail::Listeners<GlobalTextStyleListener> globalTextStyleListeners_;
 			std::shared_ptr<hyperlink::HyperlinkDetector> hyperlinkDetector_;
 			struct Hyperlinks;
@@ -234,7 +234,7 @@ namespace ascension {
 		 * @param director the director to remove
 		 */
 		inline void Presentation::removeTextLineColorDirector(TextLineColorDirector& director) /*throw()*/ {
-			for(std::list<std::shared_ptr<TextLineColorDirector> >::iterator
+			for(std::list<std::shared_ptr<TextLineColorDirector>>::iterator
 					i(textLineColorDirectors_.begin()), e(textLineColorDirectors_.end()); i != e; ++i) {
 				if(i->get() == &director) {textLineColorDirectors_.erase(i); return;}
 			}

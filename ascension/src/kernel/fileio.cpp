@@ -1218,7 +1218,7 @@ String TextFileDocumentInput::location() const /*throw()*/ {
 	return fileName();
 #else // ASCENSION_OS_POSIX
 	const codecvt<Char, PathCharacter, mbstate_t>& converter =
-		use_facet<codecvt<Char, PathCharacter, mbstate_t> >(locale());
+		use_facet<codecvt<Char, PathCharacter, mbstate_t>>(locale());
 	Char result[PATH_MAX * 2];
 	mbstate_t dummy;
 	const PathCharacter* fromNext;
@@ -1305,7 +1305,7 @@ void TextFileDocumentInput::revert(
 #else // ASCENSION_OS_POSIX
 	const PathString title(fileName());
 	const locale lc("");
-	const codecvt<Char, PathCharacter, mbstate_t>& conv = use_facet<codecvt<Char, PathCharacter, mbstate_t> >(lc);
+	const codecvt<Char, PathCharacter, mbstate_t>& conv = use_facet<codecvt<Char, PathCharacter, mbstate_t>>(lc);
 	mbstate_t state;
 	const PathCharacter* fromNext;
 	Char* ucsNext;

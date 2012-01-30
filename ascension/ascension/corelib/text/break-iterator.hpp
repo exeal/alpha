@@ -100,7 +100,7 @@ namespace ascension {
 		/// @c GraphemeBreakIterator locates grapheme cluster (character) boundaries in text.
 		template<class BaseIterator>
 		class GraphemeBreakIterator : public AbstractGraphemeBreakIterator,
-			public detail::BreakIteratorFacade<GraphemeBreakIterator <BaseIterator> > {
+			public detail::BreakIteratorFacade<GraphemeBreakIterator<BaseIterator>> {
 			ASCENSION_UNASSIGNABLE_TAG(GraphemeBreakIterator);
 		public:
 			/**
@@ -169,7 +169,7 @@ namespace ascension {
 		/// @c WordBreakIterator locates word boundaries in text.
 		template<class BaseIterator>
 		class WordBreakIterator : public AbstractWordBreakIterator,
-			public detail::BreakIteratorFacade<WordBreakIterator<BaseIterator> > {
+			public detail::BreakIteratorFacade<WordBreakIterator<BaseIterator>> {
 			ASCENSION_UNASSIGNABLE_TAG(WordBreakIterator);
 		public:
 			/**
@@ -230,7 +230,7 @@ namespace ascension {
 		/// @c SentenceBreakIterator locates sentence boundaries in text.
 		template<class BaseIterator>
 		class SentenceBreakIterator : public AbstractSentenceBreakIterator,
-			public detail::BreakIteratorFacade<SentenceBreakIterator<BaseIterator> > {
+			public detail::BreakIteratorFacade<SentenceBreakIterator<BaseIterator>> {
 			ASCENSION_UNASSIGNABLE_TAG(SentenceBreakIterator);
 		public:
 			/**
@@ -269,7 +269,7 @@ namespace ascension {
 		/// @c LineBreakIterator locates line break opportunities in text.
 		template<class BaseIterator>
 		class LineBreakIterator : public AbstractLineBreakIterator,
-			public detail::BreakIteratorFacade<LineBreakIterator<BaseIterator> > {
+			public detail::BreakIteratorFacade<LineBreakIterator<BaseIterator>> {
 			ASCENSION_UNASSIGNABLE_TAG(LineBreakIterator);
 		public:
 			/**

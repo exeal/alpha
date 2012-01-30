@@ -26,7 +26,7 @@ namespace ascension {
 	namespace text {
 
 		class Normalizer : public detail::IteratorAdapter<Normalizer,
-			std::iterator<std::bidirectional_iterator_tag, CodePoint> > {
+			std::iterator<std::bidirectional_iterator_tag, CodePoint>> {
 		public:
 			/// Normalization forms.
 			enum Form {

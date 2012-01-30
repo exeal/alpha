@@ -70,13 +70,13 @@ namespace ascension {
 			static const std::size_t value =
 				sizeof(typename std::iterator_traits<CodeUnitSequence>::value_type);
 		};
-		template<typename T> struct CodeUnitSizeOf<std::back_insert_iterator<T> > {
+		template<typename T> struct CodeUnitSizeOf<std::back_insert_iterator<T>> {
 			static const std::size_t value = sizeof(T::value_type);
 		};
-		template<typename T> struct CodeUnitSizeOf<std::front_insert_iterator<T> > {
+		template<typename T> struct CodeUnitSizeOf<std::front_insert_iterator<T>> {
 			static const std::size_t value = sizeof(T::value_type);
 		};
-		template<typename T, typename U> struct CodeUnitSizeOf<std::ostream_iterator<T, U> > {
+		template<typename T, typename U> struct CodeUnitSizeOf<std::ostream_iterator<T, U>> {
 			static const std::size_t value = sizeof(T);
 		};
 

@@ -24,7 +24,7 @@ namespace ascension {
 			template<typename U> static True test(typename U::difference_type*);
 			template<typename U> static False test(...);
 		public:
-			static const bool value = sizeof(test<std::iterator_traits<T> >(0)) == sizeof(True);
+			static const bool value = sizeof(test<std::iterator_traits<T>>(0)) == sizeof(True);
 		};
 
 		template<typename T, bool hasDifferenceType>
@@ -50,7 +50,7 @@ namespace ascension {
 	 * @note This class is not compatible with Boost.Range.
 	 * @see BasicStringPiece, kernel#Region
 	 */
-	template<typename T, typename Comp = std::less<T> >
+	template<typename T, typename Comp = std::less<T>>
 	class Range : protected std::pair<T, T> {
 	public:
 		typedef T value_type;
@@ -160,7 +160,7 @@ namespace ascension {
 	 */
 	template<typename T, typename Comp>
 	inline bool isEmpty(const Range<T, Comp>& range,
-			typename std::tr1::enable_if<std::is_same<Comp, std::less<T> >::value>::type* = 0) {
+			typename std::tr1::enable_if<std::is_same<Comp, std::less<T>>::value>::type* = 0) {
 		return range.beginning() == range.end();
 	}
 
@@ -173,7 +173,7 @@ namespace ascension {
 	 */
 	template<typename T, typename Comp>
 	inline bool isEmpty(const Range<T, Comp>& range,
-			typename std::tr1::enable_if<!std::is_same<Comp, std::less<T> >::value>::type* = 0) {
+			typename std::tr1::enable_if<!std::is_same<Comp, std::less<T>>::value>::type* = 0) {
 		const Comp lessThan;
 		return !lessThan(range.beginning(), range.end()) && !lessThan(range.end(), range.beginning());
 	}
@@ -236,7 +236,7 @@ namespace ascension {
 	template<typename T, typename Comp, typename CharType, typename CharTraits>
 	inline std::basic_ostream<CharType, CharTraits>& operator<<(
 			std::basic_ostream<CharType, CharTraits>& out, const Range<T, Comp>& range) {
-		const std::ctype<CharType>& ct = std::use_facet<std::ctype<CharType> >(out.getloc());
+		const std::ctype<CharType>& ct = std::use_facet<std::ctype<CharType>>(out.getloc());
 		std::basic_ostringstream<CharType, CharTraits> s;
 		s.flags(out.flags());
 		s.imbue(out.getloc());

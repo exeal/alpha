@@ -144,7 +144,7 @@ class TextViewer::AccessibleProxy :
 			win32::com::IUnknownImpl<
 				typelist::Cat<ASCENSION_WIN32_COM_INTERFACE_SIGNATURE(IAccessible),
 				typelist::Cat<ASCENSION_WIN32_COM_INTERFACE_SIGNATURE(IDispatch),
-				typelist::Cat<ASCENSION_WIN32_COM_INTERFACE_SIGNATURE(IOleWindow)> > >,
+				typelist::Cat<ASCENSION_WIN32_COM_INTERFACE_SIGNATURE(IOleWindow)>>>,
 				win32::com::NoReferenceCounting
 			>,
 			win32::com::ole::TypeInformationFromRegistry<&LIBID_Accessibility, &IID_IAccessible>
@@ -1050,7 +1050,7 @@ namespace {
 	// replaces single "&" with "&&".
 	template<typename CharType>
 	basic_string<CharType> escapeAmpersands(const basic_string<CharType>& s) {
-		static const ctype<CharType>& ct = use_facet<ctype<CharType> >(locale::classic());
+		static const ctype<CharType>& ct = use_facet<ctype<CharType>>(locale::classic());
 		basic_string<CharType> result;
 		result.reserve(s.length() * 2);
 		for(basic_string<CharType>::size_type i = 0; i < s.length(); ++i) {
