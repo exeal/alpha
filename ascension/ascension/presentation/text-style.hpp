@@ -250,13 +250,13 @@ namespace ascension {
 		> {
 		public:
 			StyledTextRunEnumerator();
-			StyledTextRunEnumerator(std::auto_ptr<StyledTextRunIterator> sourceIterator, Index end);
+			StyledTextRunEnumerator(std::unique_ptr<StyledTextRunIterator> sourceIterator, Index end);
 		private:
 			const reference current() const;
 			bool equals(const StyledTextRunEnumerator& other) const /*throw()*/;
 			void next();
 		private:
-			std::auto_ptr<StyledTextRunIterator> iterator_;
+			std::unique_ptr<StyledTextRunIterator> iterator_;
 			boost::optional<StyledTextRun> current_, next_;
 			const Index end_;
 		};

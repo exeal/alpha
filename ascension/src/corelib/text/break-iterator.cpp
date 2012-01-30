@@ -1,14 +1,14 @@
 /**
  * @file break-iterator.cpp
  * @date 2006-2007 (was iterator.cpp)
- * @date 2007-2011
+ * @date 2007-2012
  * @author exeal
  */
 
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
 #include <ascension/corelib/text/break-iterator.hpp>
 #include <ascension/corelib/text/character-property.hpp>
-#include <memory>	// std.auto_ptr
+#include <memory>	// std.unique_ptr
 
 using namespace ascension;
 using namespace ascension::text;
@@ -104,7 +104,7 @@ bool AbstractGraphemeBreakIterator::isBoundary(const CharacterIterator& at) cons
 	const int p = GraphemeClusterBreak::of(at.current());
 	if(p == GraphemeClusterBreak::CR || p == GraphemeClusterBreak::CONTROL)	// (GB5)
 		return true;
-	auto_ptr<CharacterIterator> i(at.clone());
+	unique_ptr<CharacterIterator> i(at.clone());
 	i->previous();
 	const int prev = GraphemeClusterBreak::of(i->current());
 	if(prev == GraphemeClusterBreak::CR)
@@ -221,7 +221,7 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 	nextBase(i);
 	if(!i.hasNext())	// (WB2)
 		return;
-	auto_ptr<CharacterIterator> prevPrev, prev, nextNext;
+	unique_ptr<CharacterIterator> prevPrev, prev, nextNext;
 	CodePoint nextCP = i.current(), prevCP = INVALID_CODE_POINT;
 	int nextClass = WordBreak::of(nextCP, syntax_, locale()),
 		prevClass = NOT_PROPERTY, nextNextClass = NOT_PROPERTY, prevPrevClass = NOT_PROPERTY;
@@ -280,8 +280,8 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 			ASCENSION_TRY_RETURN()
 
 		// éüÇ…êiÇﬁ
-		prevPrev = prev;
-		prev.reset(i.clone().release());
+		prevPrev = move(prev);
+		prev = i.clone();
 		nextBase(i);
 		nextNext.reset(0);
 		if(!i.hasNext())	// (WB2)
@@ -315,7 +315,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 	previousBase(i);
 	if(!i.hasPrevious())	// (WB1)
 		return;
-	auto_ptr<CharacterIterator> next, nextNext, prevPrev;
+	unique_ptr<CharacterIterator> next, nextNext, prevPrev;
 	CodePoint prevCP = i.current(), nextCP = INVALID_CODE_POINT, nextNextCP = INVALID_CODE_POINT;
 	int prevClass = WordBreak::of(prevCP, syntax_, locale()),
 		nextClass = NOT_PROPERTY, nextNextClass = NOT_PROPERTY, prevPrevClass = NOT_PROPERTY;
@@ -383,8 +383,8 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 		previousBase(i);
 		if(!i.hasPrevious())	// (WB1)
 			ASCENSION_TRY_RETURN()
-		next = nextNext;
-		nextNext.reset(0);
+		next = move(nextNext);
+		nextNext.reset();	// ...is need?
 		prevCP = i.current();
 		nextCP = nextNextCP;
 		nextNextCP = INVALID_CODE_POINT;
@@ -404,7 +404,7 @@ bool AbstractWordBreakIterator::isBoundary(const CharacterIterator& at) const {
 	const int nextClass = WordBreak::of(nextCP, syntax_, locale());
 	if(nextClass == WordBreak::OTHER)	// (WB14)
 		return true;
-	auto_ptr<CharacterIterator> i(at.clone());
+	unique_ptr<CharacterIterator> i(at.clone());
 	previousBase(*i);
 	CodePoint prevCP = i->current();
 	int prevClass = WordBreak::of(prevCP, syntax_, locale());
@@ -472,7 +472,7 @@ void AbstractWordBreakIterator::setComponent(Component component) {
 namespace {
 	/// Tries SB8 rule.
 	bool trySB8(CharacterIterator& i) {
-		auto_ptr<CharacterIterator> j(i.clone());
+		unique_ptr<CharacterIterator> j(i.clone());
 		for(; j->hasNext(); nextBase(*j)) {
 			switch(SentenceBreak::of(j->current())) {
 			case SentenceBreak::O_LETTER:
@@ -513,7 +513,7 @@ namespace {
 				if(!aTerm || (!closeOccured && !spOccured))
 					return false;	// (SB12)
 				else {
-					auto_ptr<CharacterIterator> temp(i.clone());
+					unique_ptr<CharacterIterator> temp(i.clone());
 					previousBase(*temp);
 					if(!temp->hasPrevious())
 						return true;	// (SB12)
@@ -598,7 +598,7 @@ void AbstractSentenceBreakIterator::doPrevious(ptrdiff_t amount) {
 bool AbstractSentenceBreakIterator::isBoundary(const CharacterIterator& at) const {
 	if(!at.hasNext() || !at.hasPrevious())
 		return true;	// (SB1, SB2)
-	auto_ptr<CharacterIterator> i(at.clone());
+	unique_ptr<CharacterIterator> i(at.clone());
 	if(at.current() == LINE_FEED) {
 		if(i->previous().current() == CARRIAGE_RETURN)
 			return false;	// (SB3)

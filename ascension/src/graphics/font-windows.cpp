@@ -116,7 +116,7 @@ namespace {
 		int ascent_, averageCharacterWidth_, descent_, externalLeading_, internalLeading_, xHeight_;
 		String familyName_;
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-		auto_ptr<IdeographicVariationSequences> ivs_;
+		unique_ptr<IdeographicVariationSequences> ivs_;
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 	};
 

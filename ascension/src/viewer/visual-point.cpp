@@ -88,6 +88,7 @@ TextViewerDisposedException::TextViewerDisposedException() :
 
 // VisualPoint ////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /**
  * Constructor.
  * @param viewer The viewer
@@ -99,6 +100,7 @@ VisualPoint::VisualPoint(TextViewer& viewer, PointListener* listener /* = 0 */) 
 	static_cast<detail::PointCollection<VisualPoint>&>(viewer).addNewPoint(*this);
 	viewer_->textRenderer().layouts().addVisualLinesListener(*this);
 }
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 /**
  * Constructor.
@@ -143,10 +145,10 @@ void VisualPoint::aboutToMove(Position& to) {
 }
 
 /// @see Point#moved
-void VisualPoint::moved(const boost::optional<Position>& from) {
+void VisualPoint::moved(const Position& from) {
 	if(isTextViewerDisposed())
 		return;
-	if(from && position() && from->line == line(*this) && lineNumberCaches_) {
+	if(from.line == line(*this) && lineNumberCaches_) {
 		const font::TextLayout* const layout = viewer_->textRenderer().layouts().atIfCached(line(*this));
 		lineNumberCaches_->visualLine -= lineNumberCaches_->visualSubline;
 		lineNumberCaches_->visualSubline = (layout != 0) ? layout->lineAt(offsetInLine(*this)) : 0;
@@ -268,19 +270,19 @@ Index VisualPoint::visualLine() const {
 
 /// @see VisualLinesListener#visualLinesDeleted
 void VisualPoint::visualLinesDeleted(const Range<Index>& lines, Index, bool) /*throw()*/ {
-	if(!adaptsToDocument() && position() && includes(lines, line(*this)))
+	if(!adaptsToDocument() && includes(lines, line(*this)))
 		lineNumberCaches_ = boost::none;
 }
 
 /// @see VisualLinesListener#visualLinesInserted
 void VisualPoint::visualLinesInserted(const Range<Index>& lines) /*throw()*/ {
-	if(!adaptsToDocument() && position() && includes(lines, line(*this)))
+	if(!adaptsToDocument() && includes(lines, line(*this)))
 		lineNumberCaches_ = boost::none;
 }
 
 /// @see VisualLinesListener#visualLinesModified
 void VisualPoint::visualLinesModified(const Range<Index>& lines, SignedIndex sublineDifference, bool, bool) /*throw()*/ {
-	if(position() && lineNumberCaches_) {
+	if(lineNumberCaches_) {
 		// adjust visualLine_ and visualSubine_ according to the visual lines modification
 		if(lines.end() <= line(*this))
 			lineNumberCaches_->visualLine += sublineDifference;
@@ -462,6 +464,7 @@ VerticalDestinationProxy locations::forwardVisualLine(const VisualPoint& p, Inde
 	layout = &renderer.layouts().at(visualLine.line);
 	if(!p.lastX_)
 		const_cast<VisualPoint&>(p).updateLastX();
+	assert(p.lastX_);
 	np.offsetInLine = layout->offset(
 		geometry::make<NativePoint>(
 			p.lastX_ - renderer.lineIndent(visualLine.line),

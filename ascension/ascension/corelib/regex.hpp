@@ -12,12 +12,12 @@
 #define ASCENSION_REGEX_HPP
 
 #include <ascension/corelib/memory.hpp>				// AutoBuffer
-#include <ascension/corelib/type-traits.hpp>		// std.tr1.integral_constant
+#include <ascension/corelib/type-traits.hpp>		// std.integral_constant
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/case-folder.hpp>
 #include <ascension/corelib/text/character-property.hpp>
 #include <ascension/corelib/text/utf-iterator.hpp>	// text.utf.*
-#include <memory>
+#include <memory>									// std.unique_ptr
 #include <map>
 #include <bitset>
 #include <boost/regex.hpp>
@@ -306,8 +306,8 @@ namespace ascension {
 			 *                              defined match flags are set in @a flags
 			 * @throw PatternSyntaxException The expression's syntax is invalid
 			 */
-			static std::auto_ptr<const Pattern> compile(const StringPiece& regex, int flags = 0) {
-				return std::auto_ptr<const Pattern>(new Pattern(regex, flags));
+			static std::unique_ptr<const Pattern> compile(const StringPiece& regex, int flags = 0) {
+				return std::unique_ptr<const Pattern>(new Pattern(regex, flags));
 			}
 			/**
 			 * Creates a matcher that will match the given input against this pattern.
@@ -317,8 +317,8 @@ namespace ascension {
 			 * @return A new matcher for this pattern
 			 */
 			template<typename CodePointIterator>
-			std::auto_ptr<Matcher<CodePointIterator> > matcher(CodePointIterator first, CodePointIterator last) const {
-				return std::auto_ptr<Matcher<CodePointIterator> >(new Matcher<CodePointIterator>(*this, first, last));
+			std::unique_ptr<Matcher<CodePointIterator> > matcher(CodePointIterator first, CodePointIterator last) const {
+				return std::unique_ptr<Matcher<CodePointIterator> >(new Matcher<CodePointIterator>(*this, first, last));
 			}
 
 			/**
@@ -655,8 +655,8 @@ namespace ascension {
 			 * The result is unaffected by subsequent operations performed upon the matcher.
 			 * @return A @c MatchResult with the state of this matcher
 			 */
-			std::auto_ptr<MatchResult<CodePointIterator> > toMatchResult() const {
-				return std::auto_ptr<MatchResult<CodePointIterator> >(
+			std::unique_ptr<MatchResult<CodePointIterator> > toMatchResult() const {
+				return std::unique_ptr<MatchResult<CodePointIterator> >(
 					new detail::MatchResultImpl<CodePointIterator>(Base::impl()));
 			}
 		private:
@@ -741,7 +741,7 @@ namespace ascension {
 		class MigemoPattern : public Pattern {
 			ASCENSION_UNASSIGNABLE_TAG(MigemoPattern);
 		public:
-			static std::auto_ptr<const MigemoPattern> compile(const StringPiece& pattern, bool caseSensitive);
+			static std::unique_ptr<const MigemoPattern> compile(const StringPiece& pattern, bool caseSensitive);
 			static void initialize(const char* runtimePathName, const char* dictionaryPathName);
 			static bool isMigemoInstalled() /*throw()*/;
 		private:

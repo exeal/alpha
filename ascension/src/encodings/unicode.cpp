@@ -49,38 +49,38 @@ namespace {
 	public:
 		UTF_8() : EncoderFactoryBase("UTF-8", fundamental::UTF_8, "Unicode (UTF-8)", 4) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<UTF_8>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<UTF_8>(*this));}
 	} utf8;
 	class UTF_16LE : public EncoderFactoryBase {
 	public:
 		UTF_16LE() : EncoderFactoryBase("UTF-16LE", fundamental::UTF_16LE, "Unicode (UTF-16LE)", 2) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<UTF_16LE>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<UTF_16LE>(*this));}
 	} utf16le;
 	class UTF_16BE : public EncoderFactoryBase {
 	public:
 		UTF_16BE() : EncoderFactoryBase("UTF-16BE", fundamental::UTF_16BE, "Unicode (UTF-16BE)", 2) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<UTF_16BE>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<UTF_16BE>(*this));}
 	} utf16be;
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 	class UTF_7 : public EncoderFactoryBase {
 	public:
 		UTF_7() : EncoderFactoryBase("UTF-7", standard::UTF_7, "Unicode (UTF-7)", 8) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<UTF_7>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<UTF_7>(*this));}
 	} utf7;
 	class UTF_32LE : public EncoderFactoryBase {
 	public:
 		UTF_32LE() : EncoderFactoryBase("UTF-32LE", standard::UTF_32LE, "Unicode (UTF-32LE)", 4) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<UTF_32LE>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<UTF_32LE>(*this));}
 	} utf32le;
 	class UTF_32BE : public EncoderFactoryBase {
 	public:
 		UTF_32BE() : EncoderFactoryBase("UTF-32BE", standard::UTF_32BE, "Unicode (UTF-32BE)", 4) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<UTF_32BE>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<UTF_32BE>(*this));}
 	} utf32be;
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
@@ -88,7 +88,7 @@ namespace {
 	public:
 		UTF_5() : EncoderFactoryBase("UTF-5", MIB_OTHER, "Unicode (UTF-5)", 6) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<UTF_5>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<UTF_5>(*this));}
 	} utf5;
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 	class UnicodeDetector : public EncodingDetector {
@@ -111,7 +111,7 @@ namespace {
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
 			Encoder::registerFactory(utf5);
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
-			EncodingDetector::registerDetector(auto_ptr<EncodingDetector>(new UnicodeDetector));
+			EncodingDetector::registerDetector(unique_ptr<EncodingDetector>(new UnicodeDetector));
 		}
 	} installer;
 } // namespace @0

@@ -227,7 +227,7 @@ private:
 	void commitPendingChange(bool beginCompound);
 	Document& document_;
 	stack<UndoableChange*> undoableChanges_, redoableChanges_;
-	auto_ptr<AtomicChange> pendingAtomicChange_;
+	unique_ptr<AtomicChange> pendingAtomicChange_;
 	size_t compoundChangeDepth_;
 	bool rollbacking_;
 	CompoundChange* rollbackingChange_;
@@ -284,7 +284,7 @@ inline void Document::UndoManager::clear() /*throw()*/ {
 inline void Document::UndoManager::commitPendingChange(bool beginCompound) {
 	if(pendingAtomicChange_.get() != 0) {
 		if(beginCompound) {
-			auto_ptr<CompoundChange> newCompound(new CompoundChange());
+			unique_ptr<CompoundChange> newCompound(new CompoundChange());
 			newCompound->appendChange(*pendingAtomicChange_.get(), document_);
 			undoableChanges_.push(newCompound.release());
 			pendingAtomicChange_.release();
@@ -361,7 +361,7 @@ void Document::UndoManager::undo(UndoableChange::Result& result) {
 // Document ///////////////////////////////////////////////////////////////////////////////////////
 
 /// Constructor.
-Document::Document() : session_(0), partitioner_(0),
+Document::Document() : session_(0), partitioner_(),
 		contentTypeInformationProvider_(new DefaultContentTypeInformationProvider),
 		readOnly_(false), length_(0), revisionNumber_(0), lastUnmodifiedRevisionNumber_(0),
 		onceUndoBufferCleared_(false), recordingChanges_(true), changing_(false), rollbacking_(false)/*, locker_(0)*/ {
@@ -631,7 +631,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 					const Char* p = nextNewline + newlineStringLength(eatNewline(nextNewline, text.end()));
 					while(true) {
 						nextNewline = find_first_of(p, text.end(), NEWLINE_CHARACTERS, ASCENSION_ENDOF(NEWLINE_CHARACTERS));
-						auto_ptr<Line> temp(new Line(revisionNumber_ + 1, String(p, nextNewline), eatNewline(nextNewline, text.end())));
+						unique_ptr<Line> temp(new Line(revisionNumber_ + 1, String(p, nextNewline), eatNewline(nextNewline, text.end())));
 						allocatedLines.push_back(temp.get());
 						temp.release();
 						insertedStringLength += allocatedLines.back()->text().length();

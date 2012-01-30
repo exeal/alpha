@@ -82,7 +82,7 @@ namespace ascension {
 			 * @param last the end of the text to parse
 			 * @return the found token or @c null
 			 */
-			virtual std::auto_ptr<Token> parse(
+			virtual std::unique_ptr<Token> parse(
 				const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ = 0;
 			/// Returns the identifier of the token.
 			Token::Identifier tokenID() const /*throw()*/ {return id_;}
@@ -98,7 +98,7 @@ namespace ascension {
 			RegionRule(Token::Identifier id,
 				const String& startSequence, const String& endSequence,
 				Char escapeCharacter = text::NONCHARACTER, bool caseSensitive = true);
-			std::auto_ptr<Token> parse(const TokenScanner& scanner,
+			std::unique_ptr<Token> parse(const TokenScanner& scanner,
 				const Char* first, const Char* last) const /*throw()*/;
 		private:
 			const String startSequence_, endSequence_;
@@ -110,7 +110,7 @@ namespace ascension {
 		class NumberRule : public Rule {
 		public:
 			explicit NumberRule(Token::Identifier id) /*throw()*/;
-			std::auto_ptr<Token> parse(const TokenScanner& scanner,
+			std::unique_ptr<Token> parse(const TokenScanner& scanner,
 				const Char* first, const Char* last) const /*throw()*/;
 		};
 
@@ -119,7 +119,7 @@ namespace ascension {
 		public:
 			URIRule(Token::Identifier id,
 				std::shared_ptr<const URIDetector> uriDetector) /*throw()*/;
-			std::auto_ptr<Token> parse(const TokenScanner& scanner,
+			std::unique_ptr<Token> parse(const TokenScanner& scanner,
 				const Char* first, const Char* last) const /*throw()*/;
 		private:
 			std::shared_ptr<const URIDetector> uriDetector_;
@@ -133,7 +133,7 @@ namespace ascension {
 			WordRule(Token::Identifier id,
 				const StringPiece& words, Char separator, bool caseSensitive = true);
 			~WordRule() /*throw()*/;
-			std::auto_ptr<Token> parse(const TokenScanner& scanner,
+			std::unique_ptr<Token> parse(const TokenScanner& scanner,
 				const Char* first, const Char* last) const /*throw()*/;
 		private:
 			detail::HashTable* words_;
@@ -143,11 +143,11 @@ namespace ascension {
 		/// A concrete rule detects tokens using regular expression match.
 		class RegexRule : public Rule {
 		public:
-			RegexRule(Token::Identifier id, std::auto_ptr<const regex::Pattern> pattern);
-			std::auto_ptr<Token> parse(const TokenScanner& scanner,
+			RegexRule(Token::Identifier id, std::unique_ptr<const regex::Pattern> pattern);
+			std::unique_ptr<Token> parse(const TokenScanner& scanner,
 				const Char* first, const Char* last) const /*throw()*/;
 		private:
-			std::auto_ptr<const regex::Pattern> pattern_;
+			std::unique_ptr<const regex::Pattern> pattern_;
 		};
 #endif // !ASCENSION_NO_REGEX
 
@@ -171,7 +171,7 @@ namespace ascension {
 			 * Moves to the next token and returns it.
 			 * @return the token or @c null if the scanning was done.
 			 */
-			virtual std::auto_ptr<Token> nextToken() = 0;
+			virtual std::unique_ptr<Token> nextToken() = 0;
 			/**
 			 * Starts the scan with the specified range. The current position of the scanner will
 			 * be the top of the specified region.
@@ -191,7 +191,7 @@ namespace ascension {
 			const text::IdentifierSyntax& getIdentifierSyntax() const /*throw()*/;
 			kernel::Position getPosition() const;
 			bool hasNext() const /*throw()*/;
-			std::auto_ptr<Token> nextToken();
+			std::unique_ptr<Token> nextToken();
 			void parse(const kernel::Document& document, const kernel::Region& region);
 		private:
 			boost::optional<kernel::Position> position_;
@@ -211,13 +211,13 @@ namespace ascension {
 			explicit LexicalTokenScanner(kernel::ContentType contentType) /*throw()*/;
 			~LexicalTokenScanner() /*throw()*/;
 			// attributes
-			void addRule(std::auto_ptr<const Rule> rule);
-			void addWordRule(std::auto_ptr<const WordRule> rule);
+			void addRule(std::unique_ptr<const Rule> rule);
+			void addWordRule(std::unique_ptr<const WordRule> rule);
 			// TokenScanner
 			const text::IdentifierSyntax& getIdentifierSyntax() const /*throw()*/;
 			kernel::Position getPosition() const /*throw()*/;
 			bool hasNext() const /*throw()*/;
-			std::auto_ptr<Token> nextToken();
+			std::unique_ptr<Token> nextToken();
 			void parse(const kernel::Document& document, const kernel::Region& region);
 		private:
 			kernel::ContentType contentType_;
@@ -234,7 +234,7 @@ namespace ascension {
 			ASCENSION_UNASSIGNABLE_TAG(TransitionRule);
 		public:
 			virtual ~TransitionRule() /*throw()*/;
-			virtual std::auto_ptr<TransitionRule> clone() const = 0;
+			virtual std::unique_ptr<TransitionRule> clone() const = 0;
 			kernel::ContentType contentType() const /*throw()*/;
 			kernel::ContentType destination() const /*throw()*/;
 			virtual Index matches(const String& line, Index offsetInLine) const = 0;
@@ -249,7 +249,7 @@ namespace ascension {
 		public:
 			LiteralTransitionRule(kernel::ContentType contentType, kernel::ContentType destination,
 				const String& pattern, Char escapeCharacter = text::NONCHARACTER, bool caseSensitive = true);
-			std::auto_ptr<TransitionRule> clone() const;
+			std::unique_ptr<TransitionRule> clone() const;
 			Index matches(const String& line, Index offsetInLine) const;
 		private:
 			const String pattern_;
@@ -262,12 +262,12 @@ namespace ascension {
 		class RegexTransitionRule : public TransitionRule {
 		public:
 			RegexTransitionRule(kernel::ContentType contentType,
-				kernel::ContentType destination, std::auto_ptr<const regex::Pattern> pattern);
+				kernel::ContentType destination, std::unique_ptr<const regex::Pattern> pattern);
 			RegexTransitionRule(const RegexTransitionRule& other);
-			std::auto_ptr<TransitionRule> clone() const;
+			std::unique_ptr<TransitionRule> clone() const;
 			Index matches(const String& line, Index offsetInLine) const;
 		private:
-			std::auto_ptr<const regex::Pattern> pattern_;
+			std::unique_ptr<const regex::Pattern> pattern_;
 		};
 #endif // !ASCENSION_NO_REGEX
 
@@ -328,16 +328,16 @@ namespace ascension {
 			ASCENSION_UNASSIGNABLE_TAG(LexicalPartitionPresentationReconstructor);
 		public:
 			explicit LexicalPartitionPresentationReconstructor(
-				const presentation::Presentation& presentation, std::auto_ptr<TokenScanner> tokenScanner,
+				const presentation::Presentation& presentation, std::unique_ptr<TokenScanner> tokenScanner,
 				const std::map<Token::Identifier, std::shared_ptr<const presentation::TextRunStyle> >& styles,
 				std::shared_ptr<const presentation::TextRunStyle> defaultStyle = std::shared_ptr<const presentation::TextRunStyle>());
 		private:
 			// presentation.IPartitionPresentationReconstructor
-			std::auto_ptr<presentation::StyledTextRunIterator> getPresentation(const kernel::Region& region) const /*throw()*/;
+			std::unique_ptr<presentation::StyledTextRunIterator> getPresentation(const kernel::Region& region) const /*throw()*/;
 		private:
 			class StyledTextRunIterator;
 			const presentation::Presentation& presentation_;
-			std::auto_ptr<TokenScanner> tokenScanner_;
+			std::unique_ptr<TokenScanner> tokenScanner_;
 			std::shared_ptr<const presentation::TextRunStyle> defaultStyle_;
 			const std::map<Token::Identifier, std::shared_ptr<const presentation::TextRunStyle> > styles_;
 		};

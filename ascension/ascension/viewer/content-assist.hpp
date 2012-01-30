@@ -244,7 +244,7 @@ namespace ascension {
 			uint32_t autoActivationDelay() const /*throw()*/;
 			void enablePrefixCompletion(bool enable);
 			void setAutoActivationDelay(unsigned long milliseconds);
-			void setContentAssistProcessor(kernel::ContentType contentType, std::auto_ptr<ContentAssistProcessor> processor);
+			void setContentAssistProcessor(kernel::ContentType contentType, std::unique_ptr<ContentAssistProcessor> processor);
 			// operation
 			void showPossibleCompletions();
 		private:
@@ -287,7 +287,7 @@ namespace ascension {
 				CompletionSession() /*throw()*/ : processor(0), numberOfProposals(0) {}
 				~CompletionSession() /*throw()*/ {for(std::size_t i = 0; i < numberOfProposals; ++i) delete proposals[i];}
 			};
-			std::auto_ptr<CompletionSession> completionSession_;
+			std::unique_ptr<CompletionSession> completionSession_;
 		};
 /*
 		class ContextInformation {};

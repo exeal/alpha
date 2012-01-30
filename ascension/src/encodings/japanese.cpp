@@ -81,7 +81,6 @@
 #include <algorithm>	// std.binary_search
 #include <cassert>
 #include <cstring>		// std.memcpy
-#include <memory>		// std.auto_ptr
 #include <map>
 
 using namespace ascension;
@@ -126,49 +125,49 @@ namespace {
 	public:
 		SHIFT_JIS() /*throw()*/ : EncoderFactoryBase("Shift_JIS", standard::SHIFT_JIS, "Japanese (Shift_JIS)", 2, 1, "MS_Kanji|csShiftJIS", 0x3f) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<SHIFT_JIS>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<SHIFT_JIS>(*this));}
 	} shiftjis;
 
 	class SHIFT_JIS_2004 : public EncoderFactoryBase {
 	public:
 		SHIFT_JIS_2004() /*throw()*/ : EncoderFactoryBase("Shift_JIS-2004", MIB_OTHER, "Japanese (Shift_JIS-2004)", 2, 1, "", 0x3f) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<SHIFT_JIS_2004>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<SHIFT_JIS_2004>(*this));}
 	} shiftjis2004;
 
 	class EUC_JP : public EncoderFactoryBase {
 	public:
 		EUC_JP() /*throw()*/ : EncoderFactoryBase("EUC-JP", standard::EUC_JP, "Japanese (EUC-JP)", 3, 1, "Extended_UNIX_Code_Packed_Format_for_Japanese|csEUCPkdFmtJapanese", 0x3f) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<EUC_JP>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<EUC_JP>(*this));}
 	} eucjp;
 
 	class EUC_JIS_2004 : public EncoderFactoryBase {
 	public:
 		EUC_JIS_2004() /*throw()*/ : EncoderFactoryBase("EUC-JIS-2004", MIB_OTHER, "Japanese (EUC-JIS-2004)", 3, 1, "", 0x3f) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<EUC_JIS_2004>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<EUC_JIS_2004>(*this));}
 	} eucjis2004;
 
 	class ISO_2022_JP : public EncoderFactoryBase {
 	public:
 		ISO_2022_JP() /*throw()*/ : EncoderFactoryBase("ISO-2022-JP", standard::ISO_2022_JP, "Japanese (ISO-2022-JP)", 8, 1, "csISO2022JP", 0x3f) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<ISO_2022_JP>(*this));}
 	} iso2022jp;
 
 	class ISO_2022_JP_2 : public EncoderFactoryBase {
 	public:
 		ISO_2022_JP_2() /*throw()*/ : EncoderFactoryBase("ISO-2022-JP-2", standard::ISO_2022_JP_2, "Japanese (ISO-2022-JP-2)", 9, 1, "csISO2022JP2", 0x3f) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2>(*this));}
 	} iso2022jp2;
 
 	class ISO_2022_JP_2004 : public EncoderFactoryBase {
 	public:
 		ISO_2022_JP_2004() /*throw()*/ : EncoderFactoryBase("ISO-2022-JP-2004", MIB_OTHER, "Japanese (ISO-2022-JP-2004)", 9, 1, "", 0x3f) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2004>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2004>(*this));}
 	} iso2022jp2004;
 
 #ifndef ASCENSION_NO_MINORITY_ENCODINGS
@@ -176,21 +175,21 @@ namespace {
 	public:
 		ISO_2022_JP_1() /*throw()*/ : EncoderFactoryBase("ISO-2022-JP-1", MIB_OTHER, "Japanese (ISO-2022-JP-1)", 9, 1, "", 0x3f) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_1>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_1>(*this));}
 	} iso2022jp1;
 
 	class ISO_2022_JP_2004_STRICT : public EncoderFactoryBase {
 	public:
 		ISO_2022_JP_2004_STRICT() /*throw()*/ : EncoderFactoryBase("ISO-2022-JP-2004-Strict", MIB_OTHER, "Japanese (ISO-2022-JP-2004-Strict)", 9, 1, "", 0x3f) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2004_STRICT>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2004_STRICT>(*this));}
 	} iso2022jp2004strict;
 
 	class ISO_2022_JP_2004_COMPATIBLE : public EncoderFactoryBase {
 	public:
 		ISO_2022_JP_2004_COMPATIBLE() /*throw()*/ : EncoderFactoryBase("ISO-2022-JP-2004-Compatible", MIB_OTHER, "Japanese (ISO-2022-JP-2004-Compatible)", 9, 1, "", 0x3f) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2004_COMPATIBLE>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<ISO_2022_JP_2004_COMPATIBLE>(*this));}
 	} iso2022jp2004compatible;
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 	class JISAutoDetector : public EncodingDetector {
@@ -214,7 +213,7 @@ namespace {
 			Encoder::registerFactory(iso2022jp2004strict);
 			Encoder::registerFactory(iso2022jp2004compatible);
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
-			EncodingDetector::registerDetector(auto_ptr<EncodingDetector>(new JISAutoDetector));
+			EncodingDetector::registerDetector(unique_ptr<EncodingDetector>(new JISAutoDetector));
 		}
 	} installer;
 } // namespace @0
@@ -557,7 +556,7 @@ namespace {
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 			;
 		const Char* const beginning = to;
-		auto_ptr<Encoder> gb2312Encoder, ksc5601Encoder, iso88591Encoder, iso88597Encoder;
+		unique_ptr<Encoder> gb2312Encoder, ksc5601Encoder, iso88591Encoder, iso88597Encoder;
 		bool checkedGB2312 = false, checkedKSC5601 = false;
 
 #define ASCENSION_HANDLE_UNMAPPABLE()	{									\
@@ -774,7 +773,7 @@ namespace {
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 			;
 		int charset = EncodingState::ASCII;
-		auto_ptr<Encoder> iso88591Encoder, iso88597Encoder, gb2312Encoder, ksc5601Encoder;
+		unique_ptr<Encoder> iso88591Encoder, iso88597Encoder, gb2312Encoder, ksc5601Encoder;
 		if(x == '2') {
 			if(0 != (iso88591Encoder = Encoder::forMIB(fundamental::ISO_8859_1)).get())
 				iso88591Encoder->setSubstitutionPolicy(substitutionPolicy);

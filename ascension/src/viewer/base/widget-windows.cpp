@@ -134,9 +134,9 @@ STDMETHODIMP Widget::Drop(IDataObject* data, DWORD keyState, POINTL position, DW
 	return S_OK;
 }
 
-auto_ptr<Widget::InputGrabLocker> Widget::grabInput() {
+unique_ptr<Widget::InputGrabLocker> Widget::grabInput() {
 	::SetCapture(identifier().get());
-	return auto_ptr<InputGrabLocker>(new InputGrabLocker(*this));
+	return unique_ptr<InputGrabLocker>(new InputGrabLocker(*this));
 }
 
 bool Widget::hasFocus() const /*throw()*/ {

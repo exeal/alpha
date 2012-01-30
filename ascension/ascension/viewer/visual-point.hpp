@@ -80,7 +80,9 @@ namespace ascension {
 			ASCENSION_UNASSIGNABLE_TAG(VisualPoint);
 		public:
 			// constructors
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			explicit VisualPoint(TextViewer& viewer, kernel::PointListener* listener = 0);
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 			VisualPoint(TextViewer& viewer, const kernel::Position& position, kernel::PointListener* listener = 0);
 			VisualPoint(const VisualPoint& other);
 			virtual ~VisualPoint() /*throw()*/;
@@ -100,7 +102,7 @@ namespace ascension {
 			static VerticalDestinationProxy makeVerticalDestinationProxy(const kernel::Position& source);
 			// kernel.Point
 			virtual void aboutToMove(kernel::Position& to);
-			virtual void moved(const boost::optional<kernel::Position>& from) /*throw()*/;
+			virtual void moved(const kernel::Position& from) /*throw()*/;
 		private:
 			void updateLastX();
 			void viewerDisposed() /*throw()*/;

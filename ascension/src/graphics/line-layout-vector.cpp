@@ -118,7 +118,7 @@ void LineLayoutVector::clearCaches(const Range<Index>& lines, bool repair) {
 			if(includes(lines, i->first)) {
 				oldSublines += i->second->numberOfLines();
 				delete i->second;
-				auto_ptr<const TextLayout> newLayout(layoutGenerator_->generate(i->first));
+				unique_ptr<const TextLayout> newLayout(layoutGenerator_->generate(i->first));
 				assert(newLayout.get() != 0);	// TODO:
 				i->second = newLayout.release();
 				newSublines += i->second->numberOfLines();

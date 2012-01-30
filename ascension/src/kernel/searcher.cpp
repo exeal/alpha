@@ -59,7 +59,7 @@ using namespace std;
  */
 LiteralPattern::LiteralPattern(const String& pattern, bool caseSensitive /* = true */
 #ifndef ASCENSION_NO_UNICODE_COLLATION
-		, auto_ptr<const Collator> collator /* = null */
+		, unique_ptr<const Collator> collator /* = null */
 #endif // !ASCENSION_NO_UNICODE_COLLATION
 		) : pattern_(pattern), caseSensitive_(caseSensitive)
 #ifndef ASCENSION_NO_UNICODE_COLLATION
@@ -108,7 +108,7 @@ inline void LiteralPattern::makeShiftTable(Direction direction) /*throw()*/ {
  */
 bool LiteralPattern::matches(const CharacterIterator& target) const {
 	// TODO: compare using collation elements.
-	auto_ptr<CharacterIterator> i(target.clone());
+	unique_ptr<CharacterIterator> i(target.clone());
 	for(const int* e = first_; e < last_ && i->hasNext(); ++e, i->next()) {
 		if(*e != static_cast<int>(caseSensitive_ ? i->current() : CaseFolder::fold(i->current())))
 			return false;
@@ -134,10 +134,10 @@ namespace {
  * @return true if the pattern was found
  */
 bool LiteralPattern::search(const CharacterIterator& target, Direction direction,
-		auto_ptr<CharacterIterator>& matchedFirst, auto_ptr<CharacterIterator>& matchedLast) const {
+		unique_ptr<CharacterIterator>& matchedFirst, unique_ptr<CharacterIterator>& matchedLast) const {
 	const_cast<LiteralPattern*>(this)->makeShiftTable(direction);
 	// TODO: this implementation is just scrath.
-	auto_ptr<CharacterIterator> t(target.clone());
+	unique_ptr<CharacterIterator> t(target.clone());
 	if(direction == Direction::FORWARD) {
 		orzAdvance(*t, last_ - first_ - 1);
 		for(const int* pattern; t->hasNext(); orzAdvance(*t,
@@ -146,7 +146,7 @@ bool LiteralPattern::search(const CharacterIterator& target, Direction direction
 				(caseSensitive_ ? t->current() : CaseFolder::fold(t->current())) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
 				t->previous(), --pattern) {
 				if(pattern == first_) {
-					matchedFirst = t;
+					matchedFirst = move(t);
 					matchedLast = matchedFirst->clone();
 					orzAdvance(*matchedLast, last_ - first_);
 					return true;
@@ -162,7 +162,7 @@ bool LiteralPattern::search(const CharacterIterator& target, Direction direction
 					t->next(), ++pattern) {
 				if(pattern == last_ - 1) {
 					orzAdvance(*t, first_ - last_ + 1);
-					matchedFirst = t;
+					matchedFirst = move(t);
 					matchedLast = matchedFirst->clone();
 					orzAdvance(*matchedLast, last_ - first_);
 					return true;
@@ -442,7 +442,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 		callback->replacementStarted(document, Region(scope).normalize());
 
 	if(type() == LITERAL) {
-		auto_ptr<CharacterIterator> matchedFirst, matchedLast;
+		unique_ptr<CharacterIterator> matchedFirst, matchedLast;
 		Point endOfScope(document, scope.end());
 		for(DocumentCharacterIterator i(document, scope); i.hasNext(); ) {
 			if(!literalPattern_->search(i, Direction::FORWARD, matchedFirst, matchedLast))
@@ -518,7 +518,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 		Position lastEOS(endOfScope);
 		DocumentCharacterIterator e(document, endOfScope);
 		DocumentCharacterIterator b(e);
-		auto_ptr<regex::Matcher<DocumentCharacterIterator> > matcher(
+		unique_ptr<regex::Matcher<DocumentCharacterIterator> > matcher(
 			regexPattern_->matcher(beginningOfDocument(document), endOfDocument(document)));
 		matcher->region(
 			DocumentCharacterIterator(document, scope.beginning()),
@@ -623,7 +623,7 @@ bool TextSearcher::search(const Document& document,
 		throw BadPositionException(from);
 	bool matched = false;
 	if(type() == LITERAL) {
-		auto_ptr<CharacterIterator> matchedFirst, matchedLast;
+		unique_ptr<CharacterIterator> matchedFirst, matchedLast;
 		for(DocumentCharacterIterator i(document, scope, from);
 				(direction == Direction::FORWARD) ? i.hasNext() : i.hasPrevious();
 				(direction == Direction::FORWARD) ? i.next() : i.previous()) {
@@ -936,7 +936,7 @@ inline void IncrementalSearcher::setPatternToSearcher(bool pushToHistory) {
 	case TextSearcher::LITERAL:
 		// TODO: specify 'collator' parameter.
 		searcher_->setPattern(
-			auto_ptr<const LiteralPattern>(new LiteralPattern(pattern_, searcher_->isCaseSensitive())), pushToHistory);
+			unique_ptr<const LiteralPattern>(new LiteralPattern(pattern_, searcher_->isCaseSensitive())), pushToHistory);
 		break;
 #ifndef ASCENSION_NO_REGEX
 	case TextSearcher::REGULAR_EXPRESSION:

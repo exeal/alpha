@@ -55,7 +55,9 @@ namespace ascension {
 			ASCENSION_UNASSIGNABLE_TAG(Point);
 		public:
 			// constructors
-//			explicit Point(Document& document, PointListener* listener = 0);
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+			explicit Point(Document& document, PointListener* listener = 0);
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 			Point(Document& document, const Position& position, PointListener* listener = 0);
 			Point(const Point& other);
 			virtual ~Point() /*throw()*/;

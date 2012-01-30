@@ -188,7 +188,7 @@ namespace {
 	 */
 	void verifyNewline(const string& encoding, Newline newline) {
 		if(newline == text::NLF_NEXT_LINE || newline == text::NLF_LINE_SEPARATOR || newline == text::NLF_PARAGRAPH_SEPARATOR) {
-			auto_ptr<Encoder> encoder(Encoder::forName(encoding));
+			unique_ptr<Encoder> encoder(Encoder::forName(encoding));
 			if(encoder.get() == 0)
 				throw UnsupportedEncodingException("the specified encoding is not supported.");
 			else if(!encoder->canEncode(newlineString(newline)[0]))
@@ -1747,7 +1747,7 @@ void RecursiveDirectoryIterator::next() {
 		PathString subdir(directory());
 		subdir += PATH_SEPARATORS[0];
 		subdir += current();
-		auto_ptr<DirectoryIterator> sub(new DirectoryIterator(subdir.c_str()));
+		unique_ptr<DirectoryIterator> sub(new DirectoryIterator(subdir.c_str()));
 		if(sub->hasNext()) {
 			stack_.push(sub.release());
 			return;

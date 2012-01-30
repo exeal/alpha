@@ -37,7 +37,7 @@ namespace ascension {
 			// constructors
 			LiteralPattern(const String& pattern, bool caseSensitive = true
 #ifndef ASCENSION_NO_UNICODE_COLLATION
-				, std::auto_ptr<const text::Collator> collator = std::auto_ptr<const text::Collator>(0)
+				, std::unique_ptr<const text::Collator> collator = std::unique_ptr<const text::Collator>(0)
 #endif // !ASCENSION_NO_UNICODE_COLLATION
 );
 			~LiteralPattern() /*throw()*/;
@@ -47,15 +47,15 @@ namespace ascension {
 			// operations
 			bool matches(const text::CharacterIterator& target) const;
 			bool search(const text::CharacterIterator& target, Direction direction,
-				std::auto_ptr<text::CharacterIterator>& matchedFirst,
-				std::auto_ptr<text::CharacterIterator>& matchedLast) const;
+				std::unique_ptr<text::CharacterIterator>& matchedFirst,
+				std::unique_ptr<text::CharacterIterator>& matchedLast) const;
 		private:
 			void makeShiftTable(Direction direction) /*throw()*/;
 		private:
 			const String pattern_;
 			const bool caseSensitive_;
 #ifndef ASCENSION_NO_UNICODE_COLLATION
-			const std::auto_ptr<const text::Collator> collator_;
+			const std::unique_ptr<const text::Collator> collator_;
 #endif // !ASCENSION_NO_UNICODE_COLLATION
 			std::array<std::ptrdiff_t, 65536> lastOccurences_;	// for forward search
 			std::array<std::ptrdiff_t, 65536> firstOccurences_;	// for backward search
@@ -146,7 +146,7 @@ namespace ascension {
 			const String& replacement(std::size_t index = 0) const;
 			void setMaximumNumberOfStoredStrings(std::size_t number) /*throw()*/;
 			template<typename PatternType>
-			TextSearcher& setPattern(std::auto_ptr<const PatternType> pattern, bool dontRemember = false);
+			TextSearcher& setPattern(std::unique_ptr<const PatternType> pattern, bool dontRemember = false);
 			// search conditions
 			int collationWeight() const /*throw()*/;
 			bool isCaseSensitive() const /*throw()*/;
@@ -173,11 +173,11 @@ namespace ascension {
 		private:
 			void pushHistory(const String& s, bool forReplacements);
 		private:
-			std::auto_ptr<const LiteralPattern> literalPattern_;
+			std::unique_ptr<const LiteralPattern> literalPattern_;
 #ifndef ASCENSION_NO_REGEX
-			std::auto_ptr<const regex::Pattern> regexPattern_;
-			std::auto_ptr<const regex::MigemoPattern> migemoPattern_;
-			std::auto_ptr<regex::Matcher<kernel::DocumentCharacterIterator> > regexMatcher_;
+			std::unique_ptr<const regex::Pattern> regexPattern_;
+			std::unique_ptr<const regex::MigemoPattern> migemoPattern_;
+			std::unique_ptr<regex::Matcher<kernel::DocumentCharacterIterator> > regexMatcher_;
 #endif // !ASCENSION_NO_REGEX
 			mutable struct LastResult {
 				const kernel::Document* document;
@@ -362,10 +362,10 @@ namespace ascension {
 	inline const String& TextSearcher::replacement(std::size_t index /* = 0 */) const {
 		if(index >= storedReplacements_.size()) throw IndexOutOfBoundsException();
 		std::list<String>::const_iterator i(storedReplacements_.begin()); std::advance(i, index); return *i;}
-	template<> inline TextSearcher& TextSearcher::setPattern<LiteralPattern>(std::auto_ptr<const LiteralPattern> pattern, bool dontRemember /* = false */) {
+	template<> inline TextSearcher& TextSearcher::setPattern<LiteralPattern>(std::unique_ptr<const LiteralPattern> pattern, bool dontRemember /* = false */) {
 		if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
 			pushHistory(pattern->pattern(), false);
-		literalPattern_ = pattern;
+		literalPattern_ = move(pattern);
 #ifndef ASCENSION_NO_REGEX
 		regexPattern_.reset();
 		regexMatcher_.reset();
@@ -376,11 +376,11 @@ namespace ascension {
 		return *this;
 	}
 #ifndef ASCENSION_NO_REGEX
-	template<> inline TextSearcher& TextSearcher::setPattern<regex::Pattern>(std::auto_ptr<const regex::Pattern> pattern, bool dontRemember /* = false */) {
+	template<> inline TextSearcher& TextSearcher::setPattern<regex::Pattern>(std::unique_ptr<const regex::Pattern> pattern, bool dontRemember /* = false */) {
 		if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
 			pushHistory(pattern->pattern(), false);
 		literalPattern_.reset();
-		regexPattern_ = pattern;
+		regexPattern_ = move(pattern);
 		regexMatcher_.reset();
 #ifndef ASCENSION_NO_MIGEMO
 		migemoPattern_.reset();
@@ -388,12 +388,12 @@ namespace ascension {
 		return *this;
 	}
 #ifndef ASCENSION_NO_MIGEMO
-	template<> inline TextSearcher& TextSearcher::setPattern<regex::MigemoPattern>(std::auto_ptr<const regex::MigemoPattern> pattern, bool dontRemember /* = false */) {
+	template<> inline TextSearcher& TextSearcher::setPattern<regex::MigemoPattern>(std::unique_ptr<const regex::MigemoPattern> pattern, bool dontRemember /* = false */) {
 		if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
 			pushHistory(pattern->pattern(), false);
 		literalPattern_.reset();
 		regexPattern_.reset();
-		migemoPattern_ = pattern;
+		migemoPattern_ = move(pattern);
 		regexMatcher_.reset();
 		return *this;
 	}

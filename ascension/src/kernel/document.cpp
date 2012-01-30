@@ -827,10 +827,10 @@ void Document::setModified() /*throw()*/ {
 
 /**
  * Sets the new document partitioner.
- * @param newPartitioner The new partitioner. the ownership will be transferred to the callee
+ * @param newPartitioner The new partitioner. The ownership will be transferred to the callee
  */
-void Document::setPartitioner(auto_ptr<DocumentPartitioner> newPartitioner) /*throw()*/ {
-	partitioner_ = newPartitioner;
+void Document::setPartitioner(unique_ptr<DocumentPartitioner> newPartitioner) /*throw()*/ {
+	partitioner_ = move(newPartitioner);
 	if(partitioner_.get() != 0)
 		partitioner_->install(*this);
 	partitioningChanged(region());
@@ -1090,8 +1090,8 @@ void DocumentCharacterIterator::doAssign(const CharacterIterator& other) {
 }
 
 /// @see text#CharacterIterator#doClone
-auto_ptr<CharacterIterator> DocumentCharacterIterator::doClone() const {
-	return auto_ptr<CharacterIterator>(new DocumentCharacterIterator(*this));
+unique_ptr<CharacterIterator> DocumentCharacterIterator::doClone() const {
+	return unique_ptr<CharacterIterator>(new DocumentCharacterIterator(*this));
 }
 
 /// @see text#CharacterIterator#doFirst

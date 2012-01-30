@@ -79,11 +79,10 @@ DefaultCaretShaper::DefaultCaretShaper() /*throw()*/ : updater_(0) {
 }
 
 /// @see CaretListener#caretMoved
-void DefaultCaretShaper::caretMoved(const Caret& caret, const boost::optional<k::Region>& oldRegion) {
+void DefaultCaretShaper::caretMoved(const Caret& caret, const k::Region& oldRegion) {
 	if(updater_ != 0) {
 		assert(&updater_->caret() == &caret);	// sanity check...
-		if(static_cast<bool>(oldRegion) == static_cast<bool>(caret.position())
-				|| (caret.position() && oldRegion && line(caret) != oldRegion->second.line))
+		if(line(caret) != oldRegion.second.line)
 			updater_->update();
 	}
 }
@@ -113,10 +112,10 @@ namespace {
 	 * @param color The color
 	 * @return The image
 	 */
-	inline auto_ptr<Image> createSolidCaretImage(uint16_t width, uint16_t height, const Color& color) {
+	inline unique_ptr<Image> createSolidCaretImage(uint16_t width, uint16_t height, const Color& color) {
 		const AutoBuffer<uint32_t> pattern(new uint32_t[width * height]);
 		uninitialized_fill(pattern.get(), pattern.get() + (width * height), packColor(color));
-		return auto_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(
+		return unique_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(
 			pattern.get()), geometry::make<NativeSize>(width, height), Image::ARGB_32));
 	}
 	inline Scalar systemDefinedCaretMeasure() {
@@ -146,7 +145,7 @@ namespace {
 	 * @param color The color
 	 * @return The bitmap
 	 */
-	inline auto_ptr<Image> createRTLCaretImage(uint16_t extent, const Color& color) {
+	inline unique_ptr<Image> createRTLCaretImage(uint16_t extent, const Color& color) {
 		const uint32_t white = 0, black = packColor(color);
 		AutoBuffer<uint32_t> pattern(new uint32_t[5 * extent]);
 		assert(extent > 3);
@@ -157,7 +156,7 @@ namespace {
 //			if(bold)
 //				pattern[i * 5 + 4] = black;
 		}
-		return auto_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(
+		return unique_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(
 			pattern.get()), geometry::make<NativeSize>(5, extent), Image::ARGB_32));
 	}
 	/**
@@ -166,7 +165,7 @@ namespace {
 	 * @param color The color
 	 * @return The bitmap
 	 */
-	inline auto_ptr<Image> createTISCaretImage(uint16_t extent, const Color& color) {
+	inline unique_ptr<Image> createTISCaretImage(uint16_t extent, const Color& color) {
 		const uint32_t white = 0, black = packColor(color);
 		const uint16_t width = max<uint16_t>(extent / 8, 3);
 		AutoBuffer<uint32_t> pattern(new uint32_t[width * extent]);
@@ -182,11 +181,11 @@ namespace {
 //				pattern[width * (extent - 2) + x] = black;
 		for(uint16_t x = 0; x < width; ++x)
 			pattern[width * (extent - 1) + x] = black;
-		return auto_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(
+		return unique_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(
 			pattern.get()), geometry::make<NativeSize>(width, extent), Image::ARGB_32));
 	}
 
-	void shapeCaret(const Caret& caret, bool localeSensitive, auto_ptr<Image>& image, NativePoint& alignmentPoint) {
+	void shapeCaret(const Caret& caret, bool localeSensitive, unique_ptr<Image>& image, NativePoint& alignmentPoint) {
 		const bool overtype = caret.isOvertypeMode() && isSelectionEmpty(caret);
 		const TextRenderer& renderer = caret.textViewer().textRenderer();
 		const TextLayout& layout = renderer.layouts().at(line(caret));
@@ -239,7 +238,7 @@ namespace {
 }
 
 /// @see CaretShaper#shape
-void DefaultCaretShaper::shape(auto_ptr<Image>& image, NativePoint& alignmentPoint) const /*throw()*/ {
+void DefaultCaretShaper::shape(unique_ptr<Image>& image, NativePoint& alignmentPoint) const /*throw()*/ {
 	return shapeCaret(updater_->caret(), false, image, alignmentPoint);
 }
 
@@ -313,7 +312,7 @@ void LocaleSensitiveCaretShaper::selectionShapeChanged(const Caret&) {
 }
 
 /// @see CaretShaper#shape
-void LocaleSensitiveCaretShaper::shape(auto_ptr<Image>& image, NativePoint& alignmentPoint) const /*throw()*/ {
+void LocaleSensitiveCaretShaper::shape(unique_ptr<Image>& image, NativePoint& alignmentPoint) const /*throw()*/ {
 	return shapeCaret(updater()->caret(), true, image, alignmentPoint);
 }
 

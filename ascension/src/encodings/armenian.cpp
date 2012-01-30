@@ -28,8 +28,8 @@ namespace {
 	template<int n> class ARMSCII : public EncoderFactoryBase {
 	public:
 		ARMSCII() /*throw()*/;
-		auto_ptr<Encoder> create() const /*throw()*/ {
-			return auto_ptr<Encoder>(new InternalEncoder(*this));
+		unique_ptr<Encoder> create() const /*throw()*/ {
+			return unique_ptr<Encoder>(new InternalEncoder(*this));
 		}
 	private:
 		class InternalEncoder : public Encoder {
@@ -405,7 +405,7 @@ namespace {
 			Encoder::registerFactory(ARMSCII_7);
 			Encoder::registerFactory(ARMSCII_8A);
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
-			EncodingDetector::registerDetector(auto_ptr<EncodingDetector>(new ArmenianDetector));
+			EncodingDetector::registerDetector(unique_ptr<EncodingDetector>(new ArmenianDetector));
 		}
 	} installer;
 

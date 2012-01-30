@@ -124,7 +124,7 @@ namespace ascension {
 				 *              can be the beginning of the found hyperlink
 				 * @return The found hyperlink, or @c null if not found
 				 */
-				virtual std::auto_ptr<Hyperlink> nextHyperlink(
+				virtual std::unique_ptr<Hyperlink> nextHyperlink(
 					const kernel::Document& document, Index line, const Range<Index>& range) const /*throw()*/ = 0;
 			};
 
@@ -138,7 +138,7 @@ namespace ascension {
 				URIHyperlinkDetector(std::shared_ptr<const rules::URIDetector> uriDetector) /*throw()*/;
 				~URIHyperlinkDetector() /*throw()*/;
 				// HyperlinkDetector
-				std::auto_ptr<Hyperlink> nextHyperlink(
+				std::unique_ptr<Hyperlink> nextHyperlink(
 					const kernel::Document& document, Index line, const Range<Index>& range) const /*throw()*/;
 			private:
 				std::shared_ptr<const rules::URIDetector> uriDetector_;
@@ -150,9 +150,9 @@ namespace ascension {
 			class CompositeHyperlinkDetector : public hyperlink::HyperlinkDetector {
 			public:
 				~CompositeHyperlinkDetector() /*throw()*/;
-				void setDetector(kernel::ContentType contentType, std::auto_ptr<hyperlink::HyperlinkDetector> detector);
+				void setDetector(kernel::ContentType contentType, std::unique_ptr<hyperlink::HyperlinkDetector> detector);
 				// hyperlink.HyperlinkDetector
-				std::auto_ptr<Hyperlink> nextHyperlink(
+				std::unique_ptr<Hyperlink> nextHyperlink(
 					const kernel::Document& document, Index line, const Range<Index>& range) const /*throw()*/;
 			private:
 				std::map<kernel::ContentType, hyperlink::HyperlinkDetector*> composites_;
@@ -184,7 +184,7 @@ namespace ascension {
 			void setGlobalTextStyle(std::shared_ptr<const TextToplevelStyle> newStyle);
 			void textLineColors(Index line, graphics::Color& foreground, graphics::Color& background) const;
 			TextLineStyle& textLineStyle(Index line, TextLineStyle& style) const;
-			std::auto_ptr<StyledTextRunIterator> textRunStyles(Index line) const;
+			std::unique_ptr<StyledTextRunIterator> textRunStyles(Index line) const;
 			// strategies
 			void addTextLineColorDirector(std::shared_ptr<TextLineColorDirector> director);
 			void removeTextLineColorDirector(TextLineColorDirector& director) /*throw()*/;

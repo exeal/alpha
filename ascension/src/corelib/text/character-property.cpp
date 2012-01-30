@@ -265,7 +265,7 @@ int WordBreak::of(CodePoint c,
 		0xfe14u		// Presentation Form For Vertical Semicolon
 	};
 	static bool localeInitialized = false;
-	static auto_ptr<locale> japanese, swedish;
+	static unique_ptr<locale> japanese, swedish;
 	if(!localeInitialized) {
 		localeInitialized = true;
 		static const char* JAPANESE_NAMES[] = {"ja_JP", "ja", "JP"};

@@ -246,7 +246,7 @@ namespace {
 		Index len;	// length of room
 		// decompose
 		basic_stringbuf<CodePoint> buffer(ios_base::out);
-		for(auto_ptr<CharacterIterator> i(first.clone()); i->offset() < last.offset(); i->next()) {
+		for(unique_ptr<CharacterIterator> i(first.clone()); i->offset() < last.offset(); i->next()) {
 			len = internalDecompose(i->current(), form == Normalizer::FORM_KD || form == Normalizer::FORM_KC, room);
 			for(utf::CharacterDecodeIterator<const Char*> j(room, room + len); j.tell() < room + len; ++j)
 				buffer.sputc(*j);
@@ -337,13 +337,13 @@ Normalizer::Normalizer() {
  * @param text The text to be normalized
  * @param form The normalization form
  */
-Normalizer::Normalizer(const CharacterIterator& text, Form form) : form_(form), current_(text.clone()) {
+Normalizer::Normalizer(const CharacterIterator& text, Form form) : form_(form), current_(text.clone().release()) {
 	nextClosure(Direction::FORWARD, true);
 }
 
 /// Copy-constructor.
 Normalizer::Normalizer(const Normalizer& rhs) : form_(rhs.form_),
-		current_(rhs.current_->clone()), normalizedBuffer_(rhs.normalizedBuffer_), indexInBuffer_(rhs.indexInBuffer_) {
+		current_(rhs.current_->clone().release()), normalizedBuffer_(rhs.normalizedBuffer_), indexInBuffer_(rhs.indexInBuffer_) {
 }
 
 /// Destructor.
@@ -369,7 +369,7 @@ Normalizer& Normalizer::operator=(const Normalizer& rhs) {
  * @retval &gt;0 @a s1 is greater than @a s2
  */
 int Normalizer::compare(const String& s1, const String& s2, CaseSensitivity caseSensitivity) {
-	auto_ptr<String>
+	unique_ptr<String>
 		nfd1((caseSensitivity == CASE_INSENSITIVE_EXCLUDING_TURKISH_I || !isFCD(s1.begin(), s1.end())) ? new String : 0),
 		nfd2((caseSensitivity == CASE_INSENSITIVE_EXCLUDING_TURKISH_I || !isFCD(s2.begin(), s2.end())) ? new String : 0);
 	if(nfd1.get() != 0)
@@ -381,7 +381,7 @@ int Normalizer::compare(const String& s1, const String& s2, CaseSensitivity case
 
 /// Normalizes the next or previous closure for the following iteration.
 void Normalizer::nextClosure(Direction direction, bool initialize) {
-	auto_ptr<CharacterIterator> next;
+	unique_ptr<CharacterIterator> next;
 	if(direction == Direction::FORWARD) {
 		if(!initialize) {
 			do {

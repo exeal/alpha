@@ -177,7 +177,7 @@ namespace ascension {
 #else // ASCENSION_OS_POSIX
 				off_t originalFileEnd_;
 #endif
-				std::auto_ptr<encoding::Encoder> encoder_;
+				std::unique_ptr<encoding::Encoder> encoder_;
 				Char ucsBuffer_[8192];
 			};
 

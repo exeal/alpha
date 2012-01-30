@@ -736,7 +736,7 @@ void TextViewer::initialize() {
 	p->setRules(rules, ASCENSION_ENDOF(rules));
 	for(size_t i = 0; i < ASCENSION_COUNTOF(rules); ++i)
 		delete rules[i];
-	document().setPartitioner(auto_ptr<DocumentPartitioner>(p));
+	document().setPartitioner(unique_ptr<DocumentPartitioner>(p));
 
 	PresentationReconstructor* pr = new PresentationReconstructor(presentation());
 
@@ -744,16 +744,16 @@ void TextViewer::initialize() {
 	static const Char JSDOC_ATTRIBUTES[] = L"@addon @argument @author @base @class @constructor @deprecated @exception @exec @extends"
 		L" @fileoverview @final @ignore @link @member @param @private @requires @return @returns @see @throws @type @version";
 	{
-		auto_ptr<const WordRule> jsdocAttributes(new WordRule(220, JSDOC_ATTRIBUTES, ASCENSION_ENDOF(JSDOC_ATTRIBUTES) - 1, L' ', true));
-		auto_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(JS_MULTILINE_DOC_COMMENT));
+		unique_ptr<const WordRule> jsdocAttributes(new WordRule(220, JSDOC_ATTRIBUTES, ASCENSION_ENDOF(JSDOC_ATTRIBUTES) - 1, L' ', true));
+		unique_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(JS_MULTILINE_DOC_COMMENT));
 		scanner->addWordRule(jsdocAttributes);
-		scanner->addRule(auto_ptr<Rule>(new URIRule(219, URIDetector::defaultIANAURIInstance(), false)));
+		scanner->addRule(unique_ptr<Rule>(new URIRule(219, URIDetector::defaultIANAURIInstance(), false)));
 		map<Token::ID, const TextStyle> jsdocStyles;
 		jsdocStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle(Colors(Color(0x00, 0x80, 0x00)))));
 		jsdocStyles.insert(make_pair(219, TextStyle(Colors(Color(0x00, 0x80, 0x00)), false, false, false, SOLID_UNDERLINE)));
 		jsdocStyles.insert(make_pair(220, TextStyle(Colors(Color(0x00, 0x80, 0x00)), true)));
-		auto_ptr<IPartitionPresentationReconstructor> ppr(
-			new LexicalPartitionPresentationReconstructor(document(), auto_ptr<ITokenScanner>(scanner.release()), jsdocStyles));
+		unique_ptr<IPartitionPresentationReconstructor> ppr(
+			new LexicalPartitionPresentationReconstructor(document(), unique_ptr<ITokenScanner>(scanner.release()), jsdocStyles));
 		pr->setPartitionReconstructor(JS_MULTILINE_DOC_COMMENT, ppr);
 	}
 
@@ -763,36 +763,36 @@ void TextViewer::initialize() {
 	static const Char JS_FUTURE_KEYWORDS[] = L"abstract boolean byte char class double enum extends final float goto"
 		L" implements int interface long native package private protected public short static super synchronized throws transient volatile";
 	{
-		auto_ptr<const WordRule> jsKeywords(new WordRule(221, JS_KEYWORDS, ASCENSION_ENDOF(JS_KEYWORDS) - 1, L' ', true));
-		auto_ptr<const WordRule> jsFutureKeywords(new WordRule(222, JS_FUTURE_KEYWORDS, ASCENSION_ENDOF(JS_FUTURE_KEYWORDS) - 1, L' ', true));
-		auto_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(DEFAULT_CONTENT_TYPE));
+		unique_ptr<const WordRule> jsKeywords(new WordRule(221, JS_KEYWORDS, ASCENSION_ENDOF(JS_KEYWORDS) - 1, L' ', true));
+		unique_ptr<const WordRule> jsFutureKeywords(new WordRule(222, JS_FUTURE_KEYWORDS, ASCENSION_ENDOF(JS_FUTURE_KEYWORDS) - 1, L' ', true));
+		unique_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(DEFAULT_CONTENT_TYPE));
 		scanner->addWordRule(jsKeywords);
 		scanner->addWordRule(jsFutureKeywords);
-		scanner->addRule(auto_ptr<const Rule>(new NumberRule(223)));
+		scanner->addRule(unique_ptr<const Rule>(new NumberRule(223)));
 		map<Token::ID, const TextStyle> jsStyles;
 		jsStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle()));
 		jsStyles.insert(make_pair(221, TextStyle(Colors(Color(0x00, 0x00, 0xff)))));
 		jsStyles.insert(make_pair(222, TextStyle(Colors(Color(0x00, 0x00, 0xff)), false, false, false, DASHED_UNDERLINE)));
 		jsStyles.insert(make_pair(223, TextStyle(Colors(Color(0x80, 0x00, 0x00)))));
 		pr->setPartitionReconstructor(DEFAULT_CONTENT_TYPE,
-			auto_ptr<IPartitionPresentationReconstructor>(new LexicalPartitionPresentationReconstructor(document(),
-				auto_ptr<ITokenScanner>(scanner.release()), jsStyles)));
+			unique_ptr<IPartitionPresentationReconstructor>(new LexicalPartitionPresentationReconstructor(document(),
+				unique_ptr<ITokenScanner>(scanner.release()), jsStyles)));
 	}
 
 	// other contents
-	pr->setPartitionReconstructor(JS_MULTILINE_COMMENT, auto_ptr<IPartitionPresentationReconstructor>(
+	pr->setPartitionReconstructor(JS_MULTILINE_COMMENT, unique_ptr<IPartitionPresentationReconstructor>(
 		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(Color(0x00, 0x80, 0x00))))));
-	pr->setPartitionReconstructor(JS_SINGLELINE_COMMENT, auto_ptr<IPartitionPresentationReconstructor>(
+	pr->setPartitionReconstructor(JS_SINGLELINE_COMMENT, unique_ptr<IPartitionPresentationReconstructor>(
 		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(Color(0x00, 0x80, 0x00))))));
-	pr->setPartitionReconstructor(JS_DQ_STRING, auto_ptr<IPartitionPresentationReconstructor>(
+	pr->setPartitionReconstructor(JS_DQ_STRING, unique_ptr<IPartitionPresentationReconstructor>(
 		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(Color(0x00, 0x00, 0x80))))));
-	pr->setPartitionReconstructor(JS_SQ_STRING, auto_ptr<IPartitionPresentationReconstructor>(
+	pr->setPartitionReconstructor(JS_SQ_STRING, unique_ptr<IPartitionPresentationReconstructor>(
 		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(Color(0x00, 0x00, 0x80))))));
 	new CurrentLineHighlighter(*caret_, Colors(Color(), Color::fromCOLORREF(::GetSysColor(COLOR_INFOBK))));
 
 	// URL hyperlinks test
-	auto_ptr<hyperlink::CompositeHyperlinkDetector> hld(new hyperlink::CompositeHyperlinkDetector);
-	hld->setDetector(JS_MULTILINE_DOC_COMMENT, auto_ptr<hyperlink::IHyperlinkDetector>(
+	unique_ptr<hyperlink::CompositeHyperlinkDetector> hld(new hyperlink::CompositeHyperlinkDetector);
+	hld->setDetector(JS_MULTILINE_DOC_COMMENT, unique_ptr<hyperlink::IHyperlinkDetector>(
 		new hyperlink::URIHyperlinkDetector(URIDetector::defaultIANAURIInstance(), false)));
 	presentation().setHyperlinkDetector(hld.release(), true);
 
@@ -823,11 +823,11 @@ void TextViewer::initialize() {
 		}
 		bool isCompletionProposalAutoActivationCharacter(CodePoint c) const /*throw()*/ {return c == L'.';}
 	};
-	auto_ptr<contentassist::ContentAssistant> ca(new contentassist::ContentAssistant());
-	ca->setContentAssistProcessor(JS_MULTILINE_DOC_COMMENT, auto_ptr<contentassist::IContentAssistProcessor>(new JSDocProposals(cti->getIdentifierSyntax(JS_MULTILINE_DOC_COMMENT))));
-	ca->setContentAssistProcessor(DEFAULT_CONTENT_TYPE, auto_ptr<contentassist::IContentAssistProcessor>(new JSProposals(cti->getIdentifierSyntax(DEFAULT_CONTENT_TYPE))));
-	setContentAssistant(auto_ptr<contentassist::IContentAssistant>(ca));
-	document().setContentTypeInformation(auto_ptr<IContentTypeInformationProvider>(cti));
+	unique_ptr<contentassist::ContentAssistant> ca(new contentassist::ContentAssistant());
+	ca->setContentAssistProcessor(JS_MULTILINE_DOC_COMMENT, unique_ptr<contentassist::IContentAssistProcessor>(new JSDocProposals(cti->getIdentifierSyntax(JS_MULTILINE_DOC_COMMENT))));
+	ca->setContentAssistProcessor(DEFAULT_CONTENT_TYPE, unique_ptr<contentassist::IContentAssistProcessor>(new JSProposals(cti->getIdentifierSyntax(DEFAULT_CONTENT_TYPE))));
+	setContentAssistant(unique_ptr<contentassist::IContentAssistant>(ca));
+	document().setContentTypeInformation(unique_ptr<IContentTypeInformationProvider>(cti));
 #endif // 1
 
 	class ZebraTextRunStyleTest : public TextRunStyleDirector {
@@ -856,7 +856,7 @@ void TextViewer::initialize() {
 			void update() {
 				int temp = beginningIsBlackBack_ ? 0 : 1;
 				temp += (current_.position() % 2 == 0) ? 0 : 1;
-				auto_ptr<TextRunStyle> style(new TextRunStyle);
+				unique_ptr<TextRunStyle> style(new TextRunStyle);
 				style->foreground = Paint((temp % 2 == 0) ?
 					Color(0xff, 0x00, 0x00) : SystemColors::get(SystemColors::WINDOW_TEXT));
 				style->background = Paint((temp % 2 == 0) ?
@@ -871,8 +871,8 @@ void TextViewer::initialize() {
 	public:
 		ZebraTextRunStyleTest(const k::Document& document) : document_(document) {
 		}
-		auto_ptr<StyledTextRunIterator> queryTextRunStyle(Index line) const {
-			return auto_ptr<StyledTextRunIterator>(new Iterator(document_.lineLength(line), line % 2 == 0));
+		unique_ptr<StyledTextRunIterator> queryTextRunStyle(Index line) const {
+			return unique_ptr<StyledTextRunIterator>(new Iterator(document_.lineLength(line), line % 2 == 0));
 		}
 	private:
 		const k::Document& document_;

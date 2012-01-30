@@ -127,19 +127,19 @@ namespace ascension {
 			private:
 				struct GeneratorBase {
 					virtual ~GeneratorBase() /*throw()*/ {}
-					virtual std::auto_ptr<const TextLayout> generate(Index line) const = 0;
+					virtual std::unique_ptr<const TextLayout> generate(Index line) const = 0;
 				};
 				template<typename Function>
 				class Generator : public GeneratorBase {
 				public:
 					Generator(Function function) : function_(function) {}
-					std::auto_ptr<const TextLayout> generate(Index line) const {return function_(line);}
+					std::unique_ptr<const TextLayout> generate(Index line) const {return function_(line);}
 				private:
 					const Function function_;
 				};
 			private:
 				kernel::Document& document_;
-				std::auto_ptr<GeneratorBase> layoutGenerator_;
+				std::unique_ptr<GeneratorBase> layoutGenerator_;
 				std::list<LineLayout> layouts_;	// should use GapVector instead?
 				const std::size_t bufferSize_;
 				const bool autoRepair_;

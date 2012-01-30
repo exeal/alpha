@@ -13,7 +13,7 @@
 #include <ascension/corelib/standard-iterator-adapter.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>	// CharacterIterator
 #include <ascension/corelib/text/character.hpp>
-#include <memory>		// std.auto_ptr
+#include <memory>		// std.unique_ptr
 #include <stdexcept>	// std.out_of_range
 #include <string>
 
@@ -87,7 +87,7 @@ namespace ascension {
 			void nextClosure(Direction direction, bool initialize);
 		private:
 			Form form_;
-			std::auto_ptr<CharacterIterator> current_;
+			std::unique_ptr<CharacterIterator> current_;
 			std::basic_string<CodePoint> normalizedBuffer_;
 			std::size_t indexInBuffer_;
 			std::ptrdiff_t nextOffset_;
