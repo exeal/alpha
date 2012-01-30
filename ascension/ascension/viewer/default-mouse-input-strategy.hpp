@@ -17,7 +17,7 @@
 #include <ascension/kernel/position.hpp>	// kernel.Position
 #include <ascension/viewer/caret-observers.hpp>
 #include <ascension/viewer/base/widget.hpp>
-#include <memory>	// std.auto_ptr
+#include <memory>	// std.unique_ptr
 #include <utility>	// std.pair
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
@@ -131,7 +131,7 @@ namespace ascension {
 				win32::com::ComPtr<IDropTargetHelper> dropTargetHelper;
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 			} dnd_;
-			std::auto_ptr<base::Widget> autoScrollOriginMark_;
+			std::unique_ptr<base::Widget> autoScrollOriginMark_;
 			const presentation::hyperlink::Hyperlink* lastHoveredHyperlink_;
 			Timer timer_;
 			static const unsigned int SELECTION_EXPANSION_INTERVAL, DRAGGING_TRACK_INTERVAL;

@@ -163,13 +163,13 @@ namespace {
 	private:
 		enum {LITERAL_STATE, ENGLISH_STATE, VIETNAMESE_STATE} encodingState_, decodingState_;
 		static const Byte CLS = 0x01, COM = 0x5c;
-		static auto_ptr<sbcs::BidirectionalMap> table_;
+		static unique_ptr<sbcs::BidirectionalMap> table_;
 	};
 	class VIQRFactory : public implementation::EncoderFactoryBase {
 	public:
 		VIQRFactory() /*throw()*/ : implementation::EncoderFactoryBase("VIQR", standard::VIQR, "Vietnamese (VIQR)", 3, 1, "csVIQR", 0x1a) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new VIQREncoder);}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new VIQREncoder);}
 	} VIQR;
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 
@@ -195,7 +195,7 @@ namespace {
 
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 
-auto_ptr<sbcs::BidirectionalMap> VIQREncoder::table_;
+unique_ptr<sbcs::BidirectionalMap> VIQREncoder::table_;
 
 VIQREncoder::VIQREncoder() /*throw()*/ : encodingState_(VIETNAMESE_STATE), decodingState_(VIETNAMESE_STATE) {
 	if(table_.get() == 0)

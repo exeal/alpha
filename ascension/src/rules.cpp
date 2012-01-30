@@ -714,12 +714,12 @@ RegionRule::RegionRule(Token::Identifier id, const String& startSequence, const 
 }
 
 /// @see Rule#parse
-auto_ptr<Token> RegionRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
+unique_ptr<Token> RegionRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
 	// match the start sequence
 	if(first[0] != startSequence_[0]
 			|| static_cast<size_t>(last - first) < startSequence_.length() + endSequence_.length()
 			|| (startSequence_.length() > 1 && umemcmp(first + 1, startSequence_.data() + 1, startSequence_.length() - 1) != 0))
-		return auto_ptr<Token>(0);
+		return unique_ptr<Token>();
 	const Char* end = last;
 	if(!endSequence_.empty()) {
 		// search the end sequence
@@ -732,7 +732,7 @@ auto_ptr<Token> RegionRule::parse(const TokenScanner& scanner, const Char* first
 			}
 		}
 	}
-	auto_ptr<Token> result(new Token);
+	unique_ptr<Token> result(new Token);
 	result->id = tokenID();
 	result->region.first.line = result->region.second.line = scanner.getPosition().line;
 	result->region.first.offsetInLine = scanner.getPosition().line;
@@ -751,7 +751,7 @@ NumberRule::NumberRule(Token::Identifier id) /*throw()*/ : Rule(id) {
 }
 
 /// @see Rule#parse
-auto_ptr<Token> NumberRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
+unique_ptr<Token> NumberRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
 	assert(first < last);
 	/*
 		This is based on ECMAScript 3 "7.8.3 Numeric Literals" and performs the following regular
@@ -764,7 +764,7 @@ auto_ptr<Token> NumberRule::parse(const TokenScanner& scanner, const Char* first
 	// ISSUE: this implementation accepts some illegal format like as "0.1.2".
 	if(scanner.getPosition().offsetInLine > 0	// see below
 			&& (inRange<Char>(first[-1], '0', '9') || inRange<Char>(first[-1], 'A', 'F') || inRange<Char>(first[-1], 'a', 'f')))
-		return auto_ptr<Token>(0);
+		return unique_ptr<Token>();
 	const Char* e;
 	if(last - first > 2 && first[0] == '0' && (first[1] == 'x' || first[1] == 'X')) {	// HexIntegerLiteral?
 		for(e = first + 2; e < last; ++e) {
@@ -773,7 +773,7 @@ auto_ptr<Token> NumberRule::parse(const TokenScanner& scanner, const Char* first
 			break;
 		}
 		if(e == first + 2)
-			return auto_ptr<Token>(0);
+			return unique_ptr<Token>();
 	} else {	// DecimalLiteral?
 		bool foundDecimalIntegerLiteral = false, foundDot = false;
 		if(inRange<Char>(first[0], '0', '9')) {	// DecimalIntegerLiteral ::= /0|[1-9][0-9]*/
@@ -787,16 +787,16 @@ auto_ptr<Token> NumberRule::parse(const TokenScanner& scanner, const Char* first
 			foundDot = true;
 			e = find_if(++e, last, not1(InRange<Char>('0', '9')));
 			if(e[-1] == '.')
-				return auto_ptr<Token>(0);
+				return unique_ptr<Token>();
 		}
 		if(!foundDecimalIntegerLiteral && !foundDot)
-			return auto_ptr<Token>(0);
+			return unique_ptr<Token>();
 		if(e < last && (*e == 'e' || *e == 'E')) {	// ExponentPart ::= /[e|E][\+\-]?[0-9]+/
 			if(++e == last)
-				return auto_ptr<Token>(0);
+				return unique_ptr<Token>();
 			if(*e == '+' || *e == '-') {
 				if(++e == last)
-					return auto_ptr<Token>(0);
+					return unique_ptr<Token>();
 			}
 			e = find_if(++e, last, not1(InRange<Char>('0', '9')));
 		}
@@ -806,9 +806,9 @@ auto_ptr<Token> NumberRule::parse(const TokenScanner& scanner, const Char* first
 	assert(e > first);
 	// "The source character immediately following a NumericLiteral must not be an IdentifierStart or DecimalDigit."
 	if(e < last && (inRange<Char>(*e, '0', '9') || scanner.getIdentifierSyntax().isIdentifierStartCharacter(utf::decodeFirst(e, last))))
-		return auto_ptr<Token>(0);
+		return unique_ptr<Token>();
 
-	auto_ptr<Token> temp(new Token);
+	unique_ptr<Token> temp(new Token);
 	temp->id = tokenID();
 	temp->region.first.line = temp->region.second.line = scanner.getPosition().line;
 	temp->region.first.offsetInLine = scanner.getPosition().offsetInLine;
@@ -831,12 +831,12 @@ URIRule::URIRule(Token::Identifier id, shared_ptr<const URIDetector> uriDetector
 }
 
 /// @see Rule#parse
-auto_ptr<Token> URIRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
+unique_ptr<Token> URIRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
 	assert(first < last);
 	const Char* const e = uriDetector_->detect(first, last);
 	if(e == first)
-		return auto_ptr<Token>(0);
-	auto_ptr<Token> temp(new Token);
+		return unique_ptr<Token>();
+	unique_ptr<Token> temp(new Token);
 	temp->id = tokenID();
 	temp->region.first.line = temp->region.second.line = scanner.getPosition().line;
 	temp->region.first.offsetInLine = scanner.getPosition().offsetInLine;
@@ -901,10 +901,10 @@ WordRule::~WordRule() /*throw()*/ {
 }
 
 /// @see Rule#parse
-auto_ptr<Token> WordRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const {
+unique_ptr<Token> WordRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const {
 	if(!words_->matches(first, last))
-		return auto_ptr<Token>(0);
-	auto_ptr<Token> result(new Token);
+		return unique_ptr<Token>();
+	unique_ptr<Token> result(new Token);
 	result->id = tokenID();
 	result->region.first.line = result->region.second.line = scanner.getPosition().line;
 	result->region.first.offsetInLine = scanner.getPosition().offsetInLine;
@@ -923,16 +923,16 @@ auto_ptr<Token> WordRule::parse(const TokenScanner& scanner, const Char* first, 
  * @param pattern The compiled regular expression
  * @throw regex#PatternSyntaxException The specified pattern is invalid
  */
-RegexRule::RegexRule(Token::Identifier id, auto_ptr<const regex::Pattern> pattern) : Rule(id), pattern_(pattern) {
+RegexRule::RegexRule(Token::Identifier id, unique_ptr<const regex::Pattern> pattern) : Rule(id), pattern_(move(pattern)) {
 }
 
 /// @see Rule#parse
-auto_ptr<Token> RegexRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const {
+unique_ptr<Token> RegexRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const {
 	const utf::CharacterDecodeIterator<const Char*> b(first, last), e(first, last, last);
-	auto_ptr<regex::Matcher<utf::CharacterDecodeIterator<const Char*> > > matcher(pattern_->matcher(b, e));
+	unique_ptr<regex::Matcher<utf::CharacterDecodeIterator<const Char*>>> matcher(pattern_->matcher(b, e));
 	if(!matcher->lookingAt())
-		return auto_ptr<Token>(0);
-	auto_ptr<Token> token(new Token);
+		return unique_ptr<Token>();
+	unique_ptr<Token> token(new Token);
 	token->id = tokenID();
 	token->region.first.line = token->region.second.line = scanner.getPosition().line;
 	token->region.first.offsetInLine = scanner.getPosition().offsetInLine;
@@ -963,8 +963,8 @@ bool NullTokenScanner::hasNext() const /*throw()*/ {
 }
 
 /// @see TokenScanner#nextToken
-auto_ptr<Token> NullTokenScanner::nextToken() {
-	return auto_ptr<Token>(0);
+unique_ptr<Token> NullTokenScanner::nextToken() {
+	return unique_ptr<Token>();
 }
 
 /// @see TokenScanner#parse
@@ -1001,7 +1001,7 @@ const IdentifierSyntax& LexicalTokenScanner::getIdentifierSyntax() const /*throw
  * @throw std#invalid_argument @a rule is already registered
  * @throw BadScannerStateException The scanner is running
  */
-void LexicalTokenScanner::addRule(auto_ptr<const Rule> rule) {
+void LexicalTokenScanner::addRule(unique_ptr<const Rule> rule) {
 	if(rule.get() == 0)
 		throw NullPointerException("rule");
 	else if(hasNext())
@@ -1018,7 +1018,7 @@ void LexicalTokenScanner::addRule(auto_ptr<const Rule> rule) {
  * @throw std#invalid_argument @a rule is already registered
  * @throw BadScannerStateException The scanner is running
  */
-void LexicalTokenScanner::addWordRule(auto_ptr<const WordRule> rule) {
+void LexicalTokenScanner::addWordRule(unique_ptr<const WordRule> rule) {
 	if(rule.get() == 0)
 		throw NullPointerException("rule");
 	else if(hasNext())
@@ -1041,9 +1041,9 @@ bool LexicalTokenScanner::hasNext() const /*throw()*/ {
 }
 
 /// @see ITokenScanner#nextToken
-auto_ptr<Token> LexicalTokenScanner::nextToken() {
+unique_ptr<Token> LexicalTokenScanner::nextToken() {
 	const IdentifierSyntax& idSyntax = getIdentifierSyntax();
-	auto_ptr<Token> result;
+	unique_ptr<Token> result;
 	const String* line = &current_.line();
 	while(current_.hasNext()) {
 		if(current_.current() == LINE_SEPARATOR) {
@@ -1137,8 +1137,8 @@ LiteralTransitionRule::LiteralTransitionRule(ContentType contentType, ContentTyp
 }
 
 /// @see TransitionRule#clone
-auto_ptr<TransitionRule> LiteralTransitionRule::clone() const {
-	return auto_ptr<TransitionRule>(new LiteralTransitionRule(*this));
+unique_ptr<TransitionRule> LiteralTransitionRule::clone() const {
+	return unique_ptr<TransitionRule>(new LiteralTransitionRule(*this));
 }
 
 /// @see TransitionRule#matches
@@ -1168,7 +1168,7 @@ Index LiteralTransitionRule::matches(const String& line, Index offsetInLine) con
  * @throw regex#PatternSyntaxException @a pattern is invalid
  */
 RegexTransitionRule::RegexTransitionRule(ContentType contentType, ContentType destination,
-		auto_ptr<const regex::Pattern> pattern) : TransitionRule(contentType, destination), pattern_(pattern) {
+		unique_ptr<const regex::Pattern> pattern) : TransitionRule(contentType, destination), pattern_(move(pattern)) {
 }
 
 /// Copy-constructor.
@@ -1177,15 +1177,15 @@ RegexTransitionRule::RegexTransitionRule(const RegexTransitionRule& other) :
 }
 
 /// @see TransitionRule#clone
-auto_ptr<TransitionRule> RegexTransitionRule::clone() const {
-	return auto_ptr<TransitionRule>(new RegexTransitionRule(*this));
+unique_ptr<TransitionRule> RegexTransitionRule::clone() const {
+	return unique_ptr<TransitionRule>(new RegexTransitionRule(*this));
 }
 
 /// @see TransitionRule#matches
 Index RegexTransitionRule::matches(const String& line, Index offsetInLine) const {
 	try {
 		typedef utf::CharacterDecodeIterator<String::const_iterator> I;
-		auto_ptr<regex::Matcher<I> > matcher(pattern_->matcher(I(line.begin(), line.end()), I(line.begin(), line.end(), line.end())));
+		unique_ptr<regex::Matcher<I>> matcher(pattern_->matcher(I(line.begin(), line.end()), I(line.begin(), line.end(), line.end())));
 		matcher->region(I(line.begin(), line.end(), line.begin() + offsetInLine), matcher->regionEnd());
 		matcher->useAnchoringBounds(false).useTransparentBounds(true);
 		return matcher->lookingAt() ? max(matcher->end().tell() - matcher->start().tell(), 1) : 0;
@@ -1509,10 +1509,10 @@ inline void LexicalPartitioner::verify() const {
  * @throw NullPointerException @a tokenScanner is @c null
  */
 LexicalPartitionPresentationReconstructor::LexicalPartitionPresentationReconstructor(
-		const Presentation& presentation, auto_ptr<TokenScanner> tokenScanner,
+		const Presentation& presentation, unique_ptr<TokenScanner> tokenScanner,
 		const map<Token::Identifier, shared_ptr<const presentation::TextRunStyle>>& styles,
 		shared_ptr<const presentation::TextRunStyle> defaultStyle /* = shared_ptr<const presentation::TextRunStyle>() */)
-		: presentation_(presentation), tokenScanner_(tokenScanner), styles_(styles) {
+		: presentation_(presentation), tokenScanner_(move(tokenScanner)), styles_(styles) {
 	if(tokenScanner_.get() == 0)
 		throw NullPointerException("tokenScanner");
 }

@@ -12,8 +12,8 @@
 #include <ascension/corelib/standard-iterator-adapter.hpp>
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/utf.hpp>
-#include <stdexcept>
 #include <iterator>
+#include <stdexcept>
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #error These class definitions and implementations are based on old version of Unicode.
@@ -55,8 +55,8 @@ namespace ascension {
 				return *this;
 			}
 			/// Creates a copy of the iterator.
-			std::auto_ptr<CharacterIterator> clone() const {
-				std::auto_ptr<CharacterIterator> p(doClone());
+			std::unique_ptr<CharacterIterator> clone() const {
+				std::unique_ptr<CharacterIterator> p(doClone());
 				if(p.get() != 0)
 					p->offset_ = offset_;
 				return p;
@@ -101,7 +101,7 @@ namespace ascension {
 			/// Called by @c #assign method.
 			virtual void doAssign(const CharacterIterator& other) = 0;
 			/// Called by @c #clone method.
-			virtual std::auto_ptr<CharacterIterator> doClone() const = 0;
+			virtual std::unique_ptr<CharacterIterator> doClone() const = 0;
 			/// Called by @c #equals method.
 			virtual bool doEquals(const CharacterIterator& other) const = 0;
 			/// Called by @c #first method.
@@ -171,7 +171,7 @@ namespace ascension {
 			bool hasPrevious() const /*throw()*/ {return current_ != first_;}
 		private:
 			void doAssign(const CharacterIterator& other);
-			std::auto_ptr<CharacterIterator> doClone() const;
+			std::unique_ptr<CharacterIterator> doClone() const;
 			void doFirst();
 			bool doEquals(const CharacterIterator& other) const;
 			void doLast();

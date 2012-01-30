@@ -85,8 +85,8 @@ namespace ascension {
 				states_.top().fillStyle = style;
 				return *this;
 			}
-//			virtual std::auto_ptr<Gradient> createLinearGradient() = 0;
-//			virtual std::auto_ptr<Gradient> createRadicalGradient() = 0;
+//			virtual std::unique_ptr<Gradient> createLinearGradient() = 0;
+//			virtual std::unique_ptr<Gradient> createRadicalGradient() = 0;
 //			virtual Pattern createPattern() = 0;
 
 			FillRule fillRule() const /*throw()*/ {

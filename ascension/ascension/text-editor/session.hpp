@@ -54,7 +54,7 @@ namespace ascension {
 #endif // !ASCENSION_NO_MIGEMO
 			searcher::TextSearcher& textSearcher() /*throw()*/;
 			const searcher::TextSearcher& textSearcher() const /*throw()*/;
-			void setInputSequenceCheckers(std::auto_ptr<InputSequenceCheckers> isc) /*throw()*/;
+			void setInputSequenceCheckers(std::unique_ptr<InputSequenceCheckers> isc) /*throw()*/;
 #ifndef ASCENSION_NO_MIGEMO
 			void setMigemoPathName(const kernel::fileio::PathString& pathName, bool runtime);
 #endif // !ASCENSION_NO_MIGEMO
@@ -65,9 +65,9 @@ namespace ascension {
 		private:
 			std::vector<kernel::Document*> documents_;
 			KillRing killRing_;
-			std::auto_ptr<searcher::IncrementalSearcher> isearch_;
-			std::auto_ptr<searcher::TextSearcher> textSearcher_;
-			std::auto_ptr<InputSequenceCheckers> inputSequenceCheckers_;
+			std::unique_ptr<searcher::IncrementalSearcher> isearch_;
+			std::unique_ptr<searcher::TextSearcher> textSearcher_;
+			std::unique_ptr<InputSequenceCheckers> inputSequenceCheckers_;
 #ifndef ASCENSION_NO_MIGEMO
 			kernel::fileio::PathString migemoRuntimePathName_, migemoDictionaryPathName_;
 #endif // !ASCENSION_NO_MIGEMO

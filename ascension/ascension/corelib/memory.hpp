@@ -7,7 +7,7 @@
  * @author exeal
  * @date 2005-2010 (was manah/memory.hpp)
  * @date 2010-10-21
- * @date 2011
+ * @date 2011-2012
  */
 
 #ifndef ASCENSION_MEMORY_HPP
@@ -17,7 +17,7 @@
 #include <algorithm>	// std.max
 #include <new>			// new[], delete[], std.bad_alloc, std.nothrow
 #include <cstddef>		// std.size_t
-#include <memory>		// std.auto_ptr
+#include <memory>		// std.unique_ptr
 #undef min
 #undef max
 
@@ -164,10 +164,10 @@ namespace ascension {
 		static void operator delete(void* p, const std::nothrow_t&) /*throw()*/ {return operator delete(p);}
 		static void operator delete(void* p, void* where) /*throw()*/ {return ::operator delete(p, where);}
 	private:
-		static std::auto_ptr<MemoryPool> pool_;
+		static std::unique_ptr<MemoryPool> pool_;
 	};
 
-	template<typename T> std::auto_ptr<MemoryPool> FastArenaObject<T>::pool_;
+	template<typename T> std::unique_ptr<MemoryPool> FastArenaObject<T>::pool_;
 
 } // namespace ascension
 

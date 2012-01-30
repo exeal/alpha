@@ -36,7 +36,7 @@ namespace ascension {
 			 * @param region The region to reconstruct the new presentation
 			 * @return The presentation or @c null (filled by the presentation's default style)
 			 */
-			virtual std::auto_ptr<StyledTextRunIterator> getPresentation(const kernel::Region& region) const /*throw()*/ = 0;
+			virtual std::unique_ptr<StyledTextRunIterator> getPresentation(const kernel::Region& region) const /*throw()*/ = 0;
 			friend class PresentationReconstructor;
 		};
 
@@ -47,7 +47,7 @@ namespace ascension {
 			explicit SingleStyledPartitionPresentationReconstructor(std::shared_ptr<const TextRunStyle> style) /*throw()*/;
 		private:
 			// PartitionPresentationReconstructor
-			std::auto_ptr<StyledTextRunIterator>
+			std::unique_ptr<StyledTextRunIterator>
 				getPresentation(Index line, const Range<Index>& columnRange) const /*throw()*/;
 		private:
 			class Iterator;
@@ -69,7 +69,7 @@ namespace ascension {
 			 * @return The style of the line or @c null (filled by the presentation's default style)
 			 * @throw BadPositionException @a line is outside of the document
 			 */
-			virtual std::auto_ptr<StyledTextRunIterator> queryTextRunStyle(Index line) const = 0;
+			virtual std::unique_ptr<StyledTextRunIterator> queryTextRunStyle(Index line) const = 0;
 			friend class Presentation;
 		};
 
@@ -84,10 +84,10 @@ namespace ascension {
 			~PresentationReconstructor() /*throw()*/;
 			// attribute
 			void setPartitionReconstructor(kernel::ContentType contentType,
-				std::auto_ptr<PartitionPresentationReconstructor> reconstructor);
+				std::unique_ptr<PartitionPresentationReconstructor> reconstructor);
 		private:
 			// TextRunStyleDirector
-			std::auto_ptr<StyledTextRunIterator> queryTextRunStyle(Index line) const;
+			std::unique_ptr<StyledTextRunIterator> queryTextRunStyle(Index line) const;
 		private:
 			class Iterator;
 			Presentation& presentation_;

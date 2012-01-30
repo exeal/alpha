@@ -72,7 +72,7 @@ namespace ascension {
 			// attributes : selection
 			const VirtualBox& boxForRectangleSelection() const;
 			bool isSelectionRectangle() const /*throw()*/;
-			boost::optional<kernel::Region> selectedRegion() const /*throw()*/;
+			kernel::Region selectedRegion() const /*throw()*/;
 			// attribute : shape
 			void setShaper(std::shared_ptr<CaretShaper> shaper) /*throw()*/;
 			// attributes : character input
@@ -107,14 +107,14 @@ namespace ascension {
 		private:
 			void adjustInputMethodCompositionWindow();
 			void checkMatchBrackets();
-			void fireCaretMoved(const boost::optional<kernel::Region>& oldRegion);
+			void fireCaretMoved(const kernel::Region& oldRegion);
 			void internalExtendSelection(void (*algorithm)(void));
 			void prechangeDocument();
 			void update(const kernel::DocumentChange& change);
 			void updateVisualAttributes();
 			// VisualPoint
 			void aboutToMove(kernel::Position& to);
-			void moved(const boost::optional<kernel::Position>& from) /*throw()*/;
+			void moved(const kernel::Position& from) /*throw()*/;
 			// detail.InputEventHandler
 			void abortInput();
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
@@ -124,7 +124,7 @@ namespace ascension {
 			LRESULT onImeRequest(WPARAM command, LPARAM lp, bool& consumed);
 #endif
 			// kernel.PointListener
-			void pointMoved(const kernel::Point& self, const boost::optional<kernel::Position>& oldPosition);
+			void pointMoved(const kernel::Point& self, const kernel::Position& oldPosition);
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
@@ -161,7 +161,7 @@ namespace ascension {
 			MatchBracketsTrackingMode matchBracketsTrackingMode_;
 			std::shared_ptr<CaretShaper> shaper_;
 			struct Shape {
-				std::auto_ptr<graphics::Image> image;
+				std::unique_ptr<graphics::Image> image;
 				graphics::NativePoint alignmentPoint;
 				Shape() /*throw()*/;
 			} shapeCache_;
@@ -169,7 +169,7 @@ namespace ascension {
 				bool yanking;			// true when right after pasted by using clipboard ring, and waiting for next cycle of ring
 				bool leaveAnchorNext;	// true if should leave the anchor at the next movement
 				bool leadingAnchor;		// true if in anchor_->moveTo calling, and ignore pointMoved
-				std::auto_ptr<VirtualBox> selectedRectangle;	// for rectangular selection. null when the selection is linear
+				std::unique_ptr<VirtualBox> selectedRectangle;	// for rectangular selection. null when the selection is linear
 				bool typing;			// true when inputCharacter called (see prechangeDocument)
 				bool inputMethodCompositionActivated, inputMethodComposingCharacter;
 				boost::optional<kernel::Position> lastTypedPosition;	// the position the caret input character previously
@@ -192,12 +192,12 @@ namespace ascension {
 		void selectWord(Caret& caret);
 
 		// free functions change the document by using Caret class
-		void breakLine(kernel::Somewhere<Caret> at, bool inheritIndent, std::size_t newlines /* = 1 */);
+		void breakLine(Caret& at, bool inheritIndent, std::size_t newlines /* = 1 */);
 		void eraseSelection(Caret& caret);
 		void insertRectangle(Caret& caret, const Char* first, const Char* last);
 		void insertRectangle(Caret& caret, const String& text);
-		void indentBySpaces(kernel::Somewhere<Caret> caret, bool rectangle, long level = 1);
-		void indentByTabs(kernel::Somewhere<Caret> caret, bool rectangle, long level = 1);
+		void indentBySpaces(Caret& caret, bool rectangle, long level = 1);
+		void indentByTabs(Caret& caret, bool rectangle, long level = 1);
 		void newLine(Caret& caret, std::size_t newlines = 1);
 		bool transposeCharacters(Caret& caret);
 		bool transposeLines(Caret& caret);
@@ -272,7 +272,7 @@ namespace ascension {
 
 		/// Returns the selected region.
 		inline kernel::Region Caret::selectedRegion() const /*throw()*/ {
-			return kernel::Region(*anchor_, *position());
+			return kernel::Region(*anchor_, position());
 		}
 
 		/**

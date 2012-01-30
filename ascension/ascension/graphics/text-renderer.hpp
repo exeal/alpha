@@ -13,7 +13,7 @@
 #include <ascension/kernel/point.hpp>	// kernel.locations
 #include <ascension/graphics/line-layout-vector.hpp>
 #include <ascension/presentation/presentation.hpp>
-#include <memory>	// std.auto_ptr, std.shared_ptr, std.weak_ptr
+#include <memory>	// std.shared_ptr, std.unique_ptr, std.weak_ptr
 
 namespace ascension {
 
@@ -93,7 +93,7 @@ namespace ascension {
 				// viewport
 				std::weak_ptr<TextViewport> viewport() const /*throw()*/;
 				// layout
-				virtual std::auto_ptr<const TextLayout> createLineLayout(Index line) const = 0;
+				virtual std::unique_ptr<const TextLayout> createLineLayout(Index line) const = 0;
 				LineLayoutVector& layouts() /*throw()*/;
 				const LineLayoutVector& layouts() const /*throw()*/;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -135,7 +135,7 @@ namespace ascension {
 				void fireComputedWritingModeChanged(
 					const presentation::TextToplevelStyle& globalTextStyle,
 					const presentation::WritingMode& defaultUI);
-				std::auto_ptr<const TextLayout> generateLineLayout(Index line) const;
+				std::unique_ptr<const TextLayout> generateLineLayout(Index line) const;
 				void updateDefaultFont();
 				// presentation.GlobalTextStyleListener
 				void globalTextStyleChanged(std::shared_ptr<const presentation::TextToplevelStyle> used);
@@ -144,13 +144,13 @@ namespace ascension {
 				presentation::WritingMode defaultUIWritingMode_;
 				presentation::TextWrapping<presentation::Length> textWrapping_;
 				Scalar textWrappingMeasureInPixels_;
-				std::auto_ptr<LineLayoutVector> layouts_;
+				std::unique_ptr<LineLayoutVector> layouts_;
 				const FontCollection& fontCollection_;
 				std::shared_ptr<const Font> defaultFont_;
 				std::shared_ptr<const LineRenderingOptions> lineRenderingOptions_;
 				std::shared_ptr<TextViewport> viewport_;
 				class SpacePainter;
-				std::auto_ptr<SpacePainter> spacePainter_;
+				std::unique_ptr<SpacePainter> spacePainter_;
 				detail::Listeners<ComputedWritingModeListener> computedWritingModeListeners_;
 				detail::Listeners<DefaultFontListener> defaultFontListeners_;
 				mutable win32::Handle<HDC> memoryDC_;

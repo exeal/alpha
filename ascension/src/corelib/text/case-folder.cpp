@@ -25,7 +25,7 @@ const Index CaseFolder::MAXIMUM_EXPANSION_CHARACTERS = 3;
  * @retval &gt;0 The first character sequence is greater than the second
  */
 int CaseFolder::compare(const CharacterIterator& s1, const CharacterIterator& s2, bool excludeTurkishI /* = false */) {
-	auto_ptr<CharacterIterator> i1(s1.clone()), i2(s2.clone());
+	unique_ptr<CharacterIterator> i1(s1.clone()), i2(s2.clone());
 	CodePoint c1 = CharacterIterator::DONE, c2 = CharacterIterator::DONE;
 	CodePoint folded1[MAXIMUM_EXPANSION_CHARACTERS], folded2[MAXIMUM_EXPANSION_CHARACTERS];
 	const CodePoint* p1 = folded1 - 1;

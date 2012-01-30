@@ -27,7 +27,7 @@ InputSequenceCheckers::~InputSequenceCheckers() {
  * @param checker The sequence checker to be registered.
  * @throw std#invalid_argument @a checker is already registered
  */
-void InputSequenceCheckers::add(auto_ptr<InputSequenceChecker> checker) {
+void InputSequenceCheckers::add(unique_ptr<InputSequenceChecker> checker) {
 	if(find(strategies_.begin(), strategies_.end(), checker.get()) != strategies_.end())
 		throw invalid_argument("Specified checker is already registered.");
 	strategies_.push_back(checker.release());
@@ -164,7 +164,7 @@ bool VietnameseInputSequenceChecker::check(const locale& lc, const StringPiece& 
 		0x0102u, 0x0103u, 0x01a0u, 0x01a1u, 0x01afu, 0x01b0u	// Ă ă Ơ ơ Ư ư
 	};
 	static const CodePoint TONE_MARKS[5] = {0x0300u, 0x0301u, 0x0303u, 0x0309u, 0x0323u};
-	static pair<auto_ptr<locale>, bool> vietnamese;
+	static pair<unique_ptr<locale>, bool> vietnamese;
 
 	if(!vietnamese.second) {
 		vietnamese.second = true;

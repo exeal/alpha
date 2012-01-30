@@ -118,7 +118,7 @@ namespace {
 				throw NullPointerException("s");
 
 			// convert the source text from UTF-16 to native Japanese encoding
-			auto_ptr<encoding::Encoder> encoder(encoding::Encoder::forMIB(encoding::standard::SHIFT_JIS));
+			unique_ptr<encoding::Encoder> encoder(encoding::Encoder::forMIB(encoding::standard::SHIFT_JIS));
 			if(encoder.get() == 0)
 				return 0;
 			else {
@@ -172,7 +172,7 @@ namespace {
 		unsigned char* lastNativePattern_;
 		Char* lastPattern_;
 	};
-	auto_ptr<Migemo> migemoLib;
+	unique_ptr<Migemo> migemoLib;
 } // namespace @0
 
 
@@ -279,7 +279,7 @@ PatternSyntaxException::Code PatternSyntaxException::getCode() const {
  *
  * @code
  * Pattern p(patternString);
- * std::auto_ptr<MatchResult<const Char*> > m(p.matches(target, endof(target)));
+ * std::unique_ptr<MatchResult<const Char*> > m(p.matches(target, endof(target)));
  * @endcode
  *
  * @note Following sections are draft and subject to change.
@@ -560,15 +560,15 @@ MigemoPattern::MigemoPattern(const StringPiece& pattern, bool caseSensitive) :
  * @param caseSensitive Set @c true to enable case-sensitive match
  * @return The pattern or @c null if Migemo is not installed
  */
-auto_ptr<const MigemoPattern> MigemoPattern::compile(const StringPiece& pattern, bool caseSensitive) {
+unique_ptr<const MigemoPattern> MigemoPattern::compile(const StringPiece& pattern, bool caseSensitive) {
 	install();
 	if(isMigemoInstalled()) {
 		size_t len;
 		const Char* const p = migemoLib->query(pattern, len);
 		using namespace boost::regex_constants;
-		return auto_ptr<const MigemoPattern>(new MigemoPattern(StringPiece(p, len), caseSensitive));
+		return unique_ptr<const MigemoPattern>(new MigemoPattern(StringPiece(p, len), caseSensitive));
 	} else
-		return auto_ptr<const MigemoPattern>();
+		return unique_ptr<const MigemoPattern>();
 }
 
 /**

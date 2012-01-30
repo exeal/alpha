@@ -22,7 +22,7 @@ namespace ascension {
 			virtual ~RenderingDevice() /*throw()*/ {}
 
 			/// Creates and returns the rendering context.
-			virtual std::auto_ptr<RenderingContext2D> createRenderingContext() const = 0;
+			virtual std::unique_ptr<RenderingContext2D> createRenderingContext() const = 0;
 
 			/// Returns the bit depth (number of bit planes) of the device.
 			virtual int depth() = 0;
@@ -58,7 +58,7 @@ namespace ascension {
 		class Screen : public RenderingDevice {
 		public:
 			static Screen& instance();
-			std::auto_ptr<RenderingContext2D> createGraphicContext() const;
+			std::unique_ptr<RenderingContext2D> createGraphicContext() const;
 		};
 
 	}

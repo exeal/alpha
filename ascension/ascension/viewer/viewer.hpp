@@ -145,7 +145,7 @@ namespace ascension {
 				void rewrapAtWindowEdge();
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 				// TextRenderer
-				std::auto_ptr<const graphics::font::TextLayout> createLineLayout(Index line) const;
+				std::unique_ptr<const graphics::font::TextLayout> createLineLayout(Index line) const;
 				const presentation::WritingMode& defaultUIWritingMode() const /*throw()*/;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				graphics::Scalar width() const /*throw()*/;
@@ -201,7 +201,7 @@ namespace ascension {
 #endif // !ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
 			// content assist
 			contentassist::ContentAssistant* contentAssistant() const /*throw()*/;
-			void setContentAssistant(std::auto_ptr<contentassist::ContentAssistant> newContentAssistant) /*throw()*/;
+			void setContentAssistant(std::unique_ptr<contentassist::ContentAssistant> newContentAssistant) /*throw()*/;
 			// redraw
 			void redrawLine(Index line, bool following = false);
 			void redrawLines(const Range<Index>& lines);
@@ -398,8 +398,8 @@ namespace ascension {
 		private:
 			// big stars
 			presentation::Presentation& presentation_;
-			std::auto_ptr<Caret> caret_;
-			std::auto_ptr<Renderer> renderer_;
+			std::unique_ptr<Caret> caret_;
+			std::unique_ptr<Renderer> renderer_;
 			Configuration configuration_;
 			std::set<VisualPoint*> points_;
 			HWND toolTip_;
@@ -409,8 +409,8 @@ namespace ascension {
 			std::shared_ptr<base::DropTarget> dropTargetHandler_;
 			detail::Listeners<DisplaySizeListener> displaySizeListeners_;
 			detail::Listeners<ViewportListener> viewportListeners_;
-			std::auto_ptr<detail::RulerPainter> rulerPainter_;
-			std::auto_ptr<contentassist::ContentAssistant> contentAssistant_;
+			std::unique_ptr<detail::RulerPainter> rulerPainter_;
+			std::unique_ptr<contentassist::ContentAssistant> contentAssistant_;
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 			class AccessibleProxy;
 			AccessibleProxy* accessibleProxy_;

@@ -34,8 +34,7 @@ namespace ascension {
 			 * @param oldRegion The region which the caret had before. @c first is the anchor, and
 			 *                  @c second is the caret
 			 */
-			virtual void caretMoved(const Caret& caret,
-				const boost::optional<kernel::Region>& oldRegion) = 0;
+			virtual void caretMoved(const Caret& caret, const kernel::Region& oldRegion) = 0;
 			friend class Caret;
 		};
 

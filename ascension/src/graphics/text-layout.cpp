@@ -119,7 +119,7 @@ namespace {
 			HDC, SCRIPT_CACHE*, SCRIPT_ANALYSIS*, OPENTYPE_TAG, OPENTYPE_TAG, OPENTYPE_TAG, LONG,
 			WORD, WORD*));
 //#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-	auto_ptr<detail::SharedLibrary<Uniscribe16> > uspLib(
+	unique_ptr<detail::SharedLibrary<Uniscribe16> > uspLib(
 		new detail::SharedLibrary<Uniscribe16>("usp10.dll"));
 } // namespace @0
 
@@ -522,17 +522,17 @@ public:
 	int totalWidth() const /*throw()*/ {return accumulate(advances(), advances() + numberOfGlyphs(), 0);}
 	int x(Index at, bool trailing) const;
 	// layout
-	auto_ptr<TextRun> breakAt(Index at, const String& layoutString);
+	unique_ptr<TextRun> breakAt(Index at, const String& layoutString);
 	bool expandTabCharacters(const TabExpander& tabExpander,
 		const String& layoutString, Scalar x, Scalar maximumWidth);
 	HRESULT justify(int width);
 	static void mergeScriptsAndStyles(const String& layoutString, const SCRIPT_ITEM scriptRuns[],
 		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, const FontCollection& fontCollection,
-		shared_ptr<const TextRunStyle> defaultStyle, auto_ptr<StyledTextRunIterator> styles,
+		shared_ptr<const TextRunStyle> defaultStyle, unique_ptr<StyledTextRunIterator> styles,
 		vector<TextRun*>& textRuns, vector<const StyledTextRun>& styledRanges);
 	void shape(const win32::Handle<HDC>& dc, const String& layoutString);
 	void positionGlyphs(const win32::Handle<HDC>& dc, const String& layoutString, SimpleStyledTextRunIterator& styles);
-	auto_ptr<TextRun> splitIfTooLong(const String& layoutString);
+	unique_ptr<TextRun> splitIfTooLong(const String& layoutString);
 	static void substituteGlyphs(const Range<TextRun**>& runs, const String& layoutString);
 	// drawing and painting
 	void drawGlyphs(PaintContext& context, const NativePoint& p, const Range<Index>& range) const;
@@ -666,7 +666,7 @@ void TextLayout::TextRun::blackBoxBounds(const Range<Index>& range, NativeRectan
 		geometry::make<NativeSize>(right - left, fontMetrics.cellHeight())));
 }
 
-auto_ptr<TextLayout::TextRun> TextLayout::TextRun::breakAt(Index at, const String& layoutString) {
+unique_ptr<TextLayout::TextRun> TextLayout::TextRun::breakAt(Index at, const String& layoutString) {
 	// 'at' is from the beginning of the line
 	assert(at > beginning() && at < end());
 	assert(glyphs_->clusters[at - beginning()] != glyphs_->clusters[at - beginning() - 1]);
@@ -676,7 +676,7 @@ auto_ptr<TextLayout::TextRun> TextLayout::TextRun::breakAt(Index at, const Strin
 	assert(ltr == (analysis_.fRTL == 0));
 
 	// create the new following run
-	auto_ptr<TextRun> following(new TextRun(*this, newLength));
+	unique_ptr<TextRun> following(new TextRun(*this, newLength));
 
 	// update placements
 //	place(context, layoutString, lip);
@@ -959,7 +959,7 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 		const String& layoutString, const SCRIPT_ITEM scriptRuns[],
 		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns,
 		const FontCollection& fontCollection, shared_ptr<const TextRunStyle> defaultStyle,
-		auto_ptr<StyledTextRunIterator> styles, vector<TextRun*>& textRuns,
+		unique_ptr<StyledTextRunIterator> styles, vector<TextRun*>& textRuns,
 		vector<const StyledTextRun>& styledRanges) {
 	if(scriptRuns == 0)
 		throw NullPointerException("scriptRuns");
@@ -1045,7 +1045,7 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 					scriptRun->a, font,
 					(scriptTags != 0) ? scriptTags[scriptRun - scriptRuns] : SCRIPT_TAG_UNKNOWN));	// TODO: 'DFLT' is preferred?
 			while(true) {
-				auto_ptr<TextRun> piece(results.first.back()->splitIfTooLong(layoutString));
+				unique_ptr<TextRun> piece(results.first.back()->splitIfTooLong(layoutString));
 				if(piece.get() == 0)
 					break;
 				results.first.push_back(piece.release());
@@ -1543,9 +1543,9 @@ void TextLayout::TextRun::shape(DC& dc, const String& layoutString, const ILayou
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 }
 #endif
-auto_ptr<TextLayout::TextRun> TextLayout::TextRun::splitIfTooLong(const String& layoutString) {
+unique_ptr<TextLayout::TextRun> TextLayout::TextRun::splitIfTooLong(const String& layoutString) {
 	if(estimateNumberOfGlyphs(length(*this)) <= 65535)
-		return auto_ptr<TextRun>();
+		return unique_ptr<TextRun>();
 
 	// split this run, because the length would cause ScriptShape to fail (see also Mozilla bug 366643).
 	static const Index MAXIMUM_RUN_LENGTH = 43680;	// estimateNumberOfGlyphs(43680) == 65536
@@ -1569,7 +1569,7 @@ auto_ptr<TextLayout::TextRun> TextLayout::TextRun::splitIfTooLong(const String& 
 			--opportunity;
 	}
 
-	auto_ptr<TextRun> following(new TextRun(Range<Index>(
+	unique_ptr<TextRun> following(new TextRun(Range<Index>(
 		opportunity, length(*this) - opportunity), analysis_, glyphs_->font, glyphs_->scriptTag));
 	static_cast<Range<Index>&>(*this) = Range<Index>(0, opportunity);
 	analysis_.fLinkAfter = following->analysis_.fLinkBefore = 0;
@@ -2016,7 +2016,7 @@ TextLayout::TextLayout(const String& text,
 	} else {
 		// 5-1. expand horizontal tabs and wrap into lines
 		const TabExpander* tabExpander = otherParameters.tabExpander;
-		auto_ptr<TabExpander> temp;
+		unique_ptr<TabExpander> temp;
 		if(tabExpander == 0) {
 			// create default tab expander
 			temp.reset(new FixedWidthTabExpander(nominalFont->metrics().averageCharacterWidth() * 8));
@@ -2468,7 +2468,7 @@ void TextLayout::draw(PaintContext& context,
 			}
 			if(!ascension::isEmpty(runs)) {
 				const Range<Index> characterRange(runs.beginning()[0]->beginning(), runs.end()[-1]->end());
-				auto_ptr<TextPaintOverride::Iterator> paintOverrideIterator;
+				unique_ptr<TextPaintOverride::Iterator> paintOverrideIterator;
 				if(paintOverride != 0)
 					paintOverrideIterator = paintOverride->queryTextPaintOverride(characterRange);
 			}
@@ -2655,7 +2655,7 @@ String TextLayout::fillToX(int x) const {
 	if(cx == x)
 		return String(numberOfTabs, L'\t');
 
-	auto_ptr<DC> dc(lip_.getFontSelector().deviceContext());
+	unique_ptr<DC> dc(lip_.getFontSelector().deviceContext());
 	HFONT oldFont = dc->selectObject(lip_.getFontSelector().font(Script::COMMON));
 	int spaceWidth;
 	dc->getCharWidth(L' ', L' ', &spaceWidth);
@@ -3113,7 +3113,7 @@ void TextLayout::stackLines(LineStackingStrategy lineStackingStrategy, const Fon
 	lineMetrics_.reset(new LineMetrics*[numberOfLines()]);
 	for(size_t line = 0; line != v.size(); ++line) {
 		try {
-			auto_ptr<SillyLineMetrics> lineMetrics(new SillyLineMetrics(v[line].first, v[line].second));
+			unique_ptr<SillyLineMetrics> lineMetrics(new SillyLineMetrics(v[line].first, v[line].second));
 			lineMetrics_[line] = lineMetrics.release();
 		} catch(...) {
 			while(line > 0)
@@ -3228,7 +3228,7 @@ void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
 				}
 				// case 3: break at the middle of the run -> split the run (run -> newRun + run)
 				else {
-					auto_ptr<TextRun> followingRun(run->breakAt(lastBreakable, text_));
+					unique_ptr<TextRun> followingRun(run->breakAt(lastBreakable, text_));
 					newRuns.push_back(run);
 					assert(lineFirstRuns.empty() || newRuns.size() != lineFirstRuns.back());
 					lineFirstRuns.push_back(newRuns.size());

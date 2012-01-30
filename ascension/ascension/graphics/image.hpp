@@ -43,7 +43,7 @@ namespace ascension {
 			const NativeImage& asNativeObject() const /*throw()*/ {return impl_;}
 			static int depth(Format format);
 			// RenderingDevice
-			std::auto_ptr<RenderingContext2D> createRenderingContext() const;
+			std::unique_ptr<RenderingContext2D> createRenderingContext() const;
 			int depth();
 			uint32_t numberOfColors();
 			geometry::Coordinate<NativeSize>::Type height() const;

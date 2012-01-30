@@ -64,7 +64,7 @@ namespace ascension {
 			 *                            glyph on the the baseline of the line (not the glyph)) of
 			 *                            the character addressed by the caret
 			 */
-			virtual void shape(std::auto_ptr<graphics::Image>& image,
+			virtual void shape(std::unique_ptr<graphics::Image>& image,
 				graphics::NativePoint& alignmentPoint) const /*throw()*/ = 0;
 		private:
 			/**
@@ -94,12 +94,11 @@ namespace ascension {
 			const CaretShapeUpdater* updater() const /*throw()*/ {return updater_;}
 			// CaretShaper
 			virtual void install(CaretShapeUpdater& updater) /*throw()*/;
-			virtual void shape(std::auto_ptr<graphics::Image>& image,
+			virtual void shape(std::unique_ptr<graphics::Image>& image,
 				graphics::NativePoint& alignmentPoint) const /*throw()*/;
 			virtual void uninstall() /*throw()*/;
 			// CaretListener
-			virtual void caretMoved(const Caret& caret,
-				const boost::optional<kernel::Region>& oldRegion);
+			virtual void caretMoved(const Caret& caret, const kernel::Region& oldRegion);
 			// graphics.font.ComputedWritingModeListener
 			void computedWritingModeChanged(const presentation::WritingMode& used);
 			// graphics.font.VisualLinesListener
@@ -124,7 +123,7 @@ namespace ascension {
 		private:
 			// CaretShaper
 			void install(CaretShapeUpdater& updater) /*throw()*/;
-			void shape(std::auto_ptr<graphics::Image>& image,
+			void shape(std::unique_ptr<graphics::Image>& image,
 				graphics::NativePoint& alignmentPoint) const /*throw()*/;
 			void uninstall() /*throw()*/;
 			// CaretListener

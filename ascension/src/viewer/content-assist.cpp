@@ -471,7 +471,7 @@ bool ContentAssistant::complete() {
 		const int sel = proposalPopup_->getCurSel();
 		if(sel != LB_ERR) {
 			if(ICompletionProposal* p = static_cast<ICompletionProposal*>(proposalPopup_->getItemDataPtr(sel))) {
-				auto_ptr<CompletionSession> temp(completionSession_);	// force completionSession_ to null
+				unique_ptr<CompletionSession> temp(completionSession_);	// force completionSession_ to null
 				Document& document = textViewer_->document();
 				if(!document.isReadOnly()) {
 					document.insertUndoBoundary();
@@ -595,7 +595,7 @@ void ContentAssistant::setAutoActivationDelay(ulong milliseconds) {
  * @param contentType The content type
  * @param processor The new content assist processor to register or @c null to unregister
  */
-void ContentAssistant::setContentAssistProcessor(ContentType contentType, auto_ptr<IContentAssistProcessor> processor) {
+void ContentAssistant::setContentAssistProcessor(ContentType contentType, unique_ptr<IContentAssistProcessor> processor) {
 	map<ContentType, IContentAssistProcessor*>::iterator i(processors_.find(contentType));
 	if(i != processors_.end()) {
 		delete i->second;

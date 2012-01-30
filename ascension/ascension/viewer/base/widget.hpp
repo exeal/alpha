@@ -106,14 +106,14 @@ namespace ascension {
 				bool isActive() const;
 				void setFocus();
 
-				std::auto_ptr<InputGrabLocker> grabInput();
+				std::unique_ptr<InputGrabLocker> grabInput();
 				void releaseInput();
 
 				void acceptDrops(bool accept = true);
 				bool acceptsDrops() const;
 
 				// graphics.RenderingDevice
-				std::auto_ptr<graphics::RenderingContext2D> createRenderingContext() const;
+				std::unique_ptr<graphics::RenderingContext2D> createRenderingContext() const;
 				int depth();
 				uint32_t numberOfColors();
 				graphics::geometry::Coordinate<graphics::NativeSize>::Type height() const;

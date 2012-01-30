@@ -420,7 +420,7 @@ namespace {
 		Char maximumExtentCharacter;
 		Scalar maximumAdvance = 0;
 		for(Char c = '0'; c <= '9'; ++c) {
-			auto_ptr<const GlyphVector> glyphs(font->createGlyphVector(String(1, c)));
+			unique_ptr<const GlyphVector> glyphs(font->createGlyphVector(String(1, c)));
 			shared_ptr<GlyphMetrics> gm(glyphs->metrics(0));
 			const Scalar advance = isHorizontal(writingMode.blockFlowDirection) ? gm->advanceX() : gm->advanceY();
 			if(advance > maximumAdvance) {
@@ -450,7 +450,7 @@ void RulerPainter::recalculateWidth() /*throw()*/ {
 	//     (line-numbers-interior-width) = (line-numbers-padding-start) + (line-numbers-padding-end)
 	//     (line-numbers-content-width) = max((glyphs-extent), (average-glyph-extent) * (minimum-digits-setting))
 
-	auto_ptr<RenderingContext2D> context(viewer_.createRenderingContext());
+	unique_ptr<RenderingContext2D> context(viewer_.createRenderingContext());
 
 	// compute the width of the line numbers
 	Scalar lineNumbersContentWidth = 0, lineNumbersPaddingStartWidth = 0, lineNumbersPaddingEndWidth = 0, lineNumbersBorderWidth = 0;

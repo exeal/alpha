@@ -24,7 +24,7 @@ using namespace std;
  * @throw UnsupportedEncodingException @a source can't convert
  */
 string encoding::encodingNameFromUnicode(const String& source) {
-	const auto_ptr<Encoder> encoder(Encoder::forMIB(fundamental::US_ASCII));
+	const unique_ptr<Encoder> encoder(Encoder::forMIB(fundamental::US_ASCII));
 	const string temp(encoder->fromUnicode(source));
 	if(temp.empty())
 		throw UnsupportedEncodingException("invalid encoding name character");
@@ -56,7 +56,7 @@ UnsupportedEncodingException::UnsupportedEncodingException(const string& message
  *
  * @code
  * const std::string native(...);
- * std::auto_ptr<Encoder> encoder(Encoder::forName("Shift_JIS"));
+ * std::unique_ptr<Encoder> encoder(Encoder::forName("Shift_JIS"));
  * if(encoder->get() != 0) {
  *   const String unicode(encoder->toUnicode(native));
  *   ...
@@ -94,7 +94,7 @@ UnsupportedEncodingException::UnsupportedEncodingException(const string& message
  * invocations of the conversion methods. The following illustrates the case of ISO-2022-JP:
  *
  * @code
- * std::auto_ptr<Encoder> encoder = Encoder::forName("ISO-2022-JP");
+ * std::unique_ptr<Encoder> encoder = Encoder::forName("ISO-2022-JP");
  *
  * // give an escape sequence to switch to JIS X 0208:1983
  * encoder->toUnicode("\x1B$B"); 
@@ -166,7 +166,7 @@ Encoder& Encoder::defaultInstance() /*throw()*/ {
 //#ifdef ASCENSION_OS_WINDOWS
 //	return convertWin32CPtoMIB(::GetACP());
 //#else
-	static auto_ptr<Encoder> instance(forMIB(fundamental::UTF_8));
+	static unique_ptr<Encoder> instance(forMIB(fundamental::UTF_8));
 	return *instance;
 //#endif // ASCENSION_OS_WINDOWS
 }
@@ -213,8 +213,8 @@ EncoderFactory* Encoder::find(const string& name) /*throw()*/ {
  * @return The encoder or @c null if not registered
  * @see #availableNames
  */
-auto_ptr<Encoder> Encoder::forID(size_t id) /*throw()*/ {
-	return (id < registry().size()) ? registry()[id]->create() : auto_ptr<Encoder>(0);
+unique_ptr<Encoder> Encoder::forID(size_t id) /*throw()*/ {
+	return (id < registry().size()) ? registry()[id]->create() : unique_ptr<Encoder>();
 }
 
 /**
@@ -222,9 +222,9 @@ auto_ptr<Encoder> Encoder::forID(size_t id) /*throw()*/ {
  * @param mib The MIBenum value
  * @return The encoder or @c null if not registered
  */
-auto_ptr<Encoder> Encoder::forMIB(MIBenum mib) /*throw()*/ {
+unique_ptr<Encoder> Encoder::forMIB(MIBenum mib) /*throw()*/ {
 	EncoderFactory* const factory = find(mib);
-	return (factory != 0) ? factory->create() : auto_ptr<Encoder>(0);
+	return (factory != 0) ? factory->create() : unique_ptr<Encoder>();
 }
 
 /**
@@ -232,9 +232,9 @@ auto_ptr<Encoder> Encoder::forMIB(MIBenum mib) /*throw()*/ {
  * @param name The name
  * @return The encoder or @c null if not registered
  */
-auto_ptr<Encoder> Encoder::forName(const string& name) /*throw()*/ {
+unique_ptr<Encoder> Encoder::forName(const string& name) /*throw()*/ {
 	EncoderFactory* const factory = find(name);
-	return (factory != 0) ? factory->create() : auto_ptr<Encoder>(0);
+	return (factory != 0) ? factory->create() : unique_ptr<Encoder>();
 }
 
 #ifdef ASCENSION_OS_WINDOWS
@@ -243,9 +243,9 @@ auto_ptr<Encoder> Encoder::forName(const string& name) /*throw()*/ {
  * @param codePage The code page
  * @return The encoder or @c null if not registered
  */
-auto_ptr<Encoder> Encoder::forWindowsCodePage(unsigned int codePage) /*throw()*/ {
+unique_ptr<Encoder> Encoder::forWindowsCodePage(unsigned int codePage) /*throw()*/ {
 	// TODO: not implemented.
-	return auto_ptr<Encoder>(0);
+	return unique_ptr<Encoder>();
 }
 #endif // ASCENSION_OS_WINDOWS
 
@@ -500,7 +500,7 @@ vector<EncodingDetector*>& EncodingDetector::registry() {
  * @param newDetector The encoding detector
  * @throw NullPointerException @a detector is @c null
  */
-void EncodingDetector::registerDetector(auto_ptr<EncodingDetector> newDetector) {
+void EncodingDetector::registerDetector(unique_ptr<EncodingDetector> newDetector) {
 	if(newDetector.get() == 0)
 		throw NullPointerException("newDetector");
 	registry().push_back(newDetector.release());
@@ -557,7 +557,7 @@ namespace {
 		BasicLatinEncoderFactory(const string& name, MIBenum mib, const string& displayName,
 			const string& aliases, uint32_t mask) : EncoderFactoryBase(name, mib, displayName, 1, 1, aliases), mask_(mask) {}
 		virtual ~BasicLatinEncoderFactory() /*throw()*/ {}
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder(mask_, *this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder(mask_, *this));}
 	private:
 		class InternalEncoder : public Encoder {
 		public:
@@ -586,7 +586,7 @@ namespace {
 		Installer() /*throw()*/ {
 			Encoder::registerFactory(US_ASCII);
 			Encoder::registerFactory(ISO_8859_1);
-			EncodingDetector::registerDetector(auto_ptr<EncodingDetector>(new UniversalDetector));
+			EncodingDetector::registerDetector(unique_ptr<EncodingDetector>(new UniversalDetector));
 		}
 	} unused;
 
@@ -803,7 +803,7 @@ namespace {
 	}
 } // namespace @0
 
-auto_ptr<Encoder> detail::createSingleByteEncoder(
+unique_ptr<Encoder> detail::createSingleByteEncoder(
 		const Char** byteToCharacterWire, const EncodingProperties& properties) /*throw()*/ {
-	return auto_ptr<Encoder>(new SingleByteEncoder(byteToCharacterWire, properties));
+	return unique_ptr<Encoder>(new SingleByteEncoder(byteToCharacterWire, properties));
 }

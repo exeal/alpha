@@ -64,7 +64,7 @@ StyledTextRunEnumerator::StyledTextRunEnumerator() : end_(0) {
  * @throw NullPointerException @a sourceIterator is @c null
  */
 StyledTextRunEnumerator::StyledTextRunEnumerator(
-		auto_ptr<StyledTextRunIterator> sourceIterator, Index end) : iterator_(sourceIterator), end_(end) {
+		unique_ptr<StyledTextRunIterator> sourceIterator, Index end) : iterator_(move(sourceIterator)), end_(end) {
 	if(iterator_.get() == 0)
 		throw NullPointerException("sourceIterator");
 	if(iterator_->hasNext()) {
@@ -139,11 +139,11 @@ struct Presentation::Hyperlinks {
  */
 Presentation::Presentation(Document& document) /*throw()*/ : document_(document) {
 	if(DEFAULT_GLOBAL_TEXT_STYLE.get() == 0) {
-		auto_ptr<TextLineStyle> temp1(new TextLineStyle);
+		unique_ptr<TextLineStyle> temp1(new TextLineStyle);
 		temp1->defaultRunStyle.reset(new TextRunStyle);
-		auto_ptr<TextToplevelStyle> temp2(new TextToplevelStyle);
-		temp2->defaultLineStyle = temp1;
-		DEFAULT_GLOBAL_TEXT_STYLE = temp2;
+		unique_ptr<TextToplevelStyle> temp2(new TextToplevelStyle);
+		temp2->defaultLineStyle = move(temp1);
+		DEFAULT_GLOBAL_TEXT_STYLE = move(temp2);
 	}
 	setGlobalTextStyle(shared_ptr<const TextToplevelStyle>());
 	document_.addListener(*this);
@@ -248,7 +248,7 @@ const Hyperlink* const* Presentation::getHyperlinks(Index line, size_t& numberOf
 	}
 	vector<Hyperlink*> temp;
 	for(Index offsetInLine = 0, eol = document_.lineLength(line); offsetInLine < eol; ) {
-		auto_ptr<Hyperlink> h(hyperlinkDetector_->nextHyperlink(document_, line, Range<Index>(offsetInLine, eol)));
+		unique_ptr<Hyperlink> h(hyperlinkDetector_->nextHyperlink(document_, line, Range<Index>(offsetInLine, eol)));
 		if(h.get() == 0)
 			break;
 		// check result
@@ -258,7 +258,7 @@ const Hyperlink* const* Presentation::getHyperlinks(Index line, size_t& numberOf
 		offsetInLine = r.end();
 		temp.push_back(h.release());
 	}
-	auto_ptr<Hyperlinks> newItem(new Hyperlinks);
+	unique_ptr<Hyperlinks> newItem(new Hyperlinks);
 	newItem->lineNumber = line;
 	newItem->hyperlinks.reset(new Hyperlink*[numberOfHyperlinks = newItem->numberOfHyperlinks = temp.size()]);
 	copy(temp.begin(), temp.end(), newItem->hyperlinks.get());
@@ -368,10 +368,10 @@ void Presentation::textLineColors(Index line, Color& foreground, Color& backgrou
  *         has no styled text runs
  * @throw BadPositionException @a line is outside of the document
  */
-auto_ptr<StyledTextRunIterator> Presentation::textRunStyles(Index line) const {
+unique_ptr<StyledTextRunIterator> Presentation::textRunStyles(Index line) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
-	return (textRunStyleDirector_.get() != 0) ? textRunStyleDirector_->queryTextRunStyle(line) : auto_ptr<StyledTextRunIterator>();
+	return (textRunStyleDirector_.get() != 0) ? textRunStyleDirector_->queryTextRunStyle(line) : unique_ptr<StyledTextRunIterator>();
 }
 
 
@@ -411,8 +411,8 @@ SingleStyledPartitionPresentationReconstructor::SingleStyledPartitionPresentatio
 }
 
 /// @see PartitionPresentationReconstructor#getPresentation
-auto_ptr<StyledTextRunIterator> SingleStyledPartitionPresentationReconstructor::getPresentation(Index, const Range<Index>& columnRange) const /*throw()*/ {
-	return auto_ptr<presentation::StyledTextRunIterator>(new Iterator(columnRange.beginning(), style_));
+unique_ptr<StyledTextRunIterator> SingleStyledPartitionPresentationReconstructor::getPresentation(Index, const Range<Index>& columnRange) const /*throw()*/ {
+	return unique_ptr<presentation::StyledTextRunIterator>(new Iterator(columnRange.beginning(), style_));
 }
 
 
@@ -434,7 +434,7 @@ private:
 	const map<kernel::ContentType, PartitionPresentationReconstructor*> reconstructors_;
 	const Index line_;
 	DocumentPartition currentPartition_;
-	auto_ptr<presentation::StyledTextRunIterator> subiterator_;
+	unique_ptr<presentation::StyledTextRunIterator> subiterator_;
 	pair<Index, shared_ptr<const TextRunStyle>> current_;
 };
 
@@ -511,8 +511,10 @@ void PresentationReconstructor::Iterator::next() {
 
 inline void PresentationReconstructor::Iterator::updateSubiterator() {
 	map<ContentType, PartitionPresentationReconstructor*>::const_iterator r(reconstructors_.find(currentPartition_.contentType));
-	subiterator_ = (r != reconstructors_.end()) ?
-		r->second->getPresentation(currentPartition_.region) : auto_ptr<presentation::StyledTextRunIterator>();
+	if(r != reconstructors_.end())
+		subiterator_ = r->second->getPresentation(currentPartition_.region);
+	else
+		subiterator_.reset();
 	if(subiterator_.get() == 0) {
 		const shared_ptr<const TextLineStyle> lineStyle(presentation_.globalTextStyle().defaultLineStyle);
 		assert(lineStyle.get() != 0);
@@ -542,9 +544,8 @@ PresentationReconstructor::~PresentationReconstructor() /*throw()*/ {
 }
 
 /// @see LineStyleDirector#queryTextRunStyle
-auto_ptr<StyledTextRunIterator> PresentationReconstructor::queryTextRunStyle(Index line) const {
-	return auto_ptr<presentation::StyledTextRunIterator>(
-		new Iterator(presentation_, reconstructors_, line));
+unique_ptr<StyledTextRunIterator> PresentationReconstructor::queryTextRunStyle(Index line) const {
+	return unique_ptr<presentation::StyledTextRunIterator>(new Iterator(presentation_, reconstructors_, line));
 }
 
 /**
@@ -556,7 +557,7 @@ auto_ptr<StyledTextRunIterator> PresentationReconstructor::queryTextRunStyle(Ind
  * @throw NullPointerException @a reconstructor is @c null
  */
 void PresentationReconstructor::setPartitionReconstructor(
-		ContentType contentType, auto_ptr<PartitionPresentationReconstructor> reconstructor) {
+		ContentType contentType, unique_ptr<PartitionPresentationReconstructor> reconstructor) {
 	if(reconstructor.get() == 0)
 		throw NullPointerException("reconstructor");
 	const map<ContentType, PartitionPresentationReconstructor*>::iterator old(reconstructors_.find(contentType));
@@ -609,17 +610,17 @@ URIHyperlinkDetector::~URIHyperlinkDetector() /*throw()*/ {
 }
 
 /// @see HyperlinkDetector#nextHyperlink
-auto_ptr<Hyperlink> URIHyperlinkDetector::nextHyperlink(
+unique_ptr<Hyperlink> URIHyperlinkDetector::nextHyperlink(
 		const Document& document, Index line, const Range<Index>& range) const /*throw()*/ {
 	// TODO: ??? range is not used???
 	const String& s = document.line(line);
 	const Char* p = s.data();
 	Range<const Char*> result;
 	if(uriDetector_->search(p, p + s.length(), result))
-		return auto_ptr<Hyperlink>(new URIHyperlink(
+		return unique_ptr<Hyperlink>(new URIHyperlink(
 			Range<Index>(result.beginning() - p, result.end() - p), String(result.beginning(), result.end())));
 	else
-		return auto_ptr<Hyperlink>(0);
+		return unique_ptr<Hyperlink>();
 }
 
 
@@ -632,7 +633,7 @@ CompositeHyperlinkDetector::~CompositeHyperlinkDetector() /*throw()*/ {
 }
 
 /// @see HyperlinkDetector#nextHyperlink
-auto_ptr<Hyperlink> CompositeHyperlinkDetector::nextHyperlink(
+unique_ptr<Hyperlink> CompositeHyperlinkDetector::nextHyperlink(
 		const Document& document, Index line, const Range<Index>& range) const /*throw()*/ {
 	const DocumentPartitioner& partitioner = document.partitioner();
 	DocumentPartition partition;
@@ -641,14 +642,14 @@ auto_ptr<Hyperlink> CompositeHyperlinkDetector::nextHyperlink(
 		assert(partition.region.includes(p));
 		map<ContentType, HyperlinkDetector*>::const_iterator detector(composites_.find(partition.contentType));
 		if(detector != composites_.end()) {
-			auto_ptr<Hyperlink> found = detector->second->nextHyperlink(
+			unique_ptr<Hyperlink> found = detector->second->nextHyperlink(
 				document, line, Range<Index>(p.offsetInLine, min(partition.region.end(), e).offsetInLine));
 			if(found.get() != 0)
 				return found;
 		}
 		p = partition.region.end();
 	}
-	return auto_ptr<Hyperlink>(0);
+	return unique_ptr<Hyperlink>();
 }
 
 /**
@@ -659,7 +660,7 @@ auto_ptr<Hyperlink> CompositeHyperlinkDetector::nextHyperlink(
  *                 transferred to the callee
  * @throw NullPointerException @a detector is @c null
  */
-void CompositeHyperlinkDetector::setDetector(ContentType contentType, auto_ptr<HyperlinkDetector> detector) {
+void CompositeHyperlinkDetector::setDetector(ContentType contentType, unique_ptr<HyperlinkDetector> detector) {
 	if(detector.get() == 0)
 		throw NullPointerException("detector");
 	map<ContentType, HyperlinkDetector*>::iterator old(composites_.find(contentType));
@@ -692,7 +693,7 @@ private:
 	shared_ptr<const TextRunStyle> defaultStyle_;
 	Region region_;
 	pair<Index, shared_ptr<const TextRunStyle>> current_;
-	auto_ptr<Token> next_;
+	unique_ptr<Token> next_;
 	Position lastTokenEnd_;
 };
 
@@ -732,7 +733,7 @@ inline void LexicalPartitionPresentationReconstructor::StyledTextRunIterator::ne
 		lastTokenEnd_ = next_->region.end();
 		next_.reset();
 	} else if(tokenScanner_.hasNext()) {
-		next_ = tokenScanner_.nextToken();
+		next_ = move(tokenScanner_.nextToken());
 		assert(next_.get() != 0);
 		if(next_->region.beginning() != lastTokenEnd_) {
 			// 
@@ -758,7 +759,7 @@ inline void LexicalPartitionPresentationReconstructor::StyledTextRunIterator::ne
 // LexicalPartitionPresentationReconstructor //////////////////////////////////////////////////////
 
 /// @see presentation#PartitionPresentationReconstructor#getPresentation
-auto_ptr<StyledTextRunIterator> LexicalPartitionPresentationReconstructor::getPresentation(const Region& region) const /*throw()*/ {
-	return auto_ptr<presentation::StyledTextRunIterator>(
+unique_ptr<StyledTextRunIterator> LexicalPartitionPresentationReconstructor::getPresentation(const Region& region) const /*throw()*/ {
+	return unique_ptr<presentation::StyledTextRunIterator>(
 		new StyledTextRunIterator(presentation_.document(), *tokenScanner_, styles_, defaultStyle_, region));
 }

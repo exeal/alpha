@@ -49,7 +49,7 @@ namespace {
 			"KS_C_5601-1987|iso-ir-149|KS_C_5601-1989|KSC_5601|korean|csKSC56011987"
 			"\0ibm-1363|5601|cp1363|ksc|windows-949|ibm-1363_VSUB_VPUA|ms949|ibm-1363_P11B-1998|windows-949-2000", 0x3f) {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<UHC>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<UHC>(*this));}
 	} uhc;
 
 	class EUC_KR : public EncoderFactoryBase {
@@ -57,14 +57,14 @@ namespace {
 		EUC_KR() /*throw()*/ : EncoderFactoryBase("EUC-KR", standard::EUC_KR, "Korean (EUC-KR)", 2, 1,
 			"csEUCKR" "\0ibm-970KS_C_5601-1987|windows-51949|ibm-eucKR|KSC_5601|5601|cp970|970|ibm-970-VPUA|ibm-970_P110_P110-2006_U2") {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<EUC_KR>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<EUC_KR>(*this));}
 	} euckr;
 
 	class ISO_2022_KR : public EncoderFactoryBase {
 	public:
 		ISO_2022_KR() /*throw()*/ : EncoderFactoryBase("ISO-2022-KR", standard::ISO_2022_KR, "Korean (ISO-2022-KR)", 7, 1, "csISO2022KR") {}
 	private:
-		auto_ptr<Encoder> create() const /*throw()*/ {return auto_ptr<Encoder>(new InternalEncoder<ISO_2022_KR>(*this));}
+		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder<ISO_2022_KR>(*this));}
 	} iso2022kr;
 
 	struct Installer {

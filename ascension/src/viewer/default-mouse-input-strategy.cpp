@@ -86,7 +86,7 @@ AutoScrollOriginMark::AutoScrollOriginMark(TextViewer& viewer) /*throw()*/ : Wid
  * @throw UnknownValueException @a type is unknown
  */
 const base::Cursor& AutoScrollOriginMark::cursorForScrolling(CursorType type) {
-	static auto_ptr<Cursor> instances[3];
+	static unique_ptr<Cursor> instances[3];
 	if(type >= ASCENSION_COUNTOF(instances))
 		throw UnknownValueException("type");
 	if(instances[type].get() == 0) {

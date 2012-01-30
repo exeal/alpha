@@ -1134,7 +1134,7 @@ void TextViewer::setConfiguration(const Configuration* general, const RulerConfi
  * Sets the new content assistant.
  * @param newContentAssistant the content assistant to set. the ownership will be transferred to the callee.
  */
-void TextViewer::setContentAssistant(auto_ptr<contentassist::ContentAssistant> newContentAssistant) /*throw()*/ {
+void TextViewer::setContentAssistant(unique_ptr<contentassist::ContentAssistant> newContentAssistant) /*throw()*/ {
 	if(contentAssistant_.get() != 0)
 		contentAssistant_->uninstall();	// $friendly-access
 	(contentAssistant_ = newContentAssistant)->install(*this);	// $friendly-access

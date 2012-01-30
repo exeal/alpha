@@ -45,9 +45,9 @@ const Direction Direction::BACKWARD(false);
  *
  * @code
  * StringCharacterIterator i1 = ...;
- * auto_ptr<CharacterIterator> i2 = i1.clone(); // i2 is a clone of i1
- * StringCharacterIterator i3 = ...;            // i3 is not a clone of i1, but has a same type
- * DocumentCharacterIterator i4 = ...;          // i4 is not a clone of i1, and has a different type
+ * unique_ptr<CharacterIterator> i2 = i1.clone(); // i2 is a clone of i1
+ * StringCharacterIterator i3 = ...;              // i3 is not a clone of i1, but has a same type
+ * DocumentCharacterIterator i4 = ...;            // i4 is not a clone of i1, and has a different type
  *
  * i1.equals(*i2); // ok
  * i2->less(i1);   // ok
@@ -152,8 +152,8 @@ void StringCharacterIterator::doAssign(const CharacterIterator& other) {
 }
 
 /// @see CharacterIterator#doClone
-auto_ptr<CharacterIterator> StringCharacterIterator::doClone() const {
-	return auto_ptr<CharacterIterator>(new StringCharacterIterator(*this));
+unique_ptr<CharacterIterator> StringCharacterIterator::doClone() const {
+	return unique_ptr<CharacterIterator>(new StringCharacterIterator(*this));
 }
 
 /// @see CharacterIterator#doEquals

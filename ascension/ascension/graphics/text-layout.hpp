@@ -141,7 +141,7 @@ namespace ascension {
 				 * @param range The character range in the line
 				 * @return The iterator which generates the overridden paints
 				 */
-				virtual std::auto_ptr<Iterator>
+				virtual std::unique_ptr<Iterator>
 					queryTextPaintOverride(const Range<Index>& range) const = 0;
 			};
 
@@ -201,7 +201,7 @@ namespace ascension {
 					/// The default text run style. The default value is @c null.
 					std::shared_ptr<const presentation::TextRunStyle> defaultTextRunStyle;
 					/// The text run styles. The default value is @c null.
-					mutable std::auto_ptr<presentation::StyledTextRunIterator> textRunStyles;
+					mutable std::unique_ptr<presentation::StyledTextRunIterator> textRunStyles;
 					/**
 					 * The tab expander object. If this is @c null, the default object is used. The
 					 * default value is @c null.

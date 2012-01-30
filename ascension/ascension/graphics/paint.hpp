@@ -10,7 +10,7 @@
 #include <ascension/corelib/basic-types.hpp>	// std.tr1.shared_ptr
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/geometry.hpp>
-#include <memory>	// std.auto_ptr
+#include <memory>	// std.unique_ptr
 
 namespace ascension {
 	namespace graphics {
@@ -39,8 +39,8 @@ namespace ascension {
 		public:
 			virtual ~Gradient() /*throw()*/ {}
 			virtual void addColorStop() = 0;
-			static std::auto_ptr<Gradient> createLinearGradient(const NativePoint& p0, const NativePoint& p1);
-			static std::auto_ptr<Gradient> createRadialGradient(
+			static std::unique_ptr<Gradient> createLinearGradient(const NativePoint& p0, const NativePoint& p1);
+			static std::unique_ptr<Gradient> createRadialGradient(
 				const NativePoint& p0, Scalar r0, const NativePoint& p1, Scalar r1);
 		};
 
@@ -58,10 +58,10 @@ namespace ascension {
 		public:
 			Paint() /*throw()*/ {}
 			explicit Paint(const Color& color) : color_(color) {if(color == Color()) throw std::invalid_argument("color");}
-			explicit Paint(std::auto_ptr<const Gradient> gradient) : color_(Color::TRANSPARENT_COLOR), gradient_(gradient) {}
-			explicit Paint(const Color& color, std::auto_ptr<const Gradient> gradient) : color_(color), gradient_(gradient) {}
-			explicit Paint(std::auto_ptr<const Pattern> pattern) : color_(Color::TRANSPARENT_COLOR), pattern_(pattern) {}
-			explicit Paint(const Color& color, std::auto_ptr<const Pattern> pattern) : color_(color), pattern_(pattern) {}
+			explicit Paint(std::unique_ptr<const Gradient> gradient) : color_(Color::TRANSPARENT_COLOR), gradient_(std::move(gradient)) {}
+			explicit Paint(const Color& color, std::unique_ptr<const Gradient> gradient) : color_(color), gradient_(std::move(gradient)) {}
+			explicit Paint(std::unique_ptr<const Pattern> pattern) : color_(Color::TRANSPARENT_COLOR), pattern_(std::move(pattern)) {}
+			explicit Paint(const Color& color, std::unique_ptr<const Pattern> pattern) : color_(color), pattern_(std::move(pattern)) {}
 			const Color& color() const /*throw()*/ {return color_;}
 			const Gradient* gradient() const /*throw()*/ {return gradient_.get();}
 			const Pattern* pattern() const /*throw()*/ {return pattern_.get();}

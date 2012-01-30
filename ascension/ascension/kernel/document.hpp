@@ -246,7 +246,7 @@ namespace ascension {
 			const texteditor::Session* session() const /*throw()*/;
 			void setInput(std::weak_ptr<DocumentInput> newInput) /*throw()*/;
 			void setModified() /*throw()*/;
-			void setPartitioner(std::auto_ptr<DocumentPartitioner> newPartitioner) /*throw()*/;
+			void setPartitioner(std::unique_ptr<DocumentPartitioner> newPartitioner) /*throw()*/;
 			void setProperty(const DocumentPropertyKey& key, const String& property);
 			void setReadOnly(bool readOnly = true) /*throw()*/;
 			// contents
@@ -261,7 +261,7 @@ namespace ascension {
 			std::size_t revisionNumber() const /*throw()*/;
 			// content type information
 			ContentTypeInformationProvider& contentTypeInformation() const /*throw()*/;
-			void setContentTypeInformation(std::auto_ptr<ContentTypeInformationProvider> newProvider) /*throw()*/;
+			void setContentTypeInformation(std::unique_ptr<ContentTypeInformationProvider> newProvider) /*throw()*/;
 			// manipulations
 			bool isChanging() const /*throw()*/;
 			void replace(const Region& region, const StringPiece& text, Position* eos = 0);
@@ -318,9 +318,9 @@ namespace ascension {
 
 			texteditor::Session* session_;
 			std::weak_ptr<DocumentInput> input_;
-			std::auto_ptr<DocumentPartitioner> partitioner_;
-			std::auto_ptr<Bookmarker> bookmarker_;
-			std::auto_ptr<ContentTypeInformationProvider> contentTypeInformationProvider_;
+			std::unique_ptr<DocumentPartitioner> partitioner_;
+			std::unique_ptr<Bookmarker> bookmarker_;
+			std::unique_ptr<ContentTypeInformationProvider> contentTypeInformationProvider_;
 			bool readOnly_;
 			LineList lines_;
 			Index length_;
@@ -589,7 +589,7 @@ inline const texteditor::Session* Document::session() const /*throw()*/ {return 
  * @param newProvider the new content type information provider. the ownership will be transferred
  * to the callee. can be @c null
  */
-inline void Document::setContentTypeInformation(std::auto_ptr<ContentTypeInformationProvider> newProvider) /*throw()*/ {
+inline void Document::setContentTypeInformation(std::unique_ptr<ContentTypeInformationProvider> newProvider) /*throw()*/ {
 	contentTypeInformationProvider_.reset((newProvider.get() != 0) ? newProvider.release() : new DefaultContentTypeInformationProvider);}
 
 /**

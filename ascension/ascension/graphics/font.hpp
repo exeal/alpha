@@ -14,6 +14,7 @@
 #include <ascension/graphics/geometry.hpp>
 #include <cstring>	// std.strlen
 #include <locale>	// std.collate
+#include <memory>	// std.unique_ptr
 #if defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
 #	include <ascension/win32/windows.hpp>	// win32.Handle
 #endif
@@ -103,13 +104,16 @@ namespace ascension {
 					if(name.empty())
 						throw std::length_error("name");
 				}
-				FontFamily& append(std::auto_ptr<FontFamily> family) /*throw()*/ {next_ = family; return *this;}
+				FontFamily& append(std::unique_ptr<FontFamily> family) /*throw()*/ {
+					next_.reset(family.release());
+					return *this;
+				}
 				const String& name() const /*throw()*/ {return name_;}
 				FontFamily* next() /*throw()*/ {return next_.get();}
 				const FontFamily* next() const /*throw()*/ {return next_.get();}
 			private:
 				const String name_;
-				std::auto_ptr<FontFamily> next_;
+				std::unique_ptr<FontFamily> next_;
 			};
 
 			class FontFamilies : public FontFamily {
@@ -268,15 +272,15 @@ namespace ascension {
 				 * @param properties The properties other than the family names
 				 */
 				explicit FontDescription(
-					std::auto_ptr<FontFamilies> families = std::auto_ptr<FontFamilies>(),
+					std::unique_ptr<FontFamilies> families = std::unique_ptr<FontFamilies>(),
 					const FontProperties<PropertyHolder>& properties = FontProperties<PropertyHolder>())
 					: families_(families), properties_(properties) {}
 				/// Returns the family names or @c null.
-				const std::auto_ptr<FontFamilies>& families() const /*throw()*/ {return families_;}
+				const std::unique_ptr<FontFamilies>& families() const /*throw()*/ {return families_;}
 				/// Returns the properties other than the family names.
 				const FontProperties<PropertyHolder>& properties() const /* throw() */ {return properties_;}
 			private:
-				const std::auto_ptr<FontFamilies> families_;
+				const std::unique_ptr<FontFamilies> families_;
 				const FontProperties<PropertyHolder> properties_;
 			};
 
@@ -341,7 +345,7 @@ namespace ascension {
 				 * @param text The text string
 				 * @return A new @c GlyphVector created with the specified string
 				 */
-				std::auto_ptr<const GlyphVector> createGlyphVector(const String& text) const;
+				std::unique_ptr<const GlyphVector> createGlyphVector(const String& text) const;
 				/**
 				 * Returns the face name (logical name) of this font.
 				 * @param lc The locale for which to get the font face name. If this value is

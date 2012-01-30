@@ -43,7 +43,7 @@ namespace ascension {
 			ASCENSION_NONCOPYABLE_TAG(InputSequenceCheckers);
 		public:
 			~InputSequenceCheckers();
-			void add(std::auto_ptr<InputSequenceChecker> checker);
+			void add(std::unique_ptr<InputSequenceChecker> checker);
 			bool check(const StringPiece& preceding, CodePoint c) const;
 			void clear();
 			bool isEmpty() const /*throw()*/;

@@ -13,7 +13,7 @@
 #ifndef ASCENSION_NO_UNICODE_COLLATION
 #include <ascension/corelib/memory.hpp>		// AutoBuffer
 #include <ascension/corelib/text/unicode.hpp>
-#include <memory>							// std.auto_ptr
+#include <memory>							// std.unique_ptr
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #	error These class definitions and implementations are based on old version of Unicode.
@@ -78,12 +78,12 @@ namespace ascension {
 			void setStrength(Strength newStrength);
 			Strength strength() const /*throw()*/;
 			// operations
-			virtual std::auto_ptr<CollationKey> collationKey(const String& s) const = 0;
+			virtual std::unique_ptr<CollationKey> collationKey(const String& s) const = 0;
 			int compare(const String& s1, const String& s2) const;
 			virtual int compare(const CharacterIterator& s1, const CharacterIterator& s2) const = 0;
-			std::auto_ptr<CollationElementIterator>
+			std::unique_ptr<CollationElementIterator>
 				createCollationElementIterator(const String& source) const;
-			virtual std::auto_ptr<CollationElementIterator>
+			virtual std::unique_ptr<CollationElementIterator>
 				createCollationElementIterator(const CharacterIterator& source) const = 0;
 		protected:
 			Collator() /*throw()*/ : strength_(IDENTICAL), decomposition_(NO_DECOMPOSITION) {}
@@ -96,21 +96,21 @@ namespace ascension {
 		class NullCollator : public Collator {
 		public:
 			NullCollator() /*throw()*/;
-			std::auto_ptr<CollationKey> collationKey(const String& s) const;
+			std::unique_ptr<CollationKey> collationKey(const String& s) const;
 			int compare(const CharacterIterator& s1, const CharacterIterator& s2) const;
-			std::auto_ptr<CollationElementIterator>
+			std::unique_ptr<CollationElementIterator>
 				createCollationElementIterator(const CharacterIterator& source) const;
 		private:
 			class ElementIterator : public CollationElementIterator {
 			public:
-				explicit ElementIterator(std::auto_ptr<CharacterIterator> source) /*throw()*/ : i_(source) {}
+				explicit ElementIterator(std::unique_ptr<CharacterIterator> source) /*throw()*/ : i_(std::move(source)) {}
 				~ElementIterator() /*throw()*/ {}
 				int current() const {return i_->hasNext() ? i_->current() : NULL_ORDER;}
 				void next() {i_->next();}
 				void previous() {i_->previous();}
 				std::size_t position() const {return i_->offset();}
 			private:
-				std::auto_ptr<CharacterIterator> i_;
+				std::unique_ptr<CharacterIterator> i_;
 			};
 		};
 

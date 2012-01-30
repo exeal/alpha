@@ -10,7 +10,7 @@
 #include <ascension/config.hpp>	// ASCENSION_NO_*_ENCODINGS
 #include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/string-piece.hpp>
-#include <memory>	// std.auto_ptr
+#include <memory>	// std.unique_ptr
 #include <locale>	// std.locale, std.codecvt
 #include <vector>
 
@@ -356,12 +356,12 @@ namespace ascension {
 			// factory
 			template<typename OutputIterator> static void availableEncodings(OutputIterator out);
 			static Encoder& defaultInstance() /*throw()*/;
-			static std::auto_ptr<Encoder> forCCSID(int ccsid) /*throw()*/;
-			static std::auto_ptr<Encoder> forCPGID(int cpgid) /*throw()*/;
-			static std::auto_ptr<Encoder> forID(std::size_t id) /*throw()*/;
-			static std::auto_ptr<Encoder> forMIB(MIBenum mib) /*throw()*/;
-			static std::auto_ptr<Encoder> forName(const std::string& name) /*throw()*/;
-			static std::auto_ptr<Encoder> forWindowsCodePage(unsigned int codePage) /*throw()*/;
+			static std::unique_ptr<Encoder> forCCSID(int ccsid) /*throw()*/;
+			static std::unique_ptr<Encoder> forCPGID(int cpgid) /*throw()*/;
+			static std::unique_ptr<Encoder> forID(std::size_t id) /*throw()*/;
+			static std::unique_ptr<Encoder> forMIB(MIBenum mib) /*throw()*/;
+			static std::unique_ptr<Encoder> forName(const std::string& name) /*throw()*/;
+			static std::unique_ptr<Encoder> forWindowsCodePage(unsigned int codePage) /*throw()*/;
 			static bool supports(MIBenum mib) /*throw()*/;
 			static bool supports(const std::string& name) /*throw()*/;
 			static void registerFactory(EncoderFactory& newFactory);
@@ -409,7 +409,7 @@ namespace ascension {
 			virtual ~EncoderFactory() /*throw()*/ {}
 		protected:
 			/// Returns the @c Encoder instance.
-			virtual std::auto_ptr<Encoder> create() const /*throw()*/ = 0;
+			virtual std::unique_ptr<Encoder> create() const /*throw()*/ = 0;
 			friend class Encoder;
 		};
 
@@ -429,7 +429,7 @@ namespace ascension {
 			static EncodingDetector* forWindowsCodePage(unsigned int codePage) /*throw()*/;
 #endif // ASCENSION_OS_WINDOWS
 			template<typename OutputIterator> static void availableNames(OutputIterator out);
-			static void registerDetector(std::auto_ptr<EncodingDetector> newDetector);
+			static void registerDetector(std::unique_ptr<EncodingDetector> newDetector);
 		protected:
 			explicit EncodingDetector(const std::string& name);
 		private:
@@ -604,7 +604,7 @@ namespace ascension {
 						const std::string& displayName, const std::string& aliases, Byte substitutionCharacter);
 					virtual ~SingleByteEncoderFactory() /*throw()*/;
 				private:
-					std::auto_ptr<Encoder> create() const /*throw()*/;
+					std::unique_ptr<Encoder> create() const /*throw()*/;
 				};
 			} // namespace sbcs
 
@@ -633,7 +633,7 @@ namespace ascension {
 	}
 
 	namespace detail {
-		std::auto_ptr<encoding::Encoder> createSingleByteEncoder(
+		std::unique_ptr<encoding::Encoder> createSingleByteEncoder(
 			const Char** byteToCharacterWire, const encoding::EncodingProperties& properties) /*throw()*/;
 	}
 
@@ -720,7 +720,7 @@ namespace ascension {
 		}
 
 		/// @see EncoderFactory#create
-		template<typename MappingTable> std::auto_ptr<Encoder>
+		template<typename MappingTable> std::unique_ptr<Encoder>
 		implementation::sbcs::SingleByteEncoderFactory<MappingTable>::create() const /*throw()*/ {
 			return detail::createSingleByteEncoder(MappingTable::VALUES, *this);
 		}
