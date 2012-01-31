@@ -57,7 +57,7 @@ UnsupportedEncodingException::UnsupportedEncodingException(const string& message
  * @code
  * const std::string native(...);
  * std::unique_ptr<Encoder> encoder(Encoder::forName("Shift_JIS"));
- * if(encoder->get() != 0) {
+ * if(encoder->get() != nullptr) {
  *   const String unicode(encoder->toUnicode(native));
  *   ...
  * }
@@ -148,9 +148,9 @@ bool Encoder::canEncode(CodePoint c) {
  * @return Succeeded or not
  */
 bool Encoder::canEncode(const StringPiece& s) {
-	if(s.beginning() == 0)
+	if(s.beginning() == nullptr)
 		throw NullPointerException("s.beginning()");
-	else if(s.end() == 0)
+	else if(s.end() == nullptr)
 		throw NullPointerException("s.end()");
 	// TODO: Should be able to implement without heap/free store...
 	const size_t bytes = length(s) * properties().maximumNativeBytes();
@@ -178,7 +178,7 @@ EncoderFactory* Encoder::find(MIBenum mib) /*throw()*/ {
 				return *i;
 		}
 	}
-	return 0;
+	return nullptr;
 }
 
 EncoderFactory* Encoder::find(const string& name) /*throw()*/ {
@@ -204,7 +204,7 @@ EncoderFactory* Encoder::find(const string& name) /*throw()*/ {
 			j = delimiter;
 		}
 	}
-	return 0;
+	return nullptr;
 }
 
 /**
@@ -224,7 +224,7 @@ unique_ptr<Encoder> Encoder::forID(size_t id) /*throw()*/ {
  */
 unique_ptr<Encoder> Encoder::forMIB(MIBenum mib) /*throw()*/ {
 	EncoderFactory* const factory = find(mib);
-	return (factory != 0) ? factory->create() : unique_ptr<Encoder>();
+	return (factory != nullptr) ? factory->create() : unique_ptr<Encoder>();
 }
 
 /**
@@ -234,7 +234,7 @@ unique_ptr<Encoder> Encoder::forMIB(MIBenum mib) /*throw()*/ {
  */
 unique_ptr<Encoder> Encoder::forName(const string& name) /*throw()*/ {
 	EncoderFactory* const factory = find(name);
-	return (factory != 0) ? factory->create() : unique_ptr<Encoder>();
+	return (factory != nullptr) ? factory->create() : unique_ptr<Encoder>();
 }
 
 #ifdef ASCENSION_OS_WINDOWS
@@ -264,14 +264,14 @@ unique_ptr<Encoder> Encoder::forWindowsCodePage(unsigned int codePage) /*throw()
  */
 Encoder::Result Encoder::fromUnicode(Byte* to, Byte* toEnd,
 		Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext) {
-	if(to == 0 || toEnd == 0 || from == 0 || fromEnd == 0)
+	if(to == nullptr || toEnd == nullptr || from == nullptr || fromEnd == nullptr)
 		throw NullPointerException("");
 	else if(to > toEnd)
 		throw invalid_argument("to > toEnd");
 	else if(from > fromEnd)
 		throw invalid_argument("from > fromEnd");
-	toNext = 0;
-	fromNext = 0;
+	toNext = nullptr;
+	fromNext = nullptr;
 	return doFromUnicode(to, toEnd, toNext, from, fromEnd, fromNext);
 }
 
@@ -295,7 +295,7 @@ string Encoder::fromUnicode(const String& from) {
 			break;
 		else if(result == INSUFFICIENT_BUFFER) {
 			temp.reset(new(nothrow) Byte[bytes *= 2]);
-			if(temp.get() == 0)
+			if(temp.get() == nullptr)
 				throw bad_alloc();
 		} else
 			return "";
@@ -365,12 +365,12 @@ Encoder& Encoder::setSubstitutionPolicy(SubstitutionPolicy newPolicy) {
 
 /// Returns @c true if supports the encoding has the given MIBenum value.
 bool Encoder::supports(MIBenum mib) /*throw()*/ {
-	return find(mib) != 0;
+	return find(mib) != nullptr;
 }
 
 /// Returns @c true if supports the encoding has to the given name or alias.
 bool Encoder::supports(const string& name) /*throw()*/ {
-	return find(name) != 0;
+	return find(name) != nullptr;
 }
 
 /**
@@ -385,14 +385,14 @@ bool Encoder::supports(const string& name) /*throw()*/ {
  */
 Encoder::Result Encoder::toUnicode(Char* to, Char* toEnd,
 		Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext) {
-	if(to == 0 || toEnd == 0 || from == 0 || fromEnd == 0)
+	if(to == nullptr || toEnd == nullptr || from == nullptr || fromEnd == nullptr)
 		throw NullPointerException("");
 	else if(to > toEnd)
 		throw invalid_argument("to > toEnd");
 	else if(from > fromEnd)
 		throw invalid_argument("from > fromEnd");
-	toNext = 0;
-	fromNext = 0;
+	toNext = nullptr;
+	fromNext = nullptr;
 	return doToUnicode(to, toEnd, toNext, from, fromEnd, fromNext);
 }
 
@@ -447,7 +447,7 @@ EncodingDetector::~EncodingDetector() /*throw()*/ {
  * @throw std#invalid_argument @c first is greater than @a last
  */
 pair<MIBenum, string> EncodingDetector::detect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const {
-	if(first == 0 || last == 0)
+	if(first == nullptr || last == nullptr)
 		throw NullPointerException("first or last");
 	else if(first > last)
 		throw invalid_argument("first > last");
@@ -465,7 +465,7 @@ EncodingDetector* EncodingDetector::forName(const string& name) /*throw()*/ {
 		if(compareEncodingNames(name.begin(), name.end(), canonicalName.begin(), canonicalName.end()) == 0)
 			return *i;
 	}
-	return 0;
+	return nullptr;
 }
 
 #ifdef ASCENSION_OS_WINDOWS
@@ -479,7 +479,7 @@ EncodingDetector* EncodingDetector::forWindowsCodePage(unsigned int codePage) /*
 	case 50001:	return forName("UniversalAutoDetect");
 	case 50932:	return forName("JISAutoDetect");
 	case 50949:	return forName("KSAutoDetect");
-	default:	return 0;
+	default:	return nullptr;
 	}
 }
 #endif // ASCENSION_OS_WINDOWS
@@ -501,7 +501,7 @@ vector<EncodingDetector*>& EncodingDetector::registry() {
  * @throw NullPointerException @a detector is @c null
  */
 void EncodingDetector::registerDetector(unique_ptr<EncodingDetector> newDetector) {
-	if(newDetector.get() == 0)
+	if(newDetector.get() == nullptr)
 		throw NullPointerException("newDetector");
 	registry().push_back(newDetector.release());
 }
@@ -713,7 +713,7 @@ const Byte sbcs::BidirectionalMap::UNMAPPABLE_16x16_UNICODE_TABLE[0x100] = {
  *                            16Å~16-characters
  */
 sbcs::BidirectionalMap::BidirectionalMap(const Char** byteToCharacterWire) /*throw()*/ : byteToUnicode_(byteToCharacterWire) {
-	fill_n(unicodeToByte_, ASCENSION_COUNTOF(unicodeToByte_), static_cast<Byte*>(0));
+	fill_n(unicodeToByte_, ASCENSION_COUNTOF(unicodeToByte_), static_cast<Byte*>(nullptr));
 	buildUnicodeToByteTable();	// eager?
 }
 

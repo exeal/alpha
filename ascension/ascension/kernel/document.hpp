@@ -264,8 +264,8 @@ namespace ascension {
 			void setContentTypeInformation(std::unique_ptr<ContentTypeInformationProvider> newProvider) /*throw()*/;
 			// manipulations
 			bool isChanging() const /*throw()*/;
-			void replace(const Region& region, const StringPiece& text, Position* eos = 0);
-			void replace(const Region& region, std::basic_istream<Char>& in, Position* eos = 0);
+			void replace(const Region& region, const StringPiece& text, Position* eos = nullptr);
+			void replace(const Region& region, std::basic_istream<Char>& in, Position* eos = nullptr);
 #if ASCENSION_ABANDONED_AT_VERSION_08
 			// locks
 			bool lock(const void* locker);
@@ -365,8 +365,8 @@ namespace ascension {
 		// free functions to change document
 		void erase(Document& document, const Region& region);
 		void erase(Document& document, const Position& first, const Position& second);
-		void insert(Document& document, const Position& at, const StringPiece& text, Position* endOfInsertedString = 0);
-		void insert(Document& document, const Position& at, std::basic_istream<Char>& in, Position* endOfInsertedString = 0);
+		void insert(Document& document, const Position& at, const StringPiece& text, Position* endOfInsertedString = nullptr);
+		void insert(Document& document, const Position& at, std::basic_istream<Char>& in, Position* endOfInsertedString = nullptr);
 
 		// other free functions related to document
 		std::basic_ostream<Char>& writeDocumentToStream(std::basic_ostream<Char>& out,
@@ -388,7 +388,7 @@ namespace ascension {
 
 /// Calls @c Document#replace.
 inline void erase(Document& document, const Region& region) {
-	return document.replace(region, 0, 0);
+	return document.replace(region, String(), nullptr);
 }
 
 /// Calls @c Document#replace.
@@ -398,13 +398,13 @@ inline void erase(Document& document, const Position& first, const Position& sec
 
 /// Calls @c Document#replace.
 inline void insert(Document& document, const Position& at,
-		const StringPiece& text, Position* endOfInsertedString /* = 0 */) {
+		const StringPiece& text, Position* endOfInsertedString /* = nullptr */) {
 	return document.replace(Region(at), text, endOfInsertedString);
 }
 
 /// Calls @c Document#replace.
 inline void insert(Document& document, const Position& at,
-		std::basic_istream<Char>& in, Position* endOfInsertedString /* = 0 */) {
+		std::basic_istream<Char>& in, Position* endOfInsertedString /* = nullptr */) {
 	return document.replace(Region(at), in, endOfInsertedString);
 }
 
@@ -506,7 +506,7 @@ inline bool Document::isModified() const /*throw()*/ {return revisionNumber() !=
  * Returns @c true if the document is narrowed.
  * @see #narrow, #widen
  */
-inline bool Document::isNarrowed() const /*throw()*/ {return accessibleRegion_.get() != 0;}
+inline bool Document::isNarrowed() const /*throw()*/ {return accessibleRegion_.get() != nullptr;}
 
 /**
  * Returns @c true if the document is read only.
@@ -544,7 +544,7 @@ inline Index Document::numberOfLines() const /*throw()*/ {return lines_.size();}
 
 /// Returns the document partitioner of the document.
 inline const DocumentPartitioner& Document::partitioner() const /*throw()*/ {
-	if(partitioner_.get() == 0) {
+	if(partitioner_.get() == nullptr) {
 		Document& self = *const_cast<Document*>(this);
 		self.partitioner_.reset(static_cast<DocumentPartitioner*>(new NullPartitioner));
 		self.partitioner_->install(self);
@@ -567,7 +567,7 @@ inline void Document::partitioningChanged(const Region& changedRegion) /*throw()
  */
 inline const String* Document::property(const DocumentPropertyKey& key) const /*throw()*/ {
 	const std::map<const DocumentPropertyKey*, String*>::const_iterator i(properties_.find(&key));
-	return (i != properties_.end()) ? i->second : 0;
+	return (i != properties_.end()) ? i->second : nullptr;
 }
 
 /// Returns the entire region of the document. The returned region is normalized.
@@ -590,7 +590,7 @@ inline const texteditor::Session* Document::session() const /*throw()*/ {return 
  * to the callee. can be @c null
  */
 inline void Document::setContentTypeInformation(std::unique_ptr<ContentTypeInformationProvider> newProvider) /*throw()*/ {
-	contentTypeInformationProvider_.reset((newProvider.get() != 0) ? newProvider.release() : new DefaultContentTypeInformationProvider);}
+	contentTypeInformationProvider_.reset((newProvider.get() != nullptr) ? newProvider.release() : new DefaultContentTypeInformationProvider);}
 
 /**
  * Notifies the partitioning change to the listeners.
@@ -599,7 +599,7 @@ inline void Document::setContentTypeInformation(std::unique_ptr<ContentTypeInfor
  * @throw IllegalStateException the partitioner is not connected any document
  */
 inline void DocumentPartitioner::notifyDocument(const Region& changedRegion) {
-	if(document_ == 0)
+	if(document_ == nullptr)
 		throw IllegalStateException("the partitioner is not connected any document.");
 	document_->partitioningChanged(changedRegion);	// $friendly-access
 }
@@ -612,7 +612,7 @@ inline void DocumentPartitioner::notifyDocument(const Region& changedRegion) {
  * @throw IllegalStateException the partitioner is not connected to any document
  */
 inline void DocumentPartitioner::partition(const Position& at, DocumentPartition& partition) const {
-	if(document_ == 0)
+	if(document_ == nullptr)
 		throw IllegalStateException("the partitioner is not connected to any document.");
 	else if(at > document_->region().second)
 		throw BadPositionException(at);

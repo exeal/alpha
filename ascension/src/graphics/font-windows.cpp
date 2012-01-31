@@ -47,7 +47,7 @@ namespace {
 //	if(length > ) {
 			const uint8_t* p = static_cast<const uint8_t*>(cmapData);
 			const uint32_t numberOfSubtables = readBytes<2>(p += 2);
-			const uint8_t* uvsSubtable = 0;
+			const uint8_t* uvsSubtable = nullptr;
 			for(uint16_t i = 0; i < numberOfSubtables; ++i) {
 				const uint32_t platformID = readBytes<2>(p);
 				const uint32_t encodingID = readBytes<2>(p);
@@ -59,7 +59,7 @@ namespace {
 					break;
 				}
 			}
-			if(uvsSubtable != 0) {
+			if(uvsSubtable != nullptr) {
 				p = uvsSubtable + 6;
 				const uint32_t numberOfRecords = readBytes<4>(p);
 				for(uint32_t i = 0; i < numberOfRecords; ++i) {
@@ -158,7 +158,7 @@ SystemFont::SystemFont(win32::Handle<HFONT> handle) : handle_(handle) {
 	// x-height
 	GLYPHMETRICS gm;
 	const MAT2 temp = {{0, 1}, {0, 0}, {0, 0}, {0, 1}};
-	xHeight_ = (::GetGlyphOutlineW(dc.get(), L'x', GGO_METRICS, &gm, 0, 0, 0) != GDI_ERROR
+	xHeight_ = (::GetGlyphOutlineW(dc.get(), L'x', GGO_METRICS, &gm, 0, nullptr, nullptr) != GDI_ERROR
 		&& gm.gmptGlyphOrigin.y > 0) ? gm.gmptGlyphOrigin.y : round(static_cast<double>(ascent_) * 0.56);
 	::SelectObject(dc.get(), oldFont);
 
@@ -175,12 +175,12 @@ bool SystemFont::ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, 
 		throw invalid_argument("variationSelector");
 	else if(variationSelector < 0x0e0100ul || variationSelector > 0x0e01eful)
 		return false;
-	if(ivs_.get() == 0) {
+	if(ivs_.get() == nullptr) {
 		const_cast<SystemFont*>(this)->ivs_.reset(new IdeographicVariationSequences);
 		win32::Handle<HDC> dc(detail::screenDC());
 		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), handle_.get()));
 		static const TrueTypeFontTag CMAP_TAG = MakeTrueTypeFontTag<'c', 'm', 'a', 'p'>::value;
-		const DWORD bytes = ::GetFontData(dc.get(), CMAP_TAG, 0, 0, 0);
+		const DWORD bytes = ::GetFontData(dc.get(), CMAP_TAG, 0, nullptr, 0);
 		if(bytes != GDI_ERROR) {
 			AutoBuffer<uint8_t> data(new uint8_t[bytes]);
 			if(GDI_ERROR != ::GetFontData(dc.get(), CMAP_TAG, 0, data.get(), bytes))
@@ -238,7 +238,7 @@ shared_ptr<const Font> SystemFonts::cache(const String& familyName, const FontPr
 			GLYPHMETRICS gm;
 			const MAT2 temp = {{0, 1}, {0, 0}, {0, 0}, {0, 1}};
 			const int xHeight =
-				(::GetGlyphOutlineW(dc.get(), L'x', GGO_METRICS, &gm, 0, 0, 0) != GDI_ERROR && gm.gmptGlyphOrigin.y > 0) ?
+				(::GetGlyphOutlineW(dc.get(), L'x', GGO_METRICS, &gm, 0, nullptr, nullptr) != GDI_ERROR && gm.gmptGlyphOrigin.y > 0) ?
 					gm.gmptGlyphOrigin.y : round(static_cast<double>(tm.tmAscent) * 0.56);
 			const double aspect = static_cast<double>(xHeight) / static_cast<double>(tm.tmHeight - tm.tmInternalLeading);
 			FontProperties<> adjustedProperties(properties.weight(), properties.stretch(), properties.style(),
@@ -256,7 +256,7 @@ shared_ptr<const Font> SystemFonts::cache(const String& familyName, const FontPr
 			static const int WIDTH_RATIOS[] = {1000, 1000, 1000, 500, 625, 750, 875, 1125, 1250, 1500, 2000, 1000};
 			lf.lfWidth = ::MulDiv(lf.lfWidth, WIDTH_RATIOS[properties.stretch()], 1000);
 			win32::Handle<HFONT> temp(::CreateFontIndirectW(&lf), &::DeleteObject);
-			if(temp.get() != 0)
+			if(temp.get() != nullptr)
 				font = temp;
 		}
 	}
@@ -271,7 +271,7 @@ shared_ptr<const Font> SystemFonts::lastResortFallback(const FontProperties<>& p
 	// TODO: 'familyName' should update when system property changed.
 	if(familyName.empty()) {
 		LOGFONTW lf;
-		if(::GetObjectW(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)), sizeof(LOGFONTW), &lf) != 0)
+		if(::GetObjectW(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)), sizeof(LOGFONTW), &lf) != nullptr)
 			familyName = lf.lfFaceName;
 		else {
 			win32::AutoZeroSize<NONCLIENTMETRICSW> ncm;

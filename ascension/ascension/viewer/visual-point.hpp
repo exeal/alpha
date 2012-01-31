@@ -81,9 +81,9 @@ namespace ascension {
 		public:
 			// constructors
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			explicit VisualPoint(TextViewer& viewer, kernel::PointListener* listener = 0);
+			explicit VisualPoint(TextViewer& viewer, kernel::PointListener* listener = nullptr);
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
-			VisualPoint(TextViewer& viewer, const kernel::Position& position, kernel::PointListener* listener = 0);
+			VisualPoint(TextViewer& viewer, const kernel::Position& position, kernel::PointListener* listener = nullptr);
 			VisualPoint(const VisualPoint& other);
 			virtual ~VisualPoint() /*throw()*/;
 			// attributes
@@ -133,7 +133,7 @@ namespace ascension {
 
 
 		/// Returns @c true if the text viewer the point connecting to has been disposed.
-		inline bool VisualPoint::isTextViewerDisposed() const /*throw()*/ {return viewer_ == 0;}
+		inline bool VisualPoint::isTextViewerDisposed() const /*throw()*/ {return viewer_ == nullptr;}
 
 		/// @internal
 		inline VerticalDestinationProxy VisualPoint::makeVerticalDestinationProxy(
@@ -142,15 +142,15 @@ namespace ascension {
 		/// Returns the text viewer or throw @c TextViewerDisposedException if the text viewer the
 		/// point connecting to has been disposed.
 		inline TextViewer& VisualPoint::textViewer() {
-			if(viewer_ == 0) throw TextViewerDisposedException(); return *viewer_;}
+			if(viewer_ == nullptr) throw TextViewerDisposedException(); return *viewer_;}
 
 		/// Returns the text viewer or throw @c TextViewerDisposedException if the text viewer the
 		/// point connecting to has been disposed.
 		inline const TextViewer& VisualPoint::textViewer() const {
-			if(viewer_ == 0) throw TextViewerDisposedException(); return *viewer_;}
+			if(viewer_ == nullptr) throw TextViewerDisposedException(); return *viewer_;}
 
 		/// Called when the text viewer is disposed.
-		inline void VisualPoint::viewerDisposed() /*throw()*/ {viewer_ = 0;}
+		inline void VisualPoint::viewerDisposed() /*throw()*/ {viewer_ = nullptr;}
 
 		/// Returns the visual subline number.
 		inline Index VisualPoint::visualSubline() const {

@@ -221,10 +221,10 @@ namespace ascension {
 				LockType lockType() const /*throw()*/;
 				void revert(const std::string& encoding,
 					encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
-					UnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = 0);
+					UnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = nullptr);
 				void unbind() /*throw()*/;
 				void unlockFile();
-				void write(const WritingFormat& format, const WritingOption* options = 0);
+				void write(const WritingFormat& format, const WritingOption* options = nullptr);
 				// encodings
 				TextFileDocumentInput& setEncoding(const std::string& encoding);
 				TextFileDocumentInput& setNewline(text::Newline newline);
@@ -347,7 +347,7 @@ namespace ascension {
 			// free function
 			std::pair<std::string, bool> insertFileContents(Document& document,
 				const Position& at, const PathString& fileName, const std::string& encoding,
-				encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy, Position* endOfInsertedString = 0);
+				encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy, Position* endOfInsertedString = nullptr);
 			void writeRegion(const Document& document, const Region& region,
 				const PathString& fileName, const WritingFormat& format, bool append = false);
 

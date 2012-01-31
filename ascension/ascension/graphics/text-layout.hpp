@@ -281,16 +281,16 @@ namespace ascension {
 				Index locateLine(Scalar bpd, bool& outside) const /*throw()*/;
 				NativePoint location(Index offsetInLine, Edge edge = LEADING) const;
 				std::pair<NativePoint, NativePoint> locations(Index offsetInLine) const;
-				std::pair<Index, Index> offset(const NativePoint& p, bool* outside = 0) const /*throw()*/;
+				std::pair<Index, Index> offset(const NativePoint& p, bool* outside = nullptr) const /*throw()*/;
 				// styled segments
 //				StyledSegmentIterator firstStyledSegment() const /*throw()*/;
 //				StyledSegmentIterator lastStyledSegment() const /*throw()*/;
 				presentation::StyledTextRun styledTextRun(Index offsetInLine) const;
 				// painting
 				void draw(PaintContext& context, const NativePoint& origin,
-					const TextPaintOverride* paintOverride = 0,
-					const InlineObject* endOfLine = 0,
-					const InlineObject* lineWrappingMark = 0) const /*throw()*/;
+					const TextPaintOverride* paintOverride = nullptr,
+					const InlineObject* endOfLine = nullptr,
+					const InlineObject* lineWrappingMark = nullptr) const /*throw()*/;
 				// miscellaneous
 				String fillToX(Scalar x) const;
 #ifdef _DEBUG
@@ -360,7 +360,7 @@ namespace ascension {
 			}
 
 			/// Returns @c true if the layout is empty.
-			inline bool TextLayout::isEmpty() const /*throw()*/ {return runs_.get() == 0;}
+			inline bool TextLayout::isEmpty() const /*throw()*/ {return runs_.get() == nullptr;}
 
 			/**
 			 * Returns the wrapped line containing the specified offset in the logical line.
@@ -429,7 +429,7 @@ namespace ascension {
 			 */
 			inline NativePoint TextLayout::location(Index offsetInLine, Edge edge /* = LEADING */) const {
 				NativePoint result;
-				locations(offsetInLine, (edge == LEADING) ? &result : 0, (edge == TRAILING) ? &result : 0);
+				locations(offsetInLine, (edge == LEADING) ? &result : nullptr, (edge == TRAILING) ? &result : nullptr);
 				return result;
 			}
 

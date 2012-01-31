@@ -2,6 +2,7 @@
  * @file length.cpp
  * @author exeal
  * @date 2011-06-20 created.
+ * @date 2011-2012
  */
 
 #include <ascension/graphics/rendering-context.hpp>
@@ -88,12 +89,12 @@ void Length::newValueSpecifiedUnits(Unit unitType, double valueInSpecifiedUnits)
 void Length::setValue(double value, const RenderingContext2D* context, const NativeSize* contextSize) {
 	switch(unitType()) {
 		case EM_HEIGHT:
-			if(context == 0)
+			if(context == nullptr)
 				throw NullPointerException("context");
 			valueInSpecifiedUnits_ = value / context->font()->metrics().emHeight();
 			break;
 		case X_HEIGHT:
-			if(context == 0)
+			if(context == nullptr)
 				throw NullPointerException("context");
 			valueInSpecifiedUnits_ = value / context->font()->metrics().xHeight();
 			break;
@@ -102,19 +103,19 @@ void Length::setValue(double value, const RenderingContext2D* context, const Nat
 //		case GRIDS:
 //		case REMS:
 		case VIEWPORT_WIDTH:
-			if(context == 0)
+			if(context == nullptr)
 				throw NullPointerException("context");
 			valueInSpecifiedUnits_ = value / geometry::dx(context->device().size());
 		case VIEWPORT_HEIGHT:
-			if(context == 0)
+			if(context == nullptr)
 				throw NullPointerException("context");
 			valueInSpecifiedUnits_ = value / geometry::dy(context->device().size());
 		case VIEWPORT_MINIMUM:
-			if(context == 0)
+			if(context == nullptr)
 				throw NullPointerException("context");
 			valueInSpecifiedUnits_ = value / min(geometry::dx(context->device().size()), geometry::dy(context->device().size()));
 		case CHARACTERS:
-			if(context == 0)
+			if(context == nullptr)
 				throw NullPointerException("context");
 			valueInSpecifiedUnits_ = value / context->font()->metrics().averageCharacterWidth();
 		case INCHES:
@@ -130,9 +131,9 @@ void Length::setValue(double value, const RenderingContext2D* context, const Nat
 		case DIPS:
 			valueInSpecifiedUnits_ = value / pixelsPerInch(context, mode_) * 96;
 		case PERCENTAGE: {
-			if(context == 0)
+			if(context == nullptr)
 				throw NullPointerException("context");
-			const NativeSize size((contextSize != 0) ? *contextSize : context->device().size());
+			const NativeSize size((contextSize != nullptr) ? *contextSize : context->device().size());
 			if(mode_ == WIDTH)
 				valueInSpecifiedUnits_ = value / geometry::dx(size) * 100;
 			else if(mode_ == HEIGHT)
@@ -156,11 +157,11 @@ void Length::setValue(double value, const RenderingContext2D* context, const Nat
 double Length::value(const RenderingContext2D* context, const NativeSize* contextSize) const {
 	switch(unitType()) {
 		case EM_HEIGHT:
-			if(context == 0)
+			if(context == nullptr)
 				throw NullPointerException("context");
 			return valueInSpecifiedUnits() * context->font()->metrics().emHeight();
 		case X_HEIGHT:
-			if(context == 0)
+			if(context == nullptr)
 				throw NullPointerException("context");
 			return valueInSpecifiedUnits() * context->font()->metrics().xHeight();
 		case PIXELS:
@@ -168,19 +169,19 @@ double Length::value(const RenderingContext2D* context, const NativeSize* contex
 //		case GRIDS:
 //		case REMS:
 		case VIEWPORT_WIDTH:
-			if(context == 0)
+			if(context == nullptr)
 				throw NullPointerException("context");
 			return valueInSpecifiedUnits() * geometry::dx(context->device().size());
 		case VIEWPORT_HEIGHT:
-			if(context == 0)
+			if(context == nullptr)
 				throw NullPointerException("context");
 			return valueInSpecifiedUnits() * geometry::dy(context->device().size());
 		case VIEWPORT_MINIMUM:
-			if(context == 0)
+			if(context == nullptr)
 				throw NullPointerException("context");
 			return valueInSpecifiedUnits() * min(geometry::dx(context->device().size()), geometry::dy(context->device().size()));
 		case CHARACTERS:
-			if(context == 0)
+			if(context == nullptr)
 				throw NullPointerException("context");
 			return valueInSpecifiedUnits() * context->font()->metrics().averageCharacterWidth();
 		case INCHES:
@@ -196,9 +197,9 @@ double Length::value(const RenderingContext2D* context, const NativeSize* contex
 		case DIPS:
 			return valueInSpecifiedUnits() * pixelsPerInch(context, mode_) / 96;
 		case PERCENTAGE: {
-			if(context == 0)
+			if(context == nullptr)
 				throw NullPointerException("context");
-			const NativeSize size((contextSize != 0) ? *contextSize : context->device().size());
+			const NativeSize size((contextSize != nullptr) ? *contextSize : context->device().size());
 			if(mode_ == WIDTH)
 				return valueInSpecifiedUnits() * geometry::dx(size);
 			else if(mode_ == HEIGHT)

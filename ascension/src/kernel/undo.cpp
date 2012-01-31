@@ -211,8 +211,8 @@ public:
 	explicit UndoManager(Document& document) /*throw()*/;
 	virtual ~UndoManager() /*throw()*/ {clear();}
 	// attributes
-	size_t numberOfRedoableChanges() const /*throw()*/ {return redoableChanges_.size() + ((pendingAtomicChange_.get() != 0) ? 1 : 0);}
-	size_t numberOfUndoableChanges() const /*throw()*/ {return undoableChanges_.size() + ((pendingAtomicChange_.get() != 0) ? 1 : 0);}
+	size_t numberOfRedoableChanges() const /*throw()*/ {return redoableChanges_.size() + ((pendingAtomicChange_.get() != nullptr) ? 1 : 0);}
+	size_t numberOfUndoableChanges() const /*throw()*/ {return undoableChanges_.size() + ((pendingAtomicChange_.get() != nullptr) ? 1 : 0);}
 	bool isStackingCompoundOperation() const /*throw()*/ {return compoundChangeDepth_ > 0;}
 	// rollbacks
 	void redo(UndoableChange::Result& result);
@@ -236,15 +236,15 @@ private:
 
 // constructor takes the target document
 Document::UndoManager::UndoManager(Document& document) /*throw()*/ : document_(document),
-		compoundChangeDepth_(0), rollbacking_(false), rollbackingChange_(0), currentCompoundChange_(0) {
+		compoundChangeDepth_(0), rollbacking_(false), rollbackingChange_(nullptr), currentCompoundChange_(nullptr) {
 }
 
 // pushes the operation into the undo stack
 void Document::UndoManager::addUndoableChange(AtomicChange& c) {
 	if(!rollbacking_) {
-		if(currentCompoundChange_ != 0)
+		if(currentCompoundChange_ != nullptr)
 			currentCompoundChange_->appendChange(c, document_);	// CompoundChange.appendChange always returns true
-		else if(pendingAtomicChange_.get() != 0) {
+		else if(pendingAtomicChange_.get() != nullptr) {
 			if(!pendingAtomicChange_->appendChange(c, document_)) {
 				commitPendingChange(true);
 				currentCompoundChange_->appendChange(c, document_);	// CompoundChange.appendChange always returns true
@@ -259,7 +259,7 @@ void Document::UndoManager::addUndoableChange(AtomicChange& c) {
 		}
 	} else {
 		// delay pushing to the stack when rollbacking
-		if(rollbackingChange_ == 0)
+		if(rollbackingChange_ == nullptr)
 			rollbackingChange_ = new CompoundChange();
 		rollbackingChange_->appendChange(c, document_);	// CompoundChange.appendChange always returns true
 	}
@@ -277,12 +277,12 @@ inline void Document::UndoManager::clear() /*throw()*/ {
 	}
 	pendingAtomicChange_.reset();
 	compoundChangeDepth_ = 0;
-	currentCompoundChange_ = 0;
+	currentCompoundChange_ = nullptr;
 }
 
 // commits the pending undoable change
 inline void Document::UndoManager::commitPendingChange(bool beginCompound) {
-	if(pendingAtomicChange_.get() != 0) {
+	if(pendingAtomicChange_.get() != nullptr) {
 		if(beginCompound) {
 			unique_ptr<CompoundChange> newCompound(new CompoundChange());
 			newCompound->appendChange(*pendingAtomicChange_.get(), document_);
@@ -290,9 +290,10 @@ inline void Document::UndoManager::commitPendingChange(bool beginCompound) {
 			pendingAtomicChange_.release();
 			currentCompoundChange_ = static_cast<CompoundChange*>(undoableChanges_.top());	// safe down cast
 		} else {
-			if(currentCompoundChange_ == 0 || !currentCompoundChange_->appendChange(*pendingAtomicChange_.get(), document_)) {
+			if(currentCompoundChange_ == nullptr
+					|| !currentCompoundChange_->appendChange(*pendingAtomicChange_.get(), document_)) {
 				undoableChanges_.push(pendingAtomicChange_.get());
-				currentCompoundChange_ = 0;
+				currentCompoundChange_ = nullptr;
 			}
 			pendingAtomicChange_.release();
 		}
@@ -327,9 +328,9 @@ void Document::UndoManager::redo(UndoableChange::Result& result) {
 	c->perform(document_, result);
 	if(result.completed)
 		redoableChanges_.pop();
-	if(rollbackingChange_ != 0)
+	if(rollbackingChange_ != nullptr)
 		undoableChanges_.push(rollbackingChange_);	// move the rollbcked change(s) into the undo stack
-	rollbackingChange_ = currentCompoundChange_ = 0;
+	rollbackingChange_ = currentCompoundChange_ = nullptr;
 	rollbacking_ = false;
 	if(result.completed)
 		delete c;
@@ -348,9 +349,9 @@ void Document::UndoManager::undo(UndoableChange::Result& result) {
 	c->perform(document_, result);
 	if(result.completed)
 		undoableChanges_.pop();
-	if(rollbackingChange_ != 0)
+	if(rollbackingChange_ != nullptr)
 		redoableChanges_.push(rollbackingChange_);	// move the rollbacked change(s) into the redo stack
-	rollbackingChange_ = currentCompoundChange_ = 0;
+	rollbackingChange_ = currentCompoundChange_ = nullptr;
 	rollbacking_ = false;
 	if(result.completed)
 		delete c;
@@ -361,10 +362,10 @@ void Document::UndoManager::undo(UndoableChange::Result& result) {
 // Document ///////////////////////////////////////////////////////////////////////////////////////
 
 /// Constructor.
-Document::Document() : session_(0), partitioner_(),
+Document::Document() : session_(nullptr), partitioner_(),
 		contentTypeInformationProvider_(new DefaultContentTypeInformationProvider),
 		readOnly_(false), length_(0), revisionNumber_(0), lastUnmodifiedRevisionNumber_(0),
-		onceUndoBufferCleared_(false), recordingChanges_(true), changing_(false), rollbacking_(false)/*, locker_(0)*/ {
+		onceUndoBufferCleared_(false), recordingChanges_(true), changing_(false), rollbacking_(false)/*, locker_(nullptr)*/ {
 	bookmarker_.reset(new Bookmarker(*this));
 	undoManager_ = new UndoManager(*this);
 	resetContent();
@@ -378,7 +379,7 @@ Document::~Document() {
 	for(map<const DocumentPropertyKey*, String*>::iterator i(properties_.begin()), e(properties_.end()); i != e; ++i)
 		delete i->second;
 	delete undoManager_;
-	bookmarker_.reset(0);	// Bookmarker.~Bookmarker() calls Document...
+	bookmarker_.reset();	// Bookmarker.~Bookmarker() calls Document...
 	for(size_t i = 0, c = lines_.size(); i < c; ++i)
 		delete lines_[i];
 }
@@ -464,7 +465,7 @@ namespace {
 	public:
 		FirstChangeHolder(const Document& document, weak_ptr<DocumentInput> input,
 				void(DocumentInput::*post)(const Document&)) : document_(document), input_(input), post_(post) {
-			assert(post_ != 0);
+			assert(post_ != nullptr);
 		}
 		~FirstChangeHolder() {
 			if(shared_ptr<DocumentInput> input = input_.lock())
@@ -552,8 +553,8 @@ void Document::removeCompoundChangeListener(ICompoundChangeListener& listener) {
  * @throw IDocumentInput#ChangeRejectedException The input of the document rejected this change
  * @throw std#bad_alloc The internal memory allocation failed
  */
-void Document::replace(const Region& region, const StringPiece& text, Position* eos /* = 0 */) {
-	if(text.beginning() != 0 && text.end() == 0)
+void Document::replace(const Region& region, const StringPiece& text, Position* eos /* = nullptr */) {
+	if(text.beginning() != nullptr && text.end() == nullptr)
 		throw NullPointerException("text.end()");
 	if(changing_)
 		throw IllegalStateException("called in IDocumentListeners' notification.");
@@ -565,7 +566,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 		throw BadRegionException(region);
 	else if(isNarrowed() && !accessibleRegion().encompasses(region))
 		throw DocumentAccessViolationException();
-	else if(region.isEmpty() && (text.beginning() == 0 || isEmpty(text)))
+	else if(region.isEmpty() && (text.beginning() == nullptr || isEmpty(text)))
 		return;	// nothing to do
 	ASCENSION_PREPARE_FIRST_CHANGE(rollbacking_);
 
@@ -577,14 +578,14 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 	// change the content
 	const Position& beginning = region.beginning();
 	const Position& end = region.end();
-	const Char* nextNewline = (text.beginning() != 0 && !isEmpty(text)) ?
-		find_first_of(text.beginning(), text.end(), NEWLINE_CHARACTERS, ASCENSION_ENDOF(NEWLINE_CHARACTERS)) : 0;
+	const Char* nextNewline = (text.beginning() != nullptr && !isEmpty(text)) ?
+		find_first_of(text.beginning(), text.end(), NEWLINE_CHARACTERS, ASCENSION_ENDOF(NEWLINE_CHARACTERS)) : nullptr;
 	basic_stringbuf<Char> erasedString;
 	Index erasedStringLength = 0, insertedStringLength = 0;
 	Position endOfInsertedString;
 	try {
 		// simple cases: both erased region and inserted string are single line
-		if(beginning.line == end.line && (text.beginning() == 0 || isEmpty(text))) {	// erase in single line
+		if(beginning.line == end.line && (text.beginning() == nullptr || isEmpty(text))) {	// erase in single line
 			Line& line = *lines_[beginning.line];
 			erasedString.sputn(line.text().data() + beginning.offsetInLine, static_cast<streamsize>(end.offsetInLine - beginning.offsetInLine));
 			line.text_.erase(beginning.offsetInLine, end.offsetInLine - beginning.offsetInLine);
@@ -626,7 +627,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 			// 2. allocate strings (lines except first) to insert newly. only when inserted string was multiline
 			vector<Line*> allocatedLines;
 			const Char* const firstNewline = nextNewline;
-			if(text.beginning() != 0 && nextNewline != text.end()) {
+			if(text.beginning() != nullptr && nextNewline != text.end()) {
 				try {
 					const Char* p = nextNewline + newlineStringLength(eatNewline(nextNewline, text.end()));
 					while(true) {
@@ -704,7 +705,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 	if(isRecordingChanges()) {
 		if(region.isEmpty())
 			undoManager_->addUndoableChange(*(new DeletionChange(Region(beginning, endOfInsertedString))));
-		else if(text.beginning() == 0 || isEmpty(text))
+		else if(text.beginning() == nullptr || isEmpty(text))
 			undoManager_->addUndoableChange(*(new InsertionChange(beginning, erasedString.str())));
 		else
 			undoManager_->addUndoableChange(*(new ReplacementChange(Region(beginning, endOfInsertedString), erasedString.str())));
@@ -719,14 +720,14 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 	if(!rollbacking_ && !modified)
 		stateListeners_.notify<const Document&>(&DocumentStateListener::documentModificationSignChanged, *this);
 
-	if(eos != 0)
+	if(eos != nullptr)
 		*eos = endOfInsertedString;
 }
 
 /**
  * @see fileio#insertFileContents
  */
-void Document::replace(const Region& region, basic_istream<Char>& in, Position* endOfInsertedString /* = 0 */) {
+void Document::replace(const Region& region, basic_istream<Char>& in, Position* endOfInsertedString /* = nullptr */) {
 	// TODO: this implementation is provisional and not exception-safe.
 	Position e;
 	Char buffer[0x8000];

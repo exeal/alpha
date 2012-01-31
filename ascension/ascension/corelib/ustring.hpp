@@ -36,7 +36,7 @@ namespace ascension {
 	
 	inline const Char* umemchr(const Char* s, Char c, std::size_t length) {
 		const Char* const p = std::find(s, s + length, c);
-		return (p != s + length) ? p : 0;
+		return (p != s + length) ? p : nullptr;
 	}
 	
 	inline int umemcmp(const Char* s1, const Char* s2, std::size_t n) {
@@ -51,7 +51,7 @@ namespace ascension {
 			if(*s == c)
 				return s;
 		}
-		return 0;
+		return nullptr;
 	}
 
 	inline std::size_t ustrlen(const Char* s) {

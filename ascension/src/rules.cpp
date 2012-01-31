@@ -67,14 +67,14 @@ template<typename StringSequence>
 HashTable::HashTable(StringSequence first, StringSequence last, bool caseSensitive)
 		: numberOfEntries_(std::distance(first, last)), maxLength_(0), caseSensitive_(caseSensitive) {
 	entries_ = new Entry*[numberOfEntries_];
-	fill_n(entries_, numberOfEntries_, static_cast<Entry*>(0));
+	fill_n(entries_, numberOfEntries_, static_cast<Entry*>(nullptr));
 	while(first != last) {
 		const String folded(caseSensitive_ ? *first : CaseFolder::fold(*first));
 		const size_t h = hashCode(folded.begin(), folded.end());
 		Entry* const newEntry = new Entry(folded);
 		if(folded.length() > maxLength_)
 			maxLength_ = folded.length();
-		newEntry->next = (entries_[h % numberOfEntries_] != 0) ? entries_[h % numberOfEntries_] : 0;
+		newEntry->next = (entries_[h % numberOfEntries_] != nullptr) ? entries_[h % numberOfEntries_] : nullptr;
 		entries_[h % numberOfEntries_] = newEntry;
 		++first;
 	}
@@ -118,14 +118,14 @@ bool HashTable::matches(const Char* first, const Char* last) const {
 		if(static_cast<size_t>(last - first) > maxLength_)
 			return false;
 		const size_t h = hashCode(first, last);
-		for(Entry* entry = entries_[h % numberOfEntries_]; entry != 0; entry = entry->next) {
+		for(Entry* entry = entries_[h % numberOfEntries_]; entry != nullptr; entry = entry->next) {
 			if(entry->data.length() == static_cast<size_t>(last - first) && umemcmp(entry->data.data(), first, entry->data.length()) == 0)
 				return true;
 		}
 	} else {
 		const String folded(CaseFolder::fold(String(first, last)));
 		const size_t h = hashCode(folded.begin(), folded.end());
-		for(Entry* entry = entries_[h % numberOfEntries_]; entry != 0; entry = entry->next) {
+		for(Entry* entry = entries_[h % numberOfEntries_]; entry != nullptr; entry = entry->next) {
 			if(entry->data.length() == folded.length() && umemcmp(entry->data.data(), folded.data(), folded.length()) == 0)
 				return true;
 		}
@@ -150,29 +150,29 @@ namespace {
 	// sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
 	inline const Char* handleSubDelims(const Char* first, const Char* last) {
 		static const Char SUB_DELIMS[] = {'!', '$', '&', '\'', '(', ')', '*', '+', ',', ';', '=', 0};
-		return (first < last && ustrchr(SUB_DELIMS, *first) != 0) ? ++first : 0;
+		return (first < last && ustrchr(SUB_DELIMS, *first) != nullptr) ? ++first : nullptr;
 	}
 
 	// gen-delims = ":" / "/" / "?" / "#" / "[" / "]" / "@"
 	inline const Char* handleGenDelims(const Char* first, const Char* last) {
 		static const Char GEN_DELIMS[] = {':', '/', '?', '#', '[', ']', '@', 0};
-		return (first < last && ustrchr(GEN_DELIMS, *first) != 0) ? ++first : 0;
+		return (first < last && ustrchr(GEN_DELIMS, *first) != nullptr) ? ++first : nullptr;
 	}
 
 	// reserved = gen-delims / sub-delims
 	inline const Char* handleReserved(const Char* first, const Char* last) {
-		return (handleGenDelims(first, last) != 0 || handleSubDelims(first, last) != 0) ? ++first : 0;
+		return (handleGenDelims(first, last) != nullptr || handleSubDelims(first, last) != nullptr) ? ++first : nullptr;
 	}
 
 	// unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
 	inline const Char* handleUnreserved(const Char* first, const Char* last) {
 		static const Char UNRESERVED_LEFTOVERS[] = {'-', '.', '_', '~', 0};
-		return (first < last && (isalnum(*first, cl) || ustrchr(UNRESERVED_LEFTOVERS, *first) != 0)) ? ++first : 0;
+		return (first < last && (isalnum(*first, cl) || ustrchr(UNRESERVED_LEFTOVERS, *first) != nullptr)) ? ++first : nullptr;
 	}
 
 	// pct-encoded = "%" HEXDIG HEXDIG
 	inline const Char* handlePctEncoded(const Char* first, const Char* last) {
-		return (last - first >= 3 && first[0] == '%' && isxdigit(first[1], cl) && isxdigit(first[2], cl)) ? first += 3 : 0;
+		return (last - first >= 3 && first[0] == '%' && isxdigit(first[1], cl) && isxdigit(first[2], cl)) ? first += 3 : nullptr;
 	}
 
 	// IPv6address =                            6( h16 ":" ) ls32
@@ -184,41 +184,41 @@ namespace {
 	//             / [ *4( h16 ":" ) h16 ] "::"              ls32
 	//             / [ *5( h16 ":" ) h16 ] "::"              h16
 	//             / [ *6( h16 ":" ) h16 ] "::"
-	const Char* ASCENSION_FASTCALL handleIPv6address(const Char* first, const Char* last) {return 0;}
+	const Char* ASCENSION_FASTCALL handleIPv6address(const Char* first, const Char* last) {return nullptr;}
 
 	// IPvFuture = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
 	const Char* ASCENSION_FASTCALL handleIPvFuture(const Char* first, const Char* last) {
 		if(last - first >= 4 && *first == 'v' && isxdigit(*++first, cl)) {
 			while(isxdigit(*first, cl)) {
 				if(++first == last)
-					return 0;
+					return nullptr;
 			}
 			if(*first == '.' && ++first < last) {
 				const Char* p = first;
 				while(p < last) {
-					if(0 != (p = handleUnreserved(p, last)) || (0 != (p = handleSubDelims(p, last))))
+					if(nullptr != (p = handleUnreserved(p, last)) || (nullptr != (p = handleSubDelims(p, last))))
 						continue;
 					else if(*p == ':')
 						++p;
 					else
 						break;
 				}
-				return (p > first) ? p : 0;
+				return (p > first) ? p : nullptr;
 			}
 		}
-		return 0;
+		return nullptr;
 	}
 
 	// IP-literal = "[" ( IPv6address / IPvFuture  ) "]"
 	inline const Char* handleIPLiteral(const Char* first, const Char* last) {
 		if(first < last && *first == '[') {
 			const Char* p;
-			if(0 != (p = handleIPv6address(++first, last)) || 0 != (p = handleIPvFuture(first, last))) {
+			if(nullptr != (p = handleIPv6address(++first, last)) || nullptr != (p = handleIPvFuture(first, last))) {
 				if(p < last && *p == ']')
 					return ++p;
 			}
 		}
-		return 0;
+		return nullptr;
 	}
 
 	// port = *DIGIT
@@ -253,19 +253,19 @@ namespace {
 			} else if(inRange<Char>(*first, '3', '9'))
 				return (++first < last && isdigit(*first, cl)) ? ++first : first;
 		}
-		return 0;
+		return nullptr;
 	}
 
 	// IPv4address = dec-octet "." dec-octet "." dec-octet "." dec-octet
 	inline const Char* handleIPv4address(const Char* first, const Char* last) {
 		return (last - first >= 7
-			&& 0 != (first = handleDecOctet(first, last))
+			&& nullptr != (first = handleDecOctet(first, last))
 			&& first < last && *first == '.'
-			&& 0 != (first = handleDecOctet(++first, last))
+			&& nullptr != (first = handleDecOctet(++first, last))
 			&& first < last && *first == '.'
-			&& 0 != (first = handleDecOctet(++first, last))
+			&& nullptr != (first = handleDecOctet(++first, last))
 			&& first < last && *first == '.'
-			&& 0 != (first = handleDecOctet(++first, last))) ? first : 0;
+			&& nullptr != (first = handleDecOctet(++first, last))) ? first : nullptr;
 	}
 
 	// h16 = 1*4HEXDIG
@@ -276,14 +276,14 @@ namespace {
 				++first;
 			return first;
 		}
-		return 0;
+		return nullptr;
 	}
 
 	// ls32 = ( h16 ":" h16 ) / IPv4address
 	inline const Char* handleLs32(const Char* first, const Char* last) {
 		const Char* p;
-		return ((0 != (p = handleH16(first, last)) && p + 2 < last && *++p == ':' && 0 != (p = handleH16(p, last)))
-			|| (0 != (p = handleIPv4address(first, last)))) ? p : 0;
+		return ((nullptr != (p = handleH16(first, last)) && p + 2 < last && *++p == ':' && nullptr != (p = handleH16(p, last)))
+			|| (nullptr != (p = handleIPv4address(first, last)))) ? p : nullptr;
 	}
 
 	// scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
@@ -295,7 +295,7 @@ namespace {
 			}
 			return last;
 		}
-		return 0;
+		return nullptr;
 	}
 
 	// iprivate = %xE000-F8FF / %xF0000-FFFFD / %x100000-10FFFD
@@ -307,7 +307,7 @@ namespace {
 			if(inRange<CodePoint>(c, 0xf0000u, 0xffffdu) || inRange<CodePoint>(c, 0x100000u, 0x10fffdu))
 				return first += 2;
 		}
-		return 0;
+		return nullptr;
 	}
 
 	// ucschar = %xA0-D7FF / %xF900-FDCF / %xFDF0-FFEF
@@ -326,33 +326,33 @@ namespace {
 					return first += 2;
 			}
 		}
-		return 0;
+		return nullptr;
 	}
 
 	// iunreserved = ALPHA / DIGIT / "-" / "." / "_" / "~" / ucschar
 	inline const Char* handleIunreserved(const Char* first, const Char* last) {
 		const Char* p;
-		return (0 != (p = handleUnreserved(first, last)) || 0 != (p = handleUcschar(first, last))) ? p : 0;
+		return (nullptr != (p = handleUnreserved(first, last)) || nullptr != (p = handleUcschar(first, last))) ? p : nullptr;
 	}
 
 	// ipchar = iunreserved / pct-encoded / sub-delims / ":" / "@"
 	inline const Char* handlePchar(const Char* first, const Char* last) {
 		if(first < last) {
 			const Char* p;
-			if(0 != (p = handleIunreserved(first, last))
-					|| 0 != (p = handlePctEncoded(first, last))
-					|| 0 != (p = handleSubDelims(first, last)))
+			if(nullptr != (p = handleIunreserved(first, last))
+					|| nullptr != (p = handlePctEncoded(first, last))
+					|| nullptr != (p = handleSubDelims(first, last)))
 				return p;
 			else if(*first == ':' || *first == '@')
 				return ++first;
 		}
-		return 0;
+		return nullptr;
 	}
 
 	// isegment = *ipchar
 	inline const Char* handleSegment(const Char* first, const Char* last) {	// [nullable]
 		for(const Char* eop ; first < last; first = eop) {
-			if(0 == (eop = handlePchar(first, last)))
+			if(nullptr == (eop = handlePchar(first, last)))
 				break;
 		}
 		return first;
@@ -361,23 +361,23 @@ namespace {
 	// isegment-nz = 1*ipchar
 	inline const Char* handleSegmentNz(const Char* first, const Char* last) {
 		const Char* const eos = handleSegment(first, last);
-		return (eos > first) ? eos : 0;
+		return (eos > first) ? eos : nullptr;
 	}
 
 	// isegment-nz-nc = 1*( iunreserved / pct-encoded / sub-delims / "@" ) ; non-zero-length segment without any colon ":"
 	inline const Char* handleSegmentNzNc(const Char* first, const Char* last) {
 		const Char* const f = first;
 		for(const Char* eop; first < last; ) {
-			if(0 != (eop = handleUnreserved(first, last))
-					|| 0 != (eop = handlePctEncoded(first, last))
-					|| 0 != (eop = handleSubDelims(first, last)))
+			if(nullptr != (eop = handleUnreserved(first, last))
+					|| nullptr != (eop = handlePctEncoded(first, last))
+					|| nullptr != (eop = handleSubDelims(first, last)))
 				first = eop;
 			else if(*first == '@')
 				++first;
 			else
 				break;
 		}
-		return (first > f) ? first : 0;
+		return (first > f) ? first : nullptr;
 	}
 
 	// ipath-empty = 0<ipchar>
@@ -393,26 +393,26 @@ namespace {
 	// ipath-rootless = isegment-nz *( "/" isegment )
 	inline const Char* handlePathRootless(const Char* first, const Char* last) {
 		const Char* const eos = handleSegmentNz(first, last);
-		return (eos != 0) ? handlePathAbempty(eos, last) : 0;
+		return (eos != nullptr) ? handlePathAbempty(eos, last) : nullptr;
 	}
 
 	// ipath-noscheme = isegment-nz-nc *( "/" isegment )
 	inline const Char* handlePathNoscheme(const Char* first, const Char* last) {
 		const Char* const eos = handleSegmentNzNc(first, last);
-		return (eos != 0) ? handlePathAbempty(eos, last) : 0;
+		return (eos != nullptr) ? handlePathAbempty(eos, last) : nullptr;
 	}
 
 	// ipath-absolute = "/" [ isegment-nz *( "/" isegment ) ]
 	inline const Char* handlePathAbsolute(const Char* first, const Char* last) {
-		return (first < last && *first == '/') ? handlePathRootless(++first, last) : 0;
+		return (first < last && *first == '/') ? handlePathRootless(++first, last) : nullptr;
 	}
 
 	// ireg-name = *( iunreserved / pct-encoded / sub-delims )
 	inline const Char* handleRegName(const Char* first, const Char* last) {	// [nullable]
 		for(const Char* p; first < last; first = p) {
-			if(0 == (p = handleIunreserved(first, last))
-					&& 0 == (p = handlePctEncoded(first, last))
-					&& 0 == (p = handleSubDelims(first, last)))
+			if(nullptr == (p = handleIunreserved(first, last))
+					&& nullptr == (p = handlePctEncoded(first, last))
+					&& nullptr == (p = handleSubDelims(first, last)))
 				break;
 		}
 		return first;
@@ -421,15 +421,15 @@ namespace {
 	// ihost = IP-literal / IPv4address / ireg-name
 	inline const Char* handleHost(const Char* first, const Char* last) {	// [nullable]
 		const Char* p;
-		return (0 != (p = handleIPLiteral(first, last)) || 0 != (p = handleIPv4address(first, last))) ? p : handleRegName(first, last);
+		return (nullptr != (p = handleIPLiteral(first, last)) || nullptr != (p = handleIPv4address(first, last))) ? p : handleRegName(first, last);
 	}
 
 	// iuserinfo = *( iunreserved / pct-encoded / sub-delims / ":" )
 	const Char* ASCENSION_FASTCALL handleUserinfo(const Char* first, const Char* last) {	// [nullable]
 		for(const Char* eop; first < last; ) {
-			if(0 != (eop = handleUnreserved(first, last))
-					|| 0 != (eop = handlePctEncoded(first, last))
-					|| 0 != (eop = handleSubDelims(first, last)))
+			if(nullptr != (eop = handleUnreserved(first, last))
+					|| nullptr != (eop = handlePctEncoded(first, last))
+					|| nullptr != (eop = handleSubDelims(first, last)))
 				first = eop;
 			else if(*first == ':')
 				++first;
@@ -443,18 +443,18 @@ namespace {
 	const Char* ASCENSION_FASTCALL handleAuthority(const Char* first, const Char* last) {	// [nullable]
 		const Char* const beginning = first;
 		first = handleUserinfo(first, last);
-		assert(first != 0);
+		assert(first != nullptr);
 		if(first > beginning) {
 			if(first >= last || *++first != '@')
 				first = beginning;
 		} else if(first < last && *++first != '@')
 			--first;
-		if(0 != (first = handleHost(first, last))) {
+		if(nullptr != (first = handleHost(first, last))) {
 			if(first != last) {
 				if(*first == ':')
 					++first;
 				first = handlePort(first, last);
-				assert(first != 0);
+				assert(first != nullptr);
 			}
 		}
 		return first;
@@ -465,17 +465,17 @@ namespace {
 		static const Char DOUBLE_SLASH[] = {'/', '/', 0};
 		const Char* eop;
 		(last - first > 2 && umemcmp(first, DOUBLE_SLASH, 2) == 0
-			&& 0 != (eop = handleAuthority(first + 2, last)) && 0 != (eop = handlePathAbempty(eop, last)))
-			|| 0 != (eop = handlePathAbsolute(first, last))
-			|| 0 != (eop = handlePathRootless(first, last))
-			|| 0 != (eop = handlePathEmpty(first, last));
+			&& nullptr != (eop = handleAuthority(first + 2, last)) && nullptr != (eop = handlePathAbempty(eop, last)))
+			|| nullptr != (eop = handlePathAbsolute(first, last))
+			|| nullptr != (eop = handlePathRootless(first, last))
+			|| nullptr != (eop = handlePathEmpty(first, last));
 		return eop;
 	}
 
 	// iquery = *( ipchar / iprivate / "/" / "?" )
 	const Char* ASCENSION_FASTCALL handleQuery(const Char* first, const Char* last) {	// [nullable]
 		for(const Char* eop; first < last; ) {
-			if(0 != (eop = handlePchar(first, last)) || 0 != (eop = handlePrivate(first, last)))
+			if(nullptr != (eop = handlePchar(first, last)) || nullptr != (eop = handlePrivate(first, last)))
 				first = eop;
 			else if(*first == '/' || *first == '?')
 				++first;
@@ -488,7 +488,7 @@ namespace {
 	// ifragment = *( ipchar / "/" / "?" )
 	const Char* ASCENSION_FASTCALL handleFragment(const Char* first, const Char* last) {	// [nullable]
 		for(const Char* eop; first < last; ) {
-			if(0 != (eop = handlePchar(first, last)))
+			if(nullptr != (eop = handlePchar(first, last)))
 				first = eop;
 			else if(*first == '/' || *first == '?')
 				++first;
@@ -500,27 +500,27 @@ namespace {
 
 	// IRI = scheme ":" ihier-part [ "?" iquery ] [ "#" ifragment ]
 	const Char* ASCENSION_FASTCALL handleIRI(const Char* first, const Char* last) {
-		if(0 != (first = handleScheme(first, last))) {
+		if(nullptr != (first = handleScheme(first, last))) {
 			if(*first == ':') {
-				if(0 != (first = handleHierPart(++first, last))) {
+				if(nullptr != (first = handleHierPart(++first, last))) {
 					if(*first == '?') {
 						first = handleQuery(++first, last);
-						assert(first != 0);
+						assert(first != nullptr);
 					}
 					if(*first == '#') {
 						first = handleFragment(++first, last);
-						assert(first != 0);
+						assert(first != nullptr);
 					}
 					return first;
 				}
 			}
 		}
-		return 0;
+		return nullptr;
 	}
 } // namespace @0
 
 /// Constructor. The set of the valid schemes is empty.
-URIDetector::URIDetector() /*throw()*/ : validSchemes_(0) {
+URIDetector::URIDetector() /*throw()*/ : validSchemes_(nullptr) {
 }
 
 /// Destructor.
@@ -540,7 +540,7 @@ const URIDetector& URIDetector::defaultGenericInstance() /*throw()*/ {
  */
 const URIDetector& URIDetector::defaultIANAURIInstance() /*throw()*/ {
 	static URIDetector singleton;
-	if(singleton.validSchemes_ == 0) {
+	if(singleton.validSchemes_ == nullptr) {
 		const char SCHEMES[] =
 			// permanent URI schemes
 			"aaa|aaas|acap|cap|cid|crid|data|dav|dict|dns|fax|file|ftp|go|gopher|h323|http|https"
@@ -565,29 +565,29 @@ const URIDetector& URIDetector::defaultIANAURIInstance() /*throw()*/ {
  * @throw NullPointerException @a first and/or @a last are @c null
  */
 const Char* URIDetector::detect(const Char* first, const Char* last) const {
-	if(first == 0)
+	if(first == nullptr)
 		throw NullPointerException("first");
-	else if(last == 0)
+	else if(last == nullptr)
 		throw NullPointerException("last");
 	else if(first >= last)
 		return first;
 
 	// check scheme
 	const Char* endOfScheme;
-	if(validSchemes_ != 0) {
+	if(validSchemes_ != nullptr) {
 		endOfScheme = umemchr(first + 1, ':', min<size_t>(last - first - 1, validSchemes_->maximumLength()));
 		if(!validSchemes_->matches(first, endOfScheme))
-			endOfScheme = 0;
+			endOfScheme = nullptr;
 	} else {
 		endOfScheme = umemchr(first + 1, ':', static_cast<size_t>(last - first - 1));
 		if(handleScheme(first, endOfScheme) != endOfScheme)
-			endOfScheme = 0;
+			endOfScheme = nullptr;
 	}
-	if(endOfScheme == 0)
+	if(endOfScheme == nullptr)
 		return first;
 	else if(endOfScheme == last - 1)	// terminated with <ipath-empty>
 		return last;
-	return (0 != (last = handleIRI(first, last))) ? last : first;
+	return (nullptr != (last = handleIRI(first, last))) ? last : first;
 }
 
 /**
@@ -599,20 +599,20 @@ const Char* URIDetector::detect(const Char* first, const Char* last) const {
  * @throw NullPointerException @a first and/or @a last are @c null
  */
 bool URIDetector::search(const Char* first, const Char* last, Range<const Char*>& result) const {
-	if(first == 0)
+	if(first == nullptr)
 		throw NullPointerException("first");
-	else if(last == 0)
+	else if(last == nullptr)
 		throw NullPointerException("last");
 	else if(first >= last)
 		return false;
 
 	// search scheme
 	const Char* nextColon = umemchr(first, ':', last - first);
-	if(nextColon == 0)
+	if(nextColon == nullptr)
 		return false;
 	while(true) {
 		if(handleScheme(first, nextColon) == nextColon) {
-			if(validSchemes_ == 0 || validSchemes_->matches(first, nextColon)) {
+			if(validSchemes_ == nullptr || validSchemes_->matches(first, nextColon)) {
 				if(const Char* const e = handleIRI(first, last)) {
 					result = Range<const Char*>(first, e);
 					return true;
@@ -624,7 +624,7 @@ bool URIDetector::search(const Char* first, const Char* last, Range<const Char*>
 		if(first == nextColon) {
 			first = nextColon;
 			nextColon = umemchr(first, ':', last - first);
-			if(nextColon == 0)
+			if(nextColon == nullptr)
 				break;
 		}
 	}
@@ -826,7 +826,7 @@ unique_ptr<Token> NumberRule::parse(const TokenScanner& scanner, const Char* fir
  * @throw NullPointerException @a uriDetector is @c null
  */
 URIRule::URIRule(Token::Identifier id, shared_ptr<const URIDetector> uriDetector) /*throw()*/ : Rule(id), uriDetector_(uriDetector) {
-	if(uriDetector.get() == 0)
+	if(uriDetector.get() == nullptr)
 		throw NullPointerException("uriDetector");
 }
 
@@ -857,9 +857,9 @@ unique_ptr<Token> URIRule::parse(const TokenScanner& scanner, const Char* first,
  * @throw std#invalid_argument @a first &gt;= @a last
  */
 WordRule::WordRule(Token::Identifier id, const String* first, const String* last, bool caseSensitive /* = true */) : Rule(id) {
-	if(first == 0)
+	if(first == nullptr)
 		throw NullPointerException("first");
-	else if(last == 0)
+	else if(last == nullptr)
 		throw NullPointerException("last");
 	else if(first >= last)
 		throw invalid_argument("first >= last");
@@ -876,7 +876,7 @@ WordRule::WordRule(Token::Identifier id, const String* first, const String* last
  * @throw text#InvalidScalarValueException @a separator is a surrogate
  */
 WordRule::WordRule(Token::Identifier id, const StringPiece& words, Char separator, bool caseSensitive) : Rule(id) {
-	if(words.beginning() == 0 || words.end() == 0)
+	if(words.beginning() == nullptr || words.end() == nullptr)
 		throw NullPointerException("words");
 	else if(surrogates::isSurrogate(separator))
 		throw InvalidScalarValueException(separator);
@@ -1002,7 +1002,7 @@ const IdentifierSyntax& LexicalTokenScanner::getIdentifierSyntax() const /*throw
  * @throw BadScannerStateException The scanner is running
  */
 void LexicalTokenScanner::addRule(unique_ptr<const Rule> rule) {
-	if(rule.get() == 0)
+	if(rule.get() == nullptr)
 		throw NullPointerException("rule");
 	else if(hasNext())
 		throw BadScannerStateException();
@@ -1019,7 +1019,7 @@ void LexicalTokenScanner::addRule(unique_ptr<const Rule> rule) {
  * @throw BadScannerStateException The scanner is running
  */
 void LexicalTokenScanner::addWordRule(unique_ptr<const WordRule> rule) {
-	if(rule.get() == 0)
+	if(rule.get() == nullptr)
 		throw NullPointerException("rule");
 	else if(hasNext())
 		throw BadScannerStateException();
@@ -1056,7 +1056,7 @@ unique_ptr<Token> LexicalTokenScanner::nextToken() {
 		const Char* const last = line->data() + line->length();
 		for(list<const Rule*>::const_iterator i = rules_.begin(); i != rules_.end(); ++i) {
 			result = (*i)->parse(*this, p, last);
-			if(result.get() != 0) {
+			if(result.get() != nullptr) {
 				current_.seek(result->region.end());
 				return result;
 			}
@@ -1066,7 +1066,7 @@ unique_ptr<Token> LexicalTokenScanner::nextToken() {
 			if(!wordRules_.empty()) {
 				for(list<const WordRule*>::const_iterator i = wordRules_.begin(); i != wordRules_.end(); ++i) {
 					result = (*i)->parse(*this, p, wordEnd);
-					if(result.get() != 0) {
+					if(result.get() != nullptr) {
 						current_.seek(result->region.end());
 						return result;
 					}
@@ -1513,6 +1513,6 @@ LexicalPartitionPresentationReconstructor::LexicalPartitionPresentationReconstru
 		const map<Token::Identifier, shared_ptr<const presentation::TextRunStyle>>& styles,
 		shared_ptr<const presentation::TextRunStyle> defaultStyle /* = shared_ptr<const presentation::TextRunStyle>() */)
 		: presentation_(presentation), tokenScanner_(move(tokenScanner)), styles_(styles) {
-	if(tokenScanner_.get() == 0)
+	if(tokenScanner_.get() == nullptr)
 		throw NullPointerException("tokenScanner");
 }

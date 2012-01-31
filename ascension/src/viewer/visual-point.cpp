@@ -95,7 +95,7 @@ TextViewerDisposedException::TextViewerDisposedException() :
  * @param listener The listener. can be @c null
  * @throw BadPositionException @a position is outside of the document
  */
-VisualPoint::VisualPoint(TextViewer& viewer, PointListener* listener /* = 0 */) :
+VisualPoint::VisualPoint(TextViewer& viewer, PointListener* listener /* = nullptr */) :
 		Point(viewer.document(), listener), viewer_(&viewer), crossingLines_(false) {
 	static_cast<detail::PointCollection<VisualPoint>&>(viewer).addNewPoint(*this);
 	viewer_->textRenderer().layouts().addVisualLinesListener(*this);
@@ -109,7 +109,7 @@ VisualPoint::VisualPoint(TextViewer& viewer, PointListener* listener /* = 0 */) 
  * @param listener The listener. can be @c null
  * @throw BadPositionException @a position is outside of the document
  */
-VisualPoint::VisualPoint(TextViewer& viewer, const Position& position, PointListener* listener /* = 0 */) :
+VisualPoint::VisualPoint(TextViewer& viewer, const Position& position, PointListener* listener /* = nullptr */) :
 		Point(viewer.document(), position, listener), viewer_(&viewer), crossingLines_(false) {
 	static_cast<detail::PointCollection<VisualPoint>&>(viewer).addNewPoint(*this);
 	viewer_->textRenderer().layouts().addVisualLinesListener(*this);
@@ -123,7 +123,7 @@ VisualPoint::VisualPoint(TextViewer& viewer, const Position& position, PointList
  */
 VisualPoint::VisualPoint(const VisualPoint& other) : Point(other), viewer_(other.viewer_),
 		lastX_(other.lastX_), crossingLines_(false), lineNumberCaches_(other.lineNumberCaches_) {
-	if(viewer_ == 0)
+	if(viewer_ == nullptr)
 		throw TextViewerDisposedException();
 	static_cast<detail::PointCollection<VisualPoint>*>(viewer_)->addNewPoint(*this);
 	viewer_->textRenderer().layouts().addVisualLinesListener(*this);
@@ -131,7 +131,7 @@ VisualPoint::VisualPoint(const VisualPoint& other) : Point(other), viewer_(other
 
 /// Destructor.
 VisualPoint::~VisualPoint() /*throw()*/ {
-	if(viewer_ != 0) {
+	if(viewer_ != nullptr) {
 		static_cast<detail::PointCollection<VisualPoint>*>(viewer_)->removePoint(*this);
 		viewer_->textRenderer().layouts().removeVisualLinesListener(*this);
 	}
@@ -151,7 +151,7 @@ void VisualPoint::moved(const Position& from) {
 	if(from.line == line(*this) && lineNumberCaches_) {
 		const font::TextLayout* const layout = viewer_->textRenderer().layouts().atIfCached(line(*this));
 		lineNumberCaches_->visualLine -= lineNumberCaches_->visualSubline;
-		lineNumberCaches_->visualSubline = (layout != 0) ? layout->lineAt(offsetInLine(*this)) : 0;
+		lineNumberCaches_->visualSubline = (layout != nullptr) ? layout->lineAt(offsetInLine(*this)) : 0;
 		lineNumberCaches_->visualLine += lineNumberCaches_->visualSubline;
 	} else
 		lineNumberCaches_ = boost::none;
@@ -179,9 +179,9 @@ void VisualPoint::insertRectangle(const Char* first, const Char* last) {
 	if(textViewer().configuration().lineWrap.wraps())
 		return insert(first, last);
 
-	if(first == 0)
+	if(first == nullptr)
 		throw NullPointerException("first");
-	else if(last == 0)
+	else if(last == nullptr)
 		throw NullPointerException("last");
 	else if(first > last)
 		throw invalid_argument("first > last");
@@ -196,7 +196,7 @@ void VisualPoint::insertRectangle(const Char* first, const Char* last) {
 	const TextRenderer& renderer = textViewer().textRenderer();
 	const int x = renderer.lineLayout(line).location(columnNumber()).x + renderer.lineIndent(line, 0);
 	const DocumentInput* const documentInput = doc.input();
-	const String newline(getNewlineString((documentInput != 0) ? documentInput->newline() : ASCENSION_DEFAULT_NEWLINE));
+	const String newline(getNewlineString((documentInput != nullptr) ? documentInput->newline() : ASCENSION_DEFAULT_NEWLINE));
 	for(const Char* bol = first; ; ++line) {
 		// find the next EOL
 		const Char* const eol = find_first_of(bol, last, NEWLINE_CHARACTERS, ASCENSION_ENDOF(NEWLINE_CHARACTERS));

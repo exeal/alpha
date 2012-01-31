@@ -96,7 +96,7 @@ namespace ascension {
 			void* buffer;
 			if(0 != ::FormatMessageA(
 					FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-					0, code, LANG_USER_DEFAULT, reinterpret_cast<char*>(&buffer), 0, 0)) {
+					0, code, LANG_USER_DEFAULT, reinterpret_cast<char*>(&buffer), 0, nullptr)) {
 				message_ = static_cast<char*>(buffer);
 				::LocalFree(buffer);
 			}
@@ -112,7 +112,7 @@ namespace ascension {
 	public:
 		PlatformDependentError(int code = errno) : IntegralError<int, Base>(code) {
 			const char* const s = std::strerror(code);
-			message_ = (s != 0) ? s : "";
+			message_ = (s != nullptr) ? s : "";
 		}
 		~PlatformDependentError() throw() {}
 		const char* what() const throw() {return message_.c_str();}

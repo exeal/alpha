@@ -375,11 +375,11 @@ namespace {
 				return Encoder::MALFORMED_INPUT;
 			} else if(c >= 0x20000ul && c < 0x30000ul) {
 				const uint16_t** wire;
-				if(0 != (wire = UCS_SIP_TO_JIS_X_0213_PLANE_1[mask8Bit((c - 0x20000ul) >> 8)])) {
+				if(nullptr != (wire = UCS_SIP_TO_JIS_X_0213_PLANE_1[mask8Bit((c - 0x20000ul) >> 8)])) {
 					if(0 != (jis = wireAt(wire, mask8Bit(c - 0x20000ul))))
 						plane2 = false;
 				}
-				if(jis == 0 && 0 != (wire = UCS_SIP_TO_JIS_X_0213_PLANE_2[mask8Bit((c - 0x20000ul) >> 8)])) {
+				if(jis == 0 && nullptr != (wire = UCS_SIP_TO_JIS_X_0213_PLANE_2[mask8Bit((c - 0x20000ul) >> 8)])) {
 					if(0 != (jis = wireAt(wire, mask8Bit(c - 0x20000ul))))
 						plane2 = true;
 				}
@@ -394,15 +394,15 @@ namespace {
 			}
 		} else {
 			const uint16_t** wire;
-			if(0 != (wire = UCS_BMP_TO_JIS_X_0213_PLANE_1[mask8Bit(first[0] >> 8)])) {
+			if(nullptr != (wire = UCS_BMP_TO_JIS_X_0213_PLANE_1[mask8Bit(first[0] >> 8)])) {
 				if(0 != (jis = wireAt(wire, mask8Bit(first[0]))))
 					plane2 = false;
 			}
-			if(jis == 0 && 0 != (wire = UCS_BMP_TO_JIS_X_0213_PLANE_2[mask8Bit(first[0] >> 8)])) {
+			if(jis == 0 && nullptr != (wire = UCS_BMP_TO_JIS_X_0213_PLANE_2[mask8Bit(first[0] >> 8)])) {
 				if(0 != (jis = wireAt(wire, mask8Bit(first[0]))))
 					plane2 = true;
 			}
-			if(jis == 0 && 0 != (wire = UCS_TO_JIS_X_0208[mask8Bit(first[0] >> 8)])) {
+			if(jis == 0 && nullptr != (wire = UCS_TO_JIS_X_0208[mask8Bit(first[0] >> 8)])) {
 				if(0 != (jis = wireAt(wire, mask8Bit(first[0]))))
 					plane2 = false;
 			}
@@ -587,10 +587,10 @@ namespace {
 						case 'A':	// "$A" => GB2312
 							if(x != '2') break;
 							if(!checkedGB2312) {
-								if(0 != (gb2312Encoder = Encoder::forMIB(standard::GB2312)).get())
+								if(nullptr != (gb2312Encoder = Encoder::forMIB(standard::GB2312)).get())
 									gb2312Encoder->setSubstitutionPolicy(substitutionPolicy);
 							}
-							if(gb2312Encoder.get() == 0) break;
+							if(gb2312Encoder.get() == nullptr) break;
 							state.g0 = EncodingState::GB2312; from += 2; continue;
 						case 'B': state.g0 = EncodingState::JIS_X_0208; from += 2; continue;	// "$B" => JIS X 0208
 						case '(':
@@ -599,10 +599,10 @@ namespace {
 								case 'C':	// "$(C" => KSC5601
 									if(x != '2') break;
 									if(!checkedKSC5601) {
-										if(0 != (ksc5601Encoder = Encoder::forMIB(36)).get())
+										if(nullptr != (ksc5601Encoder = Encoder::forMIB(36)).get())
 											ksc5601Encoder->setSubstitutionPolicy(substitutionPolicy);
 									}
-									if(ksc5601Encoder.get() == 0) break;
+									if(ksc5601Encoder.get() == nullptr) break;
 									state.g0 = EncodingState::KS_C_5601; from += 3; continue;
 								case 'D':	// "$(D" => JIS X 0212
 									if(x != '2'
@@ -650,7 +650,7 @@ namespace {
 			} else if(state.invokedG2) {	// G2
 				const Byte c = *from | 0x80;
 				if(state.g2 == EncodingState::ISO_8859_1) {	// ISO-8859-1
-					if(iso88591Encoder.get() == 0)
+					if(iso88591Encoder.get() == nullptr)
 						(iso88591Encoder = Encoder::forMIB(fundamental::ISO_8859_1))->setSubstitutionPolicy(substitutionPolicy);
 					const Byte* next;
 					const Encoder::Result r = iso88591Encoder->toUnicode(to, toEnd, toNext, &c, &c + 1, next);
@@ -659,7 +659,7 @@ namespace {
 						return r;
 					}
 				} else if(state.g2 == EncodingState::ISO_8859_7) {	// ISO-8859-7
-					if(iso88597Encoder.get() == 0)
+					if(iso88597Encoder.get() == nullptr)
 						(iso88597Encoder = Encoder::forMIB(standard::ISO_8859_7))->setSubstitutionPolicy(substitutionPolicy);
 					const Byte* next;
 					const Encoder::Result r = iso88597Encoder->toUnicode(to, toEnd, toNext, &c, &c + 1, next);
@@ -775,28 +775,28 @@ namespace {
 		int charset = EncodingState::ASCII;
 		unique_ptr<Encoder> iso88591Encoder, iso88597Encoder, gb2312Encoder, ksc5601Encoder;
 		if(x == '2') {
-			if(0 != (iso88591Encoder = Encoder::forMIB(fundamental::ISO_8859_1)).get())
+			if(nullptr != (iso88591Encoder = Encoder::forMIB(fundamental::ISO_8859_1)).get())
 				iso88591Encoder->setSubstitutionPolicy(substitutionPolicy);
-			if(0 != (iso88597Encoder = Encoder::forMIB(standard::ISO_8859_7)).get())
+			if(nullptr != (iso88597Encoder = Encoder::forMIB(standard::ISO_8859_7)).get())
 				iso88597Encoder->setSubstitutionPolicy(substitutionPolicy);
-			if(0 != (gb2312Encoder = Encoder::forMIB(standard::GB2312)).get())
+			if(nullptr != (gb2312Encoder = Encoder::forMIB(standard::GB2312)).get())
 				gb2312Encoder->setSubstitutionPolicy(substitutionPolicy);
-			if(0 != (ksc5601Encoder = Encoder::forMIB(36)).get())
+			if(nullptr != (ksc5601Encoder = Encoder::forMIB(36)).get())
 				ksc5601Encoder->setSubstitutionPolicy(substitutionPolicy);
 		}
 
-#define ASCENSION_HANDLE_UNMAPPABLE()										\
-	if(substitutionPolicy == Encoder::REPLACE_UNMAPPABLE_CHARACTERS) {		\
-		jis = mbcs[0] = 0x1a;												\
-		mbcs[1] = 1;														\
-		charset = EncodingState::ASCII;										\
+#define ASCENSION_HANDLE_UNMAPPABLE()											\
+	if(substitutionPolicy == Encoder::REPLACE_UNMAPPABLE_CHARACTERS) {			\
+		jis = mbcs[0] = 0x1a;													\
+		mbcs[1] = 1;															\
+		charset = EncodingState::ASCII;											\
 	} else if(substitutionPolicy == Encoder::IGNORE_UNMAPPABLE_CHARACTERS) {	\
-		--to;																\
-		continue;															\
-	} else {																\
-		toNext = to;														\
-		fromNext = from;													\
-		return Encoder::UNMAPPABLE_CHARACTER;								\
+		--to;																	\
+		continue;																\
+	} else {																	\
+		toNext = to;															\
+		fromNext = from;														\
+		return Encoder::UNMAPPABLE_CHARACTER;									\
 	}
 
 		uint16_t jis;
@@ -846,10 +846,10 @@ namespace {
 #endif // !ASCENSION_NO_EXTENDED_ENCODINGS
 					) && (jis = convertUCStoX0212(*from)) != 0)
 				charset = EncodingState::JIS_X_0212;
-			else if(/*x == '2' &&*/ gb2312Encoder.get() != 0
+			else if(/*x == '2' &&*/ gb2312Encoder.get() != nullptr
 					&& gb2312Encoder->fromUnicode(mbcs, ASCENSION_ENDOF(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
 				charset = EncodingState::GB2312;
-			else if(/*x == '2' &&*/ ksc5601Encoder.get() != 0
+			else if(/*x == '2' &&*/ ksc5601Encoder.get() != nullptr
 					&& ksc5601Encoder->fromUnicode(mbcs, ASCENSION_ENDOF(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
 				charset = EncodingState::KS_C_5601;
 			else if(x == '2'
@@ -1662,7 +1662,7 @@ namespace {
 		}
 
 		convertibleBytes = p - from;
-		const EncodingProperties* result = 0;
+		const EncodingProperties* result = nullptr;
 		switch(x) {
 		case '0': result = &iso2022jp; break;
 		case '2': result = &iso2022jp2; break;
@@ -1672,7 +1672,7 @@ namespace {
 		case 'c': result = &iso2022jp2004compatible; break;
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 		}
-		assert(result != 0);
+		assert(result != nullptr);
 		return *result;
 	}
 

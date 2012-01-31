@@ -73,7 +73,7 @@ namespace {
 
 /// Implements @c IDropTarget#DragEnter method.
 STDMETHODIMP Widget::DragEnter(IDataObject* data, DWORD keyState, POINTL position, DWORD* effect) {
-	if(data == 0)
+	if(data == nullptr)
 		return E_INVALIDARG;
 	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
 
@@ -92,7 +92,7 @@ STDMETHODIMP Widget::DragEnter(IDataObject* data, DWORD keyState, POINTL positio
 					dout << L"\t" << name << L"\n";
 				else
 					dout << L"\t" << L"(unknown format : " << format.cfFormat << L")\n";
-				if(format.ptd != 0)
+				if(format.ptd != nullptr)
 					::CoTaskMemFree(format.ptd);
 			}
 		}
@@ -125,7 +125,7 @@ STDMETHODIMP Widget::DragLeave() {
 
 /// Implements @c IDropTarget#Drop method.
 STDMETHODIMP Widget::Drop(IDataObject* data, DWORD keyState, POINTL position, DWORD* effect) {
-	if(data == 0)
+	if(data == nullptr)
 		return E_INVALIDARG;
 	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
 
@@ -144,7 +144,7 @@ bool Widget::hasFocus() const /*throw()*/ {
 }
 
 void Widget::hide() {
-	if(!win32::boole(::SetWindowPos(identifier().get(), 0, 0, 0, 0, 0,
+	if(!win32::boole(::SetWindowPos(identifier().get(), nullptr, 0, 0, 0, 0,
 			SWP_HIDEWINDOW | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOREPOSITION | SWP_NOSIZE | SWP_NOZORDER)))
 		throw PlatformDependentError<>();
 }
@@ -153,11 +153,11 @@ void WidgetBase::initialize(const Handle<HWND>& parent,
 			const Point<>& position /* = Point<>(CW_USEDEFAULT, CW_USEDEFAULT) */,
 			const Dimension<>& size /* = Dimension<>(CW_USEDEFAULT, CW_USEDEFAULT) */,
 			DWORD style /* = 0 */, DWORD extendedStyle /* = 0 */) {
-	if(handle().get() != 0)
+	if(handle().get() != nullptr)
 		throw IllegalStateException("this object already has a window handle.");
 	AutoZeroSize<WNDCLASSEXW> klass;
 	const basic_string<WCHAR> className(provideClassName());
-	if(!boole(::GetClassInfoExW(klass.hInstance = ::GetModuleHandle(0), className.c_str(), &klass))) {
+	if(!boole(::GetClassInfoExW(klass.hInstance = ::GetModuleHandle(nullptr), className.c_str(), &klass))) {
 		ClassInformation ci;
 		provideClassInformation(ci);
 		klass.style = ci.style;
@@ -171,9 +171,9 @@ void WidgetBase::initialize(const Handle<HWND>& parent,
 			throw PlatformDependentError<>();
 	}
 
-	HWND borrowed = ::CreateWindowExW(extendedStyle, className.c_str(), 0,
-		style, position.x, position.y, size.cx, size.cy, parent.get(), 0, 0, this);
-	if(borrowed == 0)
+	HWND borrowed = ::CreateWindowExW(extendedStyle, className.c_str(), nullptr,
+		style, position.x, position.y, size.cx, size.cy, parent.get(), nullptr, nullptr, this);
+	if(borrowed == nullptr)
 		throw PlatformDependentError<>();
 	assert(borrowed == handle().get());
 	const WidgetBase* const self = reinterpret_cast<WidgetBase*>(
@@ -218,14 +218,14 @@ void Widget::releaseInput() {
 }
 
 void Widget::setBounds(const NativeRectangle& bounds) {
-	if(!win32::boole(::SetWindowPos(identifier().get(), 0,
+	if(!win32::boole(::SetWindowPos(identifier().get(), nullptr,
 			geometry::left(bounds), geometry::top(bounds),
 			geometry::dx(bounds), geometry::dy(bounds), SWP_NOACTIVATE | SWP_NOZORDER)))
 		throw PlatformDependentError<>();
 }
 
 void Widget::scheduleRedraw(bool eraseBackground) {
-	if(!win32::boole(::InvalidateRect(identifier().get(), 0, eraseBackground)))
+	if(!win32::boole(::InvalidateRect(identifier().get(), nullptr, eraseBackground)))
 		throw PlatformDependentError<>();
 }
 
@@ -282,7 +282,7 @@ LRESULT CALLBACK WidgetBase::windowProcedure(HWND window, UINT message, WPARAM w
 	bool consumed = false;
 	if(message == WM_NCCREATE) {
 		self = reinterpret_cast<WidgetBase*>(reinterpret_cast<CREATESTRUCTW*>(lp)->lpCreateParams);
-		assert(self != 0);
+		assert(self != nullptr);
 #ifdef _WIN64
 		::SetWindowLongPtr(window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
 #else
@@ -296,7 +296,7 @@ LRESULT CALLBACK WidgetBase::windowProcedure(HWND window, UINT message, WPARAM w
 #else
 			static_cast<LONG_PTR>(::GetWindowLongW(window, GWL_USERDATA)));
 #endif // _WIN64
-		if(self == 0)
+		if(self == nullptr)
 			return TRUE;
 /*		const LRESULT r = self->preTranslateWindowMessage(message, wp, lp, consumed);
 		if(consumed)

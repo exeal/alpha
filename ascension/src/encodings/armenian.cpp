@@ -172,7 +172,7 @@ namespace {
 		case 0xfb15u:	return MEN_INI;
 		case 0xfb16u:	return VEW_NOW;
 		case 0xfb17u:	return MEN_XEH;
-		default:		return 0;
+		default:		return nullptr;
 		}
 	}
 
@@ -425,7 +425,7 @@ namespace {
 			}
 		}
 
-		const EncodingProperties* props = 0;
+		const EncodingProperties* props = nullptr;
 #ifdef ASCENSION_NO_MINORITY_ENCODINGS
 		props = &ARMSCII_8;
 		for(; first < last; ++first) {

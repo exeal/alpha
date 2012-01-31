@@ -157,7 +157,7 @@ namespace ascension {
 			};
 
 			// constructors
-			explicit TextViewer(presentation::Presentation& presentation, Widget* parent = 0, Style styles = WIDGET);
+			explicit TextViewer(presentation::Presentation& presentation, Widget* parent = nullptr, Style styles = WIDGET);
 			TextViewer(const TextViewer& other);
 			virtual ~TextViewer();
 			// listeners and strategies

@@ -56,9 +56,9 @@ namespace ascension {
 		public:
 			// constructors
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			explicit Point(Document& document, PointListener* listener = 0);
+			explicit Point(Document& document, PointListener* listener = nullptr);
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
-			Point(Document& document, const Position& position, PointListener* listener = 0);
+			Point(Document& document, const Position& position, PointListener* listener = nullptr);
 			Point(const Point& other);
 			virtual ~Point() /*throw()*/;
 			// operators
@@ -192,22 +192,22 @@ namespace ascension {
 		}
 		/// Returns the document or throw @c DocumentDisposedException if the document is already disposed.
 		inline Document& Point::document() {
-			if(document_ == 0)
+			if(document_ == nullptr)
 				throw DocumentDisposedException();
 			return *document_;
 		}
 		/// Returns the document or throw @c DocumentDisposedException if the document is already disposed.
 		inline const Document& Point::document() const {
-			if(document_ == 0)
+			if(document_ == nullptr)
 				throw DocumentDisposedException();
 			return *document_;
 		}
 		/// Called when the document is disposed.
-		inline void Point::documentDisposed() /*throw()*/ {document_ = 0;}
+		inline void Point::documentDisposed() /*throw()*/ {document_ = nullptr;}
 		/// Returns the gravity.
 		inline Direction Point::gravity() const /*throw()*/ {return gravity_;}
 		/// Returns @c true if the document is already disposed.
-		inline bool Point::isDocumentDisposed() const /*throw()*/ {return document_ == 0;}
+		inline bool Point::isDocumentDisposed() const /*throw()*/ {return document_ == nullptr;}
 		/**
 		 * Normalizes the position of the point.
 		 * This method does <strong>not</strong> inform to the listeners about any movement.

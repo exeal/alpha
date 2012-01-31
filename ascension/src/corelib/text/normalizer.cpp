@@ -370,13 +370,13 @@ Normalizer& Normalizer::operator=(const Normalizer& rhs) {
  */
 int Normalizer::compare(const String& s1, const String& s2, CaseSensitivity caseSensitivity) {
 	unique_ptr<String>
-		nfd1((caseSensitivity == CASE_INSENSITIVE_EXCLUDING_TURKISH_I || !isFCD(s1.begin(), s1.end())) ? new String : 0),
-		nfd2((caseSensitivity == CASE_INSENSITIVE_EXCLUDING_TURKISH_I || !isFCD(s2.begin(), s2.end())) ? new String : 0);
-	if(nfd1.get() != 0)
+		nfd1((caseSensitivity == CASE_INSENSITIVE_EXCLUDING_TURKISH_I || !isFCD(s1.begin(), s1.end())) ? new String : nullptr),
+		nfd2((caseSensitivity == CASE_INSENSITIVE_EXCLUDING_TURKISH_I || !isFCD(s2.begin(), s2.end())) ? new String : nullptr);
+	if(nfd1.get() != nullptr)
 		nfd1->assign(normalize(StringCharacterIterator(s1), FORM_D));
-	if(nfd2.get() != 0)
+	if(nfd2.get() != nullptr)
 		nfd2->assign(normalize(StringCharacterIterator(s2), FORM_D));
-	return internalCompare((nfd1.get() != 0) ? *nfd1 : s1, (nfd2.get() != 0) ? *nfd2 : s2, caseSensitivity);
+	return internalCompare((nfd1.get() != nullptr) ? *nfd1 : s1, (nfd2.get() != nullptr) ? *nfd2 : s2, caseSensitivity);
 }
 
 /// Normalizes the next or previous closure for the following iteration.

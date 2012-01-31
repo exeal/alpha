@@ -27,7 +27,7 @@ namespace ascension {
 				if(oldBackground != CLR_INVALID) {
 					if(CLR_INVALID != ::SetBkColor(dc_.get(), color.asCOLORREF())) {
 						const RECT rc = toNative(rect);
-						if(0 != ::ExtTextOutW(dc_.get(), 0, 0, ETO_IGNORELANGUAGE | ETO_OPAQUE, &rc, L"", 0, 0)) {
+						if(0 != ::ExtTextOutW(dc_.get(), 0, 0, ETO_IGNORELANGUAGE | ETO_OPAQUE, &rc, L"", 0, nullptr)) {
 							::SetBkColor(dc_.get(), oldBackground);
 							return;
 						}
@@ -43,7 +43,7 @@ namespace ascension {
 			}
 		protected:
 			GraphicsContext() /*throw()*/ {}
-			void initialize(Handle<HDC> deviceContext) {assert(deviceContext.get() != 0); dc_ = deviceContext;}
+			void initialize(Handle<HDC> deviceContext) {assert(deviceContext.get() != nullptr); dc_ = deviceContext;}
 		private:
 			Handle<HDC> dc_;
 		};
@@ -51,10 +51,10 @@ namespace ascension {
 		class ClientAreaGraphicsContext : public GraphicsContext<graphics::RenderingContext2D> {
 		public:
 			explicit ClientAreaGraphicsContext(const Handle<HWND>& window) {
-				if(window.get() == 0)
+				if(window.get() == nullptr)
 					throw NullPointerException("window");
 				Handle<HDC> dc(::GetDC(window.get()), std::bind1st(std::ptr_fun(&::ReleaseDC), window.get()));
-				if(dc.get() == 0)
+				if(dc.get() == nullptr)
 					throw PlatformDependentError<>();
 				initialize(dc);
 			}
@@ -63,10 +63,10 @@ namespace ascension {
 		class EntireWindowGraphicsContext : public GraphicsContext<graphics::RenderingContext2D> {
 		public:
 			explicit EntireWindowGraphicsContext(const Handle<HWND>& window) {
-				if(window.get() == 0)
+				if(window.get() == nullptr)
 					throw NullPointerException("window");
 				Handle<HDC> dc(::GetWindowDC(window.get()), std::bind1st(std::ptr_fun(&::ReleaseDC), window.get()));
-				if(dc.get() == 0)
+				if(dc.get() == nullptr)
 					throw PlatformDependentError<>();
 				initialize(dc);
 			}
@@ -75,10 +75,10 @@ namespace ascension {
 		class PaintContext : public GraphicsContext<graphics::PaintContext> {
 		public:
 			explicit PaintContext(const Handle<HWND>& window) {
-				if(window.get() == 0)
+				if(window.get() == nullptr)
 					throw NullPointerException("window");
 				Handle<HDC> dc(::BeginPaint(window.get(), &ps_), X(window.get(), ps_));
-				if(dc.get() == 0)
+				if(dc.get() == nullptr)
 					throw PlatformDependentError<>();
 				initialize(dc);
 			}
@@ -99,7 +99,7 @@ namespace ascension {
 
 	namespace detail {
 		inline win32::Handle<HDC> screenDC() {
-			return win32::Handle<HDC>(::GetDC(0), std::bind1st(std::ptr_fun(&::ReleaseDC), static_cast<HWND>(0)));
+			return win32::Handle<HDC>(::GetDC(nullptr), std::bind1st(std::ptr_fun(&::ReleaseDC), static_cast<HWND>(nullptr)));
 		}
 	}
 }

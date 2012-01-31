@@ -228,7 +228,7 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 	while(true) {
 		// 1 ‚Â‘O (B) ‚ð’²‚×‚é
 		assert(i.hasPrevious());
-		if(prev.get() == 0) {prev.reset(i.clone().release()); previousBase(*prev);}
+		if(prev.get() == nullptr) {prev.reset(i.clone().release()); previousBase(*prev);}
 		if(prevCP == INVALID_CODE_POINT) prevCP = prev->current();
 		if(prevClass == NOT_PROPERTY) prevClass = WordBreak::of(prevCP, syntax_, locale());
 		if(prevClass == GraphemeClusterBreak::CR && nextClass == GraphemeClusterBreak::LF)	// (WB3)
@@ -259,7 +259,7 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 				break;
 			}
 			if(prevPrevClass == NOT_PROPERTY) {
-				if(prevPrev.get() == 0) {
+				if(prevPrev.get() == nullptr) {
 					prevPrev.reset(prev->clone().release());
 					previousBase(*prevPrev);
 				}
@@ -283,7 +283,7 @@ void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
 		prevPrev = move(prev);
 		prev = i.clone();
 		nextBase(i);
-		nextNext.reset(0);
+		nextNext.reset();
 		if(!i.hasNext())	// (WB2)
 			return;
 		prevCP = nextCP;
@@ -322,7 +322,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 	while(true) {
 		// 1 ‚ÂŽŸ (B) ‚ð’²‚×‚é
 		assert(i.hasPrevious());
-		if(next.get() == 0) {
+		if(next.get() == nullptr) {
 			next.reset(i.clone().release());
 			previousBase(*next);
 		}
@@ -340,7 +340,7 @@ void AbstractWordBreakIterator::doPrevious(ptrdiff_t amount) {
 				|| (nextClass == WordBreak::NUMERIC && prevClass == WordBreak::MID_NUM)) {	// (WB6, WB12)?
 			// 2 ‚Â‘O (D) ‚ð’²‚×‚é
 			if(prevPrevClass == NOT_PROPERTY) {
-				if(prevPrev.get() == 0) {
+				if(prevPrev.get() == nullptr) {
 					prevPrev.reset(i.clone().release());
 					nextBase(*prevPrev);
 				}

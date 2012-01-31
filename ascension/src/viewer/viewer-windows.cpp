@@ -42,7 +42,7 @@ namespace k = ascension::kernel;
 namespace {
 	// ‚·‚®‰º‚ÅŽg‚¤
 	BOOL CALLBACK enumResLangProc(HMODULE, const WCHAR*, const WCHAR* name, WORD langID, LONG_PTR param) {
-		if(name == 0)
+		if(name == nullptr)
 			return false;
 		else if(langID != MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US))
 			*reinterpret_cast<LANGID*>(param) = langID;
@@ -101,10 +101,10 @@ namespace {
 	class AccLib {
 	public:
 		AccLib() /*throw()*/ : oleaccDLL_(::LoadLibraryA("oleacc.dll")), user32DLL_(::LoadLibraryA("user32.dll")) {
-			if(oleaccDLL_ == 0 || user32DLL_ == 0) {
+			if(oleaccDLL_ == nullptr || user32DLL_ == nullptr) {
 				::FreeLibrary(oleaccDLL_);
 				::FreeLibrary(user32DLL_);
-				oleaccDLL_ = user32DLL_ = 0;
+				oleaccDLL_ = user32DLL_ = nullptr;
 			} else {
 				accessibleObjectFromWindowPtr_ =
 					reinterpret_cast<LPFNACCESSIBLEOBJECTFROMWINDOW>(::GetProcAddress(oleaccDLL_, "AccessibleObjectFromWindow"));
@@ -116,7 +116,7 @@ namespace {
 			}
 		}
 		~AccLib() {::FreeLibrary(oleaccDLL_); ::FreeLibrary(user32DLL_);}
-		bool isAvailable() const /*throw()*/ {return oleaccDLL_ != 0;}
+		bool isAvailable() const /*throw()*/ {return oleaccDLL_ != nullptr;}
 		HRESULT accessibleObjectFromWindow(HWND window, DWORD objectID, REFIID iid, void** object) {
 			assert(isAvailable()); return (*accessibleObjectFromWindowPtr_)(window, objectID, iid, object);}
 		void createStdAccessibleObject(HWND window, long objectID, REFIID iid, void** object) {
@@ -291,7 +291,7 @@ void TextViewer::AccessibleProxy::documentChanged(const k::Document&, const k::D
 STDMETHODIMP TextViewer::AccessibleProxy::get_accChild(VARIANT, IDispatch** ppdispChild) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	ASCENSION_WIN32_VERIFY_COM_POINTER(ppdispChild);
-	*ppdispChild = 0;
+	*ppdispChild = nullptr;
 	return S_OK;
 }
 
@@ -340,7 +340,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accHelpTopic(BSTR*, VARIANT, long*
 STDMETHODIMP TextViewer::AccessibleProxy::get_accKeyboardShortcut(VARIANT varChild, BSTR* pszKeyboardShortcut) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pszKeyboardShortcut);
-	*pszKeyboardShortcut = 0;
+	*pszKeyboardShortcut = nullptr;
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
 	return S_FALSE;
@@ -350,7 +350,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accKeyboardShortcut(VARIANT varChi
 STDMETHODIMP TextViewer::AccessibleProxy::get_accName(VARIANT varChild, BSTR* pszName) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pszName);
-	*pszName = 0;
+	*pszName = nullptr;
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
 	return S_FALSE;
@@ -411,7 +411,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accValue(VARIANT varChild, BSTR* p
 	basic_ostringstream<Char> s;
 	writeDocumentToStream(s, viewer_.document(), viewer_.document().region());
 	*pszValue = ::SysAllocString(s.str().c_str());
-	return (*pszValue != 0) ? S_OK : E_OUTOFMEMORY;
+	return (*pszValue != nullptr) ? S_OK : E_OUTOFMEMORY;
 }
 
 /// @see IOleWindow#GetWindow
@@ -435,7 +435,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::put_accValue(VARIANT varChild, BSTR sz
 		return E_INVALIDARG;
 	else if(viewer_.document().isReadOnly())
 		return E_ACCESSDENIED;
-	viewer_.caret().replaceSelection((szValue != 0) ? szValue : L"");
+	viewer_.caret().replaceSelection((szValue != nullptr) ? szValue : L"");
 	return S_OK;
 }
 
@@ -496,15 +496,15 @@ namespace {
 /// Returns the accessible proxy of the viewer.
 HRESULT TextViewer::accessibleObject(IAccessible*& acc) const /*throw()*/ {
 	TextViewer& self = *const_cast<TextViewer*>(this);
-	acc = 0;
-	if(accessibleProxy_ == 0 && win32::boole(::IsWindow(identifier().get())) && accLib.isAvailable()) {
+	acc = nullptr;
+	if(accessibleProxy_ == nullptr && win32::boole(::IsWindow(identifier().get())) && accLib.isAvailable()) {
 		if(self.accessibleProxy_ = new AccessibleProxy(self)) {
 			self.accessibleProxy_->AddRef();
 //			accLib.notifyWinEvent(EVENT_OBJECT_CREATE, *this, OBJID_CLIENT, CHILDID_SELF);
 		} else
 			return E_OUTOFMEMORY;
 	}
-	if(accessibleProxy_ == 0)
+	if(accessibleProxy_ == nullptr)
 		return E_FAIL;
 	(acc = self.accessibleProxy_)->AddRef();
 	return S_OK;
@@ -592,8 +592,8 @@ LRESULT TextViewer::handleWindowSystemEvent(UINT message, WPARAM wp, LPARAM lp, 
 			if(consumed) {
 				// ignore if the cursor is not over a window belongs to the same thread
 				HWND pointedWindow = ::WindowFromPoint(base::Cursor::position());
-				if(pointedWindow != 0
-						&& ::GetWindowThreadProcessId(pointedWindow, 0) == ::GetWindowThreadProcessId(identifier().get(), 0))
+				if(pointedWindow != nullptr
+						&& ::GetWindowThreadProcessId(pointedWindow, nullptr) == ::GetWindowThreadProcessId(identifier().get(), nullptr))
 					cursorVanisher_.vanish();
 			}
 			return consumed ? 0 : 1;
@@ -654,7 +654,7 @@ LRESULT TextViewer::handleWindowSystemEvent(UINT message, WPARAM wp, LPARAM lp, 
 /// Hides the tool tip.
 void TextViewer::hideToolTip() {
 	assert(::IsWindow(identifier().get()));
-	if(tipText_ == 0)
+	if(tipText_ == nullptr)
 		tipText_ = new Char[1];
 	wcscpy(tipText_, L"");
 	::KillTimer(identifier().get(), TIMERID_CALLTIP);	// ”O‚Ì‚½‚ß...
@@ -669,9 +669,9 @@ void TextViewer::initialize() {
 	// create the tooltip belongs to the window
 	toolTip_ = ::CreateWindowExW(
 		WS_EX_TOOLWINDOW | WS_EX_TOPMOST, TOOLTIPS_CLASSW, 0, WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX,
-		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, identifier().get(), 0,
-		reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLongPtr(identifier().get(), GWLP_HINSTANCE))), 0);
-	if(toolTip_ != 0) {
+		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, identifier().get(), nullptr,
+		reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLongPtr(identifier().get(), GWLP_HINSTANCE))), nullptr);
+	if(toolTip_ != nullptr) {
 		win32::AutoZeroSize<TOOLINFOW> ti;
 		RECT margins = {1, 1, 1, 1};
 		ti.hwnd = identifier().get();
@@ -697,7 +697,7 @@ void TextViewer::initialize() {
 	rc.lineNumbers.border.color = Color(0x00, 0x80, 0x80);
 	rc.lineNumbers.border.style = Border::DOTTED;
 	rc.lineNumbers.border.width = Length(1);
-	setConfiguration(0, &rc, false);
+	setConfiguration(nullptr, &rc, false);
 
 #if 0
 	// this is JavaScript partitioning and lexing settings for test
@@ -887,7 +887,7 @@ void TextViewer::initialize() {
 
 /// @see WM_CAPTURECHANGED
 void TextViewer::onCaptureChanged(const win32::Handle<HWND>&, bool& consumed) {
-	if(consumed = (mouseInputStrategy_.get() != 0))
+	if(consumed = (mouseInputStrategy_.get() != nullptr))
 		mouseInputStrategy_->captureChanged();
 }
 
@@ -988,7 +988,7 @@ void TextViewer::onCommand(WORD id, WORD, const win32::Handle<HWND>&, bool& cons
 
 /// @see WM_DESTROY
 void TextViewer::onDestroy(bool& consumed) {
-	if(mouseInputStrategy_.get() != 0) {
+	if(mouseInputStrategy_.get() != nullptr) {
 		mouseInputStrategy_->interruptMouseReaction(false);
 		mouseInputStrategy_->uninstall();
 		mouseInputStrategy_.reset();
@@ -998,7 +998,7 @@ void TextViewer::onDestroy(bool& consumed) {
 	::DestroyWindow(toolTip_);
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-	if(accessibleProxy_ != 0) {
+	if(accessibleProxy_ != nullptr) {
 		accessibleProxy_->dispose();
 		accessibleProxy_->Release();
 	}
@@ -1083,7 +1083,7 @@ void TextViewer::onNotify(int, NMHDR& nmhdr, bool& consumed) {
 /// @see WM_SETCURSOR
 void TextViewer::onSetCursor(const win32::Handle<HWND>&, UINT, UINT, bool& consumed) {
 	cursorVanisher_.restore();
-	if(consumed = (mouseInputStrategy_.get() != 0))
+	if(consumed = (mouseInputStrategy_.get() != nullptr))
 		mouseInputStrategy_->showCursor(mapFromGlobal(base::Cursor::position()));
 }
 
@@ -1095,7 +1095,7 @@ void TextViewer::onStyleChanged(int type, const STYLESTRUCT& style) {
 		// (ignore the alignment)
 		Configuration c(configuration());
 		c.readingDirection = ((style.styleNew & WS_EX_RTLREADING) != 0) ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
-		setConfiguration(&c, 0, false);
+		setConfiguration(&c, nullptr, false);
 	}
 }
 
@@ -1204,14 +1204,14 @@ void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKey
 	static const WCHAR* captions[] = {
 		L"&Undo",									L"\x5143\x306b\x623b\x3059(&U)",
 		L"&Redo",									L"\x3084\x308a\x76f4\x3057(&R)",
-		0,											0,
+		nullptr,									nullptr,
 		L"Cu&t",									L"\x5207\x308a\x53d6\x308a(&T)",
 		L"&Copy",									L"\x30b3\x30d4\x30fc(&C)",
 		L"&Paste",									L"\x8cbc\x308a\x4ed8\x3051(&P)",
 		L"&Delete",									L"\x524a\x9664(&D)",
-		0,											0,
+		nullptr,									nullptr,
 		L"Select &All",								L"\x3059\x3079\x3066\x9078\x629e(&A)",
-		0,											0,
+		nullptr,									nullptr,
 		L"&Right to left Reading order",			L"\x53f3\x304b\x3089\x5de6\x306b\x8aad\x3080(&R)",
 		L"&Show Unicode control characters",		L"Unicode \x5236\x5fa1\x6587\x5b57\x306e\x8868\x793a(&S)",
 		L"&Insert Unicode control character",		L"Unicode \x5236\x5fa1\x6587\x5b57\x306e\x633f\x5165(&I)",
@@ -1325,7 +1325,7 @@ void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKey
 
 		if(win32::boole(::ImmGetProperty(keyboardLayout, IGP_CONVERSION) & IME_CMODE_SOFTKBD)) {
 			DWORD convMode;
-			::ImmGetConversionStatus(imc, &convMode, 0);
+			::ImmGetConversionStatus(imc, &convMode, nullptr);
 			menu << Menu::StringItem(ID_TOGGLESOFTKEYBOARD, win32::boole(convMode & IME_CMODE_SOFTKBD) ? closeSftKbd : openSftKbd);
 		}
 
@@ -1362,8 +1362,8 @@ void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKey
 
 namespace {
 	HRESULT createSelectionImage(const TextViewer& viewer, const NativePoint& cursorPosition, bool highlightSelection, SHDRAGIMAGE& image) {
-		win32::Handle<HDC> dc(::CreateCompatibleDC(0), &::DeleteDC);
-		if(dc.get() == 0)
+		win32::Handle<HDC> dc(::CreateCompatibleDC(nullptr), &::DeleteDC);
+		if(dc.get() == nullptr)
 			return E_FAIL;
 
 		win32::AutoZero<BITMAPV5HEADER> bh;
@@ -1379,7 +1379,7 @@ namespace {
 		// determine the range to draw
 		const k::Region selectedRegion(viewer.caret());
 		Index firstLine, firstSubline;
-		viewer.firstVisibleLine(&firstLine, 0, &firstSubline);
+		viewer.firstVisibleLine(&firstLine, nullptr, &firstSubline);
 
 		// calculate the size of the image
 		const NativeRectangle clientBounds(viewer.bounds(false));
@@ -1412,7 +1412,7 @@ namespace {
 
 		// create a mask
 		win32::Handle<HBITMAP> mask(::CreateBitmap(bh.bV5Width, bh.bV5Height, 1, 1, 0), &::DeleteObject);	// monochrome
-		if(mask.get() == 0)
+		if(mask.get() == nullptr)
 			return E_FAIL;
 		HBITMAP oldBitmap = static_cast<HBITMAP>(::SelectObject(dc.get(), mask.get()));
 		dc.fillSolidRect(0, 0, bh.bV5Width, bh.bV5Height, RGB(0x00, 0x00, 0x00));
@@ -1434,7 +1434,7 @@ namespace {
 			}
 		}
 		::SelectObject(dc.get(), oldBitmap);
-		BITMAPINFO* bi = 0;
+		BITMAPINFO* bi = nullptr;
 		AutoBuffer<byte> maskBuffer;
 		uint8_t* maskBits;
 		BYTE alphaChunnels[2] = {0xff, 0x01};
@@ -1442,7 +1442,7 @@ namespace {
 			bi = static_cast<BITMAPINFO*>(::operator new(sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * 2));
 			memset(&bi->bmiHeader, 0, sizeof(BITMAPINFOHEADER));
 			bi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-			int r = ::GetDIBits(dc.get(), mask.get(), 0, bh.bV5Height, 0, bi, DIB_RGB_COLORS);
+			int r = ::GetDIBits(dc.get(), mask.get(), 0, bh.bV5Height, nullptr, bi, DIB_RGB_COLORS);
 			if(r == 0 || r == ERROR_INVALID_PARAMETER)
 				throw runtime_error("");
 			assert(bi->bmiHeader.biBitCount == 1 && bi->bmiHeader.biClrUsed == 2);
@@ -1464,7 +1464,7 @@ namespace {
 		// create the result bitmap
 		void* bits;
 		win32::Handle<HBITMAP> bitmap(::CreateDIBSection(dc.get(), *reinterpret_cast<BITMAPINFO*>(&bh), DIB_RGB_COLORS, bits));
-		if(bitmap.get() == 0)
+		if(bitmap.get() == nullptr)
 			return E_FAIL;
 		// render the lines
 		oldBitmap = ::SelectObject(dc.get(), bitmap.get());
@@ -1475,7 +1475,7 @@ namespace {
 		for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
 			renderer.renderLine(line, dc,
 				renderer.lineIndent(line) - geometry::left(selectionBounds), y,
-				selectionExtent, selectionExtent, highlightSelection ? &selection : 0);
+				selectionExtent, selectionExtent, highlightSelection ? &selection : nullptr);
 			y += static_cast<int>(renderer.defaultFont()->metrics().linePitch() * renderer.numberOfLinesOfLine(line));
 		}
 		::SelectObject(dc.get(), oldBitmap);
@@ -1530,7 +1530,7 @@ HRESULT DefaultMouseInputStrategy::doDragAndDrop() {
 	}
 
 	// setup drag-image
-	if(dnd_.dragSourceHelper.get() != 0) {
+	if(dnd_.dragSourceHelper.get() != nullptr) {
 		SHDRAGIMAGE image;
 		if(SUCCEEDED(hr = createSelectionImage(*viewer_,
 				dragApproachedPosition_, dnd_.supportLevel >= SUPPORT_DND_WITH_SELECTED_DRAG_IMAGE, image))) {
@@ -1551,7 +1551,7 @@ HRESULT DefaultMouseInputStrategy::doDragAndDrop() {
 
 /// @see IDropTarget#DragEnter
 STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) {
-	if(data == 0)
+	if(data == nullptr)
 		return E_INVALIDARG;
 	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
 	*effect = DROPEFFECT_NONE;
@@ -1572,7 +1572,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 					dout << L"\t" << name << L"\n";
 				else
 					dout << L"\t" << L"(unknown format : " << format.cfFormat << L")\n";
-				if(format.ptd != 0)
+				if(format.ptd != nullptr)
 					::CoTaskMemFree(format.ptd);
 			}
 		}
@@ -1583,7 +1583,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 		return S_OK;
 
 	// validate the dragged data if can drop
-	FORMATETC fe = {CF_UNICODETEXT, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+	FORMATETC fe = {CF_UNICODETEXT, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
 	if((hr = data->QueryGetData(&fe)) != S_OK) {
 		fe.cfFormat = CF_TEXT;
 		if(SUCCEEDED(hr = data->QueryGetData(&fe) != S_OK))
@@ -1611,7 +1611,7 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 
 	viewer_->setFocus();
 	timer_.start(DRAGGING_TRACK_INTERVAL, *this);
-	if(dnd_.dropTargetHelper.get() != 0) {
+	if(dnd_.dropTargetHelper.get() != nullptr) {
 		POINT p = {pt.x, pt.y};
 		hr = dnd_.dropTargetHelper->DragEnter(viewer_->identifier().get(), data, &p, *effect);
 	}
@@ -1620,11 +1620,11 @@ STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keySt
 
 /// @see IDropTarget#Drop
 STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) {
-	if(dnd_.dropTargetHelper.get() != 0) {
+	if(dnd_.dropTargetHelper.get() != nullptr) {
 		POINT p = {pt.x, pt.y};
 		dnd_.dropTargetHelper->Drop(data, &p, *effect);
 	}
-	if(data == 0)
+	if(data == nullptr)
 		return E_INVALIDARG;
 	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
 	*effect = DROPEFFECT_NONE;

@@ -56,7 +56,7 @@ DocumentDisposedException::DocumentDisposedException() :
  * @param document The document to which the point attaches
  * @param listener The listener. Can be @c null if not needed
  */
-Point::Point(Document& document, PointListener* listener /* = 0 */) :
+Point::Point(Document& document, PointListener* listener /* = nullptr */) :
 		document_(&document), position_(), adapting_(true), gravity_(Direction::FORWARD), listener_(listener) {
 	static_cast<detail::PointCollection<Point>&>(document).addNewPoint(*this);
 }
@@ -69,7 +69,7 @@ Point::Point(Document& document, PointListener* listener /* = 0 */) :
  * @param listener The listener. Can be @c null if not needed
  * @throw BadPositionException @a position is outside of the document
  */
-Point::Point(Document& document, const Position& position, PointListener* listener /* = 0 */) :
+Point::Point(Document& document, const Position& position, PointListener* listener /* = nullptr */) :
 		document_(&document), position_(position), adapting_(true), gravity_(Direction::FORWARD), listener_(listener) {
 	if(!document.region().includes(position))
 		throw BadPositionException(position);
@@ -83,7 +83,7 @@ Point::Point(Document& document, const Position& position, PointListener* listen
  */
 Point::Point(const Point& other) : document_(other.document_), position_(other.position_),
 		adapting_(other.adapting_), gravity_(other.gravity_), listener_(other.listener_) {
-	if(document_ == 0)
+	if(document_ == nullptr)
 		throw DocumentDisposedException();
 	static_cast<detail::PointCollection<Point>*>(document_)->addNewPoint(*this);
 }
@@ -91,7 +91,7 @@ Point::Point(const Point& other) : document_(other.document_), position_(other.p
 /// Destructor.
 Point::~Point() /*throw()*/ {
 	lifeCycleListeners_.notify(&PointLifeCycleListener::pointDestroyed);
-	if(document_ != 0)
+	if(document_ != nullptr)
 		static_cast<detail::PointCollection<Point>*>(document_)->removePoint(*this);
 }
 
@@ -156,7 +156,7 @@ Point& Point::moveTo(const Position& to) {
 	const Position from(position());
 	position_ = destination;
 	moved(from);
-	if(listener_ != 0 && destination != from)
+	if(listener_ != nullptr && destination != from)
 		listener_->pointMoved(*this, from);
 	return *this;
 }
@@ -187,7 +187,7 @@ Point& Point::setGravity(Direction gravity) /*throw()*/ {
  * @param change The content of the document change
  */
 void Point::update(const DocumentChange& change) {
-	if(document_ == 0 || !adaptsToDocument())
+	if(document_ == nullptr || !adaptsToDocument())
 		return;
 //	normalize();
 	const Position newPosition(positions::updatePosition(position(), change, gravity()));

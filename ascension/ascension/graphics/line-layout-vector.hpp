@@ -110,7 +110,7 @@ namespace ascension {
 			private:
 				typedef std::list<LineLayout>::iterator Iterator;
 				void clearCaches(const Range<Index>& lines, bool repair);
-				void deleteLineLayout(Index line, TextLayout* newLayout = 0) /*throw()*/;
+				void deleteLineLayout(Index line, TextLayout* newLayout = nullptr) /*throw()*/;
 				void fireVisualLinesDeleted(const Range<Index>& lines, Index sublines);
 				void fireVisualLinesInserted(const Range<Index>& lines);
 				void fireVisualLinesModified(const Range<Index>& lines,
@@ -118,7 +118,7 @@ namespace ascension {
 				void initialize();
 				void invalidate(const std::vector<Index>& lines);
 				void presentationStylistChanged();
-				void updateLongestLine(Index line, Scalar measure) /*throw()*/;
+				void updateLongestLine(boost::optional<Index> line, Scalar measure) /*throw()*/;
 				// kernel.DocumentListener
 				void documentAboutToBeChanged(const kernel::Document& document);
 				void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
@@ -195,12 +195,12 @@ namespace ascension {
 			 */
 			inline const TextLayout* LineLayoutVector::atIfCached(Index line) const /*throw()*/ {
 				if(pendingCacheClearance_ && includes(*pendingCacheClearance_, line))
-					return 0;
+					return nullptr;
 				for(std::list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 					if(i->first == line)
 						return i->second;
 				}
-				return 0;
+				return nullptr;
 			}
 
 			/// Returns the document.
@@ -242,7 +242,7 @@ namespace ascension {
 			 */
 			inline Index LineLayoutVector::numberOfSublinesOfLine(Index line) const /*throw()*/ {
 				const TextLayout* const layout = atIfCached(line);
-				return (layout != 0) ? layout->numberOfLines() : 1;
+				return (layout != nullptr) ? layout->numberOfLines() : 1;
 			}
 
 			/// Returns the number of the visual lines.

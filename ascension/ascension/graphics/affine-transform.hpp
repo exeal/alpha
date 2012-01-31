@@ -198,78 +198,78 @@ namespace ascension {
 			inline typename Coordinate<AffineTransform>::Type determinant(const AffineTransform& a);
 			template<typename AffineTransform>
 			inline bool isIdentity(const AffineTransform& a,
-				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = 0);
+				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = nullptr);
 
 			// inverse transformations ////////////////////////////////////////////////////////////
 
 			template<typename AffineTransform>
 			inline AffineTransform inverted(const AffineTransform& a,
-				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = 0);
+				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = nullptr);
 			template<typename AffineTransform>
 			inline bool isInvertible(const AffineTransform& a,
-				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = 0);
+				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = nullptr);
 
 			// generic concatenations /////////////////////////////////////////////////////////////
 
 			template<typename AffineTransform>
 			inline AffineTransform concatenate(
 				AffineTransform& lhs, const AffineTransform& rhs,
-				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = 0);
+				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = nullptr);
 			template<typename AffineTransform>
 			inline AffineTransform preConcatenate(
 				const AffineTransform& lhs, AffineTransform& rhs,
-				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = 0);
+				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = nullptr);
 
 			// known concatenations ///////////////////////////////////////////////////////////////
 
 			template<typename AffineTransform>
 			inline AffineTransform& quadrantRotate(AffineTransform& a, int numberOfQuadrants,
-				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = 0);
+				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = nullptr);
 			template<typename AffineTransform>
 			inline AffineTransform& quadrantRotate(AffineTransform& a, int numberOfQuadrants,
 				typename Coordinate<AffineTransform>::Type x,
 				typename Coordinate<AffineTransform>::Type y,
-				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = 0);
+				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = nullptr);
 			template<typename AffineTransform>
 			inline AffineTransform& rotate(AffineTransform& a,
 				typename Coordinate<AffineTransform>::Type thetaInRadians,
-				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = 0);
+				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = nullptr);
 			template<typename AffineTransform>
 			inline AffineTransform& rotate(AffineTransform& a,
 				typename Coordinate<AffineTransform>::Type thetaInRadians,
 				typename Coordinate<AffineTransform>::Type x,
 				typename Coordinate<AffineTransform>::Type y,
-				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = 0);
+				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = nullptr);
 			template<typename AffineTransform>
 			inline AffineTransform& scale(AffineTransform& a,
 				typename Coordinate<AffineTransform>::Type sx,
 				typename Coordinate<AffineTransform>::Type sy,
-				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = 0);
+				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = nullptr);
 			template<typename AffineTransform>
 			inline AffineTransform& scaleNonUniform(AffineTransform& a,
 				typename Coordinate<AffineTransform>::Type sx,
 				typename Coordinate<AffineTransform>::Type sy,
-				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = 0);
+				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = nullptr);
 			template<typename AffineTransform>
 			inline AffineTransform& scale(AffineTransform& a,
 				typename Coordinate<AffineTransform>::Type factor,
-				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = 0);
+				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = nullptr);
 			template<typename AffineTransform>
 			inline AffineTransform& shear(AffineTransform& a,
 				typename Coordinate<AffineTransform>::Type shx,
 				typename Coordinate<AffineTransform>::Type shy,
-				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = 0);
+				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = nullptr);
 			template<typename AffineTransform>
 			inline AffineTransform& translate(AffineTransform& a,
 				typename Coordinate<AffineTransform>::Type tx,
 				typename Coordinate<AffineTransform>::Type ty,
-				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = 0);
+				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = nullptr);
 
 			// transformations ////////////////////////////////////////////////////////////////////
 
 			template<typename AffineTransform, typename Geometry>
 			inline Geometry& transform(const AffineTransform& a, Geometry& g,
-				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = 0);
+				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = nullptr);
 
 		}
 	}

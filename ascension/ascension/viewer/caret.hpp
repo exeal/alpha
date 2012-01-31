@@ -25,7 +25,7 @@ namespace ascension {
 
 		namespace utils {
 			HRESULT createTextObjectForSelectedString(const Caret& caret, bool rtf, IDataObject*& content);
-			std::pair<HRESULT, String> getTextFromDataObject(IDataObject& data, bool* rectangle = 0);
+			std::pair<HRESULT, String> getTextFromDataObject(IDataObject& data, bool* rectangle = nullptr);
 		}
 
 		class VirtualBox;
@@ -251,7 +251,7 @@ namespace ascension {
 
 		/// Returns @c true if the selection is rectangle.
 		inline bool Caret::isSelectionRectangle() const /*throw()*/ {
-			return context_.selectedRectangle.get() != 0;
+			return context_.selectedRectangle.get() != nullptr;
 		}
 
 		/// キャレット位置の括弧と対応する括弧の位置を返す (@a first が対括弧、@a second がキャレット周辺の括弧)

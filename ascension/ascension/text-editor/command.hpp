@@ -186,7 +186,7 @@ namespace ascension {
 			class IncrementalFindCommand : public Command {
 			public:
 				IncrementalFindCommand(viewers::TextViewer& view, searcher::TextSearcher::Type type,
-					Direction direction, searcher::IncrementalSearchCallback* callback = 0) /*throw()*/;
+					Direction direction, searcher::IncrementalSearchCallback* callback = nullptr) /*throw()*/;
 			private:
 				bool perform();
 				searcher::TextSearcher::Type type_;

@@ -47,7 +47,7 @@
 #define ASCENSION_IMPLEMENT_MESSAGE_DISPATCH(messageID, methodName)	\
 	template<typename T>											\
 	static LRESULT dispatch(T& widget, MessageTag<messageID>,		\
-		WPARAM wp, LPARAM lp, bool& consumed, typename std::enable_if<detail::Has_##methodName<T>::value>::type* = 0)
+		WPARAM wp, LPARAM lp, bool& consumed, typename std::enable_if<detail::Has_##methodName<T>::value>::type* = nullptr)
 
 namespace ascension {
 

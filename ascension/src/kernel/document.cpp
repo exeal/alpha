@@ -432,7 +432,7 @@ void Bookmarker::toggle(Index line) {
 // DocumentPartitioner ////////////////////////////////////////////////////////////////////////////
 
 /// Constructor.
-DocumentPartitioner::DocumentPartitioner() /*throw()*/ : document_(0) {
+DocumentPartitioner::DocumentPartitioner() /*throw()*/ : document_(nullptr) {
 }
 
 /// Destructor.
@@ -513,7 +513,7 @@ const DocumentPropertyKey Document::TITLE_PROPERTY;
  * @see #region, DocumentAccessViolationException
  */
 Region Document::accessibleRegion() const /*throw()*/ {
-	return (accessibleRegion_.get() != 0) ? Region(accessibleRegion_->first, *accessibleRegion_->second) : region();
+	return (accessibleRegion_.get() != nullptr) ? Region(accessibleRegion_->first, *accessibleRegion_->second) : region();
 }
 
 #if 0
@@ -584,7 +584,7 @@ void Document::doResetContent() {
 }
 
 void Document::fireDocumentAboutToBeChanged() /*throw()*/ {
-	if(partitioner_.get() != 0)
+	if(partitioner_.get() != nullptr)
 		partitioner_->documentAboutToBeChanged();
 	for(list<DocumentListener*>::iterator i(prenotifiedListeners_.begin()), e(prenotifiedListeners_.end()); i != e; ++i)
 		(*i)->documentAboutToBeChanged(*this);
@@ -593,7 +593,7 @@ void Document::fireDocumentAboutToBeChanged() /*throw()*/ {
 }
 
 void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints /* = true */) /*throw()*/ {
-	if(partitioner_.get() != 0)
+	if(partitioner_.get() != nullptr)
 		partitioner_->documentChanged(c);
 	if(updateAllPoints)
 		updatePoints(c);
@@ -664,9 +664,9 @@ bool Document::lock(const void* locker) {
 	// TODO: should support exclusive operation.
 	if(isReadOnly())
 		throw ReadOnlyDocumentException();
-	else if(locker == 0)
+	else if(locker == nullptr)
 		throw NullPointerException("locker");
-	else if(locker_ != 0 || (isModified() && input_.get() != 0 && !input_->isChangeable()))
+	else if(locker_ != nullptr || (isModified() && input_.get() != nullptr && !input_->isChangeable()))
 		return false;
 	locker_ = locker;
 	return true;
@@ -831,7 +831,7 @@ void Document::setModified() /*throw()*/ {
  */
 void Document::setPartitioner(unique_ptr<DocumentPartitioner> newPartitioner) /*throw()*/ {
 	partitioner_ = move(newPartitioner);
-	if(partitioner_.get() != 0)
+	if(partitioner_.get() != nullptr)
 		partitioner_->install(*this);
 	partitioningChanged(region());
 }
@@ -872,13 +872,13 @@ void Document::setReadOnly(bool readOnly /* = true */) /*throw()*/ {
  */
 void Document::unlock(const void* locker) {
 	// TODO: support exclusive operation.
-	if(locker_ == 0)
+	if(locker_ == nullptr)
 		throw IllegalStateException("the document's input is not locked.");
-	else if(locker == 0)
+	else if(locker == nullptr)
 		throw NullPointerException("locker");
 	else if(locker != locker_)
 		throw invalid_argument("locker");
-	locker_ = 0;
+	locker_ = nullptr;
 }
 #endif
 /**
@@ -898,7 +898,7 @@ inline void Document::updatePoints(const DocumentChange& change) /*throw()*/ {
  * @see #isNarrowed, #narrow
  */
 void Document::widen() /*throw()*/ {
-	if(accessibleRegion_.get() != 0) {
+	if(accessibleRegion_.get() != nullptr) {
 		accessibleRegion_.reset();
 		stateListeners_.notify<const Document&>(&DocumentStateListener::documentAccessibleRegionChanged, *this);
 	}
@@ -948,7 +948,7 @@ Document::DefaultContentTypeInformationProvider::~DefaultContentTypeInformationP
  * @throw ... Any exceptions @c Document#beginCompoundChange throws
  */
 CompoundChangeSaver::CompoundChangeSaver(Document* document) : document_(document) {
-	if(document_ != 0)
+	if(document_ != nullptr)
 		document_->beginCompoundChange();
 }
 
@@ -957,7 +957,7 @@ CompoundChangeSaver::CompoundChangeSaver(Document* document) : document_(documen
  * @throw ... Any exceptions @c Document#endCompoundChange throws
  */
 CompoundChangeSaver::~CompoundChangeSaver() {
-	if(document_ != 0)
+	if(document_ != nullptr)
 		document_->endCompoundChange();
 }
 
@@ -978,14 +978,14 @@ CompoundChangeSaver::~CompoundChangeSaver() {
  * @throw ReadOnlyDocumentException The document is read only
  * @throw DocumentCantChangeException Failed to lock the document
  */
-DocumentLocker::DocumentLocker(Document& document) : document_((document.locker() == 0) ? &document : 0) {
-	if(document_ != 0 && !document_->lock(this))	// manage lock if there is not an active lock
+DocumentLocker::DocumentLocker(Document& document) : document_((document.locker() == nullptr) ? &document : nullptr) {
+	if(document_ != nullptr && !document_->lock(this))	// manage lock if there is not an active lock
 		throw DocumentCantChangeException();
 }
 
 /// Destructor calls @c Document#unlock.
 DocumentLocker::~DocumentLocker() /*throw()*/ {
-	if(document_ != 0)
+	if(document_ != nullptr)
 		document_->unlock(this);
 }
 #endif
@@ -1015,7 +1015,7 @@ const CharacterIterator::ConcreteTypeTag
 
 /// Default constructor makes an invalid iterator object.
 DocumentCharacterIterator::DocumentCharacterIterator() /*throw()*/
-		: CharacterIterator(CONCRETE_TYPE_TAG_), document_(0), line_(0) {
+		: CharacterIterator(CONCRETE_TYPE_TAG_), document_(nullptr), line_(0) {
 }
 
 /**
@@ -1069,7 +1069,7 @@ DocumentCharacterIterator::DocumentCharacterIterator(const DocumentCharacterIter
 
 /// @see text#CharacterIterator#current
 CodePoint DocumentCharacterIterator::current() const /*throw()*/ {
-	if(document() == 0 || tell() == region().second)
+	if(document() == nullptr || tell() == region().second)
 		return DONE;
 	else if(tell().offsetInLine == line().length())
 		return LINE_SEPARATOR;
@@ -1109,7 +1109,7 @@ bool DocumentCharacterIterator::doEquals(const CharacterIterator& other) const {
 	const DocumentCharacterIterator& o = static_cast<const DocumentCharacterIterator&>(other);
 	if(document() != o.document())
 		return false;
-	return document() == 0 || tell() == o.tell();
+	return document() == nullptr || tell() == o.tell();
 }
 
 /// @see text#CharacterIterator#doLess

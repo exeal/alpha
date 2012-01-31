@@ -26,7 +26,7 @@ void viewers::currentCharacterSize(const Caret& caret, Scalar* measure, Scalar* 
 		return;
 
 	const TextRenderer& textRenderer = caret.textViewer().textRenderer();
-	const TextLayout* layout = 0;
+	const TextLayout* layout = nullptr;
 	if(extent != 0) {
 		layout = &textRenderer.layouts().at(line(caret));
 		const LineMetrics& lineMetrics = layout->lineMetrics(layout->lineAt(offsetInLine(caret)));
@@ -36,7 +36,7 @@ void viewers::currentCharacterSize(const Caret& caret, Scalar* measure, Scalar* 
 		if(k::locations::isEndOfLine(caret))	// EOL
 			*measure = textRenderer.defaultFont()->metrics().averageCharacterWidth();
 		else {
-			if(layout == 0)
+			if(layout == nullptr)
 				layout = &textRenderer.layouts().at(line(caret));
 			const Scalar leading = geometry::x(layout->location(offsetInLine(caret), TextLayout::LEADING));
 			const Scalar trailing = geometry::x(layout->location(offsetInLine(caret), TextLayout::TRAILING));
@@ -75,12 +75,12 @@ void CaretShapeUpdater::update() /*throw()*/ {
 // DefaultCaretShaper /////////////////////////////////////////////////////////////////////////////
 
 /// Constructor.
-DefaultCaretShaper::DefaultCaretShaper() /*throw()*/ : updater_(0) {
+DefaultCaretShaper::DefaultCaretShaper() /*throw()*/ : updater_(nullptr) {
 }
 
 /// @see CaretListener#caretMoved
 void DefaultCaretShaper::caretMoved(const Caret& caret, const k::Region& oldRegion) {
-	if(updater_ != 0) {
+	if(updater_ != nullptr) {
 		assert(&updater_->caret() == &caret);	// sanity check...
 		if(line(caret) != oldRegion.second.line)
 			updater_->update();
@@ -89,7 +89,7 @@ void DefaultCaretShaper::caretMoved(const Caret& caret, const k::Region& oldRegi
 
 /// @see graphics#font#ComputedWritingModeListener#computedWritingModeChanged
 void DefaultCaretShaper::computedWritingModeChanged(const WritingMode& used) {
-	if(updater_ != 0)
+	if(updater_ != nullptr)
 		updater_->update();
 }
 
@@ -195,7 +195,7 @@ namespace {
 		if(localeSensitive && overtype)
 			currentCharacterSize(caret, &measure, &extent);
 		else {
-			currentCharacterSize(caret, 0, &extent);
+			currentCharacterSize(caret, nullptr, &extent);
 			measure = systemDefinedCaretMeasure();
 		}
 		switch(layout.writingMode().blockFlowDirection) {
@@ -247,7 +247,7 @@ void DefaultCaretShaper::uninstall() /*throw()*/ {
 	updater_->caret().removeListener(*this);
 	updater_->caret().textViewer().textRenderer().removeComputedWritingModeListener(*this);
 	updater_->caret().textViewer().textRenderer().layouts().removeVisualLinesListener(*this);
-	updater_ = 0;
+	updater_ = nullptr;
 }
 
 /// @see CaretShaper#visualLinesModified
@@ -260,7 +260,7 @@ void DefaultCaretShaper::visualLinesInserted(const Range<Index>& lines) /*throw(
 
 /// @see CaretShaper#visualLinesModified
 void DefaultCaretShaper::visualLinesModified(const Range<Index>& lines, SignedIndex, bool, bool) /*throw()*/ {
-	if(updater_ != 0 && includes(lines, line(updater_->caret())))
+	if(updater_ != nullptr && includes(lines, line(updater_->caret())))
 		updater_->update();
 }
 
@@ -272,7 +272,7 @@ namespace {
 
 /// @see CaretListener#caretMoved
 void LocaleSensitiveCaretShaper::caretMoved(const Caret& caret, const k::Region& oldRegion) {
-	if(updater() != 0 && caret.isOvertypeMode())
+	if(updater() != nullptr && caret.isOvertypeMode())
 		updater()->update();
 	else
 		DefaultCaretShaper::caretMoved(caret, oldRegion);
@@ -280,13 +280,13 @@ void LocaleSensitiveCaretShaper::caretMoved(const Caret& caret, const k::Region&
 
 /// @see TextViewerInputStatusListener#inputLocaleChanged
 void LocaleSensitiveCaretShaper::inputLocaleChanged() /*throw()*/ {
-	if(updater() != 0)
+	if(updater() != nullptr)
 		updater()->update();
 }
 
 /// @see InputPropertyListener#inputMethodOpenStatusChanged
 void LocaleSensitiveCaretShaper::inputMethodOpenStatusChanged() /*throw()*/ {
-	if(updater() != 0)
+	if(updater() != nullptr)
 		updater()->update();
 }
 
@@ -303,7 +303,7 @@ void LocaleSensitiveCaretShaper::matchBracketsChanged(const Caret&, const std::p
 
 /// @see CaretStateListener#overtypeModeChanged
 void LocaleSensitiveCaretShaper::overtypeModeChanged(const Caret&) {
-	if(updater() != 0)
+	if(updater() != nullptr)
 		updater()->update();
 }
 
@@ -318,7 +318,7 @@ void LocaleSensitiveCaretShaper::shape(unique_ptr<Image>& image, NativePoint& al
 
 /// @see CaretShapeProvider#uninstall
 void LocaleSensitiveCaretShaper::uninstall() {
-	assert(updater() != 0);
+	assert(updater() != nullptr);
 	updater()->caret().removeStateListener(*this);
 	updater()->caret().removeInputPropertyListener(*this);
 	DefaultCaretShaper::uninstall();

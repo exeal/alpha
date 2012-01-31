@@ -649,7 +649,7 @@ namespace {
 	 */
 	inline const Byte* decodeUTF5Character(const Byte* first, const Byte* last, CodePoint& cp) /*throw()*/ {
 		if(*first < 'G' || *first > 'V')
-			return 0;
+			return nullptr;
 		cp = *first - 'G';
 		for(++first; first < last; ++first) {
 			if(*first >= '0' && *first <= '9') {
@@ -835,7 +835,7 @@ namespace {
 
 /// @see EncodingDetector#doDetect
 pair<MIBenum, string> UnicodeDetector::doDetect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/ {
-	const EncodingProperties* result = 0;
+	const EncodingProperties* result = nullptr;
 	// first, test Unicode byte order marks
 	if(last - first >= 3 && memcmp(first, UTF8_BOM, ASCENSION_COUNTOF(UTF8_BOM)) == 0)
 		result = &utf8;
@@ -853,7 +853,7 @@ pair<MIBenum, string> UnicodeDetector::doDetect(const Byte* first, const Byte* l
 		}
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 	}
-	if(result != 0) {
+	if(result != nullptr) {
 		if(convertibleBytes != 0)
 			*convertibleBytes = last - first;
 	} else {

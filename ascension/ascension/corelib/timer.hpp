@@ -28,9 +28,9 @@ namespace ascension {
 		typedef int Identifier;
 	public:
 		/// Default constructor.
-		Timer() : object_(0) {}
+		Timer() : object_(nullptr) {}
 		/***/
-		Timer(unsigned int milliseconds, HasTimer& object) : object_(0) {
+		Timer(unsigned int milliseconds, HasTimer& object) : object_(nullptr) {
 			start(milliseconds, object);
 		}
 		/// Destructor.
@@ -46,7 +46,7 @@ namespace ascension {
 			return identifier_;
 		}
 		/// Returns @c true if this timer is running.
-		bool isActive() const /*throw()*/ {return object_ != 0;}
+		bool isActive() const /*throw()*/ {return object_ != nullptr;}
 		/**
 		 * Starts or restarts this timer.
 		 * @param milliseconds The interval in milliseconds
@@ -56,9 +56,9 @@ namespace ascension {
 		void start(unsigned int milliseconds, HasTimer& object) {
 			stop();
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-			::g_timout_add(milliseconds, &function, 0);
+			::g_timout_add(milliseconds, &function, nullptr);
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-			identifier_ = ::SetTimer(0, 0, milliseconds, &function);
+			identifier_ = ::SetTimer(nullptr, 0, milliseconds, &function);
 			if(identifier_ == 0)
 				throw PlatformDependentError<>();
 #endif

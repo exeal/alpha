@@ -200,15 +200,21 @@ namespace ascension {
 				void scrollTo(const VisualLine& line, Index ipd, viewers::base::Widget* widget);
 				void unlockScroll();
 				// model-view mapping
-				boost::optional<kernel::Position> characterForPoint(
-					const NativePoint& pointInView, TextLayout::Edge edge, bool abortNoCharacter = false,
+				kernel::Position characterForPoint(
+					const NativePoint& pointInView, TextLayout::Edge edge,
+					kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER) const;
+				boost::optional<kernel::Position> characterForPointInBounds(
+					const NativePoint& pointInView, TextLayout::Edge edge,
 					kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER) const;
 				NativePoint location(
 					const kernel::Position& position, bool fullSearchBpd,
 					graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING) const;
 			private:
-				VisualLine locateLine(const NativePoint& p, bool* snapped = 0) const /*throw()*/;
-				VisualLine mapBpdToLine(Scalar bpd, bool* snapped = 0) const /*throw()*/;
+				boost::optional<kernel::Position> internalCharacterForPoint(
+					const NativePoint& pointInView, TextLayout::Edge edge,
+					bool abortNoCharacter, kernel::locations::CharacterUnit snapPolicy) const;
+				VisualLine locateLine(const NativePoint& p, bool* snapped = nullptr) const /*throw()*/;
+				VisualLine mapBpdToLine(Scalar bpd, bool* snapped = nullptr) const /*throw()*/;
 			private:
 				TextRenderer& textRenderer_;
 				NativeRectangle boundsInView_;
@@ -256,8 +262,11 @@ namespace ascension {
 			NativePoint modelToView(const TextRenderer& textRenderer,
 				const kernel::Position& position, bool fullSearchBpd,
 				graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING);
-			boost::optional<kernel::Position> viewToModel(const TextRenderer& textRenderer,
-				const NativePoint& pointInView, TextLayout::Edge edge, bool abortNoCharacter = false,
+			kernel::Position viewToModel(const TextRenderer& textRenderer,
+				const NativePoint& pointInView, TextLayout::Edge edge,
+				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
+			boost::optional<kernel::Position> viewToModelInBounds(const TextRenderer& textRenderer,
+				const NativePoint& pointInView, TextLayout::Edge edge,
 				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
 			Scalar lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline = 0);
 			Scalar lineStartEdge(const TextLayout& layout, Scalar contentMeasure);

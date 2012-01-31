@@ -24,7 +24,7 @@ namespace ascension {
 		class StrategyPointer {
 			ASCENSION_NONCOPYABLE_TAG(StrategyPointer);
 		public:
-			StrategyPointer() /*throw()*/ : pointee_(0), manages_(false) {}
+			StrategyPointer() /*throw()*/ : pointee_(nullptr), manages_(false) {}
 			StrategyPointer(Strategy* pointee, bool manage) /*throw()*/ : pointee_(pointee), manages_(manage) {}
 			~StrategyPointer() /*throw()*/ {if(manages_) delete pointee_;}
 			Strategy& operator*() const /*throw()*/ {return *pointee_;}
@@ -36,7 +36,7 @@ namespace ascension {
 				pointee_ = newValue;
 				manages_ = manage;
 			}
-			void reset() {reset(0, false);}
+			void reset() {reset(nullptr, false);}
 		private:
 			Strategy* pointee_;
 			bool manages_;
