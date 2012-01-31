@@ -39,14 +39,14 @@ void Session::addDocument(kernel::Document& document) {
 
 /// Returns the incremental searcher.
 searcher::IncrementalSearcher& Session::incrementalSearcher() /*throw()*/ {
-	if(isearch_.get() == 0)
+	if(isearch_.get() == nullptr)
 		isearch_.reset(new searcher::IncrementalSearcher());
 	return *isearch_;
 }
 
 /// Returns the incremental searcher.
 const searcher::IncrementalSearcher& Session::incrementalSearcher() const /*throw()*/ {
-	if(isearch_.get() == 0)
+	if(isearch_.get() == nullptr)
 		const_cast<Session*>(this)->isearch_.reset(new searcher::IncrementalSearcher());
 	return *isearch_;
 }
@@ -104,14 +104,14 @@ void Session::setMigemoPathName(const kernel::fileio::PathString& pathName, bool
 
 /// Returns the text searcher.
 searcher::TextSearcher& Session::textSearcher() /*throw()*/ {
-	if(textSearcher_.get() == 0)
+	if(textSearcher_.get() == nullptr)
 		textSearcher_.reset(new searcher::TextSearcher());
 	return *textSearcher_;
 }
 
 /// Returns the text searcher.
 const searcher::TextSearcher& Session::textSearcher() const /*throw()*/ {
-	if(textSearcher_.get() == 0)
+	if(textSearcher_.get() == nullptr)
 		const_cast<Session*>(this)->textSearcher_.reset(new searcher::TextSearcher());
 	return *textSearcher_;
 }

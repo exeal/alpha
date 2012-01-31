@@ -64,7 +64,7 @@ namespace ascension {
 					friend class Widget;
 				};
 			public:
-				Widget(Widget* parent = 0, Style styles = WIDGET);
+				Widget(Widget* parent = nullptr, Style styles = WIDGET);
 				virtual ~Widget();
 
 				const Identifier& identifier() const;
@@ -163,7 +163,7 @@ namespace ascension {
 					class Background {
 					public:
 						/// Constructor makes @c null @c HBRUSH value.
-						Background() /*throw()*/ : brush_(0) {}
+						Background() /*throw()*/ : brush_(nullptr) {}
 						/// Constructor takes a brush handle.
 						Background(win32::Handle<HBRUSH> handle) /*throw()*/ : brush_(handle.release()) {}
 						/// Constructor takes a @c COLORREF value used to make the brush handle.
@@ -179,11 +179,11 @@ namespace ascension {
 					class CursorHandleOrID {
 					public:
 						/// Constructor makes @c null @c HCURSOR value.
-						CursorHandleOrID() /*throw()*/ : cursor_(0) {}
+						CursorHandleOrID() /*throw()*/ : cursor_(nullptr) {}
 						/// Constructor takes a cursor handle.
 						CursorHandleOrID(const win32::Handle<HCURSOR>& handle) /*throw()*/ : cursor_(handle.get()) {}
 						/// Constructor takes a numeric identifier for system cursor.
-						CursorHandleOrID(const WCHAR* systemCursorID) : cursor_(::LoadCursorW(0, systemCursorID)) {}
+						CursorHandleOrID(const WCHAR* systemCursorID) : cursor_(::LoadCursorW(nullptr, systemCursorID)) {}
 						/// Returns the cursor handle.
 						HCURSOR get() const /*throw()*/ {return cursor_;}
 					private:

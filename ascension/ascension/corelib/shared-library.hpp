@@ -30,7 +30,7 @@ namespace ascension {
 					::dlopen(fileName, RTLD_LAZY)
 #endif
 					) {
-				if(library_ == 0)
+				if(library_ == nullptr)
 #ifdef ASCENSION_OS_WINDOWS
 					throw PlatformDependentError<>();
 #else	// ASCENSION_OS_POSIX

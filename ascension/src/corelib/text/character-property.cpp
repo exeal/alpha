@@ -271,9 +271,9 @@ int WordBreak::of(CodePoint c,
 		static const char* JAPANESE_NAMES[] = {"ja_JP", "ja", "JP"};
 		static const char* SWEDISH_NAMES[] = {"sv_SE", "sv", "SE"};
 		try {
-			for(size_t i = 0; i < ASCENSION_COUNTOF(JAPANESE_NAMES) && japanese.get() == 0; ++i)
+			for(size_t i = 0; i < ASCENSION_COUNTOF(JAPANESE_NAMES) && japanese.get() == nullptr; ++i)
 				japanese.reset(new locale(JAPANESE_NAMES[i]));
-			for(size_t i = 0; i < ASCENSION_COUNTOF(SWEDISH_NAMES) && swedish.get() == 0; ++i)
+			for(size_t i = 0; i < ASCENSION_COUNTOF(SWEDISH_NAMES) && swedish.get() == nullptr; ++i)
 				swedish.reset(new locale(SWEDISH_NAMES[i]));
 		} catch(const runtime_error&) {
 		}
@@ -295,7 +295,7 @@ int WordBreak::of(CodePoint c,
 			|| c == 0x05f3u))	// Hebrew Punctuation Geresh
 		return A_LETTER;
 	else if(binary_search(MID_LETTERS, ASCENSION_ENDOF(MID_LETTERS), c)
-			|| (c == 0x003au && swedish.get() != 0 && lc == *swedish.get()))	// Colon (for Swedish)
+			|| (c == 0x003au && swedish.get() != nullptr && lc == *swedish.get()))	// Colon (for Swedish)
 		return MID_LETTER;
 	else if(binary_search(MID_NUMS, ASCENSION_ENDOF(MID_NUMS), c))
 		return MID_NUM;

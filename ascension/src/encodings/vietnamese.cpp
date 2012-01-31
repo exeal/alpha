@@ -198,7 +198,7 @@ namespace {
 unique_ptr<sbcs::BidirectionalMap> VIQREncoder::table_;
 
 VIQREncoder::VIQREncoder() /*throw()*/ : encodingState_(VIETNAMESE_STATE), decodingState_(VIETNAMESE_STATE) {
-	if(table_.get() == 0)
+	if(table_.get() == nullptr)
 		table_.reset(new sbcs::BidirectionalMap(VISCII_BYTE_TABLE::VALUES));
 }
 

@@ -79,7 +79,7 @@ namespace ascension {
 			 */
 			template<typename Inputiterator>
 			GapVector(Inputiterator first, Inputiterator last, const allocator_type& allocator = allocator_type()) :
-				allocator_(allocator), first_(0), last_(0), gapFirst_(0), gapLast_(0) {insert(0, first, last);}
+				allocator_(allocator), first_(nullptr), last_(nullptr), gapFirst_(nullptr), gapLast_(nullptr) {insert(0, first, last);}
 			/**
 			 * Copy-constructor.
 			 * @param other The source object.
@@ -309,10 +309,10 @@ return r;
 			class const_iterator : public std::iterator<
 				std::random_access_iterator_tag, value_type, difference_type, const_pointer, const_reference> {
 			public:
-				const_iterator() : target_(0), current_(0) {}
+				const_iterator() : target_(nullptr), current_(nullptr) {}
 			protected:
 				const_iterator(const GapVector<value_type, allocator_type>& target,
-					pointer position) : target_(&target), current_(position) {assert(current_ != 0);}
+					pointer position) : target_(&target), current_(position) {assert(current_ != nullptr);}
 			public:
 				const_reference operator*() const /*throw()*/ {return *current_;}
 				const_reference operator->() const /*throw()*/ {return **this;}

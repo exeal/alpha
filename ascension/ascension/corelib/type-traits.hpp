@@ -50,7 +50,7 @@ namespace ascension {
 				template<typename U> static Yes test(Test<methodSignature, &U::methodName>*);	\
 				template<typename U> static No test(...);										\
 			public:																				\
-				static const bool value = sizeof(test<T>(0)) == sizeof(Yes);					\
+				static const bool value = sizeof(test<T>(nullptr)) == sizeof(Yes);				\
 			}
 
 	}

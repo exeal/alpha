@@ -256,9 +256,9 @@ void RulerPainter::paint(PaintContext& context) {
 	Scalar left;
 	HDC dcex;
 	if(enablesDoubleBuffering_) {
-		if(memoryDC_.get() == 0)
+		if(memoryDC_.get() == nullptr)
 			memoryDC_.reset(::CreateCompatibleDC(win32::ClientAreaGraphicsContext(viewer_.identifier()).nativeHandle().get()), &::DeleteDC);
-		if(memoryBitmap_.get() == 0)
+		if(memoryBitmap_.get() == nullptr)
 			memoryBitmap_.reset(::CreateCompatibleBitmap(context.nativeHandle().get(),
 				width(), geometry::dy(clientBounds) + ::GetSystemMetrics(SM_CYHSCROLL)), &::DeleteObject);
 		::SelectObject(memoryDC_.get(), memoryBitmap_.get());
@@ -277,7 +277,7 @@ void RulerPainter::paint(PaintContext& context) {
 		HPEN oldPen = static_cast<HPEN>(::SelectObject(dcex, indicatorMarginPen_.get()));
 		HBRUSH oldBrush = static_cast<HBRUSH>(::SelectObject(dcex, indicatorMarginBrush_.get()));
 		::PatBlt(dcex, leftAligned ? left : borderX + 1, geometry::top(paintBounds), imWidth, geometry::dy(paintBounds), PATCOPY);
-		::MoveToEx(dcex, borderX, geometry::top(paintBounds), 0);
+		::MoveToEx(dcex, borderX, geometry::top(paintBounds), nullptr);
 		::LineTo(dcex, borderX, geometry::bottom(paintBounds));
 		::SelectObject(dcex, oldPen);
 		::SelectObject(dcex, oldBrush);
@@ -290,7 +290,7 @@ void RulerPainter::paint(PaintContext& context) {
 		if(configuration_.lineNumbers.borderStyle != RulerConfiguration::LineNumbers::NONE) {
 			HPEN oldPen = static_cast<HPEN>(::SelectObject(dcex, lineNumbersPen_.get()));
 			const Scalar x = (leftAligned ? right : left + 1) - configuration_.lineNumbers.borderWidth;
-			::MoveToEx(dcex, x, 0/*paintRect.top*/, 0);
+			::MoveToEx(dcex, x, 0/*paintRect.top*/, nullptr);
 			::LineTo(dcex, x, geometry::bottom(paintBounds));
 			::SelectObject(dcex, oldPen);
 		}
@@ -311,7 +311,7 @@ void RulerPainter::paint(PaintContext& context) {
 		// compute reading direction of the line numbers from 'configuration_.lineNumbers.readingDirection'
 		if(configuration_.lineNumbers.readingDirection.inherits()) {
 			const shared_ptr<const TextLineStyle> defaultLineStyle(viewer_.presentation().globalTextStyle()->defaultLineStyle);
-			if(defaultLineStyle.get() != 0)
+			if(defaultLineStyle.get() != nullptr)
 				lineNumbersReadingDirection = defaultLineStyle->readingDirection;
 			if(lineNumbersReadingDirection.inherits())
 				lineNumbersReadingDirection = renderer.defaultUIWritingMode().inlineFlowDirection;
@@ -522,7 +522,7 @@ void RulerPainter::update() /*throw()*/ {
 	recalculateWidth();
 #if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
 	updateGDIObjects();
-	if(enablesDoubleBuffering_ && memoryBitmap_.get() != 0)
+	if(enablesDoubleBuffering_ && memoryBitmap_.get() != nullptr)
 		memoryBitmap_.reset();
 #endif
 }

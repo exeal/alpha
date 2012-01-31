@@ -119,7 +119,7 @@ void LineLayoutVector::clearCaches(const Range<Index>& lines, bool repair) {
 				oldSublines += i->second->numberOfLines();
 				delete i->second;
 				unique_ptr<const TextLayout> newLayout(layoutGenerator_->generate(i->first));
-				assert(newLayout.get() != 0);	// TODO:
+				assert(newLayout.get() != nullptr);	// TODO:
 				i->second = newLayout.release();
 				newSublines += i->second->numberOfLines();
 				++cachedLines;
@@ -208,7 +208,7 @@ void LineLayoutVector::fireVisualLinesModified(const Range<Index>& lines,
 	// update the longest line
 	bool longestLineChanged = false;
 	if(includes(lines, *longestLine_)) {
-		updateLongestLine(static_cast<Index>(-1), 0);
+		updateLongestLine(boost::none, 0);
 		longestLineChanged = true;
 	} else {
 		Index newLongestLine = *longestLine_;
@@ -350,14 +350,14 @@ Index LineLayoutVector::mapLogicalPositionToVisualPosition(const k::Position& po
  */
 Index LineLayoutVector::mapVisualLineToLogicalLine(Index line, Index* subline) const {
 	if(!getTextViewer().getConfiguration().lineWrap.wraps()) {
-		if(subline != 0)
+		if(subline != nullptr)
 			*subline = 0;
 		return line;
 	}
 	Index c = getCacheFirstLine();
 	for(Index i = getCacheFirstLine(); ; ++i) {
 		if(c + getNumberOfSublinesOfLine(i) > line) {
-			if(subline != 0)
+			if(subline != nullptr)
 				*subline = line - c;
 			return i;
 		}
@@ -429,16 +429,14 @@ void LineLayoutVector::presentationStylistChanged() {
 
 /**
  * Updates the longest line.
- * @param line The new longest line. set -1 to recalculate
- * @param measure The measure (inline-progression-dimension) of the longest line. If @a line is -1,
- *                this value is ignored
+ * @param line The new longest line. set @c boost#none to recalculate
+ * @param measure The measure (inline-progression-dimension) of the longest line. If @a line is
+ *                @c boost#none, this value is ignored
  */
-void LineLayoutVector::updateLongestLine(Index line, Scalar measure) /*throw()*/ {
-	if(line != -1) {
-		longestLine_ = line;
+void LineLayoutVector::updateLongestLine(boost::optional<Index> line, Scalar measure) /*throw()*/ {
+	if(longestLine_ = line)
 		maximumMeasure_ = measure;
-	} else {
-		longestLine_ = boost::none;
+	else {
 		maximumMeasure_ = 0;
 		for(list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 			if(i->second->measure() > maximumMeasure_) {

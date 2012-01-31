@@ -41,7 +41,7 @@ void InputSequenceCheckers::add(unique_ptr<InputSequenceChecker> checker) {
  * @throw NullPointerException @a receding is @c null
  */
 bool InputSequenceCheckers::check(const StringPiece& preceding, CodePoint c) const {
-	if(preceding.beginning() == 0 || preceding.end() == 0)
+	if(preceding.beginning() == nullptr || preceding.end() == nullptr)
 		throw NullPointerException("preceding");
 	for(list<InputSequenceChecker*>::const_iterator i = strategies_.begin(); i != strategies_.end(); ++i) {
 		if(!(*i)->check(locale_, preceding, c))
@@ -170,13 +170,13 @@ bool VietnameseInputSequenceChecker::check(const locale& lc, const StringPiece& 
 		vietnamese.second = true;
 		static const char* CANDIDATE_NAMES[] = {"vi_VN", "vi", "VN"};
 		try {
-			for(size_t i = 0; i < ASCENSION_COUNTOF(CANDIDATE_NAMES) && vietnamese.first.get() == 0; ++i)
+			for(size_t i = 0; i < ASCENSION_COUNTOF(CANDIDATE_NAMES) && vietnamese.first.get() == nullptr; ++i)
 				vietnamese.first.reset(new locale(CANDIDATE_NAMES[i]));
 		} catch(const runtime_error&) {
 		}
 	}
 
-	if(vietnamese.first.get() == 0 && lc != *vietnamese.first)
+	if(vietnamese.first.get() == nullptr && lc != *vietnamese.first)
 		return true;
 	else if(!isEmpty(preceding) && binary_search(TONE_MARKS, ASCENSION_ENDOF(TONE_MARKS), c))
 		return binary_search(VOWELS, ASCENSION_ENDOF(VOWELS), preceding.end()[-1]);

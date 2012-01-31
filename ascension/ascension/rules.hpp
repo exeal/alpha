@@ -350,7 +350,7 @@ namespace ascension {
 		inline kernel::ContentType TransitionRule::destination() const /*throw()*/ {return destination_;}
 
 		template<typename InputIterator> inline void LexicalPartitioner::setRules(InputIterator first, InputIterator last) {
-			if(document() != 0)
+			if(document() != nullptr)
 				throw IllegalStateException("The partitioner is already connected to document.");
 			std::list<const TransitionRule*> temp;
 			try {

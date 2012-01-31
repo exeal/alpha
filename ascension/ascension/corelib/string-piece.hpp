@@ -33,13 +33,13 @@ namespace ascension {
 		typedef CharacterTraits traits_type;
 	public:
 		/// Default constructor.
-		BasicStringPiece() : Range<const Character*>(0, 0) {}
+		BasicStringPiece() : Range<const Character*>(nullptr, nullptr) {}
 		/**
 		 * Implicit constructor. The length of the string is calculated by using
 		 * @c traits_type#length function.
 		 * @param p A pointer addresses the beginning of the string
 		 */
-		BasicStringPiece(const_pointer p) : Range<const Character*>(p, (p != 0) ? p + traits_type::length(p) : 0) {}
+		BasicStringPiece(const_pointer p) : Range<const Character*>(p, (p != nullptr) ? p + traits_type::length(p) : nullptr) {}
 		/**
 		 * Constructor takes the beginning and the end of a string.
 		 * @param first A pointer addresses the beginning of the string

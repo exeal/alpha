@@ -43,7 +43,7 @@ namespace {
 		 */
 		Migemo(const string& runtimeFileName, const string& dictionaryPathName) :
 				detail::SharedLibrary<CMigemo>(runtimeFileName.c_str()),
-				instance_(0), lastNativePattern_(0), lastPattern_(0) {
+				instance_(nullptr), lastNativePattern_(nullptr), lastPattern_(nullptr) {
 			if(dictionaryPathName.empty())
 				throw invalid_argument("Dictionary path name is empty.");
 			CMigemo::Procedure<0>::signature migemoOpen;
@@ -52,7 +52,7 @@ namespace {
 			if((migemoOpen = get<0>()) && (migemoQuery_ = get<2>())
 					&& (migemoRelease_ = get<3>()) && (migemoLoad = get<4>())
 					&& (migemoSetOperator = get<6>())) {
-				if(0 != (instance_ = migemoOpen(0))) {
+				if(nullptr != (instance_ = migemoOpen(0))) {
 					// load dictionaries
 					size_t directoryLength = dictionaryPathName.length();
 					if(dictionaryPathName[directoryLength - 1] != '/'
@@ -87,18 +87,18 @@ namespace {
 		/// Destructor.
 		~Migemo() throw() {
 			releasePatterns();
-			if(instance_ != 0) {
+			if(instance_ != nullptr) {
 				if(CMigemo::Procedure<1>::signature migemoClose = get<1>())
 					migemoClose(instance_);
 			}
 		}
 		/// @see #query(const Char*, const Char*, size_t&)
 		const unsigned char* query(const unsigned char* text) {
-			if(text == 0)
+			if(text == nullptr)
 				throw invalid_argument("Invalid text.");
 			else if(!isEnable())
-				return 0;
-			if(lastNativePattern_ != 0)
+				return nullptr;
+			if(lastNativePattern_ != nullptr)
 				migemoRelease_(instance_, lastNativePattern_);
 			lastNativePattern_ = migemoQuery_(instance_, const_cast<unsigned char*>(text));
 			return reinterpret_cast<unsigned char*>(lastNativePattern_);
@@ -113,14 +113,14 @@ namespace {
 		 */
 		const Char* query(const StringPiece& s, size_t& outputLength) {
 			if(!isEnable())
-				return 0;
-			else if(s.beginning() == 0)
+				return nullptr;
+			else if(s.beginning() == nullptr)
 				throw NullPointerException("s");
 
 			// convert the source text from UTF-16 to native Japanese encoding
 			unique_ptr<encoding::Encoder> encoder(encoding::Encoder::forMIB(encoding::standard::SHIFT_JIS));
-			if(encoder.get() == 0)
-				return 0;
+			if(encoder.get() == nullptr)
+				return nullptr;
 			else {
 				size_t bufferLength = encoder->properties().maximumNativeBytes() * length(s);
 				AutoBuffer<Byte> buffer(new Byte[bufferLength + 1]);
@@ -129,11 +129,11 @@ namespace {
 				if(encoding::Encoder::COMPLETED != encoder->fromUnicode(buffer.get(),
 						buffer.get() + bufferLength, toNext,
 						s.beginning(), s.end(), fromNext), encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTERS)
-					return 0;
+					return nullptr;
 				*toNext = 0;
 				query(buffer.get());
-				if(lastNativePattern_ == 0)
-					return 0;
+				if(lastNativePattern_ == nullptr)
+					return nullptr;
 			}
 
 			// convert the result pattern from native Japanese encoding to UTF-16
@@ -150,16 +150,16 @@ namespace {
 		}
 		/// Releases the pattern explicitly.
 		void releasePatterns() throw() {
-			if(lastNativePattern_ != 0) {
+			if(lastNativePattern_ != nullptr) {
 				migemoRelease_(instance_, reinterpret_cast<unsigned char*>(lastNativePattern_));
-				lastNativePattern_ = 0;
+				lastNativePattern_ = nullptr;
 			}
 			delete[] lastPattern_;
-			lastPattern_ = 0;
+			lastPattern_ = nullptr;
 		}
 		/// Returns true if the library is enable.
 		bool isEnable() const {
-			if(instance_ == 0)
+			if(instance_ == nullptr)
 				return false;
 			else if(CMigemo::Procedure<5>::signature migemoIsEnable = get<5>())
 				return migemoIsEnable(instance_) != 0;
@@ -365,7 +365,7 @@ Pattern::Pattern(const StringPiece& regex, int flags /* = 0 */) : flags_(flags) 
  * @throw PatternSyntaxException The expression's syntax is invalid
  */
 Pattern::Pattern(const StringPiece& regex, boost::regex_constants::syntax_option_type nativeSyntax) : flags_(0) {
-	if(regex.beginning() == 0)
+	if(regex.beginning() == nullptr)
 		throw NullPointerException("regex");
 	try {
 		impl_.assign(utf::CharacterDecodeIterator<const Char*>(regex.beginning(), regex.end()),
@@ -486,7 +486,7 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 		return klass;
 
 	if(value != p1) {	// "name=value" or "name:value"
-		int(*valueNameDetector)(const char_type*) = 0;
+		int(*valueNameDetector)(const char_type*) = nullptr;
 		const basic_string<char_type> name(p1, value - 1);
 		if(PropertyNameComparer::compare(name.c_str(), GeneralCategory::LONG_NAME) == 0
 				|| PropertyNameComparer::compare(name.c_str(), GeneralCategory::SHORT_NAME) == 0)
@@ -497,7 +497,7 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 		else if(PropertyNameComparer::compare(name.c_str(), Script::LONG_NAME) == 0
 				|| PropertyNameComparer::compare(name.c_str(), Script::SHORT_NAME) == 0)
 			valueNameDetector = &Script::forName<char_type>;
-		if(valueNameDetector != 0) {
+		if(valueNameDetector != nullptr) {
 			const int p = valueNameDetector(basic_string<char_type>(value, p2).c_str());
 			if(p != NOT_PROPERTY)
 				klass.set(p);
@@ -578,9 +578,9 @@ unique_ptr<const MigemoPattern> MigemoPattern::compile(const StringPiece& patter
  * @throw NullPointerException @a runtimePathName and/or @a dictionaryPathName is @c null
  */
 void MigemoPattern::initialize(const char* runtimePathName, const char* dictionaryPathName) {
-	if(runtimePathName == 0)
+	if(runtimePathName == nullptr)
 		throw invalid_argument("runtimePathName");
-	else if(dictionaryPathName == 0)
+	else if(dictionaryPathName == nullptr)
 		throw invalid_argument("dictionaryPathName");
 	runtimePathName_.reset(new char[strlen(runtimePathName) + 1]);
 	strcpy(runtimePathName_.get(), runtimePathName);
@@ -589,7 +589,7 @@ void MigemoPattern::initialize(const char* runtimePathName, const char* dictiona
 }
 
 inline void MigemoPattern::install() {
-	if(migemoLib.get() == 0 && runtimePathName_.get() != 0 && dictionaryPathName_.get() != 0) {
+	if(migemoLib.get() == nullptr && runtimePathName_.get() != nullptr && dictionaryPathName_.get() != nullptr) {
 		try {
 			migemoLib.reset(new Migemo(runtimePathName_.get(), dictionaryPathName_.get()));
 		} catch(runtime_error&) {
@@ -599,7 +599,7 @@ inline void MigemoPattern::install() {
 
 /// Returns @c true if Migemo is installed.
 bool MigemoPattern::isMigemoInstalled() /*throw()*/ {
-	return migemoLib.get() != 0 && migemoLib->isEnable();
+	return migemoLib.get() != nullptr && migemoLib->isEnable();
 }
 
 #endif // !ASCENSION_NO_MIGEMO

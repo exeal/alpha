@@ -116,10 +116,10 @@ namespace {
  * Constructor.
  * @param presentation the presentation
  */
-TextViewer::TextViewer(Presentation& presentation, Widget* parent /* = 0 */, Style styles /* = WIDGET */)
-		: ScrollableWidget(parent, styles), presentation_(presentation), tipText_(0),
+TextViewer::TextViewer(Presentation& presentation, Widget* parent /* = nullptr */, Style styles /* = WIDGET */)
+		: ScrollableWidget(parent, styles), presentation_(presentation), tipText_(nullptr),
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-		accessibleProxy_(0),
+		accessibleProxy_(nullptr),
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		mouseInputDisabledCount_(0) {
 	renderer_.reset(new Renderer(*this));
@@ -141,9 +141,9 @@ TextViewer::TextViewer(Presentation& presentation, Widget* parent /* = 0 */, Sty
  * Copy-constructor. Unlike @c win32#Object class, this does not copy the window handle. For
  * more details, see the description of @c TextViewer.
  */
-TextViewer::TextViewer(const TextViewer& other) : presentation_(other.presentation_), tipText_(0)
+TextViewer::TextViewer(const TextViewer& other) : presentation_(other.presentation_), tipText_(nullptr)
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-		, accessibleProxy_(0)
+		, accessibleProxy_(nullptr)
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 {
 	renderer_.reset(new Renderer(*other.renderer_, *this));
@@ -182,7 +182,7 @@ TextViewer::~TextViewer() {
 /// @see Widget#aboutToLoseFocus
 void TextViewer::aboutToLoseFocus() {
 	cursorVanisher_.restore();
-	if(mouseInputStrategy_.get() != 0)
+	if(mouseInputStrategy_.get() != nullptr)
 		mouseInputStrategy_->interruptMouseReaction(false);
 /*	if(caret_->getMatchBracketsTrackingMode() != Caret::DONT_TRACK
 			&& getCaret().getMatchBrackets().first != Position::INVALID_POSITION) {	// 対括弧の通知を終了
@@ -197,7 +197,7 @@ void TextViewer::aboutToLoseFocus() {
 //		hideCaret();
 //		::DestroyCaret();
 //	}
-	redrawLines(makeRange(caret().beginning().line(), caret().end().line() + 1));
+	redrawLines(makeRange(line(caret().beginning()), line(caret().end()) + 1));
 	redrawScheduledRegion();
 }
 
@@ -359,21 +359,21 @@ void TextViewer::documentUndoSequenceStopped(const k::Document&, const k::Positi
 
 /// @see Widget#dragEntered
 void TextViewer::dragEntered(DragEnterInput& input) {
-	if(dropTargetHandler_.get() == 0)
+	if(dropTargetHandler_.get() == nullptr)
 		return base::Widget::dragEntered(input);
 	return dropTargetHandler_->dragEntered(input);
 }
 
 /// @see Widget#dragLeft
 void TextViewer::dragLeft(DragLeaveInput& input) {
-	if(dropTargetHandler_.get() == 0)
+	if(dropTargetHandler_.get() == nullptr)
 		return base::Widget::dragLeft(input);
 	return dropTargetHandler_->dragLeft(input);
 }
 
 /// @see Widget#dragMoved
 void TextViewer::dragMoved(DragMoveInput& input) {
-	if(dropTargetHandler_.get() == 0)
+	if(dropTargetHandler_.get() == nullptr)
 		return base::Widget::dragMoved(input);
 	return dropTargetHandler_->dragMoved(input);
 }
@@ -389,7 +389,7 @@ void TextViewer::drawIndicatorMargin(Index /* line */, Context& /* context */, c
 
 /// @see Widget#dropped
 void TextViewer::dropped(DropInput& input) {
-	if(dropTargetHandler_.get() == 0)
+	if(dropTargetHandler_.get() == nullptr)
 		return base::Widget::dropped(input);
 	return dropTargetHandler_->dropped(input);
 }
@@ -478,7 +478,7 @@ void TextViewer::focusGained() {
 
 	// hmm...
 //	if(/*sharedData_->options.appearance[SHOW_CURRENT_UNDERLINE] ||*/ !getCaret().isSelectionEmpty()) {
-		redrawLines(makeRange(caret().beginning().line(), caret().end().line() + 1));
+		redrawLines(makeRange(line(caret().beginning()), line(caret().end()) + 1));
 		redrawScheduledRegion();
 //	}
 
@@ -558,7 +558,7 @@ Scalar TextViewer::inlineProgressionOffsetInViewport() const {
 
 /// @see Widget#keyPressed
 void TextViewer::keyPressed(const KeyInput& input) {
-	if(mouseInputStrategy_.get() != 0)
+	if(mouseInputStrategy_.get() != nullptr)
 		mouseInputStrategy_->interruptMouseReaction(true);
 
 	// TODO: This code is temporary. The following code provides a default implementation of
@@ -741,7 +741,7 @@ void TextViewer::keyPressed(const KeyInput& input) {
 void TextViewer::keyReleased(const KeyInput& input) {
 	if(hasModifier<UserInput::ALT_DOWN>(input)) {
 		cursorVanisher_.restore();
-		if(mouseInputStrategy_.get() != 0)
+		if(mouseInputStrategy_.get() != nullptr)
 			mouseInputStrategy_->interruptMouseReaction(true);
 	}
 }
@@ -868,21 +868,21 @@ void TextViewer::matchBracketsChanged(const Caret& self, const boost::optional<p
 
 /// @see Widget#mouseDoubleClicked
 void TextViewer::mouseDoubleClicked(const MouseButtonInput& input) {
-	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+	if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 		mouseInputStrategy_->mouseButtonInput(MouseInputStrategy::DOUBLE_CLICKED, input);
 }
 
 /// @see Widget#mouseMoved
 void TextViewer::mouseMoved(const LocatedUserInput& input) {
 	cursorVanisher_.restore();
-	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+	if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 		mouseInputStrategy_->mouseMoved(input);
 }
 
 /// @see Widget#mousePressed
 void TextViewer::mousePressed(const MouseButtonInput& input) {
 	cursorVanisher_.restore();
-	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+	if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 		mouseInputStrategy_->mouseButtonInput(MouseInputStrategy::PRESSED, input);
 }
 
@@ -890,14 +890,14 @@ void TextViewer::mousePressed(const MouseButtonInput& input) {
 void TextViewer::mouseReleased(const MouseButtonInput& input) {
 	if(allowsMouseInput() || input.button() == UserInput::BUTTON3_DOWN)
 		cursorVanisher_.restore();
-	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+	if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 		mouseInputStrategy_->mouseButtonInput(MouseInputStrategy::RELEASED, input);
 }
 
 /// @see Widget#mouseWheelChanged
 void TextViewer::mouseWheelChanged(const MouseWheelInput& input) {
 	cursorVanisher_.restore();
-	if(allowsMouseInput() && mouseInputStrategy_.get() != 0)
+	if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 		mouseInputStrategy_->mouseWheelRotated(input);
 }
 
@@ -967,7 +967,7 @@ void TextViewer::redrawLines(const Range<Index>& lines) {
 	mapPhysicalToAbstract(writingMode, viewport, viewport, abstractBounds);
 
 	// calculate before and after edges of a rectangle to redraw
-	BaselineIterator baseline(textRenderer(), lines.beginning(), false);
+	BaselineIterator baseline(*textRenderer().viewport().lock(), lines.beginning(), false);
 	if(*baseline != numeric_limits<Scalar>::min())
 		abstractBounds.before() = mapTextAreaBpdToLocal(*this, *baseline)
 			- textRenderer().layouts().at(lines.beginning()).lineMetrics(0).ascent();
@@ -1027,7 +1027,7 @@ void TextViewer::resized(State state, const NativeSize&) {
 	utils::closeCompletionProposalsPopup(*this);
 	if(state == MINIMIZED)
 		return;
-	if(renderer_.get() == 0)
+	if(renderer_.get() == nullptr)
 		return;
 	if(const shared_ptr<TextViewport> viewport = textRenderer().viewport().lock()) {
 		const NativeRectangle textArea(textAllocationRectangle());
@@ -1082,7 +1082,7 @@ void TextViewer::scrollTo(Index line, bool redraw) {
 /// @see CaretStateListener#selectionShapeChanged
 void TextViewer::selectionShapeChanged(const Caret& self) {
 	if(!isFrozen() && !isSelectionEmpty(self))
-		redrawLines(makeRange(self.beginning().line(), self.end().line() + 1));
+		redrawLines(makeRange(line(self.beginning()), line(self.end()) + 1));
 }
 
 /**
@@ -1095,9 +1095,9 @@ void TextViewer::selectionShapeChanged(const Caret& self) {
  * @throw UnknownValueException The content of @a verticalRuler is invalid
  */
 void TextViewer::setConfiguration(const Configuration* general, const RulerConfiguration* ruler, bool synchronizeUI) {
-	if(ruler != 0)
+	if(ruler != nullptr)
 		rulerPainter_->setConfiguration(*ruler);
-	if(general != 0) {
+	if(general != nullptr) {
 		const Inheritable<ReadingDirection> oldReadingDirection(configuration_.readingDirection);
 		assert(!oldReadingDirection.inherits());
 		configuration_ = *general;
@@ -1135,9 +1135,9 @@ void TextViewer::setConfiguration(const Configuration* general, const RulerConfi
  * @param newContentAssistant the content assistant to set. the ownership will be transferred to the callee.
  */
 void TextViewer::setContentAssistant(unique_ptr<contentassist::ContentAssistant> newContentAssistant) /*throw()*/ {
-	if(contentAssistant_.get() != 0)
+	if(contentAssistant_.get() != nullptr)
 		contentAssistant_->uninstall();	// $friendly-access
-	(contentAssistant_ = newContentAssistant)->install(*this);	// $friendly-access
+	(contentAssistant_ = std::move(newContentAssistant))->install(*this);	// $friendly-access
 }
 
 /**
@@ -1149,12 +1149,12 @@ void TextViewer::setContentAssistant(unique_ptr<contentassist::ContentAssistant>
  */
 void TextViewer::setMouseInputStrategy(shared_ptr<MouseInputStrategy> newStrategy) {
 //	checkInitialization();
-	if(mouseInputStrategy_.get() != 0) {
+	if(mouseInputStrategy_.get() != nullptr) {
 		mouseInputStrategy_->interruptMouseReaction(false);
 		mouseInputStrategy_->uninstall();
 		dropTargetHandler_.reset();
 	}
-	if(newStrategy != 0)
+	if(newStrategy.get() != nullptr)
 		mouseInputStrategy_ = newStrategy;
 	else
 		mouseInputStrategy_.reset(new DefaultMouseInputStrategy(), true);	// TODO: the two parameters don't have rationales.
@@ -1177,7 +1177,7 @@ void TextViewer::showToolTip(const String& text, unsigned long timeToWait /* = -
 	if(timeToWait == -1)
 		timeToWait = ::GetDoubleClickTime();
 	wcscpy(tipText_, text.c_str());
-	::SetTimer(identifier().get(), TIMERID_CALLTIP, timeToWait, 0);
+	::SetTimer(identifier().get(), TIMERID_CALLTIP, timeToWait, nullptr);
 }
 
 #ifndef ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
@@ -1256,7 +1256,7 @@ void TextViewer::unfreeze() {
 /// Updates the scroll information.
 void TextViewer::updateScrollBars() {
 //	checkInitialization();
-	if(renderer_.get() == 0)
+	if(renderer_.get() == nullptr)
 		return;
 
 #define ASCENSION_GET_SCROLL_MINIMUM(s)	(s.maximum/* * s.rate*/ - s.pageSize + 1)
@@ -1470,14 +1470,14 @@ void TextViewer::visualLinesModified(const Range<Index>& lines,
  * @throw ... Any exceptions @c TextViewer#freeze throws
  */
 AutoFreeze::AutoFreeze(TextViewer* textViewer) : textViewer_(textViewer) {
-	if(textViewer_ != 0)
+	if(textViewer_ != nullptr)
 		textViewer_->freeze();
 }
 
 /// Destructor calls @c TextViewer#unfreeze.
 AutoFreeze::~AutoFreeze() /*throw()*/ {
 	try {
-		if(textViewer_ != 0)
+		if(textViewer_ != nullptr)
 			textViewer_->unfreeze();
 	} catch(...) {
 		// ignore
@@ -1487,7 +1487,7 @@ AutoFreeze::~AutoFreeze() /*throw()*/ {
 
 // TextViewer.CursorVanisher //////////////////////////////////////////////////////////////////////
 
-TextViewer::CursorVanisher::CursorVanisher() /*throw()*/ : viewer_(0) {
+TextViewer::CursorVanisher::CursorVanisher() /*throw()*/ : viewer_(nullptr) {
 }
 
 TextViewer::CursorVanisher::~CursorVanisher() /*throw()*/ {
@@ -1495,7 +1495,7 @@ TextViewer::CursorVanisher::~CursorVanisher() /*throw()*/ {
 }
 
 void TextViewer::CursorVanisher::install(TextViewer& viewer) {
-	assert(viewer_ == 0);
+	assert(viewer_ == nullptr);
 	viewer_ = &viewer;
 }
 
@@ -1612,7 +1612,7 @@ TextViewer::Configuration::Configuration() /*throw()*/ :
 		readingDirection(LEFT_TO_RIGHT), usesRichTextClipboardFormat(false) {
 #if(_WIN32_WINNT >= 0x0501)
 	BOOL b;
-	if(::SystemParametersInfo(SPI_GETMOUSEVANISH, 0, &b, 0) != 0)
+	if(::SystemParametersInfoW(SPI_GETMOUSEVANISH, 0, &b, 0) != 0)
 		vanishesCursor = win32::boole(b);
 	else
 		vanishesCursor = false;
@@ -1818,7 +1818,7 @@ CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret,
 
 /// Destructor.
 CurrentLineHighlighter::~CurrentLineHighlighter() /*throw()*/ {
-	if(caret_ != 0) {
+	if(caret_ != nullptr) {
 		caret_->removeListener(*this);
 		caret_->removeStateListener(*this);
 		caret_->textViewer().presentation().removeTextLineColorDirector(*this);
@@ -1833,12 +1833,12 @@ const Color& CurrentLineHighlighter::background() const /*throw()*/ {
 /// @see CaretListener#caretMoved
 void CurrentLineHighlighter::caretMoved(const Caret&, const k::Region& oldRegion) {
 	if(oldRegion.isEmpty()) {
-		if(!isSelectionEmpty(*caret_) || caret_->line() != oldRegion.first.line)
+		if(!isSelectionEmpty(*caret_) || line(*caret_) != oldRegion.first.line)
 			caret_->textViewer().redrawLine(oldRegion.first.line, false);
 	}
 	if(isSelectionEmpty(*caret_)) {
-		if(!oldRegion.isEmpty() || caret_->line() != oldRegion.first.line)
-			caret_->textViewer().redrawLine(caret_->line(), false);
+		if(!oldRegion.isEmpty() || line(*caret_) != oldRegion.first.line)
+			caret_->textViewer().redrawLine(line(*caret_), false);
 	}
 }
 
@@ -1859,12 +1859,12 @@ void CurrentLineHighlighter::overtypeModeChanged(const Caret&) {
 void CurrentLineHighlighter::pointDestroyed() {
 //	caret_->removeListener(*this);
 //	caret_->removeStateListener(*this);
-	caret_ = 0;
+	caret_ = nullptr;
 }
 
 /// @see ILineColorDirector#queryLineColors
 TextLineColorDirector::Priority CurrentLineHighlighter::queryLineColors(Index line, Color& foreground, Color& background) const {
-	if(caret_ != 0 && isSelectionEmpty(*caret_) && caret_->line() == line && caret_->textViewer().hasFocus()) {
+	if(caret_ != nullptr && isSelectionEmpty(*caret_) && k::line(*caret_) == line && caret_->textViewer().hasFocus()) {
 		foreground = foreground_;
 		background = background_;
 		return LINE_COLOR_PRIORITY;
@@ -1918,9 +1918,9 @@ void TextViewport::resize(const NativeSize& newSize, Widget* widget, const Nativ
  * @throw NullPointerException
  */
 void TextViewport::scroll(SignedIndex dbpd, SignedIndex dipd, Widget* widget, const NativePoint* origin) {
-	if(widget == 0 && origin != 0)
+	if(widget == nullptr && origin != nullptr)
 		throw NullPointerException("widget");
-	else if(widget != 0 && origin == 0)
+	else if(widget != nullptr && origin == nullptr)
 		throw NullPointerException("origin");
 	else if(lockCount_ != 0)
 		return;
@@ -1953,7 +1953,7 @@ void TextViewport::scroll(SignedIndex dbpd, SignedIndex dipd, Widget* widget, co
 	listeners_.notify<const VisualLine&, Index>(&TextViewportListener::viewportPositionChanged, oldLine, oldInlineProgressionOffset);
 
 	// 2. calculate numbers of pixels to scroll
-	if(widget == 0)
+	if(widget == nullptr)
 		return;
 	dipd *= textRenderer().defaultFont()->metrics().averageCharacterWidth();
 	NativeSize pixelsToScroll;
@@ -1980,7 +1980,7 @@ void TextViewport::scroll(SignedIndex dbpd, SignedIndex dipd, Widget* widget, co
 		// scroll image by BLIT
 		// TODO: direct call of Win32 API.
 		::ScrollWindowEx(widget->identifier().get(),
-			-geometry::dx(pixelsToScroll), -geometry::dy(pixelsToScroll), 0, &boundsToScroll, 0, 0, SW_INVALIDATE);
+			-geometry::dx(pixelsToScroll), -geometry::dy(pixelsToScroll), nullptr, &boundsToScroll, nullptr, nullptr, SW_INVALIDATE);
 		// invalidate bounds newly entered into the viewport
 		if(geometry::dx(pixelsToScroll) > 0)
 			widget->scheduleRedraw(geometry::make<NativeRectangle>(
@@ -2020,7 +2020,7 @@ const hyperlink::Hyperlink* utils::getPointedHyperlink(const TextViewer& viewer,
 				return hyperlinks[i];
 		}
 	}
-	return 0;
+	return nullptr;
 }
 
 /**
@@ -2077,12 +2077,12 @@ bool source::getNearestIdentifier(const k::Document& document, const k::Position
 		} while(i.hasPrevious());
 		if(!i.hasPrevious())
 			start = i.tell().offsetInLine;
-		if(startColumn!= 0)
+		if(startColumn!= nullptr)
 			*startColumn = start;
 	}
 
 	// find the end of the identifier
-	if(endColumn != 0) {
+	if(endColumn != nullptr) {
 		k::DocumentCharacterIterator i(document, k::Region(position,
 			min(partition.region.end(), k::Position(position.line, document.lineLength(position.line)))), position);
 		while(i.hasNext()) {
@@ -2096,7 +2096,7 @@ bool source::getNearestIdentifier(const k::Document& document, const k::Position
 		}
 		if(!i.hasNext())
 			end = i.tell().offsetInLine;
-		if(endColumn != 0)
+		if(endColumn != nullptr)
 			*endColumn = end;
 	}
 
@@ -2117,12 +2117,12 @@ bool source::getPointedIdentifier(const TextViewer& viewer, k::Position* startPo
 		NativePoint cursorPoint;
 		::GetCursorPos(&cursorPoint);
 		viewer.mapFromGlobal(cursorPoint);
-		const k::Position cursor = viewer.characterForLocalPoint(cursorPoint, TextLayout::LEADING);
+		const k::Position cursor = viewToModel(viewer.textRenderer(), cursorPoint, TextLayout::LEADING);
 		if(source::getNearestIdentifier(viewer.document(), cursor,
-				(startPosition != 0) ? &startPosition->offsetInLine : 0, (endPosition != 0) ? &endPosition->column : 0)) {
-			if(startPosition != 0)
+				(startPosition != nullptr) ? &startPosition->offsetInLine : 0, (endPosition != nullptr) ? &endPosition->offsetInLine : 0)) {
+			if(startPosition != nullptr)
 				startPosition->line = cursor.line;
-			if(endPosition != 0)
+			if(endPosition != nullptr)
 				endPosition->line = cursor.line;
 			return true;
 		}

@@ -178,9 +178,9 @@ namespace ascension {
 				return *this;
 			}
 			virtual RenderingContext2D& fillText(
-				const StringPiece& text, const NativePoint& p, Scalar* maxWidth = 0) = 0;
+				const StringPiece& text, const NativePoint& p, Scalar* maxWidth = nullptr) = 0;
 			virtual RenderingContext2D& strokeText(
-				const StringPiece& text, const NativePoint& p, Scalar* maxWidth = 0) = 0;
+				const StringPiece& text, const NativePoint& p, Scalar* maxWidth = nullptr) = 0;
 			virtual NativeSize measureText(const StringPiece& text) = 0;
 
 			virtual RenderingContext2D& drawImage() = 0;

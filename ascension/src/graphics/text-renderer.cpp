@@ -28,7 +28,7 @@ extern bool DIAGNOSE_INHERENT_DRAWING;
 
 namespace {
 	AutoBuffer<WCHAR> ASCENSION_FASTCALL mapFontFileNameToTypeface(const WCHAR* fileName) {
-		assert(fileName != 0);
+		assert(fileName != nullptr);
 		static const WCHAR KEY_NAME[] = L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts";
 		HKEY key;
 		long e = ::RegOpenKeyExW(HKEY_CURRENT_USER, KEY_NAME, 0, KEY_QUERY_VALUE, &key);
@@ -37,7 +37,8 @@ namespace {
 		if(e == ERROR_SUCCESS) {
 			const size_t fileNameLength = wcslen(fileName);
 			DWORD maximumValueNameLength, maximumValueBytes;
-			e = ::RegQueryInfoKeyW(key, 0, 0, 0, 0, 0, 0, 0, &maximumValueNameLength, &maximumValueBytes, 0, 0);
+			e = ::RegQueryInfoKeyW(key, nullptr, nullptr, nullptr,
+				nullptr, nullptr, nullptr, nullptr, &maximumValueNameLength, &maximumValueBytes, nullptr, nullptr);
 			if(e == ERROR_SUCCESS && (maximumValueBytes / sizeof(WCHAR)) - 1 >= fileNameLength) {
 				const size_t fileNameLength = wcslen(fileName);
 				AutoBuffer<WCHAR> valueName(new WCHAR[maximumValueNameLength + 1]);
@@ -63,7 +64,7 @@ namespace {
 								temp[nameLength] = 0;
 								return temp;
 							} else
-								return AutoBuffer<WCHAR>(0);
+								return AutoBuffer<WCHAR>();
 						}
 					} else	// ERROR_NO_MORE_ITEMS
 						break;
@@ -71,13 +72,13 @@ namespace {
 			}
 			::RegCloseKey(key);
 		}
-		return AutoBuffer<WCHAR>(0);
+		return AutoBuffer<WCHAR>();
 	}
 } // namespace @0
 #if 0
 void FontSelector::linkPrimaryFont() /*throw()*/ {
 	// TODO: this does not support nested font linking.
-	assert(linkedFonts_ != 0);
+	assert(linkedFonts_ != nullptr);
 	for(vector<Fontset*>::iterator i(linkedFonts_->begin()), e(linkedFonts_->end()); i != e; ++i)
 		delete *i;
 	linkedFonts_->clear();
@@ -95,11 +96,11 @@ void FontSelector::linkPrimaryFont() /*throw()*/ {
 				const WCHAR* const e = sz + bytes / sizeof(WCHAR);
 				for(; sz < e; sz += wcslen(sz) + 1) {
 					const WCHAR* comma = wcschr(sz, L',');
-					if(comma != 0 && comma[1] != 0)	// "<file-name>,<typeface>"
+					if(comma != nullptr && comma[1] != 0)	// "<file-name>,<typeface>"
 						linkedFonts_->push_back(new Fontset(comma + 1));
 					else {	// "<file-name>"
 						AutoBuffer<WCHAR> typeface(mapFontFileNameToTypeface(sz));
-						if(typeface.get() != 0)
+						if(typeface.get() != nullptr)
 							linkedFonts_->push_back(new Fontset(typeface.get()));
 					}
 				}
@@ -339,9 +340,9 @@ void TextRenderer::paint(PaintContext& context) const {
 void TextRenderer::paint(Index line, PaintContext& context, const NativePoint& alignmentPoint) const /*throw()*/ {
 //	if(!enablesDoubleBuffering_) {
 		layouts().at(line).draw(context, alignmentPoint,
-			(lineRenderingOptions_.get() != 0) ? lineRenderingOptions_->textPaintOverride(line) : 0,
-			(lineRenderingOptions_.get() != 0) ? lineRenderingOptions_->endOfLine(line) : 0,
-			(lineRenderingOptions_.get() != 0) ? lineRenderingOptions_->textWrappingMark(line) : 0);
+			(lineRenderingOptions_.get() != nullptr) ? lineRenderingOptions_->textPaintOverride(line) : nullptr,
+			(lineRenderingOptions_.get() != nullptr) ? lineRenderingOptions_->endOfLine(line) : nullptr,
+			(lineRenderingOptions_.get() != nullptr) ? lineRenderingOptions_->textWrappingMark(line) : nullptr);
 		return;
 //	}
 
@@ -359,16 +360,16 @@ void TextRenderer::paint(Index line, PaintContext& context, const NativePoint& a
 		return;	// this logical line does not need to draw
 	y += static_cast<Scalar>(dy * subline);
 
-	if(memoryDC_.get() == 0)		
+	if(memoryDC_.get() == nullptr)		
 		memoryDC_.reset(::CreateCompatibleDC(context.nativeObject().get()), &::DeleteDC);
 	const int horizontalResolution = calculateMemoryBitmapSize(geometry::dx(context.device()->viewportSize()));
-	if(memoryBitmap_.get() != 0) {
+	if(memoryBitmap_.get() != nullptr) {
 		BITMAP temp;
 		::GetObjectW(memoryBitmap_.get(), sizeof(HBITMAP), &temp);
 		if(temp.bmWidth < horizontalResolution)
 			memoryBitmap_.reset();
 	}
-	if(memoryBitmap_.get() == 0)
+	if(memoryBitmap_.get() == nullptr)
 		memoryBitmap_.reset(::CreateCompatibleBitmap(
 			context.nativeObject().get(),
 			horizontalResolution, calculateMemoryBitmapSize(dy)), &::DeleteObject);
@@ -428,7 +429,7 @@ void TextRenderer::setTextWrapping(const TextWrapping<presentation::Length>& new
 
 void TextRenderer::updateDefaultFont() {
 	shared_ptr<const TextRunStyle> defaultStyle(presentation_.globalTextStyle().defaultLineStyle->defaultRunStyle);
-	if(defaultStyle.get() != 0 && !defaultStyle->fontFamily.empty())
+	if(defaultStyle.get() != nullptr && !defaultStyle->fontFamily.empty())
 		defaultFont_ = fontCollection().get(defaultStyle->fontFamily, defaultStyle->fontProperties);
 	else {
 		LOGFONTW lf;
@@ -443,7 +444,7 @@ void TextRenderer::updateDefaultFont() {
 	}
 
 	layouts().invalidate();
-	if(/*enablesDoubleBuffering_ &&*/ memoryBitmap_.get() != 0) {
+	if(/*enablesDoubleBuffering_ &&*/ memoryBitmap_.get() != nullptr) {
 		BITMAP temp;
 		::GetObjectW(memoryBitmap_.get(), sizeof(HBITMAP), &temp);
 		if(temp.bmHeight != calculateMemoryBitmapSize(defaultFont()->metrics().linePitch()))
@@ -620,7 +621,7 @@ void TextViewer::BaselineIterator::move(Index line) {
 	Scalar newBaseline;
 	if(!isValid()) {
 		Index firstVisibleLine, firstVisibleSubline;
-		viewer_.firstVisibleLine(&firstVisibleLine, 0, &firstVisibleSubline);
+		viewer_.firstVisibleLine(&firstVisibleLine, nullptr, &firstVisibleSubline);
 		const PhysicalFourSides<Scalar> spaces(viewer_.spaceWidths());
 		Scalar spaceBefore;
 		switch(utils::writingMode(viewer_).blockFlowDirection) {
@@ -732,7 +733,19 @@ Scalar TextViewport::allocationMeasure() const /*throw()*/ {
 }
 
 /**
- * Returns the document position nearest from the specified point.
+ * Returns the measure of the 'content-rectangle'.
+ * @return The measure of the 'content-rectangle' in pixels
+ * @see #allocationMeasure
+ */
+Scalar TextViewport::contentMeasure() const /*throw()*/ {
+	return max(
+		textRenderer().layouts().maximumMeasure(),
+		static_cast<Scalar>(isHorizontal(textRenderer().writingMode().blockFlowDirection) ?
+			geometry::dx(boundsInView()) : geometry::dy(boundsInView())));
+}
+
+/**
+ * @internal Returns the document position nearest from the specified point.
  * @param pointInView The point in view-coordinates (not viewport-coordinates). This can be outside
  *                    of the view
  * @param edge If set @c TextLayout#LEADING, the result is the leading of the character at @a p.
@@ -741,13 +754,14 @@ Scalar TextViewport::allocationMeasure() const /*throw()*/ {
  *                         @a p hovered outside of the text layout (e.g. far left or right of the
  *                         line, beyond the last line, ...)
  * @param snapPolicy Which character boundary the returned position snapped to
- * @return The document position
+ * @return The document position, or @c boost#none if @a abortNoCharacter was @c true and @a p is
+ *         outside of the layout
  * @throw UnknownValueException @a edge and/or snapPolicy are invalid
  * @see #location, TextLayout#offset
  */
-boost::optional<k::Position> TextViewport::characterForPoint(
-		const NativePoint& pointInView, TextLayout::Edge edge, bool abortNoCharacter /* = false */,
-		k::locations::CharacterUnit snapPolicy /* = k::locations::GRAPHEME_CLUSTER */) const {
+boost::optional<k::Position> TextViewport::internalCharacterForPoint(
+		const NativePoint& pointInView, TextLayout::Edge edge,
+		bool abortNoCharacter, k::locations::CharacterUnit snapPolicy) const {
 	NativePoint p(pointInView);
 	geometry::translate(p, geometry::make<NativeSize>(geometry::left(boundsInView()), geometry::top(boundsInView())));
 	k::Position result;
@@ -761,7 +775,7 @@ boost::optional<k::Position> TextViewport::characterForPoint(
 		subline = temp.subline;
 	}
 	if(abortNoCharacter && outside)
-		return k::Position();
+		return boost::none;
 	const TextLayout& layout = textRenderer().layouts()[result.line];
 	const BaselineIterator baseline(*this, result.line, true);
 
@@ -781,7 +795,7 @@ boost::optional<k::Position> TextViewport::characterForPoint(
 	else
 		throw UnknownValueException("edge");
 	if(abortNoCharacter && outside)
-		return k::Position();
+		return boost::none;
 
 	// snap intervening position to the boundary
 	if(result.offsetInLine != 0 && snapPolicy != k::locations::UTF16_CODE_UNIT) {
@@ -827,24 +841,12 @@ boost::optional<k::Position> TextViewport::characterForPoint(
 }
 
 /**
- * Returns the measure of the 'content-rectangle'.
- * @return The measure of the 'content-rectangle' in pixels
- * @see #allocationMeasure
- */
-Scalar TextViewport::contentMeasure() const /*throw()*/ {
-	return max(
-		textRenderer().layouts().maximumMeasure(),
-		static_cast<Scalar>(isHorizontal(textRenderer().writingMode().blockFlowDirection) ?
-			geometry::dx(boundsInView()) : geometry::dy(boundsInView())));
-}
-
-/**
  * Converts the point in the viewport into the logical line number and visual subline offset.
  * @param p The point in the viewport in pixels
  * @param[out] snapped @c true if there was not a line at @a p. Optional
  * @see #location, #mapBpdToLine, TextLayout#locateLine, TextLayout#offset
  */
-VisualLine TextViewport::locateLine(const NativePoint& p, bool* snapped /* = 0 */) const /*throw()*/ {
+VisualLine TextViewport::locateLine(const NativePoint& p, bool* snapped /* = nullptr */) const /*throw()*/ {
 	const NativeRectangle bounds(geometry::make<NativeRectangle>(
 		geometry::make<NativePoint>(0, 0), geometry::size(boundsInView())));
 	switch(textRenderer().writingMode().blockFlowDirection) {
@@ -916,7 +918,7 @@ NativePoint TextViewport::location(const k::Position& position,
  * @return The logical and visual line numbers
  * @see #BaselineIterator, TextViewer#mapLocalBpdToLine
  */
-VisualLine TextViewport::mapBpdToLine(Scalar bpd, bool* snapped /* = 0 */) const /*throw()*/ {
+VisualLine TextViewport::mapBpdToLine(Scalar bpd, bool* snapped /* = nullptr */) const /*throw()*/ {
 	const WritingMode writingMode(textRenderer().writingMode());
 	const PhysicalFourSides<Scalar>& physicalSpaces = textRenderer().spaceWidths();
 	AbstractFourSides<Scalar> abstractSpaces;
@@ -956,7 +958,7 @@ VisualLine TextViewport::mapBpdToLine(Scalar bpd, bool* snapped /* = 0 */) const
 		}
 		outside = beyondAfter;
 	}
-	if(snapped != 0)
+	if(snapped != nullptr)
 		*snapped = outside;
 	return result;
 }
@@ -1066,7 +1068,7 @@ void TextViewport::scrollTo(const VisualLine& line, Index ipd, viewers::base::Wi
  * @return The indentation in pixels
  * @throw IndexOutOfBoundsException @a subline is invalid
  */
-Scalar font::lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline /* = 0 */) {
+Scalar font::lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline /* = nullptr */) {
 	const detail::PhysicalTextAnchor alignment =
 		detail::computePhysicalTextAnchor(layout.anchor(), layout.writingMode().inlineFlowDirection);
 	if(alignment == detail::LEFT /*|| ... != NO_JUSTIFICATION*/)	// TODO: recognize the last subline of a justified line.

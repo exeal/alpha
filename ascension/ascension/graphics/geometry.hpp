@@ -110,13 +110,13 @@ namespace ascension {
 				template<typename Rectangle> struct Maker<RectangleTag, Rectangle> {
 					template<typename Size>
 					static Rectangle make(const typename Coordinate<Rectangle>::Type& origin, const Size& size,
-							typename std::enable_if<std::is_same<typename Tag<Size>::Type, SizeTag>::value>::type* = 0) {
+							typename std::enable_if<std::is_same<typename Tag<Size>::Type, SizeTag>::value>::type* = nullptr) {
 						const Rectangle temp = {origin.x, origin.y, origin.x + size.cx, origin.y + size.cy};
 						return temp;
 					}
 					template<typename Point>
 					static Rectangle make(const typename Coordinate<Rectangle>::Type& first, const Point& second,
-							typename std::enable_if<std::is_same<typename Tag<Point>::Type, PointTag>::value>::type* = 0) {
+							typename std::enable_if<std::is_same<typename Tag<Point>::Type, PointTag>::value>::type* = nullptr) {
 						const Rectangle temp = {first.x, first.y, second.x, second.y};
 						return temp;
 					}
@@ -246,7 +246,7 @@ namespace ascension {
 			inline Rectangle make(
 					const Range<typename Coordinate<typename Coordinate<Rectangle>::Type>::Type>& xrange,
 					const Range<typename Coordinate<typename Coordinate<Rectangle>::Type>::Type>& yrange,
-					typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
+					typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
 				return make<Rectangle>(
 					make<Coordinate<Rectangle>::Type>(xrange.beginning(), yrange.beginning()),
 					make<Coordinate<Rectangle>::Type>(xrange.end(), yrange.end()));
@@ -265,14 +265,14 @@ namespace ascension {
 			// 'add' for point and size
 
 			template<typename Point>
-			inline Point& add(Point& point1, const Point& point2, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
+			inline Point& add(Point& point1, const Point& point2, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
 				x(point1) += x(point2);
 				y(point1) += y(point2);
 				return point1;
 			}
 
 			template<typename Size>
-			inline Size& add(Size& size1, const Size& size2, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+			inline Size& add(Size& size1, const Size& size2, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
 				dx(size1) += dx(size2);
 				dy(size1) += dy(size2);
 				return size1;
@@ -284,18 +284,18 @@ namespace ascension {
 
 			/// Returns the size of the @a size in x-coordinate.
 			template<typename Size>
-			inline typename Coordinate<Size>::Type dx(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+			inline typename Coordinate<Size>::Type dx(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
 				return get<X_COORDINATE>(size);
 			}
 
 			template<typename Size>
-			inline detail::AccessProxy<Size, X_COORDINATE> dx(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+			inline detail::AccessProxy<Size, X_COORDINATE> dx(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
 				return detail::AccessProxy<Size, 0>(size);
 			}
 
 			/// Returns the size of the @a rectangle in x-coordinate.
 			template<typename Rectangle>
-			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type dx(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
+			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type dx(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
 				return dx(size(rectangle));
 			}
 
@@ -303,18 +303,18 @@ namespace ascension {
 
 			/// Returns the size of the @a size in y-coordinate.
 			template<typename Size>
-			inline typename Coordinate<Size>::Type dy(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+			inline typename Coordinate<Size>::Type dy(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
 				return get<Y_COORDINATE>(size);
 			}
 
 			template<typename Size>
-			inline detail::AccessProxy<Size, Y_COORDINATE> dy(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+			inline detail::AccessProxy<Size, Y_COORDINATE> dy(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
 				return detail::AccessProxy<Size, 1>(size);
 			}
 
 			/// Returns the size of the @a rectangle in x-coordinate.
 			template<typename Rectangle>
-			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type dy(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
+			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type dy(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
 				return dy(size(rectangle));
 			}
 
@@ -322,13 +322,13 @@ namespace ascension {
 
 			template<typename Geometry>
 			inline bool equals(const Geometry& geometry1, const Geometry& geometry2,
-					typename std::enable_if<std::is_arithmetic<typename Coordinate<Geometry>::Type>::value>::type* = 0) {
+					typename std::enable_if<std::is_arithmetic<typename Coordinate<Geometry>::Type>::value>::type* = nullptr) {
 				return get<0>(geometry1) == get<0>(geometry2) && get<1>(geometry1) == get<1>(geometry2);
 			}
 
 			template<typename Geometry>
 			inline bool equals(const Geometry& geometry1, const Geometry& geometry2,
-					typename std::enable_if<!std::is_arithmetic<typename Coordinate<Geometry>::Type>::value>::type* = 0) {
+					typename std::enable_if<!std::is_arithmetic<typename Coordinate<Geometry>::Type>::value>::type* = nullptr) {
 				return equals(get<0>(geometry1), get<0>(geometry2)) && equals(get<1>(geometry1), get<1>(geometry2));
 			}
 
@@ -336,8 +336,8 @@ namespace ascension {
 
 			template<typename Rectangle1, typename Rectangle2>
 			inline Rectangle1 intersected(const Rectangle1& rectangle1, const Rectangle2& rectangle2,
-					typename detail::EnableIfTagIs<Rectangle1, RectangleTag>::type* = 0,
-					typename detail::EnableIfTagIs<Rectangle2, RectangleTag>::type* = 0) {
+					typename detail::EnableIfTagIs<Rectangle1, RectangleTag>::type* = nullptr,
+					typename detail::EnableIfTagIs<Rectangle2, RectangleTag>::type* = nullptr) {
 				return make<Rectangle1>(
 					ascension::intersected(range<X_COORDINATE>(rectangle1), range<X_COORDINATE>(rectangle2)),
 					ascension::intersected(range<Y_COORDINATE>(rectangle1), range<Y_COORDINATE>(rectangle2)));
@@ -360,16 +360,16 @@ namespace ascension {
 
 			template<typename Rectangle, typename Point>
 			inline bool includes(const Rectangle& rectangle, const Point& point,
-					typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0,
-					typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
+					typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr,
+					typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
 				return ascension::includes(makeRange(left(rectangle), right(rectangle)), x(point))
 					&& ascension::includes(makeRange(top(rectangle), bottom(rectangle)), y(point));
 			}
 
 			template<typename Rectangle1, typename Rectangle2>
 			inline bool includes(const Rectangle1& rectangle1, const Rectangle2& rectangle2,
-					typename detail::EnableIfTagIs<Rectangle1, RectangleTag>::type* = 0,
-					typename detail::EnableIfTagIs<Rectangle2, RectangleTag>::type* = 0) {
+					typename detail::EnableIfTagIs<Rectangle1, RectangleTag>::type* = nullptr,
+					typename detail::EnableIfTagIs<Rectangle2, RectangleTag>::type* = nullptr) {
 				return ascension::includes(range<X_COORDINATE>(rectangle1), range<X_COORDINATE>(rectangle2))
 					&& ascension::includes(range<Y_COORDINATE>(rectangle1), range<Y_COORDINATE>(rectangle2));
 			}
@@ -377,24 +377,24 @@ namespace ascension {
 			// 'isEmpty' for size, rectangle and region
 
 			template<typename Size>
-			inline bool isEmpty(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+			inline bool isEmpty(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
 				return dx(size) <= 0 || dy(size) <= 0;
 			}
 
 			template<typename Rectangle>
-			inline bool isEmpty(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
+			inline bool isEmpty(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
 				return isEmpty(size(rectangle));
 			}
 
 			// 'isNormalized' for size and rectangle
 
 			template<typename Size>
-			inline bool isNormalized(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+			inline bool isNormalized(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
 				return dx(size) >= 0 && dy(size) >= 0;
 			}
 
 			template<typename Rectangle>
-			inline bool isNormalized(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
+			inline bool isNormalized(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
 				return isNormalized(size(rectangle));
 			}
 
@@ -403,14 +403,14 @@ namespace ascension {
 			// 'negate' for point and size
 
 			template<typename Point>
-			inline Point& negate(Point& point, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
+			inline Point& negate(Point& point, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
 				x(point) = -x(point);
 				y(point) = -y(point);
 				return point;
 			}
 
 			template<typename Size>
-			inline Size& negate(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+			inline Size& negate(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
 				dx(size) = -dx(size);
 				dy(size) = -dy(size);
 				return size;
@@ -419,7 +419,7 @@ namespace ascension {
 			// 'normalize' for size and rectangle
 
 			template<typename Size>
-			inline Size& normalize(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+			inline Size& normalize(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
 				if(dx(size) < 0)
 					dx(size) = -dx(size);
 				if(dy(size) < 0)
@@ -428,7 +428,7 @@ namespace ascension {
 			}
 
 			template<typename Rectangle>
-			inline Rectangle& normalize(Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
+			inline Rectangle& normalize(Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
 				typedef typename Coordinate<typename Coordinate<Rectangle>::Type>::Type Scalar;
 				std::pair<Scalar, Scalar> minimumCorner(x(get<0>(rectangle)), y(get<0>(rectangle)));
 				std::pair<Scalar, Scalar> maximumCorner(x(get<1>(rectangle)), y(get<1>(rectangle)));
@@ -444,14 +444,14 @@ namespace ascension {
 			// 'subtract' for point and size
 
 			template<typename Point>
-			inline Point& subtract(Point& point1, const Point& point2, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
+			inline Point& subtract(Point& point1, const Point& point2, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
 				x(point1) -= x(point2);
 				y(point1) -= y(point2);
 				return point1;
 			}
 
 			template<typename Size>
-			inline Size& subtract(Size& size1, const Size& size2, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+			inline Size& subtract(Size& size1, const Size& size2, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
 				dx(size1) -= dx(size2);
 				dy(size1) -= dy(size2);
 				return size1;
@@ -460,14 +460,14 @@ namespace ascension {
 			// 'translate' for point, rectangle and region
 
 			template<typename Point, typename Size>
-			inline Point& translate(Point& p, const Size& offset, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
+			inline Point& translate(Point& p, const Size& offset, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
 				x(p) += dx(offset);
 				y(p) += dy(offset);
 				return p;
 			}
 
 			template<typename Rectangle, typename Offset>
-			inline Rectangle& translate(Rectangle& rectangle, const Offset& offset, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
+			inline Rectangle& translate(Rectangle& rectangle, const Offset& offset, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
 				Coordinate<Rectangle>::Type p[2] = {get<0>(rectangle), get<1>(rectangle)};
 				return rectangle = make<Rectangle>(translate(p[0], offset), translate(p[1], offset));
 			}
@@ -478,12 +478,12 @@ namespace ascension {
 
 			/// Returns the x-coordinate of @a point.
 			template<typename Point>
-			inline typename Coordinate<Point>::Type x(const Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
+			inline typename Coordinate<Point>::Type x(const Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
 				return get<X_COORDINATE>(p);
 			}
 
 			template<typename Point>
-			inline detail::AccessProxy<Point, 0> x(Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
+			inline detail::AccessProxy<Point, 0> x(Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
 				return detail::AccessProxy<Point, X_COORDINATE>(p);
 			}
 
@@ -491,12 +491,12 @@ namespace ascension {
 
 			/// Returns the y-coordinate of @a point.
 			template<typename Point>
-			inline typename Coordinate<Point>::Type y(const Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
+			inline typename Coordinate<Point>::Type y(const Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
 				return get<Y_COORDINATE>(p);
 			}
 
 			template<typename Point>
-			inline detail::AccessProxy<Point, 1> y(Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
+			inline detail::AccessProxy<Point, 1> y(Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
 				return detail::AccessProxy<Point, Y_COORDINATE>(p);
 			}
 
@@ -560,12 +560,12 @@ namespace ascension {
 
 			/// Returns the Manhattan-length of @a point.
 			template<typename Point>
-			inline typename Coordinate<Point>::Type manhattanLength(const Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = 0) {
+			inline typename Coordinate<Point>::Type manhattanLength(const Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
 				return std::abs(x(p)) + std::abs(y(p));
 			}
 
 			template<typename Size>
-			inline Size& expandTo(Size&, const Size& other, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0);
+			inline Size& expandTo(Size&, const Size& other, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr);
 
 			/**
 			 * Returns the x-coordinate of the left edge of @a rectangle.
@@ -577,7 +577,7 @@ namespace ascension {
 			}
 
 			template<typename Size>
-			inline Size& makeBoundedTo(Size&, const Size& other, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0);
+			inline Size& makeBoundedTo(Size&, const Size& other, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr);
 
 			template<std::size_t dimension, typename Rectangle>
 			inline const Range<typename Coordinate<typename Coordinate<Rectangle>::Type>::Type> range(const Rectangle& rectangle) {
@@ -590,7 +590,7 @@ namespace ascension {
 			}
 
 			template<typename Rectangle, typename Size>
-			inline Rectangle& resize(Rectangle& rectangle, const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = 0) {
+			inline Rectangle& resize(Rectangle& rectangle, const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
 				Coordinate<Rectangle>::Type o(get<0>(rectangle));
 				set<1>(rectangle, translate(o, size));
 				return rectangle;
@@ -661,13 +661,13 @@ namespace ascension {
 
 			/// Returns the origin of the @a rectangle.
 			template<typename Rectangle>
-			inline const typename Coordinate<Rectangle>::Type origin(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
+			inline const typename Coordinate<Rectangle>::Type origin(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
 				return get<0>(rectangle);
 			}
 
 			/// Returns the size of the @a rectangle.
 			template<typename Rectangle>
-			inline const NativeSize size(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = 0) {
+			inline const NativeSize size(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
 				const std::pair<typename Coordinate<Rectangle>::Type,
 					typename Coordinate<Rectangle>::Type> points(std::make_pair(get<0>(rectangle), get<1>(rectangle)));
 				return make<NativeSize>(x(points.second) - x(points.first), y(points.second) - y(points.first));

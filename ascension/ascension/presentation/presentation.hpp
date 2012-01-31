@@ -217,7 +217,7 @@ namespace ascension {
 		 * @throw NullPointerException @a director is @c null
 		 */
 		inline void Presentation::addTextLineColorDirector(std::shared_ptr<TextLineColorDirector> director) {
-			if(director.get() == 0) throw NullPointerException("director"); textLineColorDirectors_.push_back(director);}
+			if(director.get() == nullptr) throw NullPointerException("director"); textLineColorDirectors_.push_back(director);}
 
 		/**
 		 * Returns the global text style this object gives.
@@ -225,7 +225,7 @@ namespace ascension {
 		 * @see #setGlobalTextStyle
 		 */
 		inline const TextToplevelStyle& Presentation::globalTextStyle() const /*throw()*/ {
-			assert(globalTextStyle_ != 0);
+			assert(globalTextStyle_ != nullptr);
 			return *globalTextStyle_;
 		}
 

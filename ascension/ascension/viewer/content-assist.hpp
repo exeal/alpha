@@ -284,7 +284,7 @@ namespace ascension {
 				kernel::Region replacementRegion;
 				AutoBuffer<CompletionProposal*> proposals;
 				std::size_t numberOfProposals;
-				CompletionSession() /*throw()*/ : processor(0), numberOfProposals(0) {}
+				CompletionSession() /*throw()*/ : processor(nullptr), numberOfProposals(0) {}
 				~CompletionSession() /*throw()*/ {for(std::size_t i = 0; i < numberOfProposals; ++i) delete proposals[i];}
 			};
 			std::unique_ptr<CompletionSession> completionSession_;

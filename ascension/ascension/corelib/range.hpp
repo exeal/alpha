@@ -24,7 +24,7 @@ namespace ascension {
 			template<typename U> static True test(typename U::difference_type*);
 			template<typename U> static False test(...);
 		public:
-			static const bool value = sizeof(test<std::iterator_traits<T>>(0)) == sizeof(True);
+			static const bool value = sizeof(test<std::iterator_traits<T>>(nullptr)) == sizeof(True);
 		};
 
 		template<typename T, bool hasDifferenceType>
@@ -160,7 +160,7 @@ namespace ascension {
 	 */
 	template<typename T, typename Comp>
 	inline bool isEmpty(const Range<T, Comp>& range,
-			typename std::tr1::enable_if<std::is_same<Comp, std::less<T>>::value>::type* = 0) {
+			typename std::tr1::enable_if<std::is_same<Comp, std::less<T>>::value>::type* = nullptr) {
 		return range.beginning() == range.end();
 	}
 
@@ -173,7 +173,7 @@ namespace ascension {
 	 */
 	template<typename T, typename Comp>
 	inline bool isEmpty(const Range<T, Comp>& range,
-			typename std::tr1::enable_if<!std::is_same<Comp, std::less<T>>::value>::type* = 0) {
+			typename std::tr1::enable_if<!std::is_same<Comp, std::less<T>>::value>::type* = nullptr) {
 		const Comp lessThan;
 		return !lessThan(range.beginning(), range.end()) && !lessThan(range.end(), range.beginning());
 	}

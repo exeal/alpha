@@ -76,7 +76,7 @@ namespace {
 	list<GenericDataObject::Entry*>::iterator GenericDataObject::find(
 			const FORMATETC& format, list<Entry*>::iterator initial) const /*throw()*/ {
 		const list<Entry*>::iterator e(const_cast<GenericDataObject*>(this)->entries_.end());
-		if(format.ptd == 0) {	// this does not support DVTARGETDEVICE
+		if(format.ptd == nullptr) {	// this does not support DVTARGETDEVICE
 			for(list<Entry*>::iterator i(initial); i != e; ++i) {
 				const FORMATETC& other = (*i)->format;
 				if(other.cfFormat == format.cfFormat && other.dwAspect == format.dwAspect && other.lindex == format.lindex)
@@ -86,7 +86,7 @@ namespace {
 		return e;
 	}
 	STDMETHODIMP GenericDataObject::GetData(FORMATETC* format, STGMEDIUM* medium) {
-		if(format == 0 || medium == 0)
+		if(format == nullptr || medium == nullptr)
 			return E_INVALIDARG;
 		else if(format->lindex != -1)
 			return DV_E_LINDEX;
@@ -97,11 +97,11 @@ namespace {
 			return DV_E_TYMED;
 		const HRESULT hr = ::CopyStgMedium(&(*entry)->medium, medium);
 		if(SUCCEEDED(hr))
-			medium->pUnkForRelease = 0;
+			medium->pUnkForRelease = nullptr;
 		return hr;
 	}
 	STDMETHODIMP GenericDataObject::QueryGetData(LPFORMATETC format) {
-		if(format == 0)
+		if(format == nullptr)
 			return E_INVALIDARG;
 		else if(format->lindex != -1)
 			return DV_E_LINDEX;
@@ -111,17 +111,17 @@ namespace {
 		return (((*entry)->format.tymed & format->tymed) != 0) ? S_OK : DV_E_TYMED;
 	}
 	STDMETHODIMP GenericDataObject::GetCanonicalFormatEtc(FORMATETC* in, FORMATETC* out) {
-		if(in == 0 || out == 0)
+		if(in == nullptr || out == nullptr)
 			return E_INVALIDARG;
 		else if(in->lindex != -1)
 			return DV_E_LINDEX;
-		else if(in->ptd != 0)
+		else if(in->ptd != nullptr)
 			return DV_E_FORMATETC;
 		*out = *in;
 		return DATA_S_SAMEFORMATETC;
 	}
 	STDMETHODIMP GenericDataObject::SetData(FORMATETC* format, STGMEDIUM* medium, BOOL release) {
-		if(format == 0 || medium == 0)
+		if(format == nullptr || medium == nullptr)
 			return E_INVALIDARG;
 		STGMEDIUM clone;
 		if(!release) {
@@ -136,7 +136,7 @@ namespace {
 		}
 		if(entry == entries_.end()) {	// a entry has the given format does not exist
 			Entry* const newEntry = static_cast<Entry*>(::CoTaskMemAlloc(sizeof(Entry)));
-			if(newEntry == 0)
+			if(newEntry == nullptr)
 				return E_OUTOFMEMORY;
 			newEntry->format = *format;
 			memset(&newEntry->medium, 0, sizeof(STGMEDIUM));
@@ -156,10 +156,10 @@ namespace {
 			return E_NOTIMPL;
 		else if(direction != DATADIR_GET)
 			return E_INVALIDARG;
-		else if(enumerator == 0)
+		else if(enumerator == nullptr)
 			return E_INVALIDARG;
 		FORMATETC* buffer = static_cast<FORMATETC*>(::CoTaskMemAlloc(sizeof(FORMATETC) * entries_.size()));
-		if(buffer == 0)
+		if(buffer == nullptr)
 			return E_OUTOFMEMORY;
 		size_t j = 0;
 		for(list<Entry*>::const_iterator i(entries_.begin()), e(entries_.end()); i != e; ++i, ++j)
@@ -194,7 +194,7 @@ namespace {
 namespace {
 	// copied from point.cpp
 	inline const IdentifierSyntax& identifierSyntax(const Point& p) {
-		return p.document().contentTypeInformation().getIdentifierSyntax(p.contentType());
+		return p.document().contentTypeInformation().getIdentifierSyntax(contentType(p));
 	}
 } // namespace @0
 
@@ -209,7 +209,7 @@ namespace {
  */
 HRESULT utils::createTextObjectForSelectedString(const Caret& caret, bool rtf, IDataObject*& content) {
 	GenericDataObject* o = new(nothrow) GenericDataObject();
-	if(o == 0)
+	if(o == nullptr)
 		return E_OUTOFMEMORY;
 	o->AddRef();
 
@@ -218,18 +218,18 @@ HRESULT utils::createTextObjectForSelectedString(const Caret& caret, bool rtf, I
 
 	// register datas...
 	FORMATETC format;
-	format.ptd = 0;
+	format.ptd = nullptr;
 	format.dwAspect = DVASPECT_CONTENT;
 	format.lindex = -1;
 	format.tymed = TYMED_HGLOBAL;
 	STGMEDIUM medium;
 	medium.tymed = TYMED_HGLOBAL;
-	medium.pUnkForRelease = 0;
+	medium.pUnkForRelease = nullptr;
 
 	// Unicode text format
 	format.cfFormat = CF_UNICODETEXT;
 	medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(Char) * (text.length() + 1));
-	if(medium.hGlobal == 0) {
+	if(medium.hGlobal == nullptr) {
 		o->Release();
 		return E_OUTOFMEMORY;
 	}
@@ -253,13 +253,13 @@ HRESULT utils::createTextObjectForSelectedString(const Caret& caret, bool rtf, I
 		wchar_t* eob;
 		codePage = wcstoul(codePageString, &eob, 10);
 		format.cfFormat = CF_TEXT;
-		if(int ansiLength = ::WideCharToMultiByte(codePage, 0, text.c_str(), static_cast<int>(text.length()), 0, 0, 0, 0)) {
+		if(int ansiLength = ::WideCharToMultiByte(codePage, 0, text.c_str(), static_cast<int>(text.length()), nullptr, 0, nullptr, nullptr)) {
 			AutoBuffer<char> ansiBuffer(new(nothrow) char[ansiLength]);
-			if(ansiBuffer.get() != 0) {
+			if(ansiBuffer.get() != nullptr) {
 				ansiLength = ::WideCharToMultiByte(codePage, 0,
-					text.data(), static_cast<int>(text.length()), ansiBuffer.get(), ansiLength, 0, 0);
+					text.data(), static_cast<int>(text.length()), ansiBuffer.get(), ansiLength, nullptr, nullptr);
 				if(ansiLength != 0) {
-					if(0 != (medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(char) * (ansiLength + 1)))) {
+					if(nullptr != (medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(char) * (ansiLength + 1)))) {
 						if(char* const temp = static_cast<char*>(::GlobalLock(medium.hGlobal))) {
 							memcpy(temp, ansiBuffer.get(), sizeof(char) * ansiLength);
 							temp[ansiLength] = 0;
@@ -270,7 +270,7 @@ HRESULT utils::createTextObjectForSelectedString(const Caret& caret, bool rtf, I
 						::GlobalFree(medium.hGlobal);
 						if(SUCCEEDED(hr)) {
 							format.cfFormat = CF_LOCALE;
-							if(0 != (medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(LCID)))) {
+							if(nullptr != (medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(LCID)))) {
 								if(LCID* const lcid = static_cast<LCID*>(::GlobalLock(medium.hGlobal))) {
 									*lcid = caret.clipboardLocale();
 									hr = o->SetData(&format, &medium, false);
@@ -302,10 +302,10 @@ HRESULT utils::createTextObjectForSelectedString(const Caret& caret, bool rtf, I
  * @return A pair of the result HRESULT and the text content. @c SCODE is one of @c S_OK,
  *         @c E_OUTOFMEMORY and @c DV_E_FORMATETC
  */
-pair<HRESULT, String> utils::getTextFromDataObject(IDataObject& data, bool* rectangle /* = 0 */) {
+pair<HRESULT, String> utils::getTextFromDataObject(IDataObject& data, bool* rectangle /* = nullptr */) {
 	pair<HRESULT, String> result;
-	FORMATETC fe = {CF_UNICODETEXT, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
-	STGMEDIUM stm = {TYMED_HGLOBAL, 0};
+	FORMATETC fe = {CF_UNICODETEXT, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+	STGMEDIUM stm = {TYMED_HGLOBAL, nullptr};
 	if(S_OK == (result.first = data.QueryGetData(&fe))) {	// the data suppports CF_UNICODETEXT ?
 		if(SUCCEEDED(result.first = data.GetData(&fe, &stm))) {
 			if(const Char* buffer = static_cast<Char*>(::GlobalLock(stm.hGlobal))) {
@@ -329,7 +329,7 @@ pair<HRESULT, String> utils::getTextFromDataObject(IDataObject& data, bool* rect
 					UINT codePage = ::GetACP();
 					fe.cfFormat = CF_LOCALE;
 					if(S_OK == (result.first = data.QueryGetData(&fe))) {
-						STGMEDIUM locale = {TYMED_HGLOBAL, 0};
+						STGMEDIUM locale = {TYMED_HGLOBAL, nullptr};
 						if(S_OK == (result.first = data.GetData(&fe, &locale))) {
 							wchar_t buffer[6];
 							if(0 != ::GetLocaleInfoW(*static_cast<USHORT*>(::GlobalLock(locale.hGlobal)),
@@ -344,10 +344,10 @@ pair<HRESULT, String> utils::getTextFromDataObject(IDataObject& data, bool* rect
 					const Index nativeLength = min<Index>(
 						strlen(nativeBuffer), ::GlobalSize(stm.hGlobal) / sizeof(char)) + 1;
 					const Index ucsLength = ::MultiByteToWideChar(
-						codePage, MB_PRECOMPOSED, nativeBuffer, static_cast<int>(nativeLength), 0, 0);
+						codePage, MB_PRECOMPOSED, nativeBuffer, static_cast<int>(nativeLength), nullptr, 0);
 					if(ucsLength != 0) {
 						AutoBuffer<wchar_t> ucsBuffer(new(nothrow) wchar_t[ucsLength]);
-						if(ucsBuffer.get() != 0) {
+						if(ucsBuffer.get() != nullptr) {
 							if(0 != ::MultiByteToWideChar(codePage, MB_PRECOMPOSED,
 									nativeBuffer, static_cast<int>(nativeLength), ucsBuffer.get(), static_cast<int>(ucsLength))) {
 								try {
@@ -367,7 +367,7 @@ pair<HRESULT, String> utils::getTextFromDataObject(IDataObject& data, bool* rect
 
 	if(FAILED(result.first))
 		result.first = DV_E_FORMATETC;
-	if(SUCCEEDED(result.first) && rectangle != 0) {
+	if(SUCCEEDED(result.first) && rectangle != nullptr) {
 		fe.cfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
 		*rectangle = fe.cfFormat != 0 && data.QueryGetData(&fe) == S_OK;
 	}
@@ -379,10 +379,10 @@ pair<HRESULT, String> utils::getTextFromDataObject(IDataObject& data, bool* rect
 // ClipboardException /////////////////////////////////////////////////////////////////////////////
 
 ClipboardException::ClipboardException(HRESULT hr) : runtime_error("") {
-	void* buffer = 0;
+	void* buffer = nullptr;
 	::FormatMessageA(
 		FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-		0, hr, 0, reinterpret_cast<char*>(&buffer), 0, 0);
+		nullptr, hr, 0, reinterpret_cast<char*>(&buffer), 0, nullptr);
 	runtime_error(static_cast<char*>(buffer));
 	::LocalFree(buffer);
 }
@@ -410,7 +410,7 @@ void Caret::adjustInputMethodCompositionWindow() {
 		return;
 	const TextViewer& viewer = textViewer();
 	win32::Handle<HIMC> imc(inputMethod(viewer));
-	if(imc.get() != 0) {
+	if(imc.get() != nullptr) {
 		// composition window placement
 		COMPOSITIONFORM cf;
 		cf.rcArea = viewer.bounds(false);
@@ -420,7 +420,7 @@ void Caret::adjustInputMethodCompositionWindow() {
 		cf.rcArea.right -= margins.right();
 		cf.rcArea.bottom -= margins.bottom();
 		cf.dwStyle = CFS_POINT;
-		cf.ptCurrentPos = viewer.localPointForCharacter(beginning(), false, font::TextLayout::LEADING);
+		cf.ptCurrentPos = modelToView(viewer.textRenderer(), beginning(), false, font::TextLayout::LEADING);
 		if(cf.ptCurrentPos.y == numeric_limits<Scalar>::max() || cf.ptCurrentPos.y == numeric_limits<Scalar>::min())
 			cf.ptCurrentPos.y = (cf.ptCurrentPos.y == numeric_limits<Scalar>::min()) ? cf.rcArea.top : cf.rcArea.bottom;
 		else
@@ -513,8 +513,8 @@ void Caret::onImeComposition(WPARAM wp, LPARAM lp, bool& consumed) {
 		return;
 	else if(/*event.lParam == 0 ||*/ win32::boole(lp & GCS_RESULTSTR)) {	// completed
 		win32::Handle<HIMC> imc(inputMethod(textViewer()));
-		if(imc.get() != 0) {
-			if(const Index len = ::ImmGetCompositionStringW(imc.get(), GCS_RESULTSTR, 0, 0) / sizeof(WCHAR)) {
+		if(imc.get() != nullptr) {
+			if(const Index len = ::ImmGetCompositionStringW(imc.get(), GCS_RESULTSTR, nullptr, 0) / sizeof(WCHAR)) {
 				// this was not canceled
 				const AutoBuffer<Char> text(new Char[len + 1]);
 				::ImmGetCompositionStringW(imc.get(), GCS_RESULTSTR, text.get(), static_cast<DWORD>(len * sizeof(WCHAR)));
@@ -573,14 +573,14 @@ LRESULT Caret::onImeRequest(WPARAM command, LPARAM lp, bool& consumed) {
 		consumed = true;
 		if(isSelectionEmpty(*this)) {	// IME selects the composition target automatically if no selection
 			if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lp)) {
-				const String& lineString = doc.line(line());
+				const String& lineString = doc.line(line(*this));
 				rcs->dwStrLen = static_cast<DWORD>(lineString.length());
 				rcs->dwStrOffset = sizeof(RECONVERTSTRING);
-				rcs->dwTargetStrOffset = rcs->dwCompStrOffset = static_cast<DWORD>(sizeof(Char) * column());
+				rcs->dwTargetStrOffset = rcs->dwCompStrOffset = static_cast<DWORD>(sizeof(Char) * offsetInLine(*this));
 				rcs->dwTargetStrLen = rcs->dwCompStrLen = 0;
 				lineString.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
 			}
-			return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(line());
+			return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(line(*this));
 		} else {
 			const String selection(selectedString(*this, text::NLF_RAW_VALUE));
 			if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lp)) {
@@ -605,21 +605,21 @@ LRESULT Caret::onImeRequest(WPARAM command, LPARAM lp, bool& consumed) {
 			} else {
 				// reconvert the region IME passed if no selection (and create the new selection).
 				// in this case, reconversion across multi-line (prcs->dwStrXxx represents the entire line)
-				if(doc.isNarrowed() && line() == region.first.line) {	// the document is narrowed
-					if(rcs->dwCompStrOffset / sizeof(Char) < region.first.column) {
-						rcs->dwCompStrLen += static_cast<DWORD>(sizeof(Char) * region.first.column - rcs->dwCompStrOffset);
+				if(doc.isNarrowed() && line(*this) == region.first.line) {	// the document is narrowed
+					if(rcs->dwCompStrOffset / sizeof(Char) < region.first.offsetInLine) {
+						rcs->dwCompStrLen += static_cast<DWORD>(sizeof(Char) * region.first.offsetInLine - rcs->dwCompStrOffset);
 						rcs->dwTargetStrLen = rcs->dwCompStrOffset;
-						rcs->dwCompStrOffset = rcs->dwTargetStrOffset = static_cast<DWORD>(sizeof(Char) * region.first.column);
-					} else if(rcs->dwCompStrOffset / sizeof(Char) > region.second.column) {
-						rcs->dwCompStrOffset -= rcs->dwCompStrOffset - sizeof(Char) * region.second.column;
+						rcs->dwCompStrOffset = rcs->dwTargetStrOffset = static_cast<DWORD>(sizeof(Char) * region.first.offsetInLine);
+					} else if(rcs->dwCompStrOffset / sizeof(Char) > region.second.offsetInLine) {
+						rcs->dwCompStrOffset -= rcs->dwCompStrOffset - sizeof(Char) * region.second.offsetInLine;
 						rcs->dwTargetStrOffset = rcs->dwCompStrOffset;
 						rcs->dwCompStrLen = rcs->dwTargetStrLen
-							= static_cast<DWORD>(sizeof(Char) * region.second.column - rcs->dwCompStrOffset);
+							= static_cast<DWORD>(sizeof(Char) * region.second.offsetInLine - rcs->dwCompStrOffset);
 					}
 				}
 				select(
-					Position(line(), rcs->dwCompStrOffset / sizeof(Char)),
-					Position(line(), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
+					Position(line(*this), rcs->dwCompStrOffset / sizeof(Char)),
+					Position(line(*this), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
 			}
 			consumed = true;
 			return true;
@@ -632,16 +632,16 @@ LRESULT Caret::onImeRequest(WPARAM command, LPARAM lp, bool& consumed) {
 
 	// queried document content for higher conversion accuracy
 	else if(command == IMR_DOCUMENTFEED) {
-		if(line() == anchor().line()) {
+		if(line(*this) == line(anchor())) {
 			consumed = true;
 			if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lp)) {
-				rcs->dwStrLen = static_cast<DWORD>(doc.lineLength(line()));
+				rcs->dwStrLen = static_cast<DWORD>(doc.lineLength(line(*this)));
 				rcs->dwStrOffset = sizeof(RECONVERTSTRING);
 				rcs->dwCompStrLen = rcs->dwTargetStrLen = 0;
-				rcs->dwCompStrOffset = rcs->dwTargetStrOffset = sizeof(Char) * static_cast<DWORD>(beginning().column());
-				doc.line(line()).copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
+				rcs->dwCompStrOffset = rcs->dwTargetStrOffset = sizeof(Char) * static_cast<DWORD>(offsetInLine(beginning()));
+				doc.line(line(*this)).copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), rcs->dwStrLen);
 			}
-			return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(line());
+			return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(line(*this));
 		}
 	}
 
@@ -678,7 +678,7 @@ void Caret::paste(bool useKillRing) {
 		replaceSelection(text.second, rectangle);
 	} else {
 		texteditor::Session* const session = document().session();
-		if(session == 0 || session->killRing().numberOfKills() == 0)
+		if(session == nullptr || session->killRing().numberOfKills() == 0)
 			throw IllegalStateException("the kill-ring is not available.");
 		texteditor::KillRing& killRing = session->killRing();
 		const pair<String, bool>& text = context_.yanking ? killRing.setCurrent(+1) : killRing.get();

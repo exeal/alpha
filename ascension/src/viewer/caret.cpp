@@ -97,7 +97,7 @@ Caret::Context::Context() /*throw()*/ : yanking(false), leaveAnchorNext(false), 
  * @param position The initial position of the point
  * @throw BadPositionException @a position is outside of the document
  */
-Caret::Caret(TextViewer& viewer, const Position& position /* = Position(0, 0) */) /*throw()*/ : VisualPoint(viewer, position, 0),
+Caret::Caret(TextViewer& viewer, const Position& position /* = Position(0, 0) */) /*throw()*/ : VisualPoint(viewer, position, nullptr),
 		anchor_(new SelectionAnchor(viewer, position)),
 #ifdef ASCENSION_OS_WINDOWS
 		clipboardLocale_(::GetUserDefaultLCID()),
@@ -167,7 +167,7 @@ void Caret::addStateListener(CaretStateListener& listener) {
  * @see #endRectangleSelection, #isSelectionRectangle
  */
 void Caret::beginRectangleSelection() {
-	if(context_.selectedRectangle.get() == 0) {
+	if(context_.selectedRectangle.get() == nullptr) {
 		context_.selectedRectangle.reset(new VirtualBox(textViewer(), selectedRegion()));
 		stateListeners_.notify<const Caret&>(&CaretStateListener::selectionShapeChanged, *this);
 	}
@@ -243,7 +243,7 @@ void Caret::documentChanged(const Document&, const DocumentChange&) {
 void Caret::endRectangleSelection() {
 	if(isTextViewerDisposed())
 		throw TextViewerDisposedException();
-	if(context_.selectedRectangle.get() != 0) {
+	if(context_.selectedRectangle.get() != nullptr) {
 		context_.selectedRectangle.reset();
 		stateListeners_.notify<const Caret&>(&CaretStateListener::selectionShapeChanged, *this);
 	}
@@ -376,7 +376,7 @@ namespace {
 	 * @throw ... Any exceptions @c Document#replace throws
 	 */
 	void destructiveInsert(Caret& caret, const StringPiece& text, bool keepNewline = true) {
-		if(text.beginning() == 0)
+		if(text.beginning() == nullptr)
 			throw NullPointerException("text");
 		const bool adapts = caret.adaptsToDocument();
 		caret.adaptToDocument(false);
@@ -582,7 +582,7 @@ void Caret::resetVisualization() {
 	} else if(context_.inputMethodCompositionActivated) {
 		image.reset(new Image(geometry::make<NativeSize>(0, 0), Image::RGB_16));
 		alignmentPoint = geometry::make<NativePoint>(0, 0);
-	} else if(shaper_.get() != 0)
+	} else if(shaper_.get() != nullptr)
 		shaper_->shape(image, alignmentPoint);
 	else {
 		DefaultCaretShaper s;
@@ -591,7 +591,7 @@ void Caret::resetVisualization() {
 		static_cast<CaretShaper&>(s).shape(image, alignmentPoint);
 		static_cast<CaretShaper&>(s).uninstall();
 	}
-	assert(image.get() != 0);
+	assert(image.get() != nullptr);
 
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 	::DestroyCaret();
@@ -741,8 +741,8 @@ bool viewers::isPointOverSelection(const Caret& caret, const NativePoint& p) {
 		const NativeRectangle viewerBounds(caret.textViewer().bounds(false));
 		if(geometry::x(p) > geometry::right(viewerBounds) || geometry::y(p) > geometry::bottom(viewerBounds))
 			return false;
-		const Position pos(mapViewToModel(caret.textViewer().textRenderer(), p, font::TextLayout::TRAILING));
-		return pos >= caret.beginning() && pos <= caret.end();
+		const boost::optional<Position> pos(viewToModel(caret.textViewer().textRenderer(), p, font::TextLayout::TRAILING));
+		return pos && *pos >= caret.beginning() && *pos <= caret.end();
 	}
 }
 

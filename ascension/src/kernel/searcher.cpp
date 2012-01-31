@@ -228,13 +228,13 @@ int TextSearcher::collationWeight() const /*throw()*/ {
 
 /// Returns @c false if caseless match is enabled. This setting is obtained from the pattern.
 bool TextSearcher::isCaseSensitive() const {
-	if(literalPattern_.get() != 0)
+	if(literalPattern_.get() != nullptr)
 		return literalPattern_->isCaseSensitive();
 #ifndef ASCENSION_NO_REGEX
-	else if(regexPattern_.get() != 0)
+	else if(regexPattern_.get() != nullptr)
 		return (regexPattern_->flags() & regex::Pattern::CASE_INSENSITIVE) == 0;
 #ifndef ASCENSION_NO_MIGEMO
-	else if(migemoPattern_.get() != 0)
+	else if(migemoPattern_.get() != nullptr)
 		return  (migemoPattern_->flags() & regex::Pattern::CASE_INSENSITIVE) == 0;
 #endif // !ASCENSION_NO_MIGEMO
 #endif // !ASCENSION_NO_REGEX
@@ -264,7 +264,7 @@ bool TextSearcher::isMigemoAvailable() const /*throw()*/ {
 bool TextSearcher::match(const Document& document, const Region& target) const {
 	bool matched = false;
 	const DocumentCharacterIterator b(document, target.beginning()), e(document, target.end());
-	compilePattern((options_.type == LITERAL && literalPattern_.get() != 0) ? literalPattern_->getDirection() : FORWARD);
+	compilePattern((options_.type == LITERAL && literalPattern_.get() != nullptr) ? literalPattern_->getDirection() : FORWARD);
 	switch(options_.type) {
 		case LITERAL:
 			matched = literalPattern_->matches(DocumentCharacterIterator(document, target)) && checkBoundary(b, e);
@@ -274,7 +274,7 @@ bool TextSearcher::match(const Document& document, const Region& target) const {
 #ifndef ASCENSION_NO_MIGEMO
 		case MIGEMO:
 #endif // !ASCENSION_NO_MIGEMO
-			if(regexMatcher_.get() == 0) {
+			if(regexMatcher_.get() == nullptr) {
 				TextSearcher& self = const_cast<TextSearcher&>(*this);
 				self.regexMatcher_ = regexPattern_->matcher(beginningOfDocument(document), endOfDocument(document));
 				self.regexMatcher_->useAnchoringBounds(false).useTransparentBounds(true);
@@ -352,7 +352,7 @@ bool TextSearcher::replace(Document& document, const Region& target, Position* e
 		case MIGEMO:
 #endif // !ASCENSION_NO_MIGEMO
 		{
-			assert(regexMatcher_.get() != 0);
+			assert(regexMatcher_.get() != nullptr);
 			replacement.assign(regexMatcher_->replaceInplace(replacement));
 			const Point regionEnd(document, regexMatcher_->regionEnd().tell());
 			eor = !replacement.empty() ? document.insert(target.beginning(), replacement) : target.beginning();
@@ -372,7 +372,7 @@ bool TextSearcher::replace(Document& document, const Region& target, Position* e
 		lastResult_.matchedRegion.first = eor;
 	lastResult_.matchedRegion.second = eor;
 	lastResult_.documentRevisionNumber = document.getRevisionNumber();
-	if(endOfReplacement != 0)
+	if(endOfReplacement != nullptr)
 		*endOfReplacement = eor;
 	return true;
 }
@@ -438,7 +438,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 
 	InteractiveReplacementCallback::Action action;	// the action the callback returns
 	InteractiveReplacementCallback* const storedCallback = callback;
-	if(callback != 0)
+	if(callback != nullptr)
 		callback->replacementStarted(document, Region(scope).normalize());
 
 	if(type() == LITERAL) {
@@ -460,7 +460,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 				static_cast<DocumentCharacterIterator&>(*matchedFirst).tell(),
 				static_cast<DocumentCharacterIterator&>(*matchedLast).tell());
 			while(true) {
-				action = (callback != 0) ?
+				action = (callback != nullptr) ?
 					callback->queryReplacementAction(matchedRegion, !history.empty()) : InteractiveReplacementCallback::REPLACE;
 				if(action != InteractiveReplacementCallback::UNDO)
 					break;
@@ -485,7 +485,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 					|| action == InteractiveReplacementCallback::REPLACE_AND_EXIT) {
 				// replace? -- yes
 				if(action == InteractiveReplacementCallback::REPLACE_ALL)
-					callback = 0;
+					callback = nullptr;
 				if(!matchedRegion.isEmpty() || !replacement.empty()) {
 					Position e;
 					try {
@@ -535,7 +535,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 				++numberOfMatches;
 				Region matchedRegion(matcher->start().tell(), matcher->end().tell());
 				while(true) {
-					action = (callback != 0) ?
+					action = (callback != nullptr) ?
 						callback->queryReplacementAction(matchedRegion, !history.empty()) : InteractiveReplacementCallback::REPLACE;
 					if(action != InteractiveReplacementCallback::UNDO)
 						break;
@@ -560,7 +560,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 						|| action == InteractiveReplacementCallback::REPLACE_AND_EXIT) {
 					// replace? -- yes
 					if(action == InteractiveReplacementCallback::REPLACE_ALL)
-						callback = 0;
+						callback = nullptr;
 					history.push(matchedRegion);
 					assert(!matchedRegion.isEmpty() || !replacement.empty());
 					try {
@@ -597,7 +597,7 @@ size_t TextSearcher::replaceAll(Document& document, const Region& scope, const S
 	}
 #endif // !ASCENSION_NO_REGEX
 
-	if(storedCallback != 0)
+	if(storedCallback != nullptr)
 		storedCallback->replacementEnded(numberOfMatches, numberOfReplacements);
 	pushHistory(replacement, true);	// only this call make this method not-const...
 	return numberOfReplacements;
@@ -646,7 +646,7 @@ bool TextSearcher::search(const Document& document,
 			|| type() == MIGEMO
 #endif // !ASCENSION_NO_MIGEMO
 	) {
-		if(regexMatcher_.get() == 0)
+		if(regexMatcher_.get() == nullptr)
 			(const_cast<TextSearcher*>(this)->regexMatcher_ = regexPattern_->matcher(
 				beginningOfDocument(document), endOfDocument(document)))->useAnchoringBounds(false).useTransparentBounds(true);
 		else if(!lastResult_.checkDocumentRevision(document) || direction != lastResult_.direction) {
@@ -742,21 +742,21 @@ TextSearcher& TextSearcher::setWholeMatch(WholeMatch newValue) {
  */
 TextSearcher::Type TextSearcher::type() const /*throw()*/ {
 #ifndef ASCENSION_NO_REGEX
-	if(regexPattern_.get() != 0)
+	if(regexPattern_.get() != nullptr)
 		return REGULAR_EXPRESSION;
 #ifndef ASCENSION_NO_MIGEMO
-	else if(migemoPattern_.get() != 0)
+	else if(migemoPattern_.get() != nullptr)
 		return MIGEMO;
 #endif // !ASCENSION_NO_MIGEMO
 #endif // !ASCENSION_NO_REGEX
-//	if(literalPattern_.get() != 0)
+//	if(literalPattern_.get() != nullptr)
 		return LITERAL;
 }
 
 /// Returns @c true if the pattern uses Unicode canonical equivalents.
 bool TextSearcher::usesCanonicalEquivalents() const /*throw()*/ {
 #ifndef ASCENSION_NO_REGEX
-	if(regexPattern_.get() != 0 && (regexPattern_->flags() & regex::Pattern::CANON_EQ) != 0)
+	if(regexPattern_.get() != nullptr && (regexPattern_->flags() & regex::Pattern::CANON_EQ) != 0)
 		return true;
 #endif  // !ASCENSION_NO_REGEX
 	return false;
@@ -777,7 +777,7 @@ IncrementalSearcher::IncrementalSearcher() /*throw()*/ : type_(TextSearcher::LIT
 /// Aborts the search.
 void IncrementalSearcher::abort() {
 	if(isRunning()) {
-		if(callback_ != 0) {
+		if(callback_ != nullptr) {
 			while(statusHistory_.size() > 1)
 				statusHistory_.pop();
 			callback_->incrementalSearchAborted(statusHistory_.top().matchedRegion.first);
@@ -828,7 +828,7 @@ bool IncrementalSearcher::addCharacter(CodePoint c) {
  *            error occured
  */
 bool IncrementalSearcher::addString(const StringPiece& text) {
-	if(text.beginning() == 0 || text.end() == 0)
+	if(text.beginning() == nullptr || text.end() == nullptr)
 		throw NullPointerException("text");
 	checkRunning();
 	if(isEmpty(text))
@@ -871,12 +871,12 @@ void IncrementalSearcher::end() {
 		document_->bookmarker().removeListener(*this);
 		while(!statusHistory_.empty())
 			statusHistory_.pop();
-		if(callback_ != 0)
+		if(callback_ != nullptr)
 			callback_->incrementalSearchCompleted();
 		if(!pattern_.empty())
 			setPatternToSearcher(true);	// store to reuse
-		searcher_ = 0;
-		callback_ = 0;
+		searcher_ = nullptr;
+		callback_ = nullptr;
 		pattern_.erase();
 	}
 }
@@ -894,7 +894,7 @@ bool IncrementalSearcher::next(Direction direction) {
 		if(searcher_->numberOfStoredPatterns() > 0)
 			return addString(searcher_->pattern());	// use the most recent used
 		else {
-			if(callback_ != 0)
+			if(callback_ != nullptr)
 				callback_->incrementalSearchPatternChanged(IncrementalSearchCallback::EMPTY_PATTERN, IncrementalSearchCallback::NO_WRAPPED);
 			return true;
 		}
@@ -925,7 +925,7 @@ void IncrementalSearcher::reset() {
 	while(statusHistory_.size() > 1)
 		statusHistory_.pop();
 	pattern_.erase();
-	if(callback_ != 0)
+	if(callback_ != nullptr)
 		callback_->incrementalSearchPatternChanged(IncrementalSearchCallback::EMPTY_PATTERN, IncrementalSearchCallback::NO_WRAPPED);
 }
 
@@ -962,7 +962,7 @@ inline void IncrementalSearcher::setPatternToSearcher(bool pushToHistory) {
  * @param callback The callback object. can be @c null
  */
 void IncrementalSearcher::start(Document& document, const Position& from, TextSearcher& searcher,
-		TextSearcher::Type type, Direction direction, IncrementalSearchCallback* callback /* = 0 */) {
+		TextSearcher::Type type, Direction direction, IncrementalSearchCallback* callback /* = nullptr */) {
 	if(isRunning())
 		end();
 	const Status s = {Region(from, from), direction};
@@ -973,7 +973,7 @@ void IncrementalSearcher::start(Document& document, const Position& from, TextSe
 	searcher_ = &searcher;
 	type_ = type;
 	matchedRegion_ = statusHistory_.top().matchedRegion;
-	if(0 != (callback_ = callback)) {
+	if(nullptr != (callback_ = callback)) {
 		callback_->incrementalSearchStarted(document);
 		callback_->incrementalSearchPatternChanged(IncrementalSearchCallback::EMPTY_PATTERN, IncrementalSearchCallback::NO_WRAPPED);
 	}
@@ -1007,7 +1007,7 @@ bool IncrementalSearcher::undo() {
 		assert(!statusHistory_.empty());
 		if(!matched_) {	// ... and should be matched state
 			matched_ = true;
-			if(callback_ != 0)
+			if(callback_ != nullptr)
 				callback_->incrementalSearchPatternChanged(IncrementalSearchCallback::FOUND, IncrementalSearchCallback::NO_WRAPPED);
 		}
 		return true;
@@ -1026,7 +1026,7 @@ bool IncrementalSearcher::update() {
 	if(pattern_.empty()) {
 		assert(statusHistory_.size() == 1);
 		matchedRegion_ = lastStatus.matchedRegion;
-		if(callback_ != 0)
+		if(callback_ != nullptr)
 			callback_->incrementalSearchPatternChanged(
 				IncrementalSearchCallback::EMPTY_PATTERN, IncrementalSearchCallback::NO_WRAPPED);
 		return true;
@@ -1056,11 +1056,11 @@ bool IncrementalSearcher::update() {
 			scope, lastStatus.direction, matchedRegion);
 #ifndef ASCENSION_NO_REGEX
 	} catch(boost::regex_error&) {
-		if(callback_ != 0)
+		if(callback_ != nullptr)
 			callback_->incrementalSearchPatternChanged(IncrementalSearchCallback::BAD_REGEX, IncrementalSearchCallback::NO_WRAPPED);
 		return false;
 	} catch(runtime_error&) {
-		if(callback_ != 0)
+		if(callback_ != nullptr)
 			callback_->incrementalSearchPatternChanged(IncrementalSearchCallback::COMPLEX_REGEX, IncrementalSearchCallback::NO_WRAPPED);
 		return false;
 	}
@@ -1068,7 +1068,7 @@ bool IncrementalSearcher::update() {
 
 	if(matched_)
 		matchedRegion_ = matchedRegion;
-	if(callback_ != 0)
+	if(callback_ != nullptr)
 		callback_->incrementalSearchPatternChanged(matched_ ?
 			IncrementalSearchCallback::FOUND : IncrementalSearchCallback::NOT_FOUND, IncrementalSearchCallback::NO_WRAPPED);
 	return matched_;

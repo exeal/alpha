@@ -37,7 +37,7 @@ namespace ascension {
 			// constructors
 			LiteralPattern(const String& pattern, bool caseSensitive = true
 #ifndef ASCENSION_NO_UNICODE_COLLATION
-				, std::unique_ptr<const text::Collator> collator = std::unique_ptr<const text::Collator>(0)
+				, std::unique_ptr<const text::Collator> collator = std::unique_ptr<const text::Collator>()
 #endif // !ASCENSION_NO_UNICODE_COLLATION
 );
 			~LiteralPattern() /*throw()*/;
@@ -184,7 +184,7 @@ namespace ascension {
 				boost::optional<kernel::Region> matchedRegion;
 				Direction direction;
 				std::size_t documentRevisionNumber;
-				LastResult() /*throw()*/ : document(0), direction(Direction::FORWARD) {}
+				LastResult() /*throw()*/ : document(nullptr), direction(Direction::FORWARD) {}
 				~LastResult() /*throw()*/ {reset();}
 				bool checkDocumentRevision(const kernel::Document& current) const /*throw()*/ {
 					return document == &current && documentRevisionNumber == current.revisionNumber();}
@@ -275,7 +275,7 @@ namespace ascension {
 			void reset();
 			void start(kernel::Document& document, const kernel::Position& from,
 				TextSearcher& searcher, TextSearcher::Type type, Direction direction,
-				IncrementalSearchCallback* callback = 0);
+				IncrementalSearchCallback* callback = nullptr);
 			bool undo();
 		private:
 			void setPatternToSearcher(bool pushToHistory);
@@ -333,11 +333,11 @@ namespace ascension {
 	inline std::size_t ReplacementInterruptedException<SourceException>::numberOfReplacements() const /*throw()*/ {return numberOfReplacements_;}
 	/// Returns @c true if any pattern is set on the searcher.
 	inline bool TextSearcher::hasPattern() const /*throw()*/ {
-		return literalPattern_.get() != 0
+		return literalPattern_.get() != nullptr
 #ifndef ASCENSION_NO_REGEX
-			|| regexPattern_.get() != 0
+			|| regexPattern_.get() != nullptr
 #ifndef ASCENSION_NO_MIGEMO
-			|| migemoPattern_.get() != 0
+			|| migemoPattern_.get() != nullptr
 #endif // !ASCENSION_NO_MIGEMO
 #endif // !ASCENSION_NO_REGEX
 			;
@@ -355,11 +355,11 @@ namespace ascension {
 	/// Returns the number of the stored replacements.
 	inline std::size_t TextSearcher::numberOfStoredReplacements() const /*throw()*/ {return storedReplacements_.size();}
 	/// Returns the pattern string.
-	inline const String& TextSearcher::pattern(std::size_t index /* = 0 */) const {
+	inline const String& TextSearcher::pattern(std::size_t index /* = nullptr */) const {
 		if(index >= storedPatterns_.size()) throw IndexOutOfBoundsException();
 		std::list<String>::const_iterator i(storedPatterns_.begin()); std::advance(i, index); return *i;}
 	/// Returns the replacement string.
-	inline const String& TextSearcher::replacement(std::size_t index /* = 0 */) const {
+	inline const String& TextSearcher::replacement(std::size_t index /* = nullptr */) const {
 		if(index >= storedReplacements_.size()) throw IndexOutOfBoundsException();
 		std::list<String>::const_iterator i(storedReplacements_.begin()); std::advance(i, index); return *i;}
 	template<> inline TextSearcher& TextSearcher::setPattern<LiteralPattern>(std::unique_ptr<const LiteralPattern> pattern, bool dontRemember /* = false */) {

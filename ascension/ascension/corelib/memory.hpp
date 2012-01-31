@@ -30,7 +30,7 @@ namespace ascension {
 		typedef T element_type;
 	public:
 		// constructors
-		explicit AutoBuffer(element_type* p = 0) /*throw()*/ : buffer_(p) {}
+		explicit AutoBuffer(element_type* p = nullptr) /*throw()*/ : buffer_(p) {}
 		AutoBuffer(AutoBuffer<element_type>& other) /*throw()*/ : buffer_(other.release()) {}
 		template<typename Other>
 		AutoBuffer(AutoBuffer<Other>& other) /*throw()*/ : buffer_(other.release()) {}
@@ -57,7 +57,7 @@ namespace ascension {
 		 */
 		element_type* release() /*throw()*/ {
 			element_type* const temp = buffer_;
-			buffer_ = 0;
+			buffer_ = nullptr;
 			return temp;
 		}
 		/**
@@ -66,7 +66,7 @@ namespace ascension {
 		 * @param p The new buffer or @c null
 		 * @note This method does not destruct the each elements in the buffer.
 		 */
-		void reset(element_type* p = 0) {if(p != buffer_) {delete[] buffer_; buffer_ = p;}}
+		void reset(element_type* p = nullptr) {if(p != buffer_) {delete[] buffer_; buffer_ = p;}}
 		/// Swaps two @c AutoBuffer objects.
 		void swap(AutoBuffer<element_type>& other) /*throw()*/ {std::swap(buffer_, other.buffer_);}
 	private:
@@ -80,7 +80,7 @@ namespace ascension {
 	class MemoryPool {
 		ASCENSION_NONCOPYABLE_TAG(MemoryPool);
 	public:
-		MemoryPool(std::size_t chunkSize) /*throw()*/ : chunkSize_(std::max(chunkSize, sizeof(Chunk))), chunks_(0) {}
+		MemoryPool(std::size_t chunkSize) /*throw()*/ : chunkSize_(std::max(chunkSize, sizeof(Chunk))), chunks_(nullptr) {}
 		~MemoryPool() /*throw()*/ {release();}
 		void* allocate() {
 			if(void* const chunk = allocate(std::nothrow))
@@ -88,13 +88,13 @@ namespace ascension {
 			throw std::bad_alloc();
 		}
 		void* allocate(const std::nothrow_t&) {
-			if(chunks_ == 0)
+			if(chunks_ == nullptr)
 				expandChunks();
 			if(Chunk* head = chunks_) {
 				chunks_ = head->next;
 				return head;
 			}
-			return 0;
+			return nullptr;
 		}
 		void deallocate(void* doomed) /*throw()*/ {
 			if(Chunk* p = static_cast<Chunk*>(doomed)) {
@@ -103,25 +103,25 @@ namespace ascension {
 			}
 		}
 		void release() /*throw()*/ {
-			for(Chunk* next = chunks_; next != 0; next = chunks_) {
+			for(Chunk* next = chunks_; next != nullptr; next = chunks_) {
 				chunks_ = chunks_->next;
 				::operator delete(next);
 			}
 		}
 	private:
 		void expandChunks() /*throw()*/ {
-			assert(chunks_ == 0);
+			assert(chunks_ == nullptr);
 			Chunk* p = static_cast<Chunk*>(::operator new(chunkSize_, std::nothrow));
-			if(p == 0)
+			if(p == nullptr)
 				return;
 			Chunk* q = p;
-			p->next = 0;
+			p->next = nullptr;
 			int i;
 			for(i = 0; i < NUMBER_OF_CHUNKS_TO_EXPAND_AT_ONCE; ++i) {
-				if(0 == (p->next = static_cast<Chunk*>(::operator new(chunkSize_, std::nothrow))))
+				if(nullptr == (p->next = static_cast<Chunk*>(::operator new(chunkSize_, std::nothrow))))
 					break;
 				p = p->next;
-				p->next = 0;
+				p->next = nullptr;
 			}
 			if(i != NUMBER_OF_CHUNKS_TO_EXPAND_AT_ONCE) {
 				Chunk* next;
@@ -129,7 +129,7 @@ namespace ascension {
 					next = q->next;
 					::operator delete(q);
 					q = next;
-				} while(next != 0);
+				} while(next != nullptr);
 				return;
 			}
 			chunks_ = q;
@@ -145,9 +145,9 @@ namespace ascension {
 	template<typename T> /* final */ class FastArenaObject {
 	public:
 		static void* operator new(std::size_t bytes) /*throw(std::bad_alloc)*/ {
-			if(pool_.get() == 0) {
+			if(pool_.get() == nullptr) {
 				pool_.reset(new(std::nothrow) MemoryPool(std::max(sizeof(T), bytes)));
-				if(pool_.get() == 0)
+				if(pool_.get() == nullptr)
 					throw std::bad_alloc();
 			}
 			if(void* p = pool_->allocate())
@@ -155,12 +155,12 @@ namespace ascension {
 			throw std::bad_alloc();
 		}
 		static void* operator new(std::size_t, const std::nothrow_t&) /*throw()*/ {
-			if(pool_.get() == 0)
+			if(pool_.get() == nullptr)
 				pool_.reset(new(std::nothrow) MemoryPool(sizeof(T)));
-			return (pool_.get() != 0) ? pool_->allocate(std::nothrow) : 0;
+			return (pool_.get() != nullptr) ? pool_->allocate(std::nothrow) : nullptr;
 		}
 		static void* operator new(std::size_t bytes, void* where) /*throw()*/ {return ::operator new(bytes, where);}
-		static void operator delete(void* p) /*throw()*/ {if(pool_.get() != 0) pool_->deallocate(p);}
+		static void operator delete(void* p) /*throw()*/ {if(pool_.get() != nullptr) pool_->deallocate(p);}
 		static void operator delete(void* p, const std::nothrow_t&) /*throw()*/ {return operator delete(p);}
 		static void operator delete(void* p, void* where) /*throw()*/ {return ::operator delete(p, where);}
 	private:

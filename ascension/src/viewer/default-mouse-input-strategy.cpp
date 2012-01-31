@@ -89,7 +89,7 @@ const base::Cursor& AutoScrollOriginMark::cursorForScrolling(CursorType type) {
 	static unique_ptr<Cursor> instances[3];
 	if(type >= ASCENSION_COUNTOF(instances))
 		throw UnknownValueException("type");
-	if(instances[type].get() == 0) {
+	if(instances[type].get() == nullptr) {
 		static const uint8_t AND_LINE_3_TO_11[] = {
 			0xff, 0xfe, 0x7f, 0xff,
 			0xff, 0xfc, 0x3f, 0xff,
@@ -166,7 +166,7 @@ const base::Cursor& AutoScrollOriginMark::cursorForScrolling(CursorType type) {
 			memcpy(xorBits + 4 * 20, XOR_LINE_20_TO_28, sizeof(XOR_LINE_20_TO_28));
 		}
 #if defined(ASCENSION_OS_WINDOWS)
-		instances[type].reset(new base::Cursor(win32::Handle<HCURSOR>(::CreateCursor(::GetModuleHandleW(0), 16, 16, 32, 32, andBits, xorBits), &::DestroyCursor)));
+		instances[type].reset(new base::Cursor(win32::Handle<HCURSOR>(::CreateCursor(::GetModuleHandleW(nullptr), 16, 16, 32, 32, andBits, xorBits), &::DestroyCursor)));
 #else
 		instances[type].reset(new base::Cursor(bitmap));
 #endif
@@ -245,13 +245,13 @@ const unsigned int DefaultMouseInputStrategy::DRAGGING_TRACK_INTERVAL = 100;
  * @param dragAndDropSupportLevel The drag-and-drop feature support level
  */
 DefaultMouseInputStrategy::DefaultMouseInputStrategy(
-		DragAndDropSupport dragAndDropSupportLevel) : viewer_(0), state_(NONE), lastHoveredHyperlink_(0) {
+		DragAndDropSupport dragAndDropSupportLevel) : viewer_(nullptr), state_(NONE), lastHoveredHyperlink_(nullptr) {
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 	if((dnd_.supportLevel = dragAndDropSupportLevel) >= SUPPORT_DND_WITH_DRAG_IMAGE) {
 		dnd_.dragSourceHelper.ComPtr<IDragSourceHelper>::ComPtr(CLSID_DragDropHelper, IID_IDragSourceHelper, CLSCTX_INPROC_SERVER);
-		if(dnd_.dragSourceHelper.get() != 0) {
+		if(dnd_.dragSourceHelper.get() != nullptr) {
 			dnd_.dropTargetHelper.ComPtr<IDropTargetHelper>::ComPtr(CLSID_DragDropHelper, IID_IDropTargetHelper, CLSCTX_INPROC_SERVER);
-			if(dnd_.dropTargetHelper.get() == 0)
+			if(dnd_.dropTargetHelper.get() == nullptr)
 				dnd_.dragSourceHelper.reset();
 		}
 	}
@@ -290,14 +290,14 @@ void DefaultMouseInputStrategy::captureChanged() {
 /// @see DropTarget#dragLeft
 void DefaultMouseInputStrategy::dragLeft(base::DragLeaveInput& input) {
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-	::SetFocus(0);
+	::SetFocus(nullptr);
 #endif
 	timer_.stop();
 	if(dnd_.supportLevel >= SUPPORT_DND) {
 		if(state_ == DND_TARGET)
 			state_ = NONE;
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-		if(dnd_.dropTargetHelper.get() != 0)
+		if(dnd_.dropTargetHelper.get() != nullptr)
 			dnd_.dropTargetHelper->DragLeave();
 #endif
 	}
@@ -330,7 +330,7 @@ void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
 		acceptable = false;
 	else {
 		const NativePoint caretPoint(viewer_->mapFromGlobal(input.location()));
-		const k::Position p(viewer_->characterForLocalPoint(caretPoint, TextLayout::TRAILING));
+		const k::Position p(viewToModel(viewer_->textRenderer(), caretPoint, TextLayout::TRAILING));
 //		viewer_->setCaretPosition(viewer_->localPointForCharacter(p, true, TextLayout::LEADING));
 
 		// drop rectangle text into bidirectional line is not supported...
@@ -363,7 +363,7 @@ void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
 	input.consume();
 
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-	if(dnd_.dropTargetHelper.get() != 0) {
+	if(dnd_.dropTargetHelper.get() != nullptr) {
 		viewer_->lockScroll();
 		POINT location(input.location());
 		dnd_.dropTargetHelper->DragOver(&location, translateDropAction(dropAction));	// damn! IDropTargetHelper scrolls the view
@@ -388,11 +388,11 @@ bool DefaultMouseInputStrategy::endAutoScroll() {
 }
 
 /// Extends the selection to the current cursor position.
-void DefaultMouseInputStrategy::extendSelection(const k::Position* to /* = 0 */) {
+void DefaultMouseInputStrategy::extendSelection(const k::Position* to /* = nullptr */) {
 	if((state_ & SELECTION_EXTENDING_MASK) != SELECTION_EXTENDING_MASK)
 		throw IllegalStateException("not extending the selection.");
 	k::Position destination;
-	if(to == 0) {
+	if(to == nullptr) {
 		const NativeRectangle viewport(viewer_->bounds(false));
 		const PhysicalFourSides<Scalar> spaces(viewer_->spaceWidths());
 		NativePoint p(viewer_->mapFromGlobal(Cursor::position()));
@@ -410,7 +410,7 @@ void DefaultMouseInputStrategy::extendSelection(const k::Position* to /* = 0 */)
 				min<Scalar>(
 					max<Scalar>(geometry::y(p), geometry::top(viewport) + spaces.top()),
 					geometry::bottom(viewport) - spaces.bottom()));
-		destination = viewer_->characterForLocalPoint(p, TextLayout::TRAILING);
+		destination = viewToModel(viewer_->textRenderer(), p, TextLayout::TRAILING);
 	} else
 		destination = *to;
 
@@ -480,7 +480,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 
 	// select line(s)
 	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS) {
-		const k::Position to(viewer_->characterForLocalPoint(position, TextLayout::LEADING));
+		const k::Position to(viewToModel(viewer_->textRenderer(), position, TextLayout::LEADING));
 		const bool extend = win32::boole(modifiers & MK_SHIFT) && to.line != line(caret.anchor());
 		state_ = EXTENDING_LINE_SELECTION;
 		selection_.initialLine = extend ? line(caret.anchor()) : to.line;
@@ -504,7 +504,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 		if(win32::boole(modifiers & MK_CONTROL)) {
 			if(!isPointOverSelection(caret, position)) {
 				if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
-					if(const boost::optional<k::Position> p = viewport->characterForPoint(position, TextLayout::TRAILING, true)) {
+					if(const boost::optional<k::Position> p = viewport->characterForPointInBounds(position, TextLayout::TRAILING)) {
 						if(const hyperlink::Hyperlink* link = utils::getPointedHyperlink(*viewer_, *p)) {
 							link->invoke();
 							hyperlinkInvoked = true;
@@ -559,8 +559,8 @@ void DefaultMouseInputStrategy::handleLeftButtonReleased(const NativePoint& posi
 			&& (state_ == APPROACHING_DND
 			|| state_ == DND_SOURCE)) {	// TODO: this should handle only case APPROACHING_DND?
 		state_ = NONE;
-		viewer_->caret().moveTo(viewer_->characterForLocalPoint(position, TextLayout::TRAILING));
-		::SetCursor(::LoadCursor(0, IDC_IBEAM));	// hmm...
+		viewer_->caret().moveTo(viewToModel(viewer_->textRenderer(), position, TextLayout::TRAILING));
+		::SetCursor(::LoadCursor(nullptr, IDC_IBEAM));	// hmm...
 	}
 
 	timer_.stop();
@@ -607,7 +607,7 @@ bool DefaultMouseInputStrategy::handleX2Button(Action action, const NativePoint&
 
 /// @see MouseInputStrategy#install
 void DefaultMouseInputStrategy::install(TextViewer& viewer) {
-	if(viewer_ != 0)
+	if(viewer_ != nullptr)
 		uninstall();
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 	::RegisterDragDrop((viewer_ = &viewer)->identifier().get(), this);
@@ -718,7 +718,7 @@ void DefaultMouseInputStrategy::mouseWheelRotated(const base::MouseWheelInput& i
 	if(!endAutoScroll()) {
 		// use system settings
 		UINT lines;	// the number of lines to scroll
-		if(!win32::boole(::SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, &lines, 0)))
+		if(!win32::boole(::SystemParametersInfoW(SPI_GETWHEELSCROLLLINES, 0, &lines, 0)))
 			lines = 3;
 		if(lines == WHEEL_PAGESCROLL)
 			lines = static_cast<UINT>(viewer_->numberOfVisibleLines());
@@ -729,8 +729,8 @@ void DefaultMouseInputStrategy::mouseWheelRotated(const base::MouseWheelInput& i
 /// @see MouseInputStrategy#showCursor
 bool DefaultMouseInputStrategy::showCursor(const NativePoint& position) {
 	using namespace hyperlink;
-	LPCTSTR cursorName = 0;
-	const Hyperlink* newlyHoveredHyperlink = 0;
+	LPCTSTR cursorName = nullptr;
+	const Hyperlink* newlyHoveredHyperlink = nullptr;
 
 	// on the vertical ruler?
 	const TextViewer::HitTestResult htr = viewer_->hitTest(position);
@@ -742,18 +742,18 @@ bool DefaultMouseInputStrategy::showCursor(const NativePoint& position) {
 	else if(htr == TextViewer::CONTENT_AREA) {
 		// on a hyperlink?
 		if(const boost::optional<k::Position> p =
-				characterForPoint(viewer_->textRenderer(), position, TextLayout::TRAILING, true, k::locations::UTF16_CODE_UNIT))
+				viewToModelInBounds(viewer_->textRenderer(), position, TextLayout::TRAILING, k::locations::UTF16_CODE_UNIT))
 			newlyHoveredHyperlink = utils::getPointedHyperlink(*viewer_, *p);
-		if(newlyHoveredHyperlink != 0 && win32::boole(::GetAsyncKeyState(VK_CONTROL) & 0x8000))
+		if(newlyHoveredHyperlink != nullptr && win32::boole(::GetAsyncKeyState(VK_CONTROL) & 0x8000))
 			cursorName = IDC_HAND;
 	}
 
-	if(cursorName != 0) {
-		::SetCursor(static_cast<HCURSOR>(::LoadImage(
-			0, cursorName, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED)));
+	if(cursorName != nullptr) {
+		::SetCursor(static_cast<HCURSOR>(::LoadImageW(
+			nullptr, cursorName, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED)));
 		return true;
 	}
-	if(newlyHoveredHyperlink != 0) {
+	if(newlyHoveredHyperlink != nullptr) {
 		if(newlyHoveredHyperlink != lastHoveredHyperlink_)
 			viewer_->showToolTip(newlyHoveredHyperlink->description(), 1000, 30000);
 	} else
@@ -813,12 +813,12 @@ void DefaultMouseInputStrategy::timeElapsed(Timer& timer) {
 /// @see MouseInputStrategy#uninstall
 void DefaultMouseInputStrategy::uninstall() {
 	timer_.stop();
-	if(autoScrollOriginMark_.get() != 0)
+	if(autoScrollOriginMark_.get() != nullptr)
 		autoScrollOriginMark_.reset();
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 	::RevokeDragDrop(viewer_->identifier().get());
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
-	viewer_ = 0;
+	viewer_ = nullptr;
 }
 
 

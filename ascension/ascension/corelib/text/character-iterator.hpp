@@ -57,7 +57,7 @@ namespace ascension {
 			/// Creates a copy of the iterator.
 			std::unique_ptr<CharacterIterator> clone() const {
 				std::unique_ptr<CharacterIterator> p(doClone());
-				if(p.get() != 0)
+				if(p.get() != nullptr)
 					p->offset_ = offset_;
 				return p;
 			}

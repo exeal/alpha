@@ -93,7 +93,7 @@ namespace {
  */
 
 /// Default constructor.
-DefaultSpecialCharacterRenderer::DefaultSpecialCharacterRenderer() /*throw()*/ : renderer_(0),
+DefaultSpecialCharacterRenderer::DefaultSpecialCharacterRenderer() /*throw()*/ : renderer_(nullptr),
 		controlColor_(0x80, 0x80, 0x00), eolColor_(0x00, 0x80, 0x80), wrapMarkColor_(0x00, 0x80, 0x80),
 		whiteSpaceColor_(0x00, 0x80, 0x80), showsEOLs_(true), showsWhiteSpaces_(true), font_() {
 }
@@ -106,7 +106,7 @@ void DefaultSpecialCharacterRenderer::drawControlCharacter(const DrawingContext&
 	::SetTextColor(dc.get(), controlColor_.asCOLORREF());
 	Char buffer[2];
 	getControlPresentationString(c, buffer);
-	::ExtTextOutW(dc.get(), context.rect.left(), context.rect.top() + primaryFont->metrics().ascent(), 0, 0, buffer, 2, 0);
+	::ExtTextOutW(dc.get(), context.rect.left(), context.rect.top() + primaryFont->metrics().ascent(), 0, nullptr, buffer, 2, nullptr);
 	::SelectObject(dc.get(), oldFont);
 }
 
@@ -120,7 +120,7 @@ void DefaultSpecialCharacterRenderer::drawLineTerminator(const DrawingContext& c
 		::SetTextColor(dc.get(), eolColor_.asCOLORREF());
 		::ExtTextOutW(dc.get(),
 			context.rect.left(), context.rect.top() + primaryFont->metrics().ascent(),
-			ETO_GLYPH_INDEX, 0, reinterpret_cast<const WCHAR*>(&glyphs_[LINE_TERMINATOR]), 1, 0);
+			ETO_GLYPH_INDEX, nullptr, reinterpret_cast<const WCHAR*>(&glyphs_[LINE_TERMINATOR]), 1, nullptr);
 		::SelectObject(dc.get(), oldFont);
 	}
 }
@@ -137,7 +137,7 @@ void DefaultSpecialCharacterRenderer::drawLineWrappingMark(const DrawingContext&
 		::SetTextColor(dc.get(), wrapMarkColor_.asCOLORREF());
 		::ExtTextOutW(dc.get(),
 			context.rect.left(), context.rect.top() + primaryFont->metrics().ascent(),
-			ETO_GLYPH_INDEX, 0, &glyph, 1, 0);
+			ETO_GLYPH_INDEX, nullptr, &glyph, 1, nullptr);
 		::SelectObject(dc.get(), oldFont);
 	}
 }
@@ -162,7 +162,7 @@ void DefaultSpecialCharacterRenderer::drawWhiteSpaceCharacter(const DrawingConte
 			::SetTextColor(dc.get(), whiteSpaceColor_.asCOLORREF());
 			::ExtTextOutW(dc.get(),
 				x, context.rect.top() + primaryFont->metrics().ascent(),
-				ETO_CLIPPED | ETO_GLYPH_INDEX, &toNative(context.rect), &glyph, 1, 0);
+				ETO_CLIPPED | ETO_GLYPH_INDEX, &toNative(context.rect), &glyph, 1, nullptr);
 			::SelectObject(dc.get(), oldFont);
 		}
 	} else if(glyphs_[WHITE_SPACE] != 0xffffu) {
@@ -174,7 +174,7 @@ void DefaultSpecialCharacterRenderer::drawWhiteSpaceCharacter(const DrawingConte
 		::ExtTextOutW(dc.get(),
 			(context.rect.left() + context.rect.right() - (glyphWidths_[WHITE_SPACE] & 0x7ffffffful)) / 2,
 			context.rect.top() + primaryFont->metrics().ascent(), ETO_CLIPPED | ETO_GLYPH_INDEX, &toNative(context.rect),
-			reinterpret_cast<const WCHAR*>(&glyphs_[WHITE_SPACE]), 1, 0);
+			reinterpret_cast<const WCHAR*>(&glyphs_[WHITE_SPACE]), 1, nullptr);
 		::SelectObject(dc.get(), oldFont);
 	}
 }
@@ -184,7 +184,7 @@ void DefaultSpecialCharacterRenderer::defaultFontChanged() {
 	static const Char codes[] = {0x2192u, 0x2190u, 0x2193u, 0x21a9u, 0x21aau, 0x00b7u};
 
 	// using the primary font
-	win32::Handle<HDC> dc(::GetDC(0), bind1st(ptr_fun(&::ReleaseDC), static_cast<HWND>(0)));
+	win32::Handle<HDC> dc(::GetDC(nullptr), bind1st(ptr_fun(&::ReleaseDC), static_cast<HWND>(nullptr)));
 	HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), renderer_->primaryFont()->nativeHandle().get()));
 	::GetGlyphIndicesW(dc.get(), codes, ASCENSION_COUNTOF(codes), glyphs_, GGI_MARK_NONEXISTING_GLYPHS);
 	::GetCharWidthI(dc.get(), 0, ASCENSION_COUNTOF(codes), glyphs_, glyphWidths_);
@@ -248,5 +248,5 @@ void DefaultSpecialCharacterRenderer::install(TextRenderer& renderer) {
 /// @see ISpecialCharacterRenderer#uninstall
 void DefaultSpecialCharacterRenderer::uninstall() {
 	renderer_->removeDefaultFontListener(*this);
-	renderer_ = 0;
+	renderer_ = nullptr;
 }

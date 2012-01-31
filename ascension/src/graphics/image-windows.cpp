@@ -29,8 +29,8 @@ namespace {
 		default:
 			throw UnknownValueException("format");
 		}
-		win32::Handle<HDC> dc(::GetDC(0));
-		if(dc.get() == 0)
+		win32::Handle<HDC> dc(::GetDC(nullptr));
+		if(dc.get() == nullptr)
 			throw PlatformDependentError<>();
 		BITMAPINFO* const info = static_cast<BITMAPINFO*>(::operator new(
 			sizeof(BITMAPINFOHEADER) + bytesPerPixel * geometry::dx(size) * geometry::dy(size)));

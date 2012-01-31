@@ -19,7 +19,7 @@ namespace ascension {
 	namespace win32 {
 		namespace com {
 
-#define ASCENSION_WIN32_VERIFY_COM_POINTER(p) if((p) == 0) return E_POINTER
+#define ASCENSION_WIN32_VERIFY_COM_POINTER(p) if((p) == nullptr) return E_POINTER
 
 			namespace internal {
 				class OlestrButNotBstr {
@@ -37,17 +37,17 @@ namespace ascension {
 			 * OLESTR("").
 			 */
 			inline internal::OlestrButNotBstr safeBSTRtoOLESTR(const BSTR p) /*throw()*/ {
-				return internal::OlestrButNotBstr((p != 0) ? p : OLESTR(""));
+				return internal::OlestrButNotBstr((p != nullptr) ? p : OLESTR(""));
 			}
 
 			/// Returns @c true if @a bstr is an empty string.
 			inline bool isEmptyBSTR(const BSTR bstr) /*throw()*/ {
-				return bstr == 0 || *bstr == 0;
+				return bstr == nullptr || *bstr == 0;
 			}
 
 			/// Converts the given C++ boolean into OLE VariantBool.
 			inline VARIANT_BOOL toVariantBoolean(bool b) /*throw()*/ {
-				return (b != 0) ? VARIANT_TRUE : VARIANT_FALSE;
+				return b ? VARIANT_TRUE : VARIANT_FALSE;
 			}
 
 			/// A proxy returned by @c ComPtr#operator->.
@@ -67,20 +67,20 @@ namespace ascension {
 				/// Interface type.
 				typedef T Interface;
 				/// Constructor.
-				explicit ComPtr(Interface* p = 0) /*throw()*/ : pointee_(p) {
-					if(pointee_ != 0)
+				explicit ComPtr(Interface* p = nullptr) /*throw()*/ : pointee_(p) {
+					if(pointee_ != nullptr)
 						pointee_->AddRef();
 				}
 				/// Constructor creates instance by using @c CoCreateInstance.
 				ComPtr<Interface>(REFCLSID clsid, REFIID iid /* = __uuidof(Interface) */,
-						DWORD context = CLSCTX_ALL, IUnknown* outer = 0, HRESULT* hr = 0) : pointee_(0) {
+						DWORD context = CLSCTX_ALL, IUnknown* outer = nullptr, HRESULT* hr = nullptr) : pointee_(nullptr) {
 					const HRESULT r = ::CoCreateInstance(clsid, outer, context, iid, initializePPV());
 					if(hr != 0)
 						*hr = r;
 				}
 				/// Copy-constructor.
 				ComPtr(const ComPtr<Interface>& other) /*throw()*/ : pointee_(other.pointee_) {
-					if(pointee_ != 0)
+					if(pointee_ != nullptr)
 						pointee_->AddRef();
 				}
 				/// Assignment operator.
@@ -90,7 +90,7 @@ namespace ascension {
 				}
 				/// Destructor.
 				virtual ~ComPtr() /*throw()*/ {
-					if(pointee_ != 0)
+					if(pointee_ != nullptr)
 						pointee_->Release();
 				}
 				/// Returns the raw pointer.
@@ -103,9 +103,9 @@ namespace ascension {
 				void** initializePPV() /*throw*/ {return reinterpret_cast<void**>(initialize());}
 				/// Returns true if the pointer addresses the same object.
 				bool equals(IUnknown* p) const /*throw()*/ {
-					if(pointee_ == 0 && p == 0)
+					if(pointee_ == nullptr && p == nullptr)
 						return true;
-					else if(pointee_ == 0 || p == 0)
+					else if(pointee_ == nullptr || p == nullptr)
 						return false;
 					ComPtr<IUnknown> ps[2];
 					pointee_->QueryInterface(IID_IUnknown, ps[0].initialize());
@@ -113,17 +113,17 @@ namespace ascension {
 					return ps[1].get() == ps[2].get();
 				}
 				/// Resets the pointer.
-				void reset(Interface* p = 0) /*throw()*/ {
-					if(pointee_ != 0)
+				void reset(Interface* p = nullptr) /*throw()*/ {
+					if(pointee_ != nullptr)
 						pointee_->Release();
 					pointee_ = p;
-					if(p != 0)
+					if(p != nullptr)
 						pointee_->AddRef();
 				}
 				/// Member-access operator.
-				ComPtrProxy<Interface>* operator->() const /*throw()*/ {assert(get() != 0); return get();}
+				ComPtrProxy<Interface>* operator->() const /*throw()*/ {assert(get() != nullptr); return get();}
 				/// Dereference operator.
-				ComPtrProxy<Interface>& operator*() const /*throw()*/ {assert(get() != 0); return *get();}
+				ComPtrProxy<Interface>& operator*() const /*throw()*/ {assert(get() != nullptr); return *get();}
 				/// Equality operator.
 				bool operator==(const Interface* rhs) const /*throw()*/ {return pointee_ == rhs;}
 				/// Inequality operator.
@@ -139,13 +139,13 @@ namespace ascension {
 				typedef typename ComPtr<T>::Interface Interface;
 			public:
 				/// Constructor.
-				explicit ComQIPtr(Interface* p = 0) /*throw()*/ : ComPtr<Interface>(p) {}
+				explicit ComQIPtr(Interface* p = nullptr) /*throw()*/ : ComPtr<Interface>(p) {}
 				/// Constructor takes IUnknown pointer.
-				ComQIPtr(IUnknown* p) /*throw()*/ {if(p != 0) p->QueryInterface(*iid, initializePPV());}
+				ComQIPtr(IUnknown* p) /*throw()*/ {if(p != nullptr) p->QueryInterface(*iid, initializePPV());}
 				/// Constructor takes other typed ComPtr.
 				template<typename Other>
 				ComQIPtr(const ComPtr<Other>& other) /*throw()*/ {
-					if(other.get() != 0)
+					if(other.get() != nullptr)
 						other->QueryInterface(*iid, initializePPV());
 				}
 				/// Copy-constructor.
@@ -153,7 +153,7 @@ namespace ascension {
 				/// Assignment operator.
 				ComQIPtr<Interface, iid>& operator=(IUnknown* other) /*throw()*/ {
 					ComPtr<Interface> temp;
-					if(other != 0)
+					if(other != nullptr)
 						other->QueryInterface(*iid, temp.initializePPV());
 					ComPtr<Interface>::operator=(temp);
 					return *this;
