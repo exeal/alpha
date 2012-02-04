@@ -58,7 +58,7 @@ namespace {
 					if(dictionaryPathName[directoryLength - 1] != '/'
 							&& dictionaryPathName[directoryLength - 1] != '\\')
 						++directoryLength;
-					AutoBuffer<char> pathName(new char[directoryLength + 32]);
+					unique_ptr<char[]> pathName(new char[directoryLength + 32]);
 					strcpy(pathName.get(), dictionaryPathName.c_str());
 					if(directoryLength != dictionaryPathName.length())
 						strcat(pathName.get(), "/");
@@ -123,7 +123,7 @@ namespace {
 				return nullptr;
 			else {
 				size_t bufferLength = encoder->properties().maximumNativeBytes() * length(s);
-				AutoBuffer<Byte> buffer(new Byte[bufferLength + 1]);
+				unique_ptr<Byte[]> buffer(new Byte[bufferLength + 1]);
 				Byte* toNext;
 				const Char* fromNext;
 				if(encoding::Encoder::COMPLETED != encoder->fromUnicode(buffer.get(),
@@ -539,8 +539,8 @@ RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, 
 
 // MigemoPattern //////////////////////////////////////////////////////////////////////////////////
 
-AutoBuffer<char> MigemoPattern::runtimePathName_;
-AutoBuffer<char> MigemoPattern::dictionaryPathName_;
+string MigemoPattern::runtimePathName_;
+string MigemoPattern::dictionaryPathName_;
 
 /**
  * Private constructor.
@@ -575,23 +575,16 @@ unique_ptr<const MigemoPattern> MigemoPattern::compile(const StringPiece& patter
  * Initializes the library.
  * @param runtimePathName
  * @param dictionaryPathName
- * @throw NullPointerException @a runtimePathName and/or @a dictionaryPathName is @c null
  */
-void MigemoPattern::initialize(const char* runtimePathName, const char* dictionaryPathName) {
-	if(runtimePathName == nullptr)
-		throw invalid_argument("runtimePathName");
-	else if(dictionaryPathName == nullptr)
-		throw invalid_argument("dictionaryPathName");
-	runtimePathName_.reset(new char[strlen(runtimePathName) + 1]);
-	strcpy(runtimePathName_.get(), runtimePathName);
-	dictionaryPathName_.reset(new char[strlen(dictionaryPathName) + 1]);
-	strcpy(dictionaryPathName_.get(), dictionaryPathName);
+void MigemoPattern::initialize(const string& runtimePathName, const string& dictionaryPathName) {
+	runtimePathName_ = runtimePathName;
+	dictionaryPathName_ = dictionaryPathName;
 }
 
 inline void MigemoPattern::install() {
-	if(migemoLib.get() == nullptr && runtimePathName_.get() != nullptr && dictionaryPathName_.get() != nullptr) {
+	if(migemoLib.get() == nullptr) {
 		try {
-			migemoLib.reset(new Migemo(runtimePathName_.get(), dictionaryPathName_.get()));
+			migemoLib.reset(new Migemo(runtimePathName_, dictionaryPathName_));
 		} catch(runtime_error&) {
 		}
 	}

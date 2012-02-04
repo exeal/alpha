@@ -55,11 +55,11 @@ int NullCollator::compare(const CharacterIterator& s1, const CharacterIterator& 
 }
 
 /// @see Collator#getCollationKey
-std::unique_ptr<CollationKey> NullCollator::collationKey(const String& s) const {
+unique_ptr<CollationKey> NullCollator::collationKey(const String& s) const {
 	const size_t len = s.length() * sizeof(Char) / sizeof(uint8_t);
-	AutoBuffer<uint8_t> temp(new uint8_t[len]);
+	unique_ptr<uint8_t[]> temp(new uint8_t[len]);
 	memcpy(temp.get(), s.data(), len);
-	AutoBuffer<const uint8_t> buffer(temp);
+	unique_ptr<const uint8_t[]> buffer(temp);
 	return unique_ptr<CollationKey>(new CollationKey(buffer, len));
 }
 

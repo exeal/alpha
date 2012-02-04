@@ -113,7 +113,7 @@ namespace {
 	 * @return The image
 	 */
 	inline unique_ptr<Image> createSolidCaretImage(uint16_t width, uint16_t height, const Color& color) {
-		const AutoBuffer<uint32_t> pattern(new uint32_t[width * height]);
+		const unique_ptr<uint32_t[]> pattern(new uint32_t[width * height]);
 		uninitialized_fill(pattern.get(), pattern.get() + (width * height), packColor(color));
 		return unique_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(
 			pattern.get()), geometry::make<NativeSize>(width, height), Image::ARGB_32));
@@ -147,7 +147,7 @@ namespace {
 	 */
 	inline unique_ptr<Image> createRTLCaretImage(uint16_t extent, const Color& color) {
 		const uint32_t white = 0, black = packColor(color);
-		AutoBuffer<uint32_t> pattern(new uint32_t[5 * extent]);
+		unique_ptr<uint32_t[]> pattern(new uint32_t[5 * extent]);
 		assert(extent > 3);
 		uninitialized_fill(pattern.get(), pattern.get() + 5 * extent, white);
 		pattern[0] = pattern[1] = pattern[2] = pattern[6] = pattern[7] = pattern[12] = black;
@@ -168,7 +168,7 @@ namespace {
 	inline unique_ptr<Image> createTISCaretImage(uint16_t extent, const Color& color) {
 		const uint32_t white = 0, black = packColor(color);
 		const uint16_t width = max<uint16_t>(extent / 8, 3);
-		AutoBuffer<uint32_t> pattern(new uint32_t[width * extent]);
+		unique_ptr<uint32_t[]> pattern(new uint32_t[width * extent]);
 		assert(extent > 3);
 		uninitialized_fill(pattern.get(), pattern.get() + width * extent, white);
 		for(uint16_t y = 0; y < extent - 1; ++y) {

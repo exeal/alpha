@@ -23,6 +23,7 @@
 
 namespace ascension {
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	// std.auto_ptr for arrays.
 	template<typename T> class AutoBuffer {
 	public:
@@ -75,6 +76,7 @@ namespace ascension {
 
 	template<typename T>
 	inline void swap(AutoBuffer<T>& left, AutoBuffer<T>& right) {return left.swap(right);}
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 	// Efficient memory pool implementation (from MemoryPool of Efficient C++).
 	class MemoryPool {

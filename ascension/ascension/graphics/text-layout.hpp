@@ -10,12 +10,12 @@
 #define ASCENSION_TEXT_LAYOUT_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
-#include <ascension/corelib/memory.hpp>		// AutoBuffer
 #include <ascension/corelib/utility.hpp>	// detail.searchBound
 #include <ascension/kernel/document.hpp>
 #include <ascension/graphics/color.hpp>
 #include <ascension/presentation/text-style.hpp>
 #include <limits>	// std.numeric_limits
+#include <memory>	// std.unique_ptr
 #include <vector>
 
 namespace ascension {
@@ -317,16 +317,16 @@ namespace ascension {
 				const presentation::WritingMode writingMode_;
 				const presentation::TextAnchor anchor_;
 				const presentation::DominantBaseline dominantBaseline_;
-				AutoBuffer<TextRun*> runs_;
+				std::unique_ptr<TextRun*[]> runs_;
 				std::size_t numberOfRuns_;
 				class LineArea;
 				std::vector<const InlineArea*> inlineAreas_;
-				AutoBuffer<const Index> lineOffsets_;	// size is numberOfLines_
-				AutoBuffer<const Index> lineFirstRuns_;	// size is numberOfLines_
+				std::unique_ptr<const Index[]> lineOffsets_;	// size is numberOfLines_
+				std::unique_ptr<const Index[]> lineFirstRuns_;	// size is numberOfLines_
 				static const Index SINGLE_LINE_OFFSETS;
 				Index numberOfLines_;
-				AutoBuffer<LineMetrics*> lineMetrics_;
-				AutoBuffer<Scalar> measures_;
+				std::unique_ptr<LineMetrics*[]> lineMetrics_;
+				std::unique_ptr<Scalar[]> measures_;
 				Scalar maximumMeasure_;
 				Scalar wrappingMeasure_;	// -1 if should not wrap
 				friend class LineLayoutVector;

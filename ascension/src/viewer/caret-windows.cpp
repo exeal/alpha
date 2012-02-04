@@ -254,7 +254,7 @@ HRESULT utils::createTextObjectForSelectedString(const Caret& caret, bool rtf, I
 		codePage = wcstoul(codePageString, &eob, 10);
 		format.cfFormat = CF_TEXT;
 		if(int ansiLength = ::WideCharToMultiByte(codePage, 0, text.c_str(), static_cast<int>(text.length()), nullptr, 0, nullptr, nullptr)) {
-			AutoBuffer<char> ansiBuffer(new(nothrow) char[ansiLength]);
+			unique_ptr<char[]> ansiBuffer(new(nothrow) char[ansiLength]);
 			if(ansiBuffer.get() != nullptr) {
 				ansiLength = ::WideCharToMultiByte(codePage, 0,
 					text.data(), static_cast<int>(text.length()), ansiBuffer.get(), ansiLength, nullptr, nullptr);
@@ -346,7 +346,7 @@ pair<HRESULT, String> utils::getTextFromDataObject(IDataObject& data, bool* rect
 					const Index ucsLength = ::MultiByteToWideChar(
 						codePage, MB_PRECOMPOSED, nativeBuffer, static_cast<int>(nativeLength), nullptr, 0);
 					if(ucsLength != 0) {
-						AutoBuffer<wchar_t> ucsBuffer(new(nothrow) wchar_t[ucsLength]);
+						unique_ptr<wchar_t[]> ucsBuffer(new(nothrow) wchar_t[ucsLength]);
 						if(ucsBuffer.get() != nullptr) {
 							if(0 != ::MultiByteToWideChar(codePage, MB_PRECOMPOSED,
 									nativeBuffer, static_cast<int>(nativeLength), ucsBuffer.get(), static_cast<int>(ucsLength))) {
@@ -516,7 +516,7 @@ void Caret::onImeComposition(WPARAM wp, LPARAM lp, bool& consumed) {
 		if(imc.get() != nullptr) {
 			if(const Index len = ::ImmGetCompositionStringW(imc.get(), GCS_RESULTSTR, nullptr, 0) / sizeof(WCHAR)) {
 				// this was not canceled
-				const AutoBuffer<Char> text(new Char[len + 1]);
+				const unique_ptr<Char[]> text(new Char[len + 1]);
 				::ImmGetCompositionStringW(imc.get(), GCS_RESULTSTR, text.get(), static_cast<DWORD>(len * sizeof(WCHAR)));
 				text[len] = 0;
 				if(!context_.inputMethodComposingCharacter)

@@ -129,7 +129,7 @@ shared_ptr<const TextToplevelStyle> Presentation::DEFAULT_GLOBAL_TEXT_STYLE;
 
 struct Presentation::Hyperlinks {
 	Index lineNumber;
-	AutoBuffer<Hyperlink*> hyperlinks;
+	unique_ptr<Hyperlink*[]> hyperlinks;
 	size_t numberOfHyperlinks;
 };
 
