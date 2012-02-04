@@ -182,7 +182,7 @@ bool SystemFont::ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, 
 		static const TrueTypeFontTag CMAP_TAG = MakeTrueTypeFontTag<'c', 'm', 'a', 'p'>::value;
 		const DWORD bytes = ::GetFontData(dc.get(), CMAP_TAG, 0, nullptr, 0);
 		if(bytes != GDI_ERROR) {
-			AutoBuffer<uint8_t> data(new uint8_t[bytes]);
+			unique_ptr<uint8_t[]> data(new uint8_t[bytes]);
 			if(GDI_ERROR != ::GetFontData(dc.get(), CMAP_TAG, 0, data.get(), bytes))
 				generateIVSMappings(data.get(), bytes, *const_cast<SystemFont*>(this)->ivs_);
 		}

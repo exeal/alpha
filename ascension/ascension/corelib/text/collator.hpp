@@ -11,7 +11,6 @@
 #include <ascension/config.hpp>				// ASCENSION_NO_UNICODE_COLLATION
 
 #ifndef ASCENSION_NO_UNICODE_COLLATION
-#include <ascension/corelib/memory.hpp>		// AutoBuffer
 #include <ascension/corelib/text/unicode.hpp>
 #include <memory>							// std.unique_ptr
 
@@ -26,7 +25,7 @@ namespace ascension {
 		class CollationKey : public FastArenaObject<CollationKey> {
 		public:
 			CollationKey() /*throw()*/ : length_(0) {}
-			CollationKey(AutoBuffer<const uint8_t> keyValues,
+			CollationKey(std::unique_ptr<const uint8_t[]> keyValues,
 				std::size_t length) : keyValues_(keyValues), length_(length) {}
 			CollationKey(const CollationKey& other);
 			CollationKey&operator=(const CollationKey& other);
@@ -37,7 +36,7 @@ namespace ascension {
 			bool operator>(const CollationKey& other) const /*throw()*/;
 			bool operator>=(const CollationKey& other) const /*throw()*/;
 		private:
-			const AutoBuffer<const uint8_t> keyValues_;
+			const std::unique_ptr<const uint8_t[]> keyValues_;
 			const std::size_t length_;
 		};
 

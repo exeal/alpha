@@ -1338,7 +1338,7 @@ void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKey
 	// hyperlink
 	if(const hyperlink::Hyperlink* link = utils::getPointedHyperlink(*this, caret())) {
 		const Index len = (link->region().end() - link->region().beginning()) * 2 + 8;
-		AutoBuffer<WCHAR> caption(new WCHAR[len]);	// TODO: this code can have buffer overflow in future
+		unique_ptr<WCHAR[]> caption(new WCHAR[len]);	// TODO: this code can have buffer overflow in future
 		swprintf(caption.get(),
 #if(_MSC_VER < 1400)
 #else
@@ -1435,7 +1435,7 @@ namespace {
 		}
 		::SelectObject(dc.get(), oldBitmap);
 		BITMAPINFO* bi = nullptr;
-		AutoBuffer<byte> maskBuffer;
+		unique_ptr<byte[]> maskBuffer;
 		uint8_t* maskBits;
 		BYTE alphaChunnels[2] = {0xff, 0x01};
 		try {

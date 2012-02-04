@@ -2,7 +2,7 @@
  * @file content-assist.hpp
  * @author exeal
  * @date 2003-2006 (was CompletionWindow.h)
- * @date 2006-2011
+ * @date 2006-2012
  */
 
 #ifndef ASCENSION_CONTENT_ASSIST_HPP
@@ -15,6 +15,7 @@
 #include <ascension/viewer/viewer-observers.hpp>
 #include <ascension/win32/windows.hpp>	// win32.Handle
 #include <map>
+#include <memory>	// std.unique_ptr
 #include <set>
 
 // TODO: make code cross-platform.
@@ -282,7 +283,7 @@ namespace ascension {
 				const ContentAssistProcessor* processor;
 				bool incremental;
 				kernel::Region replacementRegion;
-				AutoBuffer<CompletionProposal*> proposals;
+				std::unique_ptr<CompletionProposal*[]> proposals;
 				std::size_t numberOfProposals;
 				CompletionSession() /*throw()*/ : processor(nullptr), numberOfProposals(0) {}
 				~CompletionSession() /*throw()*/ {for(std::size_t i = 0; i < numberOfProposals; ++i) delete proposals[i];}

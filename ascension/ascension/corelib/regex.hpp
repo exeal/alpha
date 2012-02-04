@@ -2,7 +2,7 @@
  * @file regex.hpp
  * Defines wrappers of Boost.Regex library or std#tr1#regex.
  * @author exeal
- * @date 2006-2011
+ * @date 2006-2012
  */
 
 #include <ascension/config.hpp>	// ASCENSION_NO_REGEX, ASCENSION_NO_MIGEMO
@@ -11,7 +11,6 @@
 #ifndef ASCENSION_REGEX_HPP
 #define ASCENSION_REGEX_HPP
 
-#include <ascension/corelib/memory.hpp>				// AutoBuffer
 #include <ascension/corelib/type-traits.hpp>		// std.integral_constant
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/case-folder.hpp>
@@ -742,12 +741,12 @@ namespace ascension {
 			ASCENSION_UNASSIGNABLE_TAG(MigemoPattern);
 		public:
 			static std::unique_ptr<const MigemoPattern> compile(const StringPiece& pattern, bool caseSensitive);
-			static void initialize(const char* runtimePathName, const char* dictionaryPathName);
+			static void initialize(const std::string& runtimePathName, const std::string& dictionaryPathName);
 			static bool isMigemoInstalled() /*throw()*/;
 		private:
 			MigemoPattern(const StringPiece& pattern, bool caseSensitive);
 			static void install();
-			static AutoBuffer<char> runtimePathName_, dictionaryPathName_;
+			static std::string runtimePathName_, dictionaryPathName_;
 		};
 #endif // !ASCENSION_NO_MIGEMO
 

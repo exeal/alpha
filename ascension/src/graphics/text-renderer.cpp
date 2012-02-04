@@ -25,7 +25,7 @@ extern bool DIAGNOSE_INHERENT_DRAWING;
 
 
 // FontSelector /////////////////////////////////////////////////////////////
-
+#if 0
 namespace {
 	AutoBuffer<WCHAR> ASCENSION_FASTCALL mapFontFileNameToTypeface(const WCHAR* fileName) {
 		assert(fileName != nullptr);
@@ -75,7 +75,7 @@ namespace {
 		return AutoBuffer<WCHAR>();
 	}
 } // namespace @0
-#if 0
+
 void FontSelector::linkPrimaryFont() /*throw()*/ {
 	// TODO: this does not support nested font linking.
 	assert(linkedFonts_ != nullptr);

@@ -547,10 +547,10 @@ private:
 		const OPENTYPE_TAG scriptTag;
 		mutable SCRIPT_CACHE fontCache;
 		// only 'clusters' is character-base. others are glyph-base
-		AutoBuffer<WORD> indices, clusters;
-		AutoBuffer<SCRIPT_VISATTR> visualAttributes;
-		AutoBuffer<int> advances, justifiedAdvances;
-		AutoBuffer<GOFFSET> offsets;
+		unique_ptr<WORD[]> indices, clusters;
+		unique_ptr<SCRIPT_VISATTR[]> visualAttributes;
+		unique_ptr<int[]> advances, justifiedAdvances;
+		unique_ptr<GOFFSET[]> offsets;
 		Glyphs(const Range<Index>& characters, shared_ptr<const Font> font,
 				OPENTYPE_TAG scriptTag) : characters(characters), font(font), scriptTag(scriptTag), fontCache(nullptr) {
 			if(font.get() == nullptr)
@@ -772,8 +772,8 @@ inline void TextLayout::TextRun::generateDefaultGlyphs(const win32::Handle<HDC>&
 	if(FAILED(::ScriptGetFontProperties(dc.get(), &fontCache, &fp)))
 		fp.wgDefault = 0;	// hmm...
 
-	AutoBuffer<WORD> indices, clusters;
-	AutoBuffer<SCRIPT_VISATTR> visualAttributes;
+	unique_ptr<WORD[]> indices, clusters;
+	unique_ptr<SCRIPT_VISATTR[]> visualAttributes;
 	const int numberOfGlyphs = static_cast<int>(length(text));
 	indices.reset(new WORD[numberOfGlyphs]);
 	clusters.reset(new WORD[length(text)]);
@@ -820,8 +820,8 @@ HRESULT TextLayout::TextRun::generateGlyphs(const win32::Handle<HDC>& dc,
 #endif
 
 	SCRIPT_CACHE fontCache(nullptr);	// TODO: this object should belong to a font, not glyph run???
-	AutoBuffer<WORD> indices, clusters;
-	AutoBuffer<SCRIPT_VISATTR> visualAttributes;
+	unique_ptr<WORD[]> indices, clusters;
+	unique_ptr<SCRIPT_VISATTR[]> visualAttributes;
 	clusters.reset(new WORD[length(text)]);
 	numberOfGlyphs = estimateNumberOfGlyphs(length(text));
 	HRESULT hr;
@@ -1108,8 +1108,8 @@ void TextLayout::TextRun::positionGlyphs(const win32::Handle<HDC>& dc, const Str
 	assert(glyphs_.get() != nullptr && glyphs_.unique());
 	assert(glyphs_->indices.get() != nullptr && glyphs_->advances.get() == nullptr);
 
-	AutoBuffer<int> advances(new int[numberOfGlyphs()]);
-	AutoBuffer<GOFFSET> offsets(new GOFFSET[numberOfGlyphs()]);
+	unique_ptr<int[]> advances(new int[numberOfGlyphs()]);
+	unique_ptr<GOFFSET[]> offsets(new GOFFSET[numberOfGlyphs()]);
 //	ABC width;
 	HRESULT hr = ::ScriptPlace(nullptr, &glyphs_->fontCache, glyphs_->indices.get(), numberOfGlyphs(),
 		glyphs_->visualAttributes.get(), &analysis_, advances.get(), offsets.get(), nullptr/*&width*/);
@@ -1127,7 +1127,7 @@ void TextLayout::TextRun::positionGlyphs(const win32::Handle<HDC>& dc, const Str
 		StyledTextRun styledRange(styles.current());
 /*
 		// query widths of C0 and C1 controls in this run
-		AutoBuffer<WORD> glyphIndices;
+		unique_ptr<WORD[]> glyphIndices;
 		if(ISpecialCharacterRenderer* scr = lip.specialCharacterRenderer()) {
 			ISpecialCharacterRenderer::LayoutContext context(dc);
 			context.readingDirection = readingDirection();
@@ -1173,8 +1173,8 @@ void TextLayout::TextRun::positionGlyphs(const win32::Handle<HDC>& dc, const Str
 */	}
 
 	// commit
-	glyphs_->advances = advances;
-	glyphs_->offsets = offsets;
+	glyphs_->advances = move(advances);
+	glyphs_->offsets = move(offsets);
 //	glyphs_->width = width;
 }
 
@@ -1343,7 +1343,7 @@ void TextLayout::TextRun::shape(DC& dc, const String& layoutString, const ILayou
 
 		// ScriptShape may crash if the shaping is disabled (see Mozilla bug 341500).
 		// Following technique is also from Mozilla (gfxWindowsFonts.cpp).
-		AutoBuffer<Char> safeString;
+		unique_ptr<Char[]> safeString;
 		if(analysis_.eScript == SCRIPT_UNDEFINED
 				&& find_if(textString, textString + length(), surrogates::isSurrogate) != textString + length()) {
 			ASCENSION_MAKE_TEXT_STRING_SAFE();
@@ -1551,7 +1551,7 @@ unique_ptr<TextLayout::TextRun> TextLayout::TextRun::splitIfTooLong(const String
 	// split this run, because the length would cause ScriptShape to fail (see also Mozilla bug 366643).
 	static const Index MAXIMUM_RUN_LENGTH = 43680;	// estimateNumberOfGlyphs(43680) == 65536
 	Index opportunity = 0;
-	AutoBuffer<SCRIPT_LOGATTR> la(new SCRIPT_LOGATTR[length(*this)]);
+	unique_ptr<SCRIPT_LOGATTR[]> la(new SCRIPT_LOGATTR[length(*this)]);
 	const HRESULT hr = logicalAttributes(layoutString, la.get());
 	if(SUCCEEDED(hr)) {
 		for(Index i = MAXIMUM_RUN_LENGTH; i > 0; --i) {
@@ -1871,7 +1871,7 @@ namespace {
 		}
 	private:
 		ElementType auto_[STATIC_CAPACITY];
-		AutoBuffer<ElementType> allocated_;
+		unique_ptr<ElementType[]> allocated_;
 		size_t capacity_;
 		ElementType* p_;
 	};
@@ -2151,8 +2151,8 @@ NativeRegion TextLayout::blackBoxBounds(const Range<Index>& range) const {
 	}
 
 	// create the result region
-	AutoBuffer<POINT> vertices(new POINT[rectangles.size() * 4]);
-	AutoBuffer<int> numbersOfVertices(new int[rectangles.size()]);
+	unique_ptr<POINT[]> vertices(new POINT[rectangles.size() * 4]);
+	unique_ptr<int[]> numbersOfVertices(new int[rectangles.size()]);
 	for(size_t i = 0, c = rectangles.size(); i < c; ++i) {
 		geometry::x(vertices[i * 4 + 0]) = geometry::x(vertices[i * 4 + 3]) = geometry::left(rectangles[i]);
 		geometry::y(vertices[i * 4 + 0]) = geometry::y(vertices[i * 4 + 1]) = geometry::top(rectangles[i]);
@@ -2988,15 +2988,15 @@ pair<Index, Index> TextLayout::offset(const NativePoint& p, bool* outside /* = n
 inline void TextLayout::reorder() /*throw()*/ {
 	if(numberOfRuns_ == 0)
 		return;
-	AutoBuffer<TextRun*> temp(new TextRun*[numberOfRuns_]);
+	unique_ptr<TextRun*[]> temp(new TextRun*[numberOfRuns_]);
 	copy(runs_.get(), runs_.get() + numberOfRuns_, temp.get());
 	for(Index line = 0; line < numberOfLines(); ++line) {
 		const size_t numberOfRunsInLine = ((line < numberOfLines() - 1) ?
 			lineFirstRuns_[line + 1] : numberOfRuns_) - lineFirstRuns_[line];
-		const AutoBuffer<BYTE> levels(new BYTE[numberOfRunsInLine]);
+		const unique_ptr<BYTE[]> levels(new BYTE[numberOfRunsInLine]);
 		for(size_t i = 0; i < numberOfRunsInLine; ++i)
 			levels[i] = static_cast<BYTE>(runs_[i + lineFirstRuns_[line]]->bidiEmbeddingLevel() & 0x1f);
-		const AutoBuffer<int> log2vis(new int[numberOfRunsInLine]);
+		const unique_ptr<int[]> log2vis(new int[numberOfRunsInLine]);
 		const HRESULT hr = ::ScriptLayout(static_cast<int>(numberOfRunsInLine), levels.get(), nullptr, log2vis.get());
 		assert(SUCCEEDED(hr));
 		for(size_t i = lineFirstRuns_[line]; i < lineFirstRuns_[line] + numberOfRunsInLine; ++i)
@@ -3147,8 +3147,8 @@ void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
 	vector<Index> lineFirstRuns;
 	lineFirstRuns.push_back(0);
 	int x1 = 0;	// addresses the beginning of the run. see x2
-	AutoBuffer<int> logicalWidths;
-	AutoBuffer<SCRIPT_LOGATTR> logicalAttributes;
+	unique_ptr<int[]> logicalWidths;
+	unique_ptr<SCRIPT_LOGATTR[]> logicalAttributes;
 	Index longestRunLength = 0;	// for efficient allocation
 	vector<TextRun*> newRuns;
 	newRuns.reserve(numberOfRuns_ * 3 / 2);
@@ -3255,12 +3255,12 @@ void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
 
 	{
 		assert(numberOfLines() > 1);
-		AutoBuffer<Index> temp(new Index[numberOfLines_ = lineFirstRuns.size()]);
+		unique_ptr<Index[]> temp(new Index[numberOfLines_ = lineFirstRuns.size()]);
 		copy(lineFirstRuns.begin(), lineFirstRuns.end(), temp.get());
-		lineFirstRuns_.reset(temp.release());
+		lineFirstRuns_ = move(temp);
 	}
 
-	lineOffsets_.reset(new Index[numberOfLines()]);
+	lineOffsets_ = move(unique_ptr<Index[]>(new Index[numberOfLines()]));
 	for(size_t i = 0; i < numberOfLines(); ++i)
 		const_cast<Index&>(lineOffsets_[i]) = runs_[lineFirstRuns_[i]]->beginning();
 }

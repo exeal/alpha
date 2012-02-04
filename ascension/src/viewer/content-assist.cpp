@@ -347,7 +347,7 @@ bool ContentAssistant::CompletionProposalPopup::updateListCursel() {
 			setCurSel(found);
 			if(found != getCount() - 1) {
 				const int nextLength = getTextLen(found + 1);
-				AutoBuffer<wchar_t> next(new wchar_t[nextLength + 1]);
+				unique_ptr<wchar_t[]> next(new wchar_t[nextLength + 1]);
 				getText(found + 1, next.get());
 				return unicode::CaseFolder::compare(
 					unicode::StringCharacterIterator(precedingID),

@@ -4,7 +4,7 @@
  * @note Currently, this implementation does not support OpenVMS.
  * @author exeal
  * @date 2007 (separated from document.cpp)
- * @date 2007-2011
+ * @date 2007-2012
  */
 
 #include <ascension/config.hpp>	// ASCENSION_NO_STANDARD_ENCODINGS
@@ -127,7 +127,7 @@ namespace {
 	 * @throw IOException Any I/O error occurred
 	 */
 	PathString makeTemporaryFileName(const PathString& seed) {
-		AutoBuffer<PathCharacter> s(new PathCharacter[seed.length() + 1]);
+		unique_ptr<PathCharacter[]> s(new PathCharacter[seed.length() + 1]);
 		copy(seed.begin(), seed.end(), s.get());
 		s[seed.length()] = 0;
 		PathCharacter* const name = s.get() + (findFileName(seed) - seed.begin());
@@ -308,7 +308,7 @@ bool fileio::comparePathNames(const PathCharacter* s1, const PathCharacter* s2) 
 	const int fc1 = ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, nullptr, 0);
 	const int fc2 = ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, nullptr, 0);
 	if(fc1 != 0 && fc2 != 0 && fc1 == fc2) {
-		AutoBuffer<WCHAR> fs1(new WCHAR[fc1]), fs2(new WCHAR[fc2]);
+		unique_ptr<WCHAR[]> fs1(new WCHAR[fc1]), fs2(new WCHAR[fc2]);
 		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, fs1.get(), fc1);
 		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, fs2.get(), fc2);
 		if(wmemcmp(fs1.get(), fs2.get(), fc1) == 0)
@@ -1310,7 +1310,7 @@ void TextFileDocumentInput::revert(
 	mbstate_t state;
 	const PathCharacter* fromNext;
 	Char* ucsNext;
-	AutoBuffer<Char> ucs(new Char[title.length() * 2]);
+	unique_ptr<Char[]> ucs(new Char[title.length() * 2]);
 	if(codecvt_base::ok == conv.in(state,
 			title.data(), title.data() + title.length(), fromNext, ucs.get(), ucs.get() + title.length() * 2, ucsNext)) {
 		*ucsNext = L'0';
@@ -1586,7 +1586,7 @@ DirectoryIterator::DirectoryIterator(const PathCharacter* directoryName) :
 		throw IOException(directoryName, ERROR_PATH_NOT_FOUND);
 	const size_t len = wcslen(directoryName);
 	assert(len > 0);
-	AutoBuffer<PathCharacter> pattern(new PathCharacter[len + 3]);
+	unique_ptr<PathCharacter[]> pattern(new PathCharacter[len + 3]);
 	wmemcpy(pattern.get(), directoryName, len);
 	wcscpy(pattern.get() + len, isPathSeparator(pattern[len - 1]) ? L"*" : L"\\*");
 	WIN32_FIND_DATAW data;

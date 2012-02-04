@@ -46,36 +46,39 @@ void utils::recenter(VisualPoint& p) {
  */
 void utils::show(VisualPoint& p) {
 	TextViewer& viewer = p.textViewer();
-	const Position np(p.normalized());
 	const font::TextRenderer& renderer = viewer.textRenderer();
-	const Index visibleLines = viewer.numberOfVisibleLines();
-	NativePoint to(geometry::make<NativePoint>(-1, -1));
+	if(const shared_ptr<font::TextViewport> viewport = renderer.viewport().lock()) {
+		const Position np(p.normalized());
+		const float visibleLines = viewport->numberOfVisibleLines();
+		Index bpd = viewport->firstVisibleLineInVisualNumber(), ipd = viewport->inlineProgressionOffset();	// scroll destination
 
-	// for vertical direction
-	const Index verticalScrollPosition = viewer.verticalScrollBar().position() * viewer.scrollRate(false);
-	if(p.visualLine() < verticalScrollPosition)	// point is beyond top side of the viewport
-		geometry::y(to) = static_cast<Scalar>(p.visualLine() * viewer.scrollRate(false));
-	else if(p.visualLine() - verticalScrollPosition > visibleLines - 1)	// point is beyond bottom side of the viewport
-		geometry::y(to) = static_cast<Scalar>((p.visualLine() - visibleLines + 1) * viewer.scrollRate(false));
-	if(geometry::y(to) < -1)
-		geometry::y(to) = 0;
+		// scroll if the point is outside of 'before-edge' or 'after-edge'
+		bpd = min(p.visualLine(), bpd);
+		bpd = max(p.visualLine() - static_cast<Index>(viewport->numberOfVisibleLines()) + 1, bpd);
 
-	// for horizontal direction
-//	if(!viewer.configuration().lineWrap.wrapsAtWindowEdge()) {
-		const font::Font::Metrics& fontMetrics = renderer.defaultFont()->metrics();
-		const Index visibleColumns = viewer.numberOfVisibleColumns();
-		const Scalar x = geometry::x(renderer.layouts().at(np.line).location(np.offsetInLine, font::TextLayout::LEADING)) + renderer.lineIndent(np.line, 0);
-		const Scalar scrollOffset = viewer.horizontalScrollBar().position() * viewer.scrollRate(true) * fontMetrics.averageCharacterWidth();
-		if(x <= scrollOffset)	// point is beyond left side of the viewport
-			geometry::x(to) = x / fontMetrics.averageCharacterWidth() - visibleColumns / 4;
-		else if(x >= static_cast<Scalar>((viewer.horizontalScrollBar().position()	// point is beyond right side of the viewport
-				* viewer.scrollRate(true) + visibleColumns) * fontMetrics.averageCharacterWidth()))
-			geometry::x(to) = x / fontMetrics.averageCharacterWidth() - visibleColumns * 3 / 4;
-		if(geometry::x(to) < -1)
-			geometry::x(to) = 0;
-//	}
-	if(geometry::x(to) >= -1 || geometry::y(to) != -1)
-		viewer.scrollTo(geometry::x(to), geometry::y(to), true);
+		// scroll if the point is outside of 'start-edge' or 'end-edge'
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+//		if(!viewer.configuration().lineWrap.wrapsAtWindowEdge()) {
+			const font::Font::Metrics& fontMetrics = renderer.defaultFont()->metrics();
+			const Index visibleColumns = viewport->numberOfVisibleCharactersInLine();
+			const font::TextLayout& lineLayout = renderer.layouts().at(np.line);
+			const Scalar x = geometry::x(lineLayout.location(np.offsetInLine, font::TextLayout::LEADING)) + font::lineIndent(lineLayout, viewport->contentMeasure(), 0);
+			const Scalar scrollOffset = viewer.horizontalScrollBar().position() * viewer.scrollRate(true) * fontMetrics.averageCharacterWidth();
+			if(x <= scrollOffset)	// point is beyond left side of the viewport
+				geometry::x(to) = x / fontMetrics.averageCharacterWidth() - visibleColumns / 4;
+			else if(x >= static_cast<Scalar>((viewer.horizontalScrollBar().position()	// point is beyond right side of the viewport
+					* viewer.scrollRate(true) + visibleColumns) * fontMetrics.averageCharacterWidth()))
+				geometry::x(to) = x / fontMetrics.averageCharacterWidth() - visibleColumns * 3 / 4;
+			if(geometry::x(to) < -1)
+				geometry::x(to) = 0;
+//		}
+#else
+		font::lineIndent
+		const Scalar ipdInPixels = renderer.layouts().at(np.line).location(np.offsetInLine)
+		ipd = min(
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
+		viewport->scrollTo(bpd, ipd, &viewer);
+	}
 }
 
 
@@ -252,7 +255,7 @@ inline void VisualPoint::updateLastX() {
 	if(!isDocumentDisposed()) {
 		const font::TextLayout& layout = textViewer().textRenderer().layouts().at(line(*this));
 		lastX_ = layout.location(offsetInLine(*this), font::TextLayout::LEADING).x;
-		lastX_ += textViewer().textRenderer().lineIndent(line(*this), 0);
+		lastX_ += font::lineIndent(layout, ) textViewer().textRenderer().lineIndent(line(*this), 0);
 	}
 }
 

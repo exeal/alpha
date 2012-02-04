@@ -1,21 +1,21 @@
 /**
  * @file encoder.cpp
  * @author exeal
- * @date 2004-2011
+ * @date 2004-2012
  */
 
 #include <ascension/corelib/encoder.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>
-#include <ascension/corelib/memory.hpp>		// AutoBuffer
 #include <ascension/corelib/text/utf.hpp>	// text.isScalarValue, text.utf.encode
 #include <algorithm>
+#include <memory>							// std.unique_ptr
 using namespace ascension;
 using namespace ascension::encoding;
 using namespace ascension::encoding::implementation;
 using namespace std;
 
 
-// free function ////////////////////////////////////////////////////////////
+// free function //////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Converts the given encoding name from Unicode into 7-bit US-ASCII can pass to other functions.
@@ -32,7 +32,7 @@ string encoding::encodingNameFromUnicode(const String& source) {
 }
 
 
-// UnsupportedEncodingException /////////////////////////////////////////////
+// UnsupportedEncodingException ///////////////////////////////////////////////////////////////////
 
 /**
  * Constructor.
@@ -42,7 +42,7 @@ UnsupportedEncodingException::UnsupportedEncodingException(const string& message
 }
 
 
-// Encoder //////////////////////////////////////////////////////////////////
+// Encoder ////////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * @class ascension::encoding::Encoder
@@ -154,7 +154,7 @@ bool Encoder::canEncode(const StringPiece& s) {
 		throw NullPointerException("s.end()");
 	// TODO: Should be able to implement without heap/free store...
 	const size_t bytes = length(s) * properties().maximumNativeBytes();
-	AutoBuffer<Byte> temp(new Byte[bytes]);
+	unique_ptr<Byte[]> temp(new Byte[bytes]);
 	const Char* fromNext;
 	Byte* toNext;
 	resetEncodingState();
@@ -284,7 +284,7 @@ Encoder::Result Encoder::fromUnicode(Byte* to, Byte* toEnd,
  */
 string Encoder::fromUnicode(const String& from) {
 	size_t bytes = properties().maximumNativeBytes() * from.length();
-	AutoBuffer<Byte> temp(new Byte[bytes]);
+	unique_ptr<Byte[]> temp(new Byte[bytes]);
 	const Char* fromNext;
 	Byte* toNext;
 	Result result;
@@ -403,7 +403,7 @@ Encoder::Result Encoder::toUnicode(Char* to, Char* toEnd,
  */
 String Encoder::toUnicode(const string& from) {
 	size_t chars = properties().maximumUCSLength() * from.length();
-	AutoBuffer<Char> temp(new Char[chars]);
+	unique_ptr<Char[]> temp(new Char[chars]);
 	const Byte* fromNext;
 	Char* toNext;
 	Result result;
@@ -421,7 +421,7 @@ String Encoder::toUnicode(const string& from) {
 }
 
 
-// EncodingDetector /////////////////////////////////////////////////////////
+// EncodingDetector ///////////////////////////////////////////////////////////////////////////////
 
 /**
  * Constructor.
@@ -507,7 +507,7 @@ void EncodingDetector::registerDetector(unique_ptr<EncodingDetector> newDetector
 }
 
 
-// UniversalDetector ////////////////////////////////////////////////////////
+// UniversalDetector //////////////////////////////////////////////////////////////////////////////
 
 namespace {
 	class UniversalDetector : public EncodingDetector {
@@ -549,7 +549,7 @@ pair<MIBenum, string> UniversalDetector::doDetect(const Byte* first, const Byte*
 }
 
 
-// US-ASCII and ISO-8859-1 //////////////////////////////////////////////////
+// US-ASCII and ISO-8859-1 ////////////////////////////////////////////////////////////////////////
 
 namespace {
 	class BasicLatinEncoderFactory : public EncoderFactoryBase {
@@ -634,7 +634,7 @@ namespace {
 } // namespace @0
 
 
-// implementation.EncoderFactoryBase ////////////////////////////////////////
+// implementation.EncoderFactoryBase //////////////////////////////////////////////////////////////
 
 /**
  * Constructor.
@@ -694,7 +694,7 @@ Byte EncoderFactoryBase::substitutionCharacter() const /*throw()*/ {
 }
 
 
-// implementation.sbcs.BidirectionalMap /////////////////////////////////////
+// implementation.sbcs.BidirectionalMap ///////////////////////////////////////////////////////////
 
 const Byte sbcs::BidirectionalMap::UNMAPPABLE_16x16_UNICODE_TABLE[0x100] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -740,7 +740,7 @@ void sbcs::BidirectionalMap::buildUnicodeToByteTable() {
 }
 
 
-// implementation.sbcs.SingleByteEncoderFactory /////////////////////////////
+// implementation.sbcs.SingleByteEncoderFactory ///////////////////////////////////////////////////
 
 namespace {
 	class SingleByteEncoder : public Encoder {
