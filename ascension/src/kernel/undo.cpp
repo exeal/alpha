@@ -657,7 +657,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 			try {
 				// 3. insert allocated strings
 				if(!allocatedLines.empty())
-					lines_.insert(end.line + 1, allocatedLines.begin(), allocatedLines.end());
+					lines_.insert(lines_.cbegin() + end.line + 1, allocatedLines.begin(), allocatedLines.end());
 				// 4. replace first line
 				Line& firstLine = *lines_[beginning.line];
 				const Index erasedLength = firstLine.text().length() - beginning.offsetInLine;
@@ -674,9 +674,10 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 						endOfInsertedString.offsetInLine += insertedLength;
 					}
 				} catch(...) {
-					for(size_t i = end.line + 1, c = i + allocatedLines.size(); i < c; ++i)
-						delete lines_[i];
-					lines_.erase(end.line + 1, allocatedLines.size());
+					const detail::GapVector<Line*>::const_iterator b(lines_.begin() + end.line + 1);
+					const detail::GapVector<Line*>::const_iterator e(b + allocatedLines.size());
+					for_each(b, e, default_delete<Line>());
+					lines_.erase(b, e);
 					throw;
 				}
 				firstLine.newline_ = (firstNewline != 0) ?
@@ -690,9 +691,10 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 			}
 			// 5. remove lines to erase
 			if(!region.isEmpty()) {
-				for(size_t i = beginning.line + 1; i <= end.line; ++i)
-					delete lines_[i];
-				lines_.erase(beginning.line + 1, end.line - beginning.line);
+				const detail::GapVector<Line*>::const_iterator b(lines_.begin() + beginning.line + 1);
+				const detail::GapVector<Line*>::const_iterator e(lines_.begin() + end.line + 1);
+				for_each(b, e, default_delete<Line>());
+				lines_.erase(b, e);
 			}
 		}
 	} catch(...) {
