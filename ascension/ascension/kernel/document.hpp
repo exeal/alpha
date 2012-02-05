@@ -13,7 +13,6 @@
 #include <ascension/corelib/gap-vector.hpp>	// detail.GapVector
 #include <ascension/corelib/listeners.hpp>
 #include <ascension/corelib/memory.hpp>		// FastArenaObject
-#include <ascension/corelib/standard-iterator-adapter.hpp>	// detail.IteratorAdapter
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/newline.hpp>
 #include <ascension/kernel/document-observers.hpp>
@@ -24,6 +23,7 @@
 #include <iostream>
 #include <map>
 #include <set>
+#include <boost/iterator/iterator_facade.hpp>
 #include <boost/optional.hpp>
 
 namespace ascension {
@@ -143,19 +143,19 @@ namespace ascension {
 			ASCENSION_NONCOPYABLE_TAG(Bookmarker);
 		public:
 			/// A @c Bookmarker#Iterator enumerates the all marked lines.
-			class Iterator : public detail::IteratorAdapter<
-				Iterator, std::iterator<std::bidirectional_iterator_tag, Index, std::ptrdiff_t, Index*, Index>> {
+			class Iterator : public boost::iterator_facade<
+				Iterator, Index, std::bidirectional_iterator_tag, Index, std::ptrdiff_t> {
 			private:
 				Iterator(detail::GapVector<Index>::const_iterator impl) : impl_(impl) {}
 				detail::GapVector<Index>::const_iterator impl_;
-				// detail.IteratorAdapter requirements
-				value_type current() const {return *impl_;}
-				bool equals(const Iterator& other) const {return impl_ == other.impl_;}
-				bool less(const Iterator& other) const {return impl_ < other.impl_;}
-				void next() {++impl_;}
-				void previous() {--impl_;}
+				// boost.iterator_facade requirements
+				friend class boost::iterator_core_access;
+				void decrement() {--impl_;}
+				value_type dereference() const {return *impl_;}
+				bool equal(const Iterator& other) const {return impl_ == other.impl_;}
+				void increment() {++impl_;}
+//				bool less(const Iterator& other) const {return impl_ < other.impl_;}
 				friend class Bookmarker;
-				friend class detail::IteratorCoreAccess;
 			};
 			// destructor
 			~Bookmarker() /*throw()*/;

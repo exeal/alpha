@@ -477,7 +477,7 @@ BaselineIterator::BaselineIterator(const TextViewport& viewport, Index line,
 	advance(line - this->line());
 }
 
-/// @see detail#IteratorAdapter#advance
+/// @see boost#iterator_facade#advance
 void BaselineIterator::advance(BaselineIterator::difference_type n) {
 	const TextRenderer& renderer = viewport().textRenderer();
 	if(n == 0)
@@ -574,9 +574,19 @@ void BaselineIterator::advance(BaselineIterator::difference_type n) {
 	positionInViewport_ = newAxis;
 }
 
-/// @see detail#IteratorAdapter#current
-const BaselineIterator::reference BaselineIterator::current() const {
+/// @see boost#iterator_facade#decrement
+void BaselineIterator::decrement() {
+	return advance(-1);
+}
+
+/// @see boost#iterator_facade#dereference
+const BaselineIterator::reference BaselineIterator::dereference() const {
 	return distanceFromViewportBeforeEdge_;
+}
+
+/// @see boost#iterator_facade#increment
+void BaselineIterator::increment() {
+	return advance(+1);
 }
 
 /// @internal Moves this iterator to the first visible line in the viewport.
@@ -690,16 +700,6 @@ void TextViewer::BaselineIterator::move(Index line) {
 	}
 }
 #endif
-
-/// @see detail#IteratorAdapter#next
-void BaselineIterator::next() {
-	return advance(+1);
-}
-
-/// @see detail#IteratorAdapter#previous
-void BaselineIterator::previous() {
-	return advance(-1);
-}
 
 
 // TextViewport ///////////////////////////////////////////////////////////////////////////////////

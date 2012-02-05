@@ -425,8 +425,8 @@ String Normalizer::normalize(const CharacterIterator& text, Form form) {
 	basic_stringbuf<Char> buffer(ios_base::out);
 	CodePoint c;
 	Char surrogates[2];
-	for(Normalizer n(text, form); n.hasNext(); n.next()) {
-		c = n.current();
+	for(Normalizer n(text, form); n.hasNext(); n.increment()) {
+		c = n.dereference();
 		if(c < 0x010000ul)
 			buffer.sputc(static_cast<Char>(c & 0xffffu));
 		else {

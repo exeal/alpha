@@ -4,6 +4,7 @@
  * @author exeal
  * @date 2010-10-21 separated from common.hpp
  * @date 2010-11-06 separated from basic-types.hpp
+ * @date 2012
  */
 
 #ifndef ASCENSION_STRING_PIECE_HPP
@@ -39,7 +40,8 @@ namespace ascension {
 		 * @c traits_type#length function.
 		 * @param p A pointer addresses the beginning of the string
 		 */
-		BasicStringPiece(const_pointer p) : Range<const Character*>(p, (p != nullptr) ? p + traits_type::length(p) : nullptr) {}
+		BasicStringPiece(const_pointer p) :
+			Range<const Character*>(p, (p != nullptr) ? p + traits_type::length(p) : nullptr) {}
 		/**
 		 * Constructor takes the beginning and the end of a string.
 		 * @param first A pointer addresses the beginning of the string

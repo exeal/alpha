@@ -14,6 +14,7 @@
 #include <ascension/graphics/line-layout-vector.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <memory>	// std.shared_ptr, std.unique_ptr, std.weak_ptr
+#include <boost/iterator/iterator_facade.hpp>
 
 namespace ascension {
 
@@ -226,10 +227,8 @@ namespace ascension {
 				detail::Listeners<TextViewportListener> listeners_;
 			};
 
-			class BaselineIterator : public detail::IteratorAdapter<
-				BaselineIterator, std::iterator<
-					std::random_access_iterator_tag, Scalar, std::ptrdiff_t, Scalar*, Scalar
-				>
+			class BaselineIterator : public boost::iterator_facade<
+				BaselineIterator, Scalar, std::random_access_iterator_tag, Scalar, std::ptrdiff_t
 			> {
 			public:
 				BaselineIterator(const TextViewport& viewport, Index line, bool trackOutOfViewport);
@@ -244,12 +243,12 @@ namespace ascension {
 				void invalidate() /*throw()*/;
 				bool isValid() const /*throw()*/;
 				void move(Index line);
-				// detail.IteratorAdapter
-				const reference current() const;
-				bool equals(BaselineIterator& other);
-				void next();
-				void previous();
-				friend class detail::IteratorCoreAccess;
+				// boost.iterator_facade
+				void decrement();
+				const reference dereference() const;
+				bool equal(const BaselineIterator& other);
+				void increment();
+				friend class boost::iterator_core_access;
 			private:
 				const TextViewport* viewport_;	// this is not a reference, for operator=
 				bool tracksOutOfViewport_;		// this is not const, for operator=

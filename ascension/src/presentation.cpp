@@ -84,25 +84,25 @@ StyledTextRunEnumerator::StyledTextRunEnumerator(
 }
 
 /**
- * Implements @c detail#IteratorAdapter#current.
+ * Implements @c boost#iterator_facade#dereference.
  * @throw NoSuchElementException The enumerator addresses the end
  */
-const StyledTextRunEnumerator::reference StyledTextRunEnumerator::current() const {
+const StyledTextRunEnumerator::reference StyledTextRunEnumerator::dereference() const {
 	if(!current_)
 		throw NoSuchElementException();
 	return make_pair(makeRange(current_->position(), next_ ? next_->position() : end_), current_->style());
 }
 
-/// Implements @c detail#IteratorAdapter#equals.
-bool StyledTextRunEnumerator::equals(const StyledTextRunEnumerator& other) const /*throw()*/ {
+/// Implements @c boost#iterator_facade#equal.
+bool StyledTextRunEnumerator::equal(const StyledTextRunEnumerator& other) const /*throw()*/ {
 	return !current_ && !other.current_;
 }
 
 /**
- * Implements @c detail#IteratorAdapter#next.
+ * Implements @c boost#iterator_facade#increment.
  * @throw NoSuchElementException The enumerator addresses the end
  */
-void StyledTextRunEnumerator::next() {
+void StyledTextRunEnumerator::increment() {
 	if(!current_)
 		throw NoSuchElementException();
 	current_ = next_;
