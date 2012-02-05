@@ -3,6 +3,7 @@
  * @author exeal
  * @date 2005-2011 was unicode.hpp
  * @date 2011-04-26 separated from unicode.hpp
+ * @date 2012
  */
 
 #ifndef ASCENSION_NORMALIZER_HPP
@@ -10,12 +11,12 @@
 
 #include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_NORMALIZATION
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
-#include <ascension/corelib/standard-iterator-adapter.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>	// CharacterIterator
 #include <ascension/corelib/text/character.hpp>
 #include <memory>		// std.unique_ptr
 #include <stdexcept>	// std.out_of_range
 #include <string>
+#include <boost/iterator/iterator_facade.hpp>
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #	error These class definitions and implementations are based on old version of Unicode.
@@ -25,8 +26,8 @@ namespace ascension {
 
 	namespace text {
 
-		class Normalizer : public detail::IteratorAdapter<Normalizer,
-			std::iterator<std::bidirectional_iterator_tag, CodePoint>> {
+		class Normalizer : public boost::iterator_facade<
+			Normalizer, CodePoint, std::bidirectional_iterator_tag> {
 		public:
 			/// Normalization forms.
 			enum Form {
@@ -57,30 +58,30 @@ namespace ascension {
 			static String normalize(CodePoint c, Form form);
 			static String normalize(const CharacterIterator& text, Form form);
 			// methods
-			/// Returns the current character in the normalized text.
-			const CodePoint& current() const /*throw()*/ {return normalizedBuffer_[indexInBuffer_];}
-			/// Returns true if both iterators address the same character in the normalized text.
-			bool equals(const Normalizer& other) const /*throw()*/ {
-				return /*current_->isCloneOf(*other.current_)
-					&&*/ current_->offset() == other.current_->offset()
-					&& indexInBuffer_ == other.indexInBuffer_;
-			}
-			/// Moves to the next normalized character.
-			Normalizer& next() {
-				if(!hasNext())
-					throw std::out_of_range("the iterator is the last.");
-				else if(++indexInBuffer_ == normalizedBuffer_.length())
-					nextClosure(Direction::FORWARD, false);
-				return *this;
-			}
 			/// Moves to the previous normalized character.
-			Normalizer& previous() {
+			Normalizer& decrement() {
 				if(!hasPrevious())
 					throw std::out_of_range("the iterator is the first");
 				else if(indexInBuffer_ == 0)
 					nextClosure(Direction::BACKWARD, false);
 				else
 					--indexInBuffer_;
+				return *this;
+			}
+			/// Returns the current character in the normalized text.
+			const CodePoint& dereference() const /*throw()*/ {return normalizedBuffer_[indexInBuffer_];}
+			/// Returns true if both iterators address the same character in the normalized text.
+			bool equal(const Normalizer& other) const /*throw()*/ {
+				return /*current_->isCloneOf(*other.current_)
+					&&*/ current_->offset() == other.current_->offset()
+					&& indexInBuffer_ == other.indexInBuffer_;
+			}
+			/// Moves to the next normalized character.
+			Normalizer& increment() {
+				if(!hasNext())
+					throw std::out_of_range("the iterator is the last.");
+				else if(++indexInBuffer_ == normalizedBuffer_.length())
+					nextClosure(Direction::FORWARD, false);
 				return *this;
 			}
 		private:

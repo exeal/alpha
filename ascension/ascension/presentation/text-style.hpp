@@ -4,12 +4,12 @@
  * @date 2003-2006 was LineLayout.h
  * @date 2006-2011 was presentation.hpp
  * @date 2011-05-04 separated from presentation.hpp
+ * @date 2012
  */
 
 #ifndef ASCENSION_TEXT_STYLE_HPP
 #define ASCENSION_TEXT_STYLE_HPP
 
-#include <ascension/corelib/standard-iterator-adapter.hpp>
 #include <ascension/graphics/color.hpp>	// graphics.Color
 #include <ascension/graphics/font.hpp>	// graphics.font.FontProperties, ...
 #include <ascension/graphics/paint.hpp>	// graphics.Paint
@@ -17,6 +17,7 @@
 #include <ascension/presentation/length.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <map>
+#include <boost/iterator/iterator_facade.hpp>
 #include <boost/optional.hpp>
 
 namespace ascension {
@@ -238,23 +239,19 @@ namespace ascension {
 		 *
 		 * @see StyledTextRunIterator
 		 */
-		class StyledTextRunEnumerator : public detail::IteratorAdapter<
-			StyledTextRunEnumerator,
-			std::iterator<
-				std::input_iterator_tag,
-				std::pair<Range<Index>, std::shared_ptr<const TextRunStyle>>,
-				std::ptrdiff_t,
-				std::pair<Range<Index>, std::shared_ptr<const TextRunStyle>>*,
-				std::pair<Range<Index>, std::shared_ptr<const TextRunStyle>>
-			>
+		class StyledTextRunEnumerator : public boost::iterator_facade<
+			StyledTextRunEnumerator, std::pair<Range<Index>, std::shared_ptr<const TextRunStyle>>,
+			std::input_iterator_tag, std::pair<Range<Index>, std::shared_ptr<const TextRunStyle>>,
+			std::ptrdiff_t
 		> {
 		public:
 			StyledTextRunEnumerator();
 			StyledTextRunEnumerator(std::unique_ptr<StyledTextRunIterator> sourceIterator, Index end);
 		private:
-			const reference current() const;
-			bool equals(const StyledTextRunEnumerator& other) const /*throw()*/;
-			void next();
+			friend class boost::iterator_core_access;
+			const reference dereference() const;
+			bool equal(const StyledTextRunEnumerator& other) const /*throw()*/;
+			void increment();
 		private:
 			std::unique_ptr<StyledTextRunIterator> iterator_;
 			boost::optional<StyledTextRun> current_, next_;

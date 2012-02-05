@@ -4,6 +4,7 @@
  * @date 2003-2006 (was EditDoc.h)
  * @date 2006-2010 (was document.hpp)
  * @date 2010-11-06 separated from document.hpp
+ * @date 2012
  */
 
 #ifndef ASCENSION_DOCUMENT_CHARACTER_ITERATOR_HPP
@@ -11,7 +12,7 @@
 
 #include <ascension/kernel/document.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>	// text.CharacterIterator
-#include <ascension/corelib/standard-iterator-adapter.hpp>	// detail.IteratorAdapter
+#include <boost/iterator/iterator_facade.hpp>
 
 namespace ascension {
 
@@ -19,10 +20,9 @@ namespace ascension {
 
 		class DocumentCharacterIterator :
 			public text::CharacterIterator,
-			public detail::IteratorAdapter<
-				DocumentCharacterIterator,
-				std::iterator<std::bidirectional_iterator_tag,
-				CodePoint, std::ptrdiff_t, const CodePoint*, const CodePoint>
+			public boost::iterator_facade<
+				DocumentCharacterIterator, CodePoint,
+				std::bidirectional_iterator_tag, const CodePoint, std::ptrdiff_t
 			> {
 		public:
 			// constructors
@@ -52,6 +52,12 @@ namespace ascension {
 			bool doLess(const CharacterIterator& other) const;
 			void doNext();
 			void doPrevious();
+			// boost.iterator_facade
+			friend class boost::iterator_core_access;
+			CodePoint dereference() const {return current();}
+			void decrement() {previous();}
+			bool equal(const DocumentCharacterIterator& other) const {return equals(other);}
+			void increment() {next();}
 		private:
 			static const ConcreteTypeTag CONCRETE_TYPE_TAG_;
 			const Document* document_;

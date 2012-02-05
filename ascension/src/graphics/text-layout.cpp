@@ -1661,10 +1661,8 @@ inline int TextLayout::TextRun::x(Index at, bool trailing) const {
 
 namespace {
 	class InlineProgressionDimensionRangeIterator :
-		public detail::IteratorAdapter<
-			InlineProgressionDimensionRangeIterator, iterator<
-				input_iterator_tag, Range<Scalar>, ptrdiff_t, Range<Scalar>*, Range<Scalar>
-			>
+		public boost::iterator_facade<InlineProgressionDimensionRangeIterator,
+			Range<Scalar>, input_iterator_tag, Range<Scalar>, ptrdiff_t
 		> {
 	public:
 		InlineProgressionDimensionRangeIterator() /*throw()*/ : currentRun_(nullptr), lastRun_(nullptr) {}
@@ -1672,22 +1670,23 @@ namespace {
 			const Range<const TextLayout::TextRun* const*>& textRuns, const Range<Index>& characterRange,
 			ReadingDirection scanningDirection, Scalar initialIpd);
 		const Range<Index> characterRange() const /*throw()*/ {return characterRange_;}
-		Range<Scalar> current() const;
-		bool equals(const InlineProgressionDimensionRangeIterator& other) const /*throw()*/ {
+		Range<Scalar> dereference() const;
+		bool equal(const InlineProgressionDimensionRangeIterator& other) const /*throw()*/ {
 			if(currentRun_ == nullptr)
 				return other.isDone();
 			else if(other.currentRun_ == nullptr)
 				return isDone();
 			return currentRun_ == other.currentRun_;
 		}
-		void next() {return doNext(false);}
+		void increment() {return next(false);}
 		ReadingDirection scanningDirection() const /*throw()*/ {
 			return (currentRun_ <= lastRun_) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;
 		}
 	private:
-		void doNext(bool initializing);
+		void next(bool initializing);
 		bool isDone() const /*throw()*/ {return currentRun_ == lastRun_;}
 	private:
+		friend class boost::iterator_core_access;
 		/*const*/ Range<Index> characterRange_;
 		const TextLayout::TextRun* const* currentRun_;
 		const TextLayout::TextRun* const* /*const*/ lastRun_;
@@ -1701,10 +1700,10 @@ InlineProgressionDimensionRangeIterator::InlineProgressionDimensionRangeIterator
 		currentRun_((direction == LEFT_TO_RIGHT) ? textRuns.beginning() - 1 : textRuns.end()),
 		lastRun_((direction == LEFT_TO_RIGHT) ? textRuns.end() : textRuns.beginning() - 1),
 		ipd_(initialIpd) {
-	doNext(true);
+	next(true);
 }
 
-Range<Scalar> InlineProgressionDimensionRangeIterator::current() const {
+Range<Scalar> InlineProgressionDimensionRangeIterator::dereference() const {
 	if(isDone())
 		throw NoSuchElementException();
 	assert(intersects(**currentRun_, characterRange()));
@@ -1725,7 +1724,7 @@ Range<Scalar> InlineProgressionDimensionRangeIterator::current() const {
 	return Range<Scalar>(start + ipd_, end + ipd_);
 }
 
-void InlineProgressionDimensionRangeIterator::doNext(bool initializing) {
+void InlineProgressionDimensionRangeIterator::next(bool initializing) {
 	if(isDone())
 		throw NoSuchElementException();
 	const TextLayout::TextRun* const* nextRun = currentRun_;

@@ -1254,10 +1254,10 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()
 			} else if(((i + 1 < c) ? partitions_[i + 1]->start : doc.region().end()) <= change.erasedRegion().end()) {
 				// this partition is encompassed with the deleted region
 				delete partitions_[i];
-				partitions_.erase(i);
+				partitions_.erase(partitions_.begin() + i);
 				if(i < c - 1 && partitions_[i]->contentType == partitions_[i - 1]->contentType) {
 					delete partitions_[i];
-					partitions_.erase(i);
+					partitions_.erase(partitions_.begin() + i);
 					--c;
 				}
 				--i;
@@ -1345,7 +1345,7 @@ void LexicalPartitioner::doInstall() /*throw()*/ {
 	for(size_t i = 0, c = partitions_.size(); i < c; ++i)
 		delete partitions_[i];
 	partitions_.clear();
-	partitions_.insert(0, new Partition(DEFAULT_CONTENT_TYPE, Position(0, 0), Position(0, 0), 0));
+	partitions_.insert(partitions_.begin(), new Partition(DEFAULT_CONTENT_TYPE, Position(0, 0), Position(0, 0), 0));
 	Region dummy;
 	const Region entire(document()->region());
 	computePartitioning(entire.first, entire.second, dummy);
@@ -1367,24 +1367,23 @@ void LexicalPartitioner::dump() const {
 // erases partitions encompassed with the region between the given two positions.
 void LexicalPartitioner::erasePartitions(const Position& first, const Position& last) {
 	// locate the first partition to delete
-	size_t deletedFirst = partitionAt(first) - partitions_.begin();
-	if(first >= partitions_[deletedFirst]->getTokenEnd())
+	detail::GapVector<Partition*>::const_iterator deletedFirst(partitionAt(first));
+	if(first >= (*deletedFirst)->getTokenEnd())
 		++deletedFirst;	// do not delete this partition
 //	else if(deletedFirst < partitions_.getSize() - 1 && partitions_[deletedFirst + 1]->tokenStart < change.getRegion().getBottom())
 //		++deletedFirst;	// delete from the next partition
 	// locate the last partition to delete
-	size_t deletedLast = partitionAt(last) - partitions_.begin() + 1;	// exclusive
-	if(deletedLast < partitions_.size() && partitions_[deletedLast]->tokenStart < last)
+	detail::GapVector<Partition*>::const_iterator deletedLast(partitionAt(last) + 1);	// exclusive
+	if(deletedLast < partitions_.end() && (*deletedLast)->tokenStart < last)
 		++deletedLast;
 //	else if(titions_[predeletedLast - 1]->start == change.getRegion().getBottom())
 //		--deletedLast;
 	if(deletedLast > deletedFirst) {
-		if(deletedFirst > 0 && deletedLast < partitions_.size()
-				&& partitions_[deletedFirst - 1]->contentType == partitions_[deletedLast]->contentType)
+		if(deletedFirst > partitions_.begin() && deletedLast < partitions_.end()
+				&& (*(deletedFirst - 1))->contentType == (*deletedLast)->contentType)
 			++deletedLast;	// combine
-		for(size_t i = deletedFirst; i < deletedLast; ++i)
-			delete partitions_[i];
-		partitions_.erase(deletedFirst, deletedLast - deletedFirst);
+		for_each(deletedFirst, deletedLast, default_delete<Partition>());
+		partitions_.erase(deletedFirst, deletedLast);
 	}
 
 	// push a default partition if no partition includes the start of the document
@@ -1392,7 +1391,7 @@ void LexicalPartitioner::erasePartitions(const Position& first, const Position& 
 	if(partitions_.empty() || partitions_[0]->start != d.region().first) {
 		if(partitions_.empty() || partitions_[0]->contentType != DEFAULT_CONTENT_TYPE) {
 			const Position bob(d.region().first);
-			partitions_.insert(0, new Partition(DEFAULT_CONTENT_TYPE, bob, bob, 0));
+			partitions_.insert(partitions_.begin(), new Partition(DEFAULT_CONTENT_TYPE, bob, bob, 0));
 		} else {
 			partitions_[0]->start = partitions_[0]->tokenStart = d.region().first;
 			partitions_[0]->tokenLength = 0;
@@ -1402,7 +1401,7 @@ void LexicalPartitioner::erasePartitions(const Position& first, const Position& 
 	// delete the partition whose start position is the end of the document
 	if(partitions_.size() > 1 && partitions_.back()->start == d.region().second) {
 		delete partitions_[partitions_.size() - 1];
-		partitions_.erase(partitions_.size() - 1);
+		partitions_.erase(partitions_.end() - 1);
 	}
 }
 

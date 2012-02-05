@@ -9,11 +9,11 @@
 
 #ifndef ASCENSION_CHARACTER_ITERATOR_HPP
 #define ASCENSION_CHARACTER_ITERATOR_HPP
-#include <ascension/corelib/standard-iterator-adapter.hpp>
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/utf.hpp>
 #include <iterator>
 #include <stdexcept>
+#include <boost/iterator/iterator_facade.hpp>
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #error These class definitions and implementations are based on old version of Unicode.
@@ -139,11 +139,9 @@ namespace ascension {
 		 */
 		class StringCharacterIterator :
 			public CharacterIterator,
-			public detail::IteratorAdapter<
-				StringCharacterIterator, std::iterator<
-					std::bidirectional_iterator_tag,
-					CodePoint, std::ptrdiff_t, CodePoint*, const CodePoint
-				>
+			public boost::iterator_facade<
+				StringCharacterIterator, CodePoint,
+				std::bidirectional_iterator_tag, const CodePoint, std::ptrdiff_t
 			> {
 		public:
 			StringCharacterIterator() /*throw()*/;
@@ -178,6 +176,12 @@ namespace ascension {
 			bool doLess(const CharacterIterator& other) const;
 			void doNext();
 			void doPrevious();
+			// boost.iterator_facade
+			friend class boost::iterator_core_access;
+			CodePoint dereference() const {return current();}
+			void decrement() {previous();}
+			bool equal(const StringCharacterIterator& other) const {return equals(other);}
+			void increment() {next();}
 		private:
 			static const ConcreteTypeTag CONCRETE_TYPE_TAG_;
 			const Char* current_;
