@@ -1,7 +1,6 @@
 /**
  * @file memory.hpp
  * This file provides the following classes:
- * - AutoBuffer
  * - MemoryPool
  * - FastArenaObject
  * @author exeal
@@ -138,7 +137,7 @@ namespace ascension {
 		}
 	private:
 		struct Chunk {Chunk* next;};
-		enum {NUMBER_OF_CHUNKS_TO_EXPAND_AT_ONCE = 32};
+		static const int NUMBER_OF_CHUNKS_TO_EXPAND_AT_ONCE = 32;
 		const std::size_t chunkSize_;
 		Chunk* chunks_;
 	};

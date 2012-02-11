@@ -12,6 +12,7 @@
 
 #include <ascension/config.hpp>	// ASCENSION_FILE_NAME_CHARACTER_TYPE
 #include <ascension/platforms.hpp>
+#include <ascension/corelib/future.hpp>
 #ifdef ASCENSION_HAS_CSTDINT
 #	if defined(ASCENSION_OS_AIX) || defined(ASCENSION_OS_BSD4) || defined(ASCENSION_OS_HPUX)
 #		include <inttypes.h>
@@ -38,11 +39,6 @@
 /// Version of Unicode we're tracking
 #define ASCENSION_UNICODE_VERSION 0x0510	// 5.1.0
 
-/// Returns the number of the elements of the given array.
-#define ASCENSION_COUNTOF(array) (sizeof(array) / sizeof((array)[0]))
-/// Returns the end of the given array.
-#define ASCENSION_ENDOF(array) ((array) + ASCENSION_COUNTOF(array))
-
 /// Makes the specified class unassignable. Used in class definition.
 #define ASCENSION_UNASSIGNABLE_TAG(className) private: className& operator=(const className&)
 /// Makes the specified class uncopyable. Used in class definition
@@ -52,15 +48,7 @@ namespace ascension {
 
 	namespace detail {
 		struct NullDeleter {void operator()(const void*) {}};
-		template<unsigned> struct StaticAssertTest {};
-		template<int> struct StaticAssertionFailureAtLine;
-		template<> struct StaticAssertionFailureAtLine<-1> {};
 	} // namespace detail
-
-	#define ASCENSION_STATIC_ASSERT(expression)														\
-		typedef ascension::detail::StaticAssertTest<												\
-			sizeof(ascension::detail::StaticAssertionFailureAtLine<(expression) ? -1 : __LINE__>)	\
-		> oh_static_assertion_shippaidayo_orz
 
 	// sized integer types
 #if defined(ASCENSION_HAS_CSTDINT)

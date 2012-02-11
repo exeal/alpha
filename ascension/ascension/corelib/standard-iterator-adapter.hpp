@@ -7,6 +7,7 @@
 
 #ifndef ASCENSION_STANDARD_ITERATOR_ADAPTER_HPP
 #define ASCENSION_STANDARD_ITERATOR_ADAPTER_HPP
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 #include <iterator>	// std.iterator, std.iterator_traits
 
 namespace ascension {
@@ -209,4 +210,5 @@ namespace ascension {
 	}
 } // namespace ascension.detail
 
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 #endif // !ASCENSION_STANDARD_ITERATOR_ADAPTER_HPP
