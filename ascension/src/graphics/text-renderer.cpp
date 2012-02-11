@@ -1061,47 +1061,40 @@ void TextViewport::scrollTo(const VisualLine& line, Index ipd, viewers::base::Wi
 // free functions /////////////////////////////////////////////////////////////////////////////////
 
 /**
- * Returns the indentation of the specified visual line from the left most.
+ * Returns distance from the edge of content-area to the edge of the specified visual line in
+ * pixels. The edges are the start side of @a layout (ex. left if left-to-right, bottom if
+ * bottom-to-top).
  * @param layout The layout of the line
- * @param contentMeasure The measure of 'content-rectangle' of the viewport
+ * @param contentMeasure The measure of 'content-rectangle' of the content-area in pixels
  * @param subline The visual subline number
  * @return The indentation in pixels
  * @throw IndexOutOfBoundsException @a subline is invalid
+ * @see font#lineStartEdge
  */
-Scalar font::lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline /* = nullptr */) {
-	const detail::PhysicalTextAnchor alignment =
-		detail::computePhysicalTextAnchor(layout.anchor(), layout.writingMode().inlineFlowDirection);
-	if(alignment == detail::LEFT /*|| ... != NO_JUSTIFICATION*/)	// TODO: recognize the last subline of a justified line.
-		return 0;
-	else {
-		switch(alignment) {
-			case detail::RIGHT:
-				return contentMeasure - layout.measure(subline);
-			case detail::MIDDLE:
-				return (contentMeasure - layout.measure(subline)) / 2;
-			default:
-				ASCENSION_ASSERT_NOT_REACHED();
-		}
+Scalar font::lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline /* = 0 */) {
+	switch(layout.anchor()) {
+		case TEXT_ANCHOR_START:
+			return 0;
+		case TEXT_ANCHOR_MIDDLE:
+			return (contentMeasure - layout.measure(subline)) / 2;
+		case TEXT_ANCHOR_END:
+			return contentMeasure - layout.measure(subline);
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
 	}
 }
 
 /**
- * Returns distance from left/top-edge of the content-area to start-edge of the specified line in
+ * Returns distance from left/top-edge of the content-area to 'start-edge' of the specified line in
  * pixels.
  * @param layout The layout of the line
+ * @param contentMeasure The measure of 'content-rectangle' of the content-area in pixels
+ * @param subline The visual subline number
  * @return Distance from left/top-edge of the content-area to start-edge of @a line in pixels
- * @see TextLayout#lineStartEdge, TextViewer#inlineProgressionOffsetInViewport
+ * @throw IndexOutOfBoundsException @a subline is invalid
+ * @see font#lineIndent, TextLayout#lineStartEdge, TextViewer#inlineProgressionOffsetInViewport
  */
-Scalar font::lineStartEdge(const TextLayout& layout, Scalar contentMeasure) {
-	const bool ltr = layout.writingMode().inlineFlowDirection == LEFT_TO_RIGHT;
-	switch(layout.anchor()) {
-		case TEXT_ANCHOR_START:
-			return ltr ? 0 : contentMeasure;
-		case TEXT_ANCHOR_MIDDLE:
-			return ltr ? (contentMeasure - layout.measure(0) / 2) : (contentMeasure + layout.measure(0)) / 2;
-		case TEXT_ANCHOR_END:
-			return ltr ? contentMeasure - layout.measure(0) : layout.measure(0);
-		default:
-			ASCENSION_ASSERT_NOT_REACHED();
-	}
+Scalar font::lineStartEdge(const TextLayout& layout, Scalar contentMeasure, Index subline /* = 0 */) {
+	const Scalar indent = lineIndent(layout, contentMeasure, subline);
+	return (layout.writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? indent : contentMeasure - indent;
 }

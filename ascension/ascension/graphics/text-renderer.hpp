@@ -268,7 +268,7 @@ namespace ascension {
 				const NativePoint& pointInView, TextLayout::Edge edge,
 				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
 			Scalar lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline = 0);
-			Scalar lineStartEdge(const TextLayout& layout, Scalar contentMeasure);
+			Scalar lineStartEdge(const TextLayout& layout, Scalar contentMeasure, Index subline = 0);
 
 
 			/// Returns the primary font.
