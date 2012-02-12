@@ -843,7 +843,7 @@ void Document::setPartitioner(unique_ptr<DocumentPartitioner> newPartitioner) /*
  * @see #property
  */
 void Document::setProperty(const DocumentPropertyKey& key, const String& property) {
-	map<const DocumentPropertyKey*, String*>::iterator i(properties_.find(&key));
+	map<const DocumentPropertyKey*, unique_ptr<String>>::iterator i(properties_.find(&key));
 	if(i == properties_.end())
 		properties_.insert(make_pair(&key, new String(property)));
 	else

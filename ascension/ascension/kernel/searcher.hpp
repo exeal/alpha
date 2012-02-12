@@ -17,6 +17,7 @@
 #include <array>
 #include <list>
 #include <stack>
+#include <vector>
 
 namespace ascension {
 
@@ -40,7 +41,6 @@ namespace ascension {
 				, std::unique_ptr<const text::Collator> collator = std::unique_ptr<const text::Collator>()
 #endif // !ASCENSION_NO_UNICODE_COLLATION
 );
-			~LiteralPattern() /*throw()*/;
 			// attributes
 			bool isCaseSensitive() const /*throw()*/;
 			const String& pattern() const /*throw()*/;
@@ -59,8 +59,7 @@ namespace ascension {
 #endif // !ASCENSION_NO_UNICODE_COLLATION
 			std::array<std::ptrdiff_t, 65536> lastOccurences_;	// for forward search
 			std::array<std::ptrdiff_t, 65536> firstOccurences_;	// for backward search
-			int* first_;	// collation elements of the pattern
-			int* last_;
+			std::vector<int> collationElements_;	// collation elements of the pattern
 		};
 
 		/**

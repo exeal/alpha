@@ -3,7 +3,7 @@
  * Defines @c ascension#kernel#fileio namespace.
  * @author exeal
  * @date 2009 separated from document.hpp
- * @date 2009-2011
+ * @date 2009-2012
  */
 
 #ifndef ASCENSION_FILEIO_HPP
@@ -246,7 +246,7 @@ namespace ascension {
 			private:
 				std::shared_ptr<TextFileDocumentInput> weakSelf_;	// for Document.setInput call
 				class FileLocker;
-				FileLocker* fileLocker_;
+				std::unique_ptr<FileLocker> fileLocker_;
 				Document& document_;
 				PathString fileName_;
 				std::string encoding_;

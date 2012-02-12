@@ -116,7 +116,6 @@ Caret::~Caret() /*throw()*/ {
 		textViewer().removeDisplaySizeListener(*this);
 		textViewer().removeViewportListener(*this);
 	}
-	delete anchor_;
 }
 
 /// @see VisualPoint#aboutToMove

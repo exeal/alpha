@@ -8,6 +8,7 @@
 #ifndef ASCENSION_FUTURE_HPP
 #define ASCENSION_FUTURE_HPP
 
+#include <cstddef>
 //#include <ascension/config.hpp>
 //#include <ascension/platforms.hpp>
 
