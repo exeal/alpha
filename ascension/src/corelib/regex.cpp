@@ -1,7 +1,7 @@
 /**
  * @file regex.cpp
  * @author exeal
- * @date 2006-2011
+ * @date 2006-2012
  */
 
 #ifndef ASCENSION_NO_REGEX
@@ -43,16 +43,18 @@ namespace {
 		 */
 		Migemo(const string& runtimeFileName, const string& dictionaryPathName) :
 				detail::SharedLibrary<CMigemo>(runtimeFileName.c_str()),
-				instance_(nullptr), lastNativePattern_(nullptr), lastPattern_(nullptr) {
+				instance_(), lastNativePattern_(nullptr), lastPattern_(nullptr) {
 			if(dictionaryPathName.empty())
 				throw invalid_argument("Dictionary path name is empty.");
-			CMigemo::Procedure<0>::signature migemoOpen;
-			CMigemo::Procedure<4>::signature migemoLoad;
-			CMigemo::Procedure<6>::signature migemoSetOperator;
-			if((migemoOpen = get<0>()) && (migemoQuery_ = get<2>())
-					&& (migemoRelease_ = get<3>()) && (migemoLoad = get<4>())
-					&& (migemoSetOperator = get<6>())) {
-				if(nullptr != (instance_ = migemoOpen(0))) {
+			CMigemo::Procedure<0>::signature migemoOpen = get<0>();
+			CMigemo::Procedure<1>::signature migemoClose = get<1>();
+			CMigemo::Procedure<4>::signature migemoLoad = get<4>();
+			CMigemo::Procedure<6>::signature migemoSetOperator = get<6>();
+			if((migemoOpen != nullptr) && (migemoQuery_ = get<2>())
+					&& (migemoRelease_ = get<3>()) && (migemoLoad != nullptr)
+					&& (migemoSetOperator = nullptr)) {
+				instance_.reset(migemoOpen(0), ptr_fun(migemoClose));
+				if(instance_.get() != nullptr) {
 					// load dictionaries
 					size_t directoryLength = dictionaryPathName.length();
 					if(dictionaryPathName[directoryLength - 1] != '/'
@@ -63,64 +65,59 @@ namespace {
 					if(directoryLength != dictionaryPathName.length())
 						strcat(pathName.get(), "/");
 					strcpy(pathName.get() + directoryLength, "migemo-dict");
-					migemoLoad(instance_, MIGEMO_DICTID_MIGEMO, pathName.get());
+					migemoLoad(instance_.get(), MIGEMO_DICTID_MIGEMO, pathName.get());
 					strcpy(pathName.get() + directoryLength, "roma2hira.dat");
-					migemoLoad(instance_, MIGEMO_DICTID_ROMA2HIRA, pathName.get());
+					migemoLoad(instance_.get(), MIGEMO_DICTID_ROMA2HIRA, pathName.get());
 					strcpy(pathName.get() + directoryLength, "hira2kata.dat");
-					migemoLoad(instance_, MIGEMO_DICTID_HIRA2KATA, pathName.get());
+					migemoLoad(instance_.get(), MIGEMO_DICTID_HIRA2KATA, pathName.get());
 					strcpy(pathName.get() + directoryLength, "han2zen.dat");
-					migemoLoad(instance_, MIGEMO_DICTID_HAN2ZEN, pathName.get());
+					migemoLoad(instance_.get(), MIGEMO_DICTID_HAN2ZEN, pathName.get());
 					// define some operators
-					migemoSetOperator(instance_, MIGEMO_OPINDEX_OR,
+					migemoSetOperator(instance_.get(), MIGEMO_OPINDEX_OR,
 						const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>("|")));
-					migemoSetOperator(instance_, MIGEMO_OPINDEX_NEST_IN,
+					migemoSetOperator(instance_.get(), MIGEMO_OPINDEX_NEST_IN,
 						const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>("(")));
-					migemoSetOperator(instance_, MIGEMO_OPINDEX_NEST_OUT,
+					migemoSetOperator(instance_.get(), MIGEMO_OPINDEX_NEST_OUT,
 						const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(")")));
-					migemoSetOperator(instance_, MIGEMO_OPINDEX_SELECT_IN,
+					migemoSetOperator(instance_.get(), MIGEMO_OPINDEX_SELECT_IN,
 						const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>("[")));
-					migemoSetOperator(instance_, MIGEMO_OPINDEX_SELECT_OUT,
+					migemoSetOperator(instance_.get(), MIGEMO_OPINDEX_SELECT_OUT,
 						const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>("]")));
 				}
 			}
 		}
-		/// Destructor.
-		~Migemo() throw() {
-			releasePatterns();
-			if(instance_ != nullptr) {
-				if(CMigemo::Procedure<1>::signature migemoClose = get<1>())
-					migemoClose(instance_);
-			}
-		}
-		/// @see #query(const Char*, const Char*, size_t&)
-		const unsigned char* query(const unsigned char* text) {
+		/// @see #query(const StringPiece&, size_t&)
+		shared_ptr<const unsigned char> query(const unsigned char* text) {
 			if(text == nullptr)
-				throw invalid_argument("Invalid text.");
+				throw NullPointerException("text");
 			else if(!isEnable())
-				return nullptr;
-			if(lastNativePattern_ != nullptr)
-				migemoRelease_(instance_, lastNativePattern_);
-			lastNativePattern_ = migemoQuery_(instance_, const_cast<unsigned char*>(text));
-			return reinterpret_cast<unsigned char*>(lastNativePattern_);
+				throw IllegalStateException("not enable");
+			shared_ptr<unsigned char> nativePattern(
+				migemoQuery_(instance_.get(), const_cast<unsigned char*>(text)), bind1st(ptr_fun(migemoRelease_), instance_.get()));
+			if(nativePattern.get() == nullptr)
+				throw runtime_error("migemo_query returned null.");
+			return lastNativePattern_ = nativePattern;
 		}
 		/**
 		 * Transforms the specified text into the corresponding regular expression.
-		 * @param first The source text (in native Japanese encoding)
-		 * @param last The end of the source text
+		 * @param s The source text (in native Japanese encoding)
 		 * @param[out] outputLength The length of the regular expression includes @c null
-		 * @return The regular expression or @c null if failed
+		 * @return The regular expression
+		 * @throw IllegalStateException @c #isEnable returned @c false
 		 * @throw NullPointerException @a s is @c null
+		 * @throw encoding#UnsupportedEncoding The internal encoding failed
+		 * @throw std#runtime_error 
 		 */
-		const Char* query(const StringPiece& s, size_t& outputLength) {
+		const String& query(const StringPiece& s, size_t& outputLength) {
 			if(!isEnable())
-				return nullptr;
+				throw IllegalStateException("not enable");
 			else if(s.beginning() == nullptr)
 				throw NullPointerException("s");
 
 			// convert the source text from UTF-16 to native Japanese encoding
 			unique_ptr<encoding::Encoder> encoder(encoding::Encoder::forMIB(encoding::standard::SHIFT_JIS));
 			if(encoder.get() == nullptr)
-				return nullptr;
+				throw encoding::UnsupportedEncodingException("Shift_JIS is not supported in this platform.");
 			else {
 				size_t bufferLength = encoder->properties().maximumNativeBytes() * length(s);
 				unique_ptr<Byte[]> buffer(new Byte[bufferLength + 1]);
@@ -129,48 +126,36 @@ namespace {
 				if(encoding::Encoder::COMPLETED != encoder->fromUnicode(buffer.get(),
 						buffer.get() + bufferLength, toNext,
 						s.beginning(), s.end(), fromNext), encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTERS)
-					return nullptr;
+					throw encoding::UnsupportedEncodingException("internal encoding failed.");
 				*toNext = 0;
-				query(buffer.get());
-				if(lastNativePattern_ == nullptr)
-					return nullptr;
+				query(buffer.get());	// may throw std.runtime_error
 			}
 
 			// convert the result pattern from native Japanese encoding to UTF-16
-			const size_t nativePatternLength = strlen(reinterpret_cast<char*>(lastNativePattern_));
-			outputLength = encoder->properties().maximumUCSLength() * (nativePatternLength + 1);
-			delete[] lastPattern_;
-			lastPattern_ = new Char[outputLength];
+			const size_t nativePatternLength = strlen(reinterpret_cast<const char*>(lastNativePattern_.get()));
+			unique_ptr<Char[]> pattern(new Char[outputLength = encoder->properties().maximumUCSLength() * (nativePatternLength + 1)]);
 			Char* toNext;
 			const Byte* fromNext;
 			encoder->setSubstitutionPolicy(encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTERS).toUnicode(
-				lastPattern_, lastPattern_ + outputLength, toNext, lastNativePattern_, lastNativePattern_ + nativePatternLength, fromNext);
-			outputLength = toNext - lastPattern_;
+				pattern.get(), pattern.get() + outputLength, toNext, lastNativePattern_.get(), lastNativePattern_.get() + nativePatternLength, fromNext);
+			outputLength = toNext - pattern.get();
+			lastPattern_ = pattern.get();
 			return lastPattern_;
-		}
-		/// Releases the pattern explicitly.
-		void releasePatterns() throw() {
-			if(lastNativePattern_ != nullptr) {
-				migemoRelease_(instance_, reinterpret_cast<unsigned char*>(lastNativePattern_));
-				lastNativePattern_ = nullptr;
-			}
-			delete[] lastPattern_;
-			lastPattern_ = nullptr;
 		}
 		/// Returns true if the library is enable.
 		bool isEnable() const {
 			if(instance_ == nullptr)
 				return false;
 			else if(CMigemo::Procedure<5>::signature migemoIsEnable = get<5>())
-				return migemoIsEnable(instance_) != 0;
+				return migemoIsEnable(instance_.get()) != 0;
 			return false;
 		}
 	private:
-		migemo* instance_;
+		shared_ptr<migemo> instance_;
 		CMigemo::Procedure<2>::signature migemoQuery_;
 		CMigemo::Procedure<3>::signature migemoRelease_;
-		unsigned char* lastNativePattern_;
-		Char* lastPattern_;
+		shared_ptr<const unsigned char> lastNativePattern_;
+		String lastPattern_;
 	};
 	unique_ptr<Migemo> migemoLib;
 } // namespace @0
@@ -564,9 +549,9 @@ unique_ptr<const MigemoPattern> MigemoPattern::compile(const StringPiece& patter
 	install();
 	if(isMigemoInstalled()) {
 		size_t len;
-		const Char* const p = migemoLib->query(pattern, len);
+		const String& p = migemoLib->query(pattern, len);
 		using namespace boost::regex_constants;
-		return unique_ptr<const MigemoPattern>(new MigemoPattern(StringPiece(p, len), caseSensitive));
+		return unique_ptr<const MigemoPattern>(new MigemoPattern(p, caseSensitive));
 	} else
 		return unique_ptr<const MigemoPattern>();
 }

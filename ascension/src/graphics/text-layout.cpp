@@ -969,7 +969,7 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 #define ASCENSION_SPLIT_LAST_RUN()												\
 	while(runs.back()->length() > MAXIMUM_RUN_LENGTH) {							\
 		TextRun& back = *runs.back();											\
-		TextRun* piece = new SimpleRun(back.style);								\
+		unique_ptr<TextRun> piece(new SimpleRun(back.style));					\
 		Index pieceLength = MAXIMUM_RUN_LENGTH;									\
 		if(surrogates::isLowSurrogate(line[back.offsetInLine + pieceLength]))	\
 			--pieceLength;														\
@@ -977,7 +977,7 @@ void TextLayout::TextRun::mergeScriptsAndStyles(
 		piece->offsetInLine = back.offsetInLine + pieceLength;					\
 		piece->setLength(back.length() - pieceLength);							\
 		back.setLength(pieceLength);											\
-		runs.push_back(piece);													\
+		runs.push_back(piece.release());										\
 	}
 
 	pair<vector<TextRun*>, vector<const StyledTextRun>> results;

@@ -270,6 +270,7 @@
     <ClCompile Include="..\..\ascension\src\corelib\regex.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\ascension\ascension\corelib\future.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\listeners.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\native-object.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\range.hpp" />

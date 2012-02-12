@@ -148,7 +148,8 @@ namespace ascension {
 			private:
 				using kernel::Point::adaptToDocument;
 				boost::optional<kernel::Position> positionBeforeUpdate_;
-			} * anchor_;
+			};
+			std::unique_ptr<SelectionAnchor> anchor_;
 #ifdef ASCENSION_OS_WINDOWS
 			LCID clipboardLocale_;
 #endif // SCENSION_OS_WIND

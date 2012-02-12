@@ -643,6 +643,9 @@
     <ClInclude Include="..\..\ascension\ascension\presentation\inheritable.hpp">
       <Filter>ascension\Header Files\presentation</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\future.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">

@@ -104,7 +104,7 @@ namespace ascension {
 			virtual void aboutToMove(kernel::Position& to);
 			virtual void moved(const kernel::Position& from) /*throw()*/;
 		private:
-			void updateLastX();
+			void rememberPositionInVisualLine();
 			void viewerDisposed() /*throw()*/;
 			// layout.VisualLinesListener
 			void visualLinesDeleted(const Range<Index>& lines, Index sublines, bool longestLineChanged) /*throw()*/;
@@ -114,8 +114,8 @@ namespace ascension {
 
 		private:
 			TextViewer* viewer_;
-			boost::optional<graphics::Scalar> lastX_;	// distance from left edge and saved during crossing visual lines
-			bool crossingLines_;						// true only when the point is moving across the different lines
+			boost::optional<graphics::Scalar> positionInVisualLine_;	// see rememberPositionInVisualLine
+			bool crossingLines_;	// true only when the point is moving across the different lines
 			struct LineNumberCaches {
 				Index visualLine, visualSubline;
 			};

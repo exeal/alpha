@@ -226,11 +226,11 @@ public:
 private:
 	void commitPendingChange(bool beginCompound);
 	Document& document_;
-	stack<UndoableChange*> undoableChanges_, redoableChanges_;
+	stack<unique_ptr<UndoableChange>> undoableChanges_, redoableChanges_;
 	unique_ptr<AtomicChange> pendingAtomicChange_;
 	size_t compoundChangeDepth_;
 	bool rollbacking_;
-	CompoundChange* rollbackingChange_;
+	unique_ptr<CompoundChange> rollbackingChange_;
 	CompoundChange* currentCompoundChange_;
 };
 
@@ -253,28 +253,22 @@ void Document::UndoManager::addUndoableChange(AtomicChange& c) {
 			pendingAtomicChange_.reset(&c);
 
 		// make the redo stack empty
-		while(!redoableChanges_.empty()) {
-			delete redoableChanges_.top();
+		while(!redoableChanges_.empty())
 			redoableChanges_.pop();
-		}
 	} else {
 		// delay pushing to the stack when rollbacking
-		if(rollbackingChange_ == nullptr)
-			rollbackingChange_ = new CompoundChange();
+		if(rollbackingChange_.get() == nullptr)
+			rollbackingChange_.reset(new CompoundChange());
 		rollbackingChange_->appendChange(c, document_);	// CompoundChange.appendChange always returns true
 	}
 }
 
 // clears the stacks
 inline void Document::UndoManager::clear() /*throw()*/ {
-	while(!undoableChanges_.empty()) {
-		delete undoableChanges_.top();
+	while(!undoableChanges_.empty())
 		undoableChanges_.pop();
-	}
-	while(!redoableChanges_.empty()) {
-		delete redoableChanges_.top();
+	while(!redoableChanges_.empty())
 		redoableChanges_.pop();
-	}
 	pendingAtomicChange_.reset();
 	compoundChangeDepth_ = 0;
 	currentCompoundChange_ = nullptr;
@@ -286,16 +280,16 @@ inline void Document::UndoManager::commitPendingChange(bool beginCompound) {
 		if(beginCompound) {
 			unique_ptr<CompoundChange> newCompound(new CompoundChange());
 			newCompound->appendChange(*pendingAtomicChange_.get(), document_);
-			undoableChanges_.push(newCompound.release());
+			undoableChanges_.push(move(newCompound));
 			pendingAtomicChange_.release();
-			currentCompoundChange_ = static_cast<CompoundChange*>(undoableChanges_.top());	// safe down cast
+			currentCompoundChange_ = static_cast<CompoundChange*>(undoableChanges_.top().get());	// safe down cast
 		} else {
 			if(currentCompoundChange_ == nullptr
 					|| !currentCompoundChange_->appendChange(*pendingAtomicChange_.get(), document_)) {
-				undoableChanges_.push(pendingAtomicChange_.get());
+				undoableChanges_.push(move(pendingAtomicChange_));
 				currentCompoundChange_ = nullptr;
 			}
-			pendingAtomicChange_.release();
+			pendingAtomicChange_.reset();
 		}
 	}
 }
@@ -323,17 +317,15 @@ void Document::UndoManager::redo(UndoableChange::Result& result) {
 		result.reset();
 		return;
 	}
-	UndoableChange* c = redoableChanges_.top();
 	rollbacking_ = true;
-	c->perform(document_, result);
+	redoableChanges_.top()->perform(document_, result);
 	if(result.completed)
 		redoableChanges_.pop();
 	if(rollbackingChange_ != nullptr)
-		undoableChanges_.push(rollbackingChange_);	// move the rollbcked change(s) into the undo stack
-	rollbackingChange_ = currentCompoundChange_ = nullptr;
+		undoableChanges_.push(move(rollbackingChange_));	// move the rollbcked change(s) into the undo stack
+	rollbackingChange_.reset();
+	currentCompoundChange_ = nullptr;
 	rollbacking_ = false;
-	if(result.completed)
-		delete c;
 	compoundChangeDepth_ = 0;
 }
 
@@ -344,17 +336,15 @@ void Document::UndoManager::undo(UndoableChange::Result& result) {
 		result.reset();
 		return;
 	}
-	UndoableChange* c = undoableChanges_.top();
 	rollbacking_ = true;
-	c->perform(document_, result);
+	undoableChanges_.top()->perform(document_, result);
 	if(result.completed)
 		undoableChanges_.pop();
 	if(rollbackingChange_ != nullptr)
-		redoableChanges_.push(rollbackingChange_);	// move the rollbacked change(s) into the redo stack
-	rollbackingChange_ = currentCompoundChange_ = nullptr;
+		redoableChanges_.push(move(rollbackingChange_));	// move the rollbacked change(s) into the redo stack
+	rollbackingChange_.reset();
+	currentCompoundChange_ = nullptr;
 	rollbacking_ = false;
-	if(result.completed)
-		delete c;
 	compoundChangeDepth_ = 0;
 }
 
@@ -367,7 +357,7 @@ Document::Document() : session_(nullptr), partitioner_(),
 		readOnly_(false), length_(0), revisionNumber_(0), lastUnmodifiedRevisionNumber_(0),
 		onceUndoBufferCleared_(false), recordingChanges_(true), changing_(false), rollbacking_(false)/*, locker_(nullptr)*/ {
 	bookmarker_.reset(new Bookmarker(*this));
-	undoManager_ = new UndoManager(*this);
+	undoManager_.reset(new UndoManager(*this));
 	resetContent();
 }
 
@@ -376,9 +366,6 @@ Document::~Document() {
 	for(set<Point*>::iterator i(points_.begin()), e(points_.end()); i != e; ++i)
 		(*i)->documentDisposed();
 	accessibleRegion_.reset();
-	for(map<const DocumentPropertyKey*, String*>::iterator i(properties_.begin()), e(properties_.end()); i != e; ++i)
-		delete i->second;
-	delete undoManager_;
 	bookmarker_.reset();	// Bookmarker.~Bookmarker() calls Document...
 	for(size_t i = 0, c = lines_.size(); i < c; ++i)
 		delete lines_[i];

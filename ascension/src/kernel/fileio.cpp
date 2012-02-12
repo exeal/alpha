@@ -1101,7 +1101,6 @@ TextFileDocumentInput::TextFileDocumentInput(Document& document) :
 /// Destructor.
 TextFileDocumentInput::~TextFileDocumentInput() /*throw()*/ {
 	unbind();
-	delete fileLocker_;
 }
 
 /**

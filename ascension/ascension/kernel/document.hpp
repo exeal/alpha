@@ -326,8 +326,8 @@ namespace ascension {
 			Index length_;
 			std::size_t revisionNumber_, lastUnmodifiedRevisionNumber_;
 			std::set<Point*> points_;
-			UndoManager* undoManager_;
-			std::map<const DocumentPropertyKey*, String*> properties_;
+			std::unique_ptr<UndoManager> undoManager_;
+			std::map<const DocumentPropertyKey*, std::unique_ptr<String>> properties_;
 			bool onceUndoBufferCleared_, recordingChanges_, changing_, rollbacking_;
 
 			std::unique_ptr<std::pair<Position, std::unique_ptr<Point>>> accessibleRegion_;
@@ -566,8 +566,8 @@ inline void Document::partitioningChanged(const Region& changedRegion) /*throw()
  * @see #setProperty
  */
 inline const String* Document::property(const DocumentPropertyKey& key) const /*throw()*/ {
-	const std::map<const DocumentPropertyKey*, String*>::const_iterator i(properties_.find(&key));
-	return (i != properties_.end()) ? i->second : nullptr;
+	const std::map<const DocumentPropertyKey*, std::unique_ptr<String>>::const_iterator i(properties_.find(&key));
+	return (i != properties_.end()) ? i->second.get() : nullptr;
 }
 
 /// Returns the entire region of the document. The returned region is normalized.

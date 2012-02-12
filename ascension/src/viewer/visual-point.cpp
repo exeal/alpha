@@ -125,7 +125,7 @@ VisualPoint::VisualPoint(TextViewer& viewer, const Position& position, PointList
  * @throw TextViewerDisposedException The text viewer to which @a other belongs had been disposed
  */
 VisualPoint::VisualPoint(const VisualPoint& other) : Point(other), viewer_(other.viewer_),
-		lastX_(other.lastX_), crossingLines_(false), lineNumberCaches_(other.lineNumberCaches_) {
+		positionInVisualLine_(other.positionInVisualLine_), crossingLines_(false), lineNumberCaches_(other.lineNumberCaches_) {
 	if(viewer_ == nullptr)
 		throw TextViewerDisposedException();
 	static_cast<detail::PointCollection<VisualPoint>*>(viewer_)->addNewPoint(*this);
@@ -160,7 +160,7 @@ void VisualPoint::moved(const Position& from) {
 		lineNumberCaches_ = boost::none;
 	Point::moved(from);
 	if(!crossingLines_)
-		lastX_ = boost::none;
+		positionInVisualLine_ = boost::none;
 }
 #if 0
 /**
@@ -223,8 +223,8 @@ void VisualPoint::insertRectangle(const Char* first, const Char* last) {
 #endif
 /// @internal @c Point#moveTo for @c VerticalDestinationProxy.
 void VisualPoint::moveTo(const VerticalDestinationProxy& to) {
-	if(!lastX_)
-		updateLastX();
+	if(!positionInVisualLine_)
+		rememberPositionInVisualLine();
 	crossingLines_ = true;
 	try {
 		moveTo(to.position());
@@ -237,25 +237,26 @@ void VisualPoint::moveTo(const VerticalDestinationProxy& to) {
 
 /// Returns the offset of the point in the visual line.
 Index VisualPoint::offsetInVisualLine() const {
-	if(!lastX_)
-		const_cast<VisualPoint*>(this)->updateLastX();
+	if(!positionInVisualLine_)
+		const_cast<VisualPoint*>(this)->rememberPositionInVisualLine();
 	const TextViewer::Configuration& c = viewer_->configuration();
 	const font::TextRenderer& renderer = viewer_->textRenderer();
 //	if(resolveTextAlignment(c.alignment, c.readingDirection) != ALIGN_RIGHT)
-		return *lastX_ / renderer.defaultFont()->metrics().averageCharacterWidth();
+		return *positionInVisualLine_ / renderer.defaultFont()->metrics().averageCharacterWidth();
 //	else
-//		return (renderer.width() - lastX_) / renderer.averageCharacterWidth();
+//		return (renderer.width() - positionInVisualLine_) / renderer.averageCharacterWidth();
 }
 
-/// Updates @c lastX_ with the current position.
-inline void VisualPoint::updateLastX() {
+/// Updates @c positionInVisualLine_ with the current position.
+inline void VisualPoint::rememberPositionInVisualLine() {
+	// positionInVisualLine_ is distance from left/top-edge of content-area to the point
 	assert(!crossingLines_);
 	if(isTextViewerDisposed())
 		throw TextViewerDisposedException();
 	if(!isDocumentDisposed()) {
 		const font::TextLayout& layout = textViewer().textRenderer().layouts().at(line(*this));
-		lastX_ = layout.location(offsetInLine(*this), font::TextLayout::LEADING).x;
-		lastX_ += font::lineIndent(layout, ) textViewer().textRenderer().lineIndent(line(*this), 0);
+		positionInVisualLine_ = layout.location(offsetInLine(*this), font::TextLayout::LEADING).x;
+		positionInVisualLine_ += font::lineIndent(layout, ) textViewer().textRenderer().lineIndent(line(*this), 0);
 	}
 }
 
@@ -328,11 +329,11 @@ VerticalDestinationProxy locations::backwardVisualLine(const VisualPoint& p, Ind
 	font::VisualLine visualLine(np.line, subline);
 	renderer.layouts().offsetVisualLine(visualLine, -static_cast<SignedIndex>(lines));
 	const font::TextLayout& layout = renderer.layouts().at(visualLine.line);
-	if(!p.lastX_)
-		const_cast<VisualPoint&>(p).updateLastX();
+	if(!p.positionInVisualLine_)
+		const_cast<VisualPoint&>(p).rememberPositionInVisualLine();
 	np.offsetInLine = layout.offset(
 		geometry::make<NativePoint>(
-			p.lastX_ - renderer.lineIndent(np.line),
+			p.positionInVisualLine_ - renderer.lineIndent(np.line),
 			renderer.defaultFont()->metrics().linePitch() * static_cast<long>(subline)
 		)).second;
 	if(layout.lineAt(np.offsetInLine) != visualLine.subline)
@@ -465,12 +466,12 @@ VerticalDestinationProxy locations::forwardVisualLine(const VisualPoint& p, Inde
 	font::VisualLine visualLine(np.line, subline);
 	renderer.layouts().offsetVisualLine(visualLine, static_cast<SignedIndex>(lines));
 	layout = &renderer.layouts().at(visualLine.line);
-	if(!p.lastX_)
-		const_cast<VisualPoint&>(p).updateLastX();
-	assert(p.lastX_);
+	if(!p.positionInVisualLine_)
+		const_cast<VisualPoint&>(p).rememberPositionInVisualLine();
+	assert(p.positionInVisualLine_);
 	np.offsetInLine = layout->offset(
 		geometry::make<NativePoint>(
-			p.lastX_ - renderer.lineIndent(visualLine.line),
+			p.positionInVisualLine_ - renderer.lineIndent(visualLine.line),
 			renderer.defaultFont()->metrics().linePitch() * static_cast<long>(visualLine.subline)
 		)).second;
 	if(layout->lineAt(np.offsetInLine) != visualLine.subline)

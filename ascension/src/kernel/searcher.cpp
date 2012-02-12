@@ -59,7 +59,7 @@ using namespace std;
  */
 LiteralPattern::LiteralPattern(const String& pattern, bool caseSensitive /* = true */
 #ifndef ASCENSION_NO_UNICODE_COLLATION
-		, unique_ptr<const Collator> collator /* = null */
+		, unique_ptr<const Collator> collator /* = nullptr */
 #endif // !ASCENSION_NO_UNICODE_COLLATION
 		) : pattern_(pattern), caseSensitive_(caseSensitive)
 #ifndef ASCENSION_NO_UNICODE_COLLATION
@@ -71,31 +71,27 @@ LiteralPattern::LiteralPattern(const String& pattern, bool caseSensitive /* = tr
 		throw invalid_argument("pattern");
 	lastOccurences_[0] = firstOccurences_[0] = numeric_limits<ptrdiff_t>::min();
 	// build pseudo collation elements
-	first_ = last_ = new int[pattern_.length()];
-	for(StringCharacterIterator i(pattern_); i.hasNext(); ++i, ++last_)
-		*last_ = caseSensitive_ ? *i : CaseFolder::fold(*i);
-}
-
-/// Destructor.
-LiteralPattern::~LiteralPattern() /*throw()*/ {
-	delete[] first_;
+	collationElements_.resize(pattern_.length());
+	vector<int>::iterator collationElement(collationElements_.begin());
+	for(StringCharacterIterator i(pattern_); i.hasNext(); ++i, ++collationElement)
+		*collationElement = caseSensitive_ ? *i : CaseFolder::fold(*i);
 }
 
 // builds BM shift table for forward/backward search
 inline void LiteralPattern::makeShiftTable(Direction direction) /*throw()*/ {
 	if(direction == Direction::FORWARD) {
 		if(lastOccurences_[0] == numeric_limits<ptrdiff_t>::min()) {
-			lastOccurences_.fill(last_ - first_);
+			lastOccurences_.fill(collationElements_.size());
 //			fill(lastOccurences_, ASCENSION_ENDOF(lastOccurences_), last_ - first_);
-			for(const int* e = first_; e < last_; ++e)
-				lastOccurences_[*e] = last_ - e - 1;
+			for(vector<int>::const_iterator i(collationElements_.cbegin()), e(collationElements_.cend()); i < e; ++i)
+				lastOccurences_[*i] = e - i - 1;
 		}
 	} else if(firstOccurences_[0] == numeric_limits<ptrdiff_t>::min()) {
-		firstOccurences_.fill(last_ - first_);
+		firstOccurences_.fill(collationElements_.size());
 //		fill(firstOccurences_, ASCENSION_ENDOF(firstOccurences_), last_ - first_);
-		for(const int* e = last_ - 1; ; --e) {
-			firstOccurences_[*e] = e - first_;
-			if(e == first_)
+		for(vector<int>::const_iterator i(collationElements_.cend() - 1), b(collationElements_.cbegin()); ; --i) {
+			firstOccurences_[*i] = i - b;
+			if(i == b)
 				break;
 		}
 	}
@@ -109,8 +105,8 @@ inline void LiteralPattern::makeShiftTable(Direction direction) /*throw()*/ {
 bool LiteralPattern::matches(const CharacterIterator& target) const {
 	// TODO: compare using collation elements.
 	unique_ptr<CharacterIterator> i(target.clone());
-	for(const int* e = first_; e < last_ && i->hasNext(); ++e, i->next()) {
-		if(*e != static_cast<int>(caseSensitive_ ? i->current() : CaseFolder::fold(i->current())))
+	for(vector<int>::const_iterator j(collationElements_.cbegin()), e(collationElements_.cend()); j < e && i->hasNext(); ++j, i->next()) {
+		if(*j != static_cast<int>(caseSensitive_ ? i->current() : CaseFolder::fold(i->current())))
 			return false;
 	}
 	return !i->hasNext();
@@ -138,37 +134,38 @@ bool LiteralPattern::search(const CharacterIterator& target, Direction direction
 	const_cast<LiteralPattern*>(this)->makeShiftTable(direction);
 	// TODO: this implementation is just scrath.
 	unique_ptr<CharacterIterator> t(target.clone());
+	const vector<int>::const_iterator b(collationElements_.cbegin()), e(collationElements_.cend());
 	if(direction == Direction::FORWARD) {
-		orzAdvance(*t, last_ - first_ - 1);
-		for(const int* pattern; t->hasNext(); orzAdvance(*t,
-				max<Index>(lastOccurences_[caseSensitive_ ? t->current() : CaseFolder::fold(t->current())], last_ - pattern))) {
-			for(pattern = last_ - 1;
+		orzAdvance(*t, collationElements_.size() - 1);
+		for(vector<int>::const_iterator pattern; t->hasNext(); orzAdvance(*t,
+				max<Index>(lastOccurences_[caseSensitive_ ? t->current() : CaseFolder::fold(t->current())], e - pattern))) {
+			for(pattern = e - 1;
 				(caseSensitive_ ? t->current() : CaseFolder::fold(t->current())) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
 				t->previous(), --pattern) {
-				if(pattern == first_) {
+				if(pattern == b) {
 					matchedFirst = move(t);
 					matchedLast = matchedFirst->clone();
-					orzAdvance(*matchedLast, last_ - first_);
+					orzAdvance(*matchedLast, collationElements_.size());
 					return true;
 				}
 			}
 		}
 	} else {
 		ptrdiff_t skipLength;
-		orzAdvance(*t, first_ - last_);
-		for(const int* pattern; ; orzAdvance(*t, -skipLength)) {
-			for(pattern = first_;
+		orzAdvance(*t, collationElements_.size());
+		for(vector<int>::const_iterator pattern; ; orzAdvance(*t, -skipLength)) {
+			for(pattern = b;
 					(caseSensitive_ ? t->current() : CaseFolder::fold(t->current())) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
 					t->next(), ++pattern) {
-				if(pattern == last_ - 1) {
-					orzAdvance(*t, first_ - last_ + 1);
+				if(pattern == e) {
+					orzAdvance(*t, collationElements_.size() + 1);
 					matchedFirst = move(t);
 					matchedLast = matchedFirst->clone();
-					orzAdvance(*matchedLast, last_ - first_);
+					orzAdvance(*matchedLast, collationElements_.size());
 					return true;
 				}
 			}
-			skipLength = max(lastOccurences_[caseSensitive_ ? t->current() : CaseFolder::fold(t->current())], pattern - first_ + 1);
+			skipLength = max(lastOccurences_[caseSensitive_ ? t->current() : CaseFolder::fold(t->current())], pattern - b + 1);
 			if(skipLength > t->offset() - target.offset())
 				break;
 		}

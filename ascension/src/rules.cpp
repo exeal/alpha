@@ -36,7 +36,6 @@ namespace ascension {
 		public:
 			template<typename StringSequence>
 			HashTable(StringSequence first, StringSequence last, bool caseSensitive);
-			~HashTable() /*throw()*/;
 			template<typename CharacterSequence>
 			static uint32_t hashCode(CharacterSequence first, CharacterSequence last);
 			bool matches(const Char* first, const Char* last) const;
@@ -44,12 +43,10 @@ namespace ascension {
 		private:
 			struct Entry {
 				String data;
-				Entry* next;
+				unique_ptr<Entry> next;
 				explicit Entry(const String& str) /*throw()*/ : data(str) {}
-				~Entry() /*throw()*/ {delete next;}
 			};
-			Entry** entries_;
-			size_t numberOfEntries_;
+			vector<unique_ptr<Entry>> entries_;
 			size_t maxLength_;	// the length of the longest keyword
 			const bool caseSensitive_;
 		};
@@ -65,26 +62,18 @@ namespace ascension {
  */
 template<typename StringSequence>
 HashTable::HashTable(StringSequence first, StringSequence last, bool caseSensitive)
-		: numberOfEntries_(std::distance(first, last)), maxLength_(0), caseSensitive_(caseSensitive) {
-	entries_ = new Entry*[numberOfEntries_];
-	fill_n(entries_, numberOfEntries_, static_cast<Entry*>(nullptr));
+		: entries_(std::distance(first, last)), maxLength_(0), caseSensitive_(caseSensitive) {
 	while(first != last) {
 		const String folded(caseSensitive_ ? *first : CaseFolder::fold(*first));
 		const size_t h = hashCode(folded.begin(), folded.end());
-		Entry* const newEntry = new Entry(folded);
+		unique_ptr<Entry> newEntry(new Entry(folded));
 		if(folded.length() > maxLength_)
 			maxLength_ = folded.length();
-		newEntry->next = (entries_[h % numberOfEntries_] != nullptr) ? entries_[h % numberOfEntries_] : nullptr;
-		entries_[h % numberOfEntries_] = newEntry;
+		if(entries_[h % entries_.size()] != nullptr)
+			newEntry->next = move(entries_[h % entries_.size()]);
+		entries_[h % entries_.size()] = move(newEntry);
 		++first;
 	}
-}
-
-/// Destructor.
-HashTable::~HashTable() /*throw()*/ {
-	for(size_t i = 0; i < numberOfEntries_; ++i)
-		delete entries_[i];
-	delete[] entries_;
 }
 
 /**
@@ -118,15 +107,15 @@ bool HashTable::matches(const Char* first, const Char* last) const {
 		if(static_cast<size_t>(last - first) > maxLength_)
 			return false;
 		const size_t h = hashCode(first, last);
-		for(Entry* entry = entries_[h % numberOfEntries_]; entry != nullptr; entry = entry->next) {
-			if(entry->data.length() == static_cast<size_t>(last - first) && umemcmp(entry->data.data(), first, entry->data.length()) == 0)
+		for(const unique_ptr<Entry>* entry = &entries_[h % entries_.size()]; *entry != nullptr; entry = &(*entry)->next) {
+			if((*entry)->data.length() == static_cast<size_t>(last - first) && umemcmp((*entry)->data.data(), first, (*entry)->data.length()) == 0)
 				return true;
 		}
 	} else {
 		const String folded(CaseFolder::fold(String(first, last)));
 		const size_t h = hashCode(folded.begin(), folded.end());
-		for(Entry* entry = entries_[h % numberOfEntries_]; entry != nullptr; entry = entry->next) {
-			if(entry->data.length() == folded.length() && umemcmp(entry->data.data(), folded.data(), folded.length()) == 0)
+		for(const unique_ptr<Entry>* entry = &entries_[h % entries_.size()]; *entry != nullptr; entry = &(*entry)->next) {
+			if((*entry)->data.length() == folded.length() && umemcmp((*entry)->data.data(), folded.data(), folded.length()) == 0)
 				return true;
 		}
 	}
