@@ -30,11 +30,13 @@ namespace ascension {
 		};
 
 		/// See the documentation of @c kernel#locations namespace.
-		class VerticalDestinationProxy : private kernel::Position {
+		class BlockProgressionDestinationProxy : private kernel::Position {
 		public:
-			const kernel::Position& position() const {return static_cast<const kernel::Position&>(*this);}
+			const kernel::Position& position() const {
+				return static_cast<const kernel::Position&>(*this);
+			}
 		private:
-			explicit VerticalDestinationProxy(const kernel::Position& p) : Position(p) {}
+			explicit BlockProgressionDestinationProxy(const kernel::Position& p) : Position(p) {}
 			friend class VisualPoint;
 		};
 	}
@@ -47,8 +49,8 @@ namespace ascension {
 			bool isLastPrintableCharacterOfLine(const viewers::VisualPoint& p);
 			bool isLastPrintableCharacterOfVisualLine(const viewers::VisualPoint& p);
 			bool isBeginningOfVisualLine(const viewers::VisualPoint& p);
-			viewers::VerticalDestinationProxy backwardPage(const viewers::VisualPoint& p, Index pages = 1);
-			viewers::VerticalDestinationProxy backwardVisualLine(const viewers::VisualPoint& p, Index lines = 1);
+			viewers::BlockProgressionDestinationProxy backwardPage(const viewers::VisualPoint& p, Index pages = 1);
+			viewers::BlockProgressionDestinationProxy backwardVisualLine(const viewers::VisualPoint& p, Index lines = 1);
 			kernel::Position beginningOfVisualLine(const viewers::VisualPoint& p);
 			kernel::Position contextualBeginningOfLine(const viewers::VisualPoint& p);
 			kernel::Position contextualBeginningOfVisualLine(const viewers::VisualPoint& p);
@@ -57,8 +59,8 @@ namespace ascension {
 			kernel::Position endOfVisualLine(const viewers::VisualPoint& p);
 			kernel::Position firstPrintableCharacterOfLine(const viewers::VisualPoint& p);
 			kernel::Position firstPrintableCharacterOfVisualLine(const viewers::VisualPoint& p);
-			viewers::VerticalDestinationProxy forwardPage(const viewers::VisualPoint& p, Index pages = 1);
-			viewers::VerticalDestinationProxy forwardVisualLine(const viewers::VisualPoint& p, Index lines = 1);
+			viewers::BlockProgressionDestinationProxy forwardPage(const viewers::VisualPoint& p, Index pages = 1);
+			viewers::BlockProgressionDestinationProxy forwardVisualLine(const viewers::VisualPoint& p, Index lines = 1);
 			kernel::Position lastPrintableCharacterOfLine(const viewers::VisualPoint& p);
 			kernel::Position lastPrintableCharacterOfVisualLine(const viewers::VisualPoint& p);
 			kernel::Position leftCharacter(const viewers::VisualPoint& p, CharacterUnit unit, Index characters = 1);
@@ -96,10 +98,10 @@ namespace ascension {
 			Index visualSubline() const;
 			// movement
 			using kernel::Point::moveTo;
-			void moveTo(const VerticalDestinationProxy& to);
+			void moveTo(const BlockProgressionDestinationProxy& to);
 
 		protected:
-			static VerticalDestinationProxy makeVerticalDestinationProxy(const kernel::Position& source);
+			static BlockProgressionDestinationProxy makeBlockProgressionDestinationProxy(const kernel::Position& source);
 			// kernel.Point
 			virtual void aboutToMove(kernel::Position& to);
 			virtual void moved(const kernel::Position& from) /*throw()*/;
@@ -121,8 +123,8 @@ namespace ascension {
 			};
 			boost::optional<LineNumberCaches> lineNumberCaches_;	// caches
 			friend class TextViewer;
-			friend VerticalDestinationProxy kernel::locations::backwardVisualLine(const VisualPoint& p, Index lines);
-			friend VerticalDestinationProxy kernel::locations::forwardVisualLine(const VisualPoint& p, Index lines);
+			friend BlockProgressionDestinationProxy kernel::locations::backwardVisualLine(const VisualPoint& p, Index lines);
+			friend BlockProgressionDestinationProxy kernel::locations::forwardVisualLine(const VisualPoint& p, Index lines);
 		};
 
 		namespace utils {
@@ -136,8 +138,8 @@ namespace ascension {
 		inline bool VisualPoint::isTextViewerDisposed() const /*throw()*/ {return viewer_ == nullptr;}
 
 		/// @internal
-		inline VerticalDestinationProxy VisualPoint::makeVerticalDestinationProxy(
-			const kernel::Position& source) {return VerticalDestinationProxy(source);}
+		inline BlockProgressionDestinationProxy VisualPoint::makeBlockProgressionDestinationProxy(
+			const kernel::Position& source) {return BlockProgressionDestinationProxy(source);}
 
 		/// Returns the text viewer or throw @c TextViewerDisposedException if the text viewer the
 		/// point connecting to has been disposed.
