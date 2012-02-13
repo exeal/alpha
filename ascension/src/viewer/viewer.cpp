@@ -775,7 +775,8 @@ NativePoint TextViewer::localPointForCharacter(const k::Position& position,
  * @see #mapViewportIpdToLineLayout
  */
 inline Scalar TextViewer::mapLineLayoutIpdToViewport(Index line, Scalar ipd) const {
-	return ipd + lineStartEdge(textRenderer().layouts().at(line), ) + inlineProgressionOffsetInViewport();
+	return ipd + lineStartEdge(textRenderer().layouts().at(line),
+		textRenderer().viewport().lock()->contentMeasure()) + inlineProgressionOffsetInViewport();
 }
 
 /**
@@ -783,7 +784,8 @@ inline Scalar TextViewer::mapLineLayoutIpdToViewport(Index line, Scalar ipd) con
  * @see #mapLineLayoutIpdToViewport
  */
 inline Scalar TextViewer::mapViewportIpdToLineLayout(Index line, Scalar ipd) const {
-	return ipd - lineStartEdge(textRenderer().layouts().at(line), ) - inlineProgressionOffsetInViewport();
+	return ipd - lineStartEdge(textRenderer().layouts().at(line),
+		textRenderer().viewport().lock()->contentMeasure()) - inlineProgressionOffsetInViewport();
 }
 
 #if 0
