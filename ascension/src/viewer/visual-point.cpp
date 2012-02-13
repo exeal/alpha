@@ -225,8 +225,8 @@ void VisualPoint::insertRectangle(const Char* first, const Char* last) {
 	}
 }
 #endif
-/// @internal @c Point#moveTo for @c VerticalDestinationProxy.
-void VisualPoint::moveTo(const VerticalDestinationProxy& to) {
+/// @internal @c Point#moveTo for @c BlockProgressionDestinationProxy.
+void VisualPoint::moveTo(const BlockProgressionDestinationProxy& to) {
 	if(!positionInVisualLine_)
 		rememberPositionInVisualLine();
 	crossingLines_ = true;
@@ -315,7 +315,7 @@ void VisualPoint::visualLinesModified(const Range<Index>& lines, SignedIndex sub
  * @param pages The number of pages to return
  * @return The destination
  */
-VerticalDestinationProxy locations::backwardPage(const VisualPoint& p, Index pages /* = 1 */) {
+BlockProgressionDestinationProxy locations::backwardPage(const VisualPoint& p, Index pages /* = 1 */) {
 	Index lines = 0;
 	if(const shared_ptr<const font::TextViewport> viewport = p.textViewer().textRenderer().viewport().lock()) {
 		// TODO: calculate exact number of visual lines.
@@ -330,13 +330,13 @@ VerticalDestinationProxy locations::backwardPage(const VisualPoint& p, Index pag
  * @param lines The number of the visual lines to return
  * @return The destination
  */
-VerticalDestinationProxy locations::backwardVisualLine(const VisualPoint& p, Index lines /* = 1 */) {
+BlockProgressionDestinationProxy locations::backwardVisualLine(const VisualPoint& p, Index lines /* = 1 */) {
 	Position np(p.normalized());
 	const font::TextRenderer& renderer = p.textViewer().textRenderer();
 	if(const shared_ptr<const font::TextViewport> viewport = renderer.viewport().lock()) {
 		Index subline = renderer.layouts().at(np.line).lineAt(np.offsetInLine);
 		if(np.line == 0 && subline == 0)
-			return VisualPoint::makeVerticalDestinationProxy(np);
+			return VisualPoint::makeBlockProgressionDestinationProxy(np);
 		font::VisualLine visualLine(np.line, subline);
 		renderer.layouts().offsetVisualLine(visualLine, -static_cast<SignedIndex>(lines));
 		const font::TextLayout& layout = renderer.layouts().at(visualLine.line);
@@ -350,7 +350,7 @@ VerticalDestinationProxy locations::backwardVisualLine(const VisualPoint& p, Ind
 		if(layout.lineAt(np.offsetInLine) != visualLine.subline)
 			np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
 	}
-	return VisualPoint::makeVerticalDestinationProxy(np);
+	return VisualPoint::makeBlockProgressionDestinationProxy(np);
 }
 
 /**
@@ -457,7 +457,7 @@ Position locations::firstPrintableCharacterOfVisualLine(const VisualPoint& p) {
  * @param pages The number of pages to advance
  * @return The destination
  */
-VerticalDestinationProxy locations::forwardPage(const VisualPoint& p, Index pages /* = 1 */) {
+BlockProgressionDestinationProxy locations::forwardPage(const VisualPoint& p, Index pages /* = 1 */) {
 	Index lines = 0;
 	if(const shared_ptr<const font::TextViewport> viewport = p.textViewer().textRenderer().viewport().lock()) {
 		// TODO: calculate exact number of visual lines.
@@ -472,14 +472,14 @@ VerticalDestinationProxy locations::forwardPage(const VisualPoint& p, Index page
  * @param lines The number of the visual lines to advance
  * @return The destination
  */
-VerticalDestinationProxy locations::forwardVisualLine(const VisualPoint& p, Index lines /* = 1 */) {
+BlockProgressionDestinationProxy locations::forwardVisualLine(const VisualPoint& p, Index lines /* = 1 */) {
 	Position np(p.normalized());
 	const font::TextRenderer& renderer = p.textViewer().textRenderer();
 	if(const shared_ptr<const font::TextViewport> viewport = renderer.viewport().lock()) {
 		const font::TextLayout* layout = &renderer.layouts().at(np.line);
 		Index subline = layout->lineAt(np.offsetInLine);
 		if(np.line == p.document().numberOfLines() - 1 && subline == layout->numberOfLines() - 1)
-			return VisualPoint::makeVerticalDestinationProxy(np);
+			return VisualPoint::makeBlockProgressionDestinationProxy(np);
 		font::VisualLine visualLine(np.line, subline);
 		renderer.layouts().offsetVisualLine(visualLine, static_cast<SignedIndex>(lines));
 		layout = &renderer.layouts().at(visualLine.line);
@@ -493,7 +493,7 @@ VerticalDestinationProxy locations::forwardVisualLine(const VisualPoint& p, Inde
 		if(layout->lineAt(np.offsetInLine) != visualLine.subline)
 			np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
 	}
-	return VisualPoint::makeVerticalDestinationProxy(np);
+	return VisualPoint::makeBlockProgressionDestinationProxy(np);
 }
 
 /**
