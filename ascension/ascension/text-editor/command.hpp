@@ -16,7 +16,7 @@
 namespace ascension {
 
 	namespace viewers {
-		class VerticalDestinationProxy;
+		class BlockProgressionDestinationProxy;
 	}
 
 	namespace texteditor {
@@ -89,7 +89,7 @@ namespace ascension {
 				CaretMovementCommand(viewers::TextViewer& viewer,
 					kernel::Position(*procedure)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, Index), bool extendSelection = false);
 				CaretMovementCommand(viewers::TextViewer& viewer,
-					viewers::VerticalDestinationProxy(*procedure)(const viewers::VisualPoint&, Index), bool extendSelection = false);
+					viewers::BlockProgressionDestinationProxy(*procedure)(const viewers::VisualPoint&, Index), bool extendSelection = false);
 			private:
 				bool perform();
 				kernel::Position(*procedureP_)(const kernel::Point&);
@@ -98,7 +98,7 @@ namespace ascension {
 				kernel::Position(*procedureV_)(const viewers::VisualPoint&);
 				kernel::Position(*procedureVL_)(const viewers::VisualPoint&, Index);
 				kernel::Position(*procedureVCL_)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, Index);
-				viewers::VerticalDestinationProxy(*procedureVLV_)(const viewers::VisualPoint&, Index);
+				viewers::BlockProgressionDestinationProxy(*procedureVLV_)(const viewers::VisualPoint&, Index);
 				const bool extends_;
 			};
 			/**
@@ -289,7 +289,7 @@ namespace ascension {
 				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
 					kernel::Position(*procedure)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, Index));
 				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
-					viewers::VerticalDestinationProxy(*procedure)(const viewers::VisualPoint&, Index));
+					viewers::BlockProgressionDestinationProxy(*procedure)(const viewers::VisualPoint&, Index));
 				bool perform();
 			private:
 				kernel::Position(*procedureP_)(const kernel::Point&);
@@ -298,7 +298,7 @@ namespace ascension {
 				kernel::Position(*procedureV_)(const viewers::VisualPoint&);
 				kernel::Position(*procedureVL_)(const viewers::VisualPoint&, Index);
 				kernel::Position(*procedureVCL_)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, Index);
-				viewers::VerticalDestinationProxy(*procedureVLV_)(const viewers::VisualPoint&, Index);
+				viewers::BlockProgressionDestinationProxy(*procedureVLV_)(const viewers::VisualPoint&, Index);
 			};
 			/// Tabifies (exchanges tabs and spaces).
 			class TabifyCommand : public Command {
