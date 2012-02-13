@@ -40,7 +40,7 @@ void utils::recenter(VisualPoint& p) {
 
 /**
  * Scrolls the text viewer until the given point is visible in the window.
- * @param p The visual point. this position will be normalized before the process
+ * @param p The visual point. This position will be normalized before the process
  * @throw DocumentDisposedException 
  * @throw TextViewerDisposedException 
  */
@@ -73,9 +73,13 @@ void utils::show(VisualPoint& p) {
 				geometry::x(to) = 0;
 //		}
 #else
-		font::lineIndent
-		const Scalar ipdInPixels = renderer.layouts().at(np.line).location(np.offsetInLine)
-		ipd = min(
+		const font::TextLayout& layout = renderer.layouts().at(np.line);
+		const NativePoint location(layout.location(np.offsetInLine));
+		const Index pointIpd = (font::lineIndent(layout, viewport->contentMeasure())
+			+ isHorizontal(layout.writingMode().blockFlowDirection) ? geometry::x(location) : geometry::y(location))
+			/ renderer.defaultFont()->metrics().averageCharacterWidth();
+		ipd = min(pointIpd, ipd);
+		ipd = max(pointIpd - static_cast<Index>(viewport->numberOfVisibleCharactersInLine()) + 1, ipd);
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 		viewport->scrollTo(bpd, ipd, &viewer);
 	}
@@ -254,9 +258,11 @@ inline void VisualPoint::rememberPositionInVisualLine() {
 	if(isTextViewerDisposed())
 		throw TextViewerDisposedException();
 	if(!isDocumentDisposed()) {
-		const font::TextLayout& layout = textViewer().textRenderer().layouts().at(line(*this));
-		positionInVisualLine_ = layout.location(offsetInLine(*this), font::TextLayout::LEADING).x;
-		positionInVisualLine_ += font::lineIndent(layout, ) textViewer().textRenderer().lineIndent(line(*this), 0);
+		const font::TextRenderer& renderer = textViewer().textRenderer();
+		const font::TextLayout& layout = renderer.layouts().at(line(*this));
+		const NativePoint location(layout.location(offsetInLine(*this), font::TextLayout::LEADING));
+		positionInVisualLine_ = font::lineStartEdge(layout, renderer.viewport().lock()->contentMeasure())
+			+ isHorizontal(layout.writingMode().blockFlowDirection) ? geometry::x(location) : geometry::y(location);
 	}
 }
 
@@ -310,8 +316,12 @@ void VisualPoint::visualLinesModified(const Range<Index>& lines, SignedIndex sub
  * @return The destination
  */
 VerticalDestinationProxy locations::backwardPage(const VisualPoint& p, Index pages /* = 1 */) {
-	// TODO: calculate exact number of visual lines.
-	return backwardVisualLine(p, p.textViewer().numberOfVisibleLines() * pages);
+	Index lines = 0;
+	if(const shared_ptr<const font::TextViewport> viewport = p.textViewer().textRenderer().viewport().lock()) {
+		// TODO: calculate exact number of visual lines.
+		lines = static_cast<Index>(viewport->numberOfVisibleLines() * pages);
+	}
+	return backwardVisualLine(p, lines);
 }
 
 /**
@@ -323,21 +333,23 @@ VerticalDestinationProxy locations::backwardPage(const VisualPoint& p, Index pag
 VerticalDestinationProxy locations::backwardVisualLine(const VisualPoint& p, Index lines /* = 1 */) {
 	Position np(p.normalized());
 	const font::TextRenderer& renderer = p.textViewer().textRenderer();
-	Index subline = renderer.layouts().at(np.line).lineAt(np.offsetInLine);
-	if(np.line == 0 && subline == 0)
-		return VisualPoint::makeVerticalDestinationProxy(np);
-	font::VisualLine visualLine(np.line, subline);
-	renderer.layouts().offsetVisualLine(visualLine, -static_cast<SignedIndex>(lines));
-	const font::TextLayout& layout = renderer.layouts().at(visualLine.line);
-	if(!p.positionInVisualLine_)
-		const_cast<VisualPoint&>(p).rememberPositionInVisualLine();
-	np.offsetInLine = layout.offset(
-		geometry::make<NativePoint>(
-			p.positionInVisualLine_ - renderer.lineIndent(np.line),
-			renderer.defaultFont()->metrics().linePitch() * static_cast<long>(subline)
-		)).second;
-	if(layout.lineAt(np.offsetInLine) != visualLine.subline)
-		np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
+	if(const shared_ptr<const font::TextViewport> viewport = renderer.viewport().lock()) {
+		Index subline = renderer.layouts().at(np.line).lineAt(np.offsetInLine);
+		if(np.line == 0 && subline == 0)
+			return VisualPoint::makeVerticalDestinationProxy(np);
+		font::VisualLine visualLine(np.line, subline);
+		renderer.layouts().offsetVisualLine(visualLine, -static_cast<SignedIndex>(lines));
+		const font::TextLayout& layout = renderer.layouts().at(visualLine.line);
+		if(!p.positionInVisualLine_)
+			const_cast<VisualPoint&>(p).rememberPositionInVisualLine();
+		const Scalar ipd = *p.positionInVisualLine_ - font::lineStartEdge(layout, viewport->contentMeasure());
+		const Scalar bpd = layout.baseline(visualLine.subline);
+		np.offsetInLine = layout.offset(
+			isHorizontal(layout.writingMode().blockFlowDirection) ?
+				geometry::make<NativePoint>(ipd, bpd) : geometry::make<NativePoint>(bpd, ipd)).second;
+		if(layout.lineAt(np.offsetInLine) != visualLine.subline)
+			np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
+	}
 	return VisualPoint::makeVerticalDestinationProxy(np);
 }
 
@@ -446,8 +458,12 @@ Position locations::firstPrintableCharacterOfVisualLine(const VisualPoint& p) {
  * @return The destination
  */
 VerticalDestinationProxy locations::forwardPage(const VisualPoint& p, Index pages /* = 1 */) {
-	// TODO: calculate exact number of visual lines.
-	return forwardVisualLine(p, p.textViewer().numberOfVisibleLines() * pages);
+	Index lines = 0;
+	if(const shared_ptr<const font::TextViewport> viewport = p.textViewer().textRenderer().viewport().lock()) {
+		// TODO: calculate exact number of visual lines.
+		lines = static_cast<Index>(viewport->numberOfVisibleLines() * pages);
+	}
+	return forwardVisualLine(p, lines);
 }
 
 /**
@@ -459,23 +475,24 @@ VerticalDestinationProxy locations::forwardPage(const VisualPoint& p, Index page
 VerticalDestinationProxy locations::forwardVisualLine(const VisualPoint& p, Index lines /* = 1 */) {
 	Position np(p.normalized());
 	const font::TextRenderer& renderer = p.textViewer().textRenderer();
-	const font::TextLayout* layout = &renderer.layouts().at(np.line);
-	Index subline = layout->lineAt(np.offsetInLine);
-	if(np.line == p.document().numberOfLines() - 1 && subline == layout->numberOfLines() - 1)
-		return VisualPoint::makeVerticalDestinationProxy(np);
-	font::VisualLine visualLine(np.line, subline);
-	renderer.layouts().offsetVisualLine(visualLine, static_cast<SignedIndex>(lines));
-	layout = &renderer.layouts().at(visualLine.line);
-	if(!p.positionInVisualLine_)
-		const_cast<VisualPoint&>(p).rememberPositionInVisualLine();
-	assert(p.positionInVisualLine_);
-	np.offsetInLine = layout->offset(
-		geometry::make<NativePoint>(
-			p.positionInVisualLine_ - renderer.lineIndent(visualLine.line),
-			renderer.defaultFont()->metrics().linePitch() * static_cast<long>(visualLine.subline)
-		)).second;
-	if(layout->lineAt(np.offsetInLine) != visualLine.subline)
-		np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
+	if(const shared_ptr<const font::TextViewport> viewport = renderer.viewport().lock()) {
+		const font::TextLayout* layout = &renderer.layouts().at(np.line);
+		Index subline = layout->lineAt(np.offsetInLine);
+		if(np.line == p.document().numberOfLines() - 1 && subline == layout->numberOfLines() - 1)
+			return VisualPoint::makeVerticalDestinationProxy(np);
+		font::VisualLine visualLine(np.line, subline);
+		renderer.layouts().offsetVisualLine(visualLine, static_cast<SignedIndex>(lines));
+		layout = &renderer.layouts().at(visualLine.line);
+		if(!p.positionInVisualLine_)
+			const_cast<VisualPoint&>(p).rememberPositionInVisualLine();
+		const Scalar ipd = *p.positionInVisualLine_ - font::lineStartEdge(*layout, viewport->contentMeasure());
+		const Scalar bpd = layout->baseline(visualLine.subline);
+		np.offsetInLine = layout->offset(
+			isHorizontal(layout->writingMode().blockFlowDirection) ?
+				geometry::make<NativePoint>(ipd, bpd) : geometry::make<NativePoint>(bpd, ipd)).second;
+		if(layout->lineAt(np.offsetInLine) != visualLine.subline)
+			np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
+	}
 	return VisualPoint::makeVerticalDestinationProxy(np);
 }
 
