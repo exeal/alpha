@@ -69,7 +69,7 @@ namespace {
 	typedef Position(*MovementProcedureV)(const VisualPoint&);
 	typedef Position(*MovementProcedureVL)(const VisualPoint&, Index);
 	typedef Position(*MovementProcedureVCL)(const VisualPoint&, locations::CharacterUnit, Index);
-	typedef VerticalDestinationProxy(*MovementProcedureVLV)(const VisualPoint&, Index);
+	typedef BlockProgressionDestinationProxy(*MovementProcedureVLV)(const VisualPoint&, Index);
 
 	static MovementProcedureP MOVEMENT_PROCEDURES_P[] = {
 		&locations::beginningOfDocument, &locations::beginningOfLine, &locations::endOfDocument, &locations::endOfLine};
@@ -253,7 +253,7 @@ CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
  * @param extendSelection Set @c true to extend selection
  */
 CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
-		VerticalDestinationProxy(*procedure)(const VisualPoint&, Index), bool extendSelection /* = false */) :
+		BlockProgressionDestinationProxy(*procedure)(const VisualPoint&, Index), bool extendSelection /* = false */) :
 		Command(viewer), extends_(extendSelection), procedureP_(nullptr), procedurePL_(nullptr), procedurePCL_(nullptr),
 		procedureV_(nullptr), procedureVL_(nullptr), procedureVCL_(nullptr), procedureVLV_(procedure) {
 	if(procedure == nullptr || find(MOVEMENT_PROCEDURES_VLV,
@@ -1136,7 +1136,7 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
  * @param procedure A pointer to the member function defines the destination
  */
 RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
-		VerticalDestinationProxy(*procedure)(const VisualPoint&, Index)) : Command(viewer),
+		BlockProgressionDestinationProxy(*procedure)(const VisualPoint&, Index)) : Command(viewer),
 		procedureP_(nullptr), procedurePL_(nullptr), procedurePCL_(nullptr),
 		procedureV_(nullptr), procedureVL_(nullptr), procedureVCL_(nullptr), procedureVLV_(procedure) {
 	if(procedure == nullptr || find(MOVEMENT_PROCEDURES_VLV,
