@@ -345,7 +345,7 @@ void Caret::extendSelection(const Position& to) {
  * Moves to the specified position without the anchor adapting.
  * @param to The destination position
  */
-void Caret::extendSelection(const VerticalDestinationProxy& to) {
+void Caret::extendSelection(const BlockProgressionDestinationProxy& to) {
 	context_.leaveAnchorNext = true;
 	try {
 		moveTo(to);
@@ -671,30 +671,32 @@ void Caret::updateLocation() {
 	if(!viewer.hasFocus() || viewer.isFrozen())
 		return;
 
-	NativePoint p(modelToView(viewer.textRenderer(), *this, false, font::TextLayout::LEADING));
-	const PhysicalFourSides<Scalar> spaces(viewer.spaceWidths());
-	NativeRectangle textArea(viewer.bounds(false));
-	assert(geometry::isNormalized(textArea));
-	geometry::range<geometry::X_COORDINATE>(textArea) = makeRange(
-		geometry::left(textArea) + spaces.left(), geometry::right(textArea) - spaces.right() - 1);
-	geometry::range<geometry::Y_COORDINATE>(textArea) = makeRange(
-		geometry::top(textArea) + spaces.top(), geometry::bottom(textArea) - spaces.bottom());
+	if(const shared_ptr<const font::TextViewport> viewport = viewer.textRenderer().viewport().lock()) {
+		NativePoint p(modelToView(*viewport, *this, false, font::TextLayout::LEADING));
+		const PhysicalFourSides<Scalar> spaces(viewer.spaceWidths());
+		NativeRectangle textArea(viewer.bounds(false));
+		assert(geometry::isNormalized(textArea));
+		geometry::range<geometry::X_COORDINATE>(textArea) = makeRange(
+			geometry::left(textArea) + spaces.left(), geometry::right(textArea) - spaces.right() - 1);
+		geometry::range<geometry::Y_COORDINATE>(textArea) = makeRange(
+			geometry::top(textArea) + spaces.top(), geometry::bottom(textArea) - spaces.bottom());
 
-	const WritingMode writingMode(textViewer().textRenderer().writingMode());
-	if(!geometry::includes(textArea, p)) {
-		// "hide" the caret
-		const Scalar linePitch = viewer.textRenderer().defaultFont()->metrics().linePitch();
-		if(isHorizontal(writingMode.blockFlowDirection))
-			geometry::y(p) = -linePitch;
-		else
-			geometry::x(p) = -linePitch;
-	} else
-		geometry::translate(p, geometry::make<NativeSize>(
-			-geometry::x(shapeCache_.alignmentPoint), -geometry::y(shapeCache_.alignmentPoint)));
+		const WritingMode writingMode(textViewer().textRenderer().writingMode());
+		if(!geometry::includes(textArea, p)) {
+			// "hide" the caret
+			const Scalar linePitch = viewer.textRenderer().defaultFont()->metrics().linePitch();
+			if(isHorizontal(writingMode.blockFlowDirection))
+				geometry::y(p) = -linePitch;
+			else
+				geometry::x(p) = -linePitch;
+		} else
+			geometry::translate(p, geometry::make<NativeSize>(
+				-geometry::x(shapeCache_.alignmentPoint), -geometry::y(shapeCache_.alignmentPoint)));
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-	::SetCaretPos(geometry::x(p), geometry::y(p));
+		::SetCaretPos(geometry::x(p), geometry::y(p));
 #endif
-	adjustInputMethodCompositionWindow();
+		adjustInputMethodCompositionWindow();
+	}
 }
 
 inline void Caret::updateVisualAttributes() {
@@ -730,19 +732,20 @@ void Caret::viewportChanged(bool, bool) {
  * @throw TextViewerDisposedException The text viewer @a caret connecting to has been disposed
  */
 bool viewers::isPointOverSelection(const Caret& caret, const NativePoint& p) {
-	if(isSelectionEmpty(caret))
-		return false;
-	else if(caret.isSelectionRectangle())
-		return caret.boxForRectangleSelection().includes(p);
-	else {
-		if(caret.textViewer().hitTest(p) != TextViewer::CONTENT_AREA)	// ignore if on the margin
-			return false;
-		const NativeRectangle viewerBounds(caret.textViewer().bounds(false));
-		if(geometry::x(p) > geometry::right(viewerBounds) || geometry::y(p) > geometry::bottom(viewerBounds))
-			return false;
-		const boost::optional<Position> pos(viewToModel(caret.textViewer().textRenderer(), p, font::TextLayout::TRAILING));
-		return pos && *pos >= caret.beginning() && *pos <= caret.end();
+	if(!isSelectionEmpty(caret)) {
+		if(caret.isSelectionRectangle())
+			return caret.boxForRectangleSelection().includes(p);
+		if(caret.textViewer().hitTest(p) == TextViewer::CONTENT_AREA) {	// ignore if on the margin
+			const NativeRectangle viewerBounds(caret.textViewer().bounds(false));
+			if(geometry::x(p) <= geometry::right(viewerBounds) && geometry::y(p) <= geometry::bottom(viewerBounds)) {
+				if(const shared_ptr<const font::TextViewport> viewport = caret.textViewer().textRenderer().viewport().lock()) {
+					const boost::optional<Position> pos(viewToModelInBounds(*viewport, p, font::TextLayout::TRAILING));
+					return pos && *pos >= caret.beginning() && *pos <= caret.end();
+				}
+			}
+		}
 	}
+	return false;
 }
 
 /**
