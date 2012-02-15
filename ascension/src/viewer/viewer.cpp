@@ -747,30 +747,6 @@ void TextViewer::keyReleased(const KeyInput& input) {
 }
 
 /**
- * Converts the specified location in the document to a point in the viewport-local coordinates.
- * @param position The document position
- * @param fullSearchBpd If this is @c false, this method stops at before- or after-edge of the
- *                      viewport. If this happened, the block-progression-dimension of the returned
- *                      point is @c std#numeric_limits&lt;Scalar&gt;::max() (for the before-edge)
- *                      or @c std#numeric_limits&lt;Scalar&gt;::min() (for the after-edge). If this
- *                      is @c true, the calculation is performed completely and returns an exact
- *                      location will (may be very slow)
- * @param edge The edge of the character. If this is @c graphics#font#TextLayout#LEADING, the
- *             returned point is the leading edge if the character (left if the character is
- *             left-to-right), otherwise returned point is the trailing edge (right if the
- *             character is left-to-right)
- * @return The point in local coordinates. The block-progression-dimension addresses the baseline
- *         of the line
- * @throw BadPositionException @a position is outside of the document
- * @see #characterForLocalPoint, #hitTest, graphics#font#LineLayout#location
- */
-NativePoint TextViewer::localPointForCharacter(const k::Position& position,
-		bool fullSearchBpd, TextLayout::Edge edge /* = TextLayout::LEADING */) const {
-//	checkInitialization();
-	return mapTextAreaToLocal(*this, textRenderer().viewport().lock()->location(position, fullSearchBpd, edge));
-}
-
-/**
  * @internal
  * @see #mapViewportIpdToLineLayout
  */
@@ -2004,7 +1980,7 @@ void TextViewport::scroll(SignedIndex dbpd, SignedIndex dipd, Widget* widget, co
 }
 
 
-// ascension.viewers.utils ////////////////////////////////////////////////////////////////////////
+// ascension.viewers.utils free functions /////////////////////////////////////////////////////////
 
 /// Closes the opened completion proposals popup immediately.
 void utils::closeCompletionProposalsPopup(TextViewer& viewer) /*throw()*/ {
@@ -2043,7 +2019,7 @@ void utils::toggleOrientation(TextViewer& viewer) /*throw()*/ {
 }
 
 
-// free functions /////////////////////////////////////////////////////////////////////////////////
+// ascension.viewers.source free functions ////////////////////////////////////////////////////////
 
 /**
  * Returns the identifier near the specified position in the document.

@@ -93,7 +93,7 @@ namespace ascension {
 			void clearSelection();
 			void endRectangleSelection();
 			void extendSelection(const kernel::Position& to);
-			void extendSelection(const VerticalDestinationProxy& to);
+			void extendSelection(const BlockProgressionDestinationProxy& to);
 			void paste(bool useKillRing);
 			void replaceSelection(const StringPiece& text, bool rectangleInsertion = false);
 			void select(const kernel::Region& region);

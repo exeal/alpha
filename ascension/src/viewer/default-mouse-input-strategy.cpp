@@ -324,23 +324,28 @@ namespace {
 /// @see DropTarget#dragMoved
 void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
 	DropAction dropAction = DROP_ACTION_IGNORE;
-	bool acceptable = true;
+	bool acceptable = false;
 
-	if((state_ != DND_SOURCE && state_ != DND_TARGET) || viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
-		acceptable = false;
-	else {
-		const NativePoint caretPoint(viewer_->mapFromGlobal(input.location()));
-		const k::Position p(viewToModel(viewer_->textRenderer(), caretPoint, TextLayout::TRAILING));
-//		viewer_->setCaretPosition(viewer_->localPointForCharacter(p, true, TextLayout::LEADING));
+	if((state_ == DND_SOURCE || state_ == DND_TARGET)
+			&& !viewer_->document().isReadOnly() && viewer_->allowsMouseInput()) {
+		if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
+			const NativePoint caretPoint(viewer_->mapFromGlobal(input.location()));
+			const k::Position p(viewToModel(*viewport, caretPoint, TextLayout::TRAILING));
+//			viewer_->setCaretPosition(viewer_->localPointForCharacter(p, true, TextLayout::LEADING));
 
-		// drop rectangle text into bidirectional line is not supported...
-		if(dnd_.numberOfRectangleLines != 0) {
-			const Index lines = min(viewer_->document().numberOfLines(), p.line + dnd_.numberOfRectangleLines);
-			for(Index line = p.line; line < lines; ++line) {
-				if(viewer_->textRenderer().layouts()[line].isBidirectional()) {
-					acceptable = false;
-					break;
+			// drop rectangle text into bidirectional line is not supported...
+			if(dnd_.numberOfRectangleLines == 0)
+				acceptable = true;
+			else {
+				const Index lines = min(viewer_->document().numberOfLines(), p.line + dnd_.numberOfRectangleLines);
+				bool bidirectional = false;
+				for(Index line = p.line; line < lines; ++line) {
+					if(viewer_->textRenderer().layouts()[line].isBidirectional()) {
+						bidirectional = true;
+						break;
+					}
 				}
+				acceptable = !bidirectional;
 			}
 		}
 	}
@@ -364,10 +369,13 @@ void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
 
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 	if(dnd_.dropTargetHelper.get() != nullptr) {
-		viewer_->lockScroll();
+		const shared_ptr<TextViewport> viewport(viewer_->textRenderer().viewport().lock());
+		if(viewport.get() != nullptr)
+			viewport->lockScroll();
 		POINT location(input.location());
 		dnd_.dropTargetHelper->DragOver(&location, translateDropAction(dropAction));	// damn! IDropTargetHelper scrolls the view
-		viewer_->lockScroll(true);
+		if(viewport.get() != nullptr)
+			viewport->unlockScroll();
 	}
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 }
@@ -410,7 +418,7 @@ void DefaultMouseInputStrategy::extendSelection(const k::Position* to /* = nullp
 				min<Scalar>(
 					max<Scalar>(geometry::y(p), geometry::top(viewport) + spaces.top()),
 					geometry::bottom(viewport) - spaces.bottom()));
-		destination = viewToModel(viewer_->textRenderer(), p, TextLayout::TRAILING);
+		destination = viewToModel(*viewer_->textRenderer().viewport().lock(), p, TextLayout::TRAILING);
 	} else
 		destination = *to;
 
@@ -480,14 +488,16 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 
 	// select line(s)
 	if(htr == TextViewer::INDICATOR_MARGIN || htr == TextViewer::LINE_NUMBERS) {
-		const k::Position to(viewToModel(viewer_->textRenderer(), position, TextLayout::LEADING));
-		const bool extend = win32::boole(modifiers & MK_SHIFT) && to.line != line(caret.anchor());
-		state_ = EXTENDING_LINE_SELECTION;
-		selection_.initialLine = extend ? line(caret.anchor()) : to.line;
-		viewer_->caret().endRectangleSelection();
-		extendSelection(&to);
-		viewer_->grabInput();
-		timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
+		if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
+			const k::Position to(viewToModel(*viewport, position, TextLayout::LEADING));
+			const bool extend = win32::boole(modifiers & MK_SHIFT) && to.line != line(caret.anchor());
+			state_ = EXTENDING_LINE_SELECTION;
+			selection_.initialLine = extend ? line(caret.anchor()) : to.line;
+			viewer_->caret().endRectangleSelection();
+			extendSelection(&to);
+			viewer_->grabInput();
+			timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
+		}
 	}
 
 	// approach drag-and-drop
@@ -504,7 +514,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 		if(win32::boole(modifiers & MK_CONTROL)) {
 			if(!isPointOverSelection(caret, position)) {
 				if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
-					if(const boost::optional<k::Position> p = viewport->characterForPointInBounds(position, TextLayout::TRAILING)) {
+					if(const boost::optional<k::Position> p = viewToModelInBounds(*viewport, position, TextLayout::TRAILING)) {
 						if(const hyperlink::Hyperlink* link = utils::getPointedHyperlink(*viewer_, *p)) {
 							link->invoke();
 							hyperlinkInvoked = true;
@@ -521,7 +531,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 			// ctrl  => begin word selection
 			// alt   => begin rectangle selection
 			if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
-				if(const boost::optional<k::Position> to = viewport->characterForPoint(position, TextLayout::TRAILING)) {
+				if(const boost::optional<k::Position> to = viewToModelInBounds(*viewport, position, TextLayout::TRAILING)) {
 					state_ = EXTENDING_CHARACTER_SELECTION;
 					if((modifiers & (UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN)) != 0) {
 						if((modifiers & UserInput::CONTROL_DOWN) != 0) {
@@ -558,9 +568,11 @@ void DefaultMouseInputStrategy::handleLeftButtonReleased(const NativePoint& posi
 	if(dnd_.supportLevel >= SUPPORT_DND
 			&& (state_ == APPROACHING_DND
 			|| state_ == DND_SOURCE)) {	// TODO: this should handle only case APPROACHING_DND?
-		state_ = NONE;
-		viewer_->caret().moveTo(viewToModel(viewer_->textRenderer(), position, TextLayout::TRAILING));
-		::SetCursor(::LoadCursor(nullptr, IDC_IBEAM));	// hmm...
+		if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
+			state_ = NONE;
+			viewer_->caret().moveTo(viewToModel(*viewport, position, TextLayout::TRAILING));
+			::SetCursor(::LoadCursor(nullptr, IDC_IBEAM));	// hmm...
+		}
 	}
 
 	timer_.stop();
@@ -654,20 +666,22 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Action action, const base::Mous
 		break;
 	case UserInput::BUTTON2_DOWN:
 		if(action == PRESSED) {
-			if(viewer_->document().numberOfLines() > viewer_->numberOfVisibleLines()) {
-				state_ = APPROACHING_AUTO_SCROLL;
-				dragApproachedPosition_ = input.location();
-				const NativePoint p(viewer_->mapToGlobal(input.location()));
-				viewer_->setFocus();
-				// show the indicator margin
-				NativeRectangle rect(autoScrollOriginMark_->bounds(true));
-				autoScrollOriginMark_->move(
-					geometry::make<NativePoint>(geometry::x(p) - geometry::dx(rect) / 2, geometry::y(p) - geometry::dy(rect) / 2));
-				autoScrollOriginMark_->show();
-				autoScrollOriginMark_->raise();
-				viewer_->grabInput();
-				showCursor(input.location());
-				return true;
+			if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
+				if(viewer_->document().numberOfLines() > viewport->numberOfVisibleLines()) {
+					state_ = APPROACHING_AUTO_SCROLL;
+					dragApproachedPosition_ = input.location();
+					const NativePoint p(viewer_->mapToGlobal(input.location()));
+					viewer_->setFocus();
+					// show the indicator margin
+					NativeRectangle rect(autoScrollOriginMark_->bounds(true));
+					autoScrollOriginMark_->move(
+						geometry::make<NativePoint>(geometry::x(p) - geometry::dx(rect) / 2, geometry::y(p) - geometry::dy(rect) / 2));
+					autoScrollOriginMark_->show();
+					autoScrollOriginMark_->raise();
+					viewer_->grabInput();
+					showCursor(input.location());
+					return true;
+				}
 			}
 		} else if(action == RELEASED) {
 			if(state_ == APPROACHING_AUTO_SCROLL) {
@@ -720,8 +734,11 @@ void DefaultMouseInputStrategy::mouseWheelRotated(const base::MouseWheelInput& i
 		UINT lines;	// the number of lines to scroll
 		if(!win32::boole(::SystemParametersInfoW(SPI_GETWHEELSCROLLLINES, 0, &lines, 0)))
 			lines = 3;
-		if(lines == WHEEL_PAGESCROLL)
-			lines = static_cast<UINT>(viewer_->numberOfVisibleLines());
+		if(lines == WHEEL_PAGESCROLL) {
+			// TODO: calculate precise page size.
+			if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock())
+				lines = static_cast<UINT>(viewport->numberOfVisibleLines());
+		}
 		viewer_->scroll(0, -geometry::dy(input.rotation()) * static_cast<short>(lines) / WHEEL_DELTA, true);
 	}
 }
@@ -741,9 +758,11 @@ bool DefaultMouseInputStrategy::showCursor(const NativePoint& position) {
 		cursorName = IDC_ARROW;
 	else if(htr == TextViewer::CONTENT_AREA) {
 		// on a hyperlink?
-		if(const boost::optional<k::Position> p =
-				viewToModelInBounds(viewer_->textRenderer(), position, TextLayout::TRAILING, k::locations::UTF16_CODE_UNIT))
-			newlyHoveredHyperlink = utils::getPointedHyperlink(*viewer_, *p);
+		if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
+			if(const boost::optional<k::Position> p =
+					viewToModelInBounds(*viewport, position, TextLayout::TRAILING, k::locations::UTF16_CODE_UNIT))
+				newlyHoveredHyperlink = utils::getPointedHyperlink(*viewer_, *p);
+		}
 		if(newlyHoveredHyperlink != nullptr && win32::boole(::GetAsyncKeyState(VK_CONTROL) & 0x8000))
 			cursorName = IDC_HAND;
 	}
