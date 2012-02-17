@@ -31,6 +31,19 @@ namespace ascension {
 
 		namespace font {
 
+			struct VisualLine : private detail::LessThanComparable<VisualLine>, private detail::EqualityComparable<VisualLine> {
+				VisualLine() /*throw()*/ {}
+				VisualLine(Index line, Index subline) /*throw()*/ : line(line), subline(subline) {}
+				Index line;		///< The logical line number.
+				Index subline;	///< The visual offset in the logical line.
+			};
+			inline bool operator==(const VisualLine& lhs, const VisualLine& rhs) /*throw()*/ {
+				return lhs.line == rhs.line && lhs.subline == rhs.subline;
+			}
+			inline bool operator<(const VisualLine& lhs, const VisualLine& rhs) /*throw()*/ {
+				return lhs.line < rhs.line || (lhs.line == rhs.line && lhs.subline < rhs.subline);
+			}
+
 			/**
 			 * The @c InlineObject represents an inline object in @c TextLayout.
 			 */

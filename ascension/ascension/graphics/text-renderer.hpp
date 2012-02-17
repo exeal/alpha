@@ -6,25 +6,15 @@
  * @date 2011-11-12 renamed from rendering.hpp
  */
 
-#ifndef ASCENSION_RENDERING_HPP
-#define ASCENSION_RENDERING_HPP
+#ifndef ASCENSION_TEXT_RENDERER_HPP
+#define ASCENSION_TEXT_RENDERER_HPP
 
 //#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
-#include <ascension/kernel/point.hpp>	// kernel.locations
 #include <ascension/graphics/line-layout-vector.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <memory>	// std.shared_ptr, std.unique_ptr, std.weak_ptr
-#include <boost/iterator/iterator_facade.hpp>
 
 namespace ascension {
-
-	namespace viewers {
-		class Caret;
-		namespace base {
-			class Widget;
-		}
-	}
-
 	namespace graphics {
 		namespace font {
 
@@ -158,102 +148,6 @@ namespace ascension {
 				mutable win32::Handle<HBITMAP> memoryBitmap_;
 			};
 
-			/**
-			 * Interface for objects which are interested in change of scroll positions of a
-			 * @c TextViewport.
-			 * @see TextViewport#addListener, TextViewport#removeListener
-			 */
-			class TextViewportListener {
-			private:
-				virtual void viewportPositionChanged(
-					const VisualLine& oldLine, Index oldInlineProgressionOffset) /*throw()*/ = 0;
-				virtual void viewportSizeChanged(const NativeSize& oldSize) /*throw()*/ = 0;
-				friend class TextViewport;
-			};
-
-			class TextViewport {
-			public:
-				TextRenderer& textRenderer() /*throw()*/;
-				const TextRenderer& textRenderer() const /*throw()*/;
-				// observers
-				void addListener(TextViewportListener& listener);
-				void removeListener(TextViewportListener& listener);
-				// extents
-				float numberOfVisibleCharactersInLine() const /*throw()*/;
-				float numberOfVisibleLines() const /*throw()*/;
-				// content- or allocation-rectangles
-				Scalar allocationMeasure() const /*throw()*/;
-				Scalar contentMeasure() const /*throw()*/;
-				// view positions
-				const NativeRectangle& boundsInView() const /*throw()*/;
-				Index firstVisibleLineInLogicalNumber() const /*throw()*/;
-				Index firstVisibleLineInVisualNumber() const /*throw()*/;
-				Index firstVisibleSublineInLogicalLine() const /*throw()*/;
-				Index inlineProgressionOffset() const /*throw()*/;
-				void setBoundsInView(const NativeRectangle& bounds);
-				// scrolls
-				bool isScrollLocked() const /*throw()*/;
-				void lockScroll();
-				void scroll(const NativeSize& offset, viewers::base::Widget* widget);
-				void scroll(SignedIndex dbpd, SignedIndex dipd, viewers::base::Widget* widget);
-				void scrollTo(const NativePoint& position, viewers::base::Widget* widget);
-				void scrollTo(Index bpd, Index ipd, viewers::base::Widget* widget);
-				void scrollTo(const VisualLine& line, Index ipd, viewers::base::Widget* widget);
-				void unlockScroll();
-			private:
-				TextRenderer& textRenderer_;
-				NativeRectangle boundsInView_;
-				VisualLine firstVisibleLine_;
-				struct ScrollOffsets {
-					Index ipd, bpd;
-				} scrollOffsets_;
-				std::size_t lockCount_;
-				detail::Listeners<TextViewportListener> listeners_;
-			};
-
-			class BaselineIterator : public boost::iterator_facade<
-				BaselineIterator, Scalar, std::random_access_iterator_tag, Scalar, std::ptrdiff_t
-			> {
-			public:
-				BaselineIterator(const TextViewport& viewport, Index line, bool trackOutOfViewport);
-				Index line() const /*throw()*/;
-				NativePoint positionInView() const;
-				const NativePoint& positionInViewport() const;
-				const TextViewport& viewport() const /*throw()*/;
-				bool tracksOutOfViewport() const /*throw()*/;
-			private:
-				void advance(difference_type n);
-				void initializeWithFirstVisibleLine();
-				void invalidate() /*throw()*/;
-				bool isValid() const /*throw()*/;
-				void move(Index line);
-				// boost.iterator_facade
-				void decrement();
-				const reference dereference() const;
-				bool equal(const BaselineIterator& other);
-				void increment();
-				friend class boost::iterator_core_access;
-			private:
-				const TextViewport* viewport_;	// this is not a reference, for operator=
-				bool tracksOutOfViewport_;		// this is not const, for operator=
-				graphics::font::VisualLine line_;
-				Scalar distanceFromViewportBeforeEdge_;
-				NativePoint positionInViewport_;
-			};
-
-			// free functions
-			Scalar lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline = 0);
-			Scalar lineStartEdge(const TextLayout& layout, Scalar contentMeasure, Index subline = 0);
-			NativePoint modelToView(const TextViewport& viewport,
-				const kernel::Position& position, bool fullSearchBpd,
-				graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING);
-			kernel::Position viewToModel(const TextViewport& viewport,
-				const NativePoint& pointInView, TextLayout::Edge edge,
-				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
-			boost::optional<kernel::Position> viewToModelInBounds(const TextViewport& viewport,
-				const NativePoint& pointInView, TextLayout::Edge edge,
-				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
-
 
 			/// Returns the primary font.
 			inline std::shared_ptr<const Font> TextRenderer::defaultFont() const /*throw()*/ {
@@ -307,4 +201,4 @@ namespace ascension {
 	}
 } // namespace ascension.graphics.font
 
-#endif // !ASCENSION_RENDERING_HPP
+#endif // !ASCENSION_TEXT_RENDERER_HPP

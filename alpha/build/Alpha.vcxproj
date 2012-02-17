@@ -195,6 +195,7 @@
     <ClCompile Include="..\..\ascension\src\graphics\image-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\line-layout-vector.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\text-renderer.cpp" />
+    <ClCompile Include="..\..\ascension\src\graphics\text-viewport.cpp" />
     <ClCompile Include="..\..\ascension\src\length.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\command.cpp" />
@@ -296,6 +297,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-context.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-device.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\text-renderer.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\text-viewport.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-observers.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\inheritable.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\length.hpp" />
