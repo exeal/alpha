@@ -302,6 +302,9 @@
     <ClCompile Include="..\..\ascension\src\graphics\text-renderer.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\text-viewport.cpp">
+      <Filter>ascension\Source Files\graphics</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alpha.hpp">
@@ -645,6 +648,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\future.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\text-viewport.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
