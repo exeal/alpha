@@ -14,6 +14,7 @@
 #include <locale>	// std.use_facet, ...
 #include <sstream>	// std.basic_ostream, std.ostringstream
 #include <utility>	// std.pair
+#include <boost/operators.hpp>
 #include <boost/optional.hpp>
 
 namespace ascension {
@@ -25,7 +26,8 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 * @see Region, Point, viewers#VisualPoint, viewers#Caret
 		 */
-		class Position : public FastArenaObject<Position> {
+		class Position : public FastArenaObject<Position>,
+				private boost::totally_ordered<Position> {
 		public:
 			/// Line number. Zero means that the position is the first line in the document.
 			Index line;
@@ -46,25 +48,9 @@ namespace ascension {
 			bool operator==(const Position& other) const /*throw()*/ {
 				return line == other.line && offsetInLine == other.offsetInLine;
 			}
-			/// Unequality operator.
-			bool operator!=(const Position& other) const /*throw()*/ {
-				return line != other.line || offsetInLine != other.offsetInLine;
-			}
 			/// Relational operator.
 			bool operator<(const Position& other) const /*throw()*/ {
 				return line < other.line || (line == other.line && offsetInLine < other.offsetInLine);
-			}
-			/// Relational operator.
-			bool operator<=(const Position& other) const /*throw()*/ {
-				return *this < other || *this == other;
-			}
-			/// Relational operator.
-			bool operator>(const Position& other) const /*throw()*/ {
-				return line > other.line || (line == other.line && offsetInLine > other.offsetInLine);
-			}
-			/// Relational operator.
-			bool operator>=(const Position& other) const /*throw()*/ {
-				return *this > other || *this == other;
 			}
 		};
 

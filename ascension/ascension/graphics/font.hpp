@@ -2,6 +2,7 @@
  * @file font.hpp
  * @author exeal
  * @date 2010-11-06 created
+ * @date 2010-2012
  */
 
 #ifndef ASCENSION_FONT_HPP
@@ -18,6 +19,7 @@
 #if defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
 #	include <ascension/win32/windows.hpp>	// win32.Handle
 #endif
+#include <boost/operators.hpp>
 
 namespace ascension {
 	namespace graphics {
@@ -198,7 +200,8 @@ namespace ascension {
 			 * @see FontDescription
 			 */
 			template<template<typename> class PropertyHolder = detail::Type2Type>
-			class FontProperties : public FontPropertiesBase {
+			class FontProperties : public FontPropertiesBase,
+					private boost::equality_comparable<FontProperties<PropertyHolder>> {
 			public:
 				typedef typename PropertyHolder<Weight>::Type WeightType;
 				typedef typename PropertyHolder<Stretch>::Type StretchType;
@@ -229,10 +232,6 @@ namespace ascension {
 				bool operator==(const FontProperties& other) const /*throw()*/ {
 					return weight_ == other.weight_ && stretch_ == other.stretch_
 						&& style_ == other.style_ && equals(pixelSize_, other.pixelSize_);
-				}
-				/// Inequality operator.
-				bool operator!=(const FontProperties& other) const /*throw()*/ {
-					return !(*this == other);
 				}
 				/// Returns the hash value for this object.
 				std::size_t hash() const /*throw()*/ {
