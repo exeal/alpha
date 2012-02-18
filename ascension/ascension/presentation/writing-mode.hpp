@@ -111,7 +111,7 @@ namespace ascension {
 		 *      (http://www.w3.org/TR/xsl/#writing-mode-related)
 		 */
 		template<bool inheritable>
-		struct WritingModeBase : private boost::equality_comparable<WritingMode<inheritable>> {
+		struct WritingModeBase : private boost::equality_comparable<WritingModeBase<inheritable>> {
 			/// The inline flow direction.
 			typename InheritableIf<inheritable, ReadingDirection>::Type inlineFlowDirection;
 			/// The block flow direction.
