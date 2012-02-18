@@ -2008,13 +2008,16 @@ void TextViewport::scroll(SignedIndex dbpd, SignedIndex dipd, Widget* widget) {
  * Returns the identifier near the specified position in the document.
  * @param document The document
  * @param position The position
- * @param[out] startColumn The start of the identifier. can be @c null if not needed
- * @param[out] endColumn The end of the identifier. can be @c null if not needed
- * @return @c false If the identifier is not found (in this case, the values of the output
- *         parameters are undefined)
+ * @param[out] startOffsetInLine The start offset in the line, of the identifier. Can be @c nullptr
+ *                               if not needed
+ * @param[out] endOffsetInLine The end offset in the line, of the identifier. Can be @c nullptr if
+ *                             not needed
+ * @return @c true if an identifier was found. @c false if not found and output paramter valuess
+ *         are not defined in this case
  * @see #getPointedIdentifier
  */
-bool source::getNearestIdentifier(const k::Document& document, const k::Position& position, Index* startColumn, Index* endColumn) {
+bool source::getNearestIdentifier(const k::Document& document,
+		const k::Position& position, Index* startOffsetInLine, Index* endOffsetInLine) {
 	using namespace text;
 	static const Index MAXIMUM_IDENTIFIER_HALF_LENGTH = 100;
 
@@ -2024,7 +2027,7 @@ bool source::getNearestIdentifier(const k::Document& document, const k::Position
 	Index start = position.offsetInLine, end = position.offsetInLine;
 
 	// find the start of the identifier
-	if(startColumn != 0) {
+	if(startOffsetInLine != nullptr) {
 		k::DocumentCharacterIterator i(document,
 			k::Region(max(partition.region.beginning(), k::Position(position.line, 0)), position), position);
 		do {
@@ -2038,12 +2041,11 @@ bool source::getNearestIdentifier(const k::Document& document, const k::Position
 		} while(i.hasPrevious());
 		if(!i.hasPrevious())
 			start = i.tell().offsetInLine;
-		if(startColumn!= nullptr)
-			*startColumn = start;
+		*startOffsetInLine = start;
 	}
 
 	// find the end of the identifier
-	if(endColumn != nullptr) {
+	if(endOffsetInLine != nullptr) {
 		k::DocumentCharacterIterator i(document, k::Region(position,
 			min(partition.region.end(), k::Position(position.line, document.lineLength(position.line)))), position);
 		while(i.hasNext()) {
@@ -2057,38 +2059,43 @@ bool source::getNearestIdentifier(const k::Document& document, const k::Position
 		}
 		if(!i.hasNext())
 			end = i.tell().offsetInLine;
-		if(endColumn != nullptr)
-			*endColumn = end;
+		*endOffsetInLine = end;
 	}
 
 	return true;
+}
+/**
+ * Returns the identifier near the specified position in the document.
+ * @param document The document
+ * @param position The position
+ * @return The found identifier or @c boost#none if not found
+ * @see #getPointedIdentifier
+ */
+boost::optional<k::Region> source::getNearestIdentifier(const k::Document& document, const k::Position& position) {
+	pair<Index, Index> offsetsInLine;
+	if(getNearestIdentifier(document, position, &offsetsInLine.first, &offsetsInLine.second))
+		return boost::make_optional(k::Region(position.line, offsetsInLine));
+	else
+		return boost::none;
 }
 
 /**
  * Returns the identifier near the cursor.
  * @param viewer The text viewer
- * @param[out] startPosition The start of the identifier. can be @c null if not needed
- * @param[out] endPosition The end of the identifier. can be @c null if not needed
- * @return @c false if the identifier is not found (in this case, the values of the output
- *         parameters are undefined)
+ * @return The found identifier or @c boost#none if not found
  * @see #getNearestIdentifier
  */
-bool source::getPointedIdentifier(const TextViewer& viewer, k::Position* startPosition, k::Position* endPosition) {
+boost::optional<k::Region> source::getPointedIdentifier(const TextViewer& viewer) {
 //	if(viewer.isWindow()) {
-		NativePoint cursorPoint;
-		::GetCursorPos(&cursorPoint);
-		viewer.mapFromGlobal(cursorPoint);
-		const k::Position cursor = viewToModel(viewer.textRenderer(), cursorPoint, TextLayout::LEADING);
-		if(source::getNearestIdentifier(viewer.document(), cursor,
-				(startPosition != nullptr) ? &startPosition->offsetInLine : 0, (endPosition != nullptr) ? &endPosition->offsetInLine : 0)) {
-			if(startPosition != nullptr)
-				startPosition->line = cursor.line;
-			if(endPosition != nullptr)
-				endPosition->line = cursor.line;
-			return true;
+		if(const shared_ptr<const TextViewport> viewport = viewer.textRenderer().viewport().lock()) {
+			NativePoint cursorPoint;
+			::GetCursorPos(&cursorPoint);
+			viewer.mapFromGlobal(cursorPoint);
+			return source::getNearestIdentifier(viewer.document(),
+				viewToModel(*viewport, cursorPoint, TextLayout::LEADING));
 		}
 //	}
-	return false;
+	return boost::none;
 }
 
 /// Calls @c IncrementalSearcher#abort from @a viewer.
