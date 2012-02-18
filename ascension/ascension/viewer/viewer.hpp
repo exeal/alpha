@@ -52,10 +52,11 @@ namespace ascension {
 	/// Provides stuffs for source code editors.
 	/// @todo Need refinements.
 	namespace source {
-		bool getPointedIdentifier(const viewers::TextViewer& viewer,
-				kernel::Position* startPosition, kernel::Position* endPosition);
+		boost::optional<kernel::Region> getPointedIdentifier(const viewers::TextViewer& viewer);
+		boost::optional<kernel::Region> getNearestIdentifier(
+			const kernel::Document& document, const kernel::Position& position);
 		bool getNearestIdentifier(const kernel::Document& document,
-				const kernel::Position& position, Index* startColumn, Index* endColumn);
+			const kernel::Position& position, Index* startOffsetInLine, Index* endOffsetInLine);
 	}
 
 	namespace viewers {
