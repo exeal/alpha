@@ -474,6 +474,16 @@ void TextViewport::scrollTo(const VisualLine& line, Index ipd, viewers::base::Wi
 	// TODO: not implemented.
 }
 
+/**
+ * Resets the size of the viewport.
+ * @param bounds The new bounds to set, in viewer-local coordinates in pixels
+ */
+void TextViewport::setBoundsInView(const NativeRectangle& bounds) {
+	const NativeRectangle oldBounds(boundsInView());
+	// TODO: not implemented.
+	listeners_.notify<const NativeRectangle&>(&TextViewportListener::viewportBoundsInViewChanged, oldBounds);
+}
+
 
 // free functions /////////////////////////////////////////////////////////////////////////////////
 

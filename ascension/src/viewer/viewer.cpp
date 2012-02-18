@@ -1007,10 +1007,8 @@ void TextViewer::resized(State state, const NativeSize&) {
 		return;
 	if(renderer_.get() == nullptr)
 		return;
-	if(const shared_ptr<TextViewport> viewport = textRenderer().viewport().lock()) {
-		const NativeRectangle textArea(textAllocationRectangle());
-		viewport->resize(geometry::size(textArea), this, &geometry::topLeft(textArea));
-	}
+	if(const shared_ptr<TextViewport> viewport = textRenderer().viewport().lock())
+		viewport->setBoundsInView(textAllocationRectangle());
 }
 
 /**
@@ -1873,113 +1871,6 @@ void CurrentLineHighlighter::setForeground(const Color& color) /*throw()*/ {
 }
 
 
-// graphics.font.TextViewport /////////////////////////////////////////////////////////////////////
-
-/**
- * Resets the size of the viewport.
- * @param newSize The new size to set
- * @param widget
- * @param origin
- */
-void TextViewport::resize(const NativeSize& newSize, Widget* widget, const NativePoint* origin) {
-	const NativeSize oldSize(size());
-	// TODO: not implemented.
-	listeners_.notify<const NativeSize&>(&TextViewportListener::viewportSizeChanged, oldSize);
-}
-
-/**
- * 
- * @param dbpd
- * @param dipd
- * @param widget
- * @param origin
- * @throw NullPointerException
- */
-void TextViewport::scroll(SignedIndex dbpd, SignedIndex dipd, Widget* widget, const NativePoint* origin) {
-	if(widget == nullptr && origin != nullptr)
-		throw NullPointerException("widget");
-	else if(widget != nullptr && origin == nullptr)
-		throw NullPointerException("origin");
-	else if(lockCount_ != 0)
-		return;
-
-	// 1. preprocess parameters and update positions
-	const VisualLine oldLine = firstVisibleLine_;
-	const Index oldInlineProgressionOffset = inlineProgressionOffset();
-	if(dbpd != 0) {
-		const Index maximumBpd = textRenderer().layouts().numberOfVisualLines() - static_cast<Index>(numberOfVisibleLines());
-		dbpd = max(min(dbpd,
-			static_cast<SignedIndex>(maximumBpd - firstVisibleLineInVisualNumber()) + 1),
-				-static_cast<SignedIndex>(firstVisibleLineInVisualNumber()));
-		if(dbpd != 0) {
-			scrollOffsets_.bpd += dbpd;
-			textRenderer().layouts().offsetVisualLine(firstVisibleLine_, dbpd);
-		}
-	}
-	if(dipd != 0) {
-		const Index maximumIpd = contentMeasure()
-			/ textRenderer().defaultFont()->metrics().averageCharacterWidth()
-			- static_cast<Index>(numberOfVisibleCharactersInLine());
-		dipd = max(min(dipd,
-			static_cast<SignedIndex>(maximumIpd - inlineProgressionOffset()) + 1),
-			-static_cast<SignedIndex>(inlineProgressionOffset()));
-		if(dipd != 0)
-			scrollOffsets_.ipd += dipd;
-	}
-	if(dbpd == 0 && dipd == 0)
-		return;
-	listeners_.notify<const VisualLine&, Index>(&TextViewportListener::viewportPositionChanged, oldLine, oldInlineProgressionOffset);
-
-	// 2. calculate numbers of pixels to scroll
-	if(widget == nullptr)
-		return;
-	dipd *= textRenderer().defaultFont()->metrics().averageCharacterWidth();
-	NativeSize pixelsToScroll;
-	switch(textRenderer().writingMode().blockFlowDirection) {
-		case HORIZONTAL_TB:
-			pixelsToScroll = geometry::make<NativeSize>(dipd * textRenderer().defaultFont()->metrics().averageCharacterWidth(), dbpd);
-			break;
-		case VERTICAL_RL:
-			pixelsToScroll = geometry::make<NativeSize>(-dbpd, dipd * textRenderer().defaultFont()->metrics().averageCharacterWidth());
-			break;
-		case VERTICAL_LR:
-			pixelsToScroll = geometry::make<NativeSize>(+dbpd, dipd * textRenderer().defaultFont()->metrics().averageCharacterWidth());
-			break;
-		default:
-			ASCENSION_ASSERT_NOT_REACHED();
-	}
-
-	// 3. scroll the graphics device
-	const NativeRectangle boundsToScroll(geometry::make<NativeRectangle>(*origin, size()));
-	if(abs(dbpd) >= static_cast<SignedIndex>(numberOfVisibleLines())
-			|| abs(dipd) >= static_cast<SignedIndex>(numberOfVisibleCharactersInLine()))
-		widget->scheduleRedraw(boundsToScroll, false);	// repaint all if the amount of the scroll is over a page
-	else {
-		// scroll image by BLIT
-		// TODO: direct call of Win32 API.
-		::ScrollWindowEx(widget->identifier().get(),
-			-geometry::dx(pixelsToScroll), -geometry::dy(pixelsToScroll), nullptr, &boundsToScroll, nullptr, nullptr, SW_INVALIDATE);
-		// invalidate bounds newly entered into the viewport
-		if(geometry::dx(pixelsToScroll) > 0)
-			widget->scheduleRedraw(geometry::make<NativeRectangle>(
-				geometry::topLeft(boundsToScroll),
-				geometry::make<NativeSize>(geometry::dx(pixelsToScroll), geometry::dy(boundsToScroll))), false);
-		else if(geometry::dx(pixelsToScroll) < 0)
-			widget->scheduleRedraw(geometry::make<NativeRectangle>(
-				geometry::topRight(boundsToScroll),
-				geometry::make<NativeSize>(geometry::dx(pixelsToScroll), geometry::dy(boundsToScroll))), false);
-		if(geometry::dy(pixelsToScroll) > 0)
-			widget->scheduleRedraw(geometry::make<NativeRectangle>(
-				geometry::topLeft(boundsToScroll),
-				geometry::make<NativeSize>(geometry::dx(boundsToScroll), geometry::dy(pixelsToScroll))), false);
-		else if(geometry::dy(pixelsToScroll) < 0)
-			widget->scheduleRedraw(geometry::make<NativeRectangle>(
-				geometry::bottomLeft(boundsToScroll),
-				geometry::make<NativeSize>(geometry::dx(boundsToScroll), geometry::dy(pixelsToScroll))), false);
-	}
-}
-
-
 // ascension.viewers.utils free functions /////////////////////////////////////////////////////////
 
 /// Closes the opened completion proposals popup immediately.
@@ -2016,6 +1907,98 @@ void utils::toggleOrientation(TextViewer& viewer) /*throw()*/ {
 //		viewer.getScrollInformation(SB_HORZ, scroll);
 //		viewer.setScrollInformation(SB_HORZ, scroll);
 //	}
+}
+
+
+// graphics.font.TextViewport /////////////////////////////////////////////////////////////////////
+
+/**
+ * 
+ * This method does nothing if scroll is locked.
+ * @param dbpd An offset to scroll in visual lines in block-progression-dimension
+ * @param dipd An offset tp scroll in characters in inline-progression-dimension
+ * @param widget The widget to scroll. This method schedules repainting about this widget. Can be
+ *               @c nullptr
+ */
+void TextViewport::scroll(SignedIndex dbpd, SignedIndex dipd, Widget* widget) {
+	if(lockCount_ != 0)
+		return;
+
+	// 1. preprocess parameters and update positions
+	const VisualLine oldLine = firstVisibleLine_;
+	const Index oldInlineProgressionOffset = inlineProgressionOffset();
+	if(dbpd != 0) {
+		const Index maximumBpd = textRenderer().layouts().numberOfVisualLines() - static_cast<Index>(numberOfVisibleLines());
+		dbpd = max(min(dbpd,
+			static_cast<SignedIndex>(maximumBpd - firstVisibleLineInVisualNumber()) + 1),
+				-static_cast<SignedIndex>(firstVisibleLineInVisualNumber()));
+		if(dbpd != 0) {
+			scrollOffsets_.bpd += dbpd;
+			textRenderer().layouts().offsetVisualLine(firstVisibleLine_, dbpd);
+		}
+	}
+	if(dipd != 0) {
+		const Index maximumIpd = contentMeasure()
+			/ textRenderer().defaultFont()->metrics().averageCharacterWidth()
+			- static_cast<Index>(numberOfVisibleCharactersInLine());
+		dipd = max(min(dipd,
+			static_cast<SignedIndex>(maximumIpd - inlineProgressionOffset()) + 1),
+			-static_cast<SignedIndex>(inlineProgressionOffset()));
+		if(dipd != 0)
+			scrollOffsets_.ipd += dipd;
+	}
+	if(dbpd == 0 && dipd == 0)
+		return;
+	listeners_.notify<const VisualLine&, Index>(
+		&TextViewportListener::viewportScrollPositionChanged, oldLine, oldInlineProgressionOffset);
+
+	// 2. calculate numbers of pixels to scroll
+	if(widget == nullptr)
+		return;
+	dipd *= textRenderer().defaultFont()->metrics().averageCharacterWidth();
+	NativeSize pixelsToScroll;
+	switch(textRenderer().writingMode().blockFlowDirection) {
+		case HORIZONTAL_TB:
+			pixelsToScroll = geometry::make<NativeSize>(dipd * textRenderer().defaultFont()->metrics().averageCharacterWidth(), dbpd);
+			break;
+		case VERTICAL_RL:
+			pixelsToScroll = geometry::make<NativeSize>(-dbpd, dipd * textRenderer().defaultFont()->metrics().averageCharacterWidth());
+			break;
+		case VERTICAL_LR:
+			pixelsToScroll = geometry::make<NativeSize>(+dbpd, dipd * textRenderer().defaultFont()->metrics().averageCharacterWidth());
+			break;
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+
+	// 3. scroll the graphics device
+	const NativeRectangle& boundsToScroll = boundsInView();
+	if(abs(dbpd) >= static_cast<SignedIndex>(numberOfVisibleLines())
+			|| abs(dipd) >= static_cast<SignedIndex>(numberOfVisibleCharactersInLine()))
+		widget->scheduleRedraw(boundsToScroll, false);	// repaint all if the amount of the scroll is over a page
+	else {
+		// scroll image by BLIT
+		// TODO: direct call of Win32 API.
+		::ScrollWindowEx(widget->identifier().get(),
+			-geometry::dx(pixelsToScroll), -geometry::dy(pixelsToScroll), nullptr, &boundsToScroll, nullptr, nullptr, SW_INVALIDATE);
+		// invalidate bounds newly entered into the viewport
+		if(geometry::dx(pixelsToScroll) > 0)
+			widget->scheduleRedraw(geometry::make<NativeRectangle>(
+				geometry::topLeft(boundsToScroll),
+				geometry::make<NativeSize>(geometry::dx(pixelsToScroll), geometry::dy(boundsToScroll))), false);
+		else if(geometry::dx(pixelsToScroll) < 0)
+			widget->scheduleRedraw(geometry::make<NativeRectangle>(
+				geometry::topRight(boundsToScroll),
+				geometry::make<NativeSize>(geometry::dx(pixelsToScroll), geometry::dy(boundsToScroll))), false);
+		if(geometry::dy(pixelsToScroll) > 0)
+			widget->scheduleRedraw(geometry::make<NativeRectangle>(
+				geometry::topLeft(boundsToScroll),
+				geometry::make<NativeSize>(geometry::dx(boundsToScroll), geometry::dy(pixelsToScroll))), false);
+		else if(geometry::dy(pixelsToScroll) < 0)
+			widget->scheduleRedraw(geometry::make<NativeRectangle>(
+				geometry::bottomLeft(boundsToScroll),
+				geometry::make<NativeSize>(geometry::dx(boundsToScroll), geometry::dy(pixelsToScroll))), false);
+	}
 }
 
 
