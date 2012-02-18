@@ -64,12 +64,16 @@ namespace ascension {
 			public boost::iterator_facade<ConcreteIterator, Char, boost::random_access_traversal_tag> {
 		private:
 			friend class boost::iterator_core_access;
-			void advance(difference_type n) {derived().next(n);}
-			void decrement() {derived().next(-1);}
-			reference dereference() const {return *derived().tell();}
-			difference_type distance_to(const ConcreteIterator& other) const {return derived().tell() - other.tell();}
-			bool equal(const ConcreteIterator& other) const {return derived().tell() == other.tell();}
-			void increment() {derived().next(+1);}
+			void advance(difference_type n) {static_cast<ConcreteIterator*>(this)->next(n);}
+			void decrement() {return advance(-1);}
+			reference dereference() const {
+				return *static_cast<const ConcreteIterator*>(this)->tell();
+			}
+			difference_type distance_to(const ConcreteIterator& other) const {
+				return static_cast<const ConcreteIterator*>(this)->tell() - other.tell();
+			}
+			bool equal(const ConcreteIterator& other) const {return distance_to(other) == 0;}
+			void increment() {return advance(+1);}
 		};
 	} // namespace detail
 
