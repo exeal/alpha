@@ -3,6 +3,7 @@
  * @author exeal
  * @date 2005-2011 was unicode.hpp
  * @date 2011-04-26 separated from unicode.hpp
+ * @date 2011-2012
  */
 
 #ifndef ASCENSION_BREAK_ITERATOR_HPP
@@ -11,6 +12,7 @@
 #include <ascension/corelib/text/character-iterator.hpp>	// CharacterIterator
 #include <iterator>
 #include <locale>
+#include <boost/iterator/iterator_facade.hpp>
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #	error These class definitions and implementations are based on old version of Unicode.
@@ -57,27 +59,17 @@ namespace ascension {
 		 * class.
 		 * @tparam ConcreteIterator The concrete iterator
 		 */
-		template<class ConcreteIterator>
-		class BreakIteratorFacade : public std::iterator<std::random_access_iterator_tag, Char> {
-		public:
-			reference operator*() const {return *getConcrete().tell();}
-			reference operator[](difference_type index) const {return getConcrete().tell()[index];}
-			ConcreteIterator& operator++() {getConcrete().next(+1); return getConcrete();}
-			const ConcreteIterator operator++(int) {ConcreteIterator temp(getConcrete()); ++*this; return temp;}
-			ConcreteIterator& operator--() {getConcrete().next(-1); return getConcrete();}
-			const ConcreteIterator operator--(int) {ConcreteIterator temp(getConcrete()); --*this; return temp;}
-			ConcreteIterator& operator+=(difference_type offset) {getConcrete().next(+offset); return getConcrete();}
-			ConcreteIterator& operator-=(difference_type offset) {getConcrete().next(-offset); return getConcrete();}
-			const ConcreteIterator operator+(difference_type offset) {ConcreteIterator temp(*this); return temp += offset;}
-			const ConcreteIterator operator-(difference_type offset) {ConcreteIterator temp(*this); return temp -= offset;}
-			bool operator==(const ConcreteIterator& other) const {return getConcrete().tell() == other.tell();}
-			bool operator!=(const ConcreteIterator& other) const {return getConcrete().tell() != other.tell();}
-			bool operator<(const ConcreteIterator& other) const {return getConcrete().tell() < other.tell();}
-			bool operator<=(const ConcreteIterator& other) const {return getConcrete().tell() <= other.tell();}
-			bool operator>(const ConcreteIterator& other) const {return getConcrete().tell() > other.tell();}
-			bool operator>=(const ConcreteIterator& other) const {return getConcrete().tell() >= other.tell();}
+		template<typename ConcreteIterator>
+		class BreakIteratorFacade :
+			public boost::iterator_facade<ConcreteIterator, Char, boost::random_access_traversal_tag> {
 		private:
-			ConcreteIterator& getConcrete() {return *static_cast<ConcreteIterator*>(this);}
+			friend class boost::iterator_core_access;
+			void advance(difference_type n) {derived().next(n);}
+			void decrement() {derived().next(-1);}
+			reference dereference() const {return *derived().tell();}
+			difference_type distance_to(const ConcreteIterator& other) const {return derived().tell() - other.tell();}
+			bool equal(const ConcreteIterator& other) const {return derived().tell() == other.tell();}
+			void increment() {derived().next(+1);}
 		};
 	} // namespace detail
 

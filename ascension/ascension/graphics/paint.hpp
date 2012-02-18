@@ -2,6 +2,7 @@
  * @file paint.hpp
  * @author exeal
  * @date 2011-03-13 created
+ * @date 2011-2012
  */
 
 #ifndef ASCENSION_PAINT_HPP
@@ -11,6 +12,7 @@
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/geometry.hpp>
 #include <memory>	// std.unique_ptr
+#include <boost/operators.hpp>
 
 namespace ascension {
 	namespace graphics {
@@ -54,7 +56,7 @@ namespace ascension {
 			virtual ~Pattern() /*throw()*/ {}
 		};
 
-		class Paint {
+		class Paint : private boost::equality_comparable<Paint> {
 		public:
 			Paint() /*throw()*/ {}
 			explicit Paint(const Color& color) : color_(color) {if(color == Color()) throw std::invalid_argument("color");}
@@ -75,7 +77,6 @@ namespace ascension {
 			return lhs.color() == rhs.color()
 				&& lhs.gradient() == rhs.gradient() && lhs.pattern() == rhs.pattern();
 		}
-		inline bool operator!=(const Paint& lhs, const Paint& rhs) /*throw()*/ {return !(lhs == rhs);}
 
 		enum FillRule {NONZERO, EVENODD};
 

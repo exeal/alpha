@@ -13,6 +13,7 @@
 #if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
 #	include <ascension/win32/windows.hpp>	// COLORREF
 #endif
+#include <boost/operators.hpp>
 
 namespace ascension {
 	namespace graphics {
@@ -21,7 +22,7 @@ namespace ascension {
 		 * @c Color provides colors based on RGB values.
 		 * @see "CSS Color Module Level 3" (http://www.w3.org/TR/css3-color/)
 		 */
-		class Color : public FastArenaObject<Color> {
+		class Color : public FastArenaObject<Color>, private boost::equality_comparable<Color> {
 		public:
 			static const Color TRANSPARENT_COLOR;
 		public:
@@ -57,8 +58,6 @@ namespace ascension {
 					&& (!valid_ || (red() == other.red() && green() == other.green()
 						&& blue() == other.blue() && alpha() == other.alpha()));
 			}
-			/// Inequality operator.
-			bool operator!=(const Color& other) const /*throw()*/ {return !(*this == other);}
 		private:
 			uint16_t red_, green_, blue_, alpha_;
 			bool valid_;

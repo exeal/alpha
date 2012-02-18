@@ -17,6 +17,7 @@
 #include <limits>	// std.numeric_limits
 #include <memory>	// std.unique_ptr
 #include <vector>
+#include <boost/operators.hpp>
 
 namespace ascension {
 
@@ -31,7 +32,7 @@ namespace ascension {
 
 		namespace font {
 
-			struct VisualLine : private detail::LessThanComparable<VisualLine>, private detail::EqualityComparable<VisualLine> {
+			struct VisualLine : private boost::totally_ordered<VisualLine> {
 				VisualLine() /*throw()*/ {}
 				VisualLine(Index line, Index subline) /*throw()*/ : line(line), subline(subline) {}
 				Index line;		///< The logical line number.

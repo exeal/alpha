@@ -3,6 +3,7 @@
  * @author exeal
  * @date 2004-2010 (was basic-types.hpp)
  * @date 2011-03-25 separated from basic-types.hpp
+ * @date 2011-2012
  */
 
 #ifndef ASCENSION_RANGE_HPP
@@ -13,6 +14,7 @@
 #include <sstream>		// std.basic_ostream, std.ostringstream
 #include <utility>		// std.max, std.min, std.pair
 #include <ascension/corelib/type-traits.hpp>
+#include <boost/operators.hpp>
 
 namespace ascension {
 
@@ -51,7 +53,7 @@ namespace ascension {
 	 * @see BasicStringPiece, kernel#Region
 	 */
 	template<typename T, typename Comp = std::less<T>>
-	class Range : protected std::pair<T, T> {
+	class Range : protected std::pair<T, T>, private boost::equality_comparable<Range<T, Comp>> {
 	public:
 		typedef T value_type;
 	public:
@@ -76,10 +78,9 @@ namespace ascension {
 		Range(value_type v1, value_type v2) :
 //			std::pair<value_type, value_type>(std::minmax(v1, v2, Comp())) {}
 			std::pair<value_type, value_type>(std::min(v1, v2, Comp()), std::max(v1, v2, Comp())) {}
+		/// Equality operator.
 		bool operator==(const Range& other) const {
 			return static_cast<const std::pair<T, T>&>(*this) == static_cast<const std::pair<T, T>&>(other);}
-		/// Inequality operator.
-		bool operator!=(const Range& other) const {return !(*this == other);}
 		/// Returns the beginning (minimum) of the range.
 		value_type beginning() const {return std::pair<T, T>::first;}
 		/// Returns the end (maximum) of the range.

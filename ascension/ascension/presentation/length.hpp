@@ -5,12 +5,14 @@
  * @date 2006-2011 was presentation.hpp
  * @date 2011-05-04 separated from presentation.hpp
  * @date 2011-05-13 separated from text-style.hpp
+ * @date 2011-2012
  */
 
 #ifndef ASCENSION_LENGTH_HPP
 #define ASCENSION_LENGTH_HPP
 #include <ascension/graphics/geometry.hpp>	// graphics.NativeSize
 #include <stdexcept>	// std.invalid_argument
+#include <boost/operators.hpp>
 
 namespace ascension {
 
@@ -27,7 +29,7 @@ namespace ascension {
 		 * @see "4.5.11 Interface SVGLength - SVG (Second Edition)"
 		 *      (http://www.w3.org/TR/SVG/types.html#InterfaceSVGLength)
 		 */
-		class Length {
+		class Length : private boost::equality_comparable<Length> {
 		public:
 			typedef std::invalid_argument NotSupportedError;
 
@@ -67,7 +69,6 @@ namespace ascension {
 		public:
 			explicit Length(double valueInSpecifiedUnits = 0.0, Unit unitType = PIXELS, Mode = OTHER);
 			bool operator==(const Length& other) const /*throw()*/;
-			bool operator!=(const Length& other) const /*throw()*/;
 			void convertToSpecifiedUnits(Unit unitType,
 				const graphics::RenderingContext2D* context, const graphics::NativeSize* contextSize);
 			void newValueSpecifiedUnits(Unit unitType, double valueInSpecifiedUnits);
@@ -93,9 +94,6 @@ namespace ascension {
 			return valueInSpecifiedUnits() == other.valueInSpecifiedUnits()
 				&& unitType() == other.unitType() && mode_ == other.mode_;
 		}
-
-		/// Inequality operator.
-		inline bool Length::operator!=(const Length& other) const /*throw()*/ {return !(*this == other);}
 
 		/**
 		 * [Copied from SVG 1.1 documentation] Sets the value as a floating point value, in the

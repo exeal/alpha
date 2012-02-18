@@ -3,6 +3,7 @@
  * @author exeal
  * @date 2005-2011 was unicode.hpp
  * @date 2011-04-27 separated from unicode.hpp
+ * @date 2011-2012
  */
 
 #ifndef ASCENSION_COLLATOR_HPP
@@ -13,6 +14,7 @@
 #ifndef ASCENSION_NO_UNICODE_COLLATION
 #include <ascension/corelib/text/unicode.hpp>
 #include <memory>							// std.unique_ptr
+#include <boost/operators.hpp>
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
 #	error These class definitions and implementations are based on old version of Unicode.
@@ -22,7 +24,9 @@ namespace ascension {
 
 	namespace text {
 
-		class CollationKey : public FastArenaObject<CollationKey> {
+		class CollationKey :
+				public FastArenaObject<CollationKey>,
+				private boost::totally_ordered<CollationKey> {
 		public:
 			CollationKey() /*throw()*/ : length_(0) {}
 			CollationKey(std::unique_ptr<const uint8_t[]> keyValues,
@@ -30,11 +34,7 @@ namespace ascension {
 			CollationKey(const CollationKey& other);
 			CollationKey&operator=(const CollationKey& other);
 			bool operator==(const CollationKey& other) const /*throw()*/;
-			bool operator!=(const CollationKey& other) const /*throw()*/;
 			bool operator<(const CollationKey& other) const /*throw()*/;
-			bool operator<=(const CollationKey& other) const /*throw()*/;
-			bool operator>(const CollationKey& other) const /*throw()*/;
-			bool operator>=(const CollationKey& other) const /*throw()*/;
 		private:
 			const std::unique_ptr<const uint8_t[]> keyValues_;
 			const std::size_t length_;

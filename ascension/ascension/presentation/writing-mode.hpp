@@ -5,6 +5,7 @@
  * @date 2006-2011 was presentation.hpp
  * @date 2011-05-04 text-style.hpp separated from presentation.hpp
  * @date 2011-07-24 separated from text-style.hpp
+ * @date 2011-2012
  */
 
 #ifndef ASCENSION_WRITING_MODE_HPP
@@ -14,6 +15,7 @@
 #include <ascension/graphics/geometry.hpp>			// PhysicalFourSides
 #include <ascension/presentation/inheritable.hpp>	// Inheritable
 #include <array>
+#include <boost/operators.hpp>
 
 namespace ascension {
 
@@ -109,7 +111,7 @@ namespace ascension {
 		 *      (http://www.w3.org/TR/xsl/#writing-mode-related)
 		 */
 		template<bool inheritable>
-		struct WritingModeBase {
+		struct WritingModeBase : private boost::equality_comparable<WritingMode<inheritable>> {
 			/// The inline flow direction.
 			typename InheritableIf<inheritable, ReadingDirection>::Type inlineFlowDirection;
 			/// The block flow direction.
@@ -143,9 +145,6 @@ namespace ascension {
 				return inlineFlowDirection == other.inlineFlowDirection
 					&& blockFlowDirection == other.blockFlowDirection && textOrientation == other.textOrientation;
 			}
-			/// Inequality operator.
-			template<bool otherInheritable>
-			inline bool operator!=(const WritingModeBase<otherInheritable>& other) const {return !(*this == other);}
 		};
 
 		struct WritingMode : public WritingModeBase<false> {

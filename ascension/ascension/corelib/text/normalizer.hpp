@@ -40,9 +40,10 @@ namespace ascension {
 			Normalizer();
 			Normalizer(const CharacterIterator& text, Form form);
 			Normalizer(const Normalizer& other);
-			~Normalizer() /*throw()*/;
+			Normalizer(Normalizer&& other) /*noexcept*/;
 			// operator
 			Normalizer&	operator=(const Normalizer& other);
+			Normalizer& operator=(Normalizer&& other) /*noexcept*/;
 
 			// attributes
 			/// Returns @c false if the iterator addresses the end of the normalized text.

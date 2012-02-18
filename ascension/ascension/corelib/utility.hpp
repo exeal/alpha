@@ -66,6 +66,7 @@ namespace ascension {
 			T originalValue_;
 		};
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 		/// @internal Produces @c operator&gt;, @c operator&lt;= and @c operator&gt;= from @c operator&lt;.
 		template<typename Derived>
 		struct LessThanComparable {
@@ -79,6 +80,7 @@ namespace ascension {
 		struct EqualityComparable {
 			friend bool operator!=(const Derived& lhs, const Derived& rhs) {return !(lhs == rhs);}
 		};
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 	} // namespace detail
 

@@ -7,6 +7,7 @@
 #ifndef ASCENSION_POINT_HPP
 #define ASCENSION_POINT_HPP
 #include <ascension/kernel/document.hpp>
+#include <boost/operators.hpp>
 #include <boost/optional.hpp>
 
 namespace ascension {
@@ -51,7 +52,7 @@ namespace ascension {
 		};
 
 		// documentation is point.cpp
-		class Point {
+		class Point : private boost::totally_ordered<Point> {
 			ASCENSION_UNASSIGNABLE_TAG(Point);
 		public:
 			// constructors
@@ -137,25 +138,9 @@ namespace ascension {
 		inline bool operator==(const Point& lhs, const Point& rhs) /*throw()*/ {
 			return lhs.position() == rhs.position();
 		}
-		/// Unequality operator for @c Point objects.
-		inline bool operator!=(const Point& lhs, const Point& rhs) /*throw()*/ {
-			return !(lhs == rhs);
-		}
 		/// Less-than operator for @c Point objects.
 		inline bool operator<(const Point& lhs, const Point& rhs) /*throw()*/ {
 			return lhs.position() < rhs.position();
-		}
-		/// Less-than-or-equal-to operator for @c Point objects.
-		inline bool operator<=(const Point& lhs, const Point& rhs) /*throw()*/ {
-			return lhs < rhs || lhs == rhs;
-		}
-		/// Greater-than operator for @c Point objects.
-		inline bool operator>(const Point& lhs, const Point& rhs) /*throw()*/ {
-			return !(lhs <= rhs);
-		}
-		/// Greater-than-or-equal-to operator for @c Point objects.
-		inline bool operator>=(const Point& lhs, const Point& rhs) /*throw()*/ {
-			return !(lhs < rhs);
 		}
 		/// Returns the content type of the document partition contains the point.
 		inline ContentType contentType(const Point& p) {

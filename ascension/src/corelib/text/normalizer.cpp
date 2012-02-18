@@ -342,20 +342,33 @@ Normalizer::Normalizer(const CharacterIterator& text, Form form) : form_(form), 
 }
 
 /// Copy-constructor.
-Normalizer::Normalizer(const Normalizer& rhs) : form_(rhs.form_),
-		current_(rhs.current_->clone().release()), normalizedBuffer_(rhs.normalizedBuffer_), indexInBuffer_(rhs.indexInBuffer_) {
+Normalizer::Normalizer(const Normalizer& other) : form_(other.form_),
+		current_(other.current_->clone().release()), normalizedBuffer_(other.normalizedBuffer_),
+		indexInBuffer_(other.indexInBuffer_), nextOffset_(other.nextOffset_) {
 }
 
-/// Destructor.
-Normalizer::~Normalizer() /*throw()*/ {
+/// Move-constructor.
+Normalizer::Normalizer(Normalizer&& other) /*noexcept*/ : form_(other.form_), current_(move(other.current_)),
+		normalizedBuffer_(move(other.normalizedBuffer_)), indexInBuffer_(other.indexInBuffer_), nextOffset_(other.nextOffset_) {
 }
 
-/// Assignment operator.
-Normalizer& Normalizer::operator=(const Normalizer& rhs) {
-	normalizedBuffer_ = rhs.normalizedBuffer_;
-	current_.reset(rhs.current_->clone().release());
-	form_ = rhs.form_;
-	indexInBuffer_ = rhs.indexInBuffer_;
+/// Copy-assignment operator.
+Normalizer& Normalizer::operator=(const Normalizer& other) {
+	normalizedBuffer_ = other.normalizedBuffer_;
+	current_.reset(other.current_->clone().release());
+	form_ = other.form_;
+	indexInBuffer_ = other.indexInBuffer_;
+	nextOffset_ = other.nextOffset_;
+	return *this;
+}
+
+/// Move-assignment operator.
+Normalizer& Normalizer::operator=(Normalizer&& other) /*noexcept*/ {
+	form_ = other.form_;
+	current_ = move(other.current_);
+	normalizedBuffer_ = move(other.normalizedBuffer_);
+	indexInBuffer_ = other.indexInBuffer_;
+	nextOffset_ = other.nextOffset_;
 	return *this;
 }
 
