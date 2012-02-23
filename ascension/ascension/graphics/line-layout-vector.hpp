@@ -21,8 +21,11 @@ namespace ascension {
 			/**
 			 * Interface for objects which are interested in getting informed about change of
 			 * visual lines of @c LineLayoutVector.
+			 * This interface is called by also @c TextViewport. See the documentation of
+			 * @c TextViewport class.
 			 * @see LineLayoutVector#addVisualLinesListener,
-			 *      LineLayoutVector#removeVisualLinesListener
+			 *      LineLayoutVector#removeVisualLinesListener,
+			 *      TextViewport#addVisualLinesListener, TextViewport#removeVisualLinesListener
 			 */
 			class VisualLinesListener {
 			private:
@@ -52,6 +55,7 @@ namespace ascension {
 					const Range<Index>& lines, SignedIndex sublinesDifference,
 					bool documentChanged, bool longestLineChanged) /*throw()*/ = 0;
 				friend class LineLayoutVector;
+				friend class TextViewport;
 			};
 
 			/**
@@ -75,7 +79,7 @@ namespace ascension {
 				// attributes
 				const kernel::Document& document() const /*throw()*/;
 				Scalar maximumMeasure() const /*throw()*/;
-				Index numberOfSublinesOfLine(Index) const;
+				Index numberOfSublinesOfLine(Index line) const;
 				Index numberOfVisualLines() const /*throw()*/;
 				// listeners
 				void addVisualLinesListener(VisualLinesListener& listener);

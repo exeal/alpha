@@ -194,9 +194,6 @@ namespace ascension {
 			HRESULT accessibleObject(IAccessible*& acc) const /*throw()*/;
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 			void hideToolTip();
-			void scroll(int dx, int dy, bool redraw);
-			void scrollTo(int x, int y, bool redraw);
-			void scrollTo(Index line, bool redraw);
 			void showToolTip(const String& text, unsigned long timeToWait = -1, unsigned long timeRemainsVisible = -1);
 #ifndef ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
 			HRESULT startTextServices();
@@ -215,7 +212,6 @@ namespace ascension {
 			bool allowsMouseInput() const /*throw()*/;
 			void enableMouseInput(bool enable);
 			// viewport
-			void firstVisibleLine(graphics::font::VisualLine* line, Index* viewportOffset) const /*throw()*/;
 			HitTestResult hitTest(const graphics::NativePoint& pt) const;
 			graphics::NativeRectangle textAllocationRectangle() const /*throw()*/;
 
@@ -433,22 +429,10 @@ namespace ascension {
 
 			// scroll information
 			struct Scrolls {
-				struct Axis {
-					ScrollPosition position;
-					ScrollPosition maximum;
-					ScrollPosition pageSize;
-//					unsigned long rate;		// 最小スクロール量が何文字 (何行) に相当するか (普通は 1)
-				} horizontal, vertical;
-				graphics::font::VisualLine firstVisibleLine;
+//				unsigned long horizontalRate, verticalRate;	// 最小スクロール量が何文字 (何行) に相当するか (普通は 1)
 				bool changed;
-				Scrolls() /*throw()*/ : firstVisibleLine(0, 0), changed(false) {
-					horizontal.position = vertical.position = 0;
-//					horizontal.rate = vertical.rate = 1;
-				}
-				unsigned long x() const /*throw()*/ {return horizontal.position/* * horizontal.rate*/;}
-				unsigned long y() const /*throw()*/ {return vertical.position/* * vertical.rate*/;}
+				Scrolls() /*throw()*/ : /*horizontalRate(1), verticalRate(1), */changed(false) {}
 				void resetBars(const TextViewer& viewer, char bars, bool pageSizeChanged) /*throw()*/;
-				void updateVertical(const TextViewer& viewer) /*throw()*/;
 			} scrolls_;
 
 			// freeze information
@@ -598,18 +582,6 @@ inline void TextViewer::enableActiveInputMethod(bool enable /* = true */) /*thro
  */
 inline void TextViewer::enableMouseInput(bool enable) {
 	if(mouseInputDisabledCount_ != 0 || !enable) mouseInputDisabledCount_ += !enable ? 1 : -1;}
-
-/**
- * Returns the line first visible in the viewport without before-space.
- * @param[out] line The first visible logical and visual lines. Can be @c null if not needed
- * @param[out] viewportOffset The visual index of the line. Can be @c null if not needed
- */
-inline void TextViewer::firstVisibleLine(graphics::font::VisualLine* line, Index* viewportOffset) const /*throw()*/ {
-	if(line != 0)
-		*line = scrolls_.firstVisibleLine;
-	if(viewportOffset != 0)
-		*viewportOffset = scrolls_.y();	// TODO: This code can't handle vertical writing-mode.
-}
 
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 /// Returns @c true if Global IME is enabled.

@@ -12,7 +12,7 @@
 
 //#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/graphics/geometry.hpp>
-#include <ascension/graphics/text-layout.hpp>
+#include <ascension/graphics/line-layout-vector.hpp>
 #include <ascension/kernel/point.hpp>	// kernel.locations
 #include <boost/iterator/iterator_facade.hpp>
 
@@ -57,13 +57,17 @@ namespace ascension {
 				friend class TextViewport;
 			};
 
-			class TextViewport {
+			/**
+			 */
+			class TextViewport : public VisualLinesListener {
 			public:
 				TextRenderer& textRenderer() /*throw()*/;
 				const TextRenderer& textRenderer() const /*throw()*/;
 				// observers
 				void addListener(TextViewportListener& listener);
+				void addVisualLinesListener(VisualLinesListener& listener);
 				void removeListener(TextViewportListener& listener);
+				void removeVisualLinesListener(VisualLinesListener& listener);
 				// extents
 				float numberOfVisibleCharactersInLine() const /*throw()*/;
 				float numberOfVisibleLines() const /*throw()*/;
@@ -87,6 +91,15 @@ namespace ascension {
 				void scrollTo(const VisualLine& line, Index ipd, viewers::base::Widget* widget);
 				void unlockScroll();
 			private:
+				void adjustBpdScrollPositions() /*throw()*/;
+				// VisualLinesListener
+				void visualLinesDeleted(const Range<Index>& lines,
+					Index sublines, bool longestLineChanged) /*throw()*/;
+				void visualLinesInserted(const Range<Index>& lines) /*throw()*/;
+				void visualLinesModified(
+					const Range<Index>& lines, SignedIndex sublinesDifference,
+					bool documentChanged, bool longestLineChanged) /*throw()*/;
+			private:
 				TextRenderer& textRenderer_;
 				NativeRectangle boundsInView_;
 				VisualLine firstVisibleLine_;
@@ -95,6 +108,7 @@ namespace ascension {
 				} scrollOffsets_;
 				std::size_t lockCount_;
 				detail::Listeners<TextViewportListener> listeners_;
+				detail::Listeners<VisualLinesListener> visualLinesListeners_;
 			};
 
 			class BaselineIterator : public boost::iterator_facade<
