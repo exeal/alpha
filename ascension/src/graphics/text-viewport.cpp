@@ -351,6 +351,13 @@ namespace {
 	}
 }
 
+inline void TextViewport::adjustBpdScrollPositions() /*throw()*/ {
+	const LineLayoutVector& layouts = textRenderer().layouts();
+	firstVisibleLine_.line = min(firstVisibleLine_.line, textRenderer().presentation().document().numberOfLines() - 1);
+	firstVisibleLine_.subline = min(layouts.numberOfSublinesOfLine(firstVisibleLine_.line) - 1, firstVisibleLine_.subline);
+	scrollOffsets_.bpd = layouts.mapLogicalLineToVisualLine(firstVisibleLine_.line) + firstVisibleLine_.subline;
+}
+
 /**
  * Returns the measure of the 'allocation-rectangle'.
  * @return The measure of the 'allocation-rectangle' in pixels
@@ -482,6 +489,78 @@ void TextViewport::setBoundsInView(const NativeRectangle& bounds) {
 	const NativeRectangle oldBounds(boundsInView());
 	// TODO: not implemented.
 	listeners_.notify<const NativeRectangle&>(&TextViewportListener::viewportBoundsInViewChanged, oldBounds);
+}
+
+/// @see VisualLinesListener#visualLinesDeleted
+void TextViewport::visualLinesDeleted(const Range<Index>& lines, Index sublines, bool longestLineChanged) /*throw()*/ {
+//	scrolls_.changed = true;
+	if(lines.end() < firstVisibleLine_.line) {	// deleted before visible area
+		firstVisibleLine_.line -= length(lines);
+		scrollOffsets_.bpd -= sublines;
+//		scrolls_.vertical.maximum -= static_cast<int>(sublines);
+//		repaintRuler();
+	} else if(lines.beginning() > firstVisibleLine_.line	// deleted the first visible line and/or after it
+			|| (lines.beginning() == firstVisibleLine_.line && firstVisibleLine_.subline == 0)) {
+//		scrolls_.vertical.maximum -= static_cast<int>(sublines);
+//		redrawLine(lines.beginning(), true);
+	} else {	// deleted lines contain the first visible line
+		firstVisibleLine_.line = lines.beginning();
+		adjustBpdScrollPositions();
+//		redrawLine(lines.beginning(), true);
+	}
+//	if(longestLineChanged)
+//		scrolls_.resetBars(*this, 'i', false);
+	visualLinesListeners_.notify<const Range<Index>&, Index, bool>(&VisualLinesListener::visualLinesDeleted, lines, sublines, longestLineChanged);
+}
+
+/// @see VisualLinesListener#visualLinesInserted
+void TextViewport::visualLinesInserted(const Range<Index>& lines) /*throw()*/ {
+//	scrolls_.changed = true;
+	if(lines.end() < firstVisibleLine_.line) {	// inserted before visible area
+		firstVisibleLine_.line += length(lines);
+		scrollOffsets_.bpd += length(lines);
+//		scrolls_.vertical.maximum += static_cast<int>(length(lines));
+//		repaintRuler();
+	} else if(lines.beginning() > firstVisibleLine_.line	// inserted at or after the first visible line
+			|| (lines.beginning() == firstVisibleLine_.line && firstVisibleLine_.subline == 0)) {
+//		scrolls_.vertical.maximum += static_cast<int>(length(lines));
+//		redrawLine(lines.beginning(), true);
+	} else {	// inserted around the first visible line
+		firstVisibleLine_.line += length(lines);
+		adjustBpdScrollPositions();
+//		redrawLine(lines.beginning(), true);
+	}
+	visualLinesListeners_.notify<const Range<Index>&>(&VisualLinesListener::visualLinesInserted, lines);
+}
+
+/// @see VisualLinesListener#visualLinesModified
+void TextViewport::visualLinesModified(const Range<Index>& lines,
+		SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/ {
+	if(sublinesDifference == 0)	// number of visual lines was not changed
+/*		redrawLines(lines)*/;
+	else {
+//		scrolls_.changed = true;
+		if(lines.end() < firstVisibleLine_.line) {	// changed before visible area
+			scrollOffsets_.bpd += sublinesDifference;
+//			scrolls_.vertical.maximum += sublinesDifference;
+//			repaintRuler();
+		} else if(lines.beginning() > firstVisibleLine_.line	// changed at or after the first visible line
+				|| (lines.beginning() == firstVisibleLine_.line && firstVisibleLine_.subline == 0)) {
+//			scrolls_.vertical.maximum += sublinesDifference;
+//			redrawLine(lines.beginning(), true);
+		} else {	// changed lines contain the first visible line
+			adjustBpdScrollPositions();
+//			redrawLine(lines.beginning(), true);
+		}
+	}
+	if(longestLineChanged) {
+//		scrolls_.resetBars(*this, 'i', false);
+//		scrolls_.changed = true;
+	}
+//	if(!documentChanged && scrolls_.changed)
+//		updateScrollBars();
+	visualLinesListeners_.notify<const Range<Index>&, SignedIndex, bool, bool>(
+		&VisualLinesListener::visualLinesModified, lines, sublinesDifference, documentChanged, longestLineChanged);
 }
 
 

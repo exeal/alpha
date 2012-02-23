@@ -98,7 +98,7 @@ namespace ascension {
 		 *      (http://www.w3.org/TR/SVG/text.html#GlyphOrientation)
 		 */
 		enum TextOrientation {
-			VERTICAL_RIGHT, UPRIGHT, SIDEWAYS_RIGHT, SIDEWAYS_LEFT, SIDEWAYS, USE_GLYPH_ORIENTATION
+			MIXED_RIGHT, UPRIGHT, SIDEWAYS_RIGHT, SIDEWAYS_LEFT, SIDEWAYS, USE_GLYPH_ORIENTATION
 		};
 
 		/**
@@ -131,7 +131,7 @@ namespace ascension {
 				typename InheritableIf<inheritable, BlockFlowDirection>::Type
 					blockFlowDirection = HORIZONTAL_TB,
 				typename InheritableIf<inheritable, TextOrientation>::Type
-					textOrientation = VERTICAL_RIGHT) :
+					textOrientation = MIXED_RIGHT) :
 				inlineFlowDirection(inlineFlowDirection), blockFlowDirection(blockFlowDirection),
 				textOrientation(textOrientation) /*throw()*/ {}
 			/// Implicit conversion operator.
@@ -152,7 +152,7 @@ namespace ascension {
 				ReadingDirection inlineFlowDirection
 					= LEFT_TO_RIGHT/*ASCENSION_DEFAULT_TEXT_READING_DIRECTION*/,
 				BlockFlowDirection blockFlowDirection = HORIZONTAL_TB,
-				TextOrientation textOrientation = VERTICAL_RIGHT) :
+				TextOrientation textOrientation = MIXED_RIGHT) :
 				WritingModeBase(inlineFlowDirection, blockFlowDirection, textOrientation) /*throw()*/ {}
 		};
 
@@ -293,7 +293,7 @@ namespace ascension {
 					else
 						return SIDEWAYS;
 				case USE_GLYPH_ORIENTATION:
-					return VERTICAL_RIGHT;
+					return MIXED_RIGHT;
 				default:
 					return writingMode.textOrientation;
 			}
