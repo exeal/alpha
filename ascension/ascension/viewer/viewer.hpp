@@ -95,9 +95,9 @@ namespace ascension {
 
 		class TextViewer :
 				public base::ScrollableWidget,
-				public kernel::DocumentListener, public kernel::DocumentStateListener,
-				public kernel::DocumentRollbackListener, public graphics::font::DefaultFontListener,
-				public graphics::font::VisualLinesListener, public graphics::font::TextViewportListener,
+				public kernel::DocumentListener, public kernel::DocumentRollbackListener,
+				public graphics::font::DefaultFontListener, public graphics::font::VisualLinesListener,
+				public graphics::font::TextViewportListener, public graphics::font::ComputedWritingModeListener,
 				public CaretListener, public CaretStateListener, public detail::PointCollection<VisualPoint> {
 		public:
 			/// Result of hit test.
@@ -231,11 +231,6 @@ namespace ascension {
 
 			// protected interfaces
 		protected:
-			// kernel.DocumentStateListener (overridable)
-			virtual void documentAccessibleRegionChanged(const kernel::Document& document);
-			virtual void documentModificationSignChanged(const kernel::Document& document);
-			virtual void documentPropertyChanged(const kernel::Document& document, const kernel::DocumentPropertyKey& key);
-			virtual void documentReadOnlySignChanged(const kernel::Document& document);
 			// CaretListener (overridable)
 			virtual void caretMoved(const Caret& self, const kernel::Region& oldRegion);
 			// CaretStateListener (overridable)
@@ -272,6 +267,8 @@ namespace ascension {
 			void viewportPositionChanged(
 				const graphics::font::VisualLine& oldLine, Index oldInlineProgressionOffset) /*throw()*/;
 			void viewportSizeChanged(const graphics::NativeSize& oldSize) /*throw()*/;
+			// graphics.font.ComputedWritingModeListener
+			void computedWritingModeChanged(const presentation::WritingMode& used);
 			// detail.PointCollection<VisualPoint>
 			void addNewPoint(VisualPoint& point) {points_.insert(&point);}
 			void removePoint(VisualPoint& point) {points_.erase(&point);}

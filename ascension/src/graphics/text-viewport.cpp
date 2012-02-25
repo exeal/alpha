@@ -319,28 +319,6 @@ namespace {
 		return result;
 	}
 
-	/**
-	 * @internal Converts the point in the viewport into the logical line number and visual subline
-	 * offset.
-	 * @param p The point in the viewport in pixels
-	 * @param[out] snapped @c true if there was not a line at @a p. Optional
-	 * @see #location, #mapBpdToLine, TextLayout#locateLine, TextLayout#offset
-	 */
-	VisualLine locateLine(const TextViewport& viewport, const NativePoint& p, bool* snapped = nullptr) /*throw()*/ {
-		const NativeRectangle bounds(geometry::make<NativeRectangle>(
-			geometry::make<NativePoint>(0, 0), geometry::size(viewport.boundsInView())));
-		switch(viewport.textRenderer().writingMode().blockFlowDirection) {
-			case HORIZONTAL_TB:
-				return mapBpdToLine(viewport, geometry::y(p) - geometry::top(bounds), snapped);
-			case VERTICAL_RL:
-				return mapBpdToLine(viewport, geometry::right(bounds) - geometry::x(p), snapped);
-			case VERTICAL_LR:
-				return mapBpdToLine(viewport, geometry::x(p) - geometry::left(bounds), snapped);
-			default:
-				ASCENSION_ASSERT_NOT_REACHED();
-		}
-	}
-
 	inline Scalar mapLineLayoutIpdToViewport(const TextViewport& viewport, Index line, Scalar ipd) {
 		return ipd + viewport.inlineProgressionOffset()
 			+ lineStartEdge(viewport.textRenderer().layouts().at(line), viewport.contentMeasure());
@@ -603,6 +581,27 @@ Scalar font::lineIndent(const TextLayout& layout, Scalar contentMeasure, Index s
 Scalar font::lineStartEdge(const TextLayout& layout, Scalar contentMeasure, Index subline /* = 0 */) {
 	const Scalar indent = lineIndent(layout, contentMeasure, subline);
 	return (layout.writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? indent : contentMeasure - indent;
+}
+
+/**
+ * Converts the point in the viewport into the logical line number and visual subline offset.
+ * @param p The point in the viewport in pixels
+ * @param[out] snapped @c true if there was not a line at @a p. Optional
+ * @see #location, #mapBpdToLine, TextLayout#locateLine, TextLayout#offset
+ */
+VisualLine font::locateLine(const TextViewport& viewport, const NativePoint& p, bool* snapped /* = nullptr */) /*throw()*/ {
+	const NativeRectangle bounds(geometry::make<NativeRectangle>(
+		geometry::make<NativePoint>(0, 0), geometry::size(viewport.boundsInView())));
+	switch(viewport.textRenderer().writingMode().blockFlowDirection) {
+		case HORIZONTAL_TB:
+			return mapBpdToLine(viewport, geometry::y(p) - geometry::top(bounds), snapped);
+		case VERTICAL_RL:
+			return mapBpdToLine(viewport, geometry::right(bounds) - geometry::x(p), snapped);
+		case VERTICAL_LR:
+			return mapBpdToLine(viewport, geometry::x(p) - geometry::left(bounds), snapped);
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
 }
 
 /**

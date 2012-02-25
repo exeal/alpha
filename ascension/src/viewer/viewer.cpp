@@ -123,15 +123,15 @@ TextViewer::TextViewer(Presentation& presentation, Widget* parent /* = nullptr *
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		mouseInputDisabledCount_(0) {
 	renderer_.reset(new Renderer(*this));
+	textRenderer().addComputedWritingModeListener(*this);
 //	renderer_->addFontListener(*this);
 //	renderer_->addVisualLinesListener(*this);
 	caret_.reset(new Caret(*this));
-	caret_->addListener(*this);
-	caret_->addStateListener(*this);
+	caret().addListener(*this);
+	caret().addStateListener(*this);
 	rulerPainter_.reset(new detail::RulerPainter(*this));
 
 	document().addListener(*this);
-	document().addStateListener(*this);
 	document().addRollbackListener(*this);
 
 	// initializations of renderer_ and mouseInputStrategy_ are in initializeWindow()
@@ -147,30 +147,30 @@ TextViewer::TextViewer(const TextViewer& other) : presentation_(other.presentati
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 {
 	renderer_.reset(new Renderer(*other.renderer_, *this));
+	textRenderer().addComputedWritingModeListener(*this);
 //	renderer_->addFontListener(*this);
 //	renderer_->addVisualLinesListener(*this);
 	caret_.reset(new Caret(*this));
-	caret_->addListener(*this);
-	caret_->addStateListener(*this);
+	caret().addListener(*this);
+	caret().addStateListener(*this);
 	rulerPainter_.reset(new detail::RulerPainter(*this));
 
 	modeState_ = other.modeState_;
 
 	mouseInputDisabledCount_ = 0;
 	document().addListener(*this);
-	document().addStateListener(*this);
 	document().addRollbackListener(*this);
 }
 
 /// Destructor.
 TextViewer::~TextViewer() {
 	document().removeListener(*this);
-	document().removeStateListener(*this);
 	document().removeRollbackListener(*this);
-	renderer_->removeDefaultFontListener(*this);
-	renderer_->layouts().removeVisualLinesListener(*this);
-	caret_->removeListener(*this);
-	caret_->removeStateListener(*this);
+	textRenderer().removeComputedWritingModeListener(*this);
+	textRenderer().removeDefaultFontListener(*this);
+	textRenderer().layouts().removeVisualLinesListener(*this);
+	caret().removeListener(*this);
+	caret().removeStateListener(*this);
 	for(set<VisualPoint*>::iterator it = points_.begin(); it != points_.end(); ++it)
 		(*it)->viewerDisposed();
 
@@ -269,6 +269,11 @@ void TextViewer::caretMoved(const Caret& self, const k::Region& oldRegion) {
 		redrawScheduledRegion();
 }
 
+/// @see ComputedWritingModeListener#computedWritingModeChanged
+void TextViewer::computedWritingModeChanged(const presentation::WritingMode& used) {
+	updateScrollBars();
+}
+
 /// @see DefaultFontListener#defaultFontChanged
 void TextViewer::defaultFontChanged() /*throw()*/ {
 	rulerPainter_->update();
@@ -276,13 +281,6 @@ void TextViewer::defaultFontChanged() /*throw()*/ {
 	updateScrollBars();
 	caret().resetVisualization();
 	redrawLine(0, true);
-}
-
-/// @see kernel#DocumentStateListener#documentAccessibleRegionChanged
-void TextViewer::documentAccessibleRegionChanged(const k::Document&) {
-	if(document().isNarrowed())
-		scrollTo(-1, -1, false);
-	scheduleRedraw(false);
 }
 
 /// @see kernel#DocumentListener#documentAboutToBeChanged
@@ -326,21 +324,6 @@ void TextViewer::documentChanged(const k::Document&, const k::DocumentChange& ch
 		rulerPainter_->update();
 	if(scrolls_.changed)
 		updateScrollBars();
-}
-
-/// @see kernel#DocumentStateListener#documentModificationSignChanged
-void TextViewer::documentModificationSignChanged(const k::Document&) {
-	// do nothing
-}
-
-/// @see kernel#DocumentStateListener#documentPropertyChanged
-void TextViewer::documentPropertyChanged(const k::Document&, const k::DocumentPropertyKey&) {
-	// do nothing
-}
-
-/// @see kernel#DocumentStateListener#documentReadOnlySignChanged
-void TextViewer::documentReadOnlySignChanged(const k::Document&) {
-	// do nothing
 }
 
 /// @see kernel#DocumentRollbackListener#documentUndoSequenceStarted
@@ -1604,23 +1587,25 @@ bool VirtualBox::characterRangeInVisualLine(const VisualLine& line, Range<Index>
  * @return @c true If the point is on the virtual box
  * @see #characterRangeInVisualLine
  */
-bool VirtualBox::includes(const graphics::NativePoint& p) const /*throw()*/ {
+bool VirtualBox::includes(const NativePoint& p) const /*throw()*/ {
 	// TODO: This code can't handle vertical writing-mode.
 //	assert(viewer_.isWindow());
-	if(viewer_.hitTest(p) != TextViewer::CONTENT_AREA)	// ignore if not in content area
-		return false;
-
-	// about inline-progression-direction
-	const bool horizontal = isHorizontal(viewer_.textRenderer().writingMode().blockFlowDirection);
-	const Scalar ipd = (horizontal ? geometry::x(p) : geometry::y(p)) - viewer_.inlineProgressionOffsetInViewport();	// $friendly-access
-	if(ipd < startEdge() || ipd >= endEdge())
-		return false;
-
-	// about block-progression-direction
-	const Point& top = beginning();
-	const Point& bottom = end();
-	const VisualLine line(viewer_.textRenderer().viewport().lock()->locateLine(mapLocalToTextArea(viewer_, p)));
-	return line >= top.line && line <= bottom.line;
+	if(viewer_.hitTest(p) == TextViewer::CONTENT_AREA) {	// ignore if not in content area
+		if(const shared_ptr<const TextViewport> viewport = viewer_.textRenderer().viewport().lock()) {
+			// about inline-progression-direction
+			const bool horizontal = isHorizontal(viewer_.textRenderer().writingMode().blockFlowDirection);
+			const Scalar ipd = (horizontal ? geometry::x(p) : geometry::y(p)) - viewer_.inlineProgressionOffsetInViewport();	// $friendly-access
+			if(ascension::includes(makeRange(startEdge(), endEdge()), ipd)) {
+				// about block-progression-direction
+				graphics::NativePoint pointInViewport(p);
+				geometry::translate(pointInViewport, geometry::make<NativeSize>(
+					geometry::left(viewport->boundsInView()), geometry::top(viewport->boundsInView())));
+				const VisualLine line(locateLine(*viewport, pointInViewport));
+				return line >= beginning().line && line <= end().line;
+			}
+		}
+	}
+	return false;
 }
 
 /**
@@ -1719,7 +1704,7 @@ const Color& CurrentLineHighlighter::foreground() const /*throw()*/ {
 }
 
 /// @see CaretStateListener#matchBracketsChanged
-void CurrentLineHighlighter::matchBracketsChanged(const Caret&, const pair<k::Position, k::Position>&, bool) {
+void CurrentLineHighlighter::matchBracketsChanged(const Caret&, const boost::optional<pair<k::Position, k::Position>>&, bool) {
 }
 
 /// @see CaretStateListener#overtypeModeChanged
@@ -1796,7 +1781,7 @@ void utils::toggleOrientation(TextViewer& viewer) /*throw()*/ {
 	writingMode.inlineFlowDirection =
 		(writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
 	viewer.textRenderer().setDefaultWritingMode(writingMode);
-	viewer.synchronizeWritingModeUI();
+//	viewer.synchronizeWritingModeUI();
 //	if(config.lineWrap.wrapsAtWindowEdge()) {
 //		win32::AutoZeroSize<SCROLLINFO> scroll;
 //		viewer.getScrollInformation(SB_HORZ, scroll);
