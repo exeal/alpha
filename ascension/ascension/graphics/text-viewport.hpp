@@ -144,6 +144,8 @@ namespace ascension {
 			// free functions
 			Scalar lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline = 0);
 			Scalar lineStartEdge(const TextLayout& layout, Scalar contentMeasure, Index subline = 0);
+			VisualLine locateLine(const TextViewport& viewport,
+				const NativePoint& p, bool* snapped = nullptr) /*throw()*/;
 			NativePoint modelToView(const TextViewport& viewport,
 				const kernel::Position& position, bool fullSearchBpd,
 				graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING);
