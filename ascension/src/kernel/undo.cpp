@@ -510,7 +510,7 @@ bool Document::redo(size_t n /* = 1 */) {
 	rollbackListeners_.notify<const Document&, const Position&>(
 		&DocumentRollbackListener::documentUndoSequenceStopped, *this, result.endOfChange);
 	if(isModified() != modified)
-		stateListeners_.notify<const Document&>(&DocumentStateListener::documentModificationSignChanged, *this);
+		modificationSignChangedSignal_(*this);
 	return result.completed;
 }
 
@@ -707,7 +707,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 	const DocumentChange change(region, Region(beginning, endOfInsertedString));
 	fireDocumentChanged(change);
 	if(!rollbacking_ && !modified)
-		stateListeners_.notify<const Document&>(&DocumentStateListener::documentModificationSignChanged, *this);
+		modificationSignChangedSignal_(*this);
 
 	if(eos != nullptr)
 		*eos = endOfInsertedString;
@@ -767,6 +767,6 @@ bool Document::undo(size_t n /* = 1 */) {
 	rollbackListeners_.notify<const Document&, const Position&>(
 		&DocumentRollbackListener::documentUndoSequenceStopped, *this, result.endOfChange);
 	if(isModified() != modified)
-		stateListeners_.notify<const Document&>(&DocumentStateListener::documentModificationSignChanged, *this);
+		modificationSignChangedSignal_(*this);
 	return result.completed;
 }

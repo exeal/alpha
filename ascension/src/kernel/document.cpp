@@ -570,15 +570,6 @@ void Document::addRollbackListener(DocumentRollbackListener& listener) {
 	rollbackListeners_.add(listener);
 }
 
-/**
- * Registers the state listener.
- * @param listener The listener to be registered
- * @throw std#invalid_argument @a listener is already registered
- */
-void Document::addStateListener(DocumentStateListener& listener) {
-	stateListeners_.add(listener);
-}
-
 /// @c #resetContent invokes this method finally. Default implementation does nothing.
 void Document::doResetContent() {
 }
@@ -675,12 +666,12 @@ bool Document::lock(const void* locker) {
 /**
  * Marks the document unmodified at the current revision.
  * For details about modification signature, see the documentation of @c Document class.
- * @see #isModified, #setModified, IDocumentStateListener#documentModificationSignChanged
+ * @see #isModified, #setModified, #ModificationSignChangedSignal
  */
 void Document::markUnmodified() /*throw()*/ {
 	if(isModified()) {
 		lastUnmodifiedRevisionNumber_ = revisionNumber();
-		stateListeners_.notify<const Document&>(&DocumentStateListener::documentModificationSignChanged, *this);
+		modificationSignChangedSignal_(*this);
 	}
 }
 
@@ -690,7 +681,7 @@ void Document::markUnmodified() /*throw()*/ {
  * this case, @a region can be wider than the current accessible region.
  * @param region The region
  * @throw BadRegionException @a region intersects with the outside of the document
- * @see #isNarrowed, #widen
+ * @see #isNarrowed, #widen, #AccessibleRegionChangedSignal
  */
 void Document::narrowToRegion(const Region& region) {
 	if(region.end() > this->region().end())
@@ -707,7 +698,7 @@ void Document::narrowToRegion(const Region& region) {
 //		if((*i)->isExcludedFromRestriction())
 //			(*i)->normalize();
 //	}
-	stateListeners_.notify<const Document&>(&DocumentStateListener::documentAccessibleRegionChanged, *this);
+	accessibleRegionChangedSignal_(*this);
 }
 
 /**
@@ -751,15 +742,6 @@ void Document::removePrenotifiedListener(DocumentListener& listener) {
  */
 void Document::removeRollbackListener(DocumentRollbackListener& listener) {
 	rollbackListeners_.remove(listener);
-}
-
-/**
- * Removes the state listener.
- * @param listener The listener to be removed
- * @throw std#invalid_argument @a listener is not registered
- */
-void Document::removeStateListener(DocumentStateListener& listener) {
-	stateListeners_.remove(listener);
 }
 
 /**
@@ -816,13 +798,13 @@ void Document::setInput(weak_ptr<DocumentInput> newInput) /*throw()*/ {
 /**
  * Marks the document modified.
  * For details about modification signature, see the documentation of @c Document class.
- * @see #isModified, #markUnmodified, IDocumentStateListener#documentModificationSignChanged
+ * @see #isModified, #markUnmodified, #dModificationSignChangedSignal
  */
 void Document::setModified() /*throw()*/ {
 	const bool modified = isModified();
 	lastUnmodifiedRevisionNumber_ = numeric_limits<size_t>::max();
 	if(!modified)
-		stateListeners_.notify<const Document&>(&DocumentStateListener::documentModificationSignChanged, *this);
+		modificationSignChangedSignal_(*this);
 }
 
 /**
@@ -840,7 +822,7 @@ void Document::setPartitioner(unique_ptr<DocumentPartitioner> newPartitioner) /*
  * Associates the given property with the document.
  * @param key The key of the property
  * @param property The property value
- * @see #property
+ * @see #property, #PropertyChangedSignal
  */
 void Document::setProperty(const DocumentPropertyKey& key, const String& property) {
 	map<const DocumentPropertyKey*, unique_ptr<String>>::iterator i(properties_.find(&key));
@@ -848,17 +830,17 @@ void Document::setProperty(const DocumentPropertyKey& key, const String& propert
 		properties_.insert(make_pair(&key, new String(property)));
 	else
 		i->second->assign(property);
-	stateListeners_.notify<const Document&, const DocumentPropertyKey&>(&DocumentStateListener::documentPropertyChanged, *this, key);
+	propertyChangedSignal_(*this, key);
 }
 
 /**
  * Makes the document read only or not.
- * @see ReadOnlyDocumentException, #isReadOnly
+ * @see ReadOnlyDocumentException, #isReadOnly, #ReadOnlySignChangedSignal
  */
 void Document::setReadOnly(bool readOnly /* = true */) /*throw()*/ {
 	if(readOnly != isReadOnly()) {
 		readOnly_ = readOnly;
-		stateListeners_.notify<const Document&>(&DocumentStateListener::documentReadOnlySignChanged, *this);
+		readOnlySignChangedSignal_(*this);
 	}
 }
 #if 0
@@ -895,12 +877,12 @@ inline void Document::updatePoints(const DocumentChange& change) /*throw()*/ {
 
 /**
  * Revokes the narrowing.
- * @see #isNarrowed, #narrow
+ * @see #isNarrowed, #narrow, #AccessibleRegionChangedSignal
  */
 void Document::widen() /*throw()*/ {
 	if(accessibleRegion_.get() != nullptr) {
 		accessibleRegion_.reset();
-		stateListeners_.notify<const Document&>(&DocumentStateListener::documentAccessibleRegionChanged, *this);
+		accessibleRegionChangedSignal_(*this);
 	}
 }
 

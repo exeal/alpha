@@ -1095,6 +1095,9 @@ TextFileDocumentInput::TextFileDocumentInput(Document& document) :
 	memset(&internalLastWriteTime_, 0, sizeof(Time));
 	desiredLockMode_.type = NO_LOCK;
 	desiredLockMode_.onlyAsEditing = false;
+	documentModificationSignChangedConnection_ =
+		document_.modificationSignChangedSignal().connect(
+			boost::bind(&TextFileDocumentInput::documentModificationSignChanged, this, _1));
 	document.setProperty(Document::TITLE_PROPERTY, String());
 }
 
@@ -1166,11 +1169,7 @@ bool TextFileDocumentInput::checkTimeStamp() {
 	return true;
 }
 
-/// @see IDocumentStateListener#documentAccessibleRegionChanged
-void TextFileDocumentInput::documentAccessibleRegionChanged(const Document&) {
-}
-
-/// @see IDocumentStateListener#documentModificationSignChanged
+/// @see Document#ModificationSignChangedSignal
 void TextFileDocumentInput::documentModificationSignChanged(const Document&) {
 	if(isBoundToFile() && desiredLockMode_.onlyAsEditing) {
 		if(!document().isModified())
@@ -1178,15 +1177,6 @@ void TextFileDocumentInput::documentModificationSignChanged(const Document&) {
 		else if(desiredLockMode_.type != NO_LOCK)
 			fileLocker_->lock(fileName(), desiredLockMode_.type == SHARED_LOCK);
 	}
-}
-
-/// @see IDocumentStateListener#documentPropertyChanged
-void TextFileDocumentInput::documentPropertyChanged(const Document&, const DocumentPropertyKey&) {
-}
-
-
-/// @see IDocumentStateListener#documentAccessibleRegionChanged
-void TextFileDocumentInput::documentReadOnlySignChanged(const Document&) {
 }
 
 /// @see IDocumentInput#isChangeable
