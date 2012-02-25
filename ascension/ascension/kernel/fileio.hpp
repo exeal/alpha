@@ -181,7 +181,7 @@ namespace ascension {
 				Char ucsBuffer_[8192];
 			};
 
-			class TextFileDocumentInput : public DocumentInput, public DocumentStateListener {
+			class TextFileDocumentInput : public DocumentInput {
 				ASCENSION_NONCOPYABLE_TAG(TextFileDocumentInput);
 			public:
 				/// The structure used to represent a file time.
@@ -234,20 +234,17 @@ namespace ascension {
 				String location() const /*throw()*/;
 				text::Newline newline() const /*throw()*/;
 			private:
+				void documentModificationSignChanged(const Document& document);
 				bool verifyTimeStamp(bool internal, Time& newTimeStamp) /*throw()*/;
 				// DocumentInput
 				bool isChangeable(const Document& document) const /*throw()*/;
 				void postFirstDocumentChange(const Document& document) /*throw()*/;
-				// DocumentStateListener
-				void documentAccessibleRegionChanged(const Document& document);
-				void documentModificationSignChanged(const Document& document);
-				void documentPropertyChanged(const Document& document, const DocumentPropertyKey& key);
-				void documentReadOnlySignChanged(const Document& document);
 			private:
 				std::shared_ptr<TextFileDocumentInput> weakSelf_;	// for Document.setInput call
 				class FileLocker;
 				std::unique_ptr<FileLocker> fileLocker_;
 				Document& document_;
+				boost::signals2::scoped_connection documentModificationSignChangedConnection_;
 				PathString fileName_;
 				std::string encoding_;
 				bool unicodeByteOrderMark_;

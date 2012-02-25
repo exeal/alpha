@@ -32,7 +32,7 @@ namespace ascension {
 
 	namespace detail {
 		/// @internal Interface for objects which manage the set of points.
-		template<class PointType> class PointCollection {
+		template<typename PointType> class PointCollection {
 		public:
 			/// Adds the newly created point.
 			virtual void addNewPoint(PointType& point) = 0;
@@ -226,13 +226,11 @@ namespace ascension {
 			void addPartitioningListener(DocumentPartitioningListener& listener);
 			void addPrenotifiedListener(DocumentListener& listener);
 			void addRollbackListener(DocumentRollbackListener& listener);
-			void addStateListener(DocumentStateListener& listener);
 //			void removeCompoundChangeListener(CompoundChangeListener& listener);
 			void removeListener(DocumentListener& listener);
 			void removePartitioningListener(DocumentPartitioningListener& listener);
 			void removePrenotifiedListener(DocumentListener& listener);
 			void removeRollbackListener(DocumentRollbackListener& listener);
-			void removeStateListener(DocumentStateListener& listener);
 			// attributes
 			Bookmarker& bookmarker() /*throw()*/;
 			const Bookmarker& bookmarker() const /*throw()*/;
@@ -288,6 +286,15 @@ namespace ascension {
 			bool isNarrowed() const /*throw()*/;
 			void narrowToRegion(const Region& region);
 			void widen() /*throw()*/;
+			// signals
+			/// The accessible region of the document was changed.
+			ASCENSION_DEFINE_SIGNAL(AccessibleRegionChangedSignal, void(const Document&), accessibleRegionChangedSignal);
+			/// The modification flag of the document was changed.
+			ASCENSION_DEFINE_SIGNAL(ModificationSignChangedSignal, void(const Document&), modificationSignChangedSignal);
+			/// The property has @c key associated with the document was changed.
+			ASCENSION_DEFINE_SIGNAL(PropertyChangedSignal, void(const Document&, const DocumentPropertyKey& key), propertyChangedSignal);
+			/// The read only mode of the document was changed.
+			ASCENSION_DEFINE_SIGNAL(ReadOnlySignChangedSignal, void(const Document&), readOnlySignChangedSignal);
 			// overridables
 		protected:
 			virtual void doResetContent();
@@ -333,7 +340,6 @@ namespace ascension {
 			std::unique_ptr<std::pair<Position, std::unique_ptr<Point>>> accessibleRegion_;
 
 			std::list<DocumentListener*> listeners_, prenotifiedListeners_;
-			detail::Listeners<DocumentStateListener> stateListeners_;
 //			detail::Listeners<CompoundChangeListener> compoundChangeListeners_;
 			detail::Listeners<DocumentRollbackListener> rollbackListeners_;
 			detail::Listeners<DocumentPartitioningListener> partitioningListeners_;

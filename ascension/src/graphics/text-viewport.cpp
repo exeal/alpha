@@ -329,6 +329,16 @@ namespace {
 	}
 }
 
+/**
+ * Private constructor.
+ * @param textRenderer
+ */
+TextViewport::TextViewport(TextRenderer& textRenderer) : textRenderer_(textRenderer) {
+	documentAccessibleRegionChangedConnection_ =
+		this->textRenderer().presentation().document().accessibleRegionChangedSignal().connect(
+			boost::bind(&TextViewport::documentAccessibleRegionChanged, this, _1));
+}
+
 inline void TextViewport::adjustBpdScrollPositions() /*throw()*/ {
 	const LineLayoutVector& layouts = textRenderer().layouts();
 	firstVisibleLine_.line = min(firstVisibleLine_.line, textRenderer().presentation().document().numberOfLines() - 1);

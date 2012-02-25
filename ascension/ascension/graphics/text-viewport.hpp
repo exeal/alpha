@@ -60,6 +60,7 @@ namespace ascension {
 			/**
 			 */
 			class TextViewport : public VisualLinesListener {
+				ASCENSION_NONCOPYABLE_TAG(TextViewport);
 			public:
 				TextRenderer& textRenderer() /*throw()*/;
 				const TextRenderer& textRenderer() const /*throw()*/;
@@ -91,7 +92,9 @@ namespace ascension {
 				void scrollTo(const VisualLine& line, Index ipd, viewers::base::Widget* widget);
 				void unlockScroll();
 			private:
+				explicit TextViewport(TextRenderer& textRenderer);
 				void adjustBpdScrollPositions() /*throw()*/;
+				void documentAccessibleRegionChanged(const kernel::Document& document);
 				// VisualLinesListener
 				void visualLinesDeleted(const Range<Index>& lines,
 					Index sublines, bool longestLineChanged) /*throw()*/;
@@ -101,6 +104,7 @@ namespace ascension {
 					bool documentChanged, bool longestLineChanged) /*throw()*/;
 			private:
 				TextRenderer& textRenderer_;
+				boost::signals2::scoped_connection documentAccessibleRegionChangedConnection_;
 				NativeRectangle boundsInView_;
 				VisualLine firstVisibleLine_;
 				struct ScrollOffsets {

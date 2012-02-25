@@ -43,23 +43,6 @@ namespace ascension {
 			friend class Document;
 		};
 
-		/**
-		 * Interface for objects which are interested in getting informed about changes a
-		 * document's state.
-		 * @see Document#addStateListener, Document#removeStateListener
-		 */
-		class DocumentStateListener {
-		private:
-			/// The accessible region of the document was changed.
-			virtual void documentAccessibleRegionChanged(const Document& document) = 0;
-			/// The modification flag of the document was changed.
-			virtual void documentModificationSignChanged(const Document& document) = 0;
-			/// The property has @c key associated with the document was changed.
-			virtual void documentPropertyChanged(const Document& document, const DocumentPropertyKey& key) = 0;
-			/// The read only mode of the document was changed.
-			virtual void documentReadOnlySignChanged(const Document& document) = 0;
-			friend class Document;
-		};
 #if 0
 		/**
 		 * Interface for objects which are interested in getting informed about changes of a
