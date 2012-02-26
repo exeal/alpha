@@ -673,19 +673,13 @@ void Caret::updateLocation() {
 
 	if(const shared_ptr<const font::TextViewport> viewport = viewer.textRenderer().viewport().lock()) {
 		NativePoint p(modelToView(*viewport, *this, false, font::TextLayout::LEADING));
-		const PhysicalFourSides<Scalar> spaces(viewer.spaceWidths());
-		NativeRectangle textArea(viewer.bounds(false));
-		assert(geometry::isNormalized(textArea));
-		geometry::range<geometry::X_COORDINATE>(textArea) = makeRange(
-			geometry::left(textArea) + spaces.left(), geometry::right(textArea) - spaces.right() - 1);
-		geometry::range<geometry::Y_COORDINATE>(textArea) = makeRange(
-			geometry::top(textArea) + spaces.top(), geometry::bottom(textArea) - spaces.bottom());
+		const NativeRectangle contentRectangle(viewer.textAreaContentRectangle());
+		assert(geometry::isNormalized(contentRectangle));
 
-		const WritingMode writingMode(textViewer().textRenderer().writingMode());
-		if(!geometry::includes(textArea, p)) {
+		if(!geometry::includes(contentRectangle, p)) {
 			// "hide" the caret
 			const Scalar linePitch = viewer.textRenderer().defaultFont()->metrics().linePitch();
-			if(isHorizontal(writingMode.blockFlowDirection))
+			if(isHorizontal(textViewer().textRenderer().writingMode().blockFlowDirection))
 				geometry::y(p) = -linePitch;
 			else
 				geometry::x(p) = -linePitch;
@@ -735,7 +729,7 @@ bool viewers::isPointOverSelection(const Caret& caret, const NativePoint& p) {
 	if(!isSelectionEmpty(caret)) {
 		if(caret.isSelectionRectangle())
 			return caret.boxForRectangleSelection().includes(p);
-		if(caret.textViewer().hitTest(p) == TextViewer::CONTENT_AREA) {	// ignore if on the margin
+		if(caret.textViewer().hitTest(p) == TextViewer::TEXT_AREA_CONTENT_RECTANGLE) {	// ignore if on the margin
 			const NativeRectangle viewerBounds(caret.textViewer().bounds(false));
 			if(geometry::x(p) <= geometry::right(viewerBounds) && geometry::y(p) <= geometry::bottom(viewerBounds)) {
 				if(const shared_ptr<const font::TextViewport> viewport = caret.textViewer().textRenderer().viewport().lock()) {

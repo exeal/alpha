@@ -100,12 +100,25 @@ namespace ascension {
 				public graphics::font::TextViewportListener, public graphics::font::ComputedWritingModeListener,
 				public CaretListener, public CaretStateListener, public detail::PointCollection<VisualPoint> {
 		public:
-			/// Result of hit test.
+			/**
+			 * Result of hit test.
+			 * @see #hitTest
+			 */
 			enum HitTestResult {
-				INDICATOR_MARGIN,	///< The point is on the indicator margin.
-				LINE_NUMBERS,		///< The point is on the line numbers area.
-				CONTENT_AREA,		///< The point is on the text content area.
-				OUT_OF_VIEWPORT		///< The point is outside of the viewport.
+				/// The point is the indicator margin in the ruler.
+				INDICATOR_MARGIN = 1 << 0,
+				/// The point is the line numbers area in the ruler.
+				LINE_NUMBERS = 1 << 1,
+				/// The point is 'padding-start' of the text area.
+				TEXT_AREA_PADDING_START = 1 << 2,
+				/// The point is 'content-rectangle' of the text area.
+				TEXT_AREA_CONTENT_RECTANGLE = 1 << 3,
+				/// A mask for ruler.
+				RULER_MASK = INDICATOR_MARGIN | LINE_NUMBERS,
+				/// A mask for text area.
+				TEXT_AREA_MASK = TEXT_AREA_PADDING_START | TEXT_AREA_CONTENT_RECTANGLE,
+				/// The point is outside of the local bounds of the text viewer.
+				OUT_OF_VIEWER = 0
 			};
 
 			/**
@@ -211,9 +224,10 @@ namespace ascension {
 			// mouse input
 			bool allowsMouseInput() const /*throw()*/;
 			void enableMouseInput(bool enable);
-			// viewport
+			// geometries
 			HitTestResult hitTest(const graphics::NativePoint& pt) const;
-			graphics::NativeRectangle textAllocationRectangle() const /*throw()*/;
+			graphics::NativeRectangle textAreaAllocationRectangle() const /*throw()*/;
+			graphics::NativeRectangle textAreaContentRectangle() const /*throw()*/;
 
 		protected:
 			virtual void doBeep() /*throw()*/;

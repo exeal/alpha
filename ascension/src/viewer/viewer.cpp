@@ -32,24 +32,24 @@ bool DIAGNOSE_INHERENT_DRAWING = false;	// 余計な描画を行っていない�
 
 namespace {
 	inline Scalar mapLocalBpdToTextArea(const TextViewer& viewer, Scalar bpd) {
-		const NativeRectangle textArea(viewer.textAllocationRectangle());
+		const NativeRectangle textArea(viewer.textAreaAllocationRectangle());
 		AbstractFourSides<Scalar> abstractBounds;
 		mapPhysicalToAbstract(viewer.textRenderer().writingMode(), textArea, textArea, abstractBounds);
 		return bpd -= abstractBounds.before();
 	}
 	inline Scalar mapTextAreaBpdToLocal(const TextViewer& viewer, Scalar bpd) {
-		const NativeRectangle textArea(viewer.textAllocationRectangle());
+		const NativeRectangle textArea(viewer.textAreaAllocationRectangle());
 		AbstractFourSides<Scalar> abstractBounds;
 		mapPhysicalToAbstract(viewer.textRenderer().writingMode(), textArea, textArea, abstractBounds);
 		return bpd += abstractBounds.before();
 	}
 	inline NativePoint mapLocalToTextArea(const TextViewer& viewer, const NativePoint& p) {
-		const NativeRectangle textArea(viewer.textAllocationRectangle());
+		const NativeRectangle textArea(viewer.textAreaAllocationRectangle());
 		NativePoint temp(p);
 		return geometry::translate(temp, geometry::make<NativeSize>(-geometry::left(textArea), -geometry::top(textArea)));
 	}
 	inline NativePoint mapTextAreaToLocal(const TextViewer& viewer, const NativePoint& p) {
-		const NativeRectangle textArea(viewer.textAllocationRectangle());
+		const NativeRectangle textArea(viewer.textAreaAllocationRectangle());
 		NativePoint temp(p);
 		return geometry::translate(temp, geometry::make<NativeSize>(+geometry::left(textArea), +geometry::top(textArea)));
 	}
@@ -526,15 +526,19 @@ TextViewer::HitTestResult TextViewer::hitTest(const NativePoint& p) const {
 //	checkInitialization();
 	const NativeRectangle localBounds(bounds(false));
 	if(!geometry::includes(localBounds, p))
-		return OUT_OF_VIEWPORT;
+		return OUT_OF_VIEWER;
 
 	const RulerConfiguration& rc = rulerConfiguration();
 	if(rc.indicatorMargin.visible && geometry::includes(rulerPainter_->indicatorMarginAllocationRectangle(), p))
 		return INDICATOR_MARGIN;
 	else if(rc.lineNumbers.visible && geometry::includes(rulerPainter_->lineNumbersAllocationRectangle(), p))
 		return LINE_NUMBERS;
-	else
-		return CONTENT_AREA;
+	else if(geometry::includes(textAreaContentRectangle(), p))
+		return TEXT_AREA_CONTENT_RECTANGLE;
+	else {
+		assert(geometry::includes(textAreaAllocationRectangle(), p));
+		return TEXT_AREA_PADDING_START;
+	}
 }
 
 /**
@@ -1022,7 +1026,7 @@ void TextViewer::resized(State state, const NativeSize&) {
 	if(renderer_.get() == nullptr)
 		return;
 	if(const shared_ptr<TextViewport> viewport = textRenderer().viewport().lock())
-		viewport->setBoundsInView(textAllocationRectangle());
+		viewport->setBoundsInView(textAreaContentRectangle());
 }
 
 /// @see CaretStateListener#selectionShapeChanged
@@ -1144,10 +1148,10 @@ HRESULT TextViewer::startTextServices() {
 #endif // !ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
 
 /**
- * Returns the allocation-rectangle of the text editing area, in local-coordinates.
- * @see #bounds
+ * Returns the 'allocation-rectangle' of the text area, in local-coordinates.
+ * @see #bounds, #textAreaContentRectangle
  */
-NativeRectangle TextViewer::textAllocationRectangle() const /*throw()*/ {
+NativeRectangle TextViewer::textAreaAllocationRectangle() const /*throw()*/ {
 	const NativeRectangle window(bounds(false));
 	PhysicalFourSides<Scalar> result(window);
 	switch(rulerPainter_->alignment()) {
@@ -1169,6 +1173,15 @@ NativeRectangle TextViewer::textAllocationRectangle() const /*throw()*/ {
 	return geometry::make<NativeRectangle>(
 		geometry::make<NativePoint>(result.left(), result.top()),
 		geometry::make<NativeSize>(result.right() - result.left(), result.bottom() - result.top()));
+}
+
+/**
+ * Returns the 'content-rectangle' of the text area, in local-coordinates.
+ * @see #bounds, #textAreaAllocationRectangle
+ */
+NativeRectangle TextViewer::textAreaContentRectangle() const /*throw()*/ {
+	// TODO: Consider 'padding-start' setting.
+	return textAreaAllocationRectangle();
 }
 
 /**
@@ -1475,7 +1488,7 @@ bool TextViewer::CursorVanisher::vanished() const {
  */
 TextViewer::Renderer::Renderer(TextViewer& viewer, const WritingMode& writingMode) :
 		TextRenderer(viewer.presentation(), systemFonts(),
-		geometry::size(viewer.textAllocationRectangle())), viewer_(viewer), defaultWritingMode_(writingMode) {
+		geometry::size(viewer.textAreaContentRectangle())), viewer_(viewer), defaultWritingMode_(writingMode) {
 	// TODO: other FontCollection object used?
 #if 0
 	// for test
@@ -1614,7 +1627,7 @@ bool VirtualBox::characterRangeInVisualLine(const VisualLine& line, Range<Index>
 bool VirtualBox::includes(const NativePoint& p) const /*throw()*/ {
 	// TODO: This code can't handle vertical writing-mode.
 //	assert(viewer_.isWindow());
-	if(viewer_.hitTest(p) == TextViewer::CONTENT_AREA) {	// ignore if not in content area
+	if(viewer_.hitTest(p) == TextViewer::TEXT_AREA_CONTENT_RECTANGLE) {	// ignore if not in text area
 		if(const shared_ptr<const TextViewport> viewport = viewer_.textRenderer().viewport().lock()) {
 			// about inline-progression-direction
 			const bool horizontal = isHorizontal(viewer_.textRenderer().writingMode().blockFlowDirection);
