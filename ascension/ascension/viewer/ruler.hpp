@@ -59,10 +59,10 @@ namespace ascension {
 				 */
 				presentation::Inheritable<graphics::Paint> background;
 				/**
-				 * Style of the border. If the @c color is default value, fallbacked to the color
-				 * of @c #foreground member. Default value is @c presentation#Border#Part().
+				 * Style of the border-end. If the @c color is default value, fallbacked to the
+				 * color of @c #foreground member. Default value is @c presentation#Border#Part().
 				 */
-				presentation::Border::Part border;
+				presentation::Border::Part borderEnd;
 				/// Digit substitution type. @c DST_CONTEXTUAL can't set. Default value is @c DST_USER_DEFAULT.
 				presentation::NumberSubstitution numberSubstitution;
 
@@ -78,7 +78,7 @@ namespace ascension {
 				bool visible;
 				/**
 				 * Width of the indicator margin. Default value is
-				 * @c presentation#Inheritable&lt;graphics#Scalar&gt; which means to use
+				 * @c presentation#Inheritable&lt;graphics#Length&gt; which means to use
 				 * platform-dependent setting.
 				 */
 				presentation::Inheritable<presentation::Length> width;
@@ -88,10 +88,10 @@ namespace ascension {
 				 */
 				graphics::Paint paint;
 				/**
-				 * Style of the border. If @c color is default value, fallbacked to the
+				 * Style of the border-end. If @c color is default value, fallbacked to the
 				 * platform-dependent color. Default value is @c presentation#Border#Part().
 				 */
-				presentation::Border::Part border;
+				presentation::Border::Part borderEnd;
 
 				IndicatorMargin() /*throw()*/;
 			} indicatorMargin;	/// Configuration about the indicator margin.
@@ -115,16 +115,16 @@ namespace ascension {
 		public:
 			explicit RulerPainter(viewers::TextViewer& viewer) /*throw()*/;
 			SnapAlignment alignment() const /*throw()*/;
+			graphics::Scalar allocationWidth() const /*throw()*/;
 			const viewers::RulerConfiguration& configuration() const /*throw()*/;
-			graphics::NativeRectangle indicatorMarginBounds() const /*throw()*/;
-			graphics::Scalar indicatorMarginWidth() const /*throw()*/;
-			graphics::NativeRectangle lineNumbersBounds() const /*throw()*/;
-			graphics::Scalar lineNumbersWidth() const /*throw()*/;
+			graphics::NativeRectangle indicatorMarginAllocationRectangle() const /*throw()*/;
+			graphics::Scalar indicatorMarginAllocationWidth() const /*throw()*/;
+			graphics::NativeRectangle lineNumbersAllocationRectangle() const /*throw()*/;
+			graphics::Scalar lineNumbersAllocationWidth() const /*throw()*/;
 			void paint(graphics::PaintContext& context);
 			void scroll(const graphics::font::VisualLine& from);
 			void setConfiguration(const viewers::RulerConfiguration& configuration);
 			void update() /*throw()*/;
-			graphics::Scalar width() const /*throw()*/;
 		private:
 			uint8_t maximumDigitsForLineNumbers() const /*throw()*/;
 			void recalculateWidth() /*throw()*/;
@@ -134,8 +134,9 @@ namespace ascension {
 		private:
 			viewers::TextViewer& viewer_;
 			viewers::RulerConfiguration configuration_;
-			graphics::Scalar indicatorMarginContentWidth_, indicatorMarginBorderWidth_,
-				lineNumbersContentWidth_, lineNumbersPaddingStartWidth_, lineNumbersPaddingEndWidth_, lineNumbersBorderWidth_;
+			graphics::Scalar indicatorMarginContentWidth_, indicatorMarginBorderEndWidth_;
+			graphics::Scalar lineNumbersContentWidth_,
+				lineNumbersPaddingStartWidth_, lineNumbersPaddingEndWidth_, lineNumbersBorderEndWidth_;
 			uint8_t lineNumberDigitsCache_;
 #if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
 			win32::Handle<HPEN> indicatorMarginPen_, lineNumbersPen_;
@@ -146,36 +147,37 @@ namespace ascension {
 #endif
 		};
 
+		/**
+		 * Returns the width of 'allocation-rectangle' of the ruler in pixels.
+		 * @return The width of the ruler or zero if not visible
+		 * @see #indicatorMarginWidth, #lineNumbersWidth
+		 */
+		inline graphics::Scalar RulerPainter::allocationWidth() const /*throw()*/ {
+			return indicatorMarginAllocationWidth() + lineNumbersAllocationWidth();
+		}
+
 		/// Returns the ruler's configurations.
 		inline const viewers::RulerConfiguration& RulerPainter::configuration() const /*throw()*/ {
 			return configuration_;
 		}
 
 		/**
-		 * Returns the width of the indicator margin in pixels.
+		 * Returns the width of 'allocation-rectangle' of the indicator margin in pixels.
 		 * @return The width of the indicator margin or zero if not visible
 		 * @see #lineNumbersWidth, #width
 		 */
-		inline graphics::Scalar RulerPainter::indicatorMarginWidth() const /*throw()*/ {
-			return indicatorMarginContentWidth_ + indicatorMarginBorderWidth_;
+		inline graphics::Scalar RulerPainter::indicatorMarginAllocationWidth() const /*throw()*/ {
+			return indicatorMarginContentWidth_ + indicatorMarginBorderEndWidth_;
 		}
 
 		/**
-		 * Returns the width of the line numbers in pixels.
+		 * Returns the width of 'allocation-rectangle' of the line numbers in pixels.
 		 * @return The width of the line numbers or zero if not visible
 		 * @see #indicatorMarginWidth, #width
 		 */
-		inline graphics::Scalar RulerPainter::lineNumbersWidth() const /*throw()*/ {
-			return lineNumbersContentWidth_ + lineNumbersPaddingStartWidth_ + lineNumbersPaddingEndWidth_, lineNumbersBorderWidth_;
-		}
-
-		/**
-		 * Returns the width of the ruler in pixels.
-		 * @return The width of the ruler or zero if not visible
-		 * @see #indicatorMarginWidth, #lineNumbersWidth
-		 */
-		inline graphics::Scalar RulerPainter::width() const /*throw()*/ {
-			return indicatorMarginWidth() + lineNumbersWidth();
+		inline graphics::Scalar RulerPainter::lineNumbersAllocationWidth() const /*throw()*/ {
+			return lineNumbersContentWidth_ + lineNumbersPaddingStartWidth_
+				+ lineNumbersPaddingEndWidth_, lineNumbersBorderEndWidth_;
 		}
 	}
 

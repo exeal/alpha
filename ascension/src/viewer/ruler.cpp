@@ -73,9 +73,9 @@ void drawLineNumber(PaintContext& context, const NativePoint& origin, Index line
  * @param viewer The text viewer
  */
 RulerPainter::RulerPainter(TextViewer& viewer) :
-		viewer_(viewer), indicatorMarginContentWidth_(0), indicatorMarginBorderWidth_(0),
+		viewer_(viewer), indicatorMarginContentWidth_(0), indicatorMarginBorderEndWidth_(0),
 		lineNumbersContentWidth_(0), lineNumbersPaddingStartWidth_(0), lineNumbersPaddingEndWidth_(0),
-		lineNumbersBorderWidth_(0), lineNumberDigitsCache_(0) {
+		lineNumbersBorderEndWidth_(0), lineNumberDigitsCache_(0) {
 	recalculateWidth();
 }
 
@@ -95,59 +95,59 @@ RulerPainter::SnapAlignment RulerPainter::alignment() const {
 		ASCENSION_ASSERT_NOT_REACHED();
 }
 
-/// Returns the bounds of the indicator margin in the viewer-local coordinates.
-NativeRectangle RulerPainter::indicatorMarginBounds() const /*throw()*/ {
-	const NativeRectangle clientBounds(viewer_.bounds(false));
+/// Returns the 'allocation-rectangle' of the indicator margin in the viewer-local coordinates.
+NativeRectangle RulerPainter::indicatorMarginAllocationRectangle() const /*throw()*/ {
+	const NativeRectangle localBounds(viewer_.bounds(false));
 	switch(alignment()) {
 		case LEFT:
 			return geometry::make<NativeRectangle>(
-				geometry::topLeft(clientBounds),
-				geometry::make<NativeSize>(indicatorMarginWidth(), geometry::dy(clientBounds)));
+				geometry::topLeft(localBounds),
+				geometry::make<NativeSize>(indicatorMarginAllocationWidth(), geometry::dy(localBounds)));
 		case TOP:
 			return geometry::make<NativeRectangle>(
-				geometry::topLeft(clientBounds),
-				geometry::make<NativeSize>(geometry::dx(clientBounds), indicatorMarginWidth()));
+				geometry::topLeft(localBounds),
+				geometry::make<NativeSize>(geometry::dx(localBounds), indicatorMarginAllocationWidth()));
 		case RIGHT:
 			return geometry::normalize(
 				geometry::make<NativeRectangle>(
-					geometry::topRight(clientBounds),
-					geometry::make<NativeSize>(-indicatorMarginWidth(), geometry::dy(clientBounds))));
+					geometry::topRight(localBounds),
+					geometry::make<NativeSize>(-indicatorMarginAllocationWidth(), geometry::dy(localBounds))));
 		case BOTTOM:
 			return geometry::normalize(
 				geometry::make<NativeRectangle>(
-					geometry::bottomLeft(clientBounds),
-					geometry::make<NativeSize>(geometry::dx(clientBounds), -indicatorMarginWidth())));
+					geometry::bottomLeft(localBounds),
+					geometry::make<NativeSize>(geometry::dx(localBounds), -indicatorMarginAllocationWidth())));
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
 }
 
-/// Returns the bounds of the line numbers in the viewer-local coordinates.
-NativeRectangle RulerPainter::lineNumbersBounds() const /*throw()*/ {
-	const NativeRectangle clientBounds(viewer_.bounds(false));
+/// Returns the 'allocation-rectangle' of the line numbers in the viewer-local coordinates.
+NativeRectangle RulerPainter::lineNumbersAllocationRectangle() const /*throw()*/ {
+	const NativeRectangle localBounds(viewer_.bounds(false));
 	switch(alignment()) {
 		case LEFT:
 			return geometry::make<NativeRectangle>(
 				geometry::translate(
-					geometry::topLeft(clientBounds), geometry::make<NativeSize>(indicatorMarginWidth(), 0)),
-				geometry::make<NativeSize>(lineNumbersWidth(), geometry::dy(clientBounds)));
+					geometry::topLeft(localBounds), geometry::make<NativeSize>(indicatorMarginAllocationWidth(), 0)),
+				geometry::make<NativeSize>(lineNumbersAllocationWidth(), geometry::dy(localBounds)));
 		case TOP:
 			return geometry::make<NativeRectangle>(
 				geometry::translate(
-					geometry::topLeft(clientBounds), geometry::make<NativeSize>(0, indicatorMarginWidth())),
-				geometry::make<NativeSize>(geometry::dx(clientBounds), lineNumbersWidth()));
+					geometry::topLeft(localBounds), geometry::make<NativeSize>(0, indicatorMarginAllocationWidth())),
+				geometry::make<NativeSize>(geometry::dx(localBounds), lineNumbersAllocationWidth()));
 		case RIGHT:
 			return geometry::normalize(
 				geometry::make<NativeRectangle>(
 					geometry::translate(
-						geometry::topRight(clientBounds), geometry::make<NativeSize>(-indicatorMarginWidth(), 0)),
-					geometry::make<NativeSize>(-lineNumbersWidth(), geometry::dy(clientBounds))));
+						geometry::topRight(localBounds), geometry::make<NativeSize>(-indicatorMarginAllocationWidth(), 0)),
+					geometry::make<NativeSize>(-lineNumbersAllocationWidth(), geometry::dy(localBounds))));
 		case BOTTOM:
 			return geometry::normalize(
 				geometry::make<NativeRectangle>(
 					geometry::translate(
-						geometry::bottomLeft(clientBounds), geometry::make<NativeSize>(0, -indicatorMarginWidth())),				
-					geometry::make<NativeSize>(geometry::dx(clientBounds), -lineNumbersWidth())));
+						geometry::bottomLeft(localBounds), geometry::make<NativeSize>(0, -indicatorMarginAllocationWidth())),				
+					geometry::make<NativeSize>(geometry::dx(localBounds), -lineNumbersAllocationWidth())));
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
@@ -169,7 +169,7 @@ uint8_t RulerPainter::maximumDigitsForLineNumbers() const /*throw()*/ {
  * @param context The graphics context
  */
 void RulerPainter::paint(PaintContext& context) {
-	if(width() == 0)
+	if(allocationWidth() == 0)
 		return;
 
 	const NativeRectangle paintBounds(context.boundsToPaint());
@@ -177,8 +177,8 @@ void RulerPainter::paint(PaintContext& context) {
 	const SnapAlignment location = alignment();
 	AbstractFourSides<Border::Part>::reference (AbstractFourSides<Border::Part>::*borderPart)();
 
-	const NativeRectangle indicatorMarginRectangle(indicatorMarginBounds());
-	const NativeRectangle lineNumbersRectangle(lineNumbersBounds());
+	const NativeRectangle indicatorMarginRectangle(indicatorMarginAllocationRectangle());
+	const NativeRectangle lineNumbersRectangle(lineNumbersAllocationRectangle());
 	switch(location) {
 		case LEFT:
 			borderPart = &AbstractFourSides<Border::Part>::end;
@@ -215,7 +215,7 @@ void RulerPainter::paint(PaintContext& context) {
 			configuration().indicatorMargin.paint : Paint(SystemColors::get(SystemColors::THREE_D_FACE)));
 		context.fillRectangle(indicatorMarginRectangle);
 		Border borderStyle;
-		(borderStyle.sides.*borderPart)() = configuration().indicatorMargin.border;
+		(borderStyle.sides.*borderPart)() = configuration().indicatorMargin.borderEnd;
 		if((borderStyle.sides.*borderPart)().color == Color())
 			(borderStyle.sides.*borderPart)().color = SystemColors::get(SystemColors::THREE_D_SHADOW);
 		detail::paintBorder(context, indicatorMarginRectangle, borderStyle, Color(), viewer_.textRenderer().writingMode());
@@ -240,7 +240,7 @@ void RulerPainter::paint(PaintContext& context) {
 		context.setFillStyle(configuration().lineNumbers.background);
 		context.fillRectangle(lineNumbersRectangle);
 		Border borderStyle;
-		(borderStyle.sides.*borderPart)() = configuration().lineNumbers.border;
+		(borderStyle.sides.*borderPart)() = configuration().lineNumbers.borderEnd;
 		detail::paintBorder(context, lineNumbersRectangle, borderStyle, foreground.color(), viewer_.textRenderer().writingMode());
 
 		// text
@@ -468,7 +468,7 @@ void RulerPainter::recalculateWidth() /*throw()*/ {
 		const NativeSize referenceBox(geometry::make<NativeSize>(lineNumbersContentWidth, lineNumbersContentWidth));
 		lineNumbersPaddingStartWidth = static_cast<Scalar>(configuration().lineNumbers.paddingStart.value(context.get(), &referenceBox));
 		lineNumbersPaddingEndWidth = static_cast<Scalar>(configuration().lineNumbers.paddingEnd.value(context.get(), &referenceBox));
-		lineNumbersBorderWidth = static_cast<Scalar>(configuration_.lineNumbers.border.computedWidth().value(context.get(), &referenceBox));
+		lineNumbersBorderWidth = static_cast<Scalar>(configuration_.lineNumbers.borderEnd.computedWidth().value(context.get(), &referenceBox));
 //		const Scalar spaceWidth = 0;
 //		const Scalar exteriorWidth = borderWidth + spaceWidth;
 	}
@@ -479,19 +479,19 @@ void RulerPainter::recalculateWidth() /*throw()*/ {
 		indicatorMarginContentWidth = configuration().indicatorMargin.width.inherits() ?
 			platformIndicatorMarginWidth() : static_cast<Scalar>(configuration().indicatorMargin.width.get().value(context.get(), 0));
 		indicatorMarginBorderWidth = static_cast<Scalar>(
-			configuration().indicatorMargin.border.computedWidth().value(context.get(),
+			configuration().indicatorMargin.borderEnd.computedWidth().value(context.get(),
 				&geometry::make<NativeSize>(indicatorMarginContentWidth, indicatorMarginContentWidth)));
 	}
 
 	// commit
-	const Scalar oldWidth = width();
+	const Scalar oldWidth = allocationWidth();
 	lineNumbersContentWidth_ = lineNumbersContentWidth;
 	lineNumbersPaddingStartWidth_ = lineNumbersPaddingStartWidth;
 	lineNumbersPaddingEndWidth_ = lineNumbersPaddingEndWidth;
-	lineNumbersBorderWidth_ = lineNumbersBorderWidth;
+	lineNumbersBorderEndWidth_ = lineNumbersBorderWidth;
 	indicatorMarginContentWidth_ = indicatorMarginContentWidth;
-	indicatorMarginBorderWidth_ = indicatorMarginBorderWidth;
-	if(width() != oldWidth) {
+	indicatorMarginBorderEndWidth_ = indicatorMarginBorderWidth;
+	if(allocationWidth() != oldWidth) {
 		viewer_.scheduleRedraw(false);
 		viewer_.caret().updateLocation();
 	}
