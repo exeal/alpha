@@ -45,11 +45,13 @@ namespace {
 	}
 	inline NativePoint mapLocalToTextArea(const TextViewer& viewer, const NativePoint& p) {
 		const NativeRectangle textArea(viewer.textAllocationRectangle());
-		return geometry::translate(p, geometry::make<NativeSize>(-geometry::left(textArea), -geometry::top(textArea)));
+		NativePoint temp(p);
+		return geometry::translate(temp, geometry::make<NativeSize>(-geometry::left(textArea), -geometry::top(textArea)));
 	}
 	inline NativePoint mapTextAreaToLocal(const TextViewer& viewer, const NativePoint& p) {
 		const NativeRectangle textArea(viewer.textAllocationRectangle());
-		return geometry::translate(p, geometry::make<NativeSize>(+geometry::left(textArea), +geometry::top(textArea)));
+		NativePoint temp(p);
+		return geometry::translate(temp, geometry::make<NativeSize>(+geometry::left(textArea), +geometry::top(textArea)));
 	}
 }
 
@@ -452,16 +454,39 @@ bool TextViewer::getPointedLinkText(Region& region, AutoBuffer<Char>& text) cons
 #endif
 
 namespace {
+	inline TextViewer::ScrollPosition reverseScrollPosition(
+			const TextRenderer& textRenderer, TextViewer::ScrollPosition position) {
+		return textRenderer.layouts().maximumMeasure()
+			/ textRenderer.defaultFont()->metrics().averageCharacterWidth()
+			- position
+			- static_cast<TextViewer::ScrollPosition>(textRenderer.viewport().lock()->numberOfVisibleCharactersInLine());
+	}
 	NativePoint physicalScrollPosition(const TextViewer& viewer) {
 		if(const shared_ptr<const TextViewport> viewport = viewer.textRenderer().viewport().lock()) {
 			const Index bpd = viewport->firstVisibleLineInVisualNumber();
 			const Index ipd = viewport->inlineProgressionOffset();
 			const WritingMode writingMode(viewer.textRenderer().writingMode());
+			TextViewer::ScrollPosition x, y;
 			switch(writingMode.blockFlowDirection) {
 				case HORIZONTAL_TB:
-					return geometry::make<NativePoint>(writingMode.inlineFlowDirection == LEFT_TO_RIGHT ? ipd : ipd, bpd);
+					x = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ?
+						ipd : reverseScrollPosition(viewer.textRenderer(), static_cast<TextViewer::ScrollPosition>(ipd));
+					y = bpd;
+					break;
+				case VERTICAL_RL:
+					x = reverseScrollPosition(viewer.textRenderer(), bpd);
+					y = ipd;
+					break;
+				case VERTICAL_LR:
+					x = bpd;
+					y = ipd;
+					break;
+				default:
+					ASCENSION_ASSERT_NOT_REACHED();
 			}
+			return geometry::make<NativePoint>(x /* / xScrollRate */, y /* / yScrollRate */);
 		}
+		return geometry::make<NativePoint>(0, 0);
 	}
 }
 
@@ -1078,7 +1103,7 @@ void TextViewer::setMouseInputStrategy(shared_ptr<MouseInputStrategy> newStrateg
 	if(newStrategy.get() != nullptr)
 		mouseInputStrategy_ = newStrategy;
 	else
-		mouseInputStrategy_.reset(new DefaultMouseInputStrategy(), true);	// TODO: the two parameters don't have rationales.
+		mouseInputStrategy_.reset(new DefaultMouseInputStrategy());	// TODO: the two parameters don't have rationales.
 	mouseInputStrategy_->install(*this);
 	dropTargetHandler_ = mouseInputStrategy_->handleDropTarget();
 }
@@ -1182,8 +1207,11 @@ void TextViewer::updateScrollBars() {
 	else if(const shared_ptr<TextViewport> viewport = textRenderer().viewport().lock()) {
 		const LineLayoutVector& layouts = textRenderer().layouts();
 		const NativePoint positions(physicalScrollPosition(*this));
-		NativePoint endPositions(geometry::make<NativePoint>(layouts.maximumMeasure(), layouts.numberOfVisualLines()));
-		NativePoint pageSteps(geometry::make<NativePoint>(viewport->numberOfVisibleCharactersInLine(), viewport->numberOfVisibleLines()));
+		NativePoint endPositions(geometry::make<NativePoint>(layouts.maximumMeasure(),
+			static_cast<geometry::Coordinate<NativePoint>::Type>(layouts.numberOfVisualLines())));
+		NativePoint pageSteps(geometry::make<NativePoint>(
+			static_cast<geometry::Coordinate<NativePoint>::Type>(viewport->numberOfVisibleCharactersInLine()),
+			static_cast<geometry::Coordinate<NativePoint>::Type>(viewport->numberOfVisibleLines())));
 		if(isVertical(textRenderer().writingMode().blockFlowDirection)) {
 			geometry::transpose(endPositions);
 			geometry::transpose(pageSteps);
