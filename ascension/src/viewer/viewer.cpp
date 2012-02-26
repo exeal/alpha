@@ -1149,11 +1149,7 @@ HRESULT TextViewer::startTextServices() {
  */
 NativeRectangle TextViewer::textAllocationRectangle() const /*throw()*/ {
 	const NativeRectangle window(bounds(false));
-	PhysicalFourSides<Scalar> result;
-	result.left() = geometry::left(window);
-	result.top() = geometry::top(window);
-	result.right() = geometry::right(window);
-	result.bottom() = geometry::bottom(window);
+	PhysicalFourSides<Scalar> result(window);
 	switch(rulerPainter_->alignment()) {
 		case detail::RulerPainter::LEFT:
 			result.left() += rulerPainter_->width();
