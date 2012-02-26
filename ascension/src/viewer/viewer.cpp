@@ -529,9 +529,9 @@ TextViewer::HitTestResult TextViewer::hitTest(const NativePoint& p) const {
 		return OUT_OF_VIEWPORT;
 
 	const RulerConfiguration& rc = rulerConfiguration();
-	if(rc.indicatorMargin.visible && geometry::includes(rulerPainter_->indicatorMarginBounds(), p))
+	if(rc.indicatorMargin.visible && geometry::includes(rulerPainter_->indicatorMarginAllocationRectangle(), p))
 		return INDICATOR_MARGIN;
-	else if(rc.lineNumbers.visible && geometry::includes(rulerPainter_->lineNumbersBounds(), p))
+	else if(rc.lineNumbers.visible && geometry::includes(rulerPainter_->lineNumbersAllocationRectangle(), p))
 		return LINE_NUMBERS;
 	else
 		return CONTENT_AREA;
@@ -555,7 +555,7 @@ Scalar TextViewer::inlineProgressionOffsetInViewport() const {
 	// ruler width
 	if((horizontal && rulerPainter_->alignment() == detail::RulerPainter::LEFT)
 			|| (!horizontal && rulerPainter_->alignment() == detail::RulerPainter::TOP))
-		offset += rulerPainter_->width();
+		offset += rulerPainter_->allocationWidth();
 
 	return offset;
 
@@ -1007,10 +1007,10 @@ void TextViewer::repaintRuler() {
 	NativeRectangle r(bounds(false));
 	if(utils::isRulerLeftAligned(*this))
 		geometry::range<geometry::X_COORDINATE>(r) =
-			makeRange(geometry::left(r), geometry::left(r) + rulerPainter_->width());
+			makeRange(geometry::left(r), geometry::left(r) + rulerPainter_->allocationWidth());
 	else
 		geometry::range<geometry::X_COORDINATE>(r) =
-			makeRange(geometry::right(r) - rulerPainter_->width(), geometry::right(r));
+			makeRange(geometry::right(r) - rulerPainter_->allocationWidth(), geometry::right(r));
 	scheduleRedraw(r, false);
 }
 
@@ -1152,16 +1152,16 @@ NativeRectangle TextViewer::textAllocationRectangle() const /*throw()*/ {
 	PhysicalFourSides<Scalar> result(window);
 	switch(rulerPainter_->alignment()) {
 		case detail::RulerPainter::LEFT:
-			result.left() += rulerPainter_->width();
+			result.left() += rulerPainter_->allocationWidth();
 			break;
 		case detail::RulerPainter::TOP:
-			result.top() += rulerPainter_->width();
+			result.top() += rulerPainter_->allocationWidth();
 			break;
 		case detail::RulerPainter::RIGHT:
-			result.right() -= rulerPainter_->width();
+			result.right() -= rulerPainter_->allocationWidth();
 			break;
 		case detail::RulerPainter::BOTTOM:
-			result.bottom() -= rulerPainter_->width();
+			result.bottom() -= rulerPainter_->allocationWidth();
 			break;
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
