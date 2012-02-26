@@ -28,6 +28,15 @@ namespace ascension {
 		 */
 		template<typename T>
 		struct PhysicalFourSides : public std::array<T, 4> {
+			/// Default constructor.
+			PhysicalFourSides() {}
+			template<typename Rectangle>
+			PhysicalFourSides(const Rectangle& rectangle) {
+				top() = geometry::top(rectangle);
+				right() = geometry::right(rectangle);
+				bottom() = geometry::bottom(rectangle);
+				left() = geometry::left(rectangle);
+			}
 			reference top() {return (*this)[0];}
 			const_reference top() const {return (*this)[0];}
 			reference right() {return (*this)[1];}
