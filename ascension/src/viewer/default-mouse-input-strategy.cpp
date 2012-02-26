@@ -260,7 +260,8 @@ DefaultMouseInputStrategy::DefaultMouseInputStrategy(
 NativeSize DefaultMouseInputStrategy::calculateDnDScrollOffset(const TextViewer& viewer) {
 	const NativePoint p = viewer.mapFromGlobal(Cursor::position());
 	const NativeRectangle clientBounds(viewer.bounds(false));
-	PhysicalFourSides<Scalar> spaces(viewer.spaceWidths());
+	// TODO: calculate the exact spaces.
+	PhysicalFourSides<Scalar> spaces/*(viewer.spaceWidths())*/;
 	const Font::Metrics& fontMetrics = viewer.textRenderer().defaultFont()->metrics();
 	spaces.left() = max<Scalar>(fontMetrics.averageCharacterWidth(), spaces.left());
 	spaces.top() = max<Scalar>(fontMetrics.linePitch() / 2, spaces.top());
@@ -357,11 +358,13 @@ void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 			dropAction |= DROP_ACTION_WIN32_SCROLL;
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
-			// only one direction to scroll
-			if(geometry::dy(scrollOffset) != 0)
-				viewer_->scroll(0, geometry::dy(scrollOffset), true);
-			else
-				viewer_->scroll(geometry::dx(scrollOffset), 0, true);
+			if(const shared_ptr<TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
+				// only one direction to scroll
+				if(geometry::dy(scrollOffset) != 0)
+					viewport->scroll(geometry::make<NativeSize>(0, geometry::dy(scrollOffset)), viewer_);
+				else
+					viewport->scroll(geometry::make<NativeSize>(geometry::dx(scrollOffset), 0), viewer_);
+			}
 		}
 	}
 	input.setDropAction(dropAction);
@@ -730,16 +733,18 @@ void DefaultMouseInputStrategy::mouseMoved(const base::LocatedUserInput& input) 
 /// @see MouseInputStrategy#mouseWheelRotated
 void DefaultMouseInputStrategy::mouseWheelRotated(const base::MouseWheelInput& input) {
 	if(!endAutoScroll()) {
-		// use system settings
-		UINT lines;	// the number of lines to scroll
-		if(!win32::boole(::SystemParametersInfoW(SPI_GETWHEELSCROLLLINES, 0, &lines, 0)))
-			lines = 3;
-		if(lines == WHEEL_PAGESCROLL) {
-			// TODO: calculate precise page size.
-			if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock())
-				lines = static_cast<UINT>(viewport->numberOfVisibleLines());
+		if(const shared_ptr<TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
+			// use system settings
+			UINT lines;	// the number of lines to scroll
+			if(!win32::boole(::SystemParametersInfoW(SPI_GETWHEELSCROLLLINES, 0, &lines, 0)))
+				lines = 3;
+			if(lines == WHEEL_PAGESCROLL) {
+				// TODO: calculate precise page size.
+				if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock())
+					lines = static_cast<UINT>(viewport->numberOfVisibleLines());
+			}
+			viewport->scroll(geometry::make<NativeSize>(0, -geometry::dy(input.rotation()) * static_cast<short>(lines) / WHEEL_DELTA), viewer_);
 		}
-		viewer_->scroll(0, -geometry::dy(input.rotation()) * static_cast<short>(lines) / WHEEL_DELTA, true);
 	}
 }
 
@@ -784,19 +789,24 @@ bool DefaultMouseInputStrategy::showCursor(const NativePoint& position) {
 ///
 void DefaultMouseInputStrategy::timeElapsed(Timer& timer) {
 	if((state_ & SELECTION_EXTENDING_MASK) == SELECTION_EXTENDING_MASK) {	// scroll automatically during extending the selection
-		const NativePoint p(viewer_->mapFromGlobal(Cursor::position()));
-		const NativeRectangle rc(viewer_->bounds(false));
-		const PhysicalFourSides<Scalar> spaces(viewer_->spaceWidths());
+		if(const shared_ptr<TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
+			const NativePoint p(viewer_->mapFromGlobal(Cursor::position()));
+			const NativeRectangle rc(viewer_->bounds(false));
+			const PhysicalFourSides<Scalar> spaces(viewer_->spaceWidths());
 
-		// no rationale about these scroll amounts
-		if(geometry::y(p) < geometry::top(rc) + spaces.top())
-			viewer_->scroll(0, (geometry::y(p) - (geometry::top(rc) + spaces.top())) / viewer_->textRenderer().defaultFont()->metrics().linePitch() - 1, true);
-		else if(geometry::y(p) >= geometry::bottom(rc) - spaces.bottom())
-			viewer_->scroll(0, (geometry::y(p) - (geometry::bottom(rc) - spaces.bottom())) / viewer_->textRenderer().defaultFont()->metrics().linePitch() + 1, true);
-		else if(geometry::x(p) < geometry::left(rc) + spaces.left())
-			viewer_->scroll((geometry::x(p) - (geometry::left(rc) + spaces.left())) / viewer_->textRenderer().defaultFont()->metrics().averageCharacterWidth() - 1, 0, true);
-		else if(geometry::x(p) >= geometry::right(rc) - spaces.right())
-			viewer_->scroll((geometry::x(p) - (geometry::right(rc) - spaces.right())) / viewer_->textRenderer().defaultFont()->metrics().averageCharacterWidth() + 1, 0, true);
+			NativeSize offsets(geometry::make<NativeSize>(0, 0));
+			// no rationale about these scroll amounts
+			if(geometry::y(p) < geometry::top(rc) + spaces.top())
+				geometry::dy(offsets) = (geometry::y(p) - (geometry::top(rc) + spaces.top())) / viewer_->textRenderer().defaultFont()->metrics().linePitch() - 1;
+			else if(geometry::y(p) >= geometry::bottom(rc) - spaces.bottom())
+				geometry::dy(offsets) = (geometry::y(p) - (geometry::bottom(rc) - spaces.bottom())) / viewer_->textRenderer().defaultFont()->metrics().linePitch() + 1;
+			else if(geometry::x(p) < geometry::left(rc) + spaces.left())
+				geometry::dx(offsets) = (geometry::x(p) - (geometry::left(rc) + spaces.left())) / viewer_->textRenderer().defaultFont()->metrics().averageCharacterWidth() - 1;
+			else if(geometry::x(p) >= geometry::right(rc) - spaces.right())
+				geometry::dx(offsets) = (geometry::x(p) - (geometry::right(rc) - spaces.right())) / viewer_->textRenderer().defaultFont()->metrics().averageCharacterWidth() + 1;
+			if(geometry::dx(offsets) != 0 || geometry::dy(offsets) != 0)
+				viewport->scroll(offsets, viewer_);
+		}
 		extendSelection();
 	} else if(state_ == AUTO_SCROLL_DRAGGING || state_ == AUTO_SCROLL) {
 		timer.stop();
