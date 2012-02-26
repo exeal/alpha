@@ -651,11 +651,20 @@ namespace ascension {
 			}
 
 			/**
+			 * Swaps the x and y values.
+			 * @return @
+			 */
+			template<typename Point>
+			inline Point& transpose(Point& point, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
+				return point = make<Point>(y(point), x(point));
+			}
+
+			/**
 			 * Swaps the dx and dy values.
 			 * @return @
 			 */
 			template<typename Size>
-			inline Size& transpose(Size& size) {
+			inline Size& transpose(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
 				return size = make<Size>(dy(size), dx(size));
 			}
 
