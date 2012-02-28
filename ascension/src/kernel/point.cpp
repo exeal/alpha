@@ -211,8 +211,8 @@ void Point::update(const DocumentChange& change) {
  *   functions take a @c Point or @c VisualPoint as the first parameter.
  * - @c characterAt.
  *
- * Some of the above functions return @c VerticalDestinationProxy objects and these can be passed
- * to @c VisualPoint#moveTo method.
+ * Some of the above functions return @c BlockProgressionDestinationProxy objects and these can be
+ * passed to @c VisualPoint#moveTo and @c Caret#extendSelectionTo methods.
  *
  * All functions are unaffected by accessible region of the document.
  */

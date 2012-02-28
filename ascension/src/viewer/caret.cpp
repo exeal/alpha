@@ -58,7 +58,7 @@ Caret::Context::Context() /*throw()*/ : yanking(false), leaveAnchorNext(false), 
  * caret and the anchor. Anchor is @c VisualPoint but client can't operate this directly.
  *
  * Usually, the anchor will move adapting to the caret automatically. If you want to move the
- * anchor isolately, create the selection by using @c #select method or call @c #extendSelection
+ * anchor isolately, create the selection by using @c #select method or call @c #extendSelectionTo
  * method.
  *
  * When the caret moves, the text viewer will scroll automatically to show the caret. See the
@@ -73,8 +73,8 @@ Caret::Context::Context() /*throw()*/ : yanking(false), leaveAnchorNext(false), 
  * 積極的に連続編集とビューの凍結を使用する
  *
  * 行選択および単語選択は、選択の作成および拡張時にアンカーとキャレットを行境界や単語境界に束縛する機能で、
- * @c #extendSelection メソッドで実際にこれらの点が移動する位置を制限する。
- * また、この場合 @c #extendSelection を呼び出すとアンカーが自動的に移動する。
+ * @c #extendSelectionTo メソッドで実際にこれらの点が移動する位置を制限する。
+ * また、この場合 @c #extendSelectionTo を呼び出すとアンカーが自動的に移動する。
  * @c #beginLineSelection 、@c #beginWordSelection でこれらのモードに入ることができ、
  * @c #restoreSelectionMode で通常状態に戻ることができる。
  * また、これらのモードで @c #moveTo か @c #select を使っても通常状態に戻る
@@ -330,7 +330,7 @@ void Caret::eraseSelection() {
  * Moves to the specified position without the anchor adapting.
  * @param to The destination position
  */
-void Caret::extendSelection(const Position& to) {
+void Caret::extendSelectionTo(const Position& to) {
 	context_.leaveAnchorNext = true;
 	try {
 		moveTo(to);
@@ -345,7 +345,7 @@ void Caret::extendSelection(const Position& to) {
  * Moves to the specified position without the anchor adapting.
  * @param to The destination position
  */
-void Caret::extendSelection(const BlockProgressionDestinationProxy& to) {
+void Caret::extendSelectionTo(const BlockProgressionDestinationProxy& to) {
 	context_.leaveAnchorNext = true;
 	try {
 		moveTo(to);

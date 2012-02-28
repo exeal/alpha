@@ -80,7 +80,7 @@ namespace ascension {
 			HRESULT doDragAndDrop();
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 			bool endAutoScroll();
-			void extendSelection(const kernel::Position* to = nullptr);
+			void extendSelectionTo(const kernel::Position* to = nullptr);
 			void handleLeftButtonPressed(const graphics::NativePoint& position, int modifiers);
 			void handleLeftButtonReleased(const graphics::NativePoint& position, int modifiers);
 			// MouseInputStrategy
