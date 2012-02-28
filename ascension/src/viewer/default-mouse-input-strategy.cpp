@@ -399,7 +399,7 @@ bool DefaultMouseInputStrategy::endAutoScroll() {
 }
 
 /// Extends the selection to the current cursor position.
-void DefaultMouseInputStrategy::extendSelection(const k::Position* to /* = nullptr */) {
+void DefaultMouseInputStrategy::extendSelectionTo(const k::Position* to /* = nullptr */) {
 	if((state_ & SELECTION_EXTENDING_MASK) != SELECTION_EXTENDING_MASK)
 		throw IllegalStateException("not extending the selection.");
 	k::Position destination;
@@ -428,7 +428,7 @@ void DefaultMouseInputStrategy::extendSelection(const k::Position* to /* = nullp
 	const k::Document& document = viewer_->document();
 	Caret& caret = viewer_->caret();
 	if(state_ == EXTENDING_CHARACTER_SELECTION)
-		caret.extendSelection(destination);
+		caret.extendSelectionTo(destination);
 	else if(state_ == EXTENDING_LINE_SELECTION) {
 		const Index lines = document.numberOfLines();
 		k::Region s;
@@ -497,7 +497,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 			state_ = EXTENDING_LINE_SELECTION;
 			selection_.initialLine = extend ? line(caret.anchor()) : to.line;
 			viewer_->caret().endRectangleSelection();
-			extendSelection(&to);
+			extendSelectionTo(&to);
 			viewer_->grabInput();
 			timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
 		}
@@ -546,7 +546,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 							selection_.initialWordColumns = make_pair(offsetInLine(caret.beginning()), offsetInLine(caret.end()));
 						}
 						if((modifiers & UserInput::SHIFT_DOWN) != 0)
-							extendSelection(&*to);
+							extendSelectionTo(&*to);
 					} else
 						caret.moveTo(*to);
 					if((modifiers & UserInput::ALT_DOWN) != 0)	// make the selection reactangle
@@ -727,7 +727,7 @@ void DefaultMouseInputStrategy::mouseMoved(const base::LocatedUserInput& input) 
 			}
 		}
 	} else if((state_ & SELECTION_EXTENDING_MASK) == SELECTION_EXTENDING_MASK)
-		extendSelection();
+		extendSelectionTo();
 }
 
 /// @see MouseInputStrategy#mouseWheelRotated
@@ -811,7 +811,7 @@ void DefaultMouseInputStrategy::timeElapsed(Timer& timer) {
 			if(geometry::dx(scrollOffsets) != 0 || geometry::dy(scrollOffsets) != 0)
 				viewport->scroll(scrollOffsets, viewer_);
 		}
-		extendSelection();
+		extendSelectionTo();
 	} else if(state_ == AUTO_SCROLL_DRAGGING || state_ == AUTO_SCROLL) {
 		if(const shared_ptr<TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
 			timer.stop();
