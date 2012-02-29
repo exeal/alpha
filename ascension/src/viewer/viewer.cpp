@@ -626,73 +626,73 @@ void TextViewer::keyPressed(const KeyInput& input) {
 		if(hasModifier<UserInput::CONTROL_DOWN>(input))
 			onVScroll(SB_PAGEUP, 0, win32::Handle<HWND>());
 		else
-			CaretMovementCommand(*this, &k::locations::backwardPage, hasModifier<UserInput::SHIFT_DOWN>(input))();
+			makeCaretMovementCommand(*this, &k::locations::backwardPage, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
 	case keyboardcodes::NEXT_OR_PAGE_DOWN:	// [PageDown]
 		if(hasModifier<UserInput::CONTROL_DOWN>(input))
 			onVScroll(SB_PAGEDOWN, 0, win32::Handle<HWND>());
 		else
-			CaretMovementCommand(*this, &k::locations::forwardPage, hasModifier<UserInput::SHIFT_DOWN>(input))();
+			makeCaretMovementCommand(*this, &k::locations::forwardPage, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
 	case keyboardcodes::HOME:	// [Home]
 		if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			CaretMovementCommand(*this, &k::locations::beginningOfDocument, hasModifier<UserInput::SHIFT_DOWN>(input))();
+			makeCaretMovementCommand(*this, &k::locations::beginningOfDocument, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		else
-			CaretMovementCommand(*this, &k::locations::beginningOfVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
+			makeCaretMovementCommand(*this, &k::locations::beginningOfVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
 	case keyboardcodes::END:	// [End]
 		if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			CaretMovementCommand(*this, &k::locations::endOfDocument, hasModifier<UserInput::SHIFT_DOWN>(input))();
+			makeCaretMovementCommand(*this, &k::locations::endOfDocument, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		else
-			CaretMovementCommand(*this, &k::locations::endOfVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
+			makeCaretMovementCommand(*this, &k::locations::endOfVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
 	case keyboardcodes::LEFT:	// [Left]
 		if(hasModifier<UserInput::ALT_DOWN>(input) && hasModifier<UserInput::SHIFT_DOWN>(input)) {
 			if(hasModifier<UserInput::CONTROL_DOWN>(input))
-				RowSelectionExtensionCommand(*this, &k::locations::leftWord)();
+				makeRowSelectionExtensionCommand(*this, &k::locations::leftWord)();
 			else
-				RowSelectionExtensionCommand(*this, &k::locations::leftCharacter)();
+				makeRowSelectionExtensionCommand(*this, &k::locations::leftCharacter)();
 		} else {
 			if(hasModifier<UserInput::CONTROL_DOWN>(input))
-				CaretMovementCommand(*this, &k::locations::leftWord, hasModifier<UserInput::SHIFT_DOWN>(input))();
+				makeCaretMovementCommand(*this, &k::locations::leftWord, hasModifier<UserInput::SHIFT_DOWN>(input))();
 			else
-				CaretMovementCommand(*this, &k::locations::leftCharacter, hasModifier<UserInput::SHIFT_DOWN>(input))();
+				makeCaretMovementCommand(*this, &k::locations::leftCharacter, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		}
 		break;
 	case keyboardcodes::UP:		// [Up]
 		if(hasModifier<UserInput::ALT_DOWN>(input)
 				&& hasModifier<UserInput::SHIFT_DOWN>(input) && !hasModifier<UserInput::CONTROL_DOWN>(input))
-			RowSelectionExtensionCommand(*this, &k::locations::backwardVisualLine)();
+			makeRowSelectionExtensionCommand(*this, &k::locations::backwardVisualLine)();
 		else if(hasModifier<UserInput::CONTROL_DOWN>(input) && !hasModifier<UserInput::SHIFT_DOWN>(input)) {
 			if(const shared_ptr<TextViewport> viewport = textRenderer().viewport().lock())
 				viewport->scroll(geometry::make<NativeSize>(0, -1), this);
 		} else
-			CaretMovementCommand(*this, &k::locations::backwardVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
+			makeCaretMovementCommand(*this, &k::locations::backwardVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
 	case keyboardcodes::RIGHT:	// [Right]
 		if(hasModifier<UserInput::ALT_DOWN>(input)) {
 			if(hasModifier<UserInput::SHIFT_DOWN>(input)) {
 				if(hasModifier<UserInput::CONTROL_DOWN>(input))
-					RowSelectionExtensionCommand(*this, &k::locations::rightWord)();
+					makeRowSelectionExtensionCommand(*this, &k::locations::rightWord)();
 				else
-					RowSelectionExtensionCommand(*this, &k::locations::rightCharacter)();
+					makeRowSelectionExtensionCommand(*this, &k::locations::rightCharacter)();
 			} else
 				CompletionProposalPopupCommand(*this)();
 		} else {
 			if(hasModifier<UserInput::CONTROL_DOWN>(input))
-				CaretMovementCommand(*this, &k::locations::rightWord, hasModifier<UserInput::SHIFT_DOWN>(input))();
+				makeCaretMovementCommand(*this, &k::locations::rightWord, hasModifier<UserInput::SHIFT_DOWN>(input))();
 			else
-				CaretMovementCommand(*this, &k::locations::rightCharacter, hasModifier<UserInput::SHIFT_DOWN>(input))();
+				makeCaretMovementCommand(*this, &k::locations::rightCharacter, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		}
 		break;
 	case keyboardcodes::DOWN:	// [Down]
 		if(hasModifier<UserInput::ALT_DOWN>(input)
 				&& hasModifier<UserInput::SHIFT_DOWN>(input) && !hasModifier<UserInput::CONTROL_DOWN>(input))
-			RowSelectionExtensionCommand(*this, &k::locations::forwardVisualLine)();
+			makeRowSelectionExtensionCommand(*this, &k::locations::forwardVisualLine)();
 		else if(hasModifier<UserInput::CONTROL_DOWN>(input) && !hasModifier<UserInput::SHIFT_DOWN>(input))
 			onVScroll(SB_LINEDOWN, 0, win32::Handle<HWND>());
 		else
-			CaretMovementCommand(*this, &k::locations::forwardVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
+			makeCaretMovementCommand(*this, &k::locations::forwardVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
 	case keyboardcodes::INSERT:	// [Insert]
 		if(hasModifier<UserInput::ALT_DOWN>(input))
