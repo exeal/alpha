@@ -27,11 +27,13 @@ namespace ascension {
 		 */
 		class Command {
 		public:
+			typedef unsigned long NumericPrefix;	///< Type of numeric prefixes.
+		public:
 			virtual ~Command() throw();
 			bool operator()();
-			long numericPrefix() const /*throw()*/;
+			NumericPrefix numericPrefix() const /*throw()*/;
 			Command& retarget(viewers::TextViewer& viewer) /*throw()*/;
-			Command& setNumericPrefix(long number) /*throw()*/;
+			Command& setNumericPrefix(NumericPrefix number) /*throw()*/;
 		protected:
 			explicit Command(viewers::TextViewer& viewer) /*throw()*/;
 			/// Returns the text viewer which is the target of this command.
@@ -41,7 +43,7 @@ namespace ascension {
 			virtual bool perform() = 0;
 		private:
 			viewers::TextViewer* viewer_;
-			long numericPrefix_;
+			NumericPrefix numericPrefix_;
 		};
 
 		/**
@@ -70,35 +72,19 @@ namespace ascension {
 				bool perform();
 			};
 			/**
-			 * Moves the caret or extends the selection. @c CharacterUnit#GRAPHEME_CLUSTER is
-			 * always used as character unit.
+			 * Moves the caret or extends the selection.
+			 * @c kernel#locations#CharacterUnit#GRAPHEME_CLUSTER is always used as character unit.
+			 * @tparam ProcedureSignature
 			 * @see viewers#Caret
 			 */
+			template<typename ProcedureSignature>
 			class CaretMovementCommand : public Command {
 			public:
 				CaretMovementCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const kernel::Point&), bool extendSelection = false);
-				CaretMovementCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const kernel::Point&, Index), bool extendSelection = false);
-				CaretMovementCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const kernel::Point&, kernel::locations::CharacterUnit, Index), bool extendSelection = false);
-				CaretMovementCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const viewers::VisualPoint&), bool extendSelection = false);
-				CaretMovementCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const viewers::VisualPoint&, Index), bool extendSelection = false);
-				CaretMovementCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, Index), bool extendSelection = false);
-				CaretMovementCommand(viewers::TextViewer& viewer,
-					viewers::BlockProgressionDestinationProxy(*procedure)(const viewers::VisualPoint&, Index), bool extendSelection = false);
+						ProcedureSignature* procedure, bool extendSelection = false);
 			private:
 				bool perform();
-				kernel::Position(*procedureP_)(const kernel::Point&);
-				kernel::Position(*procedurePL_)(const kernel::Point&, Index);
-				kernel::Position(*procedurePCL_)(const kernel::Point&, kernel::locations::CharacterUnit, Index);
-				kernel::Position(*procedureV_)(const viewers::VisualPoint&);
-				kernel::Position(*procedureVL_)(const viewers::VisualPoint&, Index);
-				kernel::Position(*procedureVCL_)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, Index);
-				viewers::BlockProgressionDestinationProxy(*procedureVLV_)(const viewers::VisualPoint&, Index);
+				ProcedureSignature* const procedure_;
 				const bool extends_;
 			};
 			/**
@@ -273,32 +259,18 @@ namespace ascension {
 				searcher::InteractiveReplacementCallback* const callback_;
 				std::size_t numberOfLastReplacements_;
 			};
-			/// Extends the selection and begins rectangular selection.
+			/**
+			 * Extends the selection and begins rectangular selection.
+			 * @tparam ProcedureSignature
+			 * @see viewers#Caret
+			 */
+			template<typename ProcedureSignature>
 			class RowSelectionExtensionCommand : public Command {
 			public:
-				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const kernel::Point&));
-				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const kernel::Point&, Index));
-				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const kernel::Point&, kernel::locations::CharacterUnit, Index));
-				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const viewers::VisualPoint&));
-				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const viewers::VisualPoint&, Index));
-				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
-					kernel::Position(*procedure)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, Index));
-				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
-					viewers::BlockProgressionDestinationProxy(*procedure)(const viewers::VisualPoint&, Index));
-				bool perform();
+				RowSelectionExtensionCommand(viewers::TextViewer& viewer, ProcedureSignature* procedure);
 			private:
-				kernel::Position(*procedureP_)(const kernel::Point&);
-				kernel::Position(*procedurePL_)(const kernel::Point&, Index);
-				kernel::Position(*procedurePCL_)(const kernel::Point&, kernel::locations::CharacterUnit, Index);
-				kernel::Position(*procedureV_)(const viewers::VisualPoint&);
-				kernel::Position(*procedureVL_)(const viewers::VisualPoint&, Index);
-				kernel::Position(*procedureVCL_)(const viewers::VisualPoint&, kernel::locations::CharacterUnit, Index);
-				viewers::BlockProgressionDestinationProxy(*procedureVLV_)(const viewers::VisualPoint&, Index);
+				bool perform();
+				ProcedureSignature* const procedure_;
 			};
 			/// Tabifies (exchanges tabs and spaces).
 			class TabifyCommand : public Command {
@@ -349,28 +321,60 @@ namespace ascension {
 			private:
 				bool perform();
 			};
+
+			template<typename ProcedureSignature>
+			inline CaretMovementCommand<ProcedureSignature> makeCaretMovementCommand(
+					viewers::TextViewer& viewer, ProcedureSignature* procedure, bool extendSelection = false) {
+				return CaretMovementCommand<ProcedureSignature>(viewer, procedure, extendSelection);
+			}
+			template<typename ProcedureSignature>
+			inline RowSelectionExtensionCommand<ProcedureSignature> makeRowSelectionExtensionCommand(
+					viewers::TextViewer& viewer, ProcedureSignature* procedure) {
+				return RowSelectionExtensionCommand<ProcedureSignature>(viewer, procedure);
+			}
 		} // namespace commands
 
 
 		/**
-		 * Performs the command. The command can return the command-specific result value.
-		 * @retval true the command succeeded
-		 * @retval false ignorable or easily recoverable error occurred. or the command tried to
+		 * Performs the command. The command can return the command-specific result value. If the
+		 * command didn't throw an exception, this resets the numeric prefix to 1.
+		 * @retval true The command succeeded
+		 * @retval false An ignorable or easily recoverable error occurred. Or the command tried to
 		 *               change the read-only document or the document's input rejected the change
-		 * @throw ... a fatal error occurred. the type of exception(s) is defined by the derived
-		 *            class. see the documentation of @c #perform methods of the implementation
+		 * @throw ... A fatal error occurred. The type of exception(s) is defined by the derived
+		 *            class. See the documentation of @c #perform methods of the implementation
 		 * @see kernel#DocumentCantChangeException, kernel#ReadOnlyDocumentException
 		 */
-		inline bool Command::operator()() {const bool result = perform(); numericPrefix_ = 1; return result;}
+		inline bool Command::operator()() {
+			const bool result = perform();
+			setNumericPrefix(1);
+			return result;
+		}
 
 		/// Returns the numeric prefix for the next execution.
-		inline long Command::numericPrefix() const /*throw()*/ {return numericPrefix_;}
+		inline Command::NumericPrefix Command::numericPrefix() const /*throw()*/ {
+			return numericPrefix_;
+		}
 
-		/// Changes the command target.
-		inline Command& Command::retarget(viewers::TextViewer& viewer) /*throw()*/ {viewer_ = &viewer; return *this;}
+		/**
+		 * Changes the command target.
+		 * @param viewer The text viewer as the new target to set
+		 * @return This command
+		 */
+		inline Command& Command::retarget(viewers::TextViewer& viewer) /*throw()*/ {
+			viewer_ = &viewer;
+			return *this;
+		}
 
-		/// Sets the numeric prefix for the next execution.
-		inline Command& Command::setNumericPrefix(long number) /*throw()*/ {numericPrefix_ = number; return *this;}
+		/**
+		 * Sets the numeric prefix for the next performance.
+		 * @param number The new numeric prefix
+		 * @return This command
+		 */
+		inline Command& Command::setNumericPrefix(NumericPrefix number) /*throw()*/ {
+			numericPrefix_ = number;
+			return *this;
+		}
 
 	} // namespace texteditor
 

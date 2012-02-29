@@ -6,6 +6,7 @@
  * @date 2011-2012
  */
 
+#include <ascension/corelib/text/break-iterator.hpp>	// text.WordBreakIterator
 #include <ascension/text-editor/command.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/content-assist.hpp>
@@ -36,58 +37,17 @@ Command::~Command() /*throw()*/ {
 // commands.* /////////////////////////////////////////////////////////////////////////////////////
 
 namespace {
-	inline bool abortIncrementalSearch(TextViewer& target) {
-		if(Session* const session = target.document().session()) {
-			if(session->incrementalSearcher().isRunning())
-				return session->incrementalSearcher().abort(), true;
-		}
-		return false;
-	}
-	inline bool endIncrementalSearch(TextViewer& target) {
-		if(Session* const session = target.document().session()) {
-			if(session->incrementalSearcher().isRunning())
-				return session->incrementalSearcher().end(), true;
-		}
-		return false;
-	}
 	inline bool abortModes(TextViewer& target) {
 		utils::closeCompletionProposalsPopup(target);
 		return abortIncrementalSearch(target);
 	}
 }
 
-#define ASCENSION_ASSERT_IFISWINDOW() assert(target().isWindow())
+#define ASCENSION_ASSERT_IFISWINDOW() assert(true/*target().isWindow()*/)
 
 // the command can't perform and throw if the document is read only
 #define ASCENSION_CHECK_DOCUMENT_READ_ONLY()	\
 	if(target().document().isReadOnly()) return false
-
-namespace {
-	typedef Position(*MovementProcedureP)(const Point&);
-	typedef Position(*MovementProcedurePL)(const Point&, Index);
-	typedef Position(*MovementProcedurePCL)(const Point&, locations::CharacterUnit, Index);
-	typedef Position(*MovementProcedureV)(const VisualPoint&);
-	typedef Position(*MovementProcedureVL)(const VisualPoint&, Index);
-	typedef Position(*MovementProcedureVCL)(const VisualPoint&, locations::CharacterUnit, Index);
-	typedef BlockProgressionDestinationProxy(*MovementProcedureVLV)(const VisualPoint&, Index);
-
-	static MovementProcedureP MOVEMENT_PROCEDURES_P[] = {
-		&locations::beginningOfDocument, &locations::beginningOfLine, &locations::endOfDocument, &locations::endOfLine};
-	static MovementProcedurePL MOVEMENT_PROCEDURES_PL[] = {
-		&locations::backwardBookmark, &locations::backwardLine, &locations::backwardWord, &locations::backwardWordEnd,
-		&locations::forwardBookmark, &locations::forwardLine, &locations::forwardWord, &locations::forwardWordEnd};
-	static MovementProcedurePCL MOVEMENT_PROCEDURES_PCL[] = {&locations::backwardCharacter, &locations::forwardCharacter};
-	static MovementProcedureV MOVEMENT_PROCEDURES_V[] = {
-		&locations::beginningOfVisualLine, &locations::contextualBeginningOfLine,
-		&locations::contextualBeginningOfVisualLine, &locations::contextualEndOfLine, &locations::contextualEndOfVisualLine,
-		&locations::endOfVisualLine, &locations::firstPrintableCharacterOfLine, &locations::firstPrintableCharacterOfVisualLine,
-		&locations::lastPrintableCharacterOfLine, &locations::lastPrintableCharacterOfVisualLine};
-	static MovementProcedureVL MOVEMENT_PROCEDURES_VL[] = {
-		&locations::leftWord, &locations::leftWordEnd, &locations::rightWord, &locations::rightWordEnd};
-	static MovementProcedureVCL MOVEMENT_PROCEDURES_VCL[] = {&locations::leftCharacter, &locations::rightCharacter};
-	static MovementProcedureVLV MOVEMENT_PROCEDURES_VLV[] = {
-		&locations::backwardPage, &locations::backwardVisualLine, &locations::forwardPage, &locations::forwardVisualLine};
-}
 
 /**
  * Constructor.
@@ -159,186 +119,156 @@ bool CancelCommand::perform() {
 /**
  * Constructor.
  * @param viewer The target text viewer
- * @param procedure A pointer to the member function defines the destination
- * @param extendSelection Set @c true to extend selection
+ * @param procedure A function gives a motion
+ * @param extendSelection Set @c true to extend the selection
+ * @throw NullPointerException @a procedure is @c null
  */
-CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
-		Position(*procedure)(const Point&), bool extendSelection /* = false */) :
-		Command(viewer), extends_(extendSelection), procedureP_(procedure), procedurePL_(nullptr), procedurePCL_(nullptr),
-		procedureV_(nullptr), procedureVL_(nullptr), procedureVCL_(nullptr), procedureVLV_(nullptr) {
-	if(procedure == nullptr || find(MOVEMENT_PROCEDURES_P,
-			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_P), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_P))
-		throw invalid_argument("procedure");
+template<typename ProcedureSignature>
+CaretMovementCommand<ProcedureSignature>::CaretMovementCommand(
+		TextViewer& viewer, ProcedureSignature* procedure, bool extendSelection /* = false */)
+		: Command(viewer), procedure_(procedure), extends_(extendSelection) {
+	if(procedure == nullptr)
+		throw NullPointerException("procedure");
 }
 
-/**
- * Constructor.
- * @param viewer The target text viewer
- * @param procedure A pointer to the member function defines the destination
- * @param extendSelection Set @c true to extend selection
- */
-CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
-		Position(*procedure)(const Point&, Index), bool extendSelection /* = false */) :
-		Command(viewer), extends_(extendSelection), procedureP_(nullptr), procedurePL_(procedure), procedurePCL_(nullptr),
-		procedureV_(nullptr), procedureVL_(nullptr), procedureVCL_(nullptr), procedureVLV_(nullptr) {
-	if(procedure == nullptr || find(MOVEMENT_PROCEDURES_PL,
-			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PL))
-		throw invalid_argument("procedure");
+namespace {
+	template<typename CaretMovementProcedure>
+	inline bool selectCompletionProposal(TextViewer&, CaretMovementProcedure*, long) {
+		return false;
+	}
+	inline bool selectCompletionProposal(TextViewer& target, Position(*procedure)(const Point&, Index), long n) {
+		if(contentassist::ContentAssistant* const ca = target.contentAssistant()) {
+			if(contentassist::ContentAssistant::CompletionProposalsUI* const cpui = ca->completionProposalsUI()) {
+				if(procedure == &locations::forwardLine)
+					return cpui->nextProposal(+n), true;
+				else if(procedure == &locations::backwardLine)
+					return cpui->nextProposal(-n), true;
+			}
+		}
+		return false;
+	}
+	inline bool selectCompletionProposal(TextViewer& target, BlockProgressionDestinationProxy(*procedure)(const VisualPoint&, Index), long n) {
+		if(contentassist::ContentAssistant* const ca = target.contentAssistant()) {
+			if(contentassist::ContentAssistant::CompletionProposalsUI* const cpui = ca->completionProposalsUI()) {
+				if(procedure == &locations::forwardVisualLine)
+					return cpui->nextProposal(+n), true;
+				else if(procedure == &locations::backwardVisualLine)
+					return cpui->nextProposal(-n), true;
+				else if(procedure == &locations::forwardPage)
+					return cpui->nextPage(+n), true;
+				else if(procedure == &locations::backwardPage)
+					return cpui->nextPage(-n), true;
+			}
+		}
+		return false;
+	}
+
+	template<typename ProcedureSignature>
+	inline bool moveToBoundOfSelection(Caret&, ProcedureSignature*, presentation::ReadingDirection) {
+		return false;
+	}
+	inline bool moveToBoundOfSelection(Caret& caret, Position(*procedure)(const Point&, locations::CharacterUnit, Index), presentation::ReadingDirection) {
+		if(procedure == &locations::forwardCharacter)
+			return caret.moveTo(caret.end()), true;
+		else if(procedure == &locations::backwardCharacter)
+			return caret.moveTo(caret.beginning()), true;
+		return false;
+	}
+	inline bool moveToBoundOfSelection(Caret& caret, Position(*procedure)(const VisualPoint&, locations::CharacterUnit, Index), presentation::ReadingDirection defaultReadingDirection) {
+		if(procedure == &locations::rightCharacter && defaultReadingDirection == presentation::LEFT_TO_RIGHT)
+			return caret.moveTo(caret.end()), true;
+		else if(procedure == &locations::leftCharacter && defaultReadingDirection == presentation::RIGHT_TO_LEFT)
+			return caret.moveTo(caret.beginning()), true;
+		return false;
+	}
+
+	template<typename ProcedureSignature>
+	inline void scrollTextViewer(TextViewer&, ProcedureSignature, long) {
+	}
+	inline void scrollTextViewer(TextViewer& target, BlockProgressionDestinationProxy(*procedure)(const VisualPoint&, Index), long n) {
+		// TODO: consider the numeric prefix.
+		SignedIndex offset = 0;
+		if(procedure == &locations::forwardPage)
+			++offset;
+		else if(procedure == &locations::backwardPage)
+			--offset;
+		if(offset != 0) {
+			if(const shared_ptr<graphics::font::TextViewport> viewport = target.textRenderer().viewport().lock())
+				viewport->scroll(offset, 0, &target);
+		}
+	}
+
+	template<typename PointType>
+	inline void moveCaret(Caret& caret, Position(*procedure)(const PointType&), Index, bool extend) {
+		if(!extend)
+			caret.moveTo((*procedure)(caret));
+		else
+			caret.extendSelectionTo((*procedure)(caret));
+	}
+	template<typename PointType>
+	inline void moveCaret(Caret& caret, Position(*procedure)(const PointType&, Index), Index n, bool extend) {
+		if(!extend)
+			caret.moveTo((*procedure)(caret, n));
+		else
+			caret.extendSelectionTo((*procedure)(caret, n));
+	}
+	inline void moveCaret(Caret& caret, boost::optional<Position>(*procedure)(const Point&, Index), Index n, bool extend) {
+		if(const boost::optional<Position> destination = (*procedure)(caret, n)) {
+			if(!extend)
+				caret.moveTo(*destination);
+			else
+				caret.extendSelectionTo(*destination);
+		}
+	}
+	template<typename PointType>
+	inline void moveCaret(Caret& caret, Position(*procedure)(const PointType&, locations::CharacterUnit, Index), Index n, bool extend) {
+		if(!extend)
+			caret.moveTo((*procedure)(caret, locations::GRAPHEME_CLUSTER, n));
+		else
+			caret.extendSelectionTo((*procedure)(caret, locations::GRAPHEME_CLUSTER, n));
+	}
+	inline void moveCaret(Caret& caret, BlockProgressionDestinationProxy(*procedure)(const VisualPoint&, Index), Index n, bool extend) {
+		if(!extend)
+			caret.moveTo((*procedure)(caret, n));
+		else
+			caret.extendSelectionTo((*procedure)(caret, n));
+	}
 }
 
-/**
- * Constructor.
- * @param viewer The target text viewer
- * @param procedure A pointer to the member function defines the destination
- * @param extendSelection Set @c true to extend selection
- */
-CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
-		Position(*procedure)(const Point&, locations::CharacterUnit, Index), bool extendSelection /* = false */) :
-		Command(viewer), extends_(extendSelection), procedureP_(nullptr), procedurePL_(nullptr), procedurePCL_(procedure),
-		procedureV_(nullptr), procedureVL_(nullptr), procedureVCL_(nullptr), procedureVLV_(nullptr) {
-	if(procedure == nullptr || find(MOVEMENT_PROCEDURES_PCL,
-			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PCL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PCL))
-		throw invalid_argument("procedure");
-}
-
-/**
- * Constructor.
- * @param viewer The target text viewer
- * @param procedure A pointer to the member function defines the destination
- * @param extendSelection Set @c true to extend selection
- */
-CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
-		Position(*procedure)(const VisualPoint&), bool extendSelection /* = false */) :
-		Command(viewer), extends_(extendSelection), procedureP_(nullptr), procedurePL_(nullptr), procedurePCL_(nullptr),
-		procedureV_(procedure), procedureVL_(nullptr), procedureVCL_(nullptr), procedureVLV_(nullptr) {
-	if(procedure == nullptr || find(MOVEMENT_PROCEDURES_V,
-			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_V), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_V))
-		throw invalid_argument("procedure");
-}
-
-/**
- * Constructor.
- * @param viewer The target text viewer
- * @param procedure A pointer to the member function defines the destination
- * @param extendSelection Set @c true to extend selection
- */
-CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
-		Position(*procedure)(const VisualPoint&, Index), bool extendSelection /* = false */) :
-		Command(viewer), extends_(extendSelection), procedureP_(nullptr), procedurePL_(nullptr), procedurePCL_(nullptr),
-		procedureV_(nullptr), procedureVL_(procedure), procedureVCL_(nullptr), procedureVLV_(nullptr) {
-	if(procedure == nullptr || find(MOVEMENT_PROCEDURES_VL,
-			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VL))
-		throw invalid_argument("procedure");
-}
-
-/**
- * Constructor.
- * @param viewer The target text viewer
- * @param procedure A pointer to the member function defines the destination
- * @param extendSelection Set @c true to extend selection
- */
-CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
-		Position(*procedure)(const VisualPoint&, locations::CharacterUnit, Index), bool extendSelection /* = false */) :
-		Command(viewer), extends_(extendSelection), procedureP_(nullptr), procedurePL_(nullptr), procedurePCL_(nullptr),
-		procedureV_(nullptr), procedureVL_(nullptr), procedureVCL_(procedure), procedureVLV_(nullptr) {
-	if(procedure == nullptr || find(MOVEMENT_PROCEDURES_VCL,
-			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VCL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VCL))
-		throw invalid_argument("procedure");
-}
-
-/**
- * Constructor.
- * @param viewer The target text viewer
- * @param procedure A pointer to the member function defines the destination
- * @param extendSelection Set @c true to extend selection
- */
-CaretMovementCommand::CaretMovementCommand(TextViewer& viewer,
-		BlockProgressionDestinationProxy(*procedure)(const VisualPoint&, Index), bool extendSelection /* = false */) :
-		Command(viewer), extends_(extendSelection), procedureP_(nullptr), procedurePL_(nullptr), procedurePCL_(nullptr),
-		procedureV_(nullptr), procedureVL_(nullptr), procedureVCL_(nullptr), procedureVLV_(procedure) {
-	if(procedure == nullptr || find(MOVEMENT_PROCEDURES_VLV,
-			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VLV), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VLV))
-		throw invalid_argument("procedure");
-}
+// explicit instantiations
+template class CaretMovementCommand<Position(const Point&)>;
+template class CaretMovementCommand<Position(const Point&, Index)>;
+template class CaretMovementCommand<boost::optional<Position>(const Point&, Index)>;
+template class CaretMovementCommand<Position(const Point&, locations::CharacterUnit, Index)>;
+template class CaretMovementCommand<Position(const VisualPoint&)>;
+template class CaretMovementCommand<Position(const VisualPoint&, Index)>;
+template class CaretMovementCommand<Position(const VisualPoint&, locations::CharacterUnit, Index)>;
+template class CaretMovementCommand<BlockProgressionDestinationProxy(const VisualPoint&, Index)>;
 
 /**
  * Moves the caret or extends the selection.
  * @return true
  */
-bool CaretMovementCommand::perform() {
-	const long n = numericPrefix();
+template<typename ProcedureSignature>
+bool CaretMovementCommand<ProcedureSignature>::perform() {
+	const NumericPrefix n = numericPrefix();
 	endIncrementalSearch(target());
 	if(n == 0)
 		return true;
 	Caret& caret = target().caret();
 
 	if(!extends_) {
-		if(procedurePL_ == &locations::forwardLine || procedurePL_ == &locations::backwardLine
-				|| procedureVLV_ == &locations::forwardVisualLine || procedureVLV_ == &locations::backwardVisualLine
-				|| procedureVLV_ == &locations::forwardPage || procedureVLV_ == &locations::backwardPage) {
-			if(contentassist::ContentAssistant* const ca = target().contentAssistant()) {
-				if(contentassist::ContentAssistant::CompletionProposalsUI* const cpui = ca->completionProposalsUI()) {
-					if(procedurePL_ == &locations::forwardLine || procedureVLV_ == &locations::forwardVisualLine)
-						cpui->nextProposal(n);
-					else if(procedurePL_ == &locations::backwardLine || procedureVLV_ == &locations::backwardVisualLine)
-						cpui->nextProposal(n);
-					else if(procedureVLV_ == &locations::forwardPage)
-						cpui->nextPage(n);
-					else if(procedureVLV_ == &locations::backwardPage)
-						cpui->nextPage(n);
-					return true;
-				}
-			}
-		}
+		if(selectCompletionProposal(target(), procedure_, n))
+			return true;
 		caret.endRectangleSelection();
 		if(!isSelectionEmpty(caret)) {	// just clear the selection
-			const bool rtl = defaultReadingDirection(target().presentation()) == presentation::RIGHT_TO_LEFT;
-			if(procedurePCL_ == &locations::forwardCharacter
-					|| (procedureVCL_ == &locations::rightCharacter && !rtl)
-					|| (procedureVCL_ == &locations::leftCharacter && rtl)) {
-				caret.moveTo(caret.end());
+			if(moveToBoundOfSelection(caret, procedure_, defaultReadingDirection(target().presentation())))
 				return true;
-			} else if(procedurePCL_ == &locations::backwardCharacter
-					|| (procedureVCL_ == &locations::leftCharacter && !rtl)
-					|| (procedureVCL_ == &locations::rightCharacter && rtl)) {
-				caret.moveTo(caret.beginning());
-				return true;
-			}
 		}
 	}
 
-	// TODO: consider the numeric prefix.
-	if(procedureVLV_ == &locations::forwardPage)
-		target().sendMessage(WM_VSCROLL, SB_PAGEDOWN);
-	else if(procedureVLV_ == &locations::backwardPage)
-		target().sendMessage(WM_VSCROLL, SB_PAGEUP);
-
-	if(procedureVLV_ == nullptr) {
-		Position destination;
-		if(procedureP_ != nullptr)
-			destination = (*procedureP_)(caret);
-		else if(procedurePL_ != nullptr)
-			destination = (*procedurePL_)(caret, n);
-		else if(procedurePCL_ != nullptr)
-			destination = (*procedurePCL_)(caret, locations::GRAPHEME_CLUSTER, n);
-		else if(procedureV_ != nullptr)
-			destination = (*procedureV_)(caret);
-		else if(procedureVL_ != nullptr)
-			destination = (*procedureVL_)(caret, n);
-		else if(procedureVCL_ != nullptr)
-			destination = (*procedureVCL_)(caret, locations::GRAPHEME_CLUSTER, n);
-		else
-			assert(false);
-		if(!extends_)
-			caret.moveTo(destination);
-		else
-			caret.extendSelection(destination);
-	} else {
-		if(!extends_)
-			caret.moveTo((*procedureVLV_)(caret, n));
-		else
-			caret.extendSelection((*procedureVLV_)(caret, n));
-	}
+	scrollTextViewer(target(), procedure_, n);
+	moveCaret(caret, procedure_, n, extends_);
 	return true;
 }
 
@@ -357,13 +287,11 @@ CharacterDeletionCommand::CharacterDeletionCommand(TextViewer& viewer,
  *               read only or the region to delete was inaccessible
  */
 bool CharacterDeletionCommand::perform() {
-	long n = numericPrefix();
+	NumericPrefix n = numericPrefix();
 	if(n == 0)
-		return 0;
+		return true;
 	TextViewer& viewer = target();
-	const bool forward = (direction_ == Direction::FORWARD && n > 0) || (direction_ == Direction::BACKWARD && n < 0);
-	n = abs(n);
-	if(/*caret.isAutoCompletionRunning() &&*/ forward)
+	if(/*caret.isAutoCompletionRunning() &&*/ direction_ == Direction::FORWARD)
 		utils::closeCompletionProposalsPopup(viewer);
 
 	Document& document = viewer.document();
@@ -371,7 +299,7 @@ bool CharacterDeletionCommand::perform() {
 	if(Session* const session = document.session())
 		isearch = &session->incrementalSearcher();
 	if(isearch != nullptr && isearch->isRunning()) {
-		if(forward)	// delete the entire pattern
+		if(direction_ == Direction::FORWARD)	// delete the entire pattern
 			isearch->reset();
 		else {	// delete the last N characters (undo)
 			if(!isearch->canUndo())
@@ -396,7 +324,7 @@ bool CharacterDeletionCommand::perform() {
 			AutoFreeze af((!isSelectionEmpty(caret) || n > 1) ? &viewer : nullptr);
 			Region region(caret.selectedRegion());
 			assert(region.isNormalized());
-			if(forward)
+			if(direction_ == Direction::FORWARD)
 				region.second = locations::nextCharacter(document, region.second,
 					Direction::FORWARD, locations::GRAPHEME_CLUSTER, isSelectionEmpty(caret) ? n : (n - 1));
 			else
@@ -446,9 +374,9 @@ bool CharacterInputCommand::perform() {
 		}
 	} else {
 		ASCENSION_CHECK_DOCUMENT_READ_ONLY();
-		if(numericPrefix() > 0) {
+		if(numericPrefix() > 0) {	// ...
 			String s;
-			text::surrogates::encode(c_, back_inserter(s));
+			text::utf::encode(c_, back_inserter(s));
 			return TextInputCommand(target(), s).setNumericPrefix(numericPrefix())();
 		}
 		return true;
@@ -480,16 +408,16 @@ bool CharacterInputFromNextLineCommand::perform() {
 	const Document& document = target().document();
 	const VisualPoint& caret = target().caret();
 
-	if((fromPreviousLine_ && caret.line() == 0)
-			|| (!fromPreviousLine_ && caret.line() >= document.numberOfLines() - 1))
+	if((fromPreviousLine_ && line(caret) == 0)
+			|| (!fromPreviousLine_ && line(caret) >= document.numberOfLines() - 1))
 		return false;
 	
 	const Position p((fromPreviousLine_ ? locations::backwardVisualLine(caret) : locations::forwardVisualLine(caret)).position());
-	const String& line = document.line(caret.line() + (fromPreviousLine_ ? -1 : 1));
-	if(p.offsetInLine >= line.length())
+	const String& lineString = document.line(line(caret) + (fromPreviousLine_ ? -1 : 1));
+	if(p.offsetInLine >= lineString.length())
 		return false;
 	setNumericPrefix(1);
-	return CharacterInputCommand(target(), text::surrogates::decodeFirst(line.begin() + p.offsetInLine, line.end()))();
+	return CharacterInputCommand(target(), text::utf::decodeFirst(begin(lineString) + p.offsetInLine, end(lineString)))();
 }
 
 /**
@@ -515,16 +443,16 @@ bool CharacterToCodePointConversionCommand::perform() {
 		return false;
 
 	Caret& caret = viewer.caret();
-	const Char* const line = document.line(eos.line()).data();
-	const CodePoint cp = text::surrogates::decodeLast(line, line + eos.offsetInLine());
+	const String& lineString = document.line(line(eos));
+	const CodePoint c = text::utf::decodeLast(begin(lineString), begin(lineString) + offsetInLine(eos));
 	Char buffer[7];
 #if(_MSC_VER < 1400)
-	swprintf(buffer, L"%lX", cp);
+	swprintf(buffer, L"%lX", c);
 #else
-	swprintf(buffer, ASCENSION_COUNTOF(buffer), L"%lX", cp);
+	swprintf(buffer, ASCENSION_COUNTOF(buffer), L"%lX", c);
 #endif // _MSC_VER < 1400
 	AutoFreeze af(&viewer);
-	caret.select(Position(eos.line(), eos.offsetInLine() - ((cp > 0xffff) ? 2 : 1)), eos);
+	caret.select(Position(line(eos), offsetInLine(eos) - ((c > 0xffff) ? 2 : 1)), eos);
 	try {
 		caret.replaceSelection(buffer, false);
 	} catch(const DocumentInput::ChangeRejectedException&) {
@@ -556,33 +484,30 @@ bool CodePointToCharacterConversionCommand::perform() {
 		return false;
 
 	Caret& caret = viewer.caret();
-	const Char* const line = document.line(eos.line()).data();
-	const Index offsetInLine = eos.offsetInLine();
+	const String& lineString = document.line(line(eos));
+	const Index offsetInLine = kernel::offsetInLine(eos);
 
 	// accept /(?:[Uu]\+)?[0-9A-Fa-f]{1,6}/
-	if(iswxdigit(line[offsetInLine - 1]) != 0) {
+	if(iswxdigit(lineString[offsetInLine - 1]) != 0) {
 		Index i = offsetInLine - 1;
 		while(i != 0) {
 			if(offsetInLine - i == 7)
 				return false;	// too long string
-			else if(iswxdigit(line[i - 1]) == 0)
+			else if(iswxdigit(lineString[i - 1]) == 0)
 				break;
 			--i;
 		}
 
-		Char buffer[7];
-		wcsncpy(buffer, line + i, offsetInLine - i);
-		buffer[offsetInLine - i] = 0;
-		const CodePoint cp = wcstoul(buffer, nullptr, 16);
-		if(text::isValidCodePoint(cp)) {
-			buffer[1] = buffer[2] = 0;
-			text::surrogates::encode(cp, buffer);
-			if(i >= 2 && line[i - 1] == L'+' && (line[i - 2] == L'U' || line[i - 2] == L'u'))
+		const CodePoint c = wcstoul(lineString.substr(i, offsetInLine - i).c_str(), nullptr, 16);
+		if(text::isValidCodePoint(c)) {
+			String s;
+			text::utf::encode(c, back_inserter(s));
+			if(i >= 2 && lineString[i - 1] == L'+' && (lineString[i - 2] == L'U' || lineString[i - 2] == L'u'))
 				i -= 2;
 			AutoFreeze af(&viewer);
-			caret.select(Position(eos.line(), i), eos);
+			caret.select(Position(line(eos), i), eos);
 			try {
-				caret.replaceSelection(StringPiece(buffer, (cp < 0x10000u ? 1 : 2)), false);
+				caret.replaceSelection(s, false);
 			} catch(const DocumentInput::ChangeRejectedException&) {
 				return false;
 			}
@@ -646,31 +571,27 @@ FindNextCommand::FindNextCommand(TextViewer& viewer, Direction direction) /*thro
  * @throw ... Any exceptions @c searcher#TextSearcher#search throws
  */
 bool FindNextCommand::perform() {
-	long n = numericPrefix();
-	if(n == 0)
-		return 0;
+	if(numericPrefix() == 0)
+		return false;
 	endIncrementalSearch(target());
 	utils::closeCompletionProposalsPopup(target());
 
-	win32::WaitCursor wc;
+	win32::WaitCursor wc;	// TODO: code depends on Win32.
 	Document& document = target().document();
 	const searcher::TextSearcher* s;
 	if(const Session* const session = document.session())
 		s = &session->textSearcher();
 	else
 		return false;	// TODO: prepares a default text searcher.
-	const bool forward = (direction_ == Direction::FORWARD && n > 0) || (direction_ == Direction::BACKWARD && n < 0);
-	n = abs(n);
 
 	Caret& caret = target().caret();
 	const Region scope(document.accessibleRegion());
 	Region matchedRegion(caret.selectedRegion());
 	bool foundOnce = false;
-	for(; n > 0; --n) {	// search N times
-		if(!s->search(document, forward ?
+	for(NumericPrefix n(numericPrefix()); n > 0; --n) {	// search N times
+		if(!s->search(document, (direction_ == Direction::FORWARD) ?
 				max<Position>(matchedRegion.end(), scope.first)
-				: min<Position>(matchedRegion.beginning(), scope.second),
-				scope, forward ? Direction::FORWARD : Direction::BACKWARD, matchedRegion))
+				: min<Position>(matchedRegion.beginning(), scope.second), scope, direction_, matchedRegion))
 			break;
 		foundOnce = true;
 	}
@@ -696,28 +617,27 @@ IncrementalFindCommand::IncrementalFindCommand(TextViewer& viewer, searcher::Tex
 }
 
 /**
- * @see Command#perform
- * @return 0
+ * Implements Command#perform.
+ * @return false If no text matched
+ * @throw ... Any exceptions @c IncrementalSearcher#start and @c IncrementalSearcher#next throw
  */
 bool IncrementalFindCommand::perform() {
-	long n = numericPrefix();
+	NumericPrefix n(numericPrefix());
 	if(n == 0)
-		return 0;
+		return false;
 	utils::closeCompletionProposalsPopup(target());
 	if(Session* const session = target().document().session()) {
-		const Direction realDirection = (n > 0) ? direction_ : !direction_;
-		n = abs(n);
 		searcher::IncrementalSearcher& isearch = session->incrementalSearcher();
 		if(!isearch.isRunning()) {	// begin the search if not running
-			isearch.start(target().document(), target().caret(), session->textSearcher(), type_, realDirection, callback_);
+			isearch.start(target().document(), target().caret(), session->textSearcher(), type_, direction_, callback_);
 			--n;
 		}
 		for(; n > 0; --n) {	// jump N times
-			if(!isearch.next(realDirection))
+			if(!isearch.next(direction_))
 				return false;	// it is not able to jump anymore in the active incremental search
 		}
 	}
-	return 1;
+	return true;
 }
 
 /**
@@ -733,7 +653,7 @@ IndentationCommand::IndentationCommand(TextViewer& viewer, bool increase) /*thro
  * @retval false The document's input rejected the change
  */
 bool IndentationCommand::perform() {
-	const long n = numericPrefix();
+	const NumericPrefix n(numericPrefix());
 	if(n == 0)
 		return true;
 	ASCENSION_CHECK_DOCUMENT_READ_ONLY();
@@ -746,7 +666,8 @@ bool IndentationCommand::perform() {
 		Caret& caret = viewer.caret();
 		viewer.document().insertUndoBoundary();
 		AutoFreeze af(&viewer);
-		indentByTabs(caret, caret.isSelectionRectangle(), n);
+		const long tabs = n;
+		indentByTabs(caret, caret.isSelectionRectangle(), increases_ ? +tabs : -tabs);
 		viewer.document().insertUndoBoundary();
 	} catch(const DocumentInput::ChangeRejectedException&) {
 		return false;
@@ -767,9 +688,9 @@ InputMethodOpenStatusToggleCommand::InputMethodOpenStatusToggleCommand(TextViewe
  * @retval false The system didn't support the input method
  */
 bool InputMethodOpenStatusToggleCommand::perform() {
-	if(HIMC imc = ::ImmGetContext(target().handle().get())) {
+	if(HIMC imc = ::ImmGetContext(target().identifier().get())) {
 		const bool succeeded = win32::boole(::ImmSetOpenStatus(imc, !win32::boole(::ImmGetOpenStatus(imc))));
-		::ImmReleaseContext(target().handle().get(), imc);
+		::ImmReleaseContext(target().identifier().get(), imc);
 		return succeeded;
 	}
 	return false;
@@ -787,13 +708,13 @@ InputMethodSoftKeyboardModeToggleCommand::InputMethodSoftKeyboardModeToggleComma
  * @retval false The system didn't support the input method
  */
 bool InputMethodSoftKeyboardModeToggleCommand::perform() {
-	if(HIMC imc = ::ImmGetContext(target().handle().get())) {
+	if(HIMC imc = ::ImmGetContext(target().identifier().get())) {
 		DWORD conversionMode, sentenceMode;
 		if(win32::boole(::ImmGetConversionStatus(imc, &conversionMode, &sentenceMode))) {
 			conversionMode = win32::boole(conversionMode & IME_CMODE_SOFTKBD) ?
 				(conversionMode & ~IME_CMODE_SOFTKBD) : (conversionMode | IME_CMODE_SOFTKBD);
 			const bool succeeded = win32::boole(::ImmSetConversionStatus(imc, conversionMode, sentenceMode));
-			::ImmReleaseContext(target().handle().get(), imc);
+			::ImmReleaseContext(target().identifier().get(), imc);
 			return succeeded;
 		}
 	}
@@ -815,17 +736,17 @@ MatchBracketCommand::MatchBracketCommand(TextViewer& viewer, bool extendSelectio
 bool MatchBracketCommand::perform() {
 	endIncrementalSearch(target());
 	Caret& caret = target().caret();
-	const Position matchBracket(caret.matchBrackets().first);
-	if(matchBracket == Position())
+	if(const boost::optional<pair<Position, Position>> matchBrackets = caret.matchBrackets()) {
+		caret.endRectangleSelection();
+		if(!extends_)
+			caret.moveTo(matchBrackets->first);
+		else if(matchBrackets->first > caret)
+			caret.select(caret, Position(matchBrackets->first.line, matchBrackets->first.offsetInLine + 1));
+		else
+			caret.select(Position(line(caret), offsetInLine(caret) + 1), matchBrackets->first);
+		return true;
+	} else
 		return false;	// not found
-	caret.endRectangleSelection();
-	if(!extends_)
-		caret.moveTo(matchBracket);
-	else if(matchBracket > caret)
-		caret.select(caret, Position(matchBracket.line, matchBracket.offsetInLine + 1));
-	else
-		caret.select(Position(caret.line(), caret.offsetInLine() + 1), matchBracket);
-	return true;
 }
 
 /**
@@ -866,7 +787,7 @@ bool NewlineCommand::perform() {
 		const bool autoShow = caret.isAutoShowEnabled();
 		caret.enableAutoShow(false);
 		if(oldSelection.first.line != 0)
-			caret.moveTo(Position(oldSelection.first.line - 1, INVALID_INDEX));
+			caret.moveTo(Position(oldSelection.first.line - 1, caret.document().lineLength(oldSelection.first.line - 1)));
 		else
 			caret.moveTo(viewer.document().region().first);
 		caret.enableAutoShow(autoShow);
@@ -949,19 +870,19 @@ bool ReconversionCommand::perform() {
 	bool succeeded = false;
 	Caret& caret = viewer.caret();
 	if(!caret.isSelectionRectangle()) {
-		if(HIMC imc = ::ImmGetContext(viewer.handle().get())) {
+		if(HIMC imc = ::ImmGetContext(viewer.identifier().get())) {
 			if(!win32::boole(::ImmGetOpenStatus(imc)))	// without this, IME may ignore us?
 				::ImmSetOpenStatus(imc, true);
 
 			// from NotePadView.pas of TNotePad (http://wantech.ikuto.com/)
-			const bool multilineSelection = caret.line() != caret.anchor().line();
-			const String s(multilineSelection ? selectedString(caret) : viewer.document().line(caret.line()));
+			const bool multilineSelection = line(caret) != line(caret.anchor());
+			const String s(multilineSelection ? selectedString(caret) : viewer.document().line(line(caret)));
 			const DWORD bytes = static_cast<DWORD>(sizeof(RECONVERTSTRING) + sizeof(Char) * s.length());
 			RECONVERTSTRING* rcs;
 			try {
 				rcs = static_cast<RECONVERTSTRING*>(::operator new(bytes));
 			} catch(const bad_alloc&) {
-				::ImmReleaseContext(viewer.handle().get(), imc);
+				::ImmReleaseContext(viewer.identifier().get(), imc);
 				throw;	// failed to allocate the memory for RECONVERTSTRING
 			}
 			rcs->dwSize = bytes;
@@ -969,23 +890,23 @@ bool ReconversionCommand::perform() {
 			rcs->dwStrLen = static_cast<DWORD>(s.length());
 			rcs->dwStrOffset = sizeof(RECONVERTSTRING);
 			rcs->dwCompStrLen = rcs->dwTargetStrLen =
-				static_cast<DWORD>(multilineSelection ? s.length() : (caret.end().offsetInLine() - caret.beginning().offsetInLine()));
+				static_cast<DWORD>(multilineSelection ? s.length() : (offsetInLine(caret.end()) - offsetInLine(caret.beginning())));
 			rcs->dwCompStrOffset = rcs->dwTargetStrOffset =
-				multilineSelection ? 0 : static_cast<DWORD>(sizeof(Char) * caret.beginning().offsetInLine());
+				multilineSelection ? 0 : static_cast<DWORD>(sizeof(Char) * offsetInLine(caret.beginning()));
 			s.copy(reinterpret_cast<Char*>(reinterpret_cast<char*>(rcs) + rcs->dwStrOffset), s.length());
 
 			if(isSelectionEmpty(caret)) {
 				// IME selects the composition target automatically if no selection
 				if(win32::boole(::ImmSetCompositionStringW(imc, SCS_QUERYRECONVERTSTRING, rcs, rcs->dwSize, nullptr, 0))) {
 					caret.select(
-						Position(caret.line(), rcs->dwCompStrOffset / sizeof(Char)),
-						Position(caret.line(), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
+						Position(line(caret), rcs->dwCompStrOffset / sizeof(Char)),
+						Position(line(caret), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
 					if(win32::boole(::ImmSetCompositionStringW(imc, SCS_SETRECONVERTSTRING, rcs, rcs->dwSize, nullptr, 0)))
 						succeeded = true;
 				}
 			}
 			::operator delete(rcs);
-			::ImmReleaseContext(viewer.handle().get(), imc);
+			::ImmReleaseContext(viewer.identifier().get(), imc);
 		}
 	}
 
@@ -1055,92 +976,10 @@ bool ReplaceAllCommand::perform() {
  * @param viewer The target text viewer
  * @param procedure A pointer to the member function defines the destination
  */
-RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
-		Position(*procedure)(const Point&)) : Command(viewer), procedureP_(procedure), procedurePL_(nullptr), procedurePCL_(nullptr),
-		procedureV_(nullptr), procedureVL_(nullptr), procedureVCL_(nullptr), procedureVLV_(nullptr) {
-	if(procedure == nullptr || find(MOVEMENT_PROCEDURES_P,
-			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_P), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_P))
-		throw invalid_argument("procedure");
-}
-
-/**
- * Constructor.
- * @param viewer The target text viewer
- * @param procedure A pointer to the member function defines the destination
- */
-RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
-		Position(*procedure)(const Point&, Index)) : Command(viewer), procedureP_(nullptr), procedurePL_(procedure),
-		procedurePCL_(nullptr), procedureV_(nullptr), procedureVL_(nullptr), procedureVCL_(nullptr), procedureVLV_(nullptr) {
-	if(procedure == nullptr || find(MOVEMENT_PROCEDURES_PL,
-			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PL))
-		throw invalid_argument("procedure");
-}
-
-/**
- * Constructor.
- * @param viewer The target text viewer
- * @param procedure A pointer to the member function defines the destination
- */
-RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
-		Position(*procedure)(const Point&, locations::CharacterUnit, Index)) : Command(viewer),
-		procedureP_(nullptr), procedurePL_(nullptr), procedurePCL_(procedure),
-		procedureV_(nullptr), procedureVL_(nullptr), procedureVCL_(nullptr), procedureVLV_(nullptr) {
-	if(procedure == nullptr || find(MOVEMENT_PROCEDURES_PCL,
-			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PCL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_PCL))
-		throw invalid_argument("procedure");
-}
-
-/**
- * Constructor.
- * @param viewer The target text viewer
- * @param procedure A pointer to the member function defines the destination
- */
-RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
-		Position(*procedure)(const VisualPoint&)) : Command(viewer), procedureP_(nullptr), procedurePL_(nullptr),
-		procedurePCL_(nullptr), procedureV_(procedure), procedureVL_(nullptr), procedureVCL_(nullptr), procedureVLV_(nullptr) {
-	if(procedure == nullptr || find(MOVEMENT_PROCEDURES_V,
-			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_V), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_V))
-		throw invalid_argument("procedure");
-}
-
-/**
- * Constructor.
- * @param viewer The target text viewer
- * @param procedure A pointer to the member function defines the destination
- */
-RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
-		Position(*procedure)(const VisualPoint&, Index)) : Command(viewer), procedureP_(nullptr), procedurePL_(nullptr),
-		procedurePCL_(nullptr), procedureV_(nullptr), procedureVL_(procedure), procedureVCL_(nullptr), procedureVLV_(nullptr) {
-	if(procedure == nullptr || find(MOVEMENT_PROCEDURES_VL,
-			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VL))
-		throw invalid_argument("procedure");
-}
-
-/**
- * Constructor.
- * @param viewer The target text viewer
- * @param procedure A pointer to the member function defines the destination
- */
-RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
-		Position(*procedure)(const VisualPoint&, locations::CharacterUnit, Index)) : Command(viewer),
-		procedureP_(nullptr), procedurePL_(nullptr), procedurePCL_(nullptr),
-		procedureV_(nullptr), procedureVL_(nullptr), procedureVCL_(procedure), procedureVLV_(nullptr) {
-	if(procedure == nullptr || find(MOVEMENT_PROCEDURES_VCL,
-			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VCL), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VCL))
-		throw invalid_argument("procedure");
-}
-
-/**
- * Constructor.
- * @param viewer The target text viewer
- * @param procedure A pointer to the member function defines the destination
- */
-RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
-		BlockProgressionDestinationProxy(*procedure)(const VisualPoint&, Index)) : Command(viewer),
-		procedureP_(nullptr), procedurePL_(nullptr), procedurePCL_(nullptr),
-		procedureV_(nullptr), procedureVL_(nullptr), procedureVCL_(nullptr), procedureVLV_(procedure) {
-	if(procedure == nullptr || find(MOVEMENT_PROCEDURES_VLV,
-			ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VLV), procedure) == ASCENSION_ENDOF(MOVEMENT_PROCEDURES_VLV))
+template<typename ProcedureSignature>
+RowSelectionExtensionCommand<ProcedureSignature>::RowSelectionExtensionCommand(
+		TextViewer& viewer, ProcedureSignature* procedure) : Command(viewer), procedure_(procedure) {
+	if(procedure == nullptr)
 		throw invalid_argument("procedure");
 }
 
@@ -1148,28 +987,26 @@ RowSelectionExtensionCommand::RowSelectionExtensionCommand(TextViewer& viewer,
  * @see Command#perform
  * @return true
  */
-bool RowSelectionExtensionCommand::perform() {
+template<typename ProcedureSignature>
+bool RowSelectionExtensionCommand<ProcedureSignature>::perform() {
 	utils::closeCompletionProposalsPopup(target());
 	endIncrementalSearch(target());
 
 	Caret& caret = target().caret();
 	if(isSelectionEmpty(caret) && !caret.isSelectionRectangle())
 		caret.beginRectangleSelection();
-	if(procedureP_ != nullptr)
-		return CaretMovementCommand(target(), procedureP_, true).setNumericPrefix(numericPrefix())();
-	else if(procedurePL_ != nullptr)
-		return CaretMovementCommand(target(), procedurePL_, true).setNumericPrefix(numericPrefix())();
-	else if(procedurePCL_ != nullptr)
-		return CaretMovementCommand(target(), procedurePCL_, true).setNumericPrefix(numericPrefix())();
-	else if(procedureV_ != nullptr)
-		return CaretMovementCommand(target(), procedureV_, true).setNumericPrefix(numericPrefix())();
-	else if(procedureVL_ != nullptr)
-		return CaretMovementCommand(target(), procedureVL_, true).setNumericPrefix(numericPrefix())();
-	else if(procedureVCL_ != nullptr)
-		return CaretMovementCommand(target(), procedureVCL_, true).setNumericPrefix(numericPrefix())();
-	else
-		return CaretMovementCommand(target(), procedureVLV_, true).setNumericPrefix(numericPrefix())();
+	return CaretMovementCommand<ProcedureSignature>(target(), procedure_, true).setNumericPrefix(numericPrefix())();
 }
+
+// explicit instantiations
+template class RowSelectionExtensionCommand<Position(const Point&)>;
+template class RowSelectionExtensionCommand<Position(const Point&, Index)>;
+template class RowSelectionExtensionCommand<boost::optional<Position>(const Point&, Index)>;
+template class RowSelectionExtensionCommand<Position(const Point&, locations::CharacterUnit, Index)>;
+template class RowSelectionExtensionCommand<Position(const VisualPoint&)>;
+template class RowSelectionExtensionCommand<Position(const VisualPoint&, Index)>;
+template class RowSelectionExtensionCommand<Position(const VisualPoint&, locations::CharacterUnit, Index)>;
+template class RowSelectionExtensionCommand<BlockProgressionDestinationProxy(const VisualPoint&, Index)>;
 
 /**
  * Constructor.
@@ -1218,8 +1055,8 @@ namespace {
  *            @c kernel#IDocumentInput#ChangeRejectedException
  */
 bool TextInputCommand::perform() {
-	const long n = numericPrefix();
-	if(n <= 0)
+	const NumericPrefix n(numericPrefix());
+	if(n == 0)
 		return true;
 
 	if(Session* const session = target().document().session()) {
@@ -1348,19 +1185,17 @@ bool WordDeletionCommand::perform() {
 	abortIncrementalSearch(viewer);
 
 	Caret& caret = viewer.caret();
-	const bool forward = (direction_ == Direction::FORWARD && n > 0) || (direction_ == Direction::BACKWARD && n < 0);
-	n = abs(n);
-	if(/*caret.isAutoCompletionRunning() &&*/ forward)
+	if(/*caret.isAutoCompletionRunning() &&*/ direction_ == Direction::FORWARD)
 		utils::closeCompletionProposalsPopup(viewer);
 
 	Document& document = viewer.document();
-	const Position from(forward ? caret.beginning() : caret.end());
+	const Position from((direction_ == Direction::FORWARD) ? caret.beginning() : caret.end());
 	text::WordBreakIterator<DocumentCharacterIterator> to(
-		DocumentCharacterIterator(document, forward ? caret.end() : caret.beginning()),
+		DocumentCharacterIterator(document, (direction_ == Direction::FORWARD) ? caret.end() : caret.beginning()),
 		text::AbstractWordBreakIterator::START_OF_SEGMENT,
-			viewer.document().contentTypeInformation().getIdentifierSyntax(caret.contentType()));
+			viewer.document().contentTypeInformation().getIdentifierSyntax(contentType(caret)));
 	for(Position p(to.base().tell()); n > 0; --n) {
-		if(p == (forward ? ++to : --to).base().tell())
+		if(p == ((direction_ == Direction::FORWARD) ? ++to : --to).base().tell())
 			break;
 		p = to.base().tell();
 	}
