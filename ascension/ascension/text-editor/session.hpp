@@ -73,8 +73,8 @@ namespace ascension {
 #endif // !ASCENSION_NO_MIGEMO
 		};
 
-		void abortIncrementalSearch(viewers::TextViewer& viewer) /*throw()*/;
-		void endIncrementalSearch(viewers::TextViewer& viewer) /*throw()*/;
+		bool abortIncrementalSearch(viewers::TextViewer& viewer) /*throw()*/;
+		bool endIncrementalSearch(viewers::TextViewer& viewer) /*throw()*/;
 
 
 		/// Returns the input sequence checkers.
