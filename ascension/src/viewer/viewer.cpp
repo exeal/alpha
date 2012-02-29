@@ -2015,18 +2015,26 @@ boost::optional<k::Region> source::getPointedIdentifier(const TextViewer& viewer
 	return boost::none;
 }
 
-/// Calls @c IncrementalSearcher#abort from @a viewer.
-void texteditor::abortIncrementalSearch(TextViewer& viewer) /*throw()*/ {
+/**
+ * Calls @c IncrementalSearcher#abort from @a viewer.
+ * @return true if the incremental search was running
+ */
+bool texteditor::abortIncrementalSearch(TextViewer& viewer) /*throw()*/ {
 	if(texteditor::Session* session = viewer.document().session()) {
 		if(session->incrementalSearcher().isRunning())
-			session->incrementalSearcher().abort();
+			return session->incrementalSearcher().abort(), true;
 	}
+	return false;
 }
 
-/// Calls @c IncrementalSearcher#end from @a viewer.
-void texteditor::endIncrementalSearch(TextViewer& viewer) /*throw()*/ {
+/**
+ * Calls @c IncrementalSearcher#end from @a viewer.
+ * @return true if the incremental search was running
+ */
+bool texteditor::endIncrementalSearch(TextViewer& viewer) /*throw()*/ {
 	if(texteditor::Session* session = viewer.document().session()) {
 		if(session->incrementalSearcher().isRunning())
-			session->incrementalSearcher().end();
+			return session->incrementalSearcher().end(), true;
 	}
+	return false;
 }
