@@ -391,10 +391,10 @@ ClipboardException::ClipboardException(HRESULT hr) : runtime_error("") {
 // Caret //////////////////////////////////////////////////////////////////////////////////////////
 
 namespace {
-	inline win32::Handle<HIMC> inputMethod(const TextViewer& viewer) {
-		return win32::Handle<HIMC>(
+	inline shared_ptr<remove_pointer<HIMC>::type> inputMethod(const TextViewer& viewer) {
+		return shared_ptr<remove_pointer<HIMC>::type>(
 			::ImmGetContext(viewer.identifier().get()),
-			bind1st(ptr_fun(&::ImmReleaseContext), viewer.identifier().get()));
+			bind(&::ImmReleaseContext, viewer.identifier().get(), placeholders::_1));
 	}
 }
 
@@ -408,30 +408,25 @@ void Caret::adjustInputMethodCompositionWindow() {
 	assert(win32::boole(::IsWindow(textViewer().identifier().get())));
 	if(!context_.inputMethodCompositionActivated)
 		return;
-	const TextViewer& viewer = textViewer();
-	win32::Handle<HIMC> imc(inputMethod(viewer));
-	if(imc.get() != nullptr) {
-		// composition window placement
-		COMPOSITIONFORM cf;
-		cf.rcArea = viewer.bounds(false);
-		const PhysicalFourSides<Scalar> margins(viewer.spaceWidths());
-		cf.rcArea.left += margins.left();
-		cf.rcArea.top += margins.top();
-		cf.rcArea.right -= margins.right();
-		cf.rcArea.bottom -= margins.bottom();
-		cf.dwStyle = CFS_POINT;
-		cf.ptCurrentPos = modelToView(viewer.textRenderer(), beginning(), false, font::TextLayout::LEADING);
-		if(cf.ptCurrentPos.y == numeric_limits<Scalar>::max() || cf.ptCurrentPos.y == numeric_limits<Scalar>::min())
-			cf.ptCurrentPos.y = (cf.ptCurrentPos.y == numeric_limits<Scalar>::min()) ? cf.rcArea.top : cf.rcArea.bottom;
-		else
-			cf.ptCurrentPos.y = max(cf.ptCurrentPos.y, cf.rcArea.top);
-		::ImmSetCompositionWindow(imc.get(), &cf);
-		cf.dwStyle = CFS_RECT;
-		::ImmSetCompositionWindow(imc.get(), &cf);
+	if(shared_ptr<remove_pointer<HIMC>::type> imc = inputMethod(textViewer())) {
+		if(const shared_ptr<const font::TextViewport> viewport = textViewer().textRenderer().viewport().lock()) {
+			// composition window placement
+			COMPOSITIONFORM cf;
+			cf.rcArea = textViewer().textAreaContentRectangle();
+			cf.dwStyle = CFS_POINT;
+			cf.ptCurrentPos = modelToView(*viewport, beginning(), false, font::TextLayout::LEADING);
+			if(cf.ptCurrentPos.y == numeric_limits<Scalar>::max() || cf.ptCurrentPos.y == numeric_limits<Scalar>::min())
+				cf.ptCurrentPos.y = (cf.ptCurrentPos.y == numeric_limits<Scalar>::min()) ? cf.rcArea.top : cf.rcArea.bottom;
+			else
+				cf.ptCurrentPos.y = max(cf.ptCurrentPos.y, cf.rcArea.top);
+			::ImmSetCompositionWindow(imc.get(), &cf);
+			cf.dwStyle = CFS_RECT;
+			::ImmSetCompositionWindow(imc.get(), &cf);
+		}
 
 		// composition font
 		LOGFONTW font;
-		::GetObjectW(viewer.textRenderer().defaultFont()->nativeObject().get(), sizeof(LOGFONTW), &font);
+		::GetObjectW(textViewer().textRenderer().defaultFont()->nativeObject().get(), sizeof(LOGFONTW), &font);
 		::ImmSetCompositionFontW(imc.get(), &font);	// this may be ineffective for IME settings
 	}
 }
@@ -512,7 +507,7 @@ void Caret::onImeComposition(WPARAM wp, LPARAM lp, bool& consumed) {
 	if(document().isReadOnly())
 		return;
 	else if(/*event.lParam == 0 ||*/ win32::boole(lp & GCS_RESULTSTR)) {	// completed
-		win32::Handle<HIMC> imc(inputMethod(textViewer()));
+		shared_ptr<remove_pointer<HIMC>::type> imc(inputMethod(textViewer()));
 		if(imc.get() != nullptr) {
 			if(const Index len = ::ImmGetCompositionStringW(imc.get(), GCS_RESULTSTR, nullptr, 0) / sizeof(WCHAR)) {
 				// this was not canceled

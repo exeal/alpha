@@ -51,7 +51,7 @@ namespace ascension {
 				enum Style {WIDGET = 0};
 				typedef
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-					win32::Handle<HWND>
+					std::shared_ptr<std::remove_pointer<HWND>::type>
 #endif
 					Identifier;
 
@@ -165,29 +165,29 @@ namespace ascension {
 						/// Constructor makes @c null @c HBRUSH value.
 						Background() /*throw()*/ : brush_(nullptr) {}
 						/// Constructor takes a brush handle.
-						Background(win32::Handle<HBRUSH> handle) /*throw()*/ : brush_(handle.release()) {}
+						Background(std::shared_ptr<std::remove_pointer<HBRUSH>::type>&& handle) /*throw()*/ : brush_(handle) {}
 						/// Constructor takes a @c COLORREF value used to make the brush handle.
 						Background(int systemColor) /*throw()*/
 							: brush_(reinterpret_cast<HBRUSH>(static_cast<HANDLE_PTR>(systemColor + 1))) {}
 						/// Returns the brush handle.
-						HBRUSH get() const /*throw()*/ {return brush_;}
+						HBRUSH get() const /*throw()*/ {return brush_.get();}
 					private:
-						HBRUSH brush_;
+						std::shared_ptr<std::remove_pointer<HBRUSH>::type> brush_;
 					} background;
-					win32::Handle<HICON> icon, smallIcon;
+					std::shared_ptr<std::remove_pointer<HICON>::type> icon, smallIcon;
 					/// Makes a cursor handle parameter from either a cursor handle or numeric identifier.
 					class CursorHandleOrID {
 					public:
 						/// Constructor makes @c null @c HCURSOR value.
 						CursorHandleOrID() /*throw()*/ : cursor_(nullptr) {}
 						/// Constructor takes a cursor handle.
-						CursorHandleOrID(const win32::Handle<HCURSOR>& handle) /*throw()*/ : cursor_(handle.get()) {}
+						CursorHandleOrID(std::shared_ptr<std::remove_pointer<HCURSOR>::type> handle) /*throw()*/ : cursor_(handle) {}
 						/// Constructor takes a numeric identifier for system cursor.
-						CursorHandleOrID(const WCHAR* systemCursorID) : cursor_(::LoadCursorW(nullptr, systemCursorID)) {}
+						CursorHandleOrID(const WCHAR* systemCursorID) : cursor_(::LoadCursorW(nullptr, systemCursorID), detail::NullDeleter()) {}
 						/// Returns the cursor handle.
-						HCURSOR get() const /*throw()*/ {return cursor_;}
+						HCURSOR get() const /*throw()*/ {return cursor_.get();}
 					private:
-						HCURSOR cursor_;
+						std::shared_ptr<std::remove_pointer<HCURSOR>::type> cursor_;
 					} cursor;
 					ClassInformation() : style(0) {}
 				};

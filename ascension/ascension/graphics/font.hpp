@@ -296,7 +296,7 @@ namespace ascension {
 #elif defined(ASCENSION_SHAPING_ENGINE_QT)
 			typedef QFont* NativeFont;
 #elif defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
-			typedef win32::Handle<HFONT> NativeFont;
+			typedef std::shared_ptr<std::remove_pointer<HFONT>> NativeFont;
 #endif
 
 			class Font : public std::enable_shared_from_this<Font> {

@@ -50,7 +50,7 @@ namespace ascension {
 			 * shown to the leading of the display string.
 			 * @return The icon or @c null if no image is desired
 			 */
-			virtual const win32::Handle<HICON>& icon() const /*throw()*/ = 0;
+			virtual std::shared_ptr<std::remove_pointer<HICON>::type> icon() const /*throw()*/ = 0;
 			/**
 			 * Returns true if the proposal may be automatically inserted if the proposal is the
 			 * only one. In this case, completion proposals will not displayed but the single
@@ -75,19 +75,19 @@ namespace ascension {
 		public:
 			explicit DefaultCompletionProposal(
 				const String& replacementString, const String& description = String(),
-				win32::Handle<HICON> icon = win32::Handle<HICON>(), bool autoInsertable = true);
+				std::shared_ptr<std::remove_pointer<HICON>::type>&& icon = nullptr, bool autoInsertable = true);
 			DefaultCompletionProposal(const String& replacementString,
 				const String& displayString, const String& description = String(),
-				win32::Handle<HICON> icon = win32::Handle<HICON>(), bool autoInsertable = true);
+				std::shared_ptr<std::remove_pointer<HICON>::type>&& icon = nullptr, bool autoInsertable = true);
 		public:
 			String description() const /*throw()*/;
 			String displayString() const /*throw()*/;
-			const win32::Handle<HICON>& icon() const /*throw()*/;
+			std::shared_ptr<std::remove_pointer<HICON>::type> icon() const /*throw()*/;
 			bool isAutoInsertable() const /*throw()*/;
 			void replace(kernel::Document& document, const kernel::Region& replacementRegion);
 		private:
 			const String displayString_, replacementString_, descriptionString_;
-			const win32::Handle<HICON> icon_;
+			const std::shared_ptr<std::remove_pointer<HICON>::type> icon_;
 			const bool autoInsertable_;
 		};
 

@@ -144,8 +144,10 @@ namespace ascension {
 				std::unique_ptr<SpacePainter> spacePainter_;
 				detail::Listeners<ComputedWritingModeListener> computedWritingModeListeners_;
 				detail::Listeners<DefaultFontListener> defaultFontListeners_;
-				mutable win32::Handle<HDC> memoryDC_;
-				mutable win32::Handle<HBITMAP> memoryBitmap_;
+#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && ASCENSION_ABANDONED_AT_VERSION_08
+				mutable std::shared_ptr<std::remove_pointer<HDC>::type> memoryDC_;
+				mutable std::shared_ptr<std::remove_pointer<HBITMAP>::type> memoryBitmap_;
+#endif // defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && ASCENSION_ABANDONED_AT_VERSION_08
 			};
 
 
