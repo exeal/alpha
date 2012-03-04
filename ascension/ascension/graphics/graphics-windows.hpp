@@ -21,7 +21,7 @@ namespace ascension {
 		class GraphicsContext : public Base {
 		public:
 			virtual ~GraphicsContext() /*throw()*/ {}
-			const Handle<HDC>& nativeHandle() const {return dc_;}
+			std::shared_ptr<std::remove_pointer<HDC>::type>& nativeHandle() const {return dc_;}
 			void fillRectangle(const graphics::NativeRectangle& rect, const graphics::Color& color) {
 				const COLORREF oldBackground = ::GetBkColor(dc_.get());
 				if(oldBackground != CLR_INVALID) {
@@ -43,44 +43,47 @@ namespace ascension {
 			}
 		protected:
 			GraphicsContext() /*throw()*/ {}
-			void initialize(Handle<HDC> deviceContext) {assert(deviceContext.get() != nullptr); dc_ = deviceContext;}
+			void initialize(std::shared_ptr<std::remove_pointer<HDC>::type>&& deviceContext) {
+				assert(deviceContext.get() != nullptr);
+				dc_ = deviceContext;
+			}
 		private:
-			Handle<HDC> dc_;
+			std::shared_ptr<std::remove_pointer<HDC>::type> dc_;
 		};
 
 		class ClientAreaGraphicsContext : public GraphicsContext<graphics::RenderingContext2D> {
 		public:
-			explicit ClientAreaGraphicsContext(const Handle<HWND>& window) {
+			explicit ClientAreaGraphicsContext(std::shared_ptr<std::remove_pointer<HWND>::type> window) {
 				if(window.get() == nullptr)
 					throw NullPointerException("window");
-				Handle<HDC> dc(::GetDC(window.get()), std::bind1st(std::ptr_fun(&::ReleaseDC), window.get()));
+				std::shared_ptr<std::remove_pointer<HDC>::type> dc(::GetDC(window.get()), std::bind(&::ReleaseDC, window.get(), std::placeholders::_1));
 				if(dc.get() == nullptr)
 					throw PlatformDependentError<>();
-				initialize(dc);
+				initialize(std::move(dc));
 			}
 		};
 
 		class EntireWindowGraphicsContext : public GraphicsContext<graphics::RenderingContext2D> {
 		public:
-			explicit EntireWindowGraphicsContext(const Handle<HWND>& window) {
+			explicit EntireWindowGraphicsContext(std::shared_ptr<std::remove_pointer<HWND>::type> window) {
 				if(window.get() == nullptr)
 					throw NullPointerException("window");
-				Handle<HDC> dc(::GetWindowDC(window.get()), std::bind1st(std::ptr_fun(&::ReleaseDC), window.get()));
+				std::shared_ptr<std::remove_pointer<HDC>::type> dc(::GetWindowDC(window.get()), std::bind(&::ReleaseDC, window.get(), std::placeholders::_1));
 				if(dc.get() == nullptr)
 					throw PlatformDependentError<>();
-				initialize(dc);
+				initialize(std::move(dc));
 			}
 		};
 
 		class PaintContext : public GraphicsContext<graphics::PaintContext> {
 		public:
-			explicit PaintContext(const Handle<HWND>& window) {
+			explicit PaintContext(std::shared_ptr<std::remove_pointer<HWND>::type> window) {
 				if(window.get() == nullptr)
 					throw NullPointerException("window");
-				Handle<HDC> dc(::BeginPaint(window.get(), &ps_), X(window.get(), ps_));
+				std::shared_ptr<std::remove_pointer<HDC>::type> dc(::BeginPaint(window.get(), &ps_), X(window.get(), ps_));
 				if(dc.get() == nullptr)
 					throw PlatformDependentError<>();
-				initialize(dc);
+				initialize(std::move(dc));
 			}
 			graphics::NativeRectangle boundsToPaint() const {return ps_.rcPaint;}
 		private:
@@ -98,8 +101,8 @@ namespace ascension {
 	}
 
 	namespace detail {
-		inline win32::Handle<HDC> screenDC() {
-			return win32::Handle<HDC>(::GetDC(nullptr), std::bind1st(std::ptr_fun(&::ReleaseDC), static_cast<HWND>(nullptr)));
+		inline std::shared_ptr<std::remove_pointer<HDC>::type> screenDC() {
+			return std::shared_ptr<std::remove_pointer<HDC>::type>(::GetDC(nullptr), std::bind(&::ReleaseDC, static_cast<HWND>(nullptr), std::placeholders::_1));
 		}
 	}
 }

@@ -28,7 +28,7 @@ namespace ascension {
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
 			QImage
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
-			win32::Handle<HBITMAP>
+			std::shared_ptr<std::remove_pointer<HBITMAP>::type>
 #endif
 			NativeImage;
 

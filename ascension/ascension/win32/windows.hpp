@@ -51,7 +51,6 @@
 //#include <winnt.h>
 #include <windows.h>
 #undef size_t
-#include <memory>								// std.auto_ptr
 #include <stdexcept>
 #include <sstream>
 #include <utility>								// std.swap
@@ -74,6 +73,7 @@ namespace ascension {
 		 */
 		LANGID ASCENSION_FASTCALL userDefaultUILanguage() /*throw()*/;
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 		namespace internal {
 			class HandleDeleterBase {
 			public:
@@ -275,6 +275,7 @@ namespace ascension {
 			HandleType handle_;
 			bool manages_;
 		};
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 #	define ASCENSION_WIN32_OBJECT_CONSTRUCTORS(ClassName)						\
 		ClassName() : BaseObject() {}											\
