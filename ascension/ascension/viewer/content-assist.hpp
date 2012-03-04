@@ -8,12 +8,12 @@
 #ifndef ASCENSION_CONTENT_ASSIST_HPP
 #define ASCENSION_CONTENT_ASSIST_HPP
 
+#include <ascension/platforms.hpp>
 #include <ascension/corelib/timer.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/kernel/partition.hpp>	// kernel.ContentType
 #include <ascension/viewer/caret-observers.hpp>
 #include <ascension/viewer/viewer-observers.hpp>
-#include <ascension/win32/windows.hpp>	// win32.Handle
 #include <map>
 #include <memory>	// std.unique_ptr
 #include <set>
@@ -39,6 +39,18 @@ namespace ascension {
 		 */
 		class CompletionProposal {
 		public:
+			typedef
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+				GLib::RefPtr<Gdk::Pixbuf>
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+				QIcon
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+				std::shared_ptr<std::remove_pointer<HICON>::type>
+#elif defined(ASCENSION_WINDOW_SYSTEM_X)
+#endif
+				Icon;
+		public:
 			/// Destructor.
 			virtual ~CompletionProposal() /*throw()*/ {}
 			/// Returns the string to provide a description of the proposal. May be empty.
@@ -50,7 +62,7 @@ namespace ascension {
 			 * shown to the leading of the display string.
 			 * @return The icon or @c null if no image is desired
 			 */
-			virtual std::shared_ptr<std::remove_pointer<HICON>::type> icon() const /*throw()*/ = 0;
+			virtual Icon icon() const /*throw()*/ = 0;
 			/**
 			 * Returns true if the proposal may be automatically inserted if the proposal is the
 			 * only one. In this case, completion proposals will not displayed but the single
@@ -75,19 +87,19 @@ namespace ascension {
 		public:
 			explicit DefaultCompletionProposal(
 				const String& replacementString, const String& description = String(),
-				std::shared_ptr<std::remove_pointer<HICON>::type>&& icon = nullptr, bool autoInsertable = true);
+				CompletionProposal::Icon&& icon = Icon(), bool autoInsertable = true);
 			DefaultCompletionProposal(const String& replacementString,
 				const String& displayString, const String& description = String(),
-				std::shared_ptr<std::remove_pointer<HICON>::type>&& icon = nullptr, bool autoInsertable = true);
+				CompletionProposal::Icon&& icon = Icon(), bool autoInsertable = true);
 		public:
 			String description() const /*throw()*/;
 			String displayString() const /*throw()*/;
-			std::shared_ptr<std::remove_pointer<HICON>::type> icon() const /*throw()*/;
+			Icon icon() const /*throw()*/;
 			bool isAutoInsertable() const /*throw()*/;
 			void replace(kernel::Document& document, const kernel::Region& replacementRegion);
 		private:
 			const String displayString_, replacementString_, descriptionString_;
-			const std::shared_ptr<std::remove_pointer<HICON>::type> icon_;
+			const Icon icon_;
 			const bool autoInsertable_;
 		};
 
@@ -168,12 +180,12 @@ namespace ascension {
 			// attributes
 			kernel::ContentType contentType() const /*throw()*/;
 			const text::IdentifierSyntax& identifierSyntax() const /*throw()*/;
-			// IContentAssistProcessor
-			virtual void computeCompletionProposals(const viewers::Caret& caret, bool& incremental,
-				kernel::Region& replacementRegion, std::set<CompletionProposal*>& proposals) const;
-			virtual const CompletionProposal* getActiveCompletionProposal(
+			// ContentAssistProcessor
+			virtual const CompletionProposal* activeCompletionProposal(
 				const viewers::TextViewer& textViewer, const kernel::Region& replacementRegion,
 				CompletionProposal* const proposals[], std::size_t numberOfProposals) const /*throw()*/;
+			virtual void computeCompletionProposals(const viewers::Caret& caret, bool& incremental,
+				kernel::Region& replacementRegion, std::set<CompletionProposal*>& proposals) const;
 			virtual bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const /*throw()*/;
 			virtual void recomputeIncrementalCompletionProposals(const viewers::TextViewer& textViewer,
 				const kernel::Region& replacementRegion, CompletionProposal* const currentProposals[],
@@ -244,14 +256,15 @@ namespace ascension {
 			// attributes
 			uint32_t autoActivationDelay() const /*throw()*/;
 			void enablePrefixCompletion(bool enable);
-			void setAutoActivationDelay(unsigned long milliseconds);
+			void setAutoActivationDelay(uint32_t milliseconds);
 			void setContentAssistProcessor(kernel::ContentType contentType, std::unique_ptr<ContentAssistProcessor> processor);
 			// operation
 			void showPossibleCompletions();
 		private:
 			void startPopup();
-			static void CALLBACK timeElapsed(HWND, UINT, UINT_PTR eventID, DWORD);
 			void updatePopupPositions();
+			// HasTimer
+			void timeElapsed(Timer& timer);
 			// ContentAssistant
 			ContentAssistant::CompletionProposalsUI* completionProposalsUI() const /*throw()*/;
 			const ContentAssistProcessor* contentAssistProcessor(kernel::ContentType contentType) const /*throw()*/;
@@ -278,7 +291,7 @@ namespace ascension {
 			class CompletionProposalPopup;
 			CompletionProposalPopup* proposalPopup_;
 			uint32_t autoActivationDelay_;
-			static std::map<UINT_PTR, ContentAssistant*> timerIDs_;
+			Timer timer_;
 			struct CompletionSession {
 				const ContentAssistProcessor* processor;
 				bool incremental;
@@ -286,7 +299,10 @@ namespace ascension {
 				std::unique_ptr<CompletionProposal*[]> proposals;
 				std::size_t numberOfProposals;
 				CompletionSession() /*throw()*/ : processor(nullptr), numberOfProposals(0) {}
-				~CompletionSession() /*throw()*/ {for(std::size_t i = 0; i < numberOfProposals; ++i) delete proposals[i];}
+				~CompletionSession() /*throw()*/ {
+					for(std::size_t i = 0; i < numberOfProposals; ++i)
+						delete proposals[i];
+				}
 			};
 			std::unique_ptr<CompletionSession> completionSession_;
 		};
