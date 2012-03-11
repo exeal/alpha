@@ -206,6 +206,7 @@
     <ClCompile Include="..\..\ascension\src\viewer\base\widget-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\caret-shaper.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\caret-windows.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\content-assist-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\default-mouse-input-strategy.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\viewer-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\visual-point.cpp" />
@@ -314,7 +315,6 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\base\message-dispatcher-windows.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\scrollable.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\user-input.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\viewer\base\widget-windows.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\base\widget.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\caret-observers.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\caret-shaper.hpp" />
@@ -322,6 +322,8 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\ruler.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\viewer-observers.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\visual-point.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\message-dispatcher.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\window.hpp" />
     <ClInclude Include="..\src\alpha.hpp" />
     <ClInclude Include="..\src\ambient.hpp" />
     <ClInclude Include="..\src\application.hpp" />
@@ -371,8 +373,6 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\caret.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\content-assist.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\viewer.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\viewer\base\window-windows.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\viewer\base\window.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\color.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry.hpp" />

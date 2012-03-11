@@ -17,8 +17,7 @@
 #include <map>
 #include <memory>	// std.unique_ptr
 #include <set>
-
-// TODO: make code cross-platform.
+#include <vector>
 
 namespace ascension {
 
@@ -74,14 +73,15 @@ namespace ascension {
 			 * @param document The document
 			 * @param replacementRegion The region to be replaced by the proposal
 			 */
-			virtual void replace(kernel::Document& document, const kernel::Region& replacementRegion) = 0;
+			virtual void replace(kernel::Document& document,
+				const kernel::Region& replacementRegion) const = 0;
 			/// The proposal was selected.
 			virtual void selected() {}
 			/// The proposal was unselected.
 			virtual void unselected() {}
 		};
 
-		/// Default implementation of @c ICompletionalProposal.
+		/// Default implementation of @c CompletionalProposal.
 		class DefaultCompletionProposal : public CompletionProposal {
 			ASCENSION_UNASSIGNABLE_TAG(DefaultCompletionProposal);
 		public:
@@ -96,7 +96,8 @@ namespace ascension {
 			String displayString() const /*throw()*/;
 			Icon icon() const /*throw()*/;
 			bool isAutoInsertable() const /*throw()*/;
-			void replace(kernel::Document& document, const kernel::Region& replacementRegion);
+			void replace(kernel::Document& document,
+				const kernel::Region& replacementRegion) const;
 		private:
 			const String displayString_, replacementString_, descriptionString_;
 			const Icon icon_;
@@ -168,14 +169,15 @@ namespace ascension {
 		};
 
 		/**
-		 * An abstract implementation of @c IContentAssistProcessor builds completion proposals by
+		 * An abstract implementation of @c ContentAssistProcessor builds completion proposals by
 		 * collecting identifiers in the document.
 		 */
 		class IdentifiersProposalProcessor : public ContentAssistProcessor {
 			ASCENSION_UNASSIGNABLE_TAG(IdentifiersProposalProcessor);
 		protected:
 			// constructors
-			IdentifiersProposalProcessor(kernel::ContentType contentType, const text::IdentifierSyntax& syntax) /*throw()*/;
+			IdentifiersProposalProcessor(
+				kernel::ContentType contentType, const text::IdentifierSyntax& syntax) /*throw()*/;
 			virtual ~IdentifiersProposalProcessor() /*throw()*/;
 			// attributes
 			kernel::ContentType contentType() const /*throw()*/;
@@ -203,7 +205,7 @@ namespace ascension {
 		public:
 			/**
 			 * Represents an user interface of a completion proposal list.
-			 * @see IContentAssistant#getCompletionProposalsUI
+			 * @see ContentAssistant#completionProposalsUI
 			 */
 			class CompletionProposalsUI {
 			public:
@@ -243,7 +245,7 @@ namespace ascension {
 		};
 
 		/**
-		 * Default implementation of @c IContentAssistant.
+		 * Default implementation of @c ContentAssistant.
 		 * @note This class is not intended to be subclassed.
 		 */
 		class DefaultContentAssistant : public ContentAssistant, public kernel::DocumentListener,
@@ -288,8 +290,6 @@ namespace ascension {
 		private:
 			viewers::TextViewer* textViewer_;
 			std::map<kernel::ContentType, ContentAssistProcessor*> processors_;
-			class CompletionProposalPopup;
-			CompletionProposalPopup* proposalPopup_;
 			uint32_t autoActivationDelay_;
 			Timer timer_;
 			struct CompletionSession {
@@ -305,6 +305,20 @@ namespace ascension {
 				}
 			};
 			std::unique_ptr<CompletionSession> completionSession_;
+			class CompletionProposalsPopup {
+			public:
+				CompletionProposalsPopup(viewers::TextViewer& parent, CompletionProposalsUI& ui);
+				void end();
+				void resetContent(CompletionProposal* const proposals[], size_t numberOfProposals);
+				const CompletionProposal* selectedProposal() const;
+				void selectProposal(const CompletionProposal* selection);
+				bool start(const std::set<CompletionProposal*>& proposals);
+			private:
+				CompletionProposalsUI& ui_;
+				class Impl;
+				std::unique_ptr<Impl> impl_;
+			};
+			std::unique_ptr<CompletionProposalsPopup> proposalsPopup_;
 		};
 /*
 		class ContextInformation {};
