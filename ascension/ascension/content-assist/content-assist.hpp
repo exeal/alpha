@@ -1,7 +1,7 @@
 /**
  * @file content-assist.hpp
  * @author exeal
- * @date 2003-2006 (was CompletionWindow.h)
+ * @date 2003-2006 was CompletionWindow.h
  * @date 2006-2012
  */
 
@@ -14,10 +14,8 @@
 #include <ascension/kernel/partition.hpp>	// kernel.ContentType
 #include <ascension/viewer/caret-observers.hpp>
 #include <ascension/viewer/viewer-observers.hpp>
-#include <map>
 #include <memory>	// std.unique_ptr
 #include <set>
-#include <vector>
 
 namespace ascension {
 
@@ -79,29 +77,6 @@ namespace ascension {
 			virtual void selected() {}
 			/// The proposal was unselected.
 			virtual void unselected() {}
-		};
-
-		/// Default implementation of @c CompletionalProposal.
-		class DefaultCompletionProposal : public CompletionProposal {
-			ASCENSION_UNASSIGNABLE_TAG(DefaultCompletionProposal);
-		public:
-			explicit DefaultCompletionProposal(
-				const String& replacementString, const String& description = String(),
-				CompletionProposal::Icon&& icon = Icon(), bool autoInsertable = true);
-			DefaultCompletionProposal(const String& replacementString,
-				const String& displayString, const String& description = String(),
-				CompletionProposal::Icon&& icon = Icon(), bool autoInsertable = true);
-		public:
-			String description() const /*throw()*/;
-			String displayString() const /*throw()*/;
-			Icon icon() const /*throw()*/;
-			bool isAutoInsertable() const /*throw()*/;
-			void replace(kernel::Document& document,
-				const kernel::Region& replacementRegion) const;
-		private:
-			const String displayString_, replacementString_, descriptionString_;
-			const Icon icon_;
-			const bool autoInsertable_;
 		};
 
 		/**
@@ -169,35 +144,6 @@ namespace ascension {
 		};
 
 		/**
-		 * An abstract implementation of @c ContentAssistProcessor builds completion proposals by
-		 * collecting identifiers in the document.
-		 */
-		class IdentifiersProposalProcessor : public ContentAssistProcessor {
-			ASCENSION_UNASSIGNABLE_TAG(IdentifiersProposalProcessor);
-		protected:
-			// constructors
-			IdentifiersProposalProcessor(
-				kernel::ContentType contentType, const text::IdentifierSyntax& syntax) /*throw()*/;
-			virtual ~IdentifiersProposalProcessor() /*throw()*/;
-			// attributes
-			kernel::ContentType contentType() const /*throw()*/;
-			const text::IdentifierSyntax& identifierSyntax() const /*throw()*/;
-			// ContentAssistProcessor
-			virtual const CompletionProposal* activeCompletionProposal(
-				const viewers::TextViewer& textViewer, const kernel::Region& replacementRegion,
-				CompletionProposal* const proposals[], std::size_t numberOfProposals) const /*throw()*/;
-			virtual void computeCompletionProposals(const viewers::Caret& caret, bool& incremental,
-				kernel::Region& replacementRegion, std::set<CompletionProposal*>& proposals) const;
-			virtual bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const /*throw()*/;
-			virtual void recomputeIncrementalCompletionProposals(const viewers::TextViewer& textViewer,
-				const kernel::Region& replacementRegion, CompletionProposal* const currentProposals[],
-				std::size_t numberOfCurrentProposals, std::set<CompletionProposal*>& newProposals) const;
-		private:
-			const kernel::ContentType contentType_;
-			const text::IdentifierSyntax& syntax_;
-		};
-
-		/**
 		 * An content assistant provides support on interactive content completion.
 		 * @see TextViewer#getContentAssistant, TextViewer#setContentAssistant
 		 */
@@ -242,83 +188,6 @@ namespace ascension {
 			/// Uninstalls the content assistant from the text viewer.
 			virtual void uninstall() = 0;
 			friend class viewers::TextViewer;
-		};
-
-		/**
-		 * Default implementation of @c ContentAssistant.
-		 * @note This class is not intended to be subclassed.
-		 */
-		class DefaultContentAssistant : public ContentAssistant, public kernel::DocumentListener,
-			public viewers::CaretListener, public viewers::CharacterInputListener,
-			public viewers::ViewportListener, private ContentAssistant::CompletionProposalsUI {
-		public:
-			// constructors
-			DefaultContentAssistant() /*throw()*/;
-			~DefaultContentAssistant() /*throw()*/;
-			// attributes
-			uint32_t autoActivationDelay() const /*throw()*/;
-			void enablePrefixCompletion(bool enable);
-			void setAutoActivationDelay(uint32_t milliseconds);
-			void setContentAssistProcessor(kernel::ContentType contentType, std::unique_ptr<ContentAssistProcessor> processor);
-			// operation
-			void showPossibleCompletions();
-		private:
-			void startPopup();
-			void updatePopupPositions();
-			// HasTimer
-			void timeElapsed(Timer& timer);
-			// ContentAssistant
-			ContentAssistant::CompletionProposalsUI* completionProposalsUI() const /*throw()*/;
-			const ContentAssistProcessor* contentAssistProcessor(kernel::ContentType contentType) const /*throw()*/;
-			void install(viewers::TextViewer& viewer);
-			void uninstall();
-			// kernel.DocumentListener
-			void documentAboutToBeChanged(const kernel::Document& document);
-			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
-			// viewers.CaretListener
-			void caretMoved(const viewers::Caret& caret, const kernel::Region& oldRegion);
-			// viewers.CharacterInputListener
-			void characterInput(const viewers::Caret& caret, CodePoint c);
-			// viewers.ViewportListener
-			void viewportChanged(bool horizontal, bool vertical);
-			// ContentAssistant.CompletionProposalsUI
-			void close();
-			bool complete();
-			bool hasSelection() const /*throw()*/;
-			void nextPage(int pages);
-			void nextProposal(int proposals);
-		private:
-			viewers::TextViewer* textViewer_;
-			std::map<kernel::ContentType, ContentAssistProcessor*> processors_;
-			uint32_t autoActivationDelay_;
-			Timer timer_;
-			struct CompletionSession {
-				const ContentAssistProcessor* processor;
-				bool incremental;
-				kernel::Region replacementRegion;
-				std::unique_ptr<CompletionProposal*[]> proposals;
-				std::size_t numberOfProposals;
-				CompletionSession() /*throw()*/ : processor(nullptr), numberOfProposals(0) {}
-				~CompletionSession() /*throw()*/ {
-					for(std::size_t i = 0; i < numberOfProposals; ++i)
-						delete proposals[i];
-				}
-			};
-			std::unique_ptr<CompletionSession> completionSession_;
-			class CompletionProposalsPopup {
-			public:
-				CompletionProposalsPopup(viewers::TextViewer& parent, CompletionProposalsUI& ui);
-				void end();
-				void resetContent(CompletionProposal* const proposals[], size_t numberOfProposals);
-				const CompletionProposal* selectedProposal() const;
-				void selectProposal(const CompletionProposal* selection);
-				bool start(const std::set<CompletionProposal*>& proposals);
-			private:
-				CompletionProposalsUI& ui_;
-				class Impl;
-				std::unique_ptr<Impl> impl_;
-			};
-			std::unique_ptr<CompletionProposalsPopup> proposalsPopup_;
 		};
 /*
 		class ContextInformation {};
