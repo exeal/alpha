@@ -10,15 +10,6 @@
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/content-assist.hpp>
 #include <ascension/viewer/viewer.hpp>				// TextViewer
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-#	include <gtkmm/gtkmm.h>
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
-#	include <QListWidget>
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-#	include <ascension/win32/windows.hpp>
-#elif defined(ASCENSION_WINDOW_SYSTEM_X)
-#endif
 
 using namespace ascension;
 using namespace ascension::contentassist;
@@ -85,7 +76,7 @@ bool DefaultCompletionProposal::isAutoInsertable() const /*throw()*/ {
  * This method may throw any exceptions @c kernel#Document#replace throws other than
  * @c kernel#ReadOnlyDocumentException.
  */
-void DefaultCompletionProposal::replace(Document& document, const Region& replacementRegion) {
+void DefaultCompletionProposal::replace(Document& document, const Region& replacementRegion) const {
 	if(!document.isReadOnly()) {
 		document.insertUndoBoundary();
 		document.replace(replacementRegion, replacementString_);
@@ -200,214 +191,28 @@ const IdentifierSyntax& IdentifiersProposalProcessor::identifierSyntax() const /
 	return syntax_;
 }
 
-/// @see IContentAssistProcessor#isIncrementalCompletionAutoTerminationCharacter
+/// @see ContentAssistProcessor#isIncrementalCompletionAutoTerminationCharacter
 bool IdentifiersProposalProcessor::isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const /*throw()*/ {
 	return !syntax_.isIdentifierContinueCharacter(c);
 }
 
-/// @see IContentAssistProcessor#recomputIncrementalCompletionProposals
+/// @see ContentAssistProcessor#recomputIncrementalCompletionProposals
 void IdentifiersProposalProcessor::recomputeIncrementalCompletionProposals(
 		const TextViewer&, const Region&, CompletionProposal* const[], size_t, set<CompletionProposal*>&) const {
 	// do nothing
 }
 
 
-// DefaultContentAssistant.CompletionProposalPopup ////////////////////////////////////////////////
-
-/// A completion window.
-class DefaultContentAssistant::CompletionProposalPopup : public manah::win32::ui::ListBox {
-	MANAH_NONCOPYABLE_TAG(CompletionProposalPopup);
-public:
-	// constructor
-	CompletionProposalPopup(ContentAssistant::CompletionProposalsUI& ui) /*throw()*/;
-	// construction
-	bool create(HWND parent);
-	// attributes
-	void setFont(const HFONT font);
-	// operations
-	bool start(const std::set<CompletionProposal*>& proposals);
-	bool updateListCursel();
-
-private:
-	void updateDefaultFont();
-private:
-	void onDestroy();
-	void onLButtonDblClk(UINT, const POINT&, bool&);
-	void onLButtonDown(UINT, const POINT&, bool&);
-	void onSetFocus(HWND);
-	void onSettingChange(UINT, const WCHAR*);
-
-private:
-	ContentAssistant::CompletionProposalsUI& ui_;
-	HFONT defaultFont_;
-	MANAH_DECLEAR_WINDOW_MESSAGE_MAP(CompletionProposalPopup);
-};
-
-MANAH_BEGIN_WINDOW_MESSAGE_MAP(ContentAssistant::CompletionProposalPopup, manah::win32::ui::ListBox)
-	MANAH_WINDOW_MESSAGE_ENTRY(WM_DESTROY)
-	MANAH_WINDOW_MESSAGE_ENTRY(WM_LBUTTONDBLCLK)
-	MANAH_WINDOW_MESSAGE_ENTRY(WM_LBUTTONDOWN)
-	MANAH_WINDOW_MESSAGE_ENTRY(WM_SETFOCUS)
-	MANAH_WINDOW_MESSAGE_ENTRY(WM_SETTINGCHANGE)
-MANAH_END_WINDOW_MESSAGE_MAP()
-
-/**
- * Constructor.
- * @param ui The user interface
- */
-ContentAssistant::CompletionProposalPopup::CompletionProposalPopup(ContentAssistant::ICompletionProposalsUI& ui) : ui_(ui), defaultFont_(0) {
-}
-
-/**
- * Creates the list window.
- * @param parent The parent window
- * @return Succeeded or not
- */
-bool ContentAssistant::CompletionProposalPopup::create(HWND parent) {
-	using namespace manah::win32::ui;
-
-	if(ListBox::create(parent, DefaultWindowRect(), 0, 0,
-			WS_CHILD | WS_TABSTOP | WS_VSCROLL | LBS_HASSTRINGS | LBS_NOINTEGRALHEIGHT | LBS_NOTIFY,
-			WS_EX_DLGMODALFRAME | WS_EX_NOPARENTNOTIFY | WS_EX_TOOLWINDOW)
-			&& subclass()) {
-		updateDefaultFont();
-		setPosition(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-
-#if 0
-		// 影を付けてみたりする...
-#ifndef CS_DROPSHADOW
-		const ULONG_PTR CS_DROPSHADOW = 0x00020000ul;
-#endif // !CS_DROPSHADOW
-		const ULONG_PTR styleBits = ::GetClassLongPtrW(getHandle(), GCL_STYLE);
-		::SetClassLongPtrW(getHandle(), GCL_STYLE, styleBits | CS_DROPSHADOW);
-#endif
-
-		return true;
-	}
-	return false;
-}
-
-/// @see WM_DESTROY
-void ContentAssistant::CompletionProposalPopup::onDestroy() {
-	::DeleteObject(defaultFont_);
-}
-
-/// @see WM_LBUTTONDBLCLK
-void ContentAssistant::CompletionProposalPopup::onLButtonDblClk(UINT, const POINT&, bool&) {
-	ui_.complete();
-}
-
-/// @see WM_LBUTTONDOWN
-void ContentAssistant::CompletionProposalPopup::onLButtonDown(UINT, const POINT& pt, bool&) {
-	bool outside;
-	const int index = itemFromPoint(pt, outside);
-	setCurSel(outside ? -1 : index);
-}
-
-/// @see WM_SETFOCUS
-void ContentAssistant::CompletionProposalPopup::onSetFocus(HWND) {
-	getParent().setFocus();
-}
-
-/// @see WM_SETTINGCHANGE
-void ContentAssistant::CompletionProposalPopup::onSettingChange(UINT, const WCHAR*) {
-	updateDefaultFont();
-}
-
-/**
- * Sets the new font.
- * @param font The font to be set. If set to @c null, default font will be selected
- */
-void ContentAssistant::CompletionProposalPopup::setFont(const HFONT font) {
-	ListBox::setFont((font != 0) ? font : defaultFont_);
-}
-
-/// Updates the default font with system parameter.
-void ContentAssistant::CompletionProposalPopup::updateDefaultFont() {
-	manah::win32::AutoZeroSize<NONCLIENTMETRICSW> ncm;
-	::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0);
-	HFONT newFont = ::CreateFontIndirectW(&ncm.lfStatusFont);
-	if(defaultFont_ != 0 && isWindow() && getFont() == defaultFont_) {
-		HFONT oldFont = getFont();
-		ListBox::setFont(newFont);
-		::DeleteObject(oldFont);
-	} else
-		ListBox::setFont(newFont);
-	defaultFont_ = newFont;
-}
-
-#if 0
-/**
- * Updates the list's cursel based on the viewer's context.
- * @return true if only one candidate matched
- * @throw IllegalStateException The completion is not running
- */
-bool ContentAssistant::CompletionProposalPopup::updateListCursel() {
-	assertValidAsWindow();
-
-	if(!running_)
-		throw IllegalStateException("Completion is not running.");
-
-	const String precedingID = viewer_.getCaret().getPrecedingIdentifier(COMPLETION_MAX_TRACKBACK_CCH);
-	if(!precedingID.empty()) {
-		const int found = findString(-1, precedingID.c_str());
-		setCurSel((found != LB_ERR) ? found : -1);
-		if(found != LB_ERR) {
-			if(found != 0)	// そのままだと初回だけ選択項目が不可視になるみたい
-				setCurSel(found - 1);
-			setCurSel(found);
-			if(found != getCount() - 1) {
-				const int nextLength = getTextLen(found + 1);
-				unique_ptr<wchar_t[]> next(new wchar_t[nextLength + 1]);
-				getText(found + 1, next.get());
-				return unicode::CaseFolder::compare(
-					unicode::StringCharacterIterator(precedingID),
-					unicode::StringCharacterIterator(next.get(), next.get() + nextLength)) == 0;
-			}
-		}
-	} else
-		setCurSel(-1);
-	return false;
-}
-#endif
-
 // DefaultContentAssistant ////////////////////////////////////////////////////////////////////////
 
-namespace {
-	void setupPopupContent(manah::win32::ui::ListBox& listbox, CompletionProposal* const proposals[], size_t numberOfProposals) {
-		listbox.resetContent();
-		for(size_t i = 0; i < numberOfProposals; ++i) {
-			// TODO: display icons.
-			const String s(proposals[i]->getDisplayString());
-			if(!s.empty()) {
-				const int index = listbox.addString(s.c_str());
-				if(index != LB_ERR && index != LB_ERRSPACE)
-					listbox.setItemDataPtr(index, proposals[i]);
-			}
-		}
-	}
-	void selectProposal(manah::win32::ui::ListBox& listbox, const CompletionProposal* selection) {
-		listbox.setCurSel(-1);
-		if(selection != 0) {
-			for(int i = 0, c = listbox.getCount(); i < c; ++i) {
-				if(listbox.getItemDataPtr(i) == selection) {
-					listbox.setCurSel(i);
-					return;
-				}
-			}
-		}
-	}
-} // namespace @0
-
 /// Constructor.
-DefaultContentAssistant::DefaultContentAssistant() /*throw()*/ : textViewer_(0), proposalPopup_(0), autoActivationDelay_(500) {
+DefaultContentAssistant::DefaultContentAssistant() /*throw()*/ : textViewer_(0), autoActivationDelay_(500) {
 }
 
 /// Destructor.
 DefaultContentAssistant::~DefaultContentAssistant() /*throw()*/ {
 	for(map<ContentType, ContentAssistProcessor*>::iterator i(processors_.begin()), e(processors_.end()); i != e; ++i)
 		delete i->second;
-	delete proposalPopup_;
 }
 
 /// Returns the automatic activation delay in milliseconds.
@@ -467,28 +272,24 @@ void DefaultContentAssistant::close() {
 		if(completionSession_->incremental)
 			textViewer_->document().removeListener(*this);
 		completionSession_.reset();
-		proposalPopup_->show(SW_HIDE);
-		proposalPopup_->resetContent();
+		proposalsPopup_->end();
 	}
 }
 
 /// @see CompletionProposalsUI#complete
 bool DefaultContentAssistant::complete() {
 	if(completionSession_.get() != 0) {
-		const int sel = proposalPopup_->getCurSel();
-		if(sel != LB_ERR) {
-			if(CompletionProposal* p = static_cast<CompletionProposal*>(proposalPopup_->getItemDataPtr(sel))) {
-				unique_ptr<CompletionSession> temp(move(completionSession_));	// force completionSession_ to null
-				Document& document = textViewer_->document();
-				if(!document.isReadOnly()) {
-					document.insertUndoBoundary();
-					p->replace(document, temp->replacementRegion);
-					document.insertUndoBoundary();
-				}
-				completionSession_ = move(temp);
-				close();
-				return true;
+		if(const CompletionProposal* const p = proposalsPopup_->selectedProposal()) {
+			unique_ptr<CompletionSession> temp(move(completionSession_));	// force completionSession_ to null
+			Document& document = textViewer_->document();
+			if(!document.isReadOnly()) {
+				document.insertUndoBoundary();
+				p->replace(document, temp->replacementRegion);
+				document.insertUndoBoundary();
 			}
+			completionSession_ = move(temp);
+			close();
+			return true;
 		}
 		close();
 	}
@@ -533,11 +334,11 @@ void DefaultContentAssistant::documentChanged(const Document&, const DocumentCha
 			copy(newProposals.begin(), newProposals.end(), completionSession_->proposals.get());
 			sort(completionSession_->proposals.get(),
 				completionSession_->proposals.get() + newProposals.size(), CompletionProposalDisplayStringComparer());
-			setupPopupContent(*proposalPopup_, completionSession_->proposals.get(), completionSession_->numberOfProposals);
+			proposalsPopup_->resetContent(completionSession_->proposals.get(), completionSession_->numberOfProposals);
 		}
 
 		// select the most preferred
-		selectProposal(*proposalPopup_, completionSession_->processor->activeCompletionProposal(
+		proposalsPopup_->selectProposal(completionSession_->processor->activeCompletionProposal(
 			*textViewer_, completionSession_->replacementRegion, completionSession_->proposals.get(), completionSession_->numberOfProposals));
 	}
 }
@@ -555,7 +356,7 @@ const ContentAssistProcessor* DefaultContentAssistant::contentAssistProcessor(Co
 
 /// @see CompletionProposalsUI#hasSelection
 bool DefaultContentAssistant::hasSelection() const /*throw()*/ {
-	return completionSession_.get() != 0 && proposalPopup_ != 0 && proposalPopup_->getCurSel() != LB_ERR;
+	return completionSession_.get() != 0 && proposalsPopup_.get() != nullptr && proposalsPopup_->selectedProposal() != nullptr;
 }
 
 /// @see ContentAssistant#install
@@ -634,7 +435,7 @@ void DefaultContentAssistant::showPossibleCompletions() {
 				sort(completionSession_->proposals.get(),
 					completionSession_->proposals.get() + completionSession_->numberOfProposals, CompletionProposalDisplayStringComparer());
 				startPopup();
-				selectProposal(*proposalPopup_, cap->activeCompletionProposal(
+				proposalsPopup_->selectProposal(cap->activeCompletionProposal(
 					*textViewer_, completionSession_->replacementRegion,
 					completionSession_->proposals.get(), completionSession_->numberOfProposals));
 			}
@@ -647,16 +448,13 @@ void DefaultContentAssistant::showPossibleCompletions() {
 
 /// Resets the contents of the completion proposal popup based on @c completionSession-&gt;proposals.
 void DefaultContentAssistant::startPopup() {
-	if(proposalPopup_ == 0) {
-		proposalPopup_ = new CompletionProposalPopup(*this);
-		proposalPopup_->create(textViewer_->use());
-	} else
-		proposalPopup_->resetContent();
+	if(proposalsPopup_.get() == nullptr)
+		proposalsPopup_.reset(new CompletionProposalsPopup(*textViewer_, *this));
 
 	// determine the horizontal orientation of the window
 	const bool rtl = textViewer_->configuration().readingDirection == RIGHT_TO_LEFT;
 	proposalPopup_->modifyStyleEx(rtl ? 0: WS_EX_LAYOUTRTL, rtl ? WS_EX_LAYOUTRTL : 0);
-	setupPopupContent(*proposalPopup_, completionSession_->proposals.get(), completionSession_->numberOfProposals);
+	proposalsPopup_->resetContent(completionSession_->proposals.get(), completionSession_->numberOfProposals);
 
 	updatePopupPositions();
 	textViewer_->addViewportListener(*this);
@@ -680,27 +478,27 @@ void DefaultContentAssistant::uninstall() {
 }
 
 void DefaultContentAssistant::updatePopupPositions() {
-	if(proposalPopup_ != 0 && proposalPopup_->isWindow()) {
-		RECT viewerRect;
-		textViewer_->getClientRect(viewerRect);
-		int cx = (viewerRect.right - viewerRect.left) / 4;
-		int cy = proposalPopup_->getItemHeight(0) * min(static_cast<int>(completionSession_->numberOfProposals), 10) + 6;
+	if(proposalsPopup_ != 0 && proposalsPopup_->isWindow()) {
+		using namespace ascension::graphics;
+		NativeRectangle viewerBounds(textViewer_->bounds(false));
+		Scalar dx = geometry::dx(viewerBounds) / 4;
+		Scalar dy = proposalsPopup_->getItemHeight(0) * min(static_cast<Scalar>(completionSession_->numberOfProposals), 10) + 6;
 		const POINT pt = textViewer_->clientXYForCharacter(completionSession_->replacementRegion.beginning(), false, layout::LineLayout::LEADING);
 		const bool rtl = textViewer_->configuration().readingDirection == RIGHT_TO_LEFT;
-		int x = !rtl ? (pt.x - 3) : (pt.x - cx - 1 + 3);
-		if(x + cx > viewerRect.right) {
+		Scalar x = !rtl ? (pt.x - 3) : (pt.x - dx - 1 + 3);
+		if(x + dx > graphics::geometry::right(viewerBounds)) {
 //			if()
 		}
 		int y = pt.y + textViewer_->textRenderer().textMetrics().cellHeight();
-		if(y + cy > viewerRect.bottom) {
-			if(pt.y - 1 - viewerRect.top < viewerRect.bottom - y)
-				cy = viewerRect.bottom - y;
+		if(y + dy > geometry::bottom(viewerBounds)) {
+			if(pt.y - 1 - geometry::top(viewerBounds) < geometry::bottom(viewerBounds) - y)
+				dy = geometry::bottom(viewerBounds) - y;
 			else {
-				cy = min<int>(cy, pt.y - viewerRect.top);
-				y = pt.y - cy - 1;
+				dy = min<Scalar>(dy, pt.y - geometry::top(viewerBounds));
+				y = pt.y - dy - 1;
 			}
 		}
-		proposalPopup_->setPosition(0, x, y, cx, cy, SWP_NOZORDER | SWP_SHOWWINDOW);
+		proposalsPopup_->setPosition(0, x, y, dx, dy, SWP_NOZORDER | SWP_SHOWWINDOW);
 	}
 }
 

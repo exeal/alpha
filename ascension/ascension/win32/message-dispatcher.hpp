@@ -1,15 +1,15 @@
 /**
- * @file message-dispatcher-windows.hpp
+ * @file message-dispatcher.hpp
  * @author exeal
  * @date 2011-03-26 separated from window-windows.hpp
  * @date 2011-03-27 separated from widget-windows.hpp
+ * @date 2012-03-07 renamed from ascension/viewer/base/message-dispatcher-windows.hpp
  */
 
-#ifndef ASCENSION_MESSAGE_DISPATCHER_WINDOWS_HPP
-#define ASCENSION_MESSAGE_DISPATCHER_WINDOWS_HPP
+#ifndef ASCENSION_WIN32_MESSAGE_DISPATCHER_HPP
+#define ASCENSION_WIN32_MESSAGE_DISPATCHER_HPP
 #include <ascension/corelib/type-traits.hpp>	// ASCENSION_DEFINED_HAS_METHOD
 #include <ascension/graphics/geometry.hpp>
-#include <ascension/viewer/base/user-input.hpp>
 #include <ascension/win32/windows.hpp>
 #include <type_traits>	// std.enable_if
 
@@ -95,7 +95,7 @@ namespace ascension {
 	}
 
 	namespace win32 {
-
+/*
 		inline int inputModifiersFromNative(WPARAM wp) {
 			int result = 0;
 			if(boole(wp & MK_LBUTTON))
@@ -114,7 +114,7 @@ namespace ascension {
 				result |= viewers::base::UserInput::BUTTON5_DOWN;
 			return result;
 		}
-
+*/
 		template<UINT message> struct MessageTag {
 			static const UINT value = message;
 		};
@@ -393,4 +393,4 @@ namespace ascension {
 #undef ASCENSION_DISPATCH_MESSAGE
 #undef ASCENSION_IMPLEMENT_MESSAGE_DISPATCH
 
-#endif // !ASCENSION_MESSAGE_DISPATCHER_WINDOWS_HPP
+#endif // !ASCENSION_WIN32_MESSAGE_DISPATCHER_HPP
