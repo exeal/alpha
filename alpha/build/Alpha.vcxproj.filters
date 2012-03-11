@@ -81,6 +81,12 @@
     <Filter Include="ascension\Source Files\text-editor">
       <UniqueIdentifier>{bb85bf1b-ff26-4803-b2de-265555e331d4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Header Files\content-assist">
+      <UniqueIdentifier>{8b77cf30-56c1-4306-9f17-34f053a79534}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Source Files\content-assist">
+      <UniqueIdentifier>{eb13728b-d067-45d5-b384-11f53b845206}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -197,9 +203,6 @@
     <ClCompile Include="..\..\ascension\src\viewer\caret.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\viewer\content-assist.cpp">
-      <Filter>ascension\Source Files\viewer</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\ruler.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
@@ -305,8 +308,17 @@
     <ClCompile Include="..\..\ascension\src\graphics\text-viewport.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\viewer\content-assist-windows.cpp">
-      <Filter>ascension\Source Files\viewer</Filter>
+    <ClCompile Include="..\..\ascension\src\content-assist\content-assist.cpp">
+      <Filter>ascension\Source Files\content-assist</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\content-assist\content-assist-windows.cpp">
+      <Filter>ascension\Source Files\content-assist</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\content-assist\default-completion-proposal.cpp">
+      <Filter>ascension\Source Files\content-assist</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\content-assist\identifiers-proposal-processor.cpp">
+      <Filter>ascension\Source Files\content-assist</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -449,9 +461,6 @@
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\caret.hpp">
-      <Filter>ascension\Header Files\viewer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\content-assist.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\viewer.hpp">
@@ -651,6 +660,18 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\win32\window.hpp">
       <Filter>ascension\Header Files\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\content-assist\content-assist.hpp">
+      <Filter>ascension\Header Files\content-assist</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\content-assist\default-completion-proposal.hpp">
+      <Filter>ascension\Header Files\content-assist</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\content-assist\identifiers-proposal-processor.hpp">
+      <Filter>ascension\Header Files\content-assist</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\content-assist\default-content-assistant.hpp">
+      <Filter>ascension\Header Files\content-assist</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
