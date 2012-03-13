@@ -308,9 +308,6 @@
     <ClCompile Include="..\..\ascension\src\graphics\text-viewport.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\content-assist\content-assist.cpp">
-      <Filter>ascension\Source Files\content-assist</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\content-assist\content-assist-windows.cpp">
       <Filter>ascension\Source Files\content-assist</Filter>
     </ClCompile>
@@ -318,6 +315,9 @@
       <Filter>ascension\Source Files\content-assist</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\content-assist\identifiers-proposal-processor.cpp">
+      <Filter>ascension\Source Files\content-assist</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\content-assist\default-content-assistant.cpp">
       <Filter>ascension\Source Files\content-assist</Filter>
     </ClCompile>
   </ItemGroup>
