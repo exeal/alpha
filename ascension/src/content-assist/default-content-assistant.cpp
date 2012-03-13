@@ -1,14 +1,13 @@
 /**
- * @file content-assist.cpp
+ * @file default-content-assistant.cpp
  * @author exeal
- * @date 2003-2006 (was CompletionWindow.cpp)
- * @date 2006-2012
+ * @date 2003-2006 was CompletionWindow.cpp
+ * @date 2006-2012 was content-assist.cpp
+ * @date 2012-03-12 renamed from content-assist.cpp
  */
 
-#include <ascension/corelib/text/case-folder.hpp>
-#include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/viewer/caret.hpp>
-#include <ascension/viewer/content-assist.hpp>
+#include <ascension/content-assist/default-content-assistant.hpp>
 #include <ascension/viewer/viewer.hpp>				// TextViewer
 
 using namespace ascension;
@@ -21,6 +20,19 @@ using namespace std;
 
 
 // DefaultContentAssistant ////////////////////////////////////////////////////////////////////////
+
+namespace {
+	class DisplayStringComparer {
+	public:
+		explicit DisplayStringComparer(const ContentAssistProcessor& processor) /*throw()*/ : processor_(processor) {
+		}
+		bool operator()(const CompletionProposal* lhs, const CompletionProposal* rhs) const {
+			return processor_.compareDisplayStrings(lhs->displayString(), rhs->displayString());
+		}
+	private:
+		const ContentAssistProcessor& processor_;
+	};
+}
 
 /// Constructor.
 DefaultContentAssistant::DefaultContentAssistant() /*throw()*/ : textViewer_(0), autoActivationDelay_(500) {
@@ -150,7 +162,7 @@ void DefaultContentAssistant::documentChanged(const Document&, const DocumentCha
 			completionSession_->proposals.reset(new CompletionProposal*[completionSession_->numberOfProposals = newProposals.size()]);
 			copy(newProposals.begin(), newProposals.end(), completionSession_->proposals.get());
 			sort(completionSession_->proposals.get(),
-				completionSession_->proposals.get() + newProposals.size(), CompletionProposalDisplayStringComparer());
+				completionSession_->proposals.get() + newProposals.size(), DisplayStringComparer(*completionSession_->processor));
 			proposalsPopup_->resetContent(completionSession_->proposals.get(), completionSession_->numberOfProposals);
 		}
 
@@ -250,7 +262,7 @@ void DefaultContentAssistant::showPossibleCompletions() {
 				completionSession_->proposals.reset(new CompletionProposal*[completionSession_->numberOfProposals = proposals.size()]);
 				copy(proposals.begin(), proposals.end(), completionSession_->proposals.get());
 				sort(completionSession_->proposals.get(),
-					completionSession_->proposals.get() + completionSession_->numberOfProposals, CompletionProposalDisplayStringComparer());
+					completionSession_->proposals.get() + completionSession_->numberOfProposals, DisplayStringComparer(*completionSession_->processor));
 				startPopup();
 				proposalsPopup_->selectProposal(cap->activeCompletionProposal(
 					*textViewer_, completionSession_->replacementRegion,

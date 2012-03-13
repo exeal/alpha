@@ -81,12 +81,31 @@ namespace ascension {
 
 		/**
 		 * A content assist processor proposes completions for a particular content type.
-		 * @see ContentAssistant#getContentAssistProcessor, ContentAssistant#setContentAssistProcessor
+		 * @see DefaultContentAssistant#contentAssistProcessor,
+		 *      DefaultContentAssistant#setContentAssistProcessor
 		 */
 		class ContentAssistProcessor {
 		public:
 			/// Destructor.
 			virtual ~ContentAssistProcessor() /*throw()*/ {}
+			/**
+			 * Returns the proposal initially selected in the list.
+			 * @param textViewer The text viewer
+			 * @param replacementRegion The region to be replaced by the completion
+			 * @param proposals The completion proposals listed currently. this list is sorted
+			 *                  alphabetically
+			 * @param numberOfProposals The number of the current proposals
+			 * @return The proposal or @c null if no proposal should be selected
+			 */
+			virtual const CompletionProposal* activeCompletionProposal(
+				const viewers::TextViewer& textViewer, const kernel::Region& replacementRegion,
+				CompletionProposal* const proposals[], std::size_t numberOfProposals) const /*throw()*/ = 0;
+			/**
+			 * Compares the given two display strings.
+			 * @param s1, s2 The display strings to compare
+			 * @return true if @a s1 &lt; @a s2
+			 */
+			virtual bool compareDisplayStrings(const String& s1, const String& s2) const /*throw()*/ = 0;
 			/// The completion session was closed.
 			virtual void completionSessionClosed() /*throw()*/ {};
 			/**
@@ -101,18 +120,6 @@ namespace ascension {
 			 */
 			virtual void computeCompletionProposals(const viewers::Caret& caret,
 				bool& incremental, kernel::Region& replacementRegion, std::set<CompletionProposal*>& proposals) const = 0;
-			/**
-			 * Returns the proposal initially selected in the list.
-			 * @param textViewer The text viewer
-			 * @param replacementRegion The region to be replaced by the completion
-			 * @param proposals The completion proposals listed currently. this list is sorted
-			 *                  alphabetically
-			 * @param numberOfProposals The number of the current proposals
-			 * @return The proposal or @c null if no proposal should be selected
-			 */
-			virtual const CompletionProposal* activeCompletionProposal(
-				const viewers::TextViewer& textViewer, const kernel::Region& replacementRegion,
-				CompletionProposal* const proposals[], std::size_t numberOfProposals) const /*throw()*/ = 0;
 			/**
 			 * Returns @c true if the given character automatically activates the completion when
 			 * the user entered.

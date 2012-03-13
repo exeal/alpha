@@ -24,16 +24,18 @@ using namespace std;
 // IdentifiersProposalProcessor ///////////////////////////////////////////////////////////////////
 
 namespace {
-	struct CompletionProposalDisplayStringComparer {
-		bool operator()(const CompletionProposal* lhs, const CompletionProposal* rhs) const {
-			return CaseFolder::compare(lhs->displayString(), rhs->displayString()) < 0;
+	class DisplayStringComparer {
+	public:
+		explicit DisplayStringComparer(const ContentAssistProcessor& processor) /*throw()*/ : processor_(processor) {
 		}
 		bool operator()(const CompletionProposal* lhs, const String& rhs) const {
-			return CaseFolder::compare(lhs->displayString(), rhs) < 0;
+			return processor_.compareDisplayStrings(lhs->displayString(), rhs);
 		}
 		bool operator()(const String& lhs, const CompletionProposal* rhs) const {
-			return CaseFolder::compare(lhs, rhs->displayString()) < 0;
+			return processor_.compareDisplayStrings(lhs, rhs->displayString());
 		}
+	private:
+		const ContentAssistProcessor& processor_;
 	};
 } // namespace @0
 
@@ -60,11 +62,16 @@ const CompletionProposal* IdentifiersProposalProcessor::activeCompletionProposal
 	if(precedingIdentifier.empty())
 		return 0;
 	const CompletionProposal* activeProposal = *lower_bound(currentProposals,
-		currentProposals + numberOfCurrentProposals, precedingIdentifier, CompletionProposalDisplayStringComparer());
+		currentProposals + numberOfCurrentProposals, precedingIdentifier, DisplayStringComparer(*this));
 	if(activeProposal == currentProposals[numberOfCurrentProposals]
 			|| CaseFolder::compare(activeProposal->displayString().substr(0, precedingIdentifier.length()), precedingIdentifier) != 0)
 		return 0;
 	return activeProposal;
+}
+
+/// @see ContentAssistProcessor#compareDisplayStrings
+bool IdentifiersProposalProcessor::compareDisplayStrings(const String& s1, const String& s2) const /*throw()*/ {
+	return CaseFolder::compare(s1, s2) < 0;
 }
 
 /// @see ContentAssistProcessor#computCompletionProposals

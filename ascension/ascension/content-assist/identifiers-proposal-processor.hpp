@@ -31,6 +31,7 @@ namespace ascension {
 			virtual const CompletionProposal* activeCompletionProposal(
 				const viewers::TextViewer& textViewer, const kernel::Region& replacementRegion,
 				CompletionProposal* const proposals[], std::size_t numberOfProposals) const /*throw()*/;
+			virtual bool compareDisplayStrings(const String& s1, const String& s2) const /*throw()*/;
 			virtual void computeCompletionProposals(const viewers::Caret& caret, bool& incremental,
 				kernel::Region& replacementRegion, std::set<CompletionProposal*>& proposals) const;
 			virtual bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const /*throw()*/;
