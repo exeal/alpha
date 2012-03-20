@@ -9,7 +9,20 @@
 #ifndef ASCENSION_DEFAULT_CONTENT_ASSISTANT_HPP
 #define ASCENSION_DEFAULT_CONTENT_ASSISTANT_HPP
 
+#include <ascension/platforms.hpp>
 #include <ascension/content-assist/content-assist.hpp>
+#include <ascension/presentation/writing-mode.hpp>
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#	include <gtkmm/treeview.h>
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#	include <???>
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#	include <QListView>
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#	include <ascension/win32/window.hpp>
+#elif defined(ASCENSION_WINDOW_SYSTEM_X)
+#	include <???>
+#endif
 #include <map>
 #include <memory>	// std.unique_ptr
 
@@ -35,7 +48,7 @@ namespace ascension {
 			void showPossibleCompletions();
 		private:
 			void startPopup();
-			void updatePopupPositions();
+			void updatePopupBounds();
 			// HasTimer
 			void timeElapsed(Timer& timer);
 			// ContentAssistant
@@ -76,18 +89,40 @@ namespace ascension {
 				}
 			};
 			std::unique_ptr<CompletionSession> completionSession_;
-			class CompletionProposalsPopup {
+			class CompletionProposalsPopup : public
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+				Gtk::TreeView
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+				???
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+				QListView
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+				win32::Window
+#elif defined(ASCENSION_WINDOW_SYSTEM_X)
+				???
+#endif
+			{
 			public:
 				CompletionProposalsPopup(viewers::TextViewer& parent, CompletionProposalsUI& ui);
 				void end();
 				void resetContent(CompletionProposal* const proposals[], size_t numberOfProposals);
 				const CompletionProposal* selectedProposal() const;
 				void selectProposal(const CompletionProposal* selection);
+				void setReadingDirection(presentation::ReadingDirection direction);
 				bool start(const std::set<CompletionProposal*>& proposals);
 			private:
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+				LRESULT processWindowMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
+				void setFont(const HFONT newFont);
+				void updateDefaultFont();
+				HFONT defaultFont_;
+#elif defined(ASCENSION_WINDOW_SYSTEM_X)
+#endif
+			private:
 				CompletionProposalsUI& ui_;
-				class Impl;
-				std::unique_ptr<Impl> impl_;
 			};
 			std::unique_ptr<CompletionProposalsPopup> proposalsPopup_;
 		};

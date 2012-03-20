@@ -193,30 +193,6 @@ void DefaultContentAssistant::install(TextViewer& viewer) {
 	(textViewer_ = &viewer)->caret().addCharacterInputListener(*this);
 }
 
-/// @see CompletionProposalsUI#nextPage
-void DefaultContentAssistant::nextPage(int pages) {
-	while(pages > 0) {
-		proposalPopup_->sendMessage(WM_KEYDOWN, VK_NEXT);
-		--pages;
-	}
-	while(pages < 0) {
-		proposalPopup_->sendMessage(WM_KEYDOWN, VK_PRIOR);
-		++pages;
-	}
-}
-
-/// @see CompletionProposalsUI#nextProposal
-void DefaultContentAssistant::nextProposal(int proposals) {
-	while(proposals > 0) {
-		proposalPopup_->sendMessage(WM_KEYDOWN, VK_DOWN);
-		--proposals;
-	}
-	while(proposals < 0) {
-		proposalPopup_->sendMessage(WM_KEYDOWN, VK_UP);
-		++proposals;
-	}
-}
-
 /**
  * Sets the delay between a character input and the session activation.
  * @param milliseconds The delay amount as milliseconds. if set to zero, the proposals will popup
@@ -281,11 +257,10 @@ void DefaultContentAssistant::startPopup() {
 		proposalsPopup_.reset(new CompletionProposalsPopup(*textViewer_, *this));
 
 	// determine the horizontal orientation of the window
-	const bool rtl = textViewer_->configuration().readingDirection == RIGHT_TO_LEFT;
-	proposalPopup_->modifyStyleEx(rtl ? 0: WS_EX_LAYOUTRTL, rtl ? WS_EX_LAYOUTRTL : 0);
+	proposalsPopup_->setReadingDirection(textViewer_->textRenderer().writingMode().inlineFlowDirection);
 	proposalsPopup_->resetContent(completionSession_->proposals.get(), completionSession_->numberOfProposals);
 
-	updatePopupPositions();
+	updatePopupBounds();
 	textViewer_->addViewportListener(*this);
 	textViewer_->caret().addListener(*this);
 	if(completionSession_->incremental)
@@ -303,31 +278,6 @@ void DefaultContentAssistant::uninstall() {
 	if(textViewer_ != 0) {
 		textViewer_->caret().removeCharacterInputListener(*this);
 		textViewer_ = 0;
-	}
-}
-
-void DefaultContentAssistant::updatePopupPositions() {
-	if(proposalsPopup_ != 0 && proposalsPopup_->isWindow()) {
-		using namespace ascension::graphics;
-		NativeRectangle viewerBounds(textViewer_->bounds(false));
-		Scalar dx = geometry::dx(viewerBounds) / 4;
-		Scalar dy = proposalsPopup_->getItemHeight(0) * min(static_cast<Scalar>(completionSession_->numberOfProposals), 10) + 6;
-		const POINT pt = textViewer_->clientXYForCharacter(completionSession_->replacementRegion.beginning(), false, layout::LineLayout::LEADING);
-		const bool rtl = textViewer_->configuration().readingDirection == RIGHT_TO_LEFT;
-		Scalar x = !rtl ? (pt.x - 3) : (pt.x - dx - 1 + 3);
-		if(x + dx > graphics::geometry::right(viewerBounds)) {
-//			if()
-		}
-		int y = pt.y + textViewer_->textRenderer().textMetrics().cellHeight();
-		if(y + dy > geometry::bottom(viewerBounds)) {
-			if(pt.y - 1 - geometry::top(viewerBounds) < geometry::bottom(viewerBounds) - y)
-				dy = geometry::bottom(viewerBounds) - y;
-			else {
-				dy = min<Scalar>(dy, pt.y - geometry::top(viewerBounds));
-				y = pt.y - dy - 1;
-			}
-		}
-		proposalsPopup_->setPosition(0, x, y, dx, dy, SWP_NOZORDER | SWP_SHOWWINDOW);
 	}
 }
 
