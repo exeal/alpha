@@ -72,7 +72,7 @@ AutoScrollOriginMark::AutoScrollOriginMark(TextViewer& viewer) /*throw()*/ : Wid
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 
 	resize(geometry::make<NativeSize>(WINDOW_WIDTH + 1, WINDOW_WIDTH + 1));
-	win32::Handle<HRGN> rgn(::CreateEllipticRgn(0, 0, WINDOW_WIDTH + 1, WINDOW_WIDTH + 1), &::DeleteObject);
+	NativeRegion rgn(::CreateEllipticRgn(0, 0, WINDOW_WIDTH + 1, WINDOW_WIDTH + 1), &::DeleteObject);
 	setShape(rgn);
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 	::SetLayeredWindowAttributes(identifier().get(), ::GetSysColor(COLOR_WINDOW), 0, LWA_COLORKEY);
@@ -166,7 +166,8 @@ const base::Cursor& AutoScrollOriginMark::cursorForScrolling(CursorType type) {
 			memcpy(xorBits + 4 * 20, XOR_LINE_20_TO_28, sizeof(XOR_LINE_20_TO_28));
 		}
 #if defined(ASCENSION_OS_WINDOWS)
-		instances[type].reset(new base::Cursor(win32::Handle<HCURSOR>(::CreateCursor(::GetModuleHandleW(nullptr), 16, 16, 32, 32, andBits, xorBits), &::DestroyCursor)));
+		instances[type].reset(new base::Cursor(shared_ptr<remove_pointer<HCURSOR>::type>(
+			::CreateCursor(::GetModuleHandleW(nullptr), 16, 16, 32, 32, andBits, xorBits), &::DestroyCursor)));
 #else
 		instances[type].reset(new base::Cursor(bitmap));
 #endif

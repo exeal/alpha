@@ -196,7 +196,7 @@ namespace {
 				associations.insert(make_pair(Script::HAN, L"Gulim")); break;
 			default:
 				{
-					win32::Handle<HDC> dc(::GetDC(nullptr), bind1st(ptr_fun(&::ReleaseDC), static_cast<HWND>(nullptr)));
+					shared_ptr<remove_pointer<HDC>::type> dc(::GetDC(nullptr), bind(&::ReleaseDC, static_cast<HWND>(nullptr), placeholders::_1));
 					bool installed = false;
 					LOGFONTW lf;
 					memset(&lf, 0, sizeof(LOGFONTW));
@@ -238,7 +238,7 @@ namespace {
 	 * @param[out] strikethroughThickness The thickness of linethrough in pixels
 	 * @return Succeeded or not
 	 */
-	bool getDecorationLineMetrics(const win32::Handle<HDC>& dc, int* baselineOffset,
+	bool getDecorationLineMetrics(const shared_ptr<remove_pointer<HDC>::type>& dc, int* baselineOffset,
 			int* underlineOffset, int* underlineThickness, int* strikethroughOffset, int* strikethroughThickness) /*throw()*/ {
 		OUTLINETEXTMETRICW* otm = nullptr;
 		TEXTMETRICW tm;
@@ -530,8 +530,8 @@ public:
 		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, const FontCollection& fontCollection,
 		shared_ptr<const TextRunStyle> defaultStyle, unique_ptr<StyledTextRunIterator> styles,
 		vector<TextRun*>& textRuns, vector<const StyledTextRun>& styledRanges);
-	void shape(const win32::Handle<HDC>& dc, const String& layoutString);
-	void positionGlyphs(const win32::Handle<HDC>& dc, const String& layoutString, SimpleStyledTextRunIterator& styles);
+	void shape(const shared_ptr<remove_pointer<HDC>::type>& dc, const String& layoutString);
+	void positionGlyphs(const shared_ptr<remove_pointer<HDC>::type>& dc, const String& layoutString, SimpleStyledTextRunIterator& styles);
 	unique_ptr<TextRun> splitIfTooLong(const String& layoutString);
 	static void substituteGlyphs(const Range<TextRun**>& runs, const String& layoutString);
 	// drawing and painting
@@ -567,9 +567,9 @@ private:
 		if(const WORD* const p = glyphs_->clusters.get())
 			return p + (beginning() - glyphs_->characters.beginning()); return nullptr;}
 	pair<int, HRESULT> countMissingGlyphs(const Context& context, const Char* text) const /*throw()*/;
-	static HRESULT generateGlyphs(const win32::Handle<HDC>& dc,
+	static HRESULT generateGlyphs(const shared_ptr<remove_pointer<HDC>::type>& dc,
 		const StringPiece& text, const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs, int& numberOfGlyphs);
-	static void generateDefaultGlyphs(const win32::Handle<HDC>& dc,
+	static void generateDefaultGlyphs(const shared_ptr<remove_pointer<HDC>::type>& dc,
 		const StringPiece& text, const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs);
 	const WORD* glyphs() const /*throw()*/ {
 		if(const WORD* const p = glyphs_->indices.get()) return p + glyphRange_.beginning(); return nullptr;}
@@ -589,7 +589,7 @@ private:
 
 void TextLayout::TextRun::Glyphs::vanish(const Font& font, size_t at) {
 	assert(advances.get() == nullptr);
-	win32::Handle<HDC> dc(detail::screenDC());
+	shared_ptr<remove_pointer<HDC>::type> dc(detail::screenDC());
 	HFONT oldFont = nullptr;
 	WORD blankGlyph;
 	HRESULT hr = ::ScriptGetCMap(dc.get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
@@ -764,7 +764,8 @@ inline bool TextLayout::TextRun::expandTabCharacters(
 }
 
 /// Fills the glyph array with default index, instead of using @c ScriptShape.
-inline void TextLayout::TextRun::generateDefaultGlyphs(const win32::Handle<HDC>& dc,
+inline void TextLayout::TextRun::generateDefaultGlyphs(
+		const shared_ptr<remove_pointer<HDC>::type>& dc,
 		const StringPiece& text, const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs) {
 	SCRIPT_CACHE fontCache(nullptr);
 	SCRIPT_FONTPROPERTIES fp;
@@ -807,7 +808,7 @@ inline void TextLayout::TextRun::generateDefaultGlyphs(const win32::Handle<HDC>&
  * @retval HRESULT other Uniscribe error
  * @throw std#bad_alloc failed to allocate buffer for glyph indices or visual attributes array
  */
-HRESULT TextLayout::TextRun::generateGlyphs(const win32::Handle<HDC>& dc,
+HRESULT TextLayout::TextRun::generateGlyphs(const shared_ptr<remove_pointer<HDC>::type>& dc,
 		const StringPiece& text, const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs, int& numberOfGlyphs) {
 #ifdef _DEBUG
 	if(HFONT currentFont = static_cast<HFONT>(::GetCurrentObject(dc.get(), OBJ_FONT))) {
@@ -1104,7 +1105,8 @@ void TextLayout::TextRun::paintBackground(PaintContext& context,
  * 
  * @see #merge, #substituteGlyphs
  */
-void TextLayout::TextRun::positionGlyphs(const win32::Handle<HDC>& dc, const String& layoutString, SimpleStyledTextRunIterator& styles) {
+void TextLayout::TextRun::positionGlyphs(
+		const shared_ptr<remove_pointer<HDC>::type>& dc, const String& layoutString, SimpleStyledTextRunIterator& styles) {
 	assert(glyphs_.get() != nullptr && glyphs_.unique());
 	assert(glyphs_->indices.get() != nullptr && glyphs_->advances.get() == nullptr);
 
@@ -1215,7 +1217,7 @@ namespace {
 	}
 } // namespace @0
 
-void TextLayout::TextRun::shape(const win32::Handle<HDC>& dc, const String& layoutString) {
+void TextLayout::TextRun::shape(const shared_ptr<remove_pointer<HDC>::type>& dc, const String& layoutString) {
 	assert(glyphs_.unique());
 
 	// TODO: check if the requested style (or the default one) disables shaping.
@@ -1753,7 +1755,7 @@ void InlineProgressionDimensionRangeIterator::next(bool initializing) {
 // helpers for TextLayout.draw
 namespace {
 	const size_t MAXIMUM_RUN_LENGTH = 1024;
-	inline win32::Handle<HPEN> createPen(const Color& color, int width, int style) {
+	inline shared_ptr<remove_pointer<HPEN>::type> createPen(const Color& color, int width, int style) {
 		if(color == Color() || color.alpha() < 0xff)
 			throw invalid_argument("color");
 		LOGBRUSH brush;
@@ -1771,16 +1773,16 @@ namespace {
 		}
 		if(pen == nullptr)
 			throw UnknownValueException("style");
-		return win32::Handle<HPEN>(pen, &::DeleteObject);
+		return shared_ptr<remove_pointer<HPEN>::type>(pen, &::DeleteObject);
 	}
 	inline void drawDecorationLines(Context& context, const TextRunStyle& style, const Color& foregroundColor, int x, int y, int width, int height) {
 		if(style.decorations.underline.style != Decorations::NONE || style.decorations.strikethrough.style != Decorations::NONE) {
-			const win32::Handle<HDC>& dc = context.nativeObject();
+			const shared_ptr<remove_pointer<HDC>::type>& dc = context.nativeObject();
 			int baselineOffset, underlineOffset, underlineThickness, linethroughOffset, linethroughThickness;
 			if(getDecorationLineMetrics(dc, &baselineOffset, &underlineOffset, &underlineThickness, &linethroughOffset, &linethroughThickness)) {
 				// draw underline
 				if(style.decorations.underline.style != Decorations::NONE) {
-					win32::Handle<HPEN> pen(createPen((style.decorations.underline.color != Color()) ?
+					shared_ptr<remove_pointer<HPEN>::type> pen(createPen((style.decorations.underline.color != Color()) ?
 						style.decorations.underline.color : foregroundColor, underlineThickness, style.decorations.underline.style));
 					HPEN oldPen = static_cast<HPEN>(::SelectObject(dc.get(), pen.get()));
 					const int underlineY = y + baselineOffset - underlineOffset + underlineThickness / 2;
@@ -1790,7 +1792,8 @@ namespace {
 				}
 				// draw strikethrough line
 				if(style.decorations.strikethrough.style != Decorations::NONE) {
-					win32::Handle<HPEN> pen(createPen((style.decorations.strikethrough.color != Color()) ?
+					shared_ptr<remove_pointer<HPEN>::type> pen(
+						createPen((style.decorations.strikethrough.color != Color()) ?
 						style.decorations.strikethrough.color : foregroundColor, linethroughThickness, 1));
 					HPEN oldPen = static_cast<HPEN>(::SelectObject(dc.get(), pen.get()));
 					const int strikeoutY = y + baselineOffset - linethroughOffset + linethroughThickness / 2;
@@ -1989,7 +1992,7 @@ TextLayout::TextLayout(const String& text,
 //	shrinkToFit(styledRanges_);
 
 	// 3. generate glyphs for each text runs
-	const win32::Handle<HDC> dc(detail::screenDC());
+	const shared_ptr<remove_pointer<HDC>::type> dc(detail::screenDC());
 	for(size_t i = 0; i < numberOfRuns_; ++i)
 		runs_[i]->shape(dc, text_);
 	TextRun::substituteGlyphs(Range<TextRun**>(runs_.get(), runs_.get() + numberOfRuns_), text_);
@@ -2119,7 +2122,7 @@ NativeRegion TextLayout::blackBoxBounds(const Range<Index>& range) const {
 
 	// handle empty line
 	if(numberOfRuns_ == 0)
-		return win32::Handle<HRGN>(::CreateRectRgn(0, 0, 0, lineMetrics_[0]->height()), &::DeleteObject);
+		return shared_ptr<remove_pointer<HRGN>::type>(::CreateRectRgn(0, 0, 0, lineMetrics_[0]->height()), &::DeleteObject);
 
 	// TODO: this implementation can't handle vertical text.
 	const Index firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
@@ -2159,7 +2162,7 @@ NativeRegion TextLayout::blackBoxBounds(const Range<Index>& range) const {
 		geometry::y(vertices[i * 4 + 2]) = geometry::y(vertices[i * 4 + 3]) = geometry::bottom(rectangles[i]);
 	}
 	fill_n(numbersOfVertices.get(), rectangles.size(), 4);
-	return win32::Handle<HRGN>(::CreatePolyPolygonRgn(vertices.get(),
+	return shared_ptr<remove_pointer<HRGN>::type>(::CreatePolyPolygonRgn(vertices.get(),
 		numbersOfVertices.get(), static_cast<int>(rectangles.size()), WINDING), &::DeleteObject);
 }
 

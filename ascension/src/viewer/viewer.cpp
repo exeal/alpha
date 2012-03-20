@@ -689,9 +689,10 @@ void TextViewer::keyPressed(const KeyInput& input) {
 		if(hasModifier<UserInput::ALT_DOWN>(input)
 				&& hasModifier<UserInput::SHIFT_DOWN>(input) && !hasModifier<UserInput::CONTROL_DOWN>(input))
 			makeRowSelectionExtensionCommand(*this, &k::locations::forwardVisualLine)();
-		else if(hasModifier<UserInput::CONTROL_DOWN>(input) && !hasModifier<UserInput::SHIFT_DOWN>(input))
-			onVScroll(SB_LINEDOWN, 0, win32::Handle<HWND>());
-		else
+		else if(hasModifier<UserInput::CONTROL_DOWN>(input) && !hasModifier<UserInput::SHIFT_DOWN>(input)) {
+			if(const shared_ptr<TextViewport> viewport = textRenderer().viewport().lock())
+				viewport->scroll(geometry::make<NativeSize>(0, +1), this);
+		} else
 			makeCaretMovementCommand(*this, &k::locations::forwardVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
 	case keyboardcodes::INSERT:	// [Insert]

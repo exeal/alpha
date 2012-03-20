@@ -442,12 +442,14 @@ void TextRenderer::updateDefaultFont() {
 	}
 
 	layouts().invalidate();
+#if 0
 	if(/*enablesDoubleBuffering_ &&*/ memoryBitmap_.get() != nullptr) {
 		BITMAP temp;
 		::GetObjectW(memoryBitmap_.get(), sizeof(HBITMAP), &temp);
 		if(temp.bmHeight != calculateMemoryBitmapSize(defaultFont()->metrics().linePitch()))
 			memoryBitmap_.reset();
 	}
+#endif
 	defaultFontListeners_.notify(&DefaultFontListener::defaultFontChanged);
 }
 

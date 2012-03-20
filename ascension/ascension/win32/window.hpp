@@ -32,12 +32,13 @@ namespace ascension {
 		class Window : public WindowBase {
 		protected:
 			Window(std::shared_ptr<std::remove_pointer<HWND>::type> parent, const WCHAR className[],
-					const graphics::NativePoint& position = graphics::geometry::make<graphics::NativePoint>(CW_USEDEFAULT, CW_USEDEFAULT),
-					const graphics::NativeSize& size = graphics::geometry::make<graphics::NativeSize>(CW_USEDEFAULT, CW_USEDEFAULT),
+					const graphics::NativePoint* position = nullptr, const graphics::NativeSize* size = nullptr,
 					DWORD style = 0, DWORD extendedStyle = 0) : WindowBase(::CreateWindowExW(
 						extendedStyle, className, nullptr, style,
-						graphics::geometry::x(position), graphics::geometry::y(position),
-						graphics::geometry::dx(size), graphics::geometry::dy(size),
+						(position != nullptr) ? graphics::geometry::x(*position) : CW_USEDEFAULT,
+						(position != nullptr) ? graphics::geometry::y(*position) : CW_USEDEFAULT,
+						(size != nullptr) ? graphics::geometry::dx(*size) : CW_USEDEFAULT,
+						(size != nullptr) ? graphics::geometry::dy(*size) : CW_USEDEFAULT,
 						parent.get(), nullptr, ::GetModuleHandleW(nullptr), nullptr)) {
 				originalWindowProcedure_ = reinterpret_cast<WNDPROC>(::GetWindowLongPtrW(handle_.get(), GWLP_WNDPROC));
 				::SetWindowLongPtrW(handle_.get(), GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
