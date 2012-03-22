@@ -146,6 +146,15 @@ namespace ascension {
 			};
 
 			// free functions
+			/**
+			 * Converts an inline progression scroll offset into pixels.
+			 * @param viewport The viewport
+			 * @param scrollOffset The inline progression scroll offset
+			 * @return A scroll offset in pixels
+			 */
+			inline Scalar inlineProgressionScrollOffsetInPixels(const TextViewport& viewport, Index scrollOffset) {
+				return viewport.textRenderer().defaultFont()->metrics().averageCharacterWidth() * scrollOffset;
+			}
 			Scalar lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline = 0);
 			Scalar lineStartEdge(const TextLayout& layout, Scalar contentMeasure, Index subline = 0);
 			VisualLine locateLine(const TextViewport& viewport,

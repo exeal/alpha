@@ -82,7 +82,8 @@ namespace ascension {
 				TextRenderer(const TextRenderer& other);
 				virtual ~TextRenderer() /*throw()*/;
 				// viewport
-				std::weak_ptr<TextViewport> viewport() const /*throw()*/;
+				std::shared_ptr<TextViewport> viewport() /*throw()*/;
+				std::shared_ptr<const TextViewport> viewport() const /*throw()*/;
 				// layout
 				virtual std::unique_ptr<const TextLayout> createLineLayout(Index line) const = 0;
 				LineLayoutVector& layouts() /*throw()*/;

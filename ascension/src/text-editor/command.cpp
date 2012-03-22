@@ -192,10 +192,8 @@ namespace {
 			++offset;
 		else if(procedure == &locations::backwardPage)
 			--offset;
-		if(offset != 0) {
-			if(const shared_ptr<graphics::font::TextViewport> viewport = target.textRenderer().viewport().lock())
-				viewport->scroll(offset, 0, &target);
-		}
+		if(offset != 0)
+			target.textRenderer().viewport()->scroll(offset, 0, &target);
 	}
 
 	template<typename PointType>
