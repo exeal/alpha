@@ -551,8 +551,7 @@ Scalar TextViewer::inlineProgressionOffsetInViewport() const {
 
 	// scroll position
 	const NativePoint scrollPosition(physicalScrollPosition(*this));
-	offset -= (horizontal ? geometry::x(scrollPosition) : geometry::y(scrollPosition))
-		* textRenderer().defaultFont()->metrics().averageCharacterWidth();
+	offset -= inlineProgressionScrollOffsetInPixels(*textRenderer().viewport(), horizontal ? geometry::x(scrollPosition) : geometry::y(scrollPosition));
 
 	// ruler width
 	if((horizontal && rulerPainter_->alignment() == detail::RulerPainter::LEFT)
@@ -1867,17 +1866,16 @@ void TextViewport::scroll(SignedIndex dbpd, SignedIndex dipd, Widget* widget) {
 	// 2. calculate numbers of pixels to scroll
 	if(widget == nullptr)
 		return;
-	dipd *= textRenderer().defaultFont()->metrics().averageCharacterWidth();
 	NativeSize pixelsToScroll;
 	switch(textRenderer().writingMode().blockFlowDirection) {
 		case HORIZONTAL_TB:
-			pixelsToScroll = geometry::make<NativeSize>(dipd * textRenderer().defaultFont()->metrics().averageCharacterWidth(), dbpd);
+			pixelsToScroll = geometry::make<NativeSize>(inlineProgressionScrollOffsetInPixels(*this, dipd), dbpd);
 			break;
 		case VERTICAL_RL:
-			pixelsToScroll = geometry::make<NativeSize>(-dbpd, dipd * textRenderer().defaultFont()->metrics().averageCharacterWidth());
+			pixelsToScroll = geometry::make<NativeSize>(-dbpd, inlineProgressionScrollOffsetInPixels(*this, dipd));
 			break;
 		case VERTICAL_LR:
-			pixelsToScroll = geometry::make<NativeSize>(+dbpd, dipd * textRenderer().defaultFont()->metrics().averageCharacterWidth());
+			pixelsToScroll = geometry::make<NativeSize>(+dbpd, inlineProgressionScrollOffsetInPixels(*this, dipd));
 			break;
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
