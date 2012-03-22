@@ -671,26 +671,25 @@ void Caret::updateLocation() {
 	if(!viewer.hasFocus() || viewer.isFrozen())
 		return;
 
-	if(const shared_ptr<const font::TextViewport> viewport = viewer.textRenderer().viewport().lock()) {
-		NativePoint p(modelToView(*viewport, *this, false, font::TextLayout::LEADING));
-		const NativeRectangle contentRectangle(viewer.textAreaContentRectangle());
-		assert(geometry::isNormalized(contentRectangle));
+	const shared_ptr<const font::TextViewport> viewport(viewer.textRenderer().viewport());
+	NativePoint p(modelToView(*viewport, *this, false, font::TextLayout::LEADING));
+	const NativeRectangle contentRectangle(viewer.textAreaContentRectangle());
+	assert(geometry::isNormalized(contentRectangle));
 
-		if(!geometry::includes(contentRectangle, p)) {
-			// "hide" the caret
-			const Scalar linePitch = viewer.textRenderer().defaultFont()->metrics().linePitch();
-			if(isHorizontal(textViewer().textRenderer().writingMode().blockFlowDirection))
-				geometry::y(p) = -linePitch;
-			else
-				geometry::x(p) = -linePitch;
-		} else
-			geometry::translate(p, geometry::make<NativeSize>(
-				-geometry::x(shapeCache_.alignmentPoint), -geometry::y(shapeCache_.alignmentPoint)));
+	if(!geometry::includes(contentRectangle, p)) {
+		// "hide" the caret
+		const Scalar linePitch = viewer.textRenderer().defaultFont()->metrics().linePitch();
+		if(isHorizontal(textViewer().textRenderer().writingMode().blockFlowDirection))
+			geometry::y(p) = -linePitch;
+		else
+			geometry::x(p) = -linePitch;
+	} else
+		geometry::translate(p, geometry::make<NativeSize>(
+			-geometry::x(shapeCache_.alignmentPoint), -geometry::y(shapeCache_.alignmentPoint)));
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-		::SetCaretPos(geometry::x(p), geometry::y(p));
+	::SetCaretPos(geometry::x(p), geometry::y(p));
 #endif
-		adjustInputMethodCompositionWindow();
-	}
+	adjustInputMethodCompositionWindow();
 }
 
 inline void Caret::updateVisualAttributes() {
@@ -732,10 +731,9 @@ bool viewers::isPointOverSelection(const Caret& caret, const NativePoint& p) {
 		if(caret.textViewer().hitTest(p) == TextViewer::TEXT_AREA_CONTENT_RECTANGLE) {	// ignore if on the margin
 			const NativeRectangle viewerBounds(caret.textViewer().bounds(false));
 			if(geometry::x(p) <= geometry::right(viewerBounds) && geometry::y(p) <= geometry::bottom(viewerBounds)) {
-				if(const shared_ptr<const font::TextViewport> viewport = caret.textViewer().textRenderer().viewport().lock()) {
-					const boost::optional<Position> pos(viewToModelInBounds(*viewport, p, font::TextLayout::TRAILING));
-					return pos && *pos >= caret.beginning() && *pos <= caret.end();
-				}
+				const boost::optional<Position> pos(
+					viewToModelInBounds(*caret.textViewer().textRenderer().viewport(), p, font::TextLayout::TRAILING));
+				return pos && *pos >= caret.beginning() && *pos <= caret.end();
 			}
 		}
 	}

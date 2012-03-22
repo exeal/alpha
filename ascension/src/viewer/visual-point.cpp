@@ -47,42 +47,41 @@ void utils::recenter(VisualPoint& p) {
 void utils::show(VisualPoint& p) {
 	TextViewer& viewer = p.textViewer();
 	const font::TextRenderer& renderer = viewer.textRenderer();
-	if(const shared_ptr<font::TextViewport> viewport = renderer.viewport().lock()) {
-		const Position np(p.normalized());
-		const float visibleLines = viewport->numberOfVisibleLines();
-		Index bpd = viewport->firstVisibleLineInVisualNumber(), ipd = viewport->inlineProgressionOffset();	// scroll destination
+	const shared_ptr<font::TextViewport> viewport(viewer.textRenderer().viewport());
+	const Position np(p.normalized());
+	const float visibleLines = viewport->numberOfVisibleLines();
+	Index bpd = viewport->firstVisibleLineInVisualNumber(), ipd = viewport->inlineProgressionOffset();	// scroll destination
 
-		// scroll if the point is outside of 'before-edge' or 'after-edge'
-		bpd = min(p.visualLine(), bpd);
-		bpd = max(p.visualLine() - static_cast<Index>(viewport->numberOfVisibleLines()) + 1, bpd);
+	// scroll if the point is outside of 'before-edge' or 'after-edge'
+	bpd = min(p.visualLine(), bpd);
+	bpd = max(p.visualLine() - static_cast<Index>(viewport->numberOfVisibleLines()) + 1, bpd);
 
-		// scroll if the point is outside of 'start-edge' or 'end-edge'
+	// scroll if the point is outside of 'start-edge' or 'end-edge'
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
-//		if(!viewer.configuration().lineWrap.wrapsAtWindowEdge()) {
-			const font::Font::Metrics& fontMetrics = renderer.defaultFont()->metrics();
-			const Index visibleColumns = viewport->numberOfVisibleCharactersInLine();
-			const font::TextLayout& lineLayout = renderer.layouts().at(np.line);
-			const Scalar x = geometry::x(lineLayout.location(np.offsetInLine, font::TextLayout::LEADING)) + font::lineIndent(lineLayout, viewport->contentMeasure(), 0);
-			const Scalar scrollOffset = viewer.horizontalScrollBar().position() * viewer.scrollRate(true) * fontMetrics.averageCharacterWidth();
-			if(x <= scrollOffset)	// point is beyond left side of the viewport
-				geometry::x(to) = x / fontMetrics.averageCharacterWidth() - visibleColumns / 4;
-			else if(x >= static_cast<Scalar>((viewer.horizontalScrollBar().position()	// point is beyond right side of the viewport
-					* viewer.scrollRate(true) + visibleColumns) * fontMetrics.averageCharacterWidth()))
-				geometry::x(to) = x / fontMetrics.averageCharacterWidth() - visibleColumns * 3 / 4;
-			if(geometry::x(to) < -1)
-				geometry::x(to) = 0;
-//		}
+//	if(!viewer.configuration().lineWrap.wrapsAtWindowEdge()) {
+		const font::Font::Metrics& fontMetrics = renderer.defaultFont()->metrics();
+		const Index visibleColumns = viewport->numberOfVisibleCharactersInLine();
+		const font::TextLayout& lineLayout = renderer.layouts().at(np.line);
+		const Scalar x = geometry::x(lineLayout.location(np.offsetInLine, font::TextLayout::LEADING)) + font::lineIndent(lineLayout, viewport->contentMeasure(), 0);
+		const Scalar scrollOffset = viewer.horizontalScrollBar().position() * viewer.scrollRate(true) * fontMetrics.averageCharacterWidth();
+		if(x <= scrollOffset)	// point is beyond left side of the viewport
+			geometry::x(to) = x / fontMetrics.averageCharacterWidth() - visibleColumns / 4;
+		else if(x >= static_cast<Scalar>((viewer.horizontalScrollBar().position()	// point is beyond right side of the viewport
+				* viewer.scrollRate(true) + visibleColumns) * fontMetrics.averageCharacterWidth()))
+			geometry::x(to) = x / fontMetrics.averageCharacterWidth() - visibleColumns * 3 / 4;
+		if(geometry::x(to) < -1)
+			geometry::x(to) = 0;
+//	}
 #else
-		const font::TextLayout& layout = renderer.layouts().at(np.line);
-		const NativePoint location(layout.location(np.offsetInLine));
-		const Index pointIpd = (font::lineIndent(layout, viewport->contentMeasure())
-			+ isHorizontal(layout.writingMode().blockFlowDirection) ? geometry::x(location) : geometry::y(location))
-			/ renderer.defaultFont()->metrics().averageCharacterWidth();
-		ipd = min(pointIpd, ipd);
-		ipd = max(pointIpd - static_cast<Index>(viewport->numberOfVisibleCharactersInLine()) + 1, ipd);
+	const font::TextLayout& layout = renderer.layouts().at(np.line);
+	const NativePoint location(layout.location(np.offsetInLine));
+	const Index pointIpd = (font::lineIndent(layout, viewport->contentMeasure())
+		+ isHorizontal(layout.writingMode().blockFlowDirection) ? geometry::x(location) : geometry::y(location))
+		/ renderer.defaultFont()->metrics().averageCharacterWidth();
+	ipd = min(pointIpd, ipd);
+	ipd = max(pointIpd - static_cast<Index>(viewport->numberOfVisibleCharactersInLine()) + 1, ipd);
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
-		viewport->scrollTo(bpd, ipd, &viewer);
-	}
+	viewport->scrollTo(bpd, ipd, &viewer);
 }
 
 
@@ -261,7 +260,7 @@ inline void VisualPoint::rememberPositionInVisualLine() {
 		const font::TextRenderer& renderer = textViewer().textRenderer();
 		const font::TextLayout& layout = renderer.layouts().at(line(*this));
 		const NativePoint location(layout.location(offsetInLine(*this), font::TextLayout::LEADING));
-		positionInVisualLine_ = font::lineStartEdge(layout, renderer.viewport().lock()->contentMeasure())
+		positionInVisualLine_ = font::lineStartEdge(layout, renderer.viewport()->contentMeasure())
 			+ isHorizontal(layout.writingMode().blockFlowDirection) ? geometry::x(location) : geometry::y(location);
 	}
 }
@@ -317,10 +316,10 @@ void VisualPoint::visualLinesModified(const Range<Index>& lines, SignedIndex sub
  */
 BlockProgressionDestinationProxy locations::backwardPage(const VisualPoint& p, Index pages /* = 1 */) {
 	Index lines = 0;
-	if(const shared_ptr<const font::TextViewport> viewport = p.textViewer().textRenderer().viewport().lock()) {
-		// TODO: calculate exact number of visual lines.
-		lines = static_cast<Index>(viewport->numberOfVisibleLines() * pages);
-	}
+	const shared_ptr<const font::TextViewport> viewport(p.textViewer().textRenderer().viewport());
+	// TODO: calculate exact number of visual lines.
+	lines = static_cast<Index>(viewport->numberOfVisibleLines() * pages);
+
 	return backwardVisualLine(p, lines);
 }
 
@@ -333,23 +332,21 @@ BlockProgressionDestinationProxy locations::backwardPage(const VisualPoint& p, I
 BlockProgressionDestinationProxy locations::backwardVisualLine(const VisualPoint& p, Index lines /* = 1 */) {
 	Position np(p.normalized());
 	const font::TextRenderer& renderer = p.textViewer().textRenderer();
-	if(const shared_ptr<const font::TextViewport> viewport = renderer.viewport().lock()) {
-		Index subline = renderer.layouts().at(np.line).lineAt(np.offsetInLine);
-		if(np.line == 0 && subline == 0)
-			return VisualPoint::makeBlockProgressionDestinationProxy(np);
-		font::VisualLine visualLine(np.line, subline);
-		renderer.layouts().offsetVisualLine(visualLine, -static_cast<SignedIndex>(lines));
-		const font::TextLayout& layout = renderer.layouts().at(visualLine.line);
-		if(!p.positionInVisualLine_)
-			const_cast<VisualPoint&>(p).rememberPositionInVisualLine();
-		const Scalar ipd = *p.positionInVisualLine_ - font::lineStartEdge(layout, viewport->contentMeasure());
-		const Scalar bpd = layout.baseline(visualLine.subline);
-		np.offsetInLine = layout.offset(
-			isHorizontal(layout.writingMode().blockFlowDirection) ?
-				geometry::make<NativePoint>(ipd, bpd) : geometry::make<NativePoint>(bpd, ipd)).second;
-		if(layout.lineAt(np.offsetInLine) != visualLine.subline)
-			np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
-	}
+	Index subline = renderer.layouts().at(np.line).lineAt(np.offsetInLine);
+	if(np.line == 0 && subline == 0)
+		return VisualPoint::makeBlockProgressionDestinationProxy(np);
+	font::VisualLine visualLine(np.line, subline);
+	renderer.layouts().offsetVisualLine(visualLine, -static_cast<SignedIndex>(lines));
+	const font::TextLayout& layout = renderer.layouts().at(visualLine.line);
+	if(!p.positionInVisualLine_)
+		const_cast<VisualPoint&>(p).rememberPositionInVisualLine();
+	const Scalar ipd = *p.positionInVisualLine_ - font::lineStartEdge(layout, renderer.viewport()->contentMeasure());
+	const Scalar bpd = layout.baseline(visualLine.subline);
+	np.offsetInLine = layout.offset(
+		isHorizontal(layout.writingMode().blockFlowDirection) ?
+			geometry::make<NativePoint>(ipd, bpd) : geometry::make<NativePoint>(bpd, ipd)).second;
+	if(layout.lineAt(np.offsetInLine) != visualLine.subline)
+		np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
 	return VisualPoint::makeBlockProgressionDestinationProxy(np);
 }
 
@@ -459,10 +456,10 @@ Position locations::firstPrintableCharacterOfVisualLine(const VisualPoint& p) {
  */
 BlockProgressionDestinationProxy locations::forwardPage(const VisualPoint& p, Index pages /* = 1 */) {
 	Index lines = 0;
-	if(const shared_ptr<const font::TextViewport> viewport = p.textViewer().textRenderer().viewport().lock()) {
-		// TODO: calculate exact number of visual lines.
-		lines = static_cast<Index>(viewport->numberOfVisibleLines() * pages);
-	}
+	const shared_ptr<const font::TextViewport> viewport(p.textViewer().textRenderer().viewport());
+	// TODO: calculate exact number of visual lines.
+	lines = static_cast<Index>(viewport->numberOfVisibleLines() * pages);
+
 	return forwardVisualLine(p, lines);
 }
 
@@ -475,24 +472,23 @@ BlockProgressionDestinationProxy locations::forwardPage(const VisualPoint& p, In
 BlockProgressionDestinationProxy locations::forwardVisualLine(const VisualPoint& p, Index lines /* = 1 */) {
 	Position np(p.normalized());
 	const font::TextRenderer& renderer = p.textViewer().textRenderer();
-	if(const shared_ptr<const font::TextViewport> viewport = renderer.viewport().lock()) {
-		const font::TextLayout* layout = &renderer.layouts().at(np.line);
-		Index subline = layout->lineAt(np.offsetInLine);
-		if(np.line == p.document().numberOfLines() - 1 && subline == layout->numberOfLines() - 1)
-			return VisualPoint::makeBlockProgressionDestinationProxy(np);
-		font::VisualLine visualLine(np.line, subline);
-		renderer.layouts().offsetVisualLine(visualLine, static_cast<SignedIndex>(lines));
-		layout = &renderer.layouts().at(visualLine.line);
-		if(!p.positionInVisualLine_)
-			const_cast<VisualPoint&>(p).rememberPositionInVisualLine();
-		const Scalar ipd = *p.positionInVisualLine_ - font::lineStartEdge(*layout, viewport->contentMeasure());
-		const Scalar bpd = layout->baseline(visualLine.subline);
-		np.offsetInLine = layout->offset(
-			isHorizontal(layout->writingMode().blockFlowDirection) ?
-				geometry::make<NativePoint>(ipd, bpd) : geometry::make<NativePoint>(bpd, ipd)).second;
-		if(layout->lineAt(np.offsetInLine) != visualLine.subline)
-			np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
-	}
+	const font::TextLayout* layout = &renderer.layouts().at(np.line);
+	Index subline = layout->lineAt(np.offsetInLine);
+	if(np.line == p.document().numberOfLines() - 1 && subline == layout->numberOfLines() - 1)
+		return VisualPoint::makeBlockProgressionDestinationProxy(np);
+	font::VisualLine visualLine(np.line, subline);
+	renderer.layouts().offsetVisualLine(visualLine, static_cast<SignedIndex>(lines));
+	layout = &renderer.layouts().at(visualLine.line);
+	if(!p.positionInVisualLine_)
+		const_cast<VisualPoint&>(p).rememberPositionInVisualLine();
+	const Scalar ipd = *p.positionInVisualLine_ - font::lineStartEdge(*layout, renderer.viewport()->contentMeasure());
+	const Scalar bpd = layout->baseline(visualLine.subline);
+	np.offsetInLine = layout->offset(
+		isHorizontal(layout->writingMode().blockFlowDirection) ?
+			geometry::make<NativePoint>(ipd, bpd) : geometry::make<NativePoint>(bpd, ipd)).second;
+	if(layout->lineAt(np.offsetInLine) != visualLine.subline)
+		np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
+
 	return VisualPoint::makeBlockProgressionDestinationProxy(np);
 }
 

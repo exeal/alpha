@@ -459,34 +459,32 @@ namespace {
 		return textRenderer.layouts().maximumMeasure()
 			/ textRenderer.defaultFont()->metrics().averageCharacterWidth()
 			- position
-			- static_cast<TextViewer::ScrollPosition>(textRenderer.viewport().lock()->numberOfVisibleCharactersInLine());
+			- static_cast<TextViewer::ScrollPosition>(textRenderer.viewport()->numberOfVisibleCharactersInLine());
 	}
 	NativePoint physicalScrollPosition(const TextViewer& viewer) {
-		if(const shared_ptr<const TextViewport> viewport = viewer.textRenderer().viewport().lock()) {
-			const Index bpd = viewport->firstVisibleLineInVisualNumber();
-			const Index ipd = viewport->inlineProgressionOffset();
-			const WritingMode writingMode(viewer.textRenderer().writingMode());
-			TextViewer::ScrollPosition x, y;
-			switch(writingMode.blockFlowDirection) {
-				case HORIZONTAL_TB:
-					x = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ?
-						ipd : reverseScrollPosition(viewer.textRenderer(), static_cast<TextViewer::ScrollPosition>(ipd));
-					y = bpd;
-					break;
-				case VERTICAL_RL:
-					x = reverseScrollPosition(viewer.textRenderer(), bpd);
-					y = ipd;
-					break;
-				case VERTICAL_LR:
-					x = bpd;
-					y = ipd;
-					break;
-				default:
-					ASCENSION_ASSERT_NOT_REACHED();
-			}
-			return geometry::make<NativePoint>(x /* / xScrollRate */, y /* / yScrollRate */);
+		const shared_ptr<const TextViewport> viewport(viewer.textRenderer().viewport());
+		const Index bpd = viewport->firstVisibleLineInVisualNumber();
+		const Index ipd = viewport->inlineProgressionOffset();
+		const WritingMode writingMode(viewer.textRenderer().writingMode());
+		TextViewer::ScrollPosition x, y;
+		switch(writingMode.blockFlowDirection) {
+			case HORIZONTAL_TB:
+				x = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ?
+					ipd : reverseScrollPosition(viewer.textRenderer(), static_cast<TextViewer::ScrollPosition>(ipd));
+				y = bpd;
+				break;
+			case VERTICAL_RL:
+				x = reverseScrollPosition(viewer.textRenderer(), bpd);
+				y = ipd;
+				break;
+			case VERTICAL_LR:
+				x = bpd;
+				y = ipd;
+				break;
+			default:
+				ASCENSION_ASSERT_NOT_REACHED();
 		}
-		return geometry::make<NativePoint>(0, 0);
+		return geometry::make<NativePoint>(x /* / xScrollRate */, y /* / yScrollRate */);
 	}
 }
 
@@ -663,10 +661,9 @@ void TextViewer::keyPressed(const KeyInput& input) {
 		if(hasModifier<UserInput::ALT_DOWN>(input)
 				&& hasModifier<UserInput::SHIFT_DOWN>(input) && !hasModifier<UserInput::CONTROL_DOWN>(input))
 			makeRowSelectionExtensionCommand(*this, &k::locations::backwardVisualLine)();
-		else if(hasModifier<UserInput::CONTROL_DOWN>(input) && !hasModifier<UserInput::SHIFT_DOWN>(input)) {
-			if(const shared_ptr<TextViewport> viewport = textRenderer().viewport().lock())
-				viewport->scroll(geometry::make<NativeSize>(0, -1), this);
-		} else
+		else if(hasModifier<UserInput::CONTROL_DOWN>(input) && !hasModifier<UserInput::SHIFT_DOWN>(input))
+			textRenderer().viewport()->scroll(geometry::make<NativeSize>(0, -1), this);
+		else
 			makeCaretMovementCommand(*this, &k::locations::backwardVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
 	case keyboardcodes::RIGHT:	// [Right]
@@ -689,10 +686,9 @@ void TextViewer::keyPressed(const KeyInput& input) {
 		if(hasModifier<UserInput::ALT_DOWN>(input)
 				&& hasModifier<UserInput::SHIFT_DOWN>(input) && !hasModifier<UserInput::CONTROL_DOWN>(input))
 			makeRowSelectionExtensionCommand(*this, &k::locations::forwardVisualLine)();
-		else if(hasModifier<UserInput::CONTROL_DOWN>(input) && !hasModifier<UserInput::SHIFT_DOWN>(input)) {
-			if(const shared_ptr<TextViewport> viewport = textRenderer().viewport().lock())
-				viewport->scroll(geometry::make<NativeSize>(0, +1), this);
-		} else
+		else if(hasModifier<UserInput::CONTROL_DOWN>(input) && !hasModifier<UserInput::SHIFT_DOWN>(input))
+			textRenderer().viewport()->scroll(geometry::make<NativeSize>(0, +1), this);
+		else
 			makeCaretMovementCommand(*this, &k::locations::forwardVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
 	case keyboardcodes::INSERT:	// [Insert]
@@ -782,7 +778,7 @@ void TextViewer::keyReleased(const KeyInput& input) {
  */
 inline Scalar TextViewer::mapLineLayoutIpdToViewport(Index line, Scalar ipd) const {
 	return ipd + lineStartEdge(textRenderer().layouts().at(line),
-		textRenderer().viewport().lock()->contentMeasure()) + inlineProgressionOffsetInViewport();
+		textRenderer().viewport()->contentMeasure()) + inlineProgressionOffsetInViewport();
 }
 
 /**
@@ -791,7 +787,7 @@ inline Scalar TextViewer::mapLineLayoutIpdToViewport(Index line, Scalar ipd) con
  */
 inline Scalar TextViewer::mapViewportIpdToLineLayout(Index line, Scalar ipd) const {
 	return ipd - lineStartEdge(textRenderer().layouts().at(line),
-		textRenderer().viewport().lock()->contentMeasure()) - inlineProgressionOffsetInViewport();
+		textRenderer().viewport()->contentMeasure()) - inlineProgressionOffsetInViewport();
 }
 
 #if 0
@@ -958,7 +954,7 @@ void TextViewer::redrawLines(const Range<Index>& lines) {
 		return;
 	}
 
-	if(lines.end() - 1 < textRenderer().viewport().lock()->firstVisibleLineInLogicalNumber())
+	if(lines.end() - 1 < textRenderer().viewport()->firstVisibleLineInLogicalNumber())
 		return;
 
 #ifdef _DEBUG
@@ -975,7 +971,7 @@ void TextViewer::redrawLines(const Range<Index>& lines) {
 	mapPhysicalToAbstract(writingMode, viewport, viewport, abstractBounds);
 
 	// calculate before and after edges of a rectangle to redraw
-	BaselineIterator baseline(*textRenderer().viewport().lock(), lines.beginning(), false);
+	BaselineIterator baseline(*textRenderer().viewport(), lines.beginning(), false);
 	if(*baseline != numeric_limits<Scalar>::min())
 		abstractBounds.before() = mapTextAreaBpdToLocal(*this, *baseline)
 			- textRenderer().layouts().at(lines.beginning()).lineMetrics(0).ascent();
@@ -1026,8 +1022,7 @@ void TextViewer::resized(State state, const NativeSize&) {
 		return;
 	if(renderer_.get() == nullptr)
 		return;
-	if(const shared_ptr<TextViewport> viewport = textRenderer().viewport().lock())
-		viewport->setBoundsInView(textAreaContentRectangle());
+	textRenderer().viewport()->setBoundsInView(textAreaContentRectangle());
 }
 
 /// @see CaretStateListener#selectionShapeChanged
@@ -1214,61 +1209,60 @@ void TextViewer::updateScrollBars() {
 //	checkInitialization();
 	if(renderer_.get() == nullptr || isFrozen())
 		return;
-	else if(const shared_ptr<TextViewport> viewport = textRenderer().viewport().lock()) {
-		const LineLayoutVector& layouts = textRenderer().layouts();
-		const NativePoint positions(physicalScrollPosition(*this));
-		NativePoint endPositions(geometry::make<NativePoint>(layouts.maximumMeasure(),
-			static_cast<geometry::Coordinate<NativePoint>::Type>(layouts.numberOfVisualLines())));
-		NativePoint pageSteps(geometry::make<NativePoint>(
-			static_cast<geometry::Coordinate<NativePoint>::Type>(viewport->numberOfVisibleCharactersInLine()),
-			static_cast<geometry::Coordinate<NativePoint>::Type>(viewport->numberOfVisibleLines())));
-		if(isVertical(textRenderer().writingMode().blockFlowDirection)) {
-			geometry::transpose(endPositions);
-			geometry::transpose(pageSteps);
-		}
+	const shared_ptr<TextViewport> viewport(textRenderer().viewport());
+	const LineLayoutVector& layouts = textRenderer().layouts();
+	const NativePoint positions(physicalScrollPosition(*this));
+	NativePoint endPositions(geometry::make<NativePoint>(layouts.maximumMeasure(),
+		static_cast<geometry::Coordinate<NativePoint>::Type>(layouts.numberOfVisualLines())));
+	NativePoint pageSteps(geometry::make<NativePoint>(
+		static_cast<geometry::Coordinate<NativePoint>::Type>(viewport->numberOfVisibleCharactersInLine()),
+		static_cast<geometry::Coordinate<NativePoint>::Type>(viewport->numberOfVisibleLines())));
+	if(isVertical(textRenderer().writingMode().blockFlowDirection)) {
+		geometry::transpose(endPositions);
+		geometry::transpose(pageSteps);
+	}
 
 #define ASCENSION_GET_SCROLL_MINIMUM(endPosition, pageStep)	(endPosition/* * rate*/ - pageStep + 1)
 
-		// about horizontal scroll bar
-		bool wasNeededScrollbar = ASCENSION_GET_SCROLL_MINIMUM(geometry::x(endPositions), geometry::x(pageSteps)) > 0;
-		// scroll to leftmost/rightmost before the scroll bar vanishes
-		ScrollPosition minimum = ASCENSION_GET_SCROLL_MINIMUM(geometry::x(endPositions), geometry::x(pageSteps));
-		if(wasNeededScrollbar && minimum <= 0) {
-//			scrolls_.horizontal.position = 0;
-			if(!isFrozen()) {
-				scheduleRedraw(false);
-				caret().updateLocation();
-			}
-		} else if(static_cast<ScrollPosition>(geometry::x(positions)) > minimum)
-			viewport->scrollTo(geometry::make<NativePoint>(minimum, geometry::y(positions)), this);
-		assert(ASCENSION_GET_SCROLL_MINIMUM(geometry::x(endPositions), geometry::x(pageSteps)) > 0 || geometry::x(positions) == 0);
+	// about horizontal scroll bar
+	bool wasNeededScrollbar = ASCENSION_GET_SCROLL_MINIMUM(geometry::x(endPositions), geometry::x(pageSteps)) > 0;
+	// scroll to leftmost/rightmost before the scroll bar vanishes
+	ScrollPosition minimum = ASCENSION_GET_SCROLL_MINIMUM(geometry::x(endPositions), geometry::x(pageSteps));
+	if(wasNeededScrollbar && minimum <= 0) {
+//		scrolls_.horizontal.position = 0;
 		if(!isFrozen()) {
-			ScrollProperties<ScrollPosition>& scrollBar = horizontalScrollBar();
-			scrollBar.setRange(makeRange<ScrollPosition>(0, geometry::x(endPositions)));
-			scrollBar.setPageStep(geometry::x(pageSteps));
-			scrollBar.setPosition(geometry::x(positions));
+			scheduleRedraw(false);
+			caret().updateLocation();
 		}
+	} else if(static_cast<ScrollPosition>(geometry::x(positions)) > minimum)
+		viewport->scrollTo(geometry::make<NativePoint>(minimum, geometry::y(positions)), this);
+	assert(ASCENSION_GET_SCROLL_MINIMUM(geometry::x(endPositions), geometry::x(pageSteps)) > 0 || geometry::x(positions) == 0);
+	if(!isFrozen()) {
+		ScrollProperties<ScrollPosition>& scrollBar = horizontalScrollBar();
+		scrollBar.setRange(makeRange<ScrollPosition>(0, geometry::x(endPositions)));
+		scrollBar.setPageStep(geometry::x(pageSteps));
+		scrollBar.setPosition(geometry::x(positions));
+	}
 
-		// about vertical scroll bar
-		wasNeededScrollbar = ASCENSION_GET_SCROLL_MINIMUM(geometry::y(endPositions), geometry::y(pageSteps)) > 0;
-		minimum = ASCENSION_GET_SCROLL_MINIMUM(geometry::y(endPositions), geometry::y(pageSteps));
-		// validate scroll position
-		if(minimum <= 0) {
-//			scrolls_.vertical.position = 0;
-//			scrolls_.firstVisibleLine = VisualLine(0, 0);
-			if(!isFrozen()) {
-				scheduleRedraw(false);
-				caret().updateLocation();
-			}
-		} else if(static_cast<ScrollPosition>(geometry::y(positions)) > minimum)
-			viewport->scrollTo(geometry::make<NativePoint>(geometry::x(positions), minimum), this);
-		assert(ASCENSION_GET_SCROLL_MINIMUM(geometry::y(endPositions), geometry::y(pageSteps)) > 0 || geometry::y(positions) == 0);
+	// about vertical scroll bar
+	wasNeededScrollbar = ASCENSION_GET_SCROLL_MINIMUM(geometry::y(endPositions), geometry::y(pageSteps)) > 0;
+	minimum = ASCENSION_GET_SCROLL_MINIMUM(geometry::y(endPositions), geometry::y(pageSteps));
+	// validate scroll position
+	if(minimum <= 0) {
+//		scrolls_.vertical.position = 0;
+//		scrolls_.firstVisibleLine = VisualLine(0, 0);
 		if(!isFrozen()) {
-			ScrollProperties<ScrollPosition>& scrollBar = verticalScrollBar();
-			scrollBar.setRange(makeRange<ScrollPosition>(0, geometry::y(endPositions)));
-			scrollBar.setPageStep(geometry::y(pageSteps));
-			scrollBar.setPosition(geometry::y(positions));
+			scheduleRedraw(false);
+			caret().updateLocation();
 		}
+	} else if(static_cast<ScrollPosition>(geometry::y(positions)) > minimum)
+		viewport->scrollTo(geometry::make<NativePoint>(geometry::x(positions), minimum), this);
+	assert(ASCENSION_GET_SCROLL_MINIMUM(geometry::y(endPositions), geometry::y(pageSteps)) > 0 || geometry::y(positions) == 0);
+	if(!isFrozen()) {
+		ScrollProperties<ScrollPosition>& scrollBar = verticalScrollBar();
+		scrollBar.setRange(makeRange<ScrollPosition>(0, geometry::y(endPositions)));
+		scrollBar.setPageStep(geometry::y(pageSteps));
+		scrollBar.setPosition(geometry::y(positions));
 	}
 
 	scrolls_.changed = isFrozen();
@@ -1278,37 +1272,38 @@ void TextViewer::updateScrollBars() {
 
 /// @see TextViewportListener#viewportPositionChanged
 void TextViewer::viewportPositionChanged(const VisualLine& oldLine, Index oldInlineProgressionOffset) {
-	if(isFrozen())
+	if(isFrozen()) {
 		scrolls_.changed = true;
-	else if(const shared_ptr<TextViewport> viewport = textRenderer().viewport().lock()) {
-		// TODO: this code ignores orientation in vertical layout.
-		switch(textRenderer().writingMode().blockFlowDirection) {
-			case HORIZONTAL_TB:
-				horizontalScrollBar().setPosition(viewport->inlineProgressionOffset());
-				verticalScrollBar().setPosition(viewport->firstVisibleLineInVisualNumber());
-				break;
-			case VERTICAL_RL:
-				horizontalScrollBar().setPosition(horizontalScrollBar().range().end()
-					- horizontalScrollBar().pageStep() - viewport->firstVisibleLineInVisualNumber());
-				verticalScrollBar().setPosition(viewport->inlineProgressionOffset());
-				break;
-			case VERTICAL_LR:
-				horizontalScrollBar().setPosition(viewport->firstVisibleLineInVisualNumber());
-				verticalScrollBar().setPosition(viewport->inlineProgressionOffset());
-				break;
-			default:
-				ASCENSION_ASSERT_NOT_REACHED();
-		}
-
-//		closeCompletionProposalsPopup(*this);
-		hideToolTip();
-
-		// scroll the ruler
-		rulerPainter_->scroll(oldLine);
-
-		// repaint
-		redrawScheduledRegion();
+		return;
 	}
+	const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
+	// TODO: this code ignores orientation in vertical layout.
+	switch(textRenderer().writingMode().blockFlowDirection) {
+		case HORIZONTAL_TB:
+			horizontalScrollBar().setPosition(viewport->inlineProgressionOffset());
+			verticalScrollBar().setPosition(viewport->firstVisibleLineInVisualNumber());
+			break;
+		case VERTICAL_RL:
+			horizontalScrollBar().setPosition(horizontalScrollBar().range().end()
+				- horizontalScrollBar().pageStep() - viewport->firstVisibleLineInVisualNumber());
+			verticalScrollBar().setPosition(viewport->inlineProgressionOffset());
+			break;
+		case VERTICAL_LR:
+			horizontalScrollBar().setPosition(viewport->firstVisibleLineInVisualNumber());
+			verticalScrollBar().setPosition(viewport->inlineProgressionOffset());
+			break;
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+
+//	closeCompletionProposalsPopup(*this);
+	hideToolTip();
+
+	// scroll the ruler
+	rulerPainter_->scroll(oldLine);
+
+	// repaint
+	redrawScheduledRegion();
 }
 
 /// @see TextViewportListener#viewportSizeChanged
@@ -1336,44 +1331,42 @@ void TextViewer::viewportSizeChanged(const NativeSize& oldSize) {
 /// @see VisualLinesListener#visualLinesDeleted
 void TextViewer::visualLinesDeleted(const Range<Index>& lines, Index sublines, bool longestLineChanged) /*throw()*/ {
 	scrolls_.changed = true;
-	if(const shared_ptr<const TextViewport> viewport = textRenderer().viewport().lock()) {
-		if(lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// deleted before visible area
-//			scrolls_.firstVisibleLine.line -= length(lines);
-//			scrolls_.vertical.position -= static_cast<int>(sublines);
-//			scrolls_.vertical.maximum -= static_cast<int>(sublines);
-			repaintRuler();
-		} else if(lines.beginning() > viewport->firstVisibleLineInLogicalNumber()	// deleted the first visible line and/or after it
-				|| (lines.beginning() == viewport->firstVisibleLineInLogicalNumber() && viewport->firstVisibleSublineInLogicalLine() == 0)) {
-//			scrolls_.vertical.maximum -= static_cast<int>(sublines);
-			redrawLine(lines.beginning(), true);
-		} else {	// deleted lines contain the first visible line
-//			scrolls_.firstVisibleLine.line = lines.beginning();
-//			scrolls_.updateVertical(*this);
-			redrawLine(lines.beginning(), true);
-		}
-		if(longestLineChanged)
-			scrolls_.resetBars(*this, 'i', false);
+	const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
+	if(lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// deleted before visible area
+//		scrolls_.firstVisibleLine.line -= length(lines);
+//		scrolls_.vertical.position -= static_cast<int>(sublines);
+//		scrolls_.vertical.maximum -= static_cast<int>(sublines);
+		repaintRuler();
+	} else if(lines.beginning() > viewport->firstVisibleLineInLogicalNumber()	// deleted the first visible line and/or after it
+			|| (lines.beginning() == viewport->firstVisibleLineInLogicalNumber() && viewport->firstVisibleSublineInLogicalLine() == 0)) {
+//		scrolls_.vertical.maximum -= static_cast<int>(sublines);
+		redrawLine(lines.beginning(), true);
+	} else {	// deleted lines contain the first visible line
+//		scrolls_.firstVisibleLine.line = lines.beginning();
+//		scrolls_.updateVertical(*this);
+		redrawLine(lines.beginning(), true);
 	}
+	if(longestLineChanged)
+		scrolls_.resetBars(*this, 'i', false);
 }
 
 /// @see VisualLinesListener#visualLinesInserted
 void TextViewer::visualLinesInserted(const Range<Index>& lines) /*throw()*/ {
 	scrolls_.changed = true;
-	if(const shared_ptr<const TextViewport> viewport = textRenderer().viewport().lock()) {
-		if(lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// inserted before visible area
-//			scrolls_.firstVisibleLine.line += length(lines);
-//			scrolls_.vertical.position += static_cast<int>(length(lines));
-//			scrolls_.vertical.maximum += static_cast<int>(length(lines));
-			repaintRuler();
-		} else if(lines.beginning() > viewport->firstVisibleLineInLogicalNumber()	// inserted at or after the first visible line
-				|| (lines.beginning() == viewport->firstVisibleLineInLogicalNumber() && viewport->firstVisibleSublineInLogicalLine() == 0)) {
-//			scrolls_.vertical.maximum += static_cast<int>(length(lines));
-			redrawLine(lines.beginning(), true);
-		} else {	// inserted around the first visible line
-//			scrolls_.firstVisibleLine.line += length(lines);
-//			scrolls_.updateVertical(*this);
-			redrawLine(lines.beginning(), true);
-		}
+	const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
+	if(lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// inserted before visible area
+//		scrolls_.firstVisibleLine.line += length(lines);
+//		scrolls_.vertical.position += static_cast<int>(length(lines));
+//		scrolls_.vertical.maximum += static_cast<int>(length(lines));
+		repaintRuler();
+	} else if(lines.beginning() > viewport->firstVisibleLineInLogicalNumber()	// inserted at or after the first visible line
+			|| (lines.beginning() == viewport->firstVisibleLineInLogicalNumber() && viewport->firstVisibleSublineInLogicalLine() == 0)) {
+//		scrolls_.vertical.maximum += static_cast<int>(length(lines));
+		redrawLine(lines.beginning(), true);
+	} else {	// inserted around the first visible line
+//		scrolls_.firstVisibleLine.line += length(lines);
+//		scrolls_.updateVertical(*this);
+		redrawLine(lines.beginning(), true);
 	}
 }
 
@@ -1382,7 +1375,8 @@ void TextViewer::visualLinesModified(const Range<Index>& lines,
 		SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/ {
 	if(sublinesDifference == 0)	// number of visual lines was not changed
 		redrawLines(lines);
-	else if(const shared_ptr<const TextViewport> viewport = textRenderer().viewport().lock()) {
+	else {
+		const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
 		scrolls_.changed = true;
 		if(lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// changed before visible area
 //			scrolls_.vertical.position += sublinesDifference;
@@ -1629,18 +1623,18 @@ bool VirtualBox::includes(const NativePoint& p) const /*throw()*/ {
 	// TODO: This code can't handle vertical writing-mode.
 //	assert(viewer_.isWindow());
 	if(viewer_.hitTest(p) == TextViewer::TEXT_AREA_CONTENT_RECTANGLE) {	// ignore if not in text area
-		if(const shared_ptr<const TextViewport> viewport = viewer_.textRenderer().viewport().lock()) {
-			// about inline-progression-direction
-			const bool horizontal = isHorizontal(viewer_.textRenderer().writingMode().blockFlowDirection);
-			const Scalar ipd = (horizontal ? geometry::x(p) : geometry::y(p)) - viewer_.inlineProgressionOffsetInViewport();	// $friendly-access
-			if(ascension::includes(makeRange(startEdge(), endEdge()), ipd)) {
-				// about block-progression-direction
-				graphics::NativePoint pointInViewport(p);
-				geometry::translate(pointInViewport, geometry::make<NativeSize>(
-					geometry::left(viewport->boundsInView()), geometry::top(viewport->boundsInView())));
-				const VisualLine line(locateLine(*viewport, pointInViewport));
-				return line >= beginning().line && line <= end().line;
-			}
+		// about inline-progression-direction
+		const bool horizontal = isHorizontal(viewer_.textRenderer().writingMode().blockFlowDirection);
+		const Scalar ipd = (horizontal ? geometry::x(p) : geometry::y(p)) - viewer_.inlineProgressionOffsetInViewport();	// $friendly-access
+		if(ascension::includes(makeRange(startEdge(), endEdge()), ipd)) {
+			// about block-progression-direction
+			const shared_ptr<const TextViewport> viewport(viewer_.textRenderer().viewport());
+			graphics::NativePoint pointInViewport(p);
+			const graphics::NativeRectangle viewportBoundsInView(viewport->boundsInView());
+			geometry::translate(pointInViewport, geometry::make<NativeSize>(
+				geometry::left(viewportBoundsInView), geometry::top(viewportBoundsInView)));
+			const VisualLine line(locateLine(*viewport, pointInViewport));
+			return line >= beginning().line && line <= end().line;
 		}
 	}
 	return false;
@@ -2005,13 +1999,11 @@ boost::optional<k::Region> source::getNearestIdentifier(const k::Document& docum
  */
 boost::optional<k::Region> source::getPointedIdentifier(const TextViewer& viewer) {
 //	if(viewer.isWindow()) {
-		if(const shared_ptr<const TextViewport> viewport = viewer.textRenderer().viewport().lock()) {
-			NativePoint cursorPoint;
-			::GetCursorPos(&cursorPoint);
-			viewer.mapFromGlobal(cursorPoint);
-			return source::getNearestIdentifier(viewer.document(),
-				viewToModel(*viewport, cursorPoint, TextLayout::LEADING));
-		}
+		NativePoint cursorPoint;
+		::GetCursorPos(&cursorPoint);
+		viewer.mapFromGlobal(cursorPoint);
+		return source::getNearestIdentifier(viewer.document(),
+			viewToModel(*viewer.textRenderer().viewport(), cursorPoint, TextLayout::LEADING));
 //	}
 	return boost::none;
 }

@@ -330,25 +330,23 @@ void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
 
 	if((state_ == DND_SOURCE || state_ == DND_TARGET)
 			&& !viewer_->document().isReadOnly() && viewer_->allowsMouseInput()) {
-		if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
-			const NativePoint caretPoint(viewer_->mapFromGlobal(input.location()));
-			const k::Position p(viewToModel(*viewport, caretPoint, TextLayout::TRAILING));
-//			viewer_->setCaretPosition(viewer_->localPointForCharacter(p, true, TextLayout::LEADING));
+		const NativePoint caretPoint(viewer_->mapFromGlobal(input.location()));
+		const k::Position p(viewToModel(*viewer_->textRenderer().viewport(), caretPoint, TextLayout::TRAILING));
+//		viewer_->setCaretPosition(viewer_->localPointForCharacter(p, true, TextLayout::LEADING));
 
-			// drop rectangle text into bidirectional line is not supported...
-			if(dnd_.numberOfRectangleLines == 0)
-				acceptable = true;
-			else {
-				const Index lines = min(viewer_->document().numberOfLines(), p.line + dnd_.numberOfRectangleLines);
-				bool bidirectional = false;
-				for(Index line = p.line; line < lines; ++line) {
-					if(viewer_->textRenderer().layouts()[line].isBidirectional()) {
-						bidirectional = true;
-						break;
-					}
+		// drop rectangle text into bidirectional line is not supported...
+		if(dnd_.numberOfRectangleLines == 0)
+			acceptable = true;
+		else {
+			const Index lines = min(viewer_->document().numberOfLines(), p.line + dnd_.numberOfRectangleLines);
+			bool bidirectional = false;
+			for(Index line = p.line; line < lines; ++line) {
+				if(viewer_->textRenderer().layouts()[line].isBidirectional()) {
+					bidirectional = true;
+					break;
 				}
-				acceptable = !bidirectional;
 			}
+			acceptable = !bidirectional;
 		}
 	}
 
@@ -359,13 +357,11 @@ void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 			dropAction |= DROP_ACTION_WIN32_SCROLL;
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
-			if(const shared_ptr<TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
-				// only one direction to scroll
-				if(geometry::dy(scrollOffset) != 0)
-					viewport->scroll(geometry::make<NativeSize>(0, geometry::dy(scrollOffset)), viewer_);
-				else
-					viewport->scroll(geometry::make<NativeSize>(geometry::dx(scrollOffset), 0), viewer_);
-			}
+			// only one direction to scroll
+			if(geometry::dy(scrollOffset) != 0)
+				viewer_->textRenderer().viewport()->scroll(geometry::make<NativeSize>(0, geometry::dy(scrollOffset)), viewer_);
+			else
+				viewer_->textRenderer().viewport()->scroll(geometry::make<NativeSize>(geometry::dx(scrollOffset), 0), viewer_);
 		}
 	}
 	input.setDropAction(dropAction);
@@ -373,13 +369,11 @@ void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
 
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 	if(dnd_.dropTargetHelper.get() != nullptr) {
-		const shared_ptr<TextViewport> viewport(viewer_->textRenderer().viewport().lock());
-		if(viewport.get() != nullptr)
-			viewport->lockScroll();
+		const shared_ptr<TextViewport> viewport(viewer_->textRenderer().viewport());
+		viewport->lockScroll();
 		POINT location(input.location());
 		dnd_.dropTargetHelper->DragOver(&location, translateDropAction(dropAction));	// damn! IDropTargetHelper scrolls the view
-		if(viewport.get() != nullptr)
-			viewport->unlockScroll();
+		viewport->unlockScroll();
 	}
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 }
@@ -422,7 +416,7 @@ void DefaultMouseInputStrategy::extendSelectionTo(const k::Position* to /* = nul
 				min<Scalar>(
 					max<Scalar>(geometry::y(p), geometry::top(contentRectangle)),
 					geometry::bottom(contentRectangle)));
-		destination = viewToModel(*viewer_->textRenderer().viewport().lock(), p, TextLayout::TRAILING);
+		destination = viewToModel(*viewer_->textRenderer().viewport(), p, TextLayout::TRAILING);
 	} else
 		destination = *to;
 
@@ -492,16 +486,14 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 
 	// select line(s)
 	if((htr & TextViewer::RULER_MASK) != 0) {
-		if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
-			const k::Position to(viewToModel(*viewport, position, TextLayout::LEADING));
-			const bool extend = win32::boole(modifiers & MK_SHIFT) && to.line != line(caret.anchor());
-			state_ = EXTENDING_LINE_SELECTION;
-			selection_.initialLine = extend ? line(caret.anchor()) : to.line;
-			viewer_->caret().endRectangleSelection();
-			extendSelectionTo(&to);
-			viewer_->grabInput();
-			timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
-		}
+		const k::Position to(viewToModel(*viewer_->textRenderer().viewport(), position, TextLayout::LEADING));
+		const bool extend = win32::boole(modifiers & MK_SHIFT) && to.line != line(caret.anchor());
+		state_ = EXTENDING_LINE_SELECTION;
+		selection_.initialLine = extend ? line(caret.anchor()) : to.line;
+		viewer_->caret().endRectangleSelection();
+		extendSelectionTo(&to);
+		viewer_->grabInput();
+		timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
 	}
 
 	// approach drag-and-drop
@@ -517,12 +509,10 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 		bool hyperlinkInvoked = false;
 		if(win32::boole(modifiers & MK_CONTROL)) {
 			if(!isPointOverSelection(caret, position)) {
-				if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
-					if(const boost::optional<k::Position> p = viewToModelInBounds(*viewport, position, TextLayout::TRAILING)) {
-						if(const hyperlink::Hyperlink* link = utils::getPointedHyperlink(*viewer_, *p)) {
-							link->invoke();
-							hyperlinkInvoked = true;
-						}
+				if(const boost::optional<k::Position> p = viewToModelInBounds(*viewer_->textRenderer().viewport(), position, TextLayout::TRAILING)) {
+					if(const hyperlink::Hyperlink* link = utils::getPointedHyperlink(*viewer_, *p)) {
+						link->invoke();
+						hyperlinkInvoked = true;
 					}
 				}
 			}
@@ -534,29 +524,27 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 			// shift => keep the anchor and move the caret to the cursor position
 			// ctrl  => begin word selection
 			// alt   => begin rectangle selection
-			if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
-				if(const boost::optional<k::Position> to = viewToModelInBounds(*viewport, position, TextLayout::TRAILING)) {
-					state_ = EXTENDING_CHARACTER_SELECTION;
-					if((modifiers & (UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN)) != 0) {
-						if((modifiers & UserInput::CONTROL_DOWN) != 0) {
-							// begin word selection
-							state_ = EXTENDING_WORD_SELECTION;
-							caret.moveTo((modifiers & UserInput::SHIFT_DOWN) != 0 ? caret.anchor() : *to);
-							selectWord(caret);
-							selection_.initialLine = line(caret);
-							selection_.initialWordColumns = make_pair(offsetInLine(caret.beginning()), offsetInLine(caret.end()));
-						}
-						if((modifiers & UserInput::SHIFT_DOWN) != 0)
-							extendSelectionTo(&*to);
-					} else
-						caret.moveTo(*to);
-					if((modifiers & UserInput::ALT_DOWN) != 0)	// make the selection reactangle
-						caret.beginRectangleSelection();
-					else
-						caret.endRectangleSelection();
-					viewer_->grabInput();
-					timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
-				}
+			if(const boost::optional<k::Position> to = viewToModelInBounds(*viewer_->textRenderer().viewport(), position, TextLayout::TRAILING)) {
+				state_ = EXTENDING_CHARACTER_SELECTION;
+				if((modifiers & (UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN)) != 0) {
+					if((modifiers & UserInput::CONTROL_DOWN) != 0) {
+						// begin word selection
+						state_ = EXTENDING_WORD_SELECTION;
+						caret.moveTo((modifiers & UserInput::SHIFT_DOWN) != 0 ? caret.anchor() : *to);
+						selectWord(caret);
+						selection_.initialLine = line(caret);
+						selection_.initialWordColumns = make_pair(offsetInLine(caret.beginning()), offsetInLine(caret.end()));
+					}
+					if((modifiers & UserInput::SHIFT_DOWN) != 0)
+						extendSelectionTo(&*to);
+				} else
+					caret.moveTo(*to);
+				if((modifiers & UserInput::ALT_DOWN) != 0)	// make the selection reactangle
+					caret.beginRectangleSelection();
+				else
+					caret.endRectangleSelection();
+				viewer_->grabInput();
+				timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
 			}
 		}
 	}
@@ -572,11 +560,9 @@ void DefaultMouseInputStrategy::handleLeftButtonReleased(const NativePoint& posi
 	if(dnd_.supportLevel >= SUPPORT_DND
 			&& (state_ == APPROACHING_DND
 			|| state_ == DND_SOURCE)) {	// TODO: this should handle only case APPROACHING_DND?
-		if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
-			state_ = NONE;
-			viewer_->caret().moveTo(viewToModel(*viewport, position, TextLayout::TRAILING));
-			::SetCursor(::LoadCursor(nullptr, IDC_IBEAM));	// hmm...
-		}
+		state_ = NONE;
+		viewer_->caret().moveTo(viewToModel(*viewer_->textRenderer().viewport(), position, TextLayout::TRAILING));
+		::SetCursor(::LoadCursor(nullptr, IDC_IBEAM));	// hmm...
 	}
 
 	timer_.stop();
@@ -670,22 +656,20 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Action action, const base::Mous
 		break;
 	case UserInput::BUTTON2_DOWN:
 		if(action == PRESSED) {
-			if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
-				if(viewer_->document().numberOfLines() > viewport->numberOfVisibleLines()) {
-					state_ = APPROACHING_AUTO_SCROLL;
-					dragApproachedPosition_ = input.location();
-					const NativePoint p(viewer_->mapToGlobal(input.location()));
-					viewer_->setFocus();
-					// show the indicator margin
-					NativeRectangle rect(autoScrollOriginMark_->bounds(true));
-					autoScrollOriginMark_->move(
-						geometry::make<NativePoint>(geometry::x(p) - geometry::dx(rect) / 2, geometry::y(p) - geometry::dy(rect) / 2));
-					autoScrollOriginMark_->show();
-					autoScrollOriginMark_->raise();
-					viewer_->grabInput();
-					showCursor(input.location());
-					return true;
-				}
+			if(viewer_->document().numberOfLines() > viewer_->textRenderer().viewport()->numberOfVisibleLines()) {
+				state_ = APPROACHING_AUTO_SCROLL;
+				dragApproachedPosition_ = input.location();
+				const NativePoint p(viewer_->mapToGlobal(input.location()));
+				viewer_->setFocus();
+				// show the indicator margin
+				NativeRectangle rect(autoScrollOriginMark_->bounds(true));
+				autoScrollOriginMark_->move(
+					geometry::make<NativePoint>(geometry::x(p) - geometry::dx(rect) / 2, geometry::y(p) - geometry::dy(rect) / 2));
+				autoScrollOriginMark_->show();
+				autoScrollOriginMark_->raise();
+				viewer_->grabInput();
+				showCursor(input.location());
+				return true;
 			}
 		} else if(action == RELEASED) {
 			if(state_ == APPROACHING_AUTO_SCROLL) {
@@ -734,18 +718,16 @@ void DefaultMouseInputStrategy::mouseMoved(const base::LocatedUserInput& input) 
 /// @see MouseInputStrategy#mouseWheelRotated
 void DefaultMouseInputStrategy::mouseWheelRotated(const base::MouseWheelInput& input) {
 	if(!endAutoScroll()) {
-		if(const shared_ptr<TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
-			// use system settings
-			UINT lines;	// the number of lines to scroll
-			if(!win32::boole(::SystemParametersInfoW(SPI_GETWHEELSCROLLLINES, 0, &lines, 0)))
-				lines = 3;
-			if(lines == WHEEL_PAGESCROLL) {
-				// TODO: calculate precise page size.
-				if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock())
-					lines = static_cast<UINT>(viewport->numberOfVisibleLines());
-			}
-			viewport->scroll(geometry::make<NativeSize>(0, -geometry::dy(input.rotation()) * static_cast<short>(lines) / WHEEL_DELTA), viewer_);
+		const shared_ptr<TextViewport> viewport(viewer_->textRenderer().viewport());
+		// use system settings
+		UINT lines;	// the number of lines to scroll
+		if(!win32::boole(::SystemParametersInfoW(SPI_GETWHEELSCROLLLINES, 0, &lines, 0)))
+			lines = 3;
+		if(lines == WHEEL_PAGESCROLL) {
+			// TODO: calculate precise page size.
+			lines = static_cast<UINT>(viewport->numberOfVisibleLines());
 		}
+		viewport->scroll(geometry::make<NativeSize>(0, -geometry::dy(input.rotation()) * static_cast<short>(lines) / WHEEL_DELTA), viewer_);
 	}
 }
 
@@ -764,11 +746,9 @@ bool DefaultMouseInputStrategy::showCursor(const NativePoint& position) {
 		cursorName = IDC_ARROW;
 	else if(htr == TextViewer::TEXT_AREA_CONTENT_RECTANGLE) {
 		// on a hyperlink?
-		if(const shared_ptr<const TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
-			if(const boost::optional<k::Position> p =
-					viewToModelInBounds(*viewport, position, TextLayout::TRAILING, k::locations::UTF16_CODE_UNIT))
-				newlyHoveredHyperlink = utils::getPointedHyperlink(*viewer_, *p);
-		}
+		if(const boost::optional<k::Position> p =
+				viewToModelInBounds(*viewer_->textRenderer().viewport(), position, TextLayout::TRAILING, k::locations::UTF16_CODE_UNIT))
+			newlyHoveredHyperlink = utils::getPointedHyperlink(*viewer_, *p);
 		if(newlyHoveredHyperlink != nullptr && win32::boole(::GetAsyncKeyState(VK_CONTROL) & 0x8000))
 			cursorName = IDC_HAND;
 	}
@@ -790,56 +770,54 @@ bool DefaultMouseInputStrategy::showCursor(const NativePoint& position) {
 ///
 void DefaultMouseInputStrategy::timeElapsed(Timer& timer) {
 	if((state_ & SELECTION_EXTENDING_MASK) == SELECTION_EXTENDING_MASK) {	// scroll automatically during extending the selection
-		if(const shared_ptr<TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
-			const NativePoint p(viewer_->mapFromGlobal(Cursor::position()));
-			const NativeRectangle contentRectangle(viewer_->textAreaContentRectangle());
-			NativeSize scrollUnits(geometry::make<NativeSize>(
-				viewer_->textRenderer().defaultFont()->metrics().averageCharacterWidth(),
-				viewer_->textRenderer().defaultFont()->metrics().linePitch()));
-			if(isVertical(viewer_->textRenderer().writingMode().blockFlowDirection))
-				geometry::transpose(scrollUnits);
+		const shared_ptr<TextViewport> viewport(viewer_->textRenderer().viewport());
+		const NativePoint p(viewer_->mapFromGlobal(Cursor::position()));
+		const NativeRectangle contentRectangle(viewer_->textAreaContentRectangle());
+		NativeSize scrollUnits(geometry::make<NativeSize>(
+			inlineProgressionScrollOffsetInPixels(*viewport, 1),
+			viewer_->textRenderer().defaultFont()->metrics().linePitch()));
+		if(isVertical(viewer_->textRenderer().writingMode().blockFlowDirection))
+			geometry::transpose(scrollUnits);
 
-			NativeSize scrollOffsets(geometry::make<NativeSize>(0, 0));
-			// no rationale about these scroll amounts
-			if(geometry::y(p) < geometry::top(contentRectangle))
-				geometry::dy(scrollOffsets) = (geometry::y(p) - (geometry::top(contentRectangle))) / geometry::dy(scrollUnits) - 1;
-			else if(geometry::y(p) >= geometry::bottom(contentRectangle))
-				geometry::dy(scrollOffsets) = (geometry::y(p) - (geometry::bottom(contentRectangle))) / geometry::dy(scrollUnits) + 1;
-			else if(geometry::x(p) < geometry::left(contentRectangle))
-				geometry::dx(scrollOffsets) = (geometry::x(p) - (geometry::left(contentRectangle))) / geometry::dx(scrollUnits) - 1;
-			else if(geometry::x(p) >= geometry::right(contentRectangle))
-				geometry::dx(scrollOffsets) = (geometry::x(p) - (geometry::right(contentRectangle))) / geometry::dx(scrollUnits) + 1;
-			if(geometry::dx(scrollOffsets) != 0 || geometry::dy(scrollOffsets) != 0)
-				viewport->scroll(scrollOffsets, viewer_);
-		}
+		NativeSize scrollOffsets(geometry::make<NativeSize>(0, 0));
+		// no rationale about these scroll amounts
+		if(geometry::y(p) < geometry::top(contentRectangle))
+			geometry::dy(scrollOffsets) = (geometry::y(p) - (geometry::top(contentRectangle))) / geometry::dy(scrollUnits) - 1;
+		else if(geometry::y(p) >= geometry::bottom(contentRectangle))
+			geometry::dy(scrollOffsets) = (geometry::y(p) - (geometry::bottom(contentRectangle))) / geometry::dy(scrollUnits) + 1;
+		else if(geometry::x(p) < geometry::left(contentRectangle))
+			geometry::dx(scrollOffsets) = (geometry::x(p) - (geometry::left(contentRectangle))) / geometry::dx(scrollUnits) - 1;
+		else if(geometry::x(p) >= geometry::right(contentRectangle))
+			geometry::dx(scrollOffsets) = (geometry::x(p) - (geometry::right(contentRectangle))) / geometry::dx(scrollUnits) + 1;
+		if(geometry::dx(scrollOffsets) != 0 || geometry::dy(scrollOffsets) != 0)
+			viewport->scroll(scrollOffsets, viewer_);
 		extendSelectionTo();
 	} else if(state_ == AUTO_SCROLL_DRAGGING || state_ == AUTO_SCROLL) {
-		if(const shared_ptr<TextViewport> viewport = viewer_->textRenderer().viewport().lock()) {
-			timer.stop();
-			const NativePoint p(viewer_->mapFromGlobal(Cursor::position()));
-			NativeSize scrollUnits(geometry::make<NativeSize>(
-				viewer_->textRenderer().defaultFont()->metrics().averageCharacterWidth(),
-				viewer_->textRenderer().defaultFont()->metrics().linePitch()));
-			if(isVertical(viewer_->textRenderer().writingMode().blockFlowDirection))
-				geometry::transpose(scrollUnits);
-			const NativeSize scrollOffsets(geometry::make<NativeSize>(
-				(geometry::x(p) - geometry::x(dragApproachedPosition_)) / geometry::dx(scrollUnits),
-				(geometry::y(p) - geometry::y(dragApproachedPosition_)) / geometry::dy(scrollUnits)));
-//			const Scalar scrollDegree = max(abs(yScrollDegree), abs(xScrollDegree));
+		const shared_ptr<TextViewport> viewport(viewer_->textRenderer().viewport());
+		timer.stop();
+		const NativePoint p(viewer_->mapFromGlobal(Cursor::position()));
+		NativeSize scrollUnits(geometry::make<NativeSize>(
+			inlineProgressionScrollOffsetInPixels(*viewport, 1),
+			viewer_->textRenderer().defaultFont()->metrics().linePitch()));
+		if(isVertical(viewer_->textRenderer().writingMode().blockFlowDirection))
+			geometry::transpose(scrollUnits);
+		const NativeSize scrollOffsets(geometry::make<NativeSize>(
+			(geometry::x(p) - geometry::x(dragApproachedPosition_)) / geometry::dx(scrollUnits),
+			(geometry::y(p) - geometry::y(dragApproachedPosition_)) / geometry::dy(scrollUnits)));
+//		const Scalar scrollDegree = max(abs(yScrollDegree), abs(xScrollDegree));
 
-			if(geometry::dy(scrollOffsets) != 0 /*&& abs(geometry::dy(scrollOffsets)) >= abs(geometry::dx(scrollOffsets))*/)
-				viewport->scroll(geometry::make<NativeSize>(0, (geometry::dy(scrollOffsets) > 0) ? +1 : -1), viewer_);
-//			else if(geometry::dx(scrollOffsets) != 0)
-//				viewport->scroll(geometry::make<NativeSize>((geometry::dx(scrollOffsets) > 0) ? +1 : -1, 0), viewer_);
+		if(geometry::dy(scrollOffsets) != 0 /*&& abs(geometry::dy(scrollOffsets)) >= abs(geometry::dx(scrollOffsets))*/)
+			viewport->scroll(geometry::make<NativeSize>(0, (geometry::dy(scrollOffsets) > 0) ? +1 : -1), viewer_);
+//		else if(geometry::dx(scrollOffsets) != 0)
+//			viewport->scroll(geometry::make<NativeSize>((geometry::dx(scrollOffsets) > 0) ? +1 : -1, 0), viewer_);
 
-			if(geometry::dy(scrollOffsets) != 0) {
-				timer_.start(500 / static_cast<unsigned int>((pow(2.0f, abs(geometry::dy(scrollOffsets)) / 2))), *this);
-				::SetCursor(AutoScrollOriginMark::cursorForScrolling(
-					(geometry::dy(scrollOffsets) > 0) ? AutoScrollOriginMark::CURSOR_DOWNWARD : AutoScrollOriginMark::CURSOR_UPWARD).asNativeObject().get());
-			} else {
-				timer_.start(300, *this);
-				::SetCursor(AutoScrollOriginMark::cursorForScrolling(AutoScrollOriginMark::CURSOR_NEUTRAL).asNativeObject().get());
-			}
+		if(geometry::dy(scrollOffsets) != 0) {
+			timer_.start(500 / static_cast<unsigned int>((pow(2.0f, abs(geometry::dy(scrollOffsets)) / 2))), *this);
+			::SetCursor(AutoScrollOriginMark::cursorForScrolling(
+				(geometry::dy(scrollOffsets) > 0) ? AutoScrollOriginMark::CURSOR_DOWNWARD : AutoScrollOriginMark::CURSOR_UPWARD).asNativeObject().get());
+		} else {
+			timer_.start(300, *this);
+			::SetCursor(AutoScrollOriginMark::cursorForScrolling(AutoScrollOriginMark::CURSOR_NEUTRAL).asNativeObject().get());
 		}
 #if 0
 	} else if(self.dnd_.enabled && (self.state_ & DND_MASK) == DND_MASK) {	// scroll automatically during dragging

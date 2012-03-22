@@ -409,20 +409,19 @@ void Caret::adjustInputMethodCompositionWindow() {
 	if(!context_.inputMethodCompositionActivated)
 		return;
 	if(shared_ptr<remove_pointer<HIMC>::type> imc = inputMethod(textViewer())) {
-		if(const shared_ptr<const font::TextViewport> viewport = textViewer().textRenderer().viewport().lock()) {
-			// composition window placement
-			COMPOSITIONFORM cf;
-			cf.rcArea = textViewer().textAreaContentRectangle();
-			cf.dwStyle = CFS_POINT;
-			cf.ptCurrentPos = modelToView(*viewport, beginning(), false, font::TextLayout::LEADING);
-			if(cf.ptCurrentPos.y == numeric_limits<Scalar>::max() || cf.ptCurrentPos.y == numeric_limits<Scalar>::min())
-				cf.ptCurrentPos.y = (cf.ptCurrentPos.y == numeric_limits<Scalar>::min()) ? cf.rcArea.top : cf.rcArea.bottom;
-			else
-				cf.ptCurrentPos.y = max(cf.ptCurrentPos.y, cf.rcArea.top);
-			::ImmSetCompositionWindow(imc.get(), &cf);
-			cf.dwStyle = CFS_RECT;
-			::ImmSetCompositionWindow(imc.get(), &cf);
-		}
+		// composition window placement
+		const shared_ptr<const font::TextViewport> viewport(textViewer().textRenderer().viewport());
+		COMPOSITIONFORM cf;
+		cf.rcArea = textViewer().textAreaContentRectangle();
+		cf.dwStyle = CFS_POINT;
+		cf.ptCurrentPos = modelToView(*viewport, beginning(), false, font::TextLayout::LEADING);
+		if(cf.ptCurrentPos.y == numeric_limits<Scalar>::max() || cf.ptCurrentPos.y == numeric_limits<Scalar>::min())
+			cf.ptCurrentPos.y = (cf.ptCurrentPos.y == numeric_limits<Scalar>::min()) ? cf.rcArea.top : cf.rcArea.bottom;
+		else
+			cf.ptCurrentPos.y = max(cf.ptCurrentPos.y, cf.rcArea.top);
+		::ImmSetCompositionWindow(imc.get(), &cf);
+		cf.dwStyle = CFS_RECT;
+		::ImmSetCompositionWindow(imc.get(), &cf);
 
 		// composition font
 		LOGFONTW font;
