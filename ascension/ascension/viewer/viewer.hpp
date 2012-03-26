@@ -278,9 +278,11 @@ namespace ascension {
 			void visualLinesModified(const Range<Index>& lines,
 				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/;
 			// graphics.font.TextViewportListener
-			void viewportPositionChanged(
-				const graphics::font::VisualLine& oldLine, Index oldInlineProgressionOffset) /*throw()*/;
-			void viewportSizeChanged(const graphics::NativeSize& oldSize) /*throw()*/;
+			void viewportBoundsInViewChanged(const graphics::NativeRectangle& oldBounds) /*throw()*/;
+			void viewportScrollPositionChanged(
+				const presentation::AbstractTwoAxes<graphics::font::TextViewport::SignedScrollOffset>& offsets,
+				const graphics::font::VisualLine& oldLine,
+				graphics::font::TextViewport::ScrollOffset oldInlineProgressionOffset) /*throw()*/;
 			// graphics.font.ComputedWritingModeListener
 			void computedWritingModeChanged(const presentation::WritingMode& used);
 			// detail.PointCollection<VisualPoint>

@@ -1019,17 +1019,23 @@ const win32::Handle<HFONT>& TextViewer::onGetFont() {
 }
 
 /// @see WM_HSCROLL
-void TextViewer::onHScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
+void TextViewer::onHScroll(UINT sbCode, UINT, const shared_ptr<remove_pointer<HWND>::type>&) {
+	const shared_ptr<TextViewport> viewport(textRenderer().viewport());
 	switch(sbCode) {
 		case SB_LINELEFT:	// 1 列分左
-			scroll(-1, 0, true); break;
+			viewport->scroll(geometry::make<NativeSize>(-1, 0));
+			break;
 		case SB_LINERIGHT:	// 1 列分右
-			scroll(+1, 0, true); break;
+			viewport->scroll(geometry::make<NativeSize>(+1, 0));
+			break;
 		case SB_PAGELEFT:	// 1 ページ左
-			scroll(-static_cast<int>(numberOfVisibleColumns()), 0, true); break;
+			viewport->scroll(geometry::make<NativeSize>(-abs(pageSize<geometry::X_COORDINATE>(*viewport)), 0));
+			break;
 		case SB_PAGERIGHT:	// 1 ページ右
-			scroll(+static_cast<int>(numberOfVisibleColumns()), 0, true); break;
+			viewport->scroll(geometry::make<NativeSize>(+abs(pageSize<geometry::X_COORDINATE>(*viewport)), 0));
+			break;
 		case SB_LEFT:		// 左端
+			viewport->scrollTo(
 		case SB_RIGHT: {	// 右端
 			const Range<int> range(horizontalScrollBar().range());
 			scrollTo((sbCode == SB_LEFT) ? range.beginning() : range.end(), -1, true);
