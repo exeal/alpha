@@ -343,7 +343,7 @@ inline void TextViewport::adjustBpdScrollPositions() /*throw()*/ {
 	const LineLayoutVector& layouts = textRenderer().layouts();
 	firstVisibleLine_.line = min(firstVisibleLine_.line, textRenderer().presentation().document().numberOfLines() - 1);
 	firstVisibleLine_.subline = min(layouts.numberOfSublinesOfLine(firstVisibleLine_.line) - 1, firstVisibleLine_.subline);
-	scrollOffsets_.bpd = layouts.mapLogicalLineToVisualLine(firstVisibleLine_.line) + firstVisibleLine_.subline;
+	scrollOffsets_.bpd() = layouts.mapLogicalLineToVisualLine(firstVisibleLine_.line) + firstVisibleLine_.subline;
 }
 
 /**
@@ -418,54 +418,101 @@ float TextViewport::numberOfVisibleLines() const /*throw()*/ {
 	}
 }
 
-void TextViewport::scroll(const NativeSize& offset, viewers::base::Widget* widget) {
+/**
+ * 
+ * This method does nothing if scroll is locked.
+ * @param offsets The offsets to scroll in visual lines in block-progression-dimension and in
+ *                characters in inline-progression-dimension
+ */
+void TextViewport::scroll(const AbstractTwoAxes<TextViewport::SignedScrollOffset>& offsets) {
+	if(lockCount_ != 0)
+		return;
+
+	// 1. preprocess parameters and update positions
+	AbstractTwoAxes<TextViewport::SignedScrollOffset> delta(offsets);
+	const VisualLine oldLine = firstVisibleLine_;
+	const ScrollOffset oldInlineProgressionOffset = inlineProgressionOffset();
+	if(offsets.bpd() != 0) {
+		const ScrollOffset maximumBpd = textRenderer().layouts().numberOfVisualLines() - static_cast<ScrollOffset>(numberOfVisibleLines());
+		delta.bpd() = max(min(offsets.bpd(),
+			static_cast<SignedScrollOffset>(maximumBpd - firstVisibleLineInVisualNumber()) + 1),
+				-static_cast<SignedScrollOffset>(firstVisibleLineInVisualNumber()));
+		if(delta.bpd() != 0) {
+			scrollOffsets_.bpd() += delta.bpd();
+			textRenderer().layouts().offsetVisualLine(firstVisibleLine_, delta.bpd());
+		}
+	}
+	if(offsets.ipd() != 0) {
+		const ScrollOffset maximumIpd = contentMeasure()
+			/ textRenderer().defaultFont()->metrics().averageCharacterWidth()
+			- static_cast<ScrollOffset>(numberOfVisibleCharactersInLine());
+		delta.ipd() = max(min(offsets.ipd(),
+			static_cast<SignedScrollOffset>(maximumIpd - inlineProgressionOffset()) + 1),
+			-static_cast<SignedScrollOffset>(inlineProgressionOffset()));
+		if(delta.ipd() != 0)
+			scrollOffsets_.ipd() += delta.ipd();
+	}
+	if(delta.bpd() == 0 && delta.ipd() == 0)
+		return;
+	listeners_.notify<const AbstractTwoAxes<SignedScrollOffset>&, const VisualLine&, ScrollOffset>(
+		&TextViewportListener::viewportScrollPositionChanged, delta, oldLine, oldInlineProgressionOffset);
+}
+
+/***/
+void TextViewport::scroll(const PhysicalTwoAxes<TextViewport::SignedScrollOffset>& offsets) {
+	AbstractTwoAxes<SignedScrollOffset> delta;
 	switch(textRenderer().writingMode().blockFlowDirection) {
 		case HORIZONTAL_TB:
-			return scroll(geometry::dy(offset), geometry::dx(offset), widget);
+			delta.bpd() = offsets.y();
+			delta.ipd() = offsets.x();
+			break;
 		case VERTICAL_RL:
-			return scroll(-geometry::dx(offset), geometry::dy(offset), widget);
+			delta.bpd() = -offsets.x();
+			delta.ipd() = offsets.y();
+			break;
 		case VERTICAL_LR:
-			return scroll(+geometry::dx(offset), geometry::dy(offset), widget);
+			delta.bpd() = +offsets.x();
+			delta.ipd() = offsets.y();
+			break;
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
+	return scroll(delta);
 }
 
 /**
  * Scrolls the viewport to the specified position.
- * @param position
- * @param widget
+ * @param positions
  */
-void TextViewport::scrollTo(const NativePoint& position, viewers::base::Widget* widget) {
-	const bool horizontal = isHorizontal(textRenderer().writingMode().blockFlowDirection);
-	return scrollTo(
-		horizontal ? geometry::y(position) : geometry::x(position),
-		horizontal ? geometry::x(position) : geometry::y(position),
-		widget);
+void TextViewport::scrollTo(const AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
+	AbstractTwoAxes<SignedScrollOffset> delta;
+	if(positions.bpd() != boost::none) {
+		const ScrollOffset maximumBpd =
+			textRenderer().layouts().numberOfVisualLines() - static_cast<ScrollOffset>(numberOfVisibleLines()) + 1;
+		delta.bpd() = max<ScrollOffset>(min(*positions.bpd(), maximumBpd), 0) - firstVisibleLineInVisualNumber();
+	} else
+		delta.bpd() = 0;
+	if(positions.ipd() != boost::none) {
+		const ScrollOffset maximumIpd =
+			static_cast<ScrollOffset>(contentMeasure()
+				/ textRenderer().defaultFont()->metrics().averageCharacterWidth())
+				- static_cast<ScrollOffset>(numberOfVisibleCharactersInLine()) + 1;
+		delta.ipd() = max<ScrollOffset>(min(*positions.ipd(), maximumIpd), 0) - inlineProgressionOffset();
+	} else
+		delta.ipd() = 0;
+	if(delta.bpd() != 0 || delta.ipd() != 0)
+		scroll(delta);
 }
 
 /**
  * Scrolls the viewport to the specified position.
- * @param bpd
- * @param ipd
- * @param widget
+ * @param positions
  */
-void TextViewport::scrollTo(Index bpd, Index ipd, viewers::base::Widget* widget) {
-	const Index maximumBpd =
-		textRenderer().layouts().numberOfVisualLines() - static_cast<Index>(numberOfVisibleLines()) + 1;
-	const Index maximumIpd =
-		static_cast<Index>(contentMeasure()
-			/ textRenderer().defaultFont()->metrics().averageCharacterWidth())
-			- static_cast<Index>(numberOfVisibleCharactersInLine()) + 1;
-	bpd = max<Index>(min(bpd, maximumBpd), 0);
-	ipd = max<Index>(min(ipd, maximumIpd), 0);
-	const ptrdiff_t dbpd = bpd - firstVisibleLineInVisualNumber();
-	const ptrdiff_t dipd = ipd - inlineProgressionOffset();
-	if(dbpd != 0 || dipd != 0)
-		scroll(dbpd, dipd, widget);
+void TextViewport::scrollTo(const PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
+	return scrollTo(convertPhysicalScrollPositionsToAbstract(*this, positions));
 }
 
-void TextViewport::scrollTo(const VisualLine& line, Index ipd, viewers::base::Widget* widget) {
+void TextViewport::scrollTo(const VisualLine& line, TextViewport::ScrollOffset ipd) {
 	// TODO: not implemented.
 }
 
@@ -484,7 +531,7 @@ void TextViewport::visualLinesDeleted(const Range<Index>& lines, Index sublines,
 //	scrolls_.changed = true;
 	if(lines.end() < firstVisibleLine_.line) {	// deleted before visible area
 		firstVisibleLine_.line -= length(lines);
-		scrollOffsets_.bpd -= sublines;
+		scrollOffsets_.bpd() -= sublines;
 //		scrolls_.vertical.maximum -= static_cast<int>(sublines);
 //		repaintRuler();
 	} else if(lines.beginning() > firstVisibleLine_.line	// deleted the first visible line and/or after it
@@ -506,7 +553,7 @@ void TextViewport::visualLinesInserted(const Range<Index>& lines) /*throw()*/ {
 //	scrolls_.changed = true;
 	if(lines.end() < firstVisibleLine_.line) {	// inserted before visible area
 		firstVisibleLine_.line += length(lines);
-		scrollOffsets_.bpd += length(lines);
+		scrollOffsets_.bpd() += length(lines);
 //		scrolls_.vertical.maximum += static_cast<int>(length(lines));
 //		repaintRuler();
 	} else if(lines.beginning() > firstVisibleLine_.line	// inserted at or after the first visible line
@@ -529,7 +576,7 @@ void TextViewport::visualLinesModified(const Range<Index>& lines,
 	else {
 //		scrolls_.changed = true;
 		if(lines.end() < firstVisibleLine_.line) {	// changed before visible area
-			scrollOffsets_.bpd += sublinesDifference;
+			scrollOffsets_.bpd() += sublinesDifference;
 //			scrolls_.vertical.maximum += sublinesDifference;
 //			repaintRuler();
 		} else if(lines.beginning() > firstVisibleLine_.line	// changed at or after the first visible line

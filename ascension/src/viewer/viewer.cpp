@@ -661,7 +661,7 @@ void TextViewer::keyPressed(const KeyInput& input) {
 				&& hasModifier<UserInput::SHIFT_DOWN>(input) && !hasModifier<UserInput::CONTROL_DOWN>(input))
 			makeRowSelectionExtensionCommand(*this, &k::locations::backwardVisualLine)();
 		else if(hasModifier<UserInput::CONTROL_DOWN>(input) && !hasModifier<UserInput::SHIFT_DOWN>(input))
-			textRenderer().viewport()->scroll(geometry::make<NativeSize>(0, -1), this);
+			textRenderer().viewport()->scroll(geometry::make<NativeSize>(0, -1));
 		else
 			makeCaretMovementCommand(*this, &k::locations::backwardVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
@@ -686,7 +686,7 @@ void TextViewer::keyPressed(const KeyInput& input) {
 				&& hasModifier<UserInput::SHIFT_DOWN>(input) && !hasModifier<UserInput::CONTROL_DOWN>(input))
 			makeRowSelectionExtensionCommand(*this, &k::locations::forwardVisualLine)();
 		else if(hasModifier<UserInput::CONTROL_DOWN>(input) && !hasModifier<UserInput::SHIFT_DOWN>(input))
-			textRenderer().viewport()->scroll(geometry::make<NativeSize>(0, +1), this);
+			textRenderer().viewport()->scroll(geometry::make<NativeSize>(0, +1));
 		else
 			makeCaretMovementCommand(*this, &k::locations::forwardVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
@@ -1022,6 +1022,24 @@ void TextViewer::resized(State state, const NativeSize&) {
 	if(renderer_.get() == nullptr)
 		return;
 	textRenderer().viewport()->setBoundsInView(textAreaContentRectangle());
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+	// notify the tooltip
+	win32::AutoZeroSize<TOOLINFOW> ti;
+	const NativeRectangle viewerBounds(bounds(false));
+	ti.hwnd = identifier().get();
+	ti.uId = 1;
+	ti.rect = viewerBounds;
+	::SendMessageW(toolTip_, TTM_NEWTOOLRECT, 0, reinterpret_cast<LPARAM>(&ti));
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+	textRenderer().setTextWrapping(textRenderer().textWrapping(), createRenderingContext().get());
+	scrolls_.resetBars(*this, 'a', true);
+	updateScrollBars();
+	rulerPainter_->update();
+	if(rulerPainter_->alignment() != detail::RulerPainter::LEFT && rulerPainter_->alignment() != detail::RulerPainter::TOP) {
+//		recreateCaret();
+//		redrawVerticalRuler();
+		scheduleRedraw(false);	// hmm...
+	}
 }
 
 /// @see CaretStateListener#selectionShapeChanged
@@ -1234,7 +1252,7 @@ void TextViewer::updateScrollBars() {
 			caret().updateLocation();
 		}
 	} else if(static_cast<ScrollPosition>(geometry::x(positions)) > minimum)
-		viewport->scrollTo(geometry::make<NativePoint>(minimum, geometry::y(positions)), this);
+		viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(minimum, boost::none));
 	assert(ASCENSION_GET_SCROLL_MINIMUM(geometry::x(endPositions), geometry::x(pageSteps)) > 0 || geometry::x(positions) == 0);
 	if(!isFrozen()) {
 		ScrollProperties<ScrollPosition>& scrollBar = horizontalScrollBar();
@@ -1255,7 +1273,7 @@ void TextViewer::updateScrollBars() {
 			caret().updateLocation();
 		}
 	} else if(static_cast<ScrollPosition>(geometry::y(positions)) > minimum)
-		viewport->scrollTo(geometry::make<NativePoint>(geometry::x(positions), minimum), this);
+		viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(boost::none, minimum));
 	assert(ASCENSION_GET_SCROLL_MINIMUM(geometry::y(endPositions), geometry::y(pageSteps)) > 0 || geometry::y(positions) == 0);
 	if(!isFrozen()) {
 		ScrollProperties<ScrollPosition>& scrollBar = verticalScrollBar();
@@ -1269,12 +1287,21 @@ void TextViewer::updateScrollBars() {
 #undef ASCENSION_GET_SCROLL_MINIMUM
 }
 
-/// @see TextViewportListener#viewportPositionChanged
-void TextViewer::viewportPositionChanged(const VisualLine& oldLine, Index oldInlineProgressionOffset) {
+/// @see TextViewport#viewportBoundsInViewChanged
+void TextViewer::viewportBoundsInViewChanged(const NativeRectangle& oldBounds) /*throw()*/ {
+	// does nothing
+}
+
+/// @see TextViewportListener#viewportScrollPositionChanged
+void TextViewer::viewportScrollPositionChanged(
+		const AbstractTwoAxes<TextViewport::SignedScrollOffset>& offsets,
+		const VisualLine& oldLine, TextViewport::ScrollOffset oldInlineProgressionOffset) {
 	if(isFrozen()) {
 		scrolls_.changed = true;
 		return;
 	}
+
+	// 1. update the scroll positions
 	const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
 	// TODO: this code ignores orientation in vertical layout.
 	switch(textRenderer().writingMode().blockFlowDirection) {
@@ -1294,37 +1321,59 @@ void TextViewer::viewportPositionChanged(const VisualLine& oldLine, Index oldInl
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
-
 //	closeCompletionProposalsPopup(*this);
 	hideToolTip();
 
-	// scroll the ruler
+	// 2. calculate pixels to scroll
+	NativeSize pixelsToScroll;
+	switch(textRenderer().writingMode().blockFlowDirection) {
+		case HORIZONTAL_TB:
+			pixelsToScroll = geometry::make<NativeSize>(inlineProgressionScrollOffsetInPixels(*viewport, offsets.ipd()), offsets.bpd());
+			break;
+		case VERTICAL_RL:
+			pixelsToScroll = geometry::make<NativeSize>(-offsets.bpd(), inlineProgressionScrollOffsetInPixels(*viewport, offsets.ipd()));
+			break;
+		case VERTICAL_LR:
+			pixelsToScroll = geometry::make<NativeSize>(+offsets.bpd(), inlineProgressionScrollOffsetInPixels(*viewport, offsets.ipd()));
+			break;
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+
+	// 3. scroll the graphics device
+	const NativeRectangle& boundsToScroll = viewport->boundsInView();
+	if(abs(offsets.bpd()) >= static_cast<SignedIndex>(viewport->numberOfVisibleLines())
+			|| abs(offsets.ipd()) >= static_cast<SignedIndex>(viewport->numberOfVisibleCharactersInLine()))
+		scheduleRedraw(boundsToScroll, false);	// repaint all if the amount of the scroll is over a page
+	else {
+		// scroll image by BLIT
+		// TODO: direct call of Win32 API.
+		::ScrollWindowEx(identifier().get(),
+			-geometry::dx(pixelsToScroll), -geometry::dy(pixelsToScroll), nullptr, &boundsToScroll, nullptr, nullptr, SW_INVALIDATE);
+		// invalidate bounds newly entered into the viewport
+		if(geometry::dx(pixelsToScroll) > 0)
+			scheduleRedraw(geometry::make<NativeRectangle>(
+				geometry::topLeft(boundsToScroll),
+				geometry::make<NativeSize>(geometry::dx(pixelsToScroll), geometry::dy(boundsToScroll))), false);
+		else if(geometry::dx(pixelsToScroll) < 0)
+			scheduleRedraw(geometry::make<NativeRectangle>(
+				geometry::topRight(boundsToScroll),
+				geometry::make<NativeSize>(geometry::dx(pixelsToScroll), geometry::dy(boundsToScroll))), false);
+		if(geometry::dy(pixelsToScroll) > 0)
+			scheduleRedraw(geometry::make<NativeRectangle>(
+				geometry::topLeft(boundsToScroll),
+				geometry::make<NativeSize>(geometry::dx(boundsToScroll), geometry::dy(pixelsToScroll))), false);
+		else if(geometry::dy(pixelsToScroll) < 0)
+			scheduleRedraw(geometry::make<NativeRectangle>(
+				geometry::bottomLeft(boundsToScroll),
+				geometry::make<NativeSize>(geometry::dx(boundsToScroll), geometry::dy(pixelsToScroll))), false);
+	}
+
+	// 4. scroll the ruler
 	rulerPainter_->scroll(oldLine);
 
-	// repaint
+	// 5. repaint
 	redrawScheduledRegion();
-}
-
-/// @see TextViewportListener#viewportSizeChanged
-void TextViewer::viewportSizeChanged(const NativeSize& oldSize) {
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-	// notify the tooltip
-	win32::AutoZeroSize<TOOLINFOW> ti;
-	const NativeRectangle viewerBounds(bounds(false));
-	ti.hwnd = identifier().get();
-	ti.uId = 1;
-	ti.rect = viewerBounds;
-	::SendMessageW(toolTip_, TTM_NEWTOOLRECT, 0, reinterpret_cast<LPARAM>(&ti));
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
-	textRenderer().setTextWrapping(textRenderer().textWrapping(), createRenderingContext().get());
-	scrolls_.resetBars(*this, 'a', true);
-	updateScrollBars();
-	rulerPainter_->update();
-	if(rulerPainter_->alignment() != detail::RulerPainter::LEFT && rulerPainter_->alignment() != detail::RulerPainter::TOP) {
-//		recreateCaret();
-//		redrawVerticalRuler();
-		scheduleRedraw(false);	// hmm...
-	}
 }
 
 /// @see VisualLinesListener#visualLinesDeleted
@@ -1818,97 +1867,6 @@ void utils::toggleOrientation(TextViewer& viewer) /*throw()*/ {
 //		viewer.getScrollInformation(SB_HORZ, scroll);
 //		viewer.setScrollInformation(SB_HORZ, scroll);
 //	}
-}
-
-
-// graphics.font.TextViewport /////////////////////////////////////////////////////////////////////
-
-/**
- * 
- * This method does nothing if scroll is locked.
- * @param dbpd An offset to scroll in visual lines in block-progression-dimension
- * @param dipd An offset tp scroll in characters in inline-progression-dimension
- * @param widget The widget to scroll. This method schedules repainting about this widget. Can be
- *               @c nullptr
- */
-void TextViewport::scroll(SignedIndex dbpd, SignedIndex dipd, Widget* widget) {
-	if(lockCount_ != 0)
-		return;
-
-	// 1. preprocess parameters and update positions
-	const VisualLine oldLine = firstVisibleLine_;
-	const Index oldInlineProgressionOffset = inlineProgressionOffset();
-	if(dbpd != 0) {
-		const Index maximumBpd = textRenderer().layouts().numberOfVisualLines() - static_cast<Index>(numberOfVisibleLines());
-		dbpd = max(min(dbpd,
-			static_cast<SignedIndex>(maximumBpd - firstVisibleLineInVisualNumber()) + 1),
-				-static_cast<SignedIndex>(firstVisibleLineInVisualNumber()));
-		if(dbpd != 0) {
-			scrollOffsets_.bpd += dbpd;
-			textRenderer().layouts().offsetVisualLine(firstVisibleLine_, dbpd);
-		}
-	}
-	if(dipd != 0) {
-		const Index maximumIpd = contentMeasure()
-			/ textRenderer().defaultFont()->metrics().averageCharacterWidth()
-			- static_cast<Index>(numberOfVisibleCharactersInLine());
-		dipd = max(min(dipd,
-			static_cast<SignedIndex>(maximumIpd - inlineProgressionOffset()) + 1),
-			-static_cast<SignedIndex>(inlineProgressionOffset()));
-		if(dipd != 0)
-			scrollOffsets_.ipd += dipd;
-	}
-	if(dbpd == 0 && dipd == 0)
-		return;
-	listeners_.notify<const VisualLine&, Index>(
-		&TextViewportListener::viewportScrollPositionChanged, oldLine, oldInlineProgressionOffset);
-
-	// 2. calculate numbers of pixels to scroll
-	if(widget == nullptr)
-		return;
-	NativeSize pixelsToScroll;
-	switch(textRenderer().writingMode().blockFlowDirection) {
-		case HORIZONTAL_TB:
-			pixelsToScroll = geometry::make<NativeSize>(inlineProgressionScrollOffsetInPixels(*this, dipd), dbpd);
-			break;
-		case VERTICAL_RL:
-			pixelsToScroll = geometry::make<NativeSize>(-dbpd, inlineProgressionScrollOffsetInPixels(*this, dipd));
-			break;
-		case VERTICAL_LR:
-			pixelsToScroll = geometry::make<NativeSize>(+dbpd, inlineProgressionScrollOffsetInPixels(*this, dipd));
-			break;
-		default:
-			ASCENSION_ASSERT_NOT_REACHED();
-	}
-
-	// 3. scroll the graphics device
-	const NativeRectangle& boundsToScroll = boundsInView();
-	if(abs(dbpd) >= static_cast<SignedIndex>(numberOfVisibleLines())
-			|| abs(dipd) >= static_cast<SignedIndex>(numberOfVisibleCharactersInLine()))
-		widget->scheduleRedraw(boundsToScroll, false);	// repaint all if the amount of the scroll is over a page
-	else {
-		// scroll image by BLIT
-		// TODO: direct call of Win32 API.
-		::ScrollWindowEx(widget->identifier().get(),
-			-geometry::dx(pixelsToScroll), -geometry::dy(pixelsToScroll), nullptr, &boundsToScroll, nullptr, nullptr, SW_INVALIDATE);
-		// invalidate bounds newly entered into the viewport
-		if(geometry::dx(pixelsToScroll) > 0)
-			widget->scheduleRedraw(geometry::make<NativeRectangle>(
-				geometry::topLeft(boundsToScroll),
-				geometry::make<NativeSize>(geometry::dx(pixelsToScroll), geometry::dy(boundsToScroll))), false);
-		else if(geometry::dx(pixelsToScroll) < 0)
-			widget->scheduleRedraw(geometry::make<NativeRectangle>(
-				geometry::topRight(boundsToScroll),
-				geometry::make<NativeSize>(geometry::dx(pixelsToScroll), geometry::dy(boundsToScroll))), false);
-		if(geometry::dy(pixelsToScroll) > 0)
-			widget->scheduleRedraw(geometry::make<NativeRectangle>(
-				geometry::topLeft(boundsToScroll),
-				geometry::make<NativeSize>(geometry::dx(boundsToScroll), geometry::dy(pixelsToScroll))), false);
-		else if(geometry::dy(pixelsToScroll) < 0)
-			widget->scheduleRedraw(geometry::make<NativeRectangle>(
-				geometry::bottomLeft(boundsToScroll),
-				geometry::make<NativeSize>(geometry::dx(boundsToScroll), geometry::dy(pixelsToScroll))), false);
-	}
 }
 
 

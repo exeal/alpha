@@ -1,4 +1,4 @@
-/**
+Ôªø/**
  * @file writing-mode.hpp
  * @author exeal
  * @date 2003-2006 was LineLayout.h
@@ -11,7 +11,6 @@
 #ifndef ASCENSION_WRITING_MODE_HPP
 #define ASCENSION_WRITING_MODE_HPP
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException, std.logic_error
-#include <ascension/corelib/type-traits.hpp>		// detail.Select
 #include <ascension/graphics/geometry.hpp>			// PhysicalFourSides
 #include <ascension/presentation/inheritable.hpp>	// Inheritable
 #include <array>
@@ -30,7 +29,7 @@ namespace ascension {
 		/**
 		 * Orientation of the text layout.
 		 * @see TextLineStyle#readingDirection, defaultReadingDirection,
-		 * @see "CSS Writing Modes Module Level 3, 2.1. Specifying Directionality: the ÅedirectionÅf
+		 * @see "CSS Writing Modes Module Level 3, 2.1. Specifying Directionality: the ‚Äòdirection‚Äô
 		 *      property" (http://www.w3.org/TR/css3-writing-modes/#direction)
 		 * @see SVG 1.1 (Second Edition), 10.7.4 Relationship with bidirectionality
 		 *      (http://www.w3.org/TR/SVG/text.html#DirectionProperty)
@@ -43,6 +42,33 @@ namespace ascension {
 
 		class Presentation;
 		ReadingDirection defaultReadingDirection(const Presentation& presentation);
+
+		/**
+		 * @see PhysicalTwoAxes
+		 */
+		template<typename T>
+		class AbstractTwoAxes : private std::pair<T, T> {
+		public:
+			typedef T value_type;
+			T& bpd() {return first;}
+			const T& bpd() const {return first;}
+			T& ipd() {return second;}
+			const T& ipd() const {return second;}
+		};
+
+		/**
+		 * @see AbstractTwoAxes
+		 */
+		template<typename T>
+		class PhysicalTwoAxes : private std::pair<T, T> {
+		public:
+			typedef T value_type;
+			PhysicalTwoAxes(const T& x, const T& y) : std::pair<T, T>(x, y) {}
+			T& x() {return first;}
+			const T& x() const {return first;}
+			T& y() {return second;}
+			const T& y() const {return second;}
+		};
 
 		/**
 		 * @see graphics#PhysicalFourSides
@@ -62,7 +88,7 @@ namespace ascension {
 
 		/**
 		 * Defines block flow directions.
-		 * @see "CSS Writing Modes Module Level 3, 3.1. Block Flow Direction: the Åewriting-modeÅf
+		 * @see "CSS Writing Modes Module Level 3, 3.1. Block Flow Direction: the ‚Äòwriting-mode‚Äô
 		 *      property" (http://www.w3.org/TR/css3-writing-modes/#writing-mode)
 		 * @see "SVG 1.1 (Second Edition), 10.7.2 Setting the inline-progression-direction"
 		 *      (http://www.w3.org/TR/SVG/text.html#WritingModeProperty)
@@ -92,7 +118,7 @@ namespace ascension {
 
 		/**
 		 * Defines the orientation of characters within a line.
-		 * @see "CSS Writing Modes Module Level 3, 5.1. Orienting Text: the Åetext-orientationÅf
+		 * @see "CSS Writing Modes Module Level 3, 5.1. Orienting Text: the ‚Äòtext-orientation‚Äô
 		 *      property" (http://www.w3.org/TR/css3-writing-modes/#text-orientation)
 		 * @see "SVG 1.1 (Second Edition), 10.7.3 Glyph orientation within a text run"
 		 *      (http://www.w3.org/TR/SVG/text.html#GlyphOrientation)
