@@ -64,11 +64,11 @@ namespace ascension {
 			kernel::Position lastPrintableCharacterOfLine(const viewers::VisualPoint& p);
 			kernel::Position lastPrintableCharacterOfVisualLine(const viewers::VisualPoint& p);
 			kernel::Position leftCharacter(const viewers::VisualPoint& p, CharacterUnit unit, Index characters = 1);
-			kernel::Position leftWord(const viewers::VisualPoint& p, Index words = 1);
-			kernel::Position leftWordEnd(const viewers::VisualPoint& p, Index words = 1);
+			boost::optional<kernel::Position> leftWord(const viewers::VisualPoint& p, Index words = 1);
+			boost::optional<kernel::Position> leftWordEnd(const viewers::VisualPoint& p, Index words = 1);
 			kernel::Position rightCharacter(const viewers::VisualPoint& p, CharacterUnit unit, Index characters = 1);
-			kernel::Position rightWord(const viewers::VisualPoint& p, Index words = 1);
-			kernel::Position rightWordEnd(const viewers::VisualPoint& p, Index words = 1);
+			boost::optional<kernel::Position> rightWord(const viewers::VisualPoint& p, Index words = 1);
+			boost::optional<kernel::Position> rightWordEnd(const viewers::VisualPoint& p, Index words = 1);
 		} // namespace locations
 	} // namespace kernel
 

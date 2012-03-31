@@ -105,30 +105,6 @@ namespace ascension {
 	inline bool equals(double n1, double n2, double epsilon = 1.0e-5) {return std::abs(n1 - n2) <= epsilon;}
 
 	/**
-	 * Represents direction in a text or a document (not visual orientation. See
-	 * @c #presentation#ReadingDirection).
-	 * @see ascension#text, ascension#searcher
-	 */
-	class Direction {
-	public:
-		static const Direction FORWARD;		///< Direction to the end.
-		static const Direction BACKWARD;	///< Direction to the start.
-		/// Copy-constructor.
-		Direction(const Direction& other) /*throw()*/ : value_(other.value_) {}
-		/// Assignment operator.
-		Direction& operator=(const Direction& other) /*throw()*/ {value_ = other.value_; return *this;}
-		/// Negation operator returns the complement of this.
-		Direction operator!() const /*throw()*/ {return (*this == FORWARD) ? BACKWARD : FORWARD;}
-		/// Equality operator.
-		bool operator==(const Direction& other) const /*throw()*/ {return value_ == other.value_;}
-		/// Inequality operator.
-		bool operator!=(const Direction& other) const /*throw()*/ {return !(*this == other);}
-	private:
-		explicit Direction(bool value) /*throw()*/ : value_(value) {}
-		bool value_;
-	};
-
-	/**
 	 * Notifies about the system parameter changes.
 	 * Clients of Ascension should call this function when the system settings are changed
 	 * (for example, received @c WM_SETTINGCHANGE window message on Win32 platform).

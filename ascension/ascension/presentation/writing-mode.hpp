@@ -10,10 +10,10 @@
 
 #ifndef ASCENSION_WRITING_MODE_HPP
 #define ASCENSION_WRITING_MODE_HPP
+#include <ascension/directions.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException, std.logic_error
 #include <ascension/graphics/geometry.hpp>			// PhysicalFourSides
 #include <ascension/presentation/inheritable.hpp>	// Inheritable
-#include <array>
 #include <boost/operators.hpp>
 
 namespace ascension {
@@ -42,49 +42,6 @@ namespace ascension {
 
 		class Presentation;
 		ReadingDirection defaultReadingDirection(const Presentation& presentation);
-
-		/**
-		 * @see PhysicalTwoAxes
-		 */
-		template<typename T>
-		class AbstractTwoAxes : private std::pair<T, T> {
-		public:
-			typedef T value_type;
-			T& bpd() {return first;}
-			const T& bpd() const {return first;}
-			T& ipd() {return second;}
-			const T& ipd() const {return second;}
-		};
-
-		/**
-		 * @see AbstractTwoAxes
-		 */
-		template<typename T>
-		class PhysicalTwoAxes : private std::pair<T, T> {
-		public:
-			typedef T value_type;
-			PhysicalTwoAxes(const T& x, const T& y) : std::pair<T, T>(x, y) {}
-			T& x() {return first;}
-			const T& x() const {return first;}
-			T& y() {return second;}
-			const T& y() const {return second;}
-		};
-
-		/**
-		 * @see graphics#PhysicalFourSides
-		 */
-		template<typename T>
-		class AbstractFourSides : public std::array<T, 4> {
-		public:
-			reference before() {return (*this)[0];}
-			const_reference before() const {return (*this)[0];}
-			reference after() {return (*this)[1];}
-			const_reference after() const {return (*this)[1];}
-			reference start() {return (*this)[2];}
-			const_reference start() const {return (*this)[2];}
-			reference end() {return (*this)[3];}
-			const_reference end() const {return (*this)[3];}
-		};
 
 		/**
 		 * Defines block flow directions.
@@ -184,48 +141,116 @@ namespace ascension {
 
 		template<> class Inheritable<WritingMode> : public WritingModeBase<true> {};
 
+		/***/
+		inline TextOrientation resolveTextOrientation(const WritingMode& writingMode) {
+			switch(writingMode.textOrientation) {
+				case SIDEWAYS:
+					if(writingMode.blockFlowDirection == VERTICAL_RL)
+						return SIDEWAYS_RIGHT;
+					else if(writingMode.blockFlowDirection == VERTICAL_LR)
+						return SIDEWAYS_LEFT;
+					else
+						return SIDEWAYS;
+				case USE_GLYPH_ORIENTATION:
+					return MIXED_RIGHT;
+				default:
+					return writingMode.textOrientation;
+			}
+		}
+
+
+		// relative-flow vs. physical direction/dimension/axis mappings ///////////////////////////
+
+		inline graphics::PhysicalDirection mapFlowRelativeToPhysical(const WritingMode& writingMode, FlowRelativeDirection direction) {
+			switch(writingMode.blockFlowDirection) {
+				case HORIZONTAL_TB:
+					switch(direction) {
+						case BEFORE:
+							return graphics::TOP;
+						case AFTER:
+							return graphics::BOTTOM;
+						case START:
+							return (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? graphics::LEFT : graphics::RIGHT;
+						case END:
+							return (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? graphics::RIGHT : graphics::LEFT;
+					}
+					break;
+				case VERTICAL_RL:
+				case VERTICAL_LR:
+					switch(direction) {
+						case BEFORE:
+							return (writingMode.blockFlowDirection == VERTICAL_RL) ? graphics::RIGHT : graphics::LEFT;
+						case AFTER:
+							return (writingMode.blockFlowDirection == VERTICAL_RL) ? graphics::LEFT : graphics::RIGHT;
+						case START:
+						case END: {
+							bool ttb = resolveTextOrientation(writingMode) == SIDEWAYS_LEFT;
+							ttb = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? !ttb : ttb;
+							return (direction == START) ? (ttb ? graphics::TOP : graphics::BOTTOM) : (ttb ? graphics::BOTTOM : graphics::TOP);
+						}
+					}
+				default:
+					throw UnknownValueException("writingMode.blockFlowDirection");
+			}
+			throw UnknownValueException("direction");
+		}
+
+		inline FlowRelativeDirection mapPhysicalToFlowRelative(const WritingMode& writingMode, graphics::PhysicalDirection direction) {
+			switch(writingMode.blockFlowDirection) {
+				case HORIZONTAL_TB:
+					switch(direction) {
+						case graphics::TOP:
+							return BEFORE;
+						case graphics::RIGHT:
+							return (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? START : END;
+						case graphics::BOTTOM:
+							return AFTER;
+						case graphics::LEFT:
+							return (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? END : START;
+					}
+					break;
+				case VERTICAL_RL:
+				case VERTICAL_LR:
+					switch(direction) {
+						case graphics::TOP:
+						case graphics::BOTTOM: {
+							bool ttb = resolveTextOrientation(writingMode) == SIDEWAYS_LEFT;
+							ttb = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? !ttb : ttb;
+							return (direction == graphics::TOP) ? (ttb ? START : END) : (ttb ? END : START);
+						}
+						case graphics::RIGHT:
+							return (writingMode.blockFlowDirection == VERTICAL_RL) ? BEFORE : AFTER;
+						case graphics::LEFT:
+							return (writingMode.blockFlowDirection == VERTICAL_RL) ? AFTER : BEFORE;
+					}
+				default:
+					throw UnknownValueException("writingMode.blockFlowDirection");
+			}
+			throw UnknownValueException("direction");
+		}
+
 		/**
 		 * Performs abstract-to-physical mappings according to the given writing mode.
 		 * @tparam From The type for @a from
 		 * @tparam To The type for @a to
 		 * @param writingMode The writing mode
-		 * @param from The abstract value to map
+		 * @param from The flow-relative value to map
 		 * @param[out] to The result physical value
-		 * @see mapPhysicalToAbstract
+		 * @see mapPhysicalToFlowRelative
 		 */
 		template<typename From, typename To>
-		inline graphics::PhysicalFourSides<To>& mapAbstractToPhysical(
+		inline graphics::PhysicalFourSides<To>& mapFlowRelativeToPhysical(
 				const WritingMode& writingMode,
-				const AbstractFourSides<From>& from, graphics::PhysicalFourSides<To>& to) {
-			const TextOrientation textOrientation(resolveTextOrientation(writingMode));
-			switch(writingMode.blockFlowDirection) {
-				case HORIZONTAL_TB:
-					to.top() = from.before();
-					to.bottom() = from.after();
-					to.left() = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? from.start() : from.end();
-					to.right() = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? from.end() : from.start();
-					break;
-				case VERTICAL_RL:
-				case VERTICAL_LR:
-					to.left() = (writingMode.blockFlowDirection == VERTICAL_LR) ? from.before() : from.after();
-					to.right() = (writingMode.blockFlowDirection == VERTICAL_RL) ? from.before() : from.after();
-					{
-						bool ttb = textOrientation == SIDEWAYS_LEFT;
-						ttb = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? !ttb : ttb;
-						to.top() = ttb ? from.start() : from.end();
-						to.bottom() = ttb ? from.start() : from.end();
-					}
-		 			break;			
-				default:
-					throw UnknownValueException("writingMode.blockFlowDirection");
-			}
+				const FlowRelativeFourSides<From>& from, graphics::PhysicalFourSides<To>& to) {
+			for(FlowRelativeDirection direction = 0; direction != from.size(); ++direction)
+				to[mapFlowRelativeToPhysical(direction)] = from[direction];
 			return to;
 		}
 
 		template<typename Rectangle1, typename From, typename Rectangle2>
-		inline Rectangle2& mapAbstractToPhysical(
+		inline Rectangle2& mapFlowRelativeToPhysical(
 				const WritingMode& writingMode, const Rectangle1& viewport,
-				const AbstractFourSides<From>& from, Rectangle2& to);
+				const FlowRelativeFourSides<From>& from, Rectangle2& to);
 
 		/**
 		 * Performs abstract-to-physical mappings according to the given writing mode.
@@ -233,35 +258,15 @@ namespace ascension {
 		 * @tparam To The type for @a to
 		 * @param writingMode The writing mode
 		 * @param from The physical value to map
-		 * @param[out] to The result abstract value
+		 * @param[out] to The result flow-relative value
 		 * @return @a to
-		 * @see #mapAbstractToPhysical
+		 * @see #mapFlowRelativeToPhysical
 		 */
 		template<typename From, typename To>
-		inline AbstractFourSides<To>& mapPhysicalToAbstract(const WritingMode& writingMode,
-				const graphics::PhysicalFourSides<From>& from, AbstractFourSides<To>& to) {
-			const TextOrientation textOrientation(resolveTextOrientation(writingMode));
-			switch(writingMode.blockFlowDirection) {
-				case HORIZONTAL_TB:
-					to.before() = from.top();
-					to.after() = from.bottom();
-					to.start() = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? from.left() : from.right();
-					to.end() = (writingMode.inlineFlowDirection == RIGHT_TO_LEFT) ? from.left() : from.right();
-					break;
-				case VERTICAL_RL:
-				case VERTICAL_LR:
-					to.before() = (writingMode.blockFlowDirection == VERTICAL_LR) ? from.left() : from.right();
-					to.after() = (writingMode.blockFlowDirection == VERTICAL_RL) ? from.left() : from.right();
-					{
-						bool ttb = textOrientation == SIDEWAYS_LEFT;
-						ttb = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? !ttb : ttb;
-						to.start() = ttb ? from.top() : from.bottom();
-						to.end() = ttb ? from.top() : from.bottom();
-					}
-		 			break;			
-				default:
-					throw UnknownValueException("writingMode.blockFlowDirection");
-			}
+		inline FlowRelativeFourSides<To>& mapPhysicalToFlowRelative(const WritingMode& writingMode,
+				const graphics::PhysicalFourSides<From>& from, FlowRelativeFourSides<To>& to) {
+			for(graphics::PhysicalDirection direction = 0; direction != from.size(); ++direction)
+				to[mapPhysicalToFlowRelative(direction)] = from[direction];
 			return to;
 		}
 
@@ -273,13 +278,13 @@ namespace ascension {
 		 * @param writingMode The writing mode
 		 * @param viewport The base physical rectangle
 		 * @param from The physical rectangle to map
-		 * @param[out] to The result abstract value
+		 * @param[out] to The result flow-relative value
 		 * @return @a to
 		 */
 		template<typename Rectangle1, typename Rectangle2, typename To>
-		inline AbstractFourSides<To>& mapPhysicalToAbstract(
+		inline FlowRelativeFourSides<To>& mapPhysicalToFlowRelative(
 				const WritingMode& writingMode, const Rectangle1& viewport,
-				const Rectangle2& from, AbstractFourSides<To>& to) {
+				const Rectangle2& from, FlowRelativeFourSides<To>& to) {
 			using namespace graphics;
 			const TextOrientation textOrientation(resolveTextOrientation(writingMode));
 			switch(writingMode.blockFlowDirection) {
@@ -306,23 +311,6 @@ namespace ascension {
 					throw UnknownValueException("writingMode.blockFlowDirection");
 			}
 			return to;
-		}
-
-		/***/
-		inline TextOrientation resolveTextOrientation(const WritingMode& writingMode) {
-			switch(writingMode.textOrientation) {
-				case SIDEWAYS:
-					if(writingMode.blockFlowDirection == VERTICAL_RL)
-						return SIDEWAYS_RIGHT;
-					else if(writingMode.blockFlowDirection == VERTICAL_LR)
-						return SIDEWAYS_LEFT;
-					else
-						return SIDEWAYS;
-				case USE_GLYPH_ORIENTATION:
-					return MIXED_RIGHT;
-				default:
-					return writingMode.textOrientation;
-			}
 		}
 
 	}

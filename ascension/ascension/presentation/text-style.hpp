@@ -64,7 +64,7 @@ namespace ascension {
 				/// Returns @c true if this part is invisible (but may be consumes place).
 				bool hasVisibleStyle() const /*throw()*/ {return style != NONE && style != HIDDEN;}
 			};
-			AbstractFourSides<Part> sides;
+			FlowRelativeFourSides<Part> sides;
 		};
 
 		/**

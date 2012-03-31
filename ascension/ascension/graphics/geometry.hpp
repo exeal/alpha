@@ -17,35 +17,10 @@
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
 #	include <gdk/gdk.h>
 #endif
-#include <array>
 
 namespace ascension {
 
 	namespace graphics {
-
-		/**
-		 * @see presentation#AbstractFourSides
-		 */
-		template<typename T>
-		struct PhysicalFourSides : public std::array<T, 4> {
-			/// Default constructor.
-			PhysicalFourSides() {}
-			template<typename Rectangle>
-			PhysicalFourSides(const Rectangle& rectangle) {
-				top() = geometry::top(rectangle);
-				right() = geometry::right(rectangle);
-				bottom() = geometry::bottom(rectangle);
-				left() = geometry::left(rectangle);
-			}
-			reference top() {return (*this)[0];}
-			const_reference top() const {return (*this)[0];}
-			reference right() {return (*this)[1];}
-			const_reference right() const {return (*this)[1];}
-			reference bottom() {return (*this)[2];}
-			const_reference bottom() const {return (*this)[2];}
-			reference left() {return (*this)[3];}
-			const_reference left() const {return (*this)[3];}
-		};
 
 		namespace geometry {
 			template<typename Geometry> struct Coordinate;
