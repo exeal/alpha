@@ -598,17 +598,37 @@ void TextViewer::keyPressed(const KeyInput& input) {
 	switch(input.keyboardCode()) {
 	case keyboardcodes::BACK_SPACE:	// [BackSpace]
 	case keyboardcodes::F16:	// [F16]
-		if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			WordDeletionCommand(*this, Direction::BACKWARD)();
-		else
-			CharacterDeletionCommand(*this, Direction::BACKWARD)();
+		switch(input.modifiers()) {
+			case 0:
+			case UserInput::SHIFT_DOWN:
+				CharacterDeletionCommand(*this, Direction::BACKWARD)();
+				break;
+			case UserInput::CONTROL_DOWN:
+				WordDeletionCommand(*this, Direction::BACKWARD)();
+				break;
+			case UserInput::ALT_DOWN:
+			case UserInput::SHIFT_DOWN | UserInput::ALT_DOWN:
+				UndoCommand(*this, hasModifier<UserInput::SHIFT_DOWN>(input))();
+				break;
+		}
 		break;
 	case keyboardcodes::CLEAR:	// [Clear]
-		if(hasModifier<UserInput::CONTROL_DOWN>(input))
+		if(input.modifiers() == UserInput::CONTROL_DOWN)
 			EntireDocumentSelectionCreationCommand(*this)();
 		break;
 	case keyboardcodes::ENTER_OR_RETURN:	// [Enter]
-		NewlineCommand(*this, hasModifier<UserInput::CONTROL_DOWN>(input))();
+		switch(input.modifiers()) {
+		case 0:
+		case UserInput::SHIFT_DOWN:
+			NewlineCommand(*this)();
+			break;
+		case UserInput::CONTROL_DOWN:
+			NewlineCommand(*this, Direction::BACKWARD)();
+			break;
+		case UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN:
+			NewlineCommand(*this, Direction::FORWARD)();
+			break;
+		}
 		break;
 	case keyboardcodes::SHIFT:	// [Shift]
 		if(hasModifier<UserInput::CONTROL_DOWN>(input)

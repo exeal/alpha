@@ -155,20 +155,16 @@ namespace ascension {
 				explicit Renderer(TextViewer& viewer,
 					const presentation::WritingMode& writingMode = presentation::WritingMode());
 				Renderer(const Renderer& other, TextViewer& viewer);
-				void setDefaultWritingMode(const presentation::WritingMode& writingMode) /*throw()*/;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				void rewrapAtWindowEdge();
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 				// TextRenderer
 				std::unique_ptr<const graphics::font::TextLayout> createLineLayout(Index line) const;
-				const presentation::WritingMode& defaultUIWritingMode() const /*throw()*/;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				graphics::Scalar width() const /*throw()*/;
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 			private:
 				TextViewer& viewer_;
-				presentation::WritingMode defaultWritingMode_;
-//				presentation::Inheritable<presentation::TextAnchor> overrideTextAnchor_;
 			};
 
 			// constructors

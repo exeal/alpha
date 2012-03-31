@@ -50,11 +50,13 @@ void utils::show(VisualPoint& p) {
 	const shared_ptr<font::TextViewport> viewport(viewer.textRenderer().viewport());
 	const Position np(p.normalized());
 	const float visibleLines = viewport->numberOfVisibleLines();
-	Index bpd = viewport->firstVisibleLineInVisualNumber(), ipd = viewport->inlineProgressionOffset();	// scroll destination
+	AbstractTwoAxes<boost::optional<font::TextViewport::ScrollOffset>> to;	// scroll destination
+	to.bpd() = viewport->firstVisibleLineInVisualNumber();
+	to.ipd() = viewport->inlineProgressionOffset();
 
 	// scroll if the point is outside of 'before-edge' or 'after-edge'
-	bpd = min(p.visualLine(), bpd);
-	bpd = max(p.visualLine() - static_cast<Index>(viewport->numberOfVisibleLines()) + 1, bpd);
+	to.bpd() = min(p.visualLine(), *to.bpd());
+	to.bpd() = max(p.visualLine() - static_cast<font::TextViewport::ScrollOffset>(viewport->numberOfVisibleLines()) + 1, *to.bpd());
 
 	// scroll if the point is outside of 'start-edge' or 'end-edge'
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -78,10 +80,10 @@ void utils::show(VisualPoint& p) {
 	const Index pointIpd = (font::lineIndent(layout, viewport->contentMeasure())
 		+ isHorizontal(layout.writingMode().blockFlowDirection) ? geometry::x(location) : geometry::y(location))
 		/ renderer.defaultFont()->metrics().averageCharacterWidth();
-	ipd = min(pointIpd, ipd);
-	ipd = max(pointIpd - static_cast<Index>(viewport->numberOfVisibleCharactersInLine()) + 1, ipd);
+	to.ipd() = min(pointIpd, *to.ipd());
+	to.ipd() = max(pointIpd - static_cast<Index>(viewport->numberOfVisibleCharactersInLine()) + 1, *to.ipd());
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
-	viewport->scrollTo(bpd, ipd, &viewer);
+	viewport->scrollTo(to);
 }
 
 

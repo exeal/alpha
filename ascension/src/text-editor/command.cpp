@@ -6,10 +6,10 @@
  * @date 2011-2012
  */
 
+#include <ascension/content-assist/content-assist.hpp>
 #include <ascension/corelib/text/break-iterator.hpp>	// text.WordBreakIterator
 #include <ascension/text-editor/command.hpp>
 #include <ascension/viewer/caret.hpp>
-#include <ascension/viewer/content-assist.hpp>
 #include <ascension/win32/ui/wait-cursor.hpp>
 
 using namespace ascension;
@@ -187,7 +187,7 @@ namespace {
 	}
 	inline void scrollTextViewer(TextViewer& target, BlockProgressionDestinationProxy(*procedure)(const VisualPoint&, Index), long n) {
 		// TODO: consider the numeric prefix.
-		SignedIndex offset = 0;
+		graphics::font::TextViewport::SignedScrollOffset offset = 0;
 		if(procedure == &locations::forwardPage)
 			++offset;
 		else if(procedure == &locations::backwardPage)
@@ -750,9 +750,12 @@ bool MatchBracketCommand::perform() {
 /**
  * Constructor.
  * @param viewer The target text viewer
- * @param insertPrevious Set @c true to insert on previous line. Otherwise on the current line
+ * @param direction Set @c boost#none to break current line at the caret position. Otherwise,
+ *                  this command inserts newline(s) at the beginning of the next
+ *                  (@c Direction#FORWARD) or the previous (@c Direction#BACKWARD) line. In this
+ *                  case, the command ends the active mode and inserts newline character(s)
  */
-NewlineCommand::NewlineCommand(TextViewer& viewer, bool insertPrevious) /*throw()*/ : Command(viewer), insertsPrevious_(insertPrevious) {
+NewlineCommand::NewlineCommand(TextViewer& viewer, boost::optional<Direction> direction) /*throw()*/ : Command(viewer), direction_(direction) {
 }
 
 /**
@@ -771,7 +774,7 @@ bool NewlineCommand::perform() {
 		}
 	}
 
-	if(endIncrementalSearch(viewer))
+	if(endIncrementalSearch(viewer) && direction_ == boost::none)
 		return true;
 
 	ASCENSION_CHECK_DOCUMENT_READ_ONLY();
@@ -779,27 +782,34 @@ bool NewlineCommand::perform() {
 
 	Caret& caret = viewer.caret();
 	const Region oldSelection(caret.selectedRegion());
+	Document& document = viewer.document();
 	AutoFreeze af(&viewer);
 
-	if(insertsPrevious_) {
+	if(direction_ != boost::none) {
+		Position p;
+		if(*direction_ == Direction::FORWARD)
+			p = locations::endOfVisualLine(caret);
+		else if(line(caret) != document.region().beginning().line)
+			p.offsetInLine = document.lineLength(p.line = line(caret) - 1);
+		else
+			p = document.region().beginning();
+		if(p < document.accessibleRegion().beginning() || p > document.accessibleRegion().end())
+			return false;
 		const bool autoShow = caret.isAutoShowEnabled();
 		caret.enableAutoShow(false);
-		if(oldSelection.first.line != 0)
-			caret.moveTo(Position(oldSelection.first.line - 1, caret.document().lineLength(oldSelection.first.line - 1)));
-		else
-			caret.moveTo(viewer.document().region().first);
+		caret.moveTo(p);
 		caret.enableAutoShow(autoShow);
 	}
 
 	try {
-		viewer.document().insertUndoBoundary();
+		document.insertUndoBoundary();
 		breakLine(caret, false, numericPrefix());
 	} catch(const DocumentInput::ChangeRejectedException&) {
-		viewer.document().insertUndoBoundary();
+		document.insertUndoBoundary();
 		caret.select(oldSelection);
 		return false;
 	}
-	viewer.document().insertUndoBoundary();
+	document.insertUndoBoundary();
 	caret.moveTo(caret.anchor());
 	return true;
 }

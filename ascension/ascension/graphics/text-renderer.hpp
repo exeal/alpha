@@ -95,6 +95,7 @@ namespace ascension {
 				void addComputedWritingModeListener(ComputedWritingModeListener& listener);
 				const presentation::WritingMode& defaultUIWritingMode() const /*throw()*/;
 				void removeComputedWritingModeListener(ComputedWritingModeListener& listener);
+				void setDefaultUIWritingMode(const presentation::WritingMode& writingMode);
 				presentation::WritingMode writingMode() const /*throw()*/;
 				// text wrappings
 				void setTextWrapping(
@@ -122,7 +123,6 @@ namespace ascension {
 			protected:
 				void buildLineLayoutConstructionParameters(Index line,
 					TextLayout::ConstructionParameters& parameters) const;
-				void setDefaultUIWritingMode(const presentation::WritingMode& writingMode);
 			private:
 				void fireComputedWritingModeChanged(
 					const presentation::TextToplevelStyle& globalTextStyle,
