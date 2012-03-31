@@ -673,6 +673,9 @@
     <ClInclude Include="..\..\ascension\ascension\content-assist\default-content-assistant.hpp">
       <Filter>ascension\Header Files\content-assist</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\directions.hpp">
+      <Filter>ascension\Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">

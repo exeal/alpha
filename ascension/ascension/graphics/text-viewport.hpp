@@ -56,9 +56,9 @@ namespace ascension {
 				bool isScrollLocked() const /*throw()*/;
 				void lockScroll();
 				void scroll(const presentation::AbstractTwoAxes<SignedScrollOffset>& offsets);
-				void scroll(const presentation::PhysicalTwoAxes<SignedScrollOffset>& offsets);
+				void scroll(const PhysicalTwoAxes<SignedScrollOffset>& offsets);
 				void scrollTo(const presentation::AbstractTwoAxes<boost::optional<ScrollOffset>>& positions);
-				void scrollTo(const presentation::PhysicalTwoAxes<boost::optional<ScrollOffset>>& positions);
+				void scrollTo(const PhysicalTwoAxes<boost::optional<ScrollOffset>>& positions);
 				void scrollTo(const VisualLine& line, ScrollOffset ipd);
 				void unlockScroll();
 			private:
@@ -143,26 +143,26 @@ namespace ascension {
 			};
 
 			// free functions
-			inline presentation::PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>
-			convertAbstractScrollPositionsToPhysical(const TextViewport& viewport,
+			inline PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>
+			convertFlowRelativeScrollPositionsToPhysical(const TextViewport& viewport,
 					const presentation::AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
 				switch(viewport.textRenderer().writingMode().blockFlowDirection) {
 					case presentation::HORIZONTAL_TB:
-						return presentation::PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.ipd(), positions.bpd());
+						return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.ipd(), positions.bpd());
 					case presentation::VERTICAL_RL:
-						return presentation::PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(
+						return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(
 							(positions.bpd() != boost::none) ?
 								boost::make_optional(viewport.textRenderer().layouts().numberOfVisualLines() - *positions.bpd() - 1) : boost::none,
 							positions.ipd());
 					case presentation::VERTICAL_LR:
-						return presentation::PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.bpd(), positions.ipd());
+						return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.bpd(), positions.ipd());
 					default:
 						ASCENSION_ASSERT_NOT_REACHED();
 				}
 			}
 			inline presentation::AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>
 			convertPhysicalScrollPositionsToAbstract(const TextViewport& viewport,
-					const presentation::PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
+					const PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
 				presentation::AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>> result;
 				switch(viewport.textRenderer().writingMode().blockFlowDirection) {
 					case presentation::HORIZONTAL_TB:

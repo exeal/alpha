@@ -600,9 +600,9 @@ Position locations::leftCharacter(const VisualPoint& p, CharacterUnit unit, Inde
  * Returns the beginning of the word where advanced to the left by N words.
  * @param p The base position
  * @param words The number of words to adavance
- * @return The destination
+ * @return The destination, or @c boost#none if the writing mode is vertical
  */
-Position locations::leftWord(const VisualPoint& p, Index words /* = 1 */) {
+boost::optional<Position> locations::leftWord(const VisualPoint& p, Index words /* = 1 */) {
 	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? backwardWord(p, words) : forwardWord(p, words);
 }
 
@@ -610,9 +610,9 @@ Position locations::leftWord(const VisualPoint& p, Index words /* = 1 */) {
  * Returns the end of the word where advanced to the left by N words.
  * @param p The base position
  * @param words The number of words to adavance
- * @return The destination
+ * @return The destination, or @c boost#none if the writing mode is vertical
  */
-Position locations::leftWordEnd(const VisualPoint& p, Index words /* = 1 */) {
+boost::optional<Position> locations::leftWordEnd(const VisualPoint& p, Index words /* = 1 */) {
 	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? backwardWordEnd(p, words) : forwardWordEnd(p, words);
 }
 
@@ -634,7 +634,7 @@ Position locations::rightCharacter(const VisualPoint& p, CharacterUnit unit, Ind
  * @param words The number of words to adavance
  * @return The destination
  */
-Position locations::rightWord(const VisualPoint& p, Index words /* = 1 */) {
+boost::optional<Position> locations::rightWord(const VisualPoint& p, Index words /* = 1 */) {
 	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? forwardWord(p, words) : backwardWord(p, words);
 }
 
@@ -644,6 +644,6 @@ Position locations::rightWord(const VisualPoint& p, Index words /* = 1 */) {
  * @param words The number of words to adavance
  * @return The destination
  */
-Position locations::rightWordEnd(const VisualPoint& p, Index words /* = 1 */) {
+boost::optional<Position> locations::rightWordEnd(const VisualPoint& p, Index words /* = 1 */) {
 	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? forwardWordEnd(p, words) : backwardWordEnd(p, words);
 }

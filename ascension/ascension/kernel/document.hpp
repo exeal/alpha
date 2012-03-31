@@ -9,6 +9,7 @@
 #define ASCENSION_DOCUMENT_HPP
 
 #include <ascension/config.hpp>				// ASCENSION_DEFAULT_NEWLINE
+#include <ascension/directions.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/corelib/gap-vector.hpp>	// detail.GapVector
 #include <ascension/corelib/listeners.hpp>
