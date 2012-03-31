@@ -219,10 +219,10 @@ namespace ascension {
 			 */
 			class NewlineCommand : public Command {
 			public:
-				NewlineCommand(viewers::TextViewer& view, bool insertPrevious) /*throw()*/;
+				NewlineCommand(viewers::TextViewer& view, boost::optional<Direction> direction = boost::none) /*throw()*/;
 			private:
 				bool perform();
-				const bool insertsPrevious_;
+				const boost::optional<Direction> direction_;
 			};
 			/// Toggles overtype mode of the caret.
 			class OvertypeModeToggleCommand : public Command {
