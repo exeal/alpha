@@ -108,27 +108,39 @@ namespace ascension {
 				GLYPH_CLUSTER		///< A glyph is a character (not implemented).
 			};
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			boost::optional<Position> backwardBookmark(const Point& p, Index marks = 1);
 			Position backwardCharacter(const Point& p, CharacterUnit unit, Index characters = 1);
 			Position backwardLine(const Point& p, Index lines = 1);
 			Position backwardWord(const Point& p, Index words = 1);
 			Position backwardWordEnd(const Point& p, Index words = 1);
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 			Position beginningOfDocument(const Point& p);
 			Position beginningOfLine(const Point& p);
 			CodePoint characterAt(const Point& p, bool useLineFeed = false);
 			Position endOfDocument(const Point& p);
 			Position endOfLine(const Point& p);
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			boost::optional<Position> forwardBookmark(const Point& p, Index marks = 1);
 			Position forwardCharacter(const Point& p, CharacterUnit unit, Index characters = 1);
 			Position forwardLine(const Point& p, Index lines = 1);
 			Position forwardWord(const Point& p, Index words = 1);
 			Position forwardWordEnd(const Point& p, Index words = 1);
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 			bool isBeginningOfDocument(const Point& p);
 			bool isBeginningOfLine(const Point& p);
 			bool isEndOfDocument(const Point& p);
 			bool isEndOfLine(const Point& p);
+			boost::optional<Position> nextBookmark(const Point& p, Direction direction, Index marks = 1);
 			Position nextCharacter(const Document& document, const Position& p,
 				Direction direction, CharacterUnit characterUnit, Index offset = 1);
+			inline Position nextCharacter(const Point& p,
+					Direction direction, CharacterUnit characterUnit, Index offset = 1) {
+				return nextCharacter(p.document(), p, direction, characterUnit, offset);
+			}
+			Position nextLine(const Point& p, Direction direction, Index lines = 1);
+			Position nextWord(const Point& p, Direction direction, Index words = 1);
+			Position nextWordEnd(const Point& p, Direction direction, Index words = 1);
 		} // namespace locations
 
 

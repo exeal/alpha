@@ -234,14 +234,15 @@ namespace {
 }
 
 // explicit instantiations
-template class CaretMovementCommand<Position(const Point&)>;
-template class CaretMovementCommand<Position(const Point&, Index)>;
-template class CaretMovementCommand<boost::optional<Position>(const Point&, Index)>;
-template class CaretMovementCommand<Position(const Point&, locations::CharacterUnit, Index)>;
-template class CaretMovementCommand<Position(const VisualPoint&)>;
-template class CaretMovementCommand<Position(const VisualPoint&, Index)>;
-template class CaretMovementCommand<Position(const VisualPoint&, locations::CharacterUnit, Index)>;
-template class CaretMovementCommand<BlockProgressionDestinationProxy(const VisualPoint&, Index)>;
+template class CaretMovementCommand<Position(const Point&)>;	// (beginning|end)Of(Document|Line)
+template class CaretMovementCommand<Position(const Point&, Direction, Index)>;	// next(Line|Word|WordEnd)
+template class CaretMovementCommand<boost::optional<Position>(const Point&, Direction, Index)>;	// nextBookmark
+template class CaretMovementCommand<Position(const Point&, Direction, locations::CharacterUnit, Index)>;	// nextCharacter
+template class CaretMovementCommand<Position(const VisualPoint&)>;	// contextual(Beginning|End)OfLine, (beginning|end|contextualBeginning|contextualEnd)OfVisualLine, (first|last)PrintableCharacterOf(Visual)?Line
+template class CaretMovementCommand<VisualDestinationProxy(const VisualPoint&, Direction, Index)>;	// nextPage, nextVisualLine
+template class CaretMovementCommand<boost::optional<Position>(const VisualPoint&, PhysicalDirection, Index)>;	// nextBookmarkInPhysicalDirection
+template class CaretMovementCommand<VisualDestinationProxy(const VisualPoint&, PhysicalDirection, locations::CharacterUnit, Index)>;	// nextCharacterInPhysicalDirection
+template class CaretMovementCommand<VisualDestinationProxy(const VisualPoint&, PhysicalDirection, Index)>;	// nextWord(End)?InPhysicalDirection
 
 /**
  * Moves the caret or extends the selection.

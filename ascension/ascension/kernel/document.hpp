@@ -138,7 +138,7 @@ namespace ascension {
 		/**
 		 * A @c Bookmarker manages bookmarks of the document.
 		 * @note This class is not intended to be subclassed.
-		 * @see Document#bookmarker, locations#forwardBookmark, locations#backwardBookmark
+		 * @see Document#bookmarker, locations#nextBookmark
 		 */
 		class Bookmarker : private DocumentListener {
 			ASCENSION_NONCOPYABLE_TAG(Bookmarker);
