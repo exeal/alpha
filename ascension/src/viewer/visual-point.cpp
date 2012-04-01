@@ -87,6 +87,16 @@ void utils::show(VisualPoint& p) {
 }
 
 
+// detail.VisualDestinationProxyMaker /////////////////////////////////////////////////////////////
+
+class detail::VisualDestinationProxyMaker {
+public:
+	static VisualDestinationProxy make(const Position& p, bool crossVisualLines) {
+		return VisualDestinationProxy(p, crossVisualLines);
+	}
+};
+
+
 // TextViewerDisposedException ////////////////////////////////////////////////////////////////////
 
 TextViewerDisposedException::TextViewerDisposedException() :
@@ -227,7 +237,11 @@ void VisualPoint::insertRectangle(const Char* first, const Char* last) {
 }
 #endif
 /// @internal @c Point#moveTo for @c BlockProgressionDestinationProxy.
-void VisualPoint::moveTo(const BlockProgressionDestinationProxy& to) {
+void VisualPoint::moveTo(const VisualDestinationProxy& to) {
+	if(!to.crossesVisualLines()) {
+		moveTo(to.position());
+		return;
+	}
 	if(!positionInVisualLine_)
 		rememberPositionInVisualLine();
 	crossingLines_ = true;
@@ -310,13 +324,14 @@ void VisualPoint::visualLinesModified(const Range<Index>& lines, SignedIndex sub
 
 // viewers.locations free functions ///////////////////////////////////////////////////////////////
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /**
  * Returns the position returned by N pages.
  * @param p The base position
  * @param pages The number of pages to return
  * @return The destination
  */
-BlockProgressionDestinationProxy locations::backwardPage(const VisualPoint& p, Index pages /* = 1 */) {
+VisualDestinationProxy locations::backwardPage(const VisualPoint& p, Index pages /* = 1 */) {
 	Index lines = 0;
 	const shared_ptr<const font::TextViewport> viewport(p.textViewer().textRenderer().viewport());
 	// TODO: calculate exact number of visual lines.
@@ -331,12 +346,12 @@ BlockProgressionDestinationProxy locations::backwardPage(const VisualPoint& p, I
  * @param lines The number of the visual lines to return
  * @return The destination
  */
-BlockProgressionDestinationProxy locations::backwardVisualLine(const VisualPoint& p, Index lines /* = 1 */) {
+VisualDestinationProxy locations::backwardVisualLine(const VisualPoint& p, Index lines /* = 1 */) {
 	Position np(p.normalized());
 	const font::TextRenderer& renderer = p.textViewer().textRenderer();
 	Index subline = renderer.layouts().at(np.line).lineAt(np.offsetInLine);
 	if(np.line == 0 && subline == 0)
-		return VisualPoint::makeBlockProgressionDestinationProxy(np);
+		return detail::VisualDestinationProxyMaker::make(np, true);
 	font::VisualLine visualLine(np.line, subline);
 	renderer.layouts().offsetVisualLine(visualLine, -static_cast<SignedIndex>(lines));
 	const font::TextLayout& layout = renderer.layouts().at(visualLine.line);
@@ -349,8 +364,9 @@ BlockProgressionDestinationProxy locations::backwardVisualLine(const VisualPoint
 			geometry::make<NativePoint>(ipd, bpd) : geometry::make<NativePoint>(bpd, ipd)).second;
 	if(layout.lineAt(np.offsetInLine) != visualLine.subline)
 		np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
-	return VisualPoint::makeBlockProgressionDestinationProxy(np);
+	return detail::VisualDestinationProxyMaker::make(np, true);
 }
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 /**
  * Returns the beginning of the visual line.
@@ -450,13 +466,14 @@ Position locations::firstPrintableCharacterOfVisualLine(const VisualPoint& p) {
 	return np;
 }
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /**
  * Returns the position advanced by N pages.
  * @param p The base position
  * @param pages The number of pages to advance
  * @return The destination
  */
-BlockProgressionDestinationProxy locations::forwardPage(const VisualPoint& p, Index pages /* = 1 */) {
+VisualDestinationProxy locations::forwardPage(const VisualPoint& p, Index pages /* = 1 */) {
 	Index lines = 0;
 	const shared_ptr<const font::TextViewport> viewport(p.textViewer().textRenderer().viewport());
 	// TODO: calculate exact number of visual lines.
@@ -471,13 +488,13 @@ BlockProgressionDestinationProxy locations::forwardPage(const VisualPoint& p, In
  * @param lines The number of the visual lines to advance
  * @return The destination
  */
-BlockProgressionDestinationProxy locations::forwardVisualLine(const VisualPoint& p, Index lines /* = 1 */) {
+VisualDestinationProxy locations::forwardVisualLine(const VisualPoint& p, Index lines /* = 1 */) {
 	Position np(p.normalized());
 	const font::TextRenderer& renderer = p.textViewer().textRenderer();
 	const font::TextLayout* layout = &renderer.layouts().at(np.line);
 	Index subline = layout->lineAt(np.offsetInLine);
 	if(np.line == p.document().numberOfLines() - 1 && subline == layout->numberOfLines() - 1)
-		return VisualPoint::makeBlockProgressionDestinationProxy(np);
+		return detail::VisualDestinationProxyMaker::make(np, true);
 	font::VisualLine visualLine(np.line, subline);
 	renderer.layouts().offsetVisualLine(visualLine, static_cast<SignedIndex>(lines));
 	layout = &renderer.layouts().at(visualLine.line);
@@ -491,8 +508,9 @@ BlockProgressionDestinationProxy locations::forwardVisualLine(const VisualPoint&
 	if(layout->lineAt(np.offsetInLine) != visualLine.subline)
 		np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
 
-	return VisualPoint::makeBlockProgressionDestinationProxy(np);
+	return detail::VisualDestinationProxyMaker::make(np, true);
 }
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 /**
  * Returns @c true if the point is the beginning of the visual line.
@@ -583,19 +601,7 @@ namespace {
 	}
 }
 
-/**
- * Returns the position advanced to the left by N characters.
- * @param p The base position
- * @param unit Defines what a character is
- * @param characters The number of characters to adavance
- * @return The destination
- */
-Position locations::leftCharacter(const VisualPoint& p, CharacterUnit unit, Index characters /* = 1 */) {
-	
-	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ?
-		backwardCharacter(p, unit, characters) : forwardCharacter(p, unit, characters);
-}
-
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /**
  * Returns the beginning of the word where advanced to the left by N words.
  * @param p The base position
@@ -615,19 +621,154 @@ boost::optional<Position> locations::leftWord(const VisualPoint& p, Index words 
 boost::optional<Position> locations::leftWordEnd(const VisualPoint& p, Index words /* = 1 */) {
 	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? backwardWordEnd(p, words) : forwardWordEnd(p, words);
 }
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 /**
- * Returns the position advanced to the right by N characters.
+ * Returns the beginning of the next bookmarked line.
+ * @param p The base point
+ * @param direction The direction
+ * @return The beginning of the forward/backward bookmarked line, or @c boost#none if there is no
+ *         bookmark in the document or @a direction is inline-progression
+ * @see #nextBookmark
+ */
+boost::optional<Position> locations::nextBookmarkInPhysicalDirection(
+		const viewers::VisualPoint& p, graphics::PhysicalDirection direction, Index marks /* = 1 */) {
+	switch(mapPhysicalToFlowRelative(p.textViewer().textRenderer().defaultUIWritingMode(), direction)) {
+		case BEFORE:
+			return nextBookmark(p, Direction::BACKWARD, marks);
+		case AFTER:
+			return nextBookmark(p, Direction::FORWARD, marks);
+		case START:
+		case END:
+			return boost::none;
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+}
+
+/**
+ * Returns the position advanced to the left by N characters.
  * @param p The base position
+ * @param direction The physical direction
  * @param unit Defines what a character is
  * @param characters The number of characters to adavance
  * @return The destination
+ * @see #nextCharacter
  */
-Position locations::rightCharacter(const VisualPoint& p, CharacterUnit unit, Index characters /* = 1 */) {
-	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ?
-		forwardCharacter(p, unit, characters) : backwardCharacter(p, unit, characters);
+VisualDestinationProxy locations::nextCharacterInPhysicalDirection(
+		const VisualPoint& p, PhysicalDirection direction, CharacterUnit unit, Index characters /* = 1 */) {
+	switch(mapPhysicalToFlowRelative(p.textViewer().textRenderer().defaultUIWritingMode(), direction)) {
+		case BEFORE:
+			return nextVisualLine(p, Direction::BACKWARD, characters);
+		case AFTER:
+			return nextVisualLine(p, Direction::FORWARD, characters);
+		case START:
+			return detail::VisualDestinationProxyMaker::make(nextCharacter(p, Direction::BACKWARD, unit, characters), false);
+		case END:
+			return detail::VisualDestinationProxyMaker::make(nextCharacter(p, Direction::FORWARD, unit, characters), false);
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
 }
 
+/**
+ * Returns the position advanced/returned by N pages.
+ * @param p The base position
+ * @param direction The direction
+ * @param pages The number of pages to advance/return
+ * @return The destination
+ */
+VisualDestinationProxy locations::nextPage(const VisualPoint& p, Direction direction, Index pages /* = 1 */) {
+	Index lines = 0;
+	const shared_ptr<const font::TextViewport> viewport(p.textViewer().textRenderer().viewport());
+	// TODO: calculate exact number of visual lines.
+	lines = static_cast<Index>(viewport->numberOfVisibleLines() * pages);
+
+	return nextVisualLine(p, direction, lines);
+}
+
+/**
+ * Returns the position advanced/returned by N visual lines.
+ * @param p The base position
+ * @param lines The number of the visual lines to advance/return
+ * @return The destination
+ * @see #nextLine
+ */
+VisualDestinationProxy locations::nextVisualLine(const VisualPoint& p, Direction direction, Index lines /* = 1 */) {
+	Position np(p.normalized());
+	const font::TextRenderer& renderer = p.textViewer().textRenderer();
+	Index subline;
+	if(direction == Direction::FORWARD) {
+		const font::TextLayout& layout = renderer.layouts().at(np.line);
+		subline = layout.lineAt(np.offsetInLine);
+		if(np.line == p.document().numberOfLines() - 1 && subline == layout.numberOfLines() - 1)
+			return detail::VisualDestinationProxyMaker::make(np, true);
+	} else {
+		subline = renderer.layouts().at(np.line).lineAt(np.offsetInLine);
+		if(np.line == 0 && subline == 0)
+			return detail::VisualDestinationProxyMaker::make(np, true);
+	}
+	font::VisualLine visualLine(np.line, subline);
+	renderer.layouts().offsetVisualLine(visualLine,
+		(direction == Direction::FORWARD) ? static_cast<SignedIndex>(lines) : -static_cast<SignedIndex>(lines));
+	const font::TextLayout& layout = renderer.layouts().at(visualLine.line);
+	if(!p.positionInVisualLine_)
+		const_cast<VisualPoint&>(p).rememberPositionInVisualLine();
+	const Scalar ipd = *p.positionInVisualLine_ - font::lineStartEdge(layout, renderer.viewport()->contentMeasure());
+	const Scalar bpd = layout.baseline(visualLine.subline);
+	np.offsetInLine = layout.offset(
+		isHorizontal(layout.writingMode().blockFlowDirection) ?
+			geometry::make<NativePoint>(ipd, bpd) : geometry::make<NativePoint>(bpd, ipd)).second;
+	if(layout.lineAt(np.offsetInLine) != visualLine.subline)
+		np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
+	return detail::VisualDestinationProxyMaker::make(np, true);
+}
+
+/**
+ * Returns the beginning of the word where advanced to the left/right/top/bottom by N words.
+ * @param p The base position
+ * @param words The number of words to adavance
+ * @return The destination, or @c boost#none if @a direction is block-progression
+ * @see #nextWord, #nextWordEndInPhysicalDirection
+ */
+boost::optional<Position> locations::nextWordInPhysicalDirection(
+		const VisualPoint& p, PhysicalDirection direction, Index words /* = 1 */) {
+	switch(mapPhysicalToFlowRelative(p.textViewer().textRenderer().defaultUIWritingMode(), direction)) {
+		case BEFORE:
+		case AFTER:
+			return boost::none;
+		case START:
+			return nextWord(p, Direction::BACKWARD, words);
+		case END:
+			return nextWord(p, Direction::FORWARD, words);
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+}
+
+/**
+ * Returns the end of the word where advanced to the left/right/top/bottom by N words.
+ * @param p The base position
+ * @param words The number of words to adavance
+ * @return The destination, or @c boost#none if @a direction is block-progression
+ * @see #nextWordEnd, #nextWordInPhysicalDirection
+ */
+boost::optional<Position> locations::nextWordEndInPhysicalDirection(
+		const VisualPoint& p, PhysicalDirection direction, Index words /* = 1 */) {
+	switch(mapPhysicalToFlowRelative(p.textViewer().textRenderer().defaultUIWritingMode(), direction)) {
+		case BEFORE:
+		case AFTER:
+			return boost::none;
+		case START:
+			return nextWordEnd(p, Direction::BACKWARD, words);
+		case END:
+			return nextWordEnd(p, Direction::FORWARD, words);
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+}
+
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /**
  * Returns the beginning of the word where advanced to the right by N words.
  * @param p The base position
@@ -647,3 +788,4 @@ boost::optional<Position> locations::rightWord(const VisualPoint& p, Index words
 boost::optional<Position> locations::rightWordEnd(const VisualPoint& p, Index words /* = 1 */) {
 	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? forwardWordEnd(p, words) : backwardWordEnd(p, words);
 }
+#endif // ASCENSION_ABANDONED_AT_VERSION_08

@@ -205,8 +205,8 @@ void Point::update(const DocumentChange& change) {
  *
  * Functions this namespace defines are categorized into the following three:
  *
- * - Functions take a position and return other position (ex. @c forwardCharacter). These functions
- *   take a @c Point or @c VisualPoint as the first parameter excepting @c nextCharacter.
+ * - Functions take a position and return other position (ex. @c nextCharacter). These functions
+ *   take a @c Position, @c Point or @c VisualPoint as the base position.
  * - Functions check if the given position is specific location (ex. isBeginningOfLine). These
  *   functions take a @c Point or @c VisualPoint as the first parameter.
  * - @c characterAt.
@@ -224,6 +224,7 @@ namespace {
 	}
 } // namespace @0
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /**
  * Returns the beginning of the previous bookmarked line.
  * @param p The base point
@@ -288,6 +289,7 @@ Position locations::backwardWordEnd(const Point& p, Index words /* = 1 */) {
 		AbstractWordBreakIterator::END_OF_SEGMENT, identifierSyntax(p));
 	return (i -= words).base().tell();
 }
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 /**
  * Returns the beginning of the document.
@@ -341,6 +343,7 @@ Position locations::endOfLine(const Point& p) {
 	return min(Position(temp.line, p.document().lineLength(temp.line)), p.document().accessibleRegion().second);
 }
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /**
  * Returns the beginning of the next bookmarked line.
  * @param p The base point
@@ -405,6 +408,7 @@ Position locations::forwardWordEnd(const Point& p, Index words /* = 1 */) {
 		AbstractWordBreakIterator::END_OF_SEGMENT, identifierSyntax(p));
 	return (i += words).base().tell();
 }
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 /// Returns @c true if the given point @a p is the beginning of the document.
 bool locations::isBeginningOfDocument(const Point& p) {
@@ -429,6 +433,19 @@ bool locations::isEndOfLine(const Point& p) {
 }
 
 /**
+ * Returns the beginning of the next bookmarked line.
+ * @param p The base point
+ * @param direction The direction
+ * @return The beginning of the forward/backward bookmarked line, or @c boost#none if there is no
+ *         bookmark in the document
+ * @see #nextBookmarkInPhysicalDirection
+ */
+boost::optional<Position> locations::nextBookmark(const Point& p, Direction direction, Index marks /* = 1 */) {
+	const boost::optional<Index> line(p.document().bookmarker().next(p.normalized().line, direction, true, marks));
+	return (line != boost::none) ? boost::make_optional(Position(*line, 0)) : boost::none;
+}
+
+/**
  * Returns the position offset from the given point with the given character unit.
  * This function considers the accessible region of the document.
  * @param document The document
@@ -439,6 +456,7 @@ bool locations::isEndOfLine(const Point& p) {
  * @return The result position. This must be inside of the accessible region of the document
  * @throw BadPositionException @a position is outside of the document
  * @throw UnknownValueException @a characterUnit is invalid
+ * @see #nextCharacterInPhysicalDirection
  */
 Position locations::nextCharacter(const Document& document, const Position& position,
 		Direction direction, locations::CharacterUnit characterUnit, Index offset /* = 1 */) {
@@ -485,6 +503,68 @@ Position locations::nextCharacter(const Document& document, const Position& posi
 	throw UnknownValueException("characterUnit");
 }
 
+/**
+ * Returns the position advanced/returned by N lines. If the destination position is outside of the
+ * inaccessible region, returns the last/first line whose offset is accessible, rather than the
+ * end/beginning of the accessible region.
+ * @param p The base point
+ * @param direction The direction
+ * @param lines The number of the lines to advance/return
+ * @return The position of the next/previous line
+ * @see #nextVisualLine
+ */
+Position locations::nextLine(const Point& p, Direction direction, Index lines /* = 1 */) {
+	Position result(p.normalized());
+	if(direction == Direction::FORWARD) {
+		const Position eob(p.document().accessibleRegion().end());
+		result.line = (result.line + lines < eob.line) ? result.line + lines : eob.line;
+		if(result.line == eob.line && result.offsetInLine > eob.offsetInLine)
+			--result.line;
+	} else {
+		const Position bob(p.document().accessibleRegion().beginning());
+		result.line = (result.line > bob.line + lines) ? result.line - lines : bob.line;
+		if(result.line == bob.line && result.offsetInLine < bob.offsetInLine)
+			++result.line;
+	}
+	return result;
+}
+
+/**
+ * Returns the beginning of the forward/backward N words.
+ * @param p The base point
+ * @param direction The direction
+ * @param words The number of words to traverse
+ * @return The destination
+ * @see #nextWordEnd, #nextWordInPhysicalDirection
+ */
+Position locations::nextWord(const Point& p, Direction direction, Index words /* = 1 */) {
+	WordBreakIterator<DocumentCharacterIterator> i(
+		DocumentCharacterIterator(p.document(), p.document().accessibleRegion(), p.normalized()),
+		AbstractWordBreakIterator::START_OF_SEGMENT, identifierSyntax(p));
+	if(direction == Direction::FORWARD)
+		i += words;
+	else
+		i -= words;
+	return i.base().tell();
+}
+
+/**
+ * Returns the end of the forward/backward N words.
+ * @param p The base point
+ * @param words The number of words to traverse
+ * @return The destination
+ * @see #nextWord, #nextWordEndInPhysicalDirection
+ */
+Position locations::nextWordEnd(const Point& p, Direction direction, Index words /* = 1 */) {
+	WordBreakIterator<DocumentCharacterIterator> i(
+		DocumentCharacterIterator(p.document(), p.document().accessibleRegion(), p.normalized()),
+		AbstractWordBreakIterator::END_OF_SEGMENT, identifierSyntax(p));
+	if(direction == Direction::FORWARD)
+		i += words;
+	else
+		i -= words;
+	return i.base().tell();
+}
 
 #if 0
 /**
