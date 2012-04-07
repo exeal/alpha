@@ -118,7 +118,7 @@ public:
 	SpacePainter();
 	void paint(PaintContext& context);
 	const PhysicalFourSides<Scalar>& spaces() const;
-	void update(const TextRenderer& textRenderer, const NativeSize& size, const AbstractFourSides<Space>& spaces);
+	void update(const TextRenderer& textRenderer, const NativeSize& size, const FlowRelativeFourSides<Space>& spaces);
 private:
 	NativeSize canvasSize_;
 	PhysicalFourSides<Scalar> computedValues_;
@@ -168,12 +168,12 @@ inline const PhysicalFourSides<Scalar>& TextRenderer::SpacePainter::spaces() con
 	return computedValues_;
 }
 
-void TextRenderer::SpacePainter::update(const TextRenderer& textRenderer, const NativeSize& size, const AbstractFourSides<Space>& spaces) {
+void TextRenderer::SpacePainter::update(const TextRenderer& textRenderer, const NativeSize& size, const FlowRelativeFourSides<Space>& spaces) {
 	canvasSize_ = size;
-	AbstractFourSides<Scalar> spacesInPixels;
+	FlowRelativeFourSides<Scalar> spacesInPixels;
 	for(size_t i = 0; i < spaces.size(); ++i)
 		spacesInPixels[i] = static_cast<Scalar>(spaces[i].value(0, 0));
-	mapAbstractToPhysical(textRenderer.writingMode(), spacesInPixels, computedValues_);
+	mapFlowRelativeToPhysical(textRenderer.writingMode(), spacesInPixels, computedValues_);
 }
 
 
@@ -209,7 +209,7 @@ TextRenderer::TextRenderer(Presentation& presentation,
 	layouts_.reset(new LineLayoutVector(presentation.document(),
 		bind1st(mem_fun(&TextRenderer::generateLineLayout), this), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
 	updateDefaultFont();
-	AbstractFourSides<Space> zeroSpaces;
+	FlowRelativeFourSides<Space> zeroSpaces;
 	zeroSpaces.fill(Length(0));
 	spacePainter_->update(*this, initialSize, zeroSpaces);
 /*	switch(PRIMARYLANGID(getUserDefaultUILanguage())) {
@@ -398,13 +398,17 @@ void TextRenderer::removeDefaultFontListener(DefaultFontListener& listener) {
 }
 
 /**
- * 
- * @param writingMode 
+ * Sets the default UI writing mode. This method invalidates the all layouts and call listeners'
+ * @c ComputedWritingModeListener#computedWritingModeChanged.
+ * @param writingMode The new value to set
  */
 void TextRenderer::setDefaultUIWritingMode(const WritingMode& writingMode) {
-	const WritingMode used(defaultUIWritingMode());
-	defaultUIWritingMode_ = writingMode;
-	fireComputedWritingModeChanged(presentation().globalTextStyle(), used);
+	if(writingMode != defaultUIWritingMode()) {
+		const WritingMode used(defaultUIWritingMode());
+		defaultUIWritingMode_ = writingMode;
+		layouts().invalidate();
+		fireComputedWritingModeChanged(presentation().globalTextStyle(), used);
+	}
 }
 
 /**
