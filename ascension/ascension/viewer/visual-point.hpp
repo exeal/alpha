@@ -80,19 +80,10 @@ namespace ascension {
 			boost::optional<kernel::Position> leftWord(const viewers::VisualPoint& p, Index words = 1);
 			boost::optional<kernel::Position> leftWordEnd(const viewers::VisualPoint& p, Index words = 1);
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
-			boost::optional<Position> nextBookmarkInPhysicalDirection(
-				const viewers::VisualPoint& p, graphics::PhysicalDirection direction, Index marks = 1);
-			viewers::VisualDestinationProxy nextCharacterInPhysicalDirection(
-				const viewers::VisualPoint& p, graphics::PhysicalDirection direction,
-				CharacterUnit unit, Index characters = 1);
 			viewers::VisualDestinationProxy nextPage(
 				const viewers::VisualPoint& p, Direction direction, Index pages = 1);
 			viewers::VisualDestinationProxy nextVisualLine(
 				const viewers::VisualPoint& p, Direction direction, Index lines = 1);
-			boost::optional<Position> nextWordInPhysicalDirection(
-				const viewers::VisualPoint& p, graphics::PhysicalDirection direction, Index words = 1);
-			boost::optional<Position> nextWordEndInPhysicalDirection(
-				const viewers::VisualPoint& p, graphics::PhysicalDirection direction, Index words = 1);
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			viewers::VisualDestinationProxy rightCharacter(
 				const viewers::VisualPoint& p, CharacterUnit unit, Index characters = 1);
