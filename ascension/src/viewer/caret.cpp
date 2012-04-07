@@ -345,7 +345,7 @@ void Caret::extendSelectionTo(const Position& to) {
  * Moves to the specified position without the anchor adapting.
  * @param to The destination position
  */
-void Caret::extendSelectionTo(const BlockProgressionDestinationProxy& to) {
+void Caret::extendSelectionTo(const VisualDestinationProxy& to) {
 	context_.leaveAnchorNext = true;
 	try {
 		moveTo(to);
