@@ -2199,7 +2199,7 @@ NativeRectangle TextLayout::bounds(const Range<Index>& range) const {
 	if(range.end() > text_.length())
 		throw kernel::BadPositionException(kernel::Position(0, range.end()));
 
-	AbstractFourSides<Scalar> result;
+	FlowRelativeFourSides<Scalar> result;
 
 	// TODO: this implementation can't handle vertical text.
 

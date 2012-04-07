@@ -242,8 +242,10 @@ namespace ascension {
 		inline graphics::PhysicalFourSides<To>& mapFlowRelativeToPhysical(
 				const WritingMode& writingMode,
 				const FlowRelativeFourSides<From>& from, graphics::PhysicalFourSides<To>& to) {
-			for(FlowRelativeDirection direction = 0; direction != from.size(); ++direction)
-				to[mapFlowRelativeToPhysical(direction)] = from[direction];
+			for(std::size_t i = 0; i != from.size(); ++i) {
+				const FlowRelativeDirection direction = static_cast<FlowRelativeDirection>(i);
+				to[mapFlowRelativeToPhysical(writingMode, direction)] = from[direction];
+			}
 			return to;
 		}
 
@@ -265,8 +267,10 @@ namespace ascension {
 		template<typename From, typename To>
 		inline FlowRelativeFourSides<To>& mapPhysicalToFlowRelative(const WritingMode& writingMode,
 				const graphics::PhysicalFourSides<From>& from, FlowRelativeFourSides<To>& to) {
-			for(graphics::PhysicalDirection direction = 0; direction != from.size(); ++direction)
-				to[mapPhysicalToFlowRelative(direction)] = from[direction];
+			for(std::size_t i = 0; i != from.size(); ++i) {
+				const graphics::PhysicalDirection direction = static_cast<graphics::PhysicalDirection>(i);
+				to[mapPhysicalToFlowRelative(writingMode, direction)] = from[direction];
+			}
 			return to;
 		}
 

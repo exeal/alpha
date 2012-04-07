@@ -175,22 +175,22 @@ void RulerPainter::paint(PaintContext& context) {
 	const NativeRectangle paintBounds(context.boundsToPaint());
 	const TextRenderer& renderer = viewer_.textRenderer();
 	const SnapAlignment location = alignment();
-	AbstractFourSides<Border::Part>::reference (AbstractFourSides<Border::Part>::*borderPart)();
+	FlowRelativeFourSides<Border::Part>::reference (FlowRelativeFourSides<Border::Part>::*borderPart)();
 
 	const NativeRectangle indicatorMarginRectangle(indicatorMarginAllocationRectangle());
 	const NativeRectangle lineNumbersRectangle(lineNumbersAllocationRectangle());
 	switch(location) {
 		case LEFT:
-			borderPart = &AbstractFourSides<Border::Part>::end;
+			borderPart = &FlowRelativeFourSides<Border::Part>::end;
 			break;
 		case TOP:
-			borderPart = &AbstractFourSides<Border::Part>::after;
+			borderPart = &FlowRelativeFourSides<Border::Part>::after;
 			break;
 		case RIGHT:
-			borderPart = &AbstractFourSides<Border::Part>::start;
+			borderPart = &FlowRelativeFourSides<Border::Part>::start;
 			break;
 		case BOTTOM:
-			borderPart = &AbstractFourSides<Border::Part>::before;
+			borderPart = &FlowRelativeFourSides<Border::Part>::before;
 			break;
 	}
 

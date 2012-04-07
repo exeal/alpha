@@ -277,8 +277,8 @@ namespace {
 	VisualLine mapBpdToLine(const TextViewport& viewport, Scalar bpd, bool* snapped = nullptr) /*throw()*/ {
 		const WritingMode writingMode(viewport.textRenderer().writingMode());
 		const PhysicalFourSides<Scalar>& physicalSpaces = viewport.textRenderer().spaceWidths();
-		AbstractFourSides<Scalar> abstractSpaces;
-		mapPhysicalToAbstract(writingMode, physicalSpaces, abstractSpaces);
+		FlowRelativeFourSides<Scalar> abstractSpaces;
+		mapPhysicalToFlowRelative(writingMode, physicalSpaces, abstractSpaces);
 		const Scalar spaceBefore = abstractSpaces.before();
 		const Scalar spaceAfter = abstractSpaces.after();
 		const Scalar borderBefore = 0, borderAfter = 0, paddingBefore = 0, paddingAfter = 0;
