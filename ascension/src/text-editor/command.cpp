@@ -120,80 +120,78 @@ bool CancelCommand::perform() {
  * Constructor.
  * @param viewer The target text viewer
  * @param procedure A function gives a motion
+ * @param direction The direction of motion
  * @param extendSelection Set @c true to extend the selection
  * @throw NullPointerException @a procedure is @c null
  */
-template<typename ProcedureSignature>
-CaretMovementCommand<ProcedureSignature>::CaretMovementCommand(
-		TextViewer& viewer, ProcedureSignature* procedure, bool extendSelection /* = false */)
-		: Command(viewer), procedure_(procedure), extends_(extendSelection) {
+template<typename ProcedureSignature, typename DirectionType>
+CaretMovementCommand<ProcedureSignature, DirectionType>::CaretMovementCommand(
+		TextViewer& viewer, ProcedureSignature* procedure,
+		DirectionType direction, bool extendSelection /* = false */)
+		: Command(viewer), procedure_(procedure), direction_(direction), extends_(extendSelection) {
 	if(procedure == nullptr)
 		throw NullPointerException("procedure");
 }
 
 namespace {
+	inline presentation::FlowRelativeDirection resolveDirection(const TextViewer&, presentation::FlowRelativeDirection direction) {
+		return direction;
+	}
+	inline presentation::FlowRelativeDirection resolveDirection(const TextViewer& viewer, graphics::PhysicalDirection direction) {
+		return presentation::mapPhysicalToFlowRelative(viewer.textRenderer().defaultUIWritingMode(), direction);
+	}
+
 	template<typename CaretMovementProcedure>
 	inline bool selectCompletionProposal(TextViewer&, CaretMovementProcedure*, long) {
 		return false;
 	}
-	inline bool selectCompletionProposal(TextViewer& target, Position(*procedure)(const Point&, Index), long n) {
-		if(contentassist::ContentAssistant* const ca = target.contentAssistant()) {
-			if(contentassist::ContentAssistant::CompletionProposalsUI* const cpui = ca->completionProposalsUI()) {
-				if(procedure == &locations::forwardLine)
-					return cpui->nextProposal(+n), true;
-				else if(procedure == &locations::backwardLine)
-					return cpui->nextProposal(-n), true;
+	inline bool selectCompletionProposal(TextViewer& target, Position(*procedure)(const Point&, Direction, Index), Direction direction, long n) {
+		if(procedure == &locations::nextLine) {
+			if(contentassist::ContentAssistant* const ca = target.contentAssistant()) {
+				if(contentassist::ContentAssistant::CompletionProposalsUI* const cpui = ca->completionProposalsUI())
+					return cpui->nextProposal((direction == Direction::FORWARD) ? +n : -n), true;
 			}
 		}
 		return false;
 	}
-	inline bool selectCompletionProposal(TextViewer& target, BlockProgressionDestinationProxy(*procedure)(const VisualPoint&, Index), long n) {
-		if(contentassist::ContentAssistant* const ca = target.contentAssistant()) {
-			if(contentassist::ContentAssistant::CompletionProposalsUI* const cpui = ca->completionProposalsUI()) {
-				if(procedure == &locations::forwardVisualLine)
-					return cpui->nextProposal(+n), true;
-				else if(procedure == &locations::backwardVisualLine)
-					return cpui->nextProposal(-n), true;
-				else if(procedure == &locations::forwardPage)
-					return cpui->nextPage(+n), true;
-				else if(procedure == &locations::backwardPage)
-					return cpui->nextPage(-n), true;
+	inline bool selectCompletionProposal(TextViewer& target, VisualDestinationProxy(*procedure)(const VisualPoint&, Direction, Index), Direction direction, long n) {
+		if(procedure == &locations::nextVisualLine || procedure == &locations::nextPage) {
+			if(contentassist::ContentAssistant* const ca = target.contentAssistant()) {
+				if(contentassist::ContentAssistant::CompletionProposalsUI* const cpui = ca->completionProposalsUI()) {
+					if(procedure == &locations::nextVisualLine)
+						return cpui->nextProposal((direction == Direction::FORWARD) ? +n : -n), true;
+					else if(procedure == &locations::nextPage)
+						return cpui->nextPage((direction == Direction::FORWARD) ? +n : -n), true;
+				}
 			}
 		}
 		return false;
 	}
 
 	template<typename ProcedureSignature>
-	inline bool moveToBoundOfSelection(Caret&, ProcedureSignature*, presentation::ReadingDirection) {
+	inline bool moveToBoundOfSelection(Caret&, ProcedureSignature*, Direction) {
 		return false;
 	}
-	inline bool moveToBoundOfSelection(Caret& caret, Position(*procedure)(const Point&, locations::CharacterUnit, Index), presentation::ReadingDirection) {
-		if(procedure == &locations::forwardCharacter)
-			return caret.moveTo(caret.end()), true;
-		else if(procedure == &locations::backwardCharacter)
-			return caret.moveTo(caret.beginning()), true;
-		return false;
-	}
-	inline bool moveToBoundOfSelection(Caret& caret, Position(*procedure)(const VisualPoint&, locations::CharacterUnit, Index), presentation::ReadingDirection defaultReadingDirection) {
-		if(procedure == &locations::rightCharacter && defaultReadingDirection == presentation::LEFT_TO_RIGHT)
-			return caret.moveTo(caret.end()), true;
-		else if(procedure == &locations::leftCharacter && defaultReadingDirection == presentation::RIGHT_TO_LEFT)
-			return caret.moveTo(caret.beginning()), true;
+	inline bool moveToBoundOfSelection(Caret& caret, Position(*procedure)(const Point&, Direction direction, locations::CharacterUnit, Index), Direction direction) {
+		if(procedure == &locations::nextCharacter)
+			return caret.moveTo((direction == Direction::FORWARD) ? caret.end() : caret.beginning()), true;
 		return false;
 	}
 
 	template<typename ProcedureSignature>
-	inline void scrollTextViewer(TextViewer&, ProcedureSignature, long) {
+	inline void scrollTextViewer(TextViewer&, ProcedureSignature, Direction, long) {
 	}
-	inline void scrollTextViewer(TextViewer& target, BlockProgressionDestinationProxy(*procedure)(const VisualPoint&, Index), long n) {
+	inline void scrollTextViewer(TextViewer& target, VisualDestinationProxy(*procedure)(const VisualPoint&, Direction, Index), Direction direction, long n) {
 		// TODO: consider the numeric prefix.
-		graphics::font::TextViewport::SignedScrollOffset offset = 0;
-		if(procedure == &locations::forwardPage)
-			++offset;
-		else if(procedure == &locations::backwardPage)
-			--offset;
-		if(offset != 0)
-			target.textRenderer().viewport()->scroll(offset, 0, &target);
+		if(procedure == &locations::nextPage) {
+			graphics::font::TextViewport::SignedScrollOffset offset = (direction == Direction::FORWARD) ? n : -n;
+			if(offset != 0) {
+				presentation::AbstractTwoAxes<graphics::font::TextViewport::SignedScrollOffset> delta;
+				delta.bpd() = offset;
+				delta.ipd() = 0;
+				target.textRenderer().viewport()->scroll(delta);
+			}
+		}
 	}
 
 	template<typename PointType>
@@ -225,7 +223,7 @@ namespace {
 		else
 			caret.extendSelectionTo((*procedure)(caret, locations::GRAPHEME_CLUSTER, n));
 	}
-	inline void moveCaret(Caret& caret, BlockProgressionDestinationProxy(*procedure)(const VisualPoint&, Index), Index n, bool extend) {
+	inline void moveCaret(Caret& caret, VisualDestinationProxy(*procedure)(const VisualPoint&, Index), Index n, bool extend) {
 		if(!extend)
 			caret.moveTo((*procedure)(caret, n));
 		else
@@ -234,40 +232,74 @@ namespace {
 }
 
 // explicit instantiations
-template class CaretMovementCommand<Position(const Point&)>;	// (beginning|end)Of(Document|Line)
-template class CaretMovementCommand<Position(const Point&, Direction, Index)>;	// next(Line|Word|WordEnd)
-template class CaretMovementCommand<boost::optional<Position>(const Point&, Direction, Index)>;	// nextBookmark
-template class CaretMovementCommand<Position(const Point&, Direction, locations::CharacterUnit, Index)>;	// nextCharacter
-template class CaretMovementCommand<Position(const VisualPoint&)>;	// contextual(Beginning|End)OfLine, (beginning|end|contextualBeginning|contextualEnd)OfVisualLine, (first|last)PrintableCharacterOf(Visual)?Line
-template class CaretMovementCommand<VisualDestinationProxy(const VisualPoint&, Direction, Index)>;	// nextPage, nextVisualLine
-template class CaretMovementCommand<boost::optional<Position>(const VisualPoint&, PhysicalDirection, Index)>;	// nextBookmarkInPhysicalDirection
-template class CaretMovementCommand<VisualDestinationProxy(const VisualPoint&, PhysicalDirection, locations::CharacterUnit, Index)>;	// nextCharacterInPhysicalDirection
-template class CaretMovementCommand<VisualDestinationProxy(const VisualPoint&, PhysicalDirection, Index)>;	// nextWord(End)?InPhysicalDirection
+template class CaretMovementCommand<Position(const Point&, Direction, Index), Direction>;	// next(Line|Word|WordEnd)
+template class CaretMovementCommand<Position(const Point&, Direction, Index), graphics::PhysicalDirection>;
+template class CaretMovementCommand<boost::optional<Position>(const Point&, Direction, Index), Direction>;	// nextBookmark
+template class CaretMovementCommand<boost::optional<Position>(const Point&, Direction, Index), graphics::PhysicalDirection>;
+template class CaretMovementCommand<Position(const Point&, Direction, locations::CharacterUnit, Index), Direction>;	// nextCharacter
+template class CaretMovementCommand<Position(const Point&, Direction, locations::CharacterUnit, Index), graphics::PhysicalDirection>;
+template class CaretMovementCommand<VisualDestinationProxy(const VisualPoint&, Direction, Index), Direction>;	// next(Page|VisualLine)
+template class CaretMovementCommand<VisualDestinationProxy(const VisualPoint&, Direction, Index), graphics::PhysicalDirection>;
 
 /**
  * Moves the caret or extends the selection.
  * @return true
  */
-template<typename ProcedureSignature>
-bool CaretMovementCommand<ProcedureSignature>::perform() {
+template<typename ProcedureSignature, typename DirectionType>
+bool CaretMovementCommand<ProcedureSignature, DirectionType>::perform() {
 	const NumericPrefix n = numericPrefix();
 	endIncrementalSearch(target());
 	if(n == 0)
 		return true;
 	Caret& caret = target().caret();
+	const FlowRelativeDirection direction = resolveDirection(direction_);
 
 	if(!extends_) {
-		if(selectCompletionProposal(target(), procedure_, n))
+		if((direction == BEFORE || direction == AFTER)
+				&& selectCompletionProposal(target(), procedure_, (direction == AFTER) ? Direction::FORWARD : Direction::BACKWARD, n))
 			return true;
 		caret.endRectangleSelection();
-		if(!isSelectionEmpty(caret)) {	// just clear the selection
-			if(moveToBoundOfSelection(caret, procedure_, defaultReadingDirection(target().presentation())))
+		if((direction == START || direction == END) && !isSelectionEmpty(caret)) {	// just clear the selection
+			if(moveToBoundOfSelection(caret, procedure_, (direction == END) ? Direction::FORWARD : Direction::BACKWARD))
 				return true;
 		}
 	}
 
 	scrollTextViewer(target(), procedure_, n);
 	moveCaret(caret, procedure_, n, extends_);
+	return true;
+}
+
+/**
+ * Constructor.
+ * @param viewer The target text viewer
+ * @param procedure A function gives a motion
+ * @param extendSelection Set @c true to extend the selection
+ * @throw NullPointerException @a procedure is @c null
+ */
+template<typename ProcedureSignature>
+CaretMovementToDefinedPositionCommand<ProcedureSignature>::CaretMovementToDefinedPositionCommand(
+		TextViewer& viewer, ProcedureSignature* procedure, bool extendSelection /* = false */)
+		: Command(viewer), procedure_(procedure), extends_(extendSelection) {
+	if(procedure == nullptr)
+		throw NullPointerException("procedure");
+}
+
+// explicit instantiations
+template class CaretMovementToDefinedPositionCommand<Position(const Point&)>;	// (beginning|end)Of(Document|Line)
+template class CaretMovementToDefinedPositionCommand<Position(const VisualPoint&)>;	// contextual(Beginning|End)OfLine, (beginning|end|contextualBeginning|contextualEnd)OfVisualLine, (first|last)PrintableCharacterOf(Visual)?Line
+
+/**
+ * Moves the caret or extends the selection.
+ * @return true
+ */
+template<typename ProcedureSignature>
+bool CaretMovementToDefinedPositionCommand<ProcedureSignature>::perform() {
+	endIncrementalSearch(target());
+	if(!extends_)
+		target().caret().moveTo((*procedure_)());
+	else
+		target().caret().extendSelectionTo((*procedure_)());
 	return true;
 }
 
@@ -411,7 +443,7 @@ bool CharacterInputFromNextLineCommand::perform() {
 			|| (!fromPreviousLine_ && line(caret) >= document.numberOfLines() - 1))
 		return false;
 	
-	const Position p((fromPreviousLine_ ? locations::backwardVisualLine(caret) : locations::forwardVisualLine(caret)).position());
+	const Position p(locations::nextVisualLine(caret, fromPreviousLine_ ? Direction::BACKWARD : Direction::FORWARD).position());
 	const String& lineString = document.line(line(caret) + (fromPreviousLine_ ? -1 : 1));
 	if(p.offsetInLine >= lineString.length())
 		return false;
@@ -983,39 +1015,75 @@ bool ReplaceAllCommand::perform() {
 /**
  * Constructor.
  * @param viewer The target text viewer
- * @param procedure A pointer to the member function defines the destination
+ * @param procedure A function gives a motion
+ * @param direction The direction of motion
+ * @throw NullPointerException @a procedure is @c null
  */
-template<typename ProcedureSignature>
-RowSelectionExtensionCommand<ProcedureSignature>::RowSelectionExtensionCommand(
-		TextViewer& viewer, ProcedureSignature* procedure) : Command(viewer), procedure_(procedure) {
+template<typename ProcedureSignature, typename DirectionType>
+RowSelectionExtensionCommand<ProcedureSignature, DirectionType>::RowSelectionExtensionCommand(
+		TextViewer& viewer, ProcedureSignature* procedure, DirectionType direction)
+		: Command(viewer), procedure_(procedure), direction_(direction) {
 	if(procedure == nullptr)
-		throw invalid_argument("procedure");
+		throw NullPointerException("procedure");
 }
 
 /**
  * @see Command#perform
  * @return true
  */
-template<typename ProcedureSignature>
-bool RowSelectionExtensionCommand<ProcedureSignature>::perform() {
+template<typename ProcedureSignature, typename DirectionType>
+bool RowSelectionExtensionCommand<ProcedureSignature, DirectionType>::perform() {
 	utils::closeCompletionProposalsPopup(target());
 	endIncrementalSearch(target());
 
 	Caret& caret = target().caret();
 	if(isSelectionEmpty(caret) && !caret.isSelectionRectangle())
 		caret.beginRectangleSelection();
-	return CaretMovementCommand<ProcedureSignature>(target(), procedure_, true).setNumericPrefix(numericPrefix())();
+	return CaretMovementCommand<ProcedureSignature>(target(), procedure_, direction_, true).setNumericPrefix(numericPrefix())();
 }
 
 // explicit instantiations
-template class RowSelectionExtensionCommand<Position(const Point&)>;
-template class RowSelectionExtensionCommand<Position(const Point&, Index)>;
-template class RowSelectionExtensionCommand<boost::optional<Position>(const Point&, Index)>;
-template class RowSelectionExtensionCommand<Position(const Point&, locations::CharacterUnit, Index)>;
-template class RowSelectionExtensionCommand<Position(const VisualPoint&)>;
-template class RowSelectionExtensionCommand<Position(const VisualPoint&, Index)>;
-template class RowSelectionExtensionCommand<Position(const VisualPoint&, locations::CharacterUnit, Index)>;
-template class RowSelectionExtensionCommand<BlockProgressionDestinationProxy(const VisualPoint&, Index)>;
+template class RowSelectionExtensionCommand<Position(const Point&, Direction, Index), Direction>;	// next(Line|Word|WordEnd)
+template class RowSelectionExtensionCommand<Position(const Point&, Direction, Index), graphics::PhysicalDirection>;
+template class RowSelectionExtensionCommand<boost::optional<Position>(const Point&, Direction, Index), Direction>;	// nextBookmark
+template class RowSelectionExtensionCommand<boost::optional<Position>(const Point&, Direction, Index), graphics::PhysicalDirection>;
+template class RowSelectionExtensionCommand<Position(const Point&, Direction, locations::CharacterUnit, Index), Direction>;	// nextCharacter
+template class RowSelectionExtensionCommand<Position(const Point&, Direction, locations::CharacterUnit, Index), graphics::PhysicalDirection>;
+template class RowSelectionExtensionCommand<VisualDestinationProxy(const VisualPoint&, Direction, Index), Direction>;	// next(Page|VisualLine)
+template class RowSelectionExtensionCommand<VisualDestinationProxy(const VisualPoint&, Direction, Index), graphics::PhysicalDirection>;
+
+/**
+ * Constructor.
+ * @param viewer The target text viewer
+ * @param procedure A function gives a motion
+ * @throw NullPointerException @a procedure is @c null
+ * 
+ */
+template<typename ProcedureSignature>
+RowSelectionExtensionToDefinedPositionCommand<ProcedureSignature>::RowSelectionExtensionToDefinedPositionCommand(
+		TextViewer& viewer, ProcedureSignature* procedure) : Command(viewer), procedure_(procedure) {
+	if(procedure == nullptr)
+		throw NullPointerException("procedure");
+}
+
+// explicit instantiations
+template class RowSelectionExtensionToDefinedPositionCommand<Position(const Point&)>;	// (beginning|end)Of(Document|Line)
+template class RowSelectionExtensionToDefinedPositionCommand<Position(const VisualPoint&)>;	// contextual(Beginning|End)OfLine, (beginning|end|contextualBeginning|contextualEnd)OfVisualLine, (first|last)PrintableCharacterOf(Visual)?Line
+
+/**
+ * Moves the caret or extends the selection.
+ * @return true
+ */
+template<typename ProcedureSignature>
+bool RowSelectionExtensionToDefinedPositionCommand<ProcedureSignature>::perform() {
+	utils::closeCompletionProposalsPopup(target());
+	endIncrementalSearch(target());
+
+	Caret& caret = target().caret();
+	if(isSelectionEmpty(caret) && !caret.isSelectionRectangle())
+		caret.beginRectangleSelection();
+	return CaretMovementToDefinedPositionCommand<ProcedureSignature>(target(), procedure_, true).setNumericPrefix(numericPrefix())();
+}
 
 /**
  * Constructor.

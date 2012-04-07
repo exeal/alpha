@@ -33,14 +33,14 @@ bool DIAGNOSE_INHERENT_DRAWING = false;	// 余計な描画を行っていない�
 namespace {
 	inline Scalar mapLocalBpdToTextArea(const TextViewer& viewer, Scalar bpd) {
 		const NativeRectangle textArea(viewer.textAreaAllocationRectangle());
-		AbstractFourSides<Scalar> abstractBounds;
-		mapPhysicalToAbstract(viewer.textRenderer().writingMode(), textArea, textArea, abstractBounds);
+		FlowRelativeFourSides<Scalar> abstractBounds;
+		mapPhysicalToFlowRelative(viewer.textRenderer().writingMode(), textArea, textArea, abstractBounds);
 		return bpd -= abstractBounds.before();
 	}
 	inline Scalar mapTextAreaBpdToLocal(const TextViewer& viewer, Scalar bpd) {
 		const NativeRectangle textArea(viewer.textAreaAllocationRectangle());
-		AbstractFourSides<Scalar> abstractBounds;
-		mapPhysicalToAbstract(viewer.textRenderer().writingMode(), textArea, textArea, abstractBounds);
+		FlowRelativeFourSides<Scalar> abstractBounds;
+		mapPhysicalToFlowRelative(viewer.textRenderer().writingMode(), textArea, textArea, abstractBounds);
 		return bpd += abstractBounds.before();
 	}
 	inline NativePoint mapLocalToTextArea(const TextViewer& viewer, const NativePoint& p) {
@@ -589,6 +589,7 @@ void TextViewer::keyPressed(const KeyInput& input) {
 	// TODO: This code is temporary. The following code provides a default implementation of
 	// TODO: "key combination to command" map.
 	using namespace ascension::texteditor::commands;
+	static k::Position(*const nextCharacterLocation)(const k::Point&, Direction, k::locations::CharacterUnit, Index) = k::locations::nextCharacter;
 //	if(hasModifier<UserInput::ALT_DOWN>(input)) {
 //		if(!hasModifier<UserInput::SHIFT_DOWN>(input)
 //				|| (input.keyboardCode() != VK_LEFT && input.keyboardCode() != VK_UP
@@ -643,13 +644,13 @@ void TextViewer::keyPressed(const KeyInput& input) {
 		if(hasModifier<UserInput::CONTROL_DOWN>(input))
 			onVScroll(SB_PAGEUP, 0, win32::Handle<HWND>());
 		else
-			makeCaretMovementCommand(*this, &k::locations::backwardPage, hasModifier<UserInput::SHIFT_DOWN>(input))();
+			makeCaretMovementCommand(*this, &k::locations::nextPage, Direction::BACKWARD, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
 	case keyboardcodes::NEXT_OR_PAGE_DOWN:	// [PageDown]
 		if(hasModifier<UserInput::CONTROL_DOWN>(input))
 			onVScroll(SB_PAGEDOWN, 0, win32::Handle<HWND>());
 		else
-			makeCaretMovementCommand(*this, &k::locations::forwardPage, hasModifier<UserInput::SHIFT_DOWN>(input))();
+			makeCaretMovementCommand(*this, &k::locations::nextPage, Direction::FORWARD, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
 	case keyboardcodes::HOME:	// [Home]
 		if(hasModifier<UserInput::CONTROL_DOWN>(input))
@@ -666,49 +667,49 @@ void TextViewer::keyPressed(const KeyInput& input) {
 	case keyboardcodes::LEFT:	// [Left]
 		if(hasModifier<UserInput::ALT_DOWN>(input) && hasModifier<UserInput::SHIFT_DOWN>(input)) {
 			if(hasModifier<UserInput::CONTROL_DOWN>(input))
-				makeRowSelectionExtensionCommand(*this, &k::locations::leftWord)();
+				makeRowSelectionExtensionCommand(*this, &k::locations::nextWord, LEFT)();
 			else
-				makeRowSelectionExtensionCommand(*this, &k::locations::leftCharacter)();
+				makeRowSelectionExtensionCommand(*this, nextCharacterLocation, LEFT)();
 		} else {
 			if(hasModifier<UserInput::CONTROL_DOWN>(input))
-				makeCaretMovementCommand(*this, &k::locations::leftWord, hasModifier<UserInput::SHIFT_DOWN>(input))();
+				makeCaretMovementCommand(*this, &k::locations::nextWord, LEFT, hasModifier<UserInput::SHIFT_DOWN>(input))();
 			else
-				makeCaretMovementCommand(*this, &k::locations::leftCharacter, hasModifier<UserInput::SHIFT_DOWN>(input))();
+				makeCaretMovementCommand(*this, nextCharacterLocation, LEFT, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		}
 		break;
 	case keyboardcodes::UP:		// [Up]
 		if(hasModifier<UserInput::ALT_DOWN>(input)
 				&& hasModifier<UserInput::SHIFT_DOWN>(input) && !hasModifier<UserInput::CONTROL_DOWN>(input))
-			makeRowSelectionExtensionCommand(*this, &k::locations::backwardVisualLine)();
+			makeRowSelectionExtensionCommand(*this, &k::locations::nextVisualLine, TOP)();
 		else if(hasModifier<UserInput::CONTROL_DOWN>(input) && !hasModifier<UserInput::SHIFT_DOWN>(input))
-			textRenderer().viewport()->scroll(geometry::make<NativeSize>(0, -1));
+			textRenderer().viewport()->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(0, -1));
 		else
-			makeCaretMovementCommand(*this, &k::locations::backwardVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
+			makeCaretMovementCommand(*this, &k::locations::nextVisualLine, TOP, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
 	case keyboardcodes::RIGHT:	// [Right]
 		if(hasModifier<UserInput::ALT_DOWN>(input)) {
 			if(hasModifier<UserInput::SHIFT_DOWN>(input)) {
 				if(hasModifier<UserInput::CONTROL_DOWN>(input))
-					makeRowSelectionExtensionCommand(*this, &k::locations::rightWord)();
+					makeRowSelectionExtensionCommand(*this, &k::locations::nextWord, RIGHT)();
 				else
-					makeRowSelectionExtensionCommand(*this, &k::locations::rightCharacter)();
+					makeRowSelectionExtensionCommand(*this, nextCharacterLocation, RIGHT)();
 			} else
 				CompletionProposalPopupCommand(*this)();
 		} else {
 			if(hasModifier<UserInput::CONTROL_DOWN>(input))
-				makeCaretMovementCommand(*this, &k::locations::rightWord, hasModifier<UserInput::SHIFT_DOWN>(input))();
+				makeCaretMovementCommand(*this, &k::locations::nextWord, RIGHT, hasModifier<UserInput::SHIFT_DOWN>(input))();
 			else
-				makeCaretMovementCommand(*this, &k::locations::rightCharacter, hasModifier<UserInput::SHIFT_DOWN>(input))();
+				makeCaretMovementCommand(*this, nextCharacterLocation, RIGHT, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		}
 		break;
 	case keyboardcodes::DOWN:	// [Down]
 		if(hasModifier<UserInput::ALT_DOWN>(input)
 				&& hasModifier<UserInput::SHIFT_DOWN>(input) && !hasModifier<UserInput::CONTROL_DOWN>(input))
-			makeRowSelectionExtensionCommand(*this, &k::locations::forwardVisualLine)();
+			makeRowSelectionExtensionCommand(*this, &k::locations::nextVisualLine, BOTTOM)();
 		else if(hasModifier<UserInput::CONTROL_DOWN>(input) && !hasModifier<UserInput::SHIFT_DOWN>(input))
-			textRenderer().viewport()->scroll(geometry::make<NativeSize>(0, +1));
+			textRenderer().viewport()->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(0, +1));
 		else
-			makeCaretMovementCommand(*this, &k::locations::forwardVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
+			makeCaretMovementCommand(*this, &k::locations::nextVisualLine, BOTTOM, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
 	case keyboardcodes::INSERT:	// [Insert]
 		if(hasModifier<UserInput::ALT_DOWN>(input))
@@ -986,8 +987,8 @@ void TextViewer::redrawLines(const Range<Index>& lines) {
 
 	const WritingMode writingMode(textRenderer().writingMode());
 	const NativeRectangle viewport(bounds(false));
-	AbstractFourSides<Scalar> abstractBounds;
-	mapPhysicalToAbstract(writingMode, viewport, viewport, abstractBounds);
+	FlowRelativeFourSides<Scalar> abstractBounds;
+	mapPhysicalToFlowRelative(writingMode, viewport, viewport, abstractBounds);
 
 	// calculate before and after edges of a rectangle to redraw
 	BaselineIterator baseline(*textRenderer().viewport(), lines.beginning(), false);
@@ -999,7 +1000,7 @@ void TextViewer::redrawLines(const Range<Index>& lines) {
 		abstractBounds.after() = mapTextAreaBpdToLocal(*this, *baseline)
 			+ textRenderer().layouts().at(baseline.line()).extent().end();
 	NativeRectangle boundsToRedraw(viewport);
-	mapAbstractToPhysical(writingMode, viewport, abstractBounds, boundsToRedraw);
+	mapFlowRelativeToPhysical(writingMode, viewport, abstractBounds, boundsToRedraw);
 
 	scheduleRedraw(boundsToRedraw, false);
 }
@@ -1547,11 +1548,10 @@ bool TextViewer::CursorVanisher::vanished() const {
 /**
  * Constructor.
  * @param viewer The text viewer
- * @param writingMode The initial writing mode
  */
-TextViewer::Renderer::Renderer(TextViewer& viewer, const WritingMode& writingMode) :
+TextViewer::Renderer::Renderer(TextViewer& viewer) :
 		TextRenderer(viewer.presentation(), systemFonts(),
-		geometry::size(viewer.textAreaContentRectangle())), viewer_(viewer), defaultWritingMode_(writingMode) {
+		geometry::size(viewer.textAreaContentRectangle())), viewer_(viewer) {
 	// TODO: other FontCollection object used?
 #if 0
 	// for test
@@ -1564,13 +1564,7 @@ TextViewer::Renderer::Renderer(TextViewer& viewer, const WritingMode& writingMod
  * @param other The source object
  * @param viewer The text viewer
  */
-TextViewer::Renderer::Renderer(const Renderer& other, TextViewer& viewer) :
-		TextRenderer(other), viewer_(viewer), defaultWritingMode_(other.defaultWritingMode_) {
-}
-
-/// @see TextRenderer#defaultUIWritingMode
-const WritingMode& TextViewer::Renderer::defaultUIWritingMode() const /*throw()*/ {
-	return defaultWritingMode_;
+TextViewer::Renderer::Renderer(const Renderer& other, TextViewer& viewer) : TextRenderer(other), viewer_(viewer) {
 }
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -1598,17 +1592,6 @@ void TextViewer::Renderer::rewrapAtWindowEdge() {
 	}
 }
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
-
-/**
- * Sets the default UI writing mode.
- * @param writingMode The writing mode
- */
-void TextViewer::Renderer::setDefaultWritingMode(const WritingMode& writingMode) /*throw()*/ {
-	if(writingMode != defaultWritingMode_) {
-		defaultWritingMode_ = writingMode;
-		layouts().invalidate();
-	}
-}
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /// @see TextRenderer#width
@@ -1880,7 +1863,7 @@ void utils::toggleOrientation(TextViewer& viewer) /*throw()*/ {
 	WritingMode writingMode(viewer.textRenderer().defaultUIWritingMode());
 	writingMode.inlineFlowDirection =
 		(writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
-	viewer.textRenderer().setDefaultWritingMode(writingMode);
+	viewer.textRenderer().setDefaultUIWritingMode(writingMode);
 //	viewer.synchronizeWritingModeUI();
 //	if(config.lineWrap.wrapsAtWindowEdge()) {
 //		win32::AutoZeroSize<SCROLLINFO> scroll;

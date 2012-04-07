@@ -74,14 +74,32 @@ namespace ascension {
 			/**
 			 * Moves the caret or extends the selection.
 			 * @c kernel#locations#CharacterUnit#GRAPHEME_CLUSTER is always used as character unit.
-			 * @tparam ProcedureSignature
-			 * @see viewers#Caret
+			 * @tparam ProcedureSignature Type of the function gives a motion
+			 * @tparam DirectionType Either @c Direction or @c graphics#PhysicalDirection
+			 * @see CaretMovementToDefinedPositionCommand, viewers#Caret, kernel#locations
 			 */
-			template<typename ProcedureSignature>
+			template<typename ProcedureSignature, typename DirectionType>
 			class CaretMovementCommand : public Command {
 			public:
-				CaretMovementCommand(viewers::TextViewer& viewer,
-						ProcedureSignature* procedure, bool extendSelection = false);
+				CaretMovementCommand(
+					viewers::TextViewer& viewer, ProcedureSignature* procedure,
+					DirectionType direction, bool extendSelection = false);
+			private:
+				bool perform();
+				ProcedureSignature* const procedure_;
+				const DirectionType direction_;
+				const bool extends_;
+			};
+			/**
+			 * Moves the caret or extends the selection to a defined position.
+			 * @tparam ProcedureSignature Type of the function gives a motion
+			 * @see CaretMovementCommand, viewers#Caret, kernel#locations
+			 */
+			template<typename ProcedureSignature>
+			class CaretMovementToDefinedPositionCommand : public Command {
+			public:
+				CaretMovementToDefinedPositionCommand(viewers::TextViewer& viewer,
+					ProcedureSignature* procedure, bool extendSelection = false);
 			private:
 				bool perform();
 				ProcedureSignature* const procedure_;
@@ -261,13 +279,30 @@ namespace ascension {
 			};
 			/**
 			 * Extends the selection and begins rectangular selection.
-			 * @tparam ProcedureSignature
-			 * @see viewers#Caret
+			 * @tparam ProcedureSignature Type of the function gives a motion
+			 * @tparam DirectionType Either @c Direction or @c graphics#PhysicalDirection
+			 * @see RowSelectionExtensionToDefinedPositionCommand, viewers#Caret, kernel#locations
 			 */
-			template<typename ProcedureSignature>
+			template<typename ProcedureSignature, typename DirectionType>
 			class RowSelectionExtensionCommand : public Command {
 			public:
-				RowSelectionExtensionCommand(viewers::TextViewer& viewer, ProcedureSignature* procedure);
+				RowSelectionExtensionCommand(viewers::TextViewer& viewer,
+					ProcedureSignature* procedure, DirectionType direction);
+			private:
+				bool perform();
+				ProcedureSignature* const procedure_;
+				const DirectionType direction_;
+			};
+			/**
+			 * Extends the selection to a defined position and begins rectangular selection.
+			 * @tparam ProcedureSignature Type of the function gives a motion
+			 * @see RowSelectionExtensionCommand, viewers#Caret, kernel#locations
+			 */
+			template<typename ProcedureSignature>
+			class RowSelectionExtensionToDefinedPositionCommand : public Command {
+			public:
+				RowSelectionExtensionToDefinedPositionCommand(
+					viewers::TextViewer& viewer, ProcedureSignature* procedure);
 			private:
 				bool perform();
 				ProcedureSignature* const procedure_;
@@ -322,15 +357,17 @@ namespace ascension {
 				bool perform();
 			};
 
-			template<typename ProcedureSignature>
-			inline CaretMovementCommand<ProcedureSignature> makeCaretMovementCommand(
-					viewers::TextViewer& viewer, ProcedureSignature* procedure, bool extendSelection = false) {
-				return CaretMovementCommand<ProcedureSignature>(viewer, procedure, extendSelection);
+			template<typename ProcedureSignature, typename DirectionType>
+			inline CaretMovementCommand<ProcedureSignature, DirectionType> makeCaretMovementCommand(
+					viewers::TextViewer& viewer, ProcedureSignature* procedure,
+					DirectionType direction, bool extendSelection = false) {
+				return CaretMovementCommand<ProcedureSignature>(
+					viewer, procedure, direction, extendSelection);
 			}
-			template<typename ProcedureSignature>
-			inline RowSelectionExtensionCommand<ProcedureSignature> makeRowSelectionExtensionCommand(
-					viewers::TextViewer& viewer, ProcedureSignature* procedure) {
-				return RowSelectionExtensionCommand<ProcedureSignature>(viewer, procedure);
+			template<typename ProcedureSignature, typename DirectionType>
+			inline RowSelectionExtensionCommand<ProcedureSignature, DirectionType> makeRowSelectionExtensionCommand(
+					viewers::TextViewer& viewer, ProcedureSignature* procedure, DirectionType direction) {
+				return RowSelectionExtensionCommand<ProcedureSignature>(viewer, procedure, direction);
 			}
 		} // namespace commands
 
