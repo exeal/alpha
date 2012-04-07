@@ -152,8 +152,7 @@ namespace ascension {
 			class Renderer : public graphics::font::TextRenderer {
 				ASCENSION_UNASSIGNABLE_TAG(Renderer);
 			public:
-				explicit Renderer(TextViewer& viewer,
-					const presentation::WritingMode& writingMode = presentation::WritingMode());
+				explicit Renderer(TextViewer& viewer);
 				Renderer(const Renderer& other, TextViewer& viewer);
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				void rewrapAtWindowEdge();
