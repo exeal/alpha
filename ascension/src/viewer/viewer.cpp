@@ -581,6 +581,48 @@ Scalar TextViewer::inlineProgressionOffsetInViewport() const {
 #endif
 }
 
+namespace {
+	void handleDirectionalKey(TextViewer& viewer, PhysicalDirection direction, UserInput::ModifierKey modifiers) {
+		using namespace ascension::texteditor::commands;
+		static k::Position(*const nextCharacterLocation)(const k::Point&, Direction, k::locations::CharacterUnit, Index) = k::locations::nextCharacter;
+
+		const FlowRelativeDirection abstractDirection = mapPhysicalToFlowRelative(viewer.textRenderer().defaultUIWritingMode(), direction);
+		const Direction logicalDirection = (abstractDirection == AFTER || abstractDirection == END) ? Direction::FORWARD : Direction::BACKWARD;
+		switch(abstractDirection) {
+			case BEFORE:
+			case AFTER:
+				if((modifiers & ~(UserInput::SHIFT_DOWN | UserInput::ALT_DOWN)) == 0) {
+					if((modifiers & UserInput::ALT_DOWN) == 0)
+						makeCaretMovementCommand(viewer, &k::locations::nextVisualLine,
+							logicalDirection, (modifiers & UserInput::SHIFT_DOWN) != 0)();
+					else
+						makeRowSelectionExtensionCommand(viewer, &k::locations::nextVisualLine, logicalDirection)();
+				}
+				break;
+			case START:
+			case END:
+				if((modifiers & ~(UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN | UserInput::ALT_DOWN)) == 0) {
+					if((modifiers & UserInput::ALT_DOWN) == 0) {
+						if((modifiers & UserInput::CONTROL_DOWN) != 0)
+							makeCaretMovementCommand(viewer, &k::locations::nextWord,
+								logicalDirection, (modifiers & UserInput::SHIFT_DOWN) != 0)();
+						else
+							makeCaretMovementCommand(viewer, nextCharacterLocation,
+								logicalDirection, (modifiers & UserInput::SHIFT_DOWN) != 0)();
+					} else if((modifiers & UserInput::SHIFT_DOWN) != 0) {
+						if((modifiers & UserInput::CONTROL_DOWN) != 0)
+							makeRowSelectionExtensionCommand(viewer, &k::locations::nextWord, logicalDirection)();
+						else
+							makeRowSelectionExtensionCommand(viewer, nextCharacterLocation, logicalDirection)();
+					}
+				}
+				break;
+			default:
+				ASCENSION_ASSERT_NOT_REACHED();
+		}
+	}
+}
+
 /// @see Widget#keyPressed
 void TextViewer::keyPressed(const KeyInput& input) {
 	if(mouseInputStrategy_.get() != nullptr)
@@ -642,13 +684,13 @@ void TextViewer::keyPressed(const KeyInput& input) {
 		break;
 	case keyboardcodes::PRIOR_OR_PAGE_UP:	// [PageUp]
 		if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			onVScroll(SB_PAGEUP, 0, win32::Handle<HWND>());
+			onVScroll(SB_PAGEUP, 0, nullptr);
 		else
 			makeCaretMovementCommand(*this, &k::locations::nextPage, Direction::BACKWARD, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
 	case keyboardcodes::NEXT_OR_PAGE_DOWN:	// [PageDown]
 		if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			onVScroll(SB_PAGEDOWN, 0, win32::Handle<HWND>());
+			onVScroll(SB_PAGEDOWN, 0, nullptr);
 		else
 			makeCaretMovementCommand(*this, &k::locations::nextPage, Direction::FORWARD, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
@@ -665,51 +707,16 @@ void TextViewer::keyPressed(const KeyInput& input) {
 			makeCaretMovementCommand(*this, &k::locations::endOfVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
 	case keyboardcodes::LEFT:	// [Left]
-		if(hasModifier<UserInput::ALT_DOWN>(input) && hasModifier<UserInput::SHIFT_DOWN>(input)) {
-			if(hasModifier<UserInput::CONTROL_DOWN>(input))
-				makeRowSelectionExtensionCommand(*this, &k::locations::nextWord, LEFT)();
-			else
-				makeRowSelectionExtensionCommand(*this, nextCharacterLocation, LEFT)();
-		} else {
-			if(hasModifier<UserInput::CONTROL_DOWN>(input))
-				makeCaretMovementCommand(*this, &k::locations::nextWord, LEFT, hasModifier<UserInput::SHIFT_DOWN>(input))();
-			else
-				makeCaretMovementCommand(*this, nextCharacterLocation, LEFT, hasModifier<UserInput::SHIFT_DOWN>(input))();
-		}
+		handleDirectionalKey(*this, LEFT, input.modifiers());
 		break;
 	case keyboardcodes::UP:		// [Up]
-		if(hasModifier<UserInput::ALT_DOWN>(input)
-				&& hasModifier<UserInput::SHIFT_DOWN>(input) && !hasModifier<UserInput::CONTROL_DOWN>(input))
-			makeRowSelectionExtensionCommand(*this, &k::locations::nextVisualLine, TOP)();
-		else if(hasModifier<UserInput::CONTROL_DOWN>(input) && !hasModifier<UserInput::SHIFT_DOWN>(input))
-			textRenderer().viewport()->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(0, -1));
-		else
-			makeCaretMovementCommand(*this, &k::locations::nextVisualLine, TOP, hasModifier<UserInput::SHIFT_DOWN>(input))();
+		handleDirectionalKey(*this, TOP, input.modifiers());
 		break;
 	case keyboardcodes::RIGHT:	// [Right]
-		if(hasModifier<UserInput::ALT_DOWN>(input)) {
-			if(hasModifier<UserInput::SHIFT_DOWN>(input)) {
-				if(hasModifier<UserInput::CONTROL_DOWN>(input))
-					makeRowSelectionExtensionCommand(*this, &k::locations::nextWord, RIGHT)();
-				else
-					makeRowSelectionExtensionCommand(*this, nextCharacterLocation, RIGHT)();
-			} else
-				CompletionProposalPopupCommand(*this)();
-		} else {
-			if(hasModifier<UserInput::CONTROL_DOWN>(input))
-				makeCaretMovementCommand(*this, &k::locations::nextWord, RIGHT, hasModifier<UserInput::SHIFT_DOWN>(input))();
-			else
-				makeCaretMovementCommand(*this, nextCharacterLocation, RIGHT, hasModifier<UserInput::SHIFT_DOWN>(input))();
-		}
+		handleDirectionalKey(*this, RIGHT, input.modifiers());
 		break;
 	case keyboardcodes::DOWN:	// [Down]
-		if(hasModifier<UserInput::ALT_DOWN>(input)
-				&& hasModifier<UserInput::SHIFT_DOWN>(input) && !hasModifier<UserInput::CONTROL_DOWN>(input))
-			makeRowSelectionExtensionCommand(*this, &k::locations::nextVisualLine, BOTTOM)();
-		else if(hasModifier<UserInput::CONTROL_DOWN>(input) && !hasModifier<UserInput::SHIFT_DOWN>(input))
-			textRenderer().viewport()->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(0, +1));
-		else
-			makeCaretMovementCommand(*this, &k::locations::nextVisualLine, BOTTOM, hasModifier<UserInput::SHIFT_DOWN>(input))();
+		handleDirectionalKey(*this, BOTTOM, input.modifiers());
 		break;
 	case keyboardcodes::INSERT:	// [Insert]
 		if(hasModifier<UserInput::ALT_DOWN>(input))
