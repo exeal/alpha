@@ -16,10 +16,10 @@ namespace ascension {
 				::SetCursor(::LoadCursorW(0, MAKEINTRESOURCEW(32514)));
 			}
 			~WaitCursor() /*throw()*/ {
-				::SetCursor(originalCursor_.get());
+				::SetCursor(originalCursor_);
 			}
 		private:
-			Handle<HCURSOR> originalCursor_;
+			HCURSOR originalCursor_;
 		};
 	}
 } // namespace ascension.win32
