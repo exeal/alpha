@@ -73,7 +73,7 @@ void DefaultContentAssistant::characterInput(const Caret&, CodePoint c) {
 				Caret& caret = textViewer_->caret();
 				try {
 					document.insertUndoBoundary();
-					erase(document, locations::backwardCharacter(caret, locations::UTF32_CODE_UNIT), caret);
+					erase(document, locations::nextCharacter(caret, Direction::BACKWARD, locations::UTF32_CODE_UNIT), caret);
 					document.insertUndoBoundary();
 					complete();
 				} catch(...) {
