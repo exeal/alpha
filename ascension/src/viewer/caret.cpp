@@ -380,7 +380,7 @@ namespace {
 		const bool adapts = caret.adaptsToDocument();
 		caret.adaptToDocument(false);
 		Position e((keepNewline && locations::isEndOfLine(caret)) ?
-			caret.position() : locations::forwardCharacter(caret, locations::GRAPHEME_CLUSTER));
+			caret.position() : locations::nextCharacter(caret, Direction::FORWARD, locations::GRAPHEME_CLUSTER));
 		if(e != caret.position()) {
 			try {
 				caret.document().replace(Region(caret.position(), e), text, &e);

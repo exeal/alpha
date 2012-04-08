@@ -75,7 +75,6 @@ namespace ascension {
 			virtual bool handleX1Button(Action action, const graphics::NativePoint& position, int modifiers);
 			virtual bool handleX2Button(Action action, const graphics::NativePoint& position, int modifiers);
 		private:
-			static graphics::NativeSize calculateDnDScrollOffset(const TextViewer& viewer);
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 			HRESULT doDragAndDrop();
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32

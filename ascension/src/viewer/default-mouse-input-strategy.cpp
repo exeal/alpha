@@ -259,30 +259,6 @@ DefaultMouseInputStrategy::DefaultMouseInputStrategy(
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 }
 
-NativeSize DefaultMouseInputStrategy::calculateDnDScrollOffset(const TextViewer& viewer) {
-	const NativePoint p(viewer.mapFromGlobal(Cursor::position()));
-	const NativeRectangle localBounds(viewer.bounds(false));
-	NativeRectangle inset(viewer.textAreaContentRectangle());
-	const Font::Metrics& fontMetrics = viewer.textRenderer().defaultFont()->metrics();
-	geometry::range<geometry::X_COORDINATE>(inset) = makeRange(
-		geometry::left(inset) + fontMetrics.averageCharacterWidth(), geometry::right(inset) - fontMetrics.averageCharacterWidth());
-	geometry::range<geometry::Y_COORDINATE>(inset) = makeRange(
-		geometry::top(inset) + fontMetrics.linePitch() / 2, geometry::bottom(inset) - fontMetrics.linePitch() / 2);
-
-	// On Win32, oleidl.h defines the value named DD_DEFSCROLLINSET, but...
-
-	geometry::Coordinate<NativeSize>::Type dx = 0, dy = 0;
-	if(includes(makeRange(geometry::top(localBounds), geometry::top(inset)), geometry::y(p)))
-		dy = -1;
-	else if(includes(makeRange(geometry::bottom(localBounds), geometry::bottom(inset)), geometry::y(p)))
-		dy = +1;
-	if(includes(makeRange(geometry::left(localBounds), geometry::left(inset)), geometry::x(p)))
-		dx = -3;
-	else if(includes(makeRange(geometry::right(localBounds), geometry::right(inset)), geometry::y(p)))
-		dx = +3;
-	return geometry::make<NativeSize>(dx, dy);
-}
-
 /// @see MouseInputStrategy#captureChanged
 void DefaultMouseInputStrategy::captureChanged() {
 	timer_.stop();
@@ -323,6 +299,32 @@ namespace {
 }
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 
+namespace {
+	PhysicalTwoAxes<TextViewport::SignedScrollOffset> calculateDnDScrollOffset(const TextViewer& viewer) {
+		const NativePoint p(viewer.mapFromGlobal(Cursor::position()));
+		const NativeRectangle localBounds(viewer.bounds(false));
+		NativeRectangle inset(viewer.textAreaContentRectangle());
+		const Font::Metrics& fontMetrics = viewer.textRenderer().defaultFont()->metrics();
+		geometry::range<geometry::X_COORDINATE>(inset) = makeRange(
+			geometry::left(inset) + fontMetrics.averageCharacterWidth(), geometry::right(inset) - fontMetrics.averageCharacterWidth());
+		geometry::range<geometry::Y_COORDINATE>(inset) = makeRange(
+			geometry::top(inset) + fontMetrics.linePitch() / 2, geometry::bottom(inset) - fontMetrics.linePitch() / 2);
+
+		// On Win32, oleidl.h defines the value named DD_DEFSCROLLINSET, but...
+
+		geometry::Coordinate<NativeSize>::Type dx = 0, dy = 0;
+		if(includes(makeRange(geometry::top(localBounds), geometry::top(inset)), geometry::y(p)))
+			dy = -1;
+		else if(includes(makeRange(geometry::bottom(localBounds), geometry::bottom(inset)), geometry::y(p)))
+			dy = +1;
+		if(includes(makeRange(geometry::left(localBounds), geometry::left(inset)), geometry::x(p)))
+			dx = -3;
+		else if(includes(makeRange(geometry::right(localBounds), geometry::right(inset)), geometry::y(p)))
+			dx = +3;
+		return PhysicalTwoAxes<TextViewport::SignedScrollOffset>(dx, dy);
+	}
+}
+
 /// @see DropTarget#dragMoved
 void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
 	DropAction dropAction = DROP_ACTION_IGNORE;
@@ -352,16 +354,16 @@ void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
 
 	if(acceptable) {
 		dropAction = base::hasModifier<UserInput::CONTROL_DOWN>(input) ? DROP_ACTION_COPY : DROP_ACTION_MOVE;
-		const NativeSize scrollOffset(calculateDnDScrollOffset(*viewer_));
-		if(geometry::dx(scrollOffset) != 0 || geometry::dy(scrollOffset) != 0) {
+		const PhysicalTwoAxes<TextViewport::SignedScrollOffset> scrollOffset(calculateDnDScrollOffset(*viewer_));
+		if(scrollOffset.x() != 0 || scrollOffset.y() != 0) {
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 			dropAction |= DROP_ACTION_WIN32_SCROLL;
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 			// only one direction to scroll
-			if(geometry::dy(scrollOffset) != 0)
-				viewer_->textRenderer().viewport()->scroll(geometry::make<NativeSize>(0, geometry::dy(scrollOffset)), viewer_);
+			if(scrollOffset.x() != 0)
+				viewer_->textRenderer().viewport()->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(0, scrollOffset.y()));
 			else
-				viewer_->textRenderer().viewport()->scroll(geometry::make<NativeSize>(geometry::dx(scrollOffset), 0), viewer_);
+				viewer_->textRenderer().viewport()->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(scrollOffset.x(), 0));
 		}
 	}
 	input.setDropAction(dropAction);
@@ -727,7 +729,8 @@ void DefaultMouseInputStrategy::mouseWheelRotated(const base::MouseWheelInput& i
 			// TODO: calculate precise page size.
 			lines = static_cast<UINT>(viewport->numberOfVisibleLines());
 		}
-		viewport->scroll(geometry::make<NativeSize>(0, -geometry::dy(input.rotation()) * static_cast<short>(lines) / WHEEL_DELTA), viewer_);
+		viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(
+			0, -geometry::dy(input.rotation()) * static_cast<short>(lines) / WHEEL_DELTA));
 	}
 }
 
@@ -779,18 +782,18 @@ void DefaultMouseInputStrategy::timeElapsed(Timer& timer) {
 		if(isVertical(viewer_->textRenderer().writingMode().blockFlowDirection))
 			geometry::transpose(scrollUnits);
 
-		NativeSize scrollOffsets(geometry::make<NativeSize>(0, 0));
+		PhysicalTwoAxes<TextViewport::SignedScrollOffset> scrollOffsets(0, 0);
 		// no rationale about these scroll amounts
 		if(geometry::y(p) < geometry::top(contentRectangle))
-			geometry::dy(scrollOffsets) = (geometry::y(p) - (geometry::top(contentRectangle))) / geometry::dy(scrollUnits) - 1;
+			scrollOffsets.y() = (geometry::y(p) - (geometry::top(contentRectangle))) / geometry::dy(scrollUnits) - 1;
 		else if(geometry::y(p) >= geometry::bottom(contentRectangle))
-			geometry::dy(scrollOffsets) = (geometry::y(p) - (geometry::bottom(contentRectangle))) / geometry::dy(scrollUnits) + 1;
+			scrollOffsets.y() = (geometry::y(p) - (geometry::bottom(contentRectangle))) / geometry::dy(scrollUnits) + 1;
 		else if(geometry::x(p) < geometry::left(contentRectangle))
-			geometry::dx(scrollOffsets) = (geometry::x(p) - (geometry::left(contentRectangle))) / geometry::dx(scrollUnits) - 1;
+			scrollOffsets.x() = (geometry::x(p) - (geometry::left(contentRectangle))) / geometry::dx(scrollUnits) - 1;
 		else if(geometry::x(p) >= geometry::right(contentRectangle))
-			geometry::dx(scrollOffsets) = (geometry::x(p) - (geometry::right(contentRectangle))) / geometry::dx(scrollUnits) + 1;
-		if(geometry::dx(scrollOffsets) != 0 || geometry::dy(scrollOffsets) != 0)
-			viewport->scroll(scrollOffsets, viewer_);
+			scrollOffsets.x() = (geometry::x(p) - (geometry::right(contentRectangle))) / geometry::dx(scrollUnits) + 1;
+		if(scrollOffsets.x() != 0 || scrollOffsets.y() != 0)
+			viewport->scroll(scrollOffsets);
 		extendSelectionTo();
 	} else if(state_ == AUTO_SCROLL_DRAGGING || state_ == AUTO_SCROLL) {
 		const shared_ptr<TextViewport> viewport(viewer_->textRenderer().viewport());
@@ -807,9 +810,9 @@ void DefaultMouseInputStrategy::timeElapsed(Timer& timer) {
 //		const Scalar scrollDegree = max(abs(yScrollDegree), abs(xScrollDegree));
 
 		if(geometry::dy(scrollOffsets) != 0 /*&& abs(geometry::dy(scrollOffsets)) >= abs(geometry::dx(scrollOffsets))*/)
-			viewport->scroll(geometry::make<NativeSize>(0, (geometry::dy(scrollOffsets) > 0) ? +1 : -1), viewer_);
+			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(0, (geometry::dy(scrollOffsets) > 0) ? +1 : -1));
 //		else if(geometry::dx(scrollOffsets) != 0)
-//			viewport->scroll(geometry::make<NativeSize>((geometry::dx(scrollOffsets) > 0) ? +1 : -1, 0), viewer_);
+//			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>((geometry::dx(scrollOffsets) > 0) ? +1 : -1, 0));
 
 		if(geometry::dy(scrollOffsets) != 0) {
 			timer_.start(500 / static_cast<unsigned int>((pow(2.0f, abs(geometry::dy(scrollOffsets)) / 2))), *this);

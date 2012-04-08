@@ -621,7 +621,6 @@ boost::optional<Position> locations::leftWord(const VisualPoint& p, Index words 
 boost::optional<Position> locations::leftWordEnd(const VisualPoint& p, Index words /* = 1 */) {
 	return (defaultUIReadingDirection(p) == LEFT_TO_RIGHT) ? backwardWordEnd(p, words) : forwardWordEnd(p, words);
 }
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 /**
  * Returns the beginning of the next bookmarked line.
@@ -670,6 +669,7 @@ VisualDestinationProxy locations::nextCharacterInPhysicalDirection(
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
 }
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 /**
  * Returns the position advanced/returned by N pages.
@@ -724,6 +724,7 @@ VisualDestinationProxy locations::nextVisualLine(const VisualPoint& p, Direction
 	return detail::VisualDestinationProxyMaker::make(np, true);
 }
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /**
  * Returns the beginning of the word where advanced to the left/right/top/bottom by N words.
  * @param p The base position
@@ -768,7 +769,6 @@ boost::optional<Position> locations::nextWordEndInPhysicalDirection(
 	}
 }
 
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /**
  * Returns the beginning of the word where advanced to the right by N words.
  * @param p The base position
