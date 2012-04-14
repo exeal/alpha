@@ -10,7 +10,6 @@
 #define ASCENSION_VIEWER_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
-#include <ascension/content-assist/content-assist.hpp>
 #include <ascension/graphics/text-renderer.hpp>
 #include <ascension/graphics/text-viewport.hpp>
 #include <ascension/kernel/point.hpp>
@@ -57,6 +56,10 @@ namespace ascension {
 			const kernel::Document& document, const kernel::Position& position);
 		bool getNearestIdentifier(const kernel::Document& document,
 			const kernel::Position& position, Index* startOffsetInLine, Index* endOffsetInLine);
+	}
+
+	namespace contentassist {
+		class ContentAssistant;
 	}
 
 	namespace viewers {

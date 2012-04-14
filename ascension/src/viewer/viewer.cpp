@@ -6,6 +6,7 @@
  */
 
 #include <ascension/rules.hpp>
+#include <ascension/content-assist/content-assist.hpp>
 #include <ascension/corelib/text/break-iterator.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/text-editor/command.hpp>
