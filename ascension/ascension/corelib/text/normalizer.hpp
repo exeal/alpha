@@ -11,6 +11,7 @@
 
 #include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_NORMALIZATION
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
+#include <ascension/directions.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>	// CharacterIterator
 #include <ascension/corelib/text/character.hpp>
 #include <memory>		// std.unique_ptr
