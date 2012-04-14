@@ -92,7 +92,7 @@ namespace ascension {
 			private:
 				/**
 				 * The bounds of the text viewport was changed.
-				 * @param oldBounds
+				 * @param oldBounds The old bounds in viewer-local coordinates
 				 * @see TextViewport#boundsInView, TextViewport#setBoundsInView
 				 */
 				virtual void viewportBoundsInViewChanged(const NativeRectangle& oldBounds) /*throw()*/ = 0;

@@ -91,7 +91,7 @@
 
 /*
 	Window system (ASCENSION_WINDOW_SYSTEM_*)
-	- GTK : GTK+ 2
+	- GTK : GTK+ 3 (gtkmm 3.x)
 	- QUARTZ : Quartz Compositor of Mac OS X
 	- QT : Nokia Qt
 	- WIN32 : Windows Win32
