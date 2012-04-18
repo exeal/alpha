@@ -201,7 +201,7 @@ namespace ascension {
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
 			QPainter& nativeObject() const /*throw()*/;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
-			const std::shared_ptr<std::remove_pointer<HDC>::type>& nativeObject() const /*throw()*/;
+			const win32::Handle<HDC>& nativeObject() const /*throw()*/;
 #endif
 
 		private:

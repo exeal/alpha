@@ -391,9 +391,8 @@ ClipboardException::ClipboardException(HRESULT hr) : runtime_error("") {
 // Caret //////////////////////////////////////////////////////////////////////////////////////////
 
 namespace {
-	inline shared_ptr<remove_pointer<HIMC>::type> inputMethod(const TextViewer& viewer) {
-		return shared_ptr<remove_pointer<HIMC>::type>(
-			::ImmGetContext(viewer.identifier().get()),
+	inline win32::Handle<HIMC> inputMethod(const TextViewer& viewer) {
+		return win32::Handle<HIMC>(::ImmGetContext(viewer.identifier().get()),
 			bind(&::ImmReleaseContext, viewer.identifier().get(), placeholders::_1));
 	}
 }
@@ -408,7 +407,7 @@ void Caret::adjustInputMethodCompositionWindow() {
 	assert(win32::boole(::IsWindow(textViewer().identifier().get())));
 	if(!context_.inputMethodCompositionActivated)
 		return;
-	if(shared_ptr<remove_pointer<HIMC>::type> imc = inputMethod(textViewer())) {
+	if(win32::Handle<HIMC> imc = inputMethod(textViewer())) {
 		// composition window placement
 		const shared_ptr<const font::TextViewport> viewport(textViewer().textRenderer().viewport());
 		COMPOSITIONFORM cf;
@@ -506,7 +505,7 @@ void Caret::onImeComposition(WPARAM wp, LPARAM lp, bool& consumed) {
 	if(document().isReadOnly())
 		return;
 	else if(/*event.lParam == 0 ||*/ win32::boole(lp & GCS_RESULTSTR)) {	// completed
-		shared_ptr<remove_pointer<HIMC>::type> imc(inputMethod(textViewer()));
+		win32::Handle<HIMC> imc(inputMethod(textViewer()));
 		if(imc.get() != nullptr) {
 			if(const Index len = ::ImmGetCompositionStringW(imc.get(), GCS_RESULTSTR, nullptr, 0) / sizeof(WCHAR)) {
 				// this was not canceled

@@ -303,15 +303,15 @@ namespace ascension {
 			void showContextMenu(const base::LocatedUserInput& input, bool byKeyboard);
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 			LRESULT handleWindowSystemEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
-			void onCaptureChanged(const std::shared_ptr<std::remove_pointer<HWND>::type>& newWindow, bool& consumed);
-			void onCommand(WORD id, WORD notifyCode, const std::shared_ptr<std::remove_pointer<HWND>::type>& control, bool& consumed);
+			void onCaptureChanged(const win32::Handle<HWND>& newWindow, bool& consumed);
+			void onCommand(WORD id, WORD notifyCode, const win32::Handle<HWND>& control, bool& consumed);
 			void onDestroy(bool& consumed);
-			void onEraseBkgnd(const std::shared_ptr<std::remove_pointer<HDC>::type>& dc, bool& consumed);
-			std::shared_ptr<std::remove_pointer<HFONT>::type> onGetFont();
-			void onHScroll(UINT sbCode, UINT pos, const std::shared_ptr<std::remove_pointer<HWND>::type>& scrollBar);
+			void onEraseBkgnd(const win32::Handle<HDC>& dc, bool& consumed);
+			win32::Handle<HFONT> onGetFont();
+			void onHScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>& scrollBar);
 			bool onNcCreate(CREATESTRUCTW& cs);
 			void onNotify(int id, NMHDR& nmhdr, bool& consumed);
-			void onSetCursor(const std::shared_ptr<std::remove_pointer<HWND>::type>& window, UINT hitTest, UINT message, bool& consumed);
+			void onSetCursor(const win32::Handle<HWND>& window, UINT hitTest, UINT message, bool& consumed);
 			void onStyleChanged(int type, const STYLESTRUCT& style);
 			void onStyleChanging(int type, STYLESTRUCT& style);
 			void onSysColorChange();
@@ -319,7 +319,7 @@ namespace ascension {
 			void onThemeChanged();
 #endif // WM_THEMECHANGED
 			void onTimer(UINT_PTR eventId, TIMERPROC timerProc);
-			void onVScroll(UINT sbCode, UINT pos, const std::shared_ptr<std::remove_pointer<HWND>::type>& scrollBar);
+			void onVScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>& scrollBar);
 #endif
 
 			// internal classes

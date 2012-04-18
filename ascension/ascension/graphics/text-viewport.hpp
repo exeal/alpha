@@ -14,6 +14,7 @@
 #include <ascension/graphics/geometry.hpp>
 #include <ascension/graphics/line-layout-vector.hpp>
 #include <ascension/kernel/point.hpp>	// kernel.locations
+#include <ascension/presentation/writing-mode.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 
 namespace ascension {
@@ -143,55 +144,14 @@ namespace ascension {
 			};
 
 			// free functions
-			inline PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>
+			PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>
 			convertFlowRelativeScrollPositionsToPhysical(const TextViewport& viewport,
-					const presentation::AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
-				switch(viewport.textRenderer().writingMode().blockFlowDirection) {
-					case presentation::HORIZONTAL_TB:
-						return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.ipd(), positions.bpd());
-					case presentation::VERTICAL_RL:
-						return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(
-							(positions.bpd() != boost::none) ?
-								boost::make_optional(viewport.textRenderer().layouts().numberOfVisualLines() - *positions.bpd() - 1) : boost::none,
-							positions.ipd());
-					case presentation::VERTICAL_LR:
-						return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.bpd(), positions.ipd());
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
-				}
-			}
-			inline presentation::AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>
+				const presentation::AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions);
+			presentation::AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>
 			convertPhysicalScrollPositionsToAbstract(const TextViewport& viewport,
-					const PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
-				presentation::AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>> result;
-				switch(viewport.textRenderer().writingMode().blockFlowDirection) {
-					case presentation::HORIZONTAL_TB:
-						result.bpd() = positions.y();
-						result.ipd() = positions.x();
-						break;
-					case presentation::VERTICAL_RL:
-						result.bpd() = (positions.x() != boost::none) ?
-							boost::make_optional(viewport.textRenderer().layouts().numberOfVisualLines() - *positions.x() - 1) : boost::none;
-						result.ipd() = positions.y();
-						break;
-					case presentation::VERTICAL_LR:
-						result.bpd() = positions.x();
-						result.ipd() = positions.y();
-						break;
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
-				}
-				return result;
-			}
-			/**
-			 * Converts an inline progression scroll offset into pixels.
-			 * @param viewport The viewport
-			 * @param scrollOffset The inline progression scroll offset
-			 * @return A scroll offset in pixels
-			 */
-			inline Scalar inlineProgressionScrollOffsetInPixels(const TextViewport& viewport, TextViewport::ScrollOffset scrollOffset) {
-				return viewport.textRenderer().defaultFont()->metrics().averageCharacterWidth() * scrollOffset;
-			}
+				const PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions);
+			Scalar inlineProgressionScrollOffsetInPixels(
+				const TextViewport& viewport, TextViewport::ScrollOffset scrollOffset);
 			Scalar lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline = 0);
 			Scalar lineStartEdge(const TextLayout& layout, Scalar contentMeasure, Index subline = 0);
 			VisualLine locateLine(const TextViewport& viewport,
@@ -200,29 +160,6 @@ namespace ascension {
 				const kernel::Position& position, bool fullSearchBpd,
 				graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING);
 			template<std::size_t coordinate> TextViewport::SignedScrollOffset pageSize(const TextViewport& viewport);
-			template<> inline TextViewport::SignedScrollOffset pageSize<geometry::X_COORDINATE>(const TextViewport& viewport) {
-				switch(viewport.textRenderer().writingMode().blockFlowDirection) {
-					case presentation::HORIZONTAL_TB:
-						return static_cast<TextViewport::SignedScrollOffset>(viewport.numberOfVisibleCharactersInLine());
-					case presentation::VERTICAL_RL:
-						return -static_cast<TextViewport::SignedScrollOffset>(viewport.numberOfVisibleLines());
-					case presentation::VERTICAL_LR:
-						return +static_cast<TextViewport::SignedScrollOffset>(viewport.numberOfVisibleLines());
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
-				}
-			}
-			template<> inline TextViewport::SignedScrollOffset pageSize<geometry::Y_COORDINATE>(const TextViewport& viewport) {
-				switch(viewport.textRenderer().writingMode().blockFlowDirection) {
-					case presentation::HORIZONTAL_TB:
-						return static_cast<TextViewport::SignedScrollOffset>(viewport.numberOfVisibleLines());
-					case presentation::VERTICAL_RL:
-					case presentation::VERTICAL_LR:
-						return static_cast<TextViewport::SignedScrollOffset>(viewport.numberOfVisibleCharactersInLine());
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
-				}
-			}
 			kernel::Position viewToModel(const TextViewport& viewport,
 				const NativePoint& pointInView, TextLayout::Edge edge,
 				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);

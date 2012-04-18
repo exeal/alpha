@@ -11,6 +11,7 @@
 
 #include <ascension/platforms.hpp>
 #include <ascension/content-assist/content-assist.hpp>
+#include <ascension/graphics/text-viewport.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 #	include <gtkmm/treeview.h>
@@ -34,7 +35,8 @@ namespace ascension {
 		 */
 		class DefaultContentAssistant : public ContentAssistant, public kernel::DocumentListener,
 			public viewers::CaretListener, public viewers::CharacterInputListener,
-			public viewers::ViewportListener, private ContentAssistant::CompletionProposalsUI {
+			public viewers::ViewportListener, public graphics::font::TextViewportListener,
+			private ContentAssistant::CompletionProposalsUI {
 		public:
 			// constructors
 			DefaultContentAssistant() /*throw()*/;
@@ -56,6 +58,7 @@ namespace ascension {
 			const ContentAssistProcessor* contentAssistProcessor(kernel::ContentType contentType) const /*throw()*/;
 			void install(viewers::TextViewer& viewer);
 			void uninstall();
+			void viewerBoundsChanged() /*throw()*/;
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
@@ -65,6 +68,12 @@ namespace ascension {
 			void characterInput(const viewers::Caret& caret, CodePoint c);
 			// viewers.ViewportListener
 			void viewportChanged(bool horizontal, bool vertical);
+			// graphics.font.TextViewportListener
+			void viewportBoundsInViewChanged(const graphics::NativeRectangle& oldBounds) /*throw()*/;
+			void viewportScrollPositionChanged(
+				const presentation::AbstractTwoAxes<graphics::font::TextViewport::SignedScrollOffset>& offsets,
+				const graphics::font::VisualLine& oldLine,
+				graphics::font::TextViewport::ScrollOffset oldInlineProgressionOffset) /*throw()*/;
 			// ContentAssistant.CompletionProposalsUI
 			void close();
 			bool complete();

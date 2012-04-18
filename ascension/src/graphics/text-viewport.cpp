@@ -601,6 +601,58 @@ void TextViewport::visualLinesModified(const Range<Index>& lines,
 
 // free functions /////////////////////////////////////////////////////////////////////////////////
 
+PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>
+convertFlowRelativeScrollPositionsToPhysical(const TextViewport& viewport,
+		const AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
+	switch(viewport.textRenderer().writingMode().blockFlowDirection) {
+		case HORIZONTAL_TB:
+			return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.ipd(), positions.bpd());
+		case VERTICAL_RL:
+			return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(
+				(positions.bpd() != boost::none) ?
+					boost::make_optional(viewport.textRenderer().layouts().numberOfVisualLines() - *positions.bpd() - 1) : boost::none,
+				positions.ipd());
+		case VERTICAL_LR:
+			return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.bpd(), positions.ipd());
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+}
+
+AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>
+convertPhysicalScrollPositionsToAbstract(const TextViewport& viewport,
+		const PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
+	AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>> result;
+	switch(viewport.textRenderer().writingMode().blockFlowDirection) {
+		case HORIZONTAL_TB:
+			result.bpd() = positions.y();
+			result.ipd() = positions.x();
+			break;
+		case VERTICAL_RL:
+			result.bpd() = (positions.x() != boost::none) ?
+				boost::make_optional(viewport.textRenderer().layouts().numberOfVisualLines() - *positions.x() - 1) : boost::none;
+			result.ipd() = positions.y();
+			break;
+		case VERTICAL_LR:
+			result.bpd() = positions.x();
+			result.ipd() = positions.y();
+			break;
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+	return result;
+}
+
+/**
+ * Converts an inline progression scroll offset into pixels.
+ * @param viewport The viewport
+ * @param scrollOffset The inline progression scroll offset
+ * @return A scroll offset in pixels
+ */
+Scalar font::inlineProgressionScrollOffsetInPixels(const TextViewport& viewport, TextViewport::ScrollOffset scrollOffset) {
+	return viewport.textRenderer().defaultFont()->metrics().averageCharacterWidth() * scrollOffset;
+}
+
 /**
  * Returns distance from the edge of content-area to the edge of the specified visual line in
  * pixels. The edges are the start side of @a layout (ex. left if left-to-right, bottom if
@@ -709,6 +761,36 @@ NativePoint font::modelToView(const TextViewport& viewport,
 	return geometry::translate(p, geometry::make<NativeSize>(
 		geometry::left(viewport.boundsInView()), geometry::top(viewport.boundsInView())));
 }
+
+template<>
+TextViewport::SignedScrollOffset font::pageSize<geometry::X_COORDINATE>(const TextViewport& viewport) {
+	switch(viewport.textRenderer().writingMode().blockFlowDirection) {
+		case HORIZONTAL_TB:
+			return static_cast<TextViewport::SignedScrollOffset>(viewport.numberOfVisibleCharactersInLine());
+		case VERTICAL_RL:
+			return -static_cast<TextViewport::SignedScrollOffset>(viewport.numberOfVisibleLines());
+		case VERTICAL_LR:
+			return +static_cast<TextViewport::SignedScrollOffset>(viewport.numberOfVisibleLines());
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+}
+
+template<>
+TextViewport::SignedScrollOffset font::pageSize<geometry::Y_COORDINATE>(const TextViewport& viewport) {
+	switch(viewport.textRenderer().writingMode().blockFlowDirection) {
+		case HORIZONTAL_TB:
+			return static_cast<TextViewport::SignedScrollOffset>(viewport.numberOfVisibleLines());
+		case VERTICAL_RL:
+		case VERTICAL_LR:
+			return static_cast<TextViewport::SignedScrollOffset>(viewport.numberOfVisibleCharactersInLine());
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+}
+
+template TextViewport::SignedScrollOffset font::pageSize<geometry::X_COORDINATE>(const TextViewport& viewport);
+template TextViewport::SignedScrollOffset font::pageSize<geometry::Y_COORDINATE>(const TextViewport& viewport);
 
 namespace {
 	// implements viewToModel and viewToModelInBounds in font namespace.

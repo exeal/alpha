@@ -26,7 +26,7 @@ namespace ascension {
 		public:
 			String description() const /*throw()*/;
 			String displayString() const /*throw()*/;
-			Icon icon() const /*throw()*/;
+			const Icon& icon() const /*throw()*/;
 			bool isAutoInsertable() const /*throw()*/;
 			void replace(kernel::Document& document,
 				const kernel::Region& replacementRegion) const;

@@ -43,7 +43,7 @@ namespace ascension {
 				QIcon
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-				std::shared_ptr<std::remove_pointer<HICON>::type>
+				win32::Handle<HICON>
 #elif defined(ASCENSION_WINDOW_SYSTEM_X)
 #endif
 				Icon;
@@ -59,7 +59,7 @@ namespace ascension {
 			 * shown to the leading of the display string.
 			 * @return The icon or @c null if no image is desired
 			 */
-			virtual Icon icon() const /*throw()*/ = 0;
+			virtual const Icon& icon() const /*throw()*/ = 0;
 			/**
 			 * Returns true if the proposal may be automatically inserted if the proposal is the
 			 * only one. In this case, completion proposals will not displayed but the single
@@ -152,7 +152,7 @@ namespace ascension {
 
 		/**
 		 * An content assistant provides support on interactive content completion.
-		 * @see TextViewer#getContentAssistant, TextViewer#setContentAssistant
+		 * @see TextViewer#contentAssistant, TextViewer#setContentAssistant
 		 */
 		class ContentAssistant : public HasTimer {
 		public:
@@ -164,7 +164,7 @@ namespace ascension {
 			public:
 				/// Closes the list without completion.
 				virtual void close() = 0;
-				/// Completes and closes. Returns true if the completion was succeeded.
+				/// Completes and closes. Returns @c true if the completion was succeeded.
 				virtual bool complete() = 0;
 				/// Returns true if the list has a selection.
 				virtual bool hasSelection() const /*throw()*/ = 0;
@@ -194,6 +194,8 @@ namespace ascension {
 			virtual void install(viewers::TextViewer& viewer) = 0;
 			/// Uninstalls the content assistant from the text viewer.
 			virtual void uninstall() = 0;
+			/// The bounds of the text viewer was changed.
+			virtual void viewerBoundsChanged() {}
 			friend class viewers::TextViewer;
 		};
 /*

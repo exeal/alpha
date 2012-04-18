@@ -166,7 +166,7 @@ const base::Cursor& AutoScrollOriginMark::cursorForScrolling(CursorType type) {
 			memcpy(xorBits + 4 * 20, XOR_LINE_20_TO_28, sizeof(XOR_LINE_20_TO_28));
 		}
 #if defined(ASCENSION_OS_WINDOWS)
-		instances[type].reset(new base::Cursor(shared_ptr<remove_pointer<HCURSOR>::type>(
+		instances[type].reset(new base::Cursor(win32::Handle<HCURSOR>(
 			::CreateCursor(::GetModuleHandleW(nullptr), 16, 16, 32, 32, andBits, xorBits), &::DestroyCursor)));
 #else
 		instances[type].reset(new base::Cursor(bitmap));

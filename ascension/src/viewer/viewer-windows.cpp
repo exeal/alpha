@@ -1019,7 +1019,7 @@ const win32::Handle<HFONT>& TextViewer::onGetFont() {
 }
 
 /// @see WM_HSCROLL
-void TextViewer::onHScroll(UINT sbCode, UINT, const shared_ptr<remove_pointer<HWND>::type>&) {
+void TextViewer::onHScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
 	const shared_ptr<TextViewport> viewport(textRenderer().viewport());
 	switch(sbCode) {
 		case SB_LINELEFT:	// 1 óÒï™ç∂
