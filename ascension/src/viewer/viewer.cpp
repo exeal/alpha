@@ -1069,6 +1069,8 @@ void TextViewer::resized(State state, const NativeSize&) {
 //		redrawVerticalRuler();
 		scheduleRedraw(false);	// hmm...
 	}
+	if(contentAssistant() != 0)
+		contentAssistant()->viewerBoundsChanged();
 }
 
 /// @see CaretStateListener#selectionShapeChanged

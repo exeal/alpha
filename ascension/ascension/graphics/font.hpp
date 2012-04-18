@@ -15,9 +15,9 @@
 #include <ascension/graphics/geometry.hpp>
 #include <cstring>	// std.strlen
 #include <locale>	// std.collate
-#include <memory>	// std.unique_ptr
+#include <memory>	// std.unique_ptr, std.shared_ptr
 #if defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
-#	include <ascension/win32/windows.hpp>	// win32.Handle
+#	include <ascension/win32/handle.hpp>	// win32.Handle
 #endif
 #include <boost/operators.hpp>
 
@@ -296,7 +296,7 @@ namespace ascension {
 #elif defined(ASCENSION_SHAPING_ENGINE_QT)
 			typedef QFont* NativeFont;
 #elif defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
-			typedef std::shared_ptr<std::remove_pointer<HFONT>> NativeFont;
+			typedef win32::Handle<HFONT> NativeFont;
 #endif
 
 			class Font : public std::enable_shared_from_this<Font> {

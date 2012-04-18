@@ -27,7 +27,7 @@ using namespace std;
 DefaultCompletionProposal::DefaultCompletionProposal(
 		const String& replacementString, const String& description /* = String() */,
 		Icon&& icon /* = Icon() */, bool autoInsertable /* = true */) :
-		displayString_(replacementString), replacementString_(replacementString), icon_(icon),
+		displayString_(replacementString), replacementString_(replacementString), icon_(move(icon)),
 		descriptionString_(description), autoInsertable_(autoInsertable) {
 }
 
@@ -42,7 +42,7 @@ DefaultCompletionProposal::DefaultCompletionProposal(
 DefaultCompletionProposal::DefaultCompletionProposal(const String& replacementString,
 		const String& displayString, const String& description /* = String() */,
 		Icon&& icon /* = Icon() */, bool autoInsertable /* = true */) :
-		displayString_(displayString), replacementString_(replacementString), icon_(icon),
+		displayString_(displayString), replacementString_(replacementString), icon_(move(icon)),
 		descriptionString_(description), autoInsertable_(autoInsertable) {
 }
 
@@ -57,7 +57,7 @@ String DefaultCompletionProposal::displayString() const /*throw()*/ {
 }
 
 /// @see CompletionProposal#icon
-CompletionProposal::Icon DefaultCompletionProposal::icon() const /*throw()*/ {
+const CompletionProposal::Icon& DefaultCompletionProposal::icon() const /*throw()*/ {
 	return icon_;
 }
 

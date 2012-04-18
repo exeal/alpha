@@ -13,7 +13,7 @@
 #include <ascension/corelib/type-traits.hpp>
 #include <ascension/platforms.hpp>
 #if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
-#	include <ascension/win32/windows.hpp>
+#	include <ascension/win32/handle.hpp>
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
 #	include <gdk/gdk.h>
 #endif
@@ -62,7 +62,7 @@ namespace ascension {
 				typedef POINT NativePoint;
 				typedef SIZE NativeSize;
 				typedef RECT NativeRectangle;
-				typedef std::shared_ptr<std::remove_pointer<HRGN>::type> NativeRegion;
+				typedef win32::Handle<HRGN> NativeRegion;
 			}
 
 			template<> struct Coordinate<POINT> {typedef LONG Type;};

@@ -1,25 +1,25 @@
 /**
  * @file windows.hpp
- * @date 2006-2010 exeal
+ * @date 2006-2012 exeal
  */
 
 #ifndef ASCENSION_WIN32_WINDOWS_HPP
 #define ASCENSION_WIN32_WINDOWS_HPP
 
-#if defined(_DEBUG) && !defined(MANAH_NO_MEMORY_LEAK_CHECK)
+#if defined(_DEBUG) && !defined(ASCENSION_NO_MEMORY_LEAK_CHECK)
 #	define _CRTDBG_MAP_ALLOC
 #	include <cstdlib>
 #	include <malloc.h>
 #	include <crtdbg.h>
-#	define _DEBUG_NEW MANAH_DEBUG_NEW
-#	define MANAH_DEBUG_NEW ::new(_NORMAL_BLOCK, MANAH_OVERRIDDEN_FILE, __LINE__)
-#	define MANAH_OVERRIDDEN_FILE "uknown source file"
-#endif // defined(_DEBUG) && !defined(MANAH_NO_MEMORY_LEAK_CHECK)
+#	define _DEBUG_NEW ASCENSION_DEBUG_NEW
+#	define ASCENSION_DEBUG_NEW ::new(_NORMAL_BLOCK, ASCENSION_OVERRIDDEN_FILE, __LINE__)
+#	define ASCENSION_OVERRIDDEN_FILE "uknown source file"
+#endif // defined(_DEBUG) && !defined(ASCENSION_NO_MEMORY_LEAK_CHECK)
 /*
 	... and you should do the follow:
 	#ifdef _DEBUG
-	#undef MANAH_OVERRIDDEN_FILE
-	static const char MANAH_OVERRIDDEN_FILE[] = __FILE__;
+	#undef ASCENSION_OVERRIDDEN_FILE
+	static const char ASCENSION_OVERRIDDEN_FILE[] = __FILE__;
 	#endif
  */
 
@@ -72,210 +72,6 @@ namespace ascension {
 		 * Wrapper for Win32 @c GetUserDefaultUILanguage API.
 		 */
 		LANGID ASCENSION_FASTCALL userDefaultUILanguage() /*throw()*/;
-
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-		namespace internal {
-			class HandleDeleterBase {
-			public:
-				virtual ~HandleDeleterBase() {}
-				virtual void destroy() = 0;
-			};
-
-			template<typename Handle, typename Deleter>
-			class HandleDeleter : public HandleDeleterBase {
-			public:
-				HandleDeleter(Handle handle, Deleter deleter) : handle_(handle), deleter_(deleter) {}
-				void destroy() {deleter_(handle_);}
-			private:
-				Handle handle_;
-				Deleter deleter_;
-			};
-		}
-
-		/**
-		 *
-		 * @tparam T
-		 */
-		template<typename T> class Handle {
-		public:
-			/// Default constructor.
-			Handle() : handle_(0) {}
-			/**
-			 * Constructor. A @c Handle initialized by this constructor does not get the ownership
-			 * of the handle.
-			 * @tpatam U The type of @a handle. Can be not @c T
-			 * @param handle The handle to hold
-			 */
-			template<typename U>
-			explicit Handle(U handle) : handle_(handle) {}
-			/**
-			 * Constructor. A @c Handle initialized by this constructor gets the ownership of the
-			 * handle and the destructor destroys the handle.
-			 * @tparam U The type of @a handle. Can be not @c T
-			 * @tparam D The type of @a deleter
-			 * @param handle The handle to hold
-			 * @param deleter The function destroys the handle
-			 */
-			template<typename U, typename D> Handle(U handle, D deleter) :
-				handle_(handle), deleter_(new internal::HandleDeleter<T, D>(handle, deleter)) {}
-			/// Destructor.
-			~Handle() {
-				if(deleter_.get() != 0)
-					deleter_->destroy();
-			}
-			/**
-			 * Copy-constructor snatches the ownership of the handle from the source object.
-			 * @param other The source object
-			 */
-			Handle(Handle<T>& other) : handle_(other.handle_), deleter_(other.deleter_) {
-				other.handle_ = 0;
-			}
-			/**
-			 * Assignment operator snatches the ownership of the handle from the source object.
-			 * @param other The source object.
-			 * @return This object
-			 */
-			Handle<T>& operator=(Handle<T>& other) {
-				Handle<T>(other).swap(*this);
-				return *this;
-			}
-			/// Returns the held handle.
-			T get() const {return handle_;}
-			/***/
-			void swap(Handle<T>& other) {
-				std::swap(handle_, other.handle_);
-				std::swap(deleter_, other.deleter_);
-			}
-			/**
-			 * Releases the held handle without destruction.
-			 * @return The held handle
-			 */
-			T release() {
-				deleter_.reset();
-				T temp(0);
-				std::swap(handle_, temp);
-				return temp;
-			}
-			/// Resets the handle.
-			void reset() {Handle<T>().swap(*this);}
-			/**
-			 * Resets the handle. This method does not get the ownership of the handle.
-			 * @param handle The handle to hold. Can be @c null
-			 */
-			template<typename U>
-			void reset(U handle) {
-				assert(handle == 0 || handle != get());
-				Handle<T>(handle).swap(*this);
-			}
-			/**
-			 * Resets the handle. This method does not get the ownership of the handle.
-			 * @tparam Deleter The type of @a deleter
-			 * @param handle The handle to hold. Can be @c null
-			 * @param deleter The function destroys the handle
-			 */
-			template<typename U, typename D> void reset(U handle, D deleter) {
-				assert(handle == 0 || handle != get());
-				Handle<T>(handle, deleter).swap(*this);
-			}
-		private:
-			T handle_;
-			std::auto_ptr<internal::HandleDeleterBase> deleter_;
-		};
-
-		template<typename Handle> struct Managed {};
-		template<typename Handle> struct Borrowed {};
-		template<typename Handle> inline Managed<Handle>* managed(Handle handle) {return reinterpret_cast<Managed<Handle>*>(handle);}
-		template<typename Handle> inline Borrowed<Handle>* borrowed(Handle handle) {return reinterpret_cast<Borrowed<Handle>*>(handle);}
-
-		/**
-		 * Holds and manages a handle value. The instance has the ownership of the handle value.
-		 * The semantics of the copy operations is same as @c std#auto_ptr.
-		 * @tparam Handle the type of the handle to be held
-		 * @tparam deleter Win32 function used to discard the handle
-		 * @tparam HeldType the type of the handle to be held actually
-		 */
-		template<typename Handle = HANDLE, BOOL(WINAPI* deleter)(Handle) = ::CloseHandle, typename HeldType = Handle>
-		class Object {
-		public:
-			/// The type of the handle to be held.
-			typedef HeldType HandleType;
-			/// Alias of this type.
-			typedef Object<Handle, deleter, HeldType> BaseObject;
-		public:
-			/// Constructor takes a handle as the initial value and manages it.
-			explicit Object(Managed<HandleType>* handle) : handle_(reinterpret_cast<HandleType>(handle)), manages_(true) {
-				if(handle_ != 0 && !check(handle_))
-					throw InvalidHandleException("handle");
-			}
-			/// Constructor takes a handle as the initial value.
-			explicit Object(Borrowed<HandleType>* handle = 0) : handle_(reinterpret_cast<HandleType>(handle)), manages_(false) {
-				if(handle_ != 0 && !check(handle_))
-					throw InvalidHandleException("handle");
-			}
-			/// Destructor discards the handle.
-			virtual ~Object() {
-				reset();
-			}
-			/// Copy-constructor takes the ownership of the handle away from @a other.
-			Object(Object<Handle, deleter, HandleType>& other) : handle_(other.handle_), manages_(other.manages_) {
-				other.handle_ = 0;
-			}
-			/// Assignment operator takes the ownership of the handle away from @a other.
-			Object<Handle, deleter, HandleType>& operator=(Object<Handle, deleter, HandleType>& other) {
-				reset();
-				std::swap(handle_, other.handle_);
-				manages_ = other.manages_;
-				return *this;
-			}
-			/// Returns the raw handle value.
-			HandleType get() const {return handle_;}
-			/// Sets the internal handle value to @c null.
-			HandleType release() {
-				HandleType temp(0);
-				std::swap(handle_, temp);
-				return temp;
-			}
-			/// Discards or release the current handle, holds the new handle value and manages it.
-			void reset(Managed<HandleType>* newValue) {
-				resetHandle(reinterpret_cast<HandleType>(newValue));
-				manages_ = true;
-			}
-			/// Discards or release the current handle and holds the new handle value.
-			void reset(Borrowed<HandleType>* newValue = 0) {
-				resetHandle(reinterpret_cast<HandleType>(newValue));
-				manages_ = false;
-			}
-			/// Returns the raw handle value. If the handle is @c null, throws @c std#logic_error.
-			HandleType use() const {
-				if(handle_ == 0)
-					throw std::logic_error("handle is null.");
-				else if(!check(handle_))
-					throw InvalidHandleException("handle is invalid.");
-				return handle_;
-			}
-		protected:
-			/// Returns @c false if @a handle is invalid. Called by @c #use method.
-			virtual bool check(HandleType handle) const {return true;}
-		private:
-			void resetHandle(HandleType newHandle) {
-				if(newHandle != 0 && !check(newHandle))
-					throw InvalidHandleException("newValue");
-				if(handle_ == 0)
-					handle_ = newHandle;
-				else if(newHandle == 0) {
-					if(deleter != 0 && manages_)
-						(*deleter)(handle_);
-					handle_ = 0;
-				} else {
-					if(newHandle != handle_ && deleter != 0 && manages_)
-						(*deleter)(handle_);
-					handle_ = newHandle;
-				}
-			}
-			HandleType handle_;
-			bool manages_;
-		};
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 #	define ASCENSION_WIN32_OBJECT_CONSTRUCTORS(ClassName)						\
 		ClassName() : BaseObject() {}											\

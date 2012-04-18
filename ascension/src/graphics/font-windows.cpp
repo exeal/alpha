@@ -96,7 +96,7 @@ namespace {
 namespace {
 	class SystemFont : public Font, public Font::Metrics {
 	public:
-		explicit SystemFont(shared_ptr<remove_pointer<HFONT>::type>&& handle);
+		explicit SystemFont(win32::Handle<HFONT>&& handle);
 		// Font
 		String faceName(const locale& lc /* = std::locale::classic() */) const /*throw()*/ {return familyName_;}
 		String familyName(const locale& lc /* = std::locale::classic() */) const /*throw()*/ {return familyName_;}
@@ -104,7 +104,7 @@ namespace {
 		bool ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, GlyphCode& glyph) const;
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 		const Font::Metrics& metrics() const /*throw()*/ {return *this;}
-		shared_ptr<remove_pointer<HFONT>::type> nativeHandle() const /*throw()*/ {return handle_;}
+		const win32::Handle<HFONT>& nativeHandle() const /*throw()*/ {return handle_;}
 		// FontMetrics
 		int ascent() const /*throw()*/ {return ascent_;}
 		int averageCharacterWidth() const /*throw()*/ {return averageCharacterWidth_;}
@@ -113,7 +113,7 @@ namespace {
 		int internalLeading() const /*throw()*/ {return internalLeading_;}
 		int xHeight() const /*throw()*/ {return xHeight_;}
 	private:
-		const shared_ptr<remove_pointer<HFONT>::type> handle_;
+		const win32::Handle<HFONT> handle_;
 		int ascent_, averageCharacterWidth_, descent_, externalLeading_, internalLeading_, xHeight_;
 		String familyName_;
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
@@ -139,8 +139,8 @@ namespace {
 	};
 } // namespace @0
 
-SystemFont::SystemFont(shared_ptr<remove_pointer<HFONT>::type>&& handle) : handle_(handle) {
-	shared_ptr<remove_pointer<HDC>::type> dc(detail::screenDC());
+SystemFont::SystemFont(win32::Handle<HFONT>&& handle) : handle_(move(handle)) {
+	win32::Handle<HDC> dc(detail::screenDC());
 	HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), handle_.get()));
 	::SetGraphicsMode(dc.get(), GM_ADVANCED);
 //	const double xdpi = dc.getDeviceCaps(LOGPIXELSX);
@@ -178,7 +178,7 @@ bool SystemFont::ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, 
 		return false;
 	if(ivs_.get() == nullptr) {
 		const_cast<SystemFont*>(this)->ivs_.reset(new IdeographicVariationSequences);
-		shared_ptr<remove_pointer<HDC>::type> dc(detail::screenDC());
+		win32::Handle<HDC> dc(detail::screenDC());
 		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), handle_.get()));
 		static const TrueTypeFontTag CMAP_TAG = MakeTrueTypeFontTag<'c', 'm', 'a', 'p'>::value;
 		const DWORD bytes = ::GetFontData(dc.get(), CMAP_TAG, 0, nullptr, 0);
@@ -219,7 +219,7 @@ shared_ptr<const Font> SystemFonts::cache(const String& familyName, const FontPr
 	lf.lfWeight = properties.weight();
 	lf.lfItalic = (properties.style() == FontPropertiesBase::ITALIC) || (properties.style() == FontPropertiesBase::OBLIQUE);
 	wcscpy(lf.lfFaceName, familyName.c_str());
-	shared_ptr<remove_pointer<HFONT>::type> font(::CreateFontIndirectW(&lf), &::DeleteObject);
+	win32::Handle<HFONT> font(::CreateFontIndirectW(&lf), &::DeleteObject);
 #ifdef _DEBUG
 	if(::GetObjectW(font.get(), sizeof(LOGFONTW), &lf) > 0) {
 		::OutputDebugStringW(L"[SystemFonts.cache] Created font '");
@@ -232,7 +232,7 @@ shared_ptr<const Font> SystemFonts::cache(const String& familyName, const FontPr
 
 	// handle RunStyle.fontSizeAdjust
 	if(!equals(sizeAdjust, 0.0) && sizeAdjust > 0.0) {
-		shared_ptr<remove_pointer<HDC>::type> dc(detail::screenDC());
+		win32::Handle<HDC> dc(detail::screenDC());
 		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font.get()));
 		TEXTMETRICW tm;
 		if(::GetTextMetricsW(dc.get(), &tm)) {
@@ -256,13 +256,13 @@ shared_ptr<const Font> SystemFonts::cache(const String& familyName, const FontPr
 		if(::GetObjectW(font.get(), sizeof(LOGFONTW), &lf) > 0) {
 			static const int WIDTH_RATIOS[] = {1000, 1000, 1000, 500, 625, 750, 875, 1125, 1250, 1500, 2000, 1000};
 			lf.lfWidth = ::MulDiv(lf.lfWidth, WIDTH_RATIOS[properties.stretch()], 1000);
-			shared_ptr<remove_pointer<HFONT>::type> temp(::CreateFontIndirectW(&lf), &::DeleteObject);
+			win32::Handle<HFONT> temp(::CreateFontIndirectW(&lf), &::DeleteObject);
 			if(temp.get() != nullptr)
 				font = temp;
 		}
 	}
 
-	shared_ptr<Font> newFont(new SystemFont(font));
+	shared_ptr<Font> newFont(new SystemFont(move(font)));
 	registry_.insert(make_pair(make_pair(familyName, properties), newFont));
 	return newFont;
 }

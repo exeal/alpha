@@ -17,7 +17,7 @@ namespace ascension {
 		class WindowBase {
 		public:
 			static const DWORD defaultStyle = WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE;
-			std::shared_ptr<std::remove_pointer<HWND>::type> handle() const {
+			const Handle<HWND>& handle() const {
 				return handle_;
 			}
 		protected:
@@ -26,12 +26,12 @@ namespace ascension {
 					throw NullPointerException("handle");
 			}
 		private:
-			std::shared_ptr<std::remove_pointer<HWND>::type> handle_;
+			Handle<HWND> handle_;
 		};
 
 		class Window : public WindowBase {
 		protected:
-			Window(std::shared_ptr<std::remove_pointer<HWND>::type> parent, const WCHAR className[],
+			Window(const Handle<HWND>& parent, const WCHAR className[],
 					const graphics::NativePoint* position = nullptr, const graphics::NativeSize* size = nullptr,
 					DWORD style = 0, DWORD extendedStyle = 0) : WindowBase(::CreateWindowExW(
 						extendedStyle, className, nullptr, style,
@@ -57,7 +57,7 @@ namespace ascension {
 				return ::DefWindowProc(window, message, wp, lp);
 			}
 		private:
-			std::shared_ptr<std::remove_pointer<HWND>::type> handle_;
+			Handle<HWND> handle_;
 			WNDPROC originalWindowProcedure_;
 		};
 

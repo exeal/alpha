@@ -8,7 +8,7 @@
 
 #include <ascension/viewer/caret.hpp>
 #include <ascension/content-assist/default-content-assistant.hpp>
-#include <ascension/viewer/viewer.hpp>				// TextViewer
+#include <ascension/viewer/viewer.hpp>	// TextViewer
 
 using namespace ascension;
 using namespace ascension::contentassist;
@@ -96,7 +96,9 @@ void DefaultContentAssistant::characterInput(const Caret&, CodePoint c) {
 /// @see CompletionProposalsUI#close
 void DefaultContentAssistant::close() {
 	if(completionSession_.get() != 0) {
+		// these connections were maken by startPopup() method
 		textViewer_->removeViewportListener(*this);
+		textViewer_->textRenderer().viewport()->removeListener(*this);
 		textViewer_->caret().removeListener(*this);
 		if(completionSession_->incremental)
 			textViewer_->document().removeListener(*this);
@@ -230,6 +232,7 @@ void DefaultContentAssistant::showPossibleCompletions() {
 			completionSession_->incremental, completionSession_->replacementRegion, proposals);
 		if(!proposals.empty()) {
 			if(proposals.size() == 1 && (*proposals.begin())->isAutoInsertable()) {
+				// proposal is only one which is auto insertable => insert it without popup
 				(*proposals.begin())->replace(textViewer_->document(), completionSession_->replacementRegion);
 				completionSession_.reset();
 				delete *proposals.begin();
@@ -253,6 +256,7 @@ void DefaultContentAssistant::showPossibleCompletions() {
 
 /// Resets the contents of the completion proposal popup based on @c completionSession-&gt;proposals.
 void DefaultContentAssistant::startPopup() {
+	assert(completionSession_.get() != 0);
 	if(proposalsPopup_.get() == nullptr)
 		proposalsPopup_.reset(new CompletionProposalsPopup(*textViewer_, *this));
 
@@ -261,7 +265,9 @@ void DefaultContentAssistant::startPopup() {
 	proposalsPopup_->resetContent(completionSession_->proposals.get(), completionSession_->numberOfProposals);
 
 	updatePopupBounds();
+	// these connections are revoke by close() method
 	textViewer_->addViewportListener(*this);
+	textViewer_->textRenderer().viewport()->addListener(*this);
 	textViewer_->caret().addListener(*this);
 	if(completionSession_->incremental)
 		textViewer_->document().addListener(*this);
@@ -281,7 +287,22 @@ void DefaultContentAssistant::uninstall() {
 	}
 }
 
-/// @see viewers#IViewportListener#viewportChanged
-void ContentAssistant::viewportChanged(bool, bool) {
-	updatePopupPositions();
+/// @see ContentAssistant#viewerBoundsChanged
+void DefaultContentAssistant::viewerBoundsChanged() /*throw()*/ {
+	try {
+		updatePopupBounds();
+	} catch(...) {
+	}
+}
+
+/// @see graphics.font.TextViewportListener.viewportBoundsInViewChanged
+void DefaultContentAssistant::viewportBoundsInViewChanged(const graphics::NativeRectangle&) /*throw()*/ {
+	viewerBoundsChanged();
+}
+
+/// @see graphics.font.TextViewportListener.viewportScrollPositionChanged
+void DefaultContentAssistant::viewportScrollPositionChanged(
+		const AbstractTwoAxes<graphics::font::TextViewport::SignedScrollOffset>&,
+		const graphics::font::VisualLine&, graphics::font::TextViewport::ScrollOffset) /*throw()*/ {
+	viewerBoundsChanged();
 }

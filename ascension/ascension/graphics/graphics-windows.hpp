@@ -11,7 +11,7 @@
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>
-#include <ascension/win32/windows.hpp>	// win32.Handle
+#include <ascension/win32/handle.hpp>	// win32.Handle
 #include <functional>			// std.bind1st, std.ptr_fun
 
 namespace ascension {
@@ -21,7 +21,7 @@ namespace ascension {
 		class GraphicsContext : public Base {
 		public:
 			virtual ~GraphicsContext() /*throw()*/ {}
-			std::shared_ptr<std::remove_pointer<HDC>::type>& nativeHandle() const {return dc_;}
+			Handle<HDC>& nativeHandle() const {return dc_;}
 			void fillRectangle(const graphics::NativeRectangle& rect, const graphics::Color& color) {
 				const COLORREF oldBackground = ::GetBkColor(dc_.get());
 				if(oldBackground != CLR_INVALID) {
@@ -43,20 +43,20 @@ namespace ascension {
 			}
 		protected:
 			GraphicsContext() /*throw()*/ {}
-			void initialize(std::shared_ptr<std::remove_pointer<HDC>::type>&& deviceContext) {
+			void initialize(Handle<HDC>&& deviceContext) {
 				assert(deviceContext.get() != nullptr);
-				dc_ = deviceContext;
+				dc_ = move(deviceContext);
 			}
 		private:
-			std::shared_ptr<std::remove_pointer<HDC>::type> dc_;
+			Handle<HDC> dc_;
 		};
 
 		class ClientAreaGraphicsContext : public GraphicsContext<graphics::RenderingContext2D> {
 		public:
-			explicit ClientAreaGraphicsContext(std::shared_ptr<std::remove_pointer<HWND>::type> window) {
+			explicit ClientAreaGraphicsContext(Handle<HWND> window) {
 				if(window.get() == nullptr)
 					throw NullPointerException("window");
-				std::shared_ptr<std::remove_pointer<HDC>::type> dc(::GetDC(window.get()), std::bind(&::ReleaseDC, window.get(), std::placeholders::_1));
+				Handle<HDC> dc(::GetDC(window.get()), std::bind(&::ReleaseDC, window.get(), std::placeholders::_1));
 				if(dc.get() == nullptr)
 					throw PlatformDependentError<>();
 				initialize(std::move(dc));
@@ -65,10 +65,10 @@ namespace ascension {
 
 		class EntireWindowGraphicsContext : public GraphicsContext<graphics::RenderingContext2D> {
 		public:
-			explicit EntireWindowGraphicsContext(std::shared_ptr<std::remove_pointer<HWND>::type> window) {
+			explicit EntireWindowGraphicsContext(Handle<HWND> window) {
 				if(window.get() == nullptr)
 					throw NullPointerException("window");
-				std::shared_ptr<std::remove_pointer<HDC>::type> dc(::GetWindowDC(window.get()), std::bind(&::ReleaseDC, window.get(), std::placeholders::_1));
+				Handle<HDC> dc(::GetWindowDC(window.get()), std::bind(&::ReleaseDC, window.get(), std::placeholders::_1));
 				if(dc.get() == nullptr)
 					throw PlatformDependentError<>();
 				initialize(std::move(dc));
@@ -77,10 +77,10 @@ namespace ascension {
 
 		class PaintContext : public GraphicsContext<graphics::PaintContext> {
 		public:
-			explicit PaintContext(std::shared_ptr<std::remove_pointer<HWND>::type> window) {
+			explicit PaintContext(Handle<HWND> window) {
 				if(window.get() == nullptr)
 					throw NullPointerException("window");
-				std::shared_ptr<std::remove_pointer<HDC>::type> dc(::BeginPaint(window.get(), &ps_), X(window.get(), ps_));
+				Handle<HDC> dc(::BeginPaint(window.get(), &ps_), X(window.get(), ps_));
 				if(dc.get() == nullptr)
 					throw PlatformDependentError<>();
 				initialize(std::move(dc));
@@ -101,8 +101,8 @@ namespace ascension {
 	}
 
 	namespace detail {
-		inline std::shared_ptr<std::remove_pointer<HDC>::type> screenDC() {
-			return std::shared_ptr<std::remove_pointer<HDC>::type>(::GetDC(nullptr), std::bind(&::ReleaseDC, static_cast<HWND>(nullptr), std::placeholders::_1));
+		inline win32::Handle<HDC> screenDC() {
+			return win32::Handle<HDC>(::GetDC(nullptr), std::bind(&::ReleaseDC, static_cast<HWND>(nullptr), std::placeholders::_1));
 		}
 	}
 }

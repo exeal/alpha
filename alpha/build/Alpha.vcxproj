@@ -329,6 +329,7 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\ruler.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\viewer-observers.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\visual-point.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\handle.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\message-dispatcher.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\window.hpp" />
     <ClInclude Include="..\src\alpha.hpp" />
