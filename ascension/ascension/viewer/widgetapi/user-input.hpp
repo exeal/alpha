@@ -13,7 +13,7 @@
 
 namespace ascension {
 	namespace viewers {
-		namespace base {
+		namespace widgetapi {
 
 			class Event {
 			public:

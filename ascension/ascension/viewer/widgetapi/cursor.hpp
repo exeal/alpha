@@ -24,7 +24,7 @@ namespace ascension {
 	namespace graphics {class Image;}
 
 	namespace viewers {
-		namespace base {
+		namespace widgetapi {
 
 			typedef
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
