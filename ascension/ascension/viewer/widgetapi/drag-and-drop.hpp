@@ -10,7 +10,7 @@
 
 namespace ascension {
 	namespace viewers {
-		namespace base {
+		namespace widgetapi {
 
 			typedef uint16_t DropAction;
 			const DropAction DROP_ACTION_IGNORE = 0;

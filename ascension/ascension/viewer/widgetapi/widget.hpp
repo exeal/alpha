@@ -18,7 +18,7 @@
 #	include <QWidget>
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-#	include <ascension/win32/windows.hpp>
+#	include <ascension/win32/window.hpp>	// win32.Window
 #	include <ObjIdl.h>	// IDataObject
 #endif
 
@@ -29,6 +29,80 @@ namespace ascension {
 	}
 
 	namespace viewers {
+		namespace widgetapi {
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+			typedef Gtk::Widget NativeWidget;
+		typedef Gtk::Window NativeWindow;
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+			typedef QWidget NativeWidget;
+			typedef QWidget NativeWindow;
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+			typedef NSView NativeWidget;
+			typedef NSWindow NativeWindow;
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+			typedef win32::Window NativeWidget;
+			typedef win32::Window NativeWindow;
+#endif
+			graphics::NativeRectangle bounds(const NativeWidget& widget, bool includeFrame);
+			graphics::NativePoint mapFromGlobal(const NativeWidget& widget, const graphics::NativePoint& position);
+			inline graphics::NativeRectangle mapFromGlobal(const NativeWidget& widget, const graphics::NativeRectangle& rectangle) {
+				return graphics::geometry::make<graphics::NativeRectangle>(
+					mapFromGlobal(widget, graphics::geometry::get<0>(rectangle)),
+					mapFromGlobal(widget, graphics::geometry::get<1>(rectangle)));
+			}
+			graphics::NativePoint mapToGlobal(const NativeWidget& widget, const graphics::NativePoint& position);
+			inline graphics::NativeRectangle mapToGlobal(const NativeWidget& widget, const graphics::NativeRectangle& rectangle) {
+				return graphics::geometry::make<graphics::NativeRectangle>(
+					mapToGlobal(widget, graphics::geometry::get<0>(rectangle)),
+					mapToGlobal(widget, graphics::geometry::get<1>(rectangle)));
+			}
+			void move(const NativeWidget& widget, const graphics::NativePoint& newOrigin);
+			void resize(const NativeWidget& widget, const graphics::NativeSize& newSize);
+			void setBounds(const NativeWidget& widget, const graphics::NativeRectangle& bounds);
+			void setShape(const NativeWidget& widget, const graphics::NativeRegion& shape);
+
+			// visibilities
+			void close(NativeWidget& widget);
+			void hide(NativeWidget& widget);
+			bool isVisible(const NativeWidget& widget);
+			void lower(NativeWidget& widget);
+			void raise(NativeWidget& widget);
+			void setOpacity(NativeWidget& widget, double opacity);
+			void setAlwaysOnTop(NativeWidget& widget, bool set);
+			void show(NativeWidget& widget);
+
+			enum State {
+				NORMAL, MAXIMIZED, MINIMIZED
+			};
+			enum Style {WIDGET = 0};
+
+			// paints
+			void forcePaint(NativeWidget& widget, const graphics::NativeRectangle& bounds);
+			void redrawScheduledRegion(NativeWidget& widget);
+			void scheduleRedraw(NativeWidget& widget, bool eraseBackground);
+			void scheduleRedraw(NativeWidget& widget, const graphics::NativeRectangle& rect, bool eraseBackground);
+
+			// focus/input
+			class InputGrabLocker {
+			public:
+				~InputGrabLocker() {releaseInput(widget_);}
+			private:
+				explicit InputGrabLocker(NativeWidget& widget) : widget_(widget) {}
+				NativeWidget& widget_;
+			};
+			std::unique_ptr<InputGrabLocker> grabInput(NativeWidget& widget);
+			bool hasFocus(const NativeWidget& widget);
+			bool isActive(const NativeWidget& widget);
+			void releaseInput(NativeWidget& widget);
+			void setFocus(NativeWidget& widget);
+
+			// drag and drop
+			void acceptDrops(NativeWidget& widget, bool accept = true);
+			bool acceptsDrops(const NativeWidget& widget);
+
+			NativeWindow desktop();
+		}
+
 		namespace base {
 
 			/**
@@ -54,64 +128,7 @@ namespace ascension {
 					std::shared_ptr<std::remove_pointer<HWND>::type>
 #endif
 					Identifier;
-
-				class InputGrabLocker {
-				public:
-					~InputGrabLocker() {widget_.releaseInput();}
-				private:
-					explicit InputGrabLocker(Widget& widget) : widget_(widget) {}
-					Widget& widget_;
-					friend class Widget;
-				};
 			public:
-				Widget(Widget* parent = nullptr, Style styles = WIDGET);
-				virtual ~Widget();
-
-				const Identifier& identifier() const;
-
-				graphics::NativeRectangle bounds(bool includeFrame) const;
-				graphics::NativePoint mapFromGlobal(const graphics::NativePoint& position) const;
-				graphics::NativeRectangle mapFromGlobal(const graphics::NativeRectangle& rectangle) const {
-					return graphics::geometry::make<graphics::NativeRectangle>(
-						mapFromGlobal(graphics::geometry::get<0>(rectangle)),
-						mapFromGlobal(graphics::geometry::get<1>(rectangle)));
-				}
-				graphics::NativePoint mapToGlobal(const graphics::NativePoint& position) const;
-				graphics::NativeRectangle mapToGlobal(const graphics::NativeRectangle& rectangle) const {
-					return graphics::geometry::make<graphics::NativeRectangle>(
-						mapToGlobal(graphics::geometry::get<0>(rectangle)),
-						mapToGlobal(graphics::geometry::get<1>(rectangle)));
-				}
-				void move(const graphics::NativePoint& newOrigin);
-				void resize(const graphics::NativeSize& newSize);
-				void setBounds(const graphics::NativeRectangle& bounds);
-				void setShape(const graphics::NativeRegion& shape);
- 
-				void close();
-				void hide();
-				void lower();
-				void raise();
-				void show();
-
-				void forcePaint(const graphics::NativeRectangle& bounds);
-				void redrawScheduledRegion();
-				void scheduleRedraw(bool eraseBackground);
-				void scheduleRedraw(const graphics::NativeRectangle& rect, bool eraseBackground);
-
-				void setOpacity(double opacity);
-				void setAlwaysOnTop(bool set);
-
-				bool hasFocus() const;
-				bool isVisible() const;
-				bool isActive() const;
-				void setFocus();
-
-				std::unique_ptr<InputGrabLocker> grabInput();
-				void releaseInput();
-
-				void acceptDrops(bool accept = true);
-				bool acceptsDrops() const;
-
 				// graphics.RenderingDevice
 				std::unique_ptr<graphics::RenderingContext2D> createRenderingContext() const;
 				int depth();
@@ -157,42 +174,6 @@ namespace ascension {
 #endif
 				// window system specific
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-				struct ClassInformation {
-					UINT style;	// corresponds to WNDCLASSEXW.style
-					/// Makes a brush handle parameter from either a brush handle or @c COLORREF value. 
-					class Background {
-					public:
-						/// Constructor makes @c null @c HBRUSH value.
-						Background() /*throw()*/ : brush_(nullptr) {}
-						/// Constructor takes a brush handle.
-						Background(std::shared_ptr<std::remove_pointer<HBRUSH>::type>&& handle) /*throw()*/ : brush_(handle) {}
-						/// Constructor takes a @c COLORREF value used to make the brush handle.
-						Background(int systemColor) /*throw()*/
-							: brush_(reinterpret_cast<HBRUSH>(static_cast<HANDLE_PTR>(systemColor + 1))) {}
-						/// Returns the brush handle.
-						HBRUSH get() const /*throw()*/ {return brush_.get();}
-					private:
-						std::shared_ptr<std::remove_pointer<HBRUSH>::type> brush_;
-					} background;
-					std::shared_ptr<std::remove_pointer<HICON>::type> icon, smallIcon;
-					/// Makes a cursor handle parameter from either a cursor handle or numeric identifier.
-					class CursorHandleOrID {
-					public:
-						/// Constructor makes @c null @c HCURSOR value.
-						CursorHandleOrID() /*throw()*/ : cursor_(nullptr) {}
-						/// Constructor takes a cursor handle.
-						CursorHandleOrID(std::shared_ptr<std::remove_pointer<HCURSOR>::type> handle) /*throw()*/ : cursor_(handle) {}
-						/// Constructor takes a numeric identifier for system cursor.
-						CursorHandleOrID(const WCHAR* systemCursorID) : cursor_(::LoadCursorW(nullptr, systemCursorID), detail::NullDeleter()) {}
-						/// Returns the cursor handle.
-						HCURSOR get() const /*throw()*/ {return cursor_.get();}
-					private:
-						std::shared_ptr<std::remove_pointer<HCURSOR>::type> cursor_;
-					} cursor;
-					ClassInformation() : style(0) {}
-				};
-				virtual void provideClassInformation(ClassInformation& classInfomation) const {}
-				virtual std::basic_string<WCHAR> provideClassName() const = 0;
 #endif
 			private:
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)

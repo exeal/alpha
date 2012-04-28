@@ -320,6 +320,9 @@
     <ClCompile Include="..\..\ascension\src\content-assist\default-content-assistant.cpp">
       <Filter>ascension\Source Files\content-assist</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\viewer-gtkmm.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alpha.hpp">

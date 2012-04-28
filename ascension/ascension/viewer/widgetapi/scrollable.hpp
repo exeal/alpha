@@ -11,7 +11,7 @@
 
 namespace ascension {
 	namespace viewers {
-		namespace base {
+		namespace widgetapi {
 
 			struct ScrollCommands {
 				enum Value {
@@ -39,6 +39,16 @@ namespace ascension {
 				virtual void setSingleStep(ScrollPosition newSingleStep) = 0;
 				virtual ScrollPosition singleStep() const = 0;
 			};
+
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+			typedef Gtk::Scrollable NativeScrollableWidget;	// Gtk.Viewport is preferred?
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+			typedef QScrollArea NativeScrollableWidget;
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+			typedef NSScrollView NativeScrollableWidget;
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+			typedef win32::Window NativeScrollableWidget;
+#endif
 
 			class ScrollableWidget : public ScrollProperties<int>, public Widget {
 			public:
