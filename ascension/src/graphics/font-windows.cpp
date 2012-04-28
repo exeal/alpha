@@ -256,9 +256,8 @@ shared_ptr<const Font> SystemFonts::cache(const String& familyName, const FontPr
 		if(::GetObjectW(font.get(), sizeof(LOGFONTW), &lf) > 0) {
 			static const int WIDTH_RATIOS[] = {1000, 1000, 1000, 500, 625, 750, 875, 1125, 1250, 1500, 2000, 1000};
 			lf.lfWidth = ::MulDiv(lf.lfWidth, WIDTH_RATIOS[properties.stretch()], 1000);
-			win32::Handle<HFONT> temp(::CreateFontIndirectW(&lf), &::DeleteObject);
-			if(temp.get() != nullptr)
-				font = temp;
+			if(win32::Handle<HFONT> temp = win32::Handle<HFONT>(::CreateFontIndirectW(&lf), &::DeleteObject))
+				font = move(temp);
 		}
 	}
 

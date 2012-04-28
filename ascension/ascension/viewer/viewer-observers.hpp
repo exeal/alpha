@@ -54,7 +54,7 @@ namespace ascension {
 		class KeyboardInputStrategy {
 		};
 #endif
-		namespace base {
+		namespace widgetapi {
 			class DropTarget;
 			class LocatedUserInput;
 			class MouseButtonInput;

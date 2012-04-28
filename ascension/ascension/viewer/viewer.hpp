@@ -97,7 +97,15 @@ namespace ascension {
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
 		class TextViewer :
-				public base::ScrollableWidget,
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+				public Gtk::Widget, public Gtk::Scrollable,
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+				public QAbstractScrollArea,
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+				public NSView,
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+				public win32::CustomControl,
+#endif
 				public kernel::DocumentListener, public kernel::DocumentRollbackListener,
 				public graphics::font::DefaultFontListener, public graphics::font::VisualLinesListener,
 				public graphics::font::TextViewportListener, public graphics::font::ComputedWritingModeListener,
@@ -170,7 +178,7 @@ namespace ascension {
 			};
 
 			// constructors
-			explicit TextViewer(presentation::Presentation& presentation, Widget* parent = nullptr, Style styles = WIDGET);
+			explicit TextViewer(presentation::Presentation& presentation, widgetapi::NativeWidget* parent = nullptr);
 			TextViewer(const TextViewer& other);
 			virtual ~TextViewer();
 			// listeners and strategies
@@ -234,7 +242,7 @@ namespace ascension {
 			// helpers
 		private:
 			graphics::Scalar inlineProgressionOffsetInViewport() const;
-			void initialize();
+			void initialize(const TextViewer* other);
 			graphics::Scalar mapLineLayoutIpdToViewport(Index line, graphics::Scalar ipd) const;
 //			graphics::Scalar mapLineToViewportBpd(Index line, bool fullSearch) const;
 			graphics::Scalar mapViewportIpdToLineLayout(Index line, graphics::Scalar ipd) const;
@@ -287,6 +295,52 @@ namespace ascension {
 			void addNewPoint(VisualPoint& point) {points_.insert(&point);}
 			void removePoint(VisualPoint& point) {points_.erase(&point);}
 
+			// platform-dependent events
+		private:
+#if defined(ASCENSION_WINDOW_SYSTEM_GTKMM)
+			bool on_button_press_event(GdkEventButton* event);
+			bool on_button_release_event(GdkEventButton* event);
+			bool on_configure_event(GdkEventConfigure* event);
+			bool on_draw(const Cairo::RefPtr<Cairo::Context>& context);
+			bool on_focus_in_event(GdkEventFocus* event);
+			bool on_focus_out_event(GdkEventFocus* event);
+			bool on_grab_broken_event(GdkEventGrabBroken* event);
+			bool on_grab_focus();
+			bool on_key_press_event(GdkEventKey* event);
+			bool on_key_release(GdkEventKey* event);
+			bool on_motion_notify_event(GdkEventMotion* event);
+			bool on_scroll_event(GdkEventScroll* event);
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+			void contextMenuEvent(QContextMenuEvent* event);
+			void focusInEvent(QFocusEvent* event);
+			void focusOutEvent(QFocusEvent* event);
+			void keyPressEvent(QKeyEvent* event);
+			void keyReleaseEvent(QKeyEvent* event);
+			void mouseDoubleClickEvent(QMouseEvent* event);
+			void mouseMoveEvent(QMouseEvent* event);
+			void mousePressEvent(QMouseEvent* event);
+			void mouseReleaseEvent(QMouseEvent* event);
+			void paintEvent(QPaintEvent* event);
+			void resizeEvent(QResizeEvent* event);
+			void wheelEvent(QWheelEvent* event);
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+			void onCaptureChanged(const win32::Handle<HWND>& newWindow, bool& consumed);
+			void onCommand(WORD id, WORD notifyCode, const win32::Handle<HWND>& control, bool& consumed);
+			void onDestroy(bool& consumed);
+			void onEraseBkgnd(const win32::Handle<HDC>& dc, bool& consumed);
+			win32::Handle<HFONT> onGetFont();
+			void onHScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>& scrollBar);
+			bool onNcCreate(CREATESTRUCTW& cs);
+			void onNotify(int id, NMHDR& nmhdr, bool& consumed);
+			void onSetCursor(const win32::Handle<HWND>& window, UINT hitTest, UINT message, bool& consumed);
+			void onStyleChanged(int type, const STYLESTRUCT& style);
+			void onStyleChanging(int type, STYLESTRUCT& style);
+			void onSysColorChange();
+			void onThemeChanged();
+			void onTimer(UINT_PTR eventId, TIMERPROC timerProc);
+			void onVScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>& scrollBar);
+			LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
+#endif
 			// event handlers
 		private:
 			void aboutToLoseFocus();
@@ -301,26 +355,6 @@ namespace ascension {
 			void paint(graphics::PaintContext& context);
 			void resized(State state, const graphics::NativeSize& newSize);
 			void showContextMenu(const base::LocatedUserInput& input, bool byKeyboard);
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-			LRESULT handleWindowSystemEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
-			void onCaptureChanged(const win32::Handle<HWND>& newWindow, bool& consumed);
-			void onCommand(WORD id, WORD notifyCode, const win32::Handle<HWND>& control, bool& consumed);
-			void onDestroy(bool& consumed);
-			void onEraseBkgnd(const win32::Handle<HDC>& dc, bool& consumed);
-			win32::Handle<HFONT> onGetFont();
-			void onHScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>& scrollBar);
-			bool onNcCreate(CREATESTRUCTW& cs);
-			void onNotify(int id, NMHDR& nmhdr, bool& consumed);
-			void onSetCursor(const win32::Handle<HWND>& window, UINT hitTest, UINT message, bool& consumed);
-			void onStyleChanged(int type, const STYLESTRUCT& style);
-			void onStyleChanging(int type, STYLESTRUCT& style);
-			void onSysColorChange();
-#ifdef WM_THEMECHANGED
-			void onThemeChanged();
-#endif // WM_THEMECHANGED
-			void onTimer(UINT_PTR eventId, TIMERPROC timerProc);
-			void onVScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>& scrollBar);
-#endif
 
 			// internal classes
 		private:

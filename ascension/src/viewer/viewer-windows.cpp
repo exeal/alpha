@@ -209,7 +209,7 @@ private:
  */
 TextViewer::AccessibleProxy::AccessibleProxy(TextViewer& viewer) /*throw()*/ : viewer_(viewer), available_(true) {
 	assert(accLib.isAvailable());
-	accLib.createStdAccessibleObject(viewer.identifier().get(), OBJID_CLIENT, IID_IAccessible, defaultServer_.initializePPV());
+	accLib.createStdAccessibleObject(viewer.handle().get(), OBJID_CLIENT, IID_IAccessible, defaultServer_.initializePPV());
 }
 
 /// @see IAccessible#accDoDefaultAction
@@ -223,7 +223,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::accHitTest(long xLeft, long yTop, VARI
 	ASCENSION_VERIFY_AVAILABILITY();
 	// ウィンドウが矩形であることを前提としている
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pvarChild);
-	if(geometry::includes(viewer_.bounds(false), viewer_.mapFromGlobal(geometry::make<NativePoint>(xLeft, yTop)))) {
+	if(geometry::includes(widgetapi::bounds(viewer_, false), widgetapi::mapFromGlobal(viewer_, geometry::make<NativePoint>(xLeft, yTop)))) {
 		pvarChild->vt = VT_I4;
 		pvarChild->lVal = CHILDID_SELF;
 		return S_OK;
@@ -242,8 +242,8 @@ STDMETHODIMP TextViewer::AccessibleProxy::accLocation(long* pxLeft, long* pyTop,
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pcyHeight);
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
-	const NativeRectangle clientBounds(viewer_.bounds(false));
-	const NativePoint origin(viewer_.mapToGlobal(geometry::topLeft(clientBounds)));
+	const NativeRectangle clientBounds(widgetapi::bounds(viewer_, false));
+	const NativePoint origin(widgetapi::mapToGlobal(viewer_, geometry::topLeft(clientBounds)));
 	*pxLeft = geometry::x(origin);
 	*pyTop = geometry::y(origin);
 	*pcxWidth = geometry::dx(clientBounds);
@@ -284,7 +284,7 @@ void TextViewer::AccessibleProxy::documentAboutToBeChanged(const k::Document&) {
 /// @see Document#IListener#documentChanged
 void TextViewer::AccessibleProxy::documentChanged(const k::Document&, const k::DocumentChange&) {
 	assert(accLib.isAvailable());
-	accLib.notifyWinEvent(EVENT_OBJECT_VALUECHANGE, viewer_.identifier().get(), OBJID_CLIENT, CHILDID_SELF);
+	accLib.notifyWinEvent(EVENT_OBJECT_VALUECHANGE, viewer_.handle().get(), OBJID_CLIENT, CHILDID_SELF);
 }
 
 /// @see IAccessible#get_accChild
@@ -360,7 +360,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accName(VARIANT varChild, BSTR* ps
 STDMETHODIMP TextViewer::AccessibleProxy::get_accParent(IDispatch** ppdispParent) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	if(accLib.isAvailable())
-		return accLib.accessibleObjectFromWindow(viewer_.identifier().get(),
+		return accLib.accessibleObjectFromWindow(viewer_.handle().get(),
 			OBJID_WINDOW, IID_IAccessible, reinterpret_cast<void**>(ppdispParent));
 	return defaultServer_->get_accParent(ppdispParent);
 }
@@ -391,11 +391,11 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accState(VARIANT varChild, VARIANT
 		return E_INVALIDARG;
 	pvarState->vt = VT_I4;
 	pvarState->lVal = 0;	// STATE_SYSTEM_NORMAL;
-	if(!viewer_.isVisible())
+	if(!widgetapi::isVisible(viewer_))
 		pvarState->lVal |= STATE_SYSTEM_INVISIBLE;
-	if(::GetTopWindow(viewer_.identifier().get()) == ::GetActiveWindow())
+	if(::GetTopWindow(viewer_.handle().get()) == ::GetActiveWindow())
 		pvarState->lVal |= STATE_SYSTEM_FOCUSABLE;
-	if(viewer_.hasFocus())
+	if(widgetapi::hasFocus(viewer_))
 		pvarState->lVal |= STATE_SYSTEM_FOCUSED;
 	if(viewer_.document().isReadOnly())
 		pvarState->lVal |= STATE_SYSTEM_READONLY;
@@ -418,7 +418,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accValue(VARIANT varChild, BSTR* p
 STDMETHODIMP TextViewer::AccessibleProxy::GetWindow(HWND* phwnd) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	ASCENSION_WIN32_VERIFY_COM_POINTER(phwnd);
-	*phwnd = viewer_.identifier().get();
+	*phwnd = viewer_.handle().get();
 	return S_OK;
 }
 
@@ -492,12 +492,23 @@ namespace {
 
 // TextViewer /////////////////////////////////////////////////////////////////////////////////////
 
+TextViewer::TextViewer(Presentation& presentation, widgetapi::NativeWidget* parent /* = nullptr */)
+		: win32::CustomControl(parent), presentation_(presentation), tipText_(nullptr),
+#ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
+		accessibleProxy_(nullptr),
+#endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
+		mouseInputDisabledCount_(0) {
+	initialize(nullptr);
+
+	// initializations of renderer_ and mouseInputStrategy_ are in initializeWindow()
+}
+
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 /// Returns the accessible proxy of the viewer.
 HRESULT TextViewer::accessibleObject(IAccessible*& acc) const /*throw()*/ {
 	TextViewer& self = *const_cast<TextViewer*>(this);
 	acc = nullptr;
-	if(accessibleProxy_ == nullptr && win32::boole(::IsWindow(identifier().get())) && accLib.isAvailable()) {
+	if(accessibleProxy_ == nullptr && win32::boole(::IsWindow(handle().get())) && accLib.isAvailable()) {
 		if(self.accessibleProxy_ = new AccessibleProxy(self)) {
 			self.accessibleProxy_->AddRef();
 //			accLib.notifyWinEvent(EVENT_OBJECT_CREATE, *this, OBJID_CLIENT, CHILDID_SELF);
@@ -516,148 +527,13 @@ void TextViewer::doBeep() /*throw()*/ {
 	::MessageBeep(MB_OK);
 }
 
-/// @see Widget#handleWindowSystemEvent
-LRESULT TextViewer::handleWindowSystemEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
-	using namespace ascension::texteditor::commands;
-
-	switch(message) {
-#ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
-		case WM_CLEAR:
-			if(::GetKeyState(VK_SHIFT) < 0)
-				cutSelection(caret(), true);
-			else
-				CharacterDeletionCommand(*this, Direction::FORWARD)();
-			consumed = true;
-			return 0L;
-		case WM_COPY:
-			copySelection(caret(), true);
-			consumed = true;
-			return 0L;
-		case WM_CUT:
-			cutSelection(caret(), true);
-			consumed = true;
-			return 0L;
-#endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
-#ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-		case WM_GETOBJECT:
-			if(lp == OBJID_CLIENT) {
-				win32::com::ComPtr<IAccessible> acc;
-				if(SUCCEEDED(accessibleObject(*acc.initialize())) && accLib.isAvailable())
-					return accLib.lresultFromObject(IID_IAccessible, wp, acc.get());
-			} else if(lp == OBJID_WINDOW) {
-			}
-			return 0;
-#endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
-		case WM_GETTEXT: {
-			basic_ostringstream<Char> s;
-			writeDocumentToStream(s, document(), document().region(), text::NLF_CR_LF);
-			consumed = true;
-			return reinterpret_cast<LRESULT>(s.str().c_str());
-		}
-		case WM_GETTEXTLENGTH:
-			// ウィンドウ関係だし改行は CRLF でいいか。NLR_RAW_VALUE だと遅いし
-			consumed = true;
-			return document().length(text::NLF_CR_LF);
-//		case WM_NCPAINT:
-//			return 0;
-#ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
-		case WM_PASTE:
-			PasteCommand(*this, false)();
-			consumed = true;
-			return 0L;
-#endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
-		case WM_SETTEXT:
-			EntireDocumentSelectionCreationCommand(*this)();
-			caret().replaceSelection(String(reinterpret_cast<const wchar_t*>(lp)), false);
-			consumed = true;
-			return 0L;
-#ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
-		case WM_UNDO:
-			UndoCommand(*this, false)();
-			consumed = true;
-			return 0L;
-#endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
-			// dispatch message into handler
-		case WM_CAPTURECHANGED:
-			onCaptureChanged(win32::Handle<HWND>(reinterpret_cast<HWND>(lp)), consumed);
-			return consumed ? 0 : 1;
-		case WM_CHAR:
-		case WM_SYSCHAR:
-#ifdef WM_UNICHAR:
-		case WM_UNICHAR:
-#endif // WM_UNICHAR
-		{
-			static_cast<detail::InputEventHandler&>(caret()).handleInputEvent(message, wp, lp, consumed);	// $friendly-access
-			// vanish the cursor when the GUI user began typing
-			if(consumed) {
-				// ignore if the cursor is not over a window belongs to the same thread
-				HWND pointedWindow = ::WindowFromPoint(base::Cursor::position());
-				if(pointedWindow != nullptr
-						&& ::GetWindowThreadProcessId(pointedWindow, nullptr) == ::GetWindowThreadProcessId(identifier().get(), nullptr))
-					cursorVanisher_.vanish();
-			}
-			return consumed ? 0 : 1;
-		}
-		case WM_COMMAND:
-			onCommand(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp)), consumed);
-			return consumed ? 0 : 1;
-		case WM_DESTROY:
-			onDestroy(consumed);
-			return consumed ? 0 : 1;
-		case WM_ERASEBKGND:
-			onEraseBkgnd(win32::Handle<HDC>(reinterpret_cast<HDC>(wp)), consumed);
-			return consumed ? TRUE : FALSE;
-		case WM_GETFONT:
-			return (consumed = true), reinterpret_cast<LRESULT>(onGetFont().get());
-		case WM_HSCROLL:
-			return (consumed = true), onHScroll(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp))), 0;
-		case WM_IME_CHAR:
-		case WM_IME_COMPOSITION:
-		case WM_IME_COMPOSITIONFULL:
-		case WM_IME_CONTROL:
-		case WM_IME_ENDCOMPOSITION:
-		case WM_IME_KEYDOWN:
-		case WM_IME_KEYUP:
-		case WM_IME_NOTIFY:
-		case WM_IME_REQUEST:
-		case WM_IME_SELECT:
-		case WM_IME_SETCONTEXT:
-		case WM_IME_STARTCOMPOSITION:
-		case WM_INPUTLANGCHANGE:
-			return static_cast<detail::InputEventHandler&>(caret()).handleInputEvent(message, wp, lp, consumed);	// $friendly-access
-		case WM_NCCREATE:
-			return (consumed = true), onNcCreate(*reinterpret_cast<CREATESTRUCTW*>(lp));
-		case WM_NOTIFY:
-			return onNotify(static_cast<int>(wp), *reinterpret_cast<NMHDR*>(lp), consumed), 0;
-		case WM_SETCURSOR:
-			onSetCursor(win32::Handle<HWND>(reinterpret_cast<HWND>(wp)), LOWORD(lp), HIWORD(lp), consumed);
-			return consumed ? TRUE : FALSE;
-		case WM_STYLECHANGED:
-			return (consumed = true), onStyleChanged(static_cast<int>(wp), *reinterpret_cast<STYLESTRUCT*>(lp)), 0;
-		case WM_STYLECHANGING:
-			return (consumed = true), onStyleChanging(static_cast<int>(wp), *reinterpret_cast<STYLESTRUCT*>(lp)), 0;
-		case WM_SYSCOLORCHANGE:
-			return (consumed = true), onSysColorChange(), 0;
-#ifdef WM_THEMECHANGED
-		case WM_THEMECHANGED:
-			return (consumed = true), onThemeChanged(), 0;
-#endif // WM_THEMECHANGED
-		case WM_TIMER:
-			return (consumed = true), onTimer(static_cast<UINT_PTR>(wp), reinterpret_cast<TIMERPROC>(lp)), 0;
-		case WM_VSCROLL:
-			return (consumed = true), onVScroll(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp))), 0;
-	}
-
-	return Widget::handleWindowSystemEvent(message, wp, lp, consumed);
-}
-
 /// Hides the tool tip.
 void TextViewer::hideToolTip() {
-	assert(::IsWindow(identifier().get()));
+	assert(::IsWindow(handle().get()));
 	if(tipText_ == nullptr)
 		tipText_ = new Char[1];
 	wcscpy(tipText_, L"");
-	::KillTimer(identifier().get(), TIMERID_CALLTIP);	// 念のため...
+	::KillTimer(handle().get(), TIMERID_CALLTIP);	// 念のため...
 	::SendMessageW(toolTip_, TTM_UPDATE, 0, 0L);
 }
 
@@ -1023,16 +899,16 @@ void TextViewer::onHScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
 	const shared_ptr<TextViewport> viewport(textRenderer().viewport());
 	switch(sbCode) {
 		case SB_LINELEFT:	// 1 列分左
-			viewport->scroll(geometry::make<NativeSize>(-1, 0));
+			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(-1, 0));
 			break;
 		case SB_LINERIGHT:	// 1 列分右
-			viewport->scroll(geometry::make<NativeSize>(+1, 0));
+			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(+1, 0));
 			break;
 		case SB_PAGELEFT:	// 1 ページ左
-			viewport->scroll(geometry::make<NativeSize>(-abs(pageSize<geometry::X_COORDINATE>(*viewport)), 0));
+			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(-abs(pageSize<geometry::X_COORDINATE>(*viewport)), 0));
 			break;
 		case SB_PAGERIGHT:	// 1 ページ右
-			viewport->scroll(geometry::make<NativeSize>(+abs(pageSize<geometry::X_COORDINATE>(*viewport)), 0));
+			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(+abs(pageSize<geometry::X_COORDINATE>(*viewport)), 0));
 			break;
 		case SB_LEFT:		// 左端
 			viewport->scrollTo(
@@ -1044,7 +920,7 @@ void TextViewer::onHScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
 		case SB_THUMBTRACK: {	// by drag or wheel
 			win32::AutoZeroSize<SCROLLINFO> si;
 			si.fMask = SIF_TRACKPOS;
-			if(win32::boole(::GetScrollInfo(identifier().get(), SB_HORZ, &si)))
+			if(win32::boole(::GetScrollInfo(handle().get(), SB_HORZ, &si)))
 				scrollTo(si.nTrackPos, -1, false);
 			break;
 		}
@@ -1070,8 +946,8 @@ namespace {
 
 /// @see WM_NCCREATE
 bool TextViewer::onNcCreate(CREATESTRUCTW&) {
-	const LONG s = ::GetWindowLongW(identifier().get(), GWL_EXSTYLE);
-	::SetWindowLongW(identifier().get(), GWL_EXSTYLE, s & ~WS_EX_LAYOUTRTL);
+	const LONG s = ::GetWindowLongW(handle().get(), GWL_EXSTYLE);
+	::SetWindowLongW(handle().get(), GWL_EXSTYLE, s & ~WS_EX_LAYOUTRTL);
 	return true;
 }
 
@@ -1090,7 +966,7 @@ void TextViewer::onNotify(int, NMHDR& nmhdr, bool& consumed) {
 void TextViewer::onSetCursor(const win32::Handle<HWND>&, UINT, UINT, bool& consumed) {
 	cursorVanisher_.restore();
 	if(consumed = (mouseInputStrategy_.get() != nullptr))
-		mouseInputStrategy_->showCursor(mapFromGlobal(base::Cursor::position()));
+		mouseInputStrategy_->showCursor(widgetapi::mapFromGlobal(*this, base::Cursor::position()));
 }
 
 /// @see WM_STYLECHANGED
@@ -1127,7 +1003,7 @@ void TextViewer::onThemeChanged() {
 /// @see WM_TIMER
 void TextViewer::onTimer(UINT_PTR eventID, TIMERPROC) {
 	if(eventID == TIMERID_CALLTIP) {	// show the tooltip
-		::KillTimer(identifier().get(), TIMERID_CALLTIP);
+		::KillTimer(handle().get(), TIMERID_CALLTIP);
 		::SendMessageW(toolTip_, TTM_UPDATE, 0, 0L);
 	}
 }
@@ -1151,11 +1027,248 @@ void TextViewer::onVScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
 		case SB_THUMBTRACK: {	// by drag or wheel
 			win32::AutoZeroSize<SCROLLINFO> si;
 			si.fMask = SIF_TRACKPOS;
-			if(win32::boole(::GetScrollInfo(identifier().get(), SB_VERT, &si)))
+			if(win32::boole(::GetScrollInfo(handle().get(), SB_VERT, &si)))
 				scrollTo(-1, si.nTrackPos, true);
 			break;
 		}
 	}
+}
+
+namespace {
+	inline NativePoint makeMouseLocation(LPARAM lp) {
+#ifndef GET_X_LPARAM
+	// <windowsx.h> defines the followings
+#	define GET_X_LPARAM(l) LOWORD(l)
+#	define GET_Y_LPARAM(l) HIWORD(l)
+#endif
+		return geometry::make<NativePoint>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
+	}
+	inline base::UserInput::ModifierKey makeModifiers() {
+		base::UserInput::ModifierKey modifiers = 0;
+		if(::GetKeyState(VK_SHIFT) < 0)
+			modifiers |= base::UserInput::SHIFT_DOWN;
+		if(::GetKeyState(VK_CONTROL) < 0)
+			modifiers |= base::UserInput::CONTROL_DOWN;
+		if(::GetKeyState(VK_MENU) < 0)
+			modifiers |= base::UserInput::ALT_DOWN;
+		return modifiers;
+	}
+	inline base::UserInput::ModifierKey makeModifiers(WPARAM wp) {
+		base::UserInput::ModifierKey modifiers = 0;
+		if((wp & MK_CONTROL) != 0)
+			modifiers = base::UserInput::CONTROL_DOWN;
+		if((wp & MK_SHIFT) != 0)
+			modifiers = base::UserInput::SHIFT_DOWN;
+		return modifiers;
+	}
+	inline base::KeyInput makeKeyInput(WPARAM wp, LPARAM lp) {
+		return base::KeyInput(wp, makeModifiers(), LOWORD(lp), HIWORD(lp));
+	}
+	inline base::MouseButtonInput makeMouseButtonInput(base::UserInput::MouseButton button, WPARAM wp, LPARAM lp) {
+		return base::MouseButtonInput(makeMouseLocation(lp), button, makeModifiers(wp));
+	}
+}
+
+/// @see win32#Window#processMessage
+LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
+#ifndef WM_UNICHAR
+	static const UINT WM_UNICHAR = 0x109;
+#endif
+#ifndef WM_XBUTTONDOWN
+	static const UINT WM_XBUTTONDOWN = 0x20b;
+	static const UINT WM_XBUTTONUP = 0x20c;
+	static const UINT WM_XBUTTONDBLCLK = 0x20d;
+	static const int XBUTTON1 = 0x1, XBUTTON2 = 0x2;
+#	define GET_KEYSTATE_WPARAM(wp) (LOWORD(wp))
+#	define GET_XBUTTON_WPARAM(wp) (HIWORD(wp))
+#endif
+#ifndef WM_MOUSEHWHEEL
+	static const UINT WM_MOUSEHWHEEL = 0x20e;
+#endif
+#ifndef WM_THEMECHANGED
+	static const UINT WM_THEMECHANGED = 0x31a;
+#endif
+
+	using namespace ascension::texteditor::commands;
+
+	switch(message) {
+#ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
+		case WM_CLEAR:
+			if(::GetKeyState(VK_SHIFT) < 0)
+				cutSelection(caret(), true);
+			else
+				CharacterDeletionCommand(*this, Direction::FORWARD)();
+			consumed = true;
+			return 0L;
+		case WM_COPY:
+			copySelection(caret(), true);
+			consumed = true;
+			return 0L;
+		case WM_CUT:
+			cutSelection(caret(), true);
+			consumed = true;
+			return 0L;
+#endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
+#ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
+		case WM_GETOBJECT:
+			if(lp == OBJID_CLIENT) {
+				win32::com::ComPtr<IAccessible> acc;
+				if(SUCCEEDED(accessibleObject(*acc.initialize())) && accLib.isAvailable())
+					return accLib.lresultFromObject(IID_IAccessible, wp, acc.get());
+			} else if(lp == OBJID_WINDOW) {
+			}
+			return 0;
+#endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
+		case WM_GETTEXT: {
+			basic_ostringstream<Char> s;
+			writeDocumentToStream(s, document(), document().region(), text::NLF_CR_LF);
+			consumed = true;
+			return reinterpret_cast<LRESULT>(s.str().c_str());
+		}
+		case WM_GETTEXTLENGTH:
+			// ウィンドウ関係だし改行は CRLF でいいか。NLR_RAW_VALUE だと遅いし
+			consumed = true;
+			return document().length(text::NLF_CR_LF);
+//		case WM_NCPAINT:
+//			return 0;
+#ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
+		case WM_PASTE:
+			PasteCommand(*this, false)();
+			consumed = true;
+			return 0L;
+#endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
+		case WM_SETTEXT:
+			EntireDocumentSelectionCreationCommand(*this)();
+			caret().replaceSelection(String(reinterpret_cast<const wchar_t*>(lp)), false);
+			consumed = true;
+			return 0L;
+#ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
+		case WM_UNDO:
+			UndoCommand(*this, false)();
+			consumed = true;
+			return 0L;
+#endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
+			// dispatch message into handler
+		case WM_CAPTURECHANGED:
+			onCaptureChanged(win32::Handle<HWND>(reinterpret_cast<HWND>(lp)), consumed);
+			return consumed ? 0 : 1;
+		case WM_CHAR:
+		case WM_SYSCHAR:
+		case WM_UNICHAR:
+		{
+			static_cast<detail::InputEventHandler&>(caret()).handleInputEvent(message, wp, lp, consumed);	// $friendly-access
+			// vanish the cursor when the GUI user began typing
+			if(consumed) {
+				// ignore if the cursor is not over a window belongs to the same thread
+				HWND pointedWindow = ::WindowFromPoint(base::Cursor::position());
+				if(pointedWindow != nullptr
+						&& ::GetWindowThreadProcessId(pointedWindow, nullptr) == ::GetWindowThreadProcessId(handle().get(), nullptr))
+					cursorVanisher_.vanish();
+			}
+			return consumed ? 0 : 1;
+		}
+		case WM_COMMAND:
+			onCommand(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp)), consumed);
+			return consumed ? 0 : 1;
+		case WM_CONTEXTMENU: {
+			const base::LocatedUserInput input(makeMouseLocation(lp), makeModifiers());
+			showContextMenu(input, geometry::x(input.location()) == -1 && geometry::y(input.location()) == -1);
+			return (consumed = true), 0;
+		}
+		case WM_DESTROY:
+			onDestroy(consumed);
+			return consumed ? 0 : 1;
+		case WM_ERASEBKGND:
+			onEraseBkgnd(win32::Handle<HDC>(reinterpret_cast<HDC>(wp)), consumed);
+			return consumed ? TRUE : FALSE;
+		case WM_GETFONT:
+			return (consumed = true), reinterpret_cast<LRESULT>(onGetFont().get());
+		case WM_HSCROLL:
+			return (consumed = true), onHScroll(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp))), 0;
+		case WM_IME_CHAR:
+		case WM_IME_COMPOSITION:
+		case WM_IME_COMPOSITIONFULL:
+		case WM_IME_CONTROL:
+		case WM_IME_ENDCOMPOSITION:
+		case WM_IME_KEYDOWN:
+		case WM_IME_KEYUP:
+		case WM_IME_NOTIFY:
+		case WM_IME_REQUEST:
+		case WM_IME_SELECT:
+		case WM_IME_SETCONTEXT:
+		case WM_IME_STARTCOMPOSITION:
+		case WM_INPUTLANGCHANGE:
+			return static_cast<detail::InputEventHandler&>(caret()).handleInputEvent(message, wp, lp, consumed);	// $friendly-access
+		case WM_KEYDOWN:
+		case WM_SYSKEYDOWN:
+			return (consumed = true), keyPressed(makeKeyInput(wp, lp)), 0;
+		case WM_KEYUP:
+		case WM_SYSKEYUP:
+			return (consumed = true), keyReleased(makeKeyInput(wp, lp)), 0;
+		case WM_KILLFOCUS:
+			return (consumed = true), aboutToLoseFocus(), 0;
+		case WM_LBUTTONDBLCLK:
+			return (consumed = true), mouseDoubleClicked(makeMouseButtonInput(base::UserInput::BUTTON1_DOWN, wp, lp)), 0;
+		case WM_LBUTTONDOWN:
+			return (consumed = true), mousePressed(makeMouseButtonInput(base::UserInput::BUTTON1_DOWN, wp, lp)), 0;
+		case WM_LBUTTONUP:
+			return (consumed = true), mouseReleased(makeMouseButtonInput(base::UserInput::BUTTON1_DOWN, wp, lp)), 0;
+		case WM_MBUTTONDBLCLK:
+			return (consumed = true), mouseDoubleClicked(makeMouseButtonInput(base::UserInput::BUTTON2_DOWN, wp, lp)), 0;
+		case WM_MBUTTONDOWN:
+			return (consumed = true), mousePressed(makeMouseButtonInput(base::UserInput::BUTTON2_DOWN, wp, lp)), 0;
+		case WM_MBUTTONUP:
+			return (consumed = true), mouseReleased(makeMouseButtonInput(base::UserInput::BUTTON2_DOWN, wp, lp)), 0;
+		case WM_MOUSEMOVE:
+			return (consumed = true), mouseMoved(base::LocatedUserInput(makeMouseLocation(lp), makeModifiers(wp))), 0;
+		case WM_MOUSEWHEEL:
+		case WM_MOUSEHWHEEL:
+			return (consumed = true), mouseWheelChanged(base::MouseWheelInput(
+				widgetapi::mapFromGlobal(*this, makeMouseLocation(lp)),
+				makeModifiers(GET_KEYSTATE_WPARAM(wp)),
+				geometry::make<NativeSize>(
+					(message == WM_MOUSEHWHEEL) ? GET_WHEEL_DELTA_WPARAM(wp) : 0,
+					(message == WM_MOUSEWHEEL) ? GET_WHEEL_DELTA_WPARAM(wp) : 0)), 0;
+		case WM_NCCREATE:
+			return (consumed = true), onNcCreate(*reinterpret_cast<CREATESTRUCTW*>(lp));
+		case WM_NOTIFY:
+			return onNotify(static_cast<int>(wp), *reinterpret_cast<NMHDR*>(lp), consumed), 0;
+		case WM_PAINT:
+			return (consumed = true), paint(createRenderingContext()), 0;
+		case WM_RBUTTONDBLCLK:
+			return (consumed = true), mouseDoubleClicked(makeMouseButtonInput(base::UserInput::BUTTON3_DOWN, wp, lp)), 0;
+		case WM_RBUTTONDOWN:
+			return (consumed = true), mousePressed(makeMouseButtonInput(base::UserInput::BUTTON3_DOWN, wp, lp)), 0;
+		case WM_RBUTTONUP:
+			return (consumed = true), mouseReleased(makeMouseButtonInput(base::UserInput::BUTTON3_DOWN, wp, lp)), 0;
+		case WM_SETCURSOR:
+			onSetCursor(win32::Handle<HWND>(reinterpret_cast<HWND>(wp)), LOWORD(lp), HIWORD(lp), consumed);
+			return consumed ? TRUE : FALSE;
+		case WM_SETFOCUS:
+			return (consumed = true), focusGained(), 0;
+		case WM_SIZE:
+			return (consumed = true), resized(wp, geometry::make<NativeSize>(LOWORD(lp), HIWORD(lp))), 0;
+		case WM_STYLECHANGED:
+			return (consumed = true), onStyleChanged(static_cast<int>(wp), *reinterpret_cast<STYLESTRUCT*>(lp)), 0;
+		case WM_STYLECHANGING:
+			return (consumed = true), onStyleChanging(static_cast<int>(wp), *reinterpret_cast<STYLESTRUCT*>(lp)), 0;
+		case WM_SYSCOLORCHANGE:
+			return (consumed = true), onSysColorChange(), 0;
+		case WM_THEMECHANGED:
+			return (consumed = true), onThemeChanged(), 0;
+		case WM_TIMER:
+			return (consumed = true), onTimer(static_cast<UINT_PTR>(wp), reinterpret_cast<TIMERPROC>(lp)), 0;
+		case WM_VSCROLL:
+			return (consumed = true), onVScroll(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp))), 0;
+		case WM_XBUTTONDBLCLK:
+			return (consumed = true), mouseDoubleClicked(makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? base::UserInput::BUTTON4_DOWN : base::UserInput::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
+		case WM_XBUTTONDOWN:
+			return (consumed = true), mousePressed(makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? base::UserInput::BUTTON4_DOWN : base::UserInput::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
+		case WM_XBUTTONUP:
+			return (consumed = true), mouseReleased(makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? base::UserInput::BUTTON4_DOWN : base::UserInput::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
+	}
+
+	return win32::Window::processMessage(message, wp, lp, consumed);
 }
 
 void TextViewer::provideClassInformation(Widget::ClassInformation& classInformation) const {
@@ -1184,20 +1297,20 @@ void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKey
 		// MSDN says "the application should display the context menu at the location of the current selection."
 		menuPosition = localPointForCharacter(caret(), false);
 		geometry::y(menuPosition) += textRenderer().defaultFont()->metrics().cellHeight() + 1;
-		NativeRectangle clientBounds(bounds(false));
+		NativeRectangle clientBounds(widgetapi::bounds(*this, false));
 		const PhysicalFourSides<Scalar> spaces(spaceWidths());
 		clientBounds = geometry::make<NativeRectangle>(
-			geometry::translate(geometry::topLeft(clientBounds), geometry::make<NativeSize>(spaces.left, spaces.top)),
-			geometry::translate(geometry::bottomRight(clientBounds), geometry::make<NativeSize>(-spaces.right + 1, -spaces.bottom)));
+			geometry::translate(geometry::topLeft(clientBounds), geometry::make<NativeSize>(spaces.left(), spaces.top())),
+			geometry::translate(geometry::bottomRight(clientBounds), geometry::make<NativeSize>(-spaces().right + 1, -spaces.bottom())));
 		if(!geometry::includes(clientBounds, menuPosition))
 			menuPosition = geometry::make<NativePoint>(1, 1);
-		mapToGlobal(menuPosition);
+		widgetapi::mapToGlobal(*this, menuPosition);
 	} else
 		menuPosition = input.location();
 
 	// ignore if the point is over the scroll bars
-	const NativeRectangle clientBounds(bounds(false));
-	mapToGlobal(clientBounds);
+	const NativeRectangle clientBounds(widgetapi::bounds(*this, false));
+	widgetapi::mapToGlobal(*this, clientBounds);
 	if(!geometry::includes(clientBounds, menuPosition))
 		return;
 
@@ -1317,7 +1430,7 @@ void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKey
 
 	// IME commands
 	HKL keyboardLayout = ::GetKeyboardLayout(::GetCurrentThreadId());
-	if(//toBoolean(::ImmIsIME(keyboardLayout)) &&
+	if(//win32::boole(::ImmIsIME(keyboardLayout)) &&
 			::ImmGetProperty(keyboardLayout, IGP_SENTENCE) != IME_SMODE_NONE) {
 		HIMC imc = ::ImmGetContext(identifier().get());
 		WCHAR* openIme = japanese ? L"IME \x3092\x958b\x304f(&O)" : L"&Open IME";
@@ -1338,7 +1451,7 @@ void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKey
 		if(win32::boole(::ImmGetProperty(keyboardLayout, IGP_SETCOMPSTR) & SCS_CAP_SETRECONVERTSTRING))
 			menu << Menu::StringItem(ID_RECONVERT, reconvert, (!readOnly && hasSelection) ? MFS_ENABLED : MFS_GRAYED);
 
-		::ImmReleaseContext(identifier().get(), imc);
+		::ImmReleaseContext(handle().get(), imc);
 	}
 
 	// hyperlink
@@ -1355,7 +1468,7 @@ void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKey
 		menu << Menu::SeparatorItem() << Menu::StringItem(ID_INVOKE_HYPERLINK, caption.get());
 	}
 
-	menu.trackPopup(TPM_LEFTALIGN, geometry::x(menuPosition), geometry::y(menuPosition), identifier().get());
+	menu.trackPopup(TPM_LEFTALIGN, geometry::x(menuPosition), geometry::y(menuPosition), handle().get());
 
 	// ...finally erase all items
 	int c = menu.getNumberOfItems();
@@ -1388,7 +1501,7 @@ namespace {
 		viewer.firstVisibleLine(&firstLine, nullptr, &firstSubline);
 
 		// calculate the size of the image
-		const NativeRectangle clientBounds(viewer.bounds(false));
+		const NativeRectangle clientBounds(widgetapi::bounds(viewer, false));
 		const TextRenderer& renderer = viewer.textRenderer();
 		NativeRectangle selectionBounds(geometry::make<NativeRectangle>(
 			geometry::make<NativePoint>(numeric_limits<Scalar>::max(), 0),

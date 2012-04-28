@@ -116,29 +116,10 @@ namespace {
  */
 
 /**
+ * @fn ascension::viewers::TextViewer::TextViewer
  * Constructor.
  * @param presentation the presentation
  */
-TextViewer::TextViewer(Presentation& presentation, Widget* parent /* = nullptr */, Style styles /* = WIDGET */)
-		: ScrollableWidget(parent, styles), presentation_(presentation), tipText_(nullptr),
-#ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-		accessibleProxy_(nullptr),
-#endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
-		mouseInputDisabledCount_(0) {
-	renderer_.reset(new Renderer(*this));
-	textRenderer().addComputedWritingModeListener(*this);
-//	renderer_->addFontListener(*this);
-//	renderer_->addVisualLinesListener(*this);
-	caret_.reset(new Caret(*this));
-	caret().addListener(*this);
-	caret().addStateListener(*this);
-	rulerPainter_.reset(new detail::RulerPainter(*this));
-
-	document().addListener(*this);
-	document().addRollbackListener(*this);
-
-	// initializations of renderer_ and mouseInputStrategy_ are in initializeWindow()
-}
 
 /**
  * Copy-constructor. Unlike @c win32#Object class, this does not copy the window handle. For
@@ -149,14 +130,7 @@ TextViewer::TextViewer(const TextViewer& other) : presentation_(other.presentati
 		, accessibleProxy_(nullptr)
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 {
-	renderer_.reset(new Renderer(*other.renderer_, *this));
-	textRenderer().addComputedWritingModeListener(*this);
-//	renderer_->addFontListener(*this);
-//	renderer_->addVisualLinesListener(*this);
-	caret_.reset(new Caret(*this));
-	caret().addListener(*this);
-	caret().addStateListener(*this);
-	rulerPainter_.reset(new detail::RulerPainter(*this));
+	initialize(&other);
 
 	modeState_ = other.modeState_;
 
@@ -538,6 +512,20 @@ TextViewer::HitTestResult TextViewer::hitTest(const NativePoint& p) const {
 		assert(geometry::includes(textAreaAllocationRectangle(), p));
 		return TEXT_AREA_PADDING_START;
 	}
+}
+
+void TextViewer::initialize(const TextViewer* other) {
+	renderer_.reset((other == nullptr) ? new Renderer(*this) : new Renderer(*other->renderer_, *this));
+	textRenderer().addComputedWritingModeListener(*this);
+//	renderer_->addFontListener(*this);
+//	renderer_->addVisualLinesListener(*this);
+	caret_.reset(new Caret(*this));
+	caret().addListener(*this);
+	caret().addStateListener(*this);
+	rulerPainter_.reset(new detail::RulerPainter(*this));
+
+	document().addListener(*this);
+	document().addRollbackListener(*this);
 }
 
 /**
