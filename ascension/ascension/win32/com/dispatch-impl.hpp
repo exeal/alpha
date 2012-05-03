@@ -1,13 +1,17 @@
-// dispatch-impl.hpp
-// (c) 2002-2008 exeal
+/**
+ * @file dispatch-impl.hpp
+ * @author exeal
+ * @date 2002-2012
+ */
 
-#ifndef MANAH_DISPATCH_IMPL_HPP
-#define MANAH_DISPATCH_IMPL_HPP
-#include "common.hpp"
+#ifndef ASCENSION_WIN32_DISPATCH_IMPL_HPP
+#define ASCENSION_WIN32_DISPATCH_IMPL_HPP
+#include "com.hpp"
 
-namespace manah {
-	namespace com {
-		namespace ole {
+namespace ascension {
+	namespace win32 {
+		namespace com {
+			namespace ole {
 
 // IProvideClassInfo2Impl ///////////////////////////////////////////////////
 	
@@ -15,11 +19,11 @@ namespace manah {
 
 /**
  * Standard implementation of @c IProvideClassInfo2 interface.
- * @param clsid the CLSID
- * @param iid the IID
- * @param libid the LIBID
- * @param majorVersion the major version
- * @param minorVersion the minor version
+ * @tparam clsid The CLSID
+ * @tparam iid The IID
+ * @tparam libid The LIBID
+ * @tparam majorVersion The major version
+ * @tparam minorVersion The minor version
  */
 template<const CLSID* clsid, const IID* iid, const GUID* libid, WORD majorVersion = 1, WORD minorVersion = 0>
 class IProvideClassInfo2Impl : /*virtual*/ public IProvideClassInfo2 {
@@ -57,16 +61,16 @@ private:
 
 /**
  * Loads the type library from LIBID.
- * @param libid the LIBID of the type library
- * @param iid the IID of the type to load
- * @param majorVersion the major version
- * @param minorVersion the minor version
+ * @tparam libid The LIBID of the type library
+ * @tparam iid The IID of the type to load
+ * @tparam majorVersion The major version
+ * @tparam minorVersion The minor version
  */
 template<const GUID* libid, const IID* iid, WORD majorVersion = 1, WORD minorVersion = 0> class TypeInformationFromRegistry {
 public:
 	TypeInformationFromRegistry() {
 		ComPtr<ITypeLib> typeLibrary;
-		assert(libid != 0 && iid != 0);
+		assert(libid != nullptr && iid != nullptr);
 		HRESULT hr = ::LoadRegTypeLib(*libid, majorVersion, minorVersion, 0, typeLibrary.initialize());
 		assert(SUCCEEDED(hr));
 		hr = typeLibrary->GetTypeInfoOfGuid(*iid, typeInformation_.initialize());
@@ -79,8 +83,8 @@ private:
 
 /**
  * Loads the type library from file.
- * @param TypeLibPath the class provides the path name of the type library.
- * @param iid the IID of the type to load
+ * @tparam TypeLibPath The class provides the path name of the type library.
+ * @tparam iid The IID of the type to load
  */
 template<typename TypeLibraryPath, const IID* iid> class TypeInformationFromPath {
 public:
@@ -99,13 +103,13 @@ private:
 
 /**
  * Loads the type library from program module.
- * @param iid IID of the type to load
+ * @param iid The IID of the type to load
  */
 template<const IID* iid> class TypeInformationFromExecutable {
 public:
 	TypeInformationFromExecutable() {
 		WCHAR programName[MAX_PATH];
-		const DWORD n = ::GetModuleFileNameW(0, programName, MANAH_COUNTOF(programName));
+		const DWORD n = ::GetModuleFileNameW(nullptr, programName, MANAH_COUNTOF(programName));
 		if(n != 0 && n != MANAH_COUNTOF(programName)) {
 			ComPtr<ITypeLib> typeLibrary;
 			if(SUCCEEDED(::LoadTypeLib(programName, typeLibrary.initialize())))
@@ -123,8 +127,8 @@ private:
 
 /**
  * Standard implementation of @c IDispatch interface.
- * @param Base the base class derived from dispatch interfaces to implement
- * @param TypeInformationProvider provides @c ITypeInfo
+ * @tparam Base The base class derived from dispatch interfaces to implement
+ * @tparam TypeInformationProvider Provides @c ITypeInfo
  */
 template<typename Base, typename TypeInformationProvider>
 class IDispatchImpl : public Base {
@@ -146,6 +150,9 @@ private:
 	TypeInformationProvider tip_;
 };
 
-}}} // namespace manah.com.ole
+			}
+		}
+	}
+} // namespace ascension.win32.com.ole
 
-#endif /* !MANAH_DISPATCH_IMPL_HPP */
+#endif // !ASCENSION_WIN32_DISPATCH_IMPL_HPP
