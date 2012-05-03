@@ -83,7 +83,7 @@ public:
 	 *	コンストラクタ
 	 *	@param first, last	要素のイテレータ
 	 */
-	template<class ForwardIterator> IEnumImpl(ForwardIterator first, ForwardIterator last) : cursor_(0) {
+	template<class ForwardIterator> IEnumImpl(ForwardIterator first, ForwardIterator last) : cursor_(nullptr) {
 		while(first < last) {
 			T temp;
 			Copier<typeSpec>::copy(temp, *(first++));
@@ -104,7 +104,7 @@ public:
 		if(riid == __uuidof(IEnum) || riid == IID_IUnknown)
 			*ppv = static_cast<IEnum*>(this);
 		else
-			return (*ppv = 0), E_NOINTERFACE;
+			return (*ppv = nullptr), E_NOINTERFACE;
 		reinterpret_cast<IUnknown*>(*ppv)->AddRef();
 		return S_OK;
 	}
@@ -112,7 +112,7 @@ public:
 	STDMETHODIMP Next(unsigned long celt, T* rgelt, unsigned long* pcFetched) {
 		if(celt == 0)
 			return S_OK;
-		else if(rgelt == 0 || (celt != 1 && pcFetched == 0))
+		else if(rgelt == nullptr || (celt != 1 && pcFetched == nullptr))
 			return E_INVALIDARG;
 		while(celt-- != 0) {
 			if(cursor_ == elements_.size())
@@ -133,7 +133,7 @@ public:
 	}
 	///	@see	IEnumXXXX::Reset
 	STDMETHODIMP Reset() {
-		cursor_ = 0;
+		cursor_ = nullptr;
 		return S_OK;
 	}
 	///	@see	IEnumXXXX::Clone
@@ -144,7 +144,7 @@ public:
 			return E_NOTIMPL;
 
 		IEnumImpl* clone = new IEnumImpl<T, IEnum, CloningPolicy>(elements_.begin(), elements_.end());
-		if(clone == 0)
+		if(clone == nullptr)
 			return E_OUTOFMEMORY;
 		clone->cursor_ = cursor_;
 		(*ppEnum)->AddRef();
