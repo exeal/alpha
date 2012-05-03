@@ -11,7 +11,7 @@
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/text-editor/session.hpp>	// texteditor.xxxIncrementalSearch
-#include <ascension/viewer/base/cursor.hpp>
+#include <ascension/viewer/widgetapi/cursor.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/default-mouse-input-strategy.hpp>
 #include <ascension/viewer/viewer.hpp>
@@ -19,7 +19,6 @@
 
 using namespace ascension;
 using namespace ascension::viewers;
-using namespace ascension::viewers::base;
 using namespace ascension::presentation;
 using namespace ascension::graphics;
 using namespace ascension::graphics::font;
@@ -31,7 +30,7 @@ namespace k = ascension::kernel;
 
 namespace {
 	/// Circled window displayed at which the auto scroll started.
-	class AutoScrollOriginMark : public Widget {
+	class AutoScrollOriginMark : public widgetapi::NativeWidget {
 		ASCENSION_NONCOPYABLE_TAG(AutoScrollOriginMark);
 	public:
 		/// Defines the type of the cursors obtained by @c #cursorForScrolling method.
@@ -43,11 +42,11 @@ namespace {
 	public:
 		explicit AutoScrollOriginMark(TextViewer& viewer) /*throw()*/;
 		void initialize(const TextViewer& viewer);
-		static const Cursor& cursorForScrolling(CursorType type);
+		static const widgetapi::Cursor& cursorForScrolling(CursorType type);
 	private:
 		void paint(graphics::PaintContext& context);
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-		void provideClassInformation(ClassInformation& classInformation) const {
+		void provideClassInformation(win32::ClassInformation& classInformation) const {
 			classInformation.style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW;
 			classInformation.background = COLOR_WINDOW;
 			classInformation.cursor = MAKEINTRESOURCEW(32513);	// IDC_IBEAM
@@ -67,15 +66,15 @@ AutoScrollOriginMark::AutoScrollOriginMark(TextViewer& viewer) /*throw()*/ : Wid
 	// TODO: Set transparency on window system other than Win32.
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 	// calling CreateWindowExW with WS_EX_LAYERED will fail on NT 4.0
-	::SetWindowLongW(identifier().get(), GWL_EXSTYLE,
-		::GetWindowLongW(identifier().get(), GWL_EXSTYLE) | WS_EX_LAYERED);
+	::SetWindowLongW(handle().get(), GWL_EXSTYLE,
+		::GetWindowLongW(handle().get(), GWL_EXSTYLE) | WS_EX_LAYERED);
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 
-	resize(geometry::make<NativeSize>(WINDOW_WIDTH + 1, WINDOW_WIDTH + 1));
+	widgetapi::resize(*this, geometry::make<NativeSize>(WINDOW_WIDTH + 1, WINDOW_WIDTH + 1));
 	NativeRegion rgn(::CreateEllipticRgn(0, 0, WINDOW_WIDTH + 1, WINDOW_WIDTH + 1), &::DeleteObject);
-	setShape(rgn);
+	widgetapi::setShape(*this, rgn);
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-	::SetLayeredWindowAttributes(identifier().get(), ::GetSysColor(COLOR_WINDOW), 0, LWA_COLORKEY);
+	::SetLayeredWindowAttributes(handle().get(), ::GetSysColor(COLOR_WINDOW), 0, LWA_COLORKEY);
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 }
 
@@ -85,8 +84,8 @@ AutoScrollOriginMark::AutoScrollOriginMark(TextViewer& viewer) /*throw()*/ : Wid
  * @return The cursor. Do not destroy the returned value
  * @throw UnknownValueException @a type is unknown
  */
-const base::Cursor& AutoScrollOriginMark::cursorForScrolling(CursorType type) {
-	static unique_ptr<Cursor> instances[3];
+const widgetapi::Cursor& AutoScrollOriginMark::cursorForScrolling(CursorType type) {
+	static unique_ptr<widgetapi::Cursor> instances[3];
 	if(type >= ASCENSION_COUNTOF(instances))
 		throw UnknownValueException("type");
 	if(instances[type].get() == nullptr) {
@@ -241,22 +240,42 @@ void AutoScrollOriginMark::paint(PaintContext& context) {
 const unsigned int DefaultMouseInputStrategy::SELECTION_EXPANSION_INTERVAL = 100;
 const unsigned int DefaultMouseInputStrategy::DRAGGING_TRACK_INTERVAL = 100;
 
-/**
- * Constructor.
- * @param dragAndDropSupportLevel The drag-and-drop feature support level
- */
-DefaultMouseInputStrategy::DefaultMouseInputStrategy(
-		DragAndDropSupport dragAndDropSupportLevel) : viewer_(nullptr), state_(NONE), lastHoveredHyperlink_(nullptr) {
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-	if((dnd_.supportLevel = dragAndDropSupportLevel) >= SUPPORT_DND_WITH_DRAG_IMAGE) {
-		dnd_.dragSourceHelper.ComPtr<IDragSourceHelper>::ComPtr(CLSID_DragDropHelper, IID_IDragSourceHelper, CLSCTX_INPROC_SERVER);
-		if(dnd_.dragSourceHelper.get() != nullptr) {
-			dnd_.dropTargetHelper.ComPtr<IDropTargetHelper>::ComPtr(CLSID_DragDropHelper, IID_IDropTargetHelper, CLSCTX_INPROC_SERVER);
-			if(dnd_.dropTargetHelper.get() == nullptr)
-				dnd_.dragSourceHelper.reset();
+/// Default constructor.
+DefaultMouseInputStrategy::DefaultMouseInputStrategy() : viewer_(nullptr), state_(NONE), lastHoveredHyperlink_(nullptr) {
+}
+
+void DefaultMouseInputStrategy::beginDragAndDrop() {
+	win32::com::ComPtr<IDataObject> draggingContent;
+	const Caret& caret = viewer_->caret();
+	HRESULT hr;
+
+	if(FAILED(hr = utils::createTextObjectForSelectedString(viewer_->caret(), true, *draggingContent.initialize())))
+		return hr;
+	if(!caret.isSelectionRectangle())
+		dnd_.numberOfRectangleLines = 0;
+	else {
+		const k::Region selection(caret.selectedRegion());
+		dnd_.numberOfRectangleLines = selection.end().line - selection.beginning().line + 1;
+	}
+
+	// setup drag-image
+	if(dnd_.dragSourceHelper.get() != nullptr) {
+		SHDRAGIMAGE image;
+		if(SUCCEEDED(hr = createSelectionImage(*viewer_,
+				dragApproachedPosition_, dnd_.supportLevel >= SUPPORT_DND_WITH_SELECTED_DRAG_IMAGE, image))) {
+			if(FAILED(hr = dnd_.dragSourceHelper->InitializeFromBitmap(&image, draggingContent.get())))
+				::DeleteObject(image.hbmpDragImage);
 		}
 	}
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+
+	// operation
+	state_ = DND_SOURCE;
+	DWORD effectOwn;	// dummy
+	hr = ::DoDragDrop(draggingContent.get(), this, DROPEFFECT_COPY | DROPEFFECT_MOVE | DROPEFFECT_SCROLL, &effectOwn);
+	state_ = NONE;
+	if(widgetapi::isVisible(*viewer_))
+		widgetapi::setFocus(*viewer_);
+	return hr;
 }
 
 /// @see MouseInputStrategy#captureChanged
@@ -265,44 +284,58 @@ void DefaultMouseInputStrategy::captureChanged() {
 	state_ = NONE;
 }
 
+/// @see DropTarget#dragEntered
+void DefaultMouseInputStrategy::dragEntered(widgetapi::DragEnterInput& input) {
+	if(dnd_.supportLevel == DONT_SUPPORT_DND || viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
+		return input.ignore();
+
+	// validate the dragged data if can drop
+	FORMATETC fe = {CF_UNICODETEXT, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+	if((hr = data->QueryGetData(&fe)) != S_OK) {
+		fe.cfFormat = CF_TEXT;
+		if(SUCCEEDED(hr = data->QueryGetData(&fe) != S_OK))
+			return input.ignore();	// can't accept
+	}
+
+	if(state_ != DND_SOURCE) {
+		assert(state_ == NONE);
+		// retrieve number of lines if text is rectangle
+		dnd_.numberOfRectangleLines = 0;
+		fe.cfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
+		if(fe.cfFormat != 0 && data->QueryGetData(&fe) == S_OK) {
+			const TextAlignment alignment = defaultTextAlignment(viewer_->presentation());
+			const ReadingDirection readingDirection = defaultReadingDirection(viewer_->presentation());
+			if(alignment == TEXT_ANCHOR_END
+					|| (alignment == ALIGN_LEFT && readingDirection == RIGHT_TO_LEFT)
+					|| (alignment == ALIGN_RIGHT && readingDirection == LEFT_TO_RIGHT))
+				return input.ignore();	// TODO: support alignments other than ALIGN_LEFT.
+			pair<HRESULT, String> text(utils::getTextFromDataObject(*data));
+			if(SUCCEEDED(text.first))
+				dnd_.numberOfRectangleLines = text::calculateNumberOfLines(text.second) - 1;
+		}
+		state_ = DND_TARGET;
+	}
+
+	widgetapi::setFocus(*viewer_);
+	timer_.start(DRAGGING_TRACK_INTERVAL, *this);
+	return dragMoved(input);
+}
+
 /// @see DropTarget#dragLeft
-void DefaultMouseInputStrategy::dragLeft(base::DragLeaveInput& input) {
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-	::SetFocus(nullptr);
-#endif
+void DefaultMouseInputStrategy::dragLeft(widgetapi::DragLeaveInput& input) {
+	widgetapi::setFocus(nullptr);
 	timer_.stop();
 	if(dnd_.supportLevel >= SUPPORT_DND) {
 		if(state_ == DND_TARGET)
 			state_ = NONE;
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-		if(dnd_.dropTargetHelper.get() != nullptr)
-			dnd_.dropTargetHelper->DragLeave();
-#endif
 	}
 	input.consume();
 }
 
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-namespace {
-	inline DWORD translateDropAction(DropAction dropAction) {
-		DWORD effect = DROPEFFECT_NONE;
-		if((dropAction & DROP_ACTION_COPY) != 0)
-			effect |= DROPEFFECT_COPY;
-		if((dropAction & DROP_ACTION_MOVE) != 0)
-			effect |= DROPEFFECT_MOVE;
-		if((dropAction & DROP_ACTION_LINK) != 0)
-			effect |= DROPEFFECT_LINK;
-		if((dropAction & DROP_ACTION_WIN32_SCROLL) != 0)
-			effect |= DROPEFFECT_SCROLL;
-		return effect;
-	}
-}
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
-
 namespace {
 	PhysicalTwoAxes<TextViewport::SignedScrollOffset> calculateDnDScrollOffset(const TextViewer& viewer) {
-		const NativePoint p(viewer.mapFromGlobal(Cursor::position()));
-		const NativeRectangle localBounds(viewer.bounds(false));
+		const NativePoint p(widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position()));
+		const NativeRectangle localBounds(widgetapi::bounds(viewer, false));
 		NativeRectangle inset(viewer.textAreaContentRectangle());
 		const Font::Metrics& fontMetrics = viewer.textRenderer().defaultFont()->metrics();
 		geometry::range<geometry::X_COORDINATE>(inset) = makeRange(
@@ -326,13 +359,13 @@ namespace {
 }
 
 /// @see DropTarget#dragMoved
-void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
-	DropAction dropAction = DROP_ACTION_IGNORE;
+void DefaultMouseInputStrategy::dragMoved(widgetapi::DragMoveInput& input) {
+	widgetapi::DropAction dropAction = widgetapi::DROP_ACTION_IGNORE;
 	bool acceptable = false;
 
 	if((state_ == DND_SOURCE || state_ == DND_TARGET)
 			&& !viewer_->document().isReadOnly() && viewer_->allowsMouseInput()) {
-		const NativePoint caretPoint(viewer_->mapFromGlobal(input.location()));
+		const NativePoint caretPoint(widgetapi::mapFromGlobal(*viewer_, input.location()));
 		const k::Position p(viewToModel(*viewer_->textRenderer().viewport(), caretPoint, TextLayout::TRAILING));
 //		viewer_->setCaretPosition(viewer_->localPointForCharacter(p, true, TextLayout::LEADING));
 
@@ -353,11 +386,11 @@ void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
 	}
 
 	if(acceptable) {
-		dropAction = base::hasModifier<UserInput::CONTROL_DOWN>(input) ? DROP_ACTION_COPY : DROP_ACTION_MOVE;
+		dropAction = widgetapi::hasModifier<widgetapi::UserInput::CONTROL_DOWN>(input) ? widgetapi::DROP_ACTION_COPY : widgetapi::DROP_ACTION_MOVE;
 		const PhysicalTwoAxes<TextViewport::SignedScrollOffset> scrollOffset(calculateDnDScrollOffset(*viewer_));
 		if(scrollOffset.x() != 0 || scrollOffset.y() != 0) {
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-			dropAction |= DROP_ACTION_WIN32_SCROLL;
+			dropAction |= widgetapi::DROP_ACTION_WIN32_SCROLL;
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 			// only one direction to scroll
 			if(scrollOffset.x() != 0)
@@ -368,16 +401,97 @@ void DefaultMouseInputStrategy::dragMoved(base::DragMoveInput& input) {
 	}
 	input.setDropAction(dropAction);
 	input.consume();
+}
 
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-	if(dnd_.dropTargetHelper.get() != nullptr) {
-		const shared_ptr<TextViewport> viewport(viewer_->textRenderer().viewport());
-		viewport->lockScroll();
-		POINT location(input.location());
-		dnd_.dropTargetHelper->DragOver(&location, translateDropAction(dropAction));	// damn! IDropTargetHelper scrolls the view
-		viewport->unlockScroll();
+/// @see DropTarget#drop
+void DefaultMouseInputStrategy::dropped(widgetapi::DropInput& input) {
+	k::Document& document = viewer_->document();
+	if(dnd_.supportLevel == DONT_SUPPORT_DND || document.isReadOnly() || !viewer_->allowsMouseInput())
+		return input.ignore();
+	Caret& ca = viewer_->caret();
+	const NativePoint caretPoint(input.location());
+	const k::Position destination(viewToModel(*viewer_->textRenderer().viewport(), caretPoint, TextLayout::TRAILING));
+
+	if(!document.accessibleRegion().includes(destination))
+		return input.ignore();
+
+	if(state_ == DND_TARGET) {	// dropped from the other widget
+		timer_.stop();
+		ca.moveTo(destination);
+
+		bool rectangle;
+		pair<HRESULT, String> content(utils::getTextFromDataObject(*data, &rectangle));
+		if(SUCCEEDED(content.first)) {
+			AutoFreeze af(viewer_);
+			bool failed = false;
+			ca.moveTo(destination);
+			try {
+				ca.replaceSelection(content.second, rectangle);
+			} catch(...) {
+				failed = true;
+			}
+			if(!failed) {
+				if(rectangle)
+					ca.beginRectangleSelection();
+				ca.select(destination, ca);
+				*effect = DROPEFFECT_COPY;
+			}
+		}
+		state_ = NONE;
+	} else {	// drop from the same widget
+		assert(state_ == DND_SOURCE);
+		String text(selectedString(ca, text::NLF_RAW_VALUE));
+
+		// can't drop into the selection
+		if(isPointOverSelection(ca, caretPoint)) {
+			ca.moveTo(destination);
+			state_ = NONE;
+		} else {
+			const bool rectangle = ca.isSelectionRectangle();
+			document.insertUndoBoundary();
+			AutoFreeze af(viewer_);
+			if(widgetapi::hasModifier<widgetapi::UserInput::CONTROL_DOWN>(input)) {	// copy
+//				viewer_->redrawLines(ca.beginning().line(), ca.end().line());
+				bool failed = false;
+				ca.enableAutoShow(false);
+				ca.moveTo(destination);
+				try {
+					ca.replaceSelection(text, rectangle);
+				} catch(...) {
+					failed = true;
+				}
+				ca.enableAutoShow(true);
+				if(!failed) {
+					ca.select(destination, ca);
+					*effect = DROPEFFECT_COPY;
+				}
+			} else {	// move as a rectangle or linear
+				bool failed = false;
+				pair<k::Point, k::Point> oldSelection(make_pair(k::Point(ca.anchor()), k::Point(ca)));
+				ca.enableAutoShow(false);
+				ca.moveTo(destination);
+				try {
+					ca.replaceSelection(text, rectangle);
+				} catch(...) {
+					failed = true;
+				}
+				if(!failed) {
+					ca.select(destination, ca);
+					if(rectangle)
+						ca.beginRectangleSelection();
+					try {
+						erase(ca.document(), oldSelection.first, oldSelection.second);
+					} catch(...) {
+						failed = true;
+					}
+				}
+				ca.enableAutoShow(true);
+				if(!failed)
+					*effect = DROPEFFECT_MOVE;
+			}
+			document.insertUndoBoundary();
+		}
 	}
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
 }
 
 /**
@@ -401,7 +515,7 @@ void DefaultMouseInputStrategy::extendSelectionTo(const k::Position* to /* = nul
 		throw IllegalStateException("not extending the selection.");
 	k::Position destination;
 	if(to == nullptr) {
-		NativePoint p(viewer_->mapFromGlobal(Cursor::position()));
+		NativePoint p(widgetapi::mapFromGlobal(*viewer_, Cursor::position()));
 		Caret& caret = viewer_->caret();
 		if(state_ != EXTENDING_CHARACTER_SELECTION) {
 			const TextViewer::HitTestResult htr = viewer_->hitTest(p);
@@ -460,10 +574,17 @@ void DefaultMouseInputStrategy::extendSelectionTo(const k::Position* to /* = nul
 	}
 }
 
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+/// @see IDropSource#GiveFeedback
+STDMETHODIMP DefaultMouseInputStrategy::GiveFeedback(DWORD) {
+	return DRAGDROP_S_USEDEFAULTCURSORS;	// use the system default cursor
+}
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+
 /// @see MouseInputStrategy#handleDropTarget
-shared_ptr<base::DropTarget> DefaultMouseInputStrategy::handleDropTarget() const {
-	const base::DropTarget* const self = this;
-	return shared_ptr<base::DropTarget>(const_cast<base::DropTarget*>(self), detail::NullDeleter());
+shared_ptr<widgetapi::DropTarget> DefaultMouseInputStrategy::handleDropTarget() const {
+	const widgetapi::DropTarget* const self = this;
+	return shared_ptr<widgetapi::DropTarget>(const_cast<widgetapi::DropTarget*>(self), detail::NullDeleter());
 }
 
 /**
@@ -494,7 +615,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 		selection_.initialLine = extend ? line(caret.anchor()) : to.line;
 		viewer_->caret().endRectangleSelection();
 		extendSelectionTo(&to);
-		viewer_->grabInput();
+		widgetapi::grabInput(*viewer_).release();
 		timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
 	}
 
@@ -545,7 +666,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 					caret.beginRectangleSelection();
 				else
 					caret.endRectangleSelection();
-				viewer_->grabInput();
+				widgetapi::grabInput(*viewer_);
 				timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
 			}
 		}
@@ -553,7 +674,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 
 //	if(!caret.isSelectionRectangle() && !boxDragging)
 //		viewer_->redrawLine(caret.line());
-	viewer_->setFocus();
+	widgetapi::setFocus(*viewer_);
 }
 
 /// Handles @c WM_LBUTTONUP.
@@ -613,8 +734,10 @@ bool DefaultMouseInputStrategy::handleX2Button(Action action, const NativePoint&
 void DefaultMouseInputStrategy::install(TextViewer& viewer) {
 	if(viewer_ != nullptr)
 		uninstall();
+	viewer_ = &viewer;
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-	::RegisterDragDrop((viewer_ = &viewer)->identifier().get(), this);
+	if(dnd_.dragSourceHelper.get() == nullptr)
+		dnd_.dragSourceHelper = win32::com::ComPtr<IDragSourceHelper>(CLSID_DragDropHelper, IID_IDragSourceHelper, CLSCTX_INPROC_SERVER);
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 	state_ = NONE;
 
@@ -734,6 +857,17 @@ void DefaultMouseInputStrategy::mouseWheelRotated(const base::MouseWheelInput& i
 	}
 }
 
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+/// Implements @c IDropSource#QueryContinueDrag method.
+STDMETHODIMP DefaultMouseInputStrategy::QueryContinueDrag(BOOL escapePressed, DWORD keyState) {
+	if(win32::boole(escapePressed) || win32::boole(keyState & MK_RBUTTON))	// cancel
+		return DRAGDROP_S_CANCEL;
+	if(!win32::boole(keyState & MK_LBUTTON))	// drop
+		return DRAGDROP_S_DROP;
+	return S_OK;
+}
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+
 /// @see MouseInputStrategy#showCursor
 bool DefaultMouseInputStrategy::showCursor(const NativePoint& position) {
 	using namespace hyperlink;
@@ -838,9 +972,6 @@ void DefaultMouseInputStrategy::uninstall() {
 	timer_.stop();
 	if(autoScrollOriginMark_.get() != nullptr)
 		autoScrollOriginMark_.reset();
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-	::RevokeDragDrop(viewer_->identifier().get());
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
 	viewer_ = nullptr;
 }
 

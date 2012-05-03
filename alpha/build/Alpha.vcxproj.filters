@@ -54,9 +54,6 @@
     <Filter Include="ascension\Header Files\viewer">
       <UniqueIdentifier>{8abd216a-e01b-48d1-a250-915cdbae00bb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ascension\Header Files\viewer\base">
-      <UniqueIdentifier>{06983a2c-8c09-4463-9f14-30e4fa7adfc8}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ascension\Header Files\graphics">
       <UniqueIdentifier>{bc93968e-0028-433a-b053-e46944a514f5}</UniqueIdentifier>
     </Filter>
@@ -86,6 +83,9 @@
     </Filter>
     <Filter Include="ascension\Source Files\content-assist">
       <UniqueIdentifier>{eb13728b-d067-45d5-b384-11f53b845206}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Header Files\viewer\widgetapi">
+      <UniqueIdentifier>{06983a2c-8c09-4463-9f14-30e4fa7adfc8}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -520,12 +520,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\range.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\base\widget.hpp">
-      <Filter>ascension\Header Files\viewer\base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\base\message-dispatcher-windows.hpp">
-      <Filter>ascension\Header Files\viewer\base</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\caret-observers.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
@@ -604,12 +598,6 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-device.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\base\cursor.hpp">
-      <Filter>ascension\Header Files\viewer\base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\base\user-input.hpp">
-      <Filter>ascension\Header Files\viewer\base</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\timer.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
@@ -628,9 +616,6 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\caret-shaper.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\base\scrollable.hpp">
-      <Filter>ascension\Header Files\viewer\base</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\image.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
@@ -639,9 +624,6 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\default-mouse-input-strategy.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\base\drag-and-drop.hpp">
-      <Filter>ascension\Header Files\viewer\base</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\text-renderer.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
@@ -681,6 +663,24 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\win32\handle.hpp">
       <Filter>ascension\Header Files\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\cursor.hpp">
+      <Filter>ascension\Header Files\viewer\widgetapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\drag-and-drop.hpp">
+      <Filter>ascension\Header Files\viewer\widgetapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\scrollable.hpp">
+      <Filter>ascension\Header Files\viewer\widgetapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\user-input.hpp">
+      <Filter>ascension\Header Files\viewer\widgetapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\widget.hpp">
+      <Filter>ascension\Header Files\viewer\widgetapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\widget-windows.hpp">
+      <Filter>ascension\Header Files\viewer\widgetapi</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

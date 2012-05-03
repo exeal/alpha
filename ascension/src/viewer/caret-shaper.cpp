@@ -216,8 +216,7 @@ namespace {
 		const bool horizontal = isHorizontal(layout.writingMode().blockFlowDirection);
 		static const Color black(0, 0, 0);
 		if(localeSensitive) {
-			const Widget::Identifier& wid = caret.textViewer().identifier();
-			win32::Handle<HIMC> imc(::ImmGetContext(wid.get()), bind1st(ptr_fun(&::ImmReleaseContext), wid.get()));
+			win32::Handle<HIMC> imc(win32::inputMethod(caret.textViewer()));
 			if(win32::boole(::ImmGetOpenStatus(imc.get()))) {
 				static const Color red(0x80, 0x00, 0x00);
 				image = createSolidCaretImage(horizontal ? measure : extent, horizontal ? extent : measure, red);

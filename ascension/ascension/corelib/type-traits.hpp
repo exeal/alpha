@@ -2,6 +2,7 @@
  * @file type-traits.hpp
  * @author exeal
  * @date 2011-03-06 created
+ * @see type-list.hpp
  */
 
 #ifndef ASCENSION_TYPE_TRAITS_HPP
@@ -18,13 +19,14 @@
 
 namespace ascension {
 	namespace detail {
-
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 		/**
 		 * Returns the type @a T if @a condition is @c true, otherwise type @a U.
 		 * @deprecated 0.8 Use @c std#conditional out of TR1.
 		 */
 		template<bool condition, typename T, typename U> struct Select {typedef T Type;};
 		template<typename T, typename U> struct Select<false, T, U> {typedef U Type;};
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 		/// @c Type2Type type form Loki library.
 		template<typename T>
@@ -52,7 +54,6 @@ namespace ascension {
 			public:																				\
 				static const bool value = sizeof(test<T>(nullptr)) == sizeof(Yes);				\
 			}
-
 	}
 }
 

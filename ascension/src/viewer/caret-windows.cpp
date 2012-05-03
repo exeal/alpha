@@ -390,13 +390,6 @@ ClipboardException::ClipboardException(HRESULT hr) : runtime_error("") {
 
 // Caret //////////////////////////////////////////////////////////////////////////////////////////
 
-namespace {
-	inline win32::Handle<HIMC> inputMethod(const TextViewer& viewer) {
-		return win32::Handle<HIMC>(::ImmGetContext(viewer.identifier().get()),
-			bind(&::ImmReleaseContext, viewer.identifier().get(), placeholders::_1));
-	}
-}
-
 void Caret::abortInput() {
 	if(context_.inputMethodCompositionActivated)	// stop IME input
 		::ImmNotifyIME(inputMethod(textViewer()).get(), NI_COMPOSITIONSTR, CPS_CANCEL, 0);

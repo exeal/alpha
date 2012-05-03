@@ -1184,7 +1184,7 @@ HRESULT TextViewer::startTextServices() {
  * @see #bounds, #textAreaContentRectangle
  */
 NativeRectangle TextViewer::textAreaAllocationRectangle() const /*throw()*/ {
-	const NativeRectangle window(bounds(false));
+	const NativeRectangle window(widgetapi::bounds(*this, false));
 	PhysicalFourSides<Scalar> result(window);
 	switch(rulerPainter_->alignment()) {
 		case detail::RulerPainter::LEFT:

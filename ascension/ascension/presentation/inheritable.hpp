@@ -87,7 +87,7 @@ namespace ascension {
 		template<bool condition, typename T>
 		struct InheritableIf {
 			/// @c Inheritable&lt;T&gt; if @c condition is @c true. Otherwise, @c T.
-			typedef typename detail::Select<condition, Inheritable<T>, T>::Type Type;
+			typedef typename std::conditional<condition, Inheritable<T>, T>::type Type;
 		};
 
 		/**

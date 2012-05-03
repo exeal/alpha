@@ -10,8 +10,8 @@
 #include <ascension/corelib/basic-exceptions.hpp>	// IllegalStateException
 #include <ascension/graphics/geometry.hpp>
 #include <ascension/graphics/rendering-device.hpp>	// graphics.RenderingDevice, ...
-#include <ascension/viewer/base/drag-and-drop.hpp>
-#include <ascension/viewer/base/user-input.hpp>
+#include <ascension/viewer/widgetapi/drag-and-drop.hpp>
+#include <ascension/viewer/widgetapi/user-input.hpp>
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 #	include <gtkmm/widget.h>
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
@@ -90,7 +90,7 @@ namespace ascension {
 				explicit InputGrabLocker(NativeWidget& widget) : widget_(widget) {}
 				NativeWidget& widget_;
 			};
-			std::unique_ptr<InputGrabLocker> grabInput(NativeWidget& widget);
+			void grabInput(NativeWidget& widget);
 			bool hasFocus(const NativeWidget& widget);
 			bool isActive(const NativeWidget& widget);
 			void releaseInput(NativeWidget& widget);
@@ -102,7 +102,7 @@ namespace ascension {
 
 			NativeWindow desktop();
 		}
-
+#if 0
 		namespace base {
 
 			/**
@@ -205,7 +205,18 @@ namespace ascension {
 			};
 
 		}
+#endif // 0
 	}
 }
+
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#	include <ascension/viewer/widgetapi/widget-gtk.hpp>
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#	include <ascension/viewer/widgetapi/widget-qt.hpp>
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#	include <ascension/viewer/widgetapi/widget-osx.hpp>
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#	include <ascension/viewer/widgetapi/widget-windows.hpp>
+#endif
 
 #endif // !ASCENSION_WIDGET_HPP

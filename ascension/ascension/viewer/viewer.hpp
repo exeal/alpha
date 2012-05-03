@@ -18,13 +18,13 @@
 #include <ascension/viewer/caret-observers.hpp>
 #include <ascension/viewer/ruler.hpp>
 #include <ascension/viewer/viewer-observers.hpp>
-#include <ascension/viewer/base/scrollable.hpp>
-#include <ascension/win32/com/unknown-impl.hpp>
+#include <ascension/viewer/widgetapi/scrollable.hpp>
 #include <algorithm>
 #include <array>
 #include <set>
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-#	include <shlobj.h>	// IDragSourceHelper, IDropTargetHelper
+#	include <ascension/win32/com/unknown-impl.hpp>
+#	include <shlobj.h>	// IDropTargetHelper
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
@@ -105,6 +105,9 @@ namespace ascension {
 				public NSView,
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 				public win32::CustomControl,
+				public win32::com::IUnknownImpl<
+					ASCENSION_WIN32_COM_INTERFACE(IDropSource), win32::com::NoReferenceCounting
+				>,
 #endif
 				public kernel::DocumentListener, public kernel::DocumentRollbackListener,
 				public graphics::font::DefaultFontListener, public graphics::font::VisualLinesListener,
@@ -265,11 +268,6 @@ namespace ascension {
 			void provideClassInformation(ClassInformation& classInformation) const;
 			std::basic_string<WCHAR> provideClassName() const;
 #endif	// defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-			// base.DropTarget
-			void dragEntered(base::DragEnterInput& input);
-			void dragLeft(base::DragLeaveInput& input);
-			void dragMoved(base::DragMoveInput& input);
-			void dropped(base::DropInput& input);
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
@@ -295,8 +293,8 @@ namespace ascension {
 			void addNewPoint(VisualPoint& point) {points_.insert(&point);}
 			void removePoint(VisualPoint& point) {points_.erase(&point);}
 
-			// platform-dependent events
 		private:
+			// platform-dependent events
 #if defined(ASCENSION_WINDOW_SYSTEM_GTKMM)
 			bool on_button_press_event(GdkEventButton* event);
 			bool on_button_release_event(GdkEventButton* event);
@@ -328,7 +326,7 @@ namespace ascension {
 			void onCommand(WORD id, WORD notifyCode, const win32::Handle<HWND>& control, bool& consumed);
 			void onDestroy(bool& consumed);
 			void onEraseBkgnd(const win32::Handle<HDC>& dc, bool& consumed);
-			win32::Handle<HFONT> onGetFont();
+			const win32::Handle<HFONT>& onGetFont();
 			void onHScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>& scrollBar);
 			bool onNcCreate(CREATESTRUCTW& cs);
 			void onNotify(int id, NMHDR& nmhdr, bool& consumed);
@@ -340,21 +338,26 @@ namespace ascension {
 			void onTimer(UINT_PTR eventId, TIMERPROC timerProc);
 			void onVScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>& scrollBar);
 			LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
+			// IDropTarget
+			STDMETHODIMP DragEnter(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
+			STDMETHODIMP DragOver(DWORD keyState, POINTL location, DWORD* effect);
+			STDMETHODIMP DragLeave();
+			STDMETHODIMP Drop(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
 #endif
 			// event handlers
 		private:
 			void aboutToLoseFocus();
 			void focusGained();
-			void keyPressed(const base::KeyInput& input);
-			void keyReleased(const base::KeyInput& input);
-			void mouseDoubleClicked(const base::MouseButtonInput& input);
-			void mouseMoved(const base::LocatedUserInput& input);
-			void mousePressed(const base::MouseButtonInput& input);
-			void mouseReleased(const base::MouseButtonInput& input);
-			void mouseWheelChanged(const base::MouseWheelInput& input);
+			void keyPressed(const widgetapi::KeyInput& input);
+			void keyReleased(const widgetapi::KeyInput& input);
+			void mouseDoubleClicked(const widgetapi::MouseButtonInput& input);
+			void mouseMoved(const widgetapi::LocatedUserInput& input);
+			void mousePressed(const widgetapi::MouseButtonInput& input);
+			void mouseReleased(const widgetapi::MouseButtonInput& input);
+			void mouseWheelChanged(const widgetapi::MouseWheelInput& input);
 			void paint(graphics::PaintContext& context);
 			void resized(State state, const graphics::NativeSize& newSize);
-			void showContextMenu(const base::LocatedUserInput& input, bool byKeyboard);
+			void showContextMenu(const widgetapi::LocatedUserInput& input, bool byKeyboard);
 
 			// internal classes
 		private:
@@ -379,64 +382,6 @@ namespace ascension {
 //				TIMERID_LINEPARSE
 			};
 
-			// identifiers of GUI commands
-			enum {
-				WM_REDO	= WM_APP + 1,		// Undo
-				WM_SELECTALL,				// Select All
-				ID_DISPLAYSHAPINGCONTROLS,	// Show Unicode control characters
-				ID_RTLREADING,				// Right to left Reading order
-				ID_TOGGLEIMESTATUS,			// Open/Close IME
-				ID_TOGGLESOFTKEYBOARD,		// Open/Close soft keyboard
-				ID_RECONVERT,				// Reconvert
-
-				ID_INSERT_LRM,		// LRM (Left-to-right mark)
-				ID_INSERT_RLM,		// RLM (Right-to-left mark)
-				ID_INSERT_ZWJ,		// ZWJ (Zero width joiner)
-				ID_INSERT_ZWNJ,		// ZWNJ (Zero width non-joiner)
-				ID_INSERT_LRE,		// LRE (Left-to-right embedding)
-				ID_INSERT_RLE,		// RLE (Right-to-left embedding)
-				ID_INSERT_LRO,		// LRO (Left-to-right override)
-				ID_INSERT_RLO,		// RLO (Right-to-left override)
-				ID_INSERT_PDF,		// PDF (Pop directional formatting)
-				ID_INSERT_WJ,		// WJ (Word Joiner)
-				ID_INSERT_NADS,		// NADS (National digit shapes)	<- the following six are deprecated code points (Unicode 4.0)
-				ID_INSERT_NODS,		// NODS (Nominal digit shapes)
-				ID_INSERT_ASS,		// ASS (Activate symmetric swapping)
-				ID_INSERT_ISS,		// ISS (Inhibit symmetric swapping)
-				ID_INSERT_AAFS,		// AAFS (Activate Arabic form shaping)
-				ID_INSERT_IAFS,		// IAFS (Inhibit Arabic form shaping)
-				ID_INSERT_RS,		// RS (Record Separator)
-				ID_INSERT_US,		// US (Unit Separator)
-				ID_INSERT_IAA,		// Interlinear Annotation Anchor
-				ID_INSERT_IAS,		// Interlinear Annotation Separator
-				ID_INSERT_IAT,		// Interlinear Annotation Terminator
-
-				ID_INSERT_U0020,	// U+0020 (Space)
-				ID_INSERT_NBSP,		// NBSP (No-Break Space)
-				ID_INSERT_U1680,	// U+1680 (Ogham Space Mark)
-				ID_INSERT_MVS,		// MVS (Mongolian Vowel Separator)
-				ID_INSERT_U2000,	// U+2000 (En Quad)
-				ID_INSERT_U2001,	// U+2001 (Em Quad)
-				ID_INSERT_U2002,	// U+2002 (En Space)
-				ID_INSERT_U2003,	// U+2003 (Em Space)
-				ID_INSERT_U2004,	// U+2004 (Three-Per-Em Space)
-				ID_INSERT_U2005,	// U+2005 (Four-Per-Em Space)
-				ID_INSERT_U2006,	// U+2006 (Six-Per-Em Space)
-				ID_INSERT_U2007,	// U+2007 (Figure Space)
-				ID_INSERT_U2008,	// U+2008 (Punctuation Space)
-				ID_INSERT_U2009,	// U+2009 (Thin Space)
-				ID_INSERT_U200A,	// U+200A (Hair Space)
-				ID_INSERT_ZWSP,		// ZWSP (Zero Width Space)
-				ID_INSERT_NNBSP,	// NNSBP (Narrwow No-Break Space)
-				ID_INSERT_MMSP,		// MMSP (Medium Mathematical Space)
-				ID_INSERT_U3000,	// U+3000 (Ideographic Space)
-				ID_INSERT_NEL,		// NEL (Next Line)
-				ID_INSERT_LS,		// LS (Line Separator)
-				ID_INSERT_PS,		// PS (Paragraph Separator)
-
-				ID_INVOKE_HYPERLINK	// Open <hyperlink>
-			};
-
 			// data members
 		private:
 			// big stars
@@ -449,7 +394,7 @@ namespace ascension {
 			Char* tipText_;
 			// strategies and listeners
 			std::shared_ptr<MouseInputStrategy> mouseInputStrategy_;
-			std::shared_ptr<base::DropTarget> dropTargetHandler_;
+			std::shared_ptr<widgetapi::DropTarget> dropTargetHandler_;
 			detail::Listeners<DisplaySizeListener> displaySizeListeners_;
 			detail::Listeners<ViewportListener> viewportListeners_;
 			std::unique_ptr<detail::RulerPainter> rulerPainter_;
@@ -512,6 +457,10 @@ namespace ascension {
 
 			// input state
 			unsigned long mouseInputDisabledCount_;
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+			win32::com::ComPtr<IDropTargetHelper> dropTargetHelper_;
+			win32::com::ComPtr<IDataObject> draggingData_;
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32
 
 			friend class VisualPoint;
 			friend class VirtualBox;
