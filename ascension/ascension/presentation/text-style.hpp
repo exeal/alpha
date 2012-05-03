@@ -201,8 +201,8 @@ namespace ascension {
 		 */
 		class StyledTextRun {
 		public:
-//			/// Default constructor.
-//			StyledTextRun() /*throw()*/ : position_(INVALID_INDEX) {}
+			/// Default constructor.
+			StyledTextRun() /*throw()*/ {}
 			/**
 			 * Constructor.
 			 * @param position The beginning position of the text style

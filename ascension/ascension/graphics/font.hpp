@@ -367,7 +367,7 @@ namespace ascension {
 				/// Returns the metrics of the font.
 				virtual const Metrics& metrics() const /*throw()*/ = 0;
 				/// Returns the platform-dependent native object.
-				virtual const NativeFont nativeObject() const /*throw()*/ = 0;
+				virtual const NativeFont& nativeObject() const /*throw()*/ = 0;
 			};
 
 			/// An interface represents an object provides a set of fonts.

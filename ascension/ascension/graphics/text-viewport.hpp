@@ -160,6 +160,10 @@ namespace ascension {
 				const kernel::Position& position, bool fullSearchBpd,
 				graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING);
 			template<std::size_t coordinate> TextViewport::SignedScrollOffset pageSize(const TextViewport& viewport);
+			Range<TextViewport::ScrollOffset> scrollableRangeInBlockDimension(const TextViewport& viewport);
+			Range<TextViewport::ScrollOffset> scrollableRangeInInlineDimension(const TextViewport& viewport);
+			template<std::size_t coordinate>
+			Range<TextViewport::ScrollOffset> scrollableRangeInPhysicalDirection(const TextViewport& viewport);
 			kernel::Position viewToModel(const TextViewport& viewport,
 				const NativePoint& pointInView, TextLayout::Edge edge,
 				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);

@@ -706,11 +706,8 @@ InputMethodOpenStatusToggleCommand::InputMethodOpenStatusToggleCommand(TextViewe
  * @retval false The system didn't support the input method
  */
 bool InputMethodOpenStatusToggleCommand::perform() {
-	if(HIMC imc = ::ImmGetContext(target().identifier().get())) {
-		const bool succeeded = win32::boole(::ImmSetOpenStatus(imc, !win32::boole(::ImmGetOpenStatus(imc))));
-		::ImmReleaseContext(target().identifier().get(), imc);
-		return succeeded;
-	}
+	if(win32::Handle<HIMC> imc = win32::inputMethod(target()))
+		return win32::boole(::ImmSetOpenStatus(imc.get(), !win32::boole(::ImmGetOpenStatus(imc.get()))));
 	return false;
 }
 
@@ -726,14 +723,12 @@ InputMethodSoftKeyboardModeToggleCommand::InputMethodSoftKeyboardModeToggleComma
  * @retval false The system didn't support the input method
  */
 bool InputMethodSoftKeyboardModeToggleCommand::perform() {
-	if(HIMC imc = ::ImmGetContext(target().identifier().get())) {
+	if(win32::Handle<HIMC> imc = win32::inputMethod(target())) {
 		DWORD conversionMode, sentenceMode;
-		if(win32::boole(::ImmGetConversionStatus(imc, &conversionMode, &sentenceMode))) {
+		if(win32::boole(::ImmGetConversionStatus(imc.get(), &conversionMode, &sentenceMode))) {
 			conversionMode = win32::boole(conversionMode & IME_CMODE_SOFTKBD) ?
 				(conversionMode & ~IME_CMODE_SOFTKBD) : (conversionMode | IME_CMODE_SOFTKBD);
-			const bool succeeded = win32::boole(::ImmSetConversionStatus(imc, conversionMode, sentenceMode));
-			::ImmReleaseContext(target().identifier().get(), imc);
-			return succeeded;
+			return win32::boole(::ImmSetConversionStatus(imc.get(), conversionMode, sentenceMode));
 		}
 	}
 	return false;
@@ -898,21 +893,15 @@ bool ReconversionCommand::perform() {
 	bool succeeded = false;
 	Caret& caret = viewer.caret();
 	if(!caret.isSelectionRectangle()) {
-		if(HIMC imc = ::ImmGetContext(viewer.identifier().get())) {
-			if(!win32::boole(::ImmGetOpenStatus(imc)))	// without this, IME may ignore us?
-				::ImmSetOpenStatus(imc, true);
+		if(win32::Handle<HIMC> imc = win32::inputMethod(viewer)) {
+			if(!win32::boole(::ImmGetOpenStatus(imc.get))))	// without this, IME may ignore us?
+				::ImmSetOpenStatus(imc.get(), true);
 
 			// from NotePadView.pas of TNotePad (http://wantech.ikuto.com/)
 			const bool multilineSelection = line(caret) != line(caret.anchor());
 			const String s(multilineSelection ? selectedString(caret) : viewer.document().line(line(caret)));
 			const DWORD bytes = static_cast<DWORD>(sizeof(RECONVERTSTRING) + sizeof(Char) * s.length());
-			RECONVERTSTRING* rcs;
-			try {
-				rcs = static_cast<RECONVERTSTRING*>(::operator new(bytes));
-			} catch(const bad_alloc&) {
-				::ImmReleaseContext(viewer.identifier().get(), imc);
-				throw;	// failed to allocate the memory for RECONVERTSTRING
-			}
+			RECONVERTSTRING* const rcs = static_cast<RECONVERTSTRING*>(::operator new(bytes));
 			rcs->dwSize = bytes;
 			rcs->dwVersion = 0;
 			rcs->dwStrLen = static_cast<DWORD>(s.length());
@@ -934,7 +923,6 @@ bool ReconversionCommand::perform() {
 				}
 			}
 			::operator delete(rcs);
-			::ImmReleaseContext(viewer.identifier().get(), imc);
 		}
 	}
 

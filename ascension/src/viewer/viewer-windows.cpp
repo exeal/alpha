@@ -11,11 +11,10 @@
 
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/viewer.hpp>
-#include <ascension/viewer/base/cursor.hpp>
+#include <ascension/viewer/widgetapi/cursor.hpp>
 #include <ascension/text-editor/command.hpp>
 #include <ascension/text-editor/input-sequence-checker.hpp>
 #include <ascension/win32/windows.hpp>
-#include <ascension/win32/ui/menu.hpp>
 #include <ascension/win32/ui/wait-cursor.hpp>
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 #	include <ascension/win32/com/dispatch-impl.hpp>
@@ -142,9 +141,9 @@ class TextViewer::AccessibleProxy :
 		public k::DocumentListener,
 		public win32::com::ole::IDispatchImpl<
 			win32::com::IUnknownImpl<
-				typelist::Cat<ASCENSION_WIN32_COM_INTERFACE_SIGNATURE(IAccessible),
-				typelist::Cat<ASCENSION_WIN32_COM_INTERFACE_SIGNATURE(IDispatch),
-				typelist::Cat<ASCENSION_WIN32_COM_INTERFACE_SIGNATURE(IOleWindow)>>>,
+				typelist::Cat<ASCENSION_WIN32_COM_INTERFACE(IAccessible),
+				typelist::Cat<ASCENSION_WIN32_COM_INTERFACE(IDispatch),
+				typelist::Cat<ASCENSION_WIN32_COM_INTERFACE(IOleWindow)>>>,
 				win32::com::NoReferenceCounting
 			>,
 			win32::com::ole::TypeInformationFromRegistry<&LIBID_Accessibility, &IID_IAccessible>
@@ -527,6 +526,183 @@ void TextViewer::doBeep() /*throw()*/ {
 	::MessageBeep(MB_OK);
 }
 
+namespace {
+	inline widgetapi::DropAction translateDropActions(DWORD effect) {
+		widgetapi::DropAction result = widgetapi::DROP_ACTION_IGNORE;
+		if(win32::boole(effect & DROPEFFECT_COPY))
+			result |= widgetapi::DROP_ACTION_COPY;
+		if(win32::boole(effect & DROPEFFECT_MOVE))
+			result |= widgetapi::DROP_ACTION_MOVE;
+		if(win32::boole(effect & DROPEFFECT_LINK))
+			result |= widgetapi::DROP_ACTION_LINK;
+		if(win32::boole(effect & DROPEFFECT_SCROLL))
+			result |= widgetapi::DROP_ACTION_WIN32_SCROLL;
+		return result;
+	}
+	inline DWORD translateDropAction(widgetapi::DropAction dropAction) {
+		DWORD effect = DROPEFFECT_NONE;
+		if((dropAction & widgetapi::DROP_ACTION_COPY) != 0)
+			effect |= DROPEFFECT_COPY;
+		if((dropAction & widgetapi::DROP_ACTION_MOVE) != 0)
+			effect |= DROPEFFECT_MOVE;
+		if((dropAction & widgetapi::DROP_ACTION_LINK) != 0)
+			effect |= DROPEFFECT_LINK;
+		if((dropAction & widgetapi::DROP_ACTION_WIN32_SCROLL) != 0)
+			effect |= DROPEFFECT_SCROLL;
+		return effect;
+	}
+	inline widgetapi::MouseButtonInput makeMouseButtonInput(DWORD keyState, const NativePoint& location) {
+		widgetapi::UserInput::MouseButton buttons = 0;
+		if(win32::boole(keyState & MK_LBUTTON))
+			buttons |= widgetapi::UserInput::BUTTON1_DOWN;
+		if(win32::boole(keyState & MK_MBUTTON))
+			buttons |= widgetapi::UserInput::BUTTON2_DOWN;
+		if(win32::boole(keyState & MK_RBUTTON))
+			buttons |= widgetapi::UserInput::BUTTON3_DOWN;
+		if(win32::boole(keyState & MK_XBUTTON1))
+			buttons |= widgetapi::UserInput::BUTTON4_DOWN;
+		if(win32::boole(keyState & MK_XBUTTON2))
+			buttons |= widgetapi::UserInput::BUTTON5_DOWN;
+		widgetapi::UserInput::ModifierKey modifiers = 0;
+		if(win32::boole(keyState & MK_CONTROL))
+			modifiers |= widgetapi::UserInput::CONTROL_DOWN;
+		if(win32::boole(keyState & MK_SHIFT))
+			modifiers |= widgetapi::UserInput::SHIFT_DOWN;
+		if(win32::boole(keyState & MK_ALT))
+			modifiers |= widgetapi::UserInput::ALT_DOWN;
+		return widgetapi::MouseButtonInput(location, buttons, modifiers);
+	}
+}
+
+/// Implements @c IDropTarget#DragEnter method.
+STDMETHODIMP TextViewer::DragEnter(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect) {
+	if(data == nullptr)
+		return E_INVALIDARG;
+	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
+	*effect = DROPEFFECT_NONE;
+
+	HRESULT hr;
+
+#ifdef _DEBUG
+	{
+		win32::DumpContext dout;
+		win32::com::ComPtr<IEnumFORMATETC> formats;
+		if(SUCCEEDED(hr = data->EnumFormatEtc(DATADIR_GET, formats.initialize()))) {
+			FORMATETC format;
+			ULONG fetched;
+			dout << L"DragEnter received a data object exposes the following formats.\n";
+			for(formats->Reset(); formats->Next(1, &format, &fetched) == S_OK; ) {
+				WCHAR name[256];
+				if(::GetClipboardFormatNameW(format.cfFormat, name, ASCENSION_COUNTOF(name) - 1) != 0)
+					dout << L"\t" << name << L"\n";
+				else
+					dout << L"\t" << L"(unknown format : " << format.cfFormat << L")\n";
+				if(format.ptd != nullptr)
+					::CoTaskMemFree(format.ptd);
+			}
+		}
+	}
+#endif // _DEBUG
+
+	if(mouseInputStrategy_.get() != nullptr) {
+		if(const shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
+			try {
+				dropTarget->dragEntered(widgetapi::DragEnterInput(
+					makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, location)), translateDropActions(*effect)));
+			} catch(const bad_alloc&) {
+				return E_OUTOFMEMORY;
+			} catch(...) {
+				return E_UNEXPECTED;
+			}
+
+			if(dropTargetHelper_.get() != nullptr) {
+				POINT pt = {location.x, location.y};
+				dropTargetHelper_->DragEnter(handle().get(), data, &pt, *effect);
+			}
+		}
+	}
+}
+
+/// Implements @c IDropTarget#DragLeave method.
+STDMETHODIMP TextViewer::DragLeave() {
+	if(mouseInputStrategy_.get() != nullptr) {
+		if(const shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
+			if(dropTargetHelper_.get() != nullptr)
+				dropTargetHelper_->DragLeave();
+			try {
+				dropTarget->dragLeft(widgetapi::DragLeaveInput());
+			} catch(const bad_alloc&) {
+				return E_OUTOFMEMORY;
+			} catch(...) {
+				return E_UNEXPECTED;
+			}
+		}
+	}
+	return S_OK;
+}
+
+/// Implements @c IDropTarget#DragOver method.
+STDMETHODIMP TextViewer::DragOver(DWORD keyState, POINTL location, DWORD* effect) {
+	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
+
+	if(mouseInputStrategy_.get() != nullptr) {
+		if(const shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
+			try {
+				dropTarget->dragMoved(widgetapi::DragMoveInput(
+					makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, location)), translateDropActions(*effect)));
+			} catch(const bad_alloc&) {
+				return E_OUTOFMEMORY;
+			} catch(...) {
+				return E_UNEXPECTED;
+			}
+			if(dropTargetHelper_.get() != nullptr) {
+				const shared_ptr<TextViewport> viewport(textRenderer().viewport());
+				viewport->lockScroll();
+				POINT pt = {location.x, location.y};
+				dropTargetHelper_->DragOver(&pt, *effect);	// damn! IDropTargetHelper scrolls the view
+				viewport->unlockScroll();
+			}
+		}
+	}
+	return S_OK;
+}
+
+/// Implements @c IDropTarget#Drop method.
+STDMETHODIMP TextViewer::Drop(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect) {
+	if(data == nullptr)
+		return E_INVALIDARG;
+	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
+	*effect = DROPEFFECT_NONE;
+/*
+	FORMATETC fe = {::RegisterClipboardFormatA("Rich Text Format"), 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+	STGMEDIUM stg;
+	data->GetData(&fe, &stg);
+	const char* bytes = static_cast<char*>(::GlobalLock(stg.hGlobal));
+	manah::win32::DumpContext dout;
+	dout << bytes;
+	::GlobalUnlock(stg.hGlobal);
+	::ReleaseStgMedium(&stg);
+*/
+	HRESULT hr = S_OK;
+	if(mouseInputStrategy_.get() != nullptr) {
+		if(const shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
+			try {
+				dropTarget->dropped(widgetapi::DropInput(
+					makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, location)), translateDropActions(*effect)));
+			} catch(const bad_alloc&) {
+				hr = E_OUTOFMEMORY;
+			} catch(...) {
+				hr = E_UNEXPECTED;
+			}
+		}
+	}
+	if(dropTargetHelper_.get() != nullptr) {
+		POINT pt = {location.x, location.y};
+		dropTargetHelper_->DragOver(&pt, *effect);
+	}
+	return hr;
+}
+
 /// Hides the tool tip.
 void TextViewer::hideToolTip() {
 	assert(::IsWindow(handle().get()));
@@ -538,19 +714,19 @@ void TextViewer::hideToolTip() {
 }
 
 /// @internal Initializes the window of the viewer.
-void TextViewer::initialize() {
+void TextViewer::initialize(const TextViewer* other) {
 	scrollInfo_.updateVertical(*this);
 	updateScrollBars();
 
 	// create the tooltip belongs to the window
 	toolTip_ = ::CreateWindowExW(
 		WS_EX_TOOLWINDOW | WS_EX_TOPMOST, TOOLTIPS_CLASSW, 0, WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX,
-		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, identifier().get(), nullptr,
-		reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLongPtr(identifier().get(), GWLP_HINSTANCE))), nullptr);
+		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, handle().get(), nullptr,
+		reinterpret_cast<HINSTANCE>(static_cast<HANDLE_PTR>(::GetWindowLongPtr(handle().get(), GWLP_HINSTANCE))), nullptr);
 	if(toolTip_ != nullptr) {
 		win32::AutoZeroSize<TOOLINFOW> ti;
 		RECT margins = {1, 1, 1, 1};
-		ti.hwnd = identifier().get();
+		ti.hwnd = handle().get();
 		ti.lpszText = LPSTR_TEXTCALLBACKW;
 		ti.uFlags = TTF_SUBCLASS;
 		ti.uId = 1;
@@ -562,6 +738,8 @@ void TextViewer::initialize() {
 		::SendMessageW(toolTip_, TTM_ACTIVATE, true, 0L);
 	}
 
+	::RegisterDragDrop(handle().get(), this);
+	dropTargetHelper_ = win32::com::ComPtr<IDropTargetHelper>(CLSID_DragDropHelper, IID_IDropTargetHelper, CLSCTX_INPROC_SERVER);
 	setMouseInputStrategy(shared_ptr<MouseInputStrategy>());
 
 #ifdef ASCENSION_TEST_TEXT_STYLES
@@ -570,9 +748,9 @@ void TextViewer::initialize() {
 	rc.indicatorMargin.visible = true;
 	rc.lineNumbers.foreground = Paint(Color(0x00, 0x80, 0x80));
 	rc.lineNumbers.background = Paint(Color(0xff, 0xff, 0xff));
-	rc.lineNumbers.border.color = Color(0x00, 0x80, 0x80);
-	rc.lineNumbers.border.style = Border::DOTTED;
-	rc.lineNumbers.border.width = Length(1);
+	rc.lineNumbers.borderEnd.color = Color(0x00, 0x80, 0x80);
+	rc.lineNumbers.borderEnd.style = Border::DOTTED;
+	rc.lineNumbers.borderEnd.width = Length(1);
 	setConfiguration(nullptr, &rc, false);
 
 #if 0
@@ -732,7 +910,7 @@ void TextViewer::initialize() {
 			void update() {
 				int temp = beginningIsBlackBack_ ? 0 : 1;
 				temp += (current_.position() % 2 == 0) ? 0 : 1;
-				unique_ptr<TextRunStyle> style(new TextRunStyle);
+				shared_ptr<TextRunStyle> style(make_shared<TextRunStyle>());
 				style->foreground = Paint((temp % 2 == 0) ?
 					Color(0xff, 0x00, 0x00) : SystemColors::get(SystemColors::WINDOW_TEXT));
 				style->background = Paint((temp % 2 == 0) ?
@@ -765,6 +943,66 @@ void TextViewer::initialize() {
 void TextViewer::onCaptureChanged(const win32::Handle<HWND>&, bool& consumed) {
 	if(consumed = (mouseInputStrategy_.get() != nullptr))
 		mouseInputStrategy_->captureChanged();
+}
+
+namespace {
+	// identifiers of GUI commands
+	enum {
+		WM_REDO	= WM_APP + 1,		// Undo
+		WM_SELECTALL,				// Select All
+		ID_DISPLAYSHAPINGCONTROLS,	// Show Unicode control characters
+		ID_RTLREADING,				// Right to left Reading order
+		ID_TOGGLEIMESTATUS,			// Open/Close IME
+		ID_TOGGLESOFTKEYBOARD,		// Open/Close soft keyboard
+		ID_RECONVERT,				// Reconvert
+
+		ID_INSERT_LRM,		// LRM (Left-to-right mark)
+		ID_INSERT_RLM,		// RLM (Right-to-left mark)
+		ID_INSERT_ZWJ,		// ZWJ (Zero width joiner)
+		ID_INSERT_ZWNJ,		// ZWNJ (Zero width non-joiner)
+		ID_INSERT_LRE,		// LRE (Left-to-right embedding)
+		ID_INSERT_RLE,		// RLE (Right-to-left embedding)
+		ID_INSERT_LRO,		// LRO (Left-to-right override)
+		ID_INSERT_RLO,		// RLO (Right-to-left override)
+		ID_INSERT_PDF,		// PDF (Pop directional formatting)
+		ID_INSERT_WJ,		// WJ (Word Joiner)
+		ID_INSERT_NADS,		// NADS (National digit shapes)	<- the following six are deprecated code points (Unicode 4.0)
+		ID_INSERT_NODS,		// NODS (Nominal digit shapes)
+		ID_INSERT_ASS,		// ASS (Activate symmetric swapping)
+		ID_INSERT_ISS,		// ISS (Inhibit symmetric swapping)
+		ID_INSERT_AAFS,		// AAFS (Activate Arabic form shaping)
+		ID_INSERT_IAFS,		// IAFS (Inhibit Arabic form shaping)
+		ID_INSERT_RS,		// RS (Record Separator)
+		ID_INSERT_US,		// US (Unit Separator)
+		ID_INSERT_IAA,		// Interlinear Annotation Anchor
+		ID_INSERT_IAS,		// Interlinear Annotation Separator
+		ID_INSERT_IAT,		// Interlinear Annotation Terminator
+
+		ID_INSERT_U0020,	// U+0020 (Space)
+		ID_INSERT_NBSP,		// NBSP (No-Break Space)
+		ID_INSERT_U1680,	// U+1680 (Ogham Space Mark)
+		ID_INSERT_MVS,		// MVS (Mongolian Vowel Separator)
+		ID_INSERT_U2000,	// U+2000 (En Quad)
+		ID_INSERT_U2001,	// U+2001 (Em Quad)
+		ID_INSERT_U2002,	// U+2002 (En Space)
+		ID_INSERT_U2003,	// U+2003 (Em Space)
+		ID_INSERT_U2004,	// U+2004 (Three-Per-Em Space)
+		ID_INSERT_U2005,	// U+2005 (Four-Per-Em Space)
+		ID_INSERT_U2006,	// U+2006 (Six-Per-Em Space)
+		ID_INSERT_U2007,	// U+2007 (Figure Space)
+		ID_INSERT_U2008,	// U+2008 (Punctuation Space)
+		ID_INSERT_U2009,	// U+2009 (Thin Space)
+		ID_INSERT_U200A,	// U+200A (Hair Space)
+		ID_INSERT_ZWSP,		// ZWSP (Zero Width Space)
+		ID_INSERT_NNBSP,	// NNSBP (Narrwow No-Break Space)
+		ID_INSERT_MMSP,		// MMSP (Medium Mathematical Space)
+		ID_INSERT_U3000,	// U+3000 (Ideographic Space)
+		ID_INSERT_NEL,		// NEL (Next Line)
+		ID_INSERT_LS,		// LS (Line Separator)
+		ID_INSERT_PS,		// PS (Paragraph Separator)
+
+		ID_INVOKE_HYPERLINK	// Open <hyperlink>
+	};
 }
 
 /// @see Window#onCommand
@@ -864,6 +1102,7 @@ void TextViewer::onCommand(WORD id, WORD, const win32::Handle<HWND>&, bool& cons
 
 /// @see WM_DESTROY
 void TextViewer::onDestroy(bool& consumed) {
+	::RevokeDragDrop(handle().get());
 	if(mouseInputStrategy_.get() != nullptr) {
 		mouseInputStrategy_->interruptMouseReaction(false);
 		mouseInputStrategy_->uninstall();
@@ -911,17 +1150,16 @@ void TextViewer::onHScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
 			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(+abs(pageSize<geometry::X_COORDINATE>(*viewport)), 0));
 			break;
 		case SB_LEFT:		// 左端
-			viewport->scrollTo(
-		case SB_RIGHT: {	// 右端
-			const Range<int> range(horizontalScrollBar().range());
-			scrollTo((sbCode == SB_LEFT) ? range.beginning() : range.end(), -1, true);
+			viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(scrollableRangeInPhysicalDirection<geometry::X_COORDINATE>(*viewport).beginning(), boost::none));
 			break;
-		}
+		case SB_RIGHT:		// 右端
+			viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(scrollableRangeInPhysicalDirection<geometry::X_COORDINATE>(*viewport).end(), boost::none));
+			break;
 		case SB_THUMBTRACK: {	// by drag or wheel
 			win32::AutoZeroSize<SCROLLINFO> si;
 			si.fMask = SIF_TRACKPOS;
 			if(win32::boole(::GetScrollInfo(handle().get(), SB_HORZ, &si)))
-				scrollTo(si.nTrackPos, -1, false);
+				viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(si.nTrackPos, boost::none));
 			break;
 		}
 	}
@@ -966,7 +1204,7 @@ void TextViewer::onNotify(int, NMHDR& nmhdr, bool& consumed) {
 void TextViewer::onSetCursor(const win32::Handle<HWND>&, UINT, UINT, bool& consumed) {
 	cursorVanisher_.restore();
 	if(consumed = (mouseInputStrategy_.get() != nullptr))
-		mouseInputStrategy_->showCursor(widgetapi::mapFromGlobal(*this, base::Cursor::position()));
+		mouseInputStrategy_->showCursor(widgetapi::mapFromGlobal(*this, widgetapi::Cursor::position()));
 }
 
 /// @see WM_STYLECHANGED
@@ -1010,25 +1248,31 @@ void TextViewer::onTimer(UINT_PTR eventID, TIMERPROC) {
 
 /// @see Window#onVScroll
 void TextViewer::onVScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
+	const shared_ptr<TextViewport> viewport(textRenderer().viewport());
 	switch(sbCode) {
 		case SB_LINEUP:		// 1 行上
-			scroll(0, -1, true); break;
+			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(0, -1));
+			break;
 		case SB_LINEDOWN:	// 1 行下
-			scroll(0, +1, true); break;
+			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(0, +1));
+			break;
 		case SB_PAGEUP:		// 1 ページ上
-			scroll(0, -static_cast<int>(numberOfVisibleLines()), true); break;
+			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(0, -abs(pageSize<geometry::Y_COORDINATE>(*viewport))));
+			break;
 		case SB_PAGEDOWN:	// 1 ページ下
-			scroll(0, +static_cast<int>(numberOfVisibleLines()), true); break;
+			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(0, +abs(pageSize<geometry::Y_COORDINATE>(*viewport))));
+			break;
 		case SB_TOP:		// 上端
-		case SB_BOTTOM: {	// 下端
-			const Range<int> range(verticalScrollBar().range());
-			scrollTo(-1, (sbCode == SB_TOP) ? range.beginning() : range.end(), true); break;
-		}
+			viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(boost::none, scrollableRangeInPhysicalDirection<geometry::Y_COORDINATE>(*viewport).beginning()));
+			break;
+		case SB_BOTTOM:		// 下端
+			viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(boost::none, scrollableRangeInPhysicalDirection<geometry::Y_COORDINATE>(*viewport).end()));
+			break;
 		case SB_THUMBTRACK: {	// by drag or wheel
 			win32::AutoZeroSize<SCROLLINFO> si;
 			si.fMask = SIF_TRACKPOS;
 			if(win32::boole(::GetScrollInfo(handle().get(), SB_VERT, &si)))
-				scrollTo(-1, si.nTrackPos, true);
+				viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(boost::none, si.nTrackPos));
 			break;
 		}
 	}
@@ -1043,29 +1287,29 @@ namespace {
 #endif
 		return geometry::make<NativePoint>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
 	}
-	inline base::UserInput::ModifierKey makeModifiers() {
-		base::UserInput::ModifierKey modifiers = 0;
+	inline widgetapi::UserInput::ModifierKey makeModifiers() {
+		widgetapi::UserInput::ModifierKey modifiers = 0;
 		if(::GetKeyState(VK_SHIFT) < 0)
-			modifiers |= base::UserInput::SHIFT_DOWN;
+			modifiers |= widgetapi::UserInput::SHIFT_DOWN;
 		if(::GetKeyState(VK_CONTROL) < 0)
-			modifiers |= base::UserInput::CONTROL_DOWN;
+			modifiers |= widgetapi::UserInput::CONTROL_DOWN;
 		if(::GetKeyState(VK_MENU) < 0)
-			modifiers |= base::UserInput::ALT_DOWN;
+			modifiers |= widgetapi::UserInput::ALT_DOWN;
 		return modifiers;
 	}
-	inline base::UserInput::ModifierKey makeModifiers(WPARAM wp) {
-		base::UserInput::ModifierKey modifiers = 0;
+	inline widgetapi::UserInput::ModifierKey makeModifiers(WPARAM wp) {
+		widgetapi::UserInput::ModifierKey modifiers = 0;
 		if((wp & MK_CONTROL) != 0)
-			modifiers = base::UserInput::CONTROL_DOWN;
+			modifiers = widgetapi::UserInput::CONTROL_DOWN;
 		if((wp & MK_SHIFT) != 0)
-			modifiers = base::UserInput::SHIFT_DOWN;
+			modifiers = widgetapi::UserInput::SHIFT_DOWN;
 		return modifiers;
 	}
-	inline base::KeyInput makeKeyInput(WPARAM wp, LPARAM lp) {
-		return base::KeyInput(wp, makeModifiers(), LOWORD(lp), HIWORD(lp));
+	inline widgetapi::KeyInput makeKeyInput(WPARAM wp, LPARAM lp) {
+		return widgetapi::KeyInput(wp, makeModifiers(), LOWORD(lp), HIWORD(lp));
 	}
-	inline base::MouseButtonInput makeMouseButtonInput(base::UserInput::MouseButton button, WPARAM wp, LPARAM lp) {
-		return base::MouseButtonInput(makeMouseLocation(lp), button, makeModifiers(wp));
+	inline widgetapi::MouseButtonInput makeMouseButtonInput(widgetapi::UserInput::MouseButton button, WPARAM wp, LPARAM lp) {
+		return widgetapi::MouseButtonInput(makeMouseLocation(lp), button, makeModifiers(wp));
 	}
 }
 
@@ -1160,7 +1404,7 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 			// vanish the cursor when the GUI user began typing
 			if(consumed) {
 				// ignore if the cursor is not over a window belongs to the same thread
-				HWND pointedWindow = ::WindowFromPoint(base::Cursor::position());
+				HWND pointedWindow = ::WindowFromPoint(widgetapi::Cursor::position());
 				if(pointedWindow != nullptr
 						&& ::GetWindowThreadProcessId(pointedWindow, nullptr) == ::GetWindowThreadProcessId(handle().get(), nullptr))
 					cursorVanisher_.vanish();
@@ -1171,8 +1415,8 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 			onCommand(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp)), consumed);
 			return consumed ? 0 : 1;
 		case WM_CONTEXTMENU: {
-			const base::LocatedUserInput input(makeMouseLocation(lp), makeModifiers());
-			showContextMenu(input, geometry::x(input.location()) == -1 && geometry::y(input.location()) == -1);
+			const widgetapi::LocatedUserInput input(makeMouseLocation(lp), makeModifiers());
+			showContextMenu(input, geometry::x(input.location()) == 0xffff && geometry::y(input.location()) == 0xffff);
 			return (consumed = true), 0;
 		}
 		case WM_DESTROY:
@@ -1208,27 +1452,27 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 		case WM_KILLFOCUS:
 			return (consumed = true), aboutToLoseFocus(), 0;
 		case WM_LBUTTONDBLCLK:
-			return (consumed = true), mouseDoubleClicked(makeMouseButtonInput(base::UserInput::BUTTON1_DOWN, wp, lp)), 0;
+			return (consumed = true), mouseDoubleClicked(makeMouseButtonInput(widgetapi::UserInput::BUTTON1_DOWN, wp, lp)), 0;
 		case WM_LBUTTONDOWN:
-			return (consumed = true), mousePressed(makeMouseButtonInput(base::UserInput::BUTTON1_DOWN, wp, lp)), 0;
+			return (consumed = true), mousePressed(makeMouseButtonInput(widgetapi::UserInput::BUTTON1_DOWN, wp, lp)), 0;
 		case WM_LBUTTONUP:
-			return (consumed = true), mouseReleased(makeMouseButtonInput(base::UserInput::BUTTON1_DOWN, wp, lp)), 0;
+			return (consumed = true), mouseReleased(makeMouseButtonInput(widgetapi::UserInput::BUTTON1_DOWN, wp, lp)), 0;
 		case WM_MBUTTONDBLCLK:
-			return (consumed = true), mouseDoubleClicked(makeMouseButtonInput(base::UserInput::BUTTON2_DOWN, wp, lp)), 0;
+			return (consumed = true), mouseDoubleClicked(makeMouseButtonInput(widgetapi::UserInput::BUTTON2_DOWN, wp, lp)), 0;
 		case WM_MBUTTONDOWN:
-			return (consumed = true), mousePressed(makeMouseButtonInput(base::UserInput::BUTTON2_DOWN, wp, lp)), 0;
+			return (consumed = true), mousePressed(makeMouseButtonInput(widgetapi::UserInput::BUTTON2_DOWN, wp, lp)), 0;
 		case WM_MBUTTONUP:
-			return (consumed = true), mouseReleased(makeMouseButtonInput(base::UserInput::BUTTON2_DOWN, wp, lp)), 0;
+			return (consumed = true), mouseReleased(makeMouseButtonInput(widgetapi::UserInput::BUTTON2_DOWN, wp, lp)), 0;
 		case WM_MOUSEMOVE:
-			return (consumed = true), mouseMoved(base::LocatedUserInput(makeMouseLocation(lp), makeModifiers(wp))), 0;
+			return (consumed = true), mouseMoved(widgetapi::LocatedUserInput(makeMouseLocation(lp), makeModifiers(wp))), 0;
 		case WM_MOUSEWHEEL:
 		case WM_MOUSEHWHEEL:
-			return (consumed = true), mouseWheelChanged(base::MouseWheelInput(
+			return (consumed = true), mouseWheelChanged(widgetapi::MouseWheelInput(
 				widgetapi::mapFromGlobal(*this, makeMouseLocation(lp)),
 				makeModifiers(GET_KEYSTATE_WPARAM(wp)),
 				geometry::make<NativeSize>(
 					(message == WM_MOUSEHWHEEL) ? GET_WHEEL_DELTA_WPARAM(wp) : 0,
-					(message == WM_MOUSEWHEEL) ? GET_WHEEL_DELTA_WPARAM(wp) : 0)), 0;
+					(message == WM_MOUSEWHEEL) ? GET_WHEEL_DELTA_WPARAM(wp) : 0))), 0;
 		case WM_NCCREATE:
 			return (consumed = true), onNcCreate(*reinterpret_cast<CREATESTRUCTW*>(lp));
 		case WM_NOTIFY:
@@ -1236,11 +1480,11 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 		case WM_PAINT:
 			return (consumed = true), paint(createRenderingContext()), 0;
 		case WM_RBUTTONDBLCLK:
-			return (consumed = true), mouseDoubleClicked(makeMouseButtonInput(base::UserInput::BUTTON3_DOWN, wp, lp)), 0;
+			return (consumed = true), mouseDoubleClicked(makeMouseButtonInput(widgetapi::UserInput::BUTTON3_DOWN, wp, lp)), 0;
 		case WM_RBUTTONDOWN:
-			return (consumed = true), mousePressed(makeMouseButtonInput(base::UserInput::BUTTON3_DOWN, wp, lp)), 0;
+			return (consumed = true), mousePressed(makeMouseButtonInput(widgetapi::UserInput::BUTTON3_DOWN, wp, lp)), 0;
 		case WM_RBUTTONUP:
-			return (consumed = true), mouseReleased(makeMouseButtonInput(base::UserInput::BUTTON3_DOWN, wp, lp)), 0;
+			return (consumed = true), mouseReleased(makeMouseButtonInput(widgetapi::UserInput::BUTTON3_DOWN, wp, lp)), 0;
 		case WM_SETCURSOR:
 			onSetCursor(win32::Handle<HWND>(reinterpret_cast<HWND>(wp)), LOWORD(lp), HIWORD(lp), consumed);
 			return consumed ? TRUE : FALSE;
@@ -1261,17 +1505,17 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 		case WM_VSCROLL:
 			return (consumed = true), onVScroll(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp))), 0;
 		case WM_XBUTTONDBLCLK:
-			return (consumed = true), mouseDoubleClicked(makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? base::UserInput::BUTTON4_DOWN : base::UserInput::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
+			return (consumed = true), mouseDoubleClicked(makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::UserInput::BUTTON4_DOWN : widgetapi::UserInput::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
 		case WM_XBUTTONDOWN:
-			return (consumed = true), mousePressed(makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? base::UserInput::BUTTON4_DOWN : base::UserInput::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
+			return (consumed = true), mousePressed(makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::UserInput::BUTTON4_DOWN : widgetapi::UserInput::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
 		case WM_XBUTTONUP:
-			return (consumed = true), mouseReleased(makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? base::UserInput::BUTTON4_DOWN : base::UserInput::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
+			return (consumed = true), mouseReleased(makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::UserInput::BUTTON4_DOWN : widgetapi::UserInput::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
 	}
 
 	return win32::Window::processMessage(message, wp, lp, consumed);
 }
 
-void TextViewer::provideClassInformation(Widget::ClassInformation& classInformation) const {
+void TextViewer::provideClassInformation(win32::Window::ClassInformation& classInformation) const {
 	classInformation.style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW | CS_DBLCLKS;
 	classInformation.background = COLOR_WINDOW;
 	classInformation.cursor = MAKEINTRESOURCEW(32513);	// IDC_IBEAM
@@ -1282,9 +1526,7 @@ basic_string<WCHAR> TextViewer::provideClassName() const {
 }
 
 /// @see Widget#showContextMenu
-void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKeyboard) {
-	using namespace win32::ui;
-
+void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, bool byKeyboard) {
 	if(!allowsMouseInput() && !byKeyboard)	// however, may be invoked by other than the mouse...
 		return;
 	utils::closeCompletionProposalsPopup(*this);
@@ -1293,16 +1535,11 @@ void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKey
 	NativePoint menuPosition;
 
 	// invoked by the keyboard
-	if(byKeyboard/*geometry::x(input.location()) == 0xffff && geometry::y(input.location()) == 0xffff*/) {
+	if(byKeyboard) {
 		// MSDN says "the application should display the context menu at the location of the current selection."
-		menuPosition = localPointForCharacter(caret(), false);
+		menuPosition = modelToView(*textRenderer().viewport(), caret(), false);
 		geometry::y(menuPosition) += textRenderer().defaultFont()->metrics().cellHeight() + 1;
-		NativeRectangle clientBounds(widgetapi::bounds(*this, false));
-		const PhysicalFourSides<Scalar> spaces(spaceWidths());
-		clientBounds = geometry::make<NativeRectangle>(
-			geometry::translate(geometry::topLeft(clientBounds), geometry::make<NativeSize>(spaces.left(), spaces.top())),
-			geometry::translate(geometry::bottomRight(clientBounds), geometry::make<NativeSize>(-spaces().right + 1, -spaces.bottom())));
-		if(!geometry::includes(clientBounds, menuPosition))
+		if(!geometry::includes(textAreaContentRectangle(), menuPosition))
 			menuPosition = geometry::make<NativePoint>(1, 1);
 		widgetapi::mapToGlobal(*this, menuPosition);
 	} else
@@ -1319,139 +1556,180 @@ void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKey
 	const bool readOnly = doc.isReadOnly();
 	const bool japanese = PRIMARYLANGID(userDefaultUILanguage()) == LANG_JAPANESE;
 
-	static PopupMenu menu;
-	static const WCHAR* captions[] = {
-		L"&Undo",									L"\x5143\x306b\x623b\x3059(&U)",
-		L"&Redo",									L"\x3084\x308a\x76f4\x3057(&R)",
-		nullptr,									nullptr,
-		L"Cu&t",									L"\x5207\x308a\x53d6\x308a(&T)",
-		L"&Copy",									L"\x30b3\x30d4\x30fc(&C)",
-		L"&Paste",									L"\x8cbc\x308a\x4ed8\x3051(&P)",
-		L"&Delete",									L"\x524a\x9664(&D)",
-		nullptr,									nullptr,
-		L"Select &All",								L"\x3059\x3079\x3066\x9078\x629e(&A)",
-		nullptr,									nullptr,
-		L"&Right to left Reading order",			L"\x53f3\x304b\x3089\x5de6\x306b\x8aad\x3080(&R)",
-		L"&Show Unicode control characters",		L"Unicode \x5236\x5fa1\x6587\x5b57\x306e\x8868\x793a(&S)",
-		L"&Insert Unicode control character",		L"Unicode \x5236\x5fa1\x6587\x5b57\x306e\x633f\x5165(&I)",
-		L"Insert Unicode &white space character",	L"Unicode \x7a7a\x767d\x6587\x5b57\x306e\x633f\x5165(&W)",
-	};																	
-#define GET_CAPTION(index)	captions[(index) * 2 + (japanese ? 1 : 0)]
-
-	if(menu.getNumberOfItems() == 0) {	// first initialization
-		menu << Menu::StringItem(WM_UNDO, GET_CAPTION(0))
-			<< Menu::StringItem(WM_REDO, GET_CAPTION(1))
-			<< Menu::SeparatorItem()
-			<< Menu::StringItem(WM_CUT, GET_CAPTION(3))
-			<< Menu::StringItem(WM_COPY, GET_CAPTION(4))
-			<< Menu::StringItem(WM_PASTE, GET_CAPTION(5))
-			<< Menu::StringItem(WM_CLEAR, GET_CAPTION(6))
-			<< Menu::SeparatorItem()
-			<< Menu::StringItem(WM_SELECTALL, GET_CAPTION(8))
-			<< Menu::SeparatorItem()
-			<< Menu::StringItem(ID_RTLREADING, GET_CAPTION(10))
-			<< Menu::StringItem(ID_DISPLAYSHAPINGCONTROLS, GET_CAPTION(11))
-			<< Menu::StringItem(0, GET_CAPTION(12))
-			<< Menu::StringItem(0, GET_CAPTION(13));
-
+	static win32::Handle<HMENU> toplevelPopup(::CreatePopupMenu(), &::DestroyMenu);
+	if(::GetMenuItemCount(toplevelPopup.get()) == 0) {	// first initialization
 		// under "Insert Unicode control character"
-		PopupMenu subMenu;
-		subMenu << Menu::StringItem(ID_INSERT_LRM, L"LRM\t&Left-To-Right Mark")
-			<< Menu::StringItem(ID_INSERT_RLM, L"RLM\t&Right-To-Left Mark")
-			<< Menu::StringItem(ID_INSERT_ZWJ, L"ZWJ\t&Zero Width Joiner")
-			<< Menu::StringItem(ID_INSERT_ZWNJ, L"ZWNJ\tZero Width &Non-Joiner")
-			<< Menu::StringItem(ID_INSERT_LRE, L"LRE\tLeft-To-Right &Embedding")
-			<< Menu::StringItem(ID_INSERT_RLE, L"RLE\tRight-To-Left E&mbedding")
-			<< Menu::StringItem(ID_INSERT_LRO, L"LRO\tLeft-To-Right &Override")
-			<< Menu::StringItem(ID_INSERT_RLO, L"RLO\tRight-To-Left O&verride")
-			<< Menu::StringItem(ID_INSERT_PDF, L"PDF\t&Pop Directional Formatting")
-			<< Menu::StringItem(ID_INSERT_WJ, L"WJ\t&Word Joiner")
-			<< Menu::StringItem(ID_INSERT_NADS, L"NADS\tN&ational Digit Shapes (deprecated)")
-			<< Menu::StringItem(ID_INSERT_NODS, L"NODS\tNominal &Digit Shapes (deprecated)")
-			<< Menu::StringItem(ID_INSERT_ASS, L"ASS\tActivate &Symmetric Swapping (deprecated)")
-			<< Menu::StringItem(ID_INSERT_ISS, L"ISS\tInhibit S&ymmetric Swapping (deprecated)")
-			<< Menu::StringItem(ID_INSERT_AAFS, L"AAFS\tActivate Arabic &Form Shaping (deprecated)")
-			<< Menu::StringItem(ID_INSERT_IAFS, L"IAFS\tInhibit Arabic Form S&haping (deprecated)")
-			<< Menu::StringItem(ID_INSERT_RS, L"RS\tRe&cord Separator")
-			<< Menu::StringItem(ID_INSERT_US, L"US\tUnit &Separator")
-			<< Menu::SeparatorItem()
-			<< Menu::StringItem(ID_INSERT_IAA, L"IAA\tInterlinear Annotation Anchor")
-			<< Menu::StringItem(ID_INSERT_IAT, L"IAT\tInterlinear Annotation Terminator")
-			<< Menu::StringItem(ID_INSERT_IAS, L"IAS\tInterlinear Annotation Separator");
-		menu.setChildPopup<Menu::BY_POSITION>(12, subMenu);
+		static const pair<UINT, const basic_string<WCHAR>> insertUnicodeControlCharacterItems[] = {
+			make_pair(ID_INSERT_LRM, L"LRM\t&Left-To-Right Mark"),
+			make_pair(ID_INSERT_RLM, L"RLM\t&Right-To-Left Mark"),
+			make_pair(ID_INSERT_ZWJ, L"ZWJ\t&Zero Width Joiner"),
+			make_pair(ID_INSERT_ZWNJ, L"ZWNJ\tZero Width &Non-Joiner"),
+			make_pair(ID_INSERT_LRE, L"LRE\tLeft-To-Right &Embedding"),
+			make_pair(ID_INSERT_RLE, L"RLE\tRight-To-Left E&mbedding"),
+			make_pair(ID_INSERT_LRO, L"LRO\tLeft-To-Right &Override"),
+			make_pair(ID_INSERT_RLO, L"RLO\tRight-To-Left O&verride"),
+			make_pair(ID_INSERT_PDF, L"PDF\t&Pop Directional Formatting"),
+			make_pair(ID_INSERT_WJ, L"WJ\t&Word Joiner"),
+			make_pair(ID_INSERT_NADS, L"NADS\tN&ational Digit Shapes (deprecated)"),
+			make_pair(ID_INSERT_NODS, L"NODS\tNominal &Digit Shapes (deprecated)"),
+			make_pair(ID_INSERT_ASS, L"ASS\tActivate &Symmetric Swapping (deprecated)"),
+			make_pair(ID_INSERT_ISS, L"ISS\tInhibit S&ymmetric Swapping (deprecated)"),
+			make_pair(ID_INSERT_AAFS, L"AAFS\tActivate Arabic &Form Shaping (deprecated)"),
+			make_pair(ID_INSERT_IAFS, L"IAFS\tInhibit Arabic Form S&haping (deprecated)"),
+			make_pair(ID_INSERT_RS, L"RS\tRe&cord Separator"),
+			make_pair(ID_INSERT_US, L"US\tUnit &Separator"),
+			make_pair(0, L""),
+			make_pair(ID_INSERT_IAA, L"IAA\tInterlinear Annotation Anchor"),
+			make_pair(ID_INSERT_IAT, L"IAT\tInterlinear Annotation Terminator"),
+			make_pair(ID_INSERT_IAS, L"IAS\tInterlinear Annotation Separator")
+		};
+		win32::Handle<HMENU> insertUnicodeControlCharacterPopup(::CreatePopupMenu(), &::DestroyMenu);
+		win32::AutoZeroSize<MENUITEMINFOW> item;
+		for(size_t i = 0; i < ASCENSION_COUNTOF(insertUnicodeControlCharacterItems); ++i) {
+			if(!insertUnicodeControlCharacterItems[i].second.empty()) {
+				item.fMask = MIIM_FTYPE | MIIM_ID | MIIM_STRING;
+				item.wID = insertUnicodeControlCharacterItems[i].first;
+				item.dwTypeData = const_cast<WCHAR*>(insertUnicodeControlCharacterItems[i].second.c_str());
+			} else {
+				item.fMask = MIIM_FTYPE;
+				item.fType = MFT_SEPARATOR;
+			}
+			::InsertMenuItemW(insertUnicodeControlCharacterPopup.get(), i, true, &item);
+		}
 
 		// under "Insert Unicode white space character"
-		subMenu.reset(win32::managed(::CreatePopupMenu()));
-		subMenu << Menu::StringItem(ID_INSERT_U0020, L"U+0020\tSpace")
-			<< Menu::StringItem(ID_INSERT_NBSP, L"NBSP\tNo-Break Space")
-			<< Menu::StringItem(ID_INSERT_U1680, L"U+1680\tOgham Space Mark")
-			<< Menu::StringItem(ID_INSERT_MVS, L"MVS\tMongolian Vowel Separator")
-			<< Menu::StringItem(ID_INSERT_U2000, L"U+2000\tEn Quad")
-			<< Menu::StringItem(ID_INSERT_U2001, L"U+2001\tEm Quad")
-			<< Menu::StringItem(ID_INSERT_U2002, L"U+2002\tEn Space")
-			<< Menu::StringItem(ID_INSERT_U2003, L"U+2003\tEm Space")
-			<< Menu::StringItem(ID_INSERT_U2004, L"U+2004\tThree-Per-Em Space")
-			<< Menu::StringItem(ID_INSERT_U2005, L"U+2005\tFour-Per-Em Space")
-			<< Menu::StringItem(ID_INSERT_U2006, L"U+2006\tSix-Per-Em Space")
-			<< Menu::StringItem(ID_INSERT_U2007, L"U+2007\tFigure Space")
-			<< Menu::StringItem(ID_INSERT_U2008, L"U+2008\tPunctuation Space")
-			<< Menu::StringItem(ID_INSERT_U2009, L"U+2009\tThin Space")
-			<< Menu::StringItem(ID_INSERT_U200A, L"U+200A\tHair Space")
-			<< Menu::StringItem(ID_INSERT_ZWSP, L"ZWSP\tZero Width Space")
-			<< Menu::StringItem(ID_INSERT_NNBSP, L"NNBSP\tNarrow No-Break Space")
-			<< Menu::StringItem(ID_INSERT_MMSP, L"MMSP\tMedium Mathematical Space")
-			<< Menu::StringItem(ID_INSERT_U3000, L"U+3000\tIdeographic Space")
-			<< Menu::SeparatorItem()
-			<< Menu::StringItem(ID_INSERT_NEL, L"NEL\tNext Line")
-			<< Menu::StringItem(ID_INSERT_LS, L"LS\tLine Separator")
-			<< Menu::StringItem(ID_INSERT_PS, L"PS\tParagraph Separator");
-		menu.setChildPopup<Menu::BY_POSITION>(13, subMenu);
+		static const pair<UINT, const basic_string<WCHAR>> insertUnicodeWhiteSpaceCharacterItems[] = {
+			make_pair(ID_INSERT_U0020, L"U+0020\tSpace"),
+			make_pair(ID_INSERT_NBSP, L"NBSP\tNo-Break Space"),
+			make_pair(ID_INSERT_U1680, L"U+1680\tOgham Space Mark"),
+			make_pair(ID_INSERT_MVS, L"MVS\tMongolian Vowel Separator"),
+			make_pair(ID_INSERT_U2000, L"U+2000\tEn Quad"),
+			make_pair(ID_INSERT_U2001, L"U+2001\tEm Quad"),
+			make_pair(ID_INSERT_U2002, L"U+2002\tEn Space"),
+			make_pair(ID_INSERT_U2003, L"U+2003\tEm Space"),
+			make_pair(ID_INSERT_U2004, L"U+2004\tThree-Per-Em Space"),
+			make_pair(ID_INSERT_U2005, L"U+2005\tFour-Per-Em Space"),
+			make_pair(ID_INSERT_U2006, L"U+2006\tSix-Per-Em Space"),
+			make_pair(ID_INSERT_U2007, L"U+2007\tFigure Space"),
+			make_pair(ID_INSERT_U2008, L"U+2008\tPunctuation Space"),
+			make_pair(ID_INSERT_U2009, L"U+2009\tThin Space"),
+			make_pair(ID_INSERT_U200A, L"U+200A\tHair Space"),
+			make_pair(ID_INSERT_ZWSP, L"ZWSP\tZero Width Space"),
+			make_pair(ID_INSERT_NNBSP, L"NNBSP\tNarrow No-Break Space"),
+			make_pair(ID_INSERT_MMSP, L"MMSP\tMedium Mathematical Space"),
+			make_pair(ID_INSERT_U3000, L"U+3000\tIdeographic Space"),
+			make_pair(0, L""),
+			make_pair(ID_INSERT_NEL, L"NEL\tNext Line"),
+			make_pair(ID_INSERT_LS, L"LS\tLine Separator"),
+			make_pair(ID_INSERT_PS, L"PS\tParagraph Separator")
+		};
+		win32::Handle<HMENU> insertUnicodeWhiteSpaceCharacterPopup(::CreatePopupMenu(), &::DestroyMenu);
+		for(size_t i = 0; i < ASCENSION_COUNTOF(insertUnicodeWhiteSpaceCharacterItems); ++i) {
+			if(!insertUnicodeWhiteSpaceCharacterItems[i].second.empty()) {
+				item.fMask = MIIM_FTYPE | MIIM_ID | MIIM_STRING;
+				item.wID = insertUnicodeWhiteSpaceCharacterItems[i].first;
+				item.dwTypeData = const_cast<WCHAR*>(insertUnicodeWhiteSpaceCharacterItems[i].second.c_str());
+			} else {
+				item.fMask = MIIM_FTYPE;
+				item.fType = MFT_SEPARATOR;
+			}
+			::InsertMenuItemW(insertUnicodeWhiteSpaceCharacterPopup.get(), i, true, &item);
+		}
+
+		// toplevel
+		static const pair<UINT, const basic_string<WCHAR>> toplevelItems[] = {
+			make_pair(WM_UNDO, !japanese ? L"&Undo" : L"\x5143\x306b\x623b\x3059(&U)"),
+			make_pair(WM_REDO, !japanese ? L"&Redo" : L"\x3084\x308a\x76f4\x3057(&R)"),
+			make_pair(0, L""),
+			make_pair(WM_CUT, !japanese ? L"Cu&t" : L"\x5207\x308a\x53d6\x308a(&T)"),
+			make_pair(WM_COPY, !japanese ? L"&Copy" : L"\x30b3\x30d4\x30fc(&C)"),
+			make_pair(WM_PASTE, !japanese ? L"&Paste" : L"\x8cbc\x308a\x4ed8\x3051(&P)"),
+			make_pair(WM_CLEAR, !japanese ? L"&Delete" : L"\x524a\x9664(&D)"),
+			make_pair(0, L""),
+			make_pair(WM_SELECTALL, !japanese ? L"Select &All" : L"\x3059\x3079\x3066\x9078\x629e(&A)"),
+			make_pair(0, L""),
+			make_pair(ID_RTLREADING, !japanese ? L"&Right to left Reading order" : L"\x53f3\x304b\x3089\x5de6\x306b\x8aad\x3080(&R)"),
+			make_pair(ID_DISPLAYSHAPINGCONTROLS, !japanese ? L"&Show Unicode control characters" : L"Unicode \x5236\x5fa1\x6587\x5b57\x306e\x8868\x793a(&S)"),
+			make_pair(0, !japanese ? L"&Insert Unicode control character" : L"Unicode \x5236\x5fa1\x6587\x5b57\x306e\x633f\x5165(&I)"),
+			make_pair(0, !japanese ? L"Insert Unicode &white space character" : L"Unicode \x7a7a\x767d\x6587\x5b57\x306e\x633f\x5165(&W)")
+		};
+		for(size_t i = 0; i < ASCENSION_COUNTOF(toplevelItems); ++i) {
+			if(toplevelItems[i].second.empty()) {
+				item.fMask = MIIM_FTYPE;
+				item.fType = MFT_SEPARATOR;
+			} else {
+				item.fMask = MIIM_FTYPE | MIIM_ID | MIIM_STRING;
+				item.wID = insertUnicodeWhiteSpaceCharacterItems[i].first;
+				item.dwTypeData = const_cast<WCHAR*>(insertUnicodeWhiteSpaceCharacterItems[i].second.c_str());
+				if(i == 12 || i == 13) {
+					item.fMask |= MIIM_SUBMENU;
+					item.hSubMenu = (i == 12) ? insertUnicodeControlCharacterPopup.get() : insertUnicodeWhiteSpaceCharacterPopup.get();
+				}
+			}
+			::InsertMenuItemW(insertUnicodeControlCharacterPopup.get(), i, true, &item);
+		}
 
 		// check if the system supports bidi
 		if(!font::supportsComplexScripts()) {
-			menu.enable<Menu::BY_COMMAND>(ID_RTLREADING, false);
-			menu.enable<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, false);
-			menu.enable<Menu::BY_POSITION>(12, false);
-			menu.enable<Menu::BY_POSITION>(13, false);
+			::EnableMenuItem(toplevelPopup.get(), ID_RTLREADING, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+			::EnableMenuItem(toplevelPopup.get(), ID_DISPLAYSHAPINGCONTROLS, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+			::EnableMenuItem(toplevelPopup.get(), 12, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
+			::EnableMenuItem(toplevelPopup.get(), 13, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
 		}
 	}
 #undef GET_CAPTION
 
 	// modify menu items
-	menu.enable<Menu::BY_COMMAND>(WM_UNDO, !readOnly && doc.numberOfUndoableChanges() != 0);
-	menu.enable<Menu::BY_COMMAND>(WM_REDO, !readOnly && doc.numberOfRedoableChanges() != 0);
-	menu.enable<Menu::BY_COMMAND>(WM_CUT, !readOnly && hasSelection);
-	menu.enable<Menu::BY_COMMAND>(WM_COPY, hasSelection);
-	menu.enable<Menu::BY_COMMAND>(WM_PASTE, !readOnly && caret_->canPaste(false));
-	menu.enable<Menu::BY_COMMAND>(WM_CLEAR, !readOnly && hasSelection);
-	menu.enable<Menu::BY_COMMAND>(WM_SELECTALL, doc.numberOfLines() > 1 || doc.lineLength(0) > 0);
-	menu.check<Menu::BY_COMMAND>(ID_RTLREADING, configuration_.readingDirection == RIGHT_TO_LEFT);
-	menu.check<Menu::BY_COMMAND>(ID_DISPLAYSHAPINGCONTROLS, textRenderer().displaysShapingControls());
+	::EnableMenuItem(toplevelPopup.get(), WM_UNDO, MF_BYCOMMAND | (!readOnly && doc.numberOfUndoableChanges() != 0) ? MF_ENABLED : MF_DISABLED | MF_GRAYED);
+	::EnableMenuItem(toplevelPopup.get(), WM_REDO, MF_BYCOMMAND | (!readOnly && doc.numberOfRedoableChanges() != 0) ? MF_ENABLED : MF_DISABLED | MF_GRAYED);
+	::EnableMenuItem(toplevelPopup.get(), WM_CUT, MF_BYCOMMAND | (!readOnly && hasSelection) ? MF_ENABLED : MF_DISABLED | MF_GRAYED);
+	::EnableMenuItem(toplevelPopup.get(), WM_COPY, MF_BYCOMMAND | hasSelection ? MF_ENABLED : MF_DISABLED | MF_GRAYED);
+	::EnableMenuItem(toplevelPopup.get(), WM_PASTE, MF_BYCOMMAND | (!readOnly && caret_->canPaste(false)) ? MF_ENABLED : MF_DISABLED | MF_GRAYED);
+	::EnableMenuItem(toplevelPopup.get(), WM_CLEAR, MF_BYCOMMAND | (!readOnly && hasSelection) ? MF_ENABLED : MF_DISABLED | MF_GRAYED);
+	::EnableMenuItem(toplevelPopup.get(), WM_SELECTALL, MF_BYCOMMAND | (doc.numberOfLines() > 1 || doc.lineLength(0) > 0) ? MF_ENABLED : MF_DISABLED | MF_GRAYED);
+	win32::AutoZeroSize<MENUITEMINFOW> item;
+	item.fMask = MIIM_STATE;
+	item.fState = ((configuration_.readingDirection == RIGHT_TO_LEFT) ? MFS_CHECKED : MFS_UNCHECKED) | MFS_ENABLED | MFS_UNHILITE;
+	::SetMenuItemInfoW(toplevelPopup.get(), ID_RTLREADING, false, &item);
+	item.fState = (textRenderer().displaysShapingControls() ? MFS_CHECKED : MFS_UNCHECKED) | MFS_ENABLED | MFS_UNHILITE;
+	::SetMenuItemInfoW(toplevelPopup.get(), ID_DISPLAYSHAPINGCONTROLS, false, &item);
 
 	// IME commands
 	HKL keyboardLayout = ::GetKeyboardLayout(::GetCurrentThreadId());
 	if(//win32::boole(::ImmIsIME(keyboardLayout)) &&
 			::ImmGetProperty(keyboardLayout, IGP_SENTENCE) != IME_SMODE_NONE) {
-		HIMC imc = ::ImmGetContext(identifier().get());
-		WCHAR* openIme = japanese ? L"IME \x3092\x958b\x304f(&O)" : L"&Open IME";
-		WCHAR* closeIme = japanese ? L"IME \x3092\x9589\x3058\x308b(&L)" : L"C&lose IME";
-		WCHAR* openSftKbd = japanese ? L"\x30bd\x30d5\x30c8\x30ad\x30fc\x30dc\x30fc\x30c9\x3092\x958b\x304f(&E)" : L"Op&en soft keyboard";
-		WCHAR* closeSftKbd = japanese ? L"\x30bd\x30d5\x30c8\x30ad\x30fc\x30dc\x30fc\x30c9\x3092\x9589\x3058\x308b(&F)" : L"Close so&ft keyboard";
-		WCHAR* reconvert = japanese ? L"\x518d\x5909\x63db(&R)" : L"&Reconvert";
+		win32::Handle<HIMC> imc(win32::inputMethod(*this));
+		const basic_string<WCHAR> openIme(japanese ? L"IME \x3092\x958b\x304f(&O)" : L"&Open IME");
+		const basic_string<WCHAR> closeIme(japanese ? L"IME \x3092\x9589\x3058\x308b(&L)" : L"C&lose IME");
+		const basic_string<WCHAR> openSoftKeyboard(japanese ? L"\x30bd\x30d5\x30c8\x30ad\x30fc\x30dc\x30fc\x30c9\x3092\x958b\x304f(&E)" : L"Op&en soft keyboard");
+		const basic_string<WCHAR> closeSoftKeyboard(japanese ? L"\x30bd\x30d5\x30c8\x30ad\x30fc\x30dc\x30fc\x30c9\x3092\x9589\x3058\x308b(&F)" : L"Close so&ft keyboard");
+		const basic_string<WCHAR> reconvert(japanese ? L"\x518d\x5909\x63db(&R)" : L"&Reconvert");
 
-		menu << Menu::SeparatorItem()
-			<< Menu::StringItem(ID_TOGGLEIMESTATUS, win32::boole(::ImmGetOpenStatus(imc)) ? closeIme : openIme);
+		win32::AutoZeroSize<MENUITEMINFOW> item;
+		item.fMask = MIIM_FTYPE;
+		item.fType = MFT_SEPARATOR;
+		::InsertMenuItemW(toplevelPopup.get(), ::GetMenuItemCount(toplevelPopup.get()), true, &item);
+		item.fMask = MIIM_ID | MIIM_STRING;
+		item.wID = ID_TOGGLEIMESTATUS;
+		item.dwTypeData = const_cast<WCHAR*>(win32::boole(::ImmGetOpenStatus(imc.get())) ? closeIme.c_str() : openIme.c_str());
+		::InsertMenuItemW(toplevelPopup.get(), ::GetMenuItemCount(toplevelPopup.get()), true, &item);
+		item.fMask = MIIM_ID | MIIM_STRING;
 
 		if(win32::boole(::ImmGetProperty(keyboardLayout, IGP_CONVERSION) & IME_CMODE_SOFTKBD)) {
 			DWORD convMode;
-			::ImmGetConversionStatus(imc, &convMode, nullptr);
-			menu << Menu::StringItem(ID_TOGGLESOFTKEYBOARD, win32::boole(convMode & IME_CMODE_SOFTKBD) ? closeSftKbd : openSftKbd);
+			::ImmGetConversionStatus(imc.get(), &convMode, nullptr);
+			item.wID = ID_TOGGLESOFTKEYBOARD;
+			item.dwTypeData = const_cast<WCHAR*>(win32::boole(convMode & IME_CMODE_SOFTKBD) ? closeSoftKeyboard.c_str() : openSoftKeyboard.c_str());
+			::InsertMenuItemW(toplevelPopup.get(), ::GetMenuItemCount(toplevelPopup.get()), true, &item);
 		}
 
-		if(win32::boole(::ImmGetProperty(keyboardLayout, IGP_SETCOMPSTR) & SCS_CAP_SETRECONVERTSTRING))
-			menu << Menu::StringItem(ID_RECONVERT, reconvert, (!readOnly && hasSelection) ? MFS_ENABLED : MFS_GRAYED);
-
-		::ImmReleaseContext(handle().get(), imc);
+		if(win32::boole(::ImmGetProperty(keyboardLayout, IGP_SETCOMPSTR) & SCS_CAP_SETRECONVERTSTRING)) {
+			item.fMask |= MIIM_STATE;
+			item.wID = ID_RECONVERT;
+			item.dwTypeData = const_cast<WCHAR*>(reconvert.c_str());
+			item.fState = (!readOnly && hasSelection) ? MFS_ENABLED : (MFS_DISABLED | MFS_GRAYED);
+			::InsertMenuItemW(toplevelPopup.get(), ::GetMenuItemCount(toplevelPopup.get()), true, &item);
+		}
 	}
 
 	// hyperlink
@@ -1464,16 +1742,23 @@ void TextViewer::showContextMenu(const base::LocatedUserInput& input, bool byKey
 			len,
 #endif // _MSC_VER < 1400
 			japanese ? L"\x202a%s\x202c \x3092\x958b\x304f" : L"Open \x202a%s\x202c", escapeAmpersands(doc.line(
-				caret().line()).substr(link->region().beginning(), link->region().end() - link->region().beginning())).c_str());
-		menu << Menu::SeparatorItem() << Menu::StringItem(ID_INVOKE_HYPERLINK, caption.get());
+				line(caret())).substr(link->region().beginning(), link->region().end() - link->region().beginning())).c_str());
+		win32::AutoZeroSize<MENUITEMINFOW> item;
+		item.fMask = MIIM_FTYPE;
+		item.fType = MFT_SEPARATOR;
+		::InsertMenuItemW(toplevelPopup.get(), ::GetMenuItemCount(toplevelPopup.get()), true, &item);
+		item.fMask = MIIM_ID | MIIM_STRING;
+		item.wID = ID_INVOKE_HYPERLINK;
+		item.dwTypeData = caption.get();
+		::InsertMenuItemW(toplevelPopup.get(), ::GetMenuItemCount(toplevelPopup.get()), true, &item);
 	}
 
-	menu.trackPopup(TPM_LEFTALIGN, geometry::x(menuPosition), geometry::y(menuPosition), handle().get());
+	::TrackPopupMenu(toplevelPopup.get(), TPM_LEFTALIGN, geometry::x(menuPosition), geometry::y(menuPosition), 0, handle().get(), 0);
 
 	// ...finally erase all items
-	int c = menu.getNumberOfItems();
+	int c = ::GetMenuItemCount(toplevelPopup.get());
 	while(c > 13)
-		menu.erase<Menu::BY_POSITION>(c--);
+		::DeleteMenu(toplevelPopup.get(), c--, MF_BYPOSITION);
 }
 
 
@@ -1497,8 +1782,9 @@ namespace {
 
 		// determine the range to draw
 		const k::Region selectedRegion(viewer.caret());
-		Index firstLine, firstSubline;
-		viewer.firstVisibleLine(&firstLine, nullptr, &firstSubline);
+//		const shared_ptr<const TextViewport> viewport(viewer.textRenderer().viewport());
+//		const Index firstLine = viewport->firstVisibleLineInLogicalNumber();
+//		const Index firstSubline = viewport->firstVisibleSublineInLogicalLine();
 
 		// calculate the size of the image
 		const NativeRectangle clientBounds(widgetapi::bounds(viewer, false));
@@ -1511,7 +1797,7 @@ namespace {
 			if(geometry::dy(selectionBounds) > geometry::dy(clientBounds))
 				return S_FALSE;	// overflow
 			const TextLayout& layout = renderer.layouts()[line];
-			const Scalar indent = renderer.lineIndent(line);
+			const Scalar indent = font::lineIndent(renderer.layouts()[line], );
 			Range<Index> range;
 			for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
 				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range)) {
@@ -1519,8 +1805,9 @@ namespace {
 						range.beginning(),
 						min(viewer.document().lineLength(line), range.end()));
 					const NativeRectangle sublineBounds(layout.bounds(range));
-					selectionBounds.left() = min(geometry::left(sublineBounds) + indent, geometry::left(selectionBounds));
-					selectionBounds.right() = max(geometry::right(sublineBounds) + indent, geometry::right(selectionBounds));
+					geometry::range<geometry::X_COORDINATE>(selectionBounds) = makeRange(
+						min(geometry::left(sublineBounds) + indent, geometry::left(selectionBounds)),
+						max(geometry::right(sublineBounds) + indent, geometry::right(selectionBounds)));
 					if(geometry::dx(selectionBounds) > geometry::dx(clientBounds))
 						return S_FALSE;	// overflow
 				}
@@ -1586,7 +1873,7 @@ namespace {
 		if(bitmap.get() == nullptr)
 			return E_FAIL;
 		// render the lines
-		oldBitmap = ::SelectObject(dc.get(), bitmap.get());
+		oldBitmap = static_cast<HBITMAP>(::SelectObject(dc.get(), bitmap.get()));
 		NativeRectangle selectionExtent(selectionBounds);
 		geometry::translate(selectionExtent, geometry::negate(geometry::topLeft(selectionExtent)));
 		y = selectionBounds.top;
@@ -1618,10 +1905,11 @@ namespace {
 		}
 
 		// locate the hotspot of the image based on the cursor position
-		const PhysicalFourSides<Scalar> spaces(viewer.spaceWidths());
+		// TODO: This code can't handle vertical writing mode.
 		NativePoint hotspot(cursorPosition);
-		geometry::x(hotspot) -= margins.left - viewer.horizontalScrollBar().position() * renderer.defaultFont()->metrics().averageCharacterWidth() + geometry::left(selectionBounds);
-		geometry::y(hotspot) -= geometry::y(viewer.clientXYForCharacter(k::Position(selectedRegion.beginning().line, 0), true));
+		const shared_ptr<const TextViewport> viewport(viewer.textRenderer().viewport());
+		geometry::x(hotspot) -= geometry::left(viewer.textAreaContentRectangle()) - inlineProgressionScrollOffsetInPixels(*viewport, viewport->inlineProgressionOffset()) + geometry::left(selectionBounds);
+		geometry::y(hotspot) -= geometry::y(modelToView(*viewport, k::Position(selectedRegion.beginning().line, 0), true));
 
 		memset(&image, 0, sizeof(SHDRAGIMAGE));
 		image.sizeDragImage.cx = bh.bV5Width;
@@ -1632,231 +1920,4 @@ namespace {
 
 		return S_OK;
 	}
-}
-
-HRESULT DefaultMouseInputStrategy::doDragAndDrop() {
-	win32::com::ComPtr<IDataObject> draggingContent;
-	const Caret& caret = viewer_->caret();
-	HRESULT hr;
-
-	if(FAILED(hr = utils::createTextObjectForSelectedString(viewer_->caret(), true, *draggingContent.initialize())))
-		return hr;
-	if(!caret.isSelectionRectangle())
-		dnd_.numberOfRectangleLines = 0;
-	else {
-		const k::Region selection(caret.selectedRegion());
-		dnd_.numberOfRectangleLines = selection.end().line - selection.beginning().line + 1;
-	}
-
-	// setup drag-image
-	if(dnd_.dragSourceHelper.get() != nullptr) {
-		SHDRAGIMAGE image;
-		if(SUCCEEDED(hr = createSelectionImage(*viewer_,
-				dragApproachedPosition_, dnd_.supportLevel >= SUPPORT_DND_WITH_SELECTED_DRAG_IMAGE, image))) {
-			if(FAILED(hr = dnd_.dragSourceHelper->InitializeFromBitmap(&image, draggingContent.get())))
-				::DeleteObject(image.hbmpDragImage);
-		}
-	}
-
-	// operation
-	state_ = DND_SOURCE;
-	DWORD effectOwn;	// dummy
-	hr = ::DoDragDrop(draggingContent.get(), this, DROPEFFECT_COPY | DROPEFFECT_MOVE | DROPEFFECT_SCROLL, &effectOwn);
-	state_ = NONE;
-	if(viewer_->isVisible())
-		viewer_->setFocus();
-	return hr;
-}
-
-/// @see IDropTarget#DragEnter
-STDMETHODIMP DefaultMouseInputStrategy::DragEnter(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) {
-	if(data == nullptr)
-		return E_INVALIDARG;
-	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
-	*effect = DROPEFFECT_NONE;
-
-	HRESULT hr;
-
-#ifdef _DEBUG
-	{
-		win32::DumpContext dout;
-		win32::com::ComPtr<IEnumFORMATETC> formats;
-		if(SUCCEEDED(hr = data->EnumFormatEtc(DATADIR_GET, formats.initialize()))) {
-			FORMATETC format;
-			ULONG fetched;
-			dout << L"DragEnter received a data object exposes the following formats.\n";
-			for(formats->Reset(); formats->Next(1, &format, &fetched) == S_OK; ) {
-				WCHAR name[256];
-				if(::GetClipboardFormatNameW(format.cfFormat, name, ASCENSION_COUNTOF(name) - 1) != 0)
-					dout << L"\t" << name << L"\n";
-				else
-					dout << L"\t" << L"(unknown format : " << format.cfFormat << L")\n";
-				if(format.ptd != nullptr)
-					::CoTaskMemFree(format.ptd);
-			}
-		}
-	}
-#endif // _DEBUG
-
-	if(dnd_.supportLevel == DONT_SUPPORT_DND || viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
-		return S_OK;
-
-	// validate the dragged data if can drop
-	FORMATETC fe = {CF_UNICODETEXT, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
-	if((hr = data->QueryGetData(&fe)) != S_OK) {
-		fe.cfFormat = CF_TEXT;
-		if(SUCCEEDED(hr = data->QueryGetData(&fe) != S_OK))
-			return S_OK;	// can't accept
-	}
-
-	if(state_ != DND_SOURCE) {
-		assert(state_ == NONE);
-		// retrieve number of lines if text is rectangle
-		dnd_.numberOfRectangleLines = 0;
-		fe.cfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
-		if(fe.cfFormat != 0 && data->QueryGetData(&fe) == S_OK) {
-			const TextAlignment alignment = defaultTextAlignment(viewer_->presentation());
-			const ReadingDirection readingDirection = defaultReadingDirection(viewer_->presentation());
-			if(alignment == ALIGN_END
-					|| (alignment == ALIGN_LEFT && readingDirection == RIGHT_TO_LEFT)
-					|| (alignment == ALIGN_RIGHT && readingDirection == LEFT_TO_RIGHT))
-				return S_OK;	// TODO: support alignments other than ALIGN_LEFT.
-			pair<HRESULT, String> text(utils::getTextFromDataObject(*data));
-			if(SUCCEEDED(text.first))
-				dnd_.numberOfRectangleLines = text::calculateNumberOfLines(text.second) - 1;
-		}
-		state_ = DND_TARGET;
-	}
-
-	viewer_->setFocus();
-	timer_.start(DRAGGING_TRACK_INTERVAL, *this);
-	if(dnd_.dropTargetHelper.get() != nullptr) {
-		POINT p = {pt.x, pt.y};
-		hr = dnd_.dropTargetHelper->DragEnter(viewer_->identifier().get(), data, &p, *effect);
-	}
-	return DragOver(keyState, pt, effect);
-}
-
-/// @see IDropTarget#Drop
-STDMETHODIMP DefaultMouseInputStrategy::Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) {
-	if(dnd_.dropTargetHelper.get() != nullptr) {
-		POINT p = {pt.x, pt.y};
-		dnd_.dropTargetHelper->Drop(data, &p, *effect);
-	}
-	if(data == nullptr)
-		return E_INVALIDARG;
-	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
-	*effect = DROPEFFECT_NONE;
-/*
-	FORMATETC fe = {::RegisterClipboardFormatA("Rich Text Format"), 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
-	STGMEDIUM stg;
-	data->GetData(&fe, &stg);
-	const char* bytes = static_cast<char*>(::GlobalLock(stg.hGlobal));
-	manah::win32::DumpContext dout;
-	dout << bytes;
-	::GlobalUnlock(stg.hGlobal);
-	::ReleaseStgMedium(&stg);
-*/
-	k::Document& document = viewer_->document();
-	if(dnd_.supportLevel == DONT_SUPPORT_DND || document.isReadOnly() || !viewer_->allowsMouseInput())
-		return S_OK;
-	Caret& ca = viewer_->caret();
-	const NativePoint caretPoint(viewer_->mapFromGlobal(geometry::make<NativePoint>(pt.x, pt.y)));
-	const k::Position destination(viewer_->characterForClientXY(caretPoint, TextLayout::TRAILING));
-
-	if(!document.accessibleRegion().includes(destination))
-		return S_OK;
-
-	if(state_ == DND_TARGET) {	// dropped from the other widget
-		timer_.stop();
-		ca.moveTo(destination);
-
-		bool rectangle;
-		pair<HRESULT, String> content(utils::getTextFromDataObject(*data, &rectangle));
-		if(SUCCEEDED(content.first)) {
-			AutoFreeze af(viewer_);
-			bool failed = false;
-			ca.moveTo(destination);
-			try {
-				ca.replaceSelection(content.second, rectangle);
-			} catch(...) {
-				failed = true;
-			}
-			if(!failed) {
-				if(rectangle)
-					ca.beginRectangleSelection();
-				ca.select(destination, ca);
-				*effect = DROPEFFECT_COPY;
-			}
-		}
-		state_ = NONE;
-	} else {	// drop from the same widget
-		assert(state_ == DND_SOURCE);
-		String text(selectedString(ca, text::NLF_RAW_VALUE));
-
-		// can't drop into the selection
-		if(isPointOverSelection(ca, caretPoint)) {
-			ca.moveTo(destination);
-			state_ = NONE;
-		} else {
-			const bool rectangle = ca.isSelectionRectangle();
-			document.insertUndoBoundary();
-			AutoFreeze af(viewer_);
-			if(win32::boole(keyState & MK_CONTROL)) {	// copy
-//				viewer_->redrawLines(ca.beginning().line(), ca.end().line());
-				bool failed = false;
-				ca.enableAutoShow(false);
-				ca.moveTo(destination);
-				try {
-					ca.replaceSelection(text, rectangle);
-				} catch(...) {
-					failed = true;
-				}
-				ca.enableAutoShow(true);
-				if(!failed) {
-					ca.select(destination, ca);
-					*effect = DROPEFFECT_COPY;
-				}
-			} else {	// move as a rectangle or linear
-				bool failed = false;
-				pair<k::Point, k::Point> oldSelection(make_pair(k::Point(ca.anchor()), k::Point(ca)));
-				ca.enableAutoShow(false);
-				ca.moveTo(destination);
-				try {
-					ca.replaceSelection(text, rectangle);
-				} catch(...) {
-					failed = true;
-				}
-				if(!failed) {
-					ca.select(destination, ca);
-					if(rectangle)
-						ca.beginRectangleSelection();
-					try {
-						erase(ca.document(), oldSelection.first, oldSelection.second);
-					} catch(...) {
-						failed = true;
-					}
-				}
-				ca.enableAutoShow(true);
-				if(!failed)
-					*effect = DROPEFFECT_MOVE;
-			}
-			document.insertUndoBoundary();
-		}
-	}
-	return S_OK;
-}
-
-/// @see IDropSource#GiveFeedback
-STDMETHODIMP DefaultMouseInputStrategy::GiveFeedback(DWORD) {
-	return DRAGDROP_S_USEDEFAULTCURSORS;	// use the system default cursor
-}
-
-/// @see IDropSource#QueryContinueDrag
-STDMETHODIMP DefaultMouseInputStrategy::QueryContinueDrag(BOOL escapePressed, DWORD keyState) {
-	if(win32::boole(escapePressed) || win32::boole(keyState & MK_RBUTTON))	// cancel
-		return DRAGDROP_S_CANCEL;
-	if(!win32::boole(keyState & MK_LBUTTON))	// drop
-		return DRAGDROP_S_DROP;
-	return S_OK;
 }

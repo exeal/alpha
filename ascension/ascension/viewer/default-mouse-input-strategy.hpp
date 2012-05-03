@@ -16,7 +16,7 @@
 #include <ascension/corelib/timer.hpp>	// Timer
 #include <ascension/kernel/position.hpp>	// kernel.Position
 #include <ascension/viewer/caret-observers.hpp>
-#include <ascension/viewer/base/widget.hpp>
+#include <ascension/viewer/widgetapi/widget.hpp>
 #include <memory>	// std.unique_ptr
 #include <utility>	// std.pair
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
@@ -24,7 +24,7 @@
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 #	include <ascension/win32/com/unknown-impl.hpp>
-#	include <shlobj.h>	// IDragSourceHelper, IDropTargetHelper
+#	include <shlobj.h>	// IDragSourceHelper
 #endif
 
 
@@ -41,17 +41,12 @@ namespace ascension {
 		// the documentation is user-input.cpp
 		class DefaultMouseInputStrategy : public MouseInputStrategy,
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-				win32::com::IUnknownImpl<
-					typelist::Cat<
-						ASCENSION_WIN32_COM_INTERFACE_SIGNATURE(IDropSource), typelist::Cat<
-							ASCENSION_WIN32_COM_INTERFACE_SIGNATURE(IDropTarget)
-						>
-					>, win32::com::NoReferenceCounting
-				>,
+				win32::com::IUnknownImpl<ASCENSION_WIN32_COM_INTERFACE(IDropSource), win32::com::NoReferenceCounting>,
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
-				private HasTimer, private base::DropTarget {
+				private HasTimer, private widgetapi::DropTarget {
 			ASCENSION_UNASSIGNABLE_TAG(DefaultMouseInputStrategy);
 		public:
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			/**
 			 * Defines drag-and-drop support levels.
 			 * @see DefaultMouseInputStrategy#DefaultMouseInputStrategy
@@ -66,39 +61,38 @@ namespace ascension {
 				/// Enables drag-and-drop and shows a selection-highlighted drag-image.
 				SUPPORT_DND_WITH_SELECTED_DRAG_IMAGE
 			};
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 		public:
-			explicit DefaultMouseInputStrategy(
-				DragAndDropSupport dragAndDropSupportLevel = SUPPORT_DND_WITH_SELECTED_DRAG_IMAGE);
+			DefaultMouseInputStrategy();
+		protected:
+			// widgetapi.DropTarget
+			virtual void dragEntered(widgetapi::DragEnterInput& input);
+			virtual void dragLeft(widgetapi::DragLeaveInput& input);
+			virtual void dragMoved(widgetapi::DragMoveInput& input);
+			virtual void dropped(widgetapi::DropInput& input);
 		private:
+			void beginDragAndDrop();
 			virtual bool handleLeftButtonDoubleClick(const graphics::NativePoint& position, int modifiers);
 			virtual bool handleRightButton(Action action, const graphics::NativePoint& position, int modifiers);
 			virtual bool handleX1Button(Action action, const graphics::NativePoint& position, int modifiers);
 			virtual bool handleX2Button(Action action, const graphics::NativePoint& position, int modifiers);
 		private:
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-			HRESULT doDragAndDrop();
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
 			bool endAutoScroll();
 			void extendSelectionTo(const kernel::Position* to = nullptr);
 			void handleLeftButtonPressed(const graphics::NativePoint& position, int modifiers);
 			void handleLeftButtonReleased(const graphics::NativePoint& position, int modifiers);
 			// MouseInputStrategy
 			void captureChanged();
-			std::shared_ptr<base::DropTarget> handleDropTarget() const;
+			std::shared_ptr<widgetapi::DropTarget> handleDropTarget() const;
 			void install(TextViewer& viewer);
 			void interruptMouseReaction(bool forKeyboardInput);
-			bool mouseButtonInput(Action action, const base::MouseButtonInput& input);
-			void mouseMoved(const base::LocatedUserInput& input);
-			void mouseWheelRotated(const base::MouseWheelInput& input);
+			bool mouseButtonInput(Action action, const widgetapi::MouseButtonInput& input);
+			void mouseMoved(const widgetapi::LocatedUserInput& input);
+			void mouseWheelRotated(const widgetapi::MouseWheelInput& input);
 			bool showCursor(const graphics::NativePoint& position);
 			void uninstall();
 			// HasTimer
 			void timeElapsed(Timer& timer);
-			// base.DropTarget
-			void dragEntered(base::DragEnterInput& input);
-			void dragLeft(base::DragLeaveInput& input);
-			void dragMoved(base::DragMoveInput& input);
-			void dropped(base::DropInput& input);
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 			// IDropSource
 			STDMETHODIMP QueryContinueDrag(BOOL escapePressed, DWORD keyState);
@@ -123,14 +117,12 @@ namespace ascension {
 				std::pair<Index, Index> initialWordColumns;
 			} selection_;
 			struct DragAndDrop {
-				DragAndDropSupport supportLevel;
 				Index numberOfRectangleLines;
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 				win32::com::ComPtr<IDragSourceHelper> dragSourceHelper;
-				win32::com::ComPtr<IDropTargetHelper> dropTargetHelper;
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 			} dnd_;
-			std::unique_ptr<base::Widget> autoScrollOriginMark_;
+			std::unique_ptr<widgetapi::NativeWidget> autoScrollOriginMark_;
 			const presentation::hyperlink::Hyperlink* lastHoveredHyperlink_;
 			Timer timer_;
 			static const unsigned int SELECTION_EXPANSION_INTERVAL, DRAGGING_TRACK_INTERVAL;

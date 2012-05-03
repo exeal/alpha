@@ -7,7 +7,7 @@
 #ifndef ASCENSION_SCROLLABLE_HPP
 #define ASCENSION_SCROLLABLE_HPP
 #include <ascension/corelib/range.hpp>
-#include <ascension/viewer/base/widget.hpp>
+#include <ascension/viewer/widgetapi/widget.hpp>
 
 namespace ascension {
 	namespace viewers {
