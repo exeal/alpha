@@ -7,6 +7,15 @@
 #ifndef ASCENSION_DRAG_AND_DROP_HPP
 #define ASCENSION_DRAG_AND_DROP_HPP
 #include <ascension/viewer/widgetapi/user-input.hpp>
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#	include <gtkmm/selectiondata.h>
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#	include <QMimeData>
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#	include <NSPasteboard.h>
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#	include <ObjIdl.h>
+#endif
 
 namespace ascension {
 	namespace viewers {

@@ -30,7 +30,17 @@ namespace k = ascension::kernel;
 
 namespace {
 	/// Circled window displayed at which the auto scroll started.
-	class AutoScrollOriginMark : public widgetapi::NativeWidget {
+	class AutoScrollOriginMark :
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+			public Gtk::Widget
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+			public QAbstractScrollArea
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+			public NSView
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+			public win32::CustomControl
+#endif
+	{
 		ASCENSION_NONCOPYABLE_TAG(AutoScrollOriginMark);
 	public:
 		/// Defines the type of the cursors obtained by @c #cursorForScrolling method.
@@ -46,7 +56,7 @@ namespace {
 	private:
 		void paint(graphics::PaintContext& context);
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-		void provideClassInformation(win32::ClassInformation& classInformation) const {
+		void provideClassInformation(win32::CustomControl::ClassInformation& classInformation) const {
 			classInformation.style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW;
 			classInformation.background = COLOR_WINDOW;
 			classInformation.cursor = MAKEINTRESOURCEW(32513);	// IDC_IBEAM
@@ -165,10 +175,10 @@ const widgetapi::Cursor& AutoScrollOriginMark::cursorForScrolling(CursorType typ
 			memcpy(xorBits + 4 * 20, XOR_LINE_20_TO_28, sizeof(XOR_LINE_20_TO_28));
 		}
 #if defined(ASCENSION_OS_WINDOWS)
-		instances[type].reset(new base::Cursor(win32::Handle<HCURSOR>(
+		instances[type].reset(new widgetapi::Cursor(win32::Handle<HCURSOR>(
 			::CreateCursor(::GetModuleHandleW(nullptr), 16, 16, 32, 32, andBits, xorBits), &::DestroyCursor)));
 #else
-		instances[type].reset(new base::Cursor(bitmap));
+		instances[type].reset(new widgetapi::Cursor(bitmap));
 #endif
 	}
 	return *instances[type];
@@ -284,30 +294,49 @@ void DefaultMouseInputStrategy::captureChanged() {
 	state_ = NONE;
 }
 
+namespace {
+	bool isMimeDataAcceptable(const widgetapi::NativeMimeData& data, bool onlyRectangle) {
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		return (data.get_target() == ASCENSION_RECTANGLE_TEXT_MIME_FORMAT) || (!onlyRectangle && data.targets_include_text());
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		return data.hasFormat(ASCENSION_RECTANGLE_TEXT_MIME_FORMAT) || (!onlyRectangle && data.hasText());
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		const array<CLIPFORMAT, 3> formats = {
+			static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_MIME_FORMAT)), CF_UNICODETEXT, CF_TEXT
+		};
+		FORMATETC format = {0, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+		for(size_t i = 0; i < onlyRectangle ? 1 : formats.size(); ++i) {
+			if((format.cfFormat = formats[i]) != 0) {
+				const HRESULT hr = const_cast<widgetapi::NativeMimeData&>(data).QueryGetData(&format);
+				if(hr == S_OK)
+					return true;
+			}
+		}
+		return false;
+#endif
+	}
+}
+
 /// @see DropTarget#dragEntered
 void DefaultMouseInputStrategy::dragEntered(widgetapi::DragEnterInput& input) {
-	if(dnd_.supportLevel == DONT_SUPPORT_DND || viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
+	input.setDropAction(widgetapi::DROP_ACTION_IGNORE);
+	if(/*dnd_.supportLevel == DONT_SUPPORT_DND ||*/ viewer_->document().isReadOnly() || !viewer_->allowsMouseInput())
 		return input.ignore();
 
 	// validate the dragged data if can drop
-	FORMATETC fe = {CF_UNICODETEXT, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
-	if((hr = data->QueryGetData(&fe)) != S_OK) {
-		fe.cfFormat = CF_TEXT;
-		if(SUCCEEDED(hr = data->QueryGetData(&fe) != S_OK))
-			return input.ignore();	// can't accept
-	}
+	if(!isMimeDataAcceptable(input.mimeData(), false))
+		return input.ignore();
 
 	if(state_ != DND_SOURCE) {
 		assert(state_ == NONE);
 		// retrieve number of lines if text is rectangle
 		dnd_.numberOfRectangleLines = 0;
-		fe.cfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
-		if(fe.cfFormat != 0 && data->QueryGetData(&fe) == S_OK) {
-			const TextAlignment alignment = defaultTextAlignment(viewer_->presentation());
+		if(isMimeDataAcceptable(input.mimeData(), true)) {
+			const TextAnchor anchor = defaultTextAnchor(viewer_->presentation());
 			const ReadingDirection readingDirection = defaultReadingDirection(viewer_->presentation());
-			if(alignment == TEXT_ANCHOR_END
-					|| (alignment == ALIGN_LEFT && readingDirection == RIGHT_TO_LEFT)
-					|| (alignment == ALIGN_RIGHT && readingDirection == LEFT_TO_RIGHT))
+			if((anchor == TEXT_ANCHOR_START && readingDirection == RIGHT_TO_LEFT)
+					|| (anchor == TEXT_ANCHOR_END && readingDirection == LEFT_TO_RIGHT))
 				return input.ignore();	// TODO: support alignments other than ALIGN_LEFT.
 			pair<HRESULT, String> text(utils::getTextFromDataObject(*data));
 			if(SUCCEEDED(text.first))
@@ -325,10 +354,10 @@ void DefaultMouseInputStrategy::dragEntered(widgetapi::DragEnterInput& input) {
 void DefaultMouseInputStrategy::dragLeft(widgetapi::DragLeaveInput& input) {
 	widgetapi::setFocus(nullptr);
 	timer_.stop();
-	if(dnd_.supportLevel >= SUPPORT_DND) {
+//	if(dnd_.supportLevel >= SUPPORT_DND) {
 		if(state_ == DND_TARGET)
 			state_ = NONE;
-	}
+//	}
 	input.consume();
 }
 
@@ -406,9 +435,10 @@ void DefaultMouseInputStrategy::dragMoved(widgetapi::DragMoveInput& input) {
 /// @see DropTarget#drop
 void DefaultMouseInputStrategy::dropped(widgetapi::DropInput& input) {
 	k::Document& document = viewer_->document();
-	if(dnd_.supportLevel == DONT_SUPPORT_DND || document.isReadOnly() || !viewer_->allowsMouseInput())
+	input.setDropAction(widgetapi::DROP_ACTION_IGNORE);
+	if(/*dnd_.supportLevel == DONT_SUPPORT_DND ||*/ document.isReadOnly() || !viewer_->allowsMouseInput())
 		return input.ignore();
-	Caret& ca = viewer_->caret();
+	Caret& caret = viewer_->caret();
 	const NativePoint caretPoint(input.location());
 	const k::Position destination(viewToModel(*viewer_->textRenderer().viewport(), caretPoint, TextLayout::TRAILING));
 
@@ -417,79 +447,86 @@ void DefaultMouseInputStrategy::dropped(widgetapi::DropInput& input) {
 
 	if(state_ == DND_TARGET) {	// dropped from the other widget
 		timer_.stop();
-		ca.moveTo(destination);
+		if((input.possibleActions() & widgetapi::DROP_ACTION_COPY) != 0) {
+			caret.moveTo(destination);
 
-		bool rectangle;
-		pair<HRESULT, String> content(utils::getTextFromDataObject(*data, &rectangle));
-		if(SUCCEEDED(content.first)) {
-			AutoFreeze af(viewer_);
-			bool failed = false;
-			ca.moveTo(destination);
-			try {
-				ca.replaceSelection(content.second, rectangle);
-			} catch(...) {
-				failed = true;
-			}
-			if(!failed) {
-				if(rectangle)
-					ca.beginRectangleSelection();
-				ca.select(destination, ca);
-				*effect = DROPEFFECT_COPY;
+			bool rectangle;
+			pair<HRESULT, String> content(utils::getTextFromDataObject(*data, &rectangle));
+			if(SUCCEEDED(content.first)) {
+				AutoFreeze af(viewer_);
+				bool failed = false;
+				try {
+					caret.replaceSelection(content.second, rectangle);
+				} catch(...) {
+					failed = true;
+				}
+				if(!failed) {
+					if(rectangle)
+						caret.beginRectangleSelection();
+					caret.select(destination, caret);
+					input.setDropAction(widgetapi::DROP_ACTION_COPY);
+				}
 			}
 		}
 		state_ = NONE;
 	} else {	// drop from the same widget
 		assert(state_ == DND_SOURCE);
-		String text(selectedString(ca, text::NLF_RAW_VALUE));
+		String text(selectedString(caret, text::NLF_RAW_VALUE));
 
 		// can't drop into the selection
-		if(isPointOverSelection(ca, caretPoint)) {
-			ca.moveTo(destination);
+		if(isPointOverSelection(caret, caretPoint)) {
+			caret.moveTo(destination);
 			state_ = NONE;
 		} else {
-			const bool rectangle = ca.isSelectionRectangle();
-			document.insertUndoBoundary();
-			AutoFreeze af(viewer_);
+			const bool rectangle = caret.isSelectionRectangle();
+			bool failed = false;
 			if(widgetapi::hasModifier<widgetapi::UserInput::CONTROL_DOWN>(input)) {	// copy
-//				viewer_->redrawLines(ca.beginning().line(), ca.end().line());
-				bool failed = false;
-				ca.enableAutoShow(false);
-				ca.moveTo(destination);
-				try {
-					ca.replaceSelection(text, rectangle);
-				} catch(...) {
-					failed = true;
-				}
-				ca.enableAutoShow(true);
-				if(!failed) {
-					ca.select(destination, ca);
-					*effect = DROPEFFECT_COPY;
-				}
-			} else {	// move as a rectangle or linear
-				bool failed = false;
-				pair<k::Point, k::Point> oldSelection(make_pair(k::Point(ca.anchor()), k::Point(ca)));
-				ca.enableAutoShow(false);
-				ca.moveTo(destination);
-				try {
-					ca.replaceSelection(text, rectangle);
-				} catch(...) {
-					failed = true;
-				}
-				if(!failed) {
-					ca.select(destination, ca);
-					if(rectangle)
-						ca.beginRectangleSelection();
+				if((input.possibleActions() & widgetapi::DROP_ACTION_COPY) != 0) {
+					document.insertUndoBoundary();
+					AutoFreeze af(viewer_);
+//					viewer_->redrawLines(ca.beginning().line(), ca.end().line());
+					caret.enableAutoShow(false);
+					caret.moveTo(destination);
 					try {
-						erase(ca.document(), oldSelection.first, oldSelection.second);
+						caret.replaceSelection(text, rectangle);
 					} catch(...) {
 						failed = true;
 					}
+					caret.enableAutoShow(true);
+					if(!failed) {
+						caret.select(destination, caret);
+						input.setDropAction(widgetapi::DROP_ACTION_COPY);
+					}
+					document.insertUndoBoundary();
 				}
-				ca.enableAutoShow(true);
-				if(!failed)
-					*effect = DROPEFFECT_MOVE;
+			} else {	// move as a rectangle or linear
+				if((input.possibleActions() & widgetapi::DROP_ACTION_MOVE) != 0) {
+					document.insertUndoBoundary();
+					AutoFreeze af(viewer_);
+					pair<k::Point, k::Point> oldSelection(make_pair(k::Point(caret.anchor()), k::Point(caret)));
+					caret.enableAutoShow(false);
+					caret.moveTo(destination);
+					try {
+						caret.replaceSelection(text, rectangle);
+					} catch(...) {
+						failed = true;
+					}
+					if(!failed) {
+						caret.select(destination, caret);
+						if(rectangle)
+							caret.beginRectangleSelection();
+						try {
+							erase(caret.document(), oldSelection.first, oldSelection.second);
+						} catch(...) {
+							failed = true;
+						}
+					}
+					caret.enableAutoShow(true);
+					if(!failed)
+						input.setDropAction(widgetapi::DROP_ACTION_MOVE);
+					document.insertUndoBoundary();
+				}
 			}
-			document.insertUndoBoundary();
 		}
 	}
 }
@@ -502,8 +539,8 @@ bool DefaultMouseInputStrategy::endAutoScroll() {
 	if(state_ == AUTO_SCROLL_DRAGGING || state_ == AUTO_SCROLL) {
 		timer_.stop();
 		state_ = NONE;
-		autoScrollOriginMark_->hide();
-		viewer_->releaseInput();
+		widgetapi::hide(*autoScrollOriginMark_);
+		widgetapi::releaseInput(*viewer_);
 		return true;
 	}
 	return false;
@@ -515,7 +552,7 @@ void DefaultMouseInputStrategy::extendSelectionTo(const k::Position* to /* = nul
 		throw IllegalStateException("not extending the selection.");
 	k::Position destination;
 	if(to == nullptr) {
-		NativePoint p(widgetapi::mapFromGlobal(*viewer_, Cursor::position()));
+		NativePoint p(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
 		Caret& caret = viewer_->caret();
 		if(state_ != EXTENDING_CHARACTER_SELECTION) {
 			const TextViewer::HitTestResult htr = viewer_->hitTest(p);
@@ -615,12 +652,12 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 		selection_.initialLine = extend ? line(caret.anchor()) : to.line;
 		viewer_->caret().endRectangleSelection();
 		extendSelectionTo(&to);
-		widgetapi::grabInput(*viewer_).release();
+		widgetapi::grabInput(*viewer_);
 		timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
 	}
 
 	// approach drag-and-drop
-	else if(dnd_.supportLevel >= SUPPORT_DND && !isSelectionEmpty(caret) && isPointOverSelection(caret, position)) {
+	else if(/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(caret) && isPointOverSelection(caret, position)) {
 		state_ = APPROACHING_DND;
 		dragApproachedPosition_ = position;
 		if(caret.isSelectionRectangle())
@@ -649,20 +686,20 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 			// alt   => begin rectangle selection
 			if(const boost::optional<k::Position> to = viewToModelInBounds(*viewer_->textRenderer().viewport(), position, TextLayout::TRAILING)) {
 				state_ = EXTENDING_CHARACTER_SELECTION;
-				if((modifiers & (UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN)) != 0) {
-					if((modifiers & UserInput::CONTROL_DOWN) != 0) {
+				if((modifiers & (widgetapi::UserInput::CONTROL_DOWN | widgetapi::UserInput::SHIFT_DOWN)) != 0) {
+					if((modifiers & widgetapi::UserInput::CONTROL_DOWN) != 0) {
 						// begin word selection
 						state_ = EXTENDING_WORD_SELECTION;
-						caret.moveTo((modifiers & UserInput::SHIFT_DOWN) != 0 ? caret.anchor() : *to);
+						caret.moveTo((modifiers & widgetapi::UserInput::SHIFT_DOWN) != 0 ? caret.anchor() : *to);
 						selectWord(caret);
 						selection_.initialLine = line(caret);
 						selection_.initialWordColumns = make_pair(offsetInLine(caret.beginning()), offsetInLine(caret.end()));
 					}
-					if((modifiers & UserInput::SHIFT_DOWN) != 0)
+					if((modifiers & widgetapi::UserInput::SHIFT_DOWN) != 0)
 						extendSelectionTo(&*to);
 				} else
 					caret.moveTo(*to);
-				if((modifiers & UserInput::ALT_DOWN) != 0)	// make the selection reactangle
+				if((modifiers & widgetapi::UserInput::ALT_DOWN) != 0)	// make the selection reactangle
 					caret.beginRectangleSelection();
 				else
 					caret.endRectangleSelection();
@@ -680,8 +717,8 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 /// Handles @c WM_LBUTTONUP.
 void DefaultMouseInputStrategy::handleLeftButtonReleased(const NativePoint& position, int) {
 	// cancel if drag-and-drop approaching
-	if(dnd_.supportLevel >= SUPPORT_DND
-			&& (state_ == APPROACHING_DND
+	if(/*dnd_.supportLevel >= SUPPORT_DND
+			&&*/ (state_ == APPROACHING_DND
 			|| state_ == DND_SOURCE)) {	// TODO: this should handle only case APPROACHING_DND?
 		state_ = NONE;
 		viewer_->caret().moveTo(viewToModel(*viewer_->textRenderer().viewport(), position, TextLayout::TRAILING));
@@ -694,7 +731,7 @@ void DefaultMouseInputStrategy::handleLeftButtonReleased(const NativePoint& posi
 		// if released the button when extending the selection, the scroll may not reach the caret position
 		utils::show(viewer_->caret());
 	}
-	viewer_->releaseInput();
+	widgetapi::releaseInput(*viewer_);
 }
 
 /**
@@ -752,11 +789,11 @@ void DefaultMouseInputStrategy::interruptMouseReaction(bool forKeyboardInput) {
 }
 
 /// @see MouseInputStrategy#mouseButtonInput
-bool DefaultMouseInputStrategy::mouseButtonInput(Action action, const base::MouseButtonInput& input) {
+bool DefaultMouseInputStrategy::mouseButtonInput(Action action, const widgetapi::MouseButtonInput& input) {
 	if(action != RELEASED && endAutoScroll())
 		return true;
 	switch(input.button()) {
-	case UserInput::BUTTON1_DOWN:
+	case widgetapi::UserInput::BUTTON1_DOWN:
 		if(action == PRESSED)
 			handleLeftButtonPressed(input.location(), input.modifiers());
 		else if(action == RELEASED)
@@ -765,7 +802,7 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Action action, const base::Mous
 			texteditor::abortIncrementalSearch(*viewer_);
 			if(handleLeftButtonDoubleClick(input.location(), input.modifiers()))
 				return true;
-			const TextViewer::HitTestResult htr = viewer_->hitTest(viewer_->mapFromGlobal(Cursor::position()));
+			const TextViewer::HitTestResult htr = viewer_->hitTest(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
 			if((htr & TextViewer::TEXT_AREA_MASK) != 0) {
 				// begin word selection
 				Caret& caret = viewer_->caret();
@@ -773,26 +810,26 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Action action, const base::Mous
 				state_ = EXTENDING_WORD_SELECTION;
 				selection_.initialLine = line(caret);
 				selection_.initialWordColumns = make_pair(offsetInLine(caret.anchor()), offsetInLine(caret));
-				viewer_->grabInput();
+				widgetapi::grabInput(*viewer_);
 				timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
 				return true;
 			}
 		}
 		break;
-	case UserInput::BUTTON2_DOWN:
+	case widgetapi::UserInput::BUTTON2_DOWN:
 		if(action == PRESSED) {
 			if(viewer_->document().numberOfLines() > viewer_->textRenderer().viewport()->numberOfVisibleLines()) {
 				state_ = APPROACHING_AUTO_SCROLL;
 				dragApproachedPosition_ = input.location();
-				const NativePoint p(viewer_->mapToGlobal(input.location()));
-				viewer_->setFocus();
+				const NativePoint p(widgetapi::mapToGlobal(*viewer_, input.location()));
+				widgetapi::setFocus(*viewer_);
 				// show the indicator margin
-				NativeRectangle rect(autoScrollOriginMark_->bounds(true));
-				autoScrollOriginMark_->move(
+				NativeRectangle rect(widgetapi::bounds(*autoScrollOriginMark_, true));
+				widgetapi::move(*autoScrollOriginMark_,
 					geometry::make<NativePoint>(geometry::x(p) - geometry::dx(rect) / 2, geometry::y(p) - geometry::dy(rect) / 2));
-				autoScrollOriginMark_->show();
-				autoScrollOriginMark_->raise();
-				viewer_->grabInput();
+				widgetapi::show(*autoScrollOriginMark_);
+				widgetapi::raise(*autoScrollOriginMark_);
+				widgetapi::grabInput(*viewer_);
 				showCursor(input.location());
 				return true;
 			}
@@ -804,20 +841,20 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Action action, const base::Mous
 				endAutoScroll();
 		}
 		break;
-	case UserInput::BUTTON3_DOWN:
+	case widgetapi::UserInput::BUTTON3_DOWN:
 		return handleRightButton(action, input.location(), input.modifiers());
-	case UserInput::BUTTON4_DOWN:
+	case widgetapi::UserInput::BUTTON4_DOWN:
 		return handleX1Button(action, input.location(), input.modifiers());
-	case UserInput::BUTTON5_DOWN:
+	case widgetapi::UserInput::BUTTON5_DOWN:
 		return handleX2Button(action, input.location(), input.modifiers());
 	}
 	return false;
 }
 
 /// @see MouseInputStrategy#mouseMoved
-void DefaultMouseInputStrategy::mouseMoved(const base::LocatedUserInput& input) {
+void DefaultMouseInputStrategy::mouseMoved(const widgetapi::LocatedUserInput& input) {
 	if(state_ == APPROACHING_AUTO_SCROLL
-			|| (dnd_.supportLevel >= SUPPORT_DND && state_ == APPROACHING_DND)) {	// dragging starts?
+			|| (/*dnd_.supportLevel >= SUPPORT_DND &&*/ state_ == APPROACHING_DND)) {	// dragging starts?
 		if(state_ == APPROACHING_DND && isSelectionEmpty(viewer_->caret()))
 			state_ = NONE;	// approaching... => cancel
 		else {
@@ -829,7 +866,7 @@ void DefaultMouseInputStrategy::mouseMoved(const base::LocatedUserInput& input) 
 					|| (geometry::y(input.location()) > geometry::y(dragApproachedPosition_) + cyDragBox / 2)
 					|| (geometry::y(input.location()) < geometry::y(dragApproachedPosition_) - cyDragBox / 2)) {
 				if(state_ == APPROACHING_DND)
-					doDragAndDrop();
+					beginDragAndDrop();
 				else {
 					state_ = AUTO_SCROLL_DRAGGING;
 					timer_.start(0, *this);
@@ -841,7 +878,7 @@ void DefaultMouseInputStrategy::mouseMoved(const base::LocatedUserInput& input) 
 }
 
 /// @see MouseInputStrategy#mouseWheelRotated
-void DefaultMouseInputStrategy::mouseWheelRotated(const base::MouseWheelInput& input) {
+void DefaultMouseInputStrategy::mouseWheelRotated(const widgetapi::MouseWheelInput& input) {
 	if(!endAutoScroll()) {
 		const shared_ptr<TextViewport> viewport(viewer_->textRenderer().viewport());
 		// use system settings
@@ -879,7 +916,7 @@ bool DefaultMouseInputStrategy::showCursor(const NativePoint& position) {
 	if((htr & TextViewer::RULER_MASK) != 0)
 		cursorName = IDC_ARROW;
 	// on a draggable text selection?
-	else if(dnd_.supportLevel >= SUPPORT_DND && !isSelectionEmpty(viewer_->caret()) && isPointOverSelection(viewer_->caret(), position))
+	else if(/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(viewer_->caret()) && isPointOverSelection(viewer_->caret(), position))
 		cursorName = IDC_ARROW;
 	else if(htr == TextViewer::TEXT_AREA_CONTENT_RECTANGLE) {
 		// on a hyperlink?
@@ -908,7 +945,7 @@ bool DefaultMouseInputStrategy::showCursor(const NativePoint& position) {
 void DefaultMouseInputStrategy::timeElapsed(Timer& timer) {
 	if((state_ & SELECTION_EXTENDING_MASK) == SELECTION_EXTENDING_MASK) {	// scroll automatically during extending the selection
 		const shared_ptr<TextViewport> viewport(viewer_->textRenderer().viewport());
-		const NativePoint p(viewer_->mapFromGlobal(Cursor::position()));
+		const NativePoint p(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
 		const NativeRectangle contentRectangle(viewer_->textAreaContentRectangle());
 		NativeSize scrollUnits(geometry::make<NativeSize>(
 			inlineProgressionScrollOffsetInPixels(*viewport, 1),
@@ -932,7 +969,7 @@ void DefaultMouseInputStrategy::timeElapsed(Timer& timer) {
 	} else if(state_ == AUTO_SCROLL_DRAGGING || state_ == AUTO_SCROLL) {
 		const shared_ptr<TextViewport> viewport(viewer_->textRenderer().viewport());
 		timer.stop();
-		const NativePoint p(viewer_->mapFromGlobal(Cursor::position()));
+		const NativePoint p(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
 		NativeSize scrollUnits(geometry::make<NativeSize>(
 			inlineProgressionScrollOffsetInPixels(*viewport, 1),
 			viewer_->textRenderer().defaultFont()->metrics().linePitch()));

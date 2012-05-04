@@ -14,26 +14,52 @@
 #include <ascension/viewer/caret-shaper.hpp>
 #include <ascension/viewer/viewer-observers.hpp>
 #include <ascension/viewer/visual-point.hpp>
-#ifdef ASCENSION_COMPILER_GCC
-#	include <unknwn.h>	// IUnknown, OLESTR, ...
-#endif // ASCENSION_COMPILER_GCC
-#include <objidl.h>		// IDataObject
+#include <ascension/viewer/widgetapi/drag-and-drop.hpp>
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#	include <ascension/win32/com/smart-pointer.hpp>	// win32.com.SmartPointer
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32
 
 namespace ascension {
 
 	namespace viewers {
 
 		namespace utils {
-			HRESULT createTextObjectForSelectedString(const Caret& caret, bool rtf, IDataObject*& content);
-			std::pair<HRESULT, String> getTextFromDataObject(IDataObject& data, bool* rectangle = nullptr);
+			/**
+			 * Creates an MIME data object represents the selected content.
+			 * @param caret The caret gives the selection
+			 * @param rtf Set @c true if the content is available as Rich Text Format. This feature
+			 *            is not implemented yet and the parameter is ignored
+			 * @return The MIME data object
+			 */
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+			win32::com::SmartPointer<widgetapi::NativeMimeData>
+#else
+			std::unique_ptr<widgetapi::NativeMimeData>
+#endif
+				createMimeDataForSelectedString(const Caret& caret, bool rtf);
+			/**
+			 * Returns the text content from the given MIME data.
+			 * @param data The MIME data
+			 * @return A pair of the following values:
+			 * @retval first The text string
+			 * @retval second @c true if the content is rectangle
+			 * @throw std#bad_alloc
+			 */
+			std::pair<String, bool> getTextFromMimeData(const widgetapi::NativeMimeData& data);
 		}
 
 		class VirtualBox;
 
 		/// Clipboard Win32 API was failed.
-		class ClipboardException : public std::runtime_error {
+		class ClipboardException : public std::system_error {
 		public:
-			explicit ClipboardException(HRESULT hr);
+#ifdef ASCENSION_OS_WINDOWS
+			typedef HRESULT NativeErrorCode;
+#else
+			typedef void NativeErrorCode;
+#endif
+		public:
+			explicit ClipboardException(NativeErrorCode);
 		};
 	}
 
