@@ -241,12 +241,16 @@
 #define ASCENSION_NO_TEXT_OBJECT_MODEL
 
 /**
- * @def ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT
- * Clipboard format for rectangle text. This effects only on Win32 platform.
+ * @def ASCENSION_RECTANGLE_TEXT_MIME_FORMAT
+ * MIME data format for rectangle text.
  */
-#ifndef ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT
-#	define ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT L"MSDEVColumnSelect"
-#endif	// !ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT
+#ifndef ASCENSION_RECTANGLE_TEXT_MIME_FORMAT
+#	ifdef _WIN32
+#		define ASCENSION_RECTANGLE_TEXT_MIME_FORMAT L"MSDEVColumnSelect"
+#	else
+#		define ASCENSION_RECTANGLE_TEXT_MIME_FORMAT "text/x-ascension-rectangle"
+#	endif
+#endif	// !ASCENSION_RECTANGLE_TEXT_MIME_FORMAT
 
 #ifdef ASCENSION_NO_REGEX
 #	ifndef ASCENSION_NO_MIGEMO

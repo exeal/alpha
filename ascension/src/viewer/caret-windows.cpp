@@ -27,6 +27,37 @@ using namespace std;
 
 namespace {
 #pragma comment(lib, "urlmon.lib")
+
+	// managed (but ugly) STGMEDIUM
+	struct GlobalStgMedium : public STGMEDIUM {
+		GlobalStgMedium() /*noexcept*/ {
+			tymed = TYMED_NULL;
+			pUnkForRelease = nullptr;
+		}
+		explicit GlobalStgMedium(size_t nbytes, UINT flags = GHND | GMEM_SHARE) {
+			tymed = TYMED_HGLOBAL;
+			if(0 == (hGlobal = ::GlobalAlloc(flags, nbytes)))
+				throw makePlatformError();
+		}
+		~GlobalStgMedium() /*noexcept*/ {
+			if(lockedBuffer_ != nullptr)
+				::GlobalUnlock(hGlobal);
+			::ReleaseStgMedium(this);
+		}
+		void* lock() {
+			assert(tymed == TYMED_HGLOBAL && hGlobal != nullptr);
+			if(lockedBuffer_ != nullptr)
+				lockedBuffer_ = static_cast<char*>(::GlobalLock(hGlobal));
+			if(lockedBuffer_ == nullptr)
+				throw makePlatformError();
+			return lockedBuffer();
+		}
+		void* lockedBuffer() /*noexcept*/ {return lockedBuffer_;}
+		const void* lockedBuffer() const /*noexcept*/ {return lockedBuffer_;}
+	private:
+		char* lockedBuffer_;
+	};
+
 	// IDataObject implementation for OLE image drag-and-drop. Caret.createTextObject returns this
 	// object as a result.
 	//
@@ -44,7 +75,7 @@ namespace {
 	//   (http://www.microsoft.com/japan/msdn/windows/windows2000/ddhelp_pt2.aspx)
 	// ...but these documents have many bugs. Well, there is no interface named "IDropSourceHelper".
 	class GenericDataObject : public win32::com::IUnknownImpl<
-		typelist::Cat<ASCENSION_WIN32_COM_INTERFACE_SIGNATURE(IDataObject)>, win32::com::NoReferenceCounting> {
+		ASCENSION_WIN32_COM_INTERFACE(IDataObject), win32::com::NoReferenceCounting> {
 	public:
 		virtual ~GenericDataObject() throw();
 		// IDataObject
@@ -198,20 +229,8 @@ namespace {
 	}
 } // namespace @0
 
-/**
- * Creates an @c IDataObject represents the selected content.
- * @param caret The caret gives the selection
- * @param rtf Set @c true if the content is available as Rich Text Format. This feature is not
- *            implemented yet and the parameter is ignored
- * @param[out] content The data object
- * @retval S_OK Succeeded
- * @retval E_OUTOFMEMORY Failed to allocate memory for @a content
- */
-HRESULT utils::createTextObjectForSelectedString(const Caret& caret, bool rtf, IDataObject*& content) {
-	GenericDataObject* o = new(nothrow) GenericDataObject();
-	if(o == nullptr)
-		return E_OUTOFMEMORY;
-	o->AddRef();
+win32::com::SmartPointer<widgetapi::NativeMimeData> utils::createMimeDataForSelectedString(const Caret& caret, bool rtf) {
+	win32::com::SmartPointer<GenericDataObject, &IID_IDataObject> content(new GenericDataObject());
 
 	// get text on the given region
 	const String text(selectedString(caret, NLF_CR_LF));
@@ -222,65 +241,45 @@ HRESULT utils::createTextObjectForSelectedString(const Caret& caret, bool rtf, I
 	format.dwAspect = DVASPECT_CONTENT;
 	format.lindex = -1;
 	format.tymed = TYMED_HGLOBAL;
-	STGMEDIUM medium;
-	medium.tymed = TYMED_HGLOBAL;
-	medium.pUnkForRelease = nullptr;
 
 	// Unicode text format
-	format.cfFormat = CF_UNICODETEXT;
-	medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(Char) * (text.length() + 1));
-	if(medium.hGlobal == nullptr) {
-		o->Release();
-		return E_OUTOFMEMORY;
-	}
-	wcscpy(static_cast<wchar_t*>(::GlobalLock(medium.hGlobal)), text.c_str());
-	::GlobalUnlock(medium.hGlobal);
-	HRESULT hr = o->SetData(&format, &medium, false);
+	{
+		format.cfFormat = CF_UNICODETEXT;
+		GlobalStgMedium unicodeData(sizeof(Char) * (text.length() + 1));
+		wcscpy(static_cast<wchar_t*>(unicodeData.lock()), text.c_str());
+		HRESULT hr = content->SetData(&format, &unicodeData, false);
 
-	// rectangle text format
-	if(caret.isSelectionRectangle()) {
-		if(0 != (format.cfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT))))
-			hr = o->SetData(&format, &medium, false);
+		// rectangle text format
+		if(caret.isSelectionRectangle()) {
+			if(0 != (format.cfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_MIME_FORMAT))))
+				hr = content->SetData(&format, &unicodeData, false);
+		}
 	}
-
-	::GlobalFree(medium.hGlobal);
 
 	// ANSI text format and locale
-	hr = S_OK;
 	UINT codePage = CP_ACP;
 	wchar_t codePageString[6];
 	if(0 != ::GetLocaleInfoW(caret.clipboardLocale(), LOCALE_IDEFAULTANSICODEPAGE, codePageString, ASCENSION_COUNTOF(codePageString))) {
 		wchar_t* eob;
 		codePage = wcstoul(codePageString, &eob, 10);
-		format.cfFormat = CF_TEXT;
-		if(int ansiLength = ::WideCharToMultiByte(codePage, 0, text.c_str(), static_cast<int>(text.length()), nullptr, 0, nullptr, nullptr)) {
-			unique_ptr<char[]> ansiBuffer(new(nothrow) char[ansiLength]);
-			if(ansiBuffer.get() != nullptr) {
-				ansiLength = ::WideCharToMultiByte(codePage, 0,
-					text.data(), static_cast<int>(text.length()), ansiBuffer.get(), ansiLength, nullptr, nullptr);
-				if(ansiLength != 0) {
-					if(nullptr != (medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(char) * (ansiLength + 1)))) {
-						if(char* const temp = static_cast<char*>(::GlobalLock(medium.hGlobal))) {
-							memcpy(temp, ansiBuffer.get(), sizeof(char) * ansiLength);
-							temp[ansiLength] = 0;
-							::GlobalUnlock(medium.hGlobal);
-							hr = o->SetData(&format, &medium, false);
-						} else
-							hr = E_FAIL;
-						::GlobalFree(medium.hGlobal);
-						if(SUCCEEDED(hr)) {
-							format.cfFormat = CF_LOCALE;
-							if(nullptr != (medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(LCID)))) {
-								if(LCID* const lcid = static_cast<LCID*>(::GlobalLock(medium.hGlobal))) {
-									*lcid = caret.clipboardLocale();
-									hr = o->SetData(&format, &medium, false);
-								}
-								::GlobalUnlock(medium.hGlobal);
-								::GlobalFree(medium.hGlobal);
-							}
-						}
-					}
-				}
+	}
+	format.cfFormat = CF_TEXT;
+	int nativeLength = ::WideCharToMultiByte(codePage, 0, text.c_str(), static_cast<int>(text.length()), nullptr, 0, nullptr, nullptr);
+	if(nativeLength != 0 || text.empty()) {
+		unique_ptr<char[]> nativeBuffer(new char[nativeLength]);
+		nativeLength = ::WideCharToMultiByte(codePage, 0,
+			text.data(), static_cast<int>(text.length()), nativeBuffer.get(), nativeLength, nullptr, nullptr);
+		if(nativeLength != 0 || text.empty()) {
+			GlobalStgMedium nativeData(sizeof(char) * (nativeLength + 1));
+			nativeData.lock();
+			memcpy(nativeData.lockedBuffer(), nativeBuffer.get(), sizeof(char) * nativeLength);
+			static_cast<char*>(nativeData.lockedBuffer())[nativeLength] = 0;
+			HRESULT hr = content->SetData(&format, &nativeData, false);
+			if(SUCCEEDED(hr)) {
+				format.cfFormat = CF_LOCALE;
+				GlobalStgMedium localeData(sizeof(LCID));
+				*static_cast<LCID*>(localeData.lock()) = caret.clipboardLocale();
+				hr = content->SetData(&format, &localeData, false);
 			}
 		}
 	}
@@ -291,28 +290,72 @@ HRESULT utils::createTextObjectForSelectedString(const Caret& caret, bool rtf, I
 		// TODO: implement the follow...
 	}
 
-	content = o;
-	return S_OK;
+	return win32::com::SmartPointer<IDataObject>(content);
 }
 
-/**
- * Returns the text content from the given data object.
- * @param data The data object
- * @param[out] rectangle @c true if the data is rectangle format. can be @c null
- * @return A pair of the result HRESULT and the text content. @c SCODE is one of @c S_OK,
- *         @c E_OUTOFMEMORY and @c DV_E_FORMATETC
- */
-pair<HRESULT, String> utils::getTextFromDataObject(IDataObject& data, bool* rectangle /* = nullptr */) {
-	pair<HRESULT, String> result;
+pair<String, bool> utils::getTextFromMimeData(const widgetapi::NativeMimeData& data) {
+	pair<String, bool> result;
 	FORMATETC fe = {CF_UNICODETEXT, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
 	STGMEDIUM stm = {TYMED_HGLOBAL, nullptr};
-	if(S_OK == (result.first = data.QueryGetData(&fe))) {	// the data suppports CF_UNICODETEXT ?
-		if(SUCCEEDED(result.first = data.GetData(&fe, &stm))) {
-			if(const Char* buffer = static_cast<Char*>(::GlobalLock(stm.hGlobal))) {
+	IDataObject& dataObject = const_cast<IDataObject&>(data);
+	HRESULT hr = dataObject.QueryGetData(&fe);
+	if(hr == S_OK) {	// the data suppports CF_UNICODETEXT ?
+		if(SUCCEEDED(hr = dataObject.GetData(&fe, &stm))) {
+			if(const Char* const buffer = static_cast<Char*>(::GlobalLock(stm.hGlobal))) {
 				try {
-					result.second = String(buffer);
+					result.first = String(buffer);
 				} catch(...) {
-					result.first = E_OUTOFMEMORY;
+					::GlobalUnlock(stm.hGlobal);
+					::ReleaseStgMedium(&stm);
+					throw;
+				}
+				::GlobalUnlock(stm.hGlobal);
+				::ReleaseStgMedium(&stm);
+			} else
+				hr = E_FAIL;
+		}
+	}
+
+	if(FAILED(hr)) {
+		fe.cfFormat = CF_TEXT;
+		if(S_OK == (hr = dataObject.QueryGetData(&fe))	// the data supports CF_TEXT ?
+				&& SUCCEEDED(hr = dataObject.GetData(&fe, &stm))) {
+			if(const char* const nativeBuffer = static_cast<char*>(::GlobalLock(stm.hGlobal))) {
+				// determine the encoding of the content of the clipboard
+				UINT codePage = ::GetACP();
+				fe.cfFormat = CF_LOCALE;
+				if(S_OK == (hr = dataObject.QueryGetData(&fe))) {
+					STGMEDIUM locale = {TYMED_HGLOBAL, nullptr};
+					if(S_OK == (hr = dataObject.GetData(&fe, &locale))) {
+						wchar_t buffer[6];
+						if(0 != ::GetLocaleInfoW(*static_cast<USHORT*>(::GlobalLock(locale.hGlobal)),
+								LOCALE_IDEFAULTANSICODEPAGE, buffer, ASCENSION_COUNTOF(buffer))) {
+							wchar_t* eob;
+							codePage = wcstoul(buffer, &eob, 10);
+						}
+					}
+					::ReleaseStgMedium(&locale);
+				}
+				// convert ANSI text into Unicode by the code page
+				const Index nativeLength = min<Index>(
+					strlen(nativeBuffer), ::GlobalSize(stm.hGlobal) / sizeof(char)) + 1;
+				if(nativeLength != 0) {
+					const Index ucsLength = ::MultiByteToWideChar(
+						codePage, MB_PRECOMPOSED, nativeBuffer, static_cast<int>(nativeLength), nullptr, 0);
+					try {
+						if(ucsLength == 0)
+							throw makePlatformError();
+						unique_ptr<WCHAR[]> ucsBuffer(new WCHAR[ucsLength]);
+						if(0 != ::MultiByteToWideChar(codePage, MB_PRECOMPOSED,
+								nativeBuffer, static_cast<int>(nativeLength), ucsBuffer.get(), static_cast<int>(ucsLength)))
+							result.first = String(ucsBuffer.get(), ucsLength - 1);
+						else
+							throw makePlatformError();
+					} catch(...) {
+						::GlobalUnlock(stm.hGlobal);
+						::ReleaseStgMedium(&stm);
+						throw;
+					}
 				}
 				::GlobalUnlock(stm.hGlobal);
 				::ReleaseStgMedium(&stm);
@@ -320,57 +363,10 @@ pair<HRESULT, String> utils::getTextFromDataObject(IDataObject& data, bool* rect
 		}
 	}
 
-	if(FAILED(result.first)) {
-		fe.cfFormat = CF_TEXT;
-		if(S_OK == (result.first = data.QueryGetData(&fe))) {	// the data supports CF_TEXT ?
-			if(SUCCEEDED(result.first = data.GetData(&fe, &stm))) {
-				if(const char* nativeBuffer = static_cast<char*>(::GlobalLock(stm.hGlobal))) {
-					// determine the encoding of the content of the clipboard
-					UINT codePage = ::GetACP();
-					fe.cfFormat = CF_LOCALE;
-					if(S_OK == (result.first = data.QueryGetData(&fe))) {
-						STGMEDIUM locale = {TYMED_HGLOBAL, nullptr};
-						if(S_OK == (result.first = data.GetData(&fe, &locale))) {
-							wchar_t buffer[6];
-							if(0 != ::GetLocaleInfoW(*static_cast<USHORT*>(::GlobalLock(locale.hGlobal)),
-									LOCALE_IDEFAULTANSICODEPAGE, buffer, ASCENSION_COUNTOF(buffer))) {
-								wchar_t* eob;
-								codePage = wcstoul(buffer, &eob, 10);
-							}
-						}
-						::ReleaseStgMedium(&locale);
-					}
-					// convert ANSI text into Unicode by the code page
-					const Index nativeLength = min<Index>(
-						strlen(nativeBuffer), ::GlobalSize(stm.hGlobal) / sizeof(char)) + 1;
-					const Index ucsLength = ::MultiByteToWideChar(
-						codePage, MB_PRECOMPOSED, nativeBuffer, static_cast<int>(nativeLength), nullptr, 0);
-					if(ucsLength != 0) {
-						unique_ptr<wchar_t[]> ucsBuffer(new(nothrow) wchar_t[ucsLength]);
-						if(ucsBuffer.get() != nullptr) {
-							if(0 != ::MultiByteToWideChar(codePage, MB_PRECOMPOSED,
-									nativeBuffer, static_cast<int>(nativeLength), ucsBuffer.get(), static_cast<int>(ucsLength))) {
-								try {
-									result.second = String(ucsBuffer.get(), ucsLength - 1);
-								} catch(...) {
-									result.first = E_OUTOFMEMORY;
-								}
-							}
-						}
-					}
-					::GlobalUnlock(stm.hGlobal);
-					::ReleaseStgMedium(&stm);
-				}
-			}
-		}
-	}
-
-	if(FAILED(result.first))
-		result.first = DV_E_FORMATETC;
-	if(SUCCEEDED(result.first) && rectangle != nullptr) {
-		fe.cfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT));
-		*rectangle = fe.cfFormat != 0 && data.QueryGetData(&fe) == S_OK;
-	}
+	if(FAILED(hr))
+		throw ClipboardException(DV_E_FORMATETC);
+	fe.cfFormat = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_MIME_FORMAT));
+	result.second = fe.cfFormat != 0 && dataObject.QueryGetData(&fe) == S_OK;
 
 	return result;
 }
@@ -378,13 +374,7 @@ pair<HRESULT, String> utils::getTextFromDataObject(IDataObject& data, bool* rect
 
 // ClipboardException /////////////////////////////////////////////////////////////////////////////
 
-ClipboardException::ClipboardException(HRESULT hr) : runtime_error("") {
-	void* buffer = nullptr;
-	::FormatMessageA(
-		FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-		nullptr, hr, 0, reinterpret_cast<char*>(&buffer), 0, nullptr);
-	runtime_error(static_cast<char*>(buffer));
-	::LocalFree(buffer);
+ClipboardException::ClipboardException(HRESULT hr) : system_error(makePlatformError(hr)) {
 }
 
 
@@ -397,7 +387,7 @@ void Caret::abortInput() {
 
 /// Moves the IME form to valid position.
 void Caret::adjustInputMethodCompositionWindow() {
-	assert(win32::boole(::IsWindow(textViewer().identifier().get())));
+	assert(win32::boole(::IsWindow(textViewer().handle().get())));
 	if(!context_.inputMethodCompositionActivated)
 		return;
 	if(win32::Handle<HIMC> imc = inputMethod(textViewer())) {
@@ -431,7 +421,7 @@ void Caret::adjustInputMethodCompositionWindow() {
  */
 bool Caret::canPaste(bool useKillRing) const {
 	if(!useKillRing) {
-		const UINT rectangleClipFormat = ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_CLIP_FORMAT);
+		const UINT rectangleClipFormat = ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_MIME_FORMAT);
 		if(rectangleClipFormat != 0 && win32::boole(::IsClipboardFormatAvailable(rectangleClipFormat)))
 			return true;
 		else if(win32::boole(::IsClipboardFormatAvailable(CF_UNICODETEXT)) || win32::boole(::IsClipboardFormatAvailable(CF_TEXT)))
@@ -648,20 +638,15 @@ LRESULT Caret::onImeRequest(WPARAM command, LPARAM lp, bool& consumed) {
 void Caret::paste(bool useKillRing) {
 	AutoFreeze af(&textViewer());
 	if(!useKillRing) {
-		win32::com::ComPtr<IDataObject> content;
+		win32::com::SmartPointer<IDataObject> content;
 		HRESULT hr = tryOleClipboard(::OleGetClipboard, content.initialize());
 		if(hr == E_OUTOFMEMORY)
 			throw bad_alloc("::OleGetClipboard returned E_OUTOFMEMORY.");
 		else if(FAILED(hr))
 			throw ClipboardException(hr);
-		bool rectangle;
-		const pair<HRESULT, String> text(utils::getTextFromDataObject(*content, &rectangle));
-		if(text.first == E_OUTOFMEMORY)
-			throw bad_alloc("ascension.viewers.utils.getTextFromDataObject returned E_OUTOFMEMORY.");
-		else if(FAILED(text.first))
-			throw ClipboardException(text.first);
+		const pair<String, bool> text(utils::getTextFromMimeData(*content));	// this may throw several exceptions
 		document().insertUndoBoundary();
-		replaceSelection(text.second, rectangle);
+		replaceSelection(text.first, text.second);
 	} else {
 		texteditor::Session* const session = document().session();
 		if(session == nullptr || session->killRing().numberOfKills() == 0)
@@ -717,17 +702,12 @@ void viewers::copySelection(Caret& caret, bool useKillRing) {
 	if(isSelectionEmpty(caret))
 		return;
 
-	IDataObject* content;
-	HRESULT hr = utils::createTextObjectForSelectedString(caret, true, content);
-	if(hr == E_OUTOFMEMORY)
-		throw bad_alloc("Caret.createTextObject returned E_OUTOFMEMORY.");
-	hr = tryOleClipboard(::OleSetClipboard, content);
-	if(FAILED(hr)) {
-		content->Release();
+	win32::com::SmartPointer<widgetapi::NativeMimeData> content(
+		utils::createMimeDataForSelectedString(caret, true));	// this may throw std.bad_alloc
+	HRESULT hr = tryOleClipboard(::OleSetClipboard, content);
+	if(FAILED(hr))
 		throw ClipboardException(hr);
-	}
 	hr = tryOleClipboard(::OleFlushClipboard);
-	content->Release();
 	if(useKillRing) {
 		if(texteditor::Session* const session = caret.document().session())
 			session->killRing().addNew(selectedString(caret, NLF_RAW_VALUE), caret.isSelectionRectangle());
@@ -747,7 +727,7 @@ void viewers::cutSelection(Caret& caret, bool useKillRing) {
 	if(isSelectionEmpty(caret))
 		return;
 
-	win32::com::ComPtr<IDataObject> previousContent;
+	win32::com::SmartPointer<IDataObject> previousContent;
 	HRESULT hr = tryOleClipboard(::OleGetClipboard, previousContent.initialize());
 	if(hr == E_OUTOFMEMORY)
 		throw bad_alloc("::OleGetClipboard returned E_OUTOFMEMORY.");

@@ -458,8 +458,8 @@ namespace ascension {
 			// input state
 			unsigned long mouseInputDisabledCount_;
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-			win32::com::ComPtr<IDropTargetHelper> dropTargetHelper_;
-			win32::com::ComPtr<IDataObject> draggingData_;
+			win32::com::SmartPointer<IDropTargetHelper> dropTargetHelper_;
+			win32::com::SmartPointer<IDataObject> draggingData_;
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 
 			friend class VisualPoint;

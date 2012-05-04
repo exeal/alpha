@@ -139,14 +139,14 @@ namespace {
  */
 class TextViewer::AccessibleProxy :
 		public k::DocumentListener,
-		public win32::com::ole::IDispatchImpl<
+		public win32::com::IDispatchImpl<
 			win32::com::IUnknownImpl<
 				typelist::Cat<ASCENSION_WIN32_COM_INTERFACE(IAccessible),
 				typelist::Cat<ASCENSION_WIN32_COM_INTERFACE(IDispatch),
 				typelist::Cat<ASCENSION_WIN32_COM_INTERFACE(IOleWindow)>>>,
 				win32::com::NoReferenceCounting
 			>,
-			win32::com::ole::TypeInformationFromRegistry<&LIBID_Accessibility, &IID_IAccessible>
+			win32::com::TypeInformationFromRegistry<&LIBID_Accessibility, &IID_IAccessible>
 		> {
 	// references about implementation of IAccessible:
 	//   MSAA サーバーを実装する - 開発者のための実用的助言と、 Mozilla による MSAA サーバーの実装方法
@@ -195,7 +195,7 @@ private:
 private:
 	TextViewer& viewer_;
 	bool available_;
-	win32::com::ComPtr<IAccessible> defaultServer_;
+	win32::com::SmartPointer<IAccessible> defaultServer_;
 //	enum {CHILDID_SELECTION = 1};
 };
 
@@ -586,7 +586,7 @@ STDMETHODIMP TextViewer::DragEnter(IDataObject* data, DWORD keyState, POINTL loc
 #ifdef _DEBUG
 	{
 		win32::DumpContext dout;
-		win32::com::ComPtr<IEnumFORMATETC> formats;
+		win32::com::SmartPointer<IEnumFORMATETC> formats;
 		if(SUCCEEDED(hr = data->EnumFormatEtc(DATADIR_GET, formats.initialize()))) {
 			FORMATETC format;
 			ULONG fetched;
@@ -739,7 +739,7 @@ void TextViewer::initialize(const TextViewer* other) {
 	}
 
 	::RegisterDragDrop(handle().get(), this);
-	dropTargetHelper_ = win32::com::ComPtr<IDropTargetHelper>(CLSID_DragDropHelper, IID_IDropTargetHelper, CLSCTX_INPROC_SERVER);
+	dropTargetHelper_ = win32::com::SmartPointer<IDropTargetHelper>::create(CLSID_DragDropHelper, IID_IDropTargetHelper, CLSCTX_INPROC_SERVER);
 	setMouseInputStrategy(shared_ptr<MouseInputStrategy>());
 
 #ifdef ASCENSION_TEST_TEXT_STYLES
@@ -1356,7 +1356,7 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		case WM_GETOBJECT:
 			if(lp == OBJID_CLIENT) {
-				win32::com::ComPtr<IAccessible> acc;
+				win32::com::SmartPointer<IAccessible> acc;
 				if(SUCCEEDED(accessibleObject(*acc.initialize())) && accLib.isAvailable())
 					return accLib.lresultFromObject(IID_IAccessible, wp, acc.get());
 			} else if(lp == OBJID_WINDOW) {
