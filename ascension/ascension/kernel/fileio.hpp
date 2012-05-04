@@ -49,12 +49,11 @@ namespace ascension {
 				bool unicodeByteOrderMark;
 			};
 
-			class IOException : public PlatformDependentError<std::ios_base::failure> {
+			class IOException : public std::ios_base::failure {
 			public:
 				explicit IOException(const PathString& fileName);
-				IOException(const PathString& fileName, value_type code);
+				IOException(const PathString& fileName, const std::error_code& code);
 				~IOException() throw();
-				value_type code() const /*throw()*/;
 				const PathString& fileName() const /*throw()*/;
 			public:
 				static bool isFileNotFound(const IOException& e);

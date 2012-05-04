@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <sstream>	// std.ostringstream
 #include <string>	// std.string
+#include <system_error>
 #if defined(ASCENSION_OS_WINDOWS)
 #	include <ascension/win32/windows.hpp>	// DWORD, GetLastError
 #elif defined(ASCENSION_OS_POSIX)
@@ -64,6 +65,26 @@ namespace ascension {
 		explicit UnknownValueException(const std::string& message) : invalid_argument(message) {}
 	};
 
+#if defined(ASCENSION_OS_WINDOWS)
+	inline std::system_error makePlatformError(DWORD code = ::GetLastError()) {
+		std::string message;
+		void* buffer;
+		if(0 == ::FormatMessageA(
+				FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+				0, code, LANG_USER_DEFAULT, reinterpret_cast<char*>(&buffer), 0, nullptr)) {
+			message.assign(static_cast<char*>(buffer));
+			::LocalFree(buffer);
+		}
+		return std::system_error(std::error_code(code, std::system_category()), message);
+	}
+#elif defined(ASCENSION_OS_POSIX)
+	inline std::system_error makePlatformError(int code = errno) {
+		const char* const s = std::strerror(code);
+		return std::system_error(std::error_code(code, std::system_category()), std::string((s != nullptr) ? s : ""));
+	}
+#endif
+
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	/**
 	 * An error whose detail can be identified by an integer (ex. POSIX @c errno, Win32
 	 * @c GetLastError, ...
@@ -120,6 +141,7 @@ namespace ascension {
 		std::string message_;
 	};
 #endif
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 	namespace detail {
 		/// @internal
