@@ -356,7 +356,7 @@ namespace ascension {
 			void mouseReleased(const widgetapi::MouseButtonInput& input);
 			void mouseWheelChanged(const widgetapi::MouseWheelInput& input);
 			void paint(graphics::PaintContext& context);
-			void resized(State state, const graphics::NativeSize& newSize);
+			void resized(widgetapi::State state, const graphics::NativeSize& newSize);
 			void showContextMenu(const widgetapi::LocatedUserInput& input, bool byKeyboard);
 
 			// internal classes
@@ -460,7 +460,9 @@ namespace ascension {
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 			win32::com::SmartPointer<IDropTargetHelper> dropTargetHelper_;
 			win32::com::SmartPointer<IDataObject> draggingData_;
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#else
+			const NativeMimeData* draggingData_;
+#endif
 
 			friend class VisualPoint;
 			friend class VirtualBox;

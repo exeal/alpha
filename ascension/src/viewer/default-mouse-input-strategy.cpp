@@ -273,21 +273,20 @@ void DefaultMouseInputStrategy::beginDragAndDrop() {
 
 	// setup drag-image
 	if(dnd_.dragSourceHelper.get() != nullptr) {
-		SHDRAGIMAGE image;
-		if(SUCCEEDED(hr = createSelectionImage(*viewer_, dragApproachedPosition_, true, image))) {
-			if(FAILED(hr = dnd_.dragSourceHelper->InitializeFromBitmap(&image, draggingContent.get())))
-				::DeleteObject(image.hbmpDragImage);
-		}
+		boost::optional<SHDRAGIMAGE> image(createSelectionImage(*viewer_, dragApproachedPosition_, true));
+		if(image != boost::none && FAILED(hr = dnd_.dragSourceHelper->InitializeFromBitmap(&image.get(), draggingContent.get())))
+			::DeleteObject(image->hbmpDragImage);
 	}
 
 	// operation
 	state_ = DND_SOURCE;
-	DWORD effectOwn;	// dummy
-	hr = ::DoDragDrop(draggingContent.get(), this, DROPEFFECT_COPY | DROPEFFECT_MOVE | DROPEFFECT_SCROLL, &effectOwn);
+	DWORD possibleEffects = DROPEFFECT_COPY | DROPEFFECT_SCROLL, resultEffect;
+	if(!viewer_->document().isReadOnly())
+		possibleEffects |= DROPEFFECT_MOVE;
+	hr = ::DoDragDrop(draggingContent.get(), this, possibleEffects, &resultEffect);
 	state_ = NONE;
 	if(widgetapi::isVisible(*viewer_))
 		widgetapi::setFocus(*viewer_);
-	return hr;
 }
 
 /// @see MouseInputStrategy#captureChanged
