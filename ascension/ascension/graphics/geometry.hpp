@@ -66,12 +66,14 @@ namespace ascension {
 			}
 
 			template<> struct Coordinate<POINT> {typedef LONG Type;};
+			template<> struct Coordinate<POINTL> {typedef SHORT Type;};
 			template<> struct Coordinate<POINTS> {typedef SHORT Type;};
 			template<> struct Coordinate<SIZE> {typedef LONG Type;};
 			template<> struct Coordinate<RECT> {typedef POINT Type;};
 			template<> struct Coordinate<RECTL> {typedef POINT Type;};
 			template<> struct Coordinate<SMALL_RECT> {typedef POINTS Type;};
 			template<> struct Tag<POINT> {typedef PointTag Type;};
+			template<> struct Tag<POINTL> {typedef PointTag Type;};
 			template<> struct Tag<POINTS> {typedef PointTag Type;};
 			template<> struct Tag<SIZE> {typedef SizeTag Type;};
 			template<> struct Tag<RECT> {typedef RectangleTag Type;};

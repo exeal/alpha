@@ -60,7 +60,7 @@ namespace ascension {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 			identifier_ = ::SetTimer(nullptr, 0, milliseconds, &function);
 			if(identifier_ == 0)
-				throw PlatformDependentError<>();
+				throw makePlatformError();
 #endif
 		}
 		void stop();

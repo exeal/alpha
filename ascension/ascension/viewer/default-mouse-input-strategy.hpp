@@ -23,6 +23,7 @@
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#	include <ascension/win32/com/smart-pointer.hpp>
 #	include <ascension/win32/com/unknown-impl.hpp>
 #	include <shlobj.h>	// IDragSourceHelper
 #endif
@@ -119,7 +120,7 @@ namespace ascension {
 			struct DragAndDrop {
 				Index numberOfRectangleLines;
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-				win32::com::ComPtr<IDragSourceHelper> dragSourceHelper;
+				win32::com::SmartPointer<IDragSourceHelper> dragSourceHelper;
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 			} dnd_;
 			std::unique_ptr<widgetapi::NativeWidget> autoScrollOriginMark_;

@@ -106,7 +106,7 @@ namespace ascension {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 				public win32::CustomControl,
 				public win32::com::IUnknownImpl<
-					ASCENSION_WIN32_COM_INTERFACE(IDropSource), win32::com::NoReferenceCounting
+					ASCENSION_WIN32_COM_INTERFACE(IDropTarget), win32::com::NoReferenceCounting
 				>,
 #endif
 				public kernel::DocumentListener, public kernel::DocumentRollbackListener,
@@ -181,7 +181,7 @@ namespace ascension {
 			};
 
 			// constructors
-			explicit TextViewer(presentation::Presentation& presentation, widgetapi::NativeWidget* parent = nullptr);
+			explicit TextViewer(presentation::Presentation& presentation);
 			TextViewer(const TextViewer& other);
 			virtual ~TextViewer();
 			// listeners and strategies
