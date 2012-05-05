@@ -491,8 +491,7 @@ namespace {
 
 // TextViewer /////////////////////////////////////////////////////////////////////////////////////
 
-TextViewer::TextViewer(Presentation& presentation, widgetapi::NativeWidget* parent /* = nullptr */)
-		: win32::CustomControl(parent), presentation_(presentation), tipText_(nullptr),
+TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation), tipText_(nullptr),
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		accessibleProxy_(nullptr),
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
@@ -608,7 +607,8 @@ STDMETHODIMP TextViewer::DragEnter(IDataObject* data, DWORD keyState, POINTL loc
 		if(const shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
 			try {
 				dropTarget->dragEntered(widgetapi::DragEnterInput(
-					makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, location)), translateDropActions(*effect)));
+					makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, location)),
+					translateDropActions(*effect), *data));
 			} catch(const bad_alloc&) {
 				return E_OUTOFMEMORY;
 			} catch(...) {
@@ -649,7 +649,8 @@ STDMETHODIMP TextViewer::DragOver(DWORD keyState, POINTL location, DWORD* effect
 		if(const shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
 			try {
 				dropTarget->dragMoved(widgetapi::DragMoveInput(
-					makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, location)), translateDropActions(*effect)));
+					makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, location)),
+					translateDropActions(*effect), *data));
 			} catch(const bad_alloc&) {
 				return E_OUTOFMEMORY;
 			} catch(...) {
@@ -688,7 +689,8 @@ STDMETHODIMP TextViewer::Drop(IDataObject* data, DWORD keyState, POINTL location
 		if(const shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
 			try {
 				dropTarget->dropped(widgetapi::DropInput(
-					makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, location)), translateDropActions(*effect)));
+					makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, location)),
+					translateDropActions(*effect), *data));
 			} catch(const bad_alloc&) {
 				hr = E_OUTOFMEMORY;
 			} catch(...) {
@@ -1512,10 +1514,10 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 			return (consumed = true), mouseReleased(makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::UserInput::BUTTON4_DOWN : widgetapi::UserInput::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
 	}
 
-	return win32::Window::processMessage(message, wp, lp, consumed);
+	return win32::CustomControl::processMessage(message, wp, lp, consumed);
 }
 
-void TextViewer::provideClassInformation(win32::Window::ClassInformation& classInformation) const {
+void TextViewer::provideClassInformation(win32::CustomControl::ClassInformation& classInformation) const {
 	classInformation.style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW | CS_DBLCLKS;
 	classInformation.background = COLOR_WINDOW;
 	classInformation.cursor = MAKEINTRESOURCEW(32513);	// IDC_IBEAM
@@ -1554,7 +1556,7 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, bool 
 	const k::Document& doc = document();
 	const bool hasSelection = !isSelectionEmpty(caret());
 	const bool readOnly = doc.isReadOnly();
-	const bool japanese = PRIMARYLANGID(userDefaultUILanguage()) == LANG_JAPANESE;
+	const bool japanese = PRIMARYLANGID(win32::userDefaultUILanguage()) == LANG_JAPANESE;
 
 	static win32::Handle<HMENU> toplevelPopup(::CreatePopupMenu(), &::DestroyMenu);
 	if(::GetMenuItemCount(toplevelPopup.get()) == 0) {	// first initialization
@@ -1765,10 +1767,10 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, bool 
 // DefaultMouseInputStrategy //////////////////////////////////////////////////////////////////////
 
 namespace {
-	HRESULT createSelectionImage(const TextViewer& viewer, const NativePoint& cursorPosition, bool highlightSelection, SHDRAGIMAGE& image) {
+	boost::optional<SHDRAGIMAGE> createSelectionImage(const TextViewer& viewer, const NativePoint& cursorPosition, bool highlightSelection) {
 		win32::Handle<HDC> dc(::CreateCompatibleDC(nullptr), &::DeleteDC);
 		if(dc.get() == nullptr)
-			return E_FAIL;
+			throw makePlatformError();	// MSDN does *not* says CreateCompatibleDC set the last error value, but...
 
 		win32::AutoZero<BITMAPV5HEADER> bh;
 		bh.bV5Size = sizeof(BITMAPV5HEADER);
@@ -1795,9 +1797,9 @@ namespace {
 		for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
 			selectionBounds.bottom += static_cast<LONG>(renderer.defaultFont()->metrics().linePitch() * renderer.layouts()[line].numberOfLines());
 			if(geometry::dy(selectionBounds) > geometry::dy(clientBounds))
-				return S_FALSE;	// overflow
+				return boost::none;	// overflow
 			const TextLayout& layout = renderer.layouts()[line];
-			const Scalar indent = font::lineIndent(renderer.layouts()[line], );
+			const Scalar indent = font::lineIndent(layout, renderer.viewport()->contentMeasure());
 			Range<Index> range;
 			for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
 				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range)) {
@@ -1809,7 +1811,7 @@ namespace {
 						min(geometry::left(sublineBounds) + indent, geometry::left(selectionBounds)),
 						max(geometry::right(sublineBounds) + indent, geometry::right(selectionBounds)));
 					if(geometry::dx(selectionBounds) > geometry::dx(clientBounds))
-						return S_FALSE;	// overflow
+						return boost::none;	// overflow
 				}
 			}
 		}
@@ -1819,13 +1821,17 @@ namespace {
 		// create a mask
 		win32::Handle<HBITMAP> mask(::CreateBitmap(bh.bV5Width, bh.bV5Height, 1, 1, 0), &::DeleteObject);	// monochrome
 		if(mask.get() == nullptr)
-			return E_FAIL;
+			throw makePlatformError();	// this must be ERROR_INVALID_BITMAP
 		HBITMAP oldBitmap = static_cast<HBITMAP>(::SelectObject(dc.get(), mask.get()));
-		dc.fillSolidRect(0, 0, bh.bV5Width, bh.bV5Height, RGB(0x00, 0x00, 0x00));
+		{
+			RECT temp;
+			::SetRect(&temp, 0, 0, bh.bV5Width, bh.bV5Height);
+			::FillRect(dc.get(), &temp, static_cast<HBRUSH>(::GetStockObject(BLACK_BRUSH)));
+		}
 		int y = 0;
 		for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
 			const TextLayout& layout = renderer.layouts()[line];
-			const int indent = renderer.lineIndent(line);
+			const int indent = font::lineIndent(layout, renderer.viewport()->contentMeasure());
 			Range<Index> range;
 			for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
 				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range)) {
@@ -1848,30 +1854,28 @@ namespace {
 			bi = static_cast<BITMAPINFO*>(::operator new(sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * 2));
 			memset(&bi->bmiHeader, 0, sizeof(BITMAPINFOHEADER));
 			bi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-			int r = ::GetDIBits(dc.get(), mask.get(), 0, bh.bV5Height, nullptr, bi, DIB_RGB_COLORS);
-			if(r == 0 || r == ERROR_INVALID_PARAMETER)
-				throw runtime_error("");
+			if(::GetDIBits(dc.get(), mask.get(), 0, bh.bV5Height, nullptr, bi, DIB_RGB_COLORS) == 0)
+				throw makePlatformError();	// this must be ERROR_INVALID_PARAMETER
 			assert(bi->bmiHeader.biBitCount == 1 && bi->bmiHeader.biClrUsed == 2);
 			maskBuffer.reset(new uint8_t[bi->bmiHeader.biSizeImage + sizeof(DWORD)]);
 			maskBits = maskBuffer.get() + sizeof(DWORD) - reinterpret_cast<ULONG_PTR>(maskBuffer.get()) % sizeof(DWORD);
-			r = ::GetDIBits(dc.get(), mask.get(), 0, bh.bV5Height, maskBits, bi, DIB_RGB_COLORS);
-			if(r == 0 || r == ERROR_INVALID_PARAMETER)
-				throw runtime_error("");
+			if(::GetDIBits(dc.get(), mask.get(), 0, bh.bV5Height, maskBits, bi, DIB_RGB_COLORS) == 0)
+				throw makePlatformError();	// this must be ERROR_INVALID_PARAMETER
 			if(bi->bmiColors[0].rgbRed == 0xff && bi->bmiColors[0].rgbGreen == 0xff && bi->bmiColors[0].rgbBlue == 0xff)
 				swap(alphaChunnels[0], alphaChunnels[1]);
 		} catch(const bad_alloc&) {
-			return E_OUTOFMEMORY;
-		} catch(const runtime_error&) {
+			throw;
+		} catch(const system_error&) {
 			::operator delete(bi);
-			return E_FAIL;
+			throw;
 		}
 		::operator delete(bi);
 
 		// create the result bitmap
 		void* bits;
-		win32::Handle<HBITMAP> bitmap(::CreateDIBSection(dc.get(), *reinterpret_cast<BITMAPINFO*>(&bh), DIB_RGB_COLORS, bits));
+		win32::Handle<HBITMAP> bitmap(::CreateDIBSection(dc.get(), reinterpret_cast<BITMAPINFO*>(&bh), DIB_RGB_COLORS, &bits, nullptr, 0));
 		if(bitmap.get() == nullptr)
-			return E_FAIL;
+			throw makePlatformError();	// this must be ERROR_INVALID_PARAMETER
 		// render the lines
 		oldBitmap = static_cast<HBITMAP>(::SelectObject(dc.get(), bitmap.get()));
 		NativeRectangle selectionExtent(selectionBounds);
@@ -1911,13 +1915,12 @@ namespace {
 		geometry::x(hotspot) -= geometry::left(viewer.textAreaContentRectangle()) - inlineProgressionScrollOffsetInPixels(*viewport, viewport->inlineProgressionOffset()) + geometry::left(selectionBounds);
 		geometry::y(hotspot) -= geometry::y(modelToView(*viewport, k::Position(selectedRegion.beginning().line, 0), true));
 
-		memset(&image, 0, sizeof(SHDRAGIMAGE));
+		SHDRAGIMAGE image;
 		image.sizeDragImage.cx = bh.bV5Width;
 		image.sizeDragImage.cy = bh.bV5Height;
 		image.ptOffset = hotspot;
 		image.hbmpDragImage = static_cast<HBITMAP>(bitmap.release());
 		image.crColorKey = CLR_NONE;
-
-		return S_OK;
+		return boost::make_optional(image);
 	}
 }

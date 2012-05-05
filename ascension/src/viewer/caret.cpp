@@ -357,7 +357,7 @@ void Caret::extendSelectionTo(const VisualDestinationProxy& to) {
 }
 
 inline void Caret::fireCaretMoved(const Region& oldRegion) {
-	if(!isTextViewerDisposed() && !textViewer().isFrozen() && (textViewer().hasFocus() /*|| completionWindow_->hasFocus()*/))
+	if(!isTextViewerDisposed() && !textViewer().isFrozen() && (widgetapi::hasFocus(textViewer()) /*|| widgetapi::hasFocus(*completionWindow_)*/))
 		updateLocation();
 	listeners_.notify<const Caret&, const Region&>(&CaretListener::caretMoved, *this, oldRegion);
 }
@@ -567,7 +567,7 @@ void Caret::replaceSelection(const StringPiece& text, bool rectangleInsertion /*
  */
 void Caret::resetVisualization() {
 	TextViewer& viewer = textViewer();
-	if(!viewer.hasFocus())
+	if(!widgetapi::hasFocus(viewer))
 		return;
 
 	unique_ptr<Image> image;
@@ -594,8 +594,8 @@ void Caret::resetVisualization() {
 
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 	::DestroyCaret();
-	::CreateCaret(viewer.identifier().get(), image->asNativeObject().get(), 0, 0);
-	::ShowCaret(viewer.identifier().get());
+	::CreateCaret(viewer.handle().get(), image->asNativeObject().get(), 0, 0);
+	::ShowCaret(viewer.handle().get());
 #endif
 
 	shapeCache_.image = move(image);
@@ -668,7 +668,7 @@ void Caret::update(const DocumentChange& change) {
  */
 void Caret::updateLocation() {
 	const TextViewer& viewer = textViewer();
-	if(!viewer.hasFocus() || viewer.isFrozen())
+	if(!widgetapi::hasFocus(viewer) || viewer.isFrozen())
 		return;
 
 	const shared_ptr<const font::TextViewport> viewport(viewer.textRenderer().viewport());
@@ -729,7 +729,7 @@ bool viewers::isPointOverSelection(const Caret& caret, const NativePoint& p) {
 		if(caret.isSelectionRectangle())
 			return caret.boxForRectangleSelection().includes(p);
 		if(caret.textViewer().hitTest(p) == TextViewer::TEXT_AREA_CONTENT_RECTANGLE) {	// ignore if on the margin
-			const NativeRectangle viewerBounds(caret.textViewer().bounds(false));
+			const NativeRectangle viewerBounds(widgetapi::bounds(caret.textViewer(), false));
 			if(geometry::x(p) <= geometry::right(viewerBounds) && geometry::y(p) <= geometry::bottom(viewerBounds)) {
 				const boost::optional<Position> pos(
 					viewToModelInBounds(*caret.textViewer().textRenderer().viewport(), p, font::TextLayout::TRAILING));

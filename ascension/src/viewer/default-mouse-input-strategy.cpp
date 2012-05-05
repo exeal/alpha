@@ -29,17 +29,20 @@ namespace k = ascension::kernel;
 // DefaultMouseInputStrategy //////////////////////////////////////////////////////////////////////
 
 namespace {
-	/// Circled window displayed at which the auto scroll started.
-	class AutoScrollOriginMark :
+	typedef
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-			public Gtk::Widget
+		Gtk::Widget
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
-			public QAbstractScrollArea
+		QWidget
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-			public NSView
+		NSView
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-			public win32::CustomControl
+		win32::CustomControl
 #endif
+		AutoScrollOriginMarkBase;
+
+	/// Circled window displayed at which the auto scroll started.
+	class AutoScrollOriginMark : public AutoScrollOriginMarkBase
 	{
 		ASCENSION_NONCOPYABLE_TAG(AutoScrollOriginMark);
 	public:
@@ -72,7 +75,7 @@ namespace {
  * Constructor.
  * @param viewer The text viewer. The widget becomes the child of this viewer
  */
-AutoScrollOriginMark::AutoScrollOriginMark(TextViewer& viewer) /*throw()*/ : Widget(&viewer) {
+AutoScrollOriginMark::AutoScrollOriginMark(TextViewer& viewer) /*throw()*/ {
 	// TODO: Set transparency on window system other than Win32.
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 	// calling CreateWindowExW with WS_EX_LAYERED will fail on NT 4.0
@@ -86,6 +89,7 @@ AutoScrollOriginMark::AutoScrollOriginMark(TextViewer& viewer) /*throw()*/ : Wid
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 	::SetLayeredWindowAttributes(handle().get(), ::GetSysColor(COLOR_WINDOW), 0, LWA_COLORKEY);
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
+	widgetapi::setParent(viewer);
 }
 
 /**
@@ -255,12 +259,11 @@ DefaultMouseInputStrategy::DefaultMouseInputStrategy() : viewer_(nullptr), state
 }
 
 void DefaultMouseInputStrategy::beginDragAndDrop() {
-	win32::com::ComPtr<IDataObject> draggingContent;
 	const Caret& caret = viewer_->caret();
 	HRESULT hr;
 
-	if(FAILED(hr = utils::createTextObjectForSelectedString(viewer_->caret(), true, *draggingContent.initialize())))
-		return hr;
+	win32::com::SmartPointer<IDataObject> draggingContent(
+		utils::createMimeDataForSelectedString(viewer_->caret(), true));
 	if(!caret.isSelectionRectangle())
 		dnd_.numberOfRectangleLines = 0;
 	else {
@@ -271,8 +274,7 @@ void DefaultMouseInputStrategy::beginDragAndDrop() {
 	// setup drag-image
 	if(dnd_.dragSourceHelper.get() != nullptr) {
 		SHDRAGIMAGE image;
-		if(SUCCEEDED(hr = createSelectionImage(*viewer_,
-				dragApproachedPosition_, dnd_.supportLevel >= SUPPORT_DND_WITH_SELECTED_DRAG_IMAGE, image))) {
+		if(SUCCEEDED(hr = createSelectionImage(*viewer_, dragApproachedPosition_, true, image))) {
 			if(FAILED(hr = dnd_.dragSourceHelper->InitializeFromBitmap(&image, draggingContent.get())))
 				::DeleteObject(image.hbmpDragImage);
 		}
@@ -306,7 +308,7 @@ namespace {
 			static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_MIME_FORMAT)), CF_UNICODETEXT, CF_TEXT
 		};
 		FORMATETC format = {0, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
-		for(size_t i = 0; i < onlyRectangle ? 1 : formats.size(); ++i) {
+		for(size_t i = 0; i < (onlyRectangle ? 1 : formats.size()); ++i) {
 			if((format.cfFormat = formats[i]) != 0) {
 				const HRESULT hr = const_cast<widgetapi::NativeMimeData&>(data).QueryGetData(&format);
 				if(hr == S_OK)
@@ -338,7 +340,7 @@ void DefaultMouseInputStrategy::dragEntered(widgetapi::DragEnterInput& input) {
 			if((anchor == TEXT_ANCHOR_START && readingDirection == RIGHT_TO_LEFT)
 					|| (anchor == TEXT_ANCHOR_END && readingDirection == LEFT_TO_RIGHT))
 				return input.ignore();	// TODO: support alignments other than ALIGN_LEFT.
-			pair<HRESULT, String> text(utils::getTextFromDataObject(*data));
+			pair<HRESULT, String> text(utils::getTextFromMimeData(input.mimeData()));
 			if(SUCCEEDED(text.first))
 				dnd_.numberOfRectangleLines = text::calculateNumberOfLines(text.second) - 1;
 		}
@@ -450,18 +452,17 @@ void DefaultMouseInputStrategy::dropped(widgetapi::DropInput& input) {
 		if((input.possibleActions() & widgetapi::DROP_ACTION_COPY) != 0) {
 			caret.moveTo(destination);
 
-			bool rectangle;
-			pair<HRESULT, String> content(utils::getTextFromDataObject(*data, &rectangle));
+			pair<String, bool> content(utils::getTextFromMimeData(input.mimeData()));
 			if(SUCCEEDED(content.first)) {
 				AutoFreeze af(viewer_);
 				bool failed = false;
 				try {
-					caret.replaceSelection(content.second, rectangle);
+					caret.replaceSelection(content.first, content.second);
 				} catch(...) {
 					failed = true;
 				}
 				if(!failed) {
-					if(rectangle)
+					if(content.second)
 						caret.beginRectangleSelection();
 					caret.select(destination, caret);
 					input.setDropAction(widgetapi::DROP_ACTION_COPY);
@@ -774,7 +775,7 @@ void DefaultMouseInputStrategy::install(TextViewer& viewer) {
 	viewer_ = &viewer;
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 	if(dnd_.dragSourceHelper.get() == nullptr)
-		dnd_.dragSourceHelper = win32::com::ComPtr<IDragSourceHelper>(CLSID_DragDropHelper, IID_IDragSourceHelper, CLSCTX_INPROC_SERVER);
+		dnd_.dragSourceHelper = win32::com::SmartPointer<IDragSourceHelper>::create(CLSID_DragDropHelper, IID_IDragSourceHelper, CLSCTX_INPROC_SERVER);
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 	state_ = NONE;
 

@@ -682,6 +682,9 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\widget-windows.hpp">
       <Filter>ascension\Header Files\viewer\widgetapi</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\win32\com\smart-pointer.hpp">
+      <Filter>ascension\Header Files\win32\com</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">

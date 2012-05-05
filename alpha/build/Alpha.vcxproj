@@ -330,6 +330,7 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\user-input.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\widget-windows.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\widget.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\win32\com\smart-pointer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\handle.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\message-dispatcher.hpp" />
     <ClInclude Include="..\..\ascension\ascension\win32\window.hpp" />

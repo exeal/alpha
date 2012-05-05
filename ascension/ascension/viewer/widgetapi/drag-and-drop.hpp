@@ -44,31 +44,33 @@ namespace ascension {
 #endif
 			class DropInput : public MouseButtonInput {
 			public:
-				void acceptProposedAction();
-				DropAction dropAction() const {return action_;}
-				DropAction possibleActions() const {return possibleActions_;}
-				DropAction proposedAction() const {return defaultAction_;}
-				void setDropAction(DropAction action);
-			protected:
-				DropInput(const MouseButtonInput& mouse, DropAction possibleActions) :
+				DropInput(const MouseButtonInput& mouse, DropAction possibleActions, const NativeMimeData& data) :
 					MouseButtonInput(mouse), possibleActions_(possibleActions),
-					defaultAction_(resolveDefaultDropAction(possibleActions, mouse.modifiers())) {}
+					defaultAction_(resolveDefaultDropAction(possibleActions, mouse.modifiers())), mimeData_(data) {}
+				void acceptProposedAction();
+				DropAction dropAction() const /*noexcept*/ {return action_;}
+				const NativeMimeData& mimeData() const /*noexcept*/ {return mimeData_;}
+				DropAction possibleActions() const /*noexcept*/ {return possibleActions_;}
+				DropAction proposedAction() const /*noexcept*/ {return defaultAction_;}
+				void setDropAction(DropAction action);
 			private:
 				const DropAction possibleActions_;
 				const DropAction defaultAction_;
 				DropAction action_;
-				friend class Widget;
+				const NativeMimeData& mimeData_;
 			};
 
 			class DragMoveInput : public DropInput {
-			protected:
-				DragMoveInput(const MouseButtonInput& mouse, DropAction possibleActions) : DropInput(mouse, possibleActions) {}
+			public:
+				DragMoveInput(const MouseButtonInput& mouse, DropAction possibleActions,
+					const NativeMimeData& data) : DropInput(mouse, possibleActions, data) {}
 				friend class Widget;
 			};
 
 			class DragEnterInput : public DragMoveInput {
-			private:
-				DragEnterInput(const MouseButtonInput& mouse, DropAction possibleActions) : DragMoveInput(mouse, possibleActions) {}
+			public:
+				DragEnterInput(const MouseButtonInput& mouse, DropAction possibleActions,
+					const NativeMimeData& data) : DragMoveInput(mouse, possibleActions, data) {}
 				friend class Widget;
 			};
 

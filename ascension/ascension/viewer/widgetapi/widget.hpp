@@ -44,13 +44,17 @@ namespace ascension {
 			typedef win32::Window NativeWindow;
 #endif
 			graphics::NativeRectangle bounds(const NativeWidget& widget, bool includeFrame);
-			graphics::NativePoint mapFromGlobal(const NativeWidget& widget, const graphics::NativePoint& position);
+			template<typename Point>
+			graphics::NativePoint mapFromGlobal(const NativeWidget& widget, const Point& position,
+				typename detail::EnableIfTagIs<Point, graphics::geometry::PointTag>::type* = nullptr);
 			inline graphics::NativeRectangle mapFromGlobal(const NativeWidget& widget, const graphics::NativeRectangle& rectangle) {
 				return graphics::geometry::make<graphics::NativeRectangle>(
 					mapFromGlobal(widget, graphics::geometry::get<0>(rectangle)),
 					mapFromGlobal(widget, graphics::geometry::get<1>(rectangle)));
 			}
-			graphics::NativePoint mapToGlobal(const NativeWidget& widget, const graphics::NativePoint& position);
+			template<typename Point>
+			graphics::NativePoint mapToGlobal(const NativeWidget& widget, const Point& position,
+				typename detail::EnableIfTagIs<Point, graphics::geometry::PointTag>::type* = nullptr);
 			inline graphics::NativeRectangle mapToGlobal(const NativeWidget& widget, const graphics::NativeRectangle& rectangle) {
 				return graphics::geometry::make<graphics::NativeRectangle>(
 					mapToGlobal(widget, graphics::geometry::get<0>(rectangle)),
@@ -95,6 +99,11 @@ namespace ascension {
 			bool isActive(const NativeWidget& widget);
 			void releaseInput(NativeWidget& widget);
 			void setFocus(NativeWidget& widget);
+
+			// hierarchy
+			NativeWidget* parent(const NativeWidget& widget);
+			void setParent();
+			void setParent(NativeWidget& newParent);
 
 			// drag and drop
 			void acceptDrops(NativeWidget& widget, bool accept = true);
