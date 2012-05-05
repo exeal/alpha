@@ -605,16 +605,19 @@ STDMETHODIMP TextViewer::DragEnter(IDataObject* data, DWORD keyState, POINTL loc
 
 	if(mouseInputStrategy_.get() != nullptr) {
 		if(const shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
+			widgetapi::DragEnterInput input(
+				makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, location)),
+				translateDropActions(*effect), *data);
 			try {
-				dropTarget->dragEntered(widgetapi::DragEnterInput(
-					makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, location)),
-					translateDropActions(*effect), *data));
+				dropTarget->dragEntered(input);
 			} catch(const bad_alloc&) {
 				return E_OUTOFMEMORY;
 			} catch(...) {
 				return E_UNEXPECTED;
 			}
 
+			draggingData_.reset(data);
+			*effect = translateDropAction(input.dropAction());
 			if(dropTargetHelper_.get() != nullptr) {
 				POINT pt = {location.x, location.y};
 				dropTargetHelper_->DragEnter(handle().get(), data, &pt, *effect);
@@ -625,6 +628,7 @@ STDMETHODIMP TextViewer::DragEnter(IDataObject* data, DWORD keyState, POINTL loc
 
 /// Implements @c IDropTarget#DragLeave method.
 STDMETHODIMP TextViewer::DragLeave() {
+	draggingData_.reset();
 	if(mouseInputStrategy_.get() != nullptr) {
 		if(const shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
 			if(dropTargetHelper_.get() != nullptr)
@@ -650,7 +654,7 @@ STDMETHODIMP TextViewer::DragOver(DWORD keyState, POINTL location, DWORD* effect
 			try {
 				dropTarget->dragMoved(widgetapi::DragMoveInput(
 					makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, location)),
-					translateDropActions(*effect), *data));
+					translateDropActions(*effect), *draggingData_));
 			} catch(const bad_alloc&) {
 				return E_OUTOFMEMORY;
 			} catch(...) {
@@ -674,6 +678,7 @@ STDMETHODIMP TextViewer::Drop(IDataObject* data, DWORD keyState, POINTL location
 		return E_INVALIDARG;
 	ASCENSION_WIN32_VERIFY_COM_POINTER(effect);
 	*effect = DROPEFFECT_NONE;
+	draggingData_.reset();
 /*
 	FORMATETC fe = {::RegisterClipboardFormatA("Rich Text Format"), 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
 	STGMEDIUM stg;
@@ -1884,9 +1889,9 @@ namespace {
 		const TextLayout::Selection selection(viewer.caret());
 		for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
 			renderer.renderLine(line, dc,
-				renderer.lineIndent(line) - geometry::left(selectionBounds), y,
+				font::lineIndent(renderer.layouts()[line], renderer.viewport()->contentMeasure()) - geometry::left(selectionBounds), y,
 				selectionExtent, selectionExtent, highlightSelection ? &selection : nullptr);
-			y += static_cast<int>(renderer.defaultFont()->metrics().linePitch() * renderer.numberOfLinesOfLine(line));
+			y += static_cast<int>(renderer.defaultFont()->metrics().linePitch() * renderer.layouts().numberOfSublinesOfLine(line));
 		}
 		::SelectObject(dc.get(), oldBitmap);
 

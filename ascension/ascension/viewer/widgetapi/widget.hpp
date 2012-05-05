@@ -87,6 +87,11 @@ namespace ascension {
 			void scheduleRedraw(NativeWidget& widget, const graphics::NativeRectangle& rect, bool eraseBackground);
 
 			// focus/input
+			void grabInput(NativeWidget& widget);
+			bool hasFocus(const NativeWidget& widget);
+			bool isActive(const NativeWidget& widget);
+			void releaseInput(NativeWidget& widget);
+			void setFocus(NativeWidget& widget);
 			class InputGrabLocker {
 			public:
 				~InputGrabLocker() {releaseInput(widget_);}
@@ -94,11 +99,6 @@ namespace ascension {
 				explicit InputGrabLocker(NativeWidget& widget) : widget_(widget) {}
 				NativeWidget& widget_;
 			};
-			void grabInput(NativeWidget& widget);
-			bool hasFocus(const NativeWidget& widget);
-			bool isActive(const NativeWidget& widget);
-			void releaseInput(NativeWidget& widget);
-			void setFocus(NativeWidget& widget);
 
 			// hierarchy
 			NativeWidget* parent(const NativeWidget& widget);
