@@ -33,15 +33,23 @@ namespace ascension {
 		namespace font {
 
 			struct VisualLine : private boost::totally_ordered<VisualLine> {
-				VisualLine() /*throw()*/ {}
-				VisualLine(Index line, Index subline) /*throw()*/ : line(line), subline(subline) {}
+				/// Default constructor.
+				VisualLine() /*noexcept*/ {}
+				/**
+				 * Constructor takes initial values.
+				 * @param line The logical line number
+				 * @param subline The visual offset in the logical line
+				 */
+				VisualLine(Index line, Index subline) /*noexcept*/ : line(line), subline(subline) {}
 				Index line;		///< The logical line number.
 				Index subline;	///< The visual offset in the logical line.
 			};
-			inline bool operator==(const VisualLine& lhs, const VisualLine& rhs) /*throw()*/ {
+			/// The equality operator.
+			inline bool operator==(const VisualLine& lhs, const VisualLine& rhs) /*noexcept*/ {
 				return lhs.line == rhs.line && lhs.subline == rhs.subline;
 			}
-			inline bool operator<(const VisualLine& lhs, const VisualLine& rhs) /*throw()*/ {
+			/// The less-than operator.
+			inline bool operator<(const VisualLine& lhs, const VisualLine& rhs) /*noexcept*/ {
 				return lhs.line < rhs.line || (lhs.line == rhs.line && lhs.subline < rhs.subline);
 			}
 
@@ -50,21 +58,24 @@ namespace ascension {
 			 */
 			class InlineObject {
 			public:
-				virtual ~InlineObject() /*throw()*/ {}
+				/// Destructor.
+				virtual ~InlineObject() /*noexcept*/ {}
 				/// Returns the advance (width) of this inline object in pixels.
-				virtual Scalar advance() const /*throw()*/ = 0;
+				virtual Scalar advance() const /*noexcept*/ = 0;
 				/// Returns the ascent of this inline object in pixels.
-				virtual Scalar ascent() const /*throw()*/ = 0;
+				virtual Scalar ascent() const /*noexcept*/ = 0;
 				/// Returns the descent of this inline object in pixels.
-				virtual Scalar descent() const /*throw()*/ = 0;
+				virtual Scalar descent() const /*noexcept*/ = 0;
 				/**
 				 * Renders this inline object at the specified location.
 				 * @param context The graphic context
 				 * @param origin The location where this inline object is rendered
 				 */
-				virtual void draw(const PaintContext& context, const NativePoint& origin) /*throw()*/ = 0;
+				virtual void draw(const PaintContext& context, const NativePoint& origin) /*noexcept*/ = 0;
 				/// Returns the size of this inline object in pixels.
-				NativeSize size() const /*throw()*/ {return geometry::make<NativeSize>(advance(), ascent() + descent());}
+				NativeSize size() const /*noexcept*/ {
+					return geometry::make<NativeSize>(advance(), ascent() + descent());
+				}
 			};
 
 			/**
@@ -74,7 +85,7 @@ namespace ascension {
 			class TabExpander {
 			public:
 				/// Destructor.
-				virtual ~TabExpander() {}
+				virtual ~TabExpander() /*noexcept*/ {}
 				/**
 				 * Returns the next tab stop position given a reference position.
 				 * @param x The position in pixels
@@ -87,7 +98,7 @@ namespace ascension {
 			/// Standard implementation of @c TabExpander with fixed width tabulations.
 			class FixedWidthTabExpander : public TabExpander {
 			public:
-				explicit FixedWidthTabExpander(Scalar width) /*throw()*/;
+				explicit FixedWidthTabExpander(Scalar width) /*noexcept*/;
 				Scalar nextTabStop(Scalar x, Index tabOffset) const;
 			private:
 				const Scalar width_;
@@ -98,7 +109,7 @@ namespace ascension {
 				class Iterator {
 				public:
 					/// Destructor.
-					virtual ~Iterator() /*throw()*/ {}
+					virtual ~Iterator() /*noexcept*/ {}
 
 					/**
 					 * Returns the overridden foreground of the current position.
@@ -137,18 +148,18 @@ namespace ascension {
 					/// Returns the length of the current text segment.
 					virtual Index length() const = 0;
 					/// Returns @c true if the iterator has no more elements.
-					virtual bool isDone() const /*throw()*/ = 0;
+					virtual bool isDone() const /*noexcept*/ = 0;
 					/**
 					 * Moves the iterator to the next overriden text segment.
 					 * @throw NoSuchElementException The iterator is end
 					 */
 					virtual void next() = 0;
 					/// Moves the iterator to the beginning.
-					virtual void reset() /*throw()*/ = 0;
+					virtual void reset() /*noexcept*/ = 0;
 				};
 			public:
 				/// Destructor.
-				virtual ~TextPaintOverride() /*throw()*/ {}
+				virtual ~TextPaintOverride() /*noexcept*/ {}
 				/**
 				 * Returns the iterator which overrides the paints of the specified character
 				 * range in the line.
@@ -166,19 +177,19 @@ namespace ascension {
 			class LineMetrics {
 			public:
 				/// Destructor.
-				virtual ~LineMetrics() /*throw()*/ {}
+				virtual ~LineMetrics() /*noexcept*/ {}
 				/// Returns the ascent of the text in pixels.
-				virtual Scalar ascent() const /*throw()*/ = 0;
+				virtual Scalar ascent() const /*noexcept*/ = 0;
 				/// Returns the dominant baseline of the text.
-				virtual presentation::DominantBaseline baseline() const /*throw()*/ = 0;
+				virtual presentation::DominantBaseline baseline() const /*noexcept*/ = 0;
 				/// Returns the baseline offset od the text, relative to the baseline of the text.
-				virtual Scalar baselineOffset(presentation::AlignmentBaseline baseline) const /*throw()*/ = 0;
+				virtual Scalar baselineOffset(presentation::AlignmentBaseline baseline) const /*noexcept*/ = 0;
 				/// Returns the descent of the text in pixels.
-				virtual Scalar descent() const /*throw()*/ = 0;
+				virtual Scalar descent() const /*noexcept*/ = 0;
 				/// Returns the height of the text in pixels.
-				Scalar height() const {return ascent() + descent()/* + leading()*/;}
+				Scalar height() const /*noexcept*/ {return ascent() + descent()/* + leading()*/;}
 //				/// Returns the leading of the text in pixels.
-//				virtual Scalar leading() const /*throw()*/ = 0;
+//				virtual Scalar leading() const /*noexcept*/ = 0;
 			};
 
 			class TextLayout {

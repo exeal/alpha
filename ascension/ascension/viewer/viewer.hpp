@@ -168,6 +168,8 @@ namespace ascension {
 			public:
 				explicit Renderer(TextViewer& viewer);
 				Renderer(const Renderer& other, TextViewer& viewer);
+				void displayShapingControls(bool display);
+				bool displaysShapingControls() const /*noexcept*/;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				void rewrapAtWindowEdge();
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
@@ -178,6 +180,7 @@ namespace ascension {
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 			private:
 				TextViewer& viewer_;
+				bool displaysShapingControls_;
 			};
 
 			// constructors
@@ -356,7 +359,7 @@ namespace ascension {
 			void mouseReleased(const widgetapi::MouseButtonInput& input);
 			void mouseWheelChanged(const widgetapi::MouseWheelInput& input);
 			void paint(graphics::PaintContext& context);
-			void resized(widgetapi::State state, const graphics::NativeSize& newSize);
+			void resized(const graphics::NativeSize& newSize);
 			void showContextMenu(const widgetapi::LocatedUserInput& input, bool byKeyboard);
 
 			// internal classes

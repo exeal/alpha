@@ -11,7 +11,7 @@
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/text-editor/command.hpp>
 #include <ascension/text-editor/session.hpp>
-#include <ascension/viewer/base/cursor.hpp>
+#include <ascension/viewer/widgetapi/cursor.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/default-mouse-input-strategy.hpp>
 #include <ascension/viewer/viewer.hpp>
@@ -19,7 +19,6 @@
 
 using namespace ascension;
 using namespace ascension::viewers;
-using namespace ascension::viewers::base;
 using namespace ascension::presentation;
 using namespace ascension::graphics;
 using namespace ascension::graphics::font;
@@ -1021,7 +1020,7 @@ void TextViewer::removeViewportListener(ViewportListener& listener) {
 
 /// Redraws the ruler.
 void TextViewer::repaintRuler() {
-	NativeRectangle r(bounds(false));
+	NativeRectangle r(widgetapi::bounds(*this, false));
 	if(utils::isRulerLeftAligned(*this))
 		geometry::range<geometry::X_COORDINATE>(r) =
 			makeRange(geometry::left(r), geometry::left(r) + rulerPainter_->allocationWidth());
@@ -1032,7 +1031,7 @@ void TextViewer::repaintRuler() {
 }
 
 /// @see Widget#resized
-void TextViewer::resized(State state, const NativeSize&) {
+void TextViewer::resized(const NativeSize&) {
 	utils::closeCompletionProposalsPopup(*this);
 	if(state == MINIMIZED)
 		return;
@@ -1042,7 +1041,7 @@ void TextViewer::resized(State state, const NativeSize&) {
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 	// notify the tooltip
 	win32::AutoZeroSize<TOOLINFOW> ti;
-	const NativeRectangle viewerBounds(bounds(false));
+	const NativeRectangle viewerBounds(widgetapi::bounds(*this, false));
 	ti.hwnd = identifier().get();
 	ti.uId = 1;
 	ti.rect = viewerBounds;

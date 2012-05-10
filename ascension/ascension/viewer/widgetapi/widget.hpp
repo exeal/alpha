@@ -91,6 +91,7 @@ namespace ascension {
 			bool hasFocus(const NativeWidget& widget);
 			bool isActive(const NativeWidget& widget);
 			void releaseInput(NativeWidget& widget);
+			void setFocus();
 			void setFocus(NativeWidget& widget);
 			class InputGrabLocker {
 			public:

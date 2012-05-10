@@ -258,6 +258,165 @@ const unsigned int DefaultMouseInputStrategy::DRAGGING_TRACK_INTERVAL = 100;
 DefaultMouseInputStrategy::DefaultMouseInputStrategy() : viewer_(nullptr), state_(NONE), lastHoveredHyperlink_(nullptr) {
 }
 
+namespace {
+	boost::optional<SHDRAGIMAGE> createSelectionImage(const TextViewer& viewer, const NativePoint& cursorPosition, bool highlightSelection) {
+		win32::Handle<HDC> dc(::CreateCompatibleDC(nullptr), &::DeleteDC);
+		if(dc.get() == nullptr)
+			throw makePlatformError();	// MSDN does *not* says CreateCompatibleDC set the last error value, but...
+
+		win32::AutoZero<BITMAPV5HEADER> bh;
+		bh.bV5Size = sizeof(BITMAPV5HEADER);
+		bh.bV5Planes = 1;
+		bh.bV5BitCount = 32;
+		bh.bV5Compression = BI_BITFIELDS;
+		bh.bV5RedMask = 0x00ff0000ul;
+		bh.bV5GreenMask = 0x0000ff00ul;
+		bh.bV5BlueMask = 0x000000fful;
+		bh.bV5AlphaMask = 0xff000000ul;
+
+		// determine the range to draw
+		const k::Region selectedRegion(viewer.caret());
+//		const shared_ptr<const TextViewport> viewport(viewer.textRenderer().viewport());
+//		const Index firstLine = viewport->firstVisibleLineInLogicalNumber();
+//		const Index firstSubline = viewport->firstVisibleSublineInLogicalLine();
+
+		// calculate the size of the image
+		const NativeRectangle clientBounds(widgetapi::bounds(viewer, false));
+		const TextRenderer& renderer = viewer.textRenderer();
+		NativeRectangle selectionBounds(geometry::make<NativeRectangle>(
+			geometry::make<NativePoint>(numeric_limits<Scalar>::max(), 0),
+			geometry::make<NativeSize>(numeric_limits<Scalar>::min(), 0)));
+		for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
+			selectionBounds.bottom += static_cast<LONG>(renderer.defaultFont()->metrics().linePitch() * renderer.layouts()[line].numberOfLines());
+			if(geometry::dy(selectionBounds) > geometry::dy(clientBounds))
+				return boost::none;	// overflow
+			const TextLayout& layout = renderer.layouts()[line];
+			const Scalar indent = font::lineIndent(layout, renderer.viewport()->contentMeasure());
+			Range<Index> range;
+			for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
+				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range)) {
+					range = Range<Index>(
+						range.beginning(),
+						min(viewer.document().lineLength(line), range.end()));
+					const NativeRectangle sublineBounds(layout.bounds(range));
+					geometry::range<geometry::X_COORDINATE>(selectionBounds) = makeRange(
+						min(geometry::left(sublineBounds) + indent, geometry::left(selectionBounds)),
+						max(geometry::right(sublineBounds) + indent, geometry::right(selectionBounds)));
+					if(geometry::dx(selectionBounds) > geometry::dx(clientBounds))
+						return boost::none;	// overflow
+				}
+			}
+		}
+		bh.bV5Width = geometry::dx(selectionBounds);
+		bh.bV5Height = geometry::dy(selectionBounds);
+
+		// create a mask
+		win32::Handle<HBITMAP> mask(::CreateBitmap(bh.bV5Width, bh.bV5Height, 1, 1, 0), &::DeleteObject);	// monochrome
+		if(mask.get() == nullptr)
+			throw makePlatformError();	// this must be ERROR_INVALID_BITMAP
+		HBITMAP oldBitmap = static_cast<HBITMAP>(::SelectObject(dc.get(), mask.get()));
+		{
+			RECT temp;
+			::SetRect(&temp, 0, 0, bh.bV5Width, bh.bV5Height);
+			::FillRect(dc.get(), &temp, static_cast<HBRUSH>(::GetStockObject(BLACK_BRUSH)));
+		}
+		int y = 0;
+		for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
+			const TextLayout& layout = renderer.layouts()[line];
+			const int indent = font::lineIndent(layout, renderer.viewport()->contentMeasure());
+			Range<Index> range;
+			for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
+				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range)) {
+					range = Range<Index>(
+						range.beginning(),
+						min(viewer.document().lineLength(line), range.end()));
+					NativeRegion rgn(layout.blackBoxBounds(range));
+					::OffsetRgn(rgn.get(), indent - geometry::left(selectionBounds), y - geometry::top(selectionBounds));
+					::FillRgn(dc.get(), rgn.get(), static_cast<HBRUSH>(::GetStockObject(WHITE_BRUSH)));
+				}
+				y += renderer.defaultFont()->metrics().linePitch();
+			}
+		}
+		::SelectObject(dc.get(), oldBitmap);
+		BITMAPINFO* bi = nullptr;
+		unique_ptr<byte[]> maskBuffer;
+		uint8_t* maskBits;
+		BYTE alphaChunnels[2] = {0xff, 0x01};
+		try {
+			bi = static_cast<BITMAPINFO*>(::operator new(sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * 2));
+			memset(&bi->bmiHeader, 0, sizeof(BITMAPINFOHEADER));
+			bi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+			if(::GetDIBits(dc.get(), mask.get(), 0, bh.bV5Height, nullptr, bi, DIB_RGB_COLORS) == 0)
+				throw makePlatformError();	// this must be ERROR_INVALID_PARAMETER
+			assert(bi->bmiHeader.biBitCount == 1 && bi->bmiHeader.biClrUsed == 2);
+			maskBuffer.reset(new uint8_t[bi->bmiHeader.biSizeImage + sizeof(DWORD)]);
+			maskBits = maskBuffer.get() + sizeof(DWORD) - reinterpret_cast<ULONG_PTR>(maskBuffer.get()) % sizeof(DWORD);
+			if(::GetDIBits(dc.get(), mask.get(), 0, bh.bV5Height, maskBits, bi, DIB_RGB_COLORS) == 0)
+				throw makePlatformError();	// this must be ERROR_INVALID_PARAMETER
+			if(bi->bmiColors[0].rgbRed == 0xff && bi->bmiColors[0].rgbGreen == 0xff && bi->bmiColors[0].rgbBlue == 0xff)
+				swap(alphaChunnels[0], alphaChunnels[1]);
+		} catch(const bad_alloc&) {
+			throw;
+		} catch(const system_error&) {
+			::operator delete(bi);
+			throw;
+		}
+		::operator delete(bi);
+
+		// create the result bitmap
+		void* bits;
+		win32::Handle<HBITMAP> bitmap(::CreateDIBSection(dc.get(), reinterpret_cast<BITMAPINFO*>(&bh), DIB_RGB_COLORS, &bits, nullptr, 0));
+		if(bitmap.get() == nullptr)
+			throw makePlatformError();	// this must be ERROR_INVALID_PARAMETER
+		// render the lines
+		oldBitmap = static_cast<HBITMAP>(::SelectObject(dc.get(), bitmap.get()));
+		NativeRectangle selectionExtent(selectionBounds);
+		geometry::translate(selectionExtent, geometry::negate(geometry::topLeft(selectionExtent)));
+		y = selectionBounds.top;
+		const TextLayout::Selection selection(viewer.caret());
+		for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
+			renderer.renderLine(line, dc,
+				font::lineIndent(renderer.layouts()[line], renderer.viewport()->contentMeasure()) - geometry::left(selectionBounds), y,
+				selectionExtent, selectionExtent, highlightSelection ? &selection : nullptr);
+			y += static_cast<int>(renderer.defaultFont()->metrics().linePitch() * renderer.layouts().numberOfSublinesOfLine(line));
+		}
+		::SelectObject(dc.get(), oldBitmap);
+
+		// set alpha chunnel
+		const uint8_t* maskByte = maskBits;
+		for(LONG y = 0; y < bh.bV5Height; ++y) {
+			for(LONG x = 0; ; ) {
+				RGBQUAD& pixel = static_cast<RGBQUAD*>(bits)[x + bh.bV5Width * y];
+				pixel.rgbReserved = alphaChunnels[(*maskByte & (1 << ((8 - x % 8) - 1))) ? 0 : 1];
+				if(x % 8 == 7)
+					++maskByte;
+				if(++x == bh.bV5Width) {
+					if(x % 8 != 0)
+						++maskByte;
+					break;
+				}
+			}
+			if(reinterpret_cast<ULONG_PTR>(maskByte) % sizeof(DWORD) != 0)
+				maskByte += sizeof(DWORD) - reinterpret_cast<ULONG_PTR>(maskByte) % sizeof(DWORD);
+		}
+
+		// locate the hotspot of the image based on the cursor position
+		// TODO: This code can't handle vertical writing mode.
+		NativePoint hotspot(cursorPosition);
+		const shared_ptr<const TextViewport> viewport(viewer.textRenderer().viewport());
+		geometry::x(hotspot) -= geometry::left(viewer.textAreaContentRectangle()) - inlineProgressionScrollOffsetInPixels(*viewport, viewport->inlineProgressionOffset()) + geometry::left(selectionBounds);
+		geometry::y(hotspot) -= geometry::y(modelToView(*viewport, k::Position(selectedRegion.beginning().line, 0), true));
+
+		SHDRAGIMAGE image;
+		image.sizeDragImage.cx = bh.bV5Width;
+		image.sizeDragImage.cy = bh.bV5Height;
+		image.ptOffset = hotspot;
+		image.hbmpDragImage = static_cast<HBITMAP>(bitmap.release());
+		image.crColorKey = CLR_NONE;
+		return boost::make_optional(image);
+	}
+}
+
 void DefaultMouseInputStrategy::beginDragAndDrop() {
 	const Caret& caret = viewer_->caret();
 	HRESULT hr;
@@ -353,7 +512,7 @@ void DefaultMouseInputStrategy::dragEntered(widgetapi::DragEnterInput& input) {
 
 /// @see DropTarget#dragLeft
 void DefaultMouseInputStrategy::dragLeft(widgetapi::DragLeaveInput& input) {
-	widgetapi::setFocus(nullptr);
+	widgetapi::setFocus();
 	timer_.stop();
 //	if(dnd_.supportLevel >= SUPPORT_DND) {
 		if(state_ == DND_TARGET)
