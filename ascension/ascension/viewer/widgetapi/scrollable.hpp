@@ -49,7 +49,7 @@ namespace ascension {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 			typedef win32::Window NativeScrollableWidget;
 #endif
-
+#if 0
 			class ScrollableWidget : public ScrollProperties<int>, public Widget {
 			public:
 				enum ScrollBarPolicy {
@@ -66,7 +66,7 @@ namespace ascension {
 				virtual ScrollProperties<ScrollPosition>& verticalScrollBar() const = 0;
 				virtual ScrollBarPolicy verticalScrollBarPolicy() const = 0;
 			};
-
+#endif
 		}
 	}
 }

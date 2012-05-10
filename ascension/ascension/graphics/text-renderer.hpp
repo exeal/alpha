@@ -26,6 +26,10 @@ namespace ascension {
 			 */
 			class ComputedWritingModeListener {
 			private:
+				/**
+				 * The computed writing mode of the text renderer was changed.
+				 * @param used The writing mode used
+				 */
 				virtual void computedWritingModeChanged(const presentation::WritingMode& used) = 0;
 				friend class TextRenderer;
 			};

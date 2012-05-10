@@ -10,17 +10,71 @@
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/graphics/geometry.hpp>
 #include <ascension/win32/handle.hpp>
+#include <map>
 #include <memory>	// std.shared_ptr
 
 namespace ascension {
+	namespace detail {
+		template<typename Window>
+		class MessageDispatcher {
+			ASCENSION_NONCOPYABLE_TAG(MessageDispatcher);
+		public:
+			void addExplicitly(HWND handle, Window& object) {
+				handleToObjects_.insert(std::make_pair(handle, &object));
+			}
+			LRESULT dispatch(HWND window, UINT message, WPARAM wp, LPARAM lp) {
+				bool dummy;
+				return dispatch(window, message, wp, lp, dummy);
+			}
+			template<typename DefaultProcedure>
+			LRESULT dispatch(HWND window, UINT message, WPARAM wp, LPARAM lp, DefaultProcedure defaultProcedure) {
+				bool consumed;
+				const LRESULT result = dispatch(window, message, wp, lp, consumed);
+				if(consumed)
+					return result;
+				std::map<HWND, Window*>::iterator i(handleToObjects_.find(window));
+				assert(i != handleToObjects_.end());
+				return ::CallWindowProcW(i->second->*defaultProcedure, window, message, wp, lp);
+			}
+			LRESULT dispatch(HWND window, UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
+				if(message == WM_NCCREATE) {
+					void* const p = reinterpret_cast<CREATESTRUCTW*>(lp)->lpCreateParams;
+					assert(p != nullptr);
+					addExplicitly(window, *p);
+				}
+				const std::map<HWND, Window*>::iterator i(handleToObjects_.find(window));
+				const LRESULT result = (i != handleToObjects_.end()) ?
+					i->second->processMessage(message, wp, lp, consumed)
+					: (::DefWindowProcW(window, message, wp, lp), consumed = true);
+				if(message == WM_NCDESTROY)
+					removeExplicitly(window);
+				return result;
+			}
+			void removeExplicitly(HWND handle) {
+				handleToObjects_.erase(handle);
+			}
+		private:
+			std::map<HWND, Window*> handleToObjects_;
+		};
+	}
+
 	namespace win32 {
 		class Window {
+			ASCENSION_NONCOPYABLE_TAG(Window);
 		public:
 			static const DWORD defaultStyle = WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE;
+			/// Move-constructor.
+			Window(Window&& other) /*noexcept*/ : handle_(std::move(other.handle_)) {}
+			/// Move-assignment operator.
+			Window& operator=(Window&& other) /*noexcept*/ {
+				std::swap(*this, Window(other));
+			}
+			/// Returns the held window handle.
 			const Handle<HWND>& handle() const {
 				return handle_;
 			}
 		protected:
+			/// Constructor takes a window handle.
 			explicit Window(HWND&& handle) : handle_(handle) {
 				if(handle_.get() == nullptr)
 					throw NullPointerException("handle");
@@ -30,6 +84,19 @@ namespace ascension {
 		};
 
 		class SubclassedWindow : public Window {
+			ASCENSION_NONCOPYABLE_TAG(SubclassedWindow);
+		public:
+			/// Move-constructor.
+			SubclassedWindow(SubclassedWindow&& other) /*noexcept*/ :
+					Window(std::move(other)), originalWindowProcedure_(other.originalWindowProcedure_) {
+				other.originalWindowProcedure_ = nullptr;
+			}
+			/// Move-assignment operator.
+			SubclassedWindow& operator=(SubclassedWindow&& other) /*noexcept*/ {
+				Window::operator=(std::move(other));
+				originalWindowProcedure_ = other.originalWindowProcedure_;
+				other.originalWindowProcedure_ = nullptr;
+			}
 		protected:
 			SubclassedWindow(const Handle<HWND>& parent, const WCHAR className[],
 					const graphics::NativePoint* position = nullptr, const graphics::NativeSize* size = nullptr,
@@ -49,15 +116,12 @@ namespace ascension {
 			}
 		private:
 			static LRESULT CALLBACK windowProcedure(HWND window, UINT message, WPARAM wp, LPARAM lp) {
-				if(SubclassedWindow* const p = reinterpret_cast<SubclassedWindow*>(::GetWindowLongPtrW(window, GWLP_USERDATA))) {
-					bool consumed = false;
-					const LRESULT result = p->processMessage(message, wp, lp, consumed);
-					return consumed ? result : ::CallWindowProcW(p->originalWindowProcedure_, window, message, wp, lp);
-				}
-				return ::DefWindowProcW(window, message, wp, lp);
+				return messageDispatcher_.dispatch(window, message, wp, lp, &SubclassedWindow::originalWindowProcedure_);
 			}
 		private:
+			static detail::MessageDispatcher<SubclassedWindow> messageDispatcher_;
 			WNDPROC originalWindowProcedure_;
+			friend class detail::MessageDispatcher<SubclassedWindow>;
 		};
 
 		class CustomControl : public Window {
@@ -96,8 +160,18 @@ namespace ascension {
 				} cursor;
 				ClassInformation() : style(0) {}
 			};
+			CustomControl();
+		protected:
+			virtual LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) = 0;
 			virtual void provideClassInformation(ClassInformation& classInfomation) const {}
 			virtual std::basic_string<WCHAR> provideClassName() const = 0;
+		private:
+			static LRESULT CALLBACK windowProcedure(HWND window, UINT message, WPARAM wp, LPARAM lp) {
+				return messageDispatcher_.dispatch(window, message, wp, lp);
+			}
+		private:
+			static detail::MessageDispatcher<CustomControl> messageDispatcher_;
+			friend class detail::MessageDispatcher<CustomControl>;
 		};
 	}
 }
