@@ -204,8 +204,8 @@ namespace ascension {
 
 			/**
 			 * Searches an isolated surrogate character in the given UTF-16 code unit sequence.
-			 * @note About UTF-32 code unit sequence, use <code>std#find_if(,,
-			 *       std#ptr_fun(isSurrogate))</code> instead.
+			 * @note About UTF-32 code unit sequence, use <code>std#find_if(...,
+			 *       isSurrogate)</code> instead.
 			 * @tparam InputIterator The input iterator represents a UTF-16 character sequence
 			 * @param first The beginning of the character sequence
 			 * @param last The end of the sequence

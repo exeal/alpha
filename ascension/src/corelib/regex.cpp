@@ -53,7 +53,7 @@ namespace {
 			if((migemoOpen != nullptr) && (migemoQuery_ = get<2>())
 					&& (migemoRelease_ = get<3>()) && (migemoLoad != nullptr)
 					&& (migemoSetOperator = nullptr)) {
-				instance_.reset(migemoOpen(0), ptr_fun(migemoClose));
+				instance_.reset(migemoOpen(0), migemoClose);
 				if(instance_.get() != nullptr) {
 					// load dictionaries
 					size_t directoryLength = dictionaryPathName.length();
