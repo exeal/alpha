@@ -852,7 +852,7 @@ WordRule::WordRule(Token::Identifier id, const String* first, const String* last
 		throw NullPointerException("last");
 	else if(first >= last)
 		throw invalid_argument("first >= last");
-	words_ = new HashTable(first, last, caseSensitive);
+	words_.reset(new HashTable(first, last, caseSensitive));
 }
 
 /**
@@ -870,7 +870,7 @@ WordRule::WordRule(Token::Identifier id, const StringPiece& words, Char separato
 	else if(surrogates::isSurrogate(separator))
 		throw InvalidScalarValueException(separator);
 	list<String> wordList;
-	const Char* p = find_if(words.beginning(), words.end(), not1(bind1st(equal_to<Char>(), separator)));
+	const Char* p = find_if(words.beginning(), words.end(), bind(not_equal_to<Char>(), separator, placeholders::_1));
 	for(const Char* next; ; p = ++next) {
 		next = find(p, words.end(), separator);
 		if(next == p)
@@ -881,12 +881,7 @@ WordRule::WordRule(Token::Identifier id, const StringPiece& words, Char separato
 	}
 	if(wordList.empty())
 		throw invalid_argument("the input string includes no words.");
-	words_ = new HashTable(wordList.begin(), wordList.end(), caseSensitive);
-}
-
-/// Destructor.
-WordRule::~WordRule() /*throw()*/ {
-	delete words_;
+	words_.reset(new HashTable(wordList.begin(), wordList.end(), caseSensitive));
 }
 
 /// @see Rule#parse

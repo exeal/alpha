@@ -32,7 +32,7 @@ namespace ascension {
 					) {
 				if(library_ == nullptr)
 #ifdef ASCENSION_OS_WINDOWS
-					throw PlatformDependentError<>();
+					throw makePlatformError();
 #else	// ASCENSION_OS_POSIX
 					throw std::runtime_error(::dlerror());
 #endif

@@ -93,7 +93,7 @@ namespace {
 			else if(!isEnable())
 				throw IllegalStateException("not enable");
 			shared_ptr<unsigned char> nativePattern(
-				migemoQuery_(instance_.get(), const_cast<unsigned char*>(text)), bind1st(ptr_fun(migemoRelease_), instance_.get()));
+				migemoQuery_(instance_.get(), const_cast<unsigned char*>(text)), bind(migemoRelease_, instance_.get(), placeholders::_1));
 			if(nativePattern.get() == nullptr)
 				throw runtime_error("migemo_query returned null.");
 			return lastNativePattern_ = nativePattern;
