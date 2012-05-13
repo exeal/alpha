@@ -9,6 +9,7 @@
 #include <ascension/corelib/text/identifier-syntax.hpp>
 #include <ascension/corelib/text/character-property.hpp>
 #include <ascension/corelib/text/utf-iterator.hpp>	// utf.CharacterDecodeIterator
+#include <functional>	// std.function
 #include <vector>
 using namespace ascension;
 using namespace ascension::text;
@@ -225,10 +226,10 @@ void IdentifierSyntax::overrideIdentifierStartCharacters(const String& adding, c
  *                                    at both @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierStartCharacters(const set<CodePoint>& adding, const set<CodePoint>& subtracting) {
-	set<CodePoint>::const_iterator isolatedSurrogate(find_if(adding.begin(), adding.end(), ptr_fun(surrogates::isSurrogate)));
+	set<CodePoint>::const_iterator isolatedSurrogate(find_if(adding.begin(), adding.end(), surrogates::isSurrogate));
 	if(isolatedSurrogate != adding.end())
 		throw InvalidScalarValueException(*isolatedSurrogate);
-	isolatedSurrogate = find_if(subtracting.begin(), subtracting.end(), ptr_fun(surrogates::isSurrogate));
+	isolatedSurrogate = find_if(subtracting.begin(), subtracting.end(), surrogates::isSurrogate);
 	if(isolatedSurrogate != subtracting.end())
 		throw InvalidScalarValueException(*isolatedSurrogate);
 	implementOverrides(adding.begin(), adding.end(),
@@ -263,10 +264,10 @@ void IdentifierSyntax::overrideIdentifierNonStartCharacters(const String& adding
  *                                    at both @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierNonStartCharacters(const set<CodePoint>& adding, const set<CodePoint>& subtracting) {
-	set<CodePoint>::const_iterator isolatedSurrogate(find_if(adding.begin(), adding.end(), ptr_fun(surrogates::isSurrogate)));
+	set<CodePoint>::const_iterator isolatedSurrogate(find_if(adding.begin(), adding.end(), surrogates::isSurrogate));
 	if(isolatedSurrogate != adding.end())
 		throw InvalidScalarValueException(*isolatedSurrogate);
-	isolatedSurrogate = find_if(subtracting.begin(), subtracting.end(), ptr_fun(surrogates::isSurrogate));
+	isolatedSurrogate = find_if(subtracting.begin(), subtracting.end(), surrogates::isSurrogate);
 	if(isolatedSurrogate != subtracting.end())
 		throw InvalidScalarValueException(*isolatedSurrogate);
 	implementOverrides(adding.begin(), adding.end(),

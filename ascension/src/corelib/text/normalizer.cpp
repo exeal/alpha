@@ -140,7 +140,9 @@ namespace {
 		basic_string<CodePoint>::iterator current(s.begin()), next;
 		const basic_string<CodePoint>::iterator last(s.end());
 		while(current != last) {
-			next = find_if(current, last, not1(ptr_fun(CanonicalCombiningClass::of)));
+			next = find_if(current, last, [](CodePoint c) {
+				return CanonicalCombiningClass::of(c) == 0;
+			});
 			if(next != last)
 				++next;
 			sort(current, next, LessCCC());
