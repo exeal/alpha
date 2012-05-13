@@ -132,11 +132,10 @@ namespace ascension {
 				const String* first, const String* last, bool caseSensitive = true);
 			WordRule(Token::Identifier id,
 				const StringPiece& words, Char separator, bool caseSensitive = true);
-			~WordRule() /*throw()*/;
 			std::unique_ptr<Token> parse(const TokenScanner& scanner,
-				const Char* first, const Char* last) const /*throw()*/;
+				const Char* first, const Char* last) const /*noexcept*/;
 		private:
-			detail::HashTable* words_;
+			std::unique_ptr<detail::HashTable> words_;
 		};
 
 #ifndef ASCENSION_NO_REGEX

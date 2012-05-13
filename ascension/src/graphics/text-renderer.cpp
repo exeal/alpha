@@ -207,7 +207,7 @@ TextRenderer::TextRenderer(Presentation& presentation,
 		: presentation_(presentation), fontCollection_(fontCollection), spacePainter_(new SpacePainter) {
 //	textWrapping_.measure = 0;
 	layouts_.reset(new LineLayoutVector(presentation.document(),
-		bind1st(mem_fun(&TextRenderer::generateLineLayout), this), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
+		bind(&TextRenderer::generateLineLayout, this, placeholders::_1), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
 	updateDefaultFont();
 	FlowRelativeFourSides<Space> zeroSpaces;
 	zeroSpaces.fill(Length(0));
@@ -227,7 +227,7 @@ TextRenderer::TextRenderer(Presentation& presentation,
 TextRenderer::TextRenderer(const TextRenderer& other) :
 		presentation_(other.presentation_), layouts_(), fontCollection_(other.fontCollection_), defaultFont_() {
 	layouts_.reset(new LineLayoutVector(other.presentation_.document(),
-		bind1st(mem_fun(&TextRenderer::generateLineLayout), this), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
+		bind(&TextRenderer::generateLineLayout, this, placeholders::_1), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
 	updateDefaultFont();
 //	updateViewerSize(); ???
 	presentation_.addGlobalTextStyleListener(*this);
