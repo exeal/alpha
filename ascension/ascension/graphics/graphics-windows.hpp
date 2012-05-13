@@ -38,14 +38,14 @@ namespace ascension {
 			unsigned int logicalDpiX() const {return ::GetDeviceCaps(dc_.get(), LOGPIXELSX);}
 			unsigned int logicalDpiY() const {return ::GetDeviceCaps(dc_.get(), LOGPIXELSY);}
 			graphics::NativeSize size() const {
-				return graphics::geometry::make<NativeSize>(
+				return graphics::geometry::make<graphics::NativeSize>(
 					::GetDeviceCaps(dc_.get(), HORZRES), ::GetDeviceCaps(dc_.get(), VERTRES));
 			}
 		protected:
 			GraphicsContext() /*throw()*/ {}
 			void initialize(Handle<HDC>&& deviceContext) {
 				assert(deviceContext.get() != nullptr);
-				dc_ = move(deviceContext);
+				dc_ = std::move(deviceContext);
 			}
 		private:
 			Handle<HDC> dc_;
@@ -58,7 +58,7 @@ namespace ascension {
 					throw NullPointerException("window");
 				Handle<HDC> dc(::GetDC(window.get()), std::bind(&::ReleaseDC, window.get(), std::placeholders::_1));
 				if(dc.get() == nullptr)
-					throw PlatformDependentError<>();
+					throw makePlatformError();
 				initialize(std::move(dc));
 			}
 		};
@@ -70,7 +70,7 @@ namespace ascension {
 					throw NullPointerException("window");
 				Handle<HDC> dc(::GetWindowDC(window.get()), std::bind(&::ReleaseDC, window.get(), std::placeholders::_1));
 				if(dc.get() == nullptr)
-					throw PlatformDependentError<>();
+					throw makePlatformError();
 				initialize(std::move(dc));
 			}
 		};
@@ -82,7 +82,7 @@ namespace ascension {
 					throw NullPointerException("window");
 				Handle<HDC> dc(::BeginPaint(window.get(), &ps_), X(window.get(), ps_));
 				if(dc.get() == nullptr)
-					throw PlatformDependentError<>();
+					throw makePlatformError();
 				initialize(std::move(dc));
 			}
 			graphics::NativeRectangle boundsToPaint() const {return ps_.rcPaint;}
