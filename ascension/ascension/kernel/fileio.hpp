@@ -52,7 +52,7 @@ namespace ascension {
 			class IOException : public std::ios_base::failure {
 			public:
 				explicit IOException(const PathString& fileName);
-				IOException(const PathString& fileName, const std::error_code& code);
+				IOException(const PathString& fileName, const std::error_code::value_type code);
 				~IOException() throw();
 				const PathString& fileName() const /*throw()*/;
 			public:

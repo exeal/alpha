@@ -35,7 +35,7 @@ namespace {
 #endif
 	static const PathCharacter PREFERRED_PATH_SEPARATOR = PATH_SEPARATORS[0];
 	/// Returns @c true if the given character is a path separator.
-	inline bool isPathSeparator(PathCharacter c) /*throw()*/ {
+	inline bool isPathSeparator(PathCharacter c) /*noexcept*/ {
 		return find(PATH_SEPARATORS, ASCENSION_ENDOF(PATH_SEPARATORS) - 1, c) != ASCENSION_ENDOF(PATH_SEPARATORS) - 1;}
 	/**
 	 * Returns @c true if the specified file or directory exists.
@@ -437,66 +437,42 @@ void fileio::writeRegion(const Document& document, const Region& region,
 
 // exception classes //////////////////////////////////////////////////////////////////////////////
 
-namespace {
-	IOException::value_type currentSystemError() /*throw()*/ {
-#ifdef ASCENSION_OS_WINDOWS
-		return ::GetLastError();
-#else // ASCENSION_OS_POSIX
-		return errno;
-#endif
-	}
-	string errorMessage(IOException::value_type code = currentSystemError()) {
-#ifdef ASCENSION_OS_WINDOWS
-		void* buffer;
-		if(0 == ::FormatMessageA(
-				FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-				nullptr, code, LANG_USER_DEFAULT, reinterpret_cast<char*>(&buffer), 0, nullptr))
-			return "";
-		const string result(static_cast<char*>(buffer));
-		::LocalFree(buffer);
-		return result;
-#else // ASCENSION_OS_POSIX
-		const char* const s = ::strerror(code);
-		return (s != nullptr) ? s : "";
-#endif
-	}
-}
-
 /**
  * Constructor.
  */
 IOException::IOException(const PathString& fileName) :
-		PlatformDependentError<ios_base::failure>(currentSystemError()), fileName_(fileName) {
+		ios_base::failure(makePlatformError().what(), makePlatformError().code()), fileName_(fileName) {
 }
 
 /**
  * Constructor.
  */
-IOException::IOException(const PathString& fileName, value_type code) :
-		PlatformDependentError<ios_base::failure>(code), fileName_(fileName) {
+IOException::IOException(const PathString& fileName, error_code::value_type code) :
+		ios_base::failure(makePlatformError(code).what(), makePlatformError(code).code()), fileName_(fileName) {
 }
 
-
 /// Returns the file name.
-const PathString& IOException::fileName() const /*throw()*/ {
+const PathString& IOException::fileName() const /*noexcept*/ {
 	return fileName_;
 }
 
-bool IOException::isFileNotFound(const IOException& e) /*throw()*/ {
+bool IOException::isFileNotFound(const IOException& e) /*noexcept*/ {
+	const error_code::value_type code(e.code().value());
 #ifdef ASCENSION_OS_WINDOWS
-	return e.code() == ERROR_FILE_NOT_FOUND || e.code() == ERROR_PATH_NOT_FOUND
-		|| e.code() == ERROR_BAD_NETPATH /*|| e.code() == ERROR_INVALID_PARAMETER*/ || e.code() == ERROR_INVALID_NAME;
+	return code == ERROR_FILE_NOT_FOUND || code == ERROR_PATH_NOT_FOUND
+		|| code == ERROR_BAD_NETPATH /*|| code == ERROR_INVALID_PARAMETER*/ || code == ERROR_INVALID_NAME;
 
 #else // ASCENSION_OS_POSIX
-	return e.code() == ENOENT || e.code() == ENOTDIR;
+	return code == ENOENT || code == ENOTDIR;
 #endif
 }
 
-bool IOException::isPermissionDenied(const IOException& e) /*throw()*/ {
+bool IOException::isPermissionDenied(const IOException& e) /*noexcept*/ {
+	const error_code::value_type code(e.code().value());
 #ifdef ASCENSION_OS_WINDOWS
-	return e.code() == ERROR_ACCESS_DENIED || e.code() == ERROR_SHARING_VIOLATION;
+	return code == ERROR_ACCESS_DENIED || code == ERROR_SHARING_VIOLATION;
 #else // ASCENSION_OS_POSIX
-	return e.code() == EACCES;
+	return code == EACCES;
 #endif
 }
 
@@ -510,15 +486,15 @@ UnmappableCharacterException::UnmappableCharacterException() : ios_base::failure
 namespace {
 	class SystemErrorSaver {
 	public:
-		SystemErrorSaver() /*throw()*/ : code_(currentSystemError()) {}
+		SystemErrorSaver() /*noexcept*/ : code_(makePlatformError().code().value()) {}
 #ifdef ASCENSION_OS_WINDOWS
-		~SystemErrorSaver() /*throw()*/ {::SetLastError(code_);}
+		~SystemErrorSaver() /*noexcept*/ {::SetLastError(code_);}
 #else // ASCENSION_OS_POSIX
-		~SystemErrorSaver() /*throw()*/ {errno = code_;}
+		~SystemErrorSaver() /*noexcept*/ {errno = code_;}
 #endif
-		IOException::value_type code() const /*throw()*/ {return code_;}
+		error_code::value_type code() const /*noexcept*/ {return code_;}
 	private:
-		IOException::value_type code_;
+		error_code::value_type code_;
 	};
 } // namespace @0
 
@@ -667,7 +643,7 @@ TextFileStreamBuffer* TextFileStreamBuffer::closeAndDiscard() {
 		ASCENSION_ASSERT_NOT_REACHED();
 }
 
-TextFileStreamBuffer* TextFileStreamBuffer::closeFile() /*throw()*/ {
+TextFileStreamBuffer* TextFileStreamBuffer::closeFile() /*noexcept*/ {
 #ifdef ASCENSION_OS_WINDOWS
 	if(fileMapping_ != nullptr) {
 		::UnmapViewOfFile(const_cast<Byte*>(inputMapping_.first));
@@ -702,12 +678,12 @@ TextFileStreamBuffer* TextFileStreamBuffer::closeFile() /*throw()*/ {
  * Returns the character encoding. If the encoding name passed to the constructor was detection
  * name, returns the detected encoding.
  */
-string TextFileStreamBuffer::encoding() const /*throw()*/ {
+string TextFileStreamBuffer::encoding() const /*noexcept*/ {
 	return encoder_->properties().name();
 }
 
 /// Returns @c true if the file is open.
-bool TextFileStreamBuffer::isOpen() const /*throw()*/ {
+bool TextFileStreamBuffer::isOpen() const /*noexcept*/ {
 #ifdef ASCENSION_OS_WINDOWS
 	return fileHandle_ != INVALID_HANDLE_VALUE;
 #else // ASCENSION_OS_POSIX
@@ -884,7 +860,7 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 }
 
 /// Returns @c true if the internal encoder has @c Encoder#UNICODE_BYTE_ORDER_MARK flag.
-bool TextFileStreamBuffer::unicodeByteOrderMark() const /*throw()*/ {
+bool TextFileStreamBuffer::unicodeByteOrderMark() const /*noexcept*/ {
 	return (encoder_->flags() & Encoder::UNICODE_BYTE_ORDER_MARK) != 0;
 }
 
@@ -894,12 +870,12 @@ bool TextFileStreamBuffer::unicodeByteOrderMark() const /*throw()*/ {
 class TextFileDocumentInput::FileLocker {
 	ASCENSION_NONCOPYABLE_TAG(FileLocker);
 public:
-	FileLocker() /*throw()*/;
-	~FileLocker() /*throw()*/;
-	bool hasLock() const /*throw()*/;
+	FileLocker() /*noexcept*/;
+	~FileLocker() /*noexcept*/;
+	bool hasLock() const /*noexcept*/;
 	bool lock(const PathString& fileName, bool share);
-	LockType type() const /*throw()*/;
-	bool unlock() /*throw()*/;
+	LockType type() const /*noexcept*/;
+	bool unlock() /*noexcept*/;
 private:
 	LockType type_;
 #ifdef ASCENSION_OS_WINDOWS
@@ -912,7 +888,7 @@ private:
 };
 
 /// Default constructor.
-TextFileDocumentInput::FileLocker::FileLocker() /*throw()*/ : type_(NO_LOCK), file_(
+TextFileDocumentInput::FileLocker::FileLocker() /*noexcept*/ : type_(NO_LOCK), file_(
 #ifdef ASCENSION_OS_WINDOWS
 		INVALID_HANDLE_VALUE
 #else // ASCENSION_OS_POSIX
@@ -922,11 +898,11 @@ TextFileDocumentInput::FileLocker::FileLocker() /*throw()*/ : type_(NO_LOCK), fi
 }
 
 /// Destructor.
-TextFileDocumentInput::FileLocker::~FileLocker() /*throw()*/ {
+TextFileDocumentInput::FileLocker::~FileLocker() /*noexcept*/ {
 	unlock();
 }
 
-inline bool TextFileDocumentInput::FileLocker::hasLock() const /*throw()*/ {
+inline bool TextFileDocumentInput::FileLocker::hasLock() const /*noexcept*/ {
 #ifdef ASCENSION_OS_WINDOWS
 	return file_ != INVALID_HANDLE_VALUE;
 #else // ASCENSION_OS_POSIX
@@ -1019,7 +995,7 @@ bool TextFileDocumentInput::FileLocker::lock(const PathString& fileName, bool sh
 	return !alreadyShared;
 }
 
-inline TextFileDocumentInput::LockType TextFileDocumentInput::FileLocker::type() const /*throw()*/ {
+inline TextFileDocumentInput::LockType TextFileDocumentInput::FileLocker::type() const /*noexcept*/ {
 	return hasLock() ? type_ : NO_LOCK;
 }
 
@@ -1027,7 +1003,7 @@ inline TextFileDocumentInput::LockType TextFileDocumentInput::FileLocker::type()
  * Unlocks the file.
  * @return succeeded or not
  */
-bool TextFileDocumentInput::FileLocker::unlock() /*throw()*/ {
+bool TextFileDocumentInput::FileLocker::unlock() /*noexcept*/ {
 	bool succeeded = true;
 	if(hasLock()) {
 #ifdef ASCENSION_OS_WINDOWS
@@ -1102,7 +1078,7 @@ TextFileDocumentInput::TextFileDocumentInput(Document& document) :
 }
 
 /// Destructor.
-TextFileDocumentInput::~TextFileDocumentInput() /*throw()*/ {
+TextFileDocumentInput::~TextFileDocumentInput() /*noexcept*/ {
 	unbind();
 }
 
@@ -1203,7 +1179,7 @@ bool TextFileDocumentInput::isChangeable(const Document&) const {
 }
 
 /// @see IDocumentInput#location
-String TextFileDocumentInput::location() const /*throw()*/ {
+String TextFileDocumentInput::location() const /*noexcept*/ {
 #ifdef ASCENSION_OS_WINDOWS
 	return fileName();
 #else // ASCENSION_OS_POSIX
@@ -1237,12 +1213,12 @@ void TextFileDocumentInput::lockFile(const LockMode& mode) {
  * Returns the file lock type, or @c NO_LOCK when @c onlyAsEditing value of the desired lock mode
  * and the file was not locked actually.
  */
-TextFileDocumentInput::LockType TextFileDocumentInput::lockType() const /*throw()*/ {
+TextFileDocumentInput::LockType TextFileDocumentInput::lockType() const /*noexcept*/ {
 	return fileLocker_->type();
 }
 
 /// @see IDocumentInput#postFirstDocumentChange
-void TextFileDocumentInput::postFirstDocumentChange(const Document&) /*throw()*/ {
+void TextFileDocumentInput::postFirstDocumentChange(const Document&) /*noexcept*/ {
 	if(!document().isModified() && desiredLockMode_.onlyAsEditing)
 		fileLocker_->unlock();
 }
@@ -1358,7 +1334,7 @@ TextFileDocumentInput& TextFileDocumentInput::setNewline(Newline newline) {
  * Unbinds the file and the document.
  * @note This method does NOT reset the content of the document.
  */
-void TextFileDocumentInput::unbind() /*throw()*/ {
+void TextFileDocumentInput::unbind() /*noexcept*/ {
 	if(isBoundToFile()) {
 		fileLocker_->unlock();	// this may return false
 		if(const shared_ptr<DocumentInput> input = document().input().lock()) {
@@ -1383,7 +1359,7 @@ void TextFileDocumentInput::unlockFile() {
  * @param[out] newTimeStamp The actual time stamp
  * @return @c false if not match
  */
-bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) /*throw()*/ {
+bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) /*noexcept*/ {
 	static Time uninitialized;
 	static bool initializedUninitialized = false;
 	if(!initializedUninitialized)
@@ -1532,11 +1508,11 @@ void TextFileDocumentInput::write(const WritingFormat& format, const WritingOpti
 // DirectoryIteratorBase ////////////////////////////////////////////////////
 
 /// Protected default constructor.
-DirectoryIteratorBase::DirectoryIteratorBase() /*throw()*/ {
+DirectoryIteratorBase::DirectoryIteratorBase() /*noexcept*/ {
 }
 
 /// Destructor.
-DirectoryIteratorBase::~DirectoryIteratorBase() /*throw()*/ {
+DirectoryIteratorBase::~DirectoryIteratorBase() /*noexcept*/ {
 }
 
 
@@ -1599,7 +1575,7 @@ DirectoryIterator::DirectoryIterator(const PathCharacter* directoryName) :
 }
 
 /// Destructor.
-DirectoryIterator::~DirectoryIterator() /*throw()*/ {
+DirectoryIterator::~DirectoryIterator() /*noexcept*/ {
 #ifdef ASCENSION_OS_WINDOWS
 	if(handle_ != INVALID_HANDLE_VALUE)
 		::FindClose(handle_);
@@ -1622,7 +1598,7 @@ const PathString& DirectoryIterator::directory() const {
 }
 
 /// @see DirectoryIteratorBase#hasNext
-bool DirectoryIterator::hasNext() const /*throw()*/ {
+bool DirectoryIterator::hasNext() const /*noexcept*/ {
 	return !done_;
 }
 
@@ -1682,7 +1658,7 @@ RecursiveDirectoryIterator::RecursiveDirectoryIterator(const PathCharacter* dire
 }
 
 /// Destructor.
-RecursiveDirectoryIterator::~RecursiveDirectoryIterator() /*throw()*/ {
+RecursiveDirectoryIterator::~RecursiveDirectoryIterator() /*noexcept*/ {
 	while(!stack_.empty()) {
 		delete stack_.top();
 		stack_.pop();
@@ -1697,7 +1673,7 @@ const PathString& RecursiveDirectoryIterator::current() const {
 }
 
 /// @see DirectoryIteratorBase#directory
-const PathString& RecursiveDirectoryIterator::directory() const /*throw()*/ {
+const PathString& RecursiveDirectoryIterator::directory() const /*noexcept*/ {
 	return stack_.top()->directory();
 }
 
@@ -1711,7 +1687,7 @@ void RecursiveDirectoryIterator::dontPush() {
 }
 
 /// @see DirectoryIteratorBase#hasNext
-bool RecursiveDirectoryIterator::hasNext() const /*throw()*/ {
+bool RecursiveDirectoryIterator::hasNext() const /*noexcept*/ {
 	return stack_.size() != 1 || stack_.top()->hasNext();
 }
 
@@ -1723,7 +1699,7 @@ bool RecursiveDirectoryIterator::isDirectory() const {
 }
 
 /// Returns the depth of the recursion.
-size_t RecursiveDirectoryIterator::level() const /*throw()*/ {
+size_t RecursiveDirectoryIterator::level() const /*noexcept*/ {
 	return stack_.size() - 1;
 }
 
