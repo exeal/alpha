@@ -894,7 +894,7 @@ bool ReconversionCommand::perform() {
 	Caret& caret = viewer.caret();
 	if(!caret.isSelectionRectangle()) {
 		if(win32::Handle<HIMC> imc = win32::inputMethod(viewer)) {
-			if(!win32::boole(::ImmGetOpenStatus(imc.get))))	// without this, IME may ignore us?
+			if(!win32::boole(::ImmGetOpenStatus(imc.get())))	// without this, IME may ignore us?
 				::ImmSetOpenStatus(imc.get(), true);
 
 			// from NotePadView.pas of TNotePad (http://wantech.ikuto.com/)
@@ -914,11 +914,11 @@ bool ReconversionCommand::perform() {
 
 			if(isSelectionEmpty(caret)) {
 				// IME selects the composition target automatically if no selection
-				if(win32::boole(::ImmSetCompositionStringW(imc, SCS_QUERYRECONVERTSTRING, rcs, rcs->dwSize, nullptr, 0))) {
+				if(win32::boole(::ImmSetCompositionStringW(imc.get(), SCS_QUERYRECONVERTSTRING, rcs, rcs->dwSize, nullptr, 0))) {
 					caret.select(
 						Position(line(caret), rcs->dwCompStrOffset / sizeof(Char)),
 						Position(line(caret), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
-					if(win32::boole(::ImmSetCompositionStringW(imc, SCS_SETRECONVERTSTRING, rcs, rcs->dwSize, nullptr, 0)))
+					if(win32::boole(::ImmSetCompositionStringW(imc.get(), SCS_SETRECONVERTSTRING, rcs, rcs->dwSize, nullptr, 0)))
 						succeeded = true;
 				}
 			}

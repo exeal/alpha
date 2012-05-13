@@ -276,7 +276,7 @@ shared_ptr<const Font> SystemFonts::lastResortFallback(const FontProperties<>& p
 		else {
 			win32::AutoZeroSize<NONCLIENTMETRICSW> ncm;
 			if(!win32::boole(::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICSW), &ncm, 0)))
-				throw PlatformDependentError<>();
+				throw makePlatformError();
 			familyName = ncm.lfMessageFont.lfFaceName;
 		}
 	}

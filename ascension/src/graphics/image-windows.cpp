@@ -31,7 +31,7 @@ namespace {
 		}
 		win32::Handle<HDC> dc(::GetDC(nullptr));
 		if(dc.get() == nullptr)
-			throw PlatformDependentError<>();
+			throw makePlatformError();
 		BITMAPINFO* const info = static_cast<BITMAPINFO*>(::operator new(
 			sizeof(BITMAPINFOHEADER) + bytesPerPixel * geometry::dx(size) * geometry::dy(size)));
 		BITMAPINFOHEADER& header = info->bmiHeader;
