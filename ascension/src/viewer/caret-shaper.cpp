@@ -13,7 +13,6 @@
 
 using namespace ascension;
 using namespace ascension::viewers;
-using namespace ascension::viewers::base;
 using namespace ascension::presentation;
 using namespace ascension::graphics;
 using namespace ascension::graphics::font;

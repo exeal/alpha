@@ -42,13 +42,19 @@ namespace ascension {
 
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 			typedef Gtk::Scrollable NativeScrollableWidget;	// Gtk.Viewport is preferred?
+			typedef double NativeScrollPosition;
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
 			typedef QScrollArea NativeScrollableWidget;
+			typedef int NativeScrollPosition;
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
 			typedef NSScrollView NativeScrollableWidget;
+			typedef CGFloat NativeScrollPosition;
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 			typedef win32::Window NativeScrollableWidget;
+			typedef int NativeScrollPosition;
 #endif
+			static_assert(std::is_signed<NativeScrollPosition>::value,
+				"ascension.viewers.widgetapi.NativeScrollPosition should be signed.");
 #if 0
 			class ScrollableWidget : public ScrollProperties<int>, public Widget {
 			public:

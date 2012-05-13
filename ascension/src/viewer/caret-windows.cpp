@@ -230,7 +230,7 @@ namespace {
 } // namespace @0
 
 win32::com::SmartPointer<widgetapi::NativeMimeData> utils::createMimeDataForSelectedString(const Caret& caret, bool rtf) {
-	win32::com::SmartPointer<GenericDataObject, &IID_IDataObject> content(new GenericDataObject());
+	win32::com::SmartPointer<IDataObject> content(new GenericDataObject());
 
 	// get text on the given region
 	const String text(selectedString(caret, NLF_CR_LF));
@@ -704,7 +704,7 @@ void viewers::copySelection(Caret& caret, bool useKillRing) {
 
 	win32::com::SmartPointer<widgetapi::NativeMimeData> content(
 		utils::createMimeDataForSelectedString(caret, true));	// this may throw std.bad_alloc
-	HRESULT hr = tryOleClipboard(::OleSetClipboard, content);
+	HRESULT hr = tryOleClipboard(::OleSetClipboard, content.get());
 	if(FAILED(hr))
 		throw ClipboardException(hr);
 	hr = tryOleClipboard(::OleFlushClipboard);

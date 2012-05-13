@@ -23,6 +23,7 @@
 #include <array>
 #include <set>
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#	include <ascension/win32/com/smart-pointer.hpp>
 #	include <ascension/win32/com/unknown-impl.hpp>
 #	include <shlobj.h>	// IDropTargetHelper
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
@@ -97,6 +98,10 @@ namespace ascension {
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
 		class TextViewer :
+				// note:
+				// Gtk.TextView inherits Gtk.Container (which inherits Gtk.Widget) and Gtk.Scrollable.
+				// QPlainTextEdit and QTextEdit inherit QAbstractScrollArea.
+				// NSTextView inherits NSText (which inherits NSView).
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 				public Gtk::Widget, public Gtk::Scrollable,
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)

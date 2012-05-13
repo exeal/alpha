@@ -40,7 +40,7 @@ namespace ascension {
 				if(message == WM_NCCREATE) {
 					void* const p = reinterpret_cast<CREATESTRUCTW*>(lp)->lpCreateParams;
 					assert(p != nullptr);
-					addExplicitly(window, *p);
+					addExplicitly(window, *static_cast<Window*>(p));
 				}
 				const std::map<HWND, Window*>::iterator i(handleToObjects_.find(window));
 				const LRESULT result = (i != handleToObjects_.end()) ?
@@ -130,31 +130,41 @@ namespace ascension {
 				UINT style;	// corresponds to WNDCLASSEXW.style
 				/// Makes a brush handle parameter from either a brush handle or @c COLORREF value. 
 				class Background {
+					ASCENSION_NONCOPYABLE_TAG(Background);
 				public:
 					/// Constructor makes @c null @c HBRUSH value.
-					Background() /*throw()*/ : brush_(nullptr) {}
+					Background() /*noexcept*/ : brush_(nullptr) {}
 					/// Constructor takes a brush handle.
-					Background(Handle<HBRUSH>&& handle) /*throw()*/ : brush_(std::move(handle)) {}
+					Background(Handle<HBRUSH>&& handle) /*noexcept*/ : brush_(std::move(handle)) {}
 					/// Constructor takes a @c COLORREF value used to make the brush handle.
-					Background(int systemColor) /*throw()*/
+					Background(int systemColor) /*noexcept*/
 						: brush_(reinterpret_cast<HBRUSH>(static_cast<HANDLE_PTR>(systemColor + 1))) {}
+					/// Move-constructor.
+					Background(Background&& other) /*noexcept*/ : brush_(std::move(other.brush_)) {}
+					/// Move-assignment operator.
+					Background& operator=(Background&& other) /*noexcept*/ {brush_ = std::move(other.brush_);}
 					/// Returns the brush handle.
-					HBRUSH get() const /*throw()*/ {return brush_.get();}
+					const Handle<HBRUSH>& get() const /*noexcept*/ {return brush_;}
 				private:
 					Handle<HBRUSH> brush_;
 				} background;
 				Handle<HICON> icon, smallIcon;
 				/// Makes a cursor handle parameter from either a cursor handle or numeric identifier.
 				class CursorHandleOrID {
+					ASCENSION_NONCOPYABLE_TAG(CursorHandleOrID);
 				public:
 					/// Constructor makes @c null @c HCURSOR value.
-					CursorHandleOrID() /*throw()*/ : cursor_(nullptr) {}
+					CursorHandleOrID() /*noexcept*/ : cursor_(nullptr) {}
 					/// Constructor takes a cursor handle.
-					CursorHandleOrID(Handle<HCURSOR>&& handle) /*throw()*/ : cursor_(std::move(handle)) {}
+					CursorHandleOrID(Handle<HCURSOR>&& handle) /*noexcept*/ : cursor_(std::move(handle)) {}
 					/// Constructor takes a numeric identifier for system cursor.
-					CursorHandleOrID(const WCHAR* systemCursorID) : cursor_(::LoadCursorW(nullptr, systemCursorID), detail::NullDeleter()) {}
+					CursorHandleOrID(const WCHAR* systemCursorID) /*noexcept*/ : cursor_(::LoadCursorW(nullptr, systemCursorID)) {}
+					/// Move-constructor.
+					CursorHandleOrID(CursorHandleOrID&& other) /*noexcept*/ : cursor_(std::move(other.cursor_)) {}
+					/// Move-assignment operator.
+					CursorHandleOrID& operator=(CursorHandleOrID&& other) /*noexcept*/ {cursor_ = std::move(other.cursor_);}
 					/// Returns the cursor handle.
-					HCURSOR get() const /*throw()*/ {return cursor_.get();}
+					const Handle<HCURSOR>& get() const /*noexcept*/ {return cursor_;}
 				private:
 					Handle<HCURSOR> cursor_;
 				} cursor;
