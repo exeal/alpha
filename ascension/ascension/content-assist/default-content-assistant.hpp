@@ -106,7 +106,7 @@ namespace ascension {
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
 				QListView
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-				win32::Window
+				win32::SubclassedWindow
 #elif defined(ASCENSION_WINDOW_SYSTEM_X)
 				???
 #endif
@@ -124,7 +124,7 @@ namespace ascension {
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-				LRESULT processWindowMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
+				LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
 				void setFont(const HFONT newFont);
 				void updateDefaultFont();
 				HFONT defaultFont_;
