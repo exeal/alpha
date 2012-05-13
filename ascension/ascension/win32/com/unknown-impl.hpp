@@ -68,9 +68,16 @@ namespace ascension {
 		template<typename Self, typename Car, const IID* iid, typename Cdr>
 		struct ChainQueryInterface<Self, typelist::Cat<win32::com::Interface<Car, iid>, Cdr>> {
 			HRESULT operator()(Self& self, const IID& riid, void** ppv) {
-				if(boole(::InlineIsEqualGUID(riid, *iid)))
+				if(win32::boole(::InlineIsEqualGUID(riid, *iid)))
 					return (*ppv = static_cast<Car*>(&self)), self.AddRef(), S_OK;
 				return ChainQueryInterface<Self, Cdr>()(self, riid, ppv);
+			}
+		};
+		template<typename Self, typename I, const IID* iid>
+		struct ChainQueryInterface<Self, win32::com::Interface<I, iid>> {
+			HRESULT operator()(Self& self, const IID& riid, void** ppv) {
+				return ChainQueryInterface<Self,
+					typelist::Cat<win32::com::Interface<I, iid>>>()(self, riid, ppv);
 			}
 		};
 		template<typename Self> struct ChainQueryInterface<Self, void> {

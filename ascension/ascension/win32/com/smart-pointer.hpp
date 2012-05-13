@@ -46,7 +46,7 @@ namespace ascension {
 				template<typename U>
 				explicit SmartPointer(U* p) /*noexcept*/ : pointee_(nullptr) {
 					if(p != nullptr)
-						p->QueryInterface(iid, initializePPV());
+						p->QueryInterface(*iid, initializePPV());
 				}
 				/// Constructor with an interface pointer.
 				template<>
@@ -141,6 +141,10 @@ namespace ascension {
 				void reset(U* p) /*noexcept*/ {
 					if(p != pointee_)
 						SmartPointer<element_type, iid>(p).swap(*this);
+				}
+				/// Swaps the two objects.
+				void swap(SmartPointer<element_type>& other) /*noexcept*/ {
+					std::swap(pointee_, other.pointee_);
 				}
 				/// Swaps the two objects.
 				void swap(SmartPointerProxy<element_type>& other) /*noexcept*/ {

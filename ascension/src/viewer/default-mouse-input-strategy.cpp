@@ -59,6 +59,13 @@ namespace {
 	private:
 		void paint(graphics::PaintContext& context);
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
+			if(message == WM_PAINT) {
+				paint(widgetapi::createRenderingContext());
+				consumed = true;
+			}
+			return win32::CustomControl::processMessage(message, wp, lp, consumed);
+		}
 		void provideClassInformation(win32::CustomControl::ClassInformation& classInformation) const {
 			classInformation.style = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW;
 			classInformation.background = COLOR_WINDOW;
@@ -610,10 +617,15 @@ void DefaultMouseInputStrategy::dropped(widgetapi::DropInput& input) {
 		if((input.possibleActions() & widgetapi::DROP_ACTION_COPY) != 0) {
 			caret.moveTo(destination);
 
-			pair<String, bool> content(utils::getTextFromMimeData(input.mimeData()));
-			if(SUCCEEDED(content.first)) {
+			pair<String, bool> content;
+			bool failed = false;
+			try {
+				content = utils::getTextFromMimeData(input.mimeData());
+			} catch(...) {
+				failed = true;
+			}
+			if(!failed) {
 				AutoFreeze af(viewer_);
-				bool failed = false;
 				try {
 					caret.replaceSelection(content.first, content.second);
 				} catch(...) {

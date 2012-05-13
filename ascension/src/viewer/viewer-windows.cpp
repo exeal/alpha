@@ -722,7 +722,7 @@ void TextViewer::hideToolTip() {
 
 /// @internal Initializes the window of the viewer.
 void TextViewer::initialize(const TextViewer* other) {
-	scrollInfo_.updateVertical(*this);
+//	scrollInfo_.updateVertical(*this);
 	updateScrollBars();
 
 	// create the tooltip belongs to the window

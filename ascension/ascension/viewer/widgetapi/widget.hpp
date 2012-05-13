@@ -101,6 +101,12 @@ namespace ascension {
 				NativeWidget& widget_;
 			};
 
+			// top-level windows
+			bool isMaximized(const NativeWidget& widget);
+			bool isMinimized(const NativeWidget& widget);
+			void showMaximized(NativeWidget& widget);
+			void showMinimized(NativeWidget& widget);
+
 			// hierarchy
 			NativeWidget* parent(const NativeWidget& widget);
 			void setParent();
