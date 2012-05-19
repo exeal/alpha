@@ -115,27 +115,22 @@ namespace {
  */
 
 /**
- * @fn ascension::viewers::TextViewer::TextViewer
  * Constructor.
- * @param presentation the presentation
+ * @param presentation The presentation object
  */
+TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation), mouseInputDisabledCount_(0) {
+	initialize(nullptr);
+
+	// initializations of renderer_ and mouseInputStrategy_ are in initializeWindow()
+}
 
 /**
  * Copy-constructor. Unlike @c win32#Object class, this does not copy the window handle. For
  * more details, see the description of @c TextViewer.
  */
-TextViewer::TextViewer(const TextViewer& other) : presentation_(other.presentation_), tipText_(nullptr)
-#ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-		, accessibleProxy_(nullptr)
-#endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
-{
+TextViewer::TextViewer(const TextViewer& other) : presentation_(other.presentation_), mouseInputDisabledCount_(0) {
 	initialize(&other);
-
 	modeState_ = other.modeState_;
-
-	mouseInputDisabledCount_ = 0;
-	document().addListener(*this);
-	document().addRollbackListener(*this);
 }
 
 /// Destructor.
@@ -152,7 +147,6 @@ TextViewer::~TextViewer() {
 
 	// 非共有データ
 //	delete selection_;
-	delete[] tipText_;
 }
 
 /// @see Widget#aboutToLoseFocus
@@ -322,7 +316,7 @@ void TextViewer::documentUndoSequenceStopped(const k::Document&, const k::Positi
  * @param context The graphics context
  * @param rect The rectangle to draw
  */
-void TextViewer::drawIndicatorMargin(Index /* line */, Context& /* context */, const NativeRectangle& /* rect */) {
+void TextViewer::drawIndicatorMargin(Index /* line */, PaintContext& /* context */, const NativeRectangle& /* rect */) {
 }
 
 /**
@@ -531,6 +525,7 @@ TextViewer::HitTestResult TextViewer::hitTest(const NativePoint& p) const {
 	}
 }
 
+/// @internal Called by constructors.
 void TextViewer::initialize(const TextViewer* other) {
 	renderer_.reset((other == nullptr) ? new Renderer(*this) : new Renderer(*other->renderer_, *this));
 	textRenderer().addComputedWritingModeListener(*this);
@@ -543,6 +538,208 @@ void TextViewer::initialize(const TextViewer* other) {
 
 	document().addListener(*this);
 	document().addRollbackListener(*this);
+
+	//	scrollInfo_.updateVertical(*this);
+	updateScrollBars();
+	setMouseInputStrategy(shared_ptr<MouseInputStrategy>());
+
+#ifdef ASCENSION_TEST_TEXT_STYLES
+	RulerConfiguration rc;
+	rc.lineNumbers.visible = true;
+	rc.indicatorMargin.visible = true;
+	rc.lineNumbers.foreground = Paint(Color(0x00, 0x80, 0x80));
+	rc.lineNumbers.background = Paint(Color(0xff, 0xff, 0xff));
+	rc.lineNumbers.borderEnd.color = Color(0x00, 0x80, 0x80);
+	rc.lineNumbers.borderEnd.style = Border::DOTTED;
+	rc.lineNumbers.borderEnd.width = Length(1);
+	setConfiguration(nullptr, &rc, false);
+
+#if 0
+	// this is JavaScript partitioning and lexing settings for test
+	using namespace contentassist;
+	using namespace rules;
+	using namespace text;
+
+	static const ContentType JS_MULTILINE_DOC_COMMENT = 140,
+		JS_MULTILINE_COMMENT = 142, JS_SINGLELINE_COMMENT = 143, JS_DQ_STRING = 144, JS_SQ_STRING = 145;
+
+	class JSContentTypeInformation : public IContentTypeInformationProvider {
+	public:
+		JSContentTypeInformation()  {
+			jsIDs_.overrideIdentifierStartCharacters(L"_", L""); jsdocIDs_.overrideIdentifierStartCharacters(L"$@", L"");}
+		const IdentifierSyntax& getIdentifierSyntax(ContentType contentType) const {
+			return (contentType != JS_MULTILINE_DOC_COMMENT) ? jsIDs_ : jsdocIDs_;}
+	private:
+		IdentifierSyntax jsIDs_, jsdocIDs_;
+	};
+	JSContentTypeInformation* cti = new JSContentTypeInformation;
+
+	TransitionRule* rules[12];
+	rules[0] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_MULTILINE_DOC_COMMENT, L"/**");
+	rules[1] = new LiteralTransitionRule(JS_MULTILINE_DOC_COMMENT, DEFAULT_CONTENT_TYPE, L"*/");
+	rules[2] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_MULTILINE_COMMENT, L"/*");
+	rules[3] = new LiteralTransitionRule(JS_MULTILINE_COMMENT, DEFAULT_CONTENT_TYPE, L"*/");
+	rules[4] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_SINGLELINE_COMMENT, L"//");
+	rules[5] = new LiteralTransitionRule(JS_SINGLELINE_COMMENT, DEFAULT_CONTENT_TYPE, L"", L'\\');
+	rules[6] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_DQ_STRING, L"\"");
+	rules[7] = new LiteralTransitionRule(JS_DQ_STRING, DEFAULT_CONTENT_TYPE, L"\"", L'\\');
+	rules[8] = new LiteralTransitionRule(JS_DQ_STRING, DEFAULT_CONTENT_TYPE, L"");
+	rules[9] = new LiteralTransitionRule(DEFAULT_CONTENT_TYPE, JS_SQ_STRING, L"\'");
+	rules[10] = new LiteralTransitionRule(JS_SQ_STRING, DEFAULT_CONTENT_TYPE, L"\'", L'\\');
+	rules[11] = new LiteralTransitionRule(JS_SQ_STRING, DEFAULT_CONTENT_TYPE, L"");
+	LexicalPartitioner* p = new LexicalPartitioner();
+	p->setRules(rules, ASCENSION_ENDOF(rules));
+	for(size_t i = 0; i < ASCENSION_COUNTOF(rules); ++i)
+		delete rules[i];
+	document().setPartitioner(unique_ptr<DocumentPartitioner>(p));
+
+	PresentationReconstructor* pr = new PresentationReconstructor(presentation());
+
+	// JSDoc syntax highlight test
+	static const Char JSDOC_ATTRIBUTES[] = L"@addon @argument @author @base @class @constructor @deprecated @exception @exec @extends"
+		L" @fileoverview @final @ignore @link @member @param @private @requires @return @returns @see @throws @type @version";
+	{
+		unique_ptr<const WordRule> jsdocAttributes(new WordRule(220, JSDOC_ATTRIBUTES, ASCENSION_ENDOF(JSDOC_ATTRIBUTES) - 1, L' ', true));
+		unique_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(JS_MULTILINE_DOC_COMMENT));
+		scanner->addWordRule(jsdocAttributes);
+		scanner->addRule(unique_ptr<Rule>(new URIRule(219, URIDetector::defaultIANAURIInstance(), false)));
+		map<Token::ID, const TextStyle> jsdocStyles;
+		jsdocStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle(Colors(Color(0x00, 0x80, 0x00)))));
+		jsdocStyles.insert(make_pair(219, TextStyle(Colors(Color(0x00, 0x80, 0x00)), false, false, false, SOLID_UNDERLINE)));
+		jsdocStyles.insert(make_pair(220, TextStyle(Colors(Color(0x00, 0x80, 0x00)), true)));
+		unique_ptr<IPartitionPresentationReconstructor> ppr(
+			new LexicalPartitionPresentationReconstructor(document(), unique_ptr<ITokenScanner>(scanner.release()), jsdocStyles));
+		pr->setPartitionReconstructor(JS_MULTILINE_DOC_COMMENT, ppr);
+	}
+
+	// JavaScript syntax highlight test
+	static const Char JS_KEYWORDS[] = L"Infinity break case catch continue default delete do else false finally for function"
+		L" if in instanceof new null return switch this throw true try typeof undefined var void while with";
+	static const Char JS_FUTURE_KEYWORDS[] = L"abstract boolean byte char class double enum extends final float goto"
+		L" implements int interface long native package private protected public short static super synchronized throws transient volatile";
+	{
+		unique_ptr<const WordRule> jsKeywords(new WordRule(221, JS_KEYWORDS, ASCENSION_ENDOF(JS_KEYWORDS) - 1, L' ', true));
+		unique_ptr<const WordRule> jsFutureKeywords(new WordRule(222, JS_FUTURE_KEYWORDS, ASCENSION_ENDOF(JS_FUTURE_KEYWORDS) - 1, L' ', true));
+		unique_ptr<LexicalTokenScanner> scanner(new LexicalTokenScanner(DEFAULT_CONTENT_TYPE));
+		scanner->addWordRule(jsKeywords);
+		scanner->addWordRule(jsFutureKeywords);
+		scanner->addRule(unique_ptr<const Rule>(new NumberRule(223)));
+		map<Token::ID, const TextStyle> jsStyles;
+		jsStyles.insert(make_pair(Token::DEFAULT_TOKEN, TextStyle()));
+		jsStyles.insert(make_pair(221, TextStyle(Colors(Color(0x00, 0x00, 0xff)))));
+		jsStyles.insert(make_pair(222, TextStyle(Colors(Color(0x00, 0x00, 0xff)), false, false, false, DASHED_UNDERLINE)));
+		jsStyles.insert(make_pair(223, TextStyle(Colors(Color(0x80, 0x00, 0x00)))));
+		pr->setPartitionReconstructor(DEFAULT_CONTENT_TYPE,
+			unique_ptr<IPartitionPresentationReconstructor>(new LexicalPartitionPresentationReconstructor(document(),
+				unique_ptr<ITokenScanner>(scanner.release()), jsStyles)));
+	}
+
+	// other contents
+	pr->setPartitionReconstructor(JS_MULTILINE_COMMENT, unique_ptr<IPartitionPresentationReconstructor>(
+		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(Color(0x00, 0x80, 0x00))))));
+	pr->setPartitionReconstructor(JS_SINGLELINE_COMMENT, unique_ptr<IPartitionPresentationReconstructor>(
+		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(Color(0x00, 0x80, 0x00))))));
+	pr->setPartitionReconstructor(JS_DQ_STRING, unique_ptr<IPartitionPresentationReconstructor>(
+		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(Color(0x00, 0x00, 0x80))))));
+	pr->setPartitionReconstructor(JS_SQ_STRING, unique_ptr<IPartitionPresentationReconstructor>(
+		new SingleStyledPartitionPresentationReconstructor(TextStyle(Colors(Color(0x00, 0x00, 0x80))))));
+	new CurrentLineHighlighter(*caret_, Colors(Color(), Color::fromCOLORREF(::GetSysColor(COLOR_INFOBK))));
+
+	// URL hyperlinks test
+	unique_ptr<hyperlink::CompositeHyperlinkDetector> hld(new hyperlink::CompositeHyperlinkDetector);
+	hld->setDetector(JS_MULTILINE_DOC_COMMENT, unique_ptr<hyperlink::IHyperlinkDetector>(
+		new hyperlink::URIHyperlinkDetector(URIDetector::defaultIANAURIInstance(), false)));
+	presentation().setHyperlinkDetector(hld.release(), true);
+
+	// content assist test
+	class JSDocProposals : public IdentifiersProposalProcessor {
+	public:
+		JSDocProposals(const IdentifierSyntax& ids) : IdentifiersProposalProcessor(JS_MULTILINE_DOC_COMMENT, ids) {}
+		void computeCompletionProposals(const Caret& caret, bool& incremental,
+				Region& replacementRegion, set<ICompletionProposal*>& proposals) const {
+			basic_istringstream<Char> s(JSDOC_ATTRIBUTES);
+			String p;
+			while(s >> p)
+				proposals.insert(new CompletionProposal(p));
+			IdentifiersProposalProcessor::computeCompletionProposals(caret, incremental = true, replacementRegion, proposals);
+		}
+		bool isCompletionProposalAutoActivationCharacter(CodePoint c) const /*throw()*/ {return c == L'@';}
+	};
+	class JSProposals : public IdentifiersProposalProcessor {
+	public:
+		JSProposals(const IdentifierSyntax& ids) : IdentifiersProposalProcessor(DEFAULT_CONTENT_TYPE, ids) {}
+		void computeCompletionProposals(const Caret& caret, bool& incremental,
+				Region& replacementRegion, set<ICompletionProposal*>& proposals) const {
+			basic_istringstream<Char> s(JS_KEYWORDS);
+			String p;
+			while(s >> p)
+				proposals.insert(new CompletionProposal(p));
+			IdentifiersProposalProcessor::computeCompletionProposals(caret, incremental = true, replacementRegion, proposals);
+		}
+		bool isCompletionProposalAutoActivationCharacter(CodePoint c) const /*throw()*/ {return c == L'.';}
+	};
+	unique_ptr<contentassist::ContentAssistant> ca(new contentassist::ContentAssistant());
+	ca->setContentAssistProcessor(JS_MULTILINE_DOC_COMMENT, unique_ptr<contentassist::IContentAssistProcessor>(new JSDocProposals(cti->getIdentifierSyntax(JS_MULTILINE_DOC_COMMENT))));
+	ca->setContentAssistProcessor(DEFAULT_CONTENT_TYPE, unique_ptr<contentassist::IContentAssistProcessor>(new JSProposals(cti->getIdentifierSyntax(DEFAULT_CONTENT_TYPE))));
+	setContentAssistant(unique_ptr<contentassist::IContentAssistant>(ca));
+	document().setContentTypeInformation(unique_ptr<IContentTypeInformationProvider>(cti));
+#endif // 1
+
+	class ZebraTextRunStyleTest : public TextRunStyleDirector {
+	private:
+		class Iterator : public StyledTextRunIterator {
+		public:
+			Iterator(Index lineLength, bool beginningIsBlackBack) : length_(lineLength), beginningIsBlackBack_(beginningIsBlackBack) {
+				current_ = StyledTextRun(0, current_.style());
+				update();
+			}
+			StyledTextRun current() const {
+				if(!hasNext())
+					throw IllegalStateException("");
+				return current_;
+			}
+			bool hasNext() const {
+				return current_.position() != length_;
+			}
+			void next() {
+				if(!hasNext())
+					throw IllegalStateException("");
+				current_ = StyledTextRun(current_.position() + 1, current_.style());
+				update();
+			}
+		private:
+			void update() {
+				int temp = beginningIsBlackBack_ ? 0 : 1;
+				temp += (current_.position() % 2 == 0) ? 0 : 1;
+				shared_ptr<TextRunStyle> style(make_shared<TextRunStyle>());
+				style->foreground = Paint((temp % 2 == 0) ?
+					Color(0xff, 0x00, 0x00) : SystemColors::get(SystemColors::WINDOW_TEXT));
+				style->background = Paint((temp % 2 == 0) ?
+					Color(0xff, 0xcc, 0xcc) : SystemColors::get(SystemColors::WINDOW));
+				current_ = StyledTextRun(current_.position(), style);
+			}
+		private:
+			const Index length_;
+			const bool beginningIsBlackBack_;
+			StyledTextRun current_;
+		};
+	public:
+		ZebraTextRunStyleTest(const k::Document& document) : document_(document) {
+		}
+		unique_ptr<StyledTextRunIterator> queryTextRunStyle(Index line) const {
+			return unique_ptr<StyledTextRunIterator>(new Iterator(document_.lineLength(line), line % 2 == 0));
+		}
+	private:
+		const k::Document& document_;
+	};
+	presentation().setTextRunStyleDirector(
+		shared_ptr<TextRunStyleDirector>(new ZebraTextRunStyleTest(document())));
+#endif // ASCENSION_TEST_TEXT_STYLES
+	
+	renderer_->addDefaultFontListener(*this);
+	renderer_->layouts().addVisualLinesListener(*this);
+
+	initializeNativeObjects(other);
 }
 
 /**
@@ -1065,7 +1262,7 @@ void TextViewer::resized(const NativeSize&) {
 	ti.hwnd = handle().get();
 	ti.uId = 1;
 	ti.rect = viewerBounds;
-	::SendMessageW(toolTip_, TTM_NEWTOOLRECT, 0, reinterpret_cast<LPARAM>(&ti));
+	::SendMessageW(toolTip_.get(), TTM_NEWTOOLRECT, 0, reinterpret_cast<LPARAM>(&ti));
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 	textRenderer().setTextWrapping(textRenderer().textWrapping(), createRenderingContext().get());
 	scrolls_.resetBars(*this, 'a', true);
@@ -1172,12 +1369,10 @@ void TextViewer::setMouseInputStrategy(shared_ptr<MouseInputStrategy> newStrateg
 void TextViewer::showToolTip(const String& text, unsigned long timeToWait /* = -1 */, unsigned long timeRemainsVisible /* = -1 */) {
 //	checkInitialization();
 
-	delete[] tipText_;
-	tipText_ = new wchar_t[text.length() + 1];
 	hideToolTip();
 	if(timeToWait == -1)
 		timeToWait = ::GetDoubleClickTime();
-	wcscpy(tipText_, text.c_str());
+	tipText_.assign(text);
 	::SetTimer(handle().get(), TIMERID_CALLTIP, timeToWait, nullptr);
 }
 

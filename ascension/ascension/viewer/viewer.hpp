@@ -248,12 +248,13 @@ namespace ascension {
 
 		protected:
 			virtual void doBeep() /*throw()*/;
-			virtual void drawIndicatorMargin(Index line, graphics::Context& context, const graphics::NativeRectangle& rect);
+			virtual void drawIndicatorMargin(Index line, graphics::PaintContext& context, const graphics::NativeRectangle& rect);
 
 			// helpers
 		private:
 			graphics::Scalar inlineProgressionOffsetInViewport() const;
 			void initialize(const TextViewer* other);
+			void initializeNativeObjects(const TextViewer* other);
 			graphics::Scalar mapLineLayoutIpdToViewport(Index line, graphics::Scalar ipd) const;
 //			graphics::Scalar mapLineToViewportBpd(Index line, bool fullSearch) const;
 			graphics::Scalar mapViewportIpdToLineLayout(Index line, graphics::Scalar ipd) const;
@@ -398,8 +399,10 @@ namespace ascension {
 			std::unique_ptr<Renderer> renderer_;
 			Configuration configuration_;
 			std::set<VisualPoint*> points_;
-			HWND toolTip_;
-			Char* tipText_;
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+			win32::Handle<HWND> toolTip_;
+			std::basic_string<WCHAR> tipText_;
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32
 			// strategies and listeners
 			std::shared_ptr<MouseInputStrategy> mouseInputStrategy_;
 			std::shared_ptr<widgetapi::DropTarget> dropTargetHandler_;
@@ -409,7 +412,7 @@ namespace ascension {
 			std::unique_ptr<contentassist::ContentAssistant> contentAssistant_;
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 			class AccessibleProxy;
-			AccessibleProxy* accessibleProxy_;
+			win32::com::SmartPointer<AccessibleProxy> accessibleProxy_;
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
 			// modes
