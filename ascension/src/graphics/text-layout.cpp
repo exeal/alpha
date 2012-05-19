@@ -400,7 +400,7 @@ bool font::supportsOpenTypeFeatures() /*throw()*/ {
  * @param border The presentative style
  * @param writingMode The writing mode used to compute the directions and orientation of @a border
  */
-void detail::paintBorder(Context& context, const NativeRectangle& rectangle,
+void detail::paintBorder(PaintContext& context, const NativeRectangle& rectangle,
 		const Border& border, const Color& currentColor, const WritingMode& writingMode) {
 	// TODO: not implemented.
 }
@@ -566,7 +566,7 @@ private:
 	const WORD* clusters() const /*throw()*/ {
 		if(const WORD* const p = glyphs_->clusters.get())
 			return p + (beginning() - glyphs_->characters.beginning()); return nullptr;}
-	pair<int, HRESULT> countMissingGlyphs(const Context& context, const Char* text) const /*throw()*/;
+	pair<int, HRESULT> countMissingGlyphs(const renderingapi::RenderingContext2D& context, const Char* text) const /*throw()*/;
 	static HRESULT generateGlyphs(const win32::Handle<HDC>& dc,
 		const StringPiece& text, const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs, int& numberOfGlyphs);
 	static void generateDefaultGlyphs(const win32::Handle<HDC>& dc,
@@ -692,10 +692,10 @@ unique_ptr<TextLayout::TextRun> TextLayout::TextRun::breakAt(Index at, const Str
  * @return the number of missing glyphs
  */
 inline pair<int, HRESULT> TextLayout::TextRun::countMissingGlyphs(
-		const Context& context, const Char* text) const /*throw()*/ {
+		const renderingapi::RenderingContext2D& context, const Char* text) const /*throw()*/ {
 	SCRIPT_FONTPROPERTIES fp;
 	fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-	const HRESULT hr = ::ScriptGetFontProperties(context.nativeObject().get(), &glyphs_->fontCache, &fp);
+	const HRESULT hr = ::ScriptGetFontProperties(context.get(), &glyphs_->fontCache, &fp);
 	if(FAILED(hr))
 		return make_pair(0, hr);	// can't handle
 	// following is not offical way, but from Mozilla (gfxWindowsFonts.cpp)
@@ -733,7 +733,7 @@ void TextLayout::TextRun::drawGlyphs(PaintContext& context, const NativePoint& p
 //		RECT temp;
 //		if(dirtyRect != nullptr)
 //			::SetRect(&temp, dirtyRect->left(), dirtyRect->top(), dirtyRect->right(), dirtyRect->bottom());
-		const HRESULT hr = ::ScriptTextOut(context.nativeObject().get(), &glyphs_->fontCache,
+		const HRESULT hr = ::ScriptTextOut(context->get(), &glyphs_->fontCache,
 			geometry::x(p) + x((analysis_.fRTL == 0) ? truncatedRange.beginning() : (truncatedRange.end() - 1), analysis_.fRTL != 0),
 			geometry::y(p) - glyphs_->font->metrics().ascent(), 0, &context.boundsToPaint(), &analysis_, nullptr, 0,
 			glyphs() + glyphRange.beginning(), length(glyphRange), advances() + glyphRange.beginning(),
@@ -1096,7 +1096,7 @@ void TextLayout::TextRun::paintBackground(PaintContext& context,
 		return;
 	NativeRectangle r;
 	blackBoxBounds(range, r);
-	context.fillRectangle(geometry::translate(r, geometry::make<NativeSize>(geometry::x(p), geometry::y(p))));
+	renderingapi::fillRectangle(*context, geometry::translate(r, geometry::make<NativeSize>(geometry::x(p), geometry::y(p))));
 	if(paintedBounds != nullptr)
 		*paintedBounds = r;
 }
@@ -1775,7 +1775,7 @@ namespace {
 			throw UnknownValueException("style");
 		return win32::Handle<HPEN>(pen, &::DeleteObject);
 	}
-	inline void drawDecorationLines(Context& context, const TextRunStyle& style, const Color& foregroundColor, int x, int y, int width, int height) {
+	inline void drawDecorationLines(PaintContext& context, const TextRunStyle& style, const Color& foregroundColor, int x, int y, int width, int height) {
 		if(style.decorations.underline.style != Decorations::NONE || style.decorations.strikethrough.style != Decorations::NONE) {
 			const win32::Handle<HDC>& dc = context.nativeObject();
 			int baselineOffset, underlineOffset, underlineThickness, linethroughOffset, linethroughThickness;
@@ -1786,8 +1786,8 @@ namespace {
 						style.decorations.underline.color : foregroundColor, underlineThickness, style.decorations.underline.style));
 					HPEN oldPen = static_cast<HPEN>(::SelectObject(dc.get(), pen.get()));
 					const int underlineY = y + baselineOffset - underlineOffset + underlineThickness / 2;
-					::MoveToEx(dc.get(), x, underlineY, nullptr);
-					::LineTo(dc.get(), x + width, underlineY);
+					renderingapi::moveTo(*context, geometry::make<NativePoint>(x, underlineY));
+					renderingapi::lineTo(*context, geometry::make<NativePoint>(x + width, underlineY));
 					::SelectObject(dc.get(), oldPen);
 				}
 				// draw strikethrough line
@@ -1797,8 +1797,8 @@ namespace {
 						style.decorations.strikethrough.color : foregroundColor, linethroughThickness, 1));
 					HPEN oldPen = static_cast<HPEN>(::SelectObject(dc.get(), pen.get()));
 					const int strikeoutY = y + baselineOffset - linethroughOffset + linethroughThickness / 2;
-					::MoveToEx(dc.get(), x, strikeoutY, nullptr);
-					::LineTo(dc.get(), x + width, strikeoutY);
+					renderingapi::moveTo(*context, geometry::make<NativePoint>(x, strikeoutY));
+					renderingapi::lineTo(*context, geometry::make<NativePoint>(x + width, strikeoutY));
 					::SelectObject(dc.get(), oldPen);
 				}
 			}
@@ -2383,7 +2383,7 @@ void TextLayout::draw(PaintContext& context,
 	// Part 10 - Transparent Text and Selection Highlighting (http://www.catch22.net/tuts/neatpad/10)
 	// Part 14 - Drawing styled text with Uniscribe (http://www.catch22.net/tuts/neatpad/14)
 
-	context.save();
+	renderingapi::save(*context);
 //	context.setTextAlign();
 //	context.setTextBaseline();
 //	::SetTextAlign(context.nativeObject().get(), TA_TOP | TA_LEFT | TA_NOUPDATECP);
@@ -2398,8 +2398,8 @@ void TextLayout::draw(PaintContext& context,
 		if((*i)->style()->background != Paint()) {
 			borderRectangle = make_pair((*i)->borderRectangle(), true);
 			if(geometry::includes(context.boundsToPaint(), borderRectangle.first)) {
-				context.setFillStyle((*i)->style()->background);
-				context.fillRectangle(borderRectangle.first);
+				renderingapi::setFillStyle(*context, (*i)->style()->background);
+				renderingapi::fillRectangle(*context, borderRectangle.first);
 			}
 		}
 
@@ -2422,26 +2422,23 @@ void TextLayout::draw(PaintContext& context,
 //			context.setStrokeStyle();
 //			context.setStrokeDashArray();
 //			context.setStrokeDashOffset();
-			context.beginPath();
-			if(border == &borders[0])	// top
-				context
-					.moveTo(geometry::make<NativePoint>(geometry::left(borderRectangle.first), geometry::top(borderRectangle.first)))
-					.lineTo(geometry::make<NativePoint>(geometry::right(borderRectangle.first) + 1, geometry::top(borderRectangle.first)));
-			else if(border == &borders[1])	// bottom
-				context
-					.moveTo(geometry::make<NativePoint>(geometry::left(borderRectangle.first), geometry::bottom(borderRectangle.first)))
-					.lineTo(geometry::make<NativePoint>(geometry::right(borderRectangle.first) + 1, geometry::bottom(borderRectangle.first)));
-			else if((writingMode().inlineFlowDirection == LEFT_TO_RIGHT && border == &borders[2])
-					|| (writingMode().inlineFlowDirection == RIGHT_TO_LEFT && border == &borders[3]))	// left
-				context
-					.moveTo(geometry::make<NativePoint>(geometry::left(borderRectangle.first), geometry::top(borderRectangle.first)))
-					.lineTo(geometry::make<NativePoint>(geometry::left(borderRectangle.first), geometry::bottom(borderRectangle.first) + 1));
-			else if((writingMode().inlineFlowDirection == LEFT_TO_RIGHT && border == &borders[3])
-					|| (writingMode().inlineFlowDirection == RIGHT_TO_LEFT && border == &borders[2]))	// right
-				context
-					.moveTo(geometry::make<NativePoint>(geometry::right(borderRectangle.first), geometry::top(borderRectangle.first)))
-					.lineTo(geometry::make<NativePoint>(geometry::right(borderRectangle.first), geometry::bottom(borderRectangle.first) + 1));
-			context.stroke();
+			renderingapi::beginPath(*context);
+			if(border == &borders[0]) {	// top
+				renderingapi::moveTo(*context, geometry::make<NativePoint>(geometry::left(borderRectangle.first), geometry::top(borderRectangle.first)));
+				renderingapi::lineTo(*context, geometry::make<NativePoint>(geometry::right(borderRectangle.first) + 1, geometry::top(borderRectangle.first)));
+			} else if(border == &borders[1]) {	// bottom
+				renderingapi::moveTo(*context, geometry::make<NativePoint>(geometry::left(borderRectangle.first), geometry::bottom(borderRectangle.first)));
+				renderingapi::lineTo(*context, geometry::make<NativePoint>(geometry::right(borderRectangle.first) + 1, geometry::bottom(borderRectangle.first)));
+			} else if((writingMode().inlineFlowDirection == LEFT_TO_RIGHT && border == &borders[2])
+					|| (writingMode().inlineFlowDirection == RIGHT_TO_LEFT && border == &borders[3])) {	// left
+				renderingapi::moveTo(*context, geometry::make<NativePoint>(geometry::left(borderRectangle.first), geometry::top(borderRectangle.first)));
+				renderingapi::lineTo(*context, geometry::make<NativePoint>(geometry::left(borderRectangle.first), geometry::bottom(borderRectangle.first) + 1));
+			} else if((writingMode().inlineFlowDirection == LEFT_TO_RIGHT && border == &borders[3])
+					|| (writingMode().inlineFlowDirection == RIGHT_TO_LEFT && border == &borders[2])) {	// right
+				renderingapi::moveTo(*context, geometry::make<NativePoint>(geometry::right(borderRectangle.first), geometry::top(borderRectangle.first)));
+				renderingapi::lineTo(*context, geometry::make<NativePoint>(geometry::right(borderRectangle.first), geometry::bottom(borderRectangle.first) + 1));
+			}
+			renderingapi::stroke(*context);
 		}
 
 		::ExcludeClipRect(context.nativeObject().get(),
@@ -2590,7 +2587,7 @@ void TextLayout::draw(PaintContext& context,
 		}
 #endif
 	}
-	context.restore();
+	renderingapi::restore(*context);
 }
 
 #ifdef _DEBUG

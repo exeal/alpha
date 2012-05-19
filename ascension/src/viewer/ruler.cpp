@@ -97,7 +97,7 @@ RulerPainter::SnapAlignment RulerPainter::alignment() const {
 
 /// Returns the 'allocation-rectangle' of the indicator margin in the viewer-local coordinates.
 NativeRectangle RulerPainter::indicatorMarginAllocationRectangle() const /*throw()*/ {
-	const NativeRectangle localBounds(viewer_.bounds(false));
+	const NativeRectangle localBounds(widgetapi::bounds(viewer_, false));
 	switch(alignment()) {
 		case LEFT:
 			return geometry::make<NativeRectangle>(
@@ -124,7 +124,7 @@ NativeRectangle RulerPainter::indicatorMarginAllocationRectangle() const /*throw
 
 /// Returns the 'allocation-rectangle' of the line numbers in the viewer-local coordinates.
 NativeRectangle RulerPainter::lineNumbersAllocationRectangle() const /*throw()*/ {
-	const NativeRectangle localBounds(viewer_.bounds(false));
+	const NativeRectangle localBounds(widgetapi::bounds(viewer_, false));
 	switch(alignment()) {
 		case LEFT:
 			return geometry::make<NativeRectangle>(
@@ -450,7 +450,7 @@ void RulerPainter::recalculateWidth() /*throw()*/ {
 	//     (line-numbers-interior-width) = (line-numbers-padding-start) + (line-numbers-padding-end)
 	//     (line-numbers-content-width) = max((glyphs-extent), (average-glyph-extent) * (minimum-digits-setting))
 
-	unique_ptr<RenderingContext2D> context(viewer_.createRenderingContext());
+	unique_ptr<RenderingContext2D> context(widgetapi::createRenderingContext(viewer_));
 
 	// compute the width of the line numbers
 	Scalar lineNumbersContentWidth = 0, lineNumbersPaddingStartWidth = 0, lineNumbersPaddingEndWidth = 0, lineNumbersBorderWidth = 0;
@@ -492,7 +492,7 @@ void RulerPainter::recalculateWidth() /*throw()*/ {
 	indicatorMarginContentWidth_ = indicatorMarginContentWidth;
 	indicatorMarginBorderEndWidth_ = indicatorMarginBorderWidth;
 	if(allocationWidth() != oldWidth) {
-		viewer_.scheduleRedraw(false);
+		widgetapi::scheduleRedraw(viewer_, false);
 		viewer_.caret().updateLocation();
 	}
 }
