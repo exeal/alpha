@@ -27,7 +27,6 @@ namespace ascension {
 	namespace graphics {
 
 		class Paint;
-		class Context;
 		class PaintContext;
 
 		namespace font {
@@ -71,7 +70,7 @@ namespace ascension {
 				 * @param context The graphic context
 				 * @param origin The location where this inline object is rendered
 				 */
-				virtual void draw(const PaintContext& context, const NativePoint& origin) /*noexcept*/ = 0;
+				virtual void draw(PaintContext& context, const NativePoint& origin) /*noexcept*/ = 0;
 				/// Returns the size of this inline object in pixels.
 				NativeSize size() const /*noexcept*/ {
 					return geometry::make<NativeSize>(advance(), ascent() + descent());
@@ -481,7 +480,7 @@ namespace ascension {
 	}
 
 	namespace detail {
-		void paintBorder(graphics::Context& context,
+		void paintBorder(graphics::PaintContext& context,
 			const graphics::NativeRectangle& rectangle, const presentation::Border& style,
 			const graphics::Color& currentColor, const presentation::WritingMode& writingMode);
 	}

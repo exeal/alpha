@@ -272,6 +272,8 @@ namespace ascension {
 				typename detail::EnableIfTagIs<AffineTransform, AffineTransformTag>::type* = nullptr);
 
 		}
+
+		using namespace geometry::nativetypes;
 	}
 }
 
