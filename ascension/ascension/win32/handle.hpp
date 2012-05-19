@@ -140,7 +140,7 @@ namespace ascension {
 				if(handle == element_type() || handle != get())
 					Handle<element_type>(handle, deleter).swap(*this);
 				else
-					deleter_.reset(new detail::HandleDeleter<U, D>(deleter));
+					deleter_.reset(new detail::HandleDeleter<U, D>(handle, deleter));
 			}
 		private:
 			Handle(const Handle<element_type>&);
