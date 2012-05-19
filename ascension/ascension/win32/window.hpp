@@ -142,7 +142,9 @@ namespace ascension {
 					/// Move-constructor.
 					Background(Background&& other) /*noexcept*/ : brush_(std::move(other.brush_)) {}
 					/// Move-assignment operator.
-					Background& operator=(Background&& other) /*noexcept*/ {brush_ = std::move(other.brush_);}
+					Background& operator=(Background&& other) /*noexcept*/ {
+						return (brush_ = std::move(other.brush_)), *this;
+					}
 					/// Returns the brush handle.
 					const Handle<HBRUSH>& get() const /*noexcept*/ {return brush_;}
 				private:
@@ -162,7 +164,9 @@ namespace ascension {
 					/// Move-constructor.
 					CursorHandleOrID(CursorHandleOrID&& other) /*noexcept*/ : cursor_(std::move(other.cursor_)) {}
 					/// Move-assignment operator.
-					CursorHandleOrID& operator=(CursorHandleOrID&& other) /*noexcept*/ {cursor_ = std::move(other.cursor_);}
+					CursorHandleOrID& operator=(CursorHandleOrID&& other) /*noexcept*/ {
+						return (cursor_ = std::move(other.cursor_)), *this;
+					}
 					/// Returns the cursor handle.
 					const Handle<HCURSOR>& get() const /*noexcept*/ {return cursor_;}
 				private:
