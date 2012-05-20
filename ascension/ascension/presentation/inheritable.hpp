@@ -18,8 +18,8 @@ namespace ascension {
 
 		/**
 		 * 
-		 * @note This class template has some known specializations. See text-style.hpp and
-		 *       writing-mode.hpp header files.
+		 * @note This class template has some known specializations. See text-line-style.hpp,
+		 *       text-style.hpp and writing-mode.hpp header files.
 		 * @tparam T The property type.
 		 */
 		template<typename T>

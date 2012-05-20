@@ -13,10 +13,22 @@
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/font.hpp>
 #include <ascension/graphics/geometry.hpp>
-//#include <ascension/graphics/rendering-device.hpp>
-#include <ascension/presentation/text-style.hpp>	// presentation.AlignmentBaseline, presentation.TextAnchor
-#include <stack>
-#include <vector>
+#include <ascension/presentation/text-line-style.hpp>	// presentation.AlignmentBaseline, presentation.TextAnchor
+#include <memory>
+#include <boost/optional.hpp>
+#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+#	include <cairomm/context.h>
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
+#	include <CGContext.h>
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_DIRECT2D)
+#	include <d2d1.h>
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+#	include <QPainter>
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+#	include <ascension/win32/handle.hpp>
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
+#	include <GdiPlus.h>
+#endif
 
 namespace ascension {
 	namespace graphics {
@@ -78,8 +90,8 @@ namespace ascension {
 			QPainter& asNativeObject();
 			const QPainter& asNativeObject() const;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
-			explicit RenderingContext2D(HDC nativeObject);	// weak ref.
-			explicit RenderingContext2D(win32::Handle<HDC> nativeObject);
+			explicit RenderingContext2D(win32::Handle<HDC>&& nativeObject);
+			explicit RenderingContext2D(const win32::Handle<HDC>& nativeObject);	// weak ref.
 			const win32::Handle<HDC>& asNativeObject() const;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
 			explicit RenderingContext2D(Gdiplus::Graphics& nativeObject);	// weak ref.
@@ -171,8 +183,8 @@ namespace ascension {
 			RenderingContext2D& setFont(std::shared_ptr<const font::Font> font);
 			presentation::TextAnchor textAlign() const;
 			RenderingContext2D& setTextAlign(presentation::TextAnchor anchor);
-			presentation::DominantBaseline textBaseline() const;
-			RenderingContext2D& setBaseline(presentation::DominantBaseline baseline);
+			presentation::AlignmentBaseline textBaseline() const;
+			RenderingContext2D& setBaseline(presentation::AlignmentBaseline baseline);
 			// shared path API methods (CanvasPathMethods interface)
 			RenderingContext2D& closePath();
 			RenderingContext2D& moveTo(const NativePoint& to);

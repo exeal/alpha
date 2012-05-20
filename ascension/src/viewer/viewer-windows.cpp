@@ -1281,7 +1281,9 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 			PAINTSTRUCT ps;
 			::BeginPaint(handle().get(), &ps);
 			consumed = true;
-			paint(PaintContext(win32::Handle<HDC>(ps.hdc), ps.rcPaint));
+			const win32::Handle<HDC> dc(ps.hdc);
+			RenderingContext2D context(dc);
+			paint(PaintContext(move(context), ps.rcPaint));
 			::EndPaint(handle().get(), &ps);
 			return 0;
 		}
