@@ -5,7 +5,9 @@
  * @date 2011-2012
  */
 
+#include <ascension/corelib/basic-exceptions.hpp>	// NullPointerException
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/rendering-device.hpp>
 #include <ascension/presentation/length.hpp>
 using namespace ascension;
 using namespace ascension::graphics;
