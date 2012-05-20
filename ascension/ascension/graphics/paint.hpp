@@ -11,33 +11,19 @@
 #include <ascension/corelib/basic-types.hpp>	// std.tr1.shared_ptr
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/geometry.hpp>
+#include <ascension/graphics/rendering-context.hpp>
 #include <memory>	// std.unique_ptr
 #include <boost/operators.hpp>
 
 namespace ascension {
 	namespace graphics {
 
-		class RenderingContext2D;
-
-		class PaintServer {
-		public:
-			/// Destructor.
-			virtual ~PaintServer() /*throw()*/ {}
-			/**
-			 * Paints the rectangle.
-			 * @param context The graphic context
-			 * @param rectangle The rectangle to fill
-			 */
-			virtual void fillRectangle(
-				RenderingContext2D& context, const NativeRectangle& rectangle) const /*throw()*/ = 0;
-		};
-
 		/**
 		 *
 		 * @see CanvasGradient interface in HTML Canvas 2D Context
 		 *      (http://www.w3.org/TR/2dcontext/#canvasgradient)
 		 */
-		class Gradient : public PaintServer {
+		class Gradient {
 		public:
 			virtual ~Gradient() /*throw()*/ {}
 			virtual void addColorStop() = 0;
@@ -51,7 +37,7 @@ namespace ascension {
 		 * @see CanvasPattern interface in HTML Canvas 2D Context
 		 *      (http://www.w3.org/TR/2dcontext/#canvaspattern)
 		 */
-		class Pattern : public PaintServer {
+		class Pattern {
 		public:
 			virtual ~Pattern() /*throw()*/ {}
 		};
@@ -59,7 +45,10 @@ namespace ascension {
 		class Paint : private boost::equality_comparable<Paint> {
 		public:
 			Paint() /*throw()*/ {}
-			explicit Paint(const Color& color) : color_(color) {if(color == Color()) throw std::invalid_argument("color");}
+			explicit Paint(const Color& color) : color_(color) {
+				if(color == Color())
+					throw std::invalid_argument("color");
+			}
 			explicit Paint(std::unique_ptr<const Gradient> gradient) : color_(Color::TRANSPARENT_COLOR), gradient_(std::move(gradient)) {}
 			explicit Paint(const Color& color, std::unique_ptr<const Gradient> gradient) : color_(color), gradient_(std::move(gradient)) {}
 			explicit Paint(std::unique_ptr<const Pattern> pattern) : color_(Color::TRANSPARENT_COLOR), pattern_(std::move(pattern)) {}
@@ -77,12 +66,6 @@ namespace ascension {
 			return lhs.color() == rhs.color()
 				&& lhs.gradient() == rhs.gradient() && lhs.pattern() == rhs.pattern();
 		}
-
-		enum FillRule {NONZERO, EVENODD};
-
-		enum LineCap {BUTT_LINE_CAP, ROUND_LINE_CAP, SQUARE_LINE_CAP};
-
-		enum LineJoin {BEVEL_LINE_JOIN, ROUND_LINE_JOIN, MITER_LINE_JOIN};
 
 	}
 }

@@ -11,13 +11,11 @@
 #ifndef ASCENSION_LENGTH_HPP
 #define ASCENSION_LENGTH_HPP
 #include <ascension/graphics/geometry.hpp>	// graphics.NativeSize
-#include <stdexcept>	// std.invalid_argument
-#include <boost/operators.hpp>
+#include <stdexcept>						// std.invalid_argument
+#include <boost/operators.hpp>				// boost.equality_comparable
 
 namespace ascension {
-
 	namespace graphics {class RenderingContext2D;}
-
 	namespace presentation {
 
 		/**
