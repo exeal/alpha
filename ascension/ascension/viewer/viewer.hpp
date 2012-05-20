@@ -14,7 +14,7 @@
 #include <ascension/graphics/text-viewport.hpp>
 #include <ascension/kernel/point.hpp>
 #include <ascension/presentation/presentation.hpp>
-#include <ascension/presentation/text-style.hpp>
+#include <ascension/presentation/writing-mode.hpp>
 #include <ascension/viewer/caret-observers.hpp>
 #include <ascension/viewer/ruler.hpp>
 #include <ascension/viewer/viewer-observers.hpp>

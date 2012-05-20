@@ -685,6 +685,9 @@
     <ClInclude Include="..\..\ascension\ascension\win32\com\smart-pointer.hpp">
       <Filter>ascension\Header Files\win32\com</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\text-line-style.hpp">
+      <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
