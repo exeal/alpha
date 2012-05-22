@@ -384,11 +384,9 @@ namespace {
 		NativeRectangle selectionExtent(selectionBounds);
 		geometry::translate(selectionExtent, geometry::negate(geometry::topLeft(selectionExtent)));
 		y = selectionBounds.top;
-		const TextLayout::Selection selection(viewer.caret());
 		for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
-			renderer.renderLine(line, dc,
-				font::lineIndent(renderer.layouts()[line], renderer.viewport()->contentMeasure()) - geometry::left(selectionBounds), y,
-				selectionExtent, selectionExtent, highlightSelection ? &selection : nullptr);
+			renderer.paint(line, PaintContext(RenderingContext2D(dc), selectionExtent),
+				geometry::make<NativePoint>(font::lineIndent(renderer.layouts()[line], renderer.viewport()->contentMeasure()) - geometry::left(selectionBounds), y));
 			y += static_cast<int>(renderer.defaultFont()->metrics().linePitch() * renderer.layouts().numberOfSublinesOfLine(line));
 		}
 		::SelectObject(dc.get(), oldBitmap);
@@ -444,7 +442,7 @@ void DefaultMouseInputStrategy::beginDragAndDrop() {
 	// setup drag-image
 	if(dnd_.dragSourceHelper.get() != nullptr) {
 		boost::optional<SHDRAGIMAGE> image(createSelectionImage(*viewer_, dragApproachedPosition_, true));
-		if(image != boost::none && FAILED(hr = dnd_.dragSourceHelper->InitializeFromBitmap(&image.get(), draggingContent.get())))
+		if(image && FAILED(hr = dnd_.dragSourceHelper->InitializeFromBitmap(&image.get(), draggingContent.get())))
 			::DeleteObject(image->hbmpDragImage);
 	}
 
@@ -509,9 +507,12 @@ void DefaultMouseInputStrategy::dragEntered(widgetapi::DragEnterInput& input) {
 			if((anchor == TEXT_ANCHOR_START && readingDirection == RIGHT_TO_LEFT)
 					|| (anchor == TEXT_ANCHOR_END && readingDirection == LEFT_TO_RIGHT))
 				return input.ignore();	// TODO: support alignments other than ALIGN_LEFT.
-			pair<HRESULT, String> text(utils::getTextFromMimeData(input.mimeData()));
-			if(SUCCEEDED(text.first))
-				dnd_.numberOfRectangleLines = text::calculateNumberOfLines(text.second) - 1;
+			try {
+				pair<String, bool> text(utils::getTextFromMimeData(input.mimeData()));
+				dnd_.numberOfRectangleLines = text::calculateNumberOfLines(text.first) - 1;
+			} catch(...) {
+				return input.ignore();
+			}
 		}
 		state_ = DND_TARGET;
 	}

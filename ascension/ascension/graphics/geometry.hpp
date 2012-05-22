@@ -446,7 +446,18 @@ namespace ascension {
 			// 'translate' for point, rectangle and region
 
 			template<typename Point, typename Size>
-			inline Point& translate(Point& p, const Size& offset, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
+			inline Point& translate(Point& p, const Size& offset,
+					typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr,
+					typename detail::EnableIfTagIs<Size, PointTag>::type* = nullptr) {
+				x(p) += x(offset);
+				y(p) += y(offset);
+				return p;
+			}
+
+			template<typename Point, typename Size>
+			inline Point& translate(Point& p, const Size& offset,
+					typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr,
+					typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
 				x(p) += dx(offset);
 				y(p) += dy(offset);
 				return p;
