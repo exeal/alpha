@@ -94,6 +94,14 @@ namespace ascension {
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 	}
 
+	namespace detail {
+		class AbstractAccessibleProxy : public IAccessible {
+		public:
+			virtual ~AbstractAccessibleProxy() /*noexcept*/ {}
+			virtual void dispose() = 0;
+		};
+	}
+
 	namespace viewers {
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
@@ -411,8 +419,7 @@ namespace ascension {
 			std::unique_ptr<detail::RulerPainter> rulerPainter_;
 			std::unique_ptr<contentassist::ContentAssistant> contentAssistant_;
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-			class AccessibleProxy;
-			win32::com::SmartPointer<AccessibleProxy> accessibleProxy_;
+			win32::com::SmartPointer<detail::AbstractAccessibleProxy> accessibleProxy_;
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
 			// modes

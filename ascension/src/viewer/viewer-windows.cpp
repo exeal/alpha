@@ -132,73 +132,73 @@ namespace {
 		LPFNLRESULTFROMOBJECT lresultFromObjectPtr_;
 		VOID(WINAPI *notifyWinEventPtr_)(DWORD, HWND, LONG, LONG);
 	} accLib;
-} // namespace @0
 
-/**
- * @c TextViewer#AccessibleProxy is proxy object for @c IAccessible interface of @c TextViewer instance.
- * @see TextViewer#getAccessibleObject, ASCENSION_NO_ACTIVE_ACCESSIBILITY
- */
-class TextViewer::AccessibleProxy :
-		public k::DocumentListener,
-		public win32::com::IDispatchImpl<
-			win32::com::IUnknownImpl<
-				typelist::Cat<ASCENSION_WIN32_COM_INTERFACE(IAccessible),
-				typelist::Cat<ASCENSION_WIN32_COM_INTERFACE(IDispatch),
-				typelist::Cat<ASCENSION_WIN32_COM_INTERFACE(IOleWindow)>>>,
-				win32::com::NoReferenceCounting
-			>,
-			win32::com::TypeInformationFromRegistry<&LIBID_Accessibility, &IID_IAccessible>
-		> {
-	// references about implementation of IAccessible:
-	//   MSAA サーバーを実装する - 開発者のための実用的助言と、 Mozilla による MSAA サーバーの実装方法
-	//   (http://www.geocities.jp/nobu586/archive/msaa-server.html)
-	//   Mozilla アクセシビリティ・アーキテクチャー
-	//   (http://www.mozilla-japan.org/access/architecture.html)
-	//   アクセシビリティのツールキット　チェックリスト - 新ツールキット実装時の必要事項
-	//   (http://www.mozilla-japan.org/access/toolkit-checklist.html)
-	//   IAccessible Implementation Sample for a Custom Push Button
-	//   (http://www.gotdotnet.com/workspaces/workspace.aspx?id=4b5530a0-c900-421b-8ed6-7407997fa979)
-	ASCENSION_UNASSIGNABLE_TAG(AccessibleProxy);
-public:
-	// constructor
-	explicit AccessibleProxy(TextViewer& viewer);
-	// method
-	void dispose();
-	// IAccessible
-	STDMETHODIMP get_accParent(IDispatch** ppdispParent);
-	STDMETHODIMP get_accChildCount(long* pcountChildren);
-	STDMETHODIMP get_accChild(VARIANT varChild, IDispatch** ppdispChild);
-	STDMETHODIMP get_accName(VARIANT varChild, BSTR* pszName);
-	STDMETHODIMP get_accValue(VARIANT varChild, BSTR* pszValue);
-	STDMETHODIMP get_accDescription(VARIANT varChild, BSTR* pszDescription);
-	STDMETHODIMP get_accRole(VARIANT varChild, VARIANT* pvarRole);
-	STDMETHODIMP get_accState(VARIANT varChild, VARIANT* pvarState);
-	STDMETHODIMP get_accHelp(VARIANT varChild, BSTR* pszHelp);
-	STDMETHODIMP get_accHelpTopic(BSTR* pszHelpFile, VARIANT varChild, long* pidTopic);
-	STDMETHODIMP get_accKeyboardShortcut(VARIANT varChild, BSTR* pszKeyboardShortcut);
-	STDMETHODIMP get_accFocus(VARIANT* pvarChild);
-	STDMETHODIMP get_accSelection(VARIANT* pvarChildren);
-	STDMETHODIMP get_accDefaultAction(VARIANT varChild, BSTR* pszDefaultAction);
-	STDMETHODIMP accSelect(long flagsSelect, VARIANT varChild);
-	STDMETHODIMP accLocation(long* pxLeft, long* pyTop, long* pcxWidth, long* pcyHeight, VARIANT varChild);
-	STDMETHODIMP accNavigate(long navDir, VARIANT varStart, VARIANT* pvarEndUpAt);
-	STDMETHODIMP accHitTest(long xLeft, long yTop, VARIANT* pvarChild);
-	STDMETHODIMP accDoDefaultAction(VARIANT varChild);
-	STDMETHODIMP put_accName(VARIANT varChild, BSTR szName);
-	STDMETHODIMP put_accValue(VARIANT varChild, BSTR szValue);
-	// IOleWindow
-	STDMETHODIMP GetWindow(HWND* phwnd);
-	STDMETHODIMP ContextSensitiveHelp(BOOL fEnterMode);
-private:
-	// DocumentListener
-	void documentAboutToBeChanged(const k::Document& document);
-	void documentChanged(const k::Document& document, const k::DocumentChange& change);
-private:
-	TextViewer& viewer_;
-	bool available_;
-	win32::com::SmartPointer<IAccessible> defaultServer_;
-//	enum {CHILDID_SELECTION = 1};
-};
+	/**
+	 * @c TextViewer#AccessibleProxy is proxy object for @c IAccessible interface of @c TextViewer instance.
+	 * @see TextViewer#getAccessibleObject, ASCENSION_NO_ACTIVE_ACCESSIBILITY
+	 */
+	class AccessibleProxy :
+			public k::DocumentListener,
+			public win32::com::IDispatchImpl<
+				win32::com::IUnknownImpl<
+					typelist::Cat<win32::com::Interface<detail::AbstractAccessibleProxy, &IID_IAccessible>,
+					typelist::Cat<ASCENSION_WIN32_COM_INTERFACE(IDispatch),
+					typelist::Cat<ASCENSION_WIN32_COM_INTERFACE(IOleWindow)>>>,
+					win32::com::NoReferenceCounting
+				>,
+				win32::com::TypeInformationFromRegistry<&LIBID_Accessibility, &IID_IAccessible>
+			> {
+		// references about implementation of IAccessible:
+		//   MSAA サーバーを実装する - 開発者のための実用的助言と、 Mozilla による MSAA サーバーの実装方法
+		//   (http://www.geocities.jp/nobu586/archive/msaa-server.html)
+		//   Mozilla アクセシビリティ・アーキテクチャー
+		//   (http://www.mozilla-japan.org/access/architecture.html)
+		//   アクセシビリティのツールキット　チェックリスト - 新ツールキット実装時の必要事項
+		//   (http://www.mozilla-japan.org/access/toolkit-checklist.html)
+		//   IAccessible Implementation Sample for a Custom Push Button
+		//   (http://www.gotdotnet.com/workspaces/workspace.aspx?id=4b5530a0-c900-421b-8ed6-7407997fa979)
+		ASCENSION_UNASSIGNABLE_TAG(AccessibleProxy);
+	public:
+		// constructor
+		explicit AccessibleProxy(TextViewer& viewer);
+		// method
+		void dispose();
+		// IAccessible
+		STDMETHODIMP get_accParent(IDispatch** ppdispParent);
+		STDMETHODIMP get_accChildCount(long* pcountChildren);
+		STDMETHODIMP get_accChild(VARIANT varChild, IDispatch** ppdispChild);
+		STDMETHODIMP get_accName(VARIANT varChild, BSTR* pszName);
+		STDMETHODIMP get_accValue(VARIANT varChild, BSTR* pszValue);
+		STDMETHODIMP get_accDescription(VARIANT varChild, BSTR* pszDescription);
+		STDMETHODIMP get_accRole(VARIANT varChild, VARIANT* pvarRole);
+		STDMETHODIMP get_accState(VARIANT varChild, VARIANT* pvarState);
+		STDMETHODIMP get_accHelp(VARIANT varChild, BSTR* pszHelp);
+		STDMETHODIMP get_accHelpTopic(BSTR* pszHelpFile, VARIANT varChild, long* pidTopic);
+		STDMETHODIMP get_accKeyboardShortcut(VARIANT varChild, BSTR* pszKeyboardShortcut);
+		STDMETHODIMP get_accFocus(VARIANT* pvarChild);
+		STDMETHODIMP get_accSelection(VARIANT* pvarChildren);
+		STDMETHODIMP get_accDefaultAction(VARIANT varChild, BSTR* pszDefaultAction);
+		STDMETHODIMP accSelect(long flagsSelect, VARIANT varChild);
+		STDMETHODIMP accLocation(long* pxLeft, long* pyTop, long* pcxWidth, long* pcyHeight, VARIANT varChild);
+		STDMETHODIMP accNavigate(long navDir, VARIANT varStart, VARIANT* pvarEndUpAt);
+		STDMETHODIMP accHitTest(long xLeft, long yTop, VARIANT* pvarChild);
+		STDMETHODIMP accDoDefaultAction(VARIANT varChild);
+		STDMETHODIMP put_accName(VARIANT varChild, BSTR szName);
+		STDMETHODIMP put_accValue(VARIANT varChild, BSTR szValue);
+		// IOleWindow
+		STDMETHODIMP GetWindow(HWND* phwnd);
+		STDMETHODIMP ContextSensitiveHelp(BOOL fEnterMode);
+	private:
+		// DocumentListener
+		void documentAboutToBeChanged(const k::Document& document);
+		void documentChanged(const k::Document& document, const k::DocumentChange& change);
+	private:
+		TextViewer& viewer_;
+		bool available_;
+		win32::com::SmartPointer<IAccessible> defaultServer_;
+	//	enum {CHILDID_SELECTION = 1};
+	};
+} // namespace @0
 
 #define ASCENSION_VERIFY_AVAILABILITY()	\
 	if(!available_) return RPC_E_DISCONNECTED
@@ -207,19 +207,19 @@ private:
  * Constructor.
  * @param view the viewer
  */
-TextViewer::AccessibleProxy::AccessibleProxy(TextViewer& viewer) /*throw()*/ : viewer_(viewer), available_(true) {
+AccessibleProxy::AccessibleProxy(TextViewer& viewer) /*throw()*/ : viewer_(viewer), available_(true) {
 	assert(accLib.isAvailable());
 	accLib.createStdAccessibleObject(viewer.handle().get(), OBJID_CLIENT, IID_IAccessible, defaultServer_.initializePPV());
 }
 
 /// @see IAccessible#accDoDefaultAction
-STDMETHODIMP TextViewer::AccessibleProxy::accDoDefaultAction(VARIANT) {
+STDMETHODIMP AccessibleProxy::accDoDefaultAction(VARIANT) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	return DISP_E_MEMBERNOTFOUND;
 }
 
 /// @see IAccessible#accHitTest
-STDMETHODIMP TextViewer::AccessibleProxy::accHitTest(long xLeft, long yTop, VARIANT* pvarChild) {
+STDMETHODIMP AccessibleProxy::accHitTest(long xLeft, long yTop, VARIANT* pvarChild) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	// ウィンドウが矩形であることを前提としている
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pvarChild);
@@ -234,7 +234,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::accHitTest(long xLeft, long yTop, VARI
 }
 
 /// @see IAccessible#accLocation
-STDMETHODIMP TextViewer::AccessibleProxy::accLocation(long* pxLeft, long* pyTop, long* pcxWidth, long* pcyHeight, VARIANT varChild) {
+STDMETHODIMP AccessibleProxy::accLocation(long* pxLeft, long* pyTop, long* pcxWidth, long* pcyHeight, VARIANT varChild) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pxLeft);
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pyTop);
@@ -252,43 +252,43 @@ STDMETHODIMP TextViewer::AccessibleProxy::accLocation(long* pxLeft, long* pyTop,
 }
 
 /// @see IAccessible#accNavigate
-STDMETHODIMP TextViewer::AccessibleProxy::accNavigate(long navDir, VARIANT varStart, VARIANT* pvarEndUpAt) {
+STDMETHODIMP AccessibleProxy::accNavigate(long navDir, VARIANT varStart, VARIANT* pvarEndUpAt) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	return defaultServer_->accNavigate(navDir, varStart, pvarEndUpAt);
 }
 
 /// @see IAccessible#accSelect
-STDMETHODIMP TextViewer::AccessibleProxy::accSelect(long flagsSelect, VARIANT varChild) {
+STDMETHODIMP AccessibleProxy::accSelect(long flagsSelect, VARIANT varChild) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	return (varChild.vt == VT_I4 && varChild.lVal == CHILDID_SELF) ?
 		defaultServer_->accSelect(flagsSelect, varChild) : E_INVALIDARG;
 }
 
 /// @see IOleWindow#ContextSensitiveHelp
-STDMETHODIMP TextViewer::AccessibleProxy::ContextSensitiveHelp(BOOL fEnterMode) {
+STDMETHODIMP AccessibleProxy::ContextSensitiveHelp(BOOL fEnterMode) {
 	return S_OK;	// not supported
 }
 
 /// Informs that the viewer is inavailable to the proxy.
-void TextViewer::AccessibleProxy::dispose() {
+void AccessibleProxy::dispose() {
 	if(!available_)
 		throw IllegalStateException("This proxy is already disposed.");
 	available_ = false;
 }
 
 /// @see Document#IListener#documentAboutToBeChanged
-void TextViewer::AccessibleProxy::documentAboutToBeChanged(const k::Document&) {
+void AccessibleProxy::documentAboutToBeChanged(const k::Document&) {
 	// do nothing
 }
 
 /// @see Document#IListener#documentChanged
-void TextViewer::AccessibleProxy::documentChanged(const k::Document&, const k::DocumentChange&) {
+void AccessibleProxy::documentChanged(const k::Document&, const k::DocumentChange&) {
 	assert(accLib.isAvailable());
 	accLib.notifyWinEvent(EVENT_OBJECT_VALUECHANGE, viewer_.handle().get(), OBJID_CLIENT, CHILDID_SELF);
 }
 
 /// @see IAccessible#get_accChild
-STDMETHODIMP TextViewer::AccessibleProxy::get_accChild(VARIANT, IDispatch** ppdispChild) {
+STDMETHODIMP AccessibleProxy::get_accChild(VARIANT, IDispatch** ppdispChild) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	ASCENSION_WIN32_VERIFY_COM_POINTER(ppdispChild);
 	*ppdispChild = nullptr;
@@ -296,7 +296,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accChild(VARIANT, IDispatch** ppdi
 }
 
 /// @see IAccessible#get_accChildCount
-STDMETHODIMP TextViewer::AccessibleProxy::get_accChildCount(long* pcountChildren) {
+STDMETHODIMP AccessibleProxy::get_accChildCount(long* pcountChildren) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pcountChildren);
 	*pcountChildren = 0;
@@ -304,19 +304,19 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accChildCount(long* pcountChildren
 }
 
 /// @see IAccessible#get_accDefaultAction
-STDMETHODIMP TextViewer::AccessibleProxy::get_accDefaultAction(VARIANT, BSTR*) {
+STDMETHODIMP AccessibleProxy::get_accDefaultAction(VARIANT, BSTR*) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	return DISP_E_MEMBERNOTFOUND;
 }
 
 /// @see IAccessible#get_accDescription
-STDMETHODIMP TextViewer::AccessibleProxy::get_accDescription(VARIANT, BSTR*) {
+STDMETHODIMP AccessibleProxy::get_accDescription(VARIANT, BSTR*) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	return DISP_E_MEMBERNOTFOUND;
 }
 
 /// @see IAccessible#get_accFocus
-STDMETHODIMP TextViewer::AccessibleProxy::get_accFocus(VARIANT* pvarChild) {
+STDMETHODIMP AccessibleProxy::get_accFocus(VARIANT* pvarChild) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pvarChild);
 	pvarChild->vt = VT_I4;
@@ -325,19 +325,19 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accFocus(VARIANT* pvarChild) {
 }
 
 /// @see IAccessible#get_accHelp
-STDMETHODIMP TextViewer::AccessibleProxy::get_accHelp(VARIANT, BSTR*) {
+STDMETHODIMP AccessibleProxy::get_accHelp(VARIANT, BSTR*) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	return DISP_E_MEMBERNOTFOUND;
 }
 
 /// @see IAccessible#get_accHelpTopic
-STDMETHODIMP TextViewer::AccessibleProxy::get_accHelpTopic(BSTR*, VARIANT, long*) {
+STDMETHODIMP AccessibleProxy::get_accHelpTopic(BSTR*, VARIANT, long*) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	return DISP_E_MEMBERNOTFOUND;
 }
 
 /// @see IAccessible#get_accKeyboardShortcut
-STDMETHODIMP TextViewer::AccessibleProxy::get_accKeyboardShortcut(VARIANT varChild, BSTR* pszKeyboardShortcut) {
+STDMETHODIMP AccessibleProxy::get_accKeyboardShortcut(VARIANT varChild, BSTR* pszKeyboardShortcut) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pszKeyboardShortcut);
 	*pszKeyboardShortcut = nullptr;
@@ -347,7 +347,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accKeyboardShortcut(VARIANT varChi
 }
 
 /// @see IAccessible#get_accName
-STDMETHODIMP TextViewer::AccessibleProxy::get_accName(VARIANT varChild, BSTR* pszName) {
+STDMETHODIMP AccessibleProxy::get_accName(VARIANT varChild, BSTR* pszName) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pszName);
 	*pszName = nullptr;
@@ -357,7 +357,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accName(VARIANT varChild, BSTR* ps
 }
 
 /// @see IAccessible#get_accParent
-STDMETHODIMP TextViewer::AccessibleProxy::get_accParent(IDispatch** ppdispParent) {
+STDMETHODIMP AccessibleProxy::get_accParent(IDispatch** ppdispParent) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	if(accLib.isAvailable())
 		return accLib.accessibleObjectFromWindow(viewer_.handle().get(),
@@ -366,7 +366,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accParent(IDispatch** ppdispParent
 }
 
 /// @see IAccessible#get_accRole
-STDMETHODIMP TextViewer::AccessibleProxy::get_accRole(VARIANT varChild, VARIANT* pvarRole) {
+STDMETHODIMP AccessibleProxy::get_accRole(VARIANT varChild, VARIANT* pvarRole) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pvarRole);
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
@@ -377,7 +377,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accRole(VARIANT varChild, VARIANT*
 }
 
 /// @see IAccessible#get_accSelection
-STDMETHODIMP TextViewer::AccessibleProxy::get_accSelection(VARIANT* pvarChildren) {
+STDMETHODIMP AccessibleProxy::get_accSelection(VARIANT* pvarChildren) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pvarChildren);
 	pvarChildren->vt = VT_EMPTY;
@@ -385,7 +385,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accSelection(VARIANT* pvarChildren
 }
 
 /// @see IAccessible#get_accState
-STDMETHODIMP TextViewer::AccessibleProxy::get_accState(VARIANT varChild, VARIANT* pvarState) {
+STDMETHODIMP AccessibleProxy::get_accState(VARIANT varChild, VARIANT* pvarState) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
@@ -403,7 +403,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accState(VARIANT varChild, VARIANT
 }
 
 /// @see IAccessible#get_accValue
-STDMETHODIMP TextViewer::AccessibleProxy::get_accValue(VARIANT varChild, BSTR* pszValue) {
+STDMETHODIMP AccessibleProxy::get_accValue(VARIANT varChild, BSTR* pszValue) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pszValue);
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
@@ -415,7 +415,7 @@ STDMETHODIMP TextViewer::AccessibleProxy::get_accValue(VARIANT varChild, BSTR* p
 }
 
 /// @see IOleWindow#GetWindow
-STDMETHODIMP TextViewer::AccessibleProxy::GetWindow(HWND* phwnd) {
+STDMETHODIMP AccessibleProxy::GetWindow(HWND* phwnd) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	ASCENSION_WIN32_VERIFY_COM_POINTER(phwnd);
 	*phwnd = viewer_.handle().get();
@@ -423,13 +423,13 @@ STDMETHODIMP TextViewer::AccessibleProxy::GetWindow(HWND* phwnd) {
 }
 
 /// @see IAccessible#put_accName
-STDMETHODIMP TextViewer::AccessibleProxy::put_accName(VARIANT, BSTR) {
+STDMETHODIMP AccessibleProxy::put_accName(VARIANT, BSTR) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	return DISP_E_MEMBERNOTFOUND;
 }
 
 /// @see IAccessible#put_accValue
-STDMETHODIMP TextViewer::AccessibleProxy::put_accValue(VARIANT varChild, BSTR szValue) {
+STDMETHODIMP AccessibleProxy::put_accValue(VARIANT varChild, BSTR szValue) {
 	ASCENSION_VERIFY_AVAILABILITY();
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
@@ -499,7 +499,7 @@ HRESULT TextViewer::accessibleObject(IAccessible*& acc) const /*throw()*/ {
 	acc = nullptr;
 	if(accessibleProxy_.get() == nullptr && win32::boole(::IsWindow(handle().get())) && accLib.isAvailable()) {
 		try {
-			self.accessibleProxy_.reset(new AccessibleProxy(self));
+			self.accessibleProxy_.reset(new AccessibleProxy(self), IID_IAccessible);
 		} catch(const bad_alloc&) {
 			return E_OUTOFMEMORY;
 		}

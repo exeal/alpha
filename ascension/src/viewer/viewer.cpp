@@ -1145,8 +1145,8 @@ void TextViewer::overtypeModeChanged(const Caret&) {
 void TextViewer::paint(PaintContext& context) {
 	if(isFrozen())	// skip if frozen
 		return;
-	const NativeRectangle scheduledBounds(geometry::normalize(context.boundsToPaint()));
-	if(geometry::isEmpty(scheduledBounds))	// skip if the region to paint is empty
+	NativeRectangle scheduledBounds(context.boundsToPaint());
+	if(geometry::isEmpty(geometry::normalize(scheduledBounds)))	// skip if the region to paint is empty
 		return;
 
 //	Timer tm(L"TextViewer.paint");
@@ -1264,7 +1264,7 @@ void TextViewer::resized(const NativeSize&) {
 	ti.rect = viewerBounds;
 	::SendMessageW(toolTip_.get(), TTM_NEWTOOLRECT, 0, reinterpret_cast<LPARAM>(&ti));
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
-	textRenderer().setTextWrapping(textRenderer().textWrapping(), createRenderingContext().get());
+	textRenderer().setTextWrapping(textRenderer().textWrapping(), widgetapi::createRenderingContext(*this).get());
 	scrolls_.resetBars(*this, 'a', true);
 	updateScrollBars();
 	rulerPainter_->update();

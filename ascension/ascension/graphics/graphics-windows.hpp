@@ -99,12 +99,6 @@ namespace ascension {
 		};
 
 	}
-
-	namespace detail {
-		inline win32::Handle<HDC> screenDC() {
-			return win32::Handle<HDC>(::GetDC(nullptr), std::bind(&::ReleaseDC, static_cast<HWND>(nullptr), std::placeholders::_1));
-		}
-	}
 }
 
 #endif // !ASCENSION_GRAPHICS_WINDOWS_HPP
