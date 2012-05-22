@@ -210,7 +210,7 @@ namespace ascension {
 #endif
 		};
 
-		class PaintContext {
+		class PaintContext : public RenderingContext2D {
 		public:
 			/**
 			 * Constructor.
@@ -218,21 +218,27 @@ namespace ascension {
 			 * @param boundsToPaint The rectangle in which the painting is requested
 			 */
 			PaintContext(RenderingContext2D&& context, const NativeRectangle& boundsToPaint)
-				: context_(std::move(context)), boundsToPaint_(boundsToPaint) {}
+				: RenderingContext2D(std::move(context)), boundsToPaint_(boundsToPaint) {}
 			/// Returns the rendering context.
-			RenderingContext2D& operator*() /*noexcept*/ {return context_;}
+//			RenderingContext2D& operator*() /*noexcept*/ {return context_;}
 			/// Returns the rendering context.
-			const RenderingContext2D& operator*() const /*noexcept*/ {return context_;}
+//			const RenderingContext2D& operator*() const /*noexcept*/ {return context_;}
 			/// Returns the rendering context.
-			RenderingContext2D* operator->() /*noexcept*/ {return &context_;}
+//			RenderingContext2D* operator->() /*noexcept*/ {return &context_;}
 			/// Returns the rendering context.
-			const RenderingContext2D* operator->() const /*noexcept*/ {return &context_;}
+//			const RenderingContext2D* operator->() const /*noexcept*/ {return &context_;}
 			/// Returns a rectangle in which the painting is requested.
 			const NativeRectangle& boundsToPaint() const /*noexcept*/ {return boundsToPaint_;}
 		private:
-			RenderingContext2D context_;
 			const NativeRectangle boundsToPaint_;
 		};
+	}
+
+	namespace detail {
+		inline win32::Handle<HDC> screenDC() {
+			return win32::Handle<HDC>(::GetDC(nullptr),
+				std::bind(&::ReleaseDC, static_cast<HWND>(nullptr), std::placeholders::_1));
+		}
 	}
 }
 

@@ -61,7 +61,11 @@ namespace {
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
 			if(message == WM_PAINT) {
-				paint(widgetapi::createRenderingContext());
+				PAINTSTRUCT ps;
+				::BeginPaint(handle().get(), &ps);
+				RenderingContext2D temp(win32::Handle<HDC>(ps.hdc));
+				paint(PaintContext(move(temp), ps.rcPaint));
+				::EndPaint(handle().get(), &ps);
 				consumed = true;
 			}
 			return win32::CustomControl::processMessage(message, wp, lp, consumed);

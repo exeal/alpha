@@ -25,6 +25,7 @@
 namespace ascension {
 
 	namespace graphics {
+		class RenderingContext2D;
 		class PaintContext;
 	}
 
@@ -85,6 +86,9 @@ namespace ascension {
 			void redrawScheduledRegion(NativeWidget& widget);
 			void scheduleRedraw(NativeWidget& widget, bool eraseBackground);
 			void scheduleRedraw(NativeWidget& widget, const graphics::NativeRectangle& rect, bool eraseBackground);
+
+			// rendering context
+			std::unique_ptr<graphics::RenderingContext2D> createRenderingContext(const NativeWidget& widget);
 
 			// focus/input
 			void grabInput(NativeWidget& widget);

@@ -789,8 +789,8 @@ TextViewport::SignedScrollOffset font::pageSize<geometry::Y_COORDINATE>(const Te
 	}
 }
 
-template TextViewport::SignedScrollOffset font::pageSize<geometry::X_COORDINATE>(const TextViewport& viewport);
-template TextViewport::SignedScrollOffset font::pageSize<geometry::Y_COORDINATE>(const TextViewport& viewport);
+//template TextViewport::SignedScrollOffset font::pageSize<geometry::X_COORDINATE>(const TextViewport& viewport);
+//template TextViewport::SignedScrollOffset font::pageSize<geometry::Y_COORDINATE>(const TextViewport& viewport);
 
 namespace {
 	// implements viewToModel and viewToModelInBounds in font namespace.
