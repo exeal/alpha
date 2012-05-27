@@ -16,6 +16,7 @@
 #include <cstring>	// std.strlen
 #include <locale>	// std.collate
 #include <memory>	// std.unique_ptr, std.shared_ptr
+#include <vector>
 #if defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
 #	include <ascension/win32/handle.hpp>	// win32.Handle
 #endif
@@ -98,6 +99,8 @@ namespace ascension {
 				virtual NativeSize visualGlyphBounds(std::size_t index) const = 0;
 				virtual NativeSize visualBounds() const = 0;
 			};
+
+			class FontFace;
 
 			class FontFamily {
 				ASCENSION_NONCOPYABLE_TAG(FontFamily);
@@ -298,6 +301,20 @@ namespace ascension {
 #elif defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
 			typedef win32::Handle<HFONT> NativeFont;
 #endif
+			/**
+			 * Used to represent a group of fonts with the same family, slant, weight, width, but
+			 * varying sizes.
+			 */
+			class FontFace {
+			public:
+				void availableSizes(std::vector<int>& sizes) const;
+				const FontDescription<>& describe() const;
+				/// Returns the face name.
+				const String& name() const;
+			private:
+				const FontDescription<> description_;
+				const String name_;
+			};
 
 			class Font : public std::enable_shared_from_this<Font> {
 			public:
