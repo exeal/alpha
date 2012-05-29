@@ -53,8 +53,9 @@
 #undef size_t
 #include <stdexcept>
 #include <sstream>
-#include <utility>								// std.swap
-#include <ascension/corelib/basic-types.hpp>	// ASCENSION_NON_COPYABLE_TAG
+#include <utility>									// std.swap
+#include <ascension/corelib/basic-types.hpp>		// ASCENSION_NON_COPYABLE_TAG
+#include <ascension/corelib/basic-exceptions.hpp>	// makePlatformError
 
 namespace ascension {
 	namespace win32 {
@@ -72,6 +73,24 @@ namespace ascension {
 		 * Wrapper for Win32 @c GetUserDefaultUILanguage API.
 		 */
 		LANGID ASCENSION_FASTCALL userDefaultUILanguage() /*throw()*/;
+
+		inline LONG_PTR getWindowLong(HWND window, int index) {
+			const DWORD lastError = ::GetLastError();
+			::SetLastError(0);
+			const LONG_PTR result = ::GetWindowLongPtrW(window, index);
+			if(result == 0 && ::GetLastError() != 0)
+				throw makePlatformError();
+			::SetLastError(lastError);
+			return result;
+		}
+
+		inline void setWindowLong(HWND window, int index, LONG_PTR value) {
+			const DWORD lastError = ::GetLastError();
+			::SetLastError(0);
+			if(::SetWindowLongPtrW(window, index, value) == 0 && ::GetLastError() != 0)
+				throw makePlatformError();
+			::SetLastError(lastError);
+		}
 
 #	define ASCENSION_WIN32_OBJECT_CONSTRUCTORS(ClassName)						\
 		ClassName() : BaseObject() {}											\

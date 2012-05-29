@@ -60,9 +60,6 @@
     <Filter Include="ascension\Header Files\kernel">
       <UniqueIdentifier>{6995a354-e31e-4b41-8ba3-3fb762f1a417}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ascension\Source Files\viewer\base">
-      <UniqueIdentifier>{551209fd-c20c-45de-a5e9-bb15cb569fd5}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ascension\Header Files\corelib\text">
       <UniqueIdentifier>{fff4b6c9-5b7e-4b1d-9a38-d4c005800002}</UniqueIdentifier>
     </Filter>
@@ -86,6 +83,9 @@
     </Filter>
     <Filter Include="ascension\Header Files\viewer\widgetapi">
       <UniqueIdentifier>{06983a2c-8c09-4463-9f14-30e4fa7adfc8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Source Files\viewer\widgetapi">
+      <UniqueIdentifier>{551209fd-c20c-45de-a5e9-bb15cb569fd5}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -236,9 +236,6 @@
     <ClCompile Include="..\..\ascension\src\graphics\default-special-character-renderer.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\viewer\base\widget-windows.cpp">
-      <Filter>ascension\Source Files\viewer\base</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\corelib\text\break-iterator.cpp">
       <Filter>ascension\Source Files\corelib\text</Filter>
     </ClCompile>
@@ -287,9 +284,6 @@
     <ClCompile Include="..\..\ascension\src\viewer\caret-shaper.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\viewer\base\scrollable-windows.cpp">
-      <Filter>ascension\Source Files\viewer\base</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\graphics\image-windows.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
@@ -322,6 +316,9 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\viewer-gtkmm.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\widgetapi\widget-windows.cpp">
+      <Filter>ascension\Source Files\viewer\widgetapi</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

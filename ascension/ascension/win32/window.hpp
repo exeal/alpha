@@ -63,6 +63,8 @@ namespace ascension {
 			ASCENSION_NONCOPYABLE_TAG(Window);
 		public:
 			static const DWORD defaultStyle = WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE;
+			/// Constructor takes a borrowed window handle.
+			explicit Window(const Handle<HWND>& handle) /*noexcept*/ : handle_(handle.get()) {}
 			/// Move-constructor.
 			Window(Window&& other) /*noexcept*/ : handle_(std::move(other.handle_)) {}
 			/// Move-assignment operator.

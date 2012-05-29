@@ -21,6 +21,7 @@
 #	include <ascension/win32/window.hpp>	// win32.Window
 #	include <ObjIdl.h>	// IDataObject
 #endif
+#include <boost/optional.hpp>
 
 namespace ascension {
 
@@ -44,36 +45,135 @@ namespace ascension {
 			typedef win32::Window NativeWidget;
 			typedef win32::Window NativeWindow;
 #endif
+			/**
+			 * Returns a bounds of the widget relative to its parent and including/excluding the
+			 * window frame.
+			 * @param widget The widget
+			 * @param includeFrame Set true to include the window frame
+			 */
 			graphics::NativeRectangle bounds(const NativeWidget& widget, bool includeFrame);
+			/**
+			 * Translates the point in the global screen coordinates into widget coordinates.
+			 * @tparam Point The type of position
+			 * @param widget The widget
+			 * @param position The position to map
+			 * @see mapToGlobal
+			 */
 			template<typename Point>
-			graphics::NativePoint mapFromGlobal(const NativeWidget& widget, const Point& position,
+			Point mapFromGlobal(const NativeWidget& widget, const Point& position,
 				typename detail::EnableIfTagIs<Point, graphics::geometry::PointTag>::type* = nullptr);
+			/**
+			 * Translates the rectangle in the global screen coordinates into widget coordinates.
+			 * @param widget The widget
+			 * @param rectangle The rectangle to map
+			 * @see mapToGlobal
+			 */
 			inline graphics::NativeRectangle mapFromGlobal(const NativeWidget& widget, const graphics::NativeRectangle& rectangle) {
 				return graphics::geometry::make<graphics::NativeRectangle>(
 					mapFromGlobal(widget, graphics::geometry::get<0>(rectangle)),
 					mapFromGlobal(widget, graphics::geometry::get<1>(rectangle)));
 			}
+			/**
+			 * Translates the point in the widget coordinates into global screen coordinates.
+			 * @tparam Point The type of position
+			 * @param widget The widget
+			 * @param position The position to map
+			 * @see mapFromGlobal
+			 */
 			template<typename Point>
-			graphics::NativePoint mapToGlobal(const NativeWidget& widget, const Point& position,
+			Point mapToGlobal(const NativeWidget& widget, const Point& position,
 				typename detail::EnableIfTagIs<Point, graphics::geometry::PointTag>::type* = nullptr);
+			/**
+			 * Translates the point in the widget coordinates into global screen coordinates.
+			 * @tparam Point The type of position
+			 * @param widget The widget
+			 * @param position The position to map
+			 * @see mapFromGlobal
+			 */
 			inline graphics::NativeRectangle mapToGlobal(const NativeWidget& widget, const graphics::NativeRectangle& rectangle) {
 				return graphics::geometry::make<graphics::NativeRectangle>(
 					mapToGlobal(widget, graphics::geometry::get<0>(rectangle)),
 					mapToGlobal(widget, graphics::geometry::get<1>(rectangle)));
 			}
-			void move(const NativeWidget& widget, const graphics::NativePoint& newOrigin);
-			void resize(const NativeWidget& widget, const graphics::NativeSize& newSize);
-			void setBounds(const NativeWidget& widget, const graphics::NativeRectangle& bounds);
-			void setShape(const NativeWidget& widget, const graphics::NativeRegion& shape);
+			/**
+			 * Moves the widget to the specified position.
+			 * @param widget
+			 * @param newOrigin The new origin of the widget in parent-relative coordinates
+			 */
+			void move(NativeWidget& widget, const graphics::NativePoint& newOrigin);
+			/**
+			 * Resizes the widget.
+			 * @param widget
+			 * @param newSize The new size of the widget excluding any window frame
+			 */
+			void resize(NativeWidget& widget, const graphics::NativeSize& newSize);
+			/**
+			 * Sets the bounds of the widget.
+			 * @param widget
+			 * @param bounds The new bounds of the widget in parent-relative coordinates excluding
+			 *               any window frame.
+			 */
+			void setBounds(NativeWidget& widget, const graphics::NativeRectangle& bounds);
+			/**
+			 * Sets the shape of the widget.
+			 * @param widget
+			 * @param shape The new shape of the widget in parent-relative coordinates excluding
+			 *               any window frame.
+			 */
+			void setShape(NativeWidget& widget, const graphics::NativeRegion& shape);
 
 			// visibilities
+			/**
+			 * Closes the widget.
+			 * @param widget
+			 */
 			void close(NativeWidget& widget);
+			/**
+			 * Hides the widget.
+			 * @param widget
+			 * @see #close, #isVisible, #show
+			 */
 			void hide(NativeWidget& widget);
+			/**
+			 * Returns true if the widget is visible.
+			 * @param widget
+			 * @see #close, #hide, #show
+			 */
 			bool isVisible(const NativeWidget& widget);
+			/**
+			 * Lowers the widget to the bottom of the parent widget's stack.
+			 * @param widget The widget to lower
+			 * @see #raise
+			 */
 			void lower(NativeWidget& widget);
+			/**
+			 * Raises the widget to the top of the parent widget's stack.
+			 * @param widget The widget to raise
+			 * @see #lower
+			 */
 			void raise(NativeWidget& widget);
-			void setOpacity(NativeWidget& widget, double opacity);
+			/**
+			 * Returns the level of opacity for the window.
+			 * @param widget The widget
+			 * @return The level of opacity from 1.0 (completely opaque) to 0.0 (completely
+			 *         transparent)
+			 * @return #setWindowOpacity
+			 */
+			double windowOpacity(const NativeWidget& widget);
+			/**
+			 * Sets the level of opacity for the window.
+			 * @param widget The widget
+			 * @param opacity The level of opacity from 1.0 (completely opaque) to 0.0 (completely
+			 *         transparent)
+			 * @return #windowOpacity
+			 */
+			void setWindowOpacity(NativeWidget& widget, double opacity);
 			void setAlwaysOnTop(NativeWidget& widget, bool set);
+			/**
+			 * Shows the widget.
+			 * @param widget
+			 * @see #close, #hide, #isVisible
+			 */
 			void show(NativeWidget& widget);
 
 			enum State {
@@ -106,20 +206,72 @@ namespace ascension {
 			};
 
 			// top-level windows
+			/**
+			 * Returns @c true if the widget is maximized.
+			 * @param widget The widget
+			 * @return true if @a widget is maximized
+			 * @see #isMinimized, #showMaximized
+			 */
 			bool isMaximized(const NativeWidget& widget);
+			/**
+			 * Returns @c true if the widget is minimized.
+			 * @param widget The widget
+			 * @return true if @a widget is minimized
+			 * @see #isMaximized, #showMinimized
+			 */
 			bool isMinimized(const NativeWidget& widget);
+			/**
+			 * Shows the widget maximized.
+			 * @param widget The widget
+			 * @see #isMaximized, #showMinimized, #showNormal
+			 */
 			void showMaximized(NativeWidget& widget);
+			/**
+			 * Shows the widget minimized.
+			 * @param widget The widget
+			 * @see #isMinimized, #showMaximized, #showNormal
+			 */
 			void showMinimized(NativeWidget& widget);
+			/**
+			 * Restores the maximized or minimized widget.
+			 * @param widget The widget
+			 * @see #isMaximized, #isMinimized, #showMaximized, #showMinimized
+			 */
+			void showNormal(NativeWidget& widget);
 
 			// hierarchy
-			NativeWidget* parent(const NativeWidget& widget);
-			void setParent();
-			void setParent(NativeWidget& newParent);
+			/**
+			 * Returns the parent of the widget.
+			 * @param widget The widget
+			 * @return The parent widget or @c boost#none
+			 * @see #setParent
+			 */
+			boost::optional<NativeWidget> parent(const NativeWidget& widget);
+			/**
+			 * Sets the parent of the widget.
+			 * @param widget The widget
+			 * @param newParent The new parent widget or @c null
+			 * @see #parent
+			 */
+			void setParent(NativeWidget& widget, NativeWidget* newParent);
 
 			// drag and drop
+			/**
+			 * Enables or disables drop events for the widget.
+			 * @param widget The widget
+			 * @param accept Set @c true to enable drop events
+			 * @see #acceptsDrops
+			 */
 			void acceptDrops(NativeWidget& widget, bool accept = true);
+			/**
+			 * Returns @c true if drop events are enabled for the widget.
+			 * @param widget The widget
+			 * @return true if drop events are enabled for @a widget
+			 * @see #acceptDrops
+			 */
 			bool acceptsDrops(const NativeWidget& widget);
 
+			/// Returns the desktop window.
 			NativeWindow desktop();
 		}
 #if 0
