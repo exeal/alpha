@@ -194,9 +194,6 @@
     <ClCompile Include="..\..\ascension\src\graphics\font-windows.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\graphics\graphics-windows.cpp">
-      <Filter>ascension\Source Files\graphics</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\graphics\text-layout.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
@@ -473,9 +470,6 @@
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\graphics-windows.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\text-layout.hpp">

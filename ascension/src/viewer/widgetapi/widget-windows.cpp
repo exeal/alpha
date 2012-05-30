@@ -113,14 +113,15 @@ void widgetapi::move(NativeWidget& widget, const NativePoint& newOrigin) {
 			SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOSIZE | SWP_NOZORDER)))
 		throw makePlatformError();
 }
-
+/*
 boost::optional<widgetapi::NativeWidget> widgetapi::parent(const NativeWidget& widget) {
-	HWND temp = ::GetParent(widget.handle().get());
-	if(temp == nullptr)
+	HWND parentHandle = ::GetParent(widget.handle().get());
+	if(parentHandle == nullptr)
 		return boost::none;
-	return boost::make_optional(win32::Handle<HWND>(temp));
+	win32::Window temp((win32::Handle<HWND>(parentHandle)));
+	return boost::make_optional(temp);
 }
-
+*/
 void widgetapi::raise(NativeWidget& widget) {
 	if(!win32::boole(::SetWindowPos(widget.handle().get(),
 			HWND_TOP, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE)))
@@ -140,7 +141,7 @@ void widgetapi::releaseInput(NativeWidget&) {
 void widgetapi::resize(NativeWidget& widget, const NativeSize& newSize) {
 	if(!win32::boole(::SetWindowPos(widget.handle().get(), nullptr,
 			0, 0, geometry::dx(newSize), geometry::dy(newSize),
-			SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOZORDER))
+			SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOZORDER)))
 		throw makePlatformError();
 }
 
@@ -182,7 +183,7 @@ void widgetapi::setShape(NativeWidget& widget, const NativeRegion& shape) {
 	if(::SetWindowRgn(widget.handle().get(), shape.get(), true) == 0)
 		throw makePlatformError();
 }
-
+#if 0
 void WidgetBase::scrollInformation(int bar, SCROLLINFO& scrollInfo, UINT mask /* = SIF_ALL */) const {
 	scrollInfo.cbSize = sizeof(SCROLLINFO);
 	scrollInfo.fMask = mask;
@@ -207,11 +208,6 @@ int WidgetBase::scrollTrackPosition(int bar) const {
 	return si.nTrackPos;
 }
 
-void widgetapi::setParent(NativeWidget& widget, NativeWidget* newParent) {
-	if(::SetParent(widget.handle().get(), (newParent != 0) ? newParent->handle().get() : nullptr) == nullptr)
-		throw makePlatformError();
-}
-
 void WidgetBase::setScrollInformation(int bar, const SCROLLINFO& scrollInfo, bool redraw /* = true */) {
 	if(!boole(::SetScrollInfo(handle().get(), bar, &scrollInfo, redraw)))
 		throw PlatformDependentError<>();
@@ -223,6 +219,11 @@ int WidgetBase::setScrollPosition(int bar, int pos, bool redraw /* = true */) {
 
 void WidgetBase::setScrollRange(int bar, const Range<int>& range, bool redraw /* = true */) {
 	::SetScrollRange(handle().get(), bar, range.beginning(), range.end(), redraw);
+}
+#endif
+void widgetapi::setParent(NativeWidget& widget, NativeWidget* newParent) {
+	if(::SetParent(widget.handle().get(), (newParent != 0) ? newParent->handle().get() : nullptr) == nullptr)
+		throw makePlatformError();
 }
 
 void widgetapi::setWindowOpacity(NativeWidget& widget, double opacity) {
@@ -260,42 +261,4 @@ double widgetapi::windowOpacity(const NativeWidget& widget) {
 	if(!win32::boole(::GetLayeredWindowAttributes(widget.handle().get(), nullptr, &alpha, &flags)))
 		throw makePlatformError();
 	return ((flags & LWA_ALPHA) != 0) ? alpha / 255.0 : 1.0;
-}
-
-LRESULT CALLBACK WidgetBase::windowProcedure(HWND window, UINT message, WPARAM wp, LPARAM lp) {
-	WidgetBase* self;
-	bool consumed = false;
-	if(message == WM_NCCREATE) {
-		self = reinterpret_cast<WidgetBase*>(reinterpret_cast<CREATESTRUCTW*>(lp)->lpCreateParams);
-		assert(self != nullptr);
-#ifdef _WIN64
-		::SetWindowLongPtr(window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
-#else
-		::SetWindowLong(window, GWL_USERDATA, static_cast<long>(reinterpret_cast<LONG_PTR>(self)));
-#endif // _WIN64
-		self->handle_.reset(window, &::DestroyWindow);
-	} else {
-		self = reinterpret_cast<WidgetBase*>(
-#ifdef _WIN64
-			::GetWindowLongPtrW(window, GWLP_USERDATA));
-#else
-			static_cast<LONG_PTR>(::GetWindowLongW(window, GWL_USERDATA)));
-#endif // _WIN64
-		if(self == nullptr)
-			return TRUE;
-/*		const LRESULT r = self->preTranslateWindowMessage(message, wp, lp, consumed);
-		if(consumed)
-			return r;
-		else*/ if(message == WM_PAINT) {
-			Handle<HWND> temp(window);
-			PaintContext context(temp);
-			self->paint(context);
-			return FALSE;
-		}
-	}
-
-	LRESULT result = self->processMessage(message, wp, lp, consumed);
-	if(!consumed)
-		result = ::CallWindowProcW(::DefWindowProcW, window, message, wp, lp);
-	return result;
 }
