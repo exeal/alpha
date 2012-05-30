@@ -259,7 +259,6 @@
     <ClCompile Include="..\..\ascension\src\encodings\unicode.cpp" />
     <ClCompile Include="..\..\ascension\src\encodings\vietnamese.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font-windows.cpp" />
-    <ClCompile Include="..\..\ascension\src\graphics\graphics-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\text-layout.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\caret.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\ruler.cpp" />
@@ -385,7 +384,6 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\color.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\graphics\graphics-windows.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\text-layout.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-character-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-stream.hpp" />
