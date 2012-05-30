@@ -542,7 +542,8 @@ namespace {
 			effect |= DROPEFFECT_SCROLL;
 		return effect;
 	}
-	inline widgetapi::MouseButtonInput makeMouseButtonInput(DWORD keyState, const NativePoint& location) {
+	template<typename Point>
+	inline widgetapi::MouseButtonInput makeMouseButtonInput(DWORD keyState, const Point& location) {
 		widgetapi::UserInput::MouseButton buttons = 0;
 		if(win32::boole(keyState & MK_LBUTTON))
 			buttons |= widgetapi::UserInput::BUTTON1_DOWN;
@@ -561,7 +562,11 @@ namespace {
 			modifiers |= widgetapi::UserInput::SHIFT_DOWN;
 		if(win32::boole(keyState & MK_ALT))
 			modifiers |= widgetapi::UserInput::ALT_DOWN;
-		return widgetapi::MouseButtonInput(location, buttons, modifiers);
+		return widgetapi::MouseButtonInput(
+			geometry::make<NativePoint>(
+				static_cast<typename geometry::Coordinate<Point>::Type>(geometry::x(location)),
+				static_cast<typename geometry::Coordinate<Point>::Type>(geometry::y(location))),
+			buttons, modifiers);
 	}
 }
 
