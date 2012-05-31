@@ -26,6 +26,7 @@
 #	include <QPainter>
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
 #	include <ascension/win32/handle.hpp>
+#	include <stack>
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
 #	include <GdiPlus.h>
 #endif
@@ -54,7 +55,9 @@ namespace ascension {
 
 		enum FillRule {NONZERO, EVENODD};
 
-		enum LineCap {BUTT_LINE_CAP, ROUND_LINE_CAP, SQUARE_LINE_CAP};
+		ASCENSION_BEGIN_SCOPED_ENUM(LineCap)
+			BUTT, ROUND, SQUARE
+		ASCENSION_END_SCOPED_ENUM
 
 		enum LineJoin {BEVEL_LINE_JOIN, ROUND_LINE_JOIN, MITER_LINE_JOIN};
 
@@ -68,6 +71,9 @@ namespace ascension {
 		/**
 		 * @c CanvasRenderingContext2D interface defined in "HTML Canvas 2D Context"
 		 * (http://dev.w3.org/html5/2dcontext/).
+		 * The documentation of this class and its members are copied (and arranged) from W3C
+		 * documents.
+		 * Many methods of this class may throw @c PlatformError exception.
 		 */
 		class RenderingContext2D {
 			ASCENSION_NONCOPYABLE_TAG(RenderingContext2D);
@@ -112,7 +118,18 @@ namespace ascension {
 //			???? canvas() const;
 			const RenderingDevice& device() const;
 			// state
+			/**
+			 * Pushes the current drawing context onto the drawing state stack.
+			 * @return This object
+			 * @see #restore
+			 */
 			RenderingContext2D& save();
+			/**
+			 * Pops the top state on the drawing state stack, restoring the context to that state.
+			 * If there is no saved state, this method does nothing.
+			 * @return This object
+			 * @see #save
+			 */
 			RenderingContext2D& restore();
 			// compositing
 			double globalAlpha() const;
@@ -164,16 +181,72 @@ namespace ascension {
 			void putImageData(const NativeSize& size);
 			void putImageData(const NativeSize& size, const NativeRectangle& dirtyRectangle);
 			// transformations (CanvasTransformation interface)
+			/**
+			 * Adds the scaling transformation described by @a s to the transformation matrix.
+			 * @param s The scaling transformation. @c geometry#dx(s) represents the scale factor
+			 *          in the horizontal direction and @c geometry#dy(s) represents the scale
+			 *          factor in the vertical direction. The factors are multiplies.
+			 * @return This object
+			 * @see #rotate, #translate, #transform, #setTransform
+			 */
 			RenderingContext2D& scale(const NativeSize& s);
+			/**
+			 * Adds the rotation transformation described by @a angle to the transformation matrix.
+			 * @param angle A clockwise rotation angle in radians
+			 * @return This object
+			 * @see #scale, #translate, #transform, #setTransform
+			 */
 			RenderingContext2D& rotate(double angle);
+			/**
+			 * Adds the translation transformation described by @a delta to the transformation matrix.
+			 * @param delta The translation transformation. @c geometry#dx(delta) represents the
+			 *              translation distance in the horizontal direction and
+			 *              @c geometry#dy(delta) represents the translation distance in the
+			 *              vertical direction. These are in xxx units
+			 * @return This object
+			 * @see #scale, #rotate, #transform, #setTransform
+			 */
 			RenderingContext2D& translate(const NativeSize& delta);
+			/**
+			 * Replaces the current transformation matrix with the result of multiplying the
+			 * current transformation matrix with the matrix described by @a matrix.
+			 * @param matrix The matrix to multiply with
+			 * @return This object
+			 * @see #scale, #rotate, #translate, #setTransform
+			 */
 			RenderingContext2D& transform(const NativeAffineTransform& matrix);
+			/**
+			 * Resets the current transformation to the identity matrix and calls @c #transform(matrix).
+			 * @param matrix The new transformation matrix
+			 * @return This object
+			 * @see #scale, #rotate, #translate, #transform
+			 */
 			RenderingContext2D& setTransform(const NativeAffineTransform& matrix);
 			// line caps/joins (CanvasLineStyles interface)
+			/**
+			 * Returns the current width of lines, in xxx units. Initial value is @c 1.0.
+			 * @return The current width of lines
+			 * @see #setLineWidth
+			 */
 			Scalar lineWidth() const;
-			RenderingContext2D& setLineWidth(NativeRenderingContext2D& context, Scalar lineWidth);
+			/**
+			 * Sets the width of lines.
+			 * @param lineWidth The width of lines, in xxx units. Values that are not finite values
+			 *                  greater than zero are ignored
+			 * @return This object
+			 * @see #lineWidth
+			 */
+			RenderingContext2D& setLineWidth(Scalar lineWidth);
+			/**
+			 * Returns the current line cap style. Initial value is @c BUTT_LINE_CAP.
+			 * @return The current line cap style
+			 * @see #setLineCap
+			 */
 			LineCap lineCap() const;
-			RenderingContext2D& setLineCap(NativeRenderingContext2D& context, LineCap lineCap);
+			/**
+			 * Sets 
+			 */
+			RenderingContext2D& setLineCap(LineCap lineCap);
 			LineJoin lineJoin() const;
 			RenderingContext2D& setLineJoin(LineJoin lineJoin);
 			Scalar miterLimit() const;
@@ -205,6 +278,7 @@ namespace ascension {
 			std::shared_ptr<QPainter> nativeObject_;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
 			win32::Handle<HDC> nativeObject_;
+			std::stack<int> savedStates_;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
 			std::shared_ptr<Gdiplus::Graphics> nativeObject_;
 #endif

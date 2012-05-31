@@ -10,7 +10,7 @@
 
 #include <ascension/corelib/memory.hpp>	// FastArenaObject
 #include <ascension/corelib/range.hpp>
-#include <ascension/corelib/type-traits.hpp>
+#include <ascension/corelib/future.hpp>
 #include <ascension/platforms.hpp>
 #if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
 #	include <ascension/win32/handle.hpp>

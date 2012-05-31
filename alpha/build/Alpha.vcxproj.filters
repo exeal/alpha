@@ -87,6 +87,9 @@
     <Filter Include="ascension\Source Files\viewer\widgetapi">
       <UniqueIdentifier>{551209fd-c20c-45de-a5e9-bb15cb569fd5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Header Files\corelib\future">
+      <UniqueIdentifier>{69be1af1-e9ae-45a7-8804-ec7cbcfe0403}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -317,6 +320,9 @@
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\widget-windows.cpp">
       <Filter>ascension\Source Files\viewer\widgetapi</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\rendering-context-gdi.cpp">
+      <Filter>ascension\Source Files\graphics</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alpha.hpp">
@@ -499,9 +505,6 @@
     <ClInclude Include="..\..\ascension\ascension\kernel\searcher.hpp">
       <Filter>ascension\Header Files\kernel</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\corelib\type-traits.hpp">
-      <Filter>ascension\Header Files\corelib</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-context.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
@@ -678,6 +681,15 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\presentation\text-line-style.hpp">
       <Filter>ascension\Header Files\presentation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\future\scoped-enum-emulation.hpp">
+      <Filter>ascension\Header Files\corelib\future</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\future\type-traits.hpp">
+      <Filter>ascension\Header Files\corelib\future</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\future\static-assert.hpp">
+      <Filter>ascension\Header Files\corelib\future</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

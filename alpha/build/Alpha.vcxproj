@@ -198,6 +198,7 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\graphics\image-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\line-layout-vector.cpp" />
+    <ClCompile Include="..\..\ascension\src\graphics\rendering-context-gdi.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\text-renderer.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\text-viewport.cpp" />
     <ClCompile Include="..\..\ascension\src\length.cpp" />
@@ -278,6 +279,9 @@
     <ClInclude Include="..\..\ascension\ascension\content-assist\default-content-assistant.hpp" />
     <ClInclude Include="..\..\ascension\ascension\content-assist\identifiers-proposal-processor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\future.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\future\scoped-enum-emulation.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\future\static-assert.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\future\type-traits.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\listeners.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\native-object.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\range.hpp" />
@@ -294,7 +298,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\text\utf-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\utf.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\timer.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\corelib\type-traits.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\utility.hpp" />
     <ClInclude Include="..\..\ascension\ascension\directions.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\affine-transform.hpp" />
