@@ -11,7 +11,6 @@
 #ifndef ASCENSION_INHERITABLE_HPP
 #define ASCENSION_INHERITABLE_HPP
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException, std.logic_error
-#include <ascension/corelib/type-traits.hpp>		// detail.Select
 
 namespace ascension {
 	namespace presentation {

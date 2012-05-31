@@ -13,7 +13,7 @@
 #include <locale>		// std.use_facet, ...
 #include <sstream>		// std.basic_ostream, std.ostringstream
 #include <utility>		// std.max, std.min, std.pair
-#include <ascension/corelib/type-traits.hpp>
+#include <ascension/corelib/future.hpp>
 #include <boost/operators.hpp>
 
 namespace ascension {

@@ -11,6 +11,9 @@
 #include <cstddef>
 //#include <ascension/config.hpp>
 //#include <ascension/platforms.hpp>
+#include <ascension/corelib/future/scoped-enum-emulation.hpp>
+#include <ascension/corelib/future/static-assert.hpp>
+#include <ascension/corelib/future/type-traits.hpp>
 
 namespace ascension {
 	template<typename T, std::size_t n>
@@ -31,37 +34,5 @@ namespace ascension {
 #define ASCENSION_COUNTOF(array) (sizeof(array) / sizeof((array)[0]))
 /// Returns the end of the given array.
 #define ASCENSION_ENDOF(array) ((array) + ASCENSION_COUNTOF(array))
-
-/// Starts scoped enum in C++ 11 emulation.
-#define ASCENSION_SCOPED_ENUM_PROLOGUE(typeName)	\
-	class typeName {								\
-		typedef Self;								\
-		enum Values
-/// Ends scoped enum in C++ 11 emulation.
-#define ASCENSION_SCOPED_ENUM_EPILOGUE()											\
-	;																				\
-		Self() : value_() {}														\
-		Self(Values value) : value_(value) {}										\
-		operator Values() const {return value_;}									\
-		bool operator==(const Self& other) const {return value_ == other.value_;}	\
-		bool operator!=(const Self& other) const {return value_ != other.value_;}	\
-		bool operator==(const Values& other) const {return value_ == other.value_;}	\
-		bool operator!=(const Values& other) const {return value_ != other.value_;}	\
-	private:																		\
-		Values value_;																\
-	};
-
-namespace ascension {
-	namespace detail {
-		template<unsigned> struct StaticAssertTest {};
-		template<int> struct StaticAssertionFailureAtLine;
-		template<> struct StaticAssertionFailureAtLine<-1> {};
-	} // namespace detail
-
-	#define ASCENSION_STATIC_ASSERT(expression)														\
-		typedef ascension::detail::StaticAssertTest<												\
-			sizeof(ascension::detail::StaticAssertionFailureAtLine<(expression) ? -1 : __LINE__>)	\
-		> oh_static_assertion_shippaidayo_orz
-}
 
 #endif // !ASCENSION_FUTURE_HPP
