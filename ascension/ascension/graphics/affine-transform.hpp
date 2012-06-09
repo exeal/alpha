@@ -164,8 +164,7 @@ namespace ascension {
 			template<typename AffineTransform, typename Point>
 			inline AffineTransform quadrantRotationTransform(int numberOfQuadrants, const Point& anchor);
 			template<typename AffineTransform>
-			inline AffineTransform rotationTransform(
-				typename Coordinate<AffineTransform>::Type thetaInRadians);
+			inline AffineTransform rotationTransform(double thetaInRadians);
 			template<typename AffineTransform, typename Point>
 			inline AffineTransform rotationTransform(
 				typename Coordinate<AffineTransform>::Type thetaInRadians, const Point& anchor);
