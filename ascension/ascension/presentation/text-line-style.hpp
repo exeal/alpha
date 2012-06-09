@@ -206,7 +206,11 @@ namespace ascension {
 	}
 
 	namespace detail {
-		enum PhysicalTextAnchor {LEFT, MIDDLE, RIGHT};
+		enum PhysicalTextAnchor {
+			LEFT = presentation::TEXT_ANCHOR_END + 1,
+			MIDDLE = presentation::TEXT_ANCHOR_MIDDLE,
+			RIGHT = LEFT + 1
+		};
 
 		inline PhysicalTextAnchor computePhysicalTextAnchor(presentation::TextAnchor anchor, presentation::ReadingDirection readingDirection) {
 			switch(anchor) {
