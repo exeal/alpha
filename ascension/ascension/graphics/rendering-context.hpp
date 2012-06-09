@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file rendering-context.hpp
  * @author exeal
  * @date 2011-03-06 created
@@ -47,19 +47,67 @@ namespace ascension {
 		typedef Gdiplus::Graphics& NativeRenderingContext2D;
 #endif
 
+		/**
+		 * Specifies how shapes and images are drawn onto the existing bitmap.
+		 * @see RenderingContext2D#globalCompositeOperation,
+		 *      RenderingContext2D#setGlobalCompositeOperation
+		 */
 		enum CompositeOperation {
-			SOURCE_ATOP, SOURCE_IN, SOURCE_OUT, SOURCE_OVER,
-			DESTINATION_ATOP, DESTINATION_IN, DESTINATION_OUT, DESTINATION_OVER,
-			LIGHTER, COPY, XOR
+			/// Display the source image wherever both images are opaque. Display the destination
+			/// image wherever the destination image is opaque but the source image is transparent.
+			/// Display transparency elsewhere.
+			SOURCE_ATOP,
+			/// Display the source image wherever both the source image and destination image are
+			/// opaque. Display transparency elsewhere.
+			SOURCE_IN,
+			/// Display the source image wherever the source image is opaque and the destination
+			/// image is transparent. Display transparency elsewhere.
+			SOURCE_OUT,
+			/// Display the source image wherever the source image is opaque. Display the
+			/// destination image elsewhere.
+			SOURCE_OVER,
+			/// Same as @c SOURCE_ATOP but using the destination image instead of the source image
+			/// and vice versa.
+			DESTINATION_ATOP,
+			/// Same as @c SOURCE_IN but using the destination image instead of the source image
+			/// and vice versa.
+			DESTINATION_IN,
+			/// Same as @c SOURCE_OUT but using the destination image instead of the source image
+			/// and vice versa.
+			DESTINATION_OUT,
+			/// Same as @c SOURCE_OVER but using the destination image instead of the source image
+			/// and vice versa.
+			DESTINATION_OVER,
+			/// Display the sum of the source image and destination image, with color values
+			/// approaching 255 (100%) as a limit.
+			LIGHTER,
+			/// Display the source image instead of the destination image.
+			COPY,
+			/// Exclusive OR of the source image and destination image.
+			XOR
 		};
 
 		enum FillRule {NONZERO, EVENODD};
 
 		ASCENSION_BEGIN_SCOPED_ENUM(LineCap)
-			BUTT, ROUND, SQUARE
+			BUTT,
+			ROUND,
+			SQUARE
 		ASCENSION_END_SCOPED_ENUM
 
-		enum LineJoin {BEVEL_LINE_JOIN, ROUND_LINE_JOIN, MITER_LINE_JOIN};
+		ASCENSION_BEGIN_SCOPED_ENUM(LineJoin)
+			BEVEL,
+			ROUND,
+			MITER
+		ASCENSION_END_SCOPED_ENUM
+
+		ASCENSION_BEGIN_SCOPED_ENUM(TextAlignment)
+			START = presentation::TEXT_ANCHOR_START,
+			END = presentation::TEXT_ANCHOR_END,
+			LEFT = detail::LEFT,
+			RIGHT = detail::RIGHT,
+			CENTER = presentation::TEXT_ANCHOR_MIDDLE
+		ASCENSION_END_SCOPED_ENUM
 
 		class ImageData : public NativeSize {
 		};
@@ -132,14 +180,61 @@ namespace ascension {
 			 */
 			RenderingContext2D& restore();
 			// compositing
+			/**
+			 * Returns the current alpha value applied to rendering operations. Initial value is
+			 * @c 1.0.
+			 * @return The current alpha value in the range from 0.0 (fully transparent) to 1.0 (no
+			 *         additional transparency)
+			 * @see #globalCompositeOperation, #setGlobalAlpha
+			 */
 			double globalAlpha() const;
+			/**
+			 * Sets the current alpha value applied to rendering operations.
+			 * @param globalAlpha The alpha value in the range from 0.0 (fully transparent) to 1.0
+			 *                   (no additional transparency)
+			 * @throw std#invalid_argument @a globalAlpha is out of range from 0.0 to 1.0
+			 * @see #globalAlpha, #setGlobalCompositeOperation
+			 */
 			RenderingContext2D& setGlobalAlpha(double globalAlpha);
+			/**
+			 * Returns the current composition operation. Initial value is @c SOURCE_OVER.
+			 * @return The current composition operation
+			 * @see #globalAlpha, #setGlobalCompositeOperation
+			 */
 			CompositeOperation globalCompositeOperation() const;
+			/**
+			 * Sets the current composition operation.
+			 * @param compositeOperation The new composition operation
+			 * @throw UnknownValueException @a compositeOperation is unknown
+			 * @see #globalCompositeOperation, #setGlobalAlpha
+			 */
 			RenderingContext2D& setGlobalCompositeOperation(CompositeOperation compositeOperation);
 			// colors and styles
+			/**
+			 * Returns the current style used for stroking shapes. Initial value is opaque black.
+			 * @return The current stokre style
+			 * @see #setStrokeStyle, #fillStyle
+			 */
 			Paint& strokeStyle() const;
+			/**
+			 * Sets the style used for stroking shapes.
+			 * @param strokeStyle The new fill style to set
+			 * @return This object
+			 * @see #strokeStyle, #setFillStyle
+			 */
 			RenderingContext2D& setStrokeStyle(const Paint& strokeStyle);
+			/**
+			 * Returns the current style used for filling shapes. Initial value is opaque black.
+			 * @return The current fill style
+			 * @see #setFillStyle, #strokeStyle
+			 */
 			Paint& fillStyle() const;
+			/**
+			 * Sets the style used for filling shapes.
+			 * @param fillStyle The new fill style to set
+			 * @return This object
+			 * @see #fillStyle, #setStrokeStyle
+			 */
 			RenderingContext2D& setFillStyle(const Paint& fillStyle);
 //			std::unique_ptr<Gradient> createLinearGradient();
 //			std::unique_ptr<Gradient> createRadialGradient();
@@ -152,27 +247,135 @@ namespace ascension {
 			Color shadowColor() const;
 			RenderingContext2D& setShadowColor(const Color& shadowColor);
 			// rects
+			/**
+			 * Clears all pixels on the canvas in the specified rectangle to transparent black.
+			 * @param rectangle The rectangle
+			 * @return This object
+			 * @see #fillRectangle, #strokeRectangle
+			 */
 			RenderingContext2D& clearRectangle(const NativeRectangle& rectangle);
+			/**
+			 * Paints the specified rectangle onto the canvas, using the current fill style.
+			 * @param rectangle The rectangle
+			 * @return This object
+			 * @see #clarRectangle, #strokeRectangle
+			 */
 			RenderingContext2D& fillRectangle(const NativeRectangle& rectangle);
+			/**
+			 * Paints the box that outlines the specified rectangle onto the canvas, using the
+			 * current stroke style.
+			 * @param rectangle The rectangle
+			 * @return This object
+			 * @see #clearRectangle, #fillRectangle
+			 */
 			RenderingContext2D& strokeRectangle(const NativeRectangle& rectangle);
 			// current default path API
+			/**
+			 * Resets the current default path.
+			 * @return This object
+			 * @see #closePath
+			 */
 			RenderingContext2D& beginPath();
+			/**
+			 * Fills the subpaths of the current default path with the current fill style.
+			 * @return This object
+			 * @see #fillRectangle, #fillText, #stroke
+			 */
 			RenderingContext2D& fill();
+			/**
+			 * Strokes the subpaths of the current default path with the current stroke style.
+			 * @return This object
+			 * @see #fill, #strokeRectangle, #strokeText
+			 */
 			RenderingContext2D& stroke();
-			void drawSystemFocusRing(const NativeRectangle& bounds);
-			bool drawCustomFocusRing(const NativeRectangle& bounds);
+			/**
+			 * Draws a focus ring around the current default path, following the platform
+			 * conventions for focus rings.
+			 * @see #drawCustomFocusRing
+			 */
+			void drawSystemFocusRing(/*const NativeRectangle& bounds*/);
+			/**
+			 * The end user has configured whose system to draw focus rings in a particular manner
+			 * (for example, high contrast focus rings), draws a focus ring around the current
+			 * default path and returns @c false. Otherwise returns @c true.
+			 * @retval true This method did not draw a focus ring
+			 * @retval false This method drew a focus ring
+			 */
+			bool drawCustomFocusRing(/*const NativeRectangle& bounds*/);
+			/**
+			 * Scrolls the current default path into view. This is especially useful on devices
+			 * with small screens, where the whole canvas might not be visible at once.
+			 * @return This object
+			 */
 			RenderingContext2D& scrollPathIntoView();
+			/**
+			 * Further constrains the clipping region to the current default path.
+			 * @return This object
+			 */
 			RenderingContext2D& clip();
+			/**
+			 * Returns @c true if the specified point is in the current default path.
+			 * @param point The point to test
+			 * @return @a point is in the current default path
+			 */
 			bool isPointInPath(const NativePoint& point) const;
 			// text
+			/**
+			 * Fills the given text at the given position. If a maximum measure is provided, the
+			 * text will be scaled to fit that measure if necessary.
+			 * @param text The text string
+			 * @param origin The origin of the text. The alignment of the drawing is calculated by
+			 *               the current @c #textAlign and @c #textBaseline values
+			 * @param maximumMeasure If present, this value specifies the maximum measure (width
+			 *                       in horizontal writing mode)
+			 * @return This object
+			 * @throw std#invalid_argument @a maximumMeasure is present but less than or equal to zero
+			 * @see #strokeText, #measureText
+			 */
 			RenderingContext2D& fillText(const StringPiece& text,
 				const NativePoint& origin, boost::optional<Scalar> maximumMeasure = boost::none);
+			/**
+			 * Strokes the given text at the given position. If a maximum measure is provided, the
+			 * text will be scaled to fit that measure if necessary.
+			 * @param text The text string
+			 * @param origin The origin of the text. The alignment of the drawing is calculated by
+			 *               the current @c #textAlign and @c #textBaseline values
+			 * @param maximumMeasure If present, this value specifies the maximum measure (width
+			 *                       in horizontal writing mode)
+			 * @return This object
+			 * @throw std#invalid_argument @a maximumMeasure is present but less than or equal to zero
+			 * @see #fillText, #measureText
+			 */
 			RenderingContext2D& strokeText(const StringPiece& text,
 				const NativePoint& origin, boost::optional<Scalar> maximumMeasure = boost::none);
+			/**
+			 * Returns a size (measure and extent) of the specified text in the current font.
+			 * @param text The text string
+			 * @see #strokeText, #fillText
+			 */
 			NativeSize measureText(const StringPiece& text);
 			// drawing images
+			/**
+			 * Draws the specified image onto the canvas.
+			 * @param image The image to draw
+			 * @param position The destination position
+			 * @return This object
+			 */
 			RenderingContext2D& drawImage(const Image& image, const NativePoint& position);
+			/**
+			 * Draws the specified image onto the canvas.
+			 * @param image The image to draw
+			 * @param destinationBounds The destination bounds
+			 * @return This object
+			 */
 			RenderingContext2D& drawImage(const Image& image, const NativeRectangle& destinationBounds);
+			/**
+			 * Draws the specified image onto the canvas.
+			 * @param image The image to draw
+			 * @param sourceBounds The bounds in @a image data to draw
+			 * @param destinationBounds The destination bounds
+			 * @return This object
+			 */
 			RenderingContext2D& drawImage(const Image& image, const NativeRectangle& sourceBounds, const NativeRectangle& destinationBounds);
 			// pixel manipulation
 			std::unique_ptr<ImageData> createImageData(const NativeSize& size) const;
@@ -183,13 +386,14 @@ namespace ascension {
 			// transformations (CanvasTransformation interface)
 			/**
 			 * Adds the scaling transformation described by @a s to the transformation matrix.
-			 * @param s The scaling transformation. @c geometry#dx(s) represents the scale factor
-			 *          in the horizontal direction and @c geometry#dy(s) represents the scale
-			 *          factor in the vertical direction. The factors are multiplies.
+			 * @param sx The scale factor in the horizontal direction. The factor is multiplies
+			 * @param sy The scale factor in the vertical direction. The factor is multiplies
 			 * @return This object
 			 * @see #rotate, #translate, #transform, #setTransform
 			 */
-			RenderingContext2D& scale(const NativeSize& s);
+			RenderingContext2D& scale(
+				geometry::Coordinate<NativeAffineTransform>::Type sx,
+				geometry::Coordinate<NativeAffineTransform>::Type sy);
 			/**
 			 * Adds the rotation transformation described by @a angle to the transformation matrix.
 			 * @param angle A clockwise rotation angle in radians
@@ -198,7 +402,8 @@ namespace ascension {
 			 */
 			RenderingContext2D& rotate(double angle);
 			/**
-			 * Adds the translation transformation described by @a delta to the transformation matrix.
+			 * Adds the translation transformation described by @a delta to the transformation
+			 * matrix.
 			 * @param delta The translation transformation. @c geometry#dx(delta) represents the
 			 *              translation distance in the horizontal direction and
 			 *              @c geometry#dy(delta) represents the translation distance in the
@@ -207,6 +412,17 @@ namespace ascension {
 			 * @see #scale, #rotate, #transform, #setTransform
 			 */
 			RenderingContext2D& translate(const NativeSize& delta);
+			/**
+			 * Adds the translation transformation described by @a dx and @a dy to the
+			 * transformation matrix.
+			 * @param dx The translation distance in the horizontal direction in xxx units
+			 * @param dy The translation distance in the vertical direction in xxx units
+			 * @return This object
+			 * @see #scale, #rotate, #transform, #setTransform
+			 */
+			RenderingContext2D& translate(
+				geometry::Coordinate<NativeAffineTransform>::Type dx,
+				geometry::Coordinate<NativeAffineTransform>::Type dy);
 			/**
 			 * Replaces the current transformation matrix with the result of multiplying the
 			 * current transformation matrix with the matrix described by @a matrix.
@@ -238,35 +454,156 @@ namespace ascension {
 			 */
 			RenderingContext2D& setLineWidth(Scalar lineWidth);
 			/**
-			 * Returns the current line cap style. Initial value is @c BUTT_LINE_CAP.
+			 * Returns the current line cap style. Initial value is @c LineCap#BUTT.
 			 * @return The current line cap style
 			 * @see #setLineCap
 			 */
 			LineCap lineCap() const;
 			/**
-			 * Sets 
+			 * Sets the line cap style.
+			 * @param lineCap The line cap style
+			 * @return This object
+			 * @throw UnknownValueException @a lineCap is unknown
+			 * @see #lineCap
 			 */
 			RenderingContext2D& setLineCap(LineCap lineCap);
+			/**
+			 * Returns the current line join style. Initial value is @c LineJoin#MITER.
+			 * @return The current line join style
+			 * @see #setLineJoin
+			 */
 			LineJoin lineJoin() const;
+			/**
+			 * Sets the line join style.
+			 * @param lineJoin The line join style
+			 * @return This object
+			 * @throw UnknownValueException @a lineJoin is unknown
+			 * @see #lineJoin
+			 */
 			RenderingContext2D& setLineJoin(LineJoin lineJoin);
-			Scalar miterLimit() const;
-			RenderingContext2D& setMiterLimit(Scalar miterLimit);
+			/**
+			 * Returns the current miter limit ratio. Initial value is @c 10.0.
+			 * @return The current miter limit ratio
+			 * @see #setMiterLimit
+			 */
+			double miterLimit() const;
+			/**
+			 * Sets the miter limit ratio.
+			 * @param miterLimit The miter limit ratio. Values that are not finite values greater
+			 *                   than zero are ignored
+			 * @return This object
+			 * @see #miterLimit
+			 */
+			RenderingContext2D& setMiterLimit(double miterLimit);
 			// text (CanvasText interface)
 			std::shared_ptr<const font::Font> font() const;
 			RenderingContext2D& setFont(std::shared_ptr<const font::Font> font);
-			presentation::TextAnchor textAlign() const;
-			RenderingContext2D& setTextAlign(presentation::TextAnchor anchor);
+			/**
+			 * Returns the current text alignment settings. Default value is @c TEXT_ANCHOR_START.
+			 * @return The current text alignment settings
+			 * @see #setTextAlignment, #textBaseline
+			 */
+			TextAlignment textAlignment() const;
+			/**
+			 * Sets the text alignment settings.
+			 * @param textAlignment The new text alignment settings
+			 * @return This object
+			 * @throw UnknownValueException
+			 * @see #setTextBaseline, #textAlignment
+			 */
+			RenderingContext2D& setTextAlignment(TextAlignment textAlignment);
+			/**
+			 * Returns the current baseline alignment settings. Default value is
+			 * @c ALIGNMENT_BASELINE_ALPHABETIC.
+			 * @return The current baseline alignment settings
+			 * @see #setTextBaseline, #textAlignment
+			 */
 			presentation::AlignmentBaseline textBaseline() const;
-			RenderingContext2D& setBaseline(presentation::AlignmentBaseline baseline);
+			/**
+			 * Sets the baseline alignment settings.
+			 * @param textAlignment The new baseline alignment settings
+			 * @return This object
+			 * @throw UnknownValueException
+			 * @see #setTextAlignment, #textBaseline
+			 */
+			RenderingContext2D& setTextBaseline(presentation::AlignmentBaseline baseline);
 			// shared path API methods (CanvasPathMethods interface)
+			/**
+			 * Marks the current subpath as closed, and starts a new subpath with a point the same
+			 * as the start and end of the newly closed subpath.
+			 * @return This object
+			 * @see #beginPath
+			 */
 			RenderingContext2D& closePath();
+			/**
+			 * Creates a new subpath with the specified point.
+			 * @param to The point as first (and only) of the new subpath
+			 * @return This object
+			 * @see #lineTo
+			 */
 			RenderingContext2D& moveTo(const NativePoint& to);
+			/**
+			 * Adds the specified point to the current subpath, connected to the previous one by a
+			 * straight line. If the path has no subpaths, ensures there is a subpath for that
+			 * point.
+			 * @param to The point to add to the current subpath
+			 * @return This object
+			 * @see #moveTo
+			 */
 			RenderingContext2D& lineTo(const NativePoint& to);
-			RenderingContext2D& quadraticCurveTo(double cpx, double cpy, double x, double y);
-			RenderingContext2D& bezierCurveTo(double cp1x, double cp1y, double cp2x, double cp2y, double x, double y);
-			RenderingContext2D& arcTo(double x1, double y1, double x2, double y2, double radius); 
+			/**
+			 * Adds the specified point to the current subpath, connected to the previous one by a
+			 * quadratic Bézier curve with the specified control point.
+			 * @param cp The control point
+			 * @param to The point to add to the current subpath
+			 * @return This object
+			 * @see #bezierCurveTo
+			 */
+			RenderingContext2D& quadraticCurveTo(const NativePoint& cp, const NativePoint& to);
+			/**
+			 * Adds the specified point to the current subpath, connected to the previous one by a
+			 * cubic Bézier curve with the specified control point.
+			 * @param cp1 The first control point
+			 * @param cp2 The second control point
+			 * @param to The point to add to the current subpath
+			 * @return This object
+			 * @see #bezierCurveTo
+			 */
+			RenderingContext2D& bezierCurveTo(const NativePoint& cp1, const NativePoint& cp2, const NativePoint& to);
+			/**
+			 * Adds an arc with the specified control points and radius to the current subpath,
+			 * connected to the previous point by a straight line.
+			 * @param p1 The start point
+			 * @param p2 The destination point
+			 * @param radius Radius of the circle gives the arc
+			 * @return This object
+			 * @throw std#invalid_argument @a radius is negative
+			 * @see #arc
+			 */
+			RenderingContext2D& arcTo(const NativePoint& p1, const NativePoint& p2, Scalar radius);
+			/**
+			 * Adds a new closed subpath to the path, representing the specified rectangle.
+			 * @param rect The rectangle
+			 * @return This object
+			 */
 			RenderingContext2D& rectangle(const NativeRectangle& rect);
-			RenderingContext2D& arc(const NativePoint& to, Scalar radius, double startAngle, double endAngle, bool counterClockwise = false);
+			/**
+			 * Adds points to the subpath such that the arc described by the circumference of the
+			 * circle described by the arguments, starting at the specified start angle and ending
+			 * at the given end angle, going in the given direction, is added to the path,
+			 * connected to the previous point by a straight line.
+			 * @param p The origin of the circle gives the arc
+			 * @param radius Radius of the circle gives the arc
+			 * @param startAngle Defines the start point 
+			 * @param endAngle Defines the end point
+			 * @param counterClosewise If @c false, the arc is the path along the circumstance of
+			 *                         the circle from the start point to the end point, closewise
+			 * @return This object
+			 * @throw std#invalid_argument @a radius is negative
+			 * @see #arc
+			 */
+			RenderingContext2D& arc(const NativePoint& p, Scalar radius,
+				double startAngle, double endAngle, bool counterClockwise = false);
 		private:
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
 			Cairo::RefPtr<Cairo::Context> nativeObject_;
@@ -279,6 +616,9 @@ namespace ascension {
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
 			win32::Handle<HDC> nativeObject_;
 			std::stack<int> savedStates_;
+			bool hasCurrentSubpath_;
+			bool endPath();
+			bool ensureThereIsASubpathFor(const NativePoint& p);
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
 			std::shared_ptr<Gdiplus::Graphics> nativeObject_;
 #endif
