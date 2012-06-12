@@ -264,6 +264,18 @@ namespace ascension {
 				return size1;
 			}
 
+			// 'area' for size and rectangle
+
+			template<typename Size>
+			inline typename Coordinate<Size>::Type area(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
+				return dx(size) * dy(size);
+			}
+
+			template<typename Rectangle>
+			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type area(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
+				return dx(rectangle) * dy(rectangle);
+			}
+
 			// 'divide' for point and size
 
 			// 'dx' for size and rectangle
