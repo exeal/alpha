@@ -11,7 +11,7 @@
 #ifndef ASCENSION_REGEX_HPP
 #define ASCENSION_REGEX_HPP
 
-#include <ascension/corelib/type-traits.hpp>		// std.integral_constant
+#include <ascension/corelib/future/type-traits.hpp>	// std.integral_constant
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/case-folder.hpp>
 #include <ascension/corelib/text/character-property.hpp>
