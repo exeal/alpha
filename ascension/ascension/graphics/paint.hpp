@@ -49,9 +49,9 @@ namespace ascension {
 				if(color == Color())
 					throw std::invalid_argument("color");
 			}
-			explicit Paint(std::unique_ptr<const Gradient> gradient) : color_(Color::TRANSPARENT_COLOR), gradient_(std::move(gradient)) {}
+			explicit Paint(std::unique_ptr<const Gradient> gradient) : color_(Color::TRANSPARENT_BLACK), gradient_(std::move(gradient)) {}
 			explicit Paint(const Color& color, std::unique_ptr<const Gradient> gradient) : color_(color), gradient_(std::move(gradient)) {}
-			explicit Paint(std::unique_ptr<const Pattern> pattern) : color_(Color::TRANSPARENT_COLOR), pattern_(std::move(pattern)) {}
+			explicit Paint(std::unique_ptr<const Pattern> pattern) : color_(Color::TRANSPARENT_BLACK), pattern_(std::move(pattern)) {}
 			explicit Paint(const Color& color, std::unique_ptr<const Pattern> pattern) : color_(color), pattern_(std::move(pattern)) {}
 			const Color& color() const /*throw()*/ {return color_;}
 			const Gradient* gradient() const /*throw()*/ {return gradient_.get();}
