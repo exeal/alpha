@@ -16,7 +16,9 @@ using namespace std;
  * @param nativeObject The Win32 @c HDC value to move
  */
 RenderingContext2D::RenderingContext2D(win32::Handle<HDC>&& nativeObject) : nativeObject_(move(nativeObject)), hasCurrentSubpath_(false) {
+	::SetBkMode(nativeObject_.get(), TRANSPARENT);
 	::SetGraphicsMode(nativeObject_.get(), GM_ADVANCED);
+	::SetPolyFillMode(nativeObject_.get(), WINDING);
 	::SetTextAlign(nativeObject_.get(), TA_LEFT | TA_BASELINE | TA_UPDATECP);
 }
 
@@ -25,7 +27,9 @@ RenderingContext2D::RenderingContext2D(win32::Handle<HDC>&& nativeObject) : nati
  * @param nativeObject
  */
 RenderingContext2D::RenderingContext2D(const win32::Handle<HDC>& nativeObject) : nativeObject_(nativeObject_.get()), hasCurrentSubpath_(false) {
+	::SetBkMode(nativeObject_.get(), TRANSPARENT);
 	::SetGraphicsMode(nativeObject_.get(), GM_ADVANCED);
+	::SetPolyFillMode(nativeObject_.get(), WINDING);
 	::SetTextAlign(nativeObject_.get(), TA_LEFT | TA_BASELINE | TA_UPDATECP);
 }
 
@@ -97,6 +101,27 @@ RenderingContext2D& RenderingContext2D::closePath() {
 	return *this;
 }
 
+unique_ptr<ImageData> RenderingContext2D::createImageData(const NativeSize& dimensions) const {
+	const size_t area = geometry::area(dimensions);
+	unique_ptr<uint8_t[]> bytes(new uint8_t[area]);
+	for(size_t i = 0; i < area; i += 4) {
+		bytes[i + 0] = Color::TRANSPARENT_BLACK.red();
+		bytes[i + 1] = Color::TRANSPARENT_BLACK.green();
+		bytes[i + 2] = Color::TRANSPARENT_BLACK.blue();
+		bytes[i + 3] = Color::TRANSPARENT_BLACK.alpha();
+	}
+	return unique_ptr<ImageData>(new ImageData(move(bytes), geometry::dx(dimensions), geometry::dy(dimensions)));
+}
+
+void RenderingContext2D::drawSystemFocusRing(/*const NativeRectangle& bounds*/) {
+	// TODO: not implemented.
+}
+
+bool RenderingContext2D::drawCustomFocusRing(/*const NativeRectangle& bounds*/) {
+	// TODO: not implemented.
+	return true;
+}
+
 inline bool RenderingContext2D::endPath() {
 	if(!hasCurrentSubpath_)
 		return false;
@@ -130,31 +155,114 @@ RenderingContext2D& RenderingContext2D::fillRectangle(const NativeRectangle& rec
 	throw makePlatformError();
 }
 
+namespace {
+	class SubpathsSaver {
+		ASCENSION_NONCOPYABLE_TAG(SubpathsSaver);
+	public:
+		explicit SubpathsSaver(const win32::Handle<HDC>& deviceContext)
+				: deviceContext_(deviceContext.get()), numberOfPoints_(::GetPath(deviceContext.get(), nullptr, nullptr, 0)) {
+			// backup subpaths
+			if(numberOfPoints_ == 0)
+				throw makePlatformError();
+			points_.reset(new POINT[numberOfPoints_]);
+			types_.reset(new BYTE[numberOfPoints_]);
+			if(::GetPath(deviceContext_.get(), points_.get(), types_.get(), numberOfPoints_) == 0)
+				throw makePlatformError();
+			if(!win32::boole(::AbortPath(deviceContext_.get()))) {
+				points_.reset();
+				throw makePlatformError();
+			}
+		}
+		~SubpathsSaver() /*noexcept*/ {
+			if(points_.get() != nullptr) {
+				// restore subpaths
+				::BeginPath(deviceContext_.get());
+				::PolyDraw(deviceContext_.get(), points_.get(), types_.get(), numberOfPoints_);
+			}
+		}
+	private:
+		const win32::Handle<HDC> deviceContext_;
+		const int numberOfPoints_;
+		unique_ptr<POINT[]> points_;
+		unique_ptr<BYTE[]> types_;
+	};
+
+	class FontSaver {
+		ASCENSION_NONCOPYABLE_TAG(FontSaver);
+	public:
+		explicit FontSaver(const win32::Handle<HDC>& deviceContext) :
+				deviceContext_(deviceContext.get()),
+				savedFont_(static_cast<HFONT>(::GetCurrentObject(deviceContext_.get(), OBJ_FONT))) {
+			if(savedFont_.get() == nullptr)
+				throw makePlatformError();
+		}
+		~FontSaver() /*noexcept*/ {
+			::SelectObject(deviceContext_.get(), savedFont_.get());
+		}
+		const win32::Handle<HFONT>& savedFont() const /*noexcept*/ {
+			return savedFont_;
+		}
+	private:
+		const win32::Handle<HDC> deviceContext_;
+		win32::Handle<HFONT> savedFont_;
+	};
+
+	RenderingContext2D& paintText(RenderingContext2D& context, const StringPiece& text,
+			const NativePoint& origin, boost::optional<Scalar> maximumMeasure, bool onlyStroke) {
+		const SubpathsSaver sb(context.asNativeObject());
+		const win32::Handle<HDC>& dc(context.asNativeObject());
+		unique_ptr<const FontSaver> fontSaver;
+		win32::Handle<HFONT> condensedFont;
+		if(maximumMeasure) {
+			fontSaver.reset(new FontSaver(context.asNativeObject()));
+			const Scalar measure = geometry::dx(context.measureText(text));
+			if(measure > *maximumMeasure) {
+				LOGFONTW lf;
+				if(::GetObjectW(fontSaver->savedFont().get(), sizeof(LOGFONTW), &lf) == 0)
+					throw makePlatformError();
+				lf.lfWidth = ::MulDiv(lf.lfWidth, *maximumMeasure, measure);
+				condensedFont.reset(::CreateFontIndirectW(&lf), &::DeleteObject);
+				if(condensedFont.get() == nullptr || ::SelectObject(dc.get(), condensedFont.get()) == nullptr)
+					throw makePlatformError();
+			}
+		}
+
+		if(onlyStroke) {
+			if(!win32::boole(::BeginPath(dc.get())))
+				throw makePlatformError();
+		}
+		if(!win32::boole(::ExtTextOutW(dc.get(),
+				geometry::x(origin), geometry::y(origin), ETO_NUMERICSLOCAL, nullptr, text.beginning(), length(text), nullptr)))
+			throw makePlatformError();
+		if(onlyStroke) {
+			if(!win32::boole(::EndPath(dc.get())) || !win32::boole(::StrokePath(dc.get())))
+				throw makePlatformError();
+		}
+
+		return context;
+	}
+}
+
+RenderingContext2D& RenderingContext2D::fillText(const StringPiece& text,
+		const NativePoint& origin, boost::optional<Scalar> maximumMeasure /* = boost::none */) {
+	return paintText(*this, text, origin, maximumMeasure, false);
+}
+
+unique_ptr<ImageData> RenderingContext2D::getImageData(const NativeRectangle& bounds) const {
+	// TODO: not implemented.
+	return nullptr;
+}
+
 bool RenderingContext2D::isPointInPath(const NativePoint& point) const {
 	// this is tough fight...
 
-	// backup current subpath
-	const int numberOfPoints = ::GetPath(nativeObject_.get(), nullptr, nullptr, 0);
-	if(numberOfPoints == 0)
-		throw makePlatformError();
-	const unique_ptr<POINT[]> points(new POINT[numberOfPoints]);
-	const unique_ptr<BYTE[]> types(new BYTE[numberOfPoints]);
-	if(::GetPath(nativeObject_.get(), points.get(), types.get(), numberOfPoints) == 0)
-		throw makePlatformError();
-
-	// test the point
+	const SubpathsSaver sb(nativeObject_);
 	if(!win32::boole(::EndPath(nativeObject_.get())))
 		throw makePlatformError();
 	win32::Handle<HRGN> region(::PathToRegion(nativeObject_.get()), &::DeleteObject);
 	if(region.get() == nullptr)
 		throw makePlatformError();
-	const bool result = win32::boole(::PtInRegion(region.get(), geometry::x(point), geometry::y(point)));
-
-	// restore subpath
-	::BeginPath(nativeObject_.get());
-	::PolyDraw(nativeObject_.get(), points.get(), types.get(), numberOfPoints);
-
-	return result;
+	return win32::boole(::PtInRegion(region.get(), geometry::x(point), geometry::y(point)));
 }
 
 LineCap RenderingContext2D::lineCap() const {
@@ -247,6 +355,13 @@ Scalar RenderingContext2D::lineWidth() const {
 	throw makePlatformError();
 }
 
+NativeSize RenderingContext2D::measureText(const StringPiece& text) const {
+	SIZE s;
+	if(!win32::boole(::GetTextExtentPoint32W(nativeObject_.get(), text.beginning(), length(text), &s)))
+		throw makePlatformError();
+	return s;
+}
+
 double RenderingContext2D::miterLimit() const {
 	FLOAT temp;
 	if(!win32::boole(::GetMiterLimit(nativeObject_.get(), &temp)))
@@ -259,6 +374,53 @@ RenderingContext2D& RenderingContext2D::moveTo(const NativePoint& to) {
 		throw makePlatformError();
 	hasCurrentSubpath_ = true;
 	return *this;
+}
+
+RenderingContext2D& RenderingContext2D::putImageData(const ImageData& image,
+		const NativePoint& destination, const NativeRectangle& dirtyRectangle) {
+	win32::Handle<HDC> dc(::CreateCompatibleDC(nativeObject_.get()), &::DeleteDC);
+	if(dc.get() != nullptr) {
+		static_assert(sizeof(DWORD) == 4, "");
+		const size_t dx = min(static_cast<size_t>(geometry::dx(dirtyRectangle)), image.width());
+		const size_t dy = min(static_cast<size_t>(geometry::dy(dirtyRectangle)), image.height());
+		win32::AutoZeroSize<BITMAPV5HEADER> header;
+		header.bV5Width = dx;
+		header.bV5Height = dy;
+		header.bV5Planes = 1;
+		header.bV5BitCount = 32;
+		header.bV5Compression = BI_BITFIELDS;
+		header.bV5RedMask = 0x00ff0000u;
+		header.bV5GreenMask = 0x00000000u;
+		header.bV5BlueMask = 0x000000ffu;
+		header.bV5AlphaMask = 0xff000000u;
+		void* pixels;
+		win32::Handle<HBITMAP> bitmap(::CreateDIBSection(nativeObject_.get(),
+			reinterpret_cast<BITMAPINFO*>(&header), DIB_RGB_COLORS, &pixels, nullptr, 0), &::DeleteObject);
+		if(bitmap.get() != nullptr) {
+			const uint8_t* const imageData = image.data().beginning();
+			DWORD* pixel = static_cast<DWORD*>(pixels);
+			for(size_t y = 0; y < dy; ++y) {
+				for(size_t x = 0; x < dx; ++x, ++pixel) {
+					// write premultiplied components
+					const uint8_t* const sourcePixel = imageData + x + y * dx;
+					*pixel = ::MulDiv(sourcePixel[0], sourcePixel[3], 255);		// R
+					*pixel |= ::MulDiv(sourcePixel[1], sourcePixel[3], 255);	// G
+					*pixel |= ::MulDiv(sourcePixel[2], sourcePixel[3], 255);	// B
+					*pixel |= 0xff000000u;										// A
+				}
+			}
+		}
+		if(const HGDIOBJ oldBitmap = ::SelectObject(dc.get(), bitmap.get())) {
+			const bool succeeded = win32::boole(::BitBlt(nativeObject_.get(),
+				geometry::x(destination) + geometry::left(dirtyRectangle),
+				geometry::y(destination) + geometry::top(dirtyRectangle),
+				dx, dy, dc.get(), geometry::left(dirtyRectangle), geometry::top(dirtyRectangle), SRCCOPY));
+			::SelectObject(dc.get(), oldBitmap);
+			if(succeeded)
+				return *this;
+		}
+	}
+	throw makePlatformError();
 }
 
 RenderingContext2D& RenderingContext2D::quadraticCurveTo(const NativePoint& cp, const NativePoint& to) {
@@ -400,6 +562,18 @@ RenderingContext2D& RenderingContext2D::setMiterLimit(double miterLimit) {
 	return *this;
 }
 
+RenderingContext2D& RenderingContext2D::setShadowBlur(Scalar) {
+	return *this;
+}
+
+RenderingContext2D& RenderingContext2D::setShadowColor(const Color&) {
+	return *this;
+}
+
+RenderingContext2D& RenderingContext2D::setShadowOffset(const NativeSize&) {
+	return *this;
+}
+
 RenderingContext2D& RenderingContext2D::setTextAlignment(TextAlignment textAlignment) {
 	UINT v = ::GetTextAlign(nativeObject_.get());
 	if(v == GDI_ERROR)
@@ -455,6 +629,18 @@ RenderingContext2D& RenderingContext2D::setTransform(const NativeAffineTransform
 	return *this;
 }
 
+Scalar RenderingContext2D::shadowBlur() const {
+	return 0;
+}
+
+Color RenderingContext2D::shadowColor() const {
+	return Color(0, 0, 0, 0);
+}
+
+NativeSize RenderingContext2D::shadowOffset() const {
+	return geometry::make<NativeSize>(0, 0);
+}
+
 RenderingContext2D& RenderingContext2D::stroke() {
 	if(endPath()) {
 		if(!win32::boole(::StrokePath(nativeObject_.get())))
@@ -472,6 +658,11 @@ RenderingContext2D& RenderingContext2D::strokeRectangle(const NativeRectangle& r
 			return *this;
 	}
 	throw makePlatformError();
+}
+
+RenderingContext2D& RenderingContext2D::strokeText(const StringPiece& text,
+		const NativePoint& origin, boost::optional<Scalar> maximumMeasure /* = boost::none */) {
+	return paintText(*this, text, origin, maximumMeasure, true);
 }
 
 TextAlignment RenderingContext2D::textAlignment() const {

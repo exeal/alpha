@@ -109,7 +109,36 @@ namespace ascension {
 			CENTER = presentation::TEXT_ANCHOR_MIDDLE
 		ASCENSION_END_SCOPED_ENUM
 
-		class ImageData : public NativeSize {
+		class ImageData {
+			ASCENSION_NONCOPYABLE_TAG(ImageData);
+		public:
+			/**
+			 * Constructor.
+			 * @param data The one-dimensional array containing the data in RGBA order, as integers
+			 *             in the range 0 to 255
+			 * @param width The height of the data in device pixels
+			 * @param height The height of the data in device pixels
+			 */
+			ImageData(std::unique_ptr<uint8_t[]>&& data, std::size_t width, std::size_t height)
+				 : data_(std::move(data)), width_(width), height_(height) {
+			}
+			/// Returns the one-dimensional array containing the data in RGBA order, as integers
+			/// in the range 0 to 255.
+			Range<uint8_t*> data() /*noexcept*/ {
+				return makeRange(data_.get(), data_.get() + width() * height());
+			}
+			/// Returns the one-dimensional array containing the data in RGBA order, as integers
+			/// in the range 0 to 255.
+			Range<const uint8_t*> data() const /*noexcept*/ {
+				return makeRange<const uint8_t*>(data_.get(), data_.get() + width() * height());
+			}
+			/// Returns the actual height of the data in the @c ImageData object, in device pixels.
+			std::size_t height() const /*noexcept*/ {return height_;}
+			/// Returns the actual width of the data in the @c ImageData object, in device pixels.
+			std::size_t width() const /*noexcept*/ {return width_;}
+		private:
+			const std::unique_ptr<uint8_t[]> data_;
+			const std::size_t width_, height_;
 		};
 
 		class Image;
@@ -240,11 +269,43 @@ namespace ascension {
 //			std::unique_ptr<Gradient> createRadialGradient();
 //			std::unique_ptr<Pattern> createPattern();
 			// shadows
+			/**
+			 * Returns the current shadow offset. Initial value is <code>(0, 0)</code>.
+			 * @return The current shadow offset
+			 * @see #setShadowOffset
+			 */
 			NativeSize shadowOffset() const;
-			RenderingContext2D& setShadowOffset(NativeRenderingContext2D& context, const NativeSize& shadowOffset);
+			/**
+			 * Sets the shadow offset.
+			 * @return The new shadow offset to set
+			 * @see #shadowOffset
+			 */
+			RenderingContext2D& setShadowOffset(const NativeSize& shadowOffset);
+			/**
+			 * Returns the current level of blur applied to shadows. Initial value is @c 0.
+			 * @return The current level of blur applied to shadows
+			 * @see #setShadowBlur
+			 */
 			Scalar shadowBlur() const;
+			/**
+			 * Sets the shadow color.
+			 * @param shadowColor The new shadow color to set
+			 * @return This object
+			 * @see #shadowBlur
+			 */
 			RenderingContext2D& setShadowBlur(Scalar shadowBlur);
+			/**
+			 * Returns the current shadow color. Initial value is fully-transparent black.
+			 * @return The current shadow color
+			 * @see #setShadowColor
+			 */
 			Color shadowColor() const;
+			/**
+			 * Sets the shadow color.
+			 * @param shadowColor The new shadow color to set
+			 * @return This object
+			 * @see #shadowColor
+			 */
 			RenderingContext2D& setShadowColor(const Color& shadowColor);
 			// rects
 			/**
@@ -353,7 +414,7 @@ namespace ascension {
 			 * @param text The text string
 			 * @see #strokeText, #fillText
 			 */
-			NativeSize measureText(const StringPiece& text);
+			NativeSize measureText(const StringPiece& text) const;
 			// drawing images
 			/**
 			 * Draws the specified image onto the canvas.
@@ -378,11 +439,58 @@ namespace ascension {
 			 */
 			RenderingContext2D& drawImage(const Image& image, const NativeRectangle& sourceBounds, const NativeRectangle& destinationBounds);
 			// pixel manipulation
-			std::unique_ptr<ImageData> createImageData(const NativeSize& size) const;
-			std::unique_ptr<ImageData> createImageData(const ImageData& image) const;
+			/**
+			 * Returns an @c ImageData object with the specified dimensions. All the pixels in the
+			 * returned object are transparent black.
+			 * @param dimensions The dimensions in pixels
+			 * @return An image data
+			 */
+			std::unique_ptr<ImageData> createImageData(const NativeSize& dimensions) const;
+			/**
+			 * Returns an @c ImageData object with the same dimensions as the argument. All pixels
+			 * in the returned object are transparent black.
+			 * @param image The image data gives the dimensions
+			 * @return An image data
+			 */
+			std::unique_ptr<ImageData> createImageData(const ImageData& image) const {
+		     	return createImageData(geometry::make<NativeSize>(image.width(), image.height()));
+			}
+			/**
+			 * Returns an @c ImageData object containing the image data for the specified rectangle
+			 * of the canvas.
+			 * @param rectangle The bounds of the image in canvas coordinate space units
+			 * @return An image data. Pixels outside the canvas are returned as transparent black
+			 * @see #putImageData
+			 */
 			std::unique_ptr<ImageData> getImageData(const NativeRectangle& rectangle) const;
-			void putImageData(const NativeSize& size);
-			void putImageData(const NativeSize& size, const NativeRectangle& dirtyRectangle);
+			/**
+			 * Paints the data from the specified @c ImageData object onto the canvas. The
+			 * @c #globalAlpha and @c #globalCompositeOperation attributes, as well as the shadow
+			 * attributes, are ignored for the purposes of this method call; pixels in the canvas
+			 * are replaced wholesale, with no composition, alpha blending, no shadows, etc.
+			 * @param image The image data
+			 * @param destination The destination position onto where the image is painted in the
+			 *                    canvas coordinate space units
+			 * @see #getImageData
+			 */
+			RenderingContext2D& putImageData(const ImageData& image, const NativePoint& destination) {
+				return putImageData(image, destination, geometry::make<NativeRectangle>(
+					geometry::make<NativePoint>(0, 0), geometry::make<NativeSize>(image.width(), image.height())));
+			}
+			/**
+			 * Paints the data from the specified @c ImageData object onto the canvas. Only the
+			 * pixels from @a dirtyRectangle are painted. The @c #globalAlpha and
+			 * @c #globalCompositeOperation attributes, as well as the shadow attributes, are
+			 * ignored for the purposes of this method call; pixels in the canvas are replaced
+			 * wholesale, with no composition, alpha blending, no shadows, etc.
+			 * @param image The image data
+			 * @param destination The destination position onto where the image is painted in the
+			 *                    canvas coordinate space units
+			 * @param dirtyRectangle The bounds to paint in image in device pixels
+			 * @see #getImageData
+			 */
+			RenderingContext2D& putImageData(const ImageData& image,
+				const NativePoint& destination, const NativeRectangle& dirtyRectangle);
 			// transformations (CanvasTransformation interface)
 			/**
 			 * Adds the scaling transformation described by @a s to the transformation matrix.
