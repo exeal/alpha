@@ -30,7 +30,7 @@ namespace ascension {
 			Color() /*noexcept*/ : valid_(false) {}
 			/// Creates a color value based on RGB values.
 			Color(Byte red, Byte green, Byte blue, Byte alpha = 255) /*noexcept*/
-				: red_(red << 8), green_(green << 8), blue_(blue << 8), alpha_(alpha << 8), valid_(true) {}
+				: red_(red * 0x0101), green_(green * 0x0101), blue_(blue * 0x0101), alpha_(alpha * 0x0101), valid_(true) {}
 			/// Converts into a native value.
 			template<typename NativeType> NativeType as() const;
 			/// Creates a @c Color object from native value.
