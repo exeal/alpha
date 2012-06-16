@@ -4,6 +4,7 @@
  * @date 2012-05-30 created
  */
 
+#include <ascension/graphics/paint.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #ifdef ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI
 
@@ -16,6 +17,10 @@ using namespace std;
  * @param nativeObject The Win32 @c HDC value to move
  */
 RenderingContext2D::RenderingContext2D(win32::Handle<HDC>&& nativeObject) : nativeObject_(move(nativeObject)), hasCurrentSubpath_(false) {
+	fillStyle_.first.reset(new SolidColor(Color(0, 0, 0)));
+	fillStyle_.second = fillStyle_.first->revisionNumber();
+	strokeStyle_.first.reset(new SolidColor(Color(0, 0, 0)));
+	strokeStyle_.second = fillStyle_.first->revisionNumber();
 	::SetBkMode(nativeObject_.get(), TRANSPARENT);
 	::SetGraphicsMode(nativeObject_.get(), GM_ADVANCED);
 	::SetPolyFillMode(nativeObject_.get(), WINDING);
@@ -27,6 +32,10 @@ RenderingContext2D::RenderingContext2D(win32::Handle<HDC>&& nativeObject) : nati
  * @param nativeObject
  */
 RenderingContext2D::RenderingContext2D(const win32::Handle<HDC>& nativeObject) : nativeObject_(nativeObject_.get()), hasCurrentSubpath_(false) {
+	fillStyle_.first.reset(new SolidColor(Color(0, 0, 0)));
+	fillStyle_.second = fillStyle_.first->revisionNumber();
+	strokeStyle_.first.reset(new SolidColor(Color(0, 0, 0)));
+	strokeStyle_.second = fillStyle_.first->revisionNumber();
 	::SetBkMode(nativeObject_.get(), TRANSPARENT);
 	::SetGraphicsMode(nativeObject_.get(), GM_ADVANCED);
 	::SetPolyFillMode(nativeObject_.get(), WINDING);
@@ -79,6 +88,85 @@ RenderingContext2D& RenderingContext2D::bezierCurveTo(const NativePoint& cp1, co
 	if(!win32::boole(::PolyBezierTo(nativeObject_.get(), points, 3)))
 		throw makePlatformError();
 	return *this;
+}
+
+RenderingContext2D& RenderingContext2D::changePen(const LOGBRUSH* patternBrush,
+		boost::optional<Scalar> lineWidth, boost::optional<LineCap> lineCap, boost::optional<LineJoin> lineJoin) {
+	if(HGDIOBJ oldPen = ::GetCurrentObject(nativeObject_.get(), OBJ_PEN)) {
+		DWORD style = PS_GEOMETRIC | PS_SOLID, width;
+		LOGBRUSH brush;
+		switch(::GetObjectType(oldPen)) {
+			case 0:
+				throw makePlatformError();
+			case OBJ_PEN: {
+				LOGPEN lp;
+				if(::GetObjectW(oldPen, sizeof(LOGPEN), &lp) == 0)
+					throw makePlatformError();
+				width = lp.lopnWidth.x;
+				brush.lbStyle = BS_SOLID;
+				brush.lbColor = lp.lopnColor;
+				break;
+			}
+			case OBJ_EXTPEN: {
+				EXTLOGPEN elp;
+				if(::GetObjectW(oldPen, sizeof(EXTLOGPEN), &elp) == 0)
+					throw makePlatformError();
+				style |= elp.elpPenStyle & PS_ENDCAP_MASK;
+				style |= elp.elpPenStyle & PS_JOIN_MASK;
+				width = elp.elpWidth;
+				brush.lbStyle = elp.elpBrushStyle;
+				brush.lbColor = elp.elpColor;
+				brush.lbHatch = elp.elpHatch;
+				break;
+			}
+		}
+
+		if(patternBrush != nullptr)
+			brush = *patternBrush;
+		width = lineWidth.get_value_or(width);
+		if(lineCap) {
+			style &= ~PS_ENDCAP_MASK;
+			switch(*lineCap) {
+				case LineCap::BUTT:
+					style |= PS_ENDCAP_FLAT;
+					break;
+				case LineCap::ROUND:
+					style |= PS_ENDCAP_ROUND;
+					break;
+				case LineCap::SQUARE:
+					style |= PS_ENDCAP_SQUARE;
+					break;
+				default:
+					throw UnknownValueException("lineCap");
+			}
+		}
+		if(lineJoin) {
+			style &= ~PS_JOIN_MASK;
+			switch(*lineJoin) {
+				case LineJoin::BEVEL:
+					style |= PS_JOIN_BEVEL;
+					break;
+				case LineJoin::MITER:
+					style |= PS_JOIN_MITER;
+					break;
+				case LineJoin::ROUND:
+					style |= PS_JOIN_ROUND;
+					break;
+				default:
+					throw UnknownValueException("lineJoin");
+			}
+		}
+
+		win32::Handle<HPEN> newPen(::ExtCreatePen(style, width, &brush, 0, nullptr), &::DeleteObject);
+		if(newPen.get() != nullptr) {
+			if((oldPen = ::SelectObject(nativeObject_.get(), newPen.get())) == nullptr) {
+				currentPen_ = move(newPen);
+				oldPen_.reset(static_cast<HPEN>(oldPen));
+				return *this;
+			}
+		}
+	}
+	throw makePlatformError();
 }
 
 RenderingContext2D& RenderingContext2D::clearRectangle(const NativeRectangle& rectangle) {
@@ -251,6 +339,10 @@ RenderingContext2D& RenderingContext2D::fillText(const StringPiece& text,
 unique_ptr<ImageData> RenderingContext2D::getImageData(const NativeRectangle& bounds) const {
 	// TODO: not implemented.
 	return nullptr;
+}
+
+double RenderingContext2D::globalAlpha() const {
+	return 1.0;	// not supported in Win32 GDI...
 }
 
 bool RenderingContext2D::isPointInPath(const NativePoint& point) const {
@@ -462,98 +554,40 @@ RenderingContext2D& RenderingContext2D::scale(
 	return transform(geometry::scalingTransform<NativeAffineTransform>(sx, sy));
 }
 
-namespace {
-	void modifyLineStyle(const win32::Handle<HDC>& dc,
-			boost::optional<Scalar> lineWidth, boost::optional<LineCap> lineCap, boost::optional<LineJoin> lineJoin) {
-		if(HGDIOBJ oldPen = ::GetCurrentObject(dc.get(), OBJ_PEN)) {
-			DWORD style = PS_GEOMETRIC | PS_SOLID, width;
-			LOGBRUSH brush;
-			switch(::GetObjectType(oldPen)) {
-				case 0:
-					throw makePlatformError();
-				case OBJ_PEN: {
-					LOGPEN lp;
-					if(::GetObjectW(oldPen, sizeof(LOGPEN), &lp) == 0)
-						throw makePlatformError();
-					width = lp.lopnWidth.x;
-					brush.lbStyle = BS_SOLID;
-					brush.lbColor = lp.lopnColor;
-					break;
-				}
-				case OBJ_EXTPEN: {
-					EXTLOGPEN elp;
-					if(::GetObjectW(oldPen, sizeof(EXTLOGPEN), &elp) == 0)
-						throw makePlatformError();
-					style |= elp.elpPenStyle & PS_ENDCAP_MASK;
-					style |= elp.elpPenStyle & PS_JOIN_MASK;
-					width = elp.elpWidth;
-					brush.lbStyle = elp.elpBrushStyle;
-					brush.lbColor = elp.elpColor;
-					brush.lbHatch = elp.elpHatch;
-					break;
-				}
-			}
+RenderingContext2D& RenderingContext2D::scrollPathIntoView() {
+	// TODO: not implemented.
+	return *this;
+}
 
-			width = lineWidth.get_value_or(width);
-			if(lineCap) {
-				style &= ~PS_ENDCAP_MASK;
-				switch(*lineCap) {
-					case LineCap::BUTT:
-						style |= PS_ENDCAP_FLAT;
-						break;
-					case LineCap::ROUND:
-						style |= PS_ENDCAP_ROUND;
-						break;
-					case LineCap::SQUARE:
-						style |= PS_ENDCAP_SQUARE;
-						break;
-					default:
-						throw UnknownValueException("lineCap");
-				}
-			}
-			if(lineJoin) {
-				style &= ~PS_JOIN_MASK;
-				switch(*lineJoin) {
-					case LineJoin::BEVEL:
-						style |= PS_JOIN_BEVEL;
-						break;
-					case LineJoin::MITER:
-						style |= PS_JOIN_MITER;
-						break;
-					case LineJoin::ROUND:
-						style |= PS_JOIN_ROUND;
-						break;
-					default:
-						throw UnknownValueException("lineJoin");
-				}
-			}
-
-			if(HPEN pen = ::ExtCreatePen(style, width, &brush, 0, nullptr)) {
-				if((oldPen = ::SelectObject(dc.get(), pen)) == 0)
-					::DeleteObject(pen);
-				else {
-					::DeleteObject(oldPen);
-					return;
-				}
-			}
+RenderingContext2D& RenderingContext2D::setFillStyle(shared_ptr<Paint> fillStyle) {
+	if(fillStyle.get() == nullptr)
+		throw NullPointerException("fillStyle");
+	win32::Handle<HBRUSH> newBrush(::CreateBrushIndirect(&fillStyle->asNativeObject()), &::DeleteObject);
+	if(newBrush.get() != nullptr) {
+		win32::Handle<HBRUSH> oldBrush(static_cast<HBRUSH>(::SelectObject(nativeObject_.get(), newBrush.get())));
+		if(oldBrush.get() != nullptr) {
+			swap(oldBrush_, oldBrush);
+			fillStyle_ = make_pair(fillStyle, fillStyle->revisionNumber());
+			return *this;
 		}
-		throw makePlatformError();
 	}
+	throw makePlatformError();
+}
+
+RenderingContext2D& RenderingContext2D::setGlobalAlpha(double) {
+	return *this;	// not supported in Win32 GDI...
 }
 
 RenderingContext2D& RenderingContext2D::setLineCap(LineCap lineCap) {
-	modifyLineStyle(nativeObject_, boost::none, lineCap, boost::none);
-	return *this;
+	return changePen(nullptr, boost::none, lineCap, boost::none);
 }
 
 RenderingContext2D& RenderingContext2D::setLineJoin(LineJoin lineJoin) {
-	modifyLineStyle(nativeObject_, boost::none, boost::none, lineJoin);
-	return *this;
+	return changePen(nullptr, boost::none, boost::none, lineJoin);
 }
 
 RenderingContext2D& RenderingContext2D::setLineWidth(Scalar lineWidth) {
-	modifyLineStyle(nativeObject_, lineWidth, boost::none, boost::none);
-	return *this;
+	return changePen(nullptr, lineWidth, boost::none, boost::none);
 }
 
 RenderingContext2D& RenderingContext2D::setMiterLimit(double miterLimit) {
@@ -571,6 +605,14 @@ RenderingContext2D& RenderingContext2D::setShadowColor(const Color&) {
 }
 
 RenderingContext2D& RenderingContext2D::setShadowOffset(const NativeSize&) {
+	return *this;
+}
+
+RenderingContext2D& RenderingContext2D::setStrokeStyle(shared_ptr<Paint> strokeStyle) {
+	if(strokeStyle.get() == nullptr)
+		throw NullPointerException("strokeStyle");
+	changePen(&strokeStyle->asNativeObject(), boost::none, boost::none, boost::none);
+	strokeStyle_ = make_pair(strokeStyle, strokeStyle->revisionNumber());
 	return *this;
 }
 
@@ -634,7 +676,7 @@ Scalar RenderingContext2D::shadowBlur() const {
 }
 
 Color RenderingContext2D::shadowColor() const {
-	return Color(0, 0, 0, 0);
+	return Color::TRANSPARENT_BLACK;
 }
 
 NativeSize RenderingContext2D::shadowOffset() const {

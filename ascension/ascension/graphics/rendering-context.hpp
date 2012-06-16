@@ -244,27 +244,27 @@ namespace ascension {
 			 * @return The current stokre style
 			 * @see #setStrokeStyle, #fillStyle
 			 */
-			Paint& strokeStyle() const;
+			std::shared_ptr<Paint> strokeStyle() const {return strokeStyle_.first;}
 			/**
 			 * Sets the style used for stroking shapes.
 			 * @param strokeStyle The new fill style to set
 			 * @return This object
 			 * @see #strokeStyle, #setFillStyle
 			 */
-			RenderingContext2D& setStrokeStyle(const Paint& strokeStyle);
+			RenderingContext2D& setStrokeStyle(std::shared_ptr<Paint> strokeStyle);
 			/**
 			 * Returns the current style used for filling shapes. Initial value is opaque black.
 			 * @return The current fill style
 			 * @see #setFillStyle, #strokeStyle
 			 */
-			Paint& fillStyle() const;
+			std::shared_ptr<Paint> fillStyle() const {return fillStyle_.first;}
 			/**
 			 * Sets the style used for filling shapes.
 			 * @param fillStyle The new fill style to set
 			 * @return This object
 			 * @see #fillStyle, #setStrokeStyle
 			 */
-			RenderingContext2D& setFillStyle(const Paint& fillStyle);
+			RenderingContext2D& setFillStyle(std::shared_ptr<Paint> fillStyle);
 //			std::unique_ptr<Gradient> createLinearGradient();
 //			std::unique_ptr<Gradient> createRadialGradient();
 //			std::unique_ptr<Pattern> createPattern();
@@ -723,13 +723,19 @@ namespace ascension {
 			std::shared_ptr<QPainter> nativeObject_;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
 			win32::Handle<HDC> nativeObject_;
+			win32::Handle<HPEN> currentPen_, oldPen_;
+			win32::Handle<HBRUSH> oldBrush_;
 			std::stack<int> savedStates_;
 			bool hasCurrentSubpath_;
+			RenderingContext2D& changePen(
+				const LOGBRUSH* patternBrush, boost::optional<Scalar> lineWidth,
+				boost::optional<LineCap> lineCap, boost::optional<LineJoin> lineJoin);
 			bool endPath();
 			bool ensureThereIsASubpathFor(const NativePoint& p);
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
 			std::shared_ptr<Gdiplus::Graphics> nativeObject_;
 #endif
+			std::pair<std::shared_ptr<Paint>, std::size_t> fillStyle_, strokeStyle_;
 		};
 
 		class PaintContext : public RenderingContext2D {
