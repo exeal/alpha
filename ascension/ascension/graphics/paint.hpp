@@ -29,7 +29,7 @@ namespace ascension {
 			/// Constructor.
 			Paint() /*noexcept*/ : revisionNumber_(0) {}
 			/// Destructor.
-			virtual ~Paint() /*noexcept*/ {}
+			virtual ~Paint() /*noexcept*/;
 			std::size_t revisionNumber() const /*noexcept*/ {
 				return revisionNumber_;
 			}
@@ -60,9 +60,9 @@ namespace ascension {
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
 			const LOGBRUSH& asNativeObject() const /*noexcept*/;
 		protected:
-			void reset(win32::Handle<HBRUSH>&& nativeObject) /*noexcept*/;
+			void reset(LOGBRUSH&& nativeObject) /*noexcept*/;
 		private:
-			win32::Handle<HBRUSH> nativeObject_;
+			LOGBRUSH nativeObject_;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
 			const std::unique_ptr<Gdiplus::Brush>& nativeObject() const /*noexcept*/;
 		protected:
