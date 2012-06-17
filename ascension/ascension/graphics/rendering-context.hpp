@@ -244,7 +244,7 @@ namespace ascension {
 			 * @return The current stokre style
 			 * @see #setStrokeStyle, #fillStyle
 			 */
-			std::shared_ptr<Paint> strokeStyle() const {return strokeStyle_.first;}
+			std::shared_ptr<Paint> strokeStyle() const;
 			/**
 			 * Sets the style used for stroking shapes.
 			 * @param strokeStyle The new fill style to set
@@ -257,7 +257,7 @@ namespace ascension {
 			 * @return The current fill style
 			 * @see #setFillStyle, #strokeStyle
 			 */
-			std::shared_ptr<Paint> fillStyle() const {return fillStyle_.first;}
+			std::shared_ptr<Paint> fillStyle() const;
 			/**
 			 * Sets the style used for filling shapes.
 			 * @param fillStyle The new fill style to set
@@ -723,19 +723,26 @@ namespace ascension {
 			std::shared_ptr<QPainter> nativeObject_;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
 			win32::Handle<HDC> nativeObject_;
-			win32::Handle<HPEN> currentPen_, oldPen_;
-			win32::Handle<HBRUSH> oldBrush_;
-			std::stack<int> savedStates_;
+			struct State {
+				State();
+				State(const State& other);
+				int cookie;
+				std::pair<std::shared_ptr<Paint>, std::size_t> fillStyle, strokeStyle;
+				win32::Handle<HPEN> pen, previousPen;
+				win32::Handle<HBRUSH> brush, previousBrush;
+			};
+			std::stack<State> savedStates_;
 			bool hasCurrentSubpath_;
-			RenderingContext2D& changePen(
+			RenderingContext2D& changePen(win32::Handle<HPEN>&& newPen);
+			win32::Handle<HPEN> createModifiedPen(
 				const LOGBRUSH* patternBrush, boost::optional<Scalar> lineWidth,
-				boost::optional<LineCap> lineCap, boost::optional<LineJoin> lineJoin);
+				boost::optional<LineCap> lineCap, boost::optional<LineJoin> lineJoin) const;
 			bool endPath();
 			bool ensureThereIsASubpathFor(const NativePoint& p);
+			void updatePenAndBrush();
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
 			std::shared_ptr<Gdiplus::Graphics> nativeObject_;
 #endif
-			std::pair<std::shared_ptr<Paint>, std::size_t> fillStyle_, strokeStyle_;
 		};
 
 		class PaintContext : public RenderingContext2D {
