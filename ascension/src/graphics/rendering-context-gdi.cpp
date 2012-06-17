@@ -17,10 +17,9 @@ using namespace std;
  * @param nativeObject The Win32 @c HDC value to move
  */
 RenderingContext2D::RenderingContext2D(win32::Handle<HDC>&& nativeObject) : nativeObject_(move(nativeObject)), hasCurrentSubpath_(false) {
-	fillStyle_.first.reset(new SolidColor(Color(0, 0, 0)));
-	fillStyle_.second = fillStyle_.first->revisionNumber();
-	strokeStyle_.first.reset(new SolidColor(Color(0, 0, 0)));
-	strokeStyle_.second = fillStyle_.first->revisionNumber();
+	savedStates_.push(State());
+	setFillStyle(shared_ptr<Paint>(new SolidColor(Color(0, 0, 0))));
+	setStrokeStyle(shared_ptr<Paint>(new SolidColor(Color(0, 0, 0))));
 	::SetBkMode(nativeObject_.get(), TRANSPARENT);
 	::SetGraphicsMode(nativeObject_.get(), GM_ADVANCED);
 	::SetPolyFillMode(nativeObject_.get(), WINDING);
@@ -32,10 +31,9 @@ RenderingContext2D::RenderingContext2D(win32::Handle<HDC>&& nativeObject) : nati
  * @param nativeObject
  */
 RenderingContext2D::RenderingContext2D(const win32::Handle<HDC>& nativeObject) : nativeObject_(nativeObject_.get()), hasCurrentSubpath_(false) {
-	fillStyle_.first.reset(new SolidColor(Color(0, 0, 0)));
-	fillStyle_.second = fillStyle_.first->revisionNumber();
-	strokeStyle_.first.reset(new SolidColor(Color(0, 0, 0)));
-	strokeStyle_.second = fillStyle_.first->revisionNumber();
+	savedStates_.push(State());
+	setFillStyle(shared_ptr<Paint>(new SolidColor(Color(0, 0, 0))));
+	setStrokeStyle(shared_ptr<Paint>(new SolidColor(Color(0, 0, 0))));
 	::SetBkMode(nativeObject_.get(), TRANSPARENT);
 	::SetGraphicsMode(nativeObject_.get(), GM_ADVANCED);
 	::SetPolyFillMode(nativeObject_.get(), WINDING);
@@ -90,8 +88,50 @@ RenderingContext2D& RenderingContext2D::bezierCurveTo(const NativePoint& cp1, co
 	return *this;
 }
 
-RenderingContext2D& RenderingContext2D::changePen(const LOGBRUSH* patternBrush,
-		boost::optional<Scalar> lineWidth, boost::optional<LineCap> lineCap, boost::optional<LineJoin> lineJoin) {
+RenderingContext2D& RenderingContext2D::changePen(win32::Handle<HPEN>&& newPen) {
+	assert(newPen.get() != nullptr);
+	win32::Handle<HPEN> oldPen(static_cast<HPEN>(::SelectObject(nativeObject_.get(), newPen.get())));
+	if(oldPen.get() == nullptr)
+		throw makePlatformError();
+	savedStates_.top().pen = move(newPen);
+	swap(savedStates_.top().previousPen, oldPen);
+	return *this;
+}
+
+RenderingContext2D& RenderingContext2D::clearRectangle(const NativeRectangle& rectangle) {
+	if(::FillRect(nativeObject_.get(), &rectangle, static_cast<HBRUSH>(::GetStockObject(BLACK_BRUSH))) == 0)
+		throw makePlatformError();
+	return *this;
+}
+
+RenderingContext2D& RenderingContext2D::clip() {
+	if(!win32::boole(::SelectClipPath(nativeObject_.get(), RGN_AND)))
+		throw makePlatformError();
+	return *this;
+}
+
+RenderingContext2D& RenderingContext2D::closePath() {
+	if(endPath()) {
+		if(!win32::boole(::CloseFigure(nativeObject_.get())))
+			throw makePlatformError();
+	}
+	return *this;
+}
+
+unique_ptr<ImageData> RenderingContext2D::createImageData(const NativeSize& dimensions) const {
+	const size_t area = geometry::area(dimensions);
+	unique_ptr<uint8_t[]> bytes(new uint8_t[area]);
+	for(size_t i = 0; i < area; i += 4) {
+		bytes[i + 0] = Color::TRANSPARENT_BLACK.red();
+		bytes[i + 1] = Color::TRANSPARENT_BLACK.green();
+		bytes[i + 2] = Color::TRANSPARENT_BLACK.blue();
+		bytes[i + 3] = Color::TRANSPARENT_BLACK.alpha();
+	}
+	return unique_ptr<ImageData>(new ImageData(move(bytes), geometry::dx(dimensions), geometry::dy(dimensions)));
+}
+
+win32::Handle<HPEN> RenderingContext2D::createModifiedPen(const LOGBRUSH* patternBrush,
+		boost::optional<Scalar> lineWidth, boost::optional<LineCap> lineCap, boost::optional<LineJoin> lineJoin) const {
 	if(HGDIOBJ oldPen = ::GetCurrentObject(nativeObject_.get(), OBJ_PEN)) {
 		DWORD style = PS_GEOMETRIC | PS_SOLID, width;
 		LOGBRUSH brush;
@@ -157,48 +197,9 @@ RenderingContext2D& RenderingContext2D::changePen(const LOGBRUSH* patternBrush,
 			}
 		}
 
-		win32::Handle<HPEN> newPen(::ExtCreatePen(style, width, &brush, 0, nullptr), &::DeleteObject);
-		if(newPen.get() != nullptr) {
-			if((oldPen = ::SelectObject(nativeObject_.get(), newPen.get())) == nullptr) {
-				currentPen_ = move(newPen);
-				oldPen_.reset(static_cast<HPEN>(oldPen));
-				return *this;
-			}
-		}
+		return win32::Handle<HPEN>(::ExtCreatePen(style, width, &brush, 0, nullptr), &::DeleteObject);
 	}
 	throw makePlatformError();
-}
-
-RenderingContext2D& RenderingContext2D::clearRectangle(const NativeRectangle& rectangle) {
-	if(::FillRect(nativeObject_.get(), &rectangle, static_cast<HBRUSH>(::GetStockObject(BLACK_BRUSH))) == 0)
-		throw makePlatformError();
-	return *this;
-}
-
-RenderingContext2D& RenderingContext2D::clip() {
-	if(!win32::boole(::SelectClipPath(nativeObject_.get(), RGN_AND)))
-		throw makePlatformError();
-	return *this;
-}
-
-RenderingContext2D& RenderingContext2D::closePath() {
-	if(endPath()) {
-		if(!win32::boole(::CloseFigure(nativeObject_.get())))
-			throw makePlatformError();
-	}
-	return *this;
-}
-
-unique_ptr<ImageData> RenderingContext2D::createImageData(const NativeSize& dimensions) const {
-	const size_t area = geometry::area(dimensions);
-	unique_ptr<uint8_t[]> bytes(new uint8_t[area]);
-	for(size_t i = 0; i < area; i += 4) {
-		bytes[i + 0] = Color::TRANSPARENT_BLACK.red();
-		bytes[i + 1] = Color::TRANSPARENT_BLACK.green();
-		bytes[i + 2] = Color::TRANSPARENT_BLACK.blue();
-		bytes[i + 3] = Color::TRANSPARENT_BLACK.alpha();
-	}
-	return unique_ptr<ImageData>(new ImageData(move(bytes), geometry::dx(dimensions), geometry::dy(dimensions)));
 }
 
 void RenderingContext2D::drawSystemFocusRing(/*const NativeRectangle& bounds*/) {
@@ -229,6 +230,7 @@ inline bool RenderingContext2D::ensureThereIsASubpathFor(const NativePoint& p) {
 
 RenderingContext2D& RenderingContext2D::fill() {
 	if(endPath()) {
+		updatePenAndBrush();
 		if(!win32::boole(::FillPath(nativeObject_.get())))
 			throw makePlatformError();
 	}
@@ -236,11 +238,16 @@ RenderingContext2D& RenderingContext2D::fill() {
 }
 
 RenderingContext2D& RenderingContext2D::fillRectangle(const NativeRectangle& rectangle) {
+	updatePenAndBrush();
 	if(HBRUSH currentBrush = static_cast<HBRUSH>(::GetCurrentObject(nativeObject_.get(), OBJ_BRUSH))) {
 		if(::FillRect(nativeObject_.get(), &rectangle, currentBrush) != 0)
 			return *this;
 	}
 	throw makePlatformError();
+}
+
+shared_ptr<Paint> RenderingContext2D::fillStyle() const {
+	return savedStates_.top().fillStyle.first;
 }
 
 namespace {
@@ -333,6 +340,7 @@ namespace {
 
 RenderingContext2D& RenderingContext2D::fillText(const StringPiece& text,
 		const NativePoint& origin, boost::optional<Scalar> maximumMeasure /* = boost::none */) {
+	updatePenAndBrush();
 	return paintText(*this, text, origin, maximumMeasure, false);
 }
 
@@ -519,22 +527,30 @@ RenderingContext2D& RenderingContext2D::quadraticCurveTo(const NativePoint& cp, 
 	return bezierCurveTo(cp, to, to);
 }
 
-RenderingContext2D& RenderingContext2D::restore() {
-	if(!savedStates_.empty()) {
-		if(!win32::boole(::RestoreDC(nativeObject_.get(), savedStates_.top())))
-			throw makePlatformError();
-		savedStates_.pop();
-	}
-//	else
-//		throw IllegalStateException("there is no state to back to.");
-	return *this;
-}
-
 RenderingContext2D& RenderingContext2D::rectangle(const NativeRectangle& bounds) {
+	updatePenAndBrush();
 	if(!win32::boole(::Rectangle(nativeObject_.get(),
 			geometry::left(bounds), geometry::top(bounds), geometry::right(bounds), geometry::bottom(bounds))))
 		throw makePlatformError();
 	return moveTo(geometry::origin(bounds));
+}
+
+RenderingContext2D& RenderingContext2D::restore() {
+	if(savedStates_.size() > 1) {
+		if(!win32::boole(::RestoreDC(nativeObject_.get(), savedStates_.top().cookie)))
+			throw makePlatformError();
+		savedStates_.pop();
+		updatePenAndBrush();
+		win32::Handle<HPEN> currentPen(static_cast<HPEN>(::GetCurrentObject(nativeObject_.get(), OBJ_PEN)));
+		win32::Handle<HBRUSH> currentBrush(static_cast<HBRUSH>(::GetCurrentObject(nativeObject_.get(), OBJ_BRUSH)));
+		if(currentPen.get() != savedStates_.top().pen.get())
+			::SelectObject(nativeObject_.get(), savedStates_.top().pen.get());
+		if(currentBrush.get() != savedStates_.top().brush.get())
+			::SelectObject(nativeObject_.get(), savedStates_.top().brush.get());
+	}
+//	else
+//		throw IllegalStateException("there is no state to back to.");
+	return *this;
 }
 
 RenderingContext2D& RenderingContext2D::rotate(double angle) {
@@ -545,7 +561,8 @@ RenderingContext2D& RenderingContext2D::save() {
 	const int cookie = ::SaveDC(nativeObject_.get());
 	if(cookie == 0)
 		throw makePlatformError();
-	savedStates_.push(cookie);
+	savedStates_.push(savedStates_.top());
+	savedStates_.top().cookie = cookie;
 	return *this;
 }
 
@@ -566,8 +583,9 @@ RenderingContext2D& RenderingContext2D::setFillStyle(shared_ptr<Paint> fillStyle
 	if(newBrush.get() != nullptr) {
 		win32::Handle<HBRUSH> oldBrush(static_cast<HBRUSH>(::SelectObject(nativeObject_.get(), newBrush.get())));
 		if(oldBrush.get() != nullptr) {
-			swap(oldBrush_, oldBrush);
-			fillStyle_ = make_pair(fillStyle, fillStyle->revisionNumber());
+			swap(savedStates_.top().brush, newBrush);
+			swap(savedStates_.top().previousBrush, oldBrush);
+			savedStates_.top().fillStyle = make_pair(fillStyle, fillStyle->revisionNumber());
 			return *this;
 		}
 	}
@@ -579,15 +597,15 @@ RenderingContext2D& RenderingContext2D::setGlobalAlpha(double) {
 }
 
 RenderingContext2D& RenderingContext2D::setLineCap(LineCap lineCap) {
-	return changePen(nullptr, boost::none, lineCap, boost::none);
+	return changePen(createModifiedPen(nullptr, boost::none, lineCap, boost::none));
 }
 
 RenderingContext2D& RenderingContext2D::setLineJoin(LineJoin lineJoin) {
-	return changePen(nullptr, boost::none, boost::none, lineJoin);
+	return changePen(createModifiedPen(nullptr, boost::none, boost::none, lineJoin));
 }
 
 RenderingContext2D& RenderingContext2D::setLineWidth(Scalar lineWidth) {
-	return changePen(nullptr, lineWidth, boost::none, boost::none);
+	return changePen(createModifiedPen(nullptr, lineWidth, boost::none, boost::none));
 }
 
 RenderingContext2D& RenderingContext2D::setMiterLimit(double miterLimit) {
@@ -611,8 +629,8 @@ RenderingContext2D& RenderingContext2D::setShadowOffset(const NativeSize&) {
 RenderingContext2D& RenderingContext2D::setStrokeStyle(shared_ptr<Paint> strokeStyle) {
 	if(strokeStyle.get() == nullptr)
 		throw NullPointerException("strokeStyle");
-	changePen(&strokeStyle->asNativeObject(), boost::none, boost::none, boost::none);
-	strokeStyle_ = make_pair(strokeStyle, strokeStyle->revisionNumber());
+	changePen(createModifiedPen(&strokeStyle->asNativeObject(), boost::none, boost::none, boost::none));
+	savedStates_.top().strokeStyle = make_pair(strokeStyle, strokeStyle->revisionNumber());
 	return *this;
 }
 
@@ -685,6 +703,7 @@ NativeSize RenderingContext2D::shadowOffset() const {
 
 RenderingContext2D& RenderingContext2D::stroke() {
 	if(endPath()) {
+		updatePenAndBrush();
 		if(!win32::boole(::StrokePath(nativeObject_.get())))
 			throw makePlatformError();
 	}
@@ -692,6 +711,7 @@ RenderingContext2D& RenderingContext2D::stroke() {
 }
 
 RenderingContext2D& RenderingContext2D::strokeRectangle(const NativeRectangle& rectangle) {
+	updatePenAndBrush();
 	if(HBRUSH oldBrush = static_cast<HBRUSH>(::SelectObject(nativeObject_.get(), ::GetStockObject(NULL_BRUSH)))) {
 		const bool succeeded = win32::boole(::Rectangle(nativeObject_.get(),
 			geometry::left(rectangle), geometry::top(rectangle), geometry::right(rectangle), geometry::bottom(rectangle)));
@@ -702,8 +722,13 @@ RenderingContext2D& RenderingContext2D::strokeRectangle(const NativeRectangle& r
 	throw makePlatformError();
 }
 
+shared_ptr<Paint> RenderingContext2D::strokeStyle() const {
+	return savedStates_.top().strokeStyle.first;
+}
+
 RenderingContext2D& RenderingContext2D::strokeText(const StringPiece& text,
 		const NativePoint& origin, boost::optional<Scalar> maximumMeasure /* = boost::none */) {
+	updatePenAndBrush();
 	return paintText(*this, text, origin, maximumMeasure, true);
 }
 
@@ -750,6 +775,51 @@ RenderingContext2D& RenderingContext2D::translate(const NativeSize& delta) {
 RenderingContext2D& RenderingContext2D::translate(
 		geometry::Coordinate<NativeAffineTransform>::Type dx, geometry::Coordinate<NativeAffineTransform>::Type dy) {
 	return transform(geometry::translationTransform<NativeAffineTransform>(dx, dy));
+}
+
+void RenderingContext2D::updatePenAndBrush() {
+	win32::Handle<HPEN> newPen;
+	win32::Handle<HBRUSH> newBrush;
+	if(savedStates_.top().strokeStyle.second != savedStates_.top().strokeStyle.first->revisionNumber())
+		newPen = createModifiedPen(nullptr, boost::none, boost::none, boost::none);
+	if(savedStates_.top().fillStyle.second != savedStates_.top().fillStyle.first->revisionNumber())
+		newBrush.reset(::CreateBrushIndirect(&savedStates_.top().fillStyle.first->asNativeObject()), &::DeleteObject);
+
+	win32::Handle<HPEN> oldPen;
+	win32::Handle<HBRUSH> oldBrush;
+	if(newPen.get() != nullptr) {
+		oldPen.reset(static_cast<HPEN>(::SelectObject(nativeObject_.get(), newPen.get())));
+		if(oldPen.get() == nullptr)
+			throw makePlatformError();
+	}
+	if(newBrush.get() != nullptr) {
+		oldBrush.reset(static_cast<HBRUSH>(::SelectObject(nativeObject_.get(), newBrush.get())));
+		if(oldBrush.get() == nullptr) {
+			if(oldPen.get() != nullptr)
+				::SelectObject(nativeObject_.get(), oldPen.get());
+			throw makePlatformError();
+		}
+	}
+
+	if(oldPen.get() != nullptr) {
+		savedStates_.top().strokeStyle.second = savedStates_.top().strokeStyle.first->revisionNumber();
+		swap(savedStates_.top().pen, newPen);
+		swap(savedStates_.top().previousPen, oldPen);
+	}
+	if(oldBrush.get() != nullptr) {
+		savedStates_.top().fillStyle.second = savedStates_.top().fillStyle.first->revisionNumber();
+		swap(savedStates_.top().brush, newBrush);
+		swap(savedStates_.top().previousBrush, oldBrush);
+	}
+}
+
+RenderingContext2D::State::State() /*noexcept*/ {
+}
+
+RenderingContext2D::State::State(const State& other) /*noexcept*/ :
+		fillStyle(other.fillStyle), strokeStyle(other.strokeStyle),
+		pen(other.pen.get()), previousPen(other.previousPen.get()),
+		brush(other.brush.get()), previousBrush(other.previousBrush.get()) {
 }
 
 #endif // ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI
