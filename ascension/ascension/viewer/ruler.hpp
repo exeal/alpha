@@ -47,17 +47,16 @@ namespace ascension {
 				/// Padding width at the end. Default value is 1-pixel.
 				presentation::Length paddingEnd;
 				/**
-				 * Color or style of the text. Default value is
-				 * @c resentation#Inheritable&lt;graphics#Paint&gt;() which is fallbacked to the
+				 * Color or style of the text. Default value is @c null which is fallbacked to the
 				 * foreground of the text run style of the viewer's presentation global text style.
 				 */
-				presentation::Inheritable<graphics::Paint> foreground;
+				std::shared_ptr<graphics::Paint> foreground;
 				/**
-				 * Color or style of the background. Default value is 
-				 * @c resentation#Inheritable&lt;graphics#Paint&gt;() which is fallbacked to the
-				 * background of the text run style of the viewer's presentation global text style.
+				 * Color or style of the background. Default value is @c null which is fallbacked
+				 * to the background of the text run style of the viewer's presentation global text
+				 * style.
 				 */
-				presentation::Inheritable<graphics::Paint> background;
+				std::shared_ptr<graphics::Paint> background;
 				/**
 				 * Style of the border-end. If the @c color is default value, fallbacked to the
 				 * color of @c #foreground member. Default value is @c presentation#Border#Part().
@@ -84,9 +83,9 @@ namespace ascension {
 				presentation::Inheritable<presentation::Length> width;
 				/**
 				 * Color or style of the content. If @c color is default value, fallbacked to the
-				 * platform-dependent color. Default value is @c graphics#Paint().
+				 * platform-dependent color. Default value is @c null.
 				 */
-				graphics::Paint paint;
+				std::shared_ptr<graphics::Paint> paint;
 				/**
 				 * Style of the border-end. If @c color is default value, fallbacked to the
 				 * platform-dependent color. Default value is @c presentation#Border#Part().

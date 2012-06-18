@@ -26,11 +26,9 @@ namespace ascension {
 		public:
 			static const Color TRANSPARENT_BLACK;
 		public:
-			/// Creates an invalid @c Color object.
-			Color() /*noexcept*/ : valid_(false) {}
 			/// Creates a color value based on RGB values.
 			Color(Byte red, Byte green, Byte blue, Byte alpha = 255) /*noexcept*/
-				: red_(red * 0x0101), green_(green * 0x0101), blue_(blue * 0x0101), alpha_(alpha * 0x0101), valid_(true) {}
+				: red_(red * 0x0101), green_(green * 0x0101), blue_(blue * 0x0101), alpha_(alpha * 0x0101) {}
 			/// Converts into a native value.
 			template<typename NativeType> NativeType as() const;
 			/// Creates a @c Color object from native value.
@@ -47,13 +45,11 @@ namespace ascension {
 			bool isTransparent() const /*noexcept*/ {return alpha() == 0;}
 			/// Equality operator.
 			bool operator==(const Color& other) const /*noexcept*/ {
-				return valid_ == other.valid_
-					&& (!valid_ || (red() == other.red() && green() == other.green()
-						&& blue() == other.blue() && alpha() == other.alpha()));
+				return red() == other.red() && green() == other.green()
+					&& blue() == other.blue() && alpha() == other.alpha();
 			}
 		private:
 			uint16_t red_, green_, blue_, alpha_;
-			bool valid_;
 		};
 
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
@@ -64,11 +60,22 @@ namespace ascension {
 		template<> inline COLORREF Color::as<COLORREF>() const {
 			return RGB(red(), green(), blue());
 		}
+		template<> inline RGBQUAD Color::as<RGBQUAD>() const {
+			RGBQUAD temp;
+			temp.rgbRed = red();
+			temp.rgbGreen = green();
+			temp.rgbBlue = blue();
+			temp.rgbReserved = alpha();
+			return temp;
+		}
 		template<> inline Color Color::from<COLORREF>(COLORREF value) /*noexcept*/ {
 			return Color(
 				static_cast<Byte>(value & 0xff),
 				static_cast<Byte>((value >> 8) & 0xff),
 				static_cast<Byte>((value >> 16) & 0xff));
+		}
+		template<> inline Color Color::from<RGBQUAD>(const RGBQUAD& value) /*noexcept*/ {
+			return Color(value.rgbRed, value.rgbGreen, value.rgbBlue, value.rgbReserved);
 		}
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
 #endif

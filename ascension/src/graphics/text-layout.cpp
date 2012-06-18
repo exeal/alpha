@@ -38,7 +38,7 @@ namespace {
 	public:
 		SystemColors() /*throw()*/ {update();}
 		COLORREF get(int index) const {assert(index >= 0 && index < ASCENSION_COUNTOF(c_)); return c_[index];}
-		COLORREF serve(const Color& color, int index) const {return (color != Color()) ? color.asCOLORREF() : get(index);}
+		COLORREF serve(const boost::optional<Color>& color, int index) const {return color ? color->as<COLORREF>() : get(index);}
 		void update() /*throw()*/ {for(int i = 0; i < ASCENSION_COUNTOF(c_); ++i) c_[i] = ::GetSysColor(i);}
 	private:
 		COLORREF c_[128];
@@ -1755,15 +1755,15 @@ void InlineProgressionDimensionRangeIterator::next(bool initializing) {
 namespace {
 	const size_t MAXIMUM_RUN_LENGTH = 1024;
 	inline win32::Handle<HPEN> createPen(const Color& color, int width, int style) {
-		if(color == Color() || color.alpha() < 0xff)
+		if(color.alpha() < 0xff)
 			throw invalid_argument("color");
 		LOGBRUSH brush;
-		brush.lbColor = color.asCOLORREF();
+		brush.lbColor = color.as<COLORREF>();
 		brush.lbStyle = BS_SOLID;
 		HPEN pen = nullptr;
 		switch(style) {
 		case 1:	// solid
-			pen = (width == 1) ? ::CreatePen(PS_SOLID, 1, color.asCOLORREF())
+			pen = (width == 1) ? ::CreatePen(PS_SOLID, 1, color.as<COLORREF>())
 				: ::ExtCreatePen(PS_GEOMETRIC | PS_SOLID | PS_ENDCAP_FLAT, width, &brush, 0, nullptr);
 		case 2:	// dashed
 			pen = ::ExtCreatePen(PS_GEOMETRIC | PS_DASH | PS_ENDCAP_FLAT, width, &brush, 0, nullptr);
@@ -1781,8 +1781,8 @@ namespace {
 			if(getDecorationLineMetrics(dc, &baselineOffset, &underlineOffset, &underlineThickness, &linethroughOffset, &linethroughThickness)) {
 				// draw underline
 				if(style.decorations.underline.style != Decorations::NONE) {
-					win32::Handle<HPEN> pen(createPen((style.decorations.underline.color != Color()) ?
-						style.decorations.underline.color : foregroundColor, underlineThickness, style.decorations.underline.style));
+					win32::Handle<HPEN> pen(createPen(
+						style.decorations.underline.color.get_value_or(foregroundColor), underlineThickness, style.decorations.underline.style));
 					HPEN oldPen = static_cast<HPEN>(::SelectObject(dc.get(), pen.get()));
 					const int underlineY = y + baselineOffset - underlineOffset + underlineThickness / 2;
 					context.moveTo(geometry::make<NativePoint>(x, underlineY));
@@ -1791,9 +1791,8 @@ namespace {
 				}
 				// draw strikethrough line
 				if(style.decorations.strikethrough.style != Decorations::NONE) {
-					win32::Handle<HPEN> pen(
-						createPen((style.decorations.strikethrough.color != Color()) ?
-						style.decorations.strikethrough.color : foregroundColor, linethroughThickness, 1));
+					win32::Handle<HPEN> pen(createPen(
+						style.decorations.strikethrough.color.get_value_or(foregroundColor), linethroughThickness, 1));
 					HPEN oldPen = static_cast<HPEN>(::SelectObject(dc.get(), pen.get()));
 					const int strikeoutY = y + baselineOffset - linethroughOffset + linethroughThickness / 2;
 					context.moveTo(geometry::make<NativePoint>(x, strikeoutY));

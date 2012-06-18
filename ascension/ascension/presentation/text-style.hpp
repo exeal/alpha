@@ -51,21 +51,21 @@ namespace ascension {
 			static const Length THIN, MEDIUM, THICK;
 			struct Part {
 				/**
-				 * The foreground color of the border. Default value is Color() which means that
-				 * the value of @c TextRunStyle#foreground
+				 * The foreground color of the border. Default value is @c boost#none which means
+				 * 'currentColor' that the value of @c TextRunStyle#color.
 				 */
-				graphics::Color color;
+				boost::optional<graphics::Color> color;
 				/// Style of the border. Default value is @c NONE.
 				Style style;
 				/// Thickness of the border. Default value is @c MEDIUM.
 				Length width;
 
 				/// Default constructor.
-				Part() : color(), style(NONE), width(MEDIUM) {}
+				Part() /*noexcept*/ : style(NONE), width(MEDIUM) {}
 				/// Returns the computed width.
 				Length computedWidth() const {return (style != NONE) ? width : Length(0.0, width.unitType());}
 				/// Returns @c true if this part is invisible (but may be consumes place).
-				bool hasVisibleStyle() const /*throw()*/ {return style != NONE && style != HIDDEN;}
+				bool hasVisibleStyle() const /*noexcept*/ {return style != NONE && style != HIDDEN;}
 			};
 			FlowRelativeFourSides<Part> sides;
 		};
@@ -73,7 +73,7 @@ namespace ascension {
 		struct Decorations {
 			enum Style {NONE, SOLID, DOTTED, DAHSED};
 			struct Part {
-				graphics::Color color;	// if is Color(), same as the foreground
+				boost::optional<graphics::Color> color;	// if is Color(), same as the foreground
 				Inheritable<Style> style;	///< Default value is @c NONE.
 				/// Default constructor.
 				Part() : style(NONE) {}
@@ -90,10 +90,15 @@ namespace ascension {
 		 */
 		struct TextRunStyle :
 				public FastArenaObject<TextRunStyle>, public std::enable_shared_from_this<TextRunStyle> {
-			/// Foreground color.
-			graphics::Paint foreground;
-			/// Background color.
-			graphics::Paint background;
+#if 1
+			/// Foreground color. Default value is @c boost#none means that inherits the value.
+			boost::optional<graphics::Color> color;
+#else
+			/// Text paint style.
+			std::shared_ptr<graphics::Paint> foreground;
+#endif
+			/// Background color. This is not inheritable and @c null means transparent.
+			std::shared_ptr<graphics::Paint> background;
 			/// Border of the text run. See the description of @c Border.
 			Border border;
 			/// Font family name. An empty string means inherit the parent.
