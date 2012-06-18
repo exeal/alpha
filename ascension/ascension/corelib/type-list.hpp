@@ -7,7 +7,7 @@
 
 #ifndef ASCENSION_TYPE_LIST_HPP
 #define ASCENSION_TYPE_LIST_HPP
-#include <ascension/corelib/type-traits.hpp>
+#include <ascension/corelib/future/type-traits.hpp>
 
 namespace ascension {
 	/**

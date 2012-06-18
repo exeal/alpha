@@ -7,7 +7,7 @@
 
 #ifndef ASCENSION_UTILITY_HPP
 #define ASCENSION_UTILITY_HPP
-#include <ascension/corelib/type-traits.hpp>	// RemoveSigned
+#include <ascension/corelib/future/type-traits.hpp>	// RemoveSigned
 #include <algorithm>	// std.upper_bound
 #include <cstddef>		// std.size_t
 

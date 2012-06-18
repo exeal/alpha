@@ -211,21 +211,21 @@ void RulerPainter::paint(PaintContext& context) {
 
 	// paint the indicator margin
 	if(indicatorMarginToPaint) {
-		context.setFillStyle((configuration().indicatorMargin.paint != Paint()) ?
-			configuration().indicatorMargin.paint : Paint(SystemColors::get(SystemColors::THREE_D_FACE)));
+		context.setFillStyle(configuration().indicatorMargin.paint.get() ?
+			configuration().indicatorMargin.paint : shared_ptr<Paint>(new SolidColor(SystemColors::get(SystemColors::THREE_D_FACE))));
 		context.fillRectangle(indicatorMarginRectangle);
 		Border borderStyle;
 		(borderStyle.sides.*borderPart)() = configuration().indicatorMargin.borderEnd;
-		if((borderStyle.sides.*borderPart)().color == Color())
+		if(!(borderStyle.sides.*borderPart)().color)
 			(borderStyle.sides.*borderPart)().color = SystemColors::get(SystemColors::THREE_D_SHADOW);
-		detail::paintBorder(context, indicatorMarginRectangle, borderStyle, Color(), viewer_.textRenderer().writingMode());
+		detail::paintBorder(context, indicatorMarginRectangle, borderStyle, boost::none, viewer_.textRenderer().writingMode());
 	}
 
 	// paint the line numbers
 	if(lineNumbersToPaint) {
 		// compute foreground
-		Paint foreground;
-		if(!configuration().lineNumbers.foreground.inherits())
+		shared_ptr<Paint> foreground;
+		if(configuration().lineNumbers.foreground)
 			foreground = configuration().lineNumbers.foreground;
 		else {
 			if(const shared_ptr<const TextLineStyle> lineStyle = viewer_.presentation().globalTextStyle().defaultLineStyle) {
@@ -233,8 +233,8 @@ void RulerPainter::paint(PaintContext& context) {
 					foreground = runStyle->foreground;
 			}
 		}
-		if(foreground == Paint())
-			foreground = Paint(SystemColors::get(SystemColors::WINDOW_TEXT));
+		if(!foreground)
+			foreground.reset(new SolidColor(SystemColors::get(SystemColors::WINDOW_TEXT)));
 
 		// background and border
 		context.setFillStyle(configuration().lineNumbers.background);
