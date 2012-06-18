@@ -13,7 +13,7 @@
 #include <string>	// std.string
 #include <system_error>
 #if defined(ASCENSION_OS_WINDOWS)
-#	include <ascension/win32/windows.hpp>	// DWORD, GetLastError
+#	include <windows.h>	// DWORD, GetLastError
 #elif defined(ASCENSION_OS_POSIX)
 #	include <cerrno>
 #	include <cstring>	// std.strerror

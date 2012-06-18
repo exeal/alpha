@@ -100,7 +100,7 @@ AutoScrollOriginMark::AutoScrollOriginMark(TextViewer& viewer) /*throw()*/ {
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 	::SetLayeredWindowAttributes(handle().get(), ::GetSysColor(COLOR_WINDOW), 0, LWA_COLORKEY);
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
-	widgetapi::setParent(viewer);
+	widgetapi::setParent(*this, &viewer);
 }
 
 /**
@@ -202,8 +202,8 @@ const widgetapi::Cursor& AutoScrollOriginMark::cursorForScrolling(CursorType typ
 /// @see Widget#paint
 void AutoScrollOriginMark::paint(PaintContext& context) {
 	const Color color(SystemColors::get(SystemColors::APP_WORKSPACE));
-	context.setStrokeStyle(Paint(color));
-	context.setFillStyle(Paint(color));
+	context.setStrokeStyle(shared_ptr<Paint>(new SolidColor(color)));
+	context.setFillStyle(shared_ptr<Paint>(new SolidColor(color)));
 
 	context
 		.beginPath()

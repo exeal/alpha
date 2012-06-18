@@ -8,6 +8,9 @@
 #include <ascension/rules.hpp>
 #include <ascension/corelib/ustring.hpp>
 #include <ascension/corelib/utility.hpp>	// detail.searchBound
+#if defined(_DEBUG) && defined(ASCENSION_OS_WINDOWS)
+#	include <ascension/win32/windows.hpp>	// win32.DumpContext
+#endif
 using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::presentation;
@@ -1337,7 +1340,7 @@ void LexicalPartitioner::doInstall() /*throw()*/ {
 
 /// Dumps the partitions information.
 void LexicalPartitioner::dump() const {
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(ASCENSION_OS_WINDOWS)
 	win32::DumpContext dout;
 	dout << "LexicalPartitioner dump start:\n";
 	for(size_t i = 0; i < partitions_.size(); ++i) {
@@ -1345,7 +1348,7 @@ void LexicalPartitioner::dump() const {
 		dout << "\t" << p.contentType << " = ("
 			<< static_cast<uint32_t>(p.start.line) << ", " << static_cast<uint32_t>(p.start.offsetInLine) << ")\n";
 	}
-#endif // _DEBUG
+#endif
 }
 
 // erases partitions encompassed with the region between the given two positions.
