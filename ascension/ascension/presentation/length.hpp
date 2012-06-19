@@ -66,15 +66,15 @@ namespace ascension {
 
 		public:
 			explicit Length(double valueInSpecifiedUnits = 0.0, Unit unitType = PIXELS, Mode = OTHER);
-			bool operator==(const Length& other) const /*throw()*/;
+			bool operator==(const Length& other) const /*noexcept*/;
 			void convertToSpecifiedUnits(Unit unitType,
 				const graphics::RenderingContext2D* context, const graphics::NativeSize* contextSize);
 			void newValueSpecifiedUnits(Unit unitType, double valueInSpecifiedUnits);
 			void setValue(double value,
 				const graphics::RenderingContext2D* context, const graphics::NativeSize* contextSize);
 //			void setValueAsString(const StringPiece&);
-			void setValueInSpecifiedUnits(double value) /*throw()*/;
-			Unit unitType() const /*throw()*/;
+			void setValueInSpecifiedUnits(double value) /*noexcept*/;
+			Unit unitType() const /*noexcept*/;
 			double value(const graphics::RenderingContext2D* context, const graphics::NativeSize* contextSize) const;
 			double valueInSpecifiedUnits() const;
 //			String valueAsString() const;
@@ -88,7 +88,7 @@ namespace ascension {
 		};
 
 		/// Equality operator returns @c true if and only if ....
-		bool Length::operator==(const Length& other) const /*throw()*/ {
+		bool Length::operator==(const Length& other) const /*noexcept*/ {
 			return valueInSpecifiedUnits() == other.valueInSpecifiedUnits()
 				&& unitType() == other.unitType() && mode_ == other.mode_;
 		}
@@ -100,20 +100,26 @@ namespace ascension {
 		 * @param value The new value
 		 * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__valueInSpecifiedUnits
 		 */
-		inline void Length::setValueInSpecifiedUnits(double value) /*throw()*/ {valueInSpecifiedUnits_ = value;}
+		inline void Length::setValueInSpecifiedUnits(double value) /*noexcept*/ {
+			valueInSpecifiedUnits_ = value;
+		}
 
 		/**
 		 * Returns the type of the value.
 		 * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__unitType
 		 */
-		inline Length::Unit Length::unitType() const /*throw()*/ {return unit_;}
+		inline Length::Unit Length::unitType() const /*noexcept*/ {
+			return unit_;
+		}
 
 		/**
 		 * Returns the value as a floating point value, in the units expressed by @c unitType().
 		 * @see #setValueInSpecifiedUnits
 		 * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__valueInSpecifiedUnits
 		 */
-		inline double Length::valueInSpecifiedUnits() const /*throw()*/ {return valueInSpecifiedUnits_;}
+		inline double Length::valueInSpecifiedUnits() const /*noexcept*/ {
+			return valueInSpecifiedUnits_;
+		}
 
 	}
 } // namespace ascension.presentation

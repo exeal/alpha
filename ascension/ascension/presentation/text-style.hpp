@@ -63,9 +63,13 @@ namespace ascension {
 				/// Default constructor.
 				Part() /*noexcept*/ : style(NONE), width(MEDIUM) {}
 				/// Returns the computed width.
-				Length computedWidth() const {return (style != NONE) ? width : Length(0.0, width.unitType());}
+				Length computedWidth() const {
+					return (style != NONE) ? width : Length(0.0, width.unitType());
+				}
 				/// Returns @c true if this part is invisible (but may be consumes place).
-				bool hasVisibleStyle() const /*noexcept*/ {return style != NONE && style != HIDDEN;}
+				bool hasVisibleStyle() const /*noexcept*/ {
+					return style != NONE && style != HIDDEN;
+				}
 			};
 			FlowRelativeFourSides<Part> sides;
 		};
