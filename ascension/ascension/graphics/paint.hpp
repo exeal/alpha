@@ -12,7 +12,7 @@
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/geometry.hpp>
 #include <ascension/graphics/rendering-context.hpp>
-#include <memory>	// std.unique_ptr
+#include <memory>	// std.unique_ptr, std.enable_shared_from_this
 //#include <boost/operators.hpp>
 
 namespace ascension {
@@ -23,7 +23,7 @@ namespace ascension {
 		 * @see RenderingContext2D#fillStyle, RenderingContext2D#strokeStyle,
 		 *      RenderingContext2D#setFillStyle, RenderingContext2D#setStrokeStyle
 		 */
-		class Paint /*: private boost::equality_comparable<Paint>*/ {
+		class Paint : public std::enable_shared_from_this<Paint> /*, private boost::equality_comparable<Paint>*/ {
 			ASCENSION_NONCOPYABLE_TAG(Paint);
 		public:
 			/// Constructor.
