@@ -32,7 +32,7 @@ namespace ascension {
 			/// Converts into a native value.
 			template<typename NativeType> NativeType as() const;
 			/// Creates a @c Color object from native value.
-			template<typename NativeType> static Color from(NativeType value) /*noexcept*/;
+			template<typename NativeType> static Color from(const NativeType& value) /*noexcept*/;
 			/// Returns the blue color component of this color.
 			Byte blue() const /*noexcept*/ {return blue_ >> 8;}
 			/// Returns the green color component of this color.
@@ -41,8 +41,12 @@ namespace ascension {
 			Byte red() const /*noexcept*/ {return red_ >> 8;}
 			/// Returns the alpha value of this color.
 			Byte alpha() const /*noexcept*/ {return alpha_ >> 8;}
+			/// Returns @c true if this color is fully opaque.
+			bool isFullyOpaque() const /*noexcept*/ {return alpha() == 255;}
+			/// Returns @c true if this color is fully transparent.
+			bool isFullyTransparent() const /*noexcept*/ {return alpha() == 0;}
 			/// Returns @c true if this color is transparent.
-			bool isTransparent() const /*noexcept*/ {return alpha() == 0;}
+			bool isTransparent() const /*noexcept*/ {return !isFullyOpaque();}
 			/// Equality operator.
 			bool operator==(const Color& other) const /*noexcept*/ {
 				return red() == other.red() && green() == other.green()
@@ -68,7 +72,7 @@ namespace ascension {
 			temp.rgbReserved = alpha();
 			return temp;
 		}
-		template<> inline Color Color::from<COLORREF>(COLORREF value) /*noexcept*/ {
+		template<> inline Color Color::from<COLORREF>(const COLORREF& value) /*noexcept*/ {
 			return Color(
 				static_cast<Byte>(value & 0xff),
 				static_cast<Byte>((value >> 8) & 0xff),
