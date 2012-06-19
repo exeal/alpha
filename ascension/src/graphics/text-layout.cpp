@@ -402,6 +402,45 @@ bool font::supportsOpenTypeFeatures() /*throw()*/ {
 void detail::paintBorder(PaintContext& context, const NativeRectangle& rectangle,
 		const Border& border, const Color& currentColor, const WritingMode& writingMode) {
 	// TODO: not implemented.
+	for(FlowRelativeFourSides<Border::Part>::const_iterator part(begin(border.sides)), e(end(border.sides)); part != e; ++part) {
+		if(!part->hasVisibleStyle() || part->computedWidth().valueInSpecifiedUnits() <= 0.0)
+			continue;
+		if(!geometry::includes(context.boundsToPaint(), rectangle))
+			continue;
+		const Color color(part->color.get_value_or(currentColor));
+		if(color.isFullyTransparent())
+			continue;
+		context.setStrokeStyle(shared_ptr<Paint>(new SolidColor(color)));
+		context.setLineWidth(part->width.value(&context, &context.canvas().size()));
+//		context.setStrokeDashArray();
+//		context.setStrokeDashOffset();
+		context.beginPath();
+		switch(mapFlowRelativeToPhysical(writingMode, static_cast<FlowRelativeDirection>(part - border.sides.begin()))) {
+			case TOP:
+				context
+					.moveTo(geometry::make<NativePoint>(geometry::left(rectangle), geometry::top(rectangle)))
+					.lineTo(geometry::make<NativePoint>(geometry::right(rectangle) + 1, geometry::top(rectangle)));
+				break;
+			case RIGHT:
+				context
+					.moveTo(geometry::make<NativePoint>(geometry::right(rectangle), geometry::top(rectangle)))
+					.lineTo(geometry::make<NativePoint>(geometry::right(rectangle), geometry::bottom(rectangle) + 1));
+				break;
+			case BOTTOM:
+				context
+					.moveTo(geometry::make<NativePoint>(geometry::left(rectangle), geometry::bottom(rectangle)))
+					.lineTo(geometry::make<NativePoint>(geometry::right(rectangle) + 1, geometry::bottom(rectangle)));
+				break;
+			case LEFT:
+				context
+					.moveTo(geometry::make<NativePoint>(geometry::left(rectangle), geometry::top(rectangle)))
+					.lineTo(geometry::make<NativePoint>(geometry::left(rectangle), geometry::bottom(rectangle) + 1));
+				break;
+			default:
+				ASCENSION_ASSERT_NOT_REACHED();
+		}
+		context.stroke();
+	}
 }
 
 
@@ -2390,61 +2429,23 @@ void TextLayout::draw(PaintContext& context,
 	for(vector<const InlineArea*>::const_iterator i(inlineAreasToDraw.beginning()), e; i != inlineAreasToDraw.end(); ++i) {
 		// TODO: recognize the override.
 		// TODO: this code can't handle sparse inline areas (with bidirectionality).
-		pair<NativeRectangle, bool> borderRectangle;
+		boost::optional<NativeRectangle> borderRectangle;
 
-		// 2-1. paint background if the property is specified
-		if((*i)->style()->background != Paint()) {
-			borderRectangle = make_pair((*i)->borderRectangle(), true);
-			if(geometry::includes(context.boundsToPaint(), borderRectangle.first)) {
+		// 2-1. paint background if the property is specified (= if not transparent)
+		if((*i)->style()->background) {
+			borderRectangle = (*i)->borderRectangle();
+			if(geometry::includes(context.boundsToPaint(), *borderRectangle)) {
 				context.setFillStyle((*i)->style()->background);
-				context.fillRectangle(borderRectangle.first);
+				context.fillRectangle(*borderRectangle);
 			}
 		}
 
 		// 2-2. paint border if the property is specified
-		pair<Color, bool> currentColor;
-		const Border::Part* borders[4] = {
-			&(*i)->style()->border.sides.before(), &(*i)->style()->border.sides.after(),
-			&(*i)->style()->border.sides.start(), &(*i)->style()->border.sides.end()};
-		for(const Border::Part** border = border = borders; border != ASCENSION_ENDOF(borders); ++border) {
-			if(!(*border)->hasVisibleStyle() || (*border)->computedWidth().valueInSpecifiedUnits() <= 0.0)
-				continue;
-			if((*border)->color == Color()) {
-				if(!currentColor.second)
-					currentColor = make_pair(Color(), true);
-			}
-			if(!borderRectangle.second)
-				borderRectangle = make_pair((*i)->borderRectangle(), true);
-			if(!geometry::includes(context.boundsToPaint(), borderRectangle.first))
-				continue;
-//			context.setStrokeStyle();
-//			context.setStrokeDashArray();
-//			context.setStrokeDashOffset();
-			context.beginPath();
-			if(border == &borders[0])	// top
-				context
-					.moveTo(geometry::make<NativePoint>(geometry::left(borderRectangle.first), geometry::top(borderRectangle.first)))
-					.lineTo(geometry::make<NativePoint>(geometry::right(borderRectangle.first) + 1, geometry::top(borderRectangle.first)));
-			else if(border == &borders[1])	// bottom
-				context
-					.moveTo(geometry::make<NativePoint>(geometry::left(borderRectangle.first), geometry::bottom(borderRectangle.first)))
-					.lineTo(geometry::make<NativePoint>(geometry::right(borderRectangle.first) + 1, geometry::bottom(borderRectangle.first)));
-			else if((writingMode().inlineFlowDirection == LEFT_TO_RIGHT && border == &borders[2])
-					|| (writingMode().inlineFlowDirection == RIGHT_TO_LEFT && border == &borders[3]))	// left
-				context
-					.moveTo(geometry::make<NativePoint>(geometry::left(borderRectangle.first), geometry::top(borderRectangle.first)))
-					.lineTo(geometry::make<NativePoint>(geometry::left(borderRectangle.first), geometry::bottom(borderRectangle.first) + 1));
-			else if((writingMode().inlineFlowDirection == LEFT_TO_RIGHT && border == &borders[3])
-					|| (writingMode().inlineFlowDirection == RIGHT_TO_LEFT && border == &borders[2]))	// right
-				context
-					.moveTo(geometry::make<NativePoint>(geometry::right(borderRectangle.first), geometry::top(borderRectangle.first)))
-					.lineTo(geometry::make<NativePoint>(geometry::right(borderRectangle.first), geometry::bottom(borderRectangle.first) + 1));
-			context.stroke();
-		}
+		detail::paintBorder(context, (*i)->borderRectangle(), (*i)->style()->border, cc, writingMode());
 
 		::ExcludeClipRect(context.asNativeObject().get(),
-			geometry::left(borderRectangle.first), geometry::top(borderRectangle.first),
-			geometry::right(borderRectangle.first), geometry::bottom(borderRectangle.first));
+			geometry::left(*borderRectangle), geometry::top(*borderRectangle),
+			geometry::right(*borderRectangle), geometry::bottom(*borderRectangle));
 	}
 
 	// 3. for each text runs
