@@ -38,19 +38,27 @@ namespace ascension {
 				presentation::Inheritable<presentation::ReadingDirection> readingDirection;
 				/// Anchor of the digits. Default value is @c presentation#TEXT_ANCHOR_END.
 				presentation::TextAnchor anchor;
-				/// Start value of the line number. Default value is 1.
+				/// Start value of the line number. Default value is @c 1.
 				Index startValue;
-				/// Minimum number of digits. Default value is 4.
+				/// Minimum number of digits. Default value is @c 4.
 				uint8_t minimumDigits;
 				/// Padding width at the start. Default value is 6-pixel.
 				presentation::Length paddingStart;
 				/// Padding width at the end. Default value is 1-pixel.
 				presentation::Length paddingEnd;
+#if 1
+				/**
+				 * Color of the text. Default value is @c boost#none which is fallbacked to the
+				 * foreground of the text run style of the viewer's presentation global text style.
+				 */
+				boost::optional<graphics::Color> color;
+#else
 				/**
 				 * Color or style of the text. Default value is @c null which is fallbacked to the
 				 * foreground of the text run style of the viewer's presentation global text style.
 				 */
 				std::shared_ptr<graphics::Paint> foreground;
+#endif
 				/**
 				 * Color or style of the background. Default value is @c null which is fallbacked
 				 * to the background of the text run style of the viewer's presentation global text
@@ -65,7 +73,7 @@ namespace ascension {
 				/// Digit substitution type. @c DST_CONTEXTUAL can't set. Default value is @c DST_USER_DEFAULT.
 				presentation::NumberSubstitution numberSubstitution;
 
-				LineNumbers() /*throw()*/;
+				LineNumbers() /*noexcept*/;
 			} lineNumbers;	/// Configuration about the line numbers area.
 
 			/// Configuration about an indicator margin.

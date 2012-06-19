@@ -30,7 +30,7 @@ RulerConfiguration::RulerConfiguration() /*throw()*/ : alignment(TEXT_ANCHOR_STA
 // RulerConfiguration.LineNumbers /////////////////////////////////////////////////////////////////
 
 /// Constructor initializes the all members to their default values.
-RulerConfiguration::LineNumbers::LineNumbers() /*throw()*/ : visible(false),
+RulerConfiguration::LineNumbers::LineNumbers() /*noexcept()*/ : visible(false),
 		anchor(TEXT_ANCHOR_END), startValue(1), minimumDigits(4), paddingStart(6), paddingEnd(1) {
 }
 
@@ -164,6 +164,20 @@ uint8_t RulerPainter::maximumDigitsForLineNumbers() const /*throw()*/ {
 	return static_cast<uint8_t>(n);	// hmm...
 }
 
+namespace {
+	Color calculateCurrentColor(boost::optional<Color> color, const TextToplevelStyle& globalStyle) {
+		if(color)
+			return *color;
+		if(const shared_ptr<const TextLineStyle> lineStyle = globalStyle.defaultLineStyle) {
+			if(const shared_ptr<const TextRunStyle> runStyle = lineStyle->defaultRunStyle) {
+				if(runStyle->color)
+					return *runStyle->color;
+			}
+		}
+		return SystemColors::get(SystemColors::WINDOW_TEXT);
+	}
+}
+
 /**
  * Paints the ruler.
  * @param context The graphics context
@@ -214,37 +228,29 @@ void RulerPainter::paint(PaintContext& context) {
 		context.setFillStyle(configuration().indicatorMargin.paint.get() ?
 			configuration().indicatorMargin.paint : shared_ptr<Paint>(new SolidColor(SystemColors::get(SystemColors::THREE_D_FACE))));
 		context.fillRectangle(indicatorMarginRectangle);
+
+		const Color currentColor(calculateCurrentColor(boost::none, viewer_.presentation().globalTextStyle()));
 		Border borderStyle;
 		(borderStyle.sides.*borderPart)() = configuration().indicatorMargin.borderEnd;
 		if(!(borderStyle.sides.*borderPart)().color)
 			(borderStyle.sides.*borderPart)().color = SystemColors::get(SystemColors::THREE_D_SHADOW);
-		detail::paintBorder(context, indicatorMarginRectangle, borderStyle, boost::none, viewer_.textRenderer().writingMode());
+		detail::paintBorder(context, indicatorMarginRectangle, borderStyle, currentColor, viewer_.textRenderer().writingMode());
 	}
 
 	// paint the line numbers
 	if(lineNumbersToPaint) {
 		// compute foreground
-		shared_ptr<Paint> foreground;
-		if(configuration().lineNumbers.foreground)
-			foreground = configuration().lineNumbers.foreground;
-		else {
-			if(const shared_ptr<const TextLineStyle> lineStyle = viewer_.presentation().globalTextStyle().defaultLineStyle) {
-				if(const shared_ptr<const TextRunStyle> runStyle = lineStyle->defaultRunStyle)
-					foreground = runStyle->foreground;
-			}
-		}
-		if(!foreground)
-			foreground.reset(new SolidColor(SystemColors::get(SystemColors::WINDOW_TEXT)));
+		const Color currentColor(calculateCurrentColor(configuration().lineNumbers.color, viewer_.presentation().globalTextStyle()));
 
 		// background and border
 		context.setFillStyle(configuration().lineNumbers.background);
 		context.fillRectangle(lineNumbersRectangle);
 		Border borderStyle;
 		(borderStyle.sides.*borderPart)() = configuration().lineNumbers.borderEnd;
-		detail::paintBorder(context, lineNumbersRectangle, borderStyle, foreground.color(), viewer_.textRenderer().writingMode());
+		detail::paintBorder(context, lineNumbersRectangle, borderStyle, currentColor, viewer_.textRenderer().writingMode());
 
 		// text
-		context.setFillStyle(foreground);
+		context.setFillStyle(shared_ptr<Paint>(new SolidColor(currentColor)));
 		context.setFont(viewer_.textRenderer().defaultFont());
 //		context.setTextAlign();
 //		context.setTextBaseline();
