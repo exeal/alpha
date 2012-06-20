@@ -1969,7 +1969,7 @@ void VirtualBox::update(const k::Region& region) /*throw()*/ {
 }
 
 
-// CurrentLineHighlighter ///////////////////////////////////////////////////
+// CurrentLineHighlighter /////////////////////////////////////////////////////////////////////////
 
 /**
  * @class ascension::presentation::CurrentLineHighlighter
@@ -1996,7 +1996,8 @@ const TextLineColorDirector::Priority CurrentLineHighlighter::LINE_COLOR_PRIORIT
  * @param background The initial background color
  */
 CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret,
-		const Color& foreground, const Color& background) : caret_(&caret), foreground_(foreground), background_(background) {
+		const boost::optional<Color>& foreground, const boost::optional<Color>& background)
+		: caret_(&caret), foreground_(foreground), background_(background) {
 	shared_ptr<TextLineColorDirector> temp(this);
 	caret.textViewer().presentation().addTextLineColorDirector(temp);
 	caret.addListener(*this);
@@ -2005,7 +2006,7 @@ CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret,
 }
 
 /// Destructor.
-CurrentLineHighlighter::~CurrentLineHighlighter() /*throw()*/ {
+CurrentLineHighlighter::~CurrentLineHighlighter() /*noexcept*/ {
 	if(caret_ != nullptr) {
 		caret_->removeListener(*this);
 		caret_->removeStateListener(*this);
@@ -2014,7 +2015,7 @@ CurrentLineHighlighter::~CurrentLineHighlighter() /*throw()*/ {
 }
 
 /// Returns the background color.
-const Color& CurrentLineHighlighter::background() const /*throw()*/ {
+const boost::optional<Color>& CurrentLineHighlighter::background() const /*noexcept*/ {
 	return background_;
 }
 
@@ -2031,7 +2032,7 @@ void CurrentLineHighlighter::caretMoved(const Caret&, const k::Region& oldRegion
 }
 
 /// Returns the foreground color.
-const Color& CurrentLineHighlighter::foreground() const /*throw()*/ {
+const boost::optional<Color>& CurrentLineHighlighter::foreground() const /*noexcept*/ {
 	return foreground_;
 }
 
@@ -2050,14 +2051,15 @@ void CurrentLineHighlighter::pointDestroyed() {
 	caret_ = nullptr;
 }
 
-/// @see ILineColorDirector#queryLineColors
-TextLineColorDirector::Priority CurrentLineHighlighter::queryLineColors(Index line, Color& foreground, Color& background) const {
+/// @see LineColorDirector#queryLineColors
+TextLineColorDirector::Priority CurrentLineHighlighter::queryLineColors(Index line,
+		boost::optional<Color>& foreground, boost::optional<Color>& background) const {
 	if(caret_ != nullptr && isSelectionEmpty(*caret_) && k::line(*caret_) == line && widgetapi::hasFocus(caret_->textViewer())) {
 		foreground = foreground_;
 		background = background_;
 		return LINE_COLOR_PRIORITY;
 	} else {
-		foreground = background = Color();
+		foreground = background = boost::none;
 		return 0;
 	}
 }
@@ -2070,7 +2072,7 @@ void CurrentLineHighlighter::selectionShapeChanged(const Caret&) {
  * Sets the background color and redraws the window.
  * @param color The background color to set
  */
-void CurrentLineHighlighter::setBackground(const Color& color) /*throw()*/ {
+void CurrentLineHighlighter::setBackground(const boost::optional<Color>& color) /*noexcept*/ {
 	background_ = color;
 }
 
@@ -2078,7 +2080,7 @@ void CurrentLineHighlighter::setBackground(const Color& color) /*throw()*/ {
  * Sets the foreground color and redraws the window.
  * @param color The foreground color to set
  */
-void CurrentLineHighlighter::setForeground(const Color& color) /*throw()*/ {
+void CurrentLineHighlighter::setForeground(const boost::optional<Color>& color) /*noexcept*/ {
 	foreground_ = color;
 }
 

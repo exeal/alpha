@@ -411,7 +411,7 @@ void detail::paintBorder(PaintContext& context, const NativeRectangle& rectangle
 		if(color.isFullyTransparent())
 			continue;
 		context.setStrokeStyle(shared_ptr<Paint>(new SolidColor(color)));
-		context.setLineWidth(part->width.value(&context, &context.canvas().size()));
+		context.setLineWidth(part->width.value(&context, &context.device().size()));
 //		context.setStrokeDashArray();
 //		context.setStrokeDashOffset();
 		context.beginPath();
@@ -2441,7 +2441,8 @@ void TextLayout::draw(PaintContext& context,
 		}
 
 		// 2-2. paint border if the property is specified
-		detail::paintBorder(context, (*i)->borderRectangle(), (*i)->style()->border, cc, writingMode());
+		assert((*i)->style()->color);
+		detail::paintBorder(context, (*i)->borderRectangle(), (*i)->style()->border, *(*i)->style()->color, writingMode());
 
 		::ExcludeClipRect(context.asNativeObject().get(),
 			geometry::left(*borderRectangle), geometry::top(*borderRectangle),

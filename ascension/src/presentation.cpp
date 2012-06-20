@@ -137,7 +137,7 @@ struct Presentation::Hyperlinks {
  * Constructor.
  * @param document The target document
  */
-Presentation::Presentation(Document& document) /*throw()*/ : document_(document) {
+Presentation::Presentation(Document& document) /*noexcept*/ : document_(document) {
 	if(DEFAULT_GLOBAL_TEXT_STYLE.get() == nullptr) {
 		unique_ptr<TextLineStyle> temp1(new TextLineStyle);
 		temp1->defaultRunStyle.reset(new TextRunStyle);
@@ -150,7 +150,7 @@ Presentation::Presentation(Document& document) /*throw()*/ : document_(document)
 }
 
 /// Destructor.
-Presentation::~Presentation() /*throw()*/ {
+Presentation::~Presentation() /*noexcept*/ {
 	document_.removeListener(*this);
 	clearHyperlinksCache();
 }
@@ -165,7 +165,7 @@ void Presentation::addGlobalTextStyleListener(GlobalTextStyleListener& listener)
 	globalTextStyleListeners_.add(listener);
 }
 
-void Presentation::clearHyperlinksCache() /*throw()*/ {
+void Presentation::clearHyperlinksCache() /*noexcept*/ {
 	for(list<Hyperlinks*>::iterator i(hyperlinks_.begin()), e(hyperlinks_.end()); i != e; ++i) {
 		for(size_t j = 0; j < (*i)->numberOfHyperlinks; ++j)
 			delete (*i)->hyperlinks[j];
@@ -175,12 +175,12 @@ void Presentation::clearHyperlinksCache() /*throw()*/ {
 }
 
 /// Returns the document to which the presentation connects.
-const Document& Presentation::document() const /*throw()*/ {
+const Document& Presentation::document() const /*noexcept*/ {
 	return document_;
 }
 
 /// Returns the document to which the presentation connects.
-Document& Presentation::document() /*throw()*/ {
+Document& Presentation::document() /*noexcept*/ {
 	return document_;
 }
 
@@ -272,7 +272,7 @@ const Hyperlink* const* Presentation::getHyperlinks(Index line, size_t& numberOf
  * @param[out] style The text line style
  * @return @a style
  */
-TextLineStyle& Presentation::textLineStyle(Index line, TextLineStyle& style) const /*throw()*/ {
+TextLineStyle& Presentation::textLineStyle(Index line, TextLineStyle& style) const /*noexcept*/ {
 	shared_ptr<const Inheritable<TextLineStyle>> p;
 	if(textLineStyleDirector_.get() != nullptr)
 		p = textLineStyleDirector_->queryTextLineStyle(line);
@@ -316,7 +316,7 @@ void Presentation::setGlobalTextStyle(shared_ptr<const TextToplevelStyle> newSty
  * Sets the hyperlink detector.
  * @param newDirector The director. Set @c null to unregister
  */
-void Presentation::setHyperlinkDetector(shared_ptr<HyperlinkDetector> newDetector) /*throw()*/ {
+void Presentation::setHyperlinkDetector(shared_ptr<HyperlinkDetector> newDetector) /*noexcept*/ {
 	hyperlinkDetector_ = newDetector;
 	clearHyperlinksCache();
 }
@@ -325,7 +325,7 @@ void Presentation::setHyperlinkDetector(shared_ptr<HyperlinkDetector> newDetecto
  * Sets the line style director.
  * @param newDirector The director. @c null to unregister
  */
-void Presentation::setTextLineStyleDirector(shared_ptr<TextLineStyleDirector> newDirector) /*throw()*/ {
+void Presentation::setTextLineStyleDirector(shared_ptr<TextLineStyleDirector> newDirector) /*noexcept*/ {
 	textLineStyleDirector_ = newDirector;
 }
 
@@ -334,7 +334,7 @@ void Presentation::setTextLineStyleDirector(shared_ptr<TextLineStyleDirector> ne
  * This method does not call @c TextRenderer#invalidate and the layout is not updated.
  * @param newDirector The director. @c null to unregister
  */
-void Presentation::setTextRunStyleDirector(shared_ptr<TextRunStyleDirector> newDirector) /*throw()*/ {
+void Presentation::setTextRunStyleDirector(shared_ptr<TextRunStyleDirector> newDirector) /*noexcept*/ {
 	textRunStyleDirector_ = newDirector;
 }
 
@@ -345,18 +345,19 @@ void Presentation::setTextRunStyleDirector(shared_ptr<TextRunStyleDirector> newD
  * @param[out] background The background color of the line. Unspecified if an invalid value
  * @throw BadPositionException @a line is outside of the document
  */
-void Presentation::textLineColors(Index line, Color& foreground, Color& background) const {
+void Presentation::textLineColors(Index line,
+		boost::optional<Color>& foreground, boost::optional<Color>& background) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
 	TextLineColorDirector::Priority highestPriority = 0, p;
-	pair<Color, Color> temp;
+	boost::optional<Color> f, g;
 	for(list<shared_ptr<TextLineColorDirector>>::const_iterator
 			i(textLineColorDirectors_.begin()), e(textLineColorDirectors_.end()); i != e; ++i) {
-		p = (*i)->queryTextLineColors(line, temp.first, temp.second);
+		p = (*i)->queryTextLineColors(line, f, g);
 		if(p > highestPriority) {
 			highestPriority = p;
-			foreground = temp.first;
-			background = temp.second;
+			foreground = f;
+			background = g;
 		}
 	}
 }
