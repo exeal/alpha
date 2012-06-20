@@ -52,19 +52,20 @@ namespace ascension {
 			/// Priority.
 			typedef uint8_t Priority;
 			/// Destructor.
-			virtual ~TextLineColorDirector() /*throw()*/ {}
+			virtual ~TextLineColorDirector() /*noexcept*/ {}
 		private:
 			/**
 			 * Returns the foreground and background colors of the text line.
 			 * @param line The line to be queried
-			 * @param[out] foreground The foreground color of the text line. If this is invalid
-			 *                        color, line color is not set
-			 * @param[out] background The background color of the text line. If this is invalid
-			 *                        color, line color is not set
+			 * @param[out] foreground The foreground color of the text line. If @c boost#none,
+			 *                        line color is not set
+			 * @param[out] background The background color of the text line. If @c boost#none,
+			 *                        line color is not set
 			 * @return the priority
 			 */
 			virtual Priority queryTextLineColors(Index line,
-				graphics::Color& foreground, graphics::Color& background) const = 0;
+				boost::optional<graphics::Color>& foreground,
+				boost::optional<graphics::Color>& background) const = 0;
 			friend class Presentation;
 		};
 
@@ -171,28 +172,29 @@ namespace ascension {
 			ASCENSION_NONCOPYABLE_TAG(Presentation);
 		public:
 			// constructors
-			explicit Presentation(kernel::Document& document) /*throw()*/;
-			~Presentation() /*throw()*/;
+			explicit Presentation(kernel::Document& document) /*noexcept*/;
+			~Presentation() /*noexcept*/;
 			// attributes
-			kernel::Document& document() /*throw()*/;
-			const kernel::Document& document() const /*throw()*/;
+			kernel::Document& document() /*noexcept*/;
+			const kernel::Document& document() const /*noexcept*/;
 			const hyperlink::Hyperlink* const* getHyperlinks(Index line, std::size_t& numberOfHyperlinks) const;
 			// styles
 			void addGlobalTextStyleListener(GlobalTextStyleListener& listener);
-			const TextToplevelStyle& globalTextStyle() const /*throw()*/;
+			const TextToplevelStyle& globalTextStyle() const /*noexcept*/;
 			void removeGlobalTextStyleListener(GlobalTextStyleListener& listener);
 			void setGlobalTextStyle(std::shared_ptr<const TextToplevelStyle> newStyle);
-			void textLineColors(Index line, graphics::Color& foreground, graphics::Color& background) const;
+			void textLineColors(Index line,
+				boost::optional<graphics::Color>& foreground, boost::optional<graphics::Color>& background) const;
 			TextLineStyle& textLineStyle(Index line, TextLineStyle& style) const;
 			std::unique_ptr<StyledTextRunIterator> textRunStyles(Index line) const;
 			// strategies
 			void addTextLineColorDirector(std::shared_ptr<TextLineColorDirector> director);
-			void removeTextLineColorDirector(TextLineColorDirector& director) /*throw()*/;
-			void setHyperlinkDetector(std::shared_ptr<hyperlink::HyperlinkDetector> newDetector) /*throw()*/;
-			void setTextLineStyleDirector(std::shared_ptr<TextLineStyleDirector> newDirector) /*throw()*/;
-			void setTextRunStyleDirector(std::shared_ptr<TextRunStyleDirector> newDirector) /*throw()*/;
+			void removeTextLineColorDirector(TextLineColorDirector& director) /*noexcept*/;
+			void setHyperlinkDetector(std::shared_ptr<hyperlink::HyperlinkDetector> newDetector) /*noexcept*/;
+			void setTextLineStyleDirector(std::shared_ptr<TextLineStyleDirector> newDirector) /*noexcept*/;
+			void setTextRunStyleDirector(std::shared_ptr<TextRunStyleDirector> newDirector) /*noexcept*/;
 		private:
-			void clearHyperlinksCache() /*throw()*/;
+			void clearHyperlinksCache() /*noexcept*/;
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);

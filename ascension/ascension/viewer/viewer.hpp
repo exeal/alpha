@@ -154,17 +154,17 @@ namespace ascension {
 			 */
 			struct Configuration /*: public graphics::LayoutSettings*/ {
 				/// Foreground color of active selected text. Standard setting is @c COLOR_HIGHLIGHTTEXT.
-				graphics::Color selectionForeground;
+				boost::optional<graphics::Color> selectionForeground;
 				/// Background color of active selected text. Standard setting is @c COLOR_HIGHLIGHT.
-				graphics::Color selectionBackground;
+				boost::optional<graphics::Color> selectionBackground;
 				/// Foreground color of inactive selected text. Standard setting is @c COLOR_INACTIVECAPTIONTEXT.
-				graphics::Color inactiveSelectionForeground;
+				boost::optional<graphics::Color> inactiveSelectionForeground;
 				/// Background color of inactive selected text. Standard setting is @c COLOR_INACTIVECAPTION.
-				graphics::Color inactiveSelectionBackground;
+				boost::optional<graphics::Color> inactiveSelectionBackground;
 				/// Foreground color of the inaccessible area. Standard setting is @c COLOR_GRAYTEXT.
-				graphics::Color restrictionForeground;
+				boost::optional<graphics::Color> restrictionForeground;
 				/// Background color of the inaccessible area. Standard setting is @c color.background.
-				graphics::Color restrictionBackground;
+				boost::optional<graphics::Color> restrictionBackground;
 				/// The reading direction of UI.
 				presentation::ReadingDirection readingDirection;
 				/// Set @c true to vanish the cursor when the user types. Default value depends on system setting.
@@ -508,17 +508,19 @@ namespace ascension {
 			static const TextLineColorDirector::Priority LINE_COLOR_PRIORITY;
 			// constructors
 			CurrentLineHighlighter(Caret& caret,
-				const graphics::Color& foreground, const graphics::Color& background);
-			~CurrentLineHighlighter() /*throw()*/;
+				const boost::optional<graphics::Color>& foreground,
+				const boost::optional<graphics::Color>& background);
+			~CurrentLineHighlighter() /*noexcept*/;
 			// attributes
-			const graphics::Color& background() const /*throw()*/;
-			const graphics::Color& foreground() const /*throw()*/;
-			void setBackground(const graphics::Color& color) /*throw()*/;
-			void setForeground(const graphics::Color& color) /*throw()*/;
+			const boost::optional<graphics::Color>& background() const /*noexcept*/;
+			const boost::optional<graphics::Color>& foreground() const /*noexcept*/;
+			void setBackground(const boost::optional<graphics::Color>& color) /*noexcept*/;
+			void setForeground(const boost::optional<graphics::Color>& color) /*noexcept*/;
 		private:
 			// presentation.TextLineColorDirector
-			TextLineColorDirector::Priority queryLineColors(Index line,
-				graphics::Color& foreground, graphics::Color& background) const;
+			TextLineColorDirector::Priority queryLineColors(
+				Index line, boost::optional<graphics::Color>& foreground,
+				boost::optional<graphics::Color>& background) const;
 			// CaretListener
 			void caretMoved(const Caret& self, const kernel::Region& oldRegion);
 			// CaretStateListener
@@ -531,7 +533,7 @@ namespace ascension {
 			void pointDestroyed();
 		private:
 			Caret* caret_;
-			graphics::Color foreground_, background_;
+			boost::optional<graphics::Color> foreground_, background_;
 		};
 
 		/// Provides the utility stuffs for viewers.
