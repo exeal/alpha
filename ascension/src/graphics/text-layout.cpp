@@ -10,6 +10,7 @@
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
 #include <ascension/graphics/text-layout.hpp>
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/rendering-device.hpp>
 //#include <ascension/graphics/special-character-renderer.hpp>
 #include <ascension/corelib/shared-library.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>
@@ -402,7 +403,7 @@ bool font::supportsOpenTypeFeatures() /*throw()*/ {
 void detail::paintBorder(PaintContext& context, const NativeRectangle& rectangle,
 		const Border& border, const Color& currentColor, const WritingMode& writingMode) {
 	// TODO: not implemented.
-	for(FlowRelativeFourSides<Border::Part>::const_iterator part(begin(border.sides)), e(end(border.sides)); part != e; ++part) {
+	for(FlowRelativeFourSides<Border::Part>::const_iterator part(begin(border.sides)), e(border.sides.cend()); part != e; ++part) {
 		if(!part->hasVisibleStyle() || part->computedWidth().valueInSpecifiedUnits() <= 0.0)
 			continue;
 		if(!geometry::includes(context.boundsToPaint(), rectangle))
@@ -411,7 +412,7 @@ void detail::paintBorder(PaintContext& context, const NativeRectangle& rectangle
 		if(color.isFullyTransparent())
 			continue;
 		context.setStrokeStyle(shared_ptr<Paint>(new SolidColor(color)));
-		context.setLineWidth(part->width.value(&context, &context.device().size()));
+		context.setLineWidth(static_cast<Scalar>(part->width.value(&context, &context.device().size())));
 //		context.setStrokeDashArray();
 //		context.setStrokeDashOffset();
 		context.beginPath();
