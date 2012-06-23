@@ -10,6 +10,7 @@
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
 #include <array>
 #include <type_traits>	// std.extent
+#include <boost/operators.hpp>
 
 namespace ascension {
 	/**
@@ -17,26 +18,26 @@ namespace ascension {
 	 * @c #presentation#ReadingDirection).
 	 * @see ascension#text, ascension#searcher
 	 */
-	class Direction {
+	class Direction : public boost::equality_comparable<Direction> {
 	public:
 		static const Direction FORWARD;		///< Direction to the end.
 		static const Direction BACKWARD;	///< Direction to the start.
 		/// Copy-constructor.
-		Direction(const Direction& other) /*throw()*/ : value_(other.value_) {}
+		Direction(const Direction& other) /*noexcept*/ : value_(other.value_) {}
 		/// Assignment operator.
-		Direction& operator=(const Direction& other) /*throw()*/ {
+		Direction& operator=(const Direction& other) /*noexcept*/ {
 			return (value_ = other.value_), *this;
 		}
 		/// Negation operator returns the complement of this.
-		Direction operator!() const /*throw()*/ {
+		Direction operator!() const /*noexcept*/ {
 			return (*this == FORWARD) ? BACKWARD : FORWARD;
 		}
 		/// Equality operator.
-		bool operator==(const Direction& other) const /*throw()*/ {return value_ == other.value_;}
-		/// Inequality operator.
-		bool operator!=(const Direction& other) const /*throw()*/ {return !(*this == other);}
+		bool operator==(const Direction& other) const /*noexcept*/ {
+			return value_ == other.value_;
+		}
 	private:
-		explicit Direction(bool value) /*throw()*/ : value_(value) {}
+		explicit Direction(bool value) /*noexcept*/ : value_(value) {}
 		bool value_;
 	};
 
@@ -72,15 +73,15 @@ namespace ascension {
 		public:
 			/// Type of directional value.
 			typedef T value_type;
-			PhysicalTwoAxes(const T& x, const T& y) : std::pair<T, T>(x, y) {}
+			PhysicalTwoAxes(const value_type& x, const value_type& y) : std::pair<T, T>(x, y) {}
 			/// Returns a reference 'x' (horizontal position) value.
-			T& x() {return first;}
+			value_type& x() /*noexcept*/ {return first;}
 			/// Returns a reference 'x' (horizontal position) value.
-			const T& x() const {return first;}
+			const value_type& x() const /*noexcept*/ {return first;}
 			/// Returns a reference 'y' (vertical position) value.
-			T& y() {return second;}
+			value_type& y() /*noexcept*/ {return second;}
 			/// Returns a reference 'y' (vertical position) value.
-			const T& y() const {return second;}
+			const value_type& y() /*noexcept*/ const {return second;}
 		};
 
 		/**
@@ -162,13 +163,13 @@ namespace ascension {
 		public:
 			typedef T value_type;
 			/// Returns a reference to 'block-dimension' value.
-			T& bpd() {return first;}
+			value_type& bpd() /*noexcept*/ {return first;}
 			/// Returns a reference to 'block-dimension' value.
-			const T& bpd() const {return first;}
+			const value_type& bpd() const /*noexcept*/ {return first;}
 			/// Returns a reference to 'inline-dimension' value.
-			T& ipd() {return second;}
+			value_type& ipd() /*noexcept*/ {return second;}
 			/// Returns a reference to 'inline-dimension' value.
-			const T& ipd() const {return second;}
+			const value_type& ipd() const /*noexcept*/ {return second;}
 		};
 
 		/**
@@ -200,8 +201,10 @@ namespace ascension {
 			/// Returns a reference to 'start' value.
 			const_reference start() const {return (*this)[START];}
 			/// Returns a reference to 'end' value.
+			/// @note This method hides @c std#array#end.
 			reference end() {return (*this)[END];}
 			/// Returns a reference to 'end' value.
+			/// @note This method hides @c std#array#end.
 			const_reference end() const {return (*this)[END];}
 		};
 	}
