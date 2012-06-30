@@ -18,7 +18,7 @@ namespace ascension {
 	 * @c #presentation#ReadingDirection).
 	 * @see ascension#text, ascension#searcher
 	 */
-	class Direction : public boost::equality_comparable<Direction> {
+	class Direction : private boost::equality_comparable<Direction> {
 	public:
 		static const Direction FORWARD;		///< Direction to the end.
 		static const Direction BACKWARD;	///< Direction to the start.
