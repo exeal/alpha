@@ -217,7 +217,7 @@ shared_ptr<const Font> SystemFonts::cache(const String& familyName, const FontPr
 	memset(&lf, 0, sizeof(LOGFONTW));
 	lf.lfHeight = -round(properties.pixelSize());
 	lf.lfWeight = properties.weight();
-	lf.lfItalic = (properties.style() == FontPropertiesBase::ITALIC) || (properties.style() == FontPropertiesBase::OBLIQUE);
+	lf.lfItalic = (properties.style() == FontStyle::ITALIC) || (properties.style() == FontStyle::OBLIQUE);
 	wcscpy(lf.lfFaceName, familyName.c_str());
 	win32::Handle<HFONT> font(::CreateFontIndirectW(&lf), &::DeleteObject);
 #ifdef _DEBUG
@@ -251,7 +251,7 @@ shared_ptr<const Font> SystemFonts::cache(const String& familyName, const FontPr
 	}
 
 	// handle 'font-stretch'
-	if(properties.stretch() != FontPropertiesBase::NORMAL_STRETCH) {
+	if(properties.stretch() != FontStretch::NORMAL) {
 		// TODO: this implementation is too simple...
 		if(::GetObjectW(font.get(), sizeof(LOGFONTW), &lf) > 0) {
 			static const int WIDTH_RATIOS[] = {1000, 1000, 1000, 500, 625, 750, 875, 1125, 1250, 1500, 2000, 1000};
