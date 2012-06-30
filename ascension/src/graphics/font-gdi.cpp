@@ -1,7 +1,8 @@
 /**
- * @file font-windows.cpp
+ * @file font-gdi.cpp
  * @author exeal
  * @date 2010-10-15 created
+ * @date 2012-06-30 renamed from font-windows.cpp
  */
 
 #include <ascension/graphics/font.hpp>
