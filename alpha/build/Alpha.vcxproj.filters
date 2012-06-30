@@ -194,9 +194,6 @@
     <ClCompile Include="..\..\ascension\src\encodings\vietnamese.cpp">
       <Filter>ascension\Source Files\encodings</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\graphics\font-windows.cpp">
-      <Filter>ascension\Source Files\graphics</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\graphics\text-layout.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
@@ -321,6 +318,12 @@
       <Filter>ascension\Source Files\viewer\widgetapi</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\graphics\rendering-context-gdi.cpp">
+      <Filter>ascension\Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\paint-gdi.cpp">
+      <Filter>ascension\Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\font-gdi.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
   </ItemGroup>

@@ -196,8 +196,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\font-gdi.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\image-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\line-layout-vector.cpp" />
+    <ClCompile Include="..\..\ascension\src\graphics\paint-gdi.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\rendering-context-gdi.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\text-renderer.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\text-viewport.cpp" />
@@ -259,7 +261,6 @@
     <ClCompile Include="..\..\ascension\src\encodings\uncategorized.cpp" />
     <ClCompile Include="..\..\ascension\src\encodings\unicode.cpp" />
     <ClCompile Include="..\..\ascension\src\encodings\vietnamese.cpp" />
-    <ClCompile Include="..\..\ascension\src\graphics\font-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\text-layout.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\caret.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\ruler.cpp" />
