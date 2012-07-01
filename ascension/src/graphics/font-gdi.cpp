@@ -6,7 +6,7 @@
  */
 
 #include <ascension/graphics/font.hpp>
-#include <ascension/graphics/graphics-windows.hpp>
+#include <ascension/graphics/rendering-context.hpp>
 #include <ascension/config.hpp>
 #include <vector>
 
@@ -228,7 +228,7 @@ shared_ptr<const Font> FontCollection::cache(const FontDescription<>& descriptio
 	}
 
 	shared_ptr<Font> newFont(new Font(move(font)));
-	cachedFonts_.insert(make_pair(make_pair(familyName, properties), newFont));
+	cachedFonts_.insert(make_pair(description, newFont));
 	return newFont;
 }
 
