@@ -336,12 +336,14 @@ namespace ascension {
 				}
 				/// Equality operator.
 				bool operator==(const FontProperties& other) const {
-					return weight_ == other.weight_ && stretch_ == other.stretch_ && style_ == other.style_;
+					return weight == other.weight
+						&& stretch == other.stretch && style == other.style
+						&& variant == other.variant && orientation == other.orientation;
 				}
 			};
 
 			template<template<typename> class PropertyHolder = detail::Type2Type>
-			class FontDescription {
+			class FontDescription : private boost::equality_comparable<FontDescription<PropertyHolder>> {
 			public:
 				typedef typename PropertyHolder<String>::Type FamilyNameType;
 				typedef typename PropertyHolder<double>::Type PixelSizeType;
@@ -357,6 +359,12 @@ namespace ascension {
 					PixelSizeType pixelSize = PixelSizeType(),
 					const PropertiesType& properties = PropertiesType())
 					: family_(family), pixelSize_(pixelSize), properties_(properties) {}
+				/// Equality operator.
+				bool operator==(const FontDescription& other) const {
+					return familyName_ == other.familyName_
+						&& pixelSize_ == other.pixelSize_	// TODO: use epsilon.
+						&& properties_ == other.properties_;
+				}
 				/// Returns the family name.
 				const FamilyNameType& familyName() const /*noexcept*/ {return familyName_;}
 				/// Returns the size in pixels.
