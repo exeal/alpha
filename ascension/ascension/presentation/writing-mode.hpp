@@ -13,7 +13,6 @@
 #include <ascension/directions.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException, std.logic_error
 #include <ascension/graphics/geometry.hpp>			// PhysicalFourSides
-#include <ascension/presentation/inheritable.hpp>	// Inheritable
 #include <boost/operators.hpp>
 
 namespace ascension {
@@ -85,22 +84,17 @@ namespace ascension {
 		};
 
 		/**
-		 * Base type of @c WritingMode.
-		 * @tparam inheritable All data members are inheritable when set to @c true
+		 * @c WritingMode.
 		 * @see "CSS Writing Modes Module Level 3" (http://www.w3.org/TR/css3-writing-modes/)
 		 * @see "SVG 1.1 (Second Edition), 10.7 Text layout"
 		 *      (http://www.w3.org/TR/SVG/text.html#TextLayout)
 		 * @see "XSL 1.1, 7.29 Writing-mode-related Properties"
 		 *      (http://www.w3.org/TR/xsl/#writing-mode-related)
 		 */
-		template<bool inheritable>
-		struct WritingModeBase : private boost::equality_comparable<WritingModeBase<inheritable>> {
-			/// The inline flow direction.
-			typename InheritableIf<inheritable, ReadingDirection>::Type inlineFlowDirection;
-			/// The block flow direction.
-			typename InheritableIf<inheritable, BlockFlowDirection>::Type blockFlowDirection;
-			/// The text orientation.
-			typename InheritableIf<inheritable, TextOrientation>::Type textOrientation;
+		struct WritingMode : private boost::equality_comparable<WritingMode> {		
+			ReadingDirection inlineFlowDirection;	///< The inline flow direction.
+			BlockFlowDirection blockFlowDirection;	///< The block flow direction.
+			TextOrientation textOrientation;		///< The text orientation.
 
 			/**
 			 * Constructor initializes the data members with the given values.
@@ -108,38 +102,19 @@ namespace ascension {
 			 * @param blockFlowDirection
 			 * @param textOrientation
 			 */
-			explicit WritingModeBase(
-				typename InheritableIf<inheritable, ReadingDirection>::Type
-					inlineFlowDirection = LEFT_TO_RIGHT/*ASCENSION_DEFAULT_TEXT_READING_DIRECTION*/,
-				typename InheritableIf<inheritable, BlockFlowDirection>::Type
-					blockFlowDirection = HORIZONTAL_TB,
-				typename InheritableIf<inheritable, TextOrientation>::Type
-					textOrientation = MIXED_RIGHT) :
-				inlineFlowDirection(inlineFlowDirection), blockFlowDirection(blockFlowDirection),
-				textOrientation(textOrientation) /*throw()*/ {}
-			/// Implicit conversion operator.
-			template<bool otherInheritable>
-			inline operator WritingModeBase<otherInheritable>() const {
-				return WritingModeBase<otherInheritable>(inlineFlowDirection, blockFlowDirection, textOrientation);
-			}
-			/// Equality operator.
-			template<bool otherInheritable>
-			inline bool operator==(const WritingModeBase<otherInheritable>& other) const {
-				return inlineFlowDirection == other.inlineFlowDirection
-					&& blockFlowDirection == other.blockFlowDirection && textOrientation == other.textOrientation;
-			}
-		};
-
-		struct WritingMode : public WritingModeBase<false> {
 			explicit WritingMode(
-				ReadingDirection inlineFlowDirection
-					= LEFT_TO_RIGHT/*ASCENSION_DEFAULT_TEXT_READING_DIRECTION*/,
+				ReadingDirection inlineFlowDirection = LEFT_TO_RIGHT/*ASCENSION_DEFAULT_TEXT_READING_DIRECTION*/,
 				BlockFlowDirection blockFlowDirection = HORIZONTAL_TB,
 				TextOrientation textOrientation = MIXED_RIGHT) :
-				WritingModeBase(inlineFlowDirection, blockFlowDirection, textOrientation) /*throw()*/ {}
+				inlineFlowDirection(inlineFlowDirection), blockFlowDirection(blockFlowDirection),
+				textOrientation(textOrientation) /*noexcept*/ {}
+			/// Equality operator.
+			inline bool operator==(const WritingMode& other) const /*noexcept*/ {
+				return inlineFlowDirection == other.inlineFlowDirection
+					&& blockFlowDirection == other.blockFlowDirection
+					&& textOrientation == other.textOrientation;
+			}
 		};
-
-		template<> class Inheritable<WritingMode> : public WritingModeBase<true> {};
 
 		/***/
 		inline TextOrientation resolveTextOrientation(const WritingMode& writingMode) {

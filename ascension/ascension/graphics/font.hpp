@@ -540,8 +540,13 @@ namespace ascension {
 					CodePoint variationSelector, GlyphCode defaultGlyph) const;
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 				/// Returns the metrics of the font.
-				std::unique_ptr<Metrics> metrics() const /*noexcept*/;
+				std::shared_ptr<const Metrics> metrics() const /*noexcept*/ {
+					if(metrics_.get() == 0)
+						const_cast<Font*>(this)->buildMetrics();
+					return metrics_;
+				}
 			private:
+				void buildMetrics() /*noexcept*/;
 #if defined(ASCENSION_SHAPING_ENGINE_CAIRO)
 				Cairo::RefPtr<Cairo::ScaledFont> nativeObject_;
 #elif defined(ASCENSION_SHAPING_ENGINE_CORE_GRAPHICS)
@@ -564,6 +569,7 @@ namespace ascension {
 #elif defined(ASCENSION_SHAPING_ENGINE_WIN32_GDIPLUS)
 				std::shared_ptr<Gdiplus::Font> nativeObject_;
 #endif
+				std::shared_ptr<const Metrics> metrics_;
 			};
 
 			/// An interface represents an object provides a set of fonts.

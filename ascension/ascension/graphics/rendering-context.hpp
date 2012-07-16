@@ -13,7 +13,7 @@
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/font.hpp>
 #include <ascension/graphics/geometry.hpp>
-#include <ascension/presentation/text-line-style.hpp>	// presentation.AlignmentBaseline, presentation.TextAnchor
+#include <ascension/presentation/text-style.hpp>	// presentation.AlignmentBaseline, presentation.TextAnchor
 #include <memory>
 #include <boost/optional.hpp>
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
@@ -102,11 +102,11 @@ namespace ascension {
 		ASCENSION_END_SCOPED_ENUM
 
 		ASCENSION_BEGIN_SCOPED_ENUM(TextAlignment)
-			START = presentation::TEXT_ANCHOR_START,
-			END = presentation::TEXT_ANCHOR_END,
-			LEFT = detail::LEFT,
-			RIGHT = detail::RIGHT,
-			CENTER = presentation::TEXT_ANCHOR_MIDDLE
+			START = presentation::TextAlignment::START,
+			END = presentation::TextAlignment::END,
+			LEFT = presentation::TextAlignment::LEFT,
+			RIGHT = presentation::TextAlignment::RIGHT,
+			CENTER = presentation::TextAlignment::CENTER
 		ASCENSION_END_SCOPED_ENUM
 
 		class ImageData {
