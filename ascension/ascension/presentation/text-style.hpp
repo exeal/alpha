@@ -5,23 +5,24 @@
  * @date 2003-2006 was LineLayout.h
  * @date 2006-2011 was presentation.hpp
  * @date 2011-05-04 separated from presentation.hpp
- * @date 2012
+ * @date 2012-07-16 reunioned with text-line-style.hpp
  */
 
 #ifndef ASCENSION_TEXT_STYLE_HPP
 #define ASCENSION_TEXT_STYLE_HPP
 
+#include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <ascension/graphics/color.hpp>	// graphics.Color
 #include <ascension/graphics/font.hpp>	// graphics.font.FontProperties, ...
 #include <ascension/graphics/paint.hpp>	// graphics.Paint
-#include <ascension/presentation/inheritable.hpp>
 #include <ascension/presentation/length.hpp>
-#include <ascension/presentation/text-line-style.hpp>
+#include <ascension/presentation/style-property.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <map>
 #include <memory>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/optional.hpp>
+#include <boost/variant.hpp>
 
 namespace ascension {
 	namespace presentation {
@@ -34,6 +35,8 @@ namespace ascension {
 #else
 		typedef Length Space;
 #endif
+
+		// from CSS Backgrounds and Borders Module Level 3 ////////////////////////////////////////
 
 		/**
 		 * @see "CSS Backgrounds and Borders Module Level 3"
@@ -74,6 +77,367 @@ namespace ascension {
 			FlowRelativeFourSides<Part> sides;
 		};
 
+		// from CSS Line Layout Module Level 3 ////////////////////////////////////////////////////
+
+		/// Enumerated values for @c TextHeight.
+		ASCENSION_BEGIN_SCOPED_ENUM(TextHeightEnums)
+			AUTO, FONT_SIZE, TEXT_SIZE, MAX_SIZE
+		ASCENSION_END_SCOPED_ENUM
+
+		/**
+		 * [Copied from CSS3] The Åetext-heightÅf property determine the block-progression dimension
+		 * of the text content area of an inline box (non-replaced elements).
+		 * @see CSS Line Layout Module Level 3, 3.3 Block-progression dimensions: the Åetext-heightÅf
+		 *      property (http://dev.w3.org/csswg/css3-linebox/#inline1)
+		 */
+		typedef boost::variant<TextHeightEnums, double> TextHeight;
+
+		/// Enumerated values for @c LineHeight.
+		ASCENSION_BEGIN_SCOPED_ENUM(LineHeightEnums)
+			NORMAL, NONE
+		ASCENSION_END_SCOPED_ENUM
+
+		/**
+		 * [Copied from CSS3] The Åeline-heightÅf property controls the amount of leading space which
+		 * is added before and after the block-progression dimension of an inline box (not
+		 * including replaced inline boxes, but including the root inline box) to determine the
+		 * extended block-progression dimension of the inline box.
+		 * @see CSS Line Layout Module Level 3, 3.4.1 Line height adjustment: the Åeline-heightÅf
+		 *      property (http://dev.w3.org/csswg/css3-linebox/#InlineBoxHeight)
+		 * @see XSL 1.1, 7.16.4 "line-height" (http://www.w3.org/TR/xsl/#line-height)
+		 */
+		typedef boost::variant<LineHeightEnums, double, Length> LineHeight;
+
+		/**
+		 * [Copied from CSS3] This property enumerates which aspects of the elements in a line box
+		 * contribute to the height height of that line box.
+		 * @see CSS Line Layout Module Level 3, 3.4.2 Line Stacking: the Åeline-box-containÅf
+		 *      property (http://dev.w3.org/csswg/css3-linebox/#LineStacking)
+		 * @see XSL 1.1, 7.16.6 "line-stacking-strategy"
+		 *      (http://www.w3.org/TR/xsl/#line-stacking-strategy)
+		 */
+		ASCENSION_BEGIN_SCOPED_ENUM(LineBoxContain)
+			BLOCK, INLINE, FONT, GLYPHS, REPLACED, INLINE_BOX, NONE
+		ASCENSION_END_SCOPED_ENUM;
+		/**
+		 * [Copied from CSS3] The Åedominant-baselineÅf property is used to determine or re-determine
+		 * a scaled-baseline-table.
+		 * @see CSS Line Layout Module Level 3, 4.4 Dominant baseline: the Åedominant-baselineÅf
+		 *      property (http://dev.w3.org/csswg/css3-linebox/#dominant-baseline-prop)
+		 * @see CSS3 module: line, 4.4. Dominant baseline: the 'dominant-baseline' property
+		 *      (http://www.w3.org/TR/css3-linebox/#dominant-baseline-prop)
+		 * @see SVG 1.1 (Second Edition), 10.9.2 Baseline alignment properties
+		 *      (http://www.w3.org/TR/SVG/text.html#DominantBaselineProperty)
+		 * @see XSL 1.1, 7.14.5 "dominant-basline" (http://www.w3.org/TR/xsl/#dominant-baseline)
+		 */
+		ASCENSION_BEGIN_SCOPED_ENUM(DominantBaseline)
+			AUTO,
+			USE_SCRIPT,
+			NO_CHANGE,
+			RESET_SIZE,
+			ALPHABETIC,
+			HANGING,
+			IDEOGRAPHIC,
+			MATHEMATICAL,
+			CENTRAL,
+			MIDDLE,
+			TEXT_AFTER_EDGE,
+			TEXT_DEFORE_EDGE,
+		ASCENSION_END_SCOPED_ENUM;
+
+		/**
+		 * [Copied from CSS3] This property specifies how an inline-level element is aligned with
+		 * respect to its parent. That is, to which of the parent's baselines the alignment point
+		 * of this element is aligned. Unlike the Åedominant-baselineÅf property the
+		 * Åealignment-baselineÅf property has no effect on its children dominant-baselines.
+		 * @see CSS Line Layout Module Level 3, 4.5 Aligning the alignment point of an element: the
+		 *      Åealignment-baselineÅf property
+		 *      (http://dev.w3.org/csswg/css3-linebox/#alignment-baseline-prop)
+		 * @see CSS3 module: line, 4.5. Aligning the alignment point of an element: the
+		 *      'alignment-baseline' property
+		 *      (http://www.w3.org/TR/css3-linebox/#alignment-baseline-prop)
+		 * @see SVG 1.1 (Second Edition), 10.9.2 Baseline alignment properties
+		 *      (http://www.w3.org/TR/SVG/text.html#AlignmentBaselineProperty)
+		 * @see XSL 1.1, 7.14.2 "alignment-baseline" (http://www.w3.org/TR/xsl/#alignment-baseline)
+		 */
+		ASCENSION_BEGIN_SCOPED_ENUM(AlignmentBaseline)
+			BASELINE,
+			USE_SCRIPT,
+			BEFORE_EDGE,
+			TEXT_BEFORE_EDGE,
+			AFTER_EDGE,
+			TEXT_AFTER_EDGE,
+			CENTRAL,
+			MIDDLE,
+			IDEOGRAPHIC,
+			ALPHABETIC,
+			HANGING,
+			MATHEMATICAL
+		ASCENSION_END_SCOPED_ENUM;
+
+		/// Enumerated values for @c AlignmentAdjust.
+		ASCENSION_BEGIN_SCOPED_ENUM(AlignmentAdjustEnums)
+			AUTO,
+			BASELINE,
+			BEFORE_EDGE,
+			TEXT_BEFORE_EDGE,
+			MIDDLE,
+			CENTRAL,
+			AFTER_EDGE,
+			TEXT_AFTER_EDGE,
+			IDEOGRAPHIC,
+			ALPHABETIC,
+			HANGING,
+			MATHEMATICAL
+		ASCENSION_END_SCOPED_ENUM;
+
+		/**
+		 * [Copied from CSS3] The Åealignment-adjustÅf property allows more precise alignment of
+		 * elements, such as graphics, that do not have a baseline-table or lack the desired
+		 * baseline in their baseline-table. With the Åealignment-adjustÅf property, the position of
+		 * the baseline identified by the Åealignment-baselineÅf can be explicitly determined. It
+		 * also determines precisely the alignment point for each glyph within a textual element.
+		 * The user agent should use heuristics to determine the position of a non existing
+		 * baseline for a given element.
+		 * @see CSS Line Layout Module Level 3, 4.6 Setting the alignment point: the
+		 *      Åealignment-adjustÅf property
+		 *      (http://dev.w3.org/csswg/css3-linebox/#alignment-adjust-prop)
+		 * @see CSS3 module: line, 4.6. Setting the alignment point: the 'alignment-adjust'
+		 *      property (http://www.w3.org/TR/css3-linebox/#alignment-adjust-prop)
+		 * @see XSL 1.1, 7.14.1 "alignment-adjust" (http://www.w3.org/TR/xsl/#alignment-adjust)
+		 */
+		typedef boost::variant<AlignmentAdjustEnums, Length> AlignmentAdjust;
+
+		/// Enumerated values for @c BaselineShift.
+		ASCENSION_BEGIN_SCOPED_ENUM(BaselineShiftEnums)
+			BASELINE,
+			SUB,
+			SUPER
+		ASCENSION_END_SCOPED_ENUM;
+
+		/**
+		 * [Copied from CSS3] The Åebaseline-shiftÅf property allows repositioning of the
+		 * dominant-baseline relative to the dominant-baseline. The shifted object might be a sub-
+		 * or superscript. Within the shifted element, the whole baseline table is offset; not just
+		 * a single baseline. For sub- and superscript, the amount of offset is determined from the
+		 * nominal font of the parent.
+		 * @see CSS Line Layout Module Level 3, 4.7 Repositioning the dominant baseline: the
+		 *      Åebaseline-shiftÅf property
+		 *      (http://dev.w3.org/csswg/css3-linebox/#baseline-shift-prop)
+		 * @see CSS3 module: line, 4.7. Repositioning the dominant baseline: the 'baseline-shift'
+		 *      property (http://www.w3.org/TR/css3-linebox/#baseline-shift-prop)
+		 * @see SVG 1.1 (Second Edition), 10.9.2 Baseline alignment properties
+		 *      (http://www.w3.org/TR/SVG/text.html#BaselineShiftProperty)
+		 * @see XSL 1.1, 7.14.3 "baseline-shift" (http://www.w3.org/TR/xsl/#baseline-shift)
+		 */
+		typedef boost::variant<BaselineShiftEnums, Length> BaselineShift;
+
+		/// Enumerated values for @c InlineBoxAlignment.
+		ASCENSION_BEGIN_SCOPED_ENUM(InlineBoxAlignmentEnums)
+			INITIAL, LAST
+		ASCENSION_END_SCOPED_ENUM;
+
+		/**
+		 * [Copied from CSS3] The Åeinline-box-alignÅf property determines which line of a multi-line
+		 * inline block aligns with the previous and next inline elements within a line.
+		 * @see CSS Line Layout Module Level 3, 4.9 Inline box alignment: the Åeinline-box-alignÅf
+		 *      property (http://dev.w3.org/csswg/css3-linebox/#inline-box-align-prop)
+		 */
+		typedef boost::variant<InlineBoxAlignmentEnums, Index> InlineBoxAlignment;
+
+		// from CSS Text Level 3 //////////////////////////////////////////////////////////////////
+
+		/**
+		 * [Copied from CSS3] This property transforms text for styling purposes.
+		 * @see CSS Text Level 3, 2.1. Transforming Text: the Åetext-transformÅf property
+		 *      (http://www.w3.org/TR/css3-text/#text-transform)
+		 * @see XSL 1.1, 7.17.6 "text-transform" (http://www.w3.org/TR/xsl/#text-transform)
+		 */
+		ASCENSION_BEGIN_SCOPED_ENUM(TextTransform)
+			NONE, CAPITALIZE, UPPERCASE, LOWERCASE, FULL_WIDTH, FULL_SIZE_KANA
+		ASCENSION_END_SCOPED_ENUM;
+
+//		enum TextSpaceCollapse;
+
+		/**
+		 * [Copied from CSS3] This property determines the measure of the tab character (U+0009)
+		 * when rendered. Integers represent the measure in space characters (U+0020).
+		 * @see CSS Text Level 3, 3.2. Tab Character Size: the Åetab-sizeÅf property
+		 *      (http://www.w3.org/TR/css3-text/#tab-size)
+		 */
+		typedef boost::variant<unsigned int, Length> TabSize;
+
+		/**
+		 * [Copied from CSS3] This property specifies the strictness of line-breaking rules applied
+		 * within an element: particularly how line-breaking interacts with punctuation.
+		 * @see CSS Text Level 3, 4.1. Line Breaking Strictness: the Åeline-breakÅf property
+		 *      (http://www.w3.org/TR/css3-text/#line-break)
+		 */
+		ASCENSION_BEGIN_SCOPED_ENUM(LineBreak)
+			AUTO,
+			LOOSE,
+			NORMAL,
+			STRICT
+		ASCENSION_END_SCOPED_ENUM;
+
+		/**
+		 * [Copied from CSS3] This property specifies line break opportunities within words.
+		 * @see CSS Text Level 3, 4.2. Word Breaking Rules: the 'word-break' property
+		 *      (http://www.w3.org/TR/css3-text/#word-break)
+		 */
+		ASCENSION_BEGIN_SCOPED_ENUM(WordBreak)
+			NORMAL,
+			KEEP_ALL,
+			BREAK_ALL
+		ASCENSION_END_SCOPED_ENUM;
+
+//		enum Hyphens;
+
+		/**
+		 * [Copied from CSS3] This property specifies the mode for text wrapping.
+		 * @see CSS Text Level 3, 6.1. Text Wrap Settings: 'text-wrap' property
+		 *      (http://www.w3.org/TR/css3-text/#text-wrap)
+		 */
+		ASCENSION_BEGIN_SCOPED_ENUM(TextWrap)
+			NORMAL,
+			NONE,
+			AVOID
+		ASCENSION_END_SCOPED_ENUM;
+
+		/**
+		 * [Copied from CSS3] This property specifies whether the UA may break within a word to
+		 * prevent overflow when an otherwise-unbreakable string is too long to fit within the line
+		 * box. It only has an effect when Åetext-wrapÅf is either ÅenormalÅf or ÅeavoidÅf. 
+		 * @see CSS Text Level 3 - 6.2. Emergency Wrapping: the 'overflow-wrap' property
+		 *      (http://www.w3.org/TR/css3-text/#overflow-wrap)
+		 */
+		ASCENSION_BEGIN_SCOPED_ENUM(OverflowWrap)
+			NORMAL,
+			BREAK_WORD/*,
+			HYPHENATE*/
+		ASCENSION_END_SCOPED_ENUM;
+
+		template<typename Measure>
+		struct TextWrappingBase {
+			TextWrap textWrap;
+			OverflowWrap overflowWrap;
+			Measure measure;
+			/// Default constructor.
+			TextWrappingBase() : textWrap(TextWrap::NORMAL), overflowWrap(OverflowWrap::NORMAL), measure(0) {}
+		};
+
+		template<typename Measure>
+		struct TextWrapping : public TextWrappingBase<Measure, false> {};
+		template<typename Measure>
+		struct Inheritable<TextWrapping<Measure>> : public TextWrappingBase<Measure, true> {};
+
+		/**
+		 * @c TextAnchor describes an alignment of text relative to the given point.
+		 * @see resolveTextAlignment, TextLineStyle#alignment, TextLineStyle#lastSublineAlignment,
+		 *      defaultTextAnchor
+		 * @see XSL 1.1, 7.16.9 "text-align"
+		 *      (http://www.w3.org/TR/2006/REC-xsl11-20061205/#text-align)
+		 * @see CSS Text Level 3, 7.1. Text Alignment: the 'text-align' property
+		 *      (http://www.w3.org/TR/2010/WD-css3-text-20101005/#text-align)
+		 */
+		ASCENSION_BEGIN_SCOPED_ENUM(TextAlignment)
+			START,
+			END,
+			LEFT,
+			RIGHT,
+			CENTER,
+			JUSTIFY,
+			MATCH_PARENT,
+			START_END
+		ASCENSION_END_SCOPED_ENUM;
+
+		/**
+		 * [Copied from SVG11] The Åetext-anchorÅf property is used to align (start-, middle- or
+		 * end-alignment) a string of text relative to a given point.
+		 * @see SVG 1.1, 10.9.1 Text alignment properties
+		 *      (http://www.w3.org/TR/SVG/text.html#TextAlignmentProperties)
+		 */
+		ASCENSION_BEGIN_SCOPED_ENUM(TextAnchor)
+			START = TextAlignment::START,
+			MIDDLE = TextAlignment::CENTER,
+			END = TextAlignment::END
+		ASCENSION_END_SCOPED_ENUM;
+
+		/**
+		 * [Copied from CSS3] This property describes how the last line of a block or a line right
+		 * before a forced line break is aligned. If a line is also the first line of the block or
+		 * the first line after a forced line break, then, unless Åetext-alignÅf assigns an explicit
+		 * first line alignment (via Åestart endÅf), Åetext-align-lastÅf takes precedence over
+		 * Åetext-alignÅf. If ÅeautoÅf is specified, content on the affected line is aligned per
+		 * Åetext-alignÅf unless Åetext-alignÅf is set to ÅejustifyÅf. In this case, content is justified
+		 * if Åetext-justifyÅf is ÅedistributeÅf and start-aligned otherwise. All other values have the
+		 * same meanings as in Åetext-alignÅf.
+		 * @see CSS Text Level 3, 7.2. Last Line Alignment: the Åetext-align-lastÅf property
+		 *      (http://www.w3.org/TR/css3-text/#text-align-last)
+		 * @see XSL 1.1, 7.16.10 "text-align-last" (http://www.w3.org/TR/xsl/#text-align-last)
+		 */
+		ASCENSION_BEGIN_SCOPED_ENUM(TextAlignmentLast)
+			START = TextAlignment::START,
+			CENTER = TextAlignment::CENTER,
+			END = TextAlignment::END,
+			LEFT = TextAlignment::LEFT,
+			RIGHT = TextAlignment::RIGHT,
+			JUSTIFY = TextAlignment::JUSTIFY,
+			AUTO = TextAlignment::START_END + 1
+		ASCENSION_END_SCOPED_ENUM;
+
+		class Presentation;
+		TextAnchor defaultTextAnchor(const Presentation& presentation);
+
+		/**
+		 * [Copied from CSS3] This property selects the justification method used when a line's
+		 * alignment is set to ÅejustifyÅf (see Åetext-alignÅf), primarily by controlling which
+		 * scripts' characters are adjusted together or separately. The property applies to block
+		 * containers, but the UA may (but is not required to) also support it on inline elements.
+		 * @see CSS Text Level 3, 7.3. Justification Method: the Åetext-justifyÅf property
+		 *      (http://www.w3.org/TR/css3-text/#text-justify)
+		 */
+		ASCENSION_BEGIN_SCOPED_ENUM(TextJustification)
+			/// Specifies no justification.
+			AUTO, NONE, INTER_WORD, INTER_IDEOGRAPH, INTER_CLUSTER, DISTRIBUTE, KASHIDA
+		ASCENSION_END_SCOPED_ENUM;
+
+		/**
+		 * @see CSS Text Level 3, 8. Spacing (http://www.w3.org/TR/css3-text/#spacing)
+		 * @see XSL 1.1, 4.3 Spaces and Conditionality (http://www.w3.org/TR/xsl/#spacecond)
+		 */
+		typedef Length SpacingLimit;
+
+		/**
+		 * [Copied from CSS3] This property specifies the indentation applied to lines of inline
+		 * content in a block.
+		 * @see CSS Text Level 3, 9.1. First Line Indentation: the Åetext-indentÅf property
+		 *      (http://www.w3.org/TR/css3-text/#text-indent)
+		 * @see XSL 1.1, 7.16.11 "text-indent" (http://www.w3.org/TR/xsl/#text-indent)
+		 */
+		struct TextIndent {
+			Length length;
+			bool hanging, eachLine;
+		};
+
+		/**
+		 * [Copied from CSS3] This property determines whether a punctuation mark, if one is
+		 * present, may be placed outside the line box (or in the indent) at the start or at the
+		 * end of a line of text.
+		 * @see CSS Text Level 3, 9.2. Hanging Punctuation: the Åehanging-punctuationÅf property
+		 *      (http://www.w3.org/TR/css3-text/#hanging-punctuation)
+		 */
+		ASCENSION_BEGIN_SCOPED_ENUM(HangingPunctuation)
+			NONE, FIRST, FORCE_END, ALLOW_END, LAST
+		ASCENSION_END_SCOPED_ENUM;
+
+		/**
+		 * @see CSS Text Level 3, 10.1. Line Decoration: Underline, Overline, and Strike-Through
+		 *      (http://www.w3.org/TR/css3-text/#line-decoration)
+		 * @see SVG 1.1 (Second Edition), 10.12 Text decoration
+		 *      (http://www.w3.org/TR/2011/REC-SVG11-20110816/text.html#TextDecorationProperties)
+		 * @see XSL 1.1, 7.17.4 "text-decoration" (http://www.w3.org/TR/xsl/#text-decoration)
+		 */
 		struct Decorations {
 			enum Style {NONE, SOLID, DOTTED, DAHSED};
 			struct Part {
@@ -84,19 +448,18 @@ namespace ascension {
 			} overline, strikethrough, baseline, underline;
 		};
 
-		enum TextTransform {
-			CAPITALIZE, UPPERCASE, LOWERCASE, NONE
-		};
+//		struct TextEmphasis;
 
 		/**
 		 * Visual style settings of a text run.
 		 * @see TextLineStyle, TextToplevelStyle, StyledTextRun, StyledTextRunIterator
 		 */
 		struct TextRunStyle :
-				public FastArenaObject<TextRunStyle>, public std::enable_shared_from_this<TextRunStyle> {
+				public FastArenaObject<TextRunStyle>,
+				public std::enable_shared_from_this<TextRunStyle> {
 #if 1
 			/// Foreground color. Default value is @c boost#none means that inherits the value.
-			boost::optional<graphics::Color> color;
+			StyleProperty<InitializedByDefaultConstructor<boost::optional<graphics::Color>>, Inherited> color;
 #else
 			/// Text paint style.
 			std::shared_ptr<graphics::Paint> foreground;
@@ -106,7 +469,9 @@ namespace ascension {
 			/// Border of the text run. See the description of @c Border.
 			Border border;
 			/// Font family name. An empty string means inherit the parent.
-			String fontFamily;	// TODO: replace with graphics.font.FontFamilies.
+			String fontFamily;	// TODO: replace with graphics.font.FontFamiliesSpecification.
+			/// Font size.
+			double fontSizeInPixels;
 			/// Font properties. See @c graphics#FontProperties.
 			graphics::font::FontProperties<Inheritable> fontProperties;
 			/// 'font-size-adjust' property. 0.0 means 'none', negative value means 'inherit'.
@@ -292,6 +657,28 @@ namespace ascension {
 			/// The default text line style. The default value is @c null.
 			std::shared_ptr<const TextLineStyle> defaultLineStyle;
 		};
+	}
+
+	namespace detail {
+		ASCENSION_BEGIN_SCOPED_ENUM(PhysicalTextAnchor) {
+			LEFT = presentation::TextAlignment::LEFT,
+			CENTER = presentation::TextAlignment::CENTER,
+			RIGHT = presentation::TextAlignment::RIGHT
+		ASCENSION_END_SCOPED_ENUM;
+
+		inline PhysicalTextAnchor computePhysicalTextAnchor(
+				presentation::TextAnchor anchor, presentation::ReadingDirection readingDirection) {
+			switch(anchor) {
+				case presentation::TEXT_ANCHOR_MIDDLE:
+					return MIDDLE;
+				case presentation::TEXT_ANCHOR_START:
+					return (readingDirection == presentation::LEFT_TO_RIGHT) ? LEFT : RIGHT;
+				case presentation::TEXT_ANCHOR_END:
+					return (readingDirection == presentation::LEFT_TO_RIGHT) ? RIGHT : LEFT;
+				default:
+					ASCENSION_ASSERT_NOT_REACHED();
+			}
+		}
 	}
 } // namespace ascension.presentation
 
