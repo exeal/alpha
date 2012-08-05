@@ -628,9 +628,6 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\affine-transform.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\presentation\inheritable.hpp">
-      <Filter>ascension\Header Files\presentation</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\future.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
@@ -682,9 +679,6 @@
     <ClInclude Include="..\..\ascension\ascension\win32\com\smart-pointer.hpp">
       <Filter>ascension\Header Files\win32\com</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\presentation\text-line-style.hpp">
-      <Filter>ascension\Header Files\presentation</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\future\scoped-enum-emulation.hpp">
       <Filter>ascension\Header Files\corelib\future</Filter>
     </ClInclude>
@@ -693,6 +687,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\future\static-assert.hpp">
       <Filter>ascension\Header Files\corelib\future</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\presentation\style-property.hpp">
+      <Filter>ascension\Header Files\presentation</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

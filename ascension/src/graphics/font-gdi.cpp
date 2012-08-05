@@ -127,7 +127,7 @@ boost::optional<GlyphCode> Font::ivsGlyph(CodePoint baseCharacter, CodePoint var
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
 namespace {
-	class FontMetrics : Font::Metrics {
+	class FontMetrics : public Font::Metrics {
 	public:
 		explicit FontMetrics(const win32::Handle<HFONT>& font) {
 			win32::Handle<HDC> dc(detail::screenDC());
@@ -166,8 +166,8 @@ namespace {
 	};
 }
 
-unique_ptr<Font::Metrics> Font::metrics() const {
-	return unique_ptr<Font::Metrics>(new FontMetrics(nativeObject_));
+void Font::buildMetrics() {
+	metrics_.reset(new FontMetrics(nativeObject_));
 }
 
 shared_ptr<const Font> FontCollection::cache(const FontDescription<>& description, double sizeAdjust) {

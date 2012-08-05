@@ -35,8 +35,91 @@ namespace ascension {
 #else
 		typedef Length Space;
 #endif
+		// from CSS Color Module Level 3 //////////////////////////////////////////////////////////
+
+		/**
+		 * Describes the foreground color of the text content. @c boost#none means 'currentColor'
+		 * CSS 3.
+		 * @see CSS Color Module Level 3, 3.1. Foreground color: the ÅecolorÅf property
+		 *      (http://www.w3.org/TR/css3-color/#foreground)
+		 * @see SVG 1.1 (Second Edition), 12.2 The ÅecolorÅf property
+		 *      (http://www.w3.org/TR/SVG11/color.html#ColorProperty)
+		 * @see XSL 1.1, 7.18.1 "color" (http://www.w3.org/TR/xsl/#color)
+		 */
+		typedef StyleProperty<
+			sp::Complex<
+				boost::optional<graphics::Color>
+			>, sp::Inherited
+		> ColorProperty;
+
+		inline graphics::Color computeColor(const ColorProperty* current,
+				const ColorProperty* parent, const ColorProperty& ancestor) {
+			if(current != nullptr && !current->inherits() && current->get() != boost::none)
+				return *current->get();
+			else if(parent != nullptr && !parent->inherits() && parent->get() != boost::none)
+				return *parent->get();
+			else if(!ancestor.inherits() && ancestor.get() != boost::none)
+				return *ancestor.get();
+			else
+				return graphics::SystemColors::get(graphics::SystemColors::WINDOW_TEXT);
+		}
 
 		// from CSS Backgrounds and Borders Module Level 3 ////////////////////////////////////////
+
+		/**
+		 * @c null also means 'transparent'.
+		 * @see CSS Backgrounds and Borders Module Level 3, 3.10. Backgrounds Shorthand: the
+		 *      ÅebackgroundÅf property (http://www.w3.org/TR/css3-background/#the-background)
+		 * @see SVG 1.1 (Second Edition), 11.3 Fill Properties
+		 *      (http://www.w3.org/TR/SVG11/painting.html#FillProperties)
+		 * @see XSL 1.1, 7.31.1 "background" (http://www.w3.org/TR/xsl/#background)
+		 */
+		struct Background {
+			/**
+			 * [Copied from CSS3] This property sets the background color of an element. The color
+			 * is drawn behind any background images.
+			 * @see CSS Backgrounds and Borders Module Level 3, 3.2. Base Color: the
+			 *      Åebackground-colorÅf property
+			 *      (http://www.w3.org/TR/css3-background/#the-background-color)
+			 * @see XSL 1.1, 7.8.2 "background-color" (http://www.w3.org/TR/xsl/#background-color)
+			 */
+			StyleProperty<
+				sp::Complex<
+					boost::optional<graphics::Color>
+				>, sp::NotInherited
+			> color;
+			/**
+			 * @see CSS Backgrounds and Borders Module Level 3, 3.1. Layering Multiple Background
+			 *      Images (http://www.w3.org/TR/css3-background/#layering)
+			 */
+			struct Layer {
+				struct Image {} image;
+				struct RepeatStyle {} repeat;
+				enum Attachment {} attachment;
+				struct Position {} position;
+				enum Clip {} clip;
+				enum Origin {} origin;
+				struct Size {} size;
+			};
+
+			Background() : color(boost::make_optional(graphics::Color::TRANSPARENT_BLACK)) {}
+		};
+
+		inline std::unique_ptr<graphics::Paint> computeBackground(
+				const Background* current, const Background* parent, const Background& ancestor) {
+			// TODO: This code is not complete.
+			if(current != nullptr && !current->color.inherits()
+					&& current->color.get() != boost::none && current->color.get()->isFullyTransparent())
+				return std::unique_ptr<graphics::Paint>(new graphics::SolidColor(*current->color.get()));
+			else if(parent != nullptr && !parent->color.inherits()
+					&& parent->color.get() != boost::none && parent->color.get()->isFullyTransparent())
+				return std::unique_ptr<graphics::Paint>(new graphics::SolidColor(*parent->color.get()));
+			else if(!ancestor.color.inherits()
+					&& ancestor.color.get() != boost::none && ancestor.color.get()->isFullyTransparent())
+				return std::unique_ptr<graphics::Paint>(new graphics::SolidColor(*ancestor.color.get()));
+			return std::unique_ptr<graphics::Paint>(
+				new graphics::SolidColor(graphics::SystemColors::get(graphics::SystemColors::WINDOW)));
+		}
 
 		/**
 		 * @see "CSS Backgrounds and Borders Module Level 3"
@@ -77,36 +160,37 @@ namespace ascension {
 			FlowRelativeFourSides<Part> sides;
 		};
 
+		// from CSS Fonts Module Level 3 //////////////////////////////////////////////////////////
+
+		/**
+		 * [Copied from CSS3] An <absolute-size> keyword refers to an entry in a table of font
+		 * sizes computed and kept by the user agent.
+		 * @see http://www.w3.org/TR/css3-fonts/#ltabsolute-sizegt
+		 */
+		ASCENSION_BEGIN_SCOPED_ENUM(AbsoluteFontSize)
+			XX_SMALL, X_SMALL, SMALL, MEDIUM, LARGE, X_LARGE, XX_LARGE
+		ASCENSION_END_SCOPED_ENUM;
+
+		/**
+		 * [Copied from CSS3] A <relative-size> keyword is interpreted relative to the table of
+		 * font sizes and the font size of the parent element.
+		 * @see http://www.w3.org/TR/css3-fonts/#ltrelative-sizegt
+		 */
+		ASCENSION_BEGIN_SCOPED_ENUM(RelativeFontSize)
+			LARGER, SMALLER
+		ASCENSION_END_SCOPED_ENUM;
+
 		// from CSS Line Layout Module Level 3 ////////////////////////////////////////////////////
 
-		/// Enumerated values for @c TextHeight.
+		/// Enumerated values for @c TextRunStyle#textHeight.
 		ASCENSION_BEGIN_SCOPED_ENUM(TextHeightEnums)
 			AUTO, FONT_SIZE, TEXT_SIZE, MAX_SIZE
-		ASCENSION_END_SCOPED_ENUM
+		ASCENSION_END_SCOPED_ENUM;
 
-		/**
-		 * [Copied from CSS3] The Åetext-heightÅf property determine the block-progression dimension
-		 * of the text content area of an inline box (non-replaced elements).
-		 * @see CSS Line Layout Module Level 3, 3.3 Block-progression dimensions: the Åetext-heightÅf
-		 *      property (http://dev.w3.org/csswg/css3-linebox/#inline1)
-		 */
-		typedef boost::variant<TextHeightEnums, double> TextHeight;
-
-		/// Enumerated values for @c LineHeight.
+		/// Enumerated values for @c TextRunStyle#lineHeight.
 		ASCENSION_BEGIN_SCOPED_ENUM(LineHeightEnums)
 			NORMAL, NONE
-		ASCENSION_END_SCOPED_ENUM
-
-		/**
-		 * [Copied from CSS3] The Åeline-heightÅf property controls the amount of leading space which
-		 * is added before and after the block-progression dimension of an inline box (not
-		 * including replaced inline boxes, but including the root inline box) to determine the
-		 * extended block-progression dimension of the inline box.
-		 * @see CSS Line Layout Module Level 3, 3.4.1 Line height adjustment: the Åeline-heightÅf
-		 *      property (http://dev.w3.org/csswg/css3-linebox/#InlineBoxHeight)
-		 * @see XSL 1.1, 7.16.4 "line-height" (http://www.w3.org/TR/xsl/#line-height)
-		 */
-		typedef boost::variant<LineHeightEnums, double, Length> LineHeight;
+		ASCENSION_END_SCOPED_ENUM;
 
 		/**
 		 * [Copied from CSS3] This property enumerates which aspects of the elements in a line box
@@ -117,6 +201,8 @@ namespace ascension {
 		 *      (http://www.w3.org/TR/xsl/#line-stacking-strategy)
 		 */
 		ASCENSION_BEGIN_SCOPED_ENUM(LineBoxContain)
+			// TODO: 'NONE' should be 0.
+			// TODO: Values other than 'NONE' can be combined by bitwise-OR.
 			BLOCK, INLINE, FONT, GLYPHS, REPLACED, INLINE_BOX, NONE
 		ASCENSION_END_SCOPED_ENUM;
 		/**
@@ -175,7 +261,7 @@ namespace ascension {
 			MATHEMATICAL
 		ASCENSION_END_SCOPED_ENUM;
 
-		/// Enumerated values for @c AlignmentAdjust.
+		/// Enumerated values for @c TextRunStyle#alignmentAdjust.
 		ASCENSION_BEGIN_SCOPED_ENUM(AlignmentAdjustEnums)
 			AUTO,
 			BASELINE,
@@ -191,46 +277,12 @@ namespace ascension {
 			MATHEMATICAL
 		ASCENSION_END_SCOPED_ENUM;
 
-		/**
-		 * [Copied from CSS3] The Åealignment-adjustÅf property allows more precise alignment of
-		 * elements, such as graphics, that do not have a baseline-table or lack the desired
-		 * baseline in their baseline-table. With the Åealignment-adjustÅf property, the position of
-		 * the baseline identified by the Åealignment-baselineÅf can be explicitly determined. It
-		 * also determines precisely the alignment point for each glyph within a textual element.
-		 * The user agent should use heuristics to determine the position of a non existing
-		 * baseline for a given element.
-		 * @see CSS Line Layout Module Level 3, 4.6 Setting the alignment point: the
-		 *      Åealignment-adjustÅf property
-		 *      (http://dev.w3.org/csswg/css3-linebox/#alignment-adjust-prop)
-		 * @see CSS3 module: line, 4.6. Setting the alignment point: the 'alignment-adjust'
-		 *      property (http://www.w3.org/TR/css3-linebox/#alignment-adjust-prop)
-		 * @see XSL 1.1, 7.14.1 "alignment-adjust" (http://www.w3.org/TR/xsl/#alignment-adjust)
-		 */
-		typedef boost::variant<AlignmentAdjustEnums, Length> AlignmentAdjust;
-
-		/// Enumerated values for @c BaselineShift.
+		/// Enumerated values for @c TextRunStyle#baselineShift.
 		ASCENSION_BEGIN_SCOPED_ENUM(BaselineShiftEnums)
 			BASELINE,
 			SUB,
 			SUPER
 		ASCENSION_END_SCOPED_ENUM;
-
-		/**
-		 * [Copied from CSS3] The Åebaseline-shiftÅf property allows repositioning of the
-		 * dominant-baseline relative to the dominant-baseline. The shifted object might be a sub-
-		 * or superscript. Within the shifted element, the whole baseline table is offset; not just
-		 * a single baseline. For sub- and superscript, the amount of offset is determined from the
-		 * nominal font of the parent.
-		 * @see CSS Line Layout Module Level 3, 4.7 Repositioning the dominant baseline: the
-		 *      Åebaseline-shiftÅf property
-		 *      (http://dev.w3.org/csswg/css3-linebox/#baseline-shift-prop)
-		 * @see CSS3 module: line, 4.7. Repositioning the dominant baseline: the 'baseline-shift'
-		 *      property (http://www.w3.org/TR/css3-linebox/#baseline-shift-prop)
-		 * @see SVG 1.1 (Second Edition), 10.9.2 Baseline alignment properties
-		 *      (http://www.w3.org/TR/SVG/text.html#BaselineShiftProperty)
-		 * @see XSL 1.1, 7.14.3 "baseline-shift" (http://www.w3.org/TR/xsl/#baseline-shift)
-		 */
-		typedef boost::variant<BaselineShiftEnums, Length> BaselineShift;
 
 		/// Enumerated values for @c InlineBoxAlignment.
 		ASCENSION_BEGIN_SCOPED_ENUM(InlineBoxAlignmentEnums)
@@ -240,8 +292,9 @@ namespace ascension {
 		/**
 		 * [Copied from CSS3] The Åeinline-box-alignÅf property determines which line of a multi-line
 		 * inline block aligns with the previous and next inline elements within a line.
-		 * @see CSS Line Layout Module Level 3, 4.9 Inline box alignment: the Åeinline-box-alignÅf
-		 *      property (http://dev.w3.org/csswg/css3-linebox/#inline-box-align-prop)
+		 * @see CSS Line Layout Module Level 3, 4.9 Inline box alignment: the
+		 *      Åeinline-box-alignÅf property
+		 *      (http://dev.w3.org/csswg/css3-linebox/#inline-box-align-prop)
 		 */
 		typedef boost::variant<InlineBoxAlignmentEnums, Index> InlineBoxAlignment;
 
@@ -258,14 +311,6 @@ namespace ascension {
 		ASCENSION_END_SCOPED_ENUM;
 
 //		enum TextSpaceCollapse;
-
-		/**
-		 * [Copied from CSS3] This property determines the measure of the tab character (U+0009)
-		 * when rendered. Integers represent the measure in space characters (U+0020).
-		 * @see CSS Text Level 3, 3.2. Tab Character Size: the Åetab-sizeÅf property
-		 *      (http://www.w3.org/TR/css3-text/#tab-size)
-		 */
-		typedef boost::variant<unsigned int, Length> TabSize;
 
 		/**
 		 * [Copied from CSS3] This property specifies the strictness of line-breaking rules applied
@@ -318,18 +363,13 @@ namespace ascension {
 		ASCENSION_END_SCOPED_ENUM;
 
 		template<typename Measure>
-		struct TextWrappingBase {
+		struct TextWrapping {
 			TextWrap textWrap;
 			OverflowWrap overflowWrap;
 			Measure measure;
 			/// Default constructor.
-			TextWrappingBase() : textWrap(TextWrap::NORMAL), overflowWrap(OverflowWrap::NORMAL), measure(0) {}
+			TextWrapping() : textWrap(TextWrap::NORMAL), overflowWrap(OverflowWrap::NORMAL), measure(0) {}
 		};
-
-		template<typename Measure>
-		struct TextWrapping : public TextWrappingBase<Measure, false> {};
-		template<typename Measure>
-		struct Inheritable<TextWrapping<Measure>> : public TextWrappingBase<Measure, true> {};
 
 		/**
 		 * @c TextAnchor describes an alignment of text relative to the given point.
@@ -428,6 +468,7 @@ namespace ascension {
 		 *      (http://www.w3.org/TR/css3-text/#hanging-punctuation)
 		 */
 		ASCENSION_BEGIN_SCOPED_ENUM(HangingPunctuation)
+			// TODO: Some values should be able to be combined by bitwise-OR.
 			NONE, FIRST, FORCE_END, ALLOW_END, LAST
 		ASCENSION_END_SCOPED_ENUM;
 
@@ -438,17 +479,23 @@ namespace ascension {
 		 *      (http://www.w3.org/TR/2011/REC-SVG11-20110816/text.html#TextDecorationProperties)
 		 * @see XSL 1.1, 7.17.4 "text-decoration" (http://www.w3.org/TR/xsl/#text-decoration)
 		 */
-		struct Decorations {
+		struct TextDecorations {
 			enum Style {NONE, SOLID, DOTTED, DAHSED};
 			struct Part {
-				boost::optional<graphics::Color> color;	// if is Color(), same as the foreground
-				Inheritable<Style> style;	///< Default value is @c NONE.
-				/// Default constructor.
-				Part() : style(NONE) {}
+				StyleProperty<
+					sp::Complex<boost::optional<graphics::Color>>,
+					sp::NotInherited
+				> color;	// if is Color(), same as the foreground
+				StyleProperty<
+					sp::Enumerated<Style, NONE>,
+					sp::NotInherited
+				> style;	///< Default value is @c NONE.
 			} overline, strikethrough, baseline, underline;
 		};
 
-//		struct TextEmphasis;
+		struct TextEmphasis {};
+
+		struct TextShadow {};
 
 		/**
 		 * Visual style settings of a text run.
@@ -458,44 +505,208 @@ namespace ascension {
 				public FastArenaObject<TextRunStyle>,
 				public std::enable_shared_from_this<TextRunStyle> {
 #if 1
-			/// Foreground color. Default value is @c boost#none means that inherits the value.
-			StyleProperty<InitializedByDefaultConstructor<boost::optional<graphics::Color>>, Inherited> color;
+			/// Foreground color of the text content. See @c ColorProperty.
+			ColorProperty color;
 #else
 			/// Text paint style.
 			std::shared_ptr<graphics::Paint> foreground;
 #endif
-			/// Background color. This is not inheritable and @c null means transparent.
-			std::shared_ptr<graphics::Paint> background;
+			/// The background properties. See @c Background.
+			Background background;
 			/// Border of the text run. See the description of @c Border.
 			Border border;
-			/// Font family name. An empty string means inherit the parent.
-			String fontFamily;	// TODO: replace with graphics.font.FontFamiliesSpecification.
-			/// Font size.
-			double fontSizeInPixels;
-			/// Font properties. See @c graphics#FontProperties.
-			graphics::font::FontProperties<Inheritable> fontProperties;
-			/// 'font-size-adjust' property. 0.0 means 'none', negative value means 'inherit'.
-			double fontSizeAdjust;
-			/// The dominant baseline of the line. Default value is @c DOMINANT_BASELINE_AUTO.
-			Inheritable<DominantBaseline> dominantBaseline;
+			/**
+			 * @see CSS Fonts Module Level 3, 3.1 Font family: the font-family property
+			 *      (http://www.w3.org/TR/css3-fonts/#font-family-prop)
+			 * @see SVG 1.1 (Second Edition), 10.10 Font selection properties
+			 *      (http://www.w3.org/TR/SVG11/text.html#FontFamilyProperty)
+			 * @see XSL 1.1, 7.9.2 "font-family" (http://www.w3.org/TR/xsl/#font-family)
+			 */
+			StyleProperty<
+				sp::Complex<
+					graphics::font::FontFamiliesSpecification
+				>, sp::Inherited
+			> fontFamily;
+			/// 'font-weight' property. See @c FontWeight.
+			StyleProperty<
+				sp::Enumerated<graphics::font::FontWeight, graphics::font::FontWeight::NORMAL>,
+				sp::Inherited
+			> fontWeight;
+			/// 'font-stretch' property. See @c FontStretch.
+			StyleProperty<
+				sp::Enumerated<graphics::font::FontStretch, graphics::font::FontStretch::NORMAL>,
+				sp::Inherited
+			> fontStretch;
+			/// 'font-style' property. See @c FontStyle.
+			StyleProperty<
+				sp::Enumerated<graphics::font::FontStyle, graphics::font::FontStyle::NORMAL>,
+				sp::Inherited
+			> fontStyle;
+			/**
+			 * [Copied from CSS3] This property indicates the desired height of glyphs from the
+			 * font. For scalable fonts, the font-size is a scale factor applied to the EM unit of
+			 * the font.
+			 * @see CSS Fonts Module Level 3, 3.5 Font size: the font-size property
+			 *      (http://www.w3.org/TR/css3-fonts/#font-size-prop)
+			 * @see SVG 1.1 (Second Edition), 10.10 Font selection properties
+			 *      (http://www.w3.org/TR/SVG11/text.html#FontFamilyProperty)
+			 * @see XSL 1.1, 7.9.4 "font-size" (http://www.w3.org/TR/xsl/#font-size)
+			 */
+			StyleProperty<
+				sp::Multiple<
+					boost::variant<AbsoluteFontSize, RelativeFontSize, Length>,
+					AbsoluteFontSize, AbsoluteFontSize::MEDIUM
+				>, sp::Inherited
+			> fontSize;
+			/// 'font-size-adjust' property. @c boost#none means 'none'.
+			StyleProperty<
+				sp::Complex<
+					boost::optional<double>
+				>, sp::Inherited
+			> fontSizeAdjust;
+//			StyleProperty<
+//				sp::Complex<
+//					std::map<graphics::font::TrueTypeFontTag, uint32_t>
+//				>, sp::Inherited
+//			> fontFeatureSettings;
+//			StyleProperty<
+//				sp::Complex<
+//					boost::optional<String>
+//				>, sp::Inherited
+//			> fontLanguageOverride;
+			/**
+			 * [Copied from CSS3] The Åetext-heightÅf property determine the block-progression
+			 * dimension of the text content area of an inline box (non-replaced elements).
+			 * @see CSS Line Layout Module Level 3, 3.3 Block-progression dimensions: the
+			 *      Åetext-heightÅf property (http://dev.w3.org/csswg/css3-linebox/#inline1)
+			 */
+			StyleProperty<
+				sp::Multiple<
+					boost::variant<TextHeightEnums, double>,
+					TextHeightEnums, TextHeightEnums::AUTO
+				>, sp::Inherited
+			> textHeight;
+			/**
+			 * [Copied from CSS3] The Åeline-heightÅf property controls the amount of leading space
+			 * which is added before and after the block-progression dimension of an inline box
+			 * (not including replaced inline boxes, but including the root inline box) to
+			 * determine the extended block-progression dimension of the inline box.
+			 * @see CSS Line Layout Module Level 3, 3.4.1 Line height adjustment: the Åeline-heightÅf
+			 *      property (http://dev.w3.org/csswg/css3-linebox/#InlineBoxHeight)
+			 * @see XSL 1.1, 7.16.4 "line-height" (http://www.w3.org/TR/xsl/#line-height)
+			 */
+			StyleProperty<
+				sp::Multiple<
+					boost::variant<LineHeightEnums, double, Length>,
+					LineHeightEnums, LineHeightEnums::NORMAL
+				>, sp::Inherited
+			> lineHeight;
+			/// The dominant baseline of the line. See @c DominantBaseline.
+			StyleProperty<
+				sp::Enumerated<DominantBaseline, DominantBaseline::AUTO>,
+				sp::NotInherited
+			> dominantBaseline;
 			/// The alignment baseline. Default value is @c ALIGNMENT_BASELINE_AUTO.
-			AlignmentBaseline alignmentBaseline;
-			std::locale locale;
-			/// Typography features applied to the text. See the description of @c TypographyProperties.
-			std::map<graphics::font::TrueTypeFontTag, uint32_t> typographyProperties;
-			Decorations decorations;
-			/// Letter spacing in DIP. Default is 0.
-			Length letterSpacing;
-			/// Word spacing in DIP. Default is 0.
-			Length wordSpacing;
-//			Inheritable<TextTransform> textTransform;
+			StyleProperty<
+				sp::Enumerated<AlignmentBaseline, AlignmentBaseline::BASELINE>,
+				sp::NotInherited
+			> alignmentBaseline;
+			/**
+			 * [Copied from CSS3] The Åealignment-adjustÅf property allows more precise alignment of
+			 * elements, such as graphics, that do not have a baseline-table or lack the desired
+			 * baseline in their baseline-table. With the Åealignment-adjustÅf property, the position
+			 * of the baseline identified by the Åealignment-baselineÅf can be explicitly determined.
+			 * It also determines precisely the alignment point for each glyph within a textual
+			 * element. The user agent should use heuristics to determine the position of a non
+			 * existing baseline for a given element.
+			 * @see CSS Line Layout Module Level 3, 4.6 Setting the alignment point: the
+			 *      Åealignment-adjustÅf property
+			 *      (http://dev.w3.org/csswg/css3-linebox/#alignment-adjust-prop)
+			 * @see CSS3 module: line, 4.6. Setting the alignment point: the 'alignment-adjust'
+			 *      property (http://www.w3.org/TR/css3-linebox/#alignment-adjust-prop)
+			 * @see XSL 1.1, 7.14.1 "alignment-adjust" (http://www.w3.org/TR/xsl/#alignment-adjust)
+			 */
+			StyleProperty<
+				sp::Multiple<
+					boost::variant<AlignmentAdjustEnums, Length>,
+					AlignmentAdjustEnums, AlignmentAdjustEnums::AUTO
+				>, sp::NotInherited
+			> alignmentAdjust;
+			/**
+			 * [Copied from CSS3] The Åebaseline-shiftÅf property allows repositioning of the
+			 * dominant-baseline relative to the dominant-baseline. The shifted object might be a
+			 * sub- or superscript. Within the shifted element, the whole baseline table is offset;
+			 * not just a single baseline. For sub- and superscript, the amount of offset is
+			 * determined from the nominal font of the parent.
+			 * @see CSS Line Layout Module Level 3, 4.7 Repositioning the dominant baseline: the
+			 *      Åebaseline-shiftÅf property
+			 *      (http://dev.w3.org/csswg/css3-linebox/#baseline-shift-prop)
+			 * @see CSS3 module: line, 4.7. Repositioning the dominant baseline: the
+			 *     'baseline-shift' property
+			 *      (http://www.w3.org/TR/css3-linebox/#baseline-shift-prop)
+			 * @see SVG 1.1 (Second Edition), 10.9.2 Baseline alignment properties
+			 *      (http://www.w3.org/TR/SVG/text.html#BaselineShiftProperty)
+			 * @see XSL 1.1, 7.14.3 "baseline-shift" (http://www.w3.org/TR/xsl/#baseline-shift)
+			 */
+			StyleProperty<
+				sp::Multiple<
+					boost::variant<BaselineShiftEnums, Length>,
+					BaselineShiftEnums, BaselineShiftEnums::BASELINE
+				>, sp::NotInherited
+			> baselineShift;
+			StyleProperty<
+				sp::Enumerated<TextTransform, TextTransform::NONE>,
+				sp::Inherited
+			> textTransform;
+//			???? hyphens;
+			/**
+			 * [Copied from CSS3] This property specifies the minimum, maximum, and optimal spacing
+			 * between ÅgwordsÅh. Additional spacing is applied to each word-separator character left
+			 * in the text after the white space processing rules have been applied, and should be
+			 * applied half on each side of the character.
+			 * @see CSS Text Level 3, 8.1. Word Spacing: the Åeword-spacingÅf property
+			 *      (http://www.w3.org/TR/css3-text/#word-spacing)
+			 * @see SVG 1.1 (Second Edition), 10.11 Spacing properties
+			 *      (http://www.w3.org/TR/SVG11/text.html#WordSpacingProperty)
+			 * @see XSL 1.1, 7.17.8 "word-spacing" (http://www.w3.org/TR/xsl/#word-spacing)
+			 */
+			StyleProperty<
+				sp::Complex<SpacingLimit>,
+				sp::Inherited
+			> wordSpacing;
+			/**
+			 * [Copied from CSS3] This property specifies the minimum, maximum, and optimal spacing
+			 * between characters. Letter-spacing is applied in addition to any word-spacing.
+			 * ÅenormalÅf optimum letter-spacing is typically zero. Letter-spacing must not be
+			 * applied at the beginning or at the end of a line. At element boundaries, the total
+			 * letter spacing between two characters is given by and rendered within the innermost
+			 * element that contains the boundary. For the purpose of letter-spacing, each
+			 * consecutive run of atomic inlines (such as image and/or inline blocks) is treated as
+			 * a single character.
+			 * @see CSS Text Level 3, 8.2. Word Spacing: the Åeletter-spacingÅf property
+			 *      (http://www.w3.org/TR/css3-text/#letter-spacing)
+			 * @see SVG 1.1 (Second Edition), 10.11 Spacing properties
+			 *      (http://www.w3.org/TR/SVG11/text.html#LetterSpacingProperty)
+			 * @see XSL 1.1, 7.17.2 "letter-spacing" (http://www.w3.org/TR/xsl/#letter-spacing)
+			 */
+			StyleProperty<
+				sp::Complex<SpacingLimit>,
+				sp::Inherited
+			> letterSpacing;
+			/// Text decoration properties. See @c TextDecorations.
+			TextDecorations textDecorations;
+			/// Text emphasis properties. See @c TextEmphasis.
+			TextEmphasis textEmphasis;
+			/// Text shadow properties. See @c TextShadow.
+			TextShadow textShadow;
 //			RubyProperties rubyProperties;
 //			Effects effects;
 			/// Set @c false to disable shaping. Default is @c true.
-			bool shapingEnabled;
+			StyleProperty<
+				sp::Enumerated<bool, true>,
+				sp::NotInherited
+			> shapingEnabled;
 
-			/// Default constructor initializes the members by their default values.
-			TextRunStyle() : letterSpacing(0), wordSpacing(0), shapingEnabled(true) {}
 			TextRunStyle& resolveInheritance(const TextRunStyle& base, bool baseIsRoot);
 		};
 
@@ -603,64 +814,169 @@ namespace ascension {
 		 * Specifies the style of a text line. This object also gives the default text run style.
 		 * @see TextRunStyle, TextToplevelStyle, TextLineStyleDirector
 		 */
-		template<bool inheritable>
-		struct TextLineStyleBase {
+		struct TextLineStyle {
 			/// The default text run style. The default value is @c null.
 			std::shared_ptr<const TextRunStyle> defaultRunStyle;
-			/// The line breaking strictness. The default value is @c LINE_BREAK_AUTO.
-			typename InheritableIf<inheritable, LineBreak>::Type lineBreak;
-			/// The word breaking rules. The default value is @c WORD_BREAK_NORMAL.
-			typename InheritableIf<inheritable, WordBreak>::Type wordBreak;
+			/// 'line-box-contain' property. See @c LineBoxContain.
+			StyleProperty<
+				sp::Enumerated<LineBoxContain, LineBoxContain::BLOCK | LineBoxContain::INLINE | LineBoxContain::REPLACED>,
+				sp::Inherited
+			> lineBoxContain;
+			/// Åeinline-box-alignÅf property. See @c InlineBoxAlignment.
+			StyleProperty<
+				sp::Multiple<
+					InlineBoxAlignment,
+					InlineBoxAlignmentEnums, InlineBoxAlignmentEnums::LAST
+				>, sp::NotInherited
+			> inlineBoxAlignment;
+//			StyleProperty<
+//				sp::Enumerated<TextSpaceCollapse, TextSpaceCollapse::COLLAPSE>,
+//				sp::Inherited
+//			> textSpaceCollapse;
 			/**
-			 * The alignment point in inline-progression-dimension. The default value is
-			 * @c TEXT_ANCHOR_START.
+			 * [Copied from CSS3] This property determines the measure of the tab character
+			 * (U+0009) when rendered. Integers represent the measure in space characters (U+0020).
+			 * @see CSS Text Level 3, 3.2. Tab Character Size: the Åetab-sizeÅf property
+			 *      (http://www.w3.org/TR/css3-text/#tab-size)
 			 */
-			typename InheritableIf<inheritable, TextAnchor>::Type anchor;
-			/**
-			 * The alignment point in block-progression-dimension, which is the dominant baseline
-			 * of the line. The default value is @c DOMINANT_BASELINE_AUTO.
-			 */
-			typename InheritableIf<inheritable, DominantBaseline>::Type dominantBaseline;
-			/// The default value is @c CONSIDER_SHIFTS.
-			typename InheritableIf<inheritable, LineHeightShiftAdjustment>::Type lineHeightShiftAdjustment;
-			/// The line stacking strategy. The default value is @c MAX_HEIGHT.
-			typename InheritableIf<inheritable, LineStackingStrategy>::Type lineStackingStrategy;
-			/// The text justification method. The default value is @c AUTO_JUSTIFICATION.
-			typename InheritableIf<inheritable, TextJustification>::Type textJustification;
+			StyleProperty<
+				sp::Multiple<
+					boost::variant<unsigned int, Length>,
+					unsigned int, 8
+				>, sp::Inherited
+			> tabSize;
+			/// The line breaking strictness. See @c LineBreak.
+			StyleProperty<
+				sp::Enumerated<LineBreak, LineBreak::AUTO>,
+				sp::Inherited
+			> lineBreak;
+			/// The word breaking rules. See @c WordBreak.
+			StyleProperty<
+				sp::Enumerated<WordBreak, WordBreak::NORMAL>,
+				sp::Inherited
+			> wordBreak;
+			/// 'text-wrap' property. See @c TextWrap.
+			StyleProperty<
+				sp::Enumerated<TextWrap, TextWrap::NORMAL>,
+				sp::Inherited
+			> textWrap;
+			/// 'overflow-wrap' property. See @c OverflowWrap.
+			StyleProperty<
+				sp::Enumerated<OverflowWrap, OverflowWrap::NORMAL>,
+				sp::Inherited
+			> overflowWrap;
+			/// 'text-align' property. See @c TextAlignment.
+			StyleProperty<
+				sp::Enumerated<TextAlignment, TextAlignment::START>,
+				sp::Inherited
+			> textAlignment;
+			/// 'text-align-last' property. See @c TextAlignmentLast.
+			StyleProperty<
+				sp::Enumerated<TextAlignmentLast, TextAlignmentLast::AUTO>,
+				sp::Inherited
+			> textAlignmentLast;
+			/// 'text-justify' property. See @c TextJustification.
+			StyleProperty<
+				sp::Enumerated<TextJustification, TextJustification::AUTO>,
+				sp::Inherited
+			> textJustification;
+			/// 'text-indent' property. See @c TextIndent.
+			StyleProperty<
+				sp::Complex<TextIndent>,
+				sp::Inherited
+			> textIndent;
+			/// 'hanging-punctuation' property. See @c HangingPunctuation.
+			StyleProperty<
+				sp::Enumerated<HangingPunctuation, HangingPunctuation::NONE>,
+				sp::Inherited
+			> hangingPunctuation;
+			/// 'dominant-baseline' property. See @c DominantBaseline.
+			StyleProperty<
+				sp::Enumerated<DominantBaseline, DominantBaseline::AUTO>,
+				sp::NotInherited
+			> dominantBaseline;
 			/// The number substitution process. The default value is @c NumberSubstitution().
-			NumberSubstitution numberSubstitution;
-
-			/// Default constructor initializes the all members with the default values.
-			TextLineStyleBase() /*throw()*/ :
-				lineBreak(LINE_BREAK_AUTO), wordBreak(WORD_BREAK_NORMAL),
-				anchor(TEXT_ANCHOR_START), dominantBaseline(DOMINANT_BASELINE_AUTO),
-				lineHeightShiftAdjustment(CONSIDER_SHIFTS), lineStackingStrategy(MAX_HEIGHT),
-				textJustification(AUTO_JUSTIFICATION) {}
+			StyleProperty<
+				sp::Complex<NumberSubstitution>,
+				sp::Inherited
+			> numberSubstitution;
 		};
 
-		struct TextLineStyle : public TextLineStyleBase<false>,
-			public std::enable_shared_from_this<TextLineStyle> {};
-		template<> struct Inheritable<TextLineStyle> : public TextLineStyleBase<true>,
-			public std::enable_shared_from_this<Inheritable<TextLineStyle>> {};
+		std::shared_ptr<const TextRunStyle> defaultTextRunStyle(
+			const TextLineStyle& textLineStyle) /*noexcept*/;
 
 		/**
+		 * 
+		 * The writing modes specified by this style may be overridden by
+		 * @c graphics#font#TextRenderer#writingMode.
 		 * @see TextRunStyle, TextLineStyle, Presentation#globalTextStyle,
 		 *      Presentation#setGlobalTextStyle
 		 */
 		struct TextToplevelStyle : public std::enable_shared_from_this<TextToplevelStyle> {
-			/**
-			 * The writing mode specified by the presentation. May be overridden by
-			 * @c graphics#font#TextRenderer class.
-			 * @see graphics#font#TextRenderer#writingMode
-			 */
-			Inheritable<WritingMode> writingMode;
+			/// 'direction' property. See @c ReadingDirection.
+			StyleProperty<
+				sp::Enumerated<ReadingDirection, LEFT_TO_RIGHT>,
+				sp::Inherited
+			> direction;
+//			StyleProperty<
+//				sp::Enumerated<UnicodeBidi, UnicodeBidi::NORMAL>,
+//				sp::NotInherited
+//			> unicodeBidi;
+			/// 'writing-mode' property. See @c BlockFlowDirection.
+			StyleProperty<
+				sp::Enumerated<BlockFlowDirection, HORIZONTAL_TB>,
+				sp::Inherited
+			> writingMode;
+			/// 'text-orientation' property. See @c TextOrientation.
+			StyleProperty<
+				sp::Enumerated<TextOrientation, MIXED_RIGHT>,
+				sp::Inherited
+			> textOrientation;
 			/// The default text line style. The default value is @c null.
 			std::shared_ptr<const TextLineStyle> defaultLineStyle;
 		};
+
+		/**
+		 * @tparam Parent @c std#shared_ptr&lt;const TextLineStyle&gt; or
+		 *                @c RulerConfiguration#LineNumbers*
+		 */
+		template<typename Parent>
+		inline graphics::Color computeColor(const ColorProperty* current,
+				const Parent parent, const TextToplevelStyle& ancestor) {
+			const ColorProperty* parentColor = nullptr;
+			if(const TextLineStyle* p = parent.get()) {
+				if(p->defaultRunStyle)
+					parentColor = &p->defaultRunStyle->color;
+			}
+			const ColorProperty* ancestorColor = nullptr;
+			if(ancestor.defaultLineStyle && ancestor.defaultLineStyle->defaultRunStyle)
+				ancestorColor = &ancestor.defaultLineStyle->defaultRunStyle->color;
+			return computeColor(current, parentColor,
+				(ancestorColor != nullptr) ? *ancestorColor : ColorProperty());
+		}
+
+		inline std::unique_ptr<graphics::Paint> computeBackground(const Background* current,
+				std::shared_ptr<const TextLineStyle> parent, const TextToplevelStyle& ancestor) {
+			const Background* parentBackground = nullptr;
+			if(const TextLineStyle* p = parent.get()) {
+				if(p->defaultRunStyle)
+					parentBackground = &p->defaultRunStyle->background;
+			}
+			const Background* ancestorBackground = nullptr;
+			if(ancestor.defaultLineStyle && ancestor.defaultLineStyle->defaultRunStyle)
+				ancestorBackground = &ancestor.defaultLineStyle->defaultRunStyle->background;
+			Background inheritedBackground;
+			inheritedBackground.color.inherit();
+			return computeBackground(current, parentBackground,
+				(ancestorBackground != nullptr) ? *ancestorBackground : inheritedBackground);
+		}
+
+		std::shared_ptr<const TextLineStyle> defaultTextLineStyle(
+			const TextToplevelStyle& textToplevelStyle) /*noexcept*/;
 	}
 
 	namespace detail {
-		ASCENSION_BEGIN_SCOPED_ENUM(PhysicalTextAnchor) {
+		ASCENSION_BEGIN_SCOPED_ENUM(PhysicalTextAnchor)
 			LEFT = presentation::TextAlignment::LEFT,
 			CENTER = presentation::TextAlignment::CENTER,
 			RIGHT = presentation::TextAlignment::RIGHT
@@ -669,12 +985,12 @@ namespace ascension {
 		inline PhysicalTextAnchor computePhysicalTextAnchor(
 				presentation::TextAnchor anchor, presentation::ReadingDirection readingDirection) {
 			switch(anchor) {
-				case presentation::TEXT_ANCHOR_MIDDLE:
-					return MIDDLE;
-				case presentation::TEXT_ANCHOR_START:
-					return (readingDirection == presentation::LEFT_TO_RIGHT) ? LEFT : RIGHT;
-				case presentation::TEXT_ANCHOR_END:
-					return (readingDirection == presentation::LEFT_TO_RIGHT) ? RIGHT : LEFT;
+				case presentation::TextAnchor::MIDDLE:
+					return PhysicalTextAnchor::CENTER;
+				case presentation::TextAnchor::START:
+					return (readingDirection == presentation::LEFT_TO_RIGHT) ? PhysicalTextAnchor::LEFT : PhysicalTextAnchor::RIGHT;
+				case presentation::TextAnchor::END:
+					return (readingDirection == presentation::LEFT_TO_RIGHT) ? PhysicalTextAnchor::RIGHT : PhysicalTextAnchor::LEFT;
 				default:
 					ASCENSION_ASSERT_NOT_REACHED();
 			}

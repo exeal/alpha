@@ -212,10 +212,10 @@ namespace ascension {
 			const kernel::Document& document() const;
 			presentation::Presentation& presentation() /*throw()*/;
 			const presentation::Presentation& presentation() const /*throw()*/;
-			const RulerConfiguration& rulerConfiguration() const /*throw()*/;
+			const RulerStyles& declaredRulerStyles() const /*throw()*/;
 			unsigned long scrollRate(bool horizontal) const /*throw()*/;
 			void setConfiguration(const Configuration* general,
-				const RulerConfiguration* ruler, bool synchronizeUI);
+				std::shared_ptr<const RulerStyles> ruler, bool synchronizeUI);
 			Renderer& textRenderer() /*throw()*/;
 			const Renderer& textRenderer() const /*throw()*/;
 			// caret
@@ -571,6 +571,14 @@ inline const TextViewer::Configuration& TextViewer::configuration() const /*thro
 /// Returns the content assistant or @c null if not registered.
 inline contentassist::ContentAssistant* TextViewer::contentAssistant() const /*throw()*/ {return contentAssistant_.get();}
 
+/**
+ * Returns the ruler's declared styles.
+ * @see #configuration, #setConfiguration
+ */
+inline const RulerStyles& TextViewer::declaredRulerStyles() const /*noexcept*/ {
+	return rulerPainter_->declaredStyles();
+}
+
 /// Returns the document.
 inline kernel::Document& TextViewer::document() {return presentation_.document();}
 
@@ -626,12 +634,6 @@ inline TextViewer::Renderer& TextViewer::textRenderer() /*throw()*/ {return *ren
 
 /// Returns the text renderer.
 inline const TextViewer::Renderer& TextViewer::textRenderer() const /*throw()*/ {return *renderer_;}
-
-/**
- * Returns the ruler's configuration.
- * @see #configuration, #setConfiguration
- */
-inline const RulerConfiguration& TextViewer::rulerConfiguration() const /*throw()*/ {return rulerPainter_->configuration();}
 
 }} // namespace ascension.viewers
 
