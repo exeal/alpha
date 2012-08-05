@@ -633,7 +633,7 @@ void TextLayout::TextRun::Glyphs::vanish(const Font& font, size_t at) {
 	WORD blankGlyph;
 	HRESULT hr = ::ScriptGetCMap(dc.get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
 	if(hr == E_PENDING) {
-		oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font.nativeObject().get()));
+		oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font.asNativeObject().get()));
 		hr = ::ScriptGetCMap(dc.get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
 	}
 	if(hr == S_OK) {
@@ -699,10 +699,10 @@ TextLayout::TextRun::~TextRun() /*throw()*/ {
 void TextLayout::TextRun::blackBoxBounds(const Range<Index>& range, NativeRectangle& bounds) const {
 	const int left = x(max(range.beginning(), beginning()), false);
 	const int right = x(min(range.end(), end()) - 1, true);
-	const Font::Metrics& fontMetrics = glyphs_->font->metrics();
+	const shared_ptr<const Font::Metrics> fontMetrics(glyphs_->font->metrics());
 	bounds = geometry::normalize(geometry::make<NativeRectangle>(
-		geometry::make<NativePoint>(left, -fontMetrics.ascent()),
-		geometry::make<NativeSize>(right - left, fontMetrics.cellHeight())));
+		geometry::make<NativePoint>(left, -fontMetrics->ascent()),
+		geometry::make<NativeSize>(right - left, fontMetrics->cellHeight())));
 }
 
 unique_ptr<TextLayout::TextRun> TextLayout::TextRun::breakAt(Index at, const String& layoutString) {
@@ -774,7 +774,7 @@ void TextLayout::TextRun::drawGlyphs(PaintContext& context, const NativePoint& p
 //			::SetRect(&temp, dirtyRect->left(), dirtyRect->top(), dirtyRect->right(), dirtyRect->bottom());
 		const HRESULT hr = ::ScriptTextOut(context.asNativeObject().get(), &glyphs_->fontCache,
 			geometry::x(p) + x((analysis_.fRTL == 0) ? truncatedRange.beginning() : (truncatedRange.end() - 1), analysis_.fRTL != 0),
-			geometry::y(p) - glyphs_->font->metrics().ascent(), 0, &context.boundsToPaint(), &analysis_, nullptr, 0,
+			geometry::y(p) - glyphs_->font->metrics()->ascent(), 0, &context.boundsToPaint(), &analysis_, nullptr, 0,
 			glyphs() + glyphRange.beginning(), length(glyphRange), advances() + glyphRange.beginning(),
 			(justifiedAdvances() != nullptr) ? justifiedAdvances() + glyphRange.beginning() : nullptr,
 			glyphOffsets() + glyphRange.beginning());
@@ -925,8 +925,8 @@ inline HRESULT TextLayout::TextRun::logicalWidths(int widths[]) const {
 
 namespace {
 	void resolveFontSpecifications(const FontCollection& fontCollection,
-			shared_ptr<const TextRunStyle> requestedStyle,
-			shared_ptr<const TextRunStyle> defaultStyle, String* computedFamilyName,
+			shared_ptr<const TextRunStyle> requestedStyle, shared_ptr<const TextRunStyle> defaultStyle,
+			String* computedFamilyName, double* computedPixelSize,
 			FontProperties<>* computedProperties, double* computedSizeAdjust) {
 		// family name
 		if(computedFamilyName != nullptr) {
@@ -935,8 +935,12 @@ namespace {
 				if(defaultStyle.get() != nullptr)
 					*computedFamilyName = defaultStyle->fontFamily;
 				if(computedFamilyName->empty())
-					*computedFamilyName = fontCollection.lastResortFallback(FontProperties<>())->familyName();
+					*computedFamilyName = fontCollection.lastResortFallback(FontDescription<>())->familyName();
 			}
+		}
+		// size
+		if(computedPixelSize != nullptr) {
+			requestedStyle->fontProperties
 		}
 		// properties
 		if(computedProperties != 0) {

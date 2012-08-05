@@ -13,22 +13,35 @@
 #define ASCENSION_STYLE_PROPERTY_HPP
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException, std.logic_error
 #include <ascension/corelib/future/type-traits.hpp>	// detail.Type2Type
+#include <ascension/presentation/length.hpp>
 
 namespace ascension {
 	namespace presentation {
 
-		template<typename T>
-		struct InitializedByDefaultConstructor : public detail::Type2Type<T> {
-			static const Type INITIAL_VALUE;
-		};
+		namespace sp {
+			template<typename T, int _initialValue>	// decltype(_initialValue) should be T...
+			struct Enumerated : public detail::Type2Type<T> {
+				static Type initialValue() {return static_cast<Type>(_initialValue);}
+			};
 
-		template<typename T, T initialValue>
-		struct InitializedByLiteralValue : public detail::Type2Type<T> {
-			static const Type INITIAL_VALUE = initialValue;
-		};
+			template<int _initialValue, Length::Unit initialUnit>
+			struct Lengthed : public detail::Type2Type<Length> {
+				static Type initialValue() {return Length(_initialValue, initialUnit);}
+			};
 
-		typedef std::true_type Inherited;
-		typedef std::false_type NotInherited;
+			template<typename T>
+			struct Complex : public detail::Type2Type<T> {
+				static Type initialValue() {return Type();}
+			};
+
+			template<typename Variant, typename InitialType, int _initialValue>	// decltype(_initialValue) should be T...
+			struct Multiple : public detail::Type2Type<Variant> {
+				static InitialType initialValue() {return _initialValue;}
+			};
+
+			typedef std::true_type Inherited;
+			typedef std::false_type NotInherited;
+		}
 
 		/**
 		 * @tparam TypeSpec
@@ -47,7 +60,7 @@ namespace ascension {
 			 * - If this property is 'inherited', set the inherit flag to @c true.
 			 * - Otherwise, initializes the property value with the initial value.
 			 */
-			StyleProperty() : value_(INITIAL_VALUE), inherits_(INHERITED) {}
+			StyleProperty() : value_(initialValue()), inherits_(INHERITED) {}
 			/**
 			 * Constructor initializes the property value with the given value, ignores property's
 			 * initial value and 'inherited' attribute.
@@ -70,6 +83,21 @@ namespace ascension {
 				if(inherits())
 					throw std::logic_error("");
 				return value_;
+			}
+			/// Returns the property value, or the @a defaultValue if inherits the parent.
+			const value_type& getOr(const value_type& defaultValue) const {
+				return inherits() ? defaultValue : value_;
+			}
+			value_type getOr(const StyleProperty* parent, const StyleProperty& ancestor) const {
+				if(!inherits())
+					return value_;
+				else if(parent != nullptr && !parent->inherits())
+					return parent->value_;
+				return ancestor.getOrInitial();
+			}
+			/// Returns the property value, or the initial value if inherits the parent.
+			value_type getOrInitial() const {
+				return inherits() ? initialValue() : value_;
 			}
 			/**
 			 * Lets this object to inherit other property.

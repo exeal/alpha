@@ -333,7 +333,7 @@ namespace ascension {
 				void reorder() /*throw()*/;
 //				void rewrap();
 				void stackLines(
-					presentation::LineStackingStrategy lineStackingStrategy,
+					presentation::LineBoxContain lineBoxContain,
 					const Font& nominalFont, Scalar lineHeight);
 				void wrap(const TabExpander& tabExpander) /*throw()*/;
 			private:

@@ -50,6 +50,7 @@
 #define size_t std::size_t
 //#include <winnt.h>
 #include <windows.h>
+#undef STRICT
 #undef size_t
 #include <stdexcept>
 #include <sstream>

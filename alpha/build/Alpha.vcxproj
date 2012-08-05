@@ -310,11 +310,10 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\text-renderer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\text-viewport.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-observers.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\presentation\inheritable.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\length.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation-reconstructor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\presentation\text-line-style.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\style-property.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\text-style.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\writing-mode.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\command.hpp" />
