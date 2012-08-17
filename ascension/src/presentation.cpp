@@ -5,6 +5,7 @@
  * @date 2007-2012
  */
 
+#include <ascension/graphics/text-layout-styles.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/presentation-reconstructor.hpp>
 #include <ascension/presentation/text-style.hpp>
@@ -168,6 +169,68 @@ void Presentation::clearHyperlinksCache() /*noexcept*/ {
 	hyperlinks_.clear();
 }
 
+namespace {
+	template<typename Property>
+	inline typename sp::IntrinsicType<Property>::Type resolveProperty(const Property& declared, const Property& global) {
+		return !declared.inherits() ? declared.get() : global.getOrInitial();
+	}
+}
+
+/**
+ * Returns the style of the specified text line.
+ * @param line The line number
+ * @param context 
+ * @param contextSize 
+ * @return The computed text line style
+ */
+font::ComputedTextLineStyle&& Presentation::computeTextLineStyle(Index line,
+		const RenderingContext2D& context, const NativeSize& contextSize) const /*noexcept*/ {
+	const shared_ptr<const TextLineStyle> global(globalTextStyle().defaultLineStyle);
+	assert(global.get() != nullptr);
+	shared_ptr<const TextLineStyle> declared;
+	if(textLineStyleDirector_.get() != nullptr)
+		declared = textLineStyleDirector_->queryTextLineStyle(line);
+	if(declared.get() == nullptr)
+		declared = global;
+	assert(declared.get() != nullptr);
+
+	font::ComputedTextLineStyle computed;
+	computed.writingMode = WritingMode();
+	computed.lineBoxContain = resolveProperty(declared->lineBoxContain, global->lineBoxContain);
+	computed.tabExpander;
+	computed.lineBreak = resolveProperty(declared->lineBreak, global->lineBreak);
+	computed.wordBreak = resolveProperty(declared->wordBreak, global->wordBreak);
+	computed.overflowWrap = resolveProperty(declared->overflowWrap, global->overflowWrap);
+	computed.alignment = resolveProperty(declared->textAlignment, global->textAlignment);
+	computed.alignmentLast = resolveProperty(declared->textAlignmentLast, global->textAlignmentLast);
+	computed.justification = resolveProperty(declared->textJustification, global->textJustification);
+	computed.indent.length = static_cast<Scalar>(
+		resolveProperty(declared->textIndent.length, global->textIndent.length).value(&context, &contextSize));
+	computed.indent.hanging = resolveProperty(declared->textIndent.hanging, global->textIndent.hanging);
+	computed.indent.eachLine = resolveProperty(declared->textIndent.eachLine, global->textIndent.eachLine);
+	computed.hangingPunctuation = resolveProperty(declared->hangingPunctuation, global->hangingPunctuation);
+	computed.dominantBaseline = resolveProperty(declared->dominantBaseline, global->dominantBaseline);
+	computed.lineHeight;
+	computed.numberSubstitution;
+
+	return move(computed);
+}
+
+/**
+ * Returns the styles of the text runs in the specified line.
+ * @param line The line
+ * @return An iterator enumerates the styles of the text runs in the line, or @c null if the line
+ *         has no styled text runs
+ * @throw BadPositionException @a line is outside of the document
+ */
+unique_ptr<StyledTextRunIterator> Presentation::computeTextRunStyles(Index line,
+		const RenderingContext2D& context, const NativeSize& contextSize) const {
+	if(line >= document_.numberOfLines())
+		throw BadPositionException(Position(line, 0));
+	return (textRunStyleDirector_.get() != nullptr) ?
+		textRunStyleDirector_->queryTextRunStyle(line) : unique_ptr<StyledTextRunIterator>();
+}
+
 /// Returns the document to which the presentation connects.
 const Document& Presentation::document() const /*noexcept*/ {
 	return document_;
@@ -261,30 +324,6 @@ const Hyperlink* const* Presentation::getHyperlinks(Index line, size_t& numberOf
 }
 
 /**
- * Returns the style of the specified text line.
- * @param[in] line The line number
- * @param[out] style The text line style
- * @return @a style
- */
-TextLineStyle& Presentation::textLineStyle(Index line, TextLineStyle& style) const /*noexcept*/ {
-	shared_ptr<const Inheritable<TextLineStyle>> p;
-	if(textLineStyleDirector_.get() != nullptr)
-		p = textLineStyleDirector_->queryTextLineStyle(line);
-	if(p.get() == nullptr)
-		style = *DEFAULT_GLOBAL_TEXT_STYLE->defaultLineStyle;
-	else {
-		style.anchor = resolveInheritance(p->anchor, DEFAULT_GLOBAL_TEXT_STYLE->defaultLineStyle->anchor);
-		style.dominantBaseline = resolveInheritance(
-			p->dominantBaseline, DEFAULT_GLOBAL_TEXT_STYLE->defaultLineStyle->dominantBaseline);
-		style.lineHeightShiftAdjustment = resolveInheritance(
-			p->lineHeightShiftAdjustment, DEFAULT_GLOBAL_TEXT_STYLE->defaultLineStyle->lineHeightShiftAdjustment);
-		style.lineStackingStrategy = resolveInheritance(
-			p->lineStackingStrategy, DEFAULT_GLOBAL_TEXT_STYLE->defaultLineStyle->lineStackingStrategy);
-	}
-	return style;
-}
-
-/**
  * Removes the global text style listener.
  * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered
@@ -354,20 +393,6 @@ void Presentation::textLineColors(Index line,
 			background = g;
 		}
 	}
-}
-
-/**
- * Returns the styles of the text runs in the specified line.
- * @param line The line
- * @return An iterator enumerates the styles of the text runs in the line, or @c null if the line
- *         has no styled text runs
- * @throw BadPositionException @a line is outside of the document
- */
-unique_ptr<StyledTextRunIterator> Presentation::textRunStyles(Index line) const {
-	if(line >= document_.numberOfLines())
-		throw BadPositionException(Position(line, 0));
-	return (textRunStyleDirector_.get() != nullptr) ?
-		textRunStyleDirector_->queryTextRunStyle(line) : unique_ptr<StyledTextRunIterator>();
 }
 
 
