@@ -129,6 +129,11 @@ namespace ascension {
 			value_type value_;
 			bool inherits_;
 		};
+
+		namespace sp {
+			template<typename Property>
+			class IntrinsicType : public detail::Type2Type<typename Property::value_type> {};
+		}
 #if 0
 		/**
 		 * Generates @c Inheritable type according to the given condition.

@@ -119,12 +119,6 @@ void StyledTextRunEnumerator::increment() {
 
 // Presentation ///////////////////////////////////////////////////////////////////////////////////
 
-/// 
-TextAnchor presentation::defaultTextAnchor(const Presentation& presentation) {
-	const shared_ptr<const TextLineStyle> lineStyle(presentation.globalTextStyle().defaultLineStyle);
-	return (lineStyle.get() != nullptr) ? lineStyle->anchor : ASCENSION_DEFAULT_TEXT_ANCHOR;
-}
-
 shared_ptr<const TextToplevelStyle> Presentation::DEFAULT_GLOBAL_TEXT_STYLE;
 
 struct Presentation::Hyperlinks {

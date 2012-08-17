@@ -11,7 +11,6 @@
 #include <ascension/corelib/basic-types.hpp>	// std.tr1.shared_ptr
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/geometry.hpp>
-#include <ascension/graphics/rendering-context.hpp>
 #include <memory>	// std.unique_ptr, std.enable_shared_from_this
 //#include <boost/operators.hpp>
 

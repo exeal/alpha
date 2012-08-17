@@ -279,7 +279,7 @@ namespace {
 	}
 
 	HRESULT resolveNumberSubstitution(
-			const NumberSubstitution* configuration, SCRIPT_CONTROL& sc, SCRIPT_STATE& ss) {
+			const ComputedNumberSubstitution* configuration, SCRIPT_CONTROL& sc, SCRIPT_STATE& ss) {
 		if(configuration == nullptr || configuration->method == NumberSubstitution::USER_SETTING)
 			return ::ScriptApplyDigitSubstitution(&userSettings.digitSubstitution(
 				(configuration != nullptr) ? configuration->ignoreUserOverride : false), &sc, &ss);
@@ -401,9 +401,9 @@ bool font::supportsOpenTypeFeatures() /*throw()*/ {
  * @param writingMode The writing mode used to compute the directions and orientation of @a border
  */
 void detail::paintBorder(PaintContext& context, const NativeRectangle& rectangle,
-		const Border& border, const Color& currentColor, const WritingMode& writingMode) {
+		const PhysicalFourSides<ComputedBorderSide>& border, const Color& currentColor, const WritingMode& writingMode) {
 	// TODO: not implemented.
-	for(FlowRelativeFourSides<Border::Part>::const_iterator part(begin(border.sides)), e(border.sides.cend()); part != e; ++part) {
+	for(FlowRelativeFourSides<Border::Side>::const_iterator side(begin(border.sides)), e(border.sides.cend()); part != e; ++part) {
 		if(!part->hasVisibleStyle() || part->computedWidth().valueInSpecifiedUnits() <= 0.0)
 			continue;
 		if(!geometry::includes(context.boundsToPaint(), rectangle))

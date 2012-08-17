@@ -169,7 +169,6 @@ namespace ascension {
 					queryTextPaintOverride(const Range<Index>& range) const = 0;
 			};
 
-
 			/**
 			 * @see Font#Metrics
 			 */
@@ -191,6 +190,188 @@ namespace ascension {
 //				virtual Scalar leading() const /*noexcept*/ = 0;
 			};
 
+			struct ComputedBorderSide {
+				Color color;
+				presentation::sp::IntrinsicType<
+					decltype(presentation::Border().sides.start().style)
+				>::Type style;
+				Scalar width;
+
+				/// Returns the computed width in pixels.
+				Scalar computedWidth() const /*noexcept*/ {
+					return (style != presentation::Border::NONE) ? width : 0;
+				}
+				/// Returns @c true if this part is invisible (but may be consumes place).
+				bool hasVisibleStyle() const /*noexcept*/ {
+					return style != presentation::Border::NONE && style != presentation::Border::HIDDEN;
+				}
+			};
+
+			struct ComputedTextDecoration {
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextDecoration().lines)
+				>::Type lines;
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextDecoration().style)
+				>::Type style;
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextDecoration().skip)
+				>::Type skip;
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextDecoration().underlinePosition)
+				>::Type underlinePosition;
+			};
+
+			struct ComputedTextEmphasis {
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextEmphasis().style)
+				>::Type style;
+				Color color;
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextEmphasis().position)
+				>::Type position;
+			};
+
+			/// Computed values of @c presentation#TextRunStyle.
+			struct ComputedTextRunStyle {
+				/// Computed value of @c TextRunStyle#color property.
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextRunStyle().color)
+				> color;
+				/// Computed value of @c TextRunStyle#background property.
+				std::shared_ptr<const Paint> background;
+				/// Computed value of @c TextRunStyle#border property.
+				PhysicalFourSides<ComputedBorderSide> borders;
+
+				/// Computed value of @c TextRunStyle#textHeight property.
+				Scalar textHeight;
+				/// Computed value of @c TextRunStyle#lineHeight property.
+				Scalar lineHeight;
+				/// Computed value of @c TextRunStyle#dominantBaseline property.
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextRunStyle().dominantBaseline)
+				> dominantBaseline;
+				/// Computed value of @c TextRunStyle#alignmentBaseline property.
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextRunStyle().alignmentBaseline)
+				> alignmentBaseline;
+				/// Computed value of @c TextRunStyle#alignmentAdjustment property.
+				Scalar alignmentAdjustment;
+				/// Computed value of @c TextRunStyle#baselineShift property.
+				Scalar baselineShift;
+				
+				/// Computed value of @c TextRunStyle#textTransform property.
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextRunStyle().textTransform)
+				> textTransform;
+				/// Computed value of @c TextRunStyle#hyphens property.
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextRunStyle().hyphens)
+				> hyphens;
+				/// Computed value of @c TextRunStyle#wordSpacing property.
+				presentation::SpacingLimit<Scalar> wordSpacing;
+				/// Computed value of @c TextRunStyle#letterSpacing property.
+				presentation::SpacingLimit<Scalar> letterSpacing;
+				/// Computed value of @c TextRunStyle#textDecoration property.
+				ComputedTextDecoration textDecoration;
+				/// Computed value of @c TextRunStyle#textEmphasis property.
+				ComputedTextEmphasis textEmphasis;
+//				TextShadow textShadow;
+
+//				RubyProperties rubyProperties;
+
+//				Effects effects;
+				/// Computed value of @c TextRunStyle#shapingEnabled.
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextRunStyle().shapingEnabled)
+				> shapingEnabled;
+			};
+
+			struct ComputedNumberSubstitution {
+				presentation::sp::IntrinsicType<
+					decltype(presentation::NumberSubstitution().method)
+				>::Type method;
+				presentation::sp::IntrinsicType<
+					decltype(presentation::NumberSubstitution().localeName)
+				>::Type localeName;
+				presentation::sp::IntrinsicType<
+					decltype(presentation::NumberSubstitution().ignoreUserOverride)
+				>::Type ignoreUserOverride;
+			};
+
+			/// Computed values of @c presentation#TextLineStyle.
+			struct ComputedTextLineStyle {
+				/// Computed value of writing modes properties of @c TextToplevelStyle.
+				presentation::WritingMode writingMode;
+
+				/// Computed value of @c TextLineStyle#lineBoxContain property.
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextLineStyle().lineBoxContain)
+				>::Type lineBoxContain;
+//				/// Computed value of @c TextLineStyle#textSpaceCollapse property.
+//				presentation::TextSpaceCollapse spaceCollapse;
+				/// Computed value of @c TextLineStyle#tabSize property.
+				std::shared_ptr<TabExpander> tabExpander;
+				/// Computed value of @c TextLineStyle#lineBreak property.
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextLineStyle().lineBreak)
+				>::Type lineBreak;
+				/// Computed value of @c TextLineStyle#wordBreak property.
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextLineStyle().wordBreak)
+				>::Type wordBreak;
+//				/// Computed value of @c TextLineStyle#textWrap property.
+//				presentation::sp::IntrinsicType<
+//					decltype(presentation::TextLineStyle().textWrap)
+//				>::Type textWrap;
+				/// Computed value of @c TextLineStyle#overflowWrap property.
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextLineStyle().overflowWrap)
+				>::Type overflowWrap;
+				/// Computed value of @c TextLineStyle#textAlignment property.
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextLineStyle().textAlignment)
+				>::Type alignment;
+				/// Computed value of @c TextLineStyle#textAlignmentLast property.
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextLineStyle().textAlignmentLast)
+				>::Type alignmentLast;
+				/// Computed value of @c TextLineStyle#textJustification property.
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextLineStyle().textJustification)
+				>::Type justification;
+				/// Computed value of @c TextLineStyle#textIndent property.
+				presentation::TextIndent<Scalar> indent;
+				/// Computed value of @c TextLineStyle#hangingPunctuation property.
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextLineStyle().hangingPunctuation)
+				>::Type hangingPunctuation;
+				/// Computed value of @c TextLineStyle#dominantBaseline property.
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextLineStyle().dominantBaseline)
+				>::Type dominantBaseline;
+				/// Computed value of @c TextLineStyle#lineHeight property.
+				Scalar lineHeight;
+				/// Computed value of @c TextLineStyle#numberSubstitution property.
+				ComputedNumberSubstitution numberSubstitution;
+
+				/**
+				 * Set @c true to shape zero width control characters as representative glyphs.
+				 * The default value is @c false.
+				 */
+				bool displayShapingControls;
+				/**
+				 * Set @c true to make the deprecated format characters (NADS, NODS, ASS and ISS)
+				 * not effective. The default value is @c false.
+				 */
+				bool disableDeprecatedFormatCharacters;
+				/**
+				 * Set @c true to inhibit from generating mirrored glyphs. The default value is
+				 * @c false.
+				 */
+				bool inhibitSymmetricSwapping;
+			};
+
 			class TextLayout {
 				ASCENSION_NONCOPYABLE_TAG(TextLayout);
 			public:
@@ -201,53 +382,6 @@ namespace ascension {
 				enum Edge {
 					LEADING,	///< Leading edge of a character.
 					TRAILING	///< Trailing edge of a character.
-				};
-
-				/**
-				 * A parameter set for the constructor of @c TextLayout class.
-				 * @see TextLayout#TextLayout
-				 */
-				struct ConstructionParameters : public presentation::TextLineStyle {
-					/// The writing mode of the text layout.
-					presentation::WritingMode writingMode;
-					/**
-					 * The height used in determining the 'half-leading' value. The default value
-					 * is 0.
-					 */
-					Scalar lineHeight;
-					/// The text wrapping settings.
-					presentation::TextWrapping<Scalar> textWrapping;
-					/**
-					 * The font collection this text layout uses. If this is @c null,
-					 * @c TextLayout uses @c systemFonts. The default value is @c null.
-					 */
-					const FontCollection* fontCollection;
-					/// The default text run style. The default value is @c null.
-					std::shared_ptr<const presentation::TextRunStyle> defaultTextRunStyle;
-					/// The text run styles. The default value is @c null.
-					mutable std::unique_ptr<presentation::StyledTextRunIterator> textRunStyles;
-					/**
-					 * The tab expander object. If this is @c null, the default object is used. The
-					 * default value is @c null.
-					 */
-					const TabExpander* tabExpander;
-					/**
-					 * Set @c true to shape zero width control characters as representative glyphs.
-					 * The default value is @c false.
-					 */
-					bool displayShapingControls;
-					/**
-					 * Set @c true to make the deprecated format characters (NADS, NODS, ASS and
-					 * ISS) not effective. The default value is @c false.
-					 */
-					bool disableDeprecatedFormatCharacters;
-					/**
-					 * Set @c true to inhibit from generating mirrored glyphs. The default value is
-					 * @c false.
-					 */
-					bool inhibitSymmetricSwapping;
-					/// Default constructor.
-					ConstructionParameters() {}
 				};
 #if 0
 				/// Bidirectional iterator enumerates style runs in a line.
@@ -273,8 +407,8 @@ namespace ascension {
 
 			public:
 				// constructors
-				TextLayout(const String& text,
-					const ConstructionParameters& otherParameters = ConstructionParameters());
+				TextLayout(const String& text, const ComputedTextLineStyle& lineStyle,
+					std::unique_ptr<presentation::StyledTextRunIterator> textRunStyles);
 				~TextLayout() /*throw()*/;
 				// general attributes
 				presentation::TextAnchor anchor() const /*throw()*/;
@@ -480,8 +614,8 @@ namespace ascension {
 	}
 
 	namespace detail {
-		void paintBorder(graphics::PaintContext& context,
-			const graphics::NativeRectangle& rectangle, const presentation::Border& style,
+		void paintBorder(graphics::PaintContext& context, const graphics::NativeRectangle& rectangle,
+			const graphics::PhysicalFourSides<graphics::font::ComputedBorderSide>& style,
 			const graphics::Color& currentColor, const presentation::WritingMode& writingMode);
 	}
 } // namespace ascension.graphics.font

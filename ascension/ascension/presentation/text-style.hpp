@@ -1,4 +1,4 @@
-/**
+Ôªø/**
  * @file text-style.hpp
  * @author exeal
  * @see text-line-style.hpp
@@ -20,40 +20,38 @@
 #include <ascension/presentation/writing-mode.hpp>
 #include <map>
 #include <memory>
+#include <tuple>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/optional.hpp>
 #include <boost/variant.hpp>
 
 namespace ascension {
 	namespace presentation {
-#if 0
-		struct Space {
-			Length minimum, optimum, maximum;
-			boost::optional<int> precedence;
-			enum Conditionality {DISCARD, RETAIN} conditionality;
-		};
-#else
-		typedef Length Space;
-#endif
+
 		// from CSS Color Module Level 3 //////////////////////////////////////////////////////////
 
 		/**
 		 * Describes the foreground color of the text content. @c boost#none means 'currentColor'
 		 * CSS 3.
-		 * @see CSS Color Module Level 3, 3.1. Foreground color: the ÅecolorÅf property
+		 * @tparam InheritedOrNot See @c StyleProperty class template
+		 * @see CSS Color Module Level 3, 3.1. Foreground color: the ‚Äòcolor‚Äô property
 		 *      (http://www.w3.org/TR/css3-color/#foreground)
-		 * @see SVG 1.1 (Second Edition), 12.2 The ÅecolorÅf property
+		 * @see SVG 1.1 (Second Edition), 12.2 The ‚Äòcolor‚Äô property
 		 *      (http://www.w3.org/TR/SVG11/color.html#ColorProperty)
 		 * @see XSL 1.1, 7.18.1 "color" (http://www.w3.org/TR/xsl/#color)
 		 */
-		typedef StyleProperty<
+		template<typename InheritedOrNot>
+		class ColorProperty : public StyleProperty<
 			sp::Complex<
 				boost::optional<graphics::Color>
-			>, sp::Inherited
-		> ColorProperty;
+			>, InheritedOrNot
+		> {};
 
-		inline graphics::Color computeColor(const ColorProperty* current,
-				const ColorProperty* parent, const ColorProperty& ancestor) {
+		template<typename InheritedOrNot>
+		inline graphics::Color computeColor(
+				const ColorProperty<InheritedOrNot>* current,
+				const ColorProperty<InheritedOrNot>* parent,
+				const ColorProperty<InheritedOrNot>& ancestor) {
 			if(current != nullptr && !current->inherits() && current->get() != boost::none)
 				return *current->get();
 			else if(parent != nullptr && !parent->inherits() && parent->get() != boost::none)
@@ -69,7 +67,7 @@ namespace ascension {
 		/**
 		 * @c null also means 'transparent'.
 		 * @see CSS Backgrounds and Borders Module Level 3, 3.10. Backgrounds Shorthand: the
-		 *      ÅebackgroundÅf property (http://www.w3.org/TR/css3-background/#the-background)
+		 *      ‚Äòbackground‚Äô property (http://www.w3.org/TR/css3-background/#the-background)
 		 * @see SVG 1.1 (Second Edition), 11.3 Fill Properties
 		 *      (http://www.w3.org/TR/SVG11/painting.html#FillProperties)
 		 * @see XSL 1.1, 7.31.1 "background" (http://www.w3.org/TR/xsl/#background)
@@ -79,7 +77,7 @@ namespace ascension {
 			 * [Copied from CSS3] This property sets the background color of an element. The color
 			 * is drawn behind any background images.
 			 * @see CSS Backgrounds and Borders Module Level 3, 3.2. Base Color: the
-			 *      Åebackground-colorÅf property
+			 *      ‚Äòbackground-color‚Äô property
 			 *      (http://www.w3.org/TR/css3-background/#the-background-color)
 			 * @see XSL 1.1, 7.8.2 "background-color" (http://www.w3.org/TR/xsl/#background-color)
 			 */
@@ -135,29 +133,42 @@ namespace ascension {
 				DOUBLE, GROOVE, RIDGE, INSET, OUTSET
 			};
 			static const Length THIN, MEDIUM, THICK;
-			struct Part {
+			struct Side {
 				/**
-				 * The foreground color of the border. Default value is @c boost#none which means
-				 * 'currentColor' that the value of @c TextRunStyle#color.
+				 * [Copied from CSS3] This property sets the foreground color of the border
+				 * specified by the border-style properties. @c boost#none means 'currentColor'.
+				 * @see CSS Backgrounds and Borders Module Level 3, 4.1. Line Colors: the
+				 *      ‚Äòborder-color‚Äô property
+				 *      (http://www.w3.org/TR/css3-background/#the-border-color)
 				 */
 				boost::optional<graphics::Color> color;
-				/// Style of the border. Default value is @c NONE.
-				Style style;
-				/// Thickness of the border. Default value is @c MEDIUM.
-				Length width;
+				/**
+				 * [Copied from CSS3] This property sets the style of the border, unless there is a
+				 * border image.
+				 * @see CSS Backgrounds and Borders Module Level 3, 4.2. Line Patterns: the
+				 *      ‚Äòborder-style‚Äô properties
+				 *      (http://www.w3.org/TR/css3-background/#the-border-style)
+				 */
+				StyleProperty<
+					sp::Enumerated<Style, NONE>,
+					sp::NotInherited
+				> style;
 
-				/// Default constructor.
-				Part() /*noexcept*/ : style(NONE), width(MEDIUM) {}
-				/// Returns the computed width.
-				Length computedWidth() const {
-					return (style != NONE) ? width : Length(0.0, width.unitType());
-				}
-				/// Returns @c true if this part is invisible (but may be consumes place).
-				bool hasVisibleStyle() const /*noexcept*/ {
-					return style != NONE && style != HIDDEN;
-				}
+				struct WidthTypeSpec : public detail::Type2Type<Length> {
+					static const Length& initialValue() {return MEDIUM;}
+				};
+				/**
+				 * [Copied from CSS3] This property sets the thickness of the border.
+				 * @see CSS Backgrounds and Borders Module Level 3, 4.3. Line Thickness: the
+				 *      ‚Äòborder-width‚Äô properties
+				 *      (http://www.w3.org/TR/css3-background/#the-border-width)
+				 */
+				StyleProperty<
+					WidthTypeSpec,
+					sp::NotInherited
+				> width;
 			};
-			FlowRelativeFourSides<Part> sides;
+			FlowRelativeFourSides<Side> sides;
 		};
 
 		// from CSS Fonts Module Level 3 //////////////////////////////////////////////////////////
@@ -195,7 +206,7 @@ namespace ascension {
 		/**
 		 * [Copied from CSS3] This property enumerates which aspects of the elements in a line box
 		 * contribute to the height height of that line box.
-		 * @see CSS Line Layout Module Level 3, 3.4.2 Line Stacking: the Åeline-box-containÅf
+		 * @see CSS Line Layout Module Level 3, 3.4.2 Line Stacking: the ‚Äòline-box-contain‚Äô
 		 *      property (http://dev.w3.org/csswg/css3-linebox/#LineStacking)
 		 * @see XSL 1.1, 7.16.6 "line-stacking-strategy"
 		 *      (http://www.w3.org/TR/xsl/#line-stacking-strategy)
@@ -206,9 +217,9 @@ namespace ascension {
 			BLOCK, INLINE, FONT, GLYPHS, REPLACED, INLINE_BOX, NONE
 		ASCENSION_END_SCOPED_ENUM;
 		/**
-		 * [Copied from CSS3] The Åedominant-baselineÅf property is used to determine or re-determine
+		 * [Copied from CSS3] The ‚Äòdominant-baseline‚Äô property is used to determine or re-determine
 		 * a scaled-baseline-table.
-		 * @see CSS Line Layout Module Level 3, 4.4 Dominant baseline: the Åedominant-baselineÅf
+		 * @see CSS Line Layout Module Level 3, 4.4 Dominant baseline: the ‚Äòdominant-baseline‚Äô
 		 *      property (http://dev.w3.org/csswg/css3-linebox/#dominant-baseline-prop)
 		 * @see CSS3 module: line, 4.4. Dominant baseline: the 'dominant-baseline' property
 		 *      (http://www.w3.org/TR/css3-linebox/#dominant-baseline-prop)
@@ -234,10 +245,10 @@ namespace ascension {
 		/**
 		 * [Copied from CSS3] This property specifies how an inline-level element is aligned with
 		 * respect to its parent. That is, to which of the parent's baselines the alignment point
-		 * of this element is aligned. Unlike the Åedominant-baselineÅf property the
-		 * Åealignment-baselineÅf property has no effect on its children dominant-baselines.
+		 * of this element is aligned. Unlike the ‚Äòdominant-baseline‚Äô property the
+		 * ‚Äòalignment-baseline‚Äô property has no effect on its children dominant-baselines.
 		 * @see CSS Line Layout Module Level 3, 4.5 Aligning the alignment point of an element: the
-		 *      Åealignment-baselineÅf property
+		 *      ‚Äòalignment-baseline‚Äô property
 		 *      (http://dev.w3.org/csswg/css3-linebox/#alignment-baseline-prop)
 		 * @see CSS3 module: line, 4.5. Aligning the alignment point of an element: the
 		 *      'alignment-baseline' property
@@ -290,10 +301,10 @@ namespace ascension {
 		ASCENSION_END_SCOPED_ENUM;
 
 		/**
-		 * [Copied from CSS3] The Åeinline-box-alignÅf property determines which line of a multi-line
+		 * [Copied from CSS3] The ‚Äòinline-box-align‚Äô property determines which line of a multi-line
 		 * inline block aligns with the previous and next inline elements within a line.
 		 * @see CSS Line Layout Module Level 3, 4.9 Inline box alignment: the
-		 *      Åeinline-box-alignÅf property
+		 *      ‚Äòinline-box-align‚Äô property
 		 *      (http://dev.w3.org/csswg/css3-linebox/#inline-box-align-prop)
 		 */
 		typedef boost::variant<InlineBoxAlignmentEnums, Index> InlineBoxAlignment;
@@ -302,7 +313,7 @@ namespace ascension {
 
 		/**
 		 * [Copied from CSS3] This property transforms text for styling purposes.
-		 * @see CSS Text Level 3, 2.1. Transforming Text: the Åetext-transformÅf property
+		 * @see CSS Text Level 3, 2.1. Transforming Text: the ‚Äòtext-transform‚Äô property
 		 *      (http://www.w3.org/TR/css3-text/#text-transform)
 		 * @see XSL 1.1, 7.17.6 "text-transform" (http://www.w3.org/TR/xsl/#text-transform)
 		 */
@@ -315,7 +326,7 @@ namespace ascension {
 		/**
 		 * [Copied from CSS3] This property specifies the strictness of line-breaking rules applied
 		 * within an element: particularly how line-breaking interacts with punctuation.
-		 * @see CSS Text Level 3, 4.1. Line Breaking Strictness: the Åeline-breakÅf property
+		 * @see CSS Text Level 3, 4.1. Line Breaking Strictness: the ‚Äòline-break‚Äô property
 		 *      (http://www.w3.org/TR/css3-text/#line-break)
 		 */
 		ASCENSION_BEGIN_SCOPED_ENUM(LineBreak)
@@ -336,7 +347,19 @@ namespace ascension {
 			BREAK_ALL
 		ASCENSION_END_SCOPED_ENUM;
 
-//		enum Hyphens;
+		/**
+		 * [Copied from CSS3] This property controls whether hyphenation is allowed to create more
+		 * soft wrap opportunities within a line of text.
+		 * @see CSS Text Level 3, 6.1. Hyphenation Control: the ‚Äòhyphens‚Äô property
+		 *      (http://www.w3.org/TR/css3-text/#hyphens)
+		 * @see XSL 1.1, 7.10 Common Hyphenation Properties
+		 *      (http://www.w3.org/TR/xsl/#common-hyphenation-properties)
+		 */
+		ASCENSION_BEGIN_SCOPED_ENUM(Hyphens)
+			NONE,
+			MANUAL,
+			AUTO
+		ASCENSION_END_SCOPED_ENUM;
 
 		/**
 		 * [Copied from CSS3] This property specifies the mode for text wrapping.
@@ -352,7 +375,7 @@ namespace ascension {
 		/**
 		 * [Copied from CSS3] This property specifies whether the UA may break within a word to
 		 * prevent overflow when an otherwise-unbreakable string is too long to fit within the line
-		 * box. It only has an effect when Åetext-wrapÅf is either ÅenormalÅf or ÅeavoidÅf. 
+		 * box. It only has an effect when ‚Äòtext-wrap‚Äô is either ‚Äònormal‚Äô or ‚Äòavoid‚Äô
 		 * @see CSS Text Level 3 - 6.2. Emergency Wrapping: the 'overflow-wrap' property
 		 *      (http://www.w3.org/TR/css3-text/#overflow-wrap)
 		 */
@@ -392,7 +415,7 @@ namespace ascension {
 		ASCENSION_END_SCOPED_ENUM;
 
 		/**
-		 * [Copied from SVG11] The Åetext-anchorÅf property is used to align (start-, middle- or
+		 * [Copied from SVG11] The ‚Äòtext-anchor‚Äô property is used to align (start-, middle- or
 		 * end-alignment) a string of text relative to a given point.
 		 * @see SVG 1.1, 10.9.1 Text alignment properties
 		 *      (http://www.w3.org/TR/SVG/text.html#TextAlignmentProperties)
@@ -406,13 +429,13 @@ namespace ascension {
 		/**
 		 * [Copied from CSS3] This property describes how the last line of a block or a line right
 		 * before a forced line break is aligned. If a line is also the first line of the block or
-		 * the first line after a forced line break, then, unless Åetext-alignÅf assigns an explicit
-		 * first line alignment (via Åestart endÅf), Åetext-align-lastÅf takes precedence over
-		 * Åetext-alignÅf. If ÅeautoÅf is specified, content on the affected line is aligned per
-		 * Åetext-alignÅf unless Åetext-alignÅf is set to ÅejustifyÅf. In this case, content is justified
-		 * if Åetext-justifyÅf is ÅedistributeÅf and start-aligned otherwise. All other values have the
-		 * same meanings as in Åetext-alignÅf.
-		 * @see CSS Text Level 3, 7.2. Last Line Alignment: the Åetext-align-lastÅf property
+		 * the first line after a forced line break, then, unless ‚Äòtext-align‚Äô assigns an explicit
+		 * first line alignment (via ‚Äòstart end‚Äô , ‚Äòtext-align-last‚Äô takes precedence over
+		 * ‚Äòtext-align‚Äô  If ‚Äòauto‚Äô is specified, content on the affected line is aligned per
+		 * ‚Äòtext-align‚Äô unless ‚Äòtext-align‚Äô is set to ‚Äòjustify‚Äô  In this case, content is justified
+		 * if ‚Äòtext-justify‚Äô is ‚Äòdistribute‚Äô and start-aligned otherwise. All other values have the
+		 * same meanings as in ‚Äòtext-align‚Äô 
+		 * @see CSS Text Level 3, 7.2. Last Line Alignment: the ‚Äòtext-align-last‚Äô property
 		 *      (http://www.w3.org/TR/css3-text/#text-align-last)
 		 * @see XSL 1.1, 7.16.10 "text-align-last" (http://www.w3.org/TR/xsl/#text-align-last)
 		 */
@@ -431,10 +454,10 @@ namespace ascension {
 
 		/**
 		 * [Copied from CSS3] This property selects the justification method used when a line's
-		 * alignment is set to ÅejustifyÅf (see Åetext-alignÅf), primarily by controlling which
+		 * alignment is set to ‚Äòjustify‚Äô (see ‚Äòtext-align‚Äô , primarily by controlling which
 		 * scripts' characters are adjusted together or separately. The property applies to block
 		 * containers, but the UA may (but is not required to) also support it on inline elements.
-		 * @see CSS Text Level 3, 7.3. Justification Method: the Åetext-justifyÅf property
+		 * @see CSS Text Level 3, 7.3. Justification Method: the ‚Äòtext-justify‚Äô property
 		 *      (http://www.w3.org/TR/css3-text/#text-justify)
 		 */
 		ASCENSION_BEGIN_SCOPED_ENUM(TextJustification)
@@ -443,28 +466,79 @@ namespace ascension {
 		ASCENSION_END_SCOPED_ENUM;
 
 		/**
+		 * [Copied from CSS3] Represents optimum, minimum, and maximum spacing.
+		 * @tparam T The type of @c #optimum, @c #minimum and @c #maximum data members
 		 * @see CSS Text Level 3, 8. Spacing (http://www.w3.org/TR/css3-text/#spacing)
 		 * @see XSL 1.1, 4.3 Spaces and Conditionality (http://www.w3.org/TR/xsl/#spacecond)
 		 */
-		typedef Length SpacingLimit;
+		template<typename T>
+		struct SpacingLimit {
+			T optimum, minimum, maximum;
+#if 0
+			// followings are defined in only XSL 1.1
+			boost::optional<int> precedence;	// boost.none means 'force'
+			enum Conditionality {DISCARD, RETAIN} conditionality;
+#endif
+			SpacingLimit() {}
+			template<typename U>
+			explicit SpacingLimit(const U& allValues)
+					: optimum(allValues), minimum(allValues), maximum(allValues) {}
+			template<typename OptimumAndMinimum, typename Maximum>
+			SpacingLimit(const OptimumAndMinimum& optimumAndMinimum, const Maximum& maximum)
+					: optimum(optimumAndMinimum), minimum(optimumAndMinimum), maximum(maximum) {}
+			template<typename Optimum, typename Minimum, typename Maximum>
+			SpacingLimit(const Optimum& optimum, const Minimum& minimum, const Maximum& maximum)
+					: optimum(optimum), minimum(minimum), maximum(maximum) {}
+			template<typename U>
+			SpacingLimit& operator=(const U& allValues) {
+				optimum = minimum = maximum = allValues;
+				return *this;
+			}
+			template<typename OptimumAndMinimum, typename Maximum>
+			SpacingLimit& operator=(const std::tuple<OptimumAndMinimum, Maximum>& other) {
+				this->optimum = this->minimum = std::get<0>(other);
+				this->maximum = std::get<1>(other);
+				return *this;
+			}
+			template<typename Optimum, typename Minimum, typename Maximum>
+			SpacingLimit& operator=(const std::tuple<Optimum, Minimum, Maximum>& other) {
+				this->optimum = std::get<0>(other);
+				this->minimum = std::get<1>(other);
+				this->maximum = std::get<2>(other);
+				return *this;
+			}
+		};
 
 		/**
 		 * [Copied from CSS3] This property specifies the indentation applied to lines of inline
 		 * content in a block.
-		 * @see CSS Text Level 3, 9.1. First Line Indentation: the Åetext-indentÅf property
+		 * @tparam LengthType The type of @c #length. Usually @c Length or @c Scalar
+		 * @see CSS Text Level 3, 9.1. First Line Indentation: the ‚Äòtext-indent‚Äô property
 		 *      (http://www.w3.org/TR/css3-text/#text-indent)
 		 * @see XSL 1.1, 7.16.11 "text-indent" (http://www.w3.org/TR/xsl/#text-indent)
 		 */
+		template<typename LengthType>
 		struct TextIndent {
-			Length length;
-			bool hanging, eachLine;
+			/**
+			 * [Copied from CSS3] Gives the amount of the indent as an absolute length. If this is
+			 * in percentage, as a percentage of the containing block's logical width
+			 */
+			LengthType length;
+			/// [Copied from CSS3] Inverts which lines are affected.
+			bool hanging;
+			/**
+			 * [Copied from CSS3] Indentation affects the first line of the block container as well
+			 * as each line after a forced line break, but does not affect lines after a soft wrap
+			 * break.
+			 */
+			bool eachLine;
 		};
 
 		/**
 		 * [Copied from CSS3] This property determines whether a punctuation mark, if one is
 		 * present, may be placed outside the line box (or in the indent) at the start or at the
 		 * end of a line of text.
-		 * @see CSS Text Level 3, 9.2. Hanging Punctuation: the Åehanging-punctuationÅf property
+		 * @see CSS Text Level 3, 9.2. Hanging Punctuation: the ‚Äòhanging-punctuation‚Äô property
 		 *      (http://www.w3.org/TR/css3-text/#hanging-punctuation)
 		 */
 		ASCENSION_BEGIN_SCOPED_ENUM(HangingPunctuation)
@@ -479,21 +553,182 @@ namespace ascension {
 		 *      (http://www.w3.org/TR/2011/REC-SVG11-20110816/text.html#TextDecorationProperties)
 		 * @see XSL 1.1, 7.17.4 "text-decoration" (http://www.w3.org/TR/xsl/#text-decoration)
 		 */
-		struct TextDecorations {
-			enum Style {NONE, SOLID, DOTTED, DAHSED};
-			struct Part {
-				StyleProperty<
-					sp::Complex<boost::optional<graphics::Color>>,
-					sp::NotInherited
-				> color;	// if is Color(), same as the foreground
-				StyleProperty<
-					sp::Enumerated<Style, NONE>,
-					sp::NotInherited
-				> style;	///< Default value is @c NONE.
-			} overline, strikethrough, baseline, underline;
+		struct TextDecoration {
+			/**
+			 * [Copied from CSS3] Specifies what line decorations, if any, are added to the element.
+			 * @see CSS Text Level 3, 10.1.1. Text Decoration Lines: the ‚Äòtext-decoration-line‚Äô
+			 *      property (http://dev.w3.org/csswg/css3-text/#text-decoration-line)
+			 * @see SVG 1.1 (Second Edition), 10.12 Text decoration
+			 *      (http://www.w3.org/TR/2011/REC-SVG11-20110816/text.html#TextDecorationProperties)
+			 * @see XSL 1.1, 7.17.4 "text-decoration" (http://www.w3.org/TR/xsl/#text-decoration)
+			 */
+			ASCENSION_BEGIN_SCOPED_ENUM(Line)
+				NONE = 0,				///< Neither produces nor inhibits text decoration.
+				UNDERLINE = 1 << 0,		///< Each line of text is underlined.
+				OVERLINE = 1 << 1,		///< Each line of text has a line above it.
+//				BASELINE = 1 << 2,
+				LINE_THROUGH = 1 << 3	///< Each line of text has a line through the middle.
+			ASCENSION_END_SCOPED_ENUM;
+			/**
+			 * This property specifies the style of the line(s) drawn for text decoration specified
+			 * on the element. 
+			 * @see CSS Text Level 3, 10.1.3. Text Decoration Style: the ‚Äòtext-decoration-style‚Äô
+			 *      property (http://dev.w3.org/csswg/css3-text/#text-decoration-style)
+			 */
+			ASCENSION_BEGIN_SCOPED_ENUM(Style)
+				SOLID = Border::SOLID,		///< Same meaning as for @c Border#Style.
+				DOUBLE = Border::DOUBLE,	///< Same meaning as for @c Border#Style.
+				DOTTED = Border::DOTTED,	///< Same meaning as for @c Border#Style.
+				DAHSED = Border::DASHED,	///< Same meaning as for @c Border#Style.
+				WAVY = Border::OUTSET + 1	///< A wavy line.
+			ASCENSION_END_SCOPED_ENUM;
+			/**
+			 * [Copied from CSS3] This property specifies what parts of the element's content any
+			 * text decoration affecting the element must skip over. It controls all text
+			 * decoration lines drawn by the element and also any text decoration lines drawn by
+			 * its ancestors.
+			 * @see CSS Text Level 3, 10.1.5. Text Decoration Line Continuity: the
+			 *      ‚Äòtext-decoration-skip‚Äô property
+			 *      (http://dev.w3.org/csswg/css3-text/#text-decoration-skip)
+			 */
+			ASCENSION_BEGIN_SCOPED_ENUM(Skip)
+				/// Skip nothing: text-decoration is drawn for all text content and for inline
+				/// replaced elements.
+				NONE = 0,
+				/// Skip this element if it is an atomic inline (such as an image or inline-block).
+				OBJECTS = 1 << 0,
+				/// Skip white space: this includes regular spaces (U+0020) and tabs (U+0009), as
+				/// well as nbsp (U+00A0), ideographic space (U+3000), all fixed width spaces (such
+				/// as U+2000‚ÄìU+200A, U+202F and U+205F), and any adjacent letter-spacing or
+				/// word-spacing.
+				SPACES = 1 << 2,
+				/// Skip over where glyphs are drawn: interrupt the decoration line to let text
+				/// show through where the text decoration would otherwise cross over a glyph. The
+				/// UA may also skip a small distance to either side of the glyph outline.
+				INK = 1 << 3,
+				/// The UA should place the start and end of the line inwards from the content edge
+				/// of the decorating element so that, e.g. two underlined elements side-by-side do
+				/// not appear to have a single underline. (This is important in Chinese, where
+				/// underlining is a form of punctuation.)
+				EDGES = 1<< 4
+			ASCENSION_END_SCOPED_ENUM;
+			/**
+			 * [Copied from CSS3] This property sets the position of an underline specified on the
+			 * same element: it does not affect underlines specified by ancestor elements.
+			 * @see CSS Text Level 3, 10.1.6. Text Underline Position: the
+			 *      ‚Äòtext-underline-position‚Äô property
+			 *      (http://dev.w3.org/csswg/css3-text/#text-underline-position)
+			 */
+			ASCENSION_BEGIN_SCOPED_ENUM(UnderlinePosition)
+				/// The user agent may use any algorithm to determine the underline's position;
+				/// however it must be placed at or below the alphabetic baseline.
+				AUTO,
+				/// The underline is positioned relative to the alphabetic baseline. In this case
+				/// the underline is likely to cross some descenders.
+				ALPHABETIC,
+				/// In horizontal writing modes, the underline is positioned relative to the under
+				/// edge of the element's content box. In this case the underline usually does not
+				/// cross the descenders.
+				BELOW,
+				BELOW_LEFT,
+				BELOW_RIGHT,
+				/// In vertical writing modes, the underline is aligned as for ‚Äòbelow‚Äô on the left
+				/// edge of the text.
+				LEFT,
+				/// In vertical writing modes, the underline is aligned as for ‚Äòbelow‚Äô except it
+				/// is aligned to the right edge of the text.
+				RIGHT
+			ASCENSION_END_SCOPED_ENUM;
+
+			StyleProperty<
+				sp::Enumerated<Line, Line::NONE>,
+				sp::NotInherited
+			> lines;	///< 'text-decoration-line' property.
+			/**
+			 * [Copied from CSS3] This property specifies the color of text decoration (underlines
+			 * overlines, and line-throughs) set on the element with ‚Äòtext-decoration-line‚Äô
+			 * @see CSS Text Level 3, 10.1.2. Text Decoration Color: the ‚Äòtext-decoration-color‚Äô
+			 *      property (http://dev.w3.org/csswg/css3-text/#text-decoration-color)
+			 */
+			ColorProperty<sp::NotInherited> color;
+			StyleProperty<
+				sp::Enumerated<Style, Style::SOLID>,
+				sp::NotInherited
+			> style;	///< 'text-decoration-style' property.
+			StyleProperty<
+				sp::Enumerated<Skip, Skip::NONE>,
+				sp::Inherited
+			> skip;	///< 'text-decoration-skip' property.
+			StyleProperty<
+				sp::Enumerated<UnderlinePosition, UnderlinePosition::AUTO>,
+				sp::Inherited
+			> underlinePosition;	///< 'text-underline-position' property.
 		};
 
-		struct TextEmphasis {};
+		struct TextEmphasis {
+			/// Enumerated values for @c #style.
+			enum StyleEnums {
+				/// No emphasis marks.
+				NONE,
+				/// The shape is filled with solid color.
+				FILLED,
+				/// The shape is hollow.
+				OPEN,
+				/// Display small circles as marks. The filled dot is U+2022 ‚Äò‚Ä¢‚Äô and the open dot
+				/// is U+25E6 ‚Äò‚ó¶‚Äô
+				DOT,
+				/// Display large circles as marks. The filled circle is U+25CF ‚Äò‚óè‚Äô and the open
+				/// circle is U+25CB ‚Äò‚óã‚Äô
+				CIRCLE,
+				/// Display double circles as marks. The filled double-circle is U+25C9 ‚Äò‚óâ‚Äô and
+				/// the open double-circle is U+25CE ‚Äò‚óé‚Äô
+				DOUBLE_CIRCLE,
+				/// Display triangles as marks. The filled triangle is U+25B2 ‚Äò‚ñ≤‚Äô and the open
+				/// triangle is U+25B3 ‚Äò‚ñ≥‚Äô
+				TRIANGLE,
+				/// Display sesames as marks. The filled sesame is U+FE45 ‚ÄòÔπÖ‚Äô, and the open sesame
+				/// is U+FE46 ‚ÄòÔπÜ‚Äô.
+				SESAME
+			};
+			/**
+			 * [Copied from CSS3] This property describes where emphasis marks are drawn at.
+			 * @see CSS Text Level 3, 10.2.4. Emphasis Mark Position: the ‚Äòtext-emphasis-position‚Äô
+			 *      property (http://dev.w3.org/csswg/css3-text/#text-emphasis-position)
+			 */
+			enum Position {
+				/// Draw marks over the text in horizontal writing mode.
+				ABOVE,
+				/// Draw marks under the text in horizontal writing mode.
+				BELOW,
+				/// Draw marks to the right of the text in vertical writing mode.
+				RIGHT,
+				/// Draw marks to the left of the text in vertical writing mode.
+				LEFT
+			};
+
+			/**
+			 * [Copied from CSS3] This property applies emphasis marks to the element's text.
+			 * @see CSS Text Level 3, 10.2.1. Emphasis Mark Style: the ‚Äòtext-emphasis-style‚Äô
+			 *      property (http://dev.w3.org/csswg/css3-text/#text-emphasis-style)
+			 */
+			StyleProperty<
+				sp::Multiple<
+					boost::variant<StyleEnums, CodePoint>,
+					StyleEnums, NONE
+				>,
+				sp::Inherited
+			> style;
+			/**
+			 * [Copied from CSS3] This property specifies the foreground color of the emphasis marks.
+			 * @see CSS Text Level 3, 10.2.2. Emphasis Mark Color: the ‚Äòtext-emphasis-color‚Äô
+			 *      property (http://dev.w3.org/csswg/css3-text/#text-emphasis-color)
+			 */
+			ColorProperty<sp::Inherited> color;
+			StyleProperty<
+				sp::Enumerated<Position, ABOVE | RIGHT>,
+				sp::Inherited
+			> position;	///< 'text-emphasis-position' property.
+		};
 
 		struct TextShadow {};
 
@@ -506,7 +741,7 @@ namespace ascension {
 				public std::enable_shared_from_this<TextRunStyle> {
 #if 1
 			/// Foreground color of the text content. See @c ColorProperty.
-			ColorProperty color;
+			ColorProperty<sp::Inherited> color;
 #else
 			/// Text paint style.
 			std::shared_ptr<graphics::Paint> foreground;
@@ -575,10 +810,10 @@ namespace ascension {
 //				>, sp::Inherited
 //			> fontLanguageOverride;
 			/**
-			 * [Copied from CSS3] The Åetext-heightÅf property determine the block-progression
+			 * [Copied from CSS3] The ‚Äòtext-height‚Äô property determine the block-progression
 			 * dimension of the text content area of an inline box (non-replaced elements).
 			 * @see CSS Line Layout Module Level 3, 3.3 Block-progression dimensions: the
-			 *      Åetext-heightÅf property (http://dev.w3.org/csswg/css3-linebox/#inline1)
+			 *      ‚Äòtext-height‚Äô property (http://dev.w3.org/csswg/css3-linebox/#inline1)
 			 */
 			StyleProperty<
 				sp::Multiple<
@@ -587,11 +822,11 @@ namespace ascension {
 				>, sp::Inherited
 			> textHeight;
 			/**
-			 * [Copied from CSS3] The Åeline-heightÅf property controls the amount of leading space
+			 * [Copied from CSS3] The ‚Äòline-height‚Äô property controls the amount of leading space
 			 * which is added before and after the block-progression dimension of an inline box
 			 * (not including replaced inline boxes, but including the root inline box) to
 			 * determine the extended block-progression dimension of the inline box.
-			 * @see CSS Line Layout Module Level 3, 3.4.1 Line height adjustment: the Åeline-heightÅf
+			 * @see CSS Line Layout Module Level 3, 3.4.1 Line height adjustment: the ‚Äòline-height‚Äô
 			 *      property (http://dev.w3.org/csswg/css3-linebox/#InlineBoxHeight)
 			 * @see XSL 1.1, 7.16.4 "line-height" (http://www.w3.org/TR/xsl/#line-height)
 			 */
@@ -612,15 +847,15 @@ namespace ascension {
 				sp::NotInherited
 			> alignmentBaseline;
 			/**
-			 * [Copied from CSS3] The Åealignment-adjustÅf property allows more precise alignment of
+			 * [Copied from CSS3] The ‚Äòalignment-adjust‚Äô property allows more precise alignment of
 			 * elements, such as graphics, that do not have a baseline-table or lack the desired
-			 * baseline in their baseline-table. With the Åealignment-adjustÅf property, the position
-			 * of the baseline identified by the Åealignment-baselineÅf can be explicitly determined.
+			 * baseline in their baseline-table. With the ‚Äòalignment-adjust‚Äô property, the position
+			 * of the baseline identified by the ‚Äòalignment-baseline‚Äô can be explicitly determined.
 			 * It also determines precisely the alignment point for each glyph within a textual
 			 * element. The user agent should use heuristics to determine the position of a non
 			 * existing baseline for a given element.
 			 * @see CSS Line Layout Module Level 3, 4.6 Setting the alignment point: the
-			 *      Åealignment-adjustÅf property
+			 *      ‚Äòalignment-adjust‚Äô property
 			 *      (http://dev.w3.org/csswg/css3-linebox/#alignment-adjust-prop)
 			 * @see CSS3 module: line, 4.6. Setting the alignment point: the 'alignment-adjust'
 			 *      property (http://www.w3.org/TR/css3-linebox/#alignment-adjust-prop)
@@ -633,13 +868,13 @@ namespace ascension {
 				>, sp::NotInherited
 			> alignmentAdjust;
 			/**
-			 * [Copied from CSS3] The Åebaseline-shiftÅf property allows repositioning of the
+			 * [Copied from CSS3] The ‚Äòbaseline-shift‚Äô property allows repositioning of the
 			 * dominant-baseline relative to the dominant-baseline. The shifted object might be a
 			 * sub- or superscript. Within the shifted element, the whole baseline table is offset;
 			 * not just a single baseline. For sub- and superscript, the amount of offset is
 			 * determined from the nominal font of the parent.
 			 * @see CSS Line Layout Module Level 3, 4.7 Repositioning the dominant baseline: the
-			 *      Åebaseline-shiftÅf property
+			 *      ‚Äòbaseline-shift‚Äô property
 			 *      (http://dev.w3.org/csswg/css3-linebox/#baseline-shift-prop)
 			 * @see CSS3 module: line, 4.7. Repositioning the dominant baseline: the
 			 *     'baseline-shift' property
@@ -658,43 +893,50 @@ namespace ascension {
 				sp::Enumerated<TextTransform, TextTransform::NONE>,
 				sp::Inherited
 			> textTransform;
-//			???? hyphens;
+			StyleProperty<
+				sp::Enumerated<Hyphens, Hyphens::MANUAL>,
+				sp::Inherited
+			> hyphens;
 			/**
 			 * [Copied from CSS3] This property specifies the minimum, maximum, and optimal spacing
-			 * between ÅgwordsÅh. Additional spacing is applied to each word-separator character left
+			 * between ‚Äúwords‚Äù. Additional spacing is applied to each word-separator character left
 			 * in the text after the white space processing rules have been applied, and should be
 			 * applied half on each side of the character.
-			 * @see CSS Text Level 3, 8.1. Word Spacing: the Åeword-spacingÅf property
+			 * @see CSS Text Level 3, 8.1. Word Spacing: the ‚Äòword-spacing‚Äô property
 			 *      (http://www.w3.org/TR/css3-text/#word-spacing)
 			 * @see SVG 1.1 (Second Edition), 10.11 Spacing properties
 			 *      (http://www.w3.org/TR/SVG11/text.html#WordSpacingProperty)
 			 * @see XSL 1.1, 7.17.8 "word-spacing" (http://www.w3.org/TR/xsl/#word-spacing)
 			 */
-			StyleProperty<
-				sp::Complex<SpacingLimit>,
-				sp::Inherited
+			SpacingLimit<
+				StyleProperty<
+					sp::Complex<boost::optional<Length>>,
+					sp::Inherited
+				>
 			> wordSpacing;
 			/**
 			 * [Copied from CSS3] This property specifies the minimum, maximum, and optimal spacing
 			 * between characters. Letter-spacing is applied in addition to any word-spacing.
-			 * ÅenormalÅf optimum letter-spacing is typically zero. Letter-spacing must not be
+			 * ‚Äònormal‚Äô optimum letter-spacing is typically zero. Letter-spacing must not be
 			 * applied at the beginning or at the end of a line. At element boundaries, the total
 			 * letter spacing between two characters is given by and rendered within the innermost
 			 * element that contains the boundary. For the purpose of letter-spacing, each
 			 * consecutive run of atomic inlines (such as image and/or inline blocks) is treated as
 			 * a single character.
-			 * @see CSS Text Level 3, 8.2. Word Spacing: the Åeletter-spacingÅf property
+			 * @see CSS Text Level 3, 8.2. Word Spacing: the ‚Äòletter-spacing‚Äô property
 			 *      (http://www.w3.org/TR/css3-text/#letter-spacing)
 			 * @see SVG 1.1 (Second Edition), 10.11 Spacing properties
 			 *      (http://www.w3.org/TR/SVG11/text.html#LetterSpacingProperty)
 			 * @see XSL 1.1, 7.17.2 "letter-spacing" (http://www.w3.org/TR/xsl/#letter-spacing)
 			 */
-			StyleProperty<
-				sp::Complex<SpacingLimit>,
-				sp::Inherited
+			SpacingLimit<
+				StyleProperty<
+					sp::Complex<boost::optional<Length>>,
+					sp::Inherited
+				>
 			> letterSpacing;
-			/// Text decoration properties. See @c TextDecorations.
-			TextDecorations textDecorations;
+			/// Text decoration properties. See @c TextDecoration.
+			TextDecoration textDecoration;
 			/// Text emphasis properties. See @c TextEmphasis.
 			TextEmphasis textEmphasis;
 			/// Text shadow properties. See @c TextShadow.
@@ -800,14 +1042,23 @@ namespace ascension {
 				NATIONAL,
 				/// Numbers are rendered using the traditional shapes for the specified locale.
 				TRADITIONAL
-			} method;	///< The substitution method. Default value is @c USER_SETTING.
-			/// The name of the locale to be used.
-			std::string localeName;
-			/// Whether to ignore user override. Default value is @c false.
-			bool ignoreUserOverride;
+			};
 
-			/// Default constructor.
-			NumberSubstitution() /*throw()*/ : method(USER_SETTING), ignoreUserOverride(false) {}
+			/// The substitution method.
+			StyleProperty<
+				sp::Enumerated<Method, USER_SETTING>,
+				sp::Inherited
+			> method;
+			/// The name of the locale to be used.
+			StyleProperty<
+				sp::Complex<std::string>,
+				sp::Inherited
+			> localeName;
+			/// Whether to ignore user override.
+			StyleProperty<
+				sp::Enumerated<bool, false>,
+				sp::Inherited
+			> ignoreUserOverride;
 		};
 
 		/**
@@ -822,7 +1073,7 @@ namespace ascension {
 				sp::Enumerated<LineBoxContain, LineBoxContain::BLOCK | LineBoxContain::INLINE | LineBoxContain::REPLACED>,
 				sp::Inherited
 			> lineBoxContain;
-			/// Åeinline-box-alignÅf property. See @c InlineBoxAlignment.
+			/// ‚Äòinline-box-align‚Äô property. See @c InlineBoxAlignment.
 			StyleProperty<
 				sp::Multiple<
 					InlineBoxAlignment,
@@ -836,7 +1087,7 @@ namespace ascension {
 			/**
 			 * [Copied from CSS3] This property determines the measure of the tab character
 			 * (U+0009) when rendered. Integers represent the measure in space characters (U+0020).
-			 * @see CSS Text Level 3, 3.2. Tab Character Size: the Åetab-sizeÅf property
+			 * @see CSS Text Level 3, 3.2. Tab Character Size: the ‚Äòtab-size‚Äô property
 			 *      (http://www.w3.org/TR/css3-text/#tab-size)
 			 */
 			StyleProperty<
@@ -882,7 +1133,7 @@ namespace ascension {
 			> textJustification;
 			/// 'text-indent' property. See @c TextIndent.
 			StyleProperty<
-				sp::Complex<TextIndent>,
+				sp::Complex<TextIndent<Length>>,
 				sp::Inherited
 			> textIndent;
 			/// 'hanging-punctuation' property. See @c HangingPunctuation.
@@ -940,19 +1191,19 @@ namespace ascension {
 		 * @tparam Parent @c std#shared_ptr&lt;const TextLineStyle&gt; or
 		 *                @c RulerConfiguration#LineNumbers*
 		 */
-		template<typename Parent>
-		inline graphics::Color computeColor(const ColorProperty* current,
+		template<typename Parent, typename InheritedOrNot>
+		inline graphics::Color computeColor(const ColorProperty<InheritedOrNot>* current,
 				const Parent parent, const TextToplevelStyle& ancestor) {
-			const ColorProperty* parentColor = nullptr;
+			const ColorProperty<InheritedOrNot>* parentColor = nullptr;
 			if(const TextLineStyle* p = parent.get()) {
 				if(p->defaultRunStyle)
 					parentColor = &p->defaultRunStyle->color;
 			}
-			const ColorProperty* ancestorColor = nullptr;
+			const ColorProperty<InheritedOrNot>* ancestorColor = nullptr;
 			if(ancestor.defaultLineStyle && ancestor.defaultLineStyle->defaultRunStyle)
 				ancestorColor = &ancestor.defaultLineStyle->defaultRunStyle->color;
 			return computeColor(current, parentColor,
-				(ancestorColor != nullptr) ? *ancestorColor : ColorProperty());
+				(ancestorColor != nullptr) ? *ancestorColor : ColorProperty<InheritedOrNot>());
 		}
 
 		inline std::unique_ptr<graphics::Paint> computeBackground(const Background* current,
