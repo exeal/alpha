@@ -14,7 +14,12 @@
 
 namespace ascension {
 
-	namespace graphics {class Color;}
+	namespace graphics {
+		class Color;
+		namespace font {
+			struct ComputedTextLineStyle;
+		}
+	}
 
 	namespace rules {class URIDetector;}
 
@@ -26,12 +31,12 @@ namespace ascension {
 
 		/**
 		 * Interface for objects which direct style of a text line.
-		 * @see Presentation#setTextLineStyleDirector
+		 * @see TextLineStyle, Presentation#setTextLineStyleDirector
 		 */
 		class TextLineStyleDirector {
 		public:
 			/// Destructor.
-			virtual ~TextLineStyleDirector() /*throw()*/ {}
+			virtual ~TextLineStyleDirector() /*noexcept*/ {}
 		private:
 			/**
 			 * Queries the style of the text line.
@@ -39,7 +44,7 @@ namespace ascension {
 			 * @return The style of the line or @c null (filled by the presentation's default style)
 			 * @throw BadPositionException @a line is outside of the document
 			 */
-			virtual std::shared_ptr<const Inheritable<TextLineStyle>> queryTextLineStyle(Index line) const = 0;
+			virtual std::shared_ptr<const TextLineStyle> queryTextLineStyle(Index line) const = 0;
 			friend class Presentation;
 		};
 
@@ -185,7 +190,7 @@ namespace ascension {
 			void setGlobalTextStyle(std::shared_ptr<const TextToplevelStyle> newStyle);
 			void textLineColors(Index line,
 				boost::optional<graphics::Color>& foreground, boost::optional<graphics::Color>& background) const;
-			TextLineStyle& textLineStyle(Index line, TextLineStyle& style) const;
+			TextLineStyle&& textLineStyle(Index line) const;
 			std::unique_ptr<StyledTextRunIterator> textRunStyles(Index line) const;
 			// strategies
 			void addTextLineColorDirector(std::shared_ptr<TextLineColorDirector> director);
