@@ -27,7 +27,6 @@ namespace ascension {
 
 		struct TextLineStyle;
 		struct TextToplevelStyle;
-		template<typename T> class Inheritable;
 
 		/**
 		 * Interface for objects which direct style of a text line.
@@ -182,22 +181,28 @@ namespace ascension {
 			// attributes
 			kernel::Document& document() /*noexcept*/;
 			const kernel::Document& document() const /*noexcept*/;
-			const hyperlink::Hyperlink* const* getHyperlinks(Index line, std::size_t& numberOfHyperlinks) const;
-			// styles
+			// styles -- declaration
 			void addGlobalTextStyleListener(GlobalTextStyleListener& listener);
 			const TextToplevelStyle& globalTextStyle() const /*noexcept*/;
 			void removeGlobalTextStyleListener(GlobalTextStyleListener& listener);
 			void setGlobalTextStyle(std::shared_ptr<const TextToplevelStyle> newStyle);
+			void setTextLineStyleDirector(std::shared_ptr<TextLineStyleDirector> newDirector) /*noexcept*/;
+			void setTextRunStyleDirector(std::shared_ptr<TextRunStyleDirector> newDirector) /*noexcept*/;
 			void textLineColors(Index line,
 				boost::optional<graphics::Color>& foreground, boost::optional<graphics::Color>& background) const;
-			TextLineStyle&& textLineStyle(Index line) const;
-			std::unique_ptr<StyledTextRunIterator> textRunStyles(Index line) const;
+			// styles -- computation
+			graphics::font::ComputedTextLineStyle&& computeTextLineStyle(Index line,
+				const graphics::RenderingContext2D& context, const graphics::NativeSize& contextSize) const;
+			std::unique_ptr<StyledTextRunIterator> computeTextRunStyles(Index line,
+				const graphics::RenderingContext2D& context, const graphics::NativeSize& contextSize) const;
+			// hyperlinks
+			const hyperlink::Hyperlink* const* getHyperlinks(
+				Index line, std::size_t& numberOfHyperlinks) const;
+			void setHyperlinkDetector(
+				std::shared_ptr<hyperlink::HyperlinkDetector> newDetector) /*noexcept*/;
 			// strategies
 			void addTextLineColorDirector(std::shared_ptr<TextLineColorDirector> director);
 			void removeTextLineColorDirector(TextLineColorDirector& director) /*noexcept*/;
-			void setHyperlinkDetector(std::shared_ptr<hyperlink::HyperlinkDetector> newDetector) /*noexcept*/;
-			void setTextLineStyleDirector(std::shared_ptr<TextLineStyleDirector> newDirector) /*noexcept*/;
-			void setTextRunStyleDirector(std::shared_ptr<TextRunStyleDirector> newDirector) /*noexcept*/;
 		private:
 			void clearHyperlinksCache() /*noexcept*/;
 			// kernel.DocumentListener

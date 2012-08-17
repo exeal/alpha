@@ -210,4 +210,4 @@ namespace ascension {
 	}
 }
 
-#endif // ASCENSION_DIRECTIONS_HPP
+#endif // !ASCENSION_DIRECTIONS_HPP

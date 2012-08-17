@@ -1,7 +1,7 @@
 ﻿/**
  * @file text-style.hpp
  * @author exeal
- * @see text-line-style.hpp
+ * @see presentation.hpp, graphics/text-alignment.hpp, graphics/text-layout-styles.hpp
  * @date 2003-2006 was LineLayout.h
  * @date 2006-2011 was presentation.hpp
  * @date 2011-05-04 separated from presentation.hpp
@@ -15,6 +15,7 @@
 #include <ascension/graphics/color.hpp>	// graphics.Color
 #include <ascension/graphics/font.hpp>	// graphics.font.FontProperties, ...
 #include <ascension/graphics/paint.hpp>	// graphics.Paint
+#include <ascension/graphics/text-alignment.hpp>
 #include <ascension/presentation/length.hpp>
 #include <ascension/presentation/style-property.hpp>
 #include <ascension/presentation/writing-mode.hpp>
@@ -203,74 +204,11 @@ namespace ascension {
 			NORMAL, NONE
 		ASCENSION_END_SCOPED_ENUM;
 
-		/**
-		 * [Copied from CSS3] This property enumerates which aspects of the elements in a line box
-		 * contribute to the height height of that line box.
-		 * @see CSS Line Layout Module Level 3, 3.4.2 Line Stacking: the ‘line-box-contain’
-		 *      property (http://dev.w3.org/csswg/css3-linebox/#LineStacking)
-		 * @see XSL 1.1, 7.16.6 "line-stacking-strategy"
-		 *      (http://www.w3.org/TR/xsl/#line-stacking-strategy)
-		 */
-		ASCENSION_BEGIN_SCOPED_ENUM(LineBoxContain)
-			// TODO: 'NONE' should be 0.
-			// TODO: Values other than 'NONE' can be combined by bitwise-OR.
-			BLOCK, INLINE, FONT, GLYPHS, REPLACED, INLINE_BOX, NONE
-		ASCENSION_END_SCOPED_ENUM;
-		/**
-		 * [Copied from CSS3] The ‘dominant-baseline’ property is used to determine or re-determine
-		 * a scaled-baseline-table.
-		 * @see CSS Line Layout Module Level 3, 4.4 Dominant baseline: the ‘dominant-baseline’
-		 *      property (http://dev.w3.org/csswg/css3-linebox/#dominant-baseline-prop)
-		 * @see CSS3 module: line, 4.4. Dominant baseline: the 'dominant-baseline' property
-		 *      (http://www.w3.org/TR/css3-linebox/#dominant-baseline-prop)
-		 * @see SVG 1.1 (Second Edition), 10.9.2 Baseline alignment properties
-		 *      (http://www.w3.org/TR/SVG/text.html#DominantBaselineProperty)
-		 * @see XSL 1.1, 7.14.5 "dominant-basline" (http://www.w3.org/TR/xsl/#dominant-baseline)
-		 */
-		ASCENSION_BEGIN_SCOPED_ENUM(DominantBaseline)
-			AUTO,
-			USE_SCRIPT,
-			NO_CHANGE,
-			RESET_SIZE,
-			ALPHABETIC,
-			HANGING,
-			IDEOGRAPHIC,
-			MATHEMATICAL,
-			CENTRAL,
-			MIDDLE,
-			TEXT_AFTER_EDGE,
-			TEXT_DEFORE_EDGE,
-		ASCENSION_END_SCOPED_ENUM;
+		using graphics::font::LineBoxContain;
 
-		/**
-		 * [Copied from CSS3] This property specifies how an inline-level element is aligned with
-		 * respect to its parent. That is, to which of the parent's baselines the alignment point
-		 * of this element is aligned. Unlike the ‘dominant-baseline’ property the
-		 * ‘alignment-baseline’ property has no effect on its children dominant-baselines.
-		 * @see CSS Line Layout Module Level 3, 4.5 Aligning the alignment point of an element: the
-		 *      ‘alignment-baseline’ property
-		 *      (http://dev.w3.org/csswg/css3-linebox/#alignment-baseline-prop)
-		 * @see CSS3 module: line, 4.5. Aligning the alignment point of an element: the
-		 *      'alignment-baseline' property
-		 *      (http://www.w3.org/TR/css3-linebox/#alignment-baseline-prop)
-		 * @see SVG 1.1 (Second Edition), 10.9.2 Baseline alignment properties
-		 *      (http://www.w3.org/TR/SVG/text.html#AlignmentBaselineProperty)
-		 * @see XSL 1.1, 7.14.2 "alignment-baseline" (http://www.w3.org/TR/xsl/#alignment-baseline)
-		 */
-		ASCENSION_BEGIN_SCOPED_ENUM(AlignmentBaseline)
-			BASELINE,
-			USE_SCRIPT,
-			BEFORE_EDGE,
-			TEXT_BEFORE_EDGE,
-			AFTER_EDGE,
-			TEXT_AFTER_EDGE,
-			CENTRAL,
-			MIDDLE,
-			IDEOGRAPHIC,
-			ALPHABETIC,
-			HANGING,
-			MATHEMATICAL
-		ASCENSION_END_SCOPED_ENUM;
+		using graphics::font::DominantBaseline;
+
+		using graphics::font::AlignmentBaseline;
 
 		/// Enumerated values for @c TextRunStyle#alignmentAdjust.
 		ASCENSION_BEGIN_SCOPED_ENUM(AlignmentAdjustEnums)
@@ -394,37 +332,9 @@ namespace ascension {
 			TextWrapping() : textWrap(TextWrap::NORMAL), overflowWrap(OverflowWrap::NORMAL), measure(0) {}
 		};
 
-		/**
-		 * @c TextAnchor describes an alignment of text relative to the given point.
-		 * @see resolveTextAlignment, TextLineStyle#alignment, TextLineStyle#lastSublineAlignment,
-		 *      defaultTextAnchor
-		 * @see XSL 1.1, 7.16.9 "text-align"
-		 *      (http://www.w3.org/TR/2006/REC-xsl11-20061205/#text-align)
-		 * @see CSS Text Level 3, 7.1. Text Alignment: the 'text-align' property
-		 *      (http://www.w3.org/TR/2010/WD-css3-text-20101005/#text-align)
-		 */
-		ASCENSION_BEGIN_SCOPED_ENUM(TextAlignment)
-			START,
-			END,
-			LEFT,
-			RIGHT,
-			CENTER,
-			JUSTIFY,
-			MATCH_PARENT,
-			START_END
-		ASCENSION_END_SCOPED_ENUM;
+		using graphics::font::TextAlignment;
 
-		/**
-		 * [Copied from SVG11] The ‘text-anchor’ property is used to align (start-, middle- or
-		 * end-alignment) a string of text relative to a given point.
-		 * @see SVG 1.1, 10.9.1 Text alignment properties
-		 *      (http://www.w3.org/TR/SVG/text.html#TextAlignmentProperties)
-		 */
-		ASCENSION_BEGIN_SCOPED_ENUM(TextAnchor)
-			START = TextAlignment::START,
-			MIDDLE = TextAlignment::CENTER,
-			END = TextAlignment::END
-		ASCENSION_END_SCOPED_ENUM;
+		using graphics::font::TextAnchor;
 
 		/**
 		 * [Copied from CSS3] This property describes how the last line of a block or a line right
@@ -512,12 +422,13 @@ namespace ascension {
 		/**
 		 * [Copied from CSS3] This property specifies the indentation applied to lines of inline
 		 * content in a block.
-		 * @tparam LengthType The type of @c #length. Usually @c Length or @c Scalar
+		 * @tparam LengthType The type of @c #length data member. Usually @c Length or @c Scalar
+		 * @tparam BooleanType The type of @c #hanging and @c #eachLine data members
 		 * @see CSS Text Level 3, 9.1. First Line Indentation: the ‘text-indent’ property
 		 *      (http://www.w3.org/TR/css3-text/#text-indent)
 		 * @see XSL 1.1, 7.16.11 "text-indent" (http://www.w3.org/TR/xsl/#text-indent)
 		 */
-		template<typename LengthType>
+		template<typename LengthType, typename BooleanType>
 		struct TextIndent {
 			/**
 			 * [Copied from CSS3] Gives the amount of the indent as an absolute length. If this is
@@ -525,13 +436,13 @@ namespace ascension {
 			 */
 			LengthType length;
 			/// [Copied from CSS3] Inverts which lines are affected.
-			bool hanging;
+			BooleanType hanging;
 			/**
 			 * [Copied from CSS3] Indentation affects the first line of the block container as well
 			 * as each line after a forced line break, but does not affect lines after a soft wrap
 			 * break.
 			 */
-			bool eachLine;
+			BooleanType eachLine;
 		};
 
 		/**
@@ -1132,9 +1043,9 @@ namespace ascension {
 				sp::Inherited
 			> textJustification;
 			/// 'text-indent' property. See @c TextIndent.
-			StyleProperty<
-				sp::Complex<TextIndent<Length>>,
-				sp::Inherited
+			TextIndent<
+				StyleProperty<sp::Lengthed<0, Length::PIXELS>, sp::Inherited>,
+				StyleProperty<sp::Enumerated<bool, false>, sp::Inherited>
 			> textIndent;
 			/// 'hanging-punctuation' property. See @c HangingPunctuation.
 			StyleProperty<
