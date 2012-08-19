@@ -9,6 +9,7 @@
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
 #include <ascension/graphics/text-layout.hpp>
+#include <ascension/graphics/text-layout-styles.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>
 //#include <ascension/graphics/special-character-renderer.hpp>
@@ -401,22 +402,22 @@ bool font::supportsOpenTypeFeatures() /*throw()*/ {
  * @param writingMode The writing mode used to compute the directions and orientation of @a border
  */
 void detail::paintBorder(PaintContext& context, const NativeRectangle& rectangle,
-		const PhysicalFourSides<ComputedBorderSide>& border, const Color& currentColor, const WritingMode& writingMode) {
+		const PhysicalFourSides<ComputedBorderSide>& border, const WritingMode& writingMode) {
 	// TODO: not implemented.
-	for(FlowRelativeFourSides<Border::Side>::const_iterator side(begin(border.sides)), e(border.sides.cend()); part != e; ++part) {
-		if(!part->hasVisibleStyle() || part->computedWidth().valueInSpecifiedUnits() <= 0.0)
+	for(PhysicalFourSides<ComputedBorderSide>::const_iterator side(begin(border)), e(border.cend()); side != e; ++side) {
+		if(!side->hasVisibleStyle() || side->computedWidth() <= 0)
 			continue;
 		if(!geometry::includes(context.boundsToPaint(), rectangle))
 			continue;
-		const Color color(part->color.get_value_or(currentColor));
+		const Color& color = side->color;
 		if(color.isFullyTransparent())
 			continue;
 		context.setStrokeStyle(shared_ptr<Paint>(new SolidColor(color)));
-		context.setLineWidth(static_cast<Scalar>(part->width.value(&context, &context.device().size())));
+		context.setLineWidth(side->width);
 //		context.setStrokeDashArray();
 //		context.setStrokeDashOffset();
 		context.beginPath();
-		switch(mapFlowRelativeToPhysical(writingMode, static_cast<FlowRelativeDirection>(part - border.sides.begin()))) {
+		switch(static_cast<PhysicalDirection>(side - begin(border))) {
 			case TOP:
 				context
 					.moveTo(geometry::make<NativePoint>(geometry::left(rectangle), geometry::top(rectangle)))
