@@ -305,6 +305,13 @@ namespace ascension {
 
 		}
 	}
+
+	namespace detail {
+		void paintBorder(graphics::PaintContext& context,
+			const graphics::NativeRectangle& rectangle,
+			const graphics::PhysicalFourSides<graphics::font::ComputedBorderSide>& style,
+			const presentation::WritingMode& writingMode);
+	}
 } // namespace ascension.graphics.font
 
 #endif // !ASCENSION_TEXT_LAYOUT_STYLES_HPP

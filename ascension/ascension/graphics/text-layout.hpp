@@ -97,6 +97,10 @@ namespace ascension {
 //				virtual Scalar leading() const /*noexcept*/ = 0;
 			};
 
+			struct ComputedTextLineStyle;
+			class TextPaintOverride;
+			class TabExpander;
+
 			class TextLayout {
 				ASCENSION_NONCOPYABLE_TAG(TextLayout);
 			public:
@@ -336,12 +340,6 @@ namespace ascension {
 			inline Index TextLayout::numberOfLines() const /*throw()*/ {return numberOfLines_;}
 
 		}
-	}
-
-	namespace detail {
-		void paintBorder(graphics::PaintContext& context, const graphics::NativeRectangle& rectangle,
-			const graphics::PhysicalFourSides<graphics::font::ComputedBorderSide>& style,
-			const graphics::Color& currentColor, const presentation::WritingMode& writingMode);
 	}
 } // namespace ascension.graphics.font
 
