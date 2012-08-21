@@ -697,6 +697,12 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\text-alignment.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font-description.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font-family.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
