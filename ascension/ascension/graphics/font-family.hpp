@@ -97,7 +97,15 @@ namespace ascension {
 				}
 #endif
 				explicit FontFamily(GenericFamily genericFamily);
-				const String& name() const /*noexcept*/ {return name_;}
+				/// Copy-assignment operator.
+				FontFamily& operator=(const FontFamily& other);
+				/**
+				 * Returns the family name.
+				 * @param lc The locale for which to get the font family name. If this value is
+				 *           C or unsupported locale, this method returns an unlocalized name
+				 * @return The family name
+				 */
+				String name(const std::locale& lc = std::locale::classic()) const /*noexcept*/;
 			private:
 #if defined(ASCENSION_SHAPING_ENGINE_DIRECT_WRITE)
 				win32::com::SmartPointer<IDWriteFontFamily> nativeObject_;

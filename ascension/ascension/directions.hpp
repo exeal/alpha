@@ -86,6 +86,7 @@ namespace ascension {
 
 		/**
 		 * A correction of all physical directions.
+		 * @tparam T Element type
 		 * @see presentation#FlowRelativeFourSides
 		 */
 		template<typename T>
@@ -125,6 +126,30 @@ namespace ascension {
 			/// Returns a reference to 'left' value.
 			const_reference left() const {return (*this)[LEFT];}
 		};
+
+		/**
+		 * Returns a range in horizontal direction of the given physical four sides.
+		 * @tparam T Element type
+		 * @param sides The physical four sides
+		 * @return A range
+		 * @see verticalRange, blockFlowRange, inlineFlowRange
+		 */
+		template<typename T>
+		inline Range<T> horizontalRange(const PhysicalFourSides<T>& sides) {
+			return makeRange(sides.left(), sides.right());
+		}
+
+		/**
+		 * Returns a range in vertical direction of the given physical four sides.
+		 * @tparam T Element type
+		 * @param sides The physical four sides
+		 * @return A range
+		 * @see horizontalRange, blockFlowRange, inlineFlowRange
+		 */
+		template<typename T>
+		inline Range<T> verticalRange(const PhysicalFourSides<T>& sides) {
+			return makeRange(sides.top(), sides.bottom());
+		}
 	}
 
 	namespace presentation {
@@ -207,6 +232,43 @@ namespace ascension {
 			/// @note This method hides @c std#array#end.
 			const_reference end() const {return (*this)[END];}
 		};
+
+		/**
+		 * Returns a range in block flow direction of the given abstract four sides.
+		 * @tparam T Element type
+		 * @param sides The abstract four sides
+		 * @return A range
+		 * @see inlineFlowRange, horizontalRange, verticalRange
+		 */
+		template<typename T>
+		inline Range<T> blockFlowRange(const FlowRelativeFourSides<T>& sides) {
+			return makeRange(sides.before(), sides.after());
+		}
+
+		/**
+		 * Returns a range in inline flow direction of the given abstract four sides.
+		 * @tparam T Element type
+		 * @param sides The abstract four sides
+		 * @return A range
+		 * @see blockFlowRange, horizontalRange, verticalRange
+		 */
+		template<typename T>
+		inline Range<T> inlineFlowRange(const FlowRelativeFourSides<T>& sides) {
+			return makeRange(sides.start(), sides.end());
+		}
+	}
+
+	namespace graphics {
+		namespace geometry {
+			template<typename Rectangle>
+			inline Rectangle make(
+					const presentation::FlowRelativeFourSides<
+						typename Coordinate<typename Coordinate<Rectangle>::Type>::Type
+					>& sides,
+					typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
+				return make<Rectangle>(horizontalRange(sides), verticalRange(sides));
+			}
+		}
 	}
 }
 

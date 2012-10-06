@@ -10,11 +10,11 @@
 #ifndef ASCENSION_PRESENTATION_RECONSTRUCTOR_HPP
 #define ASCENSION_PRESENTATION_RECONSTRUCTOR_HPP
 
-#include <ascension/corelib/basic-types.hpp>	// std.tr1.shared_ptr, ...
-#include <ascension/kernel/document.hpp>		// kernel.ContentType, kernel.Region
+#include <ascension/kernel/document.hpp>	// kernel.ContentType, kernel.Region
+#include <map>
+#include <memory>							// std.shared_ptr, std.unique_ptr
 
 namespace ascension {
-
 	namespace presentation {
 
 		class Presentation;
@@ -44,39 +44,40 @@ namespace ascension {
 		class SingleStyledPartitionPresentationReconstructor : public PartitionPresentationReconstructor {
 			ASCENSION_UNASSIGNABLE_TAG(SingleStyledPartitionPresentationReconstructor);
 		public:
-			explicit SingleStyledPartitionPresentationReconstructor(std::shared_ptr<const TextRunStyle> style) /*throw()*/;
+			explicit SingleStyledPartitionPresentationReconstructor(std::shared_ptr<const TextRunStyle> style) /*noexcept*/;
 		private:
 			// PartitionPresentationReconstructor
 			std::unique_ptr<StyledTextRunIterator>
-				getPresentation(Index line, const Range<Index>& columnRange) const /*throw()*/;
+				getPresentation(Index line, const Range<Index>& rangeInLine) const;
 		private:
 			class Iterator;
 			const std::shared_ptr<const TextRunStyle> style_;
 		};
 
 		/**
-		 * Interface for objects which direct style of text runs in a text line.
-		 * @see Presentation#setTextRunStyleDirector
+		 * Interface for objects which declare style of text runs in a text line.
+		 * @see Presentation#setTextRunStyleDeclarator, StyledTextRunIterator,
+		 *      TextLineStyleDeclarator
 		 */
-		class TextRunStyleDirector {
+		class TextRunStyleDeclarator {
 		public:
 			/// Destructor.
-			virtual ~TextRunStyleDirector() /*throw()*/ {}
+			virtual ~TextRunStyleDeclarator() /*noexcept*/ {}
 		private:
 			/**
-			 * Queries the style of the text line.
+			 * Returns the style of the text line.
 			 * @param line The line to be queried
 			 * @return The style of the line or @c null (filled by the presentation's default style)
 			 * @throw BadPositionException @a line is outside of the document
 			 */
-			virtual std::unique_ptr<StyledTextRunIterator> queryTextRunStyle(Index line) const = 0;
+			virtual std::unique_ptr<StyledTextRunIterator> declareTextRunStyle(Index line) const = 0;
 			friend class Presentation;
 		};
 
 		/**
 		 * 
 		 */
-		class PresentationReconstructor : public TextRunStyleDirector {
+		class PresentationReconstructor : public TextRunStyleDeclarator {
 			ASCENSION_UNASSIGNABLE_TAG(PresentationReconstructor);
 		public:
 			// constructors
@@ -86,8 +87,8 @@ namespace ascension {
 			void setPartitionReconstructor(kernel::ContentType contentType,
 				std::unique_ptr<PartitionPresentationReconstructor> reconstructor);
 		private:
-			// TextRunStyleDirector
-			std::unique_ptr<StyledTextRunIterator> queryTextRunStyle(Index line) const;
+			// TextRunStyleDeclarator
+			std::unique_ptr<StyledTextRunIterator> declareTextRunStyle(Index line) const;
 		private:
 			class Iterator;
 			Presentation& presentation_;

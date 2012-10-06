@@ -122,12 +122,17 @@ namespace ascension {
 			};
 
 			struct ComputedBorderSide {
-				Color color;
+				presentation::sp::IntrinsicType<
+					decltype(presentation::Border().sides.start().color)
+				>::Type::value_type color;
 				presentation::sp::IntrinsicType<
 					decltype(presentation::Border().sides.start().style)
 				>::Type style;
 				Scalar width;
 
+				/// Default constructor.
+				ComputedBorderSide() /*noexcept*/ :
+					color(Color::TRANSPARENT_BLACK), style(presentation::Border::NONE), width(0) {}
 				/// Returns the computed width in pixels.
 				Scalar computedWidth() const /*noexcept*/ {
 					return (style != presentation::Border::NONE) ? width : 0;
@@ -136,6 +141,23 @@ namespace ascension {
 				bool hasVisibleStyle() const /*noexcept*/ {
 					return style != presentation::Border::NONE && style != presentation::Border::HIDDEN;
 				}
+			};
+
+			/**
+			 * @see ComputedTextRunStyle
+			 */
+			struct ComputedFontSpecification {
+				const presentation::sp::IntrinsicType<
+					decltype(presentation::TextRunStyle().fontFamily)
+				>::Type* families;
+				double pointSize;
+//				presentation::sp::IntrinsicType<
+//					decltype(presentation::TextRunStyle().fontSize)
+//				> pointSize;
+				FontProperties properties;
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextRunStyle().fontSizeAdjust)
+				>::Type sizeAdjust;
 			};
 
 			struct ComputedTextDecoration {
@@ -168,11 +190,14 @@ namespace ascension {
 				/// Computed value of @c TextRunStyle#color property.
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextRunStyle().color)
-				> color;
+				>::Type::value_type color;
 				/// Computed value of @c TextRunStyle#background property.
 				std::shared_ptr<const Paint> background;
 				/// Computed value of @c TextRunStyle#border property.
 				PhysicalFourSides<ComputedBorderSide> borders;
+
+				/// Computed values of font specification of @c TextRunStyle.
+				ComputedFontSpecification font;
 
 				/// Computed value of @c TextRunStyle#textHeight property.
 				Scalar textHeight;
@@ -194,11 +219,11 @@ namespace ascension {
 				/// Computed value of @c TextRunStyle#textTransform property.
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextRunStyle().textTransform)
-				> textTransform;
+				>::Type textTransform;
 				/// Computed value of @c TextRunStyle#hyphens property.
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextRunStyle().hyphens)
-				> hyphens;
+				>::Type hyphens;
 				/// Computed value of @c TextRunStyle#wordSpacing property.
 				presentation::SpacingLimit<Scalar> wordSpacing;
 				/// Computed value of @c TextRunStyle#letterSpacing property.
@@ -215,7 +240,27 @@ namespace ascension {
 				/// Computed value of @c TextRunStyle#shapingEnabled.
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextRunStyle().shapingEnabled)
-				> shapingEnabled;
+				>::Type shapingEnabled;
+
+				/// Default constructor initializes the all properties with their default values.
+				ComputedTextRunStyle() : color(0, 0, 0), background(nullptr), borders(), font() {}
+			};
+
+			/**
+			 * @see TextLayout#TextLayout, presentation#StyledTextRunIterator
+			 */
+			class ComputedStyledTextRunIterator {
+			public:
+				/// Destructor.
+				virtual ~ComputedStyledTextRunIterator() /*noexcept*/ {}
+				/**
+				 */
+				virtual Range<Index> currentRange() const = 0;
+				/**
+				 */
+				virtual void currentStyle(ComputedTextRunStyle& style) const = 0;
+				virtual bool isDone() const /*noexcept*/ = 0;
+				virtual void next() = 0;
 			};
 
 			struct ComputedNumberSubstitution {
@@ -307,6 +352,62 @@ namespace ascension {
 	}
 
 	namespace detail {
+		class ComputedStyledTextRunEnumerator {
+		public:
+			ComputedStyledTextRunEnumerator(const StringPiece& textString,
+					std::unique_ptr<graphics::font::ComputedStyledTextRunIterator> source)
+					: source_(std::move(source)), textString_(textString), position_(0) {
+				if(source_.get() == nullptr)
+					throw NullPointerException("source");
+			}
+			bool isDone() const /*noexcept*/ {
+				return position_ == length(textString_);
+			}
+			void next() {
+				throwIfDone();
+				if(source_->isDone())
+					position_ = length(textString_);
+				else {
+					const Range<Index> sourceRange(source_->currentRange());
+					// sanity checks...
+					if(isEmpty(sourceRange))
+						throw std::domain_error("ComputedStyledTextRunIterator.currentRange returned an empty range.");
+					else if(textString_.beginning() + sourceRange.end() > textString_.end())
+						throw std::domain_error("ComputedStyledTextRunIterator.currentRange returned a range intersects outside of the source text string.");
+					else if(sourceRange.beginning() <= position_)
+						throw std::domain_error("ComputedStyledTextRunIterator.currentRange returned a backward range.");
+					if(position_ < sourceRange.beginning())
+						position_ = sourceRange.beginning();
+					else {
+						assert(position_ == sourceRange.beginning());
+						source_->next();
+						position_ = sourceRange.end();
+					}
+				}
+			}
+			StringPiece::const_pointer position() const {
+				throwIfDone();
+				return textString_.beginning() + position_;
+			}
+			void style(graphics::font::ComputedTextRunStyle& v) const {
+				throwIfDone();
+				if(position_ == source_->currentRange().beginning())
+					source_->currentStyle(v);
+				else
+					v = graphics::font::ComputedTextRunStyle();
+			}
+		private:
+			void throwIfDone() const {
+				if(isDone())
+					throw NoSuchElementException();
+			}
+			std::unique_ptr<graphics::font::ComputedStyledTextRunIterator> source_;
+			const StringPiece& textString_;
+			Index position_;	// beginning of current run
+		};
+		std::shared_ptr<const graphics::font::Font> findMatchingFont(
+			const StringPiece& textRun, const graphics::font::FontCollection& collection,
+			const graphics::font::ComputedFontSpecification& specification);
 		void paintBorder(graphics::PaintContext& context,
 			const graphics::NativeRectangle& rectangle,
 			const graphics::PhysicalFourSides<graphics::font::ComputedBorderSide>& style,
