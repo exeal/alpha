@@ -1374,6 +1374,8 @@ void TextRunImpl::paintBackground(PaintContext& context,
 		const NativePoint& p, const Range<Index>& range, NativeRectangle* paintedBounds) const {
 	if(ascension::isEmpty(range) || geometry::x(p) + totalWidth() < geometry::left(context.boundsToPaint()))
 		return;
+	extern const WritingMode& wm;
+	extern const PhysicalFourSides<Scalar> p4s;
 	mapFlowRelativeToPhysical(wm, glyphLogicalBounds(range), p4s);
 	NativeRectangle r;
 	blackBoxBounds(range, r);
