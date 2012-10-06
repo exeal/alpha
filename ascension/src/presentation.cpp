@@ -50,74 +50,6 @@ TextRunStyle& TextRunStyle::resolveInheritance(const TextRunStyle& base, bool ba
 }
 
 
-// StyledTextRunEnumerator ////////////////////////////////////////////////////////////////////////
-
-/**
- * Default constructor.
- */
-StyledTextRunEnumerator::StyledTextRunEnumerator() : end_(0) {
-}
-
-/**
- * Constructor.
- * @param sourceIterator The iterator to encapsulate
- * @param end The end character position
- * @throw NullPointerException @a sourceIterator is @c null
- */
-StyledTextRunEnumerator::StyledTextRunEnumerator(
-		unique_ptr<StyledTextRunIterator> sourceIterator, Index end) : iterator_(move(sourceIterator)), end_(end) {
-	if(iterator_.get() == nullptr)
-		throw NullPointerException("sourceIterator");
-	if(iterator_->hasNext()) {
-		current_ = iterator_->current();
-		if(current_->position() < end_) {
-			iterator_->next();
-			if(iterator_->hasNext()) {
-				next_ = iterator_->current();
-				if(next_->position() < end_)
-					iterator_->next();
-				else
-					next_ = boost::none;
-			}
-		} else
-			current_ = boost::none;
-	}
-}
-
-/**
- * Implements @c boost#iterator_facade#dereference.
- * @throw NoSuchElementException The enumerator addresses the end
- */
-const StyledTextRunEnumerator::reference StyledTextRunEnumerator::dereference() const {
-	if(!current_)
-		throw NoSuchElementException();
-	return make_pair(makeRange(current_->position(), next_ ? next_->position() : end_), current_->style());
-}
-
-/// Implements @c boost#iterator_facade#equal.
-bool StyledTextRunEnumerator::equal(const StyledTextRunEnumerator& other) const /*throw()*/ {
-	return !current_ && !other.current_;
-}
-
-/**
- * Implements @c boost#iterator_facade#increment.
- * @throw NoSuchElementException The enumerator addresses the end
- */
-void StyledTextRunEnumerator::increment() {
-	if(!current_)
-		throw NoSuchElementException();
-	current_ = next_;
-	if(iterator_->hasNext()) {
-		next_ = iterator_->current();
-		if(next_->position() >= end_)
-			next_ = boost::none;
-		else
-			iterator_->next();
-	} else
-		next_ = boost::none;
-}
-
-
 // Presentation ///////////////////////////////////////////////////////////////////////////////////
 
 shared_ptr<const TextToplevelStyle> Presentation::DEFAULT_GLOBAL_TEXT_STYLE;
@@ -160,6 +92,18 @@ void Presentation::addGlobalTextStyleListener(GlobalTextStyleListener& listener)
 	globalTextStyleListeners_.add(listener);
 }
 
+/**
+ * Registers the text line color specifier.
+ * This method does not call @c TextRenderer#invalidate and the layout is not updated.
+ * @param specifier The specifier to register
+ * @throw NullPointerException @a specifier is @c null
+ */
+void Presentation::addTextLineColorSpecifier(shared_ptr<TextLineColorSpecifier> specifier) {
+	if(specifier.get() == nullptr)
+		throw NullPointerException("specifier");
+	textLineColorSpecifiers_.push_back(specifier);
+}
+
 void Presentation::clearHyperlinksCache() /*noexcept*/ {
 	for(list<Hyperlinks*>::iterator i(hyperlinks_.begin()), e(hyperlinks_.end()); i != e; ++i) {
 		for(size_t j = 0; j < (*i)->numberOfHyperlinks; ++j)
@@ -188,8 +132,8 @@ font::ComputedTextLineStyle&& Presentation::computeTextLineStyle(Index line,
 	const shared_ptr<const TextLineStyle> global(globalTextStyle().defaultLineStyle);
 	assert(global.get() != nullptr);
 	shared_ptr<const TextLineStyle> declared;
-	if(textLineStyleDirector_.get() != nullptr)
-		declared = textLineStyleDirector_->queryTextLineStyle(line);
+	if(textLineStyleDeclarator_.get() != nullptr)
+		declared = textLineStyleDeclarator_->declareTextLineStyle(line);
 	if(declared.get() == nullptr)
 		declared = global;
 	assert(declared.get() != nullptr);
@@ -223,7 +167,7 @@ font::ComputedTextLineStyle&& Presentation::computeTextLineStyle(Index line,
  *         has no styled text runs
  * @throw BadPositionException @a line is outside of the document
  */
-unique_ptr<StyledTextRunIterator> Presentation::computeTextRunStyles(Index line,
+unique_ptr<ComputedStyledTextRunIterator> Presentation::computeTextRunStyles(Index line,
 		const RenderingContext2D& context, const NativeSize& contextSize) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
@@ -334,6 +278,20 @@ void Presentation::removeGlobalTextStyleListener(GlobalTextStyleListener& listen
 }
 
 /**
+ * Removes the specified text line color specifier.
+ * @param specifier The director to remove
+ */
+void Presentation::removeTextLineColorSpecifier(TextLineColorSpecifier& specifier) /*noexcept*/ {
+	for(list<shared_ptr<TextLineColorSpecifier>>::iterator
+			i(textLineColorSpecifiers_.begin()), e(textLineColorSpecifiers_.end()); i != e; ++i) {
+		if(i->get() == &specifier) {
+			textLineColorSpecifiers_.erase(i);
+			return;
+		}
+	}
+}
+
+/**
  * Sets the global text line style.
  * @param newStyle The style to set
  * @see #globalTextStyle
@@ -355,20 +313,20 @@ void Presentation::setHyperlinkDetector(shared_ptr<HyperlinkDetector> newDetecto
 }
 
 /**
- * Sets the line style director.
- * @param newDirector The director. @c null to unregister
+ * Sets the line style declarator.
+ * @param newDeclarator The declarator. @c null to unregister
  */
-void Presentation::setTextLineStyleDirector(shared_ptr<TextLineStyleDirector> newDirector) /*noexcept*/ {
-	textLineStyleDirector_ = newDirector;
+void Presentation::setTextLineStyleDeclarator(shared_ptr<TextLineStyleDeclarator> newDeclarator) /*noexcept*/ {
+	textLineStyleDeclarator_ = newDeclarator;
 }
 
 /**
- * Sets the text run style director.
+ * Sets the text run style declarator.
  * This method does not call @c TextRenderer#invalidate and the layout is not updated.
- * @param newDirector The director. @c null to unregister
+ * @param newDirector The declarator. @c null to unregister
  */
-void Presentation::setTextRunStyleDirector(shared_ptr<TextRunStyleDirector> newDirector) /*noexcept*/ {
-	textRunStyleDirector_ = newDirector;
+void Presentation::setTextRunStyleDeclarator(shared_ptr<TextRunStyleDeclarator> newDeclarator) /*noexcept*/ {
+	textRunStyleDeclarator_ = newDeclarator;
 }
 
 /**
@@ -382,11 +340,11 @@ void Presentation::textLineColors(Index line,
 		boost::optional<Color>& foreground, boost::optional<Color>& background) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
-	TextLineColorDirector::Priority highestPriority = 0, p;
+	TextLineColorSpecifier::Priority highestPriority = 0, p;
 	boost::optional<Color> f, g;
-	for(list<shared_ptr<TextLineColorDirector>>::const_iterator
-			i(textLineColorDirectors_.begin()), e(textLineColorDirectors_.end()); i != e; ++i) {
-		p = (*i)->queryTextLineColors(line, f, g);
+	for(list<shared_ptr<TextLineColorSpecifier>>::const_iterator
+			i(textLineColorSpecifiers_.begin()), e(textLineColorSpecifiers_.end()); i != e; ++i) {
+		p = (*i)->specifyTextLineColors(line, f, g);
 		if(p > highestPriority) {
 			highestPriority = p;
 			foreground = f;
@@ -400,24 +358,31 @@ void Presentation::textLineColors(Index line,
 
 class SingleStyledPartitionPresentationReconstructor::Iterator : public presentation::StyledTextRunIterator {
 public:
-	Iterator(Index offsetInLine, shared_ptr<const TextRunStyle> style) : run_(offsetInLine, style), done_(false) {}
+	Iterator(const Range<Index>& range, shared_ptr<const TextRunStyle> style) /*noexcept*/ : range_(range), style_(style), done_(false) {
+	}
 private:
 	// StyledTextRunIterator
-	StyledTextRun current() const {
+	Range<Index> currentRange() const {
 		if(done_)
-			throw NoSuchElementException("the iterator addresses the end.");
-		return run_;
+			throw NoSuchElementException();
+		return range_;
 	}
-	bool hasNext() const {
-		return !done_;
+	shared_ptr<const TextRunStyle> currentStyle() const {
+		if(done_)
+			throw NoSuchElementException();
+		return style_;
+	}
+	bool isDone() const /*noexcept*/ {
+		return done_;
 	}
 	void next() {
 		if(done_)
-			throw NoSuchElementException("the iterator addresses the end.");
+			throw NoSuchElementException();
 		done_ = true;
 	}
 private:
-	const StyledTextRun run_;
+	const Range<Index> range_;
+	const shared_ptr<const TextRunStyle> style_;
 	bool done_;
 };
 
@@ -428,12 +393,12 @@ private:
  * Constructor.
  * @param style The style
  */
-SingleStyledPartitionPresentationReconstructor::SingleStyledPartitionPresentationReconstructor(shared_ptr<const TextRunStyle> style) /*throw()*/ : style_(style) {
+SingleStyledPartitionPresentationReconstructor::SingleStyledPartitionPresentationReconstructor(shared_ptr<const TextRunStyle> style) /*noexcept*/ : style_(style) {
 }
 
 /// @see PartitionPresentationReconstructor#getPresentation
-unique_ptr<StyledTextRunIterator> SingleStyledPartitionPresentationReconstructor::getPresentation(Index, const Range<Index>& columnRange) const /*throw()*/ {
-	return unique_ptr<presentation::StyledTextRunIterator>(new Iterator(columnRange.beginning(), style_));
+unique_ptr<StyledTextRunIterator> SingleStyledPartitionPresentationReconstructor::getPresentation(Index, const Range<Index>& rangeInLine) const {
+	return unique_ptr<presentation::StyledTextRunIterator>(new Iterator(rangeInLine, style_));
 }
 
 
@@ -446,8 +411,9 @@ public:
 private:
 	void updateSubiterator();
 	// StyledTextRunIterator
-	StyledTextRun current() const;
-	bool hasNext() const;
+	Range<Index> currentRange() const;
+	shared_ptr<const TextRunStyle> currentStyle() const;
+	bool isDone() const /*noexcept*/;
 	void next();
 private:
 	static const shared_ptr<const TextRunStyle> DEFAULT_TEXT_RUN_STYLE;
@@ -456,7 +422,8 @@ private:
 	const Index line_;
 	DocumentPartition currentPartition_;
 	unique_ptr<presentation::StyledTextRunIterator> subiterator_;
-	pair<Index, shared_ptr<const TextRunStyle>> current_;
+	Range<Index> currentRange_;
+	shared_ptr<const TextRunStyle> currentStyle_;
 };
 
 const shared_ptr<const TextRunStyle> PresentationReconstructor::Iterator::DEFAULT_TEXT_RUN_STYLE(new TextRunStyle);
@@ -486,25 +453,34 @@ PresentationReconstructor::Iterator::Iterator(
 	updateSubiterator();
 }
 
-/// @see StyledTextRunIterator#current
-StyledTextRun PresentationReconstructor::Iterator::current() const {
+/// @see StyledTextRunIterator#currentRange
+Range<Index> PresentationReconstructor::Iterator::currentRange() const {
 	if(subiterator_.get() != nullptr)
-		return subiterator_->current();
-	else if(hasNext())
-		return StyledTextRun(current_.first, current_.second);
-	throw NoSuchElementException("the iterator addresses the end.");
+		return subiterator_->currentRange();
+	else if(!isDone())
+		return currentRange_;
+	throw NoSuchElementException();
 }
 
-/// @see StyledTextRunIterator#hasNext
-bool PresentationReconstructor::Iterator::hasNext() const {
-	return !currentPartition_.region.isEmpty();
+/// @see StyledTextRunIterator#currentStyle
+shared_ptr<const TextRunStyle> PresentationReconstructor::Iterator::currentStyle() const {
+	if(subiterator_.get() != nullptr)
+		return subiterator_->currentStyle();
+	else if(!isDone())
+		return currentStyle_;
+	throw NoSuchElementException();
+}
+
+/// @see StyledTextRunIterator#isDone
+bool PresentationReconstructor::Iterator::isDone() const /*noexcept*/ {
+	return currentPartition_.region.isEmpty();
 }
 
 /// @see StyledTextRunIterator#next
 void PresentationReconstructor::Iterator::next() {
 	if(subiterator_.get() != nullptr) {
 		subiterator_->next();
-		if(!subiterator_->hasNext())
+		if(subiterator_->isDone())
 			subiterator_.reset();
 	}
 	if(subiterator_.get() == nullptr) {
@@ -542,7 +518,8 @@ inline void PresentationReconstructor::Iterator::updateSubiterator() {
 		shared_ptr<const TextRunStyle> runStyle(lineStyle->defaultRunStyle);
 		if(runStyle.get() == nullptr)
 			runStyle = DEFAULT_TEXT_RUN_STYLE;
-		current_ = make_pair(currentPartition_.region.beginning().offsetInLine, runStyle);
+		currentRange_ = makeRange(currentPartition_.region.beginning().offsetInLine, currentPartition_.region.end().offsetInLine);
+		currentStyle_ = runStyle;
 	}
 }
 
@@ -554,7 +531,7 @@ inline void PresentationReconstructor::Iterator::updateSubiterator() {
  * @param presentation The presentation
  */
 PresentationReconstructor::PresentationReconstructor(Presentation& presentation) : presentation_(presentation) {
-	presentation_.setTextRunStyleDirector(shared_ptr<TextRunStyleDirector>(this));	// TODO: danger call (may delete this).
+	presentation_.setTextRunStyleDeclarator(shared_ptr<TextRunStyleDeclarator>(this));	// TODO: danger call (may delete this).
 }
 
 /// Destructor.
@@ -564,8 +541,8 @@ PresentationReconstructor::~PresentationReconstructor() /*throw()*/ {
 		delete i->second;
 }
 
-/// @see LineStyleDirector#queryTextRunStyle
-unique_ptr<StyledTextRunIterator> PresentationReconstructor::queryTextRunStyle(Index line) const {
+/// @see LineStyleDeclarator#declareTextRunStyle
+unique_ptr<StyledTextRunIterator> PresentationReconstructor::declareTextRunStyle(Index line) const {
 	return unique_ptr<presentation::StyledTextRunIterator>(new Iterator(presentation_, reconstructors_, line));
 }
 
@@ -704,75 +681,82 @@ public:
 private:
 	void nextRun();
 	// StyledTextRunIterator
-	StyledTextRun current() const;
-	bool hasNext() const;
+	Range<Index> currentRange() const;
+	shared_ptr<const TextRunStyle> currentStyle() const;
+	bool isDone() const /*noexcept*/;
 	void next();
 private:
 //	const LexicalPartitionPresentationReconstructor& reconstructor_;
 	TokenScanner& tokenScanner_;
 	const map<Token::Identifier, shared_ptr<const TextRunStyle>>& styles_;
 	shared_ptr<const TextRunStyle> defaultStyle_;
-	Region region_;
-	pair<Index, shared_ptr<const TextRunStyle>> current_;
+	const Region region_;
+	Region currentRegion_;
+	shared_ptr<const TextRunStyle> currentStyle_;
 	unique_ptr<Token> next_;
-	Position lastTokenEnd_;
 };
 
 LexicalPartitionPresentationReconstructor::StyledTextRunIterator::StyledTextRunIterator(
 		const Document& document, TokenScanner& tokenScanner,
 		const map<Token::Identifier, shared_ptr<const TextRunStyle>>& styles,
 		shared_ptr<const TextRunStyle> defaultStyle, const Region& region) :
-		tokenScanner_(tokenScanner), styles_(styles), defaultStyle_(defaultStyle), region_(region), lastTokenEnd_(region.beginning()) {
+		tokenScanner_(tokenScanner), styles_(styles), defaultStyle_(defaultStyle), region_(region), currentRegion_(region.beginning()) {
 	tokenScanner_.parse(document, region);
 	nextRun();
 }
 
-/// @see StyledTextRunIterator#current
-StyledTextRun LexicalPartitionPresentationReconstructor::StyledTextRunIterator::current() const {
-	if(!hasNext())
-		throw NoSuchElementException("the iterator addresses the end.");
-	return StyledTextRun(current_.first, current_.second);
+/// @see StyledTextRunIterator#currentRange
+Range<Index> LexicalPartitionPresentationReconstructor::StyledTextRunIterator::currentRange() const {
+	if(isDone())
+		throw NoSuchElementException();
+	if(length(currentRegion_.lines()) == 1)
+		return makeRange(currentRegion_.beginning().offsetInLine, currentRegion_.end().offsetInLine);
+	return makeRange(currentRegion_.beginning().offsetInLine, currentRegion_.end().offsetInLine);
 }
 
-/// @see StyledTextRunIterator#hasNext
-bool LexicalPartitionPresentationReconstructor::StyledTextRunIterator::hasNext() const {
-	return lastTokenEnd_.offsetInLine != region_.end().offsetInLine;
+/// @see StyledTextRunIterator#current
+shared_ptr<const TextRunStyle> LexicalPartitionPresentationReconstructor::StyledTextRunIterator::currentStyle() const {
+	if(isDone())
+		throw NoSuchElementException();
+	return currentStyle_;
+}
+
+/// @see StyledTextRunIterator#isDone
+bool LexicalPartitionPresentationReconstructor::StyledTextRunIterator::isDone() const {
+	return currentRegion_.end() == region_.end();
 }
 
 /// @see StyledTextRunIterator#next
 void LexicalPartitionPresentationReconstructor::StyledTextRunIterator::next() {
-	if(!hasNext())
-		throw NoSuchElementException("the iterator addresses the end.");
+	if(isDone())
+		throw NoSuchElementException();
 	nextRun();
 }
 
 inline void LexicalPartitionPresentationReconstructor::StyledTextRunIterator::nextRun() {
 	if(next_.get() != nullptr) {
 		map<Token::Identifier, shared_ptr<const TextRunStyle>>::const_iterator style(styles_.find(next_->id));
-		current_.first = next_->region.beginning().offsetInLine;
-		current_.second = (style != styles_.end()) ? style->second : defaultStyle_;
-		lastTokenEnd_ = next_->region.end();
+		currentRegion_ = next_->region;
+		currentStyle_ = (style != styles_.end()) ? style->second : defaultStyle_;
 		next_.reset();
 	} else if(tokenScanner_.hasNext()) {
 		next_ = move(tokenScanner_.nextToken());
 		assert(next_.get() != nullptr);
-		if(next_->region.beginning() != lastTokenEnd_) {
+		assert(next_->region.beginning() >= currentRegion_.end());
+		if(next_->region.beginning() != currentRegion_.end()) {
 			// 
-			current_.first = lastTokenEnd_.offsetInLine;
-			current_.second = defaultStyle_;
-			lastTokenEnd_ = next_->region.beginning();
+			currentRegion_ = Region(currentRegion_.end(), next_->region.beginning());
+			currentStyle_ = defaultStyle_;
 		} else {
 			map<Token::Identifier, shared_ptr<const TextRunStyle>>::const_iterator style(styles_.find(next_->id));
-			current_.first = next_->region.beginning().offsetInLine;
-			current_.second = (style != styles_.end()) ? style->second : defaultStyle_;
-			lastTokenEnd_ = next_->region.beginning();
+			currentRegion_ = next_->region;
+			currentStyle_ = (style != styles_.end()) ? style->second : defaultStyle_;
 			next_.reset();
 		}
-	} else if(lastTokenEnd_ != region_.end()) {
+	} else if(currentRegion_.end() != region_.end()) {
 		//
-		current_.first = lastTokenEnd_.offsetInLine;
-		current_.second = defaultStyle_;
-		lastTokenEnd_ = region_.end();
+		currentRegion_ = Region(currentRegion_.end(), region_.end());
+		currentStyle_ = defaultStyle_;
 	}
 }
 

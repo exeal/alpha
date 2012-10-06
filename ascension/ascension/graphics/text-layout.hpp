@@ -97,9 +97,11 @@ namespace ascension {
 //				virtual Scalar leading() const /*noexcept*/ = 0;
 			};
 
+			class ComputedStyledTextRunIterator;
 			struct ComputedTextLineStyle;
 			class TextPaintOverride;
 			class TabExpander;
+			class TextRun;
 
 			class TextLayout {
 				ASCENSION_NONCOPYABLE_TAG(TextLayout);
@@ -131,13 +133,10 @@ namespace ascension {
 					friend class LineLayout;
 				};
 #endif
-				class TextRun;
-				class InlineArea;
-
 			public:
 				// constructors
 				TextLayout(const String& text, const ComputedTextLineStyle& lineStyle,
-					std::unique_ptr<presentation::StyledTextRunIterator> textRunStyles);
+					std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles);
 				~TextLayout() /*throw()*/;
 				// general attributes
 				presentation::TextAnchor anchor() const /*throw()*/;
@@ -154,8 +153,8 @@ namespace ascension {
 				const Index* lineOffsets() const /*throw()*/;
 				// bounds, extents and measures
 				NativeRegion blackBoxBounds(const Range<Index>& range) const;
-				NativeRectangle bounds() const /*throw()*/;
-				NativeRectangle bounds(const Range<Index>& range) const;
+				presentation::FlowRelativeFourSides<Scalar> bounds() const /*noexcept*/;
+				presentation::FlowRelativeFourSides<Scalar> bounds(const Range<Index>& characterRange) const;
 				Range<Scalar> extent() /*throw()*/ const;
 				Range<Scalar> extent(const Range<Index>& lines) const;
 				NativeRectangle lineBounds(Index line) const;
@@ -172,7 +171,7 @@ namespace ascension {
 				// styled segments
 //				StyledSegmentIterator firstStyledSegment() const /*throw()*/;
 //				StyledSegmentIterator lastStyledSegment() const /*throw()*/;
-				presentation::StyledTextRun styledTextRun(Index offsetInLine) const;
+//				presentation::StyledTextRun styledTextRun(Index offsetInLine) const;
 				// painting
 				void draw(PaintContext& context, const NativePoint& origin,
 					const TextPaintOverride* paintOverride = nullptr,
@@ -204,10 +203,8 @@ namespace ascension {
 				const presentation::WritingMode writingMode_;
 				const presentation::TextAnchor anchor_;
 				const presentation::DominantBaseline dominantBaseline_;
-				std::unique_ptr<TextRun*[]> runs_;
-				std::size_t numberOfRuns_;
+				std::vector<std::unique_ptr<TextRun>> runs_;
 				class LineArea;
-				std::vector<const InlineArea*> inlineAreas_;
 				std::unique_ptr<const Index[]> lineOffsets_;	// size is numberOfLines_
 				std::unique_ptr<const Index[]> lineFirstRuns_;	// size is numberOfLines_
 				static const Index SINGLE_LINE_OFFSETS;
@@ -247,7 +244,7 @@ namespace ascension {
 			}
 
 			/// Returns @c true if the layout is empty.
-			inline bool TextLayout::isEmpty() const /*throw()*/ {return runs_.get() == nullptr;}
+			inline bool TextLayout::isEmpty() const /*noexcept*/ {return runs_.empty();}
 
 			/**
 			 * Returns the wrapped line containing the specified offset in the logical line.

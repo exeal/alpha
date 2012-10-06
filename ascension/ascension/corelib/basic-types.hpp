@@ -13,11 +13,15 @@
 #include <ascension/config.hpp>	// ASCENSION_FILE_NAME_CHARACTER_TYPE
 #include <ascension/platforms.hpp>
 #include <ascension/corelib/future.hpp>
-#ifdef ASCENSION_HAS_CSTDINT
-#	if defined(ASCENSION_OS_AIX) || defined(ASCENSION_OS_BSD4) || defined(ASCENSION_OS_HPUX)
-#		include <inttypes.h>
-#	else
-#		include <stdint.h>
+#ifndef ASCENSION_ABANDONED_AT_VERSION_08
+#	include <cstdint>
+#else
+#	ifdef ASCENSION_HAS_CSTDINT
+#		if defined(ASCENSION_OS_AIX) || defined(ASCENSION_OS_BSD4) || defined(ASCENSION_OS_HPUX)
+#			include <inttypes.h>
+#		else
+#			include <stdint.h>
+#		endif
 #	endif
 #endif
 #ifdef ASCENSION_CUSTOM_SHARED_PTR_HPP
@@ -50,8 +54,9 @@ namespace ascension {
 		struct NullDeleter {void operator()(const void*) {}};
 	} // namespace detail
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	// sized integer types
-#if defined(ASCENSION_HAS_CSTDINT)
+#	if defined(ASCENSION_HAS_CSTDINT)
 	using ::int8_t;
 	using ::int16_t;
 	using ::int32_t;
@@ -60,7 +65,7 @@ namespace ascension {
 	using ::uint16_t;
 	using ::uint32_t;
 	using ::uint64_t;
-#elif defined(ASCENSION_COMPILER_MSVC)
+#	elif defined(ASCENSION_COMPILER_MSVC)
 	typedef signed char int8_t;
 	typedef short int16_t;
 	typedef long int32_t;
@@ -69,8 +74,9 @@ namespace ascension {
 	typedef unsigned short uint16_t;
 	typedef unsigned int uint32_t;
 	typedef unsigned __int64 uint64_t;
-#else
-#	error "Could not define sized integer types."
+#	else
+#		error "Could not define sized integer types."
+#	endif
 #endif
 
 	// shorten type names
@@ -84,9 +90,9 @@ namespace ascension {
 #ifdef ASCENSION_USE_INTRINSIC_WCHAR_T
 	typedef wchar_t Char;					///< Type for characters as UTF-16 code unit.
 #else
-	typedef uint16_t Char;					///< Type for characters as UTF-16 code unit.
+	typedef std::uint16_t Char;				///< Type for characters as UTF-16 code unit.
 #endif
-	typedef uint32_t CodePoint;				///< Unicode code point.
+	typedef std::uint32_t CodePoint;		///< Unicode code point.
 	typedef std::basic_string<Char> String;	///< Type for strings as UTF-16.
 	ASCENSION_STATIC_ASSERT(sizeof(Char) == 2);
 	ASCENSION_STATIC_ASSERT(sizeof(CodePoint) == 4);

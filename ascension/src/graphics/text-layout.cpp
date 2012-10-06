@@ -10,6 +10,7 @@
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
 #include <ascension/graphics/text-layout.hpp>
 #include <ascension/graphics/text-layout-styles.hpp>
+#include <ascension/graphics/text-run.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>
 //#include <ascension/graphics/special-character-renderer.hpp>
@@ -18,7 +19,6 @@
 #include <ascension/corelib/text/character-property.hpp>
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate
-#include <usp10.h>
 
 using namespace ascension;
 using namespace ascension::graphics;
@@ -29,241 +29,13 @@ using namespace ascension::text::ucd;
 using namespace std;
 namespace k = ascension::kernel;
 
-#pragma comment(lib, "usp10.lib")
-
 //#define TRACE_LAYOUT_CACHES
 extern bool DIAGNOSE_INHERENT_DRAWING;
 
-namespace {
-	// SystemColors caches the system colors.
-	class SystemColors {
-	public:
-		SystemColors() /*throw()*/ {update();}
-		COLORREF get(int index) const {assert(index >= 0 && index < ASCENSION_COUNTOF(c_)); return c_[index];}
-		COLORREF serve(const boost::optional<Color>& color, int index) const {return color ? color->as<COLORREF>() : get(index);}
-		void update() /*throw()*/ {for(int i = 0; i < ASCENSION_COUNTOF(c_); ++i) c_[i] = ::GetSysColor(i);}
-	private:
-		COLORREF c_[128];
-	} systemColors;
-
-	const class ScriptProperties {
-	public:
-		ScriptProperties() /*throw()*/ : p_(nullptr), c_(0) {::ScriptGetProperties(&p_, &c_);}
-		const SCRIPT_PROPERTIES& get(int script) const {if(script >= c_) throw out_of_range("script"); return *p_[script];}
-		int numberOfOfScripts() const /*throw()*/ {return c_;}
-	private:
-		const SCRIPT_PROPERTIES** p_;
-		int c_;
-	} scriptProperties;
-
-	class UserSettings {
-	public:
-		UserSettings() /*throw()*/ {update();}
-		LANGID defaultLanguage() const /*throw()*/ {return languageID_;}
-		const SCRIPT_DIGITSUBSTITUTE& digitSubstitution(bool ignoreUserOverride) const /*throw()*/ {
-			return ignoreUserOverride ? digitSubstitutionNoUserOverride_ : digitSubstitution_;
-		}
-		void update() /*throw()*/ {
-			languageID_ = ::GetUserDefaultLangID();
-			::ScriptRecordDigitSubstitution(LOCALE_USER_DEFAULT, &digitSubstitution_);
-			::ScriptRecordDigitSubstitution(LOCALE_USER_DEFAULT | LOCALE_NOUSEROVERRIDE, &digitSubstitutionNoUserOverride_);
-		}
-	private:
-		LANGID languageID_;
-		SCRIPT_DIGITSUBSTITUTE digitSubstitution_, digitSubstitutionNoUserOverride_;
-	} userSettings;
-
-	int CALLBACK checkFontInstalled(ENUMLOGFONTEXW*, NEWTEXTMETRICEXW*, DWORD, LPARAM param) {
-		*reinterpret_cast<bool*>(param) = true;
-		return 0;
-	}
-
-	// New Uniscribe features (usp10.dll 1.6) dynamic loading
-#if(!defined(UNISCRIBE_OPENTYPE) || UNISCRIBE_OPENTYPE < 0x0100)
-	typedef ULONG OPENTYPE_TAG;
-	static const OPENTYPE_TAG SCRIPT_TAG_UNKNOWN = 0x00000000;
-	struct OPENTYPE_FEATURE_RECORD {
-		OPENTYPE_TAG tagFeature;
-		LONG lParameter;
-	};
-	struct SCRIPT_CHARPROP {
-		WORD fCanGlyphAlone : 1;
-		WORD reserved : 15;
-	};
-	struct SCRIPT_GLYPHPROP {
-		SCRIPT_VISATTR sva;
-		WORD reserved;
-	};
-	struct TEXTRANGE_PROPERTIES {
-		OPENTYPE_FEATURE_RECORD* potfRecords;
-		int cotfRecords;
-	};
-#endif // not usp10-1.6
-	ASCENSION_DEFINE_SHARED_LIB_ENTRIES(Uniscribe16, 4);
-	ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 0, "ScriptItemizeOpenType",
-		HRESULT(WINAPI* signature)(
-			const WCHAR*, int, int, const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*,
-			OPENTYPE_TAG*, int*));
-	ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 1, "ScriptPlaceOpenType",
-		HRESULT(WINAPI* signature)(
-			HDC, SCRIPT_CACHE*, SCRIPT_ANALYSIS*, OPENTYPE_TAG, OPENTYPE_TAG, int*,
-			TEXTRANGE_PROPERTIES**, int, const WCHAR*, WORD*, SCRIPT_CHARPROP*, int, const WORD*,
-			const SCRIPT_GLYPHPROP*, int, int*, GOFFSET*, ABC*));
-	ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 2, "ScriptShapeOpenType",
-		HRESULT(WINAPI* signature)(
-			HDC, SCRIPT_CACHE*, SCRIPT_ANALYSIS*, OPENTYPE_TAG, OPENTYPE_TAG, int*,
-			TEXTRANGE_PROPERTIES**, int, const WCHAR*, int, int, WORD*, SCRIPT_CHARPROP*, WORD*,
-			SCRIPT_GLYPHPROP*, int*));
-//#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-	ASCENSION_SHARED_LIB_ENTRY(Uniscribe16, 3, "ScriptSubstituteSingleGlyph",
-		HRESULT(WINAPI *signature)(
-			HDC, SCRIPT_CACHE*, SCRIPT_ANALYSIS*, OPENTYPE_TAG, OPENTYPE_TAG, OPENTYPE_TAG, LONG,
-			WORD, WORD*));
-//#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-	unique_ptr<detail::SharedLibrary<Uniscribe16>> uspLib(
-		new detail::SharedLibrary<Uniscribe16>("usp10.dll"));
-} // namespace @0
 
 // file-local free functions ////////////////////////////////////////////////
 
 namespace {
-
-	void dumpRuns(const TextLayout& layout) {
-#ifdef _DEBUG
-		ostringstream s;
-		layout.dumpRuns(s);
-		::OutputDebugStringA(s.str().c_str());
-#endif // _DEBUG
-	}
-
-	inline int estimateNumberOfGlyphs(Index length) {
-		return static_cast<int>(length) * 3 / 2 + 16;
-	}
-
-	LANGID userCJKLanguage() /*throw()*/;
-
-	String fallback(int script) {
-		if(script <= Script::FIRST_VALUE || script == Script::INHERITED
-				|| script == Script::KATAKANA_OR_HIRAGANA || script >= Script::LAST_VALUE)
-			throw UnknownValueException("script");
-
-		static map<int, const String> associations;
-		static const WCHAR MS_P_GOTHIC[] = L"\xff2d\xff33 \xff30\x30b4\x30b7\x30c3\x30af";	// "ＭＳ Ｐゴシック"
-		if(associations.empty()) {
-			associations.insert(make_pair(Script::ARABIC, L"Microsoft Sans Serif"));
-			associations.insert(make_pair(Script::CYRILLIC, L"Microsoft Sans Serif"));
-			associations.insert(make_pair(Script::GREEK, L"Microsoft Sans Serif"));
-			associations.insert(make_pair(Script::HANGUL, L"Gulim"));
-			associations.insert(make_pair(Script::HEBREW, L"Microsoft Sans Serif"));
-//			associations.insert(make_pair(Script::HIRAGANA, MS_P_GOTHIC));
-//			associations.insert(make_pair(Script::KATAKANA, MS_P_GOTHIC));
-			associations.insert(make_pair(Script::LATIN, L"Tahoma"));
-			associations.insert(make_pair(Script::THAI, L"Tahoma"));
-			// Windows 2000
-			associations.insert(make_pair(Script::ARMENIAN, L"Sylfaen"));
-			associations.insert(make_pair(Script::DEVANAGARI, L"Mangal"));
-			associations.insert(make_pair(Script::GEORGIAN, L"Sylfaen"));	// partial support?
-			associations.insert(make_pair(Script::TAMIL, L"Latha"));
-			// Windows XP
-			associations.insert(make_pair(Script::GUJARATI, L"Shruti"));
-			associations.insert(make_pair(Script::GURMUKHI, L"Raavi"));
-			associations.insert(make_pair(Script::KANNADA, L"Tunga"));
-			associations.insert(make_pair(Script::SYRIAC, L"Estrangelo Edessa"));
-			associations.insert(make_pair(Script::TELUGU, L"Gautami"));
-			associations.insert(make_pair(Script::THAANA, L"MV Boli"));
-			// Windows XP SP2
-			associations.insert(make_pair(Script::BENGALI, L"Vrinda"));
-			associations.insert(make_pair(Script::MALAYALAM, L"Kartika"));
-			// Windows Vista
-			associations.insert(make_pair(Script::CANADIAN_ABORIGINAL, L"Euphemia"));
-			associations.insert(make_pair(Script::CHEROKEE, L"Plantagenet Cherokee"));
-			associations.insert(make_pair(Script::ETHIOPIC, L"Nyala"));
-			associations.insert(make_pair(Script::KHMER, L"DaunPenh"));	// or "MoolBoran"
-			associations.insert(make_pair(Script::LAO, L"DokChampa"));
-			associations.insert(make_pair(Script::MONGOLIAN, L"Mongolian Baiti"));
-			associations.insert(make_pair(Script::ORIYA, L"Kalinga"));
-			associations.insert(make_pair(Script::SINHALA, L"Iskoola Pota"));
-			associations.insert(make_pair(Script::TIBETAN, L"Microsoft Himalaya"));
-			associations.insert(make_pair(Script::YI, L"Microsoft Yi Baiti"));
-			// CJK
-			const LANGID uiLang = userCJKLanguage();
-			switch(PRIMARYLANGID(uiLang)) {	// yes, this is not enough...
-			case LANG_CHINESE:
-				associations.insert(make_pair(Script::HAN, (SUBLANGID(uiLang) == SUBLANG_CHINESE_TRADITIONAL
-					&& SUBLANGID(uiLang) == SUBLANG_CHINESE_HONGKONG) ? L"PMingLiu" : L"SimSun")); break;
-			case LANG_JAPANESE:
-				associations.insert(make_pair(Script::HAN, MS_P_GOTHIC)); break;
-			case LANG_KOREAN:
-				associations.insert(make_pair(Script::HAN, L"Gulim")); break;
-			default:
-				{
-					win32::Handle<HDC> dc(::GetDC(nullptr), bind(&::ReleaseDC, static_cast<HWND>(nullptr), placeholders::_1));
-					bool installed = false;
-					LOGFONTW lf;
-					memset(&lf, 0, sizeof(LOGFONTW));
-#define ASCENSION_SELECT_INSTALLED_FONT(charset, fontname)			\
-	lf.lfCharSet = charset;											\
-	wcscpy(lf.lfFaceName, fontname);								\
-	::EnumFontFamiliesExW(dc.get(), &lf,							\
-		reinterpret_cast<FONTENUMPROCW>(checkFontInstalled),		\
-		reinterpret_cast<LPARAM>(&installed), 0);					\
-	if(installed) {													\
-		associations.insert(make_pair(Script::HAN, lf.lfFaceName));	\
-		break;														\
-	}
-					ASCENSION_SELECT_INSTALLED_FONT(GB2312_CHARSET, L"SimSun")
-					ASCENSION_SELECT_INSTALLED_FONT(SHIFTJIS_CHARSET, MS_P_GOTHIC)
-					ASCENSION_SELECT_INSTALLED_FONT(HANGUL_CHARSET, L"Gulim")
-					ASCENSION_SELECT_INSTALLED_FONT(CHINESEBIG5_CHARSET, L"PMingLiu")
-#undef ASCENSION_SELECT_INSTALLED_FONT
-				}
-				break;
-			}
-			if(associations.find(Script::HAN) != associations.end()) {
-				associations.insert(make_pair(Script::HIRAGANA, associations[Script::HAN]));
-				associations.insert(make_pair(Script::KATAKANA, associations[Script::HAN]));
-			}
-		}
-
-		map<int, const String>::const_iterator i(associations.find(script));
-		return (i != associations.end()) ? i->second : String();
-	}
-
-	/**
-	 * Returns metrics of underline and/or strikethrough for the currently selected font.
-	 * @param dc the device context
-	 * @param[out] baselineOffset The baseline position relative to the top in pixels
-	 * @param[out] underlineOffset The underline position relative to the baseline in pixels
-	 * @param[out] underlineThickness The thickness of underline in pixels
-	 * @param[out] strikethroughOffset The linethrough position relative to the baseline in pixels
-	 * @param[out] strikethroughThickness The thickness of linethrough in pixels
-	 * @return Succeeded or not
-	 */
-	bool getDecorationLineMetrics(const win32::Handle<HDC>& dc, int* baselineOffset,
-			int* underlineOffset, int* underlineThickness, int* strikethroughOffset, int* strikethroughThickness) /*throw()*/ {
-		OUTLINETEXTMETRICW* otm = nullptr;
-		TEXTMETRICW tm;
-		if(const UINT c = ::GetOutlineTextMetricsW(dc.get(), 0, nullptr)) {
-			otm = static_cast<OUTLINETEXTMETRICW*>(::operator new(c));
-			if(!win32::boole(::GetOutlineTextMetricsW(dc.get(), c, otm)))
-				return false;
-		} else if(!win32::boole(::GetTextMetricsW(dc.get(), &tm)))
-			return false;
-		const int baseline = (otm != nullptr) ? otm->otmTextMetrics.tmAscent : tm.tmAscent;
-		if(baselineOffset != nullptr)
-			*baselineOffset = baseline;
-		if(underlineOffset != nullptr)
-			*underlineOffset = (otm != nullptr) ? otm->otmsUnderscorePosition : baseline;
-		if(underlineThickness != nullptr)
-			*underlineThickness = (otm != nullptr) ? otm->otmsUnderscoreSize : 1;
-		if(strikethroughOffset != nullptr)
-			*strikethroughOffset = (otm != nullptr) ? otm->otmsStrikeoutPosition : (baseline / 3);
-		if(strikethroughThickness != nullptr)
-			*strikethroughThickness = (otm != nullptr) ? otm->otmsStrikeoutSize : 1;
-		::operator delete(otm);
-		return true;
-	}
-
 	inline bool isC0orC1Control(CodePoint c) /*throw()*/ {
 		return c < 0x20 || c == 0x7f || (c >= 0x80 && c < 0xa0);
 	}
@@ -279,97 +51,9 @@ namespace {
 		}
 	}
 
-	HRESULT resolveNumberSubstitution(
-			const ComputedNumberSubstitution* configuration, SCRIPT_CONTROL& sc, SCRIPT_STATE& ss) {
-		if(configuration == nullptr || configuration->method == NumberSubstitution::USER_SETTING)
-			return ::ScriptApplyDigitSubstitution(&userSettings.digitSubstitution(
-				(configuration != nullptr) ? configuration->ignoreUserOverride : false), &sc, &ss);
-
-		NumberSubstitution::Method method;
-		if(configuration->method == NumberSubstitution::FROM_LOCALE) {
-			DWORD n;
-			if(::GetLocaleInfoW(
-					LOCALE_USER_DEFAULT | (configuration->ignoreUserOverride ? LOCALE_NOUSEROVERRIDE : 0),
-					LOCALE_IDIGITSUBSTITUTION | LOCALE_RETURN_NUMBER, reinterpret_cast<LPWSTR>(&n), 2) == 0)
-				return HRESULT_FROM_WIN32(::GetLastError());
-			switch(n) {
-				case 0:
-					method = NumberSubstitution::CONTEXTUAL;
-					break;
-				case 1:
-					method = NumberSubstitution::NONE;
-					break;
-				case 2:
-					method = NumberSubstitution::NATIONAL;
-					break;
-				default:
-					return S_FALSE;	// hmm...
-			}
-		} else
-			method = configuration->method;
-
-		// modify SCRIPT_CONTROL and SCRIPT_STATE (without SCRIPT_DIGITSUBSTITUTE)
-		sc.uDefaultLanguage = PRIMARYLANGID(userSettings.defaultLanguage());
-		switch(method) {
-			case NumberSubstitution::CONTEXTUAL:
-				sc.fContextDigits = ss.fDigitSubstitute = 1;
-				ss.fArabicNumContext = 0;
-				break;
-			case NumberSubstitution::NONE:
-				ss.fDigitSubstitute = 0;
-				break;
-			case NumberSubstitution::NATIONAL:
-				ss.fDigitSubstitute = 1;
-				sc.fContextDigits = ss.fArabicNumContext = 0;
-				break;
-			case NumberSubstitution::TRADITIONAL:
-				ss.fDigitSubstitute = ss.fArabicNumContext = 1;
-				sc.fContextDigits = 0;
-				break;
-			default:
-				throw invalid_argument("configuration.method");
-		}
-		return S_OK;
-	}
-
 	template<typename T> inline T& shrinkToFit(T& v) {
 		swap(v, T(v));
 		return v;
-	}
-
-	inline bool uniscribeSupportsIVS() /*throw()*/ {
-		static bool checked = false, supports = false;
-		if(!checked) {
-			static const WCHAR text[] = L"\x82a6\xdb40\xdd00";	// <芦, U+E0100>
-			SCRIPT_ITEM items[4];
-			int numberOfItems;
-			if(SUCCEEDED(::ScriptItemize(text, ASCENSION_COUNTOF(text) - 1,
-					ASCENSION_COUNTOF(items), nullptr, nullptr, items, &numberOfItems)) && numberOfItems == 1)
-				supports = true;
-			checked = true;
-		}
-		return supports;
-	}
-
-	LANGID userCJKLanguage() /*throw()*/ {
-		// this code is preliminary...
-		static const WORD CJK_LANGUAGES[] = {LANG_CHINESE, LANG_JAPANESE, LANG_KOREAN};	// sorted by numeric values
-		LANGID result = win32::userDefaultUILanguage();
-		if(find(CJK_LANGUAGES, ASCENSION_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != ASCENSION_ENDOF(CJK_LANGUAGES))
-			return result;
-		result = ::GetUserDefaultLangID();
-		if(find(CJK_LANGUAGES, ASCENSION_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != ASCENSION_ENDOF(CJK_LANGUAGES))
-			return result;
-		result = ::GetSystemDefaultLangID();
-		if(find(CJK_LANGUAGES, ASCENSION_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != ASCENSION_ENDOF(CJK_LANGUAGES))
-			return result;
-		switch(::GetACP()) {
-		case 932:	return MAKELANGID(LANG_JAPANESE, SUBLANG_DEFAULT);
-		case 936:	return MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED);
-		case 949:	return MAKELANGID(LANG_KOREAN, SUBLANG_KOREAN);
-		case 950:	return MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_TRADITIONAL);
-		}
-		return result;
 	}
 } // namespace @0
 
@@ -379,16 +63,35 @@ void ascension::updateSystemSettings() /*throw()*/ {
 }
 
 
-// graphics.font.* free functions /////////////////////////////////////////////////////////////////
+// graphics.font free functions ///////////////////////////////////////////////////////////////////
 
-/// Returns @c true if complex scripts are supported.
-bool font::supportsComplexScripts() /*throw()*/ {
-	return true;
-}
-
-/// Returns @c true if OpenType features are supported.
-bool font::supportsOpenTypeFeatures() /*throw()*/ {
-	return uspLib->get<0>() != nullptr;
+void paintTextDecoration(PaintContext& context, const TextRun& run, const NativePoint& origin, const ComputedTextDecoration& style) {
+	if(style.decorations.underline.style != Decorations::NONE || style.decorations.strikethrough.style != Decorations::NONE) {
+		const win32::Handle<HDC>& dc = context.asNativeObject();
+		int baselineOffset, underlineOffset, underlineThickness, linethroughOffset, linethroughThickness;
+		if(getDecorationLineMetrics(dc, &baselineOffset, &underlineOffset, &underlineThickness, &linethroughOffset, &linethroughThickness)) {
+			// draw underline
+			if(style.decorations.underline.style != Decorations::NONE) {
+				win32::Handle<HPEN> pen(createPen(
+					style.decorations.underline.color.get_value_or(foregroundColor), underlineThickness, style.decorations.underline.style));
+				HPEN oldPen = static_cast<HPEN>(::SelectObject(dc.get(), pen.get()));
+				const int underlineY = y + baselineOffset - underlineOffset + underlineThickness / 2;
+				context.moveTo(geometry::make<NativePoint>(x, underlineY));
+				context.lineTo(geometry::make<NativePoint>(x + width, underlineY));
+				::SelectObject(dc.get(), oldPen);
+			}
+			// draw strikethrough line
+			if(style.decorations.strikethrough.style != Decorations::NONE) {
+				win32::Handle<HPEN> pen(createPen(
+					style.decorations.strikethrough.color.get_value_or(foregroundColor), linethroughThickness, 1));
+				HPEN oldPen = static_cast<HPEN>(::SelectObject(dc.get(), pen.get()));
+				const int strikeoutY = y + baselineOffset - linethroughOffset + linethroughThickness / 2;
+				context.moveTo(geometry::make<NativePoint>(x, strikeoutY));
+				context.lineTo(geometry::make<NativePoint>(x + width, strikeoutY));
+				::SelectObject(dc.get(), oldPen);
+			}
+		}
+	}
 }
 
 
@@ -446,6 +149,51 @@ void detail::paintBorder(PaintContext& context, const NativeRectangle& rectangle
 }
 
 
+// TextRun ////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Returns 'allocation-rectangle' of this text run.
+ * @see #borderRectangle, #contentRectangle
+ */
+FlowRelativeFourSides<Scalar> TextRun::allocationRectangle() const /*noexcept*/ {
+	FlowRelativeFourSides<Scalar> rectangle(contentRectangle());
+	if(const FlowRelativeFourSides<ComputedBorderSide>* const borderSides = borders()) {
+		rectangle.start() -= borderSides->start().computedWidth();
+		rectangle.end() += borderSides->end().computedWidth();
+	}
+	return rectangle;
+}
+
+/**
+ * Returns 'border-rectangle' of this text run.
+ * @see #allocationRectangle, #borders, #contentRectangle
+ */
+FlowRelativeFourSides<Scalar> TextRun::borderRectangle() const /*noexcept*/ {
+	FlowRelativeFourSides<Scalar> rectangle(contentRectangle());
+	if(const FlowRelativeFourSides<ComputedBorderSide>* const borderSides = borders()) {
+		rectangle.before() -= borderSides->before().computedWidth();
+		rectangle.after() += borderSides->after().computedWidth();
+		rectangle.start() -= borderSides->start().computedWidth();
+		rectangle.end() += borderSides->end().computedWidth();
+	}
+	return rectangle;
+}
+
+/**
+ * Returns 'content-rectangle' of this text run.
+ * @see #allocationRectangle, #borderRectangle
+ */
+FlowRelativeFourSides<Scalar> TextRun::contentRectangle() const /*noexcept*/ {
+	FlowRelativeFourSides<Scalar> rectangle;
+	rectangle.start() = leadingEdge(beginning());
+	rectangle.end() = rectangle.start() + measure();
+	const shared_ptr<const Font::Metrics> fontMetrics(font()->metrics());
+	rectangle.before() = -fontMetrics->ascent();
+	rectangle.after() = +fontMetrics->descent();
+	return rectangle;
+}
+
+
 // FixedWidthTabExpander //////////////////////////////////////////////////////////////////////////
 
 /**
@@ -477,1230 +225,6 @@ public:
 	NativeRectangle nominalRequestedLineRectangle() const;
 	NativeRectangle perInlineHeightRectangle() const;
 };
-
-
-// TextLayout.InlineArea //////////////////////////////////////////////////////////////////////////
-
-class TextLayout::InlineArea : public StyledTextRun {
-public:
-	NativeRectangle allocationRectangle() const;
-	NativeRectangle borderRectangle() const;
-	NativeRectangle contentRectangle() const;
-	NativeRectangle largeAllocationRectangle() const;
-};
-
-
-// TextLayout.TextRun /////////////////////////////////////////////////////////////////////////////
-
-// Uniscribe conventions
-namespace {
-	inline size_t characterPositionToGlyphPosition(const WORD clusters[],
-			size_t length, size_t numberOfGlyphs, size_t at, const SCRIPT_ANALYSIS& a) {
-		assert(a.fLogicalOrder == 0 && at <= length);
-		if(a.fRTL == 0)	// LTR
-			return (at < length) ? clusters[at] : numberOfGlyphs;
-		else	// RTL
-			return (at < length) ? clusters[at] + 1 : 0;
-	}
-	inline bool overhangs(const ABC& width) /*throw()*/ {return width.abcA < 0 || width.abcC < 0;}
-} // namespace
-
-namespace {
-	class SimpleStyledTextRunIterator : public StyledTextRunIterator {
-	public:
-		SimpleStyledTextRunIterator(const vector<const StyledTextRun>& styledRanges, Index start) : styledRanges_(styledRanges) {
-			current_ = detail::searchBound(styledRanges_.begin(), styledRanges_.end(), start, BeginningOfStyledTextRun());
-		}
-		// presentation.StyledTextRunIterator
-		StyledTextRun current() const {
-			if(!hasNext())
-				throw IllegalStateException("");
-			return *current_;
-		}
-		bool hasNext() const {
-			return current_ != styledRanges_.end();
-		}
-		void next() {
-			if(!hasNext())
-				throw IllegalStateException("");
-			++current_;
-		}
-	private:
-		struct BeginningOfStyledTextRun {
-			bool operator()(Index v, const StyledTextRun& range) const {
-				return v < range.position();
-			}
-		};
-		const vector<const StyledTextRun>& styledRanges_;
-		vector<const StyledTextRun>::const_iterator current_;
-	};
-}
-
-/// TextRun class represents minimum text run whose characters can shaped by single font.
-class TextLayout::TextRun : public Range<Index> {	// beginning() and end() return position in the line
-	ASCENSION_NONCOPYABLE_TAG(TextRun);
-public:
-	struct Overlay {
-		Color color;
-		Range<Index> range;
-	};
-public:
-	TextRun(const Range<Index>& characterRange,
-		const SCRIPT_ANALYSIS& script, shared_ptr<const Font> font, OPENTYPE_TAG scriptTag) /*throw()*/;
-	virtual ~TextRun() /*throw()*/;
-	// attributes
-	uint8_t bidiEmbeddingLevel() const /*throw()*/ {return static_cast<uint8_t>(analysis_.s.uBidiLevel);}
-	shared_ptr<const Font> font() const {return glyphs_->font;}
-	HRESULT logicalAttributes(const String& layoutString, SCRIPT_LOGATTR attributes[]) const;
-	int numberOfGlyphs() const /*throw()*/ {return length(glyphRange_);}
-	ReadingDirection readingDirection() const /*throw()*/ {
-		return ((analysis_.s.uBidiLevel & 0x01) == 0x00) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;}
-	// geometry
-	void blackBoxBounds(const Range<Index>& range, NativeRectangle& bounds) const;
-	HRESULT logicalWidths(int widths[]) const;
-	HRESULT hitTest(int x, int& cp, int& trailing) const;
-	int totalWidth() const /*throw()*/ {return accumulate(advances(), advances() + numberOfGlyphs(), 0);}
-	int x(Index at, bool trailing) const;
-	// layout
-	unique_ptr<TextRun> breakAt(Index at, const String& layoutString);
-	bool expandTabCharacters(const TabExpander& tabExpander,
-		const String& layoutString, Scalar x, Scalar maximumWidth);
-	HRESULT justify(int width);
-	static void mergeScriptsAndStyles(const String& layoutString, const SCRIPT_ITEM scriptRuns[],
-		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, const FontCollection& fontCollection,
-		shared_ptr<const TextRunStyle> defaultStyle, unique_ptr<StyledTextRunIterator> styles,
-		vector<TextRun*>& textRuns, vector<const StyledTextRun>& styledRanges);
-	void shape(const win32::Handle<HDC>& dc, const String& layoutString);
-	void positionGlyphs(const win32::Handle<HDC>& dc, const String& layoutString, SimpleStyledTextRunIterator& styles);
-	unique_ptr<TextRun> splitIfTooLong(const String& layoutString);
-	static void substituteGlyphs(const Range<TextRun**>& runs, const String& layoutString);
-	// drawing and painting
-	void drawGlyphs(PaintContext& context, const NativePoint& p, const Range<Index>& range) const;
-	void paintBackground(PaintContext& context, const NativePoint& p,
-		const Range<Index>& range, NativeRectangle* paintedBounds) const;
-	void paintBorder() const;
-	void paintLineDecorations() const;
-private:
-	struct Glyphs {	// this data is shared text runs separated by (only) line breaks
-		const Range<Index> characters;	// character range for this glyph arrays in the line
-		const shared_ptr<const Font> font;
-		const OPENTYPE_TAG scriptTag;
-		mutable SCRIPT_CACHE fontCache;
-		// only 'clusters' is character-base. others are glyph-base
-		unique_ptr<WORD[]> indices, clusters;
-		unique_ptr<SCRIPT_VISATTR[]> visualAttributes;
-		unique_ptr<int[]> advances, justifiedAdvances;
-		unique_ptr<GOFFSET[]> offsets;
-		Glyphs(const Range<Index>& characters, shared_ptr<const Font> font,
-				OPENTYPE_TAG scriptTag) : characters(characters), font(font), scriptTag(scriptTag), fontCache(nullptr) {
-			if(font.get() == nullptr)
-				throw NullPointerException("font");
-		}
-		~Glyphs() /*throw()*/ {::ScriptFreeCache(&fontCache);}
-		void vanish(const Font& font, size_t at);	// 'at' is distance from the beginning of this run
-	};
-private:
-	TextRun(TextRun& leading, Index characterBoundary) /*throw()*/;
-	const int* advances() const /*throw()*/ {
-		if(const int* const p = glyphs_->advances.get()) return p + glyphRange_.beginning(); return nullptr;}
-	const WORD* clusters() const /*throw()*/ {
-		if(const WORD* const p = glyphs_->clusters.get())
-			return p + (beginning() - glyphs_->characters.beginning()); return nullptr;}
-	pair<int, HRESULT> countMissingGlyphs(const RenderingContext2D& context, const Char* text) const /*throw()*/;
-	static HRESULT generateGlyphs(const win32::Handle<HDC>& dc,
-		const StringPiece& text, const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs, int& numberOfGlyphs);
-	static void generateDefaultGlyphs(const win32::Handle<HDC>& dc,
-		const StringPiece& text, const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs);
-	const WORD* glyphs() const /*throw()*/ {
-		if(const WORD* const p = glyphs_->indices.get()) return p + glyphRange_.beginning(); return nullptr;}
-	const GOFFSET* glyphOffsets() const /*throw()*/ {
-		if(const GOFFSET* const p = glyphs_->offsets.get()) return p + glyphRange_.beginning(); return nullptr;}
-	const int* justifiedAdvances() const /*throw()*/ {
-		if(const int* const p = glyphs_->justifiedAdvances.get()) return p + glyphRange_.beginning(); return nullptr;}
-	const SCRIPT_VISATTR* visualAttributes() const /*throw()*/ {
-		if(const SCRIPT_VISATTR* const p = glyphs_->visualAttributes.get()) return p + glyphRange_.beginning(); return nullptr;}
-private:
-	SCRIPT_ANALYSIS analysis_;	// fLogicalOrder member is always 0 (however see shape())
-	shared_ptr<Glyphs> glyphs_;
-	Range<WORD> glyphRange_;	// range of this run in 'glyphs_' arrays
-	int width_ : sizeof(int) - 1;
-	bool mayOverhang_ : 1;
-};
-
-void TextLayout::TextRun::Glyphs::vanish(const Font& font, size_t at) {
-	assert(advances.get() == nullptr);
-	win32::Handle<HDC> dc(detail::screenDC());
-	HFONT oldFont = nullptr;
-	WORD blankGlyph;
-	HRESULT hr = ::ScriptGetCMap(dc.get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
-	if(hr == E_PENDING) {
-		oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font.asNativeObject().get()));
-		hr = ::ScriptGetCMap(dc.get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
-	}
-	if(hr == S_OK) {
-		SCRIPT_FONTPROPERTIES fp;
-		fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-		if(FAILED(hr = ::ScriptGetFontProperties(dc.get(), &fontCache, &fp)))
-			fp.wgBlank = 0;	/* hmm... */
-		blankGlyph = fp.wgBlank;
-	}
-	if(oldFont != nullptr)
-		::SelectObject(dc.get(), oldFont);
-	indices[clusters[at]] = indices[clusters[at + 1]] = blankGlyph;
-	SCRIPT_VISATTR* const va = visualAttributes.get();
-	va[clusters[at]].uJustification = SCRIPT_JUSTIFY_BLANK;
-	va[clusters[at]].fZeroWidth = 1;
-}
-
-/**
- * Constructor.
- * @param characterRange the character range this text run covers
- * @param script @c SCRIPT_ANALYSIS object obtained by @c ScriptItemize(OpenType)
- * @param font the font renders this text run. can't be @c null
- * @param scriptTag an OpenType script tag describes the script of this text run
- * @throw NullPointerException @a font is @c null
- */
-TextLayout::TextRun::TextRun(const Range<Index>& characterRange,
-		const SCRIPT_ANALYSIS& script, shared_ptr<const Font> font, OPENTYPE_TAG scriptTag) /*throw()*/
-		: Range<Index>(characterRange), analysis_(script) {
-	glyphs_.reset(new Glyphs(*this, font, scriptTag));
-	if(font.get() == nullptr)
-		throw NullPointerException("font");
-}
-
-/**
- * Another private constructor separates an existing text run.
- * @param leading the original text run
- * @param characterBoundary
- * @throw std#invalid_argument @a leading has not been shaped
- * @throw std#out_of_range @a characterBoundary is outside of the character range @a leading covers
- * @see #splitIfTooLong
- */
-TextLayout::TextRun::TextRun(TextRun& leading, Index characterBoundary) /*throw()*/ :
-		Range<Index>(characterBoundary, leading.end()), analysis_(leading.analysis_), glyphs_(leading.glyphs_) {
-	if(leading.glyphs_.get() == nullptr)
-		throw invalid_argument("leading has not been shaped");
-	if(characterBoundary >= length(leading))
-		throw out_of_range("firstCharacter");
-
-	// compute 'glyphRange_'
-
-	// modify clusters
-//	TextRun& target = ltr ? *this : leading;
-//	WORD* const clusters = glyphs_->clusters.get();
-//	transform(target.clusters(), target.clusters() + target.length(),
-//		clusters + target.beginning(), bind2nd(minus<WORD>(), clusters[ltr ? target.beginning() : (target.end() - 1)]));
-}
-
-TextLayout::TextRun::~TextRun() /*throw()*/ {
-//	if(cache_ != nullptr)
-//		::ScriptFreeCache(&cache_);
-}
-
-void TextLayout::TextRun::blackBoxBounds(const Range<Index>& range, NativeRectangle& bounds) const {
-	const int left = x(max(range.beginning(), beginning()), false);
-	const int right = x(min(range.end(), end()) - 1, true);
-	const shared_ptr<const Font::Metrics> fontMetrics(glyphs_->font->metrics());
-	bounds = geometry::normalize(geometry::make<NativeRectangle>(
-		geometry::make<NativePoint>(left, -fontMetrics->ascent()),
-		geometry::make<NativeSize>(right - left, fontMetrics->cellHeight())));
-}
-
-unique_ptr<TextLayout::TextRun> TextLayout::TextRun::breakAt(Index at, const String& layoutString) {
-	// 'at' is from the beginning of the line
-	assert(at > beginning() && at < end());
-	assert(glyphs_->clusters[at - beginning()] != glyphs_->clusters[at - beginning() - 1]);
-
-	const bool ltr = readingDirection() == LEFT_TO_RIGHT;
-	const Index newLength = at - beginning();
-	assert(ltr == (analysis_.fRTL == 0));
-
-	// create the new following run
-	unique_ptr<TextRun> following(new TextRun(*this, newLength));
-
-	// update placements
-//	place(context, layoutString, lip);
-//	following->place(dc, layoutString, lip);
-
-	return following;
-}
-
-/**
- * Returns the number of missing glyphs in this run.
- * @param context The graphics context
- * @param run The run
- * @return The number of missing glyphs
- */
-inline pair<int, HRESULT> TextLayout::TextRun::countMissingGlyphs(
-		const RenderingContext2D& context, const Char* text) const /*throw()*/ {
-	SCRIPT_FONTPROPERTIES fp;
-	fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-	const HRESULT hr = ::ScriptGetFontProperties(context.asNativeObject().get(), &glyphs_->fontCache, &fp);
-	if(FAILED(hr))
-		return make_pair(0, hr);	// can't handle
-	// following is not offical way, but from Mozilla (gfxWindowsFonts.cpp)
-	int result = 0;
-	for(StringCharacterIterator i(StringPiece(text + beginning(), length(*this))); i.hasNext(); i.next()) {
-		if(!BinaryProperty::is<BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(i.current())) {
-			const WORD glyph = glyphs_->indices[glyphs_->clusters[i.tell() - i.beginning()]];
-			if(glyph == fp.wgDefault || (glyph == fp.wgInvalid && glyph != fp.wgBlank))
-				++result;
-			else if(glyphs_->visualAttributes[i.tell() - i.beginning()].fZeroWidth == 1
-					&& scriptProperties.get(analysis_.eScript).fComplex == 0)
-				++result;
-		}
-	}
-	return make_pair(result, S_OK);
-}
-
-/**
- * Draws the glyphs of the specified character range in this run.
- * This method uses the stroke and fill styles which are set in @a context.
- * @param context The graphics context
- * @param p The base point of this run (, does not corresponds to @c range.beginning())
- * @param range The character range to paint. If the edges addressed outside of this run, they are
- *              truncated
- */
-void TextLayout::TextRun::drawGlyphs(PaintContext& context, const NativePoint& p, const Range<Index>& range) const {
-	const Range<Index> truncatedRange(max(range.beginning(), beginning()), min(range.end(), end()));
-	if(ascension::isEmpty(truncatedRange))
-		return;
-	const Range<size_t> glyphRange(
-		characterPositionToGlyphPosition(clusters(), length(*this), numberOfGlyphs(), truncatedRange.beginning() - beginning(), analysis_),
-		characterPositionToGlyphPosition(clusters(), length(*this), numberOfGlyphs(), truncatedRange.end() - beginning(), analysis_));
-	if(!ascension::isEmpty(glyphRange)) {
-		context.setFont(glyphs_->font);
-//		RECT temp;
-//		if(dirtyRect != nullptr)
-//			::SetRect(&temp, dirtyRect->left(), dirtyRect->top(), dirtyRect->right(), dirtyRect->bottom());
-		const HRESULT hr = ::ScriptTextOut(context.asNativeObject().get(), &glyphs_->fontCache,
-			geometry::x(p) + x((analysis_.fRTL == 0) ? truncatedRange.beginning() : (truncatedRange.end() - 1), analysis_.fRTL != 0),
-			geometry::y(p) - glyphs_->font->metrics()->ascent(), 0, &context.boundsToPaint(), &analysis_, nullptr, 0,
-			glyphs() + glyphRange.beginning(), length(glyphRange), advances() + glyphRange.beginning(),
-			(justifiedAdvances() != nullptr) ? justifiedAdvances() + glyphRange.beginning() : nullptr,
-			glyphOffsets() + glyphRange.beginning());
-	}
-}
-
-/**
- * Expands tab characters in this run and modifies the width.
- * @param tabExpander The tab expander
- * @param layoutString the whole string of the layout this run belongs to
- * @param x the position in writing direction this run begins, in pixels
- * @param maximumWidth the maximum width this run can take place, in pixels
- * @return @c true if expanded tab characters
- * @throw std#invalid_argument @a maximumWidth &lt;= 0
- */
-inline bool TextLayout::TextRun::expandTabCharacters(
-		const TabExpander& tabExpander, const String& layoutString, Scalar x, Scalar maximumWidth) {
-	if(maximumWidth <= 0)
-		throw invalid_argument("maximumWidth");
-	if(layoutString[beginning()] != L'\t')
-		return false;
-	assert(length(*this) == 1 && glyphs_.unique());
-	glyphs_->advances[0] = min(tabExpander.nextTabStop(x, beginning()), maximumWidth);
-	glyphs_->justifiedAdvances.reset();
-	return true;
-}
-
-/// Fills the glyph array with default index, instead of using @c ScriptShape.
-inline void TextLayout::TextRun::generateDefaultGlyphs(
-		const win32::Handle<HDC>& dc,
-		const StringPiece& text, const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs) {
-	SCRIPT_CACHE fontCache(nullptr);
-	SCRIPT_FONTPROPERTIES fp;
-	fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-	if(FAILED(::ScriptGetFontProperties(dc.get(), &fontCache, &fp)))
-		fp.wgDefault = 0;	// hmm...
-
-	unique_ptr<WORD[]> indices, clusters;
-	unique_ptr<SCRIPT_VISATTR[]> visualAttributes;
-	const int numberOfGlyphs = static_cast<int>(length(text));
-	indices.reset(new WORD[numberOfGlyphs]);
-	clusters.reset(new WORD[length(text)]);
-	visualAttributes.reset(new SCRIPT_VISATTR[numberOfGlyphs]);
-	fill_n(indices.get(), numberOfGlyphs, fp.wgDefault);
-	const bool ltr = analysis.fRTL == 0 || analysis.fLogicalOrder == 1;
-	for(size_t i = 0, c = length(text); i < c; ++i)
-		clusters[i] = static_cast<WORD>(ltr ? i : (c - i));
-	const SCRIPT_VISATTR va = {SCRIPT_JUSTIFY_NONE, 1, 0, 0, 0, 0};
-	fill_n(visualAttributes.get(), numberOfGlyphs, va);
-
-	// commit
-	using std::swap;
-	swap(glyphs.fontCache, fontCache);
-	swap(glyphs.indices, indices);
-	swap(glyphs.clusters, clusters);
-	swap(glyphs.visualAttributes, visualAttributes);
-	::ScriptFreeCache(&fontCache);
-}
-
-/**
- * Generates glyphs for the text.
- * @param context the graphics context
- * @param text the text to generate glyphs
- * @param analysis the Uniscribe's @c SCRIPT_ANALYSIS object
- * @param[out] glyphs
- * @param[out] numberOfGlyphs the number of glyphs written to @a run
- * @retval S_OK succeeded
- * @retval USP_E_SCRIPT_NOT_IN_FONT the font does not support the required script
- * @retval E_INVALIDARG other Uniscribe error. usually, too long run was specified
- * @retval HRESULT other Uniscribe error
- * @throw std#bad_alloc failed to allocate buffer for glyph indices or visual attributes array
- */
-HRESULT TextLayout::TextRun::generateGlyphs(const win32::Handle<HDC>& dc,
-		const StringPiece& text, const SCRIPT_ANALYSIS& analysis, Glyphs& glyphs, int& numberOfGlyphs) {
-#ifdef _DEBUG
-	if(HFONT currentFont = static_cast<HFONT>(::GetCurrentObject(dc.get(), OBJ_FONT))) {
-		LOGFONTW lf;
-		if(::GetObjectW(currentFont, sizeof(LOGFONTW), &lf) > 0) {
-			win32::DumpContext dout;
-			dout << L"[TextLayout.TextRun.generateGlyphs] Selected font is '" << lf.lfFaceName << L"'.\n";
-		}
-	}
-#endif
-
-	SCRIPT_CACHE fontCache(nullptr);	// TODO: this object should belong to a font, not glyph run???
-	unique_ptr<WORD[]> indices, clusters;
-	unique_ptr<SCRIPT_VISATTR[]> visualAttributes;
-	clusters.reset(new WORD[length(text)]);
-	numberOfGlyphs = estimateNumberOfGlyphs(length(text));
-	HRESULT hr;
-	while(true) {
-		indices.reset(new WORD[numberOfGlyphs]);
-		visualAttributes.reset(new SCRIPT_VISATTR[numberOfGlyphs]);
-		hr = ::ScriptShape(dc.get(), &fontCache,
-			text.beginning(), static_cast<int>(length(text)),
-			numberOfGlyphs, const_cast<SCRIPT_ANALYSIS*>(&analysis),
-			indices.get(), clusters.get(), visualAttributes.get(), &numberOfGlyphs);
-		if(hr != E_OUTOFMEMORY)
-			break;
-		// repeat until a large enough buffer is provided
-		numberOfGlyphs *= 2;
-	}
-
-	if(analysis.fNoGlyphIndex != 0)
-		hr = GDI_ERROR;	// the caller should try other fonts or disable shaping
-
-	// commit
-	if(SUCCEEDED(hr)) {
-		using std::swap;
-		swap(glyphs.fontCache, fontCache);
-		swap(glyphs.indices, indices);
-		swap(glyphs.clusters, clusters);
-		swap(glyphs.visualAttributes, visualAttributes);
-	}
-	::ScriptFreeCache(&fontCache);
-	return hr;
-}
-
-inline HRESULT TextLayout::TextRun::hitTest(int x, int& cp, int& trailing) const {
-	return ::ScriptXtoCP(x, static_cast<int>(length(*this)), numberOfGlyphs(), clusters(),
-		visualAttributes(), (justifiedAdvances() == nullptr) ? advances() : justifiedAdvances(), &analysis_, &cp, &trailing);
-}
-
-inline HRESULT TextLayout::TextRun::justify(int width) {
-	assert(glyphs_->indices.get() != nullptr && advances() != nullptr);
-	HRESULT hr = S_OK;
-	if(width != totalWidth()) {
-		if(glyphs_->justifiedAdvances.get() == nullptr)
-			glyphs_->justifiedAdvances.reset(new int[numberOfGlyphs()]);
-		hr = ::ScriptJustify(visualAttributes(), advances(), numberOfGlyphs(), width - totalWidth(),
-			2, glyphs_->justifiedAdvances.get() + (beginning() - glyphs_->characters.beginning()));
-	}
-	return hr;
-}
-
-inline HRESULT TextLayout::TextRun::logicalAttributes(const String& layoutString, SCRIPT_LOGATTR attributes[]) const {
-	if(attributes == nullptr)
-		throw NullPointerException("attributes");
-	return ::ScriptBreak(layoutString.data() + beginning(), static_cast<int>(length(*this)), &analysis_, attributes);
-}
-
-inline HRESULT TextLayout::TextRun::logicalWidths(int widths[]) const {
-	if(widths == nullptr)
-		throw NullPointerException("widths");
-	return ::ScriptGetLogicalWidths(&analysis_, static_cast<int>(length(*this)),
-		numberOfGlyphs(), advances(), clusters(), visualAttributes(), widths);
-}
-
-namespace {
-	void resolveFontSpecifications(const FontCollection& fontCollection,
-			shared_ptr<const TextRunStyle> requestedStyle, shared_ptr<const TextRunStyle> defaultStyle,
-			String* computedFamilyName, double* computedPixelSize,
-			FontProperties<>* computedProperties, double* computedSizeAdjust) {
-		// family name
-		if(computedFamilyName != nullptr) {
-			*computedFamilyName = (requestedStyle.get() != nullptr) ? requestedStyle->fontFamily : String();
-			if(computedFamilyName->empty()) {
-				if(defaultStyle.get() != nullptr)
-					*computedFamilyName = defaultStyle->fontFamily;
-				if(computedFamilyName->empty())
-					*computedFamilyName = fontCollection.lastResortFallback(FontDescription<>())->familyName();
-			}
-		}
-		// size
-		if(computedPixelSize != nullptr) {
-			requestedStyle->fontProperties
-		}
-		// properties
-		if(computedProperties != 0) {
-			FontProperties<Inheritable> result;
-			if(requestedStyle.get() != nullptr)
-				result = requestedStyle->fontProperties;
-			Inheritable<double> computedSize(computedProperties->pixelSize());
-			if(computedSize.inherits()) {
-				if(defaultStyle.get() != nullptr)
-					computedSize = defaultStyle->fontProperties.pixelSize();
-				if(computedSize.inherits())
-					computedSize = fontCollection.lastResortFallback(FontProperties<>())->metrics().emHeight();
-			}
-			*computedProperties = FontProperties<>(
-				!result.weight().inherits() ? result.weight()
-					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.weight() : FontPropertiesBase::NORMAL_WEIGHT),
-				!result.stretch().inherits() ? result.stretch()
-					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.stretch() : FontPropertiesBase::NORMAL_STRETCH),
-				!result.style().inherits() ? result.style()
-					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.style() : FontPropertiesBase::NORMAL_STYLE),
-				!result.variant().inherits() ? result.variant()
-					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.variant() : FontPropertiesBase::NORMAL_VARIANT),
-				!result.orientation().inherits() ? result.orientation()
-					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.orientation() : FontPropertiesBase::HORIZONTAL),
-				computedSize);
-		}
-		// size-adjust
-		if(computedSizeAdjust != nullptr) {
-			*computedSizeAdjust = (requestedStyle.get() != nullptr) ? requestedStyle->fontSizeAdjust : -1.0;
-			if(*computedSizeAdjust < 0.0)
-				*computedSizeAdjust = (defaultStyle.get() != nullptr) ? defaultStyle->fontSizeAdjust : 0.0;
-		}
-	}
-	pair<const Char*, shared_ptr<const Font>> findNextFontRun(const Range<const Char*>& text,
-			const FontCollection& fontCollection, shared_ptr<const TextRunStyle> requestedStyle,
-			shared_ptr<const TextRunStyle> defaultStyle, shared_ptr<const Font> previousFont) {
-		String familyName;
-		FontProperties<> properties;
-		double sizeAdjust;
-		resolveFontSpecifications(fontCollection, requestedStyle, defaultStyle, &familyName, &properties, &sizeAdjust);
-#if 1
-		familyName.assign(L"Times New Roman");
-//		properties.style = FontProperties::ITALIC;
-#endif // 1
-		return make_pair(static_cast<const Char*>(nullptr), fontCollection.get(familyName, properties, sizeAdjust));
-	}
-} // namespace @0
-
-/**
- * Merges the given item runs and the given style runs.
- * @param layoutString
- * @param items The items itemized by @c #itemize()
- * @param numberOfItems The length of the array @a items
- * @param styles The iterator returns the styled runs in the line. Can be @c null
- * @param[out] textRuns
- * @param[out] styledRanges
- * @see presentation#Presentation#getLineStyle
- */
-void TextLayout::TextRun::mergeScriptsAndStyles(
-		const String& layoutString, const SCRIPT_ITEM scriptRuns[],
-		const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns,
-		const FontCollection& fontCollection, shared_ptr<const TextRunStyle> defaultStyle,
-		unique_ptr<StyledTextRunIterator> styles, vector<TextRun*>& textRuns,
-		vector<const StyledTextRun>& styledRanges) {
-	if(scriptRuns == nullptr)
-		throw NullPointerException("scriptRuns");
-	else if(numberOfScriptRuns == 0)
-		throw invalid_argument("numberOfScriptRuns");
-
-#define ASCENSION_SPLIT_LAST_RUN()												\
-	while(runs.back()->length() > MAXIMUM_RUN_LENGTH) {							\
-		TextRun& back = *runs.back();											\
-		unique_ptr<TextRun> piece(new SimpleRun(back.style));					\
-		Index pieceLength = MAXIMUM_RUN_LENGTH;									\
-		if(surrogates::isLowSurrogate(line[back.offsetInLine + pieceLength]))	\
-			--pieceLength;														\
-		piece->analysis = back.analysis;										\
-		piece->offsetInLine = back.offsetInLine + pieceLength;					\
-		piece->setLength(back.length() - pieceLength);							\
-		back.setLength(pieceLength);											\
-		runs.push_back(piece.release());										\
-	}
-
-	pair<vector<TextRun*>, vector<const StyledTextRun>> results;
-	results.first.reserve(static_cast<size_t>(numberOfScriptRuns * ((styles.get() != nullptr) ? 1.2 : 1)));	// hmm...
-
-	const SCRIPT_ITEM* scriptRun = scriptRuns;
-	pair<const SCRIPT_ITEM*, Index> nextScriptRun;	// 'second' is the beginning position
-	nextScriptRun.first = (numberOfScriptRuns > 1) ? (scriptRuns + 1) : nullptr;
-	nextScriptRun.second = (nextScriptRun.first != nullptr) ? nextScriptRun.first->iCharPos : layoutString.length();
-	boost::optional<StyledTextRun> styleRun;
-	if(styles.get() != nullptr && styles->hasNext()) {
-		styleRun = styles->current();
-		styles->next();
-		results.second.push_back(*styleRun);
-	}
-	boost::optional<StyledTextRun> nextStyleRun;
-	if(styles.get() != nullptr && styles->hasNext())
-		nextStyleRun = styles->current();
-	Index beginningOfNextStyleRun = nextStyleRun ? nextStyleRun->position() : layoutString.length();
-	shared_ptr<const Font> font;	// font for current glyph run
-	do {
-		const Index previousRunEnd = max<Index>(
-			scriptRun->iCharPos, styleRun ? styleRun->position() : 0);
-		assert(
-			(previousRunEnd == 0 && results.first.empty() && results.second.empty())
-			|| (!results.first.empty() && previousRunEnd == results.first.back()->end())
-			|| (!results.second.empty() && previousRunEnd == results.second.back().position()));
-		Index newRunEnd;
-		bool forwardScriptRun = false, forwardStyleRun = false, forwardGlyphRun = false;
-
-		if(nextScriptRun.second == beginningOfNextStyleRun) {
-			newRunEnd = nextScriptRun.second;
-			forwardScriptRun = forwardStyleRun = true;
-		} else if(nextScriptRun.second < beginningOfNextStyleRun) {
-			newRunEnd = nextScriptRun.second;
-			forwardScriptRun = true;
-		} else {	// nextScriptRun.second > beginningOfNextStyleRun
-			newRunEnd = beginningOfNextStyleRun;
-			forwardStyleRun = true;
-		}
-
-		if((++utf::makeCharacterDecodeIterator(layoutString.data() + previousRunEnd,
-				layoutString.data() + newRunEnd)).tell() < layoutString.data() + newRunEnd || font.get() == nullptr) {
-			const pair<const Char*, shared_ptr<const Font>> nextFontRun(
-				findNextFontRun(
-					Range<const Char*>(layoutString.data() + previousRunEnd, layoutString.data() + newRunEnd),
-					fontCollection, styleRun ? styleRun->style() : shared_ptr<const TextRunStyle>(),
-					defaultStyle, font));
-			font = nextFontRun.second;
-			if(nextFontRun.first != nullptr) {
-				forwardGlyphRun = true;
-				newRunEnd = nextFontRun.first - layoutString.data();
-				forwardScriptRun = forwardStyleRun = false;
-			}
-		}
-		if(!forwardGlyphRun && forwardScriptRun)
-			forwardGlyphRun = true;
-
-		if(forwardGlyphRun) {
-			const bool breakScriptRun = newRunEnd < nextScriptRun.second;
-			if(breakScriptRun)
-				const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkAfter = 0;
-			results.first.push_back(
-				new TextRun(Range<Index>(!results.first.empty() ? results.first.back()->end() : 0, newRunEnd),
-					scriptRun->a, font,
-					(scriptTags != nullptr) ? scriptTags[scriptRun - scriptRuns] : SCRIPT_TAG_UNKNOWN));	// TODO: 'DFLT' is preferred?
-			while(true) {
-				unique_ptr<TextRun> piece(results.first.back()->splitIfTooLong(layoutString));
-				if(piece.get() == nullptr)
-					break;
-				results.first.push_back(piece.release());
-			}
-			if(breakScriptRun)
-				const_cast<SCRIPT_ITEM*>(scriptRun)->a.fLinkBefore = 0;
-		}
-		if(forwardScriptRun) {
-			if((scriptRun = nextScriptRun.first) != nullptr) {
-				if(++nextScriptRun.first == scriptRuns + numberOfScriptRuns)
-					nextScriptRun.first = nullptr;
-				nextScriptRun.second = (nextScriptRun.first != nullptr) ? nextScriptRun.first->iCharPos : layoutString.length();
-			}
-		}
-		if(forwardStyleRun) {
-			if(nextStyleRun) {
-				styleRun = nextStyleRun;
-				results.second.push_back(*styleRun);
-				styles->next();
-				if(styles->hasNext())
-					nextStyleRun = styles->current();
-				beginningOfNextStyleRun = nextStyleRun ? nextStyleRun->position() : layoutString.length();
-			}
-		}
-	} while(scriptRun != nullptr || styleRun);
-
-	// commit
-	using std::swap;
-	swap(textRuns, results.first);
-	styledRanges = results.second;	// will be shrunk to fit
-
-#undef ASCENSION_SPLIT_LAST_RUN
-}
-
-/**
- * Paints the background of the specified character range in this run.
- * This method uses the fill style which is set in @a context.
- * @param context The graphics context
- * @param p The base point of this run (, does not corresponds to @c range.beginning())
- * @param range The character range to paint. If the edges addressed outside of this run, they are
- *              truncated
- * @param[out] paintedBounds The rectangle this method painted. Can be @c null
- */
-void TextLayout::TextRun::paintBackground(PaintContext& context,
-		const NativePoint& p, const Range<Index>& range, NativeRectangle* paintedBounds) const {
-	if(ascension::isEmpty(range) || geometry::x(p) + totalWidth() < geometry::left(context.boundsToPaint()))
-		return;
-	NativeRectangle r;
-	blackBoxBounds(range, r);
-	context.fillRectangle(geometry::translate(r, geometry::make<NativeSize>(geometry::x(p), geometry::y(p))));
-	if(paintedBounds != nullptr)
-		*paintedBounds = r;
-}
-
-/**
- * 
- * @see #merge, #substituteGlyphs
- */
-void TextLayout::TextRun::positionGlyphs(
-		const win32::Handle<HDC>& dc, const String& layoutString, SimpleStyledTextRunIterator& styles) {
-	assert(glyphs_.get() != nullptr && glyphs_.unique());
-	assert(glyphs_->indices.get() != nullptr && glyphs_->advances.get() == nullptr);
-
-	unique_ptr<int[]> advances(new int[numberOfGlyphs()]);
-	unique_ptr<GOFFSET[]> offsets(new GOFFSET[numberOfGlyphs()]);
-//	ABC width;
-	HRESULT hr = ::ScriptPlace(nullptr, &glyphs_->fontCache, glyphs_->indices.get(), numberOfGlyphs(),
-		glyphs_->visualAttributes.get(), &analysis_, advances.get(), offsets.get(), nullptr/*&width*/);
-	if(hr == E_PENDING) {
-		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), glyphs_->font->nativeObject().get()));
-		hr = ::ScriptPlace(dc.get(), &glyphs_->fontCache, glyphs_->indices.get(), numberOfGlyphs(),
-			glyphs_->visualAttributes.get(), &analysis_, advances.get(), offsets.get(), nullptr/*&width*/);
-		::SelectObject(dc.get(), oldFont);
-	}
-	if(FAILED(hr))
-		throw hr;
-
-	// apply text run styles
-	for(; styles.hasNext(); styles.next()) {
-		StyledTextRun styledRange(styles.current());
-/*
-		// query widths of C0 and C1 controls in this run
-		unique_ptr<WORD[]> glyphIndices;
-		if(ISpecialCharacterRenderer* scr = lip.specialCharacterRenderer()) {
-			ISpecialCharacterRenderer::LayoutContext context(dc);
-			context.readingDirection = readingDirection();
-			dc.selectObject(glyphs_->font->handle().get());
-			SCRIPT_FONTPROPERTIES fp;
-			fp.cBytes = 0;
-			for(Index i = beginning(); i < end(); ++i) {
-				if(isC0orC1Control(layoutString[i])) {
-					if(const int w = scr->getControlCharacterWidth(context, layoutString[i])) {
-						// substitute the glyph
-						width.abcB += w - glyphs_->advances[i - beginning()];
-						glyphs_->advances[i] = w;
-						if(fp.cBytes == 0) {
-							fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-							const HRESULT hr2 = ::ScriptGetFontProperties(dc.get(), &glyphs_->fontCache, &fp);
-							if(FAILED(hr2))
-								fp.wgBlank = 0;	// hmm...
-						}
-						if(glyphIndices.get() == nullptr) {
-							glyphIndices.reset(new WORD[numberOfGlyphs()]);
-							memcpy(glyphIndices.get(), glyphs(), sizeof(WORD) * numberOfGlyphs());
-						}
-						glyphIndices[i] = fp.wgBlank;
-					}
-				}
-			}
-		}
-*/
-/*		// handle letter spacing
-		if(styledRange.style.get() != nullptr && styledRange.style->letterSpacing.unit != Length::INHERIT) {
-			if(const int letterSpacing = pixels(dc, styledRange.style->letterSpacing, false, glyphs_->font->metrics())) {
-				const bool rtl = readingDirection() == RIGHT_TO_LEFT;
-				for(size_t i = textRun.glyphRange_.beginning(), e = textRun.glyphRange_.end(); i < e; ++i) {
-					if((!rtl && (i + 1 == e || glyphs_->visualAttributes[i + 1].fClusterStart != 0))
-							|| (rtl && (i == 0 || glyphs_->visualAttributes[i - 1].fClusterStart != 0))) {
-						advances[i] += letterSpacing;
-						if(rtl)
-							offsets[i].du += letterSpacing;
-					}
-				}
-			}
-		}
-*/	}
-
-	// commit
-	glyphs_->advances = move(advances);
-	glyphs_->offsets = move(offsets);
-//	glyphs_->width = width;
-}
-
-// shaping stuffs
-namespace {
-	/**
-	 * Returns a Unicode script corresponds to Win32 language identifier for digit substitution.
-	 * @param id the language identifier
-	 * @return the script or @c NOT_PROPERTY
-	 */
-	inline int convertWin32LangIDtoUnicodeScript(LANGID id) /*throw()*/ {
-		switch(id) {
-		case LANG_ARABIC:		return Script::ARABIC;
-		case LANG_ASSAMESE:		return Script::BENGALI;
-		case LANG_BENGALI:		return Script::BENGALI;
-		case 0x5c:				return Script::CHEROKEE;
-		case LANG_DIVEHI:		return Script::THAANA;
-		case 0x5e:				return Script::ETHIOPIC;
-		case LANG_FARSI:		return Script::ARABIC;	// Persian
-		case LANG_GUJARATI:		return Script::GUJARATI;
-		case LANG_HINDI:		return Script::DEVANAGARI;
-		case LANG_KANNADA:		return Script::KANNADA;
-		case 0x53:				return Script::KHMER;
-		case 0x54:				return Script::LAO;
-		case LANG_MALAYALAM:	return Script::MALAYALAM;
-		case 0x55:				return Script::MYANMAR;
-		case LANG_ORIYA:		return Script::ORIYA;
-		case LANG_PUNJABI:		return Script::GURMUKHI;
-		case 0x5b:				return Script::SINHALA;
-		case LANG_SYRIAC:		return Script::SYRIAC;
-		case LANG_TAMIL:		return Script::TAMIL;
-		case 0x51:				return Script::TIBETAN;
-		case LANG_TELUGU:		return Script::TELUGU;
-		case LANG_THAI:			return Script::THAI;
-		case LANG_URDU:			return Script::ARABIC;
-		}
-		return NOT_PROPERTY;
-	}
-} // namespace @0
-
-void TextLayout::TextRun::shape(const win32::Handle<HDC>& dc, const String& layoutString) {
-	assert(glyphs_.unique());
-
-	// TODO: check if the requested style (or the default one) disables shaping.
-
-	HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), glyphs_->font->nativeObject().get()));
-	const StringPiece text(layoutString.data() + beginning(), layoutString.data() + end());
-	int numberOfGlyphs;
-	HRESULT hr = generateGlyphs(dc, text, analysis_, *glyphs_, numberOfGlyphs);
-	if(hr == USP_E_SCRIPT_NOT_IN_FONT) {
-		analysis_.eScript = SCRIPT_UNDEFINED;
-		hr = generateGlyphs(dc, text, analysis_, *glyphs_, numberOfGlyphs);
-	}
-	if(FAILED(hr))
-		generateDefaultGlyphs(dc, text, analysis_, *glyphs_);
-	::SelectObject(dc.get(), oldFont);
-
-	// commit
-	glyphRange_ = Range<WORD>(0, static_cast<WORD>(numberOfGlyphs));
-}
-#if 0
-void TextLayout::TextRun::shape(DC& dc, const String& layoutString, const ILayoutInformationProvider& lip, TextRun* nextRun) {
-	if(glyphs_->clusters.get() != nullptr)
-		throw IllegalStateException("");
-	if(requestedStyle().get() != nullptr) {
-		if(!requestedStyle()->shapingEnabled)
-			analysis_.eScript = SCRIPT_UNDEFINED;
-	} else {
-		shared_ptr<const RunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
-		if(defaultStyle.get() != nullptr && !defaultStyle->shapingEnabled)
-			analysis_.eScript = SCRIPT_UNDEFINED;
-	}
-
-	HRESULT hr;
-	const WORD originalScript = analysis_.eScript;
-	HFONT oldFont;
-
-	// compute font properties
-	String computedFontFamily((requestedStyle().get() != nullptr) ?
-		requestedStyle()->fontFamily : String(L"\x5c0f\x585a\x660e\x671d Pr6N R"));
-	FontProperties computedFontProperties((requestedStyle().get() != nullptr) ? requestedStyle()->fontProperties : FontProperties());
-	double computedFontSizeAdjust = (requestedStyle().get() != nullptr) ? requestedStyle()->fontSizeAdjust : -1.0;
-	shared_ptr<const RunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
-	if(computedFontFamily.empty()) {
-		if(defaultStyle.get() != nullptr)
-			computedFontFamily = lip.presentation().defaultTextRunStyle()->fontFamily;
-		if(computedFontFamily.empty())
-			computedFontFamily = lip.textMetrics().familyName();
-	}
-	if(computedFontProperties.weight == FontProperties::INHERIT_WEIGHT)
-		computedFontProperties.weight = (defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.weight : FontProperties::NORMAL_WEIGHT;
-	if(computedFontProperties.stretch == FontProperties::INHERIT_STRETCH)
-		computedFontProperties.stretch = (defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.stretch : FontProperties::NORMAL_STRETCH;
-	if(computedFontProperties.style == FontProperties::INHERIT_STYLE)
-		computedFontProperties.style = (defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.style : FontProperties::NORMAL_STYLE;
-	if(computedFontProperties.size == 0.0f) {
-		if(defaultStyle.get() != nullptr)
-			computedFontProperties.size = defaultStyle->fontProperties.size;
-		if(computedFontProperties.size == 0.0f)
-			computedFontProperties.size = lip.textMetrics().emHeight();
-	}
-	if(computedFontSizeAdjust < 0.0)
-		computedFontSizeAdjust = (defaultStyle.get() != nullptr) ? defaultStyle->fontSizeAdjust : 0.0;
-
-#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-	bool firstVariationSelectorWasted = false;
-	if(analysis_.fLogicalOrder != 0) {
-		analysis_.fLogicalOrder = 0;
-		firstVariationSelectorWasted = true;
-	}
-#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-
-	if(analysis_.s.fDisplayZWG != 0 && scriptProperties.get(analysis_.eScript).fControl != 0) {
-		// bidirectional format controls
-		FontProperties fp;
-		fp.size = computedFontProperties.size;
-		shared_ptr<const Font> font(lip.fontCollection().get(L"Arial", fp, computedFontSizeAdjust));
-		oldFont = dc.selectObject((font_ = font)->handle().get());
-		if(USP_E_SCRIPT_NOT_IN_FONT == (hr = buildGlyphs(dc, layoutString.data()))) {
-			analysis_.eScript = SCRIPT_UNDEFINED;
-			hr = buildGlyphs(dc, layoutString.data());
-		}
-		if(FAILED(hr))
-			generateDefaultGlyphs(dc);
-		for(int i = 0; i < numberOfGlyphs(); ++i)
-			glyphs_->visualAttributes[i].fZeroWidth = 1;
-		dc.selectObject(oldFont);
-	}
-
-	else {
-		// buildGlyphs() returns glyphs for the run. however it can contain missing glyphs.
-		// we try candidate fonts in following order:
-		//
-		// 1. the primary font
-		// 2. the national font for digit substitution
-		// 3. the linked fonts
-		// 4. the fallback font
-		//
-		// with storing the fonts failed to shape ("failedFonts"). and then retry the failed
-		// fonts returned USP_E_SCRIPT_NOT_IN_FONT with shaping)
-
-		int script = NOT_PROPERTY;	// script of the run for fallback
-		typedef vector<pair<shared_ptr<const Font>, int>> FailedFonts;
-		FailedFonts failedFonts;	// failed fonts (font handle vs. # of missings)
-		int numberOfMissingGlyphs;
-
-		const Char* textString = layoutString.data() + beginning();
-
-#define ASCENSION_MAKE_TEXT_STRING_SAFE()												\
-	assert(safeString.get() == nullptr);												\
-	safeString.reset(new Char[length()]);												\
-	wmemcpy(safeString.get(), layoutString.data() + beginning(), length());				\
-	replace_if(safeString.get(),														\
-		safeString.get() + length(), surrogates::isSurrogate, REPLACEMENT_CHARACTER);	\
-	textString = safeString.get();
-
-#define ASCENSION_CHECK_FAILED_FONTS()										\
-	bool skip = false;														\
-	for(FailedFonts::const_iterator											\
-			i(failedFonts.begin()), e(failedFonts.end()); i != e; ++i) {	\
-		if(i->first == font_) {												\
-			skip = true;													\
-			break;															\
-		}																	\
-	}
-
-		// ScriptShape may crash if the shaping is disabled (see Mozilla bug 341500).
-		// Following technique is also from Mozilla (gfxWindowsFonts.cpp).
-		unique_ptr<Char[]> safeString;
-		if(analysis_.eScript == SCRIPT_UNDEFINED
-				&& find_if(textString, textString + length(), surrogates::isSurrogate) != textString + length()) {
-			ASCENSION_MAKE_TEXT_STRING_SAFE();
-		}
-
-		// 1. the primary font
-		oldFont = dc.selectObject((font_ = lip.fontCollection().get(computedFontFamily, computedFontProperties))->handle().get());
-		hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
-		if(hr == USP_E_SCRIPT_NOT_IN_FONT) {
-			::ScriptFreeCache(&glyphs_->fontCache);
-			failedFonts.push_back(make_pair(font_, (hr == S_FALSE) ? numberOfMissingGlyphs : numeric_limits<int>::max()));
-		}
-
-		// 2. the national font for digit substitution
-		if(hr == USP_E_SCRIPT_NOT_IN_FONT && analysis_.eScript != SCRIPT_UNDEFINED && analysis_.s.fDigitSubstitute != 0) {
-			script = convertWin32LangIDtoUnicodeScript(scriptProperties.get(analysis_.eScript).langid);
-			if(script != NOT_PROPERTY) {
-				const basic_string<WCHAR> fallbackFontFamily(fallback(script));
-				if(!fallbackFontFamily.empty()) {
-					font_ = lip.fontCollection().get(fallbackFontFamily, computedFontProperties, computedFontSizeAdjust);
-					ASCENSION_CHECK_FAILED_FONTS()
-					if(!skip) {
-						dc.selectObject(font_->handle().get());
-						hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
-						if(hr != S_OK) {
-							::ScriptFreeCache(&glyphs_->fontCache);
-							failedFonts.push_back(make_pair(font_, numberOfMissingGlyphs));	// not material what hr is...
-						}
-					}
-				}
-			}
-		}
-/*
-		// 3. the linked fonts
-		if(hr != S_OK) {
-			for(size_t i = 0; i < lip.getFontSelector().numberOfLinkedFonts(); ++i) {
-				font_ = lip.getFontSelector().linkedFont(i, run->style.bold, run->style.italic);
-				ASCENSION_CHECK_FAILED_FONTS()
-				if(!skip) {
-					dc.selectObject(font_);
-					if(S_OK == (hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs)))
-						break;
-					::ScriptFreeCache(&cache_);
-					failedFonts.push_back(make_pair(font_, (hr == S_FALSE) ? numberOfMissingGlyphs : numeric_limits<int>::max()));
-				}
-			}
-		}
-*/
-		// 4. the fallback font
-		if(hr != S_OK) {
-			for(StringCharacterIterator i(StringPiece(textString, textString + length())); i.hasNext(); i.next()) {
-				script = Script::of(i.current());
-				if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
-					break;
-			}
-			if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED) {
-				const basic_string<WCHAR> fallbackFontFamily(fallback(script));
-				if(!fallbackFontFamily.empty())
-					font_ = lip.fontCollection().get(fallbackFontFamily, computedFontProperties, computedFontSizeAdjust);
-			} else {
-				font_.reset();
-				// ambiguous CJK?
-				if(script == Script::COMMON && scriptProperties.get(analysis_.eScript).fAmbiguousCharSet != 0) {
-					// TODO: this code check only the first character in the run?
-					switch(Block::of(surrogates::decodeFirst(textString, textString + length()))) {
-					case Block::CJK_SYMBOLS_AND_PUNCTUATION:
-					case Block::ENCLOSED_CJK_LETTERS_AND_MONTHS:
-					case Block::CJK_COMPATIBILITY:
-					case Block::VERTICAL_FORMS:	// as of GB 18030
-					case Block::CJK_COMPATIBILITY_FORMS:
-					case Block::SMALL_FORM_VARIANTS:	// as of CNS-11643
-					case Block::HALFWIDTH_AND_FULLWIDTH_FORMS: {
-						const basic_string<WCHAR> fallbackFontFamily(fallback(Script::HAN));
-						if(!fallbackFontFamily.empty())
-							font_ = lip.fontCollection().get(fallbackFontFamily, computedFontProperties, computedFontSizeAdjust);
-						break;
-						}
-					}
-				}
-//				if(font_ == nullptr && previousRun != nullptr) {
-//					// use the previous run setting (but this will copy the style of the font...)
-//					analysis_.eScript = previousRun->analysis_.eScript;
-//					font_ = previousRun->font_;
-//				}
-			}
-			if(font_ != nullptr) {
-				ASCENSION_CHECK_FAILED_FONTS()
-				if(!skip) {
-					dc.selectObject(font_->handle().get());
-					hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
-					if(hr != S_OK) {
-						::ScriptFreeCache(&glyphs_->fontCache);
-						failedFonts.push_back(make_pair(font_, (hr == S_FALSE) ? numberOfMissingGlyphs : numeric_limits<int>::max()));
-					}
-				}
-			}
-		}
-
-		// retry without shaping
-		if(hr != S_OK) {
-			if(analysis_.eScript != SCRIPT_UNDEFINED) {
-				const WORD oldScript = analysis_.eScript;
-				analysis_.eScript = SCRIPT_UNDEFINED;	// disable shaping
-				if(find_if(textString, textString + length(), surrogates::isSurrogate) != textString + length()) {
-					ASCENSION_MAKE_TEXT_STRING_SAFE();
-				}
-				for(FailedFonts::iterator i(failedFonts.begin()), e(failedFonts.end()); i != e; ++i) {
-					if(i->second == numeric_limits<int>::max()) {
-						font_.reset();
-						dc.selectObject((font_ = i->first)->handle().get());
-						hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
-						if(hr == S_OK)
-							break;	// found the best
-						::ScriptFreeCache(&glyphs_->fontCache);
-						if(hr == S_FALSE)
-							i->second = -numberOfMissingGlyphs;
-					}
-				}
-				analysis_.eScript = oldScript;
-			}
-			if(hr != S_OK) {
-				// select the font which generated the least missing glyphs
-				assert(!failedFonts.empty());
-				FailedFonts::const_iterator bestFont(failedFonts.begin());
-				for(FailedFonts::const_iterator i(bestFont + 1), e(failedFonts.end()); i != e; ++i) {
-					if(i->second < bestFont->second)
-						bestFont = i;
-				}
-				dc.selectObject((font_ = bestFont->first)->handle().get());
-				if(bestFont->second < 0)
-					analysis_.eScript = SCRIPT_UNDEFINED;
-				hr = generateGlyphs(dc, textString, 0);
-				if(FAILED(hr)) {
-					::ScriptFreeCache(&glyphs_->fontCache);
-					generateDefaultGlyphs(dc);	// worst case...
-				}
-			}
-		}
-
-#undef ASCENSION_MAKE_TEXT_STRING_SAFE
-#undef ASCENSION_CHECK_FAILED_FONTS
-	}
-
-#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-	if(!uniscribeSupportsIVS()) {
-
-#define ASCENSION_VANISH_VARIATION_SELECTOR(index)														\
-	WORD blankGlyph;																					\
-	if(S_OK != (hr = ::ScriptGetCMap(dc.get(), &glyphs_->fontCache, L"\x0020", 1, 0, &blankGlyph))) {	\
-		SCRIPT_FONTPROPERTIES fp;																		\
-		fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);														\
-		if(FAILED(::ScriptGetFontProperties(dc.get(), &glyphs_->fontCache, &fp)))						\
-			fp.wgBlank = 0;	/* hmm... */																\
-		blankGlyph = fp.wgBlank;																		\
-	}																									\
-	glyphs_->indices[glyphs_->clusters[index]]															\
-		= glyphs_->indices[glyphs_->clusters[index + 1]] = blankGlyph;									\
-	SCRIPT_VISATTR* const va = glyphs_->visualAttributes.get();											\
-	va[glyphs_->clusters[index]].uJustification															\
-		= va[glyphs_->clusters[index + 1]].uJustification = SCRIPT_JUSTIFY_BLANK;						\
-	va[glyphs_->clusters[index]].fZeroWidth																\
-		= va[glyphs_->clusters[index + 1]].fZeroWidth = 1
-
-		if(firstVariationSelectorWasted) {
-			// remove glyphs correspond to the first character which is conjuncted with the last
-			// character as a variation character
-			assert(length() > 1);
-			ASCENSION_VANISH_VARIATION_SELECTOR(0);
-		} else if(analysis_.eScript != SCRIPT_UNDEFINED && length() > 3
-				&& surrogates::isHighSurrogate(layoutString[beginning()]) && surrogates::isLowSurrogate(layoutString[beginning() + 1])) {
-			for(StringCharacterIterator i(
-					StringPiece(layoutString.data() + beginning(), length()), layoutString.data() + beginning() + 2); i.hasNext(); i.next()) {
-				const CodePoint variationSelector = i.current();
-				if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
-					StringCharacterIterator baseCharacter(i);
-					baseCharacter.previous();
-					if(static_cast<const SystemFont*>(font_.get())->ivsGlyph(
-							baseCharacter.current(), variationSelector,
-							glyphs_->indices[glyphs_->clusters[baseCharacter.tell() - layoutString.data()]])) {
-						ASCENSION_VANISH_VARIATION_SELECTOR(i.tell() - layoutString.data());
-					}
-				}
-			}
-		}
-		if(nextRun != nullptr && nextRun->length() > 1) {
-			const CodePoint variationSelector = surrogates::decodeFirst(
-				layoutString.begin() + nextRun->beginning(), layoutString.begin() + nextRun->beginning() + 2);
-			if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
-				const CodePoint baseCharacter = surrogates::decodeLast(
-					layoutString.data() + beginning(), layoutString.data() + end());
-				if(static_cast<const SystemFont*>(font_.get())->ivsGlyph(
-						baseCharacter, variationSelector, glyphs_->indices[glyphs_->clusters[length() - 1]]))
-					nextRun->analysis_.fLogicalOrder = 1;
-			}
-		}
-#undef ASCENSION_VANISH_VARIATION_SELECTOR
-	}
-#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-}
-#endif
-unique_ptr<TextLayout::TextRun> TextLayout::TextRun::splitIfTooLong(const String& layoutString) {
-	if(estimateNumberOfGlyphs(length(*this)) <= 65535)
-		return unique_ptr<TextRun>();
-
-	// split this run, because the length would cause ScriptShape to fail (see also Mozilla bug 366643).
-	static const Index MAXIMUM_RUN_LENGTH = 43680;	// estimateNumberOfGlyphs(43680) == 65536
-	Index opportunity = 0;
-	unique_ptr<SCRIPT_LOGATTR[]> la(new SCRIPT_LOGATTR[length(*this)]);
-	const HRESULT hr = logicalAttributes(layoutString, la.get());
-	if(SUCCEEDED(hr)) {
-		for(Index i = MAXIMUM_RUN_LENGTH; i > 0; --i) {
-			if(la[i].fCharStop != 0) {
-				if(legacyctype::isspace(layoutString[i]) || legacyctype::isspace(layoutString[i - 1])) {
-					opportunity = i;
-					break;
-				}
-				opportunity = max(i, opportunity);
-			}
-		}
-	}
-	if(opportunity == 0) {
-		opportunity = MAXIMUM_RUN_LENGTH;
-		if(surrogates::isLowSurrogate(layoutString[opportunity]) && surrogates::isHighSurrogate(layoutString[opportunity - 1]))
-			--opportunity;
-	}
-
-	unique_ptr<TextRun> following(new TextRun(Range<Index>(
-		opportunity, length(*this) - opportunity), analysis_, glyphs_->font, glyphs_->scriptTag));
-	static_cast<Range<Index>&>(*this) = Range<Index>(0, opportunity);
-	analysis_.fLinkAfter = following->analysis_.fLinkBefore = 0;
-	return following;
-}
-
-/**
- * 
- * @param runs the minimal runs
- * @param layoutString the whole string of the layout
- * @see #merge, #positionGlyphs
- */
-void TextLayout::TextRun::substituteGlyphs(const Range<TextRun**>& runs, const String& layoutString) {
-	// this method processes the following substitutions:
-	// 1. missing glyphs
-	// 2. ideographic variation sequences (if Uniscribe did not support)
-
-	// 1. Presentative glyphs for missing ones
-
-	// TODO: generate missing glyphs.
-
-	// 2. Ideographic Variation Sequences (Uniscribe workaround)
-	// Older Uniscribe (version < 1.626.7100.0) does not support IVS.
-
-#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-	if(!uniscribeSupportsIVS()) {
-		for(TextRun** p = runs.beginning(); p < runs.end(); ++p) {
-			TextRun& run = **p;
-
-			// process IVSes in a glyph run
-			if(run.analysis_.eScript != SCRIPT_UNDEFINED && length(run) > 3
-					&& surrogates::isHighSurrogate(layoutString[run.beginning()])
-					&& surrogates::isLowSurrogate(layoutString[run.beginning() + 1])) {
-				for(StringCharacterIterator i(StringPiece(layoutString.data() + run.beginning(),
-						length(run)), layoutString.data() + run.beginning() + 2); i.hasNext(); i.next()) {
-					const CodePoint variationSelector = i.current();
-					if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
-						StringCharacterIterator baseCharacter(i);
-						baseCharacter.previous();
-						if(run.glyphs_->font->ivsGlyph(
-								baseCharacter.current(), variationSelector,
-								run.glyphs_->indices[run.glyphs_->clusters[baseCharacter.tell() - layoutString.data()]])) {
-							run.glyphs_->vanish(*run.glyphs_->font, i.tell() - layoutString.data() - run.beginning());
-							run.glyphs_->vanish(*run.glyphs_->font, i.tell() - layoutString.data() - run.beginning() + 1);
-						}
-					}
-				}
-			}
-
-			// process an IVS across two glyph runs
-			if(p + 1 != runs.end() && length(*p[1]) > 1) {
-				TextRun& next = *p[1];
-				const CodePoint variationSelector = utf::decodeFirst(
-					layoutString.begin() + next.beginning(), layoutString.begin() + next.beginning() + 2);
-				if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
-					const CodePoint baseCharacter = utf::decodeLast(
-						layoutString.data() + run.beginning(), layoutString.data() + run.end());
-					if(run.glyphs_->font->ivsGlyph(baseCharacter, variationSelector,
-							run.glyphs_->indices[run.glyphs_->clusters[length(run) - 1]])) {
-						next.glyphs_->vanish(*run.glyphs_->font, 0);
-						next.glyphs_->vanish(*run.glyphs_->font, 1);
-					}
-				}
-			}
-		}
-#undef ASCENSION_VANISH_VARIATION_SELECTOR
-	}
-#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-}
-
-inline int TextLayout::TextRun::x(Index at, bool trailing) const {
-	if(at < beginning() || at > end())
-		throw k::BadPositionException(k::Position(0, at));
-	int result;
-	const HRESULT hr = ::ScriptCPtoX(static_cast<int>(at - beginning()), trailing,
-		static_cast<int>(length(*this)), numberOfGlyphs(), clusters(), visualAttributes(),
-		((justifiedAdvances() == nullptr) ? advances() : justifiedAdvances()), &analysis_, &result);
-	if(FAILED(hr))
-		throw hr;
-	// TODO: handle letter-spacing correctly.
-//	if(visualAttributes()[offset].fClusterStart == 0) {
-//	}
-	return result;
-}
 
 
 // InlineProgressionDimensionRangeIterator file-local class ///////////////////////////////////////
@@ -1818,34 +342,6 @@ namespace {
 		if(pen == nullptr)
 			throw UnknownValueException("style");
 		return win32::Handle<HPEN>(pen, &::DeleteObject);
-	}
-	inline void drawDecorationLines(PaintContext& context, const TextRunStyle& style, const Color& foregroundColor, int x, int y, int width, int height) {
-		if(style.decorations.underline.style != Decorations::NONE || style.decorations.strikethrough.style != Decorations::NONE) {
-			const win32::Handle<HDC>& dc = context.asNativeObject();
-			int baselineOffset, underlineOffset, underlineThickness, linethroughOffset, linethroughThickness;
-			if(getDecorationLineMetrics(dc, &baselineOffset, &underlineOffset, &underlineThickness, &linethroughOffset, &linethroughThickness)) {
-				// draw underline
-				if(style.decorations.underline.style != Decorations::NONE) {
-					win32::Handle<HPEN> pen(createPen(
-						style.decorations.underline.color.get_value_or(foregroundColor), underlineThickness, style.decorations.underline.style));
-					HPEN oldPen = static_cast<HPEN>(::SelectObject(dc.get(), pen.get()));
-					const int underlineY = y + baselineOffset - underlineOffset + underlineThickness / 2;
-					context.moveTo(geometry::make<NativePoint>(x, underlineY));
-					context.lineTo(geometry::make<NativePoint>(x + width, underlineY));
-					::SelectObject(dc.get(), oldPen);
-				}
-				// draw strikethrough line
-				if(style.decorations.strikethrough.style != Decorations::NONE) {
-					win32::Handle<HPEN> pen(createPen(
-						style.decorations.strikethrough.color.get_value_or(foregroundColor), linethroughThickness, 1));
-					HPEN oldPen = static_cast<HPEN>(::SelectObject(dc.get(), pen.get()));
-					const int strikeoutY = y + baselineOffset - linethroughOffset + linethroughThickness / 2;
-					context.moveTo(geometry::make<NativePoint>(x, strikeoutY));
-					context.lineTo(geometry::make<NativePoint>(x + width, strikeoutY));
-					::SelectObject(dc.get(), oldPen);
-				}
-			}
-		}
 	}
 } // namespace @0
 
@@ -2215,32 +711,33 @@ NativeRegion TextLayout::blackBoxBounds(const Range<Index>& range) const {
  * @return The size of the bounds
  * @see #blackBoxBounds, #bounds(const Range&lt;Index&gt;&amp;), #lineBounds
  */
-NativeRectangle TextLayout::bounds() const /*throw()*/ {
+FlowRelativeFourSides<Scalar> TextLayout::bounds() const /*noexcept*/ {
 	// TODO: this implementation can't handle vertical text.
-	const Scalar before = /*-lineMetrics_[0]->leading()*/ - lineMetrics_[0]->ascent();
-	Scalar after = before, start = numeric_limits<Scalar>::max(), end = numeric_limits<Scalar>::min();
+	FlowRelativeFourSides<Scalar> result;
+	result.before() = /*-lineMetrics(0).leading()*/ - lineMetrics(0).ascent();
+	result.after() = result.before();
+	result.start() = numeric_limits<Scalar>::max();
+	result.end() = numeric_limits<Scalar>::min();
 	for(Index line = 0; line < numberOfLines(); ++line) {
-		after += lineMetrics_[line]->height();
+		result.after() += lineMetrics(line).height();
 		const Scalar lineStart = lineStartEdge(line);
-		start = min(lineStart, start);
-		end = max(lineStart + measure(line), end);
+		result.start() = min(lineStart, result.start());
+		result.end() = max(lineStart + measure(line), result.end());
 	}
-	return geometry::make<NativeRectangle>(
-		geometry::make<NativePoint>((writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? start : -end, before),
-		geometry::make<NativePoint>((writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? end : -start, after));
+	return result;
 }
 
 /**
  * Returns the smallest rectangle emcompasses all characters in the range. It might not coincide
  * exactly the ascent, descent or overhangs of the specified region of the text.
- * @param range The range
+ * @param characterRange The character range
  * @return The bounds
- * @throw kernel#BadPositionException @a range intersects with the outside of the line
+ * @throw kernel#BadPositionException @a characterRange intersects with the outside of the line
  * @see #blackBoxBounds, #bounds(void), #lineBounds
  */
-NativeRectangle TextLayout::bounds(const Range<Index>& range) const {
-	if(range.end() > text_.length())
-		throw kernel::BadPositionException(kernel::Position(0, range.end()));
+FlowRelativeFourSides<Scalar> TextLayout::bounds(const Range<Index>& characterRange) const {
+	if(characterRange.end() > text_.length())
+		throw kernel::BadPositionException(kernel::Position(0, characterRange.end()));
 
 	FlowRelativeFourSides<Scalar> result;
 
@@ -2248,24 +745,24 @@ NativeRectangle TextLayout::bounds(const Range<Index>& range) const {
 
 	if(isEmpty()) {	// empty line
 		result.start() = result.end() = 0;
-		result.before() = -lineMetrics_[0]->ascent()/* - lineMetrics_[0]->leading()*/;
-		result.after() = lineMetrics_[0]->descent();
-	} else if(ascension::isEmpty(range)) {	// an empty rectangle for an empty range
-		const LineMetrics& line = *lineMetrics_[lineAt(range.beginning())];
+		result.before() = -lineMetrics(0).ascent()/* - lineMetrics(0).leading()*/;
+		result.after() = lineMetrics(0).descent();
+	} else if(ascension::isEmpty(characterRange)) {	// an empty rectangle for an empty range
+		const LineMetrics& line = lineMetrics(lineAt(characterRange.beginning()));
 		return geometry::make<NativeRectangle>(
 			geometry::subtract(location(range.beginning()), geometry::make<NativePoint>(0, line.ascent()/* + line.leading()*/)),
 			geometry::make<NativeSize>(0, line.height()));
 	} else {
-		const Index firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
+		const Index firstLine = lineAt(characterRange.beginning()), lastLine = lineAt(characterRange.end());
 
 		// calculate the block-progression-edges ('before' and 'after'; it's so easy)
-		result.before() = baseline(firstLine) - lineMetrics_[firstLine]->ascent()/* - lineMetrics_[firstLine]->leading()*/;
-		result.after() = baseline(lastLine) + lineMetrics_[lastLine]->descent();
+		result.before() = baseline(firstLine) - lineMetrics(firstLine).ascent()/* - lineMetrics(firstLine).leading()*/;
+		result.after() = baseline(lastLine) + lineMetrics(lastLine).descent();
 
 		// calculate start-edge and end-edge of fully covered lines
-		const bool firstLineIsFullyCovered = includes(range,
+		const bool firstLineIsFullyCovered = includes(characterRange,
 			makeRange(lineOffset(firstLine), lineOffset(firstLine) + lineLength(firstLine)));
-		const bool lastLineIsFullyCovered = includes(range,
+		const bool lastLineIsFullyCovered = includes(characterRange,
 			makeRange(lineOffset(lastLine), lineOffset(lastLine) + lineLength(lastLine)));
 		result.start() = numeric_limits<Scalar>::max();
 		result.end() = numeric_limits<Scalar>::min();
@@ -2682,6 +1179,62 @@ String TextLayout::fillToX(int x) const {
 	return result;
 #else
 	return String();
+#endif
+}
+
+shared_ptr<const Font> TextLayout::findMatchingFont(const StringPiece& textRun,
+		const FontCollection& collection, const ComputedFontSpecification& specification) {
+#if 0
+	void resolveFontSpecifications(const FontCollection& fontCollection,
+			shared_ptr<const TextRunStyle> requestedStyle, shared_ptr<const TextRunStyle> defaultStyle,
+			FontDescription* computedDescription, double* computedSizeAdjust) {
+		// family name
+		if(computedDescription != nullptr) {
+			String familyName = (requestedStyle.get() != nullptr) ? requestedStyle->fontFamily.getOrInitial() : String();
+			if(familyName.empty()) {
+				if(defaultStyle.get() != nullptr)
+					familyName = defaultStyle->fontFamily.getOrInitial();
+				if(computedFamilyName->empty())
+					*computedFamilyName = fontCollection.lastResortFallback(FontDescription())->familyName();
+			}
+			computedDescription->setFamilyName();
+		}
+		// size
+		if(computedPixelSize != nullptr) {
+			requestedStyle->fontProperties
+		}
+		// properties
+		if(computedProperties != 0) {
+			FontProperties<Inheritable> result;
+			if(requestedStyle.get() != nullptr)
+				result = requestedStyle->fontProperties;
+			Inheritable<double> computedSize(computedProperties->pixelSize());
+			if(computedSize.inherits()) {
+				if(defaultStyle.get() != nullptr)
+					computedSize = defaultStyle->fontProperties.pixelSize();
+				if(computedSize.inherits())
+					computedSize = fontCollection.lastResortFallback(FontProperties<>())->metrics().emHeight();
+			}
+			*computedProperties = FontProperties<>(
+				!result.weight().inherits() ? result.weight()
+					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.weight() : FontPropertiesBase::NORMAL_WEIGHT),
+				!result.stretch().inherits() ? result.stretch()
+					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.stretch() : FontPropertiesBase::NORMAL_STRETCH),
+				!result.style().inherits() ? result.style()
+					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.style() : FontPropertiesBase::NORMAL_STYLE),
+				!result.variant().inherits() ? result.variant()
+					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.variant() : FontPropertiesBase::NORMAL_VARIANT),
+				!result.orientation().inherits() ? result.orientation()
+					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.orientation() : FontPropertiesBase::HORIZONTAL),
+				computedSize);
+		}
+		// size-adjust
+		if(computedSizeAdjust != nullptr) {
+			*computedSizeAdjust = (requestedStyle.get() != nullptr) ? requestedStyle->fontSizeAdjust : -1.0;
+			if(*computedSizeAdjust < 0.0)
+				*computedSizeAdjust = (defaultStyle.get() != nullptr) ? defaultStyle->fontSizeAdjust : 0.0;
+		}
+	}
 #endif
 }
 

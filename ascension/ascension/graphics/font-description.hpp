@@ -231,7 +231,7 @@ namespace ascension {
 					return (pointSize_ = newValue), *this;
 				}
 			private:
-				const FontFamily family_;
+				FontFamily family_;
 				double pointSize_;
 				FontProperties properties_;
 			};

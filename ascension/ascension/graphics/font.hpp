@@ -9,7 +9,7 @@
 #define ASCENSION_FONT_HPP
 
 #include <ascension/graphics/font-description.hpp>
-#include <ascension/graphics/geometry.hpp>
+#include <ascension/graphics/glyph-vector.hpp>
 #include <locale>
 #include <set>
 #include <unordered_map>
@@ -28,42 +28,15 @@ namespace ascension {
 	namespace graphics {
 		namespace font {
 
-			bool supportsComplexScripts() /*throw()*/;
-			bool supportsOpenTypeFeatures() /*throw()*/;
-
-			typedef uint16_t GlyphCode;
+			/// Returns @c true if complex scripts are supported.
+			bool supportsComplexScripts() /*noexcept*/;
+			/// Returns @c true if OpenType features are supported.
+			bool supportsOpenTypeFeatures() /*noexcept*/;
 
 			/**
-			 * Represents information for a single glyph.
-			 * @see GlyphVector#metrics
+			 * Represents a single physical instance of a font.
+			 * @see FontFamily, FontDescription, Fontset, FontFace, FontCollection
 			 */
-			class GlyphMetrics {
-			public:
-				virtual Scalar advanceX() const = 0;
-				virtual Scalar advanceY() const = 0;
-				virtual NativeSize bounds() const = 0;
-				virtual Scalar leftTopSideBearing() const = 0;
-				virtual Scalar rightBottomSideBearing() const = 0;
-			};
-
-			class GlyphVector {
-			public:
-				/// Destructor.
-				virtual ~GlyphVector() /*throw()*/ {}
-				GlyphCode operator[](std::ptrdiff_t index) const {return at(index);}
-				virtual GlyphCode at(std::size_t index) const = 0;
-				std::size_t length() const {return size();}
-				virtual NativeSize logicalBounds() const = 0;
-				virtual NativeSize logicalGlyphBounds(std::size_t index) const = 0;
-				virtual std::shared_ptr<GlyphMetrics> metrics(std::size_t index) const = 0;
-//				virtual std::shared_ptr<Shape> outline(std::size_t index) const = 0;
-				virtual NativePoint position(std::size_t index) const = 0;
-				/// Returns
-				virtual std::size_t size() const = 0;
-				virtual NativeSize visualGlyphBounds(std::size_t index) const = 0;
-				virtual NativeSize visualBounds() const = 0;
-			};
-
 			class Font : public std::enable_shared_from_this<Font> {
 			public:
 				/**
@@ -128,6 +101,7 @@ namespace ascension {
 				std::shared_ptr<Gdiplus::Font> asNativeObject();
 				std::shared_ptr<const Gdiplus::Font> asNativeObject() const;
 #endif
+#if 0
 				/**
 				 * Creates a @c GlyphVector by mapping characters to glyphs one-to-one based on the
 				 * Unicode cmap in this font. This method does no other processing besides the
@@ -138,16 +112,11 @@ namespace ascension {
 				 * @return A new @c GlyphVector created with the specified string
 				 */
 				std::unique_ptr<const GlyphVector> createGlyphVector(const String& text) const;
+#endif
 				/// Returns the description of this font.
 				FontDescription&& describe() const /*noexcept*/;
-				/**
-				 * Returns the family name of this font.
-				 * @param lc The locale for which to get the font family name. If this value is
-				 *           C or unsupported locale, this method returns an unlocalized name
-				 * @return The family name of this font
-				 * @see #faceName
-				 */
-				String familyName(const std::locale& lc = std::locale::classic()) const /*noexcept*/;
+				/// Returns the family name of this font.
+				FontFamily&& family() const;
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 				boost::optional<GlyphCode> ivsGlyph(CodePoint baseCharacter,
 					CodePoint variationSelector, GlyphCode defaultGlyph) const;
@@ -267,8 +236,21 @@ namespace ascension {
 				const String name_;
 			};
 
+			class FontFaceIterator {};
+			class FontSizeIterator {};
+
 			FontFaceIterator availableFaces(const FontCollection& collection, const FontFamily& family);
 			FontSizeIterator availablePointSizes(const FontFace& fontFace);
+
+			inline presentation::FlowRelativeFourSides<Scalar> GlyphVector::glyphLogicalBounds(const Range<std::size_t>& range) const {
+				presentation::FlowRelativeFourSides<Scalar> sides;
+				sides.start() = glyphPosition(range.beginning());
+				sides.end() = glyphPosition(range.end());
+				std::shared_ptr<const Font::Metrics> fontMetrics(font()->metrics());
+				sides.before() = -fontMetrics->ascent();
+				sides.after() = fontMetrics->descent();
+				return sides;
+			}
 
 		}
 	}

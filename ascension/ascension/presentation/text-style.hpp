@@ -11,6 +11,7 @@
 #ifndef ASCENSION_TEXT_STYLE_HPP
 #define ASCENSION_TEXT_STYLE_HPP
 
+#include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <ascension/graphics/color.hpp>	// graphics.Color
 #include <ascension/graphics/font.hpp>	// graphics.font.FontProperties, ...
@@ -142,7 +143,7 @@ namespace ascension {
 				 *      ‘border-color’ property
 				 *      (http://www.w3.org/TR/css3-background/#the-border-color)
 				 */
-				boost::optional<graphics::Color> color;
+				ColorProperty<sp::NotInherited> color;
 				/**
 				 * [Copied from CSS3] This property sets the style of the border, unless there is a
 				 * border image.
@@ -670,7 +671,7 @@ namespace ascension {
 			 */
 			StyleProperty<
 				sp::Complex<
-					graphics::font::FontFamiliesSpecification
+					std::vector<String>
 				>, sp::Inherited
 			> fontFamily;
 			/// 'font-weight' property. See @c FontWeight.
@@ -862,71 +863,63 @@ namespace ascension {
 
 			TextRunStyle& resolveInheritance(const TextRunStyle& base, bool baseIsRoot);
 		};
-
+#if 0
 		/**
-		 * Represents a styled text run, with the beginning position (offset) in the line and the
-		 * style.
-		 * @note This class does not provides the length of the text run.
+		 * A @c StyledTextRun represents a text range with declared style. @c #beginning and
+		 * @c #end return pointers to characters in the line text string.
 		 * @note This class is not intended to be derived.
 		 * @see StyledTextRunIterator, StyledTextRunEnumerator
 		 */
-		class StyledTextRun {
-		public:
+		struct StyledTextRun : public StringPiece, public FastArenaObject<StyledTextRun> {
+			/// The declared style in this text run.
+			std::shared_ptr<const TextRunStyle> style;
 			/// Default constructor.
-			StyledTextRun() /*throw()*/ {}
+			StyledTextRun() /*noexcept*/ {}
 			/**
 			 * Constructor.
-			 * @param position The beginning position of the text style
-			 * @param style The style of the text run
+			 * @param characterRange The range of the text run in the line
+			 * @param style The declared style of the text run. Can be @c null
 			 */
-			StyledTextRun(Index position,
-				std::shared_ptr<const TextRunStyle> style) /*throw()*/ : position_(position), style_(style) {}
-			/// Returns the position in the line of the text range which the style applies.
-			Index position() const /*throw()*/ {return position_;}
-			/// Returns the style of the text run.
-			std::shared_ptr<const TextRunStyle> style() const /*throw()*/ {return style_;}
-		private:
-			Index position_;
-			std::shared_ptr<const TextRunStyle> style_;
+			StyledTextRun(const StringPiece& characterRange,
+				std::shared_ptr<const TextRunStyle> style) /*noexcept*/
+				: StringPiece(characterRange), style_(style) {}
 		};
-
+#endif
 		/**
-		 *
-		 * @see StyledTextRunEnumerator
+		 * Abstract input iterator to obtain @c StyledTextRun objects.
+		 * @see TextRunStyleDeclarator, graphics#font#ComputedStyledTextRunIterator
 		 */
 		class StyledTextRunIterator {
 		public:
 			/// Destructor.
-			virtual ~StyledTextRunIterator() /*throw()*/ {}
-			/// Returns the current styled text run or throws @c NoSuchElementException.
-			virtual StyledTextRun current() const = 0;
-			/// Returns @c false if the iterator addresses the end of the range.
-			virtual bool hasNext() const = 0;
-			/// Moves the iterator to the next styled run or throws @c NoSuchElementException.
+			virtual ~StyledTextRunIterator() /*noexcept*/ {}
+			/**
+			 * Returns the range of the current text run addressed by this iterator.
+			 * @return The range of the current text run this iterator addresses in character
+			 *         offsets in the line. @c beginning() should be greater than or equal to
+			 *         @c end for the previous text run. If @c end is greater than the length of
+			 *         the line, the range is truncated. Otherwise if @c beginning() is greater
+			 *         than @c end() of the previous text run, treated as if there is a text run
+			 *         with the range [previous's @c end(), beginning()) and default style
+			 * @throw NoSuchElementException This iterator is done
+			 * @see #currentStyle
+			 */
+			virtual Range<Index> currentRange() const = 0;
+			/**
+			 * Returns the declared style of the current text run addressed by this iterator.
+			 * @return The style of the current text run this iterator addresses. If @c null, the
+			 *         default text run is used
+			 * @throw NoSuchElementException This iterator is done
+		 	 * @see #currentRange
+			 */
+			virtual std::shared_ptr<const TextRunStyle> currentStyle() const = 0;
+			/// Returns @c true if the iterator addresses the end of the range.
+			virtual bool isDone() const /*noexcept*/ = 0;
+			/**
+			 * Moves the iterator to the next styled text run.
+			 * @throw NoSuchElementException This iterator is done.
+			 */
 			virtual void next() = 0;
-		};
-
-		/**
-		 *
-		 * @see StyledTextRunIterator
-		 */
-		class StyledTextRunEnumerator : public boost::iterator_facade<
-			StyledTextRunEnumerator, std::pair<Range<Index>, std::shared_ptr<const TextRunStyle>>,
-			std::input_iterator_tag, std::pair<Range<Index>, std::shared_ptr<const TextRunStyle>>,
-			std::ptrdiff_t
-		> {
-		public:
-			StyledTextRunEnumerator();
-			StyledTextRunEnumerator(std::unique_ptr<StyledTextRunIterator> sourceIterator, Index end);
-		private:
-			friend class boost::iterator_core_access;
-			const reference dereference() const;
-			bool equal(const StyledTextRunEnumerator& other) const /*throw()*/;
-			void increment();
-		private:
-			std::unique_ptr<StyledTextRunIterator> iterator_;
-			boost::optional<StyledTextRun> current_, next_;
-			const Index end_;
 		};
 
 		struct NumberSubstitution {

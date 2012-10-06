@@ -21,7 +21,9 @@ namespace ascension {
 		}
 	}
 
-	namespace rules {class URIDetector;}
+	namespace rules {
+		class URIDetector;
+	}
 
 	namespace presentation {
 
@@ -29,34 +31,34 @@ namespace ascension {
 		struct TextToplevelStyle;
 
 		/**
-		 * Interface for objects which direct style of a text line.
-		 * @see TextLineStyle, Presentation#setTextLineStyleDirector
+		 * Interface for objects which declare style of a text line.
+		 * @see TextRunStyleDeclarator, TextLineStyle, Presentation#setTextLineStyleDeclarator
 		 */
-		class TextLineStyleDirector {
+		class TextLineStyleDeclarator {
 		public:
 			/// Destructor.
-			virtual ~TextLineStyleDirector() /*noexcept*/ {}
+			virtual ~TextLineStyleDeclarator() /*noexcept*/ {}
 		private:
 			/**
-			 * Queries the style of the text line.
+			 * Returns the style of the specified text line in the document.
 			 * @param line The line to be queried
 			 * @return The style of the line or @c null (filled by the presentation's default style)
 			 * @throw BadPositionException @a line is outside of the document
 			 */
-			virtual std::shared_ptr<const TextLineStyle> queryTextLineStyle(Index line) const = 0;
+			virtual std::shared_ptr<const TextLineStyle> declareTextLineStyle(Index line) const = 0;
 			friend class Presentation;
 		};
 
 		/**
-		 * Interface for objects which direct color of a text line.
-		 * @see Presentation#addTextLineColorDirector
+		 * Interface for objects which specify color of a text line.
+		 * @see Presentation#addTextLineColorS
 		 */
-		class TextLineColorDirector {
+		class TextLineColorSpecifier {
 		public:
 			/// Priority.
-			typedef uint8_t Priority;
+			typedef std::uint8_t Priority;
 			/// Destructor.
-			virtual ~TextLineColorDirector() /*noexcept*/ {}
+			virtual ~TextLineColorSpecifier() /*noexcept*/ {}
 		private:
 			/**
 			 * Returns the foreground and background colors of the text line.
@@ -67,7 +69,7 @@ namespace ascension {
 			 *                        line color is not set
 			 * @return the priority
 			 */
-			virtual Priority queryTextLineColors(Index line,
+			virtual Priority specifyTextLineColors(Index line,
 				boost::optional<graphics::Color>& foreground,
 				boost::optional<graphics::Color>& background) const = 0;
 			friend class Presentation;
@@ -164,8 +166,8 @@ namespace ascension {
 			};
 		} // namespace hyperlink
 
-		class StyledTextRunIterator;
-		class TextRunStyleDirector;
+		class ComputedStyledTextRunIterator;
+		class TextRunStyleDeclarator;
 
 		/**
 		 * A bridge between the document and visual styled text.
@@ -186,14 +188,14 @@ namespace ascension {
 			const TextToplevelStyle& globalTextStyle() const /*noexcept*/;
 			void removeGlobalTextStyleListener(GlobalTextStyleListener& listener);
 			void setGlobalTextStyle(std::shared_ptr<const TextToplevelStyle> newStyle);
-			void setTextLineStyleDirector(std::shared_ptr<TextLineStyleDirector> newDirector) /*noexcept*/;
-			void setTextRunStyleDirector(std::shared_ptr<TextRunStyleDirector> newDirector) /*noexcept*/;
+			void setTextLineStyleDeclarator(std::shared_ptr<TextLineStyleDeclarator> newDeclarator) /*noexcept*/;
+			void setTextRunStyleDeclarator(std::shared_ptr<TextRunStyleDeclarator> newDeclarator) /*noexcept*/;
 			void textLineColors(Index line,
 				boost::optional<graphics::Color>& foreground, boost::optional<graphics::Color>& background) const;
 			// styles -- computation
 			graphics::font::ComputedTextLineStyle&& computeTextLineStyle(Index line,
 				const graphics::RenderingContext2D& context, const graphics::NativeSize& contextSize) const;
-			std::unique_ptr<StyledTextRunIterator> computeTextRunStyles(Index line,
+			std::unique_ptr<ComputedStyledTextRunIterator> computeTextRunStyles(Index line,
 				const graphics::RenderingContext2D& context, const graphics::NativeSize& contextSize) const;
 			// hyperlinks
 			const hyperlink::Hyperlink* const* getHyperlinks(
@@ -201,8 +203,8 @@ namespace ascension {
 			void setHyperlinkDetector(
 				std::shared_ptr<hyperlink::HyperlinkDetector> newDetector) /*noexcept*/;
 			// strategies
-			void addTextLineColorDirector(std::shared_ptr<TextLineColorDirector> director);
-			void removeTextLineColorDirector(TextLineColorDirector& director) /*noexcept*/;
+			void addTextLineColorSpecifier(std::shared_ptr<TextLineColorSpecifier> specifier);
+			void removeTextLineColorSpecifier(TextLineColorSpecifier& specifier) /*noexcept*/;
 		private:
 			void clearHyperlinksCache() /*noexcept*/;
 			// kernel.DocumentListener
@@ -212,24 +214,15 @@ namespace ascension {
 			kernel::Document& document_;
 			static std::shared_ptr<const TextToplevelStyle> DEFAULT_GLOBAL_TEXT_STYLE;
 			std::shared_ptr<const TextToplevelStyle> globalTextStyle_;
-			std::shared_ptr<TextLineStyleDirector> textLineStyleDirector_;
-			std::shared_ptr<TextRunStyleDirector> textRunStyleDirector_;
-			std::list<std::shared_ptr<TextLineColorDirector>> textLineColorDirectors_;
+			std::shared_ptr<TextLineStyleDeclarator> textLineStyleDeclarator_;
+			std::shared_ptr<TextRunStyleDeclarator> textRunStyleDeclarator_;
+			std::list<std::shared_ptr<TextLineColorSpecifier>> textLineColorSpecifiers_;
 			detail::Listeners<GlobalTextStyleListener> globalTextStyleListeners_;
 			std::shared_ptr<hyperlink::HyperlinkDetector> hyperlinkDetector_;
 			struct Hyperlinks;
 			mutable std::list<Hyperlinks*> hyperlinks_;
 		};
 
-
-		/**
-		 * Registers the text line color director.
-		 * This method does not call @c TextRenderer#invalidate and the layout is not updated.
-		 * @param director the director to register
-		 * @throw NullPointerException @a director is @c null
-		 */
-		inline void Presentation::addTextLineColorDirector(std::shared_ptr<TextLineColorDirector> director) {
-			if(director.get() == nullptr) throw NullPointerException("director"); textLineColorDirectors_.push_back(director);}
 
 		/**
 		 * Returns the global text style this object gives.
@@ -239,17 +232,6 @@ namespace ascension {
 		inline const TextToplevelStyle& Presentation::globalTextStyle() const /*throw()*/ {
 			assert(globalTextStyle_ != nullptr);
 			return *globalTextStyle_;
-		}
-
-		/**
-		 * Removes the specified text line color director.
-		 * @param director the director to remove
-		 */
-		inline void Presentation::removeTextLineColorDirector(TextLineColorDirector& director) /*throw()*/ {
-			for(std::list<std::shared_ptr<TextLineColorDirector>>::iterator
-					i(textLineColorDirectors_.begin()), e(textLineColorDirectors_.end()); i != e; ++i) {
-				if(i->get() == &director) {textLineColorDirectors_.erase(i); return;}
-			}
 		}
 
 	}
