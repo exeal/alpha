@@ -262,7 +262,7 @@ namespace ascension {
 		namespace geometry {
 			template<typename Rectangle>
 			inline Rectangle make(
-					const presentation::FlowRelativeFourSides<
+					const PhysicalFourSides<
 						typename Coordinate<typename Coordinate<Rectangle>::Type>::Type
 					>& sides,
 					typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
