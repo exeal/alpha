@@ -888,6 +888,9 @@ void TextRunImpl::generate(const StringPiece& textString, const FontCollection& 
 
 	// 2. generate raw glyph vectors and computed styled text runs
 	vector<unique_ptr<RawGlyphVector>> glyphRuns;
+	glyphRuns.reserve(numberOfScriptRuns);
+	vector<SCRIPT_ANALYSIS*> scriptPointers;
+	scriptPointers.reserve(numberOfScriptRuns);
 	vector<AttributedCharacterRange<const ComputedTextRunStyle>> styleRuns;
 	{
 		StringPiece::const_pointer lastGlyphRunEnd = nullptr;
@@ -923,6 +926,7 @@ void TextRunImpl::generate(const StringPiece& textString, const FontCollection& 
 						new RawGlyphVector(subRange.beginning(),
 							selectFont(subRange, fontCollection, styleRun.attribute.font),
 							scriptTags[scriptRun.attribute - scriptRuns.get()])));
+				scriptPointers.push_back(&scriptRuns[scriptRun.attribute - scriptRuns.get()].a);
 				assert(nextScriptRun.position < textString.end());
 				scriptRun = nextScriptRun;
 				if(++nextScriptRun.attribute < scriptRuns.get() + numberOfScriptRuns)
@@ -952,6 +956,7 @@ void TextRunImpl::generate(const StringPiece& textString, const FontCollection& 
 			}
 			lastGlyphRunEnd = next;
 		} while(scriptRun.position < textString.end() || styleRun.position < textString.end());
+		assert(glyphRuns.size() == scriptPointers.size());
 	}
 
 	// 3. merge script runs and style runs into TextRunImpls
@@ -971,7 +976,7 @@ void TextRunImpl::generate(const StringPiece& textString, const FontCollection& 
 			const StringPiece::const_pointer previousPosition =
 				!mergedTextRuns.empty() ? mergedTextRuns.back()->end() : textString.beginning();
 
-			mergedTextRuns.push_back(new TextRunImpl(StringPiece(previousPosition, nextPosition), move(*glyphRun)));
+			mergedTextRuns.push_back(new TextRunImpl(StringPiece(previousPosition, nextPosition), *scriptPointers[glyphRun - begin(glyphRuns)], move(*glyphRun)));
 			if(nextPosition == nextGlyphRunPosition)
 				++glyphRun;
 			if(nextPosition == nextStyleRunPosition)
@@ -1374,14 +1379,18 @@ void TextRunImpl::paintBackground(PaintContext& context,
 		const NativePoint& p, const Range<Index>& range, NativeRectangle* paintedBounds) const {
 	if(ascension::isEmpty(range) || geometry::x(p) + totalWidth() < geometry::left(context.boundsToPaint()))
 		return;
+#if 1
 	extern const WritingMode& wm;
-	extern const PhysicalFourSides<Scalar> p4s;
-	mapFlowRelativeToPhysical(wm, glyphLogicalBounds(range), p4s);
-	NativeRectangle r;
-	blackBoxBounds(range, r);
-	context.fillRectangle(geometry::translate(r, geometry::make<NativeSize>(geometry::x(p), geometry::y(p))));
+	PhysicalFourSides<Scalar> sides;
+	mapFlowRelativeToPhysical(wm, glyphLogicalBounds(range), sides);
+	NativeRectangle bounds(geometry::make<NativeRectangle>(sides));
+	bounds = geometry::translate(bounds, p);
+#else
+	blackBoxBounds(range, bounds);
+#endif
+	context.fillRectangle(bounds);
 	if(paintedBounds != nullptr)
-		*paintedBounds = r;
+		*paintedBounds = bounds;
 }
 
 /**
@@ -2146,9 +2155,9 @@ namespace {
  * @param otherParameters The other parameters
  * @throw UnknownValueException @a writingMode or @a otherParameters.anchor is invalid
  */
-TextLayout::TextLayout(const String& text,
-		const TextLayout::ConstructionParameters& otherParameters /* = TextLayout::ConstructionParameters() */)
-		: text_(text), writingMode_(otherParameters.writingMode), anchor_(otherParameters.anchor),
+TextLayout::TextLayout(const String& textString,
+		const ComputedTextLineStyle& lineStyle, std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles)
+		: text_(textString), writingMode_(otherParameters.writingMode), anchor_(otherParameters.anchor),
 		dominantBaseline_(otherParameters.dominantBaseline), numberOfRuns_(0), numberOfLines_(0),
 		maximumMeasure_(-1), wrappingMeasure_(otherParameters.textWrapping.measure) {
 
@@ -2186,63 +2195,20 @@ TextLayout::TextLayout(const String& text,
 	// 6. justify each text runs if specified
 	// 7. stack the lines
 
-	// 1. split the text into script runs by Uniscribe
-	HRESULT hr;
-
-	// 1-1. configure Uniscribe's itemize
-	win32::AutoZero<SCRIPT_CONTROL> control;
-	win32::AutoZero<SCRIPT_STATE> initialState;
-	initialState.uBidiLevel = (writingMode_.inlineFlowDirection == RIGHT_TO_LEFT) ? 1 : 0;
-//	initialState.fOverrideDirection = 1;
-	initialState.fInhibitSymSwap = otherParameters.inhibitSymmetricSwapping;
-	initialState.fDisplayZWG = otherParameters.displayShapingControls;
-	resolveNumberSubstitution(&otherParameters.numberSubstitution, control, initialState);	// ignore result...
-
-	// 1-2. itemize
-	// note that ScriptItemize can cause a buffer overflow (see Mozilla bug 366643)
-	AutoArray<SCRIPT_ITEM, 128> scriptRuns;
-	AutoArray<OPENTYPE_TAG, scriptRuns.STATIC_CAPACITY> scriptTags;
-	int estimatedNumberOfScriptRuns = max(static_cast<int>(text_.length()) / 4, 2), numberOfScriptRuns;
-	HRESULT(WINAPI* scriptItemizeOpenType)(const WCHAR*, int, int,
-		const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*, OPENTYPE_TAG*, int*) = uspLib->get<0>();
-	while(true) {
-		scriptRuns.reallocate(estimatedNumberOfScriptRuns);
-		scriptTags.reallocate(estimatedNumberOfScriptRuns);
-		if(scriptItemizeOpenType != nullptr)
-			hr = (*scriptItemizeOpenType)(text_.data(), static_cast<int>(text_.length()),
-				estimatedNumberOfScriptRuns, &control, &initialState, scriptRuns.get(), scriptTags.get(), &numberOfScriptRuns);
-		else
-			hr = ::ScriptItemize(text_.data(), static_cast<int>(text_.length()),
-				estimatedNumberOfScriptRuns, &control, &initialState, scriptRuns.get(), &numberOfScriptRuns);
-		if(hr != E_OUTOFMEMORY)	// estimatedNumberOfRuns was enough...
-			break;
-		estimatedNumberOfScriptRuns *= 2;
-	}
-	if(otherParameters.disableDeprecatedFormatCharacters) {
-		for(int i = 0; i < numberOfScriptRuns; ++i) {
-			scriptRuns[i].a.s.fInhibitSymSwap = initialState.fInhibitSymSwap;
-			scriptRuns[i].a.s.fDigitSubstitute = initialState.fDigitSubstitute;
-		}
-	}
-	if(scriptItemizeOpenType == nullptr)
-		fill_n(scriptTags.get(), numberOfScriptRuns, SCRIPT_TAG_UNKNOWN);
-
 	// 2. split each script runs into text runs with StyledRunIterator
-	vector<TextRun*> textRuns;
-	vector<const StyledTextRun> styledRanges;
+	vector<TextRunImpl*> textRuns;
+	vector<AttributedCharacterRange<const ComputedTextRunStyle>> calculatedStyles;
 	const FontCollection& fontCollection = (otherParameters.fontCollection != nullptr) ? *otherParameters.fontCollection : systemFonts();
-	TextRun::mergeScriptsAndStyles(text_.data(),
-		scriptRuns.get(), scriptTags.get(), numberOfScriptRuns,
-		fontCollection, otherParameters.defaultTextRunStyle, move(otherParameters.textRunStyles), textRuns, styledRanges);
-	runs_.reset(new TextRun*[numberOfRuns_ = textRuns.size()]);
-	copy(textRuns.begin(), textRuns.end(), runs_.get());
+	TextRunImpl::generate(text(), fontCollection, computedLineStyle, computedTextRunStyles, textRuns, calculatedStyles);
+//	runs_.reset(new TextRun*[numberOfRuns_ = textRuns.size()]);
+//	copy(textRuns.begin(), textRuns.end(), runs_.get());
 //	shrinkToFit(styledRanges_);
 
 	// 3. generate glyphs for each text runs
 	const win32::Handle<HDC> dc(detail::screenDC());
 	for(size_t i = 0; i < numberOfRuns_; ++i)
 		runs_[i]->shape(dc, text_);
-	TextRun::substituteGlyphs(Range<TextRun**>(runs_.get(), runs_.get() + numberOfRuns_), text_);
+	TextRunImpl::substituteGlyphs(Range<TextRun**>(runs_.get(), runs_.get() + numberOfRuns_), text_);
 
 	// 4. position glyphs for each text runs
 	for(size_t i = 0; i < numberOfRuns_; ++i)
