@@ -135,7 +135,7 @@ namespace ascension {
 #endif
 			public:
 				// constructors
-				TextLayout(const String& text, const ComputedTextLineStyle& lineStyle,
+				TextLayout(const String& textString, const ComputedTextLineStyle& lineStyle,
 					std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles);
 				~TextLayout() /*throw()*/;
 				// general attributes
@@ -146,16 +146,16 @@ namespace ascension {
 				const presentation::TextLineStyle& style() const /*throw()*/;
 				const presentation::WritingMode& writingMode() const /*throw()*/;
 				// visual line accesses
-				Index numberOfLines() const /*throw()*/;
+				Index numberOfLines() const /*noexcept*/;
 				Index lineAt(Index offsetInLine) const;
 				Index lineLength(Index line) const;
 				Index lineOffset(Index line) const;
-				const Index* lineOffsets() const /*throw()*/;
+				const Index* lineOffsets() const /*noexcept*/;
 				// bounds, extents and measures
 				NativeRegion blackBoxBounds(const Range<Index>& range) const;
 				presentation::FlowRelativeFourSides<Scalar> bounds() const /*noexcept*/;
 				presentation::FlowRelativeFourSides<Scalar> bounds(const Range<Index>& characterRange) const;
-				Range<Scalar> extent() /*throw()*/ const;
+				Range<Scalar> extent() /*noexcept*/ const;
 				Range<Scalar> extent(const Range<Index>& lines) const;
 				NativeRectangle lineBounds(Index line) const;
 				Scalar measure() const /*throw()*/;
@@ -199,7 +199,7 @@ namespace ascension {
 					const Font& nominalFont, Scalar lineHeight);
 				void wrap(const TabExpander& tabExpander) /*throw()*/;
 			private:
-				const String& text_;
+				const String& textString_;
 				const presentation::WritingMode writingMode_;
 				const presentation::TextAnchor anchor_;
 				const presentation::DominantBaseline dominantBaseline_;
@@ -222,7 +222,7 @@ namespace ascension {
 			 * Returns extent (block-progression-dimension) of the line.
 			 * @return A range of block-progression-dimension relative to the alignment-point
 			 */
-			inline Range<Scalar> TextLayout::extent() const /*throw()*/ {
+			inline Range<Scalar> TextLayout::extent() const /*noexcept*/ {
 				return makeRange(
 					baseline(0) - lineMetrics_[0]->ascent(),
 					baseline(numberOfLines() - 1) + lineMetrics_[numberOfLines() - 1]->descent());
@@ -253,7 +253,7 @@ namespace ascension {
 			 * @throw kernel#BadPositionException @a offsetInLine is greater than the length of the line
 			 */
 			inline Index TextLayout::lineAt(Index offsetInLine) const {
-				if(offsetInLine > text_.length())
+				if(offsetInLine > textString_.length())
 					throw kernel::BadPositionException(kernel::Position(0, offsetInLine));
 				return (numberOfLines() == 1) ? 0 :
 					*detail::searchBound(lineOffsets(), lineOffsets() + numberOfLines(), offsetInLine);
@@ -279,7 +279,7 @@ namespace ascension {
 			 */
 			inline Index TextLayout::lineLength(Index line) const {
 				return (line < numberOfLines_ - 1 ?
-					lineOffset(line + 1) : text_.length()) - lineOffset(line);
+					lineOffset(line + 1) : textString_.length()) - lineOffset(line);
 			}
 
 			/**
@@ -300,7 +300,9 @@ namespace ascension {
 			 * @return The line offsets whose length is @c #numberOfLines(). Each element in the
 			 *         array is the offset for the first character in a line
 			 */
-			inline const Index* TextLayout::lineOffsets() const /*throw()*/ {return lineOffsets_.get();}
+			inline const Index* TextLayout::lineOffsets() const /*noexcept*/ {
+				return lineOffsets_.get();
+			}
 
 			/**
 			 * Returns the location for the specified character offset.
@@ -334,7 +336,7 @@ namespace ascension {
 			}
 
 			/// Returns the number of the wrapped lines.
-			inline Index TextLayout::numberOfLines() const /*throw()*/ {return numberOfLines_;}
+			inline Index TextLayout::numberOfLines() const /*noexcept*/ {return numberOfLines_;}
 
 		}
 	}
