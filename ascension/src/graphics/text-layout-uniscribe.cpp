@@ -889,7 +889,7 @@ void TextRunImpl::generate(const StringPiece& textString, const FontCollection& 
 	// 2. generate raw glyph vectors and computed styled text runs
 	vector<unique_ptr<RawGlyphVector>> glyphRuns;
 	glyphRuns.reserve(numberOfScriptRuns);
-	vector<SCRIPT_ANALYSIS*> scriptPointers;
+	vector<const SCRIPT_ANALYSIS*> scriptPointers;
 	scriptPointers.reserve(numberOfScriptRuns);
 	vector<AttributedCharacterRange<const ComputedTextRunStyle>> styleRuns;
 	{
@@ -976,7 +976,9 @@ void TextRunImpl::generate(const StringPiece& textString, const FontCollection& 
 			const StringPiece::const_pointer previousPosition =
 				!mergedTextRuns.empty() ? mergedTextRuns.back()->end() : textString.beginning();
 
-			mergedTextRuns.push_back(new TextRunImpl(StringPiece(previousPosition, nextPosition), *scriptPointers[glyphRun - begin(glyphRuns)], move(*glyphRun)));
+			mergedTextRuns.push_back(new TextRunImpl(
+				StringPiece(previousPosition, nextPosition),
+				*scriptPointers[glyphRuns.size() - (lastGlyphRun - glyphRun)], move(*glyphRun)));
 			if(nextPosition == nextGlyphRunPosition)
 				++glyphRun;
 			if(nextPosition == nextStyleRunPosition)
