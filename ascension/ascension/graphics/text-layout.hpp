@@ -16,6 +16,7 @@
 #include <ascension/presentation/text-style.hpp>
 #include <memory>	// std.unique_ptr
 #include <vector>
+#include <boost/flyweight.hpp>
 #include <boost/operators.hpp>
 
 namespace ascension {
@@ -200,9 +201,7 @@ namespace ascension {
 				void wrap(const TabExpander& tabExpander) /*throw()*/;
 			private:
 				const String& textString_;
-				const presentation::WritingMode writingMode_;
-				const presentation::TextAnchor anchor_;
-				const presentation::DominantBaseline dominantBaseline_;
+				boost::flyweight<const ComputedTextLineStyle> lineStyle_;
 				std::vector<std::unique_ptr<TextRun>> runs_;
 				class LineArea;
 				std::unique_ptr<const Index[]> lineOffsets_;	// size is numberOfLines_

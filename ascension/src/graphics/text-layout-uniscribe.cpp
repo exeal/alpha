@@ -533,15 +533,17 @@ namespace {
 		bool expandTabCharacters(const TabExpander& tabExpander,
 			StringPiece::const_pointer layoutString, Scalar x, Scalar maximumMeasure);
 		HRESULT justify(int width);
+#if 0
 		static void mergeScriptsAndStyles(const StringPiece& layoutString, const SCRIPT_ITEM scriptRuns[],
 			const OPENTYPE_TAG scriptTags[], size_t numberOfScriptRuns, const FontCollection& fontCollection,
 			shared_ptr<const TextRunStyle> defaultStyle, unique_ptr<ComputedStyledTextRunIterator> styles,
 			vector<TextRunImpl*>& textRuns, vector<const ComputedTextRunStyle>& computedStyles,
 			vector<vector<const ComputedTextRunStyle>::size_type>& computedStylesIndices);
+#endif
 		void shape(const win32::Handle<HDC>& dc);
-		void positionGlyphs(const win32::Handle<HDC>& dc, const String& layoutString, const ComputedTextRunStyle& style);
+		void positionGlyphs(const win32::Handle<HDC>& dc, const ComputedTextRunStyle& style);
 		unique_ptr<TextRunImpl> splitIfTooLong();
-		static void substituteGlyphs(const Range<TextRunImpl**>& runs, const String& layoutString);
+		static void substituteGlyphs(const Range<vector<TextRunImpl*>::iterator>& runs);
 		// drawing and painting
 		void drawGlyphs(PaintContext& context, const NativePoint& p, const Range<Index>& range) const;
 		void paintBackground(PaintContext& context, const NativePoint& p,
@@ -1198,6 +1200,7 @@ inline HRESULT TextRunImpl::logicalWidths(int widths[]) const {
 		numberOfGlyphs(), advances(), clusters(), visualAttributes(), widths);
 }
 
+#if 0
 namespace {
 	pair<StringPiece::const_pointer, shared_ptr<const Font>> findNextFontRun(
 		const StringPiece& textString, const FontCollection& fontCollection,
@@ -1362,6 +1365,7 @@ void TextRunImpl::mergeScriptsAndStyles(
 
 #undef ASCENSION_SPLIT_LAST_RUN
 }
+#endif // 0
 
 /// @see GlyphVector#numberOfGlyphs
 size_t TextRunImpl::numberOfGlyphs() const /*noexcept*/ {
@@ -1444,11 +1448,12 @@ void TextRunImpl::paintGlyphs(PaintContext& context, const NativePoint& origin, 
 }
 
 /**
- * 
- * @see #merge, #substituteGlyphs
+ * Positions the glyphs in the text run.
+ * @param dc The device context
+ * @param style The computed text run style
+ * @see #generate, #substituteGlyphs
  */
-void TextRunImpl::positionGlyphs(
-		const win32::Handle<HDC>& dc, const String& layoutString, const ComputedTextRunStyle& style) {
+void TextRunImpl::positionGlyphs(const win32::Handle<HDC>& dc, const ComputedTextRunStyle& style) {
 	assert(glyphs_.get() != nullptr && glyphs_.unique());
 	assert(glyphs_->indices.get() != nullptr && glyphs_->advances.get() == nullptr);
 
@@ -1933,7 +1938,7 @@ void TextRunImpl::strokeGlyphs(PaintContext& context, const NativePoint& origin,
  * @param layoutString the whole string of the layout
  * @see #merge, #positionGlyphs
  */
-void TextRunImpl::substituteGlyphs(const Range<TextRunImpl**>& runs, const String& layoutString) {
+void TextRunImpl::substituteGlyphs(const Range<vector<TextRunImpl*>::iterator>& runs) {
 	// this method processes the following substitutions:
 	// 1. missing glyphs
 	// 2. ideographic variation sequences (if Uniscribe did not support)
@@ -1947,8 +1952,8 @@ void TextRunImpl::substituteGlyphs(const Range<TextRunImpl**>& runs, const Strin
 
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 	if(!uniscribeSupportsIVS()) {
-		for(TextRunImpl** p = runs.beginning(); p < runs.end(); ++p) {
-			TextRunImpl& run = **p;
+		for(auto i(runs.beginning()); i != runs.end(); ++i) {
+			TextRunImpl& run = **i;
 
 			// process IVSes in a glyph run
 			using ascension::length;
@@ -1970,8 +1975,8 @@ void TextRunImpl::substituteGlyphs(const Range<TextRunImpl**>& runs, const Strin
 			}
 
 			// process an IVS across two glyph runs
-			if(p + 1 != runs.end() && length(*p[1]) > 1) {
-				TextRunImpl& next = *p[1];
+			if(i + 1 != runs.end() && length(*i[1]) > 1) {
+				TextRunImpl& next = *i[1];
 				const CodePoint variationSelector = utf::decodeFirst(next.beginning(), next.beginning() + 2);
 				if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
 					const CodePoint baseCharacter = utf::decodeLast(run.beginning(), run.end());
@@ -2153,14 +2158,14 @@ namespace {
 
 /**
  * Constructor.
- * @param text The text string to display
- * @param otherParameters The other parameters
+ * @param textString The text string to display
+ * @param lineStyle The computed text line style
+ * @param textRunStyles The computed text runs styles
  * @throw UnknownValueException @a writingMode or @a otherParameters.anchor is invalid
  */
 TextLayout::TextLayout(const String& textString,
 		const ComputedTextLineStyle& lineStyle, std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles)
-		: text_(textString), writingMode_(otherParameters.writingMode), anchor_(otherParameters.anchor),
-		dominantBaseline_(otherParameters.dominantBaseline), numberOfRuns_(0), numberOfLines_(0),
+		: textString_(textString), lineStyle_(lineStyle), numberOfLines_(0),
 		maximumMeasure_(-1), wrappingMeasure_(otherParameters.textWrapping.measure) {
 
 	// sanity checks...
@@ -2170,8 +2175,7 @@ TextLayout::TextLayout(const String& textString,
 		throw UnknownValueException("otherParameters.anchor");
 
 	// handle logically empty line
-	if(text_.empty()) {
-		numberOfRuns_ = 0;
+	if(textString_.empty()) {
 		numberOfLines_ = 1;
 		maximumMeasure_ = 0;
 		assert(isEmpty());
@@ -2200,21 +2204,21 @@ TextLayout::TextLayout(const String& textString,
 	// 2. split each script runs into text runs with StyledRunIterator
 	vector<TextRunImpl*> textRuns;
 	vector<AttributedCharacterRange<const ComputedTextRunStyle>> calculatedStyles;
-	const FontCollection& fontCollection = (otherParameters.fontCollection != nullptr) ? *otherParameters.fontCollection : systemFonts();
-	TextRunImpl::generate(text(), fontCollection, computedLineStyle, computedTextRunStyles, textRuns, calculatedStyles);
+	const FontCollection& fontCollection = (otherParameters.fontCollection != nullptr) ? *otherParameters.fontCollection : installedFonts();
+	TextRunImpl::generate(textString_, fontCollection, lineStyle_, move(textRunStyles), textRuns, calculatedStyles);
 //	runs_.reset(new TextRun*[numberOfRuns_ = textRuns.size()]);
 //	copy(textRuns.begin(), textRuns.end(), runs_.get());
 //	shrinkToFit(styledRanges_);
 
 	// 3. generate glyphs for each text runs
 	const win32::Handle<HDC> dc(detail::screenDC());
-	for(size_t i = 0; i < numberOfRuns_; ++i)
-		runs_[i]->shape(dc, text_);
-	TextRunImpl::substituteGlyphs(Range<TextRun**>(runs_.get(), runs_.get() + numberOfRuns_), text_);
+	for(auto run(begin(textRuns)), e(end(textRuns)); run != e; ++run)
+		(*run)->shape(dc);
+	TextRunImpl::substituteGlyphs(makeRange(begin(textRuns), end(textRuns)));
 
 	// 4. position glyphs for each text runs
-	for(size_t i = 0; i < numberOfRuns_; ++i)
-		runs_[i]->positionGlyphs(dc, text_, SimpleStyledTextRunIterator(styledRanges, runs_[i]->beginning()));
+	for(auto run(begin(textRuns)), b(begin(textRuns)), e(end(textRuns)); run != e; ++run)
+		(*run)->positionGlyphs(dc, calculatedStyles[run - b].attribute);
 
 	// 5. position each text runs
 	String nominalFontFamilyName;
