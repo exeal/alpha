@@ -260,12 +260,37 @@ namespace ascension {
 			NONE, CAPITALIZE, UPPERCASE, LOWERCASE, FULL_WIDTH, FULL_SIZE_KANA
 		ASCENSION_END_SCOPED_ENUM;
 
-//		enum TextSpaceCollapse;
+		/**
+		 * [Copied from CSS3] This property specifies two things: whether and how white space
+		 * inside the element is collapsed, and whether lines may wrap at unforced soft wrap
+		 * opportunities.
+		 * @see CSS Text Level 3, 3. White Space and Wrapping: the ‘white-space’ property
+		 *      (http://www.w3.org/TR/css3-text/#white-space)
+		 */
+		ASCENSION_BEGIN_SCOPED_ENUM(WhiteSpace)
+			NORMAL		= 1 << 0 | 1 << 1 | 1 << 2,
+			PRE			= 0 << 0 | 0 << 1 | 0 << 2,
+			NOWRAP		= 1 << 0 | 1 << 1 | 0 << 2,
+			PRE_WRAP	= 0 << 0 | 0 << 1 | 1 << 2,
+			PRE_LINE	= 0 << 0 | 1 << 1 | 1 << 2
+		ASCENSION_END_SCOPED_ENUM;
+
+		inline bool collapsesNewLines(WhiteSpace value) /*noexcept*/ {
+			return (value & (1 << 0)) != 0;
+		}
+
+		inline bool collapsesSpacesAndTabs(WhiteSpace value) /*noexcept*/ {
+			return (value & (1 << 1)) != 0;
+		}
+
+		inline bool wrapsText(WhiteSpace value) /*noexcept*/ {
+			return (value & (1 << 2)) != 0;
+		}
 
 		/**
 		 * [Copied from CSS3] This property specifies the strictness of line-breaking rules applied
-		 * within an element: particularly how line-breaking interacts with punctuation.
-		 * @see CSS Text Level 3, 4.1. Line Breaking Strictness: the ‘line-break’ property
+		 * within an element: particularly how wrapping interacts with punctuation and symbols.
+		 * @see CSS Text Level 3, 5.2. Breaking Rules for Punctuation: the ‘line-break’ property
 		 *      (http://www.w3.org/TR/css3-text/#line-break)
 		 */
 		ASCENSION_BEGIN_SCOPED_ENUM(LineBreak)
@@ -276,8 +301,8 @@ namespace ascension {
 		ASCENSION_END_SCOPED_ENUM;
 
 		/**
-		 * [Copied from CSS3] This property specifies line break opportunities within words.
-		 * @see CSS Text Level 3, 4.2. Word Breaking Rules: the 'word-break' property
+		 * [Copied from CSS3] This property specifies soft wrap opportunities between letters.
+		 * @see CSS Text Level 3, 5.3. Breaking Rules for Letters: the ‘word-break’ property
 		 *      (http://www.w3.org/TR/css3-text/#word-break)
 		 */
 		ASCENSION_BEGIN_SCOPED_ENUM(WordBreak)
@@ -301,21 +326,10 @@ namespace ascension {
 		ASCENSION_END_SCOPED_ENUM;
 
 		/**
-		 * [Copied from CSS3] This property specifies the mode for text wrapping.
-		 * @see CSS Text Level 3, 6.1. Text Wrap Settings: 'text-wrap' property
-		 *      (http://www.w3.org/TR/css3-text/#text-wrap)
-		 */
-		ASCENSION_BEGIN_SCOPED_ENUM(TextWrap)
-			NORMAL,
-			NONE,
-			AVOID
-		ASCENSION_END_SCOPED_ENUM;
-
-		/**
-		 * [Copied from CSS3] This property specifies whether the UA may break within a word to
-		 * prevent overflow when an otherwise-unbreakable string is too long to fit within the line
-		 * box. It only has an effect when ‘text-wrap’ is either ‘normal’ or ‘avoid’
-		 * @see CSS Text Level 3 - 6.2. Emergency Wrapping: the 'overflow-wrap' property
+		 * [Copied from CSS3] This property specifies whether the UA may arbitrarily break within a
+		 * word to prevent overflow when an otherwise-unbreakable string is too long to fit within
+		 * the line box. It only has an effect when ‘white-space’ allows wrapping.
+		 * @see CSS Text Level 3 - 6.2. Overflow Wrapping: the ‘word-wrap’/‘overflow-wrap’ property
 		 *      (http://www.w3.org/TR/css3-text/#overflow-wrap)
 		 */
 		ASCENSION_BEGIN_SCOPED_ENUM(OverflowWrap)

@@ -11,9 +11,9 @@
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/corelib/utility.hpp>	// detail.searchBound
-#include <ascension/kernel/position.hpp>
 #include <ascension/graphics/color.hpp>
-#include <ascension/presentation/text-style.hpp>
+#include <ascension/graphics/text-layout-styles.hpp>
+#include <ascension/kernel/position.hpp>
 #include <memory>	// std.unique_ptr
 #include <vector>
 #include <boost/flyweight.hpp>
@@ -21,8 +21,9 @@
 
 namespace ascension {
 
-	namespace presentation {class Presentation;}
-	namespace viewers {class Caret;}
+	namespace presentation {
+		class Presentation;
+	}
 
 	namespace graphics {
 
@@ -98,10 +99,10 @@ namespace ascension {
 //				virtual Scalar leading() const /*noexcept*/ = 0;
 			};
 
-			class ComputedStyledTextRunIterator;
-			struct ComputedTextLineStyle;
-			class TextPaintOverride;
-			class TabExpander;
+//			class ComputedStyledTextRunIterator;
+//			struct ComputedTextLineStyle;
+//			class TextPaintOverride;
+//			class TabExpander;
 			class TextRun;
 
 			class TextLayout {
@@ -201,7 +202,7 @@ namespace ascension {
 				void wrap(const TabExpander& tabExpander) /*throw()*/;
 			private:
 				const String& textString_;
-				boost::flyweight<const ComputedTextLineStyle> lineStyle_;
+				boost::flyweight<ComputedTextLineStyle> lineStyle_;
 				std::vector<std::unique_ptr<TextRun>> runs_;
 				class LineArea;
 				std::unique_ptr<const Index[]> lineOffsets_;	// size is numberOfLines_
