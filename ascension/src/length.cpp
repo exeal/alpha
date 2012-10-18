@@ -93,17 +93,19 @@ void Length::setValue(double value, const RenderingContext2D* context, const Nat
 		case EM_HEIGHT:
 			if(context == nullptr)
 				throw NullPointerException("context");
-			valueInSpecifiedUnits_ = value / context->font()->metrics().emHeight();
+			valueInSpecifiedUnits_ = value / context->font()->metrics()->emHeight();
 			break;
 		case X_HEIGHT:
 			if(context == nullptr)
 				throw NullPointerException("context");
-			valueInSpecifiedUnits_ = value / context->font()->metrics().xHeight();
+			valueInSpecifiedUnits_ = value / context->font()->metrics()->xHeight();
 			break;
-		case PIXELS:
-			valueInSpecifiedUnits_ = value;
+		case CHARACTERS:
+			if(context == nullptr)
+				throw NullPointerException("context");
+			valueInSpecifiedUnits_ = value / context->font()->metrics()->averageCharacterWidth();
 //		case GRIDS:
-//		case REMS:
+//		case ROOT_EM_HEIGHT:
 		case VIEWPORT_WIDTH:
 			if(context == nullptr)
 				throw NullPointerException("context");
@@ -116,21 +118,23 @@ void Length::setValue(double value, const RenderingContext2D* context, const Nat
 			if(context == nullptr)
 				throw NullPointerException("context");
 			valueInSpecifiedUnits_ = value / min(geometry::dx(context->device().size()), geometry::dy(context->device().size()));
-		case CHARACTERS:
+		case VIEWPORT_MAXIMUM:
 			if(context == nullptr)
 				throw NullPointerException("context");
-			valueInSpecifiedUnits_ = value / context->font()->metrics().averageCharacterWidth();
-		case INCHES:
-			valueInSpecifiedUnits_ = value / pixelsPerInch(context, mode_);
+			valueInSpecifiedUnits_ = value / max(geometry::dx(context->device().size()), geometry::dy(context->device().size()));
 		case CENTIMETERS:
 			valueInSpecifiedUnits_ = value / pixelsPerInch(context, mode_) * 2.54;
 		case MILLIMETERS:
 			valueInSpecifiedUnits_ = value / pixelsPerInch(context, mode_) * 25.4;
+		case INCHES:
+			valueInSpecifiedUnits_ = value / pixelsPerInch(context, mode_);
+		case PIXELS:
+			valueInSpecifiedUnits_ = value;
 		case POINTS:
 			valueInSpecifiedUnits_ = value / pixelsPerInch(context, mode_) * 72;
 		case PICAS:
 			valueInSpecifiedUnits_ = value / pixelsPerInch(context, mode_) * 72 / 12;
-		case DIPS:
+		case DEVICE_INDEPENDENT_PIXELS:
 			valueInSpecifiedUnits_ = value / pixelsPerInch(context, mode_) * 96;
 		case PERCENTAGE: {
 			if(context == nullptr)
@@ -161,15 +165,17 @@ double Length::value(const RenderingContext2D* context, const NativeSize* contex
 		case EM_HEIGHT:
 			if(context == nullptr)
 				throw NullPointerException("context");
-			return valueInSpecifiedUnits() * context->font()->metrics().emHeight();
+			return valueInSpecifiedUnits() * context->font()->metrics()->emHeight();
 		case X_HEIGHT:
 			if(context == nullptr)
 				throw NullPointerException("context");
-			return valueInSpecifiedUnits() * context->font()->metrics().xHeight();
-		case PIXELS:
-			return valueInSpecifiedUnits();
+			return valueInSpecifiedUnits() * context->font()->metrics()->xHeight();
+		case CHARACTERS:
+			if(context == nullptr)
+				throw NullPointerException("context");
+			return valueInSpecifiedUnits() * context->font()->metrics()->averageCharacterWidth();
 //		case GRIDS:
-//		case REMS:
+//		case ROOT_EM_HEIGHT:
 		case VIEWPORT_WIDTH:
 			if(context == nullptr)
 				throw NullPointerException("context");
@@ -182,21 +188,23 @@ double Length::value(const RenderingContext2D* context, const NativeSize* contex
 			if(context == nullptr)
 				throw NullPointerException("context");
 			return valueInSpecifiedUnits() * min(geometry::dx(context->device().size()), geometry::dy(context->device().size()));
-		case CHARACTERS:
+		case VIEWPORT_MAXIMUM:
 			if(context == nullptr)
 				throw NullPointerException("context");
-			return valueInSpecifiedUnits() * context->font()->metrics().averageCharacterWidth();
-		case INCHES:
-			return valueInSpecifiedUnits() * pixelsPerInch(context, mode_);
+			return valueInSpecifiedUnits() * max(geometry::dx(context->device().size()), geometry::dy(context->device().size()));
 		case CENTIMETERS:
 			return valueInSpecifiedUnits() * pixelsPerInch(context, mode_) / 2.54;
 		case MILLIMETERS:
 			return valueInSpecifiedUnits() * pixelsPerInch(context, mode_) / 25.4;
+		case INCHES:
+			return valueInSpecifiedUnits() * pixelsPerInch(context, mode_);
+		case PIXELS:
+			return valueInSpecifiedUnits();
 		case POINTS:
 			return valueInSpecifiedUnits() * pixelsPerInch(context, mode_) / 72;
 		case PICAS:
 			return valueInSpecifiedUnits() * pixelsPerInch(context, mode_) / 72 * 12;
-		case DIPS:
+		case DEVICE_INDEPENDENT_PIXELS:
 			return valueInSpecifiedUnits() * pixelsPerInch(context, mode_) / 96;
 		case PERCENTAGE: {
 			if(context == nullptr)
