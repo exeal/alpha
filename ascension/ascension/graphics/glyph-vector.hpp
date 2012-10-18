@@ -14,6 +14,7 @@
 #include <ascension/presentation/writing-mode.hpp>
 #include <cstdint>
 #include <memory>
+#include <boost/optional.hpp>
 
 namespace ascension {
 	namespace graphics {
