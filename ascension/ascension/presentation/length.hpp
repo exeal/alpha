@@ -15,16 +15,20 @@
 #include <boost/operators.hpp>				// boost.equality_comparable
 
 namespace ascension {
-	namespace graphics {class RenderingContext2D;}
+	namespace graphics {
+		class RenderingContext2D;
+	}
 	namespace presentation {
 
 		/**
-		 *
-		 * @see "CSS3 Values and Units 3.4 Numbers and units identifiers"
-		 *      (http://www.w3.org/TR/2006/WD-css3-values-20060919/#numbers0)
-		 * @see "4.2 Basic data types - SVG (Second Edition)"
+		 * [Copied from CSS3] Lengthes refer to distance measurements.
+		 * @see CSS Values and Units Module Level 3, 5. Distance Units: the Åe<length>Åf type
+		 *      (http://www.w3.org/TR/2012/CR-css3-values-20120828/#lengths)
+		 * @see CSS Values and Units Module Level 3, Percentages: the Åe<percentage>Åf type
+		 *      (http://www.w3.org/TR/2012/CR-css3-values-20120828/#percentages)
+		 * @see 4.2 Basic data types - SVG (Second Edition)
 		 *      (http://www.w3.org/TR/SVG/types.html#DataTypeLength)
-		 * @see "4.5.11 Interface SVGLength - SVG (Second Edition)"
+		 * @see 4.5.11 Interface SVGLength - SVG (Second Edition)
 		 *      (http://www.w3.org/TR/SVG/types.html#InterfaceSVGLength)
 		 */
 		class Length : private boost::equality_comparable<Length> {
@@ -33,31 +37,64 @@ namespace ascension {
 
 			enum Unit {
 				// relative length units
-				EM_HEIGHT,		///< The font size of the relevant font.
-				X_HEIGHT,		///< The x-height of the relevant font.
-				PIXELS,			///< Pixels, relative to the viewing device.
-				// relative length units introduced by CSS 3
-				GRIDS,				///< The grid.
-				REMS,				///< The font size of the primary font.
-				VIEWPORT_WIDTH,		///< The viewport's width.
-				VIEWPORT_HEIGHT,	///< The viewport's height.
-				VIEWPORT_MINIMUM,	///< The viewport's height or width, whichever is smaller of the two.
-				/**
-				 * The width of the "0" (ZERO, U+0030) glyph found in the font for the font size
-				 * used to render. If the "0" glyph is not found in the font, the average character
-				 * width may be used.
-				 */
+				/// [Copied from CSS3] Equal to the computed value of the Åefont-sizeÅf property of
+				/// the element on which it is used.
+				EM_HEIGHT,
+				/// [Copied from CSS3] Equal to the font's x-height.
+				X_HEIGHT,
+				/// [Copied from CSS3] Equal to the advance measure of the "0" (ZERO, U+0030) glyph
+				/// found in the font used to render it.
+				/// @note The average character width is used by Ascension if not found.
 				CHARACTERS,
+				/// [Copied from CSS3] Equal to the computed value of Åefont-sizeÅf on the root
+				/// element.
+				/// @note Refers to the global primary font in Ascension.
+				ROOT_EM_HEIGHT,
+				/// [Copied from CSS3] Equal to 1% of the width of the initial containing block.
+				VIEWPORT_WIDTH,
+				/// [Copied from CSS3] Equal to 1% of the height of the initial containing block.
+				VIEWPORT_HEIGHT,
+				/// [Copied from CSS3] Equal to the smaller of ÅevwÅf or ÅevhÅf.
+				VIEWPORT_MINIMUM,
+				/// [Copied from CSS3] Equal to the larger of ÅevwÅf or ÅevhÅf.
+				VIEWPORT_MAXIMUM,
+//				GRIDS,			///< The grid.
 				// absolute length units
-				INCHES,			///< Inches -- 1 inch is equal to 2.54 centimeters.
-				CENTIMETERS,	///< Centimeters.
-				MILLIMETERS,	///< Millimeters.
-				POINTS,			///< Points -- the point used by CSS 2.1 are equal to 1/72nd of an inch.
-				PICAS,			///< Picas -- 1 pica is equal to 12 points.
+				/// [Copied from CSS3] Centimeters.
+				CENTIMETERS,
+				/// [Copied from CSS3] Millimeters.
+				MILLIMETERS,
+				/// [Copied from CSS3] Inches; 1 in is equal to 2.54 cm.
+				INCHES,
+				/// [Copied from CSS3] Pixels; 1 px is equal to 1 / 96th of 1 in.
+				/// @note <strong>Relative</strong> to the viewing device in Ascension.
+				PIXELS,
+				/// [Copied from CSS3] Points; 1 pt is equal to 1 / 72nd of 1 in.
+				POINTS,
+				/// [Copied from CSS3] Picas; 1 pc is equal to 12 pt.
+				PICAS,
 				// used in DirectWrite
-				DIPS,			///< Device independent pixels. 1 DIP is equal to 1/96th of an inch.
+				DEVICE_INDEPENDENT_PIXELS, ///< Device independent pixels; 1 DIP is equal to 1 / 96th of 1 in.
 				// percentages (exactly not a length)
 				PERCENTAGE,		///< Percentage.
+#if 0
+				// abbreviations
+				EM = EM_HEIGHT,
+				EX = X_HEIGHT,
+				CH = CHARACTERS,
+				REM = ROOT_EM_HEIGHT,
+				VW = VIEWPORT_WIDTH,
+				VH = VIEWPORT_HEIGHT,
+				VMIN = VIEWPORT_MINIMUM,
+				VMAX = VIEWPORT_MAXIMUM,
+				CM = CENTIMETERS,
+				MM = MILLIMETERS,
+				IN = INCHES,
+				PX = PIXELS,
+				PT = POINTS,
+				PC = PICAS,
+				DIPS = DEVICE_INDEPENDENT_PIXELS
+#endif
 			};
 
 			enum Mode {
