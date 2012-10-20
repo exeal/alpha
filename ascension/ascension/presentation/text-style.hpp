@@ -471,8 +471,9 @@ namespace ascension {
 		ASCENSION_END_SCOPED_ENUM;
 
 		/**
-		 * @see CSS Text Level 3, 10.1. Line Decoration: Underline, Overline, and Strike-Through
-		 *      (http://www.w3.org/TR/css3-text/#line-decoration)
+		 * [Copied from CSS3] Describes line decorations that are added to the content of an element.
+		 * @see CSS Text Decoration Module Level 3, 2. Line Decoration: Underline, Overline, and
+		 *      Strike-Through (http://dev.w3.org/csswg/css-text-decor-3/#line-decoration)
 		 * @see SVG 1.1 (Second Edition), 10.12 Text decoration
 		 *      (http://www.w3.org/TR/2011/REC-SVG11-20110816/text.html#TextDecorationProperties)
 		 * @see XSL 1.1, 7.17.4 "text-decoration" (http://www.w3.org/TR/xsl/#text-decoration)
@@ -480,8 +481,9 @@ namespace ascension {
 		struct TextDecoration {
 			/**
 			 * [Copied from CSS3] Specifies what line decorations, if any, are added to the element.
-			 * @see CSS Text Level 3, 10.1.1. Text Decoration Lines: the ‘text-decoration-line’
-			 *      property (http://dev.w3.org/csswg/css3-text/#text-decoration-line)
+			 * @see CSS Text Decoration Module Level 3, 2.1. Text Decoration Lines: the
+			 *      ‘text-decoration-line’ property
+			 *      (http://dev.w3.org/csswg/css-text-decor-3/#text-decoration-line-property)
 			 * @see SVG 1.1 (Second Edition), 10.12 Text decoration
 			 *      (http://www.w3.org/TR/2011/REC-SVG11-20110816/text.html#TextDecorationProperties)
 			 * @see XSL 1.1, 7.17.4 "text-decoration" (http://www.w3.org/TR/xsl/#text-decoration)
@@ -494,10 +496,11 @@ namespace ascension {
 				LINE_THROUGH = 1 << 3	///< Each line of text has a line through the middle.
 			ASCENSION_END_SCOPED_ENUM;
 			/**
-			 * This property specifies the style of the line(s) drawn for text decoration specified
-			 * on the element. 
-			 * @see CSS Text Level 3, 10.1.3. Text Decoration Style: the ‘text-decoration-style’
-			 *      property (http://dev.w3.org/csswg/css3-text/#text-decoration-style)
+			 * [Copied from CSS3] This property specifies the style of the line(s) drawn for text
+			 * decoration specified on the element. 
+			 * @see CSS Text Decoration Module Level 3, 2.3. Text Decoration Style: the
+			 *      ‘text-decoration-style’ property
+			 *      (http://dev.w3.org/csswg/css-text-decor-3/#text-decoration-style-property)
 			 */
 			ASCENSION_BEGIN_SCOPED_ENUM(Style)
 				SOLID = Border::SOLID,		///< Same meaning as for @c Border#Style.
@@ -511,9 +514,9 @@ namespace ascension {
 			 * text decoration affecting the element must skip over. It controls all text
 			 * decoration lines drawn by the element and also any text decoration lines drawn by
 			 * its ancestors.
-			 * @see CSS Text Level 3, 10.1.5. Text Decoration Line Continuity: the
+			 * @see CSS Text Decoration Module Level 3, 2.5. Text Decoration Line Continuity: the
 			 *      ‘text-decoration-skip’ property
-			 *      (http://dev.w3.org/csswg/css3-text/#text-decoration-skip)
+			 *      (http://dev.w3.org/csswg/css-text-decor-3/#text-decoration-skip-property)
 			 */
 			ASCENSION_BEGIN_SCOPED_ENUM(Skip)
 				/// Skip nothing: text-decoration is drawn for all text content and for inline
@@ -534,14 +537,17 @@ namespace ascension {
 				/// of the decorating element so that, e.g. two underlined elements side-by-side do
 				/// not appear to have a single underline. (This is important in Chinese, where
 				/// underlining is a form of punctuation.)
-				EDGES = 1<< 4
+				EDGES = 1 << 4,
+				/// Skip over the box's margin, border, and padding areas. Note that this only has
+				/// an effect on decorations imposed by an ancestor.
+				BOX_DECORATION = 1 << 5
 			ASCENSION_END_SCOPED_ENUM;
 			/**
 			 * [Copied from CSS3] This property sets the position of an underline specified on the
 			 * same element: it does not affect underlines specified by ancestor elements.
-			 * @see CSS Text Level 3, 10.1.6. Text Underline Position: the
+			 * @see CSS Text Decoration Module Level 3, 2.6. Text Underline Position: the
 			 *      ‘text-underline-position’ property
-			 *      (http://dev.w3.org/csswg/css3-text/#text-underline-position)
+			 *      (http://dev.w3.org/csswg/css-text-decor-3/#text-underline-position-property)
 			 */
 			ASCENSION_BEGIN_SCOPED_ENUM(UnderlinePosition)
 				/// The user agent may use any algorithm to determine the underline's position;
@@ -554,7 +560,9 @@ namespace ascension {
 				/// edge of the element's content box. In this case the underline usually does not
 				/// cross the descenders.
 				BELOW,
+				/// Combination of @c #BELOW and @c #LEFT.
 				BELOW_LEFT,
+				/// Combination of @c #BELOW and @c #RIGHT.
 				BELOW_RIGHT,
 				/// In vertical writing modes, the underline is aligned as for ‘below’ on the left
 				/// edge of the text.
@@ -571,8 +579,9 @@ namespace ascension {
 			/**
 			 * [Copied from CSS3] This property specifies the color of text decoration (underlines
 			 * overlines, and line-throughs) set on the element with ‘text-decoration-line’
-			 * @see CSS Text Level 3, 10.1.2. Text Decoration Color: the ‘text-decoration-color’
-			 *      property (http://dev.w3.org/csswg/css3-text/#text-decoration-color)
+			 * @see CSS Text Decoration Module Level 3, 2.2. Text Decoration Color: the
+			 *      ‘text-decoration-color’ property
+			 *      (http://dev.w3.org/csswg/css-text-decor-3/#text-decoration-color-property)
 			 */
 			ColorProperty<sp::NotInherited> color;
 			StyleProperty<
@@ -589,6 +598,12 @@ namespace ascension {
 			> underlinePosition;	///< 'text-underline-position' property.
 		};
 
+		/**
+		 * [Copied from CSS3] East Asian documents traditionally use small symbols next to each
+		 * glyph to emphasize a run of text.
+		 * @see CSS Text Decoration Module Level 3, 3. Emphasis Marks
+		 *      (http://dev.w3.org/csswg/css-text-decor-3/#emphasis-marks)
+		 */
 		struct TextEmphasis {
 			/// Enumerated values for @c #style.
 			enum StyleEnums {
@@ -616,8 +631,9 @@ namespace ascension {
 			};
 			/**
 			 * [Copied from CSS3] This property describes where emphasis marks are drawn at.
-			 * @see CSS Text Level 3, 10.2.4. Emphasis Mark Position: the ‘text-emphasis-position’
-			 *      property (http://dev.w3.org/csswg/css3-text/#text-emphasis-position)
+			 * @see CSS Text Decoration Module Level 3, 3.4. Emphasis Mark Position: the
+			 *      ‘text-emphasis-position’ property
+			 *      (http://dev.w3.org/csswg/css-text-decor-3/#text-emphasis-position-property)
 			 */
 			typedef unsigned char Position;
 			static const Position
@@ -628,8 +644,9 @@ namespace ascension {
 
 			/**
 			 * [Copied from CSS3] This property applies emphasis marks to the element's text.
-			 * @see CSS Text Level 3, 10.2.1. Emphasis Mark Style: the ‘text-emphasis-style’
-			 *      property (http://dev.w3.org/csswg/css3-text/#text-emphasis-style)
+			 * @see	CSS Text Decoration Module Level 3, 3.1. Emphasis Mark Style: the
+			 *      ‘text-emphasis-style’ property
+			 *      (http://dev.w3.org/csswg/css-text-decor-3/#text-emphasis-style-property)
 			 */
 			StyleProperty<
 				sp::Multiple<
@@ -640,8 +657,9 @@ namespace ascension {
 			> style;
 			/**
 			 * [Copied from CSS3] This property specifies the foreground color of the emphasis marks.
-			 * @see CSS Text Level 3, 10.2.2. Emphasis Mark Color: the ‘text-emphasis-color’
-			 *      property (http://dev.w3.org/csswg/css3-text/#text-emphasis-color)
+			 * @see CSS Text Decoration Module Level 3, 3.2. Emphasis Mark Color: the
+			 *      ‘text-emphasis-color’ property
+			 *      (http://dev.w3.org/csswg/css-text-decor-3/#text-decoration-color-property)
 			 */
 			ColorProperty<sp::Inherited> color;
 			StyleProperty<
@@ -650,6 +668,10 @@ namespace ascension {
 			> position;	///< 'text-emphasis-position' property.
 		};
 
+		/**
+		 * @see CSS Text Decoration Module Level 3, 4. Text Shadows: the ‘text-shadow’ property
+		 *      (http://dev.w3.org/csswg/css-text-decor-3/#text-shadow-property)
+		 */
 		struct TextShadow {};
 
 		/**
