@@ -42,12 +42,23 @@ namespace ascension {
 		 *      (http://www.w3.org/TR/SVG11/color.html#ColorProperty)
 		 * @see XSL 1.1, 7.18.1 "color" (http://www.w3.org/TR/xsl/#color)
 		 */
+#ifndef BOOST_NO_TEMPLATE_ALIASES
+		template<typename InheritedOrNot> using ColorProperty =
+			StyleProperty<sp::Complex<boost::optional<graphics::Color>>, InheritedOrNot>;
+#else
 		template<typename InheritedOrNot>
 		class ColorProperty : public StyleProperty<
 			sp::Complex<
 				boost::optional<graphics::Color>
 			>, InheritedOrNot
-		> {};
+		> {
+		private:
+			typedef StyleProperty<sp::Complex<boost::optional<graphics::Color>>, InheritedOrNot> Base;
+		public:
+			ColorProperty() : Base() {}
+			ColorProperty(const value_type& value) : Base(value) {}
+		};
+#endif
 
 		template<typename InheritedOrNot>
 		inline graphics::Color computeColor(
@@ -83,11 +94,7 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/css3-background/#the-background-color)
 			 * @see XSL 1.1, 7.8.2 "background-color" (http://www.w3.org/TR/xsl/#background-color)
 			 */
-			StyleProperty<
-				sp::Complex<
-					boost::optional<graphics::Color>
-				>, sp::NotInherited
-			> color;
+			ColorProperty<sp::NotInherited> color;
 			/**
 			 * @see CSS Backgrounds and Borders Module Level 3, 3.1. Layering Multiple Background
 			 *      Images (http://www.w3.org/TR/css3-background/#layering)
@@ -337,15 +344,6 @@ namespace ascension {
 			BREAK_WORD/*,
 			HYPHENATE*/
 		ASCENSION_END_SCOPED_ENUM;
-
-		template<typename Measure>
-		struct TextWrapping {
-			TextWrap textWrap;
-			OverflowWrap overflowWrap;
-			Measure measure;
-			/// Default constructor.
-			TextWrapping() : textWrap(TextWrap::NORMAL), overflowWrap(OverflowWrap::NORMAL), measure(0) {}
-		};
 
 		using graphics::font::TextAlignment;
 
@@ -621,16 +619,12 @@ namespace ascension {
 			 * @see CSS Text Level 3, 10.2.4. Emphasis Mark Position: the ‘text-emphasis-position’
 			 *      property (http://dev.w3.org/csswg/css3-text/#text-emphasis-position)
 			 */
-			enum Position {
-				/// Draw marks over the text in horizontal writing mode.
-				ABOVE,
-				/// Draw marks under the text in horizontal writing mode.
-				BELOW,
-				/// Draw marks to the right of the text in vertical writing mode.
-				RIGHT,
-				/// Draw marks to the left of the text in vertical writing mode.
-				LEFT
-			};
+			typedef unsigned char Position;
+			static const Position
+				ABOVE = 0,	///< Draw marks over the text in horizontal writing mode.
+				BELOW = 1,	///< Draw marks under the text in horizontal writing mode.
+				RIGHT = 0,	///< Draw marks to the right of the text in vertical writing mode.
+				LEFT = 2;	///< Draw marks to the left of the text in vertical writing mode.
 
 			/**
 			 * [Copied from CSS3] This property applies emphasis marks to the element's text.
@@ -998,10 +992,11 @@ namespace ascension {
 					InlineBoxAlignmentEnums, InlineBoxAlignmentEnums::LAST
 				>, sp::NotInherited
 			> inlineBoxAlignment;
-//			StyleProperty<
-//				sp::Enumerated<TextSpaceCollapse, TextSpaceCollapse::COLLAPSE>,
-//				sp::Inherited
-//			> textSpaceCollapse;
+			/// ‘white-space’ property. See @c WhiteSpace.
+			StyleProperty<
+				sp::Enumerated<WhiteSpace, WhiteSpace::NORMAL>,
+				sp::Inherited
+			> whiteSpace;
 			/**
 			 * [Copied from CSS3] This property determines the measure of the tab character
 			 * (U+0009) when rendered. Integers represent the measure in space characters (U+0020).
@@ -1024,11 +1019,6 @@ namespace ascension {
 				sp::Enumerated<WordBreak, WordBreak::NORMAL>,
 				sp::Inherited
 			> wordBreak;
-			/// 'text-wrap' property. See @c TextWrap.
-			StyleProperty<
-				sp::Enumerated<TextWrap, TextWrap::NORMAL>,
-				sp::Inherited
-			> textWrap;
 			/// 'overflow-wrap' property. See @c OverflowWrap.
 			StyleProperty<
 				sp::Enumerated<OverflowWrap, OverflowWrap::NORMAL>,
@@ -1064,6 +1054,17 @@ namespace ascension {
 				sp::Enumerated<DominantBaseline, DominantBaseline::AUTO>,
 				sp::NotInherited
 			> dominantBaseline;
+			///
+			StyleProperty<
+				sp::Enumerated<TextJustification, TextJustification::AUTO>,
+				sp::Inherited
+			> lineHeight;
+			/// ‘width’ property.
+			StyleProperty<
+				sp::Complex<
+					boost::optional<Length>
+				>, sp::NotInherited
+			> measure;
 			/// The number substitution process. The default value is @c NumberSubstitution().
 			StyleProperty<
 				sp::Complex<NumberSubstitution>,

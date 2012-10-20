@@ -183,6 +183,11 @@ namespace ascension {
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextEmphasis().position)
 				>::Type position;
+
+				/// Default constructor initializes the members with initial values.
+				ComputedTextEmphasis() /*noexcept*/ :
+					style(presentation::TextEmphasis::NONE), color(Color::TRANSPARENT_BLACK),
+					position(presentation::TextEmphasis::ABOVE | presentation::TextEmphasis::RIGHT) {}
 			};
 
 			/// Computed values of @c presentation#TextRunStyle.
@@ -284,8 +289,10 @@ namespace ascension {
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextLineStyle().lineBoxContain)
 				>::Type lineBoxContain;
-//				/// Computed value of @c TextLineStyle#textSpaceCollapse property.
-//				presentation::TextSpaceCollapse spaceCollapse;
+				/// Computed value of @c TextLineStyle#whiteSpace property.
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextLineStyle().whiteSpace)
+				>::Type whiteSpace;
 				/// Computed value of @c TextLineStyle#tabSize property.
 				std::shared_ptr<TabExpander> tabExpander;
 				/// Computed value of @c TextLineStyle#lineBreak property.
@@ -296,10 +303,6 @@ namespace ascension {
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextLineStyle().wordBreak)
 				>::Type wordBreak;
-//				/// Computed value of @c TextLineStyle#textWrap property.
-//				presentation::sp::IntrinsicType<
-//					decltype(presentation::TextLineStyle().textWrap)
-//				>::Type textWrap;
 				/// Computed value of @c TextLineStyle#overflowWrap property.
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextLineStyle().overflowWrap)
