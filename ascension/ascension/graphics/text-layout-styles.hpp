@@ -331,6 +331,8 @@ namespace ascension {
 				>::Type dominantBaseline;
 				/// Computed value of @c TextLineStyle#lineHeight property.
 				Scalar lineHeight;
+				/// Computed value of @c TextLineStyle#measure property.
+				Scalar measure;
 				/// Computed value of @c TextLineStyle#numberSubstitution property.
 				ComputedNumberSubstitution numberSubstitution;
 
