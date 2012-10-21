@@ -144,7 +144,6 @@ namespace ascension {
 				presentation::TextAnchor anchor() const /*throw()*/;
 				uint8_t bidiEmbeddingLevel(Index offsetInLine) const;
 				bool isBidirectional() const /*throw()*/;
-				bool isEmpty() const /*throw()*/;
 				const presentation::TextLineStyle& style() const /*throw()*/;
 				const presentation::WritingMode& writingMode() const /*throw()*/;
 				// visual line accesses
@@ -189,6 +188,7 @@ namespace ascension {
 			private:
 				void expandTabsWithoutWrapping() /*throw()*/;
 				std::size_t findRunForPosition(Index offsetInLine) const /*throw()*/;
+				bool isEmpty() const /*noexcept*/ {return runs_.empty();}
 				void justify(presentation::TextJustification method) /*throw()*/;
 				std::pair<Index, Index> locateOffsets(
 					Index line, Scalar ipd, bool& outside) const /*throw()*/;
@@ -211,8 +211,7 @@ namespace ascension {
 				Index numberOfLines_;
 				std::unique_ptr<LineMetrics*[]> lineMetrics_;
 				std::unique_ptr<Scalar[]> measures_;
-				Scalar maximumMeasure_;
-				Scalar wrappingMeasure_;	// -1 if should not wrap
+				boost::optional<Scalar> maximumMeasure_;
 				friend class LineLayoutVector;
 //				friend class StyledSegmentIterator;
 			};
@@ -242,9 +241,6 @@ namespace ascension {
 					baseline(lines.beginning()) - lineMetrics_[lines.beginning()]->ascent(),
 					baseline(lines.end() - 1) + lineMetrics_[lines.end() - 1]->descent());
 			}
-
-			/// Returns @c true if the layout is empty.
-			inline bool TextLayout::isEmpty() const /*noexcept*/ {return runs_.empty();}
 
 			/**
 			 * Returns the wrapped line containing the specified offset in the logical line.

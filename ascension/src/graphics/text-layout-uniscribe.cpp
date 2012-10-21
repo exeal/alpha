@@ -2161,18 +2161,10 @@ namespace {
  * @param textString The text string to display
  * @param lineStyle The computed text line style
  * @param textRunStyles The computed text runs styles
- * @throw UnknownValueException @a writingMode or @a otherParameters.anchor is invalid
  */
 TextLayout::TextLayout(const String& textString,
 		const ComputedTextLineStyle& lineStyle, std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles)
-		: textString_(textString), lineStyle_(lineStyle), numberOfLines_(0),
-		maximumMeasure_(-1), wrappingMeasure_(otherParameters.textWrapping.measure) {
-
-	// sanity checks...
-	if(writingMode_.inlineFlowDirection != LEFT_TO_RIGHT && writingMode_.inlineFlowDirection != RIGHT_TO_LEFT)
-		throw UnknownValueException("writingMode.inlineFlowDirection");
-	if(anchor_ != TEXT_ANCHOR_START && anchor_ != TEXT_ANCHOR_MIDDLE && anchor_ != TEXT_ANCHOR_END)
-		throw UnknownValueException("otherParameters.anchor");
+		: textString_(textString), lineStyle_(lineStyle), numberOfLines_(0) {
 
 	// handle logically empty line
 	if(textString_.empty()) {
@@ -2227,7 +2219,7 @@ TextLayout::TextLayout(const String& textString,
 		shared_ptr<const TextRunStyle>(), otherParameters.defaultTextRunStyle, &nominalFontFamilyName, &nominalFontProperties, nullptr);
 	const shared_ptr<const Font> nominalFont(fontCollection.get(nominalFontFamilyName, nominalFontProperties));
 	// wrap into visual lines and reorder runs in each lines
-	if(numberOfRuns_ == 0 || wrappingMeasure_ == numeric_limits<Scalar>::max()) {
+	if(runs_.empty() || !wrapsText(lineStyle.whiteSpace)) {
 		numberOfLines_ = 1;
 		lineOffsets_.reset(&SINGLE_LINE_OFFSETS);
 		lineFirstRuns_.reset(&SINGLE_LINE_OFFSETS);
@@ -2241,7 +2233,7 @@ TextLayout::TextLayout(const String& textString,
 		unique_ptr<TabExpander> temp;
 		if(tabExpander == nullptr) {
 			// create default tab expander
-			temp.reset(new FixedWidthTabExpander(nominalFont->metrics().averageCharacterWidth() * 8));
+			temp.reset(new FixedWidthTabExpander(nominalFont->metrics()->averageCharacterWidth() * 8));
 			tabExpander = temp.get();
 		}
 		wrap(*tabExpander);
@@ -2250,8 +2242,8 @@ TextLayout::TextLayout(const String& textString,
 		// 5-3. reexpand horizontal tabs
 		// TODO: not implemented.
 		// 6. justify each text runs if specified
-		if(otherParameters.textJustification != NONE_JUSTIFICATION)
-			justify(otherParameters.textJustification);
+		if(lineStyle.justification != TextJustification::NONE)
+			justify(lineStyle.justification);
 	}
 
 	// 7. stack the lines
@@ -2262,8 +2254,8 @@ TextLayout::TextLayout(const String& textString,
 TextLayout::~TextLayout() /*throw()*/ {
 	for(size_t i = 0; i < numberOfRuns_; ++i)
 		delete runs_[i];
-	for(vector<const InlineArea*>::const_iterator i(inlineAreas_.begin()), e(inlineAreas_.end()); i != e; ++i)
-		delete *i;
+//	for(vector<const InlineArea*>::const_iterator i(inlineAreas_.begin()), e(inlineAreas_.end()); i != e; ++i)
+//		delete *i;
 	if(numberOfLines() == 1) {
 		assert(lineOffsets_.get() == &SINGLE_LINE_OFFSETS);
 		lineOffsets_.release();
@@ -2314,7 +2306,7 @@ Scalar TextLayout::baseline(Index line) const {
  * @throw kernel#BadPositionException @a offsetInLine is greater than the length of the line
  */
 uint8_t TextLayout::bidiEmbeddingLevel(Index offsetInLine) const {
-	if(numberOfRuns_ == 0) {
+	if(isEmpty()) {
 		if(offsetInLine != 0)
 			throw kernel::BadPositionException(kernel::Position(0, offsetInLine));
 		// use the default level
@@ -2336,11 +2328,11 @@ uint8_t TextLayout::bidiEmbeddingLevel(Index offsetInLine) const {
  * @see #bounds(void), #bounds(Index, Index), #lineBounds, #lineStartEdge
  */
 NativeRegion TextLayout::blackBoxBounds(const Range<Index>& range) const {
-	if(range.end() > text_.length())
+	if(range.end() > textString_.length())
 		throw kernel::BadPositionException(kernel::Position(0, range.end()));
 
 	// handle empty line
-	if(numberOfRuns_ == 0)
+	if(isEmpty())
 		return win32::Handle<HRGN>(::CreateRectRgn(0, 0, 0, lineMetrics_[0]->height()), &::DeleteObject);
 
 	// TODO: this implementation can't handle vertical text.
@@ -2868,7 +2860,7 @@ String TextLayout::fillToX(int x) const {
  * @return The index of the run
  */
 inline size_t TextLayout::findRunForPosition(Index offsetInLine) const /*throw()*/ {
-	assert(numberOfRuns_ > 0);
+	assert(!isEmpty());
 	if(offsetInLine == text_.length())
 		return numberOfRuns_ - 1;
 	const Index sl = lineAt(offsetInLine);
@@ -3171,7 +3163,7 @@ pair<Index, Index> TextLayout::offset(const NativePoint& p, bool* outside /* = n
 
 /// Reorders the runs in visual order.
 inline void TextLayout::reorder() /*throw()*/ {
-	if(numberOfRuns_ == 0)
+	if(isEmpty())
 		return;
 	unique_ptr<TextRun*[]> temp(new TextRun*[numberOfRuns_]);
 	copy(runs_.get(), runs_.get() + numberOfRuns_, temp.get());
@@ -3326,7 +3318,7 @@ StyledRun TextLayout::styledTextRun(Index offsetInLine) const {
 
 /// Locates the wrap points and resolves tab expansions.
 void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
-	assert(numberOfRuns_ != 0 && wrappingMeasure_ != numeric_limits<Scalar>::max());
+	assert(!isEmpty() && wrappingMeasure_ != numeric_limits<Scalar>::max());
 	assert(numberOfLines_ == 0 && lineOffsets_.get() == nullptr && lineFirstRuns_.get() == nullptr);
 
 	vector<Index> lineFirstRuns;
