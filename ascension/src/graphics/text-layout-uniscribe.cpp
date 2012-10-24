@@ -1169,7 +1169,7 @@ inline Scalar TextRunImpl::ipd(StringPiece::const_pointer character, bool traili
 	// TODO: handle letter-spacing correctly.
 //	if(visualAttributes()[offset].fClusterStart == 0) {
 //	}
-	return result;
+	return (direction() == LEFT_TO_RIGHT) ? result : (measure() - result);
 }
 
 inline HRESULT TextRunImpl::justify(int width) {
@@ -2007,85 +2007,100 @@ namespace {
 			Range<Scalar>, input_iterator_tag, Range<Scalar>, ptrdiff_t
 		> {
 	public:
-		InlineProgressionDimensionRangeIterator() /*noexcept*/ : currentRun_(nullptr), lastRun_(nullptr) {}
-		InlineProgressionDimensionRangeIterator(const Range<const TextRunImpl* const*>& textRuns,
-			const StringPiece& characterRange, ReadingDirection scanningDirection, Scalar initialIpd);
-		const StringPiece& characterRange() const /*noexcept*/ {return characterRange_;}
+		InlineProgressionDimensionRangeIterator() /*noexcept*/
+			: currentRun_(begin(dummy_)), lastRun_(begin(dummy_)) {}
+		InlineProgressionDimensionRangeIterator(
+			const Range<vector<unique_ptr<const TextRun>>::const_iterator>& textRunsOfLine,
+			ReadingDirection layoutDirection, const StringPiece& effectiveCharacterRange,
+			const Direction& scanningDirection, Scalar firstLineEdgeIpd);
 		Range<Scalar> dereference() const;
-		bool equal(const InlineProgressionDimensionRangeIterator& other) const /*noexcept*/ {
-			if(currentRun_ == nullptr)
-				return other.isDone();
-			else if(other.currentRun_ == nullptr)
-				return isDone();
-			return currentRun_ == other.currentRun_;
+		const StringPiece& effectiveCharacterRange() const /*noexcept*/ {
+			return effectiveCharacterRange_;
 		}
-		void increment() {return next(false);}
-		ReadingDirection scanningDirection() const /*noexcept*/ {
-			return (currentRun_ <= lastRun_) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;
+		bool equal(const InlineProgressionDimensionRangeIterator& other) const /*noexcept*/ {
+			return isDone() && other.isDone();
+		}
+		void increment() {
+			return next(false);
+		}
+		Direction scanningDirection() const /*noexcept*/ {
+			int temp = (currentRun_ <= lastRun_) ? 0 : 1;
+			temp += (layoutDirection_ == LEFT_TO_RIGHT) ? 0 : 1;
+			return (temp % 2 == 0) ? Direction::FORWARD : Direction::BACKWARD;
 		}
 	private:
+		static ReadingDirection computeScanningReadingDirection(
+				ReadingDirection layoutDirection, const Direction& scanningDirection) {
+			ReadingDirection computed = layoutDirection;
+			if(scanningDirection == Direction::BACKWARD)
+				computed = !computed;
+			return computed;
+		}
 		void next(bool initializing);
 		bool isDone() const /*noexcept*/ {return currentRun_ == lastRun_;}
 	private:
+		static const vector<unique_ptr<const TextRun>> dummy_;
 		friend class boost::iterator_core_access;
-		/*const*/ StringPiece characterRange_;
-		const TextRunImpl* const* currentRun_;
-		const TextRunImpl* const* /*const*/ lastRun_;
-		Scalar ipd_;
+		/*const*/ ReadingDirection layoutDirection_;
+		/*const*/ StringPiece effectiveCharacterRange_;
+		vector<unique_ptr<const TextRun>>::const_iterator currentRun_;
+		/*const*/ vector<unique_ptr<const TextRun>>::const_iterator lastRun_;
+		Scalar currentRunStartEdge_;	// 'start' means for 'layoutDirection_'
 	};
 }
 
 InlineProgressionDimensionRangeIterator::InlineProgressionDimensionRangeIterator(
-		const Range<const TextRunImpl* const*>& textRuns, const StringPiece& characterRange,
-		ReadingDirection direction, Scalar initialIpd) : characterRange_(characterRange),
-		currentRun_((direction == LEFT_TO_RIGHT) ? textRuns.beginning() - 1 : textRuns.end()),
-		lastRun_((direction == LEFT_TO_RIGHT) ? textRuns.end() : textRuns.beginning() - 1),
-		ipd_(initialIpd) {
+		const Range<vector<unique_ptr<const TextRun>>::const_iterator>& textRunsOfLine,
+		ReadingDirection layoutDirection, const StringPiece& effectiveCharacterRange,
+		const Direction& scanningDirection, Scalar firstLineEdgeIpd) :
+		effectiveCharacterRange_(effectiveCharacterRange), layoutDirection_(layoutDirection),
+		currentRunStartEdge_(firstLineEdgeIpd) {
+	const ReadingDirection scanningReadingDirection = computeScanningReadingDirection(layoutDirection, scanningDirection);
+	currentRun_ = (scanningReadingDirection == LEFT_TO_RIGHT) ? textRunsOfLine.beginning() : textRunsOfLine.end() - 1;
+	lastRun_ = (scanningReadingDirection == LEFT_TO_RIGHT) ? textRunsOfLine.end() : textRunsOfLine.beginning() - 1;
 	next(true);
 }
 
 Range<Scalar> InlineProgressionDimensionRangeIterator::dereference() const {
 	if(isDone())
 		throw NoSuchElementException();
-	assert(intersects(**currentRun_, characterRange()));
-	Scalar start, end;
-	if(characterRange().beginning() > (*currentRun_)->beginning())
-		start = (*currentRun_)->leadingEdge(characterRange().beginning() - (*currentRun_)->beginning());
-	else
-		start = ((*currentRun_)->direction() == LEFT_TO_RIGHT) ? 0 : (*currentRun_)->totalWidth();
-	if(characterRange().end() < (*currentRun_)->end())
-		end = (*currentRun_)->leadingEdge(characterRange().end() - (*currentRun_)->beginning());
-	else
-		end = ((*currentRun_)->direction() == LEFT_TO_RIGHT) ? (*currentRun_)->totalWidth() : 0;
-
-	if(scanningDirection() == RIGHT_TO_LEFT) {
-		start -= (*currentRun_)->totalWidth();
-		end -= (*currentRun_)->totalWidth();
-	}
-	return Range<Scalar>(start + ipd_, end + ipd_);
+	const TextRunImpl& currentRun = static_cast<const TextRunImpl&>(**currentRun_);
+	const Range<StringPiece::const_pointer> subrange(intersected(currentRun, effectiveCharacterRange()));
+	assert(!isEmpty(subrange));
+	const Scalar startInRun = currentRun.leadingEdge(subrange.beginning() - currentRun.beginning());
+	const Scalar endInRun = currentRun.trailingEdge(subrange.end() - currentRun.beginning());
+	assert(startInRun <= endInRun);
+	const Scalar startOffset = (currentRun.direction() == layoutDirection_) ? startInRun : currentRun.measure() - endInRun;
+	const Scalar endOffset = (currentRun.direction() == layoutDirection_) ? endInRun : currentRun.measure() - startInRun;
+	assert(startOffset <= endOffset);
+	return makeRange(currentRunStartEdge_ + startOffset, currentRunStartEdge_ + endOffset);
 }
 
 void InlineProgressionDimensionRangeIterator::next(bool initializing) {
 	if(isDone())
 		throw NoSuchElementException();
-	const TextRunImpl* const* nextRun = currentRun_;
-	Scalar nextIpd = ipd_;
-	while(true) {
-		if(scanningDirection() == LEFT_TO_RIGHT) {
-			if(!initializing)
-				nextIpd += (*nextRun)->totalWidth();
-			++nextRun;
+	vector<unique_ptr<const TextRun>>::const_iterator nextRun(currentRun_);
+	Scalar nextIpd = currentRunStartEdge_;
+	const Direction sd = scanningDirection();
+	const ReadingDirection srd = computeScanningReadingDirection(layoutDirection_, sd);
+	while(nextRun != lastRun_) {
+		if(sd == Direction::FORWARD) {
+			if(intersects(static_cast<const TextRunImpl&>(**nextRun), effectiveCharacterRange()))
+				break;
+			nextIpd += (*nextRun)->measure();
 		} else {
-			if(!initializing)
-				nextIpd -= (*nextRun)->totalWidth();
-			--nextRun;
+			nextIpd -= (*nextRun)->measure();
+			if(intersects(static_cast<const TextRunImpl&>(**nextRun), effectiveCharacterRange()))
+				break;
 		}
-		if(nextRun != lastRun_ || intersects(**nextRun, characterRange()))
-			break;
+		if(srd == LEFT_TO_RIGHT)
+			++nextRun;
+		else
+			--nextRun;
 	}
 	// commit
 	currentRun_ = nextRun;
-	ipd_ = nextIpd;
+	currentRunStartEdge_ = nextIpd;
 }
 
 
@@ -2252,8 +2267,8 @@ TextLayout::TextLayout(const String& textString,
 
 /// Destructor.
 TextLayout::~TextLayout() /*throw()*/ {
-	for(size_t i = 0; i < numberOfRuns_; ++i)
-		delete runs_[i];
+//	for(size_t i = 0; i < numberOfRuns_; ++i)
+//		delete runs_[i];
 //	for(vector<const InlineArea*>::const_iterator i(inlineAreas_.begin()), e(inlineAreas_.end()); i != e; ++i)
 //		delete *i;
 	if(numberOfLines() == 1) {
@@ -2297,25 +2312,6 @@ Scalar TextLayout::baseline(Index line) const {
 		result += lineMetrics_[i]->ascent();
 	}
 	return result;
-}
-
-/**
- * Returns the bidirectional embedding level at specified position.
- * @param offsetInLine The offset in the line
- * @return The embedding level
- * @throw kernel#BadPositionException @a offsetInLine is greater than the length of the line
- */
-uint8_t TextLayout::bidiEmbeddingLevel(Index offsetInLine) const {
-	if(isEmpty()) {
-		if(offsetInLine != 0)
-			throw kernel::BadPositionException(kernel::Position(0, offsetInLine));
-		// use the default level
-		return (writingMode().inlineFlowDirection == RIGHT_TO_LEFT) ? 1 : 0;
-	}
-	const size_t i = findRunForPosition(offsetInLine);
-	if(i == numberOfRuns_)
-		throw kernel::BadPositionException(kernel::Position(0, offsetInLine));
-	return runs_[i]->bidiEmbeddingLevel();
 }
 
 /**
@@ -2408,12 +2404,10 @@ FlowRelativeFourSides<Scalar> TextLayout::bounds() const /*noexcept*/ {
  * @see #blackBoxBounds, #bounds(void), #lineBounds
  */
 FlowRelativeFourSides<Scalar> TextLayout::bounds(const Range<Index>& characterRange) const {
-	if(characterRange.end() > text_.length())
+	if(characterRange.end() > textString_.length())
 		throw kernel::BadPositionException(kernel::Position(0, characterRange.end()));
 
 	FlowRelativeFourSides<Scalar> result;
-
-	// TODO: this implementation can't handle vertical text.
 
 	if(isEmpty()) {	// empty line
 		result.start() = result.end() = 0;
@@ -2421,9 +2415,12 @@ FlowRelativeFourSides<Scalar> TextLayout::bounds(const Range<Index>& characterRa
 		result.after() = lineMetrics(0).descent();
 	} else if(ascension::isEmpty(characterRange)) {	// an empty rectangle for an empty range
 		const LineMetrics& line = lineMetrics(lineAt(characterRange.beginning()));
-		return geometry::make<NativeRectangle>(
-			geometry::subtract(location(range.beginning()), geometry::make<NativePoint>(0, line.ascent()/* + line.leading()*/)),
-			geometry::make<NativeSize>(0, line.height()));
+		const AbstractTwoAxes<Scalar> leading(location(characterRange.beginning()));
+		FlowRelativeFourSides<Scalar> sides;
+		sides.before() = leading.bpd() - line.ascent();
+		sides.after() = leading.bpd() + line.descent();
+		sides.start() = sides.end() = leading.ipd();
+		return sides;
 	} else {
 		const Index firstLine = lineAt(characterRange.beginning()), lastLine = lineAt(characterRange.end());
 
@@ -2452,64 +2449,53 @@ FlowRelativeFourSides<Scalar> TextLayout::bounds(const Range<Index>& characterRa
 		if(!lastLineIsFullyCovered && (partiallyCoveredLines.empty() || partiallyCoveredLines[0] != lastLine))
 			partiallyCoveredLines.push_back(lastLine);
 		if(!partiallyCoveredLines.empty()) {
-			Scalar left = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? result.start() : -result.end();
-			Scalar right = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? result.end() : -result.start();
+			Scalar start = result.start(), end = result.end();
+			const StringPiece effectiveCharacterRange(textString_.data() + characterRange.beginning(), length(characterRange));
 			for(vector<Index>::const_iterator
-					line(partiallyCoveredLines.begin()), e(partiallyCoveredLines.end()); line != e; ++line) {
-				const Index lastRun = (*line + 1 < numberOfLines()) ? lineFirstRuns_[*line + 1] : numberOfRuns_;
+					line(begin(partiallyCoveredLines)), e(std::end(partiallyCoveredLines)); line != e; ++line) {
+				const RunVector::const_iterator lastRun(
+					(*line + 1 < numberOfLines()) ? begin(runs_) + lineFirstRuns_[*line + 1] : std::end(runs_));
 
-				// find left-edge
+				// find 'start-edge'
 				InlineProgressionDimensionRangeIterator i(
-					Range<const TextRun* const*>(runs_.get() + lineFirstRuns_[*line], runs_.get() + lastRun),
-					range, LEFT_TO_RIGHT, (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ?
-						lineStartEdge(*line) : -lineStartEdge(*line) - measure(*line));
+					makeRange(begin(runs_) + lineFirstRuns_[*line], lastRun),
+					writingMode().inlineFlowDirection, effectiveCharacterRange, Direction::FORWARD, lineStartEdge(*line));
 				assert(i != InlineProgressionDimensionRangeIterator());
-				left = min(i->beginning(), left);
+				start = min(i->beginning(), start);
 
-				Scalar x = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ?
-					lineStartEdge(*line) : -lineStartEdge(*line) - measure(*line);
-				for(Index i = lineFirstRuns_[*line];
-						i < lastRun && x < left; x += runs_[i++]->totalWidth()) {
-					const TextRun& run = *runs_[i];
-					if(intersects(range, run)) {
-						const Index leftEdge = (run.readingDirection() == LEFT_TO_RIGHT) ?
-							max(range.beginning(), run.beginning()) : min(range.end(), run.end());
-						left = min(x + run.x(leftEdge, false), left);
-						break;
-					}
-				}
-
-				// find right-edge
+				// find 'end-edge'
 				i = InlineProgressionDimensionRangeIterator(
-					Range<const TextRun* const*>(runs_.get() + lineFirstRuns_[*line], runs_.get() + lastRun),
-					range, RIGHT_TO_LEFT, (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ?
-						lineStartEdge(*line) + measure(*line) : -lineStartEdge(*line));
+					makeRange(begin(runs_) + lineFirstRuns_[*line], lastRun),
+					writingMode().inlineFlowDirection, effectiveCharacterRange, Direction::BACKWARD, lineStartEdge(*line) + measure(*line));
 				assert(i != InlineProgressionDimensionRangeIterator());
-				right = max(i->end(), right);
-
-				x = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ?
-					lineStartEdge(*line) + measure(*line) : -lineStartEdge(*line);
-				for(Index i = lastRun - 1; x > right; x -= runs_[i--]->totalWidth()) {
-					const TextRun& run = *runs_[i];
-					if(intersects(range, run)) {
-						const Index rightEdge = (run.readingDirection() == LEFT_TO_RIGHT) ?
-							min(range.end(), run.end()) : max(range.beginning(), run.beginning());
-						right = max(x - run.totalWidth() + run.x(rightEdge, false), right);
-						break;
-					}
-					if(i == lineFirstRuns_[*line])
-						break;
-				}
+				end = max(i->end(), end);
 			}
 
-			result.start() = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? left : -right;
-			result.end() = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? right : -left;
+			result.start() = start;
+			result.end() = end;
 		}
 	}
 
-	return geometry::make<NativeRectangle>(
-		geometry::make<NativePoint>(result.start(), result.before()),
-		geometry::make<NativePoint>(result.end(), result.after()));
+	return result;
+}
+
+/**
+ * Returns the bidirectional embedding level at specified position.
+ * @param offsetInLine The offset in the line
+ * @return The embedding level
+ * @throw kernel#BadPositionException @a offsetInLine is greater than the length of the line
+ */
+uint8_t TextLayout::characterLevel(Index offsetInLine) const {
+	if(isEmpty()) {
+		if(offsetInLine != 0)
+			throw kernel::BadPositionException(kernel::Position(0, offsetInLine));
+		// use the default level
+		return (writingMode().inlineFlowDirection == RIGHT_TO_LEFT) ? 1 : 0;
+	}
+	const auto run(findRunForPosition(offsetInLine));
+	if(run == end(runs_))
+		throw kernel::BadPositionException(kernel::Position(0, offsetInLine));
+	return (*run)->characterLevel();
 }
 
 namespace {
@@ -2564,14 +2550,14 @@ void TextLayout::draw(PaintContext& context,
 	// calculate inline area range to draw
 	Range<vector<const InlineArea*>::const_iterator> inlineAreasToDraw(inlineAreas_.begin(), inlineAreas_.end());
 	for(vector<const InlineArea*>::const_iterator i(inlineAreasToDraw.beginning()); i != inlineAreasToDraw.end(); ++i) {
-		const Index endOfInlineArea = (i != inlineAreasToDraw.end()) ? i[1]->position() : text_.length();
+		const Index endOfInlineArea = (i != inlineAreasToDraw.end()) ? i[1]->position() : textString_.length();
 		if(endOfInlineArea > lineOffset(linesToDraw.beginning())) {
 			inlineAreasToDraw = makeRange(i, inlineAreasToDraw.end());
 			break;
 		}
 	}
 	for(vector<const InlineArea*>::const_iterator i(inlineAreasToDraw.beginning()); i != inlineAreasToDraw.end(); ++i) {
-		const Index endOfInlineArea = (i != inlineAreasToDraw.end()) ? i[1]->position() : text_.length();
+		const Index endOfInlineArea = (i != inlineAreasToDraw.end()) ? i[1]->position() : textString_.length();
 		if(endOfInlineArea >= lineOffset(linesToDraw.beginning())) {
 			inlineAreasToDraw = makeRange(inlineAreasToDraw.beginning(), i + 1);
 			break;
@@ -2859,9 +2845,9 @@ String TextLayout::fillToX(int x) const {
  * @param offsetInLine The offset in the line
  * @return The index of the run
  */
-inline size_t TextLayout::findRunForPosition(Index offsetInLine) const /*throw()*/ {
+inline TextLayout::RunVector::const_iterator TextLayout::findRunForPosition(Index offsetInLine) const /*throw()*/ {
 	assert(!isEmpty());
-	if(offsetInLine == text_.length())
+	if(offsetInLine == textString_.length())
 		return numberOfRuns_ - 1;
 	const Index sl = lineAt(offsetInLine);
 	const size_t lastRun = (sl + 1 < numberOfLines()) ? lineFirstRuns_[sl + 1] : numberOfRuns_;
@@ -2915,22 +2901,25 @@ TextLayout::StyledSegmentIterator TextLayout::lastStyledSegment() const /*throw(
  * @param line The line number
  * @return The line bounds in pixels
  * @throw IndexOutOfBoundsException @a line is greater than the number of the lines
- * @see #lineStartEdge
+ * @see #basline, #lineStartEdge, #measure
  */
-NativeRectangle TextLayout::lineBounds(Index line) const {
+FlowRelativeFourSides<Scalar> TextLayout::lineBounds(Index line) const {
 	if(line >= numberOfLines())
 		throw IndexOutOfBoundsException("line");
 
-	const Scalar start = lineStartEdge(line);
-	const Scalar end = start + measure(line);
-	const Scalar before = baseline(line) - lineMetrics_[line]->ascent()/* - lineMetrics_[line]->leading()*/;
-	const Scalar after = before + lineMetrics_[line]->height();
-
+	FlowRelativeFourSides<Scalar> sides;
+	sides.start() = lineStartEdge(line);
+	sides.end() = sides.start() + measure(line);
+	sides.before() = baseline(line) - lineMetrics_[line]->ascent()/* - lineMetrics_[line]->leading()*/;
+	sides.after() = sides.before() + lineMetrics_[line]->height();
+	return sides;
+/*
 	// TODO: this implementation can't handle vertical text.
 	const NativeSize size(geometry::make<NativeSize>(end - start, after - before));
 	const NativePoint origin(geometry::make<NativePoint>(
 		(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? start : start - geometry::dx(size), before));
 	return geometry::make<NativeRectangle>(origin, size);
+*/
 }
 
 /**
@@ -3029,48 +3018,50 @@ pair<Index, Index> TextLayout::locateOffsets(Index line, Scalar ipd, bool& outsi
 }
 
 // implements public location methods
-void TextLayout::locations(Index offsetInLine, NativePoint* leading, NativePoint* trailing) const {
+void TextLayout::locations(Index offsetInLine, AbstractTwoAxes<Scalar>* leading, AbstractTwoAxes<Scalar>* trailing) const {
 	assert(leading != nullptr || trailing != nullptr);
-	if(offsetInLine > text_.length())
+	if(offsetInLine > textString_.length())
 		throw kernel::BadPositionException(kernel::Position(0, offsetInLine));
 
-	Scalar leadingIpd, trailingIpd, bpd = lineMetrics_[0]->ascent()/* + lineMetrics_[0]->leading()*/;
-	if(isEmpty())
+	Scalar leadingIpd, trailingIpd, bpd = 0/* + lineMetrics_[0]->leading()*/;
+	if(isEmpty()) {
 		leadingIpd = trailingIpd = 0;
-	else {
+		bpd += lineMetrics_[0]->ascent();
+	} else {
 		// inline-progression-dimension
+		const StringPiece::const_pointer at = textString_.data() + offsetInLine;
 		const Index line = lineAt(offsetInLine);
 		const Index firstRun = lineFirstRuns_[line];
 		const Index lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
 		if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) {	// LTR
-			Scalar x = lineStartEdge(line);
+			Scalar ipd = lineStartEdge(line);
 			for(size_t i = firstRun; i < lastRun; ++i) {
-				const TextRun& run = *runs_[i];
-				if(offsetInLine >= run.beginning() && offsetInLine <= run.end()) {
+				const TextRunImpl& run = *static_cast<const TextRunImpl*>(runs_[i].get());	// TODO: Down-cast.
+				if(at >= run.beginning() && at <= run.end()) {
 					if(leading != nullptr)
-						leadingIpd = x + run.x(offsetInLine, false);
+						leadingIpd = ipd + run.leadingEdge(at - run.beginning());
 					if(trailing != nullptr)
-						trailingIpd = x + run.x(offsetInLine, true);
+						trailingIpd = ipd + run.trailingEdge(at - run.beginning());
 					break;
 				}
-				x += run.totalWidth();
+				ipd += run.measure();
 			}
 		} else {	// RTL
-			Scalar x = -lineStartEdge(line);
+			Scalar ipd = lineStartEdge(line);
 			for(size_t i = lastRun - 1; ; --i) {
-				const TextRun& run = *runs_[i];
-				x -= run.totalWidth();
-				if(offsetInLine >= run.beginning() && offsetInLine <= run.end()) {
+				const TextRunImpl& run = *static_cast<const TextRunImpl*>(runs_[i].get());	// TODO: Down-cast.
+				if(at >= run.beginning() && at <= run.end()) {
 					if(leading != nullptr)
-						leadingIpd = -(x + run.x(offsetInLine, false));
+						leadingIpd = ipd + run.leadingEdge(at - run.beginning());
 					if(trailing != nullptr)
-						trailingIpd = -(x + run.x(offsetInLine, true));
+						trailingIpd = ipd + run.trailingEdge(at - run.beginning());
 					break;
 				}
 				if(i == firstRun) {
 					ASCENSION_ASSERT_NOT_REACHED();
 					break;
 				}
+				ipd += run.measure();
 			}
 		}
 
@@ -3078,14 +3069,14 @@ void TextLayout::locations(Index offsetInLine, NativePoint* leading, NativePoint
 		bpd += baseline(line);
 	}
 		
-	// TODO: this implementation can't handle vertical text.
+	// return the result(s)
 	if(leading != nullptr) {
-		leading->x = leadingIpd;
-		leading->y = bpd;
+		leading->ipd() = leadingIpd;
+		leading->bpd() = bpd;
 	}
 	if(trailing != nullptr) {
-		trailing->x = trailingIpd;
-		trailing->y = bpd;
+		trailing->ipd() = trailingIpd;
+		trailing->bpd() = bpd;
 	}
 }
 
@@ -3093,14 +3084,14 @@ void TextLayout::locations(Index offsetInLine, NativePoint* leading, NativePoint
  * Returns the inline-progression-dimension of the longest line.
  * @see #measure(Index)
  */
-Scalar TextLayout::measure() const /*throw()*/ {
-	if(maximumMeasure_ < 0) {
+Scalar TextLayout::measure() const /*noexcept*/ {
+	if(!maximumMeasure_) {
 		Scalar ipd = 0;
 		for(Index line = 0; line < numberOfLines(); ++line)
 			ipd = max(measure(line), ipd);
 		const_cast<TextLayout*>(this)->maximumMeasure_ = ipd;
 	}
-	return maximumMeasure_;
+	return boost::get(maximumMeasure_);
 }
 
 /**
@@ -3119,8 +3110,8 @@ Scalar TextLayout::measure(Index line) const {
 	else {
 		TextLayout& self = const_cast<TextLayout&>(*this);
 		if(numberOfLines() == 1) {
-			if(maximumMeasure_ >= 0)
-				return maximumMeasure_;
+			if(maximumMeasure_)
+				return boost::get(maximumMeasure_);
 		} else {
 			if(measures_.get() == nullptr) {
 				self.measures_.reset(new Scalar[numberOfLines()]);
@@ -3334,7 +3325,7 @@ void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
 		TextRun* run = runs_[i];
 
 		// if the run is a tab, expand and calculate actual width
-		if(run->expandTabCharacters(tabExpander, text_,
+		if(run->expandTabCharacters(tabExpander, textString_,
 				(x1 < wrappingMeasure_) ? x1 : 0, wrappingMeasure_ - (x1 < wrappingMeasure_) ? x1 : 0)) {
 			if(x1 < wrappingMeasure_) {
 				x1 += run->totalWidth();
@@ -3355,7 +3346,7 @@ void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
 			logicalAttributes.reset(new SCRIPT_LOGATTR[longestRunLength]);
 		}
 		HRESULT hr = run->logicalWidths(logicalWidths.get());
-		hr = run->logicalAttributes(text_, logicalAttributes.get());
+		hr = run->logicalAttributes(textString_, logicalAttributes.get());
 		const Index originalRunPosition = run->beginning();
 		int widthInThisRun = 0;
 		Index lastBreakable = run->beginning(), lastGlyphEnd = run->beginning();
@@ -3397,7 +3388,7 @@ void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
 				}
 				// case 2: break at the end of the run
 				else if(lastBreakable == run->end()) {
-					if(lastBreakable < text_.length()) {
+					if(lastBreakable < textString_.length()) {
 						assert(lineFirstRuns.empty() || newRuns.size() != lineFirstRuns.back());
 						lineFirstRuns.push_back(newRuns.size() + 1);
 //dout << L"broke the line at " << lastBreakable << L" where the run end.\n";
@@ -3406,7 +3397,7 @@ void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
 				}
 				// case 3: break at the middle of the run -> split the run (run -> newRun + run)
 				else {
-					unique_ptr<TextRun> followingRun(run->breakAt(lastBreakable, text_));
+					unique_ptr<TextRun> followingRun(run->breakAt(lastBreakable, textString_));
 					newRuns.push_back(run);
 					assert(lineFirstRuns.empty() || newRuns.size() != lineFirstRuns.back());
 					lineFirstRuns.push_back(newRuns.size());
