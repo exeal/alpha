@@ -39,6 +39,21 @@ namespace ascension {
 			RIGHT_TO_LEFT	///< Right-to-left directionality.
 		};
 
+		/**
+		 * Negation operation for @c ReadingDirection.
+		 * @throw UnknownValueException @a value is invalid
+		 */
+		inline ReadingDirection operator!(ReadingDirection value) {
+			switch(value) {
+				case LEFT_TO_RIGHT:
+					return RIGHT_TO_LEFT;
+				case RIGHT_TO_LEFT:
+					return LEFT_TO_RIGHT;
+				default:
+					throw UnknownValueException("value");
+			}
+		}
+
 		class Presentation;
 		ReadingDirection defaultReadingDirection(const Presentation& presentation);
 
