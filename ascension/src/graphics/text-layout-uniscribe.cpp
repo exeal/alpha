@@ -3201,20 +3201,24 @@ pair<Index, Index> TextLayout::offset(const NativePoint& p, bool* outside /* = n
 inline void TextLayout::reorder() /*throw()*/ {
 	if(isEmpty())
 		return;
-	unique_ptr<unique_ptr<TextRun>[]> temp(new unique_ptr<TextRun>[runs_.size()]);
-	copy(runs_.get(), runs_.get() + numberOfRuns_, temp.get());
+	vector<const TextRun*> reordered(runs_.size());
 	for(Index line = 0; line < numberOfLines(); ++line) {
-		const size_t numberOfRunsInLine = ((line < numberOfLines() - 1) ?
-			lineFirstRuns_[line + 1] : numberOfRuns_) - lineFirstRuns_[line];
-		const unique_ptr<BYTE[]> levels(new BYTE[numberOfRunsInLine]);
-		for(size_t i = 0; i < numberOfRunsInLine; ++i)
-			levels[i] = static_cast<BYTE>(runs_[i + lineFirstRuns_[line]]->bidiEmbeddingLevel() & 0x1f);
-		const unique_ptr<int[]> log2vis(new int[numberOfRunsInLine]);
-		const HRESULT hr = ::ScriptLayout(static_cast<int>(numberOfRunsInLine), levels.get(), nullptr, log2vis.get());
+		const Range<const RunVector::const_iterator> runsInLine(firstRunInLine(line), firstRunInLine(line + 1));
+		const unique_ptr<BYTE[]> levels(new BYTE[length(runsInLine)]);
+		for(RunVector::const_iterator i(runsInLine.beginning()); i != runsInLine.end(); ++i)
+			levels[i - runsInLine.beginning()] = static_cast<BYTE>((*i)->characterLevel() & 0x1f);
+		const unique_ptr<int[]> log2vis(new int[length(runsInLine)]);
+		const HRESULT hr = ::ScriptLayout(static_cast<int>(length(runsInLine)), levels.get(), nullptr, log2vis.get());
 		assert(SUCCEEDED(hr));
-		for(size_t i = lineFirstRuns_[line]; i < lineFirstRuns_[line] + numberOfRunsInLine; ++i)
-			runs_[lineFirstRuns_[line] + log2vis[i - lineFirstRuns_[line]]] = temp[i];
+		for(RunVector::const_iterator i(runsInLine.beginning()); i != runsInLine.end(); ++i)
+			reordered[runsInLine.beginning() - begin(runs_) + log2vis[i - runsInLine.beginning()]] = i->get();
 	}
+
+	// commit
+	for(RunVector::iterator i(begin(runs_)), e(end(runs_)); i != e; ++i)
+		i->release();
+	for(RunVector::size_type i = 0, c(runs_.size()); i < c; ++i)
+		runs_[i].reset(reordered[i]);
 }
 #if 0
 /**
