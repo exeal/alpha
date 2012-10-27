@@ -141,7 +141,7 @@ namespace ascension {
 					std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles);
 				~TextLayout() /*throw()*/;
 				// general attributes
-				presentation::TextAnchor anchor() const /*throw()*/;
+				presentation::TextAnchor anchor(Index line) const;
 				std::uint8_t characterLevel(Index offset) const;
 				bool isBidirectional() const /*noexcept*/;
 				const presentation::TextLineStyle& style() const /*throw()*/;
