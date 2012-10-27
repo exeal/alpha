@@ -142,16 +142,16 @@ namespace ascension {
 				~TextLayout() /*throw()*/;
 				// general attributes
 				presentation::TextAnchor anchor() const /*throw()*/;
-				std::uint8_t characterLevel(Index offsetInLine) const;
-				bool isBidirectional() const /*throw()*/;
+				std::uint8_t characterLevel(Index offset) const;
+				bool isBidirectional() const /*noexcept*/;
 				const presentation::TextLineStyle& style() const /*throw()*/;
 				const presentation::WritingMode& writingMode() const /*throw()*/;
 				// visual line accesses
 				Index numberOfLines() const /*noexcept*/;
-				Index lineAt(Index offsetInLine) const;
+				Index lineAt(Index offset) const;
 				Index lineLength(Index line) const;
 				Index lineOffset(Index line) const;
-				const Index* lineOffsets() const /*noexcept*/;
+				std::vector<Index>&& lineOffsets() const /*noexcept*/;
 				// bounds, extents and measures
 				NativeRegion blackBoxBounds(const Range<Index>& range) const;
 				presentation::FlowRelativeFourSides<Scalar> bounds() const /*noexcept*/;
@@ -166,14 +166,14 @@ namespace ascension {
 				const LineMetrics& lineMetrics(Index line) const;
 				Scalar lineStartEdge(Index line) const;
 				Index locateLine(Scalar bpd, bool& outside) const /*throw()*/;
-				presentation::AbstractTwoAxes<Scalar> location(Index offsetInLine, Edge edge = LEADING) const;
+				presentation::AbstractTwoAxes<Scalar> location(Index offset, Edge edge = LEADING) const;
 				std::pair<presentation::AbstractTwoAxes<Scalar>,
-					presentation::AbstractTwoAxes<Scalar>> locations(Index offsetInLine) const;
+					presentation::AbstractTwoAxes<Scalar>> locations(Index offset) const;
 				std::pair<Index, Index> offset(const NativePoint& p, bool* outside = nullptr) const /*throw()*/;
 				// styled segments
 //				StyledSegmentIterator firstStyledSegment() const /*throw()*/;
 //				StyledSegmentIterator lastStyledSegment() const /*throw()*/;
-//				presentation::StyledTextRun styledTextRun(Index offsetInLine) const;
+//				presentation::StyledTextRun styledTextRun(Index offset) const;
 				// painting
 				void draw(PaintContext& context, const NativePoint& origin,
 					const TextPaintOverride* paintOverride = nullptr,
@@ -189,12 +189,13 @@ namespace ascension {
 			private:
 				void expandTabsWithoutWrapping() /*throw()*/;
 				typedef std::vector<std::unique_ptr<const TextRun>> RunVector;
-				RunVector::const_iterator findRunForPosition(Index offsetInLine) const /*throw()*/;
+				RunVector::const_iterator runForPosition(Index offset) const /*throw()*/;
+				RunVector::const_iterator firstRunInLine(Index line) const /*noexcept*/;
 				bool isEmpty() const /*noexcept*/ {return runs_.empty();}
-				void justify(presentation::TextJustification method) /*throw()*/;
+				void justify(Scalar lineMeasure, presentation::TextJustification method) /*throw()*/;
 				std::pair<Index, Index> locateOffsets(
 					Index line, Scalar ipd, bool& outside) const /*throw()*/;
-				void locations(Index offsetInLine,
+				void locations(Index offset,
 					presentation::AbstractTwoAxes<Scalar>* leading,
 					presentation::AbstractTwoAxes<Scalar>* trailing) const;
 				int nextTabStopBasedLeftEdge(Scalar x, bool right) const /*throw()*/;
@@ -209,13 +210,11 @@ namespace ascension {
 				boost::flyweight<ComputedTextLineStyle> lineStyle_;
 				RunVector runs_;
 				class LineArea;
-				std::unique_ptr<const Index[]> lineOffsets_;	// size is numberOfLines_
-				std::unique_ptr<const Index[]> lineFirstRuns_;	// size is numberOfLines_
-				static const Index SINGLE_LINE_OFFSETS;
+				std::unique_ptr<const RunVector::const_iterator[]> firstRunsInLines_;	// size is runs_.size(), or null if not wrapped
 				Index numberOfLines_;
 				std::unique_ptr<LineMetrics*[]> lineMetrics_;
 				std::unique_ptr<Scalar[]> measures_;
-				boost::optional<Scalar> maximumMeasure_;
+				boost::optional<Scalar> maximumMeasure_;	// cached measure of the longest line
 				friend class LineLayoutVector;
 //				friend class StyledSegmentIterator;
 			};
@@ -248,15 +247,17 @@ namespace ascension {
 
 			/**
 			 * Returns the wrapped line containing the specified offset in the logical line.
-			 * @param offsetInLine The offset in the line
+			 * @param offset The offset in this layout
 			 * @return The wrapped line
-			 * @throw kernel#BadPositionException @a offsetInLine is greater than the length of the line
+			 * @throw kernel#BadPositionException @a offset is greater than the length of the layout
 			 */
-			inline Index TextLayout::lineAt(Index offsetInLine) const {
-				if(offsetInLine > textString_.length())
-					throw kernel::BadPositionException(kernel::Position(0, offsetInLine));
-				return (numberOfLines() == 1) ? 0 :
-					*detail::searchBound(lineOffsets(), lineOffsets() + numberOfLines(), offsetInLine);
+			inline Index TextLayout::lineAt(Index offset) const {
+				if(offset > textString_.length())
+					throw kernel::BadPositionException(kernel::Position(0, offset));
+				if(numberOfLines() == 1)
+					return 0;
+				const std::vector<Index> offsets(lineOffsets());
+				return *detail::searchBound(std::begin(offsets), std::end(offsets) - 1, offset);
 			}
 
 			/**
@@ -283,53 +284,29 @@ namespace ascension {
 			}
 
 			/**
-			 * Returns the offset of the start of the specified visual line from the start of the
-			 * logical line.
-			 * @param line The visual line
-			 * @return The offset
-			 * @throw BadPositionException @a line is greater than the count of lines
-			 */
-			inline Index TextLayout::lineOffset(Index line) const {
-				if(line >= numberOfLines())
-					throw kernel::BadPositionException(kernel::Position(line, 0));
-				return lineOffsets()[line];
-			}
-
-			/**
-			 * Returns the line offsets.
-			 * @return The line offsets whose length is @c #numberOfLines(). Each element in the
-			 *         array is the offset for the first character in a line
-			 */
-			inline const Index* TextLayout::lineOffsets() const /*noexcept*/ {
-				return lineOffsets_.get();
-			}
-
-			/**
 			 * Returns the location for the specified character offset.
-			 * @param offsetInLine The character offset in the line
+			 * @param offset The character offset in this layout
 			 * @param edge The edge of the character to locate
 			 * @return The location of the character
-			 * @throw kernel#BadPositionException @a offsetInLine is greater than the length of the
-			 *                                    line
+			 * @throw kernel#BadPositionException @a offset is greater than the length of the layout
 			 */
-			inline presentation::AbstractTwoAxes<Scalar> TextLayout::location(Index offsetInLine, Edge edge /* = LEADING */) const {
+			inline presentation::AbstractTwoAxes<Scalar> TextLayout::location(Index offset, Edge edge /* = LEADING */) const {
 				presentation::AbstractTwoAxes<Scalar> result;
-				locations(offsetInLine, (edge == LEADING) ? &result : nullptr, (edge == TRAILING) ? &result : nullptr);
+				locations(offset, (edge == LEADING) ? &result : nullptr, (edge == TRAILING) ? &result : nullptr);
 				return result;
 			}
 
 			/**
 			 * Returns the locations for the specified character offset.
-			 * @param offsetInLine The character offset in the line
+			 * @param offset The character offset in this layout
 			 * @return A pair consists of the locations. The first element means the leading, the
 			 *         second element means the trailing position of the character
-			 * @throw kernel#BadPositionException @a offsetInLine is greater than the length of the
-			 *                                    line
+			 * @throw kernel#BadPositionException @a offset is greater than the length of the layout
 			 */
 			inline std::pair<presentation::AbstractTwoAxes<Scalar>,
-					presentation::AbstractTwoAxes<Scalar>> TextLayout::locations(Index offsetInLine) const {
+					presentation::AbstractTwoAxes<Scalar>> TextLayout::locations(Index offset) const {
 				std::pair<presentation::AbstractTwoAxes<Scalar>, presentation::AbstractTwoAxes<Scalar>> result;
-				locations(offsetInLine, &result.first, &result.second);
+				locations(offset, &result.first, &result.second);
 				return result;
 			}
 

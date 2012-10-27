@@ -2454,18 +2454,16 @@ FlowRelativeFourSides<Scalar> TextLayout::bounds(const Range<Index>& characterRa
 			for(vector<Index>::const_iterator
 					line(begin(partiallyCoveredLines)), e(std::end(partiallyCoveredLines)); line != e; ++line) {
 				const RunVector::const_iterator lastRun(
-					(*line + 1 < numberOfLines()) ? begin(runs_) + lineFirstRuns_[*line + 1] : std::end(runs_));
+					(*line + 1 < numberOfLines()) ? firstRunInLine(*line + 1) : std::end(runs_));
 
 				// find 'start-edge'
-				InlineProgressionDimensionRangeIterator i(
-					makeRange(begin(runs_) + lineFirstRuns_[*line], lastRun),
+				InlineProgressionDimensionRangeIterator i(makeRange(firstRunInLine(*line), lastRun),
 					writingMode().inlineFlowDirection, effectiveCharacterRange, Direction::FORWARD, lineStartEdge(*line));
 				assert(i != InlineProgressionDimensionRangeIterator());
 				start = min(i->beginning(), start);
 
 				// find 'end-edge'
-				i = InlineProgressionDimensionRangeIterator(
-					makeRange(begin(runs_) + lineFirstRuns_[*line], lastRun),
+				i = InlineProgressionDimensionRangeIterator(makeRange(firstRunInLine(*line), lastRun),
 					writingMode().inlineFlowDirection, effectiveCharacterRange, Direction::BACKWARD, lineStartEdge(*line) + measure(*line));
 				assert(i != InlineProgressionDimensionRangeIterator());
 				end = max(i->end(), end);
@@ -2481,20 +2479,20 @@ FlowRelativeFourSides<Scalar> TextLayout::bounds(const Range<Index>& characterRa
 
 /**
  * Returns the bidirectional embedding level at specified position.
- * @param offsetInLine The offset in the line
+ * @param offset The offset in this layout
  * @return The embedding level
- * @throw kernel#BadPositionException @a offsetInLine is greater than the length of the line
+ * @throw kernel#BadPositionException @a offset is greater than the length of the layout
  */
-uint8_t TextLayout::characterLevel(Index offsetInLine) const {
+uint8_t TextLayout::characterLevel(Index offset) const {
 	if(isEmpty()) {
-		if(offsetInLine != 0)
-			throw kernel::BadPositionException(kernel::Position(0, offsetInLine));
+		if(offset != 0)
+			throw kernel::BadPositionException(kernel::Position(0, offset));
 		// use the default level
 		return (writingMode().inlineFlowDirection == RIGHT_TO_LEFT) ? 1 : 0;
 	}
-	const auto run(findRunForPosition(offsetInLine));
+	const auto run(runForPosition(offset));
 	if(run == end(runs_))
-		throw kernel::BadPositionException(kernel::Position(0, offsetInLine));
+		throw kernel::BadPositionException(kernel::Position(0, offset));
 	return (*run)->characterLevel();
 }
 
@@ -2533,36 +2531,25 @@ void TextLayout::draw(PaintContext& context,
 	// TODO: this code can't handle vertical text.
 
 	// calculate line range to draw
-	Range<Index> linesToDraw(0, numberOfLines());
-	NativePoint p(origin);
-	for(Index line = linesToDraw.beginning(); line < linesToDraw.end(); ++line) {
-		geometry::y(p) = baseline(line);
-		const Scalar lineBeforeEdge = geometry::y(p) - lineMetrics_[line]->ascent();
-		const Scalar lineAfterEdge = geometry::y(p) + lineMetrics_[line]->descent();
-		if(geometry::top(context.boundsToPaint()) >= lineBeforeEdge && geometry::top(context.boundsToPaint()) < lineAfterEdge)
-			linesToDraw = makeRange(line, linesToDraw.end());
-		if(geometry::bottom(context.boundsToPaint()) >= lineBeforeEdge && geometry::bottom(context.boundsToPaint()) < lineAfterEdge) {
-			linesToDraw = makeRange(linesToDraw.beginning(), line + 1);
+	FlowRelativeFourSides<Scalar> abstractBoundsToPaint;	// relative to the alignment point of this layout
+	mapPhysicalToAbstract(context.boundsToPaint(), origin, abstractBoundsToPaint);
+	Range<Index> linesToPaint(0, numberOfLines());
+	for(Index line = linesToPaint.beginning(); line < linesToPaint.end(); ++line) {
+		const Scalar bpd = baseline(line);
+		const Scalar lineBeforeEdge = bpd - lineMetrics_[line]->ascent();
+		const Scalar lineAfterEdge = bpd + lineMetrics_[line]->descent();
+		if(lineBeforeEdge <= abstractBoundsToPaint.before() && lineAfterEdge > abstractBoundsToPaint.before())
+			linesToPaint = makeRange(line, linesToPaint.end());
+		if(lineBeforeEdge <= abstractBoundsToPaint.after() && lineAfterEdge > abstractBoundsToPaint.after()) {
+			linesToPaint = makeRange(linesToPaint.beginning(), line + 1);
 			break;
 		}
 	}
 
 	// calculate inline area range to draw
-	Range<vector<const InlineArea*>::const_iterator> inlineAreasToDraw(inlineAreas_.begin(), inlineAreas_.end());
-	for(vector<const InlineArea*>::const_iterator i(inlineAreasToDraw.beginning()); i != inlineAreasToDraw.end(); ++i) {
-		const Index endOfInlineArea = (i != inlineAreasToDraw.end()) ? i[1]->position() : textString_.length();
-		if(endOfInlineArea > lineOffset(linesToDraw.beginning())) {
-			inlineAreasToDraw = makeRange(i, inlineAreasToDraw.end());
-			break;
-		}
-	}
-	for(vector<const InlineArea*>::const_iterator i(inlineAreasToDraw.beginning()); i != inlineAreasToDraw.end(); ++i) {
-		const Index endOfInlineArea = (i != inlineAreasToDraw.end()) ? i[1]->position() : textString_.length();
-		if(endOfInlineArea >= lineOffset(linesToDraw.beginning())) {
-			inlineAreasToDraw = makeRange(inlineAreasToDraw.beginning(), i + 1);
-			break;
-		}
-	}
+	const Range<const RunVector::const_iterator> textRunsToPaint(
+		firstRunInLine(linesToPaint.beginning()),
+		(linesToPaint.end() < numberOfLines()) ? firstRunInLine(linesToPaint.end()) : runs_.end());
 
 	// this code paints the line in the following steps:
 	// 1. calculate range of runs to paint
@@ -2587,22 +2574,23 @@ void TextLayout::draw(PaintContext& context,
 //	::SetTextAlign(context.nativeObject().get(), TA_TOP | TA_LEFT | TA_NOUPDATECP);
 
 	// 2. paint backgrounds and borders
-	for(vector<const InlineArea*>::const_iterator i(inlineAreasToDraw.beginning()), e; i != inlineAreasToDraw.end(); ++i) {
+	for(RunVector::const_iterator i(textRunsToPaint.beginning()), e; i != textRunsToPaint.end(); ++i) {
 		// TODO: recognize the override.
 		// TODO: this code can't handle sparse inline areas (with bidirectionality).
 		boost::optional<NativeRectangle> borderRectangle;
 
 		// 2-1. paint background if the property is specified (= if not transparent)
-		if((*i)->style()->background) {
-			borderRectangle = (*i)->borderRectangle();
+		const TextRunImpl& textRun = *static_cast<const TextRunImpl*>(i->get());
+		if(textRun.style()->background) {
+			borderRectangle = textRun.borderRectangle();
 			if(geometry::includes(context.boundsToPaint(), *borderRectangle)) {
-				context.setFillStyle((*i)->style()->background);
+				context.setFillStyle(textRun.style()->background);
 				context.fillRectangle(*borderRectangle);
 			}
 		}
 
 		// 2-2. paint border if the property is specified
-		assert((*i)->style()->color);
+		assert(textRun.style()->color);
 		detail::paintBorder(context, (*i)->borderRectangle(), (*i)->style()->border, *(*i)->style()->color, writingMode());
 
 		::ExcludeClipRect(context.asNativeObject().get(),
@@ -2611,7 +2599,7 @@ void TextLayout::draw(PaintContext& context,
 	}
 
 	// 3. for each text runs
-	for(Index line = linesToDraw.beginning(); line < linesToDraw.end(); ++line) {
+	for(Index line = linesToPaint.beginning(); line < linesToPaint.end(); ++line) {
 		if(!isEmpty()) {
 			// 3-1. calculate range of runs to paint
 			Range<const TextRun* const*> runs(runs_.get() + lineFirstRuns_[line],
@@ -2757,14 +2745,16 @@ void TextLayout::draw(PaintContext& context,
 #ifdef _DEBUG
 /**
  * Dumps the all runs to the specified output stream.
- * @param out the output stream
+ * @param out The output stream
  */
 void TextLayout::dumpRuns(ostream& out) const {
-	for(size_t i = 0; i < numberOfRuns_; ++i) {
-		const TextRun& run = *runs_[i];
-		out << static_cast<unsigned int>(i)
-			<< ":beginning=" << static_cast<unsigned int>(run.beginning())
-			<< ",length=" << static_cast<unsigned int>(length(run)) << endl;
+	const RunVector::const_iterator b(begin(runs_)), e(end(runs_));
+	const String::const_pointer backingStore = textString_.data();
+	for(RunVector::const_iterator i(b); i != e; ++i) {
+		const TextRunImpl& textRun = *static_cast<const TextRunImpl*>(i->get());
+		out << static_cast<unsigned int>(i - b)
+			<< ": [" << static_cast<unsigned int>(textRun.beginning() - backingStore)
+			<< "," << static_cast<unsigned int>(textRun.end() - backingStore) << ")" << std::endl;
 	}
 }
 #endif // _DEBUG
@@ -2841,18 +2831,33 @@ String TextLayout::fillToX(int x) const {
 }
 
 /**
- * Returns the index of run containing the specified offset in the line.
- * @param offsetInLine The offset in the line
- * @return The index of the run
+ * @internal 
+ * @param line
  */
-inline TextLayout::RunVector::const_iterator TextLayout::findRunForPosition(Index offsetInLine) const /*throw()*/ {
+inline TextLayout::RunVector::const_iterator TextLayout::firstRunInLine(Index line) const /*noexcept*/ {
+	assert(line <= numberOfLines());
+	if(firstRunsInLines_.get() == nullptr) {
+		assert(numberOfLines() == 1);
+		return begin(runs_);
+	}
+	return (line < numberOfLines()) ? firstRunsInLines_[line] : end(runs_);
+}
+
+/**
+ * @internal Returns the text run containing the specified offset in this layout.
+ * @param offset The offset in this layout
+ * @return An iterator addresses the text run
+ * @note If @a offset is equal to the length of this layout, returns the last text run.
+ */
+inline TextLayout::RunVector::const_iterator TextLayout::runForPosition(Index offset) const /*noexcept*/ {
 	assert(!isEmpty());
-	if(offsetInLine == textString_.length())
-		return numberOfRuns_ - 1;
-	const Index sl = lineAt(offsetInLine);
-	const size_t lastRun = (sl + 1 < numberOfLines()) ? lineFirstRuns_[sl + 1] : numberOfRuns_;
-	for(size_t i = lineFirstRuns_[sl]; i < lastRun; ++i) {
-		if(runs_[i]->beginning() <= offsetInLine && runs_[i]->end() > offsetInLine)	// TODO: replace with includes().
+	if(offset == textString_.length())
+		return end(runs_) - 1;
+	const String::const_pointer p(textString_.data() + offset);
+	const Index line = lineAt(offset);
+	const RunVector::const_iterator lastRun(firstRunInLine(line + 1));
+	for(RunVector::const_iterator i(firstRunInLine(line)); i < lastRun; ++i) {
+		if(includes(*static_cast<const TextRunImpl*>(i->get()), p))
 			return i;
 	}
 	ASCENSION_ASSERT_NOT_REACHED();
@@ -2864,26 +2869,27 @@ TextLayout::StyledSegmentIterator TextLayout::firstStyledSegment() const /*throw
 	return StyledSegmentIterator(temp);
 }
 #endif
-/// Returns if the line contains right-to-left run.
-bool TextLayout::isBidirectional() const /*throw()*/ {
+/**
+ * Returns if the line contains right-to-left run.
+ * @note This method's semantics seems to be strange. Is containning RTL run means bidi?
+ */
+bool TextLayout::isBidirectional() const /*noexcept*/ {
 	if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
 		return true;
-	for(size_t i = 0; i < numberOfRuns_; ++i) {
-		if(runs_[i]->readingDirection() == RIGHT_TO_LEFT)
+	for(auto i(begin(runs_)), e(end(runs_)); i != e; ++i) {
+		if((*i)->direction() == RIGHT_TO_LEFT)
 			return true;
 	}
 	return false;
 }
 
 /// Justifies the wrapped visual lines.
-inline void TextLayout::justify(TextJustification) /*throw()*/ {
-	assert(wrappingMeasure_ != -1);
+inline void TextLayout::justify(Scalar lineMeasure, TextJustification) /*throw()*/ {
 	for(Index line = 0; line < numberOfLines(); ++line) {
 		const int ipd = measure(line);
-		const size_t last = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
-		for(size_t i = lineFirstRuns_[line]; i < last; ++i) {
-			TextRun& run = *runs_[i];
-			const int newRunMeasure = ::MulDiv(run.totalWidth(), wrappingMeasure_, ipd);	// TODO: there is more precise way.
+		for(auto i(firstRunInLine(line)), e(firstRunInLine(line + 1)); i != e; ++i) {
+			TextRunImpl& run = *const_cast<TextRunImpl*>(static_cast<const TextRunImpl*>(i->get()));
+			const int newRunMeasure = ::MulDiv(run.measure(), lineMeasure, ipd);	// TODO: there is more precise way.
 			run.justify(newRunMeasure);
 		}
 	}
@@ -2920,6 +2926,37 @@ FlowRelativeFourSides<Scalar> TextLayout::lineBounds(Index line) const {
 		(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? start : start - geometry::dx(size), before));
 	return geometry::make<NativeRectangle>(origin, size);
 */
+}
+
+/**
+ * Returns the offset for the first character in the specified line.
+ * @param line The visual line number
+ * @return The offset
+ * @throw BadPositionException @a line is greater than the number of lines
+ * @see #lineOffsets
+ * @note Designed based on @c org.eclipse.swt.graphics.TextLayout.lineOffsets method in Eclipse.
+ */
+Index TextLayout::lineOffset(Index line) const {
+	if(line >= numberOfLines())
+		throw kernel::BadPositionException(kernel::Position(line, 0));
+	return static_cast<const TextRunImpl*>(firstRunInLine(line)->get())->beginning() - textString_.data();
+}
+
+/**
+ * Returns the line offsets. Each value in the vector is the offset for the first character in a
+ * line except for the last value, which contains the length of the text.
+ * @return The line offsets whose length is @c #numberOfLines(). Each element in the
+ *         array is the offset for the first character in a line
+ * @note Designed based on @c org.eclipse.swt.graphics.TextLayout.lineOffsets method in Eclipse.
+ */
+vector<Index>&& TextLayout::lineOffsets() const /*noexcept*/ {
+	const String::const_pointer bol = textString_.data();
+	vector<Index> offsets;
+	offsets.reserve(numberOfLines() + 1);
+	for(Index line = 0; line < numberOfLines(); ++line)
+		offsets.push_back(static_cast<const TextRunImpl*>(firstRunInLine(line)->get())->beginning() - bol);
+	offsets.push_back(textString_.length());
+	return move(offsets);
 }
 
 /**
@@ -3018,10 +3055,10 @@ pair<Index, Index> TextLayout::locateOffsets(Index line, Scalar ipd, bool& outsi
 }
 
 // implements public location methods
-void TextLayout::locations(Index offsetInLine, AbstractTwoAxes<Scalar>* leading, AbstractTwoAxes<Scalar>* trailing) const {
+void TextLayout::locations(Index offset, AbstractTwoAxes<Scalar>* leading, AbstractTwoAxes<Scalar>* trailing) const {
 	assert(leading != nullptr || trailing != nullptr);
-	if(offsetInLine > textString_.length())
-		throw kernel::BadPositionException(kernel::Position(0, offsetInLine));
+	if(offset > textString_.length())
+		throw kernel::BadPositionException(kernel::Position(0, offset));
 
 	Scalar leadingIpd, trailingIpd, bpd = 0/* + lineMetrics_[0]->leading()*/;
 	if(isEmpty()) {
@@ -3029,8 +3066,8 @@ void TextLayout::locations(Index offsetInLine, AbstractTwoAxes<Scalar>* leading,
 		bpd += lineMetrics_[0]->ascent();
 	} else {
 		// inline-progression-dimension
-		const StringPiece::const_pointer at = textString_.data() + offsetInLine;
-		const Index line = lineAt(offsetInLine);
+		const StringPiece::const_pointer at = textString_.data() + offset;
+		const Index line = lineAt(offset);
 		const Index firstRun = lineFirstRuns_[line];
 		const Index lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
 		if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) {	// LTR
@@ -3295,14 +3332,14 @@ void TextLayout::stackLines(LineStackingStrategy lineStackingStrategy, const Fon
 #if 0
 /**
  * Returns the styled text run containing the specified offset in the line.
- * @param offsetInLine The offset in the line
+ * @param offset The offset in this layout
  * @return the styled segment
- * @throw kernel#BadPositionException @a offsetInLine is greater than the length of the line
+ * @throw kernel#BadPositionException @a offset is greater than the length of this layout
  */
-StyledRun TextLayout::styledTextRun(Index offsetInLine) const {
-	if(offsetInLine > text().length())
-		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, offsetInLine));
-	const TextRun& run = *runs_[findRunForPosition(offsetInLine)];
+StyledRun TextLayout::styledTextRun(Index offset) const {
+	if(offset > text().length())
+		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, offset));
+	const TextRun& run = *runs_[findRunForPosition(offset)];
 	return StyledRun(run.offsetInLine(), run.requestedStyle());
 }
 #endif
