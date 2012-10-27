@@ -3077,12 +3077,11 @@ void TextLayout::locations(Index offset, AbstractTwoAxes<Scalar>* leading, Abstr
 		// inline-progression-dimension
 		const StringPiece::const_pointer at = textString_.data() + offset;
 		const Index line = lineAt(offset);
-		const Index firstRun = lineFirstRuns_[line];
-		const Index lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
+		const Range<const RunVector::const_iterator> runsInLine(firstRunInLine(line), firstRunInLine(line + 1));
 		if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) {	// LTR
 			Scalar ipd = lineStartEdge(line);
-			for(size_t i = firstRun; i < lastRun; ++i) {
-				const TextRunImpl& run = *static_cast<const TextRunImpl*>(runs_[i].get());	// TODO: Down-cast.
+			for(RunVector::const_iterator i(runsInLine.beginning()); i != runsInLine.end(); ++i) {
+				const TextRunImpl& run = *static_cast<const TextRunImpl*>(i->get());	// TODO: Down-cast.
 				if(at >= run.beginning() && at <= run.end()) {
 					if(leading != nullptr)
 						leadingIpd = ipd + run.leadingEdge(at - run.beginning());
@@ -3094,8 +3093,8 @@ void TextLayout::locations(Index offset, AbstractTwoAxes<Scalar>* leading, Abstr
 			}
 		} else {	// RTL
 			Scalar ipd = lineStartEdge(line);
-			for(size_t i = lastRun - 1; ; --i) {
-				const TextRunImpl& run = *static_cast<const TextRunImpl*>(runs_[i].get());	// TODO: Down-cast.
+			for(RunVector::const_iterator i(runsInLine.end() - 1); ; --i) {
+				const TextRunImpl& run = *static_cast<const TextRunImpl*>(i->get());	// TODO: Down-cast.
 				if(at >= run.beginning() && at <= run.end()) {
 					if(leading != nullptr)
 						leadingIpd = ipd + run.leadingEdge(at - run.beginning());
@@ -3103,7 +3102,7 @@ void TextLayout::locations(Index offset, AbstractTwoAxes<Scalar>* leading, Abstr
 						trailingIpd = ipd + run.trailingEdge(at - run.beginning());
 					break;
 				}
-				if(i == firstRun) {
+				if(i == runsInLine.beginning()) {
 					ASCENSION_ASSERT_NOT_REACHED();
 					break;
 				}
@@ -3152,7 +3151,7 @@ Scalar TextLayout::measure(Index line) const {
 	if(line >= numberOfLines())
 		throw IndexOutOfBoundsException("line");
 	else if(isEmpty())
-		return const_cast<TextLayout*>(this)->maximumMeasure_ = 0;
+		return boost::get(const_cast<TextLayout*>(this)->maximumMeasure_ = 0);
 	else {
 		TextLayout& self = const_cast<TextLayout&>(*this);
 		if(numberOfLines() == 1) {
@@ -3166,10 +3165,10 @@ Scalar TextLayout::measure(Index line) const {
 			if(measures_[line] >= 0)
 				return measures_[line];
 		}
-		const size_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
+		const RunVector::const_iterator lastRun = firstRunInLine(line + 1);
 		Scalar ipd = 0;
-		for(size_t i = lineFirstRuns_[line]; i < lastRun; ++i)
-			ipd += runs_[i]->totalWidth();
+		for(RunVector::const_iterator i(firstRunInLine(line)); i != lastRun; ++i)
+			ipd += (*i)->measure();
 		assert(ipd >= 0);
 		if(numberOfLines() == 1)
 			self.maximumMeasure_ = ipd;
@@ -3202,7 +3201,7 @@ pair<Index, Index> TextLayout::offset(const NativePoint& p, bool* outside /* = n
 inline void TextLayout::reorder() /*throw()*/ {
 	if(isEmpty())
 		return;
-	unique_ptr<TextRun*[]> temp(new TextRun*[numberOfRuns_]);
+	unique_ptr<unique_ptr<TextRun>[]> temp(new unique_ptr<TextRun>[runs_.size()]);
 	copy(runs_.get(), runs_.get() + numberOfRuns_, temp.get());
 	for(Index line = 0; line < numberOfLines(); ++line) {
 		const size_t numberOfRunsInLine = ((line < numberOfLines() - 1) ?
