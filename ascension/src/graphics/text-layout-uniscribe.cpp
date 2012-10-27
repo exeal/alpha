@@ -28,7 +28,6 @@ using namespace ascension::presentation;
 using namespace ascension::text;
 using namespace ascension::text::ucd;
 using namespace std;
-namespace k = ascension::kernel;
 
 #pragma comment(lib, "usp10.lib")
 
@@ -2295,15 +2294,27 @@ TextAlignment TextLayout::alignment() const /*throw()*/ {
 }
 #endif
 /**
+ * Returns the computed text anchor of the specified visual line.
+ * @param line The visual line number
+ * @return The computed text anchor value
+ * @throw kernel#BadPositionException @a line is greater than the number of lines
+ */
+TextAnchor TextLayout::anchor(Index line) const {
+	if(line >= numberOfLines())
+		throw kernel::BadPositionException(kernel::Position(line, 0));
+	return TextAnchor::START;	// TODO: Not implemented.
+}
+
+/**
  * Returns distance from the baseline of the first line to the baseline of the
  * specified line in pixels.
  * @param line The line number
  * @return The baseline position 
- * @throw BadPositionException @a line is greater than the count of lines
+ * @throw kernel#BadPositionException @a line is greater than the number of lines
  */
 Scalar TextLayout::baseline(Index line) const {
 	if(line >= numberOfLines())
-		throw kernel::BadPositionException(k::Position(line, 0));
+		throw kernel::BadPositionException(kernel::Position(line, 0));
 	else if(line == 0)
 		return 0;
 	Scalar result = 0;
@@ -2974,12 +2985,12 @@ vector<Index>&& TextLayout::lineOffsets() const /*noexcept*/ {
 Scalar TextLayout::lineStartEdge(Index line) const {
 	if(line == 0)
 		return 0;
-	switch(anchor()) {
-	case TEXT_ANCHOR_START:
+	switch(anchor(line)) {
+	case TextAnchor::START:
 		return 0;
-	case TEXT_ANCHOR_MIDDLE:
+	case TextAnchor::MIDDLE:
 		return (measure(0) - measure(line)) / 2;
-	case TEXT_ANCHOR_END:
+	case TextAnchor::END:
 		return measure(0) - measure(line);
 	default:
 		ASCENSION_ASSERT_NOT_REACHED();
@@ -3021,37 +3032,35 @@ Index TextLayout::locateLine(Scalar bpd, bool& outside) const /*throw()*/ {
 pair<Index, Index> TextLayout::locateOffsets(Index line, Scalar ipd, bool& outside) const {
 	if(isEmpty())
 		return (outside = true), make_pair(static_cast<Index>(0), static_cast<Index>(0));
-	const size_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
 
-	if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) {
-		Scalar x = lineStartEdge(line);
-		if(ipd < x) {	// beyond the left-edge => the start of the first run
-			const Index offsetInLine = runs_[lineFirstRuns_[line]]->beginning();
-			return (outside = true), make_pair(offsetInLine, offsetInLine);
-		}
-		for(size_t i = lineFirstRuns_[line]; i < lastRun; ++i) {	// scan left to right
-			const TextRun& run = *runs_[i];
-			if(ipd >= x && ipd <= x + run.totalWidth()) {
-				int cp, trailing;
-				run.hitTest(ipd - x, cp, trailing);	// TODO: check the returned value.
-				const Index temp = run.beginning() + static_cast<Index>(cp);
-				return (outside = false), make_pair(temp, temp + static_cast<Index>(trailing));
-			}
-			x += run.totalWidth();
-		}
-		// beyond the right-edge => the end of last run
-		const Index offsetInLine = runs_[lastRun - 1]->end();
-		return (outside = true), make_pair(offsetInLine, offsetInLine);
-	} else {
-		Scalar x = -lineStartEdge(line);
-		if(ipd > x) {	// beyond the right-edge => the start of the last run
-			const Index offsetInLine = runs_[lastRun - 1]->beginning();
-			return (outside = true), make_pair(offsetInLine, offsetInLine);
-		}
-		// beyond the left-edge => the end of the first run
-		const Index offsetInLine = runs_[lineFirstRuns_[line]]->end();
-		return (outside = true), make_pair(offsetInLine, offsetInLine);
+	const Range<const RunVector::const_iterator> runsInLine(firstRunInLine(line), firstRunInLine(line + 1));
+	const StringPiece characterRangeInLine(static_cast<const TextRunImpl*>(runsInLine.beginning()->get())->beginning(), lineLength(line));
+	assert(characterRangeInLine.end() == static_cast<const TextRunImpl*>((runsInLine.end() - 1)->get())->end());
+
+	const Scalar lineStart = lineStartEdge(line);
+	if(ipd < lineStart) {
+		const Index offset = characterRangeInLine.beginning() - textString_.data();
+		return (outside = true), make_pair(offset, offset);
 	}
+	outside = ipd > lineStart + measure(line);	// beyond line 'end-edge'
+
+	if(!outside) {
+		Scalar x = ipd - lineStart, dx = 0;
+		if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
+			x = measure(line) - x;
+		for(RunVector::const_iterator i(runsInLine.beginning()); i != runsInLine.end(); ++i) {
+			const Scalar nextDx = dx + (*i)->measure();
+			dx += (*i)->measure();
+			if(nextDx >= x) {
+				const Scalar ipdInRun = ((*i)->direction() == LEFT_TO_RIGHT) ? x - dx : nextDx - x;
+				return make_pair((*i)->characterEncompassesPosition(ipdInRun), (*i)->characterHasClosestLeadingEdge(ipdInRun));
+			}
+		}
+	}
+
+	// maybe beyond line 'end-edge'
+	const Index offset = characterRangeInLine.end() - textString_.data();
+	return make_pair(offset, offset);
 }
 
 // implements public location methods
