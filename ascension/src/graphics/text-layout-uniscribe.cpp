@@ -3376,6 +3376,7 @@ void TextLayout::wrap(Scalar measure, const TabExpander& tabExpander) /*noexcept
 	Index longestRunLength = 0;	// for efficient allocation
 	vector<TextRun*> runs;
 	runs.reserve(runs_.size() * 3 / 2);
+	vector<unique_ptr<TextRunImpl>> createdRuns;	// for only exception safety
 	// for each runs... (at this time, 'runs_' is in logical order)
 	for(RunVector::iterator i(begin(runs_)), e(end(runs_)); i != e; ++i) {
 		TextRunImpl* run = const_cast<TextRunImpl*>(static_cast<const TextRunImpl*>(i->get()));
@@ -3458,7 +3459,8 @@ void TextLayout::wrap(Scalar measure, const TabExpander& tabExpander) /*noexcept
 					assert(firstRunsInLines.empty() || runs.size() != firstRunsInLines.back());
 					firstRunsInLines.push_back(runs.size());
 //dout << L"broke the line at " << lastBreakable << L" where the run meddle.\n";
-					run = followingRun.release();	// continue the process about this run
+					createdRuns.push_back(move(followingRun));
+					run = createdRuns.back().get();	// continue the process about this run
 				}
 				widthInThisRun = x1 + widthInThisRun - lastBreakableX;
 				lastBreakableX -= x1;
