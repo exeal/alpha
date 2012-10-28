@@ -39,11 +39,11 @@ namespace ascension {
 				virtual ~TabExpander() /*noexcept*/ {}
 				/**
 				 * Returns the next tab stop position given a reference position.
-				 * @param x The position in pixels
+				 * @param ipd The position in pixels
 				 * @param tabOffset The position within the underlying text that the tab occured
-				 * @return The next tab stop. Should be greater than @a x
+				 * @return The next tab stop. Should be greater than @a ipd
 				 */
-				virtual Scalar nextTabStop(Scalar x, Index tabOffset) const = 0;
+				virtual Scalar nextTabStop(Scalar ipd, Index tabOffset) const = 0;
 			};
 
 			/// Standard implementation of @c TabExpander with fixed width tabulations.

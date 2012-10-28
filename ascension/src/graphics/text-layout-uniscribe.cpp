@@ -530,7 +530,7 @@ namespace {
 		// layout
 		unique_ptr<TextRunImpl> breakAt(StringPiece::const_pointer at);
 		bool expandTabCharacters(const TabExpander& tabExpander,
-			StringPiece::const_pointer layoutString, Scalar x, Scalar maximumMeasure);
+			const String& layoutString, Scalar ipd, Scalar maximumMeasure);
 		HRESULT justify(int width);
 #if 0
 		static void mergeScriptsAndStyles(const StringPiece& layoutString, const SCRIPT_ITEM scriptRuns[],
@@ -794,22 +794,20 @@ inline size_t TextRunImpl::countMissingGlyphs(const RenderingContext2D& context)
 /**
  * Expands tab characters in this run and modifies the measure (advance).
  * @param tabExpander The tab expander
- * @param layoutString A pointer to the whole string of the layout this run belongs to
- * @param x The position in writing direction this run begins, in pixels
- * @param maximumMeasure The maximum measure this run can take place, in pixels
+ * @param layoutString The text string for the layout to which this text run belongs
+ * @param ipd The position in writing direction this text run begins, in pixels
+ * @param maximumMeasure The maximum measure this text run can take place, in pixels
  * @return @c true if expanded tab characters
- * @throw NullPointerException @a layoutString is @c null
  * @throw std#invalid_argument @a maximumMeasure &lt;= 0
  */
 inline bool TextRunImpl::expandTabCharacters(
-		const TabExpander& tabExpander, StringPiece::const_pointer layoutString, Scalar x, Scalar maximumMeasure) {
-	raiseIfNull(layoutString, "layoutString");
+		const TabExpander& tabExpander, const String& layoutString, Scalar ipd, Scalar maximumMeasure) {
 	if(maximumMeasure <= 0)
 		throw invalid_argument("maximumMeasure");
 	if(*beginning() != '\t')
 		return false;
 	assert(ascension::length(*this) == 1 && glyphs_.unique());
-	glyphs_->advances[0] = min(tabExpander.nextTabStop(x, beginning() - layoutString), maximumMeasure);
+	glyphs_->advances[0] = min(tabExpander.nextTabStop(ipd, beginning() - layoutString.data()), maximumMeasure);
 	glyphs_->justifiedAdvances.reset();
 	return true;
 }
@@ -3279,30 +3277,31 @@ ReadingDirection TextLayout::readingDirection() const /*throw()*/ {
 
 /**
  * Stacks the line boxes and compute the line metrics.
+ * @param lineHeight
  * @param lineStackingStrategy
  * @param nominalFont
- * @param lineHeight
  */
-void TextLayout::stackLines(LineStackingStrategy lineStackingStrategy, const Font& nominalFont, Scalar lineHeight) {
+void TextLayout::stackLines(boost::optional<Scalar> lineHeight, LineBoxContain lineBoxContain, const Font& nominalFont) {
 	// TODO: this code is temporary. should rewrite later.
 	// calculate allocation-rectangle of the lines according to line-stacking-strategy
-	const Scalar textAltitude = nominalFont.metrics().ascent();
-	const Scalar textDepth = nominalFont.metrics().descent();
+	const Scalar textAltitude = nominalFont.metrics()->ascent();
+	const Scalar textDepth = nominalFont.metrics()->descent();
 	vector<pair<Scalar, Scalar>> v;
 	for(Index line = 0; line < numberOfLines(); ++line) {
 		// calculate extent of the line in block-progression-direction
 		Scalar ascent, descent;
-		switch(lineStackingStrategy) {
+#if 0
+		switch(lineBoxContain) {
 			case LINE_HEIGHT: {
 				// allocation-rectangle of line is per-inline-height-rectangle
 				Scalar leading = lineHeight - (textAltitude + textDepth);
 				ascent = textAltitude + (leading - leading / 2);
 				descent = textDepth + leading / 2;
-				const TextRun* const lastRun = runs_[(line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_];
-				for(const TextRun* run = runs_[lineFirstRuns_[line]]; run != lastRun; ++run) {
-					leading = lineHeight - nominalFont.metrics().cellHeight();
-					ascent = max(run->font()->metrics().ascent() - (leading - leading / 2), ascent);
-					descent = max(run->font()->metrics().descent() - leading / 2, descent);
+				const RunVector::const_iterator lastRun(firstRunInLine(line + 1));
+				for(RunVector::const_iterator run(firstRunInLine(line)); run != lastRun; ++run) {
+					leading = lineHeight - nominalFont.metrics()->cellHeight();
+					ascent = max((*run)->font()->metrics()->ascent() - (leading - leading / 2), ascent);
+					descent = max((*run)->font()->metrics()->descent() - leading / 2, descent);
 				}
 				break;
 			}
@@ -3315,16 +3314,20 @@ void TextLayout::stackLines(LineStackingStrategy lineStackingStrategy, const Fon
 				// allocation-rectangle of line is maximum-line-rectangle
 				ascent = textAltitude;
 				descent = textDepth;
-				const TextRun* const lastRun = runs_[(line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_];
-				for(const TextRun* run = runs_[lineFirstRuns_[line]]; run != lastRun; ++run) {
-					ascent = max(run->font()->metrics().ascent(), ascent);
-					descent = max(run->font()->metrics().descent(), descent);
+				const RunVector::const_iterator lastRun(firstRunInLine(line + 1));
+				for(RunVector::const_iterator run(firstRunInLine(line)); run != lastRun; ++run) {
+					ascent = max((*run)->font()->metrics()->ascent(), ascent);
+					descent = max((*run)->font()->metrics()->descent(), descent);
 				}
 				break;
 			}
 			default:
 				ASCENSION_ASSERT_NOT_REACHED();
 		}
+#else
+		ascent = textAltitude;
+		descent = textDepth;
+#endif
 		v.push_back(make_pair(ascent, descent));
 	}
 
@@ -3356,69 +3359,73 @@ StyledRun TextLayout::styledTextRun(Index offset) const {
 }
 #endif
 
-/// Locates the wrap points and resolves tab expansions.
-void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
-	assert(!isEmpty() && wrappingMeasure_ != numeric_limits<Scalar>::max());
-	assert(numberOfLines_ == 0 && lineOffsets_.get() == nullptr && lineFirstRuns_.get() == nullptr);
+/**
+ * @internal Locates the wrap points and resolves tab expansions.
+ * @param measure
+ * @param tabExpander
+ */
+void TextLayout::wrap(Scalar measure, const TabExpander& tabExpander) /*noexcept*/ {
+	assert(!isEmpty());
+	assert(numberOfLines_ == 0 && firstRunsInLines_.get() == nullptr);
 
-	vector<Index> lineFirstRuns;
-	lineFirstRuns.push_back(0);
+	vector<Index> firstRunsInLines;
+	firstRunsInLines.push_back(0);
 	int x1 = 0;	// addresses the beginning of the run. see x2
 	unique_ptr<int[]> logicalWidths;
 	unique_ptr<SCRIPT_LOGATTR[]> logicalAttributes;
 	Index longestRunLength = 0;	// for efficient allocation
-	vector<TextRun*> newRuns;
-	newRuns.reserve(numberOfRuns_ * 3 / 2);
-	// for each runs... (at this time, runs_ is in logical order)
-	for(size_t i = 0; i < numberOfRuns_; ++i) {
-		TextRun* run = runs_[i];
+	vector<TextRun*> runs;
+	runs.reserve(runs_.size() * 3 / 2);
+	// for each runs... (at this time, 'runs_' is in logical order)
+	for(RunVector::iterator i(begin(runs_)), e(end(runs_)); i != e; ++i) {
+		TextRunImpl* run = const_cast<TextRunImpl*>(static_cast<const TextRunImpl*>(i->get()));
 
 		// if the run is a tab, expand and calculate actual width
 		if(run->expandTabCharacters(tabExpander, textString_,
-				(x1 < wrappingMeasure_) ? x1 : 0, wrappingMeasure_ - (x1 < wrappingMeasure_) ? x1 : 0)) {
-			if(x1 < wrappingMeasure_) {
-				x1 += run->totalWidth();
-				newRuns.push_back(run);
+				(x1 < measure) ? x1 : 0, measure - (x1 < measure) ? x1 : 0)) {
+			if(x1 < measure) {
+				x1 += run->measure();
+				runs.push_back(run);
 			} else {
-				x1 = run->totalWidth();
-				newRuns.push_back(run);
-				lineFirstRuns.push_back(newRuns.size());
+				x1 = run->measure();
+				runs.push_back(run);
+				firstRunsInLines.push_back(runs.size());
 			}
 			continue;
 		}
 
 		// obtain logical widths and attributes for all characters in this run to determine line break positions
-		if(length(*run) > longestRunLength) {
+		if(static_cast<Index>(length(*run)) > longestRunLength) {
 			longestRunLength = length(*run);
 			longestRunLength += 16 - longestRunLength % 16;
 			logicalWidths.reset(new int[longestRunLength]);
 			logicalAttributes.reset(new SCRIPT_LOGATTR[longestRunLength]);
 		}
 		HRESULT hr = run->logicalWidths(logicalWidths.get());
-		hr = run->logicalAttributes(textString_, logicalAttributes.get());
-		const Index originalRunPosition = run->beginning();
+		hr = run->logicalAttributes(logicalAttributes.get());
+		const String::const_pointer originalRunPosition = run->beginning();
 		int widthInThisRun = 0;
-		Index lastBreakable = run->beginning(), lastGlyphEnd = run->beginning();
+		String::const_pointer lastBreakable = run->beginning(), lastGlyphEnd = run->beginning();
 		int lastBreakableX = x1, lastGlyphEndX = x1;
 		// for each characters in the run...
-		for(Index j = run->beginning(); j < run->end(); ) {	// j is position in the LOGICAL line
+		for(String::const_pointer j = run->beginning(); j < run->end(); ) {	// j is position in the LOGICAL line
 			const int x2 = x1 + widthInThisRun;
 			// remember this opportunity
-			if(logicalAttributes[j - originalRunPosition].fCharStop != 0) {
+			if(logicalAttributes[j - run->beginning()].fCharStop != 0) {
 				lastGlyphEnd = j;
 				lastGlyphEndX = x2;
-				if(logicalAttributes[j - originalRunPosition].fSoftBreak != 0
-						|| logicalAttributes[j - originalRunPosition].fWhiteSpace != 0) {
+				if(logicalAttributes[j - run->beginning()].fSoftBreak != 0
+						|| logicalAttributes[j - run->beginning()].fWhiteSpace != 0) {
 					lastBreakable = j;
 					lastBreakableX = x2;
 				}
 			}
 			// break if the width of the visual line overs the wrap width
-			if(x2 + logicalWidths[j - originalRunPosition] > wrappingMeasure_) {
+			if(x2 + logicalWidths[j - run->beginning()] > measure) {
 				// the opportunity is the start of this run
 				if(lastBreakable == run->beginning()) {
 					// break at the last glyph boundary if no opportunities
-					if(lineFirstRuns.empty() || lineFirstRuns.back() == newRuns.size()) {
+					if(firstRunsInLines.empty() || firstRunsInLines.back() == runs.size()) {
 						if(lastGlyphEnd == run->beginning()) {	// break here if no glyph boundaries
 							lastBreakable = j;
 							lastBreakableX = x2;
@@ -3431,25 +3438,25 @@ void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
 
 				// case 1: break at the start of the run
 				if(lastBreakable == run->beginning()) {
-					assert(lineFirstRuns.empty() || newRuns.size() != lineFirstRuns.back());
-					lineFirstRuns.push_back(newRuns.size());
+					assert(firstRunsInLines.empty() || runs.size() != firstRunsInLines.back());
+					firstRunsInLines.push_back(runs.size());
 //dout << L"broke the line at " << lastBreakable << L" where the run start.\n";
 				}
 				// case 2: break at the end of the run
 				else if(lastBreakable == run->end()) {
-					if(lastBreakable < textString_.length()) {
-						assert(lineFirstRuns.empty() || newRuns.size() != lineFirstRuns.back());
-						lineFirstRuns.push_back(newRuns.size() + 1);
+					if(lastBreakable < textString_.data() + textString_.length()) {
+						assert(firstRunsInLines.empty() || runs.size() != firstRunsInLines.back());
+						firstRunsInLines.push_back(runs.size() + 1);
 //dout << L"broke the line at " << lastBreakable << L" where the run end.\n";
 					}
 					break;
 				}
 				// case 3: break at the middle of the run -> split the run (run -> newRun + run)
 				else {
-					unique_ptr<TextRun> followingRun(run->breakAt(lastBreakable, textString_));
-					newRuns.push_back(run);
-					assert(lineFirstRuns.empty() || newRuns.size() != lineFirstRuns.back());
-					lineFirstRuns.push_back(newRuns.size());
+					unique_ptr<TextRunImpl> followingRun(run->breakAt(lastBreakable));
+					runs.push_back(run);
+					assert(firstRunsInLines.empty() || runs.size() != firstRunsInLines.back());
+					firstRunsInLines.push_back(runs.size());
 //dout << L"broke the line at " << lastBreakable << L" where the run meddle.\n";
 					run = followingRun.release();	// continue the process about this run
 				}
@@ -3461,25 +3468,29 @@ void TextLayout::wrap(const TabExpander& tabExpander) /*throw()*/ {
 			} else
 				widthInThisRun += logicalWidths[j++ - originalRunPosition];
 		}
-		newRuns.push_back(run);
+		runs.push_back(run);
 		x1 += widthInThisRun;
 	}
 //dout << L"...broke the all lines.\n";
-	if(newRuns.empty())
-		newRuns.push_back(nullptr);
-	runs_.reset(new TextRun*[numberOfRuns_ = newRuns.size()]);
-	copy(newRuns.begin(), newRuns.end(), runs_.get());
+#if 0
+	if(runs.empty())
+		runs.push_back(nullptr);
+#else
+	assert(!runs.empty());
+#endif
 
-	{
-		assert(numberOfLines() > 1);
-		unique_ptr<Index[]> temp(new Index[numberOfLines_ = lineFirstRuns.size()]);
-		copy(lineFirstRuns.begin(), lineFirstRuns.end(), temp.get());
-		lineFirstRuns_ = move(temp);
-	}
+	// commit
+	decltype(runs_) newRuns(runs.size());
+	assert(numberOfLines() > 1);	// ???
+	firstRunsInLines_.reset(new RunVector::const_iterator[firstRunsInLines.size()]);
 
-	lineOffsets_ = move(unique_ptr<Index[]>(new Index[numberOfLines()]));
-	for(size_t i = 0; i < numberOfLines(); ++i)
-		const_cast<Index&>(lineOffsets_[i]) = runs_[lineFirstRuns_[i]]->beginning();
+	for(auto i(begin(runs_)), e(end(runs_)); i != e; ++i)
+		i->release();
+	for(RunVector::size_type i = 0, c = runs.size(); i < c; ++i)
+		newRuns[i].reset(runs[i]);
+	runs_ = move(newRuns);
+	for(vector<Index>::size_type i = 0, c = firstRunsInLines.size(); i < c; ++i)
+		firstRunsInLines_[i] = begin(runs_) + firstRunsInLines[i];
 }
 
 #if 0
