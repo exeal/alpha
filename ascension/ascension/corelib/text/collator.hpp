@@ -29,14 +29,14 @@ namespace ascension {
 				private boost::totally_ordered<CollationKey> {
 		public:
 			CollationKey() /*throw()*/ : length_(0) {}
-			CollationKey(std::unique_ptr<const uint8_t[]> keyValues,
+			CollationKey(std::unique_ptr<const std::uint8_t[]> keyValues,
 				std::size_t length) : keyValues_(keyValues), length_(length) {}
 			CollationKey(const CollationKey& other);
 			CollationKey&operator=(const CollationKey& other);
 			bool operator==(const CollationKey& other) const /*throw()*/;
 			bool operator<(const CollationKey& other) const /*throw()*/;
 		private:
-			const std::unique_ptr<const uint8_t[]> keyValues_;
+			const std::unique_ptr<const std::uint8_t[]> keyValues_;
 			const std::size_t length_;
 		};
 

@@ -304,7 +304,7 @@ namespace ascension {
 				// graphics.RenderingDevice
 				std::unique_ptr<graphics::RenderingContext2D> createRenderingContext() const;
 				int depth();
-				uint32_t numberOfColors();
+				std::uint32_t numberOfColors();
 				graphics::geometry::Coordinate<graphics::NativeSize>::Type height() const;
 				graphics::geometry::Coordinate<graphics::NativeSize>::Type heightInMillimeters() const;
 				graphics::geometry::Coordinate<graphics::NativeSize>::Type logicalDpiX() const;

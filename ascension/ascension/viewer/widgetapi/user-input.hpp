@@ -28,7 +28,7 @@ namespace ascension {
 			/// Abstract class represents a user input.
 			class UserInput : public Event {
 			public:
-				typedef uint16_t ModifierKey;
+				typedef std::uint16_t ModifierKey;
 				static const ModifierKey
 					/// The Shift key is down.
 					SHIFT_DOWN		= 1 << 0,
@@ -43,7 +43,7 @@ namespace ascension {
 				/**
 				 * @note Defined here because these values also can be used as modifiers.
 				 */
-				typedef uint16_t MouseButton;
+				typedef std::uint16_t MouseButton;
 				static const MouseButton
 					/// The Mouse Button1 (usually left button) is down.
 					BUTTON1_DOWN	= 1 << 5,
@@ -132,7 +132,7 @@ namespace ascension {
 
 			class KeyInput : public UserInput {
 			public:
-				typedef uint32_t Code;	///< Keyboard codes.
+				typedef std::uint32_t Code;	///< Keyboard codes.
 			public:
 				KeyInput(Code keyboardCode, ModifierKey modifiers, int repeatCount, int messageFlags)
 					: UserInput(modifiers), keyboardCode_(keyboardCode), repeatCount_(repeatCount), messageFlags_(messageFlags) {}

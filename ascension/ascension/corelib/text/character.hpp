@@ -3,6 +3,7 @@
  * @author exeal
  * @date 2005-2011 was unicode.hpp
  * @date 2011-04-27 renamed from unicode.hpp
+ * @date 2012
  */
 
 #ifndef ASCENSION_CHARACTER_HPP
@@ -105,9 +106,9 @@ namespace ascension {
 					throw std::length_error("maximalSubpartLength");
 			}
 			/// Returns the length of the maximal subpart.
-			std::size_t maximalSubpartLength() const /*throw()*/ {return maximalSubpartLength_;}
+			std::size_t maximalSubpartLength() const /*noexcept*/ {return maximalSubpartLength_;}
 			/// Returns the position where the malformed input was found.
-			const InputIterator& position() const /*throw()*/ {return position_;}
+			const InputIterator& position() const /*noexcept*/ {return position_;}
 		private:
 			const InputIterator position_;
 			const std::size_t maximalSubpartLength_;	// see Unicode 6.0, D39b
@@ -123,7 +124,7 @@ namespace ascension {
 			 * @param c The code point
 			 * @return true if @a c is supplemental
 			 */
-			inline bool isSupplemental(CodePoint c) /*throw()*/ {
+			inline bool isSupplemental(CodePoint c) /*noexcept*/ {
 				return (c & 0xffff0000ul) != 0;
 			}
 
@@ -132,7 +133,7 @@ namespace ascension {
 			 * @param c The code point
 			 * @return true if @a c is high-surrogate
 			 */
-			inline bool isHighSurrogate(CodePoint c) /*throw()*/ {
+			inline bool isHighSurrogate(CodePoint c) /*noexcept*/ {
 				return (c & 0xfffffc00ul) == 0xd800u;
 			}
 
@@ -141,7 +142,7 @@ namespace ascension {
 			 * @param c The code point
 			 * @return true if @a c is low-surrogate
 			 */
-			inline bool isLowSurrogate(CodePoint c) /*throw()*/ {
+			inline bool isLowSurrogate(CodePoint c) /*noexcept*/ {
 				return (c & 0xfffffc00ul) == 0xdc00u;
 			}
 
@@ -150,7 +151,7 @@ namespace ascension {
 			 * @param c The code point
 			 * @return true if @a c is surrogate
 			 */
-			inline bool isSurrogate(CodePoint c) /*throw()*/ {
+			inline bool isSurrogate(CodePoint c) /*noexcept*/ {
 				return (c & 0xfffff800ul) == 0xd800u;
 			}
 
@@ -160,7 +161,7 @@ namespace ascension {
 			 * @param c The code point
 			 * @return The high-surrogate code unit for @a c
 			 */
-			inline Char highSurrogate(CodePoint c) /*throw()*/ {
+			inline Char highSurrogate(CodePoint c) /*noexcept*/ {
 				return static_cast<Char>((c >> 10) & 0xffffu) + 0xd7c0u;
 			}
 
@@ -170,7 +171,7 @@ namespace ascension {
 			 * @param c The code point
 			 * @return The low-surrogate code unit for @a c
 			 */
-			inline Char lowSurrogate(CodePoint c) /*throw()*/ {
+			inline Char lowSurrogate(CodePoint c) /*noexcept*/ {
 				return static_cast<Char>(c & 0x03ffu) | 0xdc00u;
 			}
 
@@ -182,7 +183,7 @@ namespace ascension {
 			 * @return The code point
 			 * @see #checkedDecode
 			 */
-			inline CodePoint decode(uint16_t high, uint16_t low) /*throw()*/ {
+			inline CodePoint decode(std::uint16_t high, std::uint16_t low) /*noexcept*/ {
 				return 0x10000ul + (high - 0xd800u) * 0x0400u + low - 0xdc00u;
 			}
 
@@ -191,14 +192,14 @@ namespace ascension {
 			 * @param high A UTF-16 code unit for the high-surrogate
 			 * @param low A UTF-16 code unit for the low-surrogate
 			 * @return The code point
-			 * @throw MalformedInputException&lt;uint16_t&gt; @a high and/or @a low are invalid
+			 * @throw MalformedInputException&lt;std#uint16_t&gt; @a high and/or @a low are invalid
 			 * @see #decode
 			 */
-			inline CodePoint checkedDecode(uint16_t high, uint16_t low) {
+			inline CodePoint checkedDecode(std::uint16_t high, std::uint16_t low) {
 				if(!text::surrogates::isHighSurrogate(high))
-					throw MalformedInputException<uint16_t>(high);
+					throw MalformedInputException<std::uint16_t>(high);
 				if(!text::surrogates::isLowSurrogate(low))
-					throw MalformedInputException<uint16_t>(low);
+					throw MalformedInputException<std::uint16_t>(low);
 				return decode(high, low);
 			}
 
@@ -213,7 +214,7 @@ namespace ascension {
 			 */
 			template<typename InputIterator>
 			inline InputIterator searchIsolatedSurrogate(
-					InputIterator first, InputIterator last) /*throw()*/ {
+					InputIterator first, InputIterator last) /*noexcept*/ {
 				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::value == 2);
 				while(first != last) {
 					if(isLowSurrogate(*first))
@@ -233,13 +234,13 @@ namespace ascension {
 		 * Returns @c true if the specified code point is in Unicode codespace (0..10FFFF).
 		 * @see InvalidCodePointException
 		 */
-		inline bool isValidCodePoint(CodePoint c) /*throw()*/ {return c <= 0x10fffful;}
+		inline bool isValidCodePoint(CodePoint c) /*noexcept*/ {return c <= 0x10fffful;}
 
 		/**
 		 * Returns @c true if the specified code point is Unicode scalar value.
 		 * @see InvalidScalarValueException
 		 */
-		inline bool isScalarValue(CodePoint c) /*throw()*/ {
+		inline bool isScalarValue(CodePoint c) /*noexcept*/ {
 			return isValidCodePoint(c) && !surrogates::isSurrogate(c);
 		}
 
@@ -256,7 +257,7 @@ namespace ascension {
 			explicit InvalidCodePointException(CodePoint c)
 				: std::out_of_range("Found an invalid code point."), c_(c) {}
 			/// Returns the code point.
-			CodePoint codePoint() const /*throw()*/ {return c_;}
+			CodePoint codePoint() const /*noexcept*/ {return c_;}
 		private:
 			const CodePoint c_;
 		};
@@ -274,7 +275,7 @@ namespace ascension {
 			explicit InvalidScalarValueException(CodePoint c)
 				: std::out_of_range("Found an invalid code point."), c_(c) {}
 			/// Returns the code point.
-			CodePoint codePoint() const /*throw()*/ {return c_;}
+			CodePoint codePoint() const /*noexcept*/ {return c_;}
 		private:
 			const CodePoint c_;
 		};

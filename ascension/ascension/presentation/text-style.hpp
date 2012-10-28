@@ -743,7 +743,7 @@ namespace ascension {
 			> fontSizeAdjust;
 //			StyleProperty<
 //				sp::Complex<
-//					std::map<graphics::font::TrueTypeFontTag, uint32_t>
+//					std::map<graphics::font::TrueTypeFontTag, std::uint32_t>
 //				>, sp::Inherited
 //			> fontFeatureSettings;
 //			StyleProperty<

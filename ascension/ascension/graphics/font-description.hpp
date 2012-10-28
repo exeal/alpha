@@ -16,9 +16,9 @@ namespace ascension {
 		namespace font {
 
 			/// TrueType/OpenType font tag.
-			typedef uint32_t OpenTypeFontTag;
+			typedef std::uint32_t OpenTypeFontTag;
 
-			template<uint8_t c1, uint8_t c2 = ' ', uint8_t c3 = ' ', uint8_t c4 = ' '>
+			template<std::uint8_t c1, std::uint8_t c2 = ' ', std::uint8_t c3 = ' ', std::uint8_t c4 = ' '>
 			struct MakeOpenTypeFontTag {
 				static const OpenTypeFontTag value = (c1 << 24) | (c2 << 16) | (c3 << 8) | c4;
 			};
@@ -144,10 +144,10 @@ namespace ascension {
 
 			struct FontFeatureSetting {
 				OpenTypeFontTag name;
-				uint32_t value;
+				std::uint32_t value;
 				/// Default constructor does not initialize the data members.
 				FontFeatureSetting() /*noexcept*/ {}
-				FontFeatureSetting(OpenTypeFontTag name, uint32_t value) /*noexcept*/ : name(name), value(value) {}
+				FontFeatureSetting(OpenTypeFontTag name, std::uint32_t value) /*noexcept*/ : name(name), value(value) {}
 			};
 
 			/**

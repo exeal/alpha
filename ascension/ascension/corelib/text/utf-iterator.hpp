@@ -23,7 +23,7 @@ namespace ascension {
 			 * @tparam codeUnitSize The byte size of code unit
 			 */
 			template<std::size_t codeUnitSize> struct DefaultByte;
-			template<> struct DefaultByte<1> {typedef uint8_t Type;};
+			template<> struct DefaultByte<1> {typedef std::uint8_t Type;};
 			template<> struct DefaultByte<2> {typedef Char Type;};
 			template<> struct DefaultByte<4> {typedef CodePoint Type;};
 
@@ -69,11 +69,11 @@ namespace ascension {
 					return *this;
 				}
 				/// Returns beginning of the range this iterator can address.
-				const BaseIterator& first() const /*throw()*/ {return first_;}
+				const BaseIterator& first() const /*noexcept*/ {return first_;}
 				/// Returns end of the range this iterator can address.
-				const BaseIterator& last() const /*throw()*/ {return first_;}
+				const BaseIterator& last() const /*noexcept*/ {return first_;}
 				/// Sets if this iterator replaces the ill-formed code unit (sub)sequence.
-				CharacterDecodeIterator& replaceMalformedInput(bool replace) /*throw()*/ {
+				CharacterDecodeIterator& replaceMalformedInput(bool replace) /*noexcept*/ {
 					replacesMalformedInput_ = replace;
 					return *this;
 				}
@@ -81,7 +81,7 @@ namespace ascension {
 				 * Returns @c true if this iterator replaces the ill-formed code unit
 				 * (sub)sequence. The default value is @c false.
 				 */
-				bool replacesMalformedInput() const /*throw()*/ {return replacesMalformedInput_;}
+				bool replacesMalformedInput() const /*noexcept*/ {return replacesMalformedInput_;}
 				/// Returns the current position.
 				BaseIterator tell() const {return base_;}
 			private:
@@ -183,7 +183,7 @@ namespace ascension {
 			private:
 				BaseIterator base_, first_, last_;
 				bool replacesMalformedInput_ : 1;
-				mutable uint8_t extractedBytes_ : 3;
+				mutable std::uint8_t extractedBytes_ : 3;
 				mutable UChar32 cache_ : 28;
 			};
 

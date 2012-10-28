@@ -21,7 +21,7 @@ namespace ascension {
 	namespace viewers {
 		namespace widgetapi {
 
-			typedef uint16_t DropAction;
+			typedef std::uint16_t DropAction;
 			const DropAction DROP_ACTION_IGNORE = 0;
 			const DropAction DROP_ACTION_COPY = 1 << 0;
 			const DropAction DROP_ACTION_MOVE = 1 << 1;

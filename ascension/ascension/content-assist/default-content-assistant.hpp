@@ -39,12 +39,12 @@ namespace ascension {
 			private ContentAssistant::CompletionProposalsUI {
 		public:
 			// constructors
-			DefaultContentAssistant() /*throw()*/;
-			~DefaultContentAssistant() /*throw()*/;
+			DefaultContentAssistant() /*noexcept*/;
+			~DefaultContentAssistant() /*noexcept*/;
 			// attributes
-			uint32_t autoActivationDelay() const /*throw()*/;
+			std::uint32_t autoActivationDelay() const /*noexcept*/;
 			void enablePrefixCompletion(bool enable);
-			void setAutoActivationDelay(uint32_t milliseconds);
+			void setAutoActivationDelay(std::uint32_t milliseconds);
 			void setContentAssistProcessor(kernel::ContentType contentType, std::unique_ptr<ContentAssistProcessor> processor);
 			// operation
 			void showPossibleCompletions();
@@ -54,11 +54,11 @@ namespace ascension {
 			// HasTimer
 			void timeElapsed(Timer& timer);
 			// ContentAssistant
-			ContentAssistant::CompletionProposalsUI* completionProposalsUI() const /*throw()*/;
-			const ContentAssistProcessor* contentAssistProcessor(kernel::ContentType contentType) const /*throw()*/;
+			ContentAssistant::CompletionProposalsUI* completionProposalsUI() const /*noexcept*/;
+			const ContentAssistProcessor* contentAssistProcessor(kernel::ContentType contentType) const /*noexcept*/;
 			void install(viewers::TextViewer& viewer);
 			void uninstall();
-			void viewerBoundsChanged() /*throw()*/;
+			void viewerBoundsChanged() /*noexcept*/;
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
@@ -69,21 +69,21 @@ namespace ascension {
 			// viewers.ViewportListener
 			void viewportChanged(bool horizontal, bool vertical);
 			// graphics.font.TextViewportListener
-			void viewportBoundsInViewChanged(const graphics::NativeRectangle& oldBounds) /*throw()*/;
+			void viewportBoundsInViewChanged(const graphics::NativeRectangle& oldBounds) /*noexcept*/;
 			void viewportScrollPositionChanged(
 				const presentation::AbstractTwoAxes<graphics::font::TextViewport::SignedScrollOffset>& offsets,
 				const graphics::font::VisualLine& oldLine,
-				graphics::font::TextViewport::ScrollOffset oldInlineProgressionOffset) /*throw()*/;
+				graphics::font::TextViewport::ScrollOffset oldInlineProgressionOffset) /*noexcept*/;
 			// ContentAssistant.CompletionProposalsUI
 			void close();
 			bool complete();
-			bool hasSelection() const /*throw()*/;
+			bool hasSelection() const /*noexcept*/;
 			void nextPage(int pages);
 			void nextProposal(int proposals);
 		private:
 			viewers::TextViewer* textViewer_;
 			std::map<kernel::ContentType, ContentAssistProcessor*> processors_;
-			uint32_t autoActivationDelay_;
+			std::uint32_t autoActivationDelay_;
 			Timer timer_;
 			struct CompletionSession {
 				const ContentAssistProcessor* processor;
@@ -91,8 +91,8 @@ namespace ascension {
 				kernel::Region replacementRegion;
 				std::unique_ptr<CompletionProposal*[]> proposals;
 				std::size_t numberOfProposals;
-				CompletionSession() /*throw()*/ : processor(nullptr), numberOfProposals(0) {}
-				~CompletionSession() /*throw()*/ {
+				CompletionSession() /*noexcept*/ : processor(nullptr), numberOfProposals(0) {}
+				~CompletionSession() /*noexcept*/ {
 					for(std::size_t i = 0; i < numberOfProposals; ++i)
 						delete proposals[i];
 				}
