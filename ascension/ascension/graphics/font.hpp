@@ -19,8 +19,8 @@ namespace ascension {
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 	namespace detail {
 		struct IdeographicVariationSequences {
-			std::vector<uint32_t> defaultMappings;
-			std::unordered_map<uint32_t, uint16_t> nonDefaultMappings;
+			std::vector<std::uint32_t> defaultMappings;
+			std::unordered_map<std::uint32_t, std::uint16_t> nonDefaultMappings;
 		};
 	}
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND

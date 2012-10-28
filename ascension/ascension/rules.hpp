@@ -58,7 +58,7 @@ namespace ascension {
 
 		/// A token is a text segment with identifier.
 		struct Token : public FastArenaObject<Token> {
-			typedef uint16_t Identifier;
+			typedef std::uint16_t Identifier;
 			static const Identifier UNCALCULATED;
 			Identifier id;
 			kernel::Region region;

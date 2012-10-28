@@ -53,7 +53,7 @@ namespace ascension {
 					&& blue() == other.blue() && alpha() == other.alpha();
 			}
 		private:
-			uint16_t red_, green_, blue_, alpha_;
+			std::uint16_t red_, green_, blue_, alpha_;
 		};
 
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)

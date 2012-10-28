@@ -205,7 +205,7 @@ namespace ascension {
 				static int of(CodePoint cp) /*throw()*/;
 			private:
 				static const CodePoint CHARACTERS_[];
-				static const uint8_t VALUES_[];
+				static const std::uint8_t VALUES_[];
 				static const std::size_t NUMBER_;
 				static const detail::CharacterPropertyValueName NAMES_[];
 			};

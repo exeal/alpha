@@ -59,7 +59,7 @@ namespace ascension {
 				> startValue;
 				/// Minimum number of digits. Default value is @c 4.
 				presentation::StyleProperty<
-					presentation::sp::Enumerated<uint8_t, 4>,
+					presentation::sp::Enumerated<std::uint8_t, 4>,
 					presentation::sp::NotInherited
 				> minimumDigits;
 				/// Padding width at the start. Default value is 6-pixel.
@@ -185,7 +185,7 @@ namespace ascension {
 			void setStyles(std::shared_ptr<const viewers::RulerStyles> styles);
 			void update() /*throw()*/;
 		private:
-			uint8_t computeMaximumDigitsForLineNumbers() const /*throw()*/;
+			std::uint8_t computeMaximumDigitsForLineNumbers() const /*throw()*/;
 			void computeAllocationWidth() /*noexcept*/;
 #if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
 			void updateGDIObjects() /*throw()*/;
@@ -198,7 +198,7 @@ namespace ascension {
 					indicatorMarginContent, indicatorMarginBorderEnd, lineNumbersContent,
 					lineNumbersPaddingStart, lineNumbersPaddingEnd, lineNumbersBorderEnd;
 			} computedWidths_;
-			boost::value_initialized<uint8_t> computedLineNumberDigits_;
+			boost::value_initialized<std::uint8_t> computedLineNumberDigits_;
 #if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
 			win32::Handle<HPEN> indicatorMarginPen_, lineNumbersPen_;
 			win32::Handle<HBRUSH> indicatorMarginBrush_, lineNumbersBrush_;

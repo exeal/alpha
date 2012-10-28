@@ -44,7 +44,7 @@ namespace ascension {
 			F4         yes  U+100000..U+10FFFF  4       no                 0x40
 			F5..FF     no                               no                 0x00
 		 */
-		const uint8_t UTF8_CODE_UNIT_VALUES[] = {
+		const std::uint8_t UTF8_CODE_UNIT_VALUES[] = {
 			0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x00
 			0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x10
 			0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x20
@@ -63,23 +63,23 @@ namespace ascension {
 			0x40, 0x40, 0x40, 0x40, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00	// 0xF0
 		};
 
-		inline CodePoint decodeUTF8(const uint8_t bytes[], std::size_t nbytes, bool checkMalformedInput) {
+		inline CodePoint decodeUTF8(const std::uint8_t bytes[], std::size_t nbytes, bool checkMalformedInput) {
 			// this function never checks bytes[0] value
 			switch(nbytes) {
 			case 1:	// 00000000 0xxxxxxx <- 0xxxxxxx
 				return bytes[0];
 			case 2:	// 00000yyy yyxxxxxx <- 110yyyyy 10xxxxxx
 				if(checkMalformedInput && (bytes[1] & 0xc0) != 0x80)	// <C2..DF 80..BF>
-					throw text::MalformedInputException<const uint8_t*>(bytes + 1, 1);
+					throw text::MalformedInputException<const std::uint8_t*>(bytes + 1, 1);
 				return ((bytes[0] & 0x1f) << 6) | (bytes[1] & 0x3f);
 			case 3:	// zzzzyyyy yyxxxxxx <- 1110zzzz 10yyyyyy 10xxxxxx
 				if(checkMalformedInput) {
 					if((bytes[0] == 0xe0 && (bytes[1] & 0xe0) != 0xa0)	// <E0 A0..BF XX>
 							|| (bytes[0] == 0xed && (bytes[1] & 0xe0) != 0x80)	// <ED 80..9F XX>
 							|| ((bytes[1] & 0xc0) != 0x80))	// <XX 80..BF XX>
-						throw text::MalformedInputException<const uint8_t*>(bytes + 1, 1);
+						throw text::MalformedInputException<const std::uint8_t*>(bytes + 1, 1);
 					if((bytes[2] & 0xc0) != 0x80)	// <XX XX 80..BF>
-						throw text::MalformedInputException<const uint8_t*>(bytes + 2, 2);
+						throw text::MalformedInputException<const std::uint8_t*>(bytes + 2, 2);
 				}
 				return ((bytes[0] & 0x0f) << 12) | ((bytes[1] & 0x3f) << 6) | (bytes[2] & 0x3f);
 			case 4:	// 000uuuuu zzzzyyyy yyxxxxxx <- 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
@@ -87,15 +87,15 @@ namespace ascension {
 					if((bytes[0] == 0xf0 && (bytes[1] < 0x90 || bytes[1] > 0xbf))	// <F0 90..BF XX XX>
 							|| (bytes[0] == 0xf4 && (bytes[1] & 0xf0) != 0x80)	// <F4 80..8F XX XX>
 							|| ((bytes[1] & 0xc0) != 0x80))	// <F1..F3 80..BF XX XX>
-						throw text::MalformedInputException<const uint8_t*>(bytes + 1, 1);
+						throw text::MalformedInputException<const std::uint8_t*>(bytes + 1, 1);
 					if((bytes[2] & 0xc0) != 0x80)	// <XX XX 80..BF XX>
-						throw text::MalformedInputException<const uint8_t*>(bytes + 2, 2);
+						throw text::MalformedInputException<const std::uint8_t*>(bytes + 2, 2);
 					if((bytes[3] & 0xc0) != 0x80)	// <XX XX XX 80..BF>
-						throw text::MalformedInputException<const uint8_t*>(bytes + 3, 3);
+						throw text::MalformedInputException<const std::uint8_t*>(bytes + 3, 3);
 				}
 				return ((bytes[0] & 0x07) << 18) | ((bytes[1] & 0x3f) << 12) | ((bytes[2] & 0x3f) << 6) | (bytes[3] & 0x3f);
 			case 0:	// bad leading byte
-				throw text::MalformedInputException<const uint8_t*>(bytes, 1);
+				throw text::MalformedInputException<const std::uint8_t*>(bytes, 1);
 			default:
 				ASCENSION_ASSERT_NOT_REACHED();
 			}
@@ -106,7 +106,7 @@ namespace ascension {
 			ASCENSION_STATIC_ASSERT(text::CodeUnitSizeOf<InputIterator>::value == 1);
 			assert(first != last);
 			InputIterator p(first);	// for throw
-			uint8_t bytes[4] = {*first};
+			std::uint8_t bytes[4] = {*first};
 			std::size_t nbytes = text::utf::length(bytes[0]);
 			for(std::size_t i = 1; i < nbytes; ++i) {
 				if(++first == last) {
@@ -117,7 +117,7 @@ namespace ascension {
 			}
 			try {
 				return decodeUTF8(bytes, nbytes, checkMalformedInput);
-			} catch(const text::MalformedInputException<const uint8_t*>& e) {
+			} catch(const text::MalformedInputException<const std::uint8_t*>& e) {
 				std::advance(p, e.position() - bytes);
 				throw text::MalformedInputException<InputIterator>(p, e.maximalSubpartLength());
 			}
@@ -127,24 +127,24 @@ namespace ascension {
 		inline std::size_t encodeUTF8(CodePoint c, OutputIterator& out) {
 			ASCENSION_STATIC_ASSERT(text::CodeUnitSizeOf<OutputIterator>::value == 1);
 			if(c < 0x0080u) {	// 00000000 0xxxxxxx -> 0xxxxxxx
-				*(out++) = static_cast<uint8_t>(c);
+				*(out++) = static_cast<std::uint8_t>(c);
 				return 1;
 			} else if(c < 0x0800u) {	// 00000yyy yyxxxxxx -> 110yyyyy 10xxxxxx
-				*(out++) = static_cast<uint8_t>((c >> 6) | 0xc0);
-				*(out++) = static_cast<uint8_t>((c & 0x3f) | 0x80);
+				*(out++) = static_cast<std::uint8_t>((c >> 6) | 0xc0);
+				*(out++) = static_cast<std::uint8_t>((c & 0x3f) | 0x80);
 				return 2;
 			} else if(c < 0x10000u) {	// zzzzyyyy yyxxxxxx -> 1110zzzz 10yyyyyy 10xxxxxx
 				if(check && text::surrogates::isSurrogate(c))
 					throw text::InvalidScalarValueException(c);
-				*(out++) = static_cast<uint8_t>((c >> 12) | 0xe0);
-				*(out++) = static_cast<uint8_t>(((c >> 6) & 0x3f) | 0x80);
-				*(out++) = static_cast<uint8_t>((c & 0x3f) | 0x80);
+				*(out++) = static_cast<std::uint8_t>((c >> 12) | 0xe0);
+				*(out++) = static_cast<std::uint8_t>(((c >> 6) & 0x3f) | 0x80);
+				*(out++) = static_cast<std::uint8_t>((c & 0x3f) | 0x80);
 				return 3;
 			} else if(c < 0x110000u) {	// 000uuuuu zzzzyyyy yyxxxxxx <- 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
-				*(out++) = static_cast<uint8_t>((c >> 18) | 0xf0);
-				*(out++) = static_cast<uint8_t>(((c >> 12) & 0x3f) | 0x80);
-				*(out++) = static_cast<uint8_t>(((c >> 6) & 0x3f) | 0x80);
-				*(out++) = static_cast<uint8_t>((c & 0x3f) | 0x80);
+				*(out++) = static_cast<std::uint8_t>((c >> 18) | 0xf0);
+				*(out++) = static_cast<std::uint8_t>(((c >> 12) & 0x3f) | 0x80);
+				*(out++) = static_cast<std::uint8_t>(((c >> 6) & 0x3f) | 0x80);
+				*(out++) = static_cast<std::uint8_t>((c & 0x3f) | 0x80);
 				return 4;
 			}
 			throw text::InvalidCodePointException(c);
@@ -156,7 +156,7 @@ namespace ascension {
 			if(c < 0x00010000ul) {
 				if(check && text::surrogates::isSurrogate(c))
 					throw text::InvalidScalarValueException(c);
-				*(out++) = static_cast<uint16_t>(c & 0xffffu);
+				*(out++) = static_cast<std::uint16_t>(c & 0xffffu);
 				return 1;
 			} else if(!check || c < 0x00110000ul) {
 				*(out++) = text::surrogates::highSurrogate(c);
@@ -215,7 +215,7 @@ namespace ascension {
 			 * @param byte The code unit to test
 			 * @return true if @a byte is valid byte
 			 */
-			inline bool isValidByte(uint8_t byte) {
+			inline bool isValidByte(std::uint8_t byte) {
 //				return byte < 0xc0 || (byte > 0xc1 && byte < 0xf5);
 				return detail::UTF8_CODE_UNIT_VALUES[byte] != 0x00;
 			}
@@ -226,7 +226,7 @@ namespace ascension {
 			 * @param byte The code unit to test
 			 * @return true if @a byte is single byte
 			 */
-			inline bool isSingleByte(uint8_t byte) {
+			inline bool isSingleByte(std::uint8_t byte) {
 //				return (byte & 0x80) == 0;
 				return detail::UTF8_CODE_UNIT_VALUES[byte] == 0x10;
 			}
@@ -236,7 +236,7 @@ namespace ascension {
 			 * @param byte The code unit to test
 			 * @return true if @a byte is leading byte
 			 */
-			inline bool isLeadingByte(uint8_t byte) /*throw()*/ {
+			inline bool isLeadingByte(std::uint8_t byte) /*throw()*/ {
 				return (detail::UTF8_CODE_UNIT_VALUES[byte] & 0xf0) != 0;
 			}
 
@@ -245,16 +245,16 @@ namespace ascension {
 			 * @param byte The code unit to test
 			 * @return true if @a byte may be trailing byte
 			 */
-			inline bool maybeTrailingByte(uint8_t byte) {
+			inline bool maybeTrailingByte(std::uint8_t byte) {
 //				return (byte & 0xc0) == 0x80;
 				return (detail::UTF8_CODE_UNIT_VALUES[byte] & 0x0f) == 0x01;
 			}
 
-			inline std::size_t length(uint8_t leadingByte) {
+			inline std::size_t length(std::uint8_t leadingByte) {
 				return detail::UTF8_CODE_UNIT_VALUES[leadingByte] >> 4;
 			}
 
-			inline std::size_t numberOfTrailingBytes(uint8_t leadingByte) {
+			inline std::size_t numberOfTrailingBytes(std::uint8_t leadingByte) {
 				return length(leadingByte) - 1;
 			}
 
@@ -339,7 +339,7 @@ namespace ascension {
 			inline CodePoint decodeFirst(InputIterator first, InputIterator last,
 					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 2>::type* = nullptr) {
 				assert(first != last);
-				const uint16_t high = *first;
+				const std::uint16_t high = *first;
 				if(surrogates::isHighSurrogate(high))
 					return (++first != last) ? surrogates::decode(high, *first) : high;
 				return high;
@@ -359,11 +359,11 @@ namespace ascension {
 			inline CodePoint checkedDecodeFirst(InputIterator first, InputIterator last,
 					typename std::enable_if<CodeUnitSizeOf<InputIterator>::value == 2>::type* = nullptr) {
 				assert(first != last);
-				const uint16_t high = *first;
+				const std::uint16_t high = *first;
 				if(surrogates::isHighSurrogate(high)) {
 					if(++first == last)
 						throw MalformedInputException<InputIterator>(first, 1);
-					const uint16_t low = *first;
+					const std::uint16_t low = *first;
 					if(!surrogates::isLowSurrogate(low))
 						throw MalformedInputException<InputIterator>(first, 1);
 					return surrogates::decode(high, low);
@@ -386,7 +386,7 @@ namespace ascension {
 					BidirectionalIterator first, BidirectionalIterator last,
 					typename std::enable_if<CodeUnitSizeOf<BidirectionalIterator>::value == 2>::type* = nullptr) {
 				assert(first != last);
-				const uint16_t low = *--last;
+				const std::uint16_t low = *--last;
 				if(surrogates::isLowSurrogate(low))
 					return (--last != first) ? surrogates::decode(*last, low) : low;
 				return low;
@@ -408,11 +408,11 @@ namespace ascension {
 			inline CodePoint checkedDecodeLast(BidirectionalIterator first, BidirectionalIterator last,
 					typename std::enable_if<CodeUnitSizeOf<BidirectionalIterator>::value == 2>::type* = nullptr) {
 				assert(first != last);
-				const uint16_t low = *--last;
+				const std::uint16_t low = *--last;
 				if(surrogates::isLowSurrogate(low)) {
 					if(last == first)
 						throw MalformedInputException<BidirectionalIterator>(last, 1);
-					const uint16_t high = *--last;
+					const std::uint16_t high = *--last;
 					if(!surrogates::isHighSurrogate(high))
 						throw MalformedInputException<BidirectionalIterator>(last, 1);
 					return surrogates::decode(high, low);
@@ -520,7 +520,7 @@ namespace ascension {
 			inline CodePoint checkedDecodeLast(BidirectionalIterator first, BidirectionalIterator last,
 					typename std::enable_if<CodeUnitSizeOf<BidirectionalIterator>::value == 4>::type* = nullptr) {
 				assert(first != last);
-				const uint32_t c = *--last;
+				const std::uint32_t c = *--last;
 				if(!isScalarValue(c))
 					throw MalformedInputException<BidirectionalIterator>(last, 1);
 				return static_cast<CodePoint>(c);
@@ -538,7 +538,7 @@ namespace ascension {
 			template<typename OutputIterator>
 			inline std::size_t encode(CodePoint c, OutputIterator& out,
 					typename std::enable_if<CodeUnitSizeOf<OutputIterator>::value == 4>::type* = nullptr) {
-				*out = static_cast<uint32_t>(c);
+				*out = static_cast<std::uint32_t>(c);
 				return ++out, 1;
 			}
 
