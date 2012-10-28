@@ -200,12 +200,12 @@ FlowRelativeFourSides<Scalar> TextRun::contentRectangle() const /*noexcept*/ {
  * Constructor.
  * @param width The fixed width in pixels
  */
-FixedWidthTabExpander::FixedWidthTabExpander(Scalar width) /*throw()*/ : width_(width) {
+FixedWidthTabExpander::FixedWidthTabExpander(Scalar width) /*noexcept*/ : width_(width) {
 }
 
 /// @see TabExpander#nextTabStop
-Scalar FixedWidthTabExpander::nextTabStop(Scalar x, Index) const /*throw()*/ {
-	return x - x % width_ + width_;
+Scalar FixedWidthTabExpander::nextTabStop(Scalar ipd, Index) const /*noexcept*/ {
+	return ipd - ipd % width_ + width_;
 }
 
 

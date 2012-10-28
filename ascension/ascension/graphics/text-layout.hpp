@@ -201,16 +201,15 @@ namespace ascension {
 				int nextTabStopBasedLeftEdge(Scalar x, bool right) const /*throw()*/;
 				void reorder() /*throw()*/;
 //				void rewrap();
-				void stackLines(
-					presentation::LineBoxContain lineBoxContain,
-					const Font& nominalFont, Scalar lineHeight);
-				void wrap(const TabExpander& tabExpander) /*throw()*/;
+				void stackLines(boost::optional<Scalar> lineHeight,
+					presentation::LineBoxContain lineBoxContain, const Font& nominalFont);
+				void wrap(Scalar measure, const TabExpander& tabExpander) /*noexcept*/;
 			private:
 				const String& textString_;
 				boost::flyweight<ComputedTextLineStyle> lineStyle_;
 				RunVector runs_;
 				class LineArea;
-				std::unique_ptr<const RunVector::const_iterator[]> firstRunsInLines_;	// size is runs_.size(), or null if not wrapped
+				std::unique_ptr<RunVector::const_iterator[]> firstRunsInLines_;	// size is runs_.size(), or null if not wrapped
 				Index numberOfLines_;
 				std::unique_ptr<LineMetrics*[]> lineMetrics_;
 				std::unique_ptr<Scalar[]> measures_;
