@@ -500,8 +500,8 @@ namespace {
 			Range<Index> range;
 		};
 	public:
-		TextRunImpl(const StringPiece& characterRange,
-			const SCRIPT_ANALYSIS& script, shared_ptr<const Font> font, OpenTypeFontTag scriptTag);
+		TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
+			shared_ptr<const Font> font, OpenTypeFontTag scriptTag, const ComputedTextRunStyleCore& coreStyle);
 		~TextRunImpl() /*noexcept*/;
 		static void generate(const StringPiece& textString, const FontCollection& fontCollection,
 			const ComputedTextLineStyle& lineStyle, unique_ptr<ComputedStyledTextRunIterator> textRunStyles,
@@ -523,6 +523,7 @@ namespace {
 		Index length() const /*noexcept*/;
 		Scalar trailingEdge(Index character) const;
 		// attributes
+		const ComputedTextRunStyleCore& style() const /*noexcept*/ {return coreStyle_;}
 		HRESULT logicalAttributes(SCRIPT_LOGATTR attributes[]) const;
 		// geometry
 		HRESULT logicalWidths(int widths[]) const;
@@ -571,8 +572,8 @@ namespace {
 			void vanish(const Font& font, StringPiece::const_pointer at);
 		};
 	private:
-		TextRunImpl(const StringPiece& characterRange,
-			const SCRIPT_ANALYSIS& script, unique_ptr<RawGlyphVector> glyphs);
+		TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
+			unique_ptr<RawGlyphVector> glyphs, const ComputedTextRunStyleCore& coreStyle);
 		TextRunImpl(TextRunImpl& leading, StringPiece::const_pointer beginningOfNewRun);
 		const int* advances() const /*noexcept*/ {
 			if(const int* const p = glyphs_->advances.get())
@@ -617,6 +618,7 @@ namespace {
 			return nullptr;
 		}
 	private:
+		boost::flyweight<ComputedTextRunStyleCore> coreStyle_;
 		SCRIPT_ANALYSIS analysis_;	// fLogicalOrder member is always 0 (however see shape())
 		shared_ptr<RawGlyphVector> glyphs_;
 		int width_ : sizeof(int) - 1;
@@ -657,12 +659,14 @@ void TextRunImpl::RawGlyphVector::vanish(const Font& font, StringPiece::const_po
  * @param script @c SCRIPT_ANALYSIS The object obtained by @c ScriptItemize(OpenType)
  * @param font The font renders this text run. Can't be @c null
  * @param scriptTag An OpenType script tag describes the script of this text run
+ * @param coreStyle The core text style
  * @throw NullPointerException @a characterRange and/or @a font are @c null
  * @throw std#invalid_argument @a characterRange is empty
+ * @note This constructor is called by only @c #splitIfTooLong.
  */
 TextRunImpl::TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
-		shared_ptr<const Font> font, OpenTypeFontTag scriptTag)
-		: StringPiece(characterRange), analysis_(script),
+		shared_ptr<const Font> font, OpenTypeFontTag scriptTag, const ComputedTextRunStyleCore& coreStyle)
+		: StringPiece(characterRange), coreStyle_(coreStyle), analysis_(script),
 		glyphs_(new RawGlyphVector(characterRange.beginning(), font, scriptTag)) {	// may throw NullPointerException for 'font'
 	raiseIfNullOrEmpty(characterRange, "characterRange");
 //	raiseIfNull(font.get(), "font");
@@ -672,11 +676,15 @@ TextRunImpl::TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSI
  * Private constructor.
  * @param characterRange The string this text run covers
  * @param script @c SCRIPT_ANALYSIS The object obtained by @c ScriptItemize(OpenType)
+ * @param glyphs The glyph vector
+ * @param coreStyle The core text style
  * @throw NullPointerException @a characterRange and/or @a glyphs are @c null
  * @throw std#invalid_argument @a characterRange is empty
+ * @note This constructor is called by only @c #generate.
  */
 TextRunImpl::TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
-		unique_ptr<RawGlyphVector> glyphs) : StringPiece(characterRange), analysis_(script), glyphs_(move(glyphs)) {
+		unique_ptr<RawGlyphVector> glyphs, const ComputedTextRunStyleCore& coreStyle) :
+		StringPiece(characterRange), coreStyle_(coreStyle), analysis_(script), glyphs_(move(glyphs)) {
 	raiseIfNullOrEmpty(characterRange, "characterRange");
 	raiseIfNull(glyphs_.get(), "glyphs");
 }
@@ -689,9 +697,11 @@ TextRunImpl::TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSI
  * @throw NullPointerException @a beginningOfNewRun is @c null
  * @throw std#out_of_range @a beginningOfNewRun is outside of the character range @a leading covers
  * @see #splitIfTooLong
+ * @note This constructor is called by only @c #breakAt.
  */
 TextRunImpl::TextRunImpl(TextRunImpl& leading, StringPiece::const_pointer beginningOfNewRun) :
-		StringPiece(beginningOfNewRun, leading.end()), analysis_(leading.analysis_), glyphs_(leading.glyphs_) {
+		StringPiece(beginningOfNewRun, leading.end()),
+		coreStyle_(leading.style()), analysis_(leading.analysis_), glyphs_(leading.glyphs_) {
 	if(leading.glyphs_.get() == nullptr)
 		throw invalid_argument("leading has not been shaped");
 	raiseIfNull(beginningOfNewRun, "beginningOfNewRun");
@@ -717,6 +727,7 @@ TextRunImpl::~TextRunImpl() /*noexcept*/ {
  * Breaks the text run into two runs at the specified position.
  * @param at The position at which break this run
  * @return The new text run following this run
+ * @note This method is called by only @c #wrap.
  */
 unique_ptr<TextRunImpl> TextRunImpl::breakAt(StringPiece::const_pointer at) {
 	raiseIfNull(at, "at");
@@ -977,7 +988,7 @@ void TextRunImpl::generate(const StringPiece& textString, const FontCollection& 
 
 			mergedTextRuns.push_back(new TextRunImpl(
 				StringPiece(previousPosition, nextPosition),
-				*scriptPointers[glyphRuns.size() - (lastGlyphRun - glyphRun)], move(*glyphRun)));
+				*scriptPointers[glyphRuns.size() - (lastGlyphRun - glyphRun)], move(*glyphRun), styleRun->attribute));
 			if(nextPosition == nextGlyphRunPosition)
 				++glyphRun;
 			if(nextPosition == nextStyleRunPosition)
@@ -1918,7 +1929,7 @@ unique_ptr<TextRunImpl> TextRunImpl::splitIfTooLong() {
 	}
 
 	unique_ptr<TextRunImpl> following(new TextRunImpl(
-		StringPiece(beginning() + opportunity, end()), analysis_, glyphs_->font, glyphs_->scriptTag));
+		StringPiece(beginning() + opportunity, end()), analysis_, glyphs_->font, glyphs_->scriptTag, style()));
 	static_cast<StringPiece&>(*this) = StringPiece(beginning(), beginning() + opportunity);
 	analysis_.fLinkAfter = following->analysis_.fLinkBefore = 0;
 	return following;
@@ -2590,7 +2601,7 @@ void TextLayout::draw(PaintContext& context,
 
 		// 2-1. paint background if the property is specified (= if not transparent)
 		const TextRunImpl& textRun = *static_cast<const TextRunImpl*>(i->get());
-		if(textRun.style()->background) {
+		if(textRun.style().background) {
 			borderRectangle = textRun.borderRectangle();
 			if(geometry::includes(context.boundsToPaint(), *borderRectangle)) {
 				context.setFillStyle(textRun.style()->background);
