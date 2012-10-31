@@ -121,6 +121,7 @@ namespace ascension {
 					queryTextPaintOverride(const Range<Index>& range) const = 0;
 			};
 
+			/// Computed value of @c presentation#Border#Side.
 			struct ComputedBorderSide {
 				presentation::sp::IntrinsicType<
 					decltype(presentation::Border().sides.start().color)
@@ -160,10 +161,14 @@ namespace ascension {
 				>::Type sizeAdjust;
 			};
 
+			/// Computed value of @c presentation#TextDecoration.
 			struct ComputedTextDecoration {
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextDecoration().lines)
 				>::Type lines;
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextDecoration().color)
+				>::Type::value_type color;
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextDecoration().style)
 				>::Type style;
@@ -173,13 +178,24 @@ namespace ascension {
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextDecoration().underlinePosition)
 				>::Type underlinePosition;
+
+				/// Default constructor initializes the members with initial values.
+				ComputedTextDecoration() /*noexcept*/ :
+					lines(presentation::TextDecoration::Line::NONE),
+					color(Color::TRANSPARENT_BLACK),
+					style(presentation::TextDecoration::Style::SOLID),
+					skip(presentation::TextDecoration::Skip::OBJECTS),
+					underlinePosition(presentation::TextDecoration::UnderlinePosition::AUTO) {}
 			};
 
+			/// Computed value of @c presentation#TextEmphasis.
 			struct ComputedTextEmphasis {
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextEmphasis().style)
 				>::Type style;
-				Color color;
+				presentation::sp::IntrinsicType<
+					decltype(presentation::TextEmphasis().color)
+				>::Type::value_type color;
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextEmphasis().position)
 				>::Type position;
@@ -190,8 +206,8 @@ namespace ascension {
 					position(presentation::TextEmphasis::ABOVE | presentation::TextEmphasis::RIGHT) {}
 			};
 
-			/// Computed values of @c presentation#TextRunStyle.
-			struct ComputedTextRunStyle {
+			/// Computed values of core properties of @c presentation#TextRunStyle.
+			struct ComputedTextRunStyleCore {
 				/// Computed value of @c TextRunStyle#color property.
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextRunStyle().color)
@@ -200,7 +216,18 @@ namespace ascension {
 				std::shared_ptr<const Paint> background;
 				/// Computed value of @c TextRunStyle#border property.
 				PhysicalFourSides<ComputedBorderSide> borders;
+				/// Computed value of @c TextRunStyle#textDecoration property.
+				ComputedTextDecoration textDecoration;
+				/// Computed value of @c TextRunStyle#textEmphasis property.
+				ComputedTextEmphasis textEmphasis;
+//				TextShadow textShadow;
 
+				/// Default constructor initializes the all properties with their default values.
+				ComputedTextRunStyleCore() : color(0, 0, 0), background(nullptr), borders() {}
+			};
+
+			/// Computed values of @c presentation#TextRunStyle.
+			struct ComputedTextRunStyle : public ComputedTextRunStyleCore {
 				/// Computed values of font specification of @c TextRunStyle.
 				ComputedFontSpecification font;
 
@@ -233,11 +260,6 @@ namespace ascension {
 				presentation::SpacingLimit<Scalar> wordSpacing;
 				/// Computed value of @c TextRunStyle#letterSpacing property.
 				presentation::SpacingLimit<Scalar> letterSpacing;
-				/// Computed value of @c TextRunStyle#textDecoration property.
-				ComputedTextDecoration textDecoration;
-				/// Computed value of @c TextRunStyle#textEmphasis property.
-				ComputedTextEmphasis textEmphasis;
-//				TextShadow textShadow;
 
 //				RubyProperties rubyProperties;
 
@@ -248,7 +270,7 @@ namespace ascension {
 				>::Type shapingEnabled;
 
 				/// Default constructor initializes the all properties with their default values.
-				ComputedTextRunStyle() : color(0, 0, 0), background(nullptr), borders(), font() {}
+				ComputedTextRunStyle() : font() {}
 			};
 
 			/**
@@ -268,6 +290,7 @@ namespace ascension {
 				virtual void next() = 0;
 			};
 
+			/// Computed value of @c presentation#NumberSubstitution.
 			struct ComputedNumberSubstitution {
 				presentation::sp::IntrinsicType<
 					decltype(presentation::NumberSubstitution().method)

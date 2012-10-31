@@ -129,8 +129,8 @@ namespace ascension {
 		}
 
 		/**
-		 * @see "CSS Backgrounds and Borders Module Level 3"
-		 *      (http://www.w3.org/TR/2011/CR-css3-background-20110215/)
+		 * @see CSS Backgrounds and Borders Module Level 3, 4. Borders
+		 *      (http://www.w3.org/TR/css3-background/#borders)
 		 */
 		struct Border {
 			/**
