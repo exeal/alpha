@@ -167,7 +167,7 @@ namespace ascension {
 				const LineMetrics& lineMetrics(Index line) const;
 				Scalar lineStartEdge(Index line) const;
 				Index locateLine(Scalar bpd, bool& outside) const /*throw()*/;
-				presentation::AbstractTwoAxes<Scalar> location(Index offset, Edge edge = LEADING) const;
+				presentation::AbstractTwoAxes<Scalar> location(const TextHitInformation& hit) const;
 				std::pair<presentation::AbstractTwoAxes<Scalar>,
 					presentation::AbstractTwoAxes<Scalar>> locations(Index offset) const;
 				std::pair<Index, Index> offset(const NativePoint& p, bool* outside = nullptr) const /*throw()*/;
@@ -284,15 +284,14 @@ namespace ascension {
 			}
 
 			/**
-			 * Returns the location for the specified character offset.
-			 * @param offset The character offset in this layout
-			 * @param edge The edge of the character to locate
+			 * Returns the location for the specified character hit.
+			 * @param hit The character hit in this layout
 			 * @return The location of the character
-			 * @throw kernel#BadPositionException @a offset is greater than the length of the layout
+			 * @throw kernel#BadPositionException @a hit is outside of the layout
 			 */
-			inline presentation::AbstractTwoAxes<Scalar> TextLayout::location(Index offset, Edge edge /* = LEADING */) const {
+			inline presentation::AbstractTwoAxes<Scalar> TextLayout::location(const TextHitInformation& hit) const {
 				presentation::AbstractTwoAxes<Scalar> result;
-				locations(offset, (edge == LEADING) ? &result : nullptr, (edge == TRAILING) ? &result : nullptr);
+				locations(hit.characterIndex(), hit.isLeadingEdge() ? &result : nullptr, !hit.isLeadingEdge() ? &result : nullptr);
 				return result;
 			}
 
