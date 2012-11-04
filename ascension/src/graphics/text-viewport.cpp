@@ -723,24 +723,25 @@ VisualLine font::locateLine(const TextViewport& viewport, const NativePoint& p, 
  *                      or @c std#numeric_limits&lt;Scalar&gt;::min() (for the after-edge). If this
  *                      is @c true, the calculation is performed completely and returns an exact
  *                      location will (may be very slow)
- * @param edge The edge of the character. If this is @c graphics#font#TextLayout#LEADING, the
- *             returned point is the leading edge if the character (left if the character is
- *             left-to-right), otherwise returned point is the trailing edge (right if the
- *             character is left-to-right)
+ * @param edge The edge of the character. If this is @c CharacterEdge#LEADING, the returned point
+ *             is the leading edge if the character (left if the character is left-to-right),
+ *             otherwise returned point is the trailing edge (right if the character is
+ *             left-to-right)
  * @return The point in view-coordinates (not viewport-coordinates) in pixels. The
  *         block-progression-dimension addresses the baseline of the line
  * @throw BadPositionException @a position is outside of the document
  * @see #modelToViewInBounds, #viewToModel, TextLayout#location
  */
 NativePoint font::modelToView(const TextViewport& viewport,
-		const k::Position& position, bool fullSearchBpd, TextLayout::Edge edge /* = TextLayout::LEADING */) {
+		const k::Position& position, bool fullSearchBpd, CharacterEdge edge /* = LEADING */) {
 	// get alignment-point
 	const BaselineIterator baseline(viewport, position.line, fullSearchBpd);
 	NativePoint p(baseline.positionInViewport());
 	const bool horizontal = isHorizontal(viewport.textRenderer().writingMode().blockFlowDirection);
 
 	// apply offset in line layout
-	const NativePoint offset(viewport.textRenderer().layouts().at(position.line).location(position.offsetInLine, edge));
+	const NativePoint offset(viewport.textRenderer().layouts().at(position.line).location(
+		(edge == LEADING) ? TextHitInformation::leading(position.offsetInLine) : TextHitInformation::trailing(position.offsetInLine)));
 	if(fullSearchBpd || horizontal
 			|| (*baseline != numeric_limits<Scalar>::max() && *baseline != numeric_limits<Scalar>::min())) {
 //		assert(geometry::x(p) != numeric_limits<Scalar>::max() && geometry::x(p) != numeric_limits<Scalar>::min());
@@ -795,7 +796,7 @@ TextViewport::SignedScrollOffset font::pageSize<geometry::Y_COORDINATE>(const Te
 namespace {
 	// implements viewToModel and viewToModelInBounds in font namespace.
 	boost::optional<k::Position> internalViewToModel(const TextViewport& viewport,
-			const NativePoint& pointInView, TextLayout::Edge edge,
+			const NativePoint& pointInView, CharacterEdge edge,
 			bool abortNoCharacter, k::locations::CharacterUnit snapPolicy) {
 		NativePoint p(pointInView);
 		geometry::translate(p, geometry::make<NativeSize>(
@@ -824,9 +825,9 @@ namespace {
 			: geometry::make<NativePoint>(
 				geometry::x(p) + geometry::x(baseline.positionInViewport()),
 				mapViewportIpdToLineLayout(viewport, result.line, geometry::y(p))));
-		if(edge == TextLayout::LEADING)
+		if(edge == LEADING)
 			result.offsetInLine = layout.offset(lineLocalPoint, &outside).first;
-		else if(edge == TextLayout::TRAILING)
+		else if(edge == TRAILING)
 			result.offsetInLine = layout.offset(lineLocalPoint, &outside).second;
 		else
 			throw UnknownValueException("edge");
@@ -893,7 +894,7 @@ namespace {
  * @see #modelToView, #viewToModelInBounds, TextLayout#offset
  */
 k::Position font::viewToModel(const TextViewport& viewport,
-		const NativePoint& pointInView, TextLayout::Edge edge,
+		const NativePoint& pointInView, CharacterEdge edge,
 		k::locations::CharacterUnit snapPolicy /* = kernel::locations::GRAPHEME_CLUSTER */) {
 	return *internalViewToModel(viewport, pointInView, edge, false, snapPolicy);
 }
@@ -915,7 +916,7 @@ k::Position font::viewToModel(const TextViewport& viewport,
  * @see #modelToView, #viewToModel, TextLayout#offset
  */
 boost::optional<k::Position> font::viewToModelInBounds(const TextViewport& viewport,
-		const NativePoint& pointInView, TextLayout::Edge edge,
+		const NativePoint& pointInView, CharacterEdge edge,
 		k::locations::CharacterUnit snapPolicy /* = k::locations::GRAPHEME_CLUSTER */) {
 	return internalViewToModel(viewport, pointInView, edge, true, snapPolicy);
 }
