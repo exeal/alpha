@@ -2338,59 +2338,58 @@ Scalar TextLayout::baseline(Index line) const {
  * Returns the black box bounds of the characters in the specified range. The black box bounds is
  * an area consisting of the union of the bounding boxes of the all of the characters in the range.
  * The result region can be disjoint.
- * @param range The character range
+ * @param characterRange The character range
  * @return The native polygon object encompasses the black box bounds
  * @throw kernel#BadPositionException @a range intersects with the outside of the line
  * @see #bounds(void), #bounds(Index, Index), #lineBounds, #lineStartEdge
  */
-NativeRegion TextLayout::blackBoxBounds(const Range<Index>& range) const {
-	if(range.end() > textString_.length())
-		throw kernel::BadPositionException(kernel::Position(0, range.end()));
+NativeRegion TextLayout::blackBoxBounds(const Range<Index>& characterRange) const {
+	if(characterRange.end() > textString_.length())
+		throw kernel::BadPositionException(kernel::Position(0, characterRange.end()));
 
 	// handle empty line
 	if(isEmpty())
 		return win32::Handle<HRGN>(::CreateRectRgn(0, 0, 0, lineMetrics_[0]->height()), &::DeleteObject);
 
-	// TODO: this implementation can't handle vertical text.
-	const Index firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
-	vector<NativeRectangle> rectangles;
-	Scalar before = baseline(firstLine)
-		/*- lineMetrics_[firstLine]->leading()*/ - lineMetrics_[firstLine]->ascent();
-	Scalar after = before + lineMetrics_[firstLine]->height();
-	for(Index line = firstLine; line <= lastLine; before = after, after += lineMetrics_[++line]->height()) {
-		const size_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
-		const Scalar leftEdge = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ?
-			lineStartEdge(line) : (-lineStartEdge(line) - measure(line));
+	// compute abstract bounds
+	const Index firstLine = lineAt(characterRange.beginning()), lastLine = lineAt(characterRange.end());
+	vector<FlowRelativeFourSides<Scalar>> abstractBounds;
+	for(Index line = firstLine; line <= lastLine; ++line) {
+		const RunVector::const_iterator lastRun(
+			(line + 1 < numberOfLines()) ? firstRunInLine(line + 1) : std::end(runs_));
+		FlowRelativeFourSides<Scalar> boundsToAppend;
+		boundsToAppend.before() = baseline(line)/*- lineMetrics_[firstLine]->leading()*/ - lineMetrics_[line]->ascent();
+		boundsToAppend.after() = boundsToAppend.before() + lineMetrics_[line]->height();
+		const Scalar lineStart = lineStartEdge(line);
 
 		// is the whole line encompassed by the range?
-		if(range.beginning() <= lineOffset(line) && range.end() >= lineOffset(line) + lineLength(line))
-			rectangles.push_back(
-				geometry::make<NativeRectangle>(
-					geometry::make<NativePoint>(leftEdge, before),
-					geometry::make<NativePoint>(leftEdge + measure(line), after)));
-		else {
-			for(InlineProgressionDimensionRangeIterator i(
-					Range<const TextRun* const*>(runs_.get() + lineFirstRuns_[line], runs_.get() + lastRun),
-					range, LEFT_TO_RIGHT, leftEdge), e; i != e; ++i)
-				rectangles.push_back(
-					geometry::make<NativeRectangle>(
-						geometry::make<NativePoint>(i->beginning(), before),
-						geometry::make<NativePoint>(i->end(), after)));
+		if(characterRange.beginning() <= lineOffset(line) && characterRange.end() >= lineOffset(line) + lineLength(line)) {
+			boundsToAppend.start() = lineStart;
+			boundsToAppend.end() = lineStart + measure(line);
+			abstractBounds.push_back(boundsToAppend);
+		} else {
+			for(InlineProgressionDimensionRangeIterator i(makeRange(firstRunInLine(line), lastRun),
+					writingMode().inlineFlowDirection, characterRange, LEFT_TO_RIGHT, lineStart), e; i != e; ++i) {
+				boundsToAppend.start() = i->beginning();
+				boundsToAppend.end() = i->end();
+				abstractBounds.push_back(boundsToAppend);
+			}
 		}
 	}
 
 	// create the result region
-	unique_ptr<POINT[]> vertices(new POINT[rectangles.size() * 4]);
-	unique_ptr<int[]> numbersOfVertices(new int[rectangles.size()]);
-	for(size_t i = 0, c = rectangles.size(); i < c; ++i) {
-		geometry::x(vertices[i * 4 + 0]) = geometry::x(vertices[i * 4 + 3]) = geometry::left(rectangles[i]);
-		geometry::y(vertices[i * 4 + 0]) = geometry::y(vertices[i * 4 + 1]) = geometry::top(rectangles[i]);
-		geometry::x(vertices[i * 4 + 1]) = geometry::x(vertices[i * 4 + 2]) = geometry::right(rectangles[i]);
-		geometry::y(vertices[i * 4 + 2]) = geometry::y(vertices[i * 4 + 3]) = geometry::bottom(rectangles[i]);
+	unique_ptr<POINT[]> vertices(new POINT[abstractBounds.size() * 4]);
+	unique_ptr<int[]> numbersOfVertices(new int[abstractBounds.size()]);
+	for(size_t i = 0, c = abstractBounds.size(); i < c; ++i) {
+		const NativeRectangle physicalBounds(mapAbstractToPhysical(abstractBounds[i], writingMode()));
+		geometry::x(vertices[i * 4 + 0]) = geometry::x(vertices[i * 4 + 3]) = geometry::left(physicalBounds);
+		geometry::y(vertices[i * 4 + 0]) = geometry::y(vertices[i * 4 + 1]) = geometry::top(physicalBounds);
+		geometry::x(vertices[i * 4 + 1]) = geometry::x(vertices[i * 4 + 2]) = geometry::right(physicalBounds);
+		geometry::y(vertices[i * 4 + 2]) = geometry::y(vertices[i * 4 + 3]) = geometry::bottom(physicalBounds);
 	}
-	fill_n(numbersOfVertices.get(), rectangles.size(), 4);
+	fill_n(numbersOfVertices.get(), abstractBounds.size(), 4);
 	return win32::Handle<HRGN>(::CreatePolyPolygonRgn(vertices.get(),
-		numbersOfVertices.get(), static_cast<int>(rectangles.size()), WINDING), &::DeleteObject);
+		numbersOfVertices.get(), static_cast<int>(abstractBounds.size()), WINDING), &::DeleteObject);
 }
 
 /**
@@ -2435,7 +2434,7 @@ FlowRelativeFourSides<Scalar> TextLayout::bounds(const Range<Index>& characterRa
 		result.after() = lineMetrics(0).descent();
 	} else if(ascension::isEmpty(characterRange)) {	// an empty rectangle for an empty range
 		const LineMetrics& line = lineMetrics(lineAt(characterRange.beginning()));
-		const AbstractTwoAxes<Scalar> leading(location(characterRange.beginning()));
+		const AbstractTwoAxes<Scalar> leading(location(TextHitInformation::leading(characterRange.beginning())));
 		FlowRelativeFourSides<Scalar> sides;
 		sides.before() = leading.bpd() - line.ascent();
 		sides.after() = leading.bpd() + line.descent();
