@@ -36,6 +36,7 @@
 #include <cmath>	// std.abs(double)
 #include <iterator>	// std.back_insert_iterator, std.front_insert_iterator, std.ostream_iterator
 #include <string>
+#include <boost/config.hpp>	// BOOST_NOEXCEPT
 
 /// Version of Ascension library
 #define ASCENSION_LIBRARY_VERSION 0x0080	// 0.8.0
@@ -51,7 +52,9 @@
 namespace ascension {
 
 	namespace detail {
-		struct NullDeleter {void operator()(const void*) {}};
+		struct NullDeleter {
+			void operator()(const void*) BOOST_NOEXCEPT {}
+		};
 	} // namespace detail
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -119,11 +122,13 @@ namespace ascension {
 	void updateSystemSettings() /*throw()*/;
 
 	// see session.hpp
-	namespace texteditor {class Session;}
+	namespace texteditor {
+		class Session;
+	}
 	namespace detail {
 		class SessionElement {
 		protected:
-			virtual void setSession(texteditor::Session& session) /*throw()*/ = 0;
+			virtual void setSession(texteditor::Session& session) BOOST_NOEXCEPT = 0;
 			friend class texteditor::Session;
 		};
 	}

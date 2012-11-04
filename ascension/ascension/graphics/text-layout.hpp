@@ -12,6 +12,7 @@
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/corelib/utility.hpp>	// detail.searchBound
 #include <ascension/graphics/color.hpp>
+#include <ascension/graphics/text-hit-information.hpp>
 #include <ascension/graphics/text-layout-styles.hpp>
 #include <ascension/kernel/position.hpp>
 #include <memory>	// std.unique_ptr
@@ -159,7 +160,7 @@ namespace ascension {
 				Range<Scalar> extent() /*noexcept*/ const;
 				Range<Scalar> extent(const Range<Index>& lines) const;
 				presentation::FlowRelativeFourSides<Scalar> lineBounds(Index line) const;
-				Scalar measure() const /*throw()*/;
+				Scalar measure() const /*noexcept*/;
 				Scalar measure(Index line) const;
 				// other coordinates
 				Scalar baseline(Index line) const;
