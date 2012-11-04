@@ -109,14 +109,6 @@ namespace ascension {
 			class TextLayout {
 				ASCENSION_NONCOPYABLE_TAG(TextLayout);
 			public:
-				/**
-				 * Edge of a character.
-				 * @see #location
-				 */
-				enum Edge {
-					LEADING,	///< Leading edge of a character.
-					TRAILING	///< Trailing edge of a character.
-				};
 #if 0
 				/// Bidirectional iterator enumerates style runs in a line.
 				class StyledSegmentIterator {

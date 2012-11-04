@@ -143,6 +143,15 @@ namespace ascension {
 				NativePoint positionInViewport_;
 			};
 
+			/**
+			 * Edge of a character.
+			 * @see #location
+			 */
+			enum CharacterEdge {
+				LEADING,	///< Leading edge of a character.
+				TRAILING	///< Trailing edge of a character.
+			};
+
 			// free functions
 			PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>
 			convertFlowRelativeScrollPositionsToPhysical(const TextViewport& viewport,
@@ -157,18 +166,17 @@ namespace ascension {
 			VisualLine locateLine(const TextViewport& viewport,
 				const NativePoint& p, bool* snapped = nullptr) /*throw()*/;
 			NativePoint modelToView(const TextViewport& viewport,
-				const kernel::Position& position, bool fullSearchBpd,
-				graphics::font::TextLayout::Edge edge = graphics::font::TextLayout::LEADING);
+				const kernel::Position& position, bool fullSearchBpd, CharacterEdge edge = LEADING);
 			template<std::size_t coordinate> TextViewport::SignedScrollOffset pageSize(const TextViewport& viewport);
 			Range<TextViewport::ScrollOffset> scrollableRangeInBlockDimension(const TextViewport& viewport);
 			Range<TextViewport::ScrollOffset> scrollableRangeInInlineDimension(const TextViewport& viewport);
 			template<std::size_t coordinate>
 			Range<TextViewport::ScrollOffset> scrollableRangeInPhysicalDirection(const TextViewport& viewport);
 			kernel::Position viewToModel(const TextViewport& viewport,
-				const NativePoint& pointInView, TextLayout::Edge edge,
+				const NativePoint& pointInView, CharacterEdge edge,
 				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
 			boost::optional<kernel::Position> viewToModelInBounds(const TextViewport& viewport,
-				const NativePoint& pointInView, TextLayout::Edge edge,
+				const NativePoint& pointInView, CharacterEdge edge,
 				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
 		}
 	}
