@@ -10,11 +10,12 @@
 #include <ascension/corelib/basic-types.hpp>	// Index, SignedIndex, BOOST_NOEXCEPT
 #include <numeric>		// std.numeric_limits
 #include <stdexcept>	// std.overflow_error, std.underflow_error
+#include <boost/operators.hpp>
 
 namespace ascension {
 	namespace graphics {
 		namespace font {
-			class TextHitInformation {
+			class TextHitInformation : private boost::totally_ordered<TextHitInformation> {
 			public:
 				// factories
 				/**
@@ -57,7 +58,20 @@ namespace ascension {
 				static TextHitInformation trailing(Index characterIndex) BOOST_NOEXCEPT {
 					return TextHitInformation(characterIndex, false);
 				}
-				// 
+
+				// relational operators
+				/// Equality operator.
+				bool operator==(const TextHitInformation& other) const BOOST_NOEXCEPT {
+					return characterIndex() == other.characterIndex()
+						&& isLeadingEdge() == other.isLeadingEdge();
+				}
+				/// Less-than operator.
+				bool operator<(const TextHitInformation& other) const BOOST_NOEXCEPT {
+					return characterIndex() < other.characterIndex()
+						|| (characterIndex() == other.characterIndex() && isLeadingEdge() && !other.isLeadingEdge());
+				}
+
+				// attributes
 				/**
 				 * Returns the index of the character hit.
 				 * @see #insertionIndex
@@ -74,7 +88,8 @@ namespace ascension {
 				}
 				/// Returns @c true if the leading edge of the character was hit.
 				bool isLeadingEdge() const BOOST_NOEXCEPT {return isLeadingEdge_;}
-				//
+
+				// other factories
 				/**
 				 * Creates a @c TextHitInformation whose character index is offset by @a delta from
 				 * the @c #characterIndex of this @c TextHitInformation. This @c TextHitInformation
