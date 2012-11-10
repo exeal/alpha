@@ -381,11 +381,11 @@ void ascension::updateSystemSettings() /*throw()*/ {
 
 // graphics.font.* free functions /////////////////////////////////////////////////////////////////
 
-bool font::supportsComplexScripts() /*noexcept*/ {
+bool font::supportsComplexScripts() BOOST_NOEXCEPT {
 	return true;
 }
 
-bool font::supportsOpenTypeFeatures() /*noexcept*/ {
+bool font::supportsOpenTypeFeatures() BOOST_NOEXCEPT {
 	return uspLib->get<0>() != nullptr;
 }
 
@@ -415,7 +415,7 @@ namespace {
 			return (at < length) ? clusters[at] + 1 : 0;
 	}
 #endif
-	inline bool overhangs(const ABC& width) /*noexcept*/ {
+	inline bool overhangs(const ABC& width) BOOST_NOEXCEPT {
 		return width.abcA < 0 || width.abcC < 0;
 	}
 } // namespace @0
@@ -502,7 +502,7 @@ namespace {
 	public:
 		TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
 			shared_ptr<const Font> font, OpenTypeFontTag scriptTag, const ComputedTextRunStyleCore& coreStyle);
-		~TextRunImpl() /*noexcept*/;
+		~TextRunImpl() BOOST_NOEXCEPT;
 		static void generate(const StringPiece& textString, const FontCollection& fontCollection,
 			const ComputedTextLineStyle& lineStyle, unique_ptr<ComputedStyledTextRunIterator> textRunStyles,
 			vector<TextRunImpl*>& textRuns, vector<AttributedCharacterRange<const ComputedTextRunStyle>>& calculatedStyles);
@@ -510,20 +510,20 @@ namespace {
 		void fillGlyphs(PaintContext& context, const NativePoint& origin,
 			boost::optional<Range<std::size_t>> range /* = boost::none */) const;
 		FlowRelativeFourSides<Scalar> glyphVisualBounds(const Range<size_t>& range) const;
-		size_t numberOfGlyphs() const /*noexcept*/;
+		size_t numberOfGlyphs() const BOOST_NOEXCEPT;
 		void strokeGlyphs(PaintContext& context, const NativePoint& origin,
 			boost::optional<Range<std::size_t>> range /* = boost::none */) const;
 		// TextRun
-		const FlowRelativeFourSides<ComputedBorderSide>* borders() const /*noexcept*/;
-		boost::optional<Index> characterEncompassesPosition(Scalar ipd) const /*noexcept*/;
+		const FlowRelativeFourSides<ComputedBorderSide>* borders() const BOOST_NOEXCEPT;
+		boost::optional<Index> characterEncompassesPosition(Scalar ipd) const BOOST_NOEXCEPT;
 		Index characterHasClosestLeadingEdge(Scalar ipd) const;
-		uint8_t characterLevel() const /*noexcept*/;
-		shared_ptr<const Font> font() const /*noexcept*/;
+		uint8_t characterLevel() const BOOST_NOEXCEPT;
+		shared_ptr<const Font> font() const BOOST_NOEXCEPT;
 		Scalar leadingEdge(Index character) const;
-		Index length() const /*noexcept*/;
+		Index length() const BOOST_NOEXCEPT;
 		Scalar trailingEdge(Index character) const;
 		// attributes
-		const ComputedTextRunStyleCore& style() const /*noexcept*/ {return coreStyle_;}
+		const ComputedTextRunStyleCore& style() const BOOST_NOEXCEPT {return coreStyle_;}
 		HRESULT logicalAttributes(SCRIPT_LOGATTR attributes[]) const;
 		// geometry
 		HRESULT logicalWidths(int widths[]) const;
@@ -568,19 +568,19 @@ namespace {
 				raiseIfNull(position, "position");
 				raiseIfNull(font.get(), "font");
 			}
-			~RawGlyphVector() /*noexcept*/ {::ScriptFreeCache(&fontCache);}
+			~RawGlyphVector() BOOST_NOEXCEPT {::ScriptFreeCache(&fontCache);}
 			void vanish(const Font& font, StringPiece::const_pointer at);
 		};
 	private:
 		TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
 			unique_ptr<RawGlyphVector> glyphs, const ComputedTextRunStyleCore& coreStyle);
 		TextRunImpl(TextRunImpl& leading, StringPiece::const_pointer beginningOfNewRun);
-		const int* advances() const /*noexcept*/ {
+		const int* advances() const BOOST_NOEXCEPT {
 			if(const int* const p = glyphs_->advances.get())
 				return p + glyphRange().beginning();
 			return nullptr;
 		}
-		const WORD* clusters() const /*noexcept*/ {
+		const WORD* clusters() const BOOST_NOEXCEPT {
 			if(const WORD* const p = glyphs_->clusters.get())
 				return p + (beginning() - glyphs_->position);
 			return nullptr;
@@ -590,12 +590,12 @@ namespace {
 			const StringPiece& text, const SCRIPT_ANALYSIS& analysis, RawGlyphVector& glyphs);
 		static HRESULT generateGlyphs(const win32::Handle<HDC>& dc,
 			const StringPiece& text, const SCRIPT_ANALYSIS& analysis, RawGlyphVector& glyphs);
-		const WORD* glyphs() const /*noexcept*/ {
+		const WORD* glyphs() const BOOST_NOEXCEPT {
 			if(const WORD* const p = glyphs_->indices.get())
 				return p + glyphRange().beginning();
 			return nullptr;
 		}
-		const GOFFSET* glyphOffsets() const /*noexcept*/ {
+		const GOFFSET* glyphOffsets() const BOOST_NOEXCEPT {
 			if(const GOFFSET* const p = glyphs_->offsets.get())
 				return p + glyphRange().beginning();
 			return nullptr;
@@ -603,7 +603,7 @@ namespace {
 		Range<size_t> glyphRange(const StringPiece& characterRange = StringPiece(nullptr)) const;
 		void hitTest(Scalar ipd, int& encompasses, int* trailing) const;
 		Scalar ipd(StringPiece::const_pointer character, bool trailing) const;
-		const int* justifiedAdvances() const /*noexcept*/ {
+		const int* justifiedAdvances() const BOOST_NOEXCEPT {
 			if(const int* const p = glyphs_->justifiedAdvances.get())
 				return p + glyphRange().beginning();
 			return nullptr;
@@ -612,7 +612,7 @@ namespace {
 			const NativePoint& origin, const StringPiece& range, bool onlyStroke) const;
 		void paintGlyphs(PaintContext& context,
 			const NativePoint& origin, boost::optional<Range<size_t>> range, bool onlyStroke) const;
-		const SCRIPT_VISATTR* visualAttributes() const /*noexcept*/ {
+		const SCRIPT_VISATTR* visualAttributes() const BOOST_NOEXCEPT {
 			if(const SCRIPT_VISATTR* const p = glyphs_->visualAttributes.get())
 				return p + glyphRange().beginning();
 			return nullptr;
@@ -718,7 +718,7 @@ TextRunImpl::TextRunImpl(TextRunImpl& leading, StringPiece::const_pointer beginn
 }
 
 /// Destructor.
-TextRunImpl::~TextRunImpl() /*noexcept*/ {
+TextRunImpl::~TextRunImpl() BOOST_NOEXCEPT {
 //	if(cache_ != nullptr)
 //		::ScriptFreeCache(&cache_);
 }
@@ -750,7 +750,7 @@ unique_ptr<TextRunImpl> TextRunImpl::breakAt(StringPiece::const_pointer at) {
 }
 
 /// @see TextRun#characterEncompassesPosition
-boost::optional<Index> TextRunImpl::characterEncompassesPosition(Scalar ipd) const /*noexcept*/ {
+boost::optional<Index> TextRunImpl::characterEncompassesPosition(Scalar ipd) const BOOST_NOEXCEPT {
 	int character;
 	hitTest(ipd, character, nullptr);
 	if(character == -1 || character == ascension::length(*this))
@@ -771,7 +771,7 @@ Index TextRunImpl::characterHasClosestLeadingEdge(Scalar ipd) const {
 }
 
 /// @see TextRun#characterLevel
-uint8_t TextRunImpl::characterLevel() const /*noexcept*/ {
+uint8_t TextRunImpl::characterLevel() const BOOST_NOEXCEPT {
 	return static_cast<uint8_t>(analysis_.s.uBidiLevel);
 }
 
@@ -829,7 +829,7 @@ void TextRunImpl::fillGlyphs(PaintContext& context, const NativePoint& origin, b
 }
 
 /// @see TextRun#font
-shared_ptr<const Font> TextRunImpl::font() const /*noexcept*/ {
+shared_ptr<const Font> TextRunImpl::font() const BOOST_NOEXCEPT {
 	return glyphs_->font;
 }
 
@@ -1376,7 +1376,7 @@ void TextRunImpl::mergeScriptsAndStyles(
 #endif // 0
 
 /// @see GlyphVector#numberOfGlyphs
-size_t TextRunImpl::numberOfGlyphs() const /*noexcept*/ {
+size_t TextRunImpl::numberOfGlyphs() const BOOST_NOEXCEPT {
 	return ascension::length(glyphRange());
 }
 
@@ -2015,23 +2015,23 @@ namespace {
 			Range<Scalar>, input_iterator_tag, Range<Scalar>, ptrdiff_t
 		> {
 	public:
-		InlineProgressionDimensionRangeIterator() /*noexcept*/
+		InlineProgressionDimensionRangeIterator() BOOST_NOEXCEPT
 			: currentRun_(begin(dummy_)), lastRun_(begin(dummy_)) {}
 		InlineProgressionDimensionRangeIterator(
 			const Range<vector<unique_ptr<const TextRun>>::const_iterator>& textRunsOfLine,
 			ReadingDirection layoutDirection, const StringPiece& effectiveCharacterRange,
 			const Direction& scanningDirection, Scalar firstLineEdgeIpd);
 		Range<Scalar> dereference() const;
-		const StringPiece& effectiveCharacterRange() const /*noexcept*/ {
+		const StringPiece& effectiveCharacterRange() const BOOST_NOEXCEPT {
 			return effectiveCharacterRange_;
 		}
-		bool equal(const InlineProgressionDimensionRangeIterator& other) const /*noexcept*/ {
+		bool equal(const InlineProgressionDimensionRangeIterator& other) const BOOST_NOEXCEPT {
 			return isDone() && other.isDone();
 		}
 		void increment() {
 			return next(false);
 		}
-		Direction scanningDirection() const /*noexcept*/ {
+		Direction scanningDirection() const BOOST_NOEXCEPT {
 			int temp = (currentRun_ <= lastRun_) ? 0 : 1;
 			temp += (layoutDirection_ == LEFT_TO_RIGHT) ? 0 : 1;
 			return (temp % 2 == 0) ? Direction::FORWARD : Direction::BACKWARD;
@@ -2045,7 +2045,7 @@ namespace {
 			return computed;
 		}
 		void next(bool initializing);
-		bool isDone() const /*noexcept*/ {return currentRun_ == lastRun_;}
+		bool isDone() const BOOST_NOEXCEPT {return currentRun_ == lastRun_;}
 	private:
 		static const vector<unique_ptr<const TextRun>> dummy_;
 		friend class boost::iterator_core_access;
@@ -2279,12 +2279,7 @@ TextLayout::~TextLayout() /*throw()*/ {
 //		delete runs_[i];
 //	for(vector<const InlineArea*>::const_iterator i(inlineAreas_.begin()), e(inlineAreas_.end()); i != e; ++i)
 //		delete *i;
-	if(numberOfLines() == 1) {
-		assert(lineOffsets_.get() == &SINGLE_LINE_OFFSETS);
-		lineOffsets_.release();
-		assert(lineFirstRuns_.get() == &SINGLE_LINE_OFFSETS);
-		lineFirstRuns_.release();
-	}
+	assert(numberOfLines() != 1 || firstRunsInLines_.get() == nullptr);
 	for(size_t i = 0; i < numberOfLines(); ++i)
 		delete lineMetrics_[i];
 }
@@ -2398,7 +2393,7 @@ NativeRegion TextLayout::blackBoxBounds(const Range<Index>& characterRange) cons
  * @return The size of the bounds
  * @see #blackBoxBounds, #bounds(const Range&lt;Index&gt;&amp;), #lineBounds
  */
-FlowRelativeFourSides<Scalar> TextLayout::bounds() const /*noexcept*/ {
+FlowRelativeFourSides<Scalar> TextLayout::bounds() const BOOST_NOEXCEPT {
 	// TODO: this implementation can't handle vertical text.
 	FlowRelativeFourSides<Scalar> result;
 	result.before() = /*-lineMetrics(0).leading()*/ - lineMetrics(0).ascent();
@@ -2591,6 +2586,8 @@ void TextLayout::draw(PaintContext& context,
 //	context.setTextAlign();
 //	context.setTextBaseline();
 //	::SetTextAlign(context.nativeObject().get(), TA_TOP | TA_LEFT | TA_NOUPDATECP);
+
+	AbstractTwoAxes<Scalar> alignmentPoint;	// alignment-point of text run relative to this layout
 
 	// 2. paint backgrounds and borders
 	for(RunVector::const_iterator i(textRunsToPaint.beginning()), e; i != textRunsToPaint.end(); ++i) {
@@ -2853,7 +2850,7 @@ String TextLayout::fillToX(int x) const {
  * @internal 
  * @param line
  */
-inline TextLayout::RunVector::const_iterator TextLayout::firstRunInLine(Index line) const /*noexcept*/ {
+inline TextLayout::RunVector::const_iterator TextLayout::firstRunInLine(Index line) const BOOST_NOEXCEPT {
 	assert(line <= numberOfLines());
 	if(firstRunsInLines_.get() == nullptr) {
 		assert(numberOfLines() == 1);
@@ -2868,7 +2865,7 @@ inline TextLayout::RunVector::const_iterator TextLayout::firstRunInLine(Index li
  * @return An iterator addresses the text run
  * @note If @a offset is equal to the length of this layout, returns the last text run.
  */
-inline TextLayout::RunVector::const_iterator TextLayout::runForPosition(Index offset) const /*noexcept*/ {
+inline TextLayout::RunVector::const_iterator TextLayout::runForPosition(Index offset) const BOOST_NOEXCEPT {
 	assert(!isEmpty());
 	if(offset == textString_.length())
 		return end(runs_) - 1;
@@ -2892,7 +2889,7 @@ TextLayout::StyledSegmentIterator TextLayout::firstStyledSegment() const /*throw
  * Returns if the line contains right-to-left run.
  * @note This method's semantics seems to be strange. Is containning RTL run means bidi?
  */
-bool TextLayout::isBidirectional() const /*noexcept*/ {
+bool TextLayout::isBidirectional() const BOOST_NOEXCEPT {
 	if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
 		return true;
 	for(auto i(begin(runs_)), e(end(runs_)); i != e; ++i) {
@@ -2968,7 +2965,7 @@ Index TextLayout::lineOffset(Index line) const {
  *         array is the offset for the first character in a line
  * @note Designed based on @c org.eclipse.swt.graphics.TextLayout.lineOffsets method in Eclipse.
  */
-vector<Index>&& TextLayout::lineOffsets() const /*noexcept*/ {
+vector<Index>&& TextLayout::lineOffsets() const BOOST_NOEXCEPT {
 	const String::const_pointer bol = textString_.data();
 	vector<Index> offsets;
 	offsets.reserve(numberOfLines() + 1);
@@ -3137,7 +3134,7 @@ void TextLayout::locations(Index offset, AbstractTwoAxes<Scalar>* leading, Abstr
  * Returns the inline-progression-dimension of the longest line.
  * @see #measure(Index)
  */
-Scalar TextLayout::measure() const /*noexcept*/ {
+Scalar TextLayout::measure() const BOOST_NOEXCEPT {
 	if(!maximumMeasure_) {
 		Scalar ipd = 0;
 		for(Index line = 0; line < numberOfLines(); ++line)
@@ -3374,7 +3371,7 @@ StyledRun TextLayout::styledTextRun(Index offset) const {
  * @param measure
  * @param tabExpander
  */
-void TextLayout::wrap(Scalar measure, const TabExpander& tabExpander) /*noexcept*/ {
+void TextLayout::wrap(Scalar measure, const TabExpander& tabExpander) BOOST_NOEXCEPT {
 	assert(!isEmpty());
 	assert(numberOfLines_ == 0 && firstRunsInLines_.get() == nullptr);
 

@@ -19,8 +19,12 @@
 
 namespace ascension {
 
-	namespace presentation {class Presentation;}
-	namespace viewers {class Caret;}
+	namespace presentation {
+		class Presentation;
+	}
+	namespace viewers {
+		class Caret;
+	}
 
 	namespace graphics {
 
@@ -36,7 +40,7 @@ namespace ascension {
 			class TabExpander {
 			public:
 				/// Destructor.
-				virtual ~TabExpander() /*noexcept*/ {}
+				virtual ~TabExpander() BOOST_NOEXCEPT {}
 				/**
 				 * Returns the next tab stop position given a reference position.
 				 * @param ipd The position in pixels
@@ -49,7 +53,7 @@ namespace ascension {
 			/// Standard implementation of @c TabExpander with fixed width tabulations.
 			class FixedWidthTabExpander : public TabExpander {
 			public:
-				explicit FixedWidthTabExpander(Scalar width) /*noexcept*/;
+				explicit FixedWidthTabExpander(Scalar width) BOOST_NOEXCEPT;
 				Scalar nextTabStop(Scalar x, Index tabOffset) const;
 			private:
 				const Scalar width_;
@@ -57,67 +61,34 @@ namespace ascension {
 
 			class TextPaintOverride {
 			public:
-				class Iterator {
-				public:
-					/// Destructor.
-					virtual ~Iterator() /*noexcept*/ {}
-
-					/**
-					 * Returns the overridden foreground of the current position.
-					 * @return The overridden foreground or @c null if does not override
-					 * @throw NoSuchElementException The iterator is end
-					 */
-					virtual const Paint* foreground() const = 0;
-					/**
-					 * Returns the overridden transparency of the foreground of the current
-					 * position.
-					 * @return The transparency. This value should be in the range from 0.0 (fully
-					 *         transparent) to 1.0 (no additional transparency)
-					 */
-					virtual double foregroundAlpha() const = 0;
-					/**
-					 * Returns the overridden background of the current position.
-					 * @return The overridden background or @c null if does not override
-					 * @throw NoSuchElementException The iterator is end
-					 */
-					virtual const Paint* background() const = 0;
-					/**
-					 * Returns the transparency of the overridden background of the current
-					 * position.
-					 * @return The transparency. This value should be in the range from 0.0 (fully
-					 *         transparent) to 1.0 (no additional transparency)
-					 */
-					virtual double backgroundAlpha() const = 0;
-					/**
-					 * Returns @c false to paint only the glyphs' bounds with @c #background.
-					 * Otherwise the logical highlight bounds of characters are painted as
-					 * background.
-					 * @throw NoSuchElementException The iterator is end
-					 */
-					virtual bool usesLogicalHighlightBounds() const = 0;
-
-					/// Returns the length of the current text segment.
-					virtual Index length() const = 0;
-					/// Returns @c true if the iterator has no more elements.
-					virtual bool isDone() const /*noexcept*/ = 0;
-					/**
-					 * Moves the iterator to the next overriden text segment.
-					 * @throw NoSuchElementException The iterator is end
-					 */
-					virtual void next() = 0;
-					/// Moves the iterator to the beginning.
-					virtual void reset() /*noexcept*/ = 0;
+				struct Segment {
+					/// The length of this segment.
+					Index length;
+					/// The overridden foreground or @c null if does not override.
+					std::shared_ptr<const Paint> foreground;
+					/// The transparency of the overridden foreground. This value should be in the
+					/// range from 0.0 (fully transparent) to 1.0 (no additional transparency).
+					double foregroundAlpha;
+					/// The overridden background or @c null if does not override.
+					std::shared_ptr<const Paint> background;
+					/// The transparency of the overridden background. This value should be in the
+					/// range from 0.0 (fully transparent) to 1.0 (no additional transparency).
+					double backgroundAlpha;
+					/// Set @c false to paint only the glyphs' bounds with @c #background.
+					/// Otherwise the logical highlight bounds of characters are painted as
+					/// background.
+					bool usesLogicalHighlightBounds;
 				};
 			public:
 				/// Destructor.
-				virtual ~TextPaintOverride() /*noexcept*/ {}
+				virtual ~TextPaintOverride() BOOST_NOEXCEPT {}
 				/**
-				 * Returns the iterator which overrides the paints of the specified character
-				 * range in the line.
+				 * Returns a vector of segments which describe override the paints of the specified
+				 * character range in the line.
 				 * @param range The character range in the line
-				 * @return The iterator which generates the overridden paints
+				 * @return A vector of @c #Segment
 				 */
-				virtual std::unique_ptr<Iterator>
+				virtual std::vector<const Segment>&&
 					queryTextPaintOverride(const Range<Index>& range) const = 0;
 			};
 
@@ -132,14 +103,14 @@ namespace ascension {
 				Scalar width;
 
 				/// Default constructor.
-				ComputedBorderSide() /*noexcept*/ :
+				ComputedBorderSide() BOOST_NOEXCEPT :
 					color(Color::TRANSPARENT_BLACK), style(presentation::Border::NONE), width(0) {}
 				/// Returns the computed width in pixels.
-				Scalar computedWidth() const /*noexcept*/ {
+				Scalar computedWidth() const BOOST_NOEXCEPT {
 					return (style != presentation::Border::NONE) ? width : 0;
 				}
 				/// Returns @c true if this part is invisible (but may be consumes place).
-				bool hasVisibleStyle() const /*noexcept*/ {
+				bool hasVisibleStyle() const BOOST_NOEXCEPT {
 					return style != presentation::Border::NONE && style != presentation::Border::HIDDEN;
 				}
 			};
@@ -180,7 +151,7 @@ namespace ascension {
 				>::Type underlinePosition;
 
 				/// Default constructor initializes the members with initial values.
-				ComputedTextDecoration() /*noexcept*/ :
+				ComputedTextDecoration() BOOST_NOEXCEPT :
 					lines(presentation::TextDecoration::Line::NONE),
 					color(Color::TRANSPARENT_BLACK),
 					style(presentation::TextDecoration::Style::SOLID),
@@ -201,7 +172,7 @@ namespace ascension {
 				>::Type position;
 
 				/// Default constructor initializes the members with initial values.
-				ComputedTextEmphasis() /*noexcept*/ :
+				ComputedTextEmphasis() BOOST_NOEXCEPT :
 					style(presentation::TextEmphasis::NONE), color(Color::TRANSPARENT_BLACK),
 					position(presentation::TextEmphasis::ABOVE | presentation::TextEmphasis::RIGHT) {}
 			};
@@ -279,14 +250,14 @@ namespace ascension {
 			class ComputedStyledTextRunIterator {
 			public:
 				/// Destructor.
-				virtual ~ComputedStyledTextRunIterator() /*noexcept*/ {}
+				virtual ~ComputedStyledTextRunIterator() BOOST_NOEXCEPT {}
 				/**
 				 */
 				virtual Range<Index> currentRange() const = 0;
 				/**
 				 */
 				virtual void currentStyle(ComputedTextRunStyle& style) const = 0;
-				virtual bool isDone() const /*noexcept*/ = 0;
+				virtual bool isDone() const BOOST_NOEXCEPT = 0;
 				virtual void next() = 0;
 			};
 
@@ -388,7 +359,7 @@ namespace ascension {
 				if(source_.get() == nullptr)
 					throw NullPointerException("source");
 			}
-			bool isDone() const /*noexcept*/ {
+			bool isDone() const BOOST_NOEXCEPT {
 				return position_ == length(textString_);
 			}
 			void next() {
