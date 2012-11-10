@@ -155,7 +155,7 @@ void detail::paintBorder(PaintContext& context, const NativeRectangle& rectangle
  * Returns 'allocation-rectangle' of this text run.
  * @see #borderRectangle, #contentRectangle
  */
-FlowRelativeFourSides<Scalar> TextRun::allocationRectangle() const /*noexcept*/ {
+FlowRelativeFourSides<Scalar> TextRun::allocationRectangle() const BOOST_NOEXCEPT {
 	FlowRelativeFourSides<Scalar> rectangle(contentRectangle());
 	if(const FlowRelativeFourSides<ComputedBorderSide>* const borderSides = borders()) {
 		rectangle.start() -= borderSides->start().computedWidth();
@@ -168,7 +168,7 @@ FlowRelativeFourSides<Scalar> TextRun::allocationRectangle() const /*noexcept*/ 
  * Returns 'border-rectangle' of this text run.
  * @see #allocationRectangle, #borders, #contentRectangle
  */
-FlowRelativeFourSides<Scalar> TextRun::borderRectangle() const /*noexcept*/ {
+FlowRelativeFourSides<Scalar> TextRun::borderRectangle() const BOOST_NOEXCEPT {
 	FlowRelativeFourSides<Scalar> rectangle(contentRectangle());
 	if(const FlowRelativeFourSides<ComputedBorderSide>* const borderSides = borders()) {
 		rectangle.before() -= borderSides->before().computedWidth();
@@ -183,7 +183,7 @@ FlowRelativeFourSides<Scalar> TextRun::borderRectangle() const /*noexcept*/ {
  * Returns 'content-rectangle' of this text run.
  * @see #allocationRectangle, #borderRectangle
  */
-FlowRelativeFourSides<Scalar> TextRun::contentRectangle() const /*noexcept*/ {
+FlowRelativeFourSides<Scalar> TextRun::contentRectangle() const BOOST_NOEXCEPT {
 	FlowRelativeFourSides<Scalar> rectangle;
 	rectangle.start() = leadingEdge(beginning());
 	rectangle.end() = rectangle.start() + measure();
@@ -200,11 +200,11 @@ FlowRelativeFourSides<Scalar> TextRun::contentRectangle() const /*noexcept*/ {
  * Constructor.
  * @param width The fixed width in pixels
  */
-FixedWidthTabExpander::FixedWidthTabExpander(Scalar width) /*noexcept*/ : width_(width) {
+FixedWidthTabExpander::FixedWidthTabExpander(Scalar width) BOOST_NOEXCEPT : width_(width) {
 }
 
 /// @see TabExpander#nextTabStop
-Scalar FixedWidthTabExpander::nextTabStop(Scalar ipd, Index) const /*noexcept*/ {
+Scalar FixedWidthTabExpander::nextTabStop(Scalar ipd, Index) const BOOST_NOEXCEPT {
 	return ipd - ipd % width_ + width_;
 }
 
@@ -711,7 +711,7 @@ NativeRegion TextLayout::blackBoxBounds(const Range<Index>& range) const {
  * @return The size of the bounds
  * @see #blackBoxBounds, #bounds(const Range&lt;Index&gt;&amp;), #lineBounds
  */
-FlowRelativeFourSides<Scalar> TextLayout::bounds() const /*noexcept*/ {
+FlowRelativeFourSides<Scalar> TextLayout::bounds() const BOOST_NOEXCEPT {
 	// TODO: this implementation can't handle vertical text.
 	FlowRelativeFourSides<Scalar> result;
 	result.before() = /*-lineMetrics(0).leading()*/ - lineMetrics(0).ascent();

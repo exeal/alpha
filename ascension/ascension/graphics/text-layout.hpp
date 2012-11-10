@@ -35,22 +35,22 @@ namespace ascension {
 
 			struct VisualLine : private boost::totally_ordered<VisualLine> {
 				/// Default constructor.
-				VisualLine() /*noexcept*/ {}
+				VisualLine() BOOST_NOEXCEPT {}
 				/**
 				 * Constructor takes initial values.
 				 * @param line The logical line number
 				 * @param subline The visual offset in the logical line
 				 */
-				VisualLine(Index line, Index subline) /*noexcept*/ : line(line), subline(subline) {}
+				VisualLine(Index line, Index subline) BOOST_NOEXCEPT : line(line), subline(subline) {}
 				Index line;		///< The logical line number.
 				Index subline;	///< The visual offset in the logical line.
 			};
 			/// The equality operator.
-			inline bool operator==(const VisualLine& lhs, const VisualLine& rhs) /*noexcept*/ {
+			inline bool operator==(const VisualLine& lhs, const VisualLine& rhs) BOOST_NOEXCEPT {
 				return lhs.line == rhs.line && lhs.subline == rhs.subline;
 			}
 			/// The less-than operator.
-			inline bool operator<(const VisualLine& lhs, const VisualLine& rhs) /*noexcept*/ {
+			inline bool operator<(const VisualLine& lhs, const VisualLine& rhs) BOOST_NOEXCEPT {
 				return lhs.line < rhs.line || (lhs.line == rhs.line && lhs.subline < rhs.subline);
 			}
 
@@ -60,21 +60,21 @@ namespace ascension {
 			class InlineObject {
 			public:
 				/// Destructor.
-				virtual ~InlineObject() /*noexcept*/ {}
+				virtual ~InlineObject() BOOST_NOEXCEPT {}
 				/// Returns the advance (width) of this inline object in pixels.
-				virtual Scalar advance() const /*noexcept*/ = 0;
+				virtual Scalar advance() const BOOST_NOEXCEPT = 0;
 				/// Returns the ascent of this inline object in pixels.
-				virtual Scalar ascent() const /*noexcept*/ = 0;
+				virtual Scalar ascent() const BOOST_NOEXCEPT = 0;
 				/// Returns the descent of this inline object in pixels.
-				virtual Scalar descent() const /*noexcept*/ = 0;
+				virtual Scalar descent() const BOOST_NOEXCEPT = 0;
 				/**
 				 * Renders this inline object at the specified location.
 				 * @param context The graphic context
 				 * @param origin The location where this inline object is rendered
 				 */
-				virtual void draw(PaintContext& context, const NativePoint& origin) /*noexcept*/ = 0;
+				virtual void draw(PaintContext& context, const NativePoint& origin) BOOST_NOEXCEPT = 0;
 				/// Returns the size of this inline object in pixels.
-				NativeSize size() const /*noexcept*/ {
+				NativeSize size() const BOOST_NOEXCEPT {
 					return geometry::make<NativeSize>(advance(), ascent() + descent());
 				}
 			};
@@ -85,19 +85,19 @@ namespace ascension {
 			class LineMetrics {
 			public:
 				/// Destructor.
-				virtual ~LineMetrics() /*noexcept*/ {}
+				virtual ~LineMetrics() BOOST_NOEXCEPT {}
 				/// Returns the ascent of the text in pixels.
-				virtual Scalar ascent() const /*noexcept*/ = 0;
+				virtual Scalar ascent() const BOOST_NOEXCEPT = 0;
 				/// Returns the dominant baseline of the text.
-				virtual DominantBaseline baseline() const /*noexcept*/ = 0;
+				virtual DominantBaseline baseline() const BOOST_NOEXCEPT = 0;
 				/// Returns the baseline offset od the text, relative to the baseline of the text.
-				virtual Scalar baselineOffset(AlignmentBaseline baseline) const /*noexcept*/ = 0;
+				virtual Scalar baselineOffset(AlignmentBaseline baseline) const BOOST_NOEXCEPT = 0;
 				/// Returns the descent of the text in pixels.
-				virtual Scalar descent() const /*noexcept*/ = 0;
+				virtual Scalar descent() const BOOST_NOEXCEPT = 0;
 				/// Returns the height of the text in pixels.
-				Scalar height() const /*noexcept*/ {return ascent() + descent()/* + leading()*/;}
+				Scalar height() const BOOST_NOEXCEPT {return ascent() + descent()/* + leading()*/;}
 //				/// Returns the leading of the text in pixels.
-//				virtual Scalar leading() const /*noexcept*/ = 0;
+//				virtual Scalar leading() const BOOST_NOEXCEPT = 0;
 			};
 
 //			class ComputedStyledTextRunIterator;
@@ -136,23 +136,23 @@ namespace ascension {
 				// general attributes
 				presentation::TextAnchor anchor(Index line) const;
 				std::uint8_t characterLevel(Index offset) const;
-				bool isBidirectional() const /*noexcept*/;
+				bool isBidirectional() const BOOST_NOEXCEPT;
 				const presentation::TextLineStyle& style() const /*throw()*/;
 				const presentation::WritingMode& writingMode() const /*throw()*/;
 				// visual line accesses
-				Index numberOfLines() const /*noexcept*/;
+				Index numberOfLines() const BOOST_NOEXCEPT;
 				Index lineAt(Index offset) const;
 				Index lineLength(Index line) const;
 				Index lineOffset(Index line) const;
-				std::vector<Index>&& lineOffsets() const /*noexcept*/;
+				std::vector<Index>&& lineOffsets() const BOOST_NOEXCEPT;
 				// bounds, extents and measures
 				NativeRegion blackBoxBounds(const Range<Index>& range) const;
-				presentation::FlowRelativeFourSides<Scalar> bounds() const /*noexcept*/;
+				presentation::FlowRelativeFourSides<Scalar> bounds() const BOOST_NOEXCEPT;
 				presentation::FlowRelativeFourSides<Scalar> bounds(const Range<Index>& characterRange) const;
-				Range<Scalar> extent() /*noexcept*/ const;
+				Range<Scalar> extent() BOOST_NOEXCEPT const;
 				Range<Scalar> extent(const Range<Index>& lines) const;
 				presentation::FlowRelativeFourSides<Scalar> lineBounds(Index line) const;
-				Scalar measure() const /*noexcept*/;
+				Scalar measure() const BOOST_NOEXCEPT;
 				Scalar measure(Index line) const;
 				// other coordinates
 				Scalar baseline(Index line) const;
@@ -183,8 +183,8 @@ namespace ascension {
 				void expandTabsWithoutWrapping() /*throw()*/;
 				typedef std::vector<std::unique_ptr<const TextRun>> RunVector;
 				RunVector::const_iterator runForPosition(Index offset) const /*throw()*/;
-				RunVector::const_iterator firstRunInLine(Index line) const /*noexcept*/;
-				bool isEmpty() const /*noexcept*/ {return runs_.empty();}
+				RunVector::const_iterator firstRunInLine(Index line) const BOOST_NOEXCEPT;
+				bool isEmpty() const BOOST_NOEXCEPT {return runs_.empty();}
 				void justify(Scalar lineMeasure, presentation::TextJustification method) /*throw()*/;
 				std::pair<Index, Index> locateOffsets(
 					Index line, Scalar ipd, bool& outside) const /*throw()*/;
@@ -196,7 +196,7 @@ namespace ascension {
 //				void rewrap();
 				void stackLines(boost::optional<Scalar> lineHeight,
 					presentation::LineBoxContain lineBoxContain, const Font& nominalFont);
-				void wrap(Scalar measure, const TabExpander& tabExpander) /*noexcept*/;
+				void wrap(Scalar measure, const TabExpander& tabExpander) BOOST_NOEXCEPT;
 			private:
 				const String& textString_;
 				boost::flyweight<ComputedTextLineStyle> lineStyle_;
@@ -216,7 +216,7 @@ namespace ascension {
 			 * Returns extent (block-progression-dimension) of the line.
 			 * @return A range of block-progression-dimension relative to the alignment-point
 			 */
-			inline Range<Scalar> TextLayout::extent() const /*noexcept*/ {
+			inline Range<Scalar> TextLayout::extent() const BOOST_NOEXCEPT {
 				return makeRange(
 					baseline(0) - lineMetrics_[0]->ascent(),
 					baseline(numberOfLines() - 1) + lineMetrics_[numberOfLines() - 1]->descent());
@@ -302,7 +302,7 @@ namespace ascension {
 			}
 
 			/// Returns the number of the wrapped lines.
-			inline Index TextLayout::numberOfLines() const /*noexcept*/ {return numberOfLines_;}
+			inline Index TextLayout::numberOfLines() const BOOST_NOEXCEPT {return numberOfLines_;}
 
 		}
 	}
