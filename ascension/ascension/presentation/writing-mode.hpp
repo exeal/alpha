@@ -89,6 +89,7 @@ namespace ascension {
 
 		/**
 		 * Defines the orientation of characters within a line.
+		 * @see resolveTextOrientation
 		 * @see "CSS Writing Modes Module Level 3, 5.1. Orienting Text: the ‘text-orientation’
 		 *      property" (http://www.w3.org/TR/css3-writing-modes/#text-orientation)
 		 * @see "SVG 1.1 (Second Edition), 10.7.3 Glyph orientation within a text run"
