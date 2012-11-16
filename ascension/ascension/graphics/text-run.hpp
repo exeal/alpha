@@ -42,10 +42,12 @@ namespace ascension {
 			class TextRun : public GlyphVector {
 			public:
 				/// Destructor.
-				virtual ~TextRun() /*noexcept*/ {}
+				virtual ~TextRun() BOOST_NOEXCEPT {}
 				/// Returns the number of characters in this run.
-				virtual Index length() const /*noexcept*/ = 0;
-				// hit test
+				virtual Index length() const BOOST_NOEXCEPT = 0;
+
+				/// @name Hit Test
+				/// @{
 				/**
 				 * Returns the character encompasses the specified location.
 				 * @param ipd The distance to the location from the leading edge of this text run
@@ -54,7 +56,7 @@ namespace ascension {
 				 *         of this text run
 				 * @see #characterHasClosestLeadingEdge
 				 */
-				virtual boost::optional<Index> characterEncompassesPosition(Scalar ipd) const /*noexcept*/ = 0;
+				virtual boost::optional<Index> characterEncompassesPosition(Scalar ipd) const BOOST_NOEXCEPT = 0;
 				/**
 				 * Returns the character whose leading edge is closest the specified location.
 				 * @param ipd The distance to the location from the leading edge of this text run
@@ -63,7 +65,10 @@ namespace ascension {
 				 * @see #characterHasClosestLeadingEdge
 				 */
 				virtual Index characterHasClosestLeadingEdge(Scalar ipd) const = 0;
-				// glyph edges
+				/// @}
+
+				/// @name Glyph Edges
+				/// @{
 				/**
 				 * Returns the distance in inline-progression-dimension from the leading edge of
 				 * this text run to one of the glyph of the specified character.
@@ -86,17 +91,24 @@ namespace ascension {
 				 * @see #leadingEdge
 				 */
 				virtual Scalar trailingEdge(Index character) const = 0;
-				// geometric definition from XSL 1.1
-				virtual presentation::FlowRelativeFourSides<Scalar> allocationRectangle() const /*noexcept*/;
-				virtual presentation::FlowRelativeFourSides<Scalar> borderRectangle() const /*noexcept*/;
-				virtual const presentation::FlowRelativeFourSides<ComputedBorderSide>* borders() const /*noexcept*/ = 0;
-				virtual presentation::FlowRelativeFourSides<Scalar> contentRectangle() const /*noexcept*/;
-				// other typographic attributes
-				virtual std::uint8_t characterLevel() const /*noexcept*/ = 0;
-				virtual std::shared_ptr<const Font> font() const /*noexcept*/ = 0;
+				/// @}
+
+				/// @name Geometric Definitions from XSL 1.1
+				/// @{
+				virtual presentation::FlowRelativeFourSides<Scalar> allocationRectangle() const BOOST_NOEXCEPT;
+				virtual presentation::FlowRelativeFourSides<Scalar> borderRectangle() const BOOST_NOEXCEPT;
+				virtual const presentation::FlowRelativeFourSides<ComputedBorderSide>* borders() const BOOST_NOEXCEPT = 0;
+				virtual presentation::FlowRelativeFourSides<Scalar> contentRectangle() const BOOST_NOEXCEPT;
+				/// @}
+
+				/// @name Other Typographic Attributes
+				virtual std::uint8_t characterLevel() const BOOST_NOEXCEPT = 0;
+				virtual std::shared_ptr<const Font> font() const BOOST_NOEXCEPT = 0;
+				/// @}
+
 				// GlyphVector
 				/// @see GlyphVector#direction
-				presentation::ReadingDirection direction() const /*noexcept*/ {
+				presentation::ReadingDirection direction() const BOOST_NOEXCEPT {
 					return ((characterLevel() & 0x01) == 0x00) ?
 						presentation::LEFT_TO_RIGHT : presentation::RIGHT_TO_LEFT;
 				}

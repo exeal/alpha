@@ -129,23 +129,30 @@ namespace ascension {
 				};
 #endif
 			public:
-				// constructors
 				TextLayout(const String& textString, const ComputedTextLineStyle& lineStyle,
 					std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles);
-				~TextLayout() /*throw()*/;
-				// general attributes
+				~TextLayout() BOOST_NOEXCEPT;
+
+				/// @name General Attributes
+				/// @{
 				presentation::TextAnchor anchor(Index line) const;
 				std::uint8_t characterLevel(Index offset) const;
 				bool isBidirectional() const BOOST_NOEXCEPT;
 				const presentation::TextLineStyle& style() const /*throw()*/;
 				const presentation::WritingMode& writingMode() const /*throw()*/;
-				// visual line accesses
+				/// @}
+
+				/// @name Visual Line Accesses
+				/// @{
 				Index numberOfLines() const BOOST_NOEXCEPT;
 				Index lineAt(Index offset) const;
 				Index lineLength(Index line) const;
 				Index lineOffset(Index line) const;
 				std::vector<Index>&& lineOffsets() const BOOST_NOEXCEPT;
-				// bounds, extents and measures
+				/// @}
+
+				/// @name Bounds, Extents and Measures
+				/// @{
 				NativeRegion blackBoxBounds(const Range<Index>& range) const;
 				presentation::FlowRelativeFourSides<Scalar> bounds() const BOOST_NOEXCEPT;
 				presentation::FlowRelativeFourSides<Scalar> bounds(const Range<Index>& characterRange) const;
@@ -154,7 +161,10 @@ namespace ascension {
 				presentation::FlowRelativeFourSides<Scalar> lineBounds(Index line) const;
 				Scalar measure() const BOOST_NOEXCEPT;
 				Scalar measure(Index line) const;
-				// other coordinates
+				/// @}
+
+				/// @name Other Coordinates
+				/// @{
 				Scalar baseline(Index line) const;
 				const LineMetrics& lineMetrics(Index line) const;
 				Scalar lineStartEdge(Index line) const;
@@ -163,17 +173,25 @@ namespace ascension {
 				std::pair<presentation::AbstractTwoAxes<Scalar>,
 					presentation::AbstractTwoAxes<Scalar>> locations(Index offset) const;
 				std::pair<Index, Index> offset(const NativePoint& p, bool* outside = nullptr) const /*throw()*/;
+				/// @}
+
 				// styled segments
 //				StyledSegmentIterator firstStyledSegment() const /*throw()*/;
 //				StyledSegmentIterator lastStyledSegment() const /*throw()*/;
 //				presentation::StyledTextRun styledTextRun(Index offset) const;
-				// painting
+
+				/// @name Painting
+				/// @{
 				void draw(PaintContext& context, const NativePoint& origin,
 					const TextPaintOverride* paintOverride = nullptr,
 					const InlineObject* endOfLine = nullptr,
 					const InlineObject* lineWrappingMark = nullptr) const /*throw()*/;
-				// miscellaneous
+				/// @}
+
+				/// @name Miscellaneous
+				/// @{
 				String fillToX(Scalar x) const;
+				/// @}
 #ifdef _DEBUG
 				// debug
 				void dumpRuns(std::ostream& out) const;

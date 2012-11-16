@@ -23,21 +23,21 @@ namespace ascension {
 		static const Direction FORWARD;		///< Direction to the end.
 		static const Direction BACKWARD;	///< Direction to the start.
 		/// Copy-constructor.
-		Direction(const Direction& other) /*noexcept*/ : value_(other.value_) {}
+		Direction(const Direction& other) BOOST_NOEXCEPT : value_(other.value_) {}
 		/// Assignment operator.
-		Direction& operator=(const Direction& other) /*noexcept*/ {
+		Direction& operator=(const Direction& other) BOOST_NOEXCEPT {
 			return (value_ = other.value_), *this;
 		}
 		/// Negation operator returns the complement of this.
-		Direction operator!() const /*noexcept*/ {
+		Direction operator!() const BOOST_NOEXCEPT {
 			return (*this == FORWARD) ? BACKWARD : FORWARD;
 		}
 		/// Equality operator.
-		bool operator==(const Direction& other) const /*noexcept*/ {
+		bool operator==(const Direction& other) const BOOST_NOEXCEPT {
 			return value_ == other.value_;
 		}
 	private:
-		explicit Direction(bool value) /*noexcept*/ : value_(value) {}
+		explicit Direction(bool value) BOOST_NOEXCEPT : value_(value) {}
 		bool value_;
 	};
 
@@ -75,13 +75,13 @@ namespace ascension {
 			typedef T value_type;
 			PhysicalTwoAxes(const value_type& x, const value_type& y) : std::pair<T, T>(x, y) {}
 			/// Returns a reference 'x' (horizontal position) value.
-			value_type& x() /*noexcept*/ {return first;}
+			value_type& x() BOOST_NOEXCEPT {return first;}
 			/// Returns a reference 'x' (horizontal position) value.
-			const value_type& x() const /*noexcept*/ {return first;}
+			const value_type& x() const BOOST_NOEXCEPT {return first;}
 			/// Returns a reference 'y' (vertical position) value.
-			value_type& y() /*noexcept*/ {return second;}
+			value_type& y() BOOST_NOEXCEPT {return second;}
 			/// Returns a reference 'y' (vertical position) value.
-			const value_type& y() /*noexcept*/ const {return second;}
+			const value_type& y() BOOST_NOEXCEPT const {return second;}
 		};
 
 		/**
@@ -188,13 +188,13 @@ namespace ascension {
 		public:
 			typedef T value_type;
 			/// Returns a reference to 'block-dimension' value.
-			value_type& bpd() /*noexcept*/ {return first;}
+			value_type& bpd() BOOST_NOEXCEPT {return first;}
 			/// Returns a reference to 'block-dimension' value.
-			const value_type& bpd() const /*noexcept*/ {return first;}
+			const value_type& bpd() const BOOST_NOEXCEPT {return first;}
 			/// Returns a reference to 'inline-dimension' value.
-			value_type& ipd() /*noexcept*/ {return second;}
+			value_type& ipd() BOOST_NOEXCEPT {return second;}
 			/// Returns a reference to 'inline-dimension' value.
-			const value_type& ipd() const /*noexcept*/ {return second;}
+			const value_type& ipd() const BOOST_NOEXCEPT {return second;}
 		};
 
 		/**

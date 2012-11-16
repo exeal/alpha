@@ -47,8 +47,8 @@ namespace ascension {
 			class GlyphVector {
 			public:
 				/// Destructor.
-				virtual ~GlyphVector() /*noexcept*/ {}
-				virtual presentation::ReadingDirection direction() const /*noexcept*/ = 0;
+				virtual ~GlyphVector() BOOST_NOEXCEPT {}
+				virtual presentation::ReadingDirection direction() const BOOST_NOEXCEPT = 0;
 				/**
 				 * @see #strokeGlyphs
 				 */
@@ -101,7 +101,7 @@ namespace ascension {
 					return geometry::make<NativeRectangle>(physical);
 				}
 				/// Returns the number of glyphs in this vector.
-				virtual std::size_t numberOfGlyphs() const /*noexcept*/ = 0;
+				virtual std::size_t numberOfGlyphs() const BOOST_NOEXCEPT = 0;
 //				virtual std::shared_ptr<Shape> outline(std::size_t index) const = 0;
 				/**
 				 * @see #fillGlyphs
