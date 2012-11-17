@@ -621,8 +621,6 @@ namespace {
 		boost::flyweight<ComputedTextRunStyleCore> coreStyle_;
 		SCRIPT_ANALYSIS analysis_;	// fLogicalOrder member is always 0 (however see shape())
 		shared_ptr<RawGlyphVector> glyphs_;
-		int width_ : sizeof(int) - 1;
-		bool mayOverhang_ : 1;
 	};
 }
 
@@ -833,7 +831,17 @@ shared_ptr<const Font> TextRunImpl::font() const BOOST_NOEXCEPT {
 	return glyphs_->font;
 }
 
+
 namespace {
+	inline HRESULT callScriptItemize(const WCHAR* text, int length, int estimatedNumberOfItems,
+			const SCRIPT_CONTROL& control, const SCRIPT_STATE& initialState, SCRIPT_ITEM items[], OPENTYPE_TAG scriptTags[], int& numberOfItems) {
+		static HRESULT(WINAPI* scriptItemizeOpenType)(const WCHAR*, int, int,
+			const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*, OPENTYPE_TAG*, int*) = uspLib->get<0>();
+		if(scriptItemizeOpenType != nullptr && scriptTags != nullptr)
+			return (*scriptItemizeOpenType)(text, length, estimatedNumberOfItems, &control, &initialState, items, scriptTags, &numberOfItems);
+		else
+			return ::ScriptItemize(text, length, estimatedNumberOfItems, &control, &initialState, items, &numberOfItems);
+	}
 	shared_ptr<const Font> selectFont(const StringPiece& textString, const FontCollection& fontCollection, const ComputedFontSpecification& specification);
 }
 
@@ -877,12 +885,8 @@ void TextRunImpl::generate(const StringPiece& textString, const FontCollection& 
 	while(true) {
 		scriptRuns.reallocate(estimatedNumberOfScriptRuns);
 		scriptTags.reallocate(estimatedNumberOfScriptRuns);
-		if(scriptItemizeOpenType != nullptr)
-			hr = (*scriptItemizeOpenType)(textString.beginning(), static_cast<int>(length(textString)),
-				estimatedNumberOfScriptRuns, &control, &initialState, scriptRuns.get(), scriptTags.get(), &numberOfScriptRuns);
-		else
-			hr = ::ScriptItemize(textString.beginning(), static_cast<int>(length(textString)),
-				estimatedNumberOfScriptRuns, &control, &initialState, scriptRuns.get(), &numberOfScriptRuns);
+		hr = callScriptItemize(textString.beginning(), static_cast<int>(length(textString)),
+			estimatedNumberOfScriptRuns, control, initialState, scriptRuns.get(), scriptTags.get(), numberOfScriptRuns);
 		if(hr != E_OUTOFMEMORY)	// estimatedNumberOfRuns was enough...
 			break;
 		estimatedNumberOfScriptRuns *= 2;
@@ -2510,18 +2514,6 @@ uint8_t TextLayout::characterLevel(Index offset) const {
 	return (*run)->characterLevel();
 }
 
-namespace {
-	inline HRESULT callScriptItemize(const WCHAR* text, int length, int estimatedNumberOfItems,
-			const SCRIPT_CONTROL& control, const SCRIPT_STATE& initialState, SCRIPT_ITEM items[], OPENTYPE_TAG scriptTags[], int& numberOfItems) {
-		static HRESULT(WINAPI* scriptItemizeOpenType)(const WCHAR*, int, int,
-			const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*, OPENTYPE_TAG*, int*) = uspLib->get<0>();
-		if(scriptItemizeOpenType != nullptr && scriptTags != nullptr)
-			return (*scriptItemizeOpenType)(text, length, estimatedNumberOfItems, &control, &initialState, items, scriptTags, &numberOfItems);
-		else
-			return ::ScriptItemize(text, length, estimatedNumberOfItems, &control, &initialState, items, &numberOfItems);
-	}
-}
-
 /**
  * Draws the specified line layout to the output device.
  * @param context The rendering context
@@ -2590,6 +2582,41 @@ void TextLayout::draw(PaintContext& context,
 	AbstractTwoAxes<Scalar> alignmentPoint;	// alignment-point of text run relative to this layout
 
 	// 2. paint backgrounds and borders
+	for(Index line = linesToPaint.beginning(); line < linesToPaint.end(); ++line) {
+		NativePoint p(origin);	// a point at which baseline and (logical) 'line-left' edge of 'allocation-rectangle' of text run
+		if(isHorizontal(writingMode().blockFlowDirection)) {
+			geometry::x(p) += (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? lineStartEdge(line) : -(lineStartEdge(line) + measure(line));
+			geometry::y(p) += baseline(line);
+		} else {
+			assert(isVertical(writingMode().blockFlowDirection));
+			geometry::x(p) += (writingMode().blockFlowDirection == VERTICAL_RL) ? -baseline(line) : baseline(line);
+			if(resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT)
+				geometry::y(p) += (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? lineStartEdge(line) : -(lineStartEdge(line) + measure(line));
+			else
+				geometry::y(p) -= (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? lineStartEdge(line) : -(lineStartEdge(line) + measure(line));
+		}
+		const RunVector::const_iterator lastRun((line + 1 < numberOfLines()) ? firstRunInLine(line + 1) : runs_.end());
+		for(RunVector::const_iterator i(firstRunInLine(line)); i < lastRun; ++i) {
+			const TextRunImpl& textRun = *static_cast<const TextRunImpl*>(i->get());
+
+			// compute 'large-allocation-rectangle' and 'allocation-rectangle'
+			NativeRectangle largeAllocationRectangle, allocationRectangle;
+			if(isHorizontal(writingMode().blockFlowDirection)) {
+				geometry::range<geometry::X_COORDINATE>(largeAllocationRectangle)
+					= geometry::range<geometry::X_COORDINATE>(allocationRectangle)
+					= makeRange<Scalar>(geometry::x(p), geometry::x(p) + textRun.measure());
+				geometry::range<geometry::Y_COORDINATE>(largeAllocationRectangle) = makeRange(geometry::y(p) - textRun.font()->metrics()->ascent();
+			}
+
+			// move 'p' to next text run
+			if(isHorizontal(writingMode().blockFlowDirection))
+				geometry::x(p) += textRun.measure();
+			else if(resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT)
+				geometry::y(p) += textRun.measure();
+			else
+				geometry::y(p) -= textRun.measure();
+		}
+	}
 	for(RunVector::const_iterator i(textRunsToPaint.beginning()), e; i != textRunsToPaint.end(); ++i) {
 		// TODO: recognize the override.
 		// TODO: this code can't handle sparse inline areas (with bidirectionality).
@@ -3163,6 +3190,7 @@ Scalar TextLayout::measure(Index line) const {
 			if(maximumMeasure_)
 				return boost::get(maximumMeasure_);
 		} else {
+			static_assert(is_signed<Scalar>::value, "");
 			if(measures_.get() == nullptr) {
 				self.measures_.reset(new Scalar[numberOfLines()]);
 				fill_n(self.measures_.get(), numberOfLines(), -1);

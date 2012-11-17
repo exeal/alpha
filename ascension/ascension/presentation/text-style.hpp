@@ -28,10 +28,10 @@
 #include <boost/variant.hpp>
 
 namespace ascension {
+	/// Defines presentative stuffs.
 	namespace presentation {
-
-		// from CSS Color Module Level 3 //////////////////////////////////////////////////////////
-
+		/// @name CSS Color Module Level 3
+		/// @{
 		/**
 		 * Describes the foreground color of the text content. @c boost#none means 'currentColor'
 		 * CSS 3.
@@ -74,9 +74,10 @@ namespace ascension {
 			else
 				return graphics::SystemColors::get(graphics::SystemColors::WINDOW_TEXT);
 		}
+		/// @}
 
-		// from CSS Backgrounds and Borders Module Level 3 ////////////////////////////////////////
-
+		/// @name CSS Backgrounds and Borders Module Level 3
+		/// @{
 		/**
 		 * @c null also means 'transparent'.
 		 * @see CSS Backgrounds and Borders Module Level 3, 3.10. Backgrounds Shorthand: the
@@ -179,9 +180,25 @@ namespace ascension {
 			};
 			FlowRelativeFourSides<Side> sides;
 		};
+		/// @}
 
-		// from CSS Fonts Module Level 3 //////////////////////////////////////////////////////////
+		/// @name CSS basic box model
+		/// @{
 
+		/// Enumerated values for @c TextRunStyle#padding.
+		ASCENSION_BEGIN_SCOPED_ENUM(PaddingEnums)
+			AUTO
+		ASCENSION_END_SCOPED_ENUM;
+
+		/// Enumerated values for @c TextRunStyle#margin.
+		ASCENSION_BEGIN_SCOPED_ENUM(MarginEnums)
+			FILL,
+			AUTO
+		ASCENSION_END_SCOPED_ENUM;
+		/// @}
+
+		/// @name CSS Fonts Module Level 3
+		/// @{
 		/**
 		 * [Copied from CSS3] An <absolute-size> keyword refers to an entry in a table of font
 		 * sizes computed and kept by the user agent.
@@ -199,8 +216,10 @@ namespace ascension {
 		ASCENSION_BEGIN_SCOPED_ENUM(RelativeFontSize)
 			LARGER, SMALLER
 		ASCENSION_END_SCOPED_ENUM;
+		/// @}
 
-		// from CSS Line Layout Module Level 3 ////////////////////////////////////////////////////
+		/// @name CSS Line Layout Module Level 3
+		/// @{
 
 		/// Enumerated values for @c TextRunStyle#textHeight.
 		ASCENSION_BEGIN_SCOPED_ENUM(TextHeightEnums)
@@ -254,9 +273,10 @@ namespace ascension {
 		 *      (http://dev.w3.org/csswg/css3-linebox/#inline-box-align-prop)
 		 */
 		typedef boost::variant<InlineBoxAlignmentEnums, Index> InlineBoxAlignment;
+		/// @}
 
-		// from CSS Text Level 3 //////////////////////////////////////////////////////////////////
-
+		/// @name CSS Text Level 3
+		/// @{
 		/**
 		 * [Copied from CSS3] This property transforms text for styling purposes.
 		 * @see CSS Text Level 3, 2.1. Transforming Text: the ‘text-transform’ property
@@ -282,15 +302,15 @@ namespace ascension {
 			PRE_LINE	= 0 << 0 | 1 << 1 | 1 << 2
 		ASCENSION_END_SCOPED_ENUM;
 
-		inline bool collapsesNewLines(WhiteSpace value) /*noexcept*/ {
+		inline bool collapsesNewLines(WhiteSpace value) BOOST_NOEXCEPT {
 			return (value & (1 << 0)) != 0;
 		}
 
-		inline bool collapsesSpacesAndTabs(WhiteSpace value) /*noexcept*/ {
+		inline bool collapsesSpacesAndTabs(WhiteSpace value) BOOST_NOEXCEPT {
 			return (value & (1 << 1)) != 0;
 		}
 
-		inline bool wrapsText(WhiteSpace value) /*noexcept*/ {
+		inline bool wrapsText(WhiteSpace value) BOOST_NOEXCEPT {
 			return (value & (1 << 2)) != 0;
 		}
 
@@ -469,7 +489,10 @@ namespace ascension {
 			// TODO: Some values should be able to be combined by bitwise-OR.
 			NONE, FIRST, FORCE_END, ALLOW_END, LAST
 		ASCENSION_END_SCOPED_ENUM;
+		/// @}
 
+		/// @name CSS Text Decoration Module Level 3
+		/// @{
 		/**
 		 * [Copied from CSS3] Describes line decorations that are added to the content of an element.
 		 * @see CSS Text Decoration Module Level 3, 2. Line Decoration: Underline, Overline, and
@@ -673,6 +696,7 @@ namespace ascension {
 		 *      (http://dev.w3.org/csswg/css-text-decor-3/#text-shadow-property)
 		 */
 		struct TextShadow {};
+		/// @}
 
 		/**
 		 * Visual style settings of a text run.
@@ -681,6 +705,8 @@ namespace ascension {
 		struct TextRunStyle :
 				public FastArenaObject<TextRunStyle>,
 				public std::enable_shared_from_this<TextRunStyle> {
+			/// @name Colors
+			/// @{
 #if 1
 			/// Foreground color of the text content. See @c ColorProperty.
 			ColorProperty<sp::Inherited> color;
@@ -688,10 +714,48 @@ namespace ascension {
 			/// Text paint style.
 			std::shared_ptr<graphics::Paint> foreground;
 #endif
-			/// The background properties. See @c Background.
-			Background background;
-			/// Border of the text run. See the description of @c Border.
-			Border border;
+			/// @}
+
+			/// @name Backgrounds and Borders
+			/// @{
+			Background background;	///< The background properties. See @c Background.
+			Border border;	///< Border of the text run. See the description of @c Border.
+			/// @}
+
+			/// @name Basic Box Model
+			/// @{
+			/**
+			 * [Copied from CSS3] Sets the thickness of the padding area. The value may not be
+			 * negative.
+			 * @see CSS basic box model, 7. The padding properties
+			 *      (http://dev.w3.org/csswg/css3-box/#the-padding-properties)
+			 */
+			FlowRelativeFourSides<
+				StyleProperty<
+					sp::Multiple<
+						boost::variant<PaddingEnums, Length>,
+						Length, 0
+					>, sp::NotInherited
+				>
+			> padding;
+			/**
+			 * [Copied from CSS3] These properties set the thickness of the margin area. The value
+			 * may be negative.
+			 * @see CSS basic box model, 8. Margins
+			 *      (http://dev.w3.org/csswg/css3-box/#margins)
+			 */
+			FlowRelativeFourSides<
+				StyleProperty<
+					sp::Multiple<
+						boost::variant<MarginEnums, Length>,
+						Length, 0
+					>, sp::NotInherited
+				>
+			> margin;
+			/// @}
+
+			/// @name Fonts
+			/// @{
 			/**
 			 * @see CSS Fonts Module Level 3, 3.1 Font family: the font-family property
 			 *      (http://www.w3.org/TR/css3-fonts/#font-family-prop)
@@ -751,6 +815,10 @@ namespace ascension {
 //					boost::optional<String>
 //				>, sp::Inherited
 //			> fontLanguageOverride;
+			/// @}
+
+			/// @name Line Layout
+			/// @{
 			/**
 			 * [Copied from CSS3] The ‘text-height’ property determine the block-progression
 			 * dimension of the text content area of an inline box (non-replaced elements).
@@ -831,6 +899,10 @@ namespace ascension {
 					BaselineShiftEnums, BaselineShiftEnums::BASELINE
 				>, sp::NotInherited
 			> baselineShift;
+			/// @}
+
+			/// @name Text
+			/// @{
 			StyleProperty<
 				sp::Enumerated<TextTransform, TextTransform::NONE>,
 				sp::Inherited
@@ -877,12 +949,18 @@ namespace ascension {
 					sp::Inherited
 				>
 			> letterSpacing;
+			/// @}
+
+			/// @name Text Decoration
+			/// @{
 			/// Text decoration properties. See @c TextDecoration.
 			TextDecoration textDecoration;
 			/// Text emphasis properties. See @c TextEmphasis.
 			TextEmphasis textEmphasis;
 			/// Text shadow properties. See @c TextShadow.
 			TextShadow textShadow;
+			/// @}
+
 //			RubyProperties rubyProperties;
 //			Effects effects;
 			/// Set @c false to disable shaping. Default is @c true.
@@ -904,14 +982,14 @@ namespace ascension {
 			/// The declared style in this text run.
 			std::shared_ptr<const TextRunStyle> style;
 			/// Default constructor.
-			StyledTextRun() /*noexcept*/ {}
+			StyledTextRun() BOOST_NOEXCEPT {}
 			/**
 			 * Constructor.
 			 * @param characterRange The range of the text run in the line
 			 * @param style The declared style of the text run. Can be @c null
 			 */
 			StyledTextRun(const StringPiece& characterRange,
-				std::shared_ptr<const TextRunStyle> style) /*noexcept*/
+				std::shared_ptr<const TextRunStyle> style) BOOST_NOEXCEPT
 				: StringPiece(characterRange), style_(style) {}
 		};
 #endif
@@ -922,7 +1000,7 @@ namespace ascension {
 		class StyledTextRunIterator {
 		public:
 			/// Destructor.
-			virtual ~StyledTextRunIterator() /*noexcept*/ {}
+			virtual ~StyledTextRunIterator() BOOST_NOEXCEPT {}
 			/**
 			 * Returns the range of the current text run addressed by this iterator.
 			 * @return The range of the current text run this iterator addresses in character
@@ -944,7 +1022,7 @@ namespace ascension {
 			 */
 			virtual std::shared_ptr<const TextRunStyle> currentStyle() const = 0;
 			/// Returns @c true if the iterator addresses the end of the range.
-			virtual bool isDone() const /*noexcept*/ = 0;
+			virtual bool isDone() const BOOST_NOEXCEPT = 0;
 			/**
 			 * Moves the iterator to the next styled text run.
 			 * @throw NoSuchElementException This iterator is done.
@@ -1095,7 +1173,7 @@ namespace ascension {
 		};
 
 		std::shared_ptr<const TextRunStyle> defaultTextRunStyle(
-			const TextLineStyle& textLineStyle) /*noexcept*/;
+			const TextLineStyle& textLineStyle) BOOST_NOEXCEPT;
 
 		/**
 		 * 
@@ -1164,7 +1242,7 @@ namespace ascension {
 		}
 
 		std::shared_ptr<const TextLineStyle> defaultTextLineStyle(
-			const TextToplevelStyle& textToplevelStyle) /*noexcept*/;
+			const TextToplevelStyle& textToplevelStyle) BOOST_NOEXCEPT;
 	}
 
 	namespace detail {

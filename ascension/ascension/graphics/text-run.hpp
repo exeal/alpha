@@ -93,12 +93,83 @@ namespace ascension {
 				virtual Scalar trailingEdge(Index character) const = 0;
 				/// @}
 
-				/// @name Geometric Definitions from XSL 1.1
+				/// @name Box Model of CSS 3 and XSL 1.1
 				/// @{
-				virtual presentation::FlowRelativeFourSides<Scalar> allocationRectangle() const BOOST_NOEXCEPT;
-				virtual presentation::FlowRelativeFourSides<Scalar> borderRectangle() const BOOST_NOEXCEPT;
-				virtual const presentation::FlowRelativeFourSides<ComputedBorderSide>* borders() const BOOST_NOEXCEPT = 0;
-				virtual presentation::FlowRelativeFourSides<Scalar> contentRectangle() const BOOST_NOEXCEPT;
+				presentation::FlowRelativeFourSides<Scalar> allocationBox() const BOOST_NOEXCEPT {
+					presentation::FlowRelativeFourSides<Scalar> bounds(borderBox());
+					if(const presentation::FlowRelativeFourSides<Scalar>* const marginWidths = margin()) {
+						bounds.start() -= marginWidths->start();
+						bounds.end() += marginWidths->end();
+					}
+					return bounds;
+				}
+				/**
+				 * Returns the border.
+				 * @return The border, or @c null if absent
+				 * @see #margin, padding
+				 */
+				virtual const presentation::FlowRelativeFourSides<ComputedBorderSide>* border() const BOOST_NOEXCEPT = 0;
+				/**
+				 * Returns the 'border-box' of this text run in device units.
+				 * @see #border, #contentBox, #marginBox, #paddingBox
+				 */
+				presentation::FlowRelativeFourSides<Scalar> borderBox() const BOOST_NOEXCEPT {
+					presentation::FlowRelativeFourSides<Scalar> bounds(paddingBox());
+					if(const presentation::FlowRelativeFourSides<ComputedBorderSide>* const borders = border()) {
+						bounds.before() -= borders->before().computedWidth();
+						bounds.after() += borders->after().computedWidth();
+						bounds.start() -= borders->start().computedWidth();
+						bounds.end() += borders->end().computedWidth();
+					}
+					return bounds;
+				}
+				/**
+				 * Returns the 'content-box' of this text run in device units.
+				 * @see #borderBox, #marginBox, #paddingBox
+				 */
+				virtual presentation::FlowRelativeFourSides<Scalar> contentBox() const BOOST_NOEXCEPT {
+					return logicalBounds();
+				}
+				/**
+				 * Returns the margin.
+				 * @return The margin widths in device units, or @c null if absent
+				 * @see #border, padding
+				 */
+				virtual const presentation::FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT = 0;
+				/**
+				 * Returns the 'margin-box' of this text run in device units.
+				 * @see #borderBox, #contentBox, #paddingBox, #margin
+				 */
+				presentation::FlowRelativeFourSides<Scalar> marginBox() const BOOST_NOEXCEPT {
+					presentation::FlowRelativeFourSides<Scalar> bounds(borderBox());
+					if(const presentation::FlowRelativeFourSides<Scalar>* const marginWidths = margin()) {
+						bounds.before() -= marginWidths->before();
+						bounds.after() += marginWidths->after();
+						bounds.start() -= marginWidths->start();
+						bounds.end() += marginWidths->end();
+					}
+					return bounds;
+				}
+				/**
+				 * Returns the padding.
+				 * @return The padding widths in device units, or @c null if absent
+				 * @see #border, #margin
+				 */
+				virtual const presentation::FlowRelativeFourSides<Scalar>* padding() const BOOST_NOEXCEPT = 0;
+				/**
+				 * Returns the 'padding-box' of this text run in device units.
+				 * @see #borderBox, #contentBox, #marginBox, #padding
+				 */
+				presentation::FlowRelativeFourSides<Scalar> paddingBox() const BOOST_NOEXCEPT {
+					presentation::FlowRelativeFourSides<Scalar> bounds(contentBox());
+					if(const presentation::FlowRelativeFourSides<Scalar>* const paddingWidths = padding()) {
+						bounds.before() -= paddingWidths->before();
+						bounds.after() += paddingWidths->after();
+						bounds.start() -= paddingWidths->start();
+						bounds.end() += paddingWidths->end();
+					}
+					return bounds;
+				}
 				/// @}
 
 				/// @name Other Typographic Attributes
