@@ -105,13 +105,17 @@ namespace ascension {
 				/// Default constructor.
 				ComputedBorderSide() BOOST_NOEXCEPT :
 					color(Color::TRANSPARENT_BLACK), style(presentation::Border::NONE), width(0) {}
-				/// Returns the computed width in pixels.
+				/// Returns the computed width in device units.
 				Scalar computedWidth() const BOOST_NOEXCEPT {
 					return (style != presentation::Border::NONE) ? width : 0;
 				}
-				/// Returns @c true if this part is invisible (but may be consumes place).
+				/// Returns @c true if this side has visible style (but may or may not consume place).
 				bool hasVisibleStyle() const BOOST_NOEXCEPT {
 					return style != presentation::Border::NONE && style != presentation::Border::HIDDEN;
+				}
+				/// Returns @c true if the computed thickness of this side is zero.
+				bool isAbsent() const BOOST_NOEXCEPT {
+					return computedWidth() == 0;
 				}
 			};
 
@@ -186,7 +190,11 @@ namespace ascension {
 				/// Computed value of @c TextRunStyle#background property.
 				std::shared_ptr<const Paint> background;
 				/// Computed value of @c TextRunStyle#border property.
-				PhysicalFourSides<ComputedBorderSide> borders;
+				presentation::FlowRelativeFourSides<ComputedBorderSide> border;
+				///Computed value of @c TextRunStyle#padding property.
+				presentation::FlowRelativeFourSides<Scalar> padding;
+				///Computed value of @c TextRunStyle#margin property.
+				presentation::FlowRelativeFourSides<Scalar> margin;
 				/// Computed value of @c TextRunStyle#textDecoration property.
 				ComputedTextDecoration textDecoration;
 				/// Computed value of @c TextRunStyle#textEmphasis property.
@@ -194,7 +202,7 @@ namespace ascension {
 //				TextShadow textShadow;
 
 				/// Default constructor initializes the all properties with their default values.
-				ComputedTextRunStyleCore() : color(0, 0, 0), background(nullptr), borders() {}
+				ComputedTextRunStyleCore() : color(0, 0, 0), background(nullptr), border() {}
 			};
 
 			/// Computed values of @c presentation#TextRunStyle.
