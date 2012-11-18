@@ -514,13 +514,15 @@ namespace {
 		void strokeGlyphs(PaintContext& context, const NativePoint& origin,
 			boost::optional<Range<std::size_t>> range /* = boost::none */) const;
 		// TextRun
-		const FlowRelativeFourSides<ComputedBorderSide>* borders() const BOOST_NOEXCEPT;
+		const FlowRelativeFourSides<ComputedBorderSide>* border() const BOOST_NOEXCEPT;
 		boost::optional<Index> characterEncompassesPosition(Scalar ipd) const BOOST_NOEXCEPT;
 		Index characterHasClosestLeadingEdge(Scalar ipd) const;
 		uint8_t characterLevel() const BOOST_NOEXCEPT;
 		shared_ptr<const Font> font() const BOOST_NOEXCEPT;
 		Scalar leadingEdge(Index character) const;
 		Index length() const BOOST_NOEXCEPT;
+		const FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT;
+		const FlowRelativeFourSides<Scalar>* padding() const BOOST_NOEXCEPT;
 		Scalar trailingEdge(Index character) const;
 		// attributes
 		const ComputedTextRunStyleCore& style() const BOOST_NOEXCEPT {return coreStyle_;}
@@ -1159,7 +1161,7 @@ FlowRelativeFourSides<Scalar> TextRunImpl::glyphVisualBounds(const Range<size_t>
 
 inline void TextRunImpl::hitTest(Scalar ipd, int& encompasses, int* trailing) const {
 	int tr;
-	const int x = (direction() == LEFT_TO_RIGHT) ? ipd : (measure() - ipd);
+	const int x = (direction() == LEFT_TO_RIGHT) ? ipd : (measure(*this) - ipd);
 	const HRESULT hr = ::ScriptXtoCP(x, static_cast<int>(ascension::length(*this)), numberOfGlyphs(), clusters(),
 		visualAttributes(), (justifiedAdvances() == nullptr) ? advances() : justifiedAdvances(), &analysis_, &encompasses, &tr);
 	if(FAILED(hr))
@@ -1181,7 +1183,7 @@ inline Scalar TextRunImpl::ipd(StringPiece::const_pointer character, bool traili
 	// TODO: handle letter-spacing correctly.
 //	if(visualAttributes()[offset].fClusterStart == 0) {
 //	}
-	return (direction() == LEFT_TO_RIGHT) ? result : (measure() - result);
+	return (direction() == LEFT_TO_RIGHT) ? result : (measure(*this) - result);
 }
 
 inline HRESULT TextRunImpl::justify(int width) {
@@ -1446,7 +1448,7 @@ void TextRunImpl::paintGlyphs(PaintContext& context, const NativePoint& origin, 
 	assert(analysis_.fLogicalOrder == 0);
 	const HRESULT hr = ::ScriptTextOut(context.asNativeObject().get(), &glyphs_->fontCache,
 		geometry::x(origin) + (analysis_.fRTL == 0) ?
-			leadingEdge(range->beginning()) : (measure() - leadingEdge(range->end())),
+			leadingEdge(range->beginning()) : (measure(*this) - leadingEdge(range->end())),
 		geometry::y(origin) - glyphs_->font->metrics()->ascent(), 0, &context.boundsToPaint(), &analysis_, nullptr, 0,
 		glyphs() + range->beginning(), ascension::length(*range), advances() + range->beginning(),
 		(justifiedAdvances() != nullptr) ? justifiedAdvances() + range->beginning() : nullptr,
@@ -2057,7 +2059,7 @@ namespace {
 		/*const*/ StringPiece effectiveCharacterRange_;
 		vector<unique_ptr<const TextRun>>::const_iterator currentRun_;
 		/*const*/ vector<unique_ptr<const TextRun>>::const_iterator lastRun_;
-		Scalar currentRunStartEdge_;	// 'start' means for 'layoutDirection_'
+		Scalar currentRunAllocationStartEdge_;	// 'start' means for 'layoutDirection_'
 	};
 }
 
@@ -2066,7 +2068,7 @@ InlineProgressionDimensionRangeIterator::InlineProgressionDimensionRangeIterator
 		ReadingDirection layoutDirection, const StringPiece& effectiveCharacterRange,
 		const Direction& scanningDirection, Scalar firstLineEdgeIpd) :
 		effectiveCharacterRange_(effectiveCharacterRange), layoutDirection_(layoutDirection),
-		currentRunStartEdge_(firstLineEdgeIpd) {
+		currentRunAllocationStartEdge_(firstLineEdgeIpd) {
 	const ReadingDirection scanningReadingDirection = computeScanningReadingDirection(layoutDirection, scanningDirection);
 	currentRun_ = (scanningReadingDirection == LEFT_TO_RIGHT) ? textRunsOfLine.beginning() : textRunsOfLine.end() - 1;
 	lastRun_ = (scanningReadingDirection == LEFT_TO_RIGHT) ? textRunsOfLine.end() : textRunsOfLine.beginning() - 1;
@@ -2077,42 +2079,51 @@ Range<Scalar> InlineProgressionDimensionRangeIterator::dereference() const {
 	if(isDone())
 		throw NoSuchElementException();
 	const TextRunImpl& currentRun = static_cast<const TextRunImpl&>(**currentRun_);
+	const FlowRelativeFourSides<Scalar>* const padding = currentRun.padding();
+	const FlowRelativeFourSides<ComputedBorderSide>* const border = currentRun.border();
+	const FlowRelativeFourSides<Scalar>* const margin = currentRun.margin();
+	const Scalar allocationStartOffset =
+		(padding != nullptr) ? padding->start() : 0
+		+ (margin != nullptr) ? margin->start() : 0
+		+ (border != nullptr) ? border->start().computedWidth() : 0;
 	const Range<StringPiece::const_pointer> subrange(intersected(currentRun, effectiveCharacterRange()));
 	assert(!isEmpty(subrange));
-	const Scalar startInRun = currentRun.leadingEdge(subrange.beginning() - currentRun.beginning());
-	const Scalar endInRun = currentRun.trailingEdge(subrange.end() - currentRun.beginning());
+	const Scalar startInRun = currentRun.leadingEdge(subrange.beginning() - currentRun.beginning()) + allocationStartOffset;
+	const Scalar endInRun = currentRun.trailingEdge(subrange.end() - currentRun.beginning()) + allocationStartOffset;
 	assert(startInRun <= endInRun);
-	const Scalar startOffset = (currentRun.direction() == layoutDirection_) ? startInRun : currentRun.measure() - endInRun;
-	const Scalar endOffset = (currentRun.direction() == layoutDirection_) ? endInRun : currentRun.measure() - startInRun;
+	const Scalar startOffset = (currentRun.direction() == layoutDirection_) ? startInRun : allocationMeasure(currentRun) - endInRun;
+	const Scalar endOffset = (currentRun.direction() == layoutDirection_) ? endInRun : allocationMeasure(currentRun) - startInRun;
 	assert(startOffset <= endOffset);
-	return makeRange(currentRunStartEdge_ + startOffset, currentRunStartEdge_ + endOffset);
+	return makeRange(currentRunAllocationStartEdge_ + startOffset, currentRunAllocationStartEdge_ + endOffset);
 }
 
 void InlineProgressionDimensionRangeIterator::next(bool initializing) {
 	if(isDone())
 		throw NoSuchElementException();
 	vector<unique_ptr<const TextRun>>::const_iterator nextRun(currentRun_);
-	Scalar nextIpd = currentRunStartEdge_;
+	Scalar nextIpd = currentRunAllocationStartEdge_;
 	const Direction sd = scanningDirection();
 	const ReadingDirection srd = computeScanningReadingDirection(layoutDirection_, sd);
 	while(nextRun != lastRun_) {
 		if(sd == Direction::FORWARD) {
-			if(intersects(static_cast<const TextRunImpl&>(**nextRun), effectiveCharacterRange()))
+			if(initializing && intersects(static_cast<const TextRunImpl&>(**nextRun), effectiveCharacterRange()))
 				break;
-			nextIpd += (*nextRun)->measure();
+			nextIpd += allocationMeasure(**nextRun);
 		} else {
-			nextIpd -= (*nextRun)->measure();
-			if(intersects(static_cast<const TextRunImpl&>(**nextRun), effectiveCharacterRange()))
+			nextIpd -= allocationMeasure(**nextRun);
+			if(initializing && intersects(static_cast<const TextRunImpl&>(**nextRun), effectiveCharacterRange()))
 				break;
 		}
 		if(srd == LEFT_TO_RIGHT)
 			++nextRun;
 		else
 			--nextRun;
+		if(!initializing)
+			break;
 	}
 	// commit
 	currentRun_ = nextRun;
-	currentRunStartEdge_ = nextIpd;
+	currentRunAllocationStartEdge_ = nextIpd;
 }
 
 
@@ -2932,8 +2943,8 @@ inline void TextLayout::justify(Scalar lineMeasure, TextJustification) /*throw()
 		const int ipd = measure(line);
 		for(auto i(firstRunInLine(line)), e(firstRunInLine(line + 1)); i != e; ++i) {
 			TextRunImpl& run = *const_cast<TextRunImpl*>(static_cast<const TextRunImpl*>(i->get()));
-			const int newRunMeasure = ::MulDiv(run.measure(), lineMeasure, ipd);	// TODO: there is more precise way.
-			run.justify(newRunMeasure);
+			const int newRunMeasure = ::MulDiv(run.measure(), lineMeasure, ipd);	// TODO: There is more precise way.
+			run.justify(newRunMeasure);	// TODO: Use 'allocation-rectangle'.
 		}
 	}
 }
@@ -3080,12 +3091,11 @@ pair<Index, Index> TextLayout::locateOffsets(Index line, Scalar ipd, bool& outsi
 		Scalar x = ipd - lineStart, dx = 0;
 		if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
 			x = measure(line) - x;
-		for(RunVector::const_iterator i(runsInLine.beginning()); i != runsInLine.end(); ++i) {
-			const Scalar nextDx = dx + (*i)->measure();
-			dx += (*i)->measure();
+		for(RunVector::const_iterator run(runsInLine.beginning()); run != runsInLine.end(); ++run) {
+			const Scalar nextDx = dx + allocationMeasure(**run);
 			if(nextDx >= x) {
-				const Scalar ipdInRun = ((*i)->direction() == LEFT_TO_RIGHT) ? x - dx : nextDx - x;
-				return make_pair((*i)->characterEncompassesPosition(ipdInRun), (*i)->characterHasClosestLeadingEdge(ipdInRun));
+				const Scalar ipdInRun = ((*run)->direction() == LEFT_TO_RIGHT) ? x - dx : nextDx - x;
+				return make_pair((*run)->characterEncompassesPosition(ipdInRun), (*run)->characterHasClosestLeadingEdge(ipdInRun));
 			}
 		}
 	}
@@ -3121,7 +3131,7 @@ void TextLayout::locations(Index offset, AbstractTwoAxes<Scalar>* leading, Abstr
 						trailingIpd = ipd + run.trailingEdge(at - run.beginning());
 					break;
 				}
-				ipd += run.measure();
+				ipd += allocationMeasure(run);
 			}
 		} else {	// RTL
 			Scalar ipd = lineStartEdge(line);
@@ -3138,7 +3148,7 @@ void TextLayout::locations(Index offset, AbstractTwoAxes<Scalar>* leading, Abstr
 					ASCENSION_ASSERT_NOT_REACHED();
 					break;
 				}
-				ipd += run.measure();
+				ipd += allocationMeasure(run);
 			}
 		}
 
@@ -3200,8 +3210,8 @@ Scalar TextLayout::measure(Index line) const {
 		}
 		const RunVector::const_iterator lastRun = firstRunInLine(line + 1);
 		Scalar ipd = 0;
-		for(RunVector::const_iterator i(firstRunInLine(line)); i != lastRun; ++i)
-			ipd += (*i)->measure();
+		for(RunVector::const_iterator run(firstRunInLine(line)); run != lastRun; ++run)
+			ipd += allocationMeasure(**run);
 		assert(ipd >= 0);
 		if(numberOfLines() == 1)
 			self.maximumMeasure_ = ipd;
@@ -3420,10 +3430,10 @@ void TextLayout::wrap(Scalar measure, const TabExpander& tabExpander) BOOST_NOEX
 		if(run->expandTabCharacters(tabExpander, textString_,
 				(x1 < measure) ? x1 : 0, measure - (x1 < measure) ? x1 : 0)) {
 			if(x1 < measure) {
-				x1 += run->measure();
+				x1 += allocationMeasure(*run);
 				runs.push_back(run);
 			} else {
-				x1 = run->measure();
+				x1 = allocationMeasure(*run);
 				runs.push_back(run);
 				firstRunsInLines.push_back(runs.size());
 			}
