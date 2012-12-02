@@ -258,18 +258,39 @@ namespace ascension {
 		}
 	}
 
+	/// @name Free Functions to Convert Between Geometries and Abstract/Flow-Relative Instances
+	/// @{
+
 	namespace graphics {
 		namespace geometry {
-			template<typename Rectangle>
-			inline Rectangle make(
-					const PhysicalFourSides<
-						typename Coordinate<typename Coordinate<Rectangle>::Type>::Type
-					>& sides,
+			/**
+			 * Converts a @c PhysicalTwoAxes into a point.
+			 * @tparam Point Type of return value
+			 * @tparam Coordinate Type of coordinate of @a axes
+			 * @param axes A @c PhysicalTwoAxes object
+			 * @return A converted point
+			 */
+			template<typename Point, typename Coordinate>
+			inline Point make(const PhysicalTwoAxes<Coordinate>& axes,
+					typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
+				return make<Point>(axes.x(), axes.y());
+			}
+			/**
+			 * Converts a @c PhysicalFourSides into a rectangle.
+			 * @tparam Rectangle Type of return value
+			 * @tparam Coordinate Type of coordinate of @a sides
+			 * @param sides A @c PhysicalFourSides object
+			 * @return A converted rectangle
+			 */
+			template<typename Rectangle, typename Coordinate>
+			inline Rectangle make(const PhysicalFourSides<Coordinate>& sides,
 					typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
 				return make<Rectangle>(horizontalRange(sides), verticalRange(sides));
 			}
 		}
 	}
+
+	/// @}
 }
 
 #endif // !ASCENSION_DIRECTIONS_HPP
