@@ -132,8 +132,12 @@ namespace ascension {
 			}
 		};
 
-		/***/
-		inline TextOrientation resolveTextOrientation(const WritingMode& writingMode) {
+		/**
+		 * Resolve ambiguous value of @c WritingMode#textOrientation.
+		 * @param writingMode The writing mode
+		 * @return The resolved @c TextOrientation value
+		 */
+		inline TextOrientation resolveTextOrientation(const WritingMode& writingMode) BOOST_NOEXCEPT {
 			switch(writingMode.textOrientation) {
 				case SIDEWAYS:
 					if(writingMode.blockFlowDirection == VERTICAL_RL)
@@ -149,9 +153,16 @@ namespace ascension {
 			}
 		}
 
+		/// @name Free Functions Privide Mappings Relative-Flow vs. Physical Direction/Dimension/Axis
+		/// @{
 
-		// relative-flow vs. physical direction/dimension/axis mappings ///////////////////////////
-
+		/**
+		 * Maps flow-relative direction into corresponding physical direction.
+		 * @param writingMode The writing mode
+		 * @param direction The flow-relative direction to map
+		 * @return Physical direction
+		 * @throw UnknownValueException @a writingMode or @a direction is invalid
+		 */
 		inline graphics::PhysicalDirection mapFlowRelativeToPhysical(const WritingMode& writingMode, FlowRelativeDirection direction) {
 			switch(writingMode.blockFlowDirection) {
 				case HORIZONTAL_TB:
@@ -186,6 +197,13 @@ namespace ascension {
 			throw UnknownValueException("direction");
 		}
 
+		/**
+		 * Maps physical direction into corresponding flow-relative direction.
+		 * @param writingMode The writing mode
+		 * @param direction The physical direction to map
+		 * @return Flow-relative direction
+		 * @throw UnknownValueException @a writingMode or @a direction is invalid
+		 */
 		inline FlowRelativeDirection mapPhysicalToFlowRelative(const WritingMode& writingMode, graphics::PhysicalDirection direction) {
 			switch(writingMode.blockFlowDirection) {
 				case HORIZONTAL_TB:
@@ -307,6 +325,8 @@ namespace ascension {
 			}
 			return to;
 		}
+
+		/// @}
 
 	}
 } // namespace ascension.presentation
