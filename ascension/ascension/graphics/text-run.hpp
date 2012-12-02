@@ -127,28 +127,25 @@ namespace ascension {
 			/// @name Free Functions to Compute Box of Text Run
 			/// @{
 			/**
-			 * Returns the 'allocation-rectangle' of the specified text run in device units.
+			 * Returns the 'content-box' of the specified text run in device units.
+			 * @see #borderBox, #marginBox, #paddingBox
 			 */
-			inline presentation::FlowRelativeFourSides<Scalar> allocationBox(const TextRun& textRun) BOOST_NOEXCEPT {
-				presentation::FlowRelativeFourSides<Scalar> bounds(borderBox(textRun));
-				if(const presentation::FlowRelativeFourSides<Scalar>* const marginWidths = textRun.margin()) {
-					bounds.start() -= marginWidths->start();
-					bounds.end() += marginWidths->end();
-				}
-				return bounds;
+			inline presentation::FlowRelativeFourSides<Scalar> contentBox(const TextRun& textRun) BOOST_NOEXCEPT {
+				return textRun.logicalBounds();
 			}
 			/**
-			 * Returns the measure of the 'allocation-rectangle' of the specified text run in device units.
-			 * @see #measure
+			 * Returns the 'padding-box' of the specified text run in device units.
+			 * @see #borderBox, #contentBox, #marginBox, TextRun#padding
 			 */
-			inline Scalar allocationMeasure(const TextRun& textRun) {
-				const presentation::FlowRelativeFourSides<ComputedBorderSide>* const border = textRun.border();
-				const presentation::FlowRelativeFourSides<Scalar>* const margin = textRun.margin();
-				const presentation::FlowRelativeFourSides<Scalar>* const padding = textRun.padding();
-				return measure(textRun)
-					+ ((border != nullptr) ? border->start().computedWidth() + border->end().computedWidth() : 0)
-					+ ((margin != nullptr) ? margin->start() + margin->end() : 0)
-					+ ((padding != nullptr) ? padding->start() + padding->end() : 0);
+			inline presentation::FlowRelativeFourSides<Scalar> paddingBox(const TextRun& textRun) BOOST_NOEXCEPT {
+				presentation::FlowRelativeFourSides<Scalar> bounds(contentBox(textRun));
+				if(const presentation::FlowRelativeFourSides<Scalar>* const paddingWidths = textRun.padding()) {
+					bounds.before() -= paddingWidths->before();
+					bounds.after() += paddingWidths->after();
+					bounds.start() -= paddingWidths->start();
+					bounds.end() += paddingWidths->end();
+				}
+				return bounds;
 			}
 			/**
 			 * Returns the 'border-box' of the specified text run in device units.
@@ -165,13 +162,6 @@ namespace ascension {
 				return bounds;
 			}
 			/**
-			 * Returns the 'content-box' of the specified text run in device units.
-			 * @see #borderBox, #marginBox, #paddingBox
-			 */
-			inline presentation::FlowRelativeFourSides<Scalar> contentBox(const TextRun& textRun) BOOST_NOEXCEPT {
-				return textRun.logicalBounds();
-			}
-			/**
 			 * Returns the 'margin-box' of the specified text run in device units.
 			 * @see #borderBox, #contentBox, #paddingBox, TextRun#margin
 			 */
@@ -186,6 +176,17 @@ namespace ascension {
 				return bounds;
 			}
 			/**
+			 * Returns the 'allocation-rectangle' of the specified text run in device units.
+			 */
+			inline presentation::FlowRelativeFourSides<Scalar> allocationBox(const TextRun& textRun) BOOST_NOEXCEPT {
+				presentation::FlowRelativeFourSides<Scalar> bounds(borderBox(textRun));
+				if(const presentation::FlowRelativeFourSides<Scalar>* const marginWidths = textRun.margin()) {
+					bounds.start() -= marginWidths->start();
+					bounds.end() += marginWidths->end();
+				}
+				return bounds;
+			}
+			/**
 			 * Returns the measure of the 'content-box' of the specified text run in device units.
 			 * @see #allocationMeasure
 			 */
@@ -193,18 +194,17 @@ namespace ascension {
 				return textRun.trailingEdge(textRun.length());
 			}
 			/**
-			 * Returns the 'padding-box' of the specified text run in device units.
-			 * @see #borderBox, #contentBox, #marginBox, TextRun#padding
+			 * Returns the measure of the 'allocation-rectangle' of the specified text run in device units.
+			 * @see #measure
 			 */
-			inline presentation::FlowRelativeFourSides<Scalar> paddingBox(const TextRun& textRun) BOOST_NOEXCEPT {
-				presentation::FlowRelativeFourSides<Scalar> bounds(contentBox(textRun));
-				if(const presentation::FlowRelativeFourSides<Scalar>* const paddingWidths = textRun.padding()) {
-					bounds.before() -= paddingWidths->before();
-					bounds.after() += paddingWidths->after();
-					bounds.start() -= paddingWidths->start();
-					bounds.end() += paddingWidths->end();
-				}
-				return bounds;
+			inline Scalar allocationMeasure(const TextRun& textRun) {
+				const presentation::FlowRelativeFourSides<ComputedBorderSide>* const border = textRun.border();
+				const presentation::FlowRelativeFourSides<Scalar>* const margin = textRun.margin();
+				const presentation::FlowRelativeFourSides<Scalar>* const padding = textRun.padding();
+				return measure(textRun)
+					+ ((border != nullptr) ? border->start().computedWidth() + border->end().computedWidth() : 0)
+					+ ((margin != nullptr) ? margin->start() + margin->end() : 0)
+					+ ((padding != nullptr) ? padding->start() + padding->end() : 0);
 			}
 			/// @}
 

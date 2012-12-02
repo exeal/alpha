@@ -548,9 +548,6 @@ namespace {
 		static void substituteGlyphs(const Range<vector<TextRunImpl*>::iterator>& runs);
 		// drawing and painting
 		void drawGlyphs(PaintContext& context, const NativePoint& p, const Range<Index>& range) const;
-		void paintBackground(PaintContext& context, const NativePoint& p,
-			const Range<Index>& range, NativeRectangle* paintedBounds) const;
-		void paintBorder() const;
 		void paintLineDecorations() const;
 	private:
 		// this data is shared text runs separated by (only) line breaks and computed styles
@@ -1384,33 +1381,6 @@ void TextRunImpl::mergeScriptsAndStyles(
 /// @see GlyphVector#numberOfGlyphs
 size_t TextRunImpl::numberOfGlyphs() const BOOST_NOEXCEPT {
 	return ascension::length(glyphRange());
-}
-
-/**
- * Paints the background of the specified character range in this run.
- * This method uses the fill style which is set in @a context.
- * @param context The graphics context
- * @param p The base point of this run (, does not corresponds to @c range.beginning())
- * @param range The character range to paint. If the edges addressed outside of this run, they are
- *              truncated
- * @param[out] paintedBounds The rectangle this method painted. Can be @c null
- */
-void TextRunImpl::paintBackground(PaintContext& context,
-		const NativePoint& p, const Range<Index>& range, NativeRectangle* paintedBounds) const {
-	if(ascension::isEmpty(range) || geometry::x(p) + totalWidth() < geometry::left(context.boundsToPaint()))
-		return;
-#if 1
-	extern const WritingMode& wm;
-	PhysicalFourSides<Scalar> sides;
-	mapFlowRelativeToPhysical(wm, glyphLogicalBounds(range), sides);
-	NativeRectangle bounds(geometry::make<NativeRectangle>(sides));
-	bounds = geometry::translate(bounds, p);
-#else
-	blackBoxBounds(range, bounds);
-#endif
-	context.fillRectangle(bounds);
-	if(paintedBounds != nullptr)
-		*paintedBounds = bounds;
 }
 
 /**
@@ -2525,6 +2495,24 @@ uint8_t TextLayout::characterLevel(Index offset) const {
 	return (*run)->characterLevel();
 }
 
+namespace {
+	/**
+	 * Paints the background and border of the specified text run.
+	 * @param context The graphics context
+	 * @param origin
+	 * @param writingMode The writing mode of the text layout to which the text run belongs
+	 * @param paintOverride
+	 * @param[out] paintedBounds The rectangle this function painted
+	 */
+	void paintBackgroundAndBorder(const TextRunImpl& textRun,
+			PaintContext& context, const NativePoint& origin, const WritingMode& writingMode,
+			const TextPaintOverride* paintOverride, NativeRectangle& paintedBounds) {
+		const FlowRelativeFourSides<Scalar> borderBounds(borderBox(textRun));
+		context.setFillStyle(textRun.style().background);
+		context.fillRectangle(borderRectangle);
+	}
+}
+
 /**
  * Draws the specified line layout to the output device.
  * @param context The rendering context
@@ -2545,9 +2533,24 @@ void TextLayout::draw(PaintContext& context,
 	if(isEmpty() || geometry::dy(context.boundsToPaint()) == 0)
 		return;
 
-	// TODO: this code can't handle vertical text.
+	// this code paints the line in the following steps:
+	// 1. calculate lines to paint
+	// 2. paint backgrounds and borders:
+	//   2-1. paint background if the property is specified
+	//   2-2. paint border if the property is specified
+	// 3. for each text runs:
+	//   3-1. calculate range of runs to paint
+	//   3-2. paint the glyphs of the text run
+	//   3-3. paint the overhanging glyphs of the around text runs
+	//   3-4. paint the text decoration
+	// 4. paint the end of line mark
+	//
+	// the following topics describe how to draw a styled and selected text using masking by clipping
+	// Catch 22 : Design & Implementation of a Win32 Text Editor
+	// - Transparent Text (http://www.catch22.net/tuts/transparent-text)
+	// - Drawing styled text with Uniscribe (http://www.catch22.net/tuts/drawing-styled-text-uniscribe)
 
-	// calculate line range to draw
+	// 1. calculate lines to draw
 	FlowRelativeFourSides<Scalar> abstractBoundsToPaint;	// relative to the alignment point of this layout
 	mapPhysicalToAbstract(context.boundsToPaint(), origin, abstractBoundsToPaint);
 	Range<Index> linesToPaint(0, numberOfLines());
@@ -2562,94 +2565,143 @@ void TextLayout::draw(PaintContext& context,
 			break;
 		}
 	}
-
+#if 0
 	// calculate inline area range to draw
 	const Range<const RunVector::const_iterator> textRunsToPaint(
 		firstRunInLine(linesToPaint.beginning()),
 		(linesToPaint.end() < numberOfLines()) ? firstRunInLine(linesToPaint.end()) : runs_.end());
-
-	// this code paints the line in the following steps:
-	// 1. calculate range of runs to paint
-	// 2. paint backgrounds and borders:
-	//   2-1. paint background if the property is specified
-	//   2-2. paint border if the property is specified
-	// 3. for each text runs:
-	//   3-1. calculate range of runs to paint
-	//   3-2. paint the glyphs of the text run
-	//   3-3. paint the overhanging glyphs of the around text runs
-	//   3-4. paint the text decoration
-	// 4. paint the end of line mark
-	//
-	// the following topics describe how to draw a styled and selected text using masking by clipping
-	// Catch 22 : Design and Implementation of a Win32 Text Editor
-	// Part 10 - Transparent Text and Selection Highlighting (http://www.catch22.net/tuts/neatpad/10)
-	// Part 14 - Drawing styled text with Uniscribe (http://www.catch22.net/tuts/neatpad/14)
-
+	AbstractTwoAxes<Scalar> alignmentPoint;	// alignment-point of text run relative to this layout
+#endif
 	context.save();
 //	context.setTextAlign();
 //	context.setTextBaseline();
 //	::SetTextAlign(context.nativeObject().get(), TA_TOP | TA_LEFT | TA_NOUPDATECP);
 
-	AbstractTwoAxes<Scalar> alignmentPoint;	// alignment-point of text run relative to this layout
-
 	// 2. paint backgrounds and borders
+	const bool horizontalLayout = isHorizontal(writingMode().blockFlowDirection);
 	for(Index line = linesToPaint.beginning(); line < linesToPaint.end(); ++line) {
 		NativePoint p(origin);	// a point at which baseline and (logical) 'line-left' edge of 'allocation-rectangle' of text run
-		if(isHorizontal(writingMode().blockFlowDirection)) {
+		Scalar over, under;		// 'over' and 'under' edges of this line (x for vertical layout or y for horizontal layout)
+
+		// move 'p' to start of line and compute 'over/under' of line
+		if(horizontalLayout) {
 			geometry::x(p) += (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? lineStartEdge(line) : -(lineStartEdge(line) + measure(line));
 			geometry::y(p) += baseline(line);
+			over = geometry::y(p) - lineMetrics(line).ascent();
+			under = geometry::y(p) + lineMetrics(line).descent();
 		} else {
 			assert(isVertical(writingMode().blockFlowDirection));
 			geometry::x(p) += (writingMode().blockFlowDirection == VERTICAL_RL) ? -baseline(line) : baseline(line);
+			over = geometry::x(p) + lineMetrics(line).ascent();
+			under = geometry::x(p) - lineMetrics(line).descent();
 			if(resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT)
 				geometry::y(p) += (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? lineStartEdge(line) : -(lineStartEdge(line) + measure(line));
-			else
+			else {
 				geometry::y(p) -= (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? lineStartEdge(line) : -(lineStartEdge(line) + measure(line));
-		}
-		const RunVector::const_iterator lastRun((line + 1 < numberOfLines()) ? firstRunInLine(line + 1) : runs_.end());
-		for(RunVector::const_iterator i(firstRunInLine(line)); i < lastRun; ++i) {
-			const TextRunImpl& textRun = *static_cast<const TextRunImpl*>(i->get());
-
-			// compute 'large-allocation-rectangle' and 'allocation-rectangle'
-			NativeRectangle largeAllocationRectangle, allocationRectangle;
-			if(isHorizontal(writingMode().blockFlowDirection)) {
-				geometry::range<geometry::X_COORDINATE>(largeAllocationRectangle)
-					= geometry::range<geometry::X_COORDINATE>(allocationRectangle)
-					= makeRange<Scalar>(geometry::x(p), geometry::x(p) + textRun.measure());
-				geometry::range<geometry::Y_COORDINATE>(largeAllocationRectangle) = makeRange(geometry::y(p) - textRun.font()->metrics()->ascent();
+				swap(over, under);
 			}
+		}
+
+		const RunVector::const_iterator lastRun((line + 1 < numberOfLines()) ? firstRunInLine(line + 1) : runs_.end());
+		NativeRectangle allocationRectangle;
+		if(horizontalLayout)
+			geometry::range<geometry::Y_COORDINATE>(allocationRectangle) = makeRange(over, under);
+		else
+			geometry::range<geometry::X_COORDINATE>(allocationRectangle) = makeRange(over, under);
+		context.setFillStyle();
+//		context.setGlobalAlpha(1.0);
+//		context.setGlobalCompositeOperation(SOURCE_OVER);
+		for(RunVector::const_iterator i(firstRunInLine(line)); i < lastRun; ++i) {
+			// check if this text run is beyond bounds to paint
+			// TODO: Consider overhangs.
+			if(horizontalLayout) {
+				if(geometry::x(p) >= geometry::right(context.boundsToPaint()))
+					break;
+			} else {
+				if(geometry::y(p) >= geometry::bottom(context.boundsToPaint()))
+					break;
+			}
+
+			// compute next position of 'p', 'border-box' and 'allocation-box'
+			const TextRunImpl& textRun = *static_cast<const TextRunImpl*>(i->get());
+			NativePoint q(p);
+			if(horizontalLayout)
+				geometry::x(q) += allocationMeasure(textRun);
+			else if(resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT)
+				geometry::y(q) += allocationMeasure(textRun);
+			else
+				geometry::y(q) -= allocationMeasure(textRun);
+			bool skipThisRun = geometry::equals(q, p);	// skip empty box
+
+			// check if this text run intersects with bounds to paint
+			// TODO: Consider overhangs.
+			if(!skipThisRun)
+				skipThisRun = horizontalLayout ?
+					(geometry::x(q) < geometry::left(context.boundsToPaint()))
+					: (geometry::y(q) < geometry::top(context.boundsToPaint()));
+			if(!skipThisRun) {
+				// paint 'allocation-rectangle'
+				if(horizontalLayout)
+					geometry::range<geometry::X_COORDINATE>(allocationRectangle) = makeRange(geometry::x(p), geometry::x(q));
+				else
+					geometry::range<geometry::Y_COORDINATE>(allocationRectangle) = makeRange(geometry::y(p), geometry::y(q));
+				context.fillRectangle(allocationRectangle);
+
+				// compute 'content-rectangle'
+				const FlowRelativeFourSides<Scalar> abstractContentBox(contentBox(textRun)), abstractAllocationBox(allocationBox(textRun));
+				NativeRectangle contentRectangle;
+				if(horizontalLayout) {
+					if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT)
+						geometry::range<geometry::X_COORDINATE>(contentRectangle) = makeRange(
+							geometry::x(p) + abstractContentBox.start() - abstractAllocationBox.start(),
+							geometry::x(p) + abstractContentBox.end() - abstractAllocationBox.start());
+					else
+						geometry::range<geometry::X_COORDINATE>(contentRectangle) = makeRange(
+							geometry::x(p) + abstractContentBox.end() - abstractAllocationBox.end(),
+							geometry::x(p) + abstractContentBox.start() - abstractAllocationBox.end());
+					geometry::range<geometry::Y_COORDINATE>(contentRectangle) =
+						makeRange(geometry::y(p) + abstractContentBox.before(), geometry::y(p) + abstractContentBox.after());
+				} else {
+					if(writingMode().blockFlowDirection == VERTICAL_RL)
+						geometry::range<geometry::X_COORDINATE>(contentRectangle) =
+							makeRange(geometry::x(p) - abstractContentBox.before(), geometry::x(p) - abstractContentBox.after());
+					else {
+						assert(writingMode().blockFlowDirection == VERTICAL_LR);
+						geometry::range<geometry::X_COORDINATE>(contentRectangle) =
+							makeRange(geometry::x(p) + abstractContentBox.before(), geometry::x(p) + abstractContentBox.after());
+					}
+					unsigned char temp = (resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT) ? 0 : 1;
+					temp += (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? 0 : 1;
+					if(temp % 2 == 0)	// ttb
+						geometry::range<geometry::Y_COORDINATE>(contentRectangle) = makeRange(
+							geometry::y(p) + abstractContentBox.start() - abstractAllocationBox.start(),
+							geometry::y(p) + abstractContentBox.end() - abstractAllocationBox.start());
+					else	// btm
+						geometry::range<geometry::Y_COORDINATE>(contentRectangle) = makeRange(
+							geometry::y(p) + abstractContentBox.end() - abstractAllocationBox.end(),
+							geometry::y(p) + abstractContentBox.start() - abstractAllocationBox.end());
+				}
+
+				// compute 'border-rectangle' if needed
+				NativeRectangle borderRectangle;
+
+				// paint 'border-rectangle'
+				if(textRun.style().background) {
+					const FlowRelativeborderBox(textRun);
+					NativeRectangle borderRectangle;
+				}
+			}
+
+			NativeRectangle paintedRectangle;
+			paintBackgroundAndBorder(textRun, context, p, writingMode(), paintOverride, paintedRectangle);
+
+			::ExcludeClipRect(context.asNativeObject().get(),
+				geometry::left(paintedRectangle), geometry::top(paintedRectangle),
+				geometry::right(paintedRectangle), geometry::bottom(paintedRectangle));
 
 			// move 'p' to next text run
-			if(isHorizontal(writingMode().blockFlowDirection))
-				geometry::x(p) += textRun.measure();
-			else if(resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT)
-				geometry::y(p) += textRun.measure();
-			else
-				geometry::y(p) -= textRun.measure();
+			p = q;
 		}
-	}
-	for(RunVector::const_iterator i(textRunsToPaint.beginning()), e; i != textRunsToPaint.end(); ++i) {
-		// TODO: recognize the override.
-		// TODO: this code can't handle sparse inline areas (with bidirectionality).
-		boost::optional<NativeRectangle> borderRectangle;
-
-		// 2-1. paint background if the property is specified (= if not transparent)
-		const TextRunImpl& textRun = *static_cast<const TextRunImpl*>(i->get());
-		if(textRun.style().background) {
-			borderRectangle = textRun.borderRectangle();
-			if(geometry::includes(context.boundsToPaint(), *borderRectangle)) {
-				context.setFillStyle(textRun.style()->background);
-				context.fillRectangle(*borderRectangle);
-			}
-		}
-
-		// 2-2. paint border if the property is specified
-		assert(textRun.style()->color);
-		detail::paintBorder(context, (*i)->borderRectangle(), (*i)->style()->border, *(*i)->style()->color, writingMode());
-
-		::ExcludeClipRect(context.asNativeObject().get(),
-			geometry::left(*borderRectangle), geometry::top(*borderRectangle),
-			geometry::right(*borderRectangle), geometry::bottom(*borderRectangle));
 	}
 
 	// 3. for each text runs
