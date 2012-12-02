@@ -73,7 +73,12 @@ namespace ascension {
 		public:
 			/// Type of directional value.
 			typedef T value_type;
-			PhysicalTwoAxes(const value_type& x, const value_type& y) : std::pair<T, T>(x, y) {}
+			/// Default constructor.
+			PhysicalTwoAxes() {}
+			/// Constructor takes a physical point.
+			template<typename Point>
+			PhysicalTwoAxes(const Point& point) :
+				std::pair<T, T>(geometry::x(point), geometry::y(p)) {}
 			/// Returns a reference 'x' (horizontal position) value.
 			value_type& x() BOOST_NOEXCEPT {return first;}
 			/// Returns a reference 'x' (horizontal position) value.
@@ -93,6 +98,7 @@ namespace ascension {
 		struct PhysicalFourSides : public std::array<T, 4> {
 			/// Default constructor.
 			PhysicalFourSides() {}
+			/// Constructor takes a physical rectangle.
 			template<typename Rectangle>
 			PhysicalFourSides(const Rectangle& rectangle) {
 				top() = geometry::top(rectangle);
