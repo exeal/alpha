@@ -239,47 +239,63 @@ namespace ascension {
 		}
 
 		/**
-		 * Performs abstract-to-physical mappings according to the given writing mode.
-		 * @tparam From The type for @a from
-		 * @tparam To The type for @a to
+		 * Converts an abstract point into a physical point.
+		 * @tparam From Type of coordinates of @a from
+		 * @tparam To Type of coordinates of return value
 		 * @param writingMode The writing mode
-		 * @param from The flow-relative value to map
-		 * @param[out] to The result physical value
-		 * @see mapPhysicalToFlowRelative
+		 * @param from The abstract point to convert
+		 * @param origin The origin of the physical space
+		 * @return A converted physical point
 		 */
 		template<typename From, typename To>
-		inline graphics::PhysicalFourSides<To>& mapFlowRelativeToPhysical(
-				const WritingMode& writingMode,
-				const FlowRelativeFourSides<From>& from, graphics::PhysicalFourSides<To>& to) {
-			for(std::size_t i = 0; i != from.size(); ++i) {
-				const FlowRelativeDirection direction = static_cast<FlowRelativeDirection>(i);
-				to[mapFlowRelativeToPhysical(writingMode, direction)] = from[direction];
+		inline graphics::PhysicalTwoAxes<To> mapAbstractToPhysical(const WritingMode& writingMode,
+				const AbstractTwoAxes<From>& from, const graphics::PhysicalTwoAxes<To>& origin) {
+			graphics::PhysicalTwoAxes<To> to;
+			switch(writingMode.blockFlowDirection) {
+				case HORIZONTAL_TB:
+					to.x() = origin.x() + (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? +from.ipd() : -from.ipd();
+					to.y() = origin.y() + from.bpd();
+					break;
+				case VERTICAL_RL:
+				case VERTICAL_LR: {
+					to.x() = origin.x() + (writingMode.blockFlowDirection == VERTICAL_RL) ? -from.bpd() : +from.bpd();
+					bool ttb = writingMode.inlineFlowDirection == LEFT_TO_RIGHT;
+					ttb = (resolveTextOrientation(writingMode) != SIDEWAYS_LEFT) ? ttb : !ttb;
+					to.y() = origin.y() + ttb ? +from.ipd() : -from.ipd();
+					break;
+				}
+				default:
+					throw UnknownValueException("writingMode.blockFlowDirection");
 			}
 			return to;
 		}
 
-		template<typename Rectangle1, typename From, typename Rectangle2>
-		inline Rectangle2& mapFlowRelativeToPhysical(
-				const WritingMode& writingMode, const Rectangle1& viewport,
-				const FlowRelativeFourSides<From>& from, Rectangle2& to);
-
 		/**
-		 * Performs abstract-to-physical mappings according to the given writing mode.
-		 * @tparam From The type for @a from
-		 * @tparam To The type for @a to
+		 * Converts a flow-relative four sides into a physical four sides.
+		 * @tparam From Type of coordinates of @a from
+		 * @tparam To Type of coordinates of return value
 		 * @param writingMode The writing mode
-		 * @param from The physical value to map
-		 * @param[out] to The result flow-relative value
-		 * @return @a to
-		 * @see #mapFlowRelativeToPhysical
+		 * @param from The flow-relative four sides to convert
+		 * @param origin The origin of the physical space
+		 * @return A converted physical four sides
 		 */
 		template<typename From, typename To>
-		inline FlowRelativeFourSides<To>& mapPhysicalToFlowRelative(const WritingMode& writingMode,
-				const graphics::PhysicalFourSides<From>& from, FlowRelativeFourSides<To>& to) {
-			for(std::size_t i = 0; i != from.size(); ++i) {
-				const graphics::PhysicalDirection direction = static_cast<graphics::PhysicalDirection>(i);
-				to[mapPhysicalToFlowRelative(writingMode, direction)] = from[direction];
-			}
+		inline graphics::PhysicalFourSides<To> mapFlowRelativeToPhysical(const WritingMode& writingMode,
+				const FlowRelativeFourSides<From>& from, const graphics::PhysicalTwoAxes<To>& origin) {
+			AbstractTwoAxes<From> sources[2];
+			sources[0].ipd() = from.start();
+			sources[0].bpd() = from.before();
+			sources[1].ipd() = from.end();
+			sources[1].bpd() = from.after();
+			graphics::PhysicalTwoAxes<To> destinations[2] = {
+				mapPhysicalToAbstract(writingMode, sources[0], origin);
+				mapPhysicalToAbstract(writingMode, sources[1], origin);
+			};
+			graphics::PhysicalFourSides<To> to;
+			to.top() = std::min(destinations[0].y(), destinations[1].y());
+			to.right() = std::max(destinations[0].x(), destinations[1].x());
+			to.bottom() = std::max(destinations[0].y(), destinations[1].y());
+			to.left() = std::min(destinations[0].x(), destinations[1].x());
 			return to;
 		}
 
