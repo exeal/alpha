@@ -11,6 +11,7 @@
 #include <array>
 #include <type_traits>	// std.extent
 #include <boost/operators.hpp>
+#include <boost/parameter.hpp>
 
 namespace ascension {
 	/**
@@ -64,47 +65,70 @@ namespace ascension {
 			return opposites[direction];
 		}
 
+		BOOST_PARAMETER_NAME(x)
+		BOOST_PARAMETER_NAME(y)
+
+		/// Base type of @c PhysicalTwoAxes class template.
+		template<typename T>
+		class PhysicalTwoAxesBase : public std::array<T, 2> {
+		public:
+			/// Default constructor initializes nothing.
+			PhysicalTwoAxesBase() {}
+			/// Constructor takes named parameters as initial values.
+			template<typename Arguments>
+			PhysicalTwoAxesBase(const Arguments& arguments) {
+				x() = arguments[_x | value_type()];
+				y() = arguments[_y | value_type()];
+			}
+			/// Returns a reference 'x' (horizontal position) value.
+			value_type& x() BOOST_NOEXCEPT {return std::get<0>(*this);}
+			/// Returns a reference 'x' (horizontal position) value.
+			const value_type& x() const BOOST_NOEXCEPT {return std::get<0>(*this);}
+			/// Returns a reference 'y' (vertical position) value.
+			value_type& y() BOOST_NOEXCEPT {return std::get<1>(*this);}
+			/// Returns a reference 'y' (vertical position) value.
+			const value_type& y() BOOST_NOEXCEPT const {return std::get<1>(*this);}
+		};
+
 		/**
 		 * A correction of all physical dimensions. This is a cartesian point.
+		 * @tparam T The coordinate type
 		 * @see presentation#AbstractTwoAxes
 		 */
 		template<typename T>
-		class PhysicalTwoAxes : private std::pair<T, T> {
+		class PhysicalTwoAxes : public PhysicalTwoAxesBase<T> {
 		public:
-			/// Type of directional value.
-			typedef T value_type;
-			/// Default constructor.
+			/// Default constructor initializes nothing.
 			PhysicalTwoAxes() {}
 			/// Constructor takes a physical point.
 			template<typename Point>
 			PhysicalTwoAxes(const Point& point) :
-				std::pair<T, T>(geometry::x(point), geometry::y(p)) {}
-			/// Returns a reference 'x' (horizontal position) value.
-			value_type& x() BOOST_NOEXCEPT {return first;}
-			/// Returns a reference 'x' (horizontal position) value.
-			const value_type& x() const BOOST_NOEXCEPT {return first;}
-			/// Returns a reference 'y' (vertical position) value.
-			value_type& y() BOOST_NOEXCEPT {return second;}
-			/// Returns a reference 'y' (vertical position) value.
-			const value_type& y() BOOST_NOEXCEPT const {return second;}
+				PhysicalTwoAxesBase<T>((_x = geometry::x(point), _y = geometry::y(point))) {}
+			/// Constructor takes named parameters as initial values (default value is zero).
+			BOOST_PARAMETER_CONSTRUCTOR(
+				PhysicalTwoAxes, (PhysicalTwoAxesBase<T>), tag,
+				(required
+					(x, (value_type))
+					(y, (value_type))))
 		};
 
-		/**
-		 * A correction of all physical directions.
-		 * @tparam T Element type
-		 * @see presentation#FlowRelativeFourSides
-		 */
+		BOOST_PARAMETER_NAME(top)
+		BOOST_PARAMETER_NAME(right)
+		BOOST_PARAMETER_NAME(bottom)
+		BOOST_PARAMETER_NAME(left)
+
+		/// Base type of @c PhysicalFourSides class template.
 		template<typename T>
-		struct PhysicalFourSides : public std::array<T, 4> {
-			/// Default constructor.
-			PhysicalFourSides() {}
-			/// Constructor takes a physical rectangle.
-			template<typename Rectangle>
-			PhysicalFourSides(const Rectangle& rectangle) {
-				top() = geometry::top(rectangle);
-				right() = geometry::right(rectangle);
-				bottom() = geometry::bottom(rectangle);
-				left() = geometry::left(rectangle);
+		struct PhysicalFourSidesBase : public std::array<T, 4> {
+			/// Default constructor initializes nothing.
+			PhysicalFourSidesBase() {}
+			/// Constructor takes named parameters as initial values (default value is zero).
+			template<typename Arguments>
+			PhysicalFourSidesBase(const Arguments& arguments) {
+				top() = arguments[_top | value_type()];
+				right() = arguments[_right | value_type()];
+				bottom() = arguments[_bottom | value_type()];
+				left() = arguments[_left | value_type()];
 			}
 			/// Returns a reference to value of @a direction.
 			reference operator[](PhysicalDirection direction) {
@@ -116,21 +140,48 @@ namespace ascension {
 			}
 			using std::array<T, 4>::operator[];
 			/// Returns a reference to 'top' value.
-			reference top() {return (*this)[TOP];}
+			reference top() BOOST_NOEXCEPT {return std::get<TOP>(*this);}
 			/// Returns a reference to 'top' value.
-			const_reference top() const {return (*this)[TOP];}
+			const_reference top() const BOOST_NOEXCEPT {return std::get<TOP>(*this);}
 			/// Returns a reference to 'right' value.
-			reference right() {return (*this)[RIGHT];}
+			reference right() BOOST_NOEXCEPT {return std::get<RIGHT>(*this);}
 			/// Returns a reference to 'right' value.
-			const_reference right() const {return (*this)[RIGHT];}
+			const_reference right() const BOOST_NOEXCEPT {return std::get<RIGHT>(*this);}
 			/// Returns a reference to 'bottom' value.
-			reference bottom() {return (*this)[BOTTOM];}
+			reference bottom() BOOST_NOEXCEPT {return std::get<BOTTOM>(*this);}
 			/// Returns a reference to 'bottom' value.
-			const_reference bottom() const {return (*this)[BOTTOM];}
+			const_reference bottom() const BOOST_NOEXCEPT {return std::get<BOTTOM>(*this);}
 			/// Returns a reference to 'left' value.
-			reference left() {return (*this)[LEFT];}
+			reference left() BOOST_NOEXCEPT {return std::get<LEFT>(*this);}
 			/// Returns a reference to 'left' value.
-			const_reference left() const {return (*this)[LEFT];}
+			const_reference left() const BOOST_NOEXCEPT {return std::get<LEFT>(*this);}
+		};
+
+		/**
+		 * A correction of all physical directions.
+		 * @tparam T Element type
+		 * @see presentation#FlowRelativeFourSides
+		 */
+		template<typename T>
+		struct PhysicalFourSides : public PhysicalFourSidesBase<T> {
+			/// Default constructor initializes nothing.
+			PhysicalFourSides() {}
+			/// Constructor takes a physical rectangle.
+			template<typename Rectangle>
+			PhysicalFourSides(const Rectangle& rectangle) {
+				top() = geometry::top(rectangle);
+				right() = geometry::right(rectangle);
+				bottom() = geometry::bottom(rectangle);
+				left() = geometry::left(rectangle);
+			}
+			/// Constructor takes named parameters as initial values (default value is zero).
+			BOOST_PARAMETER_CONSTRUCTOR(
+				PhysicalFourSides, (PhysicalFourSidesBase<T>), tag,
+				(required
+					(top, (value_type))
+					(right, (value_type))
+					(bottom, (value_type))
+					(left, (value_type))))
 		};
 
 		/**
@@ -185,31 +236,68 @@ namespace ascension {
 			return opposites[direction];
 		}
 
-		/**
-		 * A correction of all abstract dimensions.
-		 * @see graphics#PhysicalTwoAxes
-		 */
+		BOOST_PARAMETER_NAME(bpd)
+		BOOST_PARAMETER_NAME(ipd)
+
+		/// Base type of @c AbstractTwoAxes class template.
 		template<typename T>
-		class AbstractTwoAxes : private std::pair<T, T> {
+		class AbstractTwoAxesBase : public std::array<T, 2> {
 		public:
-			typedef T value_type;
+			/// Default constructor initializes nothing.
+			AbstractTwoAxesBase() {}
+			/// Constructor takes named parameters as initial values
+			template<typename Arguments>
+			AbstractTwoAxesBase(const Arguments&) {
+				bpd() = arguments[_bpd | value_type()];
+				ipd() = arguments[_ipd | value_type()];
+			}
 			/// Returns a reference to 'block-dimension' value.
-			value_type& bpd() BOOST_NOEXCEPT {return first;}
+			value_type& bpd() BOOST_NOEXCEPT {return std::get<0>(*this);}
 			/// Returns a reference to 'block-dimension' value.
-			const value_type& bpd() const BOOST_NOEXCEPT {return first;}
+			const value_type& bpd() const BOOST_NOEXCEPT {return std::get<0>(*this);}
 			/// Returns a reference to 'inline-dimension' value.
-			value_type& ipd() BOOST_NOEXCEPT {return second;}
+			value_type& ipd() BOOST_NOEXCEPT {return std::get<1>(*this);}
 			/// Returns a reference to 'inline-dimension' value.
-			const value_type& ipd() const BOOST_NOEXCEPT {return second;}
+			const value_type& ipd() const BOOST_NOEXCEPT {return std::get<1>(*this);}
 		};
 
 		/**
-		 * A correction of all flow-relative directions.
-		 * @see graphics#PhysicalFourSides
+		 * A correction of all abstract dimensions.
+		 * @tparam T The coordinate type
+		 * @see graphics#PhysicalTwoAxes
 		 */
 		template<typename T>
-		class FlowRelativeFourSides : public std::array<T, 4> {
+		class AbstractTwoAxes : public AbstractTwoAxesBase<T> {
 		public:
+			/// Default constructor initializes nothing.
+			AbstractTwoAxes() {}
+			/// Constructor takes named parameters (default value is zero).
+			BOOST_PARAMETER_CONSTRUCTOR(
+				AbstractTwoAxes, (AbstractTwoAxesBase<T>), tag,
+				(required
+					(bpd, (value_type))
+					(ipd, (value_type))))
+		};
+
+		BOOST_PARAMETER_NAME(before)
+		BOOST_PARAMETER_NAME(after)
+		BOOST_PARAMETER_NAME(start)
+		BOOST_PARAMETER_NAME(end)
+
+		/// Base type of @c FlowRelativeFourSides class template.
+		template<typename T>
+		class FlowRelativeFourSidesBase : public std::array<T, 4> {
+		public:
+			/// Default constructor initializes nothing.
+			FlowRelativeFourSidesBase() {}
+			/// Constructor takes named parameters as initial values.
+			template<typename Arguments>
+			FlowRelativeFourSidesBase(const Arguments& arguments) {
+				before() = arguments[_before | value_type()];
+				after() = arguments[_after | value_type()];
+				start() = arguments[_start | value_type()];
+				end() = arguments[_end | value_type()];
+			}
 			/// Returns a reference to value of @a direction.
 			reference operator[](FlowRelativeDirection direction) {
 				return (*this)[static_cast<size_type>(direction)];
@@ -220,23 +308,43 @@ namespace ascension {
 			}
 			using std::array<T, 4>::operator[];
 			/// Returns a reference to 'before' value.
-			reference before() {return (*this)[BEFORE];}
+			reference before() BOOST_NOEXCEPT {return std::get<BEFORE>(*this);}
 			/// Returns a reference to 'before' value.
-			const_reference before() const {return (*this)[BEFORE];}
+			const_reference before() const BOOST_NOEXCEPT {return std::get<BEFORE>(*this);}
 			/// Returns a reference to 'after' value.
-			reference after() {return (*this)[AFTER];}
+			reference after() BOOST_NOEXCEPT {return std::get<AFTER>(*this);}
 			/// Returns a reference to 'after' value.
-			const_reference after() const {return (*this)[AFTER];}
+			const_reference after() const BOOST_NOEXCEPT {return std::get<AFTER>(*this);}
 			/// Returns a reference to 'start' value.
-			reference start() {return (*this)[START];}
+			reference start() BOOST_NOEXCEPT {return std::get<START>(*this);}
 			/// Returns a reference to 'start' value.
-			const_reference start() const {return (*this)[START];}
+			const_reference start() const BOOST_NOEXCEPT {return std::get<START>(*this);}
 			/// Returns a reference to 'end' value.
 			/// @note This method hides @c std#array#end.
-			reference end() {return (*this)[END];}
+			reference end() BOOST_NOEXCEPT {return std::get<END>(*this);}
 			/// Returns a reference to 'end' value.
 			/// @note This method hides @c std#array#end.
-			const_reference end() const {return (*this)[END];}
+			const_reference end() const BOOST_NOEXCEPT {return std::get<END>(*this);}
+		};
+
+		/**
+		 * A correction of all flow-relative directions.
+		 * @tparam T The element type
+		 * @see graphics#PhysicalFourSides
+		 */
+		template<typename T>
+		class FlowRelativeFourSides : public FlowRelativeFourSidesBase<T> {
+		public:
+			/// Default constructor initializes nothing.
+			FlowRelativeFourSides() {}
+			/// Constructor takes named parameters as initial values.
+			BOOST_PARAMETER_CONSTRUCTOR(
+				FlowRelativeFourSides, (FlowRelativeFourSidesBase<T>), tag,
+				(required
+					(before, (value_type))
+					(after, (value_type))
+					(start, (value_type))
+					(end, (value_type))))
 		};
 
 		/**
