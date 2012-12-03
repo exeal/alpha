@@ -151,11 +151,17 @@ namespace ascension {
 
 	namespace detail {
 		template<typename Geometry, typename GeometryTag, typename T = void>
-		class EnableIfTagIs : std::enable_if<
+		struct EnableIfTagIs : std::enable_if<
 			std::is_same<
 				typename graphics::geometry::Tag<typename std::remove_cv<Geometry>::type>::Type,
 				GeometryTag
 			>::value, T> {};
+//		template<typename Geometry, typename GeometryTag, typename T = void>
+//		struct DisableIfTagIs : std::enable_if<
+//			!std::is_same<
+//				typename graphics::geometry::Tag<typename std::remove_cv<Geometry>::type>::Type,
+//				GeometryTag
+//			>::value, T> {};
 
 		template<typename Geometry, std::size_t dimension>
 		class AccessProxy {
