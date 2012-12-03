@@ -14,6 +14,7 @@
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException, std.logic_error
 #include <ascension/graphics/geometry.hpp>			// PhysicalFourSides
 #include <boost/operators.hpp>
+#include <boost/optional.hpp>
 
 namespace ascension {
 
@@ -240,63 +241,63 @@ namespace ascension {
 
 		/**
 		 * Converts an abstract point into a physical point.
-		 * @tparam From Type of coordinates of @a from
 		 * @tparam To Type of coordinates of return value
+		 * @tparam From Type of coordinates of @a from
 		 * @param writingMode The writing mode
 		 * @param from The abstract point to convert
-		 * @param origin The origin of the physical space
+		 * @param origin The origin of the physical space. If @c boost#none, (0, 0) is used
 		 * @return A converted physical point
 		 */
-		template<typename From, typename To>
-		inline graphics::PhysicalTwoAxes<To> mapAbstractToPhysical(const WritingMode& writingMode,
-				const AbstractTwoAxes<From>& from, const graphics::PhysicalTwoAxes<To>& origin) {
-			graphics::PhysicalTwoAxes<To> to;
+		template<typename To, typename From>
+		inline graphics::PhysicalTwoAxes<To> mapAbstractToPhysical(
+				const WritingMode& writingMode, const AbstractTwoAxes<From>& from,
+				const graphics::PhysicalTwoAxes<To>& origin = graphics::PhysicalTwoAxes<To>(graphics::_x = 0, graphics::_y = 0)) {
 			switch(writingMode.blockFlowDirection) {
 				case HORIZONTAL_TB:
-					to.x() = origin.x() + (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? +from.ipd() : -from.ipd();
-					to.y() = origin.y() + from.bpd();
-					break;
+					return graphics::PhysicalTwoAxes<To>((
+						graphics::_x = origin.x() + (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? +from.ipd() : -from.ipd(),
+						graphics::_y = origin.y() + from.bpd()
+					));
 				case VERTICAL_RL:
 				case VERTICAL_LR: {
-					to.x() = origin.x() + (writingMode.blockFlowDirection == VERTICAL_RL) ? -from.bpd() : +from.bpd();
 					bool ttb = writingMode.inlineFlowDirection == LEFT_TO_RIGHT;
 					ttb = (resolveTextOrientation(writingMode) != SIDEWAYS_LEFT) ? ttb : !ttb;
-					to.y() = origin.y() + ttb ? +from.ipd() : -from.ipd();
-					break;
+					return graphics::PhysicalTwoAxes<To>((
+						graphics::_x = origin.x() + (writingMode.blockFlowDirection == VERTICAL_RL) ? -from.bpd() : +from.bpd(),
+						graphics::_y = origin.y() + ttb ? +from.ipd() : -from.ipd()
+					));
 				}
 				default:
 					throw UnknownValueException("writingMode.blockFlowDirection");
 			}
-			return to;
 		}
 
 		/**
 		 * Converts a flow-relative four sides into a physical four sides.
-		 * @tparam From Type of coordinates of @a from
 		 * @tparam To Type of coordinates of return value
+		 * @tparam From Type of coordinates of @a from
 		 * @param writingMode The writing mode
 		 * @param from The flow-relative four sides to convert
 		 * @param origin The origin of the physical space
 		 * @return A converted physical four sides
 		 */
-		template<typename From, typename To>
-		inline graphics::PhysicalFourSides<To> mapFlowRelativeToPhysical(const WritingMode& writingMode,
-				const FlowRelativeFourSides<From>& from, const graphics::PhysicalTwoAxes<To>& origin) {
-			AbstractTwoAxes<From> sources[2];
-			sources[0].ipd() = from.start();
-			sources[0].bpd() = from.before();
-			sources[1].ipd() = from.end();
-			sources[1].bpd() = from.after();
+		template<typename To, typename From>
+		inline graphics::PhysicalFourSides<To> _mapFlowRelativeToPhysical(
+				const WritingMode& writingMode, const FlowRelativeFourSides<From>& from,
+				const graphics::PhysicalTwoAxes<To>& origin = graphics::PhysicalTwoAxes<To>(graphics::_x = 0, graphics::_y = 0)) {
+			AbstractTwoAxes<From> sources[2] = {
+				AbstractTwoAxes<From>((_ipd = from.start(), _bpd = from.before())),
+				AbstractTwoAxes<From>((_ipd = from.end(), _bpd = from.after()))
+			};
 			graphics::PhysicalTwoAxes<To> destinations[2] = {
 				mapPhysicalToAbstract(writingMode, sources[0], origin);
 				mapPhysicalToAbstract(writingMode, sources[1], origin);
 			};
-			graphics::PhysicalFourSides<To> to;
-			to.top() = std::min(destinations[0].y(), destinations[1].y());
-			to.right() = std::max(destinations[0].x(), destinations[1].x());
-			to.bottom() = std::max(destinations[0].y(), destinations[1].y());
-			to.left() = std::min(destinations[0].x(), destinations[1].x());
-			return to;
+			return graphics::PhysicalFourSides<To>((
+				graphics::_top = std::min(destinations[0].y(), destinations[1].y()),
+				graphics::_right = std::max(destinations[0].x(), destinations[1].x()),
+				graphics::_bottom = std::max(destinations[0].y(), destinations[1].y()),
+				graphics::_left = std::min(destinations[0].x(), destinations[1].x())));
 		}
 
 		/**
