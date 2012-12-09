@@ -282,7 +282,7 @@ namespace ascension {
 		 * @return A converted physical four sides
 		 */
 		template<typename To, typename From>
-		inline graphics::PhysicalFourSides<To> _mapFlowRelativeToPhysical(
+		inline graphics::PhysicalFourSides<To> mapFlowRelativeToPhysical(
 				const WritingMode& writingMode, const FlowRelativeFourSides<From>& from,
 				const graphics::PhysicalTwoAxes<To>& origin = graphics::PhysicalTwoAxes<To>(graphics::_x = 0, graphics::_y = 0)) {
 			AbstractTwoAxes<From> sources[2] = {
