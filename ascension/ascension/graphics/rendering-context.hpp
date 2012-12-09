@@ -244,27 +244,27 @@ namespace ascension {
 			 * @return The current stokre style
 			 * @see #setStrokeStyle, #fillStyle
 			 */
-			std::shared_ptr<Paint> strokeStyle() const;
+			std::shared_ptr<const Paint> strokeStyle() const;
 			/**
 			 * Sets the style used for stroking shapes.
 			 * @param strokeStyle The new fill style to set
 			 * @return This object
 			 * @see #strokeStyle, #setFillStyle
 			 */
-			RenderingContext2D& setStrokeStyle(std::shared_ptr<Paint> strokeStyle);
+			RenderingContext2D& setStrokeStyle(std::shared_ptr<const Paint> strokeStyle);
 			/**
 			 * Returns the current style used for filling shapes. Initial value is opaque black.
 			 * @return The current fill style
 			 * @see #setFillStyle, #strokeStyle
 			 */
-			std::shared_ptr<Paint> fillStyle() const;
+			std::shared_ptr<const Paint> fillStyle() const;
 			/**
 			 * Sets the style used for filling shapes.
 			 * @param fillStyle The new fill style to set
 			 * @return This object
 			 * @see #fillStyle, #setStrokeStyle
 			 */
-			RenderingContext2D& setFillStyle(std::shared_ptr<Paint> fillStyle);
+			RenderingContext2D& setFillStyle(std::shared_ptr<const Paint> fillStyle);
 //			std::unique_ptr<Gradient> createLinearGradient();
 //			std::unique_ptr<Gradient> createRadialGradient();
 //			std::unique_ptr<Pattern> createPattern();
@@ -727,7 +727,7 @@ namespace ascension {
 				State();
 				State(const State& other);
 				int cookie;
-				std::pair<std::shared_ptr<Paint>, std::size_t> fillStyle, strokeStyle;
+				std::pair<std::shared_ptr<const Paint>, std::size_t> fillStyle, strokeStyle;
 				win32::Handle<HPEN> pen, previousPen;
 				win32::Handle<HBRUSH> brush, previousBrush;
 			};
