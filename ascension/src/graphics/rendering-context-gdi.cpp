@@ -246,7 +246,7 @@ RenderingContext2D& RenderingContext2D::fillRectangle(const NativeRectangle& rec
 	throw makePlatformError();
 }
 
-shared_ptr<Paint> RenderingContext2D::fillStyle() const {
+shared_ptr<const Paint> RenderingContext2D::fillStyle() const {
 	return savedStates_.top().fillStyle.first;
 }
 
@@ -576,7 +576,7 @@ RenderingContext2D& RenderingContext2D::scrollPathIntoView() {
 	return *this;
 }
 
-RenderingContext2D& RenderingContext2D::setFillStyle(shared_ptr<Paint> fillStyle) {
+RenderingContext2D& RenderingContext2D::setFillStyle(shared_ptr<const Paint> fillStyle) {
 	if(fillStyle.get() == nullptr)
 		throw NullPointerException("fillStyle");
 	win32::Handle<HBRUSH> newBrush(::CreateBrushIndirect(&fillStyle->asNativeObject()), &::DeleteObject);
@@ -626,7 +626,7 @@ RenderingContext2D& RenderingContext2D::setShadowOffset(const NativeSize&) {
 	return *this;
 }
 
-RenderingContext2D& RenderingContext2D::setStrokeStyle(shared_ptr<Paint> strokeStyle) {
+RenderingContext2D& RenderingContext2D::setStrokeStyle(shared_ptr<const Paint> strokeStyle) {
 	if(strokeStyle.get() == nullptr)
 		throw NullPointerException("strokeStyle");
 	changePen(createModifiedPen(&strokeStyle->asNativeObject(), boost::none, boost::none, boost::none));
@@ -668,12 +668,12 @@ RenderingContext2D& RenderingContext2D::setTextBaseline(presentation::AlignmentB
 		throw makePlatformError();
 	v &= ~(TA_BASELINE | TA_BOTTOM | TA_TOP);
 	switch(textBaseline) {
-		case presentation::ALIGNMENT_BASELINE_BEFORE_EDGE:
-		case presentation::ALIGNMENT_BASELINE_TEXT_BEFORE_EDGE:
+		case presentation::AlignmentBaseline::BEFORE_EDGE:
+		case presentation::AlignmentBaseline::TEXT_BEFORE_EDGE:
 			v |= TA_TOP;
 			break;
-		case presentation::ALIGNMENT_BASELINE_AFTER_EDGE:
-		case presentation::ALIGNMENT_BASELINE_TEXT_AFTER_EDGE:
+		case presentation::AlignmentBaseline::AFTER_EDGE:
+		case presentation::AlignmentBaseline::TEXT_AFTER_EDGE:
 			v |= TA_BOTTOM;
 			break;
 		default:
@@ -722,7 +722,7 @@ RenderingContext2D& RenderingContext2D::strokeRectangle(const NativeRectangle& r
 	throw makePlatformError();
 }
 
-shared_ptr<Paint> RenderingContext2D::strokeStyle() const {
+shared_ptr<const Paint> RenderingContext2D::strokeStyle() const {
 	return savedStates_.top().strokeStyle.first;
 }
 
@@ -753,12 +753,12 @@ presentation::AlignmentBaseline RenderingContext2D::textBaseline() const {
 		throw makePlatformError();
 	switch(v & (TA_BASELINE | TA_BOTTOM | TA_TOP)) {
 		case TA_BOTTOM:
-			return presentation::ALIGNMENT_BASELINE_TEXT_AFTER_EDGE;
+			return presentation::AlignmentBaseline::TEXT_AFTER_EDGE;
 		case TA_TOP:
-			return presentation::ALIGNMENT_BASELINE_TEXT_BEFORE_EDGE;
+			return presentation::AlignmentBaseline::TEXT_BEFORE_EDGE;
 		case TA_BASELINE:
 		default:
-			return presentation::ALIGNMENT_BASELINE_ALPHABETIC;
+			return presentation::AlignmentBaseline::ALPHABETIC;
 	}
 }
 
