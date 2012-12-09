@@ -191,7 +191,8 @@ namespace ascension {
 			}
 #endif // ASCENSION_COMPILER_MSVC
 		public:
-			// back-reference to the canvas
+			/// @name Back-Reference to the Canvas
+			/// @{
 //			???? canvas() const;
 			const RenderingDevice& device() const;
 			// state
@@ -208,7 +209,10 @@ namespace ascension {
 			 * @see #save
 			 */
 			RenderingContext2D& restore();
-			// compositing
+			/// @}
+
+			/// @name Compositing
+			/// @{
 			/**
 			 * Returns the current alpha value applied to rendering operations. Initial value is
 			 * @c 1.0.
@@ -238,7 +242,10 @@ namespace ascension {
 			 * @see #globalCompositeOperation, #setGlobalAlpha
 			 */
 			RenderingContext2D& setGlobalCompositeOperation(CompositeOperation compositeOperation);
-			// colors and styles
+			/// @}
+
+			/// @name Colors and Styles
+			/// @{
 			/**
 			 * Returns the current style used for stroking shapes. Initial value is opaque black.
 			 * @return The current stokre style
@@ -268,7 +275,10 @@ namespace ascension {
 //			std::unique_ptr<Gradient> createLinearGradient();
 //			std::unique_ptr<Gradient> createRadialGradient();
 //			std::unique_ptr<Pattern> createPattern();
-			// shadows
+			/// @}
+
+			/// @name Shadows
+			/// @{
 			/**
 			 * Returns the current shadow offset. Initial value is <code>(0, 0)</code>.
 			 * @return The current shadow offset
@@ -307,7 +317,10 @@ namespace ascension {
 			 * @see #shadowColor
 			 */
 			RenderingContext2D& setShadowColor(const Color& shadowColor);
-			// rects
+			/// @}
+
+			/// @name Rects
+			/// @{
 			/**
 			 * Clears all pixels on the canvas in the specified rectangle to transparent black.
 			 * @param rectangle The rectangle
@@ -330,7 +343,10 @@ namespace ascension {
 			 * @see #clearRectangle, #fillRectangle
 			 */
 			RenderingContext2D& strokeRectangle(const NativeRectangle& rectangle);
-			// current default path API
+			/// @}
+
+			/// @name Current Default Path API
+			/// @{
 			/**
 			 * Resets the current default path.
 			 * @return This object
@@ -380,7 +396,10 @@ namespace ascension {
 			 * @return @a point is in the current default path
 			 */
 			bool isPointInPath(const NativePoint& point) const;
-			// text
+			/// @}
+
+			/// @name Text
+			/// @{
 			/**
 			 * Fills the given text at the given position. If a maximum measure is provided, the
 			 * text will be scaled to fit that measure if necessary.
@@ -415,7 +434,10 @@ namespace ascension {
 			 * @see #strokeText, #fillText
 			 */
 			NativeSize measureText(const StringPiece& text) const;
-			// drawing images
+			/// @}
+
+			/// @name Drawing Images
+			/// @{
 			/**
 			 * Draws the specified image onto the canvas.
 			 * @param image The image to draw
@@ -438,7 +460,10 @@ namespace ascension {
 			 * @return This object
 			 */
 			RenderingContext2D& drawImage(const Image& image, const NativeRectangle& sourceBounds, const NativeRectangle& destinationBounds);
-			// pixel manipulation
+			/// @}
+
+			/// @a name Pixel Manipulation
+			/// @{
 			/**
 			 * Returns an @c ImageData object with the specified dimensions. All the pixels in the
 			 * returned object are transparent black.
@@ -491,7 +516,10 @@ namespace ascension {
 			 */
 			RenderingContext2D& putImageData(const ImageData& image,
 				const NativePoint& destination, const NativeRectangle& dirtyRectangle);
-			// transformations (CanvasTransformation interface)
+			/// @}
+
+			/// @name Transformations (CanvasTransformation Interface)
+			/// @{
 			/**
 			 * Adds the scaling transformation described by @a s to the transformation matrix.
 			 * @param sx The scale factor in the horizontal direction. The factor is multiplies
@@ -546,7 +574,10 @@ namespace ascension {
 			 * @see #scale, #rotate, #translate, #transform
 			 */
 			RenderingContext2D& setTransform(const NativeAffineTransform& matrix);
-			// line caps/joins (CanvasLineStyles interface)
+			/// @}
+
+			/// @name Line Caps/Joins (CanvasLineStyles Interface)
+			/// @{
 			/**
 			 * Returns the current width of lines, in xxx units. Initial value is @c 1.0.
 			 * @return The current width of lines
@@ -603,8 +634,19 @@ namespace ascension {
 			 * @see #miterLimit
 			 */
 			RenderingContext2D& setMiterLimit(double miterLimit);
-			// text (CanvasText interface)
+			/// @}
+
+			/// @name Text (CanvasText Interface)
+			/// @{
+			/**
+			 * Returns the current font settings as a @c Font object.
+			 * @see #setFont
+			 */
 			std::shared_ptr<const font::Font> font() const;
+			/**
+			 * Sets the font settings by the @c Font object.
+			 * @see #font
+			 */
 			RenderingContext2D& setFont(std::shared_ptr<const font::Font> font);
 			/**
 			 * Returns the current text alignment settings. Default value is @c TEXT_ANCHOR_START.
@@ -635,7 +677,10 @@ namespace ascension {
 			 * @see #setTextAlignment, #textBaseline
 			 */
 			RenderingContext2D& setTextBaseline(presentation::AlignmentBaseline baseline);
-			// shared path API methods (CanvasPathMethods interface)
+			/// @}
+
+			/// @name Shared Path API Methods (CanvasPathMethods Interface)
+			/// @{
 			/**
 			 * Marks the current subpath as closed, and starts a new subpath with a point the same
 			 * as the start and end of the newly closed subpath.
@@ -712,6 +757,7 @@ namespace ascension {
 			 */
 			RenderingContext2D& arc(const NativePoint& p, Scalar radius,
 				double startAngle, double endAngle, bool counterClockwise = false);
+			/// @}
 		private:
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
 			Cairo::RefPtr<Cairo::Context> nativeObject_;

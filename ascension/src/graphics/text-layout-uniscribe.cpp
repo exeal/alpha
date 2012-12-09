@@ -19,6 +19,7 @@
 #include <ascension/corelib/text/character-property.hpp>
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate
+#include <boost/foreach.hpp>
 #include <usp10.h>
 
 using namespace ascension;
@@ -2361,7 +2362,8 @@ NativeRegion TextLayout::blackBoxBounds(const Range<Index>& characterRange) cons
 	unique_ptr<POINT[]> vertices(new POINT[abstractBounds.size() * 4]);
 	unique_ptr<int[]> numbersOfVertices(new int[abstractBounds.size()]);
 	for(size_t i = 0, c = abstractBounds.size(); i < c; ++i) {
-		const NativeRectangle physicalBounds(mapAbstractToPhysical(abstractBounds[i], writingMode()));
+		const NativeRectangle physicalBounds(geometry::make<NativeRectangle>(
+			mapFlowRelativeToPhysical<Scalar>(writingMode(), abstractBounds[i])));
 		geometry::x(vertices[i * 4 + 0]) = geometry::x(vertices[i * 4 + 3]) = geometry::left(physicalBounds);
 		geometry::y(vertices[i * 4 + 0]) = geometry::y(vertices[i * 4 + 1]) = geometry::top(physicalBounds);
 		geometry::x(vertices[i * 4 + 1]) = geometry::x(vertices[i * 4 + 2]) = geometry::right(physicalBounds);
@@ -2496,20 +2498,12 @@ uint8_t TextLayout::characterLevel(Index offset) const {
 }
 
 namespace {
-	/**
-	 * Paints the background and border of the specified text run.
-	 * @param context The graphics context
-	 * @param origin
-	 * @param writingMode The writing mode of the text layout to which the text run belongs
-	 * @param paintOverride
-	 * @param[out] paintedBounds The rectangle this function painted
-	 */
-	void paintBackgroundAndBorder(const TextRunImpl& textRun,
-			PaintContext& context, const NativePoint& origin, const WritingMode& writingMode,
-			const TextPaintOverride* paintOverride, NativeRectangle& paintedBounds) {
-		const FlowRelativeFourSides<Scalar> borderBounds(borderBox(textRun));
-		context.setFillStyle(textRun.style().background);
-		context.fillRectangle(borderRectangle);
+	inline bool borderShouldBePainted(const FlowRelativeFourSides<ComputedBorderSide>& borders) {
+		BOOST_FOREACH(auto& border, borders) {
+			if(border.hasVisibleStyle())
+				return true;
+		}
+		return false;
 	}
 }
 
@@ -2608,7 +2602,6 @@ void TextLayout::draw(PaintContext& context,
 			geometry::range<geometry::Y_COORDINATE>(allocationRectangle) = makeRange(over, under);
 		else
 			geometry::range<geometry::X_COORDINATE>(allocationRectangle) = makeRange(over, under);
-		context.setFillStyle();
 //		context.setGlobalAlpha(1.0);
 //		context.setGlobalCompositeOperation(SOURCE_OVER);
 		for(RunVector::const_iterator i(firstRunInLine(line)); i < lastRun; ++i) {
@@ -2645,6 +2638,7 @@ void TextLayout::draw(PaintContext& context,
 					geometry::range<geometry::X_COORDINATE>(allocationRectangle) = makeRange(geometry::x(p), geometry::x(q));
 				else
 					geometry::range<geometry::Y_COORDINATE>(allocationRectangle) = makeRange(geometry::y(p), geometry::y(q));
+				context.setFillStyle();
 				context.fillRectangle(allocationRectangle);
 
 				// compute 'content-rectangle'
@@ -2676,19 +2670,37 @@ void TextLayout::draw(PaintContext& context,
 						geometry::range<geometry::Y_COORDINATE>(contentRectangle) = makeRange(
 							geometry::y(p) + abstractContentBox.start() - abstractAllocationBox.start(),
 							geometry::y(p) + abstractContentBox.end() - abstractAllocationBox.start());
-					else	// btm
+					else	// btt
 						geometry::range<geometry::Y_COORDINATE>(contentRectangle) = makeRange(
 							geometry::y(p) + abstractContentBox.end() - abstractAllocationBox.end(),
 							geometry::y(p) + abstractContentBox.start() - abstractAllocationBox.end());
 				}
 
 				// compute 'border-rectangle' if needed
+				const NativePoint& alignmentPoint = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? p : q;
 				NativeRectangle borderRectangle;
+				if(textRun.style().background || borderShouldBePainted(textRun.style().border))
+					borderRectangle = geometry::make<NativeRectangle>(
+						mapFlowRelativeToPhysical(writingMode(), borderBox(textRun), PhysicalTwoAxes<Scalar>(alignmentPoint)));
 
-				// paint 'border-rectangle'
+				// paint background
 				if(textRun.style().background) {
-					const FlowRelativeborderBox(textRun);
-					NativeRectangle borderRectangle;
+					context.setFillStyle(textRun.style().background);
+					context.fillRectangle(borderRectangle);
+				}
+
+				// paint borders
+				PhysicalFourSides<const ComputedBorderSide*> physicalBorders;
+				for(auto border(begin(textRun.style().border)), e(end(textRun.style().border)); border != e; ++border) {
+					const FlowRelativeDirection direction = static_cast<FlowRelativeDirection>(border - begin(textRun.style().border));
+					physicalBorders[mapFlowRelativeToPhysical(writingMode(), direction)] = &*border;
+				}
+				for(auto border(begin(physicalBorders)), e(end(physicalBorders)); border != e; ++border) {
+					if(!(*border)->hasVisibleStyle()) {
+						*border = nullptr;
+						continue;
+					}
+					const PhysicalDirection direction = static_cast<PhysicalDirection>(border - begin(physicalBorders));
 				}
 			}
 
