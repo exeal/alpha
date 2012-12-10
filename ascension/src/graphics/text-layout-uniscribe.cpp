@@ -2231,33 +2231,29 @@ TextLayout::TextLayout(const String& textString,
 	// wrap into visual lines and reorder runs in each lines
 	if(runs_.empty() || !wrapsText(lineStyle.whiteSpace)) {
 		numberOfLines_ = 1;
-		lineOffsets_.reset(&SINGLE_LINE_OFFSETS);
-		lineFirstRuns_.reset(&SINGLE_LINE_OFFSETS);
+		assert(firstRunsInLines_.get() == nullptr);
 		// 5-2. reorder each text runs
 		reorder();
 		// 5-3. reexpand horizontal tabs
 		expandTabsWithoutWrapping();
 	} else {
 		// 5-1. expand horizontal tabs and wrap into lines
-		const TabExpander* tabExpander = otherParameters.tabExpander;
-		unique_ptr<TabExpander> temp;
-		if(tabExpander == nullptr) {
+		if(const shared_ptr<const TabExpander> tabExpander = lineStyle.tabExpander)
+			wrap(lineStyle.measure, *tabExpander);
+		else
 			// create default tab expander
-			temp.reset(new FixedWidthTabExpander(nominalFont->metrics()->averageCharacterWidth() * 8));
-			tabExpander = temp.get();
-		}
-		wrap(*tabExpander);
+			wrap(lineStyle.measure, FixedWidthTabExpander(nominalFont->metrics()->averageCharacterWidth() * 8));
 		// 5-2. reorder each text runs
 		reorder();
 		// 5-3. reexpand horizontal tabs
 		// TODO: not implemented.
 		// 6. justify each text runs if specified
 		if(lineStyle.justification != TextJustification::NONE)
-			justify(lineStyle.justification);
+			justify(lineStyle.measure, lineStyle.justification);
 	}
 
 	// 7. stack the lines
-	stackLines(otherParameters.lineStackingStrategy, *nominalFont, otherParameters.lineHeight);
+	stackLines(lineStyle.lineHeight, lineStyle.lineBoxContain, *nominalFont);
 }
 
 /// Destructor.

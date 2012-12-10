@@ -54,7 +54,7 @@ namespace ascension {
 			class FixedWidthTabExpander : public TabExpander {
 			public:
 				explicit FixedWidthTabExpander(Scalar width) BOOST_NOEXCEPT;
-				Scalar nextTabStop(Scalar x, Index tabOffset) const;
+				Scalar nextTabStop(Scalar ipd, Index tabOffset) const;
 			private:
 				const Scalar width_;
 			};
