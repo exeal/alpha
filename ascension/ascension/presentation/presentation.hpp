@@ -37,7 +37,7 @@ namespace ascension {
 		class TextLineStyleDeclarator {
 		public:
 			/// Destructor.
-			virtual ~TextLineStyleDeclarator() /*noexcept*/ {}
+			virtual ~TextLineStyleDeclarator() BOOST_NOEXCEPT {}
 		private:
 			/**
 			 * Returns the style of the specified text line in the document.
@@ -58,7 +58,7 @@ namespace ascension {
 			/// Priority.
 			typedef std::uint8_t Priority;
 			/// Destructor.
-			virtual ~TextLineColorSpecifier() /*noexcept*/ {}
+			virtual ~TextLineColorSpecifier() BOOST_NOEXCEPT {}
 		private:
 			/**
 			 * Returns the foreground and background colors of the text line.
@@ -85,7 +85,7 @@ namespace ascension {
 		class GlobalTextStyleListener {
 		public:
 			/// Destructor.
-			virtual ~GlobalTextStyleListener() /*throw()*/ {}
+			virtual ~GlobalTextStyleListener() BOOST_NOEXCEPT {}
 			/**
 			 * The global text style of @c Presentation was changed.
 			 * @param used The old style used previously
@@ -104,16 +104,16 @@ namespace ascension {
 			class Hyperlink {
 			public:
 				/// Destructor.
-				virtual ~Hyperlink() /*throw()*/ {}
+				virtual ~Hyperlink() BOOST_NOEXCEPT {}
 				/// Returns the descriptive text of the hyperlink.
-				virtual String description() const /*throw()*/ = 0;
+				virtual String description() const BOOST_NOEXCEPT = 0;
 				/// Invokes the hyperlink.
-				virtual void invoke() const /*throw()*/ = 0;
+				virtual void invoke() const BOOST_NOEXCEPT = 0;
 				/// Returns the columns of the region of the hyperlink.
-				const Range<Index>& region() const /*throw()*/ {return region_;}
+				const Range<Index>& region() const BOOST_NOEXCEPT {return region_;}
 			protected:
 				/// Protected constructor takes the region of the hyperlink.
-				explicit Hyperlink(const Range<Index>& region) /*throw()*/ : region_(region) {}
+				explicit Hyperlink(const Range<Index>& region) BOOST_NOEXCEPT : region_(region) {}
 			private:
 				const Range<Index> region_;
 			};
@@ -122,7 +122,7 @@ namespace ascension {
 			class HyperlinkDetector {
 			public:
 				/// Destructor.
-				virtual ~HyperlinkDetector() /*throw()*/ {}
+				virtual ~HyperlinkDetector() BOOST_NOEXCEPT {}
 				/**
 				 * Returns the next hyperlink in the specified text line.
 				 * @param document The document
@@ -132,7 +132,8 @@ namespace ascension {
 				 * @return The found hyperlink, or @c null if not found
 				 */
 				virtual std::unique_ptr<Hyperlink> nextHyperlink(
-					const kernel::Document& document, Index line, const Range<Index>& range) const /*throw()*/ = 0;
+					const kernel::Document& document, Index line,
+					const Range<Index>& range) const BOOST_NOEXCEPT = 0;
 			};
 
 			/**
@@ -142,11 +143,11 @@ namespace ascension {
 			 */
 			class URIHyperlinkDetector : public HyperlinkDetector {
 			public:
-				URIHyperlinkDetector(std::shared_ptr<const rules::URIDetector> uriDetector) /*throw()*/;
-				~URIHyperlinkDetector() /*throw()*/;
+				URIHyperlinkDetector(std::shared_ptr<const rules::URIDetector> uriDetector) BOOST_NOEXCEPT;
+				~URIHyperlinkDetector() BOOST_NOEXCEPT;
 				// HyperlinkDetector
 				std::unique_ptr<Hyperlink> nextHyperlink(
-					const kernel::Document& document, Index line, const Range<Index>& range) const /*throw()*/;
+					const kernel::Document& document, Index line, const Range<Index>& range) const BOOST_NOEXCEPT;
 			private:
 				std::shared_ptr<const rules::URIDetector> uriDetector_;
 			};
@@ -156,11 +157,11 @@ namespace ascension {
 			 */
 			class CompositeHyperlinkDetector : public hyperlink::HyperlinkDetector {
 			public:
-				~CompositeHyperlinkDetector() /*throw()*/;
+				~CompositeHyperlinkDetector() BOOST_NOEXCEPT;
 				void setDetector(kernel::ContentType contentType, std::unique_ptr<hyperlink::HyperlinkDetector> detector);
 				// hyperlink.HyperlinkDetector
 				std::unique_ptr<Hyperlink> nextHyperlink(
-					const kernel::Document& document, Index line, const Range<Index>& range) const /*throw()*/;
+					const kernel::Document& document, Index line, const Range<Index>& range) const BOOST_NOEXCEPT;
 			private:
 				std::map<kernel::ContentType, hyperlink::HyperlinkDetector*> composites_;
 			};
@@ -170,6 +171,25 @@ namespace ascension {
 		class TextRunStyleDeclarator;
 
 		/**
+		 * @see Presentation#computeTextLineStyle
+		 */
+		class GlobalTextStyleSwitch {
+		public:
+			/// Destructor.
+			virtual ~GlobalTextStyleSwitch() BOOST_NOEXCEPT {}
+			/**
+			 * Overrides the declared text line style.
+			 * @param[in,out] style The declared style properties
+			 */
+			virtual void overrideTextLineStyle(TextLineStyle& style) const BOOST_NOEXCEPT = 0;
+			/**
+			 * Overrides the declared text top-level style.
+			 * @param[in,out] style The declared style properties
+			 */
+			virtual void overrideTextToplevelStyle(TextToplevelStyle& style) const BOOST_NOEXCEPT = 0;
+		};
+
+		/**
 		 * A bridge between the document and visual styled text.
 		 * @note This class is not intended to be subclassed.
 		 * @see kernel#Document, kernel#DocumentPartitioner
@@ -177,36 +197,50 @@ namespace ascension {
 		class Presentation : public kernel::DocumentListener {
 			ASCENSION_NONCOPYABLE_TAG(Presentation);
 		public:
-			// constructors
-			explicit Presentation(kernel::Document& document) /*noexcept*/;
-			~Presentation() /*noexcept*/;
-			// attributes
-			kernel::Document& document() /*noexcept*/;
-			const kernel::Document& document() const /*noexcept*/;
-			// styles -- declaration
+			explicit Presentation(kernel::Document& document) BOOST_NOEXCEPT;
+			~Presentation() BOOST_NOEXCEPT;
+			/// @name Attributes
+			/// @{
+			kernel::Document& document() BOOST_NOEXCEPT;
+			const kernel::Document& document() const BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name Styles Declaration
+			/// @{
 			void addGlobalTextStyleListener(GlobalTextStyleListener& listener);
-			const TextToplevelStyle& globalTextStyle() const /*noexcept*/;
+			const TextToplevelStyle& globalTextStyle() const BOOST_NOEXCEPT;
 			void removeGlobalTextStyleListener(GlobalTextStyleListener& listener);
 			void setGlobalTextStyle(std::shared_ptr<const TextToplevelStyle> newStyle);
-			void setTextLineStyleDeclarator(std::shared_ptr<TextLineStyleDeclarator> newDeclarator) /*noexcept*/;
-			void setTextRunStyleDeclarator(std::shared_ptr<TextRunStyleDeclarator> newDeclarator) /*noexcept*/;
+			void setTextLineStyleDeclarator(std::shared_ptr<TextLineStyleDeclarator> newDeclarator) BOOST_NOEXCEPT;
+			void setTextRunStyleDeclarator(std::shared_ptr<TextRunStyleDeclarator> newDeclarator) BOOST_NOEXCEPT;
 			void textLineColors(Index line,
 				boost::optional<graphics::Color>& foreground, boost::optional<graphics::Color>& background) const;
-			// styles -- computation
-			graphics::font::ComputedTextLineStyle&& computeTextLineStyle(Index line,
-				const graphics::RenderingContext2D& context, const graphics::NativeSize& contextSize) const;
+			/// @}
+
+			/// @name Styles Computation
+			/// @{
+			graphics::font::ComputedTextLineStyle&& computeTextLineStyle(
+				Index line, const graphics::RenderingContext2D& context,
+				const graphics::NativeSize& contextSize, const GlobalTextStyleSwitch* globalSwitch) const;
 			std::unique_ptr<ComputedStyledTextRunIterator> computeTextRunStyles(Index line,
 				const graphics::RenderingContext2D& context, const graphics::NativeSize& contextSize) const;
-			// hyperlinks
+			/// @}
+
+			/// @name Hyperlinks
+			/// @{
 			const hyperlink::Hyperlink* const* getHyperlinks(
 				Index line, std::size_t& numberOfHyperlinks) const;
 			void setHyperlinkDetector(
-				std::shared_ptr<hyperlink::HyperlinkDetector> newDetector) /*noexcept*/;
-			// strategies
+				std::shared_ptr<hyperlink::HyperlinkDetector> newDetector) BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name Strategies
+			/// @{
 			void addTextLineColorSpecifier(std::shared_ptr<TextLineColorSpecifier> specifier);
-			void removeTextLineColorSpecifier(TextLineColorSpecifier& specifier) /*noexcept*/;
+			void removeTextLineColorSpecifier(TextLineColorSpecifier& specifier) BOOST_NOEXCEPT;
+			/// @}
 		private:
-			void clearHyperlinksCache() /*noexcept*/;
+			void clearHyperlinksCache() BOOST_NOEXCEPT;
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
@@ -229,7 +263,7 @@ namespace ascension {
 		 * @return The global text style
 		 * @see #setGlobalTextStyle
 		 */
-		inline const TextToplevelStyle& Presentation::globalTextStyle() const /*throw()*/ {
+		inline const TextToplevelStyle& Presentation::globalTextStyle() const BOOST_NOEXCEPT {
 			assert(globalTextStyle_ != nullptr);
 			return *globalTextStyle_;
 		}

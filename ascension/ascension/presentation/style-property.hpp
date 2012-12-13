@@ -104,7 +104,7 @@ namespace ascension {
 			 * @return This object
 			 * @see #inherits
 			 */
-			StyleProperty& inherit() /*noexcept*/ {
+			StyleProperty& inherit() BOOST_NOEXCEPT {
 				inherits_ = true;
 				return *this;
 			}
@@ -112,7 +112,7 @@ namespace ascension {
 			 * Returns @c true if this object inherits other property.
 			 * @see #inherit
 			 */
-			bool inherits() const /*noexcept*/ {
+			bool inherits() const BOOST_NOEXCEPT {
 				return inherits_;
 			}
 			/**
