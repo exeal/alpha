@@ -1080,6 +1080,20 @@ namespace ascension {
 		struct TextLineStyle {
 			/// The default text run style. The default value is @c null.
 			std::shared_ptr<const TextRunStyle> defaultRunStyle;
+			/// 'direction' property. See @c ReadingDirection.
+			StyleProperty<
+				sp::Enumerated<ReadingDirection, LEFT_TO_RIGHT>,
+				sp::Inherited
+			> direction;
+//			StyleProperty<
+//				sp::Enumerated<UnicodeBidi, UnicodeBidi::NORMAL>,
+//				sp::NotInherited
+//			> unicodeBidi;
+			/// 'text-orientation' property. See @c TextOrientation.
+			StyleProperty<
+				sp::Enumerated<TextOrientation, MIXED_RIGHT>,
+				sp::Inherited
+			> textOrientation;
 			/// 'line-box-contain' property. See @c LineBoxContain.
 			StyleProperty<
 				sp::Enumerated<LineBoxContain, LineBoxContain::BLOCK | LineBoxContain::INLINE | LineBoxContain::REPLACED>,
@@ -1183,25 +1197,11 @@ namespace ascension {
 		 *      Presentation#setGlobalTextStyle
 		 */
 		struct TextToplevelStyle : public std::enable_shared_from_this<TextToplevelStyle> {
-			/// 'direction' property. See @c ReadingDirection.
-			StyleProperty<
-				sp::Enumerated<ReadingDirection, LEFT_TO_RIGHT>,
-				sp::Inherited
-			> direction;
-//			StyleProperty<
-//				sp::Enumerated<UnicodeBidi, UnicodeBidi::NORMAL>,
-//				sp::NotInherited
-//			> unicodeBidi;
 			/// 'writing-mode' property. See @c BlockFlowDirection.
 			StyleProperty<
 				sp::Enumerated<BlockFlowDirection, HORIZONTAL_TB>,
 				sp::Inherited
 			> writingMode;
-			/// 'text-orientation' property. See @c TextOrientation.
-			StyleProperty<
-				sp::Enumerated<TextOrientation, MIXED_RIGHT>,
-				sp::Inherited
-			> textOrientation;
 			/// The default text line style. The default value is @c null.
 			std::shared_ptr<const TextLineStyle> defaultLineStyle;
 		};
