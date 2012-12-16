@@ -1170,8 +1170,10 @@ namespace ascension {
 			> dominantBaseline;
 			///
 			StyleProperty<
-				sp::Enumerated<TextJustification, TextJustification::AUTO>,
-				sp::Inherited
+				sp::Multiple<
+					boost::variant<LineHeightEnums, double, Length>,
+					LineHeightEnums, LineHeightEnums::NORMAL
+				>, sp::Inherited
 			> lineHeight;
 			/// ‘width’ property.
 			StyleProperty<
@@ -1179,11 +1181,8 @@ namespace ascension {
 					boost::optional<Length>
 				>, sp::NotInherited
 			> measure;
-			/// The number substitution process. The default value is @c NumberSubstitution().
-			StyleProperty<
-				sp::Complex<NumberSubstitution>,
-				sp::Inherited
-			> numberSubstitution;
+			/// The number substitution process. See @c NumberSubstitution.
+			NumberSubstitution numberSubstitution;
 		};
 
 		std::shared_ptr<const TextRunStyle> defaultTextRunStyle(
