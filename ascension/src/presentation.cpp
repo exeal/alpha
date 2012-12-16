@@ -64,7 +64,7 @@ struct Presentation::Hyperlinks {
  * Constructor.
  * @param document The target document
  */
-Presentation::Presentation(Document& document) /*noexcept*/ : document_(document) {
+Presentation::Presentation(Document& document) BOOST_NOEXCEPT : document_(document) {
 	if(DEFAULT_GLOBAL_TEXT_STYLE.get() == nullptr) {
 		unique_ptr<TextLineStyle> temp1(new TextLineStyle);
 		temp1->defaultRunStyle.reset(new TextRunStyle);
@@ -77,7 +77,7 @@ Presentation::Presentation(Document& document) /*noexcept*/ : document_(document
 }
 
 /// Destructor.
-Presentation::~Presentation() /*noexcept*/ {
+Presentation::~Presentation() BOOST_NOEXCEPT {
 	document_.removeListener(*this);
 	clearHyperlinksCache();
 }
@@ -104,7 +104,7 @@ void Presentation::addTextLineColorSpecifier(shared_ptr<TextLineColorSpecifier> 
 	textLineColorSpecifiers_.push_back(specifier);
 }
 
-void Presentation::clearHyperlinksCache() /*noexcept*/ {
+void Presentation::clearHyperlinksCache() BOOST_NOEXCEPT {
 	for(list<Hyperlinks*>::iterator i(hyperlinks_.begin()), e(hyperlinks_.end()); i != e; ++i) {
 		for(size_t j = 0; j < (*i)->numberOfHyperlinks; ++j)
 			delete (*i)->hyperlinks[j];
@@ -114,9 +114,13 @@ void Presentation::clearHyperlinksCache() /*noexcept*/ {
 }
 
 namespace {
-	template<typename Property>
-	inline typename sp::IntrinsicType<Property>::Type resolveProperty(const Property& declared, const Property& global) {
-		return !declared.inherits() ? declared.get() : global.getOrInitial();
+//	template<typename PropertyType>
+//	inline typename sp::IntrinsicType<PropertyType>::Type resolveProperty(PropertyType TextLineStyle::*pointerToMember, const TextLineStyle& declared, const TextLineStyle& toplevel) {
+//		return !(declared.*pointerToMember).inherits() ? (declared.*pointerToMember).get() : (toplevel.*pointerToMember).getOrInitial();
+//	}
+	template<typename PropertyType>
+	inline void resolveProperty(PropertyType TextLineStyle::*pointerToMember, const TextLineStyle& declared, const TextLineStyle& toplevel, TextLineStyle& destination) {
+		destination.*pointerToMember = !(declared.*pointerToMember).inherits() ? (declared.*pointerToMember).get() : (toplevel.*pointerToMember).getOrInitial();
 	}
 }
 
@@ -125,37 +129,82 @@ namespace {
  * @param line The line number
  * @param context 
  * @param contextSize 
+ * @param globalSwitch 
  * @return The computed text line style
+ * @throw BadPositionException @a line is outside of the document
  */
 font::ComputedTextLineStyle&& Presentation::computeTextLineStyle(Index line,
-		const RenderingContext2D& context, const NativeSize& contextSize) const /*noexcept*/ {
-	const shared_ptr<const TextLineStyle> global(globalTextStyle().defaultLineStyle);
-	assert(global.get() != nullptr);
+		const RenderingContext2D& context, const NativeSize& contextSize, const GlobalTextStyleSwitch* globalSwitch) const {
+	if(line >= document_.numberOfLines())
+		throw BadPositionException(Position(line, 0));
+	TextToplevelStyle toplevel(globalTextStyle());
+	if(globalSwitch != nullptr)
+		globalSwitch->overrideTextToplevelStyle(toplevel);
 	shared_ptr<const TextLineStyle> declared;
 	if(textLineStyleDeclarator_.get() != nullptr)
 		declared = textLineStyleDeclarator_->declareTextLineStyle(line);
 	if(declared.get() == nullptr)
-		declared = global;
+		declared = toplevel.defaultLineStyle;
 	assert(declared.get() != nullptr);
 
+	TextLineStyle precomputed;
+	resolveProperty(&TextLineStyle::direction, *declared, *toplevel.defaultLineStyle, precomputed);
+//	resolveProperty(&TextLineStyle::unicodeBidi, *declared, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::textOrientation, *declared, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::lineBoxContain, *declared, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::inlineBoxAlignment, *declared, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::whiteSpace, *declared, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::tabSize, *declared, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::lineBreak, *declared, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::wordBreak, *declared, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::overflowWrap, *declared, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::textAlignment, *declared, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::textAlignmentLast, *declared, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::textJustification, *declared, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::textIndent, *declared, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::hangingPunctuation, *declared, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::dominantBaseline, *declared, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::lineHeight, *declared, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::measure, *declared, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::numberSubstitution, *declared, *toplevel.defaultLineStyle, precomputed);
+	if(globalSwitch != nullptr)
+		globalSwitch->overrideTextLineStyle(precomputed);
+
 	font::ComputedTextLineStyle computed;
-	computed.writingMode = WritingMode();
-	computed.lineBoxContain = resolveProperty(declared->lineBoxContain, global->lineBoxContain);
-	computed.tabExpander;
-	computed.lineBreak = resolveProperty(declared->lineBreak, global->lineBreak);
-	computed.wordBreak = resolveProperty(declared->wordBreak, global->wordBreak);
-	computed.overflowWrap = resolveProperty(declared->overflowWrap, global->overflowWrap);
-	computed.alignment = resolveProperty(declared->textAlignment, global->textAlignment);
-	computed.alignmentLast = resolveProperty(declared->textAlignmentLast, global->textAlignmentLast);
-	computed.justification = resolveProperty(declared->textJustification, global->textJustification);
-	computed.indent.length = static_cast<Scalar>(
-		resolveProperty(declared->textIndent.length, global->textIndent.length).value(&context, &contextSize));
-	computed.indent.hanging = resolveProperty(declared->textIndent.hanging, global->textIndent.hanging);
-	computed.indent.eachLine = resolveProperty(declared->textIndent.eachLine, global->textIndent.eachLine);
-	computed.hangingPunctuation = resolveProperty(declared->hangingPunctuation, global->hangingPunctuation);
-	computed.dominantBaseline = resolveProperty(declared->dominantBaseline, global->dominantBaseline);
-	computed.lineHeight;
-	computed.numberSubstitution;
+	computed.writingMode = WritingMode(precomputed.direction.getOrInitial(), toplevel.writingMode.getOrInitial(), precomputed.textOrientation.getOrInitial());
+	computed.lineBoxContain = precomputed.lineBoxContain.getOrInitial();
+	computed.whiteSpace = precomputed.whiteSpace.getOrInitial();
+	precomputed.tabSize.getOrInitial();
+	computed.lineBreak = precomputed.lineBreak.getOrInitial();
+	computed.wordBreak = precomputed.wordBreak.getOrInitial();
+	computed.overflowWrap = precomputed.overflowWrap.getOrInitial();
+	computed.alignment = precomputed.textAlignment.getOrInitial();
+	computed.alignmentLast = precomputed.textAlignmentLast.getOrInitial();
+	computed.justification = precomputed.textJustification.getOrInitial();
+	computed.indent.length = static_cast<Scalar>(precomputed.textIndent.length.getOrInitial().value(&context, &contextSize));
+	computed.indent.hanging = precomputed.textIndent.hanging.getOrInitial();
+	computed.indent.eachLine = precomputed.textIndent.eachLine.getOrInitial();
+	computed.hangingPunctuation = precomputed.hangingPunctuation.getOrInitial();
+	computed.dominantBaseline = precomputed.dominantBaseline.getOrInitial();
+	{
+		// TODO: This code is temporary.
+		auto precomputedLineHeight(precomputed.lineHeight.getOrInitial());
+		if(LineHeightEnums* const keyword = boost::get<LineHeightEnums>(&precomputedLineHeight)) {
+			if(*keyword == LineHeightEnums::NONE)
+				*keyword = LineHeightEnums::NORMAL;
+			if(*keyword == LineHeightEnums::NORMAL || true)
+				precomputedLineHeight = Length(1.15, Length::EM_HEIGHT);
+		} else if(const double* const number = boost::get<double>(&precomputedLineHeight))
+			precomputedLineHeight = Length(*number, Length::EM_HEIGHT);
+		if(const Length* const length = boost::get<Length>(&precomputedLineHeight))
+			computed.lineHeight = static_cast<Scalar>(length->value(&context, &contextSize));
+		else
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+	computed.measure = static_cast<Scalar>(precomputed.measure.getOrInitial()->value(&context, &contextSize));
+	computed.numberSubstitution.method = precomputed.numberSubstitution.method.getOrInitial();
+	computed.numberSubstitution.localeName = precomputed.numberSubstitution.localeName.getOrInitial();
+	computed.numberSubstitution.ignoreUserOverride = precomputed.numberSubstitution.ignoreUserOverride.getOrInitial();
 
 	return move(computed);
 }
@@ -171,17 +220,17 @@ unique_ptr<ComputedStyledTextRunIterator> Presentation::computeTextRunStyles(Ind
 		const RenderingContext2D& context, const NativeSize& contextSize) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
-	return (textRunStyleDirector_.get() != nullptr) ?
-		textRunStyleDirector_->queryTextRunStyle(line) : unique_ptr<StyledTextRunIterator>();
+	return (textRunStyleDeclarator_.get() != nullptr) ?
+		textRunStyleDeclarator_->declareTextRunStyle(line) : unique_ptr<StyledTextRunIterator>();
 }
 
 /// Returns the document to which the presentation connects.
-const Document& Presentation::document() const /*noexcept*/ {
+const Document& Presentation::document() const BOOST_NOEXCEPT {
 	return document_;
 }
 
 /// Returns the document to which the presentation connects.
-Document& Presentation::document() /*noexcept*/ {
+Document& Presentation::document() BOOST_NOEXCEPT {
 	return document_;
 }
 
@@ -281,7 +330,7 @@ void Presentation::removeGlobalTextStyleListener(GlobalTextStyleListener& listen
  * Removes the specified text line color specifier.
  * @param specifier The director to remove
  */
-void Presentation::removeTextLineColorSpecifier(TextLineColorSpecifier& specifier) /*noexcept*/ {
+void Presentation::removeTextLineColorSpecifier(TextLineColorSpecifier& specifier) BOOST_NOEXCEPT {
 	for(list<shared_ptr<TextLineColorSpecifier>>::iterator
 			i(textLineColorSpecifiers_.begin()), e(textLineColorSpecifiers_.end()); i != e; ++i) {
 		if(i->get() == &specifier) {
@@ -307,7 +356,7 @@ void Presentation::setGlobalTextStyle(shared_ptr<const TextToplevelStyle> newSty
  * Sets the hyperlink detector.
  * @param newDirector The director. Set @c null to unregister
  */
-void Presentation::setHyperlinkDetector(shared_ptr<HyperlinkDetector> newDetector) /*noexcept*/ {
+void Presentation::setHyperlinkDetector(shared_ptr<HyperlinkDetector> newDetector) BOOST_NOEXCEPT {
 	hyperlinkDetector_ = newDetector;
 	clearHyperlinksCache();
 }
@@ -316,7 +365,7 @@ void Presentation::setHyperlinkDetector(shared_ptr<HyperlinkDetector> newDetecto
  * Sets the line style declarator.
  * @param newDeclarator The declarator. @c null to unregister
  */
-void Presentation::setTextLineStyleDeclarator(shared_ptr<TextLineStyleDeclarator> newDeclarator) /*noexcept*/ {
+void Presentation::setTextLineStyleDeclarator(shared_ptr<TextLineStyleDeclarator> newDeclarator) BOOST_NOEXCEPT {
 	textLineStyleDeclarator_ = newDeclarator;
 }
 
@@ -325,7 +374,7 @@ void Presentation::setTextLineStyleDeclarator(shared_ptr<TextLineStyleDeclarator
  * This method does not call @c TextRenderer#invalidate and the layout is not updated.
  * @param newDirector The declarator. @c null to unregister
  */
-void Presentation::setTextRunStyleDeclarator(shared_ptr<TextRunStyleDeclarator> newDeclarator) /*noexcept*/ {
+void Presentation::setTextRunStyleDeclarator(shared_ptr<TextRunStyleDeclarator> newDeclarator) BOOST_NOEXCEPT {
 	textRunStyleDeclarator_ = newDeclarator;
 }
 
@@ -358,7 +407,7 @@ void Presentation::textLineColors(Index line,
 
 class SingleStyledPartitionPresentationReconstructor::Iterator : public presentation::StyledTextRunIterator {
 public:
-	Iterator(const Range<Index>& range, shared_ptr<const TextRunStyle> style) /*noexcept*/ : range_(range), style_(style), done_(false) {
+	Iterator(const Range<Index>& range, shared_ptr<const TextRunStyle> style) BOOST_NOEXCEPT : range_(range), style_(style), done_(false) {
 	}
 private:
 	// StyledTextRunIterator
@@ -372,7 +421,7 @@ private:
 			throw NoSuchElementException();
 		return style_;
 	}
-	bool isDone() const /*noexcept*/ {
+	bool isDone() const BOOST_NOEXCEPT {
 		return done_;
 	}
 	void next() {
@@ -393,7 +442,7 @@ private:
  * Constructor.
  * @param style The style
  */
-SingleStyledPartitionPresentationReconstructor::SingleStyledPartitionPresentationReconstructor(shared_ptr<const TextRunStyle> style) /*noexcept*/ : style_(style) {
+SingleStyledPartitionPresentationReconstructor::SingleStyledPartitionPresentationReconstructor(shared_ptr<const TextRunStyle> style) BOOST_NOEXCEPT : style_(style) {
 }
 
 /// @see PartitionPresentationReconstructor#getPresentation
@@ -413,7 +462,7 @@ private:
 	// StyledTextRunIterator
 	Range<Index> currentRange() const;
 	shared_ptr<const TextRunStyle> currentStyle() const;
-	bool isDone() const /*noexcept*/;
+	bool isDone() const BOOST_NOEXCEPT;
 	void next();
 private:
 	static const shared_ptr<const TextRunStyle> DEFAULT_TEXT_RUN_STYLE;
@@ -472,7 +521,7 @@ shared_ptr<const TextRunStyle> PresentationReconstructor::Iterator::currentStyle
 }
 
 /// @see StyledTextRunIterator#isDone
-bool PresentationReconstructor::Iterator::isDone() const /*noexcept*/ {
+bool PresentationReconstructor::Iterator::isDone() const BOOST_NOEXCEPT {
 	return currentPartition_.region.isEmpty();
 }
 
@@ -683,7 +732,7 @@ private:
 	// StyledTextRunIterator
 	Range<Index> currentRange() const;
 	shared_ptr<const TextRunStyle> currentStyle() const;
-	bool isDone() const /*noexcept*/;
+	bool isDone() const BOOST_NOEXCEPT;
 	void next();
 private:
 //	const LexicalPartitionPresentationReconstructor& reconstructor_;
