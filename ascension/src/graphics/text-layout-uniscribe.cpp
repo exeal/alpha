@@ -2171,9 +2171,10 @@ namespace {
  * @param textString The text string to display
  * @param lineStyle The computed text line style
  * @param textRunStyles The computed text runs styles
+ * @param fontCollection The font collection
  */
-TextLayout::TextLayout(const String& textString,
-		const ComputedTextLineStyle& lineStyle, std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles)
+TextLayout::TextLayout(const String& textString, const ComputedTextLineStyle& lineStyle,
+		std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles, const FontCollection& fontCollection /* = installedFonts() */)
 		: textString_(textString), lineStyle_(lineStyle), numberOfLines_(0) {
 
 	// handle logically empty line
@@ -2206,7 +2207,6 @@ TextLayout::TextLayout(const String& textString,
 	// 2. split each script runs into text runs with StyledRunIterator
 	vector<TextRunImpl*> textRuns;
 	vector<AttributedCharacterRange<const ComputedTextRunStyle>> calculatedStyles;
-	const FontCollection& fontCollection = (otherParameters.fontCollection != nullptr) ? *otherParameters.fontCollection : installedFonts();
 	TextRunImpl::generate(textString_, fontCollection, lineStyle_, move(textRunStyles), textRuns, calculatedStyles);
 //	runs_.reset(new TextRun*[numberOfRuns_ = textRuns.size()]);
 //	copy(textRuns.begin(), textRuns.end(), runs_.get());

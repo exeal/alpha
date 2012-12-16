@@ -129,8 +129,10 @@ namespace ascension {
 				};
 #endif
 			public:
-				TextLayout(const String& textString, const ComputedTextLineStyle& lineStyle,
-					std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles);
+				TextLayout(const String& textString,
+					const ComputedTextLineStyle& lineStyle,
+					std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles,
+					const FontCollection& fontCollection = installedFonts());
 				~TextLayout() BOOST_NOEXCEPT;
 
 				/// @name General Attributes
