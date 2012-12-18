@@ -12,7 +12,9 @@
 #include <ascension/graphics/glyph-vector.hpp>
 #include <locale>
 #include <set>
-#include <unordered_map>
+#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+#	include <unordered_map>
+#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 #include <boost/optional.hpp>
 
 namespace ascension {
@@ -29,12 +31,12 @@ namespace ascension {
 		namespace font {
 
 			/// Returns @c true if complex scripts are supported.
-			bool supportsComplexScripts() /*noexcept*/;
+			bool supportsComplexScripts() BOOST_NOEXCEPT;
 			/// Returns @c true if OpenType features are supported.
-			bool supportsOpenTypeFeatures() /*noexcept*/;
+			bool supportsOpenTypeFeatures() BOOST_NOEXCEPT;
 
 			/**
-			 * Represents a single physical instance of a font.
+			 * Represents a single physical instance of a font, or a set of fonts.
 			 * @see FontFamily, FontDescription, Fontset, FontFace, FontCollection
 			 */
 			class Font : public std::enable_shared_from_this<Font> {
@@ -46,27 +48,27 @@ namespace ascension {
 				class Metrics {
 				public:
 					/// Returns the ascent of the text in font coordinate units.
-					virtual int ascent() const /*noexcept*/ = 0;
+					virtual int ascent() const BOOST_NOEXCEPT = 0;
 					/// Returns the average width of a character in font coordinate units.
-					virtual int averageCharacterWidth() const /*noexcept*/ = 0;
+					virtual int averageCharacterWidth() const BOOST_NOEXCEPT = 0;
 					/// Returns the cell height in font coordinate units.
-					int cellHeight() const /*throw()*/ {return ascent() + descent();}
+					int cellHeight() const BOOST_NOEXCEPT {return ascent() + descent();}
 					/// Returns the descent of the text in font coordinate units.
-					virtual int descent() const /*noexcept*/ = 0;
+					virtual int descent() const BOOST_NOEXCEPT = 0;
 					/// Returns the em height in font coordinate units.
-					int emHeight() const /*noexcept*/ {return cellHeight() - internalLeading();}
+					int emHeight() const BOOST_NOEXCEPT {return cellHeight() - internalLeading();}
 					/// Returns the external leading in font coordinate units.
 					/// @note In Ascension, external leadings are placed below characters.
-					virtual int externalLeading() const /*noexcept*/ = 0;
+					virtual int externalLeading() const BOOST_NOEXCEPT = 0;
 					/// Returns the internal leading in font coordinate units.
-					virtual int internalLeading() const /*noexcept*/ = 0;
+					virtual int internalLeading() const BOOST_NOEXCEPT = 0;
 					/// Returns the gap of the lines (external leading) in font coordinate units.
-					int lineGap() const /*noexcept*/ {return externalLeading();}
+					int lineGap() const BOOST_NOEXCEPT {return externalLeading();}
 					/// Returns the pitch of lines in pixels.
 					/// @note This method ignores @c LayoutSettings#lineSpacing value.
-					int linePitch() const /*noexcept*/ {return cellHeight() + lineGap();}
+					int linePitch() const BOOST_NOEXCEPT {return cellHeight() + lineGap();}
 					/// Returns the x-height of the font in font coordinate units.
-					virtual int xHeight() const /*noexcept*/ = 0;
+					virtual int xHeight() const BOOST_NOEXCEPT = 0;
 				};
 			public:
 #if defined(ASCENSION_SHAPING_ENGINE_CAIRO)
@@ -86,16 +88,22 @@ namespace ascension {
 				explicit Font(boost::intrusive_ptr<hb_font_t> nativeObject);
 				boost::intrusive_ptr<hb_font_t> asNativeObject() const;
 #elif defined(ASCENSION_SHAPING_ENGINE_PANGO)
-				explicit Font(Glib::RefPtr<Pango::Font> nativeObject);
-				Glib::RefPtr<Pango::Font> asNativeObject();
-				Glib::RefPtr<const Pango::Font> asNativeObject() const;
+//				explicit Font(Glib::RefPtr<Pango::Font> nativeObject);
+//				Glib::RefPtr<Pango::Font> asNativeObject();
+//				Glib::RefPtr<const Pango::Font> asNativeObject() const;
+				explicit Font(Glib::RefPtr<Pango::Fontset> nativeObject);
+				Glib::RefPtr<Pango::Fontset> asNativeObject();
+				Glib::RefPtr<const Pango::Fontset> asNativeObject() const;
 #elif defined(ASCENSION_SHAPING_ENGINE_QT)
-				explicit Font(std::shared_ptr<QRawFont> nativeObject);
-				std::shared_ptr<QRawFont> asNativeObject();
-				std::shared_ptr<const QRawFont> asNativeObject() const;
+//				explicit Font(std::shared_ptr<QRawFont> nativeObject);
+//				std::shared_ptr<QRawFont> asNativeObject();
+//				std::shared_ptr<const QRawFont> asNativeObject() const;
+				explicit Font(std::shared_ptr<QFont> nativeObject);
+				std::shared_ptr<QFont> asNativeObject();
+				std::shared_ptr<const QFont> asNativeObject() const;
 #elif defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
-				explicit Font(win32::Handle<HFONT>&& nativeObject) /*noexcept*/;
-				const win32::Handle<HFONT>& asNativeObject() const /*noexcept*/;
+				explicit Font(win32::Handle<HFONT>&& nativeObject) BOOST_NOEXCEPT;
+				const win32::Handle<HFONT>& asNativeObject() const BOOST_NOEXCEPT;
 #elif defined(ASCENSION_SHAPING_ENGINE_WIN32_GDIPLUS)
 				explicit Font(std::shared_ptr<Gdiplus::Font> nativeObject);
 				std::shared_ptr<Gdiplus::Font> asNativeObject();
@@ -114,7 +122,7 @@ namespace ascension {
 				std::unique_ptr<const GlyphVector> createGlyphVector(const String& text) const;
 #endif
 				/// Returns the description of this font.
-				FontDescription&& describe() const /*noexcept*/;
+				FontDescription&& describe() const BOOST_NOEXCEPT;
 				/// Returns the family name of this font.
 				FontFamily&& family() const;
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
@@ -122,13 +130,13 @@ namespace ascension {
 					CodePoint variationSelector, GlyphCode defaultGlyph) const;
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 				/// Returns the metrics of the font.
-				std::shared_ptr<const Metrics> metrics() const /*noexcept*/ {
+				std::shared_ptr<const Metrics> metrics() const BOOST_NOEXCEPT {
 					if(metrics_.get() == nullptr)
 						const_cast<Font*>(this)->buildMetrics();
 					return metrics_;
 				}
 			private:
-				void buildMetrics() /*noexcept*/;
+				void buildMetrics() BOOST_NOEXCEPT;
 #if defined(ASCENSION_SHAPING_ENGINE_CAIRO)
 				Cairo::RefPtr<Cairo::ScaledFont> nativeObject_;
 #elif defined(ASCENSION_SHAPING_ENGINE_CORE_GRAPHICS)
@@ -140,9 +148,11 @@ namespace ascension {
 #elif defined(ASCENSION_SHAPING_ENGINE_HARFBUZZ)
 				boost::intrusive_ptr<hb_font_t> nativeObject_;
 #elif defined(ASCENSION_SHAPING_ENGINE_PANGO)
-				Glib::RefPtr<Pango::Font> nativeObject_;
+//				Glib::RefPtr<Pango::Font> nativeObject_;
+				Glib::RefPtr<Pango::Fontset> nativeObject_;
 #elif defined(ASCENSION_SHAPING_ENGINE_QT)
-				std::shared_ptr<QRawFont> nativeObject_;
+//				std::shared_ptr<QRawFont> nativeObject_;
+				std::shared_ptr<QFont> nativeObject_;
 #elif defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
 				win32::Handle<HFONT> nativeObject_;
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
@@ -154,56 +164,34 @@ namespace ascension {
 				std::shared_ptr<const Metrics> metrics_;
 			};
 
-			class Fontset : public std::enable_shared_from_this<Fontset> {
-			public:
-#if defined(ASCENSION_SHAPING_ENGINE_PANGO)
-				explicit Font(Glib::RefPtr<Pango::Fontset> nativeObject);
-				Glib::RefPtr<Pango::Fontset> asNativeObject();
-				Glib::RefPtr<const Pango::Fontset> asNativeObject() const;
-#elif defined(ASCENSION_SHAPING_ENGINE_QT)
-				explicit Font(std::shared_ptr<QFont> nativeObject);
-				std::shared_ptr<QFont> asNativeObject();
-				std::shared_ptr<const QFont> asNativeObject() const;
-#endif
-			private:
-#if defined(ASCENSION_SHAPING_ENGINE_PANGO)
-				Glib::RefPtr<Pango::Fontset> nativeObject_;
-#elif defined(ASCENSION_SHAPING_ENGINE_QT)
-				std::shared_ptr<QFont> nativeObject_;
-#endif
-			};
-
-			/// An interface represents an object provides a set of fonts.
+			/**
+			 * @c FontCollection represents the set of fonts available for a particular graphics
+			 * context, and provides a method to enumerate font families.
+			 * @see Fontset, RenderingContext2D
+			 */
 			class FontCollection {
 			public:
-				/// Destructor.
-				virtual ~FontCollection() /*throw()*/ {}
+				/// Returns a set of font families available in this collection.
 				std::set<FontFamily>&& families() const;
 				/**
-				 * Returns the font matches the given properties.
-				 * @param familyName The font family name
-				 * @param properties The font properties
-				 * @param sizeAdjust 
-				 * @return The font has the requested properties or the default one
+				 * Returns the fontset matches the given description.
+				 * @param description The font description
+				 * @param sizeAdjust The 'font-size-adjust' value. Set @c boost#none for 'none'
+				 * @return The font has the requested description or the default one
 				 */
 				std::shared_ptr<const Font> get(
-						const FontDescription& description, double sizeAdjust = 0.0) const {
-					CachedFonts::const_iterator i(cachedFonts_.find(description));
-					if(i != cachedFonts_.end())
-						return i->second;
-					return const_cast<FontCollection*>(this)->cache(description, sizeAdjust);
-				}
+					const FontDescription& description,
+					boost::optional<double> sizeAdjust = boost::none) const;
 				/**
-				 * Returns the font for last resort fallback.
-				 * @param properties The font properties
-				 * @param sizeAdjust 
+				 * Returns the fontset for last resort fallback.
+				 * @param description The font description
+				 * @param sizeAdjust The 'font-size-adjust' value. Set @c boost#none for 'none'
 				 * @return The font has the requested property
 				 */
 				std::shared_ptr<const Font> lastResortFallback(
-					const FontDescription& description, double sizeAdjust = 0.0) const;
+					const FontDescription& description,
+					boost::optional<double> sizeAdjust = boost::none) const;
 			private:
-				std::shared_ptr<const Font> cache(
-					const FontDescription& description, double sizeAdjust);
 #if defined(ASCENSION_SHAPING_ENGINE_CORE_TEXT)
 				cg::Reference<CTFontCollectionRef> nativeObject_;
 #elif defined(ASCENSION_SHAPING_ENGINE_DIRECT_WRITE)
@@ -213,14 +201,12 @@ namespace ascension {
 				Glib::RefPtr<Pango::FontMap> nativeObject_;
 #elif defined(ASCENSION_SHAPING_ENGINE_QT)
 				std::shared_ptr<QFontDatabase> nativeObject_;
+#elif defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
+				win32::Handle<HDC> deviceContext_;
 #elif defined(ASCENSION_SHAPING_ENGINE_WIN32_GDIPLUS)
 				std::shared_ptr<Gdiplus::FontCollection> nativeObject_;
 #endif
-				typedef std::unordered_map<FontDescription, std::shared_ptr<Font>> CachedFonts;
-				CachedFonts cachedFonts_;
 			};
-
-			const FontCollection& installedFonts();
 
 			/**
 			 * Used to represent a group of fonts with the same family, slant, weight, width, but
