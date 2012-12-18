@@ -216,6 +216,11 @@ namespace ascension {
 		ASCENSION_BEGIN_SCOPED_ENUM(RelativeFontSize)
 			LARGER, SMALLER
 		ASCENSION_END_SCOPED_ENUM;
+
+		/// Enumerated values for @c TextRunStyle#fontSizeAdjust.
+		ASCENSION_BEGIN_SCOPED_ENUM(FontSizeAdjustEnums)
+			NONE, AUTO
+		ASCENSION_END_SCOPED_ENUM;
 		/// @}
 
 		/// @name CSS Line Layout Module Level 3
@@ -799,10 +804,11 @@ namespace ascension {
 					AbsoluteFontSize, AbsoluteFontSize::MEDIUM
 				>, sp::Inherited
 			> fontSize;
-			/// 'font-size-adjust' property. @c boost#none means 'none'.
+			/// 'font-size-adjust' property.
 			StyleProperty<
-				sp::Complex<
-					boost::optional<double>
+				sp::Multiple<
+					boost::variant<FontSizeAdjustEnums, double>,
+					FontSizeAdjustEnums, FontSizeAdjustEnums::NONE
 				>, sp::Inherited
 			> fontSizeAdjust;
 //			StyleProperty<
