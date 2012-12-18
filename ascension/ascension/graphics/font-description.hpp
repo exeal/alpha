@@ -18,13 +18,18 @@ namespace ascension {
 			/// TrueType/OpenType font tag.
 			typedef std::uint32_t OpenTypeFontTag;
 
+			/**
+			 * Makes an 32-bit integer represents the given TrueType/OpenType font tag.
+			 * @tparam c1, c2, c3, c4 Characters consist of the tag name
+			 * @see makeOpenTypeFontTag
+			 */
 			template<std::uint8_t c1, std::uint8_t c2 = ' ', std::uint8_t c3 = ' ', std::uint8_t c4 = ' '>
 			struct MakeOpenTypeFontTag {
 				static const OpenTypeFontTag value = (c1 << 24) | (c2 << 16) | (c3 << 8) | c4;
 			};
 
 			/**
-			 * Returns an 32-bit integer represents the given TrueType tag.
+			 * Returns an 32-bit integer represents the given TrueType/OpenType font tag.
 			 * @tparam Character The character type of @a name
 			 * @param name The TrueType tag name
 			 * @param validate Set @c true to validate characters in @a name
@@ -32,6 +37,7 @@ namespace ascension {
 			 * @throw std#length_error The length of @a name is zero or greater four
 			 * @throw std#invalid_argument @a validate is @c true and any character in @a name was
 			 *                             invalid
+			 * @see MakeOpenTypeFontTag
 			 */
 			template<typename Character>
 			inline OpenTypeFontTag makeOpenTypeFontTag(const Character name[], bool validate = true) {
@@ -50,7 +56,7 @@ namespace ascension {
 				return tag;
 			}
 
-			template<typename T> inline int round(T value) {
+			template<typename T> inline int round(T value) {	// why is this here?
 				return static_cast<int>(std::floor(value + 0.5));
 			}
 
@@ -146,13 +152,12 @@ namespace ascension {
 				OpenTypeFontTag name;
 				std::uint32_t value;
 				/// Default constructor does not initialize the data members.
-				FontFeatureSetting() /*noexcept*/ {}
-				FontFeatureSetting(OpenTypeFontTag name, std::uint32_t value) /*noexcept*/ : name(name), value(value) {}
+				FontFeatureSetting() BOOST_NOEXCEPT {}
+				FontFeatureSetting(OpenTypeFontTag name, std::uint32_t value) BOOST_NOEXCEPT : name(name), value(value) {}
 			};
 
 			/**
 			 * Set of font properties without the family name.
-			 * @tparam PropertyHolder
 			 * @see FontDescription
 			 */
 			struct FontProperties : private boost::equality_comparable<FontProperties> {
@@ -177,12 +182,15 @@ namespace ascension {
 					FontOrientation orientation = FontOrientation::HORIZONTAL)
 					: weight(weight), stretch(stretch), style(style), orientation(orientation) {}
 				/// Equality operator.
-				bool operator==(const FontProperties& other) const /*noexcept*/ {
+				bool operator==(const FontProperties& other) const BOOST_NOEXCEPT {
 					return weight == other.weight && stretch == other.stretch
 						&& style == other.style && orientation == other.orientation;
 				}
 			};
 
+			/**
+			 * @see FontProperties
+			 */
 			class FontDescription : private boost::equality_comparable<FontDescription> {
 			public:
 				/**
@@ -199,19 +207,19 @@ namespace ascension {
 						throw std::underflow_error("pointSize");
 				}
 				/// Equality operator.
-				bool operator==(const FontDescription& other) const /*noexcept*/ {
+				bool operator==(const FontDescription& other) const BOOST_NOEXCEPT {
 					return family_ == other.family_
 						&& pointSize_ == other.pointSize_	// TODO: use epsilon.
 						&& properties_ == other.properties_;
 				}
 				/// Returns the font family.
-				const FontFamily& family() const /*noexcept*/ {return family_;}
+				const FontFamily& family() const BOOST_NOEXCEPT {return family_;}
 				/// Returns the size in points.
-				double pointSize() const /*noexcept*/ {return pointSize_;}
+				double pointSize() const BOOST_NOEXCEPT {return pointSize_;}
 				/// Returns the other properties.
-				FontProperties& properties() /*noexcept*/ {return properties_;}
+				FontProperties& properties() BOOST_NOEXCEPT {return properties_;}
 				/// Returns the other properties.
-				const FontProperties& properties() const /*noexcept*/ {return properties_;}
+				const FontProperties& properties() const BOOST_NOEXCEPT {return properties_;}
 				/**
 				 * Sets the family name.
 				 * @param family The new font family

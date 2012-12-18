@@ -71,7 +71,11 @@ namespace ascension {
 				 *      (http://www.w3.org/TR/css3-fonts/#generic-font-families)
 				 */
 				enum GenericFamily {
-					SERIF, SANS_SERIF, CURSIVE, FANTASY, MONOSPACE
+					SERIF,		///< 'serif' font family.
+					SANS_SERIF,	///< 'sans-serif' font family.
+					CURSIVE,	///< 'cursive' font family.
+					FANTASY,	///< 'fantasy' font family.
+					MONOSPACE	///< 'monospace' font family.
 				};
 			public:
 #if defined(ASCENSION_SHAPING_ENGINE_DIRECT_WRITE)
@@ -91,11 +95,21 @@ namespace ascension {
 				std::shared_ptr<Gdiplus::FontFamily> asNativeObject() /*noexcept*/;
 				std::shared_ptr<const Gdiplus::FontFamily> asNativeObject() const /*noexcept*/;
 #else
+				/**
+				 * Constructor takes a family name.
+				 * @param name The font family name
+				 * @throw std#length_error @a name is empty
+				 */
 				explicit FontFamily(const String& name) : name_(name) {
 					if(name.empty())
 						throw std::length_error("name");
 				}
 #endif
+				/**
+				 * Constructor creates a font generic family.
+				 * @param genericFamily The generic family
+				 * @throw UnknownValueException @a genericFamily is invalid
+				 */
 				explicit FontFamily(GenericFamily genericFamily);
 				/// Copy-assignment operator.
 				FontFamily& operator=(const FontFamily& other);
@@ -105,7 +119,7 @@ namespace ascension {
 				 *           C or unsupported locale, this method returns an unlocalized name
 				 * @return The family name
 				 */
-				String name(const std::locale& lc = std::locale::classic()) const /*noexcept*/;
+				String name(const std::locale& lc = std::locale::classic()) const BOOST_NOEXCEPT;
 			private:
 #if defined(ASCENSION_SHAPING_ENGINE_DIRECT_WRITE)
 				win32::com::SmartPointer<IDWriteFontFamily> nativeObject_;
@@ -119,12 +133,12 @@ namespace ascension {
 			};
 
 			/// Equality operator for @c FontFamily.
-			inline bool operator==(const FontFamily& lhs, const FontFamily& rhs) /*noexcept*/ {
+			inline bool operator==(const FontFamily& lhs, const FontFamily& rhs) BOOST_NOEXCEPT {
 				return lhs.name() == rhs.name();
 			}
 
 			/// Less-than operator for @c FontFamily.
-			inline bool operator<(const FontFamily& lhs, const FontFamily& rhs) /*noexcept*/ {
+			inline bool operator<(const FontFamily& lhs, const FontFamily& rhs) BOOST_NOEXCEPT {
 				return lhs.name() < rhs.name();
 			}
 		}

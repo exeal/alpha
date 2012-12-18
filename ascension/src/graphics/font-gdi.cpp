@@ -87,10 +87,10 @@ namespace {
 } // namespace @0
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
-Font::Font(win32::Handle<HFONT>&& handle) /*noexcept*/ : nativeObject_(move(handle)) {
+Font::Font(win32::Handle<HFONT>&& handle) BOOST_NOEXCEPT : nativeObject_(move(handle)) {
 }
 
-const win32::Handle<HFONT>& Font::asNativeObject() const /*noexcept*/ {
+const win32::Handle<HFONT>& Font::asNativeObject() const BOOST_NOEXCEPT {
 	return nativeObject_;
 }
 
@@ -106,7 +106,7 @@ boost::optional<GlyphCode> Font::ivsGlyph(CodePoint baseCharacter, CodePoint var
 		const_cast<Font*>(this)->ivs_.reset(new detail::IdeographicVariationSequences);
 		win32::Handle<HDC> dc(detail::screenDC());
 		win32::Handle<HFONT> oldFont(static_cast<HFONT>(::SelectObject(dc.get(), nativeObject_.get())));
-		static const TrueTypeFontTag CMAP_TAG = MakeTrueTypeFontTag<'c', 'm', 'a', 'p'>::value;
+		static const OpenTypeFontTag CMAP_TAG = MakeOpenTypeFontTag<'c', 'm', 'a', 'p'>::value;
 		const DWORD bytes = ::GetFontData(dc.get(), CMAP_TAG, 0, nullptr, 0);
 		if(bytes != GDI_ERROR) {
 			unique_ptr<uint8_t[]> data(new uint8_t[bytes]);
@@ -170,21 +170,34 @@ void Font::buildMetrics() {
 	metrics_.reset(new FontMetrics(nativeObject_));
 }
 
-shared_ptr<const Font> FontCollection::cache(const FontDescription<>& description, double sizeAdjust) {
-	if(description.familyName().length() >= LF_FACESIZE)
-		throw length_error("");
+shared_ptr<const Font> FontCollection::get(const FontDescription& description, boost::optional<double> sizeAdjust) const {
+	const String& familyName = description.family().name();
+	if(familyName.length() >= LF_FACESIZE)
+		throw length_error("description.family().name()");
 
-	const String& familyName = description.familyName();
-	const FontProperties<>& properties = description.properties();
+	const FontProperties& properties = description.properties();
+
+	const int oldMapMode = ::SetMapMode(deviceContext_.get(), MM_TEXT);
+	if(oldMapMode == 0)
+		throw makePlatformError();
+	const int dpi = ::GetDeviceCaps(deviceContext_.get(), (properties.orientation == FontOrientation::HORIZONTAL) ? LOGPIXELSY : LOGPIXELSX);
+	::SetMapMode(deviceContext_.get(), oldMapMode);
 
 	// TODO: handle properties.orientation().
 
 	LOGFONTW lf;
 	memset(&lf, 0, sizeof(LOGFONTW));
-	lf.lfHeight = -round(description.pixelSize());
+	lf.lfHeight = -round(description.pointSize() * dpi / 72.0);
+	lf.lfEscapement = (properties.orientation == FontOrientation::HORIZONTAL) ? 0 : 900;
 	lf.lfWeight = properties.weight;
 	lf.lfItalic = (properties.style == FontStyle::ITALIC) || (properties.style == FontStyle::OBLIQUE);
 	wcscpy(lf.lfFaceName, familyName.c_str());
+
+	static unordered_map<LOGFONTW, shared_ptr<const Font>> cachedFonts;
+	const auto cache(cachedFonts.find(lf));
+	if(cache != cachedFonts.end())
+		return cache->second;
+
 	win32::Handle<HFONT> font(::CreateFontIndirectW(&lf), &::DeleteObject);
 #ifdef _DEBUG
 	if(::GetObjectW(font.get(), sizeof(LOGFONTW), &lf) > 0) {
@@ -196,24 +209,23 @@ shared_ptr<const Font> FontCollection::cache(const FontDescription<>& descriptio
 	}
 #endif
 
-	// handle RunStyle.fontSizeAdjust
-	if(!equals(sizeAdjust, 0.0) && sizeAdjust > 0.0) {
-		win32::Handle<HDC> dc(detail::screenDC());
-		win32::Handle<HFONT> oldFont(static_cast<HFONT>(::SelectObject(dc.get(), font.get())));
+	// handle 'font-size-adjust'
+	if(sizeAdjust && *sizeAdjust > 0.0) {
+		win32::Handle<HFONT> oldFont(static_cast<HFONT>(::SelectObject(deviceContext_.get(), font.get())));
 		TEXTMETRICW tm;
-		if(::GetTextMetricsW(dc.get(), &tm)) {
+		if(::GetTextMetricsW(deviceContext_.get(), &tm)) {
 			GLYPHMETRICS gm;
 			const MAT2 temp = {{0, 1}, {0, 0}, {0, 0}, {0, 1}};
 			const int xHeight =
-				(::GetGlyphOutlineW(dc.get(), L'x', GGO_METRICS, &gm, 0, nullptr, nullptr) != GDI_ERROR && gm.gmptGlyphOrigin.y > 0) ?
+				(::GetGlyphOutlineW(deviceContext_.get(), L'x', GGO_METRICS, &gm, 0, nullptr, nullptr) != GDI_ERROR && gm.gmptGlyphOrigin.y > 0) ?
 					gm.gmptGlyphOrigin.y : round(static_cast<double>(tm.tmAscent) * 0.56);
 			const double aspect = static_cast<double>(xHeight) / static_cast<double>(tm.tmHeight - tm.tmInternalLeading);
-			FontDescription<> adjustedDescription(description);
-			adjustedDescription.setPixelSize(max(description.pixelSize() * (sizeAdjust / aspect), 1.0));
-			::SelectObject(dc.get(), oldFont.get());
-			return cache(description, 0.0);
+			FontDescription adjustedDescription(description);
+			adjustedDescription.setPointSize(max(description.pointSize() * (*sizeAdjust / aspect), 1.0));
+			::SelectObject(deviceContext_.get(), oldFont.get());
+			return get(description, boost::none);
 		}
-		::SelectObject(dc.get(), oldFont.get());
+		::SelectObject(deviceContext_.get(), oldFont.get());
 	}
 
 	// handle 'font-stretch'
@@ -228,11 +240,11 @@ shared_ptr<const Font> FontCollection::cache(const FontDescription<>& descriptio
 	}
 
 	shared_ptr<Font> newFont(new Font(move(font)));
-	cachedFonts_.insert(make_pair(description, newFont));
+	cachedFonts.insert(make_pair(lf, newFont));
 	return newFont;
 }
 
-shared_ptr<const Font> FontCollection::lastResortFallback(const FontDescription<>& description, double sizeAdjust) const {
+shared_ptr<const Font> FontCollection::lastResortFallback(const FontDescription& description, boost::optional<double> sizeAdjust) const {
 	static String familyName;
 	// TODO: 'familyName' should update when system property changed.
 	if(familyName.empty()) {
@@ -247,12 +259,6 @@ shared_ptr<const Font> FontCollection::lastResortFallback(const FontDescription<
 		}
 	}
 
-	FontDescription<> modified(description);
-	return get(modified.setFamilyName(familyName), sizeAdjust);
-}
-
-/// Returns the object implements @c FontCollection interface.
-const FontCollection& font::installedFonts() {
-	static FontCollection instance;
-	return instance;
+	FontDescription modified(description);
+	return get(modified.setFamilyName(FontFamily(familyName)), sizeAdjust);
 }
