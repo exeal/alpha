@@ -199,7 +199,7 @@ namespace {
 				associations.insert(make_pair(Script::HAN, L"Gulim")); break;
 			default:
 				{
-					win32::Handle<HDC> dc(::GetDC(nullptr), bind(&::ReleaseDC, static_cast<HWND>(nullptr), placeholders::_1));
+					win32::Handle<HDC>::Type dc(detail::screenDC());
 					bool installed = false;
 					LOGFONTW lf;
 					memset(&lf, 0, sizeof(LOGFONTW));
@@ -241,7 +241,7 @@ namespace {
 	 * @param[out] strikethroughThickness The thickness of linethrough in pixels
 	 * @return Succeeded or not
 	 */
-	bool getDecorationLineMetrics(const win32::Handle<HDC>& dc, int* baselineOffset,
+	bool getDecorationLineMetrics(const win32::Handle<HDC>::Type& dc, int* baselineOffset,
 			int* underlineOffset, int* underlineThickness, int* strikethroughOffset, int* strikethroughThickness) /*throw()*/ {
 		OUTLINETEXTMETRICW* otm = nullptr;
 		TEXTMETRICW tm;
@@ -445,6 +445,13 @@ namespace {
 		AttributedCharacterRange() {}
 		AttributedCharacterRange(StringPiece::const_pointer position,
 			const Attribute& attribute) : position(position), attribute(attribute) {}
+#ifdef ASCENSION_COMPILER_MSVC
+		AttributedCharacterRange& operator=(AttributedCharacterRange&& other) BOOST_NOEXCEPT {
+			position = other.position;
+			attribute = move(other.attribute);
+			return *this;
+		}
+#endif
 	};
 
 	template<typename T, size_t staticCapacity>
@@ -544,8 +551,8 @@ namespace {
 			vector<TextRunImpl*>& textRuns, vector<const ComputedTextRunStyle>& computedStyles,
 			vector<vector<const ComputedTextRunStyle>::size_type>& computedStylesIndices);
 #endif
-		void shape(const win32::Handle<HDC>& dc);
-		void positionGlyphs(const win32::Handle<HDC>& dc, const ComputedTextRunStyle& style);
+		void shape(win32::Handle<HDC>::Type dc);
+		void positionGlyphs(win32::Handle<HDC>::Type dc, const ComputedTextRunStyle& style);
 		unique_ptr<TextRunImpl> splitIfTooLong();
 		static void substituteGlyphs(const Range<vector<TextRunImpl*>::iterator>& runs);
 		// drawing and painting
@@ -587,9 +594,9 @@ namespace {
 			return nullptr;
 		}
 		size_t countMissingGlyphs(const RenderingContext2D& context) const;
-		static void generateDefaultGlyphs(const win32::Handle<HDC>& dc,
+		static void generateDefaultGlyphs(win32::Handle<HDC>::Type dc,
 			const StringPiece& text, const SCRIPT_ANALYSIS& analysis, RawGlyphVector& glyphs);
-		static HRESULT generateGlyphs(const win32::Handle<HDC>& dc,
+		static HRESULT generateGlyphs(win32::Handle<HDC>::Type dc,
 			const StringPiece& text, const SCRIPT_ANALYSIS& analysis, RawGlyphVector& glyphs);
 		const WORD* glyphs() const BOOST_NOEXCEPT {
 			if(const WORD* const p = glyphs_->indices.get())
@@ -629,7 +636,7 @@ void TextRunImpl::RawGlyphVector::vanish(const Font& font, StringPiece::const_po
 	assert(advances.get() == nullptr);
 	assert(at != nullptr);
 	assert(at >= position);
-	win32::Handle<HDC> dc(detail::screenDC());
+	win32::Handle<HDC>::Type dc(detail::screenDC());
 	HFONT oldFont = nullptr;
 	WORD blankGlyph;
 	HRESULT hr = ::ScriptGetCMap(dc.get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
@@ -1008,7 +1015,7 @@ void TextRunImpl::generate(const StringPiece& textString, const FontCollection& 
 }
 
 /// Fills the glyph array with default index, instead of using @c ScriptShape.
-inline void TextRunImpl::generateDefaultGlyphs(const win32::Handle<HDC>& dc,
+inline void TextRunImpl::generateDefaultGlyphs(win32::Handle<HDC>::Type dc,
 		const StringPiece& text, const SCRIPT_ANALYSIS& analysis, RawGlyphVector& glyphs) {
 	SCRIPT_CACHE fontCache(nullptr);
 	SCRIPT_FONTPROPERTIES fp;
@@ -1052,7 +1059,7 @@ inline void TextRunImpl::generateDefaultGlyphs(const win32::Handle<HDC>& dc,
  * @retval HRESULT other Uniscribe error
  * @throw std#bad_alloc failed to allocate buffer for glyph indices or visual attributes array
  */
-HRESULT TextRunImpl::generateGlyphs(const win32::Handle<HDC>& dc,
+HRESULT TextRunImpl::generateGlyphs(win32::Handle<HDC>::Type dc,
 		const StringPiece& text, const SCRIPT_ANALYSIS& analysis, RawGlyphVector& glyphs) {
 #ifdef _DEBUG
 	if(HFONT currentFont = static_cast<HFONT>(::GetCurrentObject(dc.get(), OBJ_FONT))) {
@@ -1130,7 +1137,7 @@ FlowRelativeFourSides<Scalar> TextRunImpl::glyphVisualBounds(const Range<size_t>
 		return bounds;
 
 	ABC glyphMeasure;
-	win32::Handle<HDC> dc;
+	win32::Handle<HDC>::Type dc;
 	HFONT oldFont = nullptr;
 	HRESULT hr;
 	for(FlowRelativeFourSides<Scalar>::iterator i(begin(bounds)), e(std::end(bounds)); i != e; ++i) {
@@ -1439,7 +1446,7 @@ void TextRunImpl::paintGlyphs(PaintContext& context, const NativePoint& origin, 
  * @param style The computed text run style
  * @see #generate, #substituteGlyphs
  */
-void TextRunImpl::positionGlyphs(const win32::Handle<HDC>& dc, const ComputedTextRunStyle& style) {
+void TextRunImpl::positionGlyphs(win32::Handle<HDC>::Type dc, const ComputedTextRunStyle& style) {
 	assert(glyphs_.get() != nullptr && glyphs_.unique());
 	assert(glyphs_->indices.get() != nullptr && glyphs_->advances.get() == nullptr);
 
@@ -1548,7 +1555,7 @@ namespace {
 	}
 } // namespace @0
 
-void TextRunImpl::shape(const win32::Handle<HDC>& dc) {
+void TextRunImpl::shape(win32::Handle<HDC>::Type dc) {
 	assert(glyphs_.unique());
 
 	// TODO: check if the requested style (or the default one) disables shaping.
@@ -2104,7 +2111,7 @@ void InlineProgressionDimensionRangeIterator::next(bool initializing) {
 // helpers for TextLayout.draw
 namespace {
 	const size_t MAXIMUM_RUN_LENGTH = 1024;
-	inline win32::Handle<HPEN> createPen(const Color& color, int width, int style) {
+	inline win32::Handle<HPEN>::Type createPen(const Color& color, int width, int style) {
 		if(color.alpha() < 0xff)
 			throw invalid_argument("color");
 		LOGBRUSH brush;
@@ -2122,7 +2129,7 @@ namespace {
 		}
 		if(pen == nullptr)
 			throw UnknownValueException("style");
-		return win32::Handle<HPEN>(pen, &::DeleteObject);
+		return win32::Handle<HPEN>::Type(pen, &::DeleteObject);
 	}
 } // namespace @0
 
@@ -2174,7 +2181,7 @@ namespace {
  * @param fontCollection The font collection
  */
 TextLayout::TextLayout(const String& textString, const ComputedTextLineStyle& lineStyle,
-		std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles, const FontCollection& fontCollection /* = installedFonts() */)
+		std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles, const FontCollection& fontCollection)
 		: textString_(textString), lineStyle_(lineStyle), numberOfLines_(0) {
 
 	// handle logically empty line
@@ -2213,7 +2220,7 @@ TextLayout::TextLayout(const String& textString, const ComputedTextLineStyle& li
 //	shrinkToFit(styledRanges_);
 
 	// 3. generate glyphs for each text runs
-	const win32::Handle<HDC> dc(detail::screenDC());
+	const win32::Handle<HDC>::Type dc(detail::screenDC());
 	for(auto run(begin(textRuns)), e(end(textRuns)); run != e; ++run)
 		(*run)->shape(dc);
 	TextRunImpl::substituteGlyphs(makeRange(begin(textRuns), end(textRuns)));
@@ -2223,11 +2230,19 @@ TextLayout::TextLayout(const String& textString, const ComputedTextLineStyle& li
 		(*run)->positionGlyphs(dc, calculatedStyles[run - b].attribute);
 
 	// 5. position each text runs
-	String nominalFontFamilyName;
-	FontProperties<> nominalFontProperties;
-	resolveFontSpecifications(fontCollection,
-		shared_ptr<const TextRunStyle>(), otherParameters.defaultTextRunStyle, &nominalFontFamilyName, &nominalFontProperties, nullptr);
-	const shared_ptr<const Font> nominalFont(fontCollection.get(nominalFontFamilyName, nominalFontProperties));
+	const FontDescription nominalFontDescription(
+		!lineStyle.nominalFont.families.empty() ? lineStyle.nominalFont.families.front() : FontFamily(String()),
+		lineStyle.nominalFont.pointSize, lineStyle.nominalFont.properties);
+	boost::optional<double> nominalFontSizeAdjust;
+	if(const FontSizeAdjustEnums* const keyword = boost::get<FontSizeAdjustEnums>(&lineStyle.nominalFont.sizeAdjust)) {
+		if(*keyword == FontSizeAdjustEnums::NONE)
+			nominalFontSizeAdjust = boost::none;
+		else if(*keyword == FontSizeAdjustEnums::AUTO)
+			nominalFontSizeAdjust = 1.0;
+		else
+			throw UnknownValueException("lineStyle.nominalFont.sizeAdjust");
+	}
+	const shared_ptr<const Font> nominalFont(fontCollection.get(nominalFontDescription, nominalFontSizeAdjust));
 	// wrap into visual lines and reorder runs in each lines
 	if(runs_.empty() || !wrapsText(lineStyle.whiteSpace)) {
 		numberOfLines_ = 1;
@@ -2327,7 +2342,7 @@ NativeRegion TextLayout::blackBoxBounds(const Range<Index>& characterRange) cons
 
 	// handle empty line
 	if(isEmpty())
-		return win32::Handle<HRGN>(::CreateRectRgn(0, 0, 0, lineMetrics_[0]->height()), &::DeleteObject);
+		return win32::Handle<HRGN>::Type(::CreateRectRgn(0, 0, 0, lineMetrics_[0]->height()), &::DeleteObject);
 
 	// compute abstract bounds
 	const Index firstLine = lineAt(characterRange.beginning()), lastLine = lineAt(characterRange.end());
@@ -2367,7 +2382,7 @@ NativeRegion TextLayout::blackBoxBounds(const Range<Index>& characterRange) cons
 		geometry::y(vertices[i * 4 + 2]) = geometry::y(vertices[i * 4 + 3]) = geometry::bottom(physicalBounds);
 	}
 	fill_n(numbersOfVertices.get(), abstractBounds.size(), 4);
-	return win32::Handle<HRGN>(::CreatePolyPolygonRgn(vertices.get(),
+	return win32::Handle<HRGN>::Type(::CreatePolyPolygonRgn(vertices.get(),
 		numbersOfVertices.get(), static_cast<int>(abstractBounds.size()), WINDING), &::DeleteObject);
 }
 
@@ -2544,8 +2559,9 @@ void TextLayout::draw(PaintContext& context,
 	// - Drawing styled text with Uniscribe (http://www.catch22.net/tuts/drawing-styled-text-uniscribe)
 
 	// 1. calculate lines to paint
-	FlowRelativeFourSides<Scalar> abstractBoundsToPaint;	// relative to the alignment point of this layout
-	mapPhysicalToAbstract(context.boundsToPaint(), origin, abstractBoundsToPaint);
+	const FlowRelativeFourSides<Scalar> abstractBoundsToPaint(	// relative to the alignment point of this layout
+		mapPhysicalToFlowRelative<Scalar>(writingMode(),
+			PhysicalFourSides<Scalar>(geometry::translate(context.boundsToPaint(), geometry::negate(origin)))));
 	Range<Index> linesToPaint(0, numberOfLines());
 	for(Index line = linesToPaint.beginning(); line < linesToPaint.end(); ++line) {
 		const Scalar bpd = baseline(line);
@@ -2638,7 +2654,7 @@ void TextLayout::draw(PaintContext& context,
 					geometry::range<geometry::X_COORDINATE>(allocationRectangle) = makeRange(geometry::x(p), geometry::x(q));
 				else
 					geometry::range<geometry::Y_COORDINATE>(allocationRectangle) = makeRange(geometry::y(p), geometry::y(q));
-				context.setFillStyle();
+				context.setFillStyle(lineStyle_.get().background);
 				context.fillRectangle(allocationRectangle);
 
 				// 2-2. compute 'content-rectangle'
