@@ -62,7 +62,7 @@ namespace ascension {
 				typedef POINT NativePoint;
 				typedef SIZE NativeSize;
 				typedef RECT NativeRectangle;
-				typedef win32::Handle<HRGN> NativeRegion;
+				typedef win32::Handle<HRGN>::Type NativeRegion;
 			}
 
 			template<> struct Coordinate<POINT> {typedef LONG Type;};

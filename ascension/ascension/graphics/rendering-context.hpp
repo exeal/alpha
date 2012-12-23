@@ -42,7 +42,7 @@ namespace ascension {
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
 		typedef QPainter& NativeRenderingContext2D;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
-		typedef win32::Handle<HDC> NativeRenderingContext2D;
+		typedef win32::Handle<HDC>::Type NativeRenderingContext2D;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
 		typedef Gdiplus::Graphics& NativeRenderingContext2D;
 #endif
@@ -173,9 +173,8 @@ namespace ascension {
 			QPainter& asNativeObject();
 			const QPainter& asNativeObject() const;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
-			explicit RenderingContext2D(win32::Handle<HDC>&& nativeObject);
-			explicit RenderingContext2D(const win32::Handle<HDC>& nativeObject);	// weak ref.
-			const win32::Handle<HDC>& asNativeObject() const;
+			explicit RenderingContext2D(win32::Handle<HDC>::Type nativeObject);
+			win32::Handle<HDC>::Type asNativeObject() const;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
 			explicit RenderingContext2D(Gdiplus::Graphics& nativeObject);	// weak ref.
 			explicit RenderingContext2D(std::unique_ptr<Gdiplus::Graphics> nativeObject);
@@ -183,19 +182,19 @@ namespace ascension {
 			Gdiplus::Graphics& asNativeObject();
 			const Gdiplus::Graphics& asNativeObject() const;
 #endif
-#ifdef ASCENSION_COMPILER_MSVC
-			RenderingContext2D(RenderingContext2D&& other) /*noexcept*/ : nativeObject_(std::move(other.nativeObject_)) {}
-			RenderingContext2D& operator=(RenderingContext2D&& other) {
-				nativeObject_ = std::move(other.nativeObject_);
-				return *this;
-			}
-#endif // ASCENSION_COMPILER_MSVC
 		public:
+			/// Move-constructor.
+			RenderingContext2D(RenderingContext2D&& other) BOOST_NOEXCEPT;
+			/// Returns the available fonts in this rendering context.
+			font::FontCollection&& availableFonts() const;
+
 			/// @name Back-Reference to the Canvas
 			/// @{
 //			???? canvas() const;
 			const RenderingDevice& device() const;
-			// state
+			/// @}
+
+			/// @name State
 			/**
 			 * Pushes the current drawing context onto the drawing state stack.
 			 * @return This object
@@ -768,19 +767,19 @@ namespace ascension {
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
 			std::shared_ptr<QPainter> nativeObject_;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
-			win32::Handle<HDC> nativeObject_;
+			win32::Handle<HDC>::Type nativeObject_;
 			struct State {
 				State();
 				State(const State& other);
 				int cookie;
 				std::pair<std::shared_ptr<const Paint>, std::size_t> fillStyle, strokeStyle;
-				win32::Handle<HPEN> pen, previousPen;
-				win32::Handle<HBRUSH> brush, previousBrush;
+				win32::Handle<HPEN>::Type pen, previousPen;
+				win32::Handle<HBRUSH>::Type brush, previousBrush;
 			};
 			std::stack<State> savedStates_;
 			bool hasCurrentSubpath_;
-			RenderingContext2D& changePen(win32::Handle<HPEN>&& newPen);
-			win32::Handle<HPEN> createModifiedPen(
+			RenderingContext2D& changePen(win32::Handle<HPEN>::Type newPen);
+			win32::Handle<HPEN>::Type createModifiedPen(
 				const LOGBRUSH* patternBrush, boost::optional<Scalar> lineWidth,
 				boost::optional<LineCap> lineCap, boost::optional<LineJoin> lineJoin) const;
 			bool endPath();
@@ -801,23 +800,26 @@ namespace ascension {
 			PaintContext(RenderingContext2D&& context, const NativeRectangle& boundsToPaint)
 				: RenderingContext2D(std::move(context)), boundsToPaint_(boundsToPaint) {}
 			/// Returns the rendering context.
-//			RenderingContext2D& operator*() /*noexcept*/ {return context_;}
+//			RenderingContext2D& operator*() BOOST_NOEXCEPT {return context_;}
 			/// Returns the rendering context.
-//			const RenderingContext2D& operator*() const /*noexcept*/ {return context_;}
+//			const RenderingContext2D& operator*() const BOOST_NOEXCEPT {return context_;}
 			/// Returns the rendering context.
-//			RenderingContext2D* operator->() /*noexcept*/ {return &context_;}
+//			RenderingContext2D* operator->() BOOST_NOEXCEPT {return &context_;}
 			/// Returns the rendering context.
-//			const RenderingContext2D* operator->() const /*noexcept*/ {return &context_;}
+//			const RenderingContext2D* operator->() const BOOST_NOEXCEPT {return &context_;}
 			/// Returns a rectangle in which the painting is requested.
-			const NativeRectangle& boundsToPaint() const /*noexcept*/ {return boundsToPaint_;}
+			const NativeRectangle& boundsToPaint() const BOOST_NOEXCEPT {return boundsToPaint_;}
 		private:
 			const NativeRectangle boundsToPaint_;
 		};
 	}
 
 	namespace detail {
-		inline win32::Handle<HDC> screenDC() {
-			return win32::Handle<HDC>(::GetDC(nullptr),
+		inline win32::Handle<HDC>::Type screenDC() {
+			HDC dc = ::GetDC(nullptr);
+			if(dc == nullptr)
+				throw makePlatformError();
+			return win32::Handle<HDC>::Type(dc,
 				std::bind(&::ReleaseDC, static_cast<HWND>(nullptr), std::placeholders::_1));
 		}
 	}

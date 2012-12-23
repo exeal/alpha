@@ -14,23 +14,9 @@ using namespace std;
 
 /**
  * Constructor.
- * @param nativeObject The Win32 @c HDC value to move
+ * @param nativeObject The Win32 @c HDC value to hold
  */
-RenderingContext2D::RenderingContext2D(win32::Handle<HDC>&& nativeObject) : nativeObject_(move(nativeObject)), hasCurrentSubpath_(false) {
-	savedStates_.push(State());
-	setFillStyle(shared_ptr<Paint>(new SolidColor(Color(0, 0, 0))));
-	setStrokeStyle(shared_ptr<Paint>(new SolidColor(Color(0, 0, 0))));
-	::SetBkMode(nativeObject_.get(), TRANSPARENT);
-	::SetGraphicsMode(nativeObject_.get(), GM_ADVANCED);
-	::SetPolyFillMode(nativeObject_.get(), WINDING);
-	::SetTextAlign(nativeObject_.get(), TA_LEFT | TA_BASELINE | TA_UPDATECP);
-}
-
-/**
- * Constructor.
- * @param nativeObject
- */
-RenderingContext2D::RenderingContext2D(const win32::Handle<HDC>& nativeObject) : nativeObject_(nativeObject_.get()), hasCurrentSubpath_(false) {
+RenderingContext2D::RenderingContext2D(win32::Handle<HDC>::Type nativeObject) : nativeObject_(nativeObject), hasCurrentSubpath_(false) {
 	savedStates_.push(State());
 	setFillStyle(shared_ptr<Paint>(new SolidColor(Color(0, 0, 0))));
 	setStrokeStyle(shared_ptr<Paint>(new SolidColor(Color(0, 0, 0))));
@@ -41,7 +27,7 @@ RenderingContext2D::RenderingContext2D(const win32::Handle<HDC>& nativeObject) :
 }
 
 namespace {
-	inline FLOAT radianToDegree(double radian) /*noexcept*/ {
+	inline FLOAT radianToDegree(double radian) BOOST_NOEXCEPT {
 		return static_cast<FLOAT>(radian * 180 / 3.14159);
 	}
 }
@@ -69,8 +55,12 @@ RenderingContext2D& RenderingContext2D::arcTo(const NativePoint& p1, const Nativ
 }
 
 /// Returns the internal Win32 @c HDC value.
-const win32::Handle<HDC>& RenderingContext2D::asNativeObject() const /*noexcept*/ {
+win32::Handle<HDC>::Type RenderingContext2D::asNativeObject() const BOOST_NOEXCEPT {
 	return nativeObject_;
+}
+
+font::FontCollection&& RenderingContext2D::availableFonts() const {
+	return font::FontCollection(nativeObject_);
 }
 
 RenderingContext2D& RenderingContext2D::beginPath() {
@@ -88,12 +78,12 @@ RenderingContext2D& RenderingContext2D::bezierCurveTo(const NativePoint& cp1, co
 	return *this;
 }
 
-RenderingContext2D& RenderingContext2D::changePen(win32::Handle<HPEN>&& newPen) {
+RenderingContext2D& RenderingContext2D::changePen(win32::Handle<HPEN>::Type newPen) {
 	assert(newPen.get() != nullptr);
-	win32::Handle<HPEN> oldPen(static_cast<HPEN>(::SelectObject(nativeObject_.get(), newPen.get())));
+	win32::Handle<HPEN>::Type oldPen(static_cast<HPEN>(::SelectObject(nativeObject_.get(), newPen.get())), detail::NullDeleter());
 	if(oldPen.get() == nullptr)
 		throw makePlatformError();
-	savedStates_.top().pen = move(newPen);
+	savedStates_.top().pen = newPen;
 	swap(savedStates_.top().previousPen, oldPen);
 	return *this;
 }
@@ -130,7 +120,7 @@ unique_ptr<ImageData> RenderingContext2D::createImageData(const NativeSize& dime
 	return unique_ptr<ImageData>(new ImageData(move(bytes), geometry::dx(dimensions), geometry::dy(dimensions)));
 }
 
-win32::Handle<HPEN> RenderingContext2D::createModifiedPen(const LOGBRUSH* patternBrush,
+win32::Handle<HPEN>::Type RenderingContext2D::createModifiedPen(const LOGBRUSH* patternBrush,
 		boost::optional<Scalar> lineWidth, boost::optional<LineCap> lineCap, boost::optional<LineJoin> lineJoin) const {
 	if(HGDIOBJ oldPen = ::GetCurrentObject(nativeObject_.get(), OBJ_PEN)) {
 		DWORD style = PS_GEOMETRIC | PS_SOLID, width;
@@ -197,7 +187,7 @@ win32::Handle<HPEN> RenderingContext2D::createModifiedPen(const LOGBRUSH* patter
 			}
 		}
 
-		return win32::Handle<HPEN>(::ExtCreatePen(style, width, &brush, 0, nullptr), &::DeleteObject);
+		return win32::Handle<HPEN>::Type(::ExtCreatePen(style, width, &brush, 0, nullptr), &::DeleteObject);
 	}
 	throw makePlatformError();
 }
@@ -254,8 +244,8 @@ namespace {
 	class SubpathsSaver {
 		ASCENSION_NONCOPYABLE_TAG(SubpathsSaver);
 	public:
-		explicit SubpathsSaver(const win32::Handle<HDC>& deviceContext)
-				: deviceContext_(deviceContext.get()), numberOfPoints_(::GetPath(deviceContext.get(), nullptr, nullptr, 0)) {
+		explicit SubpathsSaver(win32::Handle<HDC>::Type deviceContext)
+				: deviceContext_(deviceContext), numberOfPoints_(::GetPath(deviceContext.get(), nullptr, nullptr, 0)) {
 			// backup subpaths
 			if(numberOfPoints_ == 0)
 				throw makePlatformError();
@@ -268,7 +258,7 @@ namespace {
 				throw makePlatformError();
 			}
 		}
-		~SubpathsSaver() /*noexcept*/ {
+		~SubpathsSaver() BOOST_NOEXCEPT {
 			if(points_.get() != nullptr) {
 				// restore subpaths
 				::BeginPath(deviceContext_.get());
@@ -276,7 +266,7 @@ namespace {
 			}
 		}
 	private:
-		const win32::Handle<HDC> deviceContext_;
+		const win32::Handle<HDC>::Type deviceContext_;
 		const int numberOfPoints_;
 		unique_ptr<POINT[]> points_;
 		unique_ptr<BYTE[]> types_;
@@ -285,29 +275,29 @@ namespace {
 	class FontSaver {
 		ASCENSION_NONCOPYABLE_TAG(FontSaver);
 	public:
-		explicit FontSaver(const win32::Handle<HDC>& deviceContext) :
-				deviceContext_(deviceContext.get()),
+		explicit FontSaver(win32::Handle<HDC>::Type deviceContext) :
+				deviceContext_(deviceContext),
 				savedFont_(static_cast<HFONT>(::GetCurrentObject(deviceContext_.get(), OBJ_FONT))) {
 			if(savedFont_.get() == nullptr)
 				throw makePlatformError();
 		}
-		~FontSaver() /*noexcept*/ {
+		~FontSaver() BOOST_NOEXCEPT {
 			::SelectObject(deviceContext_.get(), savedFont_.get());
 		}
-		const win32::Handle<HFONT>& savedFont() const /*noexcept*/ {
+		win32::Handle<HFONT>::Type savedFont() const BOOST_NOEXCEPT {
 			return savedFont_;
 		}
 	private:
-		const win32::Handle<HDC> deviceContext_;
-		win32::Handle<HFONT> savedFont_;
+		const win32::Handle<HDC>::Type deviceContext_;
+		win32::Handle<HFONT>::Type savedFont_;
 	};
 
 	RenderingContext2D& paintText(RenderingContext2D& context, const StringPiece& text,
 			const NativePoint& origin, boost::optional<Scalar> maximumMeasure, bool onlyStroke) {
 		const SubpathsSaver sb(context.asNativeObject());
-		const win32::Handle<HDC>& dc(context.asNativeObject());
+		const win32::Handle<HDC>::Type dc(context.asNativeObject());
 		unique_ptr<const FontSaver> fontSaver;
-		win32::Handle<HFONT> condensedFont;
+		win32::Handle<HFONT>::Type condensedFont;
 		if(maximumMeasure) {
 			fontSaver.reset(new FontSaver(context.asNativeObject()));
 			const Scalar measure = geometry::dx(context.measureText(text));
@@ -359,7 +349,7 @@ bool RenderingContext2D::isPointInPath(const NativePoint& point) const {
 	const SubpathsSaver sb(nativeObject_);
 	if(!win32::boole(::EndPath(nativeObject_.get())))
 		throw makePlatformError();
-	win32::Handle<HRGN> region(::PathToRegion(nativeObject_.get()), &::DeleteObject);
+	win32::Handle<HRGN>::Type region(::PathToRegion(nativeObject_.get()), &::DeleteObject);
 	if(region.get() == nullptr)
 		throw makePlatformError();
 	return win32::boole(::PtInRegion(region.get(), geometry::x(point), geometry::y(point)));
@@ -478,7 +468,7 @@ RenderingContext2D& RenderingContext2D::moveTo(const NativePoint& to) {
 
 RenderingContext2D& RenderingContext2D::putImageData(const ImageData& image,
 		const NativePoint& destination, const NativeRectangle& dirtyRectangle) {
-	win32::Handle<HDC> dc(::CreateCompatibleDC(nativeObject_.get()), &::DeleteDC);
+	win32::Handle<HDC>::Type dc(::CreateCompatibleDC(nativeObject_.get()), &::DeleteDC);
 	if(dc.get() != nullptr) {
 		static_assert(sizeof(DWORD) == 4, "");
 		const size_t dx = min(static_cast<size_t>(geometry::dx(dirtyRectangle)), image.width());
@@ -494,7 +484,7 @@ RenderingContext2D& RenderingContext2D::putImageData(const ImageData& image,
 		header.bV5BlueMask = 0x000000ffu;
 		header.bV5AlphaMask = 0xff000000u;
 		void* pixels;
-		win32::Handle<HBITMAP> bitmap(::CreateDIBSection(nativeObject_.get(),
+		win32::Handle<HBITMAP>::Type bitmap(::CreateDIBSection(nativeObject_.get(),
 			reinterpret_cast<BITMAPINFO*>(&header), DIB_RGB_COLORS, &pixels, nullptr, 0), &::DeleteObject);
 		if(bitmap.get() != nullptr) {
 			const uint8_t* const imageData = image.data().beginning();
@@ -541,8 +531,8 @@ RenderingContext2D& RenderingContext2D::restore() {
 			throw makePlatformError();
 		savedStates_.pop();
 		updatePenAndBrush();
-		win32::Handle<HPEN> currentPen(static_cast<HPEN>(::GetCurrentObject(nativeObject_.get(), OBJ_PEN)));
-		win32::Handle<HBRUSH> currentBrush(static_cast<HBRUSH>(::GetCurrentObject(nativeObject_.get(), OBJ_BRUSH)));
+		win32::Handle<HPEN>::Type currentPen(static_cast<HPEN>(::GetCurrentObject(nativeObject_.get(), OBJ_PEN)), detail::NullDeleter());
+		win32::Handle<HBRUSH>::Type currentBrush(static_cast<HBRUSH>(::GetCurrentObject(nativeObject_.get(), OBJ_BRUSH)), detail::NullDeleter());
 		if(currentPen.get() != savedStates_.top().pen.get())
 			::SelectObject(nativeObject_.get(), savedStates_.top().pen.get());
 		if(currentBrush.get() != savedStates_.top().brush.get())
@@ -579,9 +569,9 @@ RenderingContext2D& RenderingContext2D::scrollPathIntoView() {
 RenderingContext2D& RenderingContext2D::setFillStyle(shared_ptr<const Paint> fillStyle) {
 	if(fillStyle.get() == nullptr)
 		throw NullPointerException("fillStyle");
-	win32::Handle<HBRUSH> newBrush(::CreateBrushIndirect(&fillStyle->asNativeObject()), &::DeleteObject);
+	win32::Handle<HBRUSH>::Type newBrush(::CreateBrushIndirect(&fillStyle->asNativeObject()), &::DeleteObject);
 	if(newBrush.get() != nullptr) {
-		win32::Handle<HBRUSH> oldBrush(static_cast<HBRUSH>(::SelectObject(nativeObject_.get(), newBrush.get())));
+		win32::Handle<HBRUSH>::Type oldBrush(static_cast<HBRUSH>(::SelectObject(nativeObject_.get(), newBrush.get())));
 		if(oldBrush.get() != nullptr) {
 			swap(savedStates_.top().brush, newBrush);
 			swap(savedStates_.top().previousBrush, oldBrush);
@@ -778,15 +768,15 @@ RenderingContext2D& RenderingContext2D::translate(
 }
 
 void RenderingContext2D::updatePenAndBrush() {
-	win32::Handle<HPEN> newPen;
-	win32::Handle<HBRUSH> newBrush;
+	win32::Handle<HPEN>::Type newPen;
+	win32::Handle<HBRUSH>::Type newBrush;
 	if(savedStates_.top().strokeStyle.second != savedStates_.top().strokeStyle.first->revisionNumber())
 		newPen = createModifiedPen(nullptr, boost::none, boost::none, boost::none);
 	if(savedStates_.top().fillStyle.second != savedStates_.top().fillStyle.first->revisionNumber())
 		newBrush.reset(::CreateBrushIndirect(&savedStates_.top().fillStyle.first->asNativeObject()), &::DeleteObject);
 
-	win32::Handle<HPEN> oldPen;
-	win32::Handle<HBRUSH> oldBrush;
+	win32::Handle<HPEN>::Type oldPen;
+	win32::Handle<HBRUSH>::Type oldBrush;
 	if(newPen.get() != nullptr) {
 		oldPen.reset(static_cast<HPEN>(::SelectObject(nativeObject_.get(), newPen.get())));
 		if(oldPen.get() == nullptr)
@@ -813,10 +803,10 @@ void RenderingContext2D::updatePenAndBrush() {
 	}
 }
 
-RenderingContext2D::State::State() /*noexcept*/ {
+RenderingContext2D::State::State() BOOST_NOEXCEPT {
 }
 
-RenderingContext2D::State::State(const State& other) /*noexcept*/ :
+RenderingContext2D::State::State(const State& other) BOOST_NOEXCEPT :
 		fillStyle(other.fillStyle), strokeStyle(other.strokeStyle),
 		pen(other.pen.get()), previousPen(other.previousPen.get()),
 		brush(other.brush.get()), previousBrush(other.previousBrush.get()) {
