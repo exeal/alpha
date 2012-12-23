@@ -132,7 +132,7 @@ namespace ascension {
 				TextLayout(const String& textString,
 					const ComputedTextLineStyle& lineStyle,
 					std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles,
-					const FontCollection& fontCollection = installedFonts());
+					const FontCollection& fontCollection);
 				~TextLayout() BOOST_NOEXCEPT;
 
 				/// @name General Attributes

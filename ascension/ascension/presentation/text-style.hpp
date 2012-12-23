@@ -770,7 +770,7 @@ namespace ascension {
 			 */
 			StyleProperty<
 				sp::Complex<
-					std::vector<String>
+					std::vector<graphics::font::FontFamily>
 				>, sp::Inherited
 			> fontFamily;
 			/// 'font-weight' property. See @c FontWeight.

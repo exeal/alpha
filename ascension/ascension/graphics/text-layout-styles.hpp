@@ -125,7 +125,7 @@ namespace ascension {
 			struct ComputedFontSpecification {
 				const presentation::sp::IntrinsicType<
 					decltype(presentation::TextRunStyle().fontFamily)
-				>::Type* families;
+				>::Type families;
 				double pointSize;
 //				presentation::sp::IntrinsicType<
 //					decltype(presentation::TextRunStyle().fontSize)
@@ -134,6 +134,10 @@ namespace ascension {
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextRunStyle().fontSizeAdjust)
 				>::Type sizeAdjust;
+
+				/// Default constructor.
+				ComputedFontSpecification() : families() {}
+				ComputedFontSpecification& operator=(const ComputedFontSpecification&);
 			};
 
 			/// Computed value of @c presentation#TextDecoration.
@@ -248,8 +252,8 @@ namespace ascension {
 					decltype(presentation::TextRunStyle().shapingEnabled)
 				>::Type shapingEnabled;
 
-				/// Default constructor initializes the all properties with their default values.
-				ComputedTextRunStyle() : font() {}
+				/// Default constructor initializes nothing.
+				ComputedTextRunStyle() {}
 			};
 
 			/**
@@ -286,6 +290,12 @@ namespace ascension {
 			struct ComputedTextLineStyle {
 				/// Computed value of writing modes properties of @c TextToplevelStyle.
 				presentation::WritingMode writingMode;
+
+				/// Computed value of @c TextLineStyle#defaultRunStyle#background property.
+				std::shared_ptr<const Paint> background;
+
+				/// Computed value of @c TextLineStyle#defaultRunStyle#fontXxxx properties.
+				ComputedFontSpecification nominalFont;
 
 				/// Computed value of @c TextLineStyle#lineBoxContain property.
 				presentation::sp::IntrinsicType<
