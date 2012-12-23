@@ -2,14 +2,23 @@
  * @file handle.hpp
  * @date 2006-2011 was windows.hpp
  * @date 2012-04-17 separated from windows.hpp
+ * @deprecated This header file was deprecated since version 0.8. Use @c std#shared_ptr and
+ *             @c std#unique_ptr class templates. But Win32 handle types are not pointers...
  */
 
 #ifndef ASCENSION_WIN32_HANDLE_HPP
 #define ASCENSION_WIN32_HANDLE_HPP
-#include <ascension/win32/windows.hpp>
-#include <memory>	// std.unique_ptr
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+#	include <ascension/win32/windows.hpp>
+#	include <memory>	// std.unique_ptr
+#else
+#	include <ascension/win32/windows.hpp>
+#	include <memory>
+#	include <type_traits>
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 namespace ascension {
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	namespace detail {
 		class HandleDeleterBase {
 		public:
@@ -27,8 +36,10 @@ namespace ascension {
 			Deleter deleter_;
 		};
 	}
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 	namespace win32 {
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 		/**
 		 *
 		 * @tparam T
@@ -252,6 +263,17 @@ namespace ascension {
 		explicit ClassName(Managed<HandleType>* handle) : BaseObject(handle) {}	\
 		explicit ClassName(Borrowed<HandleType>* handle) : BaseObject(handle) {}
 
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
+#else
+#	if 0
+		template<typename HeldType>
+		using Handle = std::shared_ptr<std::remove_pointer<HeldType>::type>;
+#	else
+		template<typename HeldType>
+		struct Handle {
+			typedef std::shared_ptr<typename std::remove_pointer<HeldType>::type> Type;
+		};
+#	endif
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 	}
 }

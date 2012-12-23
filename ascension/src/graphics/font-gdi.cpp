@@ -87,10 +87,10 @@ namespace {
 } // namespace @0
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
-Font::Font(win32::Handle<HFONT>&& handle) BOOST_NOEXCEPT : nativeObject_(move(handle)) {
+Font::Font(win32::Handle<HFONT>::Type handle) BOOST_NOEXCEPT : nativeObject_(move(handle)) {
 }
 
-const win32::Handle<HFONT>& Font::asNativeObject() const BOOST_NOEXCEPT {
+win32::Handle<HFONT>::Type Font::asNativeObject() const BOOST_NOEXCEPT {
 	return nativeObject_;
 }
 
@@ -104,8 +104,8 @@ boost::optional<GlyphCode> Font::ivsGlyph(CodePoint baseCharacter, CodePoint var
 		return boost::none;
 	if(ivs_.get() == nullptr) {
 		const_cast<Font*>(this)->ivs_.reset(new detail::IdeographicVariationSequences);
-		win32::Handle<HDC> dc(detail::screenDC());
-		win32::Handle<HFONT> oldFont(static_cast<HFONT>(::SelectObject(dc.get(), nativeObject_.get())));
+		win32::Handle<HDC>::Type dc(detail::screenDC());
+		win32::Handle<HFONT>::Type oldFont(static_cast<HFONT>(::SelectObject(dc.get(), nativeObject_.get())));
 		static const OpenTypeFontTag CMAP_TAG = MakeOpenTypeFontTag<'c', 'm', 'a', 'p'>::value;
 		const DWORD bytes = ::GetFontData(dc.get(), CMAP_TAG, 0, nullptr, 0);
 		if(bytes != GDI_ERROR) {
@@ -129,9 +129,9 @@ boost::optional<GlyphCode> Font::ivsGlyph(CodePoint baseCharacter, CodePoint var
 namespace {
 	class FontMetrics : public Font::Metrics {
 	public:
-		explicit FontMetrics(const win32::Handle<HFONT>& font) {
-			win32::Handle<HDC> dc(detail::screenDC());
-			win32::Handle<HFONT> oldFont(static_cast<HFONT>(::SelectObject(dc.get(), font.get())));
+		explicit FontMetrics(win32::Handle<HFONT>::Type font) {
+			win32::Handle<HDC>::Type dc(detail::screenDC());
+			win32::Handle<HFONT>::Type oldFont(static_cast<HFONT>(::SelectObject(dc.get(), font.get())));
 			::SetGraphicsMode(dc.get(), GM_ADVANCED);
 //			const double xdpi = dc.getDeviceCaps(LOGPIXELSX);
 //			const double ydpi = dc.getDeviceCaps(LOGPIXELSY);
@@ -155,12 +155,12 @@ namespace {
 				&& gm.gmptGlyphOrigin.y > 0) ? gm.gmptGlyphOrigin.y : round(static_cast<double>(ascent_) * 0.56);
 			::SelectObject(dc.get(), oldFont.get());
 		}
-		int ascent() const /*noexcept*/ {return ascent_;}
-		int averageCharacterWidth() /*noexcept*/ const {return averageCharacterWidth_;}
-		int descent() const /*noexcept*/ {return descent_;}
-		int externalLeading() const /*noexcept*/ {return externalLeading_;}
-		int internalLeading() const /*noexcept*/ {return internalLeading_;}
-		int xHeight() const /*noexcept*/ {return xHeight_;}
+		int ascent() const BOOST_NOEXCEPT {return ascent_;}
+		int averageCharacterWidth() BOOST_NOEXCEPT const {return averageCharacterWidth_;}
+		int descent() const BOOST_NOEXCEPT {return descent_;}
+		int externalLeading() const BOOST_NOEXCEPT {return externalLeading_;}
+		int internalLeading() const BOOST_NOEXCEPT {return internalLeading_;}
+		int xHeight() const BOOST_NOEXCEPT {return xHeight_;}
 	private:
 		int ascent_, descent_, internalLeading_, externalLeading_, averageCharacterWidth_, xHeight_;
 	};
@@ -198,7 +198,7 @@ shared_ptr<const Font> FontCollection::get(const FontDescription& description, b
 	if(cache != cachedFonts.end())
 		return cache->second;
 
-	win32::Handle<HFONT> font(::CreateFontIndirectW(&lf), &::DeleteObject);
+	win32::Handle<HFONT>::Type font(::CreateFontIndirectW(&lf), &::DeleteObject);
 #ifdef _DEBUG
 	if(::GetObjectW(font.get(), sizeof(LOGFONTW), &lf) > 0) {
 		::OutputDebugStringW(L"[SystemFonts.cache] Created font '");
@@ -211,7 +211,7 @@ shared_ptr<const Font> FontCollection::get(const FontDescription& description, b
 
 	// handle 'font-size-adjust'
 	if(sizeAdjust && *sizeAdjust > 0.0) {
-		win32::Handle<HFONT> oldFont(static_cast<HFONT>(::SelectObject(deviceContext_.get(), font.get())));
+		win32::Handle<HFONT>::Type oldFont(static_cast<HFONT>(::SelectObject(deviceContext_.get(), font.get())), detail::NullDeleter());
 		TEXTMETRICW tm;
 		if(::GetTextMetricsW(deviceContext_.get(), &tm)) {
 			GLYPHMETRICS gm;
@@ -234,8 +234,8 @@ shared_ptr<const Font> FontCollection::get(const FontDescription& description, b
 		if(::GetObjectW(font.get(), sizeof(LOGFONTW), &lf) > 0) {
 			static const int WIDTH_RATIOS[] = {1000, 1000, 1000, 500, 625, 750, 875, 1125, 1250, 1500, 2000, 1000};
 			lf.lfWidth = ::MulDiv(lf.lfWidth, WIDTH_RATIOS[properties.stretch], 1000);
-			if(win32::Handle<HFONT> temp = win32::Handle<HFONT>(::CreateFontIndirectW(&lf), &::DeleteObject))
-				font = move(temp);
+			if(win32::Handle<HFONT>::Type temp = win32::Handle<HFONT>::Type(::CreateFontIndirectW(&lf), &::DeleteObject))
+				font = temp;
 		}
 	}
 
