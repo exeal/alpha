@@ -154,9 +154,8 @@ namespace ascension {
 			}
 		}
 
-		/// @name Free Functions Privide Mappings Relative-Flow vs. Physical Direction/Dimension/Axis
+		/// @name Free Functions Privide Mappings Between Relative-Flow vs. Physical Directions
 		/// @{
-
 		/**
 		 * Maps flow-relative direction into corresponding physical direction.
 		 * @param writingMode The writing mode
@@ -238,14 +237,17 @@ namespace ascension {
 			}
 			throw UnknownValueException("direction");
 		}
+		/// @}
 
+		/// @name Free Functions Privide Mappings Between Relative-Flow vs. Physical Points
+		/// @{
 		/**
 		 * Converts an abstract point into a physical point.
 		 * @tparam To Type of coordinates of return value
 		 * @tparam From Type of coordinates of @a from
 		 * @param writingMode The writing mode
 		 * @param from The abstract point to convert
-		 * @param origin The origin of the physical space. If @c boost#none, (0, 0) is used
+		 * @param origin The origin of the physical space
 		 * @return A converted physical point
 		 */
 		template<typename To, typename From>
@@ -273,6 +275,42 @@ namespace ascension {
 		}
 
 		/**
+		 * Converts a physical point into an abstract point.
+		 * @tparam To Type of coordinates of return value
+		 * @tparam From Type of coordinates of @a from
+		 * @param writingMode The writing mode
+		 * @param from The physical point to convert
+		 * @param origin The origin of the abstract space
+		 * @return A converted abstract point
+		 */
+		template<typename To, typename From>
+		inline AbstractTwoAxes<To> mapPhysicalToAbstract(
+				const WritingMode& writingMode, const graphics::PhysicalTwoAxes<From>& from,
+				const AbstractTwoAxes<To>& origin = AbstractTwoAxes<To>(_ipd = 0, _bpd = 0)) {
+			switch(writingMode.blockFlowDirection) {
+				case HORIZONTAL_TB:
+					return AbstractTwoAxes<To>((
+						_ipd = origin.ipd() + (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? +from.x() : -from.x(),
+						_bpd = origin.bpd() + from.y(),
+					));
+				case VERTICAL_RL:
+				case VERTICAL_LR: {
+					bool ttb = writingMode.inlineFlowDirection == LEFT_TO_RIGHT;
+					ttb = (resolveTextOrientation(writingMode) != SIDEWAYS_LEFT) ? ttb : !ttb;
+					return AbstractTwoAxes<To>((
+						_ipd = origin.ipd() + ttb ? +from.y() : -from.y()
+						_bpd = origin.bpd() + (writingMode.blockFlowDirection == VERTICAL_RL) ? -from.x() : +from.x()
+					));
+				}
+				default:
+					throw UnknownValueException("writingMode.blockFlowDirection");
+			}
+		}
+		/// @}
+
+		/// @name Free Functions Privide Mappings Between Relative-Flow vs. Physical Rectangles
+		/// @{
+		/**
 		 * Converts a flow-relative four sides into a physical four sides.
 		 * @tparam To Type of coordinates of return value
 		 * @tparam From Type of coordinates of @a from
@@ -290,14 +328,44 @@ namespace ascension {
 				AbstractTwoAxes<From>((_ipd = from.end(), _bpd = from.after()))
 			};
 			graphics::PhysicalTwoAxes<To> destinations[2] = {
-				mapPhysicalToAbstract(writingMode, sources[0], origin);
-				mapPhysicalToAbstract(writingMode, sources[1], origin);
+				mapPhysicalToAbstract(writingMode, sources[0], origin),
+				mapPhysicalToAbstract(writingMode, sources[1], origin)
 			};
 			return graphics::PhysicalFourSides<To>((
 				graphics::_top = std::min(destinations[0].y(), destinations[1].y()),
 				graphics::_right = std::max(destinations[0].x(), destinations[1].x()),
 				graphics::_bottom = std::max(destinations[0].y(), destinations[1].y()),
-				graphics::_left = std::min(destinations[0].x(), destinations[1].x())));
+				graphics::_left = std::min(destinations[0].x(), destinations[1].x())
+			));
+		}
+
+		/**
+		 * Converts a physical four sides into a flow-relative four sides.
+		 * @tparam To Type of coordinates of return value
+		 * @tparam From Type of coordinates of @a from
+		 * @param writingMode The writing mode
+		 * @param from The physical four sides to convert
+		 * @param origin The origin of the flow-relative space
+		 * @return A converted flow-relative four sides
+		 */
+		template<typename To, typename From>
+		inline FlowRelativeFourSides<To> mapPhysicalToFlowRelative(
+				const WritingMode& writingMode, const graphics::PhysicalFourSides<From>& from,
+				const AbstractTwoAxes<To>& origin = AbstractTwoAxes<To>(_ipd = 0, _bpd = 0)) {
+			PhysicalTwoAxes<From> sources[2] = {
+				PhysicalTwoAxes<From>((graphics::_x = from.left(), graphics::_y = from.top())),
+				PhysicalTwoAxes<From>((graphics::_x = from.right(), graphics::_y = from.bottom()))
+			};
+			AbstractTwoAxes<To> destinations[2] = {
+				mapAbstractToPhysical(writingMode, sources[0], origin),
+				mapAbstractToPhysical(writingMode, sources[1], origin)
+			};
+			return FlowRelativeFourSides<To>((
+				_before = std::min(destinations[0].y(), destinations[1].y()),
+				_after = std::max(destinations[0].y(), destinations[1].y()),
+				_start = std::min(destinations[0].x(), destinations[1].x()),
+				_end = std::max(destinations[0].x(), destinations[1].x())
+			));
 		}
 
 		/**
@@ -342,7 +410,6 @@ namespace ascension {
 			}
 			return to;
 		}
-
 		/// @}
 
 	}
