@@ -122,7 +122,7 @@ namespace ascension {
 			/**
 			 * @see ComputedTextRunStyle
 			 */
-			struct ComputedFontSpecification {
+			struct ComputedFontSpecification : private boost::equality_comparable<ComputedFontSpecification> {
 				const presentation::sp::IntrinsicType<
 					decltype(presentation::TextRunStyle().fontFamily)
 				>::Type families;
@@ -138,10 +138,12 @@ namespace ascension {
 				/// Default constructor.
 				ComputedFontSpecification() : families() {}
 				ComputedFontSpecification& operator=(const ComputedFontSpecification&);
+				/// Equality operator.
+				bool operator==(const ComputedFontSpecification& other) const;
 			};
 
 			/// Computed value of @c presentation#TextDecoration.
-			struct ComputedTextDecoration {
+			struct ComputedTextDecoration : private boost::equality_comparable<ComputedTextDecoration> {
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextDecoration().lines)
 				>::Type lines;
@@ -165,10 +167,12 @@ namespace ascension {
 					style(presentation::TextDecoration::Style::SOLID),
 					skip(presentation::TextDecoration::Skip::OBJECTS),
 					underlinePosition(presentation::TextDecoration::UnderlinePosition::AUTO) {}
+				/// Equality operator.
+				bool operator==(const ComputedTextDecoration& other) const BOOST_NOEXCEPT;
 			};
 
 			/// Computed value of @c presentation#TextEmphasis.
-			struct ComputedTextEmphasis {
+			struct ComputedTextEmphasis : private boost::equality_comparable<ComputedTextEmphasis> {
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextEmphasis().style)
 				>::Type style;
@@ -183,10 +187,12 @@ namespace ascension {
 				ComputedTextEmphasis() BOOST_NOEXCEPT :
 					style(presentation::TextEmphasis::NONE), color(Color::TRANSPARENT_BLACK),
 					position(presentation::TextEmphasis::ABOVE | presentation::TextEmphasis::RIGHT) {}
+				/// Equality operator.
+				bool operator==(const ComputedTextEmphasis& other) const BOOST_NOEXCEPT;
 			};
 
 			/// Computed values of core properties of @c presentation#TextRunStyle.
-			struct ComputedTextRunStyleCore {
+			struct ComputedTextRunStyleCore : private boost::equality_comparable<ComputedTextRunStyleCore> {
 				/// Computed value of @c TextRunStyle#color property.
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextRunStyle().color)
@@ -207,10 +213,14 @@ namespace ascension {
 
 				/// Default constructor initializes the all properties with their default values.
 				ComputedTextRunStyleCore() : color(0, 0, 0), background(nullptr), border() {}
+				/// Equality operator.
+				bool operator==(const ComputedTextRunStyleCore& other) const BOOST_NOEXCEPT;
 			};
 
+			std::size_t hash_value(const ComputedTextRunStyleCore& v);
+
 			/// Computed values of @c presentation#TextRunStyle.
-			struct ComputedTextRunStyle : public ComputedTextRunStyleCore {
+			struct ComputedTextRunStyle : public ComputedTextRunStyleCore, private boost::equality_comparable<ComputedTextRunStyle> {
 				/// Computed values of font specification of @c TextRunStyle.
 				ComputedFontSpecification font;
 
@@ -254,6 +264,12 @@ namespace ascension {
 
 				/// Default constructor initializes nothing.
 				ComputedTextRunStyle() {}
+				/// Copy-assignment operator.
+				ComputedTextRunStyle& operator=(const ComputedTextRunStyle& other);
+				/// Move-assignment operator.
+				ComputedTextRunStyle& operator=(ComputedTextRunStyle&& other) BOOST_NOEXCEPT;
+				/// Equality operator.
+				bool operator==(const ComputedTextRunStyle& other) const BOOST_NOEXCEPT;
 			};
 
 			/**
@@ -287,7 +303,7 @@ namespace ascension {
 			};
 
 			/// Computed values of @c presentation#TextLineStyle.
-			struct ComputedTextLineStyle {
+			struct ComputedTextLineStyle : private boost::equality_comparable<ComputedTextLineStyle> {
 				/// Computed value of writing modes properties of @c TextToplevelStyle.
 				presentation::WritingMode writingMode;
 
@@ -363,7 +379,12 @@ namespace ascension {
 				 * @c false.
 				 */
 				bool inhibitSymmetricSwapping;
+
+				/// Equality operator.
+				bool operator==(const ComputedTextLineStyle& other) const BOOST_NOEXCEPT;
 			};
+
+			std::size_t hash_value(const ComputedTextLineStyle& v);
 
 		}
 	}
