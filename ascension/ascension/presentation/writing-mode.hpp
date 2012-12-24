@@ -324,12 +324,12 @@ namespace ascension {
 				const WritingMode& writingMode, const FlowRelativeFourSides<From>& from,
 				const graphics::PhysicalTwoAxes<To>& origin = graphics::PhysicalTwoAxes<To>(graphics::_x = 0, graphics::_y = 0)) {
 			AbstractTwoAxes<From> sources[2] = {
-				AbstractTwoAxes<From>((_ipd = from.start(), _bpd = from.before())),
-				AbstractTwoAxes<From>((_ipd = from.end(), _bpd = from.after()))
+				AbstractTwoAxes<From>(_ipd = from.start(), _bpd = from.before()),
+				AbstractTwoAxes<From>(_ipd = from.end(), _bpd = from.after())
 			};
 			graphics::PhysicalTwoAxes<To> destinations[2] = {
-				mapPhysicalToAbstract(writingMode, sources[0], origin),
-				mapPhysicalToAbstract(writingMode, sources[1], origin)
+				mapAbstractToPhysical<To>(writingMode, sources[0], origin),
+				mapAbstractToPhysical<To>(writingMode, sources[1], origin)
 			};
 			return graphics::PhysicalFourSides<To>((
 				graphics::_top = std::min(destinations[0].y(), destinations[1].y()),
@@ -353,12 +353,12 @@ namespace ascension {
 				const WritingMode& writingMode, const graphics::PhysicalFourSides<From>& from,
 				const AbstractTwoAxes<To>& origin = AbstractTwoAxes<To>(_ipd = 0, _bpd = 0)) {
 			PhysicalTwoAxes<From> sources[2] = {
-				PhysicalTwoAxes<From>((graphics::_x = from.left(), graphics::_y = from.top())),
-				PhysicalTwoAxes<From>((graphics::_x = from.right(), graphics::_y = from.bottom()))
+				PhysicalTwoAxes<From>(graphics::_x = from.left(), graphics::_y = from.top()),
+				PhysicalTwoAxes<From>(graphics::_x = from.right(), graphics::_y = from.bottom())
 			};
 			AbstractTwoAxes<To> destinations[2] = {
-				mapAbstractToPhysical(writingMode, sources[0], origin),
-				mapAbstractToPhysical(writingMode, sources[1], origin)
+				mapPhysicalToAbstract<To>(writingMode, sources[0], origin),
+				mapPhysicalToAbstract<To>(writingMode, sources[1], origin)
 			};
 			return FlowRelativeFourSides<To>((
 				_before = std::min(destinations[0].y(), destinations[1].y()),
