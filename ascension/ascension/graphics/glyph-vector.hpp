@@ -70,11 +70,11 @@ namespace ascension {
 				 * Returns the position of the specified glyph.
 				 * @param index The glyph index in this vector
 				 * @return The position of the specified glyph relative to the leading edge of this
-				 *         vector. If this equals @c size(), this method returns the position of
-				 *         the trailing edge of the last glyph
+				 *         vector. If @a index equals @c size(), this method returns the position
+				 *         of the trailing edge of the last glyph
 				 * @throw std#out_of_range @a index &gt; @c size()
 				 */
-//				virtual Scalar glyphPosition(std::size_t index) const = 0;	// TODO: useless???
+				virtual Scalar glyphPosition(std::size_t index) const = 0;	// TODO: useless???
 				/**
 				 * Returns the visual bounds of the specified glyphs within this vector.
 				 * @param range The range of the glyphs

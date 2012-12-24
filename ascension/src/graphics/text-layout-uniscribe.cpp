@@ -445,7 +445,7 @@ namespace {
 		AttributedCharacterRange() {}
 		AttributedCharacterRange(StringPiece::const_pointer position,
 			const Attribute& attribute) : position(position), attribute(attribute) {}
-#ifdef ASCENSION_COMPILER_MSVC
+#if defined(ASCENSION_COMPILER_MSVC) && 0
 		AttributedCharacterRange& operator=(AttributedCharacterRange&& other) BOOST_NOEXCEPT {
 			position = other.position;
 			attribute = move(other.attribute);
@@ -514,10 +514,11 @@ namespace {
 		~TextRunImpl() BOOST_NOEXCEPT;
 		static void generate(const StringPiece& textString, const FontCollection& fontCollection,
 			const ComputedTextLineStyle& lineStyle, unique_ptr<ComputedStyledTextRunIterator> textRunStyles,
-			vector<TextRunImpl*>& textRuns, vector<AttributedCharacterRange<const ComputedTextRunStyle>>& calculatedStyles);
+			vector<TextRunImpl*>& textRuns, vector<AttributedCharacterRange<ComputedTextRunStyle>>& calculatedStyles);
 		// GlyphVector
 		void fillGlyphs(PaintContext& context, const NativePoint& origin,
 			boost::optional<Range<std::size_t>> range /* = boost::none */) const;
+		Scalar glyphPosition(size_t index) const;
 		FlowRelativeFourSides<Scalar> glyphVisualBounds(const Range<size_t>& range) const;
 		size_t numberOfGlyphs() const BOOST_NOEXCEPT;
 		void strokeGlyphs(PaintContext& context, const NativePoint& origin,
@@ -576,8 +577,11 @@ namespace {
 				raiseIfNull(position, "position");
 				raiseIfNull(font.get(), "font");
 			}
+			RawGlyphVector(RawGlyphVector&& other) BOOST_NOEXCEPT;
+			RawGlyphVector& operator=(RawGlyphVector&& other) BOOST_NOEXCEPT;
 			~RawGlyphVector() BOOST_NOEXCEPT {::ScriptFreeCache(&fontCache);}
 			void vanish(const Font& font, StringPiece::const_pointer at);
+			ASCENSION_NONCOPYABLE_TAG(RawGlyphVector);
 		};
 	private:
 		TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
@@ -648,7 +652,7 @@ void TextRunImpl::RawGlyphVector::vanish(const Font& font, StringPiece::const_po
 		SCRIPT_FONTPROPERTIES fp;
 		fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
 		if(FAILED(hr = ::ScriptGetFontProperties(dc.get(), &fontCache, &fp)))
-			fp.wgBlank = 0;	/* hmm... */
+			fp.wgBlank = 0;	// hmm...
 		blankGlyph = fp.wgBlank;
 	}
 	if(oldFont != nullptr)
@@ -863,7 +867,7 @@ namespace {
  */
 void TextRunImpl::generate(const StringPiece& textString, const FontCollection& fontCollection,
 		const ComputedTextLineStyle& lineStyle, unique_ptr<ComputedStyledTextRunIterator> textRunStyles,
-		vector<TextRunImpl*>& textRuns, vector<AttributedCharacterRange<const ComputedTextRunStyle>>& calculatedStyles) {
+		vector<TextRunImpl*>& textRuns, vector<AttributedCharacterRange<ComputedTextRunStyle>>& calculatedStyles) {
 	raiseIfNullOrEmpty(textString, "textString");
 
 	// split the text line into text runs as following steps:
@@ -913,7 +917,7 @@ void TextRunImpl::generate(const StringPiece& textString, const FontCollection& 
 	glyphRuns.reserve(numberOfScriptRuns);
 	vector<const SCRIPT_ANALYSIS*> scriptPointers;
 	scriptPointers.reserve(numberOfScriptRuns);
-	vector<AttributedCharacterRange<const ComputedTextRunStyle>> styleRuns;
+	vector<AttributedCharacterRange<ComputedTextRunStyle>> styleRuns;
 	{
 		StringPiece::const_pointer lastGlyphRunEnd = nullptr;
 		// script cursors
@@ -933,7 +937,7 @@ void TextRunImpl::generate(const StringPiece& textString, const FontCollection& 
 			nextStyleRun.position = styledTextRunEnumerator.position();
 		} else
 			nextStyleRun.position = textString.end();
-		styleRuns.push_back(AttributedCharacterRange<const ComputedTextRunStyle>(styleRun.position, styleRun.attribute));
+		styleRuns.push_back(AttributedCharacterRange<ComputedTextRunStyle>(styleRun.position, styleRun.attribute));
 
 		do {
 			const StringPiece::const_pointer next = min(nextScriptRun.position, nextStyleRun.position);
@@ -967,7 +971,7 @@ void TextRunImpl::generate(const StringPiece& textString, const FontCollection& 
 				}
 				assert(nextStyleRun.position < textString.end());
 				styleRun = move(nextStyleRun);
-				styleRuns.push_back(AttributedCharacterRange<const ComputedTextRunStyle>(styleRun.position, styleRun.attribute));
+				styleRuns.push_back(AttributedCharacterRange<ComputedTextRunStyle>(styleRun.position, styleRun.attribute));
 				assert(!styledTextRunEnumerator.isDone());
 				styledTextRunEnumerator.next();
 				if(!styledTextRunEnumerator.isDone()) {
@@ -1105,6 +1109,11 @@ HRESULT TextRunImpl::generateGlyphs(win32::Handle<HDC>::Type dc,
 	}
 	::ScriptFreeCache(&fontCache);
 	return hr;
+}
+
+/// @see GlyphVector#glyphPosition
+Scalar TextRunImpl::glyphPosition(size_t index) const {
+	return leadingEdge(index);
 }
 
 inline Range<size_t> TextRunImpl::glyphRange(const StringPiece& range /* = StringPiece(nullptr) */) const {
@@ -1560,9 +1569,8 @@ void TextRunImpl::shape(win32::Handle<HDC>::Type dc) {
 
 	// TODO: check if the requested style (or the default one) disables shaping.
 
-	RawGlyphVector glyphs(*glyphs_);
+	RawGlyphVector glyphs(glyphs_->position, glyphs_->font, glyphs_->scriptTag);
 	HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), glyphs_->font->asNativeObject().get()));
-	int numberOfGlyphs;
 	HRESULT hr = generateGlyphs(dc, *this, analysis_, glyphs);
 	if(hr == USP_E_SCRIPT_NOT_IN_FONT) {
 		analysis_.eScript = SCRIPT_UNDEFINED;
@@ -1889,7 +1897,7 @@ void TextRunImpl::shape(DC& dc, const String& layoutString, const ILayoutInforma
 unique_ptr<TextRunImpl> TextRunImpl::splitIfTooLong() {
 	using ascension::length;
 	if(estimateNumberOfGlyphs(length(*this)) <= 65535)
-		return unique_ptr<TextRun>();
+		return unique_ptr<TextRunImpl>();
 
 	// split this run, because the length would cause ScriptShape to fail (see also Mozilla bug 366643).
 	static const Index MAXIMUM_RUN_LENGTH = 43680;	// estimateNumberOfGlyphs(43680) == 65536
@@ -2213,7 +2221,7 @@ TextLayout::TextLayout(const String& textString, const ComputedTextLineStyle& li
 
 	// 2. split each script runs into text runs with StyledRunIterator
 	vector<TextRunImpl*> textRuns;
-	vector<AttributedCharacterRange<const ComputedTextRunStyle>> calculatedStyles;
+	vector<AttributedCharacterRange<ComputedTextRunStyle>> calculatedStyles;
 	TextRunImpl::generate(textString_, fontCollection, lineStyle_, move(textRunStyles), textRuns, calculatedStyles);
 //	runs_.reset(new TextRun*[numberOfRuns_ = textRuns.size()]);
 //	copy(textRuns.begin(), textRuns.end(), runs_.get());
@@ -2362,7 +2370,8 @@ NativeRegion TextLayout::blackBoxBounds(const Range<Index>& characterRange) cons
 			abstractBounds.push_back(boundsToAppend);
 		} else {
 			for(InlineProgressionDimensionRangeIterator i(makeRange(firstRunInLine(line), lastRun),
-					writingMode().inlineFlowDirection, characterRange, LEFT_TO_RIGHT, lineStart), e; i != e; ++i) {
+					writingMode().inlineFlowDirection, StringPiece(textString_.data() + characterRange.beginning(), length(characterRange)),
+					Direction::FORWARD, lineStart), e; i != e; ++i) {
 				boundsToAppend.start() = i->beginning();
 				boundsToAppend.end() = i->end();
 				abstractBounds.push_back(boundsToAppend);
@@ -2511,7 +2520,8 @@ uint8_t TextLayout::characterLevel(Index offset) const {
 
 namespace {
 	inline bool borderShouldBePainted(const FlowRelativeFourSides<ComputedBorderSide>& borders) {
-		BOOST_FOREACH(auto& border, borders) {
+		const array<ComputedBorderSide, 4>& temp = borders;	// sigh...
+		BOOST_FOREACH(auto& border, temp) {
 			if(border.hasVisibleStyle())
 				return true;
 		}
@@ -2559,19 +2569,24 @@ void TextLayout::draw(PaintContext& context,
 	// - Drawing styled text with Uniscribe (http://www.catch22.net/tuts/drawing-styled-text-uniscribe)
 
 	// 1. calculate lines to paint
-	const FlowRelativeFourSides<Scalar> abstractBoundsToPaint(	// relative to the alignment point of this layout
-		mapPhysicalToFlowRelative<Scalar>(writingMode(),
-			PhysicalFourSides<Scalar>(geometry::translate(context.boundsToPaint(), geometry::negate(origin)))));
 	Range<Index> linesToPaint(0, numberOfLines());
-	for(Index line = linesToPaint.beginning(); line < linesToPaint.end(); ++line) {
-		const Scalar bpd = baseline(line);
-		const Scalar lineBeforeEdge = bpd - lineMetrics_[line]->ascent();
-		const Scalar lineAfterEdge = bpd + lineMetrics_[line]->descent();
-		if(lineBeforeEdge <= abstractBoundsToPaint.before() && lineAfterEdge > abstractBoundsToPaint.before())
-			linesToPaint = makeRange(line, linesToPaint.end());
-		if(lineBeforeEdge <= abstractBoundsToPaint.after() && lineAfterEdge > abstractBoundsToPaint.after()) {
-			linesToPaint = makeRange(linesToPaint.beginning(), line + 1);
-			break;
+	{
+		NativePoint originDistance(origin);
+		geometry::negate(originDistance);
+		NativeRectangle boundsToPaint(context.boundsToPaint());
+		geometry::translate(boundsToPaint, originDistance);
+		const FlowRelativeFourSides<Scalar> abstractBoundsToPaint(	// relative to the alignment point of this layout
+			mapPhysicalToFlowRelative<Scalar>(writingMode(), PhysicalFourSides<Scalar>(boundsToPaint)));
+		for(Index line = linesToPaint.beginning(); line < linesToPaint.end(); ++line) {
+			const Scalar bpd = baseline(line);
+			const Scalar lineBeforeEdge = bpd - lineMetrics_[line]->ascent();
+			const Scalar lineAfterEdge = bpd + lineMetrics_[line]->descent();
+			if(lineBeforeEdge <= abstractBoundsToPaint.before() && lineAfterEdge > abstractBoundsToPaint.before())
+				linesToPaint = makeRange(line, linesToPaint.end());
+			if(lineBeforeEdge <= abstractBoundsToPaint.after() && lineAfterEdge > abstractBoundsToPaint.after()) {
+				linesToPaint = makeRange(linesToPaint.beginning(), line + 1);
+				break;
+			}
 		}
 	}
 #if 0
@@ -3147,7 +3162,7 @@ pair<Index, Index> TextLayout::locateOffsets(Index line, Scalar ipd, bool& outsi
 			const Scalar nextDx = dx + allocationMeasure(**run);
 			if(nextDx >= x) {
 				const Scalar ipdInRun = ((*run)->direction() == LEFT_TO_RIGHT) ? x - dx : nextDx - x;
-				return make_pair((*run)->characterEncompassesPosition(ipdInRun), (*run)->characterHasClosestLeadingEdge(ipdInRun));
+				return make_pair(boost::get((*run)->characterEncompassesPosition(ipdInRun)), (*run)->characterHasClosestLeadingEdge(ipdInRun));
 			}
 		}
 	}
