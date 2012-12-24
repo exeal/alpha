@@ -9,6 +9,7 @@
 #define ASCENSION_DIRECTIONS_HPP
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
 #include <array>
+#include <iterator>		// std.end
 #include <type_traits>	// std.extent
 #include <boost/operators.hpp>
 #include <boost/parameter.hpp>
@@ -405,6 +406,18 @@ namespace ascension {
 	}
 
 	/// @}
+}
+
+// specialize std.end for presentation.FlowRelativeFourSides.end duplication
+namespace std {
+	template<typename T>
+	inline typename ascension::presentation::FlowRelativeFourSides<T>::iterator end(ascension::presentation::FlowRelativeFourSides<T>& v) {
+		return std::end(static_cast<std::array<T, 4>&>(v));
+	}
+	template<typename T>
+	inline typename ascension::presentation::FlowRelativeFourSides<T>::const_iterator end(const ascension::presentation::FlowRelativeFourSides<T>& v) {
+		return std::end(static_cast<const std::array<T, 4>&>(v));
+	}
 }
 
 #endif // !ASCENSION_DIRECTIONS_HPP
