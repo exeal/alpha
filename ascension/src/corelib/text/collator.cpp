@@ -15,7 +15,7 @@ using namespace std;
 // Collator ///////////////////////////////////////////////////////////////////////////////////////
 
 /// Destructor.
-Collator::~Collator() /*throw()*/ {
+Collator::~Collator() BOOST_NOEXCEPT {
 }
 
 
@@ -24,18 +24,18 @@ Collator::~Collator() /*throw()*/ {
 const int CollationElementIterator::NULL_ORDER = 0xfffffffful;
 
 /// Protected default constructor.
-CollationElementIterator::CollationElementIterator() /*throw()*/ {
+CollationElementIterator::CollationElementIterator() BOOST_NOEXCEPT {
 }
 
 /// Destructor.
-CollationElementIterator::~CollationElementIterator() /*throw()*/ {
+CollationElementIterator::~CollationElementIterator() BOOST_NOEXCEPT {
 }
 
 
 // NullCollator ///////////////////////////////////////////////////////////////////////////////////
 
 /// Constructor.
-NullCollator::NullCollator() /*throw()*/ {
+NullCollator::NullCollator() BOOST_NOEXCEPT {
 }
 
 /// @see Collator#compare

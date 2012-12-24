@@ -10,7 +10,7 @@
  * - IBM1165
  * - windows-1258
  * @author exeal
- * @date 2004-2011
+ * @date 2004-2012
  */
 
 #include <ascension/corelib/encoder.hpp>
@@ -153,13 +153,13 @@ namespace {
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
 	class VIQREncoder : public Encoder {
 	public:
-		VIQREncoder() /*throw()*/;
+		VIQREncoder() BOOST_NOEXCEPT;
 	private:
 		Result doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext);
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext);
-		const EncodingProperties& properties() const /*throw()*/;
-		Encoder& resetDecodingState() /*throw()*/;
-		Encoder& resetEncodingState() /*throw()*/;
+		const EncodingProperties& properties() const BOOST_NOEXCEPT;
+		Encoder& resetDecodingState() BOOST_NOEXCEPT;
+		Encoder& resetEncodingState() BOOST_NOEXCEPT;
 	private:
 		enum {LITERAL_STATE, ENGLISH_STATE, VIETNAMESE_STATE} encodingState_, decodingState_;
 		static const Byte CLS = 0x01, COM = 0x5c;
@@ -167,9 +167,9 @@ namespace {
 	};
 	class VIQRFactory : public implementation::EncoderFactoryBase {
 	public:
-		VIQRFactory() /*throw()*/ : implementation::EncoderFactoryBase("VIQR", standard::VIQR, "Vietnamese (VIQR)", 3, 1, "csVIQR", 0x1a) {}
+		VIQRFactory() BOOST_NOEXCEPT : implementation::EncoderFactoryBase("VIQR", standard::VIQR, "Vietnamese (VIQR)", 3, 1, "csVIQR", 0x1a) {}
 	private:
-		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new VIQREncoder);}
+		unique_ptr<Encoder> create() const BOOST_NOEXCEPT {return unique_ptr<Encoder>(new VIQREncoder);}
 	} VIQR;
 #endif // !ASCENSION_NO_STANDARD_ENCODINGS
 
@@ -197,7 +197,7 @@ namespace {
 
 unique_ptr<sbcs::BidirectionalMap> VIQREncoder::table_;
 
-VIQREncoder::VIQREncoder() /*throw()*/ : encodingState_(VIETNAMESE_STATE), decodingState_(VIETNAMESE_STATE) {
+VIQREncoder::VIQREncoder() BOOST_NOEXCEPT : encodingState_(VIETNAMESE_STATE), decodingState_(VIETNAMESE_STATE) {
 	if(table_.get() == nullptr)
 		table_.reset(new sbcs::BidirectionalMap(VISCII_BYTE_TABLE::VALUES));
 }
@@ -404,16 +404,16 @@ Encoder::Result VIQREncoder::doToUnicode(Char* to, Char* toEnd,
 	return (fromNext == fromEnd) ? COMPLETED : INSUFFICIENT_BUFFER;
 }
 
-const EncodingProperties& VIQREncoder::properties() const /*throw()*/ {
+const EncodingProperties& VIQREncoder::properties() const BOOST_NOEXCEPT {
 	return VIQR;
 }
 
-Encoder& VIQREncoder::resetDecodingState() /*throw()*/ {
+Encoder& VIQREncoder::resetDecodingState() BOOST_NOEXCEPT {
 	decodingState_ = VIETNAMESE_STATE;
 	return *this;
 }
 
-Encoder& VIQREncoder::resetEncodingState() /*throw()*/ {
+Encoder& VIQREncoder::resetEncodingState() BOOST_NOEXCEPT {
 	encodingState_ = VIETNAMESE_STATE;
 	return *this;
 }

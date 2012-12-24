@@ -18,6 +18,7 @@ namespace ascension {
 		class Color;
 		namespace font {
 			struct ComputedTextLineStyle;
+			class ComputedStyledTextRunIterator;
 		}
 	}
 
@@ -167,7 +168,6 @@ namespace ascension {
 			};
 		} // namespace hyperlink
 
-		class ComputedStyledTextRunIterator;
 		class TextRunStyleDeclarator;
 
 		/**
@@ -222,8 +222,8 @@ namespace ascension {
 			graphics::font::ComputedTextLineStyle&& computeTextLineStyle(
 				Index line, const graphics::RenderingContext2D& context,
 				const graphics::NativeSize& contextSize, const GlobalTextStyleSwitch* globalSwitch) const;
-			std::unique_ptr<ComputedStyledTextRunIterator> computeTextRunStyles(Index line,
-				const graphics::RenderingContext2D& context, const graphics::NativeSize& contextSize) const;
+			std::unique_ptr<graphics::font::ComputedStyledTextRunIterator> computeTextRunStyles(
+				Index line, const graphics::RenderingContext2D& context, const graphics::NativeSize& contextSize) const;
 			/// @}
 
 			/// @name Hyperlinks

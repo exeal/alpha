@@ -119,11 +119,11 @@ UnsupportedEncodingException::UnsupportedEncodingException(const string& message
 const char Encoder::ALIASES_SEPARATOR = '|';
 
 /// Protected default constructor.
-Encoder::Encoder() /*throw()*/ : substitutionPolicy_(DONT_SUBSTITUTE), flags_(BEGINNING_OF_BUFFER | END_OF_BUFFER) {
+Encoder::Encoder() BOOST_NOEXCEPT : substitutionPolicy_(DONT_SUBSTITUTE), flags_(BEGINNING_OF_BUFFER | END_OF_BUFFER) {
 }
 
 /// Destructor.
-Encoder::~Encoder() /*throw()*/ {
+Encoder::~Encoder() BOOST_NOEXCEPT {
 }
 
 /**
@@ -162,7 +162,7 @@ bool Encoder::canEncode(const StringPiece& s) {
 }
 
 /// Returns the default encoder.
-Encoder& Encoder::defaultInstance() /*throw()*/ {
+Encoder& Encoder::defaultInstance() BOOST_NOEXCEPT {
 //#ifdef ASCENSION_OS_WINDOWS
 //	return convertWin32CPtoMIB(::GetACP());
 //#else
@@ -171,7 +171,7 @@ Encoder& Encoder::defaultInstance() /*throw()*/ {
 //#endif // ASCENSION_OS_WINDOWS
 }
 
-EncoderFactory* Encoder::find(MIBenum mib) /*throw()*/ {
+EncoderFactory* Encoder::find(MIBenum mib) BOOST_NOEXCEPT {
 	if(mib > MIB_UNKNOWN) {
 		for(vector<EncoderFactory*>::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
 			if((*i)->mibEnum() == mib)
@@ -181,7 +181,7 @@ EncoderFactory* Encoder::find(MIBenum mib) /*throw()*/ {
 	return nullptr;
 }
 
-EncoderFactory* Encoder::find(const string& name) /*throw()*/ {
+EncoderFactory* Encoder::find(const string& name) BOOST_NOEXCEPT {
 	for(vector<EncoderFactory*>::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
 		// test canonical name
 		const string canonicalName((*i)->name());
@@ -213,7 +213,7 @@ EncoderFactory* Encoder::find(const string& name) /*throw()*/ {
  * @return The encoder or @c null if not registered
  * @see #availableNames
  */
-unique_ptr<Encoder> Encoder::forID(size_t id) /*throw()*/ {
+unique_ptr<Encoder> Encoder::forID(size_t id) BOOST_NOEXCEPT {
 	return (id < registry().size()) ? registry()[id]->create() : unique_ptr<Encoder>();
 }
 
@@ -222,7 +222,7 @@ unique_ptr<Encoder> Encoder::forID(size_t id) /*throw()*/ {
  * @param mib The MIBenum value
  * @return The encoder or @c null if not registered
  */
-unique_ptr<Encoder> Encoder::forMIB(MIBenum mib) /*throw()*/ {
+unique_ptr<Encoder> Encoder::forMIB(MIBenum mib) BOOST_NOEXCEPT {
 	EncoderFactory* const factory = find(mib);
 	return (factory != nullptr) ? factory->create() : unique_ptr<Encoder>();
 }
@@ -232,7 +232,7 @@ unique_ptr<Encoder> Encoder::forMIB(MIBenum mib) /*throw()*/ {
  * @param name The name
  * @return The encoder or @c null if not registered
  */
-unique_ptr<Encoder> Encoder::forName(const string& name) /*throw()*/ {
+unique_ptr<Encoder> Encoder::forName(const string& name) BOOST_NOEXCEPT {
 	EncoderFactory* const factory = find(name);
 	return (factory != nullptr) ? factory->create() : unique_ptr<Encoder>();
 }
@@ -243,7 +243,7 @@ unique_ptr<Encoder> Encoder::forName(const string& name) /*throw()*/ {
  * @param codePage The code page
  * @return The encoder or @c null if not registered
  */
-unique_ptr<Encoder> Encoder::forWindowsCodePage(unsigned int codePage) /*throw()*/ {
+unique_ptr<Encoder> Encoder::forWindowsCodePage(unsigned int codePage) BOOST_NOEXCEPT {
 	// TODO: not implemented.
 	return unique_ptr<Encoder>();
 }
@@ -322,7 +322,7 @@ vector<EncoderFactory*>& Encoder::registry() {
  * @return The encoder
  * @see #resetEncodingState
  */
-Encoder& Encoder::resetDecodingState() /*throw()*/ {
+Encoder& Encoder::resetDecodingState() BOOST_NOEXCEPT {
 	return *this;
 }
 
@@ -332,7 +332,7 @@ Encoder& Encoder::resetDecodingState() /*throw()*/ {
  * @return The encoder
  * @see #resetDecodingState
  */
-Encoder& Encoder::resetEncodingState() /*throw()*/ {
+Encoder& Encoder::resetEncodingState() BOOST_NOEXCEPT {
 	return *this;
 }
 
@@ -364,12 +364,12 @@ Encoder& Encoder::setSubstitutionPolicy(SubstitutionPolicy newPolicy) {
 }
 
 /// Returns @c true if supports the encoding has the given MIBenum value.
-bool Encoder::supports(MIBenum mib) /*throw()*/ {
+bool Encoder::supports(MIBenum mib) BOOST_NOEXCEPT {
 	return find(mib) != nullptr;
 }
 
 /// Returns @c true if supports the encoding has to the given name or alias.
-bool Encoder::supports(const string& name) /*throw()*/ {
+bool Encoder::supports(const string& name) BOOST_NOEXCEPT {
 	return find(name) != nullptr;
 }
 
@@ -432,7 +432,7 @@ EncodingDetector::EncodingDetector(const string& name) : name_(name) {
 }
 
 /// Destructor.
-EncodingDetector::~EncodingDetector() /*throw()*/ {
+EncodingDetector::~EncodingDetector() BOOST_NOEXCEPT {
 }
 
 /**
@@ -459,7 +459,7 @@ pair<MIBenum, string> EncodingDetector::detect(const Byte* first, const Byte* la
  * @param name The name
  * @return The encoding detector or @c null if not registered
  */
-EncodingDetector* EncodingDetector::forName(const string& name) /*throw()*/ {
+EncodingDetector* EncodingDetector::forName(const string& name) BOOST_NOEXCEPT {
 	for(vector<EncodingDetector*>::iterator i(registry().begin()), e(registry().end()); i != e; ++i) {
 		const string canonicalName((*i)->name());
 		if(compareEncodingNames(name.begin(), name.end(), canonicalName.begin(), canonicalName.end()) == 0)
@@ -474,7 +474,7 @@ EncodingDetector* EncodingDetector::forName(const string& name) /*throw()*/ {
  * @param codePage The code page
  * @return The encoding detector or @c null if not registered
  */
-EncodingDetector* EncodingDetector::forWindowsCodePage(unsigned int codePage) /*throw()*/ {
+EncodingDetector* EncodingDetector::forWindowsCodePage(unsigned int codePage) BOOST_NOEXCEPT {
 	switch(codePage) {
 	case 50001:	return forName("UniversalAutoDetect");
 	case 50932:	return forName("JISAutoDetect");
@@ -514,14 +514,14 @@ namespace {
 	public:
 		UniversalDetector() : EncodingDetector("UniversalAutoDetect") {}
 	private:
-		pair<MIBenum, string> doDetect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/;
+		pair<MIBenum, string> doDetect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const BOOST_NOEXCEPT;
 	};
 //	ASCENSION_DEFINE_ENCODING_DETECTOR(SystemLocaleBasedDetector, "SystemLocaleAutoDetect");
 //	ASCENSION_DEFINE_ENCODING_DETECTOR(UserLocaleBasedDetector, "UserLocaleAutoDetect");
 } // namespace @0
 
 /// @see EncodingDetector#doDetect
-pair<MIBenum, string> UniversalDetector::doDetect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/ {
+pair<MIBenum, string> UniversalDetector::doDetect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const BOOST_NOEXCEPT {
 	// try all detectors
 	vector<string> names;
 	availableNames(back_inserter(names));
@@ -556,18 +556,18 @@ namespace {
 	public:
 		BasicLatinEncoderFactory(const string& name, MIBenum mib, const string& displayName,
 			const string& aliases, uint32_t mask) : EncoderFactoryBase(name, mib, displayName, 1, 1, aliases), mask_(mask) {}
-		virtual ~BasicLatinEncoderFactory() /*throw()*/ {}
-		unique_ptr<Encoder> create() const /*throw()*/ {return unique_ptr<Encoder>(new InternalEncoder(mask_, *this));}
+		virtual ~BasicLatinEncoderFactory() BOOST_NOEXCEPT {}
+		unique_ptr<Encoder> create() const BOOST_NOEXCEPT {return unique_ptr<Encoder>(new InternalEncoder(mask_, *this));}
 	private:
 		class InternalEncoder : public Encoder {
 		public:
-			InternalEncoder(uint32_t mask, const EncodingProperties& properties) /*throw()*/ : mask_(mask), props_(properties) {}
+			InternalEncoder(uint32_t mask, const EncodingProperties& properties) BOOST_NOEXCEPT : mask_(mask), props_(properties) {}
 		private:
 			Result doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
 				const Char* from, const Char* fromEnd, const Char*& fromNext);
 			Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 				const Byte* from, const Byte* fromEnd, const Byte*& fromNext);
-			const EncodingProperties& properties() const /*throw()*/ {return props_;}
+			const EncodingProperties& properties() const BOOST_NOEXCEPT {return props_;}
 		private:
 			const uint32_t mask_;
 			const EncodingProperties& props_;
@@ -583,7 +583,7 @@ namespace {
 			"iso-ir-100|ISO_8859-1|latin1|l1|IBM819|CP819|csISOLatin1" "\0ibm-819|8859_1|819", 0xff);
 
 	struct Installer {
-		Installer() /*throw()*/ {
+		Installer() BOOST_NOEXCEPT {
 			Encoder::registerFactory(US_ASCII);
 			Encoder::registerFactory(ISO_8859_1);
 			EncodingDetector::registerDetector(unique_ptr<EncodingDetector>(new UniversalDetector));
@@ -655,41 +655,41 @@ EncoderFactoryBase::EncoderFactoryBase(const string& name, MIBenum mib,
 }
 
 /// Destructor.
-EncoderFactoryBase::~EncoderFactoryBase() /*throw()*/ {
+EncoderFactoryBase::~EncoderFactoryBase() BOOST_NOEXCEPT {
 }
 
 /// @see EncodingProperties#aliases
-string EncoderFactoryBase::aliases() const /*throw()*/ {
+string EncoderFactoryBase::aliases() const BOOST_NOEXCEPT {
 	return aliases_;
 }
 
 /// @see EncodingProperties#displayName
-string EncoderFactoryBase::displayName(const locale&) const /*throw()*/ {
+string EncoderFactoryBase::displayName(const locale&) const BOOST_NOEXCEPT {
 	return displayName_;
 }
 
 /// @see EncodingProperties#maximumNativeBytes
-size_t EncoderFactoryBase::maximumNativeBytes() const /*throw()*/ {
+size_t EncoderFactoryBase::maximumNativeBytes() const BOOST_NOEXCEPT {
 	return maximumNativeBytes_;
 }
 
 /// @see EncodingProperties#maximumUCSLength
-size_t EncoderFactoryBase::maximumUCSLength() const /*throw()*/ {
+size_t EncoderFactoryBase::maximumUCSLength() const BOOST_NOEXCEPT {
 	return maximumUCSLength_;
 }
 
 /// @see EncodingProperties#mibEnum
-MIBenum EncoderFactoryBase::mibEnum() const /*throw()*/ {
+MIBenum EncoderFactoryBase::mibEnum() const BOOST_NOEXCEPT {
 	return mib_;
 }
 
 /// @see EncodingProperties#name
-string EncoderFactoryBase::name() const /*throw()*/ {
+string EncoderFactoryBase::name() const BOOST_NOEXCEPT {
 	return name_;
 }
 
 /// @see EncodingProperties#substitutionCharacter
-Byte EncoderFactoryBase::substitutionCharacter() const /*throw()*/ {
+Byte EncoderFactoryBase::substitutionCharacter() const BOOST_NOEXCEPT {
 	return substitutionCharacter_;
 }
 
@@ -712,13 +712,13 @@ const Byte sbcs::BidirectionalMap::UNMAPPABLE_16x16_UNICODE_TABLE[0x100] = {
  * @param byteToCharacterWire The table defines byte-to-character mapping consists of
  *                            16Å~16-characters
  */
-sbcs::BidirectionalMap::BidirectionalMap(const Char** byteToCharacterWire) /*throw()*/ : byteToUnicode_(byteToCharacterWire) {
+sbcs::BidirectionalMap::BidirectionalMap(const Char** byteToCharacterWire) BOOST_NOEXCEPT : byteToUnicode_(byteToCharacterWire) {
 	fill_n(unicodeToByte_, ASCENSION_COUNTOF(unicodeToByte_), static_cast<Byte*>(nullptr));
 	buildUnicodeToByteTable();	// eager?
 }
 
 /// Destructor.
-sbcs::BidirectionalMap::~BidirectionalMap() /*throw()*/ {
+sbcs::BidirectionalMap::~BidirectionalMap() BOOST_NOEXCEPT {
 	for(size_t i = 0; i < ASCENSION_COUNTOF(unicodeToByte_); ++i) {
 		if(unicodeToByte_[i] != UNMAPPABLE_16x16_UNICODE_TABLE)
 			delete[] unicodeToByte_[i];
@@ -745,21 +745,21 @@ void sbcs::BidirectionalMap::buildUnicodeToByteTable() {
 namespace {
 	class SingleByteEncoder : public Encoder {
 	public:
-		explicit SingleByteEncoder(const Char** byteToCharacterWire, const EncodingProperties& properties) /*throw()*/;
+		explicit SingleByteEncoder(const Char** byteToCharacterWire, const EncodingProperties& properties) BOOST_NOEXCEPT;
 	private:
 		// Encoder
 		Result doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
 			const Char* from, const Char* fromEnd, const Char*& fromNext);
 		Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 			const Byte* from, const Byte* fromEnd, const Byte*& fromNext);
-		const EncodingProperties& properties() const /*throw()*/ {return props_;}
+		const EncodingProperties& properties() const BOOST_NOEXCEPT {return props_;}
 	private:
 		const sbcs::BidirectionalMap table_;
 		const EncodingProperties& props_;
 	};
 
 	SingleByteEncoder::SingleByteEncoder(const Char** byteToCharacterWire,
-			const EncodingProperties& properties) /*throw()*/ : table_(byteToCharacterWire), props_(properties) {
+			const EncodingProperties& properties) BOOST_NOEXCEPT : table_(byteToCharacterWire), props_(properties) {
 	}
 
 	Encoder::Result SingleByteEncoder::doFromUnicode(Byte* to, Byte* toEnd,
@@ -804,6 +804,6 @@ namespace {
 } // namespace @0
 
 unique_ptr<Encoder> detail::createSingleByteEncoder(
-		const Char** byteToCharacterWire, const EncodingProperties& properties) /*throw()*/ {
+		const Char** byteToCharacterWire, const EncodingProperties& properties) BOOST_NOEXCEPT {
 	return unique_ptr<Encoder>(new SingleByteEncoder(byteToCharacterWire, properties));
 }

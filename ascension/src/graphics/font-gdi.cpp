@@ -9,6 +9,7 @@
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/config.hpp>
 #include <vector>
+#include <boost/functional/hash.hpp>	// boost.hash_combine, boost.hash_value
 
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 #	include <ascension/corelib/text/character.hpp>	// text.isValidCodePoint
@@ -193,7 +194,22 @@ shared_ptr<const Font> FontCollection::get(const FontDescription& description, b
 	lf.lfItalic = (properties.style == FontStyle::ITALIC) || (properties.style == FontStyle::OBLIQUE);
 	wcscpy(lf.lfFaceName, familyName.c_str());
 
-	static unordered_map<LOGFONTW, shared_ptr<const Font>> cachedFonts;
+	struct LogFontHash {
+		size_t operator()(const LOGFONTW& v) const {
+			size_t n = boost::hash_value(v.lfHeight);
+			boost::hash_combine(n, v.lfEscapement);
+			boost::hash_combine(n, v.lfWeight);
+			boost::hash_combine(n, v.lfItalic);
+			return n;
+		}
+	};
+	struct LogFontComp {
+		bool operator()(const LOGFONTW& lhs, const LOGFONTW& rhs) const BOOST_NOEXCEPT {
+			return lhs.lfHeight == rhs.lfHeight
+				&& lhs.lfEscapement == rhs.lfEscapement && lhs.lfWeight == rhs.lfWeight && lhs.lfItalic == rhs.lfItalic;
+		}
+	};
+	static unordered_map<LOGFONTW, shared_ptr<const Font>, LogFontHash, LogFontComp> cachedFonts;
 	const auto cache(cachedFonts.find(lf));
 	if(cache != cachedFonts.end())
 		return cache->second;

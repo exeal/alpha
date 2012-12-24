@@ -1,7 +1,8 @@
 /**
  * @file image-windows.cpp
  * @author exeal
- * @date 2011-10-01
+ * @date 2011-10-01 created
+ * @date 2012-2012
  */
 
 #include <ascension/corelib/basic-exceptions.hpp>	// PlatformDependentError
@@ -14,7 +15,7 @@ using namespace std;
 
 
 namespace {
-	win32::Handle<HBITMAP> createBitmap(const NativeSize& size, Image::Format format, const uint8_t* data) {
+	win32::Handle<HBITMAP>::Type createBitmap(const NativeSize& size, Image::Format format, const uint8_t* data) {
 		size_t bytesPerPixel;
 		switch(format) {
 		case Image::ARGB_32:
@@ -29,9 +30,7 @@ namespace {
 		default:
 			throw UnknownValueException("format");
 		}
-		win32::Handle<HDC> dc(::GetDC(nullptr));
-		if(dc.get() == nullptr)
-			throw makePlatformError();
+		win32::Handle<HDC>::Type dc(detail::screenDC());
 		BITMAPINFO* const info = static_cast<BITMAPINFO*>(::operator new(
 			sizeof(BITMAPINFOHEADER) + bytesPerPixel * geometry::dx(size) * geometry::dy(size)));
 		BITMAPINFOHEADER& header = info->bmiHeader;
@@ -43,7 +42,7 @@ namespace {
 		header.biPlanes = static_cast<WORD>(::GetDeviceCaps(dc.get(), PLANES));
 		header.biCompression = BI_RGB;
 		memcpy(info->bmiColors, data, bytesPerPixel * geometry::dx(size) * geometry::dy(size));
-		win32::Handle<HBITMAP> bitmap(::CreateDIBitmap(dc.get(), &header, CBM_INIT, info->bmiColors, info, DIB_RGB_COLORS));
+		win32::Handle<HBITMAP>::Type bitmap(::CreateDIBitmap(dc.get(), &header, CBM_INIT, info->bmiColors, info, DIB_RGB_COLORS));
 		::operator delete(info);
 		return bitmap;
 	}
