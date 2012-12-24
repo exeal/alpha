@@ -26,7 +26,7 @@ using namespace std;
  * Protected constructor.
  * @param lc The locale
  */
-AbstractGraphemeBreakIterator::AbstractGraphemeBreakIterator(const std::locale& lc) /*throw()*/ : BreakIterator(lc) {
+AbstractGraphemeBreakIterator::AbstractGraphemeBreakIterator(const std::locale& lc) BOOST_NOEXCEPT : BreakIterator(lc) {
 }
 
 void AbstractGraphemeBreakIterator::doNext(ptrdiff_t amount) {
@@ -202,7 +202,7 @@ namespace {
  * @see #setComponent
  */
 AbstractWordBreakIterator::AbstractWordBreakIterator(Component component,
-		const IdentifierSyntax& syntax, const std::locale& lc) /*throw()*/ : BreakIterator(lc), component_(component), syntax_(syntax) {
+		const IdentifierSyntax& syntax, const std::locale& lc) BOOST_NOEXCEPT : BreakIterator(lc), component_(component), syntax_(syntax) {
 }
 
 void AbstractWordBreakIterator::doNext(ptrdiff_t amount) {
@@ -554,7 +554,7 @@ namespace {
  * @param lc The locale
  */
 AbstractSentenceBreakIterator::AbstractSentenceBreakIterator(Component component,
-		const IdentifierSyntax& syntax, const std::locale& lc) /*throw()*/ : BreakIterator(lc), component_(component), syntax_(syntax) {
+		const IdentifierSyntax& syntax, const std::locale& lc) BOOST_NOEXCEPT : BreakIterator(lc), component_(component), syntax_(syntax) {
 }
 
 void AbstractSentenceBreakIterator::doNext(ptrdiff_t amount) {
@@ -653,7 +653,7 @@ void AbstractSentenceBreakIterator::setComponent(Component component) {
  * Protected constructor.
  * @param lc The locale
  */
-AbstractLineBreakIterator::AbstractLineBreakIterator(const std::locale& lc) /*throw()*/ : BreakIterator(lc) {
+AbstractLineBreakIterator::AbstractLineBreakIterator(const std::locale& lc) BOOST_NOEXCEPT : BreakIterator(lc) {
 }
 
 /// @see BreakIterator#next

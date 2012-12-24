@@ -14,7 +14,7 @@ using namespace std;
 
 namespace {
 	/// Returns true if the specified character is Line_Break=NU.
-	bool isNU(CodePoint c, int gc) /*throw()*/ {
+	bool isNU(CodePoint c, int gc) BOOST_NOEXCEPT {
 		return (gc == GeneralCategory::DECIMAL_NUMBER && (c < 0xff00u || c > 0xffefu))
 			|| c == 0x066bu		// Arabic Decimal Separator
 			|| c == 0x066cu;	// Arabic Thousands Separator
@@ -28,7 +28,7 @@ namespace {
 		0x275eu		// Heavy Double Comma Quotation Mark Ornament
 	};
 	/// Returns true if the specified character is Line_Break=QU.
-	bool isQU(CodePoint c, int gc) /*throw()*/ {
+	bool isQU(CodePoint c, int gc) BOOST_NOEXCEPT {
 		return gc == GeneralCategory::FINAL_PUNCTUATION
 			|| gc == GeneralCategory::INITIAL_PUNCTUATION
 			|| binary_search(QU, ASCENSION_ENDOF(QU), c);
@@ -187,7 +187,7 @@ const char GraphemeClusterBreak::LONG_NAME[] = "Grapheme_Cluster_Break";
 const char GraphemeClusterBreak::SHORT_NAME[] = "GCB";
 
 /// Returns Grapheme_Cluster_Break value of the specified character.
-int GraphemeClusterBreak::of(CodePoint cp) /*throw()*/ {
+int GraphemeClusterBreak::of(CodePoint cp) BOOST_NOEXCEPT {
 	if(cp == CARRIAGE_RETURN)
 		return CR;
 	else if(cp == LINE_FEED)
@@ -230,7 +230,7 @@ const char WordBreak::SHORT_NAME[] = "WB";
  */
 int WordBreak::of(CodePoint c,
 		const IdentifierSyntax& syntax /* = IdentifierSyntax(IdentifierSyntax::UNICODE_DEFAULT) */,
-		const locale& lc /* = locale::classic() */) /*throw()*/ {
+		const locale& lc /* = locale::classic() */) BOOST_NOEXCEPT {
 	static const CodePoint KATAKANAS[] = {
 		0x3031u,	// Vertical Kana Repeat Mark
 		0x3032u,	// Vertical Kana Repeat With Voiced Sound Mark
@@ -318,7 +318,7 @@ const char SentenceBreak::LONG_NAME[] = "Sentence_Break";
 const char SentenceBreak::SHORT_NAME[] = "SB";
 
 /// Returns Sentence_Break value of the specified character.
-int SentenceBreak::of(CodePoint c) /*throw()*/ {
+int SentenceBreak::of(CodePoint c) BOOST_NOEXCEPT {
 	static const CodePoint SEPS[] = {LINE_FEED, CARRIAGE_RETURN, NEXT_LINE, LINE_SEPARATOR, PARAGRAPH_SEPARATOR};
 	if(BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(c))
 		return GraphemeClusterBreak::EXTEND;

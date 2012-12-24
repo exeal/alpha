@@ -8,6 +8,8 @@
 #ifndef ASCENSION_DIRECTIONS_HPP
 #define ASCENSION_DIRECTIONS_HPP
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
+#include <ascension/corelib/range.hpp>
+#include <ascension/graphics/geometry.hpp>
 #include <array>
 #include <iterator>		// std.end
 #include <type_traits>	// std.extent

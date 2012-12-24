@@ -6,7 +6,7 @@
  * - ARMSCII-8A
  * This implementation is based on the report of Hovik Melikyan (http://www.freenet.am/armscii/).
  * @author exeal
- * @date 2004-2011
+ * @date 2004-2012
  */
 
 #ifndef ASCENSION_NO_STANDARD_ENCODINGS
@@ -27,21 +27,21 @@ using namespace std;
 namespace {
 	template<int n> class ARMSCII : public EncoderFactoryBase {
 	public:
-		ARMSCII() /*throw()*/;
-		unique_ptr<Encoder> create() const /*throw()*/ {
+		ARMSCII() BOOST_NOEXCEPT;
+		unique_ptr<Encoder> create() const BOOST_NOEXCEPT {
 			return unique_ptr<Encoder>(new InternalEncoder(*this));
 		}
 	private:
 		class InternalEncoder : public Encoder {
 		public:
-			explicit InternalEncoder(const EncodingProperties& properties) /*throw()*/ : props_(properties) {
+			explicit InternalEncoder(const EncodingProperties& properties) BOOST_NOEXCEPT : props_(properties) {
 			}
 		private:
 			Result doFromUnicode(Byte* to, Byte* toEnd, Byte*& toNext,
 				const Char* from, const Char* fromEnd, const Char*& fromNext);
 			Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 				const Byte* from, const Byte* fromEnd, const Byte*& fromNext);
-			const EncodingProperties& properties() const /*throw()*/ {return props_;}
+			const EncodingProperties& properties() const BOOST_NOEXCEPT {return props_;}
 		private:
 			const EncodingProperties& props_;
 		};
@@ -51,7 +51,7 @@ namespace {
 	public:
 		ArmenianDetector() : EncodingDetector("ARMSCIIAutoDetect") {}
 	private:
-		pair<MIBenum, string> doDetect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/;
+		pair<MIBenum, string> doDetect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const BOOST_NOEXCEPT;
 	};
 
 	const Char RP_CH_ = text::REPLACEMENT_CHARACTER;
@@ -179,7 +179,7 @@ namespace {
 
 	// ARMSCII-8 //////////////////////////////////////////////////////////////////////////////////
 
-	template<> ARMSCII<8>::ARMSCII() /*throw()*/ : EncoderFactoryBase("ARMSCII-8", MIB_OTHER, "Armenian (ARMSCII-8)", 1, 2, "", 0x1a) {
+	template<> ARMSCII<8>::ARMSCII() BOOST_NOEXCEPT : EncoderFactoryBase("ARMSCII-8", MIB_OTHER, "Armenian (ARMSCII-8)", 1, 2, "", 0x1a) {
 	}
 
 	template<> Encoder::Result ARMSCII<8>::InternalEncoder::doFromUnicode(
@@ -251,7 +251,7 @@ namespace {
 
 	// ARMSCII-7 //////////////////////////////////////////////////////////////////////////////////
 
-	template<> ARMSCII<7>::ARMSCII() /*throw()*/ : EncoderFactoryBase("ARMSCII-7", MIB_OTHER, "Armenian (ARMSCII-7)", 1, 2, "", 0x1a) {
+	template<> ARMSCII<7>::ARMSCII() BOOST_NOEXCEPT : EncoderFactoryBase("ARMSCII-7", MIB_OTHER, "Armenian (ARMSCII-7)", 1, 2, "", 0x1a) {
 	}
 
 	template<> Encoder::Result ARMSCII<7>::InternalEncoder::doFromUnicode(
@@ -320,7 +320,7 @@ namespace {
 
 	// ARMSCII-8A /////////////////////////////////////////////////////////////////////////////////
 
-	template<> ARMSCII<0x8a>::ARMSCII() /*throw()*/ : EncoderFactoryBase("ARMSCII-8A", MIB_OTHER, "Armenian (ARMSCII-8A)", 1, 2, "", 0x1a) {
+	template<> ARMSCII<0x8a>::ARMSCII() BOOST_NOEXCEPT : EncoderFactoryBase("ARMSCII-8A", MIB_OTHER, "Armenian (ARMSCII-8A)", 1, 2, "", 0x1a) {
 	}
 
 	template<> Encoder::Result ARMSCII<0x8a>::InternalEncoder::doFromUnicode(
@@ -413,7 +413,7 @@ namespace {
 	// ArmenianDetector ///////////////////////////////////////////////////////////////////////////
 
 	/// @see EncodingDetector#doDetect
-	pair<MIBenum, string> ArmenianDetector::doDetect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const /*throw()*/ {
+	pair<MIBenum, string> ArmenianDetector::doDetect(const Byte* first, const Byte* last, ptrdiff_t* convertibleBytes) const BOOST_NOEXCEPT {
 		// first, check if Unicode
 		if(const EncodingDetector* unicodeDetector = forName("UnicodeAutoDetect")) {
 			ptrdiff_t temp;

@@ -216,7 +216,7 @@ font::ComputedTextLineStyle&& Presentation::computeTextLineStyle(Index line,
  *         has no styled text runs
  * @throw BadPositionException @a line is outside of the document
  */
-unique_ptr<ComputedStyledTextRunIterator> Presentation::computeTextRunStyles(Index line,
+unique_ptr<font::ComputedStyledTextRunIterator> Presentation::computeTextRunStyles(Index line,
 		const RenderingContext2D& context, const NativeSize& contextSize) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));

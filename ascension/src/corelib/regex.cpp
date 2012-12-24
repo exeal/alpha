@@ -361,7 +361,7 @@ Pattern::Pattern(const StringPiece& regex, boost::regex_constants::syntax_option
 }
 
 /// Destructor.
-Pattern::~Pattern() /*throw()*/ {
+Pattern::~Pattern() BOOST_NOEXCEPT {
 }
 
 
@@ -576,7 +576,7 @@ inline void MigemoPattern::install() {
 }
 
 /// Returns @c true if Migemo is installed.
-bool MigemoPattern::isMigemoInstalled() /*throw()*/ {
+bool MigemoPattern::isMigemoInstalled() BOOST_NOEXCEPT {
 	return migemoLib.get() != nullptr && migemoLib->isEnable();
 }
 

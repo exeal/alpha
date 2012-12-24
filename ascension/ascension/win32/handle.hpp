@@ -276,6 +276,16 @@ namespace ascension {
 #	endif
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 	}
+
+	namespace detail {
+		inline win32::Handle<HDC>::Type screenDC() {
+			HDC dc = ::GetDC(nullptr);
+			if(dc == nullptr)
+				throw makePlatformError();
+			return win32::Handle<HDC>::Type(dc,
+				std::bind(&::ReleaseDC, static_cast<HWND>(nullptr), std::placeholders::_1));
+		}
+	}
 }
 
 #endif // !ASCENSION_WIN32_HANDLE_HPP

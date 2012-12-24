@@ -116,7 +116,7 @@ const CharacterIterator::ConcreteTypeTag
 	StringCharacterIterator::CONCRETE_TYPE_TAG_ = CharacterIterator::ConcreteTypeTag();
 
 /// Default constructor.
-StringCharacterIterator::StringCharacterIterator() /*throw()*/
+StringCharacterIterator::StringCharacterIterator() BOOST_NOEXCEPT
 		: CharacterIterator(CONCRETE_TYPE_TAG_) {
 }
 
@@ -140,7 +140,7 @@ StringCharacterIterator::StringCharacterIterator(const String& s, String::const_
 }
 
 /// Copy-constructor.
-StringCharacterIterator::StringCharacterIterator(const StringCharacterIterator& other) /*throw()*/
+StringCharacterIterator::StringCharacterIterator(const StringCharacterIterator& other) BOOST_NOEXCEPT
 		: CharacterIterator(other), current_(other.current_), first_(other.first_), last_(other.last_) {
 }
 

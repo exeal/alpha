@@ -813,16 +813,6 @@ namespace ascension {
 			const NativeRectangle boundsToPaint_;
 		};
 	}
-
-	namespace detail {
-		inline win32::Handle<HDC>::Type screenDC() {
-			HDC dc = ::GetDC(nullptr);
-			if(dc == nullptr)
-				throw makePlatformError();
-			return win32::Handle<HDC>::Type(dc,
-				std::bind(&::ReleaseDC, static_cast<HWND>(nullptr), std::placeholders::_1));
-		}
-	}
 }
 
 #endif //!ASCENSION_RENDERING_CONTEXT_HPP

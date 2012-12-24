@@ -350,7 +350,7 @@ Normalizer::Normalizer(const Normalizer& other) : form_(other.form_),
 }
 
 /// Move-constructor.
-Normalizer::Normalizer(Normalizer&& other) /*noexcept*/ : form_(other.form_), current_(move(other.current_)),
+Normalizer::Normalizer(Normalizer&& other) BOOST_NOEXCEPT : form_(other.form_), current_(move(other.current_)),
 		normalizedBuffer_(move(other.normalizedBuffer_)), indexInBuffer_(other.indexInBuffer_), nextOffset_(other.nextOffset_) {
 }
 
@@ -365,7 +365,7 @@ Normalizer& Normalizer::operator=(const Normalizer& other) {
 }
 
 /// Move-assignment operator.
-Normalizer& Normalizer::operator=(Normalizer&& other) /*noexcept*/ {
+Normalizer& Normalizer::operator=(Normalizer&& other) BOOST_NOEXCEPT {
 	form_ = other.form_;
 	current_ = move(other.current_);
 	normalizedBuffer_ = move(other.normalizedBuffer_);
