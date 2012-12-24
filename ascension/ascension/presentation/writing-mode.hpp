@@ -124,9 +124,9 @@ namespace ascension {
 				BlockFlowDirection blockFlowDirection = HORIZONTAL_TB,
 				TextOrientation textOrientation = MIXED_RIGHT) :
 				inlineFlowDirection(inlineFlowDirection), blockFlowDirection(blockFlowDirection),
-				textOrientation(textOrientation) /*noexcept*/ {}
+				textOrientation(textOrientation) BOOST_NOEXCEPT {}
 			/// Equality operator.
-			inline bool operator==(const WritingMode& other) const /*noexcept*/ {
+			inline bool operator==(const WritingMode& other) const BOOST_NOEXCEPT {
 				return inlineFlowDirection == other.inlineFlowDirection
 					&& blockFlowDirection == other.blockFlowDirection
 					&& textOrientation == other.textOrientation;
@@ -256,18 +256,18 @@ namespace ascension {
 				const graphics::PhysicalTwoAxes<To>& origin = graphics::PhysicalTwoAxes<To>(graphics::_x = 0, graphics::_y = 0)) {
 			switch(writingMode.blockFlowDirection) {
 				case HORIZONTAL_TB:
-					return graphics::PhysicalTwoAxes<To>((
+					return graphics::PhysicalTwoAxes<To>(
 						graphics::_x = origin.x() + (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? +from.ipd() : -from.ipd(),
 						graphics::_y = origin.y() + from.bpd()
-					));
+					);
 				case VERTICAL_RL:
 				case VERTICAL_LR: {
 					bool ttb = writingMode.inlineFlowDirection == LEFT_TO_RIGHT;
 					ttb = (resolveTextOrientation(writingMode) != SIDEWAYS_LEFT) ? ttb : !ttb;
-					return graphics::PhysicalTwoAxes<To>((
+					return graphics::PhysicalTwoAxes<To>(
 						graphics::_x = origin.x() + (writingMode.blockFlowDirection == VERTICAL_RL) ? -from.bpd() : +from.bpd(),
 						graphics::_y = origin.y() + ttb ? +from.ipd() : -from.ipd()
-					));
+					);
 				}
 				default:
 					throw UnknownValueException("writingMode.blockFlowDirection");
@@ -289,18 +289,18 @@ namespace ascension {
 				const AbstractTwoAxes<To>& origin = AbstractTwoAxes<To>(_ipd = 0, _bpd = 0)) {
 			switch(writingMode.blockFlowDirection) {
 				case HORIZONTAL_TB:
-					return AbstractTwoAxes<To>((
+					return AbstractTwoAxes<To>(
 						_ipd = origin.ipd() + (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? +from.x() : -from.x(),
-						_bpd = origin.bpd() + from.y(),
-					));
+						_bpd = origin.bpd() + from.y()
+					);
 				case VERTICAL_RL:
 				case VERTICAL_LR: {
 					bool ttb = writingMode.inlineFlowDirection == LEFT_TO_RIGHT;
 					ttb = (resolveTextOrientation(writingMode) != SIDEWAYS_LEFT) ? ttb : !ttb;
-					return AbstractTwoAxes<To>((
-						_ipd = origin.ipd() + ttb ? +from.y() : -from.y()
+					return AbstractTwoAxes<To>(
+						_ipd = origin.ipd() + ttb ? +from.y() : -from.y(),
 						_bpd = origin.bpd() + (writingMode.blockFlowDirection == VERTICAL_RL) ? -from.x() : +from.x()
-					));
+					);
 				}
 				default:
 					throw UnknownValueException("writingMode.blockFlowDirection");
@@ -331,12 +331,12 @@ namespace ascension {
 				mapAbstractToPhysical<To>(writingMode, sources[0], origin),
 				mapAbstractToPhysical<To>(writingMode, sources[1], origin)
 			};
-			return graphics::PhysicalFourSides<To>((
+			return graphics::PhysicalFourSides<To>(
 				graphics::_top = std::min(destinations[0].y(), destinations[1].y()),
 				graphics::_right = std::max(destinations[0].x(), destinations[1].x()),
 				graphics::_bottom = std::max(destinations[0].y(), destinations[1].y()),
 				graphics::_left = std::min(destinations[0].x(), destinations[1].x())
-			));
+			);
 		}
 
 		/**
@@ -360,12 +360,12 @@ namespace ascension {
 				mapPhysicalToAbstract<To>(writingMode, sources[0], origin),
 				mapPhysicalToAbstract<To>(writingMode, sources[1], origin)
 			};
-			return FlowRelativeFourSides<To>((
-				_before = std::min(destinations[0].y(), destinations[1].y()),
-				_after = std::max(destinations[0].y(), destinations[1].y()),
-				_start = std::min(destinations[0].x(), destinations[1].x()),
-				_end = std::max(destinations[0].x(), destinations[1].x())
-			));
+			return FlowRelativeFourSides<To>(
+				_before = std::min(destinations[0].bpd(), destinations[1].bpd()),
+				_after = std::max(destinations[0].bpd(), destinations[1].bpd()),
+				_start = std::min(destinations[0].ipd(), destinations[1].ipd()),
+				_end = std::max(destinations[0].ipd(), destinations[1].ipd())
+			);
 		}
 
 		/**

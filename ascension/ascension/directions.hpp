@@ -248,7 +248,7 @@ namespace ascension {
 			AbstractTwoAxesBase() {}
 			/// Constructor takes named parameters as initial values
 			template<typename Arguments>
-			AbstractTwoAxesBase(const Arguments&) {
+			AbstractTwoAxesBase(const Arguments& arguments) {
 				bpd() = arguments[_bpd | value_type()];
 				ipd() = arguments[_ipd | value_type()];
 			}

@@ -191,17 +191,17 @@ namespace ascension {
 		};
 
 		template<typename Rectangle, std::size_t dimension>
-		class RectangleRangeProxy : public Range<
+		class RectangleRangeProxy /*: public Range<
 			typename graphics::geometry::Coordinate<
 				typename graphics::geometry::Coordinate<Rectangle>::Type
 			>::Type
-		> {
+		>*/ {
 		private:
 			typedef typename graphics::geometry::Coordinate<Rectangle>::Type Point;
 			typedef typename graphics::geometry::Coordinate<Point>::Type Scalar;
 		public:
-			explicit RectangleRangeProxy(Rectangle& rectangle) /*throw()*/ :
-				Range<Scalar>(graphics::geometry::range<dimension>(const_cast<const Rectangle&>(rectangle))), rectangle_(rectangle) {}
+			explicit RectangleRangeProxy(Rectangle& rectangle) BOOST_NOEXCEPT :
+				/*Range<Scalar>(graphics::geometry::range<dimension>(const_cast<const Rectangle&>(rectangle))),*/ rectangle_(rectangle) {}
 			template<typename T>
 			RectangleRangeProxy<Rectangle, dimension>& operator=(const Range<T>& range) {
 				Point b(graphics::geometry::get<0>(rectangle_)), e(graphics::geometry::get<1>(rectangle_));
@@ -209,7 +209,7 @@ namespace ascension {
 				graphics::geometry::set<dimension>(e, range.end());
 				graphics::geometry::set<0>(rectangle_, b);
 				graphics::geometry::set<1>(rectangle_, e);
-				Range<Scalar>::operator=(range);
+//				Range<Scalar>::operator=(range);
 				return *this;
 			}
 		private:
@@ -234,10 +234,9 @@ namespace ascension {
 				return traits::Maker<typename Tag<Geometry0>::Type, Geometry0>::make(geometry1, geometry2);
 			}
 
-			template<typename Rectangle>
+			template<typename Rectangle, typename ScalarType>
 			inline Rectangle make(
-					const Range<typename Coordinate<typename Coordinate<Rectangle>::Type>::Type>& xrange,
-					const Range<typename Coordinate<typename Coordinate<Rectangle>::Type>::Type>& yrange,
+					const Range<ScalarType>& xrange, const Range<ScalarType>& yrange,
 					typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
 				return make<Rectangle>(
 					make<Coordinate<Rectangle>::Type>(xrange.beginning(), yrange.beginning()),
