@@ -34,9 +34,9 @@ namespace ascension {
 				static Type initialValue() {return Type();}
 			};
 
-			template<typename Variant, typename InitialType, int _initialValue>	// decltype(_initialValue) should be T...
+			template<typename Variant, typename InitialType, int _initialValue>	// decltype(_initialValue) should be InitialType...
 			struct Multiple : public detail::Type2Type<Variant> {
-				static InitialType initialValue() {return _initialValue;}
+				static InitialType initialValue() {return static_cast<InitialType>(_initialValue);}
 			};
 
 			typedef std::true_type Inherited;
