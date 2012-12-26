@@ -14,6 +14,7 @@
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException, std.logic_error
 #include <ascension/corelib/future/type-traits.hpp>	// detail.Type2Type
 #include <ascension/presentation/length.hpp>
+#include <boost/optional.hpp>
 
 namespace ascension {
 	namespace presentation {
@@ -98,6 +99,10 @@ namespace ascension {
 			/// Returns the property value, or the initial value if inherits the parent.
 			value_type getOrInitial() const {
 				return inherits() ? initialValue() : value_;
+			}
+			/// Returns the property value, or @c boost#none if inherits the parent.
+			boost::optional<value_type> getOrNone() const {
+				return inherits() ? boost::none : boost::make_optional(value_);
 			}
 			/**
 			 * Lets this object to inherit other property.
