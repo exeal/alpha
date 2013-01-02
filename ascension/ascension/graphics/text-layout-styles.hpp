@@ -289,19 +289,6 @@ namespace ascension {
 				virtual void next() = 0;
 			};
 
-			/// Computed value of @c presentation#NumberSubstitution.
-			struct ComputedNumberSubstitution {
-				presentation::sp::IntrinsicType<
-					decltype(presentation::NumberSubstitution().method)
-				>::Type method;
-				presentation::sp::IntrinsicType<
-					decltype(presentation::NumberSubstitution().localeName)
-				>::Type localeName;
-				presentation::sp::IntrinsicType<
-					decltype(presentation::NumberSubstitution().ignoreUserOverride)
-				>::Type ignoreUserOverride;
-			};
-
 			/// Computed values of @c presentation#TextLineStyle.
 			struct ComputedTextLineStyle : private boost::equality_comparable<ComputedTextLineStyle> {
 				/// Computed value of writing modes properties of @c TextToplevelStyle.
@@ -362,7 +349,7 @@ namespace ascension {
 				/// Computed value of @c TextLineStyle#measure property.
 				Scalar measure;
 				/// Computed value of @c TextLineStyle#numberSubstitution property.
-				ComputedNumberSubstitution numberSubstitution;
+				presentation::NumberSubstitution numberSubstitution;
 
 				/**
 				 * Set @c true to shape zero width control characters as representative glyphs.
