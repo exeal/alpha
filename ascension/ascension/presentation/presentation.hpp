@@ -168,26 +168,9 @@ namespace ascension {
 			};
 		} // namespace hyperlink
 
+		class GlobalTextStyleSwitch;
 		class TextRunStyleDeclarator;
-
-		/**
-		 * @see Presentation#computeTextLineStyle
-		 */
-		class GlobalTextStyleSwitch {
-		public:
-			/// Destructor.
-			virtual ~GlobalTextStyleSwitch() BOOST_NOEXCEPT {}
-			/**
-			 * Overrides the declared text line style.
-			 * @param[in,out] style The declared style properties
-			 */
-			virtual void overrideTextLineStyle(TextLineStyle& style) const BOOST_NOEXCEPT = 0;
-			/**
-			 * Overrides the declared text top-level style.
-			 * @param[in,out] style The declared style properties
-			 */
-			virtual void overrideTextToplevelStyle(TextToplevelStyle& style) const BOOST_NOEXCEPT = 0;
-		};
+		struct WritingMode;
 
 		/**
 		 * A bridge between the document and visual styled text.
@@ -208,13 +191,13 @@ namespace ascension {
 			/// @name Styles Declaration
 			/// @{
 			void addGlobalTextStyleListener(GlobalTextStyleListener& listener);
-			const TextToplevelStyle& globalTextStyle() const BOOST_NOEXCEPT;
 			void removeGlobalTextStyleListener(GlobalTextStyleListener& listener);
-			void setGlobalTextStyle(std::shared_ptr<const TextToplevelStyle> newStyle);
 			void setTextLineStyleDeclarator(std::shared_ptr<TextLineStyleDeclarator> newDeclarator) BOOST_NOEXCEPT;
 			void setTextRunStyleDeclarator(std::shared_ptr<TextRunStyleDeclarator> newDeclarator) BOOST_NOEXCEPT;
+			void setTextToplevelStyle(std::shared_ptr<const TextToplevelStyle> newStyle);
 			void textLineColors(Index line,
 				boost::optional<graphics::Color>& foreground, boost::optional<graphics::Color>& background) const;
+			const TextToplevelStyle& textToplevelStyle() const BOOST_NOEXCEPT;
 			/// @}
 
 			/// @name Styles Computation
@@ -224,6 +207,7 @@ namespace ascension {
 				const graphics::NativeSize& contextSize, const GlobalTextStyleSwitch* globalSwitch) const;
 			std::unique_ptr<graphics::font::ComputedStyledTextRunIterator> computeTextRunStyles(
 				Index line, const graphics::RenderingContext2D& context, const graphics::NativeSize& contextSize) const;
+			WritingMode&& computeWritingMode(const GlobalTextStyleSwitch* globalSwitch) const;
 			/// @}
 
 			/// @name Hyperlinks
@@ -246,8 +230,8 @@ namespace ascension {
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
 		private:
 			kernel::Document& document_;
-			static std::shared_ptr<const TextToplevelStyle> DEFAULT_GLOBAL_TEXT_STYLE;
-			std::shared_ptr<const TextToplevelStyle> globalTextStyle_;
+			static std::shared_ptr<const TextToplevelStyle> DEFAULT_TEXT_TOPLEVEL_STYLE;
+			std::shared_ptr<const TextToplevelStyle> textToplevelStyle_;
 			std::shared_ptr<TextLineStyleDeclarator> textLineStyleDeclarator_;
 			std::shared_ptr<TextRunStyleDeclarator> textRunStyleDeclarator_;
 			std::list<std::shared_ptr<TextLineColorSpecifier>> textLineColorSpecifiers_;
@@ -259,13 +243,13 @@ namespace ascension {
 
 
 		/**
-		 * Returns the global text style this object gives.
-		 * @return The global text style
-		 * @see #setGlobalTextStyle
+		 * Returns the text toplevel style this object gives.
+		 * @return The text toplevel style
+		 * @see #setTextToplevelStyle
 		 */
-		inline const TextToplevelStyle& Presentation::globalTextStyle() const BOOST_NOEXCEPT {
-			assert(globalTextStyle_ != nullptr);
-			return *globalTextStyle_;
+		inline const TextToplevelStyle& Presentation::textToplevelStyle() const BOOST_NOEXCEPT {
+			assert(textToplevelStyle_ != nullptr);
+			return *textToplevelStyle_;
 		}
 
 	}

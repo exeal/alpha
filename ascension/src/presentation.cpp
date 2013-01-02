@@ -52,7 +52,7 @@ TextRunStyle& TextRunStyle::resolveInheritance(const TextRunStyle& base, bool ba
 
 // Presentation ///////////////////////////////////////////////////////////////////////////////////
 
-shared_ptr<const TextToplevelStyle> Presentation::DEFAULT_GLOBAL_TEXT_STYLE;
+shared_ptr<const TextToplevelStyle> Presentation::DEFAULT_TEXT_TOPLEVEL_STYLE;
 
 struct Presentation::Hyperlinks {
 	Index lineNumber;
@@ -65,14 +65,14 @@ struct Presentation::Hyperlinks {
  * @param document The target document
  */
 Presentation::Presentation(Document& document) BOOST_NOEXCEPT : document_(document) {
-	if(DEFAULT_GLOBAL_TEXT_STYLE.get() == nullptr) {
+	if(DEFAULT_TEXT_TOPLEVEL_STYLE.get() == nullptr) {
 		unique_ptr<TextLineStyle> temp1(new TextLineStyle);
 		temp1->defaultRunStyle.reset(new TextRunStyle);
 		unique_ptr<TextToplevelStyle> temp2(new TextToplevelStyle);
 		temp2->defaultLineStyle = move(temp1);
-		DEFAULT_GLOBAL_TEXT_STYLE = move(temp2);
+		DEFAULT_TEXT_TOPLEVEL_STYLE = move(temp2);
 	}
-	setGlobalTextStyle(shared_ptr<const TextToplevelStyle>());
+	setTextToplevelStyle(shared_ptr<const TextToplevelStyle>());
 	document_.addListener(*this);
 }
 
@@ -119,8 +119,9 @@ namespace {
 //		return !(declared.*pointerToMember).inherits() ? (declared.*pointerToMember).get() : (toplevel.*pointerToMember).getOrInitial();
 //	}
 	template<typename PropertyType>
-	inline void resolveProperty(PropertyType TextLineStyle::*pointerToMember, const TextLineStyle& declared, const TextLineStyle& toplevel, TextLineStyle& destination) {
-		destination.*pointerToMember = !(declared.*pointerToMember).inherits() ? (declared.*pointerToMember).get() : (toplevel.*pointerToMember).getOrInitial();
+	inline void resolveProperty(PropertyType TextLineStyle::*pointerToMember, const TextLineStyle& toplevel, TextLineStyle& property) {
+		if((property.*pointerToMember).inherits())
+			property.*pointerToMember = (toplevel.*pointerToMember).getOrInitial();
 	}
 }
 
@@ -137,38 +138,46 @@ font::ComputedTextLineStyle&& Presentation::computeTextLineStyle(Index line,
 		const RenderingContext2D& context, const NativeSize& contextSize, const GlobalTextStyleSwitch* globalSwitch) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
-	TextToplevelStyle toplevel(globalTextStyle());
-	if(globalSwitch != nullptr)
-		globalSwitch->overrideTextToplevelStyle(toplevel);
+
+	TextToplevelStyle toplevel(textToplevelStyle());
+	if(toplevel.writingMode.inherits() && globalSwitch != nullptr)
+		toplevel.writingMode = globalSwitch->writingMode();
+
 	shared_ptr<const TextLineStyle> declared;
 	if(textLineStyleDeclarator_.get() != nullptr)
 		declared = textLineStyleDeclarator_->declareTextLineStyle(line);
-	if(declared.get() == nullptr)
-		declared = toplevel.defaultLineStyle;
-	assert(declared.get() != nullptr);
+	assert(toplevel.defaultLineStyle != nullptr);
 
-	TextLineStyle precomputed;
-	resolveProperty(&TextLineStyle::direction, *declared, *toplevel.defaultLineStyle, precomputed);
-//	resolveProperty(&TextLineStyle::unicodeBidi, *declared, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::textOrientation, *declared, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::lineBoxContain, *declared, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::inlineBoxAlignment, *declared, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::whiteSpace, *declared, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::tabSize, *declared, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::lineBreak, *declared, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::wordBreak, *declared, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::overflowWrap, *declared, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::textAlignment, *declared, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::textAlignmentLast, *declared, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::textJustification, *declared, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::textIndent, *declared, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::hangingPunctuation, *declared, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::dominantBaseline, *declared, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::lineHeight, *declared, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::measure, *declared, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::numberSubstitution, *declared, *toplevel.defaultLineStyle, precomputed);
-	if(globalSwitch != nullptr)
-		globalSwitch->overrideTextLineStyle(precomputed);
+	TextLineStyle precomputed((declared.get() != nullptr) ? *declared : TextLineStyle());
+	if(globalSwitch != nullptr) {
+		if(!precomputed.direction.inherits())
+			precomputed.direction = globalSwitch->direction();
+		if(!precomputed.textAlignment.inherits())
+			precomputed.textAlignment = globalSwitch->textAlignment();
+		if(!precomputed.textOrientation.inherits())
+			precomputed.textOrientation = globalSwitch->textOrientation();
+		if(!precomputed.whiteSpace.inherits())
+			precomputed.whiteSpace = globalSwitch->whiteSpace();
+	}
+	resolveProperty(&TextLineStyle::direction, *toplevel.defaultLineStyle, precomputed);
+//	resolveProperty(&TextLineStyle::unicodeBidi, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::textOrientation, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::lineBoxContain, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::inlineBoxAlignment, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::whiteSpace, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::tabSize, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::lineBreak, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::wordBreak, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::overflowWrap, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::textAlignment, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::textAlignmentLast, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::textJustification, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::textIndent, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::hangingPunctuation, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::dominantBaseline, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::lineHeight, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::measure, *toplevel.defaultLineStyle, precomputed);
+	resolveProperty(&TextLineStyle::numberSubstitution, *toplevel.defaultLineStyle, precomputed);
 
 	font::ComputedTextLineStyle computed;
 	computed.writingMode = WritingMode(precomputed.direction.getOrInitial(), toplevel.writingMode.getOrInitial(), precomputed.textOrientation.getOrInitial());
@@ -222,6 +231,41 @@ unique_ptr<font::ComputedStyledTextRunIterator> Presentation::computeTextRunStyl
 		throw BadPositionException(Position(line, 0));
 	return (textRunStyleDeclarator_.get() != nullptr) ?
 		textRunStyleDeclarator_->declareTextRunStyle(line) : unique_ptr<StyledTextRunIterator>();
+}
+
+/**
+ * Computes the writing mode. This method does not call @c TextLineStyleDeclarator.
+ * @param globalSwitch
+ * @return The computed writing mode value
+ */
+WritingMode&& Presentation::computeWritingMode(const GlobalTextStyleSwitch* globalSwitch) const {
+	const TextToplevelStyle& toplevel = textToplevelStyle();
+	boost::optional<BlockFlowDirection> writingMode(toplevel.writingMode.getOrNone());
+	if(writingMode == boost::none) {
+		if(globalSwitch != nullptr)
+			writingMode = globalSwitch->writingMode().getOrInitial();
+		else
+			writingMode = toplevel.writingMode.initialValue();
+
+	}
+	assert(writingMode != boost::none);
+
+	boost::optional<ReadingDirection> direction;
+	boost::optional<TextOrientation> textOrientation;
+	if(globalSwitch != nullptr) {
+		if(writingMode == boost::none)
+			writingMode = globalSwitch->writingMode().getOrNone();
+		direction = globalSwitch->direction().getOrNone();
+		textOrientation = globalSwitch->textOrientation().getOrNone();
+	}
+	if(direction == boost::none)
+		direction = toplevel.defaultLineStyle->direction.getOrInitial();
+	if(textOrientation == boost::none)
+		textOrientation = toplevel.defaultLineStyle->textOrientation.getOrInitial();
+	assert(direction != boost::none);
+	assert(textOrientation != boost::none);
+
+	return WritingMode(*direction, *writingMode, *textOrientation);
 }
 
 /// Returns the document to which the presentation connects.
@@ -341,18 +385,6 @@ void Presentation::removeTextLineColorSpecifier(TextLineColorSpecifier& specifie
 }
 
 /**
- * Sets the global text line style.
- * @param newStyle The style to set
- * @see #globalTextStyle
- */
-void Presentation::setGlobalTextStyle(shared_ptr<const TextToplevelStyle> newStyle) {
-	const shared_ptr<const TextToplevelStyle> used(globalTextStyle_);
-	globalTextStyle_ = (newStyle.get() != nullptr) ? newStyle : DEFAULT_GLOBAL_TEXT_STYLE;
-	globalTextStyleListeners_.notify<shared_ptr<const TextToplevelStyle>>(
-		&GlobalTextStyleListener::globalTextStyleChanged, used);
-}
-
-/**
  * Sets the hyperlink detector.
  * @param newDirector The director. Set @c null to unregister
  */
@@ -376,6 +408,18 @@ void Presentation::setTextLineStyleDeclarator(shared_ptr<TextLineStyleDeclarator
  */
 void Presentation::setTextRunStyleDeclarator(shared_ptr<TextRunStyleDeclarator> newDeclarator) BOOST_NOEXCEPT {
 	textRunStyleDeclarator_ = newDeclarator;
+}
+
+/**
+ * Sets the global text line style.
+ * @param newStyle The style to set
+ * @see #globalTextStyle
+ */
+void Presentation::setTextToplevelStyle(shared_ptr<const TextToplevelStyle> newStyle) {
+	const shared_ptr<const TextToplevelStyle> used(textToplevelStyle_);
+	textToplevelStyle_ = (newStyle.get() != nullptr) ? newStyle : DEFAULT_TEXT_TOPLEVEL_STYLE;
+	globalTextStyleListeners_.notify<shared_ptr<const TextToplevelStyle>>(
+		&GlobalTextStyleListener::globalTextStyleChanged, used);
 }
 
 /**
@@ -562,7 +606,7 @@ inline void PresentationReconstructor::Iterator::updateSubiterator() {
 	else
 		subiterator_.reset();
 	if(subiterator_.get() == nullptr) {
-		const shared_ptr<const TextLineStyle> lineStyle(presentation_.globalTextStyle().defaultLineStyle);
+		const shared_ptr<const TextLineStyle> lineStyle(presentation_.textToplevelStyle().defaultLineStyle);
 		assert(lineStyle.get() != nullptr);
 		shared_ptr<const TextRunStyle> runStyle(lineStyle->defaultRunStyle);
 		if(runStyle.get() == nullptr)
