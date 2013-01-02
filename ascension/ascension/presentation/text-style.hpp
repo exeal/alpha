@@ -481,6 +481,11 @@ namespace ascension {
 			 * break.
 			 */
 			BooleanType eachLine;
+			/**
+			 * Default constructor initializes @c length by calling default constructor of
+			 * @c LengthType, and @c hanging and @c eachLine with false.
+			 */
+			TextIndent() : length(), hanging(false), eachLine(false) {}
 		};
 
 		/**
@@ -1036,6 +1041,10 @@ namespace ascension {
 			virtual void next() = 0;
 		};
 
+		/**
+		 * Specifies how numbers in text are displayed in different locales.
+		 * @see TextLineStyle#numberSubstitution, RulerStyles#LineNumbers#numberSubstitution
+		 */
 		struct NumberSubstitution {
 			/// Specifies how to apply number substitution on digits and related punctuation.
 			enum Method {
@@ -1063,20 +1072,13 @@ namespace ascension {
 			};
 
 			/// The substitution method.
-			StyleProperty<
-				sp::Enumerated<Method, USER_SETTING>,
-				sp::Inherited
-			> method;
+			Method method;
 			/// The name of the locale to be used.
-			StyleProperty<
-				sp::Complex<std::string>,
-				sp::Inherited
-			> localeName;
+			std::string localeName;
 			/// Whether to ignore user override.
-			StyleProperty<
-				sp::Enumerated<bool, false>,
-				sp::Inherited
-			> ignoreUserOverride;
+			bool ignoreUserOverride;
+			/// Default constructor.
+			NumberSubstitution() BOOST_NOEXCEPT : method(USER_SETTING), ignoreUserOverride(false) {}
 		};
 
 		/**
@@ -1160,9 +1162,10 @@ namespace ascension {
 				sp::Inherited
 			> textJustification;
 			/// 'text-indent' property. See @c TextIndent.
-			TextIndent<
-				StyleProperty<sp::Lengthed<0, Length::PIXELS>, sp::Inherited>,
-				StyleProperty<sp::Enumerated<bool, false>, sp::Inherited>
+			StyleProperty<
+				sp::Complex<
+					TextIndent<Length, bool>
+				>, sp::Inherited
 			> textIndent;
 			/// 'hanging-punctuation' property. See @c HangingPunctuation.
 			StyleProperty<
@@ -1188,7 +1191,11 @@ namespace ascension {
 				>, sp::NotInherited
 			> measure;
 			/// The number substitution process. See @c NumberSubstitution.
-			NumberSubstitution numberSubstitution;
+			StyleProperty<
+				sp::Complex<
+					NumberSubstitution
+				>, sp::Inherited
+			> numberSubstitution;
 		};
 
 		std::shared_ptr<const TextRunStyle> defaultTextRunStyle(

@@ -190,9 +190,9 @@ font::ComputedTextLineStyle&& Presentation::computeTextLineStyle(Index line,
 	computed.alignment = precomputed.textAlignment.getOrInitial();
 	computed.alignmentLast = precomputed.textAlignmentLast.getOrInitial();
 	computed.justification = precomputed.textJustification.getOrInitial();
-	computed.indent.length = static_cast<Scalar>(precomputed.textIndent.length.getOrInitial().value(&context, &contextSize));
-	computed.indent.hanging = precomputed.textIndent.hanging.getOrInitial();
-	computed.indent.eachLine = precomputed.textIndent.eachLine.getOrInitial();
+	computed.indent.length = static_cast<Scalar>(precomputed.textIndent.getOrInitial().length.value(&context, &contextSize));
+	computed.indent.hanging = precomputed.textIndent.getOrInitial().hanging;
+	computed.indent.eachLine = precomputed.textIndent.getOrInitial().eachLine;
 	computed.hangingPunctuation = precomputed.hangingPunctuation.getOrInitial();
 	computed.dominantBaseline = precomputed.dominantBaseline.getOrInitial();
 	{
@@ -211,9 +211,9 @@ font::ComputedTextLineStyle&& Presentation::computeTextLineStyle(Index line,
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
 	computed.measure = static_cast<Scalar>(precomputed.measure.getOrInitial()->value(&context, &contextSize));
-	computed.numberSubstitution.method = precomputed.numberSubstitution.method.getOrInitial();
-	computed.numberSubstitution.localeName = precomputed.numberSubstitution.localeName.getOrInitial();
-	computed.numberSubstitution.ignoreUserOverride = precomputed.numberSubstitution.ignoreUserOverride.getOrInitial();
+	computed.numberSubstitution.method = precomputed.numberSubstitution.getOrInitial().method;
+	computed.numberSubstitution.localeName = precomputed.numberSubstitution.getOrInitial().localeName;
+	computed.numberSubstitution.ignoreUserOverride = precomputed.numberSubstitution.getOrInitial().ignoreUserOverride;
 
 	return move(computed);
 }
