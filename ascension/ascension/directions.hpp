@@ -293,6 +293,8 @@ namespace ascension {
 		public:
 			/// Default constructor initializes nothing.
 			FlowRelativeFourSidesBase() {}
+//			FlowRelativeFourSidesBase(FlowRelativeFourSidesBase&&) {}
+//			FlowRelativeFourSidesBase(const FlowRelativeFourSidesBase&) {}
 			/// Constructor takes named parameters as initial values.
 			template<typename Arguments>
 			FlowRelativeFourSidesBase(const Arguments& arguments) {
@@ -340,6 +342,8 @@ namespace ascension {
 		public:
 			/// Default constructor initializes nothing.
 			FlowRelativeFourSides() {}
+			FlowRelativeFourSides(const FlowRelativeFourSides&);
+			FlowRelativeFourSides(FlowRelativeFourSides&&);
 			/// Constructor takes named parameters as initial values.
 			BOOST_PARAMETER_CONSTRUCTOR(
 				FlowRelativeFourSides, (FlowRelativeFourSidesBase<T>), tag,
