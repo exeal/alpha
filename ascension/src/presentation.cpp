@@ -66,11 +66,9 @@ struct Presentation::Hyperlinks {
  */
 Presentation::Presentation(Document& document) BOOST_NOEXCEPT : document_(document) {
 	if(DEFAULT_TEXT_TOPLEVEL_STYLE.get() == nullptr) {
-		unique_ptr<TextLineStyle> temp1(new TextLineStyle);
-		temp1->defaultRunStyle.reset(new TextRunStyle);
-		unique_ptr<TextToplevelStyle> temp2(new TextToplevelStyle);
-		temp2->defaultLineStyle = move(temp1);
-		DEFAULT_TEXT_TOPLEVEL_STYLE = move(temp2);
+		unique_ptr<TextToplevelStyle> temp(new TextToplevelStyle);
+		temp->defaultLineStyle = defaultTextLineStyle(*temp);
+		DEFAULT_TEXT_TOPLEVEL_STYLE = move(temp);
 	}
 	setTextToplevelStyle(shared_ptr<const TextToplevelStyle>());
 	document_.addListener(*this);
@@ -146,7 +144,6 @@ font::ComputedTextLineStyle&& Presentation::computeTextLineStyle(Index line,
 	shared_ptr<const TextLineStyle> declared;
 	if(textLineStyleDeclarator_.get() != nullptr)
 		declared = textLineStyleDeclarator_->declareTextLineStyle(line);
-	assert(toplevel.defaultLineStyle != nullptr);
 
 	TextLineStyle precomputed((declared.get() != nullptr) ? *declared : TextLineStyle());
 	if(globalSwitch != nullptr) {
@@ -159,25 +156,27 @@ font::ComputedTextLineStyle&& Presentation::computeTextLineStyle(Index line,
 		if(!precomputed.whiteSpace.inherits())
 			precomputed.whiteSpace = globalSwitch->whiteSpace();
 	}
-	resolveProperty(&TextLineStyle::direction, *toplevel.defaultLineStyle, precomputed);
-//	resolveProperty(&TextLineStyle::unicodeBidi, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::textOrientation, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::lineBoxContain, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::inlineBoxAlignment, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::whiteSpace, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::tabSize, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::lineBreak, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::wordBreak, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::overflowWrap, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::textAlignment, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::textAlignmentLast, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::textJustification, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::textIndent, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::hangingPunctuation, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::dominantBaseline, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::lineHeight, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::measure, *toplevel.defaultLineStyle, precomputed);
-	resolveProperty(&TextLineStyle::numberSubstitution, *toplevel.defaultLineStyle, precomputed);
+	const shared_ptr<const TextLineStyle> defaultStyle(defaultTextLineStyle(toplevel));
+	assert(defaultStyle != nullptr);
+	resolveProperty(&TextLineStyle::direction, *defaultStyle, precomputed);
+//	resolveProperty(&TextLineStyle::unicodeBidi, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::textOrientation, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::lineBoxContain, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::inlineBoxAlignment, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::whiteSpace, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::tabSize, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::lineBreak, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::wordBreak, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::overflowWrap, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::textAlignment, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::textAlignmentLast, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::textJustification, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::textIndent, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::hangingPunctuation, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::dominantBaseline, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::lineHeight, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::measure, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::numberSubstitution, *defaultStyle, precomputed);
 
 	font::ComputedTextLineStyle computed;
 	computed.writingMode = WritingMode(precomputed.direction.getOrInitial(), toplevel.writingMode.getOrInitial(), precomputed.textOrientation.getOrInitial());
@@ -218,6 +217,38 @@ font::ComputedTextLineStyle&& Presentation::computeTextLineStyle(Index line,
 	return move(computed);
 }
 
+namespace {
+	template<typename PropertyType>
+	inline void computeDefaultTextRunStyle(PropertyType TextRunStyle::*pointerToMember, const TextRunStyle& defaultStyle, TextRunStyle& style) {
+		if((style.*pointerToMember).inherits())
+			style.*pointerToMember = (defaultStyle.*pointerToMember).getOrInitial();
+	}
+
+	class ComputedStyledTextRunIteratorImpl : public font::ComputedStyledTextRunIterator {
+	public:
+		ComputedStyledTextRunIteratorImpl(unique_ptr<StyledTextRunIterator>&& declaration,
+				TextRunStyle&& defaultStyle) : declaration_(move(declaration)), defaultStyle_(defaultStyle) {
+		}
+		// font.ComputedStyledTextRunIterator
+		Range<Index> currentRange() const {
+			return declaration_->currentRange();
+		}
+		void currentStyle(font::ComputedTextRunStyle& style) const {
+			const shared_ptr<const TextRunStyle> declared(declaration_->currentStyle());
+			declared->color;
+		}
+		bool isDone() const BOOST_NOEXCEPT {
+			return declaration_->isDone();
+		}
+		void next() {
+			return declaration_->next();
+		}
+	private:
+		unique_ptr<StyledTextRunIterator> declaration_;
+		const TextRunStyle defaultStyle_;
+	};
+}
+
 /**
  * Returns the styles of the text runs in the specified line.
  * @param line The line
@@ -229,8 +260,46 @@ unique_ptr<font::ComputedStyledTextRunIterator> Presentation::computeTextRunStyl
 		const RenderingContext2D& context, const NativeSize& contextSize) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
-	return (textRunStyleDeclarator_.get() != nullptr) ?
-		textRunStyleDeclarator_->declareTextRunStyle(line) : unique_ptr<StyledTextRunIterator>();
+	unique_ptr<StyledTextRunIterator> declaration(
+		(textRunStyleDeclarator_.get() != nullptr) ?
+			textRunStyleDeclarator_->declareTextRunStyle(line) : unique_ptr<StyledTextRunIterator>());
+	if(declaration.get() == nullptr)
+		return unique_ptr<font::ComputedStyledTextRunIterator>();
+
+	const shared_ptr<const TextLineStyle> declaredLineStyle(
+		(textLineStyleDeclarator_ != nullptr) ? textLineStyleDeclarator_->declareTextLineStyle(line) : nullptr);
+	TextRunStyle defaultStyle((declaredLineStyle.get() != nullptr) ? *declaredLineStyle->defaultRunStyle : TextRunStyle());
+	const shared_ptr<const TextRunStyle> defaultStyleFromToplevel(defaultTextRunStyle(*defaultTextLineStyle(*textToplevelStyle_)));
+	// TODO: Should I use Boost.Fusion?
+	computeDefaultTextRunStyle(&TextRunStyle::color, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::background, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::border, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::padding, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::margin, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::fontFamily, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::fontWeight, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::fontStretch, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::fontStyle, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::fontSize, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::fontSizeAdjust, *defaultStyleFromToplevel, defaultStyle);
+//	computeDefaultTextRunStyle(&TextRunStyle::fontFeatureSettings, *defaultStyleFromToplevel, defaultStyle);
+//	computeDefaultTextRunStyle(&TextRunStyle::fontLanguageOverride, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::textHeight, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::lineHeight, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::dominantBaseline, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::alignmentBaseline, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::alignmentAdjust, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::baselineShift, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::textTransform, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::hyphens, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::wordSpacing, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::letterSpacing, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::textDecoration, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::textEmphasis, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::textShadow, *defaultStyleFromToplevel, defaultStyle);
+	computeDefaultTextRunStyle(&TextRunStyle::shapingEnabled, *defaultStyleFromToplevel, defaultStyle);
+
+	return unique_ptr<font::ComputedStyledTextRunIterator>(new ComputedStyledTextRunIteratorImpl(move(declaration), move(defaultStyle)));
 }
 
 /**
@@ -259,9 +328,9 @@ WritingMode&& Presentation::computeWritingMode(const GlobalTextStyleSwitch* glob
 		textOrientation = globalSwitch->textOrientation().getOrNone();
 	}
 	if(direction == boost::none)
-		direction = toplevel.defaultLineStyle->direction.getOrInitial();
+		direction = defaultTextLineStyle(toplevel)->direction.getOrInitial();
 	if(textOrientation == boost::none)
-		textOrientation = toplevel.defaultLineStyle->textOrientation.getOrInitial();
+		textOrientation = defaultTextLineStyle(toplevel)->textOrientation.getOrInitial();
 	assert(direction != boost::none);
 	assert(textOrientation != boost::none);
 
@@ -509,7 +578,6 @@ private:
 	bool isDone() const BOOST_NOEXCEPT;
 	void next();
 private:
-	static const shared_ptr<const TextRunStyle> DEFAULT_TEXT_RUN_STYLE;
 	const Presentation& presentation_;
 	const map<kernel::ContentType, PartitionPresentationReconstructor*> reconstructors_;
 	const Index line_;
@@ -518,8 +586,6 @@ private:
 	Range<Index> currentRange_;
 	shared_ptr<const TextRunStyle> currentStyle_;
 };
-
-const shared_ptr<const TextRunStyle> PresentationReconstructor::Iterator::DEFAULT_TEXT_RUN_STYLE(new TextRunStyle);
 
 /**
  * Constructor.
@@ -606,11 +672,10 @@ inline void PresentationReconstructor::Iterator::updateSubiterator() {
 	else
 		subiterator_.reset();
 	if(subiterator_.get() == nullptr) {
-		const shared_ptr<const TextLineStyle> lineStyle(presentation_.textToplevelStyle().defaultLineStyle);
+		const shared_ptr<const TextLineStyle> lineStyle(defaultTextLineStyle(presentation_.textToplevelStyle()));
 		assert(lineStyle.get() != nullptr);
-		shared_ptr<const TextRunStyle> runStyle(lineStyle->defaultRunStyle);
-		if(runStyle.get() == nullptr)
-			runStyle = DEFAULT_TEXT_RUN_STYLE;
+		shared_ptr<const TextRunStyle> runStyle(defaultTextRunStyle(*lineStyle));
+		assert(runStyle.get() != nullptr);
 		currentRange_ = makeRange(currentPartition_.region.beginning().offsetInLine, currentPartition_.region.end().offsetInLine);
 		currentStyle_ = runStyle;
 	}

@@ -1086,7 +1086,10 @@ namespace ascension {
 		 * @see TextRunStyle, TextToplevelStyle, TextLineStyleDirector
 		 */
 		struct TextLineStyle {
-			/// The default text run style. The default value is @c null.
+			/**
+			 * The default text run style. The default value is @c null.
+			 * @see defaultTextRunStyle
+			 */
 			std::shared_ptr<const TextRunStyle> defaultRunStyle;
 			/// 'direction' property. See @c ReadingDirection.
 			StyleProperty<
@@ -1198,9 +1201,6 @@ namespace ascension {
 			> numberSubstitution;
 		};
 
-		std::shared_ptr<const TextRunStyle> defaultTextRunStyle(
-			const TextLineStyle& textLineStyle) BOOST_NOEXCEPT;
-
 		/**
 		 * 
 		 * The writing modes specified by this style may be overridden by
@@ -1214,10 +1214,16 @@ namespace ascension {
 				sp::Enumerated<BlockFlowDirection, HORIZONTAL_TB>,
 				sp::Inherited
 			> writingMode;
-			/// The default text line style. The default value is @c null.
+			/**
+			 * The default text line style. The default value is @c null.
+			 * @see defaultTextLineStyle
+			 */
 			std::shared_ptr<const TextLineStyle> defaultLineStyle;
 		};
 
+		inline std::shared_ptr<const TextRunStyle> defaultTextRunStyle(const TextLineStyle&);
+		inline std::shared_ptr<const TextLineStyle> defaultTextLineStyle(const TextToplevelStyle&);
+				
 		/**
 		 * @see Presentation#computeTextLineStyle
 		 */
@@ -1294,9 +1300,6 @@ namespace ascension {
 			return computeBackground(current, parentBackground,
 				(ancestorBackground != nullptr) ? *ancestorBackground : inheritedBackground);
 		}
-
-		std::shared_ptr<const TextLineStyle> defaultTextLineStyle(
-			const TextToplevelStyle& textToplevelStyle) BOOST_NOEXCEPT;
 	}
 
 	namespace detail {
