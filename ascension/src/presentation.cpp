@@ -177,7 +177,9 @@ font::ComputedTextLineStyle&& Presentation::computeTextLineStyle(Index line,
 	resolveProperty(&TextLineStyle::dominantBaseline, *defaultStyle, precomputed);
 	resolveProperty(&TextLineStyle::lineHeight, *defaultStyle, precomputed);
 	resolveProperty(&TextLineStyle::measure, *defaultStyle, precomputed);
-	resolveProperty(&TextLineStyle::numberSubstitution, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::numberSubstitutionLocaleOverride, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::numberSubstitutionLocaleSource, *defaultStyle, precomputed);
+	resolveProperty(&TextLineStyle::numberSubstitutionMethod, *defaultStyle, precomputed);
 
 	font::ComputedTextLineStyle computed;
 	computed.writingMode = WritingMode(precomputed.direction.getOrInitial(), toplevel.writingMode.getOrInitial(), precomputed.textOrientation.getOrInitial());
@@ -211,9 +213,9 @@ font::ComputedTextLineStyle&& Presentation::computeTextLineStyle(Index line,
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
 	computed.measure = static_cast<Scalar>(precomputed.measure.getOrInitial()->value(&context, &contextSize));
-	computed.numberSubstitution.method = precomputed.numberSubstitution.getOrInitial().method;
-	computed.numberSubstitution.localeName = precomputed.numberSubstitution.getOrInitial().localeName;
-	computed.numberSubstitution.ignoreUserOverride = precomputed.numberSubstitution.getOrInitial().ignoreUserOverride;
+	computed.numberSubstitution.localeOverride = precomputed.numberSubstitutionLocaleOverride.getOrInitial();
+	computed.numberSubstitution.localeSource = precomputed.numberSubstitutionLocaleSource.getOrInitial();
+	computed.numberSubstitution.method = precomputed.numberSubstitutionMethod.getOrInitial();
 
 	return move(computed);
 }
