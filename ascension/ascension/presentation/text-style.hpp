@@ -1046,39 +1046,61 @@ namespace ascension {
 		 * @see TextLineStyle#numberSubstitution, RulerStyles#LineNumbers#numberSubstitution
 		 */
 		struct NumberSubstitution {
-			/// Specifies how to apply number substitution on digits and related punctuation.
+			/// Specifies how the locale for numbers in a text run is determined.
+			enum LocaleSource {
+				/// Number locale is derived from the text run.
+				TEXT,
+				/// Number locale is derived from the value of the current thread.
+				USER,
+				/// Number locale is derived from @c #localeOverride.
+				OVERRIDE
+			};
+
+			/// The type of number substitution to perform on numbers in a text run.
 			enum Method {
-				/// Uses the user setting.
-				USER_SETTING,
-				/**
-				 * The substitution method should be determined based on the system setting for
-				 * the locale given in the text.
-				 */
-				FROM_LOCALE,
-				/**
-				 * The number shapes depend on the context (the nearest preceding strong character,
-				 * or the reading direction if there is none).
-				 */
-				CONTEXTUAL,
-				/**
-				 * No substitution is performed. Characters U+0030..0039 are always rendered as
-				 * nominal numeral shapes (European numbers, not Arabic-Indic digits).
-				 */
-				NONE,
-				/// Numbers are rendered using the national number shapes.
-				NATIONAL,
-				/// Numbers are rendered using the traditional shapes for the specified locale.
+				/// The substitution method should be determined based on the number locale.
+				AS_LOCALE,
+				/// If the number locale is an Arabic or Farsi, specifies that the digits depend on
+				/// the context. Either traditional or Latin digits are used depending on the
+				/// nearest preceding strong character, or if there is none, the text direction of
+				/// the paragraph.
+				CONTEXT,
+				/// Code points U+0030..0039 are always rendered as European digits, in which case,
+				/// no number substitution is performed.
+				EUROPEAN,
+				/// Numbers are rendered using the national digits for the number locale, as
+				/// specified by the locale.
+				NATIVE_NATIONAL,
+				/// Numbers are rendered using the traditional digits for the number locale. For
+				/// most locales, this is the same as @c NATIVE_NATIONAL enumeration value.
+				/// However, using @c NATIVE_NATIONAL can result in Latin digits for some Arabic
+				/// locales, whereas using @c TRADITIONAL results in Arabic digits for all Arabic
+				/// locales.
 				TRADITIONAL
 			};
 
-			/// The substitution method.
+			/**
+			 * The locale to use when the value of @c #localeSource is @c LocaleSource#OVERRIDE. If
+			 * @c #localeSource is not @c LocaleSource#OVERRIDE, this is ignored. The default value
+			 * is an empty string.
+			 * @see TextLineStyle#numberSubstitutionLocaleOverride
+			 */
+			std::string localeOverride;
+			/**
+			 * The source of the locale that is used to determine number substitution. The default
+			 * value is @c LocaleSource#TEXT.
+			 * @see TextLineStyle#numberSubstitutionLocaleSource
+			 */
+			LocaleSource localeSource;
+			/**
+			 * The substitution method that is used to determine number substitution. The default
+			 * value is @c Method#AS_LOCALE.
+			 * @see TextLineStyle#numberSubstitutionMethod
+			 */
 			Method method;
-			/// The name of the locale to be used.
-			std::string localeName;
-			/// Whether to ignore user override.
-			bool ignoreUserOverride;
-			/// Default constructor.
-			NumberSubstitution() BOOST_NOEXCEPT : method(USER_SETTING), ignoreUserOverride(false) {}
+
+			/// Default constructor initializes the all data members with their default values.
+			NumberSubstitution() BOOST_NOEXCEPT : localeSource(TEXT), method(AS_LOCALE) {}
 		};
 
 		/**
@@ -1193,12 +1215,22 @@ namespace ascension {
 					boost::optional<Length>
 				>, sp::NotInherited
 			> measure;
-			/// The number substitution process. See @c NumberSubstitution.
+			/// ‘NumberSubstitution.CultureOverride’ property. See @c NumberSubstitution.
 			StyleProperty<
 				sp::Complex<
-					NumberSubstitution
+					std::string
 				>, sp::Inherited
-			> numberSubstitution;
+			> numberSubstitutionLocaleOverride;
+			/// ‘NumberSubstitution.CultureSource’ property. See @c NumberSubstitution.
+			StyleProperty<
+				sp::Enumerated<NumberSubstitution::LocaleSource, NumberSubstitution::TEXT>,
+				sp::Inherited
+			> numberSubstitutionLocaleSource;
+			/// ‘NumberSubstitution.Substitution’ property. See @c NumberSubstitution.
+			StyleProperty<
+				sp::Enumerated<NumberSubstitution::Method, NumberSubstitution::AS_LOCALE>,
+				sp::Inherited
+			> numberSubstitutionMethod;
 		};
 
 		/**
