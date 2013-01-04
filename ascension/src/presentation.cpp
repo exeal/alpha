@@ -10,6 +10,7 @@
 #include <ascension/presentation/presentation-reconstructor.hpp>
 #include <ascension/presentation/text-style.hpp>
 #include <ascension/rules.hpp>
+#include <boost/foreach.hpp>
 #ifdef ASCENSION_OS_WINDOWS
 #include <shellapi.h>	// ShellExecuteW
 #endif // ASCENSION_OS_WINDOWS
@@ -218,10 +219,49 @@ font::ComputedTextLineStyle&& Presentation::computeTextLineStyle(Index line,
 }
 
 namespace {
-	template<typename PropertyType>
-	inline void computeDefaultTextRunStyle(PropertyType TextRunStyle::*pointerToMember, const TextRunStyle& defaultStyle, TextRunStyle& style) {
+	template<typename PropertyType, typename TextStyle>
+	inline void computeDefaultTextRunStyle(PropertyType TextStyle::*pointerToMember, const TextStyle& defaultStyle, TextStyle& style) {
 		if((style.*pointerToMember).inherits())
 			style.*pointerToMember = (defaultStyle.*pointerToMember).getOrInitial();
+	}
+	inline void computeDefaultTextRunStyle(Background TextRunStyle::*pointerToMember, const TextRunStyle& defaultStyle, TextRunStyle& style) {
+		computeDefaultTextRunStyle(&Background::color, defaultStyle.background, style.background);
+	}
+	inline void computeDefaultTextRunStyle(Border TextRunStyle::*pointerToMember, const TextRunStyle& defaultStyle, TextRunStyle& style) {
+		BOOST_FOREACH(Border::Side& side, (static_cast<array<Border::Side, 4>&>(style.border.sides))) {
+			const FlowRelativeDirection direction = static_cast<FlowRelativeDirection>(&side - &*begin(style.border.sides));
+			computeDefaultTextRunStyle(&Border::Side::color, defaultStyle.border.sides[direction], style.border.sides[direction]);
+			computeDefaultTextRunStyle(&Border::Side::style, defaultStyle.border.sides[direction], style.border.sides[direction]);
+			computeDefaultTextRunStyle(&Border::Side::width, defaultStyle.border.sides[direction], style.border.sides[direction]);
+		}
+	}
+	template<typename PropertyType>
+	inline void computeDefaultTextRunStyle(FlowRelativeFourSides<PropertyType> TextRunStyle::*pointerToMember, const TextRunStyle& defaultStyle, TextRunStyle& style) {
+		BOOST_FOREACH(FlowRelativeFourSides<PropertyType>::value_type& side, (static_cast<array<PropertyType, 4>&>(style.*pointerToMember))) {
+			const FlowRelativeDirection direction = static_cast<FlowRelativeDirection>(&side - &*begin(style.*pointerToMember));
+			if((style.*pointerToMember)[direction].inherits())
+				(style.*pointerToMember)[direction] = (defaultStyle.*pointerToMember)[direction].getOrInitial();
+		}
+	}
+	template<typename PropertyType>
+	inline void computeDefaultTextRunStyle(SpacingLimit<PropertyType> TextRunStyle::*pointerToMember, const TextRunStyle& defaultStyle, TextRunStyle& style) {
+		computeDefaultTextRunStyle(&SpacingLimit<PropertyType>::optimum, defaultStyle.*pointerToMember, style.*pointerToMember);
+		computeDefaultTextRunStyle(&SpacingLimit<PropertyType>::minimum, defaultStyle.*pointerToMember, style.*pointerToMember);
+		computeDefaultTextRunStyle(&SpacingLimit<PropertyType>::maximum, defaultStyle.*pointerToMember, style.*pointerToMember);
+	}
+	inline void computeDefaultTextRunStyle(TextDecoration TextRunStyle::*pointerToMember, const TextRunStyle& defaultStyle, TextRunStyle& style) {
+		computeDefaultTextRunStyle(&TextDecoration::lines, defaultStyle.*pointerToMember, style.*pointerToMember);
+		computeDefaultTextRunStyle(&TextDecoration::color, defaultStyle.*pointerToMember, style.*pointerToMember);
+		computeDefaultTextRunStyle(&TextDecoration::style, defaultStyle.*pointerToMember, style.*pointerToMember);
+		computeDefaultTextRunStyle(&TextDecoration::skip, defaultStyle.*pointerToMember, style.*pointerToMember);
+		computeDefaultTextRunStyle(&TextDecoration::underlinePosition, defaultStyle.*pointerToMember, style.*pointerToMember);
+	}
+	inline void computeDefaultTextRunStyle(TextEmphasis TextRunStyle::*pointerToMember, const TextRunStyle& defaultStyle, TextRunStyle& style) {
+		computeDefaultTextRunStyle(&TextEmphasis::style, defaultStyle.*pointerToMember, style.*pointerToMember);
+		computeDefaultTextRunStyle(&TextEmphasis::position, defaultStyle.*pointerToMember, style.*pointerToMember);
+	}
+	inline void computeDefaultTextRunStyle(TextShadow TextRunStyle::*pointerToMember, const TextRunStyle& defaultStyle, TextRunStyle& style) {
+		// TODO: Write the code.
 	}
 
 	class ComputedStyledTextRunIteratorImpl : public font::ComputedStyledTextRunIterator {
