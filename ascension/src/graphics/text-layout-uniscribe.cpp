@@ -281,35 +281,67 @@ namespace {
 		}
 	}
 
-	HRESULT resolveNumberSubstitution(
-			const ComputedNumberSubstitution* configuration, SCRIPT_CONTROL& sc, SCRIPT_STATE& ss) {
-		if(configuration == nullptr || configuration->method == NumberSubstitution::USER_SETTING)
-			return ::ScriptApplyDigitSubstitution(&userSettings.digitSubstitution(
-				(configuration != nullptr) ? configuration->ignoreUserOverride : false), &sc, &ss);
-
-		NumberSubstitution::Method method;
-		if(configuration->method == NumberSubstitution::FROM_LOCALE) {
-			DWORD n;
-			if(::GetLocaleInfoW(
-					LOCALE_USER_DEFAULT | (configuration->ignoreUserOverride ? LOCALE_NOUSEROVERRIDE : 0),
-					LOCALE_IDIGITSUBSTITUTION | LOCALE_RETURN_NUMBER, reinterpret_cast<LPWSTR>(&n), 2) == 0)
-				return HRESULT_FROM_WIN32(::GetLastError());
-			switch(n) {
-				case 0:
-					method = NumberSubstitution::CONTEXTUAL;
-					break;
-				case 1:
-					method = NumberSubstitution::NONE;
-					break;
-				case 2:
-					method = NumberSubstitution::NATIONAL;
-					break;
-				default:
-					return S_FALSE;	// hmm...
+	SCRIPT_DIGITSUBSTITUTE&& convertNumberSubstitutionToUniscribe(const NumberSubstitution& from) {
+		SCRIPT_DIGITSUBSTITUTE to;
+		memset(&to, 0, sizeof(SCRIPT_DIGITSUBSTITUTE));
+		switch(from.localeSource) {
+			case NumberSubstitution::TEXT:
+			case NumberSubstitution::USER: {
+				// TODO: This code should not run frequently.
+				const HRESULT hr = ::ScriptRecordDigitSubstitution(LOCALE_USER_DEFAULT, &to);
+				if(FAILED(hr))
+					throw makePlatformError(hr);
 			}
-		} else
-			method = configuration->method;
+//			case NumberSubstitution::OVERRIDE:
+//				to.NationalDigitLanguage = to.TraditionalDigitLanguage = ????(from.localeOverride);
+//				break;
+			default:
+				throw UnknownValueException("from.localeSource");
+		}
 
+		switch(from.method) {
+			case NumberSubstitution::AS_LOCALE:
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+			{
+				DWORD n;
+				if(::GetLocaleInfoW(<number-locale>,
+						LOCALE_IDIGITSUBSTITUTION | LOCALE_RETURN_NUMBER, reinterpret_cast<LPWSTR>(&n), 2) == 0)
+					throw makePlatformError();
+				switch(n) {
+					case 0:
+						to.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_CONTEXT;
+						break;
+					case 1:
+						to.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_NONE;
+						break;
+					case 2:
+						to.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_NATIONAL;
+						break;
+					default:
+						ASCENSION_ASSERT_NOT_REACHED();
+				}
+			}
+#else
+				to.DigitSubstitute = static_cast<DWORD>(-1);
+#endif
+				break;
+			case NumberSubstitution::CONTEXT:
+				to.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_CONTEXT;
+				break;
+			case NumberSubstitution::EUROPEAN:
+				to.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_NONE;
+				break;
+			case NumberSubstitution::NATIVE_NATIONAL:
+				to.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_NATIONAL;
+				break;
+			case NumberSubstitution::TRADITIONAL:
+				to.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_TRADITIONAL;
+				break;
+			default:
+				throw UnknownValueException("from.method");
+		}
+
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 		// modify SCRIPT_CONTROL and SCRIPT_STATE (without SCRIPT_DIGITSUBSTITUTE)
 		sc.uDefaultLanguage = PRIMARYLANGID(userSettings.defaultLanguage());
 		switch(method) {
@@ -332,6 +364,8 @@ namespace {
 				throw invalid_argument("configuration.method");
 		}
 		return S_OK;
+#endif
+		return move(to);
 	}
 
 	template<typename T> inline T& shrinkToFit(T& v) {
@@ -884,7 +918,10 @@ void TextRunImpl::generate(const StringPiece& textString, const FontCollection& 
 //	initialState.fOverrideDirection = 1;
 	initialState.fInhibitSymSwap = lineStyle.inhibitSymmetricSwapping;
 	initialState.fDisplayZWG = lineStyle.displayShapingControls;
-	resolveNumberSubstitution(&lineStyle.numberSubstitution, control, initialState);	// ignore result...
+	const SCRIPT_DIGITSUBSTITUTE sds(convertNumberSubstitutionToUniscribe(lineStyle.numberSubstitution));
+	hr = ::ScriptApplyDigitSubstitution(&sds, &control, &initialState);
+	if(FAILED(hr))
+		throw makePlatformError(hr);
 
 	// 1-2. itemize
 	// note that ScriptItemize can cause a buffer overflow (see Mozilla bug 366643)
