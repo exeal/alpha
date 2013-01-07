@@ -301,29 +301,7 @@ namespace {
 
 		switch(from.method) {
 			case NumberSubstitution::AS_LOCALE:
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			{
-				DWORD n;
-				if(::GetLocaleInfoW(<number-locale>,
-						LOCALE_IDIGITSUBSTITUTION | LOCALE_RETURN_NUMBER, reinterpret_cast<LPWSTR>(&n), 2) == 0)
-					throw makePlatformError();
-				switch(n) {
-					case 0:
-						to.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_CONTEXT;
-						break;
-					case 1:
-						to.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_NONE;
-						break;
-					case 2:
-						to.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_NATIONAL;
-						break;
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
-				}
-			}
-#else
 				to.DigitSubstitute = static_cast<DWORD>(-1);
-#endif
 				break;
 			case NumberSubstitution::CONTEXT:
 				to.DigitSubstitute = SCRIPT_DIGITSUBSTITUTE_CONTEXT;
@@ -366,6 +344,22 @@ namespace {
 		return S_OK;
 #endif
 		return move(to);
+	}
+
+	inline DWORD localeIntrinsicDigitSubstitution(LCID locale) {
+		DWORD n;
+		if(::GetLocaleInfoW(locale, LOCALE_IDIGITSUBSTITUTION | LOCALE_RETURN_NUMBER, reinterpret_cast<LPWSTR>(&n), 2) == 0)
+			throw makePlatformError();
+		switch(n) {
+			case 0:
+				return SCRIPT_DIGITSUBSTITUTE_CONTEXT;
+			case 1:
+				return SCRIPT_DIGITSUBSTITUTE_NONE;
+			case 2:
+				return SCRIPT_DIGITSUBSTITUTE_NATIONAL;
+			default:
+				ASCENSION_ASSERT_NOT_REACHED();
+		}
 	}
 
 	template<typename T> inline T& shrinkToFit(T& v) {

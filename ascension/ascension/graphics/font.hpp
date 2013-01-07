@@ -171,6 +171,15 @@ namespace ascension {
 			 */
 			class FontCollection {
 			public:
+#if defined(ASCENSION_SHAPING_ENGINE_CORE_TEXT)
+#elif defined(ASCENSION_SHAPING_ENGINE_DIRECT_WRITE)
+#elif defined(ASCENSION_SHAPING_ENGINE_HARFBUZZ)
+#elif defined(ASCENSION_SHAPING_ENGINE_PANGO)
+#elif defined(ASCENSION_SHAPING_ENGINE_QT)
+#elif defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
+				explicit FontCollection(win32::Handle<HDC>::Type deviceContext) BOOST_NOEXCEPT;
+#elif defined(ASCENSION_SHAPING_ENGINE_WIN32_GDIPLUS)
+#endif
 				/// Returns a set of font families available in this collection.
 				std::set<FontFamily>&& families() const;
 				/**
