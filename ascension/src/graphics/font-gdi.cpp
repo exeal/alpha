@@ -171,6 +171,9 @@ void Font::buildMetrics() {
 	metrics_.reset(new FontMetrics(nativeObject_));
 }
 
+FontCollection::FontCollection(win32::Handle<HDC>::Type deviceContext) BOOST_NOEXCEPT : deviceContext_(deviceContext) {
+}
+
 shared_ptr<const Font> FontCollection::get(const FontDescription& description, boost::optional<double> sizeAdjust) const {
 	const String& familyName = description.family().name();
 	if(familyName.length() >= LF_FACESIZE)
