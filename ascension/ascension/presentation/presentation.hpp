@@ -79,20 +79,22 @@ namespace ascension {
 		struct TextRunStyle;
 
 		/**
-		 * Interface for objects which are interested in change of the global text style of
+		 * Interface for objects which are interested in change of the toplevel text style of
 		 * @c Presentation.
-		 * @see Presentation#addGlobalTextStyleListener, Presentation#removeGlobalTextStyleListener
+		 * @see Presentation#addTextToplevelStyleListener,
+		 *      Presentation#removeTextToplevelStyleListener,
+		 *      font#ComputedBlockFlowDirectionListener
 		 */
-		class GlobalTextStyleListener {
+		class TextToplevelStyleListener {
 		public:
 			/// Destructor.
-			virtual ~GlobalTextStyleListener() BOOST_NOEXCEPT {}
+			virtual ~TextToplevelStyleListener() BOOST_NOEXCEPT {}
 			/**
-			 * The global text style of @c Presentation was changed.
+			 * The toplevel text style of @c Presentation was changed.
 			 * @param used The old style used previously
-			 * @see Presentation#globalTextStyle, Presentation#setGlobalTextStyle
+			 * @see Presentation#textToplevelStyle, Presentation#setTextToplevelStyle
 			 */
-			virtual void globalTextStyleChanged(std::shared_ptr<const TextToplevelStyle> used) = 0;
+			virtual void textToplevelStyleChanged(std::shared_ptr<const TextToplevelStyle> used) = 0;
 		};
 
 		/**
@@ -190,8 +192,8 @@ namespace ascension {
 
 			/// @name Styles Declaration
 			/// @{
-			void addGlobalTextStyleListener(GlobalTextStyleListener& listener);
-			void removeGlobalTextStyleListener(GlobalTextStyleListener& listener);
+			void addTextToplevelStyleListener(TextToplevelStyleListener& listener);
+			void removeTextToplevelStyleListener(TextToplevelStyleListener& listener);
 			void setTextLineStyleDeclarator(std::shared_ptr<TextLineStyleDeclarator> newDeclarator) BOOST_NOEXCEPT;
 			void setTextRunStyleDeclarator(std::shared_ptr<TextRunStyleDeclarator> newDeclarator) BOOST_NOEXCEPT;
 			void setTextToplevelStyle(std::shared_ptr<const TextToplevelStyle> newStyle);
@@ -235,7 +237,7 @@ namespace ascension {
 			std::shared_ptr<TextLineStyleDeclarator> textLineStyleDeclarator_;
 			std::shared_ptr<TextRunStyleDeclarator> textRunStyleDeclarator_;
 			std::list<std::shared_ptr<TextLineColorSpecifier>> textLineColorSpecifiers_;
-			detail::Listeners<GlobalTextStyleListener> globalTextStyleListeners_;
+			detail::Listeners<TextToplevelStyleListener> textToplevelStyleListeners_;
 			std::shared_ptr<hyperlink::HyperlinkDetector> hyperlinkDetector_;
 			struct Hyperlinks;
 			mutable std::list<Hyperlinks*> hyperlinks_;

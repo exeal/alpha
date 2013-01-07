@@ -82,16 +82,6 @@ Presentation::~Presentation() BOOST_NOEXCEPT {
 }
 
 /**
- * Registers the global text style listener.
- * @param listener The listener to be registered
- * @throw std#invalid_argument @a listener is already registered
- * @see #globalTextLineStyle, #removeGlobalTextStyleListener
- */
-void Presentation::addGlobalTextStyleListener(GlobalTextStyleListener& listener) {
-	globalTextStyleListeners_.add(listener);
-}
-
-/**
  * Registers the text line color specifier.
  * This method does not call @c TextRenderer#invalidate and the layout is not updated.
  * @param specifier The specifier to register
@@ -101,6 +91,16 @@ void Presentation::addTextLineColorSpecifier(shared_ptr<TextLineColorSpecifier> 
 	if(specifier.get() == nullptr)
 		throw NullPointerException("specifier");
 	textLineColorSpecifiers_.push_back(specifier);
+}
+
+/**
+ * Registers the text toplevel style listener.
+ * @param listener The listener to be registered
+ * @throw std#invalid_argument @a listener is already registered
+ * @see #removeTextToplevelStyleListener, #textToplevelStyle
+ */
+void Presentation::addTextToplevelStyleListener(TextToplevelStyleListener& listener) {
+	textToplevelStyleListeners_.add(listener);
 }
 
 void Presentation::clearHyperlinksCache() BOOST_NOEXCEPT {
@@ -472,13 +472,13 @@ const Hyperlink* const* Presentation::getHyperlinks(Index line, size_t& numberOf
 }
 
 /**
- * Removes the global text style listener.
+ * Removes the text toplevel style listener.
  * @param listener The listener to be removed
  * @throw std#invalid_argument @a listener is not registered
- * @see #globalTextLineStyle, #addGlobalTextStyleListener
+ * @see #addTextToplevelStyleListener, #textToplevelStyle
  */
-void Presentation::removeGlobalTextStyleListener(GlobalTextStyleListener& listener) {
-	globalTextStyleListeners_.remove(listener);
+void Presentation::removeTextToplevelStyleListener(TextToplevelStyleListener& listener) {
+	textToplevelStyleListeners_.remove(listener);
 }
 
 /**
@@ -522,15 +522,14 @@ void Presentation::setTextRunStyleDeclarator(shared_ptr<TextRunStyleDeclarator> 
 }
 
 /**
- * Sets the global text line style.
+ * Sets the text toplevel line style.
  * @param newStyle The style to set
- * @see #globalTextStyle
+ * @see #textToplevelStyle
  */
 void Presentation::setTextToplevelStyle(shared_ptr<const TextToplevelStyle> newStyle) {
 	const shared_ptr<const TextToplevelStyle> used(textToplevelStyle_);
 	textToplevelStyle_ = (newStyle.get() != nullptr) ? newStyle : DEFAULT_TEXT_TOPLEVEL_STYLE;
-	globalTextStyleListeners_.notify<shared_ptr<const TextToplevelStyle>>(
-		&GlobalTextStyleListener::globalTextStyleChanged, used);
+	textToplevelStyleListeners_.notify<shared_ptr<const TextToplevelStyle>>(&TextToplevelStyleListener::textToplevelStyleChanged, used);
 }
 
 /**
