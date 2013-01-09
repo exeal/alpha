@@ -2,7 +2,7 @@
  * @file text-renderer.cpp
  * @author exeal
  * @date 2003-2006 (was LineLayout.cpp)
- * @date 2006-2012
+ * @date 2006-2013
  * @date 2010-11-20 separated from ascension/layout.cpp
  * @date 2011-11-12 renamed from rendering.cpp
  */
@@ -111,72 +111,6 @@ void FontSelector::linkPrimaryFont() /*throw()*/ {
 #endif
 
 
-// TextRenderer.SpacePainter ////////////////////////////////////////////////////////////////////////
-
-class TextRenderer::SpacePainter {
-public:
-	SpacePainter();
-	void paint(PaintContext& context);
-	const PhysicalFourSides<Scalar>& spaces() const;
-	void update(const TextRenderer& textRenderer, const NativeSize& size, const FlowRelativeFourSides<Space>& spaces);
-private:
-	NativeSize canvasSize_;
-	PhysicalFourSides<Scalar> computedValues_;
-};
-
-TextRenderer::SpacePainter::SpacePainter() /*throw()*/ : canvasSize_(geometry::make<NativeSize>(0, 0)) {
-	computedValues_.left() = computedValues_.top() = computedValues_.right() = computedValues_.bottom() = 0;
-}
-
-void TextRenderer::SpacePainter::paint(PaintContext& context) {
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-	const NativeRectangle boundsToPaint(context.boundsToPaint());
-
-	// space-top
-	NativeRectangle r(geometry::make<NativeRectangle>(
-		geometry::topLeft(canvasBounds_), geometry::make<NativeSize>(geometry::dx(canvasBounds_), computedValues_.top)));
-	r = geometry::intersected(r, boundsToPaint);
-	if(!geometry::isEmpty(r))
-		context.fillRectangle(r);
-
-	// space-bottom
-	r = geometry::make<NativeRectangle>(
-		geometry::bottomLeft(canvasBounds_), geometry::make<NativeSize>(geometry::dx(canvasBounds_), -computedValues_.bottom));
-	r = geometry::intersected(r, boundsToPaint);
-	if(!geometry::isEmpty(r))
-		context.fillRectangle(r);
-
-	// space-left
-	r = geometry::make<NativeRectangle>(
-		makeRange(geometry::left(canvasBounds_), geometry::left(canvasBounds_) + computedValues_.left),
-		makeRange(geometry::top(canvasBounds_) + computedValues_.top, geometry::bottom(canvasBounds_) - computedValues_.bottom));
-	r = geometry::intersected(r, boundsToPaint);
-	if(!geometry::isEmpty(r))
-		context.fillRectangle(r);
-
-	// space-right
-	r = geometry::make<NativeRectangle>(
-		makeRange(geometry::right(canvasBounds_), geometry::right(canvasBounds_) - computedValues_.right),
-		makeRange(geometry::top(canvasBounds_) + computedValues_.top, geometry::bottom(canvasBounds_) - computedValues_.bottom));
-	r = geometry::intersected(r, boundsToPaint);
-	if(!geometry::isEmpty(r))
-		context.fillRectangle(r);
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
-}
-
-inline const PhysicalFourSides<Scalar>& TextRenderer::SpacePainter::spaces() const {
-	return computedValues_;
-}
-
-void TextRenderer::SpacePainter::update(const TextRenderer& textRenderer, const NativeSize& size, const FlowRelativeFourSides<Space>& spaces) {
-	canvasSize_ = size;
-	FlowRelativeFourSides<Scalar> spacesInPixels;
-	for(size_t i = 0; i < spaces.size(); ++i)
-		spacesInPixels[i] = static_cast<Scalar>(spaces[i].value(0, 0));
-	mapFlowRelativeToPhysical(textRenderer.writingMode(), spacesInPixels, computedValues_);
-}
-
-
 // TextRenderer ///////////////////////////////////////////////////////////////////////////////////
 
 namespace {
@@ -204,14 +138,15 @@ namespace {
  */
 TextRenderer::TextRenderer(Presentation& presentation,
 		const FontCollection& fontCollection, const NativeSize& initialSize)
-		: presentation_(presentation), fontCollection_(fontCollection), spacePainter_(new SpacePainter) {
+		: presentation_(presentation), fontCollection_(fontCollection)/*, spacePainter_(new SpacePainter)*/ {
 //	textWrapping_.measure = 0;
 	layouts_.reset(new LineLayoutVector(presentation.document(),
 		bind(&TextRenderer::generateLineLayout, this, placeholders::_1), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
+	updateComputedBlockFlowDirectionChanged();	// this initializes 'computedBlockFlowDirection_'
 	updateDefaultFont();
-	FlowRelativeFourSides<Space> zeroSpaces;
+	FlowRelativeFourSides<Length> zeroSpaces;
 	zeroSpaces.fill(Length(0));
-	spacePainter_->update(*this, initialSize, zeroSpaces);
+//	spacePainter_->update(*this, initialSize, zeroSpaces);
 /*	switch(PRIMARYLANGID(getUserDefaultUILanguage())) {
 	case LANG_CHINESE:
 	case LANG_JAPANESE:
@@ -220,7 +155,7 @@ TextRenderer::TextRenderer(Presentation& presentation,
 		break;
 	}*/
 //	updateViewerSize(); ???
-	presentation_.addGlobalTextStyleListener(*this);
+	presentation_.addTextToplevelStyleListener(*this);
 }
 
 /// Copy-constructor.
@@ -228,18 +163,20 @@ TextRenderer::TextRenderer(const TextRenderer& other) :
 		presentation_(other.presentation_), layouts_(), fontCollection_(other.fontCollection_), defaultFont_() {
 	layouts_.reset(new LineLayoutVector(other.presentation_.document(),
 		bind(&TextRenderer::generateLineLayout, this, placeholders::_1), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
+	updateComputedBlockFlowDirectionChanged();	// this initializes 'computedBlockFlowDirection_'
 	updateDefaultFont();
 //	updateViewerSize(); ???
-	presentation_.addGlobalTextStyleListener(*this);
+	presentation_.addTextToplevelStyleListener(*this);
 }
 
 /// Destructor.
-TextRenderer::~TextRenderer() /*throw()*/ {
-	presentation_.removeGlobalTextStyleListener(*this);
+TextRenderer::~TextRenderer() BOOST_NOEXCEPT {
+	presentation_.removeTextToplevelStyleListener(*this);
 //	getTextViewer().removeDisplaySizeListener(*this);
 //	layouts_.removeVisualLinesListener(*this);
 }
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /**
  * Registers the default font selector listener.
  * @param listener the listener to be registered
@@ -248,6 +185,7 @@ TextRenderer::~TextRenderer() /*throw()*/ {
 void TextRenderer::addDefaultFontListener(DefaultFontListener& listener) {
 	defaultFontListeners_.add(listener);
 }
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 /**
  * Returns the distance from the baseline of the line @a from to the baseline of the line @a to in
@@ -275,12 +213,15 @@ Scalar TextRenderer::baselineDistance(const Range<VisualLine>& lines) const {
 /**
  * Builds construction parameters for @c TextLayout object.
  * @param[in] line The line number
- * @param[out] parameters
+ * @param[out] lineStyle
+ * @param[out] runStyles
+ * @param[out] fontCollection
  * @see #createLineLayout
  */
-void TextRenderer::buildLineLayoutConstructionParameters(Index line, TextLayout::ConstructionParameters& parameters) const {
-	presentation_.textLineStyle(line, parameters);
-	parameters.writingMode = writingMode();
+void TextRenderer::buildLineLayoutConstructionParameters(Index line, ComputedTextLineStyle& lineStyle,
+		unique_ptr<ComputedStyledTextRunIterator>& runStyles, FontCollection& fontCollection) const {
+//	presentation().computeTextLineStyle(line, );
+//	presentation().computeTextRunStyles(line, );
 }
 
 /**
@@ -290,35 +231,6 @@ void TextRenderer::buildLineLayoutConstructionParameters(Index line, TextLayout:
  * @return The generated line layout
  * @see #buildLineLayoutConstructionParameters
  */
-
-/**
- * @fn ascension::graphics::font::TextRenderer::defaultUIWritingMode
- * Returns the default writing mode of UI. The value this method returns is
- * treated as "last resort" for resolution of writing mode of text layout.
- * @return The default writing mode
- * @see presentation#TextToplevel#writingMode
- * @see presentation#Presentation#globalTextStyle
- */
-
-namespace {
-	inline void computeWritingMode(const Inheritable<WritingMode>& primary, const WritingMode& secondary, WritingMode& result) {
-		result.inlineFlowDirection = resolveInheritance(primary.inlineFlowDirection, secondary.inlineFlowDirection);
-		result.blockFlowDirection = resolveInheritance(primary.blockFlowDirection, secondary.blockFlowDirection);
-		result.textOrientation = resolveInheritance(primary.textOrientation, secondary.textOrientation);
-	}
-}
-
-inline void TextRenderer::fireComputedWritingModeChanged(const TextToplevelStyle& textStyle, const WritingMode& defaultUI) {
-	WritingMode used;
-	computeWritingMode(textStyle.writingMode, defaultUI, used);
-	computedWritingModeListeners_.notify<const WritingMode&>(&ComputedWritingModeListener::computedWritingModeChanged, used);
-}
-
-/// @see GlobalTextStyleListener#GlobalTextStyleChanged
-void TextRenderer::globalTextStyleChanged(shared_ptr<const TextToplevelStyle> used) {
-	fireComputedWritingModeChanged(*used, defaultUIWritingMode());
-	updateDefaultFont();
-}
 
 /**
  * Paints the specified output device with text layout. The line rendering options provided by
@@ -388,6 +300,7 @@ void TextRenderer::paint(Index line, PaintContext& context, const NativePoint& a
 #endif
 }
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /**
  * Removes the default font selector listener.
  * @param listener The listener to be removed
@@ -396,21 +309,22 @@ void TextRenderer::paint(Index line, PaintContext& context, const NativePoint& a
 void TextRenderer::removeDefaultFontListener(DefaultFontListener& listener) {
 	defaultFontListeners_.remove(listener);
 }
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 /**
  * Sets the default UI writing mode. This method invalidates the all layouts and call listeners'
  * @c ComputedWritingModeListener#computedWritingModeChanged.
  * @param writingMode The new value to set
  */
-void TextRenderer::setDefaultUIWritingMode(const WritingMode& writingMode) {
-	if(writingMode != defaultUIWritingMode()) {
-		const WritingMode used(defaultUIWritingMode());
-		defaultUIWritingMode_ = writingMode;
+void TextRenderer::setWritingMode(decltype(presentation::TextToplevelStyle().writingMode) writingMode) {
+	if(writingMode != this->writingMode()) {
+		writingMode_ = writingMode;
 		layouts().invalidate();
-		fireComputedWritingModeChanged(presentation().globalTextStyle(), used);
+		updateComputedBlockFlowDirectionChanged();
 	}
 }
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /**
  * Sets the text wrapping settings.
  * @param newValue The new settings
@@ -456,12 +370,17 @@ void TextRenderer::updateDefaultFont() {
 #endif
 	defaultFontListeners_.notify(&DefaultFontListener::defaultFontChanged);
 }
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
-/**
- * Returns the computed writing mode.
- */
-WritingMode TextRenderer::writingMode() const /*throw()*/ {
-	WritingMode computed;
-	computeWritingMode(presentation().globalTextStyle().writingMode, defaultUIWritingMode(), computed);
-	return computed;
+/// @see TextToplevelStyleListener#textToplevelStyleChanged
+void TextRenderer::textToplevelStyleChanged(shared_ptr<const TextToplevelStyle>) {
+	updateComputedBlockFlowDirectionChanged();
+	updateDefaultFont();
+}
+
+inline void TextRenderer::updateComputedBlockFlowDirectionChanged() {
+	const WritingMode writingMode(presentation().computeWritingMode(this));
+	const BlockFlowDirection used = computedBlockFlowDirection();
+	computedBlockFlowDirection_ = writingMode.blockFlowDirection;
+	computedBlockFlowDirectionListeners_.notify<BlockFlowDirection>(&ComputedBlockFlowDirectionListener::computedBlockFlowDirectionChanged, used);
 }
