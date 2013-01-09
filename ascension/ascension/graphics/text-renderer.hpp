@@ -1,7 +1,7 @@
 /**
  * @file text-renderer.hpp
- * @date 2003-2006 (was LineLayout.h)
- * @date 2006-2012
+ * @date 2003-2006 was LineLayout.h
+ * @date 2006-2013
  * @date 2010-11-20 separated from ascension/layout.hpp
  * @date 2011-11-12 renamed from rendering.hpp
  */
@@ -12,7 +12,8 @@
 //#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/graphics/line-layout-vector.hpp>
 #include <ascension/presentation/presentation.hpp>
-#include <memory>	// std.shared_ptr, std.unique_ptr, std.weak_ptr
+#include <ascension/presentation/text-style.hpp>
+#include <memory>	// std.shared_ptr, std.unique_ptr
 
 namespace ascension {
 	namespace graphics {
@@ -21,16 +22,18 @@ namespace ascension {
 			class TextRenderer;
 
 			/**
-			 * @see TextRenderer#addComputedWritingModeListener,
-			 *      TextRenderer#removeComputedWritingModeListener
+			 * @see TextRenderer#addComputedBlockFlowDirectionListener,
+			 *      TextRenderer#removeComputedBlockFlowDirectionListener,
+			 *      presentation#TextToplevelStyleListener
 			 */
-			class ComputedWritingModeListener {
+			class ComputedBlockFlowDirectionListener {
 			private:
 				/**
-				 * The computed writing mode of the text renderer was changed.
-				 * @param used The writing mode used
+				 * The computed block flow direction of the text renderer was changed.
+				 * @param used The block flow direction used
 				 */
-				virtual void computedWritingModeChanged(const presentation::WritingMode& used) = 0;
+				virtual void computedBlockFlowDirectionChanged(
+					presentation::BlockFlowDirection used) = 0;
 				friend class TextRenderer;
 			};
 
@@ -78,76 +81,105 @@ namespace ascension {
 			class TextViewport;
 
 			// documentation is layout.cpp
-			class TextRenderer : public presentation::GlobalTextStyleListener {
+			class TextRenderer :
+				public presentation::GlobalTextStyleSwitch,
+				public presentation::TextToplevelStyleListener {
 			public:
-				// constructors
 				TextRenderer(presentation::Presentation& presentation,
 					const FontCollection& fontCollection, const NativeSize& initialSize);
 				TextRenderer(const TextRenderer& other);
-				virtual ~TextRenderer() /*throw()*/;
-				// viewport
-				std::shared_ptr<TextViewport> viewport() /*throw()*/;
-				std::shared_ptr<const TextViewport> viewport() const /*throw()*/;
-				// layout
+				virtual ~TextRenderer() BOOST_NOEXCEPT;
+				const presentation::Presentation& presentation() const BOOST_NOEXCEPT;
+
+				/// @name Viewport
+				/// @{
+				std::shared_ptr<TextViewport> viewport() BOOST_NOEXCEPT;
+				std::shared_ptr<const TextViewport> viewport() const BOOST_NOEXCEPT;
+				/// @}
+
+				/// @name Layout
+				/// @{
 				virtual std::unique_ptr<const TextLayout> createLineLayout(Index line) const = 0;
-				LineLayoutVector& layouts() /*throw()*/;
-				const LineLayoutVector& layouts() const /*throw()*/;
+				LineLayoutVector& layouts() BOOST_NOEXCEPT;
+				const LineLayoutVector& layouts() const BOOST_NOEXCEPT;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
-				virtual Scalar width() const /*throw()*/ = 0;
+				virtual Scalar width() const BOOST_NOEXCEPT = 0;
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
-				// writing modes
-				void addComputedWritingModeListener(ComputedWritingModeListener& listener);
-				const presentation::WritingMode& defaultUIWritingMode() const /*throw()*/;
-				void removeComputedWritingModeListener(ComputedWritingModeListener& listener);
-				void setDefaultUIWritingMode(const presentation::WritingMode& writingMode);
-				presentation::WritingMode writingMode() const /*throw()*/;
-				// text wrappings
-				void setTextWrapping(
-					const presentation::TextWrapping<presentation::Length>& newValue,
-					const RenderingContext2D* renderingContext);
-				const presentation::TextWrapping<presentation::Length>& textWrapping() const /*throw()*/;
-				Scalar textWrappingMeasureInPixels() const /*throw()*/;
-				// default font
+				/// @}
+
+				/// @name Block Flow Direction
+				/// @{
+				void addComputedBlockFlowDirectionListener(ComputedBlockFlowDirectionListener& listener);
+				presentation::BlockFlowDirection computedBlockFlowDirection() const BOOST_NOEXCEPT;
+				void removeComputedBlockFlowDirectionListener(ComputedBlockFlowDirectionListener& listener);
+				void setWritingMode(decltype(presentation::TextToplevelStyle().writingMode) writingMode);
+				// presentation.GlobalTextStyleSwitch
+				decltype(presentation::TextToplevelStyle().writingMode) writingMode() const BOOST_NOEXCEPT;
+				/// @}
+
+				/// @name Other Global Text Style Switch
+				/// @{
+				void setDirection(decltype(presentation::TextLineStyle().direction) direction);
+				void setTextAlignment(decltype(presentation::TextLineStyle().textAlignment) textAlignment);
+				void setTextOrientation(decltype(presentation::TextLineStyle().textOrientation) textOrientation);
+				void setWhiteSpace(decltype(presentation::TextLineStyle().whiteSpace) whiteSpace);
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+				Scalar textWrappingMeasureInPixels() const BOOST_NOEXCEPT;
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
+				// presentation.GlobalTextStyleSwitch
+				decltype(presentation::TextLineStyle().direction) direction() const BOOST_NOEXCEPT;
+				decltype(presentation::TextLineStyle().textAlignment) textAlignment() const BOOST_NOEXCEPT;
+				decltype(presentation::TextLineStyle().textOrientation) textOrientation() const BOOST_NOEXCEPT;
+				decltype(presentation::TextLineStyle().whiteSpace) whiteSpace() const BOOST_NOEXCEPT;
+				/// @}
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+				/// @name Default (, Nominal or Primary) Font
+				/// @{
 				void addDefaultFontListener(DefaultFontListener& listener);
-				std::shared_ptr<const Font> defaultFont() const /*throw()*/;
+				std::shared_ptr<const Font> defaultFont() const BOOST_NOEXCEPT;
 				void removeDefaultFontListener(DefaultFontListener& listener);
-				// text metrics
+				/// @}
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
+				/// @name Text Metrics
+				/// @{
 				Scalar baselineDistance(const Range<VisualLine>& lines) const;
-				const PhysicalFourSides<Scalar>& spaceWidths() const /*throw()*/;
-				// paint
+				const PhysicalFourSides<Scalar>& spaceWidths() const BOOST_NOEXCEPT;
+				/// @}
+
+				/// @name Painting
+				/// @{
 				void paint(PaintContext& context) const;
 				void paint(Index line, PaintContext& context, const NativePoint& alignmentPoint) const;
 				void setLineRenderingOptions(const std::shared_ptr<LineRenderingOptions> options);
-
-				// LayoutInformationProvider
-				const FontCollection& fontCollection() const /*throw()*/;
-				const presentation::Presentation& presentation() const /*throw()*/;
-//				SpecialCharacterRenderer* specialCharacterRenderer() const /*throw()*/;
-//				const Font::Metrics& textMetrics() const /*throw()*/;
+				/// @}
 			protected:
-				void buildLineLayoutConstructionParameters(Index line,
-					TextLayout::ConstructionParameters& parameters) const;
+				void buildLineLayoutConstructionParameters(Index line, ComputedTextLineStyle& lineStyle,
+					std::unique_ptr<ComputedStyledTextRunIterator>& runStyles, FontCollection& fontCollection) const;
 			private:
-				void fireComputedWritingModeChanged(
-					const presentation::TextToplevelStyle& globalTextStyle,
-					const presentation::WritingMode& defaultUI);
 				std::unique_ptr<const TextLayout> generateLineLayout(Index line) const;
+				void updateComputedBlockFlowDirectionChanged();
 				void updateDefaultFont();
-				// presentation.GlobalTextStyleListener
-				void globalTextStyleChanged(std::shared_ptr<const presentation::TextToplevelStyle> used);
+				// presentation.TextToplevelStyleListener
+				void textToplevelStyleChanged(std::shared_ptr<const presentation::TextToplevelStyle> used);
 			private:
 				presentation::Presentation& presentation_;
-				presentation::WritingMode defaultUIWritingMode_;
-				presentation::TextWrapping<presentation::Length> textWrapping_;
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				Scalar textWrappingMeasureInPixels_;
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 				std::unique_ptr<LineLayoutVector> layouts_;
 				const FontCollection& fontCollection_;
 				std::shared_ptr<const Font> defaultFont_;
 				std::shared_ptr<const LineRenderingOptions> lineRenderingOptions_;
 				std::shared_ptr<TextViewport> viewport_;
-				class SpacePainter;
-				std::unique_ptr<SpacePainter> spacePainter_;
-				detail::Listeners<ComputedWritingModeListener> computedWritingModeListeners_;
+//				class SpacePainter;
+//				std::unique_ptr<SpacePainter> spacePainter_;
+				decltype(presentation::TextLineStyle().direction) direction_;
+				decltype(presentation::TextLineStyle().textAlignment) textAlignment_;
+				decltype(presentation::TextLineStyle().textOrientation) textOrientation_;
+				decltype(presentation::TextLineStyle().whiteSpace) whiteSpace_;
+				decltype(presentation::TextToplevelStyle().writingMode) writingMode_;
+				presentation::BlockFlowDirection computedBlockFlowDirection_;
+				detail::Listeners<ComputedBlockFlowDirectionListener> computedBlockFlowDirectionListeners_;
 				detail::Listeners<DefaultFontListener> defaultFontListeners_;
 #if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && ASCENSION_ABANDONED_AT_VERSION_08
 				mutable win32::Handle<HDC> memoryDC_;
@@ -155,27 +187,29 @@ namespace ascension {
 #endif // defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && ASCENSION_ABANDONED_AT_VERSION_08
 			};
 
-
-			/// Returns the primary font.
-			inline std::shared_ptr<const Font> TextRenderer::defaultFont() const /*throw()*/ {
-				return defaultFont_;
+			/// @see presentation#GlobalTextStyleSwitch#direction
+			inline decltype(presentation::TextLineStyle().direction) TextRenderer::direction() const BOOST_NOEXCEPT {
+				return direction_;
 			}
 
-			/**
-			 * Returns the default writing mode for user interface. This setting is used to resolve
-			 * ambiguous properties specified by @c presentation#Presentation#writingMode method.
-			 * Derived classes can reset this value by calling @c #setDefaultUIWritingMode method.
-			 * The default value is initialized by the default constructor of
-			 * @c presentation#WritingMode class.
-			 * @see #setDefaultUIWritingMode, #writingMode
-			 */
-			inline const presentation::WritingMode& TextRenderer::defaultUIWritingMode() const /*throw()*/ {
-				return defaultUIWritingMode_;
+			/// @see presentation#GlobalTextStyleSwitch#textAlignment
+			inline decltype(presentation::TextLineStyle().textAlignment) TextRenderer::textAlignment() const BOOST_NOEXCEPT {
+				return textAlignment_;
 			}
 
-			/// Returns the font collection used by this object.
-			inline const FontCollection& TextRenderer::fontCollection() const /*throw()*/ {
-				return fontCollection_;
+			/// @see presentation#GlobalTextStyleSwitch#textOrientation
+			inline decltype(presentation::TextLineStyle().textOrientation) TextRenderer::textOrientation() const BOOST_NOEXCEPT {
+				return textOrientation_;
+			}
+
+			/// @see presentation#GlobalTextStyleSwitch#whiteSpace
+			inline decltype(presentation::TextLineStyle().whiteSpace) TextRenderer::whiteSpace() const BOOST_NOEXCEPT {
+				return whiteSpace_;
+			}
+
+			/// @see presentation#GlobalTextStyleSwitch#writingMode
+			inline decltype(presentation::TextToplevelStyle().writingMode) TextRenderer::writingMode() const BOOST_NOEXCEPT {
+				return writingMode_;
 			}
 
 			/// Returns the presentation used by this object.
@@ -183,26 +217,20 @@ namespace ascension {
 				return presentation_;
 			}
 
-			/// @see LayoutInformationProvider#textMetrics
-//			inline const Font::Metrics& TextRenderer::textMetrics() const /*throw()*/ {
-//				return primaryFont()->metrics();
-//			}
-
-			/**
-			 * Returns the text wrapping settings.
-			 * @see #setTextWrapping, #textWrappingMeasureInPixels
-			 */
-			inline const presentation::TextWrapping<presentation::Length>& TextRenderer::textWrapping() const /*throw()*/ {
-				return textWrapping_;
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+			/// Returns the primary font.
+			inline std::shared_ptr<const Font> TextRenderer::defaultFont() const BOOST_NOEXCEPT {
+				return defaultFont_;
 			}
 
 			/**
 			 * Returns the text wrapping measure in pixels or zero if no wrap.
 			 * @see #setTextWrapping, #textWrapping
 			 */
-			inline Scalar TextRenderer::textWrappingMeasureInPixels() const /*throw()*/ {
+			inline Scalar TextRenderer::textWrappingMeasureInPixels() const BOOST_NOEXCEPT {
 				return textWrappingMeasureInPixels_;
 			}
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 		}
 	}
