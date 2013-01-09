@@ -14,6 +14,7 @@
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException, std.logic_error
 #include <ascension/corelib/future/type-traits.hpp>	// detail.Type2Type
 #include <ascension/presentation/length.hpp>
+#include <boost/operators.hpp>
 #include <boost/optional.hpp>
 
 namespace ascension {
@@ -45,11 +46,12 @@ namespace ascension {
 		}
 
 		/**
-		 * @tparam TypeSpec
-		 * @tparam InheritedOrNot
+		 * @tparam TypeSpec One of class templates in @c sp namespace
+		 * @tparam InheritedOrNot Either @c sp#Inherited or @c sp#NotInherited
 		 */
 		template<typename TypeSpec, typename InheritedOrNot>
-		class StyleProperty : public TypeSpec {
+		class StyleProperty : public TypeSpec,
+			private boost::equality_comparable<StyleProperty<TypeSpec, InheritedOrNot>> {
 		public:
 			/// The type of property value.
 			typedef typename TypeSpec::Type value_type;
@@ -134,6 +136,18 @@ namespace ascension {
 			value_type value_;
 			bool inherits_;
 		};
+
+		/// Equality operator for @c StyleProperty class template.
+		template<typename TypeSpec, typename InheritedOrNot1, typename InheritedOrNot2>
+		inline bool operator==(
+				const StyleProperty<TypeSpec, InheritedOrNot1>& lhs,
+				const StyleProperty<TypeSpec, InheritedOrNot2>& rhs) {
+			if(lhs.inherits())
+				return rhs.inherits();
+			else if(rhs.inherits())
+				return false;
+			return lhs.get() == rhs.get();
+		}
 
 		namespace sp {
 			template<typename Property>
