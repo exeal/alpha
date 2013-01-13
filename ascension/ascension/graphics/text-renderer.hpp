@@ -37,7 +37,7 @@ namespace ascension {
 				friend class TextRenderer;
 			};
 
-			/*
+			/**
 			 * Interface for objects which are interested in change of the default font of
 			 * @c TextRenderer.
 			 * @see TextRenderer#addDefaultFontListener, TextRenderer#removeDefaultFontListener
@@ -80,7 +80,7 @@ namespace ascension {
 
 			class TextViewport;
 
-			// documentation is layout.cpp
+			// documentation is text-renderer.cpp
 			class TextRenderer :
 				public presentation::GlobalTextStyleSwitch,
 				public presentation::TextToplevelStyleListener {
@@ -132,14 +132,15 @@ namespace ascension {
 				decltype(presentation::TextLineStyle().textOrientation) textOrientation() const BOOST_NOEXCEPT;
 				decltype(presentation::TextLineStyle().whiteSpace) whiteSpace() const BOOST_NOEXCEPT;
 				/// @}
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-				/// @name Default (, Nominal or Primary) Font
+
+				/// @name Default (Globally Nominal) Font
 				/// @{
 				void addDefaultFontListener(DefaultFontListener& listener);
 				std::shared_ptr<const Font> defaultFont() const BOOST_NOEXCEPT;
 				void removeDefaultFontListener(DefaultFontListener& listener);
+				void setDefaultFont(const String& familyName, double pointSize);
 				/// @}
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
+
 				/// @name Text Metrics
 				/// @{
 				Scalar baselineDistance(const Range<VisualLine>& lines) const;
@@ -158,7 +159,6 @@ namespace ascension {
 			private:
 				std::unique_ptr<const TextLayout> generateLineLayout(Index line) const;
 				void updateComputedBlockFlowDirectionChanged();
-				void updateDefaultFont();
 				// presentation.TextToplevelStyleListener
 				void textToplevelStyleChanged(std::shared_ptr<const presentation::TextToplevelStyle> used);
 			private:
@@ -213,16 +213,16 @@ namespace ascension {
 			}
 
 			/// Returns the presentation used by this object.
-			inline const presentation::Presentation& TextRenderer::presentation() const /*throw()*/ {
+			inline const presentation::Presentation& TextRenderer::presentation() const BOOST_NOEXCEPT {
 				return presentation_;
 			}
 
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			/// Returns the primary font.
 			inline std::shared_ptr<const Font> TextRenderer::defaultFont() const BOOST_NOEXCEPT {
 				return defaultFont_;
 			}
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			/**
 			 * Returns the text wrapping measure in pixels or zero if no wrap.
 			 * @see #setTextWrapping, #textWrapping

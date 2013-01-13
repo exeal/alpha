@@ -143,7 +143,12 @@ TextRenderer::TextRenderer(Presentation& presentation,
 	layouts_.reset(new LineLayoutVector(presentation.document(),
 		bind(&TextRenderer::generateLineLayout, this, placeholders::_1), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
 	updateComputedBlockFlowDirectionChanged();	// this initializes 'computedBlockFlowDirection_'
-	updateDefaultFont();
+#if defined(ASCENSION_OS_WINDOWS)
+	LOGFONTW lf;
+	if(::GetObjectW(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)), sizeof(LOGFONTW), &lf) == 0)
+		throw makePlatformError();
+	defaultFont_ = make_shared<Font>(win32::Handle<HFONT>::Type(::CreateFontIndirectW(&lf), &::DeleteObject));
+#endif
 	FlowRelativeFourSides<Length> zeroSpaces;
 	zeroSpaces.fill(Length(0));
 //	spacePainter_->update(*this, initialSize, zeroSpaces);
@@ -160,11 +165,10 @@ TextRenderer::TextRenderer(Presentation& presentation,
 
 /// Copy-constructor.
 TextRenderer::TextRenderer(const TextRenderer& other) :
-		presentation_(other.presentation_), layouts_(), fontCollection_(other.fontCollection_), defaultFont_() {
+		presentation_(other.presentation_), layouts_(), fontCollection_(other.fontCollection_), defaultFont_(other.defaultFont_) {
 	layouts_.reset(new LineLayoutVector(other.presentation_.document(),
 		bind(&TextRenderer::generateLineLayout, this, placeholders::_1), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
 	updateComputedBlockFlowDirectionChanged();	// this initializes 'computedBlockFlowDirection_'
-	updateDefaultFont();
 //	updateViewerSize(); ???
 	presentation_.addTextToplevelStyleListener(*this);
 }
@@ -176,16 +180,14 @@ TextRenderer::~TextRenderer() BOOST_NOEXCEPT {
 //	layouts_.removeVisualLinesListener(*this);
 }
 
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /**
  * Registers the default font selector listener.
- * @param listener the listener to be registered
+ * @param listener The listener to be registered
  * @throw std#invalid_argument @a listener is already registered
  */
 void TextRenderer::addDefaultFontListener(DefaultFontListener& listener) {
 	defaultFontListeners_.add(listener);
 }
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 /**
  * Returns the distance from the baseline of the line @a from to the baseline of the line @a to in
@@ -300,7 +302,6 @@ void TextRenderer::paint(Index line, PaintContext& context, const NativePoint& a
 #endif
 }
 
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /**
  * Removes the default font selector listener.
  * @param listener The listener to be removed
@@ -309,7 +310,6 @@ void TextRenderer::paint(Index line, PaintContext& context, const NativePoint& a
 void TextRenderer::removeDefaultFontListener(DefaultFontListener& listener) {
 	defaultFontListeners_.remove(listener);
 }
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 /**
  * Sets the default UI writing mode. This method invalidates the all layouts and call listeners'
@@ -322,6 +322,27 @@ void TextRenderer::setWritingMode(decltype(presentation::TextToplevelStyle().wri
 		layouts().invalidate();
 		updateComputedBlockFlowDirectionChanged();
 	}
+}
+
+/**
+ * Sets the new default font.
+ * @param familyName The family name of the font
+ * @param pointSize The size of the font in points
+ */
+void TextRenderer::setDefaultFont(const String& familyName, double pointSize) {
+	shared_ptr<const Font> newFont(fontCollection_.get(FontDescription(FontFamily(familyName), pointSize)));
+	assert(newFont.get() != nullptr);
+	swap(defaultFont_, newFont);
+	layouts().invalidate();
+#if 0
+	if(/*enablesDoubleBuffering_ &&*/ memoryBitmap_.get() != nullptr) {
+		BITMAP temp;
+		::GetObjectW(memoryBitmap_.get(), sizeof(HBITMAP), &temp);
+		if(temp.bmHeight != calculateMemoryBitmapSize(defaultFont()->metrics().linePitch()))
+			memoryBitmap_.reset();
+	}
+#endif
+	defaultFontListeners_.notify(&DefaultFontListener::defaultFontChanged);
 }
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -342,40 +363,11 @@ void TextRenderer::setTextWrapping(const TextWrapping<presentation::Length>& new
 	if(resetLayouts)
 		layouts().invalidate();
 }
-
-void TextRenderer::updateDefaultFont() {
-	shared_ptr<const TextRunStyle> defaultStyle(presentation_.globalTextStyle().defaultLineStyle->defaultRunStyle);
-	if(defaultStyle.get() != nullptr && !defaultStyle->fontFamily.empty())
-		defaultFont_ = fontCollection().get(defaultStyle->fontFamily, defaultStyle->fontProperties);
-	else {
-		LOGFONTW lf;
-		if(::GetObjectW(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)), sizeof(LOGFONTW), &lf) == 0)
-			throw runtime_error("");
-		FontProperties<> fps(static_cast<FontPropertiesBase::Weight>(lf.lfWeight), FontPropertiesBase::NORMAL_STRETCH,
-			(lf.lfItalic != 0) ? FontPropertiesBase::ITALIC : FontPropertiesBase::NORMAL_STYLE,
-			FontPropertiesBase::NORMAL_VARIANT,
-			FontPropertiesBase::HORIZONTAL,	// TODO: Use lfEscapement and lfOrientation ?
-			(lf.lfHeight < 0) ? -lf.lfHeight : 0);
-		defaultFont_ = fontCollection().get(lf.lfFaceName, fps);
-	}
-
-	layouts().invalidate();
-#if 0
-	if(/*enablesDoubleBuffering_ &&*/ memoryBitmap_.get() != nullptr) {
-		BITMAP temp;
-		::GetObjectW(memoryBitmap_.get(), sizeof(HBITMAP), &temp);
-		if(temp.bmHeight != calculateMemoryBitmapSize(defaultFont()->metrics().linePitch()))
-			memoryBitmap_.reset();
-	}
-#endif
-	defaultFontListeners_.notify(&DefaultFontListener::defaultFontChanged);
-}
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 /// @see TextToplevelStyleListener#textToplevelStyleChanged
 void TextRenderer::textToplevelStyleChanged(shared_ptr<const TextToplevelStyle>) {
 	updateComputedBlockFlowDirectionChanged();
-	updateDefaultFont();
 }
 
 inline void TextRenderer::updateComputedBlockFlowDirectionChanged() {

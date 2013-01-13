@@ -217,6 +217,10 @@ namespace ascension {
 #endif
 			};
 
+			template<typename InputIterator>
+			InputIterator findMatchingFontFamily(
+				const FontCollection& fontCollection, InputIterator first, InputIterator last);
+
 			/**
 			 * Used to represent a group of fonts with the same family, slant, weight, width, but
 			 * varying sizes.
