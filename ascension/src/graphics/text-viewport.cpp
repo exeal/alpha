@@ -59,10 +59,10 @@ void BaselineIterator::advance(BaselineIterator::difference_type n) {
 		return;
 	}
 
-	const WritingMode writingMode(renderer.writingMode());
+	const BlockFlowDirection blockFlowDirection(renderer.computedBlockFlowDirection());
 	Scalar viewportExtent;
 	if(!tracksOutOfViewport() && n > 0)
-		viewportExtent = isHorizontal(writingMode.blockFlowDirection) ?
+		viewportExtent = isHorizontal(blockFlowDirection) ?
 			(geometry::dy(viewport().boundsInView())) : (geometry::dx(viewport().boundsInView()));
 
 	VisualLine i(line_);
@@ -113,7 +113,7 @@ void BaselineIterator::advance(BaselineIterator::difference_type n) {
 	}
 
 	NativePoint newAxis(positionInViewport_);
-	switch(writingMode.blockFlowDirection) {
+	switch(blockFlowDirection) {
 		case HORIZONTAL_TB:
 			geometry::y(newAxis) += newBaseline - distanceFromViewportBeforeEdge_;
 			break;
@@ -156,7 +156,7 @@ void BaselineIterator::initializeWithFirstVisibleLine() {
 	NativePoint axis;
 	const NativeRectangle bounds(geometry::make<NativeRectangle>(
 		geometry::make<NativePoint>(0, 0), geometry::size(viewport().boundsInView())));
-	switch(viewport().textRenderer().writingMode().blockFlowDirection) {
+	switch(viewport().textRenderer().computedBlockFlowDirection()) {
 		case HORIZONTAL_TB:
 			axis = geometry::make<NativePoint>(0, geometry::top(bounds) + baseline);
 			break;
@@ -275,15 +275,28 @@ namespace {
 	 * @see #BaselineIterator, TextViewer#mapLocalBpdToLine
 	 */
 	VisualLine mapBpdToLine(const TextViewport& viewport, Scalar bpd, bool* snapped = nullptr) /*throw()*/ {
-		const WritingMode writingMode(viewport.textRenderer().writingMode());
+		const BlockFlowDirection blockFlowDirection = viewport.textRenderer().computedBlockFlowDirection();
 		const PhysicalFourSides<Scalar>& physicalSpaces = viewport.textRenderer().spaceWidths();
-		FlowRelativeFourSides<Scalar> abstractSpaces;
-		mapPhysicalToFlowRelative(writingMode, physicalSpaces, abstractSpaces);
-		const Scalar spaceBefore = abstractSpaces.before();
-		const Scalar spaceAfter = abstractSpaces.after();
+		Scalar spaceBefore, spaceAfter;
+		switch(blockFlowDirection) {
+			case HORIZONTAL_TB:
+				spaceBefore = physicalSpaces.top();
+				spaceAfter = physicalSpaces.bottom();
+				break;
+			case VERTICAL_RL:
+				spaceBefore = physicalSpaces.right();
+				spaceAfter = physicalSpaces.left();
+				break;
+			case VERTICAL_LR:
+				spaceBefore = physicalSpaces.left();
+				spaceAfter = physicalSpaces.right();
+				break;
+			default:
+				ASCENSION_ASSERT_NOT_REACHED();
+		}
 		const Scalar borderBefore = 0, borderAfter = 0, paddingBefore = 0, paddingAfter = 0;
 		const Scalar before = spaceBefore + borderBefore + paddingBefore;
-		const Scalar after = (isHorizontal(writingMode.blockFlowDirection) ?
+		const Scalar after = (isHorizontal(blockFlowDirection) ?
 			geometry::dy(viewport.boundsInView()) : geometry::dx(viewport.boundsInView())) - spaceAfter - borderAfter - paddingBefore;
 	
 		VisualLine result(viewport.firstVisibleLineInLogicalNumber(), viewport.firstVisibleSublineInLogicalLine());
@@ -353,7 +366,7 @@ inline void TextViewport::adjustBpdScrollPositions() /*throw()*/ {
  */
 Scalar TextViewport::allocationMeasure() const /*throw()*/ {
 	const TextRenderer& renderer = textRenderer();
-	const bool horizontal = isHorizontal(renderer.writingMode().blockFlowDirection);
+	const bool horizontal = isHorizontal(renderer.computedBlockFlowDirection());
 	const Scalar spaces = horizontal ?
 		renderer.spaceWidths().left() + renderer.spaceWidths().right()
 		: renderer.spaceWidths().top() + renderer.spaceWidths().bottom();
@@ -371,7 +384,7 @@ Scalar TextViewport::allocationMeasure() const /*throw()*/ {
 Scalar TextViewport::contentMeasure() const /*throw()*/ {
 	return max(
 		textRenderer().layouts().maximumMeasure(),
-		static_cast<Scalar>(isHorizontal(textRenderer().writingMode().blockFlowDirection) ?
+		static_cast<Scalar>(isHorizontal(textRenderer().computedBlockFlowDirection()) ?
 			geometry::dx(boundsInView()) : geometry::dy(boundsInView())));
 }
 
@@ -380,7 +393,7 @@ Scalar TextViewport::contentMeasure() const /*throw()*/ {
  * @return The number of columns
  */
 float TextViewport::numberOfVisibleCharactersInLine() const /*throw()*/ {
-	const bool horizontal = isHorizontal(textRenderer().writingMode().blockFlowDirection);
+	const bool horizontal = isHorizontal(textRenderer().computedBlockFlowDirection());
 	Scalar ipd(horizontal ? geometry::dx(boundsInView()) : geometry::dy(boundsInView()));
 	if(ipd == 0)
 		return 0;
@@ -393,7 +406,7 @@ float TextViewport::numberOfVisibleCharactersInLine() const /*throw()*/ {
  * @return The number of visual lines
  */
 float TextViewport::numberOfVisibleLines() const /*throw()*/ {
-	const bool horizontal = isHorizontal(textRenderer().writingMode().blockFlowDirection);
+	const bool horizontal = isHorizontal(textRenderer().computedBlockFlowDirection());
 	Scalar bpd(horizontal ? geometry::dy(boundsInView()) : geometry::dx(boundsInView()));
 	if(bpd <= 0)
 		return 0;
@@ -461,7 +474,7 @@ void TextViewport::scroll(const AbstractTwoAxes<TextViewport::SignedScrollOffset
 /***/
 void TextViewport::scroll(const PhysicalTwoAxes<TextViewport::SignedScrollOffset>& offsets) {
 	AbstractTwoAxes<SignedScrollOffset> delta;
-	switch(textRenderer().writingMode().blockFlowDirection) {
+	switch(textRenderer().computedBlockFlowDirection()) {
 		case HORIZONTAL_TB:
 			delta.bpd() = offsets.y();
 			delta.ipd() = offsets.x();
@@ -604,7 +617,7 @@ void TextViewport::visualLinesModified(const Range<Index>& lines,
 PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>
 convertFlowRelativeScrollPositionsToPhysical(const TextViewport& viewport,
 		const AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
-	switch(viewport.textRenderer().writingMode().blockFlowDirection) {
+	switch(viewport.textRenderer().computedBlockFlowDirection()) {
 		case HORIZONTAL_TB:
 			return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.ipd(), positions.bpd());
 		case VERTICAL_RL:
@@ -623,7 +636,7 @@ AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>
 convertPhysicalScrollPositionsToAbstract(const TextViewport& viewport,
 		const PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
 	AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>> result;
-	switch(viewport.textRenderer().writingMode().blockFlowDirection) {
+	switch(viewport.textRenderer().computedBlockFlowDirection()) {
 		case HORIZONTAL_TB:
 			result.bpd() = positions.y();
 			result.ipd() = positions.x();
@@ -665,15 +678,16 @@ Scalar font::inlineProgressionScrollOffsetInPixels(const TextViewport& viewport,
  * @see font#lineStartEdge
  */
 Scalar font::lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline /* = 0 */) {
-	switch(layout.anchor()) {
-		case TEXT_ANCHOR_START:
+	// TODO: ??? Is this same as TextLayout.lineStartEdge method?
+	switch(layout.anchor(subline)) {
+		case TextAnchor::START:
 			return 0;
-		case TEXT_ANCHOR_MIDDLE:
+		case TextAnchor::MIDDLE:
 			return (contentMeasure - layout.measure(subline)) / 2;
-		case TEXT_ANCHOR_END:
+		case TextAnchor::END:
 			return contentMeasure - layout.measure(subline);
 		default:
-			ASCENSION_ASSERT_NOT_REACHED();
+			throw UnknownValueException("layout.anchor(subline) returned unknown value.");
 	}
 }
 
@@ -701,7 +715,7 @@ Scalar font::lineStartEdge(const TextLayout& layout, Scalar contentMeasure, Inde
 VisualLine font::locateLine(const TextViewport& viewport, const NativePoint& p, bool* snapped /* = nullptr */) /*throw()*/ {
 	const NativeRectangle bounds(geometry::make<NativeRectangle>(
 		geometry::make<NativePoint>(0, 0), geometry::size(viewport.boundsInView())));
-	switch(viewport.textRenderer().writingMode().blockFlowDirection) {
+	switch(viewport.textRenderer().computedBlockFlowDirection()) {
 		case HORIZONTAL_TB:
 			return mapBpdToLine(viewport, geometry::y(p) - geometry::top(bounds), snapped);
 		case VERTICAL_RL:
@@ -737,7 +751,7 @@ NativePoint font::modelToView(const TextViewport& viewport,
 	// get alignment-point
 	const BaselineIterator baseline(viewport, position.line, fullSearchBpd);
 	NativePoint p(baseline.positionInViewport());
-	const bool horizontal = isHorizontal(viewport.textRenderer().writingMode().blockFlowDirection);
+	const bool horizontal = isHorizontal(viewport.textRenderer().computedBlockFlowDirection());
 
 	// apply offset in line layout
 	const NativePoint offset(viewport.textRenderer().layouts().at(position.line).location(
@@ -765,7 +779,7 @@ NativePoint font::modelToView(const TextViewport& viewport,
 
 template<>
 TextViewport::SignedScrollOffset font::pageSize<geometry::X_COORDINATE>(const TextViewport& viewport) {
-	switch(viewport.textRenderer().writingMode().blockFlowDirection) {
+	switch(viewport.textRenderer().computedBlockFlowDirection()) {
 		case HORIZONTAL_TB:
 			return static_cast<TextViewport::SignedScrollOffset>(viewport.numberOfVisibleCharactersInLine());
 		case VERTICAL_RL:
@@ -779,7 +793,7 @@ TextViewport::SignedScrollOffset font::pageSize<geometry::X_COORDINATE>(const Te
 
 template<>
 TextViewport::SignedScrollOffset font::pageSize<geometry::Y_COORDINATE>(const TextViewport& viewport) {
-	switch(viewport.textRenderer().writingMode().blockFlowDirection) {
+	switch(viewport.textRenderer().computedBlockFlowDirection()) {
 		case HORIZONTAL_TB:
 			return static_cast<TextViewport::SignedScrollOffset>(viewport.numberOfVisibleLines());
 		case VERTICAL_RL:
