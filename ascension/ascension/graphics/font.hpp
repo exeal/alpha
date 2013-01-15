@@ -35,41 +35,13 @@ namespace ascension {
 			/// Returns @c true if OpenType features are supported.
 			bool supportsOpenTypeFeatures() BOOST_NOEXCEPT;
 
+			template<typename T> class FontMetrics;
+
 			/**
 			 * Represents a single physical instance of a font, or a set of fonts.
 			 * @see FontFamily, FontDescription, Fontset, FontFace, FontCollection
 			 */
 			class Font : public std::enable_shared_from_this<Font> {
-			public:
-				/**
-				 * Abstract class provides physical font metrics information.
-				 * @see Font#metrics
-				 */
-				class Metrics {
-				public:
-					/// Returns the ascent of the text in font coordinate units.
-					virtual int ascent() const BOOST_NOEXCEPT = 0;
-					/// Returns the average width of a character in font coordinate units.
-					virtual int averageCharacterWidth() const BOOST_NOEXCEPT = 0;
-					/// Returns the cell height in font coordinate units.
-					int cellHeight() const BOOST_NOEXCEPT {return ascent() + descent();}
-					/// Returns the descent of the text in font coordinate units.
-					virtual int descent() const BOOST_NOEXCEPT = 0;
-					/// Returns the em height in font coordinate units.
-					int emHeight() const BOOST_NOEXCEPT {return cellHeight() - internalLeading();}
-					/// Returns the external leading in font coordinate units.
-					/// @note In Ascension, external leadings are placed below characters.
-					virtual int externalLeading() const BOOST_NOEXCEPT = 0;
-					/// Returns the internal leading in font coordinate units.
-					virtual int internalLeading() const BOOST_NOEXCEPT = 0;
-					/// Returns the gap of the lines (external leading) in font coordinate units.
-					int lineGap() const BOOST_NOEXCEPT {return externalLeading();}
-					/// Returns the pitch of lines in pixels.
-					/// @note This method ignores @c LayoutSettings#lineSpacing value.
-					int linePitch() const BOOST_NOEXCEPT {return cellHeight() + lineGap();}
-					/// Returns the x-height of the font in font coordinate units.
-					virtual int xHeight() const BOOST_NOEXCEPT = 0;
-				};
 			public:
 #if defined(ASCENSION_SHAPING_ENGINE_CAIRO)
 				explicit Font(Cairo::RefPtr<Cairo::ScaledFont> nativeObject);
@@ -122,21 +94,19 @@ namespace ascension {
 				std::unique_ptr<const GlyphVector> createGlyphVector(const String& text) const;
 #endif
 				/// Returns the description of this font.
-				FontDescription&& describe() const BOOST_NOEXCEPT;
+				const FontDescription& describe() const BOOST_NOEXCEPT {
+					if(description_.get() == nullptr)
+						const_cast<Font*>(this)->buildDescription();
+					return *description_;
+				}
 				/// Returns the family name of this font.
 				FontFamily&& family() const;
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 				boost::optional<GlyphCode> ivsGlyph(CodePoint baseCharacter,
 					CodePoint variationSelector, GlyphCode defaultGlyph) const;
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-				/// Returns the metrics of the font.
-				std::shared_ptr<const Metrics> metrics() const BOOST_NOEXCEPT {
-					if(metrics_.get() == nullptr)
-						const_cast<Font*>(this)->buildMetrics();
-					return metrics_;
-				}
 			private:
-				void buildMetrics() BOOST_NOEXCEPT;
+				void buildDescription() BOOST_NOEXCEPT;
 #if defined(ASCENSION_SHAPING_ENGINE_CAIRO)
 				Cairo::RefPtr<Cairo::ScaledFont> nativeObject_;
 #elif defined(ASCENSION_SHAPING_ENGINE_CORE_GRAPHICS)
@@ -161,7 +131,7 @@ namespace ascension {
 #elif defined(ASCENSION_SHAPING_ENGINE_WIN32_GDIPLUS)
 				std::shared_ptr<Gdiplus::Font> nativeObject_;
 #endif
-				std::shared_ptr<const Metrics> metrics_;
+				std::unique_ptr<const FontDescription> description_;
 			};
 
 			/**
@@ -245,8 +215,8 @@ namespace ascension {
 				presentation::FlowRelativeFourSides<Scalar> sides;
 				sides.start() = glyphPosition(range.beginning());
 				sides.end() = glyphPosition(range.end());
-				std::shared_ptr<const Font::Metrics> fontMetrics(font()->metrics());
-				sides.before() = -fontMetrics->ascent();
+				std::unique_ptr<const FontMetrics> fontMetrics(font()->metrics());
+				sides.before() = font()->describe().pointSize -fontMetrics->ascent();
 				sides.after() = fontMetrics->descent();
 				return sides;
 			}

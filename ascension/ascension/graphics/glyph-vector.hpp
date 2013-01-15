@@ -10,10 +10,12 @@
 #ifndef ASCENSION_GLYPH_VECTOR_HPP
 #define ASCENSION_GLYPH_VECTOR_HPP
 
+#include <ascension/graphics/font-render-context.hpp>
 #include <ascension/graphics/geometry.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <cstdint>
 #include <memory>
+#include <boost/flyweight.hpp>
 #include <boost/optional.hpp>
 
 namespace ascension {
@@ -38,10 +40,9 @@ namespace ascension {
 				virtual Scalar rightBottomSideBearing() const = 0;
 			};
 
-			class Font;
-
 			/**
-			 * Abstract class represents a vector of glyph codes with geometric information.
+			 * Abstract class represents a vector of glyph codes with geometric information. All
+			 * geometric coordinates are in user space units. 
 			 * @see Font#createGlyphVector, TextRun, TextLayout
 			 */
 			class GlyphVector {
@@ -54,8 +55,10 @@ namespace ascension {
 				 */
 				virtual void fillGlyphs(PaintContext& context, const NativePoint& origin,
 					boost::optional<Range<std::size_t>> range = boost::none) const = 0;
-				/// Returns the font associated with this vector.
+				/// Returns the @c Font associated with this vector.
 				virtual std::shared_ptr<const Font> font() const = 0;
+				/// Returns the @c FontRenderContext with this vector.
+				virtual const FontRenderContext& fontRenderContext() const = 0;
 //				virtual GlyphCode glyphCode(std::size_t index) const = 0;
 //				virtual GlyphMetrics&& glyphMetrics(std::size_t index) const = 0;
 				/**

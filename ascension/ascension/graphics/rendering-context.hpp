@@ -11,7 +11,6 @@
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/graphics/affine-transform.hpp>
 #include <ascension/graphics/color.hpp>
-#include <ascension/graphics/font.hpp>
 #include <ascension/graphics/geometry.hpp>
 #include <ascension/presentation/text-style.hpp>	// presentation.AlignmentBaseline, presentation.TextAnchor
 #include <memory>
@@ -145,6 +144,12 @@ namespace ascension {
 		class Paint;
 		class RenderingDevice;
 
+		namespace font {
+			class Font;
+			class FontCollection;
+			template<typename T> class FontMetrics;
+		}
+
 		/**
 		 * @c CanvasRenderingContext2D interface defined in "HTML Canvas 2D Context"
 		 * (http://dev.w3.org/html5/2dcontext/).
@@ -187,6 +192,15 @@ namespace ascension {
 			RenderingContext2D(RenderingContext2D&& other) BOOST_NOEXCEPT;
 			/// Returns the available fonts in this rendering context.
 			font::FontCollection&& availableFonts() const;
+			/**
+			 * Returns the font metrics for the specified font.
+			 * @param font The font to get metrics. If this is @c null, this method returns the
+			 *             font metrics for the current font
+			 * @return The font metrics with values in the user units
+			 * @see #font
+			 */
+			std::unique_ptr<const font::FontMetrics<int>> fontMetrics(
+				std::shared_ptr<const font::Font> font = nullptr) const;
 
 			/// @name Back-Reference to the Canvas
 			/// @{
