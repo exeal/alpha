@@ -79,27 +79,6 @@ namespace ascension {
 				}
 			};
 
-			/**
-			 * @see Font#Metrics
-			 */
-			class LineMetrics {
-			public:
-				/// Destructor.
-				virtual ~LineMetrics() BOOST_NOEXCEPT {}
-				/// Returns the ascent of the text in pixels.
-				virtual Scalar ascent() const BOOST_NOEXCEPT = 0;
-				/// Returns the dominant baseline of the text.
-				virtual DominantBaseline baseline() const BOOST_NOEXCEPT = 0;
-				/// Returns the baseline offset od the text, relative to the baseline of the text.
-				virtual Scalar baselineOffset(AlignmentBaseline baseline) const BOOST_NOEXCEPT = 0;
-				/// Returns the descent of the text in pixels.
-				virtual Scalar descent() const BOOST_NOEXCEPT = 0;
-				/// Returns the height of the text in pixels.
-				Scalar height() const BOOST_NOEXCEPT {return ascent() + descent()/* + leading()*/;}
-//				/// Returns the leading of the text in pixels.
-//				virtual Scalar leading() const BOOST_NOEXCEPT = 0;
-			};
-
 //			class ComputedStyledTextRunIterator;
 //			struct ComputedTextLineStyle;
 //			class TextPaintOverride;

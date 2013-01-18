@@ -8,8 +8,10 @@
 #ifndef ASCENSION_FONT_HPP
 #define ASCENSION_FONT_HPP
 
+#include <ascension/corelib/string-piece.hpp>
 #include <ascension/graphics/font-description.hpp>
 #include <ascension/graphics/glyph-vector.hpp>
+#include <ascension/graphics/text-alignment.hpp>
 #include <locale>
 #include <set>
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
@@ -34,6 +36,36 @@ namespace ascension {
 			bool supportsComplexScripts() BOOST_NOEXCEPT;
 			/// Returns @c true if OpenType features are supported.
 			bool supportsOpenTypeFeatures() BOOST_NOEXCEPT;
+
+			/**
+			 * Encapsulatates the measurement information associated with a text run.
+			 * @see FontMetrics, GlyphMetrics, Font#lineMetrics
+			 */
+			class LineMetrics {
+			public:
+				/// Destructor.
+				virtual ~LineMetrics() BOOST_NOEXCEPT {}
+				/// Returns the ascent of the text in user units.
+				virtual double ascent() const BOOST_NOEXCEPT = 0;
+				/// Returns the dominant baseline of the text.
+				virtual DominantBaseline baseline() const BOOST_NOEXCEPT = 0;
+				/// Returns the baseline offset of the text, relative to the baseline of the text in user units.
+				virtual double baselineOffset(AlignmentBaseline baseline) const BOOST_NOEXCEPT = 0;
+				/// Returns the descent of the text in user units.
+				virtual double descent() const BOOST_NOEXCEPT = 0;
+				/// Returns the height of the text in user units.
+				double height() const BOOST_NOEXCEPT {return ascent() + descent() + leading();}
+				/// Returns the leading of the text in user units.
+				virtual double leading() const BOOST_NOEXCEPT = 0;
+				/// Returns the position of the strike-through line relative to the baseline in user units.
+				virtual double strikeThroughOffset() const BOOST_NOEXCEPT = 0;
+				/// Returns the thickness of the strike-through line in user units.
+				virtual double strikeThroughThickness() const BOOST_NOEXCEPT = 0;
+				/// Returns the position of the underline relative to the baseline in user units.
+				virtual double strikeUnderlineOffset() const BOOST_NOEXCEPT = 0;
+				/// Returns the thickness of the underline in user units.
+				virtual double strikeUnderlineThickness() const BOOST_NOEXCEPT = 0;
+			};
 
 			template<typename T> class FontMetrics;
 
@@ -105,6 +137,8 @@ namespace ascension {
 				boost::optional<GlyphCode> ivsGlyph(CodePoint baseCharacter,
 					CodePoint variationSelector, GlyphCode defaultGlyph) const;
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+				std::unique_ptr<const LineMetrics> lineMetrics(
+					const StringPiece& text, const FontRenderContext&) const;
 			private:
 				void buildDescription() BOOST_NOEXCEPT;
 #if defined(ASCENSION_SHAPING_ENGINE_CAIRO)
