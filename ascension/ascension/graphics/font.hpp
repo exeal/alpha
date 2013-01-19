@@ -244,17 +244,6 @@ namespace ascension {
 
 			FontFaceIterator availableFaces(const FontCollection& collection, const FontFamily& family);
 			FontSizeIterator availablePointSizes(const FontFace& fontFace);
-
-			inline presentation::FlowRelativeFourSides<Scalar> GlyphVector::glyphLogicalBounds(const Range<std::size_t>& range) const {
-				presentation::FlowRelativeFourSides<Scalar> sides;
-				sides.start() = glyphPosition(range.beginning());
-				sides.end() = glyphPosition(range.end());
-				std::unique_ptr<const FontMetrics> fontMetrics(font()->metrics());
-				sides.before() = font()->describe().pointSize -fontMetrics->ascent();
-				sides.after() = fontMetrics->descent();
-				return sides;
-			}
-
 		}
 	}
 }

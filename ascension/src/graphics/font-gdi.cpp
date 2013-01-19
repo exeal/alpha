@@ -127,50 +127,6 @@ boost::optional<GlyphCode> Font::ivsGlyph(CodePoint baseCharacter, CodePoint var
 }
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
-namespace {
-	class FontMetrics : public Font::Metrics {
-	public:
-		explicit FontMetrics(win32::Handle<HFONT>::Type font) {
-			win32::Handle<HDC>::Type dc(detail::screenDC());
-			win32::Handle<HFONT>::Type oldFont(static_cast<HFONT>(::SelectObject(dc.get(), font.get())));
-			::SetGraphicsMode(dc.get(), GM_ADVANCED);
-//			const double xdpi = dc.getDeviceCaps(LOGPIXELSX);
-//			const double ydpi = dc.getDeviceCaps(LOGPIXELSY);
-
-			// generic font metrics
-			TEXTMETRICW tm;
-			if(!win32::boole(::GetTextMetricsW(dc.get(), &tm))) {
-				::SelectObject(dc.get(), oldFont.get());
-				throw makePlatformError();
-			}
-			ascent_ = tm.tmAscent/* * 96.0 / ydpi*/;
-			descent_ = tm.tmDescent/* * 96.0 / ydpi*/;
-			internalLeading_ = tm.tmInternalLeading/* * 96.0 / ydpi*/;
-			externalLeading_ = tm.tmExternalLeading/* * 96.0 / ydpi*/;
-			averageCharacterWidth_ = max<int>(((tm.tmAveCharWidth > 0) ? tm.tmAveCharWidth : ::MulDiv(tm.tmHeight, 56, 100)), 1)/* * 96.0 / xdpi*/;
-
-			// x-height
-			GLYPHMETRICS gm;
-			const MAT2 temp = {{0, 1}, {0, 0}, {0, 0}, {0, 1}};
-			xHeight_ = (::GetGlyphOutlineW(dc.get(), L'x', GGO_METRICS, &gm, 0, nullptr, nullptr) != GDI_ERROR
-				&& gm.gmptGlyphOrigin.y > 0) ? gm.gmptGlyphOrigin.y : round(static_cast<double>(ascent_) * 0.56);
-			::SelectObject(dc.get(), oldFont.get());
-		}
-		int ascent() const BOOST_NOEXCEPT {return ascent_;}
-		int averageCharacterWidth() BOOST_NOEXCEPT const {return averageCharacterWidth_;}
-		int descent() const BOOST_NOEXCEPT {return descent_;}
-		int externalLeading() const BOOST_NOEXCEPT {return externalLeading_;}
-		int internalLeading() const BOOST_NOEXCEPT {return internalLeading_;}
-		int xHeight() const BOOST_NOEXCEPT {return xHeight_;}
-	private:
-		int ascent_, descent_, internalLeading_, externalLeading_, averageCharacterWidth_, xHeight_;
-	};
-}
-
-void Font::buildMetrics() {
-	metrics_.reset(new FontMetrics(nativeObject_));
-}
-
 FontCollection::FontCollection(win32::Handle<HDC>::Type deviceContext) BOOST_NOEXCEPT : deviceContext_(deviceContext) {
 }
 
