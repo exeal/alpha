@@ -132,22 +132,36 @@ namespace ascension {
 				std::vector<Index>&& lineOffsets() const BOOST_NOEXCEPT;
 				/// @}
 
-				/// @name Bounds, Extents and Measures
+				/// @name Metrics
+				/// @{
+				double ascent(Index line) const;
+				double baseline(Index line) const;
+				double descent(Index line) const;
+				Range<double> extent() const;
+				Range<double> extent(const Range<Index>& lines) const;
+				double leading(Index) const;
+				double measure() const;
+				double measure(Index line) const;
+				/// @}
+
+				/// @name Bounds
 				/// @{
 				NativeRegion blackBoxBounds(const Range<Index>& range) const;
 				presentation::FlowRelativeFourSides<Scalar> bounds() const BOOST_NOEXCEPT;
 				presentation::FlowRelativeFourSides<Scalar> bounds(const Range<Index>& characterRange) const;
-				Range<Scalar> extent() BOOST_NOEXCEPT const;
-				Range<Scalar> extent(const Range<Index>& lines) const;
 				presentation::FlowRelativeFourSides<Scalar> lineBounds(Index line) const;
-				Scalar measure() const BOOST_NOEXCEPT;
-				Scalar measure(Index line) const;
+				NativeRectangle pixelBounds(const FontRenderContext& frc, const NativePoint& at) const;
+				/// @}
+
+				/// @name Highlight Shapes
+				/// @{
+				presentation::FlowRelativeFourSides<float> logicalHighlightShape(const Range<Index>& range) const;
+				std::vector<Range<Index>>&& logicalRangesForVisualSelection(const Range<HitTestInformation>& range) const;
+				presentation::FlowRelativeFourSides<float> visualHighlightShape(const Range<HitTestInformation>& range) const;
 				/// @}
 
 				/// @name Other Coordinates
 				/// @{
-				Scalar baseline(Index line) const;
-				const LineMetrics& lineMetrics(Index line) const;
 				Scalar lineStartEdge(Index line) const;
 				Index locateLine(Scalar bpd, bool& outside) const /*throw()*/;
 				presentation::AbstractTwoAxes<Scalar> location(const TextHitInformation& hit) const;
@@ -179,12 +193,14 @@ namespace ascension {
 #endif // _DEBUG
 
 			private:
+				void buildLineMetrics(Index line);
 				void expandTabsWithoutWrapping() /*throw()*/;
 				typedef std::vector<std::unique_ptr<const TextRun>> RunVector;
 				RunVector::const_iterator runForPosition(Index offset) const /*throw()*/;
 				RunVector::const_iterator firstRunInLine(Index line) const BOOST_NOEXCEPT;
 				bool isEmpty() const BOOST_NOEXCEPT {return runs_.empty();}
 				void justify(Scalar lineMeasure, presentation::TextJustification method) /*throw()*/;
+				const LineMetrics& lineMetrics(Index line) const;
 				std::pair<Index, Index> locateOffsets(
 					Index line, Scalar ipd, bool& outside) const /*throw()*/;
 				void locations(Index offset,
@@ -203,8 +219,10 @@ namespace ascension {
 				class LineArea;
 				std::unique_ptr<RunVector::const_iterator[]> firstRunsInLines_;	// size is runs_.size(), or null if not wrapped
 				Index numberOfLines_;
+				struct LineMetrics {
+					double ascent, descent, leading, advance;
+				};
 				std::unique_ptr<LineMetrics*[]> lineMetrics_;
-				std::unique_ptr<Scalar[]> measures_;
 				boost::optional<Scalar> maximumMeasure_;	// cached measure of the longest line
 				friend class LineLayoutVector;
 //				friend class StyledSegmentIterator;
@@ -212,13 +230,35 @@ namespace ascension {
 
 
 			/**
+			 * Returns the ascent of this layout.
+			 * @param line The line number
+			 * @return The ascent in user units
+			 * @see #baseline, #descent, #leading
+			 * @throw kernel#BadPositionException @a line is greater than the number of lines
+			 */
+			inline double TextLayout::ascent(Index line) const {
+				return lineMetrics(line).ascent;
+			}
+
+			/**
+			 * Returns the descent of this layout.
+			 * @param line The line number
+			 * @return The descent in user units
+			 * @see #ascent, #baseline, #leading
+			 * @throw kernel#BadPositionException @a line is greater than the number of lines
+			 */
+			inline double TextLayout::descent(Index line) const {
+				return lineMetrics(line).descent;
+			}
+
+			/**
 			 * Returns extent (block-progression-dimension) of the line.
 			 * @return A range of block-progression-dimension relative to the alignment-point
 			 */
-			inline Range<Scalar> TextLayout::extent() const BOOST_NOEXCEPT {
+			inline Range<double> TextLayout::extent() const {
 				return makeRange(
-					baseline(0) - lineMetrics_[0]->ascent(),
-					baseline(numberOfLines() - 1) + lineMetrics_[numberOfLines() - 1]->descent());
+					baseline(0) - lineMetrics(0).ascent,
+					baseline(numberOfLines() - 1) + lineMetrics(numberOfLines() - 1).descent);
 			}
 
 			/**
@@ -227,13 +267,24 @@ namespace ascension {
 			 * @return A range of block-progression-dimension relative to the alignment-point
 			 * @throw kernel#BadRegionException
 			 */
-			inline Range<Scalar> TextLayout::extent(const Range<Index>& lines) const {
+			inline Range<double> TextLayout::extent(const Range<Index>& lines) const {
 				if(lines.end() >= numberOfLines())
 					throw kernel::BadRegionException(kernel::Region(
 						kernel::Position(lines.beginning(), 0), kernel::Position(lines.end(), 0)));
 				return makeRange(
-					baseline(lines.beginning()) - lineMetrics_[lines.beginning()]->ascent(),
-					baseline(lines.end() - 1) + lineMetrics_[lines.end() - 1]->descent());
+					baseline(lines.beginning()) - lineMetrics(lines.beginning()).ascent,
+					baseline(lines.end() - 1) + lineMetrics(lines.end() - 1).descent);
+			}
+
+			/**
+			 * Returns the leading of this layout.
+			 * @param line The line number
+			 * @return The leading in user units
+			 * @see #ascent, #baseline, #descent
+			 * @throw kernel#BadPositionException @a line is greater than the number of lines
+			 */
+			inline double TextLayout::leading(Index line) const {
+				return lineMetrics(line).leading;
 			}
 
 			/**
@@ -260,6 +311,10 @@ namespace ascension {
 			inline const LineMetrics& TextLayout::lineMetrics(Index line) const {
 				if(line >= numberOfLines())
 					throw kernel::BadPositionException(kernel::Position(line, 0));
+				if(lineMetrics_.get() == nullptr)
+					const_cast<TextLayout*>(this)->lineMetrics_.reset(new LineMetrics*[numberOfLines()]);
+				if(lineMetrics_[line] == nullptr)
+					buildLineMetrics(line);
 				return *lineMetrics_[line];
 			}
 

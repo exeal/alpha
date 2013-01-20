@@ -607,102 +607,26 @@ TextAlignment TextLayout::alignment() const /*throw()*/ {
 		&& defaultStyle->alignment != INHERIT_TEXT_ALIGNMENT) ? defaultStyle->alignment : ASCENSION_DEFAULT_TEXT_ALIGNMENT;
 }
 #endif
+
 /**
  * Returns distance from the baseline of the first line to the baseline of the
  * specified line in pixels.
  * @param line The line number
  * @return The baseline position 
- * @throw BadPositionException @a line is greater than the count of lines
+ * @throw kernel#BadPositionException @a line is greater than the number of lines
  */
-Scalar TextLayout::baseline(Index line) const {
+double TextLayout::baseline(Index line) const {
 	if(line >= numberOfLines())
-		throw kernel::BadPositionException(k::Position(line, 0));
+		throw kernel::BadPositionException(kernel::Position(line, 0));
 	else if(line == 0)
 		return 0;
-	Scalar result = 0;
+	double result = 0;
 	for(Index i = 1; i <= line; ++i) {
-		result += lineMetrics_[i - 1]->descent();
-		result += lineMetrics_[i]->ascent();
+		const LineMetrics& preceding = lineMetrics(i - 1);
+		result += preceding.descent + preceding.leading;
+		result += lineMetrics(i).ascent;
 	}
 	return result;
-}
-
-/**
- * Returns the bidirectional embedding level at specified position.
- * @param offsetInLine The offset in the line
- * @return The embedding level
- * @throw kernel#BadPositionException @a offsetInLine is greater than the length of the line
- */
-uint8_t TextLayout::bidiEmbeddingLevel(Index offsetInLine) const {
-	if(numberOfRuns_ == 0) {
-		if(offsetInLine != 0)
-			throw kernel::BadPositionException(kernel::Position(0, offsetInLine));
-		// use the default level
-		return (writingMode().inlineFlowDirection == RIGHT_TO_LEFT) ? 1 : 0;
-	}
-	const size_t i = findRunForPosition(offsetInLine);
-	if(i == numberOfRuns_)
-		throw kernel::BadPositionException(kernel::Position(0, offsetInLine));
-	return runs_[i]->bidiEmbeddingLevel();
-}
-
-/**
- * Returns the black box bounds of the characters in the specified range. The black box bounds is
- * an area consisting of the union of the bounding boxes of the all of the characters in the range.
- * The result region can be disjoint.
- * @param range The character range
- * @return The native polygon object encompasses the black box bounds
- * @throw kernel#BadPositionException @a range intersects with the outside of the line
- * @see #bounds(void), #bounds(Index, Index), #lineBounds, #lineStartEdge
- */
-NativeRegion TextLayout::blackBoxBounds(const Range<Index>& range) const {
-	if(range.end() > text_.length())
-		throw kernel::BadPositionException(kernel::Position(0, range.end()));
-
-	// handle empty line
-	if(numberOfRuns_ == 0)
-		return win32::Handle<HRGN>(::CreateRectRgn(0, 0, 0, lineMetrics_[0]->height()), &::DeleteObject);
-
-	// TODO: this implementation can't handle vertical text.
-	const Index firstLine = lineAt(range.beginning()), lastLine = lineAt(range.end());
-	vector<NativeRectangle> rectangles;
-	Scalar before = baseline(firstLine)
-		/*- lineMetrics_[firstLine]->leading()*/ - lineMetrics_[firstLine]->ascent();
-	Scalar after = before + lineMetrics_[firstLine]->height();
-	for(Index line = firstLine; line <= lastLine; before = after, after += lineMetrics_[++line]->height()) {
-		const size_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
-		const Scalar leftEdge = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ?
-			lineStartEdge(line) : (-lineStartEdge(line) - measure(line));
-
-		// is the whole line encompassed by the range?
-		if(range.beginning() <= lineOffset(line) && range.end() >= lineOffset(line) + lineLength(line))
-			rectangles.push_back(
-				geometry::make<NativeRectangle>(
-					geometry::make<NativePoint>(leftEdge, before),
-					geometry::make<NativePoint>(leftEdge + measure(line), after)));
-		else {
-			for(InlineProgressionDimensionRangeIterator i(
-					Range<const TextRun* const*>(runs_.get() + lineFirstRuns_[line], runs_.get() + lastRun),
-					range, LEFT_TO_RIGHT, leftEdge), e; i != e; ++i)
-				rectangles.push_back(
-					geometry::make<NativeRectangle>(
-						geometry::make<NativePoint>(i->beginning(), before),
-						geometry::make<NativePoint>(i->end(), after)));
-		}
-	}
-
-	// create the result region
-	unique_ptr<POINT[]> vertices(new POINT[rectangles.size() * 4]);
-	unique_ptr<int[]> numbersOfVertices(new int[rectangles.size()]);
-	for(size_t i = 0, c = rectangles.size(); i < c; ++i) {
-		geometry::x(vertices[i * 4 + 0]) = geometry::x(vertices[i * 4 + 3]) = geometry::left(rectangles[i]);
-		geometry::y(vertices[i * 4 + 0]) = geometry::y(vertices[i * 4 + 1]) = geometry::top(rectangles[i]);
-		geometry::x(vertices[i * 4 + 1]) = geometry::x(vertices[i * 4 + 2]) = geometry::right(rectangles[i]);
-		geometry::y(vertices[i * 4 + 2]) = geometry::y(vertices[i * 4 + 3]) = geometry::bottom(rectangles[i]);
-	}
-	fill_n(numbersOfVertices.get(), rectangles.size(), 4);
-	return win32::Handle<HRGN>(::CreatePolyPolygonRgn(vertices.get(),
-		numbersOfVertices.get(), static_cast<int>(rectangles.size()), WINDING), &::DeleteObject);
 }
 
 /**

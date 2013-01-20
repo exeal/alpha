@@ -2347,26 +2347,6 @@ TextAnchor TextLayout::anchor(Index line) const {
 }
 
 /**
- * Returns distance from the baseline of the first line to the baseline of the
- * specified line in pixels.
- * @param line The line number
- * @return The baseline position 
- * @throw kernel#BadPositionException @a line is greater than the number of lines
- */
-Scalar TextLayout::baseline(Index line) const {
-	if(line >= numberOfLines())
-		throw kernel::BadPositionException(kernel::Position(line, 0));
-	else if(line == 0)
-		return 0;
-	Scalar result = 0;
-	for(Index i = 1; i <= line; ++i) {
-		result += lineMetrics_[i - 1]->descent();
-		result += lineMetrics_[i]->ascent();
-	}
-	return result;
-}
-
-/**
  * Returns the black box bounds of the characters in the specified range. The black box bounds is
  * an area consisting of the union of the bounding boxes of the all of the characters in the range.
  * The result region can be disjoint.
