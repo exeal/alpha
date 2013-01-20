@@ -3,6 +3,7 @@
  * Defines @c ascension#graphics#font#TextHitInformation class.
  * @author exeal
  * @date 2012-11-04 created
+ * @date 2012-2013
  */
 
 #ifndef ASCENSION_TEXT_HIT_INFORMATION_HPP
@@ -17,7 +18,8 @@ namespace ascension {
 		namespace font {
 			class TextHitInformation : private boost::totally_ordered<TextHitInformation> {
 			public:
-				// factories
+				/// @name Factories
+				/// @{
 				/**
 				 * Creates a @c TextHitInformation at the specified offset, associated with the
 				 * character after the offset.
@@ -58,9 +60,11 @@ namespace ascension {
 				static TextHitInformation trailing(Index characterIndex) BOOST_NOEXCEPT {
 					return TextHitInformation(characterIndex, false);
 				}
+				/// @}
 
-				// relational operators
-				/// Equality operator.
+				/// @name Relational Operators
+				/// @{
+				/** Equality operator. */
 				bool operator==(const TextHitInformation& other) const BOOST_NOEXCEPT {
 					return characterIndex() == other.characterIndex()
 						&& isLeadingEdge() == other.isLeadingEdge();
@@ -70,8 +74,10 @@ namespace ascension {
 					return characterIndex() < other.characterIndex()
 						|| (characterIndex() == other.characterIndex() && isLeadingEdge() && !other.isLeadingEdge());
 				}
+				/// @}
 
-				// attributes
+				/// @name Attributes
+				/// @{
 				/**
 				 * Returns the index of the character hit.
 				 * @see #insertionIndex
@@ -88,8 +94,10 @@ namespace ascension {
 				}
 				/// Returns @c true if the leading edge of the character was hit.
 				bool isLeadingEdge() const BOOST_NOEXCEPT {return isLeadingEdge_;}
+				/// @}
 
-				// other factories
+				/// @name Other Factories
+				/// @{
 				/**
 				 * Creates a @c TextHitInformation whose character index is offset by @a delta from
 				 * the @c #characterIndex of this @c TextHitInformation. This @c TextHitInformation
@@ -118,12 +126,21 @@ namespace ascension {
 					return isLeadingEdge() ?
 						trailing(characterIndex() - 1) : leading(characterIndex() + 1);
 				}
+				/// @}
 			private:
 				TextHitInformation(Index characterIndex, bool isLeadingEdge) BOOST_NOEXCEPT
 					: characterIndex_(characterIndex), isLeadingEdge_(isLeadingEdge) {}
 				Index characterIndex_;
 				bool isLeadingEdge_;
 			};
+
+			template<typename Character, Traits>
+			inline std::basic_ostream<Character, Traits>& operator<<(std::basic_ostream<Character, Traits>& out, const TextHitInformation& v) {
+				std::ostringstream ss;
+				ss << "TextHitInformation[" << v.characterIndex() << (v.isLeadingEdge() ? "L]" : "T]");
+				const std::string s(ss.str());
+				return out << std::basic_string<Character, Traits>(std::begin(s), std::end(s));
+			}
 		}
 	}
 }
