@@ -12,7 +12,7 @@
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/corelib/utility.hpp>	// detail.searchBound
 #include <ascension/graphics/color.hpp>
-#include <ascension/graphics/text-hit-information.hpp>
+#include <ascension/graphics/text-hit.hpp>
 #include <ascension/graphics/text-layout-styles.hpp>
 #include <ascension/kernel/position.hpp>
 #include <memory>	// std.unique_ptr
@@ -125,11 +125,11 @@ namespace ascension {
 
 				/// @name Visual Line Accesses
 				/// @{
-				Index numberOfLines() const BOOST_NOEXCEPT;
 				Index lineAt(Index offset) const;
 				Index lineLength(Index line) const;
 				Index lineOffset(Index line) const;
 				std::vector<Index>&& lineOffsets() const BOOST_NOEXCEPT;
+				Index numberOfLines() const BOOST_NOEXCEPT;
 				/// @}
 
 				/// @name Metrics
@@ -156,18 +156,29 @@ namespace ascension {
 				/// @name Highlight Shapes
 				/// @{
 				presentation::FlowRelativeFourSides<float> logicalHighlightShape(const Range<Index>& range) const;
-				std::vector<Range<Index>>&& logicalRangesForVisualSelection(const Range<HitTestInformation>& range) const;
-				presentation::FlowRelativeFourSides<float> visualHighlightShape(const Range<HitTestInformation>& range) const;
+				std::vector<Range<Index>>&& logicalRangesForVisualSelection(const Range<TextHit>& range) const;
+				presentation::FlowRelativeFourSides<float> visualHighlightShape(const Range<TextHit>& range) const;
+				/// @}
+
+				/// @name Hit Test
+				/// @{
+				std::pair<TextHit, bool> hitTestCharacter(const presentation::AbstractTwoAxes<float>& point) const;
+				std::pair<TextHit, bool> hitTestCharacter(const presentation::AbstractTwoAxes<float>& point, const presentation::FlowRelativeFourSides<float>& bounds) const;
+				presentation::AbstractTwoAxes<float> hitToPoint(const TextHit& hit) const;
+				/// @}
+
+				/// @name Other Hit Test
+				/// @{
+				TextHit visualOtherHit(const TextHit& hit) const;
 				/// @}
 
 				/// @name Other Coordinates
 				/// @{
 				Scalar lineStartEdge(Index line) const;
 				Index locateLine(Scalar bpd, bool& outside) const /*throw()*/;
-				presentation::AbstractTwoAxes<Scalar> location(const TextHitInformation& hit) const;
+				presentation::AbstractTwoAxes<Scalar> location(const TextHit& hit) const;
 				std::pair<presentation::AbstractTwoAxes<Scalar>,
 					presentation::AbstractTwoAxes<Scalar>> locations(Index offset) const;
-				std::pair<Index, Index> offset(const NativePoint& p, bool* outside = nullptr) const /*throw()*/;
 				/// @}
 
 				// styled segments
@@ -191,6 +202,8 @@ namespace ascension {
 				// debug
 				void dumpRuns(std::ostream& out) const;
 #endif // _DEBUG
+				// TODO: Can provide 'maximum-line-rectangle', 'nominal-requested-line-rectangle'
+				//       and 'per-inline-height-rectangle' for each 'line-area'?
 
 			private:
 				void buildLineMetrics(Index line);
@@ -200,6 +213,9 @@ namespace ascension {
 				RunVector::const_iterator firstRunInLine(Index line) const BOOST_NOEXCEPT;
 				bool isEmpty() const BOOST_NOEXCEPT {return runs_.empty();}
 				void justify(Scalar lineMeasure, presentation::TextJustification method) /*throw()*/;
+				struct LineMetrics {
+					float ascent, descent, leading/*, advance*/;
+				};
 				const LineMetrics& lineMetrics(Index line) const;
 				std::pair<Index, Index> locateOffsets(
 					Index line, Scalar ipd, bool& outside) const /*throw()*/;
@@ -216,13 +232,10 @@ namespace ascension {
 				const String& textString_;
 				boost::flyweight<ComputedTextLineStyle> lineStyle_;
 				RunVector runs_;
-				class LineArea;
 				std::unique_ptr<RunVector::const_iterator[]> firstRunsInLines_;	// size is runs_.size(), or null if not wrapped
 				Index numberOfLines_;
-				struct LineMetrics {
-					double ascent, descent, leading, advance;
-				};
-				std::unique_ptr<LineMetrics*[]> lineMetrics_;
+				std::unique_ptr<std::unique_ptr<LineMetrics>[]> lineMetrics_;
+				std::unique_ptr<float[]> lineMeasures_;
 				boost::optional<Scalar> maximumMeasure_;	// cached measure of the longest line
 				friend class LineLayoutVector;
 //				friend class StyledSegmentIterator;
@@ -277,6 +290,20 @@ namespace ascension {
 			}
 
 			/**
+			 * @internal Returns the first text run in the specified visual line.
+			 * @param line The visual line
+			 * @return An iterator addresses the text run
+			 */
+			inline TextLayout::RunVector::const_iterator TextLayout::firstRunInLine(Index line) const BOOST_NOEXCEPT {
+				assert(line <= numberOfLines());
+				if(firstRunsInLines_.get() == nullptr) {
+					assert(numberOfLines() == 1);
+					return begin(runs_);
+				}
+				return (line < numberOfLines()) ? firstRunsInLines_[line] : end(runs_);
+			}
+
+			/**
 			 * Returns the leading of this layout.
 			 * @param line The line number
 			 * @return The leading in user units
@@ -308,13 +335,13 @@ namespace ascension {
 			 * @return The line metrics
 			 * @throw BadPositionException @a line is greater than the count of lines
 			 */
-			inline const LineMetrics& TextLayout::lineMetrics(Index line) const {
+			inline const TextLayout::LineMetrics& TextLayout::lineMetrics(Index line) const {
 				if(line >= numberOfLines())
 					throw kernel::BadPositionException(kernel::Position(line, 0));
 				if(lineMetrics_.get() == nullptr)
-					const_cast<TextLayout*>(this)->lineMetrics_.reset(new LineMetrics*[numberOfLines()]);
+					const_cast<TextLayout*>(this)->lineMetrics_.reset(new std::unique_ptr<LineMetrics>[numberOfLines()]);
 				if(lineMetrics_[line] == nullptr)
-					buildLineMetrics(line);
+					const_cast<TextLayout*>(this)->buildLineMetrics(line);
 				return *lineMetrics_[line];
 			}
 
@@ -335,7 +362,7 @@ namespace ascension {
 			 * @return The location of the character
 			 * @throw kernel#BadPositionException @a hit is outside of the layout
 			 */
-			inline presentation::AbstractTwoAxes<Scalar> TextLayout::location(const TextHitInformation& hit) const {
+			inline presentation::AbstractTwoAxes<Scalar> TextLayout::location(const TextHit& hit) const {
 				presentation::AbstractTwoAxes<Scalar> result;
 				locations(hit.characterIndex(), hit.isLeadingEdge() ? &result : nullptr, !hit.isLeadingEdge() ? &result : nullptr);
 				return result;

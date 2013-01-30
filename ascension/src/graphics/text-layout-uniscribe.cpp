@@ -270,17 +270,6 @@ namespace {
 		return c < 0x20 || c == 0x7f || (c >= 0x80 && c < 0xa0);
 	}
 
-	inline Scalar readingDirectionInt(ReadingDirection direction) {
-		switch(direction) {
-			case LEFT_TO_RIGHT:
-				return +1;
-			case RIGHT_TO_LEFT:
-				return -1;
-			default:
-				throw UnknownValueException("direction");
-		}
-	}
-
 	SCRIPT_DIGITSUBSTITUTE&& convertNumberSubstitutionToUniscribe(const NumberSubstitution& from) {
 		SCRIPT_DIGITSUBSTITUTE to;
 		memset(&to, 0, sizeof(SCRIPT_DIGITSUBSTITUTE));
@@ -362,12 +351,7 @@ namespace {
 		}
 	}
 
-	template<typename T> inline T& shrinkToFit(T& v) {
-		swap(v, T(v));
-		return v;
-	}
-
-	inline bool uniscribeSupportsIVS() /*throw()*/ {
+	inline bool uniscribeSupportsIVS() BOOST_NOEXCEPT {
 		static bool checked = false, supports = false;
 		if(!checked) {
 			static const WCHAR text[] = L"\x82a6\xdb40\xdd00";	// <芦, U+E0100>
@@ -381,7 +365,7 @@ namespace {
 		return supports;
 	}
 
-	LANGID userCJKLanguage() /*throw()*/ {
+	LANGID userCJKLanguage() {
 		// this code is preliminary...
 		static const WORD CJK_LANGUAGES[] = {LANG_CHINESE, LANG_JAPANESE, LANG_KOREAN};	// sorted by numeric values
 		LANGID result = win32::userDefaultUILanguage();
@@ -394,16 +378,20 @@ namespace {
 		if(find(CJK_LANGUAGES, ASCENSION_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != ASCENSION_ENDOF(CJK_LANGUAGES))
 			return result;
 		switch(::GetACP()) {
-		case 932:	return MAKELANGID(LANG_JAPANESE, SUBLANG_DEFAULT);
-		case 936:	return MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED);
-		case 949:	return MAKELANGID(LANG_KOREAN, SUBLANG_KOREAN);
-		case 950:	return MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_TRADITIONAL);
+			case 932:
+				return MAKELANGID(LANG_JAPANESE, SUBLANG_DEFAULT);
+			case 936:
+				return MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED);
+			case 949:
+				return MAKELANGID(LANG_KOREAN, SUBLANG_KOREAN);
+			case 950:
+				return MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_TRADITIONAL);
 		}
 		return result;
 	}
 } // namespace @0
 
-void ascension::updateSystemSettings() /*throw()*/ {
+void ascension::updateSystemSettings() {
 	systemColors.update();
 	userSettings.update();
 }
@@ -546,22 +534,29 @@ namespace {
 		// GlyphVector
 		void fillGlyphs(PaintContext& context, const NativePoint& origin,
 			boost::optional<Range<std::size_t>> range /* = boost::none */) const;
-		Scalar glyphPosition(size_t index) const;
-		FlowRelativeFourSides<Scalar> glyphVisualBounds(const Range<size_t>& range) const;
+		shared_ptr<const Font> font() const BOOST_NOEXCEPT;
+		const FontRenderContext& fontRenderContext() const;
+		Index glyphCharacterIndex(size_t index) const;
+		GlyphCode glyphCode(size_t index) const;
+		FlowRelativeFourSides<float> glyphLogicalBounds(size_t index) const;
+		AbstractTwoAxes<float> glyphPosition(size_t index) const;
+		FlowRelativeFourSides<float> glyphVisualBounds(const Range<size_t>& range) const;
+		FlowRelativeFourSides<float> logicalBounds() const;
 		size_t numberOfGlyphs() const BOOST_NOEXCEPT;
+		void setGlyphPosition(size_t index, const AbstractTwoAxes<float>& position);
 		void strokeGlyphs(PaintContext& context, const NativePoint& origin,
 			boost::optional<Range<std::size_t>> range /* = boost::none */) const;
+		FlowRelativeFourSides<float> visualBounds() const;
 		// TextRun
 		const FlowRelativeFourSides<ComputedBorderSide>* border() const BOOST_NOEXCEPT;
-		boost::optional<Index> characterEncompassesPosition(Scalar ipd) const BOOST_NOEXCEPT;
-		Index characterHasClosestLeadingEdge(Scalar ipd) const;
+		boost::optional<Index> characterEncompassesPosition(float ipd) const BOOST_NOEXCEPT;
+		Index characterHasClosestLeadingEdge(float ipd) const;
 		uint8_t characterLevel() const BOOST_NOEXCEPT;
-		shared_ptr<const Font> font() const BOOST_NOEXCEPT;
-		Scalar leadingEdge(Index character) const;
+		float leadingEdge(Index character) const;
 		Index length() const BOOST_NOEXCEPT;
-		const FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT;
-		const FlowRelativeFourSides<Scalar>* padding() const BOOST_NOEXCEPT;
-		Scalar trailingEdge(Index character) const;
+		const FlowRelativeFourSides<float>* margin() const BOOST_NOEXCEPT;
+		const FlowRelativeFourSides<float>* padding() const BOOST_NOEXCEPT;
+		float trailingEdge(Index character) const;
 		// attributes
 		const ComputedTextRunStyleCore& style() const BOOST_NOEXCEPT {return coreStyle_;}
 		HRESULT logicalAttributes(SCRIPT_LOGATTR attributes[]) const;
@@ -788,7 +783,7 @@ unique_ptr<TextRunImpl> TextRunImpl::breakAt(StringPiece::const_pointer at) {
 }
 
 /// @see TextRun#characterEncompassesPosition
-boost::optional<Index> TextRunImpl::characterEncompassesPosition(Scalar ipd) const BOOST_NOEXCEPT {
+boost::optional<Index> TextRunImpl::characterEncompassesPosition(float ipd) const BOOST_NOEXCEPT {
 	int character;
 	hitTest(ipd, character, nullptr);
 	if(character == -1 || character == ascension::length(*this))
@@ -798,7 +793,7 @@ boost::optional<Index> TextRunImpl::characterEncompassesPosition(Scalar ipd) con
 }
 
 /// @see TextRun#characterHasClosestLeadingEdge
-Index TextRunImpl::characterHasClosestLeadingEdge(Scalar ipd) const {
+Index TextRunImpl::characterHasClosestLeadingEdge(float ipd) const {
 	int character, trailing;
 	hitTest(ipd, character, &trailing);
 	if(character == -1)
@@ -874,7 +869,7 @@ shared_ptr<const Font> TextRunImpl::font() const BOOST_NOEXCEPT {
 
 namespace {
 	inline HRESULT callScriptItemize(const WCHAR* text, int length, int estimatedNumberOfItems,
-			const SCRIPT_CONTROL& control, const SCRIPT_STATE& initialState, SCRIPT_ITEM items[], OPENTYPE_TAG scriptTags[], int& numberOfItems) {
+			const SCRIPT_CONTROL& control, const SCRIPT_STATE& initialState, SCRIPT_ITEM items[], OPENTYPE_TAG scriptTags[], int& numberOfItems) BOOST_NOEXCEPT {
 		static HRESULT(WINAPI* scriptItemizeOpenType)(const WCHAR*, int, int,
 			const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*, OPENTYPE_TAG*, int*) = uspLib->get<0>();
 		if(scriptItemizeOpenType != nullptr && scriptTags != nullptr)
@@ -1143,7 +1138,7 @@ HRESULT TextRunImpl::generateGlyphs(win32::Handle<HDC>::Type dc,
 }
 
 /// @see GlyphVector#glyphPosition
-Scalar TextRunImpl::glyphPosition(size_t index) const {
+float TextRunImpl::glyphPosition(size_t index) const {
 	return leadingEdge(index);
 }
 
@@ -1171,8 +1166,8 @@ inline Range<size_t> TextRunImpl::glyphRange(const StringPiece& range /* = Strin
 }
 
 /// @see GlyphVector#glyphVisualBounds
-FlowRelativeFourSides<Scalar> TextRunImpl::glyphVisualBounds(const Range<size_t>& range) const {
-	FlowRelativeFourSides<Scalar> bounds(glyphLogicalBounds(range));
+FlowRelativeFourSides<float> TextRunImpl::glyphVisualBounds(const Range<size_t>& range) const {
+	FlowRelativeFourSides<float> bounds(glyphLogicalBounds(range));
 	if(isEmpty(range))
 		return bounds;
 
@@ -1245,7 +1240,7 @@ inline HRESULT TextRunImpl::justify(int width) {
 }
 
 /// @see TextRun#leadingEdge
-Scalar TextRunImpl::leadingEdge(Index character) const {
+float TextRunImpl::leadingEdge(Index character) const {
 	return ipd(beginning() + character, false);	// TODO: this ignores HRESULT.
 }
 
@@ -2310,42 +2305,6 @@ TextLayout::TextLayout(const String& textString, const ComputedTextLineStyle& li
 	stackLines(lineStyle.lineHeight, lineStyle.lineBoxContain, *nominalFont);
 }
 
-/// Destructor.
-TextLayout::~TextLayout() /*throw()*/ {
-//	for(size_t i = 0; i < numberOfRuns_; ++i)
-//		delete runs_[i];
-//	for(vector<const InlineArea*>::const_iterator i(inlineAreas_.begin()), e(inlineAreas_.end()); i != e; ++i)
-//		delete *i;
-	assert(numberOfLines() != 1 || firstRunsInLines_.get() == nullptr);
-	for(size_t i = 0; i < numberOfLines(); ++i)
-		delete lineMetrics_[i];
-}
-#if 0
-/**
- * Returns the computed text alignment of the line. The returned value may be
- * @c presentation#ALIGN_START or @c presentation#ALIGN_END.
- * @see #readingDirection, presentation#resolveTextAlignment
- */
-TextAlignment TextLayout::alignment() const /*throw()*/ {
-	if(style_.get() != nullptr && style_->readingDirection != INHERIT_TEXT_ALIGNMENT)
-		style_->readingDirection;
-	shared_ptr<const TextLineStyle> defaultStyle(lip_.presentation().defaultTextLineStyle());
-	return (defaultStyle.get() != nullptr
-		&& defaultStyle->alignment != INHERIT_TEXT_ALIGNMENT) ? defaultStyle->alignment : ASCENSION_DEFAULT_TEXT_ALIGNMENT;
-}
-#endif
-/**
- * Returns the computed text anchor of the specified visual line.
- * @param line The visual line number
- * @return The computed text anchor value
- * @throw kernel#BadPositionException @a line is greater than the number of lines
- */
-TextAnchor TextLayout::anchor(Index line) const {
-	if(line >= numberOfLines())
-		throw kernel::BadPositionException(kernel::Position(line, 0));
-	return TextAnchor::START;	// TODO: Not implemented.
-}
-
 /**
  * Returns the black box bounds of the characters in the specified range. The black box bounds is
  * an area consisting of the union of the bounding boxes of the all of the characters in the range.
@@ -2407,28 +2366,6 @@ NativeRegion TextLayout::blackBoxBounds(const Range<Index>& characterRange) cons
 }
 
 /**
- * Returns the smallest rectangle emcompasses the whole text of the line. It might not coincide
- * exactly the ascent, descent or overhangs of the text.
- * @return The size of the bounds
- * @see #blackBoxBounds, #bounds(const Range&lt;Index&gt;&amp;), #lineBounds
- */
-FlowRelativeFourSides<Scalar> TextLayout::bounds() const BOOST_NOEXCEPT {
-	// TODO: this implementation can't handle vertical text.
-	FlowRelativeFourSides<Scalar> result;
-	result.before() = /*-lineMetrics(0).leading()*/ - lineMetrics(0).ascent();
-	result.after() = result.before();
-	result.start() = numeric_limits<Scalar>::max();
-	result.end() = numeric_limits<Scalar>::min();
-	for(Index line = 0; line < numberOfLines(); ++line) {
-		result.after() += lineMetrics(line).height();
-		const Scalar lineStart = lineStartEdge(line);
-		result.start() = min(lineStart, result.start());
-		result.end() = max(lineStart + measure(line), result.end());
-	}
-	return result;
-}
-
-/**
  * Returns the smallest rectangle emcompasses all characters in the range. It might not coincide
  * exactly the ascent, descent or overhangs of the specified region of the text.
  * @param characterRange The character range
@@ -2448,7 +2385,7 @@ FlowRelativeFourSides<Scalar> TextLayout::bounds(const Range<Index>& characterRa
 		result.after() = lineMetrics(0).descent();
 	} else if(ascension::isEmpty(characterRange)) {	// an empty rectangle for an empty range
 		const LineMetrics& line = lineMetrics(lineAt(characterRange.beginning()));
-		const AbstractTwoAxes<Scalar> leading(location(TextHitInformation::leading(characterRange.beginning())));
+		const AbstractTwoAxes<Scalar> leading(location(TextHit::leading(characterRange.beginning())));
 		FlowRelativeFourSides<Scalar> sides;
 		sides.before() = leading.bpd() - line.ascent();
 		sides.after() = leading.bpd() + line.descent();
@@ -2508,25 +2445,6 @@ FlowRelativeFourSides<Scalar> TextLayout::bounds(const Range<Index>& characterRa
 	}
 
 	return result;
-}
-
-/**
- * Returns the bidirectional embedding level at specified position.
- * @param offset The offset in this layout
- * @return The embedding level
- * @throw kernel#BadPositionException @a offset is greater than the length of the layout
- */
-uint8_t TextLayout::characterLevel(Index offset) const {
-	if(isEmpty()) {
-		if(offset != 0)
-			throw kernel::BadPositionException(kernel::Position(0, offset));
-		// use the default level
-		return (writingMode().inlineFlowDirection == RIGHT_TO_LEFT) ? 1 : 0;
-	}
-	const auto run(runForPosition(offset));
-	if(run == end(runs_))
-		throw kernel::BadPositionException(kernel::Position(0, offset));
-	return (*run)->characterLevel();
 }
 
 namespace {
@@ -2963,19 +2881,6 @@ String TextLayout::fillToX(int x) const {
 }
 
 /**
- * @internal 
- * @param line
- */
-inline TextLayout::RunVector::const_iterator TextLayout::firstRunInLine(Index line) const BOOST_NOEXCEPT {
-	assert(line <= numberOfLines());
-	if(firstRunsInLines_.get() == nullptr) {
-		assert(numberOfLines() == 1);
-		return begin(runs_);
-	}
-	return (line < numberOfLines()) ? firstRunsInLines_[line] : end(runs_);
-}
-
-/**
  * @internal Returns the text run containing the specified offset in this layout.
  * @param offset The offset in this layout
  * @return An iterator addresses the text run
@@ -2994,26 +2899,6 @@ inline TextLayout::RunVector::const_iterator TextLayout::runForPosition(Index of
 	}
 	ASCENSION_ASSERT_NOT_REACHED();
 }
-#if 0
-/// Returns an iterator addresses the first styled segment.
-TextLayout::StyledSegmentIterator TextLayout::firstStyledSegment() const /*throw()*/ {
-	const TextRun* temp = *runs_;
-	return StyledSegmentIterator(temp);
-}
-#endif
-/**
- * Returns if the line contains right-to-left run.
- * @note This method's semantics seems to be strange. Is containning RTL run means bidi?
- */
-bool TextLayout::isBidirectional() const BOOST_NOEXCEPT {
-	if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
-		return true;
-	for(auto i(begin(runs_)), e(end(runs_)); i != e; ++i) {
-		if((*i)->direction() == RIGHT_TO_LEFT)
-			return true;
-	}
-	return false;
-}
 
 /// Justifies the wrapped visual lines.
 inline void TextLayout::justify(Scalar lineMeasure, TextJustification) /*throw()*/ {
@@ -3025,39 +2910,6 @@ inline void TextLayout::justify(Scalar lineMeasure, TextJustification) /*throw()
 			run.justify(newRunMeasure);
 		}
 	}
-}
-#if 0
-/// Returns an iterator addresses the last styled segment.
-TextLayout::StyledSegmentIterator TextLayout::lastStyledSegment() const /*throw()*/ {
-	const TextRun* temp = runs_[numberOfRuns_];
-	return StyledSegmentIterator(temp);
-}
-#endif
-/**
- * Returns the smallest rectangle emcompasses the specified line. It might not coincide exactly the
- * ascent, descent or overhangs of the specified line.
- * @param line The line number
- * @return The line bounds in pixels
- * @throw IndexOutOfBoundsException @a line is greater than the number of the lines
- * @see #basline, #lineStartEdge, #measure
- */
-FlowRelativeFourSides<Scalar> TextLayout::lineBounds(Index line) const {
-	if(line >= numberOfLines())
-		throw IndexOutOfBoundsException("line");
-
-	FlowRelativeFourSides<Scalar> sides;
-	sides.start() = lineStartEdge(line);
-	sides.end() = sides.start() + measure(line);
-	sides.before() = baseline(line) - lineMetrics_[line]->ascent()/* - lineMetrics_[line]->leading()*/;
-	sides.after() = sides.before() + lineMetrics_[line]->height();
-	return sides;
-/*
-	// TODO: this implementation can't handle vertical text.
-	const NativeSize size(geometry::make<NativeSize>(end - start, after - before));
-	const NativePoint origin(geometry::make<NativePoint>(
-		(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? start : start - geometry::dx(size), before));
-	return geometry::make<NativeRectangle>(origin, size);
-*/
 }
 
 /**
@@ -3089,57 +2941,6 @@ vector<Index>&& TextLayout::lineOffsets() const BOOST_NOEXCEPT {
 		offsets.push_back(static_cast<const TextRunImpl*>(firstRunInLine(line)->get())->beginning() - bol);
 	offsets.push_back(textString_.length());
 	return move(offsets);
-}
-
-/**
- * Returns the start-edge of the specified line without the start-indent in pixels.
- * @par This is distance from the start-edge of the first line to the one of @a line in
- * inline-progression-dimension. Therefore, returns always zero when @a line is zero or the anchor
- * is @c TEXT_ANCHOR_START.
- * @par A positive value means positive indentation. For example, if the start-edge of a RTL line
- * is x = -10, this method returns +10.
- * @param line The line number
- * @return The start-indentation in pixels
- * @throw IndexOutOfBoundsException @a line is invalid
- * @see TextRenderer#lineStartEdge
- */
-Scalar TextLayout::lineStartEdge(Index line) const {
-	if(line == 0)
-		return 0;
-	switch(anchor(line)) {
-	case TextAnchor::START:
-		return 0;
-	case TextAnchor::MIDDLE:
-		return (measure(0) - measure(line)) / 2;
-	case TextAnchor::END:
-		return measure(0) - measure(line);
-	default:
-		ASCENSION_ASSERT_NOT_REACHED();
-	}
-}
-
-/**
- * Converts a position in the block-progression-direction into the corresponding line.
- * @param bpd The position in block-progression-dimension in pixels
- * @param[out] outside @c true if @a bpd is outside of the line content
- * @return The line number
- * @see #basline, #lineAt, #offset
- */
-Index TextLayout::locateLine(Scalar bpd, bool& outside) const /*throw()*/ {
-	// TODO: This implementation can't handle tricky 'text-orientation'.
-
-	// beyond the before-edge ?
-	if(bpd < -lineMetrics_[0]->ascent()/* - lineMetrics_[0]->leading()*/)
-		return (outside = true), 0;
-
-	Index line = 0;
-	for(Scalar lineAfter = 0; line < numberOfLines() - 1; ++line) {
-		if(bpd < (lineAfter += lineMetrics_[line]->height()))
-			return (outside = false), line;
-	}
-
-	// beyond the after-edge
-	return (outside = true), numberOfLines() - 1;
 }
 
 /**
@@ -3246,60 +3047,6 @@ void TextLayout::locations(Index offset, AbstractTwoAxes<Scalar>* leading, Abstr
 }
 
 /**
- * Returns the inline-progression-dimension of the longest line.
- * @see #measure(Index)
- */
-Scalar TextLayout::measure() const BOOST_NOEXCEPT {
-	if(!maximumMeasure_) {
-		Scalar ipd = 0;
-		for(Index line = 0; line < numberOfLines(); ++line)
-			ipd = max(measure(line), ipd);
-		const_cast<TextLayout*>(this)->maximumMeasure_ = ipd;
-	}
-	return boost::get(maximumMeasure_);
-}
-
-/**
- * Returns the length in inline-progression-dimension without the indentations (the distance from
- * the start-edge to the end-edge) of the specified line in pixels.
- * @param line The line number
- * @return The width. Must be equal to or greater than zero
- * @throw IndexOutOfBoundsException @a line is greater than the number of lines
- * @see #measure(void)
- */
-Scalar TextLayout::measure(Index line) const {
-	if(line >= numberOfLines())
-		throw IndexOutOfBoundsException("line");
-	else if(isEmpty())
-		return boost::get(const_cast<TextLayout*>(this)->maximumMeasure_ = 0);
-	else {
-		TextLayout& self = const_cast<TextLayout&>(*this);
-		if(numberOfLines() == 1) {
-			if(maximumMeasure_)
-				return boost::get(maximumMeasure_);
-		} else {
-			static_assert(is_signed<Scalar>::value, "");
-			if(measures_.get() == nullptr) {
-				self.measures_.reset(new Scalar[numberOfLines()]);
-				fill_n(self.measures_.get(), numberOfLines(), -1);
-			}
-			if(measures_[line] >= 0)
-				return measures_[line];
-		}
-		const RunVector::const_iterator lastRun = firstRunInLine(line + 1);
-		Scalar ipd = 0;
-		for(RunVector::const_iterator run(firstRunInLine(line)); run != lastRun; ++run)
-			ipd += allocationMeasure(**run);
-		assert(ipd >= 0);
-		if(numberOfLines() == 1)
-			self.maximumMeasure_ = ipd;
-		else
-			self.measures_[line] = ipd;
-		return ipd;
-	}
-}
-
-/**
  * Returns the hit test information corresponding to the specified point.
  * @param p The point
  * @param[out] outside @c true if the specified point is outside of the layout
@@ -3341,62 +3088,6 @@ inline void TextLayout::reorder() /*throw()*/ {
 	for(RunVector::size_type i = 0, c(runs_.size()); i < c; ++i)
 		runs_[i].reset(reordered[i]);
 }
-#if 0
-/**
- * Returns the next tab stop position.
- * @param x the distance from leading edge of the line (can not be negative)
- * @param direction the direction
- * @return the distance from leading edge of the line to the next tab position
- */
-inline int TextLayout::nextTabStop(int x, Direction direction) const /*throw()*/ {
-	assert(x >= 0);
-	const int tabWidth = lip_.textMetrics().averageCharacterWidth() * lip_.layoutSettings().tabWidth;
-	return (direction == Direction::FORWARD) ? x + tabWidth - x % tabWidth : x - x % tabWidth;
-}
-
-/**
- * Returns the next tab stop.
- * @param x the distance from the left edge of the line to base position (can not be negative)
- * @param right @c true to find the next right position
- * @return the tab stop position in pixel
- */
-int TextLayout::nextTabStopBasedLeftEdge(int x, bool right) const /*throw()*/ {
-	assert(x >= 0);
-	const LayoutSettings& c = lip_.layoutSettings();
-	const int tabWidth = lip_.textMetrics().averageCharacterWidth() * c.tabWidth;
-	if(lineTerminatorOrientation(style(), lip_.presentation().defaultTextLineStyle()) == LEFT_TO_RIGHT)
-		return nextTabStop(x, right ? Direction::FORWARD : Direction::BACKWARD);
-	else
-		return right ? x + (x - longestLineWidth()) % tabWidth : x - (tabWidth - (x - longestLineWidth()) % tabWidth);
-}
-#endif
-
-#if 0
-/**
- * Returns the computed reading direction of the line.
- * @see #alignment
- */
-ReadingDirection TextLayout::readingDirection() const /*throw()*/ {
-	ReadingDirection result = INHERIT_READING_DIRECTION;
-	// try the requested line style
-	if(style_.get() != nullptr)
-		result = style_->readingDirection;
-	// try the default line style
-	if(result == INHERIT_READING_DIRECTION) {
-		shared_ptr<const TextLineStyle> defaultLineStyle(lip_.presentation().defaultTextLineStyle());
-		if(defaultLineStyle.get() != nullptr)
-			result = defaultLineStyle->readingDirection;
-	}
-	// try the default UI style
-	if(result == INHERIT_READING_DIRECTION)
-		result = lip_.defaultUIReadingDirection();
-	// use user default
-	if(result == INHERIT_READING_DIRECTION)
-		result = ASCENSION_DEFAULT_TEXT_READING_DIRECTION;
-	assert(result == LEFT_TO_RIGHT || result == RIGHT_TO_LEFT);
-	return result;
-}
-#endif
 
 /**
  * Stacks the line boxes and compute the line metrics.
@@ -3466,21 +3157,6 @@ void TextLayout::stackLines(boost::optional<Scalar> lineHeight, LineBoxContain l
 		}
 	}
 }
-
-#if 0
-/**
- * Returns the styled text run containing the specified offset in the line.
- * @param offset The offset in this layout
- * @return the styled segment
- * @throw kernel#BadPositionException @a offset is greater than the length of this layout
- */
-StyledRun TextLayout::styledTextRun(Index offset) const {
-	if(offset > text().length())
-		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, offset));
-	const TextRun& run = *runs_[findRunForPosition(offset)];
-	return StyledRun(run.offsetInLine(), run.requestedStyle());
-}
-#endif
 
 /**
  * @internal Locates the wrap points and resolves tab expansions.
@@ -3617,24 +3293,3 @@ void TextLayout::wrap(Scalar measure, const TabExpander& tabExpander) BOOST_NOEX
 	for(vector<Index>::size_type i = 0, c = firstRunsInLines.size(); i < c; ++i)
 		firstRunsInLines_[i] = begin(runs_) + firstRunsInLines[i];
 }
-
-#if 0
-// TextLayout.StyledSegmentIterator ///////////////////////////////////////////////////////////////
-
-/**
- * Private constructor.
- * @param start
- */
-TextLayout::StyledSegmentIterator::StyledSegmentIterator(const TextRun*& start) /*throw()*/ : p_(&start) {
-}
-
-/// Copy-constructor.
-TextLayout::StyledSegmentIterator::StyledSegmentIterator(const StyledSegmentIterator& rhs) /*throw()*/ : p_(rhs.p_) {
-}
-
-/// Returns the current segment.
-StyledRun TextLayout::StyledSegmentIterator::current() const /*throw()*/ {
-	const TextRun& run = **p_;
-	return StyledRun(run.offsetInLine, run.style);
-}
-#endif
