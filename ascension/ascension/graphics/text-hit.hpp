@@ -143,7 +143,7 @@ namespace ascension {
 				bool isLeadingEdge_;
 			};
 
-			template<typename Character, Traits>
+			template<typename Character, typename Traits>
 			inline std::basic_ostream<Character, Traits>& operator<<(std::basic_ostream<Character, Traits>& out, const TextHit& v) {
 				std::ostringstream ss;
 				ss << "TextHit[" << v.characterIndex() << (v.isLeadingEdge() ? "L]" : "T]");

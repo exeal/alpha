@@ -314,7 +314,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-context.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-device.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\text-alignment.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\graphics\text-hit-information.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\text-hit.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\text-layout-styles.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\text-renderer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\text-run.hpp" />
