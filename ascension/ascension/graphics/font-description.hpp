@@ -142,12 +142,12 @@ namespace ascension {
 //				NORMAL,
 //				SMALL_CAPS
 //			ASCENSION_END_SCOPED_ENUM
-
+#if 0
 			ASCENSION_BEGIN_SCOPED_ENUM(FontOrientation)
 				HORIZONTAL,
 				VERTICAL
 			ASCENSION_END_SCOPED_ENUM
-
+#endif
 			struct FontFeatureSetting {
 				OpenTypeFontTag name;
 				std::uint32_t value;
@@ -166,7 +166,9 @@ namespace ascension {
 				FontStyle style;				///< The font style.
 //				FontVariant variant;			///< The font variant.
 //				FontSynthesis synthesis;		///< The font synthesis.
+#if 0
 				FontOrientation orientation;	///< The font orientation.
+#endif
 				// TODO: 'font-feature-settings' property should be implemented as TextRunStyle?
 //				std::vector<FontFeatureSetting> featureSettings;
 
@@ -178,13 +180,11 @@ namespace ascension {
 				 * @param orientation The initial orientation value
 				 */
 				explicit FontProperties(FontWeight weight = FontWeight::NORMAL,
-					FontStretch stretch = FontStretch::NORMAL, FontStyle style = FontStyle::NORMAL,
-					FontOrientation orientation = FontOrientation::HORIZONTAL)
-					: weight(weight), stretch(stretch), style(style), orientation(orientation) {}
+					FontStretch stretch = FontStretch::NORMAL, FontStyle style = FontStyle::NORMAL)
+					: weight(weight), stretch(stretch), style(style) {}
 				/// Equality operator.
 				bool operator==(const FontProperties& other) const BOOST_NOEXCEPT {
-					return weight == other.weight && stretch == other.stretch
-						&& style == other.style && orientation == other.orientation;
+					return weight == other.weight && stretch == other.stretch && style == other.style;
 				}
 			};
 
@@ -258,8 +258,7 @@ namespace std {
 			return std::hash<ascension::graphics::font::FontWeight>()(key.weight)
 				+ std::hash<ascension::graphics::font::FontStretch>()(key.stretch)
 				+ std::hash<ascension::graphics::font::FontStyle>()(key.style)
-//				+ std::hash<ascension::graphics::font::FontVariant>()(key.variant)
-				+ std::hash<ascension::graphics::font::FontOrientation>()(key.orientation);
+/*				+ std::hash<ascension::graphics::font::FontVariant>()(key.variant)*/;
 		}
 	};
 

@@ -7,6 +7,7 @@
 #ifndef ASCENSION_AFFINE_TRANSFORM_HPP
 #define ASCENSION_AFFINE_TRANSFORM_HPP
 #include <ascension/graphics/geometry.hpp>
+#include <boost/operators.hpp>
 //#include <boost/math/constants/constants.hpp>	// boost.math.constants.pi
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
 #	include <cairomm/matrix.h>
@@ -31,7 +32,7 @@ namespace ascension {
 #endif	// !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 
 			/// Base type for @c AffineTransform class.
-			class AffineTransformBase {
+			class AffineTransformBase : public boost::equality_comparable<AffineTransformBase> {
 			public:
 				typedef double value_type;
 			public:
@@ -44,6 +45,9 @@ namespace ascension {
 				value_type translateX() const BOOST_NOEXCEPT;
 				value_type translateY() const BOOST_NOEXCEPT;
 				/// @}
+
+				/// Equality operator.
+				bool operator==(const AffineTransformBase& other) const;
 			protected:
 				AffineTransformBase() BOOST_NOEXCEPT;
 				AffineTransformBase(value_type sx, value_type shy, value_type shx,

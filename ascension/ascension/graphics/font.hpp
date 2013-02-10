@@ -139,6 +139,7 @@ namespace ascension {
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 				std::unique_ptr<const LineMetrics> lineMetrics(
 					const StringPiece& text, const FontRenderContext&) const;
+				AffineTransform&& transform() const BOOST_NOEXCEPT;
 			private:
 				void buildDescription() BOOST_NOEXCEPT;
 #if defined(ASCENSION_SHAPING_ENGINE_CAIRO)
@@ -189,20 +190,24 @@ namespace ascension {
 				/**
 				 * Returns the fontset matches the given description.
 				 * @param description The font description
+				 * @param transform The transform associated with the font
 				 * @param sizeAdjust The 'font-size-adjust' value. Set @c boost#none for 'none'
 				 * @return The font has the requested description or the default one
 				 */
 				std::shared_ptr<const Font> get(
 					const FontDescription& description,
+					const AffineTransform& transform = AffineTransform(),
 					boost::optional<double> sizeAdjust = boost::none) const;
 				/**
 				 * Returns the fontset for last resort fallback.
 				 * @param description The font description
+				 * @param transform The transform associated with the font
 				 * @param sizeAdjust The 'font-size-adjust' value. Set @c boost#none for 'none'
 				 * @return The font has the requested property
 				 */
 				std::shared_ptr<const Font> lastResortFallback(
 					const FontDescription& description,
+					const AffineTransform& transform = AffineTransform(),
 					boost::optional<double> sizeAdjust = boost::none) const;
 			private:
 #if defined(ASCENSION_SHAPING_ENGINE_CORE_TEXT)

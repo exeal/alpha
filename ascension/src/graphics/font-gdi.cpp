@@ -130,17 +130,36 @@ boost::optional<GlyphCode> Font::ivsGlyph(CodePoint baseCharacter, CodePoint var
 FontCollection::FontCollection(win32::Handle<HDC>::Type deviceContext) BOOST_NOEXCEPT : deviceContext_(deviceContext) {
 }
 
-shared_ptr<const Font> FontCollection::get(const FontDescription& description, boost::optional<double> sizeAdjust) const {
+shared_ptr<const Font> FontCollection::get(const FontDescription& description, const AffineTransform& transform, boost::optional<double> sizeAdjust) const {
 	const String& familyName = description.family().name();
 	if(familyName.length() >= LF_FACESIZE)
 		throw length_error("description.family().name()");
 
 	const FontProperties& properties = description.properties();
+	LONG orientation;
+	if(transform == AffineTransform())
+		orientation = 0;
+	if(transform == AffineTransform::quadrantRotation(1))
+		orientation = 2700;
+	else if(transform == AffineTransform::quadrantRotation(2))
+		orientation = 1800;
+	else if(transform == AffineTransform::quadrantRotation(3))
+		orientation = 900;
+	else
+		throw invalid_argument("transform");	// TODO: This version of code supports only simple quadrant-rotations.
 
 	const int oldMapMode = ::SetMapMode(deviceContext_.get(), MM_TEXT);
 	if(oldMapMode == 0)
 		throw makePlatformError();
-	const int dpi = ::GetDeviceCaps(deviceContext_.get(), (properties.orientation == FontOrientation::HORIZONTAL) ? LOGPIXELSY : LOGPIXELSX);
+	int dpi;
+	if(orientation == 0 || orientation == 1800)
+		dpi = ::GetDeviceCaps(deviceContext_.get(), LOGPIXELSY);
+	else if(orientation == 900 || orientation == 2700)
+		dpi = ::GetDeviceCaps(deviceContext_.get(), LOGPIXELSX);
+	else
+		dpi = static_cast<int>(sqrt(
+			pow(static_cast<float>(::GetDeviceCaps(deviceContext_.get(), LOGPIXELSX)), 2)
+			+ pow(static_cast<float>(::GetDeviceCaps(deviceContext_.get(), LOGPIXELSY)), 2)));
 	::SetMapMode(deviceContext_.get(), oldMapMode);
 
 	// TODO: handle properties.orientation().
@@ -148,7 +167,7 @@ shared_ptr<const Font> FontCollection::get(const FontDescription& description, b
 	LOGFONTW lf;
 	memset(&lf, 0, sizeof(LOGFONTW));
 	lf.lfHeight = -round(description.pointSize() * dpi / 72.0);
-	lf.lfEscapement = (properties.orientation == FontOrientation::HORIZONTAL) ? 0 : 900;
+	lf.lfEscapement = lf.lfOrientation = orientation;
 	lf.lfWeight = properties.weight;
 	lf.lfItalic = (properties.style == FontStyle::ITALIC) || (properties.style == FontStyle::OBLIQUE);
 	wcscpy(lf.lfFaceName, familyName.c_str());
@@ -198,7 +217,7 @@ shared_ptr<const Font> FontCollection::get(const FontDescription& description, b
 			FontDescription adjustedDescription(description);
 			adjustedDescription.setPointSize(max(description.pointSize() * (*sizeAdjust / aspect), 1.0));
 			::SelectObject(deviceContext_.get(), oldFont.get());
-			return get(description, boost::none);
+			return get(description, transform, boost::none);
 		}
 		::SelectObject(deviceContext_.get(), oldFont.get());
 	}
@@ -219,7 +238,7 @@ shared_ptr<const Font> FontCollection::get(const FontDescription& description, b
 	return newFont;
 }
 
-shared_ptr<const Font> FontCollection::lastResortFallback(const FontDescription& description, boost::optional<double> sizeAdjust) const {
+shared_ptr<const Font> FontCollection::lastResortFallback(const FontDescription& description, const AffineTransform& transform, boost::optional<double> sizeAdjust) const {
 	static String familyName;
 	// TODO: 'familyName' should update when system property changed.
 	if(familyName.empty()) {
@@ -235,5 +254,5 @@ shared_ptr<const Font> FontCollection::lastResortFallback(const FontDescription&
 	}
 
 	FontDescription modified(description);
-	return get(modified.setFamilyName(FontFamily(familyName)), sizeAdjust);
+	return get(modified.setFamilyName(FontFamily(familyName)), transform, sizeAdjust);
 }
