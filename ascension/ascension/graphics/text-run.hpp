@@ -51,7 +51,7 @@ namespace ascension {
 				/**
 				 * Returns the character encompasses the specified location.
 				 * @param ipd The distance to the location from the leading edge of this text run
-				 *            in inline-progression-dimension
+				 *            in inline-progression-dimension, in user units
 				 * @return The character index in this run, or @c boost#none if @a ipd is outside
 				 *         of this text run
 				 * @see #characterHasClosestLeadingEdge
@@ -60,7 +60,7 @@ namespace ascension {
 				/**
 				 * Returns the character whose leading edge is closest the specified location.
 				 * @param ipd The distance to the location from the leading edge of this text run
-				 *            in inline-progression-dimension
+				 *            in inline-progression-dimension, in user units
 				 * @return The character in this run
 				 * @see #characterHasClosestLeadingEdge
 				 */
@@ -73,7 +73,7 @@ namespace ascension {
 				 * Returns the distance in inline-progression-dimension from the leading edge of
 				 * this text run to one of the glyph of the specified character.
 				 * @param character The character index in this run
-				 * @return The leading edge
+				 * @return The leading edge in user units
 				 * @throw std#out_of_range @a character is outside of this text run
 				 * @see #trailingEdge
 				 */
@@ -82,7 +82,7 @@ namespace ascension {
 				 * Returns the distance in inline-progression-dimension from the leading edge of
 				 * this text run to trailing edge of the glyph of the specified character.
 				 * @param character The character index in this run
-				 * @return The trailing edge
+				 * @return The trailing edge, in user units
 				 * @throw std#out_of_range @a character is outside of this text run
 				 * @see #leadingEdge
 				 */
@@ -99,19 +99,20 @@ namespace ascension {
 				virtual const presentation::FlowRelativeFourSides<ComputedBorderSide>* border() const BOOST_NOEXCEPT = 0;
 				/**
 				 * Returns the margin.
-				 * @return The margin widths in device units, or @c null if absent
+				 * @return The margin widths in user units, or @c null if absent
 				 * @see #border, #padding
 				 */
 				virtual const presentation::FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT = 0;
 				/**
 				 * Returns the padding.
-				 * @return The padding widths in device units, or @c null if absent
+				 * @return The padding widths in user units, or @c null if absent
 				 * @see #border, #margin
 				 */
 				virtual const presentation::FlowRelativeFourSides<Scalar>* padding() const BOOST_NOEXCEPT = 0;
 				/// @}
 
 				/// @name Other Typographic Attributes
+				/// @{
 				virtual std::uint8_t characterLevel() const BOOST_NOEXCEPT = 0;
 				virtual std::shared_ptr<const Font> font() const BOOST_NOEXCEPT = 0;
 				/// @}
@@ -127,14 +128,14 @@ namespace ascension {
 			/// @name Free Functions to Compute Box of Text Run
 			/// @{
 			/**
-			 * Returns the 'content-box' of the specified text run in device units.
+			 * Returns the 'content-box' of the specified text run in user units.
 			 * @see #borderBox, #marginBox, #paddingBox
 			 */
 			inline presentation::FlowRelativeFourSides<Scalar> contentBox(const TextRun& textRun) BOOST_NOEXCEPT {
 				return textRun.logicalBounds();
 			}
 			/**
-			 * Returns the 'padding-box' of the specified text run in device units.
+			 * Returns the 'padding-box' of the specified text run in user units.
 			 * @see #borderBox, #contentBox, #marginBox, TextRun#padding
 			 */
 			inline presentation::FlowRelativeFourSides<Scalar> paddingBox(const TextRun& textRun) BOOST_NOEXCEPT {
@@ -148,7 +149,7 @@ namespace ascension {
 				return bounds;
 			}
 			/**
-			 * Returns the 'border-box' of the specified text run in device units.
+			 * Returns the 'border-box' of the specified text run in user units.
 			 * @see #contentBox, #marginBox, #paddingBox, TextRun#border
 			 */
 			inline presentation::FlowRelativeFourSides<Scalar> borderBox(const TextRun& textRun) BOOST_NOEXCEPT {
@@ -162,7 +163,7 @@ namespace ascension {
 				return bounds;
 			}
 			/**
-			 * Returns the 'margin-box' of the specified text run in device units.
+			 * Returns the 'margin-box' of the specified text run in user units.
 			 * @see #borderBox, #contentBox, #paddingBox, TextRun#margin
 			 */
 			inline presentation::FlowRelativeFourSides<Scalar> marginBox(const TextRun& textRun) BOOST_NOEXCEPT {
@@ -176,7 +177,7 @@ namespace ascension {
 				return bounds;
 			}
 			/**
-			 * Returns the 'allocation-rectangle' of the specified text run in device units.
+			 * Returns the 'allocation-rectangle' of the specified text run in user units.
 			 */
 			inline presentation::FlowRelativeFourSides<Scalar> allocationBox(const TextRun& textRun) BOOST_NOEXCEPT {
 				presentation::FlowRelativeFourSides<Scalar> bounds(borderBox(textRun));
@@ -187,14 +188,14 @@ namespace ascension {
 				return bounds;
 			}
 			/**
-			 * Returns the measure of the 'content-box' of the specified text run in device units.
+			 * Returns the measure of the 'content-box' of the specified text run in user units.
 			 * @see #allocationMeasure
 			 */
 			inline Scalar measure(const TextRun& textRun) {
 				return textRun.trailingEdge(textRun.length());
 			}
 			/**
-			 * Returns the measure of the 'allocation-rectangle' of the specified text run in device units.
+			 * Returns the measure of the 'allocation-rectangle' of the specified text run in user units.
 			 * @see #measure
 			 */
 			inline Scalar allocationMeasure(const TextRun& textRun) {
@@ -211,7 +212,7 @@ namespace ascension {
 			struct ComputedTextDecoration;
 
 			void paintTextDecoration(PaintContext& context,
-				const TextRun& run, const NativePoint& origin, const ComputedTextDecoration& style);
+				const TextRun& run, const Point& origin, const ComputedTextDecoration& style);
 		}
 	}
 }
