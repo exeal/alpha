@@ -72,11 +72,11 @@ namespace ascension {
 				 * @param context The graphic context
 				 * @param origin The location where this inline object is rendered
 				 */
-				virtual void draw(PaintContext& context, const NativePoint& origin) BOOST_NOEXCEPT = 0;
-				/// Returns the size of this inline object in pixels.
-				NativeSize size() const BOOST_NOEXCEPT {
-					return geometry::make<NativeSize>(advance(), ascent() + descent());
-				}
+				virtual void draw(PaintContext& context, const Point& origin) BOOST_NOEXCEPT = 0;
+//				/// Returns the size of this inline object in user units.
+//				Dimension size() const BOOST_NOEXCEPT {
+//					return Dimension(geometry::_dx = advance(), geometry::_dy = ascent() + descent());
+//				}
 			};
 
 //			class ComputedStyledTextRunIterator;
@@ -150,7 +150,7 @@ namespace ascension {
 				presentation::FlowRelativeFourSides<Scalar> bounds() const BOOST_NOEXCEPT;
 				presentation::FlowRelativeFourSides<Scalar> bounds(const Range<Index>& characterRange) const;
 				presentation::FlowRelativeFourSides<Scalar> lineBounds(Index line) const;
-				NativeRectangle pixelBounds(const FontRenderContext& frc, const NativePoint& at) const;
+				Rectangle pixelBounds(const FontRenderContext& frc, const Point& at) const;
 				/// @}
 
 				/// @name Highlight Shapes
@@ -188,7 +188,7 @@ namespace ascension {
 
 				/// @name Painting
 				/// @{
-				void draw(PaintContext& context, const NativePoint& origin,
+				void draw(PaintContext& context, const Point& origin,
 					const TextPaintOverride* paintOverride = nullptr,
 					const InlineObject* endOfLine = nullptr,
 					const InlineObject* lineWrappingMark = nullptr) const /*throw()*/;

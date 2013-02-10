@@ -107,7 +107,7 @@ namespace ascension {
 		 */
 		class LinearGradient : public Gradient {
 		public:
-			LinearGradient(const NativePoint& p0, const NativePoint& p1);
+			LinearGradient(const Point& p0, const Point& p1);
 		};
 
 		/**
@@ -116,7 +116,7 @@ namespace ascension {
 		 */
 		class RadialGradient : public Gradient {
 		public:
-			RadialGradient(const NativePoint& p0, Scalar r0, const NativePoint& p1, Scalar r1);
+			RadialGradient(const Point& p0, Scalar r0, const Point& p1, Scalar r1);
 		};
 
 		/**

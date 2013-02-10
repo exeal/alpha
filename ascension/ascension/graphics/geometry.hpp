@@ -17,167 +17,241 @@
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
 #	include <gdk/gdk.h>
 #endif
+#include <boost/geometry/geometry.hpp>
+#include <boost/geometry/geometries/point_xy.hpp>
+#include <boost/geometry/geometries/register/box.hpp>
+#include <boost/geometry/geometries/register/point.hpp>
+#include <boost/parameter.hpp>
 
 namespace ascension {
-
-	namespace graphics {
-
-		namespace geometry {
-			template<typename Geometry> struct Coordinate;
-			template<typename Geometry> struct Tag;
-
-			// Tags define geometry types.
-
-			/// Point identifying tag.
-			struct PointTag {};
-			/// Size identifying tag.
-			struct SizeTag {};
-			/// Rectangle identifying tag.
-			struct RectangleTag {};
-
-			const std::size_t X_COORDINATE = 0;
-			const std::size_t Y_COORDINATE = 1;
-
-/*
-	A point represents a point in the (x, y) coordinate plane.
-	A size represents the size of a two-dimensional primitive.
- */
-
-			namespace traits {
-				template<typename Tag, typename Geometry>
-				struct Maker {};
-				template<typename Tag, typename Geometry, std::size_t dimension>
-				struct Accessor {};
-			}
-
-#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
-			typedef double Scalar;
-			typedef GdkRectangle NativeRectangle;
-			typedef cairo_region_t* NativePolygon;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
-			namespace nativetypes {
-				typedef int Scalar;
-				typedef POINT NativePoint;
-				typedef SIZE NativeSize;
-				typedef RECT NativeRectangle;
-				typedef win32::Handle<HRGN>::Type NativeRegion;
-			}
-
-			template<> struct Coordinate<POINT> {typedef LONG Type;};
-			template<> struct Coordinate<POINTL> {typedef LONG Type;};
-			template<> struct Coordinate<POINTS> {typedef SHORT Type;};
-			template<> struct Coordinate<SIZE> {typedef LONG Type;};
-			template<> struct Coordinate<RECT> {typedef POINT Type;};
-			template<> struct Coordinate<RECTL> {typedef POINT Type;};
-			template<> struct Coordinate<SMALL_RECT> {typedef POINTS Type;};
-			template<> struct Tag<POINT> {typedef PointTag Type;};
-			template<> struct Tag<POINTL> {typedef PointTag Type;};
-			template<> struct Tag<POINTS> {typedef PointTag Type;};
-			template<> struct Tag<SIZE> {typedef SizeTag Type;};
-			template<> struct Tag<RECT> {typedef RectangleTag Type;};
-			template<> struct Tag<RECTL> {typedef RectangleTag Type;};
-			template<> struct Tag<SMALL_RECT> {typedef RectangleTag Type;};
-
-			namespace traits {
-				template<typename Point> struct Maker<PointTag, Point> {
-					static Point make(typename Coordinate<Point>::Type x, typename Coordinate<Point>::Type y) {
-						const Point temp = {x, y};
-						return temp;
-					}
-				};
-				template<typename Size> struct Maker<SizeTag, Size> {
-					static Size make(typename Coordinate<Size>::Type dx, typename Coordinate<Size>::Type dy) {
-						const Size temp = {dx, dy};
-						return temp;
-					}
-				};
-				template<typename Rectangle> struct Maker<RectangleTag, Rectangle> {
-					template<typename Size>
-					static Rectangle make(const typename Coordinate<Rectangle>::Type& origin, const Size& size,
-							typename std::enable_if<std::is_same<typename Tag<Size>::Type, SizeTag>::value>::type* = nullptr) {
-						const Rectangle temp = {origin.x, origin.y, origin.x + size.cx, origin.y + size.cy};
-						return temp;
-					}
-					template<typename Point>
-					static Rectangle make(const typename Coordinate<Rectangle>::Type& first, const Point& second,
-							typename std::enable_if<std::is_same<typename Tag<Point>::Type, PointTag>::value>::type* = nullptr) {
-						const Rectangle temp = {first.x, first.y, second.x, second.y};
-						return temp;
-					}
-				};
-				template<typename Point> struct Accessor<PointTag, Point, X_COORDINATE> {
-					static typename Coordinate<Point>::Type get(const Point& geometry) {return geometry.x;}
-					static void set(Point& geometry, typename Coordinate<Point>::Type value) {geometry.x = value;}
-				};
-				template<typename Point> struct Accessor<PointTag, Point, Y_COORDINATE> {
-					static typename Coordinate<Point>::Type get(const Point& geometry) {return geometry.y;}
-					static void set(Point& geometry, typename Coordinate<Point>::Type value) {geometry.y = value;}
-				};
-				template<typename Size> struct Accessor<SizeTag, Size, X_COORDINATE> {
-					static typename Coordinate<Size>::Type get(const Size& geometry) {return geometry.cx;}
-					static void set(Size& geometry, typename Coordinate<Size>::Type value) {geometry.cx = value;}
-				};
-				template<typename Size> struct Accessor<SizeTag, Size, Y_COORDINATE> {
-					static typename Coordinate<Size>::Type get(const Size& geometry) {return geometry.cy;}
-					static void set(Size& geometry, typename Coordinate<Size>::Type value) {geometry.cy = value;}
-				};
-				template<typename Rectangle> struct Accessor<RectangleTag, Rectangle, X_COORDINATE> {
-					static typename Coordinate<Rectangle>::Type get(const Rectangle& geometry) {
-						return make<typename Coordinate<Rectangle>::Type>(geometry.left, geometry.top);
-					}
-					static void set(Rectangle& geometry, const typename Coordinate<Rectangle>::Type& value) {
-						geometry.left = value.x;
-						geometry.top = value.y;
-					}
-				};
-				template<typename Rect> struct Accessor<RectangleTag, Rect, Y_COORDINATE> {
-					static typename Coordinate<Rect>::Type get(const Rect& geometry) {
-						return make<typename Coordinate<Rect>::Type>(geometry.right, geometry.bottom);
-					}
-					static void set(Rect& geometry, const typename Coordinate<Rect>::Type& value) {
-						geometry.right = value.x;
-						geometry.bottom = value.y;
-					}
-				};
-			}
-#else
-#endif
-		}
-	}
-
-	ASCENSION_STATIC_ASSERT(std::is_signed<graphics::geometry::nativetypes::Scalar>::value);
-
 	namespace detail {
 		template<typename Geometry, typename GeometryTag, typename T = void>
 		struct EnableIfTagIs : std::enable_if<
 			std::is_same<
-				typename graphics::geometry::Tag<typename std::remove_cv<Geometry>::type>::Type,
+				typename boost::geometry::tag<typename std::remove_cv<Geometry>::type>::type,
 				GeometryTag
 			>::value, T> {};
-//		template<typename Geometry, typename GeometryTag, typename T = void>
-//		struct DisableIfTagIs : std::enable_if<
-//			!std::is_same<
-//				typename graphics::geometry::Tag<typename std::remove_cv<Geometry>::type>::Type,
-//				GeometryTag
-//			>::value, T> {};
+	}
 
+	namespace graphics {
+		namespace geometry {
+			/// @name Geometric Primitives
+			/// @{
+
+			typedef float Scalar;
+
+#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+			BOOST_PARAMETER_NAME(x)
+			BOOST_PARAMETER_NAME(y)
+#endif	// !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+
+			template<typename Coordinate>
+			class BasicPointBase {
+			protected:
+				BasicPointBase() {}
+				template<typename Arguments>
+				BasicPointBase(const Arguments& arguments) : x_(arguments[_x]), y_(arguments[_y]) {}
+			protected:
+				Coordinate x_, y_;
+			};
+
+			template<typename Coordinate>
+			class BasicPoint : public BasicPointBase<Coordinate> {
+			public:
+				BasicPoint() {}
+				template<typename Other>
+				BasicPoint(const Other& other) : BasicPointBase<Coordinate>((_x = boost::geometry::get<0>(other), _y = boost::geometry::get<1>(other))) {}
+				BOOST_PARAMETER_CONSTRUCTOR(
+					BasicPoint, (BasicPointBase<Coordinate>), tag,
+					(required
+						(x, (Coordinate))
+						(y, (Coordinate))))
+#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+				BasicPoint(const POINT& nativeObject);
+				BasicPoint(const POINTL& nativeObject);
+				BasicPoint(const POINTS& nativeObject);
+				operator POINT() const;
+				operator POINTL() const;
+				operator POINTS() const;
+#else
+#endif
+			private:
+				using BasicPointBase<Coordinate>::x_;
+				using BasicPointBase<Coordinate>::y_;
+				friend struct boost::geometry::traits::access<BasicPoint<Coordinate>, 0>;
+				friend struct boost::geometry::traits::access<BasicPoint<Coordinate>, 1>;
+			};
+
+#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+			BOOST_PARAMETER_NAME(dx)
+			BOOST_PARAMETER_NAME(dy)
+#endif	// !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+
+			template<typename Coordinate>
+			class BasicDimensionBase {
+			protected:
+				BasicDimensionBase() {}
+				template<typename Arguments>
+				BasicDimensionBase(const Arguments& arguments) : dx_(arguments[_dx]), dy_(arguments[_dy]) {}
+			protected:
+				Coordinate dx_, dy_;
+			};
+
+			template<typename Coordinate> class BasicDimension;
+			template<typename Coordinate> Coordinate dx(BasicDimension<Coordinate>& dimension);
+			template<typename Coordinate> Coordinate dx(const BasicDimension<Coordinate>& dimension);
+			template<typename Coordinate> Coordinate dy(BasicDimension<Coordinate>& dimension);
+			template<typename Coordinate> Coordinate dy(const BasicDimension<Coordinate>& dimension);
+
+			template<typename Coordinate>
+			class BasicDimension : public BasicDimensionBase<Coordinate> {
+			public:
+				BasicDimension() {}
+//				template<typename Other>
+//				BasicDimension(const Other& other) : BasicDimensionBase<Coordinate>((_dx = dx(other), _dy = dy(other))) {}
+				BOOST_PARAMETER_CONSTRUCTOR(
+					BasicDimension, (BasicDimensionBase<Coordinate>), tag,
+					(required
+						(dx, (Coordinate))
+						(dy, (Coordinate))))
+#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+				BasicDimension(const SIZE& nativeObject);
+				operator SIZE() const;
+#else
+#endif
+			private:
+				using BasicDimensionBase<Coordinate>::dx_;
+				using BasicDimensionBase<Coordinate>::dy_;
+				friend Coordinate dx(BasicDimension<Coordinate>&);
+				friend Coordinate dx(const BasicDimension<Coordinate>&);
+				friend Coordinate dy(BasicDimension<Coordinate>&);
+				friend Coordinate dy(const BasicDimension<Coordinate>&);
+			};
+
+			struct DimensionTag {};
+
+#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+			BOOST_PARAMETER_NAME(left)
+			BOOST_PARAMETER_NAME(top)
+			BOOST_PARAMETER_NAME(right)
+			BOOST_PARAMETER_NAME(bottom)
+#endif	// !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+
+			template<typename Coordinate>
+			class BasicRectangleBase {
+			protected:
+				BasicRectangleBase() {}
+				template<typename Arguments>
+				BasicRectangleBase(const Arguments& arguments) : minimumCorner_(_x = arguments[_left], _y = arguments[_top]), maximumCorner_(_x = arguments[_right], _y = arguments[_bottom]) {}
+			protected:
+				BasicPoint<Coordinate> minimumCorner_, maximumCorner_;
+			};
+
+			template<typename Coordinate>
+			class BasicRectangle : public BasicRectangleBase<Coordinate> {
+			public:
+				BasicRectangle() {}
+				template<typename Point1, typename Point2>
+				explicit BasicRectangle(const std::pair<Point1, Point2>& points,
+					typename detail::EnableIfTagIs<Point1, boost::geometry::point_tag>::type* = nullptr,
+					typename detail::EnableIfTagIs<Point2, boost::geometry::point_tag>::type* = nullptr)
+					: BasicRectangleBase<Coordinate>((
+						_left = boost::geometry::get<0>(points.first), _top = boost::geometry::get<1>(points.first),
+						_right = boost::geometry::get<0>(points.second), _bottom = boost::geometry::get<1>(points.second))) {}
+				template<typename Origin, typename SizeCoordinate>
+				BasicRectangle(const Origin& origin, const BasicDimension<SizeCoordinate>& size,
+					typename detail::EnableIfTagIs<Origin, boost::geometry::point_tag>::type* = nullptr);
+				template<typename ScalarType>
+				BasicRectangle(const Range<ScalarType>& xrange, const Range<ScalarType>& yrange)
+					: BasicRectangleBase<Coordinate>((
+						_left = xrange.beginning(), _top = yrange.beginning(),
+						_right = xrange.end(), _bottom = yrange.end())) {}
+				template<typename Other>
+				BasicRectangle(const Other& other) : BasicRectangleBase<Coordinate>((_dx = dx(other), _dy = dy(other))) {}
+				BOOST_PARAMETER_CONSTRUCTOR(
+					BasicRectangle, (BasicRectangleBase<Coordinate>), tag,
+					(required
+						(left, (Coordinate))
+						(top, (Coordinate))
+						(right, (Coordinate))
+						(bottom, (Coordinate))))
+#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+				BasicRectangle(const RECT& nativeObject);
+				BasicRectangle(const RECTL& nativeObject);
+				BasicRectangle(const SMALL_RECT& nativeObject);
+				operator RECT() const;
+				operator RECTL() const;
+				operator SMALL_RECT() const;
+#else
+#endif
+			private:
+				using BasicRectangleBase<Coordinate>::minimumCorner_;
+				using BasicRectangleBase<Coordinate>::maximumCorner_;
+				friend struct boost::geometry::traits::indexed_access<BasicRectangle<Coordinate>, boost::geometry::min_corner, 0>;
+				friend struct boost::geometry::traits::indexed_access<BasicRectangle<Coordinate>, boost::geometry::min_corner, 1>;
+				friend struct boost::geometry::traits::indexed_access<BasicRectangle<Coordinate>, boost::geometry::max_corner, 0>;
+				friend struct boost::geometry::traits::indexed_access<BasicRectangle<Coordinate>, boost::geometry::max_corner, 1>;
+			};
+			/// @}
+		}
+	}
+}
+
+#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+BOOST_GEOMETRY_REGISTER_POINT_2D(
+	ascension::graphics::geometry::BasicPoint<ascension::graphics::geometry::Scalar>,
+	ascension::graphics::geometry::Scalar, boost::geometry::cs::cartesian, x_, y_)
+BOOST_GEOMETRY_REGISTER_BOX(
+	ascension::graphics::geometry::BasicRectangle<ascension::graphics::geometry::Scalar>,
+	ascension::graphics::geometry::BasicPoint<ascension::graphics::geometry::Scalar>, minimumCorner_, maximumCorner_)
+//BOOST_GEOMETRY_REGISTER_BOX_TEMPLATED(
+//	ascension::graphics::geometry::BasicRectangle, minimumCorner_, maximumCorner_)
+#endif	// !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+
+namespace boost {
+	namespace geometry {
+		namespace traits {
+			template<typename Coordinate>
+			struct tag<ascension::graphics::geometry::BasicDimension<Coordinate>> {
+				typedef ascension::graphics::geometry::DimensionTag type;
+			};
+		}
+		namespace core_dispatch {
+			template<typename Coordinate>
+			struct coordinate_type<ascension::graphics::geometry::DimensionTag, ascension::graphics::geometry::BasicDimension<Coordinate>> {
+				typedef void point_type;
+				typedef Coordinate type;
+			};
+		}
+	}
+}
+
+namespace ascension {
+	namespace detail {
 		template<typename Geometry, std::size_t dimension>
 		class AccessProxy {
 		public:
-			typedef typename graphics::geometry::Coordinate<Geometry>::Type CoordinateType;
+			typedef typename boost::geometry::coordinate_type<Geometry>::Type CoordinateType;
 		public:
 			explicit AccessProxy(Geometry& geometry) /*throw()*/ : geometry_(geometry) {}
 			const AccessProxy<Geometry, dimension>& operator=(CoordinateType value) {
-				graphics::geometry::set<dimension>(geometry_, value);
+				boost::geometry::set<dimension>(geometry_, value);
 				return *this;
 			}
 			const AccessProxy& operator=(const AccessProxy& other) {
 				return *this = static_cast<CoordinateType>(other);
 			}
 			operator CoordinateType() const {
-				return graphics::geometry::get<dimension>(geometry_);
+				return boost::geometry::get<dimension>(geometry_);
 			};
 			CoordinateType operator+() const {return +static_cast<CoordinateType>(*this);}
 			CoordinateType operator-() const {return -static_cast<CoordinateType>(*this);}
@@ -190,267 +264,191 @@ namespace ascension {
 			Geometry& geometry_;
 		};
 
-		template<typename Rectangle, std::size_t dimension>
+		template<typename Geometry, std::size_t dimension>
 		class RectangleRangeProxy /*: public Range<
 			typename graphics::geometry::Coordinate<
 				typename graphics::geometry::Coordinate<Rectangle>::Type
 			>::Type
 		>*/ {
 		private:
-			typedef typename graphics::geometry::Coordinate<Rectangle>::Type Point;
-			typedef typename graphics::geometry::Coordinate<Point>::Type Scalar;
+			typedef typename boost::geometry::point_type<Geometry>::type PointType;
+			typedef typename boost::geometry::coordinate_type<PointType>::type CoordinateType;
 		public:
-			explicit RectangleRangeProxy(Rectangle& rectangle) BOOST_NOEXCEPT :
-				/*Range<Scalar>(graphics::geometry::range<dimension>(const_cast<const Rectangle&>(rectangle))),*/ rectangle_(rectangle) {}
+			explicit RectangleRangeProxy(Geometry& rectangle) BOOST_NOEXCEPT :
+				/*Range<CoordinateType>(graphics::geometry::range<dimension>(const_cast<const Geometry&>(rectangle))),*/ rectangle_(rectangle) {}
 			template<typename T>
-			RectangleRangeProxy<Rectangle, dimension>& operator=(const Range<T>& range) {
-				Point b(graphics::geometry::get<0>(rectangle_)), e(graphics::geometry::get<1>(rectangle_));
-				graphics::geometry::set<dimension>(b, range.beginning());
-				graphics::geometry::set<dimension>(e, range.end());
-				graphics::geometry::set<0>(rectangle_, b);
-				graphics::geometry::set<1>(rectangle_, e);
+			RectangleRangeProxy<Geometry, dimension>& operator=(const Range<T>& range) {
+				boost::geometry::set<boost::geometry::min_corner, dimension>(rectangle_, range.beginning());
+				boost::geometry::set<boost::geometry::max_corner, dimension>(rectangle_, range.end());
 //				Range<Scalar>::operator=(range);
 				return *this;
 			}
 		private:
-			Rectangle& rectangle_;
+			Geometry& rectangle_;
 		};
 	}
 
 	namespace graphics {
-
-		using namespace geometry::nativetypes;
-
 		namespace geometry {
+			/// @name Additional Access Functions
+			/// @{
 
-			// fundamental operations
-
-			template<typename Geometry0, typename Geometry1, typename Geometry2>
-			inline Geometry0 make(const Geometry1& geometry1, const Geometry2& geometry2) {
-//					typename detail::Select<std::is_scalar<Geometry1>::value, Geometry1,
-//						typename std::add_const<typename std::add_reference<Geometry1>::type>::type>::Type geometry1,
-//					typename detail::Select<std::is_scalar<Geometry2>::value, Geometry2,
-//						typename std::add_const<typename std::add_reference<Geometry2>::type>::type>::Type geometry2) {
-				return traits::Maker<typename Tag<Geometry0>::Type, Geometry0>::make(geometry1, geometry2);
+			/// Returns the size of the @a dimension in x-coordinate.
+			template<typename Coordinate>
+			inline Coordinate dx(const BasicDimension<Coordinate>& dimension) {
+				return dimension.dx_;	// $friendly-access$
 			}
 
-			template<typename Rectangle, typename ScalarType>
-			inline Rectangle make(
-					const Range<ScalarType>& xrange, const Range<ScalarType>& yrange,
-					typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
-				return make<Rectangle>(
-					make<Coordinate<Rectangle>::Type>(xrange.beginning(), yrange.beginning()),
-					make<Coordinate<Rectangle>::Type>(xrange.end(), yrange.end()));
-			}
-
-			template<std::size_t dimension, typename Geometry>
-			inline typename Coordinate<Geometry>::Type get(const Geometry& geometry) {
-				return traits::Accessor<typename Tag<Geometry>::Type, Geometry, dimension>::get(geometry);
-			}
-
-			template<std::size_t dimension, typename Geometry>
-			inline void set(Geometry& geometry, typename Coordinate<Geometry>::Type value) {
-				traits::Accessor<typename Tag<Geometry>::Type, Geometry, dimension>::set(geometry, value);
-			}
-
-			// 'add' for point and size
-
-			template<typename Point>
-			inline Point& add(Point& point1, const Point& point2, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
-				x(point1) += x(point2);
-				y(point1) += y(point2);
-				return point1;
-			}
-
-			template<typename Size>
-			inline Size& add(Size& size1, const Size& size2, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
-				dx(size1) += dx(size2);
-				dy(size1) += dy(size2);
-				return size1;
-			}
-
-			// 'area' for size and rectangle
-
-			template<typename Size>
-			inline typename Coordinate<Size>::Type area(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
-				return dx(size) * dy(size);
-			}
-
-			template<typename Rectangle>
-			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type area(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
-				return dx(rectangle) * dy(rectangle);
-			}
-
-			// 'divide' for point and size
-
-			// 'dx' for size and rectangle
-
-			/// Returns the size of the @a size in x-coordinate.
-			template<typename Size>
-			inline typename Coordinate<Size>::Type dx(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
-				return get<X_COORDINATE>(size);
-			}
-
-			template<typename Size>
-			inline detail::AccessProxy<Size, X_COORDINATE> dx(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
-				return detail::AccessProxy<Size, 0>(size);
+			template<typename Coordinate>
+			inline Coordinate& dx(BasicDimension<Coordinate>& dimension) {
+				return dimension.dx_;	// $friendly-access$
 			}
 
 			/// Returns the size of the @a rectangle in x-coordinate.
-			template<typename Rectangle>
-			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type dx(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
-				return dx(size(rectangle));
+			template<typename Geometry>
+			inline typename boost::geometry::coordinate_type<Geometry>::type dx(const Geometry& rectangle, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+				return boost::geometry::get<boost::geometry::max_corner, 0>(rectangle) - boost::geometry::get<boost::geometry::min_corner, 0>(rectangle);
 			}
-
-			// 'dy' for size and rectangle
 
 			/// Returns the size of the @a size in y-coordinate.
-			template<typename Size>
-			inline typename Coordinate<Size>::Type dy(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
-				return get<Y_COORDINATE>(size);
+			template<typename Coordinate>
+			inline Coordinate dy(const BasicDimension<Coordinate>& dimension) {
+				return dimension.dy_;	// $friendly-access$
 			}
 
-			template<typename Size>
-			inline detail::AccessProxy<Size, Y_COORDINATE> dy(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
-				return detail::AccessProxy<Size, 1>(size);
+			template<typename Coordinate>
+			inline Coordinate& dy(BasicDimension<Coordinate>& dimension) {
+				return dimension.dy_;	// $friendly-access$
 			}
 
-			/// Returns the size of the @a rectangle in x-coordinate.
-			template<typename Rectangle>
-			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type dy(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
-				return dy(size(rectangle));
+			/// Returns the size of the @a rectangle in y-coordinate.
+			template<typename Geometry>
+			inline typename boost::geometry::coordinate_type<Geometry>::type dy(const Geometry& rectangle, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+				return boost::geometry::get<boost::geometry::max_corner, 1>(rectangle) - boost::geometry::get<boost::geometry::min_corner, 1>(rectangle);
 			}
 
-			// 'equals'
+			/// Returns the origin of the @a rectangle.
+			template<typename Geometry>
+			inline const typename boost::geometry::point_type<Geometry>::type origin(const Geometry& rectangle, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+				typename boost::geometry::point_type<Geometry>::type temp;
+				boost::geometry::assign_values(temp, boost::geometry::get<boost::geometry::min_corner, 0>(rectangle), boost::geometry::get<boost::geometry::min_corner, 1>(rectangle));
+				return temp;
+			}
+
+			template<std::size_t dimension, typename Geometry>
+			inline const Range<typename boost::geometry::coordinate_type<Geometry>::type> range(const Geometry& rectangle) {
+				return makeRange(boost::geometry::get<boost::geometry::min_corner, dimension>(rectangle), boost::geometry::get<boost::geometry::max_corner, dimension>(rectangle));
+			}
+
+			template<std::size_t dimension, typename Geometry>
+			inline detail::RectangleRangeProxy<Geometry, dimension> range(Geometry& rectangle) {
+				return detail::RectangleRangeProxy<Geometry, dimension>(rectangle);
+			}
+
+			/// Returns the size of the @a rectangle.
+			template<typename Geometry>
+			inline BasicDimension<boost::geometry::coordinate_type<Geometry>> size(const Geometry& rectangle, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+				return BasicDimension<boost::geometry::coordinate_type<Geometry>>((_dx = dx(rectangle), _dy = dy(rectangle)));
+			}
+
+			/// Returns the x-coordinate of @a point.
+			template<typename Geometry>
+			inline typename boost::geometry::coordinate_type<Geometry>::type x(const Geometry& point, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+				return boost::geometry::get<0>(point);
+			}
 
 			template<typename Geometry>
-			inline bool equals(const Geometry& geometry1, const Geometry& geometry2,
-					typename std::enable_if<std::is_arithmetic<typename Coordinate<Geometry>::Type>::value>::type* = nullptr) {
-				return get<0>(geometry1) == get<0>(geometry2) && get<1>(geometry1) == get<1>(geometry2);
+			inline detail::AccessProxy<Geometry, 0> x(Geometry& point, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+				return detail::AccessProxy<Geometry, 0>(point);
+			}
+
+			/// Returns the y-coordinate of @a point.
+			template<typename Geometry>
+			inline typename boost::geometry::coordinate_type<Geometry>::type y(const Geometry& point, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+				return boost::geometry::get<1>(point);
 			}
 
 			template<typename Geometry>
-			inline bool equals(const Geometry& geometry1, const Geometry& geometry2,
-					typename std::enable_if<!std::is_arithmetic<typename Coordinate<Geometry>::Type>::value>::type* = nullptr) {
-				return equals(get<0>(geometry1), get<0>(geometry2)) && equals(get<1>(geometry1), get<1>(geometry2));
+			inline detail::AccessProxy<Geometry, 1> y(Geometry& point, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+				return detail::AccessProxy<Geometry, 1>(point);
+			}
+			/// @}
+
+			/// @name Additional Algorithms
+			/// @{
+
+			template<typename Coordinate>
+			inline Coordinate area(const BasicDimension<Coordinate>& dimension) {
+				return dx(dimension) * dy(dimension);
 			}
 
-			// 'intersected' for rectangle and region
-
-			template<typename Rectangle1, typename Rectangle2>
-			inline Rectangle1 intersected(const Rectangle1& rectangle1, const Rectangle2& rectangle2,
-					typename detail::EnableIfTagIs<Rectangle1, RectangleTag>::type* = nullptr,
-					typename detail::EnableIfTagIs<Rectangle2, RectangleTag>::type* = nullptr) {
-				return make<Rectangle1>(
-					ascension::intersected(range<X_COORDINATE>(rectangle1), range<X_COORDINATE>(rectangle2)),
-					ascension::intersected(range<Y_COORDINATE>(rectangle1), range<Y_COORDINATE>(rectangle2)));
+			template<typename Coordinate>
+			inline bool isEmpty(const BasicDimension<Coordinate>& dimension) {
+				return dx(dimension) == 0 || dy(dimension) == 0;
 			}
 
-			// 'intersects' for rectangle and region
-
-			template<typename Rectangle1, typename Rectangle2>
-			inline bool _intersects(const Rectangle1& rectangle1, const Rectangle2& rectangle2, const RectangleTag&, const RectangleTag&) {
-				return ascension::intersects(range<X_COORDINATE>(rectangle1), range<X_COORDINATE>(rectangle2))
-					&& ascension::intersects(range<Y_COORDINATE>(rectangle1), range<Y_COORDINATE>(rectangle2));
-			}
-
-			template<typename Geometry1, typename Geometry2>
-			inline bool intersects(const Geometry1& geometry1, const Geometry2& geometry2) {
-				return _intersects(geometry1, geometry2, Tag<Geometry1>::Type(), Tag<Geometry2>::Type());
-			}
-
-			// 'includes' for rectangle and region
-
-			template<typename Rectangle, typename Point>
-			inline bool includes(const Rectangle& rectangle, const Point& point,
-					typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr,
-					typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
-				return ascension::includes(makeRange(left(rectangle), right(rectangle)), x(point))
-					&& ascension::includes(makeRange(top(rectangle), bottom(rectangle)), y(point));
-			}
-
-			template<typename Rectangle1, typename Rectangle2>
-			inline bool includes(const Rectangle1& rectangle1, const Rectangle2& rectangle2,
-					typename detail::EnableIfTagIs<Rectangle1, RectangleTag>::type* = nullptr,
-					typename detail::EnableIfTagIs<Rectangle2, RectangleTag>::type* = nullptr) {
-				return ascension::includes(range<X_COORDINATE>(rectangle1), range<X_COORDINATE>(rectangle2))
-					&& ascension::includes(range<Y_COORDINATE>(rectangle1), range<Y_COORDINATE>(rectangle2));
-			}
-
-			// 'isEmpty' for size, rectangle and region
-
-			template<typename Size>
-			inline bool isEmpty(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
-				return dx(size) <= 0 || dy(size) <= 0;
-			}
-
-			template<typename Rectangle>
-			inline bool isEmpty(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
+			template<typename Geometry>
+			inline bool isEmpty(const Geometry& rectangle, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
 				return isEmpty(size(rectangle));
 			}
 
-			// 'isNormalized' for size and rectangle
-
-			template<typename Size>
-			inline bool isNormalized(const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
-				return dx(size) >= 0 && dy(size) >= 0;
+			template<typename Coordinate>
+			inline bool isNormalized(const BasicDimension<Coordinate>& dimension) {
+				return dx(dimension) >= 0 && dy(dimension) >= 0;
 			}
 
-			template<typename Rectangle>
-			inline bool isNormalized(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
+			template<typename Geometry>
+			inline bool isNormalized(const Geometry& rectangle, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
 				return isNormalized(size(rectangle));
 			}
 
-			// 'multiply' for size
-
-			// 'negate' for point and size
-
-			template<typename Point>
-			inline Point& negate(Point& point, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
+			template<typename Geometry>
+			inline Geometry& negate(Geometry& point, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
 				x(point) = -x(point);
 				y(point) = -y(point);
 				return point;
 			}
 
+			template<typename Coordinate>
+			inline BasicDimension<Coordinate>& negate(BasicDimension<Coordinate>& dimension) {
+				dx(dimension) = -dx(dimension);
+				dy(dimension) = -dy(dimension);
+				return dimension;
+			}
+
+			template<typename Coordinate>
+			inline BasicDimension<Coordinate>& normalize(BasicDimension<Coordinate>& dimension) {
+				if(dx(dimension) < 0)
+					dx(dimension) = -dx(dimension);
+				if(dy(dimension) < 0)
+					dy(dimension) = -dy(dimension);
+				return dimension;
+			}
+
+			template<typename Geometry>
+			inline Geometry& normalize(Geometry& rectangle, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+				typedef typename boost::geometry::coordinate_type<Geometry>::type Coordinate;
+				Coordinate minimumX(boost::get<boost::geometry::min_corner, 0>(rectangle));
+				Coordinate minimumY(boost::get<boost::geometry::min_corner, 1>(rectangle));
+				Coordinate maximumX(boost::get<boost::geometry::max_corner, 0>(rectangle));
+				Coordinate maximumY(boost::get<boost::geometry::max_corner, 1>(rectangle));
+				if(minimumX > maximumX)
+					std::swap(minimumX, maximumX);
+				if(minimumY > maximumY)
+					std::swap(minimumY, maximumY);
+				boost::geometry::assign_values(rectangle, minimumX, minimumY, maximumX, maximumY);
+				return rectangle;
+			}
+			/// @}
+
+			// fundamental operations
+
+#if 0
 			template<typename Size>
-			inline Size& negate(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
-				dx(size) = -dx(size);
-				dy(size) = -dy(size);
-				return size;
-			}
-
-			// 'normalize' for size and rectangle
-
-			template<typename Size>
-			inline Size& normalize(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
-				if(dx(size) < 0)
-					dx(size) = -dx(size);
-				if(dy(size) < 0)
-					dy(size) = -dy(size);
-				return size;
-			}
-
-			template<typename Rectangle>
-			inline Rectangle& normalize(Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
-				typedef typename Coordinate<typename Coordinate<Rectangle>::Type>::Type Scalar;
-				std::pair<Scalar, Scalar> minimumCorner(x(get<0>(rectangle)), y(get<0>(rectangle)));
-				std::pair<Scalar, Scalar> maximumCorner(x(get<1>(rectangle)), y(get<1>(rectangle)));
-				if(minimumCorner.first > maximumCorner.first)
-					std::swap(minimumCorner.first, maximumCorner.first);
-				if(minimumCorner.second > maximumCorner.second)
-					std::swap(minimumCorner.second, maximumCorner.second);
-				return rectangle = make<Rectangle>(
-					make<Coordinate<Rectangle>::Type>(minimumCorner.first, minimumCorner.second),
-					make<Coordinate<Rectangle>::Type>(maximumCorner.first, maximumCorner.second));
-			}
-
-			// 'subtract' for point and size
-
-			template<typename Point>
-			inline Point& subtract(Point& point1, const Point& point2, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
-				x(point1) -= x(point2);
-				y(point1) -= y(point2);
-				return point1;
+			inline Size& add(Size& size1, const Size& size2, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
+				dx(size1) += dx(size2);
+				dy(size1) += dy(size2);
+				return size1;
 			}
 
 			template<typename Size>
@@ -459,80 +457,39 @@ namespace ascension {
 				dy(size1) -= dy(size2);
 				return size1;
 			}
-
+#endif
 			// 'translate' for point, rectangle and region
 
-			template<typename Point, typename Size>
-			inline Point& translate(Point& p, const Size& offset,
-					typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr,
-					typename detail::EnableIfTagIs<Size, PointTag>::type* = nullptr) {
-				x(p) += x(offset);
-				y(p) += y(offset);
-				return p;
+			template<typename Geometry, typename DimensionCoordinate>
+			inline Geometry& translate(Geometry& point, const BasicDimension<DimensionCoordinate>& offset,
+					typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+				x(point) += dx(offset);
+				y(point) += dy(offset);
+				return point;
 			}
 
-			template<typename Point, typename Size>
-			inline Point& translate(Point& p, const Size& offset,
-					typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr,
-					typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
-				x(p) += dx(offset);
-				y(p) += dy(offset);
-				return p;
-			}
-
-			template<typename Rectangle, typename Offset>
-			inline Rectangle& translate(Rectangle& rectangle, const Offset& offset, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
-				Coordinate<Rectangle>::Type p[2] = {get<0>(rectangle), get<1>(rectangle)};
-				return rectangle = make<Rectangle>(translate(p[0], offset), translate(p[1], offset));
-			}
-
-			// 'united' for ...
-
-			// 'x' for point and rectangle
-
-			/// Returns the x-coordinate of @a point.
-			template<typename Point>
-			inline typename Coordinate<Point>::Type x(const Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
-				return get<X_COORDINATE>(p);
-			}
-
-			template<typename Point>
-			inline detail::AccessProxy<Point, 0> x(Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
-				return detail::AccessProxy<Point, X_COORDINATE>(p);
-			}
-
-			// 'y' for point and rectangle
-
-			/// Returns the y-coordinate of @a point.
-			template<typename Point>
-			inline typename Coordinate<Point>::Type y(const Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
-				return get<Y_COORDINATE>(p);
-			}
-
-			template<typename Point>
-			inline detail::AccessProxy<Point, 1> y(Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
-				return detail::AccessProxy<Point, Y_COORDINATE>(p);
+			template<typename Geometry, typename DimensionCoordinate>
+			inline Geometry& translate(Geometry& rectangle, const BasicDimension<DimensionCoordinate>& offset,
+					typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+				boost::geometry::point_type<Geometry> o(origin(rectangle));
+				translate(o, offset);
+				boost::geometry::set<boost::geometry::min_corner, 0>(rectangle, x(o));
+				boost::geometry::set<boost::geometry::min_corner, 1>(rectangle, y(o));
+				return rectangle;
 			}
 
 			// writing to standard output stream
 
-			template<typename Point, typename Character, typename CharacterTraits>
+			template<typename Geometry, typename Character, typename CharacterTraits>
 			inline std::basic_ostream<Character, CharacterTraits>&
-					write(std::basic_ostream<Character, CharacterTraits>& out, const Point& point, const PointTag&) {
+					write(std::basic_ostream<Character, CharacterTraits>& out, const Geometry& point, const boost::geometry::point_tag&) {
 				const std::ctype<Character>& ct = std::use_facet<std::ctype<Character>>(out.getloc());
 				return out << x(point) << ct.widen(',') << y(point);
 			}
 
-			template<typename Size, typename Character, typename CharacterTraits>
+			template<typename Geometry, typename Character, typename CharacterTraits>
 			inline std::basic_ostream<Character, CharacterTraits>&
-					write(std::basic_ostream<Character, CharacterTraits>& out, const Size& size, const SizeTag&) {
-				const std::ctype<Character>& ct = std::use_facet<std::ctype<Character>>(out.getloc());
-				return out << dx(size) << ct.widen('x') << dy(size);
-			}
-
-			template<typename Rectangle, typename Character, typename CharacterTraits>
-			inline std::basic_ostream<Character, CharacterTraits>&
-					write(std::basic_ostream<Character, CharacterTraits>& out, const Rectangle& rectangle, const RectangleTag&) {
+					write(std::basic_ostream<Character, CharacterTraits>& out, const Geometry& rectangle, const boost::geometry::box_tag&) {
 				const std::ctype<Character>& ct = std::use_facet<std::ctype<Character>>(out.getloc());
 				return out << origin(rectangle) << ct.widen(' ') << size(rectangle);
 			}
@@ -540,7 +497,14 @@ namespace ascension {
 			template<typename Geometry, typename Character, typename CharacterTraits>
 			inline std::basic_ostream<Character, CharacterTraits>&
 					operator<<(std::basic_ostream<Character, CharacterTraits>& out, const Geometry& geometry) {
-				return write(out, geometry, typename Tag<Geometry>::Type());
+				return write(out, geometry, typename boost::geometry::tag<Geometry>::type());
+			}
+
+			template<typename Coordinate, typename Character, typename CharacterTraits>
+			inline std::basic_ostream<Character, CharacterTraits>&
+					write(std::basic_ostream<Character, CharacterTraits>& out, const BasicDimension<Coordinate>& dimension) {
+				const std::ctype<Character>& ct = std::use_facet<std::ctype<Character>>(out.getloc());
+				return out << dx(dimension) << ct.widen('x') << dy(dimension);
 			}
 
 			// special operations
@@ -549,74 +513,67 @@ namespace ascension {
 			 * Returns the y-coordinate of the bottom edge of @a rectangle.
 			 * @see #bottomLeft, #bottomRight, #top
 			 */
-			template<typename Rectangle>
-			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type bottom(const Rectangle& rectangle) {
-				return std::max(y(get<0>(rectangle)), y(get<1>(rectangle)));
+			template<typename Geometry>
+			inline typename boost::geometry::coordinate_type<Geometry>::type bottom(const Geometry& rectangle) {
+				return std::max(
+					boost::geometry::get<boost::geometry::min_corner, 1>(rectangle),
+					boost::geometry::get<boost::geometry::max_corner, 1>(rectangle));
 			}
 
 			/**
 			 * Returns the bottom-left corner of @a rectangle.
 			 * @see #bottom, #left
 			 */
-			template<typename Rectangle>
-			inline typename Coordinate<Rectangle>::Type bottomLeft(const Rectangle& rectangle) {
-				return make<typename Coordinate<Rectangle>::Type>(left(rectangle), bottom(rectangle));
+			template<typename Geometry>
+			inline typename boost::geometry::point_type<Geometry>::type bottomLeft(const Geometry& rectangle) {
+				return boost::make<typename boost::geometry::point_type<Geometry>::type>(left(rectangle), bottom(rectangle));
 			}
 
 			/**
 			 * Returns the bottom-right corner of @a rectangle.
 			 * @see #bottom, #right
 			 */
-			template<typename Rectangle>
-			inline typename Coordinate<Rectangle>::Type bottomRight(const Rectangle& rectangle) {
-				return make<typename Coordinate<Rectangle>::Type>(right(rectangle), bottom(rectangle));
+			template<typename Geometry>
+			inline typename boost::geometry::point_type<Geometry>::type bottomRight(const Geometry& rectangle) {
+				return boost::make<typename boost::geometry::point_type<Geometry>::type>(right(rectangle), bottom(rectangle));
 			}
 
 			/// Returns the Manhattan-length of @a point.
-			template<typename Point>
-			inline typename Coordinate<Point>::Type manhattanLength(const Point& p, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
-				return std::abs(x(p)) + std::abs(y(p));
+			template<typename Geometry>
+			inline typename boost::geometry::coordinate_type<Geometry>::type manhattanLength(
+					const Geometry& point, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+				return std::abs(x(point)) + std::abs(y(point));
 			}
 
-			template<typename Size>
-			inline Size& expandTo(Size&, const Size& other, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr);
+			template<typename Coordinate1, typename Coordinate2>
+			inline BasicDimension<Coordinate1>& expandTo(BasicDimension<Coordinate1>&, const BasicDimension<Coordinate2>& other);
 
 			/**
 			 * Returns the x-coordinate of the left edge of @a rectangle.
 			 * @see #bottomLeft, #right, #topLeft
 			 */
-			template<typename Rectangle>
-			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type left(const Rectangle& rectangle) {
-				return std::min(x(get<0>(rectangle)), x(get<1>(rectangle)));
+			template<typename Geometry>
+			inline typename boost::geometry::coordinate_type<Geometry>::type left(const Geometry& rectangle) {
+				return std::min(
+					boost::geometry::get<boost::geometry::min_corner, 0>(rectangle),
+					boost::geometry::get<boost::geometry::max_corner, 0>(rectangle));
 			}
 
-			template<typename Size>
-			inline Size& makeBoundedTo(Size&, const Size& other, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr);
+			template<typename Coordinate>
+			inline BasicDimension<Coordinate>& makeBoundedTo(BasicDimension<Coordinate>&, const BasicDimension<Coordinate>& other);
 
-			template<std::size_t dimension, typename Rectangle>
-			inline const Range<typename Coordinate<typename Coordinate<Rectangle>::Type>::Type> range(const Rectangle& rectangle) {
-				return makeRange(get<dimension>(get<0>(rectangle)), get<dimension>(get<1>(rectangle)));
-			}
-
-			template<std::size_t dimension, typename Rectangle>
-			inline detail::RectangleRangeProxy<Rectangle, dimension> range(Rectangle& rectangle) {
-				return detail::RectangleRangeProxy<Rectangle, dimension>(rectangle);
-			}
-
-			template<typename Rectangle, typename Size>
-			inline Rectangle& resize(Rectangle& rectangle, const Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
-				Coordinate<Rectangle>::Type o(get<0>(rectangle));
-				set<1>(rectangle, translate(o, size));
-				return rectangle;
-			}
+			template<typename Geometry, typename DimensionCoordinate>
+			inline Geometry& resize(Geometry& rectangle, const BasicDimension<DimensionCoordinate>& size);
 
 			/**
 			 * Returns the x-coordinate of the right edge of @a rectangle.
 			 * @see #bottomRight, #left, #topRight
 			 */
-			template<typename Rectangle>
-			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type right(const Rectangle& rectangle) {
-				return std::max(x(get<0>(rectangle)), x(get<1>(rectangle)));
+			template<typename Geometry>
+			inline typename boost::geometry::coordinate_type<Geometry>::type right(const Geometry& rectangle) {
+				return std::max(
+					boost::geometry::get<boost::geometry::min_corner, 0>(rectangle),
+					boost::geometry::get<boost::geometry::max_corner, 0>(rectangle));
 			}
 
 			/**
@@ -634,69 +591,65 @@ namespace ascension {
 			 *                                   rectangle as large as possible inside @a size
 			 * @return This object
 			 */
-			template<typename Size>
-			Size& scale(const Size& size, bool keepAspectRatioByExpanding);
+			template<typename Coordinate>
+			BasicDimension<Coordinate>& scale(const BasicDimension<Coordinate>& dimension, bool keepAspectRatioByExpanding);
 
 			/**
 			 * Returns the y-coordinate of the top edge of @a rectangle.
 			 * @see #bottom, #topLeft, #topRight
 			 */
-			template<typename Rectangle>
-			inline typename Coordinate<typename Coordinate<Rectangle>::Type>::Type top(const Rectangle& rectangle) {
-				return std::min(y(get<0>(rectangle)), y(get<1>(rectangle)));
+			template<typename Geometry>
+			inline typename boost::geometry::coordinate_type<Geometry>::type top(const Geometry& rectangle) {
+				return std::min(
+					boost::geometry::get<boost::geometry::min_corner, 1>(rectangle),
+					boost::geometry::get<boost::geometry::max_corner, 1>(rectangle));
 			}
 
 			/**
 			 * Returns the top-left corner of @a rectangle.
 			 * @see #top, #left
 			 */
-			template<typename Rectangle>
-			inline typename Coordinate<Rectangle>::Type topLeft(const Rectangle& rectangle) {
-				return make<typename Coordinate<Rectangle>::Type>(left(rectangle), top(rectangle));
+			template<typename Geometry>
+			inline typename boost::geometry::point_type<Geometry>::type topLeft(const Geometry& rectangle) {
+				return boost::make<typename boost::geometry::point_type<Geometry>::type>(left(rectangle), top(rectangle));
 			}
 
 			/**
 			 * Returns the top-right corner of @a rectangle.
 			 * @see #top, #right
 			 */
-			template<typename Rectangle>
-			inline typename Coordinate<Rectangle>::Type topRight(const Rectangle& rectangle) {
-				return make<typename Coordinate<Rectangle>::Type>(right(rectangle), top(rectangle));
+			template<typename Geometry>
+			inline typename boost::geometry::point_type<Geometry>::type topRight(const Geometry& rectangle) {
+				return boost::make<typename boost::geometry::point_type<Geometry>::type>(right(rectangle), top(rectangle));
 			}
 
 			/**
 			 * Swaps the x and y values.
 			 * @return @
 			 */
-			template<typename Point>
-			inline Point& transpose(Point& point, typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
-				return point = make<Point>(y(point), x(point));
+			template<typename Geometry>
+			inline Geometry& transpose(Geometry& point, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+				boost::geometry::assign_values(point, y(point), x(point));
+				return point;
 			}
 
 			/**
 			 * Swaps the dx and dy values.
 			 * @return @
 			 */
-			template<typename Size>
-			inline Size& transpose(Size& size, typename detail::EnableIfTagIs<Size, SizeTag>::type* = nullptr) {
-				return size = make<Size>(dy(size), dx(size));
-			}
-
-			/// Returns the origin of the @a rectangle.
-			template<typename Rectangle>
-			inline const typename Coordinate<Rectangle>::Type origin(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
-				return get<0>(rectangle);
-			}
-
-			/// Returns the size of the @a rectangle.
-			template<typename Rectangle>
-			inline const NativeSize size(const Rectangle& rectangle, typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
-				const std::pair<typename Coordinate<Rectangle>::Type,
-					typename Coordinate<Rectangle>::Type> points(std::make_pair(get<0>(rectangle), get<1>(rectangle)));
-				return make<NativeSize>(x(points.second) - x(points.first), y(points.second) - y(points.first));
+			template<typename Coordinate>
+			inline BasicDimension<Coordinate>& transpose(BasicDimension<Coordinate>& dimension) {
+				return dimension = BasicDimension<Coordinate>(_dx = dy(dimension), _dy = dx(dimension));
 			}
 		}
 
+		/// @name 
+		/// @{
+		using geometry::Scalar;
+		typedef geometry::BasicPoint<Scalar> Point;
+		typedef geometry::BasicDimension<Scalar> Dimension;
+		typedef geometry::BasicRectangle<Scalar> Rectangle;
+		/// @}
 	}
 }
 

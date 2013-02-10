@@ -297,13 +297,13 @@ namespace ascension {
 			 * @return The current shadow offset
 			 * @see #setShadowOffset
 			 */
-			NativeSize shadowOffset() const;
+			Dimension shadowOffset() const;
 			/**
 			 * Sets the shadow offset.
 			 * @return The new shadow offset to set
 			 * @see #shadowOffset
 			 */
-			RenderingContext2D& setShadowOffset(const NativeSize& shadowOffset);
+			RenderingContext2D& setShadowOffset(const Dimension& shadowOffset);
 			/**
 			 * Returns the current level of blur applied to shadows. Initial value is @c 0.
 			 * @return The current level of blur applied to shadows
@@ -340,14 +340,14 @@ namespace ascension {
 			 * @return This object
 			 * @see #fillRectangle, #strokeRectangle
 			 */
-			RenderingContext2D& clearRectangle(const NativeRectangle& rectangle);
+			RenderingContext2D& clearRectangle(const Rectangle& rectangle);
 			/**
 			 * Paints the specified rectangle onto the canvas, using the current fill style.
 			 * @param rectangle The rectangle
 			 * @return This object
 			 * @see #clarRectangle, #strokeRectangle
 			 */
-			RenderingContext2D& fillRectangle(const NativeRectangle& rectangle);
+			RenderingContext2D& fillRectangle(const Rectangle& rectangle);
 			/**
 			 * Paints the box that outlines the specified rectangle onto the canvas, using the
 			 * current stroke style.
@@ -355,7 +355,7 @@ namespace ascension {
 			 * @return This object
 			 * @see #clearRectangle, #fillRectangle
 			 */
-			RenderingContext2D& strokeRectangle(const NativeRectangle& rectangle);
+			RenderingContext2D& strokeRectangle(const Rectangle& rectangle);
 			/// @}
 
 			/// @name Current Default Path API
@@ -408,7 +408,7 @@ namespace ascension {
 			 * @param point The point to test
 			 * @return @a point is in the current default path
 			 */
-			bool isPointInPath(const NativePoint& point) const;
+			bool isPointInPath(const Point& point) const;
 			/// @}
 
 			/// @name Text
@@ -426,7 +426,7 @@ namespace ascension {
 			 * @see #strokeText, #measureText
 			 */
 			RenderingContext2D& fillText(const StringPiece& text,
-				const NativePoint& origin, boost::optional<Scalar> maximumMeasure = boost::none);
+				const Point& origin, boost::optional<Scalar> maximumMeasure = boost::none);
 			/**
 			 * Strokes the given text at the given position. If a maximum measure is provided, the
 			 * text will be scaled to fit that measure if necessary.
@@ -440,13 +440,13 @@ namespace ascension {
 			 * @see #fillText, #measureText
 			 */
 			RenderingContext2D& strokeText(const StringPiece& text,
-				const NativePoint& origin, boost::optional<Scalar> maximumMeasure = boost::none);
+				const Point& origin, boost::optional<Scalar> maximumMeasure = boost::none);
 			/**
 			 * Returns a size (measure and extent) of the specified text in the current font.
 			 * @param text The text string
 			 * @see #strokeText, #fillText
 			 */
-			NativeSize measureText(const StringPiece& text) const;
+			Dimension measureText(const StringPiece& text) const;
 			/// @}
 
 			/// @name Drawing Images
@@ -457,14 +457,14 @@ namespace ascension {
 			 * @param position The destination position
 			 * @return This object
 			 */
-			RenderingContext2D& drawImage(const Image& image, const NativePoint& position);
+			RenderingContext2D& drawImage(const Image& image, const Point& position);
 			/**
 			 * Draws the specified image onto the canvas.
 			 * @param image The image to draw
 			 * @param destinationBounds The destination bounds
 			 * @return This object
 			 */
-			RenderingContext2D& drawImage(const Image& image, const NativeRectangle& destinationBounds);
+			RenderingContext2D& drawImage(const Image& image, const Rectangle& destinationBounds);
 			/**
 			 * Draws the specified image onto the canvas.
 			 * @param image The image to draw
@@ -472,7 +472,7 @@ namespace ascension {
 			 * @param destinationBounds The destination bounds
 			 * @return This object
 			 */
-			RenderingContext2D& drawImage(const Image& image, const NativeRectangle& sourceBounds, const NativeRectangle& destinationBounds);
+			RenderingContext2D& drawImage(const Image& image, const Rectangle& sourceBounds, const Rectangle& destinationBounds);
 			/// @}
 
 			/// @a name Pixel Manipulation
@@ -483,7 +483,7 @@ namespace ascension {
 			 * @param dimensions The dimensions in pixels
 			 * @return An image data
 			 */
-			std::unique_ptr<ImageData> createImageData(const NativeSize& dimensions) const;
+			std::unique_ptr<ImageData> createImageData(const Dimension& dimensions) const;
 			/**
 			 * Returns an @c ImageData object with the same dimensions as the argument. All pixels
 			 * in the returned object are transparent black.
@@ -491,7 +491,9 @@ namespace ascension {
 			 * @return An image data
 			 */
 			std::unique_ptr<ImageData> createImageData(const ImageData& image) const {
-		     	return createImageData(geometry::make<NativeSize>(image.width(), image.height()));
+		     	return createImageData(Dimension(
+					geometry::_dx = static_cast<Scalar>(image.width()),
+					geometry::_dy = static_cast<Scalar>(image.height())));
 			}
 			/**
 			 * Returns an @c ImageData object containing the image data for the specified rectangle
@@ -500,7 +502,7 @@ namespace ascension {
 			 * @return An image data. Pixels outside the canvas are returned as transparent black
 			 * @see #putImageData
 			 */
-			std::unique_ptr<ImageData> getImageData(const NativeRectangle& rectangle) const;
+			std::unique_ptr<ImageData> getImageData(const Rectangle& rectangle) const;
 			/**
 			 * Paints the data from the specified @c ImageData object onto the canvas. The
 			 * @c #globalAlpha and @c #globalCompositeOperation attributes, as well as the shadow
@@ -511,9 +513,12 @@ namespace ascension {
 			 *                    canvas coordinate space units
 			 * @see #getImageData
 			 */
-			RenderingContext2D& putImageData(const ImageData& image, const NativePoint& destination) {
-				return putImageData(image, destination, geometry::make<NativeRectangle>(
-					geometry::make<NativePoint>(0, 0), geometry::make<NativeSize>(image.width(), image.height())));
+			RenderingContext2D& putImageData(const ImageData& image, const Point& destination) {
+				return putImageData(image, destination, Rectangle(
+					boost::geometry::make_zero<Point>(),
+					Dimension(
+						geometry::_dx = static_cast<Scalar>(image.width()),
+						geometry::_dy = static_cast<Scalar>(image.height()))));
 			}
 			/**
 			 * Paints the data from the specified @c ImageData object onto the canvas. Only the
@@ -528,7 +533,7 @@ namespace ascension {
 			 * @see #getImageData
 			 */
 			RenderingContext2D& putImageData(const ImageData& image,
-				const NativePoint& destination, const NativeRectangle& dirtyRectangle);
+				const Point& destination, const Rectangle& dirtyRectangle);
 			/// @}
 
 			/// @name Transformations (CanvasTransformation Interface)
@@ -540,9 +545,7 @@ namespace ascension {
 			 * @return This object
 			 * @see #rotate, #translate, #transform, #setTransform
 			 */
-			RenderingContext2D& scale(
-				geometry::Coordinate<NativeAffineTransform>::Type sx,
-				geometry::Coordinate<NativeAffineTransform>::Type sy);
+			RenderingContext2D& scale(AffineTransform::value_type sx, AffineTransform::value_type sy);
 			/**
 			 * Adds the rotation transformation described by @a angle to the transformation matrix.
 			 * @param angle A clockwise rotation angle in radians
@@ -560,7 +563,7 @@ namespace ascension {
 			 * @return This object
 			 * @see #scale, #rotate, #transform, #setTransform
 			 */
-			RenderingContext2D& translate(const NativeSize& delta);
+			RenderingContext2D& translate(const Dimension& delta);
 			/**
 			 * Adds the translation transformation described by @a dx and @a dy to the
 			 * transformation matrix.
@@ -569,9 +572,7 @@ namespace ascension {
 			 * @return This object
 			 * @see #scale, #rotate, #transform, #setTransform
 			 */
-			RenderingContext2D& translate(
-				geometry::Coordinate<NativeAffineTransform>::Type dx,
-				geometry::Coordinate<NativeAffineTransform>::Type dy);
+			RenderingContext2D& translate(AffineTransform::value_type dx, AffineTransform::value_type dy);
 			/**
 			 * Replaces the current transformation matrix with the result of multiplying the
 			 * current transformation matrix with the matrix described by @a matrix.
@@ -579,14 +580,14 @@ namespace ascension {
 			 * @return This object
 			 * @see #scale, #rotate, #translate, #setTransform
 			 */
-			RenderingContext2D& transform(const NativeAffineTransform& matrix);
+			RenderingContext2D& transform(const AffineTransform& matrix);
 			/**
 			 * Resets the current transformation to the identity matrix and calls @c #transform(matrix).
 			 * @param matrix The new transformation matrix
 			 * @return This object
 			 * @see #scale, #rotate, #translate, #transform
 			 */
-			RenderingContext2D& setTransform(const NativeAffineTransform& matrix);
+			RenderingContext2D& setTransform(const AffineTransform& matrix);
 			/// @}
 
 			/// @name Line Caps/Joins (CanvasLineStyles Interface)
@@ -707,7 +708,7 @@ namespace ascension {
 			 * @return This object
 			 * @see #lineTo
 			 */
-			RenderingContext2D& moveTo(const NativePoint& to);
+			RenderingContext2D& moveTo(const Point& to);
 			/**
 			 * Adds the specified point to the current subpath, connected to the previous one by a
 			 * straight line. If the path has no subpaths, ensures there is a subpath for that
@@ -716,7 +717,7 @@ namespace ascension {
 			 * @return This object
 			 * @see #moveTo
 			 */
-			RenderingContext2D& lineTo(const NativePoint& to);
+			RenderingContext2D& lineTo(const Point& to);
 			/**
 			 * Adds the specified point to the current subpath, connected to the previous one by a
 			 * quadratic Bézier curve with the specified control point.
@@ -725,7 +726,7 @@ namespace ascension {
 			 * @return This object
 			 * @see #bezierCurveTo
 			 */
-			RenderingContext2D& quadraticCurveTo(const NativePoint& cp, const NativePoint& to);
+			RenderingContext2D& quadraticCurveTo(const Point& cp, const Point& to);
 			/**
 			 * Adds the specified point to the current subpath, connected to the previous one by a
 			 * cubic Bézier curve with the specified control point.
@@ -735,7 +736,7 @@ namespace ascension {
 			 * @return This object
 			 * @see #bezierCurveTo
 			 */
-			RenderingContext2D& bezierCurveTo(const NativePoint& cp1, const NativePoint& cp2, const NativePoint& to);
+			RenderingContext2D& bezierCurveTo(const Point& cp1, const Point& cp2, const Point& to);
 			/**
 			 * Adds an arc with the specified control points and radius to the current subpath,
 			 * connected to the previous point by a straight line.
@@ -746,13 +747,13 @@ namespace ascension {
 			 * @throw std#invalid_argument @a radius is negative
 			 * @see #arc
 			 */
-			RenderingContext2D& arcTo(const NativePoint& p1, const NativePoint& p2, Scalar radius);
+			RenderingContext2D& arcTo(const Point& p1, const Point& p2, Scalar radius);
 			/**
 			 * Adds a new closed subpath to the path, representing the specified rectangle.
 			 * @param rect The rectangle
 			 * @return This object
 			 */
-			RenderingContext2D& rectangle(const NativeRectangle& rect);
+			RenderingContext2D& rectangle(const Rectangle& rect);
 			/**
 			 * Adds points to the subpath such that the arc described by the circumference of the
 			 * circle described by the arguments, starting at the specified start angle and ending
@@ -768,7 +769,7 @@ namespace ascension {
 			 * @throw std#invalid_argument @a radius is negative
 			 * @see #arc
 			 */
-			RenderingContext2D& arc(const NativePoint& p, Scalar radius,
+			RenderingContext2D& arc(const Point& p, Scalar radius,
 				double startAngle, double endAngle, bool counterClockwise = false);
 			/// @}
 		private:
@@ -797,7 +798,7 @@ namespace ascension {
 				const LOGBRUSH* patternBrush, boost::optional<Scalar> lineWidth,
 				boost::optional<LineCap> lineCap, boost::optional<LineJoin> lineJoin) const;
 			bool endPath();
-			bool ensureThereIsASubpathFor(const NativePoint& p);
+			bool ensureThereIsASubpathFor(const Point& p);
 			void updatePenAndBrush();
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
 			std::shared_ptr<Gdiplus::Graphics> nativeObject_;
@@ -811,7 +812,7 @@ namespace ascension {
 			 * @param context The rendering context
 			 * @param boundsToPaint The rectangle in which the painting is requested
 			 */
-			PaintContext(RenderingContext2D&& context, const NativeRectangle& boundsToPaint)
+			PaintContext(RenderingContext2D&& context, const Rectangle& boundsToPaint)
 				: RenderingContext2D(std::move(context)), boundsToPaint_(boundsToPaint) {}
 			/// Returns the rendering context.
 //			RenderingContext2D& operator*() BOOST_NOEXCEPT {return context_;}
@@ -822,9 +823,9 @@ namespace ascension {
 			/// Returns the rendering context.
 //			const RenderingContext2D* operator->() const BOOST_NOEXCEPT {return &context_;}
 			/// Returns a rectangle in which the painting is requested.
-			const NativeRectangle& boundsToPaint() const BOOST_NOEXCEPT {return boundsToPaint_;}
+			const Rectangle& boundsToPaint() const BOOST_NOEXCEPT {return boundsToPaint_;}
 		private:
-			const NativeRectangle boundsToPaint_;
+			const Rectangle boundsToPaint_;
 		};
 	}
 }
