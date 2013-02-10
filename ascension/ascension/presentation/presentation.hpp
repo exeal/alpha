@@ -204,11 +204,10 @@ namespace ascension {
 
 			/// @name Styles Computation
 			/// @{
-			graphics::font::ComputedTextLineStyle&& computeTextLineStyle(
-				Index line, const graphics::RenderingContext2D& context,
-				const graphics::NativeSize& contextSize, const GlobalTextStyleSwitch* globalSwitch) const;
-			std::unique_ptr<graphics::font::ComputedStyledTextRunIterator> computeTextRunStyles(
-				Index line, const graphics::RenderingContext2D& context, const graphics::NativeSize& contextSize) const;
+			graphics::font::ComputedTextLineStyle&& computeTextLineStyle(Index line,
+				const Length::Context& lengthContext, const GlobalTextStyleSwitch* globalSwitch) const;
+			std::unique_ptr<graphics::font::ComputedStyledTextRunIterator>
+				computeTextRunStyles(Index line, const Length::Context& lengthContext) const;
 			WritingMode&& computeWritingMode(const GlobalTextStyleSwitch* globalSwitch) const;
 			/// @}
 

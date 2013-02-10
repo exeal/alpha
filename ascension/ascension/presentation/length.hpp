@@ -10,7 +10,7 @@
 
 #ifndef ASCENSION_LENGTH_HPP
 #define ASCENSION_LENGTH_HPP
-#include <ascension/graphics/geometry.hpp>	// graphics.NativeSize
+#include <ascension/graphics/geometry.hpp>	// graphics.Scalar, graphics.Dimension
 #include <stdexcept>						// std.invalid_argument
 #include <boost/operators.hpp>				// boost.equality_comparable
 
@@ -22,9 +22,9 @@ namespace ascension {
 
 		/**
 		 * [Copied from CSS3] Lengthes refer to distance measurements.
-		 * @see CSS Values and Units Module Level 3, 5. Distance Units: the Åe<length>Åf type
+		 * @see CSS Values and Units Module Level 3, 5. Distance Units: the ‚Äò<length>‚Äô type
 		 *      (http://www.w3.org/TR/2012/CR-css3-values-20120828/#lengths)
-		 * @see CSS Values and Units Module Level 3, Percentages: the Åe<percentage>Åf type
+		 * @see CSS Values and Units Module Level 3, Percentages: the ‚Äò<percentage>‚Äô type
 		 *      (http://www.w3.org/TR/2012/CR-css3-values-20120828/#percentages)
 		 * @see 4.2 Basic data types - SVG (Second Edition)
 		 *      (http://www.w3.org/TR/SVG/types.html#DataTypeLength)
@@ -35,9 +35,20 @@ namespace ascension {
 		public:
 			typedef std::invalid_argument NotSupportedError;
 
+			/// Units in this class.
 			enum Unit {
-				// relative length units
-				/// [Copied from CSS3] Equal to the computed value of the Åefont-sizeÅf property of
+				/// [Copied from SVG 1.1] The unit type is not one of predefined unit types.
+				/// @note Ascension does not support this value at all.
+				UNKNOWN,
+				/// [Copied from SVG 1.1] No unit type was provided (i.e., a unitless value was
+				/// specified), which indicates a value in user units.
+				/// @note Ascension does not support this value at all.
+				NUMBER,
+
+				/// @name Relative Length Units
+				/// @{
+
+				/// [Copied from CSS3] Equal to the computed value of the ‚Äòfont-size‚Äô property of
 				/// the element on which it is used.
 				EM_HEIGHT,
 				/// [Copied from CSS3] Equal to the font's x-height.
@@ -46,7 +57,7 @@ namespace ascension {
 				/// found in the font used to render it.
 				/// @note The average character width is used by Ascension if not found.
 				CHARACTERS,
-				/// [Copied from CSS3] Equal to the computed value of Åefont-sizeÅf on the root
+				/// [Copied from CSS3] Equal to the computed value of ‚Äòfont-size‚Äô on the root
 				/// element.
 				/// @note Refers to the global primary font in Ascension.
 				ROOT_EM_HEIGHT,
@@ -54,12 +65,16 @@ namespace ascension {
 				VIEWPORT_WIDTH,
 				/// [Copied from CSS3] Equal to 1% of the height of the initial containing block.
 				VIEWPORT_HEIGHT,
-				/// [Copied from CSS3] Equal to the smaller of ÅevwÅf or ÅevhÅf.
+				/// [Copied from CSS3] Equal to the smaller of ‚Äòvw‚Äô or ‚Äòvh‚Äô.
 				VIEWPORT_MINIMUM,
-				/// [Copied from CSS3] Equal to the larger of ÅevwÅf or ÅevhÅf.
+				/// [Copied from CSS3] Equal to the larger of ‚Äòvw‚Äô or ‚Äòvh‚Äô.
 				VIEWPORT_MAXIMUM,
 //				GRIDS,			///< The grid.
-				// absolute length units
+				/// @}
+
+				/// @name Absolute Length Units
+				/// @{
+
 				/// [Copied from CSS3] Centimeters.
 				CENTIMETERS,
 				/// [Copied from CSS3] Millimeters.
@@ -73,6 +88,8 @@ namespace ascension {
 				POINTS,
 				/// [Copied from CSS3] Picas; 1 pc is equal to 12 pt.
 				PICAS,
+				/// @}
+
 				// used in DirectWrite
 				DEVICE_INDEPENDENT_PIXELS, ///< Device independent pixels; 1 DIP is equal to 1 / 96th of 1 in.
 				// percentages (exactly not a length)
@@ -101,23 +118,43 @@ namespace ascension {
 				WIDTH, HEIGHT, OTHER
 			};
 
+			struct Context {
+				/// The rendering context used to resolve relative value. Can be @c null if
+				/// @c Length#unitType() is absolute.
+				const graphics::RenderingContext2D* graphics2D;
+				/// The size of the viewport in user units. This is used to resolve
+				/// viewport-relative or percentage values. Can be @c null
+				const graphics::Dimension* viewport;
+				Context(const graphics::RenderingContext2D* graphics2D,
+					const graphics::Dimension* viewport) BOOST_NOEXCEPT
+					: graphics2D(graphics2D), viewport(viewport) {}
+			};
+
 		public:
-			explicit Length(double valueInSpecifiedUnits = 0.0, Unit unitType = PIXELS, Mode = OTHER);
-			bool operator==(const Length& other) const /*noexcept*/;
-			void convertToSpecifiedUnits(Unit unitType,
-				const graphics::RenderingContext2D* context, const graphics::NativeSize* contextSize);
-			void newValueSpecifiedUnits(Unit unitType, double valueInSpecifiedUnits);
-			void setValue(double value,
-				const graphics::RenderingContext2D* context, const graphics::NativeSize* contextSize);
-//			void setValueAsString(const StringPiece&);
-			void setValueInSpecifiedUnits(double value) /*noexcept*/;
-			Unit unitType() const /*noexcept*/;
-			double value(const graphics::RenderingContext2D* context, const graphics::NativeSize* contextSize) const;
-			double valueInSpecifiedUnits() const;
+			explicit Length(graphics::Scalar valueInSpecifiedUnits = 0.0, Unit unitType = PIXELS, Mode = OTHER);
+			bool operator==(const Length& other) const BOOST_NOEXCEPT;
+
+			/// @name Attributes
+			/// @{
+			Unit unitType() const BOOST_NOEXCEPT;
+			graphics::Scalar value(const Context& context) const;
+			graphics::Scalar valueInSpecifiedUnits() const;
 //			String valueAsString() const;
+			/// @}
+
+			/// @name Operations
+			/// @{
+			void convertToSpecifiedUnits(Unit unitType, const Context& context);
+			void newValueSpecifiedUnits(Unit unitType, graphics::Scalar valueInSpecifiedUnits);
+			void setValue(graphics::Scalar value, const Context& context);
+//			void setValueAsString(const StringPiece&);
+			void setValueInSpecifiedUnits(graphics::Scalar value) BOOST_NOEXCEPT;
+			/// @}
+
+			static bool isValidUnit(Unit unit) BOOST_NOEXCEPT;
 
 		private:
-			double valueInSpecifiedUnits_;
+			graphics::Scalar valueInSpecifiedUnits_;
 			Unit unit_;
 			Mode mode_;
 			///
@@ -125,9 +162,49 @@ namespace ascension {
 		};
 
 		/// Equality operator returns @c true if and only if ....
-		bool Length::operator==(const Length& other) const /*noexcept*/ {
+		bool Length::operator==(const Length& other) const BOOST_NOEXCEPT {
 			return valueInSpecifiedUnits() == other.valueInSpecifiedUnits()
 				&& unitType() == other.unitType() && mode_ == other.mode_;
+		}
+
+		/**
+		 * [Copied from SVG 1.1 documentation] Preserves the same underlying stored value, but
+		 * resets the stored unit identifier to the given @a unitType. Object attributes
+		 * @c #unitType(), @c #valueInSpecifiedUnits() and @c #valueAsString() might be modified as
+		 * a result of this method. For example, if the original value were "0.5cm" and the method
+		 * was invoked to convert to millimeters, then the unitType would be changed to
+		 * @c #MILIMIETERS, @c #valueInSpecifiedUnits() would be changed to the numeric value 5 and
+		 * @c #valueAsString() would be changed to "5mm".
+		 * @param unitType The unit type to switch to
+		 * @param context The rendering context used to resolve relative value. Can be @c null if both
+		 *                @c #unitType() and @a unitType are absolute
+		 * @param contextSize The size used to resolve percentage value. Can be @c null
+		 * @throw NotSupportedError @a unitType is not a valid unit type constant (one of the other
+		 *                          @c #Unit constants defined on this class)
+		 * @throw NullPointerException @a context is @c null although @c #unitType() and/or
+		 *                             @a unitType is relative
+		 * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__convertToSpecifiedUnits
+		 */
+		inline void Length::convertToSpecifiedUnits(Unit unitType, const Context& context) {
+			Length temp(0, unitType, mode_);		// this may throw NotSupportedError
+			temp.setValue(value(context), context);	// this may throw NullPointerException
+			*this = temp;
+		}
+
+		/**
+		 * [Copied from SVG 1.1 documentation] Resets the value as a number with an associated
+		 * @a unitType, thereby replacing the values for all of the attributes on the object.
+		 * @param unitType The unit type for the value
+		 * @param valueInSpecifiedUnits The new value
+		 * @throw NotSupportedError @a unitType is not a valid unit type constant (one of the other
+		 *                          @c #Unit constants defined on this class)
+		 * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__newValueSpecifiedUnits
+		 */
+		inline void Length::newValueSpecifiedUnits(Unit unitType, graphics::Scalar valueInSpecifiedUnits) {
+			if(!isValidUnit(unitType))
+				throw NotSupportedError("unitType");
+			unit_ = unitType;
+			valueInSpecifiedUnits_ = valueInSpecifiedUnits;
 		}
 
 		/**
@@ -135,26 +212,29 @@ namespace ascension {
 		 * units expressed by @c #unitType(). Setting this attribute will cause @c #value() and
 		 * @c #valueAsString() to be updated automatically to reflect this setting.
 		 * @param value The new value
+		 * @see #valueInSpecifiedUnits
 		 * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__valueInSpecifiedUnits
 		 */
-		inline void Length::setValueInSpecifiedUnits(double value) /*noexcept*/ {
+		inline void Length::setValueInSpecifiedUnits(graphics::Scalar value) BOOST_NOEXCEPT {
 			valueInSpecifiedUnits_ = value;
 		}
 
 		/**
-		 * Returns the type of the value.
+		 * [Copied from SVG 1.1 documentation] Returns the type of the value by one of the @c #Unit
+		 * constants defined on this class.
 		 * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__unitType
 		 */
-		inline Length::Unit Length::unitType() const /*noexcept*/ {
+		inline Length::Unit Length::unitType() const BOOST_NOEXCEPT {
 			return unit_;
 		}
 
 		/**
-		 * Returns the value as a floating point value, in the units expressed by @c unitType().
+		 * [Copied from SVG 1.1 documentation] Returns the value as a floating point value, in the
+		 * units expressed by @c #unitType().
 		 * @see #setValueInSpecifiedUnits
 		 * @see http://www.w3.org/TR/SVG11/types.html#__svg__SVGLength__valueInSpecifiedUnits
 		 */
-		inline double Length::valueInSpecifiedUnits() const /*noexcept*/ {
+		inline graphics::Scalar Length::valueInSpecifiedUnits() const BOOST_NOEXCEPT {
 			return valueInSpecifiedUnits_;
 		}
 
