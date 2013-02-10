@@ -35,7 +35,7 @@ namespace ascension {
 			public:
 				virtual Scalar advanceX() const = 0;
 				virtual Scalar advanceY() const = 0;
-				virtual NativeSize bounds() const = 0;
+				virtual Dimension bounds() const = 0;
 				virtual Scalar leftTopSideBearing() const = 0;
 				virtual Scalar rightBottomSideBearing() const = 0;
 			};
@@ -95,8 +95,14 @@ namespace ascension {
 				 * @throw std#out_of_range @a index &gt; @c #numberOfGlyphs()
 				 * @see #setGlyphPosition
 				 */
-				virtual presentation::AbstractTwoAxes<double> glyphPosition(std::size_t index) const = 0;	// TODO: useless???
-//				virtual std::vector<presentation::AbstractTwoAxes<double>>&& glyphPositions(const Range<std::size_t>& range) const = 0;
+				virtual Point glyphPosition(std::size_t index) const = 0;
+				/**
+				 * Returns a vector of glyph positions for the specified glyphs.
+				 * @param range The range of glyphs to retrieve
+				 * @return A vector of glyph positions specified by @a range
+				 * @throw std#out_of_range @a range.beginning() &gt; @c #numberOfGlyphs()
+				 */
+				virtual std::vector<Point>&& glyphPositions(const Range<std::size_t>& range) const = 0;
 				/**
 				 * Sets the position of the specified glyph within this vector.
 				 * @param index The glyph index in this vector
@@ -104,7 +110,7 @@ namespace ascension {
 				 * @throw std#out_of_range @a index &gt; @c #numberOfGlyphs()
 				 * @see #glyphPosition
 				 */
-				virtual void setGlyphPosition(std::size_t index, const presentation::AbstractTwoAxes<double>& position) = 0;
+				virtual void setGlyphPosition(std::size_t index, const Point& position) = 0;
 				/// @}
 
 				/// @name Logical, Visual and Pixel Bounds
@@ -116,8 +122,8 @@ namespace ascension {
 				 * @throw std#out_of_range @a index &gt; @c #numberOfGlyphs()
 				 * @see #glyphPixelBounds, #glyphVisualBounds, #logicalBounds
 				 */
-				virtual presentation::FlowRelativeFourSides<double> glyphLogicalBounds(std::size_t index) const = 0;
-//				virtual NativeRectangle glyphPixelBounds(std::size_t index, const FontRenderContext& frc, const NativePoint& at) const = 0;
+				virtual Rectangle glyphLogicalBounds(std::size_t index) const = 0;
+//				virtual Rectangle glyphPixelBounds(std::size_t index, const FontRenderContext& frc, const Point& at) const = 0;
 				/**
 				 * Returns the visual bounds of the specified glyphs within this vector in user units.
 				 * @param index The glyph index in this vector
@@ -125,18 +131,18 @@ namespace ascension {
 				 * @throw std#out_of_range @a index &gt; @c #numberOfGlyphs()
 				 * @see #glyphLogicalBounds, #glyphPixelBounds, #visualBounds
 				 */
-				virtual presentation::FlowRelativeFourSides<double> glyphVisualBounds(const Range<std::size_t>& range) const = 0;
+				virtual Rectangle glyphVisualBounds(const std::size_t index) const = 0;
 				/**
 				 * Returns the logical bounds of this vector in user units.
 				 * @see #glyphLogicalBounds, #pixelBounds, #visualBounds
 				 */
-				virtual presentation::FlowRelativeFourSides<double> logicalBounds() const = 0;
-//				virtual NativeRectangle pixelBounds(const FontRenderContext& frc, const NativePoint& at) const = 0;
+				virtual Rectangle logicalBounds() const = 0;
+//				virtual Rectangle pixelBounds(const FontRenderContext& frc, const Point& at) const = 0;
 				/**
 				 * Returns the visual bounds of this vector in user units.
 				 * @see #glyphVisualBounds, #logicalBounds, #pixelBounds
 				 */
-				virtual presentation::FlowRelativeFourSides<double> visualBounds() const = 0;
+				virtual Rectangle visualBounds() const = 0;
 				/// @}
 
 				/// @name Glyph Metrics
@@ -148,8 +154,8 @@ namespace ascension {
 
 				/// @name Glyph Transform
 				/// @{
-//				virtual NativeAffineTransform&& glyphTransform(std::size_t index) const = 0;
-//				virtual void setGlyphTransform(std::size_t index, const NativeAffineTransform& tx) = 0;
+//				virtual AffineTransform&& glyphTransform(std::size_t index) const = 0;
+//				virtual void setGlyphTransform(std::size_t index, const AffineTransform& tx) = 0;
 				/// @}
 
 				/// @name Painting
@@ -157,24 +163,24 @@ namespace ascension {
 				/**
 				 * @see #strokeGlyphs
 				 */
-				virtual void fillGlyphs(PaintContext& context, const NativePoint& origin,
+				virtual void fillGlyphs(PaintContext& context, const Point& origin,
 					boost::optional<Range<std::size_t>> range = boost::none) const = 0;
 				/**
 				 * @see #fillGlyphs
 				 */
-				virtual void strokeGlyphs(PaintContext& context, const NativePoint& origin,
+				virtual void strokeGlyphs(PaintContext& context, const Point& origin,
 					boost::optional<Range<std::size_t>> range = boost::none) const = 0;
 				/// @}
 
 				template<typename T>
-				NativeRectangle mapLogicalToPhysical(
+				Rectangle mapLogicalToPhysical(
 						const presentation::FlowRelativeFourSides<T>& logical,
 						presentation::BlockFlowDirection blockFlowDirection,
 						presentation::TextOrientation textOrientation) const {
 					PhysicalFourSides<Scalar> physical;
 					presentation::mapFlowRelativeToPhysical(presentation::WritingMode(
 						direction(), blockFlowDirection, textOrientation), logical, physical);
-					return geometry::make<NativeRectangle>(physical);
+					return geometry::make<Rectangle>(physical);
 				}
 			};
 

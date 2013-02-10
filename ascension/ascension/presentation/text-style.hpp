@@ -812,7 +812,7 @@ namespace ascension {
 			/// 'font-size-adjust' property.
 			StyleProperty<
 				sp::Multiple<
-					boost::variant<FontSizeAdjustEnums, double>,
+					boost::variant<FontSizeAdjustEnums, graphics::Scalar>,
 					FontSizeAdjustEnums, FontSizeAdjustEnums::NONE
 				>, sp::Inherited
 			> fontSizeAdjust;
@@ -838,7 +838,7 @@ namespace ascension {
 			 */
 			StyleProperty<
 				sp::Multiple<
-					boost::variant<TextHeightEnums, double>,
+					boost::variant<TextHeightEnums, graphics::Scalar>,
 					TextHeightEnums, TextHeightEnums::AUTO
 				>, sp::Inherited
 			> textHeight;
@@ -853,7 +853,7 @@ namespace ascension {
 			 */
 			StyleProperty<
 				sp::Multiple<
-					boost::variant<LineHeightEnums, double, Length>,
+					boost::variant<LineHeightEnums, graphics::Scalar, Length>,
 					LineHeightEnums, LineHeightEnums::NORMAL
 				>, sp::Inherited
 			> lineHeight;
@@ -1205,7 +1205,7 @@ namespace ascension {
 			///
 			StyleProperty<
 				sp::Multiple<
-					boost::variant<LineHeightEnums, double, Length>,
+					boost::variant<LineHeightEnums, graphics::Scalar, Length>,
 					LineHeightEnums, LineHeightEnums::NORMAL
 				>, sp::Inherited
 			> lineHeight;

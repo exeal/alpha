@@ -35,21 +35,21 @@ namespace {
 	}
 }
 
-RenderingContext2D& RenderingContext2D::arc(const NativePoint& p,
+RenderingContext2D& RenderingContext2D::arc(const Point& p,
 		Scalar radius, double startAngle, double endAngle, bool counterClockwise /* = false */) {
 	if(radius < 0)
 		throw invalid_argument("radius");
 	if(!hasCurrentSubpath_) {
-		::AngleArc(nativeObject_.get(), geometry::x(p), geometry::y(p), radius, radianToDegree(startAngle), 0.0);
+		::AngleArc(nativeObject_.get(), static_cast<int>(geometry::x(p)), static_cast<int>(geometry::y(p)), static_cast<DWORD>(radius), radianToDegree(startAngle), 0.0);
 		hasCurrentSubpath_ = true;
 	}
-	if(!win32::boole(::AngleArc(nativeObject_.get(), geometry::x(p), geometry::y(p), radius,
-			radianToDegree(startAngle), counterClockwise ? radianToDegree(startAngle - endAngle) : radianToDegree(endAngle - startAngle))))
+	if(!win32::boole(::AngleArc(nativeObject_.get(), static_cast<int>(geometry::x(p)), static_cast<int>(geometry::y(p)),
+			static_cast<DWORD>(radius), radianToDegree(startAngle), counterClockwise ? radianToDegree(startAngle - endAngle) : radianToDegree(endAngle - startAngle))))
 		throw makePlatformError();
 	return *this;
 }
 
-RenderingContext2D& RenderingContext2D::arcTo(const NativePoint& p1, const NativePoint& p2, Scalar radius) {
+RenderingContext2D& RenderingContext2D::arcTo(const Point& p1, const Point& p2, Scalar radius) {
 	if(radius < 0)
 		throw invalid_argument("radius");
 	ensureThereIsASubpathFor(p1);
@@ -73,7 +73,7 @@ RenderingContext2D& RenderingContext2D::beginPath() {
 	return *this;
 }
 
-RenderingContext2D& RenderingContext2D::bezierCurveTo(const NativePoint& cp1, const NativePoint& cp2, const NativePoint& to) {
+RenderingContext2D& RenderingContext2D::bezierCurveTo(const Point& cp1, const Point& cp2, const Point& to) {
 	ensureThereIsASubpathFor(cp1);
 	const POINT points[3] = {cp1, cp2, to};
 	if(!win32::boole(::PolyBezierTo(nativeObject_.get(), points, 3)))
@@ -91,8 +91,9 @@ RenderingContext2D& RenderingContext2D::changePen(win32::Handle<HPEN>::Type newP
 	return *this;
 }
 
-RenderingContext2D& RenderingContext2D::clearRectangle(const NativeRectangle& rectangle) {
-	if(::FillRect(nativeObject_.get(), &rectangle, static_cast<HBRUSH>(::GetStockObject(BLACK_BRUSH))) == 0)
+RenderingContext2D& RenderingContext2D::clearRectangle(const graphics::Rectangle& rectangle) {
+	const RECT temp(rectangle);
+	if(::FillRect(nativeObject_.get(), &temp, static_cast<HBRUSH>(::GetStockObject(BLACK_BRUSH))) == 0)
 		throw makePlatformError();
 	return *this;
 }
@@ -111,22 +112,25 @@ RenderingContext2D& RenderingContext2D::closePath() {
 	return *this;
 }
 
-unique_ptr<ImageData> RenderingContext2D::createImageData(const NativeSize& dimensions) const {
-	const size_t area = geometry::area(dimensions);
-	unique_ptr<uint8_t[]> bytes(new uint8_t[area]);
-	for(size_t i = 0; i < area; i += 4) {
+unique_ptr<ImageData> RenderingContext2D::createImageData(const Dimension& dimensions) const {
+	const size_t dx = static_cast<size_t>(geometry::dx(dimensions));
+	const size_t dy = static_cast<size_t>(geometry::dy(dimensions));
+	const size_t pixels = dx * dy /*geometry::area(dimensions)*/;
+	unique_ptr<uint8_t[]> bytes(new uint8_t[pixels]);
+	for(size_t i = 0; i < pixels; i += 4) {
 		bytes[i + 0] = Color::TRANSPARENT_BLACK.red();
 		bytes[i + 1] = Color::TRANSPARENT_BLACK.green();
 		bytes[i + 2] = Color::TRANSPARENT_BLACK.blue();
 		bytes[i + 3] = Color::TRANSPARENT_BLACK.alpha();
 	}
-	return unique_ptr<ImageData>(new ImageData(move(bytes), geometry::dx(dimensions), geometry::dy(dimensions)));
+	return unique_ptr<ImageData>(new ImageData(move(bytes), dx, dy));
 }
 
 win32::Handle<HPEN>::Type RenderingContext2D::createModifiedPen(const LOGBRUSH* patternBrush,
 		boost::optional<Scalar> lineWidth, boost::optional<LineCap> lineCap, boost::optional<LineJoin> lineJoin) const {
 	if(HGDIOBJ oldPen = ::GetCurrentObject(nativeObject_.get(), OBJ_PEN)) {
-		DWORD style = PS_GEOMETRIC | PS_SOLID, width;
+		DWORD style = PS_GEOMETRIC | PS_SOLID;
+		Scalar width;
 		LOGBRUSH brush;
 		switch(::GetObjectType(oldPen)) {
 			case 0:
@@ -135,7 +139,7 @@ win32::Handle<HPEN>::Type RenderingContext2D::createModifiedPen(const LOGBRUSH* 
 				LOGPEN lp;
 				if(::GetObjectW(oldPen, sizeof(LOGPEN), &lp) == 0)
 					throw makePlatformError();
-				width = lp.lopnWidth.x;
+				width = static_cast<Scalar>(lp.lopnWidth.x);
 				brush.lbStyle = BS_SOLID;
 				brush.lbColor = lp.lopnColor;
 				break;
@@ -146,7 +150,7 @@ win32::Handle<HPEN>::Type RenderingContext2D::createModifiedPen(const LOGBRUSH* 
 					throw makePlatformError();
 				style |= elp.elpPenStyle & PS_ENDCAP_MASK;
 				style |= elp.elpPenStyle & PS_JOIN_MASK;
-				width = elp.elpWidth;
+				width = static_cast<Scalar>(elp.elpWidth);
 				brush.lbStyle = elp.elpBrushStyle;
 				brush.lbColor = elp.elpColor;
 				brush.lbHatch = elp.elpHatch;
@@ -190,7 +194,7 @@ win32::Handle<HPEN>::Type RenderingContext2D::createModifiedPen(const LOGBRUSH* 
 			}
 		}
 
-		return win32::Handle<HPEN>::Type(::ExtCreatePen(style, width, &brush, 0, nullptr), &::DeleteObject);
+		return win32::Handle<HPEN>::Type(::ExtCreatePen(style, static_cast<DWORD>(width), &brush, 0, nullptr), &::DeleteObject);
 	}
 	throw makePlatformError();
 }
@@ -213,7 +217,7 @@ inline bool RenderingContext2D::endPath() {
 	return true;
 }
 
-inline bool RenderingContext2D::ensureThereIsASubpathFor(const NativePoint& p) {
+inline bool RenderingContext2D::ensureThereIsASubpathFor(const Point& p) {
 	const bool hadCurrentSubpath = hasCurrentSubpath_;
 	if(!hasCurrentSubpath_)
 		moveTo(p);
@@ -230,10 +234,11 @@ RenderingContext2D& RenderingContext2D::fill() {
 	return *this;
 }
 
-RenderingContext2D& RenderingContext2D::fillRectangle(const NativeRectangle& rectangle) {
+RenderingContext2D& RenderingContext2D::fillRectangle(const graphics::Rectangle& rectangle) {
 	updatePenAndBrush();
 	if(HBRUSH currentBrush = static_cast<HBRUSH>(::GetCurrentObject(nativeObject_.get(), OBJ_BRUSH))) {
-		if(::FillRect(nativeObject_.get(), &rectangle, currentBrush) != 0)
+		RECT temp(rectangle);
+		if(::FillRect(nativeObject_.get(), &temp, currentBrush) != 0)
 			return *this;
 	}
 	throw makePlatformError();
@@ -296,7 +301,7 @@ namespace {
 	};
 
 	RenderingContext2D& paintText(RenderingContext2D& context, const StringPiece& text,
-			const NativePoint& origin, boost::optional<Scalar> maximumMeasure, bool onlyStroke) {
+			const Point& origin, boost::optional<Scalar> maximumMeasure, bool onlyStroke) {
 		const SubpathsSaver sb(context.asNativeObject());
 		const win32::Handle<HDC>::Type dc(context.asNativeObject());
 		unique_ptr<const FontSaver> fontSaver;
@@ -308,7 +313,8 @@ namespace {
 				LOGFONTW lf;
 				if(::GetObjectW(fontSaver->savedFont().get(), sizeof(LOGFONTW), &lf) == 0)
 					throw makePlatformError();
-				lf.lfWidth = ::MulDiv(lf.lfWidth, *maximumMeasure, measure);
+				lf.lfWidth = static_cast<LONG>(static_cast<Scalar>(lf.lfWidth) * *maximumMeasure / measure);
+//				lf.lfWidth = ::MulDiv(lf.lfWidth, *maximumMeasure, measure);
 				condensedFont.reset(::CreateFontIndirectW(&lf), &::DeleteObject);
 				if(condensedFont.get() == nullptr || ::SelectObject(dc.get(), condensedFont.get()) == nullptr)
 					throw makePlatformError();
@@ -320,7 +326,8 @@ namespace {
 				throw makePlatformError();
 		}
 		if(!win32::boole(::ExtTextOutW(dc.get(),
-				geometry::x(origin), geometry::y(origin), ETO_NUMERICSLOCAL, nullptr, text.beginning(), length(text), nullptr)))
+				static_cast<int>(geometry::x(origin)), static_cast<int>(geometry::y(origin)),
+				ETO_NUMERICSLOCAL, nullptr, text.beginning(), length(text), nullptr)))
 			throw makePlatformError();
 		if(onlyStroke) {
 			if(!win32::boole(::EndPath(dc.get())) || !win32::boole(::StrokePath(dc.get())))
@@ -332,7 +339,7 @@ namespace {
 }
 
 RenderingContext2D& RenderingContext2D::fillText(const StringPiece& text,
-		const NativePoint& origin, boost::optional<Scalar> maximumMeasure /* = boost::none */) {
+		const Point& origin, boost::optional<Scalar> maximumMeasure /* = boost::none */) {
 	updatePenAndBrush();
 	return paintText(*this, text, origin, maximumMeasure, false);
 }
@@ -394,7 +401,7 @@ unique_ptr<const font::FontMetrics<int>> RenderingContext2D::fontMetrics(shared_
 	return unique_ptr<const font::FontMetrics<int>>(new GdiFontMetrics(nativeObject_, font->asNativeObject()));
 }
 
-unique_ptr<ImageData> RenderingContext2D::getImageData(const NativeRectangle& bounds) const {
+unique_ptr<ImageData> RenderingContext2D::getImageData(const graphics::Rectangle& bounds) const {
 	// TODO: not implemented.
 	return nullptr;
 }
@@ -403,7 +410,7 @@ double RenderingContext2D::globalAlpha() const {
 	return 1.0;	// not supported in Win32 GDI...
 }
 
-bool RenderingContext2D::isPointInPath(const NativePoint& point) const {
+bool RenderingContext2D::isPointInPath(const Point& point) const {
 	// this is tough fight...
 
 	const SubpathsSaver sb(nativeObject_);
@@ -412,7 +419,7 @@ bool RenderingContext2D::isPointInPath(const NativePoint& point) const {
 	win32::Handle<HRGN>::Type region(::PathToRegion(nativeObject_.get()), &::DeleteObject);
 	if(region.get() == nullptr)
 		throw makePlatformError();
-	return win32::boole(::PtInRegion(region.get(), geometry::x(point), geometry::y(point)));
+	return win32::boole(::PtInRegion(region.get(), static_cast<int>(geometry::x(point)), static_cast<int>(geometry::y(point))));
 }
 
 LineCap RenderingContext2D::lineCap() const {
@@ -473,9 +480,9 @@ LineJoin RenderingContext2D::lineJoin() const {
 	throw makePlatformError();
 }
 
-RenderingContext2D& RenderingContext2D::lineTo(const NativePoint& to) {
+RenderingContext2D& RenderingContext2D::lineTo(const Point& to) {
 	if(!ensureThereIsASubpathFor(to)) {
-		if(!win32::boole(::LineTo(nativeObject_.get(), geometry::x(to), geometry::y(to))))
+		if(!win32::boole(::LineTo(nativeObject_.get(), static_cast<int>(geometry::x(to)), static_cast<int>(geometry::y(to)))))
 			throw makePlatformError();
 	}
 	return *this;
@@ -490,13 +497,13 @@ Scalar RenderingContext2D::lineWidth() const {
 				LOGPEN lp;
 				if(::GetObjectW(currentPen, sizeof(LOGPEN), &lp) == 0)
 					break;
-				return lp.lopnWidth.x;
+				return static_cast<Scalar>(lp.lopnWidth.x);
 			}
 			case OBJ_EXTPEN: {
 				EXTLOGPEN elp;
 				if(::GetObjectW(currentPen, sizeof(EXTLOGPEN), &elp) == 0)
 					break;
-				return elp.elpWidth;
+				return static_cast<Scalar>(elp.elpWidth);
 			}
 			default:
 				ASCENSION_ASSERT_NOT_REACHED();
@@ -505,7 +512,7 @@ Scalar RenderingContext2D::lineWidth() const {
 	throw makePlatformError();
 }
 
-NativeSize RenderingContext2D::measureText(const StringPiece& text) const {
+Dimension RenderingContext2D::measureText(const StringPiece& text) const {
 	SIZE s;
 	if(!win32::boole(::GetTextExtentPoint32W(nativeObject_.get(), text.beginning(), length(text), &s)))
 		throw makePlatformError();
@@ -519,15 +526,15 @@ double RenderingContext2D::miterLimit() const {
 	return temp;
 }
 
-RenderingContext2D& RenderingContext2D::moveTo(const NativePoint& to) {
-	if(!win32::boole(::MoveToEx(nativeObject_.get(), geometry::x(to), geometry::y(to), nullptr)))
+RenderingContext2D& RenderingContext2D::moveTo(const Point& to) {
+	if(!win32::boole(::MoveToEx(nativeObject_.get(), static_cast<int>(geometry::x(to)), static_cast<int>(geometry::y(to)), nullptr)))
 		throw makePlatformError();
 	hasCurrentSubpath_ = true;
 	return *this;
 }
 
-RenderingContext2D& RenderingContext2D::putImageData(const ImageData& image,
-		const NativePoint& destination, const NativeRectangle& dirtyRectangle) {
+RenderingContext2D& RenderingContext2D::putImageData(
+		const ImageData& image, const Point& destination, const graphics::Rectangle& dirtyRectangle) {
 	win32::Handle<HDC>::Type dc(::CreateCompatibleDC(nativeObject_.get()), &::DeleteDC);
 	if(dc.get() != nullptr) {
 		static_assert(sizeof(DWORD) == 4, "");
@@ -562,9 +569,11 @@ RenderingContext2D& RenderingContext2D::putImageData(const ImageData& image,
 		}
 		if(const HGDIOBJ oldBitmap = ::SelectObject(dc.get(), bitmap.get())) {
 			const bool succeeded = win32::boole(::BitBlt(nativeObject_.get(),
-				geometry::x(destination) + geometry::left(dirtyRectangle),
-				geometry::y(destination) + geometry::top(dirtyRectangle),
-				dx, dy, dc.get(), geometry::left(dirtyRectangle), geometry::top(dirtyRectangle), SRCCOPY));
+				static_cast<int>(geometry::x(destination) + geometry::left(dirtyRectangle)),
+				static_cast<int>(geometry::y(destination) + geometry::top(dirtyRectangle)),
+				dx, dy, dc.get(),
+				static_cast<int>(geometry::left(dirtyRectangle)),
+				static_cast<int>(geometry::top(dirtyRectangle)), SRCCOPY));
 			::SelectObject(dc.get(), oldBitmap);
 			if(succeeded)
 				return *this;
@@ -573,14 +582,15 @@ RenderingContext2D& RenderingContext2D::putImageData(const ImageData& image,
 	throw makePlatformError();
 }
 
-RenderingContext2D& RenderingContext2D::quadraticCurveTo(const NativePoint& cp, const NativePoint& to) {
+RenderingContext2D& RenderingContext2D::quadraticCurveTo(const Point& cp, const Point& to) {
 	return bezierCurveTo(cp, to, to);
 }
 
-RenderingContext2D& RenderingContext2D::rectangle(const NativeRectangle& bounds) {
+RenderingContext2D& RenderingContext2D::rectangle(const graphics::Rectangle& bounds) {
 	updatePenAndBrush();
 	if(!win32::boole(::Rectangle(nativeObject_.get(),
-			geometry::left(bounds), geometry::top(bounds), geometry::right(bounds), geometry::bottom(bounds))))
+			static_cast<int>(geometry::left(bounds)), static_cast<int>(geometry::top(bounds)),
+			static_cast<int>(geometry::right(bounds)), static_cast<int>(geometry::bottom(bounds)))))
 		throw makePlatformError();
 	return moveTo(geometry::origin(bounds));
 }
@@ -604,7 +614,7 @@ RenderingContext2D& RenderingContext2D::restore() {
 }
 
 RenderingContext2D& RenderingContext2D::rotate(double angle) {
-	return transform(geometry::rotationTransform<NativeAffineTransform>(angle));
+	return transform(AffineTransform::rotation(angle));
 }
 
 RenderingContext2D& RenderingContext2D::save() {
@@ -616,9 +626,8 @@ RenderingContext2D& RenderingContext2D::save() {
 	return *this;
 }
 
-RenderingContext2D& RenderingContext2D::scale(
-		geometry::Coordinate<NativeAffineTransform>::Type sx, geometry::Coordinate<NativeAffineTransform>::Type sy) {
-	return transform(geometry::scalingTransform<NativeAffineTransform>(sx, sy));
+RenderingContext2D& RenderingContext2D::scale(AffineTransform::value_type sx, AffineTransform::value_type sy) {
+	return transform(AffineTransform::scaling(sx, sy));
 }
 
 RenderingContext2D& RenderingContext2D::scrollPathIntoView() {
@@ -672,7 +681,7 @@ RenderingContext2D& RenderingContext2D::setShadowColor(const Color&) {
 	return *this;
 }
 
-RenderingContext2D& RenderingContext2D::setShadowOffset(const NativeSize&) {
+RenderingContext2D& RenderingContext2D::setShadowOffset(const Dimension&) {
 	return *this;
 }
 
@@ -733,8 +742,9 @@ RenderingContext2D& RenderingContext2D::setTextBaseline(presentation::AlignmentB
 	return *this;
 }
 
-RenderingContext2D& RenderingContext2D::setTransform(const NativeAffineTransform& matrix) {
-	if(!win32::boole(::SetWorldTransform(nativeObject_.get(), &matrix)))
+RenderingContext2D& RenderingContext2D::setTransform(const AffineTransform& matrix) {
+	const XFORM temp(matrix);
+	if(!win32::boole(::SetWorldTransform(nativeObject_.get(), &temp)))
 		throw makePlatformError();
 	return *this;
 }
@@ -747,8 +757,8 @@ Color RenderingContext2D::shadowColor() const {
 	return Color::TRANSPARENT_BLACK;
 }
 
-NativeSize RenderingContext2D::shadowOffset() const {
-	return geometry::make<NativeSize>(0, 0);
+Dimension RenderingContext2D::shadowOffset() const {
+	return Dimension(geometry::_dx = 0.0f, geometry::_dy = 0.0f);
 }
 
 RenderingContext2D& RenderingContext2D::stroke() {
@@ -760,11 +770,12 @@ RenderingContext2D& RenderingContext2D::stroke() {
 	return *this;
 }
 
-RenderingContext2D& RenderingContext2D::strokeRectangle(const NativeRectangle& rectangle) {
+RenderingContext2D& RenderingContext2D::strokeRectangle(const graphics::Rectangle& rectangle) {
 	updatePenAndBrush();
 	if(HBRUSH oldBrush = static_cast<HBRUSH>(::SelectObject(nativeObject_.get(), ::GetStockObject(NULL_BRUSH)))) {
 		const bool succeeded = win32::boole(::Rectangle(nativeObject_.get(),
-			geometry::left(rectangle), geometry::top(rectangle), geometry::right(rectangle), geometry::bottom(rectangle)));
+			static_cast<int>(geometry::left(rectangle)), static_cast<int>(geometry::top(rectangle)),
+			static_cast<int>(geometry::right(rectangle)), static_cast<int>(geometry::bottom(rectangle))));
 		::SelectObject(nativeObject_.get(), oldBrush);
 		if(succeeded)
 			return *this;
@@ -777,7 +788,7 @@ shared_ptr<const Paint> RenderingContext2D::strokeStyle() const {
 }
 
 RenderingContext2D& RenderingContext2D::strokeText(const StringPiece& text,
-		const NativePoint& origin, boost::optional<Scalar> maximumMeasure /* = boost::none */) {
+		const Point& origin, boost::optional<Scalar> maximumMeasure /* = boost::none */) {
 	updatePenAndBrush();
 	return paintText(*this, text, origin, maximumMeasure, true);
 }
@@ -812,19 +823,19 @@ presentation::AlignmentBaseline RenderingContext2D::textBaseline() const {
 	}
 }
 
-RenderingContext2D& RenderingContext2D::transform(const NativeAffineTransform& matrix) {
-	if(!win32::boole(::ModifyWorldTransform(nativeObject_.get(), &matrix, MWT_RIGHTMULTIPLY)))
+RenderingContext2D& RenderingContext2D::transform(const AffineTransform& matrix) {
+	const XFORM temp(matrix);
+	if(!win32::boole(::ModifyWorldTransform(nativeObject_.get(), &temp, MWT_RIGHTMULTIPLY)))
 		throw makePlatformError();
 	return *this;
 }
 
-RenderingContext2D& RenderingContext2D::translate(const NativeSize& delta) {
-	return translate(static_cast<FLOAT>(geometry::dx(delta)), static_cast<FLOAT>(geometry::dy(delta)));
+RenderingContext2D& RenderingContext2D::translate(const Dimension& delta) {
+	return translate(geometry::dx(delta), geometry::dy(delta));
 }
 
-RenderingContext2D& RenderingContext2D::translate(
-		geometry::Coordinate<NativeAffineTransform>::Type dx, geometry::Coordinate<NativeAffineTransform>::Type dy) {
-	return transform(geometry::translationTransform<NativeAffineTransform>(dx, dy));
+RenderingContext2D& RenderingContext2D::translate(AffineTransform::value_type dx, AffineTransform::value_type dy) {
+	return transform(AffineTransform::translation(dx, dy));
 }
 
 void RenderingContext2D::updatePenAndBrush() {

@@ -434,7 +434,7 @@ namespace ascension {
 			const StringPiece& textRun, const graphics::font::FontCollection& collection,
 			const graphics::font::ComputedFontSpecification& specification);
 		void paintBorder(graphics::PaintContext& context,
-			const graphics::NativeRectangle& rectangle,
+			const graphics::Rectangle& rectangle,
 			const graphics::PhysicalFourSides<graphics::font::ComputedBorderSide>& style,
 			const presentation::WritingMode& writingMode);
 	}

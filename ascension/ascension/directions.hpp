@@ -384,27 +384,27 @@ namespace ascension {
 		namespace geometry {
 			/**
 			 * Converts a @c PhysicalTwoAxes into a point.
-			 * @tparam Point Type of return value
+			 * @tparam Geometry Type of return value
 			 * @tparam Coordinate Type of coordinate of @a axes
 			 * @param axes A @c PhysicalTwoAxes object
 			 * @return A converted point
 			 */
-			template<typename Point, typename Coordinate>
-			inline Point make(const PhysicalTwoAxes<Coordinate>& axes,
-					typename detail::EnableIfTagIs<Point, PointTag>::type* = nullptr) {
-				return make<Point>(axes.x(), axes.y());
+			template<typename Geometry, typename Coordinate>
+			inline Geometry make(const PhysicalTwoAxes<Coordinate>& axes,
+					typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+				return boost::geometry::make<Geometry>(axes.x(), axes.y());
 			}
 			/**
 			 * Converts a @c PhysicalFourSides into a rectangle.
-			 * @tparam Rectangle Type of return value
+			 * @tparam Geometry Type of return value
 			 * @tparam Coordinate Type of coordinate of @a sides
 			 * @param sides A @c PhysicalFourSides object
 			 * @return A converted rectangle
 			 */
-			template<typename Rectangle, typename Coordinate>
-			inline Rectangle make(const PhysicalFourSides<Coordinate>& sides,
-					typename detail::EnableIfTagIs<Rectangle, RectangleTag>::type* = nullptr) {
-				return make<Rectangle>(horizontalRange(sides), verticalRange(sides));
+			template<typename Geometry, typename Coordinate>
+			inline Geometry make(const PhysicalFourSides<Coordinate>& sides,
+					typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+				return boost::geometry::make<Geometry>(horizontalRange(sides), verticalRange(sides));
 			}
 		}
 	}

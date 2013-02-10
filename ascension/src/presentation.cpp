@@ -33,9 +33,9 @@ const Color Color::TRANSPARENT_BLACK(0, 0, 0, 0);
 // Border /////////////////////////////////////////////////////////////////////////////////////////
 
 // TODO: these value are changed later.
-const Length Border::THIN(0.05, Length::EM_HEIGHT);
-const Length Border::MEDIUM(0.10, Length::EM_HEIGHT);
-const Length Border::THICK(0.20, Length::EM_HEIGHT);
+const Length Border::THIN(0.05f, Length::EM_HEIGHT);
+const Length Border::MEDIUM(0.10f, Length::EM_HEIGHT);
+const Length Border::THICK(0.20f, Length::EM_HEIGHT);
 
 
 // TextRunStyle ///////////////////////////////////////////////////////////////////////////////////
@@ -127,14 +127,14 @@ namespace {
 /**
  * Returns the style of the specified text line.
  * @param line The line number
- * @param context 
- * @param contextSize 
+ * @param lengthContext 
  * @param globalSwitch 
  * @return The computed text line style
  * @throw BadPositionException @a line is outside of the document
+ * @throw NullPointerException Internal @c Length#value call may throw this exception
  */
 font::ComputedTextLineStyle&& Presentation::computeTextLineStyle(Index line,
-		const RenderingContext2D& context, const NativeSize& contextSize, const GlobalTextStyleSwitch* globalSwitch) const {
+		const Length::Context& lengthContext, const GlobalTextStyleSwitch* globalSwitch) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
 
@@ -192,7 +192,7 @@ font::ComputedTextLineStyle&& Presentation::computeTextLineStyle(Index line,
 	computed.alignment = precomputed.textAlignment.getOrInitial();
 	computed.alignmentLast = precomputed.textAlignmentLast.getOrInitial();
 	computed.justification = precomputed.textJustification.getOrInitial();
-	computed.indent.length = static_cast<Scalar>(precomputed.textIndent.getOrInitial().length.value(&context, &contextSize));
+	computed.indent.length = static_cast<Scalar>(precomputed.textIndent.getOrInitial().length.value(lengthContext));
 	computed.indent.hanging = precomputed.textIndent.getOrInitial().hanging;
 	computed.indent.eachLine = precomputed.textIndent.getOrInitial().eachLine;
 	computed.hangingPunctuation = precomputed.hangingPunctuation.getOrInitial();
@@ -204,15 +204,15 @@ font::ComputedTextLineStyle&& Presentation::computeTextLineStyle(Index line,
 			if(*keyword == LineHeightEnums::NONE)
 				*keyword = LineHeightEnums::NORMAL;
 			if(*keyword == LineHeightEnums::NORMAL || true)
-				precomputedLineHeight = Length(1.15, Length::EM_HEIGHT);
-		} else if(const double* const number = boost::get<double>(&precomputedLineHeight))
+				precomputedLineHeight = Length(1.15f, Length::EM_HEIGHT);
+		} else if(const Scalar* const number = boost::get<Scalar>(&precomputedLineHeight))
 			precomputedLineHeight = Length(*number, Length::EM_HEIGHT);
 		if(const Length* const length = boost::get<Length>(&precomputedLineHeight))
-			computed.lineHeight = static_cast<Scalar>(length->value(&context, &contextSize));
+			computed.lineHeight = static_cast<Scalar>(length->value(lengthContext));
 		else
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
-	computed.measure = static_cast<Scalar>(precomputed.measure.getOrInitial()->value(&context, &contextSize));
+	computed.measure = static_cast<Scalar>(precomputed.measure.getOrInitial()->value(lengthContext));
 	computed.numberSubstitution.localeOverride = precomputed.numberSubstitutionLocaleOverride.getOrInitial();
 	computed.numberSubstitution.localeSource = precomputed.numberSubstitutionLocaleSource.getOrInitial();
 	computed.numberSubstitution.method = precomputed.numberSubstitutionMethod.getOrInitial();
@@ -294,12 +294,12 @@ namespace {
 /**
  * Returns the styles of the text runs in the specified line.
  * @param line The line
+ * @param lengthContext 
  * @return An iterator enumerates the styles of the text runs in the line, or @c null if the line
  *         has no styled text runs
  * @throw BadPositionException @a line is outside of the document
  */
-unique_ptr<font::ComputedStyledTextRunIterator> Presentation::computeTextRunStyles(Index line,
-		const RenderingContext2D& context, const NativeSize& contextSize) const {
+unique_ptr<font::ComputedStyledTextRunIterator> Presentation::computeTextRunStyles(Index line, const Length::Context& lengthContext) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
 	unique_ptr<StyledTextRunIterator> declaration(
