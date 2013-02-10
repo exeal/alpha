@@ -23,9 +23,9 @@ namespace ascension {
 			class FontRenderContext : private boost::equality_comparable<FontRenderContext> {
 			public:
 				bool operator==(const FontRenderContext& other) const;
-				const NativeAffineTransform& transform() const BOOST_NOEXCEPT;
+				const geometry::AffineTransform& transform() const BOOST_NOEXCEPT;
 			private:
-				NativeAffineTransform transform_;
+				geometry::AffineTransform transform_;
 //				??? antiAliasingRenderingHint_;
 //				??? fractionalMetricsHint_;
 			};
