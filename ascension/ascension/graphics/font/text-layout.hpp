@@ -12,8 +12,8 @@
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/corelib/utility.hpp>	// detail.searchBound
 #include <ascension/graphics/color.hpp>
-#include <ascension/graphics/text-hit.hpp>
-#include <ascension/graphics/text-layout-styles.hpp>
+#include <ascension/graphics/font/text-hit.hpp>
+#include <ascension/graphics/font/text-layout-styles.hpp>
 #include <ascension/kernel/position.hpp>
 #include <memory>	// std.unique_ptr
 #include <vector>
@@ -207,7 +207,7 @@ namespace ascension {
 				//       and 'per-inline-height-rectangle' for each 'line-area'?
 
 			private:
-				void buildLineMetrics(Index line);
+//				void buildLineMetrics(Index line);
 				void expandTabsWithoutWrapping() /*throw()*/;
 				typedef std::vector<std::unique_ptr<const TextRun>> RunVector;
 				RunVector::const_iterator runForPosition(Index offset) const /*throw()*/;

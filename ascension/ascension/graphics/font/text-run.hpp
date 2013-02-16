@@ -10,7 +10,7 @@
 #ifndef ASCENSION_TEXT_RUN_HPP
 #define ASCENSION_TEXT_RUN_HPP
 
-#include <ascension/graphics/glyph-vector.hpp>
+#include <ascension/graphics/font/glyph-vector.hpp>
 #include <boost/optional.hpp>
 #if defined(ASCENSION_SHAPING_ENGINE_CORE_TEXT)
 #	include <CTRun.h>

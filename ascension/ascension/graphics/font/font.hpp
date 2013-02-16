@@ -9,9 +9,9 @@
 #define ASCENSION_FONT_HPP
 
 #include <ascension/corelib/string-piece.hpp>
-#include <ascension/graphics/font-description.hpp>
-#include <ascension/graphics/glyph-vector.hpp>
-#include <ascension/graphics/text-alignment.hpp>
+#include <ascension/graphics/font/font-description.hpp>
+#include <ascension/graphics/font/glyph-vector.hpp>
+#include <ascension/graphics/font/text-alignment.hpp>
 #include <locale>
 #include <set>
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND

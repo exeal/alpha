@@ -10,7 +10,7 @@
 #define ASCENSION_TEXT_RENDERER_HPP
 
 //#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
-#include <ascension/graphics/line-layout-vector.hpp>
+#include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/text-style.hpp>
 #include <memory>	// std.shared_ptr, std.unique_ptr

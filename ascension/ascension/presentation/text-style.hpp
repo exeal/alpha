@@ -14,9 +14,9 @@
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <ascension/graphics/color.hpp>	// graphics.Color
-#include <ascension/graphics/font.hpp>	// graphics.font.FontProperties, ...
 #include <ascension/graphics/paint.hpp>	// graphics.Paint
-#include <ascension/graphics/text-alignment.hpp>
+#include <ascension/graphics/font/font.hpp>	// graphics.font.FontProperties, ...
+#include <ascension/graphics/font/text-alignment.hpp>
 #include <ascension/presentation/length.hpp>
 #include <ascension/presentation/style-property.hpp>
 #include <ascension/presentation/writing-mode.hpp>

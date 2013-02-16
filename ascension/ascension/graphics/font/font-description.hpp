@@ -9,7 +9,7 @@
 #ifndef ASCENSION_FONT_DESCRIPTION_HPP
 #define ASCENSION_FONT_DESCRIPTION_HPP
 
-#include <ascension/graphics/font-family.hpp>
+#include <ascension/graphics/font/font-family.hpp>
 
 namespace ascension {
 	namespace graphics {

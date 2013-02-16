@@ -5,10 +5,10 @@
  * @date 2006-2011 was rendering.cpp
  * @date 2010-11-20 separated from ascension/layout.cpp
  * @date 2011-??-?? separated from rendering.cpp
- * @date 2011-2012
+ * @date 2011-2013
  */
 
-#include <ascension/graphics/line-layout-vector.hpp>
+#include <ascension/graphics/font/line-layout-vector.hpp>
 
 using namespace ascension;
 using namespace ascension::graphics;
