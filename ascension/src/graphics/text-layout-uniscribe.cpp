@@ -8,11 +8,12 @@
  */
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
+#include <ascension/graphics/font-metrics.hpp>
+#include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/rendering-device.hpp>
 #include <ascension/graphics/text-layout.hpp>
 #include <ascension/graphics/text-layout-styles.hpp>
 #include <ascension/graphics/text-run.hpp>
-#include <ascension/graphics/rendering-context.hpp>
-#include <ascension/graphics/rendering-device.hpp>
 //#include <ascension/graphics/special-character-renderer.hpp>
 #include <ascension/corelib/shared-library.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>
@@ -538,15 +539,16 @@ namespace {
 		const FontRenderContext& fontRenderContext() const;
 		Index glyphCharacterIndex(size_t index) const;
 		GlyphCode glyphCode(size_t index) const;
-		FlowRelativeFourSides<float> glyphLogicalBounds(size_t index) const;
-		AbstractTwoAxes<float> glyphPosition(size_t index) const;
-		FlowRelativeFourSides<float> glyphVisualBounds(const Range<size_t>& range) const;
-		FlowRelativeFourSides<float> logicalBounds() const;
+		graphics::Rectangle glyphLogicalBounds(size_t index) const;
+		Point glyphPosition(size_t index) const;
+		vector<Point>&& glyphPositions(const Range<size_t>& range) const;
+		graphics::Rectangle glyphVisualBounds(size_t index) const;
+		graphics::Rectangle logicalBounds() const;
 		size_t numberOfGlyphs() const BOOST_NOEXCEPT;
-		void setGlyphPosition(size_t index, const AbstractTwoAxes<float>& position);
+		void setGlyphPosition(size_t index, const Point& position);
 		void strokeGlyphs(PaintContext& context, const Point& origin,
 			boost::optional<Range<std::size_t>> range /* = boost::none */) const;
-		FlowRelativeFourSides<float> visualBounds() const;
+		graphics::Rectangle visualBounds() const;
 		// TextRun
 		const FlowRelativeFourSides<ComputedBorderSide>* border() const BOOST_NOEXCEPT;
 		boost::optional<Index> characterEncompassesPosition(float ipd) const BOOST_NOEXCEPT;
@@ -1138,7 +1140,7 @@ HRESULT TextRunImpl::generateGlyphs(win32::Handle<HDC>::Type dc,
 }
 
 /// @see GlyphVector#glyphPosition
-float TextRunImpl::glyphPosition(size_t index) const {
+Point TextRunImpl::glyphPosition(size_t index) const {
 	return leadingEdge(index);
 }
 
@@ -1166,7 +1168,7 @@ inline Range<size_t> TextRunImpl::glyphRange(const StringPiece& range /* = Strin
 }
 
 /// @see GlyphVector#glyphVisualBounds
-FlowRelativeFourSides<float> TextRunImpl::glyphVisualBounds(const Range<size_t>& range) const {
+Rectangle TextRunImpl::glyphVisualBounds(size_t index) const {
 	FlowRelativeFourSides<float> bounds(glyphLogicalBounds(range));
 	if(isEmpty(range))
 		return bounds;
@@ -2168,46 +2170,6 @@ namespace {
 } // namespace @0
 
 /**
- * @class ascension::graphics::font::TextLayout
- * @c TextLayout is an immutable graphical representation of styled text. Provides support for
- * drawing, cursor navigation, hit testing, text wrapping, etc.
- *
- * <h3>Coordinate system</h3>
- * All graphical information returned from a @c TextLayout object' method is relative to the origin
- * of @c TextLayout, which is the intersection of the start edge with the baseline of the first
- * line of @c TextLayout. The start edge is determined by the reading direction (inline progression
- * dimension) of the line. Also, coordinates passed into a @c TextLayout object's method are
- * assumed to be relative to the @c TextLayout object's origin.
- *
- * <h3>Constraints by Win32/Uniscribe</h3>
- * <del>A long run will be split into smaller runs automatically because Uniscribe rejects too long
- * text (especially @c ScriptShape and @c ScriptTextOut). For this reason, a combining character
- * will be rendered incorrectly if it is presented at the boundary. The maximum length of a run is
- * 1024.
- *
- * In present, this class supports only text layout horizontal against the output device.
- *
- * @note This class is not intended to be derived.
- * @see TextLayoutBuffer#lineLayout, TextLayoutBuffer#lineLayoutIfCached
- */
-
-namespace {
-	// TODO: this implementation is temporary, and should rewrite later
-	class SillyLineMetrics : public LineMetrics {
-	public:
-		SillyLineMetrics(Scalar ascent, Scalar descent) /*throw()*/ : ascent_(ascent), descent_(descent) {}
-	private:
-		Scalar ascent() const /*throw()*/ {return ascent_;}
-		DominantBaseline baseline() const /*throw()*/ {return DominantBaseline::ALPHABETIC;}
-		Scalar baselineOffset(AlignmentBaseline baseline) const /*throw()*/ {return 0;}
-		Scalar descent() const /*throw()*/ {return descent_;}
-//		Scalar leading() const /*throw()*/ {return 0;}
-	private:
-		Scalar ascent_, descent_;
-	};
-}
-
-/**
  * Constructor.
  * @param textString The text string to display
  * @param lineStyle The computed text line style
@@ -2314,7 +2276,7 @@ TextLayout::TextLayout(const String& textString, const ComputedTextLineStyle& li
  * @throw kernel#BadPositionException @a range intersects with the outside of the line
  * @see #bounds(void), #bounds(Index, Index), #lineBounds, #lineStartEdge
  */
-NativeRegion TextLayout::blackBoxBounds(const Range<Index>& characterRange) const {
+boost::geometry::model::polygon<Point> TextLayout::blackBoxBounds(const Range<Index>& characterRange) const {
 	if(characterRange.end() > textString_.length())
 		throw kernel::BadPositionException(kernel::Position(0, characterRange.end()));
 
@@ -3066,7 +3028,7 @@ pair<Index, Index> TextLayout::offset(const NativePoint& p, bool* outside /* = n
 }
 
 /// Reorders the runs in visual order.
-inline void TextLayout::reorder() /*throw()*/ {
+inline void TextLayout::reorder() {
 	if(isEmpty())
 		return;
 	vector<const TextRun*> reordered(runs_.size());
@@ -3077,7 +3039,8 @@ inline void TextLayout::reorder() /*throw()*/ {
 			levels[i - runsInLine.beginning()] = static_cast<BYTE>((*i)->characterLevel() & 0x1f);
 		const unique_ptr<int[]> log2vis(new int[length(runsInLine)]);
 		const HRESULT hr = ::ScriptLayout(static_cast<int>(length(runsInLine)), levels.get(), nullptr, log2vis.get());
-		assert(SUCCEEDED(hr));
+		if(FAILED(hr))
+			throw makePlatformError(hr);
 		for(RunVector::const_iterator i(runsInLine.beginning()); i != runsInLine.end(); ++i)
 			reordered[runsInLine.beginning() - begin(runs_) + log2vis[i - runsInLine.beginning()]] = i->get();
 	}
@@ -3091,16 +3054,19 @@ inline void TextLayout::reorder() /*throw()*/ {
 
 /**
  * Stacks the line boxes and compute the line metrics.
+ * @param context
  * @param lineHeight
  * @param lineStackingStrategy
  * @param nominalFont
  */
-void TextLayout::stackLines(boost::optional<Scalar> lineHeight, LineBoxContain lineBoxContain, const Font& nominalFont) {
+void TextLayout::stackLines(const RenderingContext2D& context, boost::optional<Scalar> lineHeight, LineBoxContain lineBoxContain, const Font& nominalFont) {
 	// TODO: this code is temporary. should rewrite later.
+	assert(numberOfLines() > 1);
+	unique_ptr<LineMetrics[]> newLineMetrics(new LineMetrics[numberOfLines()]);
 	// calculate allocation-rectangle of the lines according to line-stacking-strategy
-	const Scalar textAltitude = nominalFont.metrics()->ascent();
-	const Scalar textDepth = nominalFont.metrics()->descent();
-	vector<pair<Scalar, Scalar>> v;
+	const unique_ptr<const FontMetrics<Scalar>> nominalFontMetrics(context.fontMetrics(nominalFont.shared_from_this()));
+	const Scalar textAltitude = nominalFontMetrics->ascent();
+	const Scalar textDepth = nominalFontMetrics->descent();
 	for(Index line = 0; line < numberOfLines(); ++line) {
 		// calculate extent of the line in block-progression-direction
 		Scalar ascent, descent;
@@ -3142,19 +3108,9 @@ void TextLayout::stackLines(boost::optional<Scalar> lineHeight, LineBoxContain l
 		ascent = textAltitude;
 		descent = textDepth;
 #endif
-		v.push_back(make_pair(ascent, descent));
-	}
-
-	lineMetrics_.reset(new LineMetrics*[numberOfLines()]);
-	for(size_t line = 0; line != v.size(); ++line) {
-		try {
-			unique_ptr<SillyLineMetrics> lineMetrics(new SillyLineMetrics(v[line].first, v[line].second));
-			lineMetrics_[line] = lineMetrics.release();
-		} catch(...) {
-			while(line > 0)
-				delete lineMetrics_[--line];
-			throw;
-		}
+		newLineMetrics[line].ascent = ascent;
+		newLineMetrics[line].descent = descent;
+		newLineMetrics[line].leading = 0;
 	}
 }
 
@@ -3169,7 +3125,7 @@ void TextLayout::wrap(Scalar measure, const TabExpander& tabExpander) BOOST_NOEX
 
 	vector<Index> firstRunsInLines;
 	firstRunsInLines.push_back(0);
-	int x1 = 0;	// addresses the beginning of the run. see x2
+	Scalar ipd1 = 0;	// addresses the beginning of the run. see x2
 	unique_ptr<int[]> logicalWidths;
 	unique_ptr<SCRIPT_LOGATTR[]> logicalAttributes;
 	Index longestRunLength = 0;	// for efficient allocation
@@ -3182,12 +3138,12 @@ void TextLayout::wrap(Scalar measure, const TabExpander& tabExpander) BOOST_NOEX
 
 		// if the run is a tab, expand and calculate actual width
 		if(run->expandTabCharacters(tabExpander, textString_,
-				(x1 < measure) ? x1 : 0, measure - (x1 < measure) ? x1 : 0)) {
-			if(x1 < measure) {
-				x1 += allocationMeasure(*run);
+				(ipd1 < measure) ? ipd1 : 0, measure - (ipd1 < measure) ? ipd1 : 0)) {
+			if(ipd1 < measure) {
+				ipd1 += allocationMeasure(*run);
 				runs.push_back(run);
 			} else {
-				x1 = allocationMeasure(*run);
+				ipd1 = allocationMeasure(*run);
 				runs.push_back(run);
 				firstRunsInLines.push_back(runs.size());
 			}
@@ -3204,34 +3160,34 @@ void TextLayout::wrap(Scalar measure, const TabExpander& tabExpander) BOOST_NOEX
 		HRESULT hr = run->logicalWidths(logicalWidths.get());
 		hr = run->logicalAttributes(logicalAttributes.get());
 		const String::const_pointer originalRunPosition = run->beginning();
-		int widthInThisRun = 0;
+		Scalar measureInThisRun = 0;
 		String::const_pointer lastBreakable = run->beginning(), lastGlyphEnd = run->beginning();
-		int lastBreakableX = x1, lastGlyphEndX = x1;
+		Scalar lastBreakableIpd = ipd1, lastGlyphEndIpd = ipd1;
 		// for each characters in the run...
 		for(String::const_pointer j = run->beginning(); j < run->end(); ) {	// j is position in the LOGICAL line
-			const int x2 = x1 + widthInThisRun;
+			const Scalar ipd2 = ipd1 + measureInThisRun;
 			// remember this opportunity
 			if(logicalAttributes[j - run->beginning()].fCharStop != 0) {
 				lastGlyphEnd = j;
-				lastGlyphEndX = x2;
+				lastGlyphEndIpd = ipd2;
 				if(logicalAttributes[j - run->beginning()].fSoftBreak != 0
 						|| logicalAttributes[j - run->beginning()].fWhiteSpace != 0) {
 					lastBreakable = j;
-					lastBreakableX = x2;
+					lastBreakableIpd = ipd2;
 				}
 			}
 			// break if the width of the visual line overs the wrap width
-			if(x2 + logicalWidths[j - run->beginning()] > measure) {
+			if(ipd2 + logicalWidths[j - run->beginning()] > measure) {
 				// the opportunity is the start of this run
 				if(lastBreakable == run->beginning()) {
 					// break at the last glyph boundary if no opportunities
 					if(firstRunsInLines.empty() || firstRunsInLines.back() == runs.size()) {
 						if(lastGlyphEnd == run->beginning()) {	// break here if no glyph boundaries
 							lastBreakable = j;
-							lastBreakableX = x2;
+							lastBreakableIpd = ipd2;
 						} else {
 							lastBreakable = lastGlyphEnd;
-							lastBreakableX = lastGlyphEndX;
+							lastBreakableIpd = lastGlyphEndIpd;
 						}
 					}
 				}
@@ -3261,16 +3217,16 @@ void TextLayout::wrap(Scalar measure, const TabExpander& tabExpander) BOOST_NOEX
 					createdRuns.push_back(move(followingRun));
 					run = createdRuns.back().get();	// continue the process about this run
 				}
-				widthInThisRun = x1 + widthInThisRun - lastBreakableX;
-				lastBreakableX -= x1;
-				lastGlyphEndX -= x1;
-				x1 = 0;
+				measureInThisRun = ipd1 + measureInThisRun - lastBreakableIpd;
+				lastBreakableIpd -= ipd1;
+				lastGlyphEndIpd -= ipd1;
+				ipd1 = 0;
 				j = max(lastBreakable, j);
 			} else
-				widthInThisRun += logicalWidths[j++ - originalRunPosition];
+				measureInThisRun += logicalWidths[j++ - originalRunPosition];
 		}
 		runs.push_back(run);
-		x1 += widthInThisRun;
+		ipd1 += measureInThisRun;
 	}
 //dout << L"...broke the all lines.\n";
 #if 0

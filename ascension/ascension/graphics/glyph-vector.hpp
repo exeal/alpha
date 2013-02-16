@@ -131,7 +131,7 @@ namespace ascension {
 				 * @throw std#out_of_range @a index &gt; @c #numberOfGlyphs()
 				 * @see #glyphLogicalBounds, #glyphPixelBounds, #visualBounds
 				 */
-				virtual Rectangle glyphVisualBounds(const std::size_t index) const = 0;
+				virtual Rectangle glyphVisualBounds(std::size_t index) const = 0;
 				/**
 				 * Returns the logical bounds of this vector in user units.
 				 * @see #glyphLogicalBounds, #pixelBounds, #visualBounds

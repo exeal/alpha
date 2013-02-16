@@ -132,7 +132,18 @@ namespace ascension {
 			 * @see #borderBox, #marginBox, #paddingBox
 			 */
 			inline presentation::FlowRelativeFourSides<Scalar> contentBox(const TextRun& textRun) BOOST_NOEXCEPT {
-				return textRun.logicalBounds();
+				const Point lastGlyphPosition(textRun.glyphPosition(textRun.numberOfGlyphs()));
+				Scalar measure;
+		     	if(geometry::y(lastGlyphPosition) == 0)
+					measure = geometry::x(lastGlyphPosition);
+		     	else if(geometry::x(lastGlyphPosition) == 0)
+					measure = geometry::y(lastGlyphPosition);
+				else
+					measure = static_cast<Scalar>(boost::geometry::distance(boost::geometry::make_zero<Point>(), lastGlyphPosition));
+				std::unique_ptr<const LineMetrics> lm(textRun.font()->lineMetrics(String(), textRun.fontRenderContext()));
+				return presentation::FlowRelativeFourSides<Scalar>(
+					presentation::_start = 0, presentation::_end = measure,
+					presentation::_before = -lm->ascent(), presentation::_after = lm->descent() + lm->leading());
 			}
 			/**
 			 * Returns the 'padding-box' of the specified text run in user units.

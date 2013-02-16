@@ -19,6 +19,7 @@
 #include <ascension/corelib/text/character-property.hpp>
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate
+#include <boost/foreach.hpp>
 
 using namespace ascension;
 using namespace ascension::graphics;
@@ -36,32 +37,9 @@ extern bool DIAGNOSE_INHERENT_DRAWING;
 
 // graphics.font free functions ///////////////////////////////////////////////////////////////////
 
-void font::paintTextDecoration(PaintContext& context, const TextRun& run, const NativePoint& origin, const ComputedTextDecoration& style) {
-	if(style.decorations.underline.style != Decorations::NONE || style.decorations.strikethrough.style != Decorations::NONE) {
-		const win32::Handle<HDC>& dc = context.asNativeObject();
-		int baselineOffset, underlineOffset, underlineThickness, linethroughOffset, linethroughThickness;
-		if(getDecorationLineMetrics(dc, &baselineOffset, &underlineOffset, &underlineThickness, &linethroughOffset, &linethroughThickness)) {
-			// draw underline
-			if(style.decorations.underline.style != Decorations::NONE) {
-				win32::Handle<HPEN> pen(createPen(
-					style.decorations.underline.color.get_value_or(foregroundColor), underlineThickness, style.decorations.underline.style));
-				HPEN oldPen = static_cast<HPEN>(::SelectObject(dc.get(), pen.get()));
-				const int underlineY = y + baselineOffset - underlineOffset + underlineThickness / 2;
-				context.moveTo(geometry::make<NativePoint>(x, underlineY));
-				context.lineTo(geometry::make<NativePoint>(x + width, underlineY));
-				::SelectObject(dc.get(), oldPen);
-			}
-			// draw strikethrough line
-			if(style.decorations.strikethrough.style != Decorations::NONE) {
-				win32::Handle<HPEN> pen(createPen(
-					style.decorations.strikethrough.color.get_value_or(foregroundColor), linethroughThickness, 1));
-				HPEN oldPen = static_cast<HPEN>(::SelectObject(dc.get(), pen.get()));
-				const int strikeoutY = y + baselineOffset - linethroughOffset + linethroughThickness / 2;
-				context.moveTo(geometry::make<NativePoint>(x, strikeoutY));
-				context.lineTo(geometry::make<NativePoint>(x + width, strikeoutY));
-				::SelectObject(dc.get(), oldPen);
-			}
-		}
+void font::paintTextDecoration(PaintContext& context, const TextRun& run, const Point& origin, const ComputedTextDecoration& decoration) {
+	if(decoration.lines != TextDecoration::Line::NONE && !decoration.color.isFullyTransparent()) {
+		// TODO: Not implemented.
 	}
 }
 
@@ -75,13 +53,13 @@ void font::paintTextDecoration(PaintContext& context, const TextRun& run, const 
  * @param border The presentative style
  * @param writingMode The writing mode used to compute the directions and orientation of @a border
  */
-void detail::paintBorder(PaintContext& context, const NativeRectangle& rectangle,
+void detail::paintBorder(PaintContext& context, const graphics::Rectangle& rectangle,
 		const PhysicalFourSides<ComputedBorderSide>& border, const WritingMode& writingMode) {
 	// TODO: not implemented.
 	for(PhysicalFourSides<ComputedBorderSide>::const_iterator side(begin(border)), e(border.cend()); side != e; ++side) {
 		if(!side->hasVisibleStyle() || side->computedWidth() <= 0)
 			continue;
-		if(!geometry::includes(context.boundsToPaint(), rectangle))
+		if(!boost::geometry::within(rectangle, context.boundsToPaint()))
 			continue;
 		const Color& color = side->color;
 		if(color.isFullyTransparent())
@@ -94,23 +72,23 @@ void detail::paintBorder(PaintContext& context, const NativeRectangle& rectangle
 		switch(static_cast<PhysicalDirection>(side - begin(border))) {
 			case TOP:
 				context
-					.moveTo(geometry::make<NativePoint>(geometry::left(rectangle), geometry::top(rectangle)))
-					.lineTo(geometry::make<NativePoint>(geometry::right(rectangle) + 1, geometry::top(rectangle)));
+					.moveTo(geometry::topLeft(rectangle))
+					.lineTo(geometry::translate(geometry::topRight(rectangle), Dimension(geometry::_dx = 1, geometry::_dy = 0)));
 				break;
 			case RIGHT:
 				context
-					.moveTo(geometry::make<NativePoint>(geometry::right(rectangle), geometry::top(rectangle)))
-					.lineTo(geometry::make<NativePoint>(geometry::right(rectangle), geometry::bottom(rectangle) + 1));
+					.moveTo(geometry::topRight(rectangle))
+					.lineTo(geometry::translate(geometry::bottomRight(rectangle), Dimension(geometry::_dx = 0, geometry::_dy = 1)));
 				break;
 			case BOTTOM:
 				context
-					.moveTo(geometry::make<NativePoint>(geometry::left(rectangle), geometry::bottom(rectangle)))
-					.lineTo(geometry::make<NativePoint>(geometry::right(rectangle) + 1, geometry::bottom(rectangle)));
+					.moveTo(geometry::bottomLeft(rectangle))
+					.lineTo(geometry::translate(geometry::bottomRight(rectangle), Dimension(geometry::_dx = 1, geometry::_dy = 0)));
 				break;
 			case LEFT:
 				context
-					.moveTo(geometry::make<NativePoint>(geometry::left(rectangle), geometry::top(rectangle)))
-					.lineTo(geometry::make<NativePoint>(geometry::left(rectangle), geometry::bottom(rectangle) + 1));
+					.moveTo(geometry::topLeft(rectangle))
+					.lineTo(geometry::translate(geometry::bottomLeft(rectangle), Dimension(geometry::_dx = 0, geometry::_dy = 1)));
 				break;
 			default:
 				ASCENSION_ASSERT_NOT_REACHED();
@@ -131,7 +109,7 @@ FixedWidthTabExpander::FixedWidthTabExpander(Scalar width) BOOST_NOEXCEPT : widt
 
 /// @see TabExpander#nextTabStop
 Scalar FixedWidthTabExpander::nextTabStop(Scalar ipd, Index) const BOOST_NOEXCEPT {
-	return ipd - ipd % width_ + width_;
+	return ipd - static_cast<long>(ipd) % static_cast<long>(width_) + width_;
 }
 
 
@@ -160,168 +138,6 @@ Scalar FixedWidthTabExpander::nextTabStop(Scalar ipd, Index) const BOOST_NOEXCEP
  * @note This class is not intended to be derived.
  * @see TextLayoutBuffer#lineLayout, TextLayoutBuffer#lineLayoutIfCached
  */
-
-namespace {
-	// TODO: this implementation is temporary, and should rewrite later
-	class SillyLineMetrics : public LineMetrics {
-	public:
-		SillyLineMetrics(Scalar ascent, Scalar descent) /*throw()*/ : ascent_(ascent), descent_(descent) {}
-	private:
-		Scalar ascent() const /*throw()*/ {return ascent_;}
-		DominantBaseline baseline() const /*throw()*/ {return DOMINANT_BASELINE_ALPHABETIC;}
-		Scalar baselineOffset(AlignmentBaseline baseline) const /*throw()*/ {return 0;}
-		Scalar descent() const /*throw()*/ {return descent_;}
-//		Scalar leading() const /*throw()*/ {return 0;}
-	private:
-		Scalar ascent_, descent_;
-	};
-}
-
-/**
- * Constructor.
- * @param text The text string to display
- * @param otherParameters The other parameters
- * @throw UnknownValueException @a writingMode or @a otherParameters.anchor is invalid
- */
-TextLayout::TextLayout(const String& text,
-		const TextLayout::ConstructionParameters& otherParameters /* = TextLayout::ConstructionParameters() */)
-		: text_(text), writingMode_(otherParameters.writingMode), anchor_(otherParameters.anchor),
-		dominantBaseline_(otherParameters.dominantBaseline), numberOfRuns_(0), numberOfLines_(0),
-		maximumMeasure_(-1), wrappingMeasure_(otherParameters.textWrapping.measure) {
-
-	// sanity checks...
-	if(writingMode_.inlineFlowDirection != LEFT_TO_RIGHT && writingMode_.inlineFlowDirection != RIGHT_TO_LEFT)
-		throw UnknownValueException("writingMode.inlineFlowDirection");
-	if(anchor_ != TEXT_ANCHOR_START && anchor_ != TEXT_ANCHOR_MIDDLE && anchor_ != TEXT_ANCHOR_END)
-		throw UnknownValueException("otherParameters.anchor");
-
-	// handle logically empty line
-	if(text_.empty()) {
-		numberOfRuns_ = 0;
-		numberOfLines_ = 1;
-		maximumMeasure_ = 0;
-		assert(isEmpty());
-		return;
-	}
-#if 0
-	// calculate the wrapping width
-	if(layoutInformation.layoutSettings().lineWrap.wraps()) {
-		wrapWidth_ = layoutInformation.width();
-		if(ISpecialCharacterRenderer* scr = layoutInformation.specialCharacterRenderer()) {
-			ISpecialCharacterRenderer::LayoutContext lc(context);
-			lc.readingDirection = readingDirection();
-			wrapWidth_ -= scr->getLineWrappingMarkWidth(lc);
-		}
-	}
-#endif
-	// split the text line into text runs as following steps:
-	// 1. split the text into script runs (SCRIPT_ITEMs) by Uniscribe
-	// 2. split each script runs into atomically-shapable runs (TextRuns) with StyledRunIterator
-	// 3. generate glyphs for each text runs
-	// 4. position glyphs for each text runs
-	// 5. position each text runs
-	// 6. justify each text runs if specified
-	// 7. stack the lines
-
-	// 1. split the text into script runs by Uniscribe
-	HRESULT hr;
-
-	// 1-1. configure Uniscribe's itemize
-	win32::AutoZero<SCRIPT_CONTROL> control;
-	win32::AutoZero<SCRIPT_STATE> initialState;
-	initialState.uBidiLevel = (writingMode_.inlineFlowDirection == RIGHT_TO_LEFT) ? 1 : 0;
-//	initialState.fOverrideDirection = 1;
-	initialState.fInhibitSymSwap = otherParameters.inhibitSymmetricSwapping;
-	initialState.fDisplayZWG = otherParameters.displayShapingControls;
-	resolveNumberSubstitution(&otherParameters.numberSubstitution, control, initialState);	// ignore result...
-
-	// 1-2. itemize
-	// note that ScriptItemize can cause a buffer overflow (see Mozilla bug 366643)
-	AutoArray<SCRIPT_ITEM, 128> scriptRuns;
-	AutoArray<OPENTYPE_TAG, scriptRuns.STATIC_CAPACITY> scriptTags;
-	int estimatedNumberOfScriptRuns = max(static_cast<int>(text_.length()) / 4, 2), numberOfScriptRuns;
-	HRESULT(WINAPI* scriptItemizeOpenType)(const WCHAR*, int, int,
-		const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*, OPENTYPE_TAG*, int*) = uspLib->get<0>();
-	while(true) {
-		scriptRuns.reallocate(estimatedNumberOfScriptRuns);
-		scriptTags.reallocate(estimatedNumberOfScriptRuns);
-		if(scriptItemizeOpenType != nullptr)
-			hr = (*scriptItemizeOpenType)(text_.data(), static_cast<int>(text_.length()),
-				estimatedNumberOfScriptRuns, &control, &initialState, scriptRuns.get(), scriptTags.get(), &numberOfScriptRuns);
-		else
-			hr = ::ScriptItemize(text_.data(), static_cast<int>(text_.length()),
-				estimatedNumberOfScriptRuns, &control, &initialState, scriptRuns.get(), &numberOfScriptRuns);
-		if(hr != E_OUTOFMEMORY)	// estimatedNumberOfRuns was enough...
-			break;
-		estimatedNumberOfScriptRuns *= 2;
-	}
-	if(otherParameters.disableDeprecatedFormatCharacters) {
-		for(int i = 0; i < numberOfScriptRuns; ++i) {
-			scriptRuns[i].a.s.fInhibitSymSwap = initialState.fInhibitSymSwap;
-			scriptRuns[i].a.s.fDigitSubstitute = initialState.fDigitSubstitute;
-		}
-	}
-	if(scriptItemizeOpenType == nullptr)
-		fill_n(scriptTags.get(), numberOfScriptRuns, SCRIPT_TAG_UNKNOWN);
-
-	// 2. split each script runs into text runs with StyledRunIterator
-	vector<TextRun*> textRuns;
-	vector<const StyledTextRun> styledRanges;
-	const FontCollection& fontCollection = (otherParameters.fontCollection != nullptr) ? *otherParameters.fontCollection : systemFonts();
-	TextRun::mergeScriptsAndStyles(text_.data(),
-		scriptRuns.get(), scriptTags.get(), numberOfScriptRuns,
-		fontCollection, otherParameters.defaultTextRunStyle, move(otherParameters.textRunStyles), textRuns, styledRanges);
-	runs_.reset(new TextRun*[numberOfRuns_ = textRuns.size()]);
-	copy(textRuns.begin(), textRuns.end(), runs_.get());
-//	shrinkToFit(styledRanges_);
-
-	// 3. generate glyphs for each text runs
-	const win32::Handle<HDC> dc(detail::screenDC());
-	for(size_t i = 0; i < numberOfRuns_; ++i)
-		runs_[i]->shape(dc, text_);
-	TextRun::substituteGlyphs(Range<TextRun**>(runs_.get(), runs_.get() + numberOfRuns_), text_);
-
-	// 4. position glyphs for each text runs
-	for(size_t i = 0; i < numberOfRuns_; ++i)
-		runs_[i]->positionGlyphs(dc, text_, SimpleStyledTextRunIterator(styledRanges, runs_[i]->beginning()));
-
-	// 5. position each text runs
-	String nominalFontFamilyName;
-	FontProperties<> nominalFontProperties;
-	resolveFontSpecifications(fontCollection,
-		shared_ptr<const TextRunStyle>(), otherParameters.defaultTextRunStyle, &nominalFontFamilyName, &nominalFontProperties, nullptr);
-	const shared_ptr<const Font> nominalFont(fontCollection.get(nominalFontFamilyName, nominalFontProperties));
-	// wrap into visual lines and reorder runs in each lines
-	if(numberOfRuns_ == 0 || wrappingMeasure_ == numeric_limits<Scalar>::max()) {
-		numberOfLines_ = 1;
-		lineOffsets_.reset(&SINGLE_LINE_OFFSETS);
-		lineFirstRuns_.reset(&SINGLE_LINE_OFFSETS);
-		// 5-2. reorder each text runs
-		reorder();
-		// 5-3. reexpand horizontal tabs
-		expandTabsWithoutWrapping();
-	} else {
-		// 5-1. expand horizontal tabs and wrap into lines
-		const TabExpander* tabExpander = otherParameters.tabExpander;
-		unique_ptr<TabExpander> temp;
-		if(tabExpander == nullptr) {
-			// create default tab expander
-			temp.reset(new FixedWidthTabExpander(nominalFont->metrics().averageCharacterWidth() * 8));
-			tabExpander = temp.get();
-		}
-		wrap(*tabExpander);
-		// 5-2. reorder each text runs
-		reorder();
-		// 5-3. reexpand horizontal tabs
-		// TODO: not implemented.
-		// 6. justify each text runs if specified
-		if(otherParameters.textJustification != NONE_JUSTIFICATION)
-			justify(otherParameters.textJustification);
-	}
-
-	// 7. stack the lines
-	stackLines(otherParameters.lineStackingStrategy, *nominalFont, otherParameters.lineHeight);
-}
 
 /// Destructor.
 TextLayout::~TextLayout() BOOST_NOEXCEPT {
@@ -366,12 +182,12 @@ TextAnchor TextLayout::anchor(Index line) const {
  * @return The baseline position 
  * @throw kernel#BadPositionException @a line is greater than the number of lines
  */
-double TextLayout::baseline(Index line) const {
+Scalar TextLayout::baseline(Index line) const {
 	if(line >= numberOfLines())
 		throw kernel::BadPositionException(kernel::Position(line, 0));
 	else if(line == 0)
 		return 0;
-	double result = 0;
+	Scalar result = 0;
 	for(Index i = 1; i <= line; ++i) {
 		const LineMetrics& preceding = lineMetrics(i - 1);
 		result += preceding.descent + preceding.leading;
@@ -389,12 +205,13 @@ double TextLayout::baseline(Index line) const {
 FlowRelativeFourSides<Scalar> TextLayout::bounds() const BOOST_NOEXCEPT {
 	// TODO: this implementation can't handle vertical text.
 	FlowRelativeFourSides<Scalar> result;
-	result.before() = /*-lineMetrics(0).leading()*/ - lineMetrics(0).ascent();
+	result.before() = /*-lineMetrics(0).leading()*/ - lineMetrics(0).ascent;
 	result.after() = result.before();
 	result.start() = numeric_limits<Scalar>::max();
 	result.end() = numeric_limits<Scalar>::min();
 	for(Index line = 0; line < numberOfLines(); ++line) {
-		result.after() += lineMetrics(line).height();
+		const LineMetrics& lm = lineMetrics(line);
+		result.after() += lm.ascent + lm.descent + lm.leading;
 		const Scalar lineStart = lineStartEdge(line);
 		result.start() = min(lineStart, result.start());
 		result.end() = max(lineStart + measure(line), result.end());
@@ -477,10 +294,38 @@ shared_ptr<const Font> TextLayout::findMatchingFont(const StringPiece& textRun,
 #endif
 }
 
-pair<TextHit, bool> TextLayout::hitTestCharacter(const AbstractTwoAxes<float>& point) const {
+/**
+ * Returns a @c TextHit corresponding to the specified point. This method is a convenience overload
+ * of @c #hitTestCharacter that uses the natural bounds of this @c TextLayout.
+ * @param point The abstract point
+ * @param[out] outOfBounds @c true if @a point is out of the logical bounds of the @c TextLayout.
+ *                         Can be @c null if not needed
+ * @return A hit describing the character and edge (leading or trailing) under the specified point
+ */
+TextHit&& TextLayout::hitTestCharacter(const AbstractTwoAxes<Scalar>& point, bool* outOfBounds /* = nullptr */) const {
 }
 
-pair<TextHit, bool> TextLayout::hitTestCharacter(const AbstractTwoAxes<float>& point, const FlowRelativeFourSides<float>& bounds) const {
+/**
+ * Returns a @c TextHit corresponding to the specified point. Coordinates outside the bounds of the
+ * @c TextLayout map to hits on the leading edge of the first logical character, or the trailing
+ * edge of the last logical character, as appropriate, regardless of the position of that character
+ * in the line. Only the direction along the baseline is used to make this evaluation.
+ * @param point The abstract point
+ * @param bounds The bounds of the @c TextLayout
+ * @param[out] outOfBounds @c true if @a point is out of the logical bounds of the @c TextLayout.
+ *                         Can be @c null if not needed
+ * @return A hit describing the character and edge (leading or trailing) under the specified point
+ */
+TextHit&& TextLayout::hitTestCharacter(const AbstractTwoAxes<Scalar>& point, const FlowRelativeFourSides<Scalar>& bounds, bool* outOfBounds /* = nullptr */) const {
+}
+
+/**
+ * Converts a hit to a point in abstract coordinates.
+ * @param hit The hit to check. This must be a valid hit on the @c TextLayout
+ * @return The returned point. The point is in abstract coordinates
+ * @throw std#invalid_argument @a hit is not valid for the @c TextLayout
+ */
+AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit& hit) const {
 }
 #if 0
 /// Returns an iterator addresses the first styled segment.
@@ -496,7 +341,7 @@ TextLayout::StyledSegmentIterator TextLayout::firstStyledSegment() const /*throw
 bool TextLayout::isBidirectional() const BOOST_NOEXCEPT {
 	if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
 		return true;
-	BOOST_FOREACH(auto i, runs_) {
+	BOOST_FOREACH(const RunVector::const_iterator i, runs_) {
 		if((*i)->direction() == RIGHT_TO_LEFT)
 			return true;
 	}
@@ -729,14 +574,14 @@ Scalar TextLayout::measure(Index line) const {
 				return boost::get(maximumMeasure_);
 		} else {
 			static_assert(is_signed<Scalar>::value, "");
-			if(measures_.get() == nullptr) {
-				self.measures_.reset(new Scalar[numberOfLines()]);
-				fill_n(self.measures_.get(), numberOfLines(), -1);
+			if(lineMeasures_.get() == nullptr) {
+				self.lineMeasures_.reset(new Scalar[numberOfLines()]);
+				fill_n(self.lineMeasures_.get(), numberOfLines(), -1);
 			}
-			if(measures_[line] >= 0)
-				return measures_[line];
+			if(lineMeasures_[line] >= 0)
+				return lineMeasures_[line];
 		}
-		const RunVector::const_iterator lastRun = firstRunInLine(line + 1);
+		const RunVector::const_iterator lastRun(firstRunInLine(line + 1));
 		Scalar ipd = 0;
 		for(RunVector::const_iterator run(firstRunInLine(line)); run != lastRun; ++run)
 			ipd += allocationMeasure(**run);
@@ -744,7 +589,7 @@ Scalar TextLayout::measure(Index line) const {
 		if(numberOfLines() == 1)
 			self.maximumMeasure_ = ipd;
 		else
-			self.measures_[line] = ipd;
+			self.lineMeasures_[line] = ipd;
 		return ipd;
 	}
 }
