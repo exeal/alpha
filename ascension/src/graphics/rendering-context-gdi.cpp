@@ -5,9 +5,9 @@
  * @date 2012-2013
  */
 
-#include <ascension/graphics/font-metrics.hpp>
 #include <ascension/graphics/paint.hpp>
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/graphics/font/font-metrics.hpp>
 #include <boost/math/special_functions/round.hpp>	// boost.iround
 #ifdef ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI
 
@@ -345,7 +345,7 @@ RenderingContext2D& RenderingContext2D::fillText(const StringPiece& text,
 }
 
 namespace {
-	class GdiFontMetrics : public font::FontMetrics<int> {
+	class GdiFontMetrics : public font::FontMetrics<Scalar> {
 	public:
 		explicit GdiFontMetrics(win32::Handle<HDC>::Type dc, win32::Handle<HFONT>::Type font) {
 			const int cookie = ::SaveDC(dc.get());
@@ -397,8 +397,8 @@ namespace {
 	};
 }
 
-unique_ptr<const font::FontMetrics<int>> RenderingContext2D::fontMetrics(shared_ptr<const font::Font> font /* = nullptr */) const {
-	return unique_ptr<const font::FontMetrics<int>>(new GdiFontMetrics(nativeObject_, font->asNativeObject()));
+unique_ptr<const font::FontMetrics<Scalar>> RenderingContext2D::fontMetrics(shared_ptr<const font::Font> font /* = nullptr */) const {
+	return unique_ptr<const font::FontMetrics<Scalar>>(new GdiFontMetrics(nativeObject_, font->asNativeObject()));
 }
 
 unique_ptr<ImageData> RenderingContext2D::getImageData(const graphics::Rectangle& bounds) const {

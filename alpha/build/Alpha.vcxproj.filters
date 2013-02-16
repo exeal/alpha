@@ -90,6 +90,12 @@
     <Filter Include="ascension\Header Files\corelib\future">
       <UniqueIdentifier>{69be1af1-e9ae-45a7-8804-ec7cbcfe0403}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Header Files\graphics\font">
+      <UniqueIdentifier>{7646e73b-bfe0-4c30-add6-58e65718a98e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascension\Source Files\graphics\font">
+      <UniqueIdentifier>{1f344556-7d04-4fed-9476-a26ac7f25fc6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -194,9 +200,6 @@
     <ClCompile Include="..\..\ascension\src\encodings\vietnamese.cpp">
       <Filter>ascension\Source Files\encodings</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\graphics\text-layout.cpp">
-      <Filter>ascension\Source Files\graphics</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\caret.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
@@ -229,9 +232,6 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\corelib\regex.cpp">
       <Filter>ascension\Source Files\corelib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\ascension\src\graphics\default-special-character-renderer.cpp">
-      <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\corelib\text\break-iterator.cpp">
       <Filter>ascension\Source Files\corelib\text</Filter>
@@ -266,9 +266,6 @@
     <ClCompile Include="..\..\ascension\src\corelib\text\character-property.cpp">
       <Filter>ascension\Source Files\corelib\text</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\graphics\line-layout-vector.cpp">
-      <Filter>ascension\Source Files\graphics</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ascension\src\length.cpp">
       <Filter>ascension\Source Files</Filter>
     </ClCompile>
@@ -292,12 +289,6 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\default-mouse-input-strategy.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\ascension\src\graphics\text-renderer.cpp">
-      <Filter>ascension\Source Files\graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\ascension\src\graphics\text-viewport.cpp">
-      <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\content-assist\content-assist-windows.cpp">
       <Filter>ascension\Source Files\content-assist</Filter>
@@ -323,11 +314,26 @@
     <ClCompile Include="..\..\ascension\src\graphics\paint-gdi.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\graphics\font-gdi.cpp">
-      <Filter>ascension\Source Files\graphics</Filter>
+    <ClCompile Include="..\..\ascension\src\graphics\font\default-special-character-renderer.cpp">
+      <Filter>ascension\Source Files\graphics\font</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\graphics\text-layout-uniscribe.cpp">
-      <Filter>ascension\Source Files\graphics</Filter>
+    <ClCompile Include="..\..\ascension\src\graphics\font\font-gdi.cpp">
+      <Filter>ascension\Source Files\graphics\font</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\font\line-layout-vector.cpp">
+      <Filter>ascension\Source Files\graphics\font</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\font\text-layout.cpp">
+      <Filter>ascension\Source Files\graphics\font</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\font\text-layout-uniscribe.cpp">
+      <Filter>ascension\Source Files\graphics\font</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\font\text-renderer.cpp">
+      <Filter>ascension\Source Files\graphics\font</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\font\text-viewport.cpp">
+      <Filter>ascension\Source Files\graphics\font</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -478,13 +484,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\color.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\font.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\text-layout.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\kernel\document-character-iterator.hpp">
@@ -589,9 +589,6 @@
     <ClInclude Include="..\..\ascension\ascension\presentation\length.hpp">
       <Filter>ascension\Header Files\presentation</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\line-layout-vector.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\ruler.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
@@ -625,17 +622,11 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\default-mouse-input-strategy.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\text-renderer.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\affine-transform.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\future.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\text-viewport.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\win32\message-dispatcher.hpp">
       <Filter>ascension\Header Files\win32</Filter>
@@ -694,32 +685,47 @@
     <ClInclude Include="..\..\ascension\ascension\presentation\style-property.hpp">
       <Filter>ascension\Header Files\presentation</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\text-layout-styles.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\font.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\text-alignment.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\font-description.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\font-description.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\font-family.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\font-family.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\font-metrics.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\text-run.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\font-render-context.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\glyph-vector.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\glyph-vector.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\font-metrics.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\line-layout-vector.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\font-render-context.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-alignment.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\text-hit.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-hit.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-layout.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-layout-styles.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-renderer.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-run.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-viewport.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

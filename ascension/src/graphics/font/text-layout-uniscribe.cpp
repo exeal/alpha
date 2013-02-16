@@ -8,12 +8,12 @@
  */
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
-#include <ascension/graphics/font-metrics.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>
-#include <ascension/graphics/text-layout.hpp>
-#include <ascension/graphics/text-layout-styles.hpp>
-#include <ascension/graphics/text-run.hpp>
+#include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/font/text-layout.hpp>
+#include <ascension/graphics/font/text-layout-styles.hpp>
+#include <ascension/graphics/font/text-run.hpp>
 //#include <ascension/graphics/special-character-renderer.hpp>
 #include <ascension/corelib/shared-library.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>

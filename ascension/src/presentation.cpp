@@ -2,10 +2,10 @@
  * @file presentation.cpp
  * @author exeal
  * @date 2003-2007 (was LineLayout.cpp)
- * @date 2007-2012
+ * @date 2007-2013
  */
 
-#include <ascension/graphics/text-layout-styles.hpp>
+#include <ascension/graphics/font/text-layout-styles.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/presentation-reconstructor.hpp>
 #include <ascension/presentation/text-style.hpp>

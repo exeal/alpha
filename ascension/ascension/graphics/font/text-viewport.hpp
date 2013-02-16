@@ -12,7 +12,7 @@
 
 //#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/graphics/geometry.hpp>
-#include <ascension/graphics/line-layout-vector.hpp>
+#include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/kernel/point.hpp>	// kernel.locations
 #include <ascension/presentation/writing-mode.hpp>
 #include <boost/iterator/iterator_facade.hpp>

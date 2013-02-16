@@ -9,7 +9,7 @@
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
 #include <ascension/graphics/rendering-context.hpp>
-#include <ascension/graphics/text-renderer.hpp>
+#include <ascension/graphics/font/text-renderer.hpp>
 
 using namespace ascension;
 using namespace ascension::graphics;

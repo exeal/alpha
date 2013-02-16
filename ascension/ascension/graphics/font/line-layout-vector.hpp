@@ -10,7 +10,7 @@
 #ifndef ASCENSION_LINE_LAYOUT_VECTOR_HPP
 #define ASCENSION_LINE_LAYOUT_VECTOR_HPP
 #include <ascension/kernel/document.hpp>
-#include <ascension/graphics/text-layout.hpp>
+#include <ascension/graphics/font/text-layout.hpp>
 #include <algorithm>	// std.sort
 #include <list>
 #include <memory>		// std.unique_ptr
