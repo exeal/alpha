@@ -199,7 +199,7 @@ namespace ascension {
 			 * @return The font metrics with values in the user units
 			 * @see #font
 			 */
-			std::unique_ptr<const font::FontMetrics<int>> fontMetrics(
+			std::unique_ptr<const font::FontMetrics<Scalar>> fontMetrics(
 				std::shared_ptr<const font::Font> font = nullptr) const;
 
 			/// @name Back-Reference to the Canvas

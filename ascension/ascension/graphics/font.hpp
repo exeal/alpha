@@ -67,8 +67,6 @@ namespace ascension {
 				virtual Scalar strikeUnderlineThickness() const BOOST_NOEXCEPT = 0;
 			};
 
-			template<typename T> class FontMetrics;
-
 			/**
 			 * Represents a single physical instance of a font, or a set of fonts.
 			 * @see FontFamily, FontDescription, Fontset, FontFace, FontCollection
@@ -138,7 +136,7 @@ namespace ascension {
 					CodePoint variationSelector, GlyphCode defaultGlyph) const;
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 				std::unique_ptr<const LineMetrics> lineMetrics(
-					const StringPiece& text, const FontRenderContext&) const;
+					const StringPiece& text, const FontRenderContext& frc) const;
 				AffineTransform&& transform() const BOOST_NOEXCEPT;
 			private:
 				void buildDescription() BOOST_NOEXCEPT;

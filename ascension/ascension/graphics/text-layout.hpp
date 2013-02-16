@@ -18,6 +18,7 @@
 #include <memory>	// std.unique_ptr
 #include <vector>
 #include <boost/flyweight.hpp>
+#include <boost/geometry/geometries/polygon.hpp>
 #include <boost/operators.hpp>
 
 namespace ascension {
@@ -134,19 +135,19 @@ namespace ascension {
 
 				/// @name Metrics
 				/// @{
-				double ascent(Index line) const;
-				double baseline(Index line) const;
-				double descent(Index line) const;
-				Range<double> extent() const;
-				Range<double> extent(const Range<Index>& lines) const;
-				double leading(Index) const;
-				double measure() const;
-				double measure(Index line) const;
+				Scalar ascent(Index line) const;
+				Scalar baseline(Index line) const;
+				Scalar descent(Index line) const;
+				Range<Scalar> extent() const;
+				Range<Scalar> extent(const Range<Index>& lines) const;
+				Scalar leading(Index) const;
+				Scalar measure() const;
+				Scalar measure(Index line) const;
 				/// @}
 
 				/// @name Bounds
 				/// @{
-				NativeRegion blackBoxBounds(const Range<Index>& range) const;
+				boost::geometry::model::polygon<Point>&& blackBoxBounds(const Range<Index>& range) const;
 				presentation::FlowRelativeFourSides<Scalar> bounds() const BOOST_NOEXCEPT;
 				presentation::FlowRelativeFourSides<Scalar> bounds(const Range<Index>& characterRange) const;
 				presentation::FlowRelativeFourSides<Scalar> lineBounds(Index line) const;
@@ -155,16 +156,16 @@ namespace ascension {
 
 				/// @name Highlight Shapes
 				/// @{
-				presentation::FlowRelativeFourSides<float> logicalHighlightShape(const Range<Index>& range) const;
+				presentation::FlowRelativeFourSides<Scalar> logicalHighlightShape(const Range<Index>& range) const;
 				std::vector<Range<Index>>&& logicalRangesForVisualSelection(const Range<TextHit>& range) const;
-				presentation::FlowRelativeFourSides<float> visualHighlightShape(const Range<TextHit>& range) const;
+				presentation::FlowRelativeFourSides<Scalar> visualHighlightShape(const Range<TextHit>& range) const;
 				/// @}
 
 				/// @name Hit Test
 				/// @{
-				std::pair<TextHit, bool> hitTestCharacter(const presentation::AbstractTwoAxes<float>& point) const;
-				std::pair<TextHit, bool> hitTestCharacter(const presentation::AbstractTwoAxes<float>& point, const presentation::FlowRelativeFourSides<float>& bounds) const;
-				presentation::AbstractTwoAxes<float> hitToPoint(const TextHit& hit) const;
+				TextHit&& hitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point, bool* outOfBounds = nullptr) const;
+				TextHit&& hitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point, const presentation::FlowRelativeFourSides<Scalar>& bounds, bool* outOfBounds = nullptr) const;
+				presentation::AbstractTwoAxes<Scalar> hitToPoint(const TextHit& hit) const;
 				/// @}
 
 				/// @name Other Hit Test
@@ -223,19 +224,20 @@ namespace ascension {
 					presentation::AbstractTwoAxes<Scalar>* leading,
 					presentation::AbstractTwoAxes<Scalar>* trailing) const;
 				int nextTabStopBasedLeftEdge(Scalar x, bool right) const /*throw()*/;
-				void reorder() /*throw()*/;
+				void reorder();
 //				void rewrap();
-				void stackLines(boost::optional<Scalar> lineHeight,
+				void stackLines(
+					const RenderingContext2D& context, boost::optional<Scalar> lineHeight,
 					presentation::LineBoxContain lineBoxContain, const Font& nominalFont);
 				void wrap(Scalar measure, const TabExpander& tabExpander) BOOST_NOEXCEPT;
 			private:
 				const String& textString_;
 				boost::flyweight<ComputedTextLineStyle> lineStyle_;
 				RunVector runs_;
-				std::unique_ptr<RunVector::const_iterator[]> firstRunsInLines_;	// size is runs_.size(), or null if not wrapped
-				Index numberOfLines_;
-				std::unique_ptr<std::unique_ptr<LineMetrics>[]> lineMetrics_;
-				std::unique_ptr<float[]> lineMeasures_;
+				Index numberOfLines_;	// TODO: The following 3 std.unique_ptr<T[]> members can be packed for compaction.
+				std::unique_ptr<RunVector::const_iterator[]> firstRunsInLines_;	// size is numberOfLines_, or null if not wrapped
+				std::unique_ptr<LineMetrics[]> lineMetrics_;	// size is numberOfLines_
+				std::unique_ptr<Scalar[]> lineMeasures_;	// size is numberOfLines_, or null if not wrapped
 				boost::optional<Scalar> maximumMeasure_;	// cached measure of the longest line
 				friend class LineLayoutVector;
 //				friend class StyledSegmentIterator;
@@ -249,7 +251,7 @@ namespace ascension {
 			 * @see #baseline, #descent, #leading
 			 * @throw kernel#BadPositionException @a line is greater than the number of lines
 			 */
-			inline double TextLayout::ascent(Index line) const {
+			inline Scalar TextLayout::ascent(Index line) const {
 				return lineMetrics(line).ascent;
 			}
 
@@ -260,7 +262,7 @@ namespace ascension {
 			 * @see #ascent, #baseline, #leading
 			 * @throw kernel#BadPositionException @a line is greater than the number of lines
 			 */
-			inline double TextLayout::descent(Index line) const {
+			inline Scalar TextLayout::descent(Index line) const {
 				return lineMetrics(line).descent;
 			}
 
@@ -268,7 +270,7 @@ namespace ascension {
 			 * Returns extent (block-progression-dimension) of the line.
 			 * @return A range of block-progression-dimension relative to the alignment-point
 			 */
-			inline Range<double> TextLayout::extent() const {
+			inline Range<Scalar> TextLayout::extent() const {
 				return makeRange(
 					baseline(0) - lineMetrics(0).ascent,
 					baseline(numberOfLines() - 1) + lineMetrics(numberOfLines() - 1).descent);
@@ -280,7 +282,7 @@ namespace ascension {
 			 * @return A range of block-progression-dimension relative to the alignment-point
 			 * @throw kernel#BadRegionException
 			 */
-			inline Range<double> TextLayout::extent(const Range<Index>& lines) const {
+			inline Range<Scalar> TextLayout::extent(const Range<Index>& lines) const {
 				if(lines.end() >= numberOfLines())
 					throw kernel::BadRegionException(kernel::Region(
 						kernel::Position(lines.beginning(), 0), kernel::Position(lines.end(), 0)));
@@ -310,7 +312,7 @@ namespace ascension {
 			 * @see #ascent, #baseline, #descent
 			 * @throw kernel#BadPositionException @a line is greater than the number of lines
 			 */
-			inline double TextLayout::leading(Index line) const {
+			inline Scalar TextLayout::leading(Index line) const {
 				return lineMetrics(line).leading;
 			}
 
