@@ -148,6 +148,7 @@ namespace ascension {
 			class Font;
 			class FontCollection;
 			template<typename T> class FontMetrics;
+			class FontRenderContext;
 		}
 
 		/**
@@ -201,6 +202,7 @@ namespace ascension {
 			 */
 			std::unique_ptr<const font::FontMetrics<Scalar>> fontMetrics(
 				std::shared_ptr<const font::Font> font = nullptr) const;
+			font::FontRenderContext&& fontRenderContext() const BOOST_NOEXCEPT;
 
 			/// @name Back-Reference to the Canvas
 			/// @{
