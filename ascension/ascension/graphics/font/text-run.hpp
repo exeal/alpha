@@ -43,8 +43,8 @@ namespace ascension {
 			public:
 				/// Destructor.
 				virtual ~TextRun() BOOST_NOEXCEPT {}
-				/// Returns the number of characters in this run.
-				virtual Index length() const BOOST_NOEXCEPT = 0;
+				/// Returns the character range this text run represents.
+				virtual StringPiece characterRange() const BOOST_NOEXCEPT = 0;
 
 				/// @name Hit Test
 				/// @{
@@ -203,7 +203,7 @@ namespace ascension {
 			 * @see #allocationMeasure
 			 */
 			inline Scalar measure(const TextRun& textRun) {
-				return textRun.trailingEdge(textRun.length());
+				return textRun.trailingEdge(length(textRun.characterRange()));
 			}
 			/**
 			 * Returns the measure of the 'allocation-rectangle' of the specified text run in user units.
