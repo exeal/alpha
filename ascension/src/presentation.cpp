@@ -5,6 +5,7 @@
  * @date 2007-2013
  */
 
+#include <ascension/corelib/range.hpp>
 #include <ascension/graphics/font/text-layout-styles.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/presentation-reconstructor.hpp>
@@ -272,7 +273,7 @@ namespace {
 				TextRunStyle&& defaultStyle) : declaration_(move(declaration)), defaultStyle_(defaultStyle) {
 		}
 		// font.ComputedStyledTextRunIterator
-		Range<Index> currentRange() const {
+		boost::integer_range<Index> currentRange() const {
 			return declaration_->currentRange();
 		}
 		void currentStyle(font::ComputedTextRunStyle& style) const {
@@ -396,22 +397,22 @@ void Presentation::documentAboutToBeChanged(const Document& document) {
 
 /// @see kernel#DocumentListener#documentChanged
 void Presentation::documentChanged(const Document&, const DocumentChange& change) {
-	const Range<Index>
+	const boost::integer_range<Index>
 		erasedLines(change.erasedRegion().first.line, change.erasedRegion().second.line),
 		insertedLines(change.insertedRegion().first.line, change.insertedRegion().second.line);
 	for(list<Hyperlinks*>::iterator i(hyperlinks_.begin()), e(hyperlinks_.end()); i != e; ) {
 		const Index line = (*i)->lineNumber;
-		if(line == insertedLines.beginning() || includes(erasedLines, line)) {
+		if(line == insertedLines.front() || includes(erasedLines, line)) {
 			for(size_t j = 0; j < (*i)->numberOfHyperlinks; ++j)
 				delete (*i)->hyperlinks[j];
 			delete *i;
 			i = hyperlinks_.erase(i);
 			continue;
 		} else {
-			if(line >= erasedLines.end() && !isEmpty(erasedLines))
-				(*i)->lineNumber -= length(erasedLines);
-			if(line >= insertedLines.end() && !isEmpty(insertedLines))
-				(*i)->lineNumber += length(insertedLines);
+			if(line >= *erasedLines.end() && !erasedLines.empty())
+				(*i)->lineNumber -= erasedLines.size();
+			if(line >= *insertedLines.end() && !insertedLines.empty())
+				(*i)->lineNumber += insertedLines.size();
 		}
 		++i;
 	}
@@ -453,14 +454,14 @@ const Hyperlink* const* Presentation::getHyperlinks(Index line, size_t& numberOf
 	}
 	vector<Hyperlink*> temp;
 	for(Index offsetInLine = 0, eol = document_.lineLength(line); offsetInLine < eol; ) {
-		unique_ptr<Hyperlink> h(hyperlinkDetector_->nextHyperlink(document_, line, Range<Index>(offsetInLine, eol)));
+		unique_ptr<Hyperlink> h(hyperlinkDetector_->nextHyperlink(document_, line, boost::irange(offsetInLine, eol)));
 		if(h.get() == nullptr)
 			break;
 		// check result
-		const Range<Index>& r(h->region());
-		if(r.beginning() < offsetInLine)
+		const boost::integer_range<Index>& r(h->region());
+		if(*r.begin() < offsetInLine)
 			break;
-		offsetInLine = r.end();
+		offsetInLine = *r.end();
 		temp.push_back(h.release());
 	}
 	unique_ptr<Hyperlinks> newItem(new Hyperlinks);
@@ -561,11 +562,11 @@ void Presentation::textLineColors(Index line,
 
 class SingleStyledPartitionPresentationReconstructor::Iterator : public presentation::StyledTextRunIterator {
 public:
-	Iterator(const Range<Index>& range, shared_ptr<const TextRunStyle> style) BOOST_NOEXCEPT : range_(range), style_(style), done_(false) {
+	Iterator(const boost::integer_range<Index>& range, shared_ptr<const TextRunStyle> style) BOOST_NOEXCEPT : range_(range), style_(style), done_(false) {
 	}
 private:
 	// StyledTextRunIterator
-	Range<Index> currentRange() const {
+	boost::integer_range<Index> currentRange() const {
 		if(done_)
 			throw NoSuchElementException();
 		return range_;
@@ -584,7 +585,7 @@ private:
 		done_ = true;
 	}
 private:
-	const Range<Index> range_;
+	const boost::integer_range<Index> range_;
 	const shared_ptr<const TextRunStyle> style_;
 	bool done_;
 };
@@ -600,7 +601,7 @@ SingleStyledPartitionPresentationReconstructor::SingleStyledPartitionPresentatio
 }
 
 /// @see PartitionPresentationReconstructor#getPresentation
-unique_ptr<StyledTextRunIterator> SingleStyledPartitionPresentationReconstructor::getPresentation(Index, const Range<Index>& rangeInLine) const {
+unique_ptr<StyledTextRunIterator> SingleStyledPartitionPresentationReconstructor::getPresentation(Index, const boost::integer_range<Index>& rangeInLine) const {
 	return unique_ptr<presentation::StyledTextRunIterator>(new Iterator(rangeInLine, style_));
 }
 
@@ -614,7 +615,7 @@ public:
 private:
 	void updateSubiterator();
 	// StyledTextRunIterator
-	Range<Index> currentRange() const;
+	boost::integer_range<Index> currentRange() const;
 	shared_ptr<const TextRunStyle> currentStyle() const;
 	bool isDone() const BOOST_NOEXCEPT;
 	void next();
@@ -624,7 +625,7 @@ private:
 	const Index line_;
 	DocumentPartition currentPartition_;
 	unique_ptr<presentation::StyledTextRunIterator> subiterator_;
-	Range<Index> currentRange_;
+	boost::integer_range<Index> currentRange_;
 	shared_ptr<const TextRunStyle> currentStyle_;
 };
 
@@ -637,7 +638,7 @@ private:
 PresentationReconstructor::Iterator::Iterator(
 		const Presentation& presentation, const map<kernel::ContentType,
 		PartitionPresentationReconstructor*> reconstructors, Index line)
-		: presentation_(presentation), reconstructors_(reconstructors), line_(line) {
+		: presentation_(presentation), reconstructors_(reconstructors), line_(line), currentRange_(0, 0) {
 	const DocumentPartitioner& partitioner = presentation_.document().partitioner();
 	Index offsetInLine = 0;
 	for(const Index lineLength = presentation_.document().lineLength(line);;) {
@@ -646,7 +647,7 @@ PresentationReconstructor::Iterator::Iterator(
 			break;
 		if(++offsetInLine >= lineLength) {	// rare case...
 			currentPartition_.contentType = DEFAULT_CONTENT_TYPE;
-			currentPartition_.region = Region(line, make_pair(0, lineLength));
+			currentPartition_.region = Region(line, boost::irange(static_cast<Index>(0), lineLength));
 			break;
 		}
 	}
@@ -654,7 +655,7 @@ PresentationReconstructor::Iterator::Iterator(
 }
 
 /// @see StyledTextRunIterator#currentRange
-Range<Index> PresentationReconstructor::Iterator::currentRange() const {
+boost::integer_range<Index> PresentationReconstructor::Iterator::currentRange() const {
 	if(subiterator_.get() != nullptr)
 		return subiterator_->currentRange();
 	else if(!isDone())
@@ -699,7 +700,7 @@ void PresentationReconstructor::Iterator::next() {
 				break;
 			if(++offsetInLine >= lineLength) {	// rare case...
 				currentPartition_.contentType = DEFAULT_CONTENT_TYPE;
-				currentPartition_.region = Region(line_, make_pair(offsetInLine, lineLength));
+				currentPartition_.region = Region(line_,  boost::irange(offsetInLine, lineLength));
 			}
 		}
 		updateSubiterator();
@@ -717,7 +718,7 @@ inline void PresentationReconstructor::Iterator::updateSubiterator() {
 		assert(lineStyle.get() != nullptr);
 		shared_ptr<const TextRunStyle> runStyle(defaultTextRunStyle(*lineStyle));
 		assert(runStyle.get() != nullptr);
-		currentRange_ = makeRange(currentPartition_.region.beginning().offsetInLine, currentPartition_.region.end().offsetInLine);
+		currentRange_ = boost::irange(currentPartition_.region.beginning().offsetInLine, currentPartition_.region.end().offsetInLine);
 		currentStyle_ = runStyle;
 	}
 }
@@ -771,8 +772,8 @@ void PresentationReconstructor::setPartitionReconstructor(
 namespace {
 	class URIHyperlink : public Hyperlink {
 	public:
-		explicit URIHyperlink(const Range<Index>& region, const String& uri) /*throw()*/ : Hyperlink(region), uri_(uri) {}
-		String description() const /*throw()*/ {
+		explicit URIHyperlink(const boost::integer_range<Index>& region, const String& uri) BOOST_NOEXCEPT : Hyperlink(region), uri_(uri) {}
+		String description() const BOOST_NOEXCEPT {
 			static const Char PRECEDING[] = {0x202au, 0};
 			static const Char FOLLOWING[] = {0x202cu, 0x0a,
 				0x43, 0x54, 0x52, 0x4c, 0x20, 0x2b, 0x20, 0x63, 0x6c, 0x69, 0x63, 0x6b, 0x20,
@@ -781,7 +782,7 @@ namespace {
 			};	// "\x202c\nCTRL + click to follow the link."
 			return PRECEDING + uri_ + FOLLOWING;
 		}
-		void invoke() const /*throw()*/ {
+		void invoke() const BOOST_NOEXCEPT {
 #ifdef ASCENSION_OS_WINDOWS
 			::ShellExecuteW(nullptr, nullptr, uri_.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 #else
@@ -808,14 +809,15 @@ URIHyperlinkDetector::~URIHyperlinkDetector() /*throw()*/ {
 
 /// @see HyperlinkDetector#nextHyperlink
 unique_ptr<Hyperlink> URIHyperlinkDetector::nextHyperlink(
-		const Document& document, Index line, const Range<Index>& range) const /*throw()*/ {
-	// TODO: ??? range is not used???
+		const Document& document, Index line, const boost::integer_range<Index>& range) const {
 	const String& s = document.line(line);
-	const Char* p = s.data();
-	Range<const Char*> result;
-	if(uriDetector_->search(p, p + s.length(), result))
+	if(*range.end() > s.length())
+		throw out_of_range("range");
+	const Char* bol = s.data();
+	const StringPiece result(uriDetector_->search(StringPiece(bol + range.front(), range.size())));
+	if(result.begin() != nullptr)
 		return unique_ptr<Hyperlink>(new URIHyperlink(
-			Range<Index>(result.beginning() - p, result.end() - p), String(result.beginning(), result.end())));
+			boost::irange<Index>(result.begin() - bol, result.end() - bol), String(result.begin(), result.end())));
 	else
 		return unique_ptr<Hyperlink>();
 }
@@ -831,16 +833,16 @@ CompositeHyperlinkDetector::~CompositeHyperlinkDetector() /*throw()*/ {
 
 /// @see HyperlinkDetector#nextHyperlink
 unique_ptr<Hyperlink> CompositeHyperlinkDetector::nextHyperlink(
-		const Document& document, Index line, const Range<Index>& range) const /*throw()*/ {
+		const Document& document, Index line, const boost::integer_range<Index>& range) const /*throw()*/ {
 	const DocumentPartitioner& partitioner = document.partitioner();
 	DocumentPartition partition;
-	for(Position p(line, range.beginning()), e(line, range.end()); p < e;) {
+	for(Position p(line, *range.begin()), e(line, *range.end()); p < e;) {
 		partitioner.partition(p, partition);
 		assert(partition.region.includes(p));
 		map<ContentType, HyperlinkDetector*>::const_iterator detector(composites_.find(partition.contentType));
 		if(detector != composites_.end()) {
 			unique_ptr<Hyperlink> found = detector->second->nextHyperlink(
-				document, line, Range<Index>(p.offsetInLine, min(partition.region.end(), e).offsetInLine));
+				document, line, boost::irange(p.offsetInLine, min(partition.region.end(), e).offsetInLine));
 			if(found.get() != nullptr)
 				return found;
 		}
@@ -880,7 +882,7 @@ public:
 private:
 	void nextRun();
 	// StyledTextRunIterator
-	Range<Index> currentRange() const;
+	boost::integer_range<Index> currentRange() const;
 	shared_ptr<const TextRunStyle> currentStyle() const;
 	bool isDone() const BOOST_NOEXCEPT;
 	void next();
@@ -905,12 +907,12 @@ LexicalPartitionPresentationReconstructor::StyledTextRunIterator::StyledTextRunI
 }
 
 /// @see StyledTextRunIterator#currentRange
-Range<Index> LexicalPartitionPresentationReconstructor::StyledTextRunIterator::currentRange() const {
+boost::integer_range<Index> LexicalPartitionPresentationReconstructor::StyledTextRunIterator::currentRange() const {
 	if(isDone())
 		throw NoSuchElementException();
-	if(length(currentRegion_.lines()) == 1)
-		return makeRange(currentRegion_.beginning().offsetInLine, currentRegion_.end().offsetInLine);
-	return makeRange(currentRegion_.beginning().offsetInLine, currentRegion_.end().offsetInLine);
+	if(currentRegion_.lines().size() == 1)
+		return boost::irange(currentRegion_.beginning().offsetInLine, currentRegion_.end().offsetInLine);
+	return boost::irange(currentRegion_.beginning().offsetInLine, currentRegion_.end().offsetInLine);
 }
 
 /// @see StyledTextRunIterator#current

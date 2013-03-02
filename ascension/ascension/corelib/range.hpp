@@ -3,7 +3,7 @@
  * @author exeal
  * @date 2004-2010 (was basic-types.hpp)
  * @date 2011-03-25 separated from basic-types.hpp
- * @date 2011-2012
+ * @date 2011-2013
  */
 
 #ifndef ASCENSION_RANGE_HPP
@@ -15,6 +15,7 @@
 #include <utility>		// std.max, std.min, std.pair
 #include <ascension/corelib/future.hpp>
 #include <boost/operators.hpp>
+#include <boost/range/irange.hpp>
 
 namespace ascension {
 
@@ -45,6 +46,7 @@ namespace ascension {
 		struct DifferenceType : ArithmeticOrNot<T, std::is_arithmetic<T>::value> {};
 	}
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	/**
 	 * Represents an invariant range.
 	 * @tparam T The element type. This type shall be @c LessThanComparable
@@ -86,7 +88,9 @@ namespace ascension {
 		/// Returns the end (maximum) of the range.
 		value_type end() const {return std::pair<T, T>::second;}
 	};
+#endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	/**
 	 * Returns @c true if the given value is included by the range.
 	 * @tparam T The element type of the range
@@ -102,7 +106,20 @@ namespace ascension {
 //		return value >= range.beginning() && value < range.end();
 		return !lessThan(value, range.beginning()) && lessThan(value, range.end());
 	}
+#else
+	template<typename RandomAccessTraversalIterator>
+	inline bool includes(const boost::iterator_range<RandomAccessTraversalIterator>& range,
+			typename boost::iterator_range<RandomAccessTraversalIterator>::const_iterator value) {
+		return value >= range.begin() && value < range.end();
+	}
+	template<typename Integer>
+	inline bool includes(const boost::integer_range<Integer>& range,
+			typename boost::integer_range<Integer>::value_type value) {
+		return value >= *range.begin() && value < *range.end();
+	}
+#endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	/**
 	 * Returns @c true if the given range is included by the range.
 	 * @tparam T The element type of the range
@@ -118,7 +135,10 @@ namespace ascension {
 //		return other.beginning() >= range.beginning() && other.end() <= range.end();
 		return !lessThan(other.beginning(), range.beginning()) && !lessThan(range.end(), other.end());
 	}
+#else
+#endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	/**
 	 * Returns the intersection of the two ranges.
 	 * @tparam T The element type of the range
@@ -136,7 +156,10 @@ namespace ascension {
 		const T e(std::min<T, Comp>(range.end(), other.end(), lessThan));
 		return Range<T, Comp>(b, std::max(b, e, lessThan));
 	}
+#else
+#endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	/**
 	 * Returns @c true if the range intersects with the other.
 	 * @tparam T The element type of the range
@@ -151,7 +174,10 @@ namespace ascension {
 	inline bool intersects(const Range<T, Comp>& range, const Range<Other, Comp>& other) {
 		return !isEmpty(intersected(range, other));
 	}
+#else
+#endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	/**
 	 * Returns @c true if the range is empty.
 	 * @tparam T The element type of the range
@@ -164,7 +190,10 @@ namespace ascension {
 			typename std::tr1::enable_if<std::is_same<Comp, std::less<T>>::value>::type* = nullptr) {
 		return range.beginning() == range.end();
 	}
+#else
+#endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	/**
 	 * Returns @c true if the range is empty.
 	 * @tparam T The element type of the range
@@ -178,7 +207,10 @@ namespace ascension {
 		const Comp lessThan;
 		return !lessThan(range.beginning(), range.end()) && !lessThan(range.end(), range.beginning());
 	}
+#else
+#endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	/**
 	 * Returns the length of the range.
 	 * @tparam T The element type of the range
@@ -191,7 +223,10 @@ namespace ascension {
 	inline typename detail::DifferenceType<T>::Type length(const Range<T, Comp>& range) {
 		return range.end() - range.beginning();
 	}
+#else
+#endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	/// Returns a @c Range object using the @c std#pair object.
 	template<typename T>
 	inline Range<T> makeRange(const std::pair<T, T>& pair) {return Range<T>(pair);}
@@ -207,7 +242,9 @@ namespace ascension {
 	/// Returns a @c Range object using the given two values.
 	template<typename T, typename Comp>
 	inline Range<T, Comp> makeRange(T v1, T v2, const Comp&) {return Range<T, Comp>(v1, v2);}
+#endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	/**
 	 * Returns the new merged range of this and the given ones.
 	 * @tparam T The element type of the range
@@ -226,7 +263,10 @@ namespace ascension {
 		return Range<T, Comp>(
 			std::min(range.beginning(), other.beginning(), Comp()), std::max(range.end(), other.end(), Comp()));
 	}
+#else
+#endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	/**
 	 * Writes the into the given output stream.
 	 * @tparam T The element type of the range
@@ -245,6 +285,7 @@ namespace ascension {
 		s << ct.widen('[') << range.beginning() << ct.widen(',') << range.end() << ct.widen(')');
 		return out << s.str().c_str();
 	}
+#endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
 } // namespace ascension
 

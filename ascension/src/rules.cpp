@@ -552,76 +552,69 @@ const URIDetector& URIDetector::defaultIANAURIInstance() /*throw()*/ {
 
 /**
  * Returns the end of a URL begins at the given position.
- * @param first The beginning of the character sequence
- * @param last The end of the character sequence
- * @return The end of the detected URI, or @a first (not @c null) if not matched
- * @throw NullPointerException @a first and/or @a last are @c null
+ * @param text The character sequence
+ * @return The end of the detected URI, or @a text.begin() (not @c null) if not matched
+ * @throw NullPointerException @a text is @c null
  */
-const Char* URIDetector::detect(const Char* first, const Char* last) const {
-	if(first == nullptr)
-		throw NullPointerException("first");
-	else if(last == nullptr)
-		throw NullPointerException("last");
-	else if(first >= last)
-		return first;
+StringPiece::const_iterator URIDetector::detect(const StringPiece& text) const {
+	if(text.begin() == nullptr)
+		throw NullPointerException("text");
+	else if(text.empty())
+		return begin(text);
 
 	// check scheme
 	const Char* endOfScheme;
 	if(validSchemes_ != nullptr) {
-		endOfScheme = umemchr(first + 1, ':', min<size_t>(last - first - 1, validSchemes_->maximumLength()));
-		if(!validSchemes_->matches(first, endOfScheme))
+		endOfScheme = umemchr(begin(text) + 1, ':', min(text.length() - 1, validSchemes_->maximumLength()));
+		if(!validSchemes_->matches(begin(text), endOfScheme))
 			endOfScheme = nullptr;
 	} else {
-		endOfScheme = umemchr(first + 1, ':', static_cast<size_t>(last - first - 1));
-		if(handleScheme(first, endOfScheme) != endOfScheme)
+		endOfScheme = umemchr(begin(text) + 1, ':', text.length() - 1);
+		if(handleScheme(begin(text), endOfScheme) != endOfScheme)
 			endOfScheme = nullptr;
 	}
 	if(endOfScheme == nullptr)
-		return first;
-	else if(endOfScheme == last - 1)	// terminated with <ipath-empty>
-		return last;
-	return (nullptr != (last = handleIRI(first, last))) ? last : first;
+		return text.begin();
+	else if(endOfScheme == end(text) - 1)	// terminated with <ipath-empty>
+		return end(text);
+	if(const Char* const e = handleIRI(begin(text), end(text)))
+		return e;
+	return begin(text);
 }
 
 /**
  * Searches a URI in the specified character sequence.
- * @param first The beginning of the character sequence
- * @param last The end of the character sequence
- * @param[out] result The range of the found URI in the target character sequence
- * @return @c true if a URI was found
- * @throw NullPointerException @a first and/or @a last are @c null
+ * @param text The character sequence
+ * @return The found URI in the target character sequence, or @c null if not found
+ * @throw NullPointerException @a text is @c null
  */
-bool URIDetector::search(const Char* first, const Char* last, Range<const Char*>& result) const {
-	if(first == nullptr)
-		throw NullPointerException("first");
-	else if(last == nullptr)
-		throw NullPointerException("last");
-	else if(first >= last)
-		return false;
+StringPiece URIDetector::search(const StringPiece& text) const {
+	if(begin(text) == nullptr)
+		throw NullPointerException("text");
+	else if(text.empty())
+		return StringPiece();
 
 	// search scheme
-	const Char* nextColon = umemchr(first, ':', last - first);
+	const Char* nextColon = umemchr(begin(text), ':', text.length());
 	if(nextColon == nullptr)
 		return false;
-	while(true) {
-		if(handleScheme(first, nextColon) == nextColon) {
-			if(validSchemes_ == nullptr || validSchemes_->matches(first, nextColon)) {
-				if(const Char* const e = handleIRI(first, last)) {
-					result = Range<const Char*>(first, e);
-					return true;
-				}
+	for(StringPiece::const_iterator p(begin(text)); ; ) {
+		if(handleScheme(p, nextColon) == nextColon) {
+			if(validSchemes_ == nullptr || validSchemes_->matches(p, nextColon)) {
+				if(const Char* const e = handleIRI(p, end(text)))
+					return StringPiece(p, e - p);
 			}
-			first = nextColon;
+			p = nextColon;
 		} else
-			++first;
-		if(first == nextColon) {
-			first = nextColon;
-			nextColon = umemchr(first, ':', last - first);
+			++p;
+		if(p == nextColon) {
+			p = nextColon;
+			nextColon = umemchr(p, ':', end(text) - p);
 			if(nextColon == nullptr)
 				break;
 		}
 	}
-	return false;
+	return StringPiece();
 }
 
 /**
@@ -826,7 +819,7 @@ URIRule::URIRule(Token::Identifier id, shared_ptr<const URIDetector> uriDetector
 /// @see Rule#parse
 unique_ptr<Token> URIRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
 	assert(first < last);
-	const Char* const e = uriDetector_->detect(first, last);
+	const Char* const e = uriDetector_->detect(StringPiece(first, last - first));
 	if(e == first)
 		return unique_ptr<Token>();
 	unique_ptr<Token> temp(new Token);

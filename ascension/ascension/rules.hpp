@@ -31,18 +31,27 @@ namespace ascension {
 		class URIDetector {
 			ASCENSION_NONCOPYABLE_TAG(URIDetector);
 		public:
-			// constructors
-			explicit URIDetector() /*throw()*/;
-			~URIDetector() /*throw()*/;
-			// parsing
-			const Char* detect(const Char* first, const Char* last) const;
-			bool search(const Char* first, const Char* last, Range<const Char*>& result) const;
-			// attribute
+			explicit URIDetector() BOOST_NOEXCEPT;
+			~URIDetector() BOOST_NOEXCEPT;
+
+			/// @name Parsing
+			/// @{
+			StringPiece::const_iterator detect(const StringPiece& text) const;
+			StringPiece search(const StringPiece& text) const;
+			/// @}
+
+			/// @name Attribute
+			/// @{
 			URIDetector& setValidSchemes(const std::set<String>& schemes, bool caseSensitive = false);
 			URIDetector& setValidSchemes(const String& schemes, Char separator, bool caseSensitive = false);
-			// singleton
-			static const URIDetector& defaultGenericInstance() /*throw()*/;
-			static const URIDetector& defaultIANAURIInstance() /*throw()*/;
+			/// @}
+
+			/// @name Default Instances
+			/// @{
+			static const URIDetector& defaultGenericInstance() BOOST_NOEXCEPT;
+			static const URIDetector& defaultIANAURIInstance() BOOST_NOEXCEPT;
+			/// @}
+
 		private:
 			detail::HashTable* validSchemes_;
 		};

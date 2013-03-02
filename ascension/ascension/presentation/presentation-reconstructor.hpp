@@ -4,7 +4,7 @@
  * @date 2003-2006 was LineLayout.h
  * @date 2006-2011 was presentation.hpp
  * @date 2011-05-04 separated from presentation.hpp
- * @date 2012
+ * @date 2012-2013
  */
 
 #ifndef ASCENSION_PRESENTATION_RECONSTRUCTOR_HPP
@@ -13,6 +13,7 @@
 #include <ascension/kernel/document.hpp>	// kernel.ContentType, kernel.Region
 #include <map>
 #include <memory>							// std.shared_ptr, std.unique_ptr
+#include <boost/range/irange.hpp>
 
 namespace ascension {
 	namespace presentation {
@@ -48,7 +49,7 @@ namespace ascension {
 		private:
 			// PartitionPresentationReconstructor
 			std::unique_ptr<StyledTextRunIterator>
-				getPresentation(Index line, const Range<Index>& rangeInLine) const;
+				getPresentation(Index line, const boost::integer_range<Index>& rangeInLine) const;
 		private:
 			class Iterator;
 			const std::shared_ptr<const TextRunStyle> style_;

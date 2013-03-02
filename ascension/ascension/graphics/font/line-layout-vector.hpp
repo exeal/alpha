@@ -9,6 +9,7 @@
 
 #ifndef ASCENSION_LINE_LAYOUT_VECTOR_HPP
 #define ASCENSION_LINE_LAYOUT_VECTOR_HPP
+#include <ascension/corelib/range.hpp>
 #include <ascension/kernel/document.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <algorithm>	// std.sort
@@ -37,13 +38,13 @@ namespace ascension {
 				 * @param sublines The total number of sublines of created lines
 				 * @param longestLineChanged Set @c true if the longest line is changed
 				 */
-				virtual void visualLinesDeleted(const Range<Index>& lines,
-					Index sublines, bool longestLineChanged) /*throw()*/ = 0;
+				virtual void visualLinesDeleted(const boost::integer_range<Index>& lines,
+					Index sublines, bool longestLineChanged) BOOST_NOEXCEPT = 0;
 				/**
 				 * Several visual lines were inserted.
 				 * @param lines The range of inserted lines. @a lines.end() is exclusive
 				 */
-				virtual void visualLinesInserted(const Range<Index>& lines) /*throw()*/ = 0;
+				virtual void visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT = 0;
 				/**
 				 * A visual lines were modified.
 				 * @param lines The range of modified lines. @a lines.end() is exclusive
@@ -54,7 +55,7 @@ namespace ascension {
 				 * @param longestLineChanged Set @c true if the longest line is changed
 				 */
 				virtual void visualLinesModified(
-					const Range<Index>& lines, SignedIndex sublinesDifference,
+					const boost::integer_range<Index>& lines, SignedIndex sublinesDifference,
 					bool documentChanged, bool longestLineChanged) /*throw()*/ = 0;
 				friend class LineLayoutVector;
 				friend class TextViewport;
@@ -97,16 +98,16 @@ namespace ascension {
 				typedef std::pair<Index, const TextLayout*> LineLayout;
 				void invalidate() /*throw()*/;
 				template<typename Function> void invalidateIf(Function f);
-				void invalidate(const Range<Index>& lines);
+				void invalidate(const boost::integer_range<Index>& lines);
 			protected:
 				void invalidate(Index line);
 			private:
 				typedef std::list<LineLayout>::iterator Iterator;
-				void clearCaches(const Range<Index>& lines, bool repair);
+				void clearCaches(const boost::integer_range<Index>& lines, bool repair);
 				void deleteLineLayout(Index line, TextLayout* newLayout = nullptr) /*throw()*/;
-				void fireVisualLinesDeleted(const Range<Index>& lines, Index sublines);
-				void fireVisualLinesInserted(const Range<Index>& lines);
-				void fireVisualLinesModified(const Range<Index>& lines,
+				void fireVisualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines);
+				void fireVisualLinesInserted(const boost::integer_range<Index>& lines);
+				void fireVisualLinesModified(const boost::integer_range<Index>& lines,
 					Index newSublines, Index oldSublines, bool documentChanged);
 				void initialize();
 				void invalidate(const std::vector<Index>& lines);
@@ -137,7 +138,7 @@ namespace ascension {
 				const std::size_t bufferSize_;
 				const bool autoRepair_;
 				enum {ABOUT_TO_CHANGE, CHANGING, NONE} documentChangePhase_;
-				boost::optional<Range<Index>> pendingCacheClearance_;	// parameters of clearCaches called when document changed
+				boost::optional<boost::integer_range<Index>> pendingCacheClearance_;	// parameters of clearCaches called when document changed
 				Scalar maximumMeasure_;
 				boost::optional<Index> longestLine_;
 				Index numberOfVisualLines_;

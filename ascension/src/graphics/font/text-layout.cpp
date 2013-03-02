@@ -15,6 +15,7 @@
 #include <ascension/graphics/font/text-layout-styles.hpp>
 #include <ascension/graphics/font/text-run.hpp>
 //#include <ascension/graphics/special-character-renderer.hpp>
+#include <ascension/corelib/range.hpp>
 #include <ascension/corelib/shared-library.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>
 #include <ascension/corelib/text/character-property.hpp>
@@ -499,8 +500,8 @@ pair<Index, Index> TextLayout::locateOffsets(Index line, Scalar ipd, bool& outsi
 	if(isEmpty())
 		return (outside = true), make_pair(static_cast<Index>(0), static_cast<Index>(0));
 
-	const Range<const RunVector::const_iterator> runsInLine(firstRunInLine(line), firstRunInLine(line + 1));
-	const StringPiece characterRangeInLine(static_cast<const TextRunImpl*>(runsInLine.beginning()->get())->beginning(), lineLength(line));
+	const boost::iterator_range<const RunVector::const_iterator> runsInLine(firstRunInLine(line), firstRunInLine(line + 1));
+	const StringPiece characterRangeInLine(static_cast<const TextRunImpl*>(runsInLine.begin()->get())->begin(), lineLength(line));
 	assert(characterRangeInLine.end() == static_cast<const TextRunImpl*>((runsInLine.end() - 1)->get())->end());
 
 	const Scalar lineStart = lineStartEdge(line);
@@ -514,7 +515,7 @@ pair<Index, Index> TextLayout::locateOffsets(Index line, Scalar ipd, bool& outsi
 		Scalar x = ipd - lineStart, dx = 0;
 		if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
 			x = measure(line) - x;
-		for(RunVector::const_iterator run(runsInLine.beginning()); run != runsInLine.end(); ++run) {
+		for(RunVector::const_iterator run(runsInLine.begin()); run != runsInLine.end(); ++run) {
 			const Scalar nextDx = dx + allocationMeasure(**run);
 			if(nextDx >= x) {
 				const Scalar ipdInRun = ((*run)->direction() == LEFT_TO_RIGHT) ? x - dx : nextDx - x;

@@ -48,7 +48,7 @@ DocumentBuffer::int_type DocumentBuffer::overflow(int_type c) {
 		*p++ = traits_type::to_char_type(c);
 	setp(buffer_.data(), buffer_.data() + buffer_.size()/*tuple_size<decltype(buffer_)>::value*/ - 1);
 	if(buffer_.data() < p)
-		insert(document_, current_, StringPiece(buffer_.data(), p), &current_);
+		insert(document_, current_, StringPiece(buffer_.data(), p - buffer_.data()), &current_);
 	return traits_type::not_eof(c);
 }
 

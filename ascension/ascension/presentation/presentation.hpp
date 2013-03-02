@@ -3,7 +3,7 @@
  * Provides classes define appearance and presentation of a text editor user interface.
  * @author exeal
  * @date 2003-2006 (was LineLayout.h)
- * @date 2006-2012
+ * @date 2006-2013
  */
 
 #ifndef ASCENSION_PRESENTATION_HPP
@@ -11,6 +11,7 @@
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/kernel/document.hpp>
+#include <boost/range/irange.hpp>
 
 namespace ascension {
 
@@ -113,12 +114,12 @@ namespace ascension {
 				/// Invokes the hyperlink.
 				virtual void invoke() const BOOST_NOEXCEPT = 0;
 				/// Returns the columns of the region of the hyperlink.
-				const Range<Index>& region() const BOOST_NOEXCEPT {return region_;}
+				const boost::integer_range<Index>& region() const BOOST_NOEXCEPT {return region_;}
 			protected:
 				/// Protected constructor takes the region of the hyperlink.
-				explicit Hyperlink(const Range<Index>& region) BOOST_NOEXCEPT : region_(region) {}
+				explicit Hyperlink(const boost::integer_range<Index>& region) BOOST_NOEXCEPT : region_(region) {}
 			private:
-				const Range<Index> region_;
+				const boost::integer_range<Index> region_;
 			};
 
 			/// A @c HyperlinkDetector finds the hyperlinks in the document.
@@ -130,13 +131,13 @@ namespace ascension {
 				 * Returns the next hyperlink in the specified text line.
 				 * @param document The document
 				 * @param line The line number
-				 * @param range The range of offsets in the line to search. @a range.beginning()
-				 *              can be the beginning of the found hyperlink
+				 * @param range The range of offsets in the line to search. @a range.begin() can be
+				 *              the beginning of the found hyperlink
 				 * @return The found hyperlink, or @c null if not found
 				 */
 				virtual std::unique_ptr<Hyperlink> nextHyperlink(
 					const kernel::Document& document, Index line,
-					const Range<Index>& range) const BOOST_NOEXCEPT = 0;
+					const boost::integer_range<Index>& range) const BOOST_NOEXCEPT = 0;
 			};
 
 			/**
@@ -150,7 +151,7 @@ namespace ascension {
 				~URIHyperlinkDetector() BOOST_NOEXCEPT;
 				// HyperlinkDetector
 				std::unique_ptr<Hyperlink> nextHyperlink(
-					const kernel::Document& document, Index line, const Range<Index>& range) const BOOST_NOEXCEPT;
+					const kernel::Document& document, Index line, const boost::integer_range<Index>& range) const BOOST_NOEXCEPT;
 			private:
 				std::shared_ptr<const rules::URIDetector> uriDetector_;
 			};
@@ -164,7 +165,7 @@ namespace ascension {
 				void setDetector(kernel::ContentType contentType, std::unique_ptr<hyperlink::HyperlinkDetector> detector);
 				// hyperlink.HyperlinkDetector
 				std::unique_ptr<Hyperlink> nextHyperlink(
-					const kernel::Document& document, Index line, const Range<Index>& range) const BOOST_NOEXCEPT;
+					const kernel::Document& document, Index line, const boost::integer_range<Index>& range) const BOOST_NOEXCEPT;
 			private:
 				std::map<kernel::ContentType, hyperlink::HyperlinkDetector*> composites_;
 			};

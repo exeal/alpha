@@ -1023,7 +1023,7 @@ namespace ascension {
 			 * @throw NoSuchElementException This iterator is done
 			 * @see #currentStyle
 			 */
-			virtual Range<Index> currentRange() const = 0;
+			virtual boost::integer_range<Index> currentRange() const = 0;
 			/**
 			 * Returns the declared style of the current text run addressed by this iterator.
 			 * @return The style of the current text run this iterator addresses. If @c null, the
