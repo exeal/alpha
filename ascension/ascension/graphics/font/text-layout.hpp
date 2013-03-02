@@ -19,6 +19,7 @@
 #include <vector>
 #include <boost/flyweight.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
+#include <boost/geometry/multi/geometries/multi_polygon.hpp>
 #include <boost/operators.hpp>
 
 namespace ascension {
@@ -112,7 +113,8 @@ namespace ascension {
 				TextLayout(const String& textString,
 					const ComputedTextLineStyle& lineStyle,
 					std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles,
-					const FontCollection& fontCollection);
+					const FontCollection& fontCollection,
+					const FontRenderContext& fontRenderContext);
 				~TextLayout() BOOST_NOEXCEPT;
 
 				/// @name General Attributes
@@ -147,7 +149,7 @@ namespace ascension {
 
 				/// @name Bounds
 				/// @{
-				boost::geometry::model::polygon<Point>&& blackBoxBounds(const Range<Index>& range) const;
+				boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& blackBoxBounds(const Range<Index>& range) const;
 				presentation::FlowRelativeFourSides<Scalar> bounds() const BOOST_NOEXCEPT;
 				presentation::FlowRelativeFourSides<Scalar> bounds(const Range<Index>& characterRange) const;
 				presentation::FlowRelativeFourSides<Scalar> lineBounds(Index line) const;
@@ -207,6 +209,8 @@ namespace ascension {
 				//       and 'per-inline-height-rectangle' for each 'line-area'?
 
 			private:
+				TextHit&& internalHitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point,
+					const presentation::FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const;
 //				void buildLineMetrics(Index line);
 				void expandTabsWithoutWrapping() /*throw()*/;
 				typedef std::vector<std::unique_ptr<const TextRun>> RunVector;
@@ -215,9 +219,11 @@ namespace ascension {
 				bool isEmpty() const BOOST_NOEXCEPT {return runs_.empty();}
 				void justify(Scalar lineMeasure, presentation::TextJustification method) /*throw()*/;
 				struct LineMetrics {
-					float ascent, descent, leading/*, advance*/;
+					Scalar ascent, descent, leading/*, advance*/;
 				};
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				const LineMetrics& lineMetrics(Index line) const;
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 				std::pair<Index, Index> locateOffsets(
 					Index line, Scalar ipd, bool& outside) const /*throw()*/;
 				void locations(Index offset,
@@ -252,7 +258,7 @@ namespace ascension {
 			 * @throw kernel#BadPositionException @a line is greater than the number of lines
 			 */
 			inline Scalar TextLayout::ascent(Index line) const {
-				return lineMetrics(line).ascent;
+				return lineMetrics_[line].ascent;
 			}
 
 			/**
@@ -263,7 +269,7 @@ namespace ascension {
 			 * @throw kernel#BadPositionException @a line is greater than the number of lines
 			 */
 			inline Scalar TextLayout::descent(Index line) const {
-				return lineMetrics(line).descent;
+				return lineMetrics_[line].descent;
 			}
 
 			/**
@@ -272,8 +278,8 @@ namespace ascension {
 			 */
 			inline Range<Scalar> TextLayout::extent() const {
 				return makeRange(
-					baseline(0) - lineMetrics(0).ascent,
-					baseline(numberOfLines() - 1) + lineMetrics(numberOfLines() - 1).descent);
+					baseline(0) - lineMetrics_[0].ascent,
+					baseline(numberOfLines() - 1) + lineMetrics_[numberOfLines() - 1].descent);
 			}
 
 			/**
@@ -287,8 +293,8 @@ namespace ascension {
 					throw kernel::BadRegionException(kernel::Region(
 						kernel::Position(lines.beginning(), 0), kernel::Position(lines.end(), 0)));
 				return makeRange(
-					baseline(lines.beginning()) - lineMetrics(lines.beginning()).ascent,
-					baseline(lines.end() - 1) + lineMetrics(lines.end() - 1).descent);
+					baseline(lines.beginning()) - lineMetrics_[lines.beginning()].ascent,
+					baseline(lines.end() - 1) + lineMetrics_[lines.end() - 1].descent);
 			}
 
 			/**
@@ -313,7 +319,7 @@ namespace ascension {
 			 * @throw kernel#BadPositionException @a line is greater than the number of lines
 			 */
 			inline Scalar TextLayout::leading(Index line) const {
-				return lineMetrics(line).leading;
+				return lineMetrics_[line].leading;
 			}
 
 			/**
@@ -330,7 +336,7 @@ namespace ascension {
 				const std::vector<Index> offsets(lineOffsets());
 				return *detail::searchBound(std::begin(offsets), std::end(offsets) - 1, offset);
 			}
-
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			/**
 			 * Returns the metrics for the specified line.
 			 * @param line The line number
@@ -346,7 +352,7 @@ namespace ascension {
 					const_cast<TextLayout*>(this)->buildLineMetrics(line);
 				return *lineMetrics_[line];
 			}
-
+#endif
 			/**
 			 * Returns the length of the specified visual line.
 			 * @param line The visual line
