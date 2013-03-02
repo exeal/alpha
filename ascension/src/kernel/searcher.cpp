@@ -825,13 +825,13 @@ bool IncrementalSearcher::addCharacter(CodePoint c) {
  *            error occured
  */
 bool IncrementalSearcher::addString(const StringPiece& text) {
-	if(text.beginning() == nullptr || text.end() == nullptr)
+	if(text.begin() == nullptr)
 		throw NullPointerException("text");
 	checkRunning();
-	if(isEmpty(text))
+	if(text.empty())
 		throw invalid_argument("Added string is empty.");
-	pattern_.append(text.beginning(), text.end());
-	for(const Char* p = text.beginning(); p < text.end(); ++p)
+	pattern_.append(text.begin(), text.end());
+	for(const Char* p = text.begin(); p < text.end(); ++p)
 		operationHistory_.push(TYPE);
 	return update();
 }

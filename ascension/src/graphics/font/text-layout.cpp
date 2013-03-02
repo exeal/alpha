@@ -415,7 +415,7 @@ FlowRelativeFourSides<Scalar> TextLayout::lineBounds(Index line) const {
 Index TextLayout::lineOffset(Index line) const {
 	if(line >= numberOfLines())
 		throw kernel::BadPositionException(kernel::Position(line, 0));
-	return (*firstRunInLine(line))->characterRange().beginning() - textString_.data();
+	return (*firstRunInLine(line))->characterRange().begin() - textString_.data();
 }
 
 /**
@@ -430,7 +430,7 @@ vector<Index>&& TextLayout::lineOffsets() const BOOST_NOEXCEPT {
 	vector<Index> offsets;
 	offsets.reserve(numberOfLines() + 1);
 	for(Index line = 0; line < numberOfLines(); ++line)
-		offsets.push_back((*firstRunInLine(line))->characterRange().beginning() - bol);
+		offsets.push_back((*firstRunInLine(line))->characterRange().begin() - bol);
 	offsets.push_back(textString_.length());
 	return move(offsets);
 }
@@ -505,7 +505,7 @@ pair<Index, Index> TextLayout::locateOffsets(Index line, Scalar ipd, bool& outsi
 
 	const Scalar lineStart = lineStartEdge(line);
 	if(ipd < lineStart) {
-		const Index offset = characterRangeInLine.beginning() - textString_.data();
+		const Index offset = characterRangeInLine.begin() - textString_.data();
 		return (outside = true), make_pair(offset, offset);
 	}
 	outside = ipd > lineStart + measure(line);	// beyond line 'end-edge'

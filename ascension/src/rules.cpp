@@ -2,7 +2,7 @@
  * @file rules.cpp
  * @author exeal
  * @date 2004-2006 (was Lexer.cpp)
- * @date 2006-2012
+ * @date 2006-2013
  */
 
 #include <ascension/rules.hpp>
@@ -11,6 +11,7 @@
 #if defined(_DEBUG) && defined(ASCENSION_OS_WINDOWS)
 #	include <ascension/win32/windows.hpp>	// win32.DumpContext
 #endif
+#include <boost/range/algorithm/find_if.hpp>
 using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::presentation;
@@ -868,12 +869,12 @@ WordRule::WordRule(Token::Identifier id, const String* first, const String* last
  * @throw text#InvalidScalarValueException @a separator is a surrogate
  */
 WordRule::WordRule(Token::Identifier id, const StringPiece& words, Char separator, bool caseSensitive) : Rule(id) {
-	if(words.beginning() == nullptr || words.end() == nullptr)
+	if(words.begin() == nullptr)
 		throw NullPointerException("words");
 	else if(surrogates::isSurrogate(separator))
 		throw InvalidScalarValueException(separator);
 	list<String> wordList;
-	const Char* p = find_if(words.beginning(), words.end(), bind(not_equal_to<Char>(), separator, placeholders::_1));
+	const Char* p = boost::find_if(words, bind(not_equal_to<Char>(), separator, placeholders::_1));
 	for(const Char* next; ; p = ++next) {
 		next = find(p, words.end(), separator);
 		if(next == p)

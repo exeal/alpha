@@ -386,18 +386,18 @@ namespace ascension {
 					throw NullPointerException("source");
 			}
 			bool isDone() const BOOST_NOEXCEPT {
-				return position_ == length(textString_);
+				return position_ == textString_.length();
 			}
 			void next() {
 				throwIfDone();
 				if(source_->isDone())
-					position_ = length(textString_);
+					position_ = textString_.length();
 				else {
 					const Range<Index> sourceRange(source_->currentRange());
 					// sanity checks...
 					if(isEmpty(sourceRange))
 						throw std::domain_error("ComputedStyledTextRunIterator.currentRange returned an empty range.");
-					else if(textString_.beginning() + sourceRange.end() > textString_.end())
+					else if(textString_.begin() + sourceRange.end() > textString_.end())
 						throw std::domain_error("ComputedStyledTextRunIterator.currentRange returned a range intersects outside of the source text string.");
 					else if(sourceRange.beginning() <= position_)
 						throw std::domain_error("ComputedStyledTextRunIterator.currentRange returned a backward range.");
@@ -410,9 +410,9 @@ namespace ascension {
 					}
 				}
 			}
-			StringPiece::const_pointer position() const {
+			StringPiece::const_iterator position() const {
 				throwIfDone();
-				return textString_.beginning() + position_;
+				return textString_.begin() + position_;
 			}
 			void style(graphics::font::ComputedTextRunStyle& v) const {
 				throwIfDone();

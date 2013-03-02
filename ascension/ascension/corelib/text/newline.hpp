@@ -81,7 +81,7 @@ namespace ascension {
 		 * @return The number of lines
 		 */
 		inline Index calculateNumberOfLines(const StringPiece& text) /*throw()*/ {
-			return calculateNumberOfLines(text.beginning(), text.end());
+			return calculateNumberOfLines(text.begin(), text.end());
 		}
 
 		/**
