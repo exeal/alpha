@@ -145,11 +145,15 @@ namespace ascension {
 				virtual Rectangle visualBounds() const = 0;
 				/// @}
 
+				/// @name Outlines
+				/// @{
+//				virtual NativeShape&& glyphOutline(std::size_t index) const = 0;
+//				virtual NativeShape&& outline() const = 0;
+				/// @}
+
 				/// @name Glyph Metrics
 				/// @{
 //				virtual GlyphMetrics&& glyphMetrics(std::size_t index) const = 0;
-//				virtual NativeShape&& glyphOutline(std::size_t index) const = 0;
-//				virtual NativeShape&& outline() const = 0;
 				/// @}
 
 				/// @name Glyph Transform

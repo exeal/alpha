@@ -240,9 +240,9 @@ namespace ascension {
 		template<typename Geometry, std::size_t dimension>
 		class AccessProxy {
 		public:
-			typedef typename boost::geometry::coordinate_type<Geometry>::Type CoordinateType;
+			typedef typename boost::geometry::coordinate_type<Geometry>::type CoordinateType;
 		public:
-			explicit AccessProxy(Geometry& geometry) /*throw()*/ : geometry_(geometry) {}
+			explicit AccessProxy(Geometry& geometry) BOOST_NOEXCEPT : geometry_(geometry) {}
 			const AccessProxy<Geometry, dimension>& operator=(CoordinateType value) {
 				boost::geometry::set<dimension>(geometry_, value);
 				return *this;
