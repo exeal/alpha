@@ -14,27 +14,42 @@
 
 #include <ascension/graphics/affine-transform.hpp>
 #include <memory>
-#include <boost/flyweight.hpp>
 #include <boost/operators.hpp>
 
 namespace ascension {
 	namespace graphics {
+		struct RenderingHints {
+			enum TextAntiAliasing {};
+			enum FractionalMetrics {};
+		};
+
 		namespace font {
+			/**
+			 * A container for the information needed to correctly measure text.
+			 * @see RenderingContext2D#fontRenderContext
+			 * @note This class is designed based on @c java.awt.font.FontRenderContext class.
+			 */
 			class FontRenderContext : private boost::equality_comparable<FontRenderContext> {
 			public:
+				FontRenderContext(const geometry::AffineTransform& tx, bool isAntiAliased, bool usesFractionalMetrics);
+				FontRenderContext(const geometry::AffineTransform& tx, RenderingHints::TextAntiAliasing aaHint, RenderingHints::FractionalMetrics fmHint);
 				bool operator==(const FontRenderContext& other) const;
+				RenderingHints::TextAntiAliasing antiAliasingHint() const BOOST_NOEXCEPT;
+				RenderingHints::FractionalMetrics fractionalMetricsHint() const BOOST_NOEXCEPT;
+				bool isAntiAliased() const BOOST_NOEXCEPT;
+				bool isTransformed() const BOOST_NOEXCEPT;
 				const geometry::AffineTransform& transform() const BOOST_NOEXCEPT;
+				bool usesFractionalMetrics() const BOOST_NOEXCEPT;
 			private:
 				geometry::AffineTransform transform_;
-//				??? antiAliasingRenderingHint_;
-//				??? fractionalMetricsHint_;
+				RenderingHints::TextAntiAliasing antiAliasingRenderingHint_;
+				RenderingHints::FractionalMetrics fractionalMetricsHint_;
 			};
-
-			std::size_t hash_value(const FontRenderContext& frc);	// for boost.flyweight instantiation
 
 			class Font;
 
-			class FontAndRenderContext {
+			/// A pair of a font and render context.
+			class FontAndRenderContext : private boost::equality_comparable<FontAndRenderContext> {
 			public:
 				/**
 				 * Constructor initializes the all data members.
@@ -54,8 +69,10 @@ namespace ascension {
 				}
 			private:
 				std::shared_ptr<const Font> font_;
-				boost::flyweight<FontRenderContext> fontRenderContext_;
+				FontRenderContext fontRenderContext_;
 			};
+
+			std::size_t hash_value(const FontAndRenderContext& farc);	// for boost.flyweight instantiation
 		}
 	}
 }
