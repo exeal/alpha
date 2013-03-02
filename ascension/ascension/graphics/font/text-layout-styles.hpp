@@ -89,7 +89,7 @@ namespace ascension {
 				 * @return A vector of @c #Segment
 				 */
 				virtual std::vector<const Segment>&&
-					queryTextPaintOverride(const Range<Index>& range) const = 0;
+					queryTextPaintOverride(const boost::integer_range<Index>& range) const = 0;
 			};
 
 			/// Computed value of @c presentation#Border#Side.
@@ -281,7 +281,7 @@ namespace ascension {
 				virtual ~ComputedStyledTextRunIterator() BOOST_NOEXCEPT {}
 				/**
 				 */
-				virtual Range<Index> currentRange() const = 0;
+				virtual boost::integer_range<Index> currentRange() const = 0;
 				/**
 				 */
 				virtual void currentStyle(ComputedTextRunStyle& style) const = 0;
@@ -393,20 +393,20 @@ namespace ascension {
 				if(source_->isDone())
 					position_ = textString_.length();
 				else {
-					const Range<Index> sourceRange(source_->currentRange());
+					const boost::integer_range<Index> sourceRange(source_->currentRange());
 					// sanity checks...
-					if(isEmpty(sourceRange))
+					if(sourceRange.empty())
 						throw std::domain_error("ComputedStyledTextRunIterator.currentRange returned an empty range.");
-					else if(textString_.begin() + sourceRange.end() > textString_.end())
+					else if(textString_.begin() + *sourceRange.end() > textString_.end())
 						throw std::domain_error("ComputedStyledTextRunIterator.currentRange returned a range intersects outside of the source text string.");
-					else if(sourceRange.beginning() <= position_)
+					else if(*sourceRange.begin() <= position_)
 						throw std::domain_error("ComputedStyledTextRunIterator.currentRange returned a backward range.");
-					if(position_ < sourceRange.beginning())
-						position_ = sourceRange.beginning();
+					if(position_ < *sourceRange.begin())
+						position_ = *sourceRange.begin();
 					else {
-						assert(position_ == sourceRange.beginning());
+						assert(position_ == *sourceRange.begin());
 						source_->next();
-						position_ = sourceRange.end();
+						position_ = *sourceRange.end();
 					}
 				}
 			}
@@ -416,7 +416,7 @@ namespace ascension {
 			}
 			void style(graphics::font::ComputedTextRunStyle& v) const {
 				throwIfDone();
-				if(position_ == source_->currentRange().beginning())
+				if(position_ == *source_->currentRange().begin())
 					source_->currentStyle(v);
 				else
 					v = graphics::font::ComputedTextRunStyle();

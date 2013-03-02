@@ -111,7 +111,7 @@ namespace {
 		const String& query(const StringPiece& s, size_t& outputLength) {
 			if(!isEnable())
 				throw IllegalStateException("not enable");
-			else if(s.beginning() == nullptr)
+			else if(s.begin() == nullptr)
 				throw NullPointerException("s");
 
 			// convert the source text from UTF-16 to native Japanese encoding
@@ -119,13 +119,13 @@ namespace {
 			if(encoder.get() == nullptr)
 				throw encoding::UnsupportedEncodingException("Shift_JIS is not supported in this platform.");
 			else {
-				size_t bufferLength = encoder->properties().maximumNativeBytes() * length(s);
+				size_t bufferLength = encoder->properties().maximumNativeBytes() * s.length();
 				unique_ptr<Byte[]> buffer(new Byte[bufferLength + 1]);
 				Byte* toNext;
 				const Char* fromNext;
 				if(encoding::Encoder::COMPLETED != encoder->fromUnicode(buffer.get(),
 						buffer.get() + bufferLength, toNext,
-						s.beginning(), s.end(), fromNext), encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTERS)
+						s.begin(), s.end(), fromNext), encoding::Encoder::REPLACE_UNMAPPABLE_CHARACTERS)
 					throw encoding::UnsupportedEncodingException("internal encoding failed.");
 				*toNext = 0;
 				query(buffer.get());	// may throw std.runtime_error
@@ -331,13 +331,13 @@ Pattern::Pattern(const StringPiece& regex, int flags /* = 0 */) : flags_(flags) 
 	if((flags & ~(CANON_EQ | CASE_INSENSITIVE | COMMENTS | DOTALL | LITERAL | MULTILINE | UNICODE_CASE | UNIX_LINES)) != 0)
 		throw UnknownValueException("flags includes illegal bit values.");
 	try {
-		impl_.assign(utf::CharacterDecodeIterator<const Char*>(regex.beginning(), regex.end()),
-			utf::CharacterDecodeIterator<const Char*>(regex.beginning(), regex.end(), regex.end()),
+		impl_.assign(utf::CharacterDecodeIterator<const Char*>(regex.begin(), regex.end()),
+			utf::CharacterDecodeIterator<const Char*>(regex.begin(), regex.end(), regex.end()),
 			boost::regex_constants::perl | boost::regex_constants::collate
 			| (((flags & CASE_INSENSITIVE) != 0) ? boost::regex_constants::icase : 0)
 			| (((flags & LITERAL) != 0) ? boost::regex_constants::literal : 0));
 	} catch(const boost::regex_error& e) {
-		throw PatternSyntaxException(e, String(regex.beginning(), regex.end()));
+		throw PatternSyntaxException(e, String(regex.begin(), regex.end()));
 	}
 }
 
@@ -350,13 +350,13 @@ Pattern::Pattern(const StringPiece& regex, int flags /* = 0 */) : flags_(flags) 
  * @throw PatternSyntaxException The expression's syntax is invalid
  */
 Pattern::Pattern(const StringPiece& regex, boost::regex_constants::syntax_option_type nativeSyntax) : flags_(0) {
-	if(regex.beginning() == nullptr)
+	if(regex.begin() == nullptr)
 		throw NullPointerException("regex");
 	try {
-		impl_.assign(utf::CharacterDecodeIterator<const Char*>(regex.beginning(), regex.end()),
-			utf::CharacterDecodeIterator<const Char*>(regex.beginning(), regex.end(), regex.end()), nativeSyntax);
+		impl_.assign(utf::CharacterDecodeIterator<const Char*>(regex.begin(), regex.end()),
+			utf::CharacterDecodeIterator<const Char*>(regex.begin(), regex.end(), regex.end()), nativeSyntax);
 	} catch(const boost::regex_error& e) {
-		throw PatternSyntaxException(e, String(regex.beginning(), regex.end()));
+		throw PatternSyntaxException(e, String(regex.begin(), regex.end()));
 	}
 }
 

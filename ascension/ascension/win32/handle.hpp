@@ -16,6 +16,7 @@
 #	include <memory>
 #	include <type_traits>
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
+#include <functional>	// std.bind, std.placeholders
 
 namespace ascension {
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08

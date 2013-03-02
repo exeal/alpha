@@ -125,16 +125,20 @@ StringCharacterIterator::StringCharacterIterator(const StringPiece& text) :
 		first_(text.begin()), last_(text.end()) {
 }
 
-StringCharacterIterator::StringCharacterIterator(const Range<const Char*>& text, const Char* start) :
-		CharacterIterator(CONCRETE_TYPE_TAG_), current_(start),
-		first_(text.beginning()), last_(text.end()) {
+StringCharacterIterator::StringCharacterIterator(const StringPiece& text, const StringPiece::const_iterator start) :
+		CharacterIterator(CONCRETE_TYPE_TAG_), current_(start), first_(text.begin()), last_(text.end()) {
 	if(current_ < first_ || current_ > last_)
 		throw invalid_argument("invalid input.");
 }
 
-StringCharacterIterator::StringCharacterIterator(const String& s, String::const_iterator start) :
-		CharacterIterator(CONCRETE_TYPE_TAG_), current_(s.data() + (start - s.begin())),
-		first_(s.data()), last_(s.data() + s.length()) {
+StringCharacterIterator::StringCharacterIterator(const String& text) :
+		CharacterIterator(CONCRETE_TYPE_TAG_), current_(text.data()), first_(text.data()), last_(text.data() + text.length()) {
+	if(current_ < first_ || current_ > last_)
+		throw invalid_argument("invalid input.");
+}
+
+StringCharacterIterator::StringCharacterIterator(const String& text, String::const_iterator start) :
+		CharacterIterator(CONCRETE_TYPE_TAG_), current_(text.data() + (start - text.begin())), first_(text.data()), last_(text.data() + text.length()) {
 	if(current_ < first_ || current_ > last_)
 		throw invalid_argument("invalid input.");
 }

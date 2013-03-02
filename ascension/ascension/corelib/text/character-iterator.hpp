@@ -3,8 +3,8 @@
  * Defines iterator classes traverse Unicode character sequence.
  * @author exeal
  * @date 2005-2010 (was unicode.hpp)
- * @date 2010-2011
- * @see character.hpp
+ * @date 2010-2013
+ * @see utf-iterator.hpp
  */
 
 #ifndef ASCENSION_CHARACTER_ITERATOR_HPP
@@ -24,79 +24,114 @@
 #define ASCENSION_UAX29_REVISION_NUMBER 11	// 2006-10-12
 
 namespace ascension {
-
 	namespace text {
 
+		// documentation is character-iterator.cpp
 		class CharacterIterator {
 		public:
 			static const CodePoint DONE;
 		public:
 			/// Destructor.
-			virtual ~CharacterIterator() /*throw()*/ {}
-			// attributes
-			/// Returns @c true if the iterator equals @a other.
-			bool equals(const CharacterIterator& other) const {
-				verifyOther(other);
-				return doEquals(other);
-			}
-			/// Returns c true if the iterator is less than @a other.
-			bool less(const CharacterIterator& other) const {
-				verifyOther(other);
-				return doLess(other);
-			}
-			/// Returns the position in the character sequence.
-			std::ptrdiff_t offset() const /*throw()*/ {return offset_;}
+			virtual ~CharacterIterator() BOOST_NOEXCEPT {}
 
-			// operations
-			/// Assigns the other iterator.
+			/// Returns the position in the character sequence.
+			std::ptrdiff_t offset() const BOOST_NOEXCEPT {return offset_;}
+
+			/// @name Assignment and Copy
+			/// @{
+			/**
+			 * Assigns the other iterator.
+			 * @param other The source iterator of the assignment
+			 * @return This iterator
+			 */
 			CharacterIterator& assign(const CharacterIterator& other) {
 				verifyOther(other);
 				doAssign(other);
 				return *this;
 			}
-			/// Creates a copy of the iterator.
+			/**
+			 * Creates a copy of the iterator.
+			 * @return The copied iterator
+			 */
 			std::unique_ptr<CharacterIterator> clone() const {
 				std::unique_ptr<CharacterIterator> p(doClone());
 				if(p.get() != nullptr)
 					p->offset_ = offset_;
 				return p;
 			}
-			/// Moves to the start of the character sequence.
+			/// @}
+
+			/// @name Comparisons
+			/// @{
+			/**
+			 * Returns @c true if the iterator equals @a other.
+			 * @param other The other iterator
+			 * @return @c true if this iterator equals to @a other
+			 */
+			bool equals(const CharacterIterator& other) const {
+				verifyOther(other);
+				return doEquals(other);
+			}
+			/**
+			 * Returns @c true if the iterator is less than @a other.
+			 * @param other The other iterator
+			 * @return @c true if this iterator is less than @a other
+			 */
+			bool less(const CharacterIterator& other) const {
+				verifyOther(other);
+				return doLess(other);
+			}
+			/// @}
+
+			/// @name Traverses
+			/// @{
+			/**
+			 * Moves to the beginning of the character sequence.
+			 * @return This iterator
+			 */
 			CharacterIterator& first() {
 				doFirst();
 				offset_ = 0;
 				return *this;
 			}
-			/// Moves to the end of the character sequence.
+			/**
+			 * Moves to the end of the character sequence.
+			 * @return This iterator
+			 */
 			CharacterIterator& last() {
 				doLast();
 				offset_ = 0;
 				return *this;
 			}
-			/// Moves to the next code unit.
+			/**
+			 * Moves to the next code unit.
+			 * @return This iterator
+			 */
 			CharacterIterator& next() {
 				doNext();
 				++offset_;
 				return *this;
 			}
-			/// Moves to the previous code unit.
+			/**
+			 * Moves to the previous code unit.
+			 * @return This iterator
+			 */
 			CharacterIterator& previous() {
 				doPrevious();
 				--offset_;
 				return *this;
 			}
+			/// @}
 
-			// virtual methods the concrete class should implement
+			/// @name Virtual Methods the Concrete Class Should Implement
+			/// @{
 		public:
 			/// Returns the current code point value.
-			virtual CodePoint current() const /*throw()*/ = 0;
+			virtual CodePoint current() const BOOST_NOEXCEPT = 0;
 			/// Returns @c true if the iterator is not last.
-			virtual bool hasNext() const /*throw()*/ = 0;
+			virtual bool hasNext() const BOOST_NOEXCEPT = 0;
 			/// Returns @c true if the iterator is not first.
-			virtual bool hasPrevious() const /*throw()*/ = 0;
-		protected:
-			/// Identifies a concrete type of the derived class for relational operations.
-			struct ConcreteTypeTag {};
+			virtual bool hasPrevious() const BOOST_NOEXCEPT = 0;
 		private:
 			/// Called by @c #assign method.
 			virtual void doAssign(const CharacterIterator& other) = 0;
@@ -114,13 +149,16 @@ namespace ascension {
 			virtual void doNext() = 0;
 			/// Called by @c #previous method.
 			virtual void doPrevious() = 0;
+			/// @}
 
 		protected:
+			/// Identifies a concrete type of the derived class for relational operations.
+			struct ConcreteTypeTag {};
 			/// Protected constructor.
-			explicit CharacterIterator(const ConcreteTypeTag& classID) /*throw()*/
+			explicit CharacterIterator(const ConcreteTypeTag& classID) BOOST_NOEXCEPT
 				: offset_(0), classID_(&classID) {}
 			/// Protected copy-constructor.
-			CharacterIterator(const CharacterIterator& other) /*throw()*/
+			CharacterIterator(const CharacterIterator& other) BOOST_NOEXCEPT
 				: offset_(other.offset_), classID_(other.classID_) {}
 			/// Protected assignment operator.
 			CharacterIterator& operator=(const CharacterIterator& other) {
@@ -128,7 +166,9 @@ namespace ascension {
 			}
 		private:
 			void verifyOther(const CharacterIterator& other) const {
-				if(classID_ != other.classID_) throw std::invalid_argument("type mismatch.");}
+				if(classID_ != other.classID_)
+					throw std::invalid_argument("type mismatch.");
+			}
 			std::ptrdiff_t offset_;
 			const ConcreteTypeTag* const classID_;
 		};
@@ -144,29 +184,30 @@ namespace ascension {
 				std::bidirectional_iterator_tag, const CodePoint, std::ptrdiff_t
 			> {
 		public:
-			StringCharacterIterator() /*throw()*/;
+			StringCharacterIterator() BOOST_NOEXCEPT;
 			StringCharacterIterator(const StringPiece& text);
-			StringCharacterIterator(const Range<const Char*>& text, const Char* start);
-			StringCharacterIterator(const String& s, String::const_iterator start);
-			StringCharacterIterator(const StringCharacterIterator& other) /*throw()*/;
+			StringCharacterIterator(const StringPiece& text, StringPiece::const_iterator start);
+			StringCharacterIterator(const String& text);
+			StringCharacterIterator(const String& text, String::const_iterator start);
+			StringCharacterIterator(const StringCharacterIterator& other) BOOST_NOEXCEPT;
 
 			// attributes
 			/// Returns the beginning position.
-			const Char* beginning() const /*throw()*/ {return first_;}
+			const Char* beginning() const BOOST_NOEXCEPT {return first_;}
 			/// Returns the end position.
-			const Char* end() const /*throw()*/ {return last_;}
+			const Char* end() const BOOST_NOEXCEPT {return last_;}
 			/// Returns the current position.
-			const Char* tell() const /*throw()*/ {return current_;}
+			const Char* tell() const BOOST_NOEXCEPT {return current_;}
 
 			// CharacterIterator
 			/// @see CharacterIterator#current
-			CodePoint current() const /*throw()*/ {
+			CodePoint current() const BOOST_NOEXCEPT {
 				return (current_ != last_) ? utf::checkedDecodeFirst(current_, last_) : DONE;
 			}
 			/// @see CharacterIterator#hasNext
-			bool hasNext() const /*throw()*/ {return current_ != last_;}
+			bool hasNext() const BOOST_NOEXCEPT {return current_ != last_;}
 			/// @see CharacterIterator#hasPrevious
-			bool hasPrevious() const /*throw()*/ {return current_ != first_;}
+			bool hasPrevious() const BOOST_NOEXCEPT {return current_ != first_;}
 		private:
 			void doAssign(const CharacterIterator& other);
 			std::unique_ptr<CharacterIterator> doClone() const;

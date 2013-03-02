@@ -123,18 +123,18 @@ namespace ascension {
 			}
 			/// Returns the one-dimensional array containing the data in RGBA order, as integers
 			/// in the range 0 to 255.
-			Range<std::uint8_t*> data() /*noexcept*/ {
-				return makeRange(data_.get(), data_.get() + width() * height());
+			boost::iterator_range<std::uint8_t*> data() BOOST_NOEXCEPT {
+				return boost::make_iterator_range(data_.get(), data_.get() + width() * height());
 			}
 			/// Returns the one-dimensional array containing the data in RGBA order, as integers
 			/// in the range 0 to 255.
-			Range<const std::uint8_t*> data() const /*noexcept*/ {
-				return makeRange<const std::uint8_t*>(data_.get(), data_.get() + width() * height());
+			boost::iterator_range<const std::uint8_t*> data() const BOOST_NOEXCEPT {
+				return boost::make_iterator_range<const std::uint8_t*>(data_.get(), data_.get() + width() * height());
 			}
 			/// Returns the actual height of the data in the @c ImageData object, in device pixels.
-			std::size_t height() const /*noexcept*/ {return height_;}
+			std::size_t height() const BOOST_NOEXCEPT {return height_;}
 			/// Returns the actual width of the data in the @c ImageData object, in device pixels.
-			std::size_t width() const /*noexcept*/ {return width_;}
+			std::size_t width() const BOOST_NOEXCEPT {return width_;}
 		private:
 			const std::unique_ptr<std::uint8_t[]> data_;
 			const std::size_t width_, height_;

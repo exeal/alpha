@@ -8,6 +8,7 @@
  * @date 2011-2013
  */
 
+#include <ascension/corelib/range.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
 
 using namespace ascension;
@@ -66,13 +67,13 @@ const TextLayout& LineLayoutVector::operator[](Index line) const {
 		if(layouts_.size() == bufferSize_) {
 			// delete the last
 			self.layouts_.pop_back();
-			self.fireVisualLinesModified(makeRange(i->first, i->first + 1),
+			self.fireVisualLinesModified(boost::irange(i->first, i->first + 1),
 				1, i->second->numberOfLines(), documentChangePhase_ == CHANGING);
 			delete i->second;
 		}
 		const TextLayout* const layout = layoutGenerator_->generate(line).release();
 		self.layouts_.push_front(make_pair(line, layout));
-		self.fireVisualLinesModified(makeRange(line, line + 1), layout->numberOfLines(), 1, documentChangePhase_ == CHANGING);
+		self.fireVisualLinesModified(boost::irange(line, line + 1), layout->numberOfLines(), 1, documentChangePhase_ == CHANGING);
 		return *layout;
 	}
 }
@@ -86,7 +87,7 @@ void LineLayoutVector::addVisualLinesListener(VisualLinesListener& listener) {
 	listeners_.add(listener);
 	const Index lines = document_.numberOfLines();
 	if(lines > 1)
-		listener.visualLinesInserted(makeRange<Index>(1, lines));
+		listener.visualLinesInserted(boost::irange(static_cast<Index>(1), lines));
 }
 
 /**
@@ -96,24 +97,24 @@ void LineLayoutVector::addVisualLinesListener(VisualLinesListener& listener) {
  *               @c #layoutModified. Otherwise calls @c #layoutDeleted
  * @throw std#invalid_argument @a first and/or @a last are invalid
  */
-void LineLayoutVector::clearCaches(const Range<Index>& lines, bool repair) {
+void LineLayoutVector::clearCaches(const boost::integer_range<Index>& lines, bool repair) {
 	if(false /*|| lines.end() > viewer_.document().numberOfLines()*/)
 		throw invalid_argument("either line number is invalid.");
 	if(documentChangePhase_ == ABOUT_TO_CHANGE) {
-		pendingCacheClearance_ = makeRange(
+		pendingCacheClearance_ = boost::irange(
 			!pendingCacheClearance_ ?
-				lines.beginning() : min(lines.beginning(), pendingCacheClearance_->beginning()),
+				*lines.begin() : min(*lines.begin(), *pendingCacheClearance_->begin()),
 			!pendingCacheClearance_ ?
-				lines.end() : max(lines.end(), pendingCacheClearance_->end()));
+				*lines.end() : max(*lines.end(), *pendingCacheClearance_->end()));
 		return;
 	}
-	if(isEmpty(lines))
+	if(lines.empty())
 		return;
 
 //	const size_t originalSize = layouts_.size();
 	Index oldSublines = 0, cachedLines = 0;
 	if(repair) {
-		Index newSublines = 0, actualFirst = lines.end(), actualLast = lines.beginning();
+		Index newSublines = 0, actualFirst = *lines.end(), actualLast = *lines.begin();
 		for(Iterator i(layouts_.begin()); i != layouts_.end(); ++i) {
 			if(includes(lines, i->first)) {
 				oldSublines += i->second->numberOfLines();
@@ -127,10 +128,10 @@ void LineLayoutVector::clearCaches(const Range<Index>& lines, bool repair) {
 				actualLast = max(actualLast, i->first);
 			}
 		}
-		if(actualFirst == lines.end())	// no lines cleared
+		if(actualFirst == *lines.end())	// no lines cleared
 			return;
 		++actualLast;
-		fireVisualLinesModified(makeRange(actualFirst, actualLast), newSublines += actualLast - actualFirst - cachedLines,
+		fireVisualLinesModified(boost::irange(actualFirst, actualLast), newSublines += actualLast - actualFirst - cachedLines,
 			oldSublines += actualLast - actualFirst - cachedLines, documentChangePhase_ == CHANGING);
 	} else {
 		for(Iterator i(layouts_.begin()); i != layouts_.end(); ) {
@@ -142,7 +143,7 @@ void LineLayoutVector::clearCaches(const Range<Index>& lines, bool repair) {
 			} else
 				++i;
 		}
-		fireVisualLinesDeleted(lines, oldSublines += length(lines) - cachedLines);
+		fireVisualLinesDeleted(lines, oldSublines += lines.size() - cachedLines);
 	}
 }
 
@@ -157,7 +158,7 @@ void LineLayoutVector::documentChanged(const kernel::Document&, const kernel::Do
 	assert(change.erasedRegion().isNormalized() && change.insertedRegion().isNormalized());
 	if(change.erasedRegion().first.line != change.erasedRegion().second.line) {	// erased region includes newline(s)
 		const k::Region& region = change.erasedRegion();
-		clearCaches(makeRange(region.first.line + 1, region.second.line + 1), false);
+		clearCaches(boost::irange(region.first.line + 1, region.second.line + 1), false);
 		for(Iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
 			if(i->first > region.first.line)
 				i->first -= region.second.line - region.first.line;	// $friendly-access
@@ -169,7 +170,7 @@ void LineLayoutVector::documentChanged(const kernel::Document&, const kernel::Do
 			if(i->first > region.first.line)
 				i->first += region.second.line - region.first.line;	// $friendly-access
 		}
-		fireVisualLinesInserted(makeRange(region.first.line + 1, region.second.line + 1));
+		fireVisualLinesInserted(boost::irange(region.first.line + 1, region.second.line + 1));
 	}
 	const Index firstLine = min(change.erasedRegion().first.line, change.insertedRegion().first.line);
 	if(!pendingCacheClearance_ || !includes(*pendingCacheClearance_, firstLine))
@@ -183,25 +184,25 @@ void LineLayoutVector::documentChanged(const kernel::Document&, const kernel::Do
 
 /// @see kernel#IDocumentPartitioningListener#documentPartitioningChanged
 void LineLayoutVector::documentPartitioningChanged(const k::Region& changedRegion) {
-	invalidate(makeRange(changedRegion.beginning().line, changedRegion.end().line + 1));
+	invalidate(boost::irange(changedRegion.beginning().line, changedRegion.end().line + 1));
 }
 
-void LineLayoutVector::fireVisualLinesDeleted(const Range<Index>& lines, Index sublines) {
+void LineLayoutVector::fireVisualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines) {
 	numberOfVisualLines_ -= sublines;
 	const bool widthChanged = includes(lines, *longestLine_);
 	if(widthChanged)
 		updateLongestLine(static_cast<Index>(-1), 0);
-	listeners_.notify<const Range<Index>&, Index>(
+	listeners_.notify<const boost::integer_range<Index>&, Index>(
 		&VisualLinesListener::visualLinesDeleted, lines, sublines, widthChanged);
 }
 
-void LineLayoutVector::fireVisualLinesInserted(const Range<Index>& lines) /*throw()*/ {
-	numberOfVisualLines_ += length(lines);
-	listeners_.notify<const Range<Index>&>(&VisualLinesListener::visualLinesInserted, lines);
+void LineLayoutVector::fireVisualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT {
+	numberOfVisualLines_ += lines.size();
+	listeners_.notify<const boost::integer_range<Index>&>(&VisualLinesListener::visualLinesInserted, lines);
 }
 
-void LineLayoutVector::fireVisualLinesModified(const Range<Index>& lines,
-		Index newSublines, Index oldSublines, bool documentChanged) /*throw()*/ {
+void LineLayoutVector::fireVisualLinesModified(const boost::integer_range<Index>& lines,
+		Index newSublines, Index oldSublines, bool documentChanged) BOOST_NOEXCEPT {
 	numberOfVisualLines_ += newSublines;
 	numberOfVisualLines_ -= oldSublines;
 
@@ -223,14 +224,14 @@ void LineLayoutVector::fireVisualLinesModified(const Range<Index>& lines,
 			updateLongestLine(newLongestLine, newMaximumIpd);
 	}
 
-	listeners_.notify<const Range<Index>&, SignedIndex>(
+	listeners_.notify<const boost::integer_range<Index>&, SignedIndex>(
 		&VisualLinesListener::visualLinesModified, lines,
 		static_cast<SignedIndex>(newSublines) - static_cast<SignedIndex>(oldSublines),
 		documentChanged, longestLineChanged);
 }
 
 /// @internal Only called by constructor.
-void LineLayoutVector::initialize() /*throw()*/ {
+void LineLayoutVector::initialize() BOOST_NOEXCEPT {
 	pendingCacheClearance_ = boost::none;
 	if(bufferSize_ == 0)
 		throw invalid_argument("size of the buffer can't be zero.");
@@ -239,15 +240,15 @@ void LineLayoutVector::initialize() /*throw()*/ {
 }
 
 /// Invalidates all layouts.
-void LineLayoutVector::invalidate() /*throw()*/ {
-	clearCaches(makeRange<Index>(0, document().numberOfLines()), autoRepair_);
+void LineLayoutVector::invalidate() BOOST_NOEXCEPT {
+	clearCaches(boost::irange(static_cast<Index>(0), document().numberOfLines()), autoRepair_);
 }
 
 /**
  * Invalidates the layouts of the specified lines.
  * @param lines The range of the lines. @a lines.end() is exclusive and will not be cleared
  */
-void LineLayoutVector::invalidate(const Range<Index>& lines) {
+void LineLayoutVector::invalidate(const boost::integer_range<Index>& lines) {
 	clearCaches(lines, autoRepair_);
 }
 
@@ -263,10 +264,10 @@ void LineLayoutVector::invalidate(const vector<Index>& lines) {
 		p.first = find(p.first, e, *p.second);
 		const pair<Iterator, Iterator> next(mismatch(p.first, e, p.second));
 		if(next.second == lines.end()) {
-			clearCaches(makeRange(*p.second, lines.back() + 1), autoRepair_);
+			clearCaches(boost::irange(*p.second, lines.back() + 1), autoRepair_);
 			break;
 		}
-		clearCaches(makeRange(*p.second, *next.second), autoRepair_);
+		clearCaches(boost::irange(*p.second, *next.second), autoRepair_);
 		p = next;
 	}
 }
@@ -282,11 +283,11 @@ inline void LineLayoutVector::invalidate(Index line) {
 			delete i->second;
 			if(autoRepair_) {
 				i->second = layoutGenerator_->generate(line).release();
-				fireVisualLinesModified(makeRange(line, line + 1),
+				fireVisualLinesModified(boost::irange(line, line + 1),
 					i->second->numberOfLines(), oldSublines, documentChangePhase_ == CHANGING);
 			} else {
 				layouts_.erase(i);
-				fireVisualLinesModified(makeRange(line, line + 1),
+				fireVisualLinesModified(boost::irange(line, line + 1),
 					1, oldSublines, documentChangePhase_ == CHANGING);
 			}
 			break;

@@ -2,7 +2,7 @@
  * @file position.hpp
  * @author exeal
  * @date 2011-01-21 separated from document.hpp
- * @date 2011-2012
+ * @date 2011-2013
  */
 
 #ifndef ASCENSION_POSITION_HPP
@@ -10,24 +10,22 @@
 
 #include <ascension/corelib/basic-types.hpp>	// Index
 #include <ascension/corelib/memory.hpp>			// FastArenaObject
-#include <ascension/corelib/range.hpp>
 #include <locale>	// std.use_facet, ...
 #include <sstream>	// std.basic_ostream, std.ostringstream
 #include <utility>	// std.pair
 #include <boost/operators.hpp>
 #include <boost/optional.hpp>
+#include <boost/range/irange.hpp>
 
 namespace ascension {
 	namespace kernel {
 
 		/**
-		 * @c Position represents a position in the document by a line number and an offset in the
-		 * line.
+		 * @c Position represents a position in the document by a line number and an offset in the line.
 		 * @note This class is not intended to be subclassed.
 		 * @see Region, Point, viewers#VisualPoint, viewers#Caret
 		 */
-		class Position : public FastArenaObject<Position>,
-				private boost::totally_ordered<Position> {
+		class Position : public FastArenaObject<Position>, private boost::totally_ordered<Position> {
 		public:
 			/// Line number. Zero means that the position is the first line in the document.
 			Index line;
@@ -36,20 +34,19 @@ namespace ascension {
 			Index offsetInLine;
 		public:
 			/// Default constructor does not initialize the members at all.
-			Position() /*throw()*/ {}
+			Position() BOOST_NOEXCEPT {}
 			/**
 			 * Constructor.
 			 * @param line The initial value for @c #line
 			 * @param offsetInLine The initial value for @c #offsetInLine
 			 */
-			Position(Index line, Index offsetInLine) /*throw()*/ : line(line), offsetInLine(offsetInLine) {
-			}
+			Position(Index line, Index offsetInLine) BOOST_NOEXCEPT : line(line), offsetInLine(offsetInLine) {}
 			/// Equality operator.
-			bool operator==(const Position& other) const /*throw()*/ {
+			bool operator==(const Position& other) const BOOST_NOEXCEPT {
 				return line == other.line && offsetInLine == other.offsetInLine;
 			}
 			/// Relational operator.
-			bool operator<(const Position& other) const /*throw()*/ {
+			bool operator<(const Position& other) const BOOST_NOEXCEPT {
 				return line < other.line || (line == other.line && offsetInLine < other.offsetInLine);
 			}
 		};
@@ -79,43 +76,41 @@ namespace ascension {
 		 * are no restriction about greater/less relationship between the two positions, but the
 		 * region is called "normalized" when the first position is less than or equal to the second.
 		 * @note This class is not intended to be subclassed.
-		 * @see Range
 		 */
 		class Region : public std::pair<Position, Position>, public FastArenaObject<Region> {
 		public:
 			/// Default constructor does not initialize the two positions.
-			Region() /*throw()*/ {}
+			Region() BOOST_NOEXCEPT {}
 			/// Constructor creates an empty region.
-			explicit Region(const Position& p) /*throw()*/
-				: std::pair<Position, Position>(p, p) {}
+			explicit Region(const Position& p) BOOST_NOEXCEPT : std::pair<Position, Position>(p, p) {}
 			/// Constructor.
-			Region(const Position& first, const Position& second) /*throw()*/
+			Region(const Position& first, const Position& second) BOOST_NOEXCEPT
 				: std::pair<Position, Position>(first, second) {}
 			/// Constructor creates a region in a line.
-			Region(Index line, const std::pair<Index, Index>& columns) /*throw()*/
-				: std::pair<Position, Position>(Position(line, columns.first), Position(line, columns.second)) {}
+			Region(Index line, const boost::integer_range<Index>& rangeInLine) BOOST_NOEXCEPT
+				: std::pair<Position, Position>(Position(line, *rangeInLine.begin()), Position(line, *rangeInLine.end())) {}
 			/// Returns an intersection of the two regions. Same as @c #getIntersection.
-			Region operator&(const Region& other) const /*throw()*/ {
+			Region operator&(const Region& other) const BOOST_NOEXCEPT {
 				return getIntersection(other);
 			}
 			/// Returns a union of the two regions. Same as @c #getUnion.
 			Region operator|(const Region& other) const {return getUnion(other);}
 			/// Returns the beginning of the region.
-			Position& beginning() /*throw()*/ {return (first < second) ? first : second;}
+			Position& beginning() BOOST_NOEXCEPT {return (first < second) ? first : second;}
 			/// Returns the beginning of the region.
-			const Position& beginning() const /*throw()*/ {
+			const Position& beginning() const BOOST_NOEXCEPT {
 				return (first < second) ? first : second;
 			}
 			/// Returns @c true if the region encompasses the other region.
-			bool encompasses(const Region& other) const /*throw()*/ {
+			bool encompasses(const Region& other) const BOOST_NOEXCEPT {
 				return beginning() <= other.beginning() && end() >= other.end();
 			}
 			/// Returns the end of the region.
-			Position& end() /*throw()*/ {return (first > second) ? first : second;}
+			Position& end() BOOST_NOEXCEPT {return (first > second) ? first : second;}
 			/// Returns the end of the region.
-			const Position& end() const /*throw()*/ {return (first > second) ? first : second;}
+			const Position& end() const BOOST_NOEXCEPT {return (first > second) ? first : second;}
 			/// Returns an intersection of the two regions. If the regions don't intersect, returns @c Region().
-			Region getIntersection(const Region& other) const /*throw()*/ {
+			Region getIntersection(const Region& other) const BOOST_NOEXCEPT {
 				return intersectsWith(other) ?
 					Region(std::max(beginning(), other.beginning()), std::min(end(), other.end())) : Region();
 			}
@@ -126,21 +121,21 @@ namespace ascension {
 				return Region(beginning(), other.end());
 			}
 			/// Returns @c true if @a p is contained by the region.
-			bool includes(const Position& p) const /*throw()*/ {
+			bool includes(const Position& p) const BOOST_NOEXCEPT {
 				return p >= beginning() && p <= end();
 			}
 			/// Returns @c true if the region intersects with the other region.
-			bool intersectsWith(const Region& other) const /*throw()*/ {
+			bool intersectsWith(const Region& other) const BOOST_NOEXCEPT {
 				return includes(other.first) || includes(other.second);
 			}
 			/// Returns @c true if the region is empty.
-			bool isEmpty() const /*throw()*/ {return first == second;}
+			bool isEmpty() const BOOST_NOEXCEPT {return first == second;}
 			/// Returns @c true if the region is normalized.
-			bool isNormalized() const /*throw()*/ {return first <= second;}
+			bool isNormalized() const BOOST_NOEXCEPT {return first <= second;}
 			/// Returns a range of lines.
-			Range<Index> lines() const /*throw()*/ {return makeRange(beginning().line, end().line + 1);}
+			boost::integer_range<Index> lines() const BOOST_NOEXCEPT {return boost::irange(beginning().line, end().line + 1);}
 			/// Normalizes the region.
-			Region& normalize() /*throw()*/ {
+			Region& normalize() BOOST_NOEXCEPT {
 				if(!isNormalized())
 					std::swap(first, second);
 				return *this;
@@ -174,7 +169,7 @@ namespace ascension {
 		class BadPositionException : public std::invalid_argument {
 		public:
 			/// Default constructor.
-			BadPositionException() /*throw()*/ : std::invalid_argument(
+			BadPositionException() BOOST_NOEXCEPT : std::invalid_argument(
 				"the position <not-initialized> is outside of the document or invalid.") {}
 			/**
 			 * Constructor.
@@ -191,7 +186,7 @@ namespace ascension {
 			BadPositionException(const Position& requested, const std::string& message)
 				: std::invalid_argument(message), requestedPosition_(requested) {}
 			/// Returns the requested position in the document.
-			const boost::optional<Position>& requestedPosition() const /*throw()*/ {
+			const boost::optional<Position>& requestedPosition() const BOOST_NOEXCEPT {
 				return requestedPosition_;
 			}
 		private:
@@ -205,7 +200,7 @@ namespace ascension {
 		class BadRegionException : public std::invalid_argument {
 		public:
 			/// Default constructor.
-			BadRegionException() /*throw()*/ : std::invalid_argument(
+			BadRegionException() BOOST_NOEXCEPT : std::invalid_argument(
 				"the region <not-initialized> intersects outside of the document or invalid") {}
 			/**
 			 * Constructor.
@@ -223,7 +218,7 @@ namespace ascension {
 			BadRegionException(const Region& requested, const std::string& message)
 				: std::invalid_argument(message), requestedRegion_(requested) {}
 			/// Returns the requested region in the document.
-			const boost::optional<Region>& requestedRegion() const /*throw()*/ {
+			const boost::optional<Region>& requestedRegion() const BOOST_NOEXCEPT {
 				return requestedRegion_;
 			}
 		private:

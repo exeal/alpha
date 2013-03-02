@@ -203,7 +203,7 @@ namespace ascension {
 			 * @see #allocationMeasure
 			 */
 			inline Scalar measure(const TextRun& textRun) {
-				return textRun.trailingEdge(length(textRun.characterRange()));
+				return textRun.trailingEdge(textRun.characterRange().length());
 			}
 			/**
 			 * Returns the measure of the 'allocation-rectangle' of the specified text run in user units.

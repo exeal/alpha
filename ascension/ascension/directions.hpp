@@ -2,19 +2,20 @@
  * @file directions.hpp
  * Defines abstract and physical directional terms.
  * @date 2012-03-31 created
+ * @date 2012-2013
  * @see geometry.hpp, writing-mode.hpp
  */
 
 #ifndef ASCENSION_DIRECTIONS_HPP
 #define ASCENSION_DIRECTIONS_HPP
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
-#include <ascension/corelib/range.hpp>
 #include <ascension/graphics/geometry.hpp>
 #include <array>
 #include <iterator>		// std.end
 #include <type_traits>	// std.extent
 #include <boost/operators.hpp>
 #include <boost/parameter.hpp>
+#include <boost/range/irange.hpp>
 
 namespace ascension {
 	/**
@@ -195,8 +196,9 @@ namespace ascension {
 		 * @see verticalRange, blockFlowRange, inlineFlowRange
 		 */
 		template<typename T>
-		inline Range<T> horizontalRange(const PhysicalFourSides<T>& sides) {
-			return makeRange(sides.left(), sides.right());
+		inline boost::integer_range<T> horizontalRange(const PhysicalFourSides<T>& sides) {
+			static_assert(std::is_arithmetic<T>::value, "T is not arithmetic.");
+			return boost::irange(sides.left(), sides.right());
 		}
 
 		/**
@@ -207,8 +209,9 @@ namespace ascension {
 		 * @see horizontalRange, blockFlowRange, inlineFlowRange
 		 */
 		template<typename T>
-		inline Range<T> verticalRange(const PhysicalFourSides<T>& sides) {
-			return makeRange(sides.top(), sides.bottom());
+		inline boost::integer_range<T> verticalRange(const PhysicalFourSides<T>& sides) {
+			static_assert(std::is_arithmetic<T>::value, "T is not arithmetic.");
+			return boost::irange(sides.top(), sides.bottom());
 		}
 	}
 
@@ -360,8 +363,9 @@ namespace ascension {
 		 * @see inlineFlowRange, horizontalRange, verticalRange
 		 */
 		template<typename T>
-		inline Range<T> blockFlowRange(const FlowRelativeFourSides<T>& sides) {
-			return makeRange(sides.before(), sides.after());
+		inline boost::integer_range<T> blockFlowRange(const FlowRelativeFourSides<T>& sides) {
+			static_assert(std::is_arithmetic<T>::value, "T is not arithmetic.");
+			return boost::irange(sides.before(), sides.after());
 		}
 
 		/**
@@ -372,8 +376,9 @@ namespace ascension {
 		 * @see blockFlowRange, horizontalRange, verticalRange
 		 */
 		template<typename T>
-		inline Range<T> inlineFlowRange(const FlowRelativeFourSides<T>& sides) {
-			return makeRange(sides.start(), sides.end());
+		inline boost::integer_range<T> inlineFlowRange(const FlowRelativeFourSides<T>& sides) {
+			static_assert(std::is_arithmetic<T>::value, "T is not arithmetic.");
+			return boost::irange(sides.start(), sides.end());
 		}
 	}
 

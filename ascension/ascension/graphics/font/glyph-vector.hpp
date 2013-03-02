@@ -102,7 +102,7 @@ namespace ascension {
 				 * @return A vector of glyph positions specified by @a range
 				 * @throw std#out_of_range @a range.beginning() &gt; @c #numberOfGlyphs()
 				 */
-				virtual std::vector<Point>&& glyphPositions(const Range<std::size_t>& range) const = 0;
+				virtual std::vector<Point>&& glyphPositions(const boost::integer_range<std::size_t>& range) const = 0;
 				/**
 				 * Sets the position of the specified glyph within this vector.
 				 * @param index The glyph index in this vector
@@ -168,12 +168,12 @@ namespace ascension {
 				 * @see #strokeGlyphs
 				 */
 				virtual void fillGlyphs(PaintContext& context, const Point& origin,
-					boost::optional<Range<std::size_t>> range = boost::none) const = 0;
+					boost::optional<boost::integer_range<std::size_t>> range = boost::none) const = 0;
 				/**
 				 * @see #fillGlyphs
 				 */
 				virtual void strokeGlyphs(PaintContext& context, const Point& origin,
-					boost::optional<Range<std::size_t>> range = boost::none) const = 0;
+					boost::optional<boost::integer_range<std::size_t>> range = boost::none) const = 0;
 				/// @}
 
 				template<typename T>

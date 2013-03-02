@@ -554,7 +554,7 @@ RenderingContext2D& RenderingContext2D::putImageData(
 		win32::Handle<HBITMAP>::Type bitmap(::CreateDIBSection(nativeObject_.get(),
 			reinterpret_cast<BITMAPINFO*>(&header), DIB_RGB_COLORS, &pixels, nullptr, 0), &::DeleteObject);
 		if(bitmap.get() != nullptr) {
-			const uint8_t* const imageData = image.data().beginning();
+			const uint8_t* const imageData = image.data().begin();
 			DWORD* pixel = static_cast<DWORD*>(pixels);
 			for(size_t y = 0; y < dy; ++y) {
 				for(size_t x = 0; x < dx; ++x, ++pixel) {

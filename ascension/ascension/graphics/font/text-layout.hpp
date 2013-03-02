@@ -140,8 +140,8 @@ namespace ascension {
 				Scalar ascent(Index line) const;
 				Scalar baseline(Index line) const;
 				Scalar descent(Index line) const;
-				Range<Scalar> extent() const;
-				Range<Scalar> extent(const Range<Index>& lines) const;
+				boost::integer_range<Scalar> extent() const;
+				boost::integer_range<Scalar> extent(const boost::integer_range<Index>& lines) const;
 				Scalar leading(Index) const;
 				Scalar measure() const;
 				Scalar measure(Index line) const;
@@ -149,18 +149,18 @@ namespace ascension {
 
 				/// @name Bounds
 				/// @{
-				boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& blackBoxBounds(const Range<Index>& range) const;
+				boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& blackBoxBounds(const boost::integer_range<Index>& range) const;
 				presentation::FlowRelativeFourSides<Scalar> bounds() const BOOST_NOEXCEPT;
-				presentation::FlowRelativeFourSides<Scalar> bounds(const Range<Index>& characterRange) const;
+				presentation::FlowRelativeFourSides<Scalar> bounds(const boost::integer_range<Index>& characterRange) const;
 				presentation::FlowRelativeFourSides<Scalar> lineBounds(Index line) const;
 				Rectangle pixelBounds(const FontRenderContext& frc, const Point& at) const;
 				/// @}
 
 				/// @name Highlight Shapes
 				/// @{
-				presentation::FlowRelativeFourSides<Scalar> logicalHighlightShape(const Range<Index>& range) const;
-				std::vector<Range<Index>>&& logicalRangesForVisualSelection(const Range<TextHit>& range) const;
-				presentation::FlowRelativeFourSides<Scalar> visualHighlightShape(const Range<TextHit>& range) const;
+				presentation::FlowRelativeFourSides<Scalar> logicalHighlightShape(const boost::integer_range<Index>& range) const;
+				std::vector<boost::integer_range<Index>>&& logicalRangesForVisualSelection(const boost::integer_range<TextHit>& range) const;
+				presentation::FlowRelativeFourSides<Scalar> visualHighlightShape(const boost::iterator_range<TextHit>& range) const;
 				/// @}
 
 				/// @name Hit Test
@@ -276,8 +276,8 @@ namespace ascension {
 			 * Returns extent (block-progression-dimension) of the line.
 			 * @return A range of block-progression-dimension relative to the alignment-point
 			 */
-			inline Range<Scalar> TextLayout::extent() const {
-				return makeRange(
+			inline boost::integer_range<Scalar> TextLayout::extent() const {
+				return boost::irange(
 					baseline(0) - lineMetrics_[0].ascent,
 					baseline(numberOfLines() - 1) + lineMetrics_[numberOfLines() - 1].descent);
 			}
@@ -288,13 +288,13 @@ namespace ascension {
 			 * @return A range of block-progression-dimension relative to the alignment-point
 			 * @throw kernel#BadRegionException
 			 */
-			inline Range<Scalar> TextLayout::extent(const Range<Index>& lines) const {
-				if(lines.end() >= numberOfLines())
+			inline boost::integer_range<Scalar> TextLayout::extent(const boost::integer_range<Index>& lines) const {
+				if(*lines.end() >= numberOfLines())
 					throw kernel::BadRegionException(kernel::Region(
-						kernel::Position(lines.beginning(), 0), kernel::Position(lines.end(), 0)));
-				return makeRange(
-					baseline(lines.beginning()) - lineMetrics_[lines.beginning()].ascent,
-					baseline(lines.end() - 1) + lineMetrics_[lines.end() - 1].descent);
+						kernel::Position(*lines.begin(), 0), kernel::Position(*lines.end(), 0)));
+				return boost::irange(
+					baseline(lines.front()) - lineMetrics_[lines.front()].ascent,
+					baseline(lines.back()) + lineMetrics_[lines.back()].descent);
 			}
 
 			/**

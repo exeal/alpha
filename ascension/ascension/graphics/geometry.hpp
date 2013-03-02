@@ -9,7 +9,6 @@
 #define ASCENSION_GEOMETRY_HPP
 
 #include <ascension/corelib/memory.hpp>	// FastArenaObject
-#include <ascension/corelib/range.hpp>
 #include <ascension/corelib/future.hpp>
 #include <ascension/platforms.hpp>
 #if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
@@ -22,6 +21,7 @@
 #include <boost/geometry/geometries/register/box.hpp>
 #include <boost/geometry/geometries/register/point.hpp>
 #include <boost/parameter.hpp>
+#include <boost/range/irange.hpp>
 
 namespace ascension {
 	namespace detail {
@@ -168,10 +168,10 @@ namespace ascension {
 				BasicRectangle(const Origin& origin, const BasicDimension<SizeCoordinate>& size,
 					typename detail::EnableIfTagIs<Origin, boost::geometry::point_tag>::type* = nullptr);
 				template<typename ScalarType>
-				BasicRectangle(const Range<ScalarType>& xrange, const Range<ScalarType>& yrange)
+				BasicRectangle(const boost::integer_range<ScalarType>& xrange, const boost::integer_range<ScalarType>& yrange)
 					: BasicRectangleBase<Coordinate>((
-						_left = xrange.beginning(), _top = yrange.beginning(),
-						_right = xrange.end(), _bottom = yrange.end())) {}
+						_left = *xrange.begin(), _top = *yrange.begin(),
+						_right = *xrange.end(), _bottom = *yrange.end())) {}
 				template<typename Other>
 				BasicRectangle(const Other& other) : BasicRectangleBase<Coordinate>((_dx = dx(other), _dy = dy(other))) {}
 				BOOST_PARAMETER_CONSTRUCTOR(
@@ -277,9 +277,9 @@ namespace ascension {
 			explicit RectangleRangeProxy(Geometry& rectangle) BOOST_NOEXCEPT :
 				/*Range<CoordinateType>(graphics::geometry::range<dimension>(const_cast<const Geometry&>(rectangle))),*/ rectangle_(rectangle) {}
 			template<typename T>
-			RectangleRangeProxy<Geometry, dimension>& operator=(const Range<T>& range) {
-				boost::geometry::set<boost::geometry::min_corner, dimension>(rectangle_, range.beginning());
-				boost::geometry::set<boost::geometry::max_corner, dimension>(rectangle_, range.end());
+			RectangleRangeProxy<Geometry, dimension>& operator=(const boost::integer_range<T>& range) {
+				boost::geometry::set<boost::geometry::min_corner, dimension>(rectangle_, *range.begin());
+				boost::geometry::set<boost::geometry::max_corner, dimension>(rectangle_, *range.end());
 //				Range<Scalar>::operator=(range);
 				return *this;
 			}
@@ -329,15 +329,15 @@ namespace ascension {
 
 			/// Returns the origin of the @a rectangle.
 			template<typename Geometry>
-			inline const typename boost::geometry::point_type<Geometry>::type origin(const Geometry& rectangle, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+			inline typename boost::geometry::point_type<Geometry>::type origin(const Geometry& rectangle, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
 				typename boost::geometry::point_type<Geometry>::type temp;
 				boost::geometry::assign_values(temp, boost::geometry::get<boost::geometry::min_corner, 0>(rectangle), boost::geometry::get<boost::geometry::min_corner, 1>(rectangle));
 				return temp;
 			}
 
 			template<std::size_t dimension, typename Geometry>
-			inline const Range<typename boost::geometry::coordinate_type<Geometry>::type> range(const Geometry& rectangle) {
-				return makeRange(boost::geometry::get<boost::geometry::min_corner, dimension>(rectangle), boost::geometry::get<boost::geometry::max_corner, dimension>(rectangle));
+			inline boost::integer_range<typename boost::geometry::coordinate_type<Geometry>::type> range(const Geometry& rectangle) {
+				return boost::irange(boost::geometry::get<boost::geometry::min_corner, dimension>(rectangle), boost::geometry::get<boost::geometry::max_corner, dimension>(rectangle));
 			}
 
 			template<std::size_t dimension, typename Geometry>
