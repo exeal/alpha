@@ -21,6 +21,7 @@
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate
 #include <tuple>
+#include <boost/flyweight.hpp>
 #include <boost/foreach.hpp>
 #include <usp10.h>
 
@@ -437,6 +438,62 @@ namespace {
 	inline bool overhangs(const ABC& width) BOOST_NOEXCEPT {
 		return width.abcA < 0 || width.abcC < 0;
 	}
+
+	class LogicalClusterIterator : public boost::iterator_facade<LogicalClusterIterator, void, boost::bidirectional_traversal_tag> {
+	public:
+		LogicalClusterIterator(const Range<const WORD*> clusters, const Range<const WORD*> glyphIndices, size_t position) : clusters_(clusters), glyphIndices_(glyphIndices) {
+			if(isEmpty(clusters))
+				throw invalid_argument("clusters");
+			if(isEmpty(glyphIndices))
+				throw invalid_argument("glyphIndices");
+			if(position > length(clusters_))
+				throw out_of_range("position");
+			if(position < clusters_.end()) {
+				currentCluster_ = makeRange(clusters_.beginning() + position, clusters_.beginning() + position + 1);
+				decrement();
+				increment();
+			} else
+				currentCluster_ = makeRange(clusters_.end());
+		}
+		const Range<const WORD*>& currentCluster() const BOOST_NOEXCEPT {
+			return currentCluster_;
+		}
+		size_t numberOfCurrentGlyphs() const BOOST_NOEXCEPT {
+			assert(!isEmpty(currentCluster()));
+			return ((currentCluster().end() < clusters_.end()) ? *currentCluster().end() : length(glyphIndices_)) - *currentCluster().beginning();
+		}
+		WORD glyphIndex() const BOOST_NOEXCEPT {
+			return glyphIndices_.beginning()[*currentCluster().beginning()];
+		}
+		ReadingDirection readingDirection() const BOOST_NOEXCEPT {
+			return (*clusters_.beginning() <= clusters_.end()[-1]) ? LEFT_TO_RIGHT : RIGHT_TO_LEFT;
+		}
+	private:
+		void decrement() {
+			assert(currentCluster().end() > clusters_.beginning());
+			if(currentCluster().beginning() == clusters_.beginning()) {
+				currentCluster_ = makeRange(clusters_.beginning());
+				return;
+			}
+			pair<const WORD*, const WORD*> previous(currentCluster().beginning() - 1, currentCluster().beginning());
+			for(; previous.first > clusters_.beginning() && *previous.first == previous.second[-1]; --previous.first);
+		}
+		bool equal(const LogicalClusterIterator& other) const BOOST_NOEXCEPT {
+		}
+		void increment() {
+			assert(currentCluster().beginning() < clusters_.end());
+			if(currentCluster().end() == clusters_.end()) {
+				currentCluster_ = makeRange(clusters_.end());
+				return;
+			}
+			pair<const WORD*, const WORD*> next(currentCluster().end(), currentCluster().end());
+			for(; next.second < clusters_.end() && *next.second == *next.first; ++next.second);
+			currentCluster_ = makeRange(next);
+		}
+		const Range<const WORD*> clusters_, glyphIndices_;
+		Range<const WORD*> currentCluster_;
+		friend class boost::iterator_core_access;
+	};
 } // namespace @0
 
 namespace {
@@ -527,10 +584,12 @@ namespace {
 		};
 	public:
 		TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
-			shared_ptr<const Font> font, OpenTypeFontTag scriptTag, const ComputedTextRunStyleCore& coreStyle);
+			shared_ptr<const Font> font, const FontRenderContext& frc,
+			OpenTypeFontTag scriptTag, const ComputedTextRunStyleCore& coreStyle);
 		~TextRunImpl() BOOST_NOEXCEPT;
-		static void generate(const StringPiece& textString, const FontCollection& fontCollection,
+		static void generate(const StringPiece& textString,
 			const ComputedTextLineStyle& lineStyle, unique_ptr<ComputedStyledTextRunIterator> textRunStyles,
+			const FontCollection& fontCollection, const FontRenderContext& frc,
 			vector<TextRunImpl*>& textRuns, vector<AttributedCharacterRange<ComputedTextRunStyle>>& calculatedStyles);
 		// GlyphVector
 		void fillGlyphs(PaintContext& context, const Point& origin,
@@ -554,6 +613,9 @@ namespace {
 		boost::optional<Index> characterEncompassesPosition(float ipd) const BOOST_NOEXCEPT;
 		Index characterHasClosestLeadingEdge(float ipd) const;
 		uint8_t characterLevel() const BOOST_NOEXCEPT;
+		StringPiece characterRange() const BOOST_NOEXCEPT;
+		TextHit&& hitTestCharacter(Scalar ipd, bool* outOfBounds) const;
+		Scalar hitToIpd(const TextHit& hit) const;
 		float leadingEdge(Index character) const;
 		Index length() const BOOST_NOEXCEPT;
 		const FlowRelativeFourSides<float>* margin() const BOOST_NOEXCEPT;
@@ -563,6 +625,7 @@ namespace {
 		const ComputedTextRunStyleCore& style() const BOOST_NOEXCEPT {return coreStyle_;}
 		HRESULT logicalAttributes(SCRIPT_LOGATTR attributes[]) const;
 		// geometry
+		vector<FlowRelativeFourSides<Scalar>>&& charactersBounds(const Range<Index>& characterRange) const;
 		HRESULT logicalWidths(int widths[]) const;
 		int totalWidth() const /*throw()*/ {return accumulate(advances(), advances() + numberOfGlyphs(), 0);}
 		// layout
@@ -588,7 +651,7 @@ namespace {
 		// this data is shared text runs separated by (only) line breaks and computed styles
 		struct RawGlyphVector /*: public StringPiece*/ {
 			const StringPiece::const_pointer position;
-			const shared_ptr<const Font> font;
+			boost::flyweight<FontAndRenderContext> font;
 			const OpenTypeFontTag scriptTag;	// as OPENTYPE_TAG
 			mutable SCRIPT_CACHE fontCache;
 			size_t numberOfGlyphs;
@@ -597,8 +660,8 @@ namespace {
 			unique_ptr<SCRIPT_VISATTR[]> visualAttributes;
 			unique_ptr<int[]> advances, justifiedAdvances;
 			unique_ptr<GOFFSET[]> offsets;
-			RawGlyphVector(StringPiece::const_pointer position, shared_ptr<const Font> font,
-					OpenTypeFontTag scriptTag) : position(position), font(font), scriptTag(scriptTag), fontCache(nullptr) {
+			RawGlyphVector(StringPiece::const_pointer position, shared_ptr<const Font> font, const FontRenderContext& frc,
+					OpenTypeFontTag scriptTag) : position(position), font(font, frc), scriptTag(scriptTag), fontCache(nullptr) {
 				raiseIfNull(position, "position");
 				raiseIfNull(font.get(), "font");
 			}
@@ -627,6 +690,7 @@ namespace {
 			const StringPiece& text, const SCRIPT_ANALYSIS& analysis, RawGlyphVector& glyphs);
 		static HRESULT generateGlyphs(win32::Handle<HDC>::Type dc,
 			const StringPiece& text, const SCRIPT_ANALYSIS& analysis, RawGlyphVector& glyphs);
+		Scalar glyphLogicalPosition(size_t index) const;
 		const WORD* glyphs() const BOOST_NOEXCEPT {
 			if(const WORD* const p = glyphs_->indices.get())
 				return p + glyphRange().beginning();
@@ -700,9 +764,9 @@ void TextRunImpl::RawGlyphVector::vanish(const Font& font, StringPiece::const_po
  * @note This constructor is called by only @c #splitIfTooLong.
  */
 TextRunImpl::TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
-		shared_ptr<const Font> font, OpenTypeFontTag scriptTag, const ComputedTextRunStyleCore& coreStyle)
+		shared_ptr<const Font> font, const FontRenderContext& frc, OpenTypeFontTag scriptTag, const ComputedTextRunStyleCore& coreStyle)
 		: StringPiece(characterRange), coreStyle_(coreStyle), analysis_(script),
-		glyphs_(new RawGlyphVector(characterRange.beginning(), font, scriptTag)) {	// may throw NullPointerException for 'font'
+		glyphs_(new RawGlyphVector(characterRange.beginning(), font, frc, scriptTag)) {	// may throw NullPointerException for 'font'
 	raiseIfNullOrEmpty(characterRange, "characterRange");
 //	raiseIfNull(font.get(), "font");
 }
@@ -810,6 +874,56 @@ uint8_t TextRunImpl::characterLevel() const BOOST_NOEXCEPT {
 	return static_cast<uint8_t>(analysis_.s.uBidiLevel);
 }
 
+vector<FlowRelativeFourSides<Scalar>>&& TextRunImpl::charactersBounds(const Range<Index>& characterRange) const {
+	if(isEmpty(characterRange))
+		return ;
+	// 'characterRange' are offsets from the beginning of this text run
+
+//	const LogicalClusterIterator firstCluster(makeRange(clusters(), clusters() + length(this->characterRange())), makeRange(glyphs(), glyphs() + numberOfGlyphs()), characterRange.beginning());
+//		lastCluster = (length(characterRange) == 1) ? ;
+
+	// compute glyph range for the given character range
+	const bool rtl = clusters()[0] > clusters()[length(this->characterRange()) - 1];
+	Range<Index> glyphRange;
+	if(!rtl) {
+		const Index firstGlyph = clusters()[characterRange.beginning()];
+		Index lastGlyph;
+		for(const WORD* p = clusters() + characterRange.end() - 1; ; ++p) {
+			if(p + 1 == clusters() + length(this->characterRange())) {
+				lastGlyph = numberOfGlyphs();
+				break;
+			} else if(p[0] != p[1]) {
+				lastGlyph = p[1];
+				break;
+			}
+		}
+		glyphRange = makeRange(firstGlyph, lastGlyph);
+	} else {
+		const Index lastGlyph = clusters()[characterRange.beginning()] + 1;
+		Index firstGlyph;
+		for(const WORD* p = clusters() + characterRange.end() - 1; ; ++p) {
+			if(p + 1 == clusters() + length(this->characterRange())) {
+				firstGlyph = 0;
+				break;
+			} else if(p[0] != p[1]) {
+				firstGlyph = p[1] + 1;
+				break;
+			}
+		}
+		glyphRange = makeRange(firstGlyph, lastGlyph);
+	}
+
+	// measure glyph black box bounds
+	vector<graphics::Rectangle> bounds;
+	Scalar x = 0;
+	const int* const glyphAdvances = (justifiedAdvances() == nullptr) ? advances() : justifiedAdvances();
+	for(size_t i = 0; i < glyphRange.beginning(); ++i)
+		x += glyphAdvances[i];
+	for(size_t i = glyphRange.beginning(); i < glyphRange.end(); ++i) {
+		x += glyphAdvances[i];
+	}
+}
+
 /**
  * Returns the number of missing glyphs in this run.
  * @param context The graphics context
@@ -863,9 +977,14 @@ void TextRunImpl::fillGlyphs(PaintContext& context, const Point& origin, boost::
 	return paintGlyphs(context, origin, range, false);
 }
 
-/// @see TextRun#font
+/// @see GlyphVector#font
 shared_ptr<const Font> TextRunImpl::font() const BOOST_NOEXCEPT {
-	return glyphs_->font;
+	return glyphs_->font.get().font();
+}
+
+/// @see GlyphVector#fontRenderContext
+const FontRenderContext& TextRunImpl::fontRenderContext() const BOOST_NOEXCEPT {
+	return glyphs_->font.get().fontRenderContext();
 }
 
 
@@ -884,14 +1003,16 @@ namespace {
 
 /**
  * @param textString
- * @param fontCollection
  * @param lineStyle
  * @param textRunStyles
+ * @param fontCollection
+ * @param frc
  * @param[out] textRuns
  * @param[out] calculatedStyles
  */
-void TextRunImpl::generate(const StringPiece& textString, const FontCollection& fontCollection,
+void TextRunImpl::generate(const StringPiece& textString,
 		const ComputedTextLineStyle& lineStyle, unique_ptr<ComputedStyledTextRunIterator> textRunStyles,
+		const FontCollection& fontCollection, const FontRenderContext& frc,
 		vector<TextRunImpl*>& textRuns, vector<AttributedCharacterRange<ComputedTextRunStyle>>& calculatedStyles) {
 	raiseIfNullOrEmpty(textString, "textString");
 
@@ -979,7 +1100,7 @@ void TextRunImpl::generate(const StringPiece& textString, const FontCollection& 
 					unique_ptr<RawGlyphVector>(
 						new RawGlyphVector(subRange.beginning(),
 							selectFont(subRange, fontCollection, styleRun.attribute.font),
-							scriptTags[scriptRun.attribute - scriptRuns.get()])));
+							frc, scriptTags[scriptRun.attribute - scriptRuns.get()])));
 				scriptPointers.push_back(&scriptRuns[scriptRun.attribute - scriptRuns.get()].a);
 				assert(nextScriptRun.position < textString.end());
 				scriptRun = nextScriptRun;
@@ -995,7 +1116,7 @@ void TextRunImpl::generate(const StringPiece& textString, const FontCollection& 
 						unique_ptr<RawGlyphVector>(
 							new RawGlyphVector(subRange.beginning(),
 								selectFont(subRange, fontCollection, styleRun.attribute.font),
-								scriptTags[scriptRun.attribute - scriptRuns.get()])));
+								frc, scriptTags[scriptRun.attribute - scriptRuns.get()])));
 				}
 				assert(nextStyleRun.position < textString.end());
 				styleRun = move(nextStyleRun);
@@ -1139,6 +1260,34 @@ HRESULT TextRunImpl::generateGlyphs(win32::Handle<HDC>::Type dc,
 	return hr;
 }
 
+/// @see GlyphVector#glyphLogicalBounds
+graphics::Rectangle TextRunImpl::glyphLogicalBounds(size_t index) const {
+	if(index >= numberOfGlyphs())
+		throw out_of_range("index");
+	const Scalar x = glyphLogicalPosition(index);
+	RenderingContext2D context(detail::screenDC());
+	unique_ptr<FontMetrics<Scalar>> fm(context.fontMetrics(font()));
+	const double sy = fontRenderContext().transform().scaleY() / context.fontRenderContext().transform().scaleY();
+	return graphics::Rectangle(
+		geometry::_top = -fm->ascent() * sy, geometry::_bottom = fm->descent() * sy + fm->internalLeading() * sy,
+		geometry::_left = x, geometry::_right = x + (justifiedAdvances() != nullptr) ? justifiedAdvances()[index] : advances()[index]);
+}
+
+inline Scalar TextRunImpl::glyphLogicalPosition(size_t index) const {
+	assert(index <= numberOfGlyphs());
+	const int* glyphAdvances = justifiedAdvances();
+	if(glyphAdvances == nullptr)
+		glyphAdvances = advances();
+	assert(glyphAdvances != nullptr);
+	int x = 0;
+	for(size_t i = 0, c = numberOfGlyphs(); i < c; ++i) {
+		if(i == index)
+			break;
+		x += glyphAdvances[i];
+	}
+	return static_cast<Scalar>(x);
+}
+
 /// @see GlyphVector#glyphPosition
 Point TextRunImpl::glyphPosition(size_t index) const {
 	return leadingEdge(index);
@@ -1168,38 +1317,25 @@ inline Range<size_t> TextRunImpl::glyphRange(const StringPiece& range /* = Strin
 }
 
 /// @see GlyphVector#glyphVisualBounds
-Rectangle TextRunImpl::glyphVisualBounds(size_t index) const {
-	FlowRelativeFourSides<float> bounds(glyphLogicalBounds(range));
-	if(isEmpty(range))
-		return bounds;
-
-	ABC glyphMeasure;
-	win32::Handle<HDC>::Type dc;
-	HFONT oldFont = nullptr;
-	HRESULT hr;
-	for(FlowRelativeFourSides<Scalar>::iterator i(begin(bounds)), e(std::end(bounds)); i != e; ++i) {
-		FlowRelativeDirection d = static_cast<FlowRelativeDirection>(i - begin(bounds));
-		if(d != START && d != END)
-			continue;
-		hr = ::ScriptGetGlyphABCWidth(dc.get(), &glyphs_->fontCache, glyphs_->indices[range.beginning()], &glyphMeasure);
-		if(hr == E_PENDING) {
-			dc = detail::screenDC();
-			oldFont = static_cast<HFONT>(::SelectObject(dc.get(), glyphs_->font->asNativeObject().get()));
-			hr = ::ScriptGetGlyphABCWidth(dc.get(), &glyphs_->fontCache, glyphs_->indices[range.beginning()], &glyphMeasure);
-		}
-		if(FAILED(hr)) {
-			if(oldFont != nullptr)
-				::SelectObject(dc.get(), oldFont);
-			throw makePlatformError(hr);
-		}
-		if(d == START)
-			bounds.start() += (direction() == LEFT_TO_RIGHT) ? glyphMeasure.abcA : glyphMeasure.abcC;
-		else
-			bounds.end() -= (direction() == LEFT_TO_RIGHT) ? glyphMeasure.abcC : glyphMeasure.abcA;
-	}
-	if(oldFont != nullptr)
-		::SelectObject(dc.get(), oldFont);
-	return bounds;
+graphics::Rectangle TextRunImpl::glyphVisualBounds(size_t index) const {
+	if(index >= numberOfGlyphs())
+		throw out_of_range("index");
+	Scalar originX = glyphLogicalPosition(index);
+	RenderingContext2D context(detail::screenDC());
+	shared_ptr<const Font> oldFont(context.font());
+	context.setFont(font());
+	GLYPHMETRICS gm;
+	const MAT2 matrix = {1, 0, 0, 1};
+	const DWORD n = ::GetGlyphOutlineW(context.asNativeObject().get(), glyphCode(index), GGO_GLYPH_INDEX | GGO_METRICS, &gm, 0, nullptr, &matrix);
+	context.setFont(oldFont);
+	if(n == GDI_ERROR)
+		throw makePlatformError();
+	const double sx = fontRenderContext().transform().scaleX() / context.fontRenderContext().transform().scaleX();
+	const double sy = fontRenderContext().transform().scaleY() / context.fontRenderContext().transform().scaleY();
+	const GOFFSET& offset = glyphOffsets()[index];
+	return graphics::Rectangle(
+		geometry::_left = originX - gm.gmptGlyphOrigin.x * sx + offset.du, geometry::_right = originX + gm.gmBlackBoxX * sx + offset.du,
+		geometry::_top = 0 - gm.gmptGlyphOrigin.y * sy + offset.dv, geometry::_bottom = 0 + gm.gmBlackBoxY * sy + offset.dv);
 }
 
 inline void TextRunImpl::hitTest(Scalar ipd, int& encompasses, int* trailing) const {
@@ -1211,6 +1347,31 @@ inline void TextRunImpl::hitTest(Scalar ipd, int& encompasses, int* trailing) co
 		throw makePlatformError(hr);
 	if(trailing != nullptr)
 		*trailing = encompasses + tr;
+}
+
+/**
+ * @internal Returns a @c TextHit corresponding to the specified position. Position outside the
+ * bounds of the @c TextRun maps to hits on the leading edge of the first logical character, or the
+ * trailing edge of the last logical character, as appropriate, regardless of the position of that
+ * character in the run.
+ * @param ipd The inline-progression dimension
+ * @param[out] outOfBounds @c true if @a point is out of the logical bounds of the @c TextRun. Can
+ *                         be @c null if not needed
+ * @return A hit describing the character and edge (leading or trailing) under the specified
+ *         position
+ * @see TextLayout#hitTestCharacter
+ */
+TextHit&& TextRunImpl::hitTestCharacter(Scalar ipd, bool* outOfBounds) const {
+}
+
+/**
+ * @internal Converts a hit to inline-progression dimension.
+ * @param hit The hit to check. This must be a valid hit on the @c TextRun
+ * @return The inline-progression dimension
+ * @throw std#invalid_argument @a hit is not valid for the @c TextRun
+ * @see TextLayout#hitToPoint
+ */
+Scalar TextRunImpl::hitToIpd(const TextHit& hit) const {
 }
 
 inline Scalar TextRunImpl::ipd(StringPiece::const_pointer character, bool trailing) const {
@@ -1455,17 +1616,19 @@ void TextRunImpl::paintGlyphs(PaintContext& context, const Point& origin, boost:
 	else if(isEmpty(*range))
 		return;
 
-	context.setFont(glyphs_->font);
+	context.setFont(font());
 //	RECT temp;
 //	if(dirtyRect != nullptr)
 //		::SetRect(&temp, dirtyRect->left(), dirtyRect->top(), dirtyRect->right(), dirtyRect->bottom());
 	if(onlyStroke && !win32::boole(::BeginPath(context.asNativeObject().get())))
 		throw makePlatformError();
 	assert(analysis_.fLogicalOrder == 0);
+	const RECT boundsToPaint(context.boundsToPaint());
 	const HRESULT hr = ::ScriptTextOut(context.asNativeObject().get(), &glyphs_->fontCache,
-		geometry::x(origin) + (analysis_.fRTL == 0) ?
-			leadingEdge(range->beginning()) : (measure(*this) - leadingEdge(range->end())),
-		geometry::y(origin) - context.fontMetrics(glyphs_->font)->ascent(), 0, &context.boundsToPaint(), &analysis_, nullptr, 0,
+		static_cast<int>(geometry::x(origin) + (analysis_.fRTL == 0) ?
+			leadingEdge(range->beginning()) : (measure(*this) - leadingEdge(range->end()))),
+		static_cast<int>(geometry::y(origin) - context.fontMetrics(font())->ascent()),
+		0, &boundsToPaint, &analysis_, nullptr, 0,
 		glyphs() + range->beginning(), ascension::length(*range), advances() + range->beginning(),
 		(justifiedAdvances() != nullptr) ? justifiedAdvances() + range->beginning() : nullptr,
 			glyphOffsets() + range->beginning());
@@ -1493,7 +1656,7 @@ void TextRunImpl::positionGlyphs(win32::Handle<HDC>::Type dc, const ComputedText
 	HRESULT hr = ::ScriptPlace(nullptr, &glyphs_->fontCache, glyphs_->indices.get(), numberOfGlyphs(),
 		glyphs_->visualAttributes.get(), &analysis_, advances.get(), offsets.get(), nullptr/*&width*/);
 	if(hr == E_PENDING) {
-		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), glyphs_->font->asNativeObject().get()));
+		HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font()->asNativeObject().get()));
 		hr = ::ScriptPlace(dc.get(), &glyphs_->fontCache, glyphs_->indices.get(), numberOfGlyphs(),
 			glyphs_->visualAttributes.get(), &analysis_, advances.get(), offsets.get(), nullptr/*&width*/);
 		::SelectObject(dc.get(), oldFont);
@@ -1597,8 +1760,8 @@ void TextRunImpl::shape(win32::Handle<HDC>::Type dc) {
 
 	// TODO: check if the requested style (or the default one) disables shaping.
 
-	RawGlyphVector glyphs(glyphs_->position, glyphs_->font, glyphs_->scriptTag);
-	HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), glyphs_->font->asNativeObject().get()));
+	RawGlyphVector glyphs(glyphs_->position, glyphs_->font.get().font(), glyphs_->font.get().fontRenderContext(), glyphs_->scriptTag);
+	HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font()->asNativeObject().get()));
 	HRESULT hr = generateGlyphs(dc, *this, analysis_, glyphs);
 	if(hr == USP_E_SCRIPT_NOT_IN_FONT) {
 		analysis_.eScript = SCRIPT_UNDEFINED;
@@ -1950,7 +2113,7 @@ unique_ptr<TextRunImpl> TextRunImpl::splitIfTooLong() {
 	}
 
 	unique_ptr<TextRunImpl> following(new TextRunImpl(
-		StringPiece(beginning() + opportunity, end()), analysis_, glyphs_->font, glyphs_->scriptTag, style()));
+		StringPiece(beginning() + opportunity, end()), analysis_, glyphs_->font.get().font(), glyphs_->font.get().fontRenderContext(), glyphs_->scriptTag, style()));
 	static_cast<StringPiece&>(*this) = StringPiece(beginning(), beginning() + opportunity);
 	analysis_.fLinkAfter = following->analysis_.fLinkBefore = 0;
 	return following;
@@ -1993,11 +2156,11 @@ void TextRunImpl::substituteGlyphs(const Range<vector<TextRunImpl*>::iterator>& 
 					if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
 						StringCharacterIterator baseCharacter(i);
 						baseCharacter.previous();
-						if(run.glyphs_->font->ivsGlyph(
+						if(run.font()->ivsGlyph(
 								baseCharacter.current(), variationSelector,
 								run.glyphs_->indices[run.glyphs_->clusters[baseCharacter.tell() - run.beginning()]])) {
-							run.glyphs_->vanish(*run.glyphs_->font, i.tell());
-							run.glyphs_->vanish(*run.glyphs_->font, i.tell() + 1);
+							run.glyphs_->vanish(*run.font(), i.tell());
+							run.glyphs_->vanish(*run.font(), i.tell() + 1);
 						}
 					}
 				}
@@ -2009,10 +2172,10 @@ void TextRunImpl::substituteGlyphs(const Range<vector<TextRunImpl*>::iterator>& 
 				const CodePoint variationSelector = utf::decodeFirst(next.beginning(), next.beginning() + 2);
 				if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
 					const CodePoint baseCharacter = utf::decodeLast(run.beginning(), run.end());
-					if(run.glyphs_->font->ivsGlyph(baseCharacter, variationSelector,
+					if(run.font()->ivsGlyph(baseCharacter, variationSelector,
 							run.glyphs_->indices[run.glyphs_->clusters[length(run) - 1]])) {
-						next.glyphs_->vanish(*run.glyphs_->font, next.beginning());
-						next.glyphs_->vanish(*run.glyphs_->font, next.beginning() + 1);
+						next.glyphs_->vanish(*run.font(), next.beginning());
+						next.glyphs_->vanish(*run.font(), next.beginning() + 1);
 					}
 				}
 			}
@@ -2175,9 +2338,11 @@ namespace {
  * @param lineStyle The computed text line style
  * @param textRunStyles The computed text runs styles
  * @param fontCollection The font collection
+ * @param fontRenderContext Information about a graphics device which is needed to measure the text
+ *                          correctly
  */
 TextLayout::TextLayout(const String& textString, const ComputedTextLineStyle& lineStyle,
-		std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles, const FontCollection& fontCollection)
+		std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles, const FontCollection& fontCollection, const FontRenderContext& fontRenderContext)
 		: textString_(textString), lineStyle_(lineStyle), numberOfLines_(0) {
 
 	// handle logically empty line
@@ -2210,7 +2375,7 @@ TextLayout::TextLayout(const String& textString, const ComputedTextLineStyle& li
 	// 2. split each script runs into text runs with StyledRunIterator
 	vector<TextRunImpl*> textRuns;
 	vector<AttributedCharacterRange<ComputedTextRunStyle>> calculatedStyles;
-	TextRunImpl::generate(textString_, fontCollection, lineStyle_, move(textRunStyles), textRuns, calculatedStyles);
+	TextRunImpl::generate(textString_, lineStyle_, move(textRunStyles), fontCollection, fontRenderContext, textRuns, calculatedStyles);
 //	runs_.reset(new TextRun*[numberOfRuns_ = textRuns.size()]);
 //	copy(textRuns.begin(), textRuns.end(), runs_.get());
 //	shrinkToFit(styledRanges_);
@@ -2276,13 +2441,14 @@ TextLayout::TextLayout(const String& textString, const ComputedTextLineStyle& li
  * @throw kernel#BadPositionException @a range intersects with the outside of the line
  * @see #bounds(void), #bounds(Index, Index), #lineBounds, #lineStartEdge
  */
-boost::geometry::model::polygon<Point> TextLayout::blackBoxBounds(const Range<Index>& characterRange) const {
+boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& TextLayout::blackBoxBounds(const Range<Index>& characterRange) const {
 	if(characterRange.end() > textString_.length())
 		throw kernel::BadPositionException(kernel::Position(0, characterRange.end()));
+	boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>> result;
 
 	// handle empty line
 	if(isEmpty())
-		return win32::Handle<HRGN>::Type(::CreateRectRgn(0, 0, 0, lineMetrics_[0]->height()), &::DeleteObject);
+		return move(result);
 
 	// compute abstract bounds
 	const Index firstLine = lineAt(characterRange.beginning()), lastLine = lineAt(characterRange.end());
@@ -2291,7 +2457,7 @@ boost::geometry::model::polygon<Point> TextLayout::blackBoxBounds(const Range<In
 		const RunVector::const_iterator lastRun(
 			(line + 1 < numberOfLines()) ? firstRunInLine(line + 1) : std::end(runs_));
 		FlowRelativeFourSides<Scalar> boundsToAppend;
-		boundsToAppend.before() = baseline(line)/*- lineMetrics_[firstLine]->leading()*/ - lineMetrics_[line]->ascent();
+		boundsToAppend.before() = baseline(line)/*- lineMetrics_[firstLine]->leading()*/ - lineMetrics_[line].ascent;
 		boundsToAppend.after() = boundsToAppend.before() + lineMetrics_[line]->height();
 		const Scalar lineStart = lineStartEdge(line);
 
@@ -2343,22 +2509,22 @@ FlowRelativeFourSides<Scalar> TextLayout::bounds(const Range<Index>& characterRa
 
 	if(isEmpty()) {	// empty line
 		result.start() = result.end() = 0;
-		result.before() = -lineMetrics(0).ascent()/* - lineMetrics(0).leading()*/;
-		result.after() = lineMetrics(0).descent();
+		result.before() = -lineMetrics_[0].ascent;
+		result.after() = lineMetrics_[0].descent/* + lineMetrics_[0].leading*/;
 	} else if(ascension::isEmpty(characterRange)) {	// an empty rectangle for an empty range
-		const LineMetrics& line = lineMetrics(lineAt(characterRange.beginning()));
+		const LineMetrics& line = lineMetrics_[lineAt(characterRange.beginning())];
 		const AbstractTwoAxes<Scalar> leading(location(TextHit::leading(characterRange.beginning())));
 		FlowRelativeFourSides<Scalar> sides;
-		sides.before() = leading.bpd() - line.ascent();
-		sides.after() = leading.bpd() + line.descent();
+		sides.before() = leading.bpd() - line.ascent;
+		sides.after() = leading.bpd() + line.descent/* + line.leading*/;
 		sides.start() = sides.end() = leading.ipd();
 		return sides;
 	} else {
 		const Index firstLine = lineAt(characterRange.beginning()), lastLine = lineAt(characterRange.end());
 
 		// calculate the block-progression-edges ('before' and 'after'; it's so easy)
-		result.before() = baseline(firstLine) - lineMetrics(firstLine).ascent()/* - lineMetrics(firstLine).leading()*/;
-		result.after() = baseline(lastLine) + lineMetrics(lastLine).descent();
+		result.before() = baseline(firstLine) - lineMetrics_[firstLine].ascent;
+		result.after() = baseline(lastLine) + lineMetrics_[lastLine].descent/* + lineMetrics_[firstLine].leading*/;
 
 		// calculate start-edge and end-edge of fully covered lines
 		const bool firstLineIsFullyCovered = includes(characterRange,
@@ -2429,7 +2595,7 @@ namespace {
  * @param lineWrappingMark The inline object which paints line-wrapping-mark. Can be @c null
  */
 void TextLayout::draw(PaintContext& context,
-		const NativePoint& origin, const TextPaintOverride* paintOverride /* = nullptr */,
+		const Point& origin, const TextPaintOverride* paintOverride /* = nullptr */,
 		const InlineObject* endOfLine/* = nullptr */, const InlineObject* lineWrappingMark /* = nullptr */) const {
 
 #if /*defined(_DEBUG)*/ 0
@@ -2462,16 +2628,16 @@ void TextLayout::draw(PaintContext& context,
 	// 1. calculate lines to paint
 	Range<Index> linesToPaint(0, numberOfLines());
 	{
-		NativePoint originDistance(origin);
+		Dimension originDistance(geometry::_dx = geometry::x(origin), geometry::_dy = geometry::y(origin));
 		geometry::negate(originDistance);
-		NativeRectangle boundsToPaint(context.boundsToPaint());
+		graphics::Rectangle boundsToPaint(context.boundsToPaint());
 		geometry::translate(boundsToPaint, originDistance);
 		const FlowRelativeFourSides<Scalar> abstractBoundsToPaint(	// relative to the alignment point of this layout
 			mapPhysicalToFlowRelative<Scalar>(writingMode(), PhysicalFourSides<Scalar>(boundsToPaint)));
 		for(Index line = linesToPaint.beginning(); line < linesToPaint.end(); ++line) {
 			const Scalar bpd = baseline(line);
-			const Scalar lineBeforeEdge = bpd - lineMetrics_[line]->ascent();
-			const Scalar lineAfterEdge = bpd + lineMetrics_[line]->descent();
+			const Scalar lineBeforeEdge = bpd - lineMetrics_[line].ascent;
+			const Scalar lineAfterEdge = bpd + lineMetrics_[line].descent;
 			if(lineBeforeEdge <= abstractBoundsToPaint.before() && lineAfterEdge > abstractBoundsToPaint.before())
 				linesToPaint = makeRange(line, linesToPaint.end());
 			if(lineBeforeEdge <= abstractBoundsToPaint.after() && lineAfterEdge > abstractBoundsToPaint.after()) {
@@ -2494,22 +2660,22 @@ void TextLayout::draw(PaintContext& context,
 
 	// 2. paint backgrounds and borders
 	const bool horizontalLayout = isHorizontal(writingMode().blockFlowDirection);
-	vector<tuple<const reference_wrapper<const TextRunImpl>, const NativeRectangle, const NativePoint>> textRunsToPaint;
+	vector<tuple<const reference_wrapper<const TextRunImpl>, const graphics::Rectangle, const Point>> textRunsToPaint;
 	for(Index line = linesToPaint.beginning(); line < linesToPaint.end(); ++line) {
-		NativePoint p(origin);	// a point at which baseline and (logical) 'line-left' edge of 'allocation-rectangle' of text run
+		Point p(origin);	// a point at which baseline and (logical) 'line-left' edge of 'allocation-rectangle' of text run
 		Scalar over, under;		// 'over' and 'under' edges of this line (x for vertical layout or y for horizontal layout)
 
 		// move 'p' to start of line and compute 'over/under' of line
 		if(horizontalLayout) {
 			geometry::x(p) += (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? lineStartEdge(line) : -(lineStartEdge(line) + measure(line));
 			geometry::y(p) += baseline(line);
-			over = geometry::y(p) - lineMetrics(line).ascent();
-			under = geometry::y(p) + lineMetrics(line).descent();
+			over = geometry::y(p) - lineMetrics_[line].ascent;
+			under = geometry::y(p) + lineMetrics_[line].descent;
 		} else {
 			assert(isVertical(writingMode().blockFlowDirection));
 			geometry::x(p) += (writingMode().blockFlowDirection == VERTICAL_RL) ? -baseline(line) : baseline(line);
-			over = geometry::x(p) + lineMetrics(line).ascent();
-			under = geometry::x(p) - lineMetrics(line).descent();
+			over = geometry::x(p) + lineMetrics_[line].ascent;
+			under = geometry::x(p) - lineMetrics_[line].descent;
 			if(resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT)
 				geometry::y(p) += (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? lineStartEdge(line) : -(lineStartEdge(line) + measure(line));
 			else {
@@ -2519,11 +2685,11 @@ void TextLayout::draw(PaintContext& context,
 		}
 
 		const RunVector::const_iterator lastRun((line + 1 < numberOfLines()) ? firstRunInLine(line + 1) : runs_.end());
-		NativeRectangle allocationRectangle;
+		graphics::Rectangle allocationRectangle;
 		if(horizontalLayout)
-			geometry::range<geometry::Y_COORDINATE>(allocationRectangle) = makeRange(over, under);
+			geometry::range<1>(allocationRectangle) = makeRange(over, under);
 		else
-			geometry::range<geometry::X_COORDINATE>(allocationRectangle) = makeRange(over, under);
+			geometry::range<0>(allocationRectangle) = makeRange(over, under);
 //		context.setGlobalAlpha(1.0);
 //		context.setGlobalCompositeOperation(SOURCE_OVER);
 		for(RunVector::const_iterator i(firstRunInLine(line)); i < lastRun; ++i) {
@@ -2539,14 +2705,14 @@ void TextLayout::draw(PaintContext& context,
 
 			// compute next position of 'p', 'border-box' and 'allocation-box'
 			const TextRunImpl& textRun = *static_cast<const TextRunImpl*>(i->get());
-			NativePoint q(p);
+			Point q(p);
 			if(horizontalLayout)
 				geometry::x(q) += allocationMeasure(textRun);
 			else if(resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT)
 				geometry::y(q) += allocationMeasure(textRun);
 			else
 				geometry::y(q) -= allocationMeasure(textRun);
-			bool skipThisRun = geometry::equals(q, p);	// skip empty box
+			bool skipThisRun = boost::geometry::equals(q, p);	// skip empty box
 
 			// check if this text run intersects with bounds to paint
 			// TODO: Consider overhangs.
@@ -2557,52 +2723,52 @@ void TextLayout::draw(PaintContext& context,
 			if(!skipThisRun) {
 				// 2-1. paint 'allocation-rectangle'
 				if(horizontalLayout)
-					geometry::range<geometry::X_COORDINATE>(allocationRectangle) = makeRange(geometry::x(p), geometry::x(q));
+					geometry::range<0>(allocationRectangle) = makeRange(geometry::x(p), geometry::x(q));
 				else
-					geometry::range<geometry::Y_COORDINATE>(allocationRectangle) = makeRange(geometry::y(p), geometry::y(q));
+					geometry::range<1>(allocationRectangle) = makeRange(geometry::y(p), geometry::y(q));
 				context.setFillStyle(lineStyle_.get().background);
 				context.fillRectangle(allocationRectangle);
 
 				// 2-2. compute 'content-rectangle'
 				const FlowRelativeFourSides<Scalar> abstractContentBox(contentBox(textRun)), abstractAllocationBox(allocationBox(textRun));
-				NativeRectangle contentRectangle;
+				graphics::Rectangle contentRectangle;
 				if(horizontalLayout) {
 					if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT)
-						geometry::range<geometry::X_COORDINATE>(contentRectangle) = makeRange(
+						geometry::range<0>(contentRectangle) = makeRange(
 							geometry::x(p) + abstractContentBox.start() - abstractAllocationBox.start(),
 							geometry::x(p) + abstractContentBox.end() - abstractAllocationBox.start());
 					else
-						geometry::range<geometry::X_COORDINATE>(contentRectangle) = makeRange(
+						geometry::range<0>(contentRectangle) = makeRange(
 							geometry::x(p) + abstractContentBox.end() - abstractAllocationBox.end(),
 							geometry::x(p) + abstractContentBox.start() - abstractAllocationBox.end());
-					geometry::range<geometry::Y_COORDINATE>(contentRectangle) =
+					geometry::range<1>(contentRectangle) =
 						makeRange(geometry::y(p) + abstractContentBox.before(), geometry::y(p) + abstractContentBox.after());
 				} else {
 					if(writingMode().blockFlowDirection == VERTICAL_RL)
-						geometry::range<geometry::X_COORDINATE>(contentRectangle) =
+						geometry::range<0>(contentRectangle) =
 							makeRange(geometry::x(p) - abstractContentBox.before(), geometry::x(p) - abstractContentBox.after());
 					else {
 						assert(writingMode().blockFlowDirection == VERTICAL_LR);
-						geometry::range<geometry::X_COORDINATE>(contentRectangle) =
+						geometry::range<0>(contentRectangle) =
 							makeRange(geometry::x(p) + abstractContentBox.before(), geometry::x(p) + abstractContentBox.after());
 					}
 					bool ttb = writingMode().inlineFlowDirection == LEFT_TO_RIGHT;
 					ttb = (resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT) ? ttb : !ttb;
 					if(ttb)	// ttb
-						geometry::range<geometry::Y_COORDINATE>(contentRectangle) = makeRange(
+						geometry::range<1>(contentRectangle) = makeRange(
 							geometry::y(p) + abstractContentBox.start() - abstractAllocationBox.start(),
 							geometry::y(p) + abstractContentBox.end() - abstractAllocationBox.start());
 					else	// btt
-						geometry::range<geometry::Y_COORDINATE>(contentRectangle) = makeRange(
+						geometry::range<1>(contentRectangle) = makeRange(
 							geometry::y(p) + abstractContentBox.end() - abstractAllocationBox.end(),
 							geometry::y(p) + abstractContentBox.start() - abstractAllocationBox.end());
 				}
 
 				// compute 'border-rectangle' if needed
-				const NativePoint& alignmentPoint = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? p : q;
-				NativeRectangle borderRectangle;
+				const Point& alignmentPoint = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? p : q;
+				graphics::Rectangle borderRectangle;
 				if(textRun.style().background || borderShouldBePainted(textRun.style().border))
-					borderRectangle = geometry::make<NativeRectangle>(
+					borderRectangle = geometry::make<graphics::Rectangle>(
 						mapFlowRelativeToPhysical(writingMode(), borderBox(textRun), PhysicalTwoAxes<Scalar>(alignmentPoint)));
 
 				// 2-3. paint background
@@ -2753,23 +2919,6 @@ void TextLayout::draw(PaintContext& context,
 	}
 	context.restore();
 }
-
-#ifdef _DEBUG
-/**
- * Dumps the all runs to the specified output stream.
- * @param out The output stream
- */
-void TextLayout::dumpRuns(ostream& out) const {
-	const RunVector::const_iterator b(begin(runs_)), e(end(runs_));
-	const String::const_pointer backingStore = textString_.data();
-	for(RunVector::const_iterator i(b); i != e; ++i) {
-		const TextRunImpl& textRun = *static_cast<const TextRunImpl*>(i->get());
-		out << static_cast<unsigned int>(i - b)
-			<< ": [" << static_cast<unsigned int>(textRun.beginning() - backingStore)
-			<< "," << static_cast<unsigned int>(textRun.end() - backingStore) << ")" << std::endl;
-	}
-}
-#endif // _DEBUG
 #if 0
 /// Expands the all tabs and resolves each width.
 inline void TextLayout::expandTabsWithoutWrapping() /*throw()*/ {
@@ -2803,7 +2952,7 @@ inline void TextLayout::expandTabsWithoutWrapping() /*throw()*/ {
  * @deprecated 0.8
  * @note This does not support line wrapping and bidirectional context.
  */
-String TextLayout::fillToX(int x) const {
+String TextLayout::fillToX(Scalar x) const {
 #if 0
 	int cx = longestLineWidth();
 	if(cx >= x)
@@ -2842,134 +2991,25 @@ String TextLayout::fillToX(int x) const {
 #endif
 }
 
-/**
- * @internal Returns the text run containing the specified offset in this layout.
- * @param offset The offset in this layout
- * @return An iterator addresses the text run
- * @note If @a offset is equal to the length of this layout, returns the last text run.
- */
-inline TextLayout::RunVector::const_iterator TextLayout::runForPosition(Index offset) const BOOST_NOEXCEPT {
-	assert(!isEmpty());
-	if(offset == textString_.length())
-		return end(runs_) - 1;
-	const String::const_pointer p(textString_.data() + offset);
-	const Index line = lineAt(offset);
-	const RunVector::const_iterator lastRun(firstRunInLine(line + 1));
-	for(RunVector::const_iterator i(firstRunInLine(line)); i < lastRun; ++i) {
-		if(includes(*static_cast<const TextRunImpl*>(i->get()), p))
-			return i;
-	}
-	ASCENSION_ASSERT_NOT_REACHED();
-}
+AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit& hit) const {
+	if(hit.characterIndex() >= textString_.length())
+		throw out_of_range("hit");
 
-/// Justifies the wrapped visual lines.
-inline void TextLayout::justify(Scalar lineMeasure, TextJustification) /*throw()*/ {
-	for(Index line = 0; line < numberOfLines(); ++line) {
-		const int ipd = measure(line);
-		for(auto i(firstRunInLine(line)), e(firstRunInLine(line + 1)); i != e; ++i) {
-			TextRunImpl& run = *const_cast<TextRunImpl*>(static_cast<const TextRunImpl*>(i->get()));
-			const int newRunMeasure = ::MulDiv(allocationMeasure(run), lineMeasure, ipd);	// TODO: There is more precise way.
-			run.justify(newRunMeasure);
-		}
-	}
-}
-
-/**
- * Returns the offset for the first character in the specified line.
- * @param line The visual line number
- * @return The offset
- * @throw BadPositionException @a line is greater than the number of lines
- * @see #lineOffsets
- * @note Designed based on @c org.eclipse.swt.graphics.TextLayout.lineOffsets method in Eclipse.
- */
-Index TextLayout::lineOffset(Index line) const {
-	if(line >= numberOfLines())
-		throw kernel::BadPositionException(kernel::Position(line, 0));
-	return static_cast<const TextRunImpl*>(firstRunInLine(line)->get())->beginning() - textString_.data();
-}
-
-/**
- * Returns the line offsets. Each value in the vector is the offset for the first character in a
- * line except for the last value, which contains the length of the text.
- * @return The line offsets whose length is @c #numberOfLines(). Each element in the
- *         array is the offset for the first character in a line
- * @note Designed based on @c org.eclipse.swt.graphics.TextLayout.lineOffsets method in Eclipse.
- */
-vector<Index>&& TextLayout::lineOffsets() const BOOST_NOEXCEPT {
-	const String::const_pointer bol = textString_.data();
-	vector<Index> offsets;
-	offsets.reserve(numberOfLines() + 1);
-	for(Index line = 0; line < numberOfLines(); ++line)
-		offsets.push_back(static_cast<const TextRunImpl*>(firstRunInLine(line)->get())->beginning() - bol);
-	offsets.push_back(textString_.length());
-	return move(offsets);
-}
-
-/**
- * @internal Converts an inline-progression-dimension into character offset(s) in the line.
- * @param line The line number
- * @param ipd The inline-progression-dimension
- * @param[out] outside @c true if @a ipd is outside of the line content
- * @return See the documentation of @c #offset method
- * @throw IndexOutOfBoundsException @a line is invalid
- */
-pair<Index, Index> TextLayout::locateOffsets(Index line, Scalar ipd, bool& outside) const {
-	if(isEmpty())
-		return (outside = true), make_pair(static_cast<Index>(0), static_cast<Index>(0));
-
-	const Range<const RunVector::const_iterator> runsInLine(firstRunInLine(line), firstRunInLine(line + 1));
-	const StringPiece characterRangeInLine(static_cast<const TextRunImpl*>(runsInLine.beginning()->get())->beginning(), lineLength(line));
-	assert(characterRangeInLine.end() == static_cast<const TextRunImpl*>((runsInLine.end() - 1)->get())->end());
-
-	const Scalar lineStart = lineStartEdge(line);
-	if(ipd < lineStart) {
-		const Index offset = characterRangeInLine.beginning() - textString_.data();
-		return (outside = true), make_pair(offset, offset);
-	}
-	outside = ipd > lineStart + measure(line);	// beyond line 'end-edge'
-
-	if(!outside) {
-		Scalar x = ipd - lineStart, dx = 0;
-		if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
-			x = measure(line) - x;
-		for(RunVector::const_iterator run(runsInLine.beginning()); run != runsInLine.end(); ++run) {
-			const Scalar nextDx = dx + allocationMeasure(**run);
-			if(nextDx >= x) {
-				const Scalar ipdInRun = ((*run)->direction() == LEFT_TO_RIGHT) ? x - dx : nextDx - x;
-				return make_pair(boost::get((*run)->characterEncompassesPosition(ipdInRun)), (*run)->characterHasClosestLeadingEdge(ipdInRun));
-			}
-		}
-	}
-
-	// maybe beyond line 'end-edge'
-	const Index offset = characterRangeInLine.end() - textString_.data();
-	return make_pair(offset, offset);
-}
-
-// implements public location methods
-void TextLayout::locations(Index offset, AbstractTwoAxes<Scalar>* leading, AbstractTwoAxes<Scalar>* trailing) const {
-	assert(leading != nullptr || trailing != nullptr);
-	if(offset > textString_.length())
-		throw kernel::BadPositionException(kernel::Position(0, offset));
-
-	Scalar leadingIpd, trailingIpd, bpd = 0/* + lineMetrics_[0]->leading()*/;
+	Scalar ipd, bpd = 0/* + lineMetrics_[0].leading*/;
 	if(isEmpty()) {
-		leadingIpd = trailingIpd = 0;
-		bpd += lineMetrics_[0]->ascent();
+		ipd = 0;
+		bpd += lineMetrics_[0].ascent;
 	} else {
 		// inline-progression-dimension
-		const StringPiece::const_pointer at = textString_.data() + offset;
-		const Index line = lineAt(offset);
+		const StringPiece::const_pointer at = textString_.data() + hit.characterIndex();
+		const Index line = lineAt(hit.characterIndex());
 		const Range<const RunVector::const_iterator> runsInLine(firstRunInLine(line), firstRunInLine(line + 1));
 		if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) {	// LTR
-			Scalar ipd = lineStartEdge(line);
+			ipd = lineStartEdge(line);
 			for(RunVector::const_iterator i(runsInLine.beginning()); i != runsInLine.end(); ++i) {
 				const TextRunImpl& run = *static_cast<const TextRunImpl*>(i->get());	// TODO: Down-cast.
-				if(at >= run.beginning() && at <= run.end()) {
-					if(leading != nullptr)
-						leadingIpd = ipd + run.leadingEdge(at - run.beginning());
-					if(trailing != nullptr)
-						trailingIpd = ipd + run.trailingEdge(at - run.beginning());
+				if(at >= run.beginning() && at < run.end()) {
+					ipd += hit.isLeadingEdge() ? run.leadingEdge(at - run.beginning()) : run.trailingEdge(at - run.beginning());
 					break;
 				}
 				ipd += allocationMeasure(run);
@@ -2978,11 +3018,8 @@ void TextLayout::locations(Index offset, AbstractTwoAxes<Scalar>* leading, Abstr
 			Scalar ipd = lineStartEdge(line);
 			for(RunVector::const_iterator i(runsInLine.end() - 1); ; --i) {
 				const TextRunImpl& run = *static_cast<const TextRunImpl*>(i->get());	// TODO: Down-cast.
-				if(at >= run.beginning() && at <= run.end()) {
-					if(leading != nullptr)
-						leadingIpd = ipd + run.leadingEdge(at - run.beginning());
-					if(trailing != nullptr)
-						trailingIpd = ipd + run.trailingEdge(at - run.beginning());
+				if(at >= run.beginning() && at < run.end()) {
+					ipd += hit.isLeadingEdge() ? run.leadingEdge(at - run.beginning()) : run.trailingEdge(at - run.beginning());
 					break;
 				}
 				if(i == runsInLine.beginning()) {
@@ -2996,35 +3033,61 @@ void TextLayout::locations(Index offset, AbstractTwoAxes<Scalar>* leading, Abstr
 		// block-progression-dimension
 		bpd += baseline(line);
 	}
-		
-	// return the result(s)
-	if(leading != nullptr) {
-		leading->ipd() = leadingIpd;
-		leading->bpd() = bpd;
-	}
-	if(trailing != nullptr) {
-		trailing->ipd() = trailingIpd;
-		trailing->bpd() = bpd;
-	}
+
+	return AbstractTwoAxes<Scalar>(_ipd = ipd, _bpd = bpd);
 }
 
-/**
- * Returns the hit test information corresponding to the specified point.
- * @param p The point
- * @param[out] outside @c true if the specified point is outside of the layout
- * @return A pair of the character offsets. The first element addresses the character whose black
- *         box (bounding box) encompasses the specified point. The second element addresses the
- *         character whose leading point is the closest to the specified point in the line
- * @see #locateLine, #location
- */
-pair<Index, Index> TextLayout::offset(const NativePoint& p, bool* outside /* = nullptr */) const /*throw()*/ {
-	const bool vertical = isVertical(writingMode().blockFlowDirection);
-	bool outsides[2];
-	const std::pair<Index, Index> result(locateOffsets(locateLine(
-		vertical ? geometry::x(p) : geometry::y(p), outsides[0]), vertical ? geometry::y(p) : geometry::x(p), outsides[1]));
-	if(outside != nullptr)
-		*outside = outsides[0] | outsides[1];
-	return result;
+/// @internal Implements @c #hitTestCharacter methods.
+TextHit&& TextLayout::internalHitTestCharacter(const AbstractTwoAxes<Scalar>& point, const FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const {
+	bool outside;
+	const Index line = locateLine(point.bpd(), outside);
+
+	const Range<const RunVector::const_iterator> runsInLine(firstRunInLine(line), firstRunInLine(line + 1));
+	const StringPiece characterRangeInLine((*runsInLine.beginning())->characterRange().beginning(), lineLength(line));
+	assert(characterRangeInLine.end() == runsInLine.end()[-1]->characterRange().end());
+
+	const Scalar lineStart = lineStartEdge(line);
+	if(point.ipd() < lineStart) {
+		if(outOfBounds != nullptr)
+			*outOfBounds = true;
+		return TextHit::leading(characterRangeInLine.beginning() - textString_.data());
+	}
+	outside = point.ipd() > lineStart + measure(line);	// beyond line 'end-edge'
+
+	if(!outside) {
+		Scalar x = point.ipd() - lineStart, runLeft = 0;
+		if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
+			x = measure(line) - x;
+		for(RunVector::const_iterator run(runsInLine.beginning()); run != runsInLine.end(); ++run) {
+			const Scalar runRight = runLeft + allocationMeasure(**run);
+			if(runRight >= x) {
+				const TextRunImpl& textRun = *static_cast<const TextRunImpl*>(run->get());	// TODO: Down-cast.
+				TextHit hit(textRun.hitTestCharacter(((*run)->direction() == LEFT_TO_RIGHT) ? x - runLeft : runRight - x, outOfBounds));
+				if(outside && outOfBounds != nullptr)
+					*outOfBounds = true;
+				const Index position = (*run)->characterRange().beginning() - textString_.data() + hit.characterIndex();
+				return hit.isLeadingEdge() ? TextHit::leading(position) : TextHit::trailing(position);
+			}
+			runLeft = runRight;
+		}
+	}
+
+	// maybe beyond line 'end-edge'
+	if(outOfBounds != nullptr)
+		*outOfBounds = true;
+	return TextHit::trailing((characterRangeInLine.end() - textString_.data()) - 1);
+}
+
+/// Justifies the wrapped visual lines.
+inline void TextLayout::justify(Scalar lineMeasure, TextJustification) /*throw()*/ {
+	for(Index line = 0; line < numberOfLines(); ++line) {
+		const Scalar ipd = measure(line);
+		for(auto i(firstRunInLine(line)), e(firstRunInLine(line + 1)); i != e; ++i) {
+			TextRunImpl& run = *const_cast<TextRunImpl*>(static_cast<const TextRunImpl*>(i->get()));
+			const Scalar newRunMeasure = allocationMeasure(run) * lineMeasure / ipd;	// TODO: There is more precise way.
+			run.justify(newRunMeasure);
+		}
+	}
 }
 
 /// Reorders the runs in visual order.
@@ -3050,71 +3113,7 @@ inline void TextLayout::reorder() {
 		i->release();
 	for(RunVector::size_type i = 0, c(runs_.size()); i < c; ++i)
 		runs_[i].reset(reordered[i]);
-}
-
-/**
- * Stacks the line boxes and compute the line metrics.
- * @param context
- * @param lineHeight
- * @param lineStackingStrategy
- * @param nominalFont
- */
-void TextLayout::stackLines(const RenderingContext2D& context, boost::optional<Scalar> lineHeight, LineBoxContain lineBoxContain, const Font& nominalFont) {
-	// TODO: this code is temporary. should rewrite later.
-	assert(numberOfLines() > 1);
-	unique_ptr<LineMetrics[]> newLineMetrics(new LineMetrics[numberOfLines()]);
-	// calculate allocation-rectangle of the lines according to line-stacking-strategy
-	const unique_ptr<const FontMetrics<Scalar>> nominalFontMetrics(context.fontMetrics(nominalFont.shared_from_this()));
-	const Scalar textAltitude = nominalFontMetrics->ascent();
-	const Scalar textDepth = nominalFontMetrics->descent();
-	for(Index line = 0; line < numberOfLines(); ++line) {
-		// calculate extent of the line in block-progression-direction
-		Scalar ascent, descent;
-#if 0
-		switch(lineBoxContain) {
-			case LINE_HEIGHT: {
-				// allocation-rectangle of line is per-inline-height-rectangle
-				Scalar leading = lineHeight - (textAltitude + textDepth);
-				ascent = textAltitude + (leading - leading / 2);
-				descent = textDepth + leading / 2;
-				const RunVector::const_iterator lastRun(firstRunInLine(line + 1));
-				for(RunVector::const_iterator run(firstRunInLine(line)); run != lastRun; ++run) {
-					leading = lineHeight - nominalFont.metrics()->cellHeight();
-					ascent = max((*run)->font()->metrics()->ascent() - (leading - leading / 2), ascent);
-					descent = max((*run)->font()->metrics()->descent() - leading / 2, descent);
-				}
-				break;
-			}
-			case FONT_HEIGHT:
-				// allocation-rectangle of line is nominal-requested-line-rectangle
-				ascent = textAltitude;
-				descent = textDepth;
-				break;
-			case MAX_HEIGHT: {
-				// allocation-rectangle of line is maximum-line-rectangle
-				ascent = textAltitude;
-				descent = textDepth;
-				const RunVector::const_iterator lastRun(firstRunInLine(line + 1));
-				for(RunVector::const_iterator run(firstRunInLine(line)); run != lastRun; ++run) {
-					ascent = max((*run)->font()->metrics()->ascent(), ascent);
-					descent = max((*run)->font()->metrics()->descent(), descent);
-				}
-				break;
-			}
-			default:
-				ASCENSION_ASSERT_NOT_REACHED();
-		}
-#else
-		ascent = textAltitude;
-		descent = textDepth;
-#endif
-		newLineMetrics[line].ascent = ascent;
-		newLineMetrics[line].descent = descent;
-		newLineMetrics[line].leading = 0;
-	}
-}
-
-/**
+}/**
  * @internal Locates the wrap points and resolves tab expansions.
  * @param measure
  * @param tabExpander

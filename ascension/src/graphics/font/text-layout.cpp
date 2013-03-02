@@ -10,6 +10,7 @@
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>
+#include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-layout-styles.hpp>
 #include <ascension/graphics/font/text-run.hpp>
@@ -189,9 +190,9 @@ Scalar TextLayout::baseline(Index line) const {
 		return 0;
 	Scalar result = 0;
 	for(Index i = 1; i <= line; ++i) {
-		const LineMetrics& preceding = lineMetrics(i - 1);
+		const LineMetrics& preceding = lineMetrics_[i - 1];
 		result += preceding.descent + preceding.leading;
-		result += lineMetrics(i).ascent;
+		result += lineMetrics_[i].ascent;
 	}
 	return result;
 }
@@ -205,12 +206,12 @@ Scalar TextLayout::baseline(Index line) const {
 FlowRelativeFourSides<Scalar> TextLayout::bounds() const BOOST_NOEXCEPT {
 	// TODO: this implementation can't handle vertical text.
 	FlowRelativeFourSides<Scalar> result;
-	result.before() = /*-lineMetrics(0).leading()*/ - lineMetrics(0).ascent;
+	result.before() = /*-lineMetrics(0).leading()*/ - lineMetrics_[0].ascent;
 	result.after() = result.before();
 	result.start() = numeric_limits<Scalar>::max();
 	result.end() = numeric_limits<Scalar>::min();
 	for(Index line = 0; line < numberOfLines(); ++line) {
-		const LineMetrics& lm = lineMetrics(line);
+		const LineMetrics& lm = lineMetrics_[line];
 		result.after() += lm.ascent + lm.descent + lm.leading;
 		const Scalar lineStart = lineStartEdge(line);
 		result.start() = min(lineStart, result.start());
@@ -237,6 +238,23 @@ uint8_t TextLayout::characterLevel(Index offset) const {
 		throw kernel::BadPositionException(kernel::Position(0, offset));
 	return (*run)->characterLevel();
 }
+
+#ifdef _DEBUG
+/**
+ * Dumps the all runs to the specified output stream.
+ * @param out The output stream
+ */
+void TextLayout::dumpRuns(ostream& out) const {
+	const RunVector::const_iterator b(begin(runs_)), e(end(runs_));
+	const String::const_pointer backingStore = textString_.data();
+	for(RunVector::const_iterator i(b); i != e; ++i) {
+		const TextRunImpl& textRun = *static_cast<const TextRunImpl*>(i->get());
+		out << static_cast<unsigned int>(i - b)
+			<< ": [" << static_cast<unsigned int>(textRun.beginning() - backingStore)
+			<< "," << static_cast<unsigned int>(textRun.end() - backingStore) << ")" << std::endl;
+	}
+}
+#endif // _DEBUG
 
 shared_ptr<const Font> TextLayout::findMatchingFont(const StringPiece& textRun,
 		const FontCollection& collection, const ComputedFontSpecification& specification) {
@@ -303,6 +321,7 @@ shared_ptr<const Font> TextLayout::findMatchingFont(const StringPiece& textRun,
  * @return A hit describing the character and edge (leading or trailing) under the specified point
  */
 TextHit&& TextLayout::hitTestCharacter(const AbstractTwoAxes<Scalar>& point, bool* outOfBounds /* = nullptr */) const {
+	return internalHitTestCharacter(point, nullptr, outOfBounds);
 }
 
 /**
@@ -317,16 +336,17 @@ TextHit&& TextLayout::hitTestCharacter(const AbstractTwoAxes<Scalar>& point, boo
  * @return A hit describing the character and edge (leading or trailing) under the specified point
  */
 TextHit&& TextLayout::hitTestCharacter(const AbstractTwoAxes<Scalar>& point, const FlowRelativeFourSides<Scalar>& bounds, bool* outOfBounds /* = nullptr */) const {
+	return internalHitTestCharacter(point, &bounds, outOfBounds);
 }
 
 /**
+ * @fn ascension::graphics::font::TextLayout::hitToPoint
  * Converts a hit to a point in abstract coordinates.
  * @param hit The hit to check. This must be a valid hit on the @c TextLayout
  * @return The returned point. The point is in abstract coordinates
- * @throw std#invalid_argument @a hit is not valid for the @c TextLayout
+ * @throw std#out_of_range @a hit is not valid for the @c TextLayout
  */
-AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit& hit) const {
-}
+
 #if 0
 /// Returns an iterator addresses the first styled segment.
 TextLayout::StyledSegmentIterator TextLayout::firstStyledSegment() const /*throw()*/ {
@@ -334,6 +354,7 @@ TextLayout::StyledSegmentIterator TextLayout::firstStyledSegment() const /*throw
 	return StyledSegmentIterator(temp);
 }
 #endif
+
 /**
  * Returns if the line contains right-to-left run.
  * @note This method's semantics seems to be strange. Is containning RTL run means bidi?
@@ -369,8 +390,8 @@ FlowRelativeFourSides<Scalar> TextLayout::lineBounds(Index line) const {
 	FlowRelativeFourSides<Scalar> sides;
 	sides.start() = lineStartEdge(line);
 	sides.end() = sides.start() + measure(line);
-	const LineMetrics& lm = lineMetrics(line);
-	const float bsln = baseline(line);
+	const LineMetrics& lm = lineMetrics_[line];
+	const Scalar bsln = baseline(line);
 	sides.before() = bsln - lm.ascent/* - lm.leading*/;
 	sides.after() = bsln + lm.descent + lm.leading;
 	return sides;
@@ -381,6 +402,37 @@ FlowRelativeFourSides<Scalar> TextLayout::lineBounds(Index line) const {
 		(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? start : start - geometry::dx(size), before));
 	return geometry::make<NativeRectangle>(origin, size);
 */
+}
+
+/**
+ * Returns the offset for the first character in the specified line.
+ * @param line The visual line number
+ * @return The offset
+ * @throw BadPositionException @a line is greater than the number of lines
+ * @see #lineOffsets
+ * @note Designed based on @c org.eclipse.swt.graphics.TextLayout.lineOffsets method in Eclipse.
+ */
+Index TextLayout::lineOffset(Index line) const {
+	if(line >= numberOfLines())
+		throw kernel::BadPositionException(kernel::Position(line, 0));
+	return (*firstRunInLine(line))->characterRange().beginning() - textString_.data();
+}
+
+/**
+ * Returns the line offsets. Each value in the vector is the offset for the first character in a
+ * line except for the last value, which contains the length of the text.
+ * @return The line offsets whose length is @c #numberOfLines(). Each element in the
+ *         array is the offset for the first character in a line
+ * @note Designed based on @c org.eclipse.swt.graphics.TextLayout.lineOffsets method in Eclipse.
+ */
+vector<Index>&& TextLayout::lineOffsets() const BOOST_NOEXCEPT {
+	const String::const_pointer bol = textString_.data();
+	vector<Index> offsets;
+	offsets.reserve(numberOfLines() + 1);
+	for(Index line = 0; line < numberOfLines(); ++line)
+		offsets.push_back((*firstRunInLine(line))->characterRange().beginning() - bol);
+	offsets.push_back(textString_.length());
+	return move(offsets);
 }
 
 /**
@@ -421,12 +473,12 @@ Index TextLayout::locateLine(Scalar bpd, bool& outside) const BOOST_NOEXCEPT {
 	// TODO: This implementation can't handle tricky 'text-orientation'.
 
 	// beyond the before-edge ?
-	if(bpd < -lineMetrics(0).ascent/* - lineMetrics(0).leading*/)
+	if(bpd < -lineMetrics_[0].ascent/* - lineMetrics_[0].leading*/)
 		return (outside = true), 0;
 
 	Index line = 0;
 	for(Scalar lineAfter = 0; line < numberOfLines() - 1; ++line) {
-		const LineMetrics& lm = lineMetrics(line);
+		const LineMetrics& lm = lineMetrics_[line];
 		if(bpd < (lineAfter += lm.ascent + lm.descent + lm.leading))
 			return (outside = false), line;
 	}
@@ -446,98 +498,34 @@ Index TextLayout::locateLine(Scalar bpd, bool& outside) const BOOST_NOEXCEPT {
 pair<Index, Index> TextLayout::locateOffsets(Index line, Scalar ipd, bool& outside) const {
 	if(isEmpty())
 		return (outside = true), make_pair(static_cast<Index>(0), static_cast<Index>(0));
-	const size_t lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
 
-	if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) {
-		Scalar x = lineStartEdge(line);
-		if(ipd < x) {	// beyond the left-edge => the start of the first run
-			const Index offsetInLine = runs_[lineFirstRuns_[line]]->beginning();
-			return (outside = true), make_pair(offsetInLine, offsetInLine);
-		}
-		for(size_t i = lineFirstRuns_[line]; i < lastRun; ++i) {	// scan left to right
-			const TextRun& run = *runs_[i];
-			if(ipd >= x && ipd <= x + run.totalWidth()) {
-				int cp, trailing;
-				run.hitTest(ipd - x, cp, trailing);	// TODO: check the returned value.
-				const Index temp = run.beginning() + static_cast<Index>(cp);
-				return (outside = false), make_pair(temp, temp + static_cast<Index>(trailing));
-			}
-			x += run.totalWidth();
-		}
-		// beyond the right-edge => the end of last run
-		const Index offsetInLine = runs_[lastRun - 1]->end();
-		return (outside = true), make_pair(offsetInLine, offsetInLine);
-	} else {
-		Scalar x = -lineStartEdge(line);
-		if(ipd > x) {	// beyond the right-edge => the start of the last run
-			const Index offsetInLine = runs_[lastRun - 1]->beginning();
-			return (outside = true), make_pair(offsetInLine, offsetInLine);
-		}
-		// beyond the left-edge => the end of the first run
-		const Index offsetInLine = runs_[lineFirstRuns_[line]]->end();
-		return (outside = true), make_pair(offsetInLine, offsetInLine);
+	const Range<const RunVector::const_iterator> runsInLine(firstRunInLine(line), firstRunInLine(line + 1));
+	const StringPiece characterRangeInLine(static_cast<const TextRunImpl*>(runsInLine.beginning()->get())->beginning(), lineLength(line));
+	assert(characterRangeInLine.end() == static_cast<const TextRunImpl*>((runsInLine.end() - 1)->get())->end());
+
+	const Scalar lineStart = lineStartEdge(line);
+	if(ipd < lineStart) {
+		const Index offset = characterRangeInLine.beginning() - textString_.data();
+		return (outside = true), make_pair(offset, offset);
 	}
-}
+	outside = ipd > lineStart + measure(line);	// beyond line 'end-edge'
 
-// implements public location methods
-void TextLayout::locations(Index offsetInLine, NativePoint* leading, NativePoint* trailing) const {
-	assert(leading != nullptr || trailing != nullptr);
-	if(offsetInLine > text_.length())
-		throw kernel::BadPositionException(kernel::Position(0, offsetInLine));
-
-	Scalar leadingIpd, trailingIpd, bpd = lineMetrics_[0]->ascent()/* + lineMetrics_[0]->leading()*/;
-	if(isEmpty())
-		leadingIpd = trailingIpd = 0;
-	else {
-		// inline-progression-dimension
-		const Index line = lineAt(offsetInLine);
-		const Index firstRun = lineFirstRuns_[line];
-		const Index lastRun = (line + 1 < numberOfLines()) ? lineFirstRuns_[line + 1] : numberOfRuns_;
-		if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) {	// LTR
-			Scalar x = lineStartEdge(line);
-			for(size_t i = firstRun; i < lastRun; ++i) {
-				const TextRun& run = *runs_[i];
-				if(offsetInLine >= run.beginning() && offsetInLine <= run.end()) {
-					if(leading != nullptr)
-						leadingIpd = x + run.x(offsetInLine, false);
-					if(trailing != nullptr)
-						trailingIpd = x + run.x(offsetInLine, true);
-					break;
-				}
-				x += run.totalWidth();
-			}
-		} else {	// RTL
-			Scalar x = -lineStartEdge(line);
-			for(size_t i = lastRun - 1; ; --i) {
-				const TextRun& run = *runs_[i];
-				x -= run.totalWidth();
-				if(offsetInLine >= run.beginning() && offsetInLine <= run.end()) {
-					if(leading != nullptr)
-						leadingIpd = -(x + run.x(offsetInLine, false));
-					if(trailing != nullptr)
-						trailingIpd = -(x + run.x(offsetInLine, true));
-					break;
-				}
-				if(i == firstRun) {
-					ASCENSION_ASSERT_NOT_REACHED();
-					break;
-				}
+	if(!outside) {
+		Scalar x = ipd - lineStart, dx = 0;
+		if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
+			x = measure(line) - x;
+		for(RunVector::const_iterator run(runsInLine.beginning()); run != runsInLine.end(); ++run) {
+			const Scalar nextDx = dx + allocationMeasure(**run);
+			if(nextDx >= x) {
+				const Scalar ipdInRun = ((*run)->direction() == LEFT_TO_RIGHT) ? x - dx : nextDx - x;
+				return make_pair(boost::get((*run)->characterEncompassesPosition(ipdInRun)), (*run)->characterHasClosestLeadingEdge(ipdInRun));
 			}
 		}
+	}
 
-		// block-progression-dimension
-		bpd += baseline(line);
-	}
-		
-	// TODO: this implementation can't handle vertical text.
-	if(leading != nullptr) {
-		leading->x = leadingIpd;
-		leading->y = bpd;
-	}
-	if(trailing != nullptr) {
-		trailing->x = trailingIpd;
-		trailing->y = bpd;
-	}
+	// maybe beyond line 'end-edge'
+	const Index offset = characterRangeInLine.end() - textString_.data();
+	return make_pair(offset, offset);
 }
 
 /**
@@ -592,25 +580,6 @@ Scalar TextLayout::measure(Index line) const {
 			self.lineMeasures_[line] = ipd;
 		return ipd;
 	}
-}
-
-/**
- * Returns the hit test information corresponding to the specified point.
- * @param p The point
- * @param[out] outside @c true if the specified point is outside of the layout
- * @return A pair of the character offsets. The first element addresses the character whose black
- *         box (bounding box) encompasses the specified point. The second element addresses the
- *         character whose leading point is the closest to the specified point in the line
- * @see #locateLine, #location
- */
-pair<Index, Index> TextLayout::offset(const NativePoint& p, bool* outside /* = nullptr */) const /*throw()*/ {
-	const bool vertical = isVertical(writingMode().blockFlowDirection);
-	bool outsides[2];
-	const std::pair<Index, Index> result(locateOffsets(locateLine(
-		vertical ? geometry::x(p) : geometry::y(p), outsides[0]), vertical ? geometry::y(p) : geometry::x(p), outsides[1]));
-	if(outside != nullptr)
-		*outside = outsides[0] | outsides[1];
-	return result;
 }
 #if 0
 /**
@@ -668,6 +637,88 @@ ReadingDirection TextLayout::readingDirection() const /*throw()*/ {
 	return result;
 }
 #endif
+
+/**
+ * @internal Returns the text run containing the specified offset in this layout.
+ * @param offset The offset in this layout
+ * @return An iterator addresses the text run
+ * @note If @a offset is equal to the length of this layout, returns the last text run.
+ */
+TextLayout::RunVector::const_iterator TextLayout::runForPosition(Index offset) const BOOST_NOEXCEPT {
+	assert(!isEmpty());
+	if(offset == textString_.length())
+		return end(runs_) - 1;
+	const String::const_pointer p(textString_.data() + offset);
+	const Index line = lineAt(offset);
+	const RunVector::const_iterator lastRun(firstRunInLine(line + 1));
+	for(RunVector::const_iterator i(firstRunInLine(line)); i < lastRun; ++i) {
+		if(includes((*i)->characterRange(), p))
+			return i;
+	}
+	ASCENSION_ASSERT_NOT_REACHED();
+}
+
+/**
+ * Stacks the line boxes and compute the line metrics.
+ * @param context
+ * @param lineHeight
+ * @param lineStackingStrategy
+ * @param nominalFont
+ */
+void TextLayout::stackLines(const RenderingContext2D& context, boost::optional<Scalar> lineHeight, LineBoxContain lineBoxContain, const Font& nominalFont) {
+	// TODO: this code is temporary. should rewrite later.
+	assert(numberOfLines() > 1);
+	unique_ptr<LineMetrics[]> newLineMetrics(new LineMetrics[numberOfLines()]);
+	// calculate allocation-rectangle of the lines according to line-stacking-strategy
+	const unique_ptr<const FontMetrics<Scalar>> nominalFontMetrics(context.fontMetrics(nominalFont.shared_from_this()));
+	const Scalar textAltitude = nominalFontMetrics->ascent();
+	const Scalar textDepth = nominalFontMetrics->descent();
+	for(Index line = 0; line < numberOfLines(); ++line) {
+		// calculate extent of the line in block-progression-direction
+		Scalar ascent, descent;
+#if 0
+		switch(lineBoxContain) {
+			case LINE_HEIGHT: {
+				// allocation-rectangle of line is per-inline-height-rectangle
+				Scalar leading = lineHeight - (textAltitude + textDepth);
+				ascent = textAltitude + (leading - leading / 2);
+				descent = textDepth + leading / 2;
+				const RunVector::const_iterator lastRun(firstRunInLine(line + 1));
+				for(RunVector::const_iterator run(firstRunInLine(line)); run != lastRun; ++run) {
+					leading = lineHeight - nominalFont.metrics()->cellHeight();
+					ascent = max((*run)->font()->metrics()->ascent() - (leading - leading / 2), ascent);
+					descent = max((*run)->font()->metrics()->descent() - leading / 2, descent);
+				}
+				break;
+			}
+			case FONT_HEIGHT:
+				// allocation-rectangle of line is nominal-requested-line-rectangle
+				ascent = textAltitude;
+				descent = textDepth;
+				break;
+			case MAX_HEIGHT: {
+				// allocation-rectangle of line is maximum-line-rectangle
+				ascent = textAltitude;
+				descent = textDepth;
+				const RunVector::const_iterator lastRun(firstRunInLine(line + 1));
+				for(RunVector::const_iterator run(firstRunInLine(line)); run != lastRun; ++run) {
+					ascent = max((*run)->font()->metrics()->ascent(), ascent);
+					descent = max((*run)->font()->metrics()->descent(), descent);
+				}
+				break;
+			}
+			default:
+				ASCENSION_ASSERT_NOT_REACHED();
+		}
+#else
+		ascent = textAltitude;
+		descent = textDepth;
+#endif
+		newLineMetrics[line].ascent = ascent;
+		newLineMetrics[line].descent = descent;
+		newLineMetrics[line].leading = 0;
+	}
+}
 
 #if 0
 /**
