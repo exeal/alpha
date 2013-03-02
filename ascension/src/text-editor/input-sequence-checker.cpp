@@ -41,7 +41,7 @@ void InputSequenceCheckers::add(unique_ptr<InputSequenceChecker> checker) {
  * @throw NullPointerException @a receding is @c null
  */
 bool InputSequenceCheckers::check(const StringPiece& preceding, CodePoint c) const {
-	if(preceding.beginning() == nullptr || preceding.end() == nullptr)
+	if(preceding.begin() == nullptr)
 		throw NullPointerException("preceding");
 	for(list<InputSequenceChecker*>::const_iterator i = strategies_.begin(); i != strategies_.end(); ++i) {
 		if(!(*i)->check(locale_, preceding, c))
@@ -85,7 +85,7 @@ const locale& InputSequenceCheckers::locale() const /*throw()*/ {
 /// @see InputSequenceChecker#check
 bool AinuInputSequenceChecker::check(const locale&, const StringPiece& preceding, CodePoint c) const {
 	// only check a pair consists of combining semi-voiced sound mark is valid
-	return c != 0x309au || (preceding.beginning() < preceding.end() && (
+	return c != 0x309au || (preceding.begin() < preceding.end() && (
 		preceding.end()[-1] == L'\x30bb'		// se (セ)
 		|| preceding.end()[-1] == L'\x30c4'		// tu (ツ)
 		|| preceding.end()[-1] == L'\x30c8'		// to (ト)
@@ -139,7 +139,7 @@ bool ThaiInputSequenceChecker::check(const std::locale&, const StringPiece& prec
 	// if there is not a preceding character, as if a control is
 	// Sara Am -> Nikhahit + Sara Aa
 	return doCheck(
-		!isEmpty(preceding) ? getCharacterClass(preceding.end()[-1]) : CTRL,
+		!preceding.empty() ? getCharacterClass(preceding.end()[-1]) : CTRL,
 		getCharacterClass((c != 0x0e33u) ? c : 0x0e4du),
 		mode_ == STRICT_MODE);
 }
@@ -178,7 +178,7 @@ bool VietnameseInputSequenceChecker::check(const locale& lc, const StringPiece& 
 
 	if(vietnamese.first.get() == nullptr && lc != *vietnamese.first)
 		return true;
-	else if(!isEmpty(preceding) && binary_search(TONE_MARKS, ASCENSION_ENDOF(TONE_MARKS), c))
+	else if(!preceding.empty() && binary_search(TONE_MARKS, ASCENSION_ENDOF(TONE_MARKS), c))
 		return binary_search(VOWELS, ASCENSION_ENDOF(VOWELS), preceding.end()[-1]);
 	return true;
 }

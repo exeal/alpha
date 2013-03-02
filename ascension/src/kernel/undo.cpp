@@ -530,19 +530,15 @@ void Document::removeCompoundChangeListener(ICompoundChangeListener& listener) {
  * This method sets the modification flag and calls the listeners'
  * @c IDocumentListener#documentAboutToBeChanged and @c IDocumentListener#documentChanged.
  * @param region The region to erase. If this is empty, no text is erased
- * @param text The start of the text. If this is @c null, no text is inserted
+ * @param text The text string for replacement. If this is @c null or empty, no text is inserted
  * @param[out] eos The position of the end of the inserted text. Can be @c null if not needed
  * @throw ReadOnlyDocumentException The document is read only
  * @throw DocumentAccessViolationException @a region intersects the inaccesible region
- * @throw NullPointerException Either @c text.end() returned @c null but @c text.beginning()
- *                             returned not @c null
  * @throw IllegalStateException The method was called in @c{IDocumentListener}s' notification
  * @throw IDocumentInput#ChangeRejectedException The input of the document rejected this change
  * @throw std#bad_alloc The internal memory allocation failed
  */
 void Document::replace(const Region& region, const StringPiece& text, Position* eos /* = nullptr */) {
-	if(text.beginning() != nullptr && text.end() == nullptr)
-		throw NullPointerException("text.end()");
 	if(changing_)
 		throw IllegalStateException("called in IDocumentListeners' notification.");
 	else if(isReadOnly())
@@ -553,7 +549,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 		throw BadRegionException(region);
 	else if(isNarrowed() && !accessibleRegion().encompasses(region))
 		throw DocumentAccessViolationException();
-	else if(region.isEmpty() && (text.beginning() == nullptr || isEmpty(text)))
+	else if(region.isEmpty() && (text.begin() == nullptr || text.empty()))
 		return;	// nothing to do
 	ASCENSION_PREPARE_FIRST_CHANGE(rollbacking_);
 
@@ -565,32 +561,32 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 	// change the content
 	const Position& beginning = region.beginning();
 	const Position& end = region.end();
-	const Char* nextNewline = (text.beginning() != nullptr && !isEmpty(text)) ?
-		find_first_of(text.beginning(), text.end(), NEWLINE_CHARACTERS, ASCENSION_ENDOF(NEWLINE_CHARACTERS)) : nullptr;
+	const Char* nextNewline = (text.begin() != nullptr && !text.empty()) ?
+		text.begin() + text.find_first_of(StringPiece(NEWLINE_CHARACTERS)) : nullptr;
 	basic_stringbuf<Char> erasedString;
 	Index erasedStringLength = 0, insertedStringLength = 0;
 	Position endOfInsertedString;
 	try {
 		// simple cases: both erased region and inserted string are single line
-		if(beginning.line == end.line && (text.beginning() == nullptr || isEmpty(text))) {	// erase in single line
+		if(beginning.line == end.line && (text.begin() == nullptr || text.empty())) {	// erase in single line
 			Line& line = *lines_[beginning.line];
 			erasedString.sputn(line.text().data() + beginning.offsetInLine, static_cast<streamsize>(end.offsetInLine - beginning.offsetInLine));
 			line.text_.erase(beginning.offsetInLine, end.offsetInLine - beginning.offsetInLine);
 			erasedStringLength += end.offsetInLine - beginning.offsetInLine;
 			endOfInsertedString = beginning;
 		} else if(region.isEmpty() && nextNewline == text.end()) {	// insert single line
-			lines_[beginning.line]->text_.insert(beginning.offsetInLine, text.beginning(), ascension::length(text));
-			insertedStringLength += ascension::length(text);
+			lines_[beginning.line]->text_.insert(beginning.offsetInLine, text.begin(), text.length());
+			insertedStringLength += text.length();
 			endOfInsertedString.line = beginning.line;
-			endOfInsertedString.offsetInLine = beginning.offsetInLine + ascension::length(text);
+			endOfInsertedString.offsetInLine = beginning.offsetInLine + text.length();
 		} else if(beginning.line == end.line && nextNewline == text.end()) {	// replace in single line
 			Line& line = *lines_[beginning.line];
 			erasedString.sputn(line.text().data() + beginning.offsetInLine, static_cast<streamsize>(end.offsetInLine - beginning.offsetInLine));
-			line.text_.replace(beginning.offsetInLine, end.offsetInLine - beginning.offsetInLine, text.beginning(), ascension::length(text));
+			line.text_.replace(beginning.offsetInLine, end.offsetInLine - beginning.offsetInLine, text.begin(), text.length());
 			erasedStringLength += end.offsetInLine - beginning.offsetInLine;
-			insertedStringLength += ascension::length(text);
+			insertedStringLength += text.length();
 			endOfInsertedString.line = beginning.line;
-			endOfInsertedString.offsetInLine = beginning.offsetInLine + ascension::length(text);
+			endOfInsertedString.offsetInLine = beginning.offsetInLine + text.length();
 		}
 		// complex case: erased region and/or inserted string are/is multi-line
 		else {
@@ -614,7 +610,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 			// 2. allocate strings (lines except first) to insert newly. only when inserted string was multiline
 			vector<Line*> allocatedLines;
 			const Char* const firstNewline = nextNewline;
-			if(text.beginning() != nullptr && nextNewline != text.end()) {
+			if(text.begin() != nullptr && nextNewline != text.end()) {
 				try {
 					const Char* p = nextNewline + newlineStringLength(eatNewline(nextNewline, text.end()));
 					while(true) {
@@ -648,13 +644,13 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 				// 4. replace first line
 				Line& firstLine = *lines_[beginning.line];
 				const Index erasedLength = firstLine.text().length() - beginning.offsetInLine;
-				const Index insertedLength = firstNewline - text.beginning();
+				const Index insertedLength = firstNewline - text.begin();
 				try {
 					if(!allocatedLines.empty())
-						firstLine.text_.replace(beginning.offsetInLine, erasedLength, text.beginning(), insertedLength);
+						firstLine.text_.replace(beginning.offsetInLine, erasedLength, text.begin(), insertedLength);
 					else {
 						// join the first line, inserted string and the last line
-						String temp(text.beginning(), insertedLength);
+						String temp(text.begin(), insertedLength);
 						const Line& lastLine = *lines_[end.line];
 						temp.append(lastLine.text(), end.offsetInLine, lastLine.text().length() - end.offsetInLine);
 						firstLine.text_.replace(beginning.offsetInLine, erasedLength, temp);
@@ -694,7 +690,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 	if(isRecordingChanges()) {
 		if(region.isEmpty())
 			undoManager_->addUndoableChange(*(new DeletionChange(Region(beginning, endOfInsertedString))));
-		else if(text.beginning() == nullptr || isEmpty(text))
+		else if(text.begin() == nullptr || text.empty())
 			undoManager_->addUndoableChange(*(new InsertionChange(beginning, erasedString.str())));
 		else
 			undoManager_->addUndoableChange(*(new ReplacementChange(Region(beginning, endOfInsertedString), erasedString.str())));
@@ -724,7 +720,7 @@ void Document::replace(const Region& region, basic_istream<Char>& in, Position* 
 		in.read(buffer, ASCENSION_COUNTOF(buffer));
 		if(in.gcount() == 0)
 			break;
-		replace(r, StringPiece(buffer, buffer + in.gcount()), &e);
+		replace(r, StringPiece(buffer, static_cast<StringPiece::size_type>(in.gcount())), &e);
 	}
 	if(endOfInsertedString != 0)
 		*endOfInsertedString = e;

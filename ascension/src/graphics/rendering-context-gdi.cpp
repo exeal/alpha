@@ -327,7 +327,7 @@ namespace {
 		}
 		if(!win32::boole(::ExtTextOutW(dc.get(),
 				static_cast<int>(geometry::x(origin)), static_cast<int>(geometry::y(origin)),
-				ETO_NUMERICSLOCAL, nullptr, text.beginning(), length(text), nullptr)))
+				ETO_NUMERICSLOCAL, nullptr, text.begin(), text.length(), nullptr)))
 			throw makePlatformError();
 		if(onlyStroke) {
 			if(!win32::boole(::EndPath(dc.get())) || !win32::boole(::StrokePath(dc.get())))
@@ -514,7 +514,7 @@ Scalar RenderingContext2D::lineWidth() const {
 
 Dimension RenderingContext2D::measureText(const StringPiece& text) const {
 	SIZE s;
-	if(!win32::boole(::GetTextExtentPoint32W(nativeObject_.get(), text.beginning(), length(text), &s)))
+	if(!win32::boole(::GetTextExtentPoint32W(nativeObject_.get(), text.begin(), text.length(), &s)))
 		throw makePlatformError();
 	return s;
 }

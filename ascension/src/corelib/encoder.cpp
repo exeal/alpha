@@ -138,7 +138,7 @@ bool Encoder::canEncode(CodePoint c) {
 		throw text::InvalidScalarValueException(c);
 	Char buffer[2];
 	Char* p = buffer;
-	return canEncode(StringPiece(buffer, buffer + text::utf::encode(c, p)));
+	return canEncode(StringPiece(buffer, text::utf::encode(c, p)));
 }
 
 /**
@@ -146,19 +146,21 @@ bool Encoder::canEncode(CodePoint c) {
  * @c #resetEncodingState method.
  * @param s The string
  * @return Succeeded or not
+ * @throw NullPointerException @a s is @c null
+ * @throw std#invalid_argument @a s is empty
  */
 bool Encoder::canEncode(const StringPiece& s) {
-	if(s.beginning() == nullptr)
-		throw NullPointerException("s.beginning()");
-	else if(s.end() == nullptr)
-		throw NullPointerException("s.end()");
+	if(s.begin() == nullptr)
+		throw NullPointerException("s");
+	else if(s.empty())
+		throw invalid_argument("s");
 	// TODO: Should be able to implement without heap/free store...
-	const size_t bytes = length(s) * properties().maximumNativeBytes();
+	const size_t bytes = s.length() * properties().maximumNativeBytes();
 	unique_ptr<Byte[]> temp(new Byte[bytes]);
 	const Char* fromNext;
 	Byte* toNext;
 	resetEncodingState();
-	return fromUnicode(temp.get(), temp.get() + bytes, toNext, s.beginning(), s.end(), fromNext) == COMPLETED;
+	return fromUnicode(temp.get(), temp.get() + bytes, toNext, s.begin(), s.end(), fromNext) == COMPLETED;
 }
 
 /// Returns the default encoder.

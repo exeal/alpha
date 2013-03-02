@@ -4,18 +4,22 @@
  * @author exeal
  * @date 2010-10-21 separated from common.hpp
  * @date 2010-11-06 separated from basic-types.hpp
- * @date 2012
+ * @date 2012-2013
  */
 
 #ifndef ASCENSION_STRING_PIECE_HPP
 #define ASCENSION_STRING_PIECE_HPP
 #include <ascension/corelib/basic-types.hpp>	// Char
-#include <ascension/corelib/range.hpp>
-#include <stdexcept>							// std.out_of_range
-#include <string>
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+#	include <ascension/corelib/range.hpp>
+#	include <stdexcept>							// std.out_of_range
+#	include <string>
+#endif	// ASCENSION_ABANDONED_AT_VERSION_08
+#include <boost/utility/string_ref.hpp>
 
 namespace ascension {
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	/**
 	 * String-like object addresses a sized piece of memory.
 	 * @tparam Character The character type
@@ -78,9 +82,15 @@ namespace ascension {
 			return operator[](i);
 		}
 	};
+#endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	/// Specialization of @c BasicStringPiece for @c Char type.
 	typedef BasicStringPiece<Char> StringPiece;
+#else
+	/// Specialization of @c boost#basic_string_ref for @c Char type.
+	typedef boost::basic_string_ref<Char, std::char_traits<Char>> StringPiece;
+#endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
 } // namespace ascension
 

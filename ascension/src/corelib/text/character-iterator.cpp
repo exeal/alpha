@@ -121,8 +121,8 @@ StringCharacterIterator::StringCharacterIterator() BOOST_NOEXCEPT
 }
 
 StringCharacterIterator::StringCharacterIterator(const StringPiece& text) :
-		CharacterIterator(CONCRETE_TYPE_TAG_), current_(text.beginning()),
-		first_(text.beginning()), last_(text.end()) {
+		CharacterIterator(CONCRETE_TYPE_TAG_), current_(text.begin()),
+		first_(text.begin()), last_(text.end()) {
 }
 
 StringCharacterIterator::StringCharacterIterator(const Range<const Char*>& text, const Char* start) :

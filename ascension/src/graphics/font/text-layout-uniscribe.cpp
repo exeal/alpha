@@ -1293,11 +1293,11 @@ Point TextRunImpl::glyphPosition(size_t index) const {
 	return leadingEdge(index);
 }
 
-inline Range<size_t> TextRunImpl::glyphRange(const StringPiece& range /* = StringPiece(nullptr) */) const {
+inline Range<size_t> TextRunImpl::glyphRange(const StringPiece& range /* = StringPiece() */) const {
 	assert(glyphs_.get() != nullptr);
 	assert(analysis_.fLogicalOrder == 0);
 	using ascension::length;
-	Range<ptrdiff_t> characterRange((range != StringPiece(nullptr)) ?
+	Range<ptrdiff_t> characterRange((range != StringPiece()) ?
 		makeRange(range.beginning() - beginning(), range.end() - beginning()) : makeRange(0, length(*this)));
 	assert(includes(makeRange<ptrdiff_t>(0, length(*this)), characterRange));
 	assert(characterRange.beginning() == 0 || characterRange.beginning() == length(*this)

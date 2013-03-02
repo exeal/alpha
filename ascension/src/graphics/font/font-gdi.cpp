@@ -5,7 +5,7 @@
  * @date 2012-06-30 renamed from font-windows.cpp
  */
 
-#include <ascension/graphics/font.hpp>
+#include <ascension/graphics/font/font.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/config.hpp>
 #include <vector>
