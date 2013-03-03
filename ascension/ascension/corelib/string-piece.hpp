@@ -14,8 +14,10 @@
 #	include <ascension/corelib/range.hpp>
 #	include <stdexcept>							// std.out_of_range
 #	include <string>
+#else
+#	include <cassert>
+#	include <boost/utility/string_ref.hpp>
 #endif	// ASCENSION_ABANDONED_AT_VERSION_08
-#include <boost/utility/string_ref.hpp>
 
 namespace ascension {
 
@@ -90,6 +92,12 @@ namespace ascension {
 #else
 	/// Specialization of @c boost#basic_string_ref for @c Char type.
 	typedef boost::basic_string_ref<Char, std::char_traits<Char>> StringPiece;
+
+	/// Creates and returns a @c StringPiece with the given two iterators.
+	inline StringPiece makeStringPiece(StringPiece::const_iterator first, StringPiece::const_iterator last) {
+		assert(first <= last);
+		return StringPiece(first, last - first);
+	}
 #endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
 } // namespace ascension
