@@ -107,10 +107,10 @@ namespace ascension {
 		return !lessThan(value, range.beginning()) && lessThan(value, range.end());
 	}
 #else
-	template<typename RandomAccessTraversalIterator>
-	inline bool includes(const boost::iterator_range<RandomAccessTraversalIterator>& range,
-			typename boost::iterator_range<RandomAccessTraversalIterator>::const_iterator value) {
-		return value >= range.begin() && value < range.end();
+	template<typename RandomAccessTraversalRange>
+	inline bool includes(const RandomAccessTraversalRange& range,
+			typename boost::range_iterator<RandomAccessTraversalRange>::type position) {
+		return position >= boost::const_begin(range) && position < boost::const_end(range);
 	}
 	template<typename Integer>
 	inline bool includes(const boost::integer_range<Integer>& range,
@@ -136,6 +136,14 @@ namespace ascension {
 		return !lessThan(other.beginning(), range.beginning()) && !lessThan(range.end(), other.end());
 	}
 #else
+	template<typename RandomAccessTraversalRange1, typename RandomAccessTraversalRange2>
+	inline bool includes(const RandomAccessTraversalRange1& range, const RandomAccessTraversalRange2& subrange) {
+		return boost::const_begin(subrange) >= boost::const_begin(range) && boost::const_end(subrange) <= boost::const_begin(range);
+	}
+	template<typename Integer1, typename Integer2>
+	inline bool includes(const boost::integer_range<Integer1>& range, const boost::integer_range<Integer2>& subrange) {
+		return *subrange.begin() >= *range.begin() && *subrange.end() <= *range.end();
+	}
 #endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
