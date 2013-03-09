@@ -167,15 +167,11 @@ namespace ascension {
 				/// @name Transformations
 				/// @{
 				template<typename Geometry>
-				Geometry&& deltaTransform(const Geometry& p,
-					typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) const;
+				Geometry&& deltaTransform(const Geometry& g) const;
 				template<typename Geometry>
-				Geometry&& inverseTransform(const Geometry& p,
-					typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) const;
+				Geometry&& inverseTransform(const Geometry& g) const;
 				template<typename Geometry>
-				Geometry& transformShape(const AffineTransform& tx, Geometry& shape);
-				template<typename Geometry>
-				Geometry&& transformedShape(const AffineTransform& tx, const Geometry& shape);
+				Geometry&& transform(const Geometry& g) const;
 				/// @}
 			};
 
