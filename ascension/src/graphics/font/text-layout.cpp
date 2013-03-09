@@ -30,7 +30,6 @@ using namespace ascension::presentation;
 using namespace ascension::text;
 using namespace ascension::text::ucd;
 using namespace std;
-namespace k = ascension::kernel;
 
 //#define TRACE_LAYOUT_CACHES
 extern bool DIAGNOSE_INHERENT_DRAWING;
@@ -169,33 +168,12 @@ TextAlignment TextLayout::alignment() const /*throw()*/ {
  * Returns the computed text anchor of the specified visual line.
  * @param line The visual line number
  * @return The computed text anchor value
- * @throw kernel#BadPositionException @a line is greater than the number of lines
+ * @throw IndexOutOfBoundsException @a line &gt;= @c #numberOfLines()
  */
 TextAnchor TextLayout::anchor(Index line) const {
 	if(line >= numberOfLines())
-		throw kernel::BadPositionException(kernel::Position(line, 0));
+		throw IndexOutOfBoundsException("line");
 	return TextAnchor::START;	// TODO: Not implemented.
-}
-
-/**
- * Returns distance from the baseline of the first line to the baseline of the
- * specified line in pixels.
- * @param line The line number
- * @return The baseline position 
- * @throw kernel#BadPositionException @a line is greater than the number of lines
- */
-Scalar TextLayout::baseline(Index line) const {
-	if(line >= numberOfLines())
-		throw kernel::BadPositionException(kernel::Position(line, 0));
-	else if(line == 0)
-		return 0;
-	Scalar result = 0;
-	for(Index i = 1; i <= line; ++i) {
-		const LineMetrics& preceding = lineMetrics_[i - 1];
-		result += preceding.descent + preceding.leading;
-		result += lineMetrics_[i].ascent;
-	}
-	return result;
 }
 
 /**
@@ -225,18 +203,18 @@ FlowRelativeFourSides<Scalar> TextLayout::bounds() const BOOST_NOEXCEPT {
  * Returns the bidirectional embedding level at specified position.
  * @param offset The offset in this layout
  * @return The embedding level
- * @throw kernel#BadPositionException @a offset is greater than the length of the layout
+ * @throw IndexOutOfBoundsException @a offset is greater than the length of the layout
  */
 uint8_t TextLayout::characterLevel(Index offset) const {
 	if(isEmpty()) {
 		if(offset != 0)
-			throw kernel::BadPositionException(kernel::Position(0, offset));
+			throw IndexOutOfBoundsException("offset");
 		// use the default level
 		return (writingMode().inlineFlowDirection == RIGHT_TO_LEFT) ? 1 : 0;
 	}
 	const auto run(runForPosition(offset));
 	if(run == end(runs_))
-		throw kernel::BadPositionException(kernel::Position(0, offset));
+		throw IndexOutOfBoundsException("offset");
 	return (*run)->characterLevel();
 }
 
@@ -381,7 +359,7 @@ TextLayout::StyledSegmentIterator TextLayout::lastStyledSegment() const /*throw(
  * ascent, descent or overhangs of the specified line.
  * @param line The line number
  * @return The line bounds in pixels
- * @throw IndexOutOfBoundsException @a line is greater than the number of the lines
+ * @throw IndexOutOfBoundsException @a line &gt;= @c #numberOfLines()
  * @see #basline, #lineStartEdge, #measure
  */
 FlowRelativeFourSides<Scalar> TextLayout::lineBounds(Index line) const {
@@ -391,31 +369,55 @@ FlowRelativeFourSides<Scalar> TextLayout::lineBounds(Index line) const {
 	FlowRelativeFourSides<Scalar> sides;
 	sides.start() = lineStartEdge(line);
 	sides.end() = sides.start() + measure(line);
-	const LineMetrics& lm = lineMetrics_[line];
-	const Scalar bsln = baseline(line);
-	sides.before() = bsln - lm.ascent/* - lm.leading*/;
-	sides.after() = bsln + lm.descent + lm.leading;
+	const LineMetricsIterator lm(lineMetrics(line));
+	sides.before() = lm.baselineOffset() - lm.ascent()/* - lm.leading()*/;
+	sides.after() = lm.baselineOffset() + lm.descent() + lm.leading();
 	return sides;
-/*
-	// TODO: this implementation can't handle vertical text.
-	const NativeSize size(geometry::make<NativeSize>(end - start, after - before));
-	const NativePoint origin(geometry::make<NativePoint>(
-		(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? start : start - geometry::dx(size), before));
-	return geometry::make<NativeRectangle>(origin, size);
-*/
+}
+
+/**
+ * @internal Returns 'line-left' of the specified line.
+ * @param line The line number
+ * @return
+ */
+Point TextLayout::lineLeft(Index line) const {
+	if(isHorizontal(writingMode().blockFlowDirection)) {
+		if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT)
+			return Point(geometry::_x = lineStartEdge(line), geometry::_y = 0);
+		else
+			return Point(geometry::_x = -lineStartEdge(line) - measure(line), geometry::_y = 0);
+	} else {
+		Scalar y = -lineStartEdge(line);
+		if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
+			y -= measure(line);
+		if(resolveTextOrientation(writingMode()) == SIDEWAYS_LEFT)
+			y = -y;
+		return Point(geometry::_x = 0, geometry::_y = y);
+/*		if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) {
+			if(resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT)
+				return Point(geometry::_x = 0, geometry::_y = lineStartEdge(line));
+			else
+				return Point(geometry::_x = 0, geometry::_y = -lineStartEdge(line));
+		} else {
+			if(resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT)
+				return Point(geometry::_x = 0, geometry::_y = -lineStartEdge(line) - measure(line));
+			else
+				return Point(geometry::_x = 0, geometry::_y = lineStartEdge(line) + measure(line));
+		}
+*/	}
 }
 
 /**
  * Returns the offset for the first character in the specified line.
  * @param line The visual line number
  * @return The offset
- * @throw BadPositionException @a line is greater than the number of lines
+ * @throw IndexOutOfBoundsException @a line &gt;= @c #numberOfLines()
  * @see #lineOffsets
  * @note Designed based on @c org.eclipse.swt.graphics.TextLayout.lineOffsets method in Eclipse.
  */
 Index TextLayout::lineOffset(Index line) const {
 	if(line >= numberOfLines())
-		throw kernel::BadPositionException(kernel::Position(line, 0));
+		throw IndexOutOfBoundsException("line");
 	return (*firstRunInLine(line))->characterRange().begin() - textString_.data();
 }
 
@@ -474,14 +476,13 @@ Index TextLayout::locateLine(Scalar bpd, bool& outside) const BOOST_NOEXCEPT {
 	// TODO: This implementation can't handle tricky 'text-orientation'.
 
 	// beyond the before-edge ?
-	if(bpd < -lineMetrics_[0].ascent/* - lineMetrics_[0].leading*/)
+	if(bpd < -get<0>(lineMetrics_[0])/* - get<2>(lineMetrics_[0])*/)
 		return (outside = true), 0;
 
-	Index line = 0;
-	for(Scalar lineAfter = 0; line < numberOfLines() - 1; ++line) {
-		const LineMetrics& lm = lineMetrics_[line];
-		if(bpd < (lineAfter += lm.ascent + lm.descent + lm.leading))
-			return (outside = false), line;
+	LineMetricsIterator line(lineMetrics(0));
+	for(Scalar lineAfter = 0; line.line() < numberOfLines() - 1; ++line) {
+		if(bpd < (lineAfter += line.ascent() + line.descent() + line.leading()))
+			return (outside = false), line.line();
 	}
 
 	// beyond the after-edge
@@ -715,9 +716,9 @@ void TextLayout::stackLines(const RenderingContext2D& context, boost::optional<S
 		ascent = textAltitude;
 		descent = textDepth;
 #endif
-		newLineMetrics[line].ascent = ascent;
-		newLineMetrics[line].descent = descent;
-		newLineMetrics[line].leading = 0;
+		get<0>(newLineMetrics[line]) = ascent;
+		get<1>(newLineMetrics[line]) = descent;
+		get<2>(newLineMetrics[line]) = 0;
 	}
 }
 
@@ -726,11 +727,11 @@ void TextLayout::stackLines(const RenderingContext2D& context, boost::optional<S
  * Returns the styled text run containing the specified offset in the line.
  * @param offsetInLine The offset in the line
  * @return the styled segment
- * @throw kernel#BadPositionException @a offsetInLine is greater than the length of the line
+ * @throw IndexOutOfBoundsException @a offsetInLine is greater than the length of the line
  */
 StyledRun TextLayout::styledTextRun(Index offsetInLine) const {
 	if(offsetInLine > text().length())
-		throw kernel::BadPositionException(kernel::Position(INVALID_INDEX, offsetInLine));
+		throw IndexOutOfBoundsException("offsetInLine");
 	const TextRun& run = *runs_[findRunForPosition(offsetInLine)];
 	return StyledRun(run.offsetInLine(), run.requestedStyle());
 }

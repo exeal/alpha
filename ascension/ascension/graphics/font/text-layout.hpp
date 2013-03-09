@@ -14,7 +14,6 @@
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/font/text-hit.hpp>
 #include <ascension/graphics/font/text-layout-styles.hpp>
-#include <ascension/kernel/position.hpp>
 #include <memory>	// std.unique_ptr
 #include <vector>
 #include <boost/flyweight.hpp>
@@ -90,6 +89,28 @@ namespace ascension {
 			class TextLayout {
 				ASCENSION_NONCOPYABLE_TAG(TextLayout);
 			public:
+				/// 
+				class LineMetricsIterator : public boost::iterator_facade<LineMetricsIterator, std::nullptr_t, boost::bidirectional_traversal_tag> {
+				public:
+					LineMetricsIterator(const TextLayout& layout, Index line);
+					Scalar ascent() const;
+					DominantBaseline baseline() const;
+					Scalar baselineOffset() const;
+					Point baselineOffsetInPhysicalCoordinates() const;
+					Scalar descent() const;
+					Scalar leading() const;
+					Index line() const BOOST_NOEXCEPT;
+				private:
+					void decrement();
+					difference_type distance_to(const LineMetricsIterator& other) const;
+					bool equal(const LineMetricsIterator& other) const;
+					void increment();
+				private:
+					const TextLayout& layout_;
+					Index line_;
+					Scalar baselineOffset_;
+					friend class boost::iterator_core_access;
+				};
 #if 0
 				/// Bidirectional iterator enumerates style runs in a line.
 				class StyledSegmentIterator {
@@ -137,12 +158,9 @@ namespace ascension {
 
 				/// @name Metrics
 				/// @{
-				Scalar ascent(Index line) const;
-				Scalar baseline(Index line) const;
-				Scalar descent(Index line) const;
+				LineMetricsIterator&& lineMetrics(Index line) const;
 				boost::integer_range<Scalar> extent() const;
 				boost::integer_range<Scalar> extent(const boost::integer_range<Index>& lines) const;
-				Scalar leading(Index) const;
 				Scalar measure() const;
 				Scalar measure(Index line) const;
 				/// @}
@@ -218,9 +236,8 @@ namespace ascension {
 				RunVector::const_iterator firstRunInLine(Index line) const BOOST_NOEXCEPT;
 				bool isEmpty() const BOOST_NOEXCEPT {return runs_.empty();}
 				void justify(Scalar lineMeasure, presentation::TextJustification method) /*throw()*/;
-				struct LineMetrics {
-					Scalar ascent, descent, leading/*, advance*/;
-				};
+				Point lineLeft(Index line) const;
+				typedef std::tuple<Scalar, Scalar, Scalar/*, Scalar*/> LineMetrics;	// ascent, descent, leading/*, advance*/
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				const LineMetrics& lineMetrics(Index line) const;
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
@@ -250,51 +267,29 @@ namespace ascension {
 			};
 
 
-			/**
-			 * Returns the ascent of this layout.
-			 * @param line The line number
-			 * @return The ascent in user units
-			 * @see #baseline, #descent, #leading
-			 * @throw kernel#BadPositionException @a line is greater than the number of lines
-			 */
-			inline Scalar TextLayout::ascent(Index line) const {
-				return lineMetrics_[line].ascent;
-			}
-
-			/**
-			 * Returns the descent of this layout.
-			 * @param line The line number
-			 * @return The descent in user units
-			 * @see #ascent, #baseline, #leading
-			 * @throw kernel#BadPositionException @a line is greater than the number of lines
-			 */
-			inline Scalar TextLayout::descent(Index line) const {
-				return lineMetrics_[line].descent;
-			}
 
 			/**
 			 * Returns extent (block-progression-dimension) of the line.
 			 * @return A range of block-progression-dimension relative to the alignment-point
 			 */
 			inline boost::integer_range<Scalar> TextLayout::extent() const {
-				return boost::irange(
-					baseline(0) - lineMetrics_[0].ascent,
-					baseline(numberOfLines() - 1) + lineMetrics_[numberOfLines() - 1].descent);
+				return extent(boost::irange(static_cast<Index>(0), numberOfLines()));
 			}
 
 			/**
 			 * Returns extent (block-progression-dimension) of the specified lines.
-			 * @param lines A range of the lines. @a lines.end() is exclusive
+			 * @param lines A range of the lines
 			 * @return A range of block-progression-dimension relative to the alignment-point
-			 * @throw kernel#BadRegionException
+			 * @throw IndexOutOfBoundsException
 			 */
 			inline boost::integer_range<Scalar> TextLayout::extent(const boost::integer_range<Index>& lines) const {
-				if(*lines.end() >= numberOfLines())
-					throw kernel::BadRegionException(kernel::Region(
-						kernel::Position(*lines.begin(), 0), kernel::Position(*lines.end(), 0)));
+				const auto temp = std::minmax(*lines.begin(), *lines.end());
+				if(temp.second > numberOfLines())
+					throw IndexOutOfBoundsException("lines");
+				const LineMetricsIterator firstLine(*this, temp.first), lastLine(*this, temp.second - 1);
 				return boost::irange(
-					baseline(lines.front()) - lineMetrics_[lines.front()].ascent,
-					baseline(lines.back()) + lineMetrics_[lines.back()].descent);
+					firstLine.baselineOffset() - firstLine.ascent(),
+			   		lastLine.baselineOffset() + lastLine.descent() + lastLine.leading());
 			}
 
 			/**
@@ -312,25 +307,14 @@ namespace ascension {
 			}
 
 			/**
-			 * Returns the leading of this layout.
-			 * @param line The line number
-			 * @return The leading in user units
-			 * @see #ascent, #baseline, #descent
-			 * @throw kernel#BadPositionException @a line is greater than the number of lines
-			 */
-			inline Scalar TextLayout::leading(Index line) const {
-				return lineMetrics_[line].leading;
-			}
-
-			/**
 			 * Returns the wrapped line containing the specified offset in the logical line.
 			 * @param offset The offset in this layout
 			 * @return The wrapped line
-			 * @throw kernel#BadPositionException @a offset is greater than the length of the layout
+			 * @throw IndexOutOfBoundsException @a offset is greater than the length of the layout
 			 */
 			inline Index TextLayout::lineAt(Index offset) const {
 				if(offset > textString_.length())
-					throw kernel::BadPositionException(kernel::Position(0, offset));
+					throw IndexOutOfBoundsException("offset");
 				if(numberOfLines() == 1)
 					return 0;
 				const std::vector<Index> offsets(lineOffsets());
@@ -392,6 +376,69 @@ namespace ascension {
 
 			/// Returns the number of the wrapped lines.
 			inline Index TextLayout::numberOfLines() const BOOST_NOEXCEPT {return numberOfLines_;}
+
+			/**
+			 * Returns the ascent of the current line.
+			 * @return The ascent in user units
+			 * @see #baselineOffset, #descent, #leading
+			 * @throw NoSuchElementException The iterator is done
+			 */
+			inline Scalar TextLayout::LineMetricsIterator::ascent() const {
+				if(line_ >= layout_.numberOfLines())
+					throw NoSuchElementException();
+				return std::get<0>(layout_.lineMetrics_[line_]);	// $friendly-access$
+			}
+
+			/**
+			 * Returns the distance from the baseline of the fitst line to the one of the current line.
+			 * @return The baseline distance in user units
+			 * @see #baselineOffset, #descent, #leading
+			 * @throw NoSuchElementException The iterator is done
+			 */
+			inline Scalar TextLayout::LineMetricsIterator::baselineOffset() const {
+				if(line_ >= layout_.numberOfLines())
+					throw NoSuchElementException();
+				return baselineOffset_;
+			}
+
+			/**
+			 */
+			inline Point TextLayout::LineMetricsIterator::baselineOffsetInPhysicalCoordinates() const {
+				switch(layout_.writingMode().blockFlowDirection) {
+					case presentation::HORIZONTAL_TB:
+						return Point(geometry::_x = 0, geometry::_y = baselineOffset());
+					case presentation::VERTICAL_RL:
+			 			return Point(geometry::_x = -baselineOffset(), geometry::_y = 0);
+					case presentation::VERTICAL_LR:
+			 			return Point(geometry::_x = +baselineOffset(), geometry::_y = 0);
+					default:
+						ASCENSION_ASSERT_NOT_REACHED();
+				}
+			}
+
+			/**
+			 * Returns the descent of the current line.
+			 * @return The descent in user units
+			 * @see #ascent, #baselineOffset, #leading
+			 * @throw NoSuchElementException The iterator is done
+			 */
+			inline Scalar TextLayout::LineMetricsIterator::descent() const {
+				if(line_ >= layout_.numberOfLines())
+					throw NoSuchElementException();
+				return std::get<1>(layout_.lineMetrics_[line_]);	// $friendly-access$
+			}
+
+			/**
+			 * Returns the leading of the current line.
+			 * @return The leading in user units
+			 * @see #ascent, #baselineOffset, #descent
+			 * @throw NoSuchElementException The iterator is done
+			 */
+			inline Scalar TextLayout::LineMetricsIterator::leading() const {
+				if(line_ >= layout_.numberOfLines())
+					throw NoSuchElementException();
+				return std::get<2>(layout_.lineMetrics_[line_]);	// $friendly-access$
+			}
 
 		}
 	}
