@@ -54,7 +54,7 @@ namespace ascension {
 				/// Returns the descent of the text in user units.
 				virtual Scalar descent() const BOOST_NOEXCEPT = 0;
 				/// Returns the height of the text in user units.
-				double height() const BOOST_NOEXCEPT {return ascent() + descent() + leading();}
+				Scalar height() const BOOST_NOEXCEPT {return ascent() + descent() + leading();}
 				/// Returns the leading of the text in user units.
 				virtual Scalar leading() const BOOST_NOEXCEPT = 0;
 				/// Returns the position of the strike-through line relative to the baseline in user units.
