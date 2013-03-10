@@ -229,18 +229,14 @@ FlowRelativeFourSides<Scalar> TextLayout::bounds(Index line) const {
 }
 
 /**
- * Returns the bidirectional embedding level at specified position.
- * @param offset The offset in this layout
- * @return The embedding level
- * @throw IndexOutOfBoundsException @a offset is greater than the length of the layout
+ * Returns the bidirectional embedding level of the character at the specified offset.
+ * @param offset The index of the character from which to get the bidirectional embedding level
+ * @return The bidirectional embedding level of the character at the specified offset
+ * @throw IndexOutOfBoundsException @a offset &gt;= @c #numberOfCharacters()
  */
 uint8_t TextLayout::characterLevel(Index offset) const {
-	if(isEmpty()) {
-		if(offset != 0)
-			throw IndexOutOfBoundsException("offset");
-		// use the default level
-		return (writingMode().inlineFlowDirection == RIGHT_TO_LEFT) ? 1 : 0;
-	}
+	if(offset >= numberOfCharacters())
+		throw IndexOutOfBoundsException("offset");
 	const auto run(runForPosition(offset));
 	if(run == end(runs_))
 		throw IndexOutOfBoundsException("offset");
@@ -442,7 +438,7 @@ vector<Index>&& TextLayout::lineOffsets() const BOOST_NOEXCEPT {
 	offsets.reserve(numberOfLines() + 1);
 	for(Index line = 0; line < numberOfLines(); ++line)
 		offsets.push_back((*firstRunInLine(line))->characterRange().begin() - bol);
-	offsets.push_back(textString_.length());
+	offsets.push_back(numberOfCharacters());
 	return move(offsets);
 }
 
@@ -657,7 +653,7 @@ ReadingDirection TextLayout::readingDirection() const /*throw()*/ {
  */
 TextLayout::RunVector::const_iterator TextLayout::runForPosition(Index offset) const BOOST_NOEXCEPT {
 	assert(!isEmpty());
-	if(offset == textString_.length())
+	if(offset == numberOfCharacters())
 		return end(runs_) - 1;
 	const String::const_pointer p(textString_.data() + offset);
 	const boost::iterator_range<RunVector::const_iterator> runs(runsForLine(lineAt(offset)));

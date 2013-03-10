@@ -141,8 +141,10 @@ namespace ascension {
 				/// @name General Attributes
 				/// @{
 				presentation::TextAnchor anchor(Index line) const;
+				std::uint8_t characterLevel() const BOOST_NOEXCEPT;
 				std::uint8_t characterLevel(Index offset) const;
 				bool isBidirectional() const BOOST_NOEXCEPT;
+				Index numberOfCharacters() const BOOST_NOEXCEPT;
 				const presentation::TextLineStyle& style() const /*throw()*/;
 				const presentation::WritingMode& writingMode() const /*throw()*/;
 				/// @}
@@ -269,6 +271,11 @@ namespace ascension {
 
 
 
+			/// Returns the base bidirectional embedding level of this @c TextLayout.
+			inline std::uint8_t TextLayout::characterLevel() const BOOST_NOEXCEPT {
+				return (writingMode().inlineFlowDirection == presentation::RIGHT_TO_LEFT) ? 1 : 0;
+			}
+
 			/**
 			 * Returns extent (block-progression-dimension) of the line.
 			 * @return A range of block-progression-dimension relative to the alignment-point
@@ -314,7 +321,7 @@ namespace ascension {
 			 * @throw IndexOutOfBoundsException @a offset is greater than the length of the layout
 			 */
 			inline Index TextLayout::lineAt(Index offset) const {
-				if(offset > textString_.length())
+				if(offset > numberOfCharacters())
 					throw IndexOutOfBoundsException("offset");
 				if(numberOfLines() == 1)
 					return 0;
@@ -346,7 +353,7 @@ namespace ascension {
 			 */
 			inline Index TextLayout::lineLength(Index line) const {
 				return (line < numberOfLines_ - 1 ?
-					lineOffset(line + 1) : textString_.length()) - lineOffset(line);
+					lineOffset(line + 1) : numberOfCharacters()) - lineOffset(line);
 			}
 
 			/**
@@ -374,6 +381,9 @@ namespace ascension {
 				locations(offset, &result.first, &result.second);
 				return result;
 			}
+
+			/// Returns the number of characters represented by this @c TextLayout.
+			inline Index TextLayout::numberOfCharacters() const BOOST_NOEXCEPT {return textString_.length();}
 
 			/// Returns the number of the wrapped lines.
 			inline Index TextLayout::numberOfLines() const BOOST_NOEXCEPT {return numberOfLines_;}
