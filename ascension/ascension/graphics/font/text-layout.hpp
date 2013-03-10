@@ -169,8 +169,8 @@ namespace ascension {
 				/// @{
 				boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& blackBoxBounds(const boost::integer_range<Index>& range) const;
 				presentation::FlowRelativeFourSides<Scalar> bounds() const BOOST_NOEXCEPT;
+				presentation::FlowRelativeFourSides<Scalar> bounds(Index line) const;
 				presentation::FlowRelativeFourSides<Scalar> bounds(const boost::integer_range<Index>& characterRange) const;
-				presentation::FlowRelativeFourSides<Scalar> lineBounds(Index line) const;
 				Rectangle pixelBounds(const FontRenderContext& frc, const Point& at) const;
 				/// @}
 
@@ -233,6 +233,7 @@ namespace ascension {
 				void expandTabsWithoutWrapping() /*throw()*/;
 				typedef std::vector<std::unique_ptr<const TextRun>> RunVector;
 				RunVector::const_iterator runForPosition(Index offset) const /*throw()*/;
+				boost::iterator_range<RunVector::const_iterator> runsForLine(Index line) const;
 				RunVector::const_iterator firstRunInLine(Index line) const BOOST_NOEXCEPT;
 				bool isEmpty() const BOOST_NOEXCEPT {return runs_.empty();}
 				void justify(Scalar lineMeasure, presentation::TextJustification method) /*throw()*/;

@@ -178,25 +178,54 @@ TextAnchor TextLayout::anchor(Index line) const {
 
 /**
  * Returns the smallest rectangle emcompasses the whole text of the line. It might not coincide
- * exactly the ascent, descent or overhangs of the text.
+ * exactly the ascent, descent, origin or advance of the @c TextLayout.
  * @return The size of the bounds
- * @see #blackBoxBounds, #bounds(const Range&lt;Index&gt;&amp;), #lineBounds
+ * @see #blackBoxBounds, #bounds(Index)
  */
 FlowRelativeFourSides<Scalar> TextLayout::bounds() const BOOST_NOEXCEPT {
-	// TODO: this implementation can't handle vertical text.
-	FlowRelativeFourSides<Scalar> result;
-	result.before() = /*-lineMetrics(0).leading()*/ - lineMetrics_[0].ascent;
-	result.after() = result.before();
-	result.start() = numeric_limits<Scalar>::max();
-	result.end() = numeric_limits<Scalar>::min();
+	if(numberOfLines() <= 1)
+		return bounds(0);
+	FlowRelativeFourSides<Scalar> sides;
+	sides.before() = bounds(0).before();
+	sides.after() = bounds(numberOfLines() - 1).after();
+	sides.start() = numeric_limits<Scalar>::max();
+	sides.end() = numeric_limits<Scalar>::min();
 	for(Index line = 0; line < numberOfLines(); ++line) {
-		const LineMetrics& lm = lineMetrics_[line];
-		result.after() += lm.ascent + lm.descent + lm.leading;
 		const Scalar lineStart = lineStartEdge(line);
-		result.start() = min(lineStart, result.start());
-		result.end() = max(lineStart + measure(line), result.end());
+		sides.start() = min(lineStart, sides.start());
+		sides.end() = max(lineStart + measure(line), sides.end());
 	}
-	return result;
+	return sides;
+}
+
+/**
+ * Returns the bounds of the specified line in flow-relative coordinates. It might not coincide
+ * exactly the ascent, descent, origin or advance of the @c TextLayout.
+ * @param line The line number
+ * @return The line bounds in user units
+ * @throw IndexOutOfBoundsException @a line &gt;= @c #numberOfLines()
+ * @see #basline, #lineStartEdge, #measure
+ */
+FlowRelativeFourSides<Scalar> TextLayout::bounds(Index line) const {
+	Scalar over = numeric_limits<Scalar>::min(), under = numeric_limits<Scalar>::min();
+	BOOST_FOREACH(const unique_ptr<const TextRun>& run, runsForLine(line)) {	// may throw IndexOutOfBoundsException
+		const graphics::Rectangle runVisualBounds(run->visualBounds());
+		over = max(-geometry::top(runVisualBounds), over);
+		under = max(geometry::bottom(runVisualBounds), under);
+	}
+
+	FlowRelativeFourSides<Scalar> sides;
+	sides.start() = lineStartEdge(line);
+	sides.end() = sides.start() + measure(line);
+	const LineMetricsIterator lm(lineMetrics(line));
+	if(isHorizontal(writingMode().blockFlowDirection) || resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT) {
+		sides.before() = lm.baselineOffset() - over;
+		sides.after() = lm.baselineOffset() + under;
+	} else {
+		sides.before() = lm.baselineOffset() - under;
+		sides.after() = lm.baselineOffset() + over;
+	}
+	return sides;
 }
 
 /**
@@ -224,13 +253,12 @@ uint8_t TextLayout::characterLevel(Index offset) const {
  * @param out The output stream
  */
 void TextLayout::dumpRuns(ostream& out) const {
-	const RunVector::const_iterator b(begin(runs_)), e(end(runs_));
 	const String::const_pointer backingStore = textString_.data();
-	for(RunVector::const_iterator i(b); i != e; ++i) {
-		const TextRunImpl& textRun = *static_cast<const TextRunImpl*>(i->get());
-		out << static_cast<unsigned int>(i - b)
-			<< ": [" << static_cast<unsigned int>(textRun.beginning() - backingStore)
-			<< "," << static_cast<unsigned int>(textRun.end() - backingStore) << ")" << std::endl;
+	size_t i = 0;
+	BOOST_FOREACH(const unique_ptr<const TextRun>& run, runs_) {
+		out << i++
+			<< ": [" << static_cast<unsigned int>(run->characterRange().begin() - backingStore)
+			<< "," << static_cast<unsigned int>(run->characterRange().end() - backingStore) << ")" << endl;
 	}
 }
 #endif // _DEBUG
@@ -341,8 +369,8 @@ TextLayout::StyledSegmentIterator TextLayout::firstStyledSegment() const /*throw
 bool TextLayout::isBidirectional() const BOOST_NOEXCEPT {
 	if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
 		return true;
-	BOOST_FOREACH(const RunVector::const_iterator i, runs_) {
-		if((*i)->direction() == RIGHT_TO_LEFT)
+	BOOST_FOREACH(const unique_ptr<const TextRun>& run, runs_) {
+		if(run->direction() == RIGHT_TO_LEFT)
 			return true;
 	}
 	return false;
@@ -354,26 +382,6 @@ TextLayout::StyledSegmentIterator TextLayout::lastStyledSegment() const /*throw(
 	return StyledSegmentIterator(temp);
 }
 #endif
-/**
- * Returns the smallest rectangle emcompasses the specified line. It might not coincide exactly the
- * ascent, descent or overhangs of the specified line.
- * @param line The line number
- * @return The line bounds in pixels
- * @throw IndexOutOfBoundsException @a line &gt;= @c #numberOfLines()
- * @see #basline, #lineStartEdge, #measure
- */
-FlowRelativeFourSides<Scalar> TextLayout::lineBounds(Index line) const {
-	if(line >= numberOfLines())
-		throw IndexOutOfBoundsException("line");
-
-	FlowRelativeFourSides<Scalar> sides;
-	sides.start() = lineStartEdge(line);
-	sides.end() = sides.start() + measure(line);
-	const LineMetricsIterator lm(lineMetrics(line));
-	sides.before() = lm.baselineOffset() - lm.ascent()/* - lm.leading()*/;
-	sides.after() = lm.baselineOffset() + lm.descent() + lm.leading();
-	return sides;
-}
 
 /**
  * @internal Returns 'line-left' of the specified line.
@@ -489,6 +497,7 @@ Index TextLayout::locateLine(Scalar bpd, bool& outside) const BOOST_NOEXCEPT {
 	return (outside = true), numberOfLines() - 1;
 }
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /**
  * @internal Converts an inline-progression-dimension into character offset(s) in the line.
  * @param line The line number
@@ -529,6 +538,7 @@ pair<Index, Index> TextLayout::locateOffsets(Index line, Scalar ipd, bool& outsi
 	const Index offset = characterRangeInLine.end() - textString_.data();
 	return make_pair(offset, offset);
 }
+#endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
 /**
  * Returns the inline-progression-dimension of the longest line.
@@ -571,10 +581,9 @@ Scalar TextLayout::measure(Index line) const {
 			if(lineMeasures_[line] >= 0)
 				return lineMeasures_[line];
 		}
-		const RunVector::const_iterator lastRun(firstRunInLine(line + 1));
 		Scalar ipd = 0;
-		for(RunVector::const_iterator run(firstRunInLine(line)); run != lastRun; ++run)
-			ipd += allocationMeasure(**run);
+		BOOST_FOREACH(const unique_ptr<const TextRun>& run, runsForLine(line))
+			ipd += allocationMeasure(*run);
 		assert(ipd >= 0);
 		if(numberOfLines() == 1)
 			self.maximumMeasure_ = ipd;
@@ -651,11 +660,10 @@ TextLayout::RunVector::const_iterator TextLayout::runForPosition(Index offset) c
 	if(offset == textString_.length())
 		return end(runs_) - 1;
 	const String::const_pointer p(textString_.data() + offset);
-	const Index line = lineAt(offset);
-	const RunVector::const_iterator lastRun(firstRunInLine(line + 1));
-	for(RunVector::const_iterator i(firstRunInLine(line)); i < lastRun; ++i) {
-		if(includes((*i)->characterRange(), p))
-			return i;
+	const boost::iterator_range<RunVector::const_iterator> runs(runsForLine(lineAt(offset)));
+	for(RunVector::const_iterator run(runs.begin()); run != runs.end(); ++run) {
+		if(includes((*run)->characterRange(), p))
+			return run;
 	}
 	ASCENSION_ASSERT_NOT_REACHED();
 }
