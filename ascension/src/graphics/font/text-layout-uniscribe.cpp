@@ -2468,7 +2468,7 @@ TextLayout::TextLayout(const String& textString, const ComputedTextLineStyle& li
 boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& TextLayout::blackBoxBounds(const boost::integer_range<Index>& characterRange) const {
 	const Index firstCharacter = min(*characterRange.begin(), *characterRange.end());
 	const Index lastCharacter = max(*characterRange.begin(), *characterRange.end());
-	if(lastCharacter > textString_.length())
+	if(lastCharacter > numberOfCharacters())
 		throw IndexOutOfBoundsException("characterRange");
 	boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>> result;
 
@@ -2531,7 +2531,7 @@ boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& 
  */
 FlowRelativeFourSides<Scalar> TextLayout::bounds(const boost::integer_range<Index>& characterRange) const {
 	const auto orderedCharacterRange(ordered(characterRange));
-	if(*orderedCharacterRange.end() > textString_.length())
+	if(*orderedCharacterRange.end() > numberOfCharacters())
 		throw IndexOutOfBoundsException("characterRange");
 
 	FlowRelativeFourSides<Scalar> result;
@@ -3024,7 +3024,7 @@ String TextLayout::fillToX(Scalar x) const {
 }
 
 AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit& hit) const {
-	if(hit.characterIndex() >= textString_.length())
+	if(hit.characterIndex() >= numberOfCharacters())
 		throw out_of_range("hit");
 
 	Scalar ipd, bpd = 0/* + lineMetrics_[0].leading*/;
@@ -3231,7 +3231,7 @@ void TextLayout::wrap(Scalar measure, const TabExpander& tabExpander) BOOST_NOEX
 				}
 				// case 2: break at the end of the run
 				else if(lastBreakable == run->end()) {
-					if(lastBreakable < textString_.data() + textString_.length()) {
+					if(lastBreakable < textString_.data() + numberOfCharacters()) {
 						assert(firstRunsInLines.empty() || runs.size() != firstRunsInLines.back());
 						firstRunsInLines.push_back(runs.size() + 1);
 //dout << L"broke the line at " << lastBreakable << L" where the run end.\n";
