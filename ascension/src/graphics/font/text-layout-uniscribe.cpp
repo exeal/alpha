@@ -2487,10 +2487,9 @@ boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& 
 			geometry::x(runTypographicOrigin) = geometry::x(ll);
 		else if(geometry::y(ll) != 0)
 			geometry::y(runTypographicOrigin) = geometry::y(ll);
-		const RunVector::const_iterator lastRun(
-			(line + 1 < numberOfLines()) ? firstRunInLine(line + 1) : std::end(runs_));
 
-		for(RunVector::const_iterator run(firstRunInLine(line)); run != lastRun; ++run, ++lm) {
+		const boost::iterator_range<RunVector::const_iterator> runs(runsForLine(line));
+		for(RunVector::const_iterator run(runs.begin()); run != runs.end(); ++run, ++lm) {
 			const boost::integer_range<Index> runRange = boost::irange<Index>(
 				(*run)->characterRange().begin() - textString_.data(), (*run)->characterRange().end() - textString_.data());
 			const auto intersection = ascension::intersection(runRange, characterRange);
@@ -2583,17 +2582,16 @@ FlowRelativeFourSides<Scalar> TextLayout::bounds(const boost::integer_range<Inde
 			const StringPiece effectiveCharacterRange(textString_.data() + orderedCharacterRange.front(), orderedCharacterRange.size());
 			for(vector<Index>::const_iterator
 					line(begin(partiallyCoveredLines)), e(std::end(partiallyCoveredLines)); line != e; ++line) {
-				const RunVector::const_iterator lastRun(
-					(*line + 1 < numberOfLines()) ? firstRunInLine(*line + 1) : std::end(runs_));
+				const boost::iterator_range<RunVector::const_iterator> runs(runsForLine(*line));
 
 				// find 'start-edge'
-				InlineProgressionDimensionRangeIterator i(boost::make_iterator_range(firstRunInLine(*line), lastRun),
+				InlineProgressionDimensionRangeIterator i(runs,
 					writingMode().inlineFlowDirection, effectiveCharacterRange, Direction::FORWARD, lineStartEdge(*line));
 				assert(i != InlineProgressionDimensionRangeIterator());
 				start = min(*i->begin(), start);
 
 				// find 'end-edge'
-				i = InlineProgressionDimensionRangeIterator(boost::make_iterator_range(firstRunInLine(*line), lastRun),
+				i = InlineProgressionDimensionRangeIterator(runs,
 					writingMode().inlineFlowDirection, effectiveCharacterRange, Direction::BACKWARD, lineStartEdge(*line) + measure(*line));
 				assert(i != InlineProgressionDimensionRangeIterator());
 				end = max(*i->end(), end);
@@ -2719,7 +2717,6 @@ void TextLayout::draw(PaintContext& context,
 			}
 		}
 
-		const RunVector::const_iterator lastRun((line.line() + 1 < numberOfLines()) ? firstRunInLine(line.line() + 1) : runs_.end());
 		graphics::Rectangle allocationRectangle;
 		if(horizontalLayout)
 			geometry::range<1>(allocationRectangle) = boost::irange(over, under);
@@ -2727,7 +2724,7 @@ void TextLayout::draw(PaintContext& context,
 			geometry::range<0>(allocationRectangle) = boost::irange(over, under);
 //		context.setGlobalAlpha(1.0);
 //		context.setGlobalCompositeOperation(SOURCE_OVER);
-		for(RunVector::const_iterator i(firstRunInLine(line.line())); i < lastRun; ++i) {
+		BOOST_FOREACH(const unique_ptr<const TextRun>& run, runsForLine(line.line())) {
 			// check if this text run is beyond bounds to paint
 			// TODO: Consider overhangs.
 			if(horizontalLayout) {
@@ -2739,14 +2736,13 @@ void TextLayout::draw(PaintContext& context,
 			}
 
 			// compute next position of 'p', 'border-box' and 'allocation-box'
-			const TextRunImpl& textRun = *static_cast<const TextRunImpl*>(i->get());
 			Point q(p);
 			if(horizontalLayout)
-				geometry::x(q) += allocationMeasure(textRun);
+				geometry::x(q) += allocationMeasure(*run);
 			else if(resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT)
-				geometry::y(q) += allocationMeasure(textRun);
+				geometry::y(q) += allocationMeasure(*run);
 			else
-				geometry::y(q) -= allocationMeasure(textRun);
+				geometry::y(q) -= allocationMeasure(*run);
 			bool skipThisRun = boost::geometry::equals(q, p);	// skip empty box
 
 			// check if this text run intersects with bounds to paint
@@ -2765,7 +2761,7 @@ void TextLayout::draw(PaintContext& context,
 				context.fillRectangle(allocationRectangle);
 
 				// 2-2. compute 'content-rectangle'
-				const FlowRelativeFourSides<Scalar> abstractContentBox(contentBox(textRun)), abstractAllocationBox(allocationBox(textRun));
+				const FlowRelativeFourSides<Scalar> abstractContentBox(contentBox(*run)), abstractAllocationBox(allocationBox(*run));
 				graphics::Rectangle contentRectangle;
 				if(horizontalLayout) {
 					if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT)
@@ -2800,22 +2796,23 @@ void TextLayout::draw(PaintContext& context,
 				}
 
 				// compute 'border-rectangle' if needed
+				const auto& runStyle = static_cast<const TextRunImpl&>(*run).style();
 				const Point& alignmentPoint = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? p : q;
 				graphics::Rectangle borderRectangle;
-				if(textRun.style().background || borderShouldBePainted(textRun.style().border))
+				if(runStyle.background || borderShouldBePainted(runStyle.border))
 					borderRectangle = geometry::make<graphics::Rectangle>(
-						mapFlowRelativeToPhysical(writingMode(), borderBox(textRun), PhysicalTwoAxes<Scalar>(alignmentPoint)));
+						mapFlowRelativeToPhysical(writingMode(), borderBox(*run), PhysicalTwoAxes<Scalar>(alignmentPoint)));
 
 				// 2-3. paint background
-				if(textRun.style().background) {
-					context.setFillStyle(textRun.style().background);
+				if(runStyle.background) {
+					context.setFillStyle(runStyle.background);
 					context.fillRectangle(borderRectangle);
 				}
 
 				// 2-4. paint borders
 				PhysicalFourSides<const ComputedBorderSide*> physicalBorders;
-				for(auto border(begin(textRun.style().border)), e(end(textRun.style().border)); border != e; ++border) {
-					const FlowRelativeDirection direction = static_cast<FlowRelativeDirection>(border - begin(textRun.style().border));
+				for(auto border(begin(runStyle.border)), e(end(runStyle.border)); border != e; ++border) {
+					const FlowRelativeDirection direction = static_cast<FlowRelativeDirection>(border - begin(runStyle.border));
 					physicalBorders[mapFlowRelativeToPhysical(writingMode(), direction)] = &*border;
 				}
 				for(auto border(begin(physicalBorders)), e(end(physicalBorders)); border != e; ++border) {
@@ -2827,7 +2824,7 @@ void TextLayout::draw(PaintContext& context,
 				}
 
 				// store this text run to paint the glyphs
-				textRunsToPaint.push_back(std::make_tuple(std::cref(textRun), contentRectangle, alignmentPoint));
+				textRunsToPaint.push_back(std::make_tuple(std::cref(run), contentRectangle, alignmentPoint));
 			}
 
 //			::ExcludeClipRect(context.asNativeObject().get(),
