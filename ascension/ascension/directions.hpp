@@ -49,7 +49,7 @@ namespace ascension {
 	namespace graphics {
 		/**
 		 * Defines physical directions.
-		 * @see presentation#FlowRelativeDirection
+		 * @see font#LineRelativeDirection, presentation#FlowRelativeDirection
 		 */
 		enum PhysicalDirection {
 			TOP,	///< Physical top.
@@ -213,12 +213,41 @@ namespace ascension {
 			static_assert(std::is_arithmetic<T>::value, "T is not arithmetic.");
 			return boost::irange(sides.top(), sides.bottom());
 		}
+
+		namespace font {
+			/**
+			 * Defines line-relative directions.
+			 * @see PhysicalDirection, presentation#FlowRelativeDirection
+			 */
+			enum LineRelativeDirection {
+				/// 'over' -- Nominally the side that corresponds to the ascender side or gtoph
+				/// side of a line box.
+				OVER,
+				/// 'under' -- Opposite of over: the line-relative gbottomh or descender side.
+				UNDER,
+				/// 'line-left' -- Nominally the side from which LTR text would start.
+				LINE_LEFT,
+				/// 'line-right' -- Nominally the side from which RTL text would start.
+				LINE_RIGHT
+			};
+
+			/**
+			 * Returns direction opposite @a direction.
+			 * @throw UnknownValueException @a direction is invalid
+			 */
+			inline LineRelativeDirection operator!(LineRelativeDirection direction) {
+				static const LineRelativeDirection opposites[4] = {UNDER, OVER, LINE_RIGHT, LINE_LEFT};
+				if(direction >= std::extent<decltype(opposites)>::value)
+					throw UnknownValueException("direction");
+				return opposites[direction];
+			}
+		}
 	}
 
 	namespace presentation {
 		/**
 		 * Defines flow-relative directions.
-		 * @see graphics#PhysicalDirection
+		 * @see graphics#PhysicalDirection, graphics#font#LineRelativeDirection
 		 */
 		enum FlowRelativeDirection {
 			/// 'before' -- Nominally the side that comes earlier in the block progression.
