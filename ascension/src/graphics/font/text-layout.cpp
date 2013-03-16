@@ -71,22 +71,22 @@ void detail::paintBorder(PaintContext& context, const graphics::Rectangle& recta
 //		context.setStrokeDashOffset();
 		context.beginPath();
 		switch(static_cast<PhysicalDirection>(side - begin(border))) {
-			case TOP:
+			case PhysicalDirection::TOP:
 				context
 					.moveTo(geometry::topLeft(rectangle))
 					.lineTo(geometry::translate(geometry::topRight(rectangle), Dimension(geometry::_dx = 1, geometry::_dy = 0)));
 				break;
-			case RIGHT:
+			case PhysicalDirection::RIGHT:
 				context
 					.moveTo(geometry::topRight(rectangle))
 					.lineTo(geometry::translate(geometry::bottomRight(rectangle), Dimension(geometry::_dx = 0, geometry::_dy = 1)));
 				break;
-			case BOTTOM:
+			case PhysicalDirection::BOTTOM:
 				context
 					.moveTo(geometry::bottomLeft(rectangle))
 					.lineTo(geometry::translate(geometry::bottomRight(rectangle), Dimension(geometry::_dx = 1, geometry::_dy = 0)));
 				break;
-			case LEFT:
+			case PhysicalDirection::LEFT:
 				context
 					.moveTo(geometry::topLeft(rectangle))
 					.lineTo(geometry::translate(geometry::bottomLeft(rectangle), Dimension(geometry::_dx = 0, geometry::_dy = 1)));

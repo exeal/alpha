@@ -38,22 +38,22 @@ namespace ascension {
 				ARGB_32, RGB_24, RGB_16
 			};
 		public:
-			Image(const NativeSize& size, Format format);
-			Image(const std::uint8_t* data, const NativeSize& size, Format format);
-			const NativeImage& asNativeObject() const /*throw()*/ {return impl_;}
+			Image(const geometry::BasicDimension<std::uint16_t>& size, Format format);
+			Image(const std::uint8_t* data, const geometry::BasicDimension<std::uint16_t>& size, Format format);
+			const NativeImage& asNativeObject() const BOOST_NOEXCEPT {return impl_;}
 			static int depth(Format format);
 			// RenderingDevice
 			std::unique_ptr<RenderingContext2D> createRenderingContext() const;
-			int depth();
+			std::uint16_t depth();
 			std::uint32_t numberOfColors();
-			geometry::Coordinate<NativeSize>::Type height() const;
-			geometry::Coordinate<NativeSize>::Type heightInMillimeters() const;
-			geometry::Coordinate<NativeSize>::Type logicalDpiX() const;
-			geometry::Coordinate<NativeSize>::Type logicalDpiY() const;
-			geometry::Coordinate<NativeSize>::Type width() const;
-			geometry::Coordinate<NativeSize>::Type widthInMillimeters() const;
-			geometry::Coordinate<NativeSize>::Type physicalDpiX() const;
-			geometry::Coordinate<NativeSize>::Type physicalDpiY() const;
+			std::uint16_t height() const;
+			Scalar heightInMillimeters() const;
+			std::uint16_t logicalDpiX() const;
+			std::uint16_t logicalDpiY() const;
+			std::uint16_t width() const;
+			Scalar widthInMillimeters() const;
+			std::uint16_t physicalDpiX() const;
+			std::uint16_t physicalDpiY() const;
 		private:
 			NativeImage impl_;
 		};
