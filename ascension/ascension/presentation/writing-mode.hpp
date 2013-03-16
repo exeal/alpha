@@ -6,6 +6,7 @@
  * @date 2011-05-04 text-style.hpp separated from presentation.hpp
  * @date 2011-07-24 separated from text-style.hpp
  * @date 2011-2012
+ * @see directions.hpp
  */
 
 #ifndef ASCENSION_WRITING_MODE_HPP
