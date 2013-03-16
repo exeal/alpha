@@ -167,28 +167,34 @@ namespace ascension {
 			switch(writingMode.blockFlowDirection) {
 				case HORIZONTAL_TB:
 					switch(direction) {
-						case BEFORE:
-							return graphics::TOP;
-						case AFTER:
-							return graphics::BOTTOM;
-						case START:
-							return (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? graphics::LEFT : graphics::RIGHT;
-						case END:
-							return (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? graphics::RIGHT : graphics::LEFT;
+						case FlowRelativeDirection::BEFORE:
+							return graphics::PhysicalDirection::TOP;
+						case FlowRelativeDirection::AFTER:
+							return graphics::PhysicalDirection::BOTTOM;
+						case FlowRelativeDirection::START:
+							return (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ?
+								graphics::PhysicalDirection::LEFT : graphics::PhysicalDirection::RIGHT;
+						case FlowRelativeDirection::END:
+							return (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ?
+								graphics::PhysicalDirection::RIGHT : graphics::PhysicalDirection::LEFT;
 					}
 					break;
 				case VERTICAL_RL:
 				case VERTICAL_LR:
 					switch(direction) {
-						case BEFORE:
-							return (writingMode.blockFlowDirection == VERTICAL_RL) ? graphics::RIGHT : graphics::LEFT;
-						case AFTER:
-							return (writingMode.blockFlowDirection == VERTICAL_RL) ? graphics::LEFT : graphics::RIGHT;
-						case START:
-						case END: {
+						case FlowRelativeDirection::BEFORE:
+							return (writingMode.blockFlowDirection == VERTICAL_RL)
+								? graphics::PhysicalDirection::RIGHT : graphics::PhysicalDirection::LEFT;
+						case FlowRelativeDirection::AFTER:
+							return (writingMode.blockFlowDirection == VERTICAL_RL) ?
+								graphics::PhysicalDirection::LEFT : graphics::PhysicalDirection::RIGHT;
+						case FlowRelativeDirection::START:
+						case FlowRelativeDirection::END: {
 							bool ttb = resolveTextOrientation(writingMode) == SIDEWAYS_LEFT;
 							ttb = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? !ttb : ttb;
-							return (direction == START) ? (ttb ? graphics::TOP : graphics::BOTTOM) : (ttb ? graphics::BOTTOM : graphics::TOP);
+							return (direction == FlowRelativeDirection::START) ?
+								(ttb ? graphics::PhysicalDirection::TOP : graphics::PhysicalDirection::BOTTOM)
+								: (ttb ? graphics::PhysicalDirection::BOTTOM : graphics::PhysicalDirection::TOP);
 						}
 					}
 				default:
@@ -208,29 +214,35 @@ namespace ascension {
 			switch(writingMode.blockFlowDirection) {
 				case HORIZONTAL_TB:
 					switch(direction) {
-						case graphics::TOP:
-							return BEFORE;
-						case graphics::RIGHT:
-							return (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? START : END;
-						case graphics::BOTTOM:
-							return AFTER;
-						case graphics::LEFT:
-							return (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? END : START;
+						case graphics::PhysicalDirection::TOP:
+							return FlowRelativeDirection::BEFORE;
+						case graphics::PhysicalDirection::RIGHT:
+							return (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ?
+								FlowRelativeDirection::START : FlowRelativeDirection::END;
+						case graphics::PhysicalDirection::BOTTOM:
+							return FlowRelativeDirection::AFTER;
+						case graphics::PhysicalDirection::LEFT:
+							return (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ?
+								FlowRelativeDirection::END : FlowRelativeDirection::START;
 					}
 					break;
 				case VERTICAL_RL:
 				case VERTICAL_LR:
 					switch(direction) {
-						case graphics::TOP:
-						case graphics::BOTTOM: {
+						case graphics::PhysicalDirection::TOP:
+						case graphics::PhysicalDirection::BOTTOM: {
 							bool ttb = resolveTextOrientation(writingMode) == SIDEWAYS_LEFT;
 							ttb = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? !ttb : ttb;
-							return (direction == graphics::TOP) ? (ttb ? START : END) : (ttb ? END : START);
+							return (direction == graphics::PhysicalDirection::TOP) ?
+								(ttb ? FlowRelativeDirection::START : FlowRelativeDirection::END)
+								: (ttb ? FlowRelativeDirection::END : FlowRelativeDirection::START);
 						}
-						case graphics::RIGHT:
-							return (writingMode.blockFlowDirection == VERTICAL_RL) ? BEFORE : AFTER;
-						case graphics::LEFT:
-							return (writingMode.blockFlowDirection == VERTICAL_RL) ? AFTER : BEFORE;
+						case graphics::PhysicalDirection::RIGHT:
+							return (writingMode.blockFlowDirection == VERTICAL_RL) ?
+								FlowRelativeDirection::BEFORE : FlowRelativeDirection::AFTER;
+						case graphics::PhysicalDirection::LEFT:
+							return (writingMode.blockFlowDirection == VERTICAL_RL) ?
+								FlowRelativeDirection::AFTER : FlowRelativeDirection::BEFORE;
 					}
 				default:
 					throw UnknownValueException("writingMode.blockFlowDirection");

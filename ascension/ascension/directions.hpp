@@ -54,19 +54,22 @@ namespace ascension {
 		 * Defines physical directions.
 		 * @see font#LineRelativeDirection, presentation#FlowRelativeDirection
 		 */
-		enum PhysicalDirection {
+		ASCENSION_SCOPED_ENUMS_BEGIN(PhysicalDirection)
 			TOP,	///< Physical top.
 			RIGHT,	///< Physical right.
 			BOTTOM,	///< Physical bottom.
 			LEFT	///< Physical left.
-		};
+		ASCENSION_SCOPED_ENUMS_END
 
 		/**
 		 * Returns direction opposite @a direction.
 		 * @throw UnknownValueException @a direction is invalid
 		 */
 		inline PhysicalDirection operator!(PhysicalDirection direction) {
-			static const PhysicalDirection opposites[4] = {BOTTOM, LEFT, TOP, RIGHT};
+			static const PhysicalDirection opposites[4] = {
+				PhysicalDirection::BOTTOM, PhysicalDirection::LEFT,
+				PhysicalDirection::TOP, PhysicalDirection::RIGHT
+			};
 			if(direction >= std::extent<decltype(opposites)>::value)
 				throw UnknownValueException("direction");
 			return opposites[direction];
@@ -222,7 +225,7 @@ namespace ascension {
 			 * Defines line-relative directions.
 			 * @see PhysicalDirection, presentation#FlowRelativeDirection
 			 */
-			enum LineRelativeDirection {
+			ASCENSION_SCOPED_ENUMS_BEGIN(LineRelativeDirection)
 				/// 'over' -- Nominally the side that corresponds to the ascender side or gtoph
 				/// side of a line box.
 				OVER,
@@ -232,14 +235,17 @@ namespace ascension {
 				LINE_LEFT,
 				/// 'line-right' -- Nominally the side from which RTL text would start.
 				LINE_RIGHT
-			};
+			ASCENSION_SCOPED_ENUMS_END
 
 			/**
 			 * Returns direction opposite @a direction.
 			 * @throw UnknownValueException @a direction is invalid
 			 */
 			inline LineRelativeDirection operator!(LineRelativeDirection direction) {
-				static const LineRelativeDirection opposites[4] = {UNDER, OVER, LINE_RIGHT, LINE_LEFT};
+				static const LineRelativeDirection opposites[4] = {
+					LineRelativeDirection::UNDER, LineRelativeDirection::OVER,
+					LineRelativeDirection::LINE_RIGHT, LineRelativeDirection::LINE_LEFT
+				};
 				if(direction >= std::extent<decltype(opposites)>::value)
 					throw UnknownValueException("direction");
 				return opposites[direction];
@@ -252,7 +258,7 @@ namespace ascension {
 		 * Defines flow-relative directions.
 		 * @see graphics#PhysicalDirection, graphics#font#LineRelativeDirection
 		 */
-		enum FlowRelativeDirection {
+		ASCENSION_SCOPED_ENUMS_BEGIN(FlowRelativeDirection)
 			/// 'before' -- Nominally the side that comes earlier in the block progression.
 			BEFORE,
 			/// 'after' -- The side opposite 'before'.
@@ -261,14 +267,17 @@ namespace ascension {
 			START,
 			/// 'end' -- The side opposite 'start'.
 			END
-		};
+		ASCENSION_SCOPED_ENUMS_END
 
 		/**
 		 * Returns direction opposite @a direction.
 		 * @throw UnknownValueException @a direction is invalid
 		 */
 		inline FlowRelativeDirection operator!(FlowRelativeDirection direction) {
-			static const FlowRelativeDirection opposites[4] = {AFTER, BEFORE, END, START};
+			static const FlowRelativeDirection opposites[4] = {
+				FlowRelativeDirection::AFTER, FlowRelativeDirection::BEFORE,
+				FlowRelativeDirection::END, FlowRelativeDirection::START
+			};
 			if(direction >= std::extent<decltype(opposites)>::value)
 				throw UnknownValueException("direction");
 			return opposites[direction];
