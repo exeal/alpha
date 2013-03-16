@@ -4,11 +4,14 @@
  * @date 2012-03-31 created
  * @date 2012-2013
  * @see geometry.hpp, writing-mode.hpp
+ * @see CSS Writing Modes Module Level 3, 6. Abstract Box Terminology
+ *      (http://www.w3.org/TR/css3-writing-modes/#abstract-box)
  */
 
 #ifndef ASCENSION_DIRECTIONS_HPP
 #define ASCENSION_DIRECTIONS_HPP
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
+#include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <ascension/graphics/geometry.hpp>
 #include <array>
 #include <iterator>		// std.end

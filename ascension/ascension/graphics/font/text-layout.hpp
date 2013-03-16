@@ -169,7 +169,9 @@ namespace ascension {
 
 				/// @name Bounds
 				/// @{
-				boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& blackBoxBounds(const boost::integer_range<Index>& range) const;
+				boost::geometry::model::multi_polygon<
+					boost::geometry::model::polygon<Point>
+				>&& blackBoxBounds(const boost::integer_range<Index>& range) const;
 				presentation::FlowRelativeFourSides<Scalar> bounds() const BOOST_NOEXCEPT;
 				presentation::FlowRelativeFourSides<Scalar> bounds(Index line) const;
 				presentation::FlowRelativeFourSides<Scalar> bounds(const boost::integer_range<Index>& characterRange) const;
@@ -178,7 +180,8 @@ namespace ascension {
 
 				/// @name Highlight Shapes
 				/// @{
-				presentation::FlowRelativeFourSides<Scalar> logicalHighlightShape(const boost::integer_range<Index>& range) const;
+				boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&&
+					logicalHighlightShape(const boost::integer_range<Index>& range, const boost::optional<Rectangle>& bounds) const;
 				std::vector<boost::integer_range<Index>>&& logicalRangesForVisualSelection(const boost::integer_range<TextHit>& range) const;
 				presentation::FlowRelativeFourSides<Scalar> visualHighlightShape(const boost::iterator_range<TextHit>& range) const;
 				/// @}

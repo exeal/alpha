@@ -88,25 +88,25 @@ namespace ascension {
 
 		enum FillRule {NONZERO, EVENODD};
 
-		ASCENSION_BEGIN_SCOPED_ENUM(LineCap)
+		ASCENSION_SCOPED_ENUMS_BEGIN(LineCap)
 			BUTT,
 			ROUND,
 			SQUARE
-		ASCENSION_END_SCOPED_ENUM
+		ASCENSION_SCOPED_ENUMS_END
 
-		ASCENSION_BEGIN_SCOPED_ENUM(LineJoin)
+		ASCENSION_SCOPED_ENUMS_BEGIN(LineJoin)
 			BEVEL,
 			ROUND,
 			MITER
-		ASCENSION_END_SCOPED_ENUM
+		ASCENSION_SCOPED_ENUMS_END
 
-		ASCENSION_BEGIN_SCOPED_ENUM(TextAlignment)
+		ASCENSION_SCOPED_ENUMS_BEGIN(TextAlignment)
 			START = presentation::TextAlignment::START,
 			END = presentation::TextAlignment::END,
 			LEFT = presentation::TextAlignment::LEFT,
 			RIGHT = presentation::TextAlignment::RIGHT,
 			CENTER = presentation::TextAlignment::CENTER
-		ASCENSION_END_SCOPED_ENUM
+		ASCENSION_SCOPED_ENUMS_END
 
 		class ImageData {
 			ASCENSION_NONCOPYABLE_TAG(ImageData);

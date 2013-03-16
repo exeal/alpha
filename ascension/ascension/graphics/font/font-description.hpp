@@ -70,7 +70,7 @@ namespace ascension {
 			 * @see Fonts - SVG 1.1 (Second Edition), 20.8.3 The Åefont-faceÅf element
 			 *      (http://www.w3.org/TR/SVG11/fonts.html#FontFaceElementFontWeightAttribute)
 			 */
-			ASCENSION_BEGIN_SCOPED_ENUM(FontWeight)
+			ASCENSION_SCOPED_ENUMS_BEGIN(FontWeight)
 				/// Same as 400.
 				NORMAL = 400,
 				/// Same as 700.
@@ -90,7 +90,7 @@ namespace ascension {
 				ULTRA_BOLD = 800,
 				BLACK = 900,
 				HEAVY = 900
-			ASCENSION_END_SCOPED_ENUM
+			ASCENSION_SCOPED_ENUMS_END
 
 			/**
 			 * [Copied from CSS3] This property selects a normal, condensed, or expanded face from
@@ -102,7 +102,7 @@ namespace ascension {
 			 * @see Fonts - SVG 1.1 (Second Edition), 20.8.3 The Åefont-faceÅf element
 			 *      (http://www.w3.org/TR/SVG11/fonts.html#FontFaceElementFontStretchAttribute)
 			 */
-			ASCENSION_BEGIN_SCOPED_ENUM(FontStretch)
+			ASCENSION_SCOPED_ENUMS_BEGIN(FontStretch)
 				NORMAL = 1000,			///< Normal.
 //				WIDER,
 //				NARROWER,
@@ -114,7 +114,7 @@ namespace ascension {
 				EXPANDED = 1250,		///< Expanded.
 				EXTRA_EXPANDED = 1500,	///< Extra Expanded.
 				ULTRA_EXPANDED = 2000	///< Ultra Expanded.
-			ASCENSION_END_SCOPED_ENUM
+			ASCENSION_SCOPED_ENUMS_END
 
 			/**
 			 * [Copied from CSS3] This property allows italic or oblique faces to be selected.
@@ -125,28 +125,28 @@ namespace ascension {
 			 * @see Fonts - SVG 1.1 (Second Edition), 20.8.3 The Åefont-faceÅf element
 			 *      (http://www.w3.org/TR/SVG11/fonts.html#FontFaceElementFontStyleAttribute)
 			 */
-			ASCENSION_BEGIN_SCOPED_ENUM(FontStyle)
+			ASCENSION_SCOPED_ENUMS_BEGIN(FontStyle)
 				NORMAL,		///< Selects a face that is classified as 'normal'.
 				ITALIC,		///< Selects a face that is labeled 'italic' or 'oblique'.
 				OBLIQUE,	///< Selects a face that is labeled 'oblique'.
 				BACKSLANT	///< Selects a face that is labeled 'backslant'.
-			ASCENSION_END_SCOPED_ENUM
+			ASCENSION_SCOPED_ENUMS_END
 
-//			ASCENSION_BEGIN_SCOPED_ENUM(FontSynthesis)
+//			ASCENSION_SCOPED_ENUMS_BEGIN(FontSynthesis)
 //				NONE = 0,
 //				WEIGHT = 1 << 0,
 //				STYLE = 1 << 1
-//			ASCENSION_END_SCOPED_ENUM
+//			ASCENSION_SCOPED_ENUMS_END
 
-//			ASCENSION_BEGIN_SCOPED_ENUM(FontVariant)
+//			ASCENSION_SCOPED_ENUMS_BEGIN(FontVariant)
 //				NORMAL,
 //				SMALL_CAPS
-//			ASCENSION_END_SCOPED_ENUM
+//			ASCENSION_SCOPED_ENUMS_END
 #if 0
-			ASCENSION_BEGIN_SCOPED_ENUM(FontOrientation)
+			ASCENSION_SCOPED_ENUMS_BEGIN(FontOrientation)
 				HORIZONTAL,
 				VERTICAL
-			ASCENSION_END_SCOPED_ENUM
+			ASCENSION_SCOPED_ENUMS_END
 #endif
 			struct FontFeatureSetting {
 				OpenTypeFontTag name;

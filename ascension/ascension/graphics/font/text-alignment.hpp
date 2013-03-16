@@ -27,11 +27,11 @@ namespace ascension {
 			 * @see XSL 1.1, 7.16.6 "line-stacking-strategy"
 			 *      (http://www.w3.org/TR/xsl/#line-stacking-strategy)
 			 */
-			ASCENSION_BEGIN_SCOPED_ENUM(LineBoxContain)
+			ASCENSION_SCOPED_ENUMS_BEGIN(LineBoxContain)
 				// TODO: 'NONE' should be 0.
 				// TODO: Values other than 'NONE' can be combined by bitwise-OR.
 				BLOCK, INLINE, FONT, GLYPHS, REPLACED, INLINE_BOX, NONE
-			ASCENSION_END_SCOPED_ENUM;
+			ASCENSION_SCOPED_ENUMS_END;
 
 			/**
 			 * [Copied from CSS3] The ‘dominant-baseline’ property is used to determine or
@@ -45,7 +45,7 @@ namespace ascension {
 			 * @see XSL 1.1, 7.14.5 "dominant-basline"
 			 *      (http://www.w3.org/TR/xsl/#dominant-baseline)
 			 */
-			ASCENSION_BEGIN_SCOPED_ENUM(DominantBaseline)
+			ASCENSION_SCOPED_ENUMS_BEGIN(DominantBaseline)
 				AUTO,
 				USE_SCRIPT,
 				NO_CHANGE,
@@ -58,7 +58,7 @@ namespace ascension {
 				MIDDLE,
 				TEXT_AFTER_EDGE,
 				TEXT_DEFORE_EDGE,
-			ASCENSION_END_SCOPED_ENUM;
+			ASCENSION_SCOPED_ENUMS_END;
 
 			/**
 			 * [Copied from CSS3] This property specifies how an inline-level element is aligned
@@ -76,7 +76,7 @@ namespace ascension {
 			 * @see XSL 1.1, 7.14.2 "alignment-baseline"
 			 *      (http://www.w3.org/TR/xsl/#alignment-baseline)
 			 */
-			ASCENSION_BEGIN_SCOPED_ENUM(AlignmentBaseline)
+			ASCENSION_SCOPED_ENUMS_BEGIN(AlignmentBaseline)
 				BASELINE,
 				USE_SCRIPT,
 				BEFORE_EDGE,
@@ -89,7 +89,7 @@ namespace ascension {
 				ALPHABETIC,
 				HANGING,
 				MATHEMATICAL
-			ASCENSION_END_SCOPED_ENUM;
+			ASCENSION_SCOPED_ENUMS_END;
 
 			// from CSS Text Level 3 //////////////////////////////////////////////////////////////
 
@@ -102,7 +102,7 @@ namespace ascension {
 			 * @see XSL 1.1, 7.16.9 "text-align"
 			 *      (http://www.w3.org/TR/2006/REC-xsl11-20061205/#text-align)
 			 */
-			ASCENSION_BEGIN_SCOPED_ENUM(TextAlignment)
+			ASCENSION_SCOPED_ENUMS_BEGIN(TextAlignment)
 				START,
 				END,
 				LEFT,
@@ -111,7 +111,7 @@ namespace ascension {
 				JUSTIFY,
 				MATCH_PARENT,
 				START_END
-			ASCENSION_END_SCOPED_ENUM;
+			ASCENSION_SCOPED_ENUMS_END;
 	
 			/**
 			 * [Copied from SVG11] The ‘text-anchor’ property is used to align (start-, middle- or
@@ -119,11 +119,11 @@ namespace ascension {
 			 * @see SVG 1.1, 10.9.1 Text alignment properties
 			 *      (http://www.w3.org/TR/SVG/text.html#TextAlignmentProperties)
 			 */
-			ASCENSION_BEGIN_SCOPED_ENUM(TextAnchor)
+			ASCENSION_SCOPED_ENUMS_BEGIN(TextAnchor)
 				START = TextAlignment::START,
 				MIDDLE = TextAlignment::CENTER,
 				END = TextAlignment::END
-			ASCENSION_END_SCOPED_ENUM;
+			ASCENSION_SCOPED_ENUMS_END;
 
 			// TODO: Other types defined in presentation/text-style.hpp should move to here???
 
