@@ -15,7 +15,7 @@ using namespace std;
 
 
 namespace {
-	win32::Handle<HBITMAP>::Type createBitmap(const NativeSize& size, Image::Format format, const uint8_t* data) {
+	win32::Handle<HBITMAP>::Type createBitmap(const geometry::BasicDimension<uint16_t>& size, Image::Format format, const uint8_t* data) {
 		size_t bytesPerPixel;
 		switch(format) {
 		case Image::ARGB_32:

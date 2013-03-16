@@ -8,7 +8,7 @@
 #ifndef ASCENSION_RENDERING_DEVICE_HPP
 #define ASCENSION_RENDERING_DEVICE_HPP
 
-#include <ascension/graphics/geometry.hpp>	// NativeSize
+#include <ascension/graphics/geometry.hpp>	// geometry.BasicDimension
 
 namespace ascension {
 	
