@@ -186,15 +186,15 @@ namespace ascension {
 		/// @{
 
 		/// Enumerated values for @c TextRunStyle#padding.
-		ASCENSION_BEGIN_SCOPED_ENUM(PaddingEnums)
+		ASCENSION_SCOPED_ENUMS_BEGIN(PaddingEnums)
 			AUTO
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END;
 
 		/// Enumerated values for @c TextRunStyle#margin.
-		ASCENSION_BEGIN_SCOPED_ENUM(MarginEnums)
+		ASCENSION_SCOPED_ENUMS_BEGIN(MarginEnums)
 			FILL,
 			AUTO
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END;
 		/// @}
 
 		/// @name CSS Fonts Module Level 3
@@ -204,37 +204,37 @@ namespace ascension {
 		 * sizes computed and kept by the user agent.
 		 * @see http://www.w3.org/TR/css3-fonts/#ltabsolute-sizegt
 		 */
-		ASCENSION_BEGIN_SCOPED_ENUM(AbsoluteFontSize)
+		ASCENSION_SCOPED_ENUMS_BEGIN(AbsoluteFontSize)
 			XX_SMALL, X_SMALL, SMALL, MEDIUM, LARGE, X_LARGE, XX_LARGE
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END
 
 		/**
 		 * [Copied from CSS3] A <relative-size> keyword is interpreted relative to the table of
 		 * font sizes and the font size of the parent element.
 		 * @see http://www.w3.org/TR/css3-fonts/#ltrelative-sizegt
 		 */
-		ASCENSION_BEGIN_SCOPED_ENUM(RelativeFontSize)
+		ASCENSION_SCOPED_ENUMS_BEGIN(RelativeFontSize)
 			LARGER, SMALLER
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END
 
 		/// Enumerated values for @c TextRunStyle#fontSizeAdjust.
-		ASCENSION_BEGIN_SCOPED_ENUM(FontSizeAdjustEnums)
+		ASCENSION_SCOPED_ENUMS_BEGIN(FontSizeAdjustEnums)
 			NONE, AUTO
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END;
 		/// @}
 
 		/// @name CSS Line Layout Module Level 3
 		/// @{
 
 		/// Enumerated values for @c TextRunStyle#textHeight.
-		ASCENSION_BEGIN_SCOPED_ENUM(TextHeightEnums)
+		ASCENSION_SCOPED_ENUMS_BEGIN(TextHeightEnums)
 			AUTO, FONT_SIZE, TEXT_SIZE, MAX_SIZE
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END;
 
 		/// Enumerated values for @c TextRunStyle#lineHeight.
-		ASCENSION_BEGIN_SCOPED_ENUM(LineHeightEnums)
+		ASCENSION_SCOPED_ENUMS_BEGIN(LineHeightEnums)
 			NORMAL, NONE
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END;
 
 		using graphics::font::LineBoxContain;
 
@@ -243,7 +243,7 @@ namespace ascension {
 		using graphics::font::AlignmentBaseline;
 
 		/// Enumerated values for @c TextRunStyle#alignmentAdjust.
-		ASCENSION_BEGIN_SCOPED_ENUM(AlignmentAdjustEnums)
+		ASCENSION_SCOPED_ENUMS_BEGIN(AlignmentAdjustEnums)
 			AUTO,
 			BASELINE,
 			BEFORE_EDGE,
@@ -256,19 +256,19 @@ namespace ascension {
 			ALPHABETIC,
 			HANGING,
 			MATHEMATICAL
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END;
 
 		/// Enumerated values for @c TextRunStyle#baselineShift.
-		ASCENSION_BEGIN_SCOPED_ENUM(BaselineShiftEnums)
+		ASCENSION_SCOPED_ENUMS_BEGIN(BaselineShiftEnums)
 			BASELINE,
 			SUB,
 			SUPER
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END;
 
 		/// Enumerated values for @c InlineBoxAlignment.
-		ASCENSION_BEGIN_SCOPED_ENUM(InlineBoxAlignmentEnums)
+		ASCENSION_SCOPED_ENUMS_BEGIN(InlineBoxAlignmentEnums)
 			INITIAL, LAST
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END;
 
 		/**
 		 * [Copied from CSS3] The ‘inline-box-align’ property determines which line of a multi-line
@@ -288,9 +288,9 @@ namespace ascension {
 		 *      (http://www.w3.org/TR/css3-text/#text-transform)
 		 * @see XSL 1.1, 7.17.6 "text-transform" (http://www.w3.org/TR/xsl/#text-transform)
 		 */
-		ASCENSION_BEGIN_SCOPED_ENUM(TextTransform)
+		ASCENSION_SCOPED_ENUMS_BEGIN(TextTransform)
 			NONE, CAPITALIZE, UPPERCASE, LOWERCASE, FULL_WIDTH, FULL_SIZE_KANA
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END;
 
 		/**
 		 * [Copied from CSS3] This property specifies two things: whether and how white space
@@ -299,13 +299,13 @@ namespace ascension {
 		 * @see CSS Text Level 3, 3. White Space and Wrapping: the ‘white-space’ property
 		 *      (http://www.w3.org/TR/css3-text/#white-space)
 		 */
-		ASCENSION_BEGIN_SCOPED_ENUM(WhiteSpace)
+		ASCENSION_SCOPED_ENUMS_BEGIN(WhiteSpace)
 			NORMAL		= 1 << 0 | 1 << 1 | 1 << 2,
 			PRE			= 0 << 0 | 0 << 1 | 0 << 2,
 			NOWRAP		= 1 << 0 | 1 << 1 | 0 << 2,
 			PRE_WRAP	= 0 << 0 | 0 << 1 | 1 << 2,
 			PRE_LINE	= 0 << 0 | 1 << 1 | 1 << 2
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END;
 
 		inline bool collapsesNewLines(WhiteSpace value) BOOST_NOEXCEPT {
 			return (value & (1 << 0)) != 0;
@@ -325,23 +325,23 @@ namespace ascension {
 		 * @see CSS Text Level 3, 5.2. Breaking Rules for Punctuation: the ‘line-break’ property
 		 *      (http://www.w3.org/TR/css3-text/#line-break)
 		 */
-		ASCENSION_BEGIN_SCOPED_ENUM(LineBreak)
+		ASCENSION_SCOPED_ENUMS_BEGIN(LineBreak)
 			AUTO,
 			LOOSE,
 			NORMAL,
 			STRICT
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END;
 
 		/**
 		 * [Copied from CSS3] This property specifies soft wrap opportunities between letters.
 		 * @see CSS Text Level 3, 5.3. Breaking Rules for Letters: the ‘word-break’ property
 		 *      (http://www.w3.org/TR/css3-text/#word-break)
 		 */
-		ASCENSION_BEGIN_SCOPED_ENUM(WordBreak)
+		ASCENSION_SCOPED_ENUMS_BEGIN(WordBreak)
 			NORMAL,
 			KEEP_ALL,
 			BREAK_ALL
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END;
 
 		/**
 		 * [Copied from CSS3] This property controls whether hyphenation is allowed to create more
@@ -351,11 +351,11 @@ namespace ascension {
 		 * @see XSL 1.1, 7.10 Common Hyphenation Properties
 		 *      (http://www.w3.org/TR/xsl/#common-hyphenation-properties)
 		 */
-		ASCENSION_BEGIN_SCOPED_ENUM(Hyphens)
+		ASCENSION_SCOPED_ENUMS_BEGIN(Hyphens)
 			NONE,
 			MANUAL,
 			AUTO
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END;
 
 		/**
 		 * [Copied from CSS3] This property specifies whether the UA may arbitrarily break within a
@@ -364,11 +364,11 @@ namespace ascension {
 		 * @see CSS Text Level 3 - 6.2. Overflow Wrapping: the ‘word-wrap’/‘overflow-wrap’ property
 		 *      (http://www.w3.org/TR/css3-text/#overflow-wrap)
 		 */
-		ASCENSION_BEGIN_SCOPED_ENUM(OverflowWrap)
+		ASCENSION_SCOPED_ENUMS_BEGIN(OverflowWrap)
 			NORMAL,
 			BREAK_WORD/*,
 			HYPHENATE*/
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END;
 
 		using graphics::font::TextAlignment;
 
@@ -387,7 +387,7 @@ namespace ascension {
 		 *      (http://www.w3.org/TR/css3-text/#text-align-last)
 		 * @see XSL 1.1, 7.16.10 "text-align-last" (http://www.w3.org/TR/xsl/#text-align-last)
 		 */
-		ASCENSION_BEGIN_SCOPED_ENUM(TextAlignmentLast)
+		ASCENSION_SCOPED_ENUMS_BEGIN(TextAlignmentLast)
 			START = TextAlignment::START,
 			CENTER = TextAlignment::CENTER,
 			END = TextAlignment::END,
@@ -395,7 +395,7 @@ namespace ascension {
 			RIGHT = TextAlignment::RIGHT,
 			JUSTIFY = TextAlignment::JUSTIFY,
 			AUTO = TextAlignment::START_END + 1
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END;
 
 		class Presentation;
 		TextAnchor defaultTextAnchor(const Presentation& presentation);
@@ -408,10 +408,10 @@ namespace ascension {
 		 * @see CSS Text Level 3, 7.3. Justification Method: the ‘text-justify’ property
 		 *      (http://www.w3.org/TR/css3-text/#text-justify)
 		 */
-		ASCENSION_BEGIN_SCOPED_ENUM(TextJustification)
+		ASCENSION_SCOPED_ENUMS_BEGIN(TextJustification)
 			/// Specifies no justification.
 			AUTO, NONE, INTER_WORD, INTER_IDEOGRAPH, INTER_CLUSTER, DISTRIBUTE, KASHIDA
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END;
 
 		/**
 		 * [Copied from CSS3] Represents optimum, minimum, and maximum spacing.
@@ -495,10 +495,10 @@ namespace ascension {
 		 * @see CSS Text Level 3, 9.2. Hanging Punctuation: the ‘hanging-punctuation’ property
 		 *      (http://www.w3.org/TR/css3-text/#hanging-punctuation)
 		 */
-		ASCENSION_BEGIN_SCOPED_ENUM(HangingPunctuation)
+		ASCENSION_SCOPED_ENUMS_BEGIN(HangingPunctuation)
 			// TODO: Some values should be able to be combined by bitwise-OR.
 			NONE, FIRST, FORCE_END, ALLOW_END, LAST
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END;
 		/// @}
 
 		/// @name CSS Text Decoration Module Level 3
@@ -521,13 +521,13 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/2011/REC-SVG11-20110816/text.html#TextDecorationProperties)
 			 * @see XSL 1.1, 7.17.4 "text-decoration" (http://www.w3.org/TR/xsl/#text-decoration)
 			 */
-			ASCENSION_BEGIN_SCOPED_ENUM(Line)
+			ASCENSION_SCOPED_ENUMS_BEGIN(Line)
 				NONE = 0,				///< Neither produces nor inhibits text decoration.
 				UNDERLINE = 1 << 0,		///< Each line of text is underlined.
 				OVERLINE = 1 << 1,		///< Each line of text has a line above it.
 //				BASELINE = 1 << 2,
 				LINE_THROUGH = 1 << 3	///< Each line of text has a line through the middle.
-			ASCENSION_END_SCOPED_ENUM;
+			ASCENSION_SCOPED_ENUMS_END;
 			/**
 			 * [Copied from CSS3] This property specifies the style of the line(s) drawn for text
 			 * decoration specified on the element. 
@@ -535,13 +535,13 @@ namespace ascension {
 			 *      ‘text-decoration-style’ property
 			 *      (http://dev.w3.org/csswg/css-text-decor-3/#text-decoration-style-property)
 			 */
-			ASCENSION_BEGIN_SCOPED_ENUM(Style)
+			ASCENSION_SCOPED_ENUMS_BEGIN(Style)
 				SOLID = Border::SOLID,		///< Same meaning as for @c Border#Style.
 				DOUBLE = Border::DOUBLE,	///< Same meaning as for @c Border#Style.
 				DOTTED = Border::DOTTED,	///< Same meaning as for @c Border#Style.
 				DAHSED = Border::DASHED,	///< Same meaning as for @c Border#Style.
 				WAVY = Border::OUTSET + 1	///< A wavy line.
-			ASCENSION_END_SCOPED_ENUM;
+			ASCENSION_SCOPED_ENUMS_END;
 			/**
 			 * [Copied from CSS3] This property specifies what parts of the element's content any
 			 * text decoration affecting the element must skip over. It controls all text
@@ -551,7 +551,7 @@ namespace ascension {
 			 *      ‘text-decoration-skip’ property
 			 *      (http://dev.w3.org/csswg/css-text-decor-3/#text-decoration-skip-property)
 			 */
-			ASCENSION_BEGIN_SCOPED_ENUM(Skip)
+			ASCENSION_SCOPED_ENUMS_BEGIN(Skip)
 				/// Skip nothing: text-decoration is drawn for all text content and for inline
 				/// replaced elements.
 				NONE = 0,
@@ -574,7 +574,7 @@ namespace ascension {
 				/// Skip over the box's margin, border, and padding areas. Note that this only has
 				/// an effect on decorations imposed by an ancestor.
 				BOX_DECORATION = 1 << 5
-			ASCENSION_END_SCOPED_ENUM;
+			ASCENSION_SCOPED_ENUMS_END;
 			/**
 			 * [Copied from CSS3] This property sets the position of an underline specified on the
 			 * same element: it does not affect underlines specified by ancestor elements.
@@ -582,7 +582,7 @@ namespace ascension {
 			 *      ‘text-underline-position’ property
 			 *      (http://dev.w3.org/csswg/css-text-decor-3/#text-underline-position-property)
 			 */
-			ASCENSION_BEGIN_SCOPED_ENUM(UnderlinePosition)
+			ASCENSION_SCOPED_ENUMS_BEGIN(UnderlinePosition)
 				/// The user agent may use any algorithm to determine the underline's position;
 				/// however it must be placed at or below the alphabetic baseline.
 				AUTO,
@@ -603,7 +603,7 @@ namespace ascension {
 				/// In vertical writing modes, the underline is aligned as for ‘below’ except it
 				/// is aligned to the right edge of the text.
 				RIGHT
-			ASCENSION_END_SCOPED_ENUM;
+			ASCENSION_SCOPED_ENUMS_END;
 
 			StyleProperty<
 				sp::Enumerated<Line, Line::NONE>,
@@ -1335,11 +1335,11 @@ namespace ascension {
 	}
 
 	namespace detail {
-		ASCENSION_BEGIN_SCOPED_ENUM(PhysicalTextAnchor)
+		ASCENSION_SCOPED_ENUMS_BEGIN(PhysicalTextAnchor)
 			LEFT = presentation::TextAlignment::LEFT,
 			CENTER = presentation::TextAlignment::CENTER,
 			RIGHT = presentation::TextAlignment::RIGHT
-		ASCENSION_END_SCOPED_ENUM;
+		ASCENSION_SCOPED_ENUMS_END;
 
 		inline PhysicalTextAnchor computePhysicalTextAnchor(
 				presentation::TextAnchor anchor, presentation::ReadingDirection readingDirection) {

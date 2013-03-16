@@ -116,6 +116,12 @@ Scalar FixedWidthTabExpander::nextTabStop(Scalar ipd, Index) const BOOST_NOEXCEP
 
 // TextLayout /////////////////////////////////////////////////////////////////////////////////////
 
+namespace {
+	// Returns distance from line-left edge of allocation-rectangle to one of content-rectangle.
+	inline Scalar lineRelativeAllocationOffset(const TextRun& textRun, const WritingMode& writingMode) {
+	}
+}
+
 /**
  * @class ascension::graphics::font::TextLayout
  * @c TextLayout is an immutable graphical representation of styled text. Provides support for
@@ -535,6 +541,32 @@ pair<Index, Index> TextLayout::locateOffsets(Index line, Scalar ipd, bool& outsi
 	return make_pair(offset, offset);
 }
 #endif	// ASCENSION_ABANDONED_AT_VERSION_08
+
+/**
+ * Returns a multi-polygon enclosing the logical selection in the specified range, extended to the
+ * specified bounds.
+ * @param range The range of characters to select
+ * @param bounds The bounding rectangle to which to extend the selection, in user units. If this is
+ *               @c boost#none, the natural bounds is used
+ * @return An area enclosing the selection, in user units
+ * @throw IndexOutOfBoundsException
+ */
+boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& TextLayout::logicalHighlightShape(
+		const boost::integer_range<Index>& range, const boost::optional<graphics::Rectangle>& bounds) const {
+	const boost::integer_range<Index> orderedRange(ordered(range));
+	const boost::integer_range<Index> lines(boost::irange(lineAt(*orderedRange.begin()), lineAt(*orderedRange.end())));
+	for(LineMetricsIterator line(*this, *lines.begin()); line.line() != *lines.end(); ++line) {
+		const boost::iterator_range<RunVector::const_iterator> runs(runsForLine(line.line()));
+		Scalar x = 0;	// line-relative
+		BOOST_FOREACH(const unique_ptr<const TextRun>& run, runs) {
+			const auto selectionInRun(intersection(
+				boost::irange<Index>(run->characterRange().begin() - textString_.data(), run->characterRange().end() - textString_.data()), orderedRange));
+			if(!boost::empty(selectionInRun)) {
+			}
+			x += allocationMeasure(*run);
+		}
+	}
+}
 
 /**
  * Returns the inline-progression-dimension of the longest line.
