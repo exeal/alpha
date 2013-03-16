@@ -50,6 +50,8 @@ namespace ascension {
 	};
 
 	namespace graphics {
+		/// @defgroup physical_directions Physical Directions
+		/// @{
 		/**
 		 * Defines physical directions.
 		 * @see font#LineRelativeDirection, presentation#FlowRelativeDirection
@@ -150,27 +152,27 @@ namespace ascension {
 			}
 			using std::array<T, 4>::operator[];
 			/// Returns a reference to 'top' value.
-			reference top() BOOST_NOEXCEPT {return std::get<TOP>(*this);}
+			reference top() BOOST_NOEXCEPT {return std::get<PhysicalDirection::TOP>(*this);}
 			/// Returns a reference to 'top' value.
-			const_reference top() const BOOST_NOEXCEPT {return std::get<TOP>(*this);}
+			const_reference top() const BOOST_NOEXCEPT {return std::get<PhysicalDirection::TOP>(*this);}
 			/// Returns a reference to 'right' value.
-			reference right() BOOST_NOEXCEPT {return std::get<RIGHT>(*this);}
+			reference right() BOOST_NOEXCEPT {return std::get<PhysicalDirection::RIGHT>(*this);}
 			/// Returns a reference to 'right' value.
-			const_reference right() const BOOST_NOEXCEPT {return std::get<RIGHT>(*this);}
+			const_reference right() const BOOST_NOEXCEPT {return std::get<PhysicalDirection::RIGHT>(*this);}
 			/// Returns a reference to 'bottom' value.
-			reference bottom() BOOST_NOEXCEPT {return std::get<BOTTOM>(*this);}
+			reference bottom() BOOST_NOEXCEPT {return std::get<PhysicalDirection::BOTTOM>(*this);}
 			/// Returns a reference to 'bottom' value.
-			const_reference bottom() const BOOST_NOEXCEPT {return std::get<BOTTOM>(*this);}
+			const_reference bottom() const BOOST_NOEXCEPT {return std::get<PhysicalDirection::BOTTOM>(*this);}
 			/// Returns a reference to 'left' value.
-			reference left() BOOST_NOEXCEPT {return std::get<LEFT>(*this);}
+			reference left() BOOST_NOEXCEPT {return std::get<PhysicalDirection::LEFT>(*this);}
 			/// Returns a reference to 'left' value.
-			const_reference left() const BOOST_NOEXCEPT {return std::get<LEFT>(*this);}
+			const_reference left() const BOOST_NOEXCEPT {return std::get<PhysicalDirection::LEFT>(*this);}
 		};
 
 		/**
 		 * A correction of all physical directions.
 		 * @tparam T Element type
-		 * @see presentation#FlowRelativeFourSides
+		 * @see font#LineRelativeFourSides, presentation#FlowRelativeFourSides
 		 */
 		template<typename T>
 		struct PhysicalFourSides : public PhysicalFourSidesBase<T> {
@@ -219,8 +221,13 @@ namespace ascension {
 			static_assert(std::is_arithmetic<T>::value, "T is not arithmetic.");
 			return boost::irange(sides.top(), sides.bottom());
 		}
+		/// @}
 
 		namespace font {
+			/// @defgroup line_relative_direction Line-relative Directions
+			/// @see CSS Writing Modes Module Level 3, 6.3. Line-relative Directions
+			///      (http://www.w3.org/TR/css3-writing-modes/#line-directions)
+			/// @{
 			/**
 			 * Defines line-relative directions.
 			 * @see PhysicalDirection, presentation#FlowRelativeDirection
@@ -250,10 +257,85 @@ namespace ascension {
 					throw UnknownValueException("direction");
 				return opposites[direction];
 			}
+
+			BOOST_PARAMETER_NAME(over)
+			BOOST_PARAMETER_NAME(under)
+			BOOST_PARAMETER_NAME(lineLeft)
+			BOOST_PARAMETER_NAME(lineRight)
+
+			/// Base type of @c LineRelativeFourSides class template.
+			template<typename T>
+			class LineRelativeFourSidesBase : public std::array<T, 4> {
+			public:
+				/// Default constructor initializes nothing.
+				LineRelativeFourSidesBase() {}
+				/// Constructor takes named parameters as initial values.
+				template<typename Arguments>
+				LineRelativeFourSidesBase(const Arguments& arguments) {
+					above() = arguments[_above | value_type()];
+					under() = arguments[_under | value_type()];
+					lineLeft() = arguments[_lineLeft | value_type()];
+					lineRight() = arguments[_lineRight | value_type()];
+				}
+				/// Returns a reference to value of @a direction.
+				reference operator[](LineRelativeDirection direction) {
+					return (*this)[static_cast<size_type>(direction)];
+				}
+				/// Returns a reference to value of @a direction.
+				const_reference operator[](LineRelativeDirection direction) const {
+					return (*this)[static_cast<size_type>(direction)];
+				}
+				using std::array<T, 4>::operator[];
+				/// Returns a reference to 'over' value.
+				reference over() BOOST_NOEXCEPT {return std::get<LineRelativeDirection::OVER>(*this);}
+				/// Returns a reference to 'over' value.
+				const_reference over() const BOOST_NOEXCEPT {return std::get<LineRelativeDirection::OVER>(*this);}
+				/// Returns a reference to 'under' value.
+				reference under() BOOST_NOEXCEPT {return std::get<LineRelativeDirection::UNDER>(*this);}
+				/// Returns a reference to 'under' value.
+				const_reference under() const BOOST_NOEXCEPT {return std::get<LineRelativeDirection::UNDER>(*this);}
+				/// Returns a reference to 'line-left' value.
+				reference lineLeft() BOOST_NOEXCEPT {return std::get<LineRelativeDirection::LINE_LEFT>(*this);}
+				/// Returns a reference to 'line-left' value.
+				const_reference lineLeft() const BOOST_NOEXCEPT {return std::get<LineRelativeDirection::LINE_LEFT>(*this);}
+				/// Returns a reference to 'line-right' value.
+				/// @note This method hides @c std#array#end.
+				reference lineRight() BOOST_NOEXCEPT {return std::get<LineRelativeDirection::LINE_RIGHT>(*this);}
+				/// Returns a reference to 'line-right' value.
+				/// @note This method hides @c std#array#end.
+				const_reference lineRight() const BOOST_NOEXCEPT {return std::get<LineRelativeDirection::LINE_RIGHT>(*this);}
+			};
+
+			/**
+			 * A correction of all line-relative directions.
+			 * @tparam T The element type
+			 * @see PhysicalFourSides, presentation#FlowRelativeFourSides
+			 */
+			template<typename T>
+			class LineRelativeFourSides : public LineRelativeFourSidesBase<T> {
+			public:
+				/// Default constructor initializes nothing.
+				LineRelativeFourSides() {}
+				LineRelativeFourSides(const LineRelativeFourSides&);
+				LineRelativeFourSides(LineRelativeFourSides&&);
+				/// Constructor takes named parameters as initial values.
+				BOOST_PARAMETER_CONSTRUCTOR(
+					LineRelativeFourSides, (LineRelativeFourSidesBase<T>), tag,
+					(required
+						(over, (value_type))
+						(under, (value_type))
+						(lineLeft, (value_type))
+						(lineRight, (value_type))))
+			};
+			/// @}
 		}
 	}
 
 	namespace presentation {
+		/// @defgroup flow_relative_directions Flow-relative Directions
+		/// @see CSS Writing Modes Module Level 3, 6.2. Flow-relative Directions
+		///      (http://www.w3.org/TR/css3-writing-modes/#logical-directions)
+		/// @{
 		/**
 		 * Defines flow-relative directions.
 		 * @see graphics#PhysicalDirection, graphics#font#LineRelativeDirection
@@ -355,29 +437,29 @@ namespace ascension {
 			}
 			using std::array<T, 4>::operator[];
 			/// Returns a reference to 'before' value.
-			reference before() BOOST_NOEXCEPT {return std::get<BEFORE>(*this);}
+			reference before() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BEFORE>(*this);}
 			/// Returns a reference to 'before' value.
-			const_reference before() const BOOST_NOEXCEPT {return std::get<BEFORE>(*this);}
+			const_reference before() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::BEFORE>(*this);}
 			/// Returns a reference to 'after' value.
-			reference after() BOOST_NOEXCEPT {return std::get<AFTER>(*this);}
+			reference after() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::AFTER>(*this);}
 			/// Returns a reference to 'after' value.
-			const_reference after() const BOOST_NOEXCEPT {return std::get<AFTER>(*this);}
+			const_reference after() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::AFTER>(*this);}
 			/// Returns a reference to 'start' value.
-			reference start() BOOST_NOEXCEPT {return std::get<START>(*this);}
+			reference start() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::START>(*this);}
 			/// Returns a reference to 'start' value.
-			const_reference start() const BOOST_NOEXCEPT {return std::get<START>(*this);}
+			const_reference start() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::START>(*this);}
 			/// Returns a reference to 'end' value.
 			/// @note This method hides @c std#array#end.
-			reference end() BOOST_NOEXCEPT {return std::get<END>(*this);}
+			reference end() BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::END>(*this);}
 			/// Returns a reference to 'end' value.
 			/// @note This method hides @c std#array#end.
-			const_reference end() const BOOST_NOEXCEPT {return std::get<END>(*this);}
+			const_reference end() const BOOST_NOEXCEPT {return std::get<FlowRelativeDirection::END>(*this);}
 		};
 
 		/**
 		 * A correction of all flow-relative directions.
 		 * @tparam T The element type
-		 * @see graphics#PhysicalFourSides
+		 * @see graphics#PhysicalFourSides, graphics#font#LineRelativeFourSides
 		 */
 		template<typename T>
 		class FlowRelativeFourSides : public FlowRelativeFourSidesBase<T> {
@@ -421,6 +503,7 @@ namespace ascension {
 			static_assert(std::is_arithmetic<T>::value, "T is not arithmetic.");
 			return boost::irange(sides.start(), sides.end());
 		}
+		/// @}
 	}
 
 	/// @name Free Functions to Convert Between Geometries and Abstract/Flow-Relative Instances
