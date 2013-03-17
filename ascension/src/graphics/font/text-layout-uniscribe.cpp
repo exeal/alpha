@@ -19,6 +19,7 @@
 #include <ascension/corelib/shared-library.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>
 #include <ascension/corelib/text/character-property.hpp>
+#include <ascension/presentation/writing-mode-mappings.hpp>
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate
 #include <tuple>
@@ -2801,7 +2802,7 @@ void TextLayout::draw(PaintContext& context,
 				graphics::Rectangle borderRectangle;
 				if(runStyle.background || borderShouldBePainted(runStyle.border))
 					borderRectangle = geometry::make<graphics::Rectangle>(
-						mapFlowRelativeToPhysical(writingMode(), borderBox(*run), PhysicalTwoAxes<Scalar>(alignmentPoint)));
+						mapFlowRelativeToPhysical(writingMode(), borderBox(*run)) + PhysicalTwoAxes<Scalar>(alignmentPoint));
 
 				// 2-3. paint background
 				if(runStyle.background) {

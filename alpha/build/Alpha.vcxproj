@@ -327,6 +327,7 @@
     <ClInclude Include="..\..\ascension\ascension\presentation\presentation.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\style-property.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\text-style.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\presentation\writing-mode-mappings.hpp" />
     <ClInclude Include="..\..\ascension\ascension\presentation\writing-mode.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\command.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\input-sequence-checker.hpp" />

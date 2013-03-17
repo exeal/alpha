@@ -77,8 +77,10 @@ namespace ascension {
 			return opposites[direction];
 		}
 
+#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 		BOOST_PARAMETER_NAME(x)
 		BOOST_PARAMETER_NAME(y)
+#endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 
 		/// Base type of @c PhysicalTwoAxes class template.
 		template<typename T>
@@ -108,7 +110,7 @@ namespace ascension {
 		 * @see presentation#AbstractTwoAxes
 		 */
 		template<typename T>
-		class PhysicalTwoAxes : public PhysicalTwoAxesBase<T> {
+		class PhysicalTwoAxes : public PhysicalTwoAxesBase<T>, private boost::additive<PhysicalTwoAxes<T>> {
 		public:
 			/// Default constructor initializes nothing.
 			PhysicalTwoAxes() {}
@@ -122,16 +124,31 @@ namespace ascension {
 				(required
 					(x, (value_type))
 					(y, (value_type))))
+			/// Compound-add operator calls same operators of @c T for @c #x and @c #y.
+			PhysicalTwoAxes& operator+=(const PhysicalTwoAxes<T>& other) {
+				x() += other.x();
+				y() += other.y();
+				return *this;
+			}
+			/// Compound-subtract operator calls same operators of @c T for @c #x and @c #y.
+			PhysicalTwoAxes& operator-=(const PhysicalTwoAxes<T>& other) {
+				x() -= other.x();
+				y() -= other.y();
+				return *this;
+			}
 		};
 
+#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 		BOOST_PARAMETER_NAME(top)
 		BOOST_PARAMETER_NAME(right)
 		BOOST_PARAMETER_NAME(bottom)
 		BOOST_PARAMETER_NAME(left)
+#endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 
 		/// Base type of @c PhysicalFourSides class template.
 		template<typename T>
-		struct PhysicalFourSidesBase : public std::array<T, 4> {
+		class PhysicalFourSidesBase : public std::array<T, 4> {
+		public:
 			/// Default constructor initializes nothing.
 			PhysicalFourSidesBase() {}
 			/// Constructor takes named parameters as initial values (default value is zero).
@@ -175,7 +192,9 @@ namespace ascension {
 		 * @see font#LineRelativeFourSides, presentation#FlowRelativeFourSides
 		 */
 		template<typename T>
-		struct PhysicalFourSides : public PhysicalFourSidesBase<T> {
+		class PhysicalFourSides : public PhysicalFourSidesBase<T>,
+			private boost::additive<PhysicalFourSides<T>, PhysicalTwoAxes<T>> {
+		public:
 			/// Default constructor initializes nothing.
 			PhysicalFourSides() {}
 			/// Constructor takes a physical rectangle.
@@ -194,6 +213,22 @@ namespace ascension {
 					(right, (value_type))
 					(bottom, (value_type))
 					(left, (value_type))))
+			/// Compound-add operator calls same operators of @c T for the all elements.
+			PhysicalFourSides& operator+=(const PhysicalTwoAxes<T>& other) {
+				top() += other.y();
+				right() += other.x();
+				bottom() += other.y();
+				left() += other.x();
+				return *this;
+			}
+			/// Compound-subtract operator calls same operators of @c T for the all elements.
+			PhysicalFourSides& operator-=(const PhysicalTwoAxes<T>& other) {
+				top() -= other.y();
+				right() -= other.x();
+				bottom() -= other.y();
+				left() -= other.x();
+				return *this;
+			}
 		};
 
 		/**
@@ -258,10 +293,12 @@ namespace ascension {
 				return opposites[direction];
 			}
 
+#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 			BOOST_PARAMETER_NAME(over)
 			BOOST_PARAMETER_NAME(under)
 			BOOST_PARAMETER_NAME(lineLeft)
 			BOOST_PARAMETER_NAME(lineRight)
+#endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 
 			/// Base type of @c LineRelativeFourSides class template.
 			template<typename T>
@@ -272,7 +309,7 @@ namespace ascension {
 				/// Constructor takes named parameters as initial values.
 				template<typename Arguments>
 				LineRelativeFourSidesBase(const Arguments& arguments) {
-					above() = arguments[_above | value_type()];
+					over() = arguments[_over | value_type()];
 					under() = arguments[_under | value_type()];
 					lineLeft() = arguments[_lineLeft | value_type()];
 					lineRight() = arguments[_lineRight | value_type()];
@@ -365,8 +402,10 @@ namespace ascension {
 			return opposites[direction];
 		}
 
+#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 		BOOST_PARAMETER_NAME(bpd)
 		BOOST_PARAMETER_NAME(ipd)
+#endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 
 		/// Base type of @c AbstractTwoAxes class template.
 		template<typename T>
@@ -396,7 +435,7 @@ namespace ascension {
 		 * @see graphics#PhysicalTwoAxes
 		 */
 		template<typename T>
-		class AbstractTwoAxes : public AbstractTwoAxesBase<T> {
+		class AbstractTwoAxes : public AbstractTwoAxesBase<T>, private boost::additive<AbstractTwoAxes<T>> {
 		public:
 			/// Default constructor initializes nothing.
 			AbstractTwoAxes() {}
@@ -406,12 +445,26 @@ namespace ascension {
 				(required
 					(bpd, (value_type))
 					(ipd, (value_type))))
+			/// Compound-add operator calls same operators of @c T for @c #bpd() and @c #ipd().
+			AbstractTwoAxes& operator+=(const AbstractTwoAxes& other) {
+				bpd() += other.bpd();
+				ipd() += other.ipd();
+				return *this;
+			}
+			/// Compound-subtract operator calls same operators of @c T for @c #bpd() and @c #ipd().
+			AbstractTwoAxes& operator-=(const AbstractTwoAxes& other) {
+				bpd() -= other.bpd();
+				ipd() -= other.ipd();
+				return *this;
+			}
 		};
 
+#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 		BOOST_PARAMETER_NAME(before)
 		BOOST_PARAMETER_NAME(after)
 		BOOST_PARAMETER_NAME(start)
 		BOOST_PARAMETER_NAME(end)
+#endif // !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 
 		/// Base type of @c FlowRelativeFourSides class template.
 		template<typename T>
@@ -462,7 +515,8 @@ namespace ascension {
 		 * @see graphics#PhysicalFourSides, graphics#font#LineRelativeFourSides
 		 */
 		template<typename T>
-		class FlowRelativeFourSides : public FlowRelativeFourSidesBase<T> {
+		class FlowRelativeFourSides : public FlowRelativeFourSidesBase<T>,
+			private boost::additive<FlowRelativeFourSides<T>, AbstractTwoAxes<T>> {
 		public:
 			/// Default constructor initializes nothing.
 			FlowRelativeFourSides() {}
@@ -476,6 +530,22 @@ namespace ascension {
 					(after, (value_type))
 					(start, (value_type))
 					(end, (value_type))))
+			/// Compound-add operator calls same operators of @c T for the all elements.
+			FlowRelativeFourSides& operator+=(const AbstractTwoAxes<T>& other) {
+				before() += other.bpd();
+				after() += other.bpd();
+				start() += other.ipd();
+				end() += other.ipd();
+				return *this;
+			}
+			/// Compound-subtract operator calls same operators of @c T for the all elements.
+			FlowRelativeFourSides& operator-=(const AbstractTwoAxes<T>& other) {
+				before() -= other.bpd();
+				after() -= other.bpd();
+				start() -= other.ipd();
+				end() -= other.ipd();
+				return *this;
+			}
 		};
 
 		/**
