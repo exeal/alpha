@@ -175,17 +175,6 @@ namespace ascension {
 				virtual void strokeGlyphs(PaintContext& context, const Point& origin,
 					boost::optional<boost::integer_range<std::size_t>> range = boost::none) const = 0;
 				/// @}
-
-				template<typename T>
-				Rectangle mapLogicalToPhysical(
-						const presentation::FlowRelativeFourSides<T>& logical,
-						presentation::BlockFlowDirection blockFlowDirection,
-						presentation::TextOrientation textOrientation) const {
-					PhysicalFourSides<Scalar> physical;
-					presentation::mapFlowRelativeToPhysical(presentation::WritingMode(
-						direction(), blockFlowDirection, textOrientation), logical, physical);
-					return geometry::make<Rectangle>(physical);
-				}
 			};
 
 		}

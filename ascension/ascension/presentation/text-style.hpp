@@ -13,6 +13,7 @@
 
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
+#include <ascension/directions.hpp>
 #include <ascension/graphics/color.hpp>	// graphics.Color
 #include <ascension/graphics/paint.hpp>	// graphics.Paint
 #include <ascension/graphics/font/font.hpp>	// graphics.font.FontProperties, ...
