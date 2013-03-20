@@ -19,6 +19,7 @@
 #include <ascension/corelib/shared-library.hpp>
 #include <ascension/corelib/text/character-iterator.hpp>
 #include <ascension/corelib/text/character-property.hpp>
+#include <ascension/presentation/writing-mode-mappings.hpp>
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate
 #include <boost/foreach.hpp>
@@ -553,19 +554,86 @@ pair<Index, Index> TextLayout::locateOffsets(Index line, Scalar ipd, bool& outsi
  */
 boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& TextLayout::logicalHighlightShape(
 		const boost::integer_range<Index>& range, const boost::optional<graphics::Rectangle>& bounds) const {
+	boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>> results;
+	const bool horizontal = isHorizontal(writingMode().blockFlowDirection);
+	boost::optional<boost::integer_range<Scalar>> linearBounds;
+	if(bounds != boost::none)
+		linearBounds = horizontal ? geometry::range<0>(*bounds) : geometry::range<1>(*bounds);
+
 	const boost::integer_range<Index> orderedRange(ordered(range));
 	const boost::integer_range<Index> lines(boost::irange(lineAt(*orderedRange.begin()), lineAt(*orderedRange.end())));
 	for(LineMetricsIterator line(*this, *lines.begin()); line.line() != *lines.end(); ++line) {
-		const boost::iterator_range<RunVector::const_iterator> runs(runsForLine(line.line()));
-		Scalar x = 0;	// line-relative
-		BOOST_FOREACH(const unique_ptr<const TextRun>& run, runs) {
-			const auto selectionInRun(intersection(
-				boost::irange<Index>(run->characterRange().begin() - textString_.data(), run->characterRange().end() - textString_.data()), orderedRange));
-			if(!boost::empty(selectionInRun)) {
+		const Point baseline(line.baselineOffsetInPhysicalCoordinates());
+		Scalar lineOver, lineUnder;
+		if(horizontal) {
+			lineOver = geometry::y(baseline) - line.ascent();
+			lineUnder = geometry::y(baseline) + line.descent() + line.leading();
+		} else {
+			const bool sidewaysLeft = resolveTextOrientation(writingMode()) == SIDEWAYS_LEFT;
+			lineOver = geometry::x(baseline) + (!sidewaysLeft ? line.ascent() : -line.ascent());
+			lineUnder = geometry::x(baseline) - (!sidewaysLeft ? (line.descent() + line.leading()) : -(line.descent() + line.leading()));
+		}
+
+		// skip the line if out of bounds
+		if(bounds != boost::none) {
+			if(horizontal) {
+				if(max(lineOver, lineUnder) <= geometry::top(*bounds))
+					continue;
+				else if(min(lineOver, lineUnder) >= geometry::bottom(*bounds))
+					break;
+			} else {
+				if(writingMode().blockFlowDirection == VERTICAL_RL) {
+					if(min(lineOver, lineUnder) >= geometry::right(*bounds))
+						continue;
+					else if(max(lineOver, lineUnder) <= geometry::left(*bounds))
+						break;
+				} else {
+					if(max(lineOver, lineUnder) <= geometry::left(*bounds))
+						continue;
+					else if(min(lineOver, lineUnder) >= geometry::right(*bounds))
+						break;
+				}
 			}
-			x += allocationMeasure(*run);
+		}
+
+		const boost::iterator_range<RunVector::const_iterator> runs(runsForLine(line.line()));
+		Scalar x = static_cast<Scalar>(boost::geometry::distance(lineLeft(line.line()), boost::geometry::make_zero<Point>()));	// line-relative
+		BOOST_FOREACH(const unique_ptr<const TextRun>& run, runs) {
+			// 'x' is line-left edge of the run, here
+			if(linearBounds != boost::none && x >= *linearBounds->end())
+				break;
+			const Scalar runAllocationMeasure = allocationMeasure(*run);
+			if(linearBounds == boost::none || x + runAllocationMeasure > *linearBounds->begin()) {
+				auto selectionInRun(intersection(
+					boost::irange<Index>(run->characterRange().begin() - textString_.data(), run->characterRange().end() - textString_.data()), orderedRange));
+				if(!boost::empty(selectionInRun)) {
+					Scalar glyphsLeft = x;	// line-left edge of glyphs content of the run
+					if(const FlowRelativeFourSides<Scalar>* const margin = run->margin())
+						glyphsLeft += margin->start();
+					if(const FlowRelativeFourSides<ComputedBorderSide>* const border = run->border())
+						glyphsLeft += border->start().computedWidth();
+					if(const FlowRelativeFourSides<Scalar>* const padding = run->padding())
+						glyphsLeft += padding->start();
+
+					// compute leading and trailing edges highlight shape in the run
+					Scalar leading = run->leadingEdge(*selectionInRun.begin()), trailing = run->leadingEdge(*selectionInRun.end());
+					leading = glyphsLeft + (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? leading : (font::measure(*run) - leading);
+					trailing = glyphsLeft + (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? trailing : (font::measure(*run) - trailing);
+					Rectangle rectangle(mapLineRelativeToPhysical(writingMode(),
+						LineRelativeFourSides<Scalar>(_over = lineOver, _under = lineUnder, _lineLeft = min(leading, trailing), _lineRight = max(leading, trailing))));
+
+					if(bounds != boost::none)
+						rectangle = boost::geometry::intersection(rectangle, *bounds, rectangle);	// clip by 'bounds'
+					boost::geometry::model::polygon<Point> oneShape;
+					boost::geometry::convert(rectangle, oneShape);
+					results.push_back(oneShape);
+				}
+			}
+			x += runAllocationMeasure;
 		}
 	}
+
+	return move(results);
 }
 
 /**
