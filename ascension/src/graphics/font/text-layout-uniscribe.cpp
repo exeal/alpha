@@ -620,8 +620,8 @@ namespace {
 			const FontCollection& fontCollection, const FontRenderContext& frc,
 			vector<TextRunImpl*>& textRuns, vector<AttributedCharacterRange<ComputedTextRunStyle>>& calculatedStyles);
 		// GlyphVector
-		void fillGlyphs(PaintContext& context, const Point& origin,
-			boost::optional<boost::integer_range<size_t>> range /* = boost::none */) const;
+		void fillGlyphs(PaintContext& context, const Point& origin/*,
+			boost::optional<boost::integer_range<size_t>> range = boost::none*/) const;
 		shared_ptr<const Font> font() const BOOST_NOEXCEPT;
 		const FontRenderContext& fontRenderContext() const;
 		Index glyphCharacterIndex(size_t index) const;
@@ -633,8 +633,8 @@ namespace {
 		graphics::Rectangle logicalBounds() const;
 		size_t numberOfGlyphs() const BOOST_NOEXCEPT;
 		void setGlyphPosition(size_t index, const Point& position);
-		void strokeGlyphs(PaintContext& context, const Point& origin,
-			boost::optional<boost::integer_range<size_t>> range /* = boost::none */) const;
+		void strokeGlyphs(PaintContext& context, const Point& origin/*,
+			boost::optional<boost::integer_range<size_t>> range = boost::none*/) const;
 		graphics::Rectangle visualBounds() const;
 		// TextRun
 		const FlowRelativeFourSides<ComputedBorderSide>* border() const BOOST_NOEXCEPT;
@@ -741,8 +741,8 @@ namespace {
 				return boost::make_iterator_range(p + *glyphRange().begin(), p + *glyphRange().end());
 			return boost::make_iterator_range<const int*>(nullptr, nullptr);
 		}
-		void paintGlyphs(PaintContext& context,
-			const Point& origin, boost::optional<boost::integer_range<size_t>> range, bool onlyStroke) const;
+		void paintGlyphs(PaintContext& context, const Point& origin/*,
+			boost::optional<boost::integer_range<size_t>> range*/, bool onlyStroke) const;
 		boost::iterator_range<const SCRIPT_VISATTR*> visualAttributes() const BOOST_NOEXCEPT {
 			if(const SCRIPT_VISATTR* const p = glyphs_->visualAttributes.get())
 				return boost::make_iterator_range(p + *glyphRange().begin(), p + *glyphRange().end());
@@ -998,8 +998,8 @@ inline bool TextRunImpl::expandTabCharacters(
 }
 
 /// @see GlyphVector#fillGlyphs
-void TextRunImpl::fillGlyphs(PaintContext& context, const Point& origin, boost::optional<boost::integer_range<size_t>> range /* = boost::none */) const {
-	return paintGlyphs(context, origin, range, false);
+void TextRunImpl::fillGlyphs(PaintContext& context, const Point& origin/*, boost::optional<boost::integer_range<size_t>> range = boost::none*/) const {
+	return paintGlyphs(context, origin/*, range*/, false);
 }
 
 /// @see GlyphVector#font
@@ -1598,6 +1598,7 @@ size_t TextRunImpl::numberOfGlyphs() const BOOST_NOEXCEPT {
 	return glyphRange().size();
 }
 
+#if 0
 /**
  * @internal Fills or strokes the glyphs of the specified range in this run.
  * This method uses the stroke and fill styles which are set in @a context.
@@ -1609,20 +1610,23 @@ size_t TextRunImpl::numberOfGlyphs() const BOOST_NOEXCEPT {
 inline void TextRunImpl::paintGlyphs(PaintContext& context, const Point& origin, const StringPiece& range, bool onlyStroke) const {
 	return paintGlyphs(context, origin, glyphRange(range), onlyStroke);
 }
+#endif
 
 /**
  * @internal Fills or strokes the glyphs of the specified range in this run.
  * This method uses the stroke and fill styles which are set in @a context.
  * @param context The graphics context
  * @param origin The base point of this run (, does not corresponds to @c range-&gt;beginning())
+#if 0
  * @param range The glyph range to paint. If this is @c boost#none, the all glyphs are painted
+#endif
  * @param onlyStroke If @c true, this method only strokes the glyphs without filling
  */
-void TextRunImpl::paintGlyphs(PaintContext& context, const Point& origin, boost::optional<boost::integer_range<size_t>> range, bool onlyStroke) const {
-	if(!range)
-		return paintGlyphs(context, origin, *this, onlyStroke);
-	else if(range->empty())
-		return;
+void TextRunImpl::paintGlyphs(PaintContext& context, const Point& origin/*, boost::optional<boost::integer_range<size_t>> range*/, bool onlyStroke) const {
+//	if(!range)
+//		return paintGlyphs(context, origin, *this, onlyStroke);
+//	else if(range->empty())
+//		return;
 
 	context.setFont(font());
 //	RECT temp;
@@ -1630,25 +1634,16 @@ void TextRunImpl::paintGlyphs(PaintContext& context, const Point& origin, boost:
 //		::SetRect(&temp, dirtyRect->left(), dirtyRect->top(), dirtyRect->right(), dirtyRect->bottom());
 	if(onlyStroke && !win32::boole(::BeginPath(context.asNativeObject().get())))
 		throw makePlatformError();
-	// compute origin of paint
 	assert(analysis_.fLogicalOrder == 0);
-	Point position;
-	if(range == boost::none)
-		position = origin;
-	else {
-		Po hitToLogicalPosition(TextHit::leading(range->front()))
-	}
 	// paint glyphs
 	const RECT boundsToPaint(context.boundsToPaint());
 	const boost::iterator_range<const int*> justifiedGlyphAdvances(justifiedAdvances());
 	const HRESULT hr = ::ScriptTextOut(context.asNativeObject().get(), &glyphs_->fontCache,
-		static_cast<int>(geometry::x(origin) + (analysis_.fRTL == 0) ?
-			leadingEdge(*range->begin()) : (measure(*this) - leadingEdge(*range->end()))),
-		static_cast<int>(geometry::y(origin) - context.fontMetrics(font())->ascent()),
+		static_cast<int>(geometry::x(origin)), static_cast<int>(geometry::y(origin)),
 		0, &boundsToPaint, &analysis_, nullptr, 0,
-		glyphs().begin() + range->front(), range->size(), advances().begin() + range->front(),
-		(justifiedGlyphAdvances.begin() != nullptr) ? justifiedGlyphAdvances.begin() + range->front() : nullptr,
-			glyphOffsets().begin() + range->front());
+		glyphs().begin(), numberOfGlyphs(), advances().begin(),
+		(justifiedGlyphAdvances.begin() != nullptr) ? justifiedGlyphAdvances.begin() : nullptr,
+		glyphOffsets().begin());
 	if(onlyStroke)
 		::EndPath(context.asNativeObject().get());
 	if(FAILED(hr))
@@ -2138,8 +2133,8 @@ unique_ptr<TextRunImpl> TextRunImpl::splitIfTooLong() {
 }
 
 /// @see GlyphVector#strokeGlyphs
-void TextRunImpl::strokeGlyphs(PaintContext& context, const Point& origin, boost::optional<boost::integer_range<size_t>> range /* = boost::none */) const {
-	return paintGlyphs(context, origin, range, true);
+void TextRunImpl::strokeGlyphs(PaintContext& context, const Point& origin/*, boost::optional<boost::integer_range<size_t>> range = boost::none*/) const {
+	return paintGlyphs(context, origin/*, range*/, true);
 }
 
 /**

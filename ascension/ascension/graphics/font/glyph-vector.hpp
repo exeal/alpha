@@ -165,15 +165,21 @@ namespace ascension {
 				/// @name Painting
 				/// @{
 				/**
+				 * Fills the glyphs at the specified position.
+				 * @param context The graphics context
+				 * @param origin The position in user units where the glyphs should be rendered
 				 * @see #strokeGlyphs
 				 */
-				virtual void fillGlyphs(PaintContext& context, const Point& origin,
-					boost::optional<boost::integer_range<std::size_t>> range = boost::none) const = 0;
+				virtual void fillGlyphs(PaintContext& context, const Point& origin/*,
+					boost::optional<boost::integer_range<std::size_t>> range = boost::none*/) const = 0;
 				/**
+				 * Strokes the glyphs at the specified position.
+				 * @param context The graphics context
+				 * @param origin The position in user units where the glyphs should be rendered
 				 * @see #fillGlyphs
 				 */
-				virtual void strokeGlyphs(PaintContext& context, const Point& origin,
-					boost::optional<boost::integer_range<std::size_t>> range = boost::none) const = 0;
+				virtual void strokeGlyphs(PaintContext& context, const Point& origin/*,
+					boost::optional<boost::integer_range<std::size_t>> range = boost::none*/) const = 0;
 				/// @}
 			};
 
