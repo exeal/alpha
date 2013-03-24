@@ -38,7 +38,7 @@ namespace ascension {
 				 * @see #beforeOffset
 				 */
 				static TextHit afterOffset(Index offset) BOOST_NOEXCEPT {
-					return TextHit (offset, true);
+					return TextHit(offset, true);
 				}
 				/**
 				 * Creates a @c TextHit at the specified offset, associated with the character

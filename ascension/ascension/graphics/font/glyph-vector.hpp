@@ -92,7 +92,7 @@ namespace ascension {
 				 * @return The position of the specified glyph relative to the origin of this
 				 *         vector, in user units. If @a index equals @c #numberOfGlyphs(), this
 				 *         method returns the position of the end of the last glyph
-				 * @throw std#out_of_range @a index &gt; @c #numberOfGlyphs()
+				 * @throw IndexOutOfBoundsException @a index &gt; @c #numberOfGlyphs()
 				 * @see #setGlyphPosition
 				 */
 				virtual Point glyphPosition(std::size_t index) const = 0;
@@ -100,14 +100,14 @@ namespace ascension {
 				 * Returns a vector of glyph positions for the specified glyphs.
 				 * @param range The range of glyphs to retrieve
 				 * @return A vector of glyph positions specified by @a range
-				 * @throw std#out_of_range @a range.beginning() &gt; @c #numberOfGlyphs()
+				 * @throw IndexOutOfBoundsException @a range.beginning() &gt; @c #numberOfGlyphs()
 				 */
 				virtual std::vector<Point>&& glyphPositions(const boost::integer_range<std::size_t>& range) const = 0;
 				/**
 				 * Sets the position of the specified glyph within this vector.
 				 * @param index The glyph index in this vector
 				 * @param position The position relative to the origin of this vector in user units
-				 * @throw std#out_of_range @a index &gt; @c #numberOfGlyphs()
+				 * @throw IndexOutOfBoundsException @a index &gt; @c #numberOfGlyphs()
 				 * @see #glyphPosition
 				 */
 				virtual void setGlyphPosition(std::size_t index, const Point& position) = 0;
