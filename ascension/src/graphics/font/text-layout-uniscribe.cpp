@@ -643,12 +643,10 @@ namespace {
 		uint8_t characterLevel() const BOOST_NOEXCEPT;
 		StringPiece characterRange() const BOOST_NOEXCEPT;
 		TextHit&& hitTestCharacter(Scalar ipd, bool* outOfBounds) const;
-		Scalar hitToIpd(const TextHit& hit) const;
-		float leadingEdge(Index character) const;
+		Scalar hitToLogicalPosition(const TextHit& hit) const;
 		Index length() const BOOST_NOEXCEPT;
-		const FlowRelativeFourSides<float>* margin() const BOOST_NOEXCEPT;
-		const FlowRelativeFourSides<float>* padding() const BOOST_NOEXCEPT;
-		float trailingEdge(Index character) const;
+		const FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT;
+		const FlowRelativeFourSides<Scalar>* padding() const BOOST_NOEXCEPT;
 		// attributes
 		const ComputedTextRunStyleCore& style() const BOOST_NOEXCEPT {return coreStyle_;}
 		HRESULT logicalAttributes(SCRIPT_LOGATTR attributes[]) const;
@@ -738,14 +736,11 @@ namespace {
 		}
 		boost::integer_range<size_t> glyphRange(const StringPiece& characterRange = StringPiece()) const;
 		void hitTest(Scalar ipd, int& encompasses, int* trailing) const;
-		Scalar ipd(StringPiece::const_iterator character, bool trailing) const;
 		boost::iterator_range<const int*> justifiedAdvances() const BOOST_NOEXCEPT {
 			if(const int* const p = glyphs_->justifiedAdvances.get())
 				return boost::make_iterator_range(p + *glyphRange().begin(), p + *glyphRange().end());
 			return boost::make_iterator_range<const int*>(nullptr, nullptr);
 		}
-		void paintGlyphs(PaintContext& context,
-			const Point& origin, const StringPiece& range, bool onlyStroke) const;
 		void paintGlyphs(PaintContext& context,
 			const Point& origin, boost::optional<boost::integer_range<size_t>> range, bool onlyStroke) const;
 		boost::iterator_range<const SCRIPT_VISATTR*> visualAttributes() const BOOST_NOEXCEPT {
@@ -1313,7 +1308,11 @@ inline Scalar TextRunImpl::glyphLogicalPosition(size_t index) const {
 
 /// @see GlyphVector#glyphPosition
 Point TextRunImpl::glyphPosition(size_t index) const {
-	return leadingEdge(index);
+	if(index > numberOfGlyphs())
+		throw IndexOutOfBoundsException("index");
+	const Scalar logicalPosition = glyphLogicalPosition(index);
+	const GOFFSET& glyphOffset = glyphOffsets()[index];
+	return Point(geometry::_x = logicalPosition + glyphOffset.du, geometry::_y = glyphOffset.dv);
 }
 
 inline boost::integer_range<size_t> TextRunImpl::glyphRange(const StringPiece& range /* = StringPiece() */) const {
@@ -1387,30 +1386,20 @@ inline void TextRunImpl::hitTest(Scalar ipd, int& encompasses, int* trailing) co
 TextHit&& TextRunImpl::hitTestCharacter(Scalar ipd, bool* outOfBounds) const {
 }
 
-/**
- * @internal Converts a hit to inline-progression dimension.
- * @param hit The hit to check. This must be a valid hit on the @c TextRun
- * @return The inline-progression dimension
- * @throw std#invalid_argument @a hit is not valid for the @c TextRun
- * @see TextLayout#hitToPoint
- */
-Scalar TextRunImpl::hitToIpd(const TextHit& hit) const {
-}
-
-inline Scalar TextRunImpl::ipd(StringPiece::const_iterator character, bool trailing) const {
-	raiseIfNull(character, "character");
-	if(character < begin() || character > end())
-		throw out_of_range("character");
-	int result;
-	const HRESULT hr = ::ScriptCPtoX(static_cast<int>(character - begin()), trailing,
+/// @see TextRun#hitToLogicalPosition
+Scalar TextRunImpl::hitToLogicalPosition(const TextHit& hit) const {
+	if(hit.insertionIndex() > characterRange().length())
+		throw IndexOutOfBoundsException("hit");
+	int logicalPosition;
+	const HRESULT hr = ::ScriptCPtoX(static_cast<int>(hit.characterIndex()), !hit.isLeadingEdge(),
 		static_cast<int>(length()), numberOfGlyphs(), clusters().begin(), visualAttributes().begin(),
-		effectiveAdvances().begin(), &analysis_, &result);
+		effectiveAdvances().begin(), &analysis_, &logicalPosition);
 	if(FAILED(hr))
 		throw makePlatformError(hr);
 	// TODO: handle letter-spacing correctly.
-//	if(visualAttributes()[offset].fClusterStart == 0) {
+//	if(visualAttributes()[offset].fClusterStart == 0) {	// oops, i can't remember what this code means...
 //	}
-	return (direction() == LEFT_TO_RIGHT) ? result : (measure(*this) - result);
+	return static_cast<Scalar>(logicalPosition);
 }
 
 inline HRESULT TextRunImpl::justify(int width) {
@@ -1424,11 +1413,6 @@ inline HRESULT TextRunImpl::justify(int width) {
 			2, glyphs_->justifiedAdvances.get() + (begin() - glyphs_->position));
 	}
 	return hr;
-}
-
-/// @see TextRun#leadingEdge
-float TextRunImpl::leadingEdge(Index character) const {
-	return ipd(begin() + character, false);	// TODO: this ignores HRESULT.
 }
 
 inline HRESULT TextRunImpl::logicalAttributes(SCRIPT_LOGATTR attributes[]) const {
@@ -1646,7 +1630,15 @@ void TextRunImpl::paintGlyphs(PaintContext& context, const Point& origin, boost:
 //		::SetRect(&temp, dirtyRect->left(), dirtyRect->top(), dirtyRect->right(), dirtyRect->bottom());
 	if(onlyStroke && !win32::boole(::BeginPath(context.asNativeObject().get())))
 		throw makePlatformError();
+	// compute origin of paint
 	assert(analysis_.fLogicalOrder == 0);
+	Point position;
+	if(range == boost::none)
+		position = origin;
+	else {
+		Po hitToLogicalPosition(TextHit::leading(range->front()))
+	}
+	// paint glyphs
 	const RECT boundsToPaint(context.boundsToPaint());
 	const boost::iterator_range<const int*> justifiedGlyphAdvances(justifiedAdvances());
 	const HRESULT hr = ::ScriptTextOut(context.asNativeObject().get(), &glyphs_->fontCache,
@@ -2210,11 +2202,6 @@ void TextRunImpl::substituteGlyphs(const boost::iterator_range<vector<TextRunImp
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 }
 
-/// @see TextRun#trailingEdge
-Scalar TextRunImpl::trailingEdge(Index character) const {
-	return ipd(begin() + character, true);	// TODO: this ignores HRESULT.
-}
-
 
 // InlineProgressionDimensionRangeIterator file-local class ///////////////////////////////////////
 
@@ -2291,8 +2278,15 @@ InlineProgressionDimensionRangeIterator::value_type InlineProgressionDimensionRa
 		+ (border != nullptr) ? border->start().computedWidth() : 0;
 	const auto subrange(intersection(boost::make_iterator_range(currentRun.characterRange()), boost::make_iterator_range(effectiveCharacterRange())));
 	assert(!subrange.empty());
-	const Scalar startInRun = currentRun.leadingEdge(subrange.begin() - currentRun.begin()) + allocationStartOffset;
-	const Scalar endInRun = currentRun.trailingEdge(subrange.end() - currentRun.begin()) + allocationStartOffset;
+	Scalar startInRun = currentRun.hitToLogicalPosition(TextHit::leading(subrange.begin() - currentRun.begin()));
+	Scalar endInRun = currentRun.hitToLogicalPosition(TextHit::trailing(subrange.end() - currentRun.begin()));
+	if(currentRun.direction() == RIGHT_TO_LEFT) {
+		const Scalar runMeasure = measure(currentRun);
+		startInRun = runMeasure - startInRun;
+		endInRun = runMeasure - endInRun;
+	}
+	startInRun += allocationStartOffset;
+	endInRun += allocationStartOffset;
 	assert(startInRun <= endInRun);
 	const Scalar startOffset = (currentRun.direction() == layoutDirection_) ? startInRun : allocationMeasure(currentRun) - endInRun;
 	const Scalar endOffset = (currentRun.direction() == layoutDirection_) ? endInRun : allocationMeasure(currentRun) - startInRun;
@@ -3040,7 +3034,7 @@ AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit& hit) const {
 		if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) {	// LTR
 			ipd = lineStartEdge(line);
 			for(RunVector::const_iterator i(runsInLine.begin()); i != runsInLine.end(); ++i) {
-				const TextRunImpl& run = *static_cast<const TextRunImpl*>(i->get());	// TODO: Down-cast.
+				const TextRun& run = *static_cast<const TextRun*>(i->get());	// TODO: Down-cast.
 				if(includes(run, at)) {
 					ipd += hit.isLeadingEdge() ? run.leadingEdge(at - run.begin()) : run.trailingEdge(at - run.begin());
 					break;

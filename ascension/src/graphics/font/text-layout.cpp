@@ -551,6 +551,7 @@ pair<Index, Index> TextLayout::locateOffsets(Index line, Scalar ipd, bool& outsi
  *               @c boost#none, the natural bounds is used
  * @return An area enclosing the selection, in user units
  * @throw IndexOutOfBoundsException
+ * @see #logicalRangesForVisualSelection, #visualHighlightShape
  */
 boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& TextLayout::logicalHighlightShape(
 		const boost::integer_range<Index>& range, const boost::optional<graphics::Rectangle>& bounds) const {
@@ -840,6 +841,20 @@ StyledRun TextLayout::styledTextRun(Index offsetInLine) const {
 	return StyledRun(run.offsetInLine(), run.requestedStyle());
 }
 #endif
+
+/**
+ * Returns a multi-polygon enclosing the visual selection in the specified range, extended to the
+ * specified bounds.
+ * @param range The visual selection
+ * @param bounds The bounding rectangle to which to extend the selection, in user units. If this is
+ *               @c boost#none, the natural bounds is used
+ * @return An area enclosing the selection, in user units
+ * @throw IndexOutOfBoundsException
+ * @see #logicalHighlightShape, #logicalRangesForVisualSelection
+ */
+boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&&
+		TextLayout::visualHighlightShape(const boost::iterator_range<TextHit>& range, const boost::optional<Rectangle>& bounds) const {
+}
 
 #if 0
 // TextLayout.StyledSegmentIterator ///////////////////////////////////////////////////////////////

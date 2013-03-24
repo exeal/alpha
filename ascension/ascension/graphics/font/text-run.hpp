@@ -11,6 +11,7 @@
 #define ASCENSION_TEXT_RUN_HPP
 
 #include <ascension/graphics/font/glyph-vector.hpp>
+#include <ascension/graphics/font/text-hit.hpp>
 #include <boost/optional.hpp>
 #if defined(ASCENSION_SHAPING_ENGINE_CORE_TEXT)
 #	include <CTRun.h>
@@ -70,23 +71,13 @@ namespace ascension {
 				/// @name Glyph Edges
 				/// @{
 				/**
-				 * Returns the distance in inline-progression-dimension from the leading edge of
-				 * this text run to one of the glyph of the specified character.
-				 * @param character The character index in this run
-				 * @return The leading edge in user units
-				 * @throw std#out_of_range @a character is outside of this text run
-				 * @see #trailingEdge
+				 * Returns the distance from line-left of this run to the specified character.
+				 * @param hit The hit to check. This must be a valid hit on the @c TextRun
+				 * @return The logical glyph position in user units
+				 * @throw IndexOutOfBounds @a hit is not valid for the @c TextRun
+				 * @see GlyphVector#glyphPosition, TextLayout#hitToPoint
 				 */
-				virtual Scalar leadingEdge(Index character) const = 0;
-				/**
-				 * Returns the distance in inline-progression-dimension from the leading edge of
-				 * this text run to trailing edge of the glyph of the specified character.
-				 * @param character The character index in this run
-				 * @return The trailing edge, in user units
-				 * @throw std#out_of_range @a character is outside of this text run
-				 * @see #leadingEdge
-				 */
-				virtual Scalar trailingEdge(Index character) const = 0;
+				virtual Scalar hitToLogicalPosition(const TextHit& hit) const = 0;
 				/// @}
 
 				/// @name Box Model of CSS 3 and XSL 1.1
@@ -203,7 +194,7 @@ namespace ascension {
 			 * @see #allocationMeasure
 			 */
 			inline Scalar measure(const TextRun& textRun) {
-				return textRun.trailingEdge(textRun.characterRange().length());
+				return textRun.hitToLogicalPosition(TextHit::leading(textRun.characterRange().length()));
 			}
 			/**
 			 * Returns the measure of the 'allocation-rectangle' of the specified text run in user units.

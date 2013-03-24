@@ -183,7 +183,8 @@ namespace ascension {
 				boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&&
 					logicalHighlightShape(const boost::integer_range<Index>& range, const boost::optional<Rectangle>& bounds) const;
 				std::vector<boost::integer_range<Index>>&& logicalRangesForVisualSelection(const boost::integer_range<TextHit>& range) const;
-				presentation::FlowRelativeFourSides<Scalar> visualHighlightShape(const boost::iterator_range<TextHit>& range) const;
+				boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&&
+					visualHighlightShape(const boost::iterator_range<TextHit>& range, const boost::optional<Rectangle>& bounds) const;
 				/// @}
 
 				/// @name Hit Test
