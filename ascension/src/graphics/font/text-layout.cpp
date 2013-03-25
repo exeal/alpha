@@ -594,6 +594,7 @@ boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& 
 
 	const boost::integer_range<Index> orderedRange(ordered(range));
 	const boost::integer_range<Index> lines(boost::irange(lineAt(*orderedRange.begin()), lineAt(*orderedRange.end())));
+	const bool ltr = writingMode().inlineFlowDirection == LEFT_TO_RIGHT;
 	for(LineMetricsIterator line(*this, *lines.begin()); line.line() != *lines.end(); ++line) {
 		const Point baseline(line.baselineOffsetInPhysicalCoordinates());
 		Scalar lineOver, lineUnder;
@@ -628,9 +629,8 @@ boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& 
 			}
 		}
 
-		const boost::iterator_range<RunVector::const_iterator> runs(runsForLine(line.line()));
 		Scalar x = static_cast<Scalar>(boost::geometry::distance(lineLeft(line.line()), boost::geometry::make_zero<Point>()));	// line-relative
-		BOOST_FOREACH(const unique_ptr<const TextRun>& run, runs) {
+		BOOST_FOREACH(const unique_ptr<const TextRun>& run, runsForLine(line.line())) {
 			// 'x' is line-left edge of the run, here
 			if(linearBounds != boost::none && x >= *linearBounds->end())
 				break;
@@ -639,18 +639,22 @@ boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& 
 				auto selectionInRun(intersection(
 					boost::irange<Index>(run->characterRange().begin() - textString_.data(), run->characterRange().end() - textString_.data()), orderedRange));
 				if(!boost::empty(selectionInRun)) {
+					selectionInRun.advance_begin(textString_.data() - run->characterRange().begin());
+					selectionInRun.advance_end(textString_.data() - run->characterRange().begin());
+
 					Scalar glyphsLeft = x;	// line-left edge of glyphs content of the run
 					if(const FlowRelativeFourSides<Scalar>* const margin = run->margin())
-						glyphsLeft += margin->start();
+						glyphsLeft += ltr ? margin->start() : margin->end();
 					if(const FlowRelativeFourSides<ComputedBorderSide>* const border = run->border())
-						glyphsLeft += border->start().computedWidth();
+						glyphsLeft += (ltr ? border->start() : border->end()).computedWidth();
 					if(const FlowRelativeFourSides<Scalar>* const padding = run->padding())
-						glyphsLeft += padding->start();
+						glyphsLeft += ltr ? padding->start() : padding->end();
 
 					// compute leading and trailing edges highlight shape in the run
-					Scalar leading = run->leadingEdge(*selectionInRun.begin()), trailing = run->leadingEdge(*selectionInRun.end());
-					leading = glyphsLeft + (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? leading : (font::measure(*run) - leading);
-					trailing = glyphsLeft + (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? trailing : (font::measure(*run) - trailing);
+					Scalar leading = run->hitToLogicalPosition(TextHit::leading(*selectionInRun.begin()));
+					Scalar trailing = run->hitToLogicalPosition(TextHit::leading(*selectionInRun.end()));
+					leading = glyphsLeft + ltr ? leading : (font::measure(*run) - leading);
+					trailing = glyphsLeft + ltr ? trailing : (font::measure(*run) - trailing);
 					Rectangle rectangle(mapLineRelativeToPhysical(writingMode(),
 						LineRelativeFourSides<Scalar>(_over = lineOver, _under = lineUnder, _lineLeft = min(leading, trailing), _lineRight = max(leading, trailing))));
 
