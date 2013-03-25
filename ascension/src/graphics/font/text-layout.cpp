@@ -350,12 +350,43 @@ TextHit&& TextLayout::hitTestCharacter(const AbstractTwoAxes<Scalar>& point, con
 }
 
 /**
- * @fn ascension::graphics::font::TextLayout::hitToPoint
  * Converts a hit to a point in abstract coordinates.
  * @param hit The hit to check. This must be a valid hit on the @c TextLayout
  * @return The returned point. The point is in abstract coordinates
- * @throw std#out_of_range @a hit is not valid for the @c TextLayout
+ * @throw IndexOutOfBoundsException @a hit is not valid for the @c TextLayout
  */
+AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit& hit) const {
+	if(hit.insertionIndex() > numberOfCharacters())
+		throw IndexOutOfBoundsException("hit");
+
+	if(isEmpty())
+		return AbstractTwoAxes<Scalar>(_ipd = 0, _bpd = LineMetricsIterator(*this, 0).baselineOffset());
+
+	// locate line
+	const Index line = lineAt(hit.characterIndex());
+
+	// compute inline-progression-dimension
+	const StringPiece::const_iterator at = textString_.data() + hit.characterIndex();
+	const bool ltr = writingMode().inlineFlowDirection == LEFT_TO_RIGHT;
+	Scalar x = 0;	// line-relative position
+	BOOST_FOREACH(const unique_ptr<const TextRun>& run, runsForLine(line)) {
+		if(includes(boost::make_iterator_range(run->characterRange()), at)) {
+			if(const FlowRelativeFourSides<Scalar>* const margin = run->margin())
+				x += ltr ? margin->start() : margin->end();
+			if(const FlowRelativeFourSides<ComputedBorderSide>* const border = run->border())
+				x += (ltr ? border->start() : border->end()).computedWidth();
+			if(const FlowRelativeFourSides<Scalar>* const padding = run->padding())
+				x += ltr ? padding->start() : padding->end();
+			x += run->hitToLogicalPosition(TextHit::leading(at - run->characterRange().begin()));
+			break;
+		}
+		x += allocationMeasure(*run);
+	}
+	Scalar ipd = ltr ? x : (measure(line) - x);
+	ipd += lineStartEdge(line);
+
+	return AbstractTwoAxes<Scalar>(_ipd = ipd, _bpd = LineMetricsIterator(*this, line).baselineOffset());
+}
 
 #if 0
 /// Returns an iterator addresses the first styled segment.
