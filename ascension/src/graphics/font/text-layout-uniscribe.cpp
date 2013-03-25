@@ -3013,52 +3013,6 @@ String TextLayout::fillToX(Scalar x) const {
 #endif
 }
 
-AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit& hit) const {
-	if(hit.characterIndex() >= numberOfCharacters())
-		throw out_of_range("hit");
-
-	Scalar ipd, bpd = 0/* + lineMetrics_[0].leading*/;
-	if(isEmpty()) {
-		ipd = 0;
-		bpd += get<0>(lineMetrics_[0]);
-	} else {
-		// inline-progression-dimension
-		const StringPiece::const_iterator at = textString_.data() + hit.characterIndex();
-		const Index line = lineAt(hit.characterIndex());
-		const boost::iterator_range<const RunVector::const_iterator> runsInLine(firstRunInLine(line), firstRunInLine(line + 1));
-		if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) {	// LTR
-			ipd = lineStartEdge(line);
-			for(RunVector::const_iterator i(runsInLine.begin()); i != runsInLine.end(); ++i) {
-				const TextRun& run = *static_cast<const TextRun*>(i->get());	// TODO: Down-cast.
-				if(includes(run, at)) {
-					ipd += hit.isLeadingEdge() ? run.leadingEdge(at - run.begin()) : run.trailingEdge(at - run.begin());
-					break;
-				}
-				ipd += allocationMeasure(run);
-			}
-		} else {	// RTL
-			Scalar ipd = lineStartEdge(line);
-			for(RunVector::const_iterator i(runsInLine.end() - 1); ; --i) {
-				const TextRunImpl& run = *static_cast<const TextRunImpl*>(i->get());	// TODO: Down-cast.
-				if(includes(run, at)) {
-					ipd += hit.isLeadingEdge() ? run.leadingEdge(at - run.begin()) : run.trailingEdge(at - run.begin());
-					break;
-				}
-				if(i == runsInLine.begin()) {
-					ASCENSION_ASSERT_NOT_REACHED();
-					break;
-				}
-				ipd += allocationMeasure(run);
-			}
-		}
-
-		// block-progression-dimension
-		bpd += lineMetrics(line).baselineOffset();
-	}
-
-	return AbstractTwoAxes<Scalar>(_ipd = ipd, _bpd = bpd);
-}
-
 /// @internal Implements @c #hitTestCharacter methods.
 TextHit&& TextLayout::internalHitTestCharacter(const AbstractTwoAxes<Scalar>& point, const FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const {
 	bool outside;
