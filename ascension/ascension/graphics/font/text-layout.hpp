@@ -289,22 +289,6 @@ namespace ascension {
 			}
 
 			/**
-			 * Returns extent (block-progression-dimension) of the specified lines.
-			 * @param lines A range of the lines
-			 * @return A range of block-progression-dimension relative to the alignment-point
-			 * @throw IndexOutOfBoundsException
-			 */
-			inline boost::integer_range<Scalar> TextLayout::extent(const boost::integer_range<Index>& lines) const {
-				const auto temp = std::minmax(*lines.begin(), *lines.end());
-				if(temp.second > numberOfLines())
-					throw IndexOutOfBoundsException("lines");
-				const LineMetricsIterator firstLine(*this, temp.first), lastLine(*this, temp.second - 1);
-				return boost::irange(
-					firstLine.baselineOffset() - firstLine.ascent(),
-			   		lastLine.baselineOffset() + lastLine.descent() + lastLine.leading());
-			}
-
-			/**
 			 * @internal Returns the first text run in the specified visual line.
 			 * @param line The visual line
 			 * @return An iterator addresses the text run

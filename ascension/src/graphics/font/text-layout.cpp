@@ -267,6 +267,29 @@ void TextLayout::dumpRuns(ostream& out) const {
 }
 #endif // _DEBUG
 
+/**
+ * Returns extent (block-progression-dimension) of the specified lines.
+ * @param lines A range of the lines
+ * @return A range of block-progression-dimension relative to the alignment-point
+ * @throw IndexOutOfBoundsException
+ */
+boost::integer_range<Scalar> TextLayout::extent(const boost::integer_range<Index>& lines) const {
+	const auto orderedLines(ordered(lines));
+	if(*orderedLines.end() > numberOfLines())
+		throw IndexOutOfBoundsException("lines");
+	const LineMetricsIterator firstLine(*this, *orderedLines.begin()), lastLine(*this, *orderedLines.end() - 1);
+	bool negativeVertical = false;
+	if(isVertical(writingMode().blockFlowDirection)) {
+		if(writingMode().blockFlowDirection == VERTICAL_RL)
+			negativeVertical = resolveTextOrientation(writingMode()) == SIDEWAYS_LEFT;
+		else
+			negativeVertical = resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT;
+	}
+	return boost::irange(
+		firstLine.baselineOffset() - (!negativeVertical ? firstLine.ascent() : lastLine.descent() + lastLine.leading()),
+		lastLine.baselineOffset() + (!negativeVertical ? lastLine.descent() + lastLine.leading() : lastLine.ascent()));
+}
+
 shared_ptr<const Font> TextLayout::findMatchingFont(const StringPiece& textRun,
 		const FontCollection& collection, const ComputedFontSpecification& specification) {
 #if 0
