@@ -24,6 +24,7 @@
 #include <numeric>	// std.accumulate
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/sort.hpp>
+#include <boost/range/numeric.hpp>	// boost.accumulate
 
 using namespace ascension;
 using namespace ascension::graphics;
@@ -785,13 +786,13 @@ vector<boost::integer_range<Index>>&& TextLayout::logicalRangesForVisualSelectio
 }
 
 /**
- * Returns the inline-progression-dimension of the longest line.
+ * Returns the measure of the longest line in user units.
  * @see #measure(Index)
  */
 Scalar TextLayout::measure() const BOOST_NOEXCEPT {
-	if(!maximumMeasure_) {
+	if(maximumMeasure_ == boost::none) {
 		Scalar ipd = 0;
-		for(Index line = 0; line < numberOfLines(); ++line)
+		BOOST_FOREACH(Index line, boost::irange<Index>(0, numberOfLines()))
 			ipd = max(measure(line), ipd);
 		const_cast<TextLayout*>(this)->maximumMeasure_ = ipd;
 	}
@@ -799,42 +800,41 @@ Scalar TextLayout::measure() const BOOST_NOEXCEPT {
 }
 
 /**
- * Returns the length in inline-progression-dimension without the indentations (the distance from
- * the start-edge to the end-edge) of the specified line in pixels.
+ * Returns the measure of the specified line in user units. The measure is the measurement in the
+ * inline dimension (, or the distance from the start-edge to the end-edge of the line). The
+ * measure of a line includes margins, borders and paddings of the all text runs.
  * @param line The line number
- * @return The width. Must be equal to or greater than zero
+ * @return The measure of the line. Must be equal to or greater than zero
  * @throw IndexOutOfBoundsException @a line is greater than the number of lines
  * @see #measure(void)
  */
 Scalar TextLayout::measure(Index line) const {
 	if(line >= numberOfLines())
 		throw IndexOutOfBoundsException("line");
-	else if(isEmpty())
-		return boost::get(const_cast<TextLayout*>(this)->maximumMeasure_ = 0);
-	else {
-		TextLayout& self = const_cast<TextLayout&>(*this);
-		if(numberOfLines() == 1) {
-			if(maximumMeasure_)
-				return boost::get(maximumMeasure_);
-		} else {
-			static_assert(is_signed<Scalar>::value, "");
-			if(lineMeasures_.get() == nullptr) {
-				self.lineMeasures_.reset(new Scalar[numberOfLines()]);
-				fill_n(self.lineMeasures_.get(), numberOfLines(), -1);
-			}
-			if(lineMeasures_[line] >= 0)
-				return lineMeasures_[line];
+	TextLayout& self = const_cast<TextLayout&>(*this);
+	if(isEmpty())
+		return boost::get(self.maximumMeasure_) = 0;
+	if(numberOfLines() == 1) {
+		if(maximumMeasure_ != boost::none)
+			return boost::get(maximumMeasure_);
+	} else {
+		static_assert(is_signed<Scalar>::value, "");
+		if(lineMeasures_.get() == nullptr) {
+			self.lineMeasures_.reset(new Scalar[numberOfLines()]);
+			fill_n(self.lineMeasures_.get(), numberOfLines(), -1);
 		}
-		Scalar ipd = 0;
-		BOOST_FOREACH(const unique_ptr<const TextRun>& run, runsForLine(line))
-			ipd += allocationMeasure(*run);
-		assert(ipd >= 0);
-		if(numberOfLines() == 1)
-			self.maximumMeasure_ = ipd;
-		else
-			self.lineMeasures_[line] = ipd;
-		return ipd;
+		if(lineMeasures_[line] >= 0)
+			return lineMeasures_[line];
 	}
+	const Scalar ipd = boost::accumulate(runsForLine(line), static_cast<Scalar>(0), [](Scalar ipd, const unique_ptr<const TextRun>& run) {
+		return ipd + allocationMeasure(*run);
+	});
+	assert(ipd >= 0);
+	if(numberOfLines() == 1)
+		self.maximumMeasure_ = ipd;
+	else
+		self.lineMeasures_[line] = ipd;
+	return ipd;
 }
 #if 0
 /**
