@@ -977,7 +977,7 @@ StyledRun TextLayout::styledTextRun(Index offsetInLine) const {
  * @see #logicalHighlightShape, #logicalRangesForVisualSelection
  */
 boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&&
-		TextLayout::visualHighlightShape(const boost::iterator_range<TextHit>& range, const boost::optional<graphics::Rectangle>& bounds) const {
+		TextLayout::visualHighlightShape(const boost::integer_range<TextHit>& range, const boost::optional<graphics::Rectangle>& bounds) const {
 }
 
 #if 0

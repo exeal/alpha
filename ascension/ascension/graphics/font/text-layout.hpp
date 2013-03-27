@@ -146,7 +146,7 @@ namespace ascension {
 				bool isBidirectional() const BOOST_NOEXCEPT;
 				Index numberOfCharacters() const BOOST_NOEXCEPT;
 				const presentation::TextLineStyle& style() const /*throw()*/;
-				const presentation::WritingMode& writingMode() const /*throw()*/;
+				const presentation::WritingMode& writingMode() const BOOST_NOEXCEPT;
 				/// @}
 
 				/// @name Visual Line Accesses
@@ -184,7 +184,7 @@ namespace ascension {
 					logicalHighlightShape(const boost::integer_range<Index>& range, const boost::optional<Rectangle>& bounds) const;
 				std::vector<boost::integer_range<Index>>&& logicalRangesForVisualSelection(const boost::integer_range<TextHit>& range) const;
 				boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&&
-					visualHighlightShape(const boost::iterator_range<TextHit>& range, const boost::optional<Rectangle>& bounds) const;
+					visualHighlightShape(const boost::integer_range<TextHit>& range, const boost::optional<Rectangle>& bounds) const;
 				/// @}
 
 				/// @name Hit Test
@@ -391,6 +391,11 @@ namespace ascension {
 
 			/// Returns the number of the wrapped lines.
 			inline Index TextLayout::numberOfLines() const BOOST_NOEXCEPT {return numberOfLines_;}
+
+			/// Returns the writing mode for this @c TextLayout.
+			inline const presentation::WritingMode& TextLayout::writingMode() const BOOST_NOEXCEPT {
+				return lineStyle_.get().writingMode;
+			}
 
 			/**
 			 * Returns the ascent of the current line.
