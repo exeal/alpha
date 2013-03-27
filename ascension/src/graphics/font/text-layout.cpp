@@ -23,6 +23,7 @@
 #include <limits>	// std.numeric_limits
 #include <numeric>	// std.accumulate
 #include <boost/foreach.hpp>
+#include <boost/range/algorithm/sort.hpp>
 
 using namespace ascension;
 using namespace ascension::graphics;
@@ -673,6 +674,94 @@ boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& 
 }
 
 /**
+ * Returns the logical ranges of text corresponding to a visual selection.
+ * @param range The visual range. This can be not ordered
+ * @return A vector of indices for the selected ranges
+ * @throw IndexOutOfBoundsException @a range is not valid for the @c TextLayout
+ * @see #logicalHighlightShape, #visualHighlightShape
+ */
+vector<boost::integer_range<Index>>&& TextLayout::logicalRangesForVisualSelection(const boost::integer_range<TextHit>& range) const {
+	if(range.begin()->insertionIndex() > numberOfCharacters())
+		throw IndexOutOfBoundsException("range.begin()");
+	if(range.end()->insertionIndex() > numberOfCharacters())
+		throw IndexOutOfBoundsException("range.end()");
+	if(range.begin() == range.end())
+		return vector<boost::integer_range<Index>>();
+
+	list<const TextHit> hits;
+	hits.push_back(min(*range.begin(), *range.end()));
+	hits.push_back(max(*range.begin(), *range.end()));
+	if(hits.back().characterIndex() == numberOfCharacters()) {	// handle EOL
+		assert(hits.back().isLeadingEdge());
+		hits.pop_back();
+		if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT)
+			hits.push_back(TextHit::beforeOffset(numberOfCharacters()));
+		else {
+			const unique_ptr<const TextRun>& firstRunInLastLine = runsForLine(numberOfLines() - 1).front();
+			if(firstRunInLastLine->direction() == LEFT_TO_RIGHT)
+				hits.push_back(TextHit::leading(firstRunInLastLine->characterRange().begin() - textString_.data()));
+			else
+				hits.push_back(TextHit::beforeOffset(firstRunInLastLine->characterRange().end() - textString_.data()));
+		}
+	}
+
+	vector<boost::integer_range<Index>> hashedResult;
+	BOOST_FOREACH(Index line, boost::irange(lineAt(hits.front().characterIndex()), lineAt(hits.back().characterIndex()) + 1)) {
+		BOOST_FOREACH(const unique_ptr<const TextRun>& run, runsForLine(line)) {
+			const boost::integer_range<Index> runRange(run->characterRange().begin() - textString_.data(), run->characterRange().end() - textString_.data());
+			// there are four patterns
+			if(hits.size() == 2) {
+				size_t foundHits = 0;
+				list<const TextHit>::iterator foundHit;
+				for(list<const TextHit>::iterator hit(begin(hits)), e(end(hits)); hit != e; ++hit) {
+					if(includes(runRange, hit->characterIndex())) {
+						++foundHits;
+						foundHit = hit;
+					}
+				}
+				if(foundHits == 1) {	// selection begins from here
+					hits.erase(foundHit);
+					if(run->direction() == LEFT_TO_RIGHT)
+						hashedResult.push_back(boost::irange(hits.front().insertionIndex(), *runRange.end()));
+					else
+						hashedResult.push_back(boost::irange(*runRange.begin(), hits.front().insertionIndex()));
+				} else if(foundHits == 2) {	// selection is only in this run
+					hashedResult.push_back(ordered(boost::irange(hits.front().insertionIndex(), hits.back().insertionIndex())));
+					hits.clear();
+				}
+			} else {
+				assert(hits.size() == 1);
+				if(includes(runRange, hits.front().characterIndex())) {	// selection is end here
+					if(run->direction() == LEFT_TO_RIGHT)
+						hashedResult.push_back(boost::irange(*runRange.begin(), hits.front().insertionIndex()));
+					else
+						hashedResult.push_back(boost::irange(hits.front().insertionIndex(), *runRange.end()));
+					hits.pop_back();
+					break;
+				} else
+					hashedResult.push_back(runRange);
+			}
+		}
+		if(hits.empty())
+			break;
+	}
+	assert(hits.empty());
+
+	// sort and merge
+	boost::sort(hashedResult, [](const boost::integer_range<Index>& lhs, const boost::integer_range<Index>& rhs) {
+		return lhs.front() < rhs.front();
+	});
+	vector<boost::integer_range<Index>> result;
+	BOOST_FOREACH(const boost::integer_range<Index>& subrange, hashedResult) {
+		if(result.empty() || *result.back().end() != *subrange.begin())
+			result.push_back(subrange);
+		else
+			result.back().advance_end(*subrange.end() - *result.back().end());
+	}
+	return move(result);
+}
+
+/**
  * Returns the inline-progression-dimension of the longest line.
  * @see #measure(Index)
  */
@@ -888,7 +977,7 @@ StyledRun TextLayout::styledTextRun(Index offsetInLine) const {
  * @see #logicalHighlightShape, #logicalRangesForVisualSelection
  */
 boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&&
-		TextLayout::visualHighlightShape(const boost::iterator_range<TextHit>& range, const boost::optional<Rectangle>& bounds) const {
+		TextLayout::visualHighlightShape(const boost::iterator_range<TextHit>& range, const boost::optional<graphics::Rectangle>& bounds) const {
 }
 
 #if 0
