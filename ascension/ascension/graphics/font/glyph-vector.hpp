@@ -27,18 +27,7 @@ namespace ascension {
 			/// 16-bit glyph index value.
 			typedef std::uint16_t GlyphCode;
 
-			/**
-			 * Represents information for a single glyph.
-			 * @see GlyphVector#metrics
-			 */
-			class GlyphMetrics {
-			public:
-				virtual Scalar advanceX() const = 0;
-				virtual Scalar advanceY() const = 0;
-				virtual Dimension bounds() const = 0;
-				virtual Scalar leftTopSideBearing() const = 0;
-				virtual Scalar rightBottomSideBearing() const = 0;
-			};
+			class GlyphMetrics;
 
 			/**
 			 * Abstract class represents a vector of glyph codes with geometric information. All
@@ -153,7 +142,13 @@ namespace ascension {
 
 				/// @name Glyph Metrics
 				/// @{
-//				virtual GlyphMetrics&& glyphMetrics(std::size_t index) const = 0;
+				/**
+				 * Returns the metrics of the glyph at the specified index into this @c GlyphVector.
+				 * @param index The glyph index in this vector
+				 * @return A @c GlyphMetrics object
+				 * @throw IndexOutOfBoundsException @a index &gt; @c #numberOfGlyphs()
+				 */
+				virtual GlyphMetrics&& glyphMetrics(std::size_t index) const = 0;
 				/// @}
 
 				/// @name Glyph Transform

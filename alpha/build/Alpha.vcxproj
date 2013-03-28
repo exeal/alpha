@@ -308,6 +308,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-metrics.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-render-context.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\glyph-metrics.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\glyph-vector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\line-layout-vector.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-alignment.hpp" />

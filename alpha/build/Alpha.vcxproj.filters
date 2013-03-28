@@ -730,6 +730,9 @@
     <ClInclude Include="..\..\ascension\ascension\presentation\writing-mode-mappings.hpp">
       <Filter>ascension\Header Files\presentation</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\glyph-metrics.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
