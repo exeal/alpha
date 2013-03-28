@@ -163,7 +163,7 @@ namespace ascension {
 				LineMetricsIterator&& lineMetrics(Index line) const;
 				boost::integer_range<Scalar> extent() const;
 				boost::integer_range<Scalar> extent(const boost::integer_range<Index>& lines) const;
-				Scalar measure() const;
+				Scalar measure() const BOOST_NOEXCEPT;
 				Scalar measure(Index line) const;
 				/// @}
 
