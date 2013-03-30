@@ -146,7 +146,7 @@ namespace ascension {
 				 * Returns the metrics of the glyph at the specified index into this @c GlyphVector.
 				 * @param index The glyph index in this vector
 				 * @return A @c GlyphMetrics object
-				 * @throw IndexOutOfBoundsException @a index &gt; @c #numberOfGlyphs()
+				 * @throw IndexOutOfBoundsException @a index &gt;= @c #numberOfGlyphs()
 				 */
 				virtual GlyphMetrics&& glyphMetrics(std::size_t index) const = 0;
 				/// @}

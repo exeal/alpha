@@ -11,6 +11,7 @@
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/font/glyph-metrics.hpp>
 #include <ascension/graphics/font/text-layout.hpp>
 #include <ascension/graphics/font/text-layout-styles.hpp>
 #include <ascension/graphics/font/text-run.hpp>
@@ -627,6 +628,7 @@ namespace {
 		Index glyphCharacterIndex(size_t index) const;
 		GlyphCode glyphCode(size_t index) const;
 		graphics::Rectangle glyphLogicalBounds(size_t index) const;
+		GlyphMetrics&& glyphMetrics(size_t index) const;
 		Point glyphPosition(size_t index) const;
 		vector<Point>&& glyphPositions(const boost::integer_range<size_t>& range) const;
 		graphics::Rectangle glyphVisualBounds(size_t index) const;
@@ -1304,6 +1306,31 @@ inline Scalar TextRunImpl::glyphLogicalPosition(size_t index) const {
 		x += glyphAdvances[i];
 	}
 	return static_cast<Scalar>(x);
+}
+
+/// @see GlyphVector#glyphMetrics
+GlyphMetrics&& TextRunImpl::glyphMetrics(size_t index) const {
+	if(index >= numberOfGlyphs())
+		throw IndexOutOfBoundsException("index");
+	
+	RenderingContext2D context(detail::screenDC());
+	shared_ptr<const Font> oldFont(context.font());
+	context.setFont(font());
+	GLYPHMETRICS gm;
+	const MAT2 matrix = {1, 0, 0, 1};	// TODO: Consider glyph transform.
+	const DWORD lastError = (::GetGlyphOutlineW(context.asNativeObject().get(),
+		glyphCode(index), GGO_GLYPH_INDEX | GGO_METRICS, &gm, 0, nullptr, &matrix) == GDI_ERROR) ? ::GetLastError() : ERROR_SUCCESS;
+	context.setFont(oldFont);
+	if(lastError != ERROR_SUCCESS)
+		throw makePlatformError(lastError);
+	const double sx = fontRenderContext().transform().scaleX() / context.fontRenderContext().transform().scaleX();
+	const double sy = fontRenderContext().transform().scaleY() / context.fontRenderContext().transform().scaleY();
+	return GlyphMetrics(gm.gmCellIncY == 0,
+		Dimension(geometry::_dx = gm.gmCellIncX * sx, geometry::_dy = gm.gmCellIncY * sy),
+		graphics::Rectangle(
+			Point(geometry::_x = gm.gmptGlyphOrigin.x * sx, geometry::_y = -gm.gmptGlyphOrigin.y * sy),
+			Dimension(geometry::_dx = gm.gmBlackBoxX * sx, geometry::_dy = gm.gmBlackBoxY * sy)),
+		static_cast<GlyphMetrics::Type>(0));
 }
 
 /// @see GlyphVector#glyphPosition
