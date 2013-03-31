@@ -196,7 +196,13 @@ namespace ascension {
 
 				/// @name Other Hit Test
 				/// @{
-				TextHit visualOtherHit(const TextHit& hit) const;
+				boost::optional<TextHit> nextLeftHit(Index offset) const;
+//				boost::optional<TextHit> nextLeftHit(Index offset, CaretPolicy policy) const;
+				boost::optional<TextHit> nextLeftHit(const TextHit& hit) const;
+				boost::optional<TextHit> nextRightHit(Index offset) const;
+//				boost::optional<TextHit> nextRightHit(Index offset, CaretPolicy policy) const;
+				boost::optional<TextHit> nextRightHit(const TextHit& hit) const;
+				TextHit&& visualOtherHit(const TextHit& hit) const;
 				/// @}
 
 				/// @name Other Coordinates
