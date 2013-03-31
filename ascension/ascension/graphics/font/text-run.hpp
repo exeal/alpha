@@ -71,9 +71,31 @@ namespace ascension {
 				/// @name Glyph Edges
 				/// @{
 				/**
-				 * Returns the distance from line-left of this run to the specified character.
+				 * Returns a @c TextHit corresponding to the specified position. Position outside
+				 * the bounds of the glyph content of the @c TextRun map to hits on the leading
+				 * edge of the first logical character, or the trailing edge of the last logical
+				 * character, as appropriate, regardless of the position of that character in the
+				 * run.
+				 * @param position The logical position, the distance from the line-left edge of
+				 *                 the glyph content (not the allocation box) of this text run, in
+				 *                 user units
+				 * @param bounds The bounds of the @c TextRun. If @c boost#none, the
+				 *               inline-progression-dimension of this text run is used
+				 * @param[out] outOfBounds @c true if @a position is out of @a bounds. Can be
+				 *                         @c null if not needed
+				 * @return A hit describing the character and edge (leading or trailing) under the
+				 *         specified position
+				 * @see TextLayout#hitTestCharacter
+				 */
+				virtual TextHit&& hitTestCharacter(Scalar position,
+					const boost::optional<boost::integer_range<Scalar>>& bounds,
+					bool* outOfBounds = nullptr) const BOOST_NOEXCEPT = 0;
+				/**
+				 * Returns the logical position of the specified character in this text run. This
+				 * is the distance from the line-left edge of the glyph content (not the allocation
+				 * box) of this text run to the specified character.
 				 * @param hit The hit to check. This must be a valid hit on the @c TextRun
-				 * @return The logical glyph position in user units
+				 * @return The logical character position in user units
 				 * @throw IndexOutOfBounds @a hit is not valid for the @c TextRun
 				 * @see GlyphVector#glyphPosition, TextLayout#hitToPoint
 				 */
