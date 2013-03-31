@@ -3040,47 +3040,6 @@ String TextLayout::fillToX(Scalar x) const {
 #endif
 }
 
-/// @internal Implements @c #hitTestCharacter methods.
-TextHit&& TextLayout::internalHitTestCharacter(const AbstractTwoAxes<Scalar>& point, const FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const {
-	bool outside;
-	const Index line = locateLine(point.bpd(), outside);
-
-	const boost::iterator_range<const RunVector::const_iterator> runsInLine(firstRunInLine(line), firstRunInLine(line + 1));
-	const StringPiece characterRangeInLine((*runsInLine.begin())->characterRange().begin(), lineLength(line));
-	assert(characterRangeInLine.end() == runsInLine.end()[-1]->characterRange().end());
-
-	const Scalar lineStart = lineStartEdge(line);
-	if(point.ipd() < lineStart) {
-		if(outOfBounds != nullptr)
-			*outOfBounds = true;
-		return TextHit::leading(characterRangeInLine.begin() - textString_.data());
-	}
-	outside = point.ipd() > lineStart + measure(line);	// beyond line 'end-edge'
-
-	if(!outside) {
-		Scalar x = point.ipd() - lineStart, runLeft = 0;
-		if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
-			x = measure(line) - x;
-		for(RunVector::const_iterator run(runsInLine.begin()); run != runsInLine.end(); ++run) {
-			const Scalar runRight = runLeft + allocationMeasure(**run);
-			if(runRight >= x) {
-				const TextRunImpl& textRun = *static_cast<const TextRunImpl*>(run->get());	// TODO: Down-cast.
-				TextHit hit(textRun.hitTestCharacter(((*run)->direction() == LEFT_TO_RIGHT) ? x - runLeft : runRight - x, outOfBounds));
-				if(outside && outOfBounds != nullptr)
-					*outOfBounds = true;
-				const Index position = (*run)->characterRange().begin() - textString_.data() + hit.characterIndex();
-				return hit.isLeadingEdge() ? TextHit::leading(position) : TextHit::trailing(position);
-			}
-			runLeft = runRight;
-		}
-	}
-
-	// maybe beyond line 'end-edge'
-	if(outOfBounds != nullptr)
-		*outOfBounds = true;
-	return TextHit::trailing((characterRangeInLine.end() - textString_.data()) - 1);
-}
-
 /// Justifies the wrapped visual lines.
 inline void TextLayout::justify(Scalar lineMeasure, TextJustification) /*throw()*/ {
 	for(Index line = 0; line < numberOfLines(); ++line) {

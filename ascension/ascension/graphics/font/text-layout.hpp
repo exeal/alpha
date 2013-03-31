@@ -202,7 +202,7 @@ namespace ascension {
 				/// @name Other Coordinates
 				/// @{
 				Scalar lineStartEdge(Index line) const;
-				Index locateLine(Scalar bpd, bool& outside) const /*throw()*/;
+				Index locateLine(Scalar bpd, bool& outside) const BOOST_NOEXCEPT;
 				presentation::AbstractTwoAxes<Scalar> location(const TextHit& hit) const;
 				std::pair<presentation::AbstractTwoAxes<Scalar>,
 					presentation::AbstractTwoAxes<Scalar>> locations(Index offset) const;

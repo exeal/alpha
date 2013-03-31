@@ -268,6 +268,18 @@ void TextLayout::dumpRuns(ostream& out) const {
 }
 #endif // _DEBUG
 
+namespace {
+	inline bool isNegativeVertical(const WritingMode& writingMode) {
+		if(isVertical(writingMode.blockFlowDirection)) {
+			if(writingMode.blockFlowDirection == VERTICAL_RL)
+				return resolveTextOrientation(writingMode) == SIDEWAYS_LEFT;
+			else
+				return resolveTextOrientation(writingMode) != SIDEWAYS_LEFT;
+		}
+		return false;
+	}
+}
+
 /**
  * Returns extent (block-progression-dimension) of the specified lines.
  * @param lines A range of the lines
@@ -279,13 +291,7 @@ boost::integer_range<Scalar> TextLayout::extent(const boost::integer_range<Index
 	if(*orderedLines.end() > numberOfLines())
 		throw IndexOutOfBoundsException("lines");
 	const LineMetricsIterator firstLine(*this, *orderedLines.begin()), lastLine(*this, *orderedLines.end() - 1);
-	bool negativeVertical = false;
-	if(isVertical(writingMode().blockFlowDirection)) {
-		if(writingMode().blockFlowDirection == VERTICAL_RL)
-			negativeVertical = resolveTextOrientation(writingMode()) == SIDEWAYS_LEFT;
-		else
-			negativeVertical = resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT;
-	}
+	const bool negativeVertical = isNegativeVertical(writingMode());
 	return boost::irange(
 		firstLine.baselineOffset() - (!negativeVertical ? firstLine.ascent() : lastLine.descent() + lastLine.leading()),
 		lastLine.baselineOffset() + (!negativeVertical ? lastLine.descent() + lastLine.leading() : lastLine.ascent()));
@@ -354,6 +360,7 @@ shared_ptr<const Font> TextLayout::findMatchingFont(const StringPiece& textRun,
  * @param[out] outOfBounds @c true if @a point is out of the logical bounds of the @c TextLayout.
  *                         Can be @c null if not needed
  * @return A hit describing the character and edge (leading or trailing) under the specified point
+ * @see TextRun#hitTestCharacter
  */
 TextHit&& TextLayout::hitTestCharacter(const AbstractTwoAxes<Scalar>& point, bool* outOfBounds /* = nullptr */) const {
 	return internalHitTestCharacter(point, nullptr, outOfBounds);
@@ -369,6 +376,7 @@ TextHit&& TextLayout::hitTestCharacter(const AbstractTwoAxes<Scalar>& point, boo
  * @param[out] outOfBounds @c true if @a point is out of the logical bounds of the @c TextLayout.
  *                         Can be @c null if not needed
  * @return A hit describing the character and edge (leading or trailing) under the specified point
+ * @see TextRun#hitTestCharacter
  */
 TextHit&& TextLayout::hitTestCharacter(const AbstractTwoAxes<Scalar>& point, const FlowRelativeFourSides<Scalar>& bounds, bool* outOfBounds /* = nullptr */) const {
 	return internalHitTestCharacter(point, &bounds, outOfBounds);
@@ -411,6 +419,47 @@ AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit& hit) const {
 	ipd += lineStartEdge(line);
 
 	return AbstractTwoAxes<Scalar>(_ipd = ipd, _bpd = LineMetricsIterator(*this, line).baselineOffset());
+}
+
+/// @internal Implements @c #hitTestCharacter methods.
+TextHit&& TextLayout::internalHitTestCharacter(const AbstractTwoAxes<Scalar>& point, const FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const {
+	bool outside;
+	const Index line = locateLine(point.bpd(), outside);
+
+	const boost::iterator_range<const RunVector::const_iterator> runsInLine(runsForLine(line));
+	const StringPiece characterRangeInLine((*runsInLine.begin())->characterRange().begin(), lineLength(line));
+	assert(characterRangeInLine.end() == runsInLine.end()[-1]->characterRange().end());
+
+	const Scalar lineStart = lineStartEdge(line);
+	if(point.ipd() < lineStart) {
+		if(outOfBounds != nullptr)
+			*outOfBounds = true;
+		return TextHit::leading(characterRangeInLine.begin() - textString_.data());
+	}
+	outside = point.ipd() > lineStart + measure(line);	// beyond line 'end-edge'
+
+	if(!outside) {
+		Scalar x = point.ipd() - lineStart, runLeft = 0;
+		if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
+			x = measure(line) - x;
+		for(RunVector::const_iterator run(runsInLine.begin()); run != runsInLine.end(); ++run) {
+			const Scalar runRight = runLeft + allocationMeasure(**run);
+			if(runRight >= x) {
+				const TextRunImpl& textRun = *static_cast<const TextRunImpl*>(run->get());	// TODO: Down-cast.
+				TextHit hit(textRun.hitTestCharacter(((*run)->direction() == LEFT_TO_RIGHT) ? x - runLeft : runRight - x, outOfBounds));
+				if(outside && outOfBounds != nullptr)
+					*outOfBounds = true;
+				const Index position = (*run)->characterRange().begin() - textString_.data() + hit.characterIndex();
+				return hit.isLeadingEdge() ? TextHit::leading(position) : TextHit::trailing(position);
+			}
+			runLeft = runRight;
+		}
+	}
+
+	// maybe beyond line 'end-edge'
+	if(outOfBounds != nullptr)
+		*outOfBounds = true;
+	return TextHit::trailing((characterRangeInLine.end() - textString_.data()) - 1);
 }
 
 #if 0
@@ -540,15 +589,15 @@ Scalar TextLayout::lineStartEdge(Index line) const {
  * @see #basline, #lineAt, #offset
  */
 Index TextLayout::locateLine(Scalar bpd, bool& outside) const BOOST_NOEXCEPT {
-	// TODO: This implementation can't handle tricky 'text-orientation'.
+	LineMetricsIterator line(lineMetrics(0));
+	const bool negativeVertical = isNegativeVertical(writingMode());
 
 	// beyond the before-edge ?
-	if(bpd < -get<0>(lineMetrics_[0])/* - get<2>(lineMetrics_[0])*/)
-		return (outside = true), 0;
+	if(bpd < line.baselineOffset() - (!negativeVertical ? line.ascent() : (line.descent() + line.leading())))
+		return (outside = true), line.line();
 
-	LineMetricsIterator line(lineMetrics(0));
-	for(Scalar lineAfter = 0; line.line() < numberOfLines() - 1; ++line) {
-		if(bpd < (lineAfter += line.ascent() + line.descent() + line.leading()))
+	for(; line.line() < numberOfLines(); ++line) {
+		if(bpd < line.baselineOffset() + !negativeVertical ? (line.descent() + line.leading()) : line.ascent())
 			return (outside = false), line.line();
 	}
 
