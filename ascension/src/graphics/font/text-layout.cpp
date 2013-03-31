@@ -37,6 +37,12 @@ using namespace std;
 //#define TRACE_LAYOUT_CACHES
 extern bool DIAGNOSE_INHERENT_DRAWING;
 
+namespace boost {
+	template<typename T, typename U>
+	inline bool operator==(boost::integer_range<T> lhs, boost::integer_range<U> rhs) {
+		return boost::equal(lhs, rhs);
+	}
+}
 
 
 // graphics.font free functions ///////////////////////////////////////////////////////////////////
@@ -49,6 +55,65 @@ void font::paintTextDecoration(PaintContext& context, const TextRun& run, const 
 
 
 // detail.* free function /////////////////////////////////////////////////////////////////////////
+
+shared_ptr<const Font> detail::findMatchingFont(const StringPiece& textRun,
+		const FontCollection& collection, const ComputedFontSpecification& specification) {
+#if 0
+	void resolveFontSpecifications(const FontCollection& fontCollection,
+			shared_ptr<const TextRunStyle> requestedStyle, shared_ptr<const TextRunStyle> defaultStyle,
+			FontDescription* computedDescription, double* computedSizeAdjust) {
+		// family name
+		if(computedDescription != nullptr) {
+			String familyName = (requestedStyle.get() != nullptr) ? requestedStyle->fontFamily.getOrInitial() : String();
+			if(familyName.empty()) {
+				if(defaultStyle.get() != nullptr)
+					familyName = defaultStyle->fontFamily.getOrInitial();
+				if(computedFamilyName->empty())
+					*computedFamilyName = fontCollection.lastResortFallback(FontDescription())->familyName();
+			}
+			computedDescription->setFamilyName();
+		}
+		// size
+		if(computedPixelSize != nullptr) {
+			requestedStyle->fontProperties
+		}
+		// properties
+		if(computedProperties != 0) {
+			FontProperties<Inheritable> result;
+			if(requestedStyle.get() != nullptr)
+				result = requestedStyle->fontProperties;
+			Inheritable<double> computedSize(computedProperties->pixelSize());
+			if(computedSize.inherits()) {
+				if(defaultStyle.get() != nullptr)
+					computedSize = defaultStyle->fontProperties.pixelSize();
+				if(computedSize.inherits())
+					computedSize = fontCollection.lastResortFallback(FontProperties<>())->metrics().emHeight();
+			}
+			*computedProperties = FontProperties<>(
+				!result.weight().inherits() ? result.weight()
+					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.weight() : FontPropertiesBase::NORMAL_WEIGHT),
+				!result.stretch().inherits() ? result.stretch()
+					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.stretch() : FontPropertiesBase::NORMAL_STRETCH),
+				!result.style().inherits() ? result.style()
+					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.style() : FontPropertiesBase::NORMAL_STYLE),
+				!result.variant().inherits() ? result.variant()
+					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.variant() : FontPropertiesBase::NORMAL_VARIANT),
+				!result.orientation().inherits() ? result.orientation()
+					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.orientation() : FontPropertiesBase::HORIZONTAL),
+				computedSize);
+		}
+		// size-adjust
+		if(computedSizeAdjust != nullptr) {
+			*computedSizeAdjust = (requestedStyle.get() != nullptr) ? requestedStyle->fontSizeAdjust : -1.0;
+			if(*computedSizeAdjust < 0.0)
+				*computedSizeAdjust = (defaultStyle.get() != nullptr) ? defaultStyle->fontSizeAdjust : 0.0;
+		}
+	}
+#else
+	// TODO: Not implemented (but this function is referred by noone.
+	return shared_ptr<const Font>();
+#endif
+}
 
 /**
  * @internal Paints border.
@@ -77,22 +142,26 @@ void detail::paintBorder(PaintContext& context, const graphics::Rectangle& recta
 			case PhysicalDirection::TOP:
 				context
 					.moveTo(geometry::topLeft(rectangle))
-					.lineTo(geometry::translate(geometry::topRight(rectangle), Dimension(geometry::_dx = 1, geometry::_dy = 0)));
+					.lineTo(geometry::translate(
+						geometry::topRight(rectangle), Dimension(geometry::_dx = static_cast<Scalar>(1), geometry::_dy = static_cast<Scalar>(0))));
 				break;
 			case PhysicalDirection::RIGHT:
 				context
 					.moveTo(geometry::topRight(rectangle))
-					.lineTo(geometry::translate(geometry::bottomRight(rectangle), Dimension(geometry::_dx = 0, geometry::_dy = 1)));
+					.lineTo(geometry::translate(
+						geometry::bottomRight(rectangle), Dimension(geometry::_dx = static_cast<Scalar>(0), geometry::_dy = static_cast<Scalar>(1))));
 				break;
 			case PhysicalDirection::BOTTOM:
 				context
 					.moveTo(geometry::bottomLeft(rectangle))
-					.lineTo(geometry::translate(geometry::bottomRight(rectangle), Dimension(geometry::_dx = 1, geometry::_dy = 0)));
+					.lineTo(geometry::translate(
+						geometry::bottomRight(rectangle), Dimension(geometry::_dx = static_cast<Scalar>(1), geometry::_dy = static_cast<Scalar>(0))));
 				break;
 			case PhysicalDirection::LEFT:
 				context
 					.moveTo(geometry::topLeft(rectangle))
-					.lineTo(geometry::translate(geometry::bottomLeft(rectangle), Dimension(geometry::_dx = 0, geometry::_dy = 1)));
+					.lineTo(geometry::translate(
+						geometry::bottomLeft(rectangle), Dimension(geometry::_dx = static_cast<Scalar>(0), geometry::_dy = static_cast<Scalar>(1))));
 				break;
 			default:
 				ASCENSION_ASSERT_NOT_REACHED();
@@ -297,62 +366,6 @@ boost::integer_range<Scalar> TextLayout::extent(const boost::integer_range<Index
 		lastLine.baselineOffset() + (!negativeVertical ? lastLine.descent() + lastLine.leading() : lastLine.ascent()));
 }
 
-shared_ptr<const Font> TextLayout::findMatchingFont(const StringPiece& textRun,
-		const FontCollection& collection, const ComputedFontSpecification& specification) {
-#if 0
-	void resolveFontSpecifications(const FontCollection& fontCollection,
-			shared_ptr<const TextRunStyle> requestedStyle, shared_ptr<const TextRunStyle> defaultStyle,
-			FontDescription* computedDescription, double* computedSizeAdjust) {
-		// family name
-		if(computedDescription != nullptr) {
-			String familyName = (requestedStyle.get() != nullptr) ? requestedStyle->fontFamily.getOrInitial() : String();
-			if(familyName.empty()) {
-				if(defaultStyle.get() != nullptr)
-					familyName = defaultStyle->fontFamily.getOrInitial();
-				if(computedFamilyName->empty())
-					*computedFamilyName = fontCollection.lastResortFallback(FontDescription())->familyName();
-			}
-			computedDescription->setFamilyName();
-		}
-		// size
-		if(computedPixelSize != nullptr) {
-			requestedStyle->fontProperties
-		}
-		// properties
-		if(computedProperties != 0) {
-			FontProperties<Inheritable> result;
-			if(requestedStyle.get() != nullptr)
-				result = requestedStyle->fontProperties;
-			Inheritable<double> computedSize(computedProperties->pixelSize());
-			if(computedSize.inherits()) {
-				if(defaultStyle.get() != nullptr)
-					computedSize = defaultStyle->fontProperties.pixelSize();
-				if(computedSize.inherits())
-					computedSize = fontCollection.lastResortFallback(FontProperties<>())->metrics().emHeight();
-			}
-			*computedProperties = FontProperties<>(
-				!result.weight().inherits() ? result.weight()
-					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.weight() : FontPropertiesBase::NORMAL_WEIGHT),
-				!result.stretch().inherits() ? result.stretch()
-					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.stretch() : FontPropertiesBase::NORMAL_STRETCH),
-				!result.style().inherits() ? result.style()
-					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.style() : FontPropertiesBase::NORMAL_STYLE),
-				!result.variant().inherits() ? result.variant()
-					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.variant() : FontPropertiesBase::NORMAL_VARIANT),
-				!result.orientation().inherits() ? result.orientation()
-					: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.orientation() : FontPropertiesBase::HORIZONTAL),
-				computedSize);
-		}
-		// size-adjust
-		if(computedSizeAdjust != nullptr) {
-			*computedSizeAdjust = (requestedStyle.get() != nullptr) ? requestedStyle->fontSizeAdjust : -1.0;
-			if(*computedSizeAdjust < 0.0)
-				*computedSizeAdjust = (defaultStyle.get() != nullptr) ? defaultStyle->fontSizeAdjust : 0.0;
-		}
-	}
-#endif
-}
-
 /**
  * Returns a @c TextHit corresponding to the specified point. This method is a convenience overload
  * of @c #hitTestCharacter that uses the natural bounds of this @c TextLayout.
@@ -406,7 +419,7 @@ AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit& hit) const {
 		throw IndexOutOfBoundsException("hit");
 
 	if(isEmpty())
-		return AbstractTwoAxes<Scalar>(_ipd = 0, _bpd = LineMetricsIterator(*this, 0).baselineOffset());
+		return AbstractTwoAxes<Scalar>(_ipd = static_cast<Scalar>(0), _bpd = LineMetricsIterator(*this, 0).baselineOffset());
 
 	// locate line
 	const Index line = lineAt(hit.characterIndex());
@@ -505,26 +518,26 @@ TextLayout::StyledSegmentIterator TextLayout::lastStyledSegment() const /*throw(
 Point TextLayout::lineLeft(Index line) const {
 	if(isHorizontal(writingMode().blockFlowDirection)) {
 		if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT)
-			return Point(geometry::_x = lineStartEdge(line), geometry::_y = 0);
+			return Point(geometry::_x = lineStartEdge(line), geometry::_y = static_cast<Scalar>(0));
 		else
-			return Point(geometry::_x = -lineStartEdge(line) - measure(line), geometry::_y = 0);
+			return Point(geometry::_x = -lineStartEdge(line) - measure(line), geometry::_y = static_cast<Scalar>(0));
 	} else {
 		Scalar y = -lineStartEdge(line);
 		if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
 			y -= measure(line);
 		if(resolveTextOrientation(writingMode()) == SIDEWAYS_LEFT)
 			y = -y;
-		return Point(geometry::_x = 0, geometry::_y = y);
+		return Point(geometry::_x = static_cast<Scalar>(0), geometry::_y = y);
 /*		if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) {
 			if(resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT)
-				return Point(geometry::_x = 0, geometry::_y = lineStartEdge(line));
+				return Point(geometry::_x = static_cast<Scalar>(0), geometry::_y = lineStartEdge(line));
 			else
-				return Point(geometry::_x = 0, geometry::_y = -lineStartEdge(line));
+				return Point(geometry::_x = static_cast<Scalar>(0), geometry::_y = -lineStartEdge(line));
 		} else {
 			if(resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT)
-				return Point(geometry::_x = 0, geometry::_y = -lineStartEdge(line) - measure(line));
+				return Point(geometry::_x = static_cast<Scalar>(0), geometry::_y = -lineStartEdge(line) - measure(line));
 			else
-				return Point(geometry::_x = 0, geometry::_y = lineStartEdge(line) + measure(line));
+				return Point(geometry::_x = static_cast<Scalar>(0), geometry::_y = lineStartEdge(line) + measure(line));
 		}
 */	}
 }
@@ -678,7 +691,7 @@ boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& 
 	boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>> results;
 	const bool horizontal = isHorizontal(writingMode().blockFlowDirection);
 	boost::optional<boost::integer_range<Scalar>> linearBounds;
-	if(bounds != boost::none)
+	if(bounds)
 		linearBounds = horizontal ? geometry::range<0>(*bounds) : geometry::range<1>(*bounds);
 
 	const boost::integer_range<Index> orderedRange(ordered(range));
@@ -697,7 +710,7 @@ boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& 
 		}
 
 		// skip the line if out of bounds
-		if(bounds != boost::none) {
+		if(bounds) {
 			if(horizontal) {
 				if(max(lineOver, lineUnder) <= geometry::top(*bounds))
 					continue;
@@ -739,11 +752,13 @@ boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& 
 					Scalar trailing = run->hitToLogicalPosition(TextHit::leading(*selectionInRun.end()));
 					leading = glyphsLeft + ltr ? leading : (font::measure(*run) - leading);
 					trailing = glyphsLeft + ltr ? trailing : (font::measure(*run) - trailing);
-					Rectangle rectangle(mapLineRelativeToPhysical(writingMode(),
-						LineRelativeFourSides<Scalar>(_over = lineOver, _under = lineUnder, _lineLeft = min(leading, trailing), _lineRight = max(leading, trailing))));
+					Rectangle rectangle(
+						geometry::make<Rectangle>(
+							mapLineRelativeToPhysical(writingMode(),
+								LineRelativeFourSides<Scalar>(_over = lineOver, _under = lineUnder, _lineLeft = min(leading, trailing), _lineRight = max(leading, trailing)))));
 
-					if(bounds != boost::none)
-						rectangle = boost::geometry::intersection(rectangle, *bounds, rectangle);	// clip by 'bounds'
+					if(bounds)
+						boost::geometry::intersection(rectangle, *bounds, rectangle);	// clip by 'bounds'
 					boost::geometry::model::polygon<Point> oneShape;
 					boost::geometry::convert(rectangle, oneShape);
 					results.push_back(oneShape);
@@ -880,7 +895,7 @@ Scalar TextLayout::measure(Index line) const {
 		static_assert(is_signed<Scalar>::value, "");
 		if(lineMeasures_.get() == nullptr) {
 			self.lineMeasures_.reset(new Scalar[numberOfLines()]);
-			fill_n(self.lineMeasures_.get(), numberOfLines(), -1);
+			fill_n(self.lineMeasures_.get(), numberOfLines(), static_cast<Scalar>(-1));
 		}
 		if(lineMeasures_[line] >= 0)
 			return lineMeasures_[line];
@@ -1060,6 +1075,8 @@ StyledRun TextLayout::styledTextRun(Index offsetInLine) const {
  */
 boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&&
 		TextLayout::visualHighlightShape(const boost::integer_range<TextHit>& range, const boost::optional<graphics::Rectangle>& bounds) const {
+	// TODO: Not implemented.
+	return boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>();
 }
 
 #if 0

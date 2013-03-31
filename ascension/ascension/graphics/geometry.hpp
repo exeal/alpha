@@ -526,7 +526,7 @@ namespace ascension {
 			 */
 			template<typename Geometry>
 			inline typename boost::geometry::point_type<Geometry>::type bottomLeft(const Geometry& rectangle) {
-				return boost::make<typename boost::geometry::point_type<Geometry>::type>(left(rectangle), bottom(rectangle));
+				return boost::geometry::make<typename boost::geometry::point_type<Geometry>::type>(left(rectangle), bottom(rectangle));
 			}
 
 			/**
@@ -535,7 +535,7 @@ namespace ascension {
 			 */
 			template<typename Geometry>
 			inline typename boost::geometry::point_type<Geometry>::type bottomRight(const Geometry& rectangle) {
-				return boost::make<typename boost::geometry::point_type<Geometry>::type>(right(rectangle), bottom(rectangle));
+				return boost::geometry::make<typename boost::geometry::point_type<Geometry>::type>(right(rectangle), bottom(rectangle));
 			}
 
 			/// Returns the Manhattan-length of @a point.
@@ -611,7 +611,7 @@ namespace ascension {
 			 */
 			template<typename Geometry>
 			inline typename boost::geometry::point_type<Geometry>::type topLeft(const Geometry& rectangle) {
-				return boost::make<typename boost::geometry::point_type<Geometry>::type>(left(rectangle), top(rectangle));
+				return boost::geometry::make<typename boost::geometry::point_type<Geometry>::type>(left(rectangle), top(rectangle));
 			}
 
 			/**
@@ -620,7 +620,7 @@ namespace ascension {
 			 */
 			template<typename Geometry>
 			inline typename boost::geometry::point_type<Geometry>::type topRight(const Geometry& rectangle) {
-				return boost::make<typename boost::geometry::point_type<Geometry>::type>(right(rectangle), top(rectangle));
+				return boost::geometry::make<typename boost::geometry::point_type<Geometry>::type>(right(rectangle), top(rectangle));
 			}
 
 			/**
