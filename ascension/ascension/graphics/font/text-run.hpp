@@ -49,6 +49,7 @@ namespace ascension {
 
 				/// @name Hit Test
 				/// @{
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				/**
 				 * Returns the character encompasses the specified location.
 				 * @param ipd The distance to the location from the leading edge of this text run
@@ -66,10 +67,7 @@ namespace ascension {
 				 * @see #characterHasClosestLeadingEdge
 				 */
 				virtual Index characterHasClosestLeadingEdge(Scalar ipd) const = 0;
-				/// @}
-
-				/// @name Glyph Edges
-				/// @{
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 				/**
 				 * Returns a @c TextHit corresponding to the specified position. Position outside
 				 * the bounds of the glyph content of the @c TextRun map to hits on the leading

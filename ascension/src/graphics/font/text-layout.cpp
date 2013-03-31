@@ -382,6 +382,19 @@ TextHit&& TextLayout::hitTestCharacter(const AbstractTwoAxes<Scalar>& point, con
 	return internalHitTestCharacter(point, &bounds, outOfBounds);
 }
 
+namespace {
+	inline Scalar lineRelativeGlyphContentOffset(const TextRun& textRun, ReadingDirection lineInlineFlowDirection) BOOST_NOEXCEPT {
+		Scalar offset = 0;
+		if(const FlowRelativeFourSides<Scalar>* const margin = textRun.margin())
+			offset += (lineInlineFlowDirection == LEFT_TO_RIGHT) ? margin->start() : margin->end();
+		if(const FlowRelativeFourSides<ComputedBorderSide>* const border = textRun.border())
+			offset += ((lineInlineFlowDirection == LEFT_TO_RIGHT) ? border->start() : border->end()).computedWidth();
+		if(const FlowRelativeFourSides<Scalar>* const padding = textRun.padding())
+			offset += (lineInlineFlowDirection == LEFT_TO_RIGHT) ? padding->start() : padding->end();
+		return offset;
+	}
+}
+
 /**
  * Converts a hit to a point in abstract coordinates.
  * @param hit The hit to check. This must be a valid hit on the @c TextLayout
@@ -400,22 +413,16 @@ AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit& hit) const {
 
 	// compute inline-progression-dimension
 	const StringPiece::const_iterator at = textString_.data() + hit.characterIndex();
-	const bool ltr = writingMode().inlineFlowDirection == LEFT_TO_RIGHT;
 	Scalar x = 0;	// line-relative position
 	BOOST_FOREACH(const unique_ptr<const TextRun>& run, runsForLine(line)) {
 		if(includes(boost::make_iterator_range(run->characterRange()), at)) {
-			if(const FlowRelativeFourSides<Scalar>* const margin = run->margin())
-				x += ltr ? margin->start() : margin->end();
-			if(const FlowRelativeFourSides<ComputedBorderSide>* const border = run->border())
-				x += (ltr ? border->start() : border->end()).computedWidth();
-			if(const FlowRelativeFourSides<Scalar>* const padding = run->padding())
-				x += ltr ? padding->start() : padding->end();
+			x += lineRelativeGlyphContentOffset(*run, writingMode().inlineFlowDirection);
 			x += run->hitToLogicalPosition(TextHit::leading(at - run->characterRange().begin()));
 			break;
 		}
 		x += allocationMeasure(*run);
 	}
-	Scalar ipd = ltr ? x : (measure(line) - x);
+	Scalar ipd = (writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? x : (measure(line) - x);
 	ipd += lineStartEdge(line);
 
 	return AbstractTwoAxes<Scalar>(_ipd = ipd, _bpd = LineMetricsIterator(*this, line).baselineOffset());
@@ -423,40 +430,39 @@ AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit& hit) const {
 
 /// @internal Implements @c #hitTestCharacter methods.
 TextHit&& TextLayout::internalHitTestCharacter(const AbstractTwoAxes<Scalar>& point, const FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const {
-	bool outside;
-	const Index line = locateLine(point.bpd(), outside);
-
-	const boost::iterator_range<const RunVector::const_iterator> runsInLine(runsForLine(line));
+	AbstractTwoAxes<bool> outside;
+	const Index line = locateLine(point.bpd(), (bounds != nullptr) ? boost::make_optional(blockFlowRange(*bounds)) : boost::none, outside.bpd());
+	const auto runsInLine(runsForLine(line));
 	const StringPiece characterRangeInLine((*runsInLine.begin())->characterRange().begin(), lineLength(line));
 	assert(characterRangeInLine.end() == runsInLine.end()[-1]->characterRange().end());
 
 	const Scalar lineStart = lineStartEdge(line);
-	if(point.ipd() < lineStart) {
+	if(point.ipd() < lineStart || (bounds != nullptr && point.ipd() < min(bounds->start(), bounds->end()))) {	// beyond 'start-edge' of line ?
 		if(outOfBounds != nullptr)
 			*outOfBounds = true;
 		return TextHit::leading(characterRangeInLine.begin() - textString_.data());
 	}
-	outside = point.ipd() > lineStart + measure(line);	// beyond line 'end-edge'
+	outside.ipd() = point.ipd() >= lineStart + measure(line) || (bounds != nullptr && point.ipd() >= max(bounds->start(), bounds->end()));	// beyond 'end-edge' of line ?
 
-	if(!outside) {
-		Scalar x = point.ipd() - lineStart, runLeft = 0;
+	if(!outside.ipd()) {
+		Scalar x = point.ipd() - lineStart, runLineLeft = 0;
 		if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
 			x = measure(line) - x;
-		for(RunVector::const_iterator run(runsInLine.begin()); run != runsInLine.end(); ++run) {
-			const Scalar runRight = runLeft + allocationMeasure(**run);
-			if(runRight >= x) {
-				const TextRunImpl& textRun = *static_cast<const TextRunImpl*>(run->get());	// TODO: Down-cast.
-				TextHit hit(textRun.hitTestCharacter(((*run)->direction() == LEFT_TO_RIGHT) ? x - runLeft : runRight - x, outOfBounds));
-				if(outside && outOfBounds != nullptr)
-					*outOfBounds = true;
-				const Index position = (*run)->characterRange().begin() - textString_.data() + hit.characterIndex();
-				return hit.isLeadingEdge() ? TextHit::leading(position) : TextHit::trailing(position);
+		// 'x' is distance from line-left of 'line' to 'point' in inline-progression-dimension
+		// 'runLineLeft' is distance from line-left of 'line' to line-left of 'run' in ...
+		BOOST_FOREACH(const unique_ptr<const TextRun>& run, runsInLine) {
+			const Scalar runLineRight = runLineLeft + allocationMeasure(*run);
+			if(runLineRight > x) {
+				const TextHit hitInRun(run->hitTestCharacter(
+					x - runLineLeft - lineRelativeGlyphContentOffset(*run, writingMode().inlineFlowDirection), boost::none, nullptr));
+				const Index position = run->characterRange().begin() - textString_.data() + hitInRun.characterIndex();
+				return hitInRun.isLeadingEdge() ? TextHit::leading(position) : TextHit::trailing(position);
 			}
-			runLeft = runRight;
+			runLineLeft = runLineRight;
 		}
 	}
 
-	// maybe beyond line 'end-edge'
+	// maybe beyond 'end-edge' of line
 	if(outOfBounds != nullptr)
 		*outOfBounds = true;
 	return TextHit::trailing((characterRangeInLine.end() - textString_.data()) - 1);
@@ -583,12 +589,21 @@ Scalar TextLayout::lineStartEdge(Index line) const {
 
 /**
  * Converts a position in the block-progression-direction into the corresponding line.
- * @param bpd The position in block-progression-dimension in pixels
+ * @param bpd The position in block-progression-dimension in user units
+ * @param bounds The bounds in block-progression-dimension in user units
  * @param[out] outside @c true if @a bpd is outside of the line content
  * @return The line number
  * @see #basline, #lineAt, #offset
  */
-Index TextLayout::locateLine(Scalar bpd, bool& outside) const BOOST_NOEXCEPT {
+Index TextLayout::locateLine(Scalar bpd, const boost::optional<boost::integer_range<Scalar>>& bounds, bool& outside) const BOOST_NOEXCEPT {
+	if(bounds != boost::none) {
+		const boost::integer_range<Scalar> orderedBounds(ordered(*bounds));
+		if(bpd < *orderedBounds.begin())
+			return (outside = true), 0;
+		if(bpd > *orderedBounds.end())
+			return (outside = true), numberOfLines() - 1;
+	}
+
 	LineMetricsIterator line(lineMetrics(0));
 	const bool negativeVertical = isNegativeVertical(writingMode());
 
@@ -717,12 +732,7 @@ boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& 
 					selectionInRun.advance_end(textString_.data() - run->characterRange().begin());
 
 					Scalar glyphsLeft = x;	// line-left edge of glyphs content of the run
-					if(const FlowRelativeFourSides<Scalar>* const margin = run->margin())
-						glyphsLeft += ltr ? margin->start() : margin->end();
-					if(const FlowRelativeFourSides<ComputedBorderSide>* const border = run->border())
-						glyphsLeft += (ltr ? border->start() : border->end()).computedWidth();
-					if(const FlowRelativeFourSides<Scalar>* const padding = run->padding())
-						glyphsLeft += ltr ? padding->start() : padding->end();
+					x += lineRelativeGlyphContentOffset(*run, writingMode().inlineFlowDirection);
 
 					// compute leading and trailing edges highlight shape in the run
 					Scalar leading = run->hitToLogicalPosition(TextHit::leading(*selectionInRun.begin()));

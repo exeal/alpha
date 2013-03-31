@@ -640,11 +640,13 @@ namespace {
 		graphics::Rectangle visualBounds() const;
 		// TextRun
 		const FlowRelativeFourSides<ComputedBorderSide>* border() const BOOST_NOEXCEPT;
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 		boost::optional<Index> characterEncompassesPosition(float ipd) const BOOST_NOEXCEPT;
 		Index characterHasClosestLeadingEdge(float ipd) const;
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 		uint8_t characterLevel() const BOOST_NOEXCEPT;
 		StringPiece characterRange() const BOOST_NOEXCEPT;
-		TextHit&& hitTestCharacter(Scalar ipd, bool* outOfBounds) const;
+		TextHit&& hitTestCharacter(Scalar ipd, const boost::optional<boost::integer_range<Scalar>>& bounds, bool* outOfBounds) const;
 		Scalar hitToLogicalPosition(const TextHit& hit) const;
 		Index length() const BOOST_NOEXCEPT;
 		const FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT;
@@ -737,7 +739,9 @@ namespace {
 			return boost::make_iterator_range<const GOFFSET*>(nullptr, nullptr);
 		}
 		boost::integer_range<size_t> glyphRange(const StringPiece& characterRange = StringPiece()) const;
+#if 0
 		void hitTest(Scalar ipd, int& encompasses, int* trailing) const;
+#endif
 		boost::iterator_range<const int*> justifiedAdvances() const BOOST_NOEXCEPT {
 			if(const int* const p = glyphs_->justifiedAdvances.get())
 				return boost::make_iterator_range(p + *glyphRange().begin(), p + *glyphRange().end());
@@ -880,6 +884,7 @@ unique_ptr<TextRunImpl> TextRunImpl::breakAt(StringPiece::const_iterator at) {
 	return following;
 }
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /// @see TextRun#characterEncompassesPosition
 boost::optional<Index> TextRunImpl::characterEncompassesPosition(float ipd) const BOOST_NOEXCEPT {
 	int character;
@@ -900,6 +905,7 @@ Index TextRunImpl::characterHasClosestLeadingEdge(float ipd) const {
 	assert(result >= 0);
 	return result;
 }
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 /// @see TextRun#characterLevel
 uint8_t TextRunImpl::characterLevel() const BOOST_NOEXCEPT {
@@ -1387,6 +1393,7 @@ graphics::Rectangle TextRunImpl::glyphVisualBounds(size_t index) const {
 		geometry::_top = 0 - gm.gmptGlyphOrigin.y * sy + offset.dv, geometry::_bottom = 0 + gm.gmBlackBoxY * sy + offset.dv);
 }
 
+#if 0
 inline void TextRunImpl::hitTest(Scalar ipd, int& encompasses, int* trailing) const {
 	int tr;
 	const int x = static_cast<int>((direction() == LEFT_TO_RIGHT) ? ipd : (measure(*this) - ipd));
@@ -1397,20 +1404,40 @@ inline void TextRunImpl::hitTest(Scalar ipd, int& encompasses, int* trailing) co
 	if(trailing != nullptr)
 		*trailing = encompasses + tr;
 }
+#endif
 
-/**
- * @internal Returns a @c TextHit corresponding to the specified position. Position outside the
- * bounds of the @c TextRun maps to hits on the leading edge of the first logical character, or the
- * trailing edge of the last logical character, as appropriate, regardless of the position of that
- * character in the run.
- * @param ipd The inline-progression dimension
- * @param[out] outOfBounds @c true if @a point is out of the logical bounds of the @c TextRun. Can
- *                         be @c null if not needed
- * @return A hit describing the character and edge (leading or trailing) under the specified
- *         position
- * @see TextLayout#hitTestCharacter
- */
-TextHit&& TextRunImpl::hitTestCharacter(Scalar ipd, bool* outOfBounds) const {
+/// @see TextRun#hitTestCharacter
+TextHit&& TextRunImpl::hitTestCharacter(Scalar position, const boost::optional<boost::integer_range<Scalar>>& bounds, bool* outOfBounds) const {
+	bool beyondLineLeft = false, beyondLineRight = false;
+	if(bounds != boost::none) {
+		if(position < min(*bounds->begin(), *bounds->end()))
+			beyondLineLeft = true;
+		else if(position >= max(*bounds->begin(), *bounds->end()))
+			beyondLineRight = true;
+	}
+
+	if(!beyondLineLeft && !beyondLineRight) {
+		const int x = position;
+		int cp, trailing;
+		const HRESULT hr = ::ScriptXtoCP(x, static_cast<int>(length()), numberOfGlyphs(), clusters().begin(),
+			visualAttributes().begin(), effectiveAdvances().begin(), &analysis_, &cp, &trailing);
+		if(FAILED(hr))
+			throw makePlatformError(hr);
+		if(cp == -1)
+			beyondLineLeft = true;	// 'trailing' should be 0
+		else if(cp == length() && trailing == 1)
+			beyondLineRight = true;
+		else
+			return (trailing == 0) ? TextHit::leading(cp) : TextHit::beforeOffset(cp + trailing);
+	}
+
+	if((beyondLineLeft || beyondLineRight) && outOfBounds != nullptr)
+		*outOfBounds = true;
+	if(beyondLineLeft)
+		return (direction() == LEFT_TO_RIGHT) ? TextHit::leading(0) : TextHit::beforeOffset(length());
+	else if(beyondLineRight)
+		return (direction() == LEFT_TO_RIGHT) ? TextHit::beforeOffset(length()) : TextHit::leading(0);
+	ASCENSION_ASSERT_NOT_REACHED();
 }
 
 /// @see TextRun#hitToLogicalPosition
