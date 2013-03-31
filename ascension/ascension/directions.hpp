@@ -603,7 +603,9 @@ namespace ascension {
 			template<typename Geometry, typename Coordinate>
 			inline Geometry make(const PhysicalFourSides<Coordinate>& sides,
 					typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
-				return boost::geometry::make<Geometry>(horizontalRange(sides), verticalRange(sides));
+				Geometry result;
+				boost::geometry::assign_values(result, sides.left(), sides.top(), sides.right(), sides.bottom());
+				return result;
 			}
 		}
 	}
