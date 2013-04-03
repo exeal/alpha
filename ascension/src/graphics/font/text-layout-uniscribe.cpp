@@ -459,7 +459,7 @@ namespace {
 				decrement();
 				increment();
 			} else
-				currentCluster_ = boost::make_iterator_range(clusters_.end());
+				currentCluster_ = boost::make_iterator_range(clusters_.end(), clusters_.end());
 		}
 		const boost::iterator_range<const WORD*>& currentCluster() const BOOST_NOEXCEPT {
 			return currentCluster_;
@@ -500,7 +500,7 @@ namespace {
 		void decrement() {
 			assert(currentCluster().end() > clusters_.begin());
 			if(currentCluster().begin() == clusters_.begin()) {
-				currentCluster_ = boost::make_iterator_range(clusters_.begin());
+				currentCluster_ = boost::make_iterator_range(clusters_.begin(), clusters_.begin());
 				return;
 			}
 			pair<const WORD*, const WORD*> previous(currentCluster().begin() - 1, currentCluster().begin());
@@ -514,7 +514,7 @@ namespace {
 		void increment() {
 			assert(currentCluster().begin() < clusters_.end());
 			if(currentCluster().end() == clusters_.end()) {
-				currentCluster_ = boost::make_iterator_range(clusters_.end());
+				currentCluster_ = boost::make_iterator_range(clusters_.end(), clusters_.end());
 				return;
 			}
 			pair<const WORD*, const WORD*> next(currentCluster().end(), currentCluster().end());
@@ -1294,11 +1294,11 @@ graphics::Rectangle TextRunImpl::glyphLogicalBounds(size_t index) const {
 		throw out_of_range("index");
 	const Scalar x = glyphLogicalPosition(index);
 	RenderingContext2D context(detail::screenDC());
-	unique_ptr<FontMetrics<Scalar>> fm(context.fontMetrics(font()));
+	unique_ptr<const FontMetrics<Scalar>> fm(context.fontMetrics(font()));
 	const double sy = fontRenderContext().transform().scaleY() / context.fontRenderContext().transform().scaleY();
 	return graphics::Rectangle(
-		geometry::_top = -fm->ascent() * sy, geometry::_bottom = fm->descent() * sy + fm->internalLeading() * sy,
-		geometry::_left = x, geometry::_right = x + (justifiedAdvances() != nullptr) ? justifiedAdvances()[index] : advances()[index]);
+		geometry::_top = -static_cast<Scalar>(fm->ascent() * sy), geometry::_bottom = static_cast<Scalar>(fm->descent() * sy + fm->internalLeading() * sy),
+		geometry::_left = x, geometry::_right = static_cast<Scalar>(x + (justifiedAdvances().begin() != nullptr) ? justifiedAdvances()[index] : advances()[index]));
 }
 
 inline Scalar TextRunImpl::glyphLogicalPosition(size_t index) const {
@@ -1332,10 +1332,10 @@ GlyphMetrics&& TextRunImpl::glyphMetrics(size_t index) const {
 	const double sx = fontRenderContext().transform().scaleX() / context.fontRenderContext().transform().scaleX();
 	const double sy = fontRenderContext().transform().scaleY() / context.fontRenderContext().transform().scaleY();
 	return GlyphMetrics(gm.gmCellIncY == 0,
-		Dimension(geometry::_dx = gm.gmCellIncX * sx, geometry::_dy = gm.gmCellIncY * sy),
+		Dimension(geometry::_dx = static_cast<Scalar>(gm.gmCellIncX * sx), geometry::_dy = static_cast<Scalar>(gm.gmCellIncY * sy)),
 		graphics::Rectangle(
-			Point(geometry::_x = gm.gmptGlyphOrigin.x * sx, geometry::_y = -gm.gmptGlyphOrigin.y * sy),
-			Dimension(geometry::_dx = gm.gmBlackBoxX * sx, geometry::_dy = gm.gmBlackBoxY * sy)),
+			Point(geometry::_x = static_cast<Scalar>(gm.gmptGlyphOrigin.x * sx), geometry::_y = -static_cast<Scalar>(gm.gmptGlyphOrigin.y * sy)),
+			Dimension(geometry::_dx = static_cast<Scalar>(gm.gmBlackBoxX * sx), geometry::_dy = static_cast<Scalar>(gm.gmBlackBoxY * sy))),
 		static_cast<GlyphMetrics::Type>(0));
 }
 
@@ -1345,7 +1345,7 @@ Point TextRunImpl::glyphPosition(size_t index) const {
 		throw IndexOutOfBoundsException("index");
 	const Scalar logicalPosition = glyphLogicalPosition(index);
 	const GOFFSET& glyphOffset = glyphOffsets()[index];
-	return Point(geometry::_x = logicalPosition + glyphOffset.du, geometry::_y = glyphOffset.dv);
+	return Point(geometry::_x = static_cast<Scalar>(logicalPosition + glyphOffset.du), geometry::_y = static_cast<Scalar>(glyphOffset.dv));
 }
 
 inline boost::integer_range<size_t> TextRunImpl::glyphRange(const StringPiece& range /* = StringPiece() */) const {
@@ -1375,22 +1375,10 @@ graphics::Rectangle TextRunImpl::glyphVisualBounds(size_t index) const {
 	if(index >= numberOfGlyphs())
 		throw out_of_range("index");
 	Scalar originX = glyphLogicalPosition(index);
-	RenderingContext2D context(detail::screenDC());
-	shared_ptr<const Font> oldFont(context.font());
-	context.setFont(font());
-	GLYPHMETRICS gm;
-	const MAT2 matrix = {1, 0, 0, 1};	// TODO: Consider glyph transform.
-	const DWORD lastError = (::GetGlyphOutlineW(context.asNativeObject().get(),
-		glyphCode(index), GGO_GLYPH_INDEX | GGO_METRICS, &gm, 0, nullptr, &matrix) == GDI_ERROR) ? ::GetLastError() : ERROR_SUCCESS;
-	context.setFont(oldFont);
-	if(lastError != ERROR_SUCCESS)
-		throw makePlatformError(lastError);
-	const double sx = fontRenderContext().transform().scaleX() / context.fontRenderContext().transform().scaleX();
-	const double sy = fontRenderContext().transform().scaleY() / context.fontRenderContext().transform().scaleY();
+	const GlyphMetrics gm(glyphMetrics(index));
 	const GOFFSET& offset = glyphOffsets()[index];
-	return graphics::Rectangle(
-		geometry::_left = originX - gm.gmptGlyphOrigin.x * sx + offset.du, geometry::_right = originX + gm.gmBlackBoxX * sx + offset.du,
-		geometry::_top = 0 - gm.gmptGlyphOrigin.y * sy + offset.dv, geometry::_bottom = 0 + gm.gmBlackBoxY * sy + offset.dv);
+	graphics::Rectangle temp(gm.bounds());
+	return geometry::translate(temp, Dimension(geometry::_dx = static_cast<Scalar>(originX + offset.du), geometry::_dy = static_cast<Scalar>(offset.dv)));
 }
 
 #if 0
@@ -1409,7 +1397,7 @@ inline void TextRunImpl::hitTest(Scalar ipd, int& encompasses, int* trailing) co
 /// @see TextRun#hitTestCharacter
 TextHit&& TextRunImpl::hitTestCharacter(Scalar position, const boost::optional<boost::integer_range<Scalar>>& bounds, bool* outOfBounds) const {
 	bool beyondLineLeft = false, beyondLineRight = false;
-	if(bounds != boost::none) {
+	if(bounds) {
 		if(position < min(*bounds->begin(), *bounds->end()))
 			beyondLineLeft = true;
 		else if(position >= max(*bounds->begin(), *bounds->end()))
@@ -1417,10 +1405,9 @@ TextHit&& TextRunImpl::hitTestCharacter(Scalar position, const boost::optional<b
 	}
 
 	if(!beyondLineLeft && !beyondLineRight) {
-		const int x = position;
 		int cp, trailing;
-		const HRESULT hr = ::ScriptXtoCP(x, static_cast<int>(length()), numberOfGlyphs(), clusters().begin(),
-			visualAttributes().begin(), effectiveAdvances().begin(), &analysis_, &cp, &trailing);
+		const HRESULT hr = ::ScriptXtoCP(static_cast<int>(position), static_cast<int>(length()), numberOfGlyphs(),
+			clusters().begin(), visualAttributes().begin(), effectiveAdvances().begin(), &analysis_, &cp, &trailing);
 		if(FAILED(hr))
 			throw makePlatformError(hr);
 		if(cp == -1)
@@ -1457,7 +1444,7 @@ Scalar TextRunImpl::hitToLogicalPosition(const TextHit& hit) const {
 }
 
 inline HRESULT TextRunImpl::justify(int width) {
-	assert(glyphs_->indices.get() != nullptr && advances() != nullptr);
+	assert(glyphs_->indices.get() != nullptr && advances().begin() != nullptr);
 	HRESULT hr = S_OK;
 	const int totalAdvances = boost::accumulate(advances(), 0);
 	if(width != totalAdvances) {
@@ -2400,6 +2387,21 @@ namespace {
 	}
 } // namespace @0
 
+namespace {
+	inline AffineTransform&& fontRotationForWritingMode(BlockFlowDirection blockFlowDirection) {
+		switch(blockFlowDirection) {
+			case HORIZONTAL_TB:
+				return AffineTransform();
+			case VERTICAL_RL:
+				return AffineTransform::quadrantRotation(1);
+			case VERTICAL_LR:
+				return AffineTransform::quadrantRotation(3);
+			default:
+				throw UnknownValueException("blockFlowDirection");
+		}
+	}
+}
+
 /**
  * Constructor.
  * @param textString The text string to display
@@ -2416,7 +2418,7 @@ TextLayout::TextLayout(const String& textString, const ComputedTextLineStyle& li
 	// handle logically empty line
 	if(textString_.empty()) {
 		numberOfLines_ = 1;
-		maximumMeasure_ = 0;
+		maximumMeasure_ = static_cast<Scalar>(0);
 		assert(isEmpty());
 		return;
 	}
@@ -2449,14 +2451,14 @@ TextLayout::TextLayout(const String& textString, const ComputedTextLineStyle& li
 //	shrinkToFit(styledRanges_);
 
 	// 3. generate glyphs for each text runs
-	const win32::Handle<HDC>::Type dc(detail::screenDC());
+	const RenderingContext2D context(detail::screenDC());
 	for(auto run(begin(textRuns)), e(end(textRuns)); run != e; ++run)
-		(*run)->shape(dc);
+		(*run)->shape(context.asNativeObject());
 	TextRunImpl::substituteGlyphs(boost::make_iterator_range(textRuns));
 
 	// 4. position glyphs for each text runs
 	for(auto run(begin(textRuns)), b(begin(textRuns)), e(end(textRuns)); run != e; ++run)
-		(*run)->positionGlyphs(dc, calculatedStyles[run - b].attribute);
+		(*run)->positionGlyphs(context.asNativeObject(), calculatedStyles[run - b].attribute);
 
 	// 5. position each text runs
 	const FontDescription nominalFontDescription(
@@ -2471,7 +2473,8 @@ TextLayout::TextLayout(const String& textString, const ComputedTextLineStyle& li
 		else
 			throw UnknownValueException("lineStyle.nominalFont.sizeAdjust");
 	}
-	const shared_ptr<const Font> nominalFont(fontCollection.get(nominalFontDescription, nominalFontSizeAdjust));
+	const shared_ptr<const Font> nominalFont(fontCollection.get(nominalFontDescription,
+		fontRotationForWritingMode(writingMode().blockFlowDirection), nominalFontSizeAdjust));
 	// wrap into visual lines and reorder runs in each lines
 	if(runs_.empty() || !wrapsText(lineStyle.whiteSpace)) {
 		numberOfLines_ = 1;
@@ -2486,7 +2489,7 @@ TextLayout::TextLayout(const String& textString, const ComputedTextLineStyle& li
 			wrap(lineStyle.measure, *tabExpander);
 		else
 			// create default tab expander
-			wrap(lineStyle.measure, FixedWidthTabExpander(nominalFont->metrics()->averageCharacterWidth() * 8));
+			wrap(lineStyle.measure, FixedWidthTabExpander(context.fontMetrics(nominalFont)->averageCharacterWidth() * 8));
 		// 5-2. reorder each text runs
 		reorder();
 		// 5-3. reexpand horizontal tabs
@@ -2497,7 +2500,7 @@ TextLayout::TextLayout(const String& textString, const ComputedTextLineStyle& li
 	}
 
 	// 7. stack the lines
-	stackLines(lineStyle.lineHeight, lineStyle.lineBoxContain, *nominalFont);
+	stackLines(context, lineStyle.lineHeight, lineStyle.lineBoxContain, *nominalFont);
 }
 
 /**
@@ -2546,7 +2549,7 @@ boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& 
 					typographicalToPhysicalMapping.quadrantRotate((resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT) ? -1 : +1);
 				BOOST_FOREACH(const graphics::Rectangle& typographicBounds, runBlackBoxBounds) {
 					// map typographic rectangle into physical coordinates
-					const graphics::Rectangle physicalBounds(typographicalToPhysicalMapping.transform(runBlackBoxBounds));
+					const graphics::Rectangle physicalBounds(typographicalToPhysicalMapping.transform(typographicBounds));
 					boost::geometry::model::polygon<Point> temp;
 					boost::geometry::append(temp, boost::geometry::box_view<graphics::Rectangle>(physicalBounds));
 					result.push_back(temp);
@@ -2868,7 +2871,7 @@ void TextLayout::draw(PaintContext& context,
 				}
 
 				// store this text run to paint the glyphs
-				textRunsToPaint.push_back(std::make_tuple(std::cref(run), contentRectangle, alignmentPoint));
+				textRunsToPaint.push_back(std::make_tuple(std::cref(static_cast<const TextRunImpl&>(*run)), contentRectangle, alignmentPoint));
 			}
 
 //			::ExcludeClipRect(context.asNativeObject().get(),
