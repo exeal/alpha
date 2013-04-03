@@ -31,8 +31,8 @@ namespace ascension {
 				 * @param bounds The black box bounds of the glyph
 				 * @param type The type of the glyph
 				 */
-				GlyphMetrics(Scalar advance, const Rectangle& bounds, Type type) :
-					horizontal_(true), advances_(geometry::_dx = advance, geometry::_dy = 0), bounds_(bounds), type_(type) {}
+				GlyphMetrics(Scalar advance, const Rectangle& bounds, Type type) : horizontal_(true),
+					advances_(geometry::_dx = advance, geometry::_dy = static_cast<Scalar>(0)), bounds_(bounds), type_(type) {}
 				/**
 				 * Constructs a @c GlyphMetrics object.
 				 * @param horizontal If @c true, metrics are for a horizontal baseline, otherwise they are for a vertical baseline
