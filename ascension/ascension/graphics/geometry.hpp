@@ -101,9 +101,9 @@ namespace ascension {
 			};
 
 			template<typename Coordinate> class BasicDimension;
-			template<typename Coordinate> Coordinate dx(BasicDimension<Coordinate>& dimension);
+			template<typename Coordinate> Coordinate& dx(BasicDimension<Coordinate>& dimension);
 			template<typename Coordinate> Coordinate dx(const BasicDimension<Coordinate>& dimension);
-			template<typename Coordinate> Coordinate dy(BasicDimension<Coordinate>& dimension);
+			template<typename Coordinate> Coordinate& dy(BasicDimension<Coordinate>& dimension);
 			template<typename Coordinate> Coordinate dy(const BasicDimension<Coordinate>& dimension);
 
 			template<typename Coordinate>
@@ -128,9 +128,9 @@ namespace ascension {
 			private:
 				using BasicDimensionBase<Coordinate>::dx_;
 				using BasicDimensionBase<Coordinate>::dy_;
-				friend Coordinate dx(BasicDimension<Coordinate>&);
+				friend Coordinate& dx(BasicDimension<Coordinate>&);
 				friend Coordinate dx(const BasicDimension<Coordinate>&);
-				friend Coordinate dy(BasicDimension<Coordinate>&);
+				friend Coordinate& dy(BasicDimension<Coordinate>&);
 				friend Coordinate dy(const BasicDimension<Coordinate>&);
 			};
 
@@ -471,7 +471,7 @@ namespace ascension {
 			template<typename Geometry, typename DimensionCoordinate>
 			inline Geometry& translate(Geometry& rectangle, const BasicDimension<DimensionCoordinate>& offset,
 					typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
-				boost::geometry::point_type<Geometry> o(origin(rectangle));
+				boost::geometry::point_type<Geometry>::type o(origin(rectangle));
 				translate(o, offset);
 				boost::geometry::set<boost::geometry::min_corner, 0>(rectangle, x(o));
 				boost::geometry::set<boost::geometry::min_corner, 1>(rectangle, y(o));
