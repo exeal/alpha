@@ -59,6 +59,10 @@ namespace ascension {
 				FontAndRenderContext(std::shared_ptr<const Font> font,
 					const FontRenderContext& fontRenderContext)
 					: font_(font), fontRenderContext_(fontRenderContext) {}
+				/// Equality operator.
+				bool operator==(const FontAndRenderContext& other) const {
+					return font_ == other.font_ && fontRenderContext_ == other.fontRenderContext_;
+				}
 				/// Returns the font.
 				std::shared_ptr<const Font> font() const BOOST_NOEXCEPT {
 					return font_;
