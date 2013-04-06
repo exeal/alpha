@@ -4,7 +4,7 @@
  * @date 2006-2010 was rendering.hpp
  * @date 2010-11-20 separated from ascension/layout.hpp
  * @date 2011-05-21 separated from rendering.hpp
- * @date 2011-2012
+ * @date 2011-2013
  */
 
 #ifndef ASCENSION_LINE_LAYOUT_VECTOR_HPP
@@ -16,6 +16,7 @@
 #include <list>
 #include <memory>		// std.unique_ptr
 #include <vector>
+#include <boost/range/algorithm/find_if.hpp>
 
 namespace ascension {
 	namespace graphics {
@@ -56,7 +57,7 @@ namespace ascension {
 				 */
 				virtual void visualLinesModified(
 					const boost::integer_range<Index>& lines, SignedIndex sublinesDifference,
-					bool documentChanged, bool longestLineChanged) /*throw()*/ = 0;
+					bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT = 0;
 				friend class LineLayoutVector;
 				friend class TextViewport;
 			};
@@ -74,16 +75,16 @@ namespace ascension {
 				template<typename LayoutGenerator>
 				LineLayoutVector(kernel::Document& document,
 					LayoutGenerator layoutGenerator, Index bufferSize, bool autoRepair);
-				~LineLayoutVector() /*throw()*/;
+				~LineLayoutVector() BOOST_NOEXCEPT;
 				// accessors
 				const TextLayout& operator[](Index line) const;
 				const TextLayout& at(Index line) const;
-				const TextLayout* atIfCached(Index line) const /*throw()*/;
+				const TextLayout* atIfCached(Index line) const BOOST_NOEXCEPT;
 				// attributes
-				const kernel::Document& document() const /*throw()*/;
-				Scalar maximumMeasure() const /*throw()*/;
+				const kernel::Document& document() const BOOST_NOEXCEPT;
+				Scalar maximumMeasure() const BOOST_NOEXCEPT;
 				Index numberOfSublinesOfLine(Index line) const;
-				Index numberOfVisualLines() const /*throw()*/;
+				Index numberOfVisualLines() const BOOST_NOEXCEPT;
 				// listeners
 				void addVisualLinesListener(VisualLinesListener& listener);
 				void removeVisualLinesListener(VisualLinesListener& listener);
@@ -93,16 +94,22 @@ namespace ascension {
 					const kernel::Position& position, Index* offsetInVisualLine) const;
 //				Index mapVisualLineToLogicalLine(Index line, Index* subline) const;
 //				kernel::Position mapVisualPositionToLogicalPosition(const kernel::Position& position) const;
-				bool offsetVisualLine(VisualLine& line, SignedIndex offset) const /*throw()*/;
+				bool offsetVisualLine(VisualLine& line, SignedIndex offset) const;
 				// invalidations
-				typedef std::pair<Index, const TextLayout*> LineLayout;
 				void invalidate() /*throw()*/;
 				template<typename Function> void invalidateIf(Function f);
 				void invalidate(const boost::integer_range<Index>& lines);
 			protected:
 				void invalidate(Index line);
 			private:
-				typedef std::list<LineLayout>::iterator Iterator;
+				struct NumberedLayout {
+					Index lineNumber;
+					std::unique_ptr<const TextLayout> layout;
+					NumberedLayout() BOOST_NOEXCEPT {}
+					NumberedLayout(NumberedLayout&& other) BOOST_NOEXCEPT
+						: lineNumber(other.lineNumber), layout(std::move(other.layout)) {}
+					ASCENSION_NONCOPYABLE_TAG(NumberedLayout);
+				};
 				void clearCaches(const boost::integer_range<Index>& lines, bool repair);
 				void deleteLineLayout(Index line, TextLayout* newLayout = nullptr) /*throw()*/;
 				void fireVisualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines);
@@ -112,7 +119,7 @@ namespace ascension {
 				void initialize();
 				void invalidate(const std::vector<Index>& lines);
 				void presentationStylistChanged();
-				void updateLongestLine(boost::optional<Index> line, Scalar measure) /*throw()*/;
+				void updateLongestLine(boost::optional<Index> line, Scalar measure) BOOST_NOEXCEPT;
 				// kernel.DocumentListener
 				void documentAboutToBeChanged(const kernel::Document& document);
 				void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
@@ -134,7 +141,7 @@ namespace ascension {
 			private:
 				kernel::Document& document_;
 				std::unique_ptr<GeneratorBase> layoutGenerator_;
-				std::list<LineLayout> layouts_;	// should use GapVector instead?
+				std::list<NumberedLayout> layouts_;	// should use GapVector instead?
 				const std::size_t bufferSize_;
 				const bool autoRepair_;
 				enum {ABOUT_TO_CHANGE, CHANGING, NONE} documentChangePhase_;
@@ -172,12 +179,12 @@ namespace ascension {
 			 * Returns the layout of the specified line.
 			 * @param line The line
 			 * @return The layout
-			 * @throw kernel#BadPositionException @a line is greater than the number of the lines
+			 * @throw IndexOutOfBoundsException @a line is greater than the number of the lines
 			 * @see #operator[], #atIfCached
 			 */
 			inline const TextLayout& LineLayoutVector::at(Index line) const {
 				if(line > document().numberOfLines())
-					throw kernel::BadPositionException(kernel::Position(line, 0));
+					throw IndexOutOfBoundsException("line");
 				return (*this)[line];
 			}
 
@@ -187,18 +194,17 @@ namespace ascension {
 			 * @return The layout or @c null if the layout is not cached
 			 * @see #oprator[], #at
 			 */
-			inline const TextLayout* LineLayoutVector::atIfCached(Index line) const /*throw()*/ {
+			inline const TextLayout* LineLayoutVector::atIfCached(Index line) const BOOST_NOEXCEPT {
 				if(pendingCacheClearance_ && includes(*pendingCacheClearance_, line))
 					return nullptr;
-				for(std::list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-					if(i->first == line)
-						return i->second;
-				}
-				return nullptr;
+				const std::list<NumberedLayout>::const_iterator cached = boost::find_if(layouts_, [line](const NumberedLayout& layout) {
+					return layout.lineNumber == line;
+				});
+				return (cached != boost::end(layouts_)) ? cached->layout.get() : nullptr;
 			}
 
 			/// Returns the document.
-			inline const kernel::Document& LineLayoutVector::document() const /*throw()*/ {
+			inline const kernel::Document& LineLayoutVector::document() const BOOST_NOEXCEPT {
 				return document_;
 			}
 
@@ -209,9 +215,9 @@ namespace ascension {
 			 *             @c true if invalidates the layout
 			 */
 			template<typename Pred>
-			inline void LineLayoutVector::invalidateIf(Pred pred) /*throw()*/ {
+			inline void LineLayoutVector::invalidateIf(Pred pred) {
 				std::vector<Index> linesToInvalidate;
-				for(std::list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
+				for(std::list<LineLayout>::const_iterator i(std::begin(layouts_)), e(std::end(layouts_)); i != e; ++i) {
 					if(pred(*i))
 						linesToInvalidate.push_back(i->first);
 				}
@@ -221,8 +227,8 @@ namespace ascension {
 				}
 			}
 
-			/// Returns the measure (inline-progression-dimension) of the longest line.
-			inline Scalar LineLayoutVector::maximumMeasure() const /*throw()*/ {
+			/// Returns the measure (inline-progression-dimension) of the longest line in user units.
+			inline Scalar LineLayoutVector::maximumMeasure() const BOOST_NOEXCEPT {
 				return maximumMeasure_;
 			}
 
@@ -231,16 +237,18 @@ namespace ascension {
 			 * If the layout of the line is not calculated, this method returns 1.
 			 * @param line The line
 			 * @return The count of the sublines
-			 * @throw BadPositionException @a line is outside of the document
+			 * @throw IndexOutOfBoundsException @a line is outside of the document
 			 * @see #lineLayout, TextLayout#numberOfLines
 			 */
-			inline Index LineLayoutVector::numberOfSublinesOfLine(Index line) const /*throw()*/ {
+			inline Index LineLayoutVector::numberOfSublinesOfLine(Index line) const {
+				if(line >= document().numberOfLines())
+					throw IndexOutOfBoundsException("line");
 				const TextLayout* const layout = atIfCached(line);
 				return (layout != nullptr) ? layout->numberOfLines() : 1;
 			}
 
 			/// Returns the number of the visual lines.
-			inline Index LineLayoutVector::numberOfVisualLines() const /*throw()*/ {
+			inline Index LineLayoutVector::numberOfVisualLines() const BOOST_NOEXCEPT {
 				return numberOfVisualLines_;
 			}
 

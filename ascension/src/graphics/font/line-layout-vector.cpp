@@ -10,6 +10,8 @@
 
 #include <ascension/corelib/range.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
+#include <boost/foreach.hpp>
+#include <boost/range/algorithm/sort.hpp>
 
 using namespace ascension;
 using namespace ascension::graphics;
@@ -21,10 +23,8 @@ namespace k = ascension::kernel;
 // LineLayoutVector ///////////////////////////////////////////////////////////////////////////////
 
 /// Destructor.
-LineLayoutVector::~LineLayoutVector() /*throw()*/ {
+LineLayoutVector::~LineLayoutVector() BOOST_NOEXCEPT {
 //	clearCaches(startLine_, startLine_ + bufferSize_, false);
-	for(Iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i)
-		delete i->second;
 	document_.removePrenotifiedListener(*this);
 	document_.removePartitioningListener(*this);
 }
@@ -42,39 +42,42 @@ const TextLayout& LineLayoutVector::operator[](Index line) const {
 	dout << "finding layout for line " << line;
 #endif
 	LineLayoutVector& self = *const_cast<LineLayoutVector*>(this);
-	Iterator i(self.layouts_.begin());
-	for(const Iterator e(self.layouts_.end()); i != e; ++i) {
-		if(i->first == line)
+	auto i(begin(self.layouts_));
+	for(const auto e(end(self.layouts_)); i != e; ++i) {
+		if(i->lineNumber == line)
 			break;
 	}
 
-	if(i != layouts_.end()) {
+	if(i != end(layouts_)) {
 #ifdef ASCENSION_TRACE_LAYOUT_CACHES
 		dout << "... cache found\n";
 #endif
-		if(i->second != layouts_.front().second) {
+		if(i->layout != layouts_.front().layout) {
 			// bring to the top
-			const LineLayout temp(*i);
+			NumberedLayout temp(move(*i));
 			self.layouts_.erase(i);
-			self.layouts_.push_front(temp);
-			i = self.layouts_.begin();
+			self.layouts_.push_front(move(temp));
+			i = begin(self.layouts_);
 		}
-		return *i->second;
+		return *i->layout;
 	} else {
 #ifdef ASCENSION_TRACE_LAYOUT_CACHES
 		dout << "... cache not found\n";
 #endif
 		if(layouts_.size() == bufferSize_) {
 			// delete the last
+			NumberedLayout temp(move(self.layouts_.back()));
 			self.layouts_.pop_back();
-			self.fireVisualLinesModified(boost::irange(i->first, i->first + 1),
-				1, i->second->numberOfLines(), documentChangePhase_ == CHANGING);
-			delete i->second;
+			self.fireVisualLinesModified(boost::irange(temp.lineNumber, temp.lineNumber + 1),
+				1, temp.layout->numberOfLines(), documentChangePhase_ == CHANGING);
 		}
-		const TextLayout* const layout = layoutGenerator_->generate(line).release();
-		self.layouts_.push_front(make_pair(line, layout));
-		self.fireVisualLinesModified(boost::irange(line, line + 1), layout->numberOfLines(), 1, documentChangePhase_ == CHANGING);
-		return *layout;
+
+		NumberedLayout newLayout;
+		newLayout.lineNumber = line;
+		newLayout.layout = layoutGenerator_->generate(line);
+		self.layouts_.push_front(move(newLayout));
+		self.fireVisualLinesModified(boost::irange(line, line + 1), layouts_.front().layout->numberOfLines(), 1, documentChangePhase_ == CHANGING);
+		return *layouts_.front().layout;
 	}
 }
 
@@ -95,55 +98,52 @@ void LineLayoutVector::addVisualLinesListener(VisualLinesListener& listener) {
  * @param lines The range of lines. @a lines.end() is exclusive and will not be cleared
  * @param repair Set @c true to recreate layouts for the lines. If @c true, this method calls
  *               @c #layoutModified. Otherwise calls @c #layoutDeleted
- * @throw std#invalid_argument @a first and/or @a last are invalid
  */
 void LineLayoutVector::clearCaches(const boost::integer_range<Index>& lines, bool repair) {
-	if(false /*|| lines.end() > viewer_.document().numberOfLines()*/)
-		throw invalid_argument("either line number is invalid.");
+	const boost::integer_range<Index> orderedLines(ordered(lines));
+	if(false /*|| *orderedLines.end() > document().numberOfLines()*/)
+		throw IndexOutOfBoundsException("lines");
 	if(documentChangePhase_ == ABOUT_TO_CHANGE) {
 		pendingCacheClearance_ = boost::irange(
 			!pendingCacheClearance_ ?
-				*lines.begin() : min(*lines.begin(), *pendingCacheClearance_->begin()),
+				*orderedLines.begin() : min(*orderedLines.begin(), *pendingCacheClearance_->begin()),
 			!pendingCacheClearance_ ?
-				*lines.end() : max(*lines.end(), *pendingCacheClearance_->end()));
+				*orderedLines.end() : max(*orderedLines.end(), *pendingCacheClearance_->end()));
 		return;
 	}
-	if(lines.empty())
+	if(orderedLines.empty())
 		return;
 
 //	const size_t originalSize = layouts_.size();
 	Index oldSublines = 0, cachedLines = 0;
 	if(repair) {
-		Index newSublines = 0, actualFirst = *lines.end(), actualLast = *lines.begin();
-		for(Iterator i(layouts_.begin()); i != layouts_.end(); ++i) {
-			if(includes(lines, i->first)) {
-				oldSublines += i->second->numberOfLines();
-				delete i->second;
-				unique_ptr<const TextLayout> newLayout(layoutGenerator_->generate(i->first));
-				assert(newLayout.get() != nullptr);	// TODO:
-				i->second = newLayout.release();
-				newSublines += i->second->numberOfLines();
+		Index newSublines = 0, actualFirst = *orderedLines.end(), actualLast = *orderedLines.begin();
+		BOOST_FOREACH(NumberedLayout& layout, layouts_) {
+			if(includes(orderedLines, layout.lineNumber)) {
+				oldSublines += layout.layout->numberOfLines();
+				layout.layout = layoutGenerator_->generate(layout.lineNumber);
+				assert(layout.layout.get() != nullptr);	// TODO:
+				newSublines += layout.layout->numberOfLines();
 				++cachedLines;
-				actualFirst = min(actualFirst, i->first);
-				actualLast = max(actualLast, i->first);
+				actualFirst = min(actualFirst, layout.lineNumber);
+				actualLast = max(actualLast, layout.lineNumber);
 			}
 		}
-		if(actualFirst == *lines.end())	// no lines cleared
+		if(actualFirst == *orderedLines.end())	// no lines cleared
 			return;
 		++actualLast;
 		fireVisualLinesModified(boost::irange(actualFirst, actualLast), newSublines += actualLast - actualFirst - cachedLines,
 			oldSublines += actualLast - actualFirst - cachedLines, documentChangePhase_ == CHANGING);
 	} else {
-		for(Iterator i(layouts_.begin()); i != layouts_.end(); ) {
-			if(includes(lines, i->first)) {
-				oldSublines += i->second->numberOfLines();
-				delete i->second;
+		for(auto i(begin(layouts_)); i != end(layouts_); ) {
+			if(includes(orderedLines, i->lineNumber)) {
+				oldSublines += i->layout->numberOfLines();
 				i = layouts_.erase(i);
 				++cachedLines;
 			} else
 				++i;
 		}
-		fireVisualLinesDeleted(lines, oldSublines += lines.size() - cachedLines);
+		fireVisualLinesDeleted(orderedLines, oldSublines += orderedLines.size() - cachedLines);
 	}
 }
 
@@ -159,16 +159,16 @@ void LineLayoutVector::documentChanged(const kernel::Document&, const kernel::Do
 	if(change.erasedRegion().first.line != change.erasedRegion().second.line) {	// erased region includes newline(s)
 		const k::Region& region = change.erasedRegion();
 		clearCaches(boost::irange(region.first.line + 1, region.second.line + 1), false);
-		for(Iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-			if(i->first > region.first.line)
-				i->first -= region.second.line - region.first.line;	// $friendly-access
+		BOOST_FOREACH(NumberedLayout& layout, layouts_) {
+			if(layout.lineNumber > region.first.line)
+				layout.lineNumber -= region.second.line - region.first.line;	// $friendly-access
 		}
 	}
 	if(change.insertedRegion().first.line != change.insertedRegion().second.line) {	// inserted text is multiline
 		const k::Region& region = change.insertedRegion();
-		for(Iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-			if(i->first > region.first.line)
-				i->first += region.second.line - region.first.line;	// $friendly-access
+		BOOST_FOREACH(NumberedLayout& layout, layouts_) {
+			if(layout.lineNumber > region.first.line)
+				layout.lineNumber += region.second.line - region.first.line;	// $friendly-access
 		}
 		fireVisualLinesInserted(boost::irange(region.first.line + 1, region.second.line + 1));
 	}
@@ -182,7 +182,7 @@ void LineLayoutVector::documentChanged(const kernel::Document&, const kernel::Do
 	}
 }
 
-/// @see kernel#IDocumentPartitioningListener#documentPartitioningChanged
+/// @see kernel#DocumentPartitioningListener#documentPartitioningChanged
 void LineLayoutVector::documentPartitioningChanged(const k::Region& changedRegion) {
 	invalidate(boost::irange(changedRegion.beginning().line, changedRegion.end().line + 1));
 }
@@ -214,10 +214,10 @@ void LineLayoutVector::fireVisualLinesModified(const boost::integer_range<Index>
 	} else {
 		Index newLongestLine = *longestLine_;
 		Scalar newMaximumIpd = maximumMeasure();
-		for(list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-			if(i->second->measure() > newMaximumIpd) {
-				newLongestLine = i->first;
-				newMaximumIpd = i->second->measure();
+		BOOST_FOREACH(const NumberedLayout& layout, layouts_) {
+			if(layout.layout->measure() > newMaximumIpd) {
+				newLongestLine = layout.lineNumber;
+				newMaximumIpd = layout.layout->measure();
 			}
 		}
 		if(longestLineChanged = (newLongestLine != longestLine_))
@@ -254,16 +254,16 @@ void LineLayoutVector::invalidate(const boost::integer_range<Index>& lines) {
 
 void LineLayoutVector::invalidate(const vector<Index>& lines) {
 	vector<Index> cachedLines;
-	for(list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i)
-		cachedLines.push_back(i->first);
-	sort(cachedLines.begin(), cachedLines.end());
+	BOOST_FOREACH(const NumberedLayout& layout, layouts_)
+		cachedLines.push_back(layout.lineNumber);
+	boost::sort(cachedLines);
 
 	typedef vector<Index>::const_iterator Iterator;
-	const vector<Index>::const_iterator e(cachedLines.end());
-	for(pair<Iterator, Iterator> p(mismatch<Iterator, Iterator>(cachedLines.begin(), e, lines.begin())); ; ) {
+	const Iterator e(end(cachedLines));
+	for(pair<Iterator, Iterator> p(mismatch<Iterator, Iterator>(begin(cachedLines), e, begin(lines))); ; ) {
 		p.first = find(p.first, e, *p.second);
 		const pair<Iterator, Iterator> next(mismatch(p.first, e, p.second));
-		if(next.second == lines.end()) {
+		if(next.second == end(lines)) {
 			clearCaches(boost::irange(*p.second, lines.back() + 1), autoRepair_);
 			break;
 		}
@@ -277,14 +277,13 @@ void LineLayoutVector::invalidate(const vector<Index>& lines) {
  * @param line The line to invalidate layout
  */
 inline void LineLayoutVector::invalidate(Index line) {
-	for(Iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-		if(i->first == line) {
-			const Index oldSublines = i->second->numberOfLines();
-			delete i->second;
+	for(auto i(begin(layouts_)), e(end(layouts_)); i != e; ++i) {
+		if(i->lineNumber == line) {
+			const Index oldSublines = i->layout->numberOfLines();
 			if(autoRepair_) {
-				i->second = layoutGenerator_->generate(line).release();
+				i->layout = layoutGenerator_->generate(line);
 				fireVisualLinesModified(boost::irange(line, line + 1),
-					i->second->numberOfLines(), oldSublines, documentChangePhase_ == CHANGING);
+					i->layout->numberOfLines(), oldSublines, documentChangePhase_ == CHANGING);
 			} else {
 				layouts_.erase(i);
 				fireVisualLinesModified(boost::irange(line, line + 1),
@@ -299,18 +298,18 @@ inline void LineLayoutVector::invalidate(Index line) {
  * Returns the first visual line number of the specified logical line.
  * @param line The logical line
  * @return The first visual line of @a line
- * @throw kernel#BadPositionException @a line is outside of the document
+ * @throw IndexOutOfBoundsException @a line is outside of the document
  * @see #mapLogicalPositionToVisualPosition
  */
 Index LineLayoutVector::mapLogicalLineToVisualLine(Index line) const {
 	if(line >= document().numberOfLines())
-		throw kernel::BadPositionException(kernel::Position(line, 0));
+		throw IndexOutOfBoundsException("line");
 //	else if(!wrapLongLines())
 //		return line;
 	Index result = 0, cachedLines = 0;
-	for(list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-		if(i->first < line) {
-			result += i->second->numberOfLines();
+	BOOST_FOREACH(const NumberedLayout& layout, layouts_) {
+		if(layout.lineNumber < line) {
+			result += layout.layout->numberOfLines();
 			++cachedLines;
 		}
 	}
@@ -333,11 +332,15 @@ Index LineLayoutVector::mapLogicalPositionToVisualPosition(const k::Position& po
 //			*offsetInVisualLine = position.offsetInLine;
 //		return position.line;
 //	}
-	const TextLayout& layout = at(position.line);
-	const Index line = layout.lineAt(position.offsetInLine);
-	if(offsetInVisualLine != 0)
-		*offsetInVisualLine = position.offsetInLine - layout.lineOffset(line);
-	return mapLogicalLineToVisualLine(position.line) + line;
+	try {
+		const TextLayout& layout = at(position.line);
+		const Index line = layout.lineAt(position.offsetInLine);
+		if(offsetInVisualLine != 0)
+			*offsetInVisualLine = position.offsetInLine - layout.lineOffset(line);
+		return mapLogicalLineToVisualLine(position.line) + line;
+	} catch(const IndexOutOfBoundsException&) {
+		throw k::BadPositionException(position);
+	}
 }
 
 #if 0
@@ -393,8 +396,9 @@ k::Position LineLayoutVector::mapVisualPositionToLogicalPosition(const k::Positi
  * @param[in] offset The offset
  * @return @c false if absolute value of @a offset is too large so that the results were snapped to
  *         the beginning or the end of the document
+ * @throw IndexOutOfBoundsException @a line is invalid
  */
-bool LineLayoutVector::offsetVisualLine(VisualLine& line, SignedIndex offset) const /*throw()*/ {
+bool LineLayoutVector::offsetVisualLine(VisualLine& line, SignedIndex offset) const {
 	bool overflowedOrUnderflowed = false;
 	if(offset > 0) {
 		if(line.subline + offset < numberOfSublinesOfLine(line.line))
@@ -425,24 +429,25 @@ bool LineLayoutVector::offsetVisualLine(VisualLine& line, SignedIndex offset) co
 
 /// @see presentation#IPresentationStylistListener
 void LineLayoutVector::presentationStylistChanged() {
+	// TODO: This method is referred by noone???
 	invalidate();
 }
 
 /**
  * Updates the longest line.
- * @param line The new longest line. set @c boost#none to recalculate
- * @param measure The measure (inline-progression-dimension) of the longest line. If @a line is
- *                @c boost#none, this value is ignored
+ * @param line The new longest line. Set @c boost#none to recalculate
+ * @param measure The measure (inline-progression-dimension) of the longest line in user units. If
+ *                @a line is @c boost#none, this value is ignored
  */
-void LineLayoutVector::updateLongestLine(boost::optional<Index> line, Scalar measure) /*throw()*/ {
+void LineLayoutVector::updateLongestLine(boost::optional<Index> line, Scalar measure) BOOST_NOEXCEPT {
 	if(longestLine_ = line)
 		maximumMeasure_ = measure;
 	else {
 		maximumMeasure_ = 0;
-		for(list<LineLayout>::const_iterator i(layouts_.begin()), e(layouts_.end()); i != e; ++i) {
-			if(i->second->measure() > maximumMeasure_) {
-				longestLine_ = i->first;
-				maximumMeasure_ = i->second->measure();
+		BOOST_FOREACH(const NumberedLayout& layout, layouts_) {
+			if(layout.layout->measure() > maximumMeasure_) {
+				longestLine_ = layout.lineNumber;
+				maximumMeasure_ = layout.layout->measure();
 			}
 		}
 	}
