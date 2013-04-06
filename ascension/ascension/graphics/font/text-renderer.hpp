@@ -86,7 +86,7 @@ namespace ascension {
 				public presentation::TextToplevelStyleListener {
 			public:
 				TextRenderer(presentation::Presentation& presentation,
-					const FontCollection& fontCollection, const Dimensions& initialSize);
+					const FontCollection& fontCollection, const Dimension& initialSize);
 				TextRenderer(const TextRenderer& other);
 				virtual ~TextRenderer() BOOST_NOEXCEPT;
 				const presentation::Presentation& presentation() const BOOST_NOEXCEPT;

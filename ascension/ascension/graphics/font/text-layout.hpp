@@ -98,6 +98,7 @@ namespace ascension {
 					Scalar baselineOffset() const;
 					Point baselineOffsetInPhysicalCoordinates() const;
 					Scalar descent() const;
+					Scalar height() const;
 					Scalar leading() const;
 					Index line() const BOOST_NOEXCEPT;
 				private:
@@ -437,6 +438,16 @@ namespace ascension {
 				if(line_ >= layout_.numberOfLines())
 					throw NoSuchElementException();
 				return std::get<1>(layout_.lineMetrics_[line_]);	// $friendly-access$
+			}
+
+			/**
+			 * Returns the height (extent) of the current line.
+			 * @return The height (extent) in user units
+			 * @see #ascent, #descent, #leading
+			 * @throw NoSuchElementException The iterator is done
+			 */
+			inline Scalar TextLayout::LineMetricsIterator::height() const {
+				return ascent() + descent() + leading();
 			}
 
 			/**
