@@ -47,12 +47,12 @@ namespace ascension {
 				Scalar allocationMeasure() const /*throw()*/;
 				Scalar contentMeasure() const /*throw()*/;
 				// view positions
-				const NativeRectangle& boundsInView() const /*throw()*/;
+				const Rectangle& boundsInView() const /*throw()*/;
 				ScrollOffset firstVisibleLineInLogicalNumber() const /*throw()*/;
 				ScrollOffset firstVisibleLineInVisualNumber() const /*throw()*/;
 				ScrollOffset firstVisibleSublineInLogicalLine() const /*throw()*/;
 				ScrollOffset inlineProgressionOffset() const /*throw()*/;
-				void setBoundsInView(const NativeRectangle& bounds);
+				void setBoundsInView(const Rectangle& bounds);
 				// scrolls
 				bool isScrollLocked() const /*throw()*/;
 				void lockScroll();
@@ -67,7 +67,7 @@ namespace ascension {
 				void adjustBpdScrollPositions() /*throw()*/;
 				void documentAccessibleRegionChanged(const kernel::Document& document);
 				// VisualLinesListener
-				void visualLinesDeleted(const Range<Index>& lines,
+				void visualLinesDeleted(const boost::integer_range<Index>& lines,
 					Index sublines, bool longestLineChanged) /*throw()*/;
 				void visualLinesInserted(const Range<Index>& lines) /*throw()*/;
 				void visualLinesModified(

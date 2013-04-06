@@ -86,7 +86,7 @@ namespace ascension {
 				public presentation::TextToplevelStyleListener {
 			public:
 				TextRenderer(presentation::Presentation& presentation,
-					const FontCollection& fontCollection, const NativeSize& initialSize);
+					const FontCollection& fontCollection, const Dimensions& initialSize);
 				TextRenderer(const TextRenderer& other);
 				virtual ~TextRenderer() BOOST_NOEXCEPT;
 				const presentation::Presentation& presentation() const BOOST_NOEXCEPT;
@@ -143,14 +143,14 @@ namespace ascension {
 
 				/// @name Text Metrics
 				/// @{
-				Scalar baselineDistance(const Range<VisualLine>& lines) const;
+				Scalar baselineDistance(const boost::integer_range<VisualLine>& lines) const;
 				const PhysicalFourSides<Scalar>& spaceWidths() const BOOST_NOEXCEPT;
 				/// @}
 
 				/// @name Painting
 				/// @{
 				void paint(PaintContext& context) const;
-				void paint(Index line, PaintContext& context, const NativePoint& alignmentPoint) const;
+				void paint(Index line, PaintContext& context, const Point& alignmentPoint) const;
 				void setLineRenderingOptions(const std::shared_ptr<LineRenderingOptions> options);
 				/// @}
 			protected:
