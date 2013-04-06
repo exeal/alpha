@@ -375,7 +375,7 @@ boost::integer_range<Scalar> TextLayout::extent(const boost::integer_range<Index
  * @return A hit describing the character and edge (leading or trailing) under the specified point
  * @see TextRun#hitTestCharacter
  */
-TextHit&& TextLayout::hitTestCharacter(const AbstractTwoAxes<Scalar>& point, bool* outOfBounds /* = nullptr */) const {
+TextHit<>&& TextLayout::hitTestCharacter(const AbstractTwoAxes<Scalar>& point, bool* outOfBounds /* = nullptr */) const {
 	return internalHitTestCharacter(point, nullptr, outOfBounds);
 }
 
@@ -391,7 +391,7 @@ TextHit&& TextLayout::hitTestCharacter(const AbstractTwoAxes<Scalar>& point, boo
  * @return A hit describing the character and edge (leading or trailing) under the specified point
  * @see TextRun#hitTestCharacter
  */
-TextHit&& TextLayout::hitTestCharacter(const AbstractTwoAxes<Scalar>& point, const FlowRelativeFourSides<Scalar>& bounds, bool* outOfBounds /* = nullptr */) const {
+TextHit<>&& TextLayout::hitTestCharacter(const AbstractTwoAxes<Scalar>& point, const FlowRelativeFourSides<Scalar>& bounds, bool* outOfBounds /* = nullptr */) const {
 	return internalHitTestCharacter(point, &bounds, outOfBounds);
 }
 
@@ -414,7 +414,7 @@ namespace {
  * @return The returned point. The point is in abstract coordinates
  * @throw IndexOutOfBoundsException @a hit is not valid for the @c TextLayout
  */
-AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit& hit) const {
+AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit<>& hit) const {
 	if(hit.insertionIndex() > numberOfCharacters())
 		throw IndexOutOfBoundsException("hit");
 
@@ -430,7 +430,7 @@ AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit& hit) const {
 	BOOST_FOREACH(const unique_ptr<const TextRun>& run, runsForLine(line)) {
 		if(includes(boost::make_iterator_range(run->characterRange()), at)) {
 			x += lineRelativeGlyphContentOffset(*run, writingMode().inlineFlowDirection);
-			x += run->hitToLogicalPosition(TextHit::leading(at - run->characterRange().begin()));
+			x += run->hitToLogicalPosition(TextHit<>::leading(at - run->characterRange().begin()));
 			break;
 		}
 		x += allocationMeasure(*run);
@@ -442,7 +442,7 @@ AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit& hit) const {
 }
 
 /// @internal Implements @c #hitTestCharacter methods.
-TextHit&& TextLayout::internalHitTestCharacter(const AbstractTwoAxes<Scalar>& point, const FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const {
+TextHit<>&& TextLayout::internalHitTestCharacter(const AbstractTwoAxes<Scalar>& point, const FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const {
 	AbstractTwoAxes<bool> outside;
 	const Index line = locateLine(point.bpd(), (bounds != nullptr) ? boost::make_optional(blockFlowRange(*bounds)) : boost::none, outside.bpd());
 	const auto runsInLine(runsForLine(line));
@@ -453,7 +453,7 @@ TextHit&& TextLayout::internalHitTestCharacter(const AbstractTwoAxes<Scalar>& po
 	if(point.ipd() < lineStart || (bounds != nullptr && point.ipd() < min(bounds->start(), bounds->end()))) {	// beyond 'start-edge' of line ?
 		if(outOfBounds != nullptr)
 			*outOfBounds = true;
-		return TextHit::leading(characterRangeInLine.begin() - textString_.data());
+		return TextHit<>::leading(characterRangeInLine.begin() - textString_.data());
 	}
 	outside.ipd() = point.ipd() >= lineStart + measure(line) || (bounds != nullptr && point.ipd() >= max(bounds->start(), bounds->end()));	// beyond 'end-edge' of line ?
 
@@ -466,10 +466,10 @@ TextHit&& TextLayout::internalHitTestCharacter(const AbstractTwoAxes<Scalar>& po
 		BOOST_FOREACH(const unique_ptr<const TextRun>& run, runsInLine) {
 			const Scalar runLineRight = runLineLeft + allocationMeasure(*run);
 			if(runLineRight > x) {
-				const TextHit hitInRun(run->hitTestCharacter(
+				const TextHit<> hitInRun(run->hitTestCharacter(
 					x - runLineLeft - lineRelativeGlyphContentOffset(*run, writingMode().inlineFlowDirection), boost::none, nullptr));
 				const Index position = run->characterRange().begin() - textString_.data() + hitInRun.characterIndex();
-				return hitInRun.isLeadingEdge() ? TextHit::leading(position) : TextHit::trailing(position);
+				return hitInRun.isLeadingEdge() ? TextHit<>::leading(position) : TextHit<>::trailing(position);
 			}
 			runLineLeft = runLineRight;
 		}
@@ -478,7 +478,7 @@ TextHit&& TextLayout::internalHitTestCharacter(const AbstractTwoAxes<Scalar>& po
 	// maybe beyond 'end-edge' of line
 	if(outOfBounds != nullptr)
 		*outOfBounds = true;
-	return TextHit::trailing((characterRangeInLine.end() - textString_.data()) - 1);
+	return TextHit<>::trailing((characterRangeInLine.end() - textString_.data()) - 1);
 }
 
 #if 0
@@ -748,8 +748,8 @@ boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& 
 					x += lineRelativeGlyphContentOffset(*run, writingMode().inlineFlowDirection);
 
 					// compute leading and trailing edges highlight shape in the run
-					Scalar leading = run->hitToLogicalPosition(TextHit::leading(*selectionInRun.begin()));
-					Scalar trailing = run->hitToLogicalPosition(TextHit::leading(*selectionInRun.end()));
+					Scalar leading = run->hitToLogicalPosition(TextHit<>::leading(*selectionInRun.begin()));
+					Scalar trailing = run->hitToLogicalPosition(TextHit<>::leading(*selectionInRun.end()));
 					leading = glyphsLeft + ltr ? leading : (font::measure(*run) - leading);
 					trailing = glyphsLeft + ltr ? trailing : (font::measure(*run) - trailing);
 					Rectangle rectangle(
@@ -778,7 +778,7 @@ boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& 
  * @throw IndexOutOfBoundsException @a range is not valid for the @c TextLayout
  * @see #logicalHighlightShape, #visualHighlightShape
  */
-vector<boost::integer_range<Index>>&& TextLayout::logicalRangesForVisualSelection(const boost::integer_range<TextHit>& range) const {
+vector<boost::integer_range<Index>>&& TextLayout::logicalRangesForVisualSelection(const boost::integer_range<TextHit<>>& range) const {
 	if(range.begin()->insertionIndex() > numberOfCharacters())
 		throw IndexOutOfBoundsException("range.begin()");
 	if(range.end()->insertionIndex() > numberOfCharacters())
@@ -786,20 +786,20 @@ vector<boost::integer_range<Index>>&& TextLayout::logicalRangesForVisualSelectio
 	if(range.begin() == range.end())
 		return vector<boost::integer_range<Index>>();
 
-	list<const TextHit> hits;
+	list<const TextHit<>> hits;
 	hits.push_back(min(*range.begin(), *range.end()));
 	hits.push_back(max(*range.begin(), *range.end()));
 	if(hits.back().characterIndex() == numberOfCharacters()) {	// handle EOL
 		assert(hits.back().isLeadingEdge());
 		hits.pop_back();
 		if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT)
-			hits.push_back(TextHit::beforeOffset(numberOfCharacters()));
+			hits.push_back(TextHit<>::beforeOffset(numberOfCharacters()));
 		else {
 			const unique_ptr<const TextRun>& firstRunInLastLine = runsForLine(numberOfLines() - 1).front();
 			if(firstRunInLastLine->direction() == LEFT_TO_RIGHT)
-				hits.push_back(TextHit::leading(firstRunInLastLine->characterRange().begin() - textString_.data()));
+				hits.push_back(TextHit<>::leading(firstRunInLastLine->characterRange().begin() - textString_.data()));
 			else
-				hits.push_back(TextHit::beforeOffset(firstRunInLastLine->characterRange().end() - textString_.data()));
+				hits.push_back(TextHit<>::beforeOffset(firstRunInLastLine->characterRange().end() - textString_.data()));
 		}
 	}
 
@@ -810,8 +810,8 @@ vector<boost::integer_range<Index>>&& TextLayout::logicalRangesForVisualSelectio
 			// there are four patterns
 			if(hits.size() == 2) {
 				size_t foundHits = 0;
-				list<const TextHit>::iterator foundHit;
-				for(list<const TextHit>::iterator hit(begin(hits)), e(end(hits)); hit != e; ++hit) {
+				list<const TextHit<>>::iterator foundHit;
+				for(list<const TextHit<>>::iterator hit(begin(hits)), e(end(hits)); hit != e; ++hit) {
 					if(includes(runRange, hit->characterIndex())) {
 						++foundHits;
 						foundHit = hit;
@@ -1074,7 +1074,7 @@ StyledRun TextLayout::styledTextRun(Index offsetInLine) const {
  * @see #logicalHighlightShape, #logicalRangesForVisualSelection
  */
 boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&&
-		TextLayout::visualHighlightShape(const boost::integer_range<TextHit>& range, const boost::optional<graphics::Rectangle>& bounds) const {
+		TextLayout::visualHighlightShape(const boost::integer_range<TextHit<>>& range, const boost::optional<graphics::Rectangle>& bounds) const {
 	// TODO: Not implemented.
 	return boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>();
 }

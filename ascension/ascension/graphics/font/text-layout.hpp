@@ -183,27 +183,27 @@ namespace ascension {
 				/// @{
 				boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&&
 					logicalHighlightShape(const boost::integer_range<Index>& range, const boost::optional<Rectangle>& bounds) const;
-				std::vector<boost::integer_range<Index>>&& logicalRangesForVisualSelection(const boost::integer_range<TextHit>& range) const;
+				std::vector<boost::integer_range<Index>>&& logicalRangesForVisualSelection(const boost::integer_range<TextHit<>>& range) const;
 				boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&&
-					visualHighlightShape(const boost::integer_range<TextHit>& range, const boost::optional<Rectangle>& bounds) const;
+					visualHighlightShape(const boost::integer_range<TextHit<>>& range, const boost::optional<Rectangle>& bounds) const;
 				/// @}
 
 				/// @name Hit Test
 				/// @{
-				TextHit&& hitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point, bool* outOfBounds = nullptr) const;
-				TextHit&& hitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point, const presentation::FlowRelativeFourSides<Scalar>& bounds, bool* outOfBounds = nullptr) const;
-				presentation::AbstractTwoAxes<Scalar> hitToPoint(const TextHit& hit) const;
+				TextHit<>&& hitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point, bool* outOfBounds = nullptr) const;
+				TextHit<>&& hitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point, const presentation::FlowRelativeFourSides<Scalar>& bounds, bool* outOfBounds = nullptr) const;
+				presentation::AbstractTwoAxes<Scalar> hitToPoint(const TextHit<>& hit) const;
 				/// @}
 
 				/// @name Other Hit Test
 				/// @{
-				boost::optional<TextHit> nextLeftHit(Index offset) const;
-//				boost::optional<TextHit> nextLeftHit(Index offset, CaretPolicy policy) const;
-				boost::optional<TextHit> nextLeftHit(const TextHit& hit) const;
-				boost::optional<TextHit> nextRightHit(Index offset) const;
-//				boost::optional<TextHit> nextRightHit(Index offset, CaretPolicy policy) const;
-				boost::optional<TextHit> nextRightHit(const TextHit& hit) const;
-				TextHit&& visualOtherHit(const TextHit& hit) const;
+				boost::optional<TextHit<>> nextLeftHit(Index offset) const;
+//				boost::optional<TextHit<>> nextLeftHit(Index offset, CaretPolicy policy) const;
+				boost::optional<TextHit<>> nextLeftHit(const TextHit<>& hit) const;
+				boost::optional<TextHit<>> nextRightHit(Index offset) const;
+//				boost::optional<TextHit<>> nextRightHit(Index offset, CaretPolicy policy) const;
+				boost::optional<TextHit<>> nextRightHit(const TextHit<>& hit) const;
+				TextHit<>&& visualOtherHit(const TextHit<>& hit) const;
 				/// @}
 
 				/// @name Other Coordinates
@@ -211,7 +211,7 @@ namespace ascension {
 				Scalar lineStartEdge(Index line) const;
 				Index locateLine(Scalar bpd,
 					const boost::optional<boost::integer_range<Scalar>>& bounds, bool& outside) const BOOST_NOEXCEPT;
-				presentation::AbstractTwoAxes<Scalar> location(const TextHit& hit) const;
+				presentation::AbstractTwoAxes<Scalar> location(const TextHit<>& hit) const;
 				std::pair<presentation::AbstractTwoAxes<Scalar>,
 					presentation::AbstractTwoAxes<Scalar>> locations(Index offset) const;
 				/// @}
@@ -241,7 +241,7 @@ namespace ascension {
 				//       and 'per-inline-height-rectangle' for each 'line-area'?
 
 			private:
-				TextHit&& internalHitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point,
+				TextHit<>&& internalHitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point,
 					const presentation::FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const;
 //				void buildLineMetrics(Index line);
 				void expandTabsWithoutWrapping() /*throw()*/;
@@ -358,7 +358,7 @@ namespace ascension {
 			 * @return The location of the character
 			 * @throw kernel#BadPositionException @a hit is outside of the layout
 			 */
-			inline presentation::AbstractTwoAxes<Scalar> TextLayout::location(const TextHit& hit) const {
+			inline presentation::AbstractTwoAxes<Scalar> TextLayout::location(const TextHit<>& hit) const {
 				presentation::AbstractTwoAxes<Scalar> result;
 				locations(hit.characterIndex(), hit.isLeadingEdge() ? &result : nullptr, !hit.isLeadingEdge() ? &result : nullptr);
 				return result;

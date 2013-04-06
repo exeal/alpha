@@ -85,7 +85,7 @@ namespace ascension {
 				 *         specified position
 				 * @see TextLayout#hitTestCharacter
 				 */
-				virtual TextHit&& hitTestCharacter(Scalar position,
+				virtual TextHit<>&& hitTestCharacter(Scalar position,
 					const boost::optional<boost::integer_range<Scalar>>& bounds,
 					bool* outOfBounds = nullptr) const BOOST_NOEXCEPT = 0;
 				/**
@@ -97,7 +97,7 @@ namespace ascension {
 				 * @throw IndexOutOfBounds @a hit is not valid for the @c TextRun
 				 * @see GlyphVector#glyphPosition, TextLayout#hitToPoint
 				 */
-				virtual Scalar hitToLogicalPosition(const TextHit& hit) const = 0;
+				virtual Scalar hitToLogicalPosition(const TextHit<>& hit) const = 0;
 				/// @}
 
 				/// @name Box Model of CSS 3 and XSL 1.1
@@ -214,7 +214,7 @@ namespace ascension {
 			 * @see #allocationMeasure
 			 */
 			inline Scalar measure(const TextRun& textRun) {
-				return textRun.hitToLogicalPosition(TextHit::leading(textRun.characterRange().length()));
+				return textRun.hitToLogicalPosition(TextHit<>::leading(textRun.characterRange().length()));
 			}
 			/**
 			 * Returns the measure of the 'allocation-rectangle' of the specified text run in user units.
