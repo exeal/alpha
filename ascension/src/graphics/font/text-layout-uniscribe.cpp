@@ -646,8 +646,8 @@ namespace {
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 		uint8_t characterLevel() const BOOST_NOEXCEPT;
 		StringPiece characterRange() const BOOST_NOEXCEPT;
-		TextHit&& hitTestCharacter(Scalar ipd, const boost::optional<boost::integer_range<Scalar>>& bounds, bool* outOfBounds) const;
-		Scalar hitToLogicalPosition(const TextHit& hit) const;
+		TextHit<>&& hitTestCharacter(Scalar ipd, const boost::optional<boost::integer_range<Scalar>>& bounds, bool* outOfBounds) const;
+		Scalar hitToLogicalPosition(const TextHit<>& hit) const;
 		Index length() const BOOST_NOEXCEPT;
 		const FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT;
 		const FlowRelativeFourSides<Scalar>* padding() const BOOST_NOEXCEPT;
@@ -1395,7 +1395,7 @@ inline void TextRunImpl::hitTest(Scalar ipd, int& encompasses, int* trailing) co
 #endif
 
 /// @see TextRun#hitTestCharacter
-TextHit&& TextRunImpl::hitTestCharacter(Scalar position, const boost::optional<boost::integer_range<Scalar>>& bounds, bool* outOfBounds) const {
+TextHit<>&& TextRunImpl::hitTestCharacter(Scalar position, const boost::optional<boost::integer_range<Scalar>>& bounds, bool* outOfBounds) const {
 	bool beyondLineLeft = false, beyondLineRight = false;
 	if(bounds) {
 		if(position < min(*bounds->begin(), *bounds->end()))
@@ -1415,20 +1415,20 @@ TextHit&& TextRunImpl::hitTestCharacter(Scalar position, const boost::optional<b
 		else if(cp == length() && trailing == 1)
 			beyondLineRight = true;
 		else
-			return (trailing == 0) ? TextHit::leading(cp) : TextHit::beforeOffset(cp + trailing);
+			return (trailing == 0) ? TextHit<>::leading(cp) : TextHit<>::beforeOffset(cp + trailing);
 	}
 
 	if((beyondLineLeft || beyondLineRight) && outOfBounds != nullptr)
 		*outOfBounds = true;
 	if(beyondLineLeft)
-		return (direction() == LEFT_TO_RIGHT) ? TextHit::leading(0) : TextHit::beforeOffset(length());
+		return (direction() == LEFT_TO_RIGHT) ? TextHit<>::leading(0) : TextHit<>::beforeOffset(length());
 	else if(beyondLineRight)
-		return (direction() == LEFT_TO_RIGHT) ? TextHit::beforeOffset(length()) : TextHit::leading(0);
+		return (direction() == LEFT_TO_RIGHT) ? TextHit<>::beforeOffset(length()) : TextHit<>::leading(0);
 	ASCENSION_ASSERT_NOT_REACHED();
 }
 
 /// @see TextRun#hitToLogicalPosition
-Scalar TextRunImpl::hitToLogicalPosition(const TextHit& hit) const {
+Scalar TextRunImpl::hitToLogicalPosition(const TextHit<>& hit) const {
 	if(hit.insertionIndex() > characterRange().length())
 		throw IndexOutOfBoundsException("hit");
 	int logicalPosition;
@@ -2314,8 +2314,8 @@ InlineProgressionDimensionRangeIterator::value_type InlineProgressionDimensionRa
 		+ (border != nullptr) ? border->start().computedWidth() : 0;
 	const auto subrange(intersection(boost::make_iterator_range(currentRun.characterRange()), boost::make_iterator_range(effectiveCharacterRange())));
 	assert(!subrange.empty());
-	Scalar startInRun = currentRun.hitToLogicalPosition(TextHit::leading(subrange.begin() - currentRun.begin()));
-	Scalar endInRun = currentRun.hitToLogicalPosition(TextHit::trailing(subrange.end() - currentRun.begin()));
+	Scalar startInRun = currentRun.hitToLogicalPosition(TextHit<>::leading(subrange.begin() - currentRun.begin()));
+	Scalar endInRun = currentRun.hitToLogicalPosition(TextHit<>::trailing(subrange.end() - currentRun.begin()));
 	if(currentRun.direction() == RIGHT_TO_LEFT) {
 		const Scalar runMeasure = measure(currentRun);
 		startInRun = runMeasure - startInRun;
@@ -2590,7 +2590,7 @@ FlowRelativeFourSides<Scalar> TextLayout::bounds(const boost::integer_range<Inde
 		result.after() = lm.descent() + lm.leading();
 	} else if(orderedCharacterRange.empty()) {	// an empty rectangle for an empty range
 		const LineMetricsIterator lm(lineMetrics(lineAt(orderedCharacterRange.front())));
-		const AbstractTwoAxes<Scalar> leading(location(TextHit::leading(orderedCharacterRange.front())));
+		const AbstractTwoAxes<Scalar> leading(location(TextHit<>::leading(orderedCharacterRange.front())));
 		FlowRelativeFourSides<Scalar> sides;
 		sides.before() = leading.bpd() - lm.ascent();
 		sides.after() = leading.bpd() + lm.descent() + lm.leading();
