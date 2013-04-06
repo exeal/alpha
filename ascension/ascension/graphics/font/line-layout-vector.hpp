@@ -76,29 +76,45 @@ namespace ascension {
 				LineLayoutVector(kernel::Document& document,
 					LayoutGenerator layoutGenerator, Index bufferSize, bool autoRepair);
 				~LineLayoutVector() BOOST_NOEXCEPT;
-				// accessors
+
+				/// @name Accessors
+				/// @{
 				const TextLayout& operator[](Index line) const;
 				const TextLayout& at(Index line) const;
 				const TextLayout* atIfCached(Index line) const BOOST_NOEXCEPT;
-				// attributes
+				/// @}
+
+				/// @a name Attributes
+				/// @{
 				const kernel::Document& document() const BOOST_NOEXCEPT;
 				Scalar maximumMeasure() const BOOST_NOEXCEPT;
 				Index numberOfSublinesOfLine(Index line) const;
 				Index numberOfVisualLines() const BOOST_NOEXCEPT;
-				// listeners
+				/// @}
+
+				/// @name Listeners
+				/// @{
 				void addVisualLinesListener(VisualLinesListener& listener);
 				void removeVisualLinesListener(VisualLinesListener& listener);
-				// position translations
+				/// @}
+
+				/// @a name Position Translations
+				/// @{
 				Index mapLogicalLineToVisualLine(Index line) const;
 				Index mapLogicalPositionToVisualPosition(
 					const kernel::Position& position, Index* offsetInVisualLine) const;
 //				Index mapVisualLineToLogicalLine(Index line, Index* subline) const;
 //				kernel::Position mapVisualPositionToLogicalPosition(const kernel::Position& position) const;
 				bool offsetVisualLine(VisualLine& line, SignedIndex offset) const;
-				// invalidations
-				void invalidate() /*throw()*/;
+				/// @}
+
+				/// @name Invalidations
+				/// @{
+				void invalidate() BOOST_NOEXCEPT;
 				template<typename Function> void invalidateIf(Function f);
 				void invalidate(const boost::integer_range<Index>& lines);
+				/// @}
+
 			protected:
 				void invalidate(Index line);
 			private:
