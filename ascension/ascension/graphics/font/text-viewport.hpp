@@ -33,28 +33,45 @@ namespace ascension {
 				typedef Index ScrollOffset;
 				typedef SignedIndex SignedScrollOffset;
 			public:
-				TextRenderer& textRenderer() /*throw()*/;
-				const TextRenderer& textRenderer() const /*throw()*/;
-				// observers
+				/// @name Text Renderer
+				/// @{
+				TextRenderer& textRenderer() BOOST_NOEXCEPT;
+				const TextRenderer& textRenderer() const BOOST_NOEXCEPT;
+				/// @}
+
+				/// @name Observers
+				/// @{
 				void addListener(TextViewportListener& listener);
 				void addVisualLinesListener(VisualLinesListener& listener);
 				void removeListener(TextViewportListener& listener);
 				void removeVisualLinesListener(VisualLinesListener& listener);
-				// extents
+				/// @}
+
+				/// @name Extents
+				/// @{
 				float numberOfVisibleCharactersInLine() const /*throw()*/;
 				float numberOfVisibleLines() const /*throw()*/;
-				// content- or allocation-rectangles
-				Scalar allocationMeasure() const /*throw()*/;
-				Scalar contentMeasure() const /*throw()*/;
-				// view positions
-				const Rectangle& boundsInView() const /*throw()*/;
-				ScrollOffset firstVisibleLineInLogicalNumber() const /*throw()*/;
-				ScrollOffset firstVisibleLineInVisualNumber() const /*throw()*/;
-				ScrollOffset firstVisibleSublineInLogicalLine() const /*throw()*/;
-				ScrollOffset inlineProgressionOffset() const /*throw()*/;
+				/// @}
+
+				/// @name Content- or Allocation-rectangles
+				/// @{
+				Scalar allocationMeasure() const BOOST_NOEXCEPT;
+				Scalar contentMeasure() const BOOST_NOEXCEPT;
+				/// @}
+
+				/// @name View Positions
+				/// @{
+				const Rectangle& boundsInView() const BOOST_NOEXCEPT;
+				ScrollOffset firstVisibleLineInLogicalNumber() const BOOST_NOEXCEPT;
+				ScrollOffset firstVisibleLineInVisualNumber() const BOOST_NOEXCEPT;
+				ScrollOffset firstVisibleSublineInLogicalLine() const BOOST_NOEXCEPT;
+				ScrollOffset inlineProgressionOffset() const BOOST_NOEXCEPT;
 				void setBoundsInView(const Rectangle& bounds);
-				// scrolls
-				bool isScrollLocked() const /*throw()*/;
+				/// @}
+
+				/// @name Scrolls
+				/// @{
+				bool isScrollLocked() const BOOST_NOEXCEPT;
 				void lockScroll();
 				void scroll(const presentation::AbstractTwoAxes<SignedScrollOffset>& offsets);
 				void scroll(const PhysicalTwoAxes<SignedScrollOffset>& offsets);
@@ -62,21 +79,22 @@ namespace ascension {
 				void scrollTo(const PhysicalTwoAxes<boost::optional<ScrollOffset>>& positions);
 				void scrollTo(const VisualLine& line, ScrollOffset ipd);
 				void unlockScroll();
+				/// @}
 			private:
 				explicit TextViewport(TextRenderer& textRenderer);
 				void adjustBpdScrollPositions() /*throw()*/;
 				void documentAccessibleRegionChanged(const kernel::Document& document);
 				// VisualLinesListener
 				void visualLinesDeleted(const boost::integer_range<Index>& lines,
-					Index sublines, bool longestLineChanged) /*throw()*/;
-				void visualLinesInserted(const Range<Index>& lines) /*throw()*/;
+					Index sublines, bool longestLineChanged) BOOST_NOEXCEPT;
+				void visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT;
 				void visualLinesModified(
-					const Range<Index>& lines, SignedIndex sublinesDifference,
-					bool documentChanged, bool longestLineChanged) /*throw()*/;
+					const boost::integer_range<Index>& lines, SignedIndex sublinesDifference,
+					bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT;
 			private:
 				TextRenderer& textRenderer_;
 				boost::signals2::scoped_connection documentAccessibleRegionChangedConnection_;
-				NativeRectangle boundsInView_;
+				Rectangle boundsInView_;
 				VisualLine firstVisibleLine_;
 				presentation::AbstractTwoAxes<ScrollOffset> scrollOffsets_;
 				std::size_t lockCount_;
@@ -96,7 +114,7 @@ namespace ascension {
 				 * @param oldBounds The old bounds in viewer-local coordinates
 				 * @see TextViewport#boundsInView, TextViewport#setBoundsInView
 				 */
-				virtual void viewportBoundsInViewChanged(const NativeRectangle& oldBounds) /*throw()*/ = 0;
+				virtual void viewportBoundsInViewChanged(const Rectangle& oldBounds) BOOST_NOEXCEPT = 0;
 				/**
 				 * @param offsets
 				 * @param oldLine
@@ -109,7 +127,7 @@ namespace ascension {
 				 */
 				virtual void viewportScrollPositionChanged(
 					const presentation::AbstractTwoAxes<TextViewport::SignedScrollOffset>& offsets,
-					const VisualLine& oldLine, TextViewport::ScrollOffset oldInlineProgressionOffset) /*throw()*/ = 0;
+					const VisualLine& oldLine, TextViewport::ScrollOffset oldInlineProgressionOffset) BOOST_NOEXCEPT = 0;
 				friend class TextViewport;
 			};
 
@@ -118,17 +136,19 @@ namespace ascension {
 			> {
 			public:
 				BaselineIterator(const TextViewport& viewport, Index line, bool trackOutOfViewport);
-				Index line() const /*throw()*/;
-				NativePoint positionInView() const;
-				const NativePoint& positionInViewport() const;
-				const TextViewport& viewport() const /*throw()*/;
-				bool tracksOutOfViewport() const /*throw()*/;
+				Index line() const BOOST_NOEXCEPT;
+//				Point positionInView() const;
+				const Point& positionInViewport() const;
+				const TextViewport& viewport() const BOOST_NOEXCEPT;
+				bool tracksOutOfViewport() const BOOST_NOEXCEPT;
 			private:
 				void advance(difference_type n);
 				void initializeWithFirstVisibleLine();
-				void invalidate() /*throw()*/;
-				bool isValid() const /*throw()*/;
+				void invalidate() BOOST_NOEXCEPT;
+				bool isValid() const BOOST_NOEXCEPT;
+#if 0
 				void move(Index line);
+#endif
 				// boost.iterator_facade
 				void decrement();
 				const reference dereference() const;
@@ -140,44 +160,102 @@ namespace ascension {
 				bool tracksOutOfViewport_;		// this is not const, for operator=
 				graphics::font::VisualLine line_;
 				Scalar distanceFromViewportBeforeEdge_;
-				NativePoint positionInViewport_;
+				Point positionInViewport_;
 			};
 
-			/**
-			 * Edge of a character.
-			 * @see #location
-			 */
-			enum CharacterEdge {
-				LEADING,	///< Leading edge of a character.
-				TRAILING	///< Trailing edge of a character.
-			};
+			/// @defgroup scrollable_ranges_in_viewport Scrollable Ranges in Viewport
+			/// @{
+			template<std::size_t coordinate> TextViewport::SignedScrollOffset pageSize(const TextViewport& viewport);
+			boost::integer_range<TextViewport::ScrollOffset> scrollableRangeInBlockDimension(const TextViewport& viewport);
+			boost::integer_range<TextViewport::ScrollOffset> scrollableRangeInInlineDimension(const TextViewport& viewport);
+			template<std::size_t coordinate>
+			boost::integer_range<TextViewport::ScrollOffset> scrollableRangeInPhysicalDirection(const TextViewport& viewport);
+			/// @}
 
-			// free functions
+			/// @defgroup scroll_positions_in_viewport Scroll Positions in Viewport
+			/// @{
 			PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>
-			convertFlowRelativeScrollPositionsToPhysical(const TextViewport& viewport,
-				const presentation::AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions);
+				convertFlowRelativeScrollPositionsToPhysical(const TextViewport& viewport,
+					const presentation::AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions);
 			presentation::AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>
-			convertPhysicalScrollPositionsToAbstract(const TextViewport& viewport,
-				const PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions);
-			Scalar inlineProgressionScrollOffsetInPixels(
-				const TextViewport& viewport, TextViewport::ScrollOffset scrollOffset);
+				convertPhysicalScrollPositionsToAbstract(const TextViewport& viewport,
+					const PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions);
+			Scalar inlineProgressionScrollOffsetInUserUnits(
+				const TextViewport& viewport, const boost::optional<TextViewport::ScrollOffset>& scrollOffset = boost::none);
+			/// @}
+
+			/// @defgroup model_and_view_coordinates_conversions Model and View Coordinates Conversions
+			/// @{
+			Point lineStartEdge(const TextViewport& viewport, const VisualLine& line);
+			VisualLine locateLine(const TextViewport& viewport,
+				const Point& p, bool* snapped = nullptr) BOOST_NOEXCEPT;
+			Point modelToView(const TextViewport& viewport, const TextHit<kernel::Position>& position, bool fullSearchBpd);
+			TextHit<kernel::Position>&& viewToModel(
+				const TextViewport& viewport, const Point& pointInView,
+				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
+			boost::optional<TextHit<kernel::Position>> viewToModelInBounds(
+				const TextViewport& viewport, const Point& pointInView,
+				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
+			/// @}
+
+			/// @defgroup
+			/// @{
 			Scalar lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline = 0);
 			Scalar lineStartEdge(const TextLayout& layout, Scalar contentMeasure, Index subline = 0);
-			VisualLine locateLine(const TextViewport& viewport,
-				const NativePoint& p, bool* snapped = nullptr) /*throw()*/;
-			NativePoint modelToView(const TextViewport& viewport,
-				const kernel::Position& position, bool fullSearchBpd, CharacterEdge edge = LEADING);
-			template<std::size_t coordinate> TextViewport::SignedScrollOffset pageSize(const TextViewport& viewport);
-			Range<TextViewport::ScrollOffset> scrollableRangeInBlockDimension(const TextViewport& viewport);
-			Range<TextViewport::ScrollOffset> scrollableRangeInInlineDimension(const TextViewport& viewport);
-			template<std::size_t coordinate>
-			Range<TextViewport::ScrollOffset> scrollableRangeInPhysicalDirection(const TextViewport& viewport);
-			kernel::Position viewToModel(const TextViewport& viewport,
-				const NativePoint& pointInView, CharacterEdge edge,
-				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
-			boost::optional<kernel::Position> viewToModelInBounds(const TextViewport& viewport,
-				const NativePoint& pointInView, CharacterEdge edge,
-				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
+			/// @}
+
+
+			// inline implementation //////////////////////////////////////////////////////////////
+
+			/// Returns the line the iterator addresses.
+			inline Index BaselineIterator::line() const BOOST_NOEXCEPT {return line_.line;}
+
+			/**
+			 * Returns the baseline position of the line the iterator addresses.
+			 * @return The point in view-local coordinates. If the writing mode is horizontal,
+			 *         x-coordinate of the point is zero, otherwise y-coordinate is zero
+			 */
+			inline const Point& BaselineIterator::positionInViewport() const BOOST_NOEXCEPT {
+				return positionInViewport_;
+			}
+
+			/// Returns the viewport.
+			inline const TextViewport& BaselineIterator::viewport() const BOOST_NOEXCEPT {
+				return *viewport_;
+			}
+
+			/// Returns @c true if
+			inline bool BaselineIterator::tracksOutOfViewport() const BOOST_NOEXCEPT {
+				return tracksOutOfViewport_;
+			}
+
+
+			// TextHit specializations for kernel.Position ////////////////////////////////////////
+
+			template<> inline TextHit<kernel::Position>&& TextHit<kernel::Position>::beforeOffset(const kernel::Position& offset) BOOST_NOEXCEPT {
+				return TextHit<kernel::Position>(kernel::Position(offset.line, offset.offsetInLine - 1), false);
+			}
+
+			template<> inline kernel::Position TextHit<kernel::Position>::insertionIndex() const BOOST_NOEXCEPT {
+				kernel::Position result(characterIndex());
+				if(!isLeadingEdge())
+					++result.offsetInLine;
+				return result;
+			}
+
+			template<> inline TextHit<kernel::Position>&& TextHit<kernel::Position>::offsetHit(SignedIndex delta) const {
+				if(delta > 0 && static_cast<Index>(delta) > std::numeric_limits<Index>::max() - characterIndex().offsetInLine)
+					throw std::overflow_error("delta");
+				else if(delta < 0 && static_cast<Index>(-delta) > characterIndex().offsetInLine)
+					throw std::underflow_error("delta");
+				return TextHit(kernel::Position(characterIndex().line, characterIndex().offsetInLine + delta), isLeadingEdge());
+			}
+
+			template<> inline TextHit<kernel::Position>&& TextHit<kernel::Position>::otherHit() const BOOST_NOEXCEPT {
+				kernel::Position p(characterIndex());
+				isLeadingEdge() ? --p.offsetInLine : ++p.offsetInLine;
+				return isLeadingEdge() ? trailing(p) : leading(p);
+			}
 		}
 	}
 } // namespace ascension.graphics.font
