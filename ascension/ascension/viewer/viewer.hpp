@@ -263,9 +263,6 @@ namespace ascension {
 			graphics::Scalar inlineProgressionOffsetInViewport() const;
 			void initialize(const TextViewer* other);
 			void initializeNativeObjects(const TextViewer* other);
-			graphics::Scalar mapLineLayoutIpdToViewport(Index line, graphics::Scalar ipd) const;
-//			graphics::Scalar mapLineToViewportBpd(Index line, bool fullSearch) const;
-			graphics::Scalar mapViewportIpdToLineLayout(Index line, graphics::Scalar ipd) const;
 			void repaintRuler();
 			void updateScrollBars();
 
