@@ -2590,7 +2590,7 @@ FlowRelativeFourSides<Scalar> TextLayout::bounds(const boost::integer_range<Inde
 		result.after() = lm.descent() + lm.leading();
 	} else if(orderedCharacterRange.empty()) {	// an empty rectangle for an empty range
 		const LineMetricsIterator lm(lineMetrics(lineAt(orderedCharacterRange.front())));
-		const AbstractTwoAxes<Scalar> leading(location(TextHit<>::leading(orderedCharacterRange.front())));
+		const AbstractTwoAxes<Scalar> leading(hitToPoint(TextHit<>::leading(orderedCharacterRange.front())));
 		FlowRelativeFourSides<Scalar> sides;
 		sides.before() = leading.bpd() - lm.ascent();
 		sides.after() = leading.bpd() + lm.descent() + lm.leading();
