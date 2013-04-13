@@ -85,6 +85,24 @@ namespace ascension {
 				public presentation::GlobalTextStyleSwitch,
 				public presentation::TextToplevelStyleListener {
 			public:
+				/**
+				 * @see TextRenderer#lineRelativeAlignment, TextAlignment, TextAnchor
+				 */
+				enum LineRelativeAlignmentAxis {
+					/// Left edges of lines are left edge of the renderer.
+					LEFT,
+					/// Right edges of lines are right edge of the renderer.
+					RIGHT,
+					/// Horizontal center of lines are horizontal center of the renderer.
+					HORIZONTAL_CENTER,
+					/// Top edges of lines are top edge of the renderer.
+					TOP,
+					/// Bottom edges of lines are bottom edge of the renderer.
+					BOTTOM,
+					/// Vertical center of lines are vertical center of the renderer.
+					VERTICAL_CENTER
+				};
+			public:
 				TextRenderer(presentation::Presentation& presentation,
 					const FontCollection& fontCollection, const Dimension& initialSize);
 				TextRenderer(const TextRenderer& other);
@@ -144,6 +162,8 @@ namespace ascension {
 				/// @name Text Metrics
 				/// @{
 				Scalar baselineDistance(const boost::integer_range<VisualLine>& lines) const;
+				LineRelativeAlignmentAxis lineRelativeAlignment() const BOOST_NOEXCEPT;
+				Scalar lineStartEdge(const VisualLine& line) const;
 				const PhysicalFourSides<Scalar>& spaceWidths() const BOOST_NOEXCEPT;
 				/// @}
 
