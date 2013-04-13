@@ -211,9 +211,6 @@ namespace ascension {
 				Scalar lineStartEdge(Index line) const;
 				Index locateLine(Scalar bpd,
 					const boost::optional<boost::integer_range<Scalar>>& bounds, bool& outside) const BOOST_NOEXCEPT;
-				presentation::AbstractTwoAxes<Scalar> location(const TextHit<>& hit) const;
-				std::pair<presentation::AbstractTwoAxes<Scalar>,
-					presentation::AbstractTwoAxes<Scalar>> locations(Index offset) const;
 				/// @}
 
 				// styled segments
@@ -258,9 +255,6 @@ namespace ascension {
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 				std::pair<Index, Index> locateOffsets(
 					Index line, Scalar ipd, bool& outside) const /*throw()*/;
-				void locations(Index offset,
-					presentation::AbstractTwoAxes<Scalar>* leading,
-					presentation::AbstractTwoAxes<Scalar>* trailing) const;
 				int nextTabStopBasedLeftEdge(Scalar x, bool right) const /*throw()*/;
 				void reorder();
 //				void rewrap();
@@ -350,32 +344,6 @@ namespace ascension {
 			inline Index TextLayout::lineLength(Index line) const {
 				return (line < numberOfLines_ - 1 ?
 					lineOffset(line + 1) : numberOfCharacters()) - lineOffset(line);
-			}
-
-			/**
-			 * Returns the location for the specified character hit.
-			 * @param hit The character hit in this layout
-			 * @return The location of the character
-			 * @throw kernel#BadPositionException @a hit is outside of the layout
-			 */
-			inline presentation::AbstractTwoAxes<Scalar> TextLayout::location(const TextHit<>& hit) const {
-				presentation::AbstractTwoAxes<Scalar> result;
-				locations(hit.characterIndex(), hit.isLeadingEdge() ? &result : nullptr, !hit.isLeadingEdge() ? &result : nullptr);
-				return result;
-			}
-
-			/**
-			 * Returns the locations for the specified character offset.
-			 * @param offset The character offset in this layout
-			 * @return A pair consists of the locations. The first element means the leading, the
-			 *         second element means the trailing position of the character
-			 * @throw kernel#BadPositionException @a offset is greater than the length of the layout
-			 */
-			inline std::pair<presentation::AbstractTwoAxes<Scalar>,
-					presentation::AbstractTwoAxes<Scalar>> TextLayout::locations(Index offset) const {
-				std::pair<presentation::AbstractTwoAxes<Scalar>, presentation::AbstractTwoAxes<Scalar>> result;
-				locations(offset, &result.first, &result.second);
-				return result;
 			}
 
 			/// Returns the number of characters represented by this @c TextLayout.
