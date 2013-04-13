@@ -337,33 +337,27 @@ void TextLayout::dumpRuns(ostream& out) const {
 }
 #endif // _DEBUG
 
-namespace {
-	inline bool isNegativeVertical(const WritingMode& writingMode) {
-		if(isVertical(writingMode.blockFlowDirection)) {
-			if(writingMode.blockFlowDirection == VERTICAL_RL)
-				return resolveTextOrientation(writingMode) == SIDEWAYS_LEFT;
-			else
-				return resolveTextOrientation(writingMode) != SIDEWAYS_LEFT;
-		}
-		return false;
-	}
-}
-
 /**
  * Returns extent (block-progression-dimension) of the specified lines.
  * @param lines A range of the lines
  * @return A range of block-progression-dimension relative to the alignment-point
  * @throw IndexOutOfBoundsException
+ * @see LineMetricsIterator#extent
  */
 boost::integer_range<Scalar> TextLayout::extent(const boost::integer_range<Index>& lines) const {
+	if(lines.empty())
+		return boost::irange<Scalar>(0, 0);
+	else if(lines.size() == 1)
+		return lineMetrics(lines.front()).extent();
+
 	const auto orderedLines(ordered(lines));
 	if(*orderedLines.end() > numberOfLines())
 		throw IndexOutOfBoundsException("lines");
-	const LineMetricsIterator firstLine(*this, *orderedLines.begin()), lastLine(*this, *orderedLines.end() - 1);
-	const bool negativeVertical = isNegativeVertical(writingMode());
-	return boost::irange(
-		firstLine.baselineOffset() - (!negativeVertical ? firstLine.ascent() : lastLine.descent() + lastLine.leading()),
-		lastLine.baselineOffset() + (!negativeVertical ? lastLine.descent() + lastLine.leading() : lastLine.ascent()));
+
+	LineMetricsIterator i(lineMetrics(lines.front()));
+	const boost::integer_range<Scalar> firstExtent(i.extent());
+	advance(i, lines.size() - 1);
+	return boost::irange(*ordered(firstExtent).begin(), *ordered(i.extent()).end());	// TODO: i want suitable boost.set_union for boost.integer_range<T>.
 }
 
 /**
@@ -618,14 +612,14 @@ Index TextLayout::locateLine(Scalar bpd, const boost::optional<boost::integer_ra
 	}
 
 	LineMetricsIterator line(lineMetrics(0));
-	const bool negativeVertical = isNegativeVertical(writingMode());
 
 	// beyond the before-edge ?
-	if(bpd < line.baselineOffset() - (!negativeVertical ? line.ascent() : (line.descent() + line.leading())))
+	if(bpd <= *ordered(line.extent()).begin())
 		return (outside = true), line.line();
 
+	// locate the line includes 'bpd'
 	for(; line.line() < numberOfLines(); ++line) {
-		if(bpd < line.baselineOffset() + !negativeVertical ? (line.descent() + line.leading()) : line.ascent())
+		if(bpd < *ordered(line.extent()).end())
 			return (outside = false), line.line();
 	}
 

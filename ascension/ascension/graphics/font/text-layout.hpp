@@ -98,7 +98,7 @@ namespace ascension {
 					Scalar baselineOffset() const;
 					Point baselineOffsetInPhysicalCoordinates() const;
 					Scalar descent() const;
-					Scalar height() const;
+					boost::integer_range<Scalar> extent() const;
 					Scalar leading() const;
 					Index line() const BOOST_NOEXCEPT;
 				private:
@@ -409,13 +409,23 @@ namespace ascension {
 			}
 
 			/**
-			 * Returns the height (extent) of the current line.
-			 * @return The height (extent) in user units
+			 * Returns the extent of the current line in block-progression-dimension.
+			 * @return The extent range by the distance from the baseline of the fitst line, in user units
 			 * @see #ascent, #descent, #leading
 			 * @throw NoSuchElementException The iterator is done
+			 * @see TextLayout#extent
 			 */
-			inline Scalar TextLayout::LineMetricsIterator::height() const {
-				return ascent() + descent() + leading();
+			inline boost::integer_range<Scalar> TextLayout::LineMetricsIterator::extent() const {
+				const presentation::WritingMode& writingMode = layout_.writingMode();
+				bool negativeVertical = false;
+				if(writingMode.blockFlowDirection == presentation::VERTICAL_RL)
+					negativeVertical = presentation::resolveTextOrientation(writingMode) == presentation::SIDEWAYS_LEFT;
+				else if(writingMode.blockFlowDirection == presentation::VERTICAL_LR)
+					negativeVertical = presentation::resolveTextOrientation(writingMode) != presentation::SIDEWAYS_LEFT;
+				const Scalar bsln = baselineOffset();
+				return !negativeVertical ?
+					boost::irange(bsln - ascent(), bsln + descent() + leading())
+			    	: boost::irange(bsln - descent(), bsln + ascent() + leading());	// TODO: leading is there?
 			}
 
 			/**
