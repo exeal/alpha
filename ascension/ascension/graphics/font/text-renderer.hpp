@@ -60,7 +60,7 @@ namespace ascension {
 				 * @param line The line to render
 				 * @return The inline object renders the end of line, or @c null
 				 */
-				virtual const InlineObject* endOfLine(Index line) const /*throw()*/ = 0;
+				virtual const InlineObject* endOfLine(Index line) const BOOST_NOEXCEPT = 0;
 				/**
 				 * Returns the object overrides text paint properties for line rendering. For the
 				 * detail semantics of paint override, see the documentation of
@@ -68,13 +68,13 @@ namespace ascension {
 				 * @param line The line to render
 				 * @return The object overrides text paint properties for line rendering, or @c null
 				 */
-				virtual const TextPaintOverride* textPaintOverride(Index line) const /*throw()*/ = 0;
+				virtual const TextPaintOverride* textPaintOverride(Index line) const BOOST_NOEXCEPT = 0;
 				/**
 				 * Returns the inline object renders the mark of text wrapping.
 				 * @param line The line to render
 				 * @return The inline object renders the mark of text wrapping, or @c null
 				 */
-				virtual const InlineObject* textWrappingMark(Index line) const /*throw()*/ = 0;
+				virtual const InlineObject* textWrappingMark(Index line) const BOOST_NOEXCEPT = 0;
 				friend class TextRenderer;
 			};
 
