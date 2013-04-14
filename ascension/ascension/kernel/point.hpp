@@ -1,7 +1,7 @@
 /**
  * @file point.hpp
  * @author exeal
- * @date 2003-2012
+ * @date 2003-2013
  */
 
 #ifndef ASCENSION_POINT_HPP
@@ -12,7 +12,6 @@
 
 namespace ascension {
 	namespace kernel {
-
 		/**
 		 * Tried to use some object but the document used by the object had already been disposed.
 		 * @see Point
@@ -44,7 +43,7 @@ namespace ascension {
 		class PointLifeCycleListener {
 		protected:
 			/// Destructor.
-			virtual ~PointLifeCycleListener() /*throw()*/ {}
+			virtual ~PointLifeCycleListener() BOOST_NOEXCEPT {}
 		private:
 			/// The point was destroyed. After this, don't call @c Point#addLifeCycleListener.
 			virtual void pointDestroyed() = 0;
@@ -61,31 +60,42 @@ namespace ascension {
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 			Point(Document& document, const Position& position, PointListener* listener = nullptr);
 			Point(const Point& other);
-			virtual ~Point() /*throw()*/;
-			// operators
-			operator Position() const /*throw()*/;
-			// core attributes
+			virtual ~Point() BOOST_NOEXCEPT;
+			operator Position() const BOOST_NOEXCEPT;
+
+			/// @name Core Attributes
+			/// @{
 			Document& document();
 			const Document& document() const;
-			bool isDocumentDisposed() const /*throw()*/;
+			bool isDocumentDisposed() const BOOST_NOEXCEPT;
 			Position normalized() const;
-			const Position& position() const /*throw()*/;
-			// behaviors
-			bool adaptsToDocument() const /*throw()*/;
-			Point& adaptToDocument(bool adapt) /*throw()*/;
-			Direction gravity() const /*throw()*/;
-			Point& setGravity(Direction gravity) /*throw()*/;
-			// listeners
+			const Position& position() const BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name Behaviors
+			/// @{
+			bool adaptsToDocument() const BOOST_NOEXCEPT;
+			Point& adaptToDocument(bool adapt) BOOST_NOEXCEPT;
+			Direction gravity() const BOOST_NOEXCEPT;
+			Point& setGravity(Direction gravity) BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name Listeners
+			/// @{
 			void addLifeCycleListener(PointLifeCycleListener& listener);
 			void removeLifeCycleListener(PointLifeCycleListener& listener);
-			// operations
+			/// @}
+
+			/// @name Operations
+			/// @{
 			Point& moveTo(const Position& to);
+			/// @}
 
 		protected:
-			Point& operator=(const Position& other) /*throw()*/;
+			Point& operator=(const Position& other) BOOST_NOEXCEPT;
 			virtual void aboutToMove(Position& to);
-			void documentDisposed() /*throw()*/;
-			virtual void moved(const Position& from) /*throw()*/;
+			void documentDisposed() BOOST_NOEXCEPT;
+			virtual void moved(const Position& from) BOOST_NOEXCEPT;
 			void normalize() const;
 			virtual void update(const DocumentChange& change);
 		private:
@@ -147,11 +157,11 @@ namespace ascension {
 		// non-member functions ///////////////////////////////////////////////////////////////////
 
 		/// Equality operator for @c Point objects.
-		inline bool operator==(const Point& lhs, const Point& rhs) /*throw()*/ {
+		inline bool operator==(const Point& lhs, const Point& rhs) BOOST_NOEXCEPT {
 			return lhs.position() == rhs.position();
 		}
 		/// Less-than operator for @c Point objects.
-		inline bool operator<(const Point& lhs, const Point& rhs) /*throw()*/ {
+		inline bool operator<(const Point& lhs, const Point& rhs) BOOST_NOEXCEPT {
 			return lhs.position() < rhs.position();
 		}
 		/// Returns the content type of the document partition contains the point.
@@ -159,11 +169,11 @@ namespace ascension {
 			return p.document().partitioner().contentType(p);
 		}
 		/// Returns the line number of @a p.
-		inline Index line(const Point& p) /*throw()*/ {
+		inline Index line(const Point& p) BOOST_NOEXCEPT {
 			return p.position().line;
 		}
 		/// Returns the offset in the line of @a p.
-		inline Index offsetInLine(const Point& p) /*throw()*/ {
+		inline Index offsetInLine(const Point& p) BOOST_NOEXCEPT {
 			return p.position().offsetInLine;
 		}
 
@@ -176,14 +186,14 @@ namespace ascension {
 		 * Protected assignment operator moves the point to @a other.
 		 * @see #moveTo
 		 */
-		inline Point& Point::operator=(const Position& other) /*throw()*/ {
+		inline Point& Point::operator=(const Position& other) BOOST_NOEXCEPT {
 			position_ = other;
 			return *this;
 		}
 		/// Returns @c true if the point is adapting to the document change.
-		inline bool Point::adaptsToDocument() const /*throw()*/ {return adapting_;}
+		inline bool Point::adaptsToDocument() const BOOST_NOEXCEPT {return adapting_;}
 		/// Adapts the point to the document change.
-		inline Point& Point::adaptToDocument(bool adapt) /*throw()*/ {
+		inline Point& Point::adaptToDocument(bool adapt) BOOST_NOEXCEPT {
 			adapting_ = adapt;
 			return *this;
 		}
@@ -200,11 +210,11 @@ namespace ascension {
 			return *document_;
 		}
 		/// Called when the document is disposed.
-		inline void Point::documentDisposed() /*throw()*/ {document_ = nullptr;}
+		inline void Point::documentDisposed() BOOST_NOEXCEPT {document_ = nullptr;}
 		/// Returns the gravity.
-		inline Direction Point::gravity() const /*throw()*/ {return gravity_;}
+		inline Direction Point::gravity() const BOOST_NOEXCEPT {return gravity_;}
 		/// Returns @c true if the document is already disposed.
-		inline bool Point::isDocumentDisposed() const /*throw()*/ {return document_ == nullptr;}
+		inline bool Point::isDocumentDisposed() const BOOST_NOEXCEPT {return document_ == nullptr;}
 		/**
 		 * Normalizes the position of the point.
 		 * This method does <strong>not</strong> inform to the listeners about any movement.
@@ -213,7 +223,7 @@ namespace ascension {
 		/// Returns the normalized position of the point.
 		inline Position Point::normalized() const {return positions::shrinkToDocumentRegion(document(), position());}
 		/// Returns the position.
-		inline const Position& Point::position() const /*throw()*/ {return position_;}
+		inline const Position& Point::position() const BOOST_NOEXCEPT {return position_;}
 
 	} // namespace kernel
 } // namespace ascension

@@ -2,7 +2,7 @@
  * @file document-observers.hpp
  * @author exeal
  * @date 2011-03-30 separated from document.hpp
- * @date 2011-2012
+ * @date 2011-2013
  */
 
 #ifndef ASCENSION_DOCUMENT_OBSERVERS_HPP
@@ -26,7 +26,7 @@ namespace ascension {
 		class DocumentListener {
 		public:
 			/// Destructor.
-			virtual ~DocumentListener() /*throw()*/ {}
+			virtual ~DocumentListener() BOOST_NOEXCEPT {}
 		private:
 			/**
 			 * The document is about to be changed.
@@ -73,13 +73,13 @@ namespace ascension {
 		private:
 			/**
 			 * The undo/redo operation started.
-			 * @param document the document
+			 * @param document The document
 			 */
 			virtual void documentUndoSequenceStarted(const Document& document) = 0;
 			/**
 			 * The undo/redo operation stopped.
-			 * @param document the document
-			 * @param resultPosition preferable position to put the caret
+			 * @param document The document
+			 * @param resultPosition Th preferable position to put the caret
 			 */
 			virtual void documentUndoSequenceStopped(
 				const Document& document, const Position& resultPosition) = 0;

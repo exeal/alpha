@@ -4,7 +4,7 @@
  * @date 2003-2006 (was EditDoc.h)
  * @date 2006-2010 (was document.hpp)
  * @date 2010-11-06 separated from document.hpp
- * @date 2012
+ * @date 2012-2013
  */
 
 #ifndef ASCENSION_DOCUMENT_CHARACTER_ITERATOR_HPP
@@ -15,9 +15,7 @@
 #include <boost/iterator/iterator_facade.hpp>
 
 namespace ascension {
-
 	namespace kernel {
-
 		class DocumentCharacterIterator :
 			public text::CharacterIterator,
 			public boost::iterator_facade<
@@ -26,23 +24,23 @@ namespace ascension {
 			> {
 		public:
 			// constructors
-			DocumentCharacterIterator() /*throw()*/;
+			DocumentCharacterIterator() BOOST_NOEXCEPT;
 			DocumentCharacterIterator(const Document& document, const Position& position);
 			DocumentCharacterIterator(const Document& document, const Region& region);
 			DocumentCharacterIterator(const Document& document, const Region& region, const Position& position);
-			DocumentCharacterIterator(const DocumentCharacterIterator& other) /*throw()*/;
+			DocumentCharacterIterator(const DocumentCharacterIterator& other) BOOST_NOEXCEPT;
 			// attributes
-			const Document* document() const /*throw()*/;
-			const String& line() const /*throw()*/;
-			const Region& region() const /*throw()*/;
+			const Document* document() const BOOST_NOEXCEPT;
+			const String& line() const BOOST_NOEXCEPT;
+			const Region& region() const BOOST_NOEXCEPT;
 			void setRegion(const Region& newRegion);
-			const Position& tell() const /*throw()*/;
+			const Position& tell() const BOOST_NOEXCEPT;
 			// operation
 			DocumentCharacterIterator& seek(const Position& to);
 			// CharacterIterator
-			CodePoint current() const /*throw()*/;
-			bool hasNext() const /*throw()*/;
-			bool hasPrevious() const /*throw()*/;
+			CodePoint current() const BOOST_NOEXCEPT;
+			bool hasNext() const BOOST_NOEXCEPT;
+			bool hasPrevious() const BOOST_NOEXCEPT;
 		private:
 			void doAssign(const CharacterIterator& other);
 			std::unique_ptr<CharacterIterator> doClone() const;
@@ -70,27 +68,27 @@ namespace ascension {
 		// inline implementation //////////////////////////////////////////////////////////////////
 		
 		/// Returns the document.
-		inline const Document* DocumentCharacterIterator::document() const /*throw()*/ {
+		inline const Document* DocumentCharacterIterator::document() const BOOST_NOEXCEPT {
 			return document_;
 		}
 		
 		/// @see text#CharacterIterator#hasNext
-		inline bool DocumentCharacterIterator::hasNext() const /*throw()*/ {
+		inline bool DocumentCharacterIterator::hasNext() const BOOST_NOEXCEPT {
 			return tell() != region().second;
 		}
 		
 		/// @see text#CharacterIterator#hasPrevious
-		inline bool DocumentCharacterIterator::hasPrevious() const /*throw()*/ {
+		inline bool DocumentCharacterIterator::hasPrevious() const BOOST_NOEXCEPT {
 			return tell() != region().first;
 		}
 		
 		/// Returns the line.
-		inline const String& DocumentCharacterIterator::line() const /*throw()*/ {
+		inline const String& DocumentCharacterIterator::line() const BOOST_NOEXCEPT {
 			return *line_;
 		}
 		
 		/// Returns the iteration region.
-		inline const Region& DocumentCharacterIterator::region() const /*throw()*/ {
+		inline const Region& DocumentCharacterIterator::region() const BOOST_NOEXCEPT {
 			return region_;
 		}
 		
@@ -106,10 +104,9 @@ namespace ascension {
 		}
 		
 		/// Returns the document position the iterator addresses.
-		inline const Position& DocumentCharacterIterator::tell() const /*throw()*/ {
+		inline const Position& DocumentCharacterIterator::tell() const BOOST_NOEXCEPT {
 			return p_;
 		}
-
 	}
 } // namespace ascension.kernel
 
