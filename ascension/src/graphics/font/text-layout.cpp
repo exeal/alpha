@@ -345,9 +345,10 @@ void TextLayout::dumpRuns(ostream& out) const {
  * @see LineMetricsIterator#extent
  */
 boost::integer_range<Scalar> TextLayout::extent(const boost::integer_range<Index>& lines) const {
-	if(lines.empty())
-		return boost::irange<Scalar>(0, 0);
-	else if(lines.size() == 1)
+	if(lines.empty()) {
+		const Scalar baseline = lineMetrics(lines.front()).baselineOffset();
+		return boost::irange(baseline, baseline);
+	} else if(lines.size() == 1)
 		return lineMetrics(lines.front()).extent();
 
 	const auto orderedLines(ordered(lines));
