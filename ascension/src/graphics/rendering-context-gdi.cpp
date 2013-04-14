@@ -366,17 +366,19 @@ namespace {
 				unitsPerEm_ = 1;	// hmm...
 			else
 				fail(dc, cookie);
-			ascent_ = tm.tmAscent/* * 96.0 / ydpi*/;
-			descent_ = tm.tmDescent/* * 96.0 / ydpi*/;
-			internalLeading_ = tm.tmInternalLeading/* * 96.0 / ydpi*/;
-			externalLeading_ = tm.tmExternalLeading/* * 96.0 / ydpi*/;
-			averageCharacterWidth_ = max<int>(((tm.tmAveCharWidth > 0) ? tm.tmAveCharWidth : ::MulDiv(tm.tmHeight, 56, 100)), 1)/* * 96.0 / xdpi*/;
+			ascent_ = static_cast<Unit>(tm.tmAscent)/* * 96.0 / ydpi*/;
+			descent_ = static_cast<Unit>(tm.tmDescent)/* * 96.0 / ydpi*/;
+			internalLeading_ = static_cast<Unit>(tm.tmInternalLeading)/* * 96.0 / ydpi*/;
+			externalLeading_ = static_cast<Unit>(tm.tmExternalLeading)/* * 96.0 / ydpi*/;
+			averageCharacterWidth_ = ((tm.tmAveCharWidth > 0) ?
+				static_cast<Unit>(tm.tmAveCharWidth) : static_cast<Unit>(tm.tmHeight) * 0.56f)/* * 96.0 / xdpi*/;
+			averageCharacterWidth_ = max(averageCharacterWidth_, static_cast<Unit>(1));
 
 			// x-height
 			GLYPHMETRICS gm;
 			const MAT2 temp = {{0, 1}, {0, 0}, {0, 0}, {0, 1}};
 			xHeight_ = (::GetGlyphOutlineW(dc.get(), L'x', GGO_METRICS, &gm, 0, nullptr, nullptr) != GDI_ERROR
-				&& gm.gmptGlyphOrigin.y > 0) ? gm.gmptGlyphOrigin.y : boost::math::iround(static_cast<double>(ascent_) * 0.56);
+				&& gm.gmptGlyphOrigin.y > 0) ? static_cast<Unit>(gm.gmptGlyphOrigin.y) : boost::math::iround(static_cast<double>(ascent_) * 0.56);
 			if(xHeight_ == GDI_ERROR)
 				fail(dc, cookie);
 		}
