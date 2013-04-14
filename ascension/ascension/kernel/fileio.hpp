@@ -3,7 +3,7 @@
  * Defines @c ascension#kernel#fileio namespace.
  * @author exeal
  * @date 2009 separated from document.hpp
- * @date 2009-2012
+ * @date 2009-2013
  */
 
 #ifndef ASCENSION_FILEIO_HPP
@@ -27,7 +27,6 @@ namespace ascension {
 
 		/// Provides features about file-bound document.
 		namespace fileio {
-
 			/**
 			 * Character type for file names. This is equivalent to
 			 * @c ASCENSION_FILE_NAME_CHARACTER_TYPE configuration symbol.
@@ -53,8 +52,8 @@ namespace ascension {
 			public:
 				explicit IOException(const PathString& fileName);
 				IOException(const PathString& fileName, const std::error_code::value_type code);
-				~IOException() throw();
-				const PathString& fileName() const /*throw()*/;
+				~IOException() BOOST_NOEXCEPT;
+				const PathString& fileName() const BOOST_NOEXCEPT;
 			public:
 				static bool isFileNotFound(const IOException& e);
 				static bool isPermissionDenied(const IOException& e);
@@ -104,7 +103,7 @@ namespace ascension {
 				 * @retval true	the process will be continued and the internal time stamp will be updated
 				 * @retval false the process will be aborted
 				 */
-				virtual bool queryAboutUnexpectedDocumentFileTimeStamp(Document& document, Context context) /*throw()*/ = 0;
+				virtual bool queryAboutUnexpectedDocumentFileTimeStamp(Document& document, Context context) BOOST_NOEXCEPT = 0;
 				friend class TextFileDocumentInput;
 			};
 #if 0
@@ -141,15 +140,15 @@ namespace ascension {
 				~TextFileStreamBuffer();
 				TextFileStreamBuffer* close();
 				TextFileStreamBuffer* closeAndDiscard();
-				std::string encoding() const /*throw()*/;
-				const PathString& fileName() const /*throw()*/;
-				bool isOpen() const /*throw()*/;
-				std::ios_base::openmode mode() const /*throw()*/;
-				bool unicodeByteOrderMark() const /*throw()*/;
+				std::string encoding() const BOOST_NOEXCEPT;
+				const PathString& fileName() const BOOST_NOEXCEPT;
+				bool isOpen() const BOOST_NOEXCEPT;
+				std::ios_base::openmode mode() const BOOST_NOEXCEPT;
+				bool unicodeByteOrderMark() const BOOST_NOEXCEPT;
 			private:
 				void buildEncoder(const std::string& encoding, bool detectEncoding);
 				void buildInputMapping();
-				TextFileStreamBuffer* closeFile() /*throw()*/;
+				TextFileStreamBuffer* closeFile() BOOST_NOEXCEPT;
 				void openForReading(const std::string& encoding);
 				void openForWriting(const std::string& encoding, bool writeUnicodeByteOrderMark);
 				// std.basic_streambuf
@@ -206,38 +205,48 @@ namespace ascension {
 				};
 			public:
 				explicit TextFileDocumentInput(Document& document);
-				~TextFileDocumentInput() /*throw()*/;
+				~TextFileDocumentInput() BOOST_NOEXCEPT;
 				bool checkTimeStamp();
-				const Document& document() const /*throw()*/;
-				// listener
+				const Document& document() const BOOST_NOEXCEPT;
+
+				/// @name Listeners
+				/// @{
 				void addListener(FilePropertyListener& listener);
 				void removeListener(FilePropertyListener& listener);
-				// bound file
+				/// @}
+
+				/// @name Bound File
+				/// @{
 				void bind(const PathString& fileName);
-				PathString fileName() const /*throw()*/;
-				bool isBoundToFile() const /*throw()*/;
+				PathString fileName() const BOOST_NOEXCEPT;
+				bool isBoundToFile() const BOOST_NOEXCEPT;
 				void lockFile(const LockMode& mode);
-				LockType lockType() const /*throw()*/;
+				LockType lockType() const BOOST_NOEXCEPT;
 				void revert(const std::string& encoding,
 					encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
 					UnexpectedFileTimeStampDirector* unexpectedTimeStampDirector = nullptr);
-				void unbind() /*throw()*/;
+				void unbind() BOOST_NOEXCEPT;
 				void unlockFile();
 				void write(const WritingFormat& format, const WritingOption* options = nullptr);
-				// encodings
+				/// @}
+
+				/// @name Encodings
+				/// @{
 				TextFileDocumentInput& setEncoding(const std::string& encoding);
 				TextFileDocumentInput& setNewline(text::Newline newline);
-				bool unicodeByteOrderMark() const /*throw()*/;
+				bool unicodeByteOrderMark() const BOOST_NOEXCEPT;
+				/// @}
+
 				// DocumentInput
-				std::string encoding() const /*throw()*/;
-				String location() const /*throw()*/;
-				text::Newline newline() const /*throw()*/;
+				std::string encoding() const BOOST_NOEXCEPT;
+				String location() const BOOST_NOEXCEPT;
+				text::Newline newline() const BOOST_NOEXCEPT;
 			private:
 				void documentModificationSignChanged(const Document& document);
-				bool verifyTimeStamp(bool internal, Time& newTimeStamp) /*throw()*/;
+				bool verifyTimeStamp(bool internal, Time& newTimeStamp) BOOST_NOEXCEPT;
 				// DocumentInput
-				bool isChangeable(const Document& document) const /*throw()*/;
-				void postFirstDocumentChange(const Document& document) /*throw()*/;
+				bool isChangeable(const Document& document) const BOOST_NOEXCEPT;
+				void postFirstDocumentChange(const Document& document) BOOST_NOEXCEPT;
 			private:
 				std::shared_ptr<TextFileDocumentInput> weakSelf_;	// for Document.setInput call
 				class FileLocker;
@@ -259,7 +268,7 @@ namespace ascension {
 			class DirectoryIteratorBase {
 				ASCENSION_NONCOPYABLE_TAG(DirectoryIteratorBase);
 			public:
-				virtual ~DirectoryIteratorBase() /*throw()*/;
+				virtual ~DirectoryIteratorBase() BOOST_NOEXCEPT;
 				/**
 				 * Returns the current entry name.
 				 * @throw NoSuchElementException the iteration has already ended
@@ -269,11 +278,11 @@ namespace ascension {
 				 * Returns the directory name this iterator traverses. This value does not end
 				 * with path-separator.
 				 */
-				virtual const PathString& directory() const /*throw()*/ = 0;
+				virtual const PathString& directory() const BOOST_NOEXCEPT = 0;
 				/**
 				 * Returns @c false if the iterator is end.
 				 */
-				virtual bool hasNext() const /*throw()*/ = 0;
+				virtual bool hasNext() const BOOST_NOEXCEPT = 0;
 				/**
 				 * Returns @c true if the current entry is directory.
 				 * @throw NoSuchElementException the iteration has already ended
@@ -286,7 +295,7 @@ namespace ascension {
 				 */
 				virtual void next() = 0;
 			protected:
-				DirectoryIteratorBase() /*throw()*/;
+				DirectoryIteratorBase() BOOST_NOEXCEPT;
 			};
 
 			/// Traverses entries in the specified directory.
@@ -294,11 +303,11 @@ namespace ascension {
 			public:
 				// constructors
 				DirectoryIterator(const PathCharacter* directoryName);
-				~DirectoryIterator() /*throw()*/;
+				~DirectoryIterator() BOOST_NOEXCEPT;
 				// DirectoryIteratorBase
 				const PathString& current() const;
-				const PathString& directory() const /*throw()*/;
-				bool hasNext() const /*throw()*/;
+				const PathString& directory() const BOOST_NOEXCEPT;
+				bool hasNext() const BOOST_NOEXCEPT;
 				bool isDirectory() const;
 				void next();
 			private:
@@ -318,15 +327,15 @@ namespace ascension {
 			public:
 				// constructors
 				RecursiveDirectoryIterator(const PathCharacter* directoryName);
-				~RecursiveDirectoryIterator() /*throw()*/;
+				~RecursiveDirectoryIterator() BOOST_NOEXCEPT;
 				// attributes
 				void dontPush();
-				std::size_t level() const /*throw()*/;
+				std::size_t level() const BOOST_NOEXCEPT;
 				void pop();
 				// DirectoryIteratorBase
 				const PathString& current() const;
-				const PathString& directory() const /*throw()*/;
-				bool hasNext() const /*throw()*/;
+				const PathString& directory() const BOOST_NOEXCEPT;
+				bool hasNext() const BOOST_NOEXCEPT;
 				bool isDirectory() const;
 				void next();
 			private:
@@ -348,30 +357,29 @@ namespace ascension {
 				const PathString& fileName, const WritingFormat& format, bool append = false);
 
 			/// Returns the file name.
-			inline const PathString& TextFileStreamBuffer::fileName() const /*throw()*/ {return fileName_;}
+			inline const PathString& TextFileStreamBuffer::fileName() const BOOST_NOEXCEPT {return fileName_;}
 
 			/// Returns the open mode.
-			inline std::ios_base::openmode TextFileStreamBuffer::mode() const /*throw()*/ {return mode_;}
+			inline std::ios_base::openmode TextFileStreamBuffer::mode() const BOOST_NOEXCEPT {return mode_;}
 
 			/// Returns the document.
-			inline const Document& TextFileDocumentInput::document() const /*throw()*/ {return document_;}
+			inline const Document& TextFileDocumentInput::document() const BOOST_NOEXCEPT {return document_;}
 
 			/// @see DocumentInput#encoding, #setEncoding
-			inline std::string TextFileDocumentInput::encoding() const /*throw()*/ {return encoding_;}
+			inline std::string TextFileDocumentInput::encoding() const BOOST_NOEXCEPT {return encoding_;}
 
 			/// Returns the file full name or an empty string if the document is not bound to any of the files.
-			inline PathString TextFileDocumentInput::fileName() const /*throw()*/ {return fileName_;}
+			inline PathString TextFileDocumentInput::fileName() const BOOST_NOEXCEPT {return fileName_;}
 
 			/// Returns true if the document is bound to any file.
-			inline bool TextFileDocumentInput::isBoundToFile() const /*throw()*/ {return !fileName_.empty();}
+			inline bool TextFileDocumentInput::isBoundToFile() const BOOST_NOEXCEPT {return !fileName_.empty();}
 
 			/// @see DocumentInput#newline, #setNewline
-			inline text::Newline TextFileDocumentInput::newline() const /*throw()*/ {return newline_;}
+			inline text::Newline TextFileDocumentInput::newline() const BOOST_NOEXCEPT {return newline_;}
 
 			/// Returns true if the last opened input file contained Unicode byte order mark, or wrote BOM into
 			/// the last output file.
-			inline bool TextFileDocumentInput::unicodeByteOrderMark() const /*throw()*/ {return unicodeByteOrderMark_;}
-
+			inline bool TextFileDocumentInput::unicodeByteOrderMark() const BOOST_NOEXCEPT {return unicodeByteOrderMark_;}
 		}	// namespace fileio
 	}	// namespace kernel
 }	// namespace ascension

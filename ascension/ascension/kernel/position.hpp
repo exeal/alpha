@@ -19,7 +19,6 @@
 
 namespace ascension {
 	namespace kernel {
-
 		/**
 		 * @c Position represents a position in the document by a line number and an offset in the line.
 		 * @note This class is not intended to be subclassed.
@@ -224,7 +223,6 @@ namespace ascension {
 		private:
 			const boost::optional<Region> requestedRegion_;
 		};
-
 	}
 } // namespace ascension.kernel
 

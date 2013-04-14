@@ -2,7 +2,7 @@
  * @file document-stream.hpp
  * @author exeal
  * @date 2009 separated from document.hpp
- * @date 2003-2011
+ * @date 2003-2013
  */
 
 #ifndef ASCENSION_STREAM_HPP
@@ -14,7 +14,6 @@
 
 namespace ascension {
 	namespace kernel {
-
 		/**
 		 * @c std#basic_streambuf implementation for @c Document. This supports both input and
 		 * output streams. Seeking is not supported. Virtual methods this class overrides are:
@@ -30,8 +29,8 @@ namespace ascension {
 			explicit DocumentBuffer(Document& document,
 				const Position& initialPosition = Position(0, 0), text::Newline newline = text::NLF_RAW_VALUE,
 				std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
-			~DocumentBuffer() /*throw()*/;
-			const Position&	tell() const /*throw()*/;
+			~DocumentBuffer() BOOST_NOEXCEPT;
+			const Position&	tell() const BOOST_NOEXCEPT;
 		private:
 			int_type overflow(int_type c);
 			int sync();

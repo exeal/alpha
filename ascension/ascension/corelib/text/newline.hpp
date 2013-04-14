@@ -4,7 +4,7 @@
  * @date 2003-2006 was EditDoc.h
  * @date 2006-2011 was document.hpp
  * @date 2011-05-02 separated from document.hpp
- * @date 2011-2012
+ * @date 2011-2013
  * @see kernel/document.hpp
  */
 
@@ -17,9 +17,7 @@
 #include <algorithm>	// std.find_first_of
 
 namespace ascension {
-
 	namespace text {
-
 		/**
 		 * Value represents a newline in document. @c NLF_RAW_VALUE and @c NLF_DOCUMENT_INPUT are
 		 * special values indicate how to interpret newlines during any text I/O.
@@ -41,7 +39,7 @@ namespace ascension {
 			NLF_PARAGRAPH_SEPARATOR,
 			/// Represents any NLF as the actual newline of the line (@c kernel#Document#Line#newline()).
 			NLF_RAW_VALUE,
-			/// Represents any NLF as the value of @c kernel#IDocumentInput#newline().
+			/// Represents any NLF as the value of @c kernel#DocumentInput#newline().
 			NLF_DOCUMENT_INPUT,
 			NLF_COUNT
 		};
@@ -80,7 +78,7 @@ namespace ascension {
 		 * @param text The text string
 		 * @return The number of lines
 		 */
-		inline Index calculateNumberOfLines(const StringPiece& text) /*throw()*/ {
+		inline Index calculateNumberOfLines(const StringPiece& text) BOOST_NOEXCEPT {
 			return calculateNumberOfLines(text.begin(), text.end());
 		}
 
@@ -113,7 +111,7 @@ namespace ascension {
 		 * Returns @c true if the given newline value is a literal.
 		 * @throw UnknownValueException @a newline is invalid (undefined value)
 		 */
-		inline bool isLiteralNewline(Newline newline) /*throw()*/ {
+		inline bool isLiteralNewline(Newline newline) BOOST_NOEXCEPT {
 #if NLF_LINE_FEED != 0 //|| NLF_COUNT != 8
 #	error "Check the definition of Newline and revise this code."
 #endif
@@ -172,7 +170,6 @@ namespace ascension {
 					throw UnknownValueException("newline");
 			}
 		}
-
 	}
 } // namespace ascension.text
 

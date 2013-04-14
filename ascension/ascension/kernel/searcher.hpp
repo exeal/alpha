@@ -2,7 +2,7 @@
  * @file searcher.hpp
  * @author exeal
  * @date 2004-2006 (was TextSearcher.h)
- * @date 2006-2012
+ * @date 2006-2013
  */
 
 #ifndef ASCENSION_SEARCHER_HPP
@@ -20,7 +20,6 @@
 #include <vector>
 
 namespace ascension {
-
 	namespace text {class BreakIterator;}
 
 #ifndef ASCENSION_NO_REGEX
@@ -28,7 +27,6 @@ namespace ascension {
 #endif // !ASCENSION_NO_REGEX
 
 	namespace searcher {
-
 		/**
 		 * @note This class is not intended to be subclassed.
 		 */
@@ -42,15 +40,15 @@ namespace ascension {
 #endif // !ASCENSION_NO_UNICODE_COLLATION
 );
 			// attributes
-			bool isCaseSensitive() const /*throw()*/;
-			const String& pattern() const /*throw()*/;
+			bool isCaseSensitive() const BOOST_NOEXCEPT;
+			const String& pattern() const BOOST_NOEXCEPT;
 			// operations
 			bool matches(const text::CharacterIterator& target) const;
 			bool search(const text::CharacterIterator& target, Direction direction,
 				std::unique_ptr<text::CharacterIterator>& matchedFirst,
 				std::unique_ptr<text::CharacterIterator>& matchedLast) const;
 		private:
-			void makeShiftTable(Direction direction) /*throw()*/;
+			void makeShiftTable(Direction direction) BOOST_NOEXCEPT;
 		private:
 			const String pattern_;
 			const bool caseSensitive_;
@@ -104,9 +102,21 @@ namespace ascension {
 		template<typename SourceException>
 		class ReplacementInterruptedException : public SourceException {
 		public:
-			explicit ReplacementInterruptedException(std::size_t numberOfReplacements);
-			ReplacementInterruptedException(const char* message, std::size_t numberOfReplacements);
-			std::size_t numberOfReplacements() const /*throw()*/;
+			/**
+			 * Constructor.
+			 * @param numberOfReplacements The number of the replacements the object done successfully
+			 */
+			explicit ReplacementInterruptedException(std::size_t numberOfReplacements)
+				: numberOfReplacements_(numberOfReplacements) {}
+			/**
+			 * Constructor.
+			 * @param message The message string passed to the @a SourceException's constructor
+			 * @param numberOfReplacements The number of the replacements the object done successfully
+			 */
+			ReplacementInterruptedException(const char* message, std::size_t numberOfReplacements)
+				: SourceException(message), numberOfReplacements_(numberOfReplacements) {}
+			/// Returns the number of the replacements the object done successfully.
+			std::size_t numberOfReplacements() const BOOST_NOEXCEPT {return numberOfReplacements_;}
 		private:
 			const std::size_t numberOfReplacements_;
 		};
@@ -135,32 +145,45 @@ namespace ascension {
 				MATCH_WORD
 			};
 		public:
-			// constructor
 			TextSearcher();
-			// pattern/replacement
-			bool hasPattern() const /*throw()*/;
-			std::size_t numberOfStoredPatterns() const /*throw()*/;
-			std::size_t numberOfStoredReplacements() const /*throw()*/;
+
+			/// @name Pattern and Replacement
+			/// @{
+			bool hasPattern() const BOOST_NOEXCEPT;
+			std::size_t numberOfStoredPatterns() const BOOST_NOEXCEPT;
+			std::size_t numberOfStoredReplacements() const BOOST_NOEXCEPT;
 			const String& pattern(std::size_t index = 0) const;
 			const String& replacement(std::size_t index = 0) const;
-			void setMaximumNumberOfStoredStrings(std::size_t number) /*throw()*/;
+			void setMaximumNumberOfStoredStrings(std::size_t number) BOOST_NOEXCEPT;
 			template<typename PatternType>
 			TextSearcher& setPattern(std::unique_ptr<const PatternType> pattern, bool dontRemember = false);
-			// search conditions
-			int collationWeight() const /*throw()*/;
-			bool isCaseSensitive() const /*throw()*/;
+			/// @}
+
+			/// @a name Search Conditions
+			/// @{
+			int collationWeight() const BOOST_NOEXCEPT;
+			bool isCaseSensitive() const BOOST_NOEXCEPT;
 			TextSearcher& setWholeMatch(WholeMatch newValue);
-			Type type() const /*throw()*/;
-			bool usesCanonicalEquivalents() const /*throw()*/;
-			WholeMatch wholeMatch() const /*throw()*/;
-//			TextSearcher& wrapAround(bool wrap) /*throw()*/;
-//			bool wrapsAround() const /*throw()*/;
-			// result
-			bool isLastPatternMatched() const /*throw()*/;
-			// services
-			bool isMigemoAvailable() const /*throw()*/;
-			static bool isRegexAvailable() /*throw()*/;
-			// operations
+			Type type() const BOOST_NOEXCEPT;
+			bool usesCanonicalEquivalents() const BOOST_NOEXCEPT;
+			WholeMatch wholeMatch() const BOOST_NOEXCEPT;
+//			TextSearcher& wrapAround(bool wrap) BOOST_NOEXCEPT;
+//			bool wrapsAround() const BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name Search Result
+			/// @{
+			bool isLastPatternMatched() const BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name Services
+			/// @{
+			bool isMigemoAvailable() const BOOST_NOEXCEPT;
+			static bool isRegexAvailable() BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name Operations
+			/// @{
 			void abortInteractiveReplacement();
 			std::size_t replaceAll(
 				kernel::Document& document, const kernel::Region& scope,
@@ -169,6 +192,8 @@ namespace ascension {
 				const kernel::Region& scope, Direction direction, kernel::Region& matchedRegion) const;
 			template<typename InputIterator>
 			void setStoredStrings(InputIterator first, InputIterator last, bool forReplacements);
+			/// @}
+
 		private:
 			void pushHistory(const String& s, bool forReplacements);
 		private:
@@ -183,13 +208,13 @@ namespace ascension {
 				boost::optional<kernel::Region> matchedRegion;
 				Direction direction;
 				std::size_t documentRevisionNumber;
-				LastResult() /*throw()*/ : document(nullptr), direction(Direction::FORWARD) {}
-				~LastResult() /*throw()*/ {reset();}
-				bool checkDocumentRevision(const kernel::Document& current) const /*throw()*/ {
+				LastResult() BOOST_NOEXCEPT : document(nullptr), direction(Direction::FORWARD) {}
+				~LastResult() BOOST_NOEXCEPT {reset();}
+				bool checkDocumentRevision(const kernel::Document& current) const BOOST_NOEXCEPT {
 					return document == &current && documentRevisionNumber == current.revisionNumber();}
-				bool matched() const /*throw()*/ {return matchedRegion;}
-				void reset() /*throw()*/ {matchedRegion = boost::none;}
-				void updateDocumentRevision(const kernel::Document& document) /*throw()*/ {
+				bool matched() const BOOST_NOEXCEPT {return matchedRegion;}
+				void reset() BOOST_NOEXCEPT {matchedRegion = boost::none;}
+				void updateDocumentRevision(const kernel::Document& document) BOOST_NOEXCEPT {
 					this->document = &document; documentRevisionNumber = document.revisionNumber();}
 			} lastResult_;
 			Type searchType_;
@@ -255,16 +280,20 @@ namespace ascension {
 		class IncrementalSearcher : public kernel::DocumentListener, public kernel::BookmarkListener {
 			ASCENSION_NONCOPYABLE_TAG(IncrementalSearcher);
 		public:
-			// constructor
-			IncrementalSearcher() /*throw()*/;
-			// attributes
-			bool canUndo() const /*throw()*/;
+			IncrementalSearcher() BOOST_NOEXCEPT;
+
+			/// @name Attributes
+			/// @{
+			bool canUndo() const BOOST_NOEXCEPT;
 			Direction direction() const;
-			bool isRunning() const /*throw()*/;
+			bool isRunning() const BOOST_NOEXCEPT;
 			const kernel::Region& matchedRegion() const;
 			const String& pattern() const;
 			TextSearcher::Type type() const;
-			// operations
+			/// @}
+
+			/// @name Operations
+			/// @{
 			void abort();
 			bool addCharacter(Char c);
 			bool addCharacter(CodePoint c);
@@ -276,13 +305,14 @@ namespace ascension {
 				TextSearcher& searcher, TextSearcher::Type type, Direction direction,
 				IncrementalSearchCallback* callback = nullptr);
 			bool undo();
+			/// @}
 		private:
 			void setPatternToSearcher(bool pushToHistory);
 			bool update();
-			// kernel.IDocumentListener
+			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
-			// kernel.IBookmarkListener
+			// kernel.BookmarkListener
 			void bookmarkChanged(Index line);
 			void bookmarkCleared();
 
@@ -305,135 +335,164 @@ namespace ascension {
 		};
 
 
-// inline /////////////////////////////////////////////////////////////////////////////////////////
+		// inline implementation //////////////////////////////////////////////////////////////////
 
-	/// Returns @c true if the pattern performs case-sensitive match.
-	inline bool LiteralPattern::isCaseSensitive() const /*throw()*/ {return caseSensitive_;}
-	/// Returns the pattern string.
-	inline const String& LiteralPattern::pattern() const /*throw()*/ {return pattern_;}
-	/**
-	 * Constructor.
-	 * @param numberOfReplacements The number of the replacements the object done successfully
-	 */
-	template<typename SourceException>
-	inline ReplacementInterruptedException<SourceException>::ReplacementInterruptedException(
-		std::size_t numberOfReplacements) : numberOfReplacements_(numberOfReplacements) {}
-	/**
-	 * Constructor.
-	 * @param message The message string passed to the @a SourceException's constructor
-	 * @param numberOfReplacements The number of the replacements the object done successfully
-	 */
-	template<typename SourceException>
-	inline ReplacementInterruptedException<SourceException>::ReplacementInterruptedException(
-		const char* message, std::size_t numberOfReplacements)
-		: SourceException(message), numberOfReplacements_(numberOfReplacements) {}
-	/// Returns the number of the replacements the object done successfully.
-	template<typename SourceException>
-	inline std::size_t ReplacementInterruptedException<SourceException>::numberOfReplacements() const /*throw()*/ {return numberOfReplacements_;}
-	/// Returns @c true if any pattern is set on the searcher.
-	inline bool TextSearcher::hasPattern() const /*throw()*/ {
-		return literalPattern_.get() != nullptr
+		/// Returns @c true if the pattern performs case-sensitive match.
+		inline bool LiteralPattern::isCaseSensitive() const BOOST_NOEXCEPT {return caseSensitive_;}
+
+		/// Returns the pattern string.
+		inline const String& LiteralPattern::pattern() const BOOST_NOEXCEPT {return pattern_;}
+
+		/// Returns @c true if any pattern is set on the searcher.
+		inline bool TextSearcher::hasPattern() const BOOST_NOEXCEPT {
+			return literalPattern_.get() != nullptr
 #ifndef ASCENSION_NO_REGEX
-			|| regexPattern_.get() != nullptr
+				|| regexPattern_.get() != nullptr
 #ifndef ASCENSION_NO_MIGEMO
-			|| migemoPattern_.get() != nullptr
+				|| migemoPattern_.get() != nullptr
 #endif // !ASCENSION_NO_MIGEMO
 #endif // !ASCENSION_NO_REGEX
-			;
-	}
-	/// Returns @c true if the search using regular expression is available.
-	inline bool TextSearcher::isRegexAvailable() /*throw()*/ {
+				;
+		}
+
+		/// Returns @c true if the search using regular expression is available.
+		inline bool TextSearcher::isRegexAvailable() BOOST_NOEXCEPT {
 #ifdef ASCENSION_NO_REGEX
-		return false;
+			return false;
 #else
-		return true;
+			return true;
 #endif // ASCENSION_NO_REGEX
-	}
-	/// Returns the number of the stored patterns.
-	inline std::size_t TextSearcher::numberOfStoredPatterns() const /*throw()*/ {return storedPatterns_.size();}
-	/// Returns the number of the stored replacements.
-	inline std::size_t TextSearcher::numberOfStoredReplacements() const /*throw()*/ {return storedReplacements_.size();}
-	/// Returns the pattern string.
-	inline const String& TextSearcher::pattern(std::size_t index /* = nullptr */) const {
-		if(index >= storedPatterns_.size()) throw IndexOutOfBoundsException();
-		std::list<String>::const_iterator i(storedPatterns_.begin()); std::advance(i, index); return *i;}
-	/// Returns the replacement string.
-	inline const String& TextSearcher::replacement(std::size_t index /* = nullptr */) const {
-		if(index >= storedReplacements_.size()) throw IndexOutOfBoundsException();
-		std::list<String>::const_iterator i(storedReplacements_.begin()); std::advance(i, index); return *i;}
-	template<> inline TextSearcher& TextSearcher::setPattern<LiteralPattern>(std::unique_ptr<const LiteralPattern> pattern, bool dontRemember /* = false */) {
-		if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
-			pushHistory(pattern->pattern(), false);
-		literalPattern_ = move(pattern);
+		}
+
+		/// Returns the number of the stored patterns.
+		inline std::size_t TextSearcher::numberOfStoredPatterns() const BOOST_NOEXCEPT {
+			return storedPatterns_.size();
+		}
+
+		/// Returns the number of the stored replacements.
+		inline std::size_t TextSearcher::numberOfStoredReplacements() const BOOST_NOEXCEPT {
+			return storedReplacements_.size();
+		}
+	
+		/// Returns the pattern string.
+		inline const String& TextSearcher::pattern(std::size_t index /* = nullptr */) const {
+			if(index >= storedPatterns_.size())
+				throw IndexOutOfBoundsException();
+			std::list<String>::const_iterator i(storedPatterns_.begin());
+			std::advance(i, index);
+			return *i;
+		}
+
+		/// Returns the replacement string.
+		inline const String& TextSearcher::replacement(std::size_t index /* = nullptr */) const {
+			if(index >= storedReplacements_.size())
+				throw IndexOutOfBoundsException();
+			std::list<String>::const_iterator i(storedReplacements_.begin());
+			std::advance(i, index);
+			return *i;
+		}
+
+		template<> inline TextSearcher& TextSearcher::setPattern<LiteralPattern>(
+				std::unique_ptr<const LiteralPattern> pattern, bool dontRemember /* = false */) {
+			if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
+				pushHistory(pattern->pattern(), false);
+			literalPattern_ = move(pattern);
 #ifndef ASCENSION_NO_REGEX
-		regexPattern_.reset();
-		regexMatcher_.reset();
+			regexPattern_.reset();
+			regexMatcher_.reset();
 #ifndef ASCENSION_NO_MIGEMO
-		migemoPattern_.reset();
+			migemoPattern_.reset();
 #endif // !ASCENSION_NO_MIGEMO
 #endif // !ASCENSION_NO_REGEX
-		return *this;
-	}
+			return *this;
+		}
+
 #ifndef ASCENSION_NO_REGEX
-	template<> inline TextSearcher& TextSearcher::setPattern<regex::Pattern>(std::unique_ptr<const regex::Pattern> pattern, bool dontRemember /* = false */) {
-		if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
-			pushHistory(pattern->pattern(), false);
-		literalPattern_.reset();
-		regexPattern_ = move(pattern);
-		regexMatcher_.reset();
+		template<> inline TextSearcher& TextSearcher::setPattern<regex::Pattern>(
+				std::unique_ptr<const regex::Pattern> pattern, bool dontRemember /* = false */) {
+			if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
+				pushHistory(pattern->pattern(), false);
+			literalPattern_.reset();
+			regexPattern_ = move(pattern);
+			regexMatcher_.reset();
 #ifndef ASCENSION_NO_MIGEMO
-		migemoPattern_.reset();
+			migemoPattern_.reset();
 #endif // !ASCENSION_NO_MIGEMO
-		return *this;
-	}
+			return *this;
+		}
+
 #ifndef ASCENSION_NO_MIGEMO
-	template<> inline TextSearcher& TextSearcher::setPattern<regex::MigemoPattern>(std::unique_ptr<const regex::MigemoPattern> pattern, bool dontRemember /* = false */) {
-		if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
-			pushHistory(pattern->pattern(), false);
-		literalPattern_.reset();
-		regexPattern_.reset();
-		migemoPattern_ = move(pattern);
-		regexMatcher_.reset();
-		return *this;
-	}
+		template<> inline TextSearcher& TextSearcher::setPattern<regex::MigemoPattern>(
+				std::unique_ptr<const regex::MigemoPattern> pattern, bool dontRemember /* = false */) {
+			if(!dontRemember && (storedPatterns_.empty() || pattern->pattern() != storedPatterns_.front()))
+				pushHistory(pattern->pattern(), false);
+			literalPattern_.reset();
+			regexPattern_.reset();
+			migemoPattern_ = move(pattern);
+			regexMatcher_.reset();
+			return *this;
+		}
 #endif // !ASCENSION_NO_MIGEMO
 #endif // !ASCENSION_NO_REGEX
 
-	/**
-	 * Sets the stored list.
-	 * @param first The first string of the list
-	 * @param last The end string of the list
-	 * @param forReplacements Set @c true to set the replacements list
-	 */
-	template<typename InputIterator>
-	inline void TextSearcher::setStoredStrings(InputIterator first, InputIterator last, bool forReplacements) {
-		(forReplacements ? storedReplacements_ : storedPatterns_).assign(first, last);}
-	/// Returns if the previous command is undoable.
-	inline bool IncrementalSearcher::canUndo() const /*throw()*/ {return !operationHistory_.empty();}
-	/**
-	 * Returns the direction of the search.
-	 * @return The direction
-	 * @throw IllegalStateException The searcher is not running
-	 */
-	inline Direction IncrementalSearcher::direction() const {checkRunning(); return statusHistory_.top().direction;}
-	/// Returns true if the search is active.
-	inline bool IncrementalSearcher::isRunning() const /*throw()*/ {return !statusHistory_.empty();}
-	/**
-	 * Returns the matched region.
-	 * @throw NotRunningException the searcher is not running
-	 */
-	inline const kernel::Region& IncrementalSearcher::matchedRegion() const {checkRunning(); return matchedRegion_;}
-	/**
-	 * Returns the current search pattern.
-	 * @throw NotRunningException The searcher is not running
-	 */
-	inline const String& IncrementalSearcher::pattern() const {checkRunning(); return pattern_;}
-	/**
-	 * Returns the current search type.
-	 * @throw NotRunningException The searcher is not running
-	 */
-	inline TextSearcher::Type IncrementalSearcher::type() const {checkRunning(); return type_;}
+		/**
+		 * Sets the stored list.
+		 * @param first The first string of the list
+		 * @param last The end string of the list
+		 * @param forReplacements Set @c true to set the replacements list
+		 */
+		template<typename InputIterator>
+		inline void TextSearcher::setStoredStrings(InputIterator first, InputIterator last, bool forReplacements) {
+			(forReplacements ? storedReplacements_ : storedPatterns_).assign(first, last);
+		}
 
-}} // namespace ascension.searcher
+		/// Returns if the previous command is undoable.
+		inline bool IncrementalSearcher::canUndo() const BOOST_NOEXCEPT {
+			return !operationHistory_.empty();
+		}
+
+		/**
+		 * Returns the direction of the search.
+		 * @return The direction
+		 * @throw IllegalStateException The searcher is not running
+		 */
+		inline Direction IncrementalSearcher::direction() const {
+			checkRunning();
+			return statusHistory_.top().direction;
+		}
+
+		/// Returns true if the search is active.
+		inline bool IncrementalSearcher::isRunning() const BOOST_NOEXCEPT {
+			return !statusHistory_.empty();
+		}
+
+		/**
+		 * Returns the matched region.
+		 * @throw NotRunningException the searcher is not running
+		 */
+		inline const kernel::Region& IncrementalSearcher::matchedRegion() const {
+			checkRunning();
+			return matchedRegion_;
+		}
+
+		/**
+		 * Returns the current search pattern.
+		 * @throw NotRunningException The searcher is not running
+		 */
+		inline const String& IncrementalSearcher::pattern() const {
+			checkRunning();
+			return pattern_;
+		}
+
+		/**
+		 * Returns the current search type.
+		 * @throw NotRunningException The searcher is not running
+		 */
+		inline TextSearcher::Type IncrementalSearcher::type() const {
+			checkRunning();
+			return type_;
+		}
+	}
+} // namespace ascension.searcher
 
 #endif // !ASCENSION_SEARCHER_HPP
