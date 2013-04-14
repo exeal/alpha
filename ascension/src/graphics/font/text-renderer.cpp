@@ -137,7 +137,7 @@ namespace {
  * @param enableDoubleBuffering Set @c true to use double-buffering for non-flicker drawing
  */
 TextRenderer::TextRenderer(Presentation& presentation,
-		const FontCollection& fontCollection, const NativeSize& initialSize)
+		const FontCollection& fontCollection, const Dimension& initialSize)
 		: presentation_(presentation), fontCollection_(fontCollection)/*, spacePainter_(new SpacePainter)*/ {
 //	textWrapping_.measure = 0;
 	layouts_.reset(new LineLayoutVector(presentation.document(),
@@ -191,24 +191,27 @@ void TextRenderer::addDefaultFontListener(DefaultFontListener& listener) {
 
 /**
  * Returns the distance from the baseline of the line @a from to the baseline of the line @a to in
- * block progression direction in pixels.
+ * block progression direction in user units.
  * @param lines The first and second lines
- * @return The distance between the two baselines in pixels
+ * @return The distance between the two baselines in user units
  */
-Scalar TextRenderer::baselineDistance(const Range<VisualLine>& lines) const {
+Scalar TextRenderer::baselineDistance(const boost::integer_range<VisualLine>& lines) const {
 	// TODO: This code does not consider 'line-stacking-strategy'.
-	if(lines.beginning().line == lines.end().line) {
-		if(lines.beginning().subline == lines.end().subline)
+	if(lines.empty()) {
+		if(lines.begin()->subline == lines.end()->subline)
 			return 0;
-		const TextLayout& layout = layouts().at(lines.beginning().line);
-		return layout.baseline(lines.end().subline) - layout.baseline(lines.beginning().subline);
+		const TextLayout& layout = layouts().at(lines.begin()->line);
+		return layout.lineMetrics(lines.end()->subline).baselineOffset() - layout.lineMetrics(lines.begin()->subline).baselineOffset();
 	} else {
-		const TextLayout* layout = &layouts().at(lines.beginning().line);
-		Scalar bpd = layout->extent().end() - layout->baseline(lines.beginning().subline);
-		for(Index line = lines.beginning().line + 1; line < lines.end().line; ++line)
-			bpd += length(layouts().at(line).extent());
-		layout = &layouts().at(lines.end().line);
-		return bpd += layout->baseline(lines.end().subline) - layout->extent().beginning();
+		const TextLayout* layout = &layouts().at(lines.begin()->line);
+		Scalar bpd = *layout->extent().end() - layout->lineMetrics(lines.begin()->subline).baselineOffset();
+		for(Index line = lines.begin()->line + 1; line < lines.end()->line; ++line) {
+//			bpd += layouts().at(line).extent().size();
+			const boost::integer_range<Scalar> lineExtent(ordered(layouts().at(line).extent()));
+			bpd += *lineExtent.end() - *lineExtent.begin();
+		}
+		layout = &layouts().at(lines.end()->line);
+		return bpd += layout->lineMetrics(lines.end()->subline).baselineOffset() - layout->extent().front();
 	}
 }
 
@@ -249,7 +252,7 @@ void TextRenderer::paint(PaintContext& context) const {
  * @param context The graphics context
  * @param alignmentPoint The alignment point of the text layout of the line to draw
  */
-void TextRenderer::paint(Index line, PaintContext& context, const NativePoint& alignmentPoint) const /*throw()*/ {
+void TextRenderer::paint(Index line, PaintContext& context, const Point& alignmentPoint) const /*throw()*/ {
 //	if(!enablesDoubleBuffering_) {
 		layouts().at(line).draw(context, alignmentPoint,
 			(lineRenderingOptions_.get() != nullptr) ? lineRenderingOptions_->textPaintOverride(line) : nullptr,
