@@ -598,9 +598,10 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 					const Index e = !last ? line.text().length() : end.offsetInLine;
 					if(recordingChanges_) {
 						erasedString.sputn(line.text().data() + p.offsetInLine, static_cast<streamsize>(e - p.offsetInLine));
-						if(!last)
-							erasedString.sputn(newlineString(line.newline()),
-								static_cast<streamsize>(newlineStringLength(line.newline())));
+						if(!last) {
+							const String eol(line.newline().asString());
+							erasedString.sputn(eol.data(), static_cast<streamsize>(eol.length()));
+						}
 					}
 //					erasedStringLength += e - p.offsetInLine;
 					if(last)
@@ -612,16 +613,16 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 			const Char* const firstNewline = nextNewline;
 			if(text.begin() != nullptr && nextNewline != text.end()) {
 				try {
-					const Char* p = nextNewline + newlineStringLength(eatNewline(nextNewline, text.end()));
+					const Char* p = nextNewline + eatNewline(nextNewline, text.end())->asString().length();
 					while(true) {
 						nextNewline = find_first_of(p, text.end(), NEWLINE_CHARACTERS, ASCENSION_ENDOF(NEWLINE_CHARACTERS));
-						unique_ptr<Line> temp(new Line(revisionNumber_ + 1, String(p, nextNewline), eatNewline(nextNewline, text.end())));
+						unique_ptr<Line> temp(new Line(revisionNumber_ + 1, String(p, nextNewline), *eatNewline(nextNewline, text.end())));
 						allocatedLines.push_back(temp.get());
 						temp.release();
 						insertedStringLength += allocatedLines.back()->text().length();
 						if(nextNewline == text.end())
 							break;
-						p = nextNewline + newlineStringLength(allocatedLines.back()->newline());
+						p = nextNewline + allocatedLines.back()->newline().asString().length();
 					}
 					// merge last line
 					Line& lastAllocatedLine = *allocatedLines.back();
@@ -663,8 +664,8 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 					lines_.erase(b, e);
 					throw;
 				}
-				firstLine.newline_ = (firstNewline != 0) ?
-					eatNewline(firstNewline, text.end()) : lines_[end.line]->newline();
+				firstLine.newline_ = (firstNewline != nullptr) ?
+					*eatNewline(firstNewline, text.end()) : lines_[end.line]->newline();
 				erasedStringLength += erasedLength;
 				insertedStringLength += insertedLength;
 			} catch(...) {

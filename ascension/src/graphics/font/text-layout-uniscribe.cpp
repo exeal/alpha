@@ -2977,7 +2977,7 @@ void TextLayout::draw(PaintContext& context,
 				context.rect.setX(makeRange(0, markWidth));
 			specialCharacterRenderer->drawLineWrappingMark(context);
 		} else if(lineNumber_ < document.numberOfLines() - 1) {	// line teminator
-			const kernel::Newline nlf = document.getLineInformation(lineNumber_).newline();
+			const kernel::Newline nlf(document.getLineInformation(lineNumber_).newline());
 			const int nlfWidth = specialCharacterRenderer->getLineTerminatorWidth(context, nlf);
 			if(context.readingDirection == LEFT_TO_RIGHT)
 				context.rect.setX(makeRange(x, x + nlfWidth));

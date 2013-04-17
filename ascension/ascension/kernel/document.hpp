@@ -134,7 +134,7 @@ namespace ascension {
 			/// Returns a string represents the location of the document input or an empty string.
 			virtual String location() const BOOST_NOEXCEPT = 0;
 			/// Returns the default newline of the document. The returned value can be neighter
-			/// @c text#NLF_RAW_VALUE nor @c text#NLF_DOCUMENT_INPUT.
+			/// @c text#Newline#USE_INTRINSIC_VALUE nor @c text#Newline#USE_DOCUMENT_INPUT.
 			virtual text::Newline newline() const BOOST_NOEXCEPT = 0;
 		private:
 			virtual bool isChangeable(const Document& document) const BOOST_NOEXCEPT = 0;
@@ -224,7 +224,8 @@ namespace ascension {
 				const String& text() const BOOST_NOEXCEPT {return text_;}
 			private:
 				explicit Line(std::size_t revisionNumber) BOOST_NOEXCEPT;
-				Line(std::size_t revisionNumber, const String& text, text::Newline newline = ASCENSION_DEFAULT_NEWLINE);
+				Line(std::size_t revisionNumber, const String& text,
+					const text::Newline& newline = ASCENSION_DEFAULT_NEWLINE);
 				String text_;
 				text::Newline newline_;
 				std::size_t revisionNumber_;
@@ -273,10 +274,10 @@ namespace ascension {
 			/// @{
 			Region accessibleRegion() const BOOST_NOEXCEPT;
 			const Line& getLineInformation(Index line) const;
-			Index length(text::Newline newline = text::NLF_RAW_VALUE) const;
+			Index length(const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE) const BOOST_NOEXCEPT;
 			const String& line(Index line) const;
 			Index lineLength(Index line) const;
-			Index lineOffset(Index line, text::Newline newline = text::NLF_RAW_VALUE) const;
+			Index lineOffset(Index line, const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE) const;
 			Index numberOfLines() const BOOST_NOEXCEPT;
 			Region region() const BOOST_NOEXCEPT;
 			std::size_t revisionNumber() const BOOST_NOEXCEPT;
@@ -422,8 +423,9 @@ namespace ascension {
 
 		/// @defgroup other_free_functions_related_to_document Other Free Functions Related to Document
 		/// @{
-		std::basic_ostream<Char>& writeDocumentToStream(std::basic_ostream<Char>& out,
-			const Document& document, const Region& region, text::Newline newline = text::NLF_RAW_VALUE);
+		std::basic_ostream<Char>& writeDocumentToStream(
+			std::basic_ostream<Char>& out, const Document& document,
+			const Region& region, const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE);
 		/// @}
 
 		namespace positions {

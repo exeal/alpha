@@ -233,7 +233,7 @@ namespace ascension {
 				/// @name Encodings
 				/// @{
 				TextFileDocumentInput& setEncoding(const std::string& encoding);
-				TextFileDocumentInput& setNewline(text::Newline newline);
+				TextFileDocumentInput& setNewline(const text::Newline& newline);
 				bool unicodeByteOrderMark() const BOOST_NOEXCEPT;
 				/// @}
 

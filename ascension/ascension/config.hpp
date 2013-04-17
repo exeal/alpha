@@ -2,7 +2,7 @@
  * @file config.hpp
  * @brief Configure Ascension build settings using this file.
  * @author exeal
- * @date 2005-2011
+ * @date 2005-2013
  */
 
 #ifndef ASCENSION_CONFIG_HPP
@@ -22,13 +22,14 @@
 /**
  * @def ASCENSION_DEFAULT_NEWLINE
  * Default newline. This must be one of @c ascension#kernel#Newline enumerations except 
- * @c ascension#kernel#NLF_RAW_VALUE and @c ascension#kernel#NLF_DOCUMENT_INPUT.
+ * @c ascension#kernel#Newline#USE_INTRINSIC_VALUE and
+*  @c ascension#kernel#Newline#USE_DOCUMENT_INPUT.
  */
 #ifndef ASCENSION_DEFAULT_NEWLINE
 #	ifdef _WIN32
-#		define ASCENSION_DEFAULT_NEWLINE ascension::text::NLF_CR_LF
+#		define ASCENSION_DEFAULT_NEWLINE ascension::text::Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED
 #	else
-#		define ASCENSION_DEFAULT_NEWLINE ascension::text::NLF_LINE_FEED
+#		define ASCENSION_DEFAULT_NEWLINE ascension::text::Newline::LINE_FEED
 #	endif
 #endif	// !ASCENSION_DEFAULT_NEWLINE
 
