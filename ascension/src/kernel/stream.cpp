@@ -2,7 +2,7 @@
  * @file stream.cpp
  * @author exeal
  * @date 2009 separated from document.cpp
- * @date 2010-2012
+ * @date 2010-2013
  */
 
 #include <ascension/kernel/document-stream.hpp>
@@ -17,12 +17,12 @@ using ascension::text::Newline;
  * Constructor.
  * @param document The document
  * @param initialPosition The initial position of streams
- * @param nlr The newline representation
+ * @param newline The newline representation
  * @param streamMode The streaming mode. this can be @c std#ios_base#in and @c std#ios_base#out
  * @throw UnknownValueException @a streamMode is invalid
  */
-DocumentBuffer::DocumentBuffer(Document& document, const Position& initialPosition /* = Position::ZERO_POSITION */,
-		Newline newline /* = NLF_RAW_VALUE */, ios_base::openmode streamMode /* = ios_base::in | ios_base::out */) :
+DocumentBuffer::DocumentBuffer(Document& document, const Position& initialPosition /* = Position(0, 0) */,
+		const Newline& newline /* = Newline::USE_INTRINSIC_VALUE */, ios_base::openmode streamMode /* = ios_base::in | ios_base::out */) :
 		document_(document), newline_(newline), mode_(streamMode), current_(initialPosition) {
 	if((mode_ & ~(ios_base::in | ios_base::out)) != 0)
 		throw UnknownValueException("streamMode");
@@ -30,12 +30,12 @@ DocumentBuffer::DocumentBuffer(Document& document, const Position& initialPositi
 }
 
 /// Destructor.
-DocumentBuffer::~DocumentBuffer() /*throw()*/ {
+DocumentBuffer::~DocumentBuffer() BOOST_NOEXCEPT {
 	sync();
 }
 
 /// Returns the current position in the document.
-const Position& DocumentBuffer::tell() const /*throw()*/ {
+const Position& DocumentBuffer::tell() const BOOST_NOEXCEPT {
 	return current_;
 }
 
@@ -79,16 +79,16 @@ DocumentBuffer::int_type DocumentBuffer::underflow() {
 // document stream classes ////////////////////////////////////////////////////////////////////////
 
 /// Constructor.
-DocumentInputStream::DocumentInputStream(Document& document, const Position& initialPosition /* = Position::ZERO_POSITION */,
-		Newline newline /* = NLF_RAW_VALUE */) : basic_istream<Char>(&buffer_), buffer_(document, initialPosition, newline) {
+DocumentInputStream::DocumentInputStream(Document& document, const Position& initialPosition /* = Position(0, 0) */,
+		const Newline& newline /* = Newline::USE_INTRINSIC_VALUE */) : basic_istream<Char>(&buffer_), buffer_(document, initialPosition, newline) {
 }
 
 /// Constructor.
-DocumentOutputStream::DocumentOutputStream(Document& document, const Position& initialPosition /* = Position::ZERO_POSITION */,
-		Newline newline /* = NLF_RAW_VALUE */) : basic_ostream<Char>(&buffer_), buffer_(document, initialPosition, newline) {
+DocumentOutputStream::DocumentOutputStream(Document& document, const Position& initialPosition /* = Position(0, 0) */,
+		const Newline& newline /* = Newline::USE_INTRINSIC_VALUE */) : basic_ostream<Char>(&buffer_), buffer_(document, initialPosition, newline) {
 }
 
 /// Constructor.
-DocumentStream::DocumentStream(Document& document, const Position& initialPosition /* = Position::ZERO_POSITION */,
-		Newline newline /* = NLF_RAW_VALUE */) : basic_iostream<Char>(&buffer_), buffer_(document, initialPosition, newline) {
+DocumentStream::DocumentStream(Document& document, const Position& initialPosition /* = Position(0, 0) */,
+		const Newline& newline /* = Newline::USE_INTRINSIC_VALUE */) : basic_iostream<Char>(&buffer_), buffer_(document, initialPosition, newline) {
 }

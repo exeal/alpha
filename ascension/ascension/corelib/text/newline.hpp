@@ -14,34 +14,58 @@
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/character.hpp>
+#include <boost/operators.hpp>	// boost.equality_comparable
+#include <boost/optional.hpp>
 #include <algorithm>	// std.find_first_of
 
 namespace ascension {
 	namespace text {
 		/**
-		 * Value represents a newline in document. @c NLF_RAW_VALUE and @c NLF_DOCUMENT_INPUT are
-		 * special values indicate how to interpret newlines during any text I/O.
-		 * @see newlineStringLength, newlineString, kernel#Document, ASCENSION_DEFAULT_NEWLINE,
-		 *      NEWLINE_CHARACTERS
+		 * Value represents a newline in document. @c #USE_INTRINSIC_VALUE and
+		 * @c #USE_DOCUMENT_INPUT are special values indicate how to interpret newlines during any
+		 * text I/O.
+		 * @see kernel#Document, ASCENSION_DEFAULT_NEWLINE, NEWLINE_CHARACTERS
 		 */
-		enum Newline {
-			/// Line feed. Standard of Unix (Lf, U+000A).
-			NLF_LINE_FEED = 0,
-			/// Carriage return. Old standard of Macintosh (Cr, U+000D).
-			NLF_CARRIAGE_RETURN,
-			/// CR+LF. Standard of Windows (CrLf, U+000D U+000A).
-			NLF_CR_LF,
-			/// Next line. Standard of EBCDIC-based OS (U+0085).
-			NLF_NEXT_LINE,
-			/// Line separator (U+2028).
-			NLF_LINE_SEPARATOR,
-			/// Paragraph separator (U+2029).
-			NLF_PARAGRAPH_SEPARATOR,
-			/// Represents any NLF as the actual newline of the line (@c kernel#Document#Line#newline()).
-			NLF_RAW_VALUE,
-			/// Represents any NLF as the value of @c kernel#DocumentInput#newline().
-			NLF_DOCUMENT_INPUT,
-			NLF_COUNT
+		class Newline : public FastArenaObject<Newline>, private boost::equality_comparable<Newline> {
+		public:
+			static const Newline LINE_FEED;
+			static const Newline CARRIAGE_RETURN;
+			static const Newline CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED;
+			static const Newline NEXT_LINE;
+			static const Newline LINE_SEPARATOR;
+			static const Newline PARAGRAPH_SEPARATOR;
+			static const Newline USE_INTRINSIC_VALUE;
+			static const Newline USE_DOCUMENT_INPUT;
+		public:
+			/// Copy-constructor.
+			Newline(const Newline& other) BOOST_NOEXCEPT : value_(other.value_) {}
+			/// Copy-assignment operator.
+			Newline& operator=(const Newline& other) BOOST_NOEXCEPT {
+				return (value_ = other.value_), *this;
+			}
+			/// Equality operator.
+			bool operator==(const Newline& other) const BOOST_NOEXCEPT {return value_ == other.value_;}
+			/**
+			 * Returns a string represents the newline.
+			 * @throw std#logic_error The newline is not literal
+			 */
+			String asString() const {
+				if(!isLiteral())
+					throw std::logic_error("The newline is not literal.");
+				else if(value_ < 0x10000u)
+					return String(1, static_cast<Char>(value_ & 0xffffu));
+				else {
+					static const Char crlf[] = {text::CARRIAGE_RETURN, text::LINE_FEED};
+					return String(crlf, crlf + 1);
+				}
+			}
+			/// Returns @c true if the given newline value is a literal.
+			bool isLiteral() const BOOST_NOEXCEPT {
+				return (value_ & 0x80000000u) == 0;
+			}
+		private:
+			Newline(std::uint32_t value) BOOST_NOEXCEPT;
+			std::uint32_t value_;
 		};
 		
 		/**
@@ -87,87 +111,24 @@ namespace ascension {
 		 * @tparam ForwardIterator The type of @a first and @a last
 		 * @param first The beginning of the buffer
 		 * @param last The end of the buffer
-		 * @return The newline or @c NLF_RAW_VALUE if the beginning of the buffer is not line break
+		 * @return The newline or @c boost#none if the beginning of the buffer is not newline
 		 */
 		template<typename ForwardIterator>
-		inline Newline eatNewline(ForwardIterator first, ForwardIterator last) {
+		inline boost::optional<Newline> eatNewline(ForwardIterator first, ForwardIterator last) {
 			switch(*first) {
 			case LINE_FEED:
-				return NLF_LINE_FEED;
+				return boost::make_optional(Newline::LINE_FEED);
 			case CARRIAGE_RETURN:
-				return (++first != last && *first == LINE_FEED) ? NLF_CR_LF : NLF_CARRIAGE_RETURN;
+				return boost::make_optional((++first != last && *first == LINE_FEED) ?
+					Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED : Newline::CARRIAGE_RETURN);
 			case NEXT_LINE:
-				return NLF_NEXT_LINE;
+				return boost::make_optional(Newline::NEXT_LINE);
 			case LINE_SEPARATOR:
-				return NLF_LINE_SEPARATOR;
+				return boost::make_optional(Newline::LINE_SEPARATOR);
 			case PARAGRAPH_SEPARATOR:
-				return NLF_PARAGRAPH_SEPARATOR;
+				return boost::make_optional(Newline::PARAGRAPH_SEPARATOR);
 			default:
-				return NLF_RAW_VALUE;
-			}
-		}
-
-		/**
-		 * Returns @c true if the given newline value is a literal.
-		 * @throw UnknownValueException @a newline is invalid (undefined value)
-		 */
-		inline bool isLiteralNewline(Newline newline) BOOST_NOEXCEPT {
-#if NLF_LINE_FEED != 0 //|| NLF_COUNT != 8
-#	error "Check the definition of Newline and revise this code."
-#endif
-			if(newline < NLF_LINE_FEED || newline >= NLF_COUNT)
-				throw UnknownValueException("newline");
-			return newline <= NLF_PARAGRAPH_SEPARATOR;
-		}
-		
-		/**
-		 * Returns the null-terminated string represents the specified newline.
-		 * @param newline the newline
-		 * @return The string
-		 * @throw std#invalid_argument @a newline is not a literal value
-		 * @throw UnknownValueException @a newline is undefined
-		 * @see #newlineStringLength
-		 */
-		inline const Char* newlineString(Newline newline) {
-			static const Char NEWLINE_STRINGS[] = {
-				0x000du, 0, 0,
-				0x000au, 0, 0,
-				0x000du, 0x000au, 0,
-				0x0085u, 0, 0,
-				0x2028u, 0, 0,
-				0x2029u, 0, 0
-			};
-			if(newline <= NLF_PARAGRAPH_SEPARATOR)
-				return NEWLINE_STRINGS + newline * 3;
-			else if(newline < NLF_COUNT)
-				throw std::invalid_argument("newline");
-			else
-				throw UnknownValueException("newline");
-		}
-		
-		/**
-		 * Returns the length of the string represents the specified newline.
-		 * @param newline the newline
-		 * @return The length
-		 * @throw std#invalid_argument @a newline is not a literal value
-		 * @throw UnknownValueException @a newline is undefined
-		 * @see #newlineString
-		 */
-		inline Index newlineStringLength(Newline newline) {
-			switch(newline) {
-			case NLF_LINE_FEED:
-			case NLF_CARRIAGE_RETURN:
-			case NLF_NEXT_LINE:
-			case NLF_LINE_SEPARATOR:
-			case NLF_PARAGRAPH_SEPARATOR:
-				return 1;
-			case NLF_CR_LF:
-				return 2;
-			default:
-				if(newline < NLF_COUNT)
-					throw std::invalid_argument("newline");
-				else
-					throw UnknownValueException("newline");
+				return boost::none;
 			}
 		}
 	}

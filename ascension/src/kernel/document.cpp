@@ -20,16 +20,44 @@ using detail::GapVector;
 
 
 namespace {
-	inline Newline resolveNewline(const Document& document, Newline newline) {
-		if(newline == NLF_DOCUMENT_INPUT) {
+	inline Newline resolveNewline(const Document& document, const Newline& newline) {
+		if(newline == Newline::USE_DOCUMENT_INPUT) {
 			// fallback
 			shared_ptr<DocumentInput> input(document.input().lock());
-			newline = (input.get() != 0) ? input->newline() : ASCENSION_DEFAULT_NEWLINE;
-			assert(isLiteralNewline(newline));
+			const Newline resolved((input.get() != nullptr) ? input->newline() : ASCENSION_DEFAULT_NEWLINE);
+			assert(resolved.isLiteral());
+			return resolved;
 		}
 		return newline;
 	}
 } // namespace @0
+
+
+// text.Newline ///////////////////////////////////////////////////////////////////////////////////
+
+/// Line feed. Standard of Unix (Lf, U+000A).
+const Newline Newline::LINE_FEED(LINE_FEED);
+
+/// Carriage return. Old standard of Macintosh (Cr, U+000D).
+const Newline Newline::CARRIAGE_RETURN(CARRIAGE_RETURN);
+
+/// CR+LF. Standard of Windows (CrLf, U+000D U+000A).
+const Newline Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED((text::CARRIAGE_RETURN << 16) | text::LINE_FEED);
+
+/// Next line. Standard of EBCDIC-based OS (U+0085).
+const Newline Newline::NEXT_LINE(NEXT_LINE);
+
+/// Line separator (U+2028).
+const Newline Newline::LINE_SEPARATOR(LINE_SEPARATOR);
+
+/// Paragraph separator (U+2029).
+const Newline Newline::PARAGRAPH_SEPARATOR(PARAGRAPH_SEPARATOR);
+
+/// Represents any NLF as the actual newline of the line (@c kernel#Document#Line#newline()).
+const Newline Newline::USE_INTRINSIC_VALUE(0x80000000u);
+
+/// Represents any NLF as the value of @c kernel#DocumentInput#newline().
+const Newline Newline::USE_DOCUMENT_INPUT(0x80000001u);
 
 
 // kernel free functions //////////////////////////////////////////////////////////////////////////
@@ -43,12 +71,11 @@ namespace {
  * @param region The region to be written (This region is not restricted with narrowing)
  * @param newline The newline representation
  * @return @a out
- * @throw UnknownValueException @a newline is invalid
  * @throw ... Any exceptions out.operator bool, out.write and out.flush throw
- * @see newlineString, Document#insert
+ * @see Newline#asString, Document#insert
  */
 basic_ostream<Char>& kernel::writeDocumentToStream(basic_ostream<Char>& out,
-		const Document& document, const Region& region, Newline newline /* = NLF_RAW_VALUE */) {
+		const Document& document, const Region& region, const Newline& newline /* = Newline::USE_INTRINSIC_VALUE */) {
 	const Position& beginning = region.beginning();
 	const Position end = min(region.end(), document.region().second);
 	if(beginning.line == end.line) {	// shortcut for single-line
@@ -57,10 +84,9 @@ basic_ostream<Char>& kernel::writeDocumentToStream(basic_ostream<Char>& out,
 			out.write(document.line(end.line).data() + beginning.offsetInLine, static_cast<streamsize>(end.offsetInLine - beginning.offsetInLine));
 		}
 	} else {
-		newline = resolveNewline(document, newline);
-		const String eol(isLiteralNewline(newline) ? newlineString(newline) : String());
-		if(eol.empty() && newline != NLF_RAW_VALUE)
-			throw UnknownValueException("newline");
+		const Newline resolvedNewline(resolveNewline(document, newline));
+		const String eol(resolvedNewline.isLiteral() ? resolvedNewline.asString() : String());
+		assert(!eol.empty() || resolvedNewline == Newline::USE_INTRINSIC_VALUE);
 		for(Index i = beginning.line; out; ++i) {
 			const Document::Line& line = document.getLineInformation(i);
 			const Index first = (i == beginning.line) ? beginning.offsetInLine : 0;
@@ -68,9 +94,10 @@ basic_ostream<Char>& kernel::writeDocumentToStream(basic_ostream<Char>& out,
 			out.write(line.text().data() + first, static_cast<streamsize>(last - first));
 			if(i == end.line)
 				break;
-			if(newline == NLF_RAW_VALUE)
-				out.write(newlineString(line.newline()), static_cast<streamsize>(newlineStringLength(line.newline())));
-			else
+			if(resolvedNewline == Newline::USE_INTRINSIC_VALUE) {
+				const String intrinsicEol(line.newline().asString());
+				out.write(intrinsicEol.data(), static_cast<streamsize>(intrinsicEol.length()));
+			} else
 				out.write(eol.data(), static_cast<streamsize>(eol.length()));
 		}
 	}
@@ -115,7 +142,7 @@ Index positions::absoluteOffset(const Document& document, const Position& at, bo
  *                to the end of the inserted text
  * @return The result position
  */
-Position positions::updatePosition(const Position& position, const DocumentChange& change, Direction gravity) /*throw()*/ {
+Position positions::updatePosition(const Position& position, const DocumentChange& change, Direction gravity) BOOST_NOEXCEPT {
 	Position newPosition(position);
 	if(!change.erasedRegion().isEmpty()) {	// deletion
 		if(position < change.erasedRegion().second) {	// the end is behind the current line
@@ -160,7 +187,7 @@ namespace {
 			c += document.lineLength(i);
 		return c;
 	}
-#endif /* _DEBUG */
+#endif // _DEBUG
 } // namespace @0
 
 
@@ -180,7 +207,7 @@ ReadOnlyDocumentException::ReadOnlyDocumentException() :
 }
 
 /// Destructor.
-ReadOnlyDocumentException::~ReadOnlyDocumentException() throw() {
+ReadOnlyDocumentException::~ReadOnlyDocumentException() BOOST_NOEXCEPT {
 }
 
 /// Default constructor.
@@ -189,7 +216,7 @@ DocumentAccessViolationException::DocumentAccessViolationException() :
 }
 
 /// Destructor.
-DocumentAccessViolationException::~DocumentAccessViolationException() throw() {
+DocumentAccessViolationException::~DocumentAccessViolationException() BOOST_NOEXCEPT {
 }
 
 /// Constructor.
@@ -205,13 +232,13 @@ DocumentInput::ChangeRejectedException::ChangeRejectedException() {
  * @param insertedRegion The inserted region in the change
  */
 DocumentChange::DocumentChange(const Region& erasedRegion, const Region& insertedRegion)
-		/*throw()*/ : erasedRegion_(erasedRegion), insertedRegion_(insertedRegion) {
+		BOOST_NOEXCEPT : erasedRegion_(erasedRegion), insertedRegion_(insertedRegion) {
 	const_cast<Region&>(erasedRegion_).normalize();
 	const_cast<Region&>(erasedRegion_).normalize();
 }
 
 /// Private destructor.
-DocumentChange::~DocumentChange() /*throw()*/ {
+DocumentChange::~DocumentChange() BOOST_NOEXCEPT {
 }
 
 
@@ -221,12 +248,12 @@ DocumentChange::~DocumentChange() /*throw()*/ {
  * Private constructor.
  * @param document The document
  */
-Bookmarker::Bookmarker(Document& document) /*throw()*/ : document_(document) {
+Bookmarker::Bookmarker(Document& document) BOOST_NOEXCEPT : document_(document) {
 	document.addListener(*this);
 }
 
 /// Destructor.
-Bookmarker::~Bookmarker() /*throw()*/ {
+Bookmarker::~Bookmarker() BOOST_NOEXCEPT {
 	document_.removeListener(*this);
 }
 
@@ -248,7 +275,7 @@ Bookmarker::Iterator Bookmarker::begin() const {
 }
 
 /// Deletes all bookmarks.
-void Bookmarker::clear() /*throw()*/ {
+void Bookmarker::clear() BOOST_NOEXCEPT {
 	if(!markedLines_.empty()) {
 		markedLines_.clear();
 		listeners_.notify(&BookmarkListener::bookmarkCleared);
@@ -304,7 +331,7 @@ Bookmarker::Iterator Bookmarker::end() const {
 	return Iterator(markedLines_.end());
 }
 
-inline GapVector<Index>::iterator Bookmarker::find(Index line) const /*throw()*/ {
+inline GapVector<Index>::iterator Bookmarker::find(Index line) const BOOST_NOEXCEPT {
 	// TODO: can write faster implementation (and design) by internal.searchBound().
 	Bookmarker& self = const_cast<Bookmarker&>(*this);
 	return lower_bound(self.markedLines_.begin(), self.markedLines_.end(), line);
@@ -399,7 +426,7 @@ boost::optional<Index> Bookmarker::next(Index from, Direction direction, bool wr
 }
 
 /// Returns the number of the lines bookmarked.
-size_t Bookmarker::numberOfMarks() const /*throw()*/ {
+size_t Bookmarker::numberOfMarks() const BOOST_NOEXCEPT {
 	return markedLines_.size();
 }
 
@@ -512,7 +539,7 @@ const DocumentPropertyKey Document::TITLE_PROPERTY;
  * Returns the accessible region of the document. The returned region is normalized.
  * @see #region, DocumentAccessViolationException
  */
-Region Document::accessibleRegion() const /*throw()*/ {
+Region Document::accessibleRegion() const BOOST_NOEXCEPT {
 	return (accessibleRegion_.get() != nullptr) ? Region(accessibleRegion_->first, *accessibleRegion_->second) : region();
 }
 
@@ -574,7 +601,7 @@ void Document::addRollbackListener(DocumentRollbackListener& listener) {
 void Document::doResetContent() {
 }
 
-void Document::fireDocumentAboutToBeChanged() /*throw()*/ {
+void Document::fireDocumentAboutToBeChanged() BOOST_NOEXCEPT {
 	if(partitioner_.get() != nullptr)
 		partitioner_->documentAboutToBeChanged();
 	for(list<DocumentListener*>::iterator i(prenotifiedListeners_.begin()), e(prenotifiedListeners_.end()); i != e; ++i)
@@ -583,7 +610,7 @@ void Document::fireDocumentAboutToBeChanged() /*throw()*/ {
 		(*i)->documentAboutToBeChanged(*this);
 }
 
-void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints /* = true */) /*throw()*/ {
+void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints /* = true */) BOOST_NOEXCEPT {
 	if(partitioner_.get() != nullptr)
 		partitioner_->documentChanged(c);
 	if(updateAllPoints)
@@ -598,21 +625,18 @@ void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints
  * Returns the number of characters (UTF-16 code units) in the document.
  * @param newline The method to count newlines
  * @return The number of characters
- * @throw UnknownValueException @a newline is invalid
  */
-Index Document::length(Newline newline /* = NLF_RAW_VALUE */) const {
-	newline = resolveNewline(*this, newline);
-	if(isLiteralNewline(newline))
-		return length_ + (numberOfLines() - 1) * ((newline != NLF_CR_LF) ? 1 : 2);
-	else if(newline == NLF_RAW_VALUE) {
-		Index len = length_;
-		const Index lines = numberOfLines();
-		assert(lines > 0);
-		for(Index i = 0; i < lines - 1; ++i)
-			len += newlineStringLength(lines_[i]->newline_);
-		return len;
-	} else
-		throw UnknownValueException("newline");
+Index Document::length(const Newline& newline /* = Newline::USE_INTRINSIC_VALUE */) const BOOST_NOEXCEPT {
+	const Newline resolvedNewline(resolveNewline(*this, newline));
+	if(resolvedNewline.isLiteral())
+		return length_ + (numberOfLines() - 1) * ((resolvedNewline != Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED) ? 1 : 2);
+	assert(resolvedNewline == Newline::USE_INTRINSIC_VALUE);
+	Index len = length_;
+	const Index lines = numberOfLines();
+	assert(lines > 0);
+	for(Index i = 0; i < lines - 1; ++i)
+		len += lines_[i]->newline_.asString().length();
+	return len;
 }
 
 /**
@@ -620,21 +644,19 @@ Index Document::length(Newline newline /* = NLF_RAW_VALUE */) const {
  * @param line The line
  * @param newline The line representation policy for character counting
  * @throw BadPostionException @a line is outside of the document
- * @throw UnknownValueException @a newline is invalid
  */
-Index Document::lineOffset(Index line, Newline newline) const {
+Index Document::lineOffset(Index line, const Newline& newline) const {
 	if(line >= numberOfLines())
 		throw BadPositionException(Position(line, 0));
-	newline = resolveNewline(*this, newline);
 
-	Index offset = 0, eolLength = isLiteralNewline(newline) ? newlineStringLength(newline) : 0;
-	if(eolLength == 0 && newline != NLF_RAW_VALUE)
-		throw UnknownValueException("newline");
+	const Newline resolvedNewline(resolveNewline(*this, newline));
+	Index offset = 0, eolLength = resolvedNewline.isLiteral() ? resolvedNewline.asString().length() : 0;
+	assert(eolLength != 0 || resolvedNewline == Newline::USE_INTRINSIC_VALUE);
 	for(Index i = 0; i < line; ++i) {
 		const Line& ln = *lines_[i];
 		offset += ln.text_.length();
-		if(newline == NLF_RAW_VALUE)
-			offset += newlineStringLength(ln.newline_);
+		if(newline == Newline::USE_INTRINSIC_VALUE)
+			offset += ln.newline_.asString().length();
 		else
 			offset += eolLength;
 	}
@@ -668,7 +690,7 @@ bool Document::lock(const void* locker) {
  * For details about modification signature, see the documentation of @c Document class.
  * @see #isModified, #setModified, #ModificationSignChangedSignal
  */
-void Document::markUnmodified() /*throw()*/ {
+void Document::markUnmodified() BOOST_NOEXCEPT {
 	if(isModified()) {
 		lastUnmodifiedRevisionNumber_ = revisionNumber();
 		modificationSignChangedSignal_(*this);
@@ -791,7 +813,7 @@ void Document::resetContent() {
  * Sets the new document input.
  * @param newInput The new document input. Can be @c null
  */
-void Document::setInput(weak_ptr<DocumentInput> newInput) /*throw()*/ {
+void Document::setInput(weak_ptr<DocumentInput> newInput) BOOST_NOEXCEPT {
 	input_ = newInput;
 }
 
@@ -800,7 +822,7 @@ void Document::setInput(weak_ptr<DocumentInput> newInput) /*throw()*/ {
  * For details about modification signature, see the documentation of @c Document class.
  * @see #isModified, #markUnmodified, #dModificationSignChangedSignal
  */
-void Document::setModified() /*throw()*/ {
+void Document::setModified() BOOST_NOEXCEPT {
 	const bool modified = isModified();
 	lastUnmodifiedRevisionNumber_ = numeric_limits<size_t>::max();
 	if(!modified)
@@ -811,7 +833,7 @@ void Document::setModified() /*throw()*/ {
  * Sets the new document partitioner.
  * @param newPartitioner The new partitioner. The ownership will be transferred to the callee
  */
-void Document::setPartitioner(unique_ptr<DocumentPartitioner> newPartitioner) /*throw()*/ {
+void Document::setPartitioner(unique_ptr<DocumentPartitioner> newPartitioner) BOOST_NOEXCEPT {
 	partitioner_ = move(newPartitioner);
 	if(partitioner_.get() != nullptr)
 		partitioner_->install(*this);
@@ -837,7 +859,7 @@ void Document::setProperty(const DocumentPropertyKey& key, const String& propert
  * Makes the document read only or not.
  * @see ReadOnlyDocumentException, #isReadOnly, #ReadOnlySignChangedSignal
  */
-void Document::setReadOnly(bool readOnly /* = true */) /*throw()*/ {
+void Document::setReadOnly(bool readOnly /* = true */) BOOST_NOEXCEPT {
 	if(readOnly != isReadOnly()) {
 		readOnly_ = readOnly;
 		readOnlySignChangedSignal_(*this);
@@ -868,7 +890,7 @@ void Document::unlock(const void* locker) {
  * @param change The document change
  */
 
-inline void Document::updatePoints(const DocumentChange& change) /*throw()*/ {
+inline void Document::updatePoints(const DocumentChange& change) BOOST_NOEXCEPT {
 	for(set<Point*>::iterator i = points_.begin(); i != points_.end(); ++i) {
 		if((*i)->adaptsToDocument())
 			(*i)->update(change);
@@ -879,7 +901,7 @@ inline void Document::updatePoints(const DocumentChange& change) /*throw()*/ {
  * Revokes the narrowing.
  * @see #isNarrowed, #narrow, #AccessibleRegionChangedSignal
  */
-void Document::widen() /*throw()*/ {
+void Document::widen() BOOST_NOEXCEPT {
 	if(accessibleRegion_.get() != nullptr) {
 		accessibleRegion_.reset();
 		accessibleRegionChangedSignal_(*this);
@@ -889,11 +911,11 @@ void Document::widen() /*throw()*/ {
 
 // Document.Line //////////////////////////////////////////////////////////////////////////////////
 
-Document::Line::Line(size_t revisionNumber) /*throw()*/ : newline_(ASCENSION_DEFAULT_NEWLINE), revisionNumber_(revisionNumber) {
+Document::Line::Line(size_t revisionNumber) BOOST_NOEXCEPT : newline_(ASCENSION_DEFAULT_NEWLINE), revisionNumber_(revisionNumber) {
 }
 
 Document::Line::Line(size_t revisionNumber, const String& text,
-		Newline newline /* = ASCENSION_DEFAULT_NEWLINE */) : text_(text), newline_(newline), revisionNumber_(revisionNumber) {
+		const Newline& newline /* = ASCENSION_DEFAULT_NEWLINE */) : text_(text), newline_(newline), revisionNumber_(revisionNumber) {
 }
 
 
@@ -902,7 +924,7 @@ Document::Line::Line(size_t revisionNumber, const String& text,
 Document::DefaultContentTypeInformationProvider::DefaultContentTypeInformationProvider() : syntax_(new IdentifierSyntax()) {
 }
 
-Document::DefaultContentTypeInformationProvider::~DefaultContentTypeInformationProvider() /*throw()*/ {
+Document::DefaultContentTypeInformationProvider::~DefaultContentTypeInformationProvider() BOOST_NOEXCEPT {
 	delete syntax_;
 }
 
@@ -996,7 +1018,7 @@ const CharacterIterator::ConcreteTypeTag
 	DocumentCharacterIterator::CONCRETE_TYPE_TAG_ = CharacterIterator::ConcreteTypeTag();
 
 /// Default constructor makes an invalid iterator object.
-DocumentCharacterIterator::DocumentCharacterIterator() /*throw()*/
+DocumentCharacterIterator::DocumentCharacterIterator() BOOST_NOEXCEPT
 		: CharacterIterator(CONCRETE_TYPE_TAG_), document_(nullptr), line_(0) {
 }
 
@@ -1045,12 +1067,12 @@ DocumentCharacterIterator::DocumentCharacterIterator(const Document& document, c
 }
 
 /// Copy-constructor.
-DocumentCharacterIterator::DocumentCharacterIterator(const DocumentCharacterIterator& other) /*throw()*/ :
+DocumentCharacterIterator::DocumentCharacterIterator(const DocumentCharacterIterator& other) BOOST_NOEXCEPT :
 		text::CharacterIterator(other), document_(other.document_), region_(other.region_), line_(other.line_), p_(other.p_) {
 }
 
 /// @see text#CharacterIterator#current
-CodePoint DocumentCharacterIterator::current() const /*throw()*/ {
+CodePoint DocumentCharacterIterator::current() const BOOST_NOEXCEPT {
 	if(document() == nullptr || tell() == region().second)
 		return DONE;
 	else if(tell().offsetInLine == line().length())
@@ -1143,20 +1165,20 @@ void DocumentCharacterIterator::setRegion(const Region& newRegion) {
 // NullPartitioner ////////////////////////////////////////////////////////////////////////////////
 
 /// Constructor.
-NullPartitioner::NullPartitioner() /*throw()*/ : p_(DEFAULT_CONTENT_TYPE, Region(Position(0, 0), Position(0, 0))), changed_(true) {
+NullPartitioner::NullPartitioner() BOOST_NOEXCEPT : p_(DEFAULT_CONTENT_TYPE, Region(Position(0, 0), Position(0, 0))), changed_(true) {
 }
 
 /// @see DocumentPartitioner#documentAboutToBeChanged
-void NullPartitioner::documentAboutToBeChanged() /*throw()*/ {
+void NullPartitioner::documentAboutToBeChanged() BOOST_NOEXCEPT {
 }
 
 /// @see DocumentPartitioner#documentChanged
-void NullPartitioner::documentChanged(const DocumentChange&) /*throw()*/ {
+void NullPartitioner::documentChanged(const DocumentChange&) BOOST_NOEXCEPT {
 	changed_ = true;
 }
 
 /// @see DocumentPartitioner#doGetPartition
-void NullPartitioner::doGetPartition(const Position&, DocumentPartition& partition) const /*throw()*/ {
+void NullPartitioner::doGetPartition(const Position&, DocumentPartition& partition) const BOOST_NOEXCEPT {
 	if(changed_) {
 		const_cast<NullPartitioner*>(this)->p_.region.second = document()->region().second;
 		changed_ = false;
@@ -1165,6 +1187,6 @@ void NullPartitioner::doGetPartition(const Position&, DocumentPartition& partiti
 }
 
 /// @see DocumentPartitioner#doInstall
-void NullPartitioner::doInstall() /*throw()*/ {
+void NullPartitioner::doInstall() BOOST_NOEXCEPT {
 	changed_ = true;
 }
