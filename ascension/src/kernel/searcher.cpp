@@ -2,12 +2,13 @@
  * @file searcher.cpp
  * @author exeal
  * @date 2004-2006 (was TextSearcher.cpp)
- * @date 2006-2012
+ * @date 2006-2013
  */
 
 #include <ascension/kernel/searcher.hpp>
 #include <ascension/kernel/point.hpp>
 #include <ascension/corelib/text/break-iterator.hpp>
+#include <boost/range/algorithm/find.hpp>
 using namespace ascension;
 using namespace ascension::kernel;
 using namespace ascension::searcher;
@@ -72,24 +73,24 @@ LiteralPattern::LiteralPattern(const String& pattern, bool caseSensitive /* = tr
 	lastOccurences_[0] = firstOccurences_[0] = numeric_limits<ptrdiff_t>::min();
 	// build pseudo collation elements
 	collationElements_.resize(pattern_.length());
-	vector<int>::iterator collationElement(collationElements_.begin());
+	vector<int>::iterator collationElement(begin(collationElements_));
 	for(StringCharacterIterator i(pattern_); i.hasNext(); ++i, ++collationElement)
 		*collationElement = caseSensitive_ ? *i : CaseFolder::fold(*i);
 }
 
 // builds BM shift table for forward/backward search
-inline void LiteralPattern::makeShiftTable(Direction direction) /*throw()*/ {
+inline void LiteralPattern::makeShiftTable(Direction direction) BOOST_NOEXCEPT {
 	if(direction == Direction::FORWARD) {
 		if(lastOccurences_[0] == numeric_limits<ptrdiff_t>::min()) {
 			lastOccurences_.fill(collationElements_.size());
 //			fill(lastOccurences_, ASCENSION_ENDOF(lastOccurences_), last_ - first_);
-			for(vector<int>::const_iterator i(collationElements_.cbegin()), e(collationElements_.cend()); i < e; ++i)
+			for(vector<int>::const_iterator i(begin(collationElements_)), e(end(collationElements_)); i < e; ++i)
 				lastOccurences_[*i] = e - i - 1;
 		}
 	} else if(firstOccurences_[0] == numeric_limits<ptrdiff_t>::min()) {
 		firstOccurences_.fill(collationElements_.size());
 //		fill(firstOccurences_, ASCENSION_ENDOF(firstOccurences_), last_ - first_);
-		for(vector<int>::const_iterator i(collationElements_.cend() - 1), b(collationElements_.cbegin()); ; --i) {
+		for(vector<int>::const_iterator i(end(collationElements_) - 1), b(begin(collationElements_)); ; --i) {
 			firstOccurences_[*i] = i - b;
 			if(i == b)
 				break;
@@ -302,8 +303,8 @@ bool TextSearcher::match(const Document& document, const Region& target) const {
  */
 void TextSearcher::pushHistory(const String& s, bool forReplacements) {
 	list<String>& history = forReplacements ? storedReplacements_ : storedPatterns_;
-	const list<String>::iterator d(find(history.begin(), history.end(), s));
-	if(d != history.end())
+	const list<String>::iterator d(boost::range::find(history, s));
+	if(d != boost::end(history))
 		history.erase(d);
 	else if(history.size() == maximumNumberOfStoredStrings_)
 		history.pop_back();
