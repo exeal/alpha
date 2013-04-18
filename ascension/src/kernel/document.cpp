@@ -2,13 +2,16 @@
  * @file document.cpp
  * @author exeal
  * @date 2003-2006 (was EditDoc.h)
- * @date 2006-2012
+ * @date 2006-2013
  */
 
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/kernel/point.hpp>
 #include <ascension/corelib/text/identifier-syntax.hpp>
+#include <boost/foreach.hpp>
+#include <boost/range/algorithm/find.hpp>
+#include <boost/range/algorithm/lower_bound.hpp>
 #include <algorithm>
 #include <limits>	// std.numeric_limits
 
@@ -271,7 +274,7 @@ void Bookmarker::addListener(BookmarkListener& listener) {
  * @see #end, #next
  */
 Bookmarker::Iterator Bookmarker::begin() const {
-	return Iterator(markedLines_.begin());
+	return Iterator(std::begin(markedLines_));
 }
 
 /// Deletes all bookmarks.
@@ -295,7 +298,7 @@ void Bookmarker::documentChanged(const Document& document, const DocumentChange&
 	if(change.erasedRegion().first.line != change.erasedRegion().second.line) {
 		// remove the marks on the deleted lines
 		const Index lines = change.erasedRegion().second.line - change.erasedRegion().first.line;
-		const GapVector<Index>::iterator e(markedLines_.end());
+		const GapVector<Index>::iterator e(std::end(markedLines_));
 		GapVector<Index>::iterator top(find(change.erasedRegion().first.line));
 		if(top != e) {
 			if(*top == change.erasedRegion().first.line)
@@ -314,10 +317,10 @@ void Bookmarker::documentChanged(const Document& document, const DocumentChange&
 	if(change.insertedRegion().first.line != change.insertedRegion().second.line) {
 		const Index lines = change.insertedRegion().second.line - change.insertedRegion().first.line;
 		GapVector<Index>::iterator i(find(change.insertedRegion().first.line));
-		if(i != markedLines_.end()) {
+		if(i != std::end(markedLines_)) {
 			if(*i == change.insertedRegion().first.line && change.insertedRegion().first.offsetInLine != 0)
 				++i;
-			for(const GapVector<Index>::iterator e(markedLines_.end()); i != e; ++i)
+			for(const GapVector<Index>::iterator e(std::end(markedLines_)); i != e; ++i)
 				*i += lines;	// ??? - C4267@MSVC9
 		}
 	}
@@ -328,13 +331,13 @@ void Bookmarker::documentChanged(const Document& document, const DocumentChange&
  * @see #begin, #next
  */
 Bookmarker::Iterator Bookmarker::end() const {
-	return Iterator(markedLines_.end());
+	return Iterator(std::end(markedLines_));
 }
 
 inline GapVector<Index>::iterator Bookmarker::find(Index line) const BOOST_NOEXCEPT {
 	// TODO: can write faster implementation (and design) by internal.searchBound().
 	Bookmarker& self = const_cast<Bookmarker&>(*this);
-	return lower_bound(self.markedLines_.begin(), self.markedLines_.end(), line);
+	return boost::lower_bound(self.markedLines_, line);
 }
 
 /**
@@ -346,7 +349,7 @@ bool Bookmarker::isMarked(Index line) const {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
 	const GapVector<Index>::const_iterator i(find(line));
-	return i != markedLines_.end() && *i == line;
+	return i != std::end(markedLines_) && *i == line;
 }
 
 /**
@@ -359,7 +362,7 @@ void Bookmarker::mark(Index line, bool set) {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
 	const GapVector<Index>::iterator i(find(line));
-	if(i != markedLines_.end() && *i == line) {
+	if(i != std::end(markedLines_) && *i == line) {
 		if(!set) {
 			markedLines_.erase(i);
 			listeners_.notify<Index>(&BookmarkListener::bookmarkChanged, line);
@@ -398,7 +401,7 @@ boost::optional<Index> Bookmarker::next(Index from, Direction direction, bool wr
 			marks = markedLines_.size();
 	}
 
-	size_t i = static_cast<GapVector<Index>::const_iterator>(find(from)) - markedLines_.begin();
+	size_t i = static_cast<GapVector<Index>::const_iterator>(find(from)) - std::begin(markedLines_);
 	if(direction == Direction::FORWARD) {
 		if(i == markedLines_.size()) {
 			if(!wrapAround)
@@ -448,7 +451,7 @@ void Bookmarker::toggle(Index line) {
 	if(line >= document_.numberOfLines())
 		throw BadPositionException(Position(line, 0));
 	const GapVector<Index>::iterator i(find(line));
-	if(i == markedLines_.end() || *i != line)
+	if(i == std::end(markedLines_) || *i != line)
 		markedLines_.insert(i, line);
 	else
 		markedLines_.erase(i);
@@ -561,7 +564,7 @@ void Document::addCompoundChangeListener(ICompoundChangeListener& listener) {
  * @throw std#invalid_argument @a listener is already registered
  */
 void Document::addListener(DocumentListener& listener) {
-	if(find(listeners_.begin(), listeners_.end(), &listener) != listeners_.end())
+	if(boost::range::find(listeners_, &listener) != boost::end(listeners_))
 		throw invalid_argument("the listener already has been registered.");
 	listeners_.push_back(&listener);
 }
@@ -583,7 +586,7 @@ void Document::addPartitioningListener(DocumentPartitioningListener& listener) {
  * @throw std#invalid_argument @a listener is already registered
  */
 void Document::addPrenotifiedListener(DocumentListener& listener) {
-	if(find(prenotifiedListeners_.begin(), prenotifiedListeners_.end(), &listener) != prenotifiedListeners_.end())
+	if(boost::range::find(prenotifiedListeners_, &listener) != boost::end(prenotifiedListeners_))
 		throw invalid_argument("the listener already has been registered.");
 	prenotifiedListeners_.push_back(&listener);
 }
@@ -604,10 +607,10 @@ void Document::doResetContent() {
 void Document::fireDocumentAboutToBeChanged() BOOST_NOEXCEPT {
 	if(partitioner_.get() != nullptr)
 		partitioner_->documentAboutToBeChanged();
-	for(list<DocumentListener*>::iterator i(prenotifiedListeners_.begin()), e(prenotifiedListeners_.end()); i != e; ++i)
-		(*i)->documentAboutToBeChanged(*this);
-	for(list<DocumentListener*>::iterator i(listeners_.begin()), e(listeners_.end()); i != e; ++i)
-		(*i)->documentAboutToBeChanged(*this);
+	BOOST_FOREACH(DocumentListener* listener, prenotifiedListeners_)
+		listener->documentAboutToBeChanged(*this);
+	BOOST_FOREACH(DocumentListener* listener, listeners_)
+		listener->documentAboutToBeChanged(*this);
 }
 
 void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints /* = true */) BOOST_NOEXCEPT {
@@ -615,10 +618,10 @@ void Document::fireDocumentChanged(const DocumentChange& c, bool updateAllPoints
 		partitioner_->documentChanged(c);
 	if(updateAllPoints)
 		updatePoints(c);
-	for(list<DocumentListener*>::iterator i(prenotifiedListeners_.begin()), e(prenotifiedListeners_.end()); i != e; ++i)
-		(*i)->documentChanged(*this, c);
-	for(list<DocumentListener*>::iterator i(listeners_.begin()), e(listeners_.end()); i != e; ++i)
-		(*i)->documentChanged(*this, c);
+	BOOST_FOREACH(DocumentListener* listener, prenotifiedListeners_)
+		listener->documentChanged(*this, c);
+	BOOST_FOREACH(DocumentListener* listener, listeners_)
+		listener->documentChanged(*this, c);
 }
 
 /**
@@ -716,9 +719,9 @@ void Document::narrowToRegion(const Region& region) {
 	} else
 		accessibleRegion_->second->moveTo(region.end());
 	accessibleRegion_->first = region.beginning();
-//	for(set<Point*>::iterator i = points_.begin(); i != points_.end(); ++i) {
-//		if((*i)->isExcludedFromRestriction())
-//			(*i)->normalize();
+//	BOOST_FOREACH(Point* p, points_) {
+//		if(p->isExcludedFromRestriction())
+//			p->normalize();
 //	}
 	accessibleRegionChangedSignal_(*this);
 }
@@ -729,8 +732,8 @@ void Document::narrowToRegion(const Region& region) {
  * @throw std#invalid_argument @a listener is not registered
  */
 void Document::removeListener(DocumentListener& listener) {
-	const list<DocumentListener*>::iterator i(find(listeners_.begin(), listeners_.end(), &listener));
-	if(i == listeners_.end())
+	const list<DocumentListener*>::iterator i(boost::range::find(listeners_, &listener));
+	if(i == boost::end(listeners_))
 		throw invalid_argument("the listener is not registered.");
 	listeners_.erase(i);
 }
@@ -751,8 +754,8 @@ void Document::removePartitioningListener(DocumentPartitioningListener& listener
  * @throw std#invalid_argument @a listener is not registered
  */
 void Document::removePrenotifiedListener(DocumentListener& listener) {
-	const list<DocumentListener*>::iterator i(find(prenotifiedListeners_.begin(), prenotifiedListeners_.end(), &listener));
-	if(i == prenotifiedListeners_.end())
+	const list<DocumentListener*>::iterator i(boost::range::find(prenotifiedListeners_, &listener));
+	if(i == boost::end(prenotifiedListeners_))
 		throw invalid_argument("the listener is not registered.");
 	prenotifiedListeners_.erase(i);
 }
@@ -781,11 +784,11 @@ void Document::removeRollbackListener(DocumentRollbackListener& listener) {
  */
 void Document::resetContent() {
 	if(lines_.empty())	// called by constructor
-		lines_.insert(lines_.begin(), new Line(0));
+		lines_.insert(begin(lines_), new Line(0));
 	else {
 		widen();
-		for(set<Point*>::iterator i(points_.begin()), e(points_.end()); i != e; ++i)
-			(*i)->moveTo(Position(0, 0));
+		BOOST_FOREACH(Point* p, points_)
+			p->moveTo(Position(0, 0));
 		bookmarker_->clear();
 
 		fireDocumentAboutToBeChanged();
@@ -794,7 +797,7 @@ void Document::resetContent() {
 			for(size_t i = 0, c = lines_.size(); i < c; ++i)
 				delete lines_[i];
 			lines_.clear();
-			lines_.insert(lines_.begin(), new Line(revisionNumber_ + 1));
+			lines_.insert(begin(lines_), new Line(revisionNumber_ + 1));
 			length_ = 0;
 			++revisionNumber_;
 		}
@@ -848,7 +851,7 @@ void Document::setPartitioner(unique_ptr<DocumentPartitioner> newPartitioner) BO
  */
 void Document::setProperty(const DocumentPropertyKey& key, const String& property) {
 	map<const DocumentPropertyKey*, unique_ptr<String>>::iterator i(properties_.find(&key));
-	if(i == properties_.end())
+	if(i == end(properties_))
 		properties_.insert(make_pair(&key, new String(property)));
 	else
 		i->second->assign(property);
@@ -891,9 +894,9 @@ void Document::unlock(const void* locker) {
  */
 
 inline void Document::updatePoints(const DocumentChange& change) BOOST_NOEXCEPT {
-	for(set<Point*>::iterator i = points_.begin(); i != points_.end(); ++i) {
-		if((*i)->adaptsToDocument())
-			(*i)->update(change);
+	BOOST_FOREACH(Point* p, points_) {
+		if(p->adaptsToDocument())
+			p->update(change);
 	}
 }
 

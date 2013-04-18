@@ -9,6 +9,7 @@
 
 #include <ascension/config.hpp>	// ASCENSION_NO_STANDARD_ENCODINGS
 #include <ascension/kernel/fileio.hpp>
+#include <boost/range/algorithm/copy.hpp>
 #include <limits>	// std.numeric_limits
 #ifdef ASCENSION_OS_POSIX
 #	include <cstdio>		// std.tempnam
@@ -71,7 +72,7 @@ namespace {
 	/// Finds the base name in the given file path name.
 	inline PathString::const_iterator findFileName(const PathString& s) {
 		const PathString::size_type i = s.find_last_of(PATH_SEPARATORS);
-		return s.begin() + ((i != PathString::npos) ? i + 1 : 0);
+		return begin(s) + ((i != PathString::npos) ? i + 1 : 0);
 	}
 
 	/**
@@ -128,9 +129,9 @@ namespace {
 	 */
 	PathString makeTemporaryFileName(const PathString& seed) {
 		unique_ptr<PathCharacter[]> s(new PathCharacter[seed.length() + 1]);
-		copy(seed.begin(), seed.end(), s.get());
+		boost::copy(seed, s.get());
 		s[seed.length()] = 0;
-		PathCharacter* const name = s.get() + (findFileName(seed) - seed.begin());
+		PathCharacter* const name = s.get() + (findFileName(seed) - begin(seed));
 		if(name != s.get())
 			name[-1] = 0;
 #ifdef ASCENSION_OS_WINDOWS

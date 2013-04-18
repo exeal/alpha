@@ -1,7 +1,7 @@
 /**
  * @file point.cpp
  * @author exeal
- * @date 2003-2012
+ * @date 2003-2013
  */
 
 #include <ascension/kernel/point.hpp>
@@ -132,7 +132,7 @@ void Point::aboutToMove(Position& to) {
  * @param from The position before the point moved. This value may equal to the current position
  * @see #aboutToMove, moveTo
  */
-void Point::moved(const Position& from) /*throw()*/ {
+void Point::moved(const Position& from) BOOST_NOEXCEPT {
 }
 
 /**
@@ -175,7 +175,7 @@ void Point::removeLifeCycleListener(PointLifeCycleListener& listener) {
  * @param gravity The new gravity value
  * @return This object
  */
-Point& Point::setGravity(Direction gravity) /*throw()*/ {
+Point& Point::setGravity(Direction gravity) BOOST_NOEXCEPT {
 	if(isDocumentDisposed())
 		throw DocumentDisposedException();
 	gravity_ = gravity;
@@ -321,7 +321,7 @@ CodePoint locations::characterAt(const Point& p, bool useLineFeed /* = false */)
 	const String& lineString = p.document().line(line(p));
 	if(offsetInLine(p) == lineString.length())
 		return (line(p) == p.document().numberOfLines() - 1) ? INVALID_CODE_POINT : (useLineFeed ? LINE_FEED : LINE_SEPARATOR);
-	return utf::decodeFirst(lineString.begin() + offsetInLine(p), lineString.end());
+	return utf::decodeFirst(begin(lineString) + offsetInLine(p), end(lineString));
 }
 
 /**

@@ -2,12 +2,13 @@
  * @file undo.cpp
  * @author exeal
  * @date 2009 separated from document.cpp
- * @date 2010-2012
+ * @date 2010-2013
  */
 
 #include <ascension/kernel/document.hpp>
 #include <ascension/kernel/point.hpp>
 #include <ascension/corelib/utility.hpp>	// detail.ValueSaver
+#include <boost/foreach.hpp>
 #include <stack>
 #include <vector>
 using namespace ascension;
@@ -165,8 +166,8 @@ namespace {
 	}
 
 	CompoundChange::~CompoundChange() /*throw()*/ {
-		for(vector<AtomicChange*>::iterator i(changes_.begin()), e(changes_.end()); i != e; ++i)
-			delete *i;
+		BOOST_FOREACH(AtomicChange* change, changes_)
+			delete change;
 	}
 
 	// implements IUndoableChange.appendChange
@@ -181,14 +182,14 @@ namespace {
 		assert(!changes_.empty());
 		result.reset();
 		Result delta;
-		vector<AtomicChange*>::iterator i(changes_.end()), e(changes_.begin());
+		vector<AtomicChange*>::iterator i(end(changes_)), e(begin(changes_));
 		for(--i; ; --i) {
 			(*i)->perform(document, delta);
 			result.numberOfRevisions += delta.numberOfRevisions;
 			if(!delta.completed) {
-				if(i != --changes_.end())
+				if(i != --end(changes_))
 					// partially completed
-					changes_.erase(++i, changes_.end());
+					changes_.erase(++i, end(changes_));
 				result.endOfChange = delta.endOfChange;
 				break;
 			} else if(i == e) {	// completed
@@ -363,8 +364,8 @@ Document::Document() : session_(nullptr), partitioner_(),
 
 /// Destructor.
 Document::~Document() {
-	for(set<Point*>::iterator i(points_.begin()), e(points_.end()); i != e; ++i)
-		(*i)->documentDisposed();
+	BOOST_FOREACH(Point* p, points_)
+		p->documentDisposed();
 	accessibleRegion_.reset();
 	bookmarker_.reset();	// Bookmarker.~Bookmarker() calls Document...
 	for(size_t i = 0, c = lines_.size(); i < c; ++i)
@@ -632,8 +633,8 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 					lastAllocatedLine.text_.append(lastLine.text(), end.offsetInLine, lastLine.text().length() - end.offsetInLine);
 					lastAllocatedLine.newline_ = lastLine.newline();
 				} catch(...) {
-					for(vector<Line*>::iterator i(allocatedLines.begin()), e(allocatedLines.end()); i != e; ++i)
-						delete *i;
+					BOOST_FOREACH(Line* line, allocatedLines)
+						delete line;
 					throw;
 				}
 			} else
@@ -641,7 +642,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 			try {
 				// 3. insert allocated strings
 				if(!allocatedLines.empty())
-					lines_.insert(lines_.cbegin() + end.line + 1, allocatedLines.begin(), allocatedLines.end());
+					lines_.insert(begin(lines_) + end.line + 1, begin(allocatedLines), std::end(allocatedLines));
 				// 4. replace first line
 				Line& firstLine = *lines_[beginning.line];
 				const Index erasedLength = firstLine.text().length() - beginning.offsetInLine;
@@ -658,7 +659,7 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 						endOfInsertedString.offsetInLine += insertedLength;
 					}
 				} catch(...) {
-					const detail::GapVector<Line*>::const_iterator b(lines_.begin() + end.line + 1);
+					const detail::GapVector<Line*>::const_iterator b(begin(lines_) + end.line + 1);
 					const detail::GapVector<Line*>::const_iterator e(b + allocatedLines.size());
 					for_each(b, e, default_delete<Line>());
 					lines_.erase(b, e);
@@ -669,14 +670,14 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 				erasedStringLength += erasedLength;
 				insertedStringLength += insertedLength;
 			} catch(...) {
-				for(vector<Line*>::iterator i(allocatedLines.begin()), e(allocatedLines.end()); i != e; ++i)
-					delete *i;
+				BOOST_FOREACH(Line* line, allocatedLines)
+					delete line;
 				throw;
 			}
 			// 5. remove lines to erase
 			if(!region.isEmpty()) {
-				const detail::GapVector<Line*>::const_iterator b(lines_.begin() + beginning.line + 1);
-				const detail::GapVector<Line*>::const_iterator e(lines_.begin() + end.line + 1);
+				const detail::GapVector<Line*>::const_iterator b(begin(lines_) + beginning.line + 1);
+				const detail::GapVector<Line*>::const_iterator e(begin(lines_) + end.line + 1);
 				for_each(b, e, default_delete<Line>());
 				lines_.erase(b, e);
 			}
