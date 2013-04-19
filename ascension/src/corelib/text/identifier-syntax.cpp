@@ -1,7 +1,7 @@
 /**
  * @file identifier-syntax.cpp
  * @author exeal
- * @date 2007-2012
+ * @date 2007-2013
  */
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_CHARACTER_CLASSIFICATION
@@ -9,6 +9,11 @@
 #include <ascension/corelib/text/identifier-syntax.hpp>
 #include <ascension/corelib/text/character-property.hpp>
 #include <ascension/corelib/text/utf-iterator.hpp>	// utf.CharacterDecodeIterator
+#include <boost/foreach.hpp>
+#include <boost/range/algorithm/binary_search.hpp>
+#include <boost/range/algorithm/find_if.hpp>
+#include <boost/range/algorithm/set_algorithm.hpp>
+#include <boost/range/algorithm/sort.hpp>
 #include <functional>	// std.function
 #include <vector>
 using namespace ascension;
@@ -59,20 +64,20 @@ using namespace std;
  */
 
 namespace {
-	template<typename InputIterator>
-	void implementOverrides(InputIterator addingFirst, InputIterator addingLast,
-			InputIterator subtractingFirst, InputIterator subtractingLast,
+	template<typename SinglePassReadableRange>
+	void implementOverrides(
+			const SinglePassReadableRange& adding, const SinglePassReadableRange& subtracting,
 			basic_string<CodePoint>& added, basic_string<CodePoint>& subtracted) {
-		basic_stringbuf<CodePoint> adding, subtracting;
-		while(addingFirst != addingLast)
-			adding.sputc(*addingFirst++);
-		while(subtractingFirst != subtractingLast)
-			subtracting.sputc(*subtractingFirst++);
-		basic_string<CodePoint> a(adding.str()), s(subtracting.str());
-		sort(a.begin(), a.end());
-		sort(s.begin(), s.end());
+		basic_stringbuf<CodePoint> addingBuffer, subtractingBuffer;
+		BOOST_FOREACH(const auto& a, adding)
+			addingBuffer.sputc(a);
+		BOOST_FOREACH(const auto& s, subtracting)
+			subtractingBuffer.sputc(s);
+		basic_string<CodePoint> a(addingBuffer.str()), s(subtractingBuffer.str());
+		boost::sort(a);
+		boost::sort(s);
 		vector<CodePoint> v;
-		set_intersection(a.begin(), a.end(), s.begin(), s.end(), back_inserter(v));
+		boost::set_intersection(a, s, back_inserter(v));
 		if(!v.empty())
 			throw invalid_argument("same character was found the both sets");
 		added = a;
@@ -133,11 +138,9 @@ const IdentifierSyntax& IdentifierSyntax::defaultInstance() BOOST_NOEXCEPT {
  * @return true if @a c is identifier continue character
  */
 bool IdentifierSyntax::isIdentifierContinueCharacter(CodePoint c) const BOOST_NOEXCEPT {
-	if(binary_search(addedIDNonStartCharacters_.begin(), addedIDNonStartCharacters_.end(), c)
-			|| binary_search(addedIDStartCharacters_.begin(), addedIDStartCharacters_.end(), c))
+	if(boost::binary_search(addedIDNonStartCharacters_, c) || boost::binary_search(addedIDStartCharacters_, c))
 		return true;
-	else if(binary_search(subtractedIDStartCharacters_.begin(), subtractedIDStartCharacters_.end(), c)
-			|| binary_search(subtractedIDNonStartCharacters_.begin(), subtractedIDNonStartCharacters_.end(), c))
+	else if(boost::binary_search(subtractedIDStartCharacters_, c) || boost::binary_search(subtractedIDNonStartCharacters_, c))
 		return false;
 	switch(type_) {
 	case ASCII:
@@ -159,9 +162,9 @@ bool IdentifierSyntax::isIdentifierContinueCharacter(CodePoint c) const BOOST_NO
  * @return true if @a c is an identifier start character
  */
 bool IdentifierSyntax::isIdentifierStartCharacter(CodePoint c) const BOOST_NOEXCEPT {
-	if(binary_search(addedIDStartCharacters_.begin(), addedIDStartCharacters_.end(), c))
+	if(boost::binary_search(addedIDStartCharacters_, c))
 		return true;
-	else if(binary_search(subtractedIDStartCharacters_.begin(), subtractedIDStartCharacters_.end(), c))
+	else if(boost::binary_search(subtractedIDStartCharacters_, c))
 		return false;
 	switch(type_) {
 	case ASCII:
@@ -206,15 +209,16 @@ bool IdentifierSyntax::isWhiteSpace(CodePoint c, bool includeTab) const BOOST_NO
  *                                    at both @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierStartCharacters(const String& adding, const String& subtracting) {
-	String::const_iterator isolatedSurrogate(surrogates::searchIsolatedSurrogate(adding.begin(), adding.end()));
-	if(isolatedSurrogate != adding.end())
+	String::const_iterator isolatedSurrogate(surrogates::searchIsolatedSurrogate(begin(adding), end(adding)));
+	if(isolatedSurrogate != end(adding))
 		throw InvalidScalarValueException(*isolatedSurrogate);
-	isolatedSurrogate = surrogates::searchIsolatedSurrogate(subtracting.begin(), subtracting.end());
-	if(isolatedSurrogate != subtracting.end())
+	isolatedSurrogate = surrogates::searchIsolatedSurrogate(begin(subtracting), end(subtracting));
+	if(isolatedSurrogate != end(subtracting))
 		throw InvalidScalarValueException(*isolatedSurrogate);
 	typedef utf::CharacterDecodeIterator<String::const_iterator> I;
-	implementOverrides(I(adding.begin(), adding.end()), I(adding.begin(), adding.end(), adding.end()),
-		I(subtracting.begin(), subtracting.end()), I(subtracting.begin(), subtracting.end(), subtracting.end()),
+	implementOverrides(
+		boost::make_iterator_range(I(begin(adding), end(adding)), I(begin(adding), end(adding), end(adding))),
+		boost::make_iterator_range(I(begin(subtracting), end(subtracting)), I(begin(subtracting), end(subtracting), end(subtracting))),
 		addedIDStartCharacters_, subtractedIDStartCharacters_);
 }
 
@@ -226,14 +230,13 @@ void IdentifierSyntax::overrideIdentifierStartCharacters(const String& adding, c
  *                                    at both @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierStartCharacters(const set<CodePoint>& adding, const set<CodePoint>& subtracting) {
-	set<CodePoint>::const_iterator isolatedSurrogate(find_if(adding.begin(), adding.end(), surrogates::isSurrogate));
-	if(isolatedSurrogate != adding.end())
+	set<CodePoint>::const_iterator isolatedSurrogate(boost::find_if(adding, surrogates::isSurrogate));
+	if(isolatedSurrogate != boost::end(adding))
 		throw InvalidScalarValueException(*isolatedSurrogate);
-	isolatedSurrogate = find_if(subtracting.begin(), subtracting.end(), surrogates::isSurrogate);
-	if(isolatedSurrogate != subtracting.end())
+	isolatedSurrogate = boost::find_if(subtracting, surrogates::isSurrogate);
+	if(isolatedSurrogate != boost::end(subtracting))
 		throw InvalidScalarValueException(*isolatedSurrogate);
-	implementOverrides(adding.begin(), adding.end(),
-		subtracting.begin(), subtracting.end(), addedIDStartCharacters_, subtractedIDStartCharacters_);
+	implementOverrides(adding, subtracting, addedIDStartCharacters_, subtractedIDStartCharacters_);
 }
 
 /**
@@ -244,15 +247,16 @@ void IdentifierSyntax::overrideIdentifierStartCharacters(const set<CodePoint>& a
  *                                    at both @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierNonStartCharacters(const String& adding, const String& subtracting) {
-	String::const_iterator isolatedSurrogate(surrogates::searchIsolatedSurrogate(adding.begin(), adding.end()));
-	if(isolatedSurrogate != adding.end())
+	String::const_iterator isolatedSurrogate(surrogates::searchIsolatedSurrogate(begin(adding), end(adding)));
+	if(isolatedSurrogate != end(adding))
 		throw InvalidScalarValueException(*isolatedSurrogate);
-	isolatedSurrogate = surrogates::searchIsolatedSurrogate(subtracting.begin(), subtracting.end());
-	if(isolatedSurrogate != subtracting.end())
+	isolatedSurrogate = surrogates::searchIsolatedSurrogate(begin(subtracting), end(subtracting));
+	if(isolatedSurrogate != end(subtracting))
 		throw InvalidScalarValueException(*isolatedSurrogate);
 	typedef utf::CharacterDecodeIterator<String::const_iterator> I;
-	implementOverrides(I(adding.begin(), adding.end()), I(adding.begin(), adding.end(), adding.end()),
-		I(subtracting.begin(), subtracting.end()), I(subtracting.begin(), subtracting.end(), subtracting.end()),
+	implementOverrides(
+		boost::make_iterator_range(I(begin(adding), end(adding)), I(begin(adding), end(adding), end(adding))),
+		boost::make_iterator_range(I(begin(subtracting), end(subtracting)), I(begin(subtracting), end(subtracting), end(subtracting))),
 		addedIDNonStartCharacters_, subtractedIDNonStartCharacters_);
 }
 
@@ -264,12 +268,11 @@ void IdentifierSyntax::overrideIdentifierNonStartCharacters(const String& adding
  *                                    at both @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierNonStartCharacters(const set<CodePoint>& adding, const set<CodePoint>& subtracting) {
-	set<CodePoint>::const_iterator isolatedSurrogate(find_if(adding.begin(), adding.end(), surrogates::isSurrogate));
-	if(isolatedSurrogate != adding.end())
+	set<CodePoint>::const_iterator isolatedSurrogate(boost::find_if(adding, surrogates::isSurrogate));
+	if(isolatedSurrogate != boost::end(adding))
 		throw InvalidScalarValueException(*isolatedSurrogate);
-	isolatedSurrogate = find_if(subtracting.begin(), subtracting.end(), surrogates::isSurrogate);
-	if(isolatedSurrogate != subtracting.end())
+	isolatedSurrogate = boost::find_if(subtracting, surrogates::isSurrogate);
+	if(isolatedSurrogate != boost::end(subtracting))
 		throw InvalidScalarValueException(*isolatedSurrogate);
-	implementOverrides(adding.begin(), adding.end(),
-		subtracting.begin(), subtracting.end(), addedIDNonStartCharacters_, subtractedIDNonStartCharacters_);
+	implementOverrides(adding, subtracting, addedIDNonStartCharacters_, subtractedIDNonStartCharacters_);
 }

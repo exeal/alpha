@@ -1,7 +1,7 @@
 /**
  * @file break-iterator.cpp
- * @date 2006-2007 (was iterator.cpp)
- * @date 2007-2012
+ * @date 2006-2007 was iterator.cpp
+ * @date 2007-2013
  * @author exeal
  */
 

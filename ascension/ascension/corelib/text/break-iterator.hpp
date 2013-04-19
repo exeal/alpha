@@ -3,7 +3,7 @@
  * @author exeal
  * @date 2005-2011 was unicode.hpp
  * @date 2011-04-26 separated from unicode.hpp
- * @date 2011-2012
+ * @date 2011-2013
  */
 
 #ifndef ASCENSION_BREAK_ITERATOR_HPP
@@ -23,9 +23,7 @@
 #define ASCENSION_UAX29_REVISION_NUMBER 11	// 2006-10-12
 
 namespace ascension {
-
 	namespace text {
-
 		/**
 		 * An abstract base class for concrete break iterator classes. Break iterators are used to
 		 * find and enumerate the location of boundaries in text. These iterators are based on
@@ -38,15 +36,15 @@ namespace ascension {
 			ASCENSION_UNASSIGNABLE_TAG(BreakIterator);
 		public:
 			/// Destructor.
-			virtual ~BreakIterator() /*throw()*/ {}
+			virtual ~BreakIterator() BOOST_NOEXCEPT {}
 			/// Returns the locale.
-			const std::locale& locale() const /*throw()*/ {return locale_;}
+			const std::locale& locale() const BOOST_NOEXCEPT {return locale_;}
 			/// Returns true if @a at addresses a boundary.
 			virtual bool isBoundary(const CharacterIterator& at) const = 0;
 			/// Moves to the next boundary.
 			virtual void next(std::ptrdiff_t amount) = 0;
 		protected:
-			BreakIterator(const std::locale& lc) /*throw()*/ : locale_(lc) {}
+			BreakIterator(const std::locale& lc) BOOST_NOEXCEPT : locale_(lc) {}
 		private:
 			const std::locale& locale_;
 		};
@@ -55,8 +53,8 @@ namespace ascension {
 
 	namespace detail {
 		/**
-		 * Provides standard C++ iterator interface and facilities for the concrete iterator
-		 * class.
+		 * @internal Provides standard C++ iterator interface and facilities for the concrete
+		 * iterator class.
 		 * @tparam ConcreteIterator The concrete iterator
 		 */
 		template<typename ConcreteIterator>
@@ -78,22 +76,24 @@ namespace ascension {
 	} // namespace detail
 
 	namespace text {
-
 		/// Base class of @c GraphemeBreakIterator.
 		class AbstractGraphemeBreakIterator : public BreakIterator {
 		public:
 			bool isBoundary(const CharacterIterator& at) const;
 			void next(std::ptrdiff_t amount);
 		protected:
-			AbstractGraphemeBreakIterator(const std::locale& lc) /*throw()*/;
-			virtual CharacterIterator& characterIterator() /*throw()*/ = 0;
-			virtual const CharacterIterator& characterIterator() const /*throw()*/ = 0;
+			AbstractGraphemeBreakIterator(const std::locale& lc) BOOST_NOEXCEPT;
+			virtual CharacterIterator& characterIterator() BOOST_NOEXCEPT = 0;
+			virtual const CharacterIterator& characterIterator() const BOOST_NOEXCEPT = 0;
 		private:
 			void doNext(std::ptrdiff_t amount);
 			void doPrevious(std::ptrdiff_t amount);
 		};
 
-		/// @c GraphemeBreakIterator locates grapheme cluster (character) boundaries in text.
+		/**
+		 * @c GraphemeBreakIterator locates grapheme cluster (character) boundaries in text.
+		 * @tparam BaseIterator
+		 */
 		template<class BaseIterator>
 		class GraphemeBreakIterator : public AbstractGraphemeBreakIterator,
 			public detail::BreakIteratorFacade<GraphemeBreakIterator<BaseIterator>> {
@@ -101,21 +101,23 @@ namespace ascension {
 		public:
 			/**
 			 * Constructor.
-			 * @param base the base iterator
-			 * @param lc the locale
+			 * @param base The base iterator
+			 * @param lc The locale
 			 */
 			GraphemeBreakIterator(
 				BaseIterator base, const std::locale& lc = std::locale::classic())
 				: AbstractGraphemeBreakIterator(lc), p_(base) {}
 			/// Returns the base iterator.
-			BaseIterator& base() /*throw()*/ {return p_;}
+			BaseIterator& base() BOOST_NOEXCEPT {return p_;}
 			/// Returns the base iterator.
-			const BaseIterator& base() const /*throw()*/ {return p_;}
+			const BaseIterator& base() const BOOST_NOEXCEPT {return p_;}
 		private:
-			CharacterIterator& characterIterator() /*throw()*/ {
-				return static_cast<CharacterIterator&>(p_);}
-			const CharacterIterator& characterIterator() const /*throw()*/ {
-				return static_cast<const CharacterIterator&>(p_);}
+			CharacterIterator& characterIterator() BOOST_NOEXCEPT {
+				return static_cast<CharacterIterator&>(p_);
+			}
+			const CharacterIterator& characterIterator() const BOOST_NOEXCEPT {
+				return static_cast<const CharacterIterator&>(p_);
+			}
 			BaseIterator p_;
 		};
 
@@ -146,15 +148,15 @@ namespace ascension {
 				BOUNDARY_OF_ALPHANUMERICS	= BOUNDARY_OF_SEGMENT | ALPHA_NUMERIC
 			};
 			/// Returns the word component to search.
-			AbstractWordBreakIterator::Component component() const /*throw()*/ {return component_;}
+			AbstractWordBreakIterator::Component component() const BOOST_NOEXCEPT {return component_;}
 			bool isBoundary(const CharacterIterator& at) const;
 			void next(std::ptrdiff_t amount);
 			void setComponent(Component component);
 		protected:
 			AbstractWordBreakIterator(Component component,
-				const IdentifierSyntax& syntax, const std::locale& lc) /*throw()*/;
-			virtual CharacterIterator& characterIterator() /*throw()*/ = 0;
-			virtual const CharacterIterator& characterIterator() const /*throw()*/ = 0;
+				const IdentifierSyntax& syntax, const std::locale& lc) BOOST_NOEXCEPT;
+			virtual CharacterIterator& characterIterator() BOOST_NOEXCEPT = 0;
+			virtual const CharacterIterator& characterIterator() const BOOST_NOEXCEPT = 0;
 		private:
 			void doNext(std::ptrdiff_t amount);
 			void doPrevious(std::ptrdiff_t amount);
@@ -162,7 +164,10 @@ namespace ascension {
 			const IdentifierSyntax& syntax_;
 		};
 
-		/// @c WordBreakIterator locates word boundaries in text.
+		/**
+		 * @c WordBreakIterator locates word boundaries in text.
+		 * @tparam BaseIterator
+		 */
 		template<class BaseIterator>
 		class WordBreakIterator : public AbstractWordBreakIterator,
 			public detail::BreakIteratorFacade<WordBreakIterator<BaseIterator>> {
@@ -170,23 +175,25 @@ namespace ascension {
 		public:
 			/**
 			 * Constructor.
-			 * @param base the base iterator
-			 * @param component the component of word to search
-			 * @param syntax the identifier syntax for detecting identifier characters
-			 * @param lc the locale
+			 * @param base The base iterator
+			 * @param component The component of word to search
+			 * @param syntax The identifier syntax for detecting identifier characters
+			 * @param lc The locale
 			 */
 			WordBreakIterator(BaseIterator base, Component component,
 				const IdentifierSyntax& syntax, const std::locale& lc = std::locale::classic())
 				: AbstractWordBreakIterator(component, syntax, lc), p_(base) {}
 			/// Returns the base iterator.
-			BaseIterator& base() /*throw()*/ {return p_;}
+			BaseIterator& base() BOOST_NOEXCEPT {return p_;}
 			/// Returns the base iterator.
-			const BaseIterator& base() const /*throw()*/ {return p_;}
+			const BaseIterator& base() const BOOST_NOEXCEPT {return p_;}
 		private:
-			CharacterIterator& characterIterator() /*throw()*/ {
-				return static_cast<CharacterIterator&>(p_);}
-			const CharacterIterator& characterIterator() const /*throw()*/ {
-				return static_cast<const CharacterIterator&>(p_);}
+			CharacterIterator& characterIterator() BOOST_NOEXCEPT {
+				return static_cast<CharacterIterator&>(p_);
+			}
+			const CharacterIterator& characterIterator() const BOOST_NOEXCEPT {
+				return static_cast<const CharacterIterator&>(p_);
+			}
 			BaseIterator p_;
 		};
 
@@ -207,15 +214,15 @@ namespace ascension {
 				BOUNDARY_OF_SEGMENT	= START_OF_SEGMENT | END_OF_SEGMENT,
 			};
 			/// Returns the sentence component to search.
-			AbstractSentenceBreakIterator::Component component() const /*throw()*/ {return component_;}
+			AbstractSentenceBreakIterator::Component component() const BOOST_NOEXCEPT {return component_;}
 			bool isBoundary(const CharacterIterator& at) const;
 			void next(std::ptrdiff_t amount);
 			void setComponent(Component component);
 		protected:
 			AbstractSentenceBreakIterator(Component component,
-				const IdentifierSyntax& syntax, const std::locale& lc) /*throw()*/;
-			virtual CharacterIterator& characterIterator() /*throw()*/ = 0;
-			virtual const CharacterIterator& characterIterator() const /*throw()*/ = 0;
+				const IdentifierSyntax& syntax, const std::locale& lc) BOOST_NOEXCEPT;
+			virtual CharacterIterator& characterIterator() BOOST_NOEXCEPT = 0;
+			virtual const CharacterIterator& characterIterator() const BOOST_NOEXCEPT = 0;
 		private:
 			void doNext(std::ptrdiff_t amount);
 			void doPrevious(std::ptrdiff_t amount);
@@ -223,7 +230,10 @@ namespace ascension {
 			const IdentifierSyntax& syntax_;
 		};
 
-		/// @c SentenceBreakIterator locates sentence boundaries in text.
+		/**
+		 * @c SentenceBreakIterator locates sentence boundaries in text.
+		 * @tparam BaseIterator
+		 */
 		template<class BaseIterator>
 		class SentenceBreakIterator : public AbstractSentenceBreakIterator,
 			public detail::BreakIteratorFacade<SentenceBreakIterator<BaseIterator>> {
@@ -231,23 +241,25 @@ namespace ascension {
 		public:
 			/**
 			 * Constructor.
-			 * @param base the base iterator
-			 * @param component the component of sentence to search
-			 * @param syntax the identifier syntax to detect alphabets
-			 * @param lc the locale
+			 * @param base The base iterator
+			 * @param component The component of sentence to search
+			 * @param syntax The identifier syntax to detect alphabets
+			 * @param lc The locale
 			 */
 			SentenceBreakIterator(BaseIterator base, Component component,
 				const IdentifierSyntax& syntax, const std::locale& lc = std::locale::classic())
 				: AbstractSentenceBreakIterator(component, syntax, lc), p_(base) {}
 			/// Returns the base iterator.
-			BaseIterator& base() /*throw()*/ {return p_;}
+			BaseIterator& base() BOOST_NOEXCEPT {return p_;}
 			/// Returns the base iterator.
-			const BaseIterator& base() const /*throw()*/ {return p_;}
+			const BaseIterator& base() const BOOST_NOEXCEPT {return p_;}
 		private:
-			CharacterIterator& characterIterator() /*throw()*/ {
-				return static_cast<CharacterIterator&>(p_);}
-			const CharacterIterator& characterIterator() const /*throw()*/ {
-				return static_cast<const CharacterIterator&>(p_);}
+			CharacterIterator& characterIterator() BOOST_NOEXCEPT {
+				return static_cast<CharacterIterator&>(p_);
+			}
+			const CharacterIterator& characterIterator() const BOOST_NOEXCEPT {
+				return static_cast<const CharacterIterator&>(p_);
+			}
 			BaseIterator p_;
 		};
 
@@ -257,12 +269,15 @@ namespace ascension {
 			bool isBoundary(const CharacterIterator& at) const;
 			void next(std::ptrdiff_t amount);
 		protected:
-			AbstractLineBreakIterator(const std::locale& lc) /*throw()*/;
-			virtual CharacterIterator& characterIterator() /*throw()*/ = 0;
-			virtual const CharacterIterator& characterIterator() const /*throw()*/ = 0;
+			AbstractLineBreakIterator(const std::locale& lc) BOOST_NOEXCEPT;
+			virtual CharacterIterator& characterIterator() BOOST_NOEXCEPT = 0;
+			virtual const CharacterIterator& characterIterator() const BOOST_NOEXCEPT = 0;
 		};
 
-		/// @c LineBreakIterator locates line break opportunities in text.
+		/**
+		 * @c LineBreakIterator locates line break opportunities in text.
+		 * @tparam BaseIterator
+		 */
 		template<class BaseIterator>
 		class LineBreakIterator : public AbstractLineBreakIterator,
 			public detail::BreakIteratorFacade<LineBreakIterator<BaseIterator>> {
@@ -270,24 +285,25 @@ namespace ascension {
 		public:
 			/**
 			 * Constructor.
-			 * @param base the base iterator
-			 * @param lc the locale
+			 * @param base The base iterator
+			 * @param lc The locale
 			 */
 			LineBreakIterator(BaseIterator base,
 				const std::locale& lc = std::locale::classic())
 				: AbstractLineBreakIterator(lc), p_(base) {}
 			/// Returns the base iterator.
-			BaseIterator& base() /*throw()*/ {return p_;}
+			BaseIterator& base() BOOST_NOEXCEPT {return p_;}
 			/// Returns the base iterator.
-			const BaseIterator& base() const /*throw()*/ {return p_;}
+			const BaseIterator& base() const BOOST_NOEXCEPT {return p_;}
 		private:
-			CharacterIterator& characterIterator() /*throw()*/ {
-				return static_cast<CharacterIterator&>(p_);}
-			const CharacterIterator& characterIterator() const /*throw()*/ {
-				return static_cast<const CharacterIterator&>(p_);}
+			CharacterIterator& characterIterator() BOOST_NOEXCEPT {
+				return static_cast<CharacterIterator&>(p_);
+			}
+			const CharacterIterator& characterIterator() const BOOST_NOEXCEPT {
+				return static_cast<const CharacterIterator&>(p_);
+			}
 			BaseIterator p_;
 		};
-
 	}
 } // namespace ascension.text
 
