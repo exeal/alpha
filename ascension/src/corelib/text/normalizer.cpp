@@ -137,8 +137,8 @@ namespace {
 	 * @param[in,out] s The decomposed character sequence
 	 */
 	inline void reorderCombiningMarks(basic_string<CodePoint>& s) {
-		basic_string<CodePoint>::iterator current(s.begin()), next;
-		const basic_string<CodePoint>::iterator last(s.end());
+		basic_string<CodePoint>::iterator current(begin(s)), next;
+		const basic_string<CodePoint>::iterator last(end(s));
 		while(current != last) {
 			next = find_if(current, last, [](CodePoint c) {
 				return CanonicalCombiningClass::of(c) == 0;
@@ -217,16 +217,18 @@ namespace {
 
 	/**
 	 * Returns @c true if the specified character sequence is in FCD.
-	 * @param first The start of the character sequence
-	 * @param last The end of the character sequence
+	 * @tparam SinglePassReadableRange 16-bit character sequence
+	 * @param characterSequence The character sequence
 	 * @return true if the sequence is in FCD.
 	 */
-	template<typename CharacterSequence> inline bool isFCD(CharacterSequence first, CharacterSequence last) {
-		ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<CharacterSequence>::value == 2);
+	template<typename SinglePassReadableRange>
+	inline bool isFCD(const SinglePassReadableRange& characterSequence) {
+		typedef boost::range_iterator<const SinglePassReadableRange>::type Iterator;
+		static_assert(CodeUnitSizeOf<Iterator>::value == 2, "SinglePassReadableRange should represent 16-bit character sequence.");
 		Char buffer[32];
 		Index len;
 		int ccc, previous = CanonicalCombiningClass::NOT_REORDERED;
-		for(utf::CharacterDecodeIterator<CharacterSequence> i(first, last); i.tell() < last; ++i) {
+		for(utf::CharacterDecodeIterator<Iterator> i(boost::begin(characterSequence), boost::end(characterSequence)); i.tell() < boost::end(characterSequence); ++i) {
 			len = internalDecompose(*i, false, buffer);
 			ccc = CanonicalCombiningClass::of(utf::decodeFirst(buffer, buffer + len));
 			if(ccc != CanonicalCombiningClass::NOT_REORDERED && ccc < previous)
@@ -385,8 +387,8 @@ Normalizer& Normalizer::operator=(Normalizer&& other) BOOST_NOEXCEPT {
  */
 int Normalizer::compare(const String& s1, const String& s2, CaseSensitivity caseSensitivity) {
 	unique_ptr<String>
-		nfd1((caseSensitivity == CASE_INSENSITIVE_EXCLUDING_TURKISH_I || !isFCD(s1.begin(), s1.end())) ? new String : nullptr),
-		nfd2((caseSensitivity == CASE_INSENSITIVE_EXCLUDING_TURKISH_I || !isFCD(s2.begin(), s2.end())) ? new String : nullptr);
+		nfd1((caseSensitivity == CASE_INSENSITIVE_EXCLUDING_TURKISH_I || !isFCD(s1)) ? new String : nullptr),
+		nfd2((caseSensitivity == CASE_INSENSITIVE_EXCLUDING_TURKISH_I || !isFCD(s2)) ? new String : nullptr);
 	if(nfd1.get() != nullptr)
 		nfd1->assign(normalize(StringCharacterIterator(s1), FORM_D));
 	if(nfd2.get() != nullptr)

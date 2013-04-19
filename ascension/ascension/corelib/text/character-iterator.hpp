@@ -2,7 +2,7 @@
  * @file character-iterator.hpp
  * Defines iterator classes traverse Unicode character sequence.
  * @author exeal
- * @date 2005-2010 (was unicode.hpp)
+ * @date 2005-2010 was unicode.hpp
  * @date 2010-2013
  * @see utf-iterator.hpp
  */
@@ -193,21 +193,21 @@ namespace ascension {
 
 			// attributes
 			/// Returns the beginning position.
-			const Char* beginning() const BOOST_NOEXCEPT {return first_;}
+			StringPiece::const_iterator beginning() const BOOST_NOEXCEPT {return range_.cend();}
 			/// Returns the end position.
-			const Char* end() const BOOST_NOEXCEPT {return last_;}
+			StringPiece::const_iterator end() const BOOST_NOEXCEPT {return range_.cend();}
 			/// Returns the current position.
-			const Char* tell() const BOOST_NOEXCEPT {return current_;}
+			StringPiece::const_iterator tell() const BOOST_NOEXCEPT {return current_;}
 
 			// CharacterIterator
 			/// @see CharacterIterator#current
 			CodePoint current() const BOOST_NOEXCEPT {
-				return (current_ != last_) ? utf::checkedDecodeFirst(current_, last_) : DONE;
+				return (tell() != end()) ? utf::checkedDecodeFirst(tell(), end()) : DONE;
 			}
 			/// @see CharacterIterator#hasNext
-			bool hasNext() const BOOST_NOEXCEPT {return current_ != last_;}
+			bool hasNext() const BOOST_NOEXCEPT {return tell() != end();}
 			/// @see CharacterIterator#hasPrevious
-			bool hasPrevious() const BOOST_NOEXCEPT {return current_ != first_;}
+			bool hasPrevious() const BOOST_NOEXCEPT {return tell() != end();}
 		private:
 			void doAssign(const CharacterIterator& other);
 			std::unique_ptr<CharacterIterator> doClone() const;
@@ -225,9 +225,8 @@ namespace ascension {
 			void increment() {next();}
 		private:
 			static const ConcreteTypeTag CONCRETE_TYPE_TAG_;
-			const Char* current_;
-			const Char* first_;
-			const Char* last_;
+			StringPiece::const_iterator current_;
+			StringPiece range_;
 		};
 
 	}

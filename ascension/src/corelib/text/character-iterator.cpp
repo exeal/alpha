@@ -121,39 +121,37 @@ StringCharacterIterator::StringCharacterIterator() BOOST_NOEXCEPT
 }
 
 StringCharacterIterator::StringCharacterIterator(const StringPiece& text) :
-		CharacterIterator(CONCRETE_TYPE_TAG_), current_(text.begin()),
-		first_(text.begin()), last_(text.end()) {
+		CharacterIterator(CONCRETE_TYPE_TAG_), current_(text.cbegin()), range_(text) {
 }
 
 StringCharacterIterator::StringCharacterIterator(const StringPiece& text, const StringPiece::const_iterator start) :
-		CharacterIterator(CONCRETE_TYPE_TAG_), current_(start), first_(text.begin()), last_(text.end()) {
-	if(current_ < first_ || current_ > last_)
+		CharacterIterator(CONCRETE_TYPE_TAG_), current_(start), range_(text) {
+	if(tell() < beginning() || tell() > end())
 		throw invalid_argument("invalid input.");
 }
 
 StringCharacterIterator::StringCharacterIterator(const String& text) :
-		CharacterIterator(CONCRETE_TYPE_TAG_), current_(text.data()), first_(text.data()), last_(text.data() + text.length()) {
-	if(current_ < first_ || current_ > last_)
+		CharacterIterator(CONCRETE_TYPE_TAG_), current_(text.data()), range_(text) {
+	if(tell() < beginning() || tell() > end())
 		throw invalid_argument("invalid input.");
 }
 
 StringCharacterIterator::StringCharacterIterator(const String& text, String::const_iterator start) :
-		CharacterIterator(CONCRETE_TYPE_TAG_), current_(text.data() + (start - text.begin())), first_(text.data()), last_(text.data() + text.length()) {
-	if(current_ < first_ || current_ > last_)
+		CharacterIterator(CONCRETE_TYPE_TAG_), current_(text.data() + (start - text.begin())), range_(text) {
+	if(tell() < beginning() || tell() > end())
 		throw invalid_argument("invalid input.");
 }
 
 /// Copy-constructor.
 StringCharacterIterator::StringCharacterIterator(const StringCharacterIterator& other) BOOST_NOEXCEPT
-		: CharacterIterator(other), current_(other.current_), first_(other.first_), last_(other.last_) {
+		: CharacterIterator(other), current_(other.current_), range_(other.range_) {
 }
 
 /// @see CharacterIterator#doAssign
 void StringCharacterIterator::doAssign(const CharacterIterator& other) {
 	CharacterIterator::operator=(other);
 	current_ = static_cast<const StringCharacterIterator&>(other).current_;
-	first_ = static_cast<const StringCharacterIterator&>(other).first_;
-	last_ = static_cast<const StringCharacterIterator&>(other).last_;
+	range_ = static_cast<const StringCharacterIterator&>(other).range_;
 }
 
 /// @see CharacterIterator#doClone
@@ -163,36 +161,36 @@ unique_ptr<CharacterIterator> StringCharacterIterator::doClone() const {
 
 /// @see CharacterIterator#doEquals
 bool StringCharacterIterator::doEquals(const CharacterIterator& other) const {
-	return current_ == static_cast<const StringCharacterIterator&>(other).current_;
+	return tell() == static_cast<const StringCharacterIterator&>(other).tell();
 }
 
 /// @see CharacterIterator#doFirst
 void StringCharacterIterator::doFirst() {
-	current_ = first_;
+	current_ = beginning();
 }
 
 /// @see CharacterIterator#doLast
 void StringCharacterIterator::doLast() {
-	current_ = last_;
+	current_ = end();
 }
 
 /// @see CharacterIterator#doLess
 bool StringCharacterIterator::doLess(const CharacterIterator& other) const {
-	return current_ < static_cast<const StringCharacterIterator&>(other).current_;
+	return tell() < static_cast<const StringCharacterIterator&>(other).tell();
 }
 
 /// @see CharacterIterator#doNext
 void StringCharacterIterator::doNext() {
-	if(current_ == last_)
+	if(tell() == end())
 //		throw out_of_range("the iterator is the last.");
 		return;
-	current_ = (++utf::makeCharacterDecodeIterator(first_, last_, current_)).tell();
+	current_ = (++utf::makeCharacterDecodeIterator(beginning(), end(), tell())).tell();
 }
 
 /// @see CharacterIterator#doPrevious
 void StringCharacterIterator::doPrevious() {
-	if(current_ == first_)
+	if(tell() == beginning())
 //		throw out_of_range("the iterator is the first.");
 		return;
-	current_ = (--utf::makeCharacterDecodeIterator(first_, last_, current_)).tell();
+	current_ = (--utf::makeCharacterDecodeIterator(beginning(), end(), tell())).tell();
 }
