@@ -1,7 +1,7 @@
 /**
  * @file normalizer.cpp
  * @author exeal
- * @date 2007-2012
+ * @date 2007-2013
  */
 
 #include <ascension/config.hpp>	// ASCENSION_NO_UNICODE_*
@@ -376,26 +376,6 @@ Normalizer& Normalizer::operator=(Normalizer&& other) BOOST_NOEXCEPT {
 	return *this;
 }
 
-/**
- * Compares the two strings for canonical equivalence.
- * @param s1 The string
- * @param s2 The other string
- * @param caseSensitivity For caseless match
- * @retval &lt;0 @a s1 is less than @a s2
- * @retval 0 The two strings are canonical equivalent
- * @retval &gt;0 @a s1 is greater than @a s2
- */
-int Normalizer::compare(const String& s1, const String& s2, CaseSensitivity caseSensitivity) {
-	unique_ptr<String>
-		nfd1((caseSensitivity == CASE_INSENSITIVE_EXCLUDING_TURKISH_I || !isFCD(s1)) ? new String : nullptr),
-		nfd2((caseSensitivity == CASE_INSENSITIVE_EXCLUDING_TURKISH_I || !isFCD(s2)) ? new String : nullptr);
-	if(nfd1.get() != nullptr)
-		nfd1->assign(normalize(StringCharacterIterator(s1), FORM_D));
-	if(nfd2.get() != nullptr)
-		nfd2->assign(normalize(StringCharacterIterator(s2), FORM_D));
-	return internalCompare((nfd1.get() != nullptr) ? *nfd1 : s1, (nfd2.get() != nullptr) ? *nfd2 : s2, caseSensitivity);
-}
-
 /// Normalizes the next or previous closure for the following iteration.
 void Normalizer::nextClosure(Direction direction, bool initialize) {
 	unique_ptr<CharacterIterator> next;
@@ -431,19 +411,40 @@ void Normalizer::nextClosure(Direction direction, bool initialize) {
 	indexInBuffer_ = (direction == Direction::FORWARD) ? 0 : normalizedBuffer_.length() - 1;
 }
 
+
+// free functions /////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Compares the two strings for canonical equivalence.
+ * @param s1 The string
+ * @param s2 The other string
+ * @param caseSensitivity For caseless match
+ * @retval &lt;0 @a s1 is less than @a s2
+ * @retval 0 The two strings are canonical equivalent
+ * @retval &gt;0 @a s1 is greater than @a s2
+ */
+int text::compareForCanonicalEquivalence(const String& s1, const String& s2, CaseSensitivity caseSensitivity) {
+	boost::optional<String> nfd1, nfd2;
+	if(caseSensitivity == CASE_INSENSITIVE_EXCLUDING_TURKISH_I || !isFCD(s1))
+		nfd1 = normalize(StringCharacterIterator(s1), Normalizer::FORM_D);
+	if(caseSensitivity == CASE_INSENSITIVE_EXCLUDING_TURKISH_I || !isFCD(s2))
+		nfd2 = normalize(StringCharacterIterator(s2), Normalizer::FORM_D);
+	return internalCompare(boost::get_optional_value_or(nfd1, s1), boost::get_optional_value_or(nfd2, s2), caseSensitivity);
+}
+
 /**
  * Normalizes the specified text according to the normalization form.
  * @param text The text to normalize
  * @param form The normalization form
  */
-String Normalizer::normalize(const CharacterIterator& text, Form form) {
-	// TODO: there is more efficient implementation.
+String text::normalize(const CharacterIterator& text, Normalizer::Form form) {
+	// TODO: There is more efficient implementation.
 	Normalizer n(text, form);
 	basic_stringbuf<Char> buffer(ios_base::out);
 	CodePoint c;
 	Char surrogates[2];
-	for(Normalizer n(text, form); n.hasNext(); n.increment()) {
-		c = n.dereference();
+	for(Normalizer n(text, form); n.hasNext(); ++n) {
+		c = *n;
 		if(c < 0x010000ul)
 			buffer.sputc(static_cast<Char>(c & 0xffffu));
 		else {
