@@ -3,13 +3,15 @@
  * @author exeal
  * @date 2005-2011 was unicode.hpp
  * @date 2011-04-27 renamed from unicode.hpp
- * @date 2012
+ * @date 2012-2013
  */
 
 #ifndef ASCENSION_CHARACTER_HPP
 #define ASCENSION_CHARACTER_HPP
 
 #include <ascension/corelib/basic-types.hpp>
+#include <ascension/corelib/future/type-traits.hpp>	// std.integral_constant
+#include <boost/range/iterator.hpp>
 #include <ios>	// std.ios_base.failure
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
@@ -34,7 +36,6 @@ namespace ascension {
 	 * @see ASCENSION_UNICODE_VERSION
 	 */
 	namespace text {
-
 		/// Code point of LINE FEED (U+000A).
 		const Char LINE_FEED = 0x000au;
 		/// Code point of CARRIAGE RETURN (U+000D).
@@ -60,26 +61,21 @@ namespace ascension {
 		/// Set of newline characters.
 		/// @see kernel#Newline
 		const Char NEWLINE_CHARACTERS[] = {
-			LINE_FEED, CARRIAGE_RETURN, NEXT_LINE, LINE_SEPARATOR, PARAGRAPH_SEPARATOR};
+			LINE_FEED, CARRIAGE_RETURN, NEXT_LINE, LINE_SEPARATOR, PARAGRAPH_SEPARATOR
+		};
 
 		/**
 		 * Returns the size of a code unit of the specified code unit sequence in bytes.
 		 * @tparam CodeUnitSequence The type represents a code unit sequence
 		 */
-		template<typename CodeUnitSequence> struct CodeUnitSizeOf {
-			/// Byte size of the code unit.
-			static const std::size_t value =
-				sizeof(typename std::iterator_traits<CodeUnitSequence>::value_type);
-		};
-		template<typename T> struct CodeUnitSizeOf<std::back_insert_iterator<T>> {
-			static const std::size_t value = sizeof(T::value_type);
-		};
-		template<typename T> struct CodeUnitSizeOf<std::front_insert_iterator<T>> {
-			static const std::size_t value = sizeof(T::value_type);
-		};
-		template<typename T, typename U> struct CodeUnitSizeOf<std::ostream_iterator<T, U>> {
-			static const std::size_t value = sizeof(T);
-		};
+		template<typename CodeUnitSequence> struct CodeUnitSizeOf
+			: std::integral_constant<std::size_t, sizeof(typename std::iterator_traits<CodeUnitSequence>::value_type)> {};
+		template<typename T> struct CodeUnitSizeOf<std::back_insert_iterator<T>>
+			: std::integral_constant<std::size_t, sizeof(T::value_type)> {};
+		template<typename T> struct CodeUnitSizeOf<std::front_insert_iterator<T>>
+			: std::integral_constant<std::size_t, sizeof(T::value_type)> {};
+		template<typename T, typename U> struct CodeUnitSizeOf<std::ostream_iterator<T, U>>
+			: std::integral_constant<std::size_t, sizeof(T)> {};
 
 		/**
 		 * The Unicode decoding failed for malformed input.
@@ -106,9 +102,9 @@ namespace ascension {
 					throw std::length_error("maximalSubpartLength");
 			}
 			/// Returns the length of the maximal subpart.
-			std::size_t maximalSubpartLength() const /*noexcept*/ {return maximalSubpartLength_;}
+			std::size_t maximalSubpartLength() const BOOST_NOEXCEPT {return maximalSubpartLength_;}
 			/// Returns the position where the malformed input was found.
-			const InputIterator& position() const /*noexcept*/ {return position_;}
+			const InputIterator& position() const BOOST_NOEXCEPT {return position_;}
 		private:
 			const InputIterator position_;
 			const std::size_t maximalSubpartLength_;	// see Unicode 6.0, D39b
@@ -116,7 +112,7 @@ namespace ascension {
 
 		/**
 		 * @c surrogates namespace collects low level procedures handle UTF-16 surrogate pair.
-		 * @see UTF16To32Iterator, UTF32To16Iterator, utf-16.hpp
+		 * @see CharacterDecodeIterator, CharacterEncodeIterator, CharacterOutputIterator
 		 */
 		namespace surrogates {
 			/**
@@ -124,7 +120,7 @@ namespace ascension {
 			 * @param c The code point
 			 * @return true if @a c is supplemental
 			 */
-			inline bool isSupplemental(CodePoint c) /*noexcept*/ {
+			inline bool isSupplemental(CodePoint c) BOOST_NOEXCEPT {
 				return (c & 0xffff0000ul) != 0;
 			}
 
@@ -133,7 +129,7 @@ namespace ascension {
 			 * @param c The code point
 			 * @return true if @a c is high-surrogate
 			 */
-			inline bool isHighSurrogate(CodePoint c) /*noexcept*/ {
+			inline bool isHighSurrogate(CodePoint c) BOOST_NOEXCEPT {
 				return (c & 0xfffffc00ul) == 0xd800u;
 			}
 
@@ -142,7 +138,7 @@ namespace ascension {
 			 * @param c The code point
 			 * @return true if @a c is low-surrogate
 			 */
-			inline bool isLowSurrogate(CodePoint c) /*noexcept*/ {
+			inline bool isLowSurrogate(CodePoint c) BOOST_NOEXCEPT {
 				return (c & 0xfffffc00ul) == 0xdc00u;
 			}
 
@@ -151,7 +147,7 @@ namespace ascension {
 			 * @param c The code point
 			 * @return true if @a c is surrogate
 			 */
-			inline bool isSurrogate(CodePoint c) /*noexcept*/ {
+			inline bool isSurrogate(CodePoint c) BOOST_NOEXCEPT {
 				return (c & 0xfffff800ul) == 0xd800u;
 			}
 
@@ -161,7 +157,7 @@ namespace ascension {
 			 * @param c The code point
 			 * @return The high-surrogate code unit for @a c
 			 */
-			inline Char highSurrogate(CodePoint c) /*noexcept*/ {
+			inline Char highSurrogate(CodePoint c) BOOST_NOEXCEPT {
 				return static_cast<Char>((c >> 10) & 0xffffu) + 0xd7c0u;
 			}
 
@@ -171,7 +167,7 @@ namespace ascension {
 			 * @param c The code point
 			 * @return The low-surrogate code unit for @a c
 			 */
-			inline Char lowSurrogate(CodePoint c) /*noexcept*/ {
+			inline Char lowSurrogate(CodePoint c) BOOST_NOEXCEPT {
 				return static_cast<Char>(c & 0x03ffu) | 0xdc00u;
 			}
 
@@ -183,7 +179,7 @@ namespace ascension {
 			 * @return The code point
 			 * @see #checkedDecode
 			 */
-			inline CodePoint decode(std::uint16_t high, std::uint16_t low) /*noexcept*/ {
+			inline CodePoint decode(std::uint16_t high, std::uint16_t low) BOOST_NOEXCEPT {
 				return 0x10000ul + (high - 0xd800u) * 0x0400u + low - 0xdc00u;
 			}
 
@@ -213,9 +209,9 @@ namespace ascension {
 			 * @return The isolated surrogate or @a last if not found
 			 */
 			template<typename InputIterator>
-			inline InputIterator searchIsolatedSurrogate(
-					InputIterator first, InputIterator last) /*noexcept*/ {
-				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::value == 2);
+			inline InputIterator searchIsolatedSurrogate(InputIterator first, InputIterator last) {
+				static_assert(CodeUnitSizeOf<InputIterator>::value == 2,
+					"InputIterator should be a 16-bit character sequence.");
 				while(first != last) {
 					if(isLowSurrogate(*first))
 						break;
@@ -228,19 +224,32 @@ namespace ascension {
 				}
 				return first;
 			}
+
+			/**
+			 * @overload
+			 * @tparam SinglePassReadableRange UTF-16 character sequence
+			 * @param characterSequence The character sequence
+			 * @return The isolated surrogate or @c boost#end(characterSequence) if not found
+			 */
+			template<typename SinglePassReadableRange>
+			inline typename boost::range_iterator<const SinglePassReadableRange>::type
+					searchIsolatedSurrogate(const SinglePassReadableRange& characterSequence) {
+				return searchIsolatedSurrogate(
+					boost::begin(characterSequence), boost::end(characterSequence));
+			}
 		} // namespace surrogates
 
 		/**
 		 * Returns @c true if the specified code point is in Unicode codespace (0..10FFFF).
 		 * @see InvalidCodePointException
 		 */
-		inline bool isValidCodePoint(CodePoint c) /*noexcept*/ {return c <= 0x10fffful;}
+		inline bool isValidCodePoint(CodePoint c) BOOST_NOEXCEPT {return c <= 0x10fffful;}
 
 		/**
 		 * Returns @c true if the specified code point is Unicode scalar value.
 		 * @see InvalidScalarValueException
 		 */
-		inline bool isScalarValue(CodePoint c) /*noexcept*/ {
+		inline bool isScalarValue(CodePoint c) BOOST_NOEXCEPT {
 			return isValidCodePoint(c) && !surrogates::isSurrogate(c);
 		}
 
@@ -257,7 +266,7 @@ namespace ascension {
 			explicit InvalidCodePointException(CodePoint c)
 				: std::out_of_range("Found an invalid code point."), c_(c) {}
 			/// Returns the code point.
-			CodePoint codePoint() const /*noexcept*/ {return c_;}
+			CodePoint codePoint() const BOOST_NOEXCEPT {return c_;}
 		private:
 			const CodePoint c_;
 		};
@@ -275,7 +284,7 @@ namespace ascension {
 			explicit InvalidScalarValueException(CodePoint c)
 				: std::out_of_range("Found an invalid code point."), c_(c) {}
 			/// Returns the code point.
-			CodePoint codePoint() const /*noexcept*/ {return c_;}
+			CodePoint codePoint() const BOOST_NOEXCEPT {return c_;}
 		private:
 			const CodePoint c_;
 		};

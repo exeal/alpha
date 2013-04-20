@@ -209,7 +209,7 @@ bool IdentifierSyntax::isWhiteSpace(CodePoint c, bool includeTab) const BOOST_NO
  *                                    at both @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierStartCharacters(const String& adding, const String& subtracting) {
-	String::const_iterator isolatedSurrogate(surrogates::searchIsolatedSurrogate(begin(adding), end(adding)));
+	String::const_iterator isolatedSurrogate(surrogates::searchIsolatedSurrogate(adding));
 	if(isolatedSurrogate != end(adding))
 		throw InvalidScalarValueException(*isolatedSurrogate);
 	isolatedSurrogate = surrogates::searchIsolatedSurrogate(begin(subtracting), end(subtracting));
@@ -247,10 +247,10 @@ void IdentifierSyntax::overrideIdentifierStartCharacters(const set<CodePoint>& a
  *                                    at both @a adding and @a subtracting
  */
 void IdentifierSyntax::overrideIdentifierNonStartCharacters(const String& adding, const String& subtracting) {
-	String::const_iterator isolatedSurrogate(surrogates::searchIsolatedSurrogate(begin(adding), end(adding)));
+	String::const_iterator isolatedSurrogate(surrogates::searchIsolatedSurrogate(adding));
 	if(isolatedSurrogate != end(adding))
 		throw InvalidScalarValueException(*isolatedSurrogate);
-	isolatedSurrogate = surrogates::searchIsolatedSurrogate(begin(subtracting), end(subtracting));
+	isolatedSurrogate = surrogates::searchIsolatedSurrogate(subtracting);
 	if(isolatedSurrogate != end(subtracting))
 		throw InvalidScalarValueException(*isolatedSurrogate);
 	typedef utf::CharacterDecodeIterator<String::const_iterator> I;
