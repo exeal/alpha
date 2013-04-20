@@ -30,14 +30,15 @@ namespace ascension {
 		class PartitionPresentationReconstructor {
 		public:
 			/// Destructor.
-			virtual ~PartitionPresentationReconstructor() /*throw()*/ {}
+			virtual ~PartitionPresentationReconstructor() BOOST_NOEXCEPT {}
 		private:
 			/**
 			 * Returns the styled text segments for the specified document region.
 			 * @param region The region to reconstruct the new presentation
 			 * @return The presentation or @c null (filled by the presentation's default style)
 			 */
-			virtual std::unique_ptr<StyledTextRunIterator> getPresentation(const kernel::Region& region) const /*throw()*/ = 0;
+			virtual std::unique_ptr<StyledTextRunIterator>
+				presentation(const kernel::Region& region) const BOOST_NOEXCEPT = 0;
 			friend class PresentationReconstructor;
 		};
 
@@ -49,7 +50,7 @@ namespace ascension {
 		private:
 			// PartitionPresentationReconstructor
 			std::unique_ptr<StyledTextRunIterator>
-				getPresentation(Index line, const boost::integer_range<Index>& rangeInLine) const;
+				presentation(Index line, const boost::integer_range<Index>& rangeInLine) const;
 		private:
 			class Iterator;
 			const std::shared_ptr<const TextRunStyle> style_;
@@ -63,7 +64,7 @@ namespace ascension {
 		class TextRunStyleDeclarator {
 		public:
 			/// Destructor.
-			virtual ~TextRunStyleDeclarator() /*noexcept*/ {}
+			virtual ~TextRunStyleDeclarator() BOOST_NOEXCEPT {}
 		private:
 			/**
 			 * Returns the style of the text line.
@@ -82,8 +83,8 @@ namespace ascension {
 			ASCENSION_UNASSIGNABLE_TAG(PresentationReconstructor);
 		public:
 			// constructors
-			explicit PresentationReconstructor(Presentation& presentation) /*throw()*/;
-			~PresentationReconstructor() /*throw()*/;
+			explicit PresentationReconstructor(Presentation& presentation) BOOST_NOEXCEPT;
+			~PresentationReconstructor() BOOST_NOEXCEPT;
 			// attribute
 			void setPartitionReconstructor(kernel::ContentType contentType,
 				std::unique_ptr<PartitionPresentationReconstructor> reconstructor);

@@ -600,8 +600,8 @@ private:
 SingleStyledPartitionPresentationReconstructor::SingleStyledPartitionPresentationReconstructor(shared_ptr<const TextRunStyle> style) BOOST_NOEXCEPT : style_(style) {
 }
 
-/// @see PartitionPresentationReconstructor#getPresentation
-unique_ptr<StyledTextRunIterator> SingleStyledPartitionPresentationReconstructor::getPresentation(Index, const boost::integer_range<Index>& rangeInLine) const {
+/// @see PartitionPresentationReconstructor#presentation
+unique_ptr<StyledTextRunIterator> SingleStyledPartitionPresentationReconstructor::presentation(Index, const boost::integer_range<Index>& rangeInLine) const {
 	return unique_ptr<presentation::StyledTextRunIterator>(new Iterator(rangeInLine, style_));
 }
 
@@ -710,7 +710,7 @@ void PresentationReconstructor::Iterator::next() {
 inline void PresentationReconstructor::Iterator::updateSubiterator() {
 	map<ContentType, PartitionPresentationReconstructor*>::const_iterator r(reconstructors_.find(currentPartition_.contentType));
 	if(r != reconstructors_.end())
-		subiterator_ = r->second->getPresentation(currentPartition_.region);
+		subiterator_ = r->second->presentation(currentPartition_.region);
 	else
 		subiterator_.reset();
 	if(subiterator_.get() == nullptr) {
