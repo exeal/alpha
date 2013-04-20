@@ -30,10 +30,10 @@ namespace ascension {
 				typedef Position ScrollPosition;
 			public:
 				virtual void command(ScrollCommands::Value ) = 0;
-				virtual Range<ScrollPosition> range() const = 0;
+				virtual boost::integer_range<ScrollPosition> range() const = 0;
 				virtual ScrollPosition pageStep() const = 0;
 				virtual ScrollPosition position() const = 0;
-				virtual void setRange(const Range<ScrollPosition>& newRange) = 0;
+				virtual void setRange(const boost::integer_range<ScrollPosition>& newRange) = 0;
 				virtual void setPageStep(ScrollPosition newPageStep) = 0;
 				virtual void setPosition(ScrollPosition newPosition) = 0;
 				virtual void setSingleStep(ScrollPosition newSingleStep) = 0;

@@ -2,16 +2,16 @@
  * @file viewer.hpp
  * This header defines several visual presentation classes.
  * @author exeal
- * @date 2003-2006 (was EditView.h)
- * @date 2006-2012
+ * @date 2003-2006 was EditView.h
+ * @date 2006-2013
  */
 
 #ifndef ASCENSION_VIEWER_HPP
 #define ASCENSION_VIEWER_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
-#include <ascension/graphics/text-renderer.hpp>
-#include <ascension/graphics/text-viewport.hpp>
+#include <ascension/graphics/font/text-renderer.hpp>
+#include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/kernel/point.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/writing-mode.hpp>
@@ -43,7 +43,6 @@
 
 
 namespace ascension {
-
 	namespace viewers {
 		class VisualPoint;
 		class TextViewer;
@@ -64,7 +63,6 @@ namespace ascension {
 	}
 
 	namespace viewers {
-
 		/**
 		 * A virtual rectangle placed in the viewer.
 		 * @note This feature is not fully available on bidirectional texts.
@@ -73,11 +71,11 @@ namespace ascension {
 		class VirtualBox {
 			ASCENSION_UNASSIGNABLE_TAG(VirtualBox);
 		public:
-			VirtualBox(const TextViewer& viewer, const kernel::Region& region) /*throw()*/;
+			VirtualBox(const TextViewer& viewer, const kernel::Region& region) BOOST_NOEXCEPT;
 			bool characterRangeInVisualLine(
-				const graphics::font::VisualLine& line, Range<Index>& range) const /*throw()*/;
-			bool includes(const graphics::NativePoint& p) const /*throw()*/;
-			void update(const kernel::Region& region) /*throw()*/;
+				const graphics::font::VisualLine& line, boost::integer_range<Index>& range) const BOOST_NOEXCEPT;
+			bool includes(const graphics::Point& p) const BOOST_NOEXCEPT;
+			void update(const kernel::Region& region) BOOST_NOEXCEPT;
 		private:
 			struct Point {
 				graphics::font::VisualLine line;
@@ -85,10 +83,18 @@ namespace ascension {
 			};
 			std::array<Point, 2> points_;
 			const TextViewer& viewer_;
-			const Point& beginning() const /*throw()*/ {return points_[(points_[0].line <= points_[1].line) ? 0 : 1];}
-			const Point& end() const /*throw()*/ {return points_[(&beginning() == &points_[0]) ? 1 : 0];}
-			graphics::Scalar startEdge() const /*throw()*/ {return std::min(points_[0].ipd, points_[1].ipd);}
-			graphics::Scalar endEdge() const /*throw()*/ {return std::max(points_[0].ipd, points_[1].ipd);}
+			const Point& beginning() const BOOST_NOEXCEPT {
+				return points_[(points_[0].line <= points_[1].line) ? 0 : 1];
+			}
+			const Point& end() const BOOST_NOEXCEPT {
+				return points_[(&beginning() == &points_[0]) ? 1 : 0];
+			}
+			graphics::Scalar startEdge() const BOOST_NOEXCEPT {
+				return std::min(points_[0].ipd, points_[1].ipd);
+			}
+			graphics::Scalar endEdge() const BOOST_NOEXCEPT {
+				return std::max(points_[0].ipd, points_[1].ipd);
+			}
 		};
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
@@ -97,14 +103,13 @@ namespace ascension {
 	namespace detail {
 		class AbstractAccessibleProxy : public IAccessible {
 		public:
-			virtual ~AbstractAccessibleProxy() /*noexcept*/ {}
+			virtual ~AbstractAccessibleProxy() BOOST_NOEXCEPT {}
 			virtual void dispose() = 0;
 		};
 	}
 
 	namespace viewers {
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
-
 		class TextViewer :
 				// note:
 				// Gtk.TextView inherits Gtk.Container (which inherits Gtk.Widget) and Gtk.Scrollable.
@@ -124,7 +129,7 @@ namespace ascension {
 #endif
 				public kernel::DocumentListener, public kernel::DocumentRollbackListener,
 				public graphics::font::DefaultFontListener, public graphics::font::VisualLinesListener,
-				public graphics::font::TextViewportListener, public graphics::font::ComputedWritingModeListener,
+				public graphics::font::TextViewportListener, public graphics::font::ComputedBlockFlowDirectionListener,
 				public CaretListener, public CaretStateListener, public detail::PointCollection<VisualPoint> {
 		public:
 			/**
@@ -172,7 +177,7 @@ namespace ascension {
 				/// Set @c true to use also Rich Text Format for clipboard operations. Default value is @c false.
 				bool usesRichTextClipboardFormat;
 
-				Configuration() /*throw()*/;
+				Configuration() BOOST_NOEXCEPT;
 			};
 
 			/// Implementation of @c graphics#font#TextRenderer for @c TextViewer.
@@ -182,81 +187,110 @@ namespace ascension {
 				explicit Renderer(TextViewer& viewer);
 				Renderer(const Renderer& other, TextViewer& viewer);
 				void displayShapingControls(bool display);
-				bool displaysShapingControls() const /*noexcept*/;
+				bool displaysShapingControls() const BOOST_NOEXCEPT;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				void rewrapAtWindowEdge();
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 				// TextRenderer
 				std::unique_ptr<const graphics::font::TextLayout> createLineLayout(Index line) const;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
-				graphics::Scalar width() const /*throw()*/;
+				graphics::Scalar width() const BOOST_NOEXCEPT;
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 			private:
 				TextViewer& viewer_;
 				bool displaysShapingControls_;
 			};
 
-			// constructors
 			explicit TextViewer(presentation::Presentation& presentation);
 			TextViewer(const TextViewer& other);
 			virtual ~TextViewer();
-			// listeners and strategies
+
+			/// @name Listeners and Strategies
+			/// @{
 			void addDisplaySizeListener(DisplaySizeListener& listener);
 			void addViewportListener(ViewportListener& listener);
 			void removeDisplaySizeListener(DisplaySizeListener& listener);
 			void removeViewportListener(ViewportListener& listener);
 			void setMouseInputStrategy(std::shared_ptr<MouseInputStrategy> newStrategy);
-			// attributes
-			const Configuration& configuration() const /*throw()*/;
+			/// @}
+
+			/// @name General Attributes
+			/// @{
+			const Configuration& configuration() const BOOST_NOEXCEPT;
 			kernel::Document& document();
 			const kernel::Document& document() const;
-			presentation::Presentation& presentation() /*throw()*/;
-			const presentation::Presentation& presentation() const /*throw()*/;
-			const RulerStyles& declaredRulerStyles() const /*throw()*/;
-			unsigned long scrollRate(bool horizontal) const /*throw()*/;
+			presentation::Presentation& presentation() BOOST_NOEXCEPT;
+			const presentation::Presentation& presentation() const BOOST_NOEXCEPT;
+			const RulerStyles& declaredRulerStyles() const BOOST_NOEXCEPT;
+			unsigned long scrollRate(bool horizontal) const BOOST_NOEXCEPT;
 			void setConfiguration(const Configuration* general,
 				std::shared_ptr<const RulerStyles> ruler, bool synchronizeUI);
-			Renderer& textRenderer() /*throw()*/;
-			const Renderer& textRenderer() const /*throw()*/;
-			// caret
-			Caret& caret() /*throw()*/;
-			const Caret& caret() const /*throw()*/;
+			Renderer& textRenderer() BOOST_NOEXCEPT;
+			const Renderer& textRenderer() const BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name Caret
+			/// @{
+			Caret& caret() BOOST_NOEXCEPT;
+			const Caret& caret() const BOOST_NOEXCEPT;
+			/// @}
+
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
-			// Global IME
-			void enableActiveInputMethod(bool enable = true) /*throw()*/;
-			bool isActiveInputMethodEnabled() const /*throw()*/;
+			/// @name Global IME (Only Windows)
+			/// @{
+			void enableActiveInputMethod(bool enable = true) BOOST_NOEXCEPT;
+			bool isActiveInputMethodEnabled() const BOOST_NOEXCEPT;
+			/// @}
+
 #endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
-			// UI
-			void beep() /*throw()*/;
+			/// @name Other User Interface
+			/// @{
+			void beep() BOOST_NOEXCEPT;
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-			HRESULT accessibleObject(IAccessible*& acc) const /*throw()*/;
+			HRESULT accessibleObject(IAccessible*& acc) const BOOST_NOEXCEPT;
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 			void hideToolTip();
 			void showToolTip(const String& text, unsigned long timeToWait = -1, unsigned long timeRemainsVisible = -1);
 #ifndef ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
 			HRESULT startTextServices();
 #endif // !ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
-			// content assist
-			contentassist::ContentAssistant* contentAssistant() const /*throw()*/;
-			void setContentAssistant(std::unique_ptr<contentassist::ContentAssistant> newContentAssistant) /*throw()*/;
-			// redraw
+			/// @}
+
+			/// @name Content Assist
+			/// @{
+			contentassist::ContentAssistant* contentAssistant() const BOOST_NOEXCEPT;
+			void setContentAssistant(std::unique_ptr<contentassist::ContentAssistant> newContentAssistant) BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name Redraw
+			/// @{
 			void redrawLine(Index line, bool following = false);
-			void redrawLines(const Range<Index>& lines);
-			// freeze
+			void redrawLines(const boost::integer_range<Index>& lines);
+			/// @}
+
+			/// @name Freeze
+			/// @{
 			void freeze();
-			bool isFrozen() const /*throw()*/;
+			bool isFrozen() const BOOST_NOEXCEPT;
 			void unfreeze();
-			// mouse input
-			bool allowsMouseInput() const /*throw()*/;
+			/// @}
+
+			/// @name Mouse Input
+			/// @{
+			bool allowsMouseInput() const BOOST_NOEXCEPT;
 			void enableMouseInput(bool enable);
-			// geometries
-			HitTestResult hitTest(const graphics::NativePoint& pt) const;
-			graphics::NativeRectangle textAreaAllocationRectangle() const /*throw()*/;
-			graphics::NativeRectangle textAreaContentRectangle() const /*throw()*/;
+			/// @}
+
+			/// @name Geometries
+			/// @{
+			HitTestResult hitTest(const graphics::Point& pt) const;
+			graphics::Rectangle textAreaAllocationRectangle() const BOOST_NOEXCEPT;
+			graphics::Rectangle textAreaContentRectangle() const BOOST_NOEXCEPT;
+			/// @}
 
 		protected:
-			virtual void doBeep() /*throw()*/;
-			virtual void drawIndicatorMargin(Index line, graphics::PaintContext& context, const graphics::NativeRectangle& rect);
+			virtual void doBeep() BOOST_NOEXCEPT;
+			virtual void drawIndicatorMargin(Index line, graphics::PaintContext& context, const graphics::Rectangle& rect);
 
 			// helpers
 		private:
@@ -289,20 +323,20 @@ namespace ascension {
 			void documentUndoSequenceStarted(const kernel::Document& document);
 			void documentUndoSequenceStopped(const kernel::Document& document, const kernel::Position& resultPosition);
 			// graphics.font.DefaultFontListener
-			void defaultFontChanged() /*throw()*/;
+			void defaultFontChanged() BOOST_NOEXCEPT;
 			// graphics.font.VisualLinesListener
-			void visualLinesDeleted(const Range<Index>& lines, Index sublines, bool longestLineChanged) /*throw()*/;
-			void visualLinesInserted(const Range<Index>& lines) /*throw()*/;
-			void visualLinesModified(const Range<Index>& lines,
-				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/;
+			void visualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines, bool longestLineChanged) BOOST_NOEXCEPT;
+			void visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT;
+			void visualLinesModified(const boost::integer_range<Index>& lines,
+				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT;
 			// graphics.font.TextViewportListener
-			void viewportBoundsInViewChanged(const graphics::NativeRectangle& oldBounds) /*throw()*/;
+			void viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT;
 			void viewportScrollPositionChanged(
 				const presentation::AbstractTwoAxes<graphics::font::TextViewport::SignedScrollOffset>& offsets,
 				const graphics::font::VisualLine& oldLine,
-				graphics::font::TextViewport::ScrollOffset oldInlineProgressionOffset) /*throw()*/;
-			// graphics.font.ComputedWritingModeListener
-			void computedWritingModeChanged(const presentation::WritingMode& used);
+				graphics::font::TextViewport::ScrollOffset oldInlineProgressionOffset) BOOST_NOEXCEPT;
+			// graphics.font.ComputedBlockFlowDirectionListener
+			void computedBlockFlowDirectionChanged(presentation::BlockFlowDirection used);
 			// detail.PointCollection<VisualPoint>
 			void addNewPoint(VisualPoint& point) {points_.insert(&point);}
 			void removePoint(VisualPoint& point) {points_.erase(&point);}
@@ -370,14 +404,14 @@ namespace ascension {
 			void mouseReleased(const widgetapi::MouseButtonInput& input);
 			void mouseWheelChanged(const widgetapi::MouseWheelInput& input);
 			void paint(graphics::PaintContext& context);
-			void resized(const graphics::NativeSize& newSize);
+			void resized(const graphics::Dimension& newSize);
 			void showContextMenu(const widgetapi::LocatedUserInput& input, bool byKeyboard);
 
 			// internal classes
 		private:
 			class CursorVanisher {
 			public:
-				CursorVanisher() /*throw()*/;
+				CursorVanisher() BOOST_NOEXCEPT;
 				~CursorVanisher();
 				void install(TextViewer& viewer);
 				void restore();
@@ -425,7 +459,7 @@ namespace ascension {
 				bool activeInputMethodEnabled;	// true if uses Global IME (deprecated)
 #endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 
-				ModeState() /*throw()*/
+				ModeState() BOOST_NOEXCEPT
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 					: activeInputMethodEnabled(true)
 #endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
@@ -436,38 +470,38 @@ namespace ascension {
 			struct Scrolls {
 //				unsigned long horizontalRate, verticalRate;	// 最小スクロール量が何文字 (何行) に相当するか (普通は 1)
 				bool changed;
-				Scrolls() /*throw()*/ : /*horizontalRate(1), verticalRate(1), */changed(false) {}
-				void resetBars(const TextViewer& viewer, char bars, bool pageSizeChanged) /*throw()*/;
+				Scrolls() BOOST_NOEXCEPT : /*horizontalRate(1), verticalRate(1), */changed(false) {}
+				void resetBars(const TextViewer& viewer, char bars, bool pageSizeChanged) BOOST_NOEXCEPT;
 			} scrolls_;
 
 			// freeze information
 			class FreezeRegister {
 			public:
-				FreezeRegister() /*throw()*/ : count_(0) {
+				FreezeRegister() BOOST_NOEXCEPT : count_(0) {
 					freeze();
 					unfreeze();
 				}
-				void freeze() /*throw()*/ {++count_;}
-				void addLinesToRedraw(const Range<Index>& lines) {
+				void freeze() BOOST_NOEXCEPT {++count_;}
+				void addLinesToRedraw(const boost::integer_range<Index>& lines) {
 					assert(isFrozen());
 					linesToRedraw_ = merged(linesToRedraw_, lines);
 				}
-				bool isFrozen() const /*throw()*/ {return count_ != 0;}
-				const Range<Index>& linesToRedraw() const /*throw()*/ {return linesToRedraw_;}
-				void resetLinesToRedraw(const Range<Index>& lines) {
+				bool isFrozen() const BOOST_NOEXCEPT {return count_ != 0;}
+				const boost::integer_range<Index>& linesToRedraw() const BOOST_NOEXCEPT {return linesToRedraw_;}
+				void resetLinesToRedraw(const boost::integer_range<Index>& lines) {
 					assert(isFrozen());
 					linesToRedraw_ = lines;
 				}
-				Range<Index> unfreeze() {
+				boost::integer_range<Index> unfreeze() {
 					assert(isFrozen());
-					const Range<Index> temp(linesToRedraw());
+					const boost::integer_range<Index> temp(linesToRedraw());
 					--count_;
-					linesToRedraw_ = Range<Index>(0, 0);
+					linesToRedraw_ = boost::irange<Index>(0, 0);
 					return temp;
 				}
 			private:
 				unsigned long count_;
-				Range<Index> linesToRedraw_;
+				boost::integer_range<Index> linesToRedraw_;
 			} freezeRegister_;
 
 			// input state
@@ -491,7 +525,7 @@ namespace ascension {
 			ASCENSION_NONCOPYABLE_TAG(AutoFreeze);
 		public:
 			explicit AutoFreeze(TextViewer* textViewer);
-			~AutoFreeze() /*throw()*/;
+			~AutoFreeze() BOOST_NOEXCEPT;
 		private:
 			TextViewer* const textViewer_;
 		};
@@ -507,12 +541,12 @@ namespace ascension {
 			CurrentLineHighlighter(Caret& caret,
 				const boost::optional<graphics::Color>& foreground,
 				const boost::optional<graphics::Color>& background);
-			~CurrentLineHighlighter() /*noexcept*/;
+			~CurrentLineHighlighter() BOOST_NOEXCEPT;
 			// attributes
-			const boost::optional<graphics::Color>& background() const /*noexcept*/;
-			const boost::optional<graphics::Color>& foreground() const /*noexcept*/;
-			void setBackground(const boost::optional<graphics::Color>& color) /*noexcept*/;
-			void setForeground(const boost::optional<graphics::Color>& color) /*noexcept*/;
+			const boost::optional<graphics::Color>& background() const BOOST_NOEXCEPT;
+			const boost::optional<graphics::Color>& foreground() const BOOST_NOEXCEPT;
+			void setBackground(const boost::optional<graphics::Color>& color) BOOST_NOEXCEPT;
+			void setForeground(const boost::optional<graphics::Color>& color) BOOST_NOEXCEPT;
 		private:
 			// presentation.TextLineColorDirector
 			TextLineColorDirector::Priority queryLineColors(
@@ -535,103 +569,124 @@ namespace ascension {
 
 		/// Provides the utility stuffs for viewers.
 		namespace utils {
-			void closeCompletionProposalsPopup(TextViewer& viewer) /*throw()*/;
+			void closeCompletionProposalsPopup(TextViewer& viewer) BOOST_NOEXCEPT;
 			const presentation::hyperlink::Hyperlink* getPointedHyperlink(const TextViewer& viewer, const kernel::Position& at);
 			bool isRulerLeftAligned(const TextViewer& viewer);
-			void toggleOrientation(TextViewer& viewer) /*throw()*/;
+			void toggleOrientation(TextViewer& viewer) BOOST_NOEXCEPT;
 		} // namespace utils
 
 
-// inlines ////////////////////////////////////////////////////////////////////////////////////////
+		// inline implementation //////////////////////////////////////////////////////////////////
 
-/**
- * Returns @c true if the viewer allows the mouse operations.
- * @see #enableMouseInput
- */
-inline bool TextViewer::allowsMouseInput() const /*throw()*/ {return mouseInputDisabledCount_ == 0;} 
+		/**
+		 * Returns @c true if the viewer allows the mouse operations.
+		 * @see #enableMouseInput
+		 */
+		inline bool TextViewer::allowsMouseInput() const BOOST_NOEXCEPT {return mouseInputDisabledCount_ == 0;} 
 
-/// Informs the end user of <strong>safe</strong> error.
-inline void TextViewer::beep() /*throw()*/ {doBeep();}
+		/// Informs the end user of <strong>safe</strong> error.
+		inline void TextViewer::beep() BOOST_NOEXCEPT {doBeep();}
+		
+		/// Returns the caret.
+		inline Caret& TextViewer::caret() BOOST_NOEXCEPT {return *caret_;}
+		
+		/// Returns the caret.
+		inline const Caret& TextViewer::caret() const BOOST_NOEXCEPT {return *caret_;}
 
-/// Returns the caret.
-inline Caret& TextViewer::caret() /*throw()*/ {return *caret_;}
-
-/// Returns the caret.
-inline const Caret& TextViewer::caret() const /*throw()*/ {return *caret_;}
-
-/**
- * Returns the general configuration.
- * @see #rulerConfiguration, #setConfiguration
- */
-inline const TextViewer::Configuration& TextViewer::configuration() const /*throw()*/ {return configuration_;}
-
-/// Returns the content assistant or @c null if not registered.
-inline contentassist::ContentAssistant* TextViewer::contentAssistant() const /*throw()*/ {return contentAssistant_.get();}
-
-/**
- * Returns the ruler's declared styles.
- * @see #configuration, #setConfiguration
- */
-inline const RulerStyles& TextViewer::declaredRulerStyles() const /*noexcept*/ {
-	return rulerPainter_->declaredStyles();
-}
-
-/// Returns the document.
-inline kernel::Document& TextViewer::document() {return presentation_.document();}
-
-/// Returns the document.
-inline const kernel::Document& TextViewer::document() const {return presentation_.document();}
-
+		/**
+		 * Returns the general configuration.
+		 * @see #rulerConfiguration, #setConfiguration
+		 */
+		inline const TextViewer::Configuration& TextViewer::configuration() const BOOST_NOEXCEPT {
+			return configuration_;
+		}
+		
+		/// Returns the content assistant or @c null if not registered.
+		inline contentassist::ContentAssistant* TextViewer::contentAssistant() const BOOST_NOEXCEPT {
+			return contentAssistant_.get();
+		}
+		
+		/**
+		 * Returns the ruler's declared styles.
+		 * @see #configuration, #setConfiguration
+		 */
+		inline const RulerStyles& TextViewer::declaredRulerStyles() const BOOST_NOEXCEPT {
+			return rulerPainter_->declaredStyles();
+		}
+		
+		/// Returns the document.
+		inline kernel::Document& TextViewer::document() {return presentation_.document();}
+		
+		/// Returns the document.
+		inline const kernel::Document& TextViewer::document() const {return presentation_.document();}
+		
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
-/**
- * Enables Global IME.
- * This setting effects under only Windows NT 4.0. Otherwise, Ascension does not use Global IME.
- * @deprecated 0.8
- */
-inline void TextViewer::enableActiveInputMethod(bool enable /* = true */) /*throw()*/ {modeState_.activeInputMethodEnabled = enable;}
+		/**
+		 * Enables Global IME. This setting effects under only Windows NT 4.0. Otherwise, Ascension
+		 * does not use Global IME.
+		 * @deprecated 0.8
+		 */
+		inline void TextViewer::enableActiveInputMethod(bool enable /* = true */) BOOST_NOEXCEPT {
+			modeState_.activeInputMethodEnabled = enable;
+		}
 #endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
 
-/**
- * Enables/disables the mouse operations.
- *
- * A @c TextViewer has a disabled count for the mouse input. If this value is not zero, any mouse
- * inputs are not allowed.
- *
- * These is no way to disable the scroll bars.
- * @param enable Set @c false to increment the disabled count, @c true to decrement
- * @see #allowsMouseInput
- */
-inline void TextViewer::enableMouseInput(bool enable) {
-	if(mouseInputDisabledCount_ != 0 || !enable) mouseInputDisabledCount_ += !enable ? 1 : -1;}
-
+		/**
+		 * Enables/disables the mouse operations.
+		 *
+		 * A @c TextViewer has a disabled count for the mouse input. If this value is not zero, any
+		 * mouse inputs are not allowed.
+		 *
+		 * These is no way to disable the scroll bars.
+		 * @param enable Set @c false to increment the disabled count, @c true to decrement
+		 * @see #allowsMouseInput
+		 */
+		inline void TextViewer::enableMouseInput(bool enable) {
+			if(mouseInputDisabledCount_ != 0 || !enable)
+				mouseInputDisabledCount_ += !enable ? 1 : -1;
+		}
+		
 #ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
-/// Returns @c true if Global IME is enabled.
-inline bool TextViewer::isActiveInputMethodEnabled() const /*throw()*/ {return modeState_.activeInputMethodEnabled;}
+		/// Returns @c true if Global IME is enabled.
+		inline bool TextViewer::isActiveInputMethodEnabled() const BOOST_NOEXCEPT {
+			return modeState_.activeInputMethodEnabled;
+		}
 #endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
-
-/// Returns @c true if the viewer is frozen.
-inline bool TextViewer::isFrozen() const /*throw()*/ {return freezeRegister_.isFrozen();}
-
-/// Returns the presentation object. 
-inline presentation::Presentation& TextViewer::presentation() /*throw()*/ {return presentation_;}
-
-/// Returns the presentation object. 
-inline const presentation::Presentation& TextViewer::presentation() const /*throw()*/ {return presentation_;}
-
-/**
- * Returns the ratio to vertical/horizontal scroll amount of line/column numbers.
- * @param horizontal Set @c true for horizontal, @c false for vertical
- * @return The rate
- */
-inline unsigned long TextViewer::scrollRate(bool horizontal) const /*throw()*/ {
-	return 1/*horizontal ? scrollInfo_.horizontal.rate : scrollInfo_.vertical.rate*/;}
-
-/// Returns the text renderer.
-inline TextViewer::Renderer& TextViewer::textRenderer() /*throw()*/ {return *renderer_;}
-
-/// Returns the text renderer.
-inline const TextViewer::Renderer& TextViewer::textRenderer() const /*throw()*/ {return *renderer_;}
-
-}} // namespace ascension.viewers
+		
+		/// Returns @c true if the viewer is frozen.
+		inline bool TextViewer::isFrozen() const BOOST_NOEXCEPT {
+			return freezeRegister_.isFrozen();
+		}
+		
+		/// Returns the presentation object. 
+		inline presentation::Presentation& TextViewer::presentation() BOOST_NOEXCEPT {
+			return presentation_;
+		}
+		
+		/// Returns the presentation object. 
+		inline const presentation::Presentation& TextViewer::presentation() const BOOST_NOEXCEPT {
+			return presentation_;
+		}
+		
+		/**
+		 * Returns the ratio to vertical/horizontal scroll amount of line/column numbers.
+		 * @param horizontal Set @c true for horizontal, @c false for vertical
+		 * @return The rate
+		 */
+		inline unsigned long TextViewer::scrollRate(bool horizontal) const BOOST_NOEXCEPT {
+			return 1/*horizontal ? scrollInfo_.horizontal.rate : scrollInfo_.vertical.rate*/;
+		}
+		
+		/// Returns the text renderer.
+		inline TextViewer::Renderer& TextViewer::textRenderer() BOOST_NOEXCEPT {
+			return *renderer_;
+		}
+		
+		/// Returns the text renderer.
+		inline const TextViewer::Renderer& TextViewer::textRenderer() const BOOST_NOEXCEPT {
+			return *renderer_;
+		}
+	}
+} // namespace ascension.viewers
 
 #endif // !ASCENSION_VIEWER_HPP

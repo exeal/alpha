@@ -4,7 +4,7 @@
  * @date 2003-2006 was EditView.h
  * @date 2006-2011 was viewer.hpp
  * @date 2011-06-06 separated from viewer.hpp
- * @date 2011-2012
+ * @date 2011-2013
  */
 
 #ifndef ASCENSION_RULER_HPP
@@ -17,7 +17,6 @@
 
 namespace ascension {
 	namespace viewers {
-
 		class TextViewer;
 
 		/**
@@ -77,7 +76,7 @@ namespace ascension {
 				 * Color of the text. Default value is @c boost#none which is fallbacked to the
 				 * foreground of the text run style of the viewer's presentation global text style.
 				 */
-				presentation::ColorProperty color;
+				presentation::ColorProperty<presentation::sp::NotInherited> color;
 #else
 				/**
 				 * Color or style of the text. Default value is @c null which is fallbacked to the
@@ -92,9 +91,9 @@ namespace ascension {
 				presentation::Background background;
 				/**
 				 * Style of the border-end. If the @c color is default value, fallbacked to the
-				 * color of @c #foreground member. Default value is @c presentation#Border#Part().
+				 * color of @c #foreground member. Default value is @c presentation#Border#Side().
 				 */
-				presentation::Border::Part borderEnd;
+				presentation::Border::Side borderEnd;
 				/// Digit substitution type. @c DST_CONTEXTUAL can't set. Default value is @c DST_USER_DEFAULT.
 				presentation::StyleProperty<
 					presentation::sp::Complex<presentation::NumberSubstitution>,
@@ -132,9 +131,9 @@ namespace ascension {
 				 * Style of the border-end. If @c color is default value, fallbacked to the
 				 * platform-dependent color. Default value is @c presentation#Border#Part().
 				 */
-				presentation::Border::Part borderEnd;
+				presentation::Border::Side borderEnd;
 
-				IndicatorMargin() /*noexcept*/;
+				IndicatorMargin() BOOST_NOEXCEPT;
 			};
 
 			/**
@@ -165,27 +164,27 @@ namespace ascension {
 			ASCENSION_NONCOPYABLE_TAG(RulerPainter);
 		public:
 			enum SnapAlignment {
-				LEFT = graphics::LEFT,
-				TOP = graphics::TOP,
-				RIGHT = graphics::RIGHT,
-				BOTTOM = graphics::BOTTOM
+				LEFT = graphics::PhysicalDirection::LEFT,
+				TOP = graphics::PhysicalDirection::TOP,
+				RIGHT = graphics::PhysicalDirection::RIGHT,
+				BOTTOM = graphics::PhysicalDirection::BOTTOM
 			};
 		public:
 			explicit RulerPainter(viewers::TextViewer& viewer,
 				std::shared_ptr<const viewers::RulerStyles> initialStyles = nullptr);
-			SnapAlignment alignment() const /*throw()*/;
-			graphics::Scalar allocationWidth() const /*noexcept*/;
-			const viewers::RulerStyles& declaredStyles() const /*noexcept*/;
-			graphics::NativeRectangle indicatorMarginAllocationRectangle() const /*throw()*/;
-			graphics::Scalar indicatorMarginAllocationWidth() const /*noexcept*/;
-			graphics::NativeRectangle lineNumbersAllocationRectangle() const /*throw()*/;
-			graphics::Scalar lineNumbersAllocationWidth() const /*noexcept*/;
+			SnapAlignment alignment() const BOOST_NOEXCEPT;
+			graphics::Scalar allocationWidth() const BOOST_NOEXCEPT;
+			const viewers::RulerStyles& declaredStyles() const BOOST_NOEXCEPT;
+			graphics::Rectangle indicatorMarginAllocationRectangle() const BOOST_NOEXCEPT;
+			graphics::Scalar indicatorMarginAllocationWidth() const BOOST_NOEXCEPT;
+			graphics::Rectangle lineNumbersAllocationRectangle() const BOOST_NOEXCEPT;
+			graphics::Scalar lineNumbersAllocationWidth() const BOOST_NOEXCEPT;
 			void paint(graphics::PaintContext& context);
 			void scroll(const graphics::font::VisualLine& from);
 			void setStyles(std::shared_ptr<const viewers::RulerStyles> styles);
-			void update() /*throw()*/;
+			void update() BOOST_NOEXCEPT;
 		private:
-			std::uint8_t computeMaximumDigitsForLineNumbers() const /*throw()*/;
+			std::uint8_t computeMaximumDigitsForLineNumbers() const BOOST_NOEXCEPT;
 			void computeAllocationWidth() /*noexcept*/;
 #if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
 			void updateGDIObjects() /*throw()*/;
@@ -213,12 +212,12 @@ namespace ascension {
 		 * @return The width of the ruler or zero if not visible
 		 * @see #indicatorMarginWidth, #lineNumbersWidth
 		 */
-		inline graphics::Scalar RulerPainter::allocationWidth() const /*noexcept*/ {
+		inline graphics::Scalar RulerPainter::allocationWidth() const BOOST_NOEXCEPT {
 			return indicatorMarginAllocationWidth() + lineNumbersAllocationWidth();
 		}
 
 		/// Returns the ruler's declared styles.
-		inline const viewers::RulerStyles& RulerPainter::declaredStyles() const /*noexcept*/ {
+		inline const viewers::RulerStyles& RulerPainter::declaredStyles() const BOOST_NOEXCEPT {
 			return *declaredStyles_;
 		}
 
@@ -227,7 +226,7 @@ namespace ascension {
 		 * @return The width of the indicator margin or zero if not visible
 		 * @see #allocationWidth, #lineNumbersAllocationWidth, #indicatorMarginAllocationRectangle
 		 */
-		inline graphics::Scalar RulerPainter::indicatorMarginAllocationWidth() const /*noexcept*/ {
+		inline graphics::Scalar RulerPainter::indicatorMarginAllocationWidth() const BOOST_NOEXCEPT {
 			return computedWidths_.indicatorMarginContent + computedWidths_.indicatorMarginBorderEnd;
 		}
 
@@ -236,12 +235,11 @@ namespace ascension {
 		 * @return The width of the line numbers or zero if not visible
 		 * @see #allocationWidth, #indicatorMarginWidth, #lineNumbersAllocationRectangle
 		 */
-		inline graphics::Scalar RulerPainter::lineNumbersAllocationWidth() const /*noexcept*/ {
+		inline graphics::Scalar RulerPainter::lineNumbersAllocationWidth() const BOOST_NOEXCEPT {
 			return computedWidths_.lineNumbersContent + computedWidths_.lineNumbersPaddingStart
 				+ computedWidths_.lineNumbersPaddingEnd + computedWidths_.lineNumbersBorderEnd;
 		}
 	}
-
 }
 
 #endif // !ASCENSION_RULER_HPP

@@ -119,7 +119,7 @@ namespace ascension {
 			 * @retval @c true if the callee showed a cursor
 			 * @retval @c false if the callee did not know the appropriate cursor
 			 */
-			virtual bool showCursor(const graphics::NativePoint& position) = 0;
+			virtual bool showCursor(const graphics::Point& position) = 0;
 			/// Uninstalls the strategy. The window is not destroyed yet at this time.
 			virtual void uninstall() = 0;
 			friend class TextViewer;
