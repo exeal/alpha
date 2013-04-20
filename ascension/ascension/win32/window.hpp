@@ -64,17 +64,13 @@ namespace ascension {
 		public:
 			static const DWORD defaultStyle = WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE;
 			/// Constructor takes a borrowed window handle.
-			explicit Window(const Handle<HWND>& handle) /*noexcept*/ : handle_(handle.get()) {}
+			explicit Window(const Handle<HWND>::Type& handle) BOOST_NOEXCEPT : handle_(handle.get()) {}
 			/// Move-constructor.
-			Window(Window&& other) /*noexcept*/ : handle_(std::move(other.handle_)) {}
+			Window(Window&& other) BOOST_NOEXCEPT : handle_(std::move(other.handle_)) {}
 			/// Move-assignment operator.
-			Window& operator=(Window&& other) /*noexcept*/ {
-				std::swap(*this, Window(other));
-			}
+			Window& operator=(Window&& other) BOOST_NOEXCEPT {std::swap(*this, Window(other));}
 			/// Returns the held window handle.
-			const Handle<HWND>& handle() const {
-				return handle_;
-			}
+			Handle<HWND>::Type handle() const {return handle_;}
 		protected:
 			/// Constructor takes a window handle.
 			explicit Window(HWND&& handle) : handle_(handle) {
@@ -82,32 +78,32 @@ namespace ascension {
 					throw NullPointerException("handle");
 			}
 		private:
-			Handle<HWND> handle_;
+			Handle<HWND>::Type handle_;
 		};
 
 		class SubclassedWindow : public Window {
 			ASCENSION_NONCOPYABLE_TAG(SubclassedWindow);
 		public:
 			/// Move-constructor.
-			SubclassedWindow(SubclassedWindow&& other) /*noexcept*/ :
+			SubclassedWindow(SubclassedWindow&& other) BOOST_NOEXCEPT :
 					Window(std::move(other)), originalWindowProcedure_(other.originalWindowProcedure_) {
 				other.originalWindowProcedure_ = nullptr;
 			}
 			/// Move-assignment operator.
-			SubclassedWindow& operator=(SubclassedWindow&& other) /*noexcept*/ {
+			SubclassedWindow& operator=(SubclassedWindow&& other) BOOST_NOEXCEPT {
 				Window::operator=(std::move(other));
 				originalWindowProcedure_ = other.originalWindowProcedure_;
 				other.originalWindowProcedure_ = nullptr;
 			}
 		protected:
-			SubclassedWindow(const Handle<HWND>& parent, const WCHAR className[],
-					const graphics::NativePoint* position = nullptr, const graphics::NativeSize* size = nullptr,
+			SubclassedWindow(const Handle<HWND>::Type& parent, const WCHAR className[],
+					const graphics::Point* position = nullptr, const graphics::Dimension* size = nullptr,
 					DWORD style = 0, DWORD extendedStyle = 0) : Window(::CreateWindowExW(
 						extendedStyle, className, nullptr, style,
-						(position != nullptr) ? graphics::geometry::x(*position) : CW_USEDEFAULT,
-						(position != nullptr) ? graphics::geometry::y(*position) : CW_USEDEFAULT,
-						(size != nullptr) ? graphics::geometry::dx(*size) : CW_USEDEFAULT,
-						(size != nullptr) ? graphics::geometry::dy(*size) : CW_USEDEFAULT,
+						(position != nullptr) ? static_cast<int>(graphics::geometry::x(*position)) : CW_USEDEFAULT,
+						(position != nullptr) ? static_cast<int>(graphics::geometry::y(*position)) : CW_USEDEFAULT,
+						(size != nullptr) ? static_cast<int>(graphics::geometry::dx(*size)) : CW_USEDEFAULT,
+						(size != nullptr) ? static_cast<int>(graphics::geometry::dy(*size)) : CW_USEDEFAULT,
 						parent.get(), nullptr, ::GetModuleHandleW(nullptr), nullptr)) {
 				originalWindowProcedure_ = reinterpret_cast<WNDPROC>(::GetWindowLongPtrW(handle().get(), GWLP_WNDPROC));
 				::SetWindowLongPtrW(handle().get(), GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
@@ -135,22 +131,22 @@ namespace ascension {
 					ASCENSION_NONCOPYABLE_TAG(Background);
 				public:
 					/// Constructor makes @c null @c HBRUSH value.
-					Background() /*noexcept*/ : brush_(nullptr) {}
+					Background() BOOST_NOEXCEPT : brush_(nullptr) {}
 					/// Constructor takes a brush handle.
-					Background(Handle<HBRUSH>&& handle) /*noexcept*/ : brush_(std::move(handle)) {}
+					Background(Handle<HBRUSH>::Type handle) BOOST_NOEXCEPT : brush_(handle) {}
 					/// Constructor takes a @c COLORREF value used to make the brush handle.
-					Background(int systemColor) /*noexcept*/
+					Background(int systemColor) BOOST_NOEXCEPT
 						: brush_(reinterpret_cast<HBRUSH>(static_cast<HANDLE_PTR>(systemColor + 1))) {}
 					/// Move-constructor.
-					Background(Background&& other) /*noexcept*/ : brush_(std::move(other.brush_)) {}
+					Background(Background&& other) BOOST_NOEXCEPT : brush_(std::move(other.brush_)) {}
 					/// Move-assignment operator.
-					Background& operator=(Background&& other) /*noexcept*/ {
+					Background& operator=(Background&& other) BOOST_NOEXCEPT {
 						return (brush_ = std::move(other.brush_)), *this;
 					}
 					/// Returns the brush handle.
-					const Handle<HBRUSH>& get() const /*noexcept*/ {return brush_;}
+					Handle<HBRUSH>::Type get() const BOOST_NOEXCEPT {return brush_;}
 				private:
-					Handle<HBRUSH> brush_;
+					Handle<HBRUSH>::Type brush_;
 				} background;
 				Handle<HICON> icon, smallIcon;
 				/// Makes a cursor handle parameter from either a cursor handle or numeric identifier.
@@ -158,21 +154,21 @@ namespace ascension {
 					ASCENSION_NONCOPYABLE_TAG(CursorHandleOrID);
 				public:
 					/// Constructor makes @c null @c HCURSOR value.
-					CursorHandleOrID() /*noexcept*/ : cursor_(nullptr) {}
+					CursorHandleOrID() BOOST_NOEXCEPT : cursor_(nullptr) {}
 					/// Constructor takes a cursor handle.
-					CursorHandleOrID(Handle<HCURSOR>&& handle) /*noexcept*/ : cursor_(std::move(handle)) {}
+					CursorHandleOrID(Handle<HCURSOR>::Type handle) BOOST_NOEXCEPT : cursor_(handle) {}
 					/// Constructor takes a numeric identifier for system cursor.
-					CursorHandleOrID(const WCHAR* systemCursorID) /*noexcept*/ : cursor_(::LoadCursorW(nullptr, systemCursorID)) {}
+					CursorHandleOrID(const WCHAR* systemCursorID) BOOST_NOEXCEPT : cursor_(::LoadCursorW(nullptr, systemCursorID)) {}
 					/// Move-constructor.
-					CursorHandleOrID(CursorHandleOrID&& other) /*noexcept*/ : cursor_(std::move(other.cursor_)) {}
+					CursorHandleOrID(CursorHandleOrID&& other) BOOST_NOEXCEPT : cursor_(std::move(other.cursor_)) {}
 					/// Move-assignment operator.
-					CursorHandleOrID& operator=(CursorHandleOrID&& other) /*noexcept*/ {
+					CursorHandleOrID& operator=(CursorHandleOrID&& other) BOOST_NOEXCEPT {
 						return (cursor_ = std::move(other.cursor_)), *this;
 					}
 					/// Returns the cursor handle.
-					const Handle<HCURSOR>& get() const /*noexcept*/ {return cursor_;}
+					Handle<HCURSOR>::Type get() const BOOST_NOEXCEPT {return cursor_;}
 				private:
-					Handle<HCURSOR> cursor_;
+					Handle<HCURSOR>::Type cursor_;
 				} cursor;
 				ClassInformation() : style(0) {}
 			};

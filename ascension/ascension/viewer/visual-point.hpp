@@ -2,11 +2,11 @@
  * @file visual-point.hpp
  * Defines @c VisualPoint class and related stuffs.
  * @author exeal
- * @date 2003-2008 (was point.hpp)
- * @date 2008 (separated from point.hpp)
+ * @date 2003-2008 was point.hpp
+ * @date 2008 separated from point.hpp
  * @date 2009-2011 was caret.hpp
  * @date 2011-10-02 separated from caret.hpp
- * @date 2011-2012
+ * @date 2011-2013
  */
 
 #ifndef ASCENSION_VISUAL_POINT_HPP
@@ -15,7 +15,9 @@
 
 namespace ascension {
 
-	namespace detail {class VisualDestinationProxyMaker;}
+	namespace detail {
+		class VisualDestinationProxyMaker;
+	}
 
 	namespace viewers {
 
@@ -34,8 +36,8 @@ namespace ascension {
 		/// See the documentation of @c kernel#locations namespace.
 		class VisualDestinationProxy : private kernel::Position {
 		public:
-			bool crossesVisualLines() const /*throw()*/ {return crossesVisualLines_;}
-			const kernel::Position& position() const /*throw()*/ {
+			bool crossesVisualLines() const BOOST_NOEXCEPT {return crossesVisualLines_;}
+			const kernel::Position& position() const BOOST_NOEXCEPT {
 				return static_cast<const kernel::Position&>(*this);
 			}
 		private:
@@ -102,37 +104,44 @@ namespace ascension {
 		class VisualPoint : public kernel::Point, public graphics::font::VisualLinesListener {
 			ASCENSION_UNASSIGNABLE_TAG(VisualPoint);
 		public:
-			// constructors
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			explicit VisualPoint(TextViewer& viewer, kernel::PointListener* listener = nullptr);
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 			VisualPoint(TextViewer& viewer, const kernel::Position& position, kernel::PointListener* listener = nullptr);
 			VisualPoint(const VisualPoint& other);
-			virtual ~VisualPoint() /*throw()*/;
-			// attributes
-			bool isTextViewerDisposed() const /*throw()*/;
+			virtual ~VisualPoint() BOOST_NOEXCEPT;
+			/// @name Attributes
+			/// @{
+			bool isTextViewerDisposed() const BOOST_NOEXCEPT;
 			TextViewer& textViewer();
 			const TextViewer& textViewer() const;
-			// visual positions
+			/// @}
+
+			/// @name Visual Positions
+			/// @{
 			Index offsetInVisualLine() const;
 			Index visualLine() const;
 			Index visualSubline() const;
-			// movement
+			/// @}
+
+			/// @name Movement
+			/// @{
 			using kernel::Point::moveTo;
 			void moveTo(const VisualDestinationProxy& to);
+			/// @}
 
 		protected:
 			// kernel.Point
 			virtual void aboutToMove(kernel::Position& to);
-			virtual void moved(const kernel::Position& from) /*throw()*/;
+			virtual void moved(const kernel::Position& from) BOOST_NOEXCEPT;
 		private:
 			void rememberPositionInVisualLine();
-			void viewerDisposed() /*throw()*/;
+			void viewerDisposed() BOOST_NOEXCEPT;
 			// layout.VisualLinesListener
-			void visualLinesDeleted(const Range<Index>& lines, Index sublines, bool longestLineChanged) /*throw()*/;
-			void visualLinesInserted(const Range<Index>& lines) /*throw()*/;
-			void visualLinesModified(const Range<Index>& lines,
-				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/;
+			void visualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines, bool longestLineChanged) BOOST_NOEXCEPT;
+			void visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT;
+			void visualLinesModified(const boost::integer_range<Index>& lines,
+				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT;
 
 		private:
 			TextViewer* viewer_;
@@ -158,20 +167,30 @@ namespace ascension {
 
 
 		/// Returns @c true if the text viewer the point connecting to has been disposed.
-		inline bool VisualPoint::isTextViewerDisposed() const /*throw()*/ {return viewer_ == nullptr;}
+		inline bool VisualPoint::isTextViewerDisposed() const BOOST_NOEXCEPT {
+			return viewer_ == nullptr;
+		}
 
 		/// Returns the text viewer or throw @c TextViewerDisposedException if the text viewer the
 		/// point connecting to has been disposed.
 		inline TextViewer& VisualPoint::textViewer() {
-			if(viewer_ == nullptr) throw TextViewerDisposedException(); return *viewer_;}
+			if(viewer_ == nullptr)
+				throw TextViewerDisposedException();
+			return *viewer_;
+		}
 
 		/// Returns the text viewer or throw @c TextViewerDisposedException if the text viewer the
 		/// point connecting to has been disposed.
 		inline const TextViewer& VisualPoint::textViewer() const {
-			if(viewer_ == nullptr) throw TextViewerDisposedException(); return *viewer_;}
+			if(viewer_ == nullptr)
+				throw TextViewerDisposedException();
+			return *viewer_;
+		}
 
 		/// Called when the text viewer is disposed.
-		inline void VisualPoint::viewerDisposed() /*throw()*/ {viewer_ = nullptr;}
+		inline void VisualPoint::viewerDisposed() BOOST_NOEXCEPT {
+			viewer_ = nullptr;
+		}
 
 		/// Returns the visual subline number.
 		inline Index VisualPoint::visualSubline() const {

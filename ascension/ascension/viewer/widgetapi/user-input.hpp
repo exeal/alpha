@@ -17,10 +17,10 @@ namespace ascension {
 
 			class Event {
 			public:
-				Event() /*throw()*/ : consumed_(false) {}
-				void consume() /*throw()*/ {consumed_ = true;}
-				void ignore() /*throw()*/ {consumed_ = false;}
-				bool isConsumed() const /*throw()*/ {return consumed_;}
+				Event() BOOST_NOEXCEPT : consumed_(false) {}
+				void consume() BOOST_NOEXCEPT {consumed_ = true;}
+				void ignore() BOOST_NOEXCEPT {consumed_ = false;}
+				bool isConsumed() const BOOST_NOEXCEPT {return consumed_;}
 			private:
 				bool consumed_;
 			};
@@ -56,8 +56,8 @@ namespace ascension {
 					/// The Mouse Button5 (usually X2 button) is down.
 					BUTTON5_DOWN	= 1 << 9;
 			public:
-				ModifierKey modifiers() const /*throw()*/ {return modifiers_;}
-				const std::time_t& timeStamp() const /*throw()*/ {return timeStamp_;}
+				ModifierKey modifiers() const BOOST_NOEXCEPT {return modifiers_;}
+				const std::time_t& timeStamp() const BOOST_NOEXCEPT {return timeStamp_;}
 			protected:
 				/**
 				 * Protected constructor.
@@ -76,7 +76,7 @@ namespace ascension {
 			 * @return true if @a input has @a modifier
 			 */
 			template<UserInput::ModifierKey modifier>
-			inline bool hasModifier(const UserInput& input) /*throw()*/ {
+			inline bool hasModifier(const UserInput& input) BOOST_NOEXCEPT {
 				return (input.modifiers() & modifier) != 0;
 			}
 
@@ -88,12 +88,12 @@ namespace ascension {
 				 * @param location The location
 				 * @param modifiers The modifier flags
 				 */
-				LocatedUserInput(const graphics::NativePoint& location, ModifierKey modifiers) : UserInput(modifiers), location_(location) {
+				LocatedUserInput(const graphics::Point& location, ModifierKey modifiers) : UserInput(modifiers), location_(location) {
 				}
 				/// Returns the location.
-				const graphics::NativePoint& location() const /*throw()*/ {return location_;}
+				const graphics::Point& location() const BOOST_NOEXCEPT {return location_;}
 			private:
-				const graphics::NativePoint location_;
+				const graphics::Point location_;
 			};
 
 			/// A @c MouseButtonInput represents a mouse button event.
@@ -105,10 +105,10 @@ namespace ascension {
 				 * @param button
 				 * @param modifiers
 				 */
-				MouseButtonInput(const graphics::NativePoint& location, MouseButton button,
+				MouseButtonInput(const graphics::Point& location, MouseButton button,
 					ModifierKey modifiers) : LocatedUserInput(location, modifiers), button_(button) {}
 				/// Returns the mouse button.
-				MouseButton button() const /*throw()*/ {return button_;}
+				MouseButton button() const BOOST_NOEXCEPT {return button_;}
 			private:
 				const MouseButton button_;
 			};
@@ -122,12 +122,12 @@ namespace ascension {
 				 * @param modifiers
 				 * @param rotation
 				 */
-				MouseWheelInput(const graphics::NativePoint& location, ModifierKey modifiers,
-					graphics::NativeSize& rotation) : LocatedUserInput(location, modifiers), rotation_(rotation) {}
+				MouseWheelInput(const graphics::Point& location, ModifierKey modifiers,
+					graphics::Dimension& rotation) : LocatedUserInput(location, modifiers), rotation_(rotation) {}
 				/// Returns the mouse wheel rotation.
-				const graphics::NativeSize& rotation() const /*throw()*/ {return rotation_;}
+				const graphics::Dimension& rotation() const BOOST_NOEXCEPT {return rotation_;}
 			private:
-				const graphics::NativeSize rotation_;
+				const graphics::Dimension rotation_;
 			};
 
 			class KeyInput : public UserInput {
@@ -136,7 +136,7 @@ namespace ascension {
 			public:
 				KeyInput(Code keyboardCode, ModifierKey modifiers, int repeatCount, int messageFlags)
 					: UserInput(modifiers), keyboardCode_(keyboardCode), repeatCount_(repeatCount), messageFlags_(messageFlags) {}
-				Code keyboardCode() const /*throw()*/ {return keyboardCode_;}
+				Code keyboardCode() const BOOST_NOEXCEPT {return keyboardCode_;}
 			private:
 				const Code keyboardCode_;
 				const int repeatCount_, messageFlags_;

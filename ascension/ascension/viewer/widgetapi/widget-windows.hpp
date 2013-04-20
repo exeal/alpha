@@ -9,8 +9,8 @@
 
 namespace ascension {
 	namespace win32 {
-		inline Handle<HIMC> inputMethod(const viewers::widgetapi::NativeWidget& widget) {
-			return Handle<HIMC>(::ImmGetContext(widget.handle().get()),
+		inline Handle<HIMC>::Type inputMethod(const viewers::widgetapi::NativeWidget& widget) {
+			return Handle<HIMC>::Type(::ImmGetContext(widget.handle().get()),
 				std::bind(&::ImmReleaseContext, widget.handle().get(), std::placeholders::_1));
 		}
 	}

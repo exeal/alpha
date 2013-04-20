@@ -51,7 +51,7 @@ namespace ascension {
 			 * @param widget The widget
 			 * @param includeFrame Set true to include the window frame
 			 */
-			graphics::NativeRectangle bounds(const NativeWidget& widget, bool includeFrame);
+			graphics::Rectangle bounds(const NativeWidget& widget, bool includeFrame);
 			/**
 			 * Translates the point in the global screen coordinates into widget coordinates.
 			 * @tparam Point The type of position
@@ -61,17 +61,17 @@ namespace ascension {
 			 */
 			template<typename Point>
 			Point mapFromGlobal(const NativeWidget& widget, const Point& position,
-				typename detail::EnableIfTagIs<Point, graphics::geometry::PointTag>::type* = nullptr);
+				typename detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* = nullptr);
 			/**
 			 * Translates the rectangle in the global screen coordinates into widget coordinates.
 			 * @param widget The widget
 			 * @param rectangle The rectangle to map
 			 * @see mapToGlobal
 			 */
-			inline graphics::NativeRectangle mapFromGlobal(const NativeWidget& widget, const graphics::NativeRectangle& rectangle) {
-				return graphics::geometry::make<graphics::NativeRectangle>(
-					mapFromGlobal(widget, graphics::geometry::get<0>(rectangle)),
-					mapFromGlobal(widget, graphics::geometry::get<1>(rectangle)));
+			inline graphics::Rectangle mapFromGlobal(const NativeWidget& widget, const graphics::Rectangle& rectangle) {
+				return boost::geometry::make<graphics::Rectangle>(
+					mapFromGlobal(widget, boost::geometry::get<0>(rectangle)),
+					mapFromGlobal(widget, boost::geometry::get<1>(rectangle)));
 			}
 			/**
 			 * Translates the point in the widget coordinates into global screen coordinates.
@@ -82,7 +82,7 @@ namespace ascension {
 			 */
 			template<typename Point>
 			Point mapToGlobal(const NativeWidget& widget, const Point& position,
-				typename detail::EnableIfTagIs<Point, graphics::geometry::PointTag>::type* = nullptr);
+				typename detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* = nullptr);
 			/**
 			 * Translates the point in the widget coordinates into global screen coordinates.
 			 * @tparam Point The type of position
@@ -90,37 +90,37 @@ namespace ascension {
 			 * @param position The position to map
 			 * @see mapFromGlobal
 			 */
-			inline graphics::NativeRectangle mapToGlobal(const NativeWidget& widget, const graphics::NativeRectangle& rectangle) {
-				return graphics::geometry::make<graphics::NativeRectangle>(
-					mapToGlobal(widget, graphics::geometry::get<0>(rectangle)),
-					mapToGlobal(widget, graphics::geometry::get<1>(rectangle)));
+			inline graphics::Rectangle mapToGlobal(const NativeWidget& widget, const graphics::Rectangle& rectangle) {
+				return boost::geometry::make<graphics::Rectangle>(
+					mapToGlobal(widget, boost::geometry::get<0>(rectangle)),
+					mapToGlobal(widget, boost::geometry::get<1>(rectangle)));
 			}
 			/**
 			 * Moves the widget to the specified position.
 			 * @param widget
 			 * @param newOrigin The new origin of the widget in parent-relative coordinates
 			 */
-			void move(NativeWidget& widget, const graphics::NativePoint& newOrigin);
+			void move(NativeWidget& widget, const graphics::Point& newOrigin);
 			/**
 			 * Resizes the widget.
 			 * @param widget
 			 * @param newSize The new size of the widget excluding any window frame
 			 */
-			void resize(NativeWidget& widget, const graphics::NativeSize& newSize);
+			void resize(NativeWidget& widget, const graphics::Dimension& newSize);
 			/**
 			 * Sets the bounds of the widget.
 			 * @param widget
 			 * @param bounds The new bounds of the widget in parent-relative coordinates excluding
-			 *               any window frame.
+			 *               any window frame
 			 */
-			void setBounds(NativeWidget& widget, const graphics::NativeRectangle& bounds);
+			void setBounds(NativeWidget& widget, const graphics::Rectangle& bounds);
 			/**
 			 * Sets the shape of the widget.
 			 * @param widget
 			 * @param shape The new shape of the widget in parent-relative coordinates excluding
-			 *               any window frame.
+			 *              any window frame
 			 */
-			void setShape(NativeWidget& widget, const graphics::NativeRegion& shape);
+			void setShape(NativeWidget& widget, const graphics::Region& shape);
 
 			// visibilities
 			/**
@@ -182,10 +182,10 @@ namespace ascension {
 			enum Style {WIDGET = 0};
 
 			// paints
-			void forcePaint(NativeWidget& widget, const graphics::NativeRectangle& bounds);
+			void forcePaint(NativeWidget& widget, const graphics::Rectangle& bounds);
 			void redrawScheduledRegion(NativeWidget& widget);
 			void scheduleRedraw(NativeWidget& widget, bool eraseBackground);
-			void scheduleRedraw(NativeWidget& widget, const graphics::NativeRectangle& rect, bool eraseBackground);
+			void scheduleRedraw(NativeWidget& widget, const graphics::Rectangle& rect, bool eraseBackground);
 
 			// rendering context
 			std::unique_ptr<graphics::RenderingContext2D> createRenderingContext(const NativeWidget& widget);
