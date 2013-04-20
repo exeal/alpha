@@ -3,7 +3,7 @@
  * @author exeal
  * @date 2005-2011
  * @date 2011-04-25 deparated from unicode.hpp
- * @date 2012
+ * @date 2012-2013
  */
 
 #ifndef ASCENSION_CASE_FOLDER_HPP
@@ -11,6 +11,8 @@
 
 #include <ascension/corelib/text/character-iterator.hpp>
 #include <ascension/corelib/text/utf-iterator.hpp>	// CharacterDecodeIterator, surrogates.encode
+#include <boost/range/begin.hpp>
+#include <boost/range/end.hpp>
 #include <algorithm>	// std.lower_bound
 #include <sstream>		// std.basic_stringbuf
 
@@ -20,7 +22,6 @@
 
 namespace ascension {
 	namespace text {
-
 		/**
 		 * @c CaseFolder folds cases of characters and strings. This behavior is based on Default
 		 * Case Algorithm of Unicode, and locale-independent and context-insensitive.
@@ -54,7 +55,7 @@ namespace ascension {
 			 * @param excludeTurkishI Set @c true to perform "Turkish I mapping"
 			 * @return The case-folded character
 			 */
-			static CodePoint fold(CodePoint c, bool excludeTurkishI = false) /*throw()*/ {
+			static CodePoint fold(CodePoint c, bool excludeTurkishI = false) BOOST_NOEXCEPT {
 				CodePoint result;
 				// Turkish I
 				if(excludeTurkishI && c != (result = foldTurkishI(c)))
@@ -68,22 +69,24 @@ namespace ascension {
 				return (*p == c) ? SIMPLE_FOLDED_[p - SIMPLE_CASED_] : c;
 			}
 
-			template<typename CharacterSequence> static String fold(
-				CharacterSequence first, CharacterSequence last, bool excludeTurkishI = false);
+			template<typename InputIterator> static String fold(
+				InputIterator first, InputIterator last, bool excludeTurkishI = false);
 
 			/**
 			 * Folds case of the specified character sequence. This method performs "full case
 			 * folding."
+			 * @tparam SinglePassReadableRange
 			 * @param text The character sequence
 			 * @param excludeTurkishI Set @c true to perform "Turkish I mapping"
 			 * @return The folded string
 			 */
-			static String fold(const String& text, bool excludeTurkishI = false) {
-				return fold(text.data(), text.data() + text.length(), excludeTurkishI);
+			template<typename SinglePassReadableRange>
+			static String fold(const SinglePassReadableRange& characterSequence, bool excludeTurkishI = false) {
+				return fold(boost::begin(characterSequence), boost::end(characterSequence), excludeTurkishI);
 			}
 
 		private:
-			static CodePoint foldCommon(CodePoint c) /*throw()*/ {
+			static CodePoint foldCommon(CodePoint c) BOOST_NOEXCEPT {
 				const CodePoint* const p = std::lower_bound(
 					COMMON_CASED_, COMMON_CASED_ + NUMBER_OF_COMMON_CASED_, c);
 				return (*p == c) ? COMMON_FOLDED_[p - COMMON_CASED_] : c;
@@ -106,7 +109,7 @@ namespace ascension {
 				}
 				return (*out = first), ++out, 1;
 			}
-			static CodePoint foldTurkishI(CodePoint c) /*throw()*/ {
+			static CodePoint foldTurkishI(CodePoint c) BOOST_NOEXCEPT {
 				if(c == 0x0049u)
 					c = 0x0131u;
 				else if(c == 0x0130u)
