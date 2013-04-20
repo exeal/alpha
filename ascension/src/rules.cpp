@@ -11,6 +11,7 @@
 #if defined(_DEBUG) && defined(ASCENSION_OS_WINDOWS)
 #	include <ascension/win32/windows.hpp>	// win32.DumpContext
 #endif
+#include <boost/foreach.hpp>
 #include <boost/range/algorithm/find_if.hpp>
 using namespace ascension;
 using namespace ascension::kernel;
@@ -40,15 +41,15 @@ namespace ascension {
 		public:
 			template<typename StringSequence>
 			HashTable(StringSequence first, StringSequence last, bool caseSensitive);
-			template<typename CharacterSequence>
-			static uint32_t hashCode(CharacterSequence first, CharacterSequence last);
-			bool matches(const Char* first, const Char* last) const;
-			size_t maximumLength() const /*throw()*/ {return maxLength_;}
+			template<typename SinglePassReadableRange>
+			static uint32_t hashCode(const SinglePassReadableRange& characterSequence);
+			bool matches(const StringPiece& textString) const;
+			size_t maximumLength() const BOOST_NOEXCEPT {return maxLength_;}
 		private:
 			struct Entry {
 				String data;
 				unique_ptr<Entry> next;
-				explicit Entry(const String& str) /*throw()*/ : data(str) {}
+				explicit Entry(const String& str) BOOST_NOEXCEPT : data(str) {}
 			};
 			vector<unique_ptr<Entry>> entries_;
 			size_t maxLength_;	// the length of the longest keyword
@@ -69,7 +70,7 @@ HashTable::HashTable(StringSequence first, StringSequence last, bool caseSensiti
 		: entries_(std::distance(first, last)), maxLength_(0), caseSensitive_(caseSensitive) {
 	while(first != last) {
 		const String folded(caseSensitive_ ? *first : CaseFolder::fold(*first));
-		const size_t h = hashCode(folded.begin(), folded.end());
+		const size_t h = hashCode(folded);
 		unique_ptr<Entry> newEntry(new Entry(folded));
 		if(folded.length() > maxLength_)
 			maxLength_ = folded.length();
@@ -82,42 +83,38 @@ HashTable::HashTable(StringSequence first, StringSequence last, bool caseSensiti
 
 /**
  * Returns the hash value of the specified string.
- * @tparam CharacterSequence A type of @a first and @a last. Must represent UTF-16 character
- *                           sequence.
- * @param first The start of the character sequence
- * @param last The end of the character sequence
+ * @tparam SinglePassReadableRange UTF-16 character sequence
+ * @param characterSequence The character sequence
  * @return The hash value
  */
-template<typename CharacterSequence>
-inline uint32_t HashTable::hashCode(CharacterSequence first, CharacterSequence last) {
-	ASCENSION_STATIC_ASSERT(sizeof(*first) == 2);
+template<typename SinglePassReadableRange>
+inline uint32_t HashTable::hashCode(const SinglePassReadableRange& characterSequence) {
+	static_assert(CodeUnitSizeOf<boost::range_iterator<const SinglePassReadableRange>::type>::value == 2, "characterSequence should be 16-bit character sequence.");
 	uint32_t h = 0;
-	while(first < last) {
+	BOOST_FOREACH(auto c, characterSequence) {
 		h *= 2;
-		h += *first;
-		++first;
+		h += c;
 	}
 	return h;
 }
 
 /**
  * Searches the specified string.
- * @param first The start of the string
- * @param last The end of the string
+ * @param textString The text string
  * @return @c true if the specified string is found
  */
-bool HashTable::matches(const Char* first, const Char* last) const {
+bool HashTable::matches(const StringPiece& textString) const {
 	if(caseSensitive_) {
-		if(static_cast<size_t>(last - first) > maxLength_)
+		if(textString.length() > maxLength_)
 			return false;
-		const size_t h = hashCode(first, last);
+		const size_t h = hashCode(textString);
 		for(const unique_ptr<Entry>* entry = &entries_[h % entries_.size()]; *entry != nullptr; entry = &(*entry)->next) {
-			if((*entry)->data.length() == static_cast<size_t>(last - first) && umemcmp((*entry)->data.data(), first, (*entry)->data.length()) == 0)
+			if((*entry)->data.length() == textString.length() && umemcmp((*entry)->data.data(), textString.cbegin(), (*entry)->data.length()) == 0)
 				return true;
 		}
 	} else {
-		const String folded(CaseFolder::fold(String(first, last)));
-		const size_t h = hashCode(folded.begin(), folded.end());
+		const String folded(CaseFolder::fold(textString));
+		const size_t h = hashCode(folded);
 		for(const unique_ptr<Entry>* entry = &entries_[h % entries_.size()]; *entry != nullptr; entry = &(*entry)->next) {
 			if((*entry)->data.length() == folded.length() && umemcmp((*entry)->data.data(), folded.data(), folded.length()) == 0)
 				return true;
@@ -513,16 +510,16 @@ namespace {
 } // namespace @0
 
 /// Constructor. The set of the valid schemes is empty.
-URIDetector::URIDetector() /*throw()*/ : validSchemes_(nullptr) {
+URIDetector::URIDetector() BOOST_NOEXCEPT : validSchemes_(nullptr) {
 }
 
 /// Destructor.
-URIDetector::~URIDetector() /*throw()*/ {
+URIDetector::~URIDetector() BOOST_NOEXCEPT {
 	delete validSchemes_;
 }
 
 /// Returns the default generic instance.
-const URIDetector& URIDetector::defaultGenericInstance() /*throw()*/ {
+const URIDetector& URIDetector::defaultGenericInstance() BOOST_NOEXCEPT {
 	static URIDetector singleton;
 	return singleton;
 }
@@ -531,7 +528,7 @@ const URIDetector& URIDetector::defaultGenericInstance() /*throw()*/ {
  * Returns the default instance accepts URI schemes defined by IANA
  * (http://www.iana.org/assignments/uri-schemes.html).
  */
-const URIDetector& URIDetector::defaultIANAURIInstance() /*throw()*/ {
+const URIDetector& URIDetector::defaultIANAURIInstance() BOOST_NOEXCEPT {
 	static URIDetector singleton;
 	if(singleton.validSchemes_ == nullptr) {
 		const char SCHEMES[] =
@@ -566,7 +563,7 @@ StringPiece::const_iterator URIDetector::detect(const StringPiece& text) const {
 	const Char* endOfScheme;
 	if(validSchemes_ != nullptr) {
 		endOfScheme = umemchr(begin(text) + 1, ':', min(text.length() - 1, validSchemes_->maximumLength()));
-		if(!validSchemes_->matches(begin(text), endOfScheme))
+		if(!validSchemes_->matches(makeStringPiece(begin(text), endOfScheme)))
 			endOfScheme = nullptr;
 	} else {
 		endOfScheme = umemchr(begin(text) + 1, ':', text.length() - 1);
@@ -600,7 +597,7 @@ StringPiece URIDetector::search(const StringPiece& text) const {
 		return false;
 	for(StringPiece::const_iterator p(begin(text)); ; ) {
 		if(handleScheme(p, nextColon) == nextColon) {
-			if(validSchemes_ == nullptr || validSchemes_->matches(p, nextColon)) {
+			if(validSchemes_ == nullptr || validSchemes_->matches(makeStringPiece(p, nextColon))) {
 				if(const Char* const e = handleIRI(p, end(text)))
 					return StringPiece(p, e - p);
 			}
@@ -696,20 +693,20 @@ RegionRule::RegionRule(Token::Identifier id, const String& startSequence, const 
 		Char escapeCharacter /* = NONCHARACTER */, bool caseSensitive /* = true */) : Rule(id),
 		startSequence_(startSequence), endSequence_(endSequence), escapeCharacter_(escapeCharacter), caseSensitive_(caseSensitive) {
 	if(startSequence.empty())
-		throw invalid_argument("the start sequence is empty.");
+		throw invalid_argument("The start sequence is empty.");
 }
 
 /// @see Rule#parse
-unique_ptr<Token> RegionRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
+unique_ptr<Token> RegionRule::parse(const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT {
 	// match the start sequence
-	if(first[0] != startSequence_[0]
-			|| static_cast<size_t>(last - first) < startSequence_.length() + endSequence_.length()
-			|| (startSequence_.length() > 1 && umemcmp(first + 1, startSequence_.data() + 1, startSequence_.length() - 1) != 0))
+	if(text[0] != startSequence_[0]
+			|| static_cast<size_t>(text.length()) < startSequence_.length() + endSequence_.length()
+			|| (startSequence_.length() > 1 && umemcmp(text.cbegin() + 1, startSequence_.data() + 1, startSequence_.length() - 1) != 0))
 		return unique_ptr<Token>();
-	const Char* end = last;
+	StringPiece::const_iterator end(text.cend());
 	if(!endSequence_.empty()) {
 		// search the end sequence
-		for(const Char* p = first + startSequence_.length(); p <= last - endSequence_.length(); ++p) {
+		for(StringPiece::const_iterator p(text.cbegin() + startSequence_.length()); p <= text.cend() - endSequence_.length(); ++p) {
 			if(escapeCharacter_ != NONCHARACTER && *p == escapeCharacter_)
 				++p;
 			else if(*p == endSequence_[0] && umemcmp(p + 1, endSequence_.data() + 1, endSequence_.length() - 1) == 0) {
@@ -720,9 +717,9 @@ unique_ptr<Token> RegionRule::parse(const TokenScanner& scanner, const Char* fir
 	}
 	unique_ptr<Token> result(new Token);
 	result->id = tokenID();
-	result->region.first.line = result->region.second.line = scanner.getPosition().line;
-	result->region.first.offsetInLine = scanner.getPosition().line;
-	result->region.second.offsetInLine = result->region.first.offsetInLine + (end - first);
+	result->region.first.line = result->region.second.line = scanner.position().line;
+	result->region.first.offsetInLine = scanner.position().line;
+	result->region.second.offsetInLine = result->region.first.offsetInLine + (end - text.cbegin());
 	return result;
 }
 
@@ -733,12 +730,12 @@ unique_ptr<Token> RegionRule::parse(const TokenScanner& scanner, const Char* fir
  * Constructor.
  * @param id The identifier of the token which will be returned by the rule
  */
-NumberRule::NumberRule(Token::Identifier id) /*throw()*/ : Rule(id) {
+NumberRule::NumberRule(Token::Identifier id) BOOST_NOEXCEPT : Rule(id) {
 }
 
 /// @see Rule#parse
-unique_ptr<Token> NumberRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
-	assert(first < last);
+unique_ptr<Token> NumberRule::parse(const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT {
+	assert(text.cbegin() < text.cend());
 	/*
 		This is based on ECMAScript 3 "7.8.3 Numeric Literals" and performs the following regular
 		expression match:
@@ -747,58 +744,58 @@ unique_ptr<Token> NumberRule::parse(const TokenScanner& scanner, const Char* fir
 			/0[x|X][0-9A-Fa-f]+/ for HexIntegerLiteral
 		Octal integer literals are not supported. See "B.1.1 Numeric Literals" in the same specification.
 	*/
-	// ISSUE: this implementation accepts some illegal format like as "0.1.2".
-	if(scanner.getPosition().offsetInLine > 0	// see below
-			&& (inRange<Char>(first[-1], '0', '9') || inRange<Char>(first[-1], 'A', 'F') || inRange<Char>(first[-1], 'a', 'f')))
+	// ISSUE: This implementation accepts some illegal format like as "0.1.2".
+	if(scanner.position().offsetInLine > 0	// see below
+			&& (inRange<Char>(text[-1], '0', '9') || inRange<Char>(text[-1], 'A', 'F') || inRange<Char>(text[-1], 'a', 'f')))
 		return unique_ptr<Token>();
-	const Char* e;
-	if(last - first > 2 && first[0] == '0' && (first[1] == 'x' || first[1] == 'X')) {	// HexIntegerLiteral?
-		for(e = first + 2; e < last; ++e) {
+	StringPiece::const_iterator e;
+	if(text.length() > 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X')) {	// HexIntegerLiteral?
+		for(e = text.cbegin() + 2; e < text.cend(); ++e) {
 			if(inRange<Char>(*e, '0', '9') || inRange<Char>(*e, 'A', 'F') || inRange<Char>(*e, 'a', 'f'))
 				continue;
 			break;
 		}
-		if(e == first + 2)
+		if(e == text.cbegin() + 2)
 			return unique_ptr<Token>();
 	} else {	// DecimalLiteral?
 		bool foundDecimalIntegerLiteral = false, foundDot = false;
-		if(inRange<Char>(first[0], '0', '9')) {	// DecimalIntegerLiteral ::= /0|[1-9][0-9]*/
-			e = first + 1;
+		if(inRange<Char>(text[0], '0', '9')) {	// DecimalIntegerLiteral ::= /0|[1-9][0-9]*/
+			e = text.cbegin() + 1;
 			foundDecimalIntegerLiteral = true;
-			if(first[0] != '0')
-				e = find_if(e, last, not1(InRange<Char>('0', '9')));
+			if(text[0] != '0')
+				e = find_if(e, text.cend(), not1(InRange<Char>('0', '9')));
 		} else
-			e = first;
-		if(e < last && *e == '.') {	// . DecimalDigits ::= /\.[0-9]+/
+			e = text.cbegin();
+		if(e < text.cend() && *e == '.') {	// . DecimalDigits ::= /\.[0-9]+/
 			foundDot = true;
-			e = find_if(++e, last, not1(InRange<Char>('0', '9')));
+			e = find_if(++e, text.cend(), not1(InRange<Char>('0', '9')));
 			if(e[-1] == '.')
 				return unique_ptr<Token>();
 		}
 		if(!foundDecimalIntegerLiteral && !foundDot)
 			return unique_ptr<Token>();
-		if(e < last && (*e == 'e' || *e == 'E')) {	// ExponentPart ::= /[e|E][\+\-]?[0-9]+/
-			if(++e == last)
+		if(e < text.cend() && (*e == 'e' || *e == 'E')) {	// ExponentPart ::= /[e|E][\+\-]?[0-9]+/
+			if(++e == text.cend())
 				return unique_ptr<Token>();
 			if(*e == '+' || *e == '-') {
-				if(++e == last)
+				if(++e == text.cend())
 					return unique_ptr<Token>();
 			}
-			e = find_if(++e, last, not1(InRange<Char>('0', '9')));
+			e = find_if(++e, text.cend(), not1(InRange<Char>('0', '9')));
 		}
 	}
 
 	// e points the end of the found token
-	assert(e > first);
+	assert(e > text.cbegin());
 	// "The source character immediately following a NumericLiteral must not be an IdentifierStart or DecimalDigit."
-	if(e < last && (inRange<Char>(*e, '0', '9') || scanner.getIdentifierSyntax().isIdentifierStartCharacter(utf::decodeFirst(e, last))))
+	if(e < text.cend() && (inRange<Char>(*e, '0', '9') || scanner.identifierSyntax().isIdentifierStartCharacter(utf::decodeFirst(e, text.cend()))))
 		return unique_ptr<Token>();
 
 	unique_ptr<Token> temp(new Token);
 	temp->id = tokenID();
-	temp->region.first.line = temp->region.second.line = scanner.getPosition().line;
-	temp->region.first.offsetInLine = scanner.getPosition().offsetInLine;
-	temp->region.second.offsetInLine = temp->region.first.offsetInLine + e - first;
+	temp->region.first.line = temp->region.second.line = scanner.position().line;
+	temp->region.first.offsetInLine = scanner.position().offsetInLine;
+	temp->region.second.offsetInLine = temp->region.first.offsetInLine + e - text.cbegin();
 	return temp;
 }
 
@@ -811,22 +808,22 @@ unique_ptr<Token> NumberRule::parse(const TokenScanner& scanner, const Char* fir
  * @param uriDetector The URI detector. Can't be @c null
  * @throw NullPointerException @a uriDetector is @c null
  */
-URIRule::URIRule(Token::Identifier id, shared_ptr<const URIDetector> uriDetector) /*throw()*/ : Rule(id), uriDetector_(uriDetector) {
+URIRule::URIRule(Token::Identifier id, shared_ptr<const URIDetector> uriDetector) BOOST_NOEXCEPT : Rule(id), uriDetector_(uriDetector) {
 	if(uriDetector.get() == nullptr)
 		throw NullPointerException("uriDetector");
 }
 
 /// @see Rule#parse
-unique_ptr<Token> URIRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ {
-	assert(first < last);
-	const Char* const e = uriDetector_->detect(StringPiece(first, last - first));
-	if(e == first)
+unique_ptr<Token> URIRule::parse(const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT {
+	assert(text.cbegin() < text.cend());
+	const StringPiece::const_iterator e(uriDetector_->detect(text));
+	if(e == text.cbegin())
 		return unique_ptr<Token>();
 	unique_ptr<Token> temp(new Token);
 	temp->id = tokenID();
-	temp->region.first.line = temp->region.second.line = scanner.getPosition().line;
-	temp->region.first.offsetInLine = scanner.getPosition().offsetInLine;
-	temp->region.second.offsetInLine = temp->region.first.offsetInLine + e - first;
+	temp->region.first.line = temp->region.second.line = scanner.position().line;
+	temp->region.first.offsetInLine = scanner.position().offsetInLine;
+	temp->region.second.offsetInLine = temp->region.first.offsetInLine + e - text.cbegin();
 	return temp;
 }
 
@@ -862,7 +859,7 @@ WordRule::WordRule(Token::Identifier id, const String* first, const String* last
  * @throw text#InvalidScalarValueException @a separator is a surrogate
  */
 WordRule::WordRule(Token::Identifier id, const StringPiece& words, Char separator, bool caseSensitive) : Rule(id) {
-	if(words.begin() == nullptr)
+	if(words.cbegin() == nullptr)
 		throw NullPointerException("words");
 	else if(surrogates::isSurrogate(separator))
 		throw InvalidScalarValueException(separator);
@@ -877,19 +874,19 @@ WordRule::WordRule(Token::Identifier id, const StringPiece& words, Char separato
 			break;
 	}
 	if(wordList.empty())
-		throw invalid_argument("the input string includes no words.");
+		throw invalid_argument("The input string includes no words.");
 	words_.reset(new HashTable(wordList.begin(), wordList.end(), caseSensitive));
 }
 
 /// @see Rule#parse
-unique_ptr<Token> WordRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const {
-	if(!words_->matches(first, last))
+unique_ptr<Token> WordRule::parse(const TokenScanner& scanner, const StringPiece& text) const {
+	if(!words_->matches(text))
 		return unique_ptr<Token>();
 	unique_ptr<Token> result(new Token);
 	result->id = tokenID();
-	result->region.first.line = result->region.second.line = scanner.getPosition().line;
-	result->region.first.offsetInLine = scanner.getPosition().offsetInLine;
-	result->region.second.offsetInLine = result->region.first.offsetInLine + (last - first);
+	result->region.first.line = result->region.second.line = scanner.position().line;
+	result->region.first.offsetInLine = scanner.position().offsetInLine;
+	result->region.second.offsetInLine = result->region.first.offsetInLine + text.length();
 	return result;
 }
 
@@ -908,15 +905,15 @@ RegexRule::RegexRule(Token::Identifier id, unique_ptr<const regex::Pattern> patt
 }
 
 /// @see Rule#parse
-unique_ptr<Token> RegexRule::parse(const TokenScanner& scanner, const Char* first, const Char* last) const {
-	const utf::CharacterDecodeIterator<const Char*> b(first, last), e(first, last, last);
-	unique_ptr<regex::Matcher<utf::CharacterDecodeIterator<const Char*>>> matcher(pattern_->matcher(b, e));
+unique_ptr<Token> RegexRule::parse(const TokenScanner& scanner, const StringPiece& text) const {
+	const utf::CharacterDecodeIterator<StringPiece::const_iterator> b(text.cbegin(), text.cend()), e(text.cbegin(), text.cend(), text.cend());
+	unique_ptr<regex::Matcher<utf::CharacterDecodeIterator<StringPiece::const_iterator>>> matcher(pattern_->matcher(b, e));
 	if(!matcher->lookingAt())
 		return unique_ptr<Token>();
 	unique_ptr<Token> token(new Token);
 	token->id = tokenID();
-	token->region.first.line = token->region.second.line = scanner.getPosition().line;
-	token->region.first.offsetInLine = scanner.getPosition().offsetInLine;
+	token->region.first.line = token->region.second.line = scanner.position().line;
+	token->region.first.offsetInLine = scanner.position().offsetInLine;
 	token->region.second.offsetInLine = token->region.first.offsetInLine + (matcher->end().tell() - matcher->start().tell());
 	return token;
 }
@@ -926,21 +923,14 @@ unique_ptr<Token> RegexRule::parse(const TokenScanner& scanner, const Char* firs
 
 // NullTokenScanner ///////////////////////////////////////////////////////////////////////////////
 
-/// @see TokenScanner#getIdentifierSyntax
-const IdentifierSyntax& NullTokenScanner::getIdentifierSyntax() const /*throw()*/ {
-	return IdentifierSyntax::defaultInstance();
-}
-
-/// @see TokenScanner#getPosition
-Position NullTokenScanner::getPosition() const {
-	if(!position_)
-		throw BadScannerStateException();
-	return *position_;
-}
-
 /// @see TokenScanner#hasNext
-bool NullTokenScanner::hasNext() const /*throw()*/ {
+bool NullTokenScanner::hasNext() const BOOST_NOEXCEPT {
 	return false;
+}
+
+/// @see TokenScanner#identifierSyntax
+const IdentifierSyntax& NullTokenScanner::identifierSyntax() const BOOST_NOEXCEPT {
+	return IdentifierSyntax::defaultInstance();
 }
 
 /// @see TokenScanner#nextToken
@@ -952,6 +942,13 @@ unique_ptr<Token> NullTokenScanner::nextToken() {
 void NullTokenScanner::parse(const Document&, const Region&) {
 }
 
+/// @see TokenScanner#position
+Position NullTokenScanner::position() const {
+	if(!position_)
+		throw BadScannerStateException();
+	return *position_;
+}
+
 
 // LexicalTokenScanner ////////////////////////////////////////////////////////////////////////////
 
@@ -959,20 +956,15 @@ void NullTokenScanner::parse(const Document&, const Region&) {
  * Constructor.
  * @param contentType The content the scanner parses
  */
-LexicalTokenScanner::LexicalTokenScanner(ContentType contentType) /*throw()*/ : contentType_(contentType), current_() {
+LexicalTokenScanner::LexicalTokenScanner(ContentType contentType) BOOST_NOEXCEPT : contentType_(contentType), current_() {
 }
 
 /// Destructor.
-LexicalTokenScanner::~LexicalTokenScanner() /*throw()*/ {
+LexicalTokenScanner::~LexicalTokenScanner() BOOST_NOEXCEPT {
 	for(list<const Rule*>::iterator i = rules_.begin(); i != rules_.end(); ++i)
 		delete *i;
 	for(list<const WordRule*>::iterator i = wordRules_.begin(); i != wordRules_.end(); ++i)
 		delete *i;
-}
-
-/// @see ITokenScanner#getIdentifierSyntax
-const IdentifierSyntax& LexicalTokenScanner::getIdentifierSyntax() const /*throw()*/ {
-	return current_.document()->contentTypeInformation().getIdentifierSyntax(contentType_);
 }
 
 /**
@@ -988,7 +980,7 @@ void LexicalTokenScanner::addRule(unique_ptr<const Rule> rule) {
 	else if(hasNext())
 		throw BadScannerStateException();
 	else if(find(rules_.begin(), rules_.end(), rule.get()) != rules_.end())
-		throw invalid_argument("the rule is already registered.");
+		throw invalid_argument("The rule is already registered.");
 	rules_.push_back(rule.release());
 }
 
@@ -1005,25 +997,23 @@ void LexicalTokenScanner::addWordRule(unique_ptr<const WordRule> rule) {
 	else if(hasNext())
 		throw BadScannerStateException();
 	else if(find(wordRules_.begin(), wordRules_.end(), rule.get()) != wordRules_.end())
-		throw invalid_argument("the rule is already registered.");
+		throw invalid_argument("The rule is already registered.");
 	wordRules_.push_back(rule.release());
 }
 
-/// @see ITokenScanner#getPosition
-Position LexicalTokenScanner::getPosition() const {
-	if(current_ == DocumentCharacterIterator())
-		throw BadScannerStateException();
-	return current_.tell();
-}
-
-/// @see ITokenScanner#hasNext
-bool LexicalTokenScanner::hasNext() const /*throw()*/ {
+/// @see TokenScanner#hasNext
+bool LexicalTokenScanner::hasNext() const BOOST_NOEXCEPT {
 	return current_.hasNext();
 }
 
-/// @see ITokenScanner#nextToken
+/// @see TokenScanner#identifierSyntax
+const IdentifierSyntax& LexicalTokenScanner::identifierSyntax() const BOOST_NOEXCEPT {
+	return current_.document()->contentTypeInformation().getIdentifierSyntax(contentType_);
+}
+
+/// @see TokenScanner#nextToken
 unique_ptr<Token> LexicalTokenScanner::nextToken() {
-	const IdentifierSyntax& idSyntax = getIdentifierSyntax();
+	const IdentifierSyntax& idSyntax = identifierSyntax();
 	unique_ptr<Token> result;
 	const String* line = &current_.line();
 	while(current_.hasNext()) {
@@ -1036,7 +1026,7 @@ unique_ptr<Token> LexicalTokenScanner::nextToken() {
 		const Char* const p = line->data() + current_.tell().offsetInLine;
 		const Char* const last = line->data() + line->length();
 		for(list<const Rule*>::const_iterator i = rules_.begin(); i != rules_.end(); ++i) {
-			result = (*i)->parse(*this, p, last);
+			result = (*i)->parse(*this, makeStringPiece(p, last));
 			if(result.get() != nullptr) {
 				current_.seek(result->region.end());
 				return result;
@@ -1046,7 +1036,7 @@ unique_ptr<Token> LexicalTokenScanner::nextToken() {
 		if(wordEnd > p) {
 			if(!wordRules_.empty()) {
 				for(list<const WordRule*>::const_iterator i = wordRules_.begin(); i != wordRules_.end(); ++i) {
-					result = (*i)->parse(*this, p, wordEnd);
+					result = (*i)->parse(*this, makeStringPiece(p, wordEnd));
 					if(result.get() != nullptr) {
 						current_.seek(result->region.end());
 						return result;
@@ -1060,9 +1050,16 @@ unique_ptr<Token> LexicalTokenScanner::nextToken() {
 	return result;
 }
 
-/// @see ITokenScanner#parse
+/// @see TokenScanner#parse
 void LexicalTokenScanner::parse(const Document& document, const Region& region) {
 	current_ = DocumentCharacterIterator(document, region);
+}
+
+/// @see TokenScanner#position
+Position LexicalTokenScanner::position() const {
+	if(current_ == DocumentCharacterIterator())
+		throw BadScannerStateException();
+	return current_.tell();
 }
 
 
@@ -1074,11 +1071,11 @@ void LexicalTokenScanner::parse(const Document& document, const Region& region) 
  * @param destination The content type of the transition destination
  */
 TransitionRule::TransitionRule(ContentType contentType,
-		ContentType destination) : contentType_(contentType), destination_(destination) /*throw()*/ {
+		ContentType destination) : contentType_(contentType), destination_(destination) BOOST_NOEXCEPT {
 }
 
 /// Destructor.
-TransitionRule::~TransitionRule() /*throw()*/ {
+TransitionRule::~TransitionRule() BOOST_NOEXCEPT {
 }
 
 /**
@@ -1181,18 +1178,18 @@ Index RegexTransitionRule::matches(const String& line, Index offsetInLine) const
 // LexicalPartitioner /////////////////////////////////////////////////////////////////////////////
 
 /// Constructor.
-LexicalPartitioner::LexicalPartitioner() /*throw()*/ {
+LexicalPartitioner::LexicalPartitioner() BOOST_NOEXCEPT {
 }
 
 /// Destructor.
-LexicalPartitioner::~LexicalPartitioner() /*throw()*/ {
+LexicalPartitioner::~LexicalPartitioner() BOOST_NOEXCEPT {
 	deleteRules(rules_);
 	for(size_t i = 0, c = partitions_.size(); i < c; ++i)
 		delete partitions_[i];
 }
 
 /// @internal Deletes all the transition rules.
-void LexicalPartitioner::deleteRules(list<const TransitionRule*>& rules) /*throw()*/ {
+void LexicalPartitioner::deleteRules(list<const TransitionRule*>& rules) BOOST_NOEXCEPT {
 	for(list<const TransitionRule*>::const_iterator i(rules.begin()); i != rules.end(); ++i)
 		delete *i;
 }
@@ -1208,11 +1205,11 @@ void LexicalPartitioner::computePartitioning(const Position& start, const Positi
 }
 
 /// @see kernel#DocumentPartitioner#documentAboutToBeChanged
-void LexicalPartitioner::documentAboutToBeChanged() /*throw()*/ {
+void LexicalPartitioner::documentAboutToBeChanged() BOOST_NOEXCEPT {
 }
 
 /// @see kernel#DocumentPartitioner#documentChanged
-void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()*/ {
+void LexicalPartitioner::documentChanged(const DocumentChange& change) BOOST_NOEXCEPT {
 	// this code reconstructs partitions in the region changed by the document modification using
 	// the registered partitioning rules
 
@@ -1313,7 +1310,7 @@ void LexicalPartitioner::documentChanged(const DocumentChange& change) /*throw()
 }
 
 /// @see kernel#DocumentPartitioner#doGetPartition
-void LexicalPartitioner::doGetPartition(const Position& at, DocumentPartition& partition) const /*throw()*/ {
+void LexicalPartitioner::doGetPartition(const Position& at, DocumentPartition& partition) const BOOST_NOEXCEPT {
 	detail::GapVector<Partition*>::const_iterator i(partitionAt(at));
 	const Partition& p = **i;
 	partition.contentType = p.contentType;
@@ -1322,7 +1319,7 @@ void LexicalPartitioner::doGetPartition(const Position& at, DocumentPartition& p
 }
 
 /// @see kernel#DocumentPartitioner#doInstall
-void LexicalPartitioner::doInstall() /*throw()*/ {
+void LexicalPartitioner::doInstall() BOOST_NOEXCEPT {
 	for(size_t i = 0, c = partitions_.size(); i < c; ++i)
 		delete partitions_[i];
 	partitions_.clear();
@@ -1397,7 +1394,7 @@ namespace {
 
 // returns the index of the partition encompasses the given position.
 inline detail::GapVector<LexicalPartitioner::Partition*>::const_iterator
-		LexicalPartitioner::partitionAt(const Position& at) const /*throw()*/ {
+		LexicalPartitioner::partitionAt(const Position& at) const BOOST_NOEXCEPT {
 	detail::GapVector<Partition*>::const_iterator p(
 		detail::searchBound(partitions_.begin(), partitions_.end(), at, PartitionPositionCompare<Partition>()));
 	if(p == partitions_.end()) {
@@ -1425,7 +1422,7 @@ inline detail::GapVector<LexicalPartitioner::Partition*>::const_iterator
  */
 
 // returns the transition state (corresponding content type) at the given position.
-inline ContentType LexicalPartitioner::transitionStateAt(const Position& at) const /*throw()*/ {
+inline ContentType LexicalPartitioner::transitionStateAt(const Position& at) const BOOST_NOEXCEPT {
 	if(at.line == 0 && at.offsetInLine == 0)
 		return DEFAULT_CONTENT_TYPE;
 	detail::GapVector<Partition*>::const_iterator i(partitionAt(at));
@@ -1443,7 +1440,7 @@ inline ContentType LexicalPartitioner::transitionStateAt(const Position& at) con
  * @return The length of the pattern matched or 0 if the all rules did not matched
  */
 inline Index LexicalPartitioner::tryTransition(
-		const String& line, Index offsetInLine, ContentType contentType, ContentType& destination) const /*throw()*/ {
+		const String& line, Index offsetInLine, ContentType contentType, ContentType& destination) const BOOST_NOEXCEPT {
 	for(TransitionRules::const_iterator rule(rules_.begin()), e(rules_.end()); rule != e; ++rule) {
 		if((*rule)->contentType() == contentType) {
 			if(const Index c = (*rule)->matches(line, offsetInLine)) {

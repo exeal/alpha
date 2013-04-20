@@ -1,8 +1,8 @@
 /**
  * @file rules.hpp
  * @author exeal
- * @date 2004-2006 (was Lexer.h)
- * @date 2006-2012
+ * @date 2004-2006 was Lexer.h
+ * @date 2006-2013
  */
 
 #ifndef ASCENSION_RULES_HPP
@@ -18,11 +18,12 @@
 
 namespace ascension {
 
-	namespace detail {class HashTable;}
+	namespace detail {
+		class HashTable;
+	}
 
 	/// Provides a framework for rule based text scanning and document partitioning.
 	namespace rules {
-
 		/**
 		 * A @c URIDetector detects and searches URI. This class conforms to the syntaxes of
 		 * <a href="http://www.ietf.org/rfc/rfc3986.txt">RFC 3986</a> and
@@ -83,18 +84,17 @@ namespace ascension {
 			ASCENSION_UNASSIGNABLE_TAG(Rule);
 		public:
 			/// Destructor.
-			virtual ~Rule() /*throw()*/ {}
+			virtual ~Rule() BOOST_NOEXCEPT {}
 			/**
 			 * 
-			 * @param scanner the scanner
-			 * @param first the start of the text to parse
-			 * @param last the end of the text to parse
-			 * @return the found token or @c null
+			 * @param scanner The scanner
+			 * @param text The text to parse
+			 * @return The found token or @c null
 			 */
 			virtual std::unique_ptr<Token> parse(
-				const TokenScanner& scanner, const Char* first, const Char* last) const /*throw()*/ = 0;
+				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT = 0;
 			/// Returns the identifier of the token.
-			Token::Identifier tokenID() const /*throw()*/ {return id_;}
+			Token::Identifier tokenID() const BOOST_NOEXCEPT {return id_;}
 		protected:
 			explicit Rule(Token::Identifier tokenID);
 		private:
@@ -107,8 +107,8 @@ namespace ascension {
 			RegionRule(Token::Identifier id,
 				const String& startSequence, const String& endSequence,
 				Char escapeCharacter = text::NONCHARACTER, bool caseSensitive = true);
-			std::unique_ptr<Token> parse(const TokenScanner& scanner,
-				const Char* first, const Char* last) const /*throw()*/;
+			std::unique_ptr<Token> parse(
+				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT;
 		private:
 			const String startSequence_, endSequence_;
 			const Char escapeCharacter_;
@@ -118,18 +118,18 @@ namespace ascension {
 		/// A concrete rule detects numeric tokens.
 		class NumberRule : public Rule {
 		public:
-			explicit NumberRule(Token::Identifier id) /*throw()*/;
-			std::unique_ptr<Token> parse(const TokenScanner& scanner,
-				const Char* first, const Char* last) const /*throw()*/;
+			explicit NumberRule(Token::Identifier id) BOOST_NOEXCEPT;
+			std::unique_ptr<Token> parse(
+				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT;
 		};
 
 		/// A concrete rule detects URI strings.
 		class URIRule : public Rule {
 		public:
 			URIRule(Token::Identifier id,
-				std::shared_ptr<const URIDetector> uriDetector) /*throw()*/;
-			std::unique_ptr<Token> parse(const TokenScanner& scanner,
-				const Char* first, const Char* last) const /*throw()*/;
+				std::shared_ptr<const URIDetector> uriDetector) BOOST_NOEXCEPT;
+			std::unique_ptr<Token> parse(
+				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT;
 		private:
 			std::shared_ptr<const URIDetector> uriDetector_;
 		};
@@ -141,8 +141,8 @@ namespace ascension {
 				const String* first, const String* last, bool caseSensitive = true);
 			WordRule(Token::Identifier id,
 				const StringPiece& words, Char separator, bool caseSensitive = true);
-			std::unique_ptr<Token> parse(const TokenScanner& scanner,
-				const Char* first, const Char* last) const /*noexcept*/;
+			std::unique_ptr<Token> parse(
+				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT;
 		private:
 			std::unique_ptr<detail::HashTable> words_;
 		};
@@ -152,8 +152,8 @@ namespace ascension {
 		class RegexRule : public Rule {
 		public:
 			RegexRule(Token::Identifier id, std::unique_ptr<const regex::Pattern> pattern);
-			std::unique_ptr<Token> parse(const TokenScanner& scanner,
-				const Char* first, const Char* last) const /*throw()*/;
+			std::unique_ptr<Token> parse(
+				const TokenScanner& scanner, const StringPiece& text) const BOOST_NOEXCEPT;
 		private:
 			std::unique_ptr<const regex::Pattern> pattern_;
 		};
@@ -168,16 +168,14 @@ namespace ascension {
 		class TokenScanner {
 		public:
 			/// Destructor.
-			virtual ~TokenScanner() /*throw()*/ {}
-			/// Returns the identifier syntax.
-			virtual const text::IdentifierSyntax& getIdentifierSyntax() const /*throw()*/ = 0;
-			/// Returns the current position.
-			virtual kernel::Position getPosition() const = 0;
+			virtual ~TokenScanner() BOOST_NOEXCEPT {}
 			/// Returns @c false if the scanning is done.
-			virtual bool hasNext() const /*throw()*/ = 0;
+			virtual bool hasNext() const BOOST_NOEXCEPT = 0;
+			/// Returns the identifier syntax.
+			virtual const text::IdentifierSyntax& identifierSyntax() const BOOST_NOEXCEPT = 0;
 			/**
 			 * Moves to the next token and returns it.
-			 * @return the token or @c null if the scanning was done.
+			 * @return The token or @c null if the scanning was done.
 			 */
 			virtual std::unique_ptr<Token> nextToken() = 0;
 			/**
@@ -188,6 +186,8 @@ namespace ascension {
 			 * @throw kernel#BadRegionException @a region intersects outside of the document
 			 */
 			virtual void parse(const kernel::Document& document, const kernel::Region& region) = 0;
+			/// Returns the current position.
+			virtual kernel::Position position() const = 0;
 		};
 
 		/**
@@ -196,11 +196,11 @@ namespace ascension {
 		 */
 		class NullTokenScanner : public TokenScanner {
 		public:
-			const text::IdentifierSyntax& getIdentifierSyntax() const /*throw()*/;
-			kernel::Position getPosition() const;
-			bool hasNext() const /*throw()*/;
+			bool hasNext() const BOOST_NOEXCEPT;
+			const text::IdentifierSyntax& identifierSyntax() const BOOST_NOEXCEPT;
 			std::unique_ptr<Token> nextToken();
 			void parse(const kernel::Document& document, const kernel::Region& region);
+			kernel::Position position() const;
 		private:
 			boost::optional<kernel::Position> position_;
 		};
@@ -216,17 +216,17 @@ namespace ascension {
 			ASCENSION_NONCOPYABLE_TAG(LexicalTokenScanner);
 		public:
 			// constructors
-			explicit LexicalTokenScanner(kernel::ContentType contentType) /*throw()*/;
-			~LexicalTokenScanner() /*throw()*/;
+			explicit LexicalTokenScanner(kernel::ContentType contentType) BOOST_NOEXCEPT;
+			~LexicalTokenScanner() BOOST_NOEXCEPT;
 			// attributes
 			void addRule(std::unique_ptr<const Rule> rule);
 			void addWordRule(std::unique_ptr<const WordRule> rule);
 			// TokenScanner
-			const text::IdentifierSyntax& getIdentifierSyntax() const /*throw()*/;
-			kernel::Position getPosition() const /*throw()*/;
-			bool hasNext() const /*throw()*/;
+			bool hasNext() const BOOST_NOEXCEPT;
+			const text::IdentifierSyntax& identifierSyntax() const BOOST_NOEXCEPT;
 			std::unique_ptr<Token> nextToken();
 			void parse(const kernel::Document& document, const kernel::Region& region);
+			kernel::Position position() const BOOST_NOEXCEPT;
 		private:
 			kernel::ContentType contentType_;
 			std::list<const Rule*> rules_;
@@ -241,13 +241,13 @@ namespace ascension {
 		class TransitionRule {
 			ASCENSION_UNASSIGNABLE_TAG(TransitionRule);
 		public:
-			virtual ~TransitionRule() /*throw()*/;
+			virtual ~TransitionRule() BOOST_NOEXCEPT;
 			virtual std::unique_ptr<TransitionRule> clone() const = 0;
-			kernel::ContentType contentType() const /*throw()*/;
-			kernel::ContentType destination() const /*throw()*/;
+			kernel::ContentType contentType() const BOOST_NOEXCEPT;
+			kernel::ContentType destination() const BOOST_NOEXCEPT;
 			virtual Index matches(const String& line, Index offsetInLine) const = 0;
 		protected:
-			TransitionRule(kernel::ContentType contentType, kernel::ContentType destination) /*throw()*/;
+			TransitionRule(kernel::ContentType contentType, kernel::ContentType destination) BOOST_NOEXCEPT;
 		private:
 			const kernel::ContentType contentType_, destination_;
 		};
@@ -288,8 +288,8 @@ namespace ascension {
 			ASCENSION_NONCOPYABLE_TAG(LexicalPartitioner);
 		public:
 			// constructor
-			LexicalPartitioner() /*throw()*/;
-			~LexicalPartitioner() /*throw()*/;
+			LexicalPartitioner() BOOST_NOEXCEPT;
+			~LexicalPartitioner() BOOST_NOEXCEPT;
 			// attribute
 			template<typename InputIterator>
 			void setRules(InputIterator first, InputIterator last);
@@ -299,28 +299,28 @@ namespace ascension {
 				kernel::Position start, tokenStart;
 				Index tokenLength;
 				Partition(kernel::ContentType type, const kernel::Position& p,
-					const kernel::Position& startOfToken, Index lengthOfToken) /*throw()*/
+					const kernel::Position& startOfToken, Index lengthOfToken) BOOST_NOEXCEPT
 					: contentType(type), start(p), tokenStart(startOfToken), tokenLength(lengthOfToken) {}
-				kernel::Position getTokenEnd() const /*throw()*/ {
+				kernel::Position getTokenEnd() const BOOST_NOEXCEPT {
 					return kernel::Position(tokenStart.line, tokenStart.offsetInLine + tokenLength);
 				}
 			};
 		private:
 			void computePartitioning(const kernel::Position& start,
 				const kernel::Position& minimalLast, kernel::Region& changedRegion);
-			static void deleteRules(std::list<const TransitionRule*>& rules) /*throw()*/;
+			static void deleteRules(std::list<const TransitionRule*>& rules) BOOST_NOEXCEPT;
 			void dump() const;
 			void erasePartitions(const kernel::Position& first, const kernel::Position& last);
-			detail::GapVector<Partition*>::const_iterator partitionAt(const kernel::Position& at) const /*throw()*/;
-			kernel::ContentType transitionStateAt(const kernel::Position& at) const /*throw()*/;
+			detail::GapVector<Partition*>::const_iterator partitionAt(const kernel::Position& at) const BOOST_NOEXCEPT;
+			kernel::ContentType transitionStateAt(const kernel::Position& at) const BOOST_NOEXCEPT;
 			Index tryTransition(const String& line, Index offsetInLine,
-				kernel::ContentType contentType, kernel::ContentType& destination) const /*throw()*/;
+				kernel::ContentType contentType, kernel::ContentType& destination) const BOOST_NOEXCEPT;
 			void verify() const;
 			// DocumentPartitioner
-			void documentAboutToBeChanged() /*throw()*/;
-			void documentChanged(const kernel::DocumentChange& change) /*throw()*/;
-			void doGetPartition(const kernel::Position& at, kernel::DocumentPartition& partition) const /*throw()*/;
-			void doInstall() /*throw()*/;
+			void documentAboutToBeChanged() BOOST_NOEXCEPT;
+			void documentChanged(const kernel::DocumentChange& change) BOOST_NOEXCEPT;
+			void doGetPartition(const kernel::Position& at, kernel::DocumentPartition& partition) const BOOST_NOEXCEPT;
+			void doInstall() BOOST_NOEXCEPT;
 		private:
 			detail::GapVector<Partition*> partitions_;
 			typedef std::list<const TransitionRule*> TransitionRules;
@@ -341,7 +341,7 @@ namespace ascension {
 				std::shared_ptr<const presentation::TextRunStyle> defaultStyle = std::shared_ptr<const presentation::TextRunStyle>());
 		private:
 			// presentation.IPartitionPresentationReconstructor
-			std::unique_ptr<presentation::StyledTextRunIterator> getPresentation(const kernel::Region& region) const /*throw()*/;
+			std::unique_ptr<presentation::StyledTextRunIterator> getPresentation(const kernel::Region& region) const BOOST_NOEXCEPT;
 		private:
 			class StyledTextRunIterator;
 			const presentation::Presentation& presentation_;
@@ -352,10 +352,10 @@ namespace ascension {
 
 
 		/// Returns the content type.
-		inline kernel::ContentType TransitionRule::contentType() const /*throw()*/ {return contentType_;}
+		inline kernel::ContentType TransitionRule::contentType() const BOOST_NOEXCEPT {return contentType_;}
 
 		/// Returns the content type of the transition destination.
-		inline kernel::ContentType TransitionRule::destination() const /*throw()*/ {return destination_;}
+		inline kernel::ContentType TransitionRule::destination() const BOOST_NOEXCEPT {return destination_;}
 
 		template<typename InputIterator> inline void LexicalPartitioner::setRules(InputIterator first, InputIterator last) {
 			if(document() != nullptr)
