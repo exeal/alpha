@@ -4,7 +4,7 @@
  * @author exeal
  * @date 2003-2008 was point.hpp
  * @date 2008 separated from point.hpp
- * @date 2009-20123
+ * @date 2009-2013
  */
 
 #ifndef ASCENSION_CARET_HPP
@@ -64,7 +64,6 @@ namespace ascension {
 	}
 
 	namespace viewers {
-
 		// documentation is caret.cpp
 		class Caret : public VisualPoint, public detail::InputEventHandler,
 			public kernel::PointListener, public kernel::DocumentListener,
@@ -77,10 +76,12 @@ namespace ascension {
 				TRACK_FOR_SURROUND_CHARACTERS	///< Tracks the bracket matches backward character.
 			};
 
-			// constructor
+		public:
 			explicit Caret(TextViewer& viewer, const kernel::Position& position = kernel::Position(0, 0));
 			~Caret();
-			// listeners
+
+			/// @name Listeners
+			/// @{
 			void addCharacterInputListener(CharacterInputListener& listener);
 			void addInputPropertyListener(InputPropertyListener& listener);
 			void addListener(CaretListener& listener);
@@ -89,32 +90,53 @@ namespace ascension {
 			void removeInputPropertyListener(InputPropertyListener& listener);
 			void removeListener(CaretListener& listener);
 			void removeStateListener(CaretStateListener& listener);
-			// attributes : the anchor and the caret
+			/// @}
+
+			/// @name The Anchor and The Caret
+			/// @{
 			const VisualPoint& anchor() const BOOST_NOEXCEPT;
 			const VisualPoint& beginning() const BOOST_NOEXCEPT;
 			Caret& enableAutoShow(bool enable = true) BOOST_NOEXCEPT;
 			const VisualPoint& end() const BOOST_NOEXCEPT;
 			bool isAutoShowEnabled() const BOOST_NOEXCEPT;
-			// attributes : selection
+			/// @}
+
+			/// @name The Selection
+			/// @{
 			const VirtualBox& boxForRectangleSelection() const;
 			bool isSelectionRectangle() const BOOST_NOEXCEPT;
 			kernel::Region selectedRegion() const BOOST_NOEXCEPT;
-			// attribute : shape
+			/// @}
+
+			/// @name The Shape
+			/// @{
 			void setShaper(std::shared_ptr<CaretShaper> shaper) BOOST_NOEXCEPT;
-			// attributes : character input
+			/// @}
+
+			/// @name Character Input
+			/// @{
 			bool isOvertypeMode() const BOOST_NOEXCEPT;
 			Caret& setOvertypeMode(bool overtype) BOOST_NOEXCEPT;
-			// attributes : clipboard
+			/// @}
+
+			/// @name Clipboard
+			/// @{
 			bool canPaste(bool useKillRing) const BOOST_NOEXCEPT;
 #ifdef ASCENSION_OS_WINDOWS
 			LCID clipboardLocale() const BOOST_NOEXCEPT;
 			LCID setClipboardLocale(LCID newLocale);
 #endif // SCENSION_OS_WINDOWS
-			// attributes : matched braces
+			/// @}
+
+			/// @name The Matched Braces/Brackets
+			/// @{
 			const boost::optional<std::pair<kernel::Position, kernel::Position>>& matchBrackets() const BOOST_NOEXCEPT;
 			MatchBracketsTrackingMode matchBracketsTrackingMode() const BOOST_NOEXCEPT;
 			Caret& trackMatchBrackets(MatchBracketsTrackingMode mode);
-			// selection manipulations
+			/// @}
+
+			/// @name Selection Manipulations
+			/// @{
 			void beginRectangleSelection();
 			void clearSelection();
 			void endRectangleSelection();
@@ -124,11 +146,18 @@ namespace ascension {
 			void replaceSelection(const StringPiece& text, bool rectangleInsertion = false);
 			void select(const kernel::Region& region);
 			void select(const kernel::Position& anchor, const kernel::Position& caret);
-			// text manipulation
-			bool inputCharacter(CodePoint cp, bool validateSequence = true, bool blockControls = true);
-			// visualization updates
+			/// @}
+
+			/// @name Text Manipulation
+			/// @{
+			bool inputCharacter(CodePoint c, bool validateSequence = true, bool blockControls = true);
+			/// @}
+
+			/// @name Visualization Updates
+			/// @{
 			void resetVisualization();
 			void updateLocation();
+			/// @}
 
 		private:
 			void adjustInputMethodCompositionWindow();
@@ -189,7 +218,7 @@ namespace ascension {
 			std::shared_ptr<CaretShaper> shaper_;
 			struct Shape {
 				std::unique_ptr<graphics::Image> image;
-				graphics::Point alignmentPoint;
+				graphics::geometry::BasicPoint<std::uint16_t> alignmentPoint;
 				Shape() BOOST_NOEXCEPT;
 			} shapeCache_;
 			struct Context {
@@ -206,7 +235,8 @@ namespace ascension {
 			} context_;
 		};
 
-		// free functions related to selection of Caret class
+		/// @defgroup functions_related_to_selection Free Functions Related-to Selection of @c Caret
+		/// @{
 		void copySelection(Caret& caret, bool useKillRing);
 		void cutSelection(Caret& caret, bool useKillRing);
 		bool isPointOverSelection(const Caret& caret, const graphics::Point& p);
@@ -217,8 +247,10 @@ namespace ascension {
 		std::basic_ostream<Char>& selectedString(const Caret& caret,
 			std::basic_ostream<Char>& out, const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE);
 		void selectWord(Caret& caret);
+		/// @}
 
-		// free functions change the document by using Caret class
+		/// @defgroup functions_change_document_by_using_caret Free Functions Change the Document by using @c Caret
+		/// @{
 		void breakLine(Caret& at, bool inheritIndent, std::size_t newlines /* = 1 */);
 		void eraseSelection(Caret& caret);
 		void insertRectangle(Caret& caret, const Char* first, const Char* last);
@@ -231,6 +263,7 @@ namespace ascension {
 //		bool transposeParagraphs(Caret& caret);
 //		bool transposeSentences(Caret& caret);
 		bool transposeWords(Caret& caret);
+		/// @}
 
 
 		// inline implementations /////////////////////////////////////////////////////////////////

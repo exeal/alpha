@@ -135,7 +135,7 @@ namespace {
 			geometry::BasicDimension<uint16_t>(geometry::_dx = width, geometry::_dy = extent), Image::ARGB_32));
 	}
 
-	void shapeCaret(const Caret& caret, bool localeSensitive, unique_ptr<Image>& image, Point& alignmentPoint) {
+	void shapeCaret(const Caret& caret, bool localeSensitive, unique_ptr<Image>& image, geometry::BasicPoint<uint16_t>& alignmentPoint) {
 		const bool overtype = caret.isOvertypeMode() && isSelectionEmpty(caret);
 		const TextRenderer& renderer = caret.textViewer().textRenderer();
 		const TextLayout& layout = renderer.layouts().at(line(caret));
@@ -171,7 +171,7 @@ namespace {
 }
 
 /// @see CaretShaper#shape
-void DefaultCaretShaper::shape(unique_ptr<Image>& image, Point& alignmentPoint) const BOOST_NOEXCEPT {
+void DefaultCaretShaper::shape(unique_ptr<Image>& image, geometry::BasicPoint<uint16_t>& alignmentPoint) const BOOST_NOEXCEPT {
 	return shapeCaret(updater_->caret(), false, image, alignmentPoint);
 }
 
@@ -245,7 +245,7 @@ void LocaleSensitiveCaretShaper::selectionShapeChanged(const Caret&) {
 }
 
 /// @see CaretShaper#shape
-void LocaleSensitiveCaretShaper::shape(unique_ptr<Image>& image, Point& alignmentPoint) const BOOST_NOEXCEPT {
+void LocaleSensitiveCaretShaper::shape(unique_ptr<Image>& image, geometry::BasicPoint<uint16_t>& alignmentPoint) const BOOST_NOEXCEPT {
 	return shapeCaret(updater()->caret(), true, image, alignmentPoint);
 }
 
