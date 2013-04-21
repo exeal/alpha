@@ -477,20 +477,29 @@ namespace ascension {
 			// freeze information
 			class FreezeRegister {
 			public:
-				FreezeRegister() BOOST_NOEXCEPT : count_(0) {
+				FreezeRegister() BOOST_NOEXCEPT : count_(0), linesToRedraw_(boost::irange<Index>(0, 0)) {
 					freeze();
 					unfreeze();
 				}
 				void freeze() BOOST_NOEXCEPT {++count_;}
 				void addLinesToRedraw(const boost::integer_range<Index>& lines) {
 					assert(isFrozen());
+#if 0
 					linesToRedraw_ = merged(linesToRedraw_, lines);
+#else
+					const boost::integer_range<Index> linesToAdd(ordered(lines));
+					linesToRedraw_ = boost::irange(
+						std::min(*linesToAdd.begin(), *linesToRedraw_.begin()),
+						std::max(*linesToAdd.end(), *linesToRedraw_.end()));
+#endif
 				}
 				bool isFrozen() const BOOST_NOEXCEPT {return count_ != 0;}
-				const boost::integer_range<Index>& linesToRedraw() const BOOST_NOEXCEPT {return linesToRedraw_;}
+				const boost::integer_range<Index>& linesToRedraw() const BOOST_NOEXCEPT {
+					return linesToRedraw_;
+				}
 				void resetLinesToRedraw(const boost::integer_range<Index>& lines) {
 					assert(isFrozen());
-					linesToRedraw_ = lines;
+					linesToRedraw_ = ordered(lines);
 				}
 				boost::integer_range<Index> unfreeze() {
 					assert(isFrozen());
@@ -531,12 +540,12 @@ namespace ascension {
 		};
 
 		/// Highlights the line on which the caret is put.
-		class CurrentLineHighlighter : public presentation::TextLineColorDirector,
+		class CurrentLineHighlighter : public presentation::TextLineColorSpecifier,
 				public CaretListener, public CaretStateListener, public kernel::PointLifeCycleListener {
 			ASCENSION_NONCOPYABLE_TAG(CurrentLineHighlighter);
 		public:
 			// constant
-			static const TextLineColorDirector::Priority LINE_COLOR_PRIORITY;
+			static const presentation::TextLineColorSpecifier::Priority LINE_COLOR_PRIORITY;
 			// constructors
 			CurrentLineHighlighter(Caret& caret,
 				const boost::optional<graphics::Color>& foreground,
@@ -549,7 +558,7 @@ namespace ascension {
 			void setForeground(const boost::optional<graphics::Color>& color) BOOST_NOEXCEPT;
 		private:
 			// presentation.TextLineColorDirector
-			TextLineColorDirector::Priority queryLineColors(
+			presentation::TextLineColorSpecifier::Priority specifyTextLineColors(
 				Index line, boost::optional<graphics::Color>& foreground,
 				boost::optional<graphics::Color>& background) const;
 			// CaretListener

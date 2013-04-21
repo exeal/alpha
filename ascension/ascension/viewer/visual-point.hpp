@@ -12,6 +12,7 @@
 #ifndef ASCENSION_VISUAL_POINT_HPP
 #define ASCENSION_VISUAL_POINT_HPP
 #include <ascension/kernel/point.hpp>
+#include <ascension/graphics/font/line-layout-vector.hpp>	// graphics.font.VisualLinesListener
 
 namespace ascension {
 
