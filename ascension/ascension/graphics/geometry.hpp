@@ -210,6 +210,9 @@ namespace ascension {
 BOOST_GEOMETRY_REGISTER_POINT_2D(
 	ascension::graphics::geometry::BasicPoint<ascension::graphics::geometry::Scalar>,
 	ascension::graphics::geometry::Scalar, boost::geometry::cs::cartesian, x_, y_)
+BOOST_GEOMETRY_REGISTER_POINT_2D(
+	ascension::graphics::geometry::BasicPoint<std::uint16_t>,
+	std::uint16_t, boost::geometry::cs::cartesian, x_, y_)
 BOOST_GEOMETRY_REGISTER_BOX(
 	ascension::graphics::geometry::BasicRectangle<ascension::graphics::geometry::Scalar>,
 	ascension::graphics::geometry::BasicPoint<ascension::graphics::geometry::Scalar>, minimumCorner_, maximumCorner_)

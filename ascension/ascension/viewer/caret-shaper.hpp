@@ -64,7 +64,7 @@ namespace ascension {
 			 *                            the character addressed by the caret
 			 */
 			virtual void shape(std::unique_ptr<graphics::Image>& image,
-				graphics::Point& alignmentPoint) const BOOST_NOEXCEPT = 0;
+				graphics::geometry::BasicPoint<std::uint16_t>& alignmentPoint) const BOOST_NOEXCEPT = 0;
 		private:
 			/**
 			 * Installs the shaper.
