@@ -5,28 +5,27 @@
  * @date 2003-2006 was EditView.h
  * @date 2006-2011 was viewer.hpp
  * @date 2011-09-25 separated from viewer.hpp
- * @date 2012
+ * @date 2012-2013
  */
 
 #ifndef ASCENSION_CARET_SHAPER_HPP
 #define ASCENSION_CARET_SHAPER_HPP
-#include <ascension/graphics/geometry.hpp>			// graphics.NativeSize
-#include <ascension/graphics/image.hpp>				// graphics.Image
-#include <ascension/graphics/text-renderer.hpp>		// graphics.font.ComputedWritingModeListener
-#include <ascension/kernel/position.hpp>			// kernel.Position, kernel.Region
-#include <ascension/viewer/caret-observers.hpp>		// CaretListener, CaretStateListener
-#include <ascension/viewer/viewer-observers.hpp>	// TextViewerInputStatusListener
-#include <utility>	// std.pair
+#include <ascension/graphics/geometry.hpp>	// graphics.Scalar, graphics.Point^
+#include <memory>	// std.unique_ptr
 
 
 namespace ascension {
+	namespace graphics {
+		class Image;
+	}
+
 	namespace viewers {
 
 		// these classes are also declared by *-observers.hpp
 		class Caret;
 		class TextViewer;
 
-		void currentCharacterSize(const Caret& caret, graphics::Scalar* measure, graphics::Scalar* extent);
+		graphics::Rectangle&& currentCharacterLogicalBounds(const Caret& caret);
 
 		/**
 		 * A @c CaretShapeUpdater gives a @c CaretShaper the trigger to update the visualization of
@@ -36,11 +35,11 @@ namespace ascension {
 		class CaretShapeUpdater {
 			ASCENSION_UNASSIGNABLE_TAG(CaretShapeUpdater);
 		public:
-			Caret& caret() /*throw()*/;
-			const Caret& caret() const /*throw()*/;
-			void update() /*throw()*/;
+			Caret& caret() BOOST_NOEXCEPT;
+			const Caret& caret() const BOOST_NOEXCEPT;
+			void update() BOOST_NOEXCEPT;
 		private:
-			explicit CaretShapeUpdater(Caret& caret) /*throw()*/;
+			explicit CaretShapeUpdater(Caret& caret) BOOST_NOEXCEPT;
 			Caret& caret_;
 			friend class Caret;
 		};
@@ -53,7 +52,7 @@ namespace ascension {
 		class CaretShaper {
 		public:
 			/// Destructor.
-			virtual ~CaretShaper() /*throw()*/ {}
+			virtual ~CaretShaper() BOOST_NOEXCEPT {}
 			/**
 			 * Returns the bitmap defines caret shape.
 			 * @param[out] image The bitmap defines caret shape. If @c null, the @c Caret ignores
@@ -65,79 +64,17 @@ namespace ascension {
 			 *                            the character addressed by the caret
 			 */
 			virtual void shape(std::unique_ptr<graphics::Image>& image,
-				graphics::NativePoint& alignmentPoint) const /*throw()*/ = 0;
+				graphics::Point& alignmentPoint) const BOOST_NOEXCEPT = 0;
 		private:
 			/**
 			 * Installs the shaper.
 			 * @param updater The caret updater which notifies the text viewer to update the caret
 			 */
-			virtual void install(CaretShapeUpdater& updater) /*throw()*/ = 0;
+			virtual void install(CaretShapeUpdater& updater) BOOST_NOEXCEPT = 0;
 			/// Uninstalls the shaper.
-			virtual void uninstall() /*throw()*/ = 0;
+			virtual void uninstall() BOOST_NOEXCEPT = 0;
 			friend class Caret;
 		};
-
-		/**
-		 * Default implementation of @c CaretShaper.
-		 * @c DefaultCaretShaper returns system-defined caret shape (color, width) which depends on
-		 * the writing mode of the text viewer and the line metrics.
-		 * @note This class is not intended to be subclassed.
-		 */
-		class DefaultCaretShaper : public CaretShaper, public CaretListener,
-			public graphics::font::ComputedWritingModeListener,
-			public graphics::font::VisualLinesListener {
-			ASCENSION_NONCOPYABLE_TAG(DefaultCaretShaper);
-		public:
-			DefaultCaretShaper() /*throw()*/;
-		protected:
-			CaretShapeUpdater* updater() /*throw()*/ {return updater_;}
-			const CaretShapeUpdater* updater() const /*throw()*/ {return updater_;}
-			// CaretShaper
-			virtual void install(CaretShapeUpdater& updater) /*throw()*/;
-			virtual void shape(std::unique_ptr<graphics::Image>& image,
-				graphics::NativePoint& alignmentPoint) const /*throw()*/;
-			virtual void uninstall() /*throw()*/;
-			// CaretListener
-			virtual void caretMoved(const Caret& caret, const kernel::Region& oldRegion);
-			// graphics.font.ComputedWritingModeListener
-			void computedWritingModeChanged(const presentation::WritingMode& used);
-			// graphics.font.VisualLinesListener
-			void visualLinesDeleted(const Range<Index>& lines,
-				Index sublines, bool longestLineChanged) /*throw()*/;
-			void visualLinesInserted(const Range<Index>& lines) /*throw()*/;
-			void visualLinesModified(
-				const Range<Index>& lines, SignedIndex sublinesDifference,
-				bool documentChanged, bool longestLineChanged) /*throw()*/;
-		private:
-			CaretShapeUpdater* updater_;
-		};
-
-		/**
-		 * @c LocaleSensitiveCaretShaper defines caret shape based on active keyboard layout.
-		 * @note This class is not intended to be subclassed.
-		 */
-		class LocaleSensitiveCaretShaper : public DefaultCaretShaper,
-			public CaretStateListener, public InputPropertyListener {
-		public:
-			explicit LocaleSensitiveCaretShaper() /*throw()*/;
-		private:
-			// CaretShaper
-			void install(CaretShapeUpdater& updater) /*throw()*/;
-			void shape(std::unique_ptr<graphics::Image>& image,
-				graphics::NativePoint& alignmentPoint) const /*throw()*/;
-			void uninstall() /*throw()*/;
-			// CaretListener
-			void caretMoved(const Caret& caret, const kernel::Region& oldRegion);
-			// CaretStateListener
-			void matchBracketsChanged(const Caret& self,
-				const std::pair<kernel::Position, kernel::Position>& oldPair, bool outsideOfView);
-			void overtypeModeChanged(const Caret& self);
-			void selectionShapeChanged(const Caret& self);
-			// InputPropertyListener
-			void inputLocaleChanged() /*throw()*/;
-			void inputMethodOpenStatusChanged() /*throw()*/;
-		};
-
 	}
 } // namespace ascension.viewers
 

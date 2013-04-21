@@ -2,9 +2,9 @@
  * @file caret.hpp
  * Defines the classes in the point-hierarchy related to visual presentation.
  * @author exeal
- * @date 2003-2008 (was point.hpp)
- * @date 2008 (separated from point.hpp)
- * @date 2009-2012
+ * @date 2003-2008 was point.hpp
+ * @date 2008 separated from point.hpp
+ * @date 2009-20123
  */
 
 #ifndef ASCENSION_CARET_HPP
@@ -90,29 +90,29 @@ namespace ascension {
 			void removeListener(CaretListener& listener);
 			void removeStateListener(CaretStateListener& listener);
 			// attributes : the anchor and the caret
-			const VisualPoint& anchor() const /*throw()*/;
-			const VisualPoint& beginning() const /*throw()*/;
-			Caret& enableAutoShow(bool enable = true) /*throw()*/;
-			const VisualPoint& end() const /*throw()*/;
-			bool isAutoShowEnabled() const /*throw()*/;
+			const VisualPoint& anchor() const BOOST_NOEXCEPT;
+			const VisualPoint& beginning() const BOOST_NOEXCEPT;
+			Caret& enableAutoShow(bool enable = true) BOOST_NOEXCEPT;
+			const VisualPoint& end() const BOOST_NOEXCEPT;
+			bool isAutoShowEnabled() const BOOST_NOEXCEPT;
 			// attributes : selection
 			const VirtualBox& boxForRectangleSelection() const;
-			bool isSelectionRectangle() const /*throw()*/;
-			kernel::Region selectedRegion() const /*throw()*/;
+			bool isSelectionRectangle() const BOOST_NOEXCEPT;
+			kernel::Region selectedRegion() const BOOST_NOEXCEPT;
 			// attribute : shape
-			void setShaper(std::shared_ptr<CaretShaper> shaper) /*throw()*/;
+			void setShaper(std::shared_ptr<CaretShaper> shaper) BOOST_NOEXCEPT;
 			// attributes : character input
-			bool isOvertypeMode() const /*throw()*/;
-			Caret& setOvertypeMode(bool overtype) /*throw()*/;
+			bool isOvertypeMode() const BOOST_NOEXCEPT;
+			Caret& setOvertypeMode(bool overtype) BOOST_NOEXCEPT;
 			// attributes : clipboard
-			bool canPaste(bool useKillRing) const /*throw()*/;
+			bool canPaste(bool useKillRing) const BOOST_NOEXCEPT;
 #ifdef ASCENSION_OS_WINDOWS
-			LCID clipboardLocale() const /*throw()*/;
+			LCID clipboardLocale() const BOOST_NOEXCEPT;
 			LCID setClipboardLocale(LCID newLocale);
 #endif // SCENSION_OS_WINDOWS
 			// attributes : matched braces
-			const boost::optional<std::pair<kernel::Position, kernel::Position>>& matchBrackets() const /*throw()*/;
-			MatchBracketsTrackingMode matchBracketsTrackingMode() const /*throw()*/;
+			const boost::optional<std::pair<kernel::Position, kernel::Position>>& matchBrackets() const BOOST_NOEXCEPT;
+			MatchBracketsTrackingMode matchBracketsTrackingMode() const BOOST_NOEXCEPT;
 			Caret& trackMatchBrackets(MatchBracketsTrackingMode mode);
 			// selection manipulations
 			void beginRectangleSelection();
@@ -140,7 +140,7 @@ namespace ascension {
 			void updateVisualAttributes();
 			// VisualPoint
 			void aboutToMove(kernel::Position& to);
-			void moved(const kernel::Position& from) /*throw()*/;
+			void moved(const kernel::Position& from) BOOST_NOEXCEPT;
 			// detail.InputEventHandler
 			void abortInput();
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
@@ -161,15 +161,15 @@ namespace ascension {
 		private:
 			class SelectionAnchor : public VisualPoint {
 			public:
-				SelectionAnchor(TextViewer& viewer, const kernel::Position& position) /*throw()*/ :
+				SelectionAnchor(TextViewer& viewer, const kernel::Position& position) BOOST_NOEXCEPT :
 					VisualPoint(viewer, position), positionBeforeUpdate_() {adaptToDocument(false);}
-				void beginInternalUpdate(const kernel::DocumentChange& change) /*throw()*/ {
+				void beginInternalUpdate(const kernel::DocumentChange& change) BOOST_NOEXCEPT {
 					assert(!isInternalUpdating()); positionBeforeUpdate_ = position();
 					adaptToDocument(true); update(change); adaptToDocument(false);}
-				void endInternalUpdate() /*throw()*/ {
+				void endInternalUpdate() BOOST_NOEXCEPT {
 					assert(isInternalUpdating()); positionBeforeUpdate_ = boost::none;}
-				bool isInternalUpdating() const /*throw()*/ {return positionBeforeUpdate_;}
-				const kernel::Position& positionBeforeInternalUpdate() const /*throw()*/ {
+				bool isInternalUpdating() const BOOST_NOEXCEPT {return positionBeforeUpdate_;}
+				const kernel::Position& positionBeforeInternalUpdate() const BOOST_NOEXCEPT {
 					assert(isInternalUpdating()); return *positionBeforeUpdate_;}
 			private:
 				using kernel::Point::adaptToDocument;
@@ -189,8 +189,8 @@ namespace ascension {
 			std::shared_ptr<CaretShaper> shaper_;
 			struct Shape {
 				std::unique_ptr<graphics::Image> image;
-				graphics::NativePoint alignmentPoint;
-				Shape() /*throw()*/;
+				graphics::Point alignmentPoint;
+				Shape() BOOST_NOEXCEPT;
 			} shapeCache_;
 			struct Context {
 				bool yanking;			// true when right after pasted by using clipboard ring, and waiting for next cycle of ring
@@ -202,20 +202,20 @@ namespace ascension {
 				boost::optional<kernel::Position> lastTypedPosition;	// the position the caret input character previously
 				boost::optional<kernel::Region> regionBeforeMoved;
 				boost::optional<std::pair<kernel::Position, kernel::Position>> matchBrackets;	// matched brackets' positions. boost.none for none
-				Context() /*throw()*/;
+				Context() BOOST_NOEXCEPT;
 			} context_;
 		};
 
 		// free functions related to selection of Caret class
 		void copySelection(Caret& caret, bool useKillRing);
 		void cutSelection(Caret& caret, bool useKillRing);
-		bool isPointOverSelection(const Caret& caret, const graphics::NativePoint& p);
-		bool isSelectionEmpty(const Caret& caret) /*throw()*/;
-		bool selectedRangeOnLine(const Caret& caret, Index line, Range<Index>& range);
-		bool selectedRangeOnVisualLine(const Caret& caret, Index line, Index subline, Range<Index>& range);
-		String selectedString(const Caret& caret, text::Newline newline = text::NLF_RAW_VALUE);
+		bool isPointOverSelection(const Caret& caret, const graphics::Point& p);
+		bool isSelectionEmpty(const Caret& caret) BOOST_NOEXCEPT;
+		bool selectedRangeOnLine(const Caret& caret, Index line, boost::integer_range<Index>& range);
+		bool selectedRangeOnVisualLine(const Caret& caret, Index line, Index subline, boost::integer_range<Index>& range);
+		String selectedString(const Caret& caret, const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE);
 		std::basic_ostream<Char>& selectedString(const Caret& caret,
-			std::basic_ostream<Char>& out, text::Newline newline = text::NLF_RAW_VALUE);
+			std::basic_ostream<Char>& out, const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE);
 		void selectWord(Caret& caret);
 
 		// free functions change the document by using Caret class
@@ -236,10 +236,10 @@ namespace ascension {
 		// inline implementations /////////////////////////////////////////////////////////////////
 
 		/// Returns the anchor of the selection.
-		inline const VisualPoint& Caret::anchor() const /*throw()*/ {return *anchor_;}
+		inline const VisualPoint& Caret::anchor() const BOOST_NOEXCEPT {return *anchor_;}
 
 		/// Returns the neighborhood to the beginning of the document among the anchor and this point.
-		inline const VisualPoint& Caret::beginning() const /*throw()*/ {
+		inline const VisualPoint& Caret::beginning() const BOOST_NOEXCEPT {
 			return std::min(static_cast<const VisualPoint&>(*this), static_cast<const VisualPoint&>(*anchor_));
 		}
 
@@ -260,34 +260,34 @@ namespace ascension {
 		 * @return this caret
 		 * @see #isAutoShowEnabled
 		 */
-		inline Caret& Caret::enableAutoShow(bool enable /* = true */) /*throw()*/ {
+		inline Caret& Caret::enableAutoShow(bool enable /* = true */) BOOST_NOEXCEPT {
 			autoShow_ = enable;
 			return *this;
 		}
 
 		/// Returns the neighborhood to the end of the document among the anchor and this point.
-		inline const VisualPoint& Caret::end() const /*throw()*/ {
+		inline const VisualPoint& Caret::end() const BOOST_NOEXCEPT {
 			return std::max(static_cast<const VisualPoint&>(*this), static_cast<const VisualPoint&>(*anchor_));
 		}
 
 		/// Returns @c true if the point will be shown automatically when moved. Default is @c true.
-		inline bool Caret::isAutoShowEnabled() const /*throw()*/ {return autoShow_;}
+		inline bool Caret::isAutoShowEnabled() const BOOST_NOEXCEPT {return autoShow_;}
 
 		/// Returns @c true if the caret is in overtype mode.
-		inline bool Caret::isOvertypeMode() const /*throw()*/ {return overtypeMode_;}
+		inline bool Caret::isOvertypeMode() const BOOST_NOEXCEPT {return overtypeMode_;}
 
 		/// Returns @c true if the selection is rectangle.
-		inline bool Caret::isSelectionRectangle() const /*throw()*/ {
+		inline bool Caret::isSelectionRectangle() const BOOST_NOEXCEPT {
 			return context_.selectedRectangle.get() != nullptr;
 		}
 
 		/// キャレット位置の括弧と対応する括弧の位置を返す (@a first が対括弧、@a second がキャレット周辺の括弧)
-		inline const boost::optional<std::pair<kernel::Position, kernel::Position>>& Caret::matchBrackets() const /*throw()*/ {
+		inline const boost::optional<std::pair<kernel::Position, kernel::Position>>& Caret::matchBrackets() const BOOST_NOEXCEPT {
 			return context_.matchBrackets;
 		}
 
 		/// Returns the matched braces tracking mode.
-		inline Caret::MatchBracketsTrackingMode Caret::matchBracketsTrackingMode() const /*throw()*/ {
+		inline Caret::MatchBracketsTrackingMode Caret::matchBracketsTrackingMode() const BOOST_NOEXCEPT {
 			return matchBracketsTrackingMode_;
 		}
 
@@ -298,7 +298,7 @@ namespace ascension {
 		inline void Caret::select(const kernel::Region& region) {select(region.first, region.second);}
 
 		/// Returns the selected region.
-		inline kernel::Region Caret::selectedRegion() const /*throw()*/ {
+		inline kernel::Region Caret::selectedRegion() const BOOST_NOEXCEPT {
 			return kernel::Region(*anchor_, position());
 		}
 
@@ -313,7 +313,7 @@ namespace ascension {
 		 * @param mode the tracking mode
 		 * @return this caret
 		 */
-		inline Caret& Caret::trackMatchBrackets(MatchBracketsTrackingMode mode) /*throw()*/ {
+		inline Caret& Caret::trackMatchBrackets(MatchBracketsTrackingMode mode) BOOST_NOEXCEPT {
 			if(mode != matchBracketsTrackingMode_) {
 				matchBracketsTrackingMode_ = mode;
 				checkMatchBrackets();
@@ -322,7 +322,7 @@ namespace ascension {
 		}
 
 		/// Returns @c true if the selection of the given caret is empty.
-		inline bool isSelectionEmpty(const Caret& caret) /*throw()*/ {return caret.selectedRegion().isEmpty();}
+		inline bool isSelectionEmpty(const Caret& caret) BOOST_NOEXCEPT {return caret.selectedRegion().isEmpty();}
 
 		/**
 		 * Returns the selected text string.

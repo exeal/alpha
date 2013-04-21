@@ -213,6 +213,7 @@
     <ClCompile Include="..\..\ascension\src\text-editor\session.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\caret-shaper.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\caret-windows.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\default-caret-shaper.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\default-mouse-input-strategy.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\viewer-gtkmm.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\viewer-windows.cpp" />
@@ -336,6 +337,7 @@
     <ClInclude Include="..\..\ascension\ascension\text-editor\session.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\caret-observers.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\caret-shaper.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\default-caret-shaper.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\default-mouse-input-strategy.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\ruler.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\viewer-observers.hpp" />
