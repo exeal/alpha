@@ -99,6 +99,7 @@ namespace ascension {
 					Point baselineOffsetInPhysicalCoordinates() const;
 					Scalar descent() const;
 					boost::integer_range<Scalar> extent() const;
+					Scalar height() const;
 					Scalar leading() const;
 					Index line() const BOOST_NOEXCEPT;
 				private:
@@ -411,7 +412,7 @@ namespace ascension {
 			/**
 			 * Returns the extent of the current line in block-progression-dimension.
 			 * @return The extent range by the distance from the baseline of the fitst line, in user units
-			 * @see #ascent, #descent, #leading
+			 * @see #ascent, #descent, #height, #leading
 			 * @throw NoSuchElementException The iterator is done
 			 * @see TextLayout#extent
 			 */
@@ -426,6 +427,17 @@ namespace ascension {
 				return !negativeVertical ?
 					boost::irange(bsln - ascent(), bsln + descent() + leading())
 			    	: boost::irange(bsln - descent(), bsln + ascent() + leading());	// TODO: leading is there?
+			}
+
+			/**
+			 * Returns the height of the current line.
+			 * @return The height in user units
+			 * @see #extent
+			 * @throw NoSuchElementException The iterator is done
+			 */
+			inline Scalar TextLayout::LineMetricsIterator::height() const {
+				const boost::integer_range<Scalar> e(ordered(extent()));
+				return *e.end() - *e.begin();
 			}
 
 			/**

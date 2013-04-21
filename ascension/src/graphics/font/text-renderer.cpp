@@ -205,11 +205,8 @@ Scalar TextRenderer::baselineDistance(const boost::integer_range<VisualLine>& li
 	} else {
 		const TextLayout* layout = &layouts().at(lines.begin()->line);
 		Scalar bpd = *layout->extent().end() - layout->lineMetrics(lines.begin()->subline).baselineOffset();
-		for(Index line = lines.begin()->line + 1; line < lines.end()->line; ++line) {
-//			bpd += layouts().at(line).extent().size();
-			const boost::integer_range<Scalar> lineExtent(ordered(layouts().at(line).extent()));
-			bpd += *lineExtent.end() - *lineExtent.begin();
-		}
+		for(Index line = lines.begin()->line + 1; line < lines.end()->line; ++line)
+			bpd += layouts().at(line).height();
 		layout = &layouts().at(lines.end()->line);
 		return bpd += layout->lineMetrics(lines.end()->subline).baselineOffset() - layout->extent().front();
 	}
