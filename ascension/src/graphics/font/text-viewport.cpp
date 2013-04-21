@@ -891,7 +891,7 @@ namespace {
 					const Point leadingPoint(leading), trailingPoint(trailing);
 					const Scalar leadingIpd = horizontal ? geometry::x(leadingPoint) : geometry::y(leadingPoint);
 					const Scalar trailingIpd = horizontal ? geometry::x(trailingPoint) : geometry::y(trailingPoint);
-					hitInLine = (detail::distance<Scalar>(ipd, leadingIpd) <= detail::distance<Scalar>(ipd, trailingIpd)) ? leading : trailing;
+					hitInLine = (abs(ipd - leadingIpd) <= abs(ipd - trailingIpd)) ? leading : trailing;
 				}
 			} else if(snapPolicy == k::locations::GRAPHEME_CLUSTER) {
 				text::GraphemeBreakIterator<k::DocumentCharacterIterator> i(
@@ -903,7 +903,7 @@ namespace {
 					const Point leadingPoint(layout.hitToPoint(leading)), trailingPoint(layout.hitToPoint(trailing));
 					const Scalar leadingIpd = horizontal ? geometry::x(leadingPoint) : geometry::y(leadingPoint);
 					const Scalar trailingIpd = horizontal ? geometry::x(trailingPoint) : geometry::y(trailingPoint);
-					hitInLine = (detail::distance<Scalar>(ipd, leadingIpd) <= detail::distance<Scalar>(ipd, trailingIpd)) ? leading : trailing;
+					hitInLine = (abs(ipd - leadingIpd) <= abs(ipd - trailingIpd)) ? leading : trailing;
 				}
 			} else
 				throw UnknownValueException("snapPolicy");

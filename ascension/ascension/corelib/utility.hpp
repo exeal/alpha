@@ -44,15 +44,6 @@ namespace ascension {
 			return (temp != first) ? --temp : last;
 		}
 
-		/**
-		 * @internal Returns absolute difference of two numerals.
-		 * @tparam T The type of numerals
-		 */
-		template<typename T>
-		inline std::size_t distance(T i0, T i1) {
-			return (i0 > i1) ? i0 - i1 : i1 - i0;
-		}
-
 		/// @internal
 		template<typename T>
 		class ValueSaver {
