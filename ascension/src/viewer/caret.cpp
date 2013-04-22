@@ -580,12 +580,13 @@ void Caret::resetVisualization() {
 	if(context_.inputMethodComposingCharacter) {
 		const bool horizontal = isHorizontal(textViewer().textRenderer().computedBlockFlowDirection());
 		const graphics::Rectangle bounds(currentCharacterLogicalBounds(*this));
-		image.reset(new Image(geometry::BasicDimension<uint16_t>(geometry::dx(bounds), geometry::dy(bounds)), Image::RGB_16));
+		image.reset(new Image(geometry::BasicDimension<uint16_t>(
+			static_cast<uint16_t>(geometry::dx(bounds)), static_cast<uint16_t>(geometry::dy(bounds))), Image::RGB_16));
 		geometry::x(alignmentPoint) = static_cast<uint16_t>(geometry::left(bounds));
 		geometry::y(alignmentPoint) = static_cast<uint16_t>(geometry::top(bounds));
 	} else if(context_.inputMethodCompositionActivated) {
 		image.reset(new Image(geometry::BasicDimension<uint16_t>(0, 0), Image::RGB_16));
-		alignmentPoint = boost::geometry::make_zero<Point>();
+		alignmentPoint = boost::geometry::make_zero<geometry::BasicPoint<uint16_t>>();
 	} else if(shaper_.get() != nullptr)
 		shaper_->shape(image, alignmentPoint);
 	else {

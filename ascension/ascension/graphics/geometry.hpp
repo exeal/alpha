@@ -350,8 +350,8 @@ namespace ascension {
 
 			/// Returns the size of the @a rectangle.
 			template<typename Geometry>
-			inline BasicDimension<boost::geometry::coordinate_type<Geometry>> size(const Geometry& rectangle, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
-				return BasicDimension<boost::geometry::coordinate_type<Geometry>>((_dx = dx(rectangle), _dy = dy(rectangle)));
+			inline BasicDimension<typename boost::geometry::coordinate_type<Geometry>::type> size(const Geometry& rectangle, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+				return BasicDimension<boost::geometry::coordinate_type<Geometry>::type>(_dx = dx(rectangle), _dy = dy(rectangle));
 			}
 
 			/// Returns the x-coordinate of @a point.
