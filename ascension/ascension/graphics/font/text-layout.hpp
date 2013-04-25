@@ -436,7 +436,8 @@ namespace ascension {
 			 * @throw NoSuchElementException The iterator is done
 			 */
 			inline Scalar TextLayout::LineMetricsIterator::height() const {
-				const boost::integer_range<Scalar> e(ordered(extent()));
+//				const boost::integer_range<Scalar> e(ordered(extent()));
+				const boost::integer_range<Scalar> e(extent());
 				return *e.end() - *e.begin();
 			}
 

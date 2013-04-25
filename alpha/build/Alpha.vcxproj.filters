@@ -739,6 +739,9 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\default-caret-shaper.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\computed-text-styles.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
