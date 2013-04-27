@@ -355,16 +355,19 @@ namespace ascension {
 		}
 
 		/// Returns @c true if the selection of the given caret is empty.
-		inline bool isSelectionEmpty(const Caret& caret) BOOST_NOEXCEPT {return caret.selectedRegion().isEmpty();}
+		inline bool isSelectionEmpty(const Caret& caret) BOOST_NOEXCEPT {
+			return caret.selectedRegion().isEmpty();
+		}
 
 		/**
 		 * Returns the selected text string.
 		 * @param caret The caret gives a selection
-		 * @param newline The newline representation for multiline selection. if the selection is
+		 * @param newline The newline representation for multiline selection. If the selection is
 		 *                rectangular, this value is ignored and the document's newline is used instead
 		 * @return The text string
 		 */
-		inline String selectedString(const Caret& caret, text::Newline newline /* = NLF_RAW_VALUE */) {
+		inline String selectedString(const Caret& caret,
+				const text::Newline& newline /* = Newline::USE_INTRINSIC_VALUE */) {
 			std::basic_ostringstream<Char> ss;
 			selectedString(caret, ss, newline);
 			return ss.str();
