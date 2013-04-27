@@ -4,7 +4,7 @@
  * @date 2003-2008 was point.cpp
  * @date 2008-2010 separated from point.cpp
  * @date 2011-10-03 separated from caret.cpp
- * @date 2011-2012
+ * @date 2011-2013
  */
 
 #include <ascension/viewer/caret.hpp>
@@ -17,12 +17,12 @@
 
 using namespace ascension;
 using namespace ascension::graphics;
-using namespace ascension::kernel;
 using namespace ascension::viewers;
 using namespace ascension::presentation;
 using namespace ascension::text;
 using namespace ascension::text::ucd;
 using namespace std;
+namespace k = ascension::kernel;
 
 
 namespace {
@@ -224,7 +224,7 @@ namespace {
 
 namespace {
 	// copied from point.cpp
-	inline const IdentifierSyntax& identifierSyntax(const Point& p) {
+	inline const IdentifierSyntax& identifierSyntax(const k::Point& p) {
 		return p.document().contentTypeInformation().getIdentifierSyntax(contentType(p));
 	}
 } // namespace @0
@@ -233,7 +233,7 @@ win32::com::SmartPointer<widgetapi::NativeMimeData> utils::createMimeDataForSele
 	win32::com::SmartPointer<IDataObject> content(new GenericDataObject());
 
 	// get text on the given region
-	const String text(selectedString(caret, NLF_CR_LF));
+	const String text(selectedString(caret, text::Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED));
 
 	// register datas...
 	FORMATETC format;
@@ -390,13 +390,13 @@ void Caret::adjustInputMethodCompositionWindow() {
 	assert(win32::boole(::IsWindow(textViewer().handle().get())));
 	if(!context_.inputMethodCompositionActivated)
 		return;
-	if(win32::Handle<HIMC> imc = inputMethod(textViewer())) {
+	if(win32::Handle<HIMC>::Type imc = inputMethod(textViewer())) {
 		// composition window placement
 		const shared_ptr<const font::TextViewport> viewport(textViewer().textRenderer().viewport());
 		COMPOSITIONFORM cf;
 		cf.rcArea = textViewer().textAreaContentRectangle();
 		cf.dwStyle = CFS_POINT;
-		cf.ptCurrentPos = modelToView(*viewport, beginning(), false, font::TextLayout::LEADING);
+		cf.ptCurrentPos = modelToView(*viewport, font::TextHit<k::Position>::leading(beginning()), false);
 		if(cf.ptCurrentPos.y == numeric_limits<Scalar>::max() || cf.ptCurrentPos.y == numeric_limits<Scalar>::min())
 			cf.ptCurrentPos.y = (cf.ptCurrentPos.y == numeric_limits<Scalar>::min()) ? cf.rcArea.top : cf.rcArea.bottom;
 		else
@@ -407,7 +407,7 @@ void Caret::adjustInputMethodCompositionWindow() {
 
 		// composition font
 		LOGFONTW font;
-		::GetObjectW(textViewer().textRenderer().defaultFont()->nativeObject().get(), sizeof(LOGFONTW), &font);
+		::GetObjectW(textViewer().textRenderer().defaultFont()->asNativeObject().get(), sizeof(LOGFONTW), &font);
 		::ImmSetCompositionFontW(imc.get(), &font);	// this may be ineffective for IME settings
 	}
 }
@@ -488,7 +488,7 @@ void Caret::onImeComposition(WPARAM wp, LPARAM lp, bool& consumed) {
 	if(document().isReadOnly())
 		return;
 	else if(/*event.lParam == 0 ||*/ win32::boole(lp & GCS_RESULTSTR)) {	// completed
-		win32::Handle<HIMC> imc(inputMethod(textViewer()));
+		win32::Handle<HIMC>::Type imc(inputMethod(textViewer()));
 		if(imc.get() != nullptr) {
 			if(const Index len = ::ImmGetCompositionStringW(imc.get(), GCS_RESULTSTR, nullptr, 0) / sizeof(WCHAR)) {
 				// this was not canceled
@@ -498,14 +498,14 @@ void Caret::onImeComposition(WPARAM wp, LPARAM lp, bool& consumed) {
 				if(!context_.inputMethodComposingCharacter)
 					texteditor::commands::TextInputCommand(textViewer(), text.get())();
 				else {
-					Document& doc = document();
+					k::Document& doc = document();
 					try {
 						doc.insertUndoBoundary();
-						doc.replace(Region(*this,
-							static_cast<DocumentCharacterIterator&>(DocumentCharacterIterator(doc, *this).next()).tell()),
+						doc.replace(k::Region(*this,
+							static_cast<k::DocumentCharacterIterator&>(k::DocumentCharacterIterator(doc, *this).next()).tell()),
 							String(1, static_cast<Char>(wp)));
 						doc.insertUndoBoundary();
-					} catch(const DocumentCantChangeException&) {
+					} catch(const k::DocumentCantChangeException&) {
 					}
 					context_.inputMethodComposingCharacter = false;
 					resetVisualization();
@@ -516,12 +516,12 @@ void Caret::onImeComposition(WPARAM wp, LPARAM lp, bool& consumed) {
 		}
 	} else if(win32::boole(GCS_COMPSTR & lp)) {
 		if(win32::boole(lp & CS_INSERTCHAR)) {
-			Document& doc = document();
-			const Position temp(*this);
+			k::Document& doc = document();
+			const k::Position temp(*this);
 			try {
 				if(context_.inputMethodComposingCharacter)
-					doc.replace(Region(*this,
-						static_cast<DocumentCharacterIterator&>(DocumentCharacterIterator(doc, *this).next()).tell()),
+					doc.replace(k::Region(*this,
+						static_cast<k::DocumentCharacterIterator&>(k::DocumentCharacterIterator(doc, *this).next()).tell()),
 						String(1, static_cast<Char>(wp)));
 				else
 					insert(doc, *this, String(1, static_cast<Char>(wp)));
@@ -538,7 +538,7 @@ void Caret::onImeComposition(WPARAM wp, LPARAM lp, bool& consumed) {
 
 /// Handles Win32 @c WM_IME_REQUEST window message.
 LRESULT Caret::onImeRequest(WPARAM command, LPARAM lp, bool& consumed) {
-	const Document& doc = document();
+	const k::Document& doc = document();
 
 	// this command will be sent two times when reconversion is invoked
 	if(command == IMR_RECONVERTSTRING) {
@@ -558,7 +558,7 @@ LRESULT Caret::onImeRequest(WPARAM command, LPARAM lp, bool& consumed) {
 			}
 			return sizeof(RECONVERTSTRING) + sizeof(Char) * doc.lineLength(line(*this));
 		} else {
-			const String selection(selectedString(*this, text::NLF_RAW_VALUE));
+			const String selection(selectedString(*this, text::Newline::USE_INTRINSIC_VALUE));
 			if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lp)) {
 				rcs->dwStrLen = rcs->dwTargetStrLen = rcs->dwCompStrLen = static_cast<DWORD>(selection.length());
 				rcs->dwStrOffset = sizeof(RECONVERTSTRING);
@@ -572,7 +572,7 @@ LRESULT Caret::onImeRequest(WPARAM command, LPARAM lp, bool& consumed) {
 	// before reconversion. a RECONVERTSTRING contains the ranges of the composition
 	else if(command == IMR_CONFIRMRECONVERTSTRING) {
 		if(RECONVERTSTRING* const rcs = reinterpret_cast<RECONVERTSTRING*>(lp)) {
-			const Region region(doc.accessibleRegion());
+			const k::Region region(doc.accessibleRegion());
 			if(!isSelectionEmpty(*this)) {
 				// reconvert the selected region. the selection may be multi-line
 				if(rcs->dwCompStrLen < rcs->dwStrLen)	// the composition region was truncated.
@@ -594,8 +594,8 @@ LRESULT Caret::onImeRequest(WPARAM command, LPARAM lp, bool& consumed) {
 					}
 				}
 				select(
-					Position(line(*this), rcs->dwCompStrOffset / sizeof(Char)),
-					Position(line(*this), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
+					k::Position(line(*this), rcs->dwCompStrOffset / sizeof(Char)),
+					k::Position(line(*this), rcs->dwCompStrOffset / sizeof(Char) + rcs->dwCompStrLen));
 			}
 			consumed = true;
 			return true;
@@ -654,7 +654,7 @@ void Caret::paste(bool useKillRing) {
 		texteditor::KillRing& killRing = session->killRing();
 		const pair<String, bool>& text = context_.yanking ? killRing.setCurrent(+1) : killRing.get();
 
-		const Position temp(beginning());
+		const k::Position temp(beginning());
 		try {
 			if(!isSelectionEmpty(*this) && context_.yanking)
 				document().undo();
@@ -710,7 +710,7 @@ void viewers::copySelection(Caret& caret, bool useKillRing) {
 	hr = tryOleClipboard(::OleFlushClipboard);
 	if(useKillRing) {
 		if(texteditor::Session* const session = caret.document().session())
-			session->killRing().addNew(selectedString(caret, NLF_RAW_VALUE), caret.isSelectionRectangle());
+			session->killRing().addNew(selectedString(caret, text::Newline::USE_INTRINSIC_VALUE), caret.isSelectionRectangle());
 	}
 }
 
