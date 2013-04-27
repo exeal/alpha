@@ -31,7 +31,7 @@
 namespace ascension {
 	/// Defines presentative stuffs.
 	namespace presentation {
-		/// @name CSS Color Module Level 3
+		/// @defgroup css3_color CSS Color Module Level 3
 		/// @{
 		/**
 		 * Describes the foreground color of the text content. @c boost#none means 'currentColor'
@@ -61,11 +61,22 @@ namespace ascension {
 		};
 #endif
 
-		template<typename InheritedOrNot>
+		/**
+		 * Computes the specified color properties with inheritance and defaulting.
+		 * @tparam InheritedOrNotForCurrentColor The template parameter for @a current
+		 * @tparam InheritedOrNotForParentColor The template parameter for @a parent
+		 * @tparam InheritedOrNotForAncestorColor The template parameter for @a ancestor
+		 * @param current The declared color property of the current element
+		 * @param parent The declared color property of the parent element
+		 * @param ancestor The declared color property of the ancestor element
+		 * @return A computed color value
+		 */
+		template<typename InheritedOrNotForCurrent,
+			typename InheritedOrNotForParent, typename InheritedOrNotForAncestor>
 		inline graphics::Color computeColor(
-				const ColorProperty<InheritedOrNot>* current,
-				const ColorProperty<InheritedOrNot>* parent,
-				const ColorProperty<InheritedOrNot>& ancestor) {
+				const ColorProperty<InheritedOrNotForCurrent>* current,
+				const ColorProperty<InheritedOrNotForParent>* parent,
+				const ColorProperty<InheritedOrNotForAncestor>& ancestor) {
 			if(current != nullptr && !current->inherits() && current->get() != boost::none)
 				return *current->get();
 			else if(parent != nullptr && !parent->inherits() && parent->get() != boost::none)
@@ -77,7 +88,7 @@ namespace ascension {
 		}
 		/// @}
 
-		/// @name CSS Backgrounds and Borders Module Level 3
+		/// @defgroup css3_background CSS Backgrounds and Borders Module Level 3
 		/// @{
 		/**
 		 * @c null also means 'transparent'.
@@ -114,6 +125,14 @@ namespace ascension {
 			Background() : color(boost::make_optional(graphics::Color::TRANSPARENT_BLACK)) {}
 		};
 
+
+		/**
+		 * Computes the specified background properties with inheritance and defaulting.
+		 * @param current The declared background property of the current element
+		 * @param parent The declared background property of the parent element
+		 * @param ancestor The declared background property of the ancestor element
+		 * @return A computed background value as @c Paint
+		 */
 		inline std::unique_ptr<graphics::Paint> computeBackground(
 				const Background* current, const Background* parent, const Background& ancestor) {
 			// TODO: This code is not complete.
@@ -183,7 +202,7 @@ namespace ascension {
 		};
 		/// @}
 
-		/// @name CSS basic box model
+		/// @defgroup css3_basic_box_model CSS basic box model
 		/// @{
 
 		/// Enumerated values for @c TextRunStyle#padding.
@@ -198,7 +217,7 @@ namespace ascension {
 		ASCENSION_SCOPED_ENUMS_END;
 		/// @}
 
-		/// @name CSS Fonts Module Level 3
+		/// @defgroup css3_fonts CSS Fonts Module Level 3
 		/// @{
 		/**
 		 * [Copied from CSS3] An <absolute-size> keyword refers to an entry in a table of font
@@ -224,7 +243,7 @@ namespace ascension {
 		ASCENSION_SCOPED_ENUMS_END;
 		/// @}
 
-		/// @name CSS Line Layout Module Level 3
+		/// @defgroup css3_line_layout CSS Line Layout Module Level 3
 		/// @{
 
 		/// Enumerated values for @c TextRunStyle#textHeight.
@@ -281,7 +300,7 @@ namespace ascension {
 		typedef boost::variant<InlineBoxAlignmentEnums, Index> InlineBoxAlignment;
 		/// @}
 
-		/// @name CSS Text Level 3
+		/// @defgroup css3_text CSS Text Level 3
 		/// @{
 		/**
 		 * [Copied from CSS3] This property transforms text for styling purposes.
@@ -502,7 +521,7 @@ namespace ascension {
 		ASCENSION_SCOPED_ENUMS_END;
 		/// @}
 
-		/// @name CSS Text Decoration Module Level 3
+		/// @defgroup css3_text_decor CSS Text Decoration Module Level 3
 		/// @{
 		/**
 		 * [Copied from CSS3] Describes line decorations that are added to the content of an element.
@@ -829,7 +848,7 @@ namespace ascension {
 //			> fontLanguageOverride;
 			/// @}
 
-			/// @name Line Layout
+			/// @defgroup css3_linebox Line Layout
 			/// @{
 			/**
 			 * [Copied from CSS3] The ‘text-height’ property determine the block-progression
@@ -913,7 +932,7 @@ namespace ascension {
 			> baselineShift;
 			/// @}
 
-			/// @name Text
+			/// @addtogroup css3_text
 			/// @{
 			StyleProperty<
 				sp::Enumerated<TextTransform, TextTransform::NONE>,
@@ -963,7 +982,7 @@ namespace ascension {
 			> letterSpacing;
 			/// @}
 
-			/// @name Text Decoration
+			/// @addtogroup css3_text_decor
 			/// @{
 			/// Text decoration properties. See @c TextDecoration.
 			TextDecoration textDecoration;
@@ -1300,38 +1319,40 @@ namespace ascension {
 		};
 
 		/**
-		 * @tparam Parent @c std#shared_ptr&lt;const TextLineStyle&gt; or
-		 *                @c RulerConfiguration#LineNumbers*
+		 * @overload
+		 * @tparam InheritedOrNotForCurrentColor The template parameter for @a current
+		 * @tparam InheritedOrNotForParentColor The template parameter for @a parent
+		 * @param current The declared color property of the current element
+		 * @param parent The declared color property of the parent element
+		 * @param ancestor The top-level style provides the color property
+		 * @return A computed color value
+		 * @ingroup css3_color
 		 */
-		template<typename Parent, typename InheritedOrNot>
-		inline graphics::Color computeColor(const ColorProperty<InheritedOrNot>* current,
-				const Parent parent, const TextToplevelStyle& ancestor) {
-			const ColorProperty<InheritedOrNot>* parentColor = nullptr;
-			if(const TextLineStyle* p = parent.get()) {
-				if(p->defaultRunStyle)
-					parentColor = &p->defaultRunStyle->color;
-			}
+		template<typename InheritedOrNotForCurrentColor, typename InheritedOrNotForParentColor>
+		inline graphics::Color computeColor(const ColorProperty<InheritedOrNotForCurrentColor>* current,
+				const ColorProperty<InheritedOrNotForParentColor>* parent, const TextToplevelStyle& ancestor) {
 			const ColorProperty<InheritedOrNot>* ancestorColor = nullptr;
 			if(ancestor.defaultLineStyle && ancestor.defaultLineStyle->defaultRunStyle)
 				ancestorColor = &ancestor.defaultLineStyle->defaultRunStyle->color;
-			return computeColor(current, parentColor,
-				(ancestorColor != nullptr) ? *ancestorColor : ColorProperty<InheritedOrNot>());
+			return computeColor(current, parent, (ancestorColor != nullptr) ? *ancestorColor : ColorProperty<InheritedOrNot>());
 		}
 
-		inline std::unique_ptr<graphics::Paint> computeBackground(const Background* current,
-				std::shared_ptr<const TextLineStyle> parent, const TextToplevelStyle& ancestor) {
-			const Background* parentBackground = nullptr;
-			if(const TextLineStyle* p = parent.get()) {
-				if(p->defaultRunStyle)
-					parentBackground = &p->defaultRunStyle->background;
-			}
+		/**
+		 * @overload
+		 * @param current The declared color property of the current element
+		 * @param parent The declared color property of the parent element
+		 * @param ancestor The top-level style provides the background property
+		 * @return A computed background value as @c Paint
+		 * @ingroup css3_background
+		 */
+		inline std::unique_ptr<graphics::Paint> computeBackground(
+				const Background* current, const Background* parent, const TextToplevelStyle& ancestor) {
 			const Background* ancestorBackground = nullptr;
 			if(ancestor.defaultLineStyle && ancestor.defaultLineStyle->defaultRunStyle)
 				ancestorBackground = &ancestor.defaultLineStyle->defaultRunStyle->background;
 			Background inheritedBackground;
 			inheritedBackground.color.inherit();
-			return computeBackground(current, parentBackground,
-				(ancestorBackground != nullptr) ? *ancestorBackground : inheritedBackground);
+			return computeBackground(current, parent, (ancestorBackground != nullptr) ? *ancestorBackground : inheritedBackground);
 		}
 	}
 
