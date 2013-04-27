@@ -2,9 +2,10 @@
  * @file ruler.cpp
  * @author exeal
  * @date 2010-10-27 created (separated code from layout.cpp)
- * @date 2010-2012
+ * @date 2010-2013
  */
 
+#include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/viewer.hpp>
@@ -23,7 +24,7 @@ extern const bool DIAGNOSE_INHERENT_DRAWING;
 // RulerConfiguration.IndicatorMargin /////////////////////////////////////////////////////////////
 
 /// Constructor initializes the all members to their default values.
-RulerStyles::IndicatorMargin::IndicatorMargin() /*noexcept*/ : visible(false), width(Length(0)) {
+RulerStyles::IndicatorMargin::IndicatorMargin() BOOST_NOEXCEPT : visible(false), width(Length(0)) {
 }
 
 
@@ -31,7 +32,7 @@ RulerStyles::IndicatorMargin::IndicatorMargin() /*noexcept*/ : visible(false), w
 
 // TODO: support locale-dependent number format.
 
-void drawLineNumber(PaintContext& context, const NativePoint& origin, Index lineNumber, const NumberSubstitution& ns) {
+void drawLineNumber(PaintContext& context, const Point& origin, Index lineNumber, const NumberSubstitution& ns) {
 	// format number string
 	wchar_t s[128];	// oops, is this sufficient?
 	// TODO: std.swprintf may be slow.
@@ -61,18 +62,18 @@ RulerPainter::RulerPainter(TextViewer& viewer, shared_ptr<const RulerStyles> ini
  * @param viewer The text viewer
  * @return The snap alignment of the ruler in the text viewer
  */
-RulerPainter::SnapAlignment RulerPainter::alignment() const {
+PhysicalDirection RulerPainter::alignment() const {
 	presentation::TextAlignment computedAlignment;
 	if(!declaredStyles().alignment.inherits())
 		computedAlignment = declaredStyles().alignment.get();
 	else {
-		shared_ptr<const TextLineStyle> defaultLineStyle(defaultTextLineStyle(viewer_.presentation().globalTextStyle()));
+		shared_ptr<const TextLineStyle> defaultLineStyle(defaultTextLineStyle(viewer_.presentation().textToplevelStyle()));
 		assert(defaultLineStyle.get() != nullptr);
 		computedAlignment = !defaultLineStyle->textAlignment.inherits() ?
 			defaultLineStyle->textAlignment.get() : declaredStyles().alignment.initialValue();
 	}
 
-	const WritingMode writingMode(viewer_.textRenderer().writingMode());
+	const WritingMode writingMode(viewer_.presentation().computeWritingMode(&viewer_.textRenderer()));
 	detail::PhysicalTextAnchor anchor;
 	switch(declaredStyles().alignment.getOrInitial()) {
 		case presentation::TextAlignment::START:
@@ -91,10 +92,11 @@ RulerPainter::SnapAlignment RulerPainter::alignment() const {
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
 	switch(anchor) {
+		// TODO: 'text-orientation' is ignored.
 		case detail::PhysicalTextAnchor::LEFT:
-			return isHorizontal(writingMode.blockFlowDirection) ? LEFT : TOP;
+			return isHorizontal(writingMode.blockFlowDirection) ? PhysicalDirection::LEFT : PhysicalDirection::TOP;
 		case detail::PhysicalTextAnchor::RIGHT:
-			return isHorizontal(writingMode.blockFlowDirection) ? RIGHT : BOTTOM;
+			return isHorizontal(writingMode.blockFlowDirection) ? PhysicalDirection::RIGHT : PhysicalDirection::BOTTOM;
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
@@ -142,17 +144,17 @@ namespace {
 				maximumAdvance = advance;
 			}
 		}
-		const NativeSize stringExtent(context.measureText(String(digits, maximumExtentCharacter)));
+		const Dimension stringExtent(context.measureText(String(digits, maximumExtentCharacter)));
 
 		context.setFont(oldFont);
 		return isHorizontal(writingMode.blockFlowDirection) ? geometry::dx(stringExtent) : geometry::dy(stringExtent);
 	}
 	
-	inline Scalar platformIndicatorMarginWidthInPixels(bool horizontalLayout) {
+	inline uint16_t platformIndicatorMarginWidthInPixels(bool horizontalLayout) {
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 #if 1
 		const int width = ::GetSystemMetrics(horizontalLayout ? SM_CYHSCROLL : SM_CXVSCROLL);
-		return (width != 0) ? width : 15;
+		return static_cast<uint16_t>(width != 0) ? width : 15;
 #else
 		// TODO: This code is not suitable when the indicator margin top or bottom of the viewer?
 		win32::AutoZeroSize<NONCLIENTMETRICSW> ncm;
@@ -166,7 +168,7 @@ namespace {
 }
 
 /// Recomputes the total width of the ruler.
-void RulerPainter::computeAllocationWidth() /*throw()*/ {
+void RulerPainter::computeAllocationWidth() BOOST_NOEXCEPT {
 	// (ruler-total-width) = (line-numbers-width) + (indicator-margin-width)
 	//   (indicator-margin-width) = (indicator-margin-border-width) + (indicator-margin-content-width)
 	//   (line-numbers-width) = (line-numbers-exterior-width) + (line-numbers-interior-width) + (line-numbers-content-width)
@@ -177,51 +179,76 @@ void RulerPainter::computeAllocationWidth() /*throw()*/ {
 	unique_ptr<RenderingContext2D> context(widgetapi::createRenderingContext(viewer_));
 
 	// compute the width of the line numbers
-	ComputedWidths computedWidths;
+	decltype(computedLineNumbersBorderEnd_) computedLineNumbersBorderEnd;
+	decltype(computedLineNumbersContentWidth_) computedLineNumbersContentWidth;
+	decltype(computedLineNumbersPaddingStart_) computedLineNumbersPaddingStart;
+	decltype(computedLineNumbersPaddingEnd_) computedLineNumbersPaddingEnd;
+	decltype(computedLineNumberDigits_) computedLineNumberDigits;
 	if(lineNumbers(declaredStyles())->visible) {
-		const uint8_t digits = computeMaximumDigitsForLineNumbers();
-		if(digits != computedLineNumberDigits_)
-			boost::get(computedLineNumberDigits_) = digits;
+		shared_ptr<const RulerStyles::LineNumbers> declaredStyle(lineNumbers(declaredStyles()));
+		boost::get(computedLineNumberDigits) = computeMaximumDigitsForLineNumbers();
 		const Scalar glyphsExtent = computeMaximumNumberGlyphsExtent(
-			*context, viewer_.textRenderer().defaultFont(), digits,
-			viewer_.textRenderer().writingMode(), lineNumbers(declaredStyles())->numberSubstitution.getOrInitial());
-		const Scalar minimumExtent = viewer_.textRenderer().defaultFont()->metrics()->averageCharacterWidth() * digits;
-		boost::get(computedWidths.lineNumbersContent) = max(glyphsExtent, minimumExtent);
+			*context, viewer_.textRenderer().defaultFont(), computedLineNumberDigits,
+			viewer_.presentation().computeWritingMode(&viewer_.textRenderer()),
+			declaredStyle->numberSubstitution.getOrInitial());
+		const Scalar minimumExtent = context->fontMetrics(viewer_.textRenderer().defaultFont())->averageCharacterWidth() * computedLineNumberDigits;
+		boost::get(computedLineNumbersContentWidth) = max(glyphsExtent, minimumExtent);
 
-		const NativeSize referenceBox(geometry::make<NativeSize>(
-			computedWidths.lineNumbersContent, computedWidths.lineNumbersContent));
-		boost::get(computedWidths.lineNumbersPaddingStart) = static_cast<Scalar>(
-			lineNumbers(declaredStyles())->paddingStart.getOrInitial().value(context.get(), &referenceBox));
-		boost::get(computedWidths.lineNumbersPaddingEnd) = static_cast<Scalar>(
-			lineNumbers(declaredStyles())->paddingEnd.getOrInitial().value(context.get(), &referenceBox));
-		boost::get(computedWidths.lineNumbersBorderEnd) = static_cast<Scalar>(
-			lineNumbers(declaredStyles())->borderEnd.computedWidth().value(context.get(), &referenceBox));
+		// 'padding-start' and 'padding-end'
+		const Dimension referenceBox(
+			geometry::_dx = computedLineNumbersContentWidth, geometry::_dy = computedLineNumbersContentWidth);
+		const Length::Context lengthContext(context.get(), &referenceBox);
+		boost::get(computedLineNumbersPaddingStart) = static_cast<Scalar>(declaredStyle->paddingStart.getOrInitial().value(lengthContext));
+		boost::get(computedLineNumbersPaddingEnd) = static_cast<Scalar>(declaredStyle->paddingEnd.getOrInitial().value(lengthContext));
+
+		// 'border-end'
+		computedLineNumbersBorderEnd.color =
+			computeColor(&declaredStyle->borderEnd.color, &declaredStyles_->color, viewer_.presentation().textToplevelStyle());
+		declaredStyle->borderEnd.color;
+		computedLineNumbersBorderEnd.style = declaredStyle->borderEnd.style.getOrInitial();
+		computedLineNumbersBorderEnd.width = declaredStyle->borderEnd.width.getOrInitial().value(lengthContext);
 //		const Scalar spaceWidth = 0;
 //		const Scalar exteriorWidth = borderWidth + spaceWidth;
 	}
 
 	// compute the width of the indicator margin
+	decltype(computedIndicatorMarginBorderEnd_) computedIndicatorMarginBorderEnd;
+	decltype(computedIndicatorMarginContentWidth_) computedIndicatorMarginContentWidth;
 	if(indicatorMargin(declaredStyles())->visible) {
-		boost::optional<Length> contentWidth(indicatorMargin(declaredStyles())->width.getOrInitial());
-		boost::get(computedWidths.indicatorMarginContent) = (contentWidth != boost::none) ?
-			static_cast<Scalar>(contentWidth->value(context.get(), nullptr))
-			: platformIndicatorMarginWidthInPixels(isHorizontal(viewer_.textRenderer().writingMode().blockFlowDirection));
-		boost::get(computedWidths.indicatorMarginBorderEnd) = static_cast<Scalar>(
-			indicatorMargin(declaredStyles())->borderEnd.computedWidth().value(context.get(),
-				&geometry::make<NativeSize>(computedWidths.indicatorMarginContent, computedWidths.indicatorMarginContent)));
+		shared_ptr<const RulerStyles::IndicatorMargin> declaredStyle(indicatorMargin(declaredStyles()));
+
+		// 'width'
+		boost::optional<Length> contentWidth(declaredStyle->width.getOrInitial());
+		boost::get(computedIndicatorMarginContentWidth) = (contentWidth != boost::none) ?
+			static_cast<Scalar>(contentWidth->value(Length::Context(context.get(), nullptr)))
+			: platformIndicatorMarginWidthInPixels(isHorizontal(viewer_.textRenderer().computedBlockFlowDirection()));
+
+		// 'border-end'
+		computedIndicatorMarginBorderEnd.color =
+			computeColor(&declaredStyle->borderEnd.color, &declaredStyles_->color, viewer_.presentation().textToplevelStyle());
+		computedIndicatorMarginBorderEnd.style = declaredStyle->borderEnd.style.getOrInitial();
+		computedIndicatorMarginBorderEnd.width = declaredStyle->borderEnd.width.getOrInitial().value(Length::Context(
+			context.get(), &Dimension(
+				geometry::_dx = computedIndicatorMarginContentWidth,
+				geometry::_dy = computedIndicatorMarginContentWidth)));
 	}
 
 	// commit
-	const Scalar oldWidth = allocationWidth();
-	computedWidths_ = computedWidths;
-	if(allocationWidth() != oldWidth) {
+	const Scalar oldAllocationWidth = allocationWidth();
+	computedIndicatorMarginBorderEnd_ = computedIndicatorMarginBorderEnd;
+	computedLineNumbersBorderEnd_ = computedLineNumbersBorderEnd;
+	computedIndicatorMarginContentWidth_ = computedIndicatorMarginContentWidth;
+	computedLineNumbersContentWidth_ = computedLineNumbersContentWidth;
+	computedLineNumbersPaddingStart_ = computedLineNumbersPaddingStart;
+	computedLineNumbersPaddingEnd_ = computedLineNumbersPaddingEnd;
+	if(allocationWidth() != oldAllocationWidth) {
 		widgetapi::scheduleRedraw(viewer_, false);
 		viewer_.caret().updateLocation();
 	}
 }
 
 /// Computes the maximum number of digits of line numbers.
-uint8_t RulerPainter::computeMaximumDigitsForLineNumbers() const /*noexcept*/ {
+uint8_t RulerPainter::computeMaximumDigitsForLineNumbers() const BOOST_NOEXCEPT {
 	uint8_t n = 1;
 	const Index startValue = lineNumbers(declaredStyles())->startValue.getOrInitial();
 	Index lines = viewer_.document().numberOfLines() + startValue - 1;
@@ -233,58 +260,58 @@ uint8_t RulerPainter::computeMaximumDigitsForLineNumbers() const /*noexcept*/ {
 }
 
 /// Returns the 'allocation-rectangle' of the indicator margin in the viewer-local coordinates.
-NativeRectangle RulerPainter::indicatorMarginAllocationRectangle() const /*throw()*/ {
-	const NativeRectangle localBounds(widgetapi::bounds(viewer_, false));
+graphics::Rectangle RulerPainter::indicatorMarginAllocationRectangle() const BOOST_NOEXCEPT {
+	const graphics::Rectangle localBounds(widgetapi::bounds(viewer_, false));
 	switch(alignment()) {
-		case LEFT:
-			return geometry::make<NativeRectangle>(
+		case PhysicalDirection::LEFT:
+			return graphics::Rectangle(
 				geometry::topLeft(localBounds),
-				geometry::make<NativeSize>(indicatorMarginAllocationWidth(), geometry::dy(localBounds)));
-		case TOP:
-			return geometry::make<NativeRectangle>(
+				Dimension(geometry::_dx = indicatorMarginAllocationWidth(), geometry::_dy = geometry::dy(localBounds)));
+		case PhysicalDirection::TOP:
+			return graphics::Rectangle(
 				geometry::topLeft(localBounds),
-				geometry::make<NativeSize>(geometry::dx(localBounds), indicatorMarginAllocationWidth()));
-		case RIGHT:
+				Dimension(geometry::_dx = geometry::dx(localBounds), geometry::_dy = indicatorMarginAllocationWidth()));
+		case PhysicalDirection::RIGHT:
 			return geometry::normalize(
-				geometry::make<NativeRectangle>(
+				graphics::Rectangle(
 					geometry::topRight(localBounds),
-					geometry::make<NativeSize>(-indicatorMarginAllocationWidth(), geometry::dy(localBounds))));
-		case BOTTOM:
+					Dimension(geometry::_dx = -indicatorMarginAllocationWidth(), geometry::_dy = geometry::dy(localBounds))));
+		case PhysicalDirection::BOTTOM:
 			return geometry::normalize(
-				geometry::make<NativeRectangle>(
+				graphics::Rectangle(
 					geometry::bottomLeft(localBounds),
-					geometry::make<NativeSize>(geometry::dx(localBounds), -indicatorMarginAllocationWidth())));
+					Dimension(geometry::_dx = geometry::dx(localBounds), geometry::_dy = -indicatorMarginAllocationWidth())));
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
 }
 
 /// Returns the 'allocation-rectangle' of the line numbers in the viewer-local coordinates.
-NativeRectangle RulerPainter::lineNumbersAllocationRectangle() const /*throw()*/ {
-	const NativeRectangle localBounds(widgetapi::bounds(viewer_, false));
+graphics::Rectangle RulerPainter::lineNumbersAllocationRectangle() const BOOST_NOEXCEPT {
+	const graphics::Rectangle localBounds(widgetapi::bounds(viewer_, false));
 	switch(alignment()) {
-		case LEFT:
-			return geometry::make<NativeRectangle>(
+		case PhysicalDirection::LEFT:
+			return graphics::Rectangle(
 				geometry::translate(
-					geometry::topLeft(localBounds), geometry::make<NativeSize>(indicatorMarginAllocationWidth(), 0)),
-				geometry::make<NativeSize>(lineNumbersAllocationWidth(), geometry::dy(localBounds)));
-		case TOP:
-			return geometry::make<NativeRectangle>(
+					geometry::topLeft(localBounds), Dimension(geometry::_dx = indicatorMarginAllocationWidth(), geometry::_dy = 0)),
+				Dimension(geometry::_dx = lineNumbersAllocationWidth(), geometry::_dy = geometry::dy(localBounds)));
+		case PhysicalDirection::TOP:
+			return graphics::Rectangle(
 				geometry::translate(
-					geometry::topLeft(localBounds), geometry::make<NativeSize>(0, indicatorMarginAllocationWidth())),
-				geometry::make<NativeSize>(geometry::dx(localBounds), lineNumbersAllocationWidth()));
-		case RIGHT:
+					geometry::topLeft(localBounds), Dimension(geometry::_dx = 0, geometry::_dy = indicatorMarginAllocationWidth())),
+				Dimension(geometry::_dx = geometry::dx(localBounds), geometry::_dy = lineNumbersAllocationWidth()));
+		case PhysicalDirection::RIGHT:
 			return geometry::normalize(
-				geometry::make<NativeRectangle>(
+				graphics::Rectangle(
 					geometry::translate(
-						geometry::topRight(localBounds), geometry::make<NativeSize>(-indicatorMarginAllocationWidth(), 0)),
-					geometry::make<NativeSize>(-lineNumbersAllocationWidth(), geometry::dy(localBounds))));
-		case BOTTOM:
+						geometry::topRight(localBounds), Dimension(geometry::_dx = -indicatorMarginAllocationWidth(), geometry::_dy = 0)),
+					Dimension(geometry::_dx = -lineNumbersAllocationWidth(), geometry::_dy = geometry::dy(localBounds))));
+		case PhysicalDirection::BOTTOM:
 			return geometry::normalize(
-				geometry::make<NativeRectangle>(
+				graphics::Rectangle(
 					geometry::translate(
-						geometry::bottomLeft(localBounds), geometry::make<NativeSize>(0, -indicatorMarginAllocationWidth())),				
-					geometry::make<NativeSize>(geometry::dx(localBounds), -lineNumbersAllocationWidth())));
+						geometry::bottomLeft(localBounds), Dimension(geometry::_dx = 0, geometry::_dy = -indicatorMarginAllocationWidth())),				
+					Dimension(geometry::_dx = geometry::dx(localBounds), geometry::_dy = -lineNumbersAllocationWidth())));
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
@@ -298,32 +325,16 @@ void RulerPainter::paint(PaintContext& context) {
 	if(allocationWidth() == 0)
 		return;
 
-	const NativeRectangle paintBounds(context.boundsToPaint());
+	const graphics::Rectangle paintBounds(context.boundsToPaint());
 	const TextRenderer& renderer = viewer_.textRenderer();
-	const SnapAlignment location = alignment();
-	FlowRelativeFourSides<Border::Part>::reference (FlowRelativeFourSides<Border::Part>::*borderPart)();
 
-	const NativeRectangle indicatorMarginRectangle(indicatorMarginAllocationRectangle());
-	const NativeRectangle lineNumbersRectangle(lineNumbersAllocationRectangle());
-	switch(location) {
-		case LEFT:
-			borderPart = &FlowRelativeFourSides<Border::Part>::end;
-			break;
-		case TOP:
-			borderPart = &FlowRelativeFourSides<Border::Part>::after;
-			break;
-		case RIGHT:
-			borderPart = &FlowRelativeFourSides<Border::Part>::start;
-			break;
-		case BOTTOM:
-			borderPart = &FlowRelativeFourSides<Border::Part>::before;
-			break;
-	}
+	const graphics::Rectangle indicatorMarginRectangle(indicatorMarginAllocationRectangle());
+	const graphics::Rectangle lineNumbersRectangle(lineNumbersAllocationRectangle());
 
 	const bool indicatorMarginToPaint = indicatorMargin(declaredStyles())->visible
-		&& !geometry::isEmpty(indicatorMarginRectangle) && geometry::intersects(indicatorMarginRectangle, paintBounds);
+		&& !geometry::isEmpty(indicatorMarginRectangle) && boost::geometry::intersects(indicatorMarginRectangle, paintBounds);
 	const bool lineNumbersToPaint = lineNumbers(declaredStyles())->visible
-		&& !geometry::isEmpty(lineNumbersRectangle) && geometry::intersects(lineNumbersRectangle, paintBounds);
+		&& !geometry::isEmpty(lineNumbersRectangle) && boost::geometry::intersects(lineNumbersRectangle, paintBounds);
 	if(!indicatorMarginToPaint && !lineNumbersToPaint)
 		return;
 
@@ -335,39 +346,42 @@ void RulerPainter::paint(PaintContext& context) {
 
 	context.save();
 
+	// which side of border to paint?
+	const PhysicalDirection borderSide(!alignment());
+
 	// paint the indicator margin
+	const WritingMode writingMode(viewer_.presentation().computeWritingMode(&renderer));
 	if(indicatorMarginToPaint) {
 		// background
-		const shared_ptr<Paint> paint(indicatorMargin(declaredStyles())->paint.getOr(
-			shared_ptr<Paint>(new SolidColor(SystemColors::get(SystemColors::THREE_D_FACE)))));
-		context.setFillStyle(paint);
+		shared_ptr<const Paint> background(computeBackground(
+			&indicatorMargin(declaredStyles())->background, &declaredStyles().background, viewer_.presentation().textToplevelStyle()));
+//		const shared_ptr<Paint> paint(indicatorMargin(declaredStyles())->paint.getOr(
+//			shared_ptr<Paint>(new SolidColor(SystemColors::get(SystemColors::THREE_D_FACE)))));
+		context.setFillStyle(background);
 		context.fillRectangle(indicatorMarginRectangle);
 
 		// border
-		const Color currentColor(computeColor(nullptr, shared_ptr<const TextLineStyle>(), viewer_.presentation().globalTextStyle()));
-		Border borderStyle;
-		(borderStyle.sides.*borderPart)() = indicatorMargin(declaredStyles())->borderEnd;
-		if(!(borderStyle.sides.*borderPart)().color)
-			(borderStyle.sides.*borderPart)().color = SystemColors::get(SystemColors::THREE_D_SHADOW);
-		detail::paintBorder(context, indicatorMarginRectangle, borderStyle, currentColor, viewer_.textRenderer().writingMode());
+		PhysicalFourSides<ComputedBorderSide> borders;
+		borders[borderSide] = computedIndicatorMarginBorderEnd_;
+		detail::paintBorder(context, indicatorMarginRectangle, borders, writingMode);
 	}
 
 	// paint the line numbers
 	if(lineNumbersToPaint) {
-		// compute foreground
-		const Color currentColor(computeColor(&lineNumbers(declaredStyles())->color, shared_ptr<const TextLineStyle>(), viewer_.presentation().globalTextStyle()));
+		const TextToplevelStyle& toplevelStyle = viewer_.presentation().textToplevelStyle();
 
-		// background and border
-		shared_ptr<Paint> background(move(computeBackground(
-			&lineNumbers(declaredStyles())->background, nullptr, viewer_.presentation().globalTextStyle())));
+		// background
+		shared_ptr<Paint> background(computeBackground(&lineNumbers(declaredStyles())->background, &declaredStyles().background, toplevelStyle));
 		context.setFillStyle(background);
 		context.fillRectangle(lineNumbersRectangle);
-		Border borderStyle;
-		(borderStyle.sides.*borderPart)() = lineNumbers(declaredStyles())->borderEnd;
-		detail::paintBorder(context, lineNumbersRectangle, borderStyle, currentColor, viewer_.textRenderer().writingMode());
+		
+		// border
+		PhysicalFourSides<ComputedBorderSide> borders;
+		borders[borderSide] = computedLineNumbersBorderEnd_;
+		detail::paintBorder(context, lineNumbersRectangle, borders, writingMode);
 
 		// text
-		context.setFillStyle(shared_ptr<Paint>(new SolidColor(currentColor)));
+		context.setFillStyle(make_shared<const Paint>(new SolidColor(computeColor(&lineNumbers(declaredStyles())->color, &declaredStyles().color, toplevelStyle))));
 		context.setFont(viewer_.textRenderer().defaultFont());
 //		context.setTextAlign();
 //		context.setTextBaseline();
@@ -414,7 +428,7 @@ void RulerPainter::paint(PaintContext& context) {
 			HPEN oldPen = static_cast<HPEN>(::SelectObject(dcex, lineNumbersPen_.get()));
 			const Scalar x = (leftAligned ? right : left + 1) - configuration_.lineNumbers.borderWidth;
 			::MoveToEx(dcex, x, 0/*paintRect.top*/, nullptr);
-			::LineTo(dcex, x, geometry::bottom(paintBounds));
+			::LineTo(dcex, x, gewometry::bottom(paintBounds));
 			::SelectObject(dcex, oldPen);
 		}
 		::SelectObject(dcex, oldBrush);
@@ -527,7 +541,7 @@ void RulerPainter::setStyles(shared_ptr<const RulerStyles> styles) {
 	update();
 }
 
-void RulerPainter::update() /*throw()*/ {
+void RulerPainter::update() BOOST_NOEXCEPT {
 	// TODO: Is this method need?
 	computedLineNumberDigits_ = boost::value_initialized<uint8_t>();
 	computeAllocationWidth();
@@ -540,7 +554,7 @@ void RulerPainter::update() /*throw()*/ {
 
 #if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
 ///
-void RulerPainter::updateGDIObjects() /*throw()*/ {
+void RulerPainter::updateGDIObjects() BOOST_NOEXCEPT {
 	indicatorMarginPen_.reset();
 	indicatorMarginBrush_.reset();
 	if(configuration_.indicatorMargin.visible) {

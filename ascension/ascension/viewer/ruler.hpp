@@ -11,7 +11,7 @@
 #define ASCENSION_RULER_HPP
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
-#include <ascension/presentation/text-style.hpp>
+#include <ascension/graphics/font/computed-text-styles.hpp>
 #include <boost/utility/value_init.hpp>
 
 
@@ -76,7 +76,7 @@ namespace ascension {
 				 * Color of the text. Default value is @c boost#none which is fallbacked to the
 				 * foreground of the text run style of the viewer's presentation global text style.
 				 */
-				presentation::ColorProperty<presentation::sp::NotInherited> color;
+				presentation::ColorProperty<presentation::sp::Inherited> color;
 #else
 				/**
 				 * Color or style of the text. Default value is @c null which is fallbacked to the
@@ -84,15 +84,10 @@ namespace ascension {
 				 */
 				std::shared_ptr<graphics::Paint> foreground;
 #endif
-				/**
-				 * Color or style of the background. This can inherit the background of the text
-				 * run style of the viewer's presentation global text style.
-				 */
+				/// Color or style of the background.
 				presentation::Background background;
-				/**
-				 * Style of the border-end. If the @c color is default value, fallbacked to the
-				 * color of @c #foreground member. Default value is @c presentation#Border#Side().
-				 */
+				/// Style of the border-end. Default value is @c presentation#Border#Side().
+				/// @note Line margins area does not have other three border sides.
 				presentation::Border::Side borderEnd;
 				/// Digit substitution type. @c DST_CONTEXTUAL can't set. Default value is @c DST_USER_DEFAULT.
 				presentation::StyleProperty<
@@ -118,24 +113,25 @@ namespace ascension {
 						boost::optional<presentation::Length>
 					>, presentation::sp::NotInherited
 				> width;
-				/**
-				 * Color or style of the content. If @c color is default value, fallbacked to the
-				 * platform-dependent color. Default value is @c null.
-				 */
-				presentation::StyleProperty<
-					presentation::sp::Complex<
-						std::shared_ptr<graphics::Paint>
-					>, presentation::sp::NotInherited
-				> paint;
-				/**
-				 * Style of the border-end. If @c color is default value, fallbacked to the
-				 * platform-dependent color. Default value is @c presentation#Border#Part().
-				 */
+				/// Color or style of the content.
+				presentation::Background background;
+				/// Style of the border-end. Default value is @c presentation#Border#Side().
+				/// @note An indicator margin does have other three border sides.
 				presentation::Border::Side borderEnd;
 
 				IndicatorMargin() BOOST_NOEXCEPT;
 			};
 
+			/**
+			 * Color of the text. Default value is @c boost#none which is fallbacked to the
+			 * foreground of the text run style of the viewer's presentation global text style.
+			 */
+			presentation::ColorProperty<presentation::sp::Inherited> color;
+			/**
+			 * Color or style of the background. This can inherit the background of the text
+			 * run style of the viewer's presentation global text style.
+			 */
+			presentation::Background background;
 			/**
 			 * Alignment (anchor) of the ruler. Must be either @c presentation#TextAlignment#START,
 			 * @c presentation#TextAlignment#END, @c presentation#TextAlignment#LEFT or
@@ -163,16 +159,9 @@ namespace ascension {
 		class RulerPainter {
 			ASCENSION_NONCOPYABLE_TAG(RulerPainter);
 		public:
-			enum SnapAlignment {
-				LEFT = graphics::PhysicalDirection::LEFT,
-				TOP = graphics::PhysicalDirection::TOP,
-				RIGHT = graphics::PhysicalDirection::RIGHT,
-				BOTTOM = graphics::PhysicalDirection::BOTTOM
-			};
-		public:
 			explicit RulerPainter(viewers::TextViewer& viewer,
 				std::shared_ptr<const viewers::RulerStyles> initialStyles = nullptr);
-			SnapAlignment alignment() const BOOST_NOEXCEPT;
+			graphics::PhysicalDirection alignment() const BOOST_NOEXCEPT;
 			graphics::Scalar allocationWidth() const BOOST_NOEXCEPT;
 			const viewers::RulerStyles& declaredStyles() const BOOST_NOEXCEPT;
 			graphics::Rectangle indicatorMarginAllocationRectangle() const BOOST_NOEXCEPT;
@@ -185,18 +174,18 @@ namespace ascension {
 			void update() BOOST_NOEXCEPT;
 		private:
 			std::uint8_t computeMaximumDigitsForLineNumbers() const BOOST_NOEXCEPT;
-			void computeAllocationWidth() /*noexcept*/;
+			void computeAllocationWidth() BOOST_NOEXCEPT;
 #if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
-			void updateGDIObjects() /*throw()*/;
+			void updateGDIObjects() BOOST_NOEXCEPT;
 #endif
 		private:
 			viewers::TextViewer& viewer_;
 			std::shared_ptr<const viewers::RulerStyles> declaredStyles_;
-			struct ComputedWidths {
-				boost::value_initialized<graphics::Scalar>
-					indicatorMarginContent, indicatorMarginBorderEnd, lineNumbersContent,
-					lineNumbersPaddingStart, lineNumbersPaddingEnd, lineNumbersBorderEnd;
-			} computedWidths_;
+			graphics::font::ComputedBorderSide
+				computedIndicatorMarginBorderEnd_, computedLineNumbersBorderEnd_;
+			boost::value_initialized<graphics::Scalar>	// in user units
+				computedIndicatorMarginContentWidth_, computedLineNumbersContentWidth_,
+				computedLineNumbersPaddingStart_, computedLineNumbersPaddingEnd_;
 			boost::value_initialized<std::uint8_t> computedLineNumberDigits_;
 #if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
 			win32::Handle<HPEN> indicatorMarginPen_, lineNumbersPen_;
@@ -222,22 +211,22 @@ namespace ascension {
 		}
 
 		/**
-		 * Returns the width of 'allocation-rectangle' of the indicator margin in pixels.
+		 * Returns the width of 'allocation-rectangle' of the indicator margin in user units.
 		 * @return The width of the indicator margin or zero if not visible
 		 * @see #allocationWidth, #lineNumbersAllocationWidth, #indicatorMarginAllocationRectangle
 		 */
 		inline graphics::Scalar RulerPainter::indicatorMarginAllocationWidth() const BOOST_NOEXCEPT {
-			return computedWidths_.indicatorMarginContent + computedWidths_.indicatorMarginBorderEnd;
+			return computedIndicatorMarginContentWidth_ + computedIndicatorMarginBorderEnd_.computedWidth();
 		}
 
 		/**
-		 * Returns the width of 'allocation-rectangle' of the line numbers in pixels.
+		 * Returns the width of 'allocation-rectangle' of the line numbers in user units.
 		 * @return The width of the line numbers or zero if not visible
 		 * @see #allocationWidth, #indicatorMarginWidth, #lineNumbersAllocationRectangle
 		 */
 		inline graphics::Scalar RulerPainter::lineNumbersAllocationWidth() const BOOST_NOEXCEPT {
-			return computedWidths_.lineNumbersContent + computedWidths_.lineNumbersPaddingStart
-				+ computedWidths_.lineNumbersPaddingEnd + computedWidths_.lineNumbersBorderEnd;
+			return computedLineNumbersContentWidth_ + computedLineNumbersPaddingStart_
+				+ computedLineNumbersPaddingEnd_ + computedLineNumbersBorderEnd_.computedWidth();
 		}
 	}
 }
