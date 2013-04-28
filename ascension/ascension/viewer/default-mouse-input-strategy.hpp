@@ -73,15 +73,15 @@ namespace ascension {
 			virtual void dropped(widgetapi::DropInput& input);
 		private:
 			void beginDragAndDrop();
-			virtual bool handleLeftButtonDoubleClick(const graphics::NativePoint& position, int modifiers);
-			virtual bool handleRightButton(Action action, const graphics::NativePoint& position, int modifiers);
-			virtual bool handleX1Button(Action action, const graphics::NativePoint& position, int modifiers);
-			virtual bool handleX2Button(Action action, const graphics::NativePoint& position, int modifiers);
+			virtual bool handleLeftButtonDoubleClick(const graphics::Point& position, int modifiers);
+			virtual bool handleRightButton(Action action, const graphics::Point& position, int modifiers);
+			virtual bool handleX1Button(Action action, const graphics::Point& position, int modifiers);
+			virtual bool handleX2Button(Action action, const graphics::Point& position, int modifiers);
 		private:
 			bool endAutoScroll();
 			void extendSelectionTo(const kernel::Position* to = nullptr);
-			void handleLeftButtonPressed(const graphics::NativePoint& position, int modifiers);
-			void handleLeftButtonReleased(const graphics::NativePoint& position, int modifiers);
+			void handleLeftButtonPressed(const graphics::Point& position, int modifiers);
+			void handleLeftButtonReleased(const graphics::Point& position, int modifiers);
 			// MouseInputStrategy
 			void captureChanged();
 			std::shared_ptr<widgetapi::DropTarget> handleDropTarget() const;
@@ -90,7 +90,7 @@ namespace ascension {
 			bool mouseButtonInput(Action action, const widgetapi::MouseButtonInput& input);
 			void mouseMoved(const widgetapi::LocatedUserInput& input);
 			void mouseWheelRotated(const widgetapi::MouseWheelInput& input);
-			bool showCursor(const graphics::NativePoint& position);
+			bool showCursor(const graphics::Point& position);
 			void uninstall();
 			// HasTimer
 			void timeElapsed(Timer& timer);
@@ -112,7 +112,7 @@ namespace ascension {
 				AUTO_SCROLL_MASK = 0x20, APPROACHING_AUTO_SCROLL, AUTO_SCROLL_DRAGGING, AUTO_SCROLL,
 				DND_MASK = 0x40, APPROACHING_DND, DND_SOURCE, DND_TARGET
 			} state_;
-			graphics::NativePoint dragApproachedPosition_;	// in client coordinates
+			graphics::Point dragApproachedPosition_;	// in client coordinates
 			struct Selection {
 				Index initialLine;	// line of the anchor when entered the selection extending
 				std::pair<Index, Index> initialWordColumns;

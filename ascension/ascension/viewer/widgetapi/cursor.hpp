@@ -44,15 +44,15 @@ namespace ascension {
 			public:
 				explicit Cursor(Shape shape);
 				explicit Cursor(const graphics::Image& shape);
-				Cursor(const graphics::Image& shape, const graphics::NativePoint& hotspot);
+				Cursor(const graphics::Image& shape, const graphics::Point& hotspot);
 				explicit Cursor(const NativeCursor&);
 				Cursor(const Cursor& other);
 				Cursor& operator=(const Cursor& other);
-				const NativeCursor& asNativeObject() const /*throw()*/;
+				const NativeCursor& asNativeObject() const BOOST_NOEXCEPT;
 			public:
 				static void hide();
-				static graphics::NativePoint position();
-				static void setPosition(const graphics::NativePoint& p);
+				static graphics::Point position();
+				static void setPosition(const graphics::Point& p);
 				static void show();
 			private:
 				NativeCursor impl_;
