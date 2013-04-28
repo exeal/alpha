@@ -370,21 +370,21 @@ namespace ascension {
 			void resizeEvent(QResizeEvent* event);
 			void wheelEvent(QWheelEvent* event);
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-			void onCaptureChanged(const win32::Handle<HWND>& newWindow, bool& consumed);
-			void onCommand(WORD id, WORD notifyCode, const win32::Handle<HWND>& control, bool& consumed);
+			void onCaptureChanged(const win32::Handle<HWND>::Type& newWindow, bool& consumed);
+			void onCommand(WORD id, WORD notifyCode, const win32::Handle<HWND>::Type& control, bool& consumed);
 			void onDestroy(bool& consumed);
-			void onEraseBkgnd(const win32::Handle<HDC>& dc, bool& consumed);
-			const win32::Handle<HFONT>& onGetFont();
-			void onHScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>& scrollBar);
+			void onEraseBkgnd(const win32::Handle<HDC>::Type& dc, bool& consumed);
+			const win32::Handle<HFONT>::Type& onGetFont();
+			void onHScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>::Type& scrollBar);
 			bool onNcCreate(CREATESTRUCTW& cs);
 			void onNotify(int id, NMHDR& nmhdr, bool& consumed);
-			void onSetCursor(const win32::Handle<HWND>& window, UINT hitTest, UINT message, bool& consumed);
+			void onSetCursor(const win32::Handle<HWND>::Type& window, UINT hitTest, UINT message, bool& consumed);
 			void onStyleChanged(int type, const STYLESTRUCT& style);
 			void onStyleChanging(int type, STYLESTRUCT& style);
 			void onSysColorChange();
 			void onThemeChanged();
 			void onTimer(UINT_PTR eventId, TIMERPROC timerProc);
-			void onVScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>& scrollBar);
+			void onVScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>::Type& scrollBar);
 			LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
 			// IDropTarget
 			STDMETHODIMP DragEnter(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
@@ -439,7 +439,7 @@ namespace ascension {
 			Configuration configuration_;
 			std::set<VisualPoint*> points_;
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-			win32::Handle<HWND> toolTip_;
+			win32::Handle<HWND>::Type toolTip_;
 			std::basic_string<WCHAR> tipText_;
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 			// strategies and listeners

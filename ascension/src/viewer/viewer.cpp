@@ -2,13 +2,15 @@
  * @file viewer.cpp
  * @author exeal
  * @date 2003-2006 was EditView.cpp and EditViewWindowMessages.cpp
- * @date 2006-2012
+ * @date 2006-2013
  */
 
-#include <ascension/rules.hpp>
 #include <ascension/content-assist/content-assist.hpp>
 #include <ascension/corelib/text/break-iterator.hpp>
+#include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/rendering-context.hpp>
+#include <ascension/presentation/writing-mode-mappings.hpp>
+#include <ascension/rules.hpp>
 #include <ascension/text-editor/command.hpp>
 #include <ascension/text-editor/session.hpp>
 #include <ascension/viewer/widgetapi/cursor.hpp>
@@ -16,6 +18,7 @@
 #include <ascension/viewer/default-mouse-input-strategy.hpp>
 #include <ascension/viewer/viewer.hpp>
 #include <limits>	// std.numeric_limit
+#include <boost/foreach.hpp>
 
 using namespace ascension;
 using namespace ascension::viewers;
@@ -32,26 +35,28 @@ bool DIAGNOSE_INHERENT_DRAWING = false;	// 余計な描画を行っていない�
 
 namespace {
 	inline Scalar mapLocalBpdToTextArea(const TextViewer& viewer, Scalar bpd) {
-		const NativeRectangle textArea(viewer.textAreaAllocationRectangle());
+		const graphics::Rectangle textArea(viewer.textAreaAllocationRectangle());
 		FlowRelativeFourSides<Scalar> abstractBounds;
-		mapPhysicalToFlowRelative(viewer.textRenderer().writingMode(), textArea, textArea, abstractBounds);
+		mapPhysicalToFlowRelative(viewer.presentation().computeWritingMode(&viewer.textRenderer()), textArea, textArea, abstractBounds);
 		return bpd -= abstractBounds.before();
 	}
 	inline Scalar mapTextAreaBpdToLocal(const TextViewer& viewer, Scalar bpd) {
-		const NativeRectangle textArea(viewer.textAreaAllocationRectangle());
+		const graphics::Rectangle textArea(viewer.textAreaAllocationRectangle());
 		FlowRelativeFourSides<Scalar> abstractBounds;
-		mapPhysicalToFlowRelative(viewer.textRenderer().writingMode(), textArea, textArea, abstractBounds);
+		mapPhysicalToFlowRelative(viewer.presentation().computeWritingMode(&viewer.textRenderer()), textArea, textArea, abstractBounds);
 		return bpd += abstractBounds.before();
 	}
-	inline NativePoint mapLocalToTextArea(const TextViewer& viewer, const NativePoint& p) {
-		const NativeRectangle textArea(viewer.textAreaAllocationRectangle());
-		NativePoint temp(p);
-		return geometry::translate(temp, geometry::make<NativeSize>(-geometry::left(textArea), -geometry::top(textArea)));
+	/// @internal Maps the given point in viewer-local coordinates into a point in text-area coordinates.
+	inline Point mapLocalToTextArea(const TextViewer& viewer, const Point& p) {
+		const graphics::Rectangle textArea(viewer.textAreaAllocationRectangle());
+		Point temp(p);
+		return geometry::translate(temp, Dimension(geometry::_dx = -geometry::left(textArea), geometry::_dy = -geometry::top(textArea)));
 	}
-	inline NativePoint mapTextAreaToLocal(const TextViewer& viewer, const NativePoint& p) {
-		const NativeRectangle textArea(viewer.textAreaAllocationRectangle());
-		NativePoint temp(p);
-		return geometry::translate(temp, geometry::make<NativeSize>(+geometry::left(textArea), +geometry::top(textArea)));
+	/// @internal Maps the given point in text-area coordinates into a point in viewer-local coordinates.
+	inline Point mapTextAreaToLocal(const TextViewer& viewer, const Point& p) {
+		const graphics::Rectangle textArea(viewer.textAreaAllocationRectangle());
+		Point temp(p);
+		return geometry::translate(temp, Dimension(geometry::_dx = +geometry::left(textArea), geometry::_dy = +geometry::top(textArea)));
 	}
 }
 
@@ -137,13 +142,13 @@ TextViewer::TextViewer(const TextViewer& other) : presentation_(other.presentati
 TextViewer::~TextViewer() {
 	document().removeListener(*this);
 	document().removeRollbackListener(*this);
-	textRenderer().removeComputedWritingModeListener(*this);
+	textRenderer().removeComputedBlockFlowDirectionListener(*this);
 	textRenderer().removeDefaultFontListener(*this);
 	textRenderer().layouts().removeVisualLinesListener(*this);
 	caret().removeListener(*this);
 	caret().removeStateListener(*this);
-	for(set<VisualPoint*>::iterator it = points_.begin(); it != points_.end(); ++it)
-		(*it)->viewerDisposed();
+	BOOST_FOREACH(VisualPoint* p, points_)
+		p->viewerDisposed();
 
 	// 非共有データ
 //	delete selection_;
@@ -167,7 +172,7 @@ void TextViewer::aboutToLoseFocus() {
 //		hideCaret();
 //		::DestroyCaret();
 //	}
-	redrawLines(makeRange(line(caret().beginning()), line(caret().end()) + 1));
+	redrawLines(boost::irange(line(caret().beginning()), line(caret().end()) + 1));
 	widgetapi::redrawScheduledRegion(*this);
 }
 
@@ -199,36 +204,36 @@ void TextViewer::caretMoved(const Caret& self, const k::Region& oldRegion) {
 	// redraw the selected region
 	if(self.isSelectionRectangle()) {	// rectangle
 		if(!oldRegion.isEmpty())
-			redrawLines(makeRange(oldRegion.beginning().line, oldRegion.end().line + 1));
+			redrawLines(boost::irange(oldRegion.beginning().line, oldRegion.end().line + 1));
 		if(!newRegion.isEmpty())
-			redrawLines(makeRange(newRegion.beginning().line, newRegion.end().line + 1));
+			redrawLines(boost::irange(newRegion.beginning().line, newRegion.end().line + 1));
 	} else if(newRegion != oldRegion) {	// the selection actually changed
 		if(oldRegion.isEmpty()) {	// the selection was empty...
 			if(!newRegion.isEmpty())	// the selection is not empty now
-				redrawLines(makeRange(newRegion.beginning().line, newRegion.end().line + 1));
+				redrawLines(boost::irange(newRegion.beginning().line, newRegion.end().line + 1));
 		} else {	// ...if the there is selection
 			if(newRegion.isEmpty()) {	// the selection became empty
-				redrawLines(makeRange(oldRegion.beginning().line, oldRegion.end().line + 1));
+				redrawLines(boost::irange(oldRegion.beginning().line, oldRegion.end().line + 1));
 				if(!isFrozen())
 					widgetapi::redrawScheduledRegion(*this);
 			} else if(oldRegion.beginning() == newRegion.beginning()) {	// the beginning point didn't change
 				const Index i[2] = {oldRegion.end().line, newRegion.end().line};
-				redrawLines(makeRange(min(i[0], i[1]), max(i[0], i[1]) + 1));
+				redrawLines(boost::irange(min(i[0], i[1]), max(i[0], i[1]) + 1));
 			} else if(oldRegion.end() == newRegion.end()) {	// the end point didn't change
 				const Index i[2] = {oldRegion.beginning().line, newRegion.beginning().line};
-				redrawLines(makeRange(min(i[0], i[1]), max(i[0], i[1]) + 1));
+				redrawLines(boost::irange(min(i[0], i[1]), max(i[0], i[1]) + 1));
 			} else {	// the both points changed
 				if((oldRegion.beginning().line >= newRegion.beginning().line && oldRegion.beginning().line <= newRegion.end().line)
 						|| (oldRegion.end().line >= newRegion.beginning().line && oldRegion.end().line <= newRegion.end().line)) {
 					const Index i[2] = {
 						min(oldRegion.beginning().line, newRegion.beginning().line), max(oldRegion.end().line, newRegion.end().line)
 					};
-					redrawLines(makeRange(min(i[0], i[1]), max(i[0], i[1]) + 1));
+					redrawLines(boost::irange(min(i[0], i[1]), max(i[0], i[1]) + 1));
 				} else {
-					redrawLines(makeRange(oldRegion.beginning().line, oldRegion.end().line + 1));
+					redrawLines(boost::irange(oldRegion.beginning().line, oldRegion.end().line + 1));
 					if(!isFrozen())
 						widgetapi::redrawScheduledRegion(*this);
-					redrawLines(makeRange(newRegion.beginning().line, newRegion.end().line + 1));
+					redrawLines(boost::irange(newRegion.beginning().line, newRegion.end().line + 1));
 				}
 			}
 		}
@@ -239,8 +244,8 @@ void TextViewer::caretMoved(const Caret& self, const k::Region& oldRegion) {
 		widgetapi::redrawScheduledRegion(*this);
 }
 
-/// @see ComputedWritingModeListener#computedWritingModeChanged
-void TextViewer::computedWritingModeChanged(const presentation::WritingMode& used) {
+/// @see ComputedWritingModeListener#computedBlockFlowDirectionChanged
+void TextViewer::computedBlockFlowDirectionChanged(BlockFlowDirection used) {
 	updateScrollBars();
 }
 
@@ -264,9 +269,9 @@ void TextViewer::documentChanged(const k::Document&, const k::DocumentChange& ch
 	texteditor::abortIncrementalSearch(*this);	// TODO: should TextViewer handle this? (I.S. would...)
 
 	// slide the frozen lines to be drawn
-	if(isFrozen() && !isEmpty(freezeRegister_.linesToRedraw())) {
-		Index b = freezeRegister_.linesToRedraw().beginning();
-		Index e = freezeRegister_.linesToRedraw().end();
+	if(isFrozen() && !freezeRegister_.linesToRedraw().empty()) {
+		Index b = *freezeRegister_.linesToRedraw().begin();
+		Index e = *freezeRegister_.linesToRedraw().end();
 		if(change.erasedRegion().first.line != change.erasedRegion().second.line) {
 			const Index first = change.erasedRegion().first.line + 1, last = change.erasedRegion().second.line;
 			if(b > last)
@@ -287,7 +292,7 @@ void TextViewer::documentChanged(const k::Document&, const k::DocumentChange& ch
 			if(e >= first && e != numeric_limits<Index>::max())
 				e += last - first + 1;
 		}
-		freezeRegister_.resetLinesToRedraw(makeRange(b, e));
+		freezeRegister_.resetLinesToRedraw(boost::irange(b, e));
 	}
 //	invalidateLines(region.beginning().line, !multiLine ? region.end().line : INVALID_INDEX);
 	if(!isFrozen())
@@ -316,7 +321,7 @@ void TextViewer::documentUndoSequenceStopped(const k::Document&, const k::Positi
  * @param context The graphics context
  * @param rect The rectangle to draw
  */
-void TextViewer::drawIndicatorMargin(Index /* line */, PaintContext& /* context */, const NativeRectangle& /* rect */) {
+void TextViewer::drawIndicatorMargin(Index /* line */, PaintContext& /* context */, const graphics::Rectangle& /* rect */) {
 }
 
 /**
@@ -395,26 +400,28 @@ bool TextViewer::getPointedLinkText(Region& region, AutoBuffer<Char>& text) cons
 
 namespace {
 	inline widgetapi::NativeScrollPosition reverseScrollPosition(
-			const TextRenderer& textRenderer, widgetapi::NativeScrollPosition position) {
-		return textRenderer.layouts().maximumMeasure()
-			/ textRenderer.defaultFont()->metrics().averageCharacterWidth()
+			const TextViewer& textViewer, widgetapi::NativeScrollPosition position) {
+		const TextRenderer& textRenderer = textViewer.textRenderer();
+		return static_cast<widgetapi::NativeScrollPosition>(textRenderer.layouts().maximumMeasure()
+			/ widgetapi::createRenderingContext(textViewer)->fontMetrics(textRenderer.defaultFont())->averageCharacterWidth())
 			- position
 			- static_cast<widgetapi::NativeScrollPosition>(textRenderer.viewport()->numberOfVisibleCharactersInLine());
 	}
-	NativePoint physicalScrollPosition(const TextViewer& viewer) {
-		const shared_ptr<const TextViewport> viewport(viewer.textRenderer().viewport());
+	boost::geometry::model::d2::point_xy<widgetapi::NativeScrollPosition>&& physicalScrollPosition(const TextViewer& textViewer) {
+		const TextRenderer& textRenderer = textViewer.textRenderer();
+		const shared_ptr<const TextViewport> viewport(textRenderer.viewport());
+		const WritingMode writingMode(textViewer.presentation().computeWritingMode(&textRenderer));
 		const Index bpd = viewport->firstVisibleLineInVisualNumber();
 		const Index ipd = viewport->inlineProgressionOffset();
-		const WritingMode writingMode(viewer.textRenderer().writingMode());
 		widgetapi::NativeScrollPosition x, y;
 		switch(writingMode.blockFlowDirection) {
 			case HORIZONTAL_TB:
 				x = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ?
-					ipd : reverseScrollPosition(viewer.textRenderer(), static_cast<widgetapi::NativeScrollPosition>(ipd));
+					ipd : reverseScrollPosition(textViewer, static_cast<widgetapi::NativeScrollPosition>(ipd));
 				y = bpd;
 				break;
 			case VERTICAL_RL:
-				x = reverseScrollPosition(viewer.textRenderer(), bpd);
+				x = reverseScrollPosition(textViewer, bpd);
 				y = ipd;
 				break;
 			case VERTICAL_LR:
@@ -424,13 +431,13 @@ namespace {
 			default:
 				ASCENSION_ASSERT_NOT_REACHED();
 		}
-		return geometry::make<NativePoint>(x /* / xScrollRate */, y /* / yScrollRate */);
+		return boost::geometry::make<boost::geometry::model::d2::point_xy<widgetapi::NativeScrollPosition>>(x /* / xScrollRate */, y /* / yScrollRate */);
 	}
 }
 
 namespace {
 	void configureScrollBar(TextViewer& viewer, size_t coordinate, boost::optional<widgetapi::NativeScrollPosition> position,
-			boost::optional<const Range<widgetapi::NativeScrollPosition>> range, boost::optional<widgetapi::NativeScrollPosition> pageSize) {
+			boost::optional<const boost::integer_range<widgetapi::NativeScrollPosition>> range, boost::optional<widgetapi::NativeScrollPosition> pageSize) {
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 		Glib::RefPtr<Gtk::Adjustment> adjustment = (coordinate == geometry::X_COORDINATE) ? viewer.get_hadjustment() : viewer.get_vadjustment();
 		if(range != boost::none) {
@@ -458,8 +465,8 @@ namespace {
 		win32::AutoZeroSize<SCROLLINFO> si;
 		if(range != boost::none) {
 			si.fMask |= SIF_RANGE;
-			si.nMin = range->beginning();
-			si.nMax = range->end();
+			si.nMin = *range->begin();
+			si.nMax = *range->end();
 		}
 		if(pageSize != boost::none) {
 			si.fMask |= SIF_PAGE;
@@ -469,7 +476,7 @@ namespace {
 			si.fMask |= SIF_POS;
 			si.nPos = *position;
 		}
-		::SetScrollInfo(viewer.handle().get(), (coordinate == geometry::X_COORDINATE) ? SB_HORZ : SB_VERT, &si, true);
+		::SetScrollInfo(viewer.handle().get(), (coordinate == 0) ? SB_HORZ : SB_VERT, &si, true);
 #endif
 	}
 }
@@ -478,14 +485,14 @@ namespace {
 void TextViewer::focusGained() {
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 	// restore the scroll positions
-	const NativePoint scrollPosition(physicalScrollPosition(*this));
-	configureScrollBar(*this, geometry::X_COORDINATE, geometry::x(scrollPosition), boost::none, boost::none);
-	configureScrollBar(*this, geometry::Y_COORDINATE, geometry::y(scrollPosition), boost::none, boost::none);
+	const boost::geometry::model::d2::point_xy<widgetapi::NativeScrollPosition> scrollPosition(physicalScrollPosition(*this));
+	configureScrollBar(*this, 0, boost::geometry::get<0>(scrollPosition), boost::none, boost::none);
+	configureScrollBar(*this, 1, boost::geometry::get<1>(scrollPosition), boost::none, boost::none);
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 
 	// hmm...
 //	if(/*sharedData_->options.appearance[SHOW_CURRENT_UNDERLINE] ||*/ !getCaret().isSelectionEmpty()) {
-		redrawLines(makeRange(line(caret().beginning()), line(caret().end()) + 1));
+		redrawLines(boost::irange(line(caret().beginning()), line(caret().end()) + 1));
 		widgetapi::redrawScheduledRegion(*this);
 //	}
 
@@ -506,21 +513,21 @@ void TextViewer::focusGained() {
  * @return The result
  * @see TextViewer#HitTestResult
  */
-TextViewer::HitTestResult TextViewer::hitTest(const NativePoint& p) const {
+TextViewer::HitTestResult TextViewer::hitTest(const Point& p) const {
 //	checkInitialization();
-	const NativeRectangle localBounds(widgetapi::bounds(*this, false));
-	if(!geometry::includes(localBounds, p))
+	const graphics::Rectangle localBounds(widgetapi::bounds(*this, false));
+	if(!boost::geometry::within(p, localBounds))
 		return OUT_OF_VIEWER;
 
-	const RulerConfiguration& rc = rulerConfiguration();
-	if(rc.indicatorMargin.visible && geometry::includes(rulerPainter_->indicatorMarginAllocationRectangle(), p))
+	const RulerStyles& rulerStyles = rulerPainter_->declaredStyles();
+	if(indicatorMargin(rulerStyles)->visible && boost::geometry::within(p, rulerPainter_->indicatorMarginAllocationRectangle()))
 		return INDICATOR_MARGIN;
-	else if(rc.lineNumbers.visible && geometry::includes(rulerPainter_->lineNumbersAllocationRectangle(), p))
+	else if(lineNumbers(rulerStyles)->visible && boost::geometry::within(p, rulerPainter_->lineNumbersAllocationRectangle()))
 		return LINE_NUMBERS;
-	else if(geometry::includes(textAreaContentRectangle(), p))
+	else if(boost::geometry::within(p, textAreaContentRectangle()))
 		return TEXT_AREA_CONTENT_RECTANGLE;
 	else {
-		assert(geometry::includes(textAreaAllocationRectangle(), p));
+		assert(boost::geometry::within(p, textAreaAllocationRectangle()));
 		return TEXT_AREA_PADDING_START;
 	}
 }
@@ -528,7 +535,7 @@ TextViewer::HitTestResult TextViewer::hitTest(const NativePoint& p) const {
 /// @internal Called by constructors.
 void TextViewer::initialize(const TextViewer* other) {
 	renderer_.reset((other == nullptr) ? new Renderer(*this) : new Renderer(*other->renderer_, *this));
-	textRenderer().addComputedWritingModeListener(*this);
+	textRenderer().addComputedBlockFlowDirectionListener(*this);
 //	renderer_->addFontListener(*this);
 //	renderer_->addVisualLinesListener(*this);
 	caret_.reset(new Caret(*this));
@@ -743,22 +750,23 @@ void TextViewer::initialize(const TextViewer* other) {
 }
 
 /**
- * Returns an offset from left/top-edge of local-bounds to one of the content-area in pixels. This
- * algorithm considers the ruler, the scroll position and spaces around the content box.
+ * Returns an offset from left/top-edge of local-bounds to one of the content-area in user units.
+ * This algorithm considers the ruler, the scroll position and spaces around the content box.
  * @return The offset
  * @see TextLayout#lineStartEdge, TextRenderer#lineStartEdge
  */
 Scalar TextViewer::inlineProgressionOffsetInViewport() const {
-	const bool horizontal = isHorizontal(textRenderer().writingMode().blockFlowDirection);
+	const bool horizontal = isHorizontal(textRenderer().computedBlockFlowDirection());
 	Scalar offset = 0;
 
 	// scroll position
-	const NativePoint scrollPosition(physicalScrollPosition(*this));
-	offset -= inlineProgressionScrollOffsetInPixels(*textRenderer().viewport(), horizontal ? geometry::x(scrollPosition) : geometry::y(scrollPosition));
+	const boost::geometry::model::d2::point_xy<widgetapi::NativeScrollPosition> scrollPosition(physicalScrollPosition(*this));
+	offset -= inlineProgressionScrollOffsetInUserUnits(*textRenderer().viewport(),
+		horizontal ? boost::geometry::get<0>(scrollPosition) : boost::geometry::get<1>(scrollPosition));
 
 	// ruler width
-	if((horizontal && rulerPainter_->alignment() == detail::RulerPainter::LEFT)
-			|| (!horizontal && rulerPainter_->alignment() == detail::RulerPainter::TOP))
+	if((horizontal && rulerPainter_->alignment() == PhysicalDirection::LEFT)
+			|| (!horizontal && rulerPainter_->alignment() == PhysicalDirection::TOP))
 		offset += rulerPainter_->allocationWidth();
 
 	return offset;
@@ -770,7 +778,7 @@ Scalar TextViewer::inlineProgressionOffsetInViewport() const {
 		return spaces.left - scrolls_.x() * renderer_->defaultFont()->metrics().averageCharacterWidth();
 
 	Scalar indent;
-	const NativeRectangle clientBounds(bounds(false));
+	const graphics::Rectangle clientBounds(bounds(false));
 	if(renderer_->layouts().maximumMeasure() + spaces.left + spaces.right > geometry::dx(clientBounds)) {
 		indent = renderer_->layouts().maximumMeasure() - layout.measure(0) + spaces.left;
 		indent += (geometry::dx(clientBounds) - spaces.left - spaces.right) % renderer_->defaultFont()->metrics().averageCharacterWidth();
@@ -790,11 +798,12 @@ namespace {
 		using widgetapi::UserInput;
 		static k::Position(*const nextCharacterLocation)(const k::Point&, Direction, k::locations::CharacterUnit, Index) = k::locations::nextCharacter;
 
-		const FlowRelativeDirection abstractDirection = mapPhysicalToFlowRelative(viewer.textRenderer().defaultUIWritingMode(), direction);
-		const Direction logicalDirection = (abstractDirection == AFTER || abstractDirection == END) ? Direction::FORWARD : Direction::BACKWARD;
+		const WritingMode writingMode(viewer.presentation().computeWritingMode(&viewer.textRenderer()));
+		const FlowRelativeDirection abstractDirection = mapPhysicalToFlowRelative(writingMode, direction);
+		const Direction logicalDirection = (abstractDirection == FlowRelativeDirection::AFTER || abstractDirection == FlowRelativeDirection::END) ? Direction::FORWARD : Direction::BACKWARD;
 		switch(abstractDirection) {
-			case BEFORE:
-			case AFTER:
+			case FlowRelativeDirection::BEFORE:
+			case FlowRelativeDirection::AFTER:
 				if((modifiers & ~(UserInput::SHIFT_DOWN | UserInput::ALT_DOWN)) == 0) {
 					if((modifiers & UserInput::ALT_DOWN) == 0)
 						makeCaretMovementCommand(viewer, &k::locations::nextVisualLine,
@@ -803,8 +812,8 @@ namespace {
 						makeRowSelectionExtensionCommand(viewer, &k::locations::nextVisualLine, logicalDirection)();
 				}
 				break;
-			case START:
-			case END:
+			case FlowRelativeDirection::START:
+			case FlowRelativeDirection::END:
 				if((modifiers & ~(UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN | UserInput::ALT_DOWN)) == 0) {
 					if((modifiers & UserInput::ALT_DOWN) == 0) {
 						if((modifiers & UserInput::CONTROL_DOWN) != 0)
@@ -912,16 +921,16 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 			makeCaretMovementCommand(*this, &k::locations::endOfVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
 	case keyboardcodes::LEFT:	// [Left]
-		handleDirectionalKey(*this, LEFT, input.modifiers());
+		handleDirectionalKey(*this, PhysicalDirection::LEFT, input.modifiers());
 		break;
 	case keyboardcodes::UP:		// [Up]
-		handleDirectionalKey(*this, TOP, input.modifiers());
+		handleDirectionalKey(*this, PhysicalDirection::TOP, input.modifiers());
 		break;
 	case keyboardcodes::RIGHT:	// [Right]
-		handleDirectionalKey(*this, RIGHT, input.modifiers());
+		handleDirectionalKey(*this, PhysicalDirection::RIGHT, input.modifiers());
 		break;
 	case keyboardcodes::DOWN:	// [Down]
-		handleDirectionalKey(*this, BOTTOM, input.modifiers());
+		handleDirectionalKey(*this, PhysicalDirection::BOTTOM, input.modifiers());
 		break;
 	case keyboardcodes::INSERT:	// [Insert]
 		if(hasModifier<UserInput::ALT_DOWN>(input))
@@ -1004,6 +1013,7 @@ void TextViewer::keyReleased(const widgetapi::KeyInput& input) {
 	}
 }
 
+#if 0
 /**
  * @internal
  * @see #mapViewportIpdToLineLayout
@@ -1022,7 +1032,6 @@ inline Scalar TextViewer::mapViewportIpdToLineLayout(Index line, Scalar ipd) con
 		textRenderer().viewport()->contentMeasure()) - inlineProgressionOffsetInViewport();
 }
 
-#if 0
 /**
  * Returns the distance from the before-edge of the viewport to the baseline of the specified line.
  * @param line The logical line number
@@ -1045,7 +1054,7 @@ Scalar TextViewer::mapLineToViewportBpd(Index line, bool fullSearch) const {
 				- static_cast<Scalar>(renderer_->defaultFont()->metrics().linePitch() * scrolls_.firstVisibleLine.subline) : numeric_limits<Scalar>::min();
 	} else if(line > scrolls_.firstVisibleLine.line) {
 		const Scalar lineSpan = renderer_->defaultFont()->metrics().linePitch();
-		const NativeRectangle clientBounds(bounds(false));
+		const graphics::Rectangle clientBounds(bounds(false));
 		Scalar y = spaces.top;
 		y += lineSpan * static_cast<Scalar>(
 			renderer_->layouts().numberOfSublinesOfLine(scrolls_.firstVisibleLine.line) - scrolls_.firstVisibleLine.subline);
@@ -1145,7 +1154,7 @@ void TextViewer::overtypeModeChanged(const Caret&) {
 void TextViewer::paint(PaintContext& context) {
 	if(isFrozen())	// skip if frozen
 		return;
-	NativeRectangle scheduledBounds(context.boundsToPaint());
+	graphics::Rectangle scheduledBounds(context.boundsToPaint());
 	if(geometry::isEmpty(geometry::normalize(scheduledBounds)))	// skip if the region to paint is empty
 		return;
 
@@ -1165,7 +1174,7 @@ void TextViewer::paint(PaintContext& context) {
  * @param following Set @c true to redraw also the all lines follow to @a line
  */
 void TextViewer::redrawLine(Index line, bool following) {
-	redrawLines(makeRange(line, following ? numeric_limits<Index>::max() : line + 1));
+	redrawLines(boost::irange(line, following ? numeric_limits<Index>::max() : line + 1));
 }
 
 /**
@@ -1175,43 +1184,43 @@ void TextViewer::redrawLine(Index line, bool following) {
  *              method redraws the first line (@a lines.beginning()) and the following all lines
  * @throw kernel#BadRegionException @a lines intersects outside of the document
  */
-void TextViewer::redrawLines(const Range<Index>& lines) {
+void TextViewer::redrawLines(const boost::integer_range<Index>& lines) {
 //	checkInitialization();
 
-	if(lines.end() != numeric_limits<Index>::max() && lines.end() >= document().numberOfLines())
-		throw k::BadRegionException(k::Region(k::Position(lines.beginning(), 0), k::Position(lines.end(), 0)));
+	if(*lines.end() != numeric_limits<Index>::max() && *lines.end() >= document().numberOfLines())
+		throw k::BadRegionException(k::Region(k::Position(*lines.begin(), 0), k::Position(*lines.end(), 0)));
 
 	if(isFrozen()) {
 		freezeRegister_.addLinesToRedraw(lines);
 		return;
 	}
 
-	if(lines.end() - 1 < textRenderer().viewport()->firstVisibleLineInLogicalNumber())
+	if(*lines.end() - 1 < textRenderer().viewport()->firstVisibleLineInLogicalNumber())
 		return;
 
 #ifdef _DEBUG
 	if(DIAGNOSE_INHERENT_DRAWING)
 		win32::DumpContext()
 			<< L"@TextViewer.redrawLines invalidates lines ["
-			<< static_cast<unsigned long>(lines.beginning())
-			<< L".." << static_cast<unsigned long>(lines.end()) << L"]\n";
+			<< static_cast<unsigned long>(*lines.begin())
+			<< L".." << static_cast<unsigned long>(*lines.end()) << L"]\n";
 #endif // _DEBUG
 
-	const WritingMode writingMode(textRenderer().writingMode());
-	const NativeRectangle viewport(widgetapi::bounds(*this, false));
+	const WritingMode writingMode(presentation().computeWritingMode(&textRenderer()));
+	const graphics::Rectangle viewport(widgetapi::bounds(*this, false));
 	FlowRelativeFourSides<Scalar> abstractBounds;
 	mapPhysicalToFlowRelative(writingMode, viewport, viewport, abstractBounds);
 
 	// calculate before and after edges of a rectangle to redraw
-	BaselineIterator baseline(*textRenderer().viewport(), lines.beginning(), false);
+	BaselineIterator baseline(*textRenderer().viewport(), lines.front(), false);
 	if(*baseline != numeric_limits<Scalar>::min())
 		abstractBounds.before() = mapTextAreaBpdToLocal(*this, *baseline)
-			- textRenderer().layouts().at(lines.beginning()).lineMetrics(0).ascent();
-	baseline += length(lines);
+			- textRenderer().layouts().at(lines.front()).lineMetrics(0).ascent();
+	baseline += lines.size();
 	if(*baseline != numeric_limits<Scalar>::max())
 		abstractBounds.after() = mapTextAreaBpdToLocal(*this, *baseline)
-			+ textRenderer().layouts().at(baseline.line()).extent().end();
-	NativeRectangle boundsToRedraw(viewport);
+			+ *textRenderer().layouts().at(baseline.line()).extent().end();
+	graphics::Rectangle boundsToRedraw(viewport);
 	mapFlowRelativeToPhysical(writingMode, viewport, abstractBounds, boundsToRedraw);
 
 	widgetapi::scheduleRedraw(*this, boundsToRedraw, false);
@@ -1237,18 +1246,16 @@ void TextViewer::removeViewportListener(ViewportListener& listener) {
 
 /// Redraws the ruler.
 void TextViewer::repaintRuler() {
-	NativeRectangle r(widgetapi::bounds(*this, false));
+	graphics::Rectangle r(widgetapi::bounds(*this, false));
 	if(utils::isRulerLeftAligned(*this))
-		geometry::range<geometry::X_COORDINATE>(r) =
-			makeRange(geometry::left(r), geometry::left(r) + rulerPainter_->allocationWidth());
+		geometry::range<0>(r) = boost::irange(geometry::left(r), geometry::left(r) + rulerPainter_->allocationWidth());
 	else
-		geometry::range<geometry::X_COORDINATE>(r) =
-			makeRange(geometry::right(r) - rulerPainter_->allocationWidth(), geometry::right(r));
+		geometry::range<1>(r) = boost::irange(geometry::right(r) - rulerPainter_->allocationWidth(), geometry::right(r));
 	widgetapi::scheduleRedraw(*this, r, false);
 }
 
 /// @see Widget#resized
-void TextViewer::resized(const NativeSize&) {
+void TextViewer::resized(const Dimension&) {
 	utils::closeCompletionProposalsPopup(*this);
 	if(widgetapi::isMinimized(*this))
 		return;
@@ -1258,7 +1265,7 @@ void TextViewer::resized(const NativeSize&) {
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 	// notify the tooltip
 	win32::AutoZeroSize<TOOLINFOW> ti;
-	const NativeRectangle viewerBounds(widgetapi::bounds(*this, false));
+	const graphics::Rectangle viewerBounds(widgetapi::bounds(*this, false));
 	ti.hwnd = handle().get();
 	ti.uId = 1;
 	ti.rect = viewerBounds;
@@ -1268,7 +1275,7 @@ void TextViewer::resized(const NativeSize&) {
 	scrolls_.resetBars(*this, 'a', true);
 	updateScrollBars();
 	rulerPainter_->update();
-	if(rulerPainter_->alignment() != detail::RulerPainter::LEFT && rulerPainter_->alignment() != detail::RulerPainter::TOP) {
+	if(rulerPainter_->alignment() != PhysicalDirection::LEFT && rulerPainter_->alignment() != PhysicalDirection::TOP) {
 //		recreateCaret();
 //		redrawVerticalRuler();
 		widgetapi::scheduleRedraw(*this, false);	// hmm...
@@ -1280,7 +1287,7 @@ void TextViewer::resized(const NativeSize&) {
 /// @see CaretStateListener#selectionShapeChanged
 void TextViewer::selectionShapeChanged(const Caret& self) {
 	if(!isFrozen() && !isSelectionEmpty(self))
-		redrawLines(makeRange(line(self.beginning()), line(self.end()) + 1));
+		redrawLines(boost::irange(line(self.beginning()), line(self.end()) + 1));
 }
 
 /**
@@ -1292,9 +1299,9 @@ void TextViewer::selectionShapeChanged(const Caret& self) {
  *                      and @c WS_EX_RTLREADING styles
  * @throw UnknownValueException The content of @a verticalRuler is invalid
  */
-void TextViewer::setConfiguration(const Configuration* general, const RulerConfiguration* ruler, bool synchronizeUI) {
+void TextViewer::setConfiguration(const Configuration* general, shared_ptr<const RulerStyles> ruler, bool synchronizeUI) {
 	if(ruler != nullptr)
-		rulerPainter_->setConfiguration(*ruler);
+		rulerPainter_->setStyles(ruler);
 	if(general != nullptr) {
 		const Inheritable<ReadingDirection> oldReadingDirection(configuration_.readingDirection);
 		assert(!oldReadingDirection.inherits());
@@ -1397,35 +1404,33 @@ HRESULT TextViewer::startTextServices() {
  * Returns the 'allocation-rectangle' of the text area, in local-coordinates.
  * @see #bounds, #textAreaContentRectangle
  */
-NativeRectangle TextViewer::textAreaAllocationRectangle() const /*throw()*/ {
-	const NativeRectangle window(widgetapi::bounds(*this, false));
+graphics::Rectangle TextViewer::textAreaAllocationRectangle() const BOOST_NOEXCEPT {
+	const graphics::Rectangle window(widgetapi::bounds(*this, false));
 	PhysicalFourSides<Scalar> result(window);
 	switch(rulerPainter_->alignment()) {
-		case detail::RulerPainter::LEFT:
+		case PhysicalDirection::LEFT:
 			result.left() += rulerPainter_->allocationWidth();
 			break;
-		case detail::RulerPainter::TOP:
+		case PhysicalDirection::TOP:
 			result.top() += rulerPainter_->allocationWidth();
 			break;
-		case detail::RulerPainter::RIGHT:
+		case PhysicalDirection::RIGHT:
 			result.right() -= rulerPainter_->allocationWidth();
 			break;
-		case detail::RulerPainter::BOTTOM:
+		case PhysicalDirection::BOTTOM:
 			result.bottom() -= rulerPainter_->allocationWidth();
 			break;
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
 	}
-	return geometry::make<NativeRectangle>(
-		geometry::make<NativePoint>(result.left(), result.top()),
-		geometry::make<NativeSize>(result.right() - result.left(), result.bottom() - result.top()));
+	return geometry::make<graphics::Rectangle>(result);
 }
 
 /**
  * Returns the 'content-rectangle' of the text area, in local-coordinates.
  * @see #bounds, #textAreaAllocationRectangle
  */
-NativeRectangle TextViewer::textAreaContentRectangle() const /*throw()*/ {
+graphics::Rectangle TextViewer::textAreaContentRectangle() const /*throw()*/ {
 	// TODO: Consider 'padding-start' setting.
 	return textAreaAllocationRectangle();
 }
@@ -1438,12 +1443,12 @@ NativeRectangle TextViewer::textAreaContentRectangle() const /*throw()*/ {
 void TextViewer::unfreeze() {
 //	checkInitialization();
 	if(freezeRegister_.isFrozen()) {
-		const Range<Index> linesToRedraw(freezeRegister_.unfreeze());
+		const boost::integer_range<Index> linesToRedraw(freezeRegister_.unfreeze());
 		if(!freezeRegister_.isFrozen()) {
 			if(scrolls_.changed) {
 				updateScrollBars();
 				widgetapi::scheduleRedraw(*this, false);
-			} else if(!isEmpty(linesToRedraw))
+			} else if(!linesToRedraw.empty())
 				redrawLines(linesToRedraw);
 
 			rulerPainter_->update();
@@ -1461,13 +1466,12 @@ void TextViewer::updateScrollBars() {
 		return;
 	const shared_ptr<TextViewport> viewport(textRenderer().viewport());
 	const LineLayoutVector& layouts = textRenderer().layouts();
-	const NativePoint positions(physicalScrollPosition(*this));
-	NativePoint endPositions(geometry::make<NativePoint>(layouts.maximumMeasure(),
-		static_cast<geometry::Coordinate<NativePoint>::Type>(layouts.numberOfVisualLines())));
-	NativePoint pageSteps(geometry::make<NativePoint>(
-		static_cast<geometry::Coordinate<NativePoint>::Type>(viewport->numberOfVisibleCharactersInLine()),
-		static_cast<geometry::Coordinate<NativePoint>::Type>(viewport->numberOfVisibleLines())));
-	if(isVertical(textRenderer().writingMode().blockFlowDirection)) {
+	const boost::geometry::model::d2::point_xy<widgetapi::NativeScrollPosition> positions(physicalScrollPosition(*this));
+	Point endPositions(geometry::_x = layouts.maximumMeasure(), geometry::_y = static_cast<boost::geometry::coordinate_type<Point>::type>(layouts.numberOfVisualLines()));
+	Point pageSteps(
+		geometry::_x = static_cast<boost::geometry::coordinate_type<Point>::type>(viewport->numberOfVisibleCharactersInLine()),
+		geometry::_y = static_cast<boost::geometry::coordinate_type<Point>::type>(viewport->numberOfVisibleLines()));
+	if(isVertical(textRenderer().computedBlockFlowDirection())) {
 		geometry::transpose(endPositions);
 		geometry::transpose(pageSteps);
 	}
@@ -1477,7 +1481,7 @@ void TextViewer::updateScrollBars() {
 	// about horizontal scroll bar
 	bool wasNeededScrollbar = ASCENSION_GET_SCROLL_MINIMUM(geometry::x(endPositions), geometry::x(pageSteps)) > 0;
 	// scroll to leftmost/rightmost before the scroll bar vanishes
-	widgetapi::NativeScrollPosition minimum = ASCENSION_GET_SCROLL_MINIMUM(geometry::x(endPositions), geometry::x(pageSteps));
+	widgetapi::NativeScrollPosition minimum = static_cast<widgetapi::NativeScrollPosition>(ASCENSION_GET_SCROLL_MINIMUM(geometry::x(endPositions), geometry::x(pageSteps)));
 	if(wasNeededScrollbar && minimum <= 0) {
 //		scrolls_.horizontal.position = 0;
 		if(!isFrozen()) {
@@ -1488,8 +1492,8 @@ void TextViewer::updateScrollBars() {
 		viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(minimum, boost::none));
 	assert(ASCENSION_GET_SCROLL_MINIMUM(geometry::x(endPositions), geometry::x(pageSteps)) > 0 || geometry::x(positions) == 0);
 	if(!isFrozen())
-		configureScrollBar(*this, geometry::X_COORDINATE, geometry::x(positions),
-			makeRange<widgetapi::NativeScrollPosition>(0, geometry::x(endPositions)),
+		configureScrollBar(*this, 0, geometry::x(positions),
+			boost::irange<widgetapi::NativeScrollPosition>(0, geometry::x(endPositions)),
 			static_cast<widgetapi::NativeScrollPosition>(geometry::x(pageSteps)));
 
 	// about vertical scroll bar
@@ -1507,8 +1511,8 @@ void TextViewer::updateScrollBars() {
 		viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(boost::none, minimum));
 	assert(ASCENSION_GET_SCROLL_MINIMUM(geometry::y(endPositions), geometry::y(pageSteps)) > 0 || geometry::y(positions) == 0);
 	if(!isFrozen())
-		configureScrollBar(*this, geometry::Y_COORDINATE, geometry::y(positions),
-			makeRange<widgetapi::NativeScrollPosition>(0, geometry::y(endPositions)),
+		configureScrollBar(*this, 1, geometry::y(positions),
+			boost::irange<widgetapi::NativeScrollPosition>(0, geometry::y(endPositions)),
 			static_cast<widgetapi::NativeScrollPosition>(geometry::y(pageSteps)));
 
 	scrolls_.changed = isFrozen();
@@ -1517,14 +1521,14 @@ void TextViewer::updateScrollBars() {
 }
 
 /// @see TextViewport#viewportBoundsInViewChanged
-void TextViewer::viewportBoundsInViewChanged(const NativeRectangle& oldBounds) /*throw()*/ {
+void TextViewer::viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) /*throw()*/ {
 	// does nothing
 }
 
 namespace {
 	void scrollBarParameters(const TextViewer& viewer,
 			size_t coordinate, widgetapi::NativeScrollPosition* position,
-			Range<widgetapi::NativeScrollPosition>* range, widgetapi::NativeScrollPosition* pageSize) {
+			boost::integer_range<widgetapi::NativeScrollPosition>* range, widgetapi::NativeScrollPosition* pageSize) {
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 		Glib::RefPtr<Gtk::Adjustment> adjustment = (coordinate == geometry::X_COORDINATE) ? viewer.get_hadjustment() : viewer.get_vadjustment();
 		if(range != nullptr)
@@ -1546,10 +1550,10 @@ namespace {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		win32::AutoZeroSize<SCROLLINFO> si;
 		si.fMask = SIF_PAGE | SIF_POS | SIF_RANGE;
-		if(win32::boole(::GetScrollInfo(viewer.handle().get(), (coordinate == geometry::X_COORDINATE) ? SB_HORZ : SB_VERT, &si)))
+		if(win32::boole(::GetScrollInfo(viewer.handle().get(), (coordinate == 0) ? SB_HORZ : SB_VERT, &si)))
 			throw makePlatformError();
 		if(range != nullptr)
-			*range = makeRange<widgetapi::NativeScrollPosition>(si.nMin, si.nMax);
+			*range = boost::irange<widgetapi::NativeScrollPosition>(si.nMin, si.nMax);
 		if(pageSize != nullptr)
 			*pageSize = si.nPage;
 		if(position != nullptr)
@@ -1570,23 +1574,23 @@ void TextViewer::viewportScrollPositionChanged(
 	// 1. update the scroll positions
 	const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
 	// TODO: this code ignores orientation in vertical layout.
-	switch(textRenderer().writingMode().blockFlowDirection) {
+	switch(textRenderer().computedBlockFlowDirection()) {
 		case HORIZONTAL_TB:
-			configureScrollBar(*this, geometry::X_COORDINATE, viewport->inlineProgressionOffset(), boost::none, boost::none);
-			configureScrollBar(*this, geometry::Y_COORDINATE, viewport->firstVisibleLineInVisualNumber(), boost::none, boost::none);
+			configureScrollBar(*this, 0, viewport->inlineProgressionOffset(), boost::none, boost::none);
+			configureScrollBar(*this, 1, viewport->firstVisibleLineInVisualNumber(), boost::none, boost::none);
 			break;
 		case VERTICAL_RL: {
-			Range<widgetapi::NativeScrollPosition> range;
+			boost::integer_range<widgetapi::NativeScrollPosition> range(0, 0);
 			widgetapi::NativeScrollPosition pageStep;
-			scrollBarParameters(*this, geometry::X_COORDINATE, nullptr, &range, &pageStep);
-			configureScrollBar(*this, geometry::X_COORDINATE, range.end()
+			scrollBarParameters(*this, 0, nullptr, &range, &pageStep);
+			configureScrollBar(*this, 0, *range.end()
 				- pageStep - viewport->firstVisibleLineInVisualNumber(), boost::none, boost::none);
-			configureScrollBar(*this, geometry::Y_COORDINATE, viewport->inlineProgressionOffset(), boost::none, boost::none);
+			configureScrollBar(*this, 1, viewport->inlineProgressionOffset(), boost::none, boost::none);
 			break;
 		}
 		case VERTICAL_LR:
-			configureScrollBar(*this, geometry::X_COORDINATE, viewport->firstVisibleLineInVisualNumber(), boost::none, boost::none);
-			configureScrollBar(*this, geometry::Y_COORDINATE, viewport->inlineProgressionOffset(), boost::none, boost::none);
+			configureScrollBar(*this, 0, viewport->firstVisibleLineInVisualNumber(), boost::none, boost::none);
+			configureScrollBar(*this, 1, viewport->inlineProgressionOffset(), boost::none, boost::none);
 			break;
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
@@ -1595,23 +1599,23 @@ void TextViewer::viewportScrollPositionChanged(
 	hideToolTip();
 
 	// 2. calculate pixels to scroll
-	NativeSize pixelsToScroll;
-	switch(textRenderer().writingMode().blockFlowDirection) {
-		case HORIZONTAL_TB:
-			pixelsToScroll = geometry::make<NativeSize>(inlineProgressionScrollOffsetInPixels(*viewport, offsets.ipd()), offsets.bpd());
-			break;
-		case VERTICAL_RL:
-			pixelsToScroll = geometry::make<NativeSize>(-offsets.bpd(), inlineProgressionScrollOffsetInPixels(*viewport, offsets.ipd()));
-			break;
-		case VERTICAL_LR:
-			pixelsToScroll = geometry::make<NativeSize>(+offsets.bpd(), inlineProgressionScrollOffsetInPixels(*viewport, offsets.ipd()));
-			break;
-		default:
-			ASCENSION_ASSERT_NOT_REACHED();
+	const BlockFlowDirection writingMode = textRenderer().computedBlockFlowDirection();
+	geometry::BasicDimension<int16_t> scrollOffsetsInPixels;
+	geometry::dx(scrollOffsetsInPixels) = inlineProgressionScrollOffsetInUserUnits(*viewport, offsets.ipd()));
+	geometry::dy(scrollOffsetsInPixels) = static_cast<int16_t>(textRenderer().baselineDistance(
+		boost::irange(oldLine, VisualLine(viewport->firstVisibleLineInLogicalNumber(), viewport->firstVisibleSublineInLogicalLine()))));
+	geometry::dy(scrollOffsetsInPixels) -= static_cast<int16_t>(
+		*textRenderer().layouts().at(oldLine.line).lineMetrics(oldLine.subline).extent().begin());
+	geometry::dy(scrollOffsetsInPixels) += static_cast<int16_t>(
+		*textRenderer().layouts().at(viewport->firstVisibleLineInLogicalNumber()).lineMetrics(viewport->firstVisibleSublineInLogicalLine()).extent().begin());
+	if(isVertical(writingMode)) {
+		geometry::transpose(scrollOffsetsInPixels);
+		if(writingMode == VERTICAL_RL)
+			geometry::dx(scrollOffsetsInPixels) = -geometry::dx(scrollOffsetsInPixels);
 	}
 
 	// 3. scroll the graphics device
-	const NativeRectangle& boundsToScroll = viewport->boundsInView();
+	const graphics::Rectangle& boundsToScroll = viewport->boundsInView();
 	if(abs(offsets.bpd()) >= static_cast<SignedIndex>(viewport->numberOfVisibleLines())
 			|| abs(offsets.ipd()) >= static_cast<SignedIndex>(viewport->numberOfVisibleCharactersInLine()))
 		widgetapi::scheduleRedraw(*this, boundsToScroll, false);	// repaint all if the amount of the scroll is over a page
@@ -1619,24 +1623,24 @@ void TextViewer::viewportScrollPositionChanged(
 		// scroll image by BLIT
 		// TODO: direct call of Win32 API.
 		::ScrollWindowEx(handle().get(),
-			-geometry::dx(pixelsToScroll), -geometry::dy(pixelsToScroll), nullptr, &boundsToScroll, nullptr, nullptr, SW_INVALIDATE);
+			-geometry::dx(scrollOffsetsInPixels), -geometry::dy(scrollOffsetsInPixels), nullptr, &boundsToScroll, nullptr, nullptr, SW_INVALIDATE);
 		// invalidate bounds newly entered into the viewport
-		if(geometry::dx(pixelsToScroll) > 0)
-			widgetapi::scheduleRedraw(*this, geometry::make<NativeRectangle>(
+		if(geometry::dx(scrollOffsetsInPixels) > 0)
+			widgetapi::scheduleRedraw(*this, graphics::Rectangle(
 				geometry::topLeft(boundsToScroll),
-				geometry::make<NativeSize>(geometry::dx(pixelsToScroll), geometry::dy(boundsToScroll))), false);
-		else if(geometry::dx(pixelsToScroll) < 0)
-			widgetapi::scheduleRedraw(*this, geometry::make<NativeRectangle>(
+				Dimension(geometry::_dx = geometry::dx(scrollOffsetsInPixels), geometry::_dy = geometry::dy(boundsToScroll))), false);
+		else if(geometry::dx(scrollOffsetsInPixels) < 0)
+			widgetapi::scheduleRedraw(*this, graphics::Rectangle(
 				geometry::topRight(boundsToScroll),
-				geometry::make<NativeSize>(geometry::dx(pixelsToScroll), geometry::dy(boundsToScroll))), false);
-		if(geometry::dy(pixelsToScroll) > 0)
-			widgetapi::scheduleRedraw(*this, geometry::make<NativeRectangle>(
+				Dimension(geometry::_dx = geometry::dx(scrollOffsetsInPixels), geometry::_dy = geometry::dy(boundsToScroll))), false);
+		if(geometry::dy(scrollOffsetsInPixels) > 0)
+			widgetapi::scheduleRedraw(*this, graphics::Rectangle(
 				geometry::topLeft(boundsToScroll),
-				geometry::make<NativeSize>(geometry::dx(boundsToScroll), geometry::dy(pixelsToScroll))), false);
-		else if(geometry::dy(pixelsToScroll) < 0)
-			widgetapi::scheduleRedraw(*this, geometry::make<NativeRectangle>(
+				Dimension(geometry::_dx = geometry::dx(boundsToScroll), geometry::_dy = geometry::dy(scrollOffsetsInPixels))), false);
+		else if(geometry::dy(scrollOffsetsInPixels) < 0)
+			widgetapi::scheduleRedraw(*this, graphics::Rectangle(
 				geometry::bottomLeft(boundsToScroll),
-				geometry::make<NativeSize>(geometry::dx(boundsToScroll), geometry::dy(pixelsToScroll))), false);
+				Dimension(geometry::_dx = geometry::dx(boundsToScroll), geometry::_dy = geometry::dy(scrollOffsetsInPixels))), false);
 	}
 
 	// 4. scroll the ruler
@@ -1647,66 +1651,66 @@ void TextViewer::viewportScrollPositionChanged(
 }
 
 /// @see VisualLinesListener#visualLinesDeleted
-void TextViewer::visualLinesDeleted(const Range<Index>& lines, Index sublines, bool longestLineChanged) /*throw()*/ {
+void TextViewer::visualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines, bool longestLineChanged) /*throw()*/ {
 	scrolls_.changed = true;
 	const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
-	if(lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// deleted before visible area
+	if(*lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// deleted before visible area
 //		scrolls_.firstVisibleLine.line -= length(lines);
 //		scrolls_.vertical.position -= static_cast<int>(sublines);
 //		scrolls_.vertical.maximum -= static_cast<int>(sublines);
 		repaintRuler();
-	} else if(lines.beginning() > viewport->firstVisibleLineInLogicalNumber()	// deleted the first visible line and/or after it
-			|| (lines.beginning() == viewport->firstVisibleLineInLogicalNumber() && viewport->firstVisibleSublineInLogicalLine() == 0)) {
+	} else if(*lines.begin() > viewport->firstVisibleLineInLogicalNumber()	// deleted the first visible line and/or after it
+			|| (*lines.begin() == viewport->firstVisibleLineInLogicalNumber() && viewport->firstVisibleSublineInLogicalLine() == 0)) {
 //		scrolls_.vertical.maximum -= static_cast<int>(sublines);
-		redrawLine(lines.beginning(), true);
+		redrawLine(*lines.begin(), true);
 	} else {	// deleted lines contain the first visible line
 //		scrolls_.firstVisibleLine.line = lines.beginning();
 //		scrolls_.updateVertical(*this);
-		redrawLine(lines.beginning(), true);
+		redrawLine(*lines.begin(), true);
 	}
 	if(longestLineChanged)
 		scrolls_.resetBars(*this, 'i', false);
 }
 
 /// @see VisualLinesListener#visualLinesInserted
-void TextViewer::visualLinesInserted(const Range<Index>& lines) /*throw()*/ {
+void TextViewer::visualLinesInserted(const boost::integer_range<Index>& lines) /*throw()*/ {
 	scrolls_.changed = true;
 	const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
-	if(lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// inserted before visible area
+	if(*lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// inserted before visible area
 //		scrolls_.firstVisibleLine.line += length(lines);
 //		scrolls_.vertical.position += static_cast<int>(length(lines));
 //		scrolls_.vertical.maximum += static_cast<int>(length(lines));
 		repaintRuler();
-	} else if(lines.beginning() > viewport->firstVisibleLineInLogicalNumber()	// inserted at or after the first visible line
-			|| (lines.beginning() == viewport->firstVisibleLineInLogicalNumber() && viewport->firstVisibleSublineInLogicalLine() == 0)) {
+	} else if(*lines.begin() > viewport->firstVisibleLineInLogicalNumber()	// inserted at or after the first visible line
+			|| (*lines.begin() == viewport->firstVisibleLineInLogicalNumber() && viewport->firstVisibleSublineInLogicalLine() == 0)) {
 //		scrolls_.vertical.maximum += static_cast<int>(length(lines));
-		redrawLine(lines.beginning(), true);
+		redrawLine(*lines.begin(), true);
 	} else {	// inserted around the first visible line
 //		scrolls_.firstVisibleLine.line += length(lines);
 //		scrolls_.updateVertical(*this);
-		redrawLine(lines.beginning(), true);
+		redrawLine(*lines.begin(), true);
 	}
 }
 
 /// @see VisualLinesListener#visualLinesModified
-void TextViewer::visualLinesModified(const Range<Index>& lines,
+void TextViewer::visualLinesModified(const boost::integer_range<Index>& lines,
 		SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/ {
 	if(sublinesDifference == 0)	// number of visual lines was not changed
 		redrawLines(lines);
 	else {
 		const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
 		scrolls_.changed = true;
-		if(lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// changed before visible area
+		if(*lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// changed before visible area
 //			scrolls_.vertical.position += sublinesDifference;
 //			scrolls_.vertical.maximum += sublinesDifference;
 			repaintRuler();
-		} else if(lines.beginning() > viewport->firstVisibleLineInLogicalNumber()	// changed at or after the first visible line
-				|| (lines.beginning() == viewport->firstVisibleLineInLogicalNumber() && viewport->firstVisibleSublineInLogicalLine() == 0)) {
+		} else if(*lines.begin() > viewport->firstVisibleLineInLogicalNumber()	// changed at or after the first visible line
+				|| (*lines.begin() == viewport->firstVisibleLineInLogicalNumber() && viewport->firstVisibleSublineInLogicalLine() == 0)) {
 //			scrolls_.vertical.maximum += sublinesDifference;
-			redrawLine(lines.beginning(), true);
+			redrawLine(*lines.begin(), true);
 		} else {	// changed lines contain the first visible line
 //			scrolls_.updateVertical(*this);
-			redrawLine(lines.beginning(), true);
+			redrawLine(*lines.begin(), true);
 		}
 	}
 	if(longestLineChanged) {
@@ -1832,7 +1836,7 @@ void TextViewer::Renderer::rewrapAtWindowEdge() {
 	};
 
 	if(viewer_.configuration().lineWrap.wrapsAtWindowEdge()) {
-		const NativeRectangle clientBounds(viewer_.bounds(false));
+		const graphics::Rectangle clientBounds(viewer_.bounds(false));
 		const PhysicalFourSides<Scalar>& spaces(viewer_.spaceWidths());
 		if(isHorizontal(viewer_.textRenderer().writingMode().blockFlowDirection))
 			layouts().invalidateIf(Local(geometry::dx(clientBounds) - spaces.left - spaces.right));
@@ -1849,7 +1853,7 @@ Scalar TextViewer::Renderer::width() const /*throw()*/ {
 	if(!lwc.wraps())
 		return (viewer_.horizontalScrollBar().range().end() + 1) * viewer_.textRenderer().defaultFont()->metrics().averageCharacterWidth();
 	else if(lwc.wrapsAtWindowEdge()) {
-		const NativeRectangle clientBounds(viewer_.bounds(false));
+		const graphics::Rectangle clientBounds(viewer_.bounds(false));
 		const PhysicalFourSides<Scalar>& spaces(viewer_.spaceWidths());
 		return isHorizontal(viewer_.textRenderer().writingMode().blockFlowDirection) ?
 			(geometry::dx(clientBounds) - spaces.left - spaces.right) : (geometry::dy(clientBounds) - spaces.top - spaces.bottom);
@@ -1894,7 +1898,7 @@ VirtualBox::VirtualBox(const TextViewer& viewer, const k::Region& region) /*thro
  * @return @c true if the box and the visual line overlap
  * @see #includes
  */
-bool VirtualBox::characterRangeInVisualLine(const VisualLine& line, Range<Index>& range) const /*throw()*/ {
+bool VirtualBox::characterRangeInVisualLine(const VisualLine& line, boost::integer_range<Index>& range) const /*throw()*/ {
 //	assert(viewer_.isWindow());
 	const Point& top = beginning();
 	const Point& bottom = end();
@@ -1903,13 +1907,13 @@ bool VirtualBox::characterRangeInVisualLine(const VisualLine& line, Range<Index>
 	else {
 		const TextRenderer& renderer = viewer_.textRenderer();
 		const TextLayout& layout = renderer.layouts().at(line.line);
-		const Scalar bpd = layout.baseline(line.subline);
-		range = makeRange(
-			layout.offset(geometry::make<NativePoint>(
-				viewer_.mapViewportIpdToLineLayout(line.line, points_[0].ipd), bpd)).first,
-			layout.offset(geometry::make<NativePoint>(
-				viewer_.mapViewportIpdToLineLayout(line.line, points_[1].ipd), bpd)).first);
-		return !isEmpty(range);
+		const Scalar bpd = layout.lineMetrics(line.subline).baselineOffset();
+		range = boost::irange(
+			layout.hitTestCharacter(AbstractTwoAxes<Scalar>(
+				viewer_.mapViewportIpdToLineLayout(line.line, points_[0].ipd), bpd)).characterIndex(),
+			layout.hitTestCharacter(AbstractTwoAxes<Scalar>(
+				viewer_.mapViewportIpdToLineLayout(line.line, points_[1].ipd), bpd)).characterIndex());
+		return !range.empty();
 	}
 }
 
@@ -1919,20 +1923,20 @@ bool VirtualBox::characterRangeInVisualLine(const VisualLine& line, Range<Index>
  * @return @c true If the point is on the virtual box
  * @see #characterRangeInVisualLine
  */
-bool VirtualBox::includes(const NativePoint& p) const /*throw()*/ {
+bool VirtualBox::includes(const graphics::Point& p) const /*throw()*/ {
 	// TODO: This code can't handle vertical writing-mode.
 //	assert(viewer_.isWindow());
 	if(viewer_.hitTest(p) == TextViewer::TEXT_AREA_CONTENT_RECTANGLE) {	// ignore if not in text area
 		// about inline-progression-direction
-		const bool horizontal = isHorizontal(viewer_.textRenderer().writingMode().blockFlowDirection);
+		const bool horizontal = isHorizontal(viewer_.textRenderer().computedBlockFlowDirection());
 		const Scalar ipd = (horizontal ? geometry::x(p) : geometry::y(p)) - viewer_.inlineProgressionOffsetInViewport();	// $friendly-access
-		if(ascension::includes(makeRange(startEdge(), endEdge()), ipd)) {
+		if(ascension::includes(boost::irange(startEdge(), endEdge()), ipd)) {
 			// about block-progression-direction
 			const shared_ptr<const TextViewport> viewport(viewer_.textRenderer().viewport());
-			graphics::NativePoint pointInViewport(p);
-			const graphics::NativeRectangle viewportBoundsInView(viewport->boundsInView());
-			geometry::translate(pointInViewport, geometry::make<NativeSize>(
-				geometry::left(viewportBoundsInView), geometry::top(viewportBoundsInView)));
+			graphics::Point pointInViewport(p);
+			const graphics::Rectangle viewportBoundsInView(viewport->boundsInView());
+			geometry::translate(pointInViewport, Dimension(
+				geometry::_dx = geometry::left(viewportBoundsInView), geometry::_dy = geometry::top(viewportBoundsInView)));
 			const VisualLine line(locateLine(*viewport, pointInViewport));
 			return line >= beginning().line && line <= end().line;
 		}
@@ -1945,22 +1949,16 @@ bool VirtualBox::includes(const NativePoint& p) const /*throw()*/ {
  * @param region The region consists the rectangle
  */
 void VirtualBox::update(const k::Region& region) /*throw()*/ {
-	Point newPoints[2];
-	const TextRenderer& r = viewer_.textRenderer();
-	const bool horizontal = isHorizontal(viewer_.textRenderer().writingMode().blockFlowDirection);
+	array<Point, 2> newPoints;
 
 	// first
-	const TextLayout* layout = &r.layouts().at(newPoints[0].line.line = region.first.line);
-	graphics::NativePoint location(layout->location(region.first.offsetInLine));
-	newPoints[0].ipd = viewer_.mapLineLayoutIpdToViewport(
-		newPoints[0].line.line, horizontal ? static_cast<Scalar>(geometry::x(location)) : geometry::y(location));
+	const TextLayout* layout = &viewer_.textRenderer().layouts().at(newPoints[0].line.line = region.first.line);
+	newPoints[0].ipd = viewer_.mapLineLayoutIpdToViewport(newPoints[0].line.line, layout->hitToPoint(TextHit<>::leading(region.first.offsetInLine)).ipd());
 	newPoints[0].line.subline = layout->lineAt(region.first.offsetInLine);
 
 	// second
-	layout = &r.layouts().at(newPoints[1].line.line = region.second.line);
-	location = layout->location(region.second.offsetInLine);
-	newPoints[1].ipd = viewer_.mapLineLayoutIpdToViewport(
-		newPoints[1].line.line, horizontal ? static_cast<Scalar>(geometry::x(location)) : geometry::y(location));
+	layout = &viewer_.textRenderer().layouts().at(newPoints[1].line.line = region.second.line);
+	newPoints[1].ipd = viewer_.mapLineLayoutIpdToViewport(newPoints[1].line.line, layout->hitToPoint(TextHit<>::leading(region.second.offsetInLine)).ipd());
 	newPoints[1].line.subline = layout->lineAt(region.second.offsetInLine);
 
 	// commit
@@ -1987,7 +1985,7 @@ void VirtualBox::update(const k::Region& region) /*throw()*/ {
  */
 
 /// The priority value this class returns.
-const TextLineColorDirector::Priority CurrentLineHighlighter::LINE_COLOR_PRIORITY = 0x40;
+const TextLineColorSpecifier::Priority CurrentLineHighlighter::LINE_COLOR_PRIORITY = 0x40;
 
 /**
  * Constructor.
@@ -1998,8 +1996,8 @@ const TextLineColorDirector::Priority CurrentLineHighlighter::LINE_COLOR_PRIORIT
 CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret,
 		const boost::optional<Color>& foreground, const boost::optional<Color>& background)
 		: caret_(&caret), foreground_(foreground), background_(background) {
-	shared_ptr<TextLineColorDirector> temp(this);
-	caret.textViewer().presentation().addTextLineColorDirector(temp);
+	shared_ptr<TextLineColorSpecifier> temp(this);
+	caret.textViewer().presentation().addTextLineColorSpecifier(temp);
 	caret.addListener(*this);
 	caret.addStateListener(*this);
 	caret.addLifeCycleListener(*this);
@@ -2010,7 +2008,7 @@ CurrentLineHighlighter::~CurrentLineHighlighter() /*noexcept*/ {
 	if(caret_ != nullptr) {
 		caret_->removeListener(*this);
 		caret_->removeStateListener(*this);
-		caret_->textViewer().presentation().removeTextLineColorDirector(*this);
+		caret_->textViewer().presentation().removeTextLineColorSpecifier(*this);
 	}
 }
 
@@ -2051,8 +2049,8 @@ void CurrentLineHighlighter::pointDestroyed() {
 	caret_ = nullptr;
 }
 
-/// @see LineColorDirector#queryLineColors
-TextLineColorDirector::Priority CurrentLineHighlighter::queryLineColors(Index line,
+/// @see TextLineColorSpecifier#specifyTextLineColors
+TextLineColorSpecifier::Priority CurrentLineHighlighter::specifyTextLineColors(Index line,
 		boost::optional<Color>& foreground, boost::optional<Color>& background) const {
 	if(caret_ != nullptr && isSelectionEmpty(*caret_) && k::line(*caret_) == line && widgetapi::hasFocus(caret_->textViewer())) {
 		foreground = foreground_;
@@ -2064,7 +2062,7 @@ TextLineColorDirector::Priority CurrentLineHighlighter::queryLineColors(Index li
 	}
 }
 
-/// @see ICaretStateListener#selectionShapeChanged
+/// @see CaretStateListener#selectionShapeChanged
 void CurrentLineHighlighter::selectionShapeChanged(const Caret&) {
 }
 
@@ -2099,7 +2097,7 @@ const hyperlink::Hyperlink* utils::getPointedHyperlink(const TextViewer& viewer,
 	size_t numberOfHyperlinks;
 	if(const hyperlink::Hyperlink* const* hyperlinks = viewer.presentation().getHyperlinks(at.line, numberOfHyperlinks)) {
 		for(size_t i = 0; i < numberOfHyperlinks; ++i) {
-			if(at.offsetInLine >= hyperlinks[i]->region().beginning() && at.offsetInLine <= hyperlinks[i]->region().end())
+			if(at.offsetInLine >= *hyperlinks[i]->region().begin() && at.offsetInLine <= *hyperlinks[i]->region().end())
 				return hyperlinks[i];
 		}
 	}
@@ -2111,10 +2109,7 @@ const hyperlink::Hyperlink* utils::getPointedHyperlink(const TextViewer& viewer,
  * @param viewer The text viewer
  */
 void utils::toggleOrientation(TextViewer& viewer) /*throw()*/ {
-	WritingMode writingMode(viewer.textRenderer().defaultUIWritingMode());
-	writingMode.inlineFlowDirection =
-		(writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
-	viewer.textRenderer().setDefaultUIWritingMode(writingMode);
+	viewer.textRenderer().setDirection(!viewer.presentation().computeWritingMode(&viewer.textRenderer()).inlineFlowDirection);
 //	viewer.synchronizeWritingModeUI();
 //	if(config.lineWrap.wrapsAtWindowEdge()) {
 //		win32::AutoZeroSize<SCROLLINFO> scroll;
@@ -2196,7 +2191,7 @@ bool source::getNearestIdentifier(const k::Document& document,
 boost::optional<k::Region> source::getNearestIdentifier(const k::Document& document, const k::Position& position) {
 	pair<Index, Index> offsetsInLine;
 	if(getNearestIdentifier(document, position, &offsetsInLine.first, &offsetsInLine.second))
-		return boost::make_optional(k::Region(position.line, offsetsInLine));
+		return boost::make_optional(k::Region(position.line, boost::irange(offsetsInLine.first, offsetsInLine.second)));
 	else
 		return boost::none;
 }
@@ -2211,7 +2206,7 @@ boost::optional<k::Region> source::getPointedIdentifier(const TextViewer& viewer
 //	if(viewer.isWindow()) {
 		return source::getNearestIdentifier(
 			viewer.document(), viewToModel(*viewer.textRenderer().viewport(),
-			widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position()), TextLayout::LEADING));
+			widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position())).characterIndex());
 //	}
 	return boost::none;
 }
