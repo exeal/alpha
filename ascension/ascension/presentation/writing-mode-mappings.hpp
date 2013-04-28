@@ -39,7 +39,8 @@ namespace ascension {
 			&& static_cast<int>(graphics::PhysicalDirection::LEFT) == 3,
 			"");
 
-		/// @name Free Functions Map Between Abstract and Physical Directions
+		/// @defgroup abstract_physical_directions Abstract and Physical Directions Mappings
+		/// @brief Free functions to map between abstract and physical directions.
 		/// @{
 		/**
 		 * Maps flow-relative direction into corresponding physical one.
@@ -145,7 +146,8 @@ namespace ascension {
 		}
 		/// @}
 
-		/// @name Free Functions Map Between Abstract and Physical Axes
+		/// @defgroup abstract_physical_axes Abstract and Physical Axes Mappings
+		/// @brief Free functions map between abstract and physical axes.
 		/// @{
 		/**
 		 * Maps abstract axes into corresponding physical one.
@@ -208,7 +210,8 @@ namespace ascension {
 		}
 		/// @}
 
-		/// @name Free Functions Map Between Abstract and Physical Bounds
+		/// @defgroup abstract_physical_bounds Abstract and Physical Bounds Mappings
+		/// @brief Free functions map between abstract and physical bounds.
 		/// @{ 
 		/**
 		 * Maps flow-relative bounds into corresponding physical one.
