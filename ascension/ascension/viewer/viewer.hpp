@@ -44,6 +44,7 @@
 
 namespace ascension {
 	namespace viewers {
+		class VirtualBox;
 		class VisualPoint;
 		class TextViewer;
 	}
@@ -62,44 +63,7 @@ namespace ascension {
 		class ContentAssistant;
 	}
 
-	namespace viewers {
-		/**
-		 * A virtual rectangle placed in the viewer.
-		 * @note This feature is not fully available on bidirectional texts.
-		 * @see Caret#boxForRectangleSelection
-		 */
-		class VirtualBox {
-			ASCENSION_UNASSIGNABLE_TAG(VirtualBox);
-		public:
-			VirtualBox(const TextViewer& viewer, const kernel::Region& region) BOOST_NOEXCEPT;
-			bool characterRangeInVisualLine(
-				const graphics::font::VisualLine& line, boost::integer_range<Index>& range) const BOOST_NOEXCEPT;
-			bool includes(const graphics::Point& p) const BOOST_NOEXCEPT;
-			void update(const kernel::Region& region) BOOST_NOEXCEPT;
-		private:
-			struct Point {
-				graphics::font::VisualLine line;
-				graphics::Scalar ipd;	// distance from left/top-edge of content-area
-			};
-			std::array<Point, 2> points_;
-			const TextViewer& viewer_;
-			const Point& beginning() const BOOST_NOEXCEPT {
-				return points_[(points_[0].line <= points_[1].line) ? 0 : 1];
-			}
-			const Point& end() const BOOST_NOEXCEPT {
-				return points_[(&beginning() == &points_[0]) ? 1 : 0];
-			}
-			graphics::Scalar startEdge() const BOOST_NOEXCEPT {
-				return std::min(points_[0].ipd, points_[1].ipd);
-			}
-			graphics::Scalar endEdge() const BOOST_NOEXCEPT {
-				return std::max(points_[0].ipd, points_[1].ipd);
-			}
-		};
-
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-	}
-
 	namespace detail {
 		class AbstractAccessibleProxy : public IAccessible {
 		public:
@@ -107,9 +71,9 @@ namespace ascension {
 			virtual void dispose() = 0;
 		};
 	}
+#endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
 	namespace viewers {
-#endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		class TextViewer :
 				// note:
 				// Gtk.TextView inherits Gtk.Container (which inherits Gtk.Widget) and Gtk.Scrollable.
