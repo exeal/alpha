@@ -338,6 +338,9 @@
     <ClCompile Include="..\..\ascension\src\viewer\default-caret-shaper.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\virtual-box.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alpha.hpp">
@@ -741,6 +744,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\font\computed-text-styles.hpp">
       <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\virtual-box.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
