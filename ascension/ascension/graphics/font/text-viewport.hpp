@@ -116,9 +116,14 @@ namespace ascension {
 				 */
 				virtual void viewportBoundsInViewChanged(const Rectangle& oldBounds) BOOST_NOEXCEPT = 0;
 				/**
-				 * @param offsets
-				 * @param oldLine
-				 * @param oldInlineProgressionOffset
+				 * The scroll positions of the text viewport were changed.
+				 * @param offsets The scrolled offsets in abstract coordinates
+				 * @param oldLine Visual line numbers returned by
+				 *                @c TextViewport#firstVisibleLineInLogicalNumber() and
+				 *                @c TextViewport#firstVisibleSublineInLogicalLine()
+				 * @param oldInlineProgressionOffset A value returned by
+				 *                                   @c TextViewport#inlineProgressionOffset()
+				 *                                   before the scroll
 				 * @see TextViewport#firstVisibleLineInLogicalNumber,
 				 *      TextViewport#firstVisibleLineInVisualNumber,
 				 *      TextViewport#firstVisibleSublineInLogicalLine,
