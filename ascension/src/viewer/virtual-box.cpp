@@ -24,81 +24,130 @@ namespace k = ascension::kernel;
  * @param viewer The viewer
  * @param region The region consists the rectangle
  */
-VirtualBox::VirtualBox(const TextViewer& viewer, const k::Region& region) /*throw()*/ : viewer_(viewer) {
+VirtualBox::VirtualBox(const TextViewer& viewer, const k::Region& region) BOOST_NOEXCEPT : viewer_(viewer), lines_(VisualLine(), VisualLine()), ipds_(0, 0) {
 	update(region);
 }
+
+namespace {
+	template<typename T>
+	inline T mapTextRendererInlineProgressionDimensionToLineLayout(const presentation::WritingMode& writingMode, T ipd) {
+		bool negative = writingMode.inlineFlowDirection == presentation::RIGHT_TO_LEFT;
+		if(isVertical(writingMode.blockFlowDirection) && presentation::resolveTextOrientation(writingMode) == presentation::SIDEWAYS_LEFT)
+			negative = !negative;
+		return !negative ? ipd : -ipd;
+	}
+}
+
 
 /**
  * Returns the character range in specified visual line overlaps with the box.
  * @param line The line
- * @param[out] range The character range in @a line.line
+ * @param[out] range The character range in @a line.line, or @c boost#none if @a line is out side
+ *             of the box. The range can be empty
  * @return @c true if the box and the visual line overlap
  * @see #includes
  */
-bool VirtualBox::characterRangeInVisualLine(const VisualLine& line, boost::integer_range<Index>& range) const /*throw()*/ {
-//	assert(viewer_.isWindow());
-	const Point& top = beginning();
-	const Point& bottom = end();
-	if(line < top.line || line > bottom.line)	// out of the region
-		return false;
-	else {
-		const TextRenderer& renderer = viewer_.textRenderer();
-		const TextLayout& layout = renderer.layouts().at(line.line);
-		const Scalar bpd = layout.lineMetrics(line.subline).baselineOffset();
-		range = boost::irange(
-			layout.hitTestCharacter(AbstractTwoAxes<Scalar>(
-				viewer_.mapViewportIpdToLineLayout(line.line, points_[0].ipd), bpd)).characterIndex(),
-			layout.hitTestCharacter(AbstractTwoAxes<Scalar>(
-				viewer_.mapViewportIpdToLineLayout(line.line, points_[1].ipd), bpd)).characterIndex());
-		return !range.empty();
-	}
+boost::optional<boost::integer_range<Index>> VirtualBox::characterRangeInVisualLine(const VisualLine& line) const BOOST_NOEXCEPT {
+	if(line < *lines_.begin() || line > *lines_.end())
+		return boost::none;	// out of the region
+
+	const TextLayout& layout = viewer_.textRenderer().layouts().at(line.line);
+	const Scalar baseline = layout.lineMetrics(line.subline).baselineOffset();
+	Scalar first = *ipds_.begin(), second = *ipds_.end();
+	const Scalar lineStartOffset = viewer_.textRenderer().lineStartEdge(VisualLine(line.line, 0));
+	first -= lineStartOffset;
+	first = mapTextRendererInlineProgressionDimensionToLineLayout(layout.writingMode(), first);
+	second -= lineStartOffset;
+	second = mapTextRendererInlineProgressionDimensionToLineLayout(layout.writingMode(), second);
+
+	const boost::integer_range<Index> result(ordered(boost::irange(
+		layout.hitTestCharacter(presentation::AbstractTwoAxes<Scalar>(
+			presentation::_ipd = min(first, second), presentation::_bpd = baseline)).insertionIndex(),		
+		layout.hitTestCharacter(presentation::AbstractTwoAxes<Scalar>(
+			presentation::_ipd = max(first, second), presentation::_bpd = baseline)).insertionIndex())));
+	assert(layout.lineAt(*result.begin()) == line.subline);
+	assert(result.empty() || layout.lineAt(*result.end()) == line.subline);
+	return result;
 }
 
 /**
  * Returns if the specified point is on the virtual box.
- * @param p The point in local coordinates
+ * @param p The point in viewer-local coordinates (not viewport nor @c TextRenderer coordinates)
  * @return @c true If the point is on the virtual box
  * @see #characterRangeInVisualLine
  */
-bool VirtualBox::includes(const graphics::Point& p) const /*throw()*/ {
+bool VirtualBox::includes(const graphics::Point& p) const BOOST_NOEXCEPT {
 	// TODO: This code can't handle vertical writing-mode.
 //	assert(viewer_.isWindow());
-	if(viewer_.hitTest(p) == TextViewer::TEXT_AREA_CONTENT_RECTANGLE) {	// ignore if not in text area
-		// about inline-progression-direction
-		const bool horizontal = isHorizontal(viewer_.textRenderer().computedBlockFlowDirection());
-		const Scalar ipd = (horizontal ? geometry::x(p) : geometry::y(p)) - viewer_.inlineProgressionOffsetInViewport();	// $friendly-access
-		if(ascension::includes(boost::irange(startEdge(), endEdge()), ipd)) {
-			// about block-progression-direction
-			const shared_ptr<const TextViewport> viewport(viewer_.textRenderer().viewport());
-			graphics::Point pointInViewport(p);
-			const graphics::Rectangle viewportBoundsInView(viewport->boundsInView());
-			geometry::translate(pointInViewport, Dimension(
-				geometry::_dx = geometry::left(viewportBoundsInView), geometry::_dy = geometry::top(viewportBoundsInView)));
-			const VisualLine line(locateLine(*viewport, pointInViewport));
-			return line >= beginning().line && line <= end().line;
-		}
+	if(viewer_.hitTest(p) != TextViewer::TEXT_AREA_CONTENT_RECTANGLE)
+		return false;	// ignore if not in text area
+
+	const shared_ptr<const TextViewport> viewport(viewer_.textRenderer().viewport());
+
+	// compute inline-progression-dimension in the TextRenderer for 'p'
+	Scalar ipd = font::inlineProgressionScrollOffsetInUserUnits(*viewport);
+	switch(viewer_.textRenderer().lineRelativeAlignment()) {
+		case TextRenderer::LEFT:
+			ipd = geometry::x(p) - geometry::left(viewport->boundsInView());
+			break;
+		case TextRenderer::RIGHT:
+			ipd = geometry::x(p) - geometry::right(viewport->boundsInView());
+			break;
+		case TextRenderer::HORIZONTAL_CENTER:
+			ipd = geometry::x(p) - (geometry::left(viewport->boundsInView())) + geometry::right(viewport->boundsInView()) / 2;
+			break;
+		case TextRenderer::TOP:
+			ipd = geometry::y(p) - geometry::top(viewport->boundsInView());
+			break;
+		case TextRenderer::BOTTOM:
+			ipd = geometry::y(p) - geometry::bottom(viewport->boundsInView());
+			break;
+		case TextRenderer::VERTICAL_CENTER:
+			ipd = geometry::y(p) - (geometry::top(viewport->boundsInView())) + geometry::bottom(viewport->boundsInView()) / 2;
+			break;
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
 	}
-	return false;
+	if(!ascension::includes(ipds_, ipd))
+		return false;
+
+	graphics::Point pointInViewport(p);
+	geometry::translate(pointInViewport, Dimension(
+		geometry::_dx = geometry::left(viewport->boundsInView()), geometry::_dy = geometry::top(viewport->boundsInView())));
+	const VisualLine line(locateLine(*viewport, pointInViewport));
+	return line >= *lines_.begin() && line <= *lines_.end();	// 'lines_' is inclusive
+}
+
+namespace {
+	template<typename T>
+	inline T mapLineLayoutInlineProgressionDimensionToTextRenderer(const presentation::WritingMode& writingMode, T ipd) {
+		return mapTextRendererInlineProgressionDimensionToLineLayout(writingMode, ipd);
+	}
 }
 
 /**
  * Updates the rectangle of the virtual box.
  * @param region The region consists the rectangle
  */
-void VirtualBox::update(const k::Region& region) /*throw()*/ {
-	array<Point, 2> newPoints;
+void VirtualBox::update(const k::Region& region) BOOST_NOEXCEPT {
+	pair<VisualLine, VisualLine> lines;	// components correspond to 'region'
+	pair<Scalar, Scalar> ipds;
 
 	// first
-	const TextLayout* layout = &viewer_.textRenderer().layouts().at(newPoints[0].line.line = region.first.line);
-	newPoints[0].ipd = viewer_.mapLineLayoutIpdToViewport(newPoints[0].line.line, layout->hitToPoint(TextHit<>::leading(region.first.offsetInLine)).ipd());
-	newPoints[0].line.subline = layout->lineAt(region.first.offsetInLine);
+	const TextLayout* layout = &viewer_.textRenderer().layouts().at(lines.first.line = region.first.line);
+	ipds.first = layout->hitToPoint(TextHit<>::leading(region.first.offsetInLine)).ipd();
+	ipds.first = mapLineLayoutInlineProgressionDimensionToTextRenderer(layout->writingMode(), ipds.first);
+	ipds.first += viewer_.textRenderer().lineStartEdge(VisualLine(lines.first.line, 0));
+	lines.first.subline = layout->lineAt(region.first.offsetInLine);
 
 	// second
-	layout = &viewer_.textRenderer().layouts().at(newPoints[1].line.line = region.second.line);
-	newPoints[1].ipd = viewer_.mapLineLayoutIpdToViewport(newPoints[1].line.line, layout->hitToPoint(TextHit<>::leading(region.second.offsetInLine)).ipd());
-	newPoints[1].line.subline = layout->lineAt(region.second.offsetInLine);
+	layout = &viewer_.textRenderer().layouts().at(lines.second.line = region.second.line);
+	ipds.second = layout->hitToPoint(TextHit<>::leading(region.second.offsetInLine)).ipd();
+	ipds.second = mapLineLayoutInlineProgressionDimensionToTextRenderer(layout->writingMode(), ipds.second);
+	ipds.second += viewer_.textRenderer().lineStartEdge(VisualLine(lines.second.line, 0));
+	lines.second.subline = layout->lineAt(region.second.offsetInLine);
 
 	// commit
-	points_[0] = newPoints[0];
-	points_[1] = newPoints[1];
+	lines_ = ordered(boost::irange(lines.first, lines.second));
+	ipds_ = ordered(boost::irange(ipds.first, ipds.second));
 }

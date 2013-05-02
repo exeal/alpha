@@ -50,7 +50,7 @@ namespace ascension {
 				/// @name Extents
 				/// @{
 				float numberOfVisibleCharactersInLine() const /*throw()*/;
-				float numberOfVisibleLines() const /*throw()*/;
+				float numberOfVisibleLines() const BOOST_NOEXCEPT;
 				/// @}
 
 				/// @name Content- or Allocation-rectangles
