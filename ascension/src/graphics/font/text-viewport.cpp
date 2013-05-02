@@ -398,7 +398,7 @@ float TextViewport::numberOfVisibleCharactersInLine() const /*throw()*/ {
  * Returns the number of the drawable visual lines in the viewport.
  * @return The number of visual lines
  */
-float TextViewport::numberOfVisibleLines() const /*throw()*/ {
+float TextViewport::numberOfVisibleLines() const BOOST_NOEXCEPT {
 	const bool horizontal = isHorizontal(textRenderer().computedBlockFlowDirection());
 	Scalar bpd(horizontal ? geometry::dy(boundsInView()) : geometry::dx(boundsInView()));
 	if(bpd <= 0)
