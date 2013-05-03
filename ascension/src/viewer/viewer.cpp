@@ -34,18 +34,6 @@ bool DIAGNOSE_INHERENT_DRAWING = false;	// 余計な描画を行っていない�
 #endif // _DEBUG
 
 namespace {
-	inline Scalar mapLocalBpdToTextArea(const TextViewer& viewer, Scalar bpd) {
-		const graphics::Rectangle textArea(viewer.textAreaAllocationRectangle());
-		FlowRelativeFourSides<Scalar> abstractBounds;
-		mapPhysicalToFlowRelative(viewer.presentation().computeWritingMode(&viewer.textRenderer()), textArea, textArea, abstractBounds);
-		return bpd -= abstractBounds.before();
-	}
-	inline Scalar mapTextAreaBpdToLocal(const TextViewer& viewer, Scalar bpd) {
-		const graphics::Rectangle textArea(viewer.textAreaAllocationRectangle());
-		FlowRelativeFourSides<Scalar> abstractBounds;
-		mapPhysicalToFlowRelative(viewer.presentation().computeWritingMode(&viewer.textRenderer()), textArea, textArea, abstractBounds);
-		return bpd += abstractBounds.before();
-	}
 	/// @internal Maps the given point in viewer-local coordinates into a point in text-area coordinates.
 	inline Point mapLocalToTextArea(const TextViewer& viewer, const Point& p) {
 		const graphics::Rectangle textArea(viewer.textAreaAllocationRectangle());
@@ -463,7 +451,7 @@ namespace {
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		win32::AutoZeroSize<SCROLLINFO> si;
-		if(range != boost::none) {
+		if(range/* != boost::none*/) {
 			si.fMask |= SIF_RANGE;
 			si.nMin = *range->begin();
 			si.nMax = *range->end();
@@ -1182,20 +1170,24 @@ void TextViewer::redrawLine(Index line, bool following) {
  * @param lines The lines to be redrawn. The last line (@a lines.end()) is exclusive and this line
  *              will not be redrawn. If this value is @c std#numeric_limits<Index>#max(), this
  *              method redraws the first line (@a lines.beginning()) and the following all lines
- * @throw kernel#BadRegionException @a lines intersects outside of the document
+ * @throw IndexOutOfBoundsException @a lines intersects outside of the document
  */
 void TextViewer::redrawLines(const boost::integer_range<Index>& lines) {
 //	checkInitialization();
 
-	if(*lines.end() != numeric_limits<Index>::max() && *lines.end() >= document().numberOfLines())
-		throw k::BadRegionException(k::Region(k::Position(*lines.begin(), 0), k::Position(*lines.end(), 0)));
+	if(lines.empty())
+		return;
+
+	const boost::integer_range<Index> orderedLines(ordered(lines));
+	if(*orderedLines.end() != numeric_limits<Index>::max() && *orderedLines.end() >= document().numberOfLines())
+		throw IndexOutOfBoundsException("lines");
 
 	if(isFrozen()) {
-		freezeRegister_.addLinesToRedraw(lines);
+		freezeRegister_.addLinesToRedraw(orderedLines);
 		return;
 	}
 
-	if(*lines.end() - 1 < textRenderer().viewport()->firstVisibleLineInLogicalNumber())
+	if(orderedLines.back() < textRenderer().viewport()->firstVisibleLineInLogicalNumber())
 		return;
 
 #ifdef _DEBUG
@@ -1207,21 +1199,52 @@ void TextViewer::redrawLines(const boost::integer_range<Index>& lines) {
 #endif // _DEBUG
 
 	const WritingMode writingMode(presentation().computeWritingMode(&textRenderer()));
-	const graphics::Rectangle viewport(widgetapi::bounds(*this, false));
-	FlowRelativeFourSides<Scalar> abstractBounds;
-	mapPhysicalToFlowRelative(writingMode, viewport, viewport, abstractBounds);
-
-	// calculate before and after edges of a rectangle to redraw
+	array<Scalar, 2> beforeAndAfter;	// in viewport (distances from before-edge of the viewport)
 	BaselineIterator baseline(*textRenderer().viewport(), lines.front(), false);
-	if(*baseline != numeric_limits<Scalar>::min())
-		abstractBounds.before() = mapTextAreaBpdToLocal(*this, *baseline)
-			- textRenderer().layouts().at(lines.front()).lineMetrics(0).ascent();
+	get<0>(beforeAndAfter) = *baseline;
+	if(get<0>(beforeAndAfter) != numeric_limits<Scalar>::min() && get<0>(beforeAndAfter) != numeric_limits<Scalar>::max())
+		get<0>(beforeAndAfter) -= *textRenderer().layouts().at(baseline.line()).lineMetrics(0).extent().begin();
 	baseline += lines.size();
-	if(*baseline != numeric_limits<Scalar>::max())
-		abstractBounds.after() = mapTextAreaBpdToLocal(*this, *baseline)
-			+ *textRenderer().layouts().at(baseline.line()).extent().end();
-	graphics::Rectangle boundsToRedraw(viewport);
-	mapFlowRelativeToPhysical(writingMode, viewport, abstractBounds, boundsToRedraw);
+	get<1>(beforeAndAfter) = *baseline;
+	if(get<1>(beforeAndAfter) != numeric_limits<Scalar>::min() && get<1>(beforeAndAfter) != numeric_limits<Scalar>::max())
+		get<1>(beforeAndAfter) += *textRenderer().layouts().at(baseline.line()).lineMetrics(0).extent().end();
+	assert(get<0>(beforeAndAfter) <= get<1>(beforeAndAfter));
+
+	const graphics::Rectangle viewerBounds(widgetapi::bounds(*this, false));
+	graphics::Rectangle boundsToRedraw(textRenderer().viewport()->boundsInView());
+	geometry::translate(boundsToRedraw, Dimension(geometry::_dx = geometry::left(viewerBounds), geometry::_dy = geometry::top(viewerBounds)));
+	assert(boost::geometry::equals(boundsToRedraw, textAreaAllocationRectangle()));
+
+	BOOST_FOREACH(Scalar& edge, beforeAndAfter) {
+		switch(textRenderer().computedBlockFlowDirection()) {
+			case HORIZONTAL_TB:
+				if(edge == numeric_limits<Scalar>::min())
+					edge = geometry::top(boundsToRedraw);
+				else if(edge == numeric_limits<Scalar>::max())
+					edge = geometry::bottom(boundsToRedraw);
+				else
+					edge = geometry::top(boundsToRedraw) + edge;
+				break;
+			case VERTICAL_RL:
+				if(edge == numeric_limits<Scalar>::min())
+					edge = geometry::right(boundsToRedraw);
+				else if(edge == numeric_limits<Scalar>::max())
+					edge = geometry::left(boundsToRedraw);
+				else
+					edge = geometry::right(boundsToRedraw) - edge;
+				break;
+			case VERTICAL_LR:
+				if(edge == numeric_limits<Scalar>::min())
+					edge = geometry::left(boundsToRedraw);
+				else if(edge == numeric_limits<Scalar>::max())
+					edge = geometry::right(boundsToRedraw);
+				else
+					edge = geometry::left(boundsToRedraw) + edge;
+				break;
+			default:
+				ASCENSION_ASSERT_NOT_REACHED();
+		}
+	}
 
 	widgetapi::scheduleRedraw(*this, boundsToRedraw, false);
 }
@@ -1271,9 +1294,6 @@ void TextViewer::resized(const Dimension&) {
 	ti.rect = viewerBounds;
 	::SendMessageW(toolTip_.get(), TTM_NEWTOOLRECT, 0, reinterpret_cast<LPARAM>(&ti));
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
-	textRenderer().setTextWrapping(textRenderer().textWrapping(), widgetapi::createRenderingContext(*this).get());
-	scrolls_.resetBars(*this, 'a', true);
-	updateScrollBars();
 	rulerPainter_->update();
 	if(rulerPainter_->alignment() != PhysicalDirection::LEFT && rulerPainter_->alignment() != PhysicalDirection::TOP) {
 //		recreateCaret();
@@ -1526,7 +1546,9 @@ void TextViewer::updateScrollBars() {
 
 /// @see TextViewport#viewportBoundsInViewChanged
 void TextViewer::viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) /*throw()*/ {
-	// does nothing
+//	textRenderer().setTextWrapping(textRenderer().textWrapping(), widgetapi::createRenderingContext(*this).get());
+	scrolls_.resetBars(*this, 'a', true);
+	updateScrollBars();
 }
 
 namespace {
