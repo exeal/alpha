@@ -434,10 +434,10 @@ namespace ascension {
 			template<typename Geometry>
 			inline Geometry& normalize(Geometry& rectangle, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
 				typedef typename boost::geometry::coordinate_type<Geometry>::type Coordinate;
-				Coordinate minimumX(boost::get<boost::geometry::min_corner, 0>(rectangle));
-				Coordinate minimumY(boost::get<boost::geometry::min_corner, 1>(rectangle));
-				Coordinate maximumX(boost::get<boost::geometry::max_corner, 0>(rectangle));
-				Coordinate maximumY(boost::get<boost::geometry::max_corner, 1>(rectangle));
+				Coordinate minimumX(boost::geometry::get<boost::geometry::min_corner, 0>(rectangle));
+				Coordinate minimumY(boost::geometry::get<boost::geometry::min_corner, 1>(rectangle));
+				Coordinate maximumX(boost::geometry::get<boost::geometry::max_corner, 0>(rectangle));
+				Coordinate maximumY(boost::geometry::get<boost::geometry::max_corner, 1>(rectangle));
 				if(minimumX > maximumX)
 					std::swap(minimumX, maximumX);
 				if(minimumY > maximumY)
@@ -635,7 +635,7 @@ namespace ascension {
 			 */
 			template<typename Geometry>
 			inline Geometry& transpose(Geometry& point, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
-				boost::geometry::assign_values(point, y(point), x(point));
+				boost::geometry::assign_values<Geometry, typename boost::geometry::coordinate_type<Geometry>::type>(point, y(point), x(point));
 				return point;
 			}
 
