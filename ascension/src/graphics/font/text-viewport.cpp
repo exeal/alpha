@@ -158,13 +158,13 @@ void BaselineIterator::initializeWithFirstVisibleLine() {
 	const Rectangle bounds(boost::geometry::make_zero<Point>(), geometry::size(viewport().boundsInView()));
 	switch(viewport().textRenderer().computedBlockFlowDirection()) {
 		case HORIZONTAL_TB:
-			axis = Point(geometry::_x = 0, geometry::_y = geometry::top(bounds) + baseline);
+			axis = Point(geometry::_x = static_cast<Scalar>(0), geometry::_y = geometry::top(bounds) + baseline);
 			break;
 		case VERTICAL_RL:
-			axis = Point(geometry::_x = geometry::right(bounds) - baseline, geometry::_y = 0);
+			axis = Point(geometry::_x = geometry::right(bounds) - baseline, geometry::_y = static_cast<Scalar>(0));
 			break;
 		case VERTICAL_LR:
-			axis = Point(geometry::_x = geometry::left(bounds) + baseline, geometry::_y = 0);
+			axis = Point(geometry::_x = geometry::left(bounds) + baseline, geometry::_y = static_cast<Scalar>(0));
 			break;
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
@@ -385,13 +385,13 @@ Scalar TextViewport::contentMeasure() const BOOST_NOEXCEPT {
  * Returns the number of the drawable columns in the window.
  * @return The number of columns
  */
-float TextViewport::numberOfVisibleCharactersInLine() const /*throw()*/ {
+float TextViewport::numberOfVisibleCharactersInLine() const BOOST_NOEXCEPT {
 	const bool horizontal = isHorizontal(textRenderer().computedBlockFlowDirection());
 	Scalar ipd(horizontal ? geometry::dx(boundsInView()) : geometry::dy(boundsInView()));
 	if(ipd == 0)
 		return 0;
 //	ipd -= horizontal ? (spaceWidths().left() + spaceWidths().right()) : (spaceWidths().top() + spaceWidths().bottom());
-	return static_cast<float>(ipd) / textRenderer().defaultFont()->metrics().averageCharacterWidth();
+	return ipd / averageCharacterWidth();
 }
 
 /**
@@ -449,9 +449,8 @@ void TextViewport::scroll(const AbstractTwoAxes<TextViewport::SignedScrollOffset
 		}
 	}
 	if(offsets.ipd() != 0) {
-		const ScrollOffset maximumIpd = contentMeasure()
-			/ textRenderer().defaultFont()->metrics().averageCharacterWidth()
-			- static_cast<ScrollOffset>(numberOfVisibleCharactersInLine());
+		const ScrollOffset maximumIpd =
+			static_cast<ScrollOffset>(contentMeasure() / averageCharacterWidth()) - static_cast<ScrollOffset>(numberOfVisibleCharactersInLine());
 		delta.ipd() = max(min(offsets.ipd(),
 			static_cast<SignedScrollOffset>(maximumIpd - inlineProgressionOffset()) + 1),
 			-static_cast<SignedScrollOffset>(inlineProgressionOffset()));
@@ -500,8 +499,7 @@ void TextViewport::scrollTo(const AbstractTwoAxes<boost::optional<TextViewport::
 		delta.bpd() = 0;
 	if(positions.ipd() != boost::none) {
 		const ScrollOffset maximumIpd =
-			static_cast<ScrollOffset>(contentMeasure()
-				/ textRenderer().defaultFont()->metrics().averageCharacterWidth())
+			static_cast<ScrollOffset>(contentMeasure() / averageCharacterWidth())
 				- static_cast<ScrollOffset>(numberOfVisibleCharactersInLine()) + 1;
 		delta.ipd() = max<ScrollOffset>(min(*positions.ipd(), maximumIpd), 0) - inlineProgressionOffset();
 	} else
@@ -657,7 +655,7 @@ convertPhysicalScrollPositionsToAbstract(const TextViewport& viewport,
  */
 Scalar font::inlineProgressionScrollOffsetInUserUnits(const TextViewport& viewport, const boost::optional<TextViewport::ScrollOffset>& scrollOffset /* = boost::none */) {
 	const TextViewport::ScrollOffset offset = scrollOffset ? *scrollOffset : viewport.inlineProgressionOffset();
-	return viewport.textRenderer().defaultFont()->metrics().averageCharacterWidth() * offset;
+	return viewport.averageCharacterWidth() * offset;
 }
 
 /**
@@ -711,9 +709,9 @@ Scalar font::lineStartEdge(const TextLayout& layout, Scalar contentMeasure, Inde
  */
 Point font::lineStartEdge(const TextViewport& viewport, const VisualLine& line) {
 	const TextRenderer& renderer = viewport.textRenderer();
-	const AbstractTwoAxes<Scalar> lineStart(_ipd = renderer.lineStartEdge(line) - inlineProgressionScrollOffsetInUserUnits(viewport), _bpd = 0);
+	const AbstractTwoAxes<Scalar> lineStart(_ipd = renderer.lineStartEdge(line) - inlineProgressionScrollOffsetInUserUnits(viewport), _bpd = static_cast<Scalar>(0));
 	const TextLayout& layout = renderer.layouts().at(line.line);	// this may throw IndexOutOfBoundsException
-	Point result(mapAbstractToPhysical(layout.writingMode(), lineStart));
+	Point result(geometry::make<Point>(mapAbstractToPhysical(layout.writingMode(), lineStart)));
 
 	switch(renderer.lineRelativeAlignment()) {
 		case TextRenderer::LEFT:
@@ -796,7 +794,7 @@ Point font::modelToView(const TextViewport& viewport, const TextHit<k::Position>
 	const TextHit<> hitInLine(position.isLeadingEdge() ?
 		TextHit<>::leading(position.characterIndex().offsetInLine) : TextHit<>::trailing(position.characterIndex().offsetInLine));
 	const AbstractTwoAxes<Scalar> abstractOffset(lineLayout.hitToPoint(hitInLine));
-	const Point physicalOffset(mapAbstractToPhysical(lineLayout.writingMode(), abstractOffset));
+	const Point physicalOffset(geometry::make<Point>(mapAbstractToPhysical(lineLayout.writingMode(), abstractOffset)));
 
 	// compute the result
 	if(horizontal)
@@ -888,9 +886,8 @@ namespace {
 				if(interveningSurrogates) {
 					const Index index = hitInLine.characterIndex() - 1;
 					const TextHit<> leading(TextHit<>::leading(index)), trailing(TextHit<>::trailing(index));
-					const Point leadingPoint(leading), trailingPoint(trailing);
-					const Scalar leadingIpd = horizontal ? geometry::x(leadingPoint) : geometry::y(leadingPoint);
-					const Scalar trailingIpd = horizontal ? geometry::x(trailingPoint) : geometry::y(trailingPoint);
+					const Scalar leadingIpd = layout.hitToPoint(leading).ipd();
+					const Scalar trailingIpd = layout.hitToPoint(trailing).ipd();
 					hitInLine = (abs(ipd - leadingIpd) <= abs(ipd - trailingIpd)) ? leading : trailing;
 				}
 			} else if(snapPolicy == k::locations::GRAPHEME_CLUSTER) {
@@ -900,9 +897,8 @@ namespace {
 					--i;
 					const TextHit<> leading(TextHit<>::leading(i.base().tell().offsetInLine));
 					const TextHit<> trailing(TextHit<>::trailing((++i).base().tell().offsetInLine));
-					const Point leadingPoint(layout.hitToPoint(leading)), trailingPoint(layout.hitToPoint(trailing));
-					const Scalar leadingIpd = horizontal ? geometry::x(leadingPoint) : geometry::y(leadingPoint);
-					const Scalar trailingIpd = horizontal ? geometry::x(trailingPoint) : geometry::y(trailingPoint);
+					const Scalar leadingIpd = layout.hitToPoint(leading).ipd();
+					const Scalar trailingIpd = layout.hitToPoint(trailing).ipd();
 					hitInLine = (abs(ipd - leadingIpd) <= abs(ipd - trailingIpd)) ? leading : trailing;
 				}
 			} else

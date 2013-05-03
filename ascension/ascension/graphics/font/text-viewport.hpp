@@ -71,6 +71,7 @@ namespace ascension {
 
 				/// @name Scrolls
 				/// @{
+				graphics::Scalar averageCharacterWidth() const BOOST_NOEXCEPT;
 				bool isScrollLocked() const BOOST_NOEXCEPT;
 				void lockScroll();
 				void scroll(const presentation::AbstractTwoAxes<SignedScrollOffset>& offsets);
@@ -97,6 +98,7 @@ namespace ascension {
 				Rectangle boundsInView_;
 				VisualLine firstVisibleLine_;
 				presentation::AbstractTwoAxes<ScrollOffset> scrollOffsets_;
+				graphics::Scalar averageCharacterWidth_;
 				std::size_t lockCount_;
 				detail::Listeners<TextViewportListener> listeners_;
 				detail::Listeners<VisualLinesListener> visualLinesListeners_;
@@ -211,6 +213,14 @@ namespace ascension {
 
 
 			// inline implementation //////////////////////////////////////////////////////////////
+
+			/**
+			 * 
+			 * @see #inlineProgressionOffset, font#FontMetrics#averageCharacterWidth
+			 */
+			inline graphics::Scalar TextViewport::averageCharacterWidth() const BOOST_NOEXCEPT {
+				return averageCharacterWidth_;
+			}
 
 			/// Returns the line the iterator addresses.
 			inline Index BaselineIterator::line() const BOOST_NOEXCEPT {return line_.line;}

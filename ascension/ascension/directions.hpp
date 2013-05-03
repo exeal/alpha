@@ -413,6 +413,9 @@ namespace ascension {
 		public:
 			/// Default constructor initializes nothing.
 			AbstractTwoAxesBase() {}
+#ifdef ASCENSION_COMPILER_MSVC
+			AbstractTwoAxesBase(const AbstractTwoAxesBase& other) : std::array<T, 2>(other) {}
+#endif	// ASCENSION_COMPILER_MSVC
 			/// Constructor takes named parameters as initial values
 			template<typename Arguments>
 			AbstractTwoAxesBase(const Arguments& arguments) {
@@ -439,6 +442,9 @@ namespace ascension {
 		public:
 			/// Default constructor initializes nothing.
 			AbstractTwoAxes() {}
+#ifdef ASCENSION_COMPILER_MSVC
+			AbstractTwoAxes(const AbstractTwoAxes& other) : AbstractTwoAxesBase<T>(static_cast<const AbstractTwoAxesBase<T>&>(other)) {}
+#endif	// ASCENSION_COMPILER_MSVC
 			/// Constructor takes named parameters (default value is zero).
 			BOOST_PARAMETER_CONSTRUCTOR(
 				AbstractTwoAxes, (AbstractTwoAxesBase<T>), tag,
