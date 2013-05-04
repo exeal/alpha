@@ -34,7 +34,7 @@ namespace ascension {
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
 				NSCursor
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-				win32::Handle<HCURSOR>
+				win32::Handle<HCURSOR>::Type
 #endif
 				NativeCursor;
 
