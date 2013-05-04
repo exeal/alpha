@@ -289,6 +289,9 @@ namespace ascension {
 //				Range<Scalar>::operator=(range);
 				return *this;
 			}
+			operator boost::integer_range<CoordinateType>() const {
+				return graphics::geometry::range<dimension>(const_cast<const Geometry&>(rectangle_));
+			}
 		private:
 			Geometry& rectangle_;
 		};
@@ -296,7 +299,7 @@ namespace ascension {
 
 	namespace graphics {
 		namespace geometry {
-			/// @name Additional Access Functions
+			/// @defgroup geometry_additional_aceessors Additional Access Functions
 			/// @{
 
 			/// Returns the size of the @a dimension in x-coordinate.
@@ -380,7 +383,7 @@ namespace ascension {
 			}
 			/// @}
 
-			/// @name Additional Algorithms
+			/// @defgroup geometry_additional_algorithms Additional Algorithms
 			/// @{
 
 			template<typename Coordinate>
@@ -464,24 +467,11 @@ namespace ascension {
 				return size1;
 			}
 #endif
-			// 'translate' for point, rectangle and region
-
 			template<typename Geometry, typename DimensionCoordinate>
-			inline Geometry& translate(Geometry& point, const BasicDimension<DimensionCoordinate>& offset,
-					typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
-				x(point) += dx(offset);
-				y(point) += dy(offset);
-				return point;
-			}
-
-			template<typename Geometry, typename DimensionCoordinate>
-			inline Geometry& translate(Geometry& rectangle, const BasicDimension<DimensionCoordinate>& offset,
-					typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
-				boost::geometry::point_type<Geometry>::type o(origin(rectangle));
-				translate(o, offset);
-				boost::geometry::set<boost::geometry::min_corner, 0>(rectangle, x(o));
-				boost::geometry::set<boost::geometry::min_corner, 1>(rectangle, y(o));
-				return rectangle;
+			inline Geometry& translate(Geometry& g, const BasicDimension<DimensionCoordinate>& offset) {
+				typedef typename boost::geometry::point_type<Geometry>::type PointType;
+				boost::geometry::transform(g, g, boost::geometry::strategy::transform::translate_transformer<PointType, PointType>(dx(offset), dy(offset)));
+				return g;
 			}
 
 			// writing to standard output stream
