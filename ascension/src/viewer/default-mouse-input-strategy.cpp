@@ -4,17 +4,22 @@
  * @date 2003-2006 was EditView.cpp and EditViewWindowMessages.cpp
  * @date 2006-2011 was viewer.cpp
  * @date 2011-10-04 separated from viewer.cpp
- * @date 2011-2012
+ * @date 2011-2013
  */
 
+// TODO: This code does not support platforms other than Win32.
+
 #include <ascension/corelib/text/break-iterator.hpp>
+#include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
+#include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/text-editor/session.hpp>	// texteditor.xxxIncrementalSearch
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/default-mouse-input-strategy.hpp>
 #include <ascension/viewer/viewer.hpp>
+#include <boost/foreach.hpp>
 #include <limits>	// std.numeric_limit
 
 using namespace ascension;
@@ -54,16 +59,17 @@ namespace {
 		};
 	public:
 		explicit AutoScrollOriginMark(TextViewer& viewer) /*throw()*/;
-		void initialize(const TextViewer& viewer);
 		static const widgetapi::Cursor& cursorForScrolling(CursorType type);
+		void resetWidgetShape();
 	private:
-		void paint(graphics::PaintContext& context);
+		void paint(graphics::PaintContext& context) const;
+		void paintPattern(graphics::RenderingContext2D& context) const;
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
 			if(message == WM_PAINT) {
 				PAINTSTRUCT ps;
 				::BeginPaint(handle().get(), &ps);
-				RenderingContext2D temp(win32::Handle<HDC>(ps.hdc));
+				RenderingContext2D temp(win32::Handle<HDC>::Type(ps.hdc));
 				paint(PaintContext(move(temp), ps.rcPaint));
 				::EndPaint(handle().get(), &ps);
 				consumed = true;
@@ -78,7 +84,10 @@ namespace {
 		basic_string<WCHAR> provideClassName() const {return L"AutoScrollOriginMark";}
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 	private:
-		static const Scalar WINDOW_WIDTH = 28;
+		Scalar width_;
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		COLORREF maskColor_;
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32
 	};
 } // namespace @0
 
@@ -87,19 +96,7 @@ namespace {
  * @param viewer The text viewer. The widget becomes the child of this viewer
  */
 AutoScrollOriginMark::AutoScrollOriginMark(TextViewer& viewer) /*throw()*/ {
-	// TODO: Set transparency on window system other than Win32.
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-	// calling CreateWindowExW with WS_EX_LAYERED will fail on NT 4.0
-	::SetWindowLongW(handle().get(), GWL_EXSTYLE,
-		::GetWindowLongW(handle().get(), GWL_EXSTYLE) | WS_EX_LAYERED);
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
-
-	widgetapi::resize(*this, geometry::make<NativeSize>(WINDOW_WIDTH + 1, WINDOW_WIDTH + 1));
-	NativeRegion rgn(::CreateEllipticRgn(0, 0, WINDOW_WIDTH + 1, WINDOW_WIDTH + 1), &::DeleteObject);
-	widgetapi::setShape(*this, rgn);
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-	::SetLayeredWindowAttributes(handle().get(), ::GetSysColor(COLOR_WINDOW), 0, LWA_COLORKEY);
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+	resetWidgetShape();
 	widgetapi::setParent(*this, &viewer);
 }
 
@@ -190,7 +187,7 @@ const widgetapi::Cursor& AutoScrollOriginMark::cursorForScrolling(CursorType typ
 			memcpy(xorBits + 4 * 20, XOR_LINE_20_TO_28, sizeof(XOR_LINE_20_TO_28));
 		}
 #if defined(ASCENSION_OS_WINDOWS)
-		instances[type].reset(new widgetapi::Cursor(win32::Handle<HCURSOR>(
+		instances[type].reset(new widgetapi::Cursor(win32::Handle<HCURSOR>::Type(
 			::CreateCursor(::GetModuleHandleW(nullptr), 16, 16, 32, 32, andBits, xorBits), &::DestroyCursor)));
 #else
 		instances[type].reset(new widgetapi::Cursor(bitmap));
@@ -200,47 +197,73 @@ const widgetapi::Cursor& AutoScrollOriginMark::cursorForScrolling(CursorType typ
 }
 
 /// @see Widget#paint
-void AutoScrollOriginMark::paint(PaintContext& context) {
+void AutoScrollOriginMark::paint(PaintContext& context) const {
+	paintPattern(context);
+}
+
+/// @internal
+void AutoScrollOriginMark::paintPattern(RenderingContext2D& context) const {
 	const Color color(SystemColors::get(SystemColors::APP_WORKSPACE));
 	context.setStrokeStyle(shared_ptr<Paint>(new SolidColor(color)));
 	context.setFillStyle(shared_ptr<Paint>(new SolidColor(color)));
 
 	context
 		.beginPath()
-		.moveTo(geometry::make<NativePoint>(13, 3))
-		.lineTo(geometry::make<NativePoint>(7, 9))
-		.lineTo(geometry::make<NativePoint>(20, 9))
-		.lineTo(geometry::make<NativePoint>(14, 3))
+		.moveTo(Point(geometry::_x = 13.0f, geometry::_y = 3.0f))
+		.lineTo(Point(geometry::_x = 7.0f, geometry::_y = 9.0f))
+		.lineTo(Point(geometry::_x = 20.0f, geometry::_y = 9.0f))
+		.lineTo(Point(geometry::_x = 14.0f, geometry::_y = 3.0f))
 		.closePath()
 		.fill();
 	context
 		.beginPath()
-		.moveTo(geometry::make<NativePoint>(13, 24))
-		.lineTo(geometry::make<NativePoint>(7, 18))
-		.lineTo(geometry::make<NativePoint>(20, 18))
-		.lineTo(geometry::make<NativePoint>(14, 24))
+		.moveTo(Point(geometry::_x = 13.0f, geometry::_y = 24.0f))
+		.lineTo(Point(geometry::_x = 7.0f, geometry::_y = 18.0f))
+		.lineTo(Point(geometry::_x = 20.0f, geometry::_y = 18.0f))
+		.lineTo(Point(geometry::_x = 14.0f, geometry::_y = 24.0f))
 		.closePath()
 		.fill();
 	context
 		.beginPath()
-		.moveTo(geometry::make<NativePoint>(13, 12))
-		.lineTo(geometry::make<NativePoint>(15, 12))
+		.moveTo(Point(geometry::_x = 13.0f, geometry::_y = 12.0f))
+		.lineTo(Point(geometry::_x = 15.0f, geometry::_y = 12.0f))
 		.stroke();
 	context
 		.beginPath()
-		.moveTo(geometry::make<NativePoint>(12, 13))
-		.lineTo(geometry::make<NativePoint>(16, 13))
+		.moveTo(Point(geometry::_x = 12.0f, geometry::_y = 13.0f))
+		.lineTo(Point(geometry::_x = 16.0f, geometry::_y = 13.0f))
 		.stroke();
 	context
 		.beginPath()
-		.moveTo(geometry::make<NativePoint>(12, 14))
-		.lineTo(geometry::make<NativePoint>(16, 14))
+		.moveTo(Point(geometry::_x = 12.0f, geometry::_y = 14.0f))
+		.lineTo(Point(geometry::_x = 16.0f, geometry::_y = 14.0f))
 		.stroke();
 	context
 		.beginPath()
-		.moveTo(geometry::make<NativePoint>(13, 15))
-		.lineTo(geometry::make<NativePoint>(15, 15))
+		.moveTo(Point(geometry::_x = 13.0f, geometry::_y = 15.0f))
+		.lineTo(Point(geometry::_x = 15.0f, geometry::_y = 15.0f))
 		.stroke();
+}
+
+void AutoScrollOriginMark::resetWidgetShape() {
+	width_ = 28;	// TODO: This value must be computed by using user settings.
+	widgetapi::resize(*this, Dimension(width_ + 1, width_ + 1));
+	
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+	// TODO: Implement by using Gtk.Window.shape_combine_region(Cairo.Region).
+	// TODO: Implement by using Gtk.Widget.shape_combine_mask(,int,int) and Gdk.Pixmap.create_cairo_context.
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+	// TODO: Implement by using QWidget.setMask(QBitmap).
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+	// TODO: Implement by using [NSWindow setBackgroundColor:[NSColor clearColor]] and [NSWindow setOpaque:NO].
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+	// calling CreateWindowExW with WS_EX_LAYERED will fail on NT 4.0
+	::SetWindowLongW(handle().get(), GWL_EXSTYLE,
+		::GetWindowLongW(handle().get(), GWL_EXSTYLE) | WS_EX_LAYERED);
+	::SetLayeredWindowAttributes(handle().get(), maskColor_ = ::GetSysColor(COLOR_WINDOW), 0, LWA_COLORKEY);
+//	win32::Handle<HRGN>::Type rgn(::CreateEllipticRgn(0, 0, width_ + 1, width_ + 1), &::DeleteObject);
+//	::SetWindowRgn(asNativeObject().get(), rgn.get(), true);
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32
 }
 
 /**
@@ -270,8 +293,8 @@ DefaultMouseInputStrategy::DefaultMouseInputStrategy() : viewer_(nullptr), state
 }
 
 namespace {
-	boost::optional<SHDRAGIMAGE> createSelectionImage(const TextViewer& viewer, const NativePoint& cursorPosition, bool highlightSelection) {
-		win32::Handle<HDC> dc(::CreateCompatibleDC(nullptr), &::DeleteDC);
+	boost::optional<SHDRAGIMAGE> createSelectionImage(const TextViewer& viewer, const Point& cursorPosition, bool highlightSelection) {
+		win32::Handle<HDC>::Type dc(::CreateCompatibleDC(nullptr), &::DeleteDC);
 		if(dc.get() == nullptr)
 			throw makePlatformError();	// MSDN does *not* says CreateCompatibleDC set the last error value, but...
 
@@ -292,25 +315,29 @@ namespace {
 //		const Index firstSubline = viewport->firstVisibleSublineInLogicalLine();
 
 		// calculate the size of the image
-		const NativeRectangle clientBounds(widgetapi::bounds(viewer, false));
+		const graphics::Rectangle clientBounds(widgetapi::bounds(viewer, false));
 		const TextRenderer& renderer = viewer.textRenderer();
-		NativeRectangle selectionBounds(geometry::make<NativeRectangle>(
-			geometry::make<NativePoint>(numeric_limits<Scalar>::max(), 0),
-			geometry::make<NativeSize>(numeric_limits<Scalar>::min(), 0)));
+		graphics::Rectangle selectionBounds(
+			Point(geometry::_x = numeric_limits<Scalar>::max(), geometry::_y = 0.0f),
+			Dimension(geometry::_dx = numeric_limits<Scalar>::min(), geometry::_dy = 0.0f));
 		for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
-			selectionBounds.bottom += static_cast<LONG>(renderer.defaultFont()->metrics().linePitch() * renderer.layouts()[line].numberOfLines());
+			boost::integer_range<Scalar> yrange(geometry::range<1>(selectionBounds));
+			yrange = ordered(yrange);
+//			yrange.advance_end(widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts()[line].numberOfLines());
+			yrange = boost::irange(*yrange.begin(), *yrange.end() + widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts()[line].numberOfLines());
+			geometry::range<1>(selectionBounds) = yrange;
 			if(geometry::dy(selectionBounds) > geometry::dy(clientBounds))
 				return boost::none;	// overflow
 			const TextLayout& layout = renderer.layouts()[line];
 			const Scalar indent = font::lineIndent(layout, renderer.viewport()->contentMeasure());
-			Range<Index> range;
+			boost::integer_range<Index> range(0, 0);
 			for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
 				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range)) {
-					range = Range<Index>(
-						range.beginning(),
-						min(viewer.document().lineLength(line), range.end()));
-					const NativeRectangle sublineBounds(layout.bounds(range));
-					geometry::range<geometry::X_COORDINATE>(selectionBounds) = makeRange(
+					range = boost::irange(
+						*range.begin(),
+						min(viewer.document().lineLength(line), *range.end()));
+					const graphics::Rectangle sublineBounds(geometry::make<graphics::Rectangle>(mapFlowRelativeToPhysical(layout.writingMode(), layout.bounds(range))));
+					geometry::range<0>(selectionBounds) = boost::irange(
 						min(geometry::left(sublineBounds) + indent, geometry::left(selectionBounds)),
 						max(geometry::right(sublineBounds) + indent, geometry::right(selectionBounds)));
 					if(geometry::dx(selectionBounds) > geometry::dx(clientBounds))
@@ -318,11 +345,11 @@ namespace {
 				}
 			}
 		}
-		bh.bV5Width = geometry::dx(selectionBounds);
-		bh.bV5Height = geometry::dy(selectionBounds);
+		bh.bV5Width = static_cast<LONG>(geometry::dx(selectionBounds));
+		bh.bV5Height = static_cast<LONG>(geometry::dy(selectionBounds));
 
 		// create a mask
-		win32::Handle<HBITMAP> mask(::CreateBitmap(bh.bV5Width, bh.bV5Height, 1, 1, 0), &::DeleteObject);	// monochrome
+		win32::Handle<HBITMAP>::Type mask(::CreateBitmap(bh.bV5Width, bh.bV5Height, 1, 1, 0), &::DeleteObject);	// monochrome
 		if(mask.get() == nullptr)
 			throw makePlatformError();	// this must be ERROR_INVALID_BITMAP
 		HBITMAP oldBitmap = static_cast<HBITMAP>(::SelectObject(dc.get(), mask.get()));
@@ -331,21 +358,35 @@ namespace {
 			::SetRect(&temp, 0, 0, bh.bV5Width, bh.bV5Height);
 			::FillRect(dc.get(), &temp, static_cast<HBRUSH>(::GetStockObject(BLACK_BRUSH)));
 		}
-		int y = 0;
+		Scalar y = 0;
 		for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
 			const TextLayout& layout = renderer.layouts()[line];
-			const int indent = font::lineIndent(layout, renderer.viewport()->contentMeasure());
-			Range<Index> range;
+			const Scalar indent = font::lineIndent(layout, renderer.viewport()->contentMeasure());
+			boost::integer_range<Index> range(0, 0);
 			for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
 				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range)) {
-					range = Range<Index>(
-						range.beginning(),
-						min(viewer.document().lineLength(line), range.end()));
-					NativeRegion rgn(layout.blackBoxBounds(range));
-					::OffsetRgn(rgn.get(), indent - geometry::left(selectionBounds), y - geometry::top(selectionBounds));
-					::FillRgn(dc.get(), rgn.get(), static_cast<HBRUSH>(::GetStockObject(WHITE_BRUSH)));
+					range = boost::irange(
+						*range.begin(),
+						min(viewer.document().lineLength(line), *range.end()));
+					auto region(layout.blackBoxBounds(range));
+					geometry::translate(region,
+						Dimension(geometry::_dx = indent - geometry::left(selectionBounds), geometry::_dy = y - geometry::top(selectionBounds)));
+					::SelectObject(dc.get(), static_cast<HBRUSH>(::GetStockObject(WHITE_BRUSH)));
+					BOOST_FOREACH(const auto& polygon, region) {
+						::BeginPath(dc.get());
+						bool firstPoint = true;
+						boost::geometry::for_each_point(polygon, [&dc, &firstPoint](const Point& p) {
+							if(firstPoint) {
+								::MoveToEx(dc.get(), static_cast<int>(geometry::x(p)), static_cast<int>(geometry::y(p)), nullptr);
+								firstPoint = false;
+							} else
+								::LineTo(dc.get(), static_cast<int>(geometry::x(p)), static_cast<int>(geometry::y(p)));
+						});
+						::EndPath(dc.get());
+						::FillPath(dc.get());
+					}
 				}
-				y += renderer.defaultFont()->metrics().linePitch();
+				y += widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch();
 			}
 		}
 		::SelectObject(dc.get(), oldBitmap);
@@ -376,18 +417,23 @@ namespace {
 
 		// create the result bitmap
 		void* bits;
-		win32::Handle<HBITMAP> bitmap(::CreateDIBSection(dc.get(), reinterpret_cast<BITMAPINFO*>(&bh), DIB_RGB_COLORS, &bits, nullptr, 0));
+		struct ObjectDeleter {
+			void operator()(HBITMAP h) {
+				::DeleteObject(h);
+			}
+		};
+		unique_ptr<remove_pointer<HBITMAP>::type, ObjectDeleter> bitmap(::CreateDIBSection(dc.get(), reinterpret_cast<BITMAPINFO*>(&bh), DIB_RGB_COLORS, &bits, nullptr, 0));
 		if(bitmap.get() == nullptr)
 			throw makePlatformError();	// this must be ERROR_INVALID_PARAMETER
 		// render the lines
 		oldBitmap = static_cast<HBITMAP>(::SelectObject(dc.get(), bitmap.get()));
-		NativeRectangle selectionExtent(selectionBounds);
-		geometry::translate(selectionExtent, geometry::negate(geometry::topLeft(selectionExtent)));
-		y = selectionBounds.top;
+		graphics::Rectangle selectionExtent(selectionBounds);
+		geometry::translate(selectionExtent, geometry::negate(Dimension(geometry::_dx = geometry::left(selectionExtent), geometry::_dy = geometry::top(selectionExtent))));
+		y = geometry::top(selectionBounds);
 		for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
 			renderer.paint(line, PaintContext(RenderingContext2D(dc), selectionExtent),
-				geometry::make<NativePoint>(font::lineIndent(renderer.layouts()[line], renderer.viewport()->contentMeasure()) - geometry::left(selectionBounds), y));
-			y += static_cast<int>(renderer.defaultFont()->metrics().linePitch() * renderer.layouts().numberOfSublinesOfLine(line));
+				Point(geometry::_x = font::lineIndent(renderer.layouts()[line], renderer.viewport()->contentMeasure()) - geometry::left(selectionBounds), geometry::_y = y));
+			y += widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts().numberOfSublinesOfLine(line);
 		}
 		::SelectObject(dc.get(), oldBitmap);
 
@@ -411,10 +457,11 @@ namespace {
 
 		// locate the hotspot of the image based on the cursor position
 		// TODO: This code can't handle vertical writing mode.
-		NativePoint hotspot(cursorPosition);
+		Point hotspot(cursorPosition);
 		const shared_ptr<const TextViewport> viewport(viewer.textRenderer().viewport());
-		geometry::x(hotspot) -= geometry::left(viewer.textAreaContentRectangle()) - inlineProgressionScrollOffsetInPixels(*viewport, viewport->inlineProgressionOffset()) + geometry::left(selectionBounds);
-		geometry::y(hotspot) -= geometry::y(modelToView(*viewport, k::Position(selectedRegion.beginning().line, 0), true));
+		geometry::x(hotspot) -= geometry::left(viewer.textAreaContentRectangle())
+			- inlineProgressionScrollOffsetInUserUnits(*viewport, viewport->inlineProgressionOffset()) + geometry::left(selectionBounds);
+		geometry::y(hotspot) -= geometry::y(modelToView(*viewport, TextHit<k::Position>::leading(k::Position(selectedRegion.beginning().line, 0)), true));
 
 		SHDRAGIMAGE image;
 		image.sizeDragImage.cx = bh.bV5Width;
@@ -504,8 +551,8 @@ void DefaultMouseInputStrategy::dragEntered(widgetapi::DragEnterInput& input) {
 		if(isMimeDataAcceptable(input.mimeData(), true)) {
 			const TextAnchor anchor = defaultTextAnchor(viewer_->presentation());
 			const ReadingDirection readingDirection = defaultReadingDirection(viewer_->presentation());
-			if((anchor == TEXT_ANCHOR_START && readingDirection == RIGHT_TO_LEFT)
-					|| (anchor == TEXT_ANCHOR_END && readingDirection == LEFT_TO_RIGHT))
+			if((anchor == TextAnchor::START && readingDirection == RIGHT_TO_LEFT)
+					|| (anchor == TextAnchor::END && readingDirection == LEFT_TO_RIGHT))
 				return input.ignore();	// TODO: support alignments other than ALIGN_LEFT.
 			try {
 				pair<String, bool> text(utils::getTextFromMimeData(input.mimeData()));
@@ -535,25 +582,25 @@ void DefaultMouseInputStrategy::dragLeft(widgetapi::DragLeaveInput& input) {
 
 namespace {
 	PhysicalTwoAxes<TextViewport::SignedScrollOffset> calculateDnDScrollOffset(const TextViewer& viewer) {
-		const NativePoint p(widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position()));
-		const NativeRectangle localBounds(widgetapi::bounds(viewer, false));
-		NativeRectangle inset(viewer.textAreaContentRectangle());
-		const Font::Metrics& fontMetrics = viewer.textRenderer().defaultFont()->metrics();
-		geometry::range<geometry::X_COORDINATE>(inset) = makeRange(
-			geometry::left(inset) + fontMetrics.averageCharacterWidth(), geometry::right(inset) - fontMetrics.averageCharacterWidth());
-		geometry::range<geometry::Y_COORDINATE>(inset) = makeRange(
-			geometry::top(inset) + fontMetrics.linePitch() / 2, geometry::bottom(inset) - fontMetrics.linePitch() / 2);
+		const Point p(widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position()));
+		const graphics::Rectangle localBounds(widgetapi::bounds(viewer, false));
+		graphics::Rectangle inset(viewer.textAreaContentRectangle());
+		unique_ptr<const FontMetrics<Scalar>> fontMetrics(widgetapi::createRenderingContext(viewer)->fontMetrics(viewer.textRenderer().defaultFont()));
+		geometry::range<0>(inset) = boost::irange(
+			geometry::left(inset) + fontMetrics->averageCharacterWidth(), geometry::right(inset) - fontMetrics->averageCharacterWidth());
+		geometry::range<1>(inset) = boost::irange(
+			geometry::top(inset) + fontMetrics->linePitch() / 2, geometry::bottom(inset) - fontMetrics->linePitch() / 2);
 
 		// On Win32, oleidl.h defines the value named DD_DEFSCROLLINSET, but...
 
-		geometry::Coordinate<NativeSize>::Type dx = 0, dy = 0;
-		if(includes(makeRange(geometry::top(localBounds), geometry::top(inset)), geometry::y(p)))
+		TextViewport::SignedScrollOffset dx = 0, dy = 0;
+		if(includes(boost::irange(geometry::top(localBounds), geometry::top(inset)), geometry::y(p)))
 			dy = -1;
-		else if(includes(makeRange(geometry::bottom(localBounds), geometry::bottom(inset)), geometry::y(p)))
+		else if(includes(boost::irange(geometry::bottom(localBounds), geometry::bottom(inset)), geometry::y(p)))
 			dy = +1;
-		if(includes(makeRange(geometry::left(localBounds), geometry::left(inset)), geometry::x(p)))
+		if(includes(boost::irange(geometry::left(localBounds), geometry::left(inset)), geometry::x(p)))
 			dx = -3;
-		else if(includes(makeRange(geometry::right(localBounds), geometry::right(inset)), geometry::y(p)))
+		else if(includes(boost::irange(geometry::right(localBounds), geometry::right(inset)), geometry::y(p)))
 			dx = +3;
 		return PhysicalTwoAxes<TextViewport::SignedScrollOffset>(dx, dy);
 	}
@@ -566,8 +613,8 @@ void DefaultMouseInputStrategy::dragMoved(widgetapi::DragMoveInput& input) {
 
 	if((state_ == DND_SOURCE || state_ == DND_TARGET)
 			&& !viewer_->document().isReadOnly() && viewer_->allowsMouseInput()) {
-		const NativePoint caretPoint(widgetapi::mapFromGlobal(*viewer_, input.location()));
-		const k::Position p(viewToModel(*viewer_->textRenderer().viewport(), caretPoint, TextLayout::TRAILING));
+		const Point caretPoint(widgetapi::mapFromGlobal(*viewer_, input.location()));
+		const k::Position p(viewToModel(*viewer_->textRenderer().viewport(), caretPoint).characterIndex());
 //		viewer_->setCaretPosition(viewer_->localPointForCharacter(p, true, TextLayout::LEADING));
 
 		// drop rectangle text into bidirectional line is not supported...
@@ -611,8 +658,8 @@ void DefaultMouseInputStrategy::dropped(widgetapi::DropInput& input) {
 	if(/*dnd_.supportLevel == DONT_SUPPORT_DND ||*/ document.isReadOnly() || !viewer_->allowsMouseInput())
 		return input.ignore();
 	Caret& caret = viewer_->caret();
-	const NativePoint caretPoint(input.location());
-	const k::Position destination(viewToModel(*viewer_->textRenderer().viewport(), caretPoint, TextLayout::TRAILING));
+	const Point caretPoint(input.location());
+	const k::Position destination(viewToModel(*viewer_->textRenderer().viewport(), caretPoint).characterIndex());
 
 	if(!document.accessibleRegion().includes(destination))
 		return input.ignore();
@@ -647,7 +694,7 @@ void DefaultMouseInputStrategy::dropped(widgetapi::DropInput& input) {
 		state_ = NONE;
 	} else {	// drop from the same widget
 		assert(state_ == DND_SOURCE);
-		String text(selectedString(caret, text::NLF_RAW_VALUE));
+		String text(selectedString(caret, text::Newline::USE_INTRINSIC_VALUE));
 
 		// can't drop into the selection
 		if(isPointOverSelection(caret, caretPoint)) {
@@ -728,7 +775,7 @@ void DefaultMouseInputStrategy::extendSelectionTo(const k::Position* to /* = nul
 		throw IllegalStateException("not extending the selection.");
 	k::Position destination;
 	if(to == nullptr) {
-		NativePoint p(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
+		Point p(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
 		Caret& caret = viewer_->caret();
 		if(state_ != EXTENDING_CHARACTER_SELECTION) {
 			const TextViewer::HitTestResult htr = viewer_->hitTest(p);
@@ -737,15 +784,14 @@ void DefaultMouseInputStrategy::extendSelectionTo(const k::Position* to /* = nul
 				state_ = EXTENDING_CHARACTER_SELECTION;
 		}
 		// snap cursor position into 'content-rectangle' of the text area
-		const NativeRectangle contentRectangle(viewer_->textAreaContentRectangle());
-		p = geometry::make<NativePoint>(
-				min<Scalar>(
-					max<Scalar>(geometry::x(p), geometry::left(contentRectangle)),
-					geometry::right(contentRectangle)),
-				min<Scalar>(
-					max<Scalar>(geometry::y(p), geometry::top(contentRectangle)),
-					geometry::bottom(contentRectangle)));
-		destination = viewToModel(*viewer_->textRenderer().viewport(), p, TextLayout::TRAILING);
+		const graphics::Rectangle contentRectangle(viewer_->textAreaContentRectangle());
+		geometry::x(p) = min<Scalar>(
+			max<Scalar>(geometry::x(p), geometry::left(contentRectangle)),
+			geometry::right(contentRectangle));
+		geometry::y(p) = min<Scalar>(
+			max<Scalar>(geometry::y(p), geometry::top(contentRectangle)),
+			geometry::bottom(contentRectangle));
+		destination = viewToModel(*viewer_->textRenderer().viewport(), p).characterIndex();
 	} else
 		destination = *to;
 
@@ -807,12 +853,12 @@ shared_ptr<widgetapi::DropTarget> DefaultMouseInputStrategy::handleDropTarget() 
  * @return true if processed the input. in this case, the original behavior of
  * @c DefaultMouseInputStrategy is suppressed. the default implementation returns false
  */
-bool DefaultMouseInputStrategy::handleLeftButtonDoubleClick(const NativePoint& position, int modifiers) {
+bool DefaultMouseInputStrategy::handleLeftButtonDoubleClick(const Point& position, int modifiers) {
 	return false;
 }
 
 /// Handles @c WM_LBUTTONDOWN.
-void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& position, int modifiers) {
+void DefaultMouseInputStrategy::handleLeftButtonPressed(const Point& position, int modifiers) {
 	bool boxDragging = false;
 	Caret& caret = viewer_->caret();
 	const TextViewer::HitTestResult htr = viewer_->hitTest(position);
@@ -822,7 +868,7 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 
 	// select line(s)
 	if((htr & TextViewer::RULER_MASK) != 0) {
-		const k::Position to(viewToModel(*viewer_->textRenderer().viewport(), position, TextLayout::LEADING));
+		const k::Position to(viewToModel(*viewer_->textRenderer().viewport(), position).insertionIndex());
 		const bool extend = win32::boole(modifiers & MK_SHIFT) && to.line != line(caret.anchor());
 		state_ = EXTENDING_LINE_SELECTION;
 		selection_.initialLine = extend ? line(caret.anchor()) : to.line;
@@ -845,8 +891,8 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 		bool hyperlinkInvoked = false;
 		if(win32::boole(modifiers & MK_CONTROL)) {
 			if(!isPointOverSelection(caret, position)) {
-				if(const boost::optional<k::Position> p = viewToModelInBounds(*viewer_->textRenderer().viewport(), position, TextLayout::TRAILING)) {
-					if(const hyperlink::Hyperlink* link = utils::getPointedHyperlink(*viewer_, *p)) {
+				if(const boost::optional<TextHit<k::Position>> p = viewToModelInBounds(*viewer_->textRenderer().viewport(), position)) {
+					if(const hyperlink::Hyperlink* link = utils::getPointedHyperlink(*viewer_, p->characterIndex())) {
 						link->invoke();
 						hyperlinkInvoked = true;
 					}
@@ -860,21 +906,21 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 			// shift => keep the anchor and move the caret to the cursor position
 			// ctrl  => begin word selection
 			// alt   => begin rectangle selection
-			if(const boost::optional<k::Position> to = viewToModelInBounds(*viewer_->textRenderer().viewport(), position, TextLayout::TRAILING)) {
+			if(const boost::optional<TextHit<k::Position>> to = viewToModelInBounds(*viewer_->textRenderer().viewport(), position)) {
 				state_ = EXTENDING_CHARACTER_SELECTION;
 				if((modifiers & (widgetapi::UserInput::CONTROL_DOWN | widgetapi::UserInput::SHIFT_DOWN)) != 0) {
 					if((modifiers & widgetapi::UserInput::CONTROL_DOWN) != 0) {
 						// begin word selection
 						state_ = EXTENDING_WORD_SELECTION;
-						caret.moveTo((modifiers & widgetapi::UserInput::SHIFT_DOWN) != 0 ? caret.anchor() : *to);
+						caret.moveTo((modifiers & widgetapi::UserInput::SHIFT_DOWN) != 0 ? caret.anchor() : to->characterIndex());
 						selectWord(caret);
 						selection_.initialLine = line(caret);
 						selection_.initialWordColumns = make_pair(offsetInLine(caret.beginning()), offsetInLine(caret.end()));
 					}
 					if((modifiers & widgetapi::UserInput::SHIFT_DOWN) != 0)
-						extendSelectionTo(&*to);
+						extendSelectionTo(&to->characterIndex());
 				} else
-					caret.moveTo(*to);
+					caret.moveTo(to->characterIndex());
 				if((modifiers & widgetapi::UserInput::ALT_DOWN) != 0)	// make the selection reactangle
 					caret.beginRectangleSelection();
 				else
@@ -891,13 +937,13 @@ void DefaultMouseInputStrategy::handleLeftButtonPressed(const NativePoint& posit
 }
 
 /// Handles @c WM_LBUTTONUP.
-void DefaultMouseInputStrategy::handleLeftButtonReleased(const NativePoint& position, int) {
+void DefaultMouseInputStrategy::handleLeftButtonReleased(const Point& position, int) {
 	// cancel if drag-and-drop approaching
 	if(/*dnd_.supportLevel >= SUPPORT_DND
 			&&*/ (state_ == APPROACHING_DND
 			|| state_ == DND_SOURCE)) {	// TODO: this should handle only case APPROACHING_DND?
 		state_ = NONE;
-		viewer_->caret().moveTo(viewToModel(*viewer_->textRenderer().viewport(), position, TextLayout::TRAILING));
+		viewer_->caret().moveTo(viewToModel(*viewer_->textRenderer().viewport(), position).characterIndex());
 		::SetCursor(::LoadCursor(nullptr, IDC_IBEAM));	// hmm...
 	}
 
@@ -917,7 +963,7 @@ void DefaultMouseInputStrategy::handleLeftButtonReleased(const NativePoint& posi
  * @param modifiers Same as @c MouseInputStrategy#mouseButtonInput
  * @return Same as @c MouseInputStrategy#mouseButtonInput. The default implementation returns @c false
  */
-bool DefaultMouseInputStrategy::handleRightButton(Action action, const NativePoint& position, int modifiers) {
+bool DefaultMouseInputStrategy::handleRightButton(Action action, const Point& position, int modifiers) {
 	return false;
 }
 
@@ -928,7 +974,7 @@ bool DefaultMouseInputStrategy::handleRightButton(Action action, const NativePoi
  * @param modifiers Same as @c MouseInputStrategy#mouseButtonInput
  * @return Same as @c MouseInputStrategy#mouseButtonInput. The default implementation returns @c false
  */
-bool DefaultMouseInputStrategy::handleX1Button(Action action, const NativePoint& position, int modifiers) {
+bool DefaultMouseInputStrategy::handleX1Button(Action action, const Point& position, int modifiers) {
 	return false;
 }
 
@@ -939,7 +985,7 @@ bool DefaultMouseInputStrategy::handleX1Button(Action action, const NativePoint&
  * @param modifiers Same as @c MouseInputStrategy#mouseButtonInput
  * @return Same as @c MouseInputStrategy#mouseButtonInput. The default implementation returns @c false
  */
-bool DefaultMouseInputStrategy::handleX2Button(Action action, const NativePoint& position, int modifiers) {
+bool DefaultMouseInputStrategy::handleX2Button(Action action, const Point& position, int modifiers) {
 	return false;
 }
 
@@ -997,12 +1043,12 @@ bool DefaultMouseInputStrategy::mouseButtonInput(Action action, const widgetapi:
 			if(viewer_->document().numberOfLines() > viewer_->textRenderer().viewport()->numberOfVisibleLines()) {
 				state_ = APPROACHING_AUTO_SCROLL;
 				dragApproachedPosition_ = input.location();
-				const NativePoint p(widgetapi::mapToGlobal(*viewer_, input.location()));
+				const Point p(widgetapi::mapToGlobal(*viewer_, input.location()));
 				widgetapi::setFocus(*viewer_);
 				// show the indicator margin
-				NativeRectangle rect(widgetapi::bounds(*autoScrollOriginMark_, true));
+				graphics::Rectangle rect(widgetapi::bounds(*autoScrollOriginMark_, true));
 				widgetapi::move(*autoScrollOriginMark_,
-					geometry::make<NativePoint>(geometry::x(p) - geometry::dx(rect) / 2, geometry::y(p) - geometry::dy(rect) / 2));
+					Point(geometry::_x = geometry::x(p) - geometry::dx(rect) / 2, geometry::_y = geometry::y(p) - geometry::dy(rect) / 2));
 				widgetapi::show(*autoScrollOriginMark_);
 				widgetapi::raise(*autoScrollOriginMark_);
 				widgetapi::grabInput(*viewer_);
@@ -1066,7 +1112,7 @@ void DefaultMouseInputStrategy::mouseWheelRotated(const widgetapi::MouseWheelInp
 			lines = static_cast<UINT>(viewport->numberOfVisibleLines());
 		}
 		viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(
-			0, -geometry::dy(input.rotation()) * static_cast<short>(lines) / WHEEL_DELTA));
+			0, static_cast<TextViewport::SignedScrollOffset>(-geometry::dy(input.rotation()) * static_cast<short>(lines) / WHEEL_DELTA)));
 	}
 }
 
@@ -1082,7 +1128,7 @@ STDMETHODIMP DefaultMouseInputStrategy::QueryContinueDrag(BOOL escapePressed, DW
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 
 /// @see MouseInputStrategy#showCursor
-bool DefaultMouseInputStrategy::showCursor(const NativePoint& position) {
+bool DefaultMouseInputStrategy::showCursor(const Point& position) {
 	using namespace hyperlink;
 	LPCTSTR cursorName = nullptr;
 	const Hyperlink* newlyHoveredHyperlink = nullptr;
@@ -1096,9 +1142,9 @@ bool DefaultMouseInputStrategy::showCursor(const NativePoint& position) {
 		cursorName = IDC_ARROW;
 	else if(htr == TextViewer::TEXT_AREA_CONTENT_RECTANGLE) {
 		// on a hyperlink?
-		if(const boost::optional<k::Position> p =
-				viewToModelInBounds(*viewer_->textRenderer().viewport(), position, TextLayout::TRAILING, k::locations::UTF16_CODE_UNIT))
-			newlyHoveredHyperlink = utils::getPointedHyperlink(*viewer_, *p);
+		if(const boost::optional<TextHit<k::Position>> p =
+				viewToModelInBounds(*viewer_->textRenderer().viewport(), position, k::locations::UTF16_CODE_UNIT))
+			newlyHoveredHyperlink = utils::getPointedHyperlink(*viewer_, p->characterIndex());
 		if(newlyHoveredHyperlink != nullptr && win32::boole(::GetAsyncKeyState(VK_CONTROL) & 0x8000))
 			cursorName = IDC_HAND;
 	}
@@ -1121,39 +1167,39 @@ bool DefaultMouseInputStrategy::showCursor(const NativePoint& position) {
 void DefaultMouseInputStrategy::timeElapsed(Timer& timer) {
 	if((state_ & SELECTION_EXTENDING_MASK) == SELECTION_EXTENDING_MASK) {	// scroll automatically during extending the selection
 		const shared_ptr<TextViewport> viewport(viewer_->textRenderer().viewport());
-		const NativePoint p(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
-		const NativeRectangle contentRectangle(viewer_->textAreaContentRectangle());
-		NativeSize scrollUnits(geometry::make<NativeSize>(
-			inlineProgressionScrollOffsetInPixels(*viewport, 1),
-			viewer_->textRenderer().defaultFont()->metrics().linePitch()));
-		if(isVertical(viewer_->textRenderer().writingMode().blockFlowDirection))
+		const Point p(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
+		const graphics::Rectangle contentRectangle(viewer_->textAreaContentRectangle());
+		Dimension scrollUnits(
+			geometry::_dx = inlineProgressionScrollOffsetInUserUnits(*viewport, 1),
+			geometry::_dy = widgetapi::createRenderingContext(*viewer_)->fontMetrics(viewer_->textRenderer().defaultFont())->linePitch());
+		if(isVertical(viewer_->textRenderer().computedBlockFlowDirection()))
 			geometry::transpose(scrollUnits);
 
 		PhysicalTwoAxes<TextViewport::SignedScrollOffset> scrollOffsets(0, 0);
 		// no rationale about these scroll amounts
 		if(geometry::y(p) < geometry::top(contentRectangle))
-			scrollOffsets.y() = (geometry::y(p) - (geometry::top(contentRectangle))) / geometry::dy(scrollUnits) - 1;
+			scrollOffsets.y() = static_cast<TextViewport::SignedScrollOffset>((geometry::y(p) - (geometry::top(contentRectangle))) / geometry::dy(scrollUnits) - 1);
 		else if(geometry::y(p) >= geometry::bottom(contentRectangle))
-			scrollOffsets.y() = (geometry::y(p) - (geometry::bottom(contentRectangle))) / geometry::dy(scrollUnits) + 1;
+			scrollOffsets.y() = static_cast<TextViewport::SignedScrollOffset>((geometry::y(p) - (geometry::bottom(contentRectangle))) / geometry::dy(scrollUnits) + 1);
 		else if(geometry::x(p) < geometry::left(contentRectangle))
-			scrollOffsets.x() = (geometry::x(p) - (geometry::left(contentRectangle))) / geometry::dx(scrollUnits) - 1;
+			scrollOffsets.x() = static_cast<TextViewport::SignedScrollOffset>((geometry::x(p) - (geometry::left(contentRectangle))) / geometry::dx(scrollUnits) - 1);
 		else if(geometry::x(p) >= geometry::right(contentRectangle))
-			scrollOffsets.x() = (geometry::x(p) - (geometry::right(contentRectangle))) / geometry::dx(scrollUnits) + 1;
+			scrollOffsets.x() = static_cast<TextViewport::SignedScrollOffset>((geometry::x(p) - (geometry::right(contentRectangle))) / geometry::dx(scrollUnits) + 1);
 		if(scrollOffsets.x() != 0 || scrollOffsets.y() != 0)
 			viewport->scroll(scrollOffsets);
 		extendSelectionTo();
 	} else if(state_ == AUTO_SCROLL_DRAGGING || state_ == AUTO_SCROLL) {
 		const shared_ptr<TextViewport> viewport(viewer_->textRenderer().viewport());
 		timer.stop();
-		const NativePoint p(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
-		NativeSize scrollUnits(geometry::make<NativeSize>(
-			inlineProgressionScrollOffsetInPixels(*viewport, 1),
-			viewer_->textRenderer().defaultFont()->metrics().linePitch()));
-		if(isVertical(viewer_->textRenderer().writingMode().blockFlowDirection))
+		const Point p(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
+		Dimension scrollUnits(
+			geometry::_dx = inlineProgressionScrollOffsetInUserUnits(*viewport, 1),
+			geometry::_dy = widgetapi::createRenderingContext(*viewer_)->fontMetrics(viewer_->textRenderer().defaultFont())->linePitch());
+		if(isVertical(viewer_->textRenderer().computedBlockFlowDirection()))
 			geometry::transpose(scrollUnits);
-		const NativeSize scrollOffsets(geometry::make<NativeSize>(
-			(geometry::x(p) - geometry::x(dragApproachedPosition_)) / geometry::dx(scrollUnits),
-			(geometry::y(p) - geometry::y(dragApproachedPosition_)) / geometry::dy(scrollUnits)));
+		const Dimension scrollOffsets(
+			geometry::_dx = (geometry::x(p) - geometry::x(dragApproachedPosition_)) / geometry::dx(scrollUnits),
+			geometry::_dy = (geometry::y(p) - geometry::y(dragApproachedPosition_)) / geometry::dy(scrollUnits));
 //		const Scalar scrollDegree = max(abs(yScrollDegree), abs(xScrollDegree));
 
 		if(geometry::dy(scrollOffsets) != 0 /*&& abs(geometry::dy(scrollOffsets)) >= abs(geometry::dx(scrollOffsets))*/)
