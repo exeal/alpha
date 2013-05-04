@@ -143,25 +143,25 @@ void detail::paintBorder(PaintContext& context, const graphics::Rectangle& recta
 				context
 					.moveTo(geometry::topLeft(rectangle))
 					.lineTo(geometry::translate(
-						geometry::topRight(rectangle), Dimension(geometry::_dx = static_cast<Scalar>(1), geometry::_dy = static_cast<Scalar>(0))));
+						geometry::topRight(rectangle), Dimension(geometry::_dx = 1.0f, geometry::_dy = 0.0f)));
 				break;
 			case PhysicalDirection::RIGHT:
 				context
 					.moveTo(geometry::topRight(rectangle))
 					.lineTo(geometry::translate(
-						geometry::bottomRight(rectangle), Dimension(geometry::_dx = static_cast<Scalar>(0), geometry::_dy = static_cast<Scalar>(1))));
+						geometry::bottomRight(rectangle), Dimension(geometry::_dx = 0.0f, geometry::_dy = 1.0f)));
 				break;
 			case PhysicalDirection::BOTTOM:
 				context
 					.moveTo(geometry::bottomLeft(rectangle))
 					.lineTo(geometry::translate(
-						geometry::bottomRight(rectangle), Dimension(geometry::_dx = static_cast<Scalar>(1), geometry::_dy = static_cast<Scalar>(0))));
+						geometry::bottomRight(rectangle), Dimension(geometry::_dx = 1.0f, geometry::_dy = 0.0f)));
 				break;
 			case PhysicalDirection::LEFT:
 				context
 					.moveTo(geometry::topLeft(rectangle))
 					.lineTo(geometry::translate(
-						geometry::bottomLeft(rectangle), Dimension(geometry::_dx = static_cast<Scalar>(0), geometry::_dy = static_cast<Scalar>(1))));
+						geometry::bottomLeft(rectangle), Dimension(geometry::_dx = 0.0f, geometry::_dy = 1.0f)));
 				break;
 			default:
 				ASCENSION_ASSERT_NOT_REACHED();
@@ -414,7 +414,7 @@ AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit<>& hit) const {
 		throw IndexOutOfBoundsException("hit");
 
 	if(isEmpty())
-		return AbstractTwoAxes<Scalar>(_ipd = static_cast<Scalar>(0), _bpd = LineMetricsIterator(*this, 0).baselineOffset());
+		return AbstractTwoAxes<Scalar>(_ipd = 0.0f, _bpd = LineMetricsIterator(*this, 0).baselineOffset());
 
 	// locate line
 	const Index line = lineAt(hit.characterIndex());
@@ -513,26 +513,26 @@ TextLayout::StyledSegmentIterator TextLayout::lastStyledSegment() const /*throw(
 Point TextLayout::lineLeft(Index line) const {
 	if(isHorizontal(writingMode().blockFlowDirection)) {
 		if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT)
-			return Point(geometry::_x = lineStartEdge(line), geometry::_y = static_cast<Scalar>(0));
+			return Point(geometry::_x = lineStartEdge(line), geometry::_y = 0.0f);
 		else
-			return Point(geometry::_x = -lineStartEdge(line) - measure(line), geometry::_y = static_cast<Scalar>(0));
+			return Point(geometry::_x = -lineStartEdge(line) - measure(line), geometry::_y = 0.0f);
 	} else {
 		Scalar y = -lineStartEdge(line);
 		if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
 			y -= measure(line);
 		if(resolveTextOrientation(writingMode()) == SIDEWAYS_LEFT)
 			y = -y;
-		return Point(geometry::_x = static_cast<Scalar>(0), geometry::_y = y);
+		return Point(geometry::_x = 0.0f, geometry::_y = y);
 /*		if(writingMode().inlineFlowDirection == LEFT_TO_RIGHT) {
 			if(resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT)
-				return Point(geometry::_x = static_cast<Scalar>(0), geometry::_y = lineStartEdge(line));
+				return Point(geometry::_x = 0.0f, geometry::_y = lineStartEdge(line));
 			else
-				return Point(geometry::_x = static_cast<Scalar>(0), geometry::_y = -lineStartEdge(line));
+				return Point(geometry::_x = 0.0f, geometry::_y = -lineStartEdge(line));
 		} else {
 			if(resolveTextOrientation(writingMode()) != SIDEWAYS_LEFT)
-				return Point(geometry::_x = static_cast<Scalar>(0), geometry::_y = -lineStartEdge(line) - measure(line));
+				return Point(geometry::_x = 0.0f, geometry::_y = -lineStartEdge(line) - measure(line));
 			else
-				return Point(geometry::_x = static_cast<Scalar>(0), geometry::_y = lineStartEdge(line) + measure(line));
+				return Point(geometry::_x = 0.0f, geometry::_y = lineStartEdge(line) + measure(line));
 		}
 */	}
 }
@@ -895,7 +895,7 @@ Scalar TextLayout::measure(Index line) const {
 		if(lineMeasures_[line] >= 0)
 			return lineMeasures_[line];
 	}
-	const Scalar ipd = boost::accumulate(runsForLine(line), static_cast<Scalar>(0), [](Scalar ipd, const unique_ptr<const TextRun>& run) {
+	const Scalar ipd = boost::accumulate(runsForLine(line), 0.0f, [](Scalar ipd, const unique_ptr<const TextRun>& run) {
 		return ipd + allocationMeasure(*run);
 	});
 	assert(ipd >= 0);

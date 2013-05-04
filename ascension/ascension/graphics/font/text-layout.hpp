@@ -387,11 +387,11 @@ namespace ascension {
 			inline Point TextLayout::LineMetricsIterator::baselineOffsetInPhysicalCoordinates() const {
 				switch(layout_.writingMode().blockFlowDirection) {
 					case presentation::HORIZONTAL_TB:
-						return Point(geometry::_x = static_cast<Scalar>(0), geometry::_y = baselineOffset());
+						return Point(geometry::_x = 0.0f, geometry::_y = baselineOffset());
 					case presentation::VERTICAL_RL:
-			 			return Point(geometry::_x = -baselineOffset(), geometry::_y = static_cast<Scalar>(0));
+			 			return Point(geometry::_x = -baselineOffset(), geometry::_y = 0.0f);
 					case presentation::VERTICAL_LR:
-			 			return Point(geometry::_x = +baselineOffset(), geometry::_y = static_cast<Scalar>(0));
+			 			return Point(geometry::_x = +baselineOffset(), geometry::_y = 0.0f);
 					default:
 						ASCENSION_ASSERT_NOT_REACHED();
 				}
