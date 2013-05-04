@@ -153,7 +153,7 @@ namespace ascension {
 					measure = static_cast<Scalar>(boost::geometry::distance(boost::geometry::make_zero<Point>(), lastGlyphPosition));
 				std::unique_ptr<const LineMetrics> lm(textRun.font()->lineMetrics(String(), textRun.fontRenderContext()));
 				return presentation::FlowRelativeFourSides<Scalar>(
-					presentation::_start = static_cast<Scalar>(0), presentation::_end = measure,
+					presentation::_start = 0.0f, presentation::_end = measure,
 					presentation::_before = -lm->ascent(), presentation::_after = lm->descent() + lm->leading());
 			}
 			/**

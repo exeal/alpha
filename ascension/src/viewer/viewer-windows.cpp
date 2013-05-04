@@ -1357,7 +1357,7 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, bool 
 		// TODO: Support RTL and vertical window layout.
 		geometry::y(menuPosition) += widgetapi::createRenderingContext(*this)->fontMetrics(textRenderer().defaultFont())->cellHeight() + 1;
 		if(!boost::geometry::within(menuPosition, textAreaContentRectangle()))
-			menuPosition = Point(geometry::_x = static_cast<Scalar>(1), geometry::_y = static_cast<Scalar>(1));
+			menuPosition = Point(geometry::_x = 1.0f, geometry::_y = 1.0f);
 		widgetapi::mapToGlobal(*this, menuPosition);
 	} else
 		menuPosition = input.location();

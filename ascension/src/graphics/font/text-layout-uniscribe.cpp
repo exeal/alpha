@@ -2418,7 +2418,7 @@ TextLayout::TextLayout(const String& textString, const ComputedTextLineStyle& li
 	// handle logically empty line
 	if(textString_.empty()) {
 		numberOfLines_ = 1;
-		maximumMeasure_ = static_cast<Scalar>(0);
+		maximumMeasure_ = 0.0f;
 		assert(isEmpty());
 		return;
 	}

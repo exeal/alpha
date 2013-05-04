@@ -158,13 +158,13 @@ void BaselineIterator::initializeWithFirstVisibleLine() {
 	const Rectangle bounds(boost::geometry::make_zero<Point>(), geometry::size(viewport().boundsInView()));
 	switch(viewport().textRenderer().computedBlockFlowDirection()) {
 		case HORIZONTAL_TB:
-			axis = Point(geometry::_x = static_cast<Scalar>(0), geometry::_y = geometry::top(bounds) + baseline);
+			axis = Point(geometry::_x = 0.0f, geometry::_y = geometry::top(bounds) + baseline);
 			break;
 		case VERTICAL_RL:
-			axis = Point(geometry::_x = geometry::right(bounds) - baseline, geometry::_y = static_cast<Scalar>(0));
+			axis = Point(geometry::_x = geometry::right(bounds) - baseline, geometry::_y = 0.0f);
 			break;
 		case VERTICAL_LR:
-			axis = Point(geometry::_x = geometry::left(bounds) + baseline, geometry::_y = static_cast<Scalar>(0));
+			axis = Point(geometry::_x = geometry::left(bounds) + baseline, geometry::_y = 0.0f);
 			break;
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();

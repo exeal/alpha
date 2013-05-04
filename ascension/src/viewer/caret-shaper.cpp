@@ -36,7 +36,7 @@ graphics::Rectangle&& viewers::currentCharacterLogicalBounds(const Caret& caret)
 
 	using namespace presentation;
 	return geometry::make<graphics::Rectangle>(mapFlowRelativeToPhysical(layout.writingMode(),
-		FlowRelativeFourSides<Scalar>(_before = *extent.begin(), _after = *extent.end(), _start = static_cast<Scalar>(0), _end = trailing)));
+		FlowRelativeFourSides<Scalar>(_before = *extent.begin(), _after = *extent.end(), _start = 0.0f, _end = trailing)));
 }
 
 

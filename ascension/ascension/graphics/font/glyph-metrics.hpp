@@ -18,7 +18,8 @@ namespace ascension {
 	namespace graphics {
 		namespace font {
 			/**
-			 * Represents information for a single glyph. All coordinates used in this class are in user units.
+			 * Represents information for a single glyph.
+			 * All coordinates used in this class are in user units.
 			 * @see GlyphVector#glyphMetrics
 			 */
 			class GlyphMetrics {
@@ -32,10 +33,11 @@ namespace ascension {
 				 * @param type The type of the glyph
 				 */
 				GlyphMetrics(Scalar advance, const Rectangle& bounds, Type type) : horizontal_(true),
-					advances_(geometry::_dx = advance, geometry::_dy = static_cast<Scalar>(0)), bounds_(bounds), type_(type) {}
+					advances_(geometry::_dx = advance, geometry::_dy = 0.0f), bounds_(bounds), type_(type) {}
 				/**
 				 * Constructs a @c GlyphMetrics object.
-				 * @param horizontal If @c true, metrics are for a horizontal baseline, otherwise they are for a vertical baseline
+				 * @param horizontal If @c true, metrics are for a horizontal baseline, otherwise
+				 *                   they are for a vertical baseline
 				 * @param advances The x- and y-component of the glyph's advance
 				 * @param bounds The visual bounds of the glyph
 				 * @param type The type of the glyph
