@@ -4,11 +4,12 @@
  * @date 2003-2006 was EditView.cpp and EditViewWindowMessages.cpp
  * @date 2006-2011 was viewer.cpp
  * @date 2011-05-16 separated from viewer.cpp
- * @date 2011-2012
+ * @date 2011-2013
  */
 
 #define ASCENSION_TEST_TEXT_STYLES
 
+#include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/viewer.hpp>
@@ -221,9 +222,10 @@ STDMETHODIMP AccessibleProxy::accDoDefaultAction(VARIANT) {
 /// @see IAccessible#accHitTest
 STDMETHODIMP AccessibleProxy::accHitTest(long xLeft, long yTop, VARIANT* pvarChild) {
 	ASCENSION_VERIFY_AVAILABILITY();
-	// ウィンドウが矩形であることを前提としている
+	// this code does not support non-rectangular window
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pvarChild);
-	if(geometry::includes(widgetapi::bounds(viewer_, false), widgetapi::mapFromGlobal(viewer_, geometry::make<NativePoint>(xLeft, yTop)))) {
+	if(boost::geometry::within(widgetapi::mapFromGlobal(viewer_, Point(
+			geometry::_x = static_cast<Scalar>(xLeft), geometry::_y = static_cast<Scalar>(yTop))), widgetapi::bounds(viewer_, false))) {
 		pvarChild->vt = VT_I4;
 		pvarChild->lVal = CHILDID_SELF;
 		return S_OK;
@@ -242,12 +244,12 @@ STDMETHODIMP AccessibleProxy::accLocation(long* pxLeft, long* pyTop, long* pcxWi
 	ASCENSION_WIN32_VERIFY_COM_POINTER(pcyHeight);
 	if(varChild.vt != VT_I4 || varChild.lVal != CHILDID_SELF)
 		return E_INVALIDARG;
-	const NativeRectangle clientBounds(widgetapi::bounds(viewer_, false));
-	const NativePoint origin(widgetapi::mapToGlobal(viewer_, geometry::topLeft(clientBounds)));
-	*pxLeft = geometry::x(origin);
-	*pyTop = geometry::y(origin);
-	*pcxWidth = geometry::dx(clientBounds);
-	*pcyHeight = geometry::dy(clientBounds);
+	const graphics::Rectangle clientBounds(widgetapi::bounds(viewer_, false));
+	const Point origin(widgetapi::mapToGlobal(viewer_, geometry::topLeft(clientBounds)));
+	*pxLeft = static_cast<long>(geometry::x(origin));
+	*pyTop = static_cast<long>(geometry::y(origin));
+	*pcxWidth = static_cast<long>(geometry::dx(clientBounds));
+	*pcyHeight = static_cast<long>(geometry::dy(clientBounds));
 	return S_OK;
 }
 
@@ -563,9 +565,9 @@ namespace {
 		if(win32::boole(keyState & MK_ALT))
 			modifiers |= widgetapi::UserInput::ALT_DOWN;
 		return widgetapi::MouseButtonInput(
-			geometry::make<NativePoint>(
-				static_cast<typename geometry::Coordinate<Point>::Type>(geometry::x(location)),
-				static_cast<typename geometry::Coordinate<Point>::Type>(geometry::y(location))),
+			Point(
+				geometry::_x = static_cast<typename boost::geometry::coordinate_type<Point>::type>(geometry::x(location)),
+				geometry::_y = static_cast<typename boost::geometry::coordinate_type<Point>::type>(geometry::y(location))),
 			buttons, modifiers);
 	}
 }
@@ -603,7 +605,7 @@ STDMETHODIMP TextViewer::DragEnter(IDataObject* data, DWORD keyState, POINTL loc
 	if(mouseInputStrategy_.get() != nullptr) {
 		if(const shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
 			widgetapi::DragEnterInput input(
-				makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, location)),
+				makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, Point(location))),
 				translateDropActions(*effect), *data);
 			try {
 				dropTarget->dragEntered(input);
@@ -652,7 +654,7 @@ STDMETHODIMP TextViewer::DragOver(DWORD keyState, POINTL location, DWORD* effect
 		if(const shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
 			try {
 				dropTarget->dragMoved(widgetapi::DragMoveInput(
-					makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, location)),
+					makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, Point(location))),
 					translateDropActions(*effect), *draggingData_));
 			} catch(const bad_alloc&) {
 				return E_OUTOFMEMORY;
@@ -693,7 +695,7 @@ STDMETHODIMP TextViewer::Drop(IDataObject* data, DWORD keyState, POINTL location
 		if(const shared_ptr<widgetapi::DropTarget> dropTarget = mouseInputStrategy_->handleDropTarget()) {
 			try {
 				dropTarget->dropped(widgetapi::DropInput(
-					makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, location)),
+					makeMouseButtonInput(keyState, widgetapi::mapFromGlobal(*this, Point(location))),
 					translateDropActions(*effect), *data));
 			} catch(const bad_alloc&) {
 				hr = E_OUTOFMEMORY;
@@ -745,7 +747,7 @@ void TextViewer::initializeNativeObjects(const TextViewer* other) {
 }
 
 /// @see WM_CAPTURECHANGED
-void TextViewer::onCaptureChanged(const win32::Handle<HWND>&, bool& consumed) {
+void TextViewer::onCaptureChanged(const win32::Handle<HWND>::Type&, bool& consumed) {
 	if(consumed = (mouseInputStrategy_.get() != nullptr))
 		mouseInputStrategy_->captureChanged();
 }
@@ -811,7 +813,7 @@ namespace {
 }
 
 /// @see Window#onCommand
-void TextViewer::onCommand(WORD id, WORD, const win32::Handle<HWND>&, bool& consumed) {
+void TextViewer::onCommand(WORD id, WORD, const win32::Handle<HWND>::Type&, bool& consumed) {
 	using namespace ascension::texteditor::commands;
 	switch(id) {
 	case WM_UNDO:	// "Undo"
@@ -929,17 +931,17 @@ void TextViewer::onDestroy(bool& consumed) {
 }
 
 /// @see WM_ERASEGKGND
-void TextViewer::onEraseBkgnd(const win32::Handle<HDC>&, bool& consumed) {
+void TextViewer::onEraseBkgnd(const win32::Handle<HDC>::Type&, bool& consumed) {
 	consumed = false;
 }
 
 /// @see WM_GETFONT
-const win32::Handle<HFONT>& TextViewer::onGetFont() {
-	return textRenderer().defaultFont()->nativeObject();
+const win32::Handle<HFONT>::Type TextViewer::onGetFont() const {
+	return textRenderer().defaultFont()->asNativeObject();
 }
 
 /// @see WM_HSCROLL
-void TextViewer::onHScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
+void TextViewer::onHScroll(UINT sbCode, UINT, const win32::Handle<HWND>::Type&) {
 	const shared_ptr<TextViewport> viewport(textRenderer().viewport());
 	switch(sbCode) {
 		case SB_LINELEFT:	// 1 列分左
@@ -949,16 +951,16 @@ void TextViewer::onHScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
 			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(+1, 0));
 			break;
 		case SB_PAGELEFT:	// 1 ページ左
-			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(-abs(pageSize<geometry::X_COORDINATE>(*viewport)), 0));
+			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(-abs(pageSize<0>(*viewport)), 0));
 			break;
 		case SB_PAGERIGHT:	// 1 ページ右
-			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(+abs(pageSize<geometry::X_COORDINATE>(*viewport)), 0));
+			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(+abs(pageSize<0>(*viewport)), 0));
 			break;
 		case SB_LEFT:		// 左端
-			viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(scrollableRangeInPhysicalDirection<geometry::X_COORDINATE>(*viewport).beginning(), boost::none));
+			viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(*scrollableRangeInPhysicalDirection<0>(*viewport).begin(), boost::none));
 			break;
 		case SB_RIGHT:		// 右端
-			viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(scrollableRangeInPhysicalDirection<geometry::X_COORDINATE>(*viewport).end(), boost::none));
+			viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(*scrollableRangeInPhysicalDirection<0>(*viewport).end(), boost::none));
 			break;
 		case SB_THUMBTRACK: {	// by drag or wheel
 			win32::AutoZeroSize<SCROLLINFO> si;
@@ -1006,7 +1008,7 @@ void TextViewer::onNotify(int, NMHDR& nmhdr, bool& consumed) {
 }
 
 /// @see WM_SETCURSOR
-void TextViewer::onSetCursor(const win32::Handle<HWND>&, UINT, UINT, bool& consumed) {
+void TextViewer::onSetCursor(const win32::Handle<HWND>::Type&, UINT, UINT, bool& consumed) {
 	cursorVanisher_.restore();
 	if(consumed = (mouseInputStrategy_.get() != nullptr))
 		mouseInputStrategy_->showCursor(widgetapi::mapFromGlobal(*this, widgetapi::Cursor::position()));
@@ -1052,7 +1054,7 @@ void TextViewer::onTimer(UINT_PTR eventID, TIMERPROC) {
 }
 
 /// @see Window#onVScroll
-void TextViewer::onVScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
+void TextViewer::onVScroll(UINT sbCode, UINT, const win32::Handle<HWND>::Type&) {
 	const shared_ptr<TextViewport> viewport(textRenderer().viewport());
 	switch(sbCode) {
 		case SB_LINEUP:		// 1 行上
@@ -1062,16 +1064,16 @@ void TextViewer::onVScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
 			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(0, +1));
 			break;
 		case SB_PAGEUP:		// 1 ページ上
-			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(0, -abs(pageSize<geometry::Y_COORDINATE>(*viewport))));
+			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(0, -abs(pageSize<1>(*viewport))));
 			break;
 		case SB_PAGEDOWN:	// 1 ページ下
-			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(0, +abs(pageSize<geometry::Y_COORDINATE>(*viewport))));
+			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(0, +abs(pageSize<1>(*viewport))));
 			break;
 		case SB_TOP:		// 上端
-			viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(boost::none, scrollableRangeInPhysicalDirection<geometry::Y_COORDINATE>(*viewport).beginning()));
+			viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(boost::none, *scrollableRangeInPhysicalDirection<1>(*viewport).begin()));
 			break;
 		case SB_BOTTOM:		// 下端
-			viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(boost::none, scrollableRangeInPhysicalDirection<geometry::Y_COORDINATE>(*viewport).end()));
+			viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(boost::none, *scrollableRangeInPhysicalDirection<1>(*viewport).end()));
 			break;
 		case SB_THUMBTRACK: {	// by drag or wheel
 			win32::AutoZeroSize<SCROLLINFO> si;
@@ -1084,13 +1086,14 @@ void TextViewer::onVScroll(UINT sbCode, UINT, const win32::Handle<HWND>&) {
 }
 
 namespace {
-	inline NativePoint makeMouseLocation(LPARAM lp) {
+	template<typename Point>
+	inline Point makeMouseLocation(LPARAM lp) {
 #ifndef GET_X_LPARAM
 	// <windowsx.h> defines the followings
 #	define GET_X_LPARAM(l) LOWORD(l)
 #	define GET_Y_LPARAM(l) HIWORD(l)
 #endif
-		return geometry::make<NativePoint>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
+		return boost::geometry::make<Point>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
 	}
 	inline widgetapi::UserInput::ModifierKey makeModifiers() {
 		widgetapi::UserInput::ModifierKey modifiers = 0;
@@ -1114,7 +1117,7 @@ namespace {
 		return widgetapi::KeyInput(wp, makeModifiers(), LOWORD(lp), HIWORD(lp));
 	}
 	inline widgetapi::MouseButtonInput makeMouseButtonInput(widgetapi::UserInput::MouseButton button, WPARAM wp, LPARAM lp) {
-		return widgetapi::MouseButtonInput(makeMouseLocation(lp), button, makeModifiers(wp));
+		return widgetapi::MouseButtonInput(makeMouseLocation<graphics::Point>(lp), button, makeModifiers(wp));
 	}
 }
 
@@ -1170,14 +1173,14 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 		case WM_GETTEXT: {
 			basic_ostringstream<Char> s;
-			writeDocumentToStream(s, document(), document().region(), text::NLF_CR_LF);
+			writeDocumentToStream(s, document(), document().region(), text::Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED);
 			consumed = true;
 			return reinterpret_cast<LRESULT>(s.str().c_str());
 		}
 		case WM_GETTEXTLENGTH:
-			// ウィンドウ関係だし改行は CRLF でいいか。NLR_RAW_VALUE だと遅いし
+			// ウィンドウ関係だし改行は CRLF でいいか。Newline.USE_INTRINSIC_VALUE だと遅いし
 			consumed = true;
-			return document().length(text::NLF_CR_LF);
+			return document().length(text::Newline::CARRIAGE_RETURN_FOLLOWED_BY_LINE_FEED);
 //		case WM_NCPAINT:
 //			return 0;
 #ifdef ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
@@ -1199,7 +1202,7 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 #endif // ASCENSION_HANDLE_STANDARD_EDIT_CONTROL_MESSAGES
 			// dispatch message into handler
 		case WM_CAPTURECHANGED:
-			onCaptureChanged(win32::Handle<HWND>(reinterpret_cast<HWND>(lp)), consumed);
+			onCaptureChanged(win32::Handle<HWND>::Type(reinterpret_cast<HWND>(lp)), consumed);
 			return consumed ? 0 : 1;
 		case WM_CHAR:
 		case WM_SYSCHAR:
@@ -1217,10 +1220,10 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 			return consumed ? 0 : 1;
 		}
 		case WM_COMMAND:
-			onCommand(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp)), consumed);
+			onCommand(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>::Type(reinterpret_cast<HWND>(lp)), consumed);
 			return consumed ? 0 : 1;
 		case WM_CONTEXTMENU: {
-			const widgetapi::LocatedUserInput input(makeMouseLocation(lp), makeModifiers());
+			const widgetapi::LocatedUserInput input(makeMouseLocation<graphics::Point>(lp), makeModifiers());
 			showContextMenu(input, geometry::x(input.location()) == 0xffff && geometry::y(input.location()) == 0xffff);
 			return (consumed = true), 0;
 		}
@@ -1228,12 +1231,12 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 			onDestroy(consumed);
 			return consumed ? 0 : 1;
 		case WM_ERASEBKGND:
-			onEraseBkgnd(win32::Handle<HDC>(reinterpret_cast<HDC>(wp)), consumed);
+			onEraseBkgnd(win32::Handle<HDC>::Type(reinterpret_cast<HDC>(wp)), consumed);
 			return consumed ? TRUE : FALSE;
 		case WM_GETFONT:
 			return (consumed = true), reinterpret_cast<LRESULT>(onGetFont().get());
 		case WM_HSCROLL:
-			return (consumed = true), onHScroll(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp))), 0;
+			return (consumed = true), onHScroll(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>::Type(reinterpret_cast<HWND>(lp))), 0;
 		case WM_IME_CHAR:
 		case WM_IME_COMPOSITION:
 		case WM_IME_COMPOSITIONFULL:
@@ -1269,15 +1272,15 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 		case WM_MBUTTONUP:
 			return (consumed = true), mouseReleased(makeMouseButtonInput(widgetapi::UserInput::BUTTON2_DOWN, wp, lp)), 0;
 		case WM_MOUSEMOVE:
-			return (consumed = true), mouseMoved(widgetapi::LocatedUserInput(makeMouseLocation(lp), makeModifiers(wp))), 0;
+			return (consumed = true), mouseMoved(widgetapi::LocatedUserInput(makeMouseLocation<graphics::Point>(lp), makeModifiers(wp))), 0;
 		case WM_MOUSEWHEEL:
 		case WM_MOUSEHWHEEL:
 			return (consumed = true), mouseWheelChanged(widgetapi::MouseWheelInput(
-				widgetapi::mapFromGlobal(*this, makeMouseLocation(lp)),
+				widgetapi::mapFromGlobal(*this, makeMouseLocation<graphics::Point>(lp)),
 				makeModifiers(GET_KEYSTATE_WPARAM(wp)),
-				geometry::make<NativeSize>(
-					(message == WM_MOUSEHWHEEL) ? GET_WHEEL_DELTA_WPARAM(wp) : 0,
-					(message == WM_MOUSEWHEEL) ? GET_WHEEL_DELTA_WPARAM(wp) : 0))), 0;
+				Dimension(
+					geometry::_dx = static_cast<Scalar>((message == WM_MOUSEHWHEEL) ? GET_WHEEL_DELTA_WPARAM(wp) : 0),
+					geometry::_dy = static_cast<Scalar>((message == WM_MOUSEWHEEL) ? GET_WHEEL_DELTA_WPARAM(wp) : 0)))), 0;
 		case WM_NCCREATE:
 			return (consumed = true), onNcCreate(*reinterpret_cast<CREATESTRUCTW*>(lp));
 		case WM_NOTIFY:
@@ -1286,7 +1289,7 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 			PAINTSTRUCT ps;
 			::BeginPaint(handle().get(), &ps);
 			consumed = true;
-			const win32::Handle<HDC> dc(ps.hdc);
+			const win32::Handle<HDC>::Type dc(ps.hdc);
 			RenderingContext2D context(dc);
 			paint(PaintContext(move(context), ps.rcPaint));
 			::EndPaint(handle().get(), &ps);
@@ -1299,12 +1302,12 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 		case WM_RBUTTONUP:
 			return (consumed = true), mouseReleased(makeMouseButtonInput(widgetapi::UserInput::BUTTON3_DOWN, wp, lp)), 0;
 		case WM_SETCURSOR:
-			onSetCursor(win32::Handle<HWND>(reinterpret_cast<HWND>(wp)), LOWORD(lp), HIWORD(lp), consumed);
+			onSetCursor(win32::Handle<HWND>::Type(reinterpret_cast<HWND>(wp)), LOWORD(lp), HIWORD(lp), consumed);
 			return consumed ? TRUE : FALSE;
 		case WM_SETFOCUS:
 			return (consumed = true), focusGained(), 0;
 		case WM_SIZE:
-			return (consumed = true), resized(geometry::make<NativeSize>(LOWORD(lp), HIWORD(lp))), 0;
+			return (consumed = true), resized(Dimension(geometry::_dx = LOWORD(lp), geometry::_dy = HIWORD(lp))), 0;
 		case WM_STYLECHANGED:
 			return (consumed = true), onStyleChanged(static_cast<int>(wp), *reinterpret_cast<STYLESTRUCT*>(lp)), 0;
 		case WM_STYLECHANGING:
@@ -1316,7 +1319,7 @@ LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& con
 		case WM_TIMER:
 			return (consumed = true), onTimer(static_cast<UINT_PTR>(wp), reinterpret_cast<TIMERPROC>(lp)), 0;
 		case WM_VSCROLL:
-			return (consumed = true), onVScroll(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>(reinterpret_cast<HWND>(lp))), 0;
+			return (consumed = true), onVScroll(LOWORD(wp), HIWORD(wp), win32::Handle<HWND>::Type(reinterpret_cast<HWND>(lp))), 0;
 		case WM_XBUTTONDBLCLK:
 			return (consumed = true), mouseDoubleClicked(makeMouseButtonInput((GET_XBUTTON_WPARAM(wp) == XBUTTON1) ? widgetapi::UserInput::BUTTON4_DOWN : widgetapi::UserInput::BUTTON5_DOWN, GET_KEYSTATE_WPARAM(wp), lp)), 0;
 		case WM_XBUTTONDOWN:
@@ -1345,23 +1348,24 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, bool 
 	utils::closeCompletionProposalsPopup(*this);
 	texteditor::abortIncrementalSearch(*this);
 
-	NativePoint menuPosition;
+	Point menuPosition;
 
 	// invoked by the keyboard
 	if(byKeyboard) {
 		// MSDN says "the application should display the context menu at the location of the current selection."
-		menuPosition = modelToView(*textRenderer().viewport(), caret(), false);
-		geometry::y(menuPosition) += textRenderer().defaultFont()->metrics().cellHeight() + 1;
-		if(!geometry::includes(textAreaContentRectangle(), menuPosition))
-			menuPosition = geometry::make<NativePoint>(1, 1);
+		menuPosition = modelToView(*textRenderer().viewport(), TextHit<k::Position>::leading(caret()), false);
+		// TODO: Support RTL and vertical window layout.
+		geometry::y(menuPosition) += widgetapi::createRenderingContext(*this)->fontMetrics(textRenderer().defaultFont())->cellHeight() + 1;
+		if(!boost::geometry::within(menuPosition, textAreaContentRectangle()))
+			menuPosition = Point(geometry::_x = static_cast<Scalar>(1), geometry::_y = static_cast<Scalar>(1));
 		widgetapi::mapToGlobal(*this, menuPosition);
 	} else
 		menuPosition = input.location();
 
 	// ignore if the point is over the scroll bars
-	const NativeRectangle clientBounds(widgetapi::bounds(*this, false));
+	const graphics::Rectangle clientBounds(widgetapi::bounds(*this, false));
 	widgetapi::mapToGlobal(*this, clientBounds);
-	if(!geometry::includes(clientBounds, menuPosition))
+	if(!boost::geometry::within(menuPosition, clientBounds))
 		return;
 
 	const k::Document& doc = document();
@@ -1369,7 +1373,7 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, bool 
 	const bool readOnly = doc.isReadOnly();
 	const bool japanese = PRIMARYLANGID(win32::userDefaultUILanguage()) == LANG_JAPANESE;
 
-	static win32::Handle<HMENU> toplevelPopup(::CreatePopupMenu(), &::DestroyMenu);
+	static win32::Handle<HMENU>::Type toplevelPopup(::CreatePopupMenu(), &::DestroyMenu);
 	if(::GetMenuItemCount(toplevelPopup.get()) == 0) {	// first initialization
 		// under "Insert Unicode control character"
 		static const pair<UINT, const basic_string<WCHAR>> insertUnicodeControlCharacterItems[] = {
@@ -1396,7 +1400,7 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, bool 
 			make_pair(ID_INSERT_IAT, L"IAT\tInterlinear Annotation Terminator"),
 			make_pair(ID_INSERT_IAS, L"IAS\tInterlinear Annotation Separator")
 		};
-		win32::Handle<HMENU> insertUnicodeControlCharacterPopup(::CreatePopupMenu(), &::DestroyMenu);
+		win32::Handle<HMENU>::Type insertUnicodeControlCharacterPopup(::CreatePopupMenu(), &::DestroyMenu);
 		win32::AutoZeroSize<MENUITEMINFOW> item;
 		for(size_t i = 0; i < ASCENSION_COUNTOF(insertUnicodeControlCharacterItems); ++i) {
 			if(!insertUnicodeControlCharacterItems[i].second.empty()) {
@@ -1436,7 +1440,7 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, bool 
 			make_pair(ID_INSERT_LS, L"LS\tLine Separator"),
 			make_pair(ID_INSERT_PS, L"PS\tParagraph Separator")
 		};
-		win32::Handle<HMENU> insertUnicodeWhiteSpaceCharacterPopup(::CreatePopupMenu(), &::DestroyMenu);
+		win32::Handle<HMENU>::Type insertUnicodeWhiteSpaceCharacterPopup(::CreatePopupMenu(), &::DestroyMenu);
 		for(size_t i = 0; i < ASCENSION_COUNTOF(insertUnicodeWhiteSpaceCharacterItems); ++i) {
 			if(!insertUnicodeWhiteSpaceCharacterItems[i].second.empty()) {
 				item.fMask = MIIM_FTYPE | MIIM_ID | MIIM_STRING;
@@ -1511,7 +1515,7 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, bool 
 	HKL keyboardLayout = ::GetKeyboardLayout(::GetCurrentThreadId());
 	if(//win32::boole(::ImmIsIME(keyboardLayout)) &&
 			::ImmGetProperty(keyboardLayout, IGP_SENTENCE) != IME_SMODE_NONE) {
-		win32::Handle<HIMC> imc(win32::inputMethod(*this));
+		win32::Handle<HIMC>::Type imc(win32::inputMethod(*this));
 		const basic_string<WCHAR> openIme(japanese ? L"IME \x3092\x958b\x304f(&O)" : L"&Open IME");
 		const basic_string<WCHAR> closeIme(japanese ? L"IME \x3092\x9589\x3058\x308b(&L)" : L"C&lose IME");
 		const basic_string<WCHAR> openSoftKeyboard(japanese ? L"\x30bd\x30d5\x30c8\x30ad\x30fc\x30dc\x30fc\x30c9\x3092\x958b\x304f(&E)" : L"Op&en soft keyboard");
@@ -1547,7 +1551,7 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, bool 
 
 	// hyperlink
 	if(const hyperlink::Hyperlink* link = utils::getPointedHyperlink(*this, caret())) {
-		const Index len = (link->region().end() - link->region().beginning()) * 2 + 8;
+		const Index len = link->region().size() * 2 + 8;
 		unique_ptr<WCHAR[]> caption(new WCHAR[len]);	// TODO: this code can have buffer overflow in future
 		swprintf(caption.get(),
 #if(_MSC_VER < 1400)
@@ -1555,7 +1559,7 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, bool 
 			len,
 #endif // _MSC_VER < 1400
 			japanese ? L"\x202a%s\x202c \x3092\x958b\x304f" : L"Open \x202a%s\x202c", escapeAmpersands(doc.line(
-				line(caret())).substr(link->region().beginning(), link->region().end() - link->region().beginning())).c_str());
+				line(caret())).substr(link->region().front(), link->region().size())).c_str());
 		win32::AutoZeroSize<MENUITEMINFOW> item;
 		item.fMask = MIIM_FTYPE;
 		item.fType = MFT_SEPARATOR;
@@ -1566,7 +1570,8 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, bool 
 		::InsertMenuItemW(toplevelPopup.get(), ::GetMenuItemCount(toplevelPopup.get()), true, &item);
 	}
 
-	::TrackPopupMenu(toplevelPopup.get(), TPM_LEFTALIGN, geometry::x(menuPosition), geometry::y(menuPosition), 0, handle().get(), 0);
+	::TrackPopupMenu(toplevelPopup.get(), TPM_LEFTALIGN,
+		static_cast<int>(geometry::x(menuPosition)), static_cast<int>(geometry::y(menuPosition)), 0, handle().get(), 0);
 
 	// ...finally erase all items
 	int c = ::GetMenuItemCount(toplevelPopup.get());

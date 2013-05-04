@@ -106,17 +106,17 @@ namespace ascension {
 			inline graphics::Rectangle mapToGlobal(const NativeWidget& widget, const Box& rectangle,
 					typename detail::EnableIfTagIs<Box, boost::geometry::box_tag>::type* = nullptr) {
 				typedef typename boost::geometry::point_type<Box>::type PointType;
-				const PointType minimumCorner(boost::geometry::make<PointType>(
+				PointType minimumCorner(boost::geometry::make<PointType>(
 					boost::geometry::get<boost::geometry::min_corner, 0>(rectangle),
 					boost::geometry::get<boost::geometry::min_corner, 1>(rectangle)));
-				const PointType maximumCorner(boost::geometry::make<PointType>(
+				PointType maximumCorner(boost::geometry::make<PointType>(
 					boost::geometry::get<boost::geometry::max_corner, 0>(rectangle),
 					boost::geometry::get<boost::geometry::max_corner, 1>(rectangle)));
 				minimumCorner = mapToGlobal(widget, minimumCorner);
 				maximumCorner = mapToGlobal(widget, maximumCorner);
 				return boost::geometry::make<Box>(
-					boost::get<0>(minimumCorner), boost::get<1>(minimumCorner),
-					boost::get<0>(maximumCorner), boost::get<1>(maximumCorner));
+					boost::geometry::get<0>(minimumCorner), boost::geometry::get<1>(minimumCorner),
+					boost::geometry::get<0>(maximumCorner), boost::geometry::get<1>(maximumCorner));
 			}
 			/**
 			 * Moves the widget to the specified position.

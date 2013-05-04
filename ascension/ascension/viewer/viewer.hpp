@@ -338,7 +338,7 @@ namespace ascension {
 			void onCommand(WORD id, WORD notifyCode, const win32::Handle<HWND>::Type& control, bool& consumed);
 			void onDestroy(bool& consumed);
 			void onEraseBkgnd(const win32::Handle<HDC>::Type& dc, bool& consumed);
-			const win32::Handle<HFONT>::Type& onGetFont();
+			const win32::Handle<HFONT>::Type onGetFont() const;
 			void onHScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>::Type& scrollBar);
 			bool onNcCreate(CREATESTRUCTW& cs);
 			void onNotify(int id, NMHDR& nmhdr, bool& consumed);
