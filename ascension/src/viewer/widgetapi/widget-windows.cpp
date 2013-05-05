@@ -23,7 +23,7 @@ bool widgetapi::acceptsDrops(const NativeWidget&) {
 	return true;
 }
 
-NativeRectangle widgetapi::bounds(const NativeWidget& widget, bool includeFrame) {
+graphics::Rectangle widgetapi::bounds(const NativeWidget& widget, bool includeFrame) {
 	RECT temp;
 	if(includeFrame) {
 		if(!win32::boole(::GetWindowRect(widget.handle().get(), &temp)))
@@ -32,7 +32,7 @@ NativeRectangle widgetapi::bounds(const NativeWidget& widget, bool includeFrame)
 		if(!win32::boole(::GetClientRect(widget.handle().get(), &temp)))
 			throw makePlatformError();
 	}
-	return NativeRectangle(temp);
+	return graphics::Rectangle(temp);
 }
 
 void widgetapi::close(NativeWidget& widget) {
@@ -40,16 +40,16 @@ void widgetapi::close(NativeWidget& widget) {
 }
 
 unique_ptr<RenderingContext2D> widgetapi::createRenderingContext(const NativeWidget& widget) {
-	win32::Handle<HDC> dc(::GetDC(widget.handle().get()), bind(&::ReleaseDC, widget.handle().get(), placeholders::_1));
+	win32::Handle<HDC>::Type dc(::GetDC(widget.handle().get()), bind(&::ReleaseDC, widget.handle().get(), placeholders::_1));
 	return unique_ptr<RenderingContext2D>(new RenderingContext2D(std::move(dc)));
 }
 
 widgetapi::NativeWindow widgetapi::desktop() {
-	return win32::Window(win32::Handle<HWND>(::GetDesktopWindow()));
+	return win32::Window(win32::Handle<HWND>::Type(::GetDesktopWindow()));
 }
 
-void widgetapi::forcePaint(NativeWidget& widget, const NativeRectangle& bounds) {
-	if(!win32::boole(::RedrawWindow(widget.handle().get(), &bounds, nullptr, RDW_INTERNALPAINT | RDW_INVALIDATE)))
+void widgetapi::forcePaint(NativeWidget& widget, const graphics::Rectangle& bounds) {
+	if(!win32::boole(::RedrawWindow(widget.handle().get(), &static_cast<const RECT>(bounds), nullptr, RDW_INTERNALPAINT | RDW_INVALIDATE)))
 		throw makePlatformError();
 }
 
@@ -91,7 +91,7 @@ void widgetapi::lower(NativeWidget& widget) {
 
 template<typename Point>
 Point widgetapi::mapFromGlobal(const NativeWidget& widget, const Point& position,
-		typename detail::EnableIfTagIs<Point, graphics::geometry::PointTag>::type* /* = nullptr */) {
+		typename detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* /* = nullptr */) {
 	Point temp(position);
 	if(!win32::boole(::ScreenToClient(widget.handle().get(), &temp)))
 		throw makePlatformError();
@@ -100,16 +100,16 @@ Point widgetapi::mapFromGlobal(const NativeWidget& widget, const Point& position
 
 template<typename Point>
 Point widgetapi::mapToGlobal(const NativeWidget& widget, const Point& position,
-		typename detail::EnableIfTagIs<Point, graphics::geometry::PointTag>::type* /* = nullptr */) {
+		typename detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* /* = nullptr */) {
 	Point temp(position);
 	if(!win32::boole(::ClientToScreen(widget.handle().get(), &temp)))
 		throw makePlatformError();
 	return temp;
 }
 
-void widgetapi::move(NativeWidget& widget, const NativePoint& newOrigin) {
+void widgetapi::move(NativeWidget& widget, const Point& newOrigin) {
 	if(!win32::boole(::SetWindowPos(widget.handle().get(), nullptr,
-			geometry::x(newOrigin), geometry::y(newOrigin), 0, 0,
+			static_cast<int>(geometry::x(newOrigin)), static_cast<int>(geometry::y(newOrigin)), 0, 0,
 			SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOSIZE | SWP_NOZORDER)))
 		throw makePlatformError();
 }
@@ -138,9 +138,9 @@ void widgetapi::releaseInput(NativeWidget&) {
 		throw makePlatformError();
 }
 
-void widgetapi::resize(NativeWidget& widget, const NativeSize& newSize) {
+void widgetapi::resize(NativeWidget& widget, const Dimension& newSize) {
 	if(!win32::boole(::SetWindowPos(widget.handle().get(), nullptr,
-			0, 0, geometry::dx(newSize), geometry::dy(newSize),
+			0, 0, static_cast<int>(geometry::dx(newSize)), static_cast<int>(geometry::dy(newSize)),
 			SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOZORDER)))
 		throw makePlatformError();
 }
@@ -150,7 +150,7 @@ void widgetapi::scheduleRedraw(NativeWidget& widget, bool eraseBackground) {
 		throw makePlatformError();
 }
 
-void widgetapi::scheduleRedraw(NativeWidget& widget, const NativeRectangle& rect, bool eraseBackground) {
+void widgetapi::scheduleRedraw(NativeWidget& widget, const graphics::Rectangle& rect, bool eraseBackground) {
 	RECT temp(rect);
 	if(!win32::boole(::InvalidateRect(widget.handle().get(), &temp, eraseBackground)))
 		throw makePlatformError();
@@ -162,10 +162,10 @@ void widgetapi::setAlwaysOnTop(NativeWidget& widget, bool set) {
 		throw makePlatformError();
 }
 
-void widgetapi::setBounds(NativeWidget& widget, const NativeRectangle& bounds) {
+void widgetapi::setBounds(NativeWidget& widget, const graphics::Rectangle& bounds) {
 	if(!win32::boole(::SetWindowPos(widget.handle().get(), nullptr,
-			geometry::left(bounds), geometry::top(bounds),
-			geometry::dx(bounds), geometry::dy(bounds), SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER)))
+			static_cast<int>(geometry::left(bounds)), static_cast<int>(geometry::top(bounds)),
+			static_cast<int>(geometry::dx(bounds)), static_cast<int>(geometry::dy(bounds)), SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER)))
 		throw makePlatformError();
 }
 
@@ -178,12 +178,12 @@ void widgetapi::setFocus(NativeWidget& widget) {
 	if(::SetFocus(widget.handle().get()) == nullptr)
 		throw makePlatformError();
 }
-
+#if 0
 void widgetapi::setShape(NativeWidget& widget, const NativeRegion& shape) {
 	if(::SetWindowRgn(widget.handle().get(), shape.get(), true) == 0)
 		throw makePlatformError();
 }
-#if 0
+
 void WidgetBase::scrollInformation(int bar, SCROLLINFO& scrollInfo, UINT mask /* = SIF_ALL */) const {
 	scrollInfo.cbSize = sizeof(SCROLLINFO);
 	scrollInfo.fMask = mask;

@@ -2,7 +2,7 @@
  * @file image-windows.cpp
  * @author exeal
  * @date 2011-10-01 created
- * @date 2012-2012
+ * @date 2012-2013
  */
 
 #include <ascension/corelib/basic-exceptions.hpp>	// PlatformDependentError
@@ -48,6 +48,6 @@ namespace {
 	}
 }
 
-Image::Image(const NativeSize& size, Format format) {
+Image::Image(const geometry::BasicDimension<uint16_t>& size, Format format) {
 }
 
