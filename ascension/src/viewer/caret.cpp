@@ -18,6 +18,7 @@
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/default-caret-shaper.hpp>
 #include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/virtual-box.hpp>
 
 using namespace ascension;
 using namespace ascension::graphics;
@@ -753,51 +754,52 @@ bool viewers::isPointOverSelection(const Caret& caret, const Point& p) {
  * This function returns a logical range, and does not support rectangular selection.
  * @param caret The caret gives a selection
  * @param line The logical line
- * @param[out] range The selected range. If the selection continued to the next line,
- *                   @c range.end() returns the position of the end of line + 1
- * @return @c true if there is selected range on the line
+ * @return The selected range. If the selection continued to the next line, @c range.end() returns
+ *         the position of the end of line + 1. Otherwise if there is not selected range on the
+ *         line, @c boost#none
  * @throw kernel#DocumentDisposedException The document @a caret connecting to has been disposed
  * @throw kernel#BadPositionException @a line is outside of the document
- * @see #selectedRangeOnVisualLine
+ * @see #selectedRangeOnVisualLine, VirtualBox#characterRangeInVisualLine
  */
-bool viewers::selectedRangeOnLine(const Caret& caret, Index line, boost::integer_range<Index>& range) {
+boost::optional<boost::integer_range<Index>> viewers::selectedRangeOnLine(const Caret& caret, Index line) {
 	const k::Position bos(caret.beginning());
 	if(bos.line > line)
-		return false;
+		return boost::none;
 	const k::Position eos(caret.end());
 	if(eos.line < line)
-		return false;
-	range = boost::irange(
+		return boost::none;
+	return boost::irange(
 		(line == bos.line) ? bos.offsetInLine : 0,
 		(line == eos.line) ? eos.offsetInLine : caret.document().lineLength(line) + 1);
-	return true;
 }
 
 /**
  * Returns the selected range on the specified visual line.
  * @param caret The caret gives a selection
- * @param line The logical line
- * @param subline The visual subline
- * @param[out] range The selected range. if the selection continued to the next logical line,
- *                   @c range.end() returns the position of the end of line + 1
- * @return @c true if there is selected range on the line
+ * @param line The visual line
+ * @return The selected range. If the selection continued to the next logical line, @c range.end()
+ *         returns the position of the end of line + 1. Otherwise if there is not selected range on
+ *         the line, @c boost#none
  * @throw kernel#DocumentDisposedException The document @a caret connecting to has been disposed
  * @throw TextViewerDisposedException The text viewer @a caret connecting to has been disposed
  * @throw kernel#BadPositionException @a line or @a subline is outside of the document
- * @see #selectedRangeOnLine
+ * @see #selectedRangeOnLine, VirtualBox#characterRangeInVisualLine
  */
-bool viewers::selectedRangeOnVisualLine(const Caret& caret, Index line, Index subline, boost::integer_range<Index>& range) {
+boost::optional<boost::integer_range<Index>> viewers::selectedRangeOnVisualLine(const Caret& caret, const font::VisualLine& line) {
 	if(!caret.isSelectionRectangle()) {
-		if(!selectedRangeOnLine(caret, line, range))
-			return false;
-		const font::TextLayout& layout = caret.textViewer().textRenderer().layouts().at(line);
-		const Index sublineOffset = layout.lineOffset(subline);
+		boost::optional<boost::integer_range<Index>> range(selectedRangeOnLine(caret, line.line));
+		if(!range)
+			return boost::none;
+		const font::TextLayout& layout = caret.textViewer().textRenderer().layouts().at(line.line);
+		const Index sublineOffset = layout.lineOffset(line.subline);
 		range = boost::irange(
-			max(*range.begin(), sublineOffset),
-			min(*range.end(), sublineOffset + layout.lineLength(subline) + ((subline < layout.numberOfLines() - 1) ? 0 : 1)));
-		return !range.empty();
+			max(*range->begin(), sublineOffset),
+			min(*range->end(), sublineOffset + layout.lineLength(line.subline) + ((line.subline < layout.numberOfLines() - 1) ? 0 : 1)));
+		if(range->empty())
+			range = boost::none;
+		return range;
 	} else
-		return caret.boxForRectangleSelection().characterRangeInVisualLine(font::VisualLine(line, subline), range);
+		return caret.boxForRectangleSelection().characterRangeInVisualLine(line);
 }
 
 /**
@@ -815,11 +817,12 @@ basic_ostream<Char>& viewers::selectedString(const Caret& caret, basic_ostream<C
 		else {
 			const k::Document& document = caret.document();
 			const Index lastLine = line(caret.end());
-			boost::integer_range<Index> selection(0, 0);
 			for(Index line = kernel::line(caret.beginning()); line <= lastLine; ++line) {
 				const k::Document::Line& ln = document.getLineInformation(line);
-				caret.boxForRectangleSelection().characterRangeInVisualLine(font::VisualLine(line, 0), selection);	// TODO: Recognize wrap (second parameter).
-				out.write(ln.text().data() + *selection.begin(), static_cast<streamsize>(selection.size()));
+				// TODO: Recognize wrap (second parameter).
+				const boost::optional<boost::integer_range<Index>> selection(caret.boxForRectangleSelection().characterRangeInVisualLine(font::VisualLine(line, 0)));
+				if(selection)
+					out.write(ln.text().data() + selection->front(), static_cast<streamsize>(selection->size()));
 				const String newlineString(ln.newline().asString());
 				out.write(newlineString.data(), static_cast<streamsize>(newlineString.length()));
 			}
@@ -953,13 +956,17 @@ namespace {
 		if(level > 0) {
 			for(++line; line <= region.end().line; ++line) {
 				if(document.lineLength(line) != 0 && (line != region.end().line || region.end().offsetInLine > 0)) {
-					Index insertPosition = 0;
+					boost::optional<Index> insertPosition(0);	// zero is suitable for linear selection
 					if(rectangle) {
-						boost::integer_range<Index> dummy(0, 0);
-						caret.boxForRectangleSelection().characterRangeInVisualLine(font::VisualLine(line, 0), dummy);	// TODO: recognize wrap (second parameter).
-						insertPosition = dummy.front();
+						// TODO: recognize wrap (second parameter).
+						const boost::optional<boost::integer_range<Index>> temp(caret.boxForRectangleSelection().characterRangeInVisualLine(font::VisualLine(line, 0)));
+						if(temp)
+							insertPosition = temp->front();
+						else
+							insertPosition = boost::none;
 					}
-					insert(document, k::Position(line, insertPosition), indent);
+					if(insertPosition)
+						insert(document, k::Position(line, *insertPosition), indent);
 					if(line == otherResult.line && otherResult.offsetInLine != 0)
 						otherResult.offsetInLine += level;
 					if(line == kernel::line(caret) && offsetInLine(caret) != 0)

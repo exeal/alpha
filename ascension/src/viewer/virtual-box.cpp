@@ -42,10 +42,9 @@ namespace {
 /**
  * Returns the character range in specified visual line overlaps with the box.
  * @param line The line
- * @param[out] range The character range in @a line.line, or @c boost#none if @a line is out side
- *             of the box. The range can be empty
- * @return @c true if the box and the visual line overlap
- * @see #includes
+ * @return The character range in @a line.line, or @c boost#none if @a line is out side of the box.
+ *         The range can be empty
+ * @see #includes, viewers#selectedRangeOnLine, viewers#selectedRangeOnVisualLine
  */
 boost::optional<boost::integer_range<Index>> VirtualBox::characterRangeInVisualLine(const VisualLine& line) const BOOST_NOEXCEPT {
 	if(line < *lines_.begin() || line > *lines_.end())
