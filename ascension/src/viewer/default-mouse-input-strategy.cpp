@@ -330,13 +330,11 @@ namespace {
 				return boost::none;	// overflow
 			const TextLayout& layout = renderer.layouts()[line];
 			const Scalar indent = font::lineIndent(layout, renderer.viewport()->contentMeasure());
-			boost::integer_range<Index> range(0, 0);
 			for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
-				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range)) {
-					range = boost::irange(
-						*range.begin(),
-						min(viewer.document().lineLength(line), *range.end()));
-					const graphics::Rectangle sublineBounds(geometry::make<graphics::Rectangle>(mapFlowRelativeToPhysical(layout.writingMode(), layout.bounds(range))));
+				boost::optional<boost::integer_range<Index>> range(selectedRangeOnVisualLine(viewer.caret(), font::VisualLine(line, subline)));
+				if(range) {
+					range = boost::irange(*range->begin(), min(viewer.document().lineLength(line), *range->end()));
+					const graphics::Rectangle sublineBounds(geometry::make<graphics::Rectangle>(mapFlowRelativeToPhysical(layout.writingMode(), layout.bounds(*range))));
 					geometry::range<0>(selectionBounds) = boost::irange(
 						min(geometry::left(sublineBounds) + indent, geometry::left(selectionBounds)),
 						max(geometry::right(sublineBounds) + indent, geometry::right(selectionBounds)));
@@ -362,13 +360,11 @@ namespace {
 		for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
 			const TextLayout& layout = renderer.layouts()[line];
 			const Scalar indent = font::lineIndent(layout, renderer.viewport()->contentMeasure());
-			boost::integer_range<Index> range(0, 0);
 			for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
-				if(selectedRangeOnVisualLine(viewer.caret(), line, subline, range)) {
-					range = boost::irange(
-						*range.begin(),
-						min(viewer.document().lineLength(line), *range.end()));
-					auto region(layout.blackBoxBounds(range));
+				boost::optional<boost::integer_range<Index>> range(selectedRangeOnVisualLine(viewer.caret(), font::VisualLine(line, subline)));
+				if(range) {
+					range = boost::irange(*range->begin(), min(viewer.document().lineLength(line), *range->end()));
+					auto region(layout.blackBoxBounds(*range));
 					geometry::translate(region,
 						Dimension(geometry::_dx = indent - geometry::left(selectionBounds), geometry::_dy = y - geometry::top(selectionBounds)));
 					::SelectObject(dc.get(), static_cast<HBRUSH>(::GetStockObject(WHITE_BRUSH)));
