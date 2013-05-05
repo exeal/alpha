@@ -21,8 +21,13 @@
 
 namespace ascension {
 
-	namespace viewers {
+	namespace graphics {
+		namespace font {
+			struct VisualLine;
+		}
+	}
 
+	namespace viewers {
 		namespace utils {
 			/**
 			 * Creates an MIME data object represents the selected content.
@@ -241,8 +246,8 @@ namespace ascension {
 		void cutSelection(Caret& caret, bool useKillRing);
 		bool isPointOverSelection(const Caret& caret, const graphics::Point& p);
 		bool isSelectionEmpty(const Caret& caret) BOOST_NOEXCEPT;
-		bool selectedRangeOnLine(const Caret& caret, Index line, boost::integer_range<Index>& range);
-		bool selectedRangeOnVisualLine(const Caret& caret, Index line, Index subline, boost::integer_range<Index>& range);
+		boost::optional<boost::integer_range<Index>> selectedRangeOnLine(const Caret& caret, Index line);
+		boost::optional<boost::integer_range<Index>> selectedRangeOnVisualLine(const Caret& caret, const graphics::font::VisualLine& line);
 		String selectedString(const Caret& caret, const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE);
 		std::basic_ostream<Char>& selectedString(const Caret& caret,
 			std::basic_ostream<Char>& out, const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE);
