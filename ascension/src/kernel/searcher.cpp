@@ -141,7 +141,7 @@ bool LiteralPattern::search(const CharacterIterator& target, Direction direction
 		for(vector<int>::const_iterator pattern; t->hasNext(); orzAdvance(*t,
 				max<Index>(lastOccurences_[caseSensitive_ ? t->current() : CaseFolder::fold(t->current())], e - pattern))) {
 			for(pattern = e - 1;
-				(caseSensitive_ ? t->current() : CaseFolder::fold(t->current())) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
+				(caseSensitive_ ? t->current() : CaseFolder::fold(t->current())) == (caseSensitive_ ? *pattern : CaseFolder::fold(static_cast<CodePoint>(*pattern)));
 				t->previous(), --pattern) {
 				if(pattern == b) {
 					matchedFirst = move(t);
@@ -156,7 +156,7 @@ bool LiteralPattern::search(const CharacterIterator& target, Direction direction
 		orzAdvance(*t, collationElements_.size());
 		for(vector<int>::const_iterator pattern; ; orzAdvance(*t, -skipLength)) {
 			for(pattern = b;
-					(caseSensitive_ ? t->current() : CaseFolder::fold(t->current())) == (caseSensitive_ ? *pattern : CaseFolder::fold(*pattern));
+					(caseSensitive_ ? t->current() : CaseFolder::fold(t->current())) == (caseSensitive_ ? *pattern : CaseFolder::fold(static_cast<CodePoint>(*pattern)));
 					t->next(), ++pattern) {
 				if(pattern == e) {
 					orzAdvance(*t, collationElements_.size() + 1);
