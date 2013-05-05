@@ -596,13 +596,13 @@ k::Position k::locations::lastPrintableCharacterOfVisualLine(const VisualPoint& 
 	return p.normalized();
 }
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 namespace {
 	inline ReadingDirection defaultUIReadingDirection(const VisualPoint& p) {
 		return p.textViewer().textRenderer().defaultUIWritingMode().inlineFlowDirection;
 	}
 }
 
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /**
  * Returns the beginning of the word where advanced to the left by N words.
  * @param p The base position
