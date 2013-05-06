@@ -47,22 +47,22 @@ DefaultCompletionProposal::DefaultCompletionProposal(const String& replacementSt
 }
 
 /// @see CompletionProposal#description
-String DefaultCompletionProposal::description() const /*throw()*/ {
+String DefaultCompletionProposal::description() const BOOST_NOEXCEPT {
 	return descriptionString_;
 }
 
 /// @see CompletionProposal#displayString
-String DefaultCompletionProposal::displayString() const /*throw()*/ {
+String DefaultCompletionProposal::displayString() const BOOST_NOEXCEPT {
 	return displayString_;
 }
 
 /// @see CompletionProposal#icon
-const CompletionProposal::Icon& DefaultCompletionProposal::icon() const /*throw()*/ {
+const CompletionProposal::Icon& DefaultCompletionProposal::icon() const BOOST_NOEXCEPT {
 	return icon_;
 }
 
 /// @see CompletionProposal#isAutoInsertable
-bool DefaultCompletionProposal::isAutoInsertable() const /*throw()*/ {
+bool DefaultCompletionProposal::isAutoInsertable() const BOOST_NOEXCEPT {
 	return autoInsertable_;
 }
 

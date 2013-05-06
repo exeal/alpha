@@ -22,22 +22,22 @@ namespace ascension {
 		protected:
 			// constructors
 			IdentifiersProposalProcessor(
-				kernel::ContentType contentType, const text::IdentifierSyntax& syntax) /*throw()*/;
-			virtual ~IdentifiersProposalProcessor() /*throw()*/;
+				kernel::ContentType contentType, const text::IdentifierSyntax& syntax) BOOST_NOEXCEPT;
+			virtual ~IdentifiersProposalProcessor() BOOST_NOEXCEPT;
 			// attributes
-			kernel::ContentType contentType() const /*throw()*/;
-			const text::IdentifierSyntax& identifierSyntax() const /*throw()*/;
+			kernel::ContentType contentType() const BOOST_NOEXCEPT;
+			const text::IdentifierSyntax& identifierSyntax() const BOOST_NOEXCEPT;
 			// ContentAssistProcessor
-			virtual const CompletionProposal* activeCompletionProposal(
+			virtual std::shared_ptr<const CompletionProposal> activeCompletionProposal(
 				const viewers::TextViewer& textViewer, const kernel::Region& replacementRegion,
-				CompletionProposal* const proposals[], std::size_t numberOfProposals) const /*throw()*/;
-			virtual bool compareDisplayStrings(const String& s1, const String& s2) const /*throw()*/;
+				std::shared_ptr<const CompletionProposal> proposals[], std::size_t numberOfProposals) const BOOST_NOEXCEPT;
+			virtual bool compareDisplayStrings(const String& s1, const String& s2) const BOOST_NOEXCEPT;
 			virtual void computeCompletionProposals(const viewers::Caret& caret, bool& incremental,
-				kernel::Region& replacementRegion, std::set<CompletionProposal*>& proposals) const;
-			virtual bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const /*throw()*/;
+				kernel::Region& replacementRegion, std::set<std::shared_ptr<const CompletionProposal>>& proposals) const;
+			virtual bool isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const BOOST_NOEXCEPT;
 			virtual void recomputeIncrementalCompletionProposals(const viewers::TextViewer& textViewer,
-				const kernel::Region& replacementRegion, CompletionProposal* const currentProposals[],
-				std::size_t numberOfCurrentProposals, std::set<CompletionProposal*>& newProposals) const;
+				const kernel::Region& replacementRegion, std::shared_ptr<const CompletionProposal> currentProposals[],
+				std::size_t numberOfCurrentProposals, std::set<std::shared_ptr<const CompletionProposal>>& newProposals) const;
 		private:
 			const kernel::ContentType contentType_;
 			const text::IdentifierSyntax& syntax_;
