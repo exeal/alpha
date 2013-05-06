@@ -26,12 +26,12 @@ using namespace std;
 namespace {
 	class DisplayStringComparer {
 	public:
-		explicit DisplayStringComparer(const ContentAssistProcessor& processor) /*throw()*/ : processor_(processor) {
+		explicit DisplayStringComparer(const ContentAssistProcessor& processor) BOOST_NOEXCEPT : processor_(processor) {
 		}
-		bool operator()(const CompletionProposal* lhs, const String& rhs) const {
+		bool operator()(shared_ptr<const CompletionProposal> lhs, const String& rhs) const {
 			return processor_.compareDisplayStrings(lhs->displayString(), rhs);
 		}
-		bool operator()(const String& lhs, const CompletionProposal* rhs) const {
+		bool operator()(const String& lhs, shared_ptr<const CompletionProposal> rhs) const {
 			return processor_.compareDisplayStrings(lhs, rhs->displayString());
 		}
 	private:
@@ -45,45 +45,45 @@ namespace {
  * @param syntax The identifier syntax to detect identifiers
  */
 IdentifiersProposalProcessor::IdentifiersProposalProcessor(ContentType contentType,
-		const IdentifierSyntax& syntax) /*throw()*/ : contentType_(contentType), syntax_(syntax) {
+		const IdentifierSyntax& syntax) BOOST_NOEXCEPT : contentType_(contentType), syntax_(syntax) {
 }
 
 /// Destructor.
-IdentifiersProposalProcessor::~IdentifiersProposalProcessor() /*throw()*/ {
+IdentifiersProposalProcessor::~IdentifiersProposalProcessor() BOOST_NOEXCEPT {
 }
 
 /// @see ContentAssistProcessor#activeCompletionProposal
-const CompletionProposal* IdentifiersProposalProcessor::activeCompletionProposal(
+shared_ptr<const CompletionProposal> IdentifiersProposalProcessor::activeCompletionProposal(
 		const TextViewer& textViewer, const Region& replacementRegion,
-		CompletionProposal* const currentProposals[], size_t numberOfCurrentProposals) const /*throw()*/ {
+		shared_ptr<const CompletionProposal> currentProposals[], size_t numberOfCurrentProposals) const BOOST_NOEXCEPT {
 	// select the partially matched proposal
 	String precedingIdentifier(textViewer.document().line(replacementRegion.first.line).substr(
 		replacementRegion.beginning().offsetInLine, replacementRegion.end().offsetInLine - replacementRegion.beginning().offsetInLine));
 	if(precedingIdentifier.empty())
-		return 0;
-	const CompletionProposal* activeProposal = *lower_bound(currentProposals,
-		currentProposals + numberOfCurrentProposals, precedingIdentifier, DisplayStringComparer(*this));
+		return shared_ptr<CompletionProposal>();
+	shared_ptr<const CompletionProposal> activeProposal(*lower_bound(currentProposals,
+		currentProposals + numberOfCurrentProposals, precedingIdentifier, DisplayStringComparer(*this)));
 	if(activeProposal == currentProposals[numberOfCurrentProposals]
 			|| CaseFolder::compare(activeProposal->displayString().substr(0, precedingIdentifier.length()), precedingIdentifier) != 0)
-		return 0;
+		return shared_ptr<CompletionProposal>();
 	return activeProposal;
 }
 
 /// @see ContentAssistProcessor#compareDisplayStrings
-bool IdentifiersProposalProcessor::compareDisplayStrings(const String& s1, const String& s2) const /*throw()*/ {
+bool IdentifiersProposalProcessor::compareDisplayStrings(const String& s1, const String& s2) const BOOST_NOEXCEPT {
 	return CaseFolder::compare(s1, s2) < 0;
 }
 
 /// @see ContentAssistProcessor#computCompletionProposals
 void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret,
-		bool& incremental, Region& replacementRegion, set<CompletionProposal*>& proposals) const {
+		bool& incremental, Region& replacementRegion, set<shared_ptr<const CompletionProposal>>& proposals) const {
 	replacementRegion.second = caret;
 
 	// find the preceding identifier
 	static const Index MAXIMUM_IDENTIFIER_LENGTH = 100;
 	if(!incremental || locations::isBeginningOfLine(caret))
 		replacementRegion.first = caret;
-	else if(source::getNearestIdentifier(caret.document(), caret, &replacementRegion.first.offsetInLine, 0))
+	else if(source::getNearestIdentifier(caret.document(), caret, &replacementRegion.first.offsetInLine, nullptr))
 		replacementRegion.first.line = line(caret);
 	else
 		replacementRegion.first = caret;
@@ -126,21 +126,21 @@ void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret
 		}
 	}
 	for(set<String>::const_iterator i(identifiers.begin()), e(identifiers.end()); i != e; ++i)
-		proposals.insert(new DefaultCompletionProposal(*i));
+		proposals.insert(shared_ptr<CompletionProposal>(new DefaultCompletionProposal(*i)));
 }
 
 /// Returns the identifier syntax the processor uses or @c null.
-const IdentifierSyntax& IdentifiersProposalProcessor::identifierSyntax() const /*throw()*/ {
+const IdentifierSyntax& IdentifiersProposalProcessor::identifierSyntax() const BOOST_NOEXCEPT {
 	return syntax_;
 }
 
 /// @see ContentAssistProcessor#isIncrementalCompletionAutoTerminationCharacter
-bool IdentifiersProposalProcessor::isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const /*throw()*/ {
+bool IdentifiersProposalProcessor::isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const BOOST_NOEXCEPT {
 	return !syntax_.isIdentifierContinueCharacter(c);
 }
 
 /// @see ContentAssistProcessor#recomputIncrementalCompletionProposals
 void IdentifiersProposalProcessor::recomputeIncrementalCompletionProposals(
-		const TextViewer&, const Region&, CompletionProposal* const[], size_t, set<CompletionProposal*>&) const {
+		const TextViewer&, const Region&, shared_ptr<const CompletionProposal>[], size_t, set<shared_ptr<const CompletionProposal>>&) const {
 	// do nothing
 }

@@ -11,7 +11,7 @@
 
 #include <ascension/platforms.hpp>
 #include <ascension/content-assist/content-assist.hpp>
-#include <ascension/graphics/text-viewport.hpp>
+#include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 #	include <gtkmm/treeview.h>
@@ -39,10 +39,9 @@ namespace ascension {
 			private ContentAssistant::CompletionProposalsUI {
 		public:
 			// constructors
-			DefaultContentAssistant() /*noexcept*/;
-			~DefaultContentAssistant() /*noexcept*/;
+			DefaultContentAssistant() BOOST_NOEXCEPT;
 			// attributes
-			std::uint32_t autoActivationDelay() const /*noexcept*/;
+			std::uint32_t autoActivationDelay() const BOOST_NOEXCEPT;
 			void enablePrefixCompletion(bool enable);
 			void setAutoActivationDelay(std::uint32_t milliseconds);
 			void setContentAssistProcessor(kernel::ContentType contentType, std::unique_ptr<ContentAssistProcessor> processor);
@@ -54,11 +53,12 @@ namespace ascension {
 			// HasTimer
 			void timeElapsed(Timer& timer);
 			// ContentAssistant
-			ContentAssistant::CompletionProposalsUI* completionProposalsUI() const /*noexcept*/;
-			const ContentAssistProcessor* contentAssistProcessor(kernel::ContentType contentType) const /*noexcept*/;
+			ContentAssistant::CompletionProposalsUI* completionProposalsUI() const BOOST_NOEXCEPT;
+			std::shared_ptr<const ContentAssistProcessor>
+				contentAssistProcessor(kernel::ContentType contentType) const BOOST_NOEXCEPT;
 			void install(viewers::TextViewer& viewer);
 			void uninstall();
-			void viewerBoundsChanged() /*noexcept*/;
+			void viewerBoundsChanged() BOOST_NOEXCEPT;
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
@@ -69,33 +69,29 @@ namespace ascension {
 			// viewers.ViewportListener
 			void viewportChanged(bool horizontal, bool vertical);
 			// graphics.font.TextViewportListener
-			void viewportBoundsInViewChanged(const graphics::NativeRectangle& oldBounds) /*noexcept*/;
+			void viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT;
 			void viewportScrollPositionChanged(
 				const presentation::AbstractTwoAxes<graphics::font::TextViewport::SignedScrollOffset>& offsets,
 				const graphics::font::VisualLine& oldLine,
-				graphics::font::TextViewport::ScrollOffset oldInlineProgressionOffset) /*noexcept*/;
+				graphics::font::TextViewport::ScrollOffset oldInlineProgressionOffset) BOOST_NOEXCEPT;
 			// ContentAssistant.CompletionProposalsUI
 			void close();
 			bool complete();
-			bool hasSelection() const /*noexcept*/;
+			bool hasSelection() const BOOST_NOEXCEPT;
 			void nextPage(int pages);
 			void nextProposal(int proposals);
 		private:
 			viewers::TextViewer* textViewer_;
-			std::map<kernel::ContentType, ContentAssistProcessor*> processors_;
+			std::map<kernel::ContentType, std::shared_ptr<ContentAssistProcessor>> processors_;
 			std::uint32_t autoActivationDelay_;
 			Timer timer_;
 			struct CompletionSession {
-				const ContentAssistProcessor* processor;
+				std::shared_ptr<const ContentAssistProcessor> processor;
 				bool incremental;
 				kernel::Region replacementRegion;
-				std::unique_ptr<CompletionProposal*[]> proposals;
+				std::unique_ptr<std::shared_ptr<const CompletionProposal>[]> proposals;
 				std::size_t numberOfProposals;
-				CompletionSession() /*noexcept*/ : processor(nullptr), numberOfProposals(0) {}
-				~CompletionSession() /*noexcept*/ {
-					for(std::size_t i = 0; i < numberOfProposals; ++i)
-						delete proposals[i];
-				}
+				CompletionSession() BOOST_NOEXCEPT : numberOfProposals(0) {}
 			};
 			std::unique_ptr<CompletionSession> completionSession_;
 			class CompletionProposalsPopup : public
@@ -114,11 +110,11 @@ namespace ascension {
 			public:
 				CompletionProposalsPopup(viewers::TextViewer& parent, CompletionProposalsUI& ui);
 				void end();
-				void resetContent(CompletionProposal* const proposals[], size_t numberOfProposals);
-				const CompletionProposal* selectedProposal() const;
-				void selectProposal(const CompletionProposal* selection);
+				void resetContent(std::shared_ptr<const CompletionProposal> proposals[], size_t numberOfProposals);
+				std::shared_ptr<const CompletionProposal> selectedProposal() const;
+				void selectProposal(std::shared_ptr<const CompletionProposal> selection);
 				void setReadingDirection(presentation::ReadingDirection direction);
-				bool start(const std::set<CompletionProposal*>& proposals);
+//				bool start(const std::set<const CompletionProposal*>& proposals);
 			private:
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
@@ -132,6 +128,7 @@ namespace ascension {
 #endif
 			private:
 				CompletionProposalsUI& ui_;
+				std::vector<std::shared_ptr<const CompletionProposal>> proposals_;
 			};
 			std::unique_ptr<CompletionProposalsPopup> proposalsPopup_;
 		};

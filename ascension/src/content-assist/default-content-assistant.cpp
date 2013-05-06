@@ -9,6 +9,7 @@
 #include <ascension/viewer/caret.hpp>
 #include <ascension/content-assist/default-content-assistant.hpp>
 #include <ascension/viewer/viewer.hpp>	// TextViewer
+#include <boost/range/algorithm/copy.hpp>
 
 using namespace ascension;
 using namespace ascension::contentassist;
@@ -24,9 +25,9 @@ using namespace std;
 namespace {
 	class DisplayStringComparer {
 	public:
-		explicit DisplayStringComparer(const ContentAssistProcessor& processor) /*throw()*/ : processor_(processor) {
+		explicit DisplayStringComparer(const ContentAssistProcessor& processor) BOOST_NOEXCEPT : processor_(processor) {
 		}
-		bool operator()(const CompletionProposal* lhs, const CompletionProposal* rhs) const {
+		bool operator()(shared_ptr<const CompletionProposal>& lhs, shared_ptr<const CompletionProposal>& rhs) const {
 			return processor_.compareDisplayStrings(lhs->displayString(), rhs->displayString());
 		}
 	private:
@@ -35,23 +36,17 @@ namespace {
 }
 
 /// Constructor.
-DefaultContentAssistant::DefaultContentAssistant() /*throw()*/ : textViewer_(0), autoActivationDelay_(500) {
-}
-
-/// Destructor.
-DefaultContentAssistant::~DefaultContentAssistant() /*throw()*/ {
-	for(map<ContentType, ContentAssistProcessor*>::iterator i(processors_.begin()), e(processors_.end()); i != e; ++i)
-		delete i->second;
+DefaultContentAssistant::DefaultContentAssistant() BOOST_NOEXCEPT : textViewer_(nullptr), autoActivationDelay_(500) {
 }
 
 /// Returns the automatic activation delay in milliseconds.
-uint32_t DefaultContentAssistant::autoActivationDelay() const /*throw()*/ {
+uint32_t DefaultContentAssistant::autoActivationDelay() const BOOST_NOEXCEPT {
 	return autoActivationDelay_;
 }
 
 /// @see viewers#CaretListener
 void DefaultContentAssistant::caretMoved(const Caret& caret, const Region&) {
-	if(completionSession_.get() != 0) {
+	if(completionSession_.get() != nullptr) {
 		// non-incremental mode: close when the caret moved
 		if(!completionSession_->incremental)
 			close();
@@ -64,8 +59,8 @@ void DefaultContentAssistant::caretMoved(const Caret& caret, const Region&) {
 
 /// @see viewers#CharacterInputListener#characterInput
 void DefaultContentAssistant::characterInput(const Caret&, CodePoint c) {
-	if(textViewer_ != 0) {
-		if(completionSession_.get() != 0) {
+	if(textViewer_ != nullptr) {
+		if(completionSession_.get() != nullptr) {
 			if(!completionSession_->incremental)
 				close();
 			else if(completionSession_->processor->isIncrementalCompletionAutoTerminationCharacter(c)) {
@@ -81,7 +76,7 @@ void DefaultContentAssistant::characterInput(const Caret&, CodePoint c) {
 			}
 		} else {
 			// activate automatically
-			if(const ContentAssistProcessor* const cap = contentAssistProcessor(contentType(textViewer_->caret()))) {
+			if(const shared_ptr<const ContentAssistProcessor> cap = contentAssistProcessor(contentType(textViewer_->caret()))) {
 				if(cap->isCompletionProposalAutoActivationCharacter(c)) {
 					if(autoActivationDelay_ == 0)
 						showPossibleCompletions();
@@ -95,7 +90,7 @@ void DefaultContentAssistant::characterInput(const Caret&, CodePoint c) {
 
 /// @see CompletionProposalsUI#close
 void DefaultContentAssistant::close() {
-	if(completionSession_.get() != 0) {
+	if(completionSession_.get() != nullptr) {
 		// these connections were maken by startPopup() method
 		textViewer_->removeViewportListener(*this);
 		textViewer_->textRenderer().viewport()->removeListener(*this);
@@ -103,14 +98,14 @@ void DefaultContentAssistant::close() {
 		if(completionSession_->incremental)
 			textViewer_->document().removeListener(*this);
 		completionSession_.reset();
-		proposalsPopup_->end();
+		proposalsPopup_->end();	// TODO: Do i need to reset proposalsPopup_ ???
 	}
 }
 
 /// @see CompletionProposalsUI#complete
 bool DefaultContentAssistant::complete() {
-	if(completionSession_.get() != 0) {
-		if(const CompletionProposal* const p = proposalsPopup_->selectedProposal()) {
+	if(completionSession_.get() != nullptr) {
+		if(const shared_ptr<const CompletionProposal> p = proposalsPopup_->selectedProposal()) {
 			unique_ptr<CompletionSession> temp(move(completionSession_));	// force completionSession_ to null
 			Document& document = textViewer_->document();
 			if(!document.isReadOnly()) {
@@ -134,7 +129,7 @@ void DefaultContentAssistant::documentAboutToBeChanged(const Document&) {
 
 /// @see kernel#DocumentListener#documentChanged
 void DefaultContentAssistant::documentChanged(const Document&, const DocumentChange& change) {
-	if(completionSession_.get() != 0) {
+	if(completionSession_.get() != nullptr) {
 		// exit or update the replacement region
 		if(!completionSession_->incremental
 				|| change.erasedRegion().first.line != change.erasedRegion().second.line
@@ -149,20 +144,18 @@ void DefaultContentAssistant::documentChanged(const Document&, const DocumentCha
 			close();
 
 		// rebuild proposals
-		set<CompletionProposal*> newProposals;
+		set<shared_ptr<const CompletionProposal>> newProposals;
 		completionSession_->processor->recomputeIncrementalCompletionProposals(
 			*textViewer_, completionSession_->replacementRegion,
 			completionSession_->proposals.get(), completionSession_->numberOfProposals, newProposals);
 		if(!newProposals.empty()) {
-			for(size_t i = 0; i < completionSession_->numberOfProposals; ++i)
-				delete completionSession_->proposals[i];
 			completionSession_->proposals.reset();
-			if(newProposals.size() == 1 && (*newProposals.begin())->isAutoInsertable()) {
-				(*newProposals.begin())->replace(textViewer_->document(), completionSession_->replacementRegion);
+			if(newProposals.size() == 1 && (*begin(newProposals))->isAutoInsertable()) {
+				(*begin(newProposals))->replace(textViewer_->document(), completionSession_->replacementRegion);
 				return close();
 			}
-			completionSession_->proposals.reset(new CompletionProposal*[completionSession_->numberOfProposals = newProposals.size()]);
-			copy(newProposals.begin(), newProposals.end(), completionSession_->proposals.get());
+			completionSession_->proposals.reset(new shared_ptr<const CompletionProposal>[completionSession_->numberOfProposals = newProposals.size()]);
+			boost::copy(newProposals, completionSession_->proposals.get());
 			sort(completionSession_->proposals.get(),
 				completionSession_->proposals.get() + newProposals.size(), DisplayStringComparer(*completionSession_->processor));
 			proposalsPopup_->resetContent(completionSession_->proposals.get(), completionSession_->numberOfProposals);
@@ -175,19 +168,19 @@ void DefaultContentAssistant::documentChanged(const Document&, const DocumentCha
 }
 
 /// @see ContentAssistant#completionProposalsUI
-ContentAssistant::CompletionProposalsUI* DefaultContentAssistant::completionProposalsUI() const /*throw()*/ {
-	return (completionSession_.get() != 0) ? const_cast<DefaultContentAssistant*>(this) : 0;
+ContentAssistant::CompletionProposalsUI* DefaultContentAssistant::completionProposalsUI() const BOOST_NOEXCEPT {
+	return (completionSession_.get() != nullptr) ? const_cast<DefaultContentAssistant*>(this) : nullptr;
 }
 
 /// @see ContentAssistant#contentAssistProcessor
-const ContentAssistProcessor* DefaultContentAssistant::contentAssistProcessor(ContentType contentType) const /*throw()*/ {
-	map<ContentType, ContentAssistProcessor*>::const_iterator i(processors_.find(contentType));
-	return (i != processors_.end()) ? i->second : 0;
+shared_ptr<const ContentAssistProcessor> DefaultContentAssistant::contentAssistProcessor(ContentType contentType) const BOOST_NOEXCEPT {
+	map<ContentType, shared_ptr<ContentAssistProcessor>>::const_iterator i(processors_.find(contentType));
+	return (i != end(processors_)) ? i->second : shared_ptr<const ContentAssistProcessor>();
 }
 
 /// @see CompletionProposalsUI#hasSelection
-bool DefaultContentAssistant::hasSelection() const /*throw()*/ {
-	return completionSession_.get() != 0 && proposalsPopup_.get() != nullptr && proposalsPopup_->selectedProposal() != nullptr;
+bool DefaultContentAssistant::hasSelection() const BOOST_NOEXCEPT {
+	return completionSession_.get() != nullptr && proposalsPopup_.get() != nullptr && proposalsPopup_->selectedProposal() != nullptr;
 }
 
 /// @see ContentAssistant#install
@@ -211,35 +204,32 @@ void DefaultContentAssistant::setAutoActivationDelay(uint32_t milliseconds) {
  * @param processor The new content assist processor to register or @c null to unregister
  */
 void DefaultContentAssistant::setContentAssistProcessor(ContentType contentType, unique_ptr<ContentAssistProcessor> processor) {
-	map<ContentType, ContentAssistProcessor*>::iterator i(processors_.find(contentType));
-	if(i != processors_.end()) {
-		delete i->second;
+	map<ContentType, shared_ptr<ContentAssistProcessor>>::iterator i(processors_.find(contentType));
+	if(i != end(processors_))
 		processors_.erase(i);
-	}
-	if(processor.get() != 0)
-		processors_.insert(make_pair(contentType, processor.release()));
+	if(processor.get() != nullptr)
+		processors_.insert(make_pair(contentType, move(processor)));
 }
 
 /// @see ContentAssistant#showPossibleCompletions
 void DefaultContentAssistant::showPossibleCompletions() {
-	if(textViewer_ == 0 || completionSession_.get() != 0 || textViewer_->document().isReadOnly())
+	if(textViewer_ == nullptr || completionSession_.get() != nullptr || textViewer_->document().isReadOnly())
 		return textViewer_->beep();
 	const Caret& caret = textViewer_->caret();
-	if(const ContentAssistProcessor* const cap = contentAssistProcessor(contentType(caret))) {
-		set<CompletionProposal*> proposals;
+	if(const shared_ptr<const ContentAssistProcessor> cap = contentAssistProcessor(contentType(caret))) {
+		set<shared_ptr<const CompletionProposal>> proposals;
 		completionSession_.reset(new CompletionSession);
 		(completionSession_->processor = cap)->computeCompletionProposals(caret,
 			completionSession_->incremental, completionSession_->replacementRegion, proposals);
 		if(!proposals.empty()) {
-			if(proposals.size() == 1 && (*proposals.begin())->isAutoInsertable()) {
+			if(proposals.size() == 1 && (*begin(proposals))->isAutoInsertable()) {
 				// proposal is only one which is auto insertable => insert it without popup
-				(*proposals.begin())->replace(textViewer_->document(), completionSession_->replacementRegion);
+				(*begin(proposals))->replace(textViewer_->document(), completionSession_->replacementRegion);
 				completionSession_.reset();
-				delete *proposals.begin();
 			} else {
-				assert(completionSession_->proposals.get() == 0);
-				completionSession_->proposals.reset(new CompletionProposal*[completionSession_->numberOfProposals = proposals.size()]);
-				copy(proposals.begin(), proposals.end(), completionSession_->proposals.get());
+				assert(completionSession_->proposals.get() == nullptr);
+				completionSession_->proposals.reset(new shared_ptr<const CompletionProposal>[completionSession_->numberOfProposals = proposals.size()]);
+				boost::copy(proposals, completionSession_->proposals.get());
 				sort(completionSession_->proposals.get(),
 					completionSession_->proposals.get() + completionSession_->numberOfProposals, DisplayStringComparer(*completionSession_->processor));
 				startPopup();
@@ -256,15 +246,16 @@ void DefaultContentAssistant::showPossibleCompletions() {
 
 /// Resets the contents of the completion proposal popup based on @c completionSession-&gt;proposals.
 void DefaultContentAssistant::startPopup() {
-	assert(completionSession_.get() != 0);
+	assert(completionSession_.get() != nullptr);
 	if(proposalsPopup_.get() == nullptr)
 		proposalsPopup_.reset(new CompletionProposalsPopup(*textViewer_, *this));
 
 	// determine the horizontal orientation of the window
-	proposalsPopup_->setReadingDirection(textViewer_->textRenderer().writingMode().inlineFlowDirection);
+	// TODO: The writing mode is not considered.
+	proposalsPopup_->setReadingDirection(textViewer_->textRenderer().layouts().at(line(textViewer_->caret())).writingMode().inlineFlowDirection);
 	proposalsPopup_->resetContent(completionSession_->proposals.get(), completionSession_->numberOfProposals);
-
 	updatePopupBounds();
+
 	// these connections are revoke by close() method
 	textViewer_->addViewportListener(*this);
 	textViewer_->textRenderer().viewport()->addListener(*this);
@@ -281,14 +272,14 @@ void DefaultContentAssistant::timeElapsed(Timer&) {
 
 /// @see ContentAssistant#uninstall
 void DefaultContentAssistant::uninstall() {
-	if(textViewer_ != 0) {
+	if(textViewer_ != nullptr) {
 		textViewer_->caret().removeCharacterInputListener(*this);
-		textViewer_ = 0;
+		textViewer_ = nullptr;
 	}
 }
 
 /// @see ContentAssistant#viewerBoundsChanged
-void DefaultContentAssistant::viewerBoundsChanged() /*throw()*/ {
+void DefaultContentAssistant::viewerBoundsChanged() BOOST_NOEXCEPT {
 	try {
 		updatePopupBounds();
 	} catch(...) {
@@ -296,13 +287,13 @@ void DefaultContentAssistant::viewerBoundsChanged() /*throw()*/ {
 }
 
 /// @see graphics.font.TextViewportListener.viewportBoundsInViewChanged
-void DefaultContentAssistant::viewportBoundsInViewChanged(const graphics::NativeRectangle&) /*throw()*/ {
+void DefaultContentAssistant::viewportBoundsInViewChanged(const graphics::Rectangle&) BOOST_NOEXCEPT {
 	viewerBoundsChanged();
 }
 
 /// @see graphics.font.TextViewportListener.viewportScrollPositionChanged
 void DefaultContentAssistant::viewportScrollPositionChanged(
 		const AbstractTwoAxes<graphics::font::TextViewport::SignedScrollOffset>&,
-		const graphics::font::VisualLine&, graphics::font::TextViewport::ScrollOffset) /*throw()*/ {
+		const graphics::font::VisualLine&, graphics::font::TextViewport::ScrollOffset) BOOST_NOEXCEPT {
 	viewerBoundsChanged();
 }
