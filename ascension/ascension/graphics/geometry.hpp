@@ -128,10 +128,10 @@ namespace ascension {
 			private:
 				using BasicDimensionBase<Coordinate>::dx_;
 				using BasicDimensionBase<Coordinate>::dy_;
-				friend Coordinate& dx(BasicDimension<Coordinate>&);
-				friend Coordinate dx(const BasicDimension<Coordinate>&);
-				friend Coordinate& dy(BasicDimension<Coordinate>&);
-				friend Coordinate dy(const BasicDimension<Coordinate>&);
+				template<typename T> friend Coordinate& dx(BasicDimension<T>&);
+				template<typename T> friend Coordinate dx(const BasicDimension<T>&);
+				template<typename T> friend Coordinate& dy(BasicDimension<T>&);
+				template<typename T> friend Coordinate dy(const BasicDimension<T>&);
 			};
 
 			struct DimensionTag {};
