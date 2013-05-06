@@ -73,17 +73,17 @@ namespace ascension {
 			inline Box mapFromGlobal(const NativeWidget& widget, const Box& rectangle,
 					typename detail::EnableIfTagIs<Box, boost::geometry::box_tag>::type* = nullptr) {
 				typedef typename boost::geometry::point_type<Box>::type PointType;
-				const PointType minimumCorner(boost::geometry::make<PointType>(
+				PointType minimumCorner(boost::geometry::make<PointType>(
 					boost::geometry::get<boost::geometry::min_corner, 0>(rectangle),
 					boost::geometry::get<boost::geometry::min_corner, 1>(rectangle)));
-				const PointType maximumCorner(boost::geometry::make<PointType>(
+				PointType maximumCorner(boost::geometry::make<PointType>(
 					boost::geometry::get<boost::geometry::max_corner, 0>(rectangle),
 					boost::geometry::get<boost::geometry::max_corner, 1>(rectangle)));
-				minimumCorner = mapFromGlobal(widget, minimumCorner);
-				maximumCorner = mapFromGlobal(widget, maximumCorner);
+				boost::geometry::assign(minimumCorner, mapFromGlobal(widget, minimumCorner));
+				boost::geometry::assign(maximumCorner, mapFromGlobal(widget, maximumCorner));
 				return boost::geometry::make<Box>(
-					boost::get<0>(minimumCorner), boost::get<1>(minimumCorner),
-					boost::get<0>(maximumCorner), boost::get<1>(maximumCorner));
+					boost::geometry::get<0>(minimumCorner), boost::geometry::get<1>(minimumCorner),
+					boost::geometry::get<0>(maximumCorner), boost::geometry::get<1>(maximumCorner));
 			}
 			/**
 			 * Translates the point in the widget coordinates into global screen coordinates.
