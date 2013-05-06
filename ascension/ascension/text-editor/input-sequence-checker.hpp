@@ -9,14 +9,13 @@
 #define ASCENSION_INPUT_SEQUENCE_CHECKER_HPP
 
 #include <ascension/corelib/string-piece.hpp>
-#include <list>
+#include <forward_list>
 #include <locale>
 #include <memory>
 
 
 namespace ascension {
 	namespace texteditor {
-
 		/**
 		 * Base class for input sequence checkers.
 		 * @see isc
@@ -24,7 +23,7 @@ namespace ascension {
 		class InputSequenceChecker {
 		public:
 			/// Destructor.
-			virtual ~InputSequenceChecker() /*throw()*/ {}
+			virtual ~InputSequenceChecker() BOOST_NOEXCEPT {}
 			/**
 			 * Checks the sequence.
 			 * @param lc The locale of the active input
@@ -42,21 +41,19 @@ namespace ascension {
 		class InputSequenceCheckers {
 			ASCENSION_NONCOPYABLE_TAG(InputSequenceCheckers);
 		public:
-			~InputSequenceCheckers();
 			void add(std::unique_ptr<InputSequenceChecker> checker);
 			bool check(const StringPiece& preceding, CodePoint c) const;
 			void clear();
-			bool isEmpty() const /*throw()*/;
-			void imbue(const std::locale& lc) /*throw()*/;
-			const std::locale& locale() const /*throw()*/;
+			bool isEmpty() const BOOST_NOEXCEPT;
+			void imbue(const std::locale& lc) BOOST_NOEXCEPT;
+			const std::locale& locale() const BOOST_NOEXCEPT;
 		private:
-			std::list<InputSequenceChecker*> strategies_;
+			std::forward_list<std::unique_ptr<InputSequenceChecker>> strategies_;
 			std::locale locale_;
 		};
 
 		/// Standard input sequence checkers.
 		namespace isc {
-
 			/// I.S.C. for Ainu.
 			class AinuInputSequenceChecker : public InputSequenceChecker {
 			public:
@@ -68,7 +65,7 @@ namespace ascension {
 				ASCENSION_UNASSIGNABLE_TAG(ThaiInputSequenceChecker);
 			public:
 				enum Mode {PASS_THROUGH, BASIC_MODE, STRICT_MODE};
-				ThaiInputSequenceChecker(Mode mode = BASIC_MODE) /*throw()*/ : mode_(mode) {}
+				ThaiInputSequenceChecker(Mode mode = BASIC_MODE) BOOST_NOEXCEPT : mode_(mode) {}
 				bool check(const std::locale& lc, const StringPiece& preceding, CodePoint c) const;
 			private:
 				enum CharacterClass {
@@ -81,13 +78,17 @@ namespace ascension {
 				const Mode mode_;
 				static const CharacterClass charClasses_[];
 				static const char checkMap_[];
-				static CharacterClass getCharacterClass(CodePoint cp) /*throw()*/ {
-					if(cp < 0x0020u || cp == 0x007fu)		return CTRL;
-					else if(cp >= 0x0e00u && cp < 0x0e60u)	return charClasses_[cp - 0x0e00u];
-					else if(cp >= 0x0e60u && cp < 0x0e80u)	return CTRL;
-					else									return NON;
+				static CharacterClass getCharacterClass(CodePoint cp) BOOST_NOEXCEPT {
+					if(cp < 0x0020u || cp == 0x007fu)
+						return CTRL;
+					else if(cp >= 0x0e00u && cp < 0x0e60u)
+						return charClasses_[cp - 0x0e00u];
+					else if(cp >= 0x0e60u && cp < 0x0e80u)
+						return CTRL;
+					else
+						return NON;
 				}
-				static bool doCheck(CharacterClass lead, CharacterClass follow, bool strict) /*throw()*/ {
+				static bool doCheck(CharacterClass lead, CharacterClass follow, bool strict) BOOST_NOEXCEPT {
 					const char result = checkMap_[lead * CHARCLASS_COUNT + follow];
 					if(result == 'A' || result == 'C' || result == 'X')
 						return true;
@@ -104,7 +105,6 @@ namespace ascension {
 				bool check(const std::locale& lc, const StringPiece& preceding, CodePoint c) const;
 			};
 		} // namespace isc
-
 	} // namespace texteditor
 } // namespace ascension
 

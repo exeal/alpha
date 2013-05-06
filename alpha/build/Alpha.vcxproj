@@ -215,7 +215,6 @@
     <ClCompile Include="..\..\ascension\src\viewer\caret-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\default-caret-shaper.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\default-mouse-input-strategy.cpp" />
-    <ClCompile Include="..\..\ascension\src\viewer\viewer-gtkmm.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\viewer-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\virtual-box.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\visual-point.cpp" />

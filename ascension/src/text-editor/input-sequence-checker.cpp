@@ -7,7 +7,10 @@
 
 #include <ascension/text-editor/input-sequence-checker.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>
-#include <algorithm>
+#include <boost/foreach.hpp>
+#include <boost/range/algorithm/binary_search.hpp>
+#include <boost/range/algorithm/find.hpp>
+#include <array>
 using namespace ascension;
 using namespace ascension::texteditor;
 using namespace ascension::texteditor::isc;
@@ -16,21 +19,15 @@ using namespace std;
 
 // InputSequenceCheckers //////////////////////////////////////////////////////////////////////////
 
-/// Destructor.
-InputSequenceCheckers::~InputSequenceCheckers() {
-	for(list<InputSequenceChecker*>::iterator i = strategies_.begin(); i != strategies_.end(); ++i)
-		delete *i;
-}
-
 /**
  * Registers the sequence checker.
  * @param checker The sequence checker to be registered.
  * @throw std#invalid_argument @a checker is already registered
  */
 void InputSequenceCheckers::add(unique_ptr<InputSequenceChecker> checker) {
-	if(find(strategies_.begin(), strategies_.end(), checker.get()) != strategies_.end())
+	if(boost::find(strategies_, checker) != strategies_.end())
 		throw invalid_argument("Specified checker is already registered.");
-	strategies_.push_back(checker.release());
+	strategies_.push_front(move(checker));
 }
 
 /**
@@ -43,8 +40,8 @@ void InputSequenceCheckers::add(unique_ptr<InputSequenceChecker> checker) {
 bool InputSequenceCheckers::check(const StringPiece& preceding, CodePoint c) const {
 	if(preceding.begin() == nullptr)
 		throw NullPointerException("preceding");
-	for(list<InputSequenceChecker*>::const_iterator i = strategies_.begin(); i != strategies_.end(); ++i) {
-		if(!(*i)->check(locale_, preceding, c))
+	BOOST_FOREACH(const unique_ptr<InputSequenceChecker>& isc, strategies_) {
+		if(!isc->check(locale_, preceding, c))
 			return false;
 	}
 	return true;
@@ -52,8 +49,6 @@ bool InputSequenceCheckers::check(const StringPiece& preceding, CodePoint c) con
 
 /// Removes all registered checkers.
 void InputSequenceCheckers::clear() {
-	for(list<InputSequenceChecker*>::iterator i = strategies_.begin(); i != strategies_.end(); ++i)
-		delete *i;
 	strategies_.clear();
 }
 
@@ -62,12 +57,12 @@ void InputSequenceCheckers::clear() {
  * @param lc The locale of the input
  * @see #locale
  */
-void InputSequenceCheckers::imbue(const std::locale& lc) /*throw()*/ {
+void InputSequenceCheckers::imbue(const std::locale& lc) BOOST_NOEXCEPT {
 	locale_ = lc;
 }
 
 /// Returns if no checker is registerd.
-bool InputSequenceCheckers::isEmpty() const /*throw()*/ {
+bool InputSequenceCheckers::isEmpty() const BOOST_NOEXCEPT {
 	return strategies_.empty();
 }
 
@@ -75,7 +70,7 @@ bool InputSequenceCheckers::isEmpty() const /*throw()*/ {
  * Returns the locale.
  * @see #imbue
  */
-const locale& InputSequenceCheckers::locale() const /*throw()*/ {
+const locale& InputSequenceCheckers::locale() const BOOST_NOEXCEPT {
 	return locale_;
 }
 
@@ -157,20 +152,20 @@ bool VietnameseInputSequenceChecker::check(const locale& lc, const StringPiece& 
 	// Reference:
 	// - Vietnamese alphabet (http://en.wikipedia.org/wiki/Vietnamese_alphabet)
 	// - Vietnamese Writing System (http://www.cjvlang.com/Writing/writviet.html)
-	static const CodePoint VOWELS[24] = {
+	static const array<CodePoint, 24> VOWELS = {
 		'A', 'E', 'I', 'O', 'U', 'Y',
 		'a', 'e', 'i', 'o', 'u', 'y',
 		0x00c2u, 0x00cau, 0x00d4u, 0x00e2u, 0x00eau, 0x00f4u,	// Â Ê Ô â ê ô
 		0x0102u, 0x0103u, 0x01a0u, 0x01a1u, 0x01afu, 0x01b0u	// Ă ă Ơ ơ Ư ư
 	};
-	static const CodePoint TONE_MARKS[5] = {0x0300u, 0x0301u, 0x0303u, 0x0309u, 0x0323u};
+	static const array<CodePoint, 5> TONE_MARKS = {0x0300u, 0x0301u, 0x0303u, 0x0309u, 0x0323u};
 	static pair<unique_ptr<locale>, bool> vietnamese;
 
 	if(!vietnamese.second) {
 		vietnamese.second = true;
-		static const char* CANDIDATE_NAMES[] = {"vi_VN", "vi", "VN"};
+		static const array<const char*, 3> CANDIDATE_NAMES = {"vi_VN", "vi", "VN"};
 		try {
-			for(size_t i = 0; i < ASCENSION_COUNTOF(CANDIDATE_NAMES) && vietnamese.first.get() == nullptr; ++i)
+			for(size_t i = 0; i < CANDIDATE_NAMES.size() && vietnamese.first.get() == nullptr; ++i)
 				vietnamese.first.reset(new locale(CANDIDATE_NAMES[i]));
 		} catch(const runtime_error&) {
 		}
@@ -178,7 +173,7 @@ bool VietnameseInputSequenceChecker::check(const locale& lc, const StringPiece& 
 
 	if(vietnamese.first.get() == nullptr && lc != *vietnamese.first)
 		return true;
-	else if(!preceding.empty() && binary_search(TONE_MARKS, ASCENSION_ENDOF(TONE_MARKS), c))
-		return binary_search(VOWELS, ASCENSION_ENDOF(VOWELS), preceding.end()[-1]);
+	else if(!preceding.empty() && boost::binary_search(TONE_MARKS, c))
+		return boost::binary_search(VOWELS, preceding.end()[-1]);
 	return true;
 }
