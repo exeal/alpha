@@ -1,7 +1,7 @@
 /**
  * @file session.hpp
  * @author exeal
- * @date 2006-2011
+ * @date 2006-2013
  */
 
 #ifndef ASCENSION_SESSION_HPP
@@ -18,75 +18,81 @@
 
 namespace ascension {
 
-	namespace kernel {class Document;}
+	namespace kernel {
+		class Document;
+	}
 
 	namespace searcher {
 		class IncrementalSearcher;
 		class TextSearcher;
 	}
 
-	namespace viewers {class TextViewer;}
+	namespace viewers {
+		class TextViewer;
+	}
 
 	namespace texteditor {
-
 		class InputSequenceCheckers;
 		class KillRing;
 
 		/**
-		 * @note This class is not derivable.
+		 * @note This class is not intended to be subclassed.
 		 */
 		class Session {
 			ASCENSION_NONCOPYABLE_TAG(Session);
 		public:
-			// constructor
-			Session() /*throw()*/;
-			~Session() /*throw()*/;
-			// attributes
-			const std::vector<kernel::Document*> documents() const /*throw()*/;
-			searcher::IncrementalSearcher& incrementalSearcher() /*throw()*/;
-			const searcher::IncrementalSearcher& incrementalSearcher() const /*throw()*/;
-			InputSequenceCheckers* inputSequenceCheckers() /*throw()*/;
-			const InputSequenceCheckers* inputSequenceCheckers() const /*throw()*/;
-			KillRing& killRing() /*throw()*/;
-			const KillRing& killRing() const /*throw()*/;
-#ifndef ASCENSION_NO_MIGEMO
-			const kernel::fileio::PathString& migemoPathName(bool runtime) /*throw()*/;
-#endif // !ASCENSION_NO_MIGEMO
-			searcher::TextSearcher& textSearcher() /*throw()*/;
-			const searcher::TextSearcher& textSearcher() const /*throw()*/;
-			void setInputSequenceCheckers(std::unique_ptr<InputSequenceCheckers> isc) /*throw()*/;
-#ifndef ASCENSION_NO_MIGEMO
-			void setMigemoPathName(const kernel::fileio::PathString& pathName, bool runtime);
-#endif // !ASCENSION_NO_MIGEMO
-			// operations
+			/// @name Document Collection
+			/// @{
 			void addDocument(kernel::Document& document);
+			const std::vector<kernel::Document*> documents() const BOOST_NOEXCEPT;
 			void removeDocument(kernel::Document& document);
+			/// @}
+
+			/// @name Other Attributes
+			/// @{
+			searcher::IncrementalSearcher& incrementalSearcher() BOOST_NOEXCEPT;
+			const searcher::IncrementalSearcher& incrementalSearcher() const BOOST_NOEXCEPT;
+			std::shared_ptr<InputSequenceCheckers> inputSequenceCheckers() BOOST_NOEXCEPT;
+			std::shared_ptr<const InputSequenceCheckers> inputSequenceCheckers() const BOOST_NOEXCEPT;
+			KillRing& killRing() BOOST_NOEXCEPT;
+			const KillRing& killRing() const BOOST_NOEXCEPT;
+#ifndef ASCENSION_NO_MIGEMO
+			const kernel::fileio::PathString& migemoDictionaryPathName() BOOST_NOEXCEPT;
+			const kernel::fileio::PathString& migemoLibraryPathName() BOOST_NOEXCEPT;
+#endif // !ASCENSION_NO_MIGEMO
+			searcher::TextSearcher& textSearcher() BOOST_NOEXCEPT;
+			const searcher::TextSearcher& textSearcher() const BOOST_NOEXCEPT;
+			void setInputSequenceCheckers(std::unique_ptr<InputSequenceCheckers> isc) BOOST_NOEXCEPT;
+#ifndef ASCENSION_NO_MIGEMO
+			void setMigemoDictionaryPathName(const kernel::fileio::PathString& pathName);
+			void setMigemoLibraryPathName(const kernel::fileio::PathString& pathName);
+#endif // !ASCENSION_NO_MIGEMO
+			/// @}
 
 		private:
 			std::vector<kernel::Document*> documents_;
 			KillRing killRing_;
 			std::unique_ptr<searcher::IncrementalSearcher> isearch_;
 			std::unique_ptr<searcher::TextSearcher> textSearcher_;
-			std::unique_ptr<InputSequenceCheckers> inputSequenceCheckers_;
+			std::shared_ptr<InputSequenceCheckers> inputSequenceCheckers_;
 #ifndef ASCENSION_NO_MIGEMO
-			kernel::fileio::PathString migemoRuntimePathName_, migemoDictionaryPathName_;
+			kernel::fileio::PathString migemoDictionaryPathName_, migemoLibraryPathName_;
 #endif // !ASCENSION_NO_MIGEMO
 		};
 
-		bool abortIncrementalSearch(viewers::TextViewer& viewer) /*throw()*/;
-		bool endIncrementalSearch(viewers::TextViewer& viewer) /*throw()*/;
+		bool abortIncrementalSearch(viewers::TextViewer& viewer) BOOST_NOEXCEPT;
+		bool endIncrementalSearch(viewers::TextViewer& viewer) BOOST_NOEXCEPT;
 
 
 		/// Returns the input sequence checkers.
-		inline InputSequenceCheckers* Session::inputSequenceCheckers() /*throw()*/ {
-			return inputSequenceCheckers_.get();
+		inline std::shared_ptr<InputSequenceCheckers> Session::inputSequenceCheckers() BOOST_NOEXCEPT {
+			return inputSequenceCheckers_;
 		}
 
 		/// Returns the input sequence checkers.
-		inline const InputSequenceCheckers* Session::inputSequenceCheckers() const /*throw()*/ {
-			return inputSequenceCheckers_.get();
+		inline std::shared_ptr<const InputSequenceCheckers> Session::inputSequenceCheckers() const BOOST_NOEXCEPT {
+			return inputSequenceCheckers_;
 		}
-
 	} // namespace texteditor
 } // namespace ascension
 
