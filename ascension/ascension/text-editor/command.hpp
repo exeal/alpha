@@ -3,7 +3,7 @@
  * @author exeal
  * @date 2006-2011 was text-editor.hpp
  * @date 2011-05-06
- * @date 2011-2012
+ * @date 2011-2013
  */
 
 #ifndef ASCENSION_COMMAND_HPP
@@ -20,7 +20,6 @@ namespace ascension {
 	}
 
 	namespace texteditor {
-
 		/**
 		 * Abstract class for the editor commands.
 		 * @see ascension#texteditor#commands
@@ -31,13 +30,13 @@ namespace ascension {
 		public:
 			virtual ~Command() throw();
 			bool operator()();
-			NumericPrefix numericPrefix() const /*throw()*/;
-			Command& retarget(viewers::TextViewer& viewer) /*throw()*/;
-			Command& setNumericPrefix(NumericPrefix number) /*throw()*/;
+			NumericPrefix numericPrefix() const BOOST_NOEXCEPT;
+			Command& retarget(viewers::TextViewer& viewer) BOOST_NOEXCEPT;
+			Command& setNumericPrefix(NumericPrefix number) BOOST_NOEXCEPT;
 		protected:
-			explicit Command(viewers::TextViewer& viewer) /*throw()*/;
+			explicit Command(viewers::TextViewer& viewer) BOOST_NOEXCEPT;
 			/// Returns the text viewer which is the target of this command.
-			viewers::TextViewer& target() const /*throw()*/ {return *viewer_;}
+			viewers::TextViewer& target() const BOOST_NOEXCEPT {return *viewer_;}
 		private:
 			/// Called by @c #operator(). For semantics, see @c #operator().
 			virtual bool perform() = 0;
@@ -57,8 +56,8 @@ namespace ascension {
 			class BookmarkMatchLinesCommand : public Command {
 			public:
 				explicit BookmarkMatchLinesCommand(viewers::TextViewer& viewer,
-					const kernel::Region& region = kernel::Region()) /*throw()*/;
-				Index numberOfMarkedLines() const /*throw()*/;
+					const kernel::Region& region = kernel::Region()) BOOST_NOEXCEPT;
+				Index numberOfMarkedLines() const BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				const kernel::Region region_;
@@ -67,7 +66,7 @@ namespace ascension {
 			/// Clears the selection, or aborts the active incremental search and exits the content assist.
 			class CancelCommand : public Command {
 			public:
-				explicit CancelCommand(viewers::TextViewer& viewer) /*throw()*/;
+				explicit CancelCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
@@ -111,7 +110,7 @@ namespace ascension {
 			 */
 			class CharacterDeletionCommand : public Command {
 			public:
-				CharacterDeletionCommand(viewers::TextViewer& viewer, Direction direction) /*throw()*/;
+				CharacterDeletionCommand(viewers::TextViewer& viewer, Direction direction) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				const Direction direction_;
@@ -119,7 +118,7 @@ namespace ascension {
 			/// Converts a character into the text represents the code value of the character.
 			class CharacterToCodePointConversionCommand : public Command {
 			public:
-				CharacterToCodePointConversionCommand(viewers::TextViewer& viewer) /*throw()*/;
+				CharacterToCodePointConversionCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
@@ -138,7 +137,7 @@ namespace ascension {
 			/// Inputs a character is at same position in the next/previous visual line.
 			class CharacterInputFromNextLineCommand : public Command {
 			public:
-				CharacterInputFromNextLineCommand(viewers::TextViewer& viewer, bool fromPreviousLine) /*throw()*/;
+				CharacterInputFromNextLineCommand(viewers::TextViewer& viewer, bool fromPreviousLine) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				const bool fromPreviousLine_;
@@ -146,7 +145,7 @@ namespace ascension {
 			/// Converts a text represents a code value into the character has the code value.
 			class CodePointToCharacterConversionCommand : public Command {
 			public:
-				CodePointToCharacterConversionCommand(viewers::TextViewer& view) /*throw()*/;
+				CodePointToCharacterConversionCommand(viewers::TextViewer& view) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
@@ -156,14 +155,14 @@ namespace ascension {
 			 */
 			class CompletionProposalPopupCommand : public Command {
 			public:
-				explicit CompletionProposalPopupCommand(viewers::TextViewer& view) /*throw()*/;
+				explicit CompletionProposalPopupCommand(viewers::TextViewer& view) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
 			/// Selects the entire document.
 			class EntireDocumentSelectionCreationCommand : public Command {
 			public:
-				explicit EntireDocumentSelectionCreationCommand(viewers::TextViewer& view) /*throw()*/;
+				explicit EntireDocumentSelectionCreationCommand(viewers::TextViewer& view) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
@@ -176,7 +175,7 @@ namespace ascension {
 			 */
 			class FindNextCommand : public Command {
 			public:
-				FindNextCommand(viewers::TextViewer& viewer, Direction direction) /*throw()*/;
+				FindNextCommand(viewers::TextViewer& viewer, Direction direction) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				const Direction direction_;
@@ -188,7 +187,7 @@ namespace ascension {
 			class IncrementalFindCommand : public Command {
 			public:
 				IncrementalFindCommand(viewers::TextViewer& view, searcher::TextSearcher::Type type,
-					Direction direction, searcher::IncrementalSearchCallback* callback = nullptr) /*throw()*/;
+					Direction direction, searcher::IncrementalSearchCallback* callback = nullptr) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				searcher::TextSearcher::Type type_;
@@ -201,7 +200,7 @@ namespace ascension {
 			 */
 			class IndentationCommand : public Command {
 			public:
-				IndentationCommand(viewers::TextViewer& view, bool increase) /*throw()*/;
+				IndentationCommand(viewers::TextViewer& view, bool increase) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				bool increases_;
@@ -209,21 +208,21 @@ namespace ascension {
 			/// Toggles the input method's open status.
 			class InputMethodOpenStatusToggleCommand : public Command {
 			public:
-				explicit InputMethodOpenStatusToggleCommand(viewers::TextViewer& viewer) /*throw()*/;
+				explicit InputMethodOpenStatusToggleCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
 			/// Toggles Soft Keyboard mode of the input method.
 			class InputMethodSoftKeyboardModeToggleCommand : public Command {
 			public:
-				explicit InputMethodSoftKeyboardModeToggleCommand(viewers::TextViewer& viewer) /*throw()*/;
+				explicit InputMethodSoftKeyboardModeToggleCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
 			/// Moves the caret or extends the selection to the match bracket.
 			class MatchBracketCommand : public Command {
 			public:
-				MatchBracketCommand(viewers::TextViewer& viewer, bool extendSelection = false) /*throw()*/;
+				MatchBracketCommand(viewers::TextViewer& viewer, bool extendSelection = false) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				const bool extends_;
@@ -235,7 +234,7 @@ namespace ascension {
 			 */
 			class NewlineCommand : public Command {
 			public:
-				NewlineCommand(viewers::TextViewer& view, boost::optional<Direction> direction = boost::none) /*throw()*/;
+				NewlineCommand(viewers::TextViewer& view, boost::optional<Direction> direction = boost::none) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				const boost::optional<Direction> direction_;
@@ -243,14 +242,14 @@ namespace ascension {
 			/// Toggles overtype mode of the caret.
 			class OvertypeModeToggleCommand : public Command {
 			public:
-				explicit OvertypeModeToggleCommand(viewers::TextViewer& viewer) /*throw()*/;
+				explicit OvertypeModeToggleCommand(viewers::TextViewer& viewer) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
 			/// Inserts the content of the kill ring or the clipboard at the caret position.
 			class PasteCommand : public Command {
 			public:
-				PasteCommand(viewers::TextViewer& view, bool useKillRing) /*throw()*/;
+				PasteCommand(viewers::TextViewer& view, bool useKillRing) BOOST_NOEXCEPT;
 				bool perform();
 			private:
 				const bool usesKillRing_;
@@ -258,7 +257,7 @@ namespace ascension {
 			/// Reconverts by using the input method editor.
 			class ReconversionCommand : public Command {
 			public:
-				explicit ReconversionCommand(viewers::TextViewer& view) /*throw()*/;
+				explicit ReconversionCommand(viewers::TextViewer& view) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
@@ -266,8 +265,8 @@ namespace ascension {
 			class ReplaceAllCommand : public Command {
 			public:
 				ReplaceAllCommand(viewers::TextViewer& viewer, bool onlySelection,
-					const String& replacement, searcher::InteractiveReplacementCallback* callback) /*throw()*/;
-				std::size_t numberOfLastReplacements() const /*throw()*/;
+					const String& replacement, searcher::InteractiveReplacementCallback* callback) BOOST_NOEXCEPT;
+				std::size_t numberOfLastReplacements() const BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				const bool onlySelection_;
@@ -307,7 +306,7 @@ namespace ascension {
 			/// Tabifies (exchanges tabs and spaces).
 			class TabifyCommand : public Command {
 			public:
-				TabifyCommand(viewers::TextViewer& view, bool untabify) /*throw()*/;
+				TabifyCommand(viewers::TextViewer& view, bool untabify) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				bool untabify_;
@@ -315,7 +314,7 @@ namespace ascension {
 			/// Inputs a text.
 			class TextInputCommand : public Command {
 			public:
-				TextInputCommand(viewers::TextViewer& view, const String& text) /*throw()*/;
+				TextInputCommand(viewers::TextViewer& view, const String& text) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				String text_;
@@ -331,7 +330,7 @@ namespace ascension {
 			/// Performs undo or redo.
 			class UndoCommand : public Command {
 			public:
-				UndoCommand(viewers::TextViewer& view, bool redo) /*throw()*/;
+				UndoCommand(viewers::TextViewer& view, bool redo) BOOST_NOEXCEPT;
 				bool isLastActionIncompleted() const;
 			private:
 				bool perform();
@@ -341,7 +340,7 @@ namespace ascension {
 			/// Deletes the forward/backward N word(s).
 			class WordDeletionCommand : public Command {
 			public:
-				WordDeletionCommand(viewers::TextViewer& viewer, Direction direction) /*throw()*/;
+				WordDeletionCommand(viewers::TextViewer& viewer, Direction direction) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 				const Direction direction_;
@@ -349,7 +348,7 @@ namespace ascension {
 			/// Selects the current word.
 			class WordSelectionCreationCommand : public Command {
 			public:
-				explicit WordSelectionCreationCommand(viewers::TextViewer& view) /*throw()*/;
+				explicit WordSelectionCreationCommand(viewers::TextViewer& view) BOOST_NOEXCEPT;
 			private:
 				bool perform();
 			};
@@ -398,7 +397,7 @@ namespace ascension {
 		}
 
 		/// Returns the numeric prefix for the next execution.
-		inline Command::NumericPrefix Command::numericPrefix() const /*throw()*/ {
+		inline Command::NumericPrefix Command::numericPrefix() const BOOST_NOEXCEPT {
 			return numericPrefix_;
 		}
 
@@ -407,7 +406,7 @@ namespace ascension {
 		 * @param viewer The text viewer as the new target to set
 		 * @return This command
 		 */
-		inline Command& Command::retarget(viewers::TextViewer& viewer) /*throw()*/ {
+		inline Command& Command::retarget(viewers::TextViewer& viewer) BOOST_NOEXCEPT {
 			viewer_ = &viewer;
 			return *this;
 		}
@@ -417,7 +416,7 @@ namespace ascension {
 		 * @param number The new numeric prefix
 		 * @return This command
 		 */
-		inline Command& Command::setNumericPrefix(NumericPrefix number) /*throw()*/ {
+		inline Command& Command::setNumericPrefix(NumericPrefix number) BOOST_NOEXCEPT {
 			numericPrefix_ = number;
 			return *this;
 		}
