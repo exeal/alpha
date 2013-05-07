@@ -3,7 +3,7 @@
  * @author exeal
  * @date 2006-2011 was text-editor.cpp
  * @date 2011-05-06
- * @date 2011-2012
+ * @date 2011-2013
  */
 
 #include <ascension/content-assist/content-assist.hpp>
@@ -26,11 +26,11 @@ using namespace std;
  * Protected constructor.
  * @param viewer The target text viewer
  */
-Command::Command(TextViewer& viewer) /*throw()*/ : viewer_(&viewer), numericPrefix_(1) {
+Command::Command(TextViewer& viewer) BOOST_NOEXCEPT : viewer_(&viewer), numericPrefix_(1) {
 }
 
 /// Destructor.
-Command::~Command() /*throw()*/ {
+Command::~Command() BOOST_NOEXCEPT {
 }
 
 
@@ -56,11 +56,11 @@ namespace {
  *               region will be shrunk to the accessible region when the command performed
  */
 BookmarkMatchLinesCommand::BookmarkMatchLinesCommand(TextViewer& viewer,
-		const Region& region /* = Region() */) /*throw()*/ : Command(viewer), region_(region), numberOfMarkedLines_(0) {
+		const Region& region /* = Region() */) BOOST_NOEXCEPT : Command(viewer), region_(region), numberOfMarkedLines_(0) {
 }
 
 /// Returns the number of the previously marked lines.
-Index BookmarkMatchLinesCommand::numberOfMarkedLines() const /*throw()*/ {
+Index BookmarkMatchLinesCommand::numberOfMarkedLines() const BOOST_NOEXCEPT {
 	return numberOfMarkedLines_;
 }
 
@@ -102,7 +102,7 @@ bool BookmarkMatchLinesCommand::perform() {
  * Constructor.
  * @param viewer The target text viewer
  */
-CancelCommand::CancelCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
+CancelCommand::CancelCommand(TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 }
 
 /**
@@ -296,7 +296,7 @@ bool CaretMovementToDefinedPositionCommand<ProcedureSignature>::perform() {
  * @param direction The direcion to delete
  */
 CharacterDeletionCommand::CharacterDeletionCommand(TextViewer& viewer,
-		Direction direction) /*throw()*/ : Command(viewer), direction_(direction) {
+		Direction direction) BOOST_NOEXCEPT : Command(viewer), direction_(direction) {
 }
 
 /**
@@ -408,7 +408,7 @@ bool CharacterInputCommand::perform() {
  *                         one on the next visual line is used
  */
 CharacterInputFromNextLineCommand::CharacterInputFromNextLineCommand(
-		TextViewer& viewer, bool fromPreviousLine) /*throw()*/ : Command(viewer), fromPreviousLine_(fromPreviousLine) {
+		TextViewer& viewer, bool fromPreviousLine) BOOST_NOEXCEPT : Command(viewer), fromPreviousLine_(fromPreviousLine) {
 }
 
 /**
@@ -442,7 +442,7 @@ bool CharacterInputFromNextLineCommand::perform() {
  * Constructor.
  * @param viewer The target text viewer
  */
-CharacterToCodePointConversionCommand::CharacterToCodePointConversionCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
+CharacterToCodePointConversionCommand::CharacterToCodePointConversionCommand(TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 }
 
 /**
@@ -483,7 +483,7 @@ bool CharacterToCodePointConversionCommand::perform() {
  * Constructor.
  * @param viewer The target text viewer
  */
-CodePointToCharacterConversionCommand::CodePointToCharacterConversionCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
+CodePointToCharacterConversionCommand::CodePointToCharacterConversionCommand(TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 }
 
 /**
@@ -539,7 +539,7 @@ bool CodePointToCharacterConversionCommand::perform() {
  * Constructor.
  * @param viewer The target text viewer
  */
-CompletionProposalPopupCommand::CompletionProposalPopupCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
+CompletionProposalPopupCommand::CompletionProposalPopupCommand(TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 }
 
 /**
@@ -561,7 +561,7 @@ bool CompletionProposalPopupCommand::perform() {
  * Constructor.
  * @param viewer The target text viewer
  */
-EntireDocumentSelectionCreationCommand::EntireDocumentSelectionCreationCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
+EntireDocumentSelectionCreationCommand::EntireDocumentSelectionCreationCommand(TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 }
 
 /**
@@ -580,7 +580,7 @@ bool EntireDocumentSelectionCreationCommand::perform() {
  * @param viewer The target text viewer
  * @param direction The direction to search
  */
-FindNextCommand::FindNextCommand(TextViewer& viewer, Direction direction) /*throw()*/ : Command(viewer), direction_(direction) {
+FindNextCommand::FindNextCommand(TextViewer& viewer, Direction direction) BOOST_NOEXCEPT : Command(viewer), direction_(direction) {
 }
 
 /**
@@ -630,7 +630,7 @@ bool FindNextCommand::perform() {
  * @param callback The callback object for the incremental search. Can be @c null
  */
 IncrementalFindCommand::IncrementalFindCommand(TextViewer& viewer, searcher::TextSearcher::Type type,
-		Direction direction, searcher::IncrementalSearchCallback* callback /* = nullptr */) /*throw()*/
+		Direction direction, searcher::IncrementalSearchCallback* callback /* = nullptr */) BOOST_NOEXCEPT
 		: Command(viewer), type_(type), direction_(direction), callback_(callback) {
 }
 
@@ -663,7 +663,7 @@ bool IncrementalFindCommand::perform() {
  * @param viewer The target text viewer
  * @param increase Set @c true to increase the indentation
  */
-IndentationCommand::IndentationCommand(TextViewer& viewer, bool increase) /*throw()*/ : Command(viewer), increases_(increase) {
+IndentationCommand::IndentationCommand(TextViewer& viewer, bool increase) BOOST_NOEXCEPT : Command(viewer), increases_(increase) {
 }
 
 /**
@@ -698,7 +698,7 @@ bool IndentationCommand::perform() {
  * Constructor.
  * @param viewer the target text viewer
  */
-InputMethodOpenStatusToggleCommand::InputMethodOpenStatusToggleCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
+InputMethodOpenStatusToggleCommand::InputMethodOpenStatusToggleCommand(TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 }
 
 /**
@@ -706,7 +706,7 @@ InputMethodOpenStatusToggleCommand::InputMethodOpenStatusToggleCommand(TextViewe
  * @retval false The system didn't support the input method
  */
 bool InputMethodOpenStatusToggleCommand::perform() {
-	if(win32::Handle<HIMC> imc = win32::inputMethod(target()))
+	if(win32::Handle<HIMC>::Type imc = win32::inputMethod(target()))
 		return win32::boole(::ImmSetOpenStatus(imc.get(), !win32::boole(::ImmGetOpenStatus(imc.get()))));
 	return false;
 }
@@ -715,7 +715,7 @@ bool InputMethodOpenStatusToggleCommand::perform() {
  * Constructor.
  * @param viewer The target text viewer
  */
-InputMethodSoftKeyboardModeToggleCommand::InputMethodSoftKeyboardModeToggleCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
+InputMethodSoftKeyboardModeToggleCommand::InputMethodSoftKeyboardModeToggleCommand(TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 }
 
 /**
@@ -723,7 +723,7 @@ InputMethodSoftKeyboardModeToggleCommand::InputMethodSoftKeyboardModeToggleComma
  * @retval false The system didn't support the input method
  */
 bool InputMethodSoftKeyboardModeToggleCommand::perform() {
-	if(win32::Handle<HIMC> imc = win32::inputMethod(target())) {
+	if(win32::Handle<HIMC>::Type imc = win32::inputMethod(target())) {
 		DWORD conversionMode, sentenceMode;
 		if(win32::boole(::ImmGetConversionStatus(imc.get(), &conversionMode, &sentenceMode))) {
 			conversionMode = win32::boole(conversionMode & IME_CMODE_SOFTKBD) ?
@@ -739,7 +739,7 @@ bool InputMethodSoftKeyboardModeToggleCommand::perform() {
  * @param viewer The target text viewer
  * @param extendSelection Set @c true to extend the selection
  */
-MatchBracketCommand::MatchBracketCommand(TextViewer& viewer, bool extendSelection) /*throw()*/ : Command(viewer), extends_(extendSelection) {
+MatchBracketCommand::MatchBracketCommand(TextViewer& viewer, bool extendSelection) BOOST_NOEXCEPT : Command(viewer), extends_(extendSelection) {
 }
 
 /**
@@ -770,7 +770,7 @@ bool MatchBracketCommand::perform() {
  *                  (@c Direction#FORWARD) or the previous (@c Direction#BACKWARD) line. In this
  *                  case, the command ends the active mode and inserts newline character(s)
  */
-NewlineCommand::NewlineCommand(TextViewer& viewer, boost::optional<Direction> direction) /*throw()*/ : Command(viewer), direction_(direction) {
+NewlineCommand::NewlineCommand(TextViewer& viewer, boost::optional<Direction> direction) BOOST_NOEXCEPT : Command(viewer), direction_(direction) {
 }
 
 /**
@@ -833,7 +833,7 @@ bool NewlineCommand::perform() {
  * Constructor.
  * @param viewer The target text viewer
  */
-OvertypeModeToggleCommand::OvertypeModeToggleCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
+OvertypeModeToggleCommand::OvertypeModeToggleCommand(TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 }
 
 /**
@@ -851,7 +851,7 @@ bool OvertypeModeToggleCommand::perform() {
  * Constructor.
  * @param viewer The target text viewer
  */
-PasteCommand::PasteCommand(TextViewer& viewer, bool useKillRing) /*throw()*/ : Command(viewer), usesKillRing_(useKillRing) {
+PasteCommand::PasteCommand(TextViewer& viewer, bool useKillRing) BOOST_NOEXCEPT : Command(viewer), usesKillRing_(useKillRing) {
 }
 
 /**
@@ -874,7 +874,7 @@ bool PasteCommand::perform() {
  * Constructor.
  * @param viewer The target text viewer
  */
-ReconversionCommand::ReconversionCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
+ReconversionCommand::ReconversionCommand(TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 }
 
 /**
@@ -893,7 +893,7 @@ bool ReconversionCommand::perform() {
 	bool succeeded = false;
 	Caret& caret = viewer.caret();
 	if(!caret.isSelectionRectangle()) {
-		if(win32::Handle<HIMC> imc = win32::inputMethod(viewer)) {
+		if(win32::Handle<HIMC>::Type imc = win32::inputMethod(viewer)) {
 			if(!win32::boole(::ImmGetOpenStatus(imc.get())))	// without this, IME may ignore us?
 				::ImmSetOpenStatus(imc.get(), true);
 
@@ -937,7 +937,7 @@ bool ReconversionCommand::perform() {
  * @param callback
  */
 ReplaceAllCommand::ReplaceAllCommand(TextViewer& viewer, bool onlySelection,
-		const String& replacement, searcher::InteractiveReplacementCallback* callback) /*throw()*/
+		const String& replacement, searcher::InteractiveReplacementCallback* callback) BOOST_NOEXCEPT
 		: Command(viewer), onlySelection_(onlySelection), replacement_(replacement), callback_(callback) {
 }
 
@@ -1061,7 +1061,7 @@ bool RowSelectionExtensionToDefinedPositionCommand<ProcedureSignature>::perform(
  * @param viewer The target text viewer
  * @param untabify Set @c true to untabify rather than tabify
  */
-TabifyCommand::TabifyCommand(TextViewer& viewer, bool untabify) /*throw()*/ : Command(viewer), untabify_(untabify) {
+TabifyCommand::TabifyCommand(TextViewer& viewer, bool untabify) BOOST_NOEXCEPT : Command(viewer), untabify_(untabify) {
 }
 
 /**
@@ -1081,7 +1081,7 @@ bool TabifyCommand::perform() {
  * @param viewer The target text viewer
  * @param text The text to input. This can be empty or ill-formed UTF-16 sequence
  */
-TextInputCommand::TextInputCommand(TextViewer& viewer, const String& text) /*throw()*/ : Command(viewer), text_(text) {
+TextInputCommand::TextInputCommand(TextViewer& viewer, const String& text) BOOST_NOEXCEPT : Command(viewer), text_(text) {
 }
 
 namespace {
@@ -1177,7 +1177,7 @@ bool TranspositionCommand::perform() {
  * @param viewer The target text viewer
  * @param redo Set @c true to perform redo, rather than undo
  */
-UndoCommand::UndoCommand(TextViewer& viewer, bool redo) /*throw()*/ : Command(viewer), redo_(redo), lastResult_(INDETERMINATE) {
+UndoCommand::UndoCommand(TextViewer& viewer, bool redo) BOOST_NOEXCEPT : Command(viewer), redo_(redo), lastResult_(INDETERMINATE) {
 }
 
 /**
@@ -1217,7 +1217,7 @@ bool UndoCommand::perform() {
  * @param viewer The target text viewer
  * @param direction The direcion to delete
  */
-WordDeletionCommand::WordDeletionCommand(TextViewer& viewer, Direction direction) /*throw()*/ : Command(viewer), direction_(direction) {
+WordDeletionCommand::WordDeletionCommand(TextViewer& viewer, Direction direction) BOOST_NOEXCEPT : Command(viewer), direction_(direction) {
 }
 
 /**
@@ -1265,7 +1265,7 @@ bool WordDeletionCommand::perform() {
  * Constructor.
  * @param viewer The target text viewer
  */
-WordSelectionCreationCommand::WordSelectionCreationCommand(TextViewer& viewer) /*throw()*/ : Command(viewer) {
+WordSelectionCreationCommand::WordSelectionCreationCommand(TextViewer& viewer) BOOST_NOEXCEPT : Command(viewer) {
 }
 
 /**
