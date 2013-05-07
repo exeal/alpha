@@ -20,7 +20,6 @@ namespace ascension {
 //	}
 
 	namespace texteditor {
-
 		/**
 		 * Interface for objects which are interested in changes of the kill ring.
 		 * @see KillRing
@@ -36,7 +35,7 @@ namespace ascension {
 		class KillRing {
 		public:
 			// constructor
-			explicit KillRing(std::size_t maximumNumberOfKills = ASCENSION_DEFAULT_MAXIMUM_KILLS) /*throw()*/;
+			explicit KillRing(std::size_t maximumNumberOfKills = ASCENSION_DEFAULT_MAXIMUM_KILLS) BOOST_NOEXCEPT;
 			// listeners
 			void addListener(KillRingListener& listener);
 			void removeListener(KillRingListener& listener);
@@ -52,9 +51,9 @@ namespace ascension {
 			const std::pair<String, bool>& get(std::ptrdiff_t places = 0) const;
 			const std::pair<String, bool>& setCurrent(std::ptrdiff_t places);
 			// number
-			std::size_t maximumNumberOfKills() const /*throw()*/;
-			std::size_t numberOfKills() const /*throw()*/;
-//			void setMaximumNumberOfKills(std::size_t capacity) /*throw()*/;
+			std::size_t maximumNumberOfKills() const BOOST_NOEXCEPT;
+			std::size_t numberOfKills() const BOOST_NOEXCEPT;
+//			void setMaximumNumberOfKills(std::size_t capacity) BOOST_NOEXCEPT;
 		private:
 			typedef std::list<std::pair<String, bool>> Contents;
 			Contents::iterator at(ptrdiff_t index) const;
@@ -66,7 +65,6 @@ namespace ascension {
 			const std::size_t maximumNumberOfKills_;
 			detail::Listeners<KillRingListener> listeners_;
 		};
-
 	} // namespace texteditor
 } // namespace ascension
 

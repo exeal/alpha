@@ -24,7 +24,7 @@ using namespace std;
  * @param maximumNumberOfKills Initial maximum number of kills. This setting can be change by
  *                             @c #setMaximumNumberOfKills later
  */
-KillRing::KillRing(size_t maximumNumberOfKills /* = ASCENSION_DEFAULT_MAXIMUM_KILLS */) /*throw()*/
+KillRing::KillRing(size_t maximumNumberOfKills /* = ASCENSION_DEFAULT_MAXIMUM_KILLS */) BOOST_NOEXCEPT
 		: yankPointer_(contents_.end()), maximumNumberOfKills_(maximumNumberOfKills) {
 }
 
@@ -52,7 +52,7 @@ void KillRing::addNew(const String& text, bool rectangle, bool replace /* = fals
 		if(contents_.size() > maximumNumberOfKills_)
 			contents_.pop_back();
 	}
-	yankPointer_ = contents_.begin();
+	yankPointer_ = begin(contents_);
 	listeners_.notify(&KillRingListener::killRingChanged);
 }
 
@@ -68,7 +68,7 @@ void KillRing::append(const String& text, bool prepend) {
 		contents_.front().first.append(text);
 	else
 		contents_.front().first.insert(0, text);
-	yankPointer_ = contents_.begin();
+	yankPointer_ = begin(contents_);
 	listeners_.notify(&KillRingListener::killRingChanged);
 }
 
@@ -78,13 +78,13 @@ KillRing::Contents::iterator KillRing::at(ptrdiff_t index) const {
 	Contents::iterator i(const_cast<KillRing*>(this)->yankPointer_);
 	if(index >= 0) {
 		for(index -= index - (index % contents_.size()); index > 0; --index) {
-			if(++i == contents_.end())
-				i = const_cast<KillRing*>(this)->contents_.begin();
+			if(++i == end(contents_))
+				i = begin(const_cast<KillRing*>(this)->contents_);
 		}
 	} else {
 		for(index += -index -(-index % contents_.size()); index < 0; ++index) {
-			if(i == contents_.begin())
-				i = const_cast<KillRing*>(this)->contents_.end();
+			if(i == begin(contents_))
+				i = end(const_cast<KillRing*>(this)->contents_);
 			--i;
 		}
 	}
@@ -102,12 +102,12 @@ const pair<String, bool>& KillRing::get(ptrdiff_t places /* = 0 */) const {
 }
 
 /// Returns the maximum number of kills.
-size_t KillRing::maximumNumberOfKills() const /*throw()*/ {
+size_t KillRing::maximumNumberOfKills() const BOOST_NOEXCEPT {
 	return maximumNumberOfKills_;
 }
 
 /// Returns the number of kills.
-size_t KillRing::numberOfKills() const /*throw()*/ {
+size_t KillRing::numberOfKills() const BOOST_NOEXCEPT {
 	return contents_.size();
 }
 
