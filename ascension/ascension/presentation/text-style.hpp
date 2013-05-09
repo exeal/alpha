@@ -1331,10 +1331,10 @@ namespace ascension {
 		template<typename InheritedOrNotForCurrentColor, typename InheritedOrNotForParentColor>
 		inline graphics::Color computeColor(const ColorProperty<InheritedOrNotForCurrentColor>* current,
 				const ColorProperty<InheritedOrNotForParentColor>* parent, const TextToplevelStyle& ancestor) {
-			const ColorProperty<InheritedOrNot>* ancestorColor = nullptr;
+			const ColorProperty<sp::Inherited>* ancestorColor = nullptr;
 			if(ancestor.defaultLineStyle && ancestor.defaultLineStyle->defaultRunStyle)
 				ancestorColor = &ancestor.defaultLineStyle->defaultRunStyle->color;
-			return computeColor(current, parent, (ancestorColor != nullptr) ? *ancestorColor : ColorProperty<InheritedOrNot>());
+			return computeColor(current, parent, (ancestorColor != nullptr) ? *ancestorColor : ColorProperty<sp::Inherited>());
 		}
 
 		/**
