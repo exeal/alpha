@@ -6,6 +6,7 @@
  */
 
 #include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/font/glyph-metrics.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/viewer.hpp>
@@ -133,12 +134,13 @@ namespace {
 #else
 #endif
 */
+		const FontRenderContext frc(context.fontRenderContext());
 		Char maximumExtentCharacter;
 		Scalar maximumAdvance = 0;
 		for(Char c = '0'; c <= '9'; ++c) {
-			unique_ptr<const GlyphVector> glyphs(font->createGlyphVector(String(1, c)));
-			shared_ptr<GlyphMetrics> gm(glyphs->metrics(0));
-			const Scalar advance = isHorizontal(writingMode.blockFlowDirection) ? gm->advanceX() : gm->advanceY();
+			unique_ptr<const GlyphVector> glyphs(font->createGlyphVector(frc, StringPiece(&c, 1)));
+			const GlyphMetrics gm(glyphs->glyphMetrics(0));
+			const Scalar advance = isHorizontal(writingMode.blockFlowDirection) ? gm.advanceX() : gm.advanceY();
 			if(advance > maximumAdvance) {
 				maximumExtentCharacter = c;
 				maximumAdvance = advance;
@@ -293,24 +295,24 @@ graphics::Rectangle RulerPainter::lineNumbersAllocationRectangle() const BOOST_N
 		case PhysicalDirection::LEFT:
 			return graphics::Rectangle(
 				geometry::translate(
-					geometry::topLeft(localBounds), Dimension(geometry::_dx = indicatorMarginAllocationWidth(), geometry::_dy = 0)),
+					geometry::topLeft(localBounds), Dimension(geometry::_dx = indicatorMarginAllocationWidth(), geometry::_dy = 0.0f)),
 				Dimension(geometry::_dx = lineNumbersAllocationWidth(), geometry::_dy = geometry::dy(localBounds)));
 		case PhysicalDirection::TOP:
 			return graphics::Rectangle(
 				geometry::translate(
-					geometry::topLeft(localBounds), Dimension(geometry::_dx = 0, geometry::_dy = indicatorMarginAllocationWidth())),
+					geometry::topLeft(localBounds), Dimension(geometry::_dx = 0.0f, geometry::_dy = indicatorMarginAllocationWidth())),
 				Dimension(geometry::_dx = geometry::dx(localBounds), geometry::_dy = lineNumbersAllocationWidth()));
 		case PhysicalDirection::RIGHT:
 			return geometry::normalize(
 				graphics::Rectangle(
 					geometry::translate(
-						geometry::topRight(localBounds), Dimension(geometry::_dx = -indicatorMarginAllocationWidth(), geometry::_dy = 0)),
+						geometry::topRight(localBounds), Dimension(geometry::_dx = -indicatorMarginAllocationWidth(), geometry::_dy = 0.0f)),
 					Dimension(geometry::_dx = -lineNumbersAllocationWidth(), geometry::_dy = geometry::dy(localBounds))));
 		case PhysicalDirection::BOTTOM:
 			return geometry::normalize(
 				graphics::Rectangle(
 					geometry::translate(
-						geometry::bottomLeft(localBounds), Dimension(geometry::_dx = 0, geometry::_dy = -indicatorMarginAllocationWidth())),				
+						geometry::bottomLeft(localBounds), Dimension(geometry::_dx = 0.0f, geometry::_dy = -indicatorMarginAllocationWidth())),				
 					Dimension(geometry::_dx = geometry::dx(localBounds), geometry::_dy = -lineNumbersAllocationWidth())));
 		default:
 			ASCENSION_ASSERT_NOT_REACHED();
@@ -381,7 +383,7 @@ void RulerPainter::paint(PaintContext& context) {
 		detail::paintBorder(context, lineNumbersRectangle, borders, writingMode);
 
 		// text
-		context.setFillStyle(make_shared<const Paint>(new SolidColor(computeColor(&lineNumbers(declaredStyles())->color, &declaredStyles().color, toplevelStyle))));
+		context.setFillStyle(make_shared<const SolidColor>(computeColor(&lineNumbers(declaredStyles())->color, &declaredStyles().color, toplevelStyle)));
 		context.setFont(viewer_.textRenderer().defaultFont());
 //		context.setTextAlign();
 //		context.setTextBaseline();

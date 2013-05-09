@@ -2,7 +2,7 @@
  * @file paint.hpp
  * @author exeal
  * @date 2011-03-13 created
- * @date 2011-2012
+ * @date 2011-2013
  */
 
 #ifndef ASCENSION_PAINT_HPP
@@ -26,14 +26,14 @@ namespace ascension {
 			ASCENSION_NONCOPYABLE_TAG(Paint);
 		public:
 			/// Constructor.
-			Paint() /*noexcept*/ : revisionNumber_(0) {}
+			Paint() BOOST_NOEXCEPT : revisionNumber_(0) {}
 			/// Destructor.
-			virtual ~Paint() /*noexcept*/;
-			std::size_t revisionNumber() const /*noexcept*/ {
+			virtual ~Paint() BOOST_NOEXCEPT;
+			std::size_t revisionNumber() const BOOST_NOEXCEPT {
 				return revisionNumber_;
 			}
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
-			Cairo::PtrRef<Cairo::Pattern> asNativeObject() const /*noexcept*/;
+			Cairo::PtrRef<Cairo::Pattern> asNativeObject() const BOOST_NOEXCEPT;
 		protected:
 			void reset(Cairo::PtrRef<Cairo::Pattern> nativeObject);
 		private:
@@ -41,31 +41,31 @@ namespace ascension {
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
 			???? asNativeObject() const;
 		protected:
-			void reset(???? nativeObject) /*noexcept*/;
+			void reset(???? nativeObject) BOOST_NOEXCEPT;
 		private:
 			???? nativeObject_;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_DIRECT2D)
-			win32::com::SmartPointer<ID2D1Brush> asNativeObject() const /*noexcept*/;
+			win32::com::SmartPointer<ID2D1Brush> asNativeObject() const BOOST_NOEXCEPT;
 		protected:
-			void reset(win32::com::SmartPointer<ID2D1Brush> nativeObject) /*noexcept*/;
+			void reset(win32::com::SmartPointer<ID2D1Brush> nativeObject) BOOST_NOEXCEPT;
 		private:
 			win32::com::SmartPointer<ID2D1Brush> nativeObject_;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
-			const std::unique_ptr<QBrush>& asNativeObject() const /*noexcept*/;
+			const std::unique_ptr<QBrush>& asNativeObject() const BOOST_NOEXCEPT;
 		protected:
-			void reset(std::unique_ptr<QBrush>&& nativeObject) /*noexcept*/;
+			void reset(std::unique_ptr<QBrush>&& nativeObject) BOOST_NOEXCEPT;
 		private:
 			std::unique_ptr<QBrush> nativeObject_;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
-			const LOGBRUSH& asNativeObject() const /*noexcept*/;
+			const LOGBRUSH& asNativeObject() const BOOST_NOEXCEPT;
 		protected:
-			void reset(LOGBRUSH&& nativeObject) /*noexcept*/;
+			void reset(LOGBRUSH&& nativeObject) BOOST_NOEXCEPT;
 		private:
 			LOGBRUSH nativeObject_;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
-			const std::unique_ptr<Gdiplus::Brush>& nativeObject() const /*noexcept*/;
+			const std::unique_ptr<Gdiplus::Brush>& nativeObject() const BOOST_NOEXCEPT;
 		protected:
-			void reset(std::unique_ptr<Gdiplus::Brush>&& nativeObject) /*noexcept*/;
+			void reset(std::unique_ptr<Gdiplus::Brush>&& nativeObject) BOOST_NOEXCEPT;
 		private:
 			std::unique_ptr<Gdiplus::Brush> nativeObject_;
 #endif
@@ -75,7 +75,7 @@ namespace ascension {
 		class SolidColor : public Paint {
 		public:
 			explicit SolidColor(const Color& color);
-			const Color& color() const /*noexcept*/;
+			const Color& color() const BOOST_NOEXCEPT;
 			void setColor(const Color& color);
 		private:
 			Color color_;
