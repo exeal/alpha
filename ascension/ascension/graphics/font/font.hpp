@@ -2,7 +2,7 @@
  * @file font.hpp
  * @author exeal
  * @date 2010-11-06 created
- * @date 2010-2012
+ * @date 2010-2013
  */
 
 #ifndef ASCENSION_FONT_HPP
@@ -13,10 +13,12 @@
 #include <ascension/graphics/font/glyph-vector.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
 #include <locale>
+#include <memory>
 #include <set>
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 #	include <unordered_map>
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+#include <vector>
 #include <boost/optional.hpp>
 
 namespace ascension {
@@ -111,18 +113,32 @@ namespace ascension {
 				std::shared_ptr<Gdiplus::Font> asNativeObject();
 				std::shared_ptr<const Gdiplus::Font> asNativeObject() const;
 #endif
-#if 0
 				/**
 				 * Creates a @c GlyphVector by mapping characters to glyphs one-to-one based on the
 				 * Unicode cmap in this font. This method does no other processing besides the
 				 * mapping of glyphs to characters. This means that this method is not useful for
 				 * some scripts, such as Arabic, Hebrew, Thai, and Indic, that require reordering,
 				 * shaping, or ligature substitution.
+				 * @param frc The font render context
 				 * @param text The text string
-				 * @return A new @c GlyphVector created with the specified string
+				 * @return A new @c GlyphVector created with the specified string and the specified
+				 *         @c FontRenderContext
 				 */
-				std::unique_ptr<const GlyphVector> createGlyphVector(const String& text) const;
-#endif
+				std::unique_ptr<const GlyphVector> createGlyphVector(
+					const FontRenderContext& frc, const StringPiece& text) const;
+				/**
+				 * Creates a @c GlyphVector by mapping characters to glyphs one-to-one based on the
+				 * Unicode cmap in this font. This method does no other processing besides the
+				 * mapping of glyphs to characters. This means that this method is not useful for
+				 * some scripts, such as Arabic, Hebrew, Thai, and Indic, that require reordering,
+				 * shaping, or ligature substitution.
+				 * @param frc The font render context
+				 * @param text The text string
+				 * @return A new @c GlyphVector created with the specified string and the specified
+				 *         @c FontRenderContext
+				 */
+				std::unique_ptr<const GlyphVector> createGlyphVector(
+					const FontRenderContext& frc, const std::vector<GlyphCode>& glyphCodes) const;
 				/// Returns the description of this font.
 				const FontDescription& describe() const BOOST_NOEXCEPT {
 					if(description_.get() == nullptr)
@@ -135,6 +151,18 @@ namespace ascension {
 				boost::optional<GlyphCode> ivsGlyph(CodePoint baseCharacter,
 					CodePoint variationSelector, GlyphCode defaultGlyph) const;
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+				/**
+				 * Returns a new @c GlyphVector object, performing full layout of the text if
+				 * possible. Full layout is required for complex text, such as Arabic or Hindi.
+				 * Support for different scripts depends on the font and implementation.
+				 * @param frc The font render context
+				 * @param text The text to layout
+				 * @param flags Control flags
+				 * @return A new @c GlyphVector representing the text, with glyphs chosen and
+				 *         positioned so as to best represent the text
+				 */
+				std::unique_ptr<const GlyphVector> layoutGlyphVector(
+					const FontRenderContext& frc, const StringPiece& text) const;
 				std::unique_ptr<const LineMetrics> lineMetrics(
 					const StringPiece& text, const FontRenderContext& frc) const;
 				AffineTransform&& transform() const BOOST_NOEXCEPT;
