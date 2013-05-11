@@ -94,17 +94,17 @@ namespace ascension {
 		};
 		template<> class ReferenceCounter<win32::com::SingleThreaded> {
 		public:
-			ReferenceCounter() /*noexcept*/ : c_(0) {}
-			ULONG increment() /*noexcept*/ {return ++c_;}
-			ULONG decrement() /*noexcept*/{return --c_;}
+			ReferenceCounter() BOOST_NOEXCEPT : c_(0) {}
+			ULONG increment() BOOST_NOEXCEPT {return ++c_;}
+			ULONG decrement() BOOST_NOEXCEPT{return --c_;}
 		private:
 			ULONG c_;
 		};
 		template<> class ReferenceCounter<win32::com::MultiThreaded> {
 		public:
-			ReferenceCounter() /*noexcept*/ : c_(0) {}
-			ULONG increment() /*noexcept*/ {return ::InterlockedIncrement(&c_);}
-			ULONG decrement() /*noexcept*/{return ::InterlockedDecrement(&c_);}
+			ReferenceCounter() BOOST_NOEXCEPT : c_(0) {}
+			ULONG increment() BOOST_NOEXCEPT {return ::InterlockedIncrement(&c_);}
+			ULONG decrement() BOOST_NOEXCEPT{return ::InterlockedDecrement(&c_);}
 		private:
 			long c_;
 		};

@@ -276,7 +276,7 @@ namespace {
 	 * @return The logical and visual line numbers
 	 * @see #BaselineIterator, TextViewer#mapLocalBpdToLine
 	 */
-	VisualLine mapBpdToLine(const TextViewport& viewport, Scalar bpd, bool* snapped = nullptr) /*throw()*/ {
+	VisualLine mapBpdToLine(const TextViewport& viewport, Scalar bpd, bool* snapped = nullptr) BOOST_NOEXCEPT {
 		const BlockFlowDirection blockFlowDirection = viewport.textRenderer().computedBlockFlowDirection();
 		const PhysicalFourSides<Scalar>& physicalSpaces = viewport.textRenderer().spaceWidths();
 		Scalar spaceBefore, spaceAfter;
@@ -345,7 +345,7 @@ TextViewport::TextViewport(TextRenderer& textRenderer) : textRenderer_(textRende
 			boost::bind(&TextViewport::documentAccessibleRegionChanged, this, _1));
 }
 
-inline void TextViewport::adjustBpdScrollPositions() /*throw()*/ {
+inline void TextViewport::adjustBpdScrollPositions() BOOST_NOEXCEPT {
 	const LineLayoutVector& layouts = textRenderer().layouts();
 	firstVisibleLine_.line = min(firstVisibleLine_.line, textRenderer().presentation().document().numberOfLines() - 1);
 	firstVisibleLine_.subline = min(layouts.numberOfSublinesOfLine(firstVisibleLine_.line) - 1, firstVisibleLine_.subline);
@@ -531,7 +531,7 @@ void TextViewport::setBoundsInView(const graphics::Rectangle& bounds) {
 }
 
 /// @see VisualLinesListener#visualLinesDeleted
-void TextViewport::visualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines, bool longestLineChanged) /*throw()*/ {
+void TextViewport::visualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines, bool longestLineChanged) BOOST_NOEXCEPT {
 //	scrolls_.changed = true;
 	if(*lines.end() < firstVisibleLine_.line) {	// deleted before visible area
 		firstVisibleLine_.line -= lines.size();

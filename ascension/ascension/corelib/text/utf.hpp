@@ -23,7 +23,6 @@
 #endif
 
 namespace ascension {
-
 	namespace detail {
 		/*
 			UTF-8 code unit value distribution (based on Unicode 6.0 Table 3.7)
@@ -169,9 +168,8 @@ namespace ascension {
 
 	namespace text {
 		namespace utf {
-
-			// common trivials ////////////////////////////////////////////////////////////////////
-
+			/// @defgroup utf_common_trivials UTF Common Trivial Functions
+			/// @{
 			/**
 			 * Returns the number of bytes in 
 			 * @tparam codeUnitSize The size of the code unit. Either 1, 2 or 4
@@ -206,9 +204,10 @@ namespace ascension {
 				else
 					return 1;
 			}
+			/// @}
 
-			// UTF-8 trivials /////////////////////////////////////////////////////////////////////
-
+			/// @defgroup utf8_trivials UTF-8 Trivial Functions
+			/// @{
 			/**
 			 * Returns @c true if the given code unit is UTF-8 valid byte (which can be any
 			 * component of valid UTF-8 byte sequence).
@@ -236,7 +235,7 @@ namespace ascension {
 			 * @param byte The code unit to test
 			 * @return true if @a byte is leading byte
 			 */
-			inline bool isLeadingByte(std::uint8_t byte) /*throw()*/ {
+			inline bool isLeadingByte(std::uint8_t byte) BOOST_NOEXCEPT {
 				return (detail::UTF8_CODE_UNIT_VALUES[byte] & 0xf0) != 0;
 			}
 
@@ -257,9 +256,10 @@ namespace ascension {
 			inline std::size_t numberOfTrailingBytes(std::uint8_t leadingByte) {
 				return length(leadingByte) - 1;
 			}
+			/// @}
 
-			// UTF-8 //////////////////////////////////////////////////////////////////////////////
-
+			/// @defgroup utf8_encode_decode UTF-8 Encoding and Decoding
+			/// @{
 			/**
 			 * Converts the first character in the given UTF-8 code unit sequence to the
 			 * corresponding code point.
@@ -324,9 +324,10 @@ namespace ascension {
 					typename std::enable_if<CodeUnitSizeOf<OutputIterator>::value == 1>::type* = nullptr) {
 				return detail::encodeUTF8<true>(c, out);
 			}
+			/// @}
 
-			// UTF-16 /////////////////////////////////////////////////////////////////////////////
-
+			/// @defgroup utf16_encode_decode UTF-16 Encoding and Decoding
+			/// @{
 			/**
 			 * Converts the first character in the given UTF-16 code unit sequence to the
 			 * corresponding code point.
@@ -451,9 +452,10 @@ namespace ascension {
 					typename std::enable_if<CodeUnitSizeOf<OutputIterator>::value == 2>::type* = nullptr) {
 				return detail::encodeUTF16<true>(c, out);
 			}
+			/// @}
 
-			// UTF-32 /////////////////////////////////////////////////////////////////////////////
-
+			/// @defgroup utf32_encode_decode UTF-32 Encoding and Decoding
+			/// @{
 			/**
 			 * Converts the first character in the given UTF-32 code unit sequence to the
 			 * corresponding code point.
@@ -559,9 +561,8 @@ namespace ascension {
 					throw InvalidScalarValueException(c);
 				return encode(c, out);
 			}
-
+			/// @}
 		}
-
 	}
 }
 

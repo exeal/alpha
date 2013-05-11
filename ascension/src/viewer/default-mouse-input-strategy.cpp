@@ -58,7 +58,7 @@ namespace {
 			CURSOR_DOWNWARD	///< Indicates scrolling downward.
 		};
 	public:
-		explicit AutoScrollOriginMark(TextViewer& viewer) /*throw()*/;
+		explicit AutoScrollOriginMark(TextViewer& viewer) BOOST_NOEXCEPT;
 		static const widgetapi::Cursor& cursorForScrolling(CursorType type);
 		void resetWidgetShape();
 	private:
@@ -95,7 +95,7 @@ namespace {
  * Constructor.
  * @param viewer The text viewer. The widget becomes the child of this viewer
  */
-AutoScrollOriginMark::AutoScrollOriginMark(TextViewer& viewer) /*throw()*/ {
+AutoScrollOriginMark::AutoScrollOriginMark(TextViewer& viewer) BOOST_NOEXCEPT {
 	resetWidgetShape();
 	widgetapi::setParent(*this, &viewer);
 }

@@ -46,7 +46,7 @@ namespace ascension {
 			return identifier_;
 		}
 		/// Returns @c true if this timer is running.
-		bool isActive() const /*throw()*/ {return object_ != nullptr;}
+		bool isActive() const BOOST_NOEXCEPT {return object_ != nullptr;}
 		/**
 		 * Starts or restarts this timer.
 		 * @param milliseconds The interval in milliseconds

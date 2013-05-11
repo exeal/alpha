@@ -307,7 +307,7 @@ namespace ascension {
 			class WidgetNotInitializedException : public IllegalStateException {
 			public:
 				/// Default constructor.
-				WidgetNotInitializedException() /*throw()*/
+				WidgetNotInitializedException() BOOST_NOEXCEPT
 					: IllegalStateException("this widget is not initialized.") {}
 			};
 

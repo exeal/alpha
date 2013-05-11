@@ -26,6 +26,7 @@
 #include <tuple>
 #include <boost/flyweight.hpp>
 #include <boost/foreach.hpp>
+#include <boost/range/algorithm/find.hpp>
 #include <boost/range/numeric.hpp>	// boost.accumulate
 #include <usp10.h>
 
@@ -46,19 +47,35 @@ namespace {
 	// SystemColors caches the system colors.
 	class SystemColors {
 	public:
-		SystemColors() /*throw()*/ {update();}
-		COLORREF get(int index) const {assert(index >= 0 && index < ASCENSION_COUNTOF(c_)); return c_[index];}
-		COLORREF serve(const boost::optional<Color>& color, int index) const {return color ? color->as<COLORREF>() : get(index);}
-		void update() /*throw()*/ {for(int i = 0; i < ASCENSION_COUNTOF(c_); ++i) c_[i] = ::GetSysColor(i);}
+		SystemColors() BOOST_NOEXCEPT {
+			update();
+		}
+		COLORREF get(size_t index) const {
+			assert(index >= 0 && index < tuple_size<decltype(values_)>::value);
+			return values_[index];
+		}
+		COLORREF serve(const boost::optional<Color>& color, int index) const {
+			return color ? color->as<COLORREF>() : get(index);
+		}
+		void update() BOOST_NOEXCEPT {
+			for(size_t i = 0; i < tuple_size<decltype(values_)>::value; ++i)
+				values_[i] = ::GetSysColor(i);
+		}
 	private:
-		COLORREF c_[128];
+		array<COLORREF, 128> values_;
 	} systemColors;
 
 	const class ScriptProperties {
 	public:
-		ScriptProperties() /*throw()*/ : p_(nullptr), c_(0) {::ScriptGetProperties(&p_, &c_);}
-		const SCRIPT_PROPERTIES& get(int script) const {if(script >= c_) throw out_of_range("script"); return *p_[script];}
-		int numberOfOfScripts() const /*throw()*/ {return c_;}
+		ScriptProperties() BOOST_NOEXCEPT : p_(nullptr), c_(0) {
+			::ScriptGetProperties(&p_, &c_);
+		}
+		const SCRIPT_PROPERTIES& get(int script) const {
+			if(script >= c_)
+				throw out_of_range("script");
+			return *p_[script];
+		}
+		int numberOfOfScripts() const BOOST_NOEXCEPT {return c_;}
 	private:
 		const SCRIPT_PROPERTIES** p_;
 		int c_;
@@ -66,12 +83,12 @@ namespace {
 
 	class UserSettings {
 	public:
-		UserSettings() /*throw()*/ {update();}
-		LANGID defaultLanguage() const /*throw()*/ {return languageID_;}
-		const SCRIPT_DIGITSUBSTITUTE& digitSubstitution(bool ignoreUserOverride) const /*throw()*/ {
+		UserSettings() BOOST_NOEXCEPT {update();}
+		LANGID defaultLanguage() const BOOST_NOEXCEPT {return languageID_;}
+		const SCRIPT_DIGITSUBSTITUTE& digitSubstitution(bool ignoreUserOverride) const BOOST_NOEXCEPT {
 			return ignoreUserOverride ? digitSubstitutionNoUserOverride_ : digitSubstitution_;
 		}
-		void update() /*throw()*/ {
+		void update() BOOST_NOEXCEPT {
 			languageID_ = ::GetUserDefaultLangID();
 			::ScriptRecordDigitSubstitution(LOCALE_USER_DEFAULT, &digitSubstitution_);
 			::ScriptRecordDigitSubstitution(LOCALE_USER_DEFAULT | LOCALE_NOUSEROVERRIDE, &digitSubstitutionNoUserOverride_);
@@ -148,7 +165,7 @@ namespace {
 		return static_cast<int>(length) * 3 / 2 + 16;
 	}
 
-	LANGID userCJKLanguage() /*throw()*/;
+	LANGID userCJKLanguage() BOOST_NOEXCEPT;
 
 	String fallback(int script) {
 		if(script <= Script::FIRST_VALUE || script == Script::INHERITED
@@ -248,7 +265,7 @@ namespace {
 	 * @return Succeeded or not
 	 */
 	bool getDecorationLineMetrics(const win32::Handle<HDC>::Type& dc, int* baselineOffset,
-			int* underlineOffset, int* underlineThickness, int* strikethroughOffset, int* strikethroughThickness) /*throw()*/ {
+			int* underlineOffset, int* underlineThickness, int* strikethroughOffset, int* strikethroughThickness) BOOST_NOEXCEPT {
 		OUTLINETEXTMETRICW* otm = nullptr;
 		TEXTMETRICW tm;
 		if(const UINT c = ::GetOutlineTextMetricsW(dc.get(), 0, nullptr)) {
@@ -272,7 +289,7 @@ namespace {
 		return true;
 	}
 
-	inline bool isC0orC1Control(CodePoint c) /*throw()*/ {
+	inline bool isC0orC1Control(CodePoint c) BOOST_NOEXCEPT {
 		return c < 0x20 || c == 0x7f || (c >= 0x80 && c < 0xa0);
 	}
 
@@ -360,11 +377,11 @@ namespace {
 	inline bool uniscribeSupportsIVS() BOOST_NOEXCEPT {
 		static bool checked = false, supports = false;
 		if(!checked) {
-			static const WCHAR text[] = L"\x82a6\xdb40\xdd00";	// <芦, U+E0100>
-			SCRIPT_ITEM items[4];
+			static const basic_string<WCHAR> text(L"\x82a6\xdb40\xdd00");	// <芦, U+E0100>
+			array<SCRIPT_ITEM, 4> items;
 			int numberOfItems;
-			if(SUCCEEDED(::ScriptItemize(text, ASCENSION_COUNTOF(text) - 1,
-					ASCENSION_COUNTOF(items), nullptr, nullptr, items, &numberOfItems)) && numberOfItems == 1)
+			if(SUCCEEDED(::ScriptItemize(text.c_str(), static_cast<int>(text.length()),
+					items.size(), nullptr, nullptr, items.data(), &numberOfItems)) && numberOfItems == 1)
 				supports = true;
 			checked = true;
 		}
@@ -373,15 +390,15 @@ namespace {
 
 	LANGID userCJKLanguage() {
 		// this code is preliminary...
-		static const WORD CJK_LANGUAGES[] = {LANG_CHINESE, LANG_JAPANESE, LANG_KOREAN};	// sorted by numeric values
+		static const array<WORD, 3> CJK_LANGUAGES = {LANG_CHINESE, LANG_JAPANESE, LANG_KOREAN};	// sorted by numeric values
 		LANGID result = win32::userDefaultUILanguage();
-		if(find(CJK_LANGUAGES, ASCENSION_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != ASCENSION_ENDOF(CJK_LANGUAGES))
+		if(boost::find(CJK_LANGUAGES, PRIMARYLANGID(result)) != boost::end(CJK_LANGUAGES))
 			return result;
 		result = ::GetUserDefaultLangID();
-		if(find(CJK_LANGUAGES, ASCENSION_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != ASCENSION_ENDOF(CJK_LANGUAGES))
+		if(boost::find(CJK_LANGUAGES, PRIMARYLANGID(result)) != boost::end(CJK_LANGUAGES))
 			return result;
 		result = ::GetSystemDefaultLangID();
-		if(find(CJK_LANGUAGES, ASCENSION_ENDOF(CJK_LANGUAGES), PRIMARYLANGID(result)) != ASCENSION_ENDOF(CJK_LANGUAGES))
+		if(boost::find(CJK_LANGUAGES, PRIMARYLANGID(result)) != boost::end(CJK_LANGUAGES))
 			return result;
 		switch(::GetACP()) {
 			case 932:
@@ -1778,7 +1795,7 @@ namespace {
 	 * @param id the language identifier
 	 * @return the script or @c NOT_PROPERTY
 	 */
-	inline int convertWin32LangIDtoUnicodeScript(LANGID id) /*throw()*/ {
+	inline int convertWin32LangIDtoUnicodeScript(LANGID id) BOOST_NOEXCEPT {
 		switch(id) {
 		case LANG_ARABIC:		return Script::ARABIC;
 		case LANG_ASSAMESE:		return Script::BENGALI;
@@ -3000,7 +3017,7 @@ void TextLayout::draw(PaintContext& context,
 }
 #if 0
 /// Expands the all tabs and resolves each width.
-inline void TextLayout::expandTabsWithoutWrapping() /*throw()*/ {
+inline void TextLayout::expandTabsWithoutWrapping() BOOST_NOEXCEPT {
 	const String& s = text();
 	const int fullTabWidth = lip_.textMetrics().averageCharacterWidth() * lip_.layoutSettings().tabWidth;
 	int x = 0;
@@ -3071,7 +3088,7 @@ String TextLayout::fillToX(Scalar x) const {
 }
 
 /// Justifies the wrapped visual lines.
-inline void TextLayout::justify(Scalar lineMeasure, TextJustification) /*throw()*/ {
+inline void TextLayout::justify(Scalar lineMeasure, TextJustification) BOOST_NOEXCEPT {
 	for(Index line = 0; line < numberOfLines(); ++line) {
 		const Scalar ipd = measure(line);
 		for(auto i(firstRunInLine(line)), e(firstRunInLine(line + 1)); i != e; ++i) {

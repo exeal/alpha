@@ -1,7 +1,7 @@
 /**
  * @file encoder.hpp
  * @author exeal
- * @date 2004-2012
+ * @date 2004-2013
  */
 
 #ifndef ASCENSION_ENCODER_HPP
@@ -210,11 +210,11 @@ namespace ascension {
 				return (first2 == last2) ? 0 : -1;
 		}
 
-		MIBenum convertCCSIDtoMIB(unsigned int ccsid) /*noexcept*/;
-		unsigned int convertMIBtoCCSID(MIBenum mib) /*noexcept*/;
+		MIBenum convertCCSIDtoMIB(unsigned int ccsid) BOOST_NOEXCEPT;
+		unsigned int convertMIBtoCCSID(MIBenum mib) BOOST_NOEXCEPT;
 #ifdef ASCENSION_OS_WINDOWS
-		unsigned int convertMIBtoWinCP(MIBenum mib) /*noexcept*/;
-		MIBenum convertWinCPtoMIB(unsigned int codePage) /*noexcept*/;
+		unsigned int convertMIBtoWinCP(MIBenum mib) BOOST_NOEXCEPT;
+		MIBenum convertWinCPtoMIB(unsigned int codePage) BOOST_NOEXCEPT;
 #endif // ASCENSION_OS_WINDOWS
 		String getEncodingDisplayName(MIBenum mib);
 		std::string encodingNameFromUnicode(const String& source);
@@ -235,34 +235,34 @@ namespace ascension {
 			 * Returns the aliases of the encoding. Default implementation returns an empty.
 			 * @return a string contains aliases separated by vertical bar ('|')
 			 */
-			virtual std::string aliases() const /*noexcept*/ {return "";}
+			virtual std::string aliases() const BOOST_NOEXCEPT {return "";}
 			/**
 			 * Returns the human-readable name of the encoding. Default implementation calls
 			 * @c #name method.
 			 * @param locale The locale used to localize the name
 			 * @see #name
 			 */
-			virtual std::string displayName(const std::locale& locale) const /*noexcept*/ {return name();}
+			virtual std::string displayName(const std::locale& locale) const BOOST_NOEXCEPT {return name();}
 			/// Returns the number of bytes represents a UCS character.
-			virtual std::size_t maximumNativeBytes() const /*noexcept*/ = 0;
+			virtual std::size_t maximumNativeBytes() const BOOST_NOEXCEPT = 0;
 			/// Returns the number of UCS characters represents a native character. Default
 			/// implementation returns 1.
-			virtual std::size_t maximumUCSLength() const /*noexcept*/ {return 1;}
+			virtual std::size_t maximumUCSLength() const BOOST_NOEXCEPT {return 1;}
 			/// Returns the MIBenum value of the encoding.
-			virtual MIBenum mibEnum() const /*noexcept*/ = 0;
+			virtual MIBenum mibEnum() const BOOST_NOEXCEPT = 0;
 			/**
 			 * Returns the name of the encoding. If the encoding is registered as a character set
 			 * in <a href="http://www.iana.org/assignments/character-sets">IANA character-sets
 			 * encoding file</a>, should return the preferred mime name.
 			 * @see #displayName
 			 */
-			virtual std::string name() const /*noexcept*/ = 0;
+			virtual std::string name() const BOOST_NOEXCEPT = 0;
 			/**
 			 * Returns an native character which indicates that the given Unicode character can't
 			 * map. If @c #policy returns @c REPLACE_UNMAPPABLE_CHARACTER, the encoder should use
 			 * this character. Default implementation returns 0x1A.
 			 */
-			virtual Byte substitutionCharacter() const /*noexcept*/ {return 0x1a;}
+			virtual Byte substitutionCharacter() const BOOST_NOEXCEPT {return 0x1a;}
 		};
 
 		class EncoderFactory;
@@ -337,15 +337,15 @@ namespace ascension {
 			static const char ALIASES_SEPARATOR;
 
 		public:
-			virtual ~Encoder() /*noexcept*/;
+			virtual ~Encoder() BOOST_NOEXCEPT;
 			// attributes
-			int flags() const /*noexcept*/;
-			virtual const EncodingProperties& properties() const /*noexcept*/ = 0;
-			virtual Encoder& resetDecodingState() /*noexcept*/;
-			virtual Encoder& resetEncodingState() /*noexcept*/;
+			int flags() const BOOST_NOEXCEPT;
+			virtual const EncodingProperties& properties() const BOOST_NOEXCEPT = 0;
+			virtual Encoder& resetDecodingState() BOOST_NOEXCEPT;
+			virtual Encoder& resetEncodingState() BOOST_NOEXCEPT;
 			Encoder& setFlags(const int newFlags);
 			Encoder& setSubstitutionPolicy(SubstitutionPolicy newPolicy);
-			SubstitutionPolicy substitutionPolicy() const /*noexcept*/;
+			SubstitutionPolicy substitutionPolicy() const BOOST_NOEXCEPT;
 			// conversion
 			bool canEncode(CodePoint c);
 			bool canEncode(const StringPiece& s);
@@ -355,19 +355,19 @@ namespace ascension {
 			String toUnicode(const std::string& from);
 			// factory
 			template<typename OutputIterator> static void availableEncodings(OutputIterator out);
-			static Encoder& defaultInstance() /*noexcept*/;
-			static std::unique_ptr<Encoder> forCCSID(int ccsid) /*noexcept*/;
-			static std::unique_ptr<Encoder> forCPGID(int cpgid) /*noexcept*/;
-			static std::unique_ptr<Encoder> forID(std::size_t id) /*noexcept*/;
-			static std::unique_ptr<Encoder> forMIB(MIBenum mib) /*noexcept*/;
-			static std::unique_ptr<Encoder> forName(const std::string& name) /*noexcept*/;
-			static std::unique_ptr<Encoder> forWindowsCodePage(unsigned int codePage) /*noexcept*/;
-			static bool supports(MIBenum mib) /*noexcept*/;
-			static bool supports(const std::string& name) /*noexcept*/;
+			static Encoder& defaultInstance() BOOST_NOEXCEPT;
+			static std::unique_ptr<Encoder> forCCSID(int ccsid) BOOST_NOEXCEPT;
+			static std::unique_ptr<Encoder> forCPGID(int cpgid) BOOST_NOEXCEPT;
+			static std::unique_ptr<Encoder> forID(std::size_t id) BOOST_NOEXCEPT;
+			static std::unique_ptr<Encoder> forMIB(MIBenum mib) BOOST_NOEXCEPT;
+			static std::unique_ptr<Encoder> forName(const std::string& name) BOOST_NOEXCEPT;
+			static std::unique_ptr<Encoder> forWindowsCodePage(unsigned int codePage) BOOST_NOEXCEPT;
+			static bool supports(MIBenum mib) BOOST_NOEXCEPT;
+			static bool supports(const std::string& name) BOOST_NOEXCEPT;
 			static void registerFactory(EncoderFactory& newFactory);
 
 		protected:
-			Encoder() /*noexcept*/;
+			Encoder() BOOST_NOEXCEPT;
 		private:
 			/**
 			 * Converts the given string from UTF-16 into the native encoding.
@@ -395,8 +395,8 @@ namespace ascension {
 			virtual Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 				const Byte* from, const Byte* fromEnd, const Byte*& fromNext) = 0;
 		private:
-			static EncoderFactory* find(MIBenum mib) /*noexcept*/;
-			static EncoderFactory* find(const std::string& name) /*noexcept*/;
+			static EncoderFactory* find(MIBenum mib) BOOST_NOEXCEPT;
+			static EncoderFactory* find(const std::string& name) BOOST_NOEXCEPT;
 			static std::vector<EncoderFactory*>& registry();
 			SubstitutionPolicy substitutionPolicy_;
 			int flags_;	// see Flag enums
@@ -406,10 +406,10 @@ namespace ascension {
 		class EncoderFactory : public EncodingProperties {
 		public:
 			/// Destructor.
-			virtual ~EncoderFactory() /*noexcept*/ {}
+			virtual ~EncoderFactory() BOOST_NOEXCEPT {}
 		protected:
 			/// Returns the @c Encoder instance.
-			virtual std::unique_ptr<Encoder> create() const /*noexcept*/ = 0;
+			virtual std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT = 0;
 			friend class Encoder;
 		};
 
@@ -417,16 +417,16 @@ namespace ascension {
 			ASCENSION_NONCOPYABLE_TAG(EncodingDetector);
 		public:
 			// constructors
-			virtual ~EncodingDetector() /*noexcept*/;
+			virtual ~EncodingDetector() BOOST_NOEXCEPT;
 			// attributes
 			/// Returns the name of the encoding detector.
-			std::string name() const /*noexcept*/ {return name_;}
+			std::string name() const BOOST_NOEXCEPT {return name_;}
 			// detection
 			std::pair<MIBenum, std::string> detect(const Byte* first, const Byte* last, std::ptrdiff_t* convertibleBytes) const;
 			// factory
-			static EncodingDetector* forName(const std::string& name) /*noexcept*/;
+			static EncodingDetector* forName(const std::string& name) BOOST_NOEXCEPT;
 #ifdef ASCENSION_OS_WINDOWS
-			static EncodingDetector* forWindowsCodePage(unsigned int codePage) /*noexcept*/;
+			static EncodingDetector* forWindowsCodePage(unsigned int codePage) BOOST_NOEXCEPT;
 #endif // ASCENSION_OS_WINDOWS
 			template<typename OutputIterator> static void availableNames(OutputIterator out);
 			static void registerDetector(std::unique_ptr<EncodingDetector> newDetector);
@@ -443,7 +443,7 @@ namespace ascension {
 			 * @return The MIBenum value and the name of the detected encoding
 			 */
 			virtual std::pair<MIBenum, std::string> doDetect(
-				const Byte* first, const Byte* last, std::ptrdiff_t* convertibleBytes) const /*noexcept*/ = 0;
+				const Byte* first, const Byte* last, std::ptrdiff_t* convertibleBytes) const BOOST_NOEXCEPT = 0;
 		private:
 			static std::vector<EncodingDetector*>& registry();
 			const std::string name_;
@@ -463,7 +463,7 @@ namespace ascension {
 			/// @c EncoderFactoryBase is a base implementation of @c EncoderFactory.
 			class EncoderFactoryBase : public EncoderFactory {
 			public:
-				virtual ~EncoderFactoryBase() /*noexcept*/;
+				virtual ~EncoderFactoryBase() BOOST_NOEXCEPT;
 			protected:
 				EncoderFactoryBase(const std::string& name,
 					MIBenum mib, const std::string& displayName = "",
@@ -471,13 +471,13 @@ namespace ascension {
 					const std::string& aliases = "", Byte substitutionCharacter = 0x1a);
 			protected:
 				// EncodingProperties
-				virtual std::string aliases() const /*noexcept*/;
-				virtual std::string displayName(const std::locale& lc) const /*noexcept*/;
-				virtual std::size_t maximumNativeBytes() const /*noexcept*/;
-				virtual std::size_t maximumUCSLength() const /*noexcept*/;
-				virtual MIBenum mibEnum() const /*noexcept*/;
-				virtual std::string name() const /*noexcept*/;
-				virtual Byte substitutionCharacter() const /*noexcept*/;
+				virtual std::string aliases() const BOOST_NOEXCEPT;
+				virtual std::string displayName(const std::locale& lc) const BOOST_NOEXCEPT;
+				virtual std::size_t maximumNativeBytes() const BOOST_NOEXCEPT;
+				virtual std::size_t maximumUCSLength() const BOOST_NOEXCEPT;
+				virtual MIBenum mibEnum() const BOOST_NOEXCEPT;
+				virtual std::string name() const BOOST_NOEXCEPT;
+				virtual Byte substitutionCharacter() const BOOST_NOEXCEPT;
 			private:
 				const std::string name_, displayName_, aliases_;
 				const std::size_t maximumNativeBytes_, maximumUCSLength_;
@@ -517,7 +517,7 @@ namespace ascension {
 
 			/// Returns a code corresponds to a byte in the 16×16 wire.
 			/// @see CodeWire
-			template<typename Code> inline Code wireAt(const Code** wire, Byte c) /*noexcept*/ {return wire[c >> 4][c & 0xf];}
+			template<typename Code> inline Code wireAt(const Code** wire, Byte c) BOOST_NOEXCEPT {return wire[c >> 4][c & 0xf];}
 
 			/// Generates 16×16-character sequence.
 			template<
@@ -536,10 +536,10 @@ namespace ascension {
 				/// @see CharMap
 				class BidirectionalMap {
 				public:
-					BidirectionalMap(const Char** byteToCharacterWire) /*noexcept*/;
-					~BidirectionalMap() /*noexcept*/;
-					Byte toByte(Char c) const /*noexcept*/;
-					Char toCharacter(Byte c) const /*noexcept*/;
+					BidirectionalMap(const Char** byteToCharacterWire) BOOST_NOEXCEPT;
+					~BidirectionalMap() BOOST_NOEXCEPT;
+					Byte toByte(Char c) const BOOST_NOEXCEPT;
+					Char toCharacter(Byte c) const BOOST_NOEXCEPT;
 				private:
 					void buildUnicodeToByteTable();
 				private:
@@ -602,9 +602,9 @@ namespace ascension {
 				public:
 					SingleByteEncoderFactory(const std::string& name, MIBenum mib,
 						const std::string& displayName, const std::string& aliases, Byte substitutionCharacter);
-					virtual ~SingleByteEncoderFactory() /*noexcept*/;
+					virtual ~SingleByteEncoderFactory() BOOST_NOEXCEPT;
 				private:
-					std::unique_ptr<Encoder> create() const /*noexcept*/;
+					std::unique_ptr<Encoder> create() const BOOST_NOEXCEPT;
 				};
 			} // namespace sbcs
 
@@ -636,7 +636,7 @@ namespace ascension {
 
 	namespace detail {
 		std::unique_ptr<encoding::Encoder> createSingleByteEncoder(
-			const Char** byteToCharacterWire, const encoding::EncodingProperties& properties) /*noexcept*/;
+			const Char** byteToCharacterWire, const encoding::EncodingProperties& properties) BOOST_NOEXCEPT;
 	}
 
 	namespace encoding {
@@ -655,10 +655,10 @@ namespace ascension {
 		}
 
 		/// Returns the miscellaneous flags.
-		inline int Encoder::flags() const /*noexcept*/ {return flags_;}
+		inline int Encoder::flags() const BOOST_NOEXCEPT {return flags_;}
 
 		/// Returns the substitution policy.
-		inline Encoder::SubstitutionPolicy Encoder::substitutionPolicy() const /*noexcept*/ {
+		inline Encoder::SubstitutionPolicy Encoder::substitutionPolicy() const BOOST_NOEXCEPT {
 			return substitutionPolicy_;
 		}
 
@@ -692,7 +692,7 @@ namespace ascension {
 		 * Returns the byte corresponds to the given character @c c or @c UNMAPPABLE_BYTE if
 		 * umappable.
 		 */
-		inline Byte implementation::sbcs::BidirectionalMap::toByte(Char c) const /*noexcept*/ {
+		inline Byte implementation::sbcs::BidirectionalMap::toByte(Char c) const BOOST_NOEXCEPT {
 			return unicodeToByte_[c >> 8][mask8Bit(c)];
 		}
 
@@ -700,7 +700,7 @@ namespace ascension {
 		 * Returns the character corresponds to the given byte @a c or @c REPLACEMENT_CHARACTER if
 		 * umappable.
 		 */
-		inline Char implementation::sbcs::BidirectionalMap::toCharacter(Byte c) const /*noexcept*/ {
+		inline Char implementation::sbcs::BidirectionalMap::toCharacter(Byte c) const BOOST_NOEXCEPT {
 			return wireAt(byteToUnicode_, c);
 		}
 
@@ -718,12 +718,12 @@ namespace ascension {
 
 		/// Destructor.
 		template<typename MappingTable>
-		inline implementation::sbcs::SingleByteEncoderFactory<MappingTable>::~SingleByteEncoderFactory() /*noexcept*/ {
+		inline implementation::sbcs::SingleByteEncoderFactory<MappingTable>::~SingleByteEncoderFactory() BOOST_NOEXCEPT {
 		}
 
 		/// @see EncoderFactory#create
 		template<typename MappingTable> std::unique_ptr<Encoder>
-		implementation::sbcs::SingleByteEncoderFactory<MappingTable>::create() const /*noexcept*/ {
+		implementation::sbcs::SingleByteEncoderFactory<MappingTable>::create() const BOOST_NOEXCEPT {
 			return detail::createSingleByteEncoder(MappingTable::VALUES, *this);
 		}
 	}

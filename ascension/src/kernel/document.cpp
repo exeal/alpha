@@ -462,11 +462,11 @@ void Bookmarker::toggle(Index line) {
 // DocumentPartitioner ////////////////////////////////////////////////////////////////////////////
 
 /// Constructor.
-DocumentPartitioner::DocumentPartitioner() /*throw()*/ : document_(nullptr) {
+DocumentPartitioner::DocumentPartitioner() BOOST_NOEXCEPT : document_(nullptr) {
 }
 
 /// Destructor.
-DocumentPartitioner::~DocumentPartitioner() /*throw()*/ {
+DocumentPartitioner::~DocumentPartitioner() BOOST_NOEXCEPT {
 }
 
 
@@ -991,7 +991,7 @@ DocumentLocker::DocumentLocker(Document& document) : document_((document.locker(
 }
 
 /// Destructor calls @c Document#unlock.
-DocumentLocker::~DocumentLocker() /*throw()*/ {
+DocumentLocker::~DocumentLocker() BOOST_NOEXCEPT {
 	if(document_ != nullptr)
 		document_->unlock(this);
 }

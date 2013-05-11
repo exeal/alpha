@@ -234,7 +234,7 @@ TextLayout::~TextLayout() BOOST_NOEXCEPT {
  * @c presentation#ALIGN_START or @c presentation#ALIGN_END.
  * @see #readingDirection, presentation#resolveTextAlignment
  */
-TextAlignment TextLayout::alignment() const /*throw()*/ {
+TextAlignment TextLayout::alignment() const BOOST_NOEXCEPT {
 	if(style_.get() != nullptr && style_->readingDirection != INHERIT_TEXT_ALIGNMENT)
 		style_->readingDirection;
 	shared_ptr<const TextLineStyle> defaultStyle(lip_.presentation().defaultTextLineStyle());
@@ -478,7 +478,7 @@ TextHit<>&& TextLayout::internalHitTestCharacter(const AbstractTwoAxes<Scalar>& 
 
 #if 0
 /// Returns an iterator addresses the first styled segment.
-TextLayout::StyledSegmentIterator TextLayout::firstStyledSegment() const /*throw()*/ {
+TextLayout::StyledSegmentIterator TextLayout::firstStyledSegment() const BOOST_NOEXCEPT {
 	const TextRun* temp = *runs_;
 	return StyledSegmentIterator(temp);
 }
@@ -499,7 +499,7 @@ bool TextLayout::isBidirectional() const BOOST_NOEXCEPT {
 }
 #if 0
 /// Returns an iterator addresses the last styled segment.
-TextLayout::StyledSegmentIterator TextLayout::lastStyledSegment() const /*throw()*/ {
+TextLayout::StyledSegmentIterator TextLayout::lastStyledSegment() const BOOST_NOEXCEPT {
 	const TextRun* temp = runs_[numberOfRuns_];
 	return StyledSegmentIterator(temp);
 }
@@ -912,7 +912,7 @@ Scalar TextLayout::measure(Index line) const {
  * @param direction the direction
  * @return the distance from leading edge of the line to the next tab position
  */
-inline int TextLayout::nextTabStop(int x, Direction direction) const /*throw()*/ {
+inline int TextLayout::nextTabStop(int x, Direction direction) const BOOST_NOEXCEPT {
 	assert(x >= 0);
 	const int tabWidth = lip_.textMetrics().averageCharacterWidth() * lip_.layoutSettings().tabWidth;
 	return (direction == Direction::FORWARD) ? x + tabWidth - x % tabWidth : x - x % tabWidth;
@@ -924,7 +924,7 @@ inline int TextLayout::nextTabStop(int x, Direction direction) const /*throw()*/
  * @param right @c true to find the next right position
  * @return the tab stop position in pixel
  */
-int TextLayout::nextTabStopBasedLeftEdge(int x, bool right) const /*throw()*/ {
+int TextLayout::nextTabStopBasedLeftEdge(int x, bool right) const BOOST_NOEXCEPT {
 	assert(x >= 0);
 	const LayoutSettings& c = lip_.layoutSettings();
 	const int tabWidth = lip_.textMetrics().averageCharacterWidth() * c.tabWidth;
@@ -940,7 +940,7 @@ int TextLayout::nextTabStopBasedLeftEdge(int x, bool right) const /*throw()*/ {
  * Returns the computed reading direction of the line.
  * @see #alignment
  */
-ReadingDirection TextLayout::readingDirection() const /*throw()*/ {
+ReadingDirection TextLayout::readingDirection() const BOOST_NOEXCEPT {
 	ReadingDirection result = INHERIT_READING_DIRECTION;
 	// try the requested line style
 	if(style_.get() != nullptr)
@@ -1081,15 +1081,15 @@ boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&&
  * Private constructor.
  * @param start
  */
-TextLayout::StyledSegmentIterator::StyledSegmentIterator(const TextRun*& start) /*throw()*/ : p_(&start) {
+TextLayout::StyledSegmentIterator::StyledSegmentIterator(const TextRun*& start) BOOST_NOEXCEPT : p_(&start) {
 }
 
 /// Copy-constructor.
-TextLayout::StyledSegmentIterator::StyledSegmentIterator(const StyledSegmentIterator& rhs) /*throw()*/ : p_(rhs.p_) {
+TextLayout::StyledSegmentIterator::StyledSegmentIterator(const StyledSegmentIterator& rhs) BOOST_NOEXCEPT : p_(rhs.p_) {
 }
 
 /// Returns the current segment.
-StyledRun TextLayout::StyledSegmentIterator::current() const /*throw()*/ {
+StyledRun TextLayout::StyledSegmentIterator::current() const BOOST_NOEXCEPT {
 	const TextRun& run = **p_;
 	return StyledRun(run.offsetInLine, run.style);
 }

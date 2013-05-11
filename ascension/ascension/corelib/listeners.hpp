@@ -14,11 +14,10 @@
 #include <boost/signals2.hpp>
 
 namespace ascension {
-
 	template<typename Signal>
 	class SignalConnector {
 	public:
-		SignalConnector(Signal& signal) /*throw()*/ : signal_(signal) {
+		SignalConnector(Signal& signal) BOOST_NOEXCEPT : signal_(signal) {
 		}
 		boost::signals2::connection connect(const typename Signal::slot_type& slot,
 				boost::signals2::connect_position where = boost::signals2::at_back) {
@@ -35,14 +34,13 @@ namespace ascension {
 #define ASCENSION_DEFINE_SIGNAL(signalTypeName, signature, signalName)	\
 public:																	\
 	typedef boost::signals2::signal<signature> signalTypeName;			\
-	SignalConnector<signalTypeName> signalName() const /*throw()*/ {	\
+	SignalConnector<signalTypeName> signalName() const BOOST_NOEXCEPT {	\
 		return const_cast<signalTypeName&>(signalName##_);				\
 	}																	\
 private:																\
 	signalTypeName signalName##_
 
 	namespace detail {
-
 #if ASCENSION_ABANDONED_AT_VERSION_08
 		/**
 		 * @internal Manages a strategy object.
@@ -53,13 +51,13 @@ private:																\
 		class StrategyPointer {
 			ASCENSION_NONCOPYABLE_TAG(StrategyPointer);
 		public:
-			StrategyPointer() /*throw()*/ : pointee_(nullptr), manages_(false) {}
-			StrategyPointer(Strategy* pointee, bool manage) /*throw()*/ : pointee_(pointee), manages_(manage) {}
-			~StrategyPointer() /*throw()*/ {if(manages_) delete pointee_;}
-			Strategy& operator*() const /*throw()*/ {return *pointee_;}
-			Strategy* operator->() const /*throw()*/ {return get();}
-			Strategy* get() const /*throw()*/ {return pointee_;}
-			void reset(Strategy* newValue, bool manage) /*throw()*/ {
+			StrategyPointer() BOOST_NOEXCEPT : pointee_(nullptr), manages_(false) {}
+			StrategyPointer(Strategy* pointee, bool manage) BOOST_NOEXCEPT : pointee_(pointee), manages_(manage) {}
+			~StrategyPointer() BOOST_NOEXCEPT {if(manages_) delete pointee_;}
+			Strategy& operator*() const BOOST_NOEXCEPT {return *pointee_;}
+			Strategy* operator->() const BOOST_NOEXCEPT {return get();}
+			Strategy* get() const BOOST_NOEXCEPT {return pointee_;}
+			void reset(Strategy* newValue, bool manage) BOOST_NOEXCEPT {
 				if(manages_ && newValue != pointee_)
 					delete pointee_;
 				pointee_ = newValue;
@@ -80,7 +78,7 @@ private:																\
 		class Listeners {
 			ASCENSION_NONCOPYABLE_TAG(Listeners);
 		public:
-			Listeners() /*throw()*/ {}
+			Listeners() BOOST_NOEXCEPT {}
 			void add(Listener& listener) {
 				if(std::find(listeners_.begin(), listeners_.end(), &listener) != listeners_.end())
 					throw std::invalid_argument("The listener already has been registered.");
@@ -92,8 +90,8 @@ private:																\
 					throw std::invalid_argument("The listener is not registered.");
 				listeners_.erase(i);
 			}
-			void clear() /*throw()*/ {listeners_.clear();}
-			bool isEmpty() const /*throw()*/ {return listeners_.empty();}
+			void clear() BOOST_NOEXCEPT {listeners_.clear();}
+			bool isEmpty() const BOOST_NOEXCEPT {return listeners_.empty();}
 			void notify(void(Listener::*method)()) {
 				for(Iterator i(listeners_.begin()), e(listeners_.end()), next; i != e; i = next) {
 					next = i;
@@ -145,7 +143,6 @@ private:																\
 			std::list<Listener*> listeners_;
 			typedef typename std::list<Listener*>::iterator Iterator;
 		};
-
 	}
 }
 

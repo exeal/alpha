@@ -10,7 +10,7 @@
 using namespace ascension::graphics;
 using namespace std;
 
-Paint::~Paint() /*noexcept*/ {
+Paint::~Paint() BOOST_NOEXCEPT {
 	switch(nativeObject_.lbStyle) {
 		case BS_DIBPATTERN:
 		case BS_DIBPATTERN8X8:

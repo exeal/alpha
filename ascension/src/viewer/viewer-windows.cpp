@@ -52,7 +52,7 @@ namespace {
 } // namespace @0
 
 // defined at ascension/win32/windows.hpp
-LANGID ASCENSION_FASTCALL ascension::win32::userDefaultUILanguage() /*throw()*/ {
+LANGID ASCENSION_FASTCALL ascension::win32::userDefaultUILanguage() BOOST_NOEXCEPT {
 	// references (from Global Dev)
 	// - Writing Win32 Multilingual User Interface Applications (http://www.microsoft.com/globaldev/handson/dev/muiapp.mspx)
 	// - Ask Dr. International Column #9 (http://www.microsoft.com/globaldev/drintl/columns/009/default.mspx#EPD)
@@ -101,7 +101,7 @@ LANGID ASCENSION_FASTCALL ascension::win32::userDefaultUILanguage() /*throw()*/ 
 namespace {
 	class AccLib {
 	public:
-		AccLib() /*throw()*/ : oleaccDLL_(::LoadLibraryA("oleacc.dll")), user32DLL_(::LoadLibraryA("user32.dll")) {
+		AccLib() BOOST_NOEXCEPT : oleaccDLL_(::LoadLibraryA("oleacc.dll")), user32DLL_(::LoadLibraryA("user32.dll")) {
 			if(oleaccDLL_ == nullptr || user32DLL_ == nullptr) {
 				::FreeLibrary(oleaccDLL_);
 				::FreeLibrary(user32DLL_);
@@ -117,7 +117,7 @@ namespace {
 			}
 		}
 		~AccLib() {::FreeLibrary(oleaccDLL_); ::FreeLibrary(user32DLL_);}
-		bool isAvailable() const /*throw()*/ {return oleaccDLL_ != nullptr;}
+		bool isAvailable() const BOOST_NOEXCEPT {return oleaccDLL_ != nullptr;}
 		HRESULT accessibleObjectFromWindow(HWND window, DWORD objectID, REFIID iid, void** object) {
 			assert(isAvailable()); return (*accessibleObjectFromWindowPtr_)(window, objectID, iid, object);}
 		void createStdAccessibleObject(HWND window, long objectID, REFIID iid, void** object) {
@@ -208,7 +208,7 @@ namespace {
  * Constructor.
  * @param view the viewer
  */
-AccessibleProxy::AccessibleProxy(TextViewer& viewer) /*throw()*/ : viewer_(viewer), available_(true) {
+AccessibleProxy::AccessibleProxy(TextViewer& viewer) BOOST_NOEXCEPT : viewer_(viewer), available_(true) {
 	assert(accLib.isAvailable());
 	accLib.createStdAccessibleObject(viewer.handle().get(), OBJID_CLIENT, IID_IAccessible, defaultServer_.initializePPV());
 }
@@ -496,7 +496,7 @@ namespace {
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 /// Returns the accessible proxy of the viewer.
-HRESULT TextViewer::accessibleObject(IAccessible*& acc) const /*throw()*/ {
+HRESULT TextViewer::accessibleObject(IAccessible*& acc) const BOOST_NOEXCEPT {
 	TextViewer& self = *const_cast<TextViewer*>(this);
 	acc = nullptr;
 	if(accessibleProxy_.get() == nullptr && win32::boole(::IsWindow(handle().get())) && accLib.isAvailable()) {
@@ -515,7 +515,7 @@ HRESULT TextViewer::accessibleObject(IAccessible*& acc) const /*throw()*/ {
 #endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
 /// Implementation of @c #beep method. The subclasses can override to customize the behavior.
-void TextViewer::doBeep() /*throw()*/ {
+void TextViewer::doBeep() BOOST_NOEXCEPT {
 	::MessageBeep(MB_OK);
 }
 

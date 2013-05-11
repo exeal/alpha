@@ -735,7 +735,7 @@ PresentationReconstructor::PresentationReconstructor(Presentation& presentation)
 }
 
 /// Destructor.
-PresentationReconstructor::~PresentationReconstructor() /*throw()*/ {
+PresentationReconstructor::~PresentationReconstructor() BOOST_NOEXCEPT {
 //	presentation_.setLineStyleDirector(ASCENSION_SHARED_POINTER<LineStyleDirector>());
 	for(map<ContentType, PartitionPresentationReconstructor*>::iterator i(reconstructors_.begin()); i != reconstructors_.end(); ++i)
 		delete i->second;
@@ -804,7 +804,7 @@ URIHyperlinkDetector::URIHyperlinkDetector(shared_ptr<const URIDetector> uriDete
 }
 
 /// Destructor.
-URIHyperlinkDetector::~URIHyperlinkDetector() /*throw()*/ {
+URIHyperlinkDetector::~URIHyperlinkDetector() BOOST_NOEXCEPT {
 }
 
 /// @see HyperlinkDetector#nextHyperlink
@@ -826,14 +826,14 @@ unique_ptr<Hyperlink> URIHyperlinkDetector::nextHyperlink(
 // hyperlink.CompositeHyperlinkDetector ///////////////////////////////////////////////////////////
 
 /// Destructor.
-CompositeHyperlinkDetector::~CompositeHyperlinkDetector() /*throw()*/ {
+CompositeHyperlinkDetector::~CompositeHyperlinkDetector() BOOST_NOEXCEPT {
 	for(map<ContentType, HyperlinkDetector*>::iterator i(composites_.begin()), e(composites_.end()); i != e; ++i)
 		delete i->second;
 }
 
 /// @see HyperlinkDetector#nextHyperlink
 unique_ptr<Hyperlink> CompositeHyperlinkDetector::nextHyperlink(
-		const Document& document, Index line, const boost::integer_range<Index>& range) const /*throw()*/ {
+		const Document& document, Index line, const boost::integer_range<Index>& range) const BOOST_NOEXCEPT {
 	const DocumentPartitioner& partitioner = document.partitioner();
 	DocumentPartition partition;
 	for(Position p(line, *range.begin()), e(line, *range.end()); p < e;) {
@@ -965,7 +965,7 @@ inline void LexicalPartitionPresentationReconstructor::StyledTextRunIterator::ne
 // LexicalPartitionPresentationReconstructor //////////////////////////////////////////////////////
 
 /// @see presentation#PartitionPresentationReconstructor#getPresentation
-unique_ptr<StyledTextRunIterator> LexicalPartitionPresentationReconstructor::getPresentation(const Region& region) const /*throw()*/ {
+unique_ptr<StyledTextRunIterator> LexicalPartitionPresentationReconstructor::getPresentation(const Region& region) const BOOST_NOEXCEPT {
 	return unique_ptr<presentation::StyledTextRunIterator>(
 		new StyledTextRunIterator(presentation_.document(), *tokenScanner_, styles_, defaultStyle_, region));
 }

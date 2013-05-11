@@ -38,7 +38,7 @@ namespace ascension {
 #endif
 				std::fill(procedures_, procedures_ + ProcedureEntries::NUMBER_OF_ENTRIES, reinterpret_cast<NativeProcedure>(1));
 			}
-			~SharedLibrary() /*throw()*/ {
+			~SharedLibrary() BOOST_NOEXCEPT {
 #ifdef ASCENSION_OS_WINDOWS
 				::FreeLibrary(library_);
 #else
@@ -46,7 +46,7 @@ namespace ascension {
 #endif
 			}
 			template<std::size_t index>
-			typename ProcedureEntries::template Procedure<index>::signature get() const /*throw()*/ {
+			typename ProcedureEntries::template Procedure<index>::signature get() const BOOST_NOEXCEPT {
 				typedef typename ProcedureEntries::template Procedure<index> Procedure;
 				if(procedures_[index] == reinterpret_cast<NativeProcedure>(1))
 					procedures_[index] =

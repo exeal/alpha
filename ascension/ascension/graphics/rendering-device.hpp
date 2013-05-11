@@ -19,7 +19,7 @@ namespace ascension {
 		class RenderingDevice {
 		public:
 			/// Destructor.
-			virtual ~RenderingDevice() /*throw()*/ {}
+			virtual ~RenderingDevice() BOOST_NOEXCEPT {}
 
 			/// Creates and returns the rendering context.
 			virtual std::unique_ptr<RenderingContext2D> createRenderingContext() const = 0;

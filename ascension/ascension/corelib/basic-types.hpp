@@ -4,7 +4,7 @@
  * @date 2004-2010
  * @date 2010-10-21 separated from common.hpp
  * @date 2010-11-07 joined with common.hpp
- * @date 2011-2012
+ * @date 2011-2013
  */
 
 #ifndef ASCENSION_BASIC_TYPES_HPP
@@ -119,7 +119,7 @@ namespace ascension {
 	 * (for example, received @c WM_SETTINGCHANGE window message on Win32 platform).
 	 * @deprecated 0.8
 	 */
-	void updateSystemSettings() /*throw()*/;
+	void updateSystemSettings() BOOST_NOEXCEPT;
 
 	// see session.hpp
 	namespace texteditor {

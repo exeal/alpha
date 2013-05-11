@@ -69,11 +69,11 @@ namespace ascension {
 					return *this;
 				}
 				/// Returns beginning of the range this iterator can address.
-				const BaseIterator& first() const /*noexcept*/ {return first_;}
+				const BaseIterator& first() const BOOST_NOEXCEPT {return first_;}
 				/// Returns end of the range this iterator can address.
-				const BaseIterator& last() const /*noexcept*/ {return first_;}
+				const BaseIterator& last() const BOOST_NOEXCEPT {return first_;}
 				/// Sets if this iterator replaces the ill-formed code unit (sub)sequence.
-				CharacterDecodeIterator& replaceMalformedInput(bool replace) /*noexcept*/ {
+				CharacterDecodeIterator& replaceMalformedInput(bool replace) BOOST_NOEXCEPT {
 					replacesMalformedInput_ = replace;
 					return *this;
 				}
@@ -81,7 +81,7 @@ namespace ascension {
 				 * Returns @c true if this iterator replaces the ill-formed code unit
 				 * (sub)sequence. The default value is @c false.
 				 */
-				bool replacesMalformedInput() const /*noexcept*/ {return replacesMalformedInput_;}
+				bool replacesMalformedInput() const BOOST_NOEXCEPT {return replacesMalformedInput_;}
 				/// Returns the current position.
 				BaseIterator tell() const {return base_;}
 			private:
