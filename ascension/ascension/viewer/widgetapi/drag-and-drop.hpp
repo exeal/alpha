@@ -48,10 +48,10 @@ namespace ascension {
 					MouseButtonInput(mouse), possibleActions_(possibleActions),
 					defaultAction_(resolveDefaultDropAction(possibleActions, mouse.modifiers())), mimeData_(data) {}
 				void acceptProposedAction();
-				DropAction dropAction() const /*noexcept*/ {return action_;}
-				const NativeMimeData& mimeData() const /*noexcept*/ {return mimeData_;}
-				DropAction possibleActions() const /*noexcept*/ {return possibleActions_;}
-				DropAction proposedAction() const /*noexcept*/ {return defaultAction_;}
+				DropAction dropAction() const BOOST_NOEXCEPT {return action_;}
+				const NativeMimeData& mimeData() const BOOST_NOEXCEPT {return mimeData_;}
+				DropAction possibleActions() const BOOST_NOEXCEPT {return possibleActions_;}
+				DropAction proposedAction() const BOOST_NOEXCEPT {return defaultAction_;}
 				void setDropAction(DropAction action);
 			private:
 				const DropAction possibleActions_;
@@ -80,7 +80,7 @@ namespace ascension {
 			class DropTarget {
 			public:
 				/// Destructor.
-				virtual ~DropTarget() /*throw()*/ {}
+				virtual ~DropTarget() BOOST_NOEXCEPT {}
 				virtual void dragEntered(DragEnterInput& input) = 0;
 				virtual void dragLeft(DragLeaveInput& input) = 0;
 				virtual void dragMoved(DragMoveInput& input) = 0;

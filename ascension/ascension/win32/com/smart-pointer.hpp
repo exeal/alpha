@@ -23,7 +23,7 @@ namespace ascension {
 			private:
 				STDMETHOD_(ULONG, AddRef)() = 0;
 				STDMETHOD_(ULONG, Release)() = 0;
-				T** operator &() const /*throw()*/;	// prohibits &*p
+				T** operator &() const BOOST_NOEXCEPT;	// prohibits &*p
 			};
 
 			/**
@@ -38,46 +38,46 @@ namespace ascension {
 				typedef T element_type;	///< The interface type.
 			public:
 				/// Default constructor.
-				SmartPointer() /*noexcept*/ : pointee_(nullptr) {}
+				SmartPointer() BOOST_NOEXCEPT : pointee_(nullptr) {}
 				/// Null pointer constructor.
-				SmartPointer(std::nullptr_t) /*noexcept*/ : pointee_(nullptr) {}
+				SmartPointer(std::nullptr_t) BOOST_NOEXCEPT : pointee_(nullptr) {}
 				/// Constructor with an interface pointer.
 				template<typename U>
-				explicit SmartPointer(U* p) /*noexcept*/ : pointee_(nullptr) {
+				explicit SmartPointer(U* p) BOOST_NOEXCEPT : pointee_(nullptr) {
 					if(p != nullptr)
 						p->QueryInterface(__uuidof(element_type), initializePPV());
 				}
 				/// Constructor with an interface pointer.
 				template<typename U>
-				explicit SmartPointer(U* p, const IID& iid) /*noexcept*/ : pointee_(nullptr) {
+				explicit SmartPointer(U* p, const IID& iid) BOOST_NOEXCEPT : pointee_(nullptr) {
 					if(p != nullptr)
 						p->QueryInterface(iid, initializePPV());
 				}
 				/// Constructor with an interface pointer.
 				template<>
-				explicit SmartPointer<element_type>(element_type* p) /*noexcept*/ : pointee_(p) {
+				explicit SmartPointer<element_type>(element_type* p) BOOST_NOEXCEPT : pointee_(p) {
 					if(pointee_ != nullptr)
 						pointee_->AddRef();
 				}
 				/// Copy-constructor.
-				SmartPointer(const SmartPointer<element_type>& other) /*noexcept*/ : pointee_(other.pointee_) {
+				SmartPointer(const SmartPointer<element_type>& other) BOOST_NOEXCEPT : pointee_(other.pointee_) {
 					if(pointee_ != nullptr)
 						pointee_->AddRef();
 				}
 				/// Copy-constructor.
 				template<typename U>
-				SmartPointer(const SmartPointer<U>& other) /*noexcept*/ : pointee_(nullptr) {
+				SmartPointer(const SmartPointer<U>& other) BOOST_NOEXCEPT : pointee_(nullptr) {
 					if(other.pointee_ != nullptr)
 						other.pointee_->QueryInterface(__uuidof(element_type), initializePPV());
 				}
 				/// Copy-constructor with an interface identifier.
 				template<typename U>
-				SmartPointer(const SmartPointer<U>& other, const IID& iid) /*noexcept*/ : pointee_(nullptr) {
+				SmartPointer(const SmartPointer<U>& other, const IID& iid) BOOST_NOEXCEPT : pointee_(nullptr) {
 					if(other.pointee_ != nullptr)
 						other.pointee_->QueryInterface(iid, initializePPV());
 				}
 				/// Move-constructor.
-				SmartPointer(SmartPointer<element_type>&& other) /*noexcept*/ : pointee_(other.pointee_) {
+				SmartPointer(SmartPointer<element_type>&& other) BOOST_NOEXCEPT : pointee_(other.pointee_) {
 					if(pointee_ != nullptr) {
 						pointee_->AddRef();
 						other.reset();
@@ -85,7 +85,7 @@ namespace ascension {
 				}
 				/// Move-constructor.
 				template<typename U>
-				SmartPointer(SmartPointer<U>&& other) /*noexcept*/ : pointee_(nullptr) {
+				SmartPointer(SmartPointer<U>&& other) BOOST_NOEXCEPT : pointee_(nullptr) {
 					if(pointee_ != nullptr) {
 						if(SUCCEEDED(other.pointee_->QueryInterface(__uuidof(element_type), initializePPV())))
 							other.reset();
@@ -93,7 +93,7 @@ namespace ascension {
 				}
 				/// Move-constructor with an interface identifier.
 				template<typename U>
-				SmartPointer(SmartPointer<U>&& other, const IID& iid) /*noexcept*/ : pointee_(nullptr) {
+				SmartPointer(SmartPointer<U>&& other, const IID& iid) BOOST_NOEXCEPT : pointee_(nullptr) {
 					if(pointee_ != nullptr) {
 						if(SUCCEEDED(other.pointee_->QueryInterface(iid, initializePPV())))
 							other.reset();
@@ -101,23 +101,23 @@ namespace ascension {
 				}
 				/// Copy-assignment operator.
 				template<typename U>
-				SmartPointer<element_type>& operator=(const SmartPointer<U>& other) /*noexcept*/ {
+				SmartPointer<element_type>& operator=(const SmartPointer<U>& other) BOOST_NOEXCEPT {
 					SmartPointer<element_type>(other).swap(*this);
 					return *this;
 				}
 				/// Move-assignment operator.
 				template<typename U>
-				SmartPointer<element_type>& operator=(SmartPointer<U>&& other) /*noexcept*/ {
+				SmartPointer<element_type>& operator=(SmartPointer<U>&& other) BOOST_NOEXCEPT {
 					SmartPointer<element_type>(other).swap(*this);
 					return *this;
 				}
 				/// Destructor.
-				~SmartPointer() /*noexcept*/ {
+				~SmartPointer() BOOST_NOEXCEPT {
 					if(pointee_ != nullptr)
 						pointee_->Release();
 				}
 				/// 
-				operator bool() const /*noexcept*/ {return get() != nullptr;}
+				operator bool() const BOOST_NOEXCEPT {return get() != nullptr;}
 				/// Constructor creates instance by using @c CoCreateInstance.
 				static SmartPointer<element_type> create(REFCLSID clsid, REFIID iid /* = __uuidof(Interface) */,
 						DWORD context = CLSCTX_ALL, IUnknown* outer = nullptr, HRESULT* hr = nullptr) {
@@ -128,20 +128,20 @@ namespace ascension {
 					return p;
 				}
 				/// Returns the interface pointer.
-				SmartPointerProxy<element_type>* get() const /*noexcept*/ {
+				SmartPointerProxy<element_type>* get() const BOOST_NOEXCEPT {
 					return static_cast<SmartPointerProxy<element_type>*>(pointee_);
 				}
 				/// Returns the output pointer for initialization.
-				element_type** initialize() /*noexcept*/ {
+				element_type** initialize() BOOST_NOEXCEPT {
 					reset();
 					return &pointee_;
 				}
 				/// Returns the output pointer for initialization with type @c void**.
-				void** initializePPV() /*noexcept*/ {
+				void** initializePPV() BOOST_NOEXCEPT {
 					return reinterpret_cast<void**>(initialize());
 				}
 				/// Returns true if the pointer addresses the same object.
-				bool equals(IUnknown* p) const /*noexcept*/ {
+				bool equals(IUnknown* p) const BOOST_NOEXCEPT {
 					if(pointee_ == nullptr && p == nullptr)
 						return true;
 					else if(pointee_ == nullptr || p == nullptr)
@@ -152,61 +152,61 @@ namespace ascension {
 					return ps[1].get() == ps[2].get();
 				}
 				/// Resets the pointer.
-				void reset() /*noexcept*/ {
+				void reset() BOOST_NOEXCEPT {
 					SmartPointer<element_type>().swap(*this);
 				}
 				/// Resets the pointer.
 				template<typename U>
-				void reset(U* p) /*noexcept*/ {
+				void reset(U* p) BOOST_NOEXCEPT {
 					if(p != pointee_)
 						SmartPointer<element_type>(p).swap(*this);
 				}
 				/// Resets the pointer with an interface identifier.
 				template<typename U>
-				void reset(U* p, const IID& iid) /*noexcept*/ {
+				void reset(U* p, const IID& iid) BOOST_NOEXCEPT {
 					if(p != pointee_)
 						SmartPointer<element_type>(p, iid).swap(*this);
 				}
 				/// Swaps the two objects.
-				void swap(SmartPointer<element_type>& other) /*noexcept*/ {
+				void swap(SmartPointer<element_type>& other) BOOST_NOEXCEPT {
 					std::swap(pointee_, other.pointee_);
 				}
 				/// Swaps the two objects.
-				void swap(SmartPointerProxy<element_type>& other) /*noexcept*/ {
+				void swap(SmartPointerProxy<element_type>& other) BOOST_NOEXCEPT {
 					std::swap(pointee_, other.pointee_);
 				}
 				/// Member-access operator.
-				SmartPointerProxy<element_type>* operator->() const /*noexcept*/ {
+				SmartPointerProxy<element_type>* operator->() const BOOST_NOEXCEPT {
 					assert(get() != nullptr);
 					return get();
 				}
 				/// Dereference operator.
-				SmartPointerProxy<element_type>& operator*() const /*noexcept*/ {
+				SmartPointerProxy<element_type>& operator*() const BOOST_NOEXCEPT {
 					assert(get() != nullptr);
 					return *get();
 				}
 				/// Equality operator.
-				friend bool operator==(const element_type* lhs, const SmartPointer<element_type>& rhs) /*noexcept*/ {
+				friend bool operator==(const element_type* lhs, const SmartPointer<element_type>& rhs) BOOST_NOEXCEPT {
 					return lhs == rhs.pointee_;
 				}
 				/// Equality operator.
-				friend bool operator==(const SmartPointer<element_type>& lhs, const SmartPointer<element_type>& rhs) /*noexcept*/ {
+				friend bool operator==(const SmartPointer<element_type>& lhs, const SmartPointer<element_type>& rhs) BOOST_NOEXCEPT {
 					return lhs.pointee_ == rhs.pointee_;
 				}
 				/// Less than operator.
-				friend bool operator<(const element_type* lhs, const SmartPointer<element_type>& rhs) /*noexcept*/ {
+				friend bool operator<(const element_type* lhs, const SmartPointer<element_type>& rhs) BOOST_NOEXCEPT {
 					return lhs < rhs.pointee_;
 				}
 				/// Less than operator.
-				friend bool operator<(const SmartPointer<element_type> lhs, const SmartPointer<element_type>& rhs) /*noexcept*/ {
+				friend bool operator<(const SmartPointer<element_type> lhs, const SmartPointer<element_type>& rhs) BOOST_NOEXCEPT {
 					return lhs.pointee_ < rhs.pointee_;
 				}
 				/// Greater than operator.
-				friend bool operator>(const element_type* lhs, const SmartPointer<element_type>& rhs) /*noexcept*/ {
+				friend bool operator>(const element_type* lhs, const SmartPointer<element_type>& rhs) BOOST_NOEXCEPT {
 					return lhs > rhs.pointee_;
 				}
 				/// Greater than operator.
-				friend bool operator>(const SmartPointer<element_type>& lhs, const SmartPointer<element_type>& rhs) /*noexcept*/ {
+				friend bool operator>(const SmartPointer<element_type>& lhs, const SmartPointer<element_type>& rhs) BOOST_NOEXCEPT {
 					return lhs.pointee_ > rhs.pointee_;
 				}
 			private:

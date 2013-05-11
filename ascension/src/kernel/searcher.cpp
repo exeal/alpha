@@ -178,10 +178,10 @@ bool LiteralPattern::search(const CharacterIterator& target, Direction direction
 // TextSearcher ///////////////////////////////////////////////////////////////////////////////////
 
 namespace {
-	inline DocumentCharacterIterator beginningOfDocument(const Document& document) /*throw()*/ {
+	inline DocumentCharacterIterator beginningOfDocument(const Document& document) BOOST_NOEXCEPT {
 		return DocumentCharacterIterator(document, document.region().first);
 	}
-	inline DocumentCharacterIterator endOfDocument(const Document& document) /*throw()*/ {
+	inline DocumentCharacterIterator endOfDocument(const Document& document) BOOST_NOEXCEPT {
 		return DocumentCharacterIterator(document, document.region().second);
 	}
 }
@@ -216,7 +216,7 @@ TextSearcher::TextSearcher() : searchType_(LITERAL),
  * Returns the collation weight level.
  * @note This feature is not implemented and returns always @c Collator#IDENTICAL (15).
  */
-int TextSearcher::collationWeight() const /*throw()*/ {
+int TextSearcher::collationWeight() const BOOST_NOEXCEPT {
 #ifndef ASCENSION_NO_UNICODE_COLLATION
 	return Collator::IDENTICAL;
 #else
@@ -241,7 +241,7 @@ bool TextSearcher::isCaseSensitive() const {
 }
 
 /// Returns @c true if Migemo is available.
-bool TextSearcher::isMigemoAvailable() const /*throw()*/ {
+bool TextSearcher::isMigemoAvailable() const BOOST_NOEXCEPT {
 #ifdef ASCENSION_NO_MIGEMO
 	return false;
 #else
@@ -700,7 +700,7 @@ bool TextSearcher::search(const Document& document,
 }
 
 /// Sets the maximum number of the stored patterns or replacement strings.
-void TextSearcher::setMaximumNumberOfStoredStrings(size_t number) /*throw()*/ {
+void TextSearcher::setMaximumNumberOfStoredStrings(size_t number) BOOST_NOEXCEPT {
 	number = max<size_t>(number, MINIMUM_NUMBER_OF_STORED_STRINGS);
 	if(storedPatterns_.size() > number)
 		storedPatterns_.resize(number);
@@ -738,7 +738,7 @@ TextSearcher& TextSearcher::setWholeMatch(WholeMatch newValue) {
  * Returns the type of search.
  * @see #setPattern
  */
-TextSearcher::Type TextSearcher::type() const /*throw()*/ {
+TextSearcher::Type TextSearcher::type() const BOOST_NOEXCEPT {
 #ifndef ASCENSION_NO_REGEX
 	if(regexPattern_.get() != nullptr)
 		return REGULAR_EXPRESSION;
@@ -752,7 +752,7 @@ TextSearcher::Type TextSearcher::type() const /*throw()*/ {
 }
 
 /// Returns @c true if the pattern uses Unicode canonical equivalents.
-bool TextSearcher::usesCanonicalEquivalents() const /*throw()*/ {
+bool TextSearcher::usesCanonicalEquivalents() const BOOST_NOEXCEPT {
 #ifndef ASCENSION_NO_REGEX
 	if(regexPattern_.get() != nullptr && (regexPattern_->flags() & regex::Pattern::CANON_EQ) != 0)
 		return true;
@@ -761,7 +761,7 @@ bool TextSearcher::usesCanonicalEquivalents() const /*throw()*/ {
 }
 
 /// Returns the "whole match" condition.
-TextSearcher::WholeMatch TextSearcher::wholeMatch() const /*throw()*/ {
+TextSearcher::WholeMatch TextSearcher::wholeMatch() const BOOST_NOEXCEPT {
 	return wholeMatch_;
 }
 
@@ -769,7 +769,7 @@ TextSearcher::WholeMatch TextSearcher::wholeMatch() const /*throw()*/ {
 // IncrementalSearcher ////////////////////////////////////////////////////////////////////////////
 
 /// Constructor.
-IncrementalSearcher::IncrementalSearcher() /*throw()*/ : type_(TextSearcher::LITERAL) {
+IncrementalSearcher::IncrementalSearcher() BOOST_NOEXCEPT : type_(TextSearcher::LITERAL) {
 }
 
 /// Aborts the search.

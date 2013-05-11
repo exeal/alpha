@@ -2,7 +2,7 @@
  * @file regex.hpp
  * Defines wrappers of Boost.Regex library or std#tr1#regex.
  * @author exeal
- * @date 2006-2012
+ * @date 2006-2013
  */
 
 #include <ascension/config.hpp>	// ASCENSION_NO_REGEX, ASCENSION_NO_MIGEMO
@@ -49,7 +49,6 @@ namespace ascension {
 	 * This uses Boost.Regex to implement internally.
 	 */
 	namespace regex {
-
 		/**
 		 * The result of a match operation.
 		 * <p>This interface contains query methods used to determine the results of a match
@@ -65,7 +64,7 @@ namespace ascension {
 		class MatchResult {
 		public:
 			/// Destructor.
-			virtual ~MatchResult() /*throw()*/ {}
+			virtual ~MatchResult() BOOST_NOEXCEPT {}
 			/**
 			 * Returns the position after the last character matched.
 			 * @return The position after the last character matched
@@ -135,8 +134,8 @@ namespace ascension {
 			const CodePointIterator& start() const {return start(0);}
 			const CodePointIterator& start(int group) const {return get(group).first;}
 		protected:
-			boost::match_results<CodePointIterator>& impl() /*throw()*/ {return impl_;}
-			const boost::match_results<CodePointIterator>& impl() const /*throw()*/ {return impl_;}
+			boost::match_results<CodePointIterator>& impl() BOOST_NOEXCEPT {return impl_;}
+			const boost::match_results<CodePointIterator>& impl() const BOOST_NOEXCEPT {return impl_;}
 		private:
 			const boost::sub_match<CodePointIterator>& get(int group) const {
 				const boost::sub_match<CodePointIterator>& s = impl_[group];
@@ -223,7 +222,6 @@ namespace ascension {
 	} // namespace detail
 
 	namespace regex {
-
 		/// Unchecked exception thrown to indicate a syntax error in a regular-expression pattern.
 		class PatternSyntaxException : public std::invalid_argument {
 			ASCENSION_UNASSIGNABLE_TAG(PatternSyntaxException);
@@ -257,7 +255,7 @@ namespace ascension {
 			/// Retrieves the error index.
 			std::ptrdiff_t getIndex() const {return impl_.position();}
 			/// Retrieves the erroneous regular-expression pattern.
-			String getPattern() const /*throw()*/ {return pattern_;}
+			String getPattern() const BOOST_NOEXCEPT {return pattern_;}
 		private:
 			const boost::regex_error impl_;
 			const String pattern_;
@@ -280,13 +278,13 @@ namespace ascension {
 				CANON_EQ = 0x80				///< Enables canonical equivalence (not implemented).
 			};
 		public:
-			virtual ~Pattern() /*throw()*/;
+			virtual ~Pattern() BOOST_NOEXCEPT;
 
 			/**
 			 * Returns this pattern's match flags.
 			 * @return The match flags specified when this pattern was compiled
 			 */
-			int flags() const /*throw()*/ {return flags_;}
+			int flags() const BOOST_NOEXCEPT {return flags_;}
 			/**
 			 * Returns the regular expression from which this pattern was compiled.
 			 * @return The source of this pattern
@@ -373,7 +371,7 @@ namespace ascension {
 			 * Returns the pattern that is interpreted by this matcher.
 			 * @return The pattern for which this matcher was created
 			 */
-			const Pattern& pattern() const /*throw()*/ {return *pattern_;}
+			const Pattern& pattern() const BOOST_NOEXCEPT {return *pattern_;}
 			/**
 			 * Changes the @c Pattern that this @c Matcher uses to find matches with.
 			 * This method causes this matcher to lose information about the groups of the last
@@ -414,14 +412,14 @@ namespace ascension {
 			 * and @c regionEnd (exclusive).
 			 * @return The ending point of this matcher's region
 			 */
-			const CodePointIterator& regionEnd() const /*throw()*/ {return region_.second;}
+			const CodePointIterator& regionEnd() const BOOST_NOEXCEPT {return region_.second;}
 			/**
 			 * Reports the start index of this matcher's region. The searches this matcher conducts
 			 * are limited to finding matches within @c regionStart (inclusive) and @c regionEnd
 			 * (exclusive).
 			 * @return The starting point of this matcher's region
 			 */
-			const CodePointIterator& regionStart() const /*throw()*/ {return region_.first;}
+			const CodePointIterator& regionStart() const BOOST_NOEXCEPT {return region_.first;}
 
 			/**
 			 * Queries the anchoring of region bounds for this matcher.
@@ -432,7 +430,7 @@ namespace ascension {
 			 * @return true if this matcher is using anchoring bounds, false otherwise
 			 * @see useAnchoringBounds
 			 */
-			bool hasAnchoringBounds() const /*throw()*/ {return usesAnchoringBounds_;}
+			bool hasAnchoringBounds() const BOOST_NOEXCEPT {return usesAnchoringBounds_;}
 			/**
 			 * Queries the transparency of region bounds for this matcher.
 			 * @par This method returns @c true if this matcher uses <em>transparent</em> bounds,
@@ -442,7 +440,7 @@ namespace ascension {
 			 * @return true if this matcher is using transparent bounds, false otherwise
 			 * @see useTransparentBounds
 			 */
-			bool hasTransparentBounds() const /*throw()*/ {return usesTransparentBounds_;}
+			bool hasTransparentBounds() const BOOST_NOEXCEPT {return usesTransparentBounds_;}
 			/**
 			 * Sets the anchoring of region bounds for this matcher.
 			 * @par Invoking this method with an argument of @c true will set this matcher to use
@@ -457,7 +455,7 @@ namespace ascension {
 			 * @return This matcher
 			 * @see hasAnchoringBounds
 			 */
-			Matcher& useAnchoringBounds(bool b) /*throw()*/ {usesAnchoringBounds_ = b; return *this;}
+			Matcher& useAnchoringBounds(bool b) BOOST_NOEXCEPT {usesAnchoringBounds_ = b; return *this;}
 			/**
 			 * Sets the transparency of region bounds for this matcher.
 			 * @par Invoking this method with an argument of @c true will set this matcher to use
@@ -476,7 +474,7 @@ namespace ascension {
 			 * @return This matcher
 			 * @see hasTransparentBounds
 			 */
-			Matcher& useTransparentBounds(bool b) /*throw()*/ {usesTransparentBounds_ = b; return *this;}
+			Matcher& useTransparentBounds(bool b) BOOST_NOEXCEPT {usesTransparentBounds_ = b; return *this;}
 
 			/**
 			 * Attempts to find the next subsequence of the input sequence that matches the
@@ -707,7 +705,7 @@ namespace ascension {
 					throw IllegalStateException("the previous was not performed or failed.");
 			}
 			boost::match_flag_type nativeFlags(const CodePointIterator& first,
-					const CodePointIterator& last, bool continuous) const /*throw()*/ {
+					const CodePointIterator& last, bool continuous) const BOOST_NOEXCEPT {
 				boost::match_flag_type f(boost::regex_constants::match_default);
 				if((pattern_->flags() & Pattern::DOTALL) == 0)
 					f |= boost::regex_constants::match_not_dot_newline;
@@ -742,14 +740,13 @@ namespace ascension {
 		public:
 			static std::unique_ptr<const MigemoPattern> compile(const StringPiece& pattern, bool caseSensitive);
 			static void initialize(const std::string& runtimePathName, const std::string& dictionaryPathName);
-			static bool isMigemoInstalled() /*throw()*/;
+			static bool isMigemoInstalled() BOOST_NOEXCEPT;
 		private:
 			MigemoPattern(const StringPiece& pattern, bool caseSensitive);
 			static void install();
 			static std::string runtimePathName_, dictionaryPathName_;
 		};
 #endif // !ASCENSION_NO_MIGEMO
-
 	}
 }	// namespace ascension.regex
 

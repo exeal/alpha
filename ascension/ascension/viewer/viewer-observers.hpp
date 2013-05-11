@@ -69,7 +69,7 @@ namespace ascension {
 		class MouseInputStrategy {
 		public:
 			/// Destructor.
-			virtual ~MouseInputStrategy() /*throw()*/ {}
+			virtual ~MouseInputStrategy() BOOST_NOEXCEPT {}
 		protected:
 			/// Actions of the mouse input.
 			enum Action {

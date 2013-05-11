@@ -147,7 +147,7 @@ namespace ascension {
 				std::uint8_t characterLevel(Index offset) const;
 				bool isBidirectional() const BOOST_NOEXCEPT;
 				Index numberOfCharacters() const BOOST_NOEXCEPT;
-				const presentation::TextLineStyle& style() const /*throw()*/;
+				const presentation::TextLineStyle& style() const BOOST_NOEXCEPT;
 				const presentation::WritingMode& writingMode() const BOOST_NOEXCEPT;
 				/// @}
 
@@ -224,7 +224,7 @@ namespace ascension {
 				void draw(PaintContext& context, const Point& origin,
 					const TextPaintOverride* paintOverride = nullptr,
 					const InlineObject* endOfLine = nullptr,
-					const InlineObject* lineWrappingMark = nullptr) const /*throw()*/;
+					const InlineObject* lineWrappingMark = nullptr) const BOOST_NOEXCEPT;
 				/// @}
 
 				/// @name Miscellaneous
@@ -242,21 +242,21 @@ namespace ascension {
 				TextHit<>&& internalHitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point,
 					const presentation::FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const;
 //				void buildLineMetrics(Index line);
-				void expandTabsWithoutWrapping() /*throw()*/;
+				void expandTabsWithoutWrapping() BOOST_NOEXCEPT;
 				typedef std::vector<std::unique_ptr<const TextRun>> RunVector;
-				RunVector::const_iterator runForPosition(Index offset) const /*throw()*/;
+				RunVector::const_iterator runForPosition(Index offset) const BOOST_NOEXCEPT;
 				boost::iterator_range<RunVector::const_iterator> runsForLine(Index line) const;
 				RunVector::const_iterator firstRunInLine(Index line) const BOOST_NOEXCEPT;
 				bool isEmpty() const BOOST_NOEXCEPT {return runs_.empty();}
-				void justify(Scalar lineMeasure, presentation::TextJustification method) /*throw()*/;
+				void justify(Scalar lineMeasure, presentation::TextJustification method) BOOST_NOEXCEPT;
 				Point lineLeft(Index line) const;
 				typedef std::tuple<Scalar, Scalar, Scalar/*, Scalar*/> LineMetrics;	// ascent, descent, leading/*, advance*/
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				const LineMetrics& lineMetrics(Index line) const;
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 				std::pair<Index, Index> locateOffsets(
-					Index line, Scalar ipd, bool& outside) const /*throw()*/;
-				int nextTabStopBasedLeftEdge(Scalar x, bool right) const /*throw()*/;
+					Index line, Scalar ipd, bool& outside) const BOOST_NOEXCEPT;
+				int nextTabStopBasedLeftEdge(Scalar x, bool right) const BOOST_NOEXCEPT;
 				void reorder();
 //				void rewrap();
 				void stackLines(

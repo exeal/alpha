@@ -104,7 +104,7 @@ namespace ascension {
 		explicit IntegralError(Code code,
 			const std::string& message = "") : Base(message), code_(code) {}
 		/// Returns the error code.
-		Code code() const /*throw()*/;
+		Code code() const BOOST_NOEXCEPT;
 	private:
 		const Code code_;
 	};

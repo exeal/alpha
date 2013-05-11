@@ -18,13 +18,11 @@
 
 namespace ascension {
 	namespace text {
-
 		/**
 		 * Implements <a href="http://www.unicode.org/Public/UNIDATA/UCD.html">UCD (Unicode
 		 * Character Database)</a>.
 		 */
 		namespace ucd {
-
 			/**
 			 * A function object compares Unicode property (value) names based on "Property and
 			 * Property Value Matching"
@@ -137,7 +135,7 @@ namespace ascension {
 				static const char LONG_NAME[], SHORT_NAME[];
 				template<typename CharType> static int forName(const CharType* name);
 				template<int superCategory> static bool is(int subCategory);
-				static int of(CodePoint c) /*throw()*/;
+				static int of(CodePoint c) BOOST_NOEXCEPT;
 			private:
 				static const detail::CharacterPropertyPartition VALUES_[];
 				static const std::size_t NUMBER_;
@@ -157,7 +155,7 @@ namespace ascension {
 				static const int DEFAULT_VALUE;
 				static const char LONG_NAME[], SHORT_NAME[];				
 				template<typename CharType> static int forName(const CharType* name);
-				static int of(CodePoint c) /*throw()*/;
+				static int of(CodePoint c) BOOST_NOEXCEPT;
 			private:
 				static const detail::CharacterPropertyPartition VALUES_[];
 				static const std::size_t NUMBER_;
@@ -202,7 +200,7 @@ namespace ascension {
 				static const int DEFAULT_VALUE;
 				static const char LONG_NAME[], SHORT_NAME[];
 				template<typename CharType> static int forName(const CharType* name);
-				static int of(CodePoint cp) /*throw()*/;
+				static int of(CodePoint cp) BOOST_NOEXCEPT;
 			private:
 				static const CodePoint CHARACTERS_[];
 				static const std::uint8_t VALUES_[];
@@ -242,7 +240,7 @@ namespace ascension {
 				static const int DEFAULT_VALUE;
 				static const char LONG_NAME[], SHORT_NAME[];
 				template<typename CharType> static int forName(const CharType* name);
-				static int of(CodePoint c) /*throw()*/;
+				static int of(CodePoint c) BOOST_NOEXCEPT;
 			private:
 				static const detail::CharacterPropertyPartition VALUES_[];
 				static const std::size_t NUMBER_;
@@ -268,7 +266,7 @@ namespace ascension {
 				static const int DEFAULT_VALUE;
 				static const char LONG_NAME[], SHORT_NAME[];
 				template<typename CharType> static int forName(const CharType* name);
-				static int of(CodePoint cp) /*throw()*/;
+				static int of(CodePoint cp) BOOST_NOEXCEPT;
 			private:
 				static const detail::CharacterPropertyValueName NAMES_[];
 			};
@@ -297,7 +295,7 @@ namespace ascension {
 				template<typename CharType> static int forName(const CharType* name);
 				static bool is(CodePoint cp, int property);
 				template<int property>
-				static bool is(CodePoint cp) /*throw()*/;
+				static bool is(CodePoint cp) BOOST_NOEXCEPT;
 			private:
 				static const detail::CharacterPropertyValueName NAMES_[];
 #include "src/generated/uprops-binary-property-values-definition"
@@ -319,7 +317,7 @@ namespace ascension {
 				static const int DEFAULT_VALUE;
 				static const char LONG_NAME[], SHORT_NAME[];
 				template<typename CharType> static int forName(const CharType* name);
-				static int of(CodePoint c) /*throw()*/;
+				static int of(CodePoint c) BOOST_NOEXCEPT;
 			private:
 				static const detail::CharacterPropertyPartition VALUES_[];
 				static const std::size_t NUMBER_;
@@ -381,7 +379,7 @@ namespace ascension {
 				static const int DEFAULT_VALUE;
 				static const char LONG_NAME[], SHORT_NAME[];
 				template<typename CharType> static int forName(const CharType* name);
-				static int of(CodePoint c) /*throw()*/;
+				static int of(CodePoint c) BOOST_NOEXCEPT;
 			private:
 				static const detail::CharacterPropertyPartition VALUES_[];
 				static const std::size_t NUMBER_;
@@ -400,7 +398,7 @@ namespace ascension {
 				};
 				static const int DEFAULT_VALUE;
 				static const char LONG_NAME[], SHORT_NAME[];
-				static int of(CodePoint cp) /*throw()*/;
+				static int of(CodePoint cp) BOOST_NOEXCEPT;
 			private:
 				static const detail::CharacterPropertyValueName NAMES_[];
 			};
@@ -417,7 +415,7 @@ namespace ascension {
 				static const char LONG_NAME[], SHORT_NAME[];
 				static int of(CodePoint cp,
 					const IdentifierSyntax& syntax = IdentifierSyntax(IdentifierSyntax::UNICODE_DEFAULT),
-					const std::locale& lc = std::locale::classic()) /*throw()*/;
+					const std::locale& lc = std::locale::classic()) BOOST_NOEXCEPT;
 			private:
 				static const detail::CharacterPropertyValueName NAMES_[];
 			};
@@ -432,7 +430,7 @@ namespace ascension {
 				};
 				static const int DEFAULT_VALUE;
 				static const char LONG_NAME[], SHORT_NAME[];
-				static int of(CodePoint cp) /*throw()*/;
+				static int of(CodePoint cp) BOOST_NOEXCEPT;
 			private:
 				static const detail::CharacterPropertyValueName NAMES_[];
 			};
@@ -581,7 +579,7 @@ template<> inline bool BinaryProperty::is<BinaryProperty::UPPERCASE>(CodePoint c
 	return GeneralCategory::of(cp) == GeneralCategory::UPPERCASE_LETTER || is<OTHER_UPPERCASE>(cp);}
 
 /// Returns the Hangul_Syllable_Type property value of @a cp.
-inline int HangulSyllableType::of(CodePoint c) /*throw()*/ {
+inline int HangulSyllableType::of(CodePoint c) BOOST_NOEXCEPT {
 	if((c >= 0x1100u && c <= 0x1159u) || c == 0x115fu)
 		return LEADING_JAMO;
 	else if(c >= 0x1160u && c <= 0x11a2u)

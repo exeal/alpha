@@ -2,7 +2,7 @@
  * @file caret-observers.hpp
  * @author exeal
  * @date 2011-03-30 separated from caret.hpp
- * @date 2011-2012
+ * @date 2011-2013
  */
 
 #ifndef ASCENSION_CARET_OBSERVERS_HPP
@@ -86,9 +86,9 @@ namespace ascension {
 			 * The text viewer's input locale had been changed (ex. @c WM_INPUTLANGCHANGE of
 			 * Win32).
 			 */
-			virtual void inputLocaleChanged() /*throw()*/ = 0;
+			virtual void inputLocaleChanged() BOOST_NOEXCEPT = 0;
 			/// The text viewer's input method open status had been changed.
-			virtual void inputMethodOpenStatusChanged() /*throw()*/ = 0;
+			virtual void inputMethodOpenStatusChanged() BOOST_NOEXCEPT = 0;
 			friend class Caret;
 		};
 	}

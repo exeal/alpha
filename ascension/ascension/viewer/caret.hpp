@@ -166,6 +166,7 @@ namespace ascension {
 
 		private:
 			void adjustInputMethodCompositionWindow();
+			bool canPastePlatformData() const;
 			void checkMatchBrackets();
 			void fireCaretMoved(const kernel::Region& oldRegion);
 			void internalExtendSelection(void (*algorithm)(void));

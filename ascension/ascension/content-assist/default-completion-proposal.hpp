@@ -24,10 +24,10 @@ namespace ascension {
 				const String& displayString, const String& description = String(),
 				CompletionProposal::Icon&& icon = Icon(), bool autoInsertable = true);
 		public:
-			String description() const /*throw()*/;
-			String displayString() const /*throw()*/;
-			const Icon& icon() const /*throw()*/;
-			bool isAutoInsertable() const /*throw()*/;
+			String description() const BOOST_NOEXCEPT;
+			String displayString() const BOOST_NOEXCEPT;
+			const Icon& icon() const BOOST_NOEXCEPT;
+			bool isAutoInsertable() const BOOST_NOEXCEPT;
 			void replace(kernel::Document& document,
 				const kernel::Region& replacementRegion) const;
 		private:

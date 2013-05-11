@@ -238,7 +238,7 @@ void TextViewer::computedBlockFlowDirectionChanged(BlockFlowDirection used) {
 }
 
 /// @see DefaultFontListener#defaultFontChanged
-void TextViewer::defaultFontChanged() /*throw()*/ {
+void TextViewer::defaultFontChanged() BOOST_NOEXCEPT {
 	rulerPainter_->update();
 	scrolls_.resetBars(*this, 'a', true);
 	updateScrollBars();
@@ -658,7 +658,7 @@ void TextViewer::initialize(const TextViewer* other) {
 				proposals.insert(new CompletionProposal(p));
 			IdentifiersProposalProcessor::computeCompletionProposals(caret, incremental = true, replacementRegion, proposals);
 		}
-		bool isCompletionProposalAutoActivationCharacter(CodePoint c) const /*throw()*/ {return c == L'@';}
+		bool isCompletionProposalAutoActivationCharacter(CodePoint c) const BOOST_NOEXCEPT {return c == L'@';}
 	};
 	class JSProposals : public IdentifiersProposalProcessor {
 	public:
@@ -671,7 +671,7 @@ void TextViewer::initialize(const TextViewer* other) {
 				proposals.insert(new CompletionProposal(p));
 			IdentifiersProposalProcessor::computeCompletionProposals(caret, incremental = true, replacementRegion, proposals);
 		}
-		bool isCompletionProposalAutoActivationCharacter(CodePoint c) const /*throw()*/ {return c == L'.';}
+		bool isCompletionProposalAutoActivationCharacter(CodePoint c) const BOOST_NOEXCEPT {return c == L'.';}
 	};
 	unique_ptr<contentassist::ContentAssistant> ca(new contentassist::ContentAssistant());
 	ca->setContentAssistProcessor(JS_MULTILINE_DOC_COMMENT, unique_ptr<contentassist::IContentAssistProcessor>(new JSDocProposals(cti->getIdentifierSyntax(JS_MULTILINE_DOC_COMMENT))));
@@ -1359,7 +1359,7 @@ void TextViewer::setConfiguration(const Configuration* general, shared_ptr<const
  * Sets the new content assistant.
  * @param newContentAssistant the content assistant to set. the ownership will be transferred to the callee.
  */
-void TextViewer::setContentAssistant(unique_ptr<contentassist::ContentAssistant> newContentAssistant) /*throw()*/ {
+void TextViewer::setContentAssistant(unique_ptr<contentassist::ContentAssistant> newContentAssistant) BOOST_NOEXCEPT {
 	if(contentAssistant_.get() != nullptr)
 		contentAssistant_->uninstall();	// $friendly-access
 	(contentAssistant_ = std::move(newContentAssistant))->install(*this);	// $friendly-access
@@ -1450,7 +1450,7 @@ graphics::Rectangle TextViewer::textAreaAllocationRectangle() const BOOST_NOEXCE
  * Returns the 'content-rectangle' of the text area, in local-coordinates.
  * @see #bounds, #textAreaAllocationRectangle
  */
-graphics::Rectangle TextViewer::textAreaContentRectangle() const /*throw()*/ {
+graphics::Rectangle TextViewer::textAreaContentRectangle() const BOOST_NOEXCEPT {
 	// TODO: Consider 'padding-start' setting.
 	return textAreaAllocationRectangle();
 }
@@ -1545,7 +1545,7 @@ void TextViewer::updateScrollBars() {
 }
 
 /// @see TextViewport#viewportBoundsInViewChanged
-void TextViewer::viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) /*throw()*/ {
+void TextViewer::viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT {
 //	textRenderer().setTextWrapping(textRenderer().textWrapping(), widgetapi::createRenderingContext(*this).get());
 	scrolls_.resetBars(*this, 'a', true);
 	updateScrollBars();
@@ -1677,7 +1677,7 @@ void TextViewer::viewportScrollPositionChanged(
 }
 
 /// @see VisualLinesListener#visualLinesDeleted
-void TextViewer::visualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines, bool longestLineChanged) /*throw()*/ {
+void TextViewer::visualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines, bool longestLineChanged) BOOST_NOEXCEPT {
 	scrolls_.changed = true;
 	const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
 	if(*lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// deleted before visible area
@@ -1699,7 +1699,7 @@ void TextViewer::visualLinesDeleted(const boost::integer_range<Index>& lines, In
 }
 
 /// @see VisualLinesListener#visualLinesInserted
-void TextViewer::visualLinesInserted(const boost::integer_range<Index>& lines) /*throw()*/ {
+void TextViewer::visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT {
 	scrolls_.changed = true;
 	const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
 	if(*lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// inserted before visible area
@@ -1720,7 +1720,7 @@ void TextViewer::visualLinesInserted(const boost::integer_range<Index>& lines) /
 
 /// @see VisualLinesListener#visualLinesModified
 void TextViewer::visualLinesModified(const boost::integer_range<Index>& lines,
-		SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) /*throw()*/ {
+		SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT {
 	if(sublinesDifference == 0)	// number of visual lines was not changed
 		redrawLines(lines);
 	else {
@@ -1777,7 +1777,7 @@ AutoFreeze::AutoFreeze(TextViewer* textViewer) : textViewer_(textViewer) {
 }
 
 /// Destructor calls @c TextViewer#unfreeze.
-AutoFreeze::~AutoFreeze() /*throw()*/ {
+AutoFreeze::~AutoFreeze() BOOST_NOEXCEPT {
 	try {
 		if(textViewer_ != nullptr)
 			textViewer_->unfreeze();
@@ -1789,10 +1789,10 @@ AutoFreeze::~AutoFreeze() /*throw()*/ {
 
 // TextViewer.CursorVanisher //////////////////////////////////////////////////////////////////////
 
-TextViewer::CursorVanisher::CursorVanisher() /*throw()*/ : viewer_(nullptr) {
+TextViewer::CursorVanisher::CursorVanisher() BOOST_NOEXCEPT : viewer_(nullptr) {
 }
 
-TextViewer::CursorVanisher::~CursorVanisher() /*throw()*/ {
+TextViewer::CursorVanisher::~CursorVanisher() BOOST_NOEXCEPT {
 	restore();
 }
 
@@ -1874,7 +1874,7 @@ void TextViewer::Renderer::rewrapAtWindowEdge() {
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /// @see TextRenderer#width
-Scalar TextViewer::Renderer::width() const /*throw()*/ {
+Scalar TextViewer::Renderer::width() const BOOST_NOEXCEPT {
 	const LineWrapConfiguration& lwc = viewer_.configuration().lineWrap;
 	if(!lwc.wraps())
 		return (viewer_.horizontalScrollBar().range().end() + 1) * viewer_.textRenderer().defaultFont()->metrics().averageCharacterWidth();
@@ -1892,7 +1892,7 @@ Scalar TextViewer::Renderer::width() const /*throw()*/ {
 // TextViewer.Configuration /////////////////////////////////////////////////
 
 /// Default constructor.
-TextViewer::Configuration::Configuration() /*throw()*/ :
+TextViewer::Configuration::Configuration() BOOST_NOEXCEPT :
 		readingDirection(LEFT_TO_RIGHT), usesRichTextClipboardFormat(false) {
 #if(_WIN32_WINNT >= 0x0501)
 	BOOL b;
@@ -1943,7 +1943,7 @@ CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret,
 }
 
 /// Destructor.
-CurrentLineHighlighter::~CurrentLineHighlighter() /*noexcept*/ {
+CurrentLineHighlighter::~CurrentLineHighlighter() BOOST_NOEXCEPT {
 	if(caret_ != nullptr) {
 		caret_->removeListener(*this);
 		caret_->removeStateListener(*this);
@@ -1952,7 +1952,7 @@ CurrentLineHighlighter::~CurrentLineHighlighter() /*noexcept*/ {
 }
 
 /// Returns the background color.
-const boost::optional<Color>& CurrentLineHighlighter::background() const /*noexcept*/ {
+const boost::optional<Color>& CurrentLineHighlighter::background() const BOOST_NOEXCEPT {
 	return background_;
 }
 
@@ -1969,7 +1969,7 @@ void CurrentLineHighlighter::caretMoved(const Caret&, const k::Region& oldRegion
 }
 
 /// Returns the foreground color.
-const boost::optional<Color>& CurrentLineHighlighter::foreground() const /*noexcept*/ {
+const boost::optional<Color>& CurrentLineHighlighter::foreground() const BOOST_NOEXCEPT {
 	return foreground_;
 }
 
@@ -2009,7 +2009,7 @@ void CurrentLineHighlighter::selectionShapeChanged(const Caret&) {
  * Sets the background color and redraws the window.
  * @param color The background color to set
  */
-void CurrentLineHighlighter::setBackground(const boost::optional<Color>& color) /*noexcept*/ {
+void CurrentLineHighlighter::setBackground(const boost::optional<Color>& color) BOOST_NOEXCEPT {
 	background_ = color;
 }
 
@@ -2017,7 +2017,7 @@ void CurrentLineHighlighter::setBackground(const boost::optional<Color>& color) 
  * Sets the foreground color and redraws the window.
  * @param color The foreground color to set
  */
-void CurrentLineHighlighter::setForeground(const boost::optional<Color>& color) /*noexcept*/ {
+void CurrentLineHighlighter::setForeground(const boost::optional<Color>& color) BOOST_NOEXCEPT {
 	foreground_ = color;
 }
 
@@ -2025,7 +2025,7 @@ void CurrentLineHighlighter::setForeground(const boost::optional<Color>& color) 
 // ascension.viewers.utils free functions /////////////////////////////////////////////////////////
 
 /// Closes the opened completion proposals popup immediately.
-void utils::closeCompletionProposalsPopup(TextViewer& viewer) /*throw()*/ {
+void utils::closeCompletionProposalsPopup(TextViewer& viewer) BOOST_NOEXCEPT {
 	if(contentassist::ContentAssistant* ca = viewer.contentAssistant()) {
 		if(contentassist::ContentAssistant::CompletionProposalsUI* cpui = ca->completionProposalsUI())
 			cpui->close();
@@ -2047,7 +2047,7 @@ const hyperlink::Hyperlink* utils::getPointedHyperlink(const TextViewer& viewer,
  * Toggles the inline flow direction of the text viewer.
  * @param viewer The text viewer
  */
-void utils::toggleOrientation(TextViewer& viewer) /*throw()*/ {
+void utils::toggleOrientation(TextViewer& viewer) BOOST_NOEXCEPT {
 	viewer.textRenderer().setDirection(!viewer.presentation().computeWritingMode(&viewer.textRenderer()).inlineFlowDirection);
 //	viewer.synchronizeWritingModeUI();
 //	if(config.lineWrap.wrapsAtWindowEdge()) {
@@ -2154,7 +2154,7 @@ boost::optional<k::Region> source::getPointedIdentifier(const TextViewer& viewer
  * Calls @c IncrementalSearcher#abort from @a viewer.
  * @return true if the incremental search was running
  */
-bool texteditor::abortIncrementalSearch(TextViewer& viewer) /*throw()*/ {
+bool texteditor::abortIncrementalSearch(TextViewer& viewer) BOOST_NOEXCEPT {
 	if(texteditor::Session* session = viewer.document().session()) {
 		if(session->incrementalSearcher().isRunning())
 			return session->incrementalSearcher().abort(), true;
@@ -2166,7 +2166,7 @@ bool texteditor::abortIncrementalSearch(TextViewer& viewer) /*throw()*/ {
  * Calls @c IncrementalSearcher#end from @a viewer.
  * @return true if the incremental search was running
  */
-bool texteditor::endIncrementalSearch(TextViewer& viewer) /*throw()*/ {
+bool texteditor::endIncrementalSearch(TextViewer& viewer) BOOST_NOEXCEPT {
 	if(texteditor::Session* session = viewer.document().session()) {
 		if(session->incrementalSearcher().isRunning())
 			return session->incrementalSearcher().end(), true;

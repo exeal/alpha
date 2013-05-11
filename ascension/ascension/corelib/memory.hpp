@@ -21,7 +21,6 @@
 #undef max
 
 namespace ascension {
-
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	// std.auto_ptr for arrays.
 	template<typename T> class AutoBuffer {
@@ -30,32 +29,32 @@ namespace ascension {
 		typedef T element_type;
 	public:
 		// constructors
-		explicit AutoBuffer(element_type* p = nullptr) /*throw()*/ : buffer_(p) {}
-		AutoBuffer(AutoBuffer<element_type>& other) /*throw()*/ : buffer_(other.release()) {}
+		explicit AutoBuffer(element_type* p = nullptr) BOOST_NOEXCEPT : buffer_(p) {}
+		AutoBuffer(AutoBuffer<element_type>& other) BOOST_NOEXCEPT : buffer_(other.release()) {}
 		template<typename Other>
-		AutoBuffer(AutoBuffer<Other>& other) /*throw()*/ : buffer_(other.release()) {}
+		AutoBuffer(AutoBuffer<Other>& other) BOOST_NOEXCEPT : buffer_(other.release()) {}
 		/// Destructor deallocates the buffer by using @c #reset.
-		~AutoBuffer() /*throw()*/ {delete[] buffer_;}
+		~AutoBuffer() BOOST_NOEXCEPT {delete[] buffer_;}
 		/// Assignment operator.
-		AutoBuffer& operator=(AutoBuffer& other) /*throw()*/ {
+		AutoBuffer& operator=(AutoBuffer& other) BOOST_NOEXCEPT {
 			reset(other.release());
 			return *this;
 		}
 		/// Assignment operator.
 		template<typename Other>
-		AutoBuffer& operator=(AutoBuffer<Other>& other) /*throw()*/ {
+		AutoBuffer& operator=(AutoBuffer<Other>& other) BOOST_NOEXCEPT {
 			reset(other.release());
 			return *this;
 		}
-		element_type& operator[](std::ptrdiff_t i) const /*throw()*/ {return buffer_[i];}
+		element_type& operator[](std::ptrdiff_t i) const BOOST_NOEXCEPT {return buffer_[i];}
 		/// Returns the pointer to the buffer or @c null.
-		element_type* get() const /*throw()*/ {return buffer_;}
+		element_type* get() const BOOST_NOEXCEPT {return buffer_;}
 		/**
 		 * Sets the internal pointer to @c null without deallocation the buffer currently pointed
 		 * by @c AutoBuffer.
 		 * @retval A pointer to the buffer pointed by @c AutoBuffer before.
 		 */
-		element_type* release() /*throw()*/ {
+		element_type* release() BOOST_NOEXCEPT {
 			element_type* const temp = buffer_;
 			buffer_ = nullptr;
 			return temp;
@@ -68,7 +67,7 @@ namespace ascension {
 		 */
 		void reset(element_type* p = nullptr) {if(p != buffer_) {delete[] buffer_; buffer_ = p;}}
 		/// Swaps two @c AutoBuffer objects.
-		void swap(AutoBuffer<element_type>& other) /*throw()*/ {std::swap(buffer_, other.buffer_);}
+		void swap(AutoBuffer<element_type>& other) BOOST_NOEXCEPT {std::swap(buffer_, other.buffer_);}
 	private:
 		element_type* buffer_;
 	};
@@ -81,8 +80,8 @@ namespace ascension {
 	class MemoryPool {
 		ASCENSION_NONCOPYABLE_TAG(MemoryPool);
 	public:
-		MemoryPool(std::size_t chunkSize) /*throw()*/ : chunkSize_(std::max(chunkSize, sizeof(Chunk))), chunks_(nullptr) {}
-		~MemoryPool() /*throw()*/ {release();}
+		MemoryPool(std::size_t chunkSize) BOOST_NOEXCEPT : chunkSize_(std::max(chunkSize, sizeof(Chunk))), chunks_(nullptr) {}
+		~MemoryPool() BOOST_NOEXCEPT {release();}
 		void* allocate() {
 			if(void* const chunk = allocate(std::nothrow))
 				return chunk;
@@ -97,20 +96,20 @@ namespace ascension {
 			}
 			return nullptr;
 		}
-		void deallocate(void* doomed) /*throw()*/ {
+		void deallocate(void* doomed) BOOST_NOEXCEPT {
 			if(Chunk* p = static_cast<Chunk*>(doomed)) {
 				p->next = chunks_;
 				chunks_ = p;
 			}
 		}
-		void release() /*throw()*/ {
+		void release() BOOST_NOEXCEPT {
 			for(Chunk* next = chunks_; next != nullptr; next = chunks_) {
 				chunks_ = chunks_->next;
 				::operator delete(next);
 			}
 		}
 	private:
-		void expandChunks() /*throw()*/ {
+		void expandChunks() BOOST_NOEXCEPT {
 			assert(chunks_ == nullptr);
 			Chunk* p = static_cast<Chunk*>(::operator new(chunkSize_, std::nothrow));
 			if(p == nullptr)
@@ -155,15 +154,15 @@ namespace ascension {
 				return p;
 			throw std::bad_alloc();
 		}
-		static void* operator new(std::size_t, const std::nothrow_t&) /*throw()*/ {
+		static void* operator new(std::size_t, const std::nothrow_t&) BOOST_NOEXCEPT {
 			if(pool_.get() == nullptr)
 				pool_.reset(new(std::nothrow) MemoryPool(sizeof(T)));
 			return (pool_.get() != nullptr) ? pool_->allocate(std::nothrow) : nullptr;
 		}
-		static void* operator new(std::size_t bytes, void* where) /*throw()*/ {return ::operator new(bytes, where);}
-		static void operator delete(void* p) /*throw()*/ {if(pool_.get() != nullptr) pool_->deallocate(p);}
-		static void operator delete(void* p, const std::nothrow_t&) /*throw()*/ {return operator delete(p);}
-		static void operator delete(void* p, void* where) /*throw()*/ {return ::operator delete(p, where);}
+		static void* operator new(std::size_t bytes, void* where) BOOST_NOEXCEPT {return ::operator new(bytes, where);}
+		static void operator delete(void* p) BOOST_NOEXCEPT {if(pool_.get() != nullptr) pool_->deallocate(p);}
+		static void operator delete(void* p, const std::nothrow_t&) BOOST_NOEXCEPT {return operator delete(p);}
+		static void operator delete(void* p, void* where) BOOST_NOEXCEPT {return ::operator delete(p, where);}
 	private:
 		static std::unique_ptr<MemoryPool> pool_;
 	};

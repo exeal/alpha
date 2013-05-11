@@ -30,7 +30,7 @@ namespace {
 
 	// managed (but ugly) STGMEDIUM
 	struct GlobalStgMedium : public STGMEDIUM {
-		GlobalStgMedium() /*noexcept*/ {
+		GlobalStgMedium() BOOST_NOEXCEPT {
 			tymed = TYMED_NULL;
 			pUnkForRelease = nullptr;
 		}
@@ -39,7 +39,7 @@ namespace {
 			if(0 == (hGlobal = ::GlobalAlloc(flags, nbytes)))
 				throw makePlatformError();
 		}
-		~GlobalStgMedium() /*noexcept*/ {
+		~GlobalStgMedium() BOOST_NOEXCEPT {
 			if(lockedBuffer_ != nullptr)
 				::GlobalUnlock(hGlobal);
 			::ReleaseStgMedium(this);
@@ -52,8 +52,8 @@ namespace {
 				throw makePlatformError();
 			return lockedBuffer();
 		}
-		void* lockedBuffer() /*noexcept*/ {return lockedBuffer_;}
-		const void* lockedBuffer() const /*noexcept*/ {return lockedBuffer_;}
+		void* lockedBuffer() BOOST_NOEXCEPT {return lockedBuffer_;}
+		const void* lockedBuffer() const BOOST_NOEXCEPT {return lockedBuffer_;}
 	private:
 		char* lockedBuffer_;
 	};
@@ -93,19 +93,19 @@ namespace {
 			FORMATETC format;
 			STGMEDIUM medium;
 		};
-		list<Entry*>::iterator find(const FORMATETC& format, list<Entry*>::iterator initial) const /*throw()*/;
+		list<Entry*>::iterator find(const FORMATETC& format, list<Entry*>::iterator initial) const BOOST_NOEXCEPT;
 	private:
 		list<Entry*> entries_;
 	};
 
-	GenericDataObject::~GenericDataObject() /*throw()*/ {
+	GenericDataObject::~GenericDataObject() BOOST_NOEXCEPT {
 		for(list<Entry*>::iterator i(entries_.begin()), e(entries_.end()); i != e; ++i) {
 			::CoTaskMemFree((*i)->format.ptd);
 			::ReleaseStgMedium(&(*i)->medium);
 		}
 	}
 	list<GenericDataObject::Entry*>::iterator GenericDataObject::find(
-			const FORMATETC& format, list<Entry*>::iterator initial) const /*throw()*/ {
+			const FORMATETC& format, list<Entry*>::iterator initial) const BOOST_NOEXCEPT {
 		const list<Entry*>::iterator e(const_cast<GenericDataObject*>(this)->entries_.end());
 		if(format.ptd == nullptr) {	// this does not support DVTARGETDEVICE
 			for(list<Entry*>::iterator i(initial); i != e; ++i) {
@@ -412,32 +412,18 @@ void Caret::adjustInputMethodCompositionWindow() {
 	}
 }
 
-/**
- * Returns @c true if a paste operation can be performed.
- * @note Even when this method returned @c true, the following @c #paste call can fail.
- * @param useKillRing Set @c true to get the content from the kill-ring of the session, not from
- *                    the system clipboard
- * @return true if the clipboard data is pastable
- */
-bool Caret::canPaste(bool useKillRing) const {
-	if(!useKillRing) {
-		const UINT rectangleClipFormat = ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_MIME_FORMAT);
-		if(rectangleClipFormat != 0 && win32::boole(::IsClipboardFormatAvailable(rectangleClipFormat)))
-			return true;
-		else if(win32::boole(::IsClipboardFormatAvailable(CF_UNICODETEXT)) || win32::boole(::IsClipboardFormatAvailable(CF_TEXT)))
-			return true;
-	} else {
-		if(const texteditor::Session* const session = document().session())
-			return session->killRing().numberOfKills() != 0;
-	}
-	return false;
+bool Caret::canPastePlatformData() const {
+	const UINT rectangleClipFormat = ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_MIME_FORMAT);
+	if(rectangleClipFormat != 0 && win32::boole(::IsClipboardFormatAvailable(rectangleClipFormat)))
+		return true;
+	return win32::boole(::IsClipboardFormatAvailable(CF_UNICODETEXT)) || win32::boole(::IsClipboardFormatAvailable(CF_TEXT));
 }
 
 /**
  * Returns the locale identifier used to convert non-Unicode text.
  * @see #setClipboardLocale
  */
-LCID Caret::clipboardLocale() const /*throw()*/ {
+LCID Caret::clipboardLocale() const BOOST_NOEXCEPT {
 	return clipboardLocale_;
 }
 

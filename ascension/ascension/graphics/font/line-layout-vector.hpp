@@ -127,7 +127,7 @@ namespace ascension {
 					ASCENSION_NONCOPYABLE_TAG(NumberedLayout);
 				};
 				void clearCaches(const boost::integer_range<Index>& lines, bool repair);
-				void deleteLineLayout(Index line, TextLayout* newLayout = nullptr) /*throw()*/;
+				void deleteLineLayout(Index line, TextLayout* newLayout = nullptr) BOOST_NOEXCEPT;
 				void fireVisualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines);
 				void fireVisualLinesInserted(const boost::integer_range<Index>& lines);
 				void fireVisualLinesModified(const boost::integer_range<Index>& lines,
@@ -143,7 +143,7 @@ namespace ascension {
 				void documentPartitioningChanged(const kernel::Region& changedRegion);
 			private:
 				struct GeneratorBase {
-					virtual ~GeneratorBase() /*throw()*/ {}
+					virtual ~GeneratorBase() BOOST_NOEXCEPT {}
 					virtual std::unique_ptr<const TextLayout> generate(Index line) const = 0;
 				};
 				template<typename Function>

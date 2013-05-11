@@ -74,7 +74,7 @@ namespace {
 	}
 } // namespace @0
 
-void FontSelector::linkPrimaryFont() /*throw()*/ {
+void FontSelector::linkPrimaryFont() BOOST_NOEXCEPT {
 	// TODO: this does not support nested font linking.
 	assert(linkedFonts_ != nullptr);
 	for(vector<Fontset*>::iterator i(linkedFonts_->begin()), e(linkedFonts_->end()); i != e; ++i)
@@ -114,7 +114,7 @@ void FontSelector::linkPrimaryFont() /*throw()*/ {
 // TextRenderer ///////////////////////////////////////////////////////////////////////////////////
 
 namespace {
-	inline int calculateMemoryBitmapSize(int src) /*throw()*/ {
+	inline int calculateMemoryBitmapSize(int src) BOOST_NOEXCEPT {
 		const int UNIT = 32;
 		return (src % UNIT != 0) ? src + UNIT - src % UNIT : src;
 	}
@@ -252,7 +252,7 @@ void TextRenderer::paint(PaintContext& context) const {
  * @param context The graphics context
  * @param alignmentPoint The alignment point of the text layout of the line to draw
  */
-void TextRenderer::paint(Index line, PaintContext& context, const Point& alignmentPoint) const /*throw()*/ {
+void TextRenderer::paint(Index line, PaintContext& context, const Point& alignmentPoint) const BOOST_NOEXCEPT {
 //	if(!enablesDoubleBuffering_) {
 		layouts().at(line).draw(context, alignmentPoint,
 			(lineRenderingOptions_.get() != nullptr) ? lineRenderingOptions_->textPaintOverride(line) : nullptr,

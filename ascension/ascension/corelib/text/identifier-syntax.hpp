@@ -18,9 +18,7 @@
 #endif
 
 namespace ascension {
-
 	namespace text {
-
 		class IdentifierSyntax {
 		public:
 			/// Types of character classification used by @c IdentifierSyntax.
@@ -34,23 +32,30 @@ namespace ascension {
 				/// Conforms to the alternative identifier syntax of UAX #31.
 				UNICODE_ALTERNATIVE
 			};
-			// constructors
-			IdentifierSyntax() /*throw()*/;
+		public:
+			IdentifierSyntax() BOOST_NOEXCEPT;
 			explicit IdentifierSyntax(CharacterClassification type, bool ignoreCase = false
 #ifndef ASCENSION_NO_UNICODE_NORMALIZATION
 				, Decomposition equivalenceType = NO_DECOMPOSITION
 #endif // !ASCENSION_NO_UNICODE_NORMALIZATION
-			) /*throw()*/;
-			IdentifierSyntax(const IdentifierSyntax& other) /*throw()*/;
-			IdentifierSyntax& operator=(const IdentifierSyntax& other) /*throw()*/;
-			// singleton
-			static const IdentifierSyntax& defaultInstance() /*throw()*/;
-			// classification for character
-			bool isIdentifierStartCharacter(CodePoint c) const /*throw()*/;
-			bool isIdentifierContinueCharacter(CodePoint c) const /*throw()*/;
-			bool isWhiteSpace(CodePoint c, bool includeTab) const /*throw()*/;
+			) BOOST_NOEXCEPT;
+			IdentifierSyntax(const IdentifierSyntax& other) BOOST_NOEXCEPT;
+			IdentifierSyntax& operator=(const IdentifierSyntax& other) BOOST_NOEXCEPT;
 
-			// classification for sequence
+			/// @name Singleton
+			/// @{
+			static const IdentifierSyntax& defaultInstance() BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name Classification for Character
+			/// @{
+			bool isIdentifierStartCharacter(CodePoint c) const BOOST_NOEXCEPT;
+			bool isIdentifierContinueCharacter(CodePoint c) const BOOST_NOEXCEPT;
+			bool isWhiteSpace(CodePoint c, bool includeTab) const BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name Classification for Sequence
+			/// @{
 			/**
 			 * Checks whether the specified character sequence starts with an identifier.
 			 * The type @a CharacterSequence the bidirectional iterator expresses a UTF-n
@@ -90,8 +95,10 @@ namespace ascension {
 					++i;
 				return i.tell();
 			}
+			/// @}
 
-			// attributes
+			/// @name Syntax Overrides
+			/// @{
 			void overrideIdentifierStartCharacters(
 				const String& adding, const String& subtracting);
 			void overrideIdentifierStartCharacters(
@@ -100,6 +107,8 @@ namespace ascension {
 				const String& adding, const String& subtracting);
 			void overrideIdentifierNonStartCharacters(
 				const std::set<CodePoint>& adding, const std::set<CodePoint>& subtracting);
+			/// @}
+
 		private:
 			CharacterClassification type_;
 			bool caseSensitive_;
@@ -110,7 +119,6 @@ namespace ascension {
 				addedIDStartCharacters_, addedIDNonStartCharacters_,
 				subtractedIDStartCharacters_, subtractedIDNonStartCharacters_;
 		};
-
 	}
 } // namespace ascension.text
 

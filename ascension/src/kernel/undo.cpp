@@ -30,7 +30,7 @@ namespace {
 			bool completed;				// true if the change was *completely* performed
 			size_t numberOfRevisions;	// the number of the performed changes
 			Position endOfChange;		// the end position of the change
-			void reset() /*throw()*/ {
+			void reset() BOOST_NOEXCEPT {
 				completed = false;
 				numberOfRevisions = 0;
 //				endOfChange = Position();
@@ -38,7 +38,7 @@ namespace {
 		};
 	public:
 		// destructor
-		virtual ~UndoableChange() /*throw()*/ {}
+		virtual ~UndoableChange() BOOST_NOEXCEPT {}
 		// appends the "postChange" to this change and returns true, or returns false
 		virtual bool appendChange(AtomicChange& postChange, const Document& document) = 0;
 		// returns true if the change can perform
@@ -51,19 +51,19 @@ namespace {
 	class AtomicChange : public UndoableChange {
 	public:
 		struct TypeTag {};	// ugly dynamic type system for performance reason
-		virtual ~AtomicChange() /*throw()*/ {}
-		virtual const TypeTag& type() const /*throw()*/ = 0;
+		virtual ~AtomicChange() BOOST_NOEXCEPT {}
+		virtual const TypeTag& type() const BOOST_NOEXCEPT = 0;
 	};
 
 	// an atomic insertion change
 	class InsertionChange : public AtomicChange, public FastArenaObject<InsertionChange> {
 	public:
 		InsertionChange(const Position& position, const String& text) : position_(position), text_(text) {}
-		bool appendChange(AtomicChange&, const Document&) /*throw()*/ {return false;}
-		bool canPerform(const Document& document) const /*throw()*/ {return !document.isNarrowed() || document.region().includes(position_);}
+		bool appendChange(AtomicChange&, const Document&) BOOST_NOEXCEPT {return false;}
+		bool canPerform(const Document& document) const BOOST_NOEXCEPT {return !document.isNarrowed() || document.region().includes(position_);}
 		void perform(Document& document, Result& result);
 	private:
-		const TypeTag& type() const /*throw()*/ {return type_;}
+		const TypeTag& type() const BOOST_NOEXCEPT {return type_;}
 	private:
 		const Position position_;
 		const String text_;
@@ -73,12 +73,12 @@ namespace {
 	// an atomic deletion change
 	class DeletionChange : public AtomicChange, public FastArenaObject<DeletionChange> {
 	public:
-		explicit DeletionChange(const Region& region) /*throw()*/ : region_(region), revisions_(1) {}
-		bool appendChange(AtomicChange& postChange, const Document&) /*throw()*/;
-		bool canPerform(const Document& document) const /*throw()*/ {return !document.isNarrowed() || document.region().encompasses(region_);}
+		explicit DeletionChange(const Region& region) BOOST_NOEXCEPT : region_(region), revisions_(1) {}
+		bool appendChange(AtomicChange& postChange, const Document&) BOOST_NOEXCEPT;
+		bool canPerform(const Document& document) const BOOST_NOEXCEPT {return !document.isNarrowed() || document.region().encompasses(region_);}
 		void perform(Document& document, Result& result);
 	private:
-		const TypeTag& type() const /*throw()*/ {return type_;}
+		const TypeTag& type() const BOOST_NOEXCEPT {return type_;}
 	private:
 		Region region_;
 		size_t revisions_;
@@ -89,11 +89,11 @@ namespace {
 	class ReplacementChange : public AtomicChange, public FastArenaObject<ReplacementChange> {
 	public:
 		explicit ReplacementChange(const Region& region, const String& text) : region_(region), text_(text) {}
-		bool appendChange(AtomicChange&, const Document&) /*throw()*/ {return false;}
-		bool canPerform(const Document& document) const /*throw()*/ {return !document.isNarrowed() || document.region().encompasses(region_);}
+		bool appendChange(AtomicChange&, const Document&) BOOST_NOEXCEPT {return false;}
+		bool canPerform(const Document& document) const BOOST_NOEXCEPT {return !document.isNarrowed() || document.region().encompasses(region_);}
 		void perform(Document& document, Result& result);
 	private:
-		const TypeTag& type() const /*throw()*/ {return type_;}
+		const TypeTag& type() const BOOST_NOEXCEPT {return type_;}
 	private:
 		const Region region_;
 		const String text_;
@@ -103,9 +103,9 @@ namespace {
 	// a compound change
 	class CompoundChange : public UndoableChange {
 	public:
-		~CompoundChange() /*throw()*/;
+		~CompoundChange() BOOST_NOEXCEPT;
 		bool appendChange(AtomicChange& postChange, const Document& document);
-		bool canPerform(const Document& document) const /*throw()*/ {return !changes_.empty() && changes_.back()->canPerform(document);}
+		bool canPerform(const Document& document) const BOOST_NOEXCEPT {return !changes_.empty() && changes_.back()->canPerform(document);}
 		void perform(Document& document, Result& result);
 	private:
 		vector<AtomicChange*> changes_;
@@ -165,7 +165,7 @@ namespace {
 		result.numberOfRevisions = 1;
 	}
 
-	CompoundChange::~CompoundChange() /*throw()*/ {
+	CompoundChange::~CompoundChange() BOOST_NOEXCEPT {
 		BOOST_FOREACH(AtomicChange* change, changes_)
 			delete change;
 	}
@@ -209,21 +209,21 @@ class Document::UndoManager {
 	ASCENSION_NONCOPYABLE_TAG(UndoManager);
 public:
 	// constructors
-	explicit UndoManager(Document& document) /*throw()*/;
-	virtual ~UndoManager() /*throw()*/ {clear();}
+	explicit UndoManager(Document& document) BOOST_NOEXCEPT;
+	virtual ~UndoManager() BOOST_NOEXCEPT {clear();}
 	// attributes
-	size_t numberOfRedoableChanges() const /*throw()*/ {return redoableChanges_.size() + ((pendingAtomicChange_.get() != nullptr) ? 1 : 0);}
-	size_t numberOfUndoableChanges() const /*throw()*/ {return undoableChanges_.size() + ((pendingAtomicChange_.get() != nullptr) ? 1 : 0);}
-	bool isStackingCompoundOperation() const /*throw()*/ {return compoundChangeDepth_ > 0;}
+	size_t numberOfRedoableChanges() const BOOST_NOEXCEPT {return redoableChanges_.size() + ((pendingAtomicChange_.get() != nullptr) ? 1 : 0);}
+	size_t numberOfUndoableChanges() const BOOST_NOEXCEPT {return undoableChanges_.size() + ((pendingAtomicChange_.get() != nullptr) ? 1 : 0);}
+	bool isStackingCompoundOperation() const BOOST_NOEXCEPT {return compoundChangeDepth_ > 0;}
 	// rollbacks
 	void redo(UndoableChange::Result& result);
 	void undo(UndoableChange::Result& result);
 	// recordings
 	void addUndoableChange(AtomicChange& c);
-	void beginCompoundChange() /*throw()*/ {++compoundChangeDepth_;}
-	void clear() /*throw()*/;
-	void endCompoundChange() /*throw()*/;
-	void insertBoundary() /*throw()*/;
+	void beginCompoundChange() BOOST_NOEXCEPT {++compoundChangeDepth_;}
+	void clear() BOOST_NOEXCEPT;
+	void endCompoundChange() BOOST_NOEXCEPT;
+	void insertBoundary() BOOST_NOEXCEPT;
 private:
 	void commitPendingChange(bool beginCompound);
 	Document& document_;
@@ -236,7 +236,7 @@ private:
 };
 
 // constructor takes the target document
-Document::UndoManager::UndoManager(Document& document) /*throw()*/ : document_(document),
+Document::UndoManager::UndoManager(Document& document) BOOST_NOEXCEPT : document_(document),
 		compoundChangeDepth_(0), rollbacking_(false), rollbackingChange_(nullptr), currentCompoundChange_(nullptr) {
 }
 
@@ -265,7 +265,7 @@ void Document::UndoManager::addUndoableChange(AtomicChange& c) {
 }
 
 // clears the stacks
-inline void Document::UndoManager::clear() /*throw()*/ {
+inline void Document::UndoManager::clear() BOOST_NOEXCEPT {
 	while(!undoableChanges_.empty())
 		undoableChanges_.pop();
 	while(!redoableChanges_.empty())
@@ -296,7 +296,7 @@ inline void Document::UndoManager::commitPendingChange(bool beginCompound) {
 }
 
 // ends the compound change
-inline void Document::UndoManager::endCompoundChange() /*throw()*/ {
+inline void Document::UndoManager::endCompoundChange() BOOST_NOEXCEPT {
 	if(compoundChangeDepth_ == 0)
 // this does not throw IllegalStateException even if the internal counter is zero, because undo()
 // and redo() reset the counter to zero.
@@ -387,7 +387,7 @@ void Document::beginCompoundChange() {
 }
 
 /// Clears the undo/redo stacks and deletes the history.
-void Document::clearUndoBuffer() /*throw()*/ {
+void Document::clearUndoBuffer() BOOST_NOEXCEPT {
 	undoManager_->clear();
 	onceUndoBufferCleared_ = true;
 }
@@ -422,17 +422,17 @@ void Document::insertUndoBoundary() {
  * Returns true if the document is compound changing.
  * @see #beginCompoundChange, #endCompoundChange
  */
-bool Document::isCompoundChanging() const /*throw()*/ {
+bool Document::isCompoundChanging() const BOOST_NOEXCEPT {
 	return undoManager_->isStackingCompoundOperation();
 }
 
 /// Returns the number of undoable changes.
-size_t Document::numberOfUndoableChanges() const /*throw()*/ {
+size_t Document::numberOfUndoableChanges() const BOOST_NOEXCEPT {
 	return undoManager_->numberOfUndoableChanges();
 }
 
 /// Returns the number of redoable changes.
-size_t Document::numberOfRedoableChanges() const /*throw()*/ {
+size_t Document::numberOfRedoableChanges() const BOOST_NOEXCEPT {
 	return undoManager_->numberOfRedoableChanges();
 }
 
@@ -443,7 +443,7 @@ size_t Document::numberOfRedoableChanges() const /*throw()*/ {
  * undone. If set to @c false, discards the undo/redo information and disables the recording
  * @see #isRecordingChanges, #undo, #redo
  */
-void Document::recordChanges(bool record) /*throw()*/ {
+void Document::recordChanges(bool record) BOOST_NOEXCEPT {
 	if(!(recordingChanges_ = record))
 		clearUndoBuffer();
 }

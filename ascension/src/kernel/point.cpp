@@ -89,7 +89,7 @@ Point::Point(const Point& other) : document_(other.document_), position_(other.p
 }
 
 /// Destructor.
-Point::~Point() /*throw()*/ {
+Point::~Point() BOOST_NOEXCEPT {
 	lifeCycleListeners_.notify(&PointLifeCycleListener::pointDestroyed);
 	if(document_ != nullptr)
 		static_cast<detail::PointCollection<Point>*>(document_)->removePoint(*this);

@@ -46,7 +46,7 @@ namespace ascension {
 		class SingleStyledPartitionPresentationReconstructor : public PartitionPresentationReconstructor {
 			ASCENSION_UNASSIGNABLE_TAG(SingleStyledPartitionPresentationReconstructor);
 		public:
-			explicit SingleStyledPartitionPresentationReconstructor(std::shared_ptr<const TextRunStyle> style) /*noexcept*/;
+			explicit SingleStyledPartitionPresentationReconstructor(std::shared_ptr<const TextRunStyle> style) BOOST_NOEXCEPT;
 		private:
 			// PartitionPresentationReconstructor
 			std::unique_ptr<StyledTextRunIterator>

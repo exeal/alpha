@@ -92,8 +92,8 @@ namespace ascension {
 				explicit FontFamily(std::unique_ptr<Gdiplus::FontFamily>&& nativeObject);
 				explicit FontFamily(std::shared_ptr<Gdiplus::FontFamily> nativeObject);
 				explicit FontFamily(Gdiplus::FontFamily& nativeObject);	// weak ref.
-				std::shared_ptr<Gdiplus::FontFamily> asNativeObject() /*noexcept*/;
-				std::shared_ptr<const Gdiplus::FontFamily> asNativeObject() const /*noexcept*/;
+				std::shared_ptr<Gdiplus::FontFamily> asNativeObject() BOOST_NOEXCEPT;
+				std::shared_ptr<const Gdiplus::FontFamily> asNativeObject() const BOOST_NOEXCEPT;
 #else
 				/**
 				 * Constructor takes a family name.

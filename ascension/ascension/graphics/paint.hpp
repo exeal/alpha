@@ -89,7 +89,7 @@ namespace ascension {
 		class Gradient : public Paint {
 		public:
 			/// Destructor.
-			virtual ~Gradient() /*noexcept()*/ {}
+			virtual ~Gradient() BOOST_NOEXCEPT {}
 			/**
 			 * Adds a color stop with the given color to the gradient at the given offset.
 			 * @param offset The offset. 0.0 is the offset at one end of the gradient, 1.0 is the
@@ -126,7 +126,7 @@ namespace ascension {
 		 */
 		class Pattern : public Paint {
 		public:
-			virtual ~Pattern() /*throw()*/ {}
+			virtual ~Pattern() BOOST_NOEXCEPT {}
 		};
 
 	}

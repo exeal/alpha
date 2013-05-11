@@ -17,7 +17,6 @@
 
 namespace ascension {
 	namespace graphics {
-
 		/**
 		 * @c Color provides colors based on RGB values.
 		 * @see "CSS Color Module Level 3" (http://www.w3.org/TR/css3-color/)
@@ -27,28 +26,28 @@ namespace ascension {
 			static const Color TRANSPARENT_BLACK;
 		public:
 			/// Creates a color value based on RGB values.
-			Color(Byte red, Byte green, Byte blue, Byte alpha = 255) /*noexcept*/
+			Color(Byte red, Byte green, Byte blue, Byte alpha = 255) BOOST_NOEXCEPT
 				: red_(red * 0x0101), green_(green * 0x0101), blue_(blue * 0x0101), alpha_(alpha * 0x0101) {}
 			/// Converts into a native value.
 			template<typename NativeType> NativeType as() const;
 			/// Creates a @c Color object from native value.
-			template<typename NativeType> static Color from(const NativeType& value) /*noexcept*/;
+			template<typename NativeType> static Color from(const NativeType& value) BOOST_NOEXCEPT;
 			/// Returns the blue color component of this color.
-			Byte blue() const /*noexcept*/ {return blue_ >> 8;}
+			Byte blue() const BOOST_NOEXCEPT {return blue_ >> 8;}
 			/// Returns the green color component of this color.
-			Byte green() const /*noexcept*/ {return green_ >> 8;}
+			Byte green() const BOOST_NOEXCEPT {return green_ >> 8;}
 			/// Returns the red color component of this color.
-			Byte red() const /*noexcept*/ {return red_ >> 8;}
+			Byte red() const BOOST_NOEXCEPT {return red_ >> 8;}
 			/// Returns the alpha value of this color.
-			Byte alpha() const /*noexcept*/ {return alpha_ >> 8;}
+			Byte alpha() const BOOST_NOEXCEPT {return alpha_ >> 8;}
 			/// Returns @c true if this color is fully opaque.
-			bool isFullyOpaque() const /*noexcept*/ {return alpha() == 255;}
+			bool isFullyOpaque() const BOOST_NOEXCEPT {return alpha() == 255;}
 			/// Returns @c true if this color is fully transparent.
-			bool isFullyTransparent() const /*noexcept*/ {return alpha() == 0;}
+			bool isFullyTransparent() const BOOST_NOEXCEPT {return alpha() == 0;}
 			/// Returns @c true if this color is transparent.
-			bool isTransparent() const /*noexcept*/ {return !isFullyOpaque();}
+			bool isTransparent() const BOOST_NOEXCEPT {return !isFullyOpaque();}
 			/// Equality operator.
-			bool operator==(const Color& other) const /*noexcept*/ {
+			bool operator==(const Color& other) const BOOST_NOEXCEPT {
 				return red() == other.red() && green() == other.green()
 					&& blue() == other.blue() && alpha() == other.alpha();
 			}
@@ -72,13 +71,13 @@ namespace ascension {
 			temp.rgbReserved = alpha();
 			return temp;
 		}
-		template<> inline Color Color::from<COLORREF>(const COLORREF& value) /*noexcept*/ {
+		template<> inline Color Color::from<COLORREF>(const COLORREF& value) BOOST_NOEXCEPT {
 			return Color(
 				static_cast<Byte>(value & 0xff),
 				static_cast<Byte>((value >> 8) & 0xff),
 				static_cast<Byte>((value >> 16) & 0xff));
 		}
-		template<> inline Color Color::from<RGBQUAD>(const RGBQUAD& value) /*noexcept*/ {
+		template<> inline Color Color::from<RGBQUAD>(const RGBQUAD& value) BOOST_NOEXCEPT {
 			return Color(value.rgbRed, value.rgbGreen, value.rgbBlue, value.rgbReserved);
 		}
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
@@ -123,7 +122,6 @@ namespace ascension {
 			};
 			static Color get(Value value);
 		};
-
 	}
 }
 

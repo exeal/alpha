@@ -19,6 +19,7 @@
 #include <ascension/viewer/default-caret-shaper.hpp>
 #include <ascension/viewer/viewer.hpp>
 #include <ascension/viewer/virtual-box.hpp>
+#include <boost/range/algorithm/binary_search.hpp>
 
 using namespace ascension;
 using namespace ascension::graphics;
@@ -185,16 +186,10 @@ void Caret::beginRectangleSelection() {
  * @return true if the clipboard data is pastable
  */
 bool Caret::canPaste(bool useKillRing) const {
-	if(!useKillRing) {
-		const UINT rectangleClipFormat = ::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_MIME_FORMAT);
-		if(rectangleClipFormat != 0 && win32::boole(::IsClipboardFormatAvailable(rectangleClipFormat)))
-			return true;
-		else if(win32::boole(::IsClipboardFormatAvailable(CF_UNICODETEXT)) || win32::boole(::IsClipboardFormatAvailable(CF_TEXT)))
-			return true;
-	} else {
-		if(const texteditor::Session* const session = document().session())
-			return session->killRing().numberOfKills() != 0;
-	}
+	if(!useKillRing)
+		return canPastePlatformData();
+	else if(const texteditor::Session* const session = document().session())
+		return session->killRing().numberOfKills() != 0;
 	return false;
 }
 
@@ -374,13 +369,13 @@ namespace {
 	 * @param caret The caret
 	 * @param text The text to insert
 	 * @param keepNewline Set @c false to overwrite a newline characer
-	 * @throw NullPointerException @a first is @c null
+	 * @throw NullPointerException @a text is @c null
 	 * @throw DocumentDisposedException
 	 * @throw TextViewerDisposedException
 	 * @throw ... Any exceptions @c Document#replace throws
 	 */
 	void destructiveInsert(Caret& caret, const StringPiece& text, bool keepNewline = true) {
-		if(text.begin() == nullptr)
+		if(text.begin() == nullptr || text.end() == nullptr)
 			throw NullPointerException("text");
 		const bool adapts = caret.adaptsToDocument();
 		caret.adaptToDocument(false);
@@ -418,17 +413,17 @@ namespace {
  */
 bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true */, bool blockControls /* = true */) {
 	// check blockable control character
-	static const CodePoint SAFE_CONTROLS[] = {0x0009u, 0x001eu, 0x001fu};
+	static const array<CodePoint, 3> SAFE_CONTROLS = {0x0009u, 0x001eu, 0x001fu};
 	if(blockControls && character <= 0x00ffu
 			&& (iscntrl(static_cast<int>(character)) != 0)
-			&& !binary_search(SAFE_CONTROLS, ASCENSION_ENDOF(SAFE_CONTROLS), character))
+			&& !boost::binary_search(SAFE_CONTROLS, character))
 		return false;
 
 	// check the input sequence
 	k::Document& doc = document();
 	if(validateSequence) {
 		if(const texteditor::Session* const session = doc.session()) {
-			if(const texteditor::InputSequenceCheckers* const checker = session->inputSequenceCheckers()) {
+			if(const shared_ptr<const texteditor::InputSequenceCheckers> checker = session->inputSequenceCheckers()) {
 				const Char* const lineString = doc.line(line(beginning())).data();
 				if(!checker->check(StringPiece(lineString, offsetInLine(beginning())), character)) {
 					eraseSelection(*this);
@@ -470,8 +465,7 @@ bool Caret::inputCharacter(CodePoint character, bool validateSequence /* = true 
 			context_.lastTypedPosition = position();
 	}
 
-	characterInputListeners_.notify<const Caret&, CodePoint>(
-		&CharacterInputListener::characterInput, *this, character);
+	characterInputListeners_.notify<const Caret&, CodePoint>(&CharacterInputListener::characterInput, *this, character);
 	return true;
 }
 
@@ -603,6 +597,8 @@ void Caret::resetVisualization() {
 	::DestroyCaret();
 	::CreateCaret(viewer.handle().get(), image->asNativeObject().get(), 0, 0);
 	::ShowCaret(viewer.handle().get());
+#else
+	// TODO: Implement for other window systems.
 #endif
 
 	shapeCache_.image = move(image);
@@ -697,6 +693,8 @@ void Caret::updateLocation() {
 			static_cast<int>(geometry::y(p)) - geometry::y(shapeCache_.alignmentPoint));
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 	::SetCaretPos(boost::geometry::get<0>(newLocation), boost::geometry::get<1>(newLocation));
+#else
+	// TODO: Implement for other window systems.
 #endif
 	adjustInputMethodCompositionWindow();
 }
