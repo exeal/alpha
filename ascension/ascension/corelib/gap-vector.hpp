@@ -3,7 +3,7 @@
  * @author exeal
  * @date 2005-2009 (was gap-buffer.hpp)
  * @date 2010-10-20 Renamed GapBuffer to GapVector.
- * @date 2011-2012
+ * @date 2011-2013
  */
 
 #ifndef ASCENSION_GAP_VECTOR_HPP
@@ -52,8 +52,8 @@ namespace ascension {
 			std::random_access_iterator_tag, Reference, typename Target::difference_type> {
 		public:
 			typedef GapVectorIterator<Target, Pointer, Reference> Self;
-			GapVectorIterator() /*noexcept*/ : target_(nullptr) {}
-			GapVectorIterator(const Target& target, Pointer position) /*noexcept*/
+			GapVectorIterator() BOOST_NOEXCEPT : target_(nullptr) {}
+			GapVectorIterator(const Target& target, Pointer position) BOOST_NOEXCEPT
 					: target_(&target), current_(position - target.first_) {}
 			template<typename Pointer2, typename Reference2>
 			GapVectorIterator(const GapVectorIterator<Target, Pointer2, Reference2>& other)
@@ -63,36 +63,36 @@ namespace ascension {
 				current_ = other.current_;
 				return *this;
 			}
-			const Pointer get() const /*noexcept*/ {return target()->first_ + current_;}
-			const Target* target() const /*noexcept*/ {return target_;}
-		private:
-			difference_type offset() const /*noexcept*/ {
+			const Pointer get() const BOOST_NOEXCEPT {return target()->first_ + current_;}
+			difference_type offset() const BOOST_NOEXCEPT {
 				return (get() <= target_->gapFirst_) ?
 					get() - target_->first_ :
 						get() - target_->gapLast_ + target_->gapFirst_ - target_->first_;
 			}
+			const Target* target() const BOOST_NOEXCEPT {return target_;}
+		private:
 			friend class boost::iterator_core_access;
 			void advance(difference_type n) {
 				if(get() + n >= target_->gapFirst_ && get() + n < target_->gapLast_)
 					n += target_->gap();
 				current_ += n;
 			}
-			void decrement() /*noexcept*/ {
+			void decrement() BOOST_NOEXCEPT {
 				if(get() != target_->gapLast_)
 					--current_;
 				else
 					current_ = (target()->gapFirst_ - target()->first_) - 1;
 			}
-			reference dereference() const /*noexcept*/ {
+			reference dereference() const BOOST_NOEXCEPT {
 				return target_->first_[current_];
 			}
-			difference_type distance_to(const GapVectorIterator& other) const /*noexcept*/ {
+			difference_type distance_to(const GapVectorIterator& other) const BOOST_NOEXCEPT {
 				return current_ - other.current_;
 			}
-			bool equal(const GapVectorIterator& other) const /*noexcept*/ {
+			bool equal(const GapVectorIterator& other) const BOOST_NOEXCEPT {
 				return current_ == current_;
 			}
-			void increment() /*noexcept*/ {
+			void increment() BOOST_NOEXCEPT {
 				assert(get() != target_->gapFirst_);
 				++current_;
 				if(get() == target_->gapFirst_)
@@ -112,9 +112,6 @@ namespace ascension {
 		template<typename T, typename Allocator = std::allocator<T>>
 		class GapVector : boost::totally_ordered<GapVector<T, Allocator>> {
 		public:
-
-			// member types ///////////////////////////////////////////////////////////////////////
-
 			/// A type represents the allocator class.
 			typedef Allocator allocator_type;
 			/// A type counts the number of elements.
@@ -141,11 +138,10 @@ namespace ascension {
 			/// A type provides a random-access iterator can read any element in the content.
 			typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-
-			// core member functions //////////////////////////////////////////////////////////////
-
+			/// @name Construct/Copy/Destroy
+			/// @{
 			/**
-			 * Constructor.
+			 * Constructs an empty gap vector, using the specified allocator.
 			 * @param allocator The allocator object
 			 */
 			explicit GapVector(const allocator_type& allocator = allocator_type()) :
@@ -155,20 +151,21 @@ namespace ascension {
 				gapFirst_(first_), gapLast_(last_) {}
 
 			/**
-			 * Constructor specifies repition of a specified number of elements.
-			 * @param count The number of elements in the constructed content
+			 * Constructs a gap vector with @a n copies of value, using the specified allocator.
+			 * @param n The number of elements in the constructed content
 			 * @param value The value of elements in the constructed content
 			 * @param allocator The allocator object
 			 */
-			GapVector(size_type count, const_reference value,
+			GapVector(size_type n, const_reference value,
 					const allocator_type& allocator = allocator_type()) : allocator_(allocator),
-					first_(allocator_.allocate(count, 0)), last_(first_ + count),
+					first_(allocator_.allocate(count, 0)), last_(first_ + n),
 					gapFirst_(first_), gapLast_(last_) {
-				insert(0, count, value);
+				insert(0, n, value);
 			}
 
 			/**
-			 * Constructor copies a range of a gap vector.
+			 * Constructs a gap vector equal to the range <code>[first,last)</code>, using the
+			 * specified allocator.
 			 * @tparam Inputiterator The input iterator
 			 * @param first The first element in the range of elements to be copied
 			 * @param last The last element in the range of elements to be copied
@@ -247,14 +244,14 @@ namespace ascension {
 					*p = std::move(other.first_ + (p - first_));
 				other.first_ = other.last_ = other.gapFirst_ = other.gapLast_ = nullptr;
 			}
-
+#ifndef BOOST_NO_CXX11_HDR_INITIALIZER_LIST
 			/**
 			 * Constructor with an initializer list.
 			 * @param values The initializer list to initialize the elements of the container with
 			 * @param allocator The allocator object
 			 */
 			GapVector(std::initializer_list<value_type> values, const allocator_type& allocator);
-
+#endif	// !BOOST_NO_CXX11_HDR_INITIALIZER_LIST
 			/// Destructor.
 			~GapVector() {release();}
 
@@ -277,7 +274,9 @@ namespace ascension {
 				GapVector<value_type, allocator_type>(std::forward(other)).swap(*this);
 				return *this;
 			}
-
+#ifndef BOOST_NO_CXX11_HDR_INITIALIZER_LIST
+			GapVector& operator=(std::initializer_list<value_type> values);
+#endif	// !BOOST_NO_CXX11_HDR_INITIALIZER_LIST
 			/**
 			 * Assigns a range of elements.
 			 * @tparam InputIterator The input iterator type gives the range
@@ -292,20 +291,24 @@ namespace ascension {
 
 			/**
 			 * Assigns a number of elements.
-			 * @param count The new size of the container
+			 * @param n The new size of the container
 			 * @param value The value to initialize elements of the container with
 			 */
-			void assign(size_type count, const_reference value) {
-				GapVector<value_type, allocator_type> temp(count, value);
+			void assign(size_type n, const_reference value) {
+				GapVector<value_type, allocator_type> temp(n, value);
 				*this = std::move(temp);
 			}
+#ifndef BOOST_NO_CXX11_HDR_INITIALIZER_LIST
+			void assign(std::initializer_list<value_type> values);
+#endif	// !BOOST_NO_CXX11_HDR_INITIALIZER_LIST
 
 			/// Returns the allocator associated with the container.
 			allocator_type allocator() const {return allocator_;}
+			/// @}
 
 
-			// element accesses ///////////////////////////////////////////////////////////////////
-
+			/// @name Element Access
+			/// @{
 			/**
 			 * Returns a reference to the element at a specified position.
 			 * @param position The position of the element to return
@@ -335,7 +338,7 @@ namespace ascension {
 			 * @param position The position of the element to return
 			 * @return A reference to the requested element
 			 */
-			reference operator[](size_type position) /*throw()*/ {
+			reference operator[](size_type position) BOOST_NOEXCEPT {
 				return first_[(first_ + position < gapFirst_) ? position : position + gap()];
 			}
 
@@ -344,75 +347,75 @@ namespace ascension {
 			 * @param position The position of the element to return
 			 * @return A reference to the requested element
 			 */
-			const_reference operator[](size_type position) const /*throw()*/ {
+			const_reference operator[](size_type position) const BOOST_NOEXCEPT {
 				return first_[(first_ + position < gapFirst_) ? position : position + gap()];
 			}
 
 			/// Returns a reference to the first element in the container.
-			reference front() /*throw()*/ {return (*this)[0];}
+			reference front() BOOST_NOEXCEPT {return (*this)[0];}
 
 			/// Returns a reference to the first element in the container.
-			const_reference front() const /*throw()*/ {return (*this)[0];}
+			const_reference front() const BOOST_NOEXCEPT {return (*this)[0];}
 
 			/// Returns a reference to the last element in the container.
-			reference back() /*throw()*/ {return (*this)[size() - 1];}
+			reference back() BOOST_NOEXCEPT {return (*this)[size() - 1];}
 
 			/// Returns a const reference to the last element in the container.
-			const_reference back() const /*throw()*/ {return (*this)[size() - 1];}
+			const_reference back() const BOOST_NOEXCEPT {return (*this)[size() - 1];}
+			/// @}
 
-
-			// iterators //////////////////////////////////////////////////////////////////////////
-
-			/// Returns an iterator to the first element of the container.
-			iterator begin() /*noexcept*/ {return iterator(*this, first_);}
-
-			/// Returns an iterator to the first element of the container.
-			const_iterator begin() const /*noexcept*/ {return const_iterator(*this, first_);}
+			/// @name Iterators
+			/// @{
+			/** Returns an iterator to the first element of the container. */
+			iterator begin() BOOST_NOEXCEPT {return iterator(*this, first_);}
 
 			/// Returns an iterator to the first element of the container.
-			const_iterator cbegin() const /*noexcept*/ {return begin();}
+			const_iterator begin() const BOOST_NOEXCEPT {return const_iterator(*this, first_);}
+
+			/// Returns an iterator to the first element of the container.
+			const_iterator cbegin() const BOOST_NOEXCEPT {return begin();}
 
 			/// Returns an iterator to the element following the last element of the container.
-			iterator end() /*noexcept*/ {return iterator(*this, last_);}
+			iterator end() BOOST_NOEXCEPT {return iterator(*this, last_);}
 
 			/// Returns an iterator to the element following the last element of the container.
-			const_iterator end() const /*noexcept*/ {return const_iterator(*this, last_);}
+			const_iterator end() const BOOST_NOEXCEPT {return const_iterator(*this, last_);}
 
 			/// Returns an iterator to the element following the last element of the container.
-			const_iterator cend() const /*noexcept*/ {return end();}
+			const_iterator cend() const BOOST_NOEXCEPT {return end();}
 
 			/// Returns a reverse iterator to the first element of the reversed container.
-			reverse_iterator rbegin() /*noexcept*/ {return reverse_iterator(end());}
+			reverse_iterator rbegin() BOOST_NOEXCEPT {return reverse_iterator(end());}
 
 			/// Returns a reverse iterator to the first element of the reversed container.
-			const_reverse_iterator rbegin() const /*noexcept*/ {return const_reverse_iterator(end());}
+			const_reverse_iterator rbegin() const BOOST_NOEXCEPT {return const_reverse_iterator(end());}
 
 			/// Returns a reverse iterator to the first element of the reversed container.
-			const_reverse_iterator crbegin() const /*noexcept*/ {return rbegin();}
+			const_reverse_iterator crbegin() const BOOST_NOEXCEPT {return rbegin();}
 
 			/// Returns a reverse iterator to the element following the last element of the
 			/// reversed container.
-			reverse_iterator rend() /*noexcept*/ {return reverse_iterator(begin());}
+			reverse_iterator rend() BOOST_NOEXCEPT {return reverse_iterator(begin());}
 
 			/// Returns a reverse iterator to the element following the last element of the
 			/// reversed container.
-			const_reverse_iterator rend() const /*noexcept*/ {return const_reverse_iterator(begin());}
+			const_reverse_iterator rend() const BOOST_NOEXCEPT {return const_reverse_iterator(begin());}
 
 			/// Returns a reverse iterator to the element following the last element of the
 			/// reversed container.
-			const_reverse_iterator crend() const /*noexcept*/ {return rend();}
+			const_reverse_iterator crend() const BOOST_NOEXCEPT {return rend();}
 
-
-			// capacities /////////////////////////////////////////////////////////////////////////
-
-			/// Returns @c true if the container is empty.
-			bool empty() const /*noexcept*/ {return size() == 0;}
+			/// @name Capacity
+			/// @note @c GapVector does not provide @c resize methods.
+			/// @{
+			/** Returns @c true if the container is empty. */
+			bool empty() const BOOST_NOEXCEPT {return size() == 0;}
 
 			/// Returns the number of elements in the container.
-			size_type size() const /*noexcept*/ {return capacity() - gap();}
+			size_type size() const BOOST_NOEXCEPT {return capacity() - gap();}
 
 			/// Returns the maximum size of the container.
-			size_type maxSize() const /*noexcept*/ {return allocator_.max_size();}
+			size_type maxSize() const BOOST_NOEXCEPT {return allocator_.max_size();}
 
 			/**
 			 * Sets the capacity of the container to at least @a size.
@@ -420,15 +423,28 @@ namespace ascension {
 			 */
 			void reserve(size_type newCapacity) {reallocate(newCapacity);}
 
-			/// Returns the number of elements that the content could contain without allocating
-			/// more storage.
-			size_type capacity() const /*noexcept*/ {return last_ - first_;}
+			/**
+			 * Resizes the container to contain @a count elements.
+			 * @param count The new size of the container
+			 */
+			void resize(size_type size);
+
+			/**
+			 * Resizes the container to contain @a count elements.
+			 * @param count The new size of the container
+			 * @param value The value to initialize the new elements with
+			 */
+			void resize(size_type count, const_reference value);
+
+			/// Returns the total number of elements that the gap vector can hold without requiring reallocation.
+			size_type capacity() const BOOST_NOEXCEPT {return last_ - first_;}
 
 			/// Requests the removal of unused capacity.
 			void shrinkToFit() {reallocate(size());}
+			/// @}
 
-
-			// modifiers //////////////////////////////////////////////////////////////////////////
+			/// @name Modifiers
+			/// @{
 
 			/// Removes all elements from the container.
 			void clear() {erase(begin(), end());}	// TODO: Follow std.vector.clear semantics.
@@ -438,11 +454,12 @@ namespace ascension {
 			 * @param position The element before which the content will be inserted
 			 * @param value The element value to insert
 			 */
-			void insert(const_iterator position, const_reference value) {
+			iterator insert(const_iterator position, const_reference value) {
 				makeGapAt(position.get());
 				*(gapFirst_++) = value;
 				if(gapFirst_ == gapLast_)
 					reallocate(capacity() * 2);
+				return iterator(*this, gapFirst_);
 			}
 
 			/**
@@ -450,26 +467,28 @@ namespace ascension {
 			 * @param position The element before which the content will be inserted
 			 * @param value The element value to insert
 			 */
-			void insert(const_iterator position, value_type&& value) {
+			iterator insert(const_iterator position, value_type&& value) {
 				makeGapAt(position.get());
 				*(gapFirst_++) = std::move(value);
 				if(gapFirst_ == gapLast_)
 					reallocate(capacity() * 2);
+				return iterator(*this, gapFirst_);
 			}
 
 			/**
 			 * Inserts elements to the specified position in the container.
 			 * @param position The element before which the content will be inserted
-			 * @param count The number of the elements to insert
+			 * @param n The number of the elements to insert
 			 * @param value The element value to insert
 			 */
-			void insert(const_iterator position, size_type count, const_reference value) {
+			iterator insert(const_iterator position, size_type n, const_reference value) {
 				makeGapAt(first_ + size());
 				makeGapAt(position.get());
 				if(static_cast<size_type>(gap()) <= count)
-					reallocate(std::max(capacity() + count + 1, capacity() * 2));
-				std::fill_n(gapFirst_, count, value);
-				gapFirst_ += count;
+					reallocate(std::max(capacity() + n + 1, capacity() * 2));
+				std::fill_n(gapFirst_, n, value);
+				gapFirst_ += n;
+				return iterator(*this, gapFirst_ - n);
 			}
 
 			/**
@@ -480,28 +499,29 @@ namespace ascension {
 			 * @param last The end of the range of elements to insert
 			 */
 			template<typename InputIterator>
-			void insert(const_iterator position, InputIterator first, InputIterator last) {
-				const difference_type c = std::distance(first, last);
-				if(c != 0) {
-					if(c > gap())
-						reallocate(std::max(c + size(), capacity() * 2));
-//					makeGapAt(first_ + size());
-					makeGapAt(position.get());
-					pointer p = const_cast<pointer>(position.get());
-					gapFirst_ = first_ + (uninitializedCopy(first, last, p, allocator_) - first_);
+			iterator insert(const_iterator position, InputIterator first, InputIterator last) {
+				const difference_type n = std::distance(first, last);
+				if(n == 0)
+					return position;
+				if(n > gap()) {
+					const const_iterator::difference_type index = position.offset();
+					reallocate(std::max(n + size(), capacity() * 2));
+					position = cbegin() + index;
 				}
+//				makeGapAt(first_ + size());
+				makeGapAt(position.get());
+				pointer p = const_cast<pointer>(position.get());
+				gapFirst_ = first_ + (uninitializedCopy(first, last, p, allocator_) - first_);
+				return iterator(*this, gapFirst_ - n);
 			}
-
+#ifndef BOOST_NO_CXX11_HDR_INITIALIZER_LIST
 			/**
 			 * Inserts elements to the specified position in the container.
 			 * @param position The element before which the content will be inserted
 			 * @param values The initializer list to insert the values from
 			 */
-			void insert(const_iterator position, std::initializer_list<value_type> values);
-
-//			template<typename... Arguments>
-//			iterator emplace(const_iterator position, Arguments&& ...arguments);
-
+			iterator insert(const_iterator position, std::initializer_list<value_type> values);
+#endif	// !BOOST_NO_CXX11_HDR_INITIALIZER_LIST
 			/**
 			 * Removes an element in this gap vector.
 			 * @param position The position of the element to remove
@@ -539,33 +559,24 @@ namespace ascension {
 
 			void pushBack(const_reference value);
 			void pushBack(value_type&& value);
-//			template<typename... Arguments> void emplaceBack(Arguments&& ...arguments);
+#ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
+			template<typename... Arguments> void emplace(const_iterator position, Arguments&& ...arguments);
+			template<typename... Arguments> void emplaceBack(Arguments&& ...arguments);
+#endif	// !BOOST_NO_CXX11_VARIADIC_TEMPLATES
 			void popBack();
-
-			/**
-			 * Resizes the container to contain @a count elements.
-			 * @param count The new size of the container
-			 */
-			void resize(size_type size);
-
-			/**
-			 * Resizes the container to contain @a count elements.
-			 * @param count The new size of the container
-			 * @param value The value to initialize the new elements with
-			 */
-			void resize(size_type count, const_reference value);
 
 			/**
 			 * Exchanges the elements of two gap vectors.
 			 * @param other A gap vector whose elements to be exchanged
 			 */
-			void swap(GapVector& other) /*noexcept*/ {
+			void swap(GapVector& other) BOOST_NOEXCEPT {
 				std::swap(allocator_, other.allocator);
 				std::swap(first_, other.first_);
 				std::swap(last_, other.last_);
 				std::swap(gapFirst_, other.gapFirst_);
 				std::swap(gapLast_, other.gapLast_);
 			}
+			/// @}
 
 		private:
 			// helpers
@@ -573,7 +584,7 @@ namespace ascension {
 				for(; first != last; ++first)
 					allocator_.destroy(first);
 			}
-			difference_type gap() const /*throw()*/ {return gapLast_ - gapFirst_;}
+			difference_type gap() const BOOST_NOEXCEPT {return gapLast_ - gapFirst_;}
 			void makeGapAt(const_pointer position) {
 				pointer p = const_cast<pointer>(position);
 				if(position < gapFirst_) {
@@ -617,6 +628,7 @@ namespace ascension {
 					gapFirst_ += n;
 					gapLast_ += n;
 				}
+				assert(gapFirst_ == position);
 			}
 			void reallocate(size_type newCapacity) {
 				if(newCapacity > maxSize())
