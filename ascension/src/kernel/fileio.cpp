@@ -10,6 +10,8 @@
 #include <ascension/config.hpp>	// ASCENSION_NO_STANDARD_ENCODINGS
 #include <ascension/kernel/fileio.hpp>
 #include <boost/range/algorithm/copy.hpp>
+#include <boost/range/algorithm/find.hpp>
+#include <boost/range/algorithm/find_first_of.hpp>
 #include <limits>	// std.numeric_limits
 #ifdef ASCENSION_OS_POSIX
 #	include <cstdio>		// std.tempnam
@@ -29,30 +31,37 @@ using text::Newline;
 // free function //////////////////////////////////////////////////////////////////////////////////
 
 namespace {
+	inline void sanityCheckPathName(const PathStringPiece& s, const std::string& variableName) {
+		if(s.cbegin() == nullptr || s.cend() == nullptr)
+			throw NullPointerException(variableName);
+		if(s.cbegin() > s.cend())
+			throw invalid_argument(variableName + ".cbegin() > " + variableName + ".cend()");
+	}
+}
+
+namespace {
 #ifdef ASCENSION_OS_WINDOWS
-	static const PathCharacter PATH_SEPARATORS[] = {0x005cu, 0x002fu, 0};	// \ or /
+	static const array<PathCharacter, 2> PATH_SEPARATORS = {0x005cu, 0x002fu};	// \ or /
 #else // ASCENSION_OS_POSIX
-	static const PathCharacter PATH_SEPARATORS[] = "/";
+	static const array<PathCharacter, 1> PATH_SEPARATORS = {'/'};
 #endif
 	static const PathCharacter PREFERRED_PATH_SEPARATOR = PATH_SEPARATORS[0];
 	/// Returns @c true if the given character is a path separator.
-	inline bool isPathSeparator(PathCharacter c) /*noexcept*/ {
-		return find(PATH_SEPARATORS, ASCENSION_ENDOF(PATH_SEPARATORS) - 1, c) != ASCENSION_ENDOF(PATH_SEPARATORS) - 1;}
+	inline bool isPathSeparator(PathCharacter c) BOOST_NOEXCEPT {
+		return boost::find(PATH_SEPARATORS, c) != boost::end(PATH_SEPARATORS);
+	}
 	/**
 	 * Returns @c true if the specified file or directory exists.
 	 * @param name the name of the file
 	 * @return @c true if the file exists
-	 * @throw NullPointerException @a fileName is @c null
 	 * @throw IOException any I/O error occurred
 	 */
-	bool pathExists(const PathCharacter* name) {
-		if(name == nullptr)
-			throw NullPointerException("name");
+	bool pathExists(const PathStringPiece& name) {
 #ifdef ASCENSION_OS_WINDOWS
 #ifdef PathFileExists
-		return toBoolean(::PathFileExistsW(name));
+		return win32::boole(::PathFileExistsW(name.cbegin()));
 #else
-		if(::GetFileAttributesW(name) != INVALID_FILE_ATTRIBUTES)
+		if(::GetFileAttributesW(name.cbegin()) != INVALID_FILE_ATTRIBUTES)
 			return true;
 		const DWORD e = ::GetLastError();
 		if(e == ERROR_FILE_NOT_FOUND || e == ERROR_PATH_NOT_FOUND
@@ -70,9 +79,8 @@ namespace {
 	}
 
 	/// Finds the base name in the given file path name.
-	inline PathString::const_iterator findFileName(const PathString& s) {
-		const PathString::size_type i = s.find_last_of(PATH_SEPARATORS);
-		return begin(s) + ((i != PathString::npos) ? i + 1 : 0);
+	inline PathStringPiece::const_iterator findFileName(const PathStringPiece& s) {
+		return s.cbegin() + distance(boost::find_first_of(s | boost::adaptors::reversed, PATH_SEPARATORS), boost::rend(s));
 	}
 
 	/**
@@ -81,14 +89,14 @@ namespace {
 	 * @param[out] timeStamp The time
 	 * @throw IOException Any I/O error occurred
 	 */
-	void getFileLastWriteTime(const PathString& fileName, TextFileDocumentInput::Time& timeStamp) {
+	void getFileLastWriteTime(const PathStringPiece& fileName, TextFileDocumentInput::Time& timeStamp) {
 #ifdef ASCENSION_OS_WINDOWS
 		WIN32_FILE_ATTRIBUTE_DATA attributes;
-		if(::GetFileAttributesExW(fileName.c_str(), GetFileExInfoStandard, &attributes) != 0)
+		if(::GetFileAttributesExW(fileName.cbegin(), GetFileExInfoStandard, &attributes) != 0)
 			timeStamp = attributes.ftLastWriteTime;
 #else // ASCENSION_OS_POSIX
 		struct stat s;
-		if(::stat(fileName.c_str(), &s) == 0)
+		if(::stat(fileName.cbegin(), &s) == 0)
 			timeStamp = s.st_mtime;
 #endif
 		else
@@ -99,21 +107,18 @@ namespace {
 	 * Returns the size of the specified file.
 	 * @param fileName The name of the file
 	 * @return The size of the file in bytes or -1 if the file is too large
-	 * @throw NullPointerException @a fileName is @c null
 	 * @throw IOException Any I/O error occurred
 	 */
-	ptrdiff_t getFileSize(const PathCharacter* fileName) {
-		if(fileName == nullptr)
-			throw NullPointerException("fileName");
+	ptrdiff_t getFileSize(const PathStringPiece& fileName) {
 #ifdef ASCENSION_OS_WINDOWS
 		WIN32_FILE_ATTRIBUTE_DATA attributes;
-		if(::GetFileAttributesExW(fileName, GetFileExInfoStandard, &attributes) != 0)
+		if(::GetFileAttributesExW(fileName.cbegin(), GetFileExInfoStandard, &attributes) != 0)
 			return (attributes.nFileSizeHigh == 0
 				&& attributes.nFileSizeLow <= static_cast<DWORD>(numeric_limits<ptrdiff_t>::max())) ?
 					static_cast<ptrdiff_t>(attributes.nFileSizeLow) : -1;
 #else // ASCENSION_OS_POSIX
 		struct stat s;
-		if(::stat(fileName, &s) == 0)
+		if(::stat(fileName.cbegin(), &s) == 0)
 			return s.st_size;
 #endif
 		else
@@ -127,16 +132,18 @@ namespace {
 	 * @throw std#bad_alloc POSIX @c tempnam failed (only when @c ASCENSION_OS_POSIX was defined)
 	 * @throw IOException Any I/O error occurred
 	 */
-	PathString makeTemporaryFileName(const PathString& seed) {
-		unique_ptr<PathCharacter[]> s(new PathCharacter[seed.length() + 1]);
-		boost::copy(seed, s.get());
-		s[seed.length()] = 0;
-		PathCharacter* const name = s.get() + (findFileName(seed) - begin(seed));
-		if(name != s.get())
-			name[-1] = 0;
+	PathString makeTemporaryFileName(const PathStringPiece& seed) {
+#ifndef BOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS
+		PathString s(seed);
+#else
+		PathString s(begin(seed), end(seed));
+#endif
+		const PathString::const_iterator name(s.cbegin() + distance(seed.cbegin(), findFileName(seed)));
+		if(name != s.cbegin())
+			s.resize(distance(s.cbegin(), name) - 1);
 #ifdef ASCENSION_OS_WINDOWS
 		WCHAR result[MAX_PATH];
-		if(::GetTempFileNameW(s.get(), name, 0, result) != 0)
+		if(::GetTempFileNameW(s.c_str(), s.data() + distance(s.cbegin(), name), 0, result) != 0)
 			return result;
 #else // ASCENSION_OS_POSIX
 		if(char* p = ::tempnam(s.get(), name)) {
@@ -154,9 +161,9 @@ namespace {
 	 * @param fileName The file name
 	 * @throw IOException Any I/O error occurred
 	 */
-	bool isSpecialFile(const PathString& fileName) {
+	bool isSpecialFile(const PathStringPiece& fileName) {
 #ifdef ASCENSION_OS_WINDOWS
-		HANDLE file = ::CreateFileW(fileName.c_str(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, 0, nullptr);
+		HANDLE file = ::CreateFileW(fileName.cbegin(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, 0, nullptr);
 		if(file != INVALID_HANDLE_VALUE) {
 			const DWORD fileType = ::GetFileType(file);
 			::CloseHandle(file);
@@ -172,7 +179,7 @@ namespace {
 		}
 #else // ASCENSION_OS_POSIX
 		struct stat s;
-		if(::stat(fileName.c_str(), &s) == 0)
+		if(::stat(fileName.cbegin(), &s) == 0)
 			return !S_ISREG(s.st_mode);
 #endif
 		else
@@ -220,60 +227,70 @@ namespace {
  * @throw NullPointerException @a pathName is @c null
  * @see comparePathNames
  */
-PathString fileio::canonicalizePathName(const PathCharacter* pathName) {
-	if(pathName == nullptr)
-		throw NullPointerException("pathName");
+PathString fileio::canonicalizePathName(const PathStringPiece& pathName) {
+	sanityCheckPathName(pathName, "pathName");
 
 #ifdef ASCENSION_OS_WINDOWS
 
-	if(wcslen(pathName) >= MAX_PATH)	// too long name
-		return pathName;
+	if(pathName.length() >= MAX_PATH)	// too long name
+#ifndef BOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS
+		return PathString(pathName);
+#else
+		return PathString(begin(pathName), end(pathName));
+#endif
 
 	// resolve relative path name
-	WCHAR path[MAX_PATH];
+	array<WCHAR, MAX_PATH> fullName;
 	WCHAR* dummy;
-	if(::GetFullPathNameW(pathName, ASCENSION_COUNTOF(path), path, &dummy) == 0)
-		wcscpy(path, pathName);
+	if(::GetFullPathNameW(pathName.cbegin(), fullName.size(), fullName.data(), &dummy) == 0)
+		wcscpy(fullName.data(), pathName.cbegin());
 
 	// get real component names (from Ftruename implementation in xyzzy)
 	PathString result;
 	result.reserve(MAX_PATH);
-	const PathCharacter* p = path;
-	if(((p[0] >= L'A' && p[0] <= L'Z') || (p[0] >= L'a' && p[0] <= L'z'))
-			&& p[1] == L':' && isPathSeparator(p[2])) {	// drive letter
-		result.append(path, 3);
-		result[0] = towupper(path[0]);	// unify with uppercase letters...
-		p += 3;
-	} else if(isPathSeparator(p[0]) && isPathSeparator(p[1])) {	// UNC?
-		if((p = wcspbrk(p + 2, PATH_SEPARATORS)) == nullptr)	// server name
+	auto view(boost::make_iterator_range(fullName));
+	if(((view[0] >= L'A' && view[0] <= L'Z') || (view[0] >= L'a' && view[0] <= L'z'))
+			&& view[1] == L':' && isPathSeparator(view[2])) {	// drive letter
+		result.append(fullName.data(), 3);
+		result[0] = towupper(fullName[0]);	// unify with uppercase letters...
+		view.advance_begin(+3);
+	} else if(all_of(begin(view), begin(view) + 1, &isPathSeparator)) {	// UNC?
+		view = boost::make_iterator_range(boost::find_first_of(view.advance_begin(+2), PATH_SEPARATORS), end(view));
+		if(view.empty())	// server name
 			return false;
-		if((p = wcspbrk(p + 1, PATH_SEPARATORS)) == nullptr)	// shared name
+		view = boost::make_iterator_range(boost::find_first_of(view.advance_begin(+1), PATH_SEPARATORS), end(view));
+		if(view.empty())	// shared name
 			return false;
-		result.append(path, ++p - path);
+		result.append(begin(fullName), begin(view.advance_begin(+1)));
 	} else	// not absolute name
-		return pathName;
+#ifndef BOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS
+		return PathString(pathName);
+#else
+		return PathString(begin(pathName), end(pathName));
+#endif
 
 	WIN32_FIND_DATAW wfd;
 	while(true) {
-		if(PathCharacter* next = wcspbrk(const_cast<PathCharacter*>(p), PATH_SEPARATORS)) {
+		auto next = boost::find_first_of(view, PATH_SEPARATORS);
+		if(next != end(view)) {
 			const PathCharacter c = *next;
 			*next = 0;
-			HANDLE h = ::FindFirstFileW(path, &wfd);
+			HANDLE h = ::FindFirstFileW(fullName.data(), &wfd);
 			if(h != INVALID_HANDLE_VALUE) {
 				::FindClose(h);
 				result += wfd.cFileName;
 			} else
-				result += p;
+				result.append(begin(view), end(view));
 			*next = c;
 			result += PREFERRED_PATH_SEPARATOR;
-			p = next + 1;
+			view = boost::make_iterator_range(next + 1, end(view));
 		} else {
-			HANDLE h = ::FindFirstFileW(path, &wfd);
+			HANDLE h = ::FindFirstFileW(fullName.data(), &wfd);
 			if(h != INVALID_HANDLE_VALUE) {
 				::FindClose(h);
 				result += wfd.cFileName;
 			} else
-				result += p;
+				result.append(begin(view), end(view));
 			break;
 		}
 	}
@@ -295,32 +312,32 @@ PathString fileio::canonicalizePathName(const PathCharacter* pathName) {
  * @throw NullPointerException Either file name is @c null
  * @see canonicalizePathName
  */
-bool fileio::comparePathNames(const PathCharacter* s1, const PathCharacter* s2) {
-	if(s1 == nullptr || s2 == nullptr)
-		throw NullPointerException("either file name is null.");
+bool fileio::comparePathNames(const PathStringPiece& s1, const PathStringPiece& s2) {
+	sanityCheckPathName(s1, "s1");
+	sanityCheckPathName(s2, "s2");
 
 #ifdef ASCENSION_OS_WINDOWS
 #ifdef PathMatchSpec
-	if(toBoolean(::PathMatchSpecW(s1, s2)))
+	if(win32::boole(::PathMatchSpecW(s1, s2)))
 		return true;
 #endif // PathMatchSpec
 	// by lexicographical comparison
-	const int c1 = static_cast<int>(wcslen(s1)) + 1, c2 = static_cast<int>(wcslen(s2)) + 1;
-	const int fc1 = ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, nullptr, 0);
-	const int fc2 = ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, nullptr, 0);
+	const int c1 = static_cast<int>(s1.length()) + 1, c2 = static_cast<int>(s2.length()) + 1;
+	const int fc1 = ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1.cbegin(), c1, nullptr, 0);
+	const int fc2 = ::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2.cbegin(), c2, nullptr, 0);
 	if(fc1 != 0 && fc2 != 0 && fc1 == fc2) {
 		unique_ptr<WCHAR[]> fs1(new WCHAR[fc1]), fs2(new WCHAR[fc2]);
-		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1, c1, fs1.get(), fc1);
-		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2, c2, fs2.get(), fc2);
+		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1.cbegin(), c1, fs1.get(), fc1);
+		::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2.cbegin(), c2, fs2.get(), fc2);
 		if(wmemcmp(fs1.get(), fs2.get(), fc1) == 0)
 			return pathExists(s1);
 	}
 	// by volume information
 	bool eq = false;
-	HANDLE f1 = ::CreateFileW(s1, 0,
+	HANDLE f1 = ::CreateFileW(s1.cbegin(), 0,
 		FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 	if(f1 != INVALID_HANDLE_VALUE) {
-		HANDLE f2 = ::CreateFileW(s2, 0,
+		HANDLE f2 = ::CreateFileW(s2.cbegin(), 0,
 			FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 		if(f2 != INVALID_HANDLE_VALUE) {
 			BY_HANDLE_FILE_INFORMATION fi1;
@@ -338,11 +355,11 @@ bool fileio::comparePathNames(const PathCharacter* s1, const PathCharacter* s2) 
 	return eq;
 #else // ASCENSION_OS_POSIX
 	// by lexicographical comparison
-	if(strcmp(s1, s2) == 0)
+	if(boost::lexicographical_compare(s1, s2) == 0)
 		return true;
 	// by volume information
 	struct stat st1, st2;
-	return ::stat(s1, &st1) == 0 && ::stat(s2, &st2) == 0
+	return ::stat(s1.cbegin(), &st1) == 0 && ::stat(s2.cbegin(), &st2) == 0
 		&& st1.st_dev == st2.st_dev && st1.st_ino == st2.st_ino
 		&& st1.st_size == st2.st_size && st1.st_mtime == st2.st_mtime;
 #endif
@@ -364,7 +381,7 @@ bool fileio::comparePathNames(const PathCharacter* s1, const PathCharacter* s2) 
  * @throw ... Any exceptions @c TextFileStreamBuffer#TextFileStreamBuffer and @c kernel#insert throw
  */
 pair<string, bool> fileio::insertFileContents(Document& document,
-		const Position& at, const PathString& fileName, const string& encoding,
+		const Position& at, const PathStringPiece& fileName, const string& encoding,
 		Encoder::SubstitutionPolicy encodingSubstitutionPolicy, Position* endOfInsertedString /* = nullptr */) {
 	TextFileStreamBuffer sb(fileName, ios_base::in, encoding, encodingSubstitutionPolicy, false);
 	basic_istream<Char> in(&sb);
@@ -391,7 +408,7 @@ pair<string, bool> fileio::insertFileContents(Document& document,
  * @throw ... Any I/O error occurred
  */
 void fileio::writeRegion(const Document& document, const Region& region,
-		const PathString& fileName, const WritingFormat& format, bool append /* = false */) {
+		const PathStringPiece& fileName, const WritingFormat& format, bool append /* = false */) {
 	// verify encoding-specific newline
 	verifyNewline(format.encoding, format.newline);
 
@@ -405,7 +422,7 @@ void fileio::writeRegion(const Document& document, const Region& region,
 
 	// check if writable
 #ifdef ASCENSION_OS_WINDOWS
-	const DWORD originalAttributes = ::GetFileAttributesW(fileName.c_str());
+	const DWORD originalAttributes = ::GetFileAttributesW(fileName.cbegin());
 	if(originalAttributes != INVALID_FILE_ATTRIBUTES && win32::boole(originalAttributes & FILE_ATTRIBUTE_READONLY))
 		throw IOException(fileName, ERROR_ACCESS_DENIED);
 #else // ASCENSION_OS_POSIX
@@ -441,15 +458,15 @@ void fileio::writeRegion(const Document& document, const Region& region,
 /**
  * Constructor.
  */
-IOException::IOException(const PathString& fileName) :
-		ios_base::failure(makePlatformError().what(), makePlatformError().code()), fileName_(fileName) {
+IOException::IOException(const PathStringPiece& fileName) :
+		ios_base::failure(makePlatformError().what(), makePlatformError().code()), fileName_(fileName.cbegin(), fileName.cend()) {
 }
 
 /**
  * Constructor.
  */
-IOException::IOException(const PathString& fileName, error_code::value_type code) :
-		ios_base::failure(makePlatformError(code).what(), makePlatformError(code).code()), fileName_(fileName) {
+IOException::IOException(const PathStringPiece& fileName, error_code::value_type code) :
+		ios_base::failure(makePlatformError(code).what(), makePlatformError(code).code()), fileName_(fileName.cbegin(), fileName.cend()) {
 }
 
 /// Returns the file name.
@@ -522,10 +539,10 @@ namespace {
  * @throw UnsupportedEncodingException The encoding specified by @a encoding is not supported
  * @throw PlatformDependentIOError
  */
-TextFileStreamBuffer::TextFileStreamBuffer(const PathString& fileName, ios_base::openmode mode,
+TextFileStreamBuffer::TextFileStreamBuffer(const PathStringPiece& fileName, ios_base::openmode mode,
 		const string& encoding, Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
-		bool writeUnicodeByteOrderMark) : fileName_(fileName), mode_(mode) {
-	inputMapping_.first = inputMapping_.last = inputMapping_.current = nullptr;
+		bool writeUnicodeByteOrderMark) : fileName_(fileName.cbegin(), fileName.cend()), mode_(mode) {
+	sanityCheckPathName(fileName, "fileName");
 	if(mode == ios_base::in)
 		openForReading(encoding);
 	else if(mode == ios_base::out
@@ -554,7 +571,7 @@ void TextFileStreamBuffer::buildEncoder(const string& encoding, bool detectEncod
 	else if(detectEncoding) {
 		if(EncodingDetector* detector = EncodingDetector::forName(encoding)) {
 			const pair<MIBenum, string> detected(detector->detect(
-				inputMapping_.first, min(inputMapping_.last, inputMapping_.first + 1024 * 10), nullptr));
+				begin(inputMapping_.buffer), min(end(inputMapping_.buffer), begin(inputMapping_.buffer) + 1024 * 10), nullptr));
 			if(detected.first != MIB_OTHER)
 				encoder_ = Encoder::forMIB(detected.first);
 			else
@@ -574,18 +591,17 @@ void TextFileStreamBuffer::buildInputMapping() {
 		fileMapping_ = ::CreateFileMappingW(fileHandle_, nullptr, PAGE_READONLY, 0, 0, nullptr);
 		if(fileMapping_ == nullptr)
 			throw IOException(fileName());
-		inputMapping_.first = static_cast<const Byte*>(::MapViewOfFile(fileMapping_, FILE_MAP_READ, 0, 0, 0));
-		if(inputMapping_.first == nullptr) {
+		inputMapping_.buffer = boost::make_iterator_range<const Byte*>(static_cast<const Byte*>(::MapViewOfFile(fileMapping_, FILE_MAP_READ, 0, 0, 0)), nullptr);
+		if(begin(inputMapping_.buffer) == nullptr) {
 			SystemErrorSaver ses;
 			::CloseHandle(fileMapping_);
 			throw IOException(fileName(), ses.code());
 		}
 	} else
 		fileMapping_ = nullptr;
-	inputMapping_.last = inputMapping_.first + fileSize;
 #else // ASCENSION_OS_POSIX
-	inputMapping_.first = static_cast<const Byte*>(::mmap(0, fileSize, PROT_READ, MAP_PRIVATE, fileDescriptor_, 0));
-	if(inputMapping_.first == MAP_FAILED)
+	inputMapping_.buffer = boost::make_iterator_range<const Byte*>(static_cast<const Byte*>(::mmap(0, fileSize, PROT_READ, MAP_PRIVATE, fileDescriptor_, 0)), nullptr);
+	if(begin(inputMapping_.buffer) == MAP_FAILED)
 		throw IOException(fileName());
 	bool succeeded = false;
 	off_t org = ::lseek(fileDescriptor_, 0, SEEK_CUR);
@@ -598,9 +614,9 @@ void TextFileStreamBuffer::buildInputMapping() {
 	}
 	if(!succeeded)
 		throw IOException(fileName());
-	inputMapping_.last = inputMapping_.first + fileSize;
 #endif
-	inputMapping_.current = inputMapping_.first;
+	inputMapping_.buffer = boost::make_iterator_range(begin(inputMapping_.buffer), begin(inputMapping_.buffer) + fileSize);
+	inputMapping_.current = begin(inputMapping_.buffer);
 }
 
 /**
@@ -647,9 +663,9 @@ TextFileStreamBuffer* TextFileStreamBuffer::closeAndDiscard() {
 TextFileStreamBuffer* TextFileStreamBuffer::closeFile() BOOST_NOEXCEPT {
 #ifdef ASCENSION_OS_WINDOWS
 	if(fileMapping_ != nullptr) {
-		::UnmapViewOfFile(const_cast<Byte*>(inputMapping_.first));
+		::UnmapViewOfFile(const_cast<Byte*>(begin(inputMapping_.buffer)));
 		::CloseHandle(fileMapping_);
-		inputMapping_.first = nullptr;
+		inputMapping_.buffer = boost::make_iterator_range<const Byte*>(nullptr, nullptr);
 		fileMapping_ = nullptr;
 	}
 	if(fileHandle_ != INVALID_HANDLE_VALUE) {
@@ -668,11 +684,11 @@ TextFileStreamBuffer* TextFileStreamBuffer::closeFile() BOOST_NOEXCEPT {
 		return this;
 	}
 #endif
-	if(encoder_.get() != 0) {
+	if(encoder_.get() != nullptr) {
 		encoder_->resetEncodingState();
 		encoder_->resetDecodingState();
 	}
-	return 0;	// didn't close the file actually
+	return nullptr;	// didn't close the file actually
 }
 
 /**
@@ -763,7 +779,7 @@ void TextFileStreamBuffer::openForWriting(const string& encoding, bool writeUnic
 		if((mode() & ios_base::app) != 0)
 			buildInputMapping();
 		else
-			inputMapping_.first = nullptr;
+			inputMapping_.buffer = boost::make_iterator_range<const Byte*>(nullptr, nullptr);
 		buildEncoder(encoding, (mode() & ios_base::app) != 0);
 	} catch(...) {
 		closeFile();
@@ -772,12 +788,12 @@ void TextFileStreamBuffer::openForWriting(const string& encoding, bool writeUnic
 
 	if(writeUnicodeByteOrderMark)
 		encoder_->setFlags(encoder_->flags() | Encoder::UNICODE_BYTE_ORDER_MARK);
-	setp(ucsBuffer_, ASCENSION_ENDOF(ucsBuffer_));
+	setp(ucsBuffer_.data(), ucsBuffer_.data() + ucsBuffer_.size());
 }
 
 /// @see std#basic_streambuf#overflow
 TextFileStreamBuffer::int_type TextFileStreamBuffer::overflow(int_type c) {
-	if(inputMapping_.first != nullptr || sync() == -1)
+	if(begin(inputMapping_.buffer) != nullptr || sync() == -1)
 		return traits_type::eof();	// not output mode or can't synchronize
 
 	*pptr() = traits_type::to_char_type(c);
@@ -787,7 +803,7 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::overflow(int_type c) {
 
 /// @see std#basic_streambuf#pbackfail
 TextFileStreamBuffer::int_type TextFileStreamBuffer::pbackfail(int_type c) {
-	if(inputMapping_.first != nullptr) {
+	if(begin(inputMapping_.buffer) != nullptr) {
 		if(gptr() > eback()) {
 			gbump(-1);
 			return traits_type::not_eof(c);	// c is ignored
@@ -799,17 +815,17 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::pbackfail(int_type c) {
 /// std#basic_streambuf#sync
 int TextFileStreamBuffer::sync() {
 	// this method converts ucsBuffer_ into the native encoding and writes
-	if(isOpen() && inputMapping_.first == nullptr && pptr() > pbase()) {
+	if(isOpen() && begin(inputMapping_.buffer) == nullptr && pptr() > pbase()) {
 		Byte* toNext;
 		const Char* fromNext;
-		Byte nativeBuffer[ASCENSION_COUNTOF(ucsBuffer_)];
+		array<Byte, tuple_size<decltype(ucsBuffer_)>::value> nativeBuffer;
 		encoder_->setFlags(encoder_->flags() | Encoder::BEGINNING_OF_BUFFER | Encoder::END_OF_BUFFER);
 		while(true) {
 			const Char* const fromEnd = pptr();
 
 			// conversion
 			const Encoder::Result encodingResult = encoder_->fromUnicode(
-				nativeBuffer, ASCENSION_ENDOF(nativeBuffer), toNext, pbase(), fromEnd, fromNext);
+				nativeBuffer.data(), nativeBuffer.data() + nativeBuffer.size(), toNext, pbase(), fromEnd, fromNext);
 			if(encodingResult == Encoder::UNMAPPABLE_CHARACTER)
 				throw UnmappableCharacterException();
 			else if(encodingResult == Encoder::MALFORMED_INPUT)
@@ -818,9 +834,9 @@ int TextFileStreamBuffer::sync() {
 			// write into the file
 #ifdef ASCENSION_OS_WINDOWS
 			DWORD writtenBytes;
-			assert(static_cast<size_t>(toNext - nativeBuffer) <= numeric_limits<DWORD>::max());
-			const DWORD bytes = static_cast<DWORD>(toNext - nativeBuffer);
-			if(::WriteFile(fileHandle_, nativeBuffer, bytes, &writtenBytes, 0) == 0 || writtenBytes != bytes)
+			assert(static_cast<size_t>(toNext - nativeBuffer.data()) <= numeric_limits<DWORD>::max());
+			const DWORD bytes = static_cast<DWORD>(toNext - nativeBuffer.data());
+			if(::WriteFile(fileHandle_, nativeBuffer.data(), bytes, &writtenBytes, 0) == 0 || writtenBytes != bytes)
 #else // ASCENSION_OS_POSIX
 			const size_t bytes = toNext - nativeBuffer;
 			const ssize_t writtenBytes = ::write(fileDescriptor_, nativeBuffer, bytes);
@@ -828,25 +844,25 @@ int TextFileStreamBuffer::sync() {
 #endif
 				throw IOException(fileName());
 
-			setp(ucsBuffer_ + (fromNext - ucsBuffer_), epptr());
+			setp(ucsBuffer_.data() + (fromNext - ucsBuffer_.data()), epptr());
 			pbump(static_cast<int>(fromEnd - pbase()));	// TODO: this cast may be danger.
 			if(encodingResult == Encoder::COMPLETED)
 				break;
 		}
-		setp(ucsBuffer_, ASCENSION_ENDOF(ucsBuffer_));
+		setp(ucsBuffer_.data(), ucsBuffer_.data() + ucsBuffer_.size());
 	}
 	return 0;
 }
 
 /// @see std#basic_streambuf#underflow
 TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
-	if(inputMapping_.first == nullptr || inputMapping_.current >= inputMapping_.last)
+	if(begin(inputMapping_.buffer) == nullptr || inputMapping_.current >= end(inputMapping_.buffer))
 		return traits_type::eof();	// not input mode or reached EOF
 
 	Char* toNext;
 	const Byte* fromNext;
 	encoder_->setFlags(encoder_->flags() | Encoder::BEGINNING_OF_BUFFER | Encoder::END_OF_BUFFER);
-	switch(encoder_->toUnicode(ucsBuffer_, ASCENSION_ENDOF(ucsBuffer_), toNext, inputMapping_.current, inputMapping_.last, fromNext)) {
+	switch(encoder_->toUnicode(ucsBuffer_.data(), ucsBuffer_.data() + ucsBuffer_.size(), toNext, inputMapping_.current, end(inputMapping_.buffer), fromNext)) {
 	case Encoder::UNMAPPABLE_CHARACTER:
 		throw UnmappableCharacterException();
 	case Encoder::MALFORMED_INPUT:
@@ -856,8 +872,8 @@ TextFileStreamBuffer::int_type TextFileStreamBuffer::underflow() {
 	}
 
 	inputMapping_.current = fromNext;
-	setg(ucsBuffer_, ucsBuffer_, toNext);
-	return (toNext > ucsBuffer_) ? traits_type::to_int_type(*gptr()) : traits_type::eof();
+	setg(ucsBuffer_.data(), ucsBuffer_.data(), toNext);
+	return (toNext > ucsBuffer_.data()) ? traits_type::to_int_type(*gptr()) : traits_type::eof();
 }
 
 /// Returns @c true if the internal encoder has @c Encoder#UNICODE_BYTE_ORDER_MARK flag.
@@ -921,6 +937,7 @@ inline bool TextFileDocumentInput::FileLocker::hasLock() const BOOST_NOEXCEPT {
  * @throw IOException
  */
 bool TextFileDocumentInput::FileLocker::lock(const PathString& fileName, bool share) {
+	sanityCheckPathName(fileName, "fileName");
 	if(fileName.empty())
 #ifdef ASCENSION_OS_WINDOWS
 		throw IOException(fileName, ERROR_FILE_NOT_FOUND);
@@ -1096,12 +1113,13 @@ void TextFileDocumentInput::addListener(FilePropertyListener& listener) {
  *
  * @param fileName
  */
-void TextFileDocumentInput::bind(const PathString& fileName) {
+void TextFileDocumentInput::bind(const PathStringPiece& fileName) {
+	sanityCheckPathName(fileName, "fileName");
 	if(fileName.empty())
 		return unbind();
 
-	const PathString realName(canonicalizePathName(fileName.c_str()));
-	if(!pathExists(realName.c_str()))
+	const PathString realName(canonicalizePathName(fileName));
+	if(!pathExists(realName))
 #ifdef ASCENSION_OS_WINDOWS
 		throw IOException(fileName, ERROR_FILE_NOT_FOUND);
 #else // ASCENSION_OS_POSIX
@@ -1180,7 +1198,7 @@ bool TextFileDocumentInput::isChangeable(const Document&) const {
 }
 
 /// @see IDocumentInput#location
-String TextFileDocumentInput::location() const /*noexcept*/ {
+String TextFileDocumentInput::location() const BOOST_NOEXCEPT {
 #ifdef ASCENSION_OS_WINDOWS
 	return fileName();
 #else // ASCENSION_OS_POSIX
@@ -1386,6 +1404,7 @@ bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) B
 
 /*
 void backupAtRecycleBin(const PathString& fileName) {
+	sanityCheckPathName(fileName, "fileName");
 	if(pathExists(fileName.c_str())) {
 		WCHAR backupPath[MAX_PATH + 1];
 		SHFILEOPSTRUCTW	shfos = {
@@ -1520,7 +1539,7 @@ DirectoryIteratorBase::~DirectoryIteratorBase() BOOST_NOEXCEPT {
 // DirectoryIterator ////////////////////////////////////////////////////////
 
 namespace {
-	inline bool isDotOrDotDot(const PathString& s) {
+	inline bool isDotOrDotDot(const PathStringPiece& s) {
 		return !s.empty() && s[0] == '.' && (s.length() == 1 || (s.length() == 2 && s[1] == '.'));
 	}
 } // namespace @0
@@ -1531,16 +1550,15 @@ namespace {
  * @throw NullPointerException @a directoryName is @c null
  * @throw IOException Any I/O error occurred
  */
-DirectoryIterator::DirectoryIterator(const PathCharacter* directoryName) :
+DirectoryIterator::DirectoryIterator(const PathStringPiece& directoryName) :
 #ifdef ASCENSION_OS_WINDOWS
 		handle_(INVALID_HANDLE_VALUE),
 #else // ASCENSION_OS_POSIX
 		handle_(0),
 #endif
 		done_(false) {
-	if(directoryName == nullptr)
-		throw NullPointerException("directoryName");
-	else if(directoryName[0] == 0)
+	sanityCheckPathName(directoryName, "directoryName");
+	if(directoryName[0] == 0)
 #ifdef ASCENSION_OS_WINDOWS
 		throw IOException(directoryName, ERROR_PATH_NOT_FOUND);
 #else // ASCENSION_OS_POSIX
@@ -1550,19 +1568,18 @@ DirectoryIterator::DirectoryIterator(const PathCharacter* directoryName) :
 #ifdef ASCENSION_OS_WINDOWS
 	if(!pathExists(directoryName))
 		throw IOException(directoryName, ERROR_PATH_NOT_FOUND);
-	const size_t len = wcslen(directoryName);
-	assert(len > 0);
-	unique_ptr<PathCharacter[]> pattern(new PathCharacter[len + 3]);
-	wmemcpy(pattern.get(), directoryName, len);
-	wcscpy(pattern.get() + len, isPathSeparator(pattern[len - 1]) ? L"*" : L"\\*");
+	PathString pattern;
+	pattern.reserve(directoryName.length() + 2);
+	pattern.assign(begin(directoryName), end(directoryName));
+	pattern.append(isPathSeparator(pattern.back()) ? L"*" : L"\\*");
 	WIN32_FIND_DATAW data;
-	handle_ = ::FindFirstFileW(pattern.get(), &data);
+	handle_ = ::FindFirstFileW(pattern.c_str(), &data);
 	if(handle_ == INVALID_HANDLE_VALUE)
 		throw IOException(directoryName);
 	update(&data);
-	directory_.assign(pattern.get(), isPathSeparator(pattern[len - 1]) ? len - 1 : len);
+	directory_.assign(pattern.c_str(), isPathSeparator(pattern[directoryName.length() - 1]) ? directoryName.length() - 1 : directoryName.length());
 #else // ASCENSION_OS_POSIX
-	handle_ = ::opendir(directoryName);
+	handle_ = ::opendir(directoryName.cbegin());
 	if(handle_ == 0)
 		throw IOException(directoryName);
 	update(0);
@@ -1654,7 +1671,7 @@ void DirectoryIterator::update(const void* info) {
  * @throw IOException Can be @c IOException#FILE_NOT_FOUND or
  *                    @c IOException#PLATFORM_DEPENDENT_ERROR
  */
-RecursiveDirectoryIterator::RecursiveDirectoryIterator(const PathCharacter* directoryName) : doesntPushNext_(false) {
+RecursiveDirectoryIterator::RecursiveDirectoryIterator(const PathStringPiece& directoryName) : doesntPushNext_(false) {
 	stack_.push(new DirectoryIterator(directoryName));
 }
 
