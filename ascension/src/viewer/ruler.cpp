@@ -35,16 +35,16 @@ RulerStyles::IndicatorMargin::IndicatorMargin() BOOST_NOEXCEPT : visible(false),
 
 void drawLineNumber(PaintContext& context, const Point& origin, Index lineNumber, const NumberSubstitution& ns) {
 	// format number string
-	wchar_t s[128];	// oops, is this sufficient?
+	array<wchar_t, 128> s;	// TODO: Oops, is this sufficient?
 	// TODO: std.swprintf may be slow.
 	// TODO: use 'ns' parameter.
 #if defined(_MSC_VER) && (_MSC_VER < 1400)
-	const int length = swprintf(s, L"%lu", lineNumber);
+	const int length = swprintf(s.data(), L"%lu", lineNumber);
 #else
-	const int length = swprintf(s, ASCENSION_COUNTOF(s), L"%lu", lineNumber);
+	const int length = swprintf(s.data(), s.size(), L"%lu", lineNumber);
 #endif // _MSC_VER < 1400
 
-	context.fillText(s, origin);
+	context.fillText(s.data(), origin);
 }
 
 /**

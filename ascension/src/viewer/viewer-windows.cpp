@@ -590,9 +590,9 @@ STDMETHODIMP TextViewer::DragEnter(IDataObject* data, DWORD keyState, POINTL loc
 			ULONG fetched;
 			dout << L"DragEnter received a data object exposes the following formats.\n";
 			for(formats->Reset(); formats->Next(1, &format, &fetched) == S_OK; ) {
-				WCHAR name[256];
-				if(::GetClipboardFormatNameW(format.cfFormat, name, ASCENSION_COUNTOF(name) - 1) != 0)
-					dout << L"\t" << name << L"\n";
+				array<WCHAR, 256> name;
+				if(::GetClipboardFormatNameW(format.cfFormat, name.data(), name.size() - 1) != 0)
+					dout << L"\t" << name.data() << L"\n";
 				else
 					dout << L"\t" << L"(unknown format : " << format.cfFormat << L")\n";
 				if(format.ptd != nullptr)

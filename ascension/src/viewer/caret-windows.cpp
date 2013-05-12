@@ -258,10 +258,10 @@ win32::com::SmartPointer<widgetapi::NativeMimeData> utils::createMimeDataForSele
 
 	// ANSI text format and locale
 	UINT codePage = CP_ACP;
-	wchar_t codePageString[6];
-	if(0 != ::GetLocaleInfoW(caret.clipboardLocale(), LOCALE_IDEFAULTANSICODEPAGE, codePageString, ASCENSION_COUNTOF(codePageString))) {
+	array<wchar_t, 6> codePageString;
+	if(0 != ::GetLocaleInfoW(caret.clipboardLocale(), LOCALE_IDEFAULTANSICODEPAGE, codePageString.data(), codePageString.size())) {
 		wchar_t* eob;
-		codePage = wcstoul(codePageString, &eob, 10);
+		codePage = wcstoul(codePageString.data(), &eob, 10);
 	}
 	format.cfFormat = CF_TEXT;
 	int nativeLength = ::WideCharToMultiByte(codePage, 0, text.c_str(), static_cast<int>(text.length()), nullptr, 0, nullptr, nullptr);
