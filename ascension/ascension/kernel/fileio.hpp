@@ -18,6 +18,8 @@
 #elif defined(ASCENSION_OS_POSIX)
 #	include <dirent.h>						// DIR
 #endif
+#include <boost/range/const_iterator.hpp>
+#include <array>
 #ifndef ASCENSION_NO_GREP
 #	include <stack>
 #endif // !ASCENSION_NO_GREP
@@ -34,6 +36,8 @@ namespace ascension {
 			typedef ASCENSION_FILE_NAME_CHARACTER_TYPE PathCharacter;
 			/// String type for file names.
 			typedef std::basic_string<PathCharacter> PathString;
+			/// String reference type for file names.
+			typedef boost::basic_string_ref<PathCharacter, std::char_traits<PathCharacter>> PathStringPiece;
 
 			/// Used by functions and methods write to files. 
 			struct WritingFormat {
@@ -50,8 +54,8 @@ namespace ascension {
 
 			class IOException : public std::ios_base::failure {
 			public:
-				explicit IOException(const PathString& fileName);
-				IOException(const PathString& fileName, const std::error_code::value_type code);
+				explicit IOException(const PathStringPiece& fileName);
+				IOException(const PathStringPiece& fileName, const std::error_code::value_type code);
 				~IOException() BOOST_NOEXCEPT;
 				const PathString& fileName() const BOOST_NOEXCEPT;
 			public:
@@ -133,7 +137,7 @@ namespace ascension {
 			class TextFileStreamBuffer : public std::basic_streambuf<Char> {
 				ASCENSION_NONCOPYABLE_TAG(TextFileStreamBuffer);
 			public:
-				TextFileStreamBuffer(const PathString& fileName,
+				TextFileStreamBuffer(const PathStringPiece& fileName,
 					std::ios_base::openmode mode, const std::string& encoding,
 					encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
 					bool writeUnicodeByteOrderMark);
@@ -165,10 +169,10 @@ namespace ascension {
 #endif
 				const PathString fileName_;
 				std::ios_base::openmode mode_;
-				struct {
-					const Byte* first;
-					const Byte* last;
+				struct InputMapping {
+					boost::iterator_range<const Byte*> buffer;
 					const Byte* current;
+					InputMapping() BOOST_NOEXCEPT : buffer(nullptr, nullptr), current(nullptr) {}
 				} inputMapping_;
 #ifdef ASCENSION_OS_WINDOWS
 				LARGE_INTEGER originalFileEnd_;
@@ -176,7 +180,7 @@ namespace ascension {
 				off_t originalFileEnd_;
 #endif
 				std::unique_ptr<encoding::Encoder> encoder_;
-				Char ucsBuffer_[8192];
+				std::array<Char, 8192> ucsBuffer_;
 			};
 
 			class TextFileDocumentInput : public DocumentInput {
@@ -217,7 +221,7 @@ namespace ascension {
 
 				/// @name Bound File
 				/// @{
-				void bind(const PathString& fileName);
+				void bind(const PathStringPiece& fileName);
 				PathString fileName() const BOOST_NOEXCEPT;
 				bool isBoundToFile() const BOOST_NOEXCEPT;
 				void lockFile(const LockMode& mode);
@@ -302,7 +306,7 @@ namespace ascension {
 			class DirectoryIterator : public DirectoryIteratorBase {
 			public:
 				// constructors
-				DirectoryIterator(const PathCharacter* directoryName);
+				DirectoryIterator(const PathStringPiece& directoryName);
 				~DirectoryIterator() BOOST_NOEXCEPT;
 				// DirectoryIteratorBase
 				const PathString& current() const;
@@ -326,7 +330,7 @@ namespace ascension {
 			class RecursiveDirectoryIterator : public DirectoryIteratorBase {
 			public:
 				// constructors
-				RecursiveDirectoryIterator(const PathCharacter* directoryName);
+				RecursiveDirectoryIterator(const PathStringPiece& directoryName);
 				~RecursiveDirectoryIterator() BOOST_NOEXCEPT;
 				// attributes
 				void dontPush();
@@ -345,16 +349,20 @@ namespace ascension {
 			};
 #endif // !ASCENSION_NO_GREP
 
-			// free functions related to file path name
-			PathString canonicalizePathName(const PathCharacter* pathName);
-			bool comparePathNames(const PathCharacter* s1, const PathCharacter* s2);
+			/// @defgroup file_pathname Free Functions Related to File Path Name
+			/// @{
+			PathString canonicalizePathName(const PathStringPiece& pathName);
+			bool comparePathNames(const PathStringPiece& s1, const PathStringPiece& s2);
+			/// @}
 
-			// free function
+			/// @defgroup Free Functions Related to Document and File Path Name
+			/// @{
 			std::pair<std::string, bool> insertFileContents(Document& document,
-				const Position& at, const PathString& fileName, const std::string& encoding,
+				const Position& at, const PathStringPiece& fileName, const std::string& encoding,
 				encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy, Position* endOfInsertedString = nullptr);
 			void writeRegion(const Document& document, const Region& region,
-				const PathString& fileName, const WritingFormat& format, bool append = false);
+				const PathStringPiece& fileName, const WritingFormat& format, bool append = false);
+			/// @}
 
 			/// Returns the file name.
 			inline const PathString& TextFileStreamBuffer::fileName() const BOOST_NOEXCEPT {return fileName_;}
