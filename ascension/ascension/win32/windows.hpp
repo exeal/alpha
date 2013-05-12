@@ -1,6 +1,7 @@
 /**
  * @file windows.hpp
- * @date 2006-2012 exeal
+ * @author exeal
+ * @date 2006-2013
  */
 
 #ifndef ASCENSION_WIN32_WINDOWS_HPP
@@ -163,6 +164,20 @@ namespace ascension {
 
 
 // macros ///////////////////////////////////////////////////////////////////
+
+#if(_MSC_VER < 1300 && 0)
+// for MSVC6 + NOMINMAX
+namespace std {
+	template<typename T> inline const T& max(const T& a1, const T& a2) {return (a1 < a2) ? a2 : a1;}
+	template<typename T, typename Pr> inline const T& max(const T& a1, const T& a2, Pr pred) {return pred(a1, a2) ? a2 : a1;}
+	template<typename T> inline const T& min(const T& a1, const T& a2) {return (a2 < a1) ? a2 : a1;}
+	template<typename T, typename Pr> inline const T& min(const T& a1, const T& a2, Pr pred) {return pred(a2, a1) ? a2 : a1;}
+	typedef unsigned int size_t;
+}
+
+// for MSVC6 which can't use "/Zc:forScope"
+#	define for if(0); else for 
+#endif
 
 // sizeof(MENUITEMINFO)
 #if(WINVER >= 0x0500 && !defined(MENUITEMINFO_SIZE_VERSION_400))
