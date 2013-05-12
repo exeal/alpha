@@ -463,16 +463,16 @@ bool CharacterToCodePointConversionCommand::perform() {
 	Caret& caret = viewer.caret();
 	const String& lineString = document.line(line(eos));
 	const CodePoint c = text::utf::decodeLast(begin(lineString), begin(lineString) + offsetInLine(eos));
-	Char buffer[7];
+	array<Char, 7> buffer;
 #if(_MSC_VER < 1400)
-	swprintf(buffer, L"%lX", c);
+	swprintf(buffer.data(), L"%lX", c);
 #else
-	swprintf(buffer, ASCENSION_COUNTOF(buffer), L"%lX", c);
+	swprintf(buffer.data(), buffer.size(), L"%lX", c);
 #endif // _MSC_VER < 1400
 	AutoFreeze af(&viewer);
 	caret.select(Position(line(eos), offsetInLine(eos) - ((c > 0xffff) ? 2 : 1)), eos);
 	try {
-		caret.replaceSelection(buffer, false);
+		caret.replaceSelection(buffer.data(), false);
 	} catch(const DocumentInput::ChangeRejectedException&) {
 		return false;
 	}

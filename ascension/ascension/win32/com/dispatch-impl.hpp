@@ -80,7 +80,7 @@ namespace ascension {
 					hr = typeLibrary->GetTypeInfoOfGuid(*iid, typeInformation_.initialize());
 					assert(SUCCEEDED(hr));
 				}
-				SmartPointer<ITypeInfo> get() const /*throw()*/ {return typeInformation_;}
+				SmartPointer<ITypeInfo> get() const BOOST_NOEXCEPT {return typeInformation_;}
 			private:
 				SmartPointer<ITypeInfo> typeInformation_;
 			};
@@ -101,7 +101,7 @@ namespace ascension {
 					assert(SUCCEEDED(hr));
 				}
 				/// Returns an @c ITypeInfo instance.
-				SmartPointer<ITypeInfo> get() const /*throw()*/ {return typeInformation_;}
+				SmartPointer<ITypeInfo> get() const BOOST_NOEXCEPT {return typeInformation_;}
 			private:
 				SmartPointer<ITypeInfo> typeInformation_;
 			};
@@ -114,15 +114,15 @@ namespace ascension {
 			class TypeInformationFromExecutable {
 			public:
 				TypeInformationFromExecutable() {
-					WCHAR programName[MAX_PATH];
-					const DWORD n = ::GetModuleFileNameW(nullptr, programName, ASCENSION_COUNTOF(programName));
-					if(n != 0 && n != ASCENSION_COUNTOF(programName)) {
+					std::array<WCHAR, MAX_PATH> programName;
+					const DWORD n = ::GetModuleFileNameW(nullptr, programName.data(), programName.size());
+					if(n != 0 && n != programName.size()) {
 						SmartPointer<ITypeLib> typeLibrary;
-						if(SUCCEEDED(::LoadTypeLib(programName, typeLibrary.initialize())))
+						if(SUCCEEDED(::LoadTypeLib(programName.data(), typeLibrary.initialize())))
 							typeLibrary->GetTypeInfoOfGuid(*iid, typeInformation_.initialize());
 					}
 				}
-				SmartPointer<ITypeInfo> get() const /*throw()*/ {return typeInformation_;}
+				SmartPointer<ITypeInfo> get() const BOOST_NOEXCEPT {return typeInformation_;}
 			private:
 				SmartPointer<ITypeInfo> typeInformation_;
 			};

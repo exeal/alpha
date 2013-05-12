@@ -698,7 +698,7 @@ Byte EncoderFactoryBase::substitutionCharacter() const BOOST_NOEXCEPT {
 
 // implementation.sbcs.BidirectionalMap ///////////////////////////////////////////////////////////
 
-const Byte sbcs::BidirectionalMap::UNMAPPABLE_16x16_UNICODE_TABLE[0x100] = {
+const array<const Byte, 0x100> sbcs::BidirectionalMap::UNMAPPABLE_16x16_UNICODE_TABLE = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -715,25 +715,25 @@ const Byte sbcs::BidirectionalMap::UNMAPPABLE_16x16_UNICODE_TABLE[0x100] = {
  *                            16Å~16-characters
  */
 sbcs::BidirectionalMap::BidirectionalMap(const Char** byteToCharacterWire) BOOST_NOEXCEPT : byteToUnicode_(byteToCharacterWire) {
-	fill_n(unicodeToByte_, ASCENSION_COUNTOF(unicodeToByte_), static_cast<Byte*>(nullptr));
+	unicodeToByte_.fill(nullptr);
 	buildUnicodeToByteTable();	// eager?
 }
 
 /// Destructor.
 sbcs::BidirectionalMap::~BidirectionalMap() BOOST_NOEXCEPT {
 	for(size_t i = 0; i < ASCENSION_COUNTOF(unicodeToByte_); ++i) {
-		if(unicodeToByte_[i] != UNMAPPABLE_16x16_UNICODE_TABLE)
+		if(unicodeToByte_[i] != UNMAPPABLE_16x16_UNICODE_TABLE.data())
 			delete[] unicodeToByte_[i];
 	}
 }
 
 void sbcs::BidirectionalMap::buildUnicodeToByteTable() {
 	assert(unicodeToByte_[0] == 0);
-	fill_n(unicodeToByte_, ASCENSION_COUNTOF(unicodeToByte_), const_cast<Byte*>(UNMAPPABLE_16x16_UNICODE_TABLE));
+	unicodeToByte_.fill(const_cast<Byte*>(UNMAPPABLE_16x16_UNICODE_TABLE.data()));
 	for(int i = 0x00; i < 0xff; ++i) {
 		const Char ucs = wireAt(byteToUnicode_, static_cast<Byte>(i));
 		Byte*& p = unicodeToByte_[ucs >> 8];
-		if(p == UNMAPPABLE_16x16_UNICODE_TABLE) {
+		if(p == UNMAPPABLE_16x16_UNICODE_TABLE.data()) {
 			p = new Byte[0x100];
 			fill_n(p, 0x100, UNMAPPABLE_BYTE);
 		}

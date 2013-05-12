@@ -717,12 +717,12 @@ void Document::replace(const Region& region, const StringPiece& text, Position* 
 void Document::replace(const Region& region, basic_istream<Char>& in, Position* endOfInsertedString /* = nullptr */) {
 	// TODO: this implementation is provisional and not exception-safe.
 	Position e;
-	Char buffer[0x8000];
+	array<Char, 0x8000> buffer;
 	for(Region r(region); in; r.first = r.second = e) {
-		in.read(buffer, ASCENSION_COUNTOF(buffer));
+		in.read(buffer.data(), buffer.size());
 		if(in.gcount() == 0)
 			break;
-		replace(r, StringPiece(buffer, static_cast<StringPiece::size_type>(in.gcount())), &e);
+		replace(r, StringPiece(buffer.data(), static_cast<StringPiece::size_type>(in.gcount())), &e);
 	}
 	if(endOfInsertedString != 0)
 		*endOfInsertedString = e;

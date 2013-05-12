@@ -10,6 +10,7 @@
 #include <ascension/config.hpp>	// ASCENSION_NO_*_ENCODINGS
 #include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/string-piece.hpp>
+#include <array>
 #include <memory>	// std.unique_ptr
 #include <locale>	// std.locale, std.codecvt
 #include <vector>
@@ -544,8 +545,8 @@ namespace ascension {
 					void buildUnicodeToByteTable();
 				private:
 					const Char** const byteToUnicode_;
-					Byte* unicodeToByte_[0x100];
-					static const Byte UNMAPPABLE_16x16_UNICODE_TABLE[0x100];
+					std::array<Byte*, 0x100> unicodeToByte_;
+					static const std::array<const Byte, 0x100> UNMAPPABLE_16x16_UNICODE_TABLE;
 				};
 
 				/// Generates ISO IR C0 character sequence 0x00 through 0x0F.

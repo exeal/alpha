@@ -107,8 +107,8 @@ AutoScrollOriginMark::AutoScrollOriginMark(TextViewer& viewer) BOOST_NOEXCEPT {
  * @throw UnknownValueException @a type is unknown
  */
 const widgetapi::Cursor& AutoScrollOriginMark::cursorForScrolling(CursorType type) {
-	static unique_ptr<widgetapi::Cursor> instances[3];
-	if(type >= ASCENSION_COUNTOF(instances))
+	static array<unique_ptr<widgetapi::Cursor>, 3> instances;
+	if(static_cast<size_t>(type) >= instances.size())
 		throw UnknownValueException("type");
 	if(instances[type].get() == nullptr) {
 		static const uint8_t AND_LINE_3_TO_11[] = {
