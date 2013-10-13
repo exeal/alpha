@@ -37,6 +37,11 @@ namespace ascension {
 			static const Newline USE_INTRINSIC_VALUE;
 			static const Newline USE_DOCUMENT_INPUT;
 		public:
+			/**
+			 * Default-constructor creates a newline which refers to platform-native NLF.
+			 * @see ASCENSION_DEFAULT_NEWLINE
+			 */
+			Newline() BOOST_NOEXCEPT : value_(ASCENSION_DEFAULT_NEWLINE.value_) {}
 			/// Copy-constructor.
 			Newline(const Newline& other) BOOST_NOEXCEPT : value_(other.value_) {}
 			/// Copy-assignment operator.
