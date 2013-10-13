@@ -2,12 +2,11 @@
  * @file application.hpp
  * @author exeal
  * @date 2003-2006 (was Alpha.h)
- * @date 2006-2009
+ * @date 2006-2009, 2013
  */
 
 #ifndef ALPHA_APPLICATION_HPP
 #define ALPHA_APPLICATION_HPP
-#include "alpha.hpp"
 #include "resource.h"
 #include "buffer.hpp"
 //#include "search.hpp"	// ui.SearchDialog

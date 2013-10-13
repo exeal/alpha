@@ -4,7 +4,7 @@
 
 #ifndef ALPHA_AMBIENT_HPP
 #define ALPHA_AMBIENT_HPP
-#include <manah/object.hpp>	// MANAH_NONCOPYABLE_TAG
+#include <ascension/corelib/basic-types.hpp>
 #define BOOST_PYTHON_STATIC_LIB
 #include <boost/python.hpp>
 #include <list>
@@ -24,12 +24,12 @@ namespace alpha {
 		};
 
 		class Interpreter {
-			MANAH_NONCOPYABLE_TAG(Interpreter);
+			ASCENSION_NONCOPYABLE_TAG(Interpreter);
 		public:
-			static const manah::uint LOWEST_INSTALLATION_ORDER = static_cast<manah::uint>(-1);
+			static const std::uint32_t LOWEST_INSTALLATION_ORDER = static_cast<std::uint32_t>(-1);
 		public:
 			~Interpreter() /*throw()*/;
-			void addInstaller(void (*installer)(), manah::uint order);
+			void addInstaller(void (*installer)(), std::uint32_t order);
 			boost::python::object executeFile(const std::wstring& fileName);
 			void install();
 			static Interpreter& instance();
@@ -51,7 +51,7 @@ namespace alpha {
 			Interpreter();
 		private:
 			struct Installer {
-				manah::uint order;
+				std::uint32_t order;
 				void (*function)();
 			};
 			boost::python::object package_;
@@ -72,7 +72,7 @@ namespace alpha {
 
 #define ALPHA_EXPOSE_PROLOGUE(order)				\
 	namespace {										\
-	const manah::uint installationOrder = order;	\
+	const std::uint32_t installationOrder = order;	\
 		void installAPIs() {
 
 #define ALPHA_EXPOSE_EPILOGUE()																			\
