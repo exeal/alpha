@@ -338,6 +338,9 @@
     <ClCompile Include="..\..\ascension\src\viewer\virtual-box.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\buffer-list.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -741,6 +744,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\virtual-box.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\buffer-list.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
