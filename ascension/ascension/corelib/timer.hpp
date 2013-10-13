@@ -1,5 +1,5 @@
 /**
- * @file timer.hpp
+ * @file corelib/timer.hpp
  * @author exeal
  * @date 2011-06-29 created
  */

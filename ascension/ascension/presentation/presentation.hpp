@@ -11,6 +11,7 @@
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/kernel/document.hpp>
+#include <ascension/presentation/length.hpp>	// Length.Context
 #include <boost/range/irange.hpp>
 
 namespace ascension {

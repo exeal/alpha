@@ -205,7 +205,7 @@ namespace ascension {
 				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
 			/// @}
 
-			/// @defgroup
+			/// @defgroup additional_model_and_view_coordinates_conversions Additional Model and View Coordinates Conversions
 			/// @{
 			Scalar lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline = 0);
 			Scalar lineStartEdge(const TextLayout& layout, Scalar contentMeasure, Index subline = 0);
