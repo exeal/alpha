@@ -2,17 +2,18 @@
  * @file buffer.hpp
  * @author exeal
  * @date 2003-2010 (was AlphaDoc.h and BufferList.h)
+ * @date 2013
  */
 
 #ifndef ALPHA_BUFFER_HPP
 #define ALPHA_BUFFER_HPP
 
 #include "ambient.hpp"
-#include <ascension/fileio.hpp>
-#include <ascension/presentation.hpp>
-#include <ascension/session.hpp>
-#include <manah/win32/ui/menu.hpp>
-#include <manah/win32/ui/common-controls.hpp>
+#include <ascension/kernel/fileio.hpp>
+#include <ascension/presentation/presentation.hpp>
+#include <ascension/text-editor/session.hpp>
+#include <ascension/win32/ui/menu.hpp>
+#include <ascension/win32/ui/common-controls.hpp>
 
 
 namespace alpha {

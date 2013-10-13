@@ -340,9 +340,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\alpha.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\ambient.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
