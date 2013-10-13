@@ -226,6 +226,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\src\buffer-list.cpp" />
     <ClCompile Include="..\src\buffer.cpp">
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</RuntimeTypeInfo>
     </ClCompile>
@@ -356,6 +357,7 @@
     <ClInclude Include="..\..\ascension\ascension\win32\window.hpp" />
     <ClInclude Include="..\src\ambient.hpp" />
     <ClInclude Include="..\src\application.hpp" />
+    <ClInclude Include="..\src\buffer-list.hpp" />
     <ClInclude Include="..\src\buffer.hpp" />
     <ClInclude Include="..\src\editor-window.hpp" />
     <ClInclude Include="..\src\input.hpp" />
