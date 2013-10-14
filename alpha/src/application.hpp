@@ -10,11 +10,9 @@
 #include "resource.h"
 #include "buffer.hpp"
 //#include "search.hpp"	// ui.SearchDialog
-#include <ascension/session.hpp>
-#include <ascension/searcher.hpp>
-#include <manah/win32/module.hpp>
-#include <manah/win32/ui/common-controls.hpp>
-#include <manah/win32/gdi-object.hpp>
+#include <ascension/win32/module.hpp>
+#include <ascension/win32/ui/common-controls.hpp>
+#include <ascension/win32/gdi-object.hpp>
 #include <map>
 #include <sstream>
 

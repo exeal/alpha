@@ -413,6 +413,7 @@
     <ClInclude Include="..\..\ascension\ascension\kernel\point.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\position.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\searcher.hpp" />
+    <ClInclude Include="..\src\win32\module.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico" />
