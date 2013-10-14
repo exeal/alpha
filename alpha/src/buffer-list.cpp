@@ -2,7 +2,7 @@
  * @file buffer-list.cpp
  * @author exeal
  * @date 2003-2006 (was AlphaDoc.cpp and BufferList.cpp)
- * @date 2006-2010
+ * @date 2006-2013
  */
 
 #include "application.hpp"
@@ -1002,8 +1002,6 @@ namespace {
 }
 
 ALPHA_EXPOSE_PROLOGUE(1)
-	using namespace ascension;
-	using namespace ascension::kernel;
 	Interpreter& interpreter = Interpreter::instance();
 	py::scope temp(interpreter.toplevelPackage());
 

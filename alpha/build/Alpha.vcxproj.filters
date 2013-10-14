@@ -96,6 +96,9 @@
     <Filter Include="ascension\Source Files\graphics\font">
       <UniqueIdentifier>{1f344556-7d04-4fed-9476-a26ac7f25fc6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\win32">
+      <UniqueIdentifier>{7d0ce590-92ac-4501-9252-29d6798a6063}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -747,6 +750,9 @@
     </ClInclude>
     <ClInclude Include="..\src\buffer-list.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\win32\module.hpp">
+      <Filter>Header Files\win32</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
