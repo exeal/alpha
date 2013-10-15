@@ -1,367 +1,435 @@
-// module.hpp
-// (c) 2003-2007 exeal
+/**
+ * @file module.hpp
+ * @author exeal
+ * @date 2003-2007, 2013
+ */
 
-#ifndef MANAH_MODULE_HPP
-#define MANAH_MODULE_HPP
+#ifndef ALPHA_WIN32_MODULE_HPP
+#define ALPHA_WIN32_MODULE_HPP
 
-#include "ui/window.hpp"
-#include <vector>
+#include <ascension/win32/window.hpp>
+#include <list>
 #include <set>
 #include <sstream>
+#include <string>
+#include <vector>
 
 
-namespace manah {
+namespace alpha {
 	namespace win32 {
 
-		class Module : public Object<HMODULE, 0> {
+		class Module {
 		public:
 			// message arguments
 			class MessageArguments {
-				MANAH_NONCOPYABLE_TAG(MessageArguments);
+				ASCENSION_NONCOPYABLE_TAG(MessageArguments);
 			public:
-				MessageArguments() {}
+				/// Default constructor.
+				MessageArguments() BOOST_NOEXCEPT {}
 				template<typename T> MessageArguments& operator%(const T& rhs) {
-					std::wostringstream ss;
+					std::basic_ostringstream<WCHAR> ss;
 					ss << rhs;
 					args_.push_back(ss.str());
 					return *this;
 				}
 			private:
-				std::list<std::wstring> args_;
+				std::list<std::basic_string<WCHAR>> args_;
 				friend class Module;
 			};
 
-			// constructor
-			template<typename T> explicit Module(T* handle);
-			// methods
+			/**
+			 * Constructor.
+			 * @param handle A handle to the module
+			 * @throw ascension#NullPointerException @a handle is @c null
+			 */
+			explicit Module(HMODULE handle) : handle_(handle), accelerators_(nullptr) {
+				if(handle_ == nullptr)
+					throw ascension::NullPointerException("handle");
+				WCHAR temp[MAX_PATH];
+				if(0 == ::GetModuleFileNameW(handle_, temp, std::extent<decltype(temp)>::value))
+					throw ascension::makePlatformError();
+				fileName_.assign(temp);
+			}
+
 			HCURSOR createCursor(int xHotSpot, int yHotSpot, int width, int height, const void* andPlane, const void* xorPlane);
 			HICON createIcon(int width, int height, BYTE planeCount, BYTE bitsPixel, const BYTE* andBits, const BYTE* xorBits);
 			bool enumResourceLanguages(const WCHAR* type, const WCHAR* name, ENUMRESLANGPROCW enumFunc, LONG_PTR param);
 			bool enumResourceNames(const WCHAR* type, ENUMRESNAMEPROCW enumFunc, LONG_PTR param);
 			bool enumResourceTypes(ENUMRESTYPEPROCW enumProc, LONG_PTR param);
 			HICON extractIcon(const WCHAR* exeFileName, UINT index);
-			HRSRC findResource(const ResourceID& id, const WCHAR* type);
-			HRSRC findResource(const ResourceID& id, const WCHAR* type, WORD language);
-			const WCHAR* getModuleFileName() const;
-			bool loadAccelerators(const ResourceID& id);
-			HBITMAP loadBitmap(const ResourceID& id) const;
-			HCURSOR loadCursor(const ResourceID& id) const;
-			HICON loadIcon(const ResourceID& id) const;
-			HANDLE loadImage(const ResourceID& id, UINT type, int desiredWidth, int desiredHeight, UINT loadOptions) const;
-			HMENU loadMenu(const ResourceID& id) const;
-			std::wstring loadMessage(DWORD id, const MessageArguments& args = MessageArguments()) const;
-			HGLOBAL loadResource(HRSRC resource);
-			static HCURSOR loadStandardCursor(const ResourceID& id);
-			static HICON loadStandardIcon(const ResourceID& id);
-			int loadString(UINT id, WCHAR* buffer, int maxLength) const;
-			std::wstring loadString(UINT id, const MessageArguments& args = MessageArguments()) const;
-			DWORD sizeofResource(HRSRC resource);
+
+			/// Returns the module file name.
+			const std::basic_string<WCHAR>& fileName() const BOOST_NOEXCEPT {
+				return fileName_;
+			}
+
+			/// Calls @c FindResourceW.
+			ascension::win32::Handle<HRSRC>::Type findResource(const ascension::win32::ResourceID& id, const WCHAR* type) {
+				if(HRSRC temp = ::FindResourceW(handle_, id, type))
+					return ascension::win32::Handle<HRSRC>::Type(temp);
+				throw ascension::makePlatformError();
+			}
+
+			/// Calls @c FindResourceExW.
+			ascension::win32::Handle<HRSRC>::Type findResource(const ascension::win32::ResourceID& id, const WCHAR* type, WORD language) {
+				if(HRSRC temp = ::FindResourceExW(handle_, id, type, language))
+					return ascension::win32::Handle<HRSRC>::Type(temp);
+				throw ascension::makePlatformError();
+			}
+
+			/// Calls @c LoadAccelerators.
+			void loadAccelerators(const ascension::win32::ResourceID& id) {
+				decltype(accelerators_) temp(::LoadAcceleratorsW(handle_, id), &ascension::detail::NullDeleter());	// MSDN says "are freed automatically when the application terminates."
+				if(temp.get() == nullptr)
+					throw ascension::makePlatformError();
+				std::swap(accelerators_, temp);
+			}
+
+			/// Calls @c LoadBitmapW.
+			ascension::win32::Handle<HBITMAP>::Type loadBitmap(const ascension::win32::ResourceID& id) const {
+				if(auto temp = ascension::win32::Handle<HBITMAP>::Type(::LoadBitmapW(handle_, id), &::DeleteObject))
+					return temp;
+				throw ascension::makePlatformError();
+			}
+
+			/// Calls @c LoadCursorW.
+			ascension::win32::Handle<HCURSOR>::Type loadCursor(const ascension::win32::ResourceID& id) const {
+				if(auto temp = ascension::win32::Handle<HCURSOR>::Type(::LoadCursorW(handle_, id), &ascension::detail::NullDeleter()))
+					return temp;
+				throw ascension::makePlatformError();
+			}
+
+			/// Calls @c LoadIconW.
+			ascension::win32::Handle<HICON>::Type loadIcon(const ascension::win32::ResourceID& id) const {
+				if(auto temp = ascension::win32::Handle<HICON>::Type(::LoadIconW(handle_, id), &ascension::detail::NullDeleter()))
+					return temp;
+				throw ascension::makePlatformError();
+			}
+
+			/// Calls @c LoadImageW.
+			ascension::win32::Handle<HANDLE>::Type loadImage(const ascension::win32::ResourceID& id, UINT type, int desiredWidth, int desiredHeight, UINT options) const {
+				ascension::win32::Handle<HANDLE>::Type image;
+				if((options & LR_SHARED) != 0)
+					image = ascension::win32::Handle<HANDLE>::Type(::LoadImageW(handle_, id, type, desiredWidth, desiredHeight, options), &ascension::detail::NullDeleter());
+				else {
+					switch(type) {
+						case IMAGE_BITMAP:
+							image = ascension::win32::Handle<HANDLE>::Type(::LoadImageW(handle_, id, type, desiredWidth, desiredHeight, options), &::DeleteObject);
+							break;
+						case IMAGE_ICON:
+							image = ascension::win32::Handle<HANDLE>::Type(::LoadImageW(handle_, id, type, desiredWidth, desiredHeight, options), &::DestroyIcon);
+							break;
+						case IMAGE_CURSOR:
+							image = ascension::win32::Handle<HANDLE>::Type(::LoadImageW(handle_, id, type, desiredWidth, desiredHeight, options), &::DestroyCursor);
+							break;
+						default:
+							::SetLastError(ERROR_BAD_ARGUMENTS);
+							break;
+					}
+				}
+				if(image.get() == nullptr)
+					throw ascension::makePlatformError();
+				return image;
+			}
+
+			/// Calls @c LoadMenuW. The returned value is deleted by @c DestroyMenu.
+			ascension::win32::Handle<HMENU>::Type loadMenu(const ascension::win32::ResourceID& id) const {
+				if(auto temp = ascension::win32::Handle<HMENU>::Type(::LoadMenuW(handle_, id), &::DestroyMenu))
+					return temp;
+				throw ascension::makePlatformError();
+			}
+
+			std::basic_string<WCHAR> loadMessage(DWORD id, const MessageArguments& args = MessageArguments()) const {
+				void* buffer = nullptr;
+				std::unique_ptr<WCHAR*[]> inserts(new WCHAR*[args.args_.size()]);
+				std::size_t i = 0;
+
+				for(auto insert(std::begin(args.args_)), e(std::end(args.args_)); insert != e; ++insert, ++i)
+					inserts[i] = const_cast<WCHAR*>(insert->c_str());
+				const DWORD n = ::FormatMessageW(
+					FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE | FORMAT_MESSAGE_ARGUMENT_ARRAY,
+					handle_, id, 0, reinterpret_cast<WCHAR*>(&buffer), 0, reinterpret_cast<va_list*>(inserts.get()));
+				std::shared_ptr<void> holder(buffer, &::LocalFree);
+				if(n == 0 || buffer == nullptr)
+					throw ascension::makePlatformError();
+				return static_cast<WCHAR*>(buffer);
+			}
+
+			/// Calls @c LoadResource.
+			HGLOBAL loadResource(HRSRC resource) {
+				if(HGLOBAL temp = ::LoadResource(handle_, resource))
+					return temp;
+				throw ascension::makePlatformError();
+			}
+
+			/// Calls @c LoadCursorW with @c null @c HMODULE.
+			static ascension::win32::Handle<HCURSOR>::Type loadStandardCursor(const ascension::win32::ResourceID& id) {
+				if(auto temp = ascension::win32::Handle<HCURSOR>::Type(::LoadCursorW(nullptr, id), &ascension::detail::NullDeleter()))
+					return temp;
+				throw ascension::makePlatformError();
+			}
+
+			/// Calls @c LoadIconW with @c null @c HMODULE.
+			static ascension::win32::Handle<HICON>::Type loadStandardIcon(const ascension::win32::ResourceID& id) {
+				if(auto temp = ascension::win32::Handle<HICON>::Type(::LoadIconW(nullptr, id), &ascension::detail::NullDeleter()))
+					return temp;
+				throw ascension::makePlatformError();
+			}
+
+			/// Calls @c LoadStringW.
+			int loadString(UINT id, WCHAR* buffer, int maxLength) const {
+				if(const int temp = ::LoadStringW(handle_, id, buffer, maxLength))
+					return temp;
+				throw ascension::makePlatformError();
+			}
+
+			std::basic_string<WCHAR> loadString(UINT id, const MessageArguments& args = MessageArguments()) const {
+				WCHAR buffer[1024];
+				loadString(id, buffer, 1024);
+				if(args.args_.empty())
+					return buffer;
+
+				void* p = nullptr;
+				std::unique_ptr<WCHAR*[]> pp(new WCHAR*[args.args_.size()]);
+				std::size_t i = 0;
+
+				for(auto it = std::begin(args.args_); it != std::end(args.args_); ++it, ++i)
+					pp[i] = const_cast<WCHAR*>(it->c_str());
+				const DWORD n = ::FormatMessageW(
+					FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_STRING | FORMAT_MESSAGE_ARGUMENT_ARRAY,
+						buffer, 0, 0, reinterpret_cast<WCHAR*>(&p), 0, reinterpret_cast<va_list*>(pp.get()));
+				std::shared_ptr<void> holder(p, &::LocalFree);
+				if(n == 0 || p == nullptr)
+					throw ascension::makePlatformError();
+				return static_cast<WCHAR*>(p);
+			}
+
+			/// Calls @c SizeofResource.
+			DWORD sizeofResource(HRSRC resource) {
+				if(const DWORD temp = ::SizeofResource(handle_, resource))
+					return temp;
+				throw ascension::makePlatformError();
+			}
 
 		protected:
-			HACCEL getAccelerators() const throw() {return accelerators_;}
+			ascension::win32::Handle<HACCEL>::Type accelerators() const BOOST_NOEXCEPT {return accelerators_;}
 		private:
-			WCHAR fileName_[MAX_PATH];
-			HACCEL accelerators_;
+			HMODULE handle_;
+			std::basic_string<WCHAR> fileName_;
+			ascension::win32::Handle<HACCEL>::Type accelerators_;
 		};
 
-#define MARGS manah::win32::Module::MessageArguments()
+		template<class TopWindow = ascension::win32::Window>
+		class Application : public Module {
+		public:
+			/// Constructor.
+			explicit Application(TopWindow* topWindow = nullptr) :
+				Module(borrowed(::GetModuleHandle(nullptr))), mainWindow_(topWindow), running_(false) {}
 
+			/// Destructor.
+			virtual ~Application() BOOST_NOEXCEPT {}
 
-template<class TopWindow = ui::Window> class Application : public Module {
-public:
-	// constructors
-	explicit Application(TopWindow* topWindow = 0);
-	virtual ~Application() {}
-	// methods
-	static void getCommandLineArguments(const WCHAR* cmdLine, std::vector<std::wstring>& args);
-	void getCommandLineArguments(std::vector<std::wstring>& args) const;
-	TopWindow& getMainWindow() const;
-	virtual int run(int showCommand);
-protected:
-	virtual LRESULT dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam) = 0;
-	virtual bool initInstance(int showCommand) = 0;
-//	void popModelessDialog(HWND dialog);
-	virtual bool preTranslateMessage(const MSG& msg);
-	void pushModelessDialog(HWND dialog);
-	void setMainWindow(TopWindow& window) {mainWindow_ = &window;}
-private:
-	TopWindow* mainWindow_;
-	std::set<HWND> modelessDialogs_;	// modeless dialogs to be called isDialogMessage
-	bool running_;
-};
+			static void commandLineArguments(const ascension::win32::StringPiece& cmdLine, std::vector<std::basic_string<WCHAR>>& args)  {
+				assert(cmdLine.data() != nullptr);
+				std::unique_ptr<WCHAR[]> each(new WCHAR[std::wcslen(cmdLine) + 1]);
+				std::size_t i = 0, eachLength = 0;
+				bool inQuote = false;
 
-
-template<class TopWindow = ui::Window>
-class ProfilableApplication : public Application<TopWindow> {
-public:
-	// constructor
-	explicit ProfilableApplication(TopWindow* topWindow = 0, const WCHAR* iniFileName = 0);
-	// methods
-	const WCHAR* getINIFileName() const throw() {return iniFileName_;}
-	UINT readIntegerProfile(const WCHAR* section, const WCHAR* key, UINT defaultValue = 0);
-	std::wstring readStringProfile(const WCHAR* section, const WCHAR* key, const WCHAR* defaultValue = 0);
-	template<typename T> bool readStructureProfile(const WCHAR* section, const WCHAR* key, T& value) {
-		return toBoolean(::GetPrivateProfileStructW(section, key, &value, sizeof(T), iniFileName_));}
-	bool writeIntegerProfile(const WCHAR* section, const WCHAR* key, UINT value);
-	bool writeStringProfile(const WCHAR* section, const WCHAR* key, const WCHAR* value);
-	template<typename T> bool writeStructureProfile(const WCHAR* section, const WCHAR* key, const T& value) {
-		return toBoolean(::WritePrivateProfileStructW(section, key, const_cast<T*>(&value), sizeof(T), iniFileName_));}
-private:
-	WCHAR iniFileName_[MAX_PATH];
-};
-
-
-// Module ///////////////////////////////////////////////////////////////////
-
-template<typename T>
-inline Module::Module(T* handle) : Object<HMODULE, 0>(handle), accelerators_(0) {::GetModuleFileNameW(get(), fileName_, MAX_PATH);}
-
-inline HRSRC Module::findResource(const ResourceID& id, const WCHAR* type) {return ::FindResourceW(use(), id, type);}
-
-inline HRSRC Module::findResource(const ResourceID& id, const WCHAR* type, WORD language) {return ::FindResourceExW(use(), id, type, language);}
-
-inline const WCHAR* Module::getModuleFileName() const {return fileName_;}
-
-inline bool Module::loadAccelerators(const ResourceID& id) {return (accelerators_ = ::LoadAcceleratorsW(use(), id)) != 0;}
-
-inline HBITMAP Module::loadBitmap(const ResourceID& id) const {return ::LoadBitmapW(use(), id);}
-
-inline HCURSOR Module::loadCursor(const ResourceID& id) const {return ::LoadCursorW(use(), id);}
-
-inline HICON Module::loadIcon(const ResourceID& id) const {return ::LoadIconW(use(), id);}
-
-inline HANDLE Module::loadImage(const ResourceID& id, UINT type, int desiredWidth, int desiredHeight, UINT options) const {
-	return ::LoadImageW(use(), id, type, desiredWidth, desiredHeight, options);}
-
-inline HMENU Module::loadMenu(const ResourceID& id) const {return ::LoadMenuW(use(), id);}
-
-inline std::wstring Module::loadMessage(DWORD id, const MessageArguments& args /* = MessageArguments() */) const {
-	void* buffer = 0;
-	AutoBuffer<WCHAR*> inserts(new WCHAR*[args.args_.size()]);
-	std::list<std::wstring>::const_iterator it;
-	std::size_t i = 0;
-
-	for(std::list<std::wstring>::const_iterator insert(args.args_.begin()), e(args.args_.end()); insert != e; ++insert, ++i)
-		inserts[i] = const_cast<WCHAR*>(insert->c_str());
-	::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE | FORMAT_MESSAGE_ARGUMENT_ARRAY,
-		use(), id, 0, reinterpret_cast<WCHAR*>(&buffer), 0, reinterpret_cast<va_list*>(inserts.get()));
-	if(buffer != 0) {
-		std::wstring temp(static_cast<WCHAR*>(buffer));
-		::LocalFree(buffer);
-		return temp;
-	} else
-		return L"";
-}
-
-inline HGLOBAL Module::loadResource(HRSRC resource) {return ::LoadResource(use(), resource);}
-
-inline HCURSOR Module::loadStandardCursor(const ResourceID& id) {return ::LoadCursorW(0, id);}
-
-inline HICON Module::loadStandardIcon(const ResourceID& id) {return ::LoadIconW(0, id);}
-
-inline int Module::loadString(UINT id, WCHAR* buffer, int maxLength) const {return ::LoadStringW(use(), id, buffer, maxLength);}
-
-inline std::wstring Module::loadString(UINT id, const MessageArguments& args /* = MessageArguments() */) const {
-	WCHAR buffer[1024];
-	loadString(id, buffer, 1024);
-	if(args.args_.empty())
-		return buffer;
-
-	void* p = 0;
-	WCHAR** pp = new WCHAR*[args.args_.size()];
-	std::list<std::wstring>::const_iterator it;
-	std::size_t i;
-
-	for(it = args.args_.begin(), i = 0; it != args.args_.end(); ++it, ++i)
-		pp[i] = const_cast<WCHAR*>(it->c_str());
-	::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_STRING
-		| FORMAT_MESSAGE_ARGUMENT_ARRAY, buffer, 0, 0,
-		reinterpret_cast<WCHAR*>(&p), 0, reinterpret_cast<va_list*>(pp));
-	delete[] pp;
-
-	std::wstring temp = static_cast<WCHAR*>(p);
-	::LocalFree(p);
-	return temp;
-}
-
-inline DWORD Module::sizeofResource(HRSRC resource) {return ::SizeofResource(use(), resource);}
-
-
-// Application //////////////////////////////////////////////////////////////
-
-template<class TopWindow>
-inline Application<TopWindow>::Application(TopWindow* topWindow /* = 0 */)
-	: Module(borrowed(::GetModuleHandle(0))), mainWindow_(topWindow), running_(false) {}
-
-template<class TopWindow> inline void Application<TopWindow>::getCommandLineArguments(const WCHAR* cmdLine, std::vector<std::wstring>& args) {
-	assert(cmdLine != 0);
-	WCHAR* each = new WCHAR[std::wcslen(cmdLine) + 1];
-	WCHAR ch;
-	std::size_t i = 0;
-	std::size_t eachLength = 0;
-	bool inQuote = false;
-
-	args.clear();
-	while(true) {
-		ch = cmdLine[i];
-		if(ch == 0) {	// terminator
-			if(eachLength != 0) {
-				each[eachLength] = 0;
-				args.push_back(each);
-			}
-			break;
-		}
-		if(!inQuote) {
-			if(ch == L' ') {
-				if(eachLength != 0) {
-					*(each + eachLength) = 0;
-					args.push_back(each);
-					eachLength = 0;
-				}
-			} else if(ch == L'\"')
-				inQuote = true;
-			else {
-				*(each + eachLength) = ch;
-				++eachLength;
-			}
-		} else {
-			if(ch == L'\"')
-				inQuote = false;
-			else {
-				*(each + eachLength) = ch;
-				++eachLength;
-			}
-		}
-		++i;
-	}
-	delete[] each;
-}
-
-template<class TopWindow> inline void Application<TopWindow>::getCommandLineArguments(std::vector<std::wstring>& args) const {
-	const WCHAR* cmdLine = ::GetCommandLineW();
-	std::size_t	 i = 0;
-	WCHAR ch;
-	WCHAR* quote;
-
-	while(true) {
-		ch = cmdLine[i];
-		if(ch == 0) {
-			args.clear();
-			return;
-		} else if(ch == L'\"') {
-			quote = std::wcschr(cmdLine + i + 1, L'\"');
-			if(quote == 0) {
 				args.clear();
-				return;
-			}
-			i = quote - cmdLine + 1;
-		} else if(ch == L'\'') {
-			quote = std::wcschr(cmdLine + i + 1, '\'');
-			if(quote == 0) {
-				args.clear();
-				return;
-			}
-			i = quote - cmdLine + 1;
-		} else if(ch == L' ') {
-			++i;
-			break;
-		} else
-			++i;
-	}
-	getCommandLineArguments(cmdLine + i, args);
-}
-
-template<class TopWindow> inline TopWindow& Application<TopWindow>::getMainWindow() const {
-	if(mainWindow_ == 0)
-		throw std::logic_error("The application does not have a window.");
-	return *mainWindow_;
-}
-
-template<class TopWindow> inline bool Application<TopWindow>::preTranslateMessage(const MSG& msg) {return false;}
-
-template<class TopWindow> inline void Application<TopWindow>::pushModelessDialog(HWND dialog) {assert(toBoolean(::IsWindow(dialog))); modelessDialogs_.insert(dialog);}
-
-template<class TopWindow> inline int Application<TopWindow>::run(int showCommand) {
-	if(running_)
-		return -1;
-	MSG message;
-	int f;
-	bool dialogMessage;
-
-	if(!initInstance(showCommand))
-		return -1;
-	running_ = true;
-	while(true) {
-		dialogMessage = false;
-		f = ::GetMessageW(&message, 0, 0, 0);
-		assert(f != -1);
-		if(f == 0)
-			return static_cast<int>(message.wParam);
-		for(std::set<HWND>::iterator i(modelessDialogs_.begin()); i != modelessDialogs_.end(); ) {
-			if(!toBoolean(::IsWindow(*i))) {	// auto pop
-				modelessDialogs_.erase(i++);
-			} else if(toBoolean(::IsDialogMessage(*i, &message))) {
-				dialogMessage = true;
-				break;
-			} else
-				++i;
-		}
-		if(!dialogMessage) {
-			if(getAccelerators() != 0) {
-				if(!toBoolean(::TranslateAcceleratorW(message.hwnd, getAccelerators(), &message))
-						&& !preTranslateMessage(message)) {
-					::TranslateMessage(&message);
-					::DispatchMessageW(&message);
+				while(true) {
+					const WCHAR c = cmdLine[i];
+					if(c == 0) {	// terminator
+						if(eachLength != 0) {
+							each[eachLength] = 0;
+							args.push_back(each);
+						}
+						break;
+					}
+					if(!inQuote) {
+						if(c == L' ') {
+							if(eachLength != 0) {
+								*(each + eachLength) = 0;
+								args.push_back(each);
+								eachLength = 0;
+							}
+						} else if(c == L'\"')
+							inQuote = true;
+						else {
+							*(each + eachLength) = c;
+							++eachLength;
+						}
+					} else {
+						if(c == L'\"')
+							inQuote = false;
+						else {
+							*(each + eachLength) = c;
+							++eachLength;
+						}
+					}
+					++i;
 				}
-			} else if(!preTranslateMessage(message)) {
-				::TranslateMessage(&message);
-				::DispatchMessageW(&message);
 			}
-		}
+
+			void commandLineArguments(std::vector<std::wstring>& args) const {
+				const WCHAR* const cmdLine = ::GetCommandLineW();
+				const WCHAR* p = cmdLine;
+				while(true) {
+					switch(*p) {
+						case 0:
+							args.clear();
+							return;
+						case L'\"':
+						case L'\'': {
+							const WCHAR* const quote = std::wcschr(p + 1, *p);
+							if(quote == nullptr) {
+								args.clear();
+								return;
+							}
+							p = quote + 1;
+							break;
+						}
+						case L' ':
+							exit;
+						default:
+							++p;
+							break;
+					}
+				}
+				commandLineArguments(p, args);
+			}
+
+			/// Returns the main window.
+			TopWindow& mainWindow() const {
+				if(mainWindow_ == nullptr)
+					throw std::logic_error("The application does not have a window.");
+				return *mainWindow_;
+			}
+			virtual int run(int showCommand) {
+				if(running_)
+					return -1;
+
+				if(!initInstance(showCommand))
+					return -1;
+				running_ = true;
+
+				MSG message;
+				while(true) {
+					bool dialogMessage = false;
+					const int f = ::GetMessageW(&message, nullptr, 0, 0);
+					assert(f != -1);
+					if(f == 0)
+						return static_cast<int>(message.wParam);
+					for(std::set<HWND>::iterator i(std::begin(modelessDialogs_)), e(std::end(modelessDialogs_)); i != e; ) {
+						if(!ascension::win32::boole(::IsWindow(*i))) {	// auto pop
+							modelessDialogs_.erase(i++);
+						} else if(ascension::win32::boole(::IsDialogMessage(*i, &message))) {
+							dialogMessage = true;
+							break;
+						} else
+							++i;
+					}
+					if(!dialogMessage) {
+						if(accelerators() != 0) {
+							if(!ascension::win32::boole(::TranslateAcceleratorW(message.hwnd, accelerators(), &message))
+									&& !preTranslateMessage(message)) {
+								::TranslateMessage(&message);
+								::DispatchMessageW(&message);
+							}
+						} else if(!preTranslateMessage(message)) {
+							::TranslateMessage(&message);
+							::DispatchMessageW(&message);
+						}
+					}
+				}
+
+				running_ = false;
+				return 0;
+			}
+		protected:
+			virtual LRESULT dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam) = 0;
+			virtual bool initInstance(int showCommand) = 0;
+//			void popModelessDialog(HWND dialog);
+			virtual bool preTranslateMessage(const MSG& msg) {return false;}
+			void pushModelessDialog(HWND dialog) {
+				assert(ascension::win32::boole(::IsWindow(dialog)));
+				modelessDialogs_.insert(dialog);
+			}
+			void setMainWindow(TopWindow& window) {mainWindow_ = &window;}
+		private:
+			TopWindow* mainWindow_;
+			std::set<HWND> modelessDialogs_;	// modeless dialogs to be called isDialogMessage
+			bool running_;
+		};
+
+
+		template<class TopWindow = ascension::win32::Window>
+		class ProfilableApplication : public Application<TopWindow> {
+		public:
+			/// Constructor.
+			explicit ProfilableApplication(TopWindow* topWindow = nullptr, const ascension::win32::StringPiece& iniFileName = ascension::win32::StringPiece()) : Application<TopWindow>(topWindow) {
+				if(iniFileName.data() != nullptr)
+					iniFileName_.assign(iniFileName);
+				else {
+					WCHAR temp[MAX_PATH];
+					if(0 == ::GetModuleFileNameW(nullptr, temp, std::extent<decltype(temp)>::value))
+						throw ascension::makePlatformError();
+					if(WCHAR* const dot = std::wcsrchr(iniFileName_, L'.')) {
+						std::wcscpy(dot + 1, L"ini");
+						iniFileName_.assign(temp);
+					}
+				}
+			}
+
+			/// Returns the INI file name.
+			const std::basic_string<WCHAR>& iniFileName() const BOOST_NOEXCEPT {
+				return iniFileName_;
+			}
+
+			/// Calls @c GetPrivateProfileIntW.
+			UINT readIntegerProfile(const ascension::win32::StringPiece& section, const ascension::win32::StringPiece& key, UINT defaultValue = 0) BOOST_NOEXCEPT {
+				return ::GetPrivateProfileIntW(section.data(), key.data(), defaultValue, iniFileName().c_str());
+			}
+
+			/// Calls @c GetPrivateProfileStringW.
+			std::basic_string<WCHAR> readStringProfile(const ascension::win32::StringPiece& section,
+					const ascension::win32::StringPiece& key, const ascension::win32::StringPiece& defaultValue = ascension::win32::StringPiece()) {
+				WCHAR buffer[1024];
+				::SetLastError(ERROR_SUCCESS);
+				::GetPrivateProfileStringW(section.data(), key.data(), defaultValue.data(), buffer, std::extent<decltype(buffer)>::value, iniFileName());
+				if(::GetLastError() != ERROR_SUCCESS)
+					throw ascension::makePlatformError();
+				return buffer;
+			}
+
+			/// Calls @c GetPrivateProfileStructW.
+			template<typename T> void readStructureProfile(const ascension::win32::StringPiece& section, const ascension::win32::StringPiece& key, T& value) {
+				if(!ascension::win32::boole(::GetPrivateProfileStructW(section.data(), key.data(), &value, sizeof(T), iniFileName())))
+					throw ascension::makePlatformError();
+			}
+
+			/// Calls @c WritePrivateProfileStringW.
+			void writeIntegerProfile(const ascension::win32::StringPiece& section, const ascension::win32::StringPiece& key, UINT value) {
+				WCHAR buffer[32];
+				::wsprintfW(buffer, L"%u", value);
+				return writeStringProfile(section, key, buffer);
+			}
+
+			/// Calls @c WritePrivateProfileStringW.
+			void writeStringProfile(const ascension::win32::StringPiece& section, const ascension::win32::StringPiece& key, const ascension::win32::StringPiece& value) {
+				if(!ascension::win32::boole(::WritePrivateProfileStringW(section.data(), key.data(), value.data(), iniFileName())))
+					throw ascension::makePlatformError();
+			}
+
+			/// Calls @c WritePrivateProfileStructW.
+			template<typename T> void writeStructureProfile(const ascension::win32::StringPiece& section, const ascension::win32::StringPiece& key, const T& value) {
+				if(!ascension::win32::boole(::WritePrivateProfileStructW(section.data(), key.data(), const_cast<T*>(&value), sizeof(T), iniFileName())))
+					throw ascension::makePlatformError();
+			}
+		private:
+			std::basic_string<WCHAR> iniFileName_;
+		};
+
 	}
+} // namespace alpha.win32
 
-	running_ = false;
-	return 0;
-}
-
-
-// ProfilableApplication ////////////////////////////////////////////////////
-
-template<class TopWindow> inline ProfilableApplication<TopWindow>::ProfilableApplication(
-		TopWindow* topWindow /* = 0 */, const WCHAR* iniFileName /* = 0 */) : Application<TopWindow>(topWindow) {
-	if(iniFileName != 0)
-		std::wcscpy(iniFileName_, iniFileName);
-	else {
-		::GetModuleFileNameW(0, iniFileName_, MAX_PATH);
-		if(WCHAR* const dot = std::wcsrchr(iniFileName_, L'.'))
-			std::wcscpy(dot + 1, L"ini");
-		else
-			iniFileName_[0] = 0;
-	}
-}
-
-template<class TopWindow>
-inline UINT ProfilableApplication<TopWindow>::readIntegerProfile(const WCHAR* section, const WCHAR* key, UINT defaultValue /* 0 */) {
-	return ::GetPrivateProfileIntW(section, key, defaultValue, iniFileName_);}
-
-template<class TopWindow> inline std::wstring
-ProfilableApplication<TopWindow>::readStringProfile(const WCHAR* section, const WCHAR* key, const WCHAR* defaultValue /* = L"" */) {
-	WCHAR buffer[1024];
-	::GetPrivateProfileStringW(section, key, defaultValue, buffer, MANAH_COUNTOF(buffer), iniFileName_);
-	return buffer;
-}
-
-template<class TopWindow>
-inline bool ProfilableApplication<TopWindow>::writeIntegerProfile(const WCHAR* section, const WCHAR* key, UINT value) {
-	WCHAR buffer[32];
-	::wsprintfW(buffer, L"%u", value);
-	return writeStringProfile(section, key, buffer);
-}
-
-template<class TopWindow>
-inline bool ProfilableApplication<TopWindow>::writeStringProfile(const WCHAR* section, const WCHAR* key, const WCHAR* value) {
-	return toBoolean(::WritePrivateProfileStringW(section, key, value, iniFileName_));}
-
-}} // namespace manah.win32
-
-#endif // !MANAH_MODULE_HPP
+#endif // !ALPHA_WIN32_MODULE_HPP
