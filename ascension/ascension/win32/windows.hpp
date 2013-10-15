@@ -58,6 +58,7 @@
 #include <utility>									// std.swap
 #include <ascension/corelib/basic-types.hpp>		// ASCENSION_NON_COPYABLE_TAG
 #include <ascension/corelib/basic-exceptions.hpp>	// makePlatformError
+#include <ascension/corelib/string-piece.hpp>		// BasicStringPiece
 
 namespace ascension {
 	namespace win32 {
@@ -68,7 +69,7 @@ namespace ascension {
 		 * @retval true @a is not @c FALSE (may be @c TRUE)
 		 * @retval false @a v is @c FALSE
 		 */
-		inline bool boole(BOOL v) /*throw()*/ {return v != FALSE;}
+		inline bool boole(BOOL v) BOOST_NOEXCEPT {return v != FALSE;}
 
 		/**
 		 * Returns the default UI language.
@@ -89,10 +90,18 @@ namespace ascension {
 		inline void setWindowLong(HWND window, int index, LONG_PTR value) {
 			const DWORD lastError = ::GetLastError();
 			::SetLastError(0);
-			if(::SetWindowLongPtrW(window, index, value) == 0 && ::GetLastError() != 0)
+			if(::SetWindowLongPtrW(window, index, value) == 0 && ::GetLastError() != ERROR_SUCCESS)
 				throw makePlatformError();
 			::SetLastError(lastError);
 		}
+
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+		/// Specialization of @c BasicStringPiece for @c WCHAR type.
+		typedef BasicStringPiece<WCHAR> StringPiece;
+#else
+		/// Specialization of @c boost#basic_string_ref for @c WCHAR type.
+		typedef boost::basic_string_ref<WCHAR, std::char_traits<WCHAR>> StringPiece;
+#endif
 
 #	define ASCENSION_WIN32_OBJECT_CONSTRUCTORS(ClassName)						\
 		ClassName() : BaseObject() {}											\
@@ -104,11 +113,11 @@ namespace ascension {
 			ASCENSION_NONCOPYABLE_TAG(ResourceID);
 		public:
 			/// Constructor takes a string identifier.
-			ResourceID(const WCHAR* name) /*throw()*/ : name_(name) {}
+			ResourceID(const win32::StringPiece& name) BOOST_NOEXCEPT : name_(name.data()) {}
 			/// Constructor takes a numeric identifier.
-			ResourceID(UINT_PTR id) /*throw()*/ : name_(MAKEINTRESOURCEW(id)) {}
+			ResourceID(UINT_PTR id) BOOST_NOEXCEPT : name_(MAKEINTRESOURCEW(id)) {}
 			/// Returns the string identifier.
-			operator const WCHAR*() const /*throw()*/ {return name_;}
+			operator const WCHAR*() const BOOST_NOEXCEPT {return name_;}
 		private:
 			const WCHAR* const name_;
 		};
@@ -116,15 +125,16 @@ namespace ascension {
 		/// Defines a structure type automatically fills oneself with zero.
 		template<typename Structure> struct AutoZero : public Structure {
 			/// Default constructor.
-			AutoZero() /*throw()*/ {std::memset(this, 0, sizeof(Structure));}
+			AutoZero() BOOST_NOEXCEPT {std::memset(this, 0, sizeof(Structure));}
 		};
 
 		/// Defines a structure type automatically fills oneself with zero and sets its size member.
 		template<typename Structure, typename SizeType = int> struct AutoZeroSize : public AutoZero<Structure> {
 			/// Default constructor.
-			AutoZeroSize() /*throw()*/ {*reinterpret_cast<SizeType*>(this) = sizeof(Structure);}
+			AutoZeroSize() BOOST_NOEXCEPT {*reinterpret_cast<SizeType*>(this) = sizeof(Structure);}
 		};
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 		class DumpContext {
 		public:
 			template<typename T>
@@ -158,6 +168,7 @@ namespace ascension {
 			::OutputDebugStringW(ss.str().c_str());
 			return *this;
 		}
+#endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
 	}
 }
@@ -181,8 +192,8 @@ namespace std {
 
 // sizeof(MENUITEMINFO)
 #if(WINVER >= 0x0500 && !defined(MENUITEMINFO_SIZE_VERSION_400))
-#	define MENUITEMINFO_SIZE_VERSION_400A (offsetof(MENUITEMINFOA, cch) + sizeof(static_cast<MENUITEMINFOA*>(0)->cch))
-#	define MENUITEMINFO_SIZE_VERSION_400W (offsetof(MENUITEMINFOW, cch) + sizeof(static_cast<MENUITEMINFOW*>(0)->cch))
+#	define MENUITEMINFO_SIZE_VERSION_400A (offsetof(MENUITEMINFOA, cch) + sizeof(static_cast<MENUITEMINFOA*>(nullptr)->cch))
+#	define MENUITEMINFO_SIZE_VERSION_400W (offsetof(MENUITEMINFOW, cch) + sizeof(static_cast<MENUITEMINFOW*>(nullptr)->cch))
 #	ifdef UNICODE
 #		define MENUITEMINFO_SIZE_VERSION_400 MENUITEMINFO_SIZE_VERSION_400W
 #	else
