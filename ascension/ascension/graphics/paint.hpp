@@ -13,6 +13,9 @@
 #include <ascension/graphics/geometry.hpp>
 #include <memory>	// std.unique_ptr, std.enable_shared_from_this
 //#include <boost/operators.hpp>
+#ifdef ASCENSION_GRAPHICS_SYSTEM_CAIRO
+#	include <cairomm/cairomm.h>
+#endif
 
 namespace ascension {
 	namespace graphics {
@@ -33,11 +36,11 @@ namespace ascension {
 				return revisionNumber_;
 			}
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
-			Cairo::PtrRef<Cairo::Pattern> asNativeObject() const BOOST_NOEXCEPT;
+			Cairo::RefPtr<Cairo::Pattern> asNativeObject() const BOOST_NOEXCEPT;
 		protected:
-			void reset(Cairo::PtrRef<Cairo::Pattern> nativeObject);
+			void reset(Cairo::RefPtr<Cairo::Pattern> nativeObject);
 		private:
-			Cairo::PtrRef<Cairo::Pattern> nativeObject_;
+			Cairo::RefPtr<Cairo::Pattern> nativeObject_;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
 			???? asNativeObject() const;
 		protected:

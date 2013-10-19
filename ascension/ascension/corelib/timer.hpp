@@ -9,7 +9,7 @@
 #include <ascension/platforms.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-#	include <glib.h>
+#	include <glibmm/main.h>
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 #	include <ascension/win32/windows.hpp>
 #endif
@@ -56,19 +56,23 @@ namespace ascension {
 		void start(unsigned int milliseconds, HasTimer& object) {
 			stop();
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-			::g_timout_add(milliseconds, &function, nullptr);
+			Glib::signal_timeout().connect_once(sigc::ptr_fun(&function), milliseconds);
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 			identifier_ = ::SetTimer(nullptr, 0, milliseconds, &function);
 			if(identifier_ == 0)
 				throw makePlatformError();
+#else
+			ASCENSION_CANT_DETECT_PLATFORM();
 #endif
 		}
 		void stop();
 	private:
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-		static gboolean function(gpointer);
+		static bool function();
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		static void CALLBACK function(HWND, UINT, UINT_PTR identifier, DWORD);
+#else
+			ASCENSION_CANT_DETECT_PLATFORM();
 #endif
 	private:
 		HasTimer* object_;
