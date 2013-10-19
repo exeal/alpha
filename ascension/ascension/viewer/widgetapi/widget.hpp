@@ -402,16 +402,20 @@ namespace ascension {
 		}
 #endif // 0
 	}
-}
 
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-#	include <ascension/viewer/widgetapi/widget-gtk.hpp>
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
-#	include <ascension/viewer/widgetapi/widget-qt.hpp>
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#	include <ascension/viewer/widgetapi/widget-osx.hpp>
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-#	include <ascension/viewer/widgetapi/widget-windows.hpp>
+	namespace win32 {
+		inline Handle<HIMC>::Type inputMethod(const viewers::widgetapi::NativeWidget& widget) {
+			return Handle<HIMC>::Type(::ImmGetContext(widget.handle().get()),
+				std::bind(&::ImmReleaseContext, widget.handle().get(), std::placeholders::_1));
+		}
+	}
+#else
+	ASCENSION_CANT_DETECT_PLATFORM();
 #endif
+}
 
 #endif // !ASCENSION_WIDGET_HPP

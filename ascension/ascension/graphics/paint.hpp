@@ -32,13 +32,15 @@ namespace ascension {
 			Paint() BOOST_NOEXCEPT : revisionNumber_(0) {}
 			/// Destructor.
 			virtual ~Paint() BOOST_NOEXCEPT;
+			/// Returns the revision number.
 			std::size_t revisionNumber() const BOOST_NOEXCEPT {
 				return revisionNumber_;
 			}
+			/// Returns the native object which implements this object.
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
-			Cairo::RefPtr<Cairo::Pattern> asNativeObject() const BOOST_NOEXCEPT;
+			Cairo::RefPtr<Cairo::Pattern> asNativeObject() const BOOST_NOEXCEPT {return nativeObject_;}
 		protected:
-			void reset(Cairo::RefPtr<Cairo::Pattern> nativeObject);
+			void reset(Cairo::RefPtr<Cairo::Pattern> nativeObject) {nativeObject_ = nativeObject;}
 		private:
 			Cairo::RefPtr<Cairo::Pattern> nativeObject_;
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
@@ -77,9 +79,13 @@ namespace ascension {
 
 		class SolidColor : public Paint {
 		public:
+			/**
+			 * Creates a solid color pattern with given color value.
+			 * @param color The color value
+			 */
 			explicit SolidColor(const Color& color);
+			/// Returns the solid color value for this object.
 			const Color& color() const BOOST_NOEXCEPT;
-			void setColor(const Color& color);
 		private:
 			Color color_;
 		};
@@ -110,6 +116,11 @@ namespace ascension {
 		 */
 		class LinearGradient : public Gradient {
 		public:
+			/**
+			 * Returns a linear @c Gradient initialized with the specified line.
+			 * @param p0 The start point of the gradient
+			 * @param p1 The end point of the gradient
+			 */
 			LinearGradient(const Point& p0, const Point& p1);
 		};
 
@@ -119,6 +130,14 @@ namespace ascension {
 		 */
 		class RadialGradient : public Gradient {
 		public:
+			/**
+			 * Returns a radial @c Gradient initialized with the two specified circles.
+			 * @param p0 The origin of the start circle
+			 * @param r0 The radius of the start circle
+			 * @param p1 The origin of the end circle
+			 * @param r1 The radius of the end circle
+			 * @throw std#out_of_range Either of @a r0 or @a r1 are negative
+			 */
 			RadialGradient(const Point& p0, Scalar r0, const Point& p1, Scalar r1);
 		};
 

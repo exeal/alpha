@@ -1,7 +1,8 @@
 /**
  * @file paint-gdi.cpp
+ * Implements painting interface on GDI graphics system.
  * @author exeal
- * @date 2012-06-17 created
+ * @date 2012-06-17 Created
  */
 
 #include <ascension/graphics/paint.hpp>
