@@ -132,7 +132,14 @@ namespace ascension {
 
 			class KeyInput : public UserInput {
 			public:
-				typedef std::uint32_t Code;	///< Keyboard codes.
+				/// Keyboard codes.
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+				typedef guint Code;	// GDK_KEY_* in gdk/gdkkeysyms.h
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+				typedef WORD Code;	// VK_* in WinUser.h
+#elif 0
+				typedef std::uint32_t Code;
+#endif
 			public:
 				KeyInput(Code keyboardCode, ModifierKey modifiers, int repeatCount, int messageFlags)
 					: UserInput(modifiers), keyboardCode_(keyboardCode), repeatCount_(repeatCount), messageFlags_(messageFlags) {}
@@ -142,6 +149,7 @@ namespace ascension {
 				const int repeatCount_, messageFlags_;
 			};
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			namespace keyboardcodes {
 				static const KeyInput::Code
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
@@ -167,6 +175,7 @@ namespace ascension {
 #else
 #endif
 			}
+#endif
 
 		}
 	}

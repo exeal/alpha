@@ -128,7 +128,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(ProjectDir)../../ascension;$(ProjectDir)../..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOST_LIB_DIAGNOSTIC;BOOST_PYTHON_NO_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOST_LIB_DIAGNOSTIC;BOOST_PYTHON_NO_LIB;ASCENSION_WINDOW_SYSTEM_GTK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <SmallerTypeCheck>true</SmallerTypeCheck>
@@ -203,6 +203,7 @@
     <ClCompile Include="..\..\ascension\src\graphics\font\text-renderer.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\text-viewport.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\image-windows.cpp" />
+    <ClCompile Include="..\..\ascension\src\graphics\paint-cairo.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\paint-gdi.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\rendering-context-gdi.cpp" />
     <ClCompile Include="..\..\ascension\src\length.cpp" />

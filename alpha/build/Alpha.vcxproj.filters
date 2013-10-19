@@ -344,6 +344,9 @@
     <ClCompile Include="..\src\buffer-list.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\paint-cairo.cpp">
+      <Filter>ascension\Source Files\graphics</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">

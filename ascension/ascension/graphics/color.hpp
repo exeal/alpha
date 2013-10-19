@@ -10,9 +10,12 @@
 
 #include <ascension/platforms.hpp>
 #include <ascension/corelib/memory.hpp>		// FastArenaObject
-#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+#	include <gdk/gdk.h>						// GdkRGBA
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
 #	include <ascension/win32/windows.hpp>	// COLORREF
 #endif
+#include <boost/math/special_functions/round.hpp>
 #include <boost/operators.hpp>
 
 namespace ascension {
@@ -56,6 +59,21 @@ namespace ascension {
 		};
 
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+		template<> inline GdkRGBA Color::as<GdkRGBA>() const BOOST_NOEXCEPT {
+			GdkRGBA temp;
+			temp.red = red_ / static_cast<double>(std::numeric_limits<uint16_t>::max());
+			temp.green = green_ / static_cast<double>(std::numeric_limits<uint16_t>::max());
+			temp.blue = blue_ / static_cast<double>(std::numeric_limits<uint16_t>::max());
+			temp.alpha = alpha_ / static_cast<double>(std::numeric_limits<uint16_t>::max());
+			return temp;
+		}
+		template<> inline Color Color::from<GdkRGBA>(const GdkRGBA& value) BOOST_NOEXCEPT {
+			return Color(
+				static_cast<Byte>(boost::math::round(value.red * static_cast<double>(std::numeric_limits<uint16_t>::max()))),
+				static_cast<Byte>(boost::math::round(value.green * static_cast<double>(std::numeric_limits<uint16_t>::max()))),
+				static_cast<Byte>(boost::math::round(value.blue * static_cast<double>(std::numeric_limits<uint16_t>::max()))),
+				static_cast<Byte>(boost::math::round(value.alpha * static_cast<double>(std::numeric_limits<uint16_t>::max()))));
+		}
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_DIRECT2D)
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
