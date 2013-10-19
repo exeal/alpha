@@ -16,6 +16,9 @@
 #include <ascension/viewer/viewer-observers.hpp>
 #include <memory>	// std.shared_ptr
 #include <set>
+#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+#	include <gdkmm/pixbuf.h>
+#endif
 
 namespace ascension {
 
@@ -36,7 +39,7 @@ namespace ascension {
 		public:
 			typedef
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-				GLib::RefPtr<Gdk::Pixbuf>
+				Glib::RefPtr<Gdk::Pixbuf>
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
 				QIcon
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
