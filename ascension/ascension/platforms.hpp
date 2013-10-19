@@ -8,6 +8,10 @@
 #define ASCENSION_PLATFORMS_HPP
 
 
+#define ASCENSION_CANT_DETECT_PLATFORM()	\
+	static_assert(false, "Platform can't detect.")
+
+
 /*
 	Operating system (ASCENSION_OS_*)
 	- AIX : AIX
@@ -97,10 +101,16 @@
 	- WIN32 : Windows Win32
 	- X : X Window System (not supported directly)
  */
-#if defined(ASCENSION_OS_DARWIN)
-#	define ASCENSION_WINDOW_SYSTEM_QUARTZ
-#elif defined(ASCENSION_OS_WINDOWS)
-#	define ASCENSION_WINDOW_SYSTEM_WIN32
+#if !defined(ASCENSION_WINDOW_SYSTEM_GTK)		\
+	&& !defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)	\
+	&& !defined(ASCENSION_WINDOW_SYSTEM_QT)		\
+	&& !defined(ASCENSION_WINDOW_SYSTEM_WIN32)	\
+	&& !defined(ASCENSION_WINDOW_SYSTEM_X)
+#	if defined(ASCENSION_OS_DARWIN)
+#		define ASCENSION_WINDOW_SYSTEM_QUARTZ
+#	elif defined(ASCENSION_OS_WINDOWS)
+#		define ASCENSION_WINDOW_SYSTEM_WIN32
+#	endif
 #endif
 
 
