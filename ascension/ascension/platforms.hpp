@@ -7,6 +7,8 @@
 #ifndef ASCENSION_PLATFORMS_HPP
 #define ASCENSION_PLATFORMS_HPP
 
+#include <boost/config.hpp>	// TODO: Should replace with Boost.Predef (Boost 1.55).
+
 
 #define ASCENSION_CANT_DETECT_PLATFORM()	\
 	static_assert(false, "Platform can't detect.")
@@ -175,20 +177,24 @@
 
 
 /*
+	!DEPRECATED! I can't list all compilers!
 	C++ compiler (ASCENSION_COMPILER_*)
+	- CLANG : Clang
 	- COMEAU : Comeau C++
 	- GCC : GNU C++
 	- MSVC : Microsoft Visual C++
 	- WATCOM : Watcom C++
  */
-#if defined(_MSC_VER)
+#if defined(BOOST_CLANG)
+#	define ASCENSION_COMPILER_CLANG
+#elif defined(__COMO__)
+#	define ASCENSION_COMPILER_COMEAU
+#elif defined(BOOST_GCC)
+#	define ASCENSION_COMPILER_GCC
+#elif defined(BOOST_MSVC)
 #	define ASCENSION_COMPILER_MSVC
 #elif defined(__WATCOMC__)
 #	define ASCENSION_COMPILER_WATCOM
-#elif defined(__GNUC__)
-#	define ASCENSION_COMPILER_GCC
-#elif defined(__COMO__)
-#	define ASCENSION_COMPILER_COMEAU
 #endif
 
 
