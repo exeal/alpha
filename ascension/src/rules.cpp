@@ -8,10 +8,11 @@
 #include <ascension/rules.hpp>
 #include <ascension/corelib/ustring.hpp>
 #include <ascension/corelib/utility.hpp>	// detail.searchBound
-#if defined(_DEBUG) && defined(ASCENSION_OS_WINDOWS)
-#	include <ascension/win32/windows.hpp>	// win32.DumpContext
-#endif
 #include <boost/foreach.hpp>
+#if defined(_DEBUG)
+#	include <boost/foreach.hpp>
+#	include <boost/log/trivial.hpp>
+#endif
 #include <boost/range/algorithm/find_if.hpp>
 using namespace ascension;
 using namespace ascension::kernel;
@@ -1331,14 +1332,13 @@ void LexicalPartitioner::doInstall() BOOST_NOEXCEPT {
 
 /// Dumps the partitions information.
 void LexicalPartitioner::dump() const {
-#if defined(_DEBUG) && defined(ASCENSION_OS_WINDOWS)
-	win32::DumpContext dout;
-	dout << "LexicalPartitioner dump start:\n";
-	for(size_t i = 0; i < partitions_.size(); ++i) {
-		const Partition& p = *partitions_[i];
-		dout << "\t" << p.contentType << " = ("
-			<< static_cast<uint32_t>(p.start.line) << ", " << static_cast<uint32_t>(p.start.offsetInLine) << ")\n";
-	}
+#if defined(_DEBUG)
+	BOOST_LOG_TRIVIAL(debug) << "LexicalPartitioner dump start:\n";
+	BOOST_FOREACH(auto i, partitions_)
+		BOOST_LOG_TRIVIAL(debug)
+			<< "\t" << i->contentType << " = ("
+			<< static_cast<uint32_t>(i->start.line) << ", "
+			<< static_cast<uint32_t>(i->start.offsetInLine) << ")\n";
 #endif
 }
 
