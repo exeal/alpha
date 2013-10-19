@@ -14,7 +14,7 @@
 #	include <crtdbg.h>
 #	define _DEBUG_NEW ASCENSION_DEBUG_NEW
 #	define ASCENSION_DEBUG_NEW ::new(_NORMAL_BLOCK, ASCENSION_OVERRIDDEN_FILE, __LINE__)
-#	define ASCENSION_OVERRIDDEN_FILE "uknown source file"
+#	define ASCENSION_OVERRIDDEN_FILE "unknown source file"
 #endif // defined(_DEBUG) && !defined(ASCENSION_NO_MEMORY_LEAK_CHECK)
 /*
 	... and you should do the follow:
@@ -79,9 +79,9 @@ namespace ascension {
 
 		inline LONG_PTR getWindowLong(HWND window, int index) {
 			const DWORD lastError = ::GetLastError();
-			::SetLastError(0);
+			::SetLastError(ERROR_SUCCESS);
 			const LONG_PTR result = ::GetWindowLongPtrW(window, index);
-			if(result == 0 && ::GetLastError() != 0)
+			if(result == 0 && ::GetLastError() != ERROR_SUCCESS)
 				throw makePlatformError();
 			::SetLastError(lastError);
 			return result;
