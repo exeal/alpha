@@ -10,11 +10,13 @@
 #include "resource.h"
 #include "buffer.hpp"
 //#include "search.hpp"	// ui.SearchDialog
-#include <ascension/win32/module.hpp>
-#include <ascension/win32/ui/common-controls.hpp>
-#include <ascension/win32/gdi-object.hpp>
-#include <map>
-#include <sstream>
+#include "win32/module.hpp"
+//#include <ascension/win32/ui/common-controls.hpp>
+//#include <ascension/win32/gdi-object.hpp>
+#include <list>
+#include <memory>
+#include <set>
+#include <string>
 
 
 // タイトルバーとかに使うアプリケーション名
