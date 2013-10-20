@@ -29,6 +29,10 @@ using namespace std;
 
 /// A transparent object whose all components are zero.
 const Color Color::TRANSPARENT_BLACK(0, 0, 0, 0);
+/// An opaque object whose all components are zero.
+const Color Color::OPAQUE_BLACK(0, 0, 0, 0xff);
+/// An opaque object whose all components are 255.
+const Color Color::OPAQUE_WHITE(0xff, 0xff, 0xff, 0xff);
 
 
 // Border /////////////////////////////////////////////////////////////////////////////////////////

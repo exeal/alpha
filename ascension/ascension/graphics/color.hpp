@@ -27,6 +27,7 @@ namespace ascension {
 		class Color : public FastArenaObject<Color>, private boost::equality_comparable<Color> {
 		public:
 			static const Color TRANSPARENT_BLACK;
+			static const Color OPAQUE_BLACK, OPAQUE_WHITE;
 		public:
 			/// Creates a color value based on RGB values.
 			Color(Byte red, Byte green, Byte blue, Byte alpha = 255) BOOST_NOEXCEPT
@@ -69,10 +70,10 @@ namespace ascension {
 		}
 		template<> inline Color Color::from<GdkRGBA>(const GdkRGBA& value) BOOST_NOEXCEPT {
 			return Color(
-				static_cast<Byte>(boost::math::round(value.red * static_cast<double>(std::numeric_limits<uint16_t>::max()))),
-				static_cast<Byte>(boost::math::round(value.green * static_cast<double>(std::numeric_limits<uint16_t>::max()))),
-				static_cast<Byte>(boost::math::round(value.blue * static_cast<double>(std::numeric_limits<uint16_t>::max()))),
-				static_cast<Byte>(boost::math::round(value.alpha * static_cast<double>(std::numeric_limits<uint16_t>::max()))));
+				static_cast<Byte>(boost::math::iround(value.red * static_cast<double>(std::numeric_limits<uint16_t>::max()))),
+				static_cast<Byte>(boost::math::iround(value.green * static_cast<double>(std::numeric_limits<uint16_t>::max()))),
+				static_cast<Byte>(boost::math::iround(value.blue * static_cast<double>(std::numeric_limits<uint16_t>::max()))),
+				static_cast<Byte>(boost::math::iround(value.alpha * static_cast<double>(std::numeric_limits<uint16_t>::max()))));
 		}
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_DIRECT2D)
