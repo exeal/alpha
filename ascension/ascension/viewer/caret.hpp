@@ -36,12 +36,7 @@ namespace ascension {
 			 *            is not implemented yet and the parameter is ignored
 			 * @return The MIME data object
 			 */
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-			win32::com::SmartPointer<widgetapi::NativeMimeData>
-#else
-			std::unique_ptr<widgetapi::NativeMimeData>
-#endif
-				createMimeDataForSelectedString(const Caret& caret, bool rtf);
+			widgetapi::NativeMimeData createMimeDataForSelectedString(const Caret& caret, bool rtf);
 			/**
 			 * Returns the text content from the given MIME data.
 			 * @param data The MIME data
@@ -50,7 +45,7 @@ namespace ascension {
 			 * @retval second @c true if the content is rectangle
 			 * @throw std#bad_alloc
 			 */
-			std::pair<String, bool> getTextFromMimeData(const widgetapi::NativeMimeData& data);
+			std::pair<String, bool> getTextFromMimeData(widgetapi::ConstNativeMimeData data);
 		}
 
 		class VirtualBox;

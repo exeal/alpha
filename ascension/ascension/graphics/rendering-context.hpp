@@ -118,7 +118,7 @@ namespace ascension {
 			 * @param width The height of the data in device pixels
 			 * @param height The height of the data in device pixels
 			 */
-			ImageData(std::unique_ptr<std::uint8_t[]>&& data, std::size_t width, std::size_t height)
+			ImageData(std::unique_ptr<std::uint8_t[]> data, std::size_t width, std::size_t height)
 				 : data_(std::move(data)), width_(width), height_(height) {
 			}
 			/// Returns the one-dimensional array containing the data in RGBA order, as integers
@@ -816,6 +816,12 @@ namespace ascension {
 			 */
 			PaintContext(RenderingContext2D&& context, const Rectangle& boundsToPaint)
 				: RenderingContext2D(std::move(context)), boundsToPaint_(boundsToPaint) {}
+			/**
+			 * Constructor.
+			 * @param context The rendering context
+			 * @param boundsToPaint The rectangle in which the painting is requested
+			 */
+			PaintContext(std::unique_ptr<RenderingContext2D> context, const Rectangle& boundsToPaint);
 			/// Returns the rendering context.
 //			RenderingContext2D& operator*() BOOST_NOEXCEPT {return context_;}
 			/// Returns the rendering context.

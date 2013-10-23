@@ -31,6 +31,7 @@ namespace k = ascension::kernel;
 #ifdef _DEBUG
 bool DIAGNOSE_INHERENT_DRAWING = false;	// 余計な描画を行っていないか診断するフラグ
 //#define TRACE_DRAWING_STRING	// テキスト (代替グリフ以外) のレンダリングをトレース
+#	include <boost/log/trivial.hpp>
 #endif // _DEBUG
 
 namespace {
@@ -427,10 +428,10 @@ namespace {
 	void configureScrollBar(TextViewer& viewer, size_t coordinate, boost::optional<widgetapi::NativeScrollPosition> position,
 			boost::optional<const boost::integer_range<widgetapi::NativeScrollPosition>> range, boost::optional<widgetapi::NativeScrollPosition> pageSize) {
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-		Glib::RefPtr<Gtk::Adjustment> adjustment = (coordinate == geometry::X_COORDINATE) ? viewer.get_hadjustment() : viewer.get_vadjustment();
+		Glib::RefPtr<Gtk::Adjustment> adjustment((coordinate == 0) ? viewer.get_hadjustment() : viewer.get_vadjustment());
 		if(range != boost::none) {
-			adjustment->set_lower(range->beginning());
-			adjustment->set_upper(range->end());
+			adjustment->set_lower(*range->begin());
+			adjustment->set_upper(*range->end());
 		}
 		adjustment->set_step_increment(1);
 		if(pageSize != boost::none) {
@@ -440,7 +441,7 @@ namespace {
 		if(position != boost::none)
 			adjustment->set_value(*position);
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
-		QScrollBar* const scrollBar = (coordinate == geometry::X_COORDINATE) ? viewer.horizontalScrollBar() : viewer.verticalScrollBar();
+		QScrollBar* const scrollBar = (coordinate == 0) ? viewer.horizontalScrollBar() : viewer.verticalScrollBar();
 		if(range != boost::none)
 			scrollBar->setRange(range->beginning(), range->end());
 		scrollBar->setSingleStep(1);
@@ -1192,7 +1193,7 @@ void TextViewer::redrawLines(const boost::integer_range<Index>& lines) {
 
 #ifdef _DEBUG
 	if(DIAGNOSE_INHERENT_DRAWING)
-		win32::DumpContext()
+		BOOST_LOG_TRIVIAL(debug)
 			<< L"@TextViewer.redrawLines invalidates lines ["
 			<< static_cast<unsigned long>(*lines.begin())
 			<< L".." << static_cast<unsigned long>(*lines.end()) << L"]\n";
@@ -1341,6 +1342,11 @@ void TextViewer::setConfiguration(const Configuration* general, shared_ptr<const
 			caret().updateLocation();
 		}
 		if(synchronizeUI) {
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+			if(get_direction() != Gtk::TEXT_DIR_NONE)
+				set_direction((configuration_.readingDirection == LEFT_TO_RIGHT) ? Gtk::TEXT_DIR_LTR : Gtk::TEXT_DIR_RTL);
+//			set_placement();
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 			LONG style = ::GetWindowLongW(handle().get(), GWL_EXSTYLE);
 			if(configuration_.readingDirection == LEFT_TO_RIGHT) {
 				style &= ~(WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR);
@@ -1350,6 +1356,7 @@ void TextViewer::setConfiguration(const Configuration* general, shared_ptr<const
 				style |= WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR;
 			}
 			::SetWindowLongW(handle().get(), GWL_EXSTYLE, style);
+#endif
 		}
 	}
 	widgetapi::scheduleRedraw(*this, false);
@@ -1392,15 +1399,18 @@ void TextViewer::setMouseInputStrategy(shared_ptr<MouseInputStrategy> newStrateg
  * @param text the text to be shown. CRLF represents a line break. this can not contain any NUL character
  * @param timeToWait the time to wait in milliseconds. -1 to use the system default value
  * @param timeRemainsVisible the time remains visible in milliseconds. -1 to use the system default value
+ * @deprecated 0.8
  */
 void TextViewer::showToolTip(const String& text, unsigned long timeToWait /* = -1 */, unsigned long timeRemainsVisible /* = -1 */) {
 //	checkInitialization();
 
 	hideToolTip();
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 	if(timeToWait == -1)
 		timeToWait = ::GetDoubleClickTime();
 	tipText_.assign(text);
 	::SetTimer(handle().get(), TIMERID_CALLTIP, timeToWait, nullptr);
+#endif
 }
 
 #ifndef ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
@@ -1556,9 +1566,9 @@ namespace {
 			size_t coordinate, widgetapi::NativeScrollPosition* position,
 			boost::integer_range<widgetapi::NativeScrollPosition>* range, widgetapi::NativeScrollPosition* pageSize) {
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-		Glib::RefPtr<Gtk::Adjustment> adjustment = (coordinate == geometry::X_COORDINATE) ? viewer.get_hadjustment() : viewer.get_vadjustment();
+		Glib::RefPtr<Gtk::Adjustment> adjustment((coordinate == 0) ? viewer.get_hadjustment() : viewer.get_vadjustment());
 		if(range != nullptr)
-			*range = makeRange(adjustment->get_lower(), adjustment->get_upper());
+			*range = boost::irange(adjustment->get_lower(), adjustment->get_upper());
 		if(pageSize != nullptr)
 			*pageSize = adjustment->get_page_increment();
 //			*pageSize = adjustment->get_page_size();
@@ -1567,7 +1577,7 @@ namespace {
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
 		const QScrollBar* const scrollBar = (coordinate == geometry::X_COORDINATE) ? viewer.horizontalScrollBar() : viewer.verticalScrollBar();
 		if(range != nullptr)
-			*range = makeRange(scrollBar->minimum(), scrollBar->maximum());
+			*range = boost::irange(scrollBar->minimum(), scrollBar->maximum());
 		if(pageSize != nullptr)
 			*pageSize = scrollBar->pageStep();
 		if(position != nullptr)

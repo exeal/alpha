@@ -10,6 +10,9 @@
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/viewer.hpp>
+#ifdef _DEBUG
+#	include <boost/log/trivial.hpp>
+#endif
 
 using namespace ascension;
 using namespace ascension::graphics;
@@ -153,7 +156,9 @@ namespace {
 	}
 	
 	inline uint16_t platformIndicatorMarginWidthInPixels(bool horizontalLayout) {
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		return 15;	// TODO: Not implemented.
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 #if 1
 		const int width = ::GetSystemMetrics(horizontalLayout ? SM_CYHSCROLL : SM_CXVSCROLL);
 		return static_cast<uint16_t>(width != 0) ? width : 15;
@@ -342,7 +347,7 @@ void RulerPainter::paint(PaintContext& context) {
 
 #ifdef _DEBUG
 	if(DIAGNOSE_INHERENT_DRAWING)
-		win32::DumpContext() << L"@RulerPainter.paint draws y = "
+		BOOST_LOG_TRIVIAL(debug) << L"@RulerPainter.paint draws y = "
 			<< geometry::top(paintBounds) << L" ~ " << geometry::bottom(paintBounds) << L"\n";
 #endif // _DEBUG
 

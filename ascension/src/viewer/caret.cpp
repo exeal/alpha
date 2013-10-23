@@ -576,11 +576,11 @@ void Caret::resetVisualization() {
 		const bool horizontal = isHorizontal(textViewer().textRenderer().computedBlockFlowDirection());
 		const graphics::Rectangle bounds(currentCharacterLogicalBounds(*this));
 		image.reset(new Image(geometry::BasicDimension<uint16_t>(
-			static_cast<uint16_t>(geometry::dx(bounds)), static_cast<uint16_t>(geometry::dy(bounds))), Image::RGB_16));
+			static_cast<uint16_t>(geometry::dx(bounds)), static_cast<uint16_t>(geometry::dy(bounds))), Image::RGB16));
 		geometry::x(alignmentPoint) = static_cast<uint16_t>(geometry::left(bounds));
 		geometry::y(alignmentPoint) = static_cast<uint16_t>(geometry::top(bounds));
 	} else if(context_.inputMethodCompositionActivated) {
-		image.reset(new Image(geometry::BasicDimension<uint16_t>(0, 0), Image::RGB_16));
+		image.reset(new Image(geometry::BasicDimension<uint16_t>(0, 0), Image::RGB16));
 		alignmentPoint = boost::geometry::make_zero<geometry::BasicPoint<uint16_t>>();
 	} else if(shaper_.get() != nullptr)
 		shaper_->shape(image, alignmentPoint);
@@ -598,7 +598,7 @@ void Caret::resetVisualization() {
 	::CreateCaret(viewer.handle().get(), image->asNativeObject().get(), 0, 0);
 	::ShowCaret(viewer.handle().get());
 #else
-	// TODO: Implement for other window systems.
+	ASCENSION_CANT_DETECT_PLATFORM();
 #endif
 
 	shapeCache_.image = move(image);
@@ -694,7 +694,7 @@ void Caret::updateLocation() {
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 	::SetCaretPos(boost::geometry::get<0>(newLocation), boost::geometry::get<1>(newLocation));
 #else
-	// TODO: Implement for other window systems.
+	ASCENSION_CANT_DETECT_PLATFORM();
 #endif
 	adjustInputMethodCompositionWindow();
 }
