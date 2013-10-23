@@ -11,6 +11,7 @@
 
 #include <ascension/corelib/text/break-iterator.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/image.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
@@ -186,7 +187,12 @@ const widgetapi::Cursor& AutoScrollOriginMark::cursorForScrolling(CursorType typ
 			memcpy(andBits + 4 * 20, AND_LINE_20_TO_28, sizeof(AND_LINE_20_TO_28));
 			memcpy(xorBits + 4 * 20, XOR_LINE_20_TO_28, sizeof(XOR_LINE_20_TO_28));
 		}
-#if defined(ASCENSION_OS_WINDOWS)
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		widgetapi::Cursor::createMonochrome(
+			geometry::BasicDimension<uint16_t>(geometry::_dx = 32, geometry::_dy = 32),
+			andBits, xorBits,
+			geometry::BasicPoint<uint16_t>(geometry::_x = 16, geometry::_y = 16));
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		instances[type].reset(new widgetapi::Cursor(win32::Handle<HCURSOR>::Type(
 			::CreateCursor(::GetModuleHandleW(nullptr), 16, 16, 32, 32, andBits, xorBits), &::DestroyCursor)));
 #else
@@ -293,21 +299,7 @@ DefaultMouseInputStrategy::DefaultMouseInputStrategy() : viewer_(nullptr), state
 }
 
 namespace {
-	boost::optional<SHDRAGIMAGE> createSelectionImage(const TextViewer& viewer, const Point& cursorPosition, bool highlightSelection) {
-		win32::Handle<HDC>::Type dc(::CreateCompatibleDC(nullptr), &::DeleteDC);
-		if(dc.get() == nullptr)
-			throw makePlatformError();	// MSDN does *not* says CreateCompatibleDC set the last error value, but...
-
-		win32::AutoZero<BITMAPV5HEADER> bh;
-		bh.bV5Size = sizeof(BITMAPV5HEADER);
-		bh.bV5Planes = 1;
-		bh.bV5BitCount = 32;
-		bh.bV5Compression = BI_BITFIELDS;
-		bh.bV5RedMask = 0x00ff0000ul;
-		bh.bV5GreenMask = 0x0000ff00ul;
-		bh.bV5BlueMask = 0x000000fful;
-		bh.bV5AlphaMask = 0xff000000ul;
-
+	unique_ptr<Image> createSelectionImage(const TextViewer& viewer, const Point& cursorPosition, bool highlightSelection, geometry::BasicRectangle<uint16_t>& dimensions) {
 		// determine the range to draw
 		const k::Region selectedRegion(viewer.caret());
 //		const shared_ptr<const TextViewport> viewport(viewer.textRenderer().viewport());
@@ -327,7 +319,7 @@ namespace {
 			yrange = boost::irange(*yrange.begin(), *yrange.end() + widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts()[line].numberOfLines());
 			geometry::range<1>(selectionBounds) = yrange;
 			if(geometry::dy(selectionBounds) > geometry::dy(clientBounds))
-				return boost::none;	// overflow
+				return unique_ptr<Image>();	// overflow
 			const TextLayout& layout = renderer.layouts()[line];
 			const Scalar indent = font::lineIndent(layout, renderer.viewport()->contentMeasure());
 			for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
@@ -339,116 +331,97 @@ namespace {
 						min(geometry::left(sublineBounds) + indent, geometry::left(selectionBounds)),
 						max(geometry::right(sublineBounds) + indent, geometry::right(selectionBounds)));
 					if(geometry::dx(selectionBounds) > geometry::dx(clientBounds))
-						return boost::none;	// overflow
+						return unique_ptr<Image>();	// overflow
 				}
 			}
 		}
-		bh.bV5Width = static_cast<LONG>(geometry::dx(selectionBounds));
-		bh.bV5Height = static_cast<LONG>(geometry::dy(selectionBounds));
+		const geometry::BasicDimension<uint16_t> size(
+			geometry::_dx = static_cast<uint16_t>(geometry::dx(selectionBounds)),
+			geometry::_dy = static_cast<uint16_t>(geometry::dy(selectionBounds)));
 
 		// create a mask
-		win32::Handle<HBITMAP>::Type mask(::CreateBitmap(bh.bV5Width, bh.bV5Height, 1, 1, 0), &::DeleteObject);	// monochrome
-		if(mask.get() == nullptr)
-			throw makePlatformError();	// this must be ERROR_INVALID_BITMAP
-		HBITMAP oldBitmap = static_cast<HBITMAP>(::SelectObject(dc.get(), mask.get()));
+		Image mask(size, Image::A1);	// monochrome. This may occur ERROR_INVALID_BITMAP on Win32
 		{
-			RECT temp;
-			::SetRect(&temp, 0, 0, bh.bV5Width, bh.bV5Height);
-			::FillRect(dc.get(), &temp, static_cast<HBRUSH>(::GetStockObject(BLACK_BRUSH)));
+			unique_ptr<RenderingContext2D> context(mask.createRenderingContext());
+
+			// fill with transparent bits
+			context->setFillStyle(make_shared<SolidColor>(Color::OPAQUE_BLACK));
+			context->fillRectangle(graphics::Rectangle(boost::geometry::make_zero<Point>(), geometry::size(selectionBounds)));
+
+			// render mask pattern
+			Scalar y = 0;
+			for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
+				// render each lines
+				const TextLayout& layout = renderer.layouts()[line];
+				const Scalar indent = font::lineIndent(layout, renderer.viewport()->contentMeasure());
+				for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
+					boost::optional<boost::integer_range<Index>> range(selectedRangeOnVisualLine(viewer.caret(), font::VisualLine(line, subline)));
+					if(range) {
+						range = boost::irange(*range->begin(), min(viewer.document().lineLength(line), *range->end()));
+						auto region(layout.blackBoxBounds(*range));
+						geometry::translate(region,
+							Dimension(geometry::_dx = indent - geometry::left(selectionBounds), geometry::_dy = y - geometry::top(selectionBounds)));
+						context->setFillStyle(make_shared<SolidColor>(Color::OPAQUE_WHITE));
+						BOOST_FOREACH(const auto& polygon, region) {
+							context->beginPath();
+							bool firstPoint = true;
+							boost::geometry::for_each_point(polygon, [&context, &firstPoint](const Point& p) {
+								if(firstPoint) {
+									context->moveTo(p);
+									firstPoint = false;
+								} else
+									context->lineTo(p);
+							});
+//							context->endPath();
+							context->fill();
+						}
+					}
+					y += widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch();
+				}
+			}
 		}
-		Scalar y = 0;
-		for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
-			const TextLayout& layout = renderer.layouts()[line];
-			const Scalar indent = font::lineIndent(layout, renderer.viewport()->contentMeasure());
-			for(Index subline = 0, sublines = layout.numberOfLines(); subline < sublines; ++subline) {
-				boost::optional<boost::integer_range<Index>> range(selectedRangeOnVisualLine(viewer.caret(), font::VisualLine(line, subline)));
-				if(range) {
-					range = boost::irange(*range->begin(), min(viewer.document().lineLength(line), *range->end()));
-					auto region(layout.blackBoxBounds(*range));
-					geometry::translate(region,
-						Dimension(geometry::_dx = indent - geometry::left(selectionBounds), geometry::_dy = y - geometry::top(selectionBounds)));
-					::SelectObject(dc.get(), static_cast<HBRUSH>(::GetStockObject(WHITE_BRUSH)));
-					BOOST_FOREACH(const auto& polygon, region) {
-						::BeginPath(dc.get());
-						bool firstPoint = true;
-						boost::geometry::for_each_point(polygon, [&dc, &firstPoint](const Point& p) {
-							if(firstPoint) {
-								::MoveToEx(dc.get(), static_cast<int>(geometry::x(p)), static_cast<int>(geometry::y(p)), nullptr);
-								firstPoint = false;
-							} else
-								::LineTo(dc.get(), static_cast<int>(geometry::x(p)), static_cast<int>(geometry::y(p)));
-						});
-						::EndPath(dc.get());
-						::FillPath(dc.get());
+
+		// create the result image
+		unique_ptr<Image> image(new Image(size, Image::ARGB32));
+		{
+			// render the lines
+			graphics::Rectangle selectionExtent(selectionBounds);
+			geometry::translate(selectionExtent,
+				geometry::negate(Dimension(geometry::_dx = geometry::left(selectionExtent), geometry::_dy = geometry::top(selectionExtent))));
+			PaintContext context(move(image->createRenderingContext()), selectionExtent);
+			Scalar y = geometry::top(selectionBounds);
+			for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
+				renderer.paint(line, context,
+					Point(geometry::_x = font::lineIndent(renderer.layouts()[line], renderer.viewport()->contentMeasure()) - geometry::left(selectionBounds), geometry::_y = y));
+				y += widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts().numberOfSublinesOfLine(line);
+			}
+
+			// set alpha values
+			const array<uint8_t, 2> alphaChunnels = {
+#ifndef ASCENSION_WINDOW_SYSTEM_WIN32
+				0x00,
+#else
+				0x01,
+#endif
+				0xff
+			};
+			boost::iterator_range<const uint8_t*>::const_iterator maskByte(begin(mask.pixels()));
+			boost::iterator_range<uint8_t*> imageBits(image->pixels());
+			for(uint16_t y = 0; y < geometry::dy(size); ++y) {
+				for(uint16_t x = 0; ; ) {
+					uint8_t* const pixel = begin(imageBits) + x + geometry::dx(size) * y;	// points alpha value
+					*pixel = alphaChunnels[(*maskByte & (1 << ((8 - x % 8) - 1))) ? 1 : 0];
+					if(x % 8 == 7)
+						++maskByte;
+					if(++x == geometry::dx(size)) {
+						if(x % 8 != 0)
+							++maskByte;
+						break;
 					}
 				}
-				y += widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch();
+				if(reinterpret_cast<uintptr_t>(maskByte) % sizeof(uint32_t) != 0)
+					maskByte += sizeof(uint32_t) - reinterpret_cast<uintptr_t>(maskByte) % sizeof(uint32_t);
 			}
-		}
-		::SelectObject(dc.get(), oldBitmap);
-		BITMAPINFO* bi = nullptr;
-		unique_ptr<byte[]> maskBuffer;
-		uint8_t* maskBits;
-		BYTE alphaChunnels[2] = {0xff, 0x01};
-		try {
-			bi = static_cast<BITMAPINFO*>(::operator new(sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * 2));
-			memset(&bi->bmiHeader, 0, sizeof(BITMAPINFOHEADER));
-			bi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-			if(::GetDIBits(dc.get(), mask.get(), 0, bh.bV5Height, nullptr, bi, DIB_RGB_COLORS) == 0)
-				throw makePlatformError();	// this must be ERROR_INVALID_PARAMETER
-			assert(bi->bmiHeader.biBitCount == 1 && bi->bmiHeader.biClrUsed == 2);
-			maskBuffer.reset(new uint8_t[bi->bmiHeader.biSizeImage + sizeof(DWORD)]);
-			maskBits = maskBuffer.get() + sizeof(DWORD) - reinterpret_cast<ULONG_PTR>(maskBuffer.get()) % sizeof(DWORD);
-			if(::GetDIBits(dc.get(), mask.get(), 0, bh.bV5Height, maskBits, bi, DIB_RGB_COLORS) == 0)
-				throw makePlatformError();	// this must be ERROR_INVALID_PARAMETER
-			if(bi->bmiColors[0].rgbRed == 0xff && bi->bmiColors[0].rgbGreen == 0xff && bi->bmiColors[0].rgbBlue == 0xff)
-				swap(alphaChunnels[0], alphaChunnels[1]);
-		} catch(const bad_alloc&) {
-			throw;
-		} catch(const system_error&) {
-			::operator delete(bi);
-			throw;
-		}
-		::operator delete(bi);
-
-		// create the result bitmap
-		void* bits;
-		struct ObjectDeleter {
-			void operator()(HBITMAP h) {
-				::DeleteObject(h);
-			}
-		};
-		unique_ptr<remove_pointer<HBITMAP>::type, ObjectDeleter> bitmap(::CreateDIBSection(dc.get(), reinterpret_cast<BITMAPINFO*>(&bh), DIB_RGB_COLORS, &bits, nullptr, 0));
-		if(bitmap.get() == nullptr)
-			throw makePlatformError();	// this must be ERROR_INVALID_PARAMETER
-		// render the lines
-		oldBitmap = static_cast<HBITMAP>(::SelectObject(dc.get(), bitmap.get()));
-		graphics::Rectangle selectionExtent(selectionBounds);
-		geometry::translate(selectionExtent, geometry::negate(Dimension(geometry::_dx = geometry::left(selectionExtent), geometry::_dy = geometry::top(selectionExtent))));
-		y = geometry::top(selectionBounds);
-		for(Index line = selectedRegion.beginning().line, e = selectedRegion.end().line; line <= e; ++line) {
-			renderer.paint(line, PaintContext(RenderingContext2D(dc), selectionExtent),
-				Point(geometry::_x = font::lineIndent(renderer.layouts()[line], renderer.viewport()->contentMeasure()) - geometry::left(selectionBounds), geometry::_y = y));
-			y += widgetapi::createRenderingContext(viewer)->fontMetrics(renderer.defaultFont())->linePitch() * renderer.layouts().numberOfSublinesOfLine(line);
-		}
-		::SelectObject(dc.get(), oldBitmap);
-
-		// set alpha chunnel
-		const uint8_t* maskByte = maskBits;
-		for(LONG y = 0; y < bh.bV5Height; ++y) {
-			for(LONG x = 0; ; ) {
-				RGBQUAD& pixel = static_cast<RGBQUAD*>(bits)[x + bh.bV5Width * y];
-				pixel.rgbReserved = alphaChunnels[(*maskByte & (1 << ((8 - x % 8) - 1))) ? 0 : 1];
-				if(x % 8 == 7)
-					++maskByte;
-				if(++x == bh.bV5Width) {
-					if(x % 8 != 0)
-						++maskByte;
-					break;
-				}
-			}
-			if(reinterpret_cast<ULONG_PTR>(maskByte) % sizeof(DWORD) != 0)
-				maskByte += sizeof(DWORD) - reinterpret_cast<ULONG_PTR>(maskByte) % sizeof(DWORD);
 		}
 
 		// locate the hotspot of the image based on the cursor position
@@ -459,22 +432,16 @@ namespace {
 			- inlineProgressionScrollOffsetInUserUnits(*viewport, viewport->inlineProgressionOffset()) + geometry::left(selectionBounds);
 		geometry::y(hotspot) -= geometry::y(modelToView(*viewport, TextHit<k::Position>::leading(k::Position(selectedRegion.beginning().line, 0)), true));
 
-		SHDRAGIMAGE image;
-		image.sizeDragImage.cx = bh.bV5Width;
-		image.sizeDragImage.cy = bh.bV5Height;
-		image.ptOffset = hotspot;
-		image.hbmpDragImage = static_cast<HBITMAP>(bitmap.release());
-		image.crColorKey = CLR_NONE;
-		return boost::make_optional(image);
+		// calculate 'dimensions'
+		dimensions = geometry::BasicRectangle<uint16_t>(geometry::negate(hotspot), size);
+
+		return image;
 	}
 }
 
 void DefaultMouseInputStrategy::beginDragAndDrop() {
 	const Caret& caret = viewer_->caret();
-	HRESULT hr;
-
-	win32::com::SmartPointer<IDataObject> draggingContent(
-		utils::createMimeDataForSelectedString(viewer_->caret(), true));
+	widgetapi::NativeMimeData draggingContent(utils::createMimeDataForSelectedString(viewer_->caret(), true));
 	if(!caret.isSelectionRectangle())
 		dnd_.numberOfRectangleLines = 0;
 	else {
@@ -482,19 +449,42 @@ void DefaultMouseInputStrategy::beginDragAndDrop() {
 		dnd_.numberOfRectangleLines = selection.end().line - selection.beginning().line + 1;
 	}
 
-	// setup drag-image
-	if(dnd_.dragSourceHelper.get() != nullptr) {
-		boost::optional<SHDRAGIMAGE> image(createSelectionImage(*viewer_, dragApproachedPosition_, true));
-		if(image && FAILED(hr = dnd_.dragSourceHelper->InitializeFromBitmap(&image.get(), draggingContent.get())))
-			::DeleteObject(image->hbmpDragImage);
+	// setup drag-image and begin operation
+	geometry::BasicRectangle<uint16_t> imageDimensions;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+	Gdk::DragAction possibleActions = Gdk::ACTION_COPY;
+	if(!viewer_->document().isReadOnly())
+		possibleActions |= Gdk::ACTION_MOVE;
+	Glib::RefPtr<Gdk::DragContext> context(viewer_->drag_begin(draggingContent, possibleActions, 1, nullptr));
+	if(context) {
+		unique_ptr<Image> image(createSelectionImage(*viewer_, dragApproachedPosition_, true, imageDimensions));
+		context->set_icon(image->asNativeObject(), -geometry::left(imageDimensions), -geometry::top(imageDimensions));
 	}
-
-	// operation
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+	if(dnd_.dragSourceHelper.get() != nullptr) {
+		unique_ptr<Image> image(createSelectionImage(*viewer_, dragApproachedPosition_, true, imageDimensions));
+		if(image.get() != nullptr) {
+			SHDRAGIMAGE temp;
+			temp.sizeDragImage.cx = geometry::dx(imageDimensions);
+			temp.sizeDragImage.cy = geometry::dy(imageDimensions);
+			temp.ptOffset.x = -geometry::left(imageDimensions);
+			temp.ptOffset.y = -geometry::top(imageDimensions);
+			temp.hbmpDragImage = image->asNativeObject;
+			temp.crColorKey = CLR_NONE;
+			const HRESULT hr = dnd_.dragSourceHelper->InitializeFromBitmap(&image.get(), draggingContent.get());
+		}
+	}
 	state_ = DND_SOURCE;
 	DWORD possibleEffects = DROPEFFECT_COPY | DROPEFFECT_SCROLL, resultEffect;
 	if(!viewer_->document().isReadOnly())
 		possibleEffects |= DROPEFFECT_MOVE;
 	hr = ::DoDragDrop(draggingContent.get(), this, possibleEffects, &resultEffect);
+#else
+	ASCENSION_CANT_DETECT_PLATFORM();
+#endif
+
 	state_ = NONE;
 	if(widgetapi::isVisible(*viewer_))
 		widgetapi::setFocus(*viewer_);
@@ -507,7 +497,7 @@ void DefaultMouseInputStrategy::captureChanged() {
 }
 
 namespace {
-	bool isMimeDataAcceptable(const widgetapi::NativeMimeData& data, bool onlyRectangle) {
+	bool isMimeDataAcceptable(widgetapi::ConstNativeMimeData data, bool onlyRectangle) {
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 		return (data.get_target() == ASCENSION_RECTANGLE_TEXT_MIME_FORMAT) || (!onlyRectangle && data.targets_include_text());
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)

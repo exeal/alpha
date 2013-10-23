@@ -21,8 +21,8 @@ using namespace std;
  */
 RenderingContext2D::RenderingContext2D(win32::Handle<HDC>::Type nativeObject) : nativeObject_(nativeObject), hasCurrentSubpath_(false) {
 	savedStates_.push(State());
-	setFillStyle(shared_ptr<Paint>(new SolidColor(Color(0, 0, 0))));
-	setStrokeStyle(shared_ptr<Paint>(new SolidColor(Color(0, 0, 0))));
+	setFillStyle(shared_ptr<Paint>(new SolidColor(Color::OPAQUE_BLACK)));
+	setStrokeStyle(shared_ptr<Paint>(new SolidColor(Color::OPAQUE_BLACK)));
 	::SetBkMode(nativeObject_.get(), TRANSPARENT);
 	::SetGraphicsMode(nativeObject_.get(), GM_ADVANCED);
 	::SetPolyFillMode(nativeObject_.get(), WINDING);

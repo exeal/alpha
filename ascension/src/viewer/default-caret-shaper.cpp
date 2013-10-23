@@ -12,6 +12,9 @@
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/default-caret-shaper.hpp>
 #include <ascension/viewer/viewer.hpp>
+#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+#	include <gtkmm/settings.h>
+#endif
 
 using namespace ascension;
 using namespace ascension::viewers;
@@ -52,7 +55,7 @@ void DefaultCaretShaper::install(CaretShapeUpdater& updater) BOOST_NOEXCEPT {
 }
 
 namespace {
-	inline uint32_t packColor(const Color& color) {
+	inline uint32_t packColor(const Color& color) BOOST_NOEXCEPT {
 		return (0xff << 12) | (color.red() << 8) | (color.green() << 4) | color.blue();
 	}
 	/**
@@ -66,7 +69,7 @@ namespace {
 		const unique_ptr<uint32_t[]> pattern(new uint32_t[width * height]);
 		uninitialized_fill(pattern.get(), pattern.get() + (width * height), packColor(color));
 		return unique_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(pattern.get()),
-			geometry::BasicDimension<uint16_t>(geometry::_dx = width, geometry::_dy = height), Image::ARGB_32));
+			geometry::BasicDimension<uint16_t>(geometry::_dx = width, geometry::_dy = height), Image::ARGB32));
 	}
 	inline uint16_t systemDefinedCaretMeasure() {
 #if defined(ASCENSION_OS_WINDOWS)
@@ -107,7 +110,7 @@ namespace {
 //				pattern[i * 5 + 4] = black;
 		}
 		return unique_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(pattern.get()),
-			geometry::BasicDimension<uint16_t>(geometry::_dx = 5, geometry::_dy = extent), Image::ARGB_32));
+			geometry::BasicDimension<uint16_t>(geometry::_dx = 5, geometry::_dy = extent), Image::ARGB32));
 	}
 	/**
 	 * Creates the bitmap for Thai or Lao caret.
@@ -132,7 +135,7 @@ namespace {
 		for(uint16_t x = 0; x < width; ++x)
 			pattern[width * (extent - 1) + x] = black;
 		return unique_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(pattern.get()),
-			geometry::BasicDimension<uint16_t>(geometry::_dx = width, geometry::_dy = extent), Image::ARGB_32));
+			geometry::BasicDimension<uint16_t>(geometry::_dx = width, geometry::_dy = extent), Image::ARGB32));
 	}
 
 	void shapeCaret(const Caret& caret, bool localeSensitive, unique_ptr<Image>& image, geometry::BasicPoint<uint16_t>& alignmentPoint) {
@@ -148,10 +151,16 @@ namespace {
 			bounds = geometry::make<graphics::Rectangle>(mapFlowRelativeToPhysical(layout.writingMode(), temp));
 		}
 
-		static const Color black(0, 0, 0);
 		if(localeSensitive) {
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+			const bool inputMethodIsOpen = static_cast<Glib::ustring>(const_cast<TextViewer&>(caret.textViewer()).get_settings()->property_gtk_im_module()) != nullptr;
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 			win32::Handle<HIMC>::Type imc(win32::inputMethod(caret.textViewer()));
-			if(win32::boole(::ImmGetOpenStatus(imc.get()))) {
+			const bool inputMethodIsOpen = win32::boole(::ImmGetOpenStatus(imc.get()));
+#else
+			ASCENSION_CANT_DETECT_PLATFORM();
+#endif
+			if(inputMethodIsOpen) {
 				static const Color red(0x80, 0x00, 0x00);
 				image = createSolidCaretImage(static_cast<uint16_t>(geometry::dx(bounds)), static_cast<uint16_t>(geometry::dy(bounds)), red);
 				return;
@@ -166,7 +175,7 @@ namespace {
 //				}
 			}
 		}
-		image = createSolidCaretImage(static_cast<uint16_t>(geometry::dx(bounds)), static_cast<uint16_t>(geometry::dy(bounds)), black);
+		image = createSolidCaretImage(static_cast<uint16_t>(geometry::dx(bounds)), static_cast<uint16_t>(geometry::dy(bounds)), Color::OPAQUE_BLACK);
 	}
 }
 

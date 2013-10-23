@@ -26,20 +26,20 @@
 #	include <ascension/win32/com/smart-pointer.hpp>
 #	include <ascension/win32/com/unknown-impl.hpp>
 #	include <shlobj.h>	// IDropTargetHelper
+
+#	ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
+#		include <dimm.h>
+#	endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
+
+#	ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
+#		include <Oleacc.h>
+#		include <MSAAtext.h>
+#	endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
+
+#	ifndef ASCENSION_NO_TEXT_OBJECT_MODEL
+#		include <tom.h>
+#	endif // !ASCENSION_NO_TEXT_OBJECT_MODEL
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
-
-#ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
-#	include <dimm.h>
-#endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
-
-#ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
-#	include <Oleacc.h>
-#	include <MSAAtext.h>
-#endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
-
-#ifndef ASCENSION_NO_TEXT_OBJECT_MODEL
-#	include <tom.h>
-#endif // !ASCENSION_NO_TEXT_OBJECT_MODEL
 
 
 namespace ascension {
@@ -63,7 +63,7 @@ namespace ascension {
 		class ContentAssistant;
 	}
 
-#ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
 	namespace detail {
 		class AbstractAccessibleProxy : public IAccessible {
 		public:
@@ -71,7 +71,7 @@ namespace ascension {
 			virtual void dispose() = 0;
 		};
 	}
-#endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
+#endif
 
 	namespace viewers {
 		class TextViewer :
@@ -199,25 +199,25 @@ namespace ascension {
 			const Caret& caret() const BOOST_NOEXCEPT;
 			/// @}
 
-#ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
 			/// @name Global IME (Only Windows)
 			/// @{
 			void enableActiveInputMethod(bool enable = true) BOOST_NOEXCEPT;
 			bool isActiveInputMethodEnabled() const BOOST_NOEXCEPT;
 			/// @}
 
-#endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
+#endif
 			/// @name Other User Interface
 			/// @{
 			void beep() BOOST_NOEXCEPT;
-#ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
 			HRESULT accessibleObject(IAccessible*& acc) const BOOST_NOEXCEPT;
-#endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
+#endif
 			void hideToolTip();
 			void showToolTip(const String& text, unsigned long timeToWait = -1, unsigned long timeRemainsVisible = -1);
-#ifndef ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_TEXT_SERVICES_FRAMEWORK)
 			HRESULT startTextServices();
-#endif // !ASCENSION_NO_TEXT_SERVICES_FRAMEWORK
+#endif
 			/// @}
 
 			/// @name Content Assist
@@ -307,7 +307,7 @@ namespace ascension {
 
 		private:
 			// platform-dependent events
-#if defined(ASCENSION_WINDOW_SYSTEM_GTKMM)
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 			bool on_button_press_event(GdkEventButton* event);
 			bool on_button_release_event(GdkEventButton* event);
 			bool on_configure_event(GdkEventConfigure* event);
@@ -315,7 +315,7 @@ namespace ascension {
 			bool on_focus_in_event(GdkEventFocus* event);
 			bool on_focus_out_event(GdkEventFocus* event);
 			bool on_grab_broken_event(GdkEventGrabBroken* event);
-			bool on_grab_focus();
+			void on_grab_focus();
 			bool on_key_press_event(GdkEventKey* event);
 			bool on_key_release(GdkEventKey* event);
 			bool on_motion_notify_event(GdkEventMotion* event);
@@ -413,20 +413,20 @@ namespace ascension {
 			detail::Listeners<ViewportListener> viewportListeners_;
 			std::unique_ptr<detail::RulerPainter> rulerPainter_;
 			std::unique_ptr<contentassist::ContentAssistant> contentAssistant_;
-#ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
 			win32::com::SmartPointer<detail::AbstractAccessibleProxy> accessibleProxy_;
-#endif // !ASCENSION_NO_ACTIVE_ACCESSIBILITY
+#endif
 
 			// modes
 			struct ModeState {
-#ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
 				bool activeInputMethodEnabled;	// true if uses Global IME (deprecated)
-#endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
+#endif
 
 				ModeState() BOOST_NOEXCEPT
-#ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
 					: activeInputMethodEnabled(true)
-#endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
+#endif
 				{}
 			} modeState_;
 
@@ -483,7 +483,7 @@ namespace ascension {
 			win32::com::SmartPointer<IDropTargetHelper> dropTargetHelper_;
 			win32::com::SmartPointer<IDataObject> draggingData_;
 #else
-			const NativeMimeData* draggingData_;
+//			const NativeMimeData* draggingData_;
 #endif
 
 			friend class VisualPoint;
@@ -593,7 +593,7 @@ namespace ascension {
 		/// Returns the document.
 		inline const kernel::Document& TextViewer::document() const {return presentation_.document();}
 		
-#ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
 		/**
 		 * Enables Global IME. This setting effects under only Windows NT 4.0. Otherwise, Ascension
 		 * does not use Global IME.
@@ -602,7 +602,7 @@ namespace ascension {
 		inline void TextViewer::enableActiveInputMethod(bool enable /* = true */) BOOST_NOEXCEPT {
 			modeState_.activeInputMethodEnabled = enable;
 		}
-#endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
+#endif
 
 		/**
 		 * Enables/disables the mouse operations.
@@ -619,12 +619,12 @@ namespace ascension {
 				mouseInputDisabledCount_ += !enable ? 1 : -1;
 		}
 		
-#ifndef ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
 		/// Returns @c true if Global IME is enabled.
 		inline bool TextViewer::isActiveInputMethodEnabled() const BOOST_NOEXCEPT {
 			return modeState_.activeInputMethodEnabled;
 		}
-#endif // !ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER
+#endif
 		
 		/// Returns @c true if the viewer is frozen.
 		inline bool TextViewer::isFrozen() const BOOST_NOEXCEPT {
