@@ -219,6 +219,12 @@ BOOST_GEOMETRY_REGISTER_POINT_2D(
 BOOST_GEOMETRY_REGISTER_BOX(
 	ascension::graphics::geometry::BasicRectangle<ascension::graphics::geometry::Scalar>,
 	ascension::graphics::geometry::BasicPoint<ascension::graphics::geometry::Scalar>, minimumCorner_, maximumCorner_)
+BOOST_GEOMETRY_REGISTER_BOX(
+	ascension::graphics::geometry::BasicRectangle<std::int16_t>,
+	ascension::graphics::geometry::BasicPoint<std::int16_t>, minimumCorner_, maximumCorner_)
+BOOST_GEOMETRY_REGISTER_BOX(
+	ascension::graphics::geometry::BasicRectangle<std::uint16_t>,
+	ascension::graphics::geometry::BasicPoint<std::uint16_t>, minimumCorner_, maximumCorner_)
 //BOOST_GEOMETRY_REGISTER_BOX_TEMPLATED(
 //	ascension::graphics::geometry::BasicRectangle, minimumCorner_, maximumCorner_)
 #endif	// !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
