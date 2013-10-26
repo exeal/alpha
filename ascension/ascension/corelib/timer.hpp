@@ -21,6 +21,7 @@ namespace ascension {
 	class HasTimer {
 	private:
 		virtual void timeElapsed(Timer& timer) = 0;
+		friend class Timer;
 	};
 
 	class Timer {
@@ -55,8 +56,9 @@ namespace ascension {
 		 */
 		void start(unsigned int milliseconds, HasTimer& object) {
 			stop();
+			object_ = &object;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-			Glib::signal_timeout().connect_once(sigc::ptr_fun(&function), milliseconds);
+			Glib::signal_timeout().connect_once(sigc::mem_fun(*this, &Timer::function), milliseconds);
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 			identifier_ = ::SetTimer(nullptr, 0, milliseconds, &function);
 			if(identifier_ == 0)
@@ -68,7 +70,9 @@ namespace ascension {
 		void stop();
 	private:
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-		static bool function();
+		void function() {
+			object_->timeElapsed(*this);
+		}
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		static void CALLBACK function(HWND, UINT, UINT_PTR identifier, DWORD);
 #else
