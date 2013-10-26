@@ -14,6 +14,8 @@
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#	include <gtkmm/liststore.h>
+#	include <gtkmm/scrolledwindow.h>
 #	include <gtkmm/treeview.h>
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
 #	include <???>
@@ -96,7 +98,7 @@ namespace ascension {
 			std::unique_ptr<CompletionSession> completionSession_;
 			class CompletionProposalsPopup : public
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-				Gtk::TreeView
+				Gtk::ScrolledWindow
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
 				???
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
@@ -113,10 +115,18 @@ namespace ascension {
 				void resetContent(std::shared_ptr<const CompletionProposal> proposals[], size_t numberOfProposals);
 				std::shared_ptr<const CompletionProposal> selectedProposal() const;
 				void selectProposal(std::shared_ptr<const CompletionProposal> selection);
-				void setReadingDirection(presentation::ReadingDirection direction);
+				void setWritingMode(const presentation::WritingMode& writingMode);
 //				bool start(const std::set<const CompletionProposal*>& proposals);
 			private:
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+				Gtk::TreeView view_;
+				Glib::RefPtr<Gtk::ListStore> model_;
+				struct ColumnRecord : Gtk::TreeModel::ColumnRecord {
+					ColumnRecord();
+					Gtk::TreeModelColumn<Glib::RefPtr<Gdk::Pixbuf>> icon;
+					Gtk::TreeModelColumn<Glib::ustring> displayString;
+					Gtk::TreeModelColumn<std::shared_ptr<const CompletionProposal>> proposalObject;
+				} columns_;
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)

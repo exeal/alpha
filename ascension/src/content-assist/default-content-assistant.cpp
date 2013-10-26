@@ -6,8 +6,10 @@
  * @date 2012-03-12 renamed from content-assist.cpp
  */
 
-#include <ascension/viewer/caret.hpp>
 #include <ascension/content-assist/default-content-assistant.hpp>
+#include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/rendering-context.hpp>
+#include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/viewer.hpp>	// TextViewer
 #include <boost/range/algorithm/copy.hpp>
 
@@ -251,8 +253,7 @@ void DefaultContentAssistant::startPopup() {
 		proposalsPopup_.reset(new CompletionProposalsPopup(*textViewer_, *this));
 
 	// determine the horizontal orientation of the window
-	// TODO: The writing mode is not considered.
-	proposalsPopup_->setReadingDirection(textViewer_->textRenderer().layouts().at(line(textViewer_->caret())).writingMode().inlineFlowDirection);
+	proposalsPopup_->setWritingMode(textViewer_->textRenderer().layouts().at(line(textViewer_->caret())).writingMode());
 	proposalsPopup_->resetContent(completionSession_->proposals.get(), completionSession_->numberOfProposals);
 	updatePopupBounds();
 
@@ -275,6 +276,60 @@ void DefaultContentAssistant::uninstall() {
 	if(textViewer_ != nullptr) {
 		textViewer_->caret().removeCharacterInputListener(*this);
 		textViewer_ = nullptr;
+	}
+}
+
+void DefaultContentAssistant::updatePopupBounds() {
+	if(proposalsPopup_.get() == nullptr)
+		return;
+
+	using namespace ascension::graphics;
+	if(const shared_ptr<const font::TextViewport> viewport = textViewer_->textRenderer().viewport()) {
+		const presentation::WritingMode& writingMode = textViewer_->textRenderer().layouts().at(kernel::line(textViewer_->caret())).writingMode();
+		graphics::Rectangle screenBounds(widgetapi::bounds(widgetapi::desktop(), false));
+		screenBounds = widgetapi::mapFromGlobal(*textViewer_, screenBounds);
+		Dimension size;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		Gtk::TreeView* view = static_cast<Gtk::TreeView*>(proposalsPopup_->get_child());
+		assert(view != nullptr);
+		Gtk::TreeModel::Path startPath, endPath;
+		view->get_visible_range(startPath, endPath);
+		Gdk::Rectangle cellArea;
+		view->get_cell_area(startPath, *view->get_column(0/*1*/), cellArea);
+		const Scalar itemHeight = static_cast<Scalar>(cellArea.get_height());
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		const LRESULT listItemHeight = ::SendMessageW(proposalsPopup_->handle().get(), LB_GETITEMHEIGHT, 0, 0);
+		if(listItemHeight == LB_ERR)
+			throw makePlatformError();
+		const Scalar itemHeight = listItemHeight;
+#endif
+		if(isHorizontal(writingMode.blockFlowDirection)) {
+			geometry::dx(size) = geometry::dx(screenBounds) / 4;
+			geometry::dy(size) = static_cast<Scalar>(itemHeight * min<size_t>(completionSession_->numberOfProposals, 10) + 6);
+		} else {
+			geometry::dx(size) = static_cast<Scalar>(itemHeight * min<size_t>(completionSession_->numberOfProposals, 10) + 6);
+			geometry::dy(size) = geometry::dy(screenBounds) / 4;
+		}
+		Point origin(font::modelToView(*viewport, font::TextHit<kernel::Position>::leading(completionSession_->replacementRegion.beginning()), false));
+		// TODO: This code does not support vertical writing mode.
+		if(writingMode.blockFlowDirection == presentation::LEFT_TO_RIGHT)
+			geometry::x(origin) = geometry::x(origin) - 3;
+		else
+			geometry::x(origin) = geometry::x(origin) - geometry::dx(size) - 1 + 3;
+		proposalsPopup_->setWritingMode(writingMode);
+		if(geometry::x(origin) + geometry::dx(size) > graphics::geometry::right(screenBounds)) {
+//			if()
+		}
+		geometry::y(origin) = geometry::y(origin) + widgetapi::createRenderingContext(*textViewer_)->fontMetrics(textViewer_->textRenderer().defaultFont())->cellHeight();
+		if(geometry::y(origin) + geometry::dy(size) > geometry::bottom(screenBounds)) {
+			if(geometry::y(origin) - 1 - geometry::top(screenBounds) < geometry::bottom(screenBounds) - geometry::y(origin))
+				geometry::dy(size) = geometry::bottom(screenBounds) - geometry::y(origin);
+			else {
+				geometry::dy(size) = min<Scalar>(geometry::dy(size), geometry::y(origin) - geometry::top(screenBounds));
+				geometry::y(origin) = geometry::y(origin) - geometry::dy(size) - 1;
+			}
+		}
+		widgetapi::setBounds(*proposalsPopup_, graphics::Rectangle(origin, size));
 	}
 }
 

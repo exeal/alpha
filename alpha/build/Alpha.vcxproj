@@ -181,6 +181,7 @@
     </ManifestResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\ascension\src\content-assist\content-assist-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\content-assist\content-assist-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\content-assist\default-completion-proposal.cpp" />
     <ClCompile Include="..\..\ascension\src\content-assist\default-content-assistant.cpp" />
