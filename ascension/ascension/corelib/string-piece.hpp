@@ -19,6 +19,11 @@
 #	include <boost/utility/string_ref.hpp>
 #endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK) || defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO) || defined(ASCENSION_SHAPING_ENGINE_PANGO)
+#	include <glib.h>
+#	include <glibmm/ustring.h>
+#endif
+
 namespace ascension {
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -99,6 +104,27 @@ namespace ascension {
 		return StringPiece(first, last - first);
 	}
 #endif	// ASCENSION_ABANDONED_AT_VERSION_08
+
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK) || defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO) || defined(ASCENSION_SHAPING_ENGINE_PANGO)
+	static_assert(sizeof(StringPiece::value_type) == 2, "");
+	static_assert(sizeof(StringPiece::value_type) == sizeof(gunichar2), "");
+
+	inline Glib::ustring&& toGlibUstring(const StringPiece& s) {
+		GError* error;
+		std::shared_ptr<const char> p(::g_utf16_to_utf8(reinterpret_cast<const gunichar2*>(s.cbegin()), s.length(), nullptr, nullptr, &error), &::g_free);
+		if(p.get() == nullptr)
+			throw *error;
+		return Glib::ustring(p.get());
+	}
+
+	inline String&& fromGlibUstring(const Glib::ustring& s) {
+		GError* error;
+		std::shared_ptr<const gunichar2> p(::g_utf8_to_utf16(s.data(), s.length(), nullptr, nullptr, &error), &::g_free);
+		if(p.get() == nullptr)
+			throw *error;
+		return String(reinterpret_cast<const Char*>(p.get()));
+	}
+#endif
 
 } // namespace ascension
 
