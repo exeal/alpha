@@ -347,6 +347,9 @@
     <ClCompile Include="..\..\ascension\src\graphics\paint-cairo.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\content-assist\content-assist-gtk.cpp">
+      <Filter>ascension\Source Files\content-assist</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
