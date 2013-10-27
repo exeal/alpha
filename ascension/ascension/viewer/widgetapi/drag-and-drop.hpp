@@ -16,6 +16,7 @@
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
 #	include <NSPasteboard.h>
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#	include <ascension/win32/com/smart-pointer.hpp>
 #	include <ObjIdl.h>
 #	include <ShlObj.h>	// IDragSourceHelper
 #endif
@@ -141,18 +142,15 @@ namespace ascension {
 			public:
 				DragMoveInput(const MouseButtonInput& mouse, DropAction possibleActions,
 					ConstNativeMimeData data) : DropInput(mouse, possibleActions, data) {}
-				friend class Widget;
 			};
 
 			class DragEnterInput : public DragMoveInput {
 			public:
 				DragEnterInput(const MouseButtonInput& mouse, DropAction possibleActions,
 					ConstNativeMimeData data) : DragMoveInput(mouse, possibleActions, data) {}
-				friend class Widget;
 			};
 
 			/**
-			 * @see Widget
 			 */
 			class DropTarget {
 			public:
