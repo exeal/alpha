@@ -32,26 +32,61 @@ namespace ascension {
 
 	namespace viewers {
 		namespace widgetapi {
+			template<typename Entity, template<class> class SmartPointer>
+			struct WidgetOrWindowBase {
+				typedef Entity value_type;
+				typedef value_type& reference;
+				typedef const value_type& const_reference;
+				typedef typename SmartPointer<value_type> pointer;
+				typedef typename SmartPointer<const value_type> const_pointer;
+			};
+
+			struct Widget : WidgetOrWindowBase<
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-			typedef Gtk::Widget NativeWidget;
-		typedef Gtk::Window NativeWindow;
+				Gtk::Widget, Glib::RefPtr
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
-			typedef QWidget NativeWidget;
-			typedef QWidget NativeWindow;
+				QWidget, std::shared_ptr
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-			typedef NSView NativeWidget;
-			typedef NSWindow NativeWindow;
+				NSView, ???
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-			typedef win32::Window NativeWidget;
-			typedef win32::Window NativeWindow;
+				win32::Window, std::shared_ptr
 #endif
+			> {};
+
+			struct Window : WidgetOrWindowBase<
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+				Gdk::Window, Glib::RefPtr
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+				QWindow, std::shared_ptr
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+				NSWindow, ???
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+				win32::Window, std::shared_ptr
+#endif
+			> {};
+
+			template<typename WidgetOrWindow>
+			class Proxy {
+			public:
+				typedef typename std::conditional<std::is_const<WidgetOrWindow>::value,
+					typename WidgetOrWindow::const_pointer, typename WidgetOrWindow::pointer>::type Result;
+				Proxy(typename WidgetOrWindow::pointer);
+				Proxy(typename WidgetOrWindow::const_pointer);
+				Proxy(typename WidgetOrWindow::reference);
+				Proxy(typename WidgetOrWindow::const_reference);
+				operator Proxy<const WidgetOrWindow>() const;
+				Result get() const {return p_;}
+			private:
+				Result p_;
+			};
+
 			/**
 			 * Returns a bounds of the widget relative to its parent and including/excluding the
 			 * window frame.
 			 * @param widget The widget
 			 * @param includeFrame Set true to include the window frame
 			 */
-			graphics::Rectangle bounds(const NativeWidget& widget, bool includeFrame);
+			graphics::Rectangle bounds(Proxy<const Widget> widget, bool includeFrame);
 			/**
 			 * Translates the point in the global screen coordinates into widget coordinates.
 			 * @tparam Point The type of @a position
@@ -60,7 +95,7 @@ namespace ascension {
 			 * @see mapToGlobal
 			 */
 			template<typename Point>
-			Point mapFromGlobal(const NativeWidget& widget, const Point& position,
+			Point mapFromGlobal(Proxy<const Widget> widget, const Point& position,
 				typename detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* = nullptr);
 			/**
 			 * Translates the rectangle in the global screen coordinates into widget coordinates.
@@ -70,7 +105,7 @@ namespace ascension {
 			 * @see mapToGlobal
 			 */
 			template<typename Box>
-			inline Box mapFromGlobal(const NativeWidget& widget, const Box& rectangle,
+			inline Box mapFromGlobal(Proxy<const Widget> widget, const Box& rectangle,
 					typename detail::EnableIfTagIs<Box, boost::geometry::box_tag>::type* = nullptr) {
 				typedef typename boost::geometry::point_type<Box>::type PointType;
 				PointType minimumCorner(boost::geometry::make<PointType>(
@@ -93,7 +128,7 @@ namespace ascension {
 			 * @see mapFromGlobal
 			 */
 			template<typename Point>
-			Point mapToGlobal(const NativeWidget& widget, const Point& position,
+			Point mapToGlobal(Proxy<const Widget>, const Point& position,
 				typename detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* = nullptr);
 			/**
 			 * Translates the point in the widget coordinates into global screen coordinates.
@@ -103,7 +138,7 @@ namespace ascension {
 			 * @see mapFromGlobal
 			 */
 			template<typename Box>
-			inline graphics::Rectangle mapToGlobal(const NativeWidget& widget, const Box& rectangle,
+			inline graphics::Rectangle mapToGlobal(Proxy<const Widget> widget, const Box& rectangle,
 					typename detail::EnableIfTagIs<Box, boost::geometry::box_tag>::type* = nullptr) {
 				typedef typename boost::geometry::point_type<Box>::type PointType;
 				PointType minimumCorner(boost::geometry::make<PointType>(
@@ -123,58 +158,58 @@ namespace ascension {
 			 * @param widget
 			 * @param newOrigin The new origin of the widget in parent-relative coordinates
 			 */
-			void move(NativeWidget& widget, const graphics::Point& newOrigin);
+			void move(Proxy<Widget> widget, const graphics::Point& newOrigin);
 			/**
 			 * Resizes the widget.
 			 * @param widget
 			 * @param newSize The new size of the widget excluding any window frame
 			 */
-			void resize(NativeWidget& widget, const graphics::Dimension& newSize);
+			void resize(Proxy<Widget> widget, const graphics::Dimension& newSize);
 			/**
 			 * Sets the bounds of the widget.
 			 * @param widget
 			 * @param bounds The new bounds of the widget in parent-relative coordinates excluding
 			 *               any window frame
 			 */
-			void setBounds(NativeWidget& widget, const graphics::Rectangle& bounds);
+			void setBounds(Proxy<Widget> widget, const graphics::Rectangle& bounds);
 //			/**
 //			 * Sets the shape of the widget.
 //			 * @param widget
 //			 * @param shape The new shape of the widget in parent-relative coordinates excluding
 //			 *              any window frame
 //			 */
-//			void setShape(NativeWidget& widget, const graphics::Region& shape);
+//			void setShape(Proxy<Widget> widget, const graphics::Region& shape);
 
 			// visibilities
 			/**
 			 * Closes the widget.
 			 * @param widget
 			 */
-			void close(NativeWidget& widget);
+			void close(Proxy<Widget> widget);
 			/**
 			 * Hides the widget.
 			 * @param widget
 			 * @see #close, #isVisible, #show
 			 */
-			void hide(NativeWidget& widget);
+			void hide(Proxy<Widget> widget);
 			/**
 			 * Returns true if the widget is visible.
 			 * @param widget
 			 * @see #close, #hide, #show
 			 */
-			bool isVisible(const NativeWidget& widget);
+			bool isVisible(Proxy<const Widget> widget);
 			/**
 			 * Lowers the widget to the bottom of the parent widget's stack.
 			 * @param widget The widget to lower
 			 * @see #raise
 			 */
-			void lower(NativeWidget& widget);
+			void lower(Proxy<Widget> widget);
 			/**
 			 * Raises the widget to the top of the parent widget's stack.
 			 * @param widget The widget to raise
 			 * @see #lower
 			 */
-			void raise(NativeWidget& widget);
+			void raise(Proxy<Widget> widget);
 			/**
 			 * Returns the level of opacity for the window.
 			 * @param widget The widget
@@ -182,7 +217,7 @@ namespace ascension {
 			 *         transparent)
 			 * @return #setWindowOpacity
 			 */
-			double windowOpacity(const NativeWidget& widget);
+			double windowOpacity(Proxy<const Widget> widget);
 			/**
 			 * Sets the level of opacity for the window.
 			 * @param widget The widget
@@ -190,14 +225,14 @@ namespace ascension {
 			 *         transparent)
 			 * @return #windowOpacity
 			 */
-			void setWindowOpacity(NativeWidget& widget, double opacity);
-			void setAlwaysOnTop(NativeWidget& widget, bool set);
+			void setWindowOpacity(Proxy<Widget> widget, double opacity);
+			void setAlwaysOnTop(Proxy<Widget> widget, bool set);
 			/**
 			 * Shows the widget.
 			 * @param widget
 			 * @see #close, #hide, #isVisible
 			 */
-			void show(NativeWidget& widget);
+			void show(Proxy<Widget> widget);
 
 			enum State {
 				NORMAL, MAXIMIZED, MINIMIZED
@@ -205,27 +240,27 @@ namespace ascension {
 			enum Style {WIDGET = 0};
 
 			// paints
-			void forcePaint(NativeWidget& widget, const graphics::Rectangle& bounds);
-			void redrawScheduledRegion(NativeWidget& widget);
-			void scheduleRedraw(NativeWidget& widget, bool eraseBackground);
-			void scheduleRedraw(NativeWidget& widget, const graphics::Rectangle& rect, bool eraseBackground);
+			void forcePaint(Proxy<Widget> widget, const graphics::Rectangle& bounds);
+			void redrawScheduledRegion(Proxy<Widget> widget);
+			void scheduleRedraw(Proxy<Widget> widget, bool eraseBackground);
+			void scheduleRedraw(Proxy<Widget> widget, const graphics::Rectangle& rect, bool eraseBackground);
 
 			// rendering context
-			std::unique_ptr<graphics::RenderingContext2D> createRenderingContext(const NativeWidget& widget);
+			std::unique_ptr<graphics::RenderingContext2D> createRenderingContext(Proxy<const Widget> widget);
 
 			// focus/input
-			void grabInput(NativeWidget& widget);
-			bool hasFocus(const NativeWidget& widget);
-			bool isActive(const NativeWidget& widget);
-			void releaseInput(NativeWidget& widget);
+			void grabInput(Proxy<Widget> widget);
+			bool hasFocus(Proxy<const Widget> widget);
+			bool isActive(Proxy<const Widget> widget);
+			void releaseInput(Proxy<Widget> widget);
 			void setFocus();
-			void setFocus(NativeWidget& widget);
+			void setFocus(Proxy<Widget> widget);
 			class InputGrabLocker {
 			public:
 				~InputGrabLocker() {releaseInput(widget_);}
 			private:
-				explicit InputGrabLocker(NativeWidget& widget) : widget_(widget) {}
-				NativeWidget& widget_;
+				explicit InputGrabLocker(Proxy<Widget> widget) : widget_(widget) {}
+				Proxy<Widget> widget_;
 			};
 
 			// top-level windows
@@ -235,32 +270,32 @@ namespace ascension {
 			 * @return true if @a widget is maximized
 			 * @see #isMinimized, #showMaximized
 			 */
-			bool isMaximized(const NativeWidget& widget);
+			bool isMaximized(Proxy<const Widget> widget);
 			/**
 			 * Returns @c true if the widget is minimized.
 			 * @param widget The widget
 			 * @return true if @a widget is minimized
 			 * @see #isMaximized, #showMinimized
 			 */
-			bool isMinimized(const NativeWidget& widget);
+			bool isMinimized(Proxy<const Widget> widget);
 			/**
 			 * Shows the widget maximized.
 			 * @param widget The widget
 			 * @see #isMaximized, #showMinimized, #showNormal
 			 */
-			void showMaximized(NativeWidget& widget);
+			void showMaximized(Proxy<Widget> widget);
 			/**
 			 * Shows the widget minimized.
 			 * @param widget The widget
 			 * @see #isMinimized, #showMaximized, #showNormal
 			 */
-			void showMinimized(NativeWidget& widget);
+			void showMinimized(Proxy<Widget> widget);
 			/**
 			 * Restores the maximized or minimized widget.
 			 * @param widget The widget
 			 * @see #isMaximized, #isMinimized, #showMaximized, #showMinimized
 			 */
-			void showNormal(NativeWidget& widget);
+			void showNormal(Proxy<Widget> widget);
 
 			// hierarchy
 			/**
@@ -269,14 +304,18 @@ namespace ascension {
 			 * @return The parent widget or @c boost#none
 			 * @see #setParent
 			 */
-			boost::optional<NativeWidget> parent(const NativeWidget& widget);
+			Widget::pointer parent(Proxy<const Widget> widget);
 			/**
 			 * Sets the parent of the widget.
 			 * @param widget The widget
 			 * @param newParent The new parent widget or @c null
 			 * @see #parent
 			 */
-			void setParent(NativeWidget& widget, NativeWidget* newParent);
+			void setParent(Proxy<Widget> widget, Widget::pointer newParent);
+			/***/
+			Proxy<Window> rootWindow(Proxy<Widget> widget);
+			/***/
+			Proxy<const Window> rootWindow(Proxy<const Widget>);
 
 			// drag and drop
 			/**
@@ -285,17 +324,17 @@ namespace ascension {
 			 * @param accept Set @c true to enable drop events
 			 * @see #acceptsDrops
 			 */
-			void acceptDrops(NativeWidget& widget, bool accept = true);
+			void acceptDrops(Proxy<Widget> widget, bool accept = true);
 			/**
 			 * Returns @c true if drop events are enabled for the widget.
 			 * @param widget The widget
 			 * @return true if drop events are enabled for @a widget
 			 * @see #acceptDrops
 			 */
-			bool acceptsDrops(const NativeWidget& widget);
+			bool acceptsDrops(Proxy<const Widget> widget);
 
 			/// Returns the desktop window.
-			NativeWindow desktop();
+			Proxy<Widget> desktop();
 		}
 #if 0
 		namespace base {
@@ -408,7 +447,7 @@ namespace ascension {
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 	namespace win32 {
-		inline Handle<HIMC>::Type inputMethod(const viewers::widgetapi::NativeWidget& widget) {
+		inline Handle<HIMC>::Type inputMethod(const viewers::widgetapi::Proxy<Widget> widget) {
 			return Handle<HIMC>::Type(::ImmGetContext(widget.handle().get()),
 				std::bind(&::ImmReleaseContext, widget.handle().get(), std::placeholders::_1));
 		}
