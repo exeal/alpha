@@ -25,10 +25,10 @@ namespace ascension {
 			virtual std::unique_ptr<RenderingContext2D> createRenderingContext() const = 0;
 
 			/// Returns the bit depth (number of bit planes) of the device.
-			virtual std::uint16_t depth() = 0;
+			virtual std::uint16_t depth() const = 0;
 			/// Returns the number of colors available for the rendering device or
 			/// @c std#numeric_limits&lt;std#uint32_t&gt;::max().
-			virtual std::uint32_t numberOfColors() = 0;
+			virtual std::uint32_t numberOfColors() const = 0;
 
 			/// Returns the width of the rendering device in device units.
 			virtual std::uint16_t height() const = 0;

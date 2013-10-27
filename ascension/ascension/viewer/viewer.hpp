@@ -479,6 +479,9 @@ namespace ascension {
 
 			// input state
 			unsigned long mouseInputDisabledCount_;
+#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+			std::shared_ptr<GtkIMContext> inputMethodContext_;
+#endif
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 			win32::com::SmartPointer<IDropTargetHelper> dropTargetHelper_;
 			win32::com::SmartPointer<IDataObject> draggingData_;
