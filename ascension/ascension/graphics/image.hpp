@@ -9,7 +9,7 @@
 #include <ascension/platforms.hpp>
 #include <ascension/graphics/rendering-device.hpp>
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
-#	include <gdkmm/pixbuf.h>
+#	include <cairomm/surface.h>
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
 #	include <>
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
@@ -17,12 +17,13 @@
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
 #	include <ascension/win32/handle.hpp>
 #endif
+#include <boost/range/iterator_range.hpp>
 
 namespace ascension {
 	namespace graphics {
 		typedef
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
-			Glib::RefPtr<Gdk::Pixbuf>
+			Cairo::RefPtr<Cairo::ImageSurface>
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
 			CGImageRef
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
@@ -50,16 +51,31 @@ namespace ascension {
 				A1		///< 
 			};
 		public:
+			/**
+			 * Creates an image with the specified format and dimensions.
+			 * @param size The size of the image in pixels
+			 * @param format The format of the image
+			 * @throw UnknownValueException @a format is unknown
+			 */
 			Image(const geometry::BasicDimension<std::uint16_t>& size, Format format);
-			Image(const std::uint8_t* data, const geometry::BasicDimension<std::uint16_t>& size, Format format);
+			/**
+			 * Creates an image with the specified format, dimensions and pixel data.
+			 * @param data The pi
+			 * @param size The size of the image in pixels
+			 * @param format The format of the image
+			 * @throw UnknownValueException @a format is unknown
+			 */
+			Image(std::unique_ptr<std::uint8_t[]> data, const geometry::BasicDimension<std::uint16_t>& size, Format format);
 			const NativeImage& asNativeObject() const BOOST_NOEXCEPT {return impl_;}
 			static int depth(Format format);
+			/// Returns the format of the image.
+			Format format() const;
 			boost::iterator_range<std::uint8_t*> pixels();
 			boost::iterator_range<const std::uint8_t*> pixels() const;
 			// RenderingDevice
 			std::unique_ptr<RenderingContext2D> createRenderingContext() const;
-			std::uint16_t depth();
-			std::uint32_t numberOfColors();
+			std::uint16_t depth() const;
+			std::uint32_t numberOfColors() const;
 			std::uint16_t height() const;
 			Scalar heightInMillimeters() const;
 			std::uint16_t logicalDpiX() const;
@@ -70,6 +86,7 @@ namespace ascension {
 			std::uint16_t physicalDpiY() const;
 		private:
 			NativeImage impl_;
+			std::unique_ptr<std::uint8_t[]> buffer_;
 		};
 	}
 }

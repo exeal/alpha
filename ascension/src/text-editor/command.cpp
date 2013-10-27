@@ -706,8 +706,12 @@ InputMethodOpenStatusToggleCommand::InputMethodOpenStatusToggleCommand(TextViewe
  * @retval false The system didn't support the input method
  */
 bool InputMethodOpenStatusToggleCommand::perform() {
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 	if(win32::Handle<HIMC>::Type imc = win32::inputMethod(target()))
 		return win32::boole(::ImmSetOpenStatus(imc.get(), !win32::boole(::ImmGetOpenStatus(imc.get()))));
+#else
+	// TODO: Not implemented.
+#endif
 	return false;
 }
 
@@ -723,6 +727,7 @@ InputMethodSoftKeyboardModeToggleCommand::InputMethodSoftKeyboardModeToggleComma
  * @retval false The system didn't support the input method
  */
 bool InputMethodSoftKeyboardModeToggleCommand::perform() {
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 	if(win32::Handle<HIMC>::Type imc = win32::inputMethod(target())) {
 		DWORD conversionMode, sentenceMode;
 		if(win32::boole(::ImmGetConversionStatus(imc.get(), &conversionMode, &sentenceMode))) {
@@ -731,6 +736,9 @@ bool InputMethodSoftKeyboardModeToggleCommand::perform() {
 			return win32::boole(::ImmSetConversionStatus(imc.get(), conversionMode, sentenceMode));
 		}
 	}
+#else
+	// TODO: Not implemented.
+#endif
 	return false;
 }
 
@@ -893,6 +901,7 @@ bool ReconversionCommand::perform() {
 	bool succeeded = false;
 	Caret& caret = viewer.caret();
 	if(!caret.isSelectionRectangle()) {
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		if(win32::Handle<HIMC>::Type imc = win32::inputMethod(viewer)) {
 			if(!win32::boole(::ImmGetOpenStatus(imc.get())))	// without this, IME may ignore us?
 				::ImmSetOpenStatus(imc.get(), true);
@@ -924,6 +933,9 @@ bool ReconversionCommand::perform() {
 			}
 			::operator delete(rcs);
 		}
+#else
+		// TODO: Not implemented.
+#endif
 	}
 
 	utils::closeCompletionProposalsPopup(viewer);

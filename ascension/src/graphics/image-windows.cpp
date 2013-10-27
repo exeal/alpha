@@ -1,12 +1,15 @@
 /**
  * @file image-windows.cpp
+ * Implements @c graphics#Image class on Win32 platform.
  * @author exeal
  * @date 2011-10-01 created
  * @date 2012-2013
  */
 
-#include <ascension/corelib/basic-exceptions.hpp>	// PlatformDependentError
 #include <ascension/graphics/image.hpp>
+#ifdef ASCENSION_GRAPHICS_SYSTEM_GDI
+
+#include <ascension/corelib/basic-exceptions.hpp>	// PlatformDependentError
 #include <ascension/win32/windows.hpp>
 
 using namespace ascension;
@@ -51,3 +54,4 @@ namespace {
 Image::Image(const geometry::BasicDimension<uint16_t>& size, Format format) {
 }
 
+#endif	// ASCENSION_GRAPHICS_SYSTEM_GDI

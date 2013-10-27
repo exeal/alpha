@@ -203,6 +203,7 @@
     <ClCompile Include="..\..\ascension\src\graphics\font\text-layout.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\text-renderer.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\text-viewport.cpp" />
+    <ClCompile Include="..\..\ascension\src\graphics\image-cairo.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\image-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\paint-cairo.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\paint-gdi.cpp" />
