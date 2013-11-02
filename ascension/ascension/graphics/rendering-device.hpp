@@ -28,13 +28,13 @@ namespace ascension {
 			virtual std::unique_ptr<RenderingContext2D> createRenderingContext() const = 0;
 
 			/// Returns the bit depth (number of bit planes) of the device.
-			virtual std::uint16_t depth() const = 0;
+			virtual std::uint8_t depth() const = 0;
 			/// Returns the number of colors available for the rendering device or
 			/// @c std#numeric_limits&lt;std#uint32_t&gt;::max().
 			virtual std::uint32_t numberOfColors() const = 0;
 
 			/// Returns the width of the rendering device in device units.
-			virtual std::uint16_t height() const = 0;
+			virtual std::uint32_t height() const = 0;
 			/// Returns the height of the rendering device in millimeters.
 			virtual Scalar heightInMillimeters() const = 0;
 			/// Returns the horizontal resolution of the device in dots per inch.
@@ -42,7 +42,7 @@ namespace ascension {
 			/// Returns the vertical resolution of the device in dots per inch.
 			virtual std::uint16_t logicalDpiY() const = 0;
 			/// Returns the width of the rendering device in device units.
-			virtual std::uint16_t width() const = 0;
+			virtual std::uint32_t width() const = 0;
 			/// Returns the width of the rendering device in millimeters.
 			virtual Scalar widthInMillimeters() const = 0;
 			/// Returns the horizontal resolution of the device in dots per inch.
@@ -50,7 +50,7 @@ namespace ascension {
 			/// Returns the vertical resolution of the device in dots per inch.
 			virtual std::uint16_t physicalDpiY() const = 0;
 
-			geometry::BasicDimension<std::uint16_t> size() const {
+			geometry::BasicDimension<std::uint32_t> size() const {
 				return geometry::BasicDimension<std::uint16_t>(geometry::_dx = width(), geometry::_dy = height());
 			}
 			Dimension sizeInMillimeters() const {
