@@ -6,6 +6,8 @@
  */
 
 #include <ascension/graphics/font/font.hpp>
+
+#if defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/config.hpp>
 #include <vector>
@@ -256,3 +258,5 @@ shared_ptr<const Font> FontCollection::lastResortFallback(const FontDescription&
 	FontDescription modified(description);
 	return get(modified.setFamilyName(FontFamily(familyName)), transform, sizeAdjust);
 }
+
+#endif	// defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)

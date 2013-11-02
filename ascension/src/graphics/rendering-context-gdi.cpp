@@ -549,7 +549,7 @@ RenderingContext2D& RenderingContext2D::putImageData(
 		header.bV5BitCount = 32;
 		header.bV5Compression = BI_BITFIELDS;
 		header.bV5RedMask = 0x00ff0000u;
-		header.bV5GreenMask = 0x00000000u;
+		header.bV5GreenMask = 0x0000ff00u;
 		header.bV5BlueMask = 0x000000ffu;
 		header.bV5AlphaMask = 0xff000000u;
 		void* pixels;
