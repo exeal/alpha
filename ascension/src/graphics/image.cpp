@@ -13,7 +13,7 @@ using namespace std;
 
 
 /// @see RenderingDevice#depth
-uint16_t Image::depth() const {
+uint8_t Image::depth() const {
 	return depth(format());
 }
 
@@ -23,7 +23,7 @@ uint16_t Image::depth() const {
  * @return The depth
  * @throw UnknownValueException @a format is unknown
  */
-int Image::depth(Image::Format format) {
+uint8_t Image::depth(Image::Format format) {
 	switch(format) {
 		case ARGB32:
 			return 32;

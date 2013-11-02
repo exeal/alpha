@@ -46,7 +46,7 @@ namespace ascension {
 			 * @param format The format of the image
 			 * @throw UnknownValueException @a format is unknown
 			 */
-			Image(const geometry::BasicDimension<std::uint16_t>& size, Format format);
+			Image(const geometry::BasicDimension<std::uint32_t>& size, Format format);
 			/**
 			 * Creates an image with the specified format, dimensions and pixel data.
 			 * @param data The pi
@@ -60,7 +60,7 @@ namespace ascension {
 			 * @param other The source object
 			 */
 			Image(const Image& other);
-			static int depth(Format format);
+			static std::uint8_t depth(Format format);
 			Format format() const;
 			std::uint32_t numberOfBytes() const {return numberOfBytesPerLine() * height();}
 			std::uint16_t numberOfBytesPerLine() const;
@@ -68,22 +68,22 @@ namespace ascension {
 			boost::iterator_range<const std::uint8_t*> pixels() const;
 			// RenderingDevice
 			std::unique_ptr<RenderingContext2D> createRenderingContext() const;
-			std::uint16_t depth() const;
+			std::uint8_t depth() const;
 			std::uint32_t numberOfColors() const;
-			std::uint16_t height() const;
+			std::uint32_t height() const;
 			Scalar heightInMillimeters() const;
 			std::uint16_t logicalDpiX() const;
 			std::uint16_t logicalDpiY() const;
-			std::uint16_t width() const;
+			std::uint32_t width() const;
 			Scalar widthInMillimeters() const;
 			std::uint16_t physicalDpiX() const;
 			std::uint16_t physicalDpiY() const;
 
 		private:
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO) || defined(ASCENSION_GRAPHICS_SYSTEM_QT)
-			void initialize(std::unique_ptr<uint8_t[]> data, const geometry::BasicDimension<std::uint16_t>& size, Format format);
+			void initialize(std::unique_ptr<uint8_t[]> data, const geometry::BasicDimension<std::uint32_t>& size, Format format);
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) || defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
-			void initialize(const std::uint8_t* data, const geometry::BasicDimension<std::uint16_t>& size, Format format);
+			void initialize(const std::uint8_t* data, const geometry::BasicDimension<std::uint32_t>& size, Format format);
 #endif
 		private:
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)

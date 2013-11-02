@@ -19,7 +19,7 @@ using namespace std;
 
 
 namespace {
-	pair<win32::Handle<HBITMAP>::Type, uint8_t*> createBitmap(const geometry::BasicDimension<uint16_t>& size, Image::Format format) {
+	pair<win32::Handle<HBITMAP>::Type, uint8_t*> createBitmap(const geometry::BasicDimension<uint32_t>& size, Image::Format format) {
 		win32::AutoZeroSize<BITMAPV5HEADER> header;
 		static_assert(sizeof(decltype(header)) >= sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * 3, "");
 		switch(format) {
@@ -50,7 +50,7 @@ namespace {
 				throw UnknownValueException("format");
 		}
 		header.bV5Width = geometry::dx(size);
-		header.bV5Height = -geometry::dy(size);
+		header.bV5Height = -static_cast<LONG>(geometry::dy(size));
 		header.bV5Planes = 1;
 //		const auto stride = ((header.bV5Width * header.bV5BitCount + 31) >> 5 ) * 4;
 
@@ -60,9 +60,17 @@ namespace {
 			throw makePlatformError();
 		return make_pair(bitmap, static_cast<uint8_t*>(pixels));
 	}
+
+	template<typename T>
+	inline T&& win32Object(const win32::Handle<HBITMAP>::Type& deviceContext) {
+		T temp;
+		if(::GetObjectW(deviceContext.get(), sizeof(T), &temp) == 0)
+			throw makePlatformError();
+		return move(temp);
+	}
 }
 
-Image::Image(const geometry::BasicDimension<uint16_t>& size, Format format) {
+Image::Image(const geometry::BasicDimension<uint32_t>& size, Format format) {
 	initialize(nullptr, size, format);
 }
 
@@ -84,9 +92,7 @@ unique_ptr<RenderingContext2D> Image::createRenderingContext() const {
 }
 
 Image::Format Image::format() const {
-	DIBSECTION section;
-	if(::GetObjectW(impl_.get(), sizeof(decltype(section)), &section) == 0)
-		throw makePlatformError();
+	const DIBSECTION section(win32Object<DIBSECTION>(impl_));
 	switch(section.dsBmih.biBitCount) {
 		case 1:
 			return A1;
@@ -106,7 +112,11 @@ Image::Format Image::format() const {
 	throw UnknownValueException("The underlying image format is unknown.");
 }
 
-void Image::initialize(const uint8_t* data, const geometry::BasicDimension<uint16_t>& size, Format format) {
+uint32_t Image::height() const {
+	return /*static_cast<uint32_t>*/(win32Object<BITMAP>(impl_).bmHeight);
+}
+
+void Image::initialize(const uint8_t* data, const geometry::BasicDimension<uint32_t>& size, Format format) {
 	assert(buffer_.get() == nullptr);
 	const auto temp(createBitmap(size, format));
 	impl_ = temp.first;
@@ -116,10 +126,7 @@ void Image::initialize(const uint8_t* data, const geometry::BasicDimension<uint1
 }
 
 uint16_t Image::numberOfBytesPerLine() const {
-	BITMAP temp;
-	if(::GetObject(impl_.get(), sizeof(decltype(temp)), &temp) == 0)
-		throw makePlatformError();
-	return static_cast<uint16_t>(temp.bmWidthBytes);
+	return static_cast<uint16_t>(win32Object<BITMAP>(impl_).bmWidthBytes);
 }
 
 boost::iterator_range<uint8_t*> Image::pixels() {
@@ -128,6 +135,10 @@ boost::iterator_range<uint8_t*> Image::pixels() {
 
 boost::iterator_range<const uint8_t*> Image::pixels() const {
 	return boost::make_iterator_range(buffer_.get(), buffer_.get() + numberOfBytes());
+}
+
+uint32_t Image::width() const {
+	return static_cast<uint32_t>(win32Object<BITMAP>(impl_).bmWidth);
 }
 
 #endif	// ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI
