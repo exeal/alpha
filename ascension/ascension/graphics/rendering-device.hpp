@@ -14,6 +14,9 @@ namespace ascension {
 	
 	namespace graphics {
 
+		std::uint16_t defaultDpiX();
+		std::uint16_t defaultDpiY();
+
 		class RenderingContext2D;
 
 		class RenderingDevice {

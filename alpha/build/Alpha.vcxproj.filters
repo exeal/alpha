@@ -353,6 +353,12 @@
     <ClCompile Include="..\..\ascension\src\graphics\image-cairo.cpp">
       <Filter>ascension\Source Files\graphics</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\font\font-pango.cpp">
+      <Filter>ascension\Source Files\graphics\font</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\image.cpp">
+      <Filter>ascension\Source Files\graphics</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">

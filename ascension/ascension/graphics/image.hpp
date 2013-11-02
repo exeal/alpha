@@ -60,19 +60,9 @@ namespace ascension {
 			 * @param other The source object
 			 */
 			Image(const Image& other);
-			/**
-			 * Returns the depth (the number of bits used to store a single pixel (bpp)) of the
-			 * given image format.
-			 * @param format The image format
-			 * @return The depth
-			 * @throw UnknownValueException @a format is unknown
-			 */
 			static int depth(Format format);
-			/// Returns the format of the image.
 			Format format() const;
-			/// Returns the number of bytes occupied by the image data.
 			std::uint32_t numberOfBytes() const {return numberOfBytesPerLine() * height();}
-			/// Returns the number of bytes per the image scanline.
 			std::uint16_t numberOfBytesPerLine() const;
 			boost::iterator_range<std::uint8_t*> pixels();
 			boost::iterator_range<const std::uint8_t*> pixels() const;
