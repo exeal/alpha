@@ -21,17 +21,6 @@
 
 namespace ascension {
 	namespace graphics {
-		typedef
-#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
-			Cairo::RefPtr<Cairo::ImageSurface>
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
-			CGImageRef
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
-			QImage
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
-			win32::Handle<HBITMAP>::Type
-#endif
-			NativeImage;
 
 		class Image : public RenderingDevice {
 		public:
@@ -66,10 +55,25 @@ namespace ascension {
 			 * @throw UnknownValueException @a format is unknown
 			 */
 			Image(std::unique_ptr<std::uint8_t[]> data, const geometry::BasicDimension<std::uint16_t>& size, Format format);
-			const NativeImage& asNativeObject() const BOOST_NOEXCEPT {return impl_;}
+			/**
+			 * Creates a (deep) copy of this image.
+			 * @param other The source object
+			 */
+			Image(const Image& other);
+			/**
+			 * Returns the depth (the number of bits used to store a single pixel (bpp)) of the
+			 * given image format.
+			 * @param format The image format
+			 * @return The depth
+			 * @throw UnknownValueException @a format is unknown
+			 */
 			static int depth(Format format);
 			/// Returns the format of the image.
 			Format format() const;
+			/// Returns the number of bytes occupied by the image data.
+			std::uint32_t numberOfBytes() const {return numberOfBytesPerLine() * height();}
+			/// Returns the number of bytes per the image scanline.
+			std::uint16_t numberOfBytesPerLine() const;
 			boost::iterator_range<std::uint8_t*> pixels();
 			boost::iterator_range<const std::uint8_t*> pixels() const;
 			// RenderingDevice
@@ -84,10 +88,28 @@ namespace ascension {
 			Scalar widthInMillimeters() const;
 			std::uint16_t physicalDpiX() const;
 			std::uint16_t physicalDpiY() const;
+
 		private:
-			NativeImage impl_;
+#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO) || defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+			void initialize(std::unique_ptr<uint8_t[]> data, const geometry::BasicDimension<std::uint16_t>& size, Format format);
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) || defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
+			void initialize(const std::uint8_t* data, const geometry::BasicDimension<std::uint16_t>& size, Format format);
+#endif
+		private:
+#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+			Cairo::RefPtr<Cairo::ImageSurface> impl_;
 			std::unique_ptr<std::uint8_t[]> buffer_;
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
+			CGImageRef impl_;
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+			QImage impl_;
+			std::unique_ptr<std::uint8_t[]> buffer_;
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+			win32::Handle<HBITMAP>::Type impl_;
+			std::unique_ptr<std::uint8_t[], detail::NullDeleter> buffer_;
+#endif
 		};
+
 	}
 }
 
