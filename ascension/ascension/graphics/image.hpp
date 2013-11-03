@@ -40,25 +40,9 @@ namespace ascension {
 				A1		///< 
 			};
 		public:
-			/**
-			 * Creates an image with the specified format and dimensions.
-			 * @param size The size of the image in pixels
-			 * @param format The format of the image
-			 * @throw UnknownValueException @a format is unknown
-			 */
 			Image(const geometry::BasicDimension<std::uint32_t>& size, Format format);
-			/**
-			 * Creates an image with the specified format, dimensions and pixel data.
-			 * @param data The pi
-			 * @param size The size of the image in pixels
-			 * @param format The format of the image
-			 * @throw UnknownValueException @a format is unknown
-			 */
-			Image(std::unique_ptr<std::uint8_t[]> data, const geometry::BasicDimension<std::uint16_t>& size, Format format);
-			/**
-			 * Creates a (deep) copy of this image.
-			 * @param other The source object
-			 */
+			Image(const std::uint8_t* data, const geometry::BasicDimension<std::uint32_t>& size, Format format);
+			Image(std::unique_ptr<std::uint8_t[]> data, const geometry::BasicDimension<std::uint32_t>& size, Format format);
 			Image(const Image& other);
 			static std::uint8_t depth(Format format);
 			Format format() const;
@@ -80,11 +64,8 @@ namespace ascension {
 			std::uint16_t physicalDpiY() const;
 
 		private:
-#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO) || defined(ASCENSION_GRAPHICS_SYSTEM_QT)
 			void initialize(std::unique_ptr<uint8_t[]> data, const geometry::BasicDimension<std::uint32_t>& size, Format format);
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) || defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
 			void initialize(const std::uint8_t* data, const geometry::BasicDimension<std::uint32_t>& size, Format format);
-#endif
 		private:
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
 			Cairo::RefPtr<Cairo::ImageSurface> impl_;

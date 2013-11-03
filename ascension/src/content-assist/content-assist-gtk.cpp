@@ -65,7 +65,7 @@ void DefaultContentAssistant::CompletionProposalsPopup::resetContent(shared_ptr<
 }
 
 shared_ptr<const CompletionProposal> DefaultContentAssistant::CompletionProposalsPopup::selectedProposal() const {
-	if(const Glib::RefPtr<Gtk::TreeSelection> selection = view_.get_selection()) {
+	if(const Glib::RefPtr<Gtk::TreeSelection> selection = const_cast<Gtk::TreeView&>(view_).get_selection()) {
 		if(const Gtk::TreeModel::iterator selectedItem = selection->get_selected())
 			return (*selectedItem)[columns_.proposalObject];
 	}

@@ -19,48 +19,6 @@ using namespace std;
 
 
 namespace {
-	pair<win32::Handle<HBITMAP>::Type, uint8_t*> createBitmap(const geometry::BasicDimension<uint32_t>& size, Image::Format format) {
-		win32::AutoZeroSize<BITMAPV5HEADER> header;
-		static_assert(sizeof(decltype(header)) >= sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * 3, "");
-		switch(format) {
-			case Image::ARGB32:
-				header.bV5BitCount = 32;
-				header.bV5Compression = BI_BITFIELDS;
-				header.bV5RedMask = 0x00ff0000u;
-				header.bV5GreenMask = 0x0000ff00u;
-				header.bV5BlueMask = 0x000000ffu;
-				header.bV5AlphaMask = 0xff000000u;
-				break;
-			case Image::RGB24:
-				header.bV5BitCount = 24;
-				header.bV5Compression = BI_BITFIELDS;
-				header.bV5RedMask = 0x0000f800u;
-				header.bV5GreenMask = 0x000007e0u;
-				header.bV5BlueMask = 0x0000001fu;
-				break;
-			case Image::RGB16:
-				header.bV5BitCount = 16;
-				header.bV5Compression = BI_RGB;
-				break;
-			case Image::A1:
-				header.bV5BitCount = 1;
-				memset(reinterpret_cast<BITMAPINFO*>(&header)->bmiColors + 0, 0xff, sizeof(RGBQUAD));
-				memset(reinterpret_cast<BITMAPINFO*>(&header)->bmiColors + 1, 0x00, sizeof(RGBQUAD));
-			default:
-				throw UnknownValueException("format");
-		}
-		header.bV5Width = geometry::dx(size);
-		header.bV5Height = -static_cast<LONG>(geometry::dy(size));
-		header.bV5Planes = 1;
-//		const auto stride = ((header.bV5Width * header.bV5BitCount + 31) >> 5 ) * 4;
-
-		void* pixels;
-		win32::Handle<HBITMAP>::Type bitmap(::CreateDIBSection(nullptr, reinterpret_cast<const BITMAPINFO*>(&header), DIB_RGB_COLORS, &pixels, nullptr, 0), &::DeleteObject);
-		if(bitmap.get() == nullptr)
-			throw makePlatformError();
-		return make_pair(bitmap, static_cast<uint8_t*>(pixels));
-	}
-
 	template<typename T>
 	inline T&& win32Object(const win32::Handle<HBITMAP>::Type& deviceContext) {
 		T temp;
@@ -68,14 +26,6 @@ namespace {
 			throw makePlatformError();
 		return move(temp);
 	}
-}
-
-Image::Image(const geometry::BasicDimension<uint32_t>& size, Format format) {
-	initialize(nullptr, size, format);
-}
-
-Image::Image(const Image& other) {
-	initialize(other.pixels().begin(), other.size(), other.format());
 }
 
 unique_ptr<RenderingContext2D> Image::createRenderingContext() const {
@@ -117,12 +67,57 @@ uint32_t Image::height() const {
 }
 
 void Image::initialize(const uint8_t* data, const geometry::BasicDimension<uint32_t>& size, Format format) {
-	assert(buffer_.get() == nullptr);
-	const auto temp(createBitmap(size, format));
-	impl_ = temp.first;
-	buffer_.reset(temp.second);
-	if(data != nullptr)
-		memcpy(buffer_.get(), data, numberOfBytes());
+	win32::AutoZeroSize<BITMAPV5HEADER> header;
+	static_assert(sizeof(decltype(header)) >= sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * 3, "");
+	switch(format) {
+		case Image::ARGB32:
+			header.bV5BitCount = 32;
+			header.bV5Compression = BI_BITFIELDS;
+			header.bV5RedMask = 0x00ff0000u;
+			header.bV5GreenMask = 0x0000ff00u;
+			header.bV5BlueMask = 0x000000ffu;
+			header.bV5AlphaMask = 0xff000000u;
+			break;
+		case Image::RGB24:
+			header.bV5BitCount = 24;
+			header.bV5Compression = BI_BITFIELDS;
+			header.bV5RedMask = 0x0000f800u;
+			header.bV5GreenMask = 0x000007e0u;
+			header.bV5BlueMask = 0x0000001fu;
+			break;
+		case Image::RGB16:
+			header.bV5BitCount = 16;
+			header.bV5Compression = BI_RGB;
+			break;
+		case Image::A1:
+			header.bV5BitCount = 1;
+			memset(reinterpret_cast<BITMAPINFO*>(&header)->bmiColors + 0, 0xff, sizeof(RGBQUAD));
+			memset(reinterpret_cast<BITMAPINFO*>(&header)->bmiColors + 1, 0x00, sizeof(RGBQUAD));
+		default:
+			throw UnknownValueException("format");
+	}
+	header.bV5Width = geometry::dx(size);
+	header.bV5Height = -static_cast<LONG>(geometry::dy(size));
+	header.bV5Planes = 1;
+//	const auto stride = ((header.bV5Width * header.bV5BitCount + 31) >> 5 ) * 4;
+
+	void* pixels;
+	win32::Handle<HBITMAP>::Type bitmap(::CreateDIBSection(nullptr, reinterpret_cast<const BITMAPINFO*>(&header), DIB_RGB_COLORS, &pixels, nullptr, 0), &::DeleteObject);
+	if(bitmap.get() == nullptr)
+		throw makePlatformError();
+
+	if(data != nullptr) {
+		const BITMAP temp(win32Object<BITMAP>(bitmap));
+		memcpy(buffer_.get(), data, temp.bmWidthBytes * temp.bmHeight);
+	}
+
+	// commit
+	swap(impl_, bitmap);
+	buffer_.reset(static_cast<uint8_t*>(pixels));
+}
+
+void Image::initialize(unique_ptr<uint8_t[]> data, const geometry::BasicDimension<uint32_t>& size, Format format) {
+	return initialize(data.get(), size, format);
 }
 
 uint16_t Image::numberOfBytesPerLine() const {
