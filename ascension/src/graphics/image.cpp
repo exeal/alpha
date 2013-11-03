@@ -118,10 +118,10 @@ uint32_t Image::numberOfColors() const {
 	}
 }
 
-/**
- * @fn std::uint16_t ascension::graphics::Image::numberOfBytesPerLine() const
- * Returns the number of bytes per the image scanline.
- */
+/// Returns the number of bytes per the image scanline.
+uint32_t Image::stride() const {
+	return stride(width(), format());
+}
 
 /// @see RenderingDevice#physicalDpiX
 uint16_t Image::physicalDpiX() const {
