@@ -29,6 +29,9 @@
 #include <boost/range/algorithm/find.hpp>
 #include <boost/range/numeric.hpp>	// boost.accumulate
 #include <usp10.h>
+#ifdef _DEBUG
+#	include <boost/log/trivial.hpp>
+#endif
 
 using namespace ascension;
 using namespace ascension::graphics;
@@ -1168,7 +1171,7 @@ void TextRunImpl::generate(const StringPiece& textString,
 								frc, scriptTags[scriptRun.attribute - scriptRuns.get()])));
 				}
 				assert(nextStyleRun.position < textString.end());
-				styleRun = move(nextStyleRun);
+				styleRun = std::move(nextStyleRun);	// C2668 if included <boost/log/trivial.hpp> without 'std::' ???
 				styleRuns.push_back(AttributedCharacterRange<ComputedTextRunStyle>(styleRun.position, styleRun.attribute));
 				assert(!styledTextRunEnumerator.isDone());
 				styledTextRunEnumerator.next();
@@ -1263,10 +1266,8 @@ HRESULT TextRunImpl::generateGlyphs(win32::Handle<HDC>::Type dc,
 #ifdef _DEBUG
 	if(HFONT currentFont = static_cast<HFONT>(::GetCurrentObject(dc.get(), OBJ_FONT))) {
 		LOGFONTW lf;
-		if(::GetObjectW(currentFont, sizeof(LOGFONTW), &lf) > 0) {
-			win32::DumpContext dout;
-			dout << L"[TextLayout.TextRun.generateGlyphs] Selected font is '" << lf.lfFaceName << L"'.\n";
-		}
+		if(::GetObjectW(currentFont, sizeof(LOGFONTW), &lf) > 0)
+			BOOST_LOG_TRIVIAL(debug) << L"[TextLayout.TextRun.generateGlyphs] Selected font is '" << lf.lfFaceName << L"'.\n";
 	}
 #endif
 
@@ -3204,14 +3205,14 @@ void TextLayout::wrap(Scalar measure, const TabExpander& tabExpander) BOOST_NOEX
 				if(lastBreakable == run->begin()) {
 					assert(firstRunsInLines.empty() || runs.size() != firstRunsInLines.back());
 					firstRunsInLines.push_back(runs.size());
-//dout << L"broke the line at " << lastBreakable << L" where the run start.\n";
+//BOOST_LOG_TRIVIAL(debug) << L"broke the line at " << lastBreakable << L" where the run start.\n";
 				}
 				// case 2: break at the end of the run
 				else if(lastBreakable == run->end()) {
 					if(lastBreakable < textString_.data() + numberOfCharacters()) {
 						assert(firstRunsInLines.empty() || runs.size() != firstRunsInLines.back());
 						firstRunsInLines.push_back(runs.size() + 1);
-//dout << L"broke the line at " << lastBreakable << L" where the run end.\n";
+//BOOST_LOG_TRIVIAL(debug) << L"broke the line at " << lastBreakable << L" where the run end.\n";
 					}
 					break;
 				}
@@ -3221,8 +3222,8 @@ void TextLayout::wrap(Scalar measure, const TabExpander& tabExpander) BOOST_NOEX
 					runs.push_back(run);
 					assert(firstRunsInLines.empty() || runs.size() != firstRunsInLines.back());
 					firstRunsInLines.push_back(runs.size());
-//dout << L"broke the line at " << lastBreakable << L" where the run meddle.\n";
-					createdRuns.push_back(move(followingRun));
+//BOOST_LOG_TRIVIAL(debug) << L"broke the line at " << lastBreakable << L" where the run meddle.\n";
+					createdRuns.push_back(std::move(followingRun));	// C2668 if included <boost/log/trivial.hpp> without 'std::' ???
 					run = createdRuns.back().get();	// continue the process about this run
 				}
 				measureInThisRun = ipd1 + measureInThisRun - lastBreakableIpd;
@@ -3236,7 +3237,7 @@ void TextLayout::wrap(Scalar measure, const TabExpander& tabExpander) BOOST_NOEX
 		runs.push_back(run);
 		ipd1 += measureInThisRun;
 	}
-//dout << L"...broke the all lines.\n";
+//BOOST_LOG_TRIVIAL(debug) << L"...broke the all lines.\n";
 #if 0
 	if(runs.empty())
 		runs.push_back(nullptr);
