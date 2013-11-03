@@ -19,7 +19,7 @@ using namespace std;
 namespace {
 	inline Scalar pixelsPerInch(const RenderingContext2D* graphics2D, Length::Mode mode) {
 #if 1
-		return 96.0;
+		return (mode != Length::HEIGHT) ? defaultDpiX() : defaultDpiY();
 #else
 		if(graphics2D == nullptr)
 			throw NullPointerException("context.graphics2D");

@@ -366,12 +366,12 @@ namespace {
 				unitsPerEm_ = 1;	// hmm...
 			else
 				fail(dc, cookie);
-			ascent_ = static_cast<Unit>(tm.tmAscent)/* * 96.0 / ydpi*/;
-			descent_ = static_cast<Unit>(tm.tmDescent)/* * 96.0 / ydpi*/;
-			internalLeading_ = static_cast<Unit>(tm.tmInternalLeading)/* * 96.0 / ydpi*/;
-			externalLeading_ = static_cast<Unit>(tm.tmExternalLeading)/* * 96.0 / ydpi*/;
+			ascent_ = static_cast<Unit>(tm.tmAscent)/* * defaultDpiY() / ydpi*/;
+			descent_ = static_cast<Unit>(tm.tmDescent)/* * 96defaultDpiY()0 / ydpi*/;
+			internalLeading_ = static_cast<Unit>(tm.tmInternalLeading)/* * defaultDpiY() / ydpi*/;
+			externalLeading_ = static_cast<Unit>(tm.tmExternalLeading)/* * defaultDpiY() / ydpi*/;
 			averageCharacterWidth_ = ((tm.tmAveCharWidth > 0) ?
-				static_cast<Unit>(tm.tmAveCharWidth) : static_cast<Unit>(tm.tmHeight) * 0.56f)/* * 96.0 / xdpi*/;
+				static_cast<Unit>(tm.tmAveCharWidth) : static_cast<Unit>(tm.tmHeight) * 0.56f)/* * defaultDpiY() / xdpi*/;
 			averageCharacterWidth_ = max(averageCharacterWidth_, static_cast<Unit>(1));
 
 			// x-height
