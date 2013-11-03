@@ -120,16 +120,20 @@ void Image::initialize(unique_ptr<uint8_t[]> data, const geometry::BasicDimensio
 	return initialize(data.get(), size, format);
 }
 
-uint16_t Image::numberOfBytesPerLine() const {
-	return static_cast<uint16_t>(win32Object<BITMAP>(impl_).bmWidthBytes);
-}
-
 boost::iterator_range<uint8_t*> Image::pixels() {
 	return boost::make_iterator_range(buffer_.get(), buffer_.get() + numberOfBytes());
 }
 
 boost::iterator_range<const uint8_t*> Image::pixels() const {
 	return boost::make_iterator_range(buffer_.get(), buffer_.get() + numberOfBytes());
+}
+
+uint32_t Image::stride() const {
+	return win32Object<BITMAP>(impl_).bmWidthBytes;
+}
+
+uint32_t Image::stride(uint32_t width, Format format) {
+	return ((width * depth(format) + 31) >> 5) * 4;
 }
 
 uint32_t Image::width() const {

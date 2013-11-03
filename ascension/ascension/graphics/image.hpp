@@ -46,10 +46,11 @@ namespace ascension {
 			Image(const Image& other);
 			static std::uint8_t depth(Format format);
 			Format format() const;
-			std::uint32_t numberOfBytes() const {return numberOfBytesPerLine() * height();}
-			std::uint16_t numberOfBytesPerLine() const;
+			std::uint32_t numberOfBytes() const {return stride() * height();}
 			boost::iterator_range<std::uint8_t*> pixels();
 			boost::iterator_range<const std::uint8_t*> pixels() const;
+			std::uint32_t stride() const;
+			static std::uint32_t stride(std::uint32_t width, Format format);
 			// RenderingDevice
 			std::unique_ptr<RenderingContext2D> createRenderingContext() const;
 			std::uint8_t depth() const;
