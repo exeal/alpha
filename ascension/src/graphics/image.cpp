@@ -12,6 +12,45 @@ using namespace ascension::graphics;
 using namespace std;
 
 
+/**
+ * Creates an image with the specified format and dimensions.
+ * @param size The size of the image in pixels
+ * @param format The format of the image
+ * @throw UnknownValueException @a format is unknown
+ */
+Image::Image(const geometry::BasicDimension<uint32_t>& size, Format format) {
+	initialize(nullptr, size, format);
+}
+
+/**
+ * Creates an image with the specified format, dimensions and pixel data.
+ * @param data The pixel data
+ * @param size The size of the image in pixels
+ * @param format The format of the image
+ * @throw UnknownValueException @a format is unknown
+ */
+Image::Image(const uint8_t* data, const geometry::BasicDimension<uint32_t>& size, Format format) {
+	initialize(data, size, format);
+}
+
+/**
+ * Creates an image with the specified format, dimensions and pixel data.
+ * @param data The pixel data
+ * @param size The size of the image in pixels
+ * @param format The format of the image
+ * @throw UnknownValueException @a format is unknown
+ */
+Image::Image(unique_ptr<uint8_t[]> data, const geometry::BasicDimension<uint32_t>& size, Format format) {
+	initialize(move(data), size, format);
+}
+
+/**
+ * Creates a (deep) copy of this image.
+ * @param other The source object
+ */
+Image::Image(const Image& other) {
+}
+
 /// @see RenderingDevice#depth
 uint8_t Image::depth() const {
 	return depth(format());
