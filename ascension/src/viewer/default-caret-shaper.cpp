@@ -66,10 +66,12 @@ namespace {
 	 * @return The image
 	 */
 	inline unique_ptr<Image> createSolidCaretImage(uint16_t width, uint16_t height, const Color& color) {
-		const unique_ptr<uint32_t[]> pattern(new uint32_t[width * height]);
-		uninitialized_fill(pattern.get(), pattern.get() + (width * height), packColor(color));
-		return unique_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(pattern.get()),
-			geometry::BasicDimension<uint16_t>(geometry::_dx = width, geometry::_dy = height), Image::ARGB32));
+		const Image::Format format = Image::ARGB32;
+		const uint32_t size = Image::stride(width, format) * height;
+		unique_ptr<uint8_t[]> pattern(new uint8_t[size]);
+		uninitialized_fill(reinterpret_cast<uint32_t*>(pattern.get()), reinterpret_cast<uint32_t*>(pattern.get() + size), packColor(color));
+		return unique_ptr<Image>(new Image(move(pattern),
+			geometry::BasicDimension<uint32_t>(geometry::_dx = width, geometry::_dy = height), format));
 	}
 	inline uint16_t systemDefinedCaretMeasure() {
 #if defined(ASCENSION_OS_WINDOWS)
@@ -100,17 +102,21 @@ namespace {
 	 */
 	inline unique_ptr<Image> createRTLCaretImage(uint16_t extent, const Color& color) {
 		const uint32_t white = 0, black = packColor(color);
-		unique_ptr<uint32_t[]> pattern(new uint32_t[5 * extent]);
+		const Image::Format format = Image::ARGB32;
+		const uint32_t measure = 5;	// width
+		const uint32_t size = Image::stride(measure, format);
+		unique_ptr<uint8_t[]> pattern(new uint8_t[size]);
 		assert(extent > 3);
-		uninitialized_fill(pattern.get(), pattern.get() + 5 * extent, white);
-		pattern[0] = pattern[1] = pattern[2] = pattern[6] = pattern[7] = pattern[12] = black;
+		uint32_t* const pattern32 = reinterpret_cast<uint32_t*>(pattern.get());
+		uninitialized_fill(pattern32, reinterpret_cast<uint32_t*>(pattern.get() + size), white);
+		pattern32[0] = pattern32[1] = pattern32[2] = pattern32[6] = pattern32[7] = pattern32[12] = black;
 		for(uint16_t i = 0; i < extent; ++i) {
-			pattern[i * 5 + 3] = black;
+			pattern32[i * measure + 3] = black;
 //			if(bold)
-//				pattern[i * 5 + 4] = black;
+//				pattern[i * measure + 4] = black;
 		}
-		return unique_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(pattern.get()),
-			geometry::BasicDimension<uint16_t>(geometry::_dx = 5, geometry::_dy = extent), Image::ARGB32));
+		return unique_ptr<Image>(new Image(move(pattern),
+			geometry::BasicDimension<uint32_t>(geometry::_dx = measure, geometry::_dy = extent), format));
 	}
 	/**
 	 * Creates the bitmap for Thai or Lao caret.
@@ -120,22 +126,25 @@ namespace {
 	 */
 	inline unique_ptr<Image> createTISCaretImage(uint16_t extent, const Color& color) {
 		const uint32_t white = 0, black = packColor(color);
-		const uint16_t width = max<uint16_t>(extent / 8, 3);
-		unique_ptr<uint32_t[]> pattern(new uint32_t[width * extent]);
+		const Image::Format format = Image::ARGB32;
+		const uint32_t measure = max<uint16_t>(extent / 8, 3);	// width
+		const uint32_t size = Image::stride(measure, format);
+		unique_ptr<uint8_t[]> pattern(new uint8_t[size]);
 		assert(extent > 3);
-		uninitialized_fill(pattern.get(), pattern.get() + width * extent, white);
+		uint32_t* const pattern32 = reinterpret_cast<uint32_t*>(pattern.get());
+		uninitialized_fill(pattern32, reinterpret_cast<uint32_t*>(pattern.get() + size), white);
 		for(uint16_t y = 0; y < extent - 1; ++y) {
-			pattern[y * width] = black;
+			pattern32[y * measure] = black;
 //			if(bold)
-//				pattern[y * width + 1] = black;
+//				pattern32[y * measure + 1] = black;
 		}
 //		if(bold)
-//			for(uint16_t x = 2; x < width; ++x)
-//				pattern[width * (extent - 2) + x] = black;
-		for(uint16_t x = 0; x < width; ++x)
-			pattern[width * (extent - 1) + x] = black;
-		return unique_ptr<Image>(new Image(reinterpret_cast<uint8_t*>(pattern.get()),
-			geometry::BasicDimension<uint16_t>(geometry::_dx = width, geometry::_dy = extent), Image::ARGB32));
+//			for(uint16_t x = 2; x < measure; ++x)
+//				pattern32[measure * (extent - 2) + x] = black;
+		for(uint16_t x = 0; x < measure; ++x)
+			pattern32[measure * (extent - 1) + x] = black;
+		return unique_ptr<Image>(new Image(move(pattern),
+			geometry::BasicDimension<uint32_t>(geometry::_dx = measure, geometry::_dy = extent), format));
 	}
 
 	void shapeCaret(const Caret& caret, bool localeSensitive, unique_ptr<Image>& image, geometry::BasicPoint<uint16_t>& alignmentPoint) {

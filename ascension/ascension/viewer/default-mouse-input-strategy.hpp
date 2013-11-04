@@ -123,7 +123,7 @@ namespace ascension {
 				win32::com::SmartPointer<IDragSourceHelper> dragSourceHelper;
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 			} dnd_;
-			std::unique_ptr<widgetapi::NativeWidget> autoScrollOriginMark_;
+			std::unique_ptr<widgetapi::Widget::value_type> autoScrollOriginMark_;
 			const presentation::hyperlink::Hyperlink* lastHoveredHyperlink_;
 			Timer timer_;
 			static const unsigned int SELECTION_EXPANSION_INTERVAL, DRAGGING_TRACK_INTERVAL;

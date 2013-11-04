@@ -311,7 +311,8 @@ namespace ascension {
 			 * @param newParent The new parent widget or @c null
 			 * @see #parent
 			 */
-			void setParent(Proxy<Widget> widget, Widget::pointer newParent);
+			template<typename T>
+			void setParent(Proxy<Widget> widget, T* newParent);
 			/***/
 			Proxy<Window> rootWindow(Proxy<Widget> widget);
 			/***/
