@@ -335,9 +335,9 @@ namespace {
 				}
 			}
 		}
-		const geometry::BasicDimension<uint16_t> size(
-			geometry::_dx = static_cast<uint16_t>(geometry::dx(selectionBounds)),
-			geometry::_dy = static_cast<uint16_t>(geometry::dy(selectionBounds)));
+		const geometry::BasicDimension<uint32_t> size(
+			geometry::_dx = static_cast<uint32_t>(geometry::dx(selectionBounds)),
+			geometry::_dy = static_cast<uint32_t>(geometry::dy(selectionBounds)));
 
 		// create a mask
 		Image mask(size, Image::A1);	// monochrome. This may occur ERROR_INVALID_BITMAP on Win32

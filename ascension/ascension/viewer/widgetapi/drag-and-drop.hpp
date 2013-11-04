@@ -7,6 +7,7 @@
 #ifndef ASCENSION_DRAG_AND_DROP_HPP
 #define ASCENSION_DRAG_AND_DROP_HPP
 #include <ascension/viewer/widgetapi/user-input.hpp>
+#include <ascension/viewer/widgetapi/widget.hpp>
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 #	include <gdkmm/dragcontext.h>
 #	include <gtkmm/selectiondata.h>
@@ -20,8 +21,14 @@
 #	include <ObjIdl.h>
 #	include <ShlObj.h>	// IDragSourceHelper
 #endif
+#include <boost/optional.hpp>
 
 namespace ascension {
+
+	namespace graphics {
+		class Image;
+	}
+
 	namespace viewers {
 		namespace widgetapi {
 
@@ -50,63 +57,71 @@ namespace ascension {
 #else
 			ASCENSION_CANT_DETECT_PLATFORM();
 #endif
+			class MimeDataFormats {
+			public:
+				typedef
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+					std::string
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+					QString
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+					CLIPFORMAT
+#else
+			ASCENSION_CANT_DETECT_PLATFORM();
+#endif
+					Format;
+				/// Returns a list of formats supported by the object.
+				virtual std::list<Format>&& formats() const = 0;
+//				/// Returns @c true if this object can return an image.
+//				virtual bool hasImage() const BOOST_NOEXCEPT = 0;
+				/// Returns @c true if this object can return plain text.
+				virtual bool hasText() const BOOST_NOEXCEPT = 0;
+				/// Returns @c true if this object can return a list of URI.
+				virtual bool hasURIs() const BOOST_NOEXCEPT = 0;
+			};
 
-			class MimeData {
+			class MimeData : public MimeDataFormats {
 			public:
 				/// Default constructor creates an empty MIME data.
 				MimeData();
 
-				/// Returns @c true if this object can return an image.
-				bool hasImage() const BOOST_NOEXCEPT;
-				/// Returns @c true if this object can return plain text.
-				bool hasText() const BOOST_NOEXCEPT;
-				/// Returns @c true if this object can return a list of URI.
-				bool hasURIs() const BOOST_NOEXCEPT;
-
-				graphics::Image image() const;
+//				graphics::Image image() const;
 				String text() const;
 				template<typename OutputIterator> void uris(OutputIterator out) const;
 
-				void setImage(const graphics::Image& image);
+//				void setImage(const graphics::Image& image);
 				void setText(const StringPiece& text);
 				template<typename SinglePassReadableRange> void setURIs(const SinglePassReadableRange& uris);
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-				typedef Gtk::TargetEntry Format;
-				MimeData(const Gtk::SelectionData& borrowed);
-			private:
-				std::unique_ptr<Gtk::SelectionData> impl_;
-				std::shared_ptr<const Gtk::SelectionData> borrowed_;
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
-				MimeData(const QMimeData& borrowed);
-			private:
-				std::shared_ptr<QMimeData> impl_;
-				std::shared_ptr<const QMimeData> borrowed_;
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-			private:
-				???NSPasteboard??? impl_;
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-				typedef CLIPFORMAT Format;
-				MimeData(IDataObject& borrowed);
-			private:
-				win32::com::SmartPointer<IDataObject> impl_;
-#else
-			ASCENSION_CANT_DETECT_PLATFORM();
-#endif
 			};
+
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#else
+				ASCENSION_CANT_DETECT_PLATFORM();
+#endif
 
 			class DragContext {
 			public:
+				explicit DragContext(Widget::reference source) BOOST_NOEXCEPT : source_(source) {}
 				DropAction defaultAction() const BOOST_NOEXCEPT;
-				DropAction execute(DropAction supportedActions);
-#if 0
-				const MimeData mimeData() const BOOST_NOEXCEPT;
+				DropAction execute(DropAction supportedActions
+#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+					, int mouseButton, GdkEvent* event
 #endif
-				void setImage(const graphics::Image& image, const graphics::geometry::BasicPoint<std::uint16_t>& hotspot);
-				void setMimeData(ConstNativeMimeData data);
+				);
+				void setImage(const graphics::Image& image, const graphics::geometry::BasicPoint<std::uint32_t>& hotspot);
+				void setMimeData(std::shared_ptr<const MimeData> data);
 				DropAction supportedActions() const BOOST_NOEXCEPT;
 			private:
+				Widget::reference source_;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-				Glib::RefPtr<Gdk::DragContext> impl_;
+				Glib::RefPtr<Gdk::DragContext> context_;
+				std::shared_ptr<const MimeData> mimeData_;
+				Glib::RefPtr<Gdk::Pixbuf> icon_;
+				int iconHotspotX_, iconHotspotY_;
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
 				QDrag impl_;
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
@@ -120,34 +135,40 @@ namespace ascension {
 
 			class DragLeaveInput : public Event {};
 
-			class DropInput : public MouseButtonInput {
+			class DragInputBase : public MouseButtonInput {
 			public:
-				DropInput(const MouseButtonInput& mouse, DropAction possibleActions, ConstNativeMimeData data) :
+				DragInputBase(const MouseButtonInput& mouse, DropAction possibleActions) :
 					MouseButtonInput(mouse), possibleActions_(possibleActions),
-					defaultAction_(resolveDefaultDropAction(possibleActions, mouse.modifiers())), mimeData_(data) {}
+					defaultAction_(resolveDefaultDropAction(possibleActions, mouse.modifiers())) {}
 				void acceptProposedAction();
 				DropAction dropAction() const BOOST_NOEXCEPT {return action_;}
-				ConstNativeMimeData mimeData() const BOOST_NOEXCEPT {return mimeData_;}
 				DropAction possibleActions() const BOOST_NOEXCEPT {return possibleActions_;}
 				DropAction proposedAction() const BOOST_NOEXCEPT {return defaultAction_;}
 				void setDropAction(DropAction action);
 			private:
-				const DropAction possibleActions_;
-				const DropAction defaultAction_;
+				const DropAction possibleActions_, defaultAction_;
 				DropAction action_;
-				ConstNativeMimeData mimeData_;
 			};
 
-			class DragMoveInput : public DropInput {
+			class DropInput : public DragInputBase {
 			public:
-				DragMoveInput(const MouseButtonInput& mouse, DropAction possibleActions,
-					ConstNativeMimeData data) : DropInput(mouse, possibleActions, data) {}
+				DropInput(const MouseButtonInput& mouse, DropAction possibleActions, std::shared_ptr<const MimeData> data) :
+					DragInputBase(mouse, possibleActions), mimeData_(data) {}
+				std::shared_ptr<const MimeData> mimeData() const BOOST_NOEXCEPT {return mimeData_;}
+			private:
+				std::shared_ptr<const MimeData> mimeData_;
+			};
+
+			class DragMoveInput : public DragInputBase {
+			public:
+				DragMoveInput(const MouseButtonInput& mouse, DropAction possibleActions) : DragInputBase(mouse, possibleActions) {}
+				void accept(boost::optional<const graphics::Rectangle> rectangle);
+				void ignore(boost::optional<const graphics::Rectangle> rectangle);
 			};
 
 			class DragEnterInput : public DragMoveInput {
 			public:
-				DragEnterInput(const MouseButtonInput& mouse, DropAction possibleActions,
-					ConstNativeMimeData data) : DragMoveInput(mouse, possibleActions, data) {}
+				DragEnterInput(const MouseButtonInput& mouse, DropAction possibleActions) : DragMoveInput(mouse, possibleActions) {}
 			};
 
 			/**
