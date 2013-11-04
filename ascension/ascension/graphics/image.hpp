@@ -23,6 +23,7 @@ namespace ascension {
 	namespace graphics {
 
 		class Image : public RenderingDevice {
+			ASCENSION_UNASSIGNABLE_TAG(Image);
 		public:
 			/**
 			 * <table>
@@ -44,6 +45,19 @@ namespace ascension {
 			Image(const std::uint8_t* data, const geometry::BasicDimension<std::uint32_t>& size, Format format);
 			Image(std::unique_ptr<std::uint8_t[]> data, const geometry::BasicDimension<std::uint32_t>& size, Format format);
 			Image(const Image& other);
+#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+			explicit Image(Cairo::RefPtr<Cairo::ImageSurface> image, std::unique_ptr<unsigned char[]> data);
+			Cairo::RefPtr<Cairo::ImageSurface> asNativeObject();
+			Cairo::RefPtr<const Cairo::ImageSurface> asNativeObject() const;
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+			explicit Image(QImage&& image, std::unique_ptr<uchar[]> data);
+			QImage& asNativeObject() BOOST_NOEXCEPT;
+			const QImage& asNativeObject() const BOOST_NOEXCEPT;
+#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+			explicit Image(win32::Handle<HBITMAP>::Type image);
+			win32::Handle<HBITMAP>::Type asNativeObject() const BOOST_NOEXCEPT;
+#endif
 			static std::uint8_t depth(Format format);
 			Format format() const;
 			std::uint32_t numberOfBytes() const {return stride() * height();}
