@@ -72,13 +72,22 @@ namespace ascension {
 #endif
 					Format;
 				/// Returns a list of formats supported by the object.
-				virtual std::list<Format>&& formats() const = 0;
+				virtual std::list<Format>&& formats() const;
 //				/// Returns @c true if this object can return an image.
-//				virtual bool hasImage() const BOOST_NOEXCEPT = 0;
+//				virtual bool hasImage() const BOOST_NOEXCEPT;
 				/// Returns @c true if this object can return plain text.
-				virtual bool hasText() const BOOST_NOEXCEPT = 0;
+				virtual bool hasText() const BOOST_NOEXCEPT;
 				/// Returns @c true if this object can return a list of URI.
-				virtual bool hasURIs() const BOOST_NOEXCEPT = 0;
+				virtual bool hasURIs() const BOOST_NOEXCEPT;
+
+#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+			public:
+				explicit MimeDataFormats(std::vector<std::string>&& targets);
+			private:
+				const std::vector<std::string> targets_;
+#endif
+			protected:
+				MimeDataFormats() BOOST_NOEXCEPT {}
 			};
 
 			class MimeData : public MimeDataFormats {
@@ -93,15 +102,32 @@ namespace ascension {
 //				void setImage(const graphics::Image& image);
 				void setText(const StringPiece& text);
 				template<typename SinglePassReadableRange> void setURIs(const SinglePassReadableRange& uris);
-			};
 
+				// MimeDataFormats
+				std::list<Format>&& formats() const;
+//				bool hasImage() const BOOST_NOEXCEPT;
+				bool hasText() const BOOST_NOEXCEPT;
+				bool hasURIs() const BOOST_NOEXCEPT;
+
+			public:
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+				explicit MimeData(Gtk::SelectionData& impl);
+			private:
+				std::shared_ptr<Gtk::SelectionData> impl_;
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+				explicit MimeData(QMimeData& impl);
+			private:
+				std::shared_ptr<QMimeData> impl_;
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+				explicit MimeData(win32::com::SmartPointer<IDataObject> impl);
+			private:
+				win32::com::SmartPointer<IDataObject> impl_;
 #else
 				ASCENSION_CANT_DETECT_PLATFORM();
 #endif
+			};
+
 
 			class DragContext {
 			public:
@@ -161,14 +187,16 @@ namespace ascension {
 
 			class DragMoveInput : public DragInputBase {
 			public:
-				DragMoveInput(const MouseButtonInput& mouse, DropAction possibleActions) : DragInputBase(mouse, possibleActions) {}
+				DragMoveInput(const MouseButtonInput& mouse, DropAction possibleActions, const MimeDataFormats& formats) : DragInputBase(mouse, possibleActions), formats_(formats) {}
 				void accept(boost::optional<const graphics::Rectangle> rectangle);
 				void ignore(boost::optional<const graphics::Rectangle> rectangle);
+			private:
+				const MimeDataFormats& formats_;
 			};
 
 			class DragEnterInput : public DragMoveInput {
 			public:
-				DragEnterInput(const MouseButtonInput& mouse, DropAction possibleActions) : DragMoveInput(mouse, possibleActions) {}
+				DragEnterInput(const MouseButtonInput& mouse, DropAction possibleActions, const MimeDataFormats& formats) : DragMoveInput(mouse, possibleActions, formats) {}
 			};
 
 			/**

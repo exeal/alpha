@@ -15,21 +15,56 @@ using namespace ascension;
 using namespace ascension::viewers::widgetapi;
 using namespace std;
 
-namespace {
-	class GtkmmMimeDataFormats : public MimeDataFormats {
-	public:
-		list<Format>&& formats() const;
-//		bool hasImage() const BOOST_NOEXCEPT;
-		bool hasText() const BOOST_NOEXCEPT;
-		bool hasURIs() const BOOST_NOEXCEPT;
-	private:
-		vector<string> formats_;
-	};
 
-	class GtkmmMimeData : public MimeData {
-	private:
-		Gtk::SelectionData& selection_;
-	};
+// MimeDataFormats ////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Constructor.
+ * @param targets The list of targets returned by @c Gdk#DragContext#list_targets method
+ */
+MimeDataFormats::MimeDataFormats(vector<string>&& targets) : targets_(targets) {
+}
+
+list<MimeDataFormats::Format>&& MimeDataFormats::formats() const {
+	return list<MimeDataFormats::Format>(begin(targets_), end(targets_));
+}
+
+bool MimeDataFormats::hasText() const BOOST_NOEXCEPT {
+	return find(begin(targets_), end(targets_), "text/plain") != end(targets_);
+}
+
+bool MimeDataFormats::hasURIs() const BOOST_NOEXCEPT {
+	return find(begin(targets_), end(targets_), "text/uri-list") != end(targets_);
+}
+
+
+// MimeData ///////////////////////////////////////////////////////////////////////////////////////
+
+MimeData::MimeData() : impl_(make_shared<Gtk::SelectionData>()) {
+}
+
+MimeData::MimeData(Gtk::SelectionData& impl) : impl_(&impl, detail::NullDeleter()) {
+}
+
+list<MimeDataFormats::Format>&& MimeData::formats() const {
+	const vector<string> targets(impl_->get_targets());
+	return list<MimeDataFormats::Format>(begin(targets), end(targets));
+}
+
+bool MimeData::hasText() const BOOST_NOEXCEPT {
+	return impl_->targets_include_text();
+}
+
+bool MimeData::hasURIs() const BOOST_NOEXCEPT {
+	return impl_->targets_include_uri();
+}
+
+void MimeData::setText(const StringPiece& text) {
+	impl_->set_text(toGlibUstring(text));
+}
+
+String MimeData::text() const {
+	return fromGlibUstring(impl_->get_text());
 }
 
 
@@ -78,7 +113,12 @@ DropAction DragContext::execute(DropAction supportedActions, int mouseButton, Gd
 }
 
 void DragContext::setImage(const graphics::Image& image, const graphics::geometry::BasicPoint<uint32_t>& hotspot) {
+#ifdef ASCENSION_GRAPHICS_SYSTEM_CAIRO
 	Glib::RefPtr<Gdk::Pixbuf> icon(Gdk::Pixbuf::create(image.asNativeObject(), 0, 0, image.width(), image.height()));
+#else
+	Glib::RefPtr<Gdk::Pixbuf> icon(Gdk::Pixbuf::create_from_data(
+		image.pixels().begin(), Gdk::COLORSPACE_RGB, true, image.depth(), image.width(), image.height(), image.stride()));
+#endif
 	if(!icon)
 		throw makePlatformError();
 	if(!context_) {
