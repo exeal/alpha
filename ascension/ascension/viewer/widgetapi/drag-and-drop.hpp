@@ -95,10 +95,12 @@ namespace ascension {
 				/// Default constructor creates an empty MIME data.
 				MimeData();
 
+				std::vector<std::uint8_t>&& data(Format format) const;
 //				graphics::Image image() const;
 				String text() const;
 				template<typename OutputIterator> void uris(OutputIterator out) const;
 
+				void setData(Format format, const boost::iterator_range<const std::uint8_t*>& range);
 //				void setImage(const graphics::Image& image);
 				void setText(const StringPiece& text);
 				template<typename SinglePassReadableRange> void setURIs(const SinglePassReadableRange& uris);

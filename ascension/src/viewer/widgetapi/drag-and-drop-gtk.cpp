@@ -46,6 +46,13 @@ MimeData::MimeData() : impl_(make_shared<Gtk::SelectionData>()) {
 MimeData::MimeData(Gtk::SelectionData& impl) : impl_(&impl, detail::NullDeleter()) {
 }
 
+vector<uint8_t>&& MimeData::data(Format format) const {
+	if(format != impl_->get_target())
+		throw 0;
+	const guchar* const p = impl_->get_data();
+	return vector<uint8_t>(p, p + impl_->get_length());
+}
+
 list<MimeDataFormats::Format>&& MimeData::formats() const {
 	const vector<string> targets(impl_->get_targets());
 	return list<MimeDataFormats::Format>(begin(targets), end(targets));
@@ -57,6 +64,11 @@ bool MimeData::hasText() const BOOST_NOEXCEPT {
 
 bool MimeData::hasURIs() const BOOST_NOEXCEPT {
 	return impl_->targets_include_uri();
+}
+
+void MimeData::setData(Format format, const boost::iterator_range<const uint8_t*>& range) {
+	impl_->set(format, 8, range.begin(), range.size());
+//	impl_->set(::gdk_atom_intern(format.c_str(), true), 8, range.begin(), range.size());
 }
 
 void MimeData::setText(const StringPiece& text) {
