@@ -73,6 +73,8 @@ namespace ascension {
 					Format;
 				/// Returns a list of formats supported by the object.
 				virtual std::list<Format>&& formats() const;
+				/// Returns @c true if this object can return data for the MIME type specified by @a format.
+				virtual bool hasFormat(Format format) const BOOST_NOEXCEPT;
 //				/// Returns @c true if this object can return an image.
 //				virtual bool hasImage() const BOOST_NOEXCEPT;
 				/// Returns @c true if this object can return plain text.
@@ -107,6 +109,7 @@ namespace ascension {
 
 				// MimeDataFormats
 				std::list<Format>&& formats() const;
+				virtual bool hasFormat(Format format) const BOOST_NOEXCEPT;
 //				bool hasImage() const BOOST_NOEXCEPT;
 				bool hasText() const BOOST_NOEXCEPT;
 				bool hasURIs() const BOOST_NOEXCEPT;

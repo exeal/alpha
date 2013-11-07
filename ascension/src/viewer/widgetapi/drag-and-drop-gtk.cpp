@@ -10,6 +10,7 @@
 
 #include <ascension/graphics/image.hpp>
 #include <boost/foreach.hpp>
+#include <boost/range/algorithm/find.hpp>
 
 using namespace ascension;
 using namespace ascension::viewers::widgetapi;
@@ -29,12 +30,16 @@ list<MimeDataFormats::Format>&& MimeDataFormats::formats() const {
 	return list<MimeDataFormats::Format>(begin(targets_), end(targets_));
 }
 
+bool MimeDataFormats::hasFormat(Format format) const BOOST_NOEXCEPT {
+	return boost::find(targets_, format) != boost::end(targets_);
+}
+
 bool MimeDataFormats::hasText() const BOOST_NOEXCEPT {
-	return find(begin(targets_), end(targets_), "text/plain") != end(targets_);
+	return boost::find(targets_, "text/plain") != boost::end(targets_);
 }
 
 bool MimeDataFormats::hasURIs() const BOOST_NOEXCEPT {
-	return find(begin(targets_), end(targets_), "text/uri-list") != end(targets_);
+	return boost::find(targets_, "text/uri-list") != boost::end(targets_);
 }
 
 
@@ -56,6 +61,15 @@ vector<uint8_t>&& MimeData::data(Format format) const {
 list<MimeDataFormats::Format>&& MimeData::formats() const {
 	const vector<string> targets(impl_->get_targets());
 	return list<MimeDataFormats::Format>(begin(targets), end(targets));
+}
+
+bool MimeData::hasFormat(Format format) const BOOST_NOEXCEPT {
+	try {
+		const vector<string> targets(impl_->get_targets());
+		return boost::find(targets, format) != boost::end(targets);
+	} catch(...) {
+		return false;
+	}
 }
 
 bool MimeData::hasText() const BOOST_NOEXCEPT {
