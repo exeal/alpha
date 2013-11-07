@@ -55,10 +55,23 @@ namespace ascension {
 				Coordinate x_, y_;
 			};
 
+			/**
+			 * Defines a point representing a location in Cartesian coordinate system.
+			 * @tparam Coordinate The coordinate type
+			 * @note Some specializations of this class are registered into Boost.Geometry.
+			 * @see graphics#PhysicalTwoAxesBase, graphics#PhysicalTwoAxes
+			 */
 			template<typename Coordinate>
 			class BasicPoint : public BasicPointBase<Coordinate> {
 			public:
+				/// Default constructor does not initialize anything.
 				BasicPoint() {}
+				/// Copy-constructor.
+				BasicPoint(const BasicPoint& other) : BasicPointBase<Coordinate>((_x = other.x_, _y = other.y_)) {}
+				/// Copy-constructor for different template parameter.
+				template<typename U>
+				BasicPoint(const BasicPoint<U>& other) : BasicPointBase<Coordinate>((_x = other.x_, _y = other.y_)) {}
+				/// Copy-constructor for different point type.
 				template<typename Other>
 				BasicPoint(const Other& other) : BasicPointBase<Coordinate>((_x = boost::geometry::get<0>(other), _y = boost::geometry::get<1>(other))) {}
 				BOOST_PARAMETER_CONSTRUCTOR(
@@ -66,6 +79,19 @@ namespace ascension {
 					(required
 						(x, (Coordinate))
 						(y, (Coordinate))))
+
+				/// Copy-assignment operator.
+				BasicPoint& operator=(const BasicPoint& other) {
+					std::swap(*this, BasicPoint(other));
+					return *this;
+				}
+				/// Copy-assignment operator for different template parameter.
+				template<typename U>
+				BasicPoint& operator=(const BasicPoint<U>& other) {
+					std::swap(*this, BasicPoint(other));
+					return *this;
+				}
+
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
@@ -106,10 +132,21 @@ namespace ascension {
 			template<typename Coordinate> Coordinate& dy(BasicDimension<Coordinate>& dimension);
 			template<typename Coordinate> Coordinate dy(const BasicDimension<Coordinate>& dimension);
 
+			/**
+			 * Encapsulates a width and a height dimension in Cartesian coordinate system.
+			 * @tparam Coordinate The coordinate type
+			 */
 			template<typename Coordinate>
 			class BasicDimension : public BasicDimensionBase<Coordinate> {
 			public:
+				/// Default constructor does not initialize anything.
 				BasicDimension() {}
+				/// Copy-constructor.
+				BasicDimension(const BasicDimension& other) : BasicDimensionBase<Coordinate>((_dx = other.dx_, _dy = other.dy_)) {}
+				/// Copy-constructor for different template parameter.
+				template<typename U>
+				BasicDimension(const BasicDimension<U>& other) : BasicDimensionBase<Coordinate>((_dx = other.dx_, _dy = other.dy_)) {}
+//				/// Copy-constructor for different dimension type.
 //				template<typename Other>
 //				BasicDimension(const Other& other) : BasicDimensionBase<Coordinate>((_dx = dx(other), _dy = dy(other))) {}
 				BOOST_PARAMETER_CONSTRUCTOR(
@@ -117,6 +154,19 @@ namespace ascension {
 					(required
 						(dx, (Coordinate))
 						(dy, (Coordinate))))
+
+				/// Copy-assignment operator.
+				BasicDimension& operator=(const BasicDimension& other) {
+					std::swap(*this, BasicDimension(other));
+					return *this;
+				}
+				/// Copy-assignment operator for different template parameter.
+				template<typename U>
+				BasicDimension& operator=(const BasicDimension<U>& other) {
+					std::swap(*this, BasicDimension(other));
+					return *this;
+				}
+
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
@@ -147,16 +197,33 @@ namespace ascension {
 			class BasicRectangleBase {
 			protected:
 				BasicRectangleBase() {}
+				BasicRectangleBase(const BasicPoint<Coordinate>& minimumCorner, const BasicPoint<Coordinate>& maximumCorner) : minimumCorner_(minimumCorner), maximumCorner_(maximumCorner) {}
 				template<typename Arguments>
 				BasicRectangleBase(const Arguments& arguments) : minimumCorner_(_x = arguments[_left], _y = arguments[_top]), maximumCorner_(_x = arguments[_right], _y = arguments[_bottom]) {}
 			protected:
 				BasicPoint<Coordinate> minimumCorner_, maximumCorner_;
 			};
 
+			/**
+			 * Describes a rectangle defined by two @c BasicPoint instances.
+			 * @tparam Coordinate The coordinate type
+			 * @note Some specializations of this class are registered into Boost.Geometry.
+			 * @see graphics#PhysicalFourSidesBase, graphics#PhysicalFourSides
+			 */
 			template<typename Coordinate>
 			class BasicRectangle : public BasicRectangleBase<Coordinate> {
 			public:
+				/// Default constructor does not initialize anything.
 				BasicRectangle() {}
+				/// Copy-constructor.
+				BasicRectangle(const BasicRectangle& other) : BasicRectangleBase<Coordinate>(other.minimumCorner_, other.maximumCorner_) {}
+				/// Copy-constructor for different template parameter.
+				template<typename U>
+				BasicRectangle(const BasicRectangle<U>& other) : BasicRectangleBase<Coordinate>(other.minimumCorner_, other.maximumCorner_) {}
+				/// Copy-constructor for different rectangle type.
+				template<typename Other>
+				BasicRectangle(const Other& other) : BasicRectangleBase<Coordinate>(topLeft(other), bottomRight(other)) {}
+				/// Constructor creates a rectangle described by the given two points.
 				template<typename Point1, typename Point2>
 				explicit BasicRectangle(const std::pair<Point1, Point2>& points,
 					typename detail::EnableIfTagIs<Point1, boost::geometry::point_tag>::type* = nullptr,
@@ -164,16 +231,16 @@ namespace ascension {
 					: BasicRectangleBase<Coordinate>((
 						_left = boost::geometry::get<0>(points.first), _top = boost::geometry::get<1>(points.first),
 						_right = boost::geometry::get<0>(points.second), _bottom = boost::geometry::get<1>(points.second))) {}
+				/// Constructor creates a rectangle described by the given origin and size.
 				template<typename Origin, typename SizeCoordinate>
 				BasicRectangle(const Origin& origin, const BasicDimension<SizeCoordinate>& size,
 					typename detail::EnableIfTagIs<Origin, boost::geometry::point_tag>::type* = nullptr);
+				/// Constructor creates a rectangle described by the two ranges in x and y-coordinates.
 				template<typename ScalarType>
 				BasicRectangle(const boost::integer_range<ScalarType>& xrange, const boost::integer_range<ScalarType>& yrange)
 					: BasicRectangleBase<Coordinate>((
 						_left = *xrange.begin(), _top = *yrange.begin(),
 						_right = *xrange.end(), _bottom = *yrange.end())) {}
-				template<typename Other>
-				BasicRectangle(const Other& other) : BasicRectangleBase<Coordinate>((_dx = dx(other), _dy = dy(other))) {}
 				BOOST_PARAMETER_CONSTRUCTOR(
 					BasicRectangle, (BasicRectangleBase<Coordinate>), tag,
 					(required
@@ -181,6 +248,19 @@ namespace ascension {
 						(top, (Coordinate))
 						(right, (Coordinate))
 						(bottom, (Coordinate))))
+
+				/// Copy-assignment operator.
+				BasicRectangle& operator=(const BasicRectangle& other) {
+					std::swap(*this, BasicRectangle(other));
+					return *this;
+				}
+				/// Copy-assignment operator for different template parameter.
+				template<typename U>
+				BasicRectangle& operator=(const BasicRectangle<U>& other) {
+					std::swap(*this, BasicRectangle(other));
+					return *this;
+				}
+
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
 #elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
