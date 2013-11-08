@@ -67,13 +67,13 @@ namespace ascension {
 				/// Default constructor does not initialize anything.
 				BasicPoint() {}
 				/// Copy-constructor.
-				BasicPoint(const BasicPoint& other) : BasicPointBase<Coordinate>((_x = other.x_, _y = other.y_)) {}
+				BasicPoint(const BasicPoint& other) : BasicPointBase<Coordinate>((_x = x(other), _y = y(other))) {}
 				/// Copy-constructor for different template parameter.
 				template<typename U>
-				BasicPoint(const BasicPoint<U>& other) : BasicPointBase<Coordinate>((_x = other.x_, _y = other.y_)) {}
+				BasicPoint(const BasicPoint<U>& other) : BasicPointBase<Coordinate>((_x = x(other), _y = y(other))) {}
 				/// Copy-constructor for different point type.
 				template<typename Other>
-				BasicPoint(const Other& other) : BasicPointBase<Coordinate>((_x = boost::geometry::get<0>(other), _y = boost::geometry::get<1>(other))) {}
+				BasicPoint(const Other& other) : BasicPointBase<Coordinate>((_x = x(other), _y = y(other))) {}
 				BOOST_PARAMETER_CONSTRUCTOR(
 					BasicPoint, (BasicPointBase<Coordinate>), tag,
 					(required
@@ -142,10 +142,10 @@ namespace ascension {
 				/// Default constructor does not initialize anything.
 				BasicDimension() {}
 				/// Copy-constructor.
-				BasicDimension(const BasicDimension& other) : BasicDimensionBase<Coordinate>((_dx = other.dx_, _dy = other.dy_)) {}
+				BasicDimension(const BasicDimension& other) : BasicDimensionBase<Coordinate>((_dx = dx(other), _dy = dy(other))) {}
 				/// Copy-constructor for different template parameter.
 				template<typename U>
-				BasicDimension(const BasicDimension<U>& other) : BasicDimensionBase<Coordinate>((_dx = other.dx_, _dy = other.dy_)) {}
+				BasicDimension(const BasicDimension<U>& other) : BasicDimensionBase<Coordinate>((_dx = dx(other), _dy = dy(other))) {}
 //				/// Copy-constructor for different dimension type.
 //				template<typename Other>
 //				BasicDimension(const Other& other) : BasicDimensionBase<Coordinate>((_dx = dx(other), _dy = dy(other))) {}
@@ -216,13 +216,19 @@ namespace ascension {
 				/// Default constructor does not initialize anything.
 				BasicRectangle() {}
 				/// Copy-constructor.
-				BasicRectangle(const BasicRectangle& other) : BasicRectangleBase<Coordinate>(other.minimumCorner_, other.maximumCorner_) {}
+				BasicRectangle(const BasicRectangle& other) : BasicRectangleBase<Coordinate>((
+					_left = boost::geometry::get<boost::geometry::min_corner, 0>(other), _top = boost::geometry::get<boost::geometry::min_corner, 1>(other),
+					_right = boost::geometry::get<boost::geometry::max_corner, 0>(other), _bottom = boost::geometry::get<boost::geometry::max_corner, 1>(other))) {}
 				/// Copy-constructor for different template parameter.
 				template<typename U>
-				BasicRectangle(const BasicRectangle<U>& other) : BasicRectangleBase<Coordinate>(other.minimumCorner_, other.maximumCorner_) {}
+				BasicRectangle(const BasicRectangle<U>& other) : BasicRectangleBase<Coordinate>((
+					_left = boost::geometry::get<boost::geometry::min_corner, 0>(other), _top = boost::geometry::get<boost::geometry::min_corner, 1>(other),
+					_right = boost::geometry::get<boost::geometry::max_corner, 0>(other), _bottom = boost::geometry::get<boost::geometry::max_corner, 1>(other))) {}
 				/// Copy-constructor for different rectangle type.
 				template<typename Other>
-				BasicRectangle(const Other& other) : BasicRectangleBase<Coordinate>(topLeft(other), bottomRight(other)) {}
+				BasicRectangle(const Other& other) : BasicRectangleBase<Coordinate>((
+					_left = boost::geometry::get<boost::geometry::min_corner, 0>(other), _top = boost::geometry::get<boost::geometry::min_corner, 1>(other),
+					_right = boost::geometry::get<boost::geometry::max_corner, 0>(other), _bottom = boost::geometry::get<boost::geometry::max_corner, 1>(other))) {}
 				/// Constructor creates a rectangle described by the given two points.
 				template<typename Point1, typename Point2>
 				explicit BasicRectangle(const std::pair<Point1, Point2>& points,
