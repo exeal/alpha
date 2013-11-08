@@ -36,7 +36,7 @@ namespace ascension {
 			// CaretShaper
 			virtual void install(CaretShapeUpdater& updater) BOOST_NOEXCEPT;
 			virtual void shape(std::unique_ptr<graphics::Image>& image,
-				graphics::geometry::BasicPoint<std::uint16_t>& alignmentPoint) const BOOST_NOEXCEPT;
+				graphics::geometry::BasicPoint<std::uint32_t>& alignmentPoint) const BOOST_NOEXCEPT;
 			virtual void uninstall() BOOST_NOEXCEPT;
 			// CaretListener
 			virtual void caretMoved(const Caret& caret, const kernel::Region& oldRegion);
@@ -65,7 +65,7 @@ namespace ascension {
 			// CaretShaper
 			void install(CaretShapeUpdater& updater) BOOST_NOEXCEPT;
 			void shape(std::unique_ptr<graphics::Image>& image,
-				graphics::geometry::BasicPoint<std::uint16_t>& alignmentPoint) const BOOST_NOEXCEPT;
+				graphics::geometry::BasicPoint<std::uint32_t>& alignmentPoint) const BOOST_NOEXCEPT;
 			void uninstall() BOOST_NOEXCEPT;
 			// CaretListener
 			void caretMoved(const Caret& caret, const kernel::Region& oldRegion);
