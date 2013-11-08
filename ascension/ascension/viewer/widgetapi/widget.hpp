@@ -10,7 +10,7 @@
 #include <ascension/corelib/basic-exceptions.hpp>	// IllegalStateException
 #include <ascension/graphics/geometry.hpp>
 #include <ascension/graphics/rendering-device.hpp>	// graphics.RenderingDevice, ...
-#include <ascension/viewer/widgetapi/drag-and-drop.hpp>
+//#include <ascension/viewer/widgetapi/drag-and-drop.hpp>
 #include <ascension/viewer/widgetapi/user-input.hpp>
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 #	include <gtkmm/widget.h>
