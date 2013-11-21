@@ -112,7 +112,11 @@ namespace {
  * Constructor.
  * @param presentation The presentation object
  */
-TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation), mouseInputDisabledCount_(0) {
+TextViewer::TextViewer(Presentation& presentation) :
+#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+		Glib::ObjectBase("ascension.viewers.TextViewer"),
+#endif
+		presentation_(presentation), mouseInputDisabledCount_(0) {
 	initialize(nullptr);
 
 	// initializations of renderer_ and mouseInputStrategy_ are in initializeWindow()
@@ -122,7 +126,11 @@ TextViewer::TextViewer(Presentation& presentation) : presentation_(presentation)
  * Copy-constructor. Unlike @c win32#Object class, this does not copy the window handle. For
  * more details, see the description of @c TextViewer.
  */
-TextViewer::TextViewer(const TextViewer& other) : presentation_(other.presentation_), mouseInputDisabledCount_(0) {
+TextViewer::TextViewer(const TextViewer& other) :
+#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+		Glib::ObjectBase("ascension.viewers.TextViewer"),
+#endif
+		presentation_(other.presentation_), mouseInputDisabledCount_(0) {
 	initialize(&other);
 	modeState_ = other.modeState_;
 }

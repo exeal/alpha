@@ -22,7 +22,9 @@
 #include <algorithm>
 #include <array>
 #include <set>
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#	include <glibmm/property.h>
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 #	include <ascension/win32/com/smart-pointer.hpp>
 #	include <ascension/win32/com/unknown-impl.hpp>
 #	include <shlobj.h>	// IDropTargetHelper
@@ -39,7 +41,7 @@
 #	ifndef ASCENSION_NO_TEXT_OBJECT_MODEL
 #		include <tom.h>
 #	endif // !ASCENSION_NO_TEXT_OBJECT_MODEL
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif
 
 
 namespace ascension {
@@ -73,6 +75,18 @@ namespace ascension {
 	}
 #endif
 
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+	namespace detail {
+		class TextViewerScrollableProperties : public Gtk::Widget {
+		protected:
+			TextViewerScrollableProperties();
+		private:
+			Glib::Property<Glib::RefPtr<Gtk::Adjustment>> horizontalAdjustment_, verticalAdjustment_;
+			Glib::Property<Gtk::ScrollablePolicy> horizontalScrollPolicy_, verticalScrollPolicy_;
+		};
+	}
+#endif
+
 	namespace viewers {
 		class TextViewer :
 				// note:
@@ -80,7 +94,7 @@ namespace ascension {
 				// QPlainTextEdit and QTextEdit inherit QAbstractScrollArea.
 				// NSTextView inherits NSText (which inherits NSView).
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-				public Gtk::Widget, public Gtk::Scrollable,
+				public detail::TextViewerScrollableProperties, public Gtk::Scrollable,
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
 				public QAbstractScrollArea,
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
@@ -305,12 +319,24 @@ namespace ascension {
 			void addNewPoint(VisualPoint& point) {points_.insert(&point);}
 			void removePoint(VisualPoint& point) {points_.erase(&point);}
 
-		private:
-			// platform-dependent events
+			// platform-dependent events and other overrides
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		protected:
+			virtual void get_preferred_height_for_width_vfunc(int width, int& minimumHeight, int& naturalHeight) const;
+			virtual void get_preferred_height_vfunc(int& minimumHeight, int& naturalHeight) const;
+			virtual void get_preferred_width_vfunc(int& minimumWidth, int& naturalWidth) const;
+			virtual void get_preferred_width_for_height_vfunc(int height, int& minimumWidth, int& naturalWidth) const;
+			virtual Gtk::SizeRequestMode get_request_mode_vfunc() const;
+			virtual void on_realize();
+			virtual void on_size_allocate(Gtk::Allocation& allocation);
+			virtual void on_unrealize();
+		private:
 			bool on_button_press_event(GdkEventButton* event);
 			bool on_button_release_event(GdkEventButton* event);
 			bool on_configure_event(GdkEventConfigure* event);
+			void on_drag_leave(const Glib::RefPtr<Gdk::DragContext>& context, guint time);
+			bool on_drag_motion(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
+			bool on_drag_drop(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
 			bool on_draw(const Cairo::RefPtr<Cairo::Context>& context);
 			bool on_focus_in_event(GdkEventFocus* event);
 			bool on_focus_out_event(GdkEventFocus* event);
@@ -321,6 +347,7 @@ namespace ascension {
 			bool on_motion_notify_event(GdkEventMotion* event);
 			bool on_scroll_event(GdkEventScroll* event);
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		private:
 			void contextMenuEvent(QContextMenuEvent* event);
 			void focusInEvent(QFocusEvent* event);
 			void focusOutEvent(QFocusEvent* event);
@@ -332,8 +359,10 @@ namespace ascension {
 			void mouseReleaseEvent(QMouseEvent* event);
 			void paintEvent(QPaintEvent* event);
 			void resizeEvent(QResizeEvent* event);
+			void timerEvent(QTimerEvent* event);
 			void wheelEvent(QWheelEvent* event);
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		private:
 			void onCaptureChanged(const win32::Handle<HWND>::Type& newWindow, bool& consumed);
 			void onCommand(WORD id, WORD notifyCode, const win32::Handle<HWND>::Type& control, bool& consumed);
 			void onDestroy(bool& consumed);
@@ -478,6 +507,10 @@ namespace ascension {
 			} freezeRegister_;
 
 			// input state
+#ifndef ASCENSION_WINDOW_SYSTEM_WIN32
+			bool blinkingCaretIsVisible_;
+			Timer caretBlinkingTimer_;
+#endif	// !ASCENSION_WINDOW_SYSTEM_WIN32
 			unsigned long mouseInputDisabledCount_;
 #ifdef ASCENSION_WINDOW_SYSTEM_GTK
 			std::shared_ptr<GtkIMContext> inputMethodContext_;
