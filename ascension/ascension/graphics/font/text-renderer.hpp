@@ -11,6 +11,7 @@
 
 //#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/graphics/font/line-layout-vector.hpp>
+#include <ascension/graphics/font/text-renderer-observers.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/text-style.hpp>
 #include <memory>	// std.shared_ptr, std.unique_ptr
@@ -18,65 +19,6 @@
 namespace ascension {
 	namespace graphics {
 		namespace font {
-
-			class TextRenderer;
-
-			/**
-			 * @see TextRenderer#addComputedBlockFlowDirectionListener,
-			 *      TextRenderer#removeComputedBlockFlowDirectionListener,
-			 *      presentation#TextToplevelStyleListener
-			 */
-			class ComputedBlockFlowDirectionListener {
-			private:
-				/**
-				 * The computed block flow direction of the text renderer was changed.
-				 * @param used The block flow direction used
-				 */
-				virtual void computedBlockFlowDirectionChanged(
-					presentation::BlockFlowDirection used) = 0;
-				friend class TextRenderer;
-			};
-
-			/**
-			 * Interface for objects which are interested in change of the default font of
-			 * @c TextRenderer.
-			 * @see TextRenderer#addDefaultFontListener, TextRenderer#removeDefaultFontListener
-			 */
-			class DefaultFontListener {
-			private:
-				/// The font settings was changed.
-				virtual void defaultFontChanged() = 0;
-				friend class TextRenderer;
-			};
-
-			/**
-			 * Options for line rendering of @c TextRenderer object.
-			 * @see TextRenderer#setLineRenderingOptions
-			 */
-			class LineRenderingOptions {
-			private:
-				/**
-				 * Returns the inline object renders the end of line.
-				 * @param line The line to render
-				 * @return The inline object renders the end of line, or @c null
-				 */
-				virtual const InlineObject* endOfLine(Index line) const BOOST_NOEXCEPT = 0;
-				/**
-				 * Returns the object overrides text paint properties for line rendering. For the
-				 * detail semantics of paint override, see the documentation of
-				 * @c TextPaintOverride class.
-				 * @param line The line to render
-				 * @return The object overrides text paint properties for line rendering, or @c null
-				 */
-				virtual const TextPaintOverride* textPaintOverride(Index line) const BOOST_NOEXCEPT = 0;
-				/**
-				 * Returns the inline object renders the mark of text wrapping.
-				 * @param line The line to render
-				 * @return The inline object renders the mark of text wrapping, or @c null
-				 */
-				virtual const InlineObject* textWrappingMark(Index line) const BOOST_NOEXCEPT = 0;
-				friend class TextRenderer;
-			};
 
 			class TextViewport;
 
