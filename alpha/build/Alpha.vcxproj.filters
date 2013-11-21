@@ -362,6 +362,9 @@
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\drag-and-drop-gtk.cpp">
       <Filter>ascension\Source Files\viewer\widgetapi</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\viewer-gtk.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
