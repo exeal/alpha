@@ -20,6 +20,7 @@
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/geometry/geometries/register/box.hpp>
 #include <boost/geometry/geometries/register/point.hpp>
+#include <boost/operators.hpp>	// boost.equality_comparable
 #include <boost/parameter.hpp>
 #include <boost/range/irange.hpp>
 
@@ -46,7 +47,12 @@ namespace ascension {
 #endif	// !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 
 			template<typename Coordinate>
-			class BasicPointBase {
+			class BasicPointBase : private boost::equality_comparable<BasicPointBase<Coordinate>> {
+			public:
+				bool operator==(const BasicPointBase& other) const {
+//					return boost::geometry::equals(*this, other);
+					return x_ == other.x_ && y_ == other.y_;
+				}
 			protected:
 				BasicPointBase() {}
 				template<typename Arguments>
@@ -117,7 +123,11 @@ namespace ascension {
 #endif	// !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 
 			template<typename Coordinate>
-			class BasicDimensionBase {
+			class BasicDimensionBase : private boost::equality_comparable<BasicDimensionBase<Coordinate>> {
+			public:
+				bool operator==(const BasicDimensionBase& other) const {
+					return dx_ == other.dx_ && dy_ == other.dy_;
+				}
 			protected:
 				BasicDimensionBase() {}
 				template<typename Arguments>
@@ -194,7 +204,12 @@ namespace ascension {
 #endif	// !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 
 			template<typename Coordinate>
-			class BasicRectangleBase {
+			class BasicRectangleBase : private boost::equality_comparable<BasicRectangleBase<Coordinate>> {
+			public:
+				bool operator==(const BasicRectangleBase& other) const {
+//					return boost::geometry::equals(*this, other);
+					return minimumCorner_ == other.minimumCorner_ && maximumCorner_ == other.maximumCorner_;
+				}
 			protected:
 				BasicRectangleBase() {}
 				BasicRectangleBase(const BasicPoint<Coordinate>& minimumCorner, const BasicPoint<Coordinate>& maximumCorner) : minimumCorner_(minimumCorner), maximumCorner_(maximumCorner) {}
@@ -568,7 +583,7 @@ namespace ascension {
 			template<typename Geometry, typename DimensionCoordinate>
 			inline Geometry& translate(Geometry& g, const BasicDimension<DimensionCoordinate>& offset) {
 				typedef typename boost::geometry::point_type<Geometry>::type PointType;
-				boost::geometry::transform(g, g, boost::geometry::strategy::transform::translate_transformer<PointType, PointType>(dx(offset), dy(offset)));
+				boost::geometry::transform(g, g, boost::geometry::strategy::transform::translate_transformer<DimensionCoordinate, 2, 2>(dx(offset), dy(offset)));
 				return g;
 			}
 
