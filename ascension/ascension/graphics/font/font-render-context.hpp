@@ -76,6 +76,7 @@ namespace ascension {
 				FontRenderContext fontRenderContext_;
 			};
 
+			std::size_t hash_value(const FontRenderContext& frc);		// for boost.flyweight instantiation
 			std::size_t hash_value(const FontAndRenderContext& farc);	// for boost.flyweight instantiation
 		}
 	}
