@@ -55,6 +55,21 @@ namespace ascension {
 		struct NullDeleter {
 			void operator()(const void*) BOOST_NOEXCEPT {}
 		};
+		template<typename Lockable, void(Lockable::*lock), void(Lockable::*unlock)>
+		class LockGuard {
+			ASCENSION_NONCOPYABLE_TAG(LockGuard);
+		public:
+			explicit LockGuard(Lockable* lockable) : lockable_(lockable) {
+				if(lockable_ != nullptr)
+					(lockable_->*lock)();
+			}
+			~LockGuard() {
+				if(lockable_ != nullptr)
+					(lockable_->*unlock)();
+			}
+		private:
+			Lockable* lockable_;
+		};
 	} // namespace detail
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
