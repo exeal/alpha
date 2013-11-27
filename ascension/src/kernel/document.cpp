@@ -949,24 +949,6 @@ Document::DefaultContentTypeInformationProvider::~DefaultContentTypeInformationP
  * @note This class is not intended to be subclassed.
  */
 
-/**
- * Constructor calls @c Document#beginCompoundChange.
- * @param document The document this object manages. if this is @c null, the object does nothing
- * @throw ... Any exceptions @c Document#beginCompoundChange throws
- */
-CompoundChangeSaver::CompoundChangeSaver(Document* document) : document_(document) {
-	if(document_ != nullptr)
-		document_->beginCompoundChange();
-}
-
-/**
- * Destructor calls @c Document#endCompoundChange.
- * @throw ... Any exceptions @c Document#endCompoundChange throws
- */
-CompoundChangeSaver::~CompoundChangeSaver() {
-	if(document_ != nullptr)
-		document_->endCompoundChange();
-}
 
 #if 0
 // DocumentLocker /////////////////////////////////////////////////////////////////////////////////

@@ -55,7 +55,7 @@ namespace ascension {
 		struct NullDeleter {
 			void operator()(const void*) BOOST_NOEXCEPT {}
 		};
-		template<typename Lockable, void(Lockable::*lock), void(Lockable::*unlock)>
+		template<typename Lockable, void(Lockable::*lock)(void), void(Lockable::*unlock)(void)>
 		class LockGuard {
 			ASCENSION_NONCOPYABLE_TAG(LockGuard);
 		public:

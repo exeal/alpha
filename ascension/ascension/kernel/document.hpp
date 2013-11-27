@@ -392,14 +392,9 @@ namespace ascension {
 		};
 
 		// the documentation is document.cpp
-		class CompoundChangeSaver {
-			ASCENSION_NONCOPYABLE_TAG(CompoundChangeSaver);
-		public:
-			explicit CompoundChangeSaver(Document* document);
-			~CompoundChangeSaver();
-		private:
-			Document* const document_;
-		};
+		typedef detail::LockGuard<
+			Document, &Document::beginCompoundChange, &Document::endCompoundChange
+		> CompoundChangeSaver;
 #if 0
 		// the documentation is document.cpp
 		class DocumentLocker {
