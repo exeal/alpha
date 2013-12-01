@@ -3,7 +3,7 @@
  * @date 2003-2006 (was LineLayout.h)
  * @date 2006-2010
  * @date 2010-11-20 renamed from ascension/layout.hpp
- * @date 2011-2012
+ * @date 2011-2013
  */
 
 #ifndef ASCENSION_TEXT_LAYOUT_HPP
@@ -20,6 +20,7 @@
 #include <boost/geometry/geometries/polygon.hpp>
 #include <boost/geometry/multi/geometries/multi_polygon.hpp>
 #include <boost/operators.hpp>
+#include <boost/optional.hpp>
 
 namespace ascension {
 
@@ -210,8 +211,8 @@ namespace ascension {
 				/// @name Other Coordinates
 				/// @{
 				Scalar lineStartEdge(Index line) const;
-				Index locateLine(Scalar bpd,
-					const boost::optional<boost::integer_range<Scalar>>& bounds, bool& outside) const BOOST_NOEXCEPT;
+				std::pair<Index, boost::optional<Direction>> locateLine(Scalar bpd,
+					const boost::optional<boost::integer_range<Scalar>>& bounds) const BOOST_NOEXCEPT;
 				/// @}
 
 				// styled segments
