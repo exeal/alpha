@@ -105,7 +105,7 @@ namespace ascension {
 		};
 
 		/**
-		 * A correction of all physical dimensions. This is a cartesian point.
+		 * A collection of all physical dimensions. This is a cartesian point.
 		 * @tparam T The coordinate type
 		 * @see presentation#AbstractTwoAxes
 		 */
@@ -187,7 +187,7 @@ namespace ascension {
 		};
 
 		/**
-		 * A correction of all physical directions.
+		 * A collection of all physical directions.
 		 * @tparam T Element type
 		 * @see font#LineRelativeFourSides, presentation#FlowRelativeFourSides
 		 */
@@ -344,7 +344,7 @@ namespace ascension {
 			};
 
 			/**
-			 * A correction of all line-relative directions.
+			 * A collection of all line-relative directions.
 			 * @tparam T The element type
 			 * @see PhysicalFourSides, presentation#FlowRelativeFourSides
 			 */
@@ -433,7 +433,7 @@ namespace ascension {
 		};
 
 		/**
-		 * A correction of all abstract dimensions.
+		 * A collection of all abstract dimensions.
 		 * @tparam T The coordinate type
 		 * @see graphics#PhysicalTwoAxes
 		 */
@@ -516,7 +516,7 @@ namespace ascension {
 		};
 
 		/**
-		 * A correction of all flow-relative directions.
+		 * A collection of all flow-relative directions.
 		 * @tparam T The element type
 		 * @see graphics#PhysicalFourSides, graphics#font#LineRelativeFourSides
 		 */

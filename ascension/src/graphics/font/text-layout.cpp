@@ -438,24 +438,24 @@ AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit<>& hit) const {
 
 /// @internal Implements @c #hitTestCharacter methods.
 TextHit<>&& TextLayout::internalHitTestCharacter(const AbstractTwoAxes<Scalar>& point, const FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const {
-	AbstractTwoAxes<bool> outside;
-	const Index line = locateLine(point.bpd(), (bounds != nullptr) ? boost::make_optional(blockFlowRange(*bounds)) : boost::none, outside.bpd());
-	const auto runsInLine(runsForLine(line));
-	const StringPiece characterRangeInLine((*runsInLine.begin())->characterRange().begin(), lineLength(line));
+	const auto line(locateLine(point.bpd(), (bounds != nullptr) ? boost::make_optional(blockFlowRange(*bounds)) : boost::none));
+	const auto runsInLine(runsForLine(line.first));
+	const StringPiece characterRangeInLine((*runsInLine.begin())->characterRange().begin(), lineLength(line.first));
 	assert(characterRangeInLine.end() == runsInLine.end()[-1]->characterRange().end());
 
-	const Scalar lineStart = lineStartEdge(line);
+	const Scalar lineStart = lineStartEdge(line.first);
 	if(point.ipd() < lineStart || (bounds != nullptr && point.ipd() < min(bounds->start(), bounds->end()))) {	// beyond 'start-edge' of line ?
 		if(outOfBounds != nullptr)
 			*outOfBounds = true;
 		return TextHit<>::leading(characterRangeInLine.begin() - textString_.data());
 	}
-	outside.ipd() = point.ipd() >= lineStart + measure(line) || (bounds != nullptr && point.ipd() >= max(bounds->start(), bounds->end()));	// beyond 'end-edge' of line ?
+	const bool outsideInIpd = point.ipd() >= lineStart + measure(line.first)
+		|| (bounds != nullptr && point.ipd() >= max(bounds->start(), bounds->end()));	// beyond 'end-edge' of line ?
 
-	if(!outside.ipd()) {
+	if(!outsideInIpd) {
 		Scalar x = point.ipd() - lineStart, runLineLeft = 0;
 		if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
-			x = measure(line) - x;
+			x = measure(line.first) - x;
 		// 'x' is distance from line-left of 'line' to 'point' in inline-progression-dimension
 		// 'runLineLeft' is distance from line-left of 'line' to line-left of 'run' in ...
 		BOOST_FOREACH(const unique_ptr<const TextRun>& run, runsInLine) {
@@ -599,33 +599,34 @@ Scalar TextLayout::lineStartEdge(Index line) const {
  * Converts a position in the block-progression-direction into the corresponding line.
  * @param bpd The position in block-progression-dimension in user units
  * @param bounds The bounds in block-progression-dimension in user units
- * @param[out] outside @c true if @a bpd is outside of the line content
- * @return The line number
- * @see #basline, #lineAt, #offset
+ * @return The @c first member is line number. If @a bpd is outside of the line content, @c second
+ *         member is @c Direction#FORWARD (beyond the after-edge) or @c Direction#BACKWARD (beyond
+ *         the before-edge), or @c boost#none otherwise
+ * @see #baseline, #lineAt, #offset
  */
-Index TextLayout::locateLine(Scalar bpd, const boost::optional<boost::integer_range<Scalar>>& bounds, bool& outside) const BOOST_NOEXCEPT {
+pair<Index, boost::optional<Direction>> TextLayout::locateLine(Scalar bpd, const boost::optional<boost::integer_range<Scalar>>& bounds) const BOOST_NOEXCEPT {
 	if(bounds != boost::none) {
 		const boost::integer_range<Scalar> orderedBounds(ordered(*bounds));
 		if(bpd < *orderedBounds.begin())
-			return (outside = true), 0;
-		if(bpd > *orderedBounds.end())
-			return (outside = true), numberOfLines() - 1;
+			return make_pair(0, Direction::BACKWARD);
+		if(bpd >= *orderedBounds.end())
+			return make_pair(numberOfLines() - 1, Direction::FORWARD);
 	}
 
 	LineMetricsIterator line(lineMetrics(0));
 
 	// beyond the before-edge ?
-	if(bpd <= *ordered(line.extent()).begin())
-		return (outside = true), line.line();
+	if(bpd < *ordered(line.extent()).begin())
+		return make_pair(line.line(), Direction::BACKWARD);
 
 	// locate the line includes 'bpd'
 	for(; line.line() < numberOfLines(); ++line) {
 		if(bpd < *ordered(line.extent()).end())
-			return (outside = false), line.line();
+			return make_pair(line.line(), boost::none);
 	}
 
 	// beyond the after-edge
-	return (outside = true), numberOfLines() - 1;
+	return make_pair(numberOfLines() - 1, Direction::FORWARD);
 }
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -763,7 +764,7 @@ boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>&& 
 		}
 	}
 
-	return move(results);
+	return std::move(results);
 }
 
 /**
@@ -851,7 +852,7 @@ vector<boost::integer_range<Index>>&& TextLayout::logicalRangesForVisualSelectio
 		else
 			result.back().advance_end(*subrange.end() - *result.back().end());
 	}
-	return move(result);
+	return std::move(result);
 }
 
 /**
