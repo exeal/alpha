@@ -22,6 +22,8 @@ namespace k = ascension::kernel;
 
 // LineLayoutVector ///////////////////////////////////////////////////////////////////////////////
 
+const LineLayoutVector::UseCalculatedLayoutTag LineLayoutVector::USE_CALCULATED_LAYOUT;
+
 /// Destructor.
 LineLayoutVector::~LineLayoutVector() BOOST_NOEXCEPT {
 //	clearCaches(startLine_, startLine_ + bufferSize_, false);
@@ -36,7 +38,7 @@ LineLayoutVector::~LineLayoutVector() BOOST_NOEXCEPT {
  * @return The layout
  * @see #at, atIfCached
  */
-const TextLayout& LineLayoutVector::operator[](Index line) const {
+const TextLayout& LineLayoutVector::operator[](Index line) {
 #ifdef ASCENSION_TRACE_LAYOUT_CACHES
 	manah::win32::DumpContext dout;
 	dout << "finding layout for line " << line;
@@ -333,10 +335,10 @@ Index LineLayoutVector::mapLogicalPositionToVisualPosition(const k::Position& po
 //		return position.line;
 //	}
 	try {
-		const TextLayout& layout = at(position.line);
-		const Index line = layout.lineAt(position.offsetInLine);
-		if(offsetInVisualLine != 0)
-			*offsetInVisualLine = position.offsetInLine - layout.lineOffset(line);
+		const TextLayout* const layout = at(position.line);
+		const Index line = (layout != nullptr) ? layout->lineAt(position.offsetInLine) : 0;
+		if(offsetInVisualLine != nullptr)
+			*offsetInVisualLine = position.offsetInLine - ((layout != nullptr) ? layout->lineOffset(line) : 0);
 		return mapLogicalLineToVisualLine(position.line) + line;
 	} catch(const IndexOutOfBoundsException&) {
 		throw k::BadPositionException(position);
@@ -390,41 +392,45 @@ k::Position LineLayoutVector::mapVisualPositionToLogicalPosition(const k::Positi
 }
 #endif // 0
 
-/**
- * Offsets visual line. The line whose layout not calculated is treat as single visual line.
- * @param[in,out] line The visual line
- * @param[in] offset The offset
- * @return @c false if absolute value of @a offset is too large so that the results were snapped to
- *         the beginning or the end of the document
- * @throw IndexOutOfBoundsException @a line is invalid
- */
-bool LineLayoutVector::offsetVisualLine(VisualLine& line, SignedIndex offset) const {
-	bool overflowedOrUnderflowed = false;
+/// @internal
+SignedIndex LineLayoutVector::offsetVisualLine(VisualLine& line, SignedIndex offset, bool useCalculatedLayout) const {
+	LineLayoutVector& self = *const_cast<LineLayoutVector*>(this);
+	SignedIndex walked = 0;
 	if(offset > 0) {
-		if(line.subline + offset < numberOfSublinesOfLine(line.line))
-			line.subline += offset;
-		else {
-			const Index lines = document().numberOfLines();
-			offset -= static_cast<SignedIndex>(numberOfSublinesOfLine(line.line) - line.subline) - 1;
-			while(offset > 0 && line.line < lines - 1)
-				offset -= static_cast<SignedIndex>(numberOfSublinesOfLine(++line.line));
-			line.subline = numberOfSublinesOfLine(line.line) - 1;
-			if(offset < 0)
+		while(true) {
+			const Index sublines = useCalculatedLayout ? self.numberOfSublinesOfLine(line.line, USE_CALCULATED_LAYOUT) : numberOfSublinesOfLine(line.line);
+			if(line.subline + offset < sublines) {
 				line.subline += offset;
-			overflowedOrUnderflowed = offset > 0;
+				walked += offset;
+				break;
+			} else if(line.line == document().numberOfLines() - 1) {
+				walked += sublines - 1 - line.subline;
+				line.subline = sublines - 1;
+				break;
+			}
+			offset -= sublines - line.subline;
+			walked += sublines - line.subline;
+			++line.line;
+			line.subline = 0;
 		}
 	} else if(offset < 0) {
-		if(static_cast<Index>(-offset) <= line.subline)
-			line.subline += offset;
-		else {
-			offset += static_cast<SignedIndex>(line.subline);
-			while(offset < 0 && line.line > 0)
-				offset += static_cast<SignedIndex>(numberOfSublinesOfLine(--line.line));
-			line.subline = (offset > 0) ? offset : 0;
-			overflowedOrUnderflowed = offset > 0;
+		while(true) {
+			if(line.subline >= static_cast<Index>(-offset)) {
+				line.subline += offset;
+				walked += offset;
+				break;
+			} else if(line.line == 0) {
+				walked -= line.subline;
+				line.subline = 0;
+				break;
+			}
+			offset += line.subline + 1;
+			walked -= line.subline + 1;
+			--line.line;
+			line.subline = (useCalculatedLayout ? self.numberOfSublinesOfLine(line.line, USE_CALCULATED_LAYOUT) : numberOfSublinesOfLine(line.line)) - 1;
 		}
 	}
-	return !overflowedOrUnderflowed;
+	return walked;
 }
 
 /// @see presentation#IPresentationStylistListener

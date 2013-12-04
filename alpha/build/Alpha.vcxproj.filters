@@ -775,6 +775,9 @@
     <ClInclude Include="..\src\win32\module.hpp">
       <Filter>Header Files\win32</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-renderer-observers.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
