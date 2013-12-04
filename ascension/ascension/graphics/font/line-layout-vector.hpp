@@ -71,6 +71,14 @@ namespace ascension {
 			class LineLayoutVector : public kernel::DocumentListener, public kernel::DocumentPartitioningListener {
 				ASCENSION_NONCOPYABLE_TAG(LineLayoutVector);
 			public:
+				class UseCalculatedLayoutTag {
+					ASCENSION_NONCOPYABLE_TAG(UseCalculatedLayoutTag);
+					UseCalculatedLayoutTag() BOOST_NOEXCEPT;
+					friend class LineLayoutVector;
+				};
+				static const UseCalculatedLayoutTag USE_CALCULATED_LAYOUT;
+
+			public:
 				// constructors
 				template<typename LayoutGenerator>
 				LineLayoutVector(kernel::Document& document,
@@ -79,9 +87,9 @@ namespace ascension {
 
 				/// @name Accessors
 				/// @{
-				const TextLayout& operator[](Index line) const;
-				const TextLayout& at(Index line) const;
-				const TextLayout* atIfCached(Index line) const BOOST_NOEXCEPT;
+				const TextLayout& operator[](Index line);
+				const TextLayout* at(Index line) const BOOST_NOEXCEPT;
+				const TextLayout& at(Index line, const UseCalculatedLayoutTag&);
 				/// @}
 
 				/// @a name Attributes
@@ -89,6 +97,7 @@ namespace ascension {
 				const kernel::Document& document() const BOOST_NOEXCEPT;
 				Scalar maximumMeasure() const BOOST_NOEXCEPT;
 				Index numberOfSublinesOfLine(Index line) const;
+				Index numberOfSublinesOfLine(Index line, const UseCalculatedLayoutTag&);
 				Index numberOfVisualLines() const BOOST_NOEXCEPT;
 				/// @}
 
@@ -105,7 +114,8 @@ namespace ascension {
 					const kernel::Position& position, Index* offsetInVisualLine) const;
 //				Index mapVisualLineToLogicalLine(Index line, Index* subline) const;
 //				kernel::Position mapVisualPositionToLogicalPosition(const kernel::Position& position) const;
-				bool offsetVisualLine(VisualLine& line, SignedIndex offset) const;
+				SignedIndex offsetVisualLine(VisualLine& line, SignedIndex offset) const;
+				SignedIndex offsetVisualLine(VisualLine& line, SignedIndex offset, const UseCalculatedLayoutTag&);
 				/// @}
 
 				/// @name Invalidations
@@ -134,6 +144,7 @@ namespace ascension {
 					Index newSublines, Index oldSublines, bool documentChanged);
 				void initialize();
 				void invalidate(const std::vector<Index>& lines);
+				SignedIndex offsetVisualLine(VisualLine& line, SignedIndex offset, bool useCalculatedLayout) const;
 				void presentationStylistChanged();
 				void updateLongestLine(boost::optional<Index> line, Scalar measure) BOOST_NOEXCEPT;
 				// kernel.DocumentListener
@@ -194,29 +205,29 @@ namespace ascension {
 			/**
 			 * Returns the layout of the specified line.
 			 * @param line The line
-			 * @return The layout
-			 * @throw IndexOutOfBoundsException @a line is greater than the number of the lines
-			 * @see #operator[], #atIfCached
-			 */
-			inline const TextLayout& LineLayoutVector::at(Index line) const {
-				if(line > document().numberOfLines())
-					throw IndexOutOfBoundsException("line");
-				return (*this)[line];
-			}
-
-			/**
-			 * Returns the layout of the specified line.
-			 * @param line The line
 			 * @return The layout or @c null if the layout is not cached
-			 * @see #oprator[], #at
+			 * @see #oprator[], #at(Index, const UseCalculatedLayoutTag&)
 			 */
-			inline const TextLayout* LineLayoutVector::atIfCached(Index line) const BOOST_NOEXCEPT {
+			inline const TextLayout* LineLayoutVector::at(Index line) const BOOST_NOEXCEPT {
 				if(pendingCacheClearance_ && includes(*pendingCacheClearance_, line))
 					return nullptr;
 				const std::list<NumberedLayout>::const_iterator cached = boost::find_if(layouts_, [line](const NumberedLayout& layout) {
 					return layout.lineNumber == line;
 				});
 				return (cached != boost::end(layouts_)) ? cached->layout.get() : nullptr;
+			}
+
+			/**
+			 * Returns the layout of the specified line.
+			 * @param line The line
+			 * @return The layout
+			 * @throw IndexOutOfBoundsException @a line is greater than the number of the lines
+			 * @see #operator[], #at(Index)
+			 */
+			inline const TextLayout& LineLayoutVector::at(Index line, const UseCalculatedLayoutTag&) {
+				if(line > document().numberOfLines())
+					throw IndexOutOfBoundsException("line");
+				return (*this)[line];
 			}
 
 			/// Returns the document.
@@ -252,20 +263,55 @@ namespace ascension {
 			 * Returns the number of sublines of the specified line.
 			 * If the layout of the line is not calculated, this method returns 1.
 			 * @param line The line
-			 * @return The count of the sublines
+			 * @return The number of the sublines
 			 * @throw IndexOutOfBoundsException @a line is outside of the document
-			 * @see #lineLayout, TextLayout#numberOfLines
+			 * @see #at(Index), TextLayout#numberOfLines
 			 */
 			inline Index LineLayoutVector::numberOfSublinesOfLine(Index line) const {
 				if(line >= document().numberOfLines())
 					throw IndexOutOfBoundsException("line");
-				const TextLayout* const layout = atIfCached(line);
+				const TextLayout* const layout = at(line);
 				return (layout != nullptr) ? layout->numberOfLines() : 1;
+			}
+
+			/**
+			 * Returns the number of sublines of the specified line.
+			 * @param line The line
+			 * @return The number of the sublines
+			 * @throw IndexOutOfBoundsException @a line is outside of the document
+			 * @see #at(Index, const UseCalculatedLayoutTag&), TextLayout#numberOfLines
+			 */
+			inline Index LineLayoutVector::numberOfSublinesOfLine(Index line, const UseCalculatedLayoutTag&) {
+				if(line >= document().numberOfLines())
+					throw IndexOutOfBoundsException("line");
+				return at(line, USE_CALCULATED_LAYOUT).numberOfLines();
 			}
 
 			/// Returns the number of the visual lines.
 			inline Index LineLayoutVector::numberOfVisualLines() const BOOST_NOEXCEPT {
 				return numberOfVisualLines_;
+			}
+
+			/**
+			 * Offsets visual line. The line whose layout not calculated is treat as single visual line.
+			 * @param[in,out] line The visual line
+			 * @param[in] offset The offset
+			 * @return The number of visual lines actually moved
+			 * @throw IndexOutOfBoundsException @a line is invalid
+			 */
+			inline SignedIndex LineLayoutVector::offsetVisualLine(VisualLine& line, SignedIndex offset) const {
+				return offsetVisualLine(line, offset, false);
+			}
+
+			/**
+			 * Offsets visual line.
+			 * @param[in,out] line The visual line
+			 * @param[in] offset The offset
+			 * @return The number of visual lines actually moved
+			 * @throw IndexOutOfBoundsException @a line is invalid
+			 */
+			inline SignedIndex LineLayoutVector::offsetVisualLine(VisualLine& line, SignedIndex offset, const UseCalculatedLayoutTag&) {
+				return const_cast<LineLayoutVector*>(this)->offsetVisualLine(line, offset, true);
 			}
 
 			/**

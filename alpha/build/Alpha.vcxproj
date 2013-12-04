@@ -325,6 +325,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-hit.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-layout-styles.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-layout.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-renderer-observers.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-renderer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-run.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-viewport.hpp" />
