@@ -194,23 +194,26 @@ void TextRenderer::addDefaultFontListener(DefaultFontListener& listener) {
  * block progression direction in user units.
  * @param lines The first and second lines
  * @return The distance between the two baselines in user units
+ * @note This method calls LineLayoutVector#at(Index, const LineLayoutVector#UseCalculatedLayoutTag&)
+ *       which may change the layout
  */
 Scalar TextRenderer::baselineDistance(const boost::integer_range<VisualLine>& lines) const {
 	// TODO: This code does not consider 'line-stacking-strategy'.
+	TextRenderer& self = const_cast<TextRenderer&>(*this);
 	if(lines.empty()) {
 		if(lines.begin()->subline == lines.end()->subline)
 			return 0;
-		const TextLayout& layout = layouts().at(lines.begin()->line);
+		const TextLayout& layout = self.layouts().at(lines.begin()->line, LineLayoutVector::USE_CALCULATED_LAYOUT);
 		return layout.lineMetrics(lines.end()->subline).baselineOffset() - layout.lineMetrics(lines.begin()->subline).baselineOffset();
 	} else {
-		const TextLayout* layout = &layouts().at(lines.begin()->line);
+		const TextLayout* layout = &self.layouts().at(lines.begin()->line, LineLayoutVector::USE_CALCULATED_LAYOUT);
 		Scalar bpd = *layout->extent().end() - layout->lineMetrics(lines.begin()->subline).baselineOffset();
 		for(Index line = lines.begin()->line + 1; line < lines.end()->line; ++line) {
 //			bpd += layouts().at(line).height();
-			const boost::integer_range<Scalar> lineExtent(ordered(layouts().at(line).extent()));
+			const boost::integer_range<Scalar> lineExtent(ordered(self.layouts().at(line, LineLayoutVector::USE_CALCULATED_LAYOUT).extent()));
 			bpd += *lineExtent.end() - *lineExtent.begin();
 		}
-		layout = &layouts().at(lines.end()->line);
+		layout = &self.layouts().at(lines.end()->line, LineLayoutVector::USE_CALCULATED_LAYOUT);
 		return bpd += layout->lineMetrics(lines.end()->subline).baselineOffset() - layout->extent().front();
 	}
 }
@@ -251,10 +254,12 @@ void TextRenderer::paint(PaintContext& context) const {
  * @param line The line number
  * @param context The graphics context
  * @param alignmentPoint The alignment point of the text layout of the line to draw
+ * @note This method calls LineLayoutVector#at(Index, const LineLayoutVector#UseCalculatedLayoutTag&)
+ *       which may change the layout
  */
 void TextRenderer::paint(Index line, PaintContext& context, const Point& alignmentPoint) const BOOST_NOEXCEPT {
 //	if(!enablesDoubleBuffering_) {
-		layouts().at(line).draw(context, alignmentPoint,
+		const_cast<TextRenderer*>(this)->layouts().at(line, LineLayoutVector::USE_CALCULATED_LAYOUT).draw(context, alignmentPoint,
 			(lineRenderingOptions_.get() != nullptr) ? lineRenderingOptions_->textPaintOverride(line) : nullptr,
 			(lineRenderingOptions_.get() != nullptr) ? lineRenderingOptions_->endOfLine(line) : nullptr,
 			(lineRenderingOptions_.get() != nullptr) ? lineRenderingOptions_->textWrappingMark(line) : nullptr);
