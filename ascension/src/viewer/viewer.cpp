@@ -243,14 +243,12 @@ void TextViewer::caretMoved(const Caret& self, const k::Region& oldRegion) {
 
 /// @see ComputedWritingModeListener#computedBlockFlowDirectionChanged
 void TextViewer::computedBlockFlowDirectionChanged(BlockFlowDirection used) {
-	updateScrollBars();
+	updateScrollBars(AbstractTwoAxes<bool>(true, true));
 }
 
 /// @see DefaultFontListener#defaultFontChanged
 void TextViewer::defaultFontChanged() BOOST_NOEXCEPT {
 	rulerPainter_->update();
-	scrolls_.resetBars(*this, 'a', true);
-	updateScrollBars();
 	caret().resetVisualization();
 	redrawLine(0, true);
 }
@@ -324,11 +322,21 @@ void TextViewer::drawIndicatorMargin(Index /* line */, PaintContext& /* context 
 /**
  * Freezes the drawing of the viewer.
  * @throw WindowNotInitialized The window is not initialized
+ * @note This method freezes also viewer's @c TextViewport.
  * @see #isFrozen, #unfreeze, #AutoFreeze
  */
 void TextViewer::freeze() {
 //	checkInitialization();
-	freezeRegister_.freeze();
+	const shared_ptr<TextViewport> viewport(textRenderer().viewport());
+	if(viewport.get() == nullptr)
+		throw IllegalStateException("There is no viewport in this text viewer.");
+	freezeRegister_.freeze();	// this may throw std.overflow_error
+	try {
+		viewport->freezeNotification();
+	} catch(const overflow_error&) {
+		freezeRegister_.thaw();
+		throw;
+	}
 }
 
 #if 0
@@ -543,8 +551,7 @@ void TextViewer::initialize(const TextViewer* other) {
 	document().addListener(*this);
 	document().addRollbackListener(*this);
 
-	//	scrollInfo_.updateVertical(*this);
-	updateScrollBars();
+//	updateScrollBars(AbstractTwoAxes<bool>(true, true));
 	setMouseInputStrategy(shared_ptr<MouseInputStrategy>());
 
 #ifdef ASCENSION_TEST_TEXT_STYLES
@@ -1342,8 +1349,8 @@ void TextViewer::setConfiguration(const Configuration* general, shared_ptr<const
 //				|| (oldReadingDirection == RIGHT_TO_LEFT && configuration_.readingDirection == LEFT_TO_RIGHT))
 //			scrolls_.horizontal.position = scrolls_.horizontal.maximum
 //				- scrolls_.horizontal.pageSize - scrolls_.horizontal.position + 1;
-		scrolls_.resetBars(*this, 'a', false);
-		updateScrollBars();
+//		scrolls_.resetBars(*this, 'a', false);
+//		updateScrollBars(AbstractTwoAxes<bool>(true, true));
 
 		if(!isFrozen() && (widgetapi::hasFocus(*this) /*|| handle() == Viewer::completionWindow_->getSafeHwnd()*/)) {
 			caret().resetVisualization();
@@ -1476,17 +1483,26 @@ graphics::Rectangle TextViewer::textAreaContentRectangle() const BOOST_NOEXCEPT 
 /**
  * Revokes the frozen state of the viewer.
  * @throw WindowNotInitialized The window is not initialized
+ * @note This method thaws also viewer's @c TextViewport.
  * @see #freeze, #isFrozen
  */
 void TextViewer::unfreeze() {
 //	checkInitialization();
+	const shared_ptr<TextViewport> viewport(textRenderer().viewport());
+	if(viewport.get() == nullptr)
+		throw IllegalStateException("There is no viewport in this text viewer.");
 	if(freezeRegister_.isFrozen()) {
-		const boost::integer_range<Index> linesToRedraw(freezeRegister_.unfreeze());
+		const boost::integer_range<Index> linesToRedraw(freezeRegister_.thaw());
+		try {
+			viewport->thawNotification();
+		} catch(const underflow_error&) {
+			// ignore
+		}
 		if(!freezeRegister_.isFrozen()) {
-			if(scrolls_.changed) {
+/*			if(scrolls_.changed) {
 				updateScrollBars();
 				widgetapi::scheduleRedraw(*this, false);
-			} else if(!linesToRedraw.empty())
+			} else*/ if(!linesToRedraw.empty())
 				redrawLines(linesToRedraw);
 
 			rulerPainter_->update();
@@ -1497,13 +1513,27 @@ void TextViewer::unfreeze() {
 	}
 }
 
-/// Updates the scroll information.
-void TextViewer::updateScrollBars() {
+namespace {
+	template<typename T>
+	inline T calculateMaximumScrollPosition(T last, T pageSize) {
+//		return last /* * rate */ - pageSize + 1;
+		return last;
+	}
+}
+
+/**
+ * @internal Updates the scroll information.
+ * @param dimensions Describes which dimension to update
+ */
+void TextViewer::updateScrollBars(const AbstractTwoAxes<bool>& dimensions) {
 //	checkInitialization();
-	if(renderer_.get() == nullptr || isFrozen())
+	assert(!isFrozen());
+	if(renderer_.get() == nullptr || (!dimensions.ipd() && !dimensions.bpd()))
+		return;
+	const shared_ptr<TextViewport> viewport(textRenderer().viewport());
+	if(viewport.get() == nullptr)
 		return;
 
-	const shared_ptr<TextViewport> viewport(textRenderer().viewport());
 	const LineLayoutVector& layouts = textRenderer().layouts();
 	typedef boost::geometry::model::d2::point_xy<widgetapi::NativeScrollPosition> ScrollPositions;
 	const ScrollPositions positions(physicalScrollPosition(*this));
@@ -1518,12 +1548,15 @@ void TextViewer::updateScrollBars() {
 		geometry::transpose(pageSteps);
 	}
 
-#define ASCENSION_GET_SCROLL_MINIMUM(endPosition, pageStep)	(endPosition/* * rate*/ - pageStep + 1)
+	// update the scroll bar in inline-progressions-dimension
+	if(dimensions.ipd()) {
+
+	}
 
 	// about horizontal scroll bar
-	bool wasNeededScrollbar = ASCENSION_GET_SCROLL_MINIMUM(geometry::x(endPositions), geometry::x(pageSteps)) > 0;
+	bool wasNeededScrollbar = calculateMaximumScrollPosition(geometry::x(endPositions), geometry::x(pageSteps)) > 0;
 	// scroll to leftmost/rightmost before the scroll bar vanishes
-	widgetapi::NativeScrollPosition minimum = ASCENSION_GET_SCROLL_MINIMUM(geometry::x(endPositions), geometry::x(pageSteps));
+	widgetapi::NativeScrollPosition minimum = calculateMaximumScrollPosition(geometry::x(endPositions), geometry::x(pageSteps));
 	if(wasNeededScrollbar && minimum <= 0) {
 //		scrolls_.horizontal.position = 0;
 		if(!isFrozen()) {
@@ -1532,15 +1565,15 @@ void TextViewer::updateScrollBars() {
 		}
 	} else if(geometry::x(positions) > minimum)
 		viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(minimum, boost::none));
-	assert(ASCENSION_GET_SCROLL_MINIMUM(geometry::x(endPositions), geometry::x(pageSteps)) > 0 || geometry::x(positions) == 0);
+	assert(calculateMaximumScrollPosition(geometry::x(endPositions), geometry::x(pageSteps)) > 0 || geometry::x(positions) == 0);
 	if(!isFrozen())
 		configureScrollBar(*this, 0, geometry::x(positions),
 			boost::irange<widgetapi::NativeScrollPosition>(0, geometry::x(endPositions)),
 			boost::make_optional<widgetapi::NativeScrollPosition>(geometry::x(pageSteps)));
 
 	// about vertical scroll bar
-	wasNeededScrollbar = ASCENSION_GET_SCROLL_MINIMUM(geometry::y(endPositions), geometry::y(pageSteps)) > 0;
-	minimum = ASCENSION_GET_SCROLL_MINIMUM(geometry::y(endPositions), geometry::y(pageSteps));
+	wasNeededScrollbar = calculateMaximumScrollPosition(geometry::y(endPositions), geometry::y(pageSteps)) > 0;
+	minimum = calculateMaximumScrollPosition(geometry::y(endPositions), geometry::y(pageSteps));
 	// validate scroll position
 	if(minimum <= 0) {
 //		scrolls_.vertical.position = 0;
@@ -1551,22 +1584,19 @@ void TextViewer::updateScrollBars() {
 		}
 	} else if(static_cast<widgetapi::NativeScrollPosition>(geometry::y(positions)) > minimum)
 		viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(boost::none, minimum));
-	assert(ASCENSION_GET_SCROLL_MINIMUM(geometry::y(endPositions), geometry::y(pageSteps)) > 0 || geometry::y(positions) == 0);
+	assert(calculateMaximumScrollPosition(geometry::y(endPositions), geometry::y(pageSteps)) > 0 || geometry::y(positions) == 0);
 	if(!isFrozen())
 		configureScrollBar(*this, 1, geometry::y(positions),
 			boost::irange<widgetapi::NativeScrollPosition>(0, geometry::y(endPositions)),
 			static_cast<widgetapi::NativeScrollPosition>(geometry::y(pageSteps)));
 
 	scrolls_.changed = isFrozen();
-
-#undef ASCENSION_GET_SCROLL_MINIMUM
 }
 
 /// @see TextViewport#viewportBoundsInViewChanged
 void TextViewer::viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT {
 //	textRenderer().setTextWrapping(textRenderer().textWrapping(), widgetapi::createRenderingContext(*this).get());
-	scrolls_.resetBars(*this, 'a', true);
-	updateScrollBars();
+	updateScrollBars(AbstractTwoAxes<bool>(true, true));
 }
 
 namespace {
@@ -1694,9 +1724,12 @@ void TextViewer::viewportScrollPositionChanged(
 	widgetapi::redrawScheduledRegion(*this);
 }
 
+/// @see ViewportListener#viewportScrollPropertiesChanged
+void TextViewer::viewportScrollPropertiesChanged(const AbstractTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT {
+}
+
 /// @see VisualLinesListener#visualLinesDeleted
 void TextViewer::visualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines, bool longestLineChanged) BOOST_NOEXCEPT {
-	scrolls_.changed = true;
 	const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
 	if(*lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// deleted before visible area
 //		scrolls_.firstVisibleLine.line -= length(lines);
@@ -1712,13 +1745,10 @@ void TextViewer::visualLinesDeleted(const boost::integer_range<Index>& lines, In
 //		scrolls_.updateVertical(*this);
 		redrawLine(*lines.begin(), true);
 	}
-	if(longestLineChanged)
-		scrolls_.resetBars(*this, 'i', false);
 }
 
 /// @see VisualLinesListener#visualLinesInserted
 void TextViewer::visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT {
-	scrolls_.changed = true;
 	const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
 	if(*lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// inserted before visible area
 //		scrolls_.firstVisibleLine.line += length(lines);
@@ -1743,7 +1773,6 @@ void TextViewer::visualLinesModified(const boost::integer_range<Index>& lines,
 		redrawLines(lines);
 	else {
 		const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
-		scrolls_.changed = true;
 		if(*lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// changed before visible area
 //			scrolls_.vertical.position += sublinesDifference;
 //			scrolls_.vertical.maximum += sublinesDifference;
@@ -1757,12 +1786,6 @@ void TextViewer::visualLinesModified(const boost::integer_range<Index>& lines,
 			redrawLine(*lines.begin(), true);
 		}
 	}
-	if(longestLineChanged) {
-		scrolls_.resetBars(*this, 'i', false);
-		scrolls_.changed = true;
-	}
-	if(!documentChanged && scrolls_.changed)
-		updateScrollBars();
 }
 
 
@@ -1837,6 +1860,44 @@ void TextViewer::CursorVanisher::vanish() {
 
 bool TextViewer::CursorVanisher::vanished() const {
 	return vanished_;
+}
+
+
+// TextViewer.FreezeRegister //////////////////////////////////////////////////////////////////////
+
+TextViewer::FreezeRegister::FreezeRegister() BOOST_NOEXCEPT : linesToRedraw_(boost::irange<Index>(0, 0)) {
+	freeze();
+	thaw();
+}
+
+inline void TextViewer::FreezeRegister::addLinesToRedraw(const boost::integer_range<Index>& lines) {
+	assert(isFrozen());
+#if 0
+	linesToRedraw_ = merged(linesToRedraw_, lines);
+#else
+	const boost::integer_range<Index> linesToAdd(ordered(lines));
+	linesToRedraw_ = boost::irange(min(*linesToAdd.begin(), *linesToRedraw_.begin()), max(*linesToAdd.end(), *linesToRedraw_.end()));
+#endif
+}
+
+inline void TextViewer::FreezeRegister::freeze() {
+	if(count_ == numeric_limits<decay<decltype(count_.data())>::type>::max())
+		throw overflow_error("");
+	++count_;
+}
+
+inline void TextViewer::FreezeRegister::resetLinesToRedraw(const boost::integer_range<Index>& lines) {
+	assert(isFrozen());
+	linesToRedraw_ = ordered(lines);
+}
+
+inline boost::integer_range<Index> TextViewer::FreezeRegister::thaw() {
+	if(count_ == 0)
+		throw underflow_error("");
+	const boost::integer_range<Index> temp(linesToRedraw());
+	--count_;
+	linesToRedraw_ = boost::irange<Index>(0, 0);
+	return temp;
 }
 
 
