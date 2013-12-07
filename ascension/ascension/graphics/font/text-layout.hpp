@@ -93,6 +93,7 @@ namespace ascension {
 				/// 
 				class LineMetricsIterator : public boost::iterator_facade<LineMetricsIterator, std::nullptr_t, boost::bidirectional_traversal_tag> {
 				public:
+					LineMetricsIterator() BOOST_NOEXCEPT;
 					LineMetricsIterator(const TextLayout& layout, Index line);
 					Scalar ascent() const;
 					DominantBaseline baseline() const;
@@ -109,7 +110,7 @@ namespace ascension {
 					bool equal(const LineMetricsIterator& other) const;
 					void increment();
 				private:
-					const TextLayout& layout_;
+					const TextLayout* layout_;
 					Index line_;
 					Scalar baselineOffset_;
 					friend class boost::iterator_core_access;
@@ -211,7 +212,7 @@ namespace ascension {
 				/// @name Other Coordinates
 				/// @{
 				Scalar lineStartEdge(Index line) const;
-				std::pair<Index, boost::optional<Direction>> locateLine(Scalar bpd,
+				std::tuple<Index, boost::optional<Direction>> locateLine(Scalar bpd,
 					const boost::optional<boost::integer_range<Scalar>>& bounds) const BOOST_NOEXCEPT;
 				/// @}
 
@@ -366,9 +367,9 @@ namespace ascension {
 			 * @throw NoSuchElementException The iterator is done
 			 */
 			inline Scalar TextLayout::LineMetricsIterator::ascent() const {
-				if(line_ >= layout_.numberOfLines())
+				if(layout_ == nullptr || line_ >= layout_->numberOfLines())
 					throw NoSuchElementException();
-				return std::get<0>(layout_.lineMetrics_[line_]);	// $friendly-access$
+				return std::get<0>(layout_->lineMetrics_[line_]);	// $friendly-access$
 			}
 
 			/**
@@ -378,7 +379,7 @@ namespace ascension {
 			 * @throw NoSuchElementException The iterator is done
 			 */
 			inline Scalar TextLayout::LineMetricsIterator::baselineOffset() const {
-				if(line_ >= layout_.numberOfLines())
+				if(layout_ == nullptr || line_ >= layout_->numberOfLines())
 					throw NoSuchElementException();
 				return baselineOffset_;
 			}
@@ -386,7 +387,9 @@ namespace ascension {
 			/**
 			 */
 			inline Point TextLayout::LineMetricsIterator::baselineOffsetInPhysicalCoordinates() const {
-				switch(layout_.writingMode().blockFlowDirection) {
+				if(layout_ == nullptr)
+					throw NoSuchElementException();
+				switch(layout_->writingMode().blockFlowDirection) {
 					case presentation::HORIZONTAL_TB:
 						return Point(geometry::_x = 0.0f, geometry::_y = baselineOffset());
 					case presentation::VERTICAL_RL:
@@ -405,9 +408,9 @@ namespace ascension {
 			 * @throw NoSuchElementException The iterator is done
 			 */
 			inline Scalar TextLayout::LineMetricsIterator::descent() const {
-				if(line_ >= layout_.numberOfLines())
+				if(layout_ == nullptr || line_ >= layout_->numberOfLines())
 					throw NoSuchElementException();
-				return std::get<1>(layout_.lineMetrics_[line_]);	// $friendly-access$
+				return std::get<1>(layout_->lineMetrics_[line_]);	// $friendly-access$
 			}
 
 			/**
@@ -418,7 +421,9 @@ namespace ascension {
 			 * @see TextLayout#extent
 			 */
 			inline boost::integer_range<Scalar> TextLayout::LineMetricsIterator::extent() const {
-				const presentation::WritingMode& writingMode = layout_.writingMode();
+				if(layout_ == nullptr)
+					throw NoSuchElementException();
+				const presentation::WritingMode& writingMode = layout_->writingMode();
 				bool negativeVertical = false;
 				if(writingMode.blockFlowDirection == presentation::VERTICAL_RL)
 					negativeVertical = presentation::resolveTextOrientation(writingMode) == presentation::SIDEWAYS_LEFT;
@@ -449,9 +454,9 @@ namespace ascension {
 			 * @throw NoSuchElementException The iterator is done
 			 */
 			inline Scalar TextLayout::LineMetricsIterator::leading() const {
-				if(line_ >= layout_.numberOfLines())
+				if(layout_ == nullptr || line_ >= layout_->numberOfLines())
 					throw NoSuchElementException();
-				return std::get<2>(layout_.lineMetrics_[line_]);	// $friendly-access$
+				return std::get<2>(layout_->lineMetrics_[line_]);	// $friendly-access$
 			}
 
 		}

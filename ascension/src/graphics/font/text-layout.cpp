@@ -439,23 +439,23 @@ AbstractTwoAxes<Scalar> TextLayout::hitToPoint(const TextHit<>& hit) const {
 /// @internal Implements @c #hitTestCharacter methods.
 TextHit<>&& TextLayout::internalHitTestCharacter(const AbstractTwoAxes<Scalar>& point, const FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const {
 	const auto line(locateLine(point.bpd(), (bounds != nullptr) ? boost::make_optional(blockFlowRange(*bounds)) : boost::none));
-	const auto runsInLine(runsForLine(line.first));
-	const StringPiece characterRangeInLine((*runsInLine.begin())->characterRange().begin(), lineLength(line.first));
+	const auto runsInLine(runsForLine(get<0>(line)));
+	const StringPiece characterRangeInLine((*runsInLine.begin())->characterRange().begin(), lineLength(get<0>(line)));
 	assert(characterRangeInLine.end() == runsInLine.end()[-1]->characterRange().end());
 
-	const Scalar lineStart = lineStartEdge(line.first);
+	const Scalar lineStart = lineStartEdge(get<0>(line));
 	if(point.ipd() < lineStart || (bounds != nullptr && point.ipd() < min(bounds->start(), bounds->end()))) {	// beyond 'start-edge' of line ?
 		if(outOfBounds != nullptr)
 			*outOfBounds = true;
 		return TextHit<>::leading(characterRangeInLine.begin() - textString_.data());
 	}
-	const bool outsideInIpd = point.ipd() >= lineStart + measure(line.first)
+	const bool outsideInIpd = point.ipd() >= lineStart + measure(get<0>(line))
 		|| (bounds != nullptr && point.ipd() >= max(bounds->start(), bounds->end()));	// beyond 'end-edge' of line ?
 
 	if(!outsideInIpd) {
 		Scalar x = point.ipd() - lineStart, runLineLeft = 0;
 		if(writingMode().inlineFlowDirection == RIGHT_TO_LEFT)
-			x = measure(line.first) - x;
+			x = measure(get<0>(line)) - x;
 		// 'x' is distance from line-left of 'line' to 'point' in inline-progression-dimension
 		// 'runLineLeft' is distance from line-left of 'line' to line-left of 'run' in ...
 		BOOST_FOREACH(const unique_ptr<const TextRun>& run, runsInLine) {
@@ -604,7 +604,7 @@ Scalar TextLayout::lineStartEdge(Index line) const {
  *         the before-edge), or @c boost#none otherwise
  * @see #baseline, #lineAt, #offset
  */
-pair<Index, boost::optional<Direction>> TextLayout::locateLine(Scalar bpd, const boost::optional<boost::integer_range<Scalar>>& bounds) const BOOST_NOEXCEPT {
+tuple<Index, boost::optional<Direction>> TextLayout::locateLine(Scalar bpd, const boost::optional<boost::integer_range<Scalar>>& bounds) const BOOST_NOEXCEPT {
 	if(bounds != boost::none) {
 		const boost::integer_range<Scalar> orderedBounds(ordered(*bounds));
 		if(bpd < *orderedBounds.begin())
