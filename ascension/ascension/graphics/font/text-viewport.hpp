@@ -13,26 +13,34 @@
 //#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
 #include <ascension/graphics/geometry.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
+#include <ascension/graphics/font/text-renderer-observers.hpp>
 #include <ascension/kernel/point.hpp>	// kernel.locations
 #include <ascension/presentation/writing-mode.hpp>
+#include <boost/flyweight.hpp>
 #include <boost/iterator/iterator_facade.hpp>
+#include <boost/operators.hpp>	// boost.equality_comparable
+#include <boost/optional.hpp>
+#include <boost/utility/value_init.hpp>
+
+#undef ASCENSION_PIXELFUL_SCROLL_IN_BPD	// provisional
 
 namespace ascension {
 	namespace graphics {
 		namespace font {
 
-			class TextRenderer;
 			class TextViewportListener;
 			struct VisualLine;
 
 			/**
 			 */
-			class TextViewport : public VisualLinesListener {
+			class TextViewport : public DefaultFontListener, public VisualLinesListener, public ComputedBlockFlowDirectionListener {
 				ASCENSION_NONCOPYABLE_TAG(TextViewport);
 			public:
 				typedef Index ScrollOffset;
 				typedef SignedIndex SignedScrollOffset;
 			public:
+				~TextViewport() BOOST_NOEXCEPT;
+
 				/// @name Text Renderer
 				/// @{
 				TextRenderer& textRenderer() BOOST_NOEXCEPT;
@@ -42,15 +50,9 @@ namespace ascension {
 				/// @name Observers
 				/// @{
 				void addListener(TextViewportListener& listener);
-				void addVisualLinesListener(VisualLinesListener& listener);
+				void freezeNotification();
 				void removeListener(TextViewportListener& listener);
-				void removeVisualLinesListener(VisualLinesListener& listener);
-				/// @}
-
-				/// @name Extents
-				/// @{
-				float numberOfVisibleCharactersInLine() const /*throw()*/;
-				float numberOfVisibleLines() const BOOST_NOEXCEPT;
+				void thawNotification();
 				/// @}
 
 				/// @name Content- or Allocation-rectangles
@@ -59,19 +61,24 @@ namespace ascension {
 				Scalar contentMeasure() const BOOST_NOEXCEPT;
 				/// @}
 
-				/// @name View Positions
+				/// @name View Bounds
 				/// @{
 				const Rectangle& boundsInView() const BOOST_NOEXCEPT;
-				ScrollOffset firstVisibleLineInLogicalNumber() const BOOST_NOEXCEPT;
-				ScrollOffset firstVisibleLineInVisualNumber() const BOOST_NOEXCEPT;
-				ScrollOffset firstVisibleSublineInLogicalLine() const BOOST_NOEXCEPT;
-				ScrollOffset inlineProgressionOffset() const BOOST_NOEXCEPT;
+				float numberOfVisibleLines() const BOOST_NOEXCEPT;
 				void setBoundsInView(const Rectangle& bounds);
+				/// @}
+
+				/// @name View Positions
+				/// @{
+				const VisualLine& firstVisibleLine() const BOOST_NOEXCEPT;
+				const presentation::AbstractTwoAxes<ScrollOffset>& scrollPositions() const BOOST_NOEXCEPT;
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+				ScrollOffset blockFlowScrollOffsetInFirstVisibleVisualLine() const BOOST_NOEXCEPT;
+#endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				/// @}
 
 				/// @name Scrolls
 				/// @{
-				graphics::Scalar averageCharacterWidth() const BOOST_NOEXCEPT;
 				bool isScrollLocked() const BOOST_NOEXCEPT;
 				void lockScroll();
 				void scroll(const presentation::AbstractTwoAxes<SignedScrollOffset>& offsets);
@@ -82,9 +89,22 @@ namespace ascension {
 				void unlockScroll();
 				/// @}
 			private:
-				explicit TextViewport(TextRenderer& textRenderer);
+				TextViewport(TextRenderer& textRenderer
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+					, const FontRenderContext& frc
+#endif // ASCENSION_PIXELFUL_SCROLL_IN_BPD
+				);
 				void adjustBpdScrollPositions() /*throw()*/;
 				void documentAccessibleRegionChanged(const kernel::Document& document);
+				void fireScrollPositionChanged(
+					const presentation::AbstractTwoAxes<TextViewport::ScrollOffset>& positionsBeforeScroll,
+					const VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT;
+				void fireScrollPropertiesChanged(const presentation::AbstractTwoAxes<bool>& dimensions) BOOST_NOEXCEPT;
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+				void updateDefaultLineExtent();
+#endif // ASCENSION_PIXELFUL_SCROLL_IN_BPD
+				// DefaultFontListener
+				void defaultFontChanged();
 				// VisualLinesListener
 				void visualLinesDeleted(const boost::integer_range<Index>& lines,
 					Index sublines, bool longestLineChanged) BOOST_NOEXCEPT;
@@ -92,17 +112,44 @@ namespace ascension {
 				void visualLinesModified(
 					const boost::integer_range<Index>& lines, SignedIndex sublinesDifference,
 					bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT;
+				// ComputedBlockFlowDirectionListener
+				void computedBlockFlowDirectionChanged(presentation::BlockFlowDirection used);
 			private:
 				TextRenderer& textRenderer_;
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+				boost::flyweight<FontRenderContext> fontRenderContext_;
+#endif // ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				boost::signals2::scoped_connection documentAccessibleRegionChangedConnection_;
 				Rectangle boundsInView_;
+				presentation::AbstractTwoAxes<ScrollOffset> scrollPositions_;
 				VisualLine firstVisibleLine_;
-				presentation::AbstractTwoAxes<ScrollOffset> scrollOffsets_;
-				graphics::Scalar averageCharacterWidth_;
-				std::size_t lockCount_;
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+				boost::value_initialized<ScrollOffset> blockFlowScrollOffsetInFirstVisibleVisualLine_;
+				Scalar defaultLineExtent_;
+#endif // ASCENSION_PIXELFUL_SCROLL_IN_BPD
+				boost::value_initialized<std::size_t> lockCount_;
+				struct FrozenNotification {
+					boost::value_initialized<std::size_t> count;
+					struct Position : private boost::equality_comparable<Position> {
+						presentation::AbstractTwoAxes<ScrollOffset> offsets;
+						VisualLine line;
+						bool operator==(const Position& other) const BOOST_NOEXCEPT {
+							return offsets == other.offsets && line == other.line;
+						}
+					};
+					boost::optional<Position> positionBeforeChanged;
+					presentation::AbstractTwoAxes<bool> dimensionsPropertiesChanged;
+					boost::optional<Rectangle> boundsBeforeChanged;
+				} frozenNotification_;
 				detail::Listeners<TextViewportListener> listeners_;
-				detail::Listeners<VisualLinesListener> visualLinesListeners_;
 			};
+
+			typedef detail::LockGuard<
+				TextViewport, &TextViewport::lockScroll, &TextViewport::unlockScroll
+			> ScrollLocker;
+			typedef detail::LockGuard<
+				TextViewport, &TextViewport::freezeNotification, &TextViewport::thawNotification
+			> TextViewportNotificationLocker;
 
 			/**
 			 * Interface for objects which are interested in change of scroll positions of a
@@ -119,22 +166,26 @@ namespace ascension {
 				virtual void viewportBoundsInViewChanged(const Rectangle& oldBounds) BOOST_NOEXCEPT = 0;
 				/**
 				 * The scroll positions of the text viewport were changed.
-				 * @param offsets The scrolled offsets in abstract coordinates
-				 * @param oldLine Visual line numbers returned by
-				 *                @c TextViewport#firstVisibleLineInLogicalNumber() and
-				 *                @c TextViewport#firstVisibleSublineInLogicalLine()
-				 * @param oldInlineProgressionOffset A value returned by
-				 *                                   @c TextViewport#inlineProgressionOffset()
-				 *                                   before the scroll
-				 * @see TextViewport#firstVisibleLineInLogicalNumber,
-				 *      TextViewport#firstVisibleLineInVisualNumber,
-				 *      TextViewport#firstVisibleSublineInLogicalLine,
-				 *      TextViewport#inlineProgressionOffset, TextViewport#scroll,
-				 *      TextViewport#scrollTo
+				 * @param positionsBeforeScroll The scroll positions in abstract coordinates
+				 *                              returned by @c TextViewport#scrollPositions()
+				 *                              before the scroll
+				 * @param firstVisibleLineBeforeScroll The first visible line returned by
+				 *                                     @c TextViewport#firstVisibleLine() before
+				 *                                     the scroll
+				 * @note In this case, the position was changed by only scrolling
+				 * @see TextViewport#firstVisibleLine, TextViewport#scrollPositions,
+				 *      TextViewport#scroll, TextViewport#scrollTo
 				 */
 				virtual void viewportScrollPositionChanged(
-					const presentation::AbstractTwoAxes<TextViewport::SignedScrollOffset>& offsets,
-					const VisualLine& oldLine, TextViewport::ScrollOffset oldInlineProgressionOffset) BOOST_NOEXCEPT = 0;
+					const presentation::AbstractTwoAxes<TextViewport::ScrollOffset>& positionsBeforeScroll,
+					const VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT = 0;
+				/**
+				 * The scroll properties (position, page size and range) were changed.
+				 * @param changedDimensions Describes which dimension was changed
+				 * @note In this case, the position was changed because only the layout was changed
+				 */
+				virtual void viewportScrollPropertiesChanged(
+					const presentation::AbstractTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT = 0;
 				friend class TextViewport;
 			};
 
@@ -142,10 +193,11 @@ namespace ascension {
 				BaselineIterator, Scalar, std::random_access_iterator_tag, Scalar, std::ptrdiff_t
 			> {
 			public:
-				BaselineIterator(const TextViewport& viewport, Index line, bool trackOutOfViewport);
+				BaselineIterator(TextViewport& viewport, Index line, bool trackOutOfViewport);
 				Index line() const BOOST_NOEXCEPT;
 //				Point positionInView() const;
 				const Point& positionInViewport() const;
+				TextViewport& viewport() BOOST_NOEXCEPT;
 				const TextViewport& viewport() const BOOST_NOEXCEPT;
 				bool tracksOutOfViewport() const BOOST_NOEXCEPT;
 			private:
@@ -163,8 +215,8 @@ namespace ascension {
 				void increment();
 				friend class boost::iterator_core_access;
 			private:
-				const TextViewport* viewport_;	// this is not a reference, for operator=
-				bool tracksOutOfViewport_;		// this is not const, for operator=
+				TextViewport* viewport_;	// this is not a reference, for operator=
+				bool tracksOutOfViewport_;	// this is not const, for operator=
 				graphics::font::VisualLine line_;
 				Scalar distanceFromViewportBeforeEdge_;
 				Point positionInViewport_;
@@ -187,21 +239,24 @@ namespace ascension {
 			presentation::AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>
 				convertPhysicalScrollPositionsToAbstract(const TextViewport& viewport,
 					const PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions);
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			Scalar inlineProgressionScrollOffsetInUserUnits(
 				const TextViewport& viewport, const boost::optional<TextViewport::ScrollOffset>& scrollOffset = boost::none);
+#endif	// ASCENSION_ABANDONED_AT_VERSION_08
 			/// @}
 
 			/// @defgroup model_and_view_coordinates_conversions Model and View Coordinates Conversions
 			/// @{
 			Point lineStartEdge(const TextViewport& viewport, const VisualLine& line);
-			VisualLine locateLine(const TextViewport& viewport,
+			Point lineStartEdge(TextViewport& viewport, const VisualLine& line, const LineLayoutVector::UseCalculatedLayoutTag&);
+			VisualLine locateLine(TextViewport& viewport,
 				const Point& p, bool* snapped = nullptr) BOOST_NOEXCEPT;
-			Point modelToView(const TextViewport& viewport, const TextHit<kernel::Position>& position, bool fullSearchBpd);
+			Point modelToView(TextViewport& viewport, const TextHit<kernel::Position>& position, bool fullSearchBpd);
 			TextHit<kernel::Position>&& viewToModel(
-				const TextViewport& viewport, const Point& pointInView,
+				TextViewport& viewport, const Point& pointInView,
 				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
 			boost::optional<TextHit<kernel::Position>> viewToModelInBounds(
-				const TextViewport& viewport, const Point& pointInView,
+				TextViewport& viewport, const Point& pointInView,
 				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
 			/// @}
 
@@ -214,14 +269,6 @@ namespace ascension {
 
 			// inline implementation //////////////////////////////////////////////////////////////
 
-			/**
-			 * 
-			 * @see #inlineProgressionOffset, font#FontMetrics#averageCharacterWidth
-			 */
-			inline graphics::Scalar TextViewport::averageCharacterWidth() const BOOST_NOEXCEPT {
-				return averageCharacterWidth_;
-			}
-
 			/// Returns the line the iterator addresses.
 			inline Index BaselineIterator::line() const BOOST_NOEXCEPT {return line_.line;}
 
@@ -232,6 +279,11 @@ namespace ascension {
 			 */
 			inline const Point& BaselineIterator::positionInViewport() const BOOST_NOEXCEPT {
 				return positionInViewport_;
+			}
+
+			/// Returns the viewport.
+			inline TextViewport& BaselineIterator::viewport() BOOST_NOEXCEPT {
+				return *viewport_;
 			}
 
 			/// Returns the viewport.

@@ -608,25 +608,25 @@ tuple<Index, boost::optional<Direction>> TextLayout::locateLine(Scalar bpd, cons
 	if(bounds != boost::none) {
 		const boost::integer_range<Scalar> orderedBounds(ordered(*bounds));
 		if(bpd < *orderedBounds.begin())
-			return make_pair(0, Direction::BACKWARD);
+			return std::make_tuple(0, Direction::BACKWARD);
 		if(bpd >= *orderedBounds.end())
-			return make_pair(numberOfLines() - 1, Direction::FORWARD);
+			return std::make_tuple(numberOfLines() - 1, Direction::FORWARD);
 	}
 
 	LineMetricsIterator line(lineMetrics(0));
 
 	// beyond the before-edge ?
 	if(bpd < *ordered(line.extent()).begin())
-		return make_pair(line.line(), Direction::BACKWARD);
+		return std::make_tuple(line.line(), Direction::BACKWARD);
 
 	// locate the line includes 'bpd'
 	for(; line.line() < numberOfLines(); ++line) {
 		if(bpd < *ordered(line.extent()).end())
-			return make_pair(line.line(), boost::none);
+			return std::make_tuple(line.line(), boost::none);
 	}
 
 	// beyond the after-edge
-	return make_pair(numberOfLines() - 1, Direction::FORWARD);
+	return std::make_tuple(numberOfLines() - 1, Direction::FORWARD);
 }
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08

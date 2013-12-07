@@ -301,6 +301,7 @@ inline void LineLayoutVector::invalidate(Index line) {
  * @param line The logical line
  * @return The first visual line of @a line
  * @throw IndexOutOfBoundsException @a line is outside of the document
+ * @note This method treats an uncalculated line as a single visual line
  * @see #mapLogicalPositionToVisualPosition
  */
 Index LineLayoutVector::mapLogicalLineToVisualLine(Index line) const {

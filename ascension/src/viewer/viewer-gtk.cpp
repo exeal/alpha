@@ -52,9 +52,13 @@ Gtk::SizeRequestMode TextViewer::get_request_mode_vfunc() const {
 	return Gtk::Widget::get_request_mode_vfunc();
 }
 
+namespace {
+}
+
 void TextViewer::initializeNativeObjects(const TextViewer* other) {
 //	drag_dest_set_target_list();
-	property_hadjustment().signal_changed().connect();
+	property_hadjustment().signal_changed().connect([]() {
+	});
 }
 
 /// @see Gtk#Widget#on_drag_drop

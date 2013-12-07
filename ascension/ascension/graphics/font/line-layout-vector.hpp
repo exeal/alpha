@@ -288,6 +288,7 @@ namespace ascension {
 			}
 
 			/// Returns the number of the visual lines.
+			/// @note This method treats an uncalculated line as single visual line.
 			inline Index LineLayoutVector::numberOfVisualLines() const BOOST_NOEXCEPT {
 				return numberOfVisualLines_;
 			}

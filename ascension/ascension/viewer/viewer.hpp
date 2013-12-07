@@ -276,7 +276,7 @@ namespace ascension {
 			void initialize(const TextViewer* other);
 			void initializeNativeObjects(const TextViewer* other);
 			void repaintRuler();
-			void updateScrollBars();
+			void updateScrollBars(const presentation::AbstractTwoAxes<bool>& dimensions);
 
 			// protected interfaces
 		protected:
@@ -313,6 +313,8 @@ namespace ascension {
 				const presentation::AbstractTwoAxes<graphics::font::TextViewport::SignedScrollOffset>& offsets,
 				const graphics::font::VisualLine& oldLine,
 				graphics::font::TextViewport::ScrollOffset oldInlineProgressionOffset) BOOST_NOEXCEPT;
+			void viewportScrollPropertiesChanged(
+				const presentation::AbstractTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT;
 			// graphics.font.ComputedBlockFlowDirectionListener
 			void computedBlockFlowDirectionChanged(presentation::BlockFlowDirection used);
 			// detail.PointCollection<VisualPoint>
@@ -458,7 +460,7 @@ namespace ascension {
 #endif
 				{}
 			} modeState_;
-
+#if 0
 			// scroll information
 			struct Scrolls {
 //				unsigned long horizontalRate, verticalRate;	// 最小スクロール量が何文字 (何行) に相当するか (普通は 1)
@@ -466,43 +468,19 @@ namespace ascension {
 				Scrolls() BOOST_NOEXCEPT : /*horizontalRate(1), verticalRate(1), */changed(false) {}
 				void resetBars(const TextViewer& viewer, char bars, bool pageSizeChanged) BOOST_NOEXCEPT;
 			} scrolls_;
-
+#endif
 			// freeze information
 			class FreezeRegister {
 			public:
-				FreezeRegister() BOOST_NOEXCEPT : count_(0), linesToRedraw_(boost::irange<Index>(0, 0)) {
-					freeze();
-					unfreeze();
-				}
+				FreezeRegister() BOOST_NOEXCEPT;
 				void freeze() BOOST_NOEXCEPT {++count_;}
-				void addLinesToRedraw(const boost::integer_range<Index>& lines) {
-					assert(isFrozen());
-#if 0
-					linesToRedraw_ = merged(linesToRedraw_, lines);
-#else
-					const boost::integer_range<Index> linesToAdd(ordered(lines));
-					linesToRedraw_ = boost::irange(
-						std::min(*linesToAdd.begin(), *linesToRedraw_.begin()),
-						std::max(*linesToAdd.end(), *linesToRedraw_.end()));
-#endif
-				}
+				void addLinesToRedraw(const boost::integer_range<Index>& lines);
 				bool isFrozen() const BOOST_NOEXCEPT {return count_ != 0;}
-				const boost::integer_range<Index>& linesToRedraw() const BOOST_NOEXCEPT {
-					return linesToRedraw_;
-				}
-				void resetLinesToRedraw(const boost::integer_range<Index>& lines) {
-					assert(isFrozen());
-					linesToRedraw_ = ordered(lines);
-				}
-				boost::integer_range<Index> unfreeze() {
-					assert(isFrozen());
-					const boost::integer_range<Index> temp(linesToRedraw());
-					--count_;
-					linesToRedraw_ = boost::irange<Index>(0, 0);
-					return temp;
-				}
+				const boost::integer_range<Index>& linesToRedraw() const BOOST_NOEXCEPT {return linesToRedraw_;}
+				void resetLinesToRedraw(const boost::integer_range<Index>& lines);
+				boost::integer_range<Index> thaw();
 			private:
-				unsigned long count_;
+				boost::value_initialized<std::size_t> count_;
 				boost::integer_range<Index> linesToRedraw_;
 			} freezeRegister_;
 
