@@ -253,7 +253,8 @@ void DefaultContentAssistant::startPopup() {
 		proposalsPopup_.reset(new CompletionProposalsPopup(*textViewer_, *this));
 
 	// determine the horizontal orientation of the window
-	proposalsPopup_->setWritingMode(textViewer_->textRenderer().layouts().at(line(textViewer_->caret())).writingMode());
+	proposalsPopup_->setWritingMode(
+		textViewer_->textRenderer().layouts().at(line(textViewer_->caret()), graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT).writingMode());
 	proposalsPopup_->resetContent(completionSession_->proposals.get(), completionSession_->numberOfProposals);
 	updatePopupBounds();
 
@@ -285,7 +286,8 @@ void DefaultContentAssistant::updatePopupBounds() {
 
 	using namespace ascension::graphics;
 	if(const shared_ptr<const font::TextViewport> viewport = textViewer_->textRenderer().viewport()) {
-		const presentation::WritingMode& writingMode = textViewer_->textRenderer().layouts().at(kernel::line(textViewer_->caret())).writingMode();
+		const presentation::WritingMode& writingMode = textViewer_->textRenderer().layouts().at(
+			kernel::line(textViewer_->caret()), graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT).writingMode();
 		graphics::Rectangle screenBounds(widgetapi::bounds(widgetapi::desktop(), false));
 		screenBounds = widgetapi::mapFromGlobal(*textViewer_, screenBounds);
 		Dimension size;
@@ -310,7 +312,7 @@ void DefaultContentAssistant::updatePopupBounds() {
 			geometry::dx(size) = static_cast<Scalar>(itemHeight * min<size_t>(completionSession_->numberOfProposals, 10) + 6);
 			geometry::dy(size) = geometry::dy(screenBounds) / 4;
 		}
-		Point origin(font::modelToView(*viewport, font::TextHit<kernel::Position>::leading(completionSession_->replacementRegion.beginning()), false));
+		Point origin(font::modelToView(*viewport, font::TextHit<kernel::Position>::leading(completionSession_->replacementRegion.beginning())));
 		// TODO: This code does not support vertical writing mode.
 		if(writingMode.blockFlowDirection == presentation::LEFT_TO_RIGHT)
 			geometry::x(origin) = geometry::x(origin) - 3;
