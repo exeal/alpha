@@ -443,6 +443,7 @@ namespace {
 namespace {
 	void configureScrollBar(TextViewer& viewer, size_t coordinate, boost::optional<widgetapi::NativeScrollPosition> position,
 			boost::optional<const boost::integer_range<widgetapi::NativeScrollPosition>> range, boost::optional<widgetapi::NativeScrollPosition> pageSize) {
+		assert(coordinate <= 1);
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 		Glib::RefPtr<Gtk::Adjustment> adjustment((coordinate == 0) ? viewer.get_hadjustment() : viewer.get_vadjustment());
 		if(range != boost::none) {
@@ -1216,11 +1217,11 @@ void TextViewer::redrawLines(const boost::integer_range<Index>& lines) {
 
 	const WritingMode writingMode(presentation().computeWritingMode(&textRenderer()));
 	array<Scalar, 2> beforeAndAfter;	// in viewport (distances from before-edge of the viewport)
-	BaselineIterator baseline(*textRenderer().viewport(), lines.front(), false);
+	BaselineIterator baseline(*textRenderer().viewport(), *lines.begin(), false);
 	get<0>(beforeAndAfter) = *baseline;
 	if(get<0>(beforeAndAfter) != numeric_limits<Scalar>::min() && get<0>(beforeAndAfter) != numeric_limits<Scalar>::max())
 		get<0>(beforeAndAfter) -= *textRenderer().layouts().at(baseline.line()).lineMetrics(0).extent().begin();
-	baseline += lines.size();
+	baseline = BaselineIterator(*textRenderer().viewport(), *lines.end(), false);
 	get<1>(beforeAndAfter) = *baseline;
 	if(get<1>(beforeAndAfter) != numeric_limits<Scalar>::min() && get<1>(beforeAndAfter) != numeric_limits<Scalar>::max())
 		get<1>(beforeAndAfter) += *textRenderer().layouts().at(baseline.line()).lineMetrics(0).extent().end();
@@ -1731,13 +1732,13 @@ void TextViewer::viewportScrollPropertiesChanged(const AbstractTwoAxes<bool>& ch
 /// @see VisualLinesListener#visualLinesDeleted
 void TextViewer::visualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines, bool longestLineChanged) BOOST_NOEXCEPT {
 	const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
-	if(*lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// deleted before visible area
+	if(*lines.end() < viewport->firstVisibleLine().line) {	// deleted before visible area
 //		scrolls_.firstVisibleLine.line -= length(lines);
 //		scrolls_.vertical.position -= static_cast<int>(sublines);
 //		scrolls_.vertical.maximum -= static_cast<int>(sublines);
 		repaintRuler();
-	} else if(*lines.begin() > viewport->firstVisibleLineInLogicalNumber()	// deleted the first visible line and/or after it
-			|| (*lines.begin() == viewport->firstVisibleLineInLogicalNumber() && viewport->firstVisibleSublineInLogicalLine() == 0)) {
+	} else if(*lines.begin() > viewport->firstVisibleLine().line	// deleted the first visible line and/or after it
+			|| (*lines.begin() == viewport->firstVisibleLine().line && viewport->firstVisibleLine().subline == 0)) {
 //		scrolls_.vertical.maximum -= static_cast<int>(sublines);
 		redrawLine(*lines.begin(), true);
 	} else {	// deleted lines contain the first visible line
@@ -1750,13 +1751,13 @@ void TextViewer::visualLinesDeleted(const boost::integer_range<Index>& lines, In
 /// @see VisualLinesListener#visualLinesInserted
 void TextViewer::visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT {
 	const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
-	if(*lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// inserted before visible area
+	if(*lines.end() < viewport->firstVisibleLine().line) {	// inserted before visible area
 //		scrolls_.firstVisibleLine.line += length(lines);
 //		scrolls_.vertical.position += static_cast<int>(length(lines));
 //		scrolls_.vertical.maximum += static_cast<int>(length(lines));
 		repaintRuler();
-	} else if(*lines.begin() > viewport->firstVisibleLineInLogicalNumber()	// inserted at or after the first visible line
-			|| (*lines.begin() == viewport->firstVisibleLineInLogicalNumber() && viewport->firstVisibleSublineInLogicalLine() == 0)) {
+	} else if(*lines.begin() > viewport->firstVisibleLine().line	// inserted at or after the first visible line
+			|| (*lines.begin() == viewport->firstVisibleLine().line && viewport->firstVisibleLine().subline == 0)) {
 //		scrolls_.vertical.maximum += static_cast<int>(length(lines));
 		redrawLine(*lines.begin(), true);
 	} else {	// inserted around the first visible line
@@ -1773,12 +1774,12 @@ void TextViewer::visualLinesModified(const boost::integer_range<Index>& lines,
 		redrawLines(lines);
 	else {
 		const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
-		if(*lines.end() < viewport->firstVisibleLineInLogicalNumber()) {	// changed before visible area
+		if(*lines.end() < viewport->firstVisibleLine().line) {	// changed before visible area
 //			scrolls_.vertical.position += sublinesDifference;
 //			scrolls_.vertical.maximum += sublinesDifference;
 			repaintRuler();
-		} else if(*lines.begin() > viewport->firstVisibleLineInLogicalNumber()	// changed at or after the first visible line
-				|| (*lines.begin() == viewport->firstVisibleLineInLogicalNumber() && viewport->firstVisibleSublineInLogicalLine() == 0)) {
+		} else if(*lines.begin() > viewport->firstVisibleLine().line	// changed at or after the first visible line
+				|| (*lines.begin() == viewport->firstVisibleLine().line && viewport->firstVisibleLine().subline == 0)) {
 //			scrolls_.vertical.maximum += sublinesDifference;
 			redrawLine(*lines.begin(), true);
 		} else {	// changed lines contain the first visible line
@@ -1982,122 +1983,6 @@ TextViewer::Configuration::Configuration() BOOST_NOEXCEPT :
 #else
 	vanishesCursor = false;
 #endif // _WIN32_WINNT >= 0x0501
-}
-
-
-// CurrentLineHighlighter /////////////////////////////////////////////////////////////////////////
-
-/**
- * @class ascension::presentation::CurrentLineHighlighter
- * Highlights a line the caret is on with the specified background color.
- *
- * Because an instance automatically registers itself as a line color director, you should not call
- * @c Presentation#addLineColorDirector method. Usual usage is as follows.
- *
- * @code
- * Caret& caret = ...;
- * new CurrentLineHighlighter(caret);
- * @endcode
- *
- * When the caret has a selection, highlight is canceled.
- */
-
-/// The priority value this class returns.
-const TextLineColorSpecifier::Priority CurrentLineHighlighter::LINE_COLOR_PRIORITY = 0x40;
-
-/**
- * Constructor.
- * @param caret The caret
- * @param foreground The initial foreground color
- * @param background The initial background color
- */
-CurrentLineHighlighter::CurrentLineHighlighter(Caret& caret,
-		const boost::optional<Color>& foreground, const boost::optional<Color>& background)
-		: caret_(&caret), foreground_(foreground), background_(background) {
-	shared_ptr<TextLineColorSpecifier> temp(this);
-	caret.textViewer().presentation().addTextLineColorSpecifier(temp);
-	caret.addListener(*this);
-	caret.addStateListener(*this);
-	caret.addLifeCycleListener(*this);
-}
-
-/// Destructor.
-CurrentLineHighlighter::~CurrentLineHighlighter() BOOST_NOEXCEPT {
-	if(caret_ != nullptr) {
-		caret_->removeListener(*this);
-		caret_->removeStateListener(*this);
-		caret_->textViewer().presentation().removeTextLineColorSpecifier(*this);
-	}
-}
-
-/// Returns the background color.
-const boost::optional<Color>& CurrentLineHighlighter::background() const BOOST_NOEXCEPT {
-	return background_;
-}
-
-/// @see CaretListener#caretMoved
-void CurrentLineHighlighter::caretMoved(const Caret&, const k::Region& oldRegion) {
-	if(oldRegion.isEmpty()) {
-		if(!isSelectionEmpty(*caret_) || line(*caret_) != oldRegion.first.line)
-			caret_->textViewer().redrawLine(oldRegion.first.line, false);
-	}
-	if(isSelectionEmpty(*caret_)) {
-		if(!oldRegion.isEmpty() || line(*caret_) != oldRegion.first.line)
-			caret_->textViewer().redrawLine(line(*caret_), false);
-	}
-}
-
-/// Returns the foreground color.
-const boost::optional<Color>& CurrentLineHighlighter::foreground() const BOOST_NOEXCEPT {
-	return foreground_;
-}
-
-/// @see CaretStateListener#matchBracketsChanged
-void CurrentLineHighlighter::matchBracketsChanged(const Caret&, const boost::optional<pair<k::Position, k::Position>>&, bool) {
-}
-
-/// @see CaretStateListener#overtypeModeChanged
-void CurrentLineHighlighter::overtypeModeChanged(const Caret&) {
-}
-
-/// @see PointLifeCycleListener#pointDestroyed
-void CurrentLineHighlighter::pointDestroyed() {
-//	caret_->removeListener(*this);
-//	caret_->removeStateListener(*this);
-	caret_ = nullptr;
-}
-
-/// @see TextLineColorSpecifier#specifyTextLineColors
-TextLineColorSpecifier::Priority CurrentLineHighlighter::specifyTextLineColors(Index line,
-		boost::optional<Color>& foreground, boost::optional<Color>& background) const {
-	if(caret_ != nullptr && isSelectionEmpty(*caret_) && k::line(*caret_) == line && widgetapi::hasFocus(caret_->textViewer())) {
-		foreground = foreground_;
-		background = background_;
-		return LINE_COLOR_PRIORITY;
-	} else {
-		foreground = background = boost::none;
-		return 0;
-	}
-}
-
-/// @see CaretStateListener#selectionShapeChanged
-void CurrentLineHighlighter::selectionShapeChanged(const Caret&) {
-}
-
-/**
- * Sets the background color and redraws the window.
- * @param color The background color to set
- */
-void CurrentLineHighlighter::setBackground(const boost::optional<Color>& color) BOOST_NOEXCEPT {
-	background_ = color;
-}
-
-/**
- * Sets the foreground color and redraws the window.
- * @param color The foreground color to set
- */
-void CurrentLineHighlighter::setForeground(const boost::optional<Color>& color) BOOST_NOEXCEPT {
-	foreground_ = color;
 }
 
 

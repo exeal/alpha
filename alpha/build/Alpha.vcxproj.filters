@@ -365,6 +365,9 @@
     <ClCompile Include="..\..\ascension\src\viewer\viewer-gtk.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\current-line-highlighter.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -777,6 +780,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-renderer-observers.hpp">
       <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\current-line-highlighter.hpp">
+      <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

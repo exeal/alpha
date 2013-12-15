@@ -13,7 +13,6 @@
 #include <ascension/graphics/font/text-renderer.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/kernel/point.hpp>
-#include <ascension/presentation/presentation.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <ascension/viewer/caret-observers.hpp>
 #include <ascension/viewer/ruler.hpp>
@@ -310,9 +309,8 @@ namespace ascension {
 			// graphics.font.TextViewportListener
 			void viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT;
 			void viewportScrollPositionChanged(
-				const presentation::AbstractTwoAxes<graphics::font::TextViewport::SignedScrollOffset>& offsets,
-				const graphics::font::VisualLine& oldLine,
-				graphics::font::TextViewport::ScrollOffset oldInlineProgressionOffset) BOOST_NOEXCEPT;
+				const presentation::AbstractTwoAxes<graphics::font::TextViewport::ScrollOffset>& positionsBeforeScroll,
+				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT;
 			void viewportScrollPropertiesChanged(
 				const presentation::AbstractTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT;
 			// graphics.font.ComputedBlockFlowDirectionListener
@@ -515,43 +513,6 @@ namespace ascension {
 			~AutoFreeze() BOOST_NOEXCEPT;
 		private:
 			TextViewer* const textViewer_;
-		};
-
-		/// Highlights the line on which the caret is put.
-		class CurrentLineHighlighter : public presentation::TextLineColorSpecifier,
-				public CaretListener, public CaretStateListener, public kernel::PointLifeCycleListener {
-			ASCENSION_NONCOPYABLE_TAG(CurrentLineHighlighter);
-		public:
-			// constant
-			static const presentation::TextLineColorSpecifier::Priority LINE_COLOR_PRIORITY;
-			// constructors
-			CurrentLineHighlighter(Caret& caret,
-				const boost::optional<graphics::Color>& foreground,
-				const boost::optional<graphics::Color>& background);
-			~CurrentLineHighlighter() BOOST_NOEXCEPT;
-			// attributes
-			const boost::optional<graphics::Color>& background() const BOOST_NOEXCEPT;
-			const boost::optional<graphics::Color>& foreground() const BOOST_NOEXCEPT;
-			void setBackground(const boost::optional<graphics::Color>& color) BOOST_NOEXCEPT;
-			void setForeground(const boost::optional<graphics::Color>& color) BOOST_NOEXCEPT;
-		private:
-			// presentation.TextLineColorDirector
-			presentation::TextLineColorSpecifier::Priority specifyTextLineColors(
-				Index line, boost::optional<graphics::Color>& foreground,
-				boost::optional<graphics::Color>& background) const;
-			// CaretListener
-			void caretMoved(const Caret& self, const kernel::Region& oldRegion);
-			// CaretStateListener
-			void matchBracketsChanged(const Caret& self,
-				const boost::optional<std::pair<kernel::Position, kernel::Position>>& oldPair,
-				bool outsideOfView);
-			void overtypeModeChanged(const Caret& self);
-			void selectionShapeChanged(const Caret& self);
-			// kernel.PointLifeCycleListener
-			void pointDestroyed();
-		private:
-			Caret* caret_;
-			boost::optional<graphics::Color> foreground_, background_;
 		};
 
 		/// Provides the utility stuffs for viewers.
