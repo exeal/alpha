@@ -150,7 +150,9 @@ namespace {
 		}
 	}
 
-#include "../../generated/uprops-decomposition-mapping-table"
+#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
+#	include "../../generated/uprops-decomposition-mapping-table"
+#endif
 
 	inline void splice(Char* at, Char*& last, size_t eraseLength, const Char* replacement, size_t replacementLength) {
 		last += replacementLength - eraseLength;
