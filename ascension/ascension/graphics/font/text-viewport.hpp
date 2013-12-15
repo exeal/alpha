@@ -100,6 +100,7 @@ namespace ascension {
 					const presentation::AbstractTwoAxes<TextViewport::ScrollOffset>& positionsBeforeScroll,
 					const VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT;
 				void fireScrollPropertiesChanged(const presentation::AbstractTwoAxes<bool>& dimensions) BOOST_NOEXCEPT;
+				void repairUncalculatedLayouts();
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				void updateDefaultLineExtent();
 #endif // ASCENSION_PIXELFUL_SCROLL_IN_BPD
@@ -141,6 +142,7 @@ namespace ascension {
 					presentation::AbstractTwoAxes<bool> dimensionsPropertiesChanged;
 					boost::optional<Rectangle> boundsBeforeChanged;
 				} frozenNotification_;
+				bool repairingLayouts_;
 				detail::Listeners<TextViewportListener> listeners_;
 			};
 
@@ -193,31 +195,39 @@ namespace ascension {
 				BaselineIterator, Scalar, std::random_access_iterator_tag, Scalar, std::ptrdiff_t
 			> {
 			public:
-				BaselineIterator(TextViewport& viewport, Index line, bool trackOutOfViewport);
-				Index line() const BOOST_NOEXCEPT;
+				explicit BaselineIterator(const TextViewport& viewport/*, bool trackOutOfViewport*/);
+				BaselineIterator(const TextViewport& viewport, const VisualLine& line/*, bool trackOutOfViewport*/);
+				BaselineIterator(const TextViewport& viewport, const TextHit<kernel::Position>& position/*, bool trackOutOfViewport*/);
+				boost::optional<VisualLine> line() const BOOST_NOEXCEPT;
+				const VisualLine& snappedLine() const BOOST_NOEXCEPT;
 //				Point positionInView() const;
 				const Point& positionInViewport() const;
-				TextViewport& viewport() BOOST_NOEXCEPT;
 				const TextViewport& viewport() const BOOST_NOEXCEPT;
 				bool tracksOutOfViewport() const BOOST_NOEXCEPT;
 			private:
-				void advance(difference_type n);
+				void internalAdvance(const VisualLine* to, const boost::optional<difference_type>& delta);
 				void initializeWithFirstVisibleLine();
 				void invalidate() BOOST_NOEXCEPT;
 				bool isValid() const BOOST_NOEXCEPT;
 #if 0
 				void move(Index line);
 #endif
+				void verifyNotDone() const {
+//					if(*this == BaselineIterator())
+//						throw NoSuchElementException();
+				}
 				// boost.iterator_facade
+				void advance(difference_type n);
+//				difference_type distance_to(const BaseIterator& other) const;
 				void decrement();
 				const reference dereference() const;
-				bool equal(const BaselineIterator& other);
+				bool equal(const BaselineIterator& other) const;
 				void increment();
 				friend class boost::iterator_core_access;
 			private:
-				TextViewport* viewport_;	// this is not a reference, for operator=
-				bool tracksOutOfViewport_;	// this is not const, for operator=
-				graphics::font::VisualLine line_;
+				const TextViewport* viewport_;	// this is not a reference, for operator=
+				bool tracksOutOfViewport_;	// this is not const, for operator=. this is always false
+				VisualLine line_;
 				Scalar distanceFromViewportBeforeEdge_;
 				Point positionInViewport_;
 			};
@@ -249,14 +259,14 @@ namespace ascension {
 			/// @{
 			Point lineStartEdge(const TextViewport& viewport, const VisualLine& line);
 			Point lineStartEdge(TextViewport& viewport, const VisualLine& line, const LineLayoutVector::UseCalculatedLayoutTag&);
-			VisualLine locateLine(TextViewport& viewport,
+			VisualLine locateLine(const TextViewport& viewport,
 				const Point& p, bool* snapped = nullptr) BOOST_NOEXCEPT;
-			Point modelToView(TextViewport& viewport, const TextHit<kernel::Position>& position, bool fullSearchBpd);
+			Point modelToView(const TextViewport& viewport, const TextHit<kernel::Position>& position/*, bool fullSearchBpd*/);
 			TextHit<kernel::Position>&& viewToModel(
-				TextViewport& viewport, const Point& pointInView,
+				const TextViewport& viewport, const Point& pointInView,
 				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
 			boost::optional<TextHit<kernel::Position>> viewToModelInBounds(
-				TextViewport& viewport, const Point& pointInView,
+				const TextViewport& viewport, const Point& pointInView,
 				kernel::locations::CharacterUnit snapPolicy = kernel::locations::GRAPHEME_CLUSTER);
 			/// @}
 
@@ -269,8 +279,18 @@ namespace ascension {
 
 			// inline implementation //////////////////////////////////////////////////////////////
 
-			/// Returns the line the iterator addresses.
-			inline Index BaselineIterator::line() const BOOST_NOEXCEPT {return line_.line;}
+			/**
+			 * Returns the line the iterator addresses, or @c boost#none if out of the viewport.
+			 * @return The visual line this iterator addresses
+			 * @retval boost#none The iterator is out of the viewport
+			 * @see #snappedLine
+			 */
+			inline boost::optional<VisualLine> BaselineIterator::line() const BOOST_NOEXCEPT {
+				verifyNotDone();
+				if(**this == std::numeric_limits<Scalar>::min() || **this == std::numeric_limits<Scalar>::max())
+					return boost::none;
+				return line_;
+			}
 
 			/**
 			 * Returns the baseline position of the line the iterator addresses.
@@ -278,17 +298,25 @@ namespace ascension {
 			 *         x-coordinate of the point is zero, otherwise y-coordinate is zero
 			 */
 			inline const Point& BaselineIterator::positionInViewport() const BOOST_NOEXCEPT {
+				verifyNotDone();
 				return positionInViewport_;
 			}
 
 			/// Returns the viewport.
-			inline TextViewport& BaselineIterator::viewport() BOOST_NOEXCEPT {
+			inline const TextViewport& BaselineIterator::viewport() const BOOST_NOEXCEPT {
+//				if(viewport_ == nullptr)
+//					throw NullPointerException("this");
 				return *viewport_;
 			}
 
-			/// Returns the viewport.
-			inline const TextViewport& BaselineIterator::viewport() const BOOST_NOEXCEPT {
-				return *viewport_;
+			/**
+			 * Returns the line the iterator addresses. Unlike @c #line method, this returns a line
+			 * snapped within the viewport.
+			 * @see #line
+			 */
+			inline const VisualLine& BaselineIterator::snappedLine() const BOOST_NOEXCEPT {
+				verifyNotDone();
+				return line_;
 			}
 
 			/// Returns @c true if
