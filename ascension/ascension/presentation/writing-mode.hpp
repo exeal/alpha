@@ -120,9 +120,9 @@ namespace ascension {
 			explicit WritingMode(
 				ReadingDirection inlineFlowDirection = LEFT_TO_RIGHT/*ASCENSION_DEFAULT_TEXT_READING_DIRECTION*/,
 				BlockFlowDirection blockFlowDirection = HORIZONTAL_TB,
-				TextOrientation textOrientation = MIXED_RIGHT) :
+				TextOrientation textOrientation = MIXED_RIGHT) BOOST_NOEXCEPT :
 				inlineFlowDirection(inlineFlowDirection), blockFlowDirection(blockFlowDirection),
-				textOrientation(textOrientation) BOOST_NOEXCEPT {}
+				textOrientation(textOrientation) {}
 			/// Equality operator.
 			inline bool operator==(const WritingMode& other) const BOOST_NOEXCEPT {
 				return inlineFlowDirection == other.inlineFlowDirection
