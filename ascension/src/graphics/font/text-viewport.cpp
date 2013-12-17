@@ -24,6 +24,485 @@ using namespace std;
 namespace k = ascension::kernel;
 
 
+// free functions /////////////////////////////////////////////////////////////////////////////////
+
+PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>
+font::convertFlowRelativeScrollPositionsToPhysical(const TextViewport& viewport,
+		const AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
+	switch(viewport.textRenderer().computedBlockFlowDirection()) {
+		case HORIZONTAL_TB:
+			return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.ipd(), positions.bpd());
+		case VERTICAL_RL:
+			return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(
+				(positions.bpd() != boost::none) ?
+					boost::make_optional(viewport.textRenderer().layouts().numberOfVisualLines() - *positions.bpd() - 1) : boost::none,
+				positions.ipd());
+		case VERTICAL_LR:
+			return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.bpd(), positions.ipd());
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+}
+
+AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>
+font::convertPhysicalScrollPositionsToAbstract(const TextViewport& viewport,
+		const PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
+	AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>> result;
+	switch(viewport.textRenderer().computedBlockFlowDirection()) {
+		case HORIZONTAL_TB:
+			result.bpd() = positions.y();
+			result.ipd() = positions.x();
+			break;
+		case VERTICAL_RL:
+			result.bpd() = (positions.x() != boost::none) ?
+				boost::make_optional(viewport.textRenderer().layouts().numberOfVisualLines() - *positions.x() - 1) : boost::none;
+			result.ipd() = positions.y();
+			break;
+		case VERTICAL_LR:
+			result.bpd() = positions.x();
+			result.ipd() = positions.y();
+			break;
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+	return result;
+}
+
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+/**
+ * Converts an inline progression scroll offset into user units.
+ * @param viewport The viewport
+ * @param scrollOffset The inline progression scroll offset
+ * @return A scroll offset in user units
+ */
+Scalar font::inlineProgressionScrollOffsetInUserUnits(const TextViewport& viewport, const boost::optional<TextViewport::ScrollOffset>& scrollOffset /* = boost::none */) {
+	const TextViewport::ScrollOffset offset = scrollOffset ? *scrollOffset : viewport.inlineProgressionOffset();
+	return viewport.averageCharacterWidth() * offset;
+}
+#endif	// ASCENSION_ABANDONED_AT_VERSION_08
+
+/**
+ * Returns distance from the edge of content-area to the edge of the specified visual line in
+ * pixels. The edges are the start side of @a layout (ex. left if left-to-right, bottom if
+ * bottom-to-top).
+ * @param layout The layout of the line
+ * @param contentMeasure The measure of 'content-rectangle' of the content-area in pixels
+ * @param subline The visual subline number
+ * @return The indentation in pixels
+ * @throw IndexOutOfBoundsException @a subline is invalid
+ * @see font#lineStartEdge
+ */
+Scalar font::lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline /* = 0 */) {
+	// TODO: ??? Is this same as TextLayout.lineStartEdge method?
+	switch(layout.anchor(subline)) {
+		case TextAnchor::START:
+			return 0;
+		case TextAnchor::MIDDLE:
+			return (contentMeasure - layout.measure(subline)) / 2;
+		case TextAnchor::END:
+			return contentMeasure - layout.measure(subline);
+		default:
+			throw UnknownValueException("layout.anchor(subline) returned unknown value.");
+	}
+}
+
+/**
+ * Returns distance from left/top-edge of the content-area to 'start-edge' of the specified line in
+ * pixels.
+ * @param layout The layout of the line
+ * @param contentMeasure The measure of 'content-rectangle' of the content-area in pixels
+ * @param subline The visual subline number
+ * @return Distance from left/top-edge of the content-area to start-edge of @a line in pixels
+ * @throw IndexOutOfBoundsException @a subline is invalid
+ * @see font#lineIndent, TextLayout#lineStartEdge, TextViewer#inlineProgressionOffsetInViewport
+ */
+Scalar font::lineStartEdge(const TextLayout& layout, Scalar contentMeasure, Index subline /* = 0 */) {
+	const Scalar indent = lineIndent(layout, contentMeasure, subline);
+	return (layout.writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? indent : contentMeasure - indent;
+}
+
+namespace {
+	Point lineStartEdge(const TextViewport& viewport, const VisualLine& line, const TextLayout* layout) {
+		const TextRenderer& renderer = viewport.textRenderer();
+		const AbstractTwoAxes<Scalar> lineStart(_ipd = renderer.lineStartEdge(line) - viewport.scrollPositions().ipd(), _bpd = static_cast<Scalar>(0));
+
+		WritingMode writingMode;
+		if(layout != nullptr)
+			writingMode = layout->writingMode();
+		else {
+			writingMode.blockFlowDirection = renderer.computedBlockFlowDirection();
+			writingMode.inlineFlowDirection = renderer.direction().getOrInitial();
+			writingMode.textOrientation = renderer.textOrientation().getOrInitial();
+		}
+		Point result(geometry::make<Point>(mapAbstractToPhysical(writingMode, lineStart)));
+
+		switch(renderer.lineRelativeAlignment()) {
+			case TextRenderer::LEFT:
+				geometry::x(result) += 0;
+				break;
+			case TextRenderer::RIGHT:
+				geometry::x(result) += geometry::dx(viewport.boundsInView());
+				break;
+			case TextRenderer::HORIZONTAL_CENTER:
+				geometry::x(result) += geometry::dx(viewport.boundsInView()) / 2;
+				break;
+			case TextRenderer::TOP:
+				geometry::y(result) += 0;
+				break;
+			case TextRenderer::BOTTOM:
+				geometry::y(result) += geometry::dy(viewport.boundsInView());
+				break;
+			case TextRenderer::VERTICAL_CENTER:
+				geometry::y(result) += geometry::dy(viewport.boundsInView()) / 2;
+				break;
+			default:
+				ASCENSION_ASSERT_NOT_REACHED();
+		}
+
+		assert(geometry::x(result) == 0 || geometry::y(result) == 0);
+		return (result);
+	}
+}
+
+/**
+ * Returns the start egde of the specified line in viewport-coordinates.
+ * @param viewport The viewport
+ * @param line The line numbers
+ * @return The start edge of the @a line in viewport-coordinates, in user units. If the writing
+ *         mode of the layout is horizontal, the y-coordinate is zero. Otherwise if vertical, the
+ *         x-coordinate is zero
+ * @throw IndexOutOfBoundsException @a line is invalid
+ */
+Point font::lineStartEdge(const TextViewport& viewport, const VisualLine& line) {
+	return ::lineStartEdge(viewport, line, viewport.textRenderer().layouts().at(line.line));	// this may throw IndexOutOfBoundsException
+}
+
+/**
+ * Returns the start egde of the specified line in viewport-coordinates.
+ * @param viewport The viewport
+ * @param line The line numbers
+ * @return The start edge of the @a line in viewport-coordinates, in user units. If the writing
+ *         mode of the layout is horizontal, the y-coordinate is zero. Otherwise if vertical, the
+ *         x-coordinate is zero
+ * @throw IndexOutOfBoundsException @a line is invalid
+ */
+Point font::lineStartEdge(TextViewport& viewport, const VisualLine& line, const LineLayoutVector::UseCalculatedLayoutTag&) {
+	return ::lineStartEdge(viewport, line, &viewport.textRenderer().layouts().at(line.line, LineLayoutVector::USE_CALCULATED_LAYOUT));	// this may throw IndexOutOfBoundsException
+}
+
+namespace {
+	inline bool isNegativeVertical(const TextLayout& layout) {
+		const WritingMode& writingMode = layout.writingMode();
+		if(writingMode.blockFlowDirection == VERTICAL_RL)
+			return resolveTextOrientation(writingMode) == SIDEWAYS_LEFT;
+		else if(writingMode.blockFlowDirection == VERTICAL_LR)
+			return resolveTextOrientation(writingMode) != SIDEWAYS_LEFT;
+		return false;
+	}
+
+	boost::integer_range<Scalar> viewportContentExtent(const TextViewport& viewport) BOOST_NOEXCEPT {
+		const BlockFlowDirection blockFlowDirection = viewport.textRenderer().computedBlockFlowDirection();
+		const PhysicalFourSides<Scalar>& physicalSpaces = viewport.textRenderer().spaceWidths();
+		Scalar spaceBefore, spaceAfter;
+		switch(blockFlowDirection) {
+			case HORIZONTAL_TB:
+				spaceBefore = physicalSpaces.top();
+				spaceAfter = physicalSpaces.bottom();
+				break;
+			case VERTICAL_RL:
+				spaceBefore = physicalSpaces.right();
+				spaceAfter = physicalSpaces.left();
+				break;
+			case VERTICAL_LR:
+				spaceBefore = physicalSpaces.left();
+				spaceAfter = physicalSpaces.right();
+				break;
+			default:
+				ASCENSION_ASSERT_NOT_REACHED();
+		}
+		const Scalar borderBefore = 0, borderAfter = 0, paddingBefore = 0, paddingAfter = 0;	// TODO: Not implemented.
+		const Scalar before = spaceBefore + borderBefore + paddingBefore;
+		const Scalar after = (isHorizontal(blockFlowDirection) ?
+			geometry::dy(viewport.boundsInView()) : geometry::dx(viewport.boundsInView())) - spaceAfter - borderAfter - paddingBefore;
+		return boost::irange(before, after);
+	}
+}
+
+/**
+ * Converts the point in the viewport into the logical line number and visual subline offset.
+ * @param p The point in the viewport in user coordinates
+ * @param[out] snapped @c true if there was not a line at @a p. Optional
+ * @return The visual line numbers
+ * @note This function may change the layout.
+ * @see #location, TextLayout#hitTestCharacter, TextLayout#locateLine
+ */
+VisualLine font::locateLine(const TextViewport& viewport, const Point& p, bool* snapped /* = nullptr */) BOOST_NOEXCEPT {
+	// calculate block-progression-dimension
+	Scalar bpd;
+	switch(viewport.textRenderer().computedBlockFlowDirection()) {
+		case HORIZONTAL_TB:
+			bpd = geometry::y(p) - *viewportContentExtent(viewport).begin();
+		case VERTICAL_RL:
+			bpd = geometry::dx(viewport.boundsInView()) - geometry::x(p) - *viewportContentExtent(viewport).begin();
+		case VERTICAL_LR:
+			bpd = geometry::x(p) - *viewportContentExtent(viewport).begin();
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+
+	// locate visual line
+	BaselineIterator baseline(viewport);
+	if(bpd < 0) {	// before before-edge
+		if(snapped != nullptr)
+			*snapped = true;
+		return boost::get(baseline.line());
+	}
+	VisualLine previousLine(boost::get(baseline.line()));
+	++previousLine.line;
+	const TextLayout* layout;
+	bool negativeVertical;
+	for(; ; ++baseline) {
+		if(baseline.line() == boost::none)	// after after-edge
+			break;
+
+		const VisualLine line(boost::get(baseline.line()));
+		if(line.line != previousLine.line) {
+			layout = viewport.textRenderer().layouts().at(line.line);
+			negativeVertical = isNegativeVertical(*layout);
+		}
+		const TextLayout::LineMetricsIterator lineMetrics(layout->lineMetrics(line.subline));
+		const boost::integer_range<Scalar> lineExtent(
+			*baseline - (!negativeVertical ? lineMetrics.ascent() : lineMetrics.descent()),
+			*baseline + (!negativeVertical ? lineMetrics.descent() : lineMetrics.ascent()) + lineMetrics.leading());
+		if(includes(lineExtent, bpd)) {
+			if(snapped != nullptr)
+				*snapped = false;
+			return line;
+		}
+		previousLine = line;
+
+		if(line.line == viewport.textRenderer().presentation().document().numberOfLines() - 1 && line.subline == layout->numberOfLines() - 1)
+			break;
+	}
+
+	if(snapped != nullptr)
+		*snapped = true;
+	return previousLine;
+}
+
+/**
+ * Converts the specified position in the document to a point in the viewport-coordinates.
+ * @param viewport The viewport
+ * @param position The document position
+ * @param fullSearchBpd If this is @c false, this method stops at before- or after-edge of the
+ *                      viewport. If this happened, the block-progression-dimension of the returned
+ *                      point is @c std#numeric_limits&lt;Scalar&gt;::max() (for the before-edge)
+ *                      or @c std#numeric_limits&lt;Scalar&gt;::min() (for the after-edge). If this
+ *                      is @c true, the calculation is performed completely and returns an exact
+ *                      location will (may be very slow)
+ * @return The point in viewport-coordinates in user units. The
+ *         block-progression-dimension addresses the baseline of the line, or
+ *         @c std#numeric_limits#min() or @c std#numeric_limits#max() if @a position is outside of
+ *         @a viewport (in this case, inline-progression-dimension is zero. See the documentation
+ *         of @c font#BaselineIterator class)
+ * @throw BadPositionException @a position is outside of the document
+ * @note This function may change the layout.
+ * @see #viewToModel, #viewToModelInBounds, TextLayout#location
+ */
+Point font::modelToView(const TextViewport& viewport, const TextHit<k::Position>& position/*, bool fullSearchBpd*/) {
+	// compute alignment-point of the line
+	const BaselineIterator baseline(viewport, position/*, fullSearchBpd*/);
+	Point p(baseline.positionInViewport());
+	if(baseline.line() == boost::none)
+		return p;	// 'position' is outside of the viewport and can't calculate more
+	const Point lineStart(lineStartEdge(viewport, VisualLine(position.characterIndex().line, 0)));
+	geometry::translate(p, Dimension(geometry::_dx = geometry::x(lineStart), geometry::_dy = geometry::y(lineStart)));
+	const bool horizontal = isHorizontal(viewport.textRenderer().computedBlockFlowDirection());
+
+	// compute offset in the line layout
+	const TextLayout* const layout = viewport.textRenderer().layouts().at(position.characterIndex().line);
+	assert(layout != nullptr);
+	const TextHit<> hitInLine(position.isLeadingEdge() ?
+		TextHit<>::leading(position.characterIndex().offsetInLine) : TextHit<>::trailing(position.characterIndex().offsetInLine));
+	AbstractTwoAxes<Scalar> abstractOffset(layout->hitToPoint(hitInLine));
+	abstractOffset.bpd() = 0;	// because subline is already known
+	const PhysicalTwoAxes<Scalar> physicalOffset(mapAbstractToPhysical(layout->writingMode(), abstractOffset));
+
+	// compute the result
+	geometry::translate(p, Dimension(geometry::_dx = physicalOffset.x(), geometry::_dy = physicalOffset.y()));
+
+	return p;
+}
+
+template<>
+TextViewport::ScrollOffset font::pageSize<BlockFlowDirection>(const TextViewport& viewport) {
+	return static_cast<TextViewport::ScrollOffset>(viewport.numberOfVisibleLines());
+}
+
+template<>
+TextViewport::ScrollOffset font::pageSize<ReadingDirection>(const TextViewport& viewport) {
+	const Rectangle& bounds = viewport.boundsInView();
+	return static_cast<TextViewport::ScrollOffset>(isHorizontal(viewport.textRenderer().computedBlockFlowDirection()) ? geometry::dx(bounds) : geometry::dy(bounds));
+}
+
+/**
+ * @fn ascension::graphics::font::pageSize
+ * @tparam coordinate 0 for x-coordinate, and 1 for y-coordinate
+ * @param viewport The viewport gives the page
+ * @return The size of the page in user units if @a coordinate is inline-dimension, or in number of
+ *         visual lines if @a coordinate is block-dimension
+ */
+
+template<>
+TextViewport::SignedScrollOffset font::pageSize<0>(const TextViewport& viewport) {
+	switch(viewport.textRenderer().computedBlockFlowDirection()) {
+		case HORIZONTAL_TB:
+			return pageSize<ReadingDirection>(viewport);
+		case VERTICAL_RL:
+			return -static_cast<TextViewport::SignedScrollOffset>(pageSize<BlockFlowDirection>(viewport));
+		case VERTICAL_LR:
+			return +static_cast<TextViewport::SignedScrollOffset>(pageSize<BlockFlowDirection>(viewport));
+		default:
+			ASCENSION_ASSERT_NOT_REACHED();
+	}
+}
+
+template<>
+TextViewport::SignedScrollOffset font::pageSize<1>(const TextViewport& viewport) {
+	return isHorizontal(viewport.textRenderer().computedBlockFlowDirection()) ? pageSize<BlockFlowDirection>(viewport) : pageSize<ReadingDirection>(viewport);
+}
+
+//template TextViewport::SignedScrollOffset font::pageSize<BlockFlowDirection>(const TextViewport& viewport);
+//template TextViewport::SignedScrollOffset font::pageSize<ReadingDirection>(const TextViewport& viewport);
+//template TextViewport::SignedScrollOffset font::pageSize<0>(const TextViewport& viewport);
+//template TextViewport::SignedScrollOffset font::pageSize<1>(const TextViewport& viewport);
+
+template<>
+boost::integer_range<TextViewport::ScrollOffset> font::scrollableRange<BlockFlowDirection>(const TextViewport& viewport) {
+	return boost::irange(static_cast<TextViewport::ScrollOffset>(0), viewport.textRenderer().layouts().numberOfVisualLines()/* - pageSize<BlockFlowDirection>(viewport) + 1*/);
+}
+
+template<>
+boost::integer_range<TextViewport::ScrollOffset> font::scrollableRange<ReadingDirection>(const TextViewport& viewport) {
+	return boost::irange(static_cast<TextViewport::ScrollOffset>(0), static_cast<TextViewport::ScrollOffset>(viewport.contentMeasure()) - pageSize<ReadingDirection>(viewport) + 1);
+}
+
+template<>
+boost::integer_range<TextViewport::ScrollOffset> font::scrollableRange<0>(const TextViewport& viewport) {
+	return isHorizontal(viewport.textRenderer().computedBlockFlowDirection()) ? scrollableRange<ReadingDirection>(viewport) : scrollableRange<BlockFlowDirection>(viewport);
+}
+
+template<>
+boost::integer_range<TextViewport::ScrollOffset> font::scrollableRange<1>(const TextViewport& viewport) {
+	return isHorizontal(viewport.textRenderer().computedBlockFlowDirection()) ? scrollableRange<BlockFlowDirection>(viewport) : scrollableRange<ReadingDirection>(viewport);
+}
+
+//template boost::integer_range<TextViewport::ScrollOffset> font::scrollableRange<BlockFlowDirection>(const TextViewport& viewport);
+//template boost::integer_range<TextViewport::ScrollOffset> font::scrollableRange<ReadingDirection>(const TextViewport& viewport);
+//template boost::integer_range<TextViewport::ScrollOffset> font::scrollableRange<0>(const TextViewport& viewport);
+//template boost::integer_range<TextViewport::ScrollOffset> font::scrollableRange<1>(const TextViewport& viewport);
+
+namespace {
+	inline Scalar mapViewportIpdToLineLayout(const TextViewport& viewport, const TextLayout& line, Scalar ipd) {
+		return ipd - viewport.scrollPositions().ipd() - lineStartEdge(line, viewport.contentMeasure());
+	}
+
+	// implements viewToModel and viewToModelInBounds in font namespace.
+	boost::optional<TextHit<k::Position>> internalViewToModel(const TextViewport& viewport,
+			const Point& pointInView, bool abortNoCharacter, k::locations::CharacterUnit snapPolicy) {
+		Point p(pointInView);
+		geometry::translate(p, Dimension(geometry::_dx = geometry::left(viewport.boundsInView()), geometry::_dy = geometry::top(viewport.boundsInView())));
+
+		// locate the logical line
+		bool outside;
+		const VisualLine line(locateLine(viewport, p, &outside));
+		if(abortNoCharacter && outside)
+			return boost::none;
+		const TextLayout* const layout = viewport.textRenderer().layouts().at(line.line);
+		assert(layout != nullptr);
+		const BaselineIterator baseline(viewport, line);
+		// locate the position in the line
+		const bool horizontal = isHorizontal(layout->writingMode().blockFlowDirection);
+		const PhysicalTwoAxes<Scalar> lineLocalPoint(horizontal ?
+			Point(
+				geometry::_x = mapViewportIpdToLineLayout(viewport, *layout, geometry::x(p)),
+				geometry::_y = geometry::y(p) + geometry::y(baseline.positionInViewport()))
+			: Point(
+				geometry::_x = geometry::x(p) + geometry::x(baseline.positionInViewport()),
+				geometry::_y = mapViewportIpdToLineLayout(viewport, *layout, geometry::y(p))));
+		TextHit<> hitInLine(layout->hitTestCharacter(mapPhysicalToAbstract(layout->writingMode(), lineLocalPoint), &outside));
+		if(abortNoCharacter && outside)
+			return boost::none;
+
+		// snap intervening position to the boundary
+		if(hitInLine.characterIndex() != 0 && snapPolicy != k::locations::UTF16_CODE_UNIT) {
+			using namespace text;
+			const k::Document& document = viewport.textRenderer().presentation().document();
+			const String& s = document.line(line.line);
+			const bool interveningSurrogates =
+				surrogates::isLowSurrogate(s[hitInLine.characterIndex()]) && surrogates::isHighSurrogate(s[hitInLine.characterIndex() - 1]);
+			const Scalar ipd = horizontal ? lineLocalPoint.x() : lineLocalPoint.y();
+			if(snapPolicy == k::locations::UTF32_CODE_UNIT) {
+				if(interveningSurrogates) {
+					const Index index = hitInLine.characterIndex() - 1;
+					const TextHit<> leading(TextHit<>::leading(index)), trailing(TextHit<>::trailing(index));
+					const Scalar leadingIpd = layout->hitToPoint(leading).ipd();
+					const Scalar trailingIpd = layout->hitToPoint(trailing).ipd();
+					hitInLine = (abs(ipd - leadingIpd) <= abs(ipd - trailingIpd)) ? leading : trailing;
+				}
+			} else if(snapPolicy == k::locations::GRAPHEME_CLUSTER) {
+				text::GraphemeBreakIterator<k::DocumentCharacterIterator> i(
+					k::DocumentCharacterIterator(document, k::Region(line.line, boost::irange<Index>(0, s.length())), k::Position(line.line, hitInLine.characterIndex())));
+				if(interveningSurrogates || !i.isBoundary(i.base())) {
+					--i;
+					const TextHit<> leading(TextHit<>::leading(i.base().tell().offsetInLine));
+					const TextHit<> trailing(TextHit<>::trailing((++i).base().tell().offsetInLine));
+					const Scalar leadingIpd = layout->hitToPoint(leading).ipd();
+					const Scalar trailingIpd = layout->hitToPoint(trailing).ipd();
+					hitInLine = (abs(ipd - leadingIpd) <= abs(ipd - trailingIpd)) ? leading : trailing;
+				}
+			} else
+				throw UnknownValueException("snapPolicy");
+		}
+		return hitInLine.isLeadingEdge() ?
+			TextHit<k::Position>::leading(k::Position(line.line, hitInLine.characterIndex()))
+			: TextHit<k::Position>::trailing(k::Position(line.line, hitInLine.characterIndex()));
+	}
+}
+
+/**
+ * Returns the document position nearest from the specified point.
+ * @param pointInView The point in view-coordinates (not viewport-coordinates). This can be outside
+ *                    of the view
+ * @param snapPolicy Which character boundary the returned position snapped to
+ * @return The document position
+ * @throw UnknownValueException @a snapPolicy is invalid
+ * @note This function may change the layout.
+ * @see #modelToView, #viewToModelInBounds, TextLayout#hitTestCharacter
+ */
+TextHit<k::Position>&& font::viewToModel(const TextViewport& viewport,
+		const Point& pointInView, k::locations::CharacterUnit snapPolicy /* = kernel::locations::GRAPHEME_CLUSTER */) {
+	return std::move(*internalViewToModel(viewport, pointInView, false, snapPolicy));
+}
+
+/**
+ * Returns the document position nearest from the specified point. This method returns
+ * @c boost#none immediately when @a pointInView hovered outside of the text layout (e.g. far left
+ * or right of the line, beyond the last line, ...)
+ * @param pointInView The point in view-coordinates (not viewport-coordinates). This can be outside
+ *                    of the view
+ * @param snapPolicy Which character boundary the returned position snapped to
+ * @return The document position, or @c boost#none if @a pointInView is outside of the layout
+ * @throw UnknownValueException @a snapPolicy is invalid
+ * @note This function may change the layout.
+ * @see #modelToView, #viewToModel, TextLayout#hitTestCharacter
+ */
+boost::optional<TextHit<k::Position>> font::viewToModelInBounds(const TextViewport& viewport,
+		const Point& pointInView, k::locations::CharacterUnit snapPolicy /* = k::locations::GRAPHEME_CLUSTER */) {
+	return internalViewToModel(viewport, pointInView, true, snapPolicy);
+}
+
+
 // BaselineIterator ///////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -64,17 +543,6 @@ BaselineIterator::BaselineIterator(const TextViewport& viewport, const TextHit<k
 		internalAdvance(&line, boost::none);
 		if(this->line() != boost::none)
 			std::advance(*this, this->viewport().textRenderer().layouts().at(line.line)->lineAt(position.insertionIndex().offsetInLine));
-	}
-}
-
-namespace {
-	inline bool isNegativeVertical(const TextLayout& layout) {
-		const WritingMode& writingMode = layout.writingMode();
-		if(writingMode.blockFlowDirection == VERTICAL_RL)
-			return resolveTextOrientation(writingMode) == SIDEWAYS_LEFT;
-		else if(writingMode.blockFlowDirection == VERTICAL_LR)
-			return resolveTextOrientation(writingMode) != SIDEWAYS_LEFT;
-		return false;
 	}
 }
 
@@ -129,33 +597,6 @@ namespace {
 			default:
 				ASCENSION_ASSERT_NOT_REACHED();
 		}
-	}
-
-	boost::integer_range<Scalar> viewportContentExtent(const TextViewport& viewport) BOOST_NOEXCEPT {
-		const BlockFlowDirection blockFlowDirection = viewport.textRenderer().computedBlockFlowDirection();
-		const PhysicalFourSides<Scalar>& physicalSpaces = viewport.textRenderer().spaceWidths();
-		Scalar spaceBefore, spaceAfter;
-		switch(blockFlowDirection) {
-			case HORIZONTAL_TB:
-				spaceBefore = physicalSpaces.top();
-				spaceAfter = physicalSpaces.bottom();
-				break;
-			case VERTICAL_RL:
-				spaceBefore = physicalSpaces.right();
-				spaceAfter = physicalSpaces.left();
-				break;
-			case VERTICAL_LR:
-				spaceBefore = physicalSpaces.left();
-				spaceAfter = physicalSpaces.right();
-				break;
-			default:
-				ASCENSION_ASSERT_NOT_REACHED();
-		}
-		const Scalar borderBefore = 0, borderAfter = 0, paddingBefore = 0, paddingAfter = 0;	// TODO: Not implemented.
-		const Scalar before = spaceBefore + borderBefore + paddingBefore;
-		const Scalar after = (isHorizontal(blockFlowDirection) ?
-			geometry::dy(viewport.boundsInView()) : geometry::dx(viewport.boundsInView())) - spaceAfter - borderAfter - paddingBefore;
-		return boost::irange(before, after);
 	}
 }
 
@@ -823,7 +1264,7 @@ void TextViewport::scrollTo(const AbstractTwoAxes<boost::optional<TextViewport::
 
 	// inline dimension
 	if(positions.ipd() != boost::none) {
-		const auto range(scrollableRangeInInlineDimension(*this));
+		const auto range(scrollableRange<ReadingDirection>(*this));
 		newPositions.ipd() = min(max(newPositions.ipd(), *range.begin()), *range.end());
 	}
 
@@ -833,7 +1274,7 @@ void TextViewport::scrollTo(const AbstractTwoAxes<boost::optional<TextViewport::
 	decltype(blockFlowScrollOffsetInFirstVisibleVisualLine_) newBlockFlowScrollOffsetInFirstVisibleVisualLine;
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 	if(positions.bpd() != boost::none) {
-		const auto range(scrollableRangeInBlockDimension(*this));
+		const auto range(scrollableRange<BlockFlowDirection>(*this));
 		newPositions.bpd() = min(max(newPositions.bpd(), *range.begin()), *range.end());
 
 		// locate the nearest visual line
@@ -1002,415 +1443,4 @@ void TextViewport::visualLinesModified(const boost::integer_range<Index>& lines,
 	}
 	fireScrollPropertiesChanged(presentation::AbstractTwoAxes<bool>(presentation::_ipd = longestLineChanged, presentation::_bpd = sublinesDifference != 0));
 	repairUncalculatedLayouts();
-}
-
-
-// free functions /////////////////////////////////////////////////////////////////////////////////
-
-PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>
-convertFlowRelativeScrollPositionsToPhysical(const TextViewport& viewport,
-		const AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
-	switch(viewport.textRenderer().computedBlockFlowDirection()) {
-		case HORIZONTAL_TB:
-			return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.ipd(), positions.bpd());
-		case VERTICAL_RL:
-			return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(
-				(positions.bpd() != boost::none) ?
-					boost::make_optional(viewport.textRenderer().layouts().numberOfVisualLines() - *positions.bpd() - 1) : boost::none,
-				positions.ipd());
-		case VERTICAL_LR:
-			return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.bpd(), positions.ipd());
-		default:
-			ASCENSION_ASSERT_NOT_REACHED();
-	}
-}
-
-AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>
-convertPhysicalScrollPositionsToAbstract(const TextViewport& viewport,
-		const PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
-	AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>> result;
-	switch(viewport.textRenderer().computedBlockFlowDirection()) {
-		case HORIZONTAL_TB:
-			result.bpd() = positions.y();
-			result.ipd() = positions.x();
-			break;
-		case VERTICAL_RL:
-			result.bpd() = (positions.x() != boost::none) ?
-				boost::make_optional(viewport.textRenderer().layouts().numberOfVisualLines() - *positions.x() - 1) : boost::none;
-			result.ipd() = positions.y();
-			break;
-		case VERTICAL_LR:
-			result.bpd() = positions.x();
-			result.ipd() = positions.y();
-			break;
-		default:
-			ASCENSION_ASSERT_NOT_REACHED();
-	}
-	return result;
-}
-
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-/**
- * Converts an inline progression scroll offset into user units.
- * @param viewport The viewport
- * @param scrollOffset The inline progression scroll offset
- * @return A scroll offset in user units
- */
-Scalar font::inlineProgressionScrollOffsetInUserUnits(const TextViewport& viewport, const boost::optional<TextViewport::ScrollOffset>& scrollOffset /* = boost::none */) {
-	const TextViewport::ScrollOffset offset = scrollOffset ? *scrollOffset : viewport.inlineProgressionOffset();
-	return viewport.averageCharacterWidth() * offset;
-}
-#endif	// ASCENSION_ABANDONED_AT_VERSION_08
-
-/**
- * Returns distance from the edge of content-area to the edge of the specified visual line in
- * pixels. The edges are the start side of @a layout (ex. left if left-to-right, bottom if
- * bottom-to-top).
- * @param layout The layout of the line
- * @param contentMeasure The measure of 'content-rectangle' of the content-area in pixels
- * @param subline The visual subline number
- * @return The indentation in pixels
- * @throw IndexOutOfBoundsException @a subline is invalid
- * @see font#lineStartEdge
- */
-Scalar font::lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline /* = 0 */) {
-	// TODO: ??? Is this same as TextLayout.lineStartEdge method?
-	switch(layout.anchor(subline)) {
-		case TextAnchor::START:
-			return 0;
-		case TextAnchor::MIDDLE:
-			return (contentMeasure - layout.measure(subline)) / 2;
-		case TextAnchor::END:
-			return contentMeasure - layout.measure(subline);
-		default:
-			throw UnknownValueException("layout.anchor(subline) returned unknown value.");
-	}
-}
-
-/**
- * Returns distance from left/top-edge of the content-area to 'start-edge' of the specified line in
- * pixels.
- * @param layout The layout of the line
- * @param contentMeasure The measure of 'content-rectangle' of the content-area in pixels
- * @param subline The visual subline number
- * @return Distance from left/top-edge of the content-area to start-edge of @a line in pixels
- * @throw IndexOutOfBoundsException @a subline is invalid
- * @see font#lineIndent, TextLayout#lineStartEdge, TextViewer#inlineProgressionOffsetInViewport
- */
-Scalar font::lineStartEdge(const TextLayout& layout, Scalar contentMeasure, Index subline /* = 0 */) {
-	const Scalar indent = lineIndent(layout, contentMeasure, subline);
-	return (layout.writingMode().inlineFlowDirection == LEFT_TO_RIGHT) ? indent : contentMeasure - indent;
-}
-
-namespace {
-	Point lineStartEdge(const TextViewport& viewport, const VisualLine& line, const TextLayout* layout) {
-		const TextRenderer& renderer = viewport.textRenderer();
-		const AbstractTwoAxes<Scalar> lineStart(_ipd = renderer.lineStartEdge(line) - viewport.scrollPositions().ipd(), _bpd = static_cast<Scalar>(0));
-
-		WritingMode writingMode;
-		if(layout != nullptr)
-			writingMode = layout->writingMode();
-		else {
-			writingMode.blockFlowDirection = renderer.computedBlockFlowDirection();
-			writingMode.inlineFlowDirection = renderer.direction().getOrInitial();
-			writingMode.textOrientation = renderer.textOrientation().getOrInitial();
-		}
-		Point result(geometry::make<Point>(mapAbstractToPhysical(writingMode, lineStart)));
-
-		switch(renderer.lineRelativeAlignment()) {
-			case TextRenderer::LEFT:
-				geometry::x(result) += 0;
-				break;
-			case TextRenderer::RIGHT:
-				geometry::x(result) += geometry::dx(viewport.boundsInView());
-				break;
-			case TextRenderer::HORIZONTAL_CENTER:
-				geometry::x(result) += geometry::dx(viewport.boundsInView()) / 2;
-				break;
-			case TextRenderer::TOP:
-				geometry::y(result) += 0;
-				break;
-			case TextRenderer::BOTTOM:
-				geometry::y(result) += geometry::dy(viewport.boundsInView());
-				break;
-			case TextRenderer::VERTICAL_CENTER:
-				geometry::y(result) += geometry::dy(viewport.boundsInView()) / 2;
-				break;
-			default:
-				ASCENSION_ASSERT_NOT_REACHED();
-		}
-
-		assert(geometry::x(result) == 0 || geometry::y(result) == 0);
-		return (result);
-	}
-}
-
-/**
- * Returns the start egde of the specified line in viewport-coordinates.
- * @param viewport The viewport
- * @param line The line numbers
- * @return The start edge of the @a line in viewport-coordinates, in user units. If the writing
- *         mode of the layout is horizontal, the y-coordinate is zero. Otherwise if vertical, the
- *         x-coordinate is zero
- * @throw IndexOutOfBoundsException @a line is invalid
- */
-Point font::lineStartEdge(const TextViewport& viewport, const VisualLine& line) {
-	return ::lineStartEdge(viewport, line, viewport.textRenderer().layouts().at(line.line));	// this may throw IndexOutOfBoundsException
-}
-
-/**
- * Returns the start egde of the specified line in viewport-coordinates.
- * @param viewport The viewport
- * @param line The line numbers
- * @return The start edge of the @a line in viewport-coordinates, in user units. If the writing
- *         mode of the layout is horizontal, the y-coordinate is zero. Otherwise if vertical, the
- *         x-coordinate is zero
- * @throw IndexOutOfBoundsException @a line is invalid
- */
-Point font::lineStartEdge(TextViewport& viewport, const VisualLine& line, const LineLayoutVector::UseCalculatedLayoutTag&) {
-	return ::lineStartEdge(viewport, line, &viewport.textRenderer().layouts().at(line.line, LineLayoutVector::USE_CALCULATED_LAYOUT));	// this may throw IndexOutOfBoundsException
-}
-
-/**
- * Converts the point in the viewport into the logical line number and visual subline offset.
- * @param p The point in the viewport in user coordinates
- * @param[out] snapped @c true if there was not a line at @a p. Optional
- * @return The visual line numbers
- * @note This function may change the layout.
- * @see #location, TextLayout#hitTestCharacter, TextLayout#locateLine
- */
-VisualLine font::locateLine(const TextViewport& viewport, const Point& p, bool* snapped /* = nullptr */) BOOST_NOEXCEPT {
-	// calculate block-progression-dimension
-	Scalar bpd;
-	switch(viewport.textRenderer().computedBlockFlowDirection()) {
-		case HORIZONTAL_TB:
-			bpd = geometry::y(p) - *viewportContentExtent(viewport).begin();
-		case VERTICAL_RL:
-			bpd = geometry::dx(viewport.boundsInView()) - geometry::x(p) - *viewportContentExtent(viewport).begin();
-		case VERTICAL_LR:
-			bpd = geometry::x(p) - *viewportContentExtent(viewport).begin();
-		default:
-			ASCENSION_ASSERT_NOT_REACHED();
-	}
-
-	// locate visual line
-	BaselineIterator baseline(viewport);
-	if(bpd < 0) {	// before before-edge
-		if(snapped != nullptr)
-			*snapped = true;
-		return boost::get(baseline.line());
-	}
-	VisualLine previousLine(boost::get(baseline.line()));
-	++previousLine.line;
-	const TextLayout* layout;
-	bool negativeVertical;
-	for(; ; ++baseline) {
-		if(baseline.line() == boost::none)	// after after-edge
-			break;
-
-		const VisualLine line(boost::get(baseline.line()));
-		if(line.line != previousLine.line) {
-			layout = viewport.textRenderer().layouts().at(line.line);
-			negativeVertical = isNegativeVertical(*layout);
-		}
-		const TextLayout::LineMetricsIterator lineMetrics(layout->lineMetrics(line.subline));
-		const boost::integer_range<Scalar> lineExtent(
-			*baseline - (!negativeVertical ? lineMetrics.ascent() : lineMetrics.descent()),
-			*baseline + (!negativeVertical ? lineMetrics.descent() : lineMetrics.ascent()) + lineMetrics.leading());
-		if(includes(lineExtent, bpd)) {
-			if(snapped != nullptr)
-				*snapped = false;
-			return line;
-		}
-		previousLine = line;
-
-		if(line.line == viewport.textRenderer().presentation().document().numberOfLines() - 1 && line.subline == layout->numberOfLines() - 1)
-			break;
-	}
-
-	if(snapped != nullptr)
-		*snapped = true;
-	return previousLine;
-}
-
-/**
- * Converts the specified position in the document to a point in the viewport-coordinates.
- * @param viewport The viewport
- * @param position The document position
- * @param fullSearchBpd If this is @c false, this method stops at before- or after-edge of the
- *                      viewport. If this happened, the block-progression-dimension of the returned
- *                      point is @c std#numeric_limits&lt;Scalar&gt;::max() (for the before-edge)
- *                      or @c std#numeric_limits&lt;Scalar&gt;::min() (for the after-edge). If this
- *                      is @c true, the calculation is performed completely and returns an exact
- *                      location will (may be very slow)
- * @return The point in viewport-coordinates in user units. The
- *         block-progression-dimension addresses the baseline of the line, or
- *         @c std#numeric_limits#min() or @c std#numeric_limits#max() if @a position is outside of
- *         @a viewport (in this case, inline-progression-dimension is zero. See the documentation
- *         of @c font#BaselineIterator class)
- * @throw BadPositionException @a position is outside of the document
- * @note This function may change the layout.
- * @see #viewToModel, #viewToModelInBounds, TextLayout#location
- */
-Point font::modelToView(const TextViewport& viewport, const TextHit<k::Position>& position/*, bool fullSearchBpd*/) {
-	// compute alignment-point of the line
-	const BaselineIterator baseline(viewport, position/*, fullSearchBpd*/);
-	Point p(baseline.positionInViewport());
-	if(baseline.line() == boost::none)
-		return p;	// 'position' is outside of the viewport and can't calculate more
-	const Point lineStart(lineStartEdge(viewport, VisualLine(position.characterIndex().line, 0)));
-	geometry::translate(p, Dimension(geometry::_dx = geometry::x(lineStart), geometry::_dy = geometry::y(lineStart)));
-	const bool horizontal = isHorizontal(viewport.textRenderer().computedBlockFlowDirection());
-
-	// compute offset in the line layout
-	const TextLayout* const layout = viewport.textRenderer().layouts().at(position.characterIndex().line);
-	assert(layout != nullptr);
-	const TextHit<> hitInLine(position.isLeadingEdge() ?
-		TextHit<>::leading(position.characterIndex().offsetInLine) : TextHit<>::trailing(position.characterIndex().offsetInLine));
-	AbstractTwoAxes<Scalar> abstractOffset(layout->hitToPoint(hitInLine));
-	abstractOffset.bpd() = 0;	// because subline is already known
-	const PhysicalTwoAxes<Scalar> physicalOffset(mapAbstractToPhysical(layout->writingMode(), abstractOffset));
-
-	// compute the result
-	geometry::translate(p, Dimension(geometry::_dx = physicalOffset.x(), geometry::_dy = physicalOffset.y()));
-
-	return p;
-}
-
-/**
- * @fn ascension::graphics::font::pageSize
- * @tparam coordinate 0 for x-coordinate, and 1 for y-coordinate
- * @param viewport The viewport gives the page
- * @return The size of the page in user units if @a coordinate is inline-dimension, or in number of
- *         visual lines if @a coordinate is block-dimension
- */
-
-template<>
-TextViewport::SignedScrollOffset font::pageSize<0>(const TextViewport& viewport) {
-	switch(viewport.textRenderer().computedBlockFlowDirection()) {
-		case HORIZONTAL_TB:
-			return static_cast<TextViewport::SignedScrollOffset>(geometry::dx(viewport.boundsInView()));
-		case VERTICAL_RL:
-			return -static_cast<TextViewport::SignedScrollOffset>(viewport.numberOfVisibleLines());
-		case VERTICAL_LR:
-			return +static_cast<TextViewport::SignedScrollOffset>(viewport.numberOfVisibleLines());
-		default:
-			ASCENSION_ASSERT_NOT_REACHED();
-	}
-}
-
-template<>
-TextViewport::SignedScrollOffset font::pageSize<1>(const TextViewport& viewport) {
-	switch(viewport.textRenderer().computedBlockFlowDirection()) {
-		case HORIZONTAL_TB:
-			return static_cast<TextViewport::SignedScrollOffset>(viewport.numberOfVisibleLines());
-		case VERTICAL_RL:
-		case VERTICAL_LR:
-			return static_cast<TextViewport::SignedScrollOffset>(geometry::dy(viewport.boundsInView()));
-		default:
-			ASCENSION_ASSERT_NOT_REACHED();
-	}
-}
-
-//template TextViewport::SignedScrollOffset font::pageSize<0>(const TextViewport& viewport);
-//template TextViewport::SignedScrollOffset font::pageSize<1>(const TextViewport& viewport);
-
-namespace {
-	inline Scalar mapViewportIpdToLineLayout(const TextViewport& viewport, const TextLayout& line, Scalar ipd) {
-		return ipd - viewport.scrollPositions().ipd() - lineStartEdge(line, viewport.contentMeasure());
-	}
-
-	// implements viewToModel and viewToModelInBounds in font namespace.
-	boost::optional<TextHit<k::Position>> internalViewToModel(const TextViewport& viewport,
-			const Point& pointInView, bool abortNoCharacter, k::locations::CharacterUnit snapPolicy) {
-		Point p(pointInView);
-		geometry::translate(p, Dimension(geometry::_dx = geometry::left(viewport.boundsInView()), geometry::_dy = geometry::top(viewport.boundsInView())));
-
-		// locate the logical line
-		bool outside;
-		const VisualLine line(locateLine(viewport, p, &outside));
-		if(abortNoCharacter && outside)
-			return boost::none;
-		const TextLayout* const layout = viewport.textRenderer().layouts().at(line.line);
-		assert(layout != nullptr);
-		const BaselineIterator baseline(viewport, line);
-		// locate the position in the line
-		const bool horizontal = isHorizontal(layout->writingMode().blockFlowDirection);
-		const PhysicalTwoAxes<Scalar> lineLocalPoint(horizontal ?
-			Point(
-				geometry::_x = mapViewportIpdToLineLayout(viewport, *layout, geometry::x(p)),
-				geometry::_y = geometry::y(p) + geometry::y(baseline.positionInViewport()))
-			: Point(
-				geometry::_x = geometry::x(p) + geometry::x(baseline.positionInViewport()),
-				geometry::_y = mapViewportIpdToLineLayout(viewport, *layout, geometry::y(p))));
-		TextHit<> hitInLine(layout->hitTestCharacter(mapPhysicalToAbstract(layout->writingMode(), lineLocalPoint), &outside));
-		if(abortNoCharacter && outside)
-			return boost::none;
-
-		// snap intervening position to the boundary
-		if(hitInLine.characterIndex() != 0 && snapPolicy != k::locations::UTF16_CODE_UNIT) {
-			using namespace text;
-			const k::Document& document = viewport.textRenderer().presentation().document();
-			const String& s = document.line(line.line);
-			const bool interveningSurrogates =
-				surrogates::isLowSurrogate(s[hitInLine.characterIndex()]) && surrogates::isHighSurrogate(s[hitInLine.characterIndex() - 1]);
-			const Scalar ipd = horizontal ? lineLocalPoint.x() : lineLocalPoint.y();
-			if(snapPolicy == k::locations::UTF32_CODE_UNIT) {
-				if(interveningSurrogates) {
-					const Index index = hitInLine.characterIndex() - 1;
-					const TextHit<> leading(TextHit<>::leading(index)), trailing(TextHit<>::trailing(index));
-					const Scalar leadingIpd = layout->hitToPoint(leading).ipd();
-					const Scalar trailingIpd = layout->hitToPoint(trailing).ipd();
-					hitInLine = (abs(ipd - leadingIpd) <= abs(ipd - trailingIpd)) ? leading : trailing;
-				}
-			} else if(snapPolicy == k::locations::GRAPHEME_CLUSTER) {
-				text::GraphemeBreakIterator<k::DocumentCharacterIterator> i(
-					k::DocumentCharacterIterator(document, k::Region(line.line, boost::irange<Index>(0, s.length())), k::Position(line.line, hitInLine.characterIndex())));
-				if(interveningSurrogates || !i.isBoundary(i.base())) {
-					--i;
-					const TextHit<> leading(TextHit<>::leading(i.base().tell().offsetInLine));
-					const TextHit<> trailing(TextHit<>::trailing((++i).base().tell().offsetInLine));
-					const Scalar leadingIpd = layout->hitToPoint(leading).ipd();
-					const Scalar trailingIpd = layout->hitToPoint(trailing).ipd();
-					hitInLine = (abs(ipd - leadingIpd) <= abs(ipd - trailingIpd)) ? leading : trailing;
-				}
-			} else
-				throw UnknownValueException("snapPolicy");
-		}
-		return hitInLine.isLeadingEdge() ?
-			TextHit<k::Position>::leading(k::Position(line.line, hitInLine.characterIndex()))
-			: TextHit<k::Position>::trailing(k::Position(line.line, hitInLine.characterIndex()));
-	}
-}
-
-/**
- * Returns the document position nearest from the specified point.
- * @param pointInView The point in view-coordinates (not viewport-coordinates). This can be outside
- *                    of the view
- * @param snapPolicy Which character boundary the returned position snapped to
- * @return The document position
- * @throw UnknownValueException @a snapPolicy is invalid
- * @note This function may change the layout.
- * @see #modelToView, #viewToModelInBounds, TextLayout#hitTestCharacter
- */
-TextHit<k::Position>&& font::viewToModel(const TextViewport& viewport,
-		const Point& pointInView, k::locations::CharacterUnit snapPolicy /* = kernel::locations::GRAPHEME_CLUSTER */) {
-	return std::move(*internalViewToModel(viewport, pointInView, false, snapPolicy));
-}
-
-/**
- * Returns the document position nearest from the specified point. This method returns
- * @c boost#none immediately when @a pointInView hovered outside of the text layout (e.g. far left
- * or right of the line, beyond the last line, ...)
- * @param pointInView The point in view-coordinates (not viewport-coordinates). This can be outside
- *                    of the view
- * @param snapPolicy Which character boundary the returned position snapped to
- * @return The document position, or @c boost#none if @a pointInView is outside of the layout
- * @throw UnknownValueException @a snapPolicy is invalid
- * @note This function may change the layout.
- * @see #modelToView, #viewToModel, TextLayout#hitTestCharacter
- */
-boost::optional<TextHit<k::Position>> font::viewToModelInBounds(const TextViewport& viewport,
-		const Point& pointInView, k::locations::CharacterUnit snapPolicy /* = k::locations::GRAPHEME_CLUSTER */) {
-	return internalViewToModel(viewport, pointInView, true, snapPolicy);
 }
