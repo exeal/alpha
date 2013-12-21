@@ -307,43 +307,82 @@ namespace ascension {
 	}
 }
 
-#ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
-BOOST_GEOMETRY_REGISTER_POINT_2D(
-	ascension::graphics::geometry::BasicPoint<ascension::graphics::geometry::Scalar>,
-	ascension::graphics::geometry::Scalar, boost::geometry::cs::cartesian, x_, y_)
-BOOST_GEOMETRY_REGISTER_POINT_2D(
-	ascension::graphics::geometry::BasicPoint<std::int16_t>,
-	std::int16_t, boost::geometry::cs::cartesian, x_, y_)
-BOOST_GEOMETRY_REGISTER_POINT_2D(
-	ascension::graphics::geometry::BasicPoint<std::uint16_t>,
-	std::uint16_t, boost::geometry::cs::cartesian, x_, y_)
-BOOST_GEOMETRY_REGISTER_POINT_2D(
-	ascension::graphics::geometry::BasicPoint<std::uint32_t>,
-	std::uint32_t, boost::geometry::cs::cartesian, x_, y_)
-BOOST_GEOMETRY_REGISTER_BOX(
-	ascension::graphics::geometry::BasicRectangle<ascension::graphics::geometry::Scalar>,
-	ascension::graphics::geometry::BasicPoint<ascension::graphics::geometry::Scalar>, minimumCorner_, maximumCorner_)
-BOOST_GEOMETRY_REGISTER_BOX(
-	ascension::graphics::geometry::BasicRectangle<std::int16_t>,
-	ascension::graphics::geometry::BasicPoint<std::int16_t>, minimumCorner_, maximumCorner_)
-BOOST_GEOMETRY_REGISTER_BOX(
-	ascension::graphics::geometry::BasicRectangle<std::uint16_t>,
-	ascension::graphics::geometry::BasicPoint<std::uint16_t>, minimumCorner_, maximumCorner_)
-BOOST_GEOMETRY_REGISTER_BOX(
-	ascension::graphics::geometry::BasicRectangle<std::uint32_t>,
-	ascension::graphics::geometry::BasicPoint<std::uint32_t>, minimumCorner_, maximumCorner_)
-//BOOST_GEOMETRY_REGISTER_BOX_TEMPLATED(
-//	ascension::graphics::geometry::BasicRectangle, minimumCorner_, maximumCorner_)
-#endif	// !ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
-
 namespace boost {
 	namespace geometry {
 		namespace traits {
+			template<typename Coordinate>
+			struct tag<ascension::graphics::geometry::BasicPoint<Coordinate>> {
+				typedef point_tag type;
+			};
+			template<typename Coordinate>
+			struct dimension<ascension::graphics::geometry::BasicPoint<Coordinate>> : boost::mpl::int_<2> {
+			};
+			template<typename Coordinate>
+			struct coordinate_type<ascension::graphics::geometry::BasicPoint<Coordinate>> {
+				typedef Coordinate type;
+			};
+			template<typename Coordinate>
+			struct coordinate_system<ascension::graphics::geometry::BasicPoint<Coordinate>> {
+				typedef cs::cartesian type;
+			};
+			template<typename Coordinate>
+			struct access<ascension::graphics::geometry::BasicPoint<Coordinate>, 0> {
+				static Coordinate get(const ascension::graphics::geometry::BasicPoint<Coordinate>& p) {
+					return p.x_;
+				}
+				static void set(ascension::graphics::geometry::BasicPoint<Coordinate>& p, const Coordinate& value) {
+					p.x_ = value;
+				}
+			};
+			template<typename Coordinate>
+			struct access<ascension::graphics::geometry::BasicPoint<Coordinate>, 1> {
+				static Coordinate get(const ascension::graphics::geometry::BasicPoint<Coordinate>& p) {
+					return p.y_;
+				}
+				static void set(ascension::graphics::geometry::BasicPoint<Coordinate>& p, const Coordinate& value) {
+					p.y_ = value;
+				}
+			};
+			
+			template<typename Coordinate>
+			struct tag<ascension::graphics::geometry::BasicRectangle<Coordinate>> {
+				typedef box_tag type;
+			};
+			template<typename Coordinate>
+			struct point_type<ascension::graphics::geometry::BasicRectangle<Coordinate>> {
+				typedef ascension::graphics::geometry::BasicPoint<Coordinate> type;
+			};
+			template <typename Coordinate, std::size_t dimension>
+			struct indexed_access<ascension::graphics::geometry::BasicRectangle<Coordinate>, min_corner, dimension> {
+			private:
+				typedef typename coordinate_type<ascension::graphics::geometry::BasicPoint<Coordinate>>::type CoordinateType;
+			public:
+				static CoordinateType get(const ascension::graphics::geometry::BasicRectangle<Coordinate>& b) {
+					return geometry::get<dimension>(b.minimumCorner_);
+				}
+				static void set(ascension::graphics::geometry::BasicRectangle<Coordinate>& b, const CoordinateType& value) {
+					geometry::set<dimension>(b.minimumCorner_, value);
+				}
+			};
+			template <typename Coordinate, std::size_t dimension>
+			struct indexed_access<ascension::graphics::geometry::BasicRectangle<Coordinate>, max_corner, dimension> {
+			private:
+				typedef typename coordinate_type<ascension::graphics::geometry::BasicPoint<Coordinate>>::type CoordinateType;
+			public:
+				static CoordinateType get(const ascension::graphics::geometry::BasicRectangle<Coordinate>& b) {
+					return geometry::get<dimension>(b.maximumCorner_);
+				}
+				static void set(ascension::graphics::geometry::BasicRectangle<Coordinate>& b, const CoordinateType& value) {
+					geometry::set<dimension>(b.maximumCorner_, value);
+				}
+			};
+
 			template<typename Coordinate>
 			struct tag<ascension::graphics::geometry::BasicDimension<Coordinate>> {
 				typedef ascension::graphics::geometry::DimensionTag type;
 			};
 		}
+
 		namespace core_dispatch {
 			template<typename Coordinate>
 			struct coordinate_type<ascension::graphics::geometry::DimensionTag, ascension::graphics::geometry::BasicDimension<Coordinate>> {
