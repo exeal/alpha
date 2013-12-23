@@ -275,7 +275,9 @@ namespace ascension {
 			void initialize(const TextViewer* other);
 			void initializeNativeObjects(const TextViewer* other);
 			void repaintRuler();
-			void updateScrollBars(const presentation::AbstractTwoAxes<bool>& dimensions);
+			void updateScrollBars(
+				const presentation::AbstractTwoAxes<bool>& positions,
+				const presentation::AbstractTwoAxes<bool>& properties);
 
 			// protected interfaces
 		protected:
@@ -471,7 +473,7 @@ namespace ascension {
 			class FreezeRegister {
 			public:
 				FreezeRegister() BOOST_NOEXCEPT;
-				void freeze() BOOST_NOEXCEPT {++count_;}
+				void freeze();
 				void addLinesToRedraw(const boost::integer_range<Index>& lines);
 				bool isFrozen() const BOOST_NOEXCEPT {return count_ != 0;}
 				const boost::integer_range<Index>& linesToRedraw() const BOOST_NOEXCEPT {return linesToRedraw_;}

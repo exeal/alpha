@@ -35,6 +35,11 @@ bool DIAGNOSE_INHERENT_DRAWING = false;	// 余計な描画を行っていない�
 #endif // _DEBUG
 
 namespace {
+	///
+	template<typename Coordinate> uint32_t scrollPositionInUserUnit(TextViewport::ScrollOffset offset);
+	template<> inline uint32_t scrollPositionInUserUnit<ReadingDirection>(TextViewport::ScrollOffset offset) {
+		return static_cast<uint32_t>(offset);
+	}
 	/// @internal Maps the given point in viewer-local coordinates into a point in text-area coordinates.
 	inline Point mapLocalToTextArea(const TextViewer& viewer, const Point& p) {
 		const graphics::Rectangle textArea(viewer.textAreaAllocationRectangle());
@@ -243,7 +248,7 @@ void TextViewer::caretMoved(const Caret& self, const k::Region& oldRegion) {
 
 /// @see ComputedWritingModeListener#computedBlockFlowDirectionChanged
 void TextViewer::computedBlockFlowDirectionChanged(BlockFlowDirection used) {
-	updateScrollBars(AbstractTwoAxes<bool>(true, true));
+	updateScrollBars(AbstractTwoAxes<bool>(true, true), AbstractTwoAxes<bool>(true, true));
 }
 
 /// @see DefaultFontListener#defaultFontChanged
@@ -292,8 +297,6 @@ void TextViewer::documentChanged(const k::Document&, const k::DocumentChange& ch
 //	invalidateLines(region.beginning().line, !multiLine ? region.end().line : INVALID_INDEX);
 	if(!isFrozen())
 		rulerPainter_->update();
-	if(scrolls_.changed)
-		updateScrollBars();
 }
 
 /// @see kernel#DocumentRollbackListener#documentUndoSequenceStarted
@@ -404,43 +407,51 @@ bool TextViewer::getPointedLinkText(Region& region, AutoBuffer<Char>& text) cons
 #endif
 
 namespace {
-	inline widgetapi::NativeScrollPosition reverseScrollPosition(
-			const TextViewer& textViewer, widgetapi::NativeScrollPosition position) {
+	template<typename Coordinate>
+	inline widgetapi::NativeScrollPosition reverseScrollPosition(const TextViewer& textViewer, widgetapi::NativeScrollPosition position) {
 		const TextRenderer& textRenderer = textViewer.textRenderer();
-		return static_cast<widgetapi::NativeScrollPosition>(textRenderer.layouts().maximumMeasure()
-			/ widgetapi::createRenderingContext(textViewer)->fontMetrics(textRenderer.defaultFont())->averageCharacterWidth())
-			- position
-			- static_cast<widgetapi::NativeScrollPosition>(textRenderer.viewport()->numberOfVisibleCharactersInLine());
+//		return static_cast<widgetapi::NativeScrollPosition>(textRenderer.layouts().maximumMeasure()
+//			/ widgetapi::createRenderingContext(textViewer)->fontMetrics(textRenderer.defaultFont())->averageCharacterWidth())
+//			- position
+//			- static_cast<widgetapi::NativeScrollPosition>(textRenderer.viewport()->numberOfVisibleCharactersInLine());
+		const BlockFlowDirection blockFlowDirection = textRenderer.computedBlockFlowDirection();
+		const TextViewport::SignedScrollOffset pageSizeInIpd = isHorizontal(blockFlowDirection) ? pageSize<0>(*textRenderer.viewport()) : pageSize<1>(*textRenderer.viewport());
+		return *scrollableRange<Coordinate>(viewport).end() - position - pageSize<Coordinate>(viewport);
 	}
-	boost::geometry::model::d2::point_xy<widgetapi::NativeScrollPosition>&& physicalScrollPosition(const TextViewer& textViewer) {
+	PhysicalTwoAxes<widgetapi::NativeScrollPosition>&& physicalScrollPosition(const TextViewer& textViewer) {
 		const TextRenderer& textRenderer = textViewer.textRenderer();
 		const shared_ptr<const TextViewport> viewport(textRenderer.viewport());
 		const WritingMode writingMode(textViewer.presentation().computeWritingMode(&textRenderer));
-		const Index bpd = viewport->firstVisibleLineInVisualNumber();
-		const Index ipd = viewport->inlineProgressionOffset();
-		widgetapi::NativeScrollPosition x, y;
+		const AbstractTwoAxes<TextViewport::ScrollOffset> scrollPositions(viewport->scrollPositions());
+		PhysicalTwoAxes<widgetapi::NativeScrollPosition> result;
 		switch(writingMode.blockFlowDirection) {
 			case HORIZONTAL_TB:
-				x = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ?
-					ipd : reverseScrollPosition(textViewer, static_cast<widgetapi::NativeScrollPosition>(ipd));
-				y = bpd;
+				result.x() = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ?
+					scrollPositions.ipd() : reverseScrollPosition<ReadingDirection>(textViewer, static_cast<widgetapi::NativeScrollPosition>(scrollPositions.ipd()));
+				result.y() = scrollPositions.bpd();
 				break;
 			case VERTICAL_RL:
-				x = reverseScrollPosition(textViewer, bpd);
-				y = ipd;
+				result.x() = reverseScrollPosition<BlockFlowDirection>(textViewer, scrollPositions.bpd());
+				result.y() = scrollPositions.ipd();
 				break;
 			case VERTICAL_LR:
-				x = bpd;
-				y = ipd;
+				result.x() = scrollPositions.bpd();
+				result.y() = scrollPositions.ipd();
 				break;
 			default:
 				ASCENSION_ASSERT_NOT_REACHED();
 		}
-		return boost::geometry::make<boost::geometry::model::d2::point_xy<widgetapi::NativeScrollPosition>>(x /* / xScrollRate */, y /* / yScrollRate */);
+//		result.x() /= xScrollRate;
+//		result.y() /= yScrollRate;
+		return std::move(result);
 	}
 }
 
 namespace {
+	template<typename AbstractCoordinate>
+	widgetapi::NativeScrollPosition calculateScrollStepSize(const TextViewer& viewer);
+	template<size_t physicalCoordinate>
+	widgetapi::NativeScrollPosition calculateScrollStepSize(const TextViewer& viewer);
 	void configureScrollBar(TextViewer& viewer, size_t coordinate, boost::optional<widgetapi::NativeScrollPosition> position,
 			boost::optional<const boost::integer_range<widgetapi::NativeScrollPosition>> range, boost::optional<widgetapi::NativeScrollPosition> pageSize) {
 		assert(coordinate <= 1);
@@ -450,7 +461,7 @@ namespace {
 			adjustment->set_lower(*range->begin());
 			adjustment->set_upper(*range->end());
 		}
-		adjustment->set_step_increment(1);
+		adjustment->set_step_increment((coordinate == 0) ? calculateScrollStepSize<0>(viewer) : calculateScrollStepSize<1>(viewer));
 		if(pageSize != boost::none) {
 			adjustment->set_page_increment(*pageSize);
 			adjustment->set_page_size(*pageSize);
@@ -461,7 +472,7 @@ namespace {
 		QScrollBar* const scrollBar = (coordinate == 0) ? viewer.horizontalScrollBar() : viewer.verticalScrollBar();
 		if(range != boost::none)
 			scrollBar->setRange(range->beginning(), range->end());
-		scrollBar->setSingleStep(1);
+		scrollBar->setSingleStep((coordinate == 0) ? calculateScrollStepSize<0>(viewer) : calculateScrollStepSize<1>(viewer));
 		if(pageSize != boost::none)
 			scrollBar->setPageStep(*pageSize);
 		if(position != boost::none)
@@ -491,9 +502,9 @@ namespace {
 void TextViewer::focusGained() {
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 	// restore the scroll positions
-	const boost::geometry::model::d2::point_xy<widgetapi::NativeScrollPosition> scrollPosition(physicalScrollPosition(*this));
-	configureScrollBar(*this, 0, boost::geometry::get<0>(scrollPosition), boost::none, boost::none);
-	configureScrollBar(*this, 1, boost::geometry::get<1>(scrollPosition), boost::none, boost::none);
+	const auto scrollPositions(physicalScrollPosition(*this));
+	configureScrollBar(*this, 0, boost::geometry::get<0>(scrollPositions), boost::none, boost::none);
+	configureScrollBar(*this, 1, boost::geometry::get<1>(scrollPositions), boost::none, boost::none);
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 
 	// hmm...
@@ -552,7 +563,7 @@ void TextViewer::initialize(const TextViewer* other) {
 	document().addListener(*this);
 	document().addRollbackListener(*this);
 
-//	updateScrollBars(AbstractTwoAxes<bool>(true, true));
+//	updateScrollBars(AbstractTwoAxes<bool>(true, true), AbstractTwoAxes<bool>(true, true));
 	setMouseInputStrategy(shared_ptr<MouseInputStrategy>());
 
 #ifdef ASCENSION_TEST_TEXT_STYLES
@@ -765,9 +776,9 @@ Scalar TextViewer::inlineProgressionOffsetInViewport() const {
 	Scalar offset = 0;
 
 	// scroll position
-	const boost::geometry::model::d2::point_xy<widgetapi::NativeScrollPosition> scrollPosition(physicalScrollPosition(*this));
-	offset -= inlineProgressionScrollOffsetInUserUnits(*textRenderer().viewport(),
-		horizontal ? boost::geometry::get<0>(scrollPosition) : boost::geometry::get<1>(scrollPosition));
+	const PhysicalTwoAxes<widgetapi::NativeScrollPosition> scrollPosition(physicalScrollPosition(*this));
+	offset -= /*inlineProgressionScrollOffsetInUserUnits(*textRenderer().viewport(),*/
+		horizontal ? boost::geometry::get<0>(scrollPosition) : boost::geometry::get<1>(scrollPosition)/*)*/;
 
 	// ruler width
 	if((horizontal && rulerPainter_->alignment() == PhysicalDirection::LEFT)
@@ -1204,7 +1215,7 @@ void TextViewer::redrawLines(const boost::integer_range<Index>& lines) {
 		return;
 	}
 
-	if(orderedLines.back() < textRenderer().viewport()->firstVisibleLineInLogicalNumber())
+	if(orderedLines.back() < textRenderer().viewport()->firstVisibleLine().line)
 		return;
 
 #ifdef _DEBUG
@@ -1217,14 +1228,14 @@ void TextViewer::redrawLines(const boost::integer_range<Index>& lines) {
 
 	const WritingMode writingMode(presentation().computeWritingMode(&textRenderer()));
 	array<Scalar, 2> beforeAndAfter;	// in viewport (distances from before-edge of the viewport)
-	BaselineIterator baseline(*textRenderer().viewport(), *lines.begin(), false);
+	BaselineIterator baseline(*textRenderer().viewport(), VisualLine(*lines.begin(), 0));
 	get<0>(beforeAndAfter) = *baseline;
 	if(get<0>(beforeAndAfter) != numeric_limits<Scalar>::min() && get<0>(beforeAndAfter) != numeric_limits<Scalar>::max())
-		get<0>(beforeAndAfter) -= *textRenderer().layouts().at(baseline.line()).lineMetrics(0).extent().begin();
-	baseline = BaselineIterator(*textRenderer().viewport(), *lines.end(), false);
+		get<0>(beforeAndAfter) -= *textRenderer().layouts().at(baseline.line()->line)->lineMetrics(0).extent().begin();
+	baseline = BaselineIterator(*textRenderer().viewport(), VisualLine(*lines.end()));
 	get<1>(beforeAndAfter) = *baseline;
 	if(get<1>(beforeAndAfter) != numeric_limits<Scalar>::min() && get<1>(beforeAndAfter) != numeric_limits<Scalar>::max())
-		get<1>(beforeAndAfter) += *textRenderer().layouts().at(baseline.line()).lineMetrics(0).extent().end();
+		get<1>(beforeAndAfter) += *textRenderer().layouts().at(baseline.line()->line)->lineMetrics(0).extent().end();
 	assert(get<0>(beforeAndAfter) <= get<1>(beforeAndAfter));
 
 	const graphics::Rectangle viewerBounds(widgetapi::bounds(*this, false));
@@ -1351,7 +1362,7 @@ void TextViewer::setConfiguration(const Configuration* general, shared_ptr<const
 //			scrolls_.horizontal.position = scrolls_.horizontal.maximum
 //				- scrolls_.horizontal.pageSize - scrolls_.horizontal.position + 1;
 //		scrolls_.resetBars(*this, 'a', false);
-//		updateScrollBars(AbstractTwoAxes<bool>(true, true));
+//		updateScrollBars(AbstractTwoAxes<bool>(true, true), AbstractTwoAxes<bool>(true, true));
 
 		if(!isFrozen() && (widgetapi::hasFocus(*this) /*|| handle() == Viewer::completionWindow_->getSafeHwnd()*/)) {
 			caret().resetVisualization();
@@ -1524,40 +1535,81 @@ namespace {
 
 /**
  * @internal Updates the scroll information.
- * @param dimensions Describes which dimension to update
+ * @param positions Describes which position(s) to update
+ * @param properties Describes which property(ies) to update
  */
-void TextViewer::updateScrollBars(const AbstractTwoAxes<bool>& dimensions) {
+void TextViewer::updateScrollBars(const AbstractTwoAxes<bool>& positions, const AbstractTwoAxes<bool>& properties) {
 //	checkInitialization();
 	assert(!isFrozen());
-	if(renderer_.get() == nullptr || (!dimensions.ipd() && !dimensions.bpd()))
+	const auto needsUpdate = [](bool v) {return v;};
+	if(renderer_.get() == nullptr || (none_of(begin(positions), end(positions), needsUpdate) && none_of(begin(properties), end(properties), needsUpdate)))
 		return;
 	const shared_ptr<TextViewport> viewport(textRenderer().viewport());
 	if(viewport.get() == nullptr)
 		return;
 
-	const LineLayoutVector& layouts = textRenderer().layouts();
-	typedef boost::geometry::model::d2::point_xy<widgetapi::NativeScrollPosition> ScrollPositions;
-	const ScrollPositions positions(physicalScrollPosition(*this));
-	ScrollPositions endPositions(
-		static_cast<widgetapi::NativeScrollPosition>(layouts.maximumMeasure()),
-		static_cast<widgetapi::NativeScrollPosition>(layouts.numberOfVisualLines()));
-	ScrollPositions pageSteps(
-		static_cast<widgetapi::NativeScrollPosition>(viewport->numberOfVisibleCharactersInLine()),
-		static_cast<widgetapi::NativeScrollPosition>(viewport->numberOfVisibleLines()));
-	if(isVertical(textRenderer().computedBlockFlowDirection())) {
-		geometry::transpose(endPositions);
-		geometry::transpose(pageSteps);
+#if 1
+	const WritingMode writingMode(presentation().computeWritingMode(&textRenderer()));
+	assert(!isFrozen());
+
+	// update the scroll bar in inline-progression-dimension
+	if(positions.ipd() || properties.ipd()) {
+		const auto viewportRange(scrollableRange<ReadingDirection>(*viewport));
+		boost::optional<widgetapi::NativeScrollPosition> position, size;
+		boost::optional<const boost::integer_range<widgetapi::NativeScrollPosition>> range;
+		if(positions.ipd())
+			// TODO: Use reverseScrollPosition().
+			position = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ?
+				viewport->scrollPositions().ipd() : (*viewportRange.end() - viewport->scrollPositions().ipd() - 1);
+		if(properties.ipd()) {
+			range = viewportRange;
+			size = pageSize<ReadingDirection>(*viewport);
+		}
+		configureScrollBar(*this, isHorizontal(writingMode.blockFlowDirection) ? 0 : 1, position, range, size);
 	}
 
-	// update the scroll bar in inline-progressions-dimension
-	if(dimensions.ipd()) {
+	// update the scroll bar in block-progression-dimension
+	if(positions.bpd() || properties.bpd()) {
+		const auto viewportRange(scrollableRange<BlockFlowDirection>(*viewport));
+		boost::optional<widgetapi::NativeScrollPosition> position, size;
+		boost::optional<const boost::integer_range<widgetapi::NativeScrollPosition>> range;
+		if(positions.bpd())
+			// TODO: Use reverseScrollPosition().
+			position = (writingMode.blockFlowDirection != VERTICAL_RL) ?
+				viewport->scrollPositions().bpd() : (*viewportRange.end() - viewport->scrollPositions().bpd() - 1);
+		if(properties.bpd()) {
+			range = viewportRange;
+			size = pageSize<BlockFlowDirection>(*viewport);
+		}
+		configureScrollBar(*this, isHorizontal(writingMode.blockFlowDirection) ? 1 : 0, position, range, size);
+	}
 
+#else
+	const LineLayoutVector& layouts = textRenderer().layouts();
+	typedef PhysicalTwoAxes<widgetapi::NativeScrollPosition> ScrollPositions;
+	const ScrollPositions positions(physicalScrollPosition(*this));
+	ScrollPositions endPositions(
+#if 0
+		_x = static_cast<widgetapi::NativeScrollPosition>(layouts.maximumMeasure()),
+		_y = static_cast<widgetapi::NativeScrollPosition>(layouts.numberOfVisualLines()));
+#else
+		_x = static_cast<widgetapi::NativeScrollPosition>(*scrollableRange<0>(*viewport).end()),
+		_y = static_cast<widgetapi::NativeScrollPosition>(*scrollableRange<1>(*viewport).end()));
+#endif
+	ScrollPositions pageSizes(
+		_x = static_cast<widgetapi::NativeScrollPosition>(pageSize<0>(*viewport)),
+		_y = static_cast<widgetapi::NativeScrollPosition>(pageSize<1>(*viewport)));
+	if(isVertical(writingMode.blockFlowDirection)) {
+#if 0
+		geometry::transpose(endPositions);
+#endif
+		geometry::transpose(pageSizes);
 	}
 
 	// about horizontal scroll bar
-	bool wasNeededScrollbar = calculateMaximumScrollPosition(geometry::x(endPositions), geometry::x(pageSteps)) > 0;
+	bool wasNeededScrollbar = calculateMaximumScrollPosition(geometry::x(endPositions), geometry::x(pageSizes)) > 0;
 	// scroll to leftmost/rightmost before the scroll bar vanishes
-	widgetapi::NativeScrollPosition minimum = calculateMaximumScrollPosition(geometry::x(endPositions), geometry::x(pageSteps));
+	widgetapi::NativeScrollPosition minimum = calculateMaximumScrollPosition(geometry::x(endPositions), geometry::x(pageSizes));
 	if(wasNeededScrollbar && minimum <= 0) {
 //		scrolls_.horizontal.position = 0;
 		if(!isFrozen()) {
@@ -1566,15 +1618,15 @@ void TextViewer::updateScrollBars(const AbstractTwoAxes<bool>& dimensions) {
 		}
 	} else if(geometry::x(positions) > minimum)
 		viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(minimum, boost::none));
-	assert(calculateMaximumScrollPosition(geometry::x(endPositions), geometry::x(pageSteps)) > 0 || geometry::x(positions) == 0);
+	assert(calculateMaximumScrollPosition(geometry::x(endPositions), geometry::x(pageSizes)) > 0 || geometry::x(positions) == 0);
 	if(!isFrozen())
 		configureScrollBar(*this, 0, geometry::x(positions),
 			boost::irange<widgetapi::NativeScrollPosition>(0, geometry::x(endPositions)),
-			boost::make_optional<widgetapi::NativeScrollPosition>(geometry::x(pageSteps)));
+			boost::make_optional<widgetapi::NativeScrollPosition>(geometry::x(pageSizes)));
 
 	// about vertical scroll bar
-	wasNeededScrollbar = calculateMaximumScrollPosition(geometry::y(endPositions), geometry::y(pageSteps)) > 0;
-	minimum = calculateMaximumScrollPosition(geometry::y(endPositions), geometry::y(pageSteps));
+	wasNeededScrollbar = calculateMaximumScrollPosition(geometry::y(endPositions), geometry::y(pageSizes)) > 0;
+	minimum = calculateMaximumScrollPosition(geometry::y(endPositions), geometry::y(pageSizes));
 	// validate scroll position
 	if(minimum <= 0) {
 //		scrolls_.vertical.position = 0;
@@ -1589,15 +1641,16 @@ void TextViewer::updateScrollBars(const AbstractTwoAxes<bool>& dimensions) {
 	if(!isFrozen())
 		configureScrollBar(*this, 1, geometry::y(positions),
 			boost::irange<widgetapi::NativeScrollPosition>(0, geometry::y(endPositions)),
-			static_cast<widgetapi::NativeScrollPosition>(geometry::y(pageSteps)));
+			static_cast<widgetapi::NativeScrollPosition>(geometry::y(pageSizes)));
 
 	scrolls_.changed = isFrozen();
+#endif
 }
 
 /// @see TextViewport#viewportBoundsInViewChanged
 void TextViewer::viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT {
 //	textRenderer().setTextWrapping(textRenderer().textWrapping(), widgetapi::createRenderingContext(*this).get());
-	updateScrollBars(AbstractTwoAxes<bool>(true, true));
+	updateScrollBars(AbstractTwoAxes<bool>(true, true), AbstractTwoAxes<bool>(true, true));
 }
 
 namespace {
@@ -1639,87 +1692,86 @@ namespace {
 
 /// @see TextViewportListener#viewportScrollPositionChanged
 void TextViewer::viewportScrollPositionChanged(
-		const AbstractTwoAxes<TextViewport::SignedScrollOffset>& offsets,
-		const VisualLine& oldLine, TextViewport::ScrollOffset oldInlineProgressionOffset) {
-	if(isFrozen()) {
-		scrolls_.changed = true;
-		return;
-	}
+		const AbstractTwoAxes<TextViewport::ScrollOffset>& positionsBeforeScroll,
+		const VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT {
+	assert(!isFrozen());
 
 	// 1. update the scroll positions
-	const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
-	// TODO: this code ignores orientation in vertical layout.
-	switch(textRenderer().computedBlockFlowDirection()) {
-		case HORIZONTAL_TB:
-			configureScrollBar(*this, 0, viewport->inlineProgressionOffset(), boost::none, boost::none);
-			configureScrollBar(*this, 1, viewport->firstVisibleLineInVisualNumber(), boost::none, boost::none);
-			break;
-		case VERTICAL_RL: {
-			boost::integer_range<widgetapi::NativeScrollPosition> range(0, 0);
-			widgetapi::NativeScrollPosition pageStep;
-			scrollBarParameters(*this, 0, nullptr, &range, &pageStep);
-			configureScrollBar(*this, 0, *range.end()
-				- pageStep - viewport->firstVisibleLineInVisualNumber(), boost::none, boost::none);
-			configureScrollBar(*this, 1, viewport->inlineProgressionOffset(), boost::none, boost::none);
-			break;
-		}
-		case VERTICAL_LR:
-			configureScrollBar(*this, 0, viewport->firstVisibleLineInVisualNumber(), boost::none, boost::none);
-			configureScrollBar(*this, 1, viewport->inlineProgressionOffset(), boost::none, boost::none);
-			break;
-		default:
-			ASCENSION_ASSERT_NOT_REACHED();
-	}
+	updateScrollBars(AbstractTwoAxes<bool>(true, true), AbstractTwoAxes<bool>(false, false));
 //	closeCompletionProposalsPopup(*this);
 	hideToolTip();
 
 	// 2. calculate pixels to scroll
-	const BlockFlowDirection writingMode = textRenderer().computedBlockFlowDirection();
-	geometry::BasicDimension<int16_t> scrollOffsetsInPixels;
-	geometry::dx(scrollOffsetsInPixels) = static_cast<int16_t>(inlineProgressionScrollOffsetInUserUnits(*viewport, offsets.ipd()));
-	geometry::dy(scrollOffsetsInPixels) = static_cast<int16_t>(textRenderer().baselineDistance(
-		boost::irange(oldLine, VisualLine(viewport->firstVisibleLineInLogicalNumber(), viewport->firstVisibleSublineInLogicalLine()))));
-	geometry::dy(scrollOffsetsInPixels) -= static_cast<int16_t>(
-		*textRenderer().layouts().at(oldLine.line).lineMetrics(oldLine.subline).extent().begin());
-	geometry::dy(scrollOffsetsInPixels) += static_cast<int16_t>(
-		*textRenderer().layouts().at(viewport->firstVisibleLineInLogicalNumber()).lineMetrics(viewport->firstVisibleSublineInLogicalLine()).extent().begin());
-	if(isVertical(writingMode)) {
-		geometry::transpose(scrollOffsetsInPixels);
-		if(writingMode == VERTICAL_RL)
-			geometry::dx(scrollOffsetsInPixels) = -geometry::dx(scrollOffsetsInPixels);
+	const shared_ptr<const TextViewport> viewport(textRenderer().viewport());
+	AbstractTwoAxes<int32_t> abstractScrollOffsetInPixels;
+	// 2-1. block dimension
+	{
+		VisualLine p(viewport->firstVisibleLine());
+		const TextLayout* layout = textRenderer().layouts().at(p.line);
+		abstractScrollOffsetInPixels.bpd() = 0;
+		while(layout != nullptr && p < firstVisibleLineBeforeScroll) {
+			abstractScrollOffsetInPixels.bpd() -= static_cast<uint32_t>(layout->lineMetrics(p.subline).height());
+			if(p.subline < layout->numberOfLines() - 1)
+				++p.subline;
+			else if(p.line < document().numberOfLines() - 1) {
+				layout = textRenderer().layouts().at(++p.line);
+				p.subline = 0;
+			} else
+				break;
+		}
+		while(layout != nullptr && p > firstVisibleLineBeforeScroll) {
+			if(p.subline > 0)
+				--p.subline;
+			else if(p.line > 0) {
+				layout = textRenderer().layouts().at(--p.line);
+				p.subline = layout->numberOfLines() - 1;
+			} else
+				break;
+			abstractScrollOffsetInPixels.bpd() += static_cast<uint32_t>(layout->lineMetrics(p.subline).height());
+		}
+		if(p != firstVisibleLineBeforeScroll)
+			layout = nullptr;
+		if(layout == nullptr)
+			abstractScrollOffsetInPixels.bpd() = numeric_limits<int32_t>::max();
 	}
+	// 2-2. inline dimension
+	abstractScrollOffsetInPixels.ipd() = (abstractScrollOffsetInPixels.bpd() != numeric_limits<int32_t>::max()) ?
+		scrollPositionInUserUnit<ReadingDirection>(positionsBeforeScroll.ipd()) - scrollPositionInUserUnit<ReadingDirection>(viewport->scrollPositions().ipd())
+		: numeric_limits<int32_t>::max();
+	// 2-3. calculate physical offsets
+	const auto scrollOffsetsInPixels(mapAbstractToPhysical(presentation().computeWritingMode(&textRenderer()), abstractScrollOffsetInPixels));
 
 	// 3. scroll the graphics device
 	const graphics::Rectangle& boundsToScroll = viewport->boundsInView();
-	if(abs(offsets.bpd()) >= static_cast<SignedIndex>(viewport->numberOfVisibleLines())
-			|| abs(offsets.ipd()) >= static_cast<SignedIndex>(viewport->numberOfVisibleCharactersInLine()))
+	if(abs(geometry::x(scrollOffsetsInPixels)) >= geometry::dx(boundsToScroll)
+			|| abs(geometry::y(scrollOffsetsInPixels)) >= geometry::dy(boundsToScroll))
 		widgetapi::scheduleRedraw(*this, boundsToScroll, false);	// repaint all if the amount of the scroll is over a page
 	else {
 		// scroll image by BLIT
 		// TODO: direct call of Win32 API.
 		::ScrollWindowEx(handle().get(),
-			-geometry::dx(scrollOffsetsInPixels), -geometry::dy(scrollOffsetsInPixels), nullptr, &static_cast<RECT>(boundsToScroll), nullptr, nullptr, SW_INVALIDATE);
+			geometry::x(scrollOffsetsInPixels), geometry::y(scrollOffsetsInPixels), nullptr, &static_cast<RECT>(boundsToScroll), nullptr, nullptr, SW_INVALIDATE);
 		// invalidate bounds newly entered into the viewport
-		if(geometry::dx(scrollOffsetsInPixels) > 0)
+		if(geometry::x(scrollOffsetsInPixels) > 0)
 			widgetapi::scheduleRedraw(*this, graphics::Rectangle(
 				geometry::topLeft(boundsToScroll),
-				Dimension(geometry::_dx = geometry::dx(scrollOffsetsInPixels), geometry::_dy = geometry::dy(boundsToScroll))), false);
-		else if(geometry::dx(scrollOffsetsInPixels) < 0)
+				Dimension(geometry::_dx = geometry::x(scrollOffsetsInPixels), geometry::_dy = geometry::dy(boundsToScroll))), false);
+		else if(geometry::x(scrollOffsetsInPixels) < 0)
 			widgetapi::scheduleRedraw(*this, graphics::Rectangle(
 				geometry::topRight(boundsToScroll),
-				Dimension(geometry::_dx = geometry::dx(scrollOffsetsInPixels), geometry::_dy = geometry::dy(boundsToScroll))), false);
-		if(geometry::dy(scrollOffsetsInPixels) > 0)
+				Dimension(geometry::_dx = geometry::x(scrollOffsetsInPixels), geometry::_dy = geometry::dy(boundsToScroll))), false);
+		if(geometry::y(scrollOffsetsInPixels) > 0)
 			widgetapi::scheduleRedraw(*this, graphics::Rectangle(
 				geometry::topLeft(boundsToScroll),
-				Dimension(geometry::_dx = geometry::dx(boundsToScroll), geometry::_dy = geometry::dy(scrollOffsetsInPixels))), false);
-		else if(geometry::dy(scrollOffsetsInPixels) < 0)
+				Dimension(geometry::_dx = geometry::dx(boundsToScroll), geometry::_dy = geometry::y(scrollOffsetsInPixels))), false);
+		else if(geometry::y(scrollOffsetsInPixels) < 0)
 			widgetapi::scheduleRedraw(*this, graphics::Rectangle(
 				geometry::bottomLeft(boundsToScroll),
-				Dimension(geometry::_dx = geometry::dx(boundsToScroll), geometry::_dy = geometry::dy(scrollOffsetsInPixels))), false);
+				Dimension(geometry::_dx = geometry::dx(boundsToScroll), geometry::_dy = geometry::y(scrollOffsetsInPixels))), false);
 	}
 
 	// 4. scroll the ruler
-	rulerPainter_->scroll(oldLine);
+	rulerPainter_->scroll(firstVisibleLineBeforeScroll);
 
 	// 5. repaint
 	widgetapi::redrawScheduledRegion(*this);
@@ -1727,6 +1779,7 @@ void TextViewer::viewportScrollPositionChanged(
 
 /// @see ViewportListener#viewportScrollPropertiesChanged
 void TextViewer::viewportScrollPropertiesChanged(const AbstractTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT {
+	updateScrollBars(AbstractTwoAxes<bool>(true, true), AbstractTwoAxes<bool>(true, true));
 }
 
 /// @see VisualLinesListener#visualLinesDeleted
