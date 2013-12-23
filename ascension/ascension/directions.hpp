@@ -631,4 +631,44 @@ namespace std {
 	}
 }
 
+namespace boost {
+	namespace geometry {
+		namespace traits {
+			template<typename T>
+			struct tag<ascension::graphics::PhysicalTwoAxes<T>> {
+				typedef point_tag type;
+			};
+			template<typename T>
+			struct dimension<ascension::graphics::PhysicalTwoAxes<T>> : boost::mpl::int_<2> {
+			};
+			template<typename T>
+			struct coordinate_type<ascension::graphics::PhysicalTwoAxes<T>> {
+				typedef T type;
+			};
+			template<typename T>
+			struct coordinate_system<ascension::graphics::PhysicalTwoAxes<T>> {
+				typedef cs::cartesian type;
+			};
+			template<typename T>
+			struct access<ascension::graphics::PhysicalTwoAxes<T>, 0> {
+				static T get(const ascension::graphics::PhysicalTwoAxes<T>& p) {
+					return p.x();
+				}
+				static void set(ascension::graphics::PhysicalTwoAxes<T>& p, const T& value) {
+					p.x() = value;
+				}
+			};
+			template<typename T>
+			struct access<ascension::graphics::PhysicalTwoAxes<T>, 1> {
+				static T get(const ascension::graphics::PhysicalTwoAxes<T>& p) {
+					return p.y();
+				}
+				static void set(ascension::graphics::PhysicalTwoAxes<T>& p, const T& value) {
+					p.y() = value;
+				}
+			};
+		}
+	}
+}
+
 #endif // !ASCENSION_DIRECTIONS_HPP
