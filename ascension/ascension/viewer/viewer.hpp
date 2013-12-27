@@ -428,6 +428,9 @@ namespace ascension {
 			// data members
 		private:
 			// big stars
+#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+			Glib::RefPtr<Gdk::Window> textAreaWindow_, rulerWindow_;
+#endif	// ASCENSION_WINDOW_SYSTEM_GTK
 			presentation::Presentation& presentation_;
 			std::unique_ptr<Caret> caret_;
 			std::unique_ptr<Renderer> renderer_;
