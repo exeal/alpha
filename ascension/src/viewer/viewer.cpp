@@ -777,8 +777,8 @@ Scalar TextViewer::inlineProgressionOffsetInViewport() const {
 
 	// scroll position
 	const PhysicalTwoAxes<widgetapi::NativeScrollPosition> scrollPosition(physicalScrollPosition(*this));
-	offset -= /*inlineProgressionScrollOffsetInUserUnits(*textRenderer().viewport(),*/
-		horizontal ? boost::geometry::get<0>(scrollPosition) : boost::geometry::get<1>(scrollPosition)/*)*/;
+	offset -= scrollPositionInUserUnit<ReadingDirection>(
+		horizontal ? boost::geometry::get<0>(scrollPosition) : boost::geometry::get<1>(scrollPosition));
 
 	// ruler width
 	if((horizontal && rulerPainter_->alignment() == PhysicalDirection::LEFT)
@@ -1232,7 +1232,7 @@ void TextViewer::redrawLines(const boost::integer_range<Index>& lines) {
 	get<0>(beforeAndAfter) = *baseline;
 	if(get<0>(beforeAndAfter) != numeric_limits<Scalar>::min() && get<0>(beforeAndAfter) != numeric_limits<Scalar>::max())
 		get<0>(beforeAndAfter) -= *textRenderer().layouts().at(baseline.line()->line)->lineMetrics(0).extent().begin();
-	baseline = BaselineIterator(*textRenderer().viewport(), VisualLine(*lines.end()));
+	baseline = BaselineIterator(*textRenderer().viewport(), VisualLine(*lines.end(), 0));
 	get<1>(beforeAndAfter) = *baseline;
 	if(get<1>(beforeAndAfter) != numeric_limits<Scalar>::min() && get<1>(beforeAndAfter) != numeric_limits<Scalar>::max())
 		get<1>(beforeAndAfter) += *textRenderer().layouts().at(baseline.line()->line)->lineMetrics(0).extent().end();
