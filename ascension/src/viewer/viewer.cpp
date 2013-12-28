@@ -777,8 +777,8 @@ Scalar TextViewer::inlineProgressionOffsetInViewport() const {
 
 	// scroll position
 	const PhysicalTwoAxes<widgetapi::NativeScrollPosition> scrollPosition(physicalScrollPosition(*this));
-	offset -= scrollPositionInUserUnit<ReadingDirection>(
-		horizontal ? boost::geometry::get<0>(scrollPosition) : boost::geometry::get<1>(scrollPosition));
+	offset -= scrollPositionInUserUnit<ReadingDirection>(static_cast<TextViewport::ScrollOffset>(
+		horizontal ? boost::geometry::get<0>(scrollPosition) : boost::geometry::get<1>(scrollPosition)));
 
 	// ruler width
 	if((horizontal && rulerPainter_->alignment() == PhysicalDirection::LEFT)
@@ -869,8 +869,16 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 //			return false;
 //	}
 	switch(input.keyboardCode()) {
-	case keyboardcodes::BACK_SPACE:	// [BackSpace]
-	case keyboardcodes::F16:	// [F16]
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_BackSpace:
+		case GDK_KEY_F16:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_Backspace:
+		case Qt::Key_F16:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case VK_BACK:
+		case VK_F16:
+#endif
 		switch(input.modifiers()) {
 			case 0:
 			case UserInput::SHIFT_DOWN:
@@ -885,138 +893,332 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 				break;
 		}
 		break;
-	case keyboardcodes::CLEAR:	// [Clear]
-		if(input.modifiers() == UserInput::CONTROL_DOWN)
-			EntireDocumentSelectionCreationCommand(*this)();
-		break;
-	case keyboardcodes::ENTER_OR_RETURN:	// [Enter]
-		switch(input.modifiers()) {
-		case 0:
-		case UserInput::SHIFT_DOWN:
-			NewlineCommand(*this)();
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_Clear:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_Clear:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case VK_CLEAR:
+#endif
+			if(input.modifiers() == UserInput::CONTROL_DOWN)
+				EntireDocumentSelectionCreationCommand(*this)();
 			break;
-		case UserInput::CONTROL_DOWN:
-			NewlineCommand(*this, Direction::BACKWARD)();
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_Return:
+		case GDK_KEY_KP_Enter:
+		case GDK_KEY_ISO_Enter:
+		case GDK_KEY_3270_Enter:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_Enter:
+		case Qt::Key_Return:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case VK_RETURN:
+#endif
+			switch(input.modifiers()) {
+			case 0:
+			case UserInput::SHIFT_DOWN:
+				NewlineCommand(*this)();
+				break;
+			case UserInput::CONTROL_DOWN:
+				NewlineCommand(*this, Direction::BACKWARD)();
+				break;
+			case UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN:
+				NewlineCommand(*this, Direction::FORWARD)();
+				break;
+			}
 			break;
-		case UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN:
-			NewlineCommand(*this, Direction::FORWARD)();
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_Escape:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_Escape:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case VK_ESCAPE:
+#endif
+			CancelCommand(*this)();
 			break;
-		}
-		break;
-	case keyboardcodes::SHIFT:	// [Shift]
-		if(hasModifier<UserInput::CONTROL_DOWN>(input)
-				&& (::GetKeyState(VK_LSHIFT) < 0 && configuration_.readingDirection == RIGHT_TO_LEFT)
-				|| (::GetKeyState(VK_RSHIFT) < 0 && configuration_.readingDirection == LEFT_TO_RIGHT))
-			utils::toggleOrientation(*this);
-		break;
-	case keyboardcodes::ESCAPE:	// [Esc]
-		CancelCommand(*this)();
-		break;
-	case keyboardcodes::PRIOR_OR_PAGE_UP:	// [PageUp]
-		if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			onVScroll(SB_PAGEUP, 0, nullptr);
-		else
-			makeCaretMovementCommand(*this, &k::locations::nextPage, Direction::BACKWARD, hasModifier<UserInput::SHIFT_DOWN>(input))();
-		break;
-	case keyboardcodes::NEXT_OR_PAGE_DOWN:	// [PageDown]
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_Page_Up:	// 'GDK_KEY_Prior' has same value
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_PageUp:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case VK_PRIOR:
+#endif
+			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+				onVScroll(SB_PAGEUP, 0, nullptr);
+			else
+				makeCaretMovementCommand(*this, &k::locations::nextPage, Direction::BACKWARD, hasModifier<UserInput::SHIFT_DOWN>(input))();
+			break;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_Page_Down:	// 'GDK_KEY_Next' has same value
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_PageDown:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case VK_NEXT:
+#endif
 		if(hasModifier<UserInput::CONTROL_DOWN>(input))
 			onVScroll(SB_PAGEDOWN, 0, nullptr);
 		else
 			makeCaretMovementCommand(*this, &k::locations::nextPage, Direction::FORWARD, hasModifier<UserInput::SHIFT_DOWN>(input))();
 		break;
-	case keyboardcodes::HOME:	// [Home]
-		if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			makeCaretMovementCommand(*this, &k::locations::beginningOfDocument, hasModifier<UserInput::SHIFT_DOWN>(input))();
-		else
-			makeCaretMovementCommand(*this, &k::locations::beginningOfVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
-		break;
-	case keyboardcodes::END:	// [End]
-		if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			makeCaretMovementCommand(*this, &k::locations::endOfDocument, hasModifier<UserInput::SHIFT_DOWN>(input))();
-		else
-			makeCaretMovementCommand(*this, &k::locations::endOfVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
-		break;
-	case keyboardcodes::LEFT:	// [Left]
-		handleDirectionalKey(*this, PhysicalDirection::LEFT, input.modifiers());
-		break;
-	case keyboardcodes::UP:		// [Up]
-		handleDirectionalKey(*this, PhysicalDirection::TOP, input.modifiers());
-		break;
-	case keyboardcodes::RIGHT:	// [Right]
-		handleDirectionalKey(*this, PhysicalDirection::RIGHT, input.modifiers());
-		break;
-	case keyboardcodes::DOWN:	// [Down]
-		handleDirectionalKey(*this, PhysicalDirection::BOTTOM, input.modifiers());
-		break;
-	case keyboardcodes::INSERT:	// [Insert]
-		if(hasModifier<UserInput::ALT_DOWN>(input))
-			break;
-		else if(!hasModifier<UserInput::SHIFT_DOWN>(input)) {
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_Home:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_Home:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case VK_HOME:
+#endif
 			if(hasModifier<UserInput::CONTROL_DOWN>(input))
-				copySelection(caret(), true);
+				makeCaretMovementCommand(*this, &k::locations::beginningOfDocument, hasModifier<UserInput::SHIFT_DOWN>(input))();
 			else
-				OvertypeModeToggleCommand(*this)();
-		} else if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			PasteCommand(*this, false)();
-		else
+				makeCaretMovementCommand(*this, &k::locations::beginningOfVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
 			break;
-		break;
-	case keyboardcodes::DEL_OR_DELETE:	// [Delete]
-		if(!hasModifier<UserInput::SHIFT_DOWN>(input)) {
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_End:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_End:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case VK_END:
+#endif
 			if(hasModifier<UserInput::CONTROL_DOWN>(input))
-				WordDeletionCommand(*this, Direction::FORWARD)();
+				makeCaretMovementCommand(*this, &k::locations::endOfDocument, hasModifier<UserInput::SHIFT_DOWN>(input))();
 			else
-				CharacterDeletionCommand(*this, Direction::FORWARD)();
-		} else if(!hasModifier<UserInput::CONTROL_DOWN>(input))
-			cutSelection(caret(), true);
-		else
+				makeCaretMovementCommand(*this, &k::locations::endOfVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
 			break;
-		break;
-	case 'A':	// ^A -> Select All
-		if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			EntireDocumentSelectionCreationCommand(*this)();
-		break;
-	case 'C':	// ^C -> Copy
-		if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			copySelection(caret(), true);
-		break;
-	case 'H':	// ^H -> Backspace
-		if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			CharacterDeletionCommand(*this, Direction::BACKWARD)(), true;
-		break;
-	case 'I':	// ^I -> Tab
-		if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			CharacterInputCommand(*this, 0x0009u)();
-		break;
-	case 'J':	// ^J -> New Line
-	case 'M':	// ^M -> New Line
-		if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			NewlineCommand(*this, false)();
-		break;
-	case 'V':	// ^V -> Paste
-		if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			PasteCommand(*this, false)();
-		break;
-	case 'X':	// ^X -> Cut
-		if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			cutSelection(caret(), true);
-		break;
-	case 'Y':	// ^Y -> Redo
-		if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			UndoCommand(*this, true)();
-		break;
-	case 'Z':	// ^Z -> Undo
-		if(hasModifier<UserInput::CONTROL_DOWN>(input))
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_Left:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_Left:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case VK_LEFT:
+#endif
+			handleDirectionalKey(*this, PhysicalDirection::LEFT, input.modifiers());
+			break;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_Up:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_Up:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case VK_UP:
+#endif
+			handleDirectionalKey(*this, PhysicalDirection::TOP, input.modifiers());
+			break;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_Right:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_Right:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case VK_RIGHT:
+#endif
+			handleDirectionalKey(*this, PhysicalDirection::RIGHT, input.modifiers());
+			break;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_Down:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_Down:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case VK_DOWN:
+#endif
+			handleDirectionalKey(*this, PhysicalDirection::BOTTOM, input.modifiers());
+			break;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_Insert:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_Insert:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case VK_INSERT:
+#endif
+			if(hasModifier<UserInput::ALT_DOWN>(input))
+				break;
+			else if(!hasModifier<UserInput::SHIFT_DOWN>(input)) {
+				if(hasModifier<UserInput::CONTROL_DOWN>(input))
+					copySelection(caret(), true);
+				else
+					OvertypeModeToggleCommand(*this)();
+			} else if(hasModifier<UserInput::CONTROL_DOWN>(input))
+				PasteCommand(*this, false)();
+			else
+				break;
+			break;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_Delete:
+		case GDK_KEY_KP_Delete:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_Delete:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case VK_DELETE:
+#endif
+			if(!hasModifier<UserInput::SHIFT_DOWN>(input)) {
+				if(hasModifier<UserInput::CONTROL_DOWN>(input))
+					WordDeletionCommand(*this, Direction::FORWARD)();
+				else
+					CharacterDeletionCommand(*this, Direction::FORWARD)();
+			} else if(!hasModifier<UserInput::CONTROL_DOWN>(input))
+				cutSelection(caret(), true);
+			else
+				break;
+			break;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_A:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_A:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case 'A':
+#endif
+			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+				EntireDocumentSelectionCreationCommand(*this)();	// ^A -> Select All
+			break;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_C:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_C:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case 'C':
+#endif
+			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+				copySelection(caret(), true);	// ^C -> Copy
+			break;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_H:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_H:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case 'H':
+#endif
+			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+				CharacterDeletionCommand(*this, Direction::BACKWARD)(), true;	// ^H -> Backspace
+			break;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_I:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_I:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case 'I':
+#endif
+			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+				CharacterInputCommand(*this, 0x0009u)();	// ^I -> Tab
+			break;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_J:
+		case GDK_KEY_M:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_J:
+		case Qt::Key_M:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case 'J':
+		case 'M':
+#endif
+			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+				NewlineCommand(*this, false)();	// ^J or ^M -> New Line
+			break;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_V:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_V:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case 'V':
+#endif
+			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+				PasteCommand(*this, false)();	// ^V -> Paste
+			break;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_X:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_X:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case 'X':
+#endif
+			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+				cutSelection(caret(), true);	// ^X -> Cut
+			break;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_Y:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_Y:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case 'Y':
+#endif
+			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+				UndoCommand(*this, true)();	// ^Y -> Redo
+			break;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_Z:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_Z:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case 'Z':
+#endif
+			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+				UndoCommand(*this, false)();	// ^Z -> Undo
+			break;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_KP_5:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_5:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case VK_NUMPAD5:
+#endif
+			if(hasModifier<UserInput::CONTROL_DOWN>(input)) {
+#ifdef ASCENSION_WINDOW_SYSTEM_QT
+				if(hasModifier<Qt::KeypadModifier>(input))
+#endif
+				EntireDocumentSelectionCreationCommand(*this)();
+			}
+			break;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_F12:
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_F12:
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case VK_F12:
+#endif
+			if(hasModifier<UserInput::CONTROL_DOWN>(input) && hasModifier<UserInput::SHIFT_DOWN>(input))
+				CodePointToCharacterConversionCommand(*this)();
+			break;
+
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		case GDK_KEY_Undo:
 			UndoCommand(*this, false)();
-		break;
-	case keyboardcodes::NUMBER_PAD_5:	// [Number Pad 5]
-		if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			EntireDocumentSelectionCreationCommand(*this)();
-		break;
-	case keyboardcodes::F12:	// [F12]
-		if(hasModifier<UserInput::CONTROL_DOWN>(input) && hasModifier<UserInput::SHIFT_DOWN>(input))
-			CodePointToCharacterConversionCommand(*this)();
-		break;
+			break;
+		case GDK_KEY_Redo:
+			UndoCommand(*this, true)();
+			break;
+		case GDK_KEY_Shift_L:
+			if(hasModifier<UserInput::CONTROL_DOWN>(input) && configuration_.readingDirection == RIGHT_TO_LEFT)
+				textRenderer().setDirection(LEFT_TO_RIGHT);
+			break;
+		case GDK_KEY_Shift_R:
+			if(hasModifier<UserInput::CONTROL_DOWN>(input) && configuration_.readingDirection == LEFT_TO_RIGHT)
+				textRenderer().setDirection(RIGHT_TO_LEFT);
+			break;
+		case GDK_KEY_Copy:
+			copySelection(caret(), true);
+			break;
+		case GDK_KEY_Cut:
+			cutSelection(caret(), true);
+			break;
+		case GDK_KEY_Paste:
+			PasteCommand(*this, false)();
+			break;
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+		case Qt::Key_Copy:
+			copySelection(caret(), true);
+			break;
+		case Qt::Key_Cut:
+			cutSelection(caret(), true);
+			break;
+		case Qt::Key_Paste:
+			PasteCommand(*this, false)();
+			break;
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+		case VK_SHIFT:
+			if(hasModifier<UserInput::CONTROL_DOWN>(input)) {
+				if(::GetKeyState(VK_LSHIFT) < 0 && configuration_.readingDirection == RIGHT_TO_LEFT)
+					textRenderer().setDirection(LEFT_TO_RIGHT);
+				else if(::GetKeyState(VK_RSHIFT) < 0 && configuration_.readingDirection == LEFT_TO_RIGHT)
+					textRenderer().setDirection(RIGHT_TO_LEFT);
+				}
+			break;
+#endif
 	}
 }
 
@@ -1748,9 +1950,15 @@ void TextViewer::viewportScrollPositionChanged(
 		widgetapi::scheduleRedraw(*this, boundsToScroll, false);	// repaint all if the amount of the scroll is over a page
 	else {
 		// scroll image by BLIT
-		// TODO: direct call of Win32 API.
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+		textAreaWindow_->scroll(geometry::x(scrollOffsetsInPixels), geometry::y(scrollOffsetsInPixels));
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		::ScrollWindowEx(handle().get(),
 			geometry::x(scrollOffsetsInPixels), geometry::y(scrollOffsetsInPixels), nullptr, &static_cast<RECT>(boundsToScroll), nullptr, nullptr, SW_INVALIDATE);
+#else
+		ASCENSION_CANT_DETECT_PLATFORM();
+#endif
 		// invalidate bounds newly entered into the viewport
 		if(geometry::x(scrollOffsetsInPixels) > 0)
 			widgetapi::scheduleRedraw(*this, graphics::Rectangle(
@@ -1772,6 +1980,8 @@ void TextViewer::viewportScrollPositionChanged(
 
 	// 4. scroll the ruler
 	rulerPainter_->scroll(firstVisibleLineBeforeScroll);
+
+	// TODO: Step 3 and step 4 should reverse?
 
 	// 5. repaint
 	widgetapi::redrawScheduledRegion(*this);
