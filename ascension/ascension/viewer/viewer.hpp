@@ -41,6 +41,9 @@
 #		include <tom.h>
 #	endif // !ASCENSION_NO_TEXT_OBJECT_MODEL
 #endif
+#ifndef ASCENSION_WINDOW_SYSTEM_WIN32
+#	include <ascension/corelib/timer.hpp>
+#endif	// !ASCENSION_WINDOW_SYSTEM_WIN32
 
 
 namespace ascension {
@@ -79,9 +82,16 @@ namespace ascension {
 		class TextViewerScrollableProperties : public Gtk::Widget {
 		protected:
 			TextViewerScrollableProperties();
+#ifndef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+			const graphics::PhysicalTwoAxes<double>& scrollPositionsBeforeChanged() const BOOST_NOEXCEPT;
+			void updateScrollPositionsBeforeChanged();
+#endif
 		private:
 			Glib::Property<Glib::RefPtr<Gtk::Adjustment>> horizontalAdjustment_, verticalAdjustment_;
 			Glib::Property<Gtk::ScrollablePolicy> horizontalScrollPolicy_, verticalScrollPolicy_;
+#ifndef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+			graphics::PhysicalTwoAxes<double> scrollPositionsBeforeChanged_;
+#endif
 		};
 	}
 #endif
