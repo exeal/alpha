@@ -563,6 +563,17 @@ namespace ascension {
 				return isNormalized(size(rectangle));
 			}
 
+			template<typename Rectangle>
+			inline Rectangle joined(const Rectangle& r1, const Rectangle& r2, typename detail::EnableIfTagIs<Rectangle, boost::geometry::box_tag>::type* = nullptr) {
+				const auto xrange1(range<0>(r1)), xrange2(range<0>(r2));
+				const auto yrange1(range<1>(r1)), yrange2(range<1>(r2));
+				Rectangle temp;
+				boost::geometry::assign_values(temp,
+					std::min(*xrange1.begin(), *xrange2.begin()), std::min(*yrange1.begin(), *yrange2.begin()),
+					std::max(*xrange1.end(), *xrange2.end()), std::max(*yrange1.end(), *yrange2.end()));
+				return std::move(temp);
+			}
+
 			template<typename Geometry>
 			inline Geometry& negate(Geometry& point, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
 				x(point) = -x(point);

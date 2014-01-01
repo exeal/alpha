@@ -18,6 +18,17 @@ detail::TextViewerScrollableProperties::TextViewerScrollableProperties() :
 		horizontalAdjustment_(*this, "hadjustment"), verticalAdjustment_(*this, "vadjustment"),
 		horizontalScrollPolicy_(*this, "hscroll-policy", Gtk::SCROLL_NATURAL), verticalScrollPolicy_(*this, "vscroll-policy", Gtk::SCROLL_NATURAL) {
 }
+		
+#ifndef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+inline const graphics::PhysicalTwoAxes<double>& detail::TextViewerScrollableProperties::scrollPositionsBeforeChanged() const BOOST_NOEXCEPT {
+	return scrollPositionsBeforeChanged_;
+}
+
+inline void detail::TextViewerScrollableProperties::updateScrollPositionsBeforeChanged() {
+	scrollPositionsBeforeChanged_.x() = horizontalAdjustment_.get_value()->get_value();
+	scrollPositionsBeforeChanged_.y() = verticalAdjustment_.get_value()->get_value();
+}
+#endif
 
 void TextViewer::doBeep() BOOST_NOEXCEPT {
 #if 1
@@ -52,14 +63,25 @@ Gtk::SizeRequestMode TextViewer::get_request_mode_vfunc() const {
 	return Gtk::Widget::get_request_mode_vfunc();
 }
 
-namespace {
-}
-
 void TextViewer::initializeNativeObjects(const TextViewer* other) {
 	set_can_focus(true);
 	set_redraw_on_allocate(false);
 //	drag_dest_set_target_list();
-	property_hadjustment().signal_changed().connect([]() {
+	property_hadjustment().get_value()->signal_value_changed().connect([this]() {
+		if(const shared_ptr<graphics::font::TextViewport> viewport = this->textRenderer().viewport())
+			viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(
+				graphics::_x = static_cast<graphics::font::TextViewport::SignedScrollOffset>(
+					this->property_hadjustment().get_value()->get_value() - this->scrollPositionsBeforeChanged().x()),
+				graphics::_y = 0));
+		this->updateScrollPositionsBeforeChanged();
+	});
+	property_vadjustment().get_value()->signal_value_changed().connect([this]() {
+		if(const shared_ptr<graphics::font::TextViewport> viewport = this->textRenderer().viewport())
+			viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(
+				graphics::_x = 0,
+				graphics::_y = static_cast<graphics::font::TextViewport::SignedScrollOffset>(
+					this->property_vadjustment().get_value()->get_value() - this->scrollPositionsBeforeChanged().y())));
+		this->updateScrollPositionsBeforeChanged();
 	});
 }
 
@@ -149,9 +171,9 @@ void TextViewer::on_size_allocate(Gtk::Allocation& allocation) {
 		const RulerStyles& rulerStyles = rulerPainter_->declaredStyles();
 		r = boost::geometry::make_zero<graphics::Rectangle>();
 		if(indicatorMargin(rulerStyles)->visible)
-			boost::geometry::union_(r, rulerPainter_->indicatorMarginAllocationRectangle(), r);
+			r = graphics::geometry::joined(r, rulerPainter_->indicatorMarginAllocationRectangle());
 		if(lineNumbers(rulerStyles)->visible)
-			boost::geometry::union_(r, rulerPainter_->lineNumbersAllocationRectangle(), r);
+			r = graphics::geometry::joined(r, rulerPainter_->lineNumbersAllocationRectangle());
 		textAreaWindow_->move_resize(
 			static_cast<int>(graphics::geometry::left(r)), static_cast<int>(graphics::geometry::top(r)),
 			static_cast<int>(graphics::geometry::dx(r)), static_cast<int>(graphics::geometry::dy(r)));
