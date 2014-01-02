@@ -809,7 +809,7 @@ Scalar TextViewer::inlineProgressionOffsetInViewport() const {
 }
 
 namespace {
-	void handleDirectionalKey(TextViewer& viewer, PhysicalDirection direction, widgetapi::UserInput::ModifierKey modifiers) {
+	void handleDirectionalKey(TextViewer& viewer, PhysicalDirection direction, widgetapi::UserInput::KeyboardModifier modifiers) {
 		using namespace ascension::texteditor::commands;
 		using widgetapi::UserInput;
 		static k::Position(*const nextCharacterLocation)(const k::Point&, Direction, k::locations::CharacterUnit, Index) = k::locations::nextCharacter;
@@ -889,7 +889,7 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 				break;
 			case UserInput::ALT_DOWN:
 			case UserInput::SHIFT_DOWN | UserInput::ALT_DOWN:
-				UndoCommand(*this, hasModifier<UserInput::SHIFT_DOWN>(input))();
+				UndoCommand(*this, input.hasModifier(UserInput::SHIFT_DOWN))();
 				break;
 		}
 		break;
@@ -915,16 +915,16 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 		case VK_RETURN:
 #endif
 			switch(input.modifiers()) {
-			case 0:
-			case UserInput::SHIFT_DOWN:
-				NewlineCommand(*this)();
-				break;
-			case UserInput::CONTROL_DOWN:
-				NewlineCommand(*this, Direction::BACKWARD)();
-				break;
-			case UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN:
-				NewlineCommand(*this, Direction::FORWARD)();
-				break;
+				case 0:
+				case UserInput::SHIFT_DOWN:
+					NewlineCommand(*this)();
+					break;
+				case UserInput::CONTROL_DOWN:
+					NewlineCommand(*this, Direction::BACKWARD)();
+					break;
+				case UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN:
+					NewlineCommand(*this, Direction::FORWARD)();
+					break;
 			}
 			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
@@ -934,7 +934,8 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		case VK_ESCAPE:
 #endif
-			CancelCommand(*this)();
+			if(input.modifiers() == 0)
+				CancelCommand(*this)();
 			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 		case GDK_KEY_Page_Up:	// 'GDK_KEY_Prior' has same value
@@ -943,10 +944,10 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		case VK_PRIOR:
 #endif
-			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+			if(!input.hasModifierOtherThan(UserInput::SHIFT_DOWN))
+				makeCaretMovementCommand(*this, &k::locations::nextPage, Direction::BACKWARD, input.hasModifier(UserInput::SHIFT_DOWN))();
+			else if(input.modifiers() == UserInput::CONTROL_DOWN)
 				onVScroll(SB_PAGEUP, 0, nullptr);
-			else
-				makeCaretMovementCommand(*this, &k::locations::nextPage, Direction::BACKWARD, hasModifier<UserInput::SHIFT_DOWN>(input))();
 			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 		case GDK_KEY_Page_Down:	// 'GDK_KEY_Next' has same value
@@ -955,11 +956,11 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		case VK_NEXT:
 #endif
-		if(hasModifier<UserInput::CONTROL_DOWN>(input))
-			onVScroll(SB_PAGEDOWN, 0, nullptr);
-		else
-			makeCaretMovementCommand(*this, &k::locations::nextPage, Direction::FORWARD, hasModifier<UserInput::SHIFT_DOWN>(input))();
-		break;
+			if(!input.hasModifierOtherThan(UserInput::SHIFT_DOWN))
+				makeCaretMovementCommand(*this, &k::locations::nextPage, Direction::FORWARD, input.hasModifier(UserInput::SHIFT_DOWN))();
+			else if(input.modifiers() == UserInput::CONTROL_DOWN)
+				onVScroll(SB_PAGEDOWN, 0, nullptr);
+			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 		case GDK_KEY_Home:
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
@@ -967,10 +968,12 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		case VK_HOME:
 #endif
-			if(hasModifier<UserInput::CONTROL_DOWN>(input))
-				makeCaretMovementCommand(*this, &k::locations::beginningOfDocument, hasModifier<UserInput::SHIFT_DOWN>(input))();
-			else
-				makeCaretMovementCommand(*this, &k::locations::beginningOfVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
+			if(!input.hasModifierOtherThan(UserInput::SHIFT_DOWN | UserInput::CONTROL_DOWN)) {
+				if(input.hasModifier(UserInput::CONTROL_DOWN))
+					makeCaretMovementCommand(*this, &k::locations::beginningOfDocument, input.hasModifier(UserInput::SHIFT_DOWN))();
+				else
+					makeCaretMovementCommand(*this, &k::locations::beginningOfVisualLine, input.hasModifier(UserInput::SHIFT_DOWN))();
+			}
 			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 		case GDK_KEY_End:
@@ -979,10 +982,12 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		case VK_END:
 #endif
-			if(hasModifier<UserInput::CONTROL_DOWN>(input))
-				makeCaretMovementCommand(*this, &k::locations::endOfDocument, hasModifier<UserInput::SHIFT_DOWN>(input))();
-			else
-				makeCaretMovementCommand(*this, &k::locations::endOfVisualLine, hasModifier<UserInput::SHIFT_DOWN>(input))();
+			if(!input.hasModifierOtherThan(UserInput::SHIFT_DOWN | UserInput::CONTROL_DOWN)) {
+				if(input.hasModifier(UserInput::CONTROL_DOWN))
+					makeCaretMovementCommand(*this, &k::locations::endOfDocument, input.hasModifier(UserInput::SHIFT_DOWN))();
+				else
+					makeCaretMovementCommand(*this, &k::locations::endOfVisualLine, input.hasModifier(UserInput::SHIFT_DOWN))();
+			}
 			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 		case GDK_KEY_Left:
@@ -1027,17 +1032,14 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		case VK_INSERT:
 #endif
-			if(hasModifier<UserInput::ALT_DOWN>(input))
-				break;
-			else if(!hasModifier<UserInput::SHIFT_DOWN>(input)) {
-				if(hasModifier<UserInput::CONTROL_DOWN>(input))
+			if(!input.hasModifierOtherThan(UserInput::SHIFT_DOWN | UserInput::CONTROL_DOWN)) {
+				if(input.hasModifier(UserInput::SHIFT_DOWN))
+					PasteCommand(*this, input.hasModifier(UserInput::CONTROL_DOWN))();
+				else if(input.hasModifier(UserInput::CONTROL_DOWN))
 					copySelection(caret(), true);
 				else
 					OvertypeModeToggleCommand(*this)();
-			} else if(hasModifier<UserInput::CONTROL_DOWN>(input))
-				PasteCommand(*this, false)();
-			else
-				break;
+			}
 			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 		case GDK_KEY_Delete:
@@ -1047,15 +1049,17 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		case VK_DELETE:
 #endif
-			if(!hasModifier<UserInput::SHIFT_DOWN>(input)) {
-				if(hasModifier<UserInput::CONTROL_DOWN>(input))
-					WordDeletionCommand(*this, Direction::FORWARD)();
-				else
+			switch(input.modifiers()) {
+				case 0:
 					CharacterDeletionCommand(*this, Direction::FORWARD)();
-			} else if(!hasModifier<UserInput::CONTROL_DOWN>(input))
-				cutSelection(caret(), true);
-			else
-				break;
+					break;
+				case UserInput::SHIFT_DOWN:
+					cutSelection(caret(), true);
+					break;
+				case UserInput::CONTROL_DOWN:
+					WordDeletionCommand(*this, Direction::FORWARD)();
+					break;
+			}
 			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 		case GDK_KEY_A:
@@ -1064,7 +1068,7 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		case 'A':
 #endif
-			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+			if(input.modifiers() == UserInput::CONTROL_DOWN)
 				EntireDocumentSelectionCreationCommand(*this)();	// ^A -> Select All
 			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
@@ -1074,7 +1078,7 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		case 'C':
 #endif
-			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+			if(input.modifiers() == UserInput::CONTROL_DOWN)
 				copySelection(caret(), true);	// ^C -> Copy
 			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
@@ -1084,7 +1088,7 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		case 'H':
 #endif
-			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+			if(input.modifiers() == UserInput::CONTROL_DOWN)
 				CharacterDeletionCommand(*this, Direction::BACKWARD)(), true;	// ^H -> Backspace
 			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
@@ -1094,7 +1098,7 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		case 'I':
 #endif
-			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+			if(input.modifiers() == UserInput::CONTROL_DOWN)
 				CharacterInputCommand(*this, 0x0009u)();	// ^I -> Tab
 			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
@@ -1107,7 +1111,7 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 		case 'J':
 		case 'M':
 #endif
-			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+			if(input.modifiers() == UserInput::CONTROL_DOWN)
 				NewlineCommand(*this, false)();	// ^J or ^M -> New Line
 			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
@@ -1117,7 +1121,7 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		case 'V':
 #endif
-			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+			if(input.modifiers() == UserInput::CONTROL_DOWN)
 				PasteCommand(*this, false)();	// ^V -> Paste
 			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
@@ -1127,7 +1131,7 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		case 'X':
 #endif
-			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+			if(input.modifiers() == UserInput::CONTROL_DOWN)
 				cutSelection(caret(), true);	// ^X -> Cut
 			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
@@ -1137,7 +1141,7 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		case 'Y':
 #endif
-			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+			if(input.modifiers() == UserInput::CONTROL_DOWN)
 				UndoCommand(*this, true)();	// ^Y -> Redo
 			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
@@ -1147,7 +1151,7 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		case 'Z':
 #endif
-			if(hasModifier<UserInput::CONTROL_DOWN>(input))
+			if(input.modifiers() == UserInput::CONTROL_DOWN)
 				UndoCommand(*this, false)();	// ^Z -> Undo
 			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
@@ -1157,7 +1161,7 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		case VK_NUMPAD5:
 #endif
-			if(hasModifier<UserInput::CONTROL_DOWN>(input)) {
+			if(input.modifiers() == UserInput::CONTROL_DOWN) {
 #ifdef ASCENSION_WINDOW_SYSTEM_QT
 				if(hasModifier<Qt::KeypadModifier>(input))
 #endif
@@ -1171,7 +1175,7 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		case VK_F12:
 #endif
-			if(hasModifier<UserInput::CONTROL_DOWN>(input) && hasModifier<UserInput::SHIFT_DOWN>(input))
+			if(input.modifiers() == (UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN))
 				CodePointToCharacterConversionCommand(*this)();
 			break;
 
@@ -1183,11 +1187,11 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 			UndoCommand(*this, true)();
 			break;
 		case GDK_KEY_Shift_L:
-			if(hasModifier<UserInput::CONTROL_DOWN>(input) && configuration_.readingDirection == RIGHT_TO_LEFT)
+			if(input.hasModifier(UserInput::CONTROL_DOWN) && configuration_.readingDirection == RIGHT_TO_LEFT)
 				textRenderer().setDirection(LEFT_TO_RIGHT);
 			break;
 		case GDK_KEY_Shift_R:
-			if(hasModifier<UserInput::CONTROL_DOWN>(input) && configuration_.readingDirection == LEFT_TO_RIGHT)
+			if(input.hasModifier(UserInput::CONTROL_DOWN) && configuration_.readingDirection == LEFT_TO_RIGHT)
 				textRenderer().setDirection(RIGHT_TO_LEFT);
 			break;
 		case GDK_KEY_Copy:
@@ -1211,7 +1215,7 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 			break;
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 		case VK_SHIFT:
-			if(hasModifier<UserInput::CONTROL_DOWN>(input)) {
+			if(input.hasModifier(UserInput::CONTROL_DOWN)) {
 				if(::GetKeyState(VK_LSHIFT) < 0 && configuration_.readingDirection == RIGHT_TO_LEFT)
 					textRenderer().setDirection(LEFT_TO_RIGHT);
 				else if(::GetKeyState(VK_RSHIFT) < 0 && configuration_.readingDirection == LEFT_TO_RIGHT)
@@ -1224,7 +1228,7 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 
 /// @see Widget#keyReleased
 void TextViewer::keyReleased(const widgetapi::KeyInput& input) {
-	if(widgetapi::hasModifier<widgetapi::UserInput::ALT_DOWN>(input)) {
+	if(input.hasModifier(widgetapi::UserInput::ALT_DOWN)) {
 		cursorVanisher_.restore();
 		if(mouseInputStrategy_.get() != nullptr)
 			mouseInputStrategy_->interruptMouseReaction(true);
