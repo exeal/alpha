@@ -10,6 +10,15 @@
 
 #include <ascension/graphics/geometry.hpp>	// graphics.Point
 #include <ctime>
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#	include <gdkmm.h>
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#	error not implemented.
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#	include <QInputEvent>
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#	include <ascension/win32/windows.hpp>
+#endif
 
 namespace ascension {
 	namespace viewers {
@@ -28,57 +37,116 @@ namespace ascension {
 			/// Abstract class represents a user input.
 			class UserInput : public Event {
 			public:
-				typedef std::uint16_t ModifierKey;
-				static const ModifierKey
-					/// The Shift key is down.
-					SHIFT_DOWN		= 1 << 0,
-					/// The Ctrl (Control) key is down.
-					CONTROL_DOWN	= 1 << 1,
-					/// The Alt key is down.
-					ALT_DOWN		= 1 << 2,
-					/// The AltGraph key is down.
-					ALT_GRAPH_DOWN	= 1 << 3,
-					/// The Command key is down. Only for Mac OS X.
-					COMMAND_DOWN	= 1 << 4;
 				/**
+				 * Indicates the state of modifier keys.
+				 * @note Corresponds to @c GdkModifierType in GDK.
+				 * @note Cooresponds to @c Qt#Modifier and @c Qt#KeyboardModifier in Qt.
+				 */
+				typedef std::uint32_t KeyboardModifier;
+
+				/// @var SHIFT_DOWN The Shift key is down.
+
+				/// @var CONTROL_DOWN The Ctrl (Control) key is down.
+
+				/// @var ALT_DOWN The Alt key is down.
+
+				/// @var ALT_GRAPH_DOWN The AltGraph key is down.
+
+				/// @var COMMAND_DOWN The Command key is down. Only for Mac OS X.
+
+				static const KeyboardModifier
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+					SHIFT_DOWN = GDK_SHIFT_MASK,
+					CONTROL_DOWN = GDK_CONTROL_MASK,
+					ALT_DOWN = GDK_MOD1_MASK,
+					META_DOWN = GDK_META_MASK
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+					SHIFT_DOWN = Qt::ShiftModifier,
+					CONTROL_DOWN = Qt::ControlModifier,
+					ALT_DOWN = Qt::AltModifier,
+					META_DOWN = Qt::MetaModifier
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+					SHIFT_DOWN = MOD_SHIFT,
+					CONTROL_DOWN = MOD_CONTROL,
+					ALT_DOWN = MOD_ALT,
+					META_DOWN = MOD_WIN
+#endif
+					;
+
+				/**
+				 * Indicates the state of mouse buttons.
+				 * @note Corresponds to @c GdkModifierType in GDK.
+				 * @note Cooresponds to @c Qt#MouseButton in Qt.
 				 * @note Defined here because these values also can be used as modifiers.
 				 */
-				typedef std::uint16_t MouseButton;
+				typedef std::uint32_t MouseButton;
+
+				/// @var BUTTON1_DOWN The Mouse Button1 (usually left button) is down.
+
+				/// @var BUTTON2_DOWN The Mouse Button2 (usually middle button) is down.
+
+				/// @var BUTTON3_DOWN The Mouse Button3 (usually right button) is down.
+
+				/// @var BUTTON4_DOWN The Mouse Button4 (usually X1 button) is down.
+
+				/// @var BUTTON5_DOWN The Mouse Button5 (usually X2 button) is down.
+
 				static const MouseButton
-					/// The Mouse Button1 (usually left button) is down.
-					BUTTON1_DOWN	= 1 << 5,
-					/// The Mouse Button2 (usually middle button) is down.
-					BUTTON2_DOWN	= 1 << 6,
-					/// The Mouse Button3 (usually right button) is down.
-					BUTTON3_DOWN	= 1 << 7,
-					/// The Mouse Button4 (usually X1 button) is down.
-					BUTTON4_DOWN	= 1 << 8,
-					/// The Mouse Button5 (usually X2 button) is down.
-					BUTTON5_DOWN	= 1 << 9;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+					BUTTON1_DOWN = GDK_BUTTON1_MASK,
+					BUTTON2_DOWN = GDK_BUTTON2_MASK,
+					BUTTON3_DOWN = GDK_BUTTON3_MASK,
+					BUTTON4_DOWN = GDK_BUTTON4_MASK,
+					BUTTON5_DOWN = GDK_BUTTON5_MASK
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+					BUTTON1_DOWN = Qt::LeftButton,
+					BUTTON2_DOWN = Qt::RightButton,
+					BUTTON3_DOWN = Qt::MiddleButton,
+					BUTTON4_DOWN = Qt::ExtraButton1,
+					BUTTON5_DOWN = Qt::ExtraButton2
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+					BUTTON1_DOWN = MK_LBUTTON,
+					BUTTON2_DOWN = MK_RBUTTON,
+					BUTTON3_DOWN = MK_MBUTTON,
+					BUTTON4_DOWN = MK_XBUTTON1,
+					BUTTON5_DOWN = MK_XBUTTON2
+#endif
+					;
+
+				/// Indicates the state of modifier keys and mouse buttons.
+				typedef std::uint32_t Modifiers;
+
 			public:
-				ModifierKey modifiers() const BOOST_NOEXCEPT {return modifiers_;}
+				/**
+				 * Returns @c true if the user input is the specified modifier down.
+				 * @param modifier The modifiers to test
+				 * @return true if @a input has @a mask
+				 */
+				bool hasModifier(Modifiers mask) const BOOST_NOEXCEPT {
+					return (modifiers() & mask) != 0;
+				}	
+				/**
+				 * Returns @c true if the user input has other than the specified modifiers.
+				 * @param mask The modifiers to test
+				 * @return true if @a input has modifiers other than @a mask
+				 */
+				bool hasModifierOtherThan(Modifiers mask) const BOOST_NOEXCEPT {
+					return (modifiers() & ~mask) != 0;
+				}
+				Modifiers modifiers() const BOOST_NOEXCEPT {return modifiers_;}
 				const std::time_t& timeStamp() const BOOST_NOEXCEPT {return timeStamp_;}
 			protected:
 				/**
 				 * Protected constructor.
 				 * @param modifiers The modifier flags
 				 */
-				explicit UserInput(ModifierKey modifiers) : modifiers_(modifiers) {std::time(&timeStamp_);}
+				explicit UserInput(Modifiers modifiers) : modifiers_(modifiers) {std::time(&timeStamp_);}
 			private:
-				const ModifierKey modifiers_;
+				const Modifiers modifiers_;
 				std::time_t timeStamp_;
 			};
-
-			/**
-			 * Returns @c true if the given user input is the specified modifier down.
-			 * @tparam modifier The modifier key to test
-			 * @param input The user input
-			 * @return true if @a input has @a modifier
-			 */
-			template<UserInput::ModifierKey modifier>
-			inline bool hasModifier(const UserInput& input) BOOST_NOEXCEPT {
-				return (input.modifiers() & modifier) != 0;
-			}
 
 			/// Abstract class represents a user input located at a specific position in the screen.
 			class LocatedUserInput : public UserInput {
@@ -88,7 +156,7 @@ namespace ascension {
 				 * @param location The location
 				 * @param modifiers The modifier flags
 				 */
-				LocatedUserInput(const graphics::Point& location, ModifierKey modifiers) : UserInput(modifiers), location_(location) {
+				LocatedUserInput(const graphics::Point& location, Modifiers modifiers) : UserInput(modifiers), location_(location) {
 				}
 				/// Returns the location.
 				const graphics::Point& location() const BOOST_NOEXCEPT {return location_;}
@@ -106,7 +174,7 @@ namespace ascension {
 				 * @param modifiers
 				 */
 				MouseButtonInput(const graphics::Point& location, MouseButton button,
-					ModifierKey modifiers) : LocatedUserInput(location, modifiers), button_(button) {}
+					Modifiers modifiers) : LocatedUserInput(location, modifiers), button_(button) {}
 				/// Returns the mouse button.
 				MouseButton button() const BOOST_NOEXCEPT {return button_;}
 			private:
@@ -122,7 +190,7 @@ namespace ascension {
 				 * @param modifiers
 				 * @param rotation
 				 */
-				MouseWheelInput(const graphics::Point& location, ModifierKey modifiers,
+				MouseWheelInput(const graphics::Point& location, Modifiers modifiers,
 					graphics::Dimension& rotation) : LocatedUserInput(location, modifiers), rotation_(rotation) {}
 				/// Returns the mouse wheel rotation.
 				const graphics::Dimension& rotation() const BOOST_NOEXCEPT {return rotation_;}
@@ -133,15 +201,18 @@ namespace ascension {
 			class KeyInput : public UserInput {
 			public:
 				/// Keyboard codes.
+				/// @note Corresponds to @c Qt#Key in Qt.
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 				typedef guint Code;	// GDK_KEY_* in gdk/gdkkeysyms.h
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+				typedef int Code;	// Qt.Key
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 				typedef WORD Code;	// VK_* in WinUser.h
 #elif 0
 				typedef std::uint32_t Code;
 #endif
 			public:
-				KeyInput(Code keyboardCode, ModifierKey modifiers, int repeatCount, int messageFlags)
+				KeyInput(Code keyboardCode, Modifiers modifiers, int repeatCount, int messageFlags)
 					: UserInput(modifiers), keyboardCode_(keyboardCode), repeatCount_(repeatCount), messageFlags_(messageFlags) {}
 				Code keyboardCode() const BOOST_NOEXCEPT {return keyboardCode_;}
 			private:
@@ -149,37 +220,8 @@ namespace ascension {
 				const int repeatCount_, messageFlags_;
 			};
 
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			namespace keyboardcodes {
-				static const KeyInput::Code
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-					BACK_SPACE = VK_BACK, TAB = VK_TAB, CLEAR = VK_CLEAR, ENTER_OR_RETURN = VK_RETURN,
-					SHIFT = VK_SHIFT, CONTROL = VK_CONTROL, ALT_OR_MENU = VK_MENU, PAUSE = VK_PAUSE, CAPITAL = VK_CAPITAL,
-					KANA = VK_KANA, HANGUL = VK_HANGUL, JUNJA = VK_JUNJA, FINAL = VK_FINAL, HANJA = VK_HANJA, KANJI = VK_KANJI,
-					ESCAPE = VK_ESCAPE, CONVERT = VK_CONVERT, NON_CONVERT = VK_NONCONVERT, ACCEPT = VK_ACCEPT, MODE_CHANGE = VK_MODECHANGE,
-					SPACE = VK_SPACE, PRIOR_OR_PAGE_UP = VK_PRIOR, NEXT_OR_PAGE_DOWN = VK_NEXT,
-					END = VK_END, HOME = VK_HOME, LEFT = VK_LEFT, UP = VK_UP, RIGHT = VK_RIGHT, DOWN = VK_DOWN,
-					SELECT = VK_SELECT, PRINT = VK_PRINT, EXECUTE = VK_EXECUTE,
-					SNAPSHOT = VK_SNAPSHOT, INSERT = VK_INSERT, DEL_OR_DELETE = VK_DELETE, HELP = VK_HELP,
-					LEFT_WINDOWS = VK_LWIN, COMMAND = LEFT_WINDOWS, RIGHT_WINDOWS = VK_RWIN, APPLICATIONS = VK_APPS, SLEEP = VK_SLEEP,
-					NUMBER_PAD_0 = VK_NUMPAD0, NUMBER_PAD_1 = VK_NUMPAD1, NUMBER_PAD_2 = VK_NUMPAD2, NUMBER_PAD_3 = VK_NUMPAD3,
-					NUMBER_PAD_4 = VK_NUMPAD4, NUMBER_PAD_5 = VK_NUMPAD5, NUMBER_PAD_6 = VK_NUMPAD6, NUMBER_PAD_7 = VK_NUMPAD7,
-					NUMBER_PAD_8 = VK_NUMPAD8, NUMBER_PAD_9 = VK_NUMPAD9,
-					MULTIPLAY = VK_MULTIPLY, ADD = VK_ADD, SEPARATOR = VK_SEPARATOR, SUBTRACT = VK_SUBTRACT,
-					DECIMAL = VK_DECIMAL, DIVIDE = VK_DIVIDE,
-					F1 = VK_F1, F2 = VK_F2, F3 = VK_F3, F4 = VK_F4, F5 = VK_F5, F6 = VK_F6, F7 = VK_F7, F8 = VK_F8,
-					F9 = VK_F9, F10 = VK_F10, F11 = VK_F11, F12 = VK_F12, F13 = VK_F13, F14 = VK_F14, F15 = VK_F15, F16 = VK_F16,
-					F17 = VK_F17, F18 = VK_F18, F19 = VK_F19, F20 = VK_F20, F21 = VK_F21, F22 = VK_F22, F23 = VK_F23, F24 = VK_F24,
-					NUMBER_LOCK = VK_NUMLOCK, SCROLL_LOCK = VK_SCROLL, LEFT_SHIFT = VK_LSHIFT, RIGHT_SHIFT = VK_RSHIFT,
-					LEFT_CONTROL = VK_LCONTROL, RIGHT_CONTROL = VK_RCONTROL, LEFT_ALT_OR_MENU = VK_LMENU, RIGHT_ALT_OR_MENU = VK_RMENU;
-#else
-#endif
-			}
-#endif
-
 		}
 	}
 }
-
 
 #endif // !ASCENSION_USER_INPUT_HPP
