@@ -839,31 +839,22 @@ TextViewport::~TextViewport() BOOST_NOEXCEPT {
 	textRenderer().removeComputedBlockFlowDirectionListener(*this);
 }
 
+/**
+ * @internal
+ * @see #calculateBpdScrollPosition
+ */
 inline void TextViewport::adjustBpdScrollPositions() BOOST_NOEXCEPT {
-	const LineLayoutVector& layouts = textRenderer().layouts();
 	auto newScrollPositions(scrollPositions());
 	decltype(firstVisibleLine_) newFirstVisibleLine(
 		min(firstVisibleLine().line, textRenderer().presentation().document().numberOfLines() - 1),
-		min(firstVisibleLine().subline, layouts.numberOfSublinesOfLine(firstVisibleLine().line) - 1));
-#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+		min(firstVisibleLine().subline, textRenderer().layouts().numberOfSublinesOfLine(firstVisibleLine().line) - 1));
 	if(newFirstVisibleLine != firstVisibleLine()) {
-		// TODO: Not implemented.
-		boost::value_initialized<ScrollOffset> newBpdOffset;
-		for(Index line = 0; ; ++line) {
-			const TextLayout* const layout = layouts.at(line);
-			if(line == newFirstVisibleLine.line) {
-				// TODO: Consider *rate* of scroll.
-				newBpdOffset += static_cast<ScrollOffset>((layout != nullptr) ?
-					layout->extent(boost::irange<Index>(0, newFirstVisibleLine.subline)).size() : (defaultLineExtent_ * newFirstVisibleLine.subline));
-				break;
-			} else
-				newBpdOffset += static_cast<ScrollOffset>((layout != nullptr) ? layout->extent().size() : defaultLineExtent_);
-		}
+		newScrollPositions.bpd() = calculateBpdScrollPosition(newFirstVisibleLine);
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 		boost::get(blockFlowScrollOffsetInFirstVisibleLogicalLine_) = 0;
-	}
-#else
-	newScrollPositions.bpd() = layouts.mapLogicalLineToVisualLine(newFirstVisibleLine.line) + newFirstVisibleLine.subline;
+		// TODO: Not implemented.
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
+	}
 
 	swap(newFirstVisibleLine, firstVisibleLine_);
 	swap(newScrollPositions, scrollPositions_);
@@ -884,6 +875,32 @@ Scalar TextViewport::allocationMeasure() const BOOST_NOEXCEPT {
 	const Scalar paddings = 0;
 	return max(renderer.layouts().maximumMeasure() + spaces + borders + paddings,
 		static_cast<Scalar>(horizontal ? geometry::dx(boundsInView()) : geometry::dy(boundsInView())));
+}
+
+/**
+ * @internal Calculates the value for @c scrollPositions_.bpd() data member.
+ * @param line The first visible line numbers
+ * @return The scroll position value for @a line
+ * @see #adjustBpdScrollPositions
+ */
+inline TextViewport::ScrollOffset TextViewport::calculateBpdScrollPosition(const boost::optional<VisualLine>& line) const BOOST_NOEXCEPT {
+	const VisualLine ln(line.get_value_or(firstVisibleLine()));
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+	// TODO: Not implemented.
+	boost::value_initialized<ScrollOffset> newBpdOffset;
+	for(Index line = 0; ; ++line) {
+		const TextLayout* const layout = textRenderer().layouts().at(line);
+		if(line == ln.line) {
+			// TODO: Consider *rate* of scroll.
+			newBpdOffset += static_cast<ScrollOffset>((layout != nullptr) ?
+				layout->extent(boost::irange<Index>(0, ln.subline)).size() : (defaultLineExtent_ * ln.subline));
+			break;
+		} else
+			newBpdOffset += static_cast<ScrollOffset>((layout != nullptr) ? layout->extent().size() : defaultLineExtent_);
+	}
+#else
+	return textRenderer().layouts().mapLogicalLineToVisualLine(ln.line) + ln.subline;
+#endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 }
 
 /// @see ComputedBlockFlowDirectionListener#computedBlockFlowDirectionChanged
@@ -1177,8 +1194,7 @@ void TextViewport::scroll(const AbstractTwoAxes<TextViewport::SignedScrollOffset
 	if(isScrollLocked())
 		return;
 
-	TextViewportNotificationLocker notificationLockGuard(this);
-	decltype(scrollPositions_) newPositions;
+	auto newPositions(scrollPositions());
 
 	// inline dimension
 	if(offsets.ipd() < 0)
@@ -1195,14 +1211,18 @@ void TextViewport::scroll(const AbstractTwoAxes<TextViewport::SignedScrollOffset
 	decltype(blockFlowScrollOffsetInFirstVisibleVisualLine_) newBlockFlowScrollOffsetInFirstVisibleVisualLine;
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 	if(offsets.bpd() != 0) {
+		TextViewportNotificationLocker notificationLockGuard(this);	// the following code can change the layouts
+		const auto scrollableRangeBeforeScroll(scrollableRange<BlockFlowDirection>(*this));
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-		locateVisualLine(*this,
+		newPositions.bpd() += locateVisualLine(*this,
 			scrollPositions().bpd(), firstVisibleLine(), offsets.bpd() - blockFlowScrollOffsetInFirstVisibleVisualLine(),
 			false, defaultLineExtent_, newFirstVisibleLine, newBlockFlowScrollOffsetInFirstVisibleVisualLine);
 #else
 		newFirstVisibleLine = firstVisibleLine();
-		textRenderer().layouts().offsetVisualLine(newFirstVisibleLine, offsets.bpd(), LineLayoutVector::USE_CALCULATED_LAYOUT);
+		newPositions.bpd() += textRenderer().layouts().offsetVisualLine(newFirstVisibleLine, offsets.bpd(), LineLayoutVector::USE_CALCULATED_LAYOUT);
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
+		if(scrollableRange<BlockFlowDirection>(*this).back() != scrollableRangeBeforeScroll.back())
+			newPositions.bpd() = calculateBpdScrollPosition(newFirstVisibleLine);
 	} else {
 		newFirstVisibleLine = firstVisibleLine();
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
@@ -1218,7 +1238,7 @@ void TextViewport::scroll(const AbstractTwoAxes<TextViewport::SignedScrollOffset
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 
 	// notify
-	if(scrollPositions_ != newPositions)
+	if(firstVisibleLine_ != newFirstVisibleLine)
 		fireScrollPositionChanged(newPositions, newFirstVisibleLine);
 }
 
@@ -1249,6 +1269,76 @@ void TextViewport::scroll(const PhysicalTwoAxes<TextViewport::SignedScrollOffset
 }
 
 /**
+ * Scrolls the viewport by the specified number of pages in block flow direction.
+ * This method does nothing if scroll is locked.
+ * @param pages The number of pages to scroll in block flow direction
+ */
+void TextViewport::scrollBlockFlowPage(SignedScrollOffset pages) {
+	if(isScrollLocked())
+		return;
+
+	const boost::integer_range<ScrollOffset> rangeBeforeScroll(scrollableRange<BlockFlowDirection>(*this));
+	if(pages > 0) {
+		const TextViewportNotificationLocker notificationLockGuard(this);
+		for(; pages > 0 && scrollPositions().bpd() < rangeBeforeScroll.back(); --pages) {
+			const AbstractTwoAxes<SignedScrollOffset> delta(_bpd = pageSize<BlockFlowDirection>(*this), _ipd = 0);
+			scroll(delta);
+		}
+	} else if(pages < 0) {
+		auto newPositions(scrollPositions());
+		decltype(firstVisibleLine_) newFirstVisibleLine;
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+		decltype(blockFlowScrollOffsetInFirstVisibleVisualLine_) newBlockFlowScrollOffsetInFirstVisibleVisualLine;
+#endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
+		static_assert(std::is_integral<ScrollOffset>::value, "");
+		{
+			const TextViewportNotificationLocker notificationLockGuard(this);	// the following code can change the layouts
+			LineLayoutVector& layouts = textRenderer().layouts();
+			const Scalar bpd = isHorizontal(textRenderer().computedBlockFlowDirection()) ? geometry::dy(boundsInView()) : geometry::dx(boundsInView());
+			Index line = firstVisibleLine().line;
+			const TextLayout* layout = &layouts.at(line, LineLayoutVector::USE_CALCULATED_LAYOUT);
+			TextLayout::LineMetricsIterator lineMetrics(layout->lineMetrics(firstVisibleLine().subline));
+			Scalar bpdInPage = 0;
+			while(true) {
+				if(lineMetrics.line() > 0) {
+					if(bpdInPage += (--lineMetrics).height() > bpd)
+						++lineMetrics;
+				} else if(line > 0) {
+					layout = &layouts.at(--line, LineLayoutVector::USE_CALCULATED_LAYOUT);
+					if(bpdInPage += (lineMetrics = layout->lineMetrics(layout->numberOfLines() - 1)).height() > bpd) {
+						layout = &layouts.at(++line, LineLayoutVector::USE_CALCULATED_LAYOUT);
+						lineMetrics = layout->lineMetrics(0);
+					}
+				} else
+					break;
+				--newPositions.bpd();
+
+				if(bpdInPage > bpd) {
+					bpdInPage = 0;
+					if(++pages == 0)
+						break;
+				}
+			}
+
+			newFirstVisibleLine = VisualLine(line, lineMetrics.line());
+			if(scrollableRange<BlockFlowDirection>(*this).back() != rangeBeforeScroll.back())
+				newPositions.bpd() = calculateBpdScrollPosition(newFirstVisibleLine);
+		}
+
+		// commit
+		swap(scrollPositions_, newPositions);
+		swap(firstVisibleLine_, newFirstVisibleLine);
+#ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
+		swap(blockFlowScrollOffsetInFirstVisibleVisualLine_, newBlockFlowScrollOffsetInFirstVisibleVisualLine);
+#endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
+
+		// notify
+		if(newFirstVisibleLine != firstVisibleLine_)
+			fireScrollPositionChanged(newPositions, newFirstVisibleLine);
+	}
+}
+
+/**
  * Scrolls the viewport to the specified position in abstract dimensions.
  * This method does nothing if scroll is locked.
  * @param positions The destination of scroll in abstract dimensions in user units
@@ -1257,7 +1347,6 @@ void TextViewport::scrollTo(const AbstractTwoAxes<boost::optional<TextViewport::
 	if(isScrollLocked())
 		return;
 
-	TextViewportNotificationLocker notificationLockGuard(this);
 	decltype(scrollPositions_) newPositions(
 		presentation::_ipd = positions.ipd().get_value_or(scrollPositions().ipd()),
 		presentation::_bpd = positions.bpd().get_value_or(scrollPositions().bpd()));
@@ -1274,6 +1363,7 @@ void TextViewport::scrollTo(const AbstractTwoAxes<boost::optional<TextViewport::
 	decltype(blockFlowScrollOffsetInFirstVisibleVisualLine_) newBlockFlowScrollOffsetInFirstVisibleVisualLine;
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 	if(positions.bpd() != boost::none) {
+//		TextViewportNotificationLocker notificationLockGuard(this);	// this code can't change the layouts, unlike #scroll
 		const auto range(scrollableRange<BlockFlowDirection>(*this));
 		newPositions.bpd() = min(max(newPositions.bpd(), *range.begin()), *range.end());
 
@@ -1342,7 +1432,7 @@ void TextViewport::scrollTo(const AbstractTwoAxes<boost::optional<TextViewport::
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 
 	// notify
-	if(scrollPositions_ != newPositions)
+	if(firstVisibleLine_ != newFirstVisibleLine)
 		fireScrollPositionChanged(newPositions, newFirstVisibleLine);
 }
 
