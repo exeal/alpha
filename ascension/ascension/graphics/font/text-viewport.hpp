@@ -83,6 +83,7 @@ namespace ascension {
 				void lockScroll();
 				void scroll(const presentation::AbstractTwoAxes<SignedScrollOffset>& offsets);
 				void scroll(const PhysicalTwoAxes<SignedScrollOffset>& offsets);
+				void scrollBlockFlowPage(SignedScrollOffset pages);
 				void scrollTo(const presentation::AbstractTwoAxes<boost::optional<ScrollOffset>>& positions);
 				void scrollTo(const PhysicalTwoAxes<boost::optional<ScrollOffset>>& positions);
 				void scrollTo(const VisualLine& line, ScrollOffset ipd);
@@ -95,7 +96,8 @@ namespace ascension {
 					, const FontRenderContext& frc
 #endif // ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				);
-				void adjustBpdScrollPositions() /*throw()*/;
+				void adjustBpdScrollPositions() BOOST_NOEXCEPT;
+				ScrollOffset calculateBpdScrollPosition(const boost::optional<VisualLine>& line) const BOOST_NOEXCEPT;
 				void documentAccessibleRegionChanged(const kernel::Document& document);
 				void fireScrollPositionChanged(
 					const presentation::AbstractTwoAxes<TextViewport::ScrollOffset>& positionsBeforeScroll,
