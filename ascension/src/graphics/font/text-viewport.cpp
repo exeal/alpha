@@ -1212,7 +1212,7 @@ void TextViewport::scroll(const AbstractTwoAxes<TextViewport::SignedScrollOffset
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 	if(offsets.bpd() != 0) {
 		TextViewportNotificationLocker notificationLockGuard(this);	// the following code can change the layouts
-		const auto scrollableRangeBeforeScroll(scrollableRange<BlockFlowDirection>(*this));
+//		const auto scrollableRangeBeforeScroll(scrollableRange<BlockFlowDirection>(*this));
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 		newPositions.bpd() += locateVisualLine(*this,
 			scrollPositions().bpd(), firstVisibleLine(), offsets.bpd() - blockFlowScrollOffsetInFirstVisibleVisualLine(),
@@ -1221,8 +1221,8 @@ void TextViewport::scroll(const AbstractTwoAxes<TextViewport::SignedScrollOffset
 		newFirstVisibleLine = firstVisibleLine();
 		newPositions.bpd() += textRenderer().layouts().offsetVisualLine(newFirstVisibleLine, offsets.bpd(), LineLayoutVector::USE_CALCULATED_LAYOUT);
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
-		if(scrollableRange<BlockFlowDirection>(*this).back() != scrollableRangeBeforeScroll.back())
-			newPositions.bpd() = calculateBpdScrollPosition(newFirstVisibleLine);
+		if(frozenNotification_.dimensionsPropertiesChanged.bpd()/*scrollableRange<BlockFlowDirection>(*this).back() != scrollableRangeBeforeScroll.back()*/)
+			newPositions.bpd() = calculateBpdScrollPosition(newFirstVisibleLine);	// some layout might be changed in this code
 	} else {
 		newFirstVisibleLine = firstVisibleLine();
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
@@ -1321,8 +1321,8 @@ void TextViewport::scrollBlockFlowPage(SignedScrollOffset pages) {
 			}
 
 			newFirstVisibleLine = VisualLine(line, lineMetrics.line());
-			if(scrollableRange<BlockFlowDirection>(*this).back() != rangeBeforeScroll.back())
-				newPositions.bpd() = calculateBpdScrollPosition(newFirstVisibleLine);
+			if(frozenNotification_.dimensionsPropertiesChanged.bpd()/*scrollableRange<BlockFlowDirection>(*this).back() != rangeBeforeScroll.back()*/)
+				newPositions.bpd() = calculateBpdScrollPosition(newFirstVisibleLine);	// some layout might be changed in this code
 		}
 
 		// commit
