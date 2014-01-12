@@ -278,6 +278,8 @@ namespace ascension {
 			Scalar lineStartEdge(const TextLayout& layout, Scalar contentMeasure, Index subline = 0);
 			/// @}
 
+			void scrollPage(TextViewport& viewport, const PhysicalTwoAxes<TextViewport::SignedScrollOffset>& pages);
+
 
 			// inline implementation //////////////////////////////////////////////////////////////
 

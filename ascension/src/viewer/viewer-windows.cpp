@@ -951,10 +951,10 @@ void TextViewer::onHScroll(UINT sbCode, UINT, const win32::Handle<HWND>::Type&) 
 			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(+1, 0));
 			break;
 		case SB_PAGELEFT:	// 1 ページ左
-			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(-abs(pageSize<0>(*viewport)), 0));
+			scrollPage(*viewport, PhysicalTwoAxes<TextViewport::SignedScrollOffset>(_x = -1, _y = 0));
 			break;
 		case SB_PAGERIGHT:	// 1 ページ右
-			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(+abs(pageSize<0>(*viewport)), 0));
+			scrollPage(*viewport, PhysicalTwoAxes<TextViewport::SignedScrollOffset>(_x = +1, _y = 0));
 			break;
 		case SB_LEFT:		// 左端
 			viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(*scrollableRangeInPhysicalDirection<0>(*viewport).begin(), boost::none));
@@ -1064,10 +1064,10 @@ void TextViewer::onVScroll(UINT sbCode, UINT, const win32::Handle<HWND>::Type&) 
 			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(0, +1));
 			break;
 		case SB_PAGEUP:		// 1 ページ上
-			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(0, -abs(pageSize<1>(*viewport))));
+			scrollPage(*viewport, PhysicalTwoAxes<TextViewport::SignedScrollOffset>(_x = 0, _y = -1));
 			break;
 		case SB_PAGEDOWN:	// 1 ページ下
-			viewport->scroll(PhysicalTwoAxes<TextViewport::SignedScrollOffset>(0, +abs(pageSize<1>(*viewport))));
+			scrollPage(*viewport, PhysicalTwoAxes<TextViewport::SignedScrollOffset>(_x = 0, _y = +1));
 			break;
 		case SB_TOP:		// 上端
 			viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(boost::none, *scrollableRangeInPhysicalDirection<1>(*viewport).begin()));

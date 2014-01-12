@@ -402,6 +402,20 @@ boost::integer_range<TextViewport::ScrollOffset> font::scrollableRange<1>(const 
 //template boost::integer_range<TextViewport::ScrollOffset> font::scrollableRange<0>(const TextViewport& viewport);
 //template boost::integer_range<TextViewport::ScrollOffset> font::scrollableRange<1>(const TextViewport& viewport);
 
+/**
+ * Scrolls the specified viewport by the given physical dimensions.
+ * @param viewport The viewport
+ * @param pages The number of pages to scroll
+ */
+void font::scrollPage(TextViewport& viewport, const PhysicalTwoAxes<TextViewport::SignedScrollOffset>& pages) {
+	AbstractTwoAxes<TextViewport::SignedScrollOffset> delta =
+		mapPhysicalToAbstract(viewport.textRenderer().presentation().computeWritingMode(&viewport.textRenderer()), pages);
+	viewport.scrollBlockFlowPage(delta.bpd());
+	delta.bpd() = 0;
+	delta.ipd() *= pageSize<ReadingDirection>(viewport);
+	viewport.scroll(delta);
+}
+
 namespace {
 	inline Scalar mapViewportIpdToLineLayout(const TextViewport& viewport, const TextLayout& line, Scalar ipd) {
 		return ipd - viewport.scrollPositions().ipd() - lineStartEdge(line, viewport.contentMeasure());
@@ -1248,24 +1262,7 @@ void TextViewport::scroll(const AbstractTwoAxes<TextViewport::SignedScrollOffset
  * @param offsets The offsets to scroll in physical dimensions in user units
  */
 void TextViewport::scroll(const PhysicalTwoAxes<TextViewport::SignedScrollOffset>& offsets) {
-	AbstractTwoAxes<SignedScrollOffset> delta;
-	switch(textRenderer().computedBlockFlowDirection()) {
-		case HORIZONTAL_TB:
-			delta.bpd() = offsets.y();
-			delta.ipd() = offsets.x();
-			break;
-		case VERTICAL_RL:
-			delta.bpd() = -offsets.x();
-			delta.ipd() = offsets.y();
-			break;
-		case VERTICAL_LR:
-			delta.bpd() = +offsets.x();
-			delta.ipd() = offsets.y();
-			break;
-		default:
-			ASCENSION_ASSERT_NOT_REACHED();
-	}
-	return scroll(delta);
+	return scroll(mapPhysicalToAbstract(textRenderer().presentation().computeWritingMode(&textRenderer()), offsets));
 }
 
 /**
