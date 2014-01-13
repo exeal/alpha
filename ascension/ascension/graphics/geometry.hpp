@@ -550,7 +550,7 @@ namespace ascension {
 
 			template<typename Geometry>
 			inline bool isEmpty(const Geometry& rectangle, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
-				return isEmpty(size(rectangle));
+				return isEmpty(geometry::size(rectangle));
 			}
 
 			template<typename Coordinate>

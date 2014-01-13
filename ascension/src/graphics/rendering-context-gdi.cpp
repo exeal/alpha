@@ -160,7 +160,7 @@ win32::Handle<HPEN>::Type RenderingContext2D::createModifiedPen(const LOGBRUSH* 
 
 		if(patternBrush != nullptr)
 			brush = *patternBrush;
-		width = lineWidth.get_value_or(width);
+		width = boost::get_optional_value_or(lineWidth, width);
 		if(lineCap) {
 			style &= ~PS_ENDCAP_MASK;
 			switch(*lineCap) {

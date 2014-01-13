@@ -415,8 +415,8 @@ namespace {
 //			- position
 //			- static_cast<widgetapi::NativeScrollPosition>(textRenderer.viewport()->numberOfVisibleCharactersInLine());
 		const BlockFlowDirection blockFlowDirection = textRenderer.computedBlockFlowDirection();
-		const TextViewport::SignedScrollOffset pageSizeInIpd = isHorizontal(blockFlowDirection) ? pageSize<0>(*textRenderer.viewport()) : pageSize<1>(*textRenderer.viewport());
-		return *scrollableRange<Coordinate>(viewport).end() - position - pageSize<Coordinate>(viewport);
+		const shared_ptr<const TextViewport> viewport(textRenderer.viewport());
+		return *scrollableRange<Coordinate>(*viewport).end() - position - pageSize<Coordinate>(*viewport);
 	}
 	PhysicalTwoAxes<widgetapi::NativeScrollPosition>&& physicalScrollPosition(const TextViewer& textViewer) {
 		const TextRenderer& textRenderer = textViewer.textRenderer();
@@ -452,12 +452,12 @@ namespace {
 	widgetapi::NativeScrollPosition calculateScrollStepSize(const TextViewer& viewer);
 	template<size_t physicalCoordinate>
 	widgetapi::NativeScrollPosition calculateScrollStepSize(const TextViewer& viewer);
-	void configureScrollBar(TextViewer& viewer, size_t coordinate, boost::optional<widgetapi::NativeScrollPosition> position,
-			boost::optional<const boost::integer_range<widgetapi::NativeScrollPosition>> range, boost::optional<widgetapi::NativeScrollPosition> pageSize) {
+	void configureScrollBar(TextViewer& viewer, size_t coordinate, const boost::optional<widgetapi::NativeScrollPosition>& position,
+			const boost::optional<boost::integer_range<widgetapi::NativeScrollPosition>>& range, const boost::optional<widgetapi::NativeScrollPosition>& pageSize) {
 		assert(coordinate <= 1);
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 		Glib::RefPtr<Gtk::Adjustment> adjustment((coordinate == 0) ? viewer.get_hadjustment() : viewer.get_vadjustment());
-		if(range != boost::none) {
+		if(range) {
 			adjustment->set_lower(*range->begin());
 			adjustment->set_upper(*range->end());
 		}
@@ -946,8 +946,10 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #endif
 			if(!input.hasModifierOtherThan(UserInput::SHIFT_DOWN))
 				makeCaretMovementCommand(*this, &k::locations::nextPage, Direction::BACKWARD, input.hasModifier(UserInput::SHIFT_DOWN))();
-			else if(input.modifiers() == UserInput::CONTROL_DOWN)
-				onVScroll(SB_PAGEUP, 0, nullptr);
+			else if(input.modifiers() == UserInput::CONTROL_DOWN) {
+				if(shared_ptr<TextViewport> viewport = textRenderer().viewport())
+					viewport->scrollBlockFlowPage(+1);
+			}
 			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 		case GDK_KEY_Page_Down:	// 'GDK_KEY_Next' has same value
@@ -958,8 +960,10 @@ void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
 #endif
 			if(!input.hasModifierOtherThan(UserInput::SHIFT_DOWN))
 				makeCaretMovementCommand(*this, &k::locations::nextPage, Direction::FORWARD, input.hasModifier(UserInput::SHIFT_DOWN))();
-			else if(input.modifiers() == UserInput::CONTROL_DOWN)
-				onVScroll(SB_PAGEDOWN, 0, nullptr);
+			else if(input.modifiers() == UserInput::CONTROL_DOWN) {
+				if(shared_ptr<TextViewport> viewport = textRenderer().viewport())
+					viewport->scrollBlockFlowPage(-1);
+			}
 			break;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 		case GDK_KEY_Home:
@@ -1762,13 +1766,13 @@ void TextViewer::updateScrollBars(const AbstractTwoAxes<bool>& positions, const 
 	if(positions.ipd() || properties.ipd()) {
 		const auto viewportRange(scrollableRange<ReadingDirection>(*viewport));
 		boost::optional<widgetapi::NativeScrollPosition> position, size;
-		boost::optional<const boost::integer_range<widgetapi::NativeScrollPosition>> range;
+		boost::optional<boost::integer_range<widgetapi::NativeScrollPosition>> range;
 		if(positions.ipd())
 			// TODO: Use reverseScrollPosition().
 			position = (writingMode.inlineFlowDirection == LEFT_TO_RIGHT) ?
 				viewport->scrollPositions().ipd() : (*viewportRange.end() - viewport->scrollPositions().ipd() - 1);
 		if(properties.ipd()) {
-			range = viewportRange;
+			range = boost::irange<widgetapi::NativeScrollPosition>(*viewportRange.begin(), *viewportRange.end());
 			size = pageSize<ReadingDirection>(*viewport);
 		}
 		configureScrollBar(*this, isHorizontal(writingMode.blockFlowDirection) ? 0 : 1, position, range, size);
@@ -1778,13 +1782,13 @@ void TextViewer::updateScrollBars(const AbstractTwoAxes<bool>& positions, const 
 	if(positions.bpd() || properties.bpd()) {
 		const auto viewportRange(scrollableRange<BlockFlowDirection>(*viewport));
 		boost::optional<widgetapi::NativeScrollPosition> position, size;
-		boost::optional<const boost::integer_range<widgetapi::NativeScrollPosition>> range;
+		boost::optional<boost::integer_range<widgetapi::NativeScrollPosition>> range;
 		if(positions.bpd())
 			// TODO: Use reverseScrollPosition().
 			position = (writingMode.blockFlowDirection != VERTICAL_RL) ?
 				viewport->scrollPositions().bpd() : (*viewportRange.end() - viewport->scrollPositions().bpd() - 1);
 		if(properties.bpd()) {
-			range = viewportRange;
+			range = boost::irange<widgetapi::NativeScrollPosition>(*viewportRange.begin(), *viewportRange.end());
 			size = pageSize<BlockFlowDirection>(*viewport);
 		}
 		configureScrollBar(*this, isHorizontal(writingMode.blockFlowDirection) ? 1 : 0, position, range, size);
@@ -1864,7 +1868,7 @@ namespace {
 			size_t coordinate, widgetapi::NativeScrollPosition* position,
 			boost::integer_range<widgetapi::NativeScrollPosition>* range, widgetapi::NativeScrollPosition* pageSize) {
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-		Glib::RefPtr<Gtk::Adjustment> adjustment((coordinate == 0) ? viewer.get_hadjustment() : viewer.get_vadjustment());
+		const Glib::RefPtr<const Gtk::Adjustment> adjustment((coordinate == 0) ? viewer.get_hadjustment() : viewer.get_vadjustment());
 		if(range != nullptr)
 			*range = boost::irange(adjustment->get_lower(), adjustment->get_upper());
 		if(pageSize != nullptr)
@@ -1967,19 +1971,19 @@ void TextViewer::viewportScrollPositionChanged(
 		if(geometry::x(scrollOffsetsInPixels) > 0)
 			widgetapi::scheduleRedraw(*this, graphics::Rectangle(
 				geometry::topLeft(boundsToScroll),
-				Dimension(geometry::_dx = geometry::x(scrollOffsetsInPixels), geometry::_dy = geometry::dy(boundsToScroll))), false);
+				Dimension(geometry::_dx = static_cast<Scalar>(geometry::x(scrollOffsetsInPixels)), geometry::_dy = geometry::dy(boundsToScroll))), false);
 		else if(geometry::x(scrollOffsetsInPixels) < 0)
 			widgetapi::scheduleRedraw(*this, graphics::Rectangle(
 				geometry::topRight(boundsToScroll),
-				Dimension(geometry::_dx = geometry::x(scrollOffsetsInPixels), geometry::_dy = geometry::dy(boundsToScroll))), false);
+				Dimension(geometry::_dx = static_cast<Scalar>(geometry::x(scrollOffsetsInPixels)), geometry::_dy = geometry::dy(boundsToScroll))), false);
 		if(geometry::y(scrollOffsetsInPixels) > 0)
 			widgetapi::scheduleRedraw(*this, graphics::Rectangle(
 				geometry::topLeft(boundsToScroll),
-				Dimension(geometry::_dx = geometry::dx(boundsToScroll), geometry::_dy = geometry::y(scrollOffsetsInPixels))), false);
+				Dimension(geometry::_dx = geometry::dx(boundsToScroll), geometry::_dy = static_cast<Scalar>(geometry::y(scrollOffsetsInPixels)))), false);
 		else if(geometry::y(scrollOffsetsInPixels) < 0)
 			widgetapi::scheduleRedraw(*this, graphics::Rectangle(
 				geometry::bottomLeft(boundsToScroll),
-				Dimension(geometry::_dx = geometry::dx(boundsToScroll), geometry::_dy = geometry::y(scrollOffsetsInPixels))), false);
+				Dimension(geometry::_dx = geometry::dx(boundsToScroll), geometry::_dy = static_cast<Scalar>(geometry::y(scrollOffsetsInPixels)))), false);
 	}
 
 	// 4. scroll the ruler
