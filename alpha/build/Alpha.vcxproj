@@ -212,6 +212,10 @@
     <ClCompile Include="..\..\ascension\src\graphics\rendering-context-gdi.cpp" />
     <ClCompile Include="..\..\ascension\src\length.cpp" />
     <ClCompile Include="..\..\ascension\src\presentation.cpp" />
+    <ClCompile Include="..\..\ascension\src\rules\lexical-partitioning.cpp" />
+    <ClCompile Include="..\..\ascension\src\rules\scanner.cpp" />
+    <ClCompile Include="..\..\ascension\src\rules\token-rules.cpp" />
+    <ClCompile Include="..\..\ascension\src\rules\transition-rules.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\command.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\input-sequence-checker.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\kill-ring.cpp" />
@@ -255,7 +259,6 @@
     <ClCompile Include="..\src\style.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\..\ascension\src\rules.cpp" />
     <ClCompile Include="..\..\ascension\src\encodings\arabic.cpp" />
     <ClCompile Include="..\..\ascension\src\encodings\armenian.cpp" />
     <ClCompile Include="..\..\ascension\src\encodings\chinese.cpp">
