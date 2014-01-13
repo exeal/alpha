@@ -898,7 +898,7 @@ Scalar TextViewport::allocationMeasure() const BOOST_NOEXCEPT {
  * @see #adjustBpdScrollPositions
  */
 inline TextViewport::ScrollOffset TextViewport::calculateBpdScrollPosition(const boost::optional<VisualLine>& line) const BOOST_NOEXCEPT {
-	const VisualLine ln(line.get_value_or(firstVisibleLine()));
+	const VisualLine ln(boost::get_optional_value_or(line, firstVisibleLine()));
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 	// TODO: Not implemented.
 	boost::value_initialized<ScrollOffset> newBpdOffset;
@@ -1345,8 +1345,8 @@ void TextViewport::scrollTo(const AbstractTwoAxes<boost::optional<TextViewport::
 		return;
 
 	decltype(scrollPositions_) newPositions(
-		presentation::_ipd = positions.ipd().get_value_or(scrollPositions().ipd()),
-		presentation::_bpd = positions.bpd().get_value_or(scrollPositions().bpd()));
+		presentation::_ipd = boost::get_optional_value_or(positions.ipd(), scrollPositions().ipd()),
+		presentation::_bpd = boost::get_optional_value_or(positions.bpd(), scrollPositions().bpd()));
 
 	// inline dimension
 	if(positions.ipd() != boost::none) {
