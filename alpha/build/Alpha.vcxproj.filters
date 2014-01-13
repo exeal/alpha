@@ -99,6 +99,9 @@
     <Filter Include="Header Files\win32">
       <UniqueIdentifier>{7d0ce590-92ac-4501-9252-29d6798a6063}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Source Files\rules">
+      <UniqueIdentifier>{d027426b-2ba0-4ada-8b8f-4aa635efc72a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -154,9 +157,6 @@
     </ClCompile>
     <ClCompile Include="..\src\style.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\ascension\src\rules.cpp">
-      <Filter>ascension\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\encodings\arabic.cpp">
       <Filter>ascension\Source Files\encodings</Filter>
@@ -367,6 +367,18 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\current-line-highlighter.cpp">
       <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules\transition-rules.cpp">
+      <Filter>ascension\Source Files\rules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules\token-rules.cpp">
+      <Filter>ascension\Source Files\rules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules\scanner.cpp">
+      <Filter>ascension\Source Files\rules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\rules\lexical-partitioning.cpp">
+      <Filter>ascension\Source Files\rules</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

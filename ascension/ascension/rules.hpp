@@ -2,7 +2,7 @@
  * @file rules.hpp
  * @author exeal
  * @date 2004-2006 was Lexer.h
- * @date 2006-2013
+ * @date 2006-2014
  */
 
 #ifndef ASCENSION_RULES_HPP
@@ -13,7 +13,7 @@
 #include <ascension/corelib/regex.hpp>
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
-#include <list>
+#include <forward_list>
 #include <set>
 
 namespace ascension {
@@ -217,7 +217,6 @@ namespace ascension {
 		public:
 			// constructors
 			explicit LexicalTokenScanner(kernel::ContentType contentType) BOOST_NOEXCEPT;
-			~LexicalTokenScanner() BOOST_NOEXCEPT;
 			// attributes
 			void addRule(std::unique_ptr<const Rule> rule);
 			void addWordRule(std::unique_ptr<const WordRule> rule);
@@ -229,8 +228,8 @@ namespace ascension {
 			kernel::Position position() const BOOST_NOEXCEPT;
 		private:
 			kernel::ContentType contentType_;
-			std::list<const Rule*> rules_;
-			std::list<const WordRule*> wordRules_;
+			std::forward_list<std::unique_ptr<const Rule>> rules_;
+			std::forward_list<std::unique_ptr<const WordRule>> wordRules_;
 			kernel::DocumentCharacterIterator current_;
 		};
 
@@ -291,8 +290,8 @@ namespace ascension {
 			LexicalPartitioner() BOOST_NOEXCEPT;
 			~LexicalPartitioner() BOOST_NOEXCEPT;
 			// attribute
-			template<typename InputIterator>
-			void setRules(InputIterator first, InputIterator last);
+			template<typename SinglePassReadableRange>
+			void setRules(const SinglePassReadableRange& rules);
 		private:
 			struct Partition {
 				kernel::ContentType contentType;
@@ -308,7 +307,7 @@ namespace ascension {
 		private:
 			void computePartitioning(const kernel::Position& start,
 				const kernel::Position& minimalLast, kernel::Region& changedRegion);
-			static void deleteRules(std::list<const TransitionRule*>& rules) BOOST_NOEXCEPT;
+//			static void deleteRules(std::list<const TransitionRule*>& rules) BOOST_NOEXCEPT;
 			void dump() const;
 			void erasePartitions(const kernel::Position& first, const kernel::Position& last);
 			detail::GapVector<Partition*>::const_iterator partitionAt(const kernel::Position& at) const BOOST_NOEXCEPT;
@@ -323,8 +322,7 @@ namespace ascension {
 			void doInstall() BOOST_NOEXCEPT;
 		private:
 			detail::GapVector<Partition*> partitions_;
-			typedef std::list<const TransitionRule*> TransitionRules;
-			TransitionRules rules_;
+			std::forward_list<std::unique_ptr<const TransitionRule>> rules_;
 		};
 
 		/**
@@ -357,19 +355,16 @@ namespace ascension {
 		/// Returns the content type of the transition destination.
 		inline kernel::ContentType TransitionRule::destination() const BOOST_NOEXCEPT {return destination_;}
 
-		template<typename InputIterator> inline void LexicalPartitioner::setRules(InputIterator first, InputIterator last) {
+		/**
+		 * @tparam SinglePassReadableRange
+		 * @param rules
+		 */
+		template<typename SinglePassReadableRange>
+		inline void LexicalPartitioner::setRules(const SinglePassReadableRange& rules) {
 			if(document() != nullptr)
 				throw IllegalStateException("The partitioner is already connected to document.");
-			std::list<const TransitionRule*> temp;
-			try {
-				for(; first != last; ++first)
-					temp.push_back((*first)->clone().release());
-			} catch(...) {
-				deleteRules(temp);
-				throw;
-			}
+			std::forward_list<std::unique_ptr<const TransitionRule>> newRules(std::make_move_iterator(std::begin(rules)), std::make_move_iterator(std::end(rules)));
 			std::swap(rules_, temp);
-			deleteRules(temp);
 		}
 
 	}
