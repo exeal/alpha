@@ -267,9 +267,9 @@ namespace ascension {
 		 */
 		template<typename T>
 		inline FlowRelativeFourSides<T> mapPhysicalToFlowRelative(const WritingMode& writingMode, const graphics::PhysicalFourSides<T>& from) {
-			const PhysicalTwoAxes<T> sources[2] = {
-				PhysicalTwoAxes<T>(graphics::_x = from.left(), graphics::_y = from.top()),
-				PhysicalTwoAxes<T>(graphics::_x = from.right(), graphics::_y = from.bottom())
+			const graphics::PhysicalTwoAxes<T> sources[2] = {
+				graphics::PhysicalTwoAxes<T>(graphics::_x = from.left(), graphics::_y = from.top()),
+				graphics::PhysicalTwoAxes<T>(graphics::_x = from.right(), graphics::_y = from.bottom())
 			};
 			const AbstractTwoAxes<T> destinations[2] = {
 				mapPhysicalToAbstract(writingMode, sources[0]), mapPhysicalToAbstract(writingMode, sources[1])
