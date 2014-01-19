@@ -40,7 +40,7 @@ namespace ascension {
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 			const DropAction DROP_ACTION_WIN32_SCROLL = 1 << 3;
 #endif
-			DropAction resolveDefaultDropAction(DropAction possibleActions, UserInput::ModifierKey modifierKeys);
+			DropAction resolveDefaultDropAction(DropAction possibleActions, UserInput::Modifiers modifiers);
 
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 			typedef Glib::RefPtr<Gtk::TargetList> NativeMimeData;
@@ -68,7 +68,7 @@ namespace ascension {
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 					CLIPFORMAT
 #else
-			ASCENSION_CANT_DETECT_PLATFORM();
+					ASCENSION_CANT_DETECT_PLATFORM();
 #endif
 					Format;
 				/// Returns a list of formats supported by the object.
@@ -195,6 +195,7 @@ namespace ascension {
 				DragMoveInput(const MouseButtonInput& mouse, DropAction possibleActions, const MimeDataFormats& formats) : DragInputBase(mouse, possibleActions), formats_(formats) {}
 				void accept(boost::optional<const graphics::Rectangle> rectangle);
 				void ignore(boost::optional<const graphics::Rectangle> rectangle);
+				const MimeDataFormats& mimeDataFormats() const BOOST_NOEXCEPT {return formats_;}
 			private:
 				const MimeDataFormats& formats_;
 			};
@@ -217,6 +218,35 @@ namespace ascension {
 			};
 
 		}
+	}
+
+	namespace detail {
+		class DragEventAdapter {
+		public:
+			explicit DragEventAdapter(viewers::widgetapi::DropTarget& target) : target_(target) {}
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+			void adaptDragLeaveEvent(const Glib::RefPtr<Gdk::DragContext>& context, guint time);
+			bool adaptDragMoveEvent(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
+			bool adaptDropEvent(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+			void adaptDragEnterEvent(QDragEnterEvent* event);
+			void adaptDragLeaveEvent(QDragLeaveEvent* event);
+			void adaptDragMoveEvent(QDragMoveEvent* event);
+			void adaptDropEvent(QDropEvent* event);
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+			HRESULT adaptDragEnterEvent(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
+			HRESULT adaptDragLeaveEvent();
+			HRESULT adaptDragMoveEvent(DWORD keyState, POINTL location, DWORD* effect);
+			HRESULT adaptDropEvent(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
+#else
+			ASCENSION_CANT_DETECT_PLATFORM();
+#endif
+		private:
+			viewers::widgetapi::DropTarget& target_;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#endif
+		};
 	}
 }
 
