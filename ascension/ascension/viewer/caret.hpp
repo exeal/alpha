@@ -29,23 +29,9 @@ namespace ascension {
 
 	namespace viewers {
 		namespace utils {
-			/**
-			 * Creates an MIME data object represents the selected content.
-			 * @param caret The caret gives the selection
-			 * @param rtf Set @c true if the content is available as Rich Text Format. This feature
-			 *            is not implemented yet and the parameter is ignored
-			 * @return The MIME data object
-			 */
-			widgetapi::NativeMimeData createMimeDataForSelectedString(const Caret& caret, bool rtf);
-			/**
-			 * Returns the text content from the given MIME data.
-			 * @param data The MIME data
-			 * @return A pair of the following values:
-			 * @retval first The text string
-			 * @retval second @c true if the content is rectangle
-			 * @throw std#bad_alloc
-			 */
-			std::pair<String, bool> getTextFromMimeData(widgetapi::ConstNativeMimeData data);
+			widgetapi::MimeData&& createMimeDataForSelectedString(const Caret& caret, bool rtf);
+			std::pair<String, bool> getTextFromMimeData(const widgetapi::MimeData& data);
+			widgetapi::MimeDataFormats::Format rectangleTextMimeDataFormat();
 		}
 
 		class VirtualBox;
@@ -244,6 +230,8 @@ namespace ascension {
 		bool isSelectionEmpty(const Caret& caret) BOOST_NOEXCEPT;
 		boost::optional<boost::integer_range<Index>> selectedRangeOnLine(const Caret& caret, Index line);
 		boost::optional<boost::integer_range<Index>> selectedRangeOnVisualLine(const Caret& caret, const graphics::font::VisualLine& line);
+		boost::optional<boost::integer_range<Index>> selectedRangeOnVisualLine(Caret& caret,
+			const graphics::font::VisualLine& line, const graphics::font::LineLayoutVector::UseCalculatedLayoutTag&);
 		String selectedString(const Caret& caret, const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE);
 		std::basic_ostream<Char>& selectedString(const Caret& caret,
 			std::basic_ostream<Char>& out, const text::Newline& newline = text::Newline::USE_INTRINSIC_VALUE);
