@@ -1,6 +1,6 @@
 #!/usr/local/bin/python
 #
-# gen-uprops.py (c) 2009-2011 exeal
+# gen-uprops.py (c) 2009-2011, 2014 exeal
 # [was] props.py (c) 2008 exeal
 # [was] props.pl (c) 2005-2007 exeal
 #
@@ -96,7 +96,7 @@ class PropertyNames(object):
             return -1
     @staticmethod
     def cpp_name(name):
-        return re.sub(r'[^A-Za-z0-9]', '', name)
+        return r'ucd::' + re.sub(r'[^A-Za-z0-9]', '', name)
     @staticmethod
     def cpp_value_name(name):
         return re.sub(r'[^A-Za-z0-9]', '_', name.upper())
@@ -301,7 +301,7 @@ class CodeGenerator(object):
     def _print_partitioned_of_code(self, long_name):
         out = self._output_files['i']
         out.write('/// Returns the property of the specified character @a c.\n')
-        out.write(('inline int %s::of(CodePoint c) /*throw()*/ {' % PropertyNames.cpp_name(long_name))
+        out.write(('inline int %s::of(CodePoint c) BOOST_NOEXCEPT {' % PropertyNames.cpp_name(long_name))
                   + 'if(!isValidCodePoint(c)) return DEFAULT_VALUE;'
                   + ' const detail::CharacterPropertyPartition* const p = std::upper_bound('
                   + 'VALUES_, VALUES_ + NUMBER_, c, detail::CharacterPropertyRangeComparer<detail::CharacterPropertyPartition, CodePoint>());'
@@ -342,9 +342,9 @@ class CodeGenerator(object):
                 'Other_ID_Start', 'Other_ID_Continue', 'Other_Lowercase', 'Other_Math', 'Other_Uppercase']))
         names = self._PROPERTY_NAMES.binary_value_names()
         out = self._output_files['vn']
-        out.write(r'const detail::CharacterPropertyValueName BinaryProperty::NAMES_[] = {')
+        out.write(r'const detail::CharacterPropertyValueName ucd::BinaryProperty::NAMES_[] = {')
         for name in names:
-            out.write(r'{"%s",BinaryProperty::%s},' % name)
+            out.write(r'{"%s",ucd::BinaryProperty::%s},' % name)
         out.write('};\n')
         self._print_forname_code('BinaryProperty', names)
 
@@ -370,12 +370,12 @@ class CodeGenerator(object):
         self._output_files['bpvd'].write(
             'static const detail::CharacterPropertyRange<%s> %s[];\n' % (element_type, member_name))
         self._output_files['ct'].write(
-            r'const detail::CharacterPropertyRange<%s> BinaryProperty::%s[] = {' % (element_type, member_name))
+            r'const detail::CharacterPropertyRange<%s> ucd::BinaryProperty::%s[] = {' % (element_type, member_name))
         for p in ps:
             self._output_files['ct'].write(r'{0x%x,0x%x},' % p)
         self._output_files['ct'].write('};\n')
         self._output_files['i'].write('/// Returns true if the specified character @a c has the property.\n')
-        self._output_files['i'].write('template<> inline bool BinaryProperty::is<BinaryProperty::%s>(CodePoint c) /*throw()*/ {' % cpp_name)
+        self._output_files['i'].write('template<> inline bool ucd::BinaryProperty::is<ucd::BinaryProperty::%s>(CodePoint c) BOOST_NOEXCEPT {' % cpp_name)
         if ucs4:
             self._output_files['i'].write('if(!isValidCodePoint(c)) return false; ')
         else:
@@ -395,17 +395,17 @@ class CodeGenerator(object):
     def _process_canonical_combining_classes(self):
         sys.stdout.write('Generating code for property \'Canonical_Combining_Class\'...')
         ps = self._make_property_partitions('ccc')
-        self._output_files['ct'].write('const CodePoint CanonicalCombiningClass::CHARACTERS_[] = {')
+        self._output_files['ct'].write('const CodePoint ucd::CanonicalCombiningClass::CHARACTERS_[] = {')
         self._foreach_in_property_partitions(ps, lambda c, p : self._output_files['ct'].write('0x%x,' % c), '0')
         self._output_files['ct'].write('};\n')
-        self._output_files['ct'].write('const uint8_t CanonicalCombiningClass::VALUES_[] = {')
+        self._output_files['ct'].write('const std::uint8_t ucd::CanonicalCombiningClass::VALUES_[] = {')
         self._foreach_in_property_partitions(ps, lambda c, p : self._output_files['ct'].write('%s,' % p), '0')  # p is a string
         self._output_files['ct'].write('};\n')
-        self._output_files['ct'].write('const std::size_t CanonicalCombiningClass::NUMBER_ = ASCENSION_COUNTOF(CanonicalCombiningClass::VALUES_);')
+        self._output_files['ct'].write('const std::size_t ucd::CanonicalCombiningClass::NUMBER_ = std::extent<decltype(ucd::CanonicalCombiningClass::VALUES_)>::value;')
         self._print_value_names('Canonical_Combining_Class')
         self._output_files['i'].write(
             '/// Returns the property of the specified character @a c.\n'
-            + 'inline int CanonicalCombiningClass::of(CodePoint c) /*throw()*/ {\n'
+            + 'inline int ucd::CanonicalCombiningClass::of(CodePoint c) BOOST_NOEXCEPT {\n'
             + '\tconst CodePoint* const p = std::lower_bound(CHARACTERS_, CHARACTERS_ + NUMBER_, c);\n'
             + '\treturn (p != CHARACTERS_ + NUMBER_ && *p == c) ? VALUES_[p - CHARACTERS_] : DEFAULT_VALUE;\n'
             + '};\n')
@@ -552,15 +552,15 @@ class CodeGenerator(object):
                 self._blocks.sort()
                 code_table = self._outer._output_files['ct']
                 value_names = self._outer._output_files['vn']
-                code_table.write(r'const detail::CharacterPropertyPartition Block::VALUES_[] = {')
+                code_table.write(r'const detail::CharacterPropertyPartition ucd::Block::VALUES_[] = {')
                 for i, block in enumerate(self._blocks):
                     cpp_name = PropertyNames.cpp_value_name(block[2])
                     self._outer._output_files['bd'].write('%s, ///< %s.\n' % (cpp_name, block[2]))
                     if i != 0 and self._blocks[i - 1][1] != block[0]:
-                        code_table.write('{0x%x,Block::NO_BLOCK},' % self._blocks[i - 1][0])
-                    code_table.write(r'{0x%x,Block::%s},' % (block[0], cpp_name))
+                        code_table.write('{0x%x,ucd::Block::NO_BLOCK},' % self._blocks[i - 1][0])
+                    code_table.write(r'{0x%x,ucd::Block::%s},' % (block[0], cpp_name))
                 code_table.write('};\n')
-                code_table.write('const std::size_t Block::NUMBER_ = ASCENSION_COUNTOF(Block::VALUES_);\n')
+                code_table.write('const std::size_t ucd::Block::NUMBER_ = std::extent<decltype(ucd::Block::VALUES_)>::value;\n')
                 print(' ([%d])' % len(self._blocks))
         self._open_output_file(r'blocks-definition')
         xml.sax.parse(self._ucdxml_filename, ContentHandler(self))
@@ -579,7 +579,7 @@ class CodeGenerator(object):
             out_ct.write(r'{0x%x,%s::%s},'
                          % (p[0], cpp_name, PropertyNames.cpp_value_name(self._PROPERTY_NAMES.long_value_name(short_name, p[1]))))
         out_ct.write('};\n')
-        out_ct.write('const std::size_t %s::NUMBER_ = ASCENSION_COUNTOF(%s::VALUES_);\n' % (cpp_name, cpp_name))
+        out_ct.write('const std::size_t %s::NUMBER_ = std::extent<decltype(%s::VALUES_)>::value;\n' % (cpp_name, cpp_name))
         self._print_partitioned_of_code(long_name)
         self._print_value_names(long_name)
         print(' ([%d])' % len(ps))

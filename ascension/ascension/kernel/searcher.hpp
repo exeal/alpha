@@ -2,7 +2,7 @@
  * @file searcher.hpp
  * @author exeal
  * @date 2004-2006 (was TextSearcher.h)
- * @date 2006-2013
+ * @date 2006-2014
  */
 
 #ifndef ASCENSION_SEARCHER_HPP
@@ -20,10 +20,14 @@
 #include <vector>
 
 namespace ascension {
-	namespace text {class BreakIterator;}
+	namespace text {
+		class BreakIterator;
+	}
 
 #ifndef ASCENSION_NO_REGEX
-	namespace regex {template<typename CodePointIterator> class Matcher;};
+	namespace regex {
+		template<typename CodePointIterator> class Matcher;
+	};
 #endif // !ASCENSION_NO_REGEX
 
 	namespace searcher {
