@@ -160,18 +160,22 @@ namespace ascension {
 		inline bool operator==(const Point& lhs, const Point& rhs) BOOST_NOEXCEPT {
 			return lhs.position() == rhs.position();
 		}
+
 		/// Less-than operator for @c Point objects.
 		inline bool operator<(const Point& lhs, const Point& rhs) BOOST_NOEXCEPT {
 			return lhs.position() < rhs.position();
 		}
+
 		/// Returns the content type of the document partition contains the point.
 		inline ContentType contentType(const Point& p) {
 			return p.document().partitioner().contentType(p);
 		}
+
 		/// Returns the line number of @a p.
 		inline Index line(const Point& p) BOOST_NOEXCEPT {
 			return p.position().line;
 		}
+
 		/// Returns the offset in the line of @a p.
 		inline Index offsetInLine(const Point& p) BOOST_NOEXCEPT {
 			return p.position().offsetInLine;
@@ -182,6 +186,7 @@ namespace ascension {
 
 		/// Conversion operator for convenience.
 		inline Point::operator Position() const {return position();}
+
 		/**
 		 * Protected assignment operator moves the point to @a other.
 		 * @see #moveTo
@@ -190,42 +195,60 @@ namespace ascension {
 			position_ = other;
 			return *this;
 		}
+
 		/// Returns @c true if the point is adapting to the document change.
 		inline bool Point::adaptsToDocument() const BOOST_NOEXCEPT {return adapting_;}
+
 		/// Adapts the point to the document change.
 		inline Point& Point::adaptToDocument(bool adapt) BOOST_NOEXCEPT {
 			adapting_ = adapt;
 			return *this;
 		}
-		/// Returns the document or throw @c DocumentDisposedException if the document is already disposed.
+
+		/// Returns the document or throws @c DocumentDisposedException if the document is already disposed.
 		inline Document& Point::document() {
 			if(document_ == nullptr)
 				throw DocumentDisposedException();
 			return *document_;
 		}
-		/// Returns the document or throw @c DocumentDisposedException if the document is already disposed.
+
+		/// Returns the document or throws @c DocumentDisposedException if the document is already disposed.
 		inline const Document& Point::document() const {
 			if(document_ == nullptr)
 				throw DocumentDisposedException();
 			return *document_;
 		}
+
 		/// Called when the document is disposed.
 		inline void Point::documentDisposed() BOOST_NOEXCEPT {document_ = nullptr;}
+
 		/// Returns the gravity.
 		inline Direction Point::gravity() const BOOST_NOEXCEPT {return gravity_;}
+
 		/// Returns @c true if the document is already disposed.
 		inline bool Point::isDocumentDisposed() const BOOST_NOEXCEPT {return document_ == nullptr;}
+
 		/**
 		 * Normalizes the position of the point.
 		 * This method does <strong>not</strong> inform to the listeners about any movement.
 		 */
 		inline void Point::normalize() const {const_cast<Point*>(this)->position_ = normalized();}
+
 		/// Returns the normalized position of the point.
 		inline Position Point::normalized() const {return positions::shrinkToDocumentRegion(document(), position());}
+
 		/// Returns the position.
 		inline const Position& Point::position() const BOOST_NOEXCEPT {return position_;}
 
 	} // namespace kernel
+
+	namespace detail {
+		/// @internal Returns the @c IdentifierSyntax object corresponds to the given point.
+		template<typename Point>
+		inline const text::IdentifierSyntax& identifierSyntax(const Point& p) {
+			return p.document().contentTypeInformation().getIdentifierSyntax(contentType(p));
+		}
+	}
 } // namespace ascension
 
 #endif // !ASCENSION_POINT_HPP

@@ -365,7 +365,7 @@ namespace ascension {
 			static std::unique_ptr<Encoder> forWindowsCodePage(unsigned int codePage) BOOST_NOEXCEPT;
 			static bool supports(MIBenum mib) BOOST_NOEXCEPT;
 			static bool supports(const std::string& name) BOOST_NOEXCEPT;
-			static void registerFactory(EncoderFactory& newFactory);
+			static void registerFactory(std::shared_ptr<const EncoderFactory> newFactory);
 
 		protected:
 			Encoder() BOOST_NOEXCEPT;
@@ -396,9 +396,9 @@ namespace ascension {
 			virtual Result doToUnicode(Char* to, Char* toEnd, Char*& toNext,
 				const Byte* from, const Byte* fromEnd, const Byte*& fromNext) = 0;
 		private:
-			static EncoderFactory* find(MIBenum mib) BOOST_NOEXCEPT;
-			static EncoderFactory* find(const std::string& name) BOOST_NOEXCEPT;
-			static std::vector<EncoderFactory*>& registry();
+			static std::shared_ptr<const EncoderFactory> find(MIBenum mib) BOOST_NOEXCEPT;
+			static std::shared_ptr<const EncoderFactory> find(const std::string& name) BOOST_NOEXCEPT;
+			static std::vector<std::shared_ptr<const EncoderFactory>>& registry();
 			SubstitutionPolicy substitutionPolicy_;
 			int flags_;	// see Flag enums
 		};
@@ -425,12 +425,12 @@ namespace ascension {
 			// detection
 			std::pair<MIBenum, std::string> detect(const Byte* first, const Byte* last, std::ptrdiff_t* convertibleBytes) const;
 			// factory
-			static EncodingDetector* forName(const std::string& name) BOOST_NOEXCEPT;
+			static std::shared_ptr<const EncodingDetector> forName(const std::string& name) BOOST_NOEXCEPT;
 #ifdef ASCENSION_OS_WINDOWS
-			static EncodingDetector* forWindowsCodePage(unsigned int codePage) BOOST_NOEXCEPT;
+			static std::shared_ptr<const EncodingDetector> forWindowsCodePage(unsigned int codePage) BOOST_NOEXCEPT;
 #endif // ASCENSION_OS_WINDOWS
 			template<typename OutputIterator> static void availableNames(OutputIterator out);
-			static void registerDetector(std::unique_ptr<EncodingDetector> newDetector);
+			static void registerDetector(std::shared_ptr<const EncodingDetector> newDetector);
 		protected:
 			explicit EncodingDetector(const std::string& name);
 		private:
@@ -446,7 +446,7 @@ namespace ascension {
 			virtual std::pair<MIBenum, std::string> doDetect(
 				const Byte* first, const Byte* last, std::ptrdiff_t* convertibleBytes) const BOOST_NOEXCEPT = 0;
 		private:
-			static std::vector<EncodingDetector*>& registry();
+			static std::vector<std::shared_ptr<const EncodingDetector>>& registry();
 			const std::string name_;
 		};
 
@@ -670,7 +670,7 @@ namespace ascension {
 		 */
 		template<typename OutputIterator>
 		inline void EncodingDetector::availableNames(OutputIterator out) {
-			for(std::vector<EncodingDetector*>::const_iterator i(registry().begin()), e(registry().end()); i != e; ++i, ++out)
+			for(std::vector<std::shared_ptr<const EncodingDetector>>::const_iterator i(std::begin(registry())), e(std::end(registry())); i != e; ++i, ++out)
 				*out = (*i)->name();
 		}
 

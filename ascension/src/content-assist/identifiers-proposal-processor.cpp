@@ -4,6 +4,7 @@
  * @date 2003-2006 was CompletionWindow.cpp
  * @date 2006-2012 was content-assist.cpp
  * @date 2012-03-12 separated from content-assist.cpp
+ * @date 2014
  */
 
 #include <ascension/content-assist/default-completion-proposal.hpp>
@@ -12,135 +13,133 @@
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/viewer.hpp>
-
-using namespace ascension;
-using namespace ascension::contentassist;
-using namespace ascension::kernel;
-using namespace ascension::text;
-using namespace ascension::viewers;
-using namespace std;
+#include <boost/foreach.hpp>
 
 
-// IdentifiersProposalProcessor ///////////////////////////////////////////////////////////////////
+namespace ascension {
+	namespace contentassist {
+		// IdentifiersProposalProcessor ///////////////////////////////////////////////////////////////////////////////
 
-namespace {
-	class DisplayStringComparer {
-	public:
-		explicit DisplayStringComparer(const ContentAssistProcessor& processor) BOOST_NOEXCEPT : processor_(processor) {
+		namespace {
+			class DisplayStringComparer {
+			public:
+				explicit DisplayStringComparer(const ContentAssistProcessor& processor) BOOST_NOEXCEPT : processor_(processor) {
+				}
+				bool operator()(std::shared_ptr<const CompletionProposal> lhs, const String& rhs) const {
+					return processor_.compareDisplayStrings(lhs->displayString(), rhs);
+				}
+				bool operator()(const String& lhs, std::shared_ptr<const CompletionProposal> rhs) const {
+					return processor_.compareDisplayStrings(lhs, rhs->displayString());
+				}
+			private:
+				const ContentAssistProcessor& processor_;
+			};
+		} // namespace @0
+
+		/**
+		 * Constructor.
+		 * @param contentType The content type
+		 * @param syntax The identifier syntax to detect identifiers
+		 */
+		IdentifiersProposalProcessor::IdentifiersProposalProcessor(kernel::ContentType contentType,
+				const text::IdentifierSyntax& syntax) BOOST_NOEXCEPT : contentType_(contentType), syntax_(syntax) {
 		}
-		bool operator()(shared_ptr<const CompletionProposal> lhs, const String& rhs) const {
-			return processor_.compareDisplayStrings(lhs->displayString(), rhs);
+
+		/// Destructor.
+		IdentifiersProposalProcessor::~IdentifiersProposalProcessor() BOOST_NOEXCEPT {
 		}
-		bool operator()(const String& lhs, shared_ptr<const CompletionProposal> rhs) const {
-			return processor_.compareDisplayStrings(lhs, rhs->displayString());
+
+		/// @see ContentAssistProcessor#activeCompletionProposal
+		std::shared_ptr<const CompletionProposal> IdentifiersProposalProcessor::activeCompletionProposal(
+				const viewers::TextViewer& textViewer, const kernel::Region& replacementRegion,
+				std::shared_ptr<const CompletionProposal> currentProposals[], std::size_t numberOfCurrentProposals) const BOOST_NOEXCEPT {
+			// select the partially matched proposal
+			String precedingIdentifier(textViewer.document().line(replacementRegion.first.line).substr(
+				replacementRegion.beginning().offsetInLine, replacementRegion.end().offsetInLine - replacementRegion.beginning().offsetInLine));
+			if(precedingIdentifier.empty())
+				return std::shared_ptr<CompletionProposal>();
+			std::shared_ptr<const CompletionProposal> activeProposal(*std::lower_bound(currentProposals,
+				currentProposals + numberOfCurrentProposals, precedingIdentifier, DisplayStringComparer(*this)));
+			if(activeProposal == currentProposals[numberOfCurrentProposals]
+					|| text::CaseFolder::compare(activeProposal->displayString().substr(0, precedingIdentifier.length()), precedingIdentifier) != 0)
+				return std::shared_ptr<CompletionProposal>();
+			return activeProposal;
 		}
-	private:
-		const ContentAssistProcessor& processor_;
-	};
-} // namespace @0
 
-/**
- * Constructor.
- * @param contentType The content type
- * @param syntax The identifier syntax to detect identifiers
- */
-IdentifiersProposalProcessor::IdentifiersProposalProcessor(ContentType contentType,
-		const IdentifierSyntax& syntax) BOOST_NOEXCEPT : contentType_(contentType), syntax_(syntax) {
-}
+		/// @see ContentAssistProcessor#compareDisplayStrings
+		bool IdentifiersProposalProcessor::compareDisplayStrings(const String& s1, const String& s2) const BOOST_NOEXCEPT {
+			return text::CaseFolder::compare(s1, s2) < 0;
+		}
 
-/// Destructor.
-IdentifiersProposalProcessor::~IdentifiersProposalProcessor() BOOST_NOEXCEPT {
-}
+		/// @see ContentAssistProcessor#computCompletionProposals
+		void IdentifiersProposalProcessor::computeCompletionProposals(const viewers::Caret& caret,
+				bool& incremental, kernel::Region& replacementRegion, std::set<std::shared_ptr<const CompletionProposal>>& proposals) const {
+			replacementRegion.second = caret;
 
-/// @see ContentAssistProcessor#activeCompletionProposal
-shared_ptr<const CompletionProposal> IdentifiersProposalProcessor::activeCompletionProposal(
-		const TextViewer& textViewer, const Region& replacementRegion,
-		shared_ptr<const CompletionProposal> currentProposals[], size_t numberOfCurrentProposals) const BOOST_NOEXCEPT {
-	// select the partially matched proposal
-	String precedingIdentifier(textViewer.document().line(replacementRegion.first.line).substr(
-		replacementRegion.beginning().offsetInLine, replacementRegion.end().offsetInLine - replacementRegion.beginning().offsetInLine));
-	if(precedingIdentifier.empty())
-		return shared_ptr<CompletionProposal>();
-	shared_ptr<const CompletionProposal> activeProposal(*lower_bound(currentProposals,
-		currentProposals + numberOfCurrentProposals, precedingIdentifier, DisplayStringComparer(*this)));
-	if(activeProposal == currentProposals[numberOfCurrentProposals]
-			|| CaseFolder::compare(activeProposal->displayString().substr(0, precedingIdentifier.length()), precedingIdentifier) != 0)
-		return shared_ptr<CompletionProposal>();
-	return activeProposal;
-}
+			// find the preceding identifier
+			static const Index MAXIMUM_IDENTIFIER_LENGTH = 100;
+			if(!incremental || kernel::locations::isBeginningOfLine(caret))
+				replacementRegion.first = caret;
+			else if(source::getNearestIdentifier(caret.document(), caret, &replacementRegion.first.offsetInLine, nullptr))
+				replacementRegion.first.line = kernel::line(caret);
+			else
+				replacementRegion.first = caret;
 
-/// @see ContentAssistProcessor#compareDisplayStrings
-bool IdentifiersProposalProcessor::compareDisplayStrings(const String& s1, const String& s2) const BOOST_NOEXCEPT {
-	return CaseFolder::compare(s1, s2) < 0;
-}
-
-/// @see ContentAssistProcessor#computCompletionProposals
-void IdentifiersProposalProcessor::computeCompletionProposals(const Caret& caret,
-		bool& incremental, Region& replacementRegion, set<shared_ptr<const CompletionProposal>>& proposals) const {
-	replacementRegion.second = caret;
-
-	// find the preceding identifier
-	static const Index MAXIMUM_IDENTIFIER_LENGTH = 100;
-	if(!incremental || locations::isBeginningOfLine(caret))
-		replacementRegion.first = caret;
-	else if(source::getNearestIdentifier(caret.document(), caret, &replacementRegion.first.offsetInLine, nullptr))
-		replacementRegion.first.line = line(caret);
-	else
-		replacementRegion.first = caret;
-
-	// collect identifiers in the document
-	static const Index MAXIMUM_BACKTRACKING_LINES = 500;
-	const Document& document = caret.document();
-	DocumentCharacterIterator i(document, Region(Position(
-		(line(caret) > MAXIMUM_BACKTRACKING_LINES) ?
-			line(caret) - MAXIMUM_BACKTRACKING_LINES : 0, 0), replacementRegion.first));
-	DocumentPartition currentPartition;
-	set<String> identifiers;
-	bool followingNIDs = false;
-	document.partitioner().partition(i.tell(), currentPartition);
-	while(i.hasNext()) {
-		if(currentPartition.contentType != contentType_)
-			i.seek(currentPartition.region.end());
-		if(i.tell() >= currentPartition.region.end()) {
-			if(i.tell().offsetInLine == i.line().length())
-				i.next();
+			// collect identifiers in the document
+			static const Index MAXIMUM_BACKTRACKING_LINES = 500;
+			const kernel::Document& document = caret.document();
+			kernel::DocumentCharacterIterator i(document, kernel::Region(kernel::Position(
+				(kernel::line(caret) > MAXIMUM_BACKTRACKING_LINES) ?
+					kernel::line(caret) - MAXIMUM_BACKTRACKING_LINES : 0, 0), replacementRegion.first));
+			kernel::DocumentPartition currentPartition;
+			std::set<String> identifiers;
+			bool followingNIDs = false;
 			document.partitioner().partition(i.tell(), currentPartition);
-			continue;
-		}
-		if(!followingNIDs) {
-			const Char* const bol = i.line().data();
-			const Char* const s = bol + i.tell().offsetInLine;
-			const Char* e = syntax_.eatIdentifier(s, bol + i.line().length());
-			if(e > s) {
-				identifiers.insert(String(s, e));	// automatically merged
-				i.seek(Position(i.tell().line, e - bol));
-			} else {
-				if(syntax_.isIdentifierContinueCharacter(i.current()))
-					followingNIDs = true;
-				i.next();
+			while(i.hasNext()) {
+				if(currentPartition.contentType != contentType_)
+					i.seek(currentPartition.region.end());
+				if(i.tell() >= currentPartition.region.end()) {
+					if(i.tell().offsetInLine == i.line().length())
+						i.next();
+					document.partitioner().partition(i.tell(), currentPartition);
+					continue;
+				}
+				if(!followingNIDs) {
+					const Char* const bol = i.line().data();
+					const Char* const s = bol + i.tell().offsetInLine;
+					const Char* e = syntax_.eatIdentifier(s, bol + i.line().length());
+					if(e > s) {
+						identifiers.insert(String(s, e));	// automatically merged
+						i.seek(kernel::Position(i.tell().line, e - bol));
+					} else {
+						if(syntax_.isIdentifierContinueCharacter(i.current()))
+							followingNIDs = true;
+						i.next();
+					}
+				} else {
+					if(!syntax_.isIdentifierContinueCharacter(i.current()))
+						followingNIDs = false;
+					i.next();
+				}
 			}
-		} else {
-			if(!syntax_.isIdentifierContinueCharacter(i.current()))
-				followingNIDs = false;
-			i.next();
+			BOOST_FOREACH(const String& identifier, identifiers)
+				proposals.insert(std::make_shared<DefaultCompletionProposal>(identifier));
+		}
+
+		/// Returns the identifier syntax the processor uses or @c null.
+		const text::IdentifierSyntax& IdentifiersProposalProcessor::identifierSyntax() const BOOST_NOEXCEPT {
+			return syntax_;
+		}
+
+		/// @see ContentAssistProcessor#isIncrementalCompletionAutoTerminationCharacter
+		bool IdentifiersProposalProcessor::isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const BOOST_NOEXCEPT {
+			return !syntax_.isIdentifierContinueCharacter(c);
+		}
+
+		/// @see ContentAssistProcessor#recomputIncrementalCompletionProposals
+		void IdentifiersProposalProcessor::recomputeIncrementalCompletionProposals(const viewers::TextViewer&,
+				const kernel::Region&, std::shared_ptr<const CompletionProposal>[], std::size_t, std::set<std::shared_ptr<const CompletionProposal>>&) const {
+			// do nothing
 		}
 	}
-	for(set<String>::const_iterator i(identifiers.begin()), e(identifiers.end()); i != e; ++i)
-		proposals.insert(shared_ptr<CompletionProposal>(new DefaultCompletionProposal(*i)));
-}
-
-/// Returns the identifier syntax the processor uses or @c null.
-const IdentifierSyntax& IdentifiersProposalProcessor::identifierSyntax() const BOOST_NOEXCEPT {
-	return syntax_;
-}
-
-/// @see ContentAssistProcessor#isIncrementalCompletionAutoTerminationCharacter
-bool IdentifiersProposalProcessor::isIncrementalCompletionAutoTerminationCharacter(CodePoint c) const BOOST_NOEXCEPT {
-	return !syntax_.isIdentifierContinueCharacter(c);
-}
-
-/// @see ContentAssistProcessor#recomputIncrementalCompletionProposals
-void IdentifiersProposalProcessor::recomputeIncrementalCompletionProposals(
-		const TextViewer&, const Region&, shared_ptr<const CompletionProposal>[], size_t, set<shared_ptr<const CompletionProposal>>&) const {
-	// do nothing
 }
