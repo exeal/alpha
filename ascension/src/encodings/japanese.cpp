@@ -78,10 +78,10 @@
 
 #include <ascension/corelib/encoder.hpp>
 #include <ascension/corelib/text/utf.hpp>
-#include <algorithm>	// std.binary_search
 #include <cassert>
 #include <cstring>		// std.memcpy
 #include <map>
+#include <boost/range/algorithm/binary_search.hpp>
 
 namespace ascension {
 	namespace encoding {
@@ -353,7 +353,7 @@ namespace ascension {
 					Encoder::Result convertUCStoX0213(const Char* first, const Char* last,
 							const Char*& next, bool eob, std::uint16_t& jis, bool& plane2) BOOST_NOEXCEPT {
 						jis = 0;
-						if(std::binary_search(LEADING_BYTES_TO_JIS_X_0213, ASCENSION_ENDOF(LEADING_BYTES_TO_JIS_X_0213), first[0])) {
+						if(boost::binary_search(LEADING_BYTES_TO_JIS_X_0213, first[0])) {
 							if(first + 1 == last) {
 								if(!eob) {
 									// pending
@@ -538,12 +538,12 @@ namespace ascension {
 							|| (jis >= jk(14, 2) && jis <= jk(15, 93))
 							|| (jis >= jk(47, 53) && jis <= jk(47, 93))
 							|| (jis >= jk(84, 8) && jis <= jk(94, 89))
-							|| std::binary_search(PROHIBITED_IDEOGRAPHS_2000, ASCENSION_ENDOF(PROHIBITED_IDEOGRAPHS_2000), jis);
+							|| boost::binary_search(PROHIBITED_IDEOGRAPHS_2000, jis);
 					}
 
 					// returns true if is "禁止漢字" added by JIS X 0213:2004.
 					inline bool isISO2022JP2004ProhibitedIdeograph(std::uint16_t jis) {
-						return std::binary_search(PROHIBITED_IDEOGRAPHS_2004, ASCENSION_ENDOF(PROHIBITED_IDEOGRAPHS_2004), jis);
+						return boost::binary_search(PROHIBITED_IDEOGRAPHS_2004, jis);
 					}
 
 					// converts from ISO-2022-JP-X into UTF-16.
@@ -762,7 +762,7 @@ namespace ascension {
 								++from;
 							} else if(state.g0 == EncodingState::GB2312 || state.g0 == EncodingState::KS_C_5601) {	// GB2312:1980 or KSC5601:1987
 								const Byte buffer[2] = {*from | 0x80, from[1] | 0x80};
-								const Byte* const bufferEnd = ASCENSION_ENDOF(buffer);
+								const Byte* const bufferEnd = buffer + std::extent<decltype(buffer)>::value;
 								const Byte* next;
 								const Encoder::Result r = ((state.g0 == EncodingState::GB2312) ?
 									gb2312Encoder : ksc5601Encoder)->toUnicode(to, toEnd, toNext, buffer, bufferEnd, next);
@@ -899,16 +899,16 @@ namespace ascension {
 									) && (jis = convertUCStoX0212(*from)) != 0)
 								charset = EncodingState::JIS_X_0212;
 							else if(/*x == '2' &&*/ gb2312Encoder.get() != nullptr
-									&& gb2312Encoder->fromUnicode(mbcs, ASCENSION_ENDOF(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
+									&& gb2312Encoder->fromUnicode(mbcs, mbcs + std::extent<decltype(mbcs)>::value, dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
 								charset = EncodingState::GB2312;
 							else if(/*x == '2' &&*/ ksc5601Encoder.get() != nullptr
-									&& ksc5601Encoder->fromUnicode(mbcs, ASCENSION_ENDOF(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
+									&& ksc5601Encoder->fromUnicode(mbcs, mbcs + std::extent<decltype(mbcs)>::value, dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
 								charset = EncodingState::KS_C_5601;
 							else if(x == '2'
-									&& iso88591Encoder->fromUnicode(mbcs, ASCENSION_ENDOF(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
+									&& iso88591Encoder->fromUnicode(mbcs, mbcs + std::extent<decltype(mbcs)>::value, dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
 								charset = EncodingState::ISO_8859_1;
 							else if(x == '2'
-									&& iso88597Encoder->fromUnicode(mbcs, ASCENSION_ENDOF(mbcs), dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
+									&& iso88597Encoder->fromUnicode(mbcs, mbcs + std::extent<decltype(mbcs)>::value, dummy1, from, from + 1, dummy2) == Encoder::COMPLETED)
 								charset = EncodingState::ISO_8859_7;
 							else 
 								ASCENSION_HANDLE_UNMAPPABLE()
@@ -917,7 +917,7 @@ namespace ascension {
 	if(state.g0 != charset) {								\
 		if(to + length > toEnd)								\
 			break;	/* INSUFFICIENT_BUFFER */				\
-		memcpy(to, escapeSequence, length);					\
+		std::memcpy(to, escapeSequence, length);			\
 		to += length;										\
 		state.g0 = static_cast<EncodingState::G0>(charset);	\
 	}
@@ -925,7 +925,7 @@ namespace ascension {
 	if(state.g2 != charset) {								\
 		if(to + length > toEnd)								\
 			break;	/* INSUFFICIENT_BUFFER */				\
-		memcpy(to, escapeSequence, length);					\
+		std::memcpy(to, escapeSequence, length);			\
 		to += length;										\
 		state.g2 = static_cast<EncodingState::G2>(charset);	\
 	}

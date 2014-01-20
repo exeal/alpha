@@ -4,6 +4,7 @@
  * @author exeal
  * @date 2007-2011 was unicode-property.hpp
  * @date 2011-05-07 renamed from unicode-property.hpp
+ * @date 2014
  */
 
 #ifndef ASCENSION_CHARACTER_PROPERTY_HPP
@@ -15,6 +16,7 @@
 #include <algorithm>	// std.binary_search, std.lower_bound, std.upper_bound
 #include <locale>		// std.locale, std.tolower
 #include <string>		// std.char_traits
+#include <boost/range/algorithm/binary_search.hpp>
 
 namespace ascension {
 	namespace text {
@@ -457,199 +459,248 @@ namespace ascension {
 			} // namespace legacyctype
 
 
-// inline implementations ///////////////////////////////////////////////////
+			// inline implementations /////////////////////////////////////////////////////////////////////////////////
 			
-/// Returns true if the specified character is a letter.
-template<> inline bool GeneralCategory::is<GeneralCategory::LETTER>(int gc) {return gc >= UPPERCASE_LETTER && gc <= OTHER_LETTER;}
+			/// Returns true if the specified character is a letter.
+			template<> inline bool GeneralCategory::is<GeneralCategory::LETTER>(int gc) {
+				return gc >= UPPERCASE_LETTER && gc <= OTHER_LETTER;
+			}
 
-/// Returns true if the specified sub-category is a cased letter.
-template<> inline bool GeneralCategory::is<GeneralCategory::CASED_LETTER>(int gc) {return gc >= UPPERCASE_LETTER && gc <= TITLECASE_LETTER;}
+			/// Returns true if the specified sub-category is a cased letter.
+			template<> inline bool GeneralCategory::is<GeneralCategory::CASED_LETTER>(int gc) {
+				return gc >= UPPERCASE_LETTER && gc <= TITLECASE_LETTER;
+			}
 
-/// Returns true if the specified sub-category is a mark.
-template<> inline bool GeneralCategory::is<GeneralCategory::MARK>(int gc) {return gc >= NONSPACING_MARK && gc <= ENCLOSING_MARK;}
+			/// Returns true if the specified sub-category is a mark.
+			template<> inline bool GeneralCategory::is<GeneralCategory::MARK>(int gc) {
+				return gc >= NONSPACING_MARK && gc <= ENCLOSING_MARK;
+			}
 
-/// Returns true if the specified sub-category is a number.
-template<> inline bool GeneralCategory::is<GeneralCategory::NUMBER>(int gc) {return gc >= DECIMAL_NUMBER && gc <= OTHER_NUMBER;}
+			/// Returns true if the specified sub-category is a number.
+			template<> inline bool GeneralCategory::is<GeneralCategory::NUMBER>(int gc) {
+				return gc >= DECIMAL_NUMBER && gc <= OTHER_NUMBER;
+			}
 
-/// Returns true if the specified sub-category is a punctuation.
-template<> inline bool GeneralCategory::is<GeneralCategory::PUNCTUATION>(int gc) {return gc >= CONNECTOR_PUNCTUATION && gc <= OTHER_PUNCTUATION;}
+			/// Returns true if the specified sub-category is a punctuation.
+			template<> inline bool GeneralCategory::is<GeneralCategory::PUNCTUATION>(int gc) {
+				return gc >= CONNECTOR_PUNCTUATION && gc <= OTHER_PUNCTUATION;
+			}
 
-/// Returns true if the specified sub-category is a symbol.
-template<> inline bool GeneralCategory::is<GeneralCategory::SYMBOL>(int gc) {return gc >= MATH_SYMBOL && gc <= OTHER_SYMBOL;}
+			/// Returns true if the specified sub-category is a symbol.
+			template<> inline bool GeneralCategory::is<GeneralCategory::SYMBOL>(int gc) {
+				return gc >= MATH_SYMBOL && gc <= OTHER_SYMBOL;
+			}
 
-/// Returns true if the specified sub-category is a separator.
-template<> inline bool GeneralCategory::is<GeneralCategory::SEPARATOR>(int gc) {return gc >= SPACE_SEPARATOR&& gc <= PARAGRAPH_SEPARATOR;}
+			/// Returns true if the specified sub-category is a separator.
+			template<> inline bool GeneralCategory::is<GeneralCategory::SEPARATOR>(int gc) {
+				return gc >= SPACE_SEPARATOR&& gc <= PARAGRAPH_SEPARATOR;
+			}
 
-/// Returns true if the specified sub-category is an other.
-template<> inline bool GeneralCategory::is<GeneralCategory::OTHER>(int gc) {return gc >= CONTROL && gc <= UNASSIGNED;}
+			/// Returns true if the specified sub-category is an other.
+			template<> inline bool GeneralCategory::is<GeneralCategory::OTHER>(int gc) {
+				return gc >= CONTROL && gc <= UNASSIGNED;
+			}
 
-/// Specialization to implement Alphabetic property.
-template<> inline bool BinaryProperty::is<BinaryProperty::ALPHABETIC>(CodePoint cp) {
-	// Alphabetic :=
-	//   Lu + Ll + Lt + Lm + Lo + Nl + Other_Alphabetic
-	const int gc = GeneralCategory::of(cp);
-	return gc == GeneralCategory::UPPERCASE_LETTER
-		|| gc == GeneralCategory::LOWERCASE_LETTER
-		|| gc == GeneralCategory::TITLECASE_LETTER
-		|| gc == GeneralCategory::OTHER_LETTER
-		|| gc == GeneralCategory::LETTER_NUMBER
-		|| is<OTHER_ALPHABETIC>(cp);}
+			/// Specialization to implement Alphabetic property.
+			template<> inline bool BinaryProperty::is<BinaryProperty::ALPHABETIC>(CodePoint c) {
+				// Alphabetic :=
+				//   Lu + Ll + Lt + Lm + Lo + Nl + Other_Alphabetic
+				const int gc = GeneralCategory::of(c);
+				return gc == GeneralCategory::UPPERCASE_LETTER
+					|| gc == GeneralCategory::LOWERCASE_LETTER
+					|| gc == GeneralCategory::TITLECASE_LETTER
+					|| gc == GeneralCategory::OTHER_LETTER
+					|| gc == GeneralCategory::LETTER_NUMBER
+					|| is<OTHER_ALPHABETIC>(c);
+			}
 
-/// Specialization to implement Default_Ignorable_Code_Point property.
-template<> inline bool BinaryProperty::is<BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(CodePoint cp) {
-	// Default_Ignorable_Code_Point :=
-	//   Other_Default_Ignorable_Code_Point
-	//   + Cf (Format characters)
-	//   + Variation_Selector
-	//   - White_Space
-	//   - FFF9..FFFB (Annotation Characters)
-	//   - 0600..0603, 06DD, 070F (exceptional Cf characters that should be visible)
-	static const CodePoint EXCLUDED[] = {0x0600u, 0x0601u, 0x0602u, 0x0603u, 0x06ddu, 0x070fu, 0xfff9u, 0xfffau, 0xfffbu};
-	return (GeneralCategory::of(cp) == GeneralCategory::FORMAT
-		|| is<VARIATION_SELECTOR>(cp)
-		|| is<OTHER_DEFAULT_IGNORABLE_CODE_POINT>(cp))
-		&& !is<WHITE_SPACE>(cp)
-		&& !std::binary_search(EXCLUDED, ASCENSION_ENDOF(EXCLUDED), cp);}
+			/// Specialization to implement Default_Ignorable_Code_Point property.
+			template<> inline bool BinaryProperty::is<BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(CodePoint c) {
+				// Default_Ignorable_Code_Point :=
+				//   Other_Default_Ignorable_Code_Point
+				//   + Cf (Format characters)
+				//   + Variation_Selector
+				//   - White_Space
+				//   - FFF9..FFFB (Annotation Characters)
+				//   - 0600..0603, 06DD, 070F (exceptional Cf characters that should be visible)
+				static const CodePoint EXCLUDED[] = {0x0600u, 0x0601u, 0x0602u, 0x0603u, 0x06ddu, 0x070fu, 0xfff9u, 0xfffau, 0xfffbu};
+				return (GeneralCategory::of(c) == GeneralCategory::FORMAT
+					|| is<VARIATION_SELECTOR>(c)
+					|| is<OTHER_DEFAULT_IGNORABLE_CODE_POINT>(c))
+					&& !is<WHITE_SPACE>(c)
+					&& !boost::binary_search(EXCLUDED, c);
+			}
 
-/// Specialization to implement Grapheme_Extend property.
-template<> inline bool BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(CodePoint cp) {
-	// Grapheme_Extend :=
-	//   Me + Mn + Other_Grapheme_Extend
-	const int gc = GeneralCategory::of(cp);
-	return gc == GeneralCategory::ENCLOSING_MARK
-		|| gc == GeneralCategory::NONSPACING_MARK
-		|| is<OTHER_GRAPHEME_EXTEND>(cp);}
+			/// Specialization to implement Grapheme_Extend property.
+			template<> inline bool BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(CodePoint c) {
+				// Grapheme_Extend :=
+				//   Me + Mn + Other_Grapheme_Extend
+				const int gc = GeneralCategory::of(c);
+				return gc == GeneralCategory::ENCLOSING_MARK
+					|| gc == GeneralCategory::NONSPACING_MARK
+					|| is<OTHER_GRAPHEME_EXTEND>(c);
+			}
 
-/// Specialization to implement Grapheme_Base property.
-template<> inline bool BinaryProperty::is<BinaryProperty::GRAPHEME_BASE>(CodePoint cp) {
-	// Grapheme_Base :=
-	//   [0..10FFFF] - Cc - Cf - Cs - Co - Cn - Zl - Zp - Grapheme_Extend
-	const int gc = GeneralCategory::of(cp);
-	return !GeneralCategory::is<GeneralCategory::OTHER>(gc)
-		&& gc != GeneralCategory::LINE_SEPARATOR
-		&& gc != GeneralCategory::PARAGRAPH_SEPARATOR
-		&& !is<GRAPHEME_EXTEND>(cp);}
+			/// Specialization to implement Grapheme_Base property.
+			template<> inline bool BinaryProperty::is<BinaryProperty::GRAPHEME_BASE>(CodePoint c) {
+				// Grapheme_Base :=
+				//   [0..10FFFF] - Cc - Cf - Cs - Co - Cn - Zl - Zp - Grapheme_Extend
+				const int gc = GeneralCategory::of(c);
+				return !GeneralCategory::is<GeneralCategory::OTHER>(gc)
+					&& gc != GeneralCategory::LINE_SEPARATOR
+					&& gc != GeneralCategory::PARAGRAPH_SEPARATOR
+					&& !is<GRAPHEME_EXTEND>(c);
+			}
 
-/// Specialization to implement ID_Start property.
-template<> inline bool BinaryProperty::is<BinaryProperty::ID_START>(CodePoint cp) {
-	// ID_Start :=
-	//     Lu + Ll + Lt + Lm + Lo + Nl
-	//   + Other_ID_Start
-	//   - Pattern_Syntax
-	//   - Pattern_White_Space
-	const int gc = GeneralCategory::of(cp);
-	return (GeneralCategory::is<GeneralCategory::LETTER>(gc)
-		|| gc == GeneralCategory::LETTER_NUMBER || is<OTHER_ID_START>(cp))
-		&& !is<PATTERN_SYNTAX>(cp) && !is<PATTERN_WHITE_SPACE>(cp);}
+			/// Specialization to implement ID_Start property.
+			template<> inline bool BinaryProperty::is<BinaryProperty::ID_START>(CodePoint c) {
+				// ID_Start :=
+				//     Lu + Ll + Lt + Lm + Lo + Nl
+				//   + Other_ID_Start
+				//   - Pattern_Syntax
+				//   - Pattern_White_Space
+				const int gc = GeneralCategory::of(c);
+				return (GeneralCategory::is<GeneralCategory::LETTER>(gc)
+					|| gc == GeneralCategory::LETTER_NUMBER || is<OTHER_ID_START>(c))
+					&& !is<PATTERN_SYNTAX>(c) && !is<PATTERN_WHITE_SPACE>(c);
+			}
 
-/// Specialization to implement ID_Continue property.
-template<> inline bool BinaryProperty::is<BinaryProperty::ID_CONTINUE>(CodePoint cp) {
-	// ID_Continue :=
-	//     ID_Start
-	//   + Mn + Mc + Nd + Pc
-	//   + Other_ID_Continue
-	//   - Pattern_Syntax
-	//   - Pattern_White_Space
-	if(is<BinaryProperty::ID_START>(cp))
-		return true;
-	const int gc = GeneralCategory::of(cp);
-	return (gc == GeneralCategory::NONSPACING_MARK
-		|| gc == GeneralCategory::SPACING_MARK
-		|| gc == GeneralCategory::DECIMAL_NUMBER
-		|| gc == GeneralCategory::CONNECTOR_PUNCTUATION
-		|| is<OTHER_ID_CONTINUE>(cp))
-		&& !is<PATTERN_SYNTAX>(cp) && !is<PATTERN_WHITE_SPACE>(cp);}
+			/// Specialization to implement ID_Continue property.
+			template<> inline bool BinaryProperty::is<BinaryProperty::ID_CONTINUE>(CodePoint c) {
+				// ID_Continue :=
+				//     ID_Start
+				//   + Mn + Mc + Nd + Pc
+				//   + Other_ID_Continue
+				//   - Pattern_Syntax
+				//   - Pattern_White_Space
+				if(is<BinaryProperty::ID_START>(c))
+					return true;
+				const int gc = GeneralCategory::of(c);
+				return (gc == GeneralCategory::NONSPACING_MARK
+					|| gc == GeneralCategory::SPACING_MARK
+					|| gc == GeneralCategory::DECIMAL_NUMBER
+					|| gc == GeneralCategory::CONNECTOR_PUNCTUATION
+					|| is<OTHER_ID_CONTINUE>(c))
+					&& !is<PATTERN_SYNTAX>(c) && !is<PATTERN_WHITE_SPACE>(c);
+			}
 
-/// Specialization to implement Lowercase property.
-template<> inline bool BinaryProperty::is<BinaryProperty::LOWERCASE>(CodePoint cp) {
-	// Lowercase :=
-	//   Ll + Other_Lowercase
-	return GeneralCategory::of(cp) == GeneralCategory::LOWERCASE_LETTER || is<OTHER_LOWERCASE>(cp);}
+			/// Specialization to implement Lowercase property.
+			template<> inline bool BinaryProperty::is<BinaryProperty::LOWERCASE>(CodePoint c) {
+				// Lowercase :=
+				//   Ll + Other_Lowercase
+				return GeneralCategory::of(c) == GeneralCategory::LOWERCASE_LETTER || is<OTHER_LOWERCASE>(c);
+			}
 
-/// Specialization to implement Math property.
-template<> inline bool BinaryProperty::is<BinaryProperty::MATH>(CodePoint cp) {
-	// Math :=
-	//   Sm + Other_Math
-	return GeneralCategory::of(cp) == GeneralCategory::MATH_SYMBOL || is<OTHER_MATH>(cp);}
+			/// Specialization to implement Math property.
+			template<> inline bool BinaryProperty::is<BinaryProperty::MATH>(CodePoint c) {
+				// Math :=
+				//   Sm + Other_Math
+				return GeneralCategory::of(c) == GeneralCategory::MATH_SYMBOL || is<OTHER_MATH>(c);
+			}
 
-/// Specialization to implement Uppercase property.
-template<> inline bool BinaryProperty::is<BinaryProperty::UPPERCASE>(CodePoint cp) {
-	// Uppercase :=
-	//   Lu + Other_Uppercase
-	return GeneralCategory::of(cp) == GeneralCategory::UPPERCASE_LETTER || is<OTHER_UPPERCASE>(cp);}
+			/// Specialization to implement Uppercase property.
+			template<> inline bool BinaryProperty::is<BinaryProperty::UPPERCASE>(CodePoint c) {
+				// Uppercase :=
+				//   Lu + Other_Uppercase
+				return GeneralCategory::of(c) == GeneralCategory::UPPERCASE_LETTER || is<OTHER_UPPERCASE>(c);
+			}
 
-/// Returns the Hangul_Syllable_Type property value of @a cp.
-inline int HangulSyllableType::of(CodePoint c) BOOST_NOEXCEPT {
-	if((c >= 0x1100u && c <= 0x1159u) || c == 0x115fu)
-		return LEADING_JAMO;
-	else if(c >= 0x1160u && c <= 0x11a2u)
-		return VOWEL_JAMO;
-	else if(c >= 0x11a8u && c <= 0x11f9u)
-		return TRAILING_JAMO;
-	else if(c >= 0xac00u && c <= 0xd7a3u)
-		return ((c - 0xac00u) % 28 == 0) ? LV_SYLLABLE : LVT_SYLLABLE;
-	else
-		return NOT_APPLICABLE;
-}
+			/// Returns the Hangul_Syllable_Type property value of @a cp.
+			inline int HangulSyllableType::of(CodePoint c) BOOST_NOEXCEPT {
+				if((c >= 0x1100u && c <= 0x1159u) || c == 0x115fu)
+					return LEADING_JAMO;
+				else if(c >= 0x1160u && c <= 0x11a2u)
+					return VOWEL_JAMO;
+				else if(c >= 0x11a8u && c <= 0x11f9u)
+					return TRAILING_JAMO;
+				else if(c >= 0xac00u && c <= 0xd7a3u)
+					return ((c - 0xac00u) % 28 == 0) ? LV_SYLLABLE : LVT_SYLLABLE;
+				else
+					return NOT_APPLICABLE;
+			}
 
-/// Returns true if the character is an alphabet (alpha := \\p{Alphabetic}).
-inline bool legacyctype::isalpha(CodePoint c) {return BinaryProperty::is<BinaryProperty::ALPHABETIC>(c);}
+			/// Returns true if the character is an alphabet (alpha := \\p{Alphabetic}).
+			inline bool legacyctype::isalpha(CodePoint c) {
+				return BinaryProperty::is<BinaryProperty::ALPHABETIC>(c);
+			}
 
-/// Returns true if the character is an alphabet or numeric (alnum := [:alpha:] | [:digit:]).
-inline bool legacyctype::isalnum(CodePoint c) {return isalpha(c) || isdigit(c);}
+			/// Returns true if the character is an alphabet or numeric (alnum := [:alpha:] | [:digit:]).
+			inline bool legacyctype::isalnum(CodePoint c) {
+				return isalpha(c) || isdigit(c);
+			}
 
-/// Returns true if the character is a blank (blank := \\p{Whitespace} - [\\N{LF} \\N{VT} \\N{FF} \\N{CR} \\N{NEL} \\p{gc=Line_Separator} \\p{gc=Paragraph_Separator}]).
-inline bool legacyctype::isblank(CodePoint c) {
-	if(c == LINE_FEED || c == L'\v' || c == L'\f' || c == CARRIAGE_RETURN || c == NEXT_LINE)
-		return false;
-	if(BinaryProperty::is<BinaryProperty::WHITE_SPACE>(c)) {
-		const int gc = GeneralCategory::of(c);
-		return gc != GeneralCategory::LINE_SEPARATOR && gc != GeneralCategory::PARAGRAPH_SEPARATOR;
+			/// Returns true if the character is a blank (blank := \\p{Whitespace} - [\\N{LF} \\N{VT} \\N{FF} \\N{CR} \\N{NEL} \\p{gc=Line_Separator} \\p{gc=Paragraph_Separator}]).
+			inline bool legacyctype::isblank(CodePoint c) {
+				if(c == LINE_FEED || c == L'\v' || c == L'\f' || c == CARRIAGE_RETURN || c == NEXT_LINE)
+					return false;
+				if(BinaryProperty::is<BinaryProperty::WHITE_SPACE>(c)) {
+					const int gc = GeneralCategory::of(c);
+					return gc != GeneralCategory::LINE_SEPARATOR && gc != GeneralCategory::PARAGRAPH_SEPARATOR;
+				}
+				return false;
+			}
+
+			/// Returns true if the character is a control code (cntrl := \\p{gc=Control}).
+			inline bool legacyctype::iscntrl(CodePoint c) {
+				return GeneralCategory::of(c) == GeneralCategory::CONTROL;
+			}
+
+			/// Returns true if the character is a digit (digit := \\p{gc=Decimal_Number}).
+			inline bool legacyctype::isdigit(CodePoint c) {
+				return GeneralCategory::of(c) == GeneralCategory::DECIMAL_NUMBER;
+			}
+
+			/// Returns true if the character is graphical (graph := [^[:space:]\\p{gc=Control}\\p{Format}\\p{Surrogate}\\p{Unassigned}]).
+			inline bool legacyctype::isgraph(CodePoint c) {
+				if(isspace(c))
+					return false;
+				const int gc = GeneralCategory::of(c);
+				return gc != GeneralCategory::CONTROL
+					&& gc != GeneralCategory::FORMAT
+					&& gc != GeneralCategory::SURROGATE
+					&& gc != GeneralCategory::UNASSIGNED;
+			}
+
+			/// Returns true if the character is lower (lower := \\p{Lowercase}).
+			inline bool legacyctype::islower(CodePoint c) {
+				return BinaryProperty::is<BinaryProperty::LOWERCASE>(c);
+			}
+
+			/// Returns true if the character is printable (print := ([:graph] | [:blank:]) - [:cntrl:]).
+			inline bool legacyctype::isprint(CodePoint c) {
+				return (isgraph(c) || isblank(c)) && !iscntrl(c);
+			}
+
+			/// Returns true if the character is a punctuation (punct := \\p{gc=Punctuation}).
+			inline bool legacyctype::ispunct(CodePoint c) {
+				return GeneralCategory::is<GeneralCategory::PUNCTUATION>(GeneralCategory::of(c));
+			}
+
+			/// Returns true if the character is a white space (space := \\p{Whitespace}).
+			inline bool legacyctype::isspace(CodePoint c) {
+				return BinaryProperty::is<BinaryProperty::WHITE_SPACE>(c);
+			}
+
+			/// Returns true if the character is capital (upper := \\p{Uppercase}).
+			inline bool legacyctype::isupper(CodePoint c) {
+				return BinaryProperty::is<BinaryProperty::UPPERCASE>(c);
+			}
+
+			/// Returns true if the character can consist a word (word := [:alpha:]\\p{gc=Mark}[:digit:]\\p{gc=Connector_Punctuation}).
+			inline bool legacyctype::isword(CodePoint c) {
+				if(isalpha(c) || isdigit(c))
+					return true;
+				const int gc = GeneralCategory::of(c);
+				return GeneralCategory::is<GeneralCategory::MARK>(gc) || gc == GeneralCategory::CONNECTOR_PUNCTUATION;
+			}
+
+			/// Returns true if the character is a hexadecimal (xdigit := \\p{gc=Decimal_Number} | \\p{Hex_Digit}).
+			inline bool legacyctype::isxdigit(CodePoint c) {
+				return GeneralCategory::of(c) == GeneralCategory::DECIMAL_NUMBER || BinaryProperty::is<BinaryProperty::HEX_DIGIT>(c);
+			}
+
+		}
 	}
-	return false;
-}
-
-/// Returns true if the character is a control code (cntrl := \\p{gc=Control}).
-inline bool legacyctype::iscntrl(CodePoint c) {return GeneralCategory::of(c) == GeneralCategory::CONTROL;}
-
-/// Returns true if the character is a digit (digit := \\p{gc=Decimal_Number}).
-inline bool legacyctype::isdigit(CodePoint c) {return GeneralCategory::of(c) == GeneralCategory::DECIMAL_NUMBER;}
-
-/// Returns true if the character is graphical (graph := [^[:space:]\\p{gc=Control}\\p{Format}\\p{Surrogate}\\p{Unassigned}]).
-inline bool legacyctype::isgraph(CodePoint c) {
-	if(isspace(c))	return false;
-	const int gc = GeneralCategory::of(c);
-	return gc != GeneralCategory::CONTROL
-		&& gc != GeneralCategory::FORMAT
-		&& gc != GeneralCategory::SURROGATE
-		&& gc != GeneralCategory::UNASSIGNED;
-}
-
-/// Returns true if the character is lower (lower := \\p{Lowercase}).
-inline bool legacyctype::islower(CodePoint c) {return BinaryProperty::is<BinaryProperty::LOWERCASE>(c);}
-
-/// Returns true if the character is printable (print := ([:graph] | [:blank:]) - [:cntrl:]).
-inline bool legacyctype::isprint(CodePoint c) {return (isgraph(c) || isblank(c)) && !iscntrl(c);}
-
-/// Returns true if the character is a punctuation (punct := \\p{gc=Punctuation}).
-inline bool legacyctype::ispunct(CodePoint c) {return GeneralCategory::is<GeneralCategory::PUNCTUATION>(GeneralCategory::of(c));}
-
-/// Returns true if the character is a white space (space := \\p{Whitespace}).
-inline bool legacyctype::isspace(CodePoint c) {return BinaryProperty::is<BinaryProperty::WHITE_SPACE>(c);}
-
-/// Returns true if the character is capital (upper := \\p{Uppercase}).
-inline bool legacyctype::isupper(CodePoint c) {return BinaryProperty::is<BinaryProperty::UPPERCASE>(c);}
-
-/// Returns true if the character can consist a word (word := [:alpha:]\\p{gc=Mark}[:digit:]\\p{gc=Connector_Punctuation}).
-inline bool legacyctype::isword(CodePoint c) {
-	if(isalpha(c) || isdigit(c)) return true;
-	const int gc = GeneralCategory::of(c);
-	return GeneralCategory::is<GeneralCategory::MARK>(gc) || gc == GeneralCategory::CONNECTOR_PUNCTUATION;}
-
-/// Returns true if the character is a hexadecimal (xdigit := \\p{gc=Decimal_Number} | \\p{Hex_Digit}).
-inline bool legacyctype::isxdigit(CodePoint c) {
-	return GeneralCategory::of(c) == GeneralCategory::DECIMAL_NUMBER || BinaryProperty::is<BinaryProperty::HEX_DIGIT>(c);}
-
-}}} // namespace ascension.text.ucd
+} // namespace ascension.text.ucd
 
 #endif // !ASCENSION_CHARACTER_PROPERTY_HPP

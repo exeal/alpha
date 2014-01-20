@@ -15,6 +15,7 @@
 #include <ascension/corelib/future/static-assert.hpp>
 #include <ascension/corelib/future/type-traits.hpp>
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 namespace ascension {
 	template<typename T, std::size_t n>
 	/*constexpr*/ inline std::size_t countof(T (&a)[n]) {
@@ -34,5 +35,6 @@ namespace ascension {
 #define ASCENSION_COUNTOF(array) (sizeof(array) / sizeof((array)[0]))
 /// Returns the end of the given array.
 #define ASCENSION_ENDOF(array) ((array) + ASCENSION_COUNTOF(array))
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 #endif // !ASCENSION_FUTURE_HPP

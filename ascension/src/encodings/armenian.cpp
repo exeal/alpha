@@ -17,6 +17,7 @@
 #include <bitset>
 #endif // !ASCENSION_NO_MINORITY_ENCODINGS
 #include <cassert>
+#include <boost/range/algorithm/binary_search.hpp>
 
 
 namespace ascension {
@@ -187,13 +188,13 @@ namespace ascension {
 						if(*from < 0x0028) {
 							*to = mask8Bit(*from);
 							continue;
-						} else if(*from < 0x0028 + ASCENSION_COUNTOF(UCStoARMSCII8_0028))
+						} else if(*from < 0x0028 + std::extent<decltype(UCStoARMSCII8_0028)>::value)
 							*to = UCStoARMSCII8_0028[*from - 0x0028];
-						else if(*from < 0x00a0 + ASCENSION_COUNTOF(UCStoARMSCII78_00A0))
+						else if(*from < 0x00a0 + std::extent<decltype(UCStoARMSCII78_00A0)>::value)
 							*to = UCStoARMSCII78_00A0[*from - 0x00a0];
-						else if(*from < 0x0530 + ASCENSION_COUNTOF(UCStoARMSCII78_0530))
+						else if(*from < 0x0530 + std::extent<decltype(UCStoARMSCII78_0530)>::value)
 							*to = UCStoARMSCII78_0530[*from - 0x0530];
-						else if(*from < 0x2010 + ASCENSION_COUNTOF(UCStoARMSCII78_2010))
+						else if(*from < 0x2010 + std::extent<decltype(UCStoARMSCII78_2010)>::value)
 							*to = UCStoARMSCII78_2010[*from - 0x2010];
 						else if(const Char* decomposed = decomposeArmenianLigature(*from)) {
 							if(to + 1 < toEnd) {
@@ -259,13 +260,13 @@ namespace ascension {
 						if(*from < 0x0028) {
 							*to = mask8Bit(*from);
 							continue;
-						} else if(*from < 0x0028 + ASCENSION_COUNTOF(UCStoARMSCII7_0028))
+						} else if(*from < 0x0028 + std::extent<decltype(UCStoARMSCII7_0028)>::value)
 							*to = UCStoARMSCII7_0028[*from - 0x0028];
-						else if(*from < 0x00a0 + ASCENSION_COUNTOF(UCStoARMSCII78_00A0))
+						else if(*from < 0x00a0 + std::extent<decltype(UCStoARMSCII78_00A0)>::value)
 							*to = UCStoARMSCII78_00A0[*from - 0x00a0];
-						else if(*from < 0x0530 + ASCENSION_COUNTOF(UCStoARMSCII78_0530))
+						else if(*from < 0x0530 + std::extent<decltype(UCStoARMSCII78_0530)>::value)
 							*to = UCStoARMSCII78_0530[*from - 0x0530];
-						else if(*from < 0x2010 + ASCENSION_COUNTOF(UCStoARMSCII78_2010))
+						else if(*from < 0x2010 + std::extent<decltype(UCStoARMSCII78_2010)>::value)
 							*to = UCStoARMSCII78_2010[*from - 0x2010];
 						else if(const Char* const decomposed = decomposeArmenianLigature(*from)) {
 							if(to + 1 < toEnd) {
@@ -300,7 +301,7 @@ namespace ascension {
 					for(; to < toEnd && from < fromEnd; ++to, ++from) {
 						if(*from < 0x20)
 							*to = *from;
-						else if(*from < 0x20 + ASCENSION_COUNTOF(ARMSCII78toUCS_20)
+						else if(*from < 0x20 + std::extent<decltype(ARMSCII78toUCS_20)>::value
 								&& ARMSCII78toUCS_20[*from - 0x20] != text::REPLACEMENT_CHARACTER)
 							*to = ARMSCII78toUCS_20[*from - 0x20];
 						else if(substitutionPolicy() == IGNORE_UNMAPPABLE_CHARACTERS)
@@ -327,14 +328,14 @@ namespace ascension {
 					for(; to < toEnd && from < fromEnd; ++to, ++from) {
 						if(*from < 0x80) {
 							static const Char invChars[] = {0x0027, 0x003a, 0x005f, 0x0060, 0x007e};
-							*to = std::binary_search(invChars, ASCENSION_ENDOF(invChars), *from) ? mask8Bit(*from) : props_.substitutionCharacter();
+							*to = boost::binary_search(invChars, *from) ? mask8Bit(*from) : props_.substitutionCharacter();
 						} else if(*from < 0x00a8)
 							*to = props_.substitutionCharacter();
-						else if(*from < 0x00a8 + ASCENSION_COUNTOF(UCStoARMSCII8A_00A8))
+						else if(*from < 0x00a8 + std::extent<decltype(UCStoARMSCII8A_00A8)>::value)
 							*to = UCStoARMSCII8A_00A8[*from - 0x00a8];
-						else if(*from < 0x0530 + ASCENSION_COUNTOF(UCStoARMSCII8A_0530))
+						else if(*from < 0x0530 + std::extent<decltype(UCStoARMSCII8A_0530)>::value)
 							*to = UCStoARMSCII8A_0530[*from - 0x0530];
-						else if(*from < 0x2010 + ASCENSION_COUNTOF(UCStoARMSCII8A_2010))
+						else if(*from < 0x2010 + std::extent<decltype(UCStoARMSCII8A_2010)>::value)
 							*to = UCStoARMSCII8A_2010[*from - 0x2010];
 						else if(const Char* const decomposed = decomposeArmenianLigature(*from)) {
 							if(to + 1 < toEnd) {
@@ -369,7 +370,7 @@ namespace ascension {
 					for(; to < toEnd && from < fromEnd; ++to, ++from) {
 						if(*from < 0x20)
 							*to = *from;
-						else if(*from < 0x20 + ASCENSION_COUNTOF(ARMSCII8AtoUCS_20))
+						else if(*from < 0x20 + std::extent<decltype(ARMSCII8AtoUCS_20)>::value)
 							*to = ARMSCII8AtoUCS_20[*from - 0x20];
 						else
 							*to = ARMSCII8AtoUCS_D8[*from - 0xd8];
