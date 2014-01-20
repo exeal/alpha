@@ -525,7 +525,7 @@ namespace ascension {
 					"|afs|dtn|iax2|mailserver|pack|tn3270"
 					// historical URI schemes
 					"prospero|wais";
-				singleton.setValidSchemes(String(SCHEMES, ASCENSION_ENDOF(SCHEMES)), '|');
+				singleton.setValidSchemes(String(SCHEMES, SCHEMES + std::extent<decltype(SCHEMES)>::value), '|');
 			}
 			return singleton;
 		}

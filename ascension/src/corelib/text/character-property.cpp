@@ -8,6 +8,7 @@
 
 #include <ascension/corelib/text/case-folder.hpp>
 #include <ascension/corelib/text/character-property.hpp>
+#include <boost/foreach.hpp>
 
 
 namespace ascension {
@@ -32,7 +33,7 @@ namespace ascension {
 				bool isQU(CodePoint c, int gc) BOOST_NOEXCEPT {
 					return gc == GeneralCategory::FINAL_PUNCTUATION
 						|| gc == GeneralCategory::INITIAL_PUNCTUATION
-						|| std::binary_search(QU, ASCENSION_ENDOF(QU), c);
+						|| boost::binary_search(QU, c);
 				}
 			} // namespace @0
 
@@ -269,13 +270,19 @@ namespace ascension {
 				static std::unique_ptr<std::locale> japanese, swedish;
 				if(!localeInitialized) {
 					localeInitialized = true;
-					static const char* JAPANESE_NAMES[] = {"ja_JP", "ja", "JP"};
-					static const char* SWEDISH_NAMES[] = {"sv_SE", "sv", "SE"};
+					static const std::array<const char*, 3> JAPANESE_NAMES = {"ja_JP", "ja", "JP"};
+					static const std::array<const char*, 3> SWEDISH_NAMES = {"sv_SE", "sv", "SE"};
 					try {
-						for(std::size_t i = 0; i < ASCENSION_COUNTOF(JAPANESE_NAMES) && japanese.get() == nullptr; ++i)
-							japanese.reset(new std::locale(JAPANESE_NAMES[i]));
-						for(std::size_t i = 0; i < ASCENSION_COUNTOF(SWEDISH_NAMES) && swedish.get() == nullptr; ++i)
-							swedish.reset(new std::locale(SWEDISH_NAMES[i]));
+						BOOST_FOREACH(const char* name, JAPANESE_NAMES) {
+							if(japanese.get() != nullptr)
+								break;
+							japanese.reset(new std::locale(name));
+						}
+						BOOST_FOREACH(const char* name, SWEDISH_NAMES) {
+							if(swedish.get() != nullptr)
+								break;
+							swedish.reset(new std::locale(name));
+						}
 					} catch(const std::runtime_error&) {
 					}
 				}
@@ -286,8 +293,7 @@ namespace ascension {
 				const int gc = GeneralCategory::of(c);
 				if(gc == GeneralCategory::FORMAT && c != ZERO_WIDTH_NON_JOINER && c != ZERO_WIDTH_JOINER)
 					return FORMAT;
-				else if(Script::of(c) == Script::KATAKANA
-						|| std::binary_search(KATAKANAS, ASCENSION_ENDOF(KATAKANAS), c))
+				else if(Script::of(c) == Script::KATAKANA || boost::binary_search(KATAKANAS, c))
 					return KATAKANA;
 				else if(BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(c))
 					return GraphemeClusterBreak::EXTEND;
@@ -295,10 +301,10 @@ namespace ascension {
 						|| c == 0x00a0u		// No-Break Space
 						|| c == 0x05f3u))	// Hebrew Punctuation Geresh
 					return A_LETTER;
-				else if(std::binary_search(MID_LETTERS, ASCENSION_ENDOF(MID_LETTERS), c)
+				else if(boost::binary_search(MID_LETTERS, c)
 						|| (c == 0x003au && swedish.get() != nullptr && lc == *swedish.get()))	// Colon (for Swedish)
 					return MID_LETTER;
-				else if(std::binary_search(MID_NUMS, ASCENSION_ENDOF(MID_NUMS), c))
+				else if(boost::binary_search(MID_NUMS, c))
 					return MID_NUM;
 				else if(isNU(c, gc))
 					return NUMERIC;
@@ -323,7 +329,7 @@ namespace ascension {
 				static const CodePoint SEPS[] = {LINE_FEED, CARRIAGE_RETURN, NEXT_LINE, LINE_SEPARATOR, PARAGRAPH_SEPARATOR};
 				if(BinaryProperty::is<BinaryProperty::GRAPHEME_EXTEND>(c))
 					return GraphemeClusterBreak::EXTEND;
-				else if(std::binary_search(SEPS, ASCENSION_ENDOF(SEPS), c))
+				else if(boost::binary_search(SEPS, c))
 					return SEP;
 				const int gc = GeneralCategory::of(c);
 				if(gc == GeneralCategory::FORMAT && c != ZERO_WIDTH_NON_JOINER && c != ZERO_WIDTH_JOINER)

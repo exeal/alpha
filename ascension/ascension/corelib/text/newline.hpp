@@ -87,7 +87,7 @@ namespace ascension {
 				return 0;
 			Index lines = 1;
 			while(true) {
-				first = std::find_first_of(first, last, NEWLINE_CHARACTERS, ASCENSION_ENDOF(NEWLINE_CHARACTERS));
+				first = std::find_first_of(first, last, std::begin(NEWLINE_CHARACTERS), std::end(NEWLINE_CHARACTERS));
 				if(first == last)
 					break;
 				++lines;

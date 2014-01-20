@@ -208,7 +208,7 @@ namespace ascension {
 			const String newline(getNewlineString((documentInput != nullptr) ? documentInput->newline() : ASCENSION_DEFAULT_NEWLINE));
 			for(const Char* bol = first; ; ++line) {
 				// find the next EOL
-				const Char* const eol = find_first_of(bol, last, NEWLINE_CHARACTERS, ASCENSION_ENDOF(NEWLINE_CHARACTERS));
+				const Char* const eol = std::find_first_of(bol, last, std::begin(NEWLINE_CHARACTERS), std::end(ASCENSION_ENDOF));
 
 				// insert text if the source line is not empty
 				if(eol > bol) {

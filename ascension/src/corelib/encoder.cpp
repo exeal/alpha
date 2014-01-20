@@ -714,7 +714,7 @@ namespace ascension {
 
 				/// Destructor.
 				BidirectionalMap::~BidirectionalMap() BOOST_NOEXCEPT {
-					for(std::size_t i = 0; i < ASCENSION_COUNTOF(unicodeToByte_); ++i) {
+					for(std::size_t i = 0; i < std::tuple_size<decltype(unicodeToByte_)>::value; ++i) {
 						if(unicodeToByte_[i] != UNMAPPABLE_16x16_UNICODE_TABLE.data())
 							delete[] unicodeToByte_[i];
 					}

@@ -3,7 +3,7 @@
  * @author exeal
  * @date 2005-2011 was unicode.hpp
  * @date 2011-04-27 renamed from unicode.hpp
- * @date 2012-2013
+ * @date 2012-2014
  */
 
 #ifndef ASCENSION_CHARACTER_HPP
@@ -12,6 +12,7 @@
 #include <ascension/corelib/basic-types.hpp>
 #include <ascension/corelib/future/type-traits.hpp>	// std.integral_constant
 #include <boost/range/iterator.hpp>
+#include <array>
 #include <ios>	// std.ios_base.failure
 
 #if ASCENSION_UNICODE_VERSION > 0x0510
@@ -60,7 +61,7 @@ namespace ascension {
 		const CodePoint INVALID_CODE_POINT = 0xfffffffful;
 		/// Set of newline characters.
 		/// @see kernel#Newline
-		const Char NEWLINE_CHARACTERS[] = {
+		const std::array<Char, 5> NEWLINE_CHARACTERS = {
 			LINE_FEED, CARRIAGE_RETURN, NEXT_LINE, LINE_SEPARATOR, PARAGRAPH_SEPARATOR
 		};
 

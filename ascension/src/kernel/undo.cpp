@@ -563,7 +563,7 @@ namespace ascension {
 			const Position& beginning = region.beginning();
 			const Position& end = region.end();
 			const Char* nextNewline = (text.cbegin() != nullptr && !text.empty()) ?
-				text.cbegin() + text.find_first_of(StringPiece(text::NEWLINE_CHARACTERS)) : nullptr;
+				text.cbegin() + text.find_first_of(StringPiece(text::NEWLINE_CHARACTERS.data(), text::NEWLINE_CHARACTERS.size())) : nullptr;
 			std::basic_stringbuf<Char> erasedString;
 			Index erasedStringLength = 0, insertedStringLength = 0;
 			Position endOfInsertedString;
@@ -617,7 +617,7 @@ namespace ascension {
 							const Char* p = nextNewline + text::eatNewline(nextNewline, text.end())->asString().length();
 							while(true) {
 								nextNewline = std::find_first_of(p, text.end(),
-									text::NEWLINE_CHARACTERS, text::NEWLINE_CHARACTERS + std::extent<decltype(text::NEWLINE_CHARACTERS)>::value);
+									std::begin(text::NEWLINE_CHARACTERS), std::end(text::NEWLINE_CHARACTERS));
 								std::unique_ptr<Line> temp(new Line(revisionNumber_ + 1, String(p, nextNewline), *text::eatNewline(nextNewline, text.end())));
 								allocatedLines.push_back(temp.get());
 								temp.release();
