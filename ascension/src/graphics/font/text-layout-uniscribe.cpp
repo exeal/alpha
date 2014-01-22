@@ -144,8 +144,8 @@ namespace ascension {
 						HDC, SCRIPT_CACHE*, SCRIPT_ANALYSIS*, OPENTYPE_TAG, OPENTYPE_TAG, OPENTYPE_TAG, LONG,
 						WORD, WORD*));
 //#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-				std::unique_ptr<detail::SharedLibrary<Uniscribe16>> uspLib(
-					new detail::SharedLibrary<Uniscribe16>("usp10.dll"));
+				std::unique_ptr<ascension::detail::SharedLibrary<Uniscribe16>> uspLib(
+					new ascension::detail::SharedLibrary<Uniscribe16>("usp10.dll"));
 			} // namespace @0
 
 			// file-local free functions //////////////////////////////////////////////////////////////////////////////
@@ -158,7 +158,7 @@ namespace ascension {
 #endif // _DEBUG
 				}
 
-				inline int estimateNumberOfGlyphs(Index length) {
+				inline int estimateNumberOfGlyphs(Index length) BOOST_NOEXCEPT {
 					return static_cast<int>(length) * 3 / 2 + 16;
 				}
 
@@ -220,7 +220,7 @@ namespace ascension {
 								associations.insert(std::make_pair(Script::HAN, L"Gulim")); break;
 							default:
 								{
-									win32::Handle<HDC>::Type dc(detail::screenDC());
+									win32::Handle<HDC>::Type dc(win32::detail::screenDC());
 									bool installed = false;
 									LOGFONTW lf;
 									std::memset(&lf, 0, sizeof(LOGFONTW));
@@ -777,7 +777,7 @@ namespace ascension {
 				assert(advances.get() == nullptr);
 				assert(at != nullptr);
 				assert(at >= position);
-				win32::Handle<HDC>::Type dc(detail::screenDC());
+				win32::Handle<HDC>::Type dc(win32::detail::screenDC());
 				HFONT oldFont = nullptr;
 				WORD blankGlyph;
 				HRESULT hr = ::ScriptGetCMap(dc.get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
@@ -939,7 +939,7 @@ namespace ascension {
 					x += glyphAdvances[i];
 
 				std::vector<graphics::Rectangle> bounds;
-				RenderingContext2D context(detail::screenDC());
+				RenderingContext2D context(win32::detail::screenDC());
 				context.save();
 				context.setFont(font());
 				const MAT2 matrix = {1, 0, 0, 1};	// TODO: Consider glyph transform.
@@ -1303,7 +1303,7 @@ namespace ascension {
 				if(index >= numberOfGlyphs())
 					throw std::out_of_range("index");
 				const Scalar x = glyphLogicalPosition(index);
-				RenderingContext2D context(detail::screenDC());
+				RenderingContext2D context(win32::detail::screenDC());
 				std::unique_ptr<const FontMetrics<Scalar>> fm(context.fontMetrics(font()));
 				const double sy = fontRenderContext().transform().scaleY() / context.fontRenderContext().transform().scaleY();
 				return graphics::Rectangle(
@@ -1329,7 +1329,7 @@ namespace ascension {
 				if(index >= numberOfGlyphs())
 					throw IndexOutOfBoundsException("index");
 	
-				RenderingContext2D context(detail::screenDC());
+				RenderingContext2D context(win32::detail::screenDC());
 				std::shared_ptr<const Font> oldFont(context.font());
 				context.setFont(font());
 				GLYPHMETRICS gm;
@@ -2461,7 +2461,7 @@ namespace ascension {
 //				shrinkToFit(styledRanges_);
 
 				// 3. generate glyphs for each text runs
-				const RenderingContext2D context(detail::screenDC());
+				const RenderingContext2D context(win32::detail::screenDC());
 				BOOST_FOREACH(TextRunImpl* run, textRuns)
 					run->shape(context.asNativeObject());
 				TextRunImpl::substituteGlyphs(boost::make_iterator_range(textRuns));

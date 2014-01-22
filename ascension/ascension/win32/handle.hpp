@@ -2,6 +2,7 @@
  * @file handle.hpp
  * @date 2006-2011 was windows.hpp
  * @date 2012-04-17 separated from windows.hpp
+ * @date 2012, 2014
  * @deprecated This header file was deprecated since version 0.8. Use @c std#shared_ptr and
  *             @c std#unique_ptr class templates. But Win32 handle types are not pointers...
  */
@@ -276,15 +277,15 @@ namespace ascension {
 		};
 #	endif
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
-	}
 
-	namespace detail {
-		inline win32::Handle<HDC>::Type screenDC() {
-			HDC dc = ::GetDC(nullptr);
-			if(dc == nullptr)
-				throw makePlatformError();
-			return win32::Handle<HDC>::Type(dc,
-				std::bind(&::ReleaseDC, static_cast<HWND>(nullptr), std::placeholders::_1));
+		namespace detail {
+			inline win32::Handle<HDC>::Type screenDC() {
+				HDC dc = ::GetDC(nullptr);
+				if(dc == nullptr)
+					throw makePlatformError();
+				return win32::Handle<HDC>::Type(dc,
+					std::bind(&::ReleaseDC, static_cast<HWND>(nullptr), std::placeholders::_1));
+			}
 		}
 	}
 }

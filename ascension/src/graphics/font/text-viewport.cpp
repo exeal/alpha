@@ -1025,7 +1025,7 @@ namespace ascension {
 
 			void TextViewport::repairUncalculatedLayouts() {
 				if(!repairingLayouts_) {
-					detail::ValueSaver<bool> temp(repairingLayouts_);
+					ascension::detail::ValueSaver<bool> temp(repairingLayouts_);
 					repairingLayouts_ = true;
 
 					const Scalar extent = isHorizontal(textRenderer().computedBlockFlowDirection()) ? geometry::dy(boundsInView()) : geometry::dx(boundsInView());
