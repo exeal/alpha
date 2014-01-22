@@ -16,7 +16,7 @@
 
 namespace ascension {
 	namespace viewers {
-		graphics::Rectangle&& viewers::currentCharacterLogicalBounds(const Caret& caret) {
+		graphics::Rectangle&& currentCharacterLogicalBounds(const Caret& caret) {
 			const graphics::font::TextRenderer& textRenderer = caret.textViewer().textRenderer();
 			const graphics::font::TextLayout& layout = textRenderer.layouts().at(line(caret));
 			const Index subline = layout.lineAt(offsetInLine(caret));

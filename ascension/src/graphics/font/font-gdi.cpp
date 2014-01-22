@@ -108,7 +108,7 @@ namespace ascension {
 					return boost::none;
 				if(ivs_.get() == nullptr) {
 					const_cast<Font*>(this)->ivs_.reset(new detail::IdeographicVariationSequences);
-					win32::Handle<HDC>::Type dc(detail::screenDC());
+					win32::Handle<HDC>::Type dc(win32::detail::screenDC());
 					win32::Handle<HFONT>::Type oldFont(static_cast<HFONT>(::SelectObject(dc.get(), nativeObject_.get())));
 					static const OpenTypeFontTag CMAP_TAG = MakeOpenTypeFontTag<'c', 'm', 'a', 'p'>::value;
 					const DWORD bytes = ::GetFontData(dc.get(), CMAP_TAG, 0, nullptr, 0);
@@ -208,7 +208,7 @@ namespace ascension {
 
 				// handle 'font-size-adjust'
 				if(sizeAdjust && *sizeAdjust > 0.0) {
-					win32::Handle<HFONT>::Type oldFont(static_cast<HFONT>(::SelectObject(deviceContext_.get(), font.get())), detail::NullDeleter());
+					win32::Handle<HFONT>::Type oldFont(static_cast<HFONT>(::SelectObject(deviceContext_.get(), font.get())), ascension::detail::NullDeleter());
 					TEXTMETRICW tm;
 					if(::GetTextMetricsW(deviceContext_.get(), &tm)) {
 						GLYPHMETRICS gm;
