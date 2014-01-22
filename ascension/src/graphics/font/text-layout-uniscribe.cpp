@@ -2686,7 +2686,7 @@ namespace ascension {
 
 #if /*defined(_DEBUG)*/ 0
 				if(DIAGNOSE_INHERENT_DRAWING)
-					win32::DumpContext() << L"@TextLayout.draw draws line " << lineNumber_ << L" (" << line << L")\n";
+					BOOST_LOG_TRIVIAL(debug) << L"@TextLayout.draw draws line " << lineNumber_ << L" (" << line << L")\n";
 #endif // defined(_DEBUG)
 
 				if(isEmpty() || geometry::dy(context.boundsToPaint()) == 0)

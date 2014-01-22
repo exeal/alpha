@@ -12,6 +12,9 @@
 #include <ascension/graphics/font/line-layout-vector.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/sort.hpp>
+#ifdef _DEBUG
+#	include <boost/log/trivial.hpp>
+#endif
 
 namespace ascension {
 	namespace graphics {
@@ -35,9 +38,8 @@ namespace ascension {
 			 * @see #at
 			 */
 			const TextLayout& LineLayoutVector::operator[](Index line) {
-#ifdef ASCENSION_TRACE_LAYOUT_CACHES
-				manah::win32::DumpContext dout;
-				dout << "finding layout for line " << line;
+#if defined(ASCENSION_TRACE_LAYOUT_CACHES) && defined(_DEBUG)
+				BOOST_LOG_TRIVIAL(debug) << "finding layout for line " << line;
 #endif
 				LineLayoutVector& self = *const_cast<LineLayoutVector*>(this);
 				auto i(std::begin(self.layouts_));
@@ -47,8 +49,8 @@ namespace ascension {
 				}
 
 				if(i != end(layouts_)) {
-#ifdef ASCENSION_TRACE_LAYOUT_CACHES
-					dout << "... cache found\n";
+#if defined(ASCENSION_TRACE_LAYOUT_CACHES) && defined(_DEBUG)
+					BOOST_LOG_TRIVIAL(debug) << "... cache found\n";
 #endif
 					if(i->layout != layouts_.front().layout) {
 						// bring to the top
