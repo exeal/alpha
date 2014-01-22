@@ -68,10 +68,10 @@ namespace ascension {
 					} else if(((i + 1 < c) ? partitions_[i + 1]->start : doc.region().end()) <= change.erasedRegion().end()) {
 						// this partition is encompassed with the deleted region
 						delete partitions_[i];
-						partitions_.erase(partitions_.begin() + i);
+						partitions_.erase(std::begin(partitions_) + i);
 						if(i < c - 1 && partitions_[i]->contentType == partitions_[i - 1]->contentType) {
 							delete partitions_[i];
-							partitions_.erase(partitions_.begin() + i);
+							partitions_.erase(std::begin(partitions_) + i);
 							--c;
 						}
 						--i;
@@ -133,7 +133,7 @@ namespace ascension {
 		
 			// replace partitions encompassed with the affected region
 			erasePartitions(i.region().beginning(), i.tell());
-			partitions_.insert(partitionAt(i.region().beginning()) + 1, newPartitions.begin(), newPartitions.end());
+			partitions_.insert(partitionAt(i.region().beginning()) + 1, std::begin(newPartitions), std::end(newPartitions));
 
 #ifdef _DEBUG
 			static bool trace = false;
@@ -147,11 +147,11 @@ namespace ascension {
 
 		/// @see kernel#DocumentPartitioner#doGetPartition
 		void LexicalPartitioner::doGetPartition(const kernel::Position& at, kernel::DocumentPartition& partition) const BOOST_NOEXCEPT {
-			detail::GapVector<Partition*>::const_iterator i(partitionAt(at));
+			auto i(partitionAt(at));
 			const Partition& p = **i;
 			partition.contentType = p.contentType;
 			partition.region.first = p.start;
-			partition.region.second = (i < partitions_.end() - 1) ? (*++i)->start : document()->region().second;
+			partition.region.second = (i < std::end(partitions_) - 1) ? (*++i)->start : document()->region().second;
 		}
 
 		/// @see kernel#DocumentPartitioner#doInstall
@@ -159,7 +159,7 @@ namespace ascension {
 			BOOST_FOREACH(const Partition* partition, partitions_)
 				delete partition;
 			partitions_.clear();
-			partitions_.insert(partitions_.begin(), new Partition(kernel::DEFAULT_CONTENT_TYPE, kernel::Position(0, 0), kernel::Position(0, 0), 0));
+			partitions_.insert(std::begin(partitions_), new Partition(kernel::DEFAULT_CONTENT_TYPE, kernel::Position(0, 0), kernel::Position(0, 0), 0));
 			kernel::Region dummy;
 			const kernel::Region entire(document()->region());
 			computePartitioning(entire.first, entire.second, dummy);
@@ -180,22 +180,22 @@ namespace ascension {
 		// erases partitions encompassed with the region between the given two positions.
 		void LexicalPartitioner::erasePartitions(const kernel::Position& first, const kernel::Position& last) {
 			// locate the first partition to delete
-			detail::GapVector<Partition*>::const_iterator deletedFirst(partitionAt(first));
+			auto deletedFirst(partitionAt(first));
 			if(first >= (*deletedFirst)->getTokenEnd())
 				++deletedFirst;	// do not delete this partition
 //			else if(deletedFirst < partitions_.getSize() - 1 && partitions_[deletedFirst + 1]->tokenStart < change.getRegion().getBottom())
 //				++deletedFirst;	// delete from the next partition
 			// locate the last partition to delete
-			detail::GapVector<Partition*>::const_iterator deletedLast(partitionAt(last) + 1);	// exclusive
-			if(deletedLast < partitions_.end() && (*deletedLast)->tokenStart < last)
+			auto deletedLast(partitionAt(last) + 1);	// exclusive
+			if(deletedLast < std::end(partitions_) && (*deletedLast)->tokenStart < last)
 				++deletedLast;
 //			else if(titions_[predeletedLast - 1]->start == change.getRegion().getBottom())
 //				--deletedLast;
 			if(deletedLast > deletedFirst) {
-				if(deletedFirst > partitions_.begin() && deletedLast < partitions_.end()
+				if(deletedFirst > std::begin(partitions_) && deletedLast < std::end(partitions_)
 						&& (*(deletedFirst - 1))->contentType == (*deletedLast)->contentType)
 					++deletedLast;	// combine
-				for_each(deletedFirst, deletedLast, std::default_delete<Partition>());
+				std::for_each(deletedFirst, deletedLast, std::default_delete<Partition>());
 				partitions_.erase(deletedFirst, deletedLast);
 			}
 
@@ -204,7 +204,7 @@ namespace ascension {
 			if(partitions_.empty() || partitions_[0]->start != d.region().first) {
 				if(partitions_.empty() || partitions_[0]->contentType != kernel::DEFAULT_CONTENT_TYPE) {
 					const kernel::Position bob(d.region().first);
-					partitions_.insert(partitions_.begin(), new Partition(kernel::DEFAULT_CONTENT_TYPE, bob, bob, 0));
+					partitions_.insert(std::begin(partitions_), new Partition(kernel::DEFAULT_CONTENT_TYPE, bob, bob, 0));
 				} else {
 					partitions_[0]->start = partitions_[0]->tokenStart = d.region().first;
 					partitions_[0]->tokenLength = 0;
@@ -214,7 +214,7 @@ namespace ascension {
 			// delete the partition whose start position is the end of the document
 			if(partitions_.size() > 1 && partitions_.back()->start == d.region().second) {
 				delete partitions_[partitions_.size() - 1];
-				partitions_.erase(partitions_.end() - 1);
+				partitions_.erase(std::end(partitions_) - 1);
 			}
 		}
 
@@ -228,20 +228,19 @@ namespace ascension {
 		}
 
 		// returns the index of the partition encompasses the given position.
-		inline detail::GapVector<LexicalPartitioner::Partition*>::const_iterator
+		inline ascension::detail::GapVector<LexicalPartitioner::Partition*>::const_iterator
 				LexicalPartitioner::partitionAt(const kernel::Position& at) const BOOST_NOEXCEPT {
-			detail::GapVector<Partition*>::const_iterator p(
-				detail::searchBound(partitions_.begin(), partitions_.end(), at, PartitionPositionCompare<Partition>()));
-			if(p == partitions_.end()) {
+			auto p(ascension::detail::searchBound(std::begin(partitions_), std::end(partitions_), at, PartitionPositionCompare<Partition>()));
+			if(p == std::end(partitions_)) {
 				assert(partitions_.front()->start != document()->region().first);	// twilight context
-				return partitions_.begin();
+				return std::begin(partitions_);
 			}
 			if(at.line < document()->numberOfLines()
-					&& (*p)->tokenStart == at && p != partitions_.begin() && at.offsetInLine == document()->lineLength(at.line))
+					&& (*p)->tokenStart == at && p != std::begin(partitions_) && at.offsetInLine == document()->lineLength(at.line))
 				--p;
 //			if(result > 0 && partitions_[result]->start == partitions_[result - 1]->start)
 //				--p;
-			while(p + 1 < partitions_.end() && (*(p + 1))->start == (*p)->start)
+			while(p + 1 < std::end(partitions_) && (*(p + 1))->start == (*p)->start)
 				++p;
 			return p;
 		}
@@ -260,7 +259,7 @@ namespace ascension {
 		inline kernel::ContentType LexicalPartitioner::transitionStateAt(const kernel::Position& at) const BOOST_NOEXCEPT {
 			if(at.line == 0 && at.offsetInLine == 0)
 				return kernel::DEFAULT_CONTENT_TYPE;
-			detail::GapVector<Partition*>::const_iterator i(partitionAt(at));
+			auto i(partitionAt(at));
 			if((*i)->start == at)
 				--i;
 			return (*i)->contentType;

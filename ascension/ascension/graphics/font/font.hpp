@@ -2,7 +2,7 @@
  * @file font.hpp
  * @author exeal
  * @date 2010-11-06 created
- * @date 2010-2013
+ * @date 2010-2014
  */
 
 #ifndef ASCENSION_FONT_HPP
@@ -22,17 +22,17 @@
 #include <boost/optional.hpp>
 
 namespace ascension {
-#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-	namespace detail {
-		struct IdeographicVariationSequences {
-			std::vector<std::uint32_t> defaultMappings;
-			std::unordered_map<std::uint32_t, std::uint16_t> nonDefaultMappings;
-		};
-	}
-#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
 	namespace graphics {
 		namespace font {
+#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+			namespace detail {
+				struct IdeographicVariationSequences {
+					std::vector<std::uint32_t> defaultMappings;
+					std::unordered_map<std::uint32_t, std::uint16_t> nonDefaultMappings;
+				};
+			}
+#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
 			/// Returns @c true if complex scripts are supported.
 			bool supportsComplexScripts() BOOST_NOEXCEPT;

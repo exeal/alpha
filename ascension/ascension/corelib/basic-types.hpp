@@ -139,13 +139,13 @@ namespace ascension {
 	// see session.hpp
 	namespace texteditor {
 		class Session;
-	}
-	namespace detail {
-		class SessionElement {
-		protected:
-			virtual void setSession(texteditor::Session& session) BOOST_NOEXCEPT = 0;
-			friend class texteditor::Session;
-		};
+		namespace detail {
+			class SessionElement {
+			protected:
+				virtual void setSession(Session& session) BOOST_NOEXCEPT = 0;
+				friend class Session;
+			};
+		}
 	}
 
 } // namespace ascension
@@ -157,7 +157,7 @@ namespace std {
 		char digits[5];
 		for(ascension::String::const_iterator i(value.begin()), e(value.end()); i != e; ++i) {
 			sprintf(digits, "%04x", *i);
-			out.write(prefix, ASCENSION_COUNTOF(prefix));
+			out.write(prefix, std::extent<decltype(prefix)>::value);
 			out.write(digits, 4);
 		}
 		return out;

@@ -2,7 +2,7 @@
  * @file document.hpp
  * @author exeal
  * @date 2003-2006 (was EditDoc.h)
- * @date 2006-2012
+ * @date 2006-2012, 2014
  */
 
 #ifndef ASCENSION_DOCUMENT_HPP
@@ -28,21 +28,22 @@
 #include <boost/optional.hpp>
 
 namespace ascension {
-
-	namespace text {class IdentifierSyntax;}
-
-	namespace detail {
-		/// @internal Interface for objects which manage the set of points.
-		template<typename PointType> class PointCollection {
-		public:
-			/// Adds the newly created point.
-			virtual void addNewPoint(PointType& point) = 0;
-			/// Deletes the point about to be destroyed (@a point is in its destructor call).
-			virtual void removePoint(PointType& point) = 0;
-		};
-	} // namespace detail
+	namespace text {
+		class IdentifierSyntax;
+	}
 
 	namespace kernel {
+		namespace detail {
+			/// @internal Interface for objects which manage the set of points.
+			template<typename PointType> class PointCollection {
+			public:
+				/// Adds the newly created point.
+				virtual void addNewPoint(PointType& point) = 0;
+				/// Deletes the point about to be destroyed (@a point is in its destructor call).
+				virtual void removePoint(PointType& point) = 0;
+			};
+		} // namespace detail
+
 		class Point;
 		class Document;
 
@@ -154,8 +155,8 @@ namespace ascension {
 			class Iterator : public boost::iterator_facade<
 				Iterator, Index, std::bidirectional_iterator_tag, Index, std::ptrdiff_t> {
 			private:
-				Iterator(detail::GapVector<Index>::const_iterator impl) : impl_(impl) {}
-				detail::GapVector<Index>::const_iterator impl_;
+				Iterator(ascension::detail::GapVector<Index>::const_iterator impl) : impl_(impl) {}
+				ascension::detail::GapVector<Index>::const_iterator impl_;
 				// boost.iterator_facade requirements
 				friend class boost::iterator_core_access;
 				void decrement() {--impl_;}
@@ -191,20 +192,20 @@ namespace ascension {
 			void removeListener(BookmarkListener& listener);
 			/// @}
 		private:
-			detail::GapVector<Index>::iterator find(Index line) const BOOST_NOEXCEPT;
+			ascension::detail::GapVector<Index>::iterator find(Index line) const BOOST_NOEXCEPT;
 			// DocumentListener
 			void documentAboutToBeChanged(const Document& document);
 			void documentChanged(const Document& document, const DocumentChange& change);
 		private:
 			explicit Bookmarker(Document& document) BOOST_NOEXCEPT;
 			Document& document_;
-			detail::GapVector<Index> markedLines_;
-			detail::Listeners<BookmarkListener> listeners_;
+			ascension::detail::GapVector<Index> markedLines_;
+			ascension::detail::Listeners<BookmarkListener> listeners_;
 			friend class Document;
 		};
 
 		// the documentation is at document.cpp
-		class Document : public detail::PointCollection<Point>, public detail::SessionElement {
+		class Document : public detail::PointCollection<Point>, public texteditor::detail::SessionElement {
 			ASCENSION_NONCOPYABLE_TAG(Document);
 		public:
 			/// The property key for the title of the document.
@@ -231,7 +232,7 @@ namespace ascension {
 				std::size_t revisionNumber_;
 				friend class Document;
 			};
-			typedef detail::GapVector<Line*> LineList;	///< List of lines.
+			typedef ascension::detail::GapVector<Line*> LineList;	///< List of lines.
 
 		public:
 			Document();
@@ -384,15 +385,15 @@ namespace ascension {
 			std::unique_ptr<std::pair<Position, std::unique_ptr<Point>>> accessibleRegion_;
 
 			std::list<DocumentListener*> listeners_, prenotifiedListeners_;
-//			detail::Listeners<CompoundChangeListener> compoundChangeListeners_;
-			detail::Listeners<DocumentRollbackListener> rollbackListeners_;
-			detail::Listeners<DocumentPartitioningListener> partitioningListeners_;
+//			ascension::detail::Listeners<CompoundChangeListener> compoundChangeListeners_;
+			ascension::detail::Listeners<DocumentRollbackListener> rollbackListeners_;
+			ascension::detail::Listeners<DocumentPartitioningListener> partitioningListeners_;
 
 			friend class DocumentPartitioner;
 		};
 
 		// the documentation is document.cpp
-		typedef detail::LockGuard<
+		typedef ascension::detail::LockGuard<
 			Document, &Document::beginCompoundChange, &Document::endCompoundChange
 		> CompoundChangeSaver;
 #if 0

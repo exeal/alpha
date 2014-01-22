@@ -319,7 +319,7 @@ namespace ascension {
 				if(numberOfLines() == 1)
 					return 0;
 				const std::vector<Index> offsets(lineOffsets());
-				return *detail::searchBound(std::begin(offsets), std::end(offsets) - 1, offset);
+				return *ascension::detail::searchBound(std::begin(offsets), std::end(offsets) - 1, offset);
 			}
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			/**

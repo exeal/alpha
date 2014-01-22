@@ -22,22 +22,22 @@ namespace ascension {
 
 		namespace sp {
 			template<typename T, int _initialValue>	// decltype(_initialValue) should be T...
-			struct Enumerated : public detail::Type2Type<T> {
+			struct Enumerated : public ascension::detail::Type2Type<T> {
 				static Type initialValue() {return static_cast<Type>(_initialValue);}
 			};
 
 			template<int _initialValue, Length::Unit initialUnit>
-			struct Lengthed : public detail::Type2Type<Length> {
+			struct Lengthed : public ascension::detail::Type2Type<Length> {
 				static Type initialValue() {return Length(_initialValue, initialUnit);}
 			};
 
 			template<typename T>
-			struct Complex : public detail::Type2Type<T> {
+			struct Complex : public ascension::detail::Type2Type<T> {
 				static Type initialValue() {return Type();}
 			};
 
 			template<typename Variant, typename InitialType, int _initialValue>	// decltype(_initialValue) should be InitialType...
-			struct Multiple : public detail::Type2Type<Variant> {
+			struct Multiple : public ascension::detail::Type2Type<Variant> {
 				static InitialType initialValue() {return static_cast<InitialType>(_initialValue);}
 			};
 
@@ -151,7 +151,7 @@ namespace ascension {
 
 		namespace sp {
 			template<typename Property>
-			class IntrinsicType : public detail::Type2Type<typename Property::value_type> {};
+			class IntrinsicType : public ascension::detail::Type2Type<typename Property::value_type> {};
 		}
 #if 0
 		/**

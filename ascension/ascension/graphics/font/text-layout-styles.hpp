@@ -2,7 +2,7 @@
  * @file text-layout-styles.hpp
  * @see computed-text-styles.hpp, text-alignment.hpp, presentation/text-style.hpp
  * @date 2003-2006 was LineLayout.h
- * @date 2006-2010
+ * @date 2006-2010, 2014
  * @date 2010-11-20 renamed from ascension/layout.hpp
  * @date 2011-2012 was text-layout.hpp
  * @date 2012-08-17 separated from text-layout.hpp
@@ -261,66 +261,66 @@ namespace ascension {
 
 			std::size_t hash_value(const ComputedTextLineStyle& v);
 
-		}
-	}
-
-	namespace detail {
-		class ComputedStyledTextRunEnumerator {
-		public:
-			ComputedStyledTextRunEnumerator(const StringPiece& textString,
-					std::unique_ptr<graphics::font::ComputedStyledTextRunIterator> source)
-					: source_(std::move(source)), textString_(textString), position_(0) {
-				if(source_.get() == nullptr)
-					throw NullPointerException("source");
-			}
-			bool isDone() const BOOST_NOEXCEPT {
-				return position_ == textString_.length();
-			}
-			void next() {
-				throwIfDone();
-				if(source_->isDone())
-					position_ = textString_.length();
-				else {
-					const boost::integer_range<Index> sourceRange(source_->currentRange());
-					// sanity checks...
-					if(sourceRange.empty())
-						throw std::domain_error("ComputedStyledTextRunIterator.currentRange returned an empty range.");
-					else if(textString_.begin() + *sourceRange.end() > textString_.end())
-						throw std::domain_error("ComputedStyledTextRunIterator.currentRange returned a range intersects outside of the source text string.");
-					else if(*sourceRange.begin() <= position_)
-						throw std::domain_error("ComputedStyledTextRunIterator.currentRange returned a backward range.");
-					if(position_ < *sourceRange.begin())
-						position_ = *sourceRange.begin();
-					else {
-						assert(position_ == *sourceRange.begin());
-						source_->next();
-						position_ = *sourceRange.end();
+			namespace detail {
+				class ComputedStyledTextRunEnumerator {
+				public:
+					ComputedStyledTextRunEnumerator(const StringPiece& textString,
+							std::unique_ptr<graphics::font::ComputedStyledTextRunIterator> source)
+							: source_(std::move(source)), textString_(textString), position_(0) {
+						if(source_.get() == nullptr)
+							throw NullPointerException("source");
 					}
-				}
+					bool isDone() const BOOST_NOEXCEPT {
+						return position_ == textString_.length();
+					}
+					void next() {
+						throwIfDone();
+						if(source_->isDone())
+							position_ = textString_.length();
+						else {
+							const boost::integer_range<Index> sourceRange(source_->currentRange());
+							// sanity checks...
+							if(sourceRange.empty())
+								throw std::domain_error("ComputedStyledTextRunIterator.currentRange returned an empty range.");
+							else if(textString_.begin() + *sourceRange.end() > textString_.end())
+								throw std::domain_error("ComputedStyledTextRunIterator.currentRange returned a range intersects outside of the source text string.");
+							else if(*sourceRange.begin() <= position_)
+								throw std::domain_error("ComputedStyledTextRunIterator.currentRange returned a backward range.");
+							if(position_ < *sourceRange.begin())
+								position_ = *sourceRange.begin();
+							else {
+								assert(position_ == *sourceRange.begin());
+								source_->next();
+								position_ = *sourceRange.end();
+							}
+						}
+					}
+					StringPiece::const_iterator position() const {
+						throwIfDone();
+						return textString_.begin() + position_;
+					}
+					void style(graphics::font::ComputedTextRunStyle& v) const {
+						throwIfDone();
+						if(position_ == *source_->currentRange().begin())
+							source_->currentStyle(v);
+						else
+							v = graphics::font::ComputedTextRunStyle();
+					}
+				private:
+					void throwIfDone() const {
+						if(isDone())
+							throw NoSuchElementException();
+					}
+					std::unique_ptr<graphics::font::ComputedStyledTextRunIterator> source_;
+					const StringPiece& textString_;
+					Index position_;	// beginning of current run
+				};
+	
+				std::shared_ptr<const graphics::font::Font> findMatchingFont(
+					const StringPiece& textRun, const graphics::font::FontCollection& collection,
+					const graphics::font::ComputedFontSpecification& specification);
 			}
-			StringPiece::const_iterator position() const {
-				throwIfDone();
-				return textString_.begin() + position_;
-			}
-			void style(graphics::font::ComputedTextRunStyle& v) const {
-				throwIfDone();
-				if(position_ == *source_->currentRange().begin())
-					source_->currentStyle(v);
-				else
-					v = graphics::font::ComputedTextRunStyle();
-			}
-		private:
-			void throwIfDone() const {
-				if(isDone())
-					throw NoSuchElementException();
-			}
-			std::unique_ptr<graphics::font::ComputedStyledTextRunIterator> source_;
-			const StringPiece& textString_;
-			Index position_;	// beginning of current run
-		};
-		std::shared_ptr<const graphics::font::Font> findMatchingFont(
-			const StringPiece& textRun, const graphics::font::FontCollection& collection,
-			const graphics::font::ComputedFontSpecification& specification);
+		}
 	}
 } // namespace ascension.graphics.font
 

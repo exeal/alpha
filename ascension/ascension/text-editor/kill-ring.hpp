@@ -63,7 +63,7 @@ namespace ascension {
 			Contents contents_;	// plain-text vs. rectangle-flag
 			Contents::iterator yankPointer_;
 			const std::size_t maximumNumberOfKills_;
-			detail::Listeners<KillRingListener> listeners_;
+			ascension::detail::Listeners<KillRingListener> listeners_;
 		};
 	} // namespace texteditor
 } // namespace ascension

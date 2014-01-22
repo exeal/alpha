@@ -176,7 +176,7 @@ namespace ascension {
 				Scalar maximumMeasure_;
 				boost::optional<Index> longestLine_;
 				Index numberOfVisualLines_;
-				detail::Listeners<VisualLinesListener> listeners_;
+				ascension::detail::Listeners<VisualLinesListener> listeners_;
 			};
 
 

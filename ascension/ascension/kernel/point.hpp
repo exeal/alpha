@@ -1,7 +1,7 @@
 /**
  * @file point.hpp
  * @author exeal
- * @date 2003-2013
+ * @date 2003-2014
  */
 
 #ifndef ASCENSION_POINT_HPP
@@ -104,7 +104,7 @@ namespace ascension {
 			bool adapting_;
 			Direction gravity_;
 			PointListener* listener_;
-			detail::Listeners<PointLifeCycleListener> lifeCycleListeners_;
+			ascension::detail::Listeners<PointLifeCycleListener> lifeCycleListeners_;
 			friend class Document;
 		};
 
@@ -185,7 +185,9 @@ namespace ascension {
 		// Point method inline implementation /////////////////////////////////////////////////////
 
 		/// Conversion operator for convenience.
-		inline Point::operator Position() const {return position();}
+		inline Point::operator Position() const {
+			return position();
+		}
 
 		/**
 		 * Protected assignment operator moves the point to @a other.
@@ -197,7 +199,9 @@ namespace ascension {
 		}
 
 		/// Returns @c true if the point is adapting to the document change.
-		inline bool Point::adaptsToDocument() const BOOST_NOEXCEPT {return adapting_;}
+		inline bool Point::adaptsToDocument() const BOOST_NOEXCEPT {
+			return adapting_;
+		}
 
 		/// Adapts the point to the document change.
 		inline Point& Point::adaptToDocument(bool adapt) BOOST_NOEXCEPT {
@@ -220,35 +224,47 @@ namespace ascension {
 		}
 
 		/// Called when the document is disposed.
-		inline void Point::documentDisposed() BOOST_NOEXCEPT {document_ = nullptr;}
+		inline void Point::documentDisposed() BOOST_NOEXCEPT {
+			document_ = nullptr;
+		}
 
 		/// Returns the gravity.
-		inline Direction Point::gravity() const BOOST_NOEXCEPT {return gravity_;}
+		inline Direction Point::gravity() const BOOST_NOEXCEPT {
+			return gravity_;
+		}
 
 		/// Returns @c true if the document is already disposed.
-		inline bool Point::isDocumentDisposed() const BOOST_NOEXCEPT {return document_ == nullptr;}
+		inline bool Point::isDocumentDisposed() const BOOST_NOEXCEPT {
+			return document_ == nullptr;
+		}
 
 		/**
 		 * Normalizes the position of the point.
 		 * This method does <strong>not</strong> inform to the listeners about any movement.
 		 */
-		inline void Point::normalize() const {const_cast<Point*>(this)->position_ = normalized();}
+		inline void Point::normalize() const {
+			const_cast<Point*>(this)->position_ = normalized();
+		}
 
 		/// Returns the normalized position of the point.
-		inline Position Point::normalized() const {return positions::shrinkToDocumentRegion(document(), position());}
+		inline Position Point::normalized() const {
+			return positions::shrinkToDocumentRegion(document(), position());
+		}
 
 		/// Returns the position.
-		inline const Position& Point::position() const BOOST_NOEXCEPT {return position_;}
+		inline const Position& Point::position() const BOOST_NOEXCEPT {
+			return position_;
+		}
+
+		namespace detail {
+			/// @internal Returns the @c IdentifierSyntax object corresponds to the given point.
+			template<typename Point>
+			inline const text::IdentifierSyntax& identifierSyntax(const Point& p) {
+				return p.document().contentTypeInformation().getIdentifierSyntax(contentType(p));
+			}
+		}
 
 	} // namespace kernel
-
-	namespace detail {
-		/// @internal Returns the @c IdentifierSyntax object corresponds to the given point.
-		template<typename Point>
-		inline const text::IdentifierSyntax& identifierSyntax(const Point& p) {
-			return p.document().contentTypeInformation().getIdentifierSyntax(contentType(p));
-		}
-	}
 } // namespace ascension
 
 #endif // !ASCENSION_POINT_HPP

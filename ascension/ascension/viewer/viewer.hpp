@@ -3,7 +3,7 @@
  * This header defines several visual presentation classes.
  * @author exeal
  * @date 2003-2006 was EditView.h
- * @date 2006-2013
+ * @date 2006-2014
  */
 
 #ifndef ASCENSION_VIEWER_HPP
@@ -67,36 +67,35 @@ namespace ascension {
 		class ContentAssistant;
 	}
 
+	namespace viewers {
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
-	namespace detail {
-		class AbstractAccessibleProxy : public IAccessible {
-		public:
-			virtual ~AbstractAccessibleProxy() BOOST_NOEXCEPT {}
-			virtual void dispose() = 0;
-		};
-	}
+		namespace detail {
+			class AbstractAccessibleProxy : public IAccessible {
+			public:
+				virtual ~AbstractAccessibleProxy() BOOST_NOEXCEPT {}
+				virtual void dispose() = 0;
+			};
+		}
 #endif
 
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-	namespace detail {
-		class TextViewerScrollableProperties : public Gtk::Widget {
-		protected:
-			TextViewerScrollableProperties();
+		namespace detail {
+			class TextViewerScrollableProperties : public Gtk::Widget {
+			protected:
+				TextViewerScrollableProperties();
 #ifndef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-			const graphics::PhysicalTwoAxes<double>& scrollPositionsBeforeChanged() const BOOST_NOEXCEPT;
-			void updateScrollPositionsBeforeChanged();
+				const graphics::PhysicalTwoAxes<double>& scrollPositionsBeforeChanged() const BOOST_NOEXCEPT;
+				void updateScrollPositionsBeforeChanged();
 #endif
 		private:
-			Glib::Property<Glib::RefPtr<Gtk::Adjustment>> horizontalAdjustment_, verticalAdjustment_;
-			Glib::Property<Gtk::ScrollablePolicy> horizontalScrollPolicy_, verticalScrollPolicy_;
+				Glib::Property<Glib::RefPtr<Gtk::Adjustment>> horizontalAdjustment_, verticalAdjustment_;
+				Glib::Property<Gtk::ScrollablePolicy> horizontalScrollPolicy_, verticalScrollPolicy_;
 #ifndef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-			graphics::PhysicalTwoAxes<double> scrollPositionsBeforeChanged_;
+				graphics::PhysicalTwoAxes<double> scrollPositionsBeforeChanged_;
 #endif
-		};
-	}
+			};
+		}
 #endif
-
-	namespace viewers {
 		class TextViewer :
 				// note:
 				// Gtk.TextView inherits Gtk.Container (which inherits Gtk.Widget) and Gtk.Scrollable.
@@ -117,7 +116,7 @@ namespace ascension {
 				public kernel::DocumentListener, public kernel::DocumentRollbackListener,
 				public graphics::font::DefaultFontListener, public graphics::font::VisualLinesListener,
 				public graphics::font::TextViewportListener, public graphics::font::ComputedBlockFlowDirectionListener,
-				public CaretListener, public CaretStateListener, public detail::PointCollection<VisualPoint> {
+				public CaretListener, public CaretStateListener, public kernel::detail::PointCollection<VisualPoint> {
 		public:
 			/**
 			 * Result of hit test.
@@ -453,8 +452,8 @@ namespace ascension {
 			// strategies and listeners
 			std::shared_ptr<MouseInputStrategy> mouseInputStrategy_;
 			std::shared_ptr<widgetapi::DropTarget> dropTargetHandler_;
-			detail::Listeners<DisplaySizeListener> displaySizeListeners_;
-			detail::Listeners<ViewportListener> viewportListeners_;
+			ascension::detail::Listeners<DisplaySizeListener> displaySizeListeners_;
+			ascension::detail::Listeners<ViewportListener> viewportListeners_;
 			std::unique_ptr<detail::RulerPainter> rulerPainter_;
 			std::unique_ptr<contentassist::ContentAssistant> contentAssistant_;
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)

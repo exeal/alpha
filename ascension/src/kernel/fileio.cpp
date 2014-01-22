@@ -1133,7 +1133,7 @@ private:
 				}
 
 				if(weakSelf_.get() == nullptr)
-					weakSelf_.reset(this, detail::NullDeleter());
+					weakSelf_.reset(this, ascension::detail::NullDeleter());
 				document_.setInput(std::weak_ptr<DocumentInput>(weakSelf_));
 				fileName_ = realName;
 				listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileNameChanged, *this);

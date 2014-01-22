@@ -14,18 +14,18 @@
 #include <ascension/corelib/text/identifier-syntax.hpp>
 
 namespace ascension {
-	namespace detail {
-		// detail.VisualDestinationProxyMaker /////////////////////////////////////////////////////////////////////////
-
-		class VisualDestinationProxyMaker {
-		public:
-			static viewers::VisualDestinationProxy make(const kernel::Position& p, bool crossVisualLines) {
-				return viewers::VisualDestinationProxy(p, crossVisualLines);
-			}
-		};
-	}
-
 	namespace viewers {
+		namespace detail {
+			// detail.VisualDestinationProxyMaker /////////////////////////////////////////////////////////////////////////
+
+			class VisualDestinationProxyMaker {
+			public:
+				static viewers::VisualDestinationProxy make(const kernel::Position& p, bool crossVisualLines) {
+					return viewers::VisualDestinationProxy(p, crossVisualLines);
+				}
+			};
+		}
+
 		namespace utils {
 			/**
 			 * Centers the current visual line addressed by the given visual point in the text viewer by vertical scrolling
@@ -120,7 +120,7 @@ namespace ascension {
 		 */
 		VisualPoint::VisualPoint(TextViewer& viewer, const kernel::Position& position, kernel::PointListener* listener /* = nullptr */) :
 				Point(viewer.document(), position, listener), viewer_(&viewer), crossingLines_(false) {
-			static_cast<detail::PointCollection<VisualPoint>&>(viewer).addNewPoint(*this);
+			static_cast<kernel::detail::PointCollection<VisualPoint>&>(viewer).addNewPoint(*this);
 			viewer_->textRenderer().layouts().addVisualLinesListener(*this);
 		}
 
@@ -134,14 +134,14 @@ namespace ascension {
 					positionInVisualLine_(other.positionInVisualLine_), crossingLines_(false), lineNumberCaches_(other.lineNumberCaches_) {
 				if(viewer_ == nullptr)
 					throw TextViewerDisposedException();
-				static_cast<detail::PointCollection<VisualPoint>*>(viewer_)->addNewPoint(*this);
+				static_cast<kernel::detail::PointCollection<VisualPoint>*>(viewer_)->addNewPoint(*this);
 				viewer_->textRenderer().layouts().addVisualLinesListener(*this);
 			}
 
 			/// Destructor.
 			VisualPoint::~VisualPoint() BOOST_NOEXCEPT {
 				if(viewer_ != nullptr) {
-					static_cast<detail::PointCollection<VisualPoint>*>(viewer_)->removePoint(*this);
+					static_cast<kernel::detail::PointCollection<VisualPoint>*>(viewer_)->removePoint(*this);
 					viewer_->textRenderer().layouts().removeVisualLinesListener(*this);
 				}
 			}
@@ -696,11 +696,11 @@ namespace ascension {
 					const graphics::font::TextLayout& layout = renderer.layouts().at(np.line);
 					subline = layout.lineAt(np.offsetInLine);
 					if(np.line == p.document().numberOfLines() - 1 && subline == layout.numberOfLines() - 1)
-						return detail::VisualDestinationProxyMaker::make(np, true);
+						return viewers::detail::VisualDestinationProxyMaker::make(np, true);
 				} else {
 					subline = renderer.layouts().at(np.line).lineAt(np.offsetInLine);
 					if(np.line == 0 && subline == 0)
-						return detail::VisualDestinationProxyMaker::make(np, true);
+						return viewers::detail::VisualDestinationProxyMaker::make(np, true);
 				}
 				graphics::font::VisualLine visualLine(np.line, subline);
 				renderer.layouts().offsetVisualLine(visualLine,
@@ -714,7 +714,7 @@ namespace ascension {
 						presentation::_bpd = layout.lineMetrics(visualLine.subline).baselineOffset())).insertionIndex();
 				if(layout.lineAt(np.offsetInLine) != visualLine.subline)
 					np = nextCharacter(p.document(), np, Direction::BACKWARD, GRAPHEME_CLUSTER);
-				return detail::VisualDestinationProxyMaker::make(np, true);
+				return viewers::detail::VisualDestinationProxyMaker::make(np, true);
 			}
 
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08

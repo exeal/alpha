@@ -96,7 +96,7 @@ namespace ascension {
 			 */
 			template<typename Point>
 			Point mapFromGlobal(Proxy<const Widget> widget, const Point& position,
-				typename detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* = nullptr);
+				typename graphics::geometry::detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* = nullptr);
 			/**
 			 * Translates the rectangle in the global screen coordinates into widget coordinates.
 			 * @tparam Box The type of @a rectangle
@@ -106,7 +106,7 @@ namespace ascension {
 			 */
 			template<typename Box>
 			inline Box mapFromGlobal(Proxy<const Widget> widget, const Box& rectangle,
-					typename detail::EnableIfTagIs<Box, boost::geometry::box_tag>::type* = nullptr) {
+					typename graphics::geometry::detail::EnableIfTagIs<Box, boost::geometry::box_tag>::type* = nullptr) {
 				typedef typename boost::geometry::point_type<Box>::type PointType;
 				PointType minimumCorner(boost::geometry::make<PointType>(
 					boost::geometry::get<boost::geometry::min_corner, 0>(rectangle),
@@ -129,7 +129,7 @@ namespace ascension {
 			 */
 			template<typename Point>
 			Point mapToGlobal(Proxy<const Widget>, const Point& position,
-				typename detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* = nullptr);
+				typename graphics::geometry::detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* = nullptr);
 			/**
 			 * Translates the point in the widget coordinates into global screen coordinates.
 			 * @tparam Box The type of @a rectangle
@@ -139,7 +139,7 @@ namespace ascension {
 			 */
 			template<typename Box>
 			inline graphics::Rectangle mapToGlobal(Proxy<const Widget> widget, const Box& rectangle,
-					typename detail::EnableIfTagIs<Box, boost::geometry::box_tag>::type* = nullptr) {
+					typename graphics::geometry::detail::EnableIfTagIs<Box, boost::geometry::box_tag>::type* = nullptr) {
 				typedef typename boost::geometry::point_type<Box>::type PointType;
 				PointType minimumCorner(boost::geometry::make<PointType>(
 					boost::geometry::get<boost::geometry::min_corner, 0>(rectangle),

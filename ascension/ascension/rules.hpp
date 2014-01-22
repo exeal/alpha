@@ -17,13 +17,12 @@
 #include <set>
 
 namespace ascension {
-
-	namespace detail {
-		class HashTable;
-	}
-
 	/// Provides a framework for rule based text scanning and document partitioning.
 	namespace rules {
+		namespace detail {
+			class HashTable;
+		}
+
 		/**
 		 * A @c URIDetector detects and searches URI. This class conforms to the syntaxes of
 		 * <a href="http://www.ietf.org/rfc/rfc3986.txt">RFC 3986</a> and
@@ -310,7 +309,7 @@ namespace ascension {
 //			static void deleteRules(std::list<const TransitionRule*>& rules) BOOST_NOEXCEPT;
 			void dump() const;
 			void erasePartitions(const kernel::Position& first, const kernel::Position& last);
-			detail::GapVector<Partition*>::const_iterator partitionAt(const kernel::Position& at) const BOOST_NOEXCEPT;
+			ascension::detail::GapVector<Partition*>::const_iterator partitionAt(const kernel::Position& at) const BOOST_NOEXCEPT;
 			kernel::ContentType transitionStateAt(const kernel::Position& at) const BOOST_NOEXCEPT;
 			Index tryTransition(const String& line, Index offsetInLine,
 				kernel::ContentType contentType, kernel::ContentType& destination) const BOOST_NOEXCEPT;
@@ -321,7 +320,7 @@ namespace ascension {
 			void doGetPartition(const kernel::Position& at, kernel::DocumentPartition& partition) const BOOST_NOEXCEPT;
 			void doInstall() BOOST_NOEXCEPT;
 		private:
-			detail::GapVector<Partition*> partitions_;
+			ascension::detail::GapVector<Partition*> partitions_;
 			std::forward_list<std::unique_ptr<const TransitionRule>> rules_;
 		};
 

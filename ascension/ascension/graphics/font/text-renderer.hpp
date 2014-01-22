@@ -141,8 +141,8 @@ namespace ascension {
 				decltype(presentation::TextLineStyle().whiteSpace) whiteSpace_;
 				decltype(presentation::TextToplevelStyle().writingMode) writingMode_;
 				presentation::BlockFlowDirection computedBlockFlowDirection_;
-				detail::Listeners<ComputedBlockFlowDirectionListener> computedBlockFlowDirectionListeners_;
-				detail::Listeners<DefaultFontListener> defaultFontListeners_;
+				ascension::detail::Listeners<ComputedBlockFlowDirectionListener> computedBlockFlowDirectionListeners_;
+				ascension::detail::Listeners<DefaultFontListener> defaultFontListeners_;
 #if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && ASCENSION_ABANDONED_AT_VERSION_08
 				mutable win32::Handle<HDC> memoryDC_;
 				mutable win32::Handle<HBITMAP> memoryBitmap_;

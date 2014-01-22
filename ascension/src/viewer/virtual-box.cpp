@@ -19,7 +19,8 @@ namespace ascension {
 		 * @param viewer The viewer
 		 * @param region The region consists the rectangle
 		 */
-		VirtualBox::VirtualBox(const TextViewer& viewer, const kernel::Region& region) BOOST_NOEXCEPT : viewer_(viewer), lines_(graphics::font::VisualLine(), VisualLine()), ipds_(0, 0) {
+		VirtualBox::VirtualBox(const TextViewer& viewer, const kernel::Region& region) BOOST_NOEXCEPT
+				: viewer_(viewer), lines_(graphics::font::VisualLine(), graphics::font::VisualLine()), ipds_(0, 0) {
 			update(region);
 		}
 
@@ -129,14 +130,14 @@ namespace ascension {
 			std::pair<graphics::Scalar, graphics::Scalar> ipds;
 
 			// first
-			const graphics::font::TextLayout* layout = &viewer_.textRenderer().layouts().at(lines.first.line = region.first.line);
+			const graphics::font::TextLayout* layout = viewer_.textRenderer().layouts().at(lines.first.line = region.first.line);
 			ipds.first = layout->hitToPoint(graphics::font::TextHit<>::leading(region.first.offsetInLine)).ipd();
 			ipds.first = mapLineLayoutInlineProgressionDimensionToTextRenderer(layout->writingMode(), ipds.first);
 			ipds.first += viewer_.textRenderer().lineStartEdge(graphics::font::VisualLine(lines.first.line, 0));
 			lines.first.subline = layout->lineAt(region.first.offsetInLine);
 
 			// second
-			layout = &viewer_.textRenderer().layouts().at(lines.second.line = region.second.line);
+			layout = viewer_.textRenderer().layouts().at(lines.second.line = region.second.line);
 			ipds.second = layout->hitToPoint(graphics::font::TextHit<>::leading(region.second.offsetInLine)).ipd();
 			ipds.second = mapLineLayoutInlineProgressionDimensionToTextRenderer(layout->writingMode(), ipds.second);
 			ipds.second += viewer_.textRenderer().lineStartEdge(graphics::font::VisualLine(lines.second.line, 0));

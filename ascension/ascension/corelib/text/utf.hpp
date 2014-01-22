@@ -8,6 +8,7 @@
  * @date 2011-08-19 split a part into utf8.hpp
  * @date 2011-08-20 joined unicode-surrogates.hpp and unicode-utf.hpp
  * @date 2011-08-27 joined utf8.hpp and utf16.hpp
+ * @date 2014
  * @see utf-iterator.hpp, encoder.hpp
  */
 
@@ -23,150 +24,150 @@
 #endif
 
 namespace ascension {
-	namespace detail {
-		/*
-			UTF-8 code unit value distribution (based on Unicode 6.0 Table 3.7)
-
-			Code unit  As leading byte:                 As trailing byte:  Value
-			(hex)      y/n  code points         length  y/n
-			--------------------------------------------------------------------
-			00..7F     yes  U+0000..U+007F      1       no                 0x10
-			80..BF     no                               maybe              0x01
-			C0..C1     no                               no                 0x00
-			C2..DF     yes  U+0080..U+07FF      2       no                 0x20
-			E0         yes  U+0800..U+0FFF      3       no                 0x30
-			E1..EC     yes  U+1000..U+CFFF      3       no                 0x30
-			ED         yes  U+D000..U+D7FF      3       no                 0x30
-			EE..EF     yes  U+E000..U+FFFF      3       no                 0x30
-			F0         yes  U+10000..U+3FFFF    4       no                 0x40
-	 		F1..F3     yes  U+40000..U+FFFFF    4       no                 0x40
-			F4         yes  U+100000..U+10FFFF  4       no                 0x40
-			F5..FF     no                               no                 0x00
-		 */
-		const std::uint8_t UTF8_CODE_UNIT_VALUES[] = {
-			0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x00
-			0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x10
-			0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x20
-			0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x30
-			0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x40
-			0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x50
-			0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x60
-			0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x70
-			0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,	// 0x80
-			0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,	// 0x90
-			0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,	// 0xA0
-			0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,	// 0xB0
-			0x00, 0x00, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,	// 0xC0
-			0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,	// 0xD0
-			0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,	// 0xE0
-			0x40, 0x40, 0x40, 0x40, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00	// 0xF0
-		};
-
-		inline CodePoint decodeUTF8(const std::uint8_t bytes[], std::size_t nbytes, bool checkMalformedInput) {
-			// this function never checks bytes[0] value
-			switch(nbytes) {
-			case 1:	// 00000000 0xxxxxxx <- 0xxxxxxx
-				return bytes[0];
-			case 2:	// 00000yyy yyxxxxxx <- 110yyyyy 10xxxxxx
-				if(checkMalformedInput && (bytes[1] & 0xc0) != 0x80)	// <C2..DF 80..BF>
-					throw text::MalformedInputException<const std::uint8_t*>(bytes + 1, 1);
-				return ((bytes[0] & 0x1f) << 6) | (bytes[1] & 0x3f);
-			case 3:	// zzzzyyyy yyxxxxxx <- 1110zzzz 10yyyyyy 10xxxxxx
-				if(checkMalformedInput) {
-					if((bytes[0] == 0xe0 && (bytes[1] & 0xe0) != 0xa0)	// <E0 A0..BF XX>
-							|| (bytes[0] == 0xed && (bytes[1] & 0xe0) != 0x80)	// <ED 80..9F XX>
-							|| ((bytes[1] & 0xc0) != 0x80))	// <XX 80..BF XX>
-						throw text::MalformedInputException<const std::uint8_t*>(bytes + 1, 1);
-					if((bytes[2] & 0xc0) != 0x80)	// <XX XX 80..BF>
-						throw text::MalformedInputException<const std::uint8_t*>(bytes + 2, 2);
-				}
-				return ((bytes[0] & 0x0f) << 12) | ((bytes[1] & 0x3f) << 6) | (bytes[2] & 0x3f);
-			case 4:	// 000uuuuu zzzzyyyy yyxxxxxx <- 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
-				if(checkMalformedInput) {
-					if((bytes[0] == 0xf0 && (bytes[1] < 0x90 || bytes[1] > 0xbf))	// <F0 90..BF XX XX>
-							|| (bytes[0] == 0xf4 && (bytes[1] & 0xf0) != 0x80)	// <F4 80..8F XX XX>
-							|| ((bytes[1] & 0xc0) != 0x80))	// <F1..F3 80..BF XX XX>
-						throw text::MalformedInputException<const std::uint8_t*>(bytes + 1, 1);
-					if((bytes[2] & 0xc0) != 0x80)	// <XX XX 80..BF XX>
-						throw text::MalformedInputException<const std::uint8_t*>(bytes + 2, 2);
-					if((bytes[3] & 0xc0) != 0x80)	// <XX XX XX 80..BF>
-						throw text::MalformedInputException<const std::uint8_t*>(bytes + 3, 3);
-				}
-				return ((bytes[0] & 0x07) << 18) | ((bytes[1] & 0x3f) << 12) | ((bytes[2] & 0x3f) << 6) | (bytes[3] & 0x3f);
-			case 0:	// bad leading byte
-				throw text::MalformedInputException<const std::uint8_t*>(bytes, 1);
-			default:
-				ASCENSION_ASSERT_NOT_REACHED();
-			}
-		}
-
-		template<typename InputIterator>
-		inline CodePoint decodeUTF8(InputIterator first, InputIterator last, bool checkMalformedInput) {
-			ASCENSION_STATIC_ASSERT(text::CodeUnitSizeOf<InputIterator>::value == 1);
-			assert(first != last);
-			InputIterator p(first);	// for throw
-			std::uint8_t bytes[4] = {*first};
-			std::size_t nbytes = text::utf::length(bytes[0]);
-			for(std::size_t i = 1; i < nbytes; ++i) {
-				if(++first == last) {
-					nbytes = i;
-					break;
-				}
-				bytes[i] = *first;
-			}
-			try {
-				return decodeUTF8(bytes, nbytes, checkMalformedInput);
-			} catch(const text::MalformedInputException<const std::uint8_t*>& e) {
-				std::advance(p, e.position() - bytes);
-				throw text::MalformedInputException<InputIterator>(p, e.maximalSubpartLength());
-			}
-		}
-
-		template<bool check, typename OutputIterator>
-		inline std::size_t encodeUTF8(CodePoint c, OutputIterator& out) {
-			ASCENSION_STATIC_ASSERT(text::CodeUnitSizeOf<OutputIterator>::value == 1);
-			if(c < 0x0080u) {	// 00000000 0xxxxxxx -> 0xxxxxxx
-				*(out++) = static_cast<std::uint8_t>(c);
-				return 1;
-			} else if(c < 0x0800u) {	// 00000yyy yyxxxxxx -> 110yyyyy 10xxxxxx
-				*(out++) = static_cast<std::uint8_t>((c >> 6) | 0xc0);
-				*(out++) = static_cast<std::uint8_t>((c & 0x3f) | 0x80);
-				return 2;
-			} else if(c < 0x10000u) {	// zzzzyyyy yyxxxxxx -> 1110zzzz 10yyyyyy 10xxxxxx
-				if(check && text::surrogates::isSurrogate(c))
-					throw text::InvalidScalarValueException(c);
-				*(out++) = static_cast<std::uint8_t>((c >> 12) | 0xe0);
-				*(out++) = static_cast<std::uint8_t>(((c >> 6) & 0x3f) | 0x80);
-				*(out++) = static_cast<std::uint8_t>((c & 0x3f) | 0x80);
-				return 3;
-			} else if(c < 0x110000u) {	// 000uuuuu zzzzyyyy yyxxxxxx <- 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
-				*(out++) = static_cast<std::uint8_t>((c >> 18) | 0xf0);
-				*(out++) = static_cast<std::uint8_t>(((c >> 12) & 0x3f) | 0x80);
-				*(out++) = static_cast<std::uint8_t>(((c >> 6) & 0x3f) | 0x80);
-				*(out++) = static_cast<std::uint8_t>((c & 0x3f) | 0x80);
-				return 4;
-			}
-			throw text::InvalidCodePointException(c);
-		}
-
-		template<bool check, typename OutputIterator>
-		inline std::size_t encodeUTF16(CodePoint c, OutputIterator& out) {
-			ASCENSION_STATIC_ASSERT(text::CodeUnitSizeOf<OutputIterator>::value == 2);
-			if(c < 0x00010000ul) {
-				if(check && text::surrogates::isSurrogate(c))
-					throw text::InvalidScalarValueException(c);
-				*(out++) = static_cast<std::uint16_t>(c & 0xffffu);
-				return 1;
-			} else if(!check || c < 0x00110000ul) {
-				*(out++) = text::surrogates::highSurrogate(c);
-				*(out++) = text::surrogates::lowSurrogate(c);
-				return 2;
-			}
-			throw text::InvalidScalarValueException(c);
-		} 
-	}
-
 	namespace text {
+		namespace detail {
+			/*
+				UTF-8 code unit value distribution (based on Unicode 6.0 Table 3.7)
+	
+				Code unit  As leading byte:                 As trailing byte:  Value
+				(hex)      y/n  code points         length  y/n
+				--------------------------------------------------------------------
+				00..7F     yes  U+0000..U+007F      1       no                 0x10
+				80..BF     no                               maybe              0x01
+				C0..C1     no                               no                 0x00
+				C2..DF     yes  U+0080..U+07FF      2       no                 0x20
+				E0         yes  U+0800..U+0FFF      3       no                 0x30
+				E1..EC     yes  U+1000..U+CFFF      3       no                 0x30
+				ED         yes  U+D000..U+D7FF      3       no                 0x30
+				EE..EF     yes  U+E000..U+FFFF      3       no                 0x30
+				F0         yes  U+10000..U+3FFFF    4       no                 0x40
+		 		F1..F3     yes  U+40000..U+FFFFF    4       no                 0x40
+				F4         yes  U+100000..U+10FFFF  4       no                 0x40
+				F5..FF     no                               no                 0x00
+			 */
+			const std::uint8_t UTF8_CODE_UNIT_VALUES[] = {
+				0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x00
+				0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x10
+				0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x20
+				0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x30
+				0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x40
+				0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x50
+				0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x60
+				0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,	// 0x70
+				0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,	// 0x80
+				0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,	// 0x90
+				0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,	// 0xA0
+				0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,	// 0xB0
+				0x00, 0x00, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,	// 0xC0
+				0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,	// 0xD0
+				0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,	// 0xE0
+				0x40, 0x40, 0x40, 0x40, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00	// 0xF0
+			};
+	
+			inline CodePoint decodeUTF8(const std::uint8_t bytes[], std::size_t nbytes, bool checkMalformedInput) {
+				// this function never checks bytes[0] value
+				switch(nbytes) {
+				case 1:	// 00000000 0xxxxxxx <- 0xxxxxxx
+					return bytes[0];
+				case 2:	// 00000yyy yyxxxxxx <- 110yyyyy 10xxxxxx
+					if(checkMalformedInput && (bytes[1] & 0xc0) != 0x80)	// <C2..DF 80..BF>
+						throw MalformedInputException<const std::uint8_t*>(bytes + 1, 1);
+					return ((bytes[0] & 0x1f) << 6) | (bytes[1] & 0x3f);
+				case 3:	// zzzzyyyy yyxxxxxx <- 1110zzzz 10yyyyyy 10xxxxxx
+					if(checkMalformedInput) {
+						if((bytes[0] == 0xe0 && (bytes[1] & 0xe0) != 0xa0)	// <E0 A0..BF XX>
+								|| (bytes[0] == 0xed && (bytes[1] & 0xe0) != 0x80)	// <ED 80..9F XX>
+								|| ((bytes[1] & 0xc0) != 0x80))	// <XX 80..BF XX>
+							throw MalformedInputException<const std::uint8_t*>(bytes + 1, 1);
+						if((bytes[2] & 0xc0) != 0x80)	// <XX XX 80..BF>
+							throw MalformedInputException<const std::uint8_t*>(bytes + 2, 2);
+					}
+					return ((bytes[0] & 0x0f) << 12) | ((bytes[1] & 0x3f) << 6) | (bytes[2] & 0x3f);
+				case 4:	// 000uuuuu zzzzyyyy yyxxxxxx <- 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
+					if(checkMalformedInput) {
+						if((bytes[0] == 0xf0 && (bytes[1] < 0x90 || bytes[1] > 0xbf))	// <F0 90..BF XX XX>
+								|| (bytes[0] == 0xf4 && (bytes[1] & 0xf0) != 0x80)	// <F4 80..8F XX XX>
+								|| ((bytes[1] & 0xc0) != 0x80))	// <F1..F3 80..BF XX XX>
+							throw MalformedInputException<const std::uint8_t*>(bytes + 1, 1);
+						if((bytes[2] & 0xc0) != 0x80)	// <XX XX 80..BF XX>
+							throw MalformedInputException<const std::uint8_t*>(bytes + 2, 2);
+						if((bytes[3] & 0xc0) != 0x80)	// <XX XX XX 80..BF>
+							throw MalformedInputException<const std::uint8_t*>(bytes + 3, 3);
+					}
+					return ((bytes[0] & 0x07) << 18) | ((bytes[1] & 0x3f) << 12) | ((bytes[2] & 0x3f) << 6) | (bytes[3] & 0x3f);
+				case 0:	// bad leading byte
+					throw MalformedInputException<const std::uint8_t*>(bytes, 1);
+				default:
+					ASCENSION_ASSERT_NOT_REACHED();
+				}
+			}
+	
+			template<typename InputIterator>
+			inline CodePoint decodeUTF8(InputIterator first, InputIterator last, bool checkMalformedInput) {
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<InputIterator>::value == 1);
+				assert(first != last);
+				InputIterator p(first);	// for throw
+				std::uint8_t bytes[4] = {*first};
+				std::size_t nbytes = utf::length(bytes[0]);
+				for(std::size_t i = 1; i < nbytes; ++i) {
+					if(++first == last) {
+						nbytes = i;
+						break;
+					}
+					bytes[i] = *first;
+				}
+				try {
+					return decodeUTF8(bytes, nbytes, checkMalformedInput);
+				} catch(const MalformedInputException<const std::uint8_t*>& e) {
+					std::advance(p, e.position() - bytes);
+					throw MalformedInputException<InputIterator>(p, e.maximalSubpartLength());
+				}
+			}
+	
+			template<bool check, typename OutputIterator>
+			inline std::size_t encodeUTF8(CodePoint c, OutputIterator& out) {
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<OutputIterator>::value == 1);
+				if(c < 0x0080u) {	// 00000000 0xxxxxxx -> 0xxxxxxx
+					*(out++) = static_cast<std::uint8_t>(c);
+					return 1;
+				} else if(c < 0x0800u) {	// 00000yyy yyxxxxxx -> 110yyyyy 10xxxxxx
+					*(out++) = static_cast<std::uint8_t>((c >> 6) | 0xc0);
+					*(out++) = static_cast<std::uint8_t>((c & 0x3f) | 0x80);
+					return 2;
+				} else if(c < 0x10000u) {	// zzzzyyyy yyxxxxxx -> 1110zzzz 10yyyyyy 10xxxxxx
+					if(check && surrogates::isSurrogate(c))
+						throw InvalidScalarValueException(c);
+					*(out++) = static_cast<std::uint8_t>((c >> 12) | 0xe0);
+					*(out++) = static_cast<std::uint8_t>(((c >> 6) & 0x3f) | 0x80);
+					*(out++) = static_cast<std::uint8_t>((c & 0x3f) | 0x80);
+					return 3;
+				} else if(c < 0x110000u) {	// 000uuuuu zzzzyyyy yyxxxxxx <- 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
+					*(out++) = static_cast<std::uint8_t>((c >> 18) | 0xf0);
+					*(out++) = static_cast<std::uint8_t>(((c >> 12) & 0x3f) | 0x80);
+					*(out++) = static_cast<std::uint8_t>(((c >> 6) & 0x3f) | 0x80);
+					*(out++) = static_cast<std::uint8_t>((c & 0x3f) | 0x80);
+					return 4;
+				}
+				throw InvalidCodePointException(c);
+			}
+	
+			template<bool check, typename OutputIterator>
+			inline std::size_t encodeUTF16(CodePoint c, OutputIterator& out) {
+				ASCENSION_STATIC_ASSERT(CodeUnitSizeOf<OutputIterator>::value == 2);
+				if(c < 0x00010000ul) {
+					if(check && surrogates::isSurrogate(c))
+						throw InvalidScalarValueException(c);
+					*(out++) = static_cast<std::uint16_t>(c & 0xffffu);
+					return 1;
+				} else if(!check || c < 0x00110000ul) {
+					*(out++) = surrogates::highSurrogate(c);
+					*(out++) = surrogates::lowSurrogate(c);
+					return 2;
+				}
+				throw InvalidScalarValueException(c);
+			} 
+		}	// namespace detail
+
 		namespace utf {
 			/// @defgroup utf_common_trivials UTF Common Trivial Functions
 			/// @{

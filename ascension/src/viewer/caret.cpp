@@ -432,7 +432,7 @@ namespace ascension {
 				destructiveInsert(*this, StringPiece(buffer, (character < 0x10000u) ? 1 : 2));
 				doc.insertUndoBoundary();
 			} else {
-				const bool alpha = identifierSyntax(*this).isIdentifierContinueCharacter(character);
+				const bool alpha = detail::identifierSyntax(*this).isIdentifierContinueCharacter(character);
 				if(context_.lastTypedPosition && (!alpha || context_.lastTypedPosition != position())) {
 					// end sequential typing
 					doc.insertUndoBoundary();
@@ -442,7 +442,7 @@ namespace ascension {
 					// (re)start sequential typing
 					doc.insertUndoBoundary();
 
-				detail::ValueSaver<bool> lock(context_.typing);
+				ascension::detail::ValueSaver<bool> lock(context_.typing);
 				context_.typing = true;
 				replaceSelection(StringPiece(buffer, (character < 0x10000u) ? 1 : 2));	// this may throw
 				if(alpha)
@@ -846,7 +846,7 @@ namespace ascension {
 		void selectWord(Caret& caret) {
 			text::WordBreakIterator<kernel::DocumentCharacterIterator> i(
 				kernel::DocumentCharacterIterator(caret.document(), caret.position()),
-				text::AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, identifierSyntax(caret));
+				text::AbstractWordBreakIterator::BOUNDARY_OF_SEGMENT, detail::identifierSyntax(caret));
 			caret.endRectangleSelection();
 			if(kernel::locations::isEndOfLine(caret)) {
 				if(kernel::locations::isBeginningOfLine(caret))	// an empty line
@@ -884,7 +884,7 @@ namespace ascension {
 
 			if(inheritIndent) {	// simple auto-indent
 				const String& currentLine = caret.document().line(line(caret));
-				const Index len = identifierSyntax(caret).eatWhiteSpaces(
+				const Index len = detail::identifierSyntax(caret).eatWhiteSpaces(
 					currentLine.data(), currentLine.data() + offsetInLine(caret), true) - currentLine.data();
 				s += currentLine.substr(0, len);
 			}
@@ -1151,7 +1151,7 @@ namespace ascension {
 
 			text::WordBreakIterator<kernel::DocumentCharacterIterator> i(
 				kernel::DocumentCharacterIterator(caret.document(), caret),
-				text::AbstractWordBreakIterator::START_OF_ALPHANUMERICS, identifierSyntax(caret));
+				text::AbstractWordBreakIterator::START_OF_ALPHANUMERICS, detail::identifierSyntax(caret));
 			kernel::Position pos[4];
 
 			// find the backward word (1st-word-*)...

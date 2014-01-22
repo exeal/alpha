@@ -6,6 +6,7 @@
  * @date 2006-2011 was presentation.hpp
  * @date 2011-05-04 separated from presentation.hpp
  * @date 2012-07-16 reunioned with text-line-style.hpp
+ * @date 2014
  */
 
 #ifndef ASCENSION_TEXT_STYLE_HPP
@@ -1362,26 +1363,26 @@ namespace ascension {
 			inheritedBackground.color.inherit();
 			return computeBackground(current, parent, (ancestorBackground != nullptr) ? *ancestorBackground : inheritedBackground);
 		}
-	}
 
-	namespace detail {
-		ASCENSION_SCOPED_ENUMS_BEGIN(PhysicalTextAnchor)
-			LEFT = presentation::TextAlignment::LEFT,
-			CENTER = presentation::TextAlignment::CENTER,
-			RIGHT = presentation::TextAlignment::RIGHT
-		ASCENSION_SCOPED_ENUMS_END;
+		namespace detail {
+			ASCENSION_SCOPED_ENUMS_BEGIN(PhysicalTextAnchor)
+				LEFT = presentation::TextAlignment::LEFT,
+				CENTER = presentation::TextAlignment::CENTER,
+				RIGHT = presentation::TextAlignment::RIGHT
+			ASCENSION_SCOPED_ENUMS_END;
 
-		inline PhysicalTextAnchor computePhysicalTextAnchor(
-				presentation::TextAnchor anchor, presentation::ReadingDirection readingDirection) {
-			switch(anchor) {
-				case presentation::TextAnchor::MIDDLE:
-					return PhysicalTextAnchor::CENTER;
-				case presentation::TextAnchor::START:
-					return (readingDirection == presentation::LEFT_TO_RIGHT) ? PhysicalTextAnchor::LEFT : PhysicalTextAnchor::RIGHT;
-				case presentation::TextAnchor::END:
-					return (readingDirection == presentation::LEFT_TO_RIGHT) ? PhysicalTextAnchor::RIGHT : PhysicalTextAnchor::LEFT;
-				default:
-					ASCENSION_ASSERT_NOT_REACHED();
+			inline PhysicalTextAnchor computePhysicalTextAnchor(
+					presentation::TextAnchor anchor, presentation::ReadingDirection readingDirection) {
+				switch(anchor) {
+					case presentation::TextAnchor::MIDDLE:
+						return PhysicalTextAnchor::CENTER;
+					case presentation::TextAnchor::START:
+						return (readingDirection == presentation::LEFT_TO_RIGHT) ? PhysicalTextAnchor::LEFT : PhysicalTextAnchor::RIGHT;
+					case presentation::TextAnchor::END:
+						return (readingDirection == presentation::LEFT_TO_RIGHT) ? PhysicalTextAnchor::RIGHT : PhysicalTextAnchor::LEFT;
+					default:
+						ASCENSION_ASSERT_NOT_REACHED();
+				}
 			}
 		}
 	}

@@ -4,10 +4,12 @@
  * @date 2003-2008 was point.cpp
  * @date 2008-2010 separated from point.cpp
  * @date 2011-10-03 separated from caret.cpp
- * @date 2011-2013
+ * @date 2011-2014
  */
 
 #include <ascension/viewer/caret.hpp>
+
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 #include <ascension/viewer/viewer.hpp>
 #include <ascension/corelib/text/character-property.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
@@ -727,3 +729,5 @@ void viewers::cutSelection(Caret& caret, bool useKillRing) {
 		throw;
 	}
 }
+
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32

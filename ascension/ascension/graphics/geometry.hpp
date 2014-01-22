@@ -3,6 +3,7 @@
  * Defines basic data types for geometry.
  * @author exeal
  * @date 2010-11-06 created
+ * @date 2014
  */
 
 #ifndef ASCENSION_GEOMETRY_HPP
@@ -25,17 +26,17 @@
 #include <boost/range/irange.hpp>
 
 namespace ascension {
-	namespace detail {
-		template<typename Geometry, typename GeometryTag, typename T = void>
-		struct EnableIfTagIs : std::enable_if<
-			std::is_same<
-				typename boost::geometry::tag<typename std::remove_cv<Geometry>::type>::type,
-				GeometryTag
-			>::value, T> {};
-	}
-
 	namespace graphics {
 		namespace geometry {
+			namespace detail {
+				template<typename Geometry, typename GeometryTag, typename T = void>
+				struct EnableIfTagIs : std::enable_if<
+					std::is_same<
+						typename boost::geometry::tag<typename std::remove_cv<Geometry>::type>::type,
+						GeometryTag
+					>::value, T> {};
+			}
+
 			/// @name Geometric Primitives
 			/// @{
 
@@ -391,66 +392,66 @@ namespace boost {
 			};
 		}
 	}
-}
+}	// boost.geometry.traits
 
 namespace ascension {
-	namespace detail {
-		template<typename Geometry, std::size_t dimension>
-		class AccessProxy {
-		public:
-			typedef typename boost::geometry::coordinate_type<Geometry>::type CoordinateType;
-		public:
-			explicit AccessProxy(Geometry& geometry) BOOST_NOEXCEPT : geometry_(geometry) {}
-			const AccessProxy<Geometry, dimension>& operator=(CoordinateType value) {
-				boost::geometry::set<dimension>(geometry_, value);
-				return *this;
-			}
-			const AccessProxy& operator=(const AccessProxy& other) {
-				return *this = static_cast<CoordinateType>(other);
-			}
-			operator CoordinateType() const {
-				return boost::geometry::get<dimension>(geometry_);
-			};
-			CoordinateType operator+() const {return +static_cast<CoordinateType>(*this);}
-			CoordinateType operator-() const {return -static_cast<CoordinateType>(*this);}
-			AccessProxy<Geometry, dimension>& operator+=(CoordinateType other) {*this = *this + other; return *this;}
-			AccessProxy<Geometry, dimension>& operator-=(CoordinateType other) {*this = *this - other; return *this;}
-			AccessProxy<Geometry, dimension>& operator*=(CoordinateType other) {*this = *this * other; return *this;}
-			AccessProxy<Geometry, dimension>& operator/=(CoordinateType other) {*this = *this / other; return *this;}
-//			AccessProxy<Geometry, dimension>& operator%=(CoordinateType other) {*this = *this % other; return *this;}
-		private:
-			Geometry& geometry_;
-		};
-
-		template<typename Geometry, std::size_t dimension>
-		class RectangleRangeProxy /*: public Range<
-			typename graphics::geometry::Coordinate<
-				typename graphics::geometry::Coordinate<Rectangle>::Type
-			>::Type
-		>*/ {
-		private:
-			typedef typename boost::geometry::point_type<Geometry>::type PointType;
-			typedef typename boost::geometry::coordinate_type<PointType>::type CoordinateType;
-		public:
-			explicit RectangleRangeProxy(Geometry& rectangle) BOOST_NOEXCEPT :
-				/*Range<CoordinateType>(graphics::geometry::range<dimension>(const_cast<const Geometry&>(rectangle))),*/ rectangle_(rectangle) {}
-			template<typename T>
-			RectangleRangeProxy<Geometry, dimension>& operator=(const boost::integer_range<T>& range) {
-				boost::geometry::set<boost::geometry::min_corner, dimension>(rectangle_, *range.begin());
-				boost::geometry::set<boost::geometry::max_corner, dimension>(rectangle_, *range.end());
-//				Range<Scalar>::operator=(range);
-				return *this;
-			}
-			operator boost::integer_range<CoordinateType>() const {
-				return graphics::geometry::range<dimension>(const_cast<const Geometry&>(rectangle_));
-			}
-		private:
-			Geometry& rectangle_;
-		};
-	}
-
 	namespace graphics {
 		namespace geometry {
+			namespace detail {
+				template<typename Geometry, std::size_t dimension>
+				class AccessProxy {
+				public:
+					typedef typename boost::geometry::coordinate_type<Geometry>::type CoordinateType;
+				public:
+					explicit AccessProxy(Geometry& geometry) BOOST_NOEXCEPT : geometry_(geometry) {}
+					const AccessProxy<Geometry, dimension>& operator=(CoordinateType value) {
+						boost::geometry::set<dimension>(geometry_, value);
+						return *this;
+					}
+					const AccessProxy& operator=(const AccessProxy& other) {
+						return *this = static_cast<CoordinateType>(other);
+					}
+					operator CoordinateType() const {
+						return boost::geometry::get<dimension>(geometry_);
+					};
+					CoordinateType operator+() const {return +static_cast<CoordinateType>(*this);}
+					CoordinateType operator-() const {return -static_cast<CoordinateType>(*this);}
+					AccessProxy<Geometry, dimension>& operator+=(CoordinateType other) {*this = *this + other; return *this;}
+					AccessProxy<Geometry, dimension>& operator-=(CoordinateType other) {*this = *this - other; return *this;}
+					AccessProxy<Geometry, dimension>& operator*=(CoordinateType other) {*this = *this * other; return *this;}
+					AccessProxy<Geometry, dimension>& operator/=(CoordinateType other) {*this = *this / other; return *this;}
+//					AccessProxy<Geometry, dimension>& operator%=(CoordinateType other) {*this = *this % other; return *this;}
+				private:
+					Geometry& geometry_;
+				};
+
+				template<typename Geometry, std::size_t dimension>
+				class RectangleRangeProxy /*: public Range<
+					typename Coordinate<
+						typename Coordinate<Rectangle>::Type
+					>::Type
+				>*/ {
+				private:
+					typedef typename boost::geometry::point_type<Geometry>::type PointType;
+					typedef typename boost::geometry::coordinate_type<PointType>::type CoordinateType;
+				public:
+					explicit RectangleRangeProxy(Geometry& rectangle) BOOST_NOEXCEPT :
+						/*Range<CoordinateType>(range<dimension>(const_cast<const Geometry&>(rectangle))),*/ rectangle_(rectangle) {}
+					template<typename T>
+					RectangleRangeProxy<Geometry, dimension>& operator=(const boost::integer_range<T>& range) {
+						boost::geometry::set<boost::geometry::min_corner, dimension>(rectangle_, *range.begin());
+						boost::geometry::set<boost::geometry::max_corner, dimension>(rectangle_, *range.end());
+//						Range<Scalar>::operator=(range);
+						return *this;
+					}
+					operator boost::integer_range<CoordinateType>() const {
+						return range<dimension>(const_cast<const Geometry&>(rectangle_));
+					}
+				private:
+					Geometry& rectangle_;
+				};
+			}	// namespace detail
+
 			/// @defgroup geometry_additional_aceessors Additional Access Functions
 			/// @{
 
