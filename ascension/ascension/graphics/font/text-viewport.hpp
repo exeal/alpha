@@ -251,10 +251,10 @@ namespace ascension {
 			presentation::AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>
 				convertPhysicalScrollPositionsToAbstract(const TextViewport& viewport,
 					const PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions);
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			Scalar inlineProgressionScrollOffsetInUserUnits(
+			Scalar inlineProgressionOffsetInViewerGeometry(
 				const TextViewport& viewport, const boost::optional<TextViewport::ScrollOffset>& scrollOffset = boost::none);
-#endif	// ASCENSION_ABANDONED_AT_VERSION_08
+			TextViewport::ScrollOffset inlineProgressionOffsetInViewportScroll(
+				const TextViewport& viewport, const boost::optional<Scalar>& ipd = boost::none);
 			/// @}
 
 			/// @defgroup model_and_view_coordinates_conversions Model and View Coordinates Conversions

@@ -1213,10 +1213,11 @@ namespace ascension {
 			 * @retval first The text string
 			 * @retval second @c true if the content is rectangle
 			 * @throw std#bad_alloc
+			 * @throw std#invalid_argument @a data does not have text data
 			 */
 			std::pair<String, bool> getTextFromMimeData(const widgetapi::MimeData& data) {
 				if(!data.hasText())
-					throw ClipboardException();
+					throw std::invalid_argument("'data' does not have text data.");
 				const auto availableFormats(data.formats());
 				return std::make_pair(data.text(), boost::range::find(availableFormats, rectangleTextMimeDataFormat()) != boost::end(availableFormats));
 			}

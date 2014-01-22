@@ -63,18 +63,33 @@ namespace ascension {
 				return result;
 			}
 
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			/**
-			 * Converts an inline progression scroll offset into user units.
+			 * Converts the given inline progression offset in text viewer into scroll offset.
 			 * @param viewport The viewport
-			 * @param scrollOffset The inline progression scroll offset
-			 * @return A scroll offset in user units
+			 * @param offset The inline progression offset in the viewer associated with @a viewport in user units
+			 * @return A converted inline progression scroll offset in @a viewport
+			 * @see inlineProgressionOffsetInViewportScroll
 			 */
-			Scalar inlineProgressionScrollOffsetInUserUnits(const TextViewport& viewport, const boost::optional<TextViewport::ScrollOffset>& scrollOffset /* = boost::none */) {
+			TextViewport::ScrollOffset inlineProgressionOffsetInViewerGeometry(const TextViewport& viewport, Scalar offset) {
+				return static_cast<TextViewport::ScrollOffset>(offset /* / viewport.dimensionRates().ipd() */);
+			}
+
+			/**
+			 * Converts an inline progression scroll offset into viewer's geometry.
+			 * @param viewport The viewport
+			 * @param offset The inline progression scroll offset in @a viewport to convert. If this is @c boost#none,
+			 *               the scroll position of @a viewport is used
+			 * @return A converted inline progression offset in viewer geometry in user units
+			 * @see inlineProgressionOffsetInViewerGeometry
+			 */
+			Scalar inlineProgressionOffsetInViewportScroll(const TextViewport& viewport, const boost::optional<TextViewport::ScrollOffset>& offset /* = boost::none */) {
+#if 1
+				return boost::get_optional_value_or(offset, viewport.scrollPositions().ipd()) /* * viewport.dimensionRates().ipd() */;
+#else
 				const TextViewport::ScrollOffset offset = scrollOffset ? *scrollOffset : viewport.inlineProgressionOffset();
 				return viewport.averageCharacterWidth() * offset;
+#endif
 			}
-#endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
 			/**
 			 * Returns distance from the edge of content-area to the edge of the specified visual line in pixels. The

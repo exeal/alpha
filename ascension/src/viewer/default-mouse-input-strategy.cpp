@@ -1173,7 +1173,7 @@ namespace ascension {
 				const graphics::Point p(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
 				const graphics::Rectangle contentRectangle(viewer_->textAreaContentRectangle());
 				graphics::Dimension scrollUnits(
-					geometry::_dx = inlineProgressionScrollOffsetInUserUnits(*viewport, 1),
+					geometry::_dx = graphics::font::inlineProgressionOffsetInViewerGeometry(*viewport, 1),
 					geometry::_dy = widgetapi::createRenderingContext(*viewer_)->fontMetrics(viewer_->textRenderer().defaultFont())->linePitch());
 				if(isVertical(viewer_->textRenderer().computedBlockFlowDirection()))
 					geometry::transpose(scrollUnits);
@@ -1196,7 +1196,7 @@ namespace ascension {
 				timer.stop();
 				const graphics::Point p(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
 				graphics::Dimension scrollUnits(
-					geometry::_dx = inlineProgressionScrollOffsetInUserUnits(*viewport, 1),
+					geometry::_dx = graphics::font::inlineProgressionOffsetInViewerGeometry(*viewport, 1),
 					geometry::_dy = widgetapi::createRenderingContext(*viewer_)->fontMetrics(viewer_->textRenderer().defaultFont())->linePitch());
 				if(isVertical(viewer_->textRenderer().computedBlockFlowDirection()))
 					geometry::transpose(scrollUnits);

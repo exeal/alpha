@@ -4,7 +4,7 @@
  * @date 2003-2006 was EditView.cpp and EditViewWindowMessages.cpp
  * @date 2006-2011 was viewer.cpp
  * @date 2011-05-16 separated from viewer.cpp
- * @date 2011-2013
+ * @date 2011-2014
  */
 
 #include <ascension/viewer/viewer.hpp>
@@ -32,6 +32,10 @@
 
 #ifdef ASCENSION_TEST_TEXT_STYLES
 #	include <ascension/presentation/presentation-reconstructor.hpp>
+#endif
+
+#ifdef _DEBUG
+#	include <boost/log/trivial.hpp>
 #endif
 
 using namespace ascension;
@@ -585,18 +589,17 @@ STDMETHODIMP TextViewer::DragEnter(IDataObject* data, DWORD keyState, POINTL loc
 
 #ifdef _DEBUG
 	{
-		win32::DumpContext dout;
 		win32::com::SmartPointer<IEnumFORMATETC> formats;
 		if(SUCCEEDED(hr = data->EnumFormatEtc(DATADIR_GET, formats.initialize()))) {
 			FORMATETC format;
 			ULONG fetched;
-			dout << L"DragEnter received a data object exposes the following formats.\n";
+			BOOST_LOG_TRIVIAL(debug) << L"DragEnter received a data object exposes the following formats.\n";
 			for(formats->Reset(); formats->Next(1, &format, &fetched) == S_OK; ) {
-				array<WCHAR, 256> name;
+				std::array<WCHAR, 256> name;
 				if(::GetClipboardFormatNameW(format.cfFormat, name.data(), name.size() - 1) != 0)
-					dout << L"\t" << name.data() << L"\n";
+					BOOST_LOG_TRIVIAL(debug) << L"\t" << name.data() << L"\n";
 				else
-					dout << L"\t" << L"(unknown format : " << format.cfFormat << L")\n";
+					BOOST_LOG_TRIVIAL(debug) << L"\t" << L"(unknown format : " << format.cfFormat << L")\n";
 				if(format.ptd != nullptr)
 					::CoTaskMemFree(format.ptd);
 			}
@@ -687,8 +690,7 @@ STDMETHODIMP TextViewer::Drop(IDataObject* data, DWORD keyState, POINTL location
 	STGMEDIUM stg;
 	data->GetData(&fe, &stg);
 	const char* bytes = static_cast<char*>(::GlobalLock(stg.hGlobal));
-	manah::win32::DumpContext dout;
-	dout << bytes;
+	BOOST_LOG_TRIVIAL(debug) << bytes;
 	::GlobalUnlock(stg.hGlobal);
 	::ReleaseStgMedium(&stg);
 */

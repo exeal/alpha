@@ -1,7 +1,7 @@
 /**
  * @file windows.hpp
  * @author exeal
- * @date 2006-2013
+ * @date 2006-2014
  */
 
 #ifndef ASCENSION_WIN32_WINDOWS_HPP
@@ -133,42 +133,6 @@ namespace ascension {
 			/// Default constructor.
 			AutoZeroSize() BOOST_NOEXCEPT {*reinterpret_cast<SizeType*>(this) = sizeof(Structure);}
 		};
-
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-		class DumpContext {
-		public:
-			template<typename T>
-			DumpContext& operator<<(const T& rhs) throw();
-			void hexDump(const WCHAR* line, BYTE* pb, int bytes, int width = 0x10) throw();
-		};
-
-		inline void DumpContext::hexDump(const WCHAR* line, BYTE* pb, int bytes, int width /* = 0x10 */) throw() {
-			WCHAR* const output = new WCHAR[static_cast<std::size_t>(
-				(std::wcslen(line) + 3 * width + 2) * static_cast<float>(bytes / width))];
-			std::wcscpy(output, line);
-
-			WCHAR buffer[4];
-			for(int i = 0; i < bytes; ++i){
-				::wsprintfW(buffer, L" %d", pb);
-				std::wcscat(output, buffer);
-				if(i % width == 0){
-					std::wcscat(output, L"\n");
-					std::wcscat(output, line);
-				}
-			}
-			::OutputDebugStringW(L"\n>----Dump is started");
-			::OutputDebugStringW(output);
-			::OutputDebugStringW(L"\n>----Dump is done");
-			delete[] output;
-		}
-
-		template<typename T> inline DumpContext& DumpContext::operator<<(const T& rhs) throw() {
-			std::wostringstream ss;
-			ss << rhs;
-			::OutputDebugStringW(ss.str().c_str());
-			return *this;
-		}
-#endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
 	}
 }
