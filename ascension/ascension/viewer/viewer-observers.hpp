@@ -2,6 +2,7 @@
  * @file viewer-observers.hpp
  * @author exeal
  * @date 2011-03-30 separated from viewer.hpp
+ * @date 2014
  */
 
 #ifndef VIEWER_OBSERVERS_HPP
@@ -125,17 +126,16 @@ namespace ascension {
 			friend class TextViewer;
 		};
 
-	}
-
-	namespace detail {
-		class InputEventHandler {	// this is not an observer of caret...
-		private:
-			virtual void abortInput() = 0;
+		namespace detail {
+			class InputEventHandler {	// this is not an observer of caret...
+			private:
+				virtual void abortInput() = 0;
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-			virtual LRESULT handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed) = 0;
+				virtual LRESULT handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed) = 0;
 #endif
-			friend class viewers::TextViewer;
-		};
+				friend class TextViewer;
+			};
+		}
 	}
 }
 

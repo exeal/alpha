@@ -79,7 +79,7 @@ namespace ascension {
 								SingleByteEncoderFactory<VISCII_BYTE_TABLE>
 							>("VISCII", standard::VISCII, "Vietnamese (VISCII)", "csVISCII", 0x1a));
 
-							Encoder::registerFactory(std::shared_ptr<const EncoderFactory>(&VIQR, detail::NullDeleter()));
+							Encoder::registerFactory(std::shared_ptr<const EncoderFactory>(&VIQR, ascension::detail::NullDeleter()));
 
 							Encoder::registerFactory(std::make_shared<
 								SingleByteEncoderFactory<

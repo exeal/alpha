@@ -238,7 +238,7 @@ namespace ascension {
 			std::shared_ptr<TextLineStyleDeclarator> textLineStyleDeclarator_;
 			std::shared_ptr<TextRunStyleDeclarator> textRunStyleDeclarator_;
 			std::list<std::shared_ptr<TextLineColorSpecifier>> textLineColorSpecifiers_;
-			detail::Listeners<TextToplevelStyleListener> textToplevelStyleListeners_;
+			ascension::detail::Listeners<TextToplevelStyleListener> textToplevelStyleListeners_;
 			std::shared_ptr<hyperlink::HyperlinkDetector> hyperlinkDetector_;
 			struct Hyperlinks;
 			mutable std::list<Hyperlinks*> hyperlinks_;

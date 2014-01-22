@@ -453,7 +453,7 @@ namespace ascension {
 			widgetapi::DragContext d(*viewer_);
 
 			const widgetapi::MimeData draggingContent(utils::createMimeDataForSelectedString(viewer_->caret(), true));
-			d.setMimeData(std::shared_ptr<widgetapi::MimeData>(&draggingContent, detail::NullDeleter()));
+			d.setMimeData(std::shared_ptr<widgetapi::MimeData>(&draggingContent, ascension::detail::NullDeleter()));
 
 			graphics::geometry::BasicRectangle<std::uint16_t> imageDimensions;
 			std::unique_ptr<graphics::Image> image(createSelectionImage(*viewer_, dragApproachedPosition_, true, imageDimensions));
@@ -841,7 +841,7 @@ namespace ascension {
 		/// @see MouseInputStrategy#handleDropTarget
 		std::shared_ptr<widgetapi::DropTarget> DefaultMouseInputStrategy::handleDropTarget() const {
 			const widgetapi::DropTarget* const self = this;
-			return std::shared_ptr<widgetapi::DropTarget>(const_cast<widgetapi::DropTarget*>(self), detail::NullDeleter());
+			return std::shared_ptr<widgetapi::DropTarget>(const_cast<widgetapi::DropTarget*>(self), ascension::detail::NullDeleter());
 		}
 
 		/**

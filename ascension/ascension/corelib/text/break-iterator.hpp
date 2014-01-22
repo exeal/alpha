@@ -3,7 +3,7 @@
  * @author exeal
  * @date 2005-2011 was unicode.hpp
  * @date 2011-04-26 separated from unicode.hpp
- * @date 2011-2013
+ * @date 2011-2014
  */
 
 #ifndef ASCENSION_BREAK_ITERATOR_HPP
@@ -49,33 +49,30 @@ namespace ascension {
 			const std::locale& locale_;
 		};
 
-	}
+		namespace detail {
+			/**
+			 * @internal Provides standard C++ iterator interface and facilities for the concrete
+			 * iterator class.
+			 * @tparam ConcreteIterator The concrete iterator
+			 */
+			template<typename ConcreteIterator>
+			class BreakIteratorFacade :
+				public boost::iterator_facade<ConcreteIterator, Char, boost::random_access_traversal_tag> {
+			private:
+				friend class boost::iterator_core_access;
+				void advance(difference_type n) {static_cast<ConcreteIterator*>(this)->next(n);}
+				void decrement() {return advance(-1);}
+				reference dereference() const {
+					return *static_cast<const ConcreteIterator*>(this)->tell();
+				}
+				difference_type distance_to(const ConcreteIterator& other) const {
+					return static_cast<const ConcreteIterator*>(this)->tell() - other.tell();
+				}
+				bool equal(const ConcreteIterator& other) const {return distance_to(other) == 0;}
+				void increment() {return advance(+1);}
+			};
+		} // namespace detail
 
-	namespace detail {
-		/**
-		 * @internal Provides standard C++ iterator interface and facilities for the concrete
-		 * iterator class.
-		 * @tparam ConcreteIterator The concrete iterator
-		 */
-		template<typename ConcreteIterator>
-		class BreakIteratorFacade :
-			public boost::iterator_facade<ConcreteIterator, Char, boost::random_access_traversal_tag> {
-		private:
-			friend class boost::iterator_core_access;
-			void advance(difference_type n) {static_cast<ConcreteIterator*>(this)->next(n);}
-			void decrement() {return advance(-1);}
-			reference dereference() const {
-				return *static_cast<const ConcreteIterator*>(this)->tell();
-			}
-			difference_type distance_to(const ConcreteIterator& other) const {
-				return static_cast<const ConcreteIterator*>(this)->tell() - other.tell();
-			}
-			bool equal(const ConcreteIterator& other) const {return distance_to(other) == 0;}
-			void increment() {return advance(+1);}
-		};
-	} // namespace detail
-
-	namespace text {
 		/// Base class of @c GraphemeBreakIterator.
 		class AbstractGraphemeBreakIterator : public BreakIterator {
 		public:

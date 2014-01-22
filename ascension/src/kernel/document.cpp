@@ -294,17 +294,17 @@ namespace ascension {
 			if(change.erasedRegion().first.line != change.erasedRegion().second.line) {
 				// remove the marks on the deleted lines
 				const Index lines = change.erasedRegion().second.line - change.erasedRegion().first.line;
-				const detail::GapVector<Index>::iterator e(std::end(markedLines_));
-				detail::GapVector<Index>::iterator top(find(change.erasedRegion().first.line));
+				const auto e(std::end(markedLines_));
+				auto top(find(change.erasedRegion().first.line));
 				if(top != e) {
 					if(*top == change.erasedRegion().first.line)
 						++top;
-					detail::GapVector<Index>::iterator bottom(find(change.erasedRegion().second.line));
+					auto bottom(find(change.erasedRegion().second.line));
 					if(bottom != e && *bottom == change.erasedRegion().second.line)
 						++bottom;
 					// slide the following lines before removing
 					if(bottom != e) {
-						for(detail::GapVector<Index>::iterator i(bottom); i != e; ++i)
+						for(auto i(bottom); i != e; ++i)
 							*i -= lines;	// ??? C4267@MSVC9
 					}
 					markedLines_.erase(top, bottom);	// GapVector<>.erase does not return an iterator
@@ -312,11 +312,11 @@ namespace ascension {
 			}
 			if(change.insertedRegion().first.line != change.insertedRegion().second.line) {
 				const Index lines = change.insertedRegion().second.line - change.insertedRegion().first.line;
-				detail::GapVector<Index>::iterator i(find(change.insertedRegion().first.line));
+				auto i(find(change.insertedRegion().first.line));
 				if(i != std::end(markedLines_)) {
 					if(*i == change.insertedRegion().first.line && change.insertedRegion().first.offsetInLine != 0)
 						++i;
-					for(const detail::GapVector<Index>::iterator e(std::end(markedLines_)); i != e; ++i)
+					for(const auto e(std::end(markedLines_)); i != e; ++i)
 						*i += lines;	// ??? - C4267@MSVC9
 				}
 			}
@@ -330,7 +330,7 @@ namespace ascension {
 			return Iterator(std::end(markedLines_));
 		}
 
-		inline detail::GapVector<Index>::iterator Bookmarker::find(Index line) const BOOST_NOEXCEPT {
+		inline ascension::detail::GapVector<Index>::iterator Bookmarker::find(Index line) const BOOST_NOEXCEPT {
 			// TODO: can write faster implementation (and design) by internal.searchBound().
 			Bookmarker& self = const_cast<Bookmarker&>(*this);
 			return boost::lower_bound(self.markedLines_, line);
@@ -344,7 +344,7 @@ namespace ascension {
 		bool Bookmarker::isMarked(Index line) const {
 			if(line >= document_.numberOfLines())
 				throw BadPositionException(Position(line, 0));
-			const detail::GapVector<Index>::const_iterator i(find(line));
+			const auto i(find(line));
 			return i != std::end(markedLines_) && *i == line;
 		}
 
@@ -357,7 +357,7 @@ namespace ascension {
 		void Bookmarker::mark(Index line, bool set) {
 			if(line >= document_.numberOfLines())
 				throw BadPositionException(Position(line, 0));
-			const detail::GapVector<Index>::iterator i(find(line));
+			const auto i(find(line));
 			if(i != std::end(markedLines_) && *i == line) {
 				if(!set) {
 					markedLines_.erase(i);
@@ -397,7 +397,7 @@ namespace ascension {
 					marks = markedLines_.size();
 			}
 
-			std::size_t i = static_cast<detail::GapVector<Index>::const_iterator>(find(from)) - std::begin(markedLines_);
+			std::size_t i = static_cast<ascension::detail::GapVector<Index>::const_iterator>(find(from)) - std::begin(markedLines_);
 			if(direction == Direction::FORWARD) {
 				if(i == markedLines_.size()) {
 					if(!wrapAround)
@@ -446,7 +446,7 @@ namespace ascension {
 		void Bookmarker::toggle(Index line) {
 			if(line >= document_.numberOfLines())
 				throw BadPositionException(Position(line, 0));
-			const detail::GapVector<Index>::iterator i(find(line));
+			const auto i(find(line));
 			if(i == std::end(markedLines_) || *i != line)
 				markedLines_.insert(i, line);
 			else

@@ -146,13 +146,13 @@ namespace ascension {
 					boost::optional<Rectangle> boundsBeforeChanged;
 				} frozenNotification_;
 				bool repairingLayouts_;
-				detail::Listeners<TextViewportListener> listeners_;
+				ascension::detail::Listeners<TextViewportListener> listeners_;
 			};
 
-			typedef detail::LockGuard<
+			typedef ascension::detail::LockGuard<
 				TextViewport, &TextViewport::lockScroll, &TextViewport::unlockScroll
 			> ScrollLocker;
-			typedef detail::LockGuard<
+			typedef ascension::detail::LockGuard<
 				TextViewport, &TextViewport::freezeNotification, &TextViewport::thawNotification
 			> TextViewportNotificationLocker;
 

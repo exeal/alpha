@@ -555,7 +555,7 @@ namespace ascension {
 			ASCENSION_PREPARE_FIRST_CHANGE(rollbacking_);
 
 			// preprocess. these can't throw
-			detail::ValueSaver<bool> writeLock(changing_);
+			ascension::detail::ValueSaver<bool> writeLock(changing_);
 			changing_ = true;
 			fireDocumentAboutToBeChanged();
 
@@ -660,8 +660,8 @@ namespace ascension {
 								endOfInsertedString.offsetInLine += insertedLength;
 							}
 						} catch(...) {
-							const detail::GapVector<Line*>::const_iterator b(std::begin(lines_) + end.line + 1);
-							const detail::GapVector<Line*>::const_iterator e(b + allocatedLines.size());
+							const ascension::detail::GapVector<Line*>::const_iterator b(std::begin(lines_) + end.line + 1);
+							const ascension::detail::GapVector<Line*>::const_iterator e(b + allocatedLines.size());
 							std::for_each(b, e, std::default_delete<Line>());
 							lines_.erase(b, e);
 							throw;
@@ -677,8 +677,7 @@ namespace ascension {
 					}
 					// 5. remove lines to erase
 					if(!region.isEmpty()) {
-						const detail::GapVector<Line*>::const_iterator b(std::begin(lines_) + beginning.line + 1);
-						const detail::GapVector<Line*>::const_iterator e(std::begin(lines_) + end.line + 1);
+						const auto b(std::begin(lines_) + beginning.line + 1), e(std::begin(lines_) + end.line + 1);
 						std::for_each(b, e, std::default_delete<Line>());
 						lines_.erase(b, e);
 					}

@@ -229,7 +229,7 @@ namespace ascension {
 #ifndef ASCENSION_NO_MIGEMO
 		namespace {
 			/// Wrapper for C/Migemo.
-			class Migemo : protected detail::SharedLibrary<CMigemo> {
+			class Migemo : protected ascension::detail::SharedLibrary<CMigemo> {
 			public:
 				/**
 				 * Constructor.
@@ -239,7 +239,7 @@ namespace ascension {
 				 * @throw std#invalid_argument @a dictionaryPathName is empty
 				 */
 				Migemo(const std::string& runtimeFileName, const std::string& dictionaryPathName) :
-						detail::SharedLibrary<CMigemo>(runtimeFileName.c_str()),
+						ascension::detail::SharedLibrary<CMigemo>(runtimeFileName.c_str()),
 						instance_(), lastNativePattern_(nullptr), lastPattern_(nullptr) {
 					if(dictionaryPathName.empty())
 						throw std::invalid_argument("Dictionary path name is empty.");
@@ -416,165 +416,165 @@ namespace ascension {
 			return migemoLib.get() != nullptr && migemoLib->isEnable();
 		}
 #endif // !ASCENSION_NO_MIGEMO
-	}
 
-	namespace detail {
-		// detail.RegexTraits /////////////////////////////////////////////////////////////////////////////////////////
+		namespace detail {
+			// detail.RegexTraits /////////////////////////////////////////////////////////////////////////////////////////
 
-		bool RegexTraits::unixLineMode = false;
-		bool RegexTraits::usesExtendedProperties = false;
-		std::map<const char*, int, text::ucd::PropertyNameComparer> RegexTraits::names_;
+			bool RegexTraits::unixLineMode = false;
+			bool RegexTraits::usesExtendedProperties = false;
+			std::map<const char*, int, text::ucd::PropertyNameComparer> RegexTraits::names_;
 
-		void RegexTraits::buildNames() {
-			// POSIX
-			names_["alpha"] = text::ucd::BinaryProperty::ALPHABETIC;
-			names_["lower"] = text::ucd::BinaryProperty::LOWERCASE;
-			names_["upper"] = text::ucd::BinaryProperty::UPPERCASE;
-			names_["punct"] = text::ucd::GeneralCategory::PUNCTUATION;
-			names_["digit"] = names_["d"] = text::ucd::GeneralCategory::DECIMAL_NUMBER;
-			names_["xdigit"] = POSIX_XDIGIT;
-			names_["alnum"] = POSIX_ALNUM;
-			names_["space"] = names_["s"] = text::ucd::BinaryProperty::WHITE_SPACE;
-			names_["blank"] = POSIX_BLANK;
-			names_["cntrl"] = text::ucd::GeneralCategory::CONTROL;
-			names_["graph"] = POSIX_GRAPH;
-			names_["print"] = POSIX_PRINT;
-			names_["word"] = names_["w"] = POSIX_WORD;
-			// special GC
-			names_["ANY"] = GC_ANY;
-			names_["ASSIGNED"] = GC_ASSIGNED;
-			names_["ASCII"] = GC_ASCII;
-		}
+			void RegexTraits::buildNames() {
+				// POSIX
+				names_["alpha"] = text::ucd::BinaryProperty::ALPHABETIC;
+				names_["lower"] = text::ucd::BinaryProperty::LOWERCASE;
+				names_["upper"] = text::ucd::BinaryProperty::UPPERCASE;
+				names_["punct"] = text::ucd::GeneralCategory::PUNCTUATION;
+				names_["digit"] = names_["d"] = text::ucd::GeneralCategory::DECIMAL_NUMBER;
+				names_["xdigit"] = POSIX_XDIGIT;
+				names_["alnum"] = POSIX_ALNUM;
+				names_["space"] = names_["s"] = text::ucd::BinaryProperty::WHITE_SPACE;
+				names_["blank"] = POSIX_BLANK;
+				names_["cntrl"] = text::ucd::GeneralCategory::CONTROL;
+				names_["graph"] = POSIX_GRAPH;
+				names_["print"] = POSIX_PRINT;
+				names_["word"] = names_["w"] = POSIX_WORD;
+				// special GC
+				names_["ANY"] = GC_ANY;
+				names_["ASSIGNED"] = GC_ASSIGNED;
+				names_["ASCII"] = GC_ASCII;
+			}
 
-		bool RegexTraits::isctype(char_type c, const char_class_type& f) const {
-			using namespace text::ucd;
-			// POSIX
-			if((f[POSIX_ALNUM] && legacyctype::isalnum(c))
-					|| (f[POSIX_BLANK] && legacyctype::isblank(c))
-					|| (f[POSIX_GRAPH] && legacyctype::isgraph(c))
-					|| (f[POSIX_PRINT] && legacyctype::isprint(c))
-					|| (f[POSIX_PUNCT] && legacyctype::ispunct(c))
-					|| (f[POSIX_WORD] && legacyctype::isword(c))
-					|| (f[POSIX_XDIGIT] && legacyctype::isxdigit(c)))
-				return true;
-
-			// higher general category
-			const int gc = GeneralCategory::of(c);
-			if((f[GeneralCategory::LETTER] && GeneralCategory::is<GeneralCategory::LETTER>(gc))
-					|| (f[GeneralCategory::CASED_LETTER] && GeneralCategory::is<GeneralCategory::CASED_LETTER>(gc))
-					|| (f[GeneralCategory::MARK] && GeneralCategory::is<GeneralCategory::MARK>(gc))
-					|| (f[GeneralCategory::NUMBER] && GeneralCategory::is<GeneralCategory::NUMBER>(gc))
-					|| (f[GeneralCategory::SYMBOL] && GeneralCategory::is<GeneralCategory::SYMBOL>(gc))
-					|| (f[GeneralCategory::PUNCTUATION] && GeneralCategory::is<GeneralCategory::PUNCTUATION>(gc))
-					|| (f[GeneralCategory::SEPARATOR] && GeneralCategory::is<GeneralCategory::SEPARATOR>(gc))
-					|| (f[GeneralCategory::OTHER] && GeneralCategory::is<GeneralCategory::OTHER>(gc))
-					|| (f[GC_ANY])
-					|| (f[GC_ASSIGNED] && gc != GeneralCategory::UNASSIGNED)
-					|| (f[GC_ASCII] && c < 0x0080))
-				return true;
-
-			// lower general category, block, and script
-			if(f[gc] || f[Block::of(c)])
-				return true;
-			const int script = Script::of(c);
-			if(f[script] || (f[Script::KATAKANA_OR_HIRAGANA] && (script == Script::HIRAGANA || script == Script::KATAKANA)))
-				return true;
-
-			if(!usesExtendedProperties) {
-				return (f[BinaryProperty::ALPHABETIC] && BinaryProperty::is<BinaryProperty::ALPHABETIC>(c))
-						|| (f[BinaryProperty::UPPERCASE] && BinaryProperty::is<BinaryProperty::UPPERCASE>(c))
-						|| (f[BinaryProperty::LOWERCASE] && BinaryProperty::is<BinaryProperty::LOWERCASE>(c))
-						|| (f[BinaryProperty::WHITE_SPACE] && BinaryProperty::is<BinaryProperty::WHITE_SPACE>(c))
-						|| (f[BinaryProperty::NONCHARACTER_CODE_POINT] && BinaryProperty::is<BinaryProperty::NONCHARACTER_CODE_POINT>(c))
-						|| (f[BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT] && BinaryProperty::is<BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(c));
-			} else {
-				// binary properties
-				for(int i = BinaryProperty::FIRST_VALUE; i < BinaryProperty::LAST_VALUE; ++i) {
-					if(f[i] && BinaryProperty::is(c, i))
-						return true;
-				}
-				// others
-				if(f[HangulSyllableType::of(c)]
-						|| f[GraphemeClusterBreak::of(c)]
-						|| f[WordBreak::of(c)]
-						|| f[SentenceBreak::of(c)])
+			bool RegexTraits::isctype(char_type c, const char_class_type& f) const {
+				using namespace text::ucd;
+				// POSIX
+				if((f[POSIX_ALNUM] && legacyctype::isalnum(c))
+						|| (f[POSIX_BLANK] && legacyctype::isblank(c))
+						|| (f[POSIX_GRAPH] && legacyctype::isgraph(c))
+						|| (f[POSIX_PRINT] && legacyctype::isprint(c))
+						|| (f[POSIX_PUNCT] && legacyctype::ispunct(c))
+						|| (f[POSIX_WORD] && legacyctype::isword(c))
+						|| (f[POSIX_XDIGIT] && legacyctype::isxdigit(c)))
 					return true;
-				return false;
-			}
-		}
 
-		namespace {
-			template<typename InputIterator>
-			inline InputIterator findPropertyValue(InputIterator first, InputIterator last) {
-				static const std::array<char, 2> EQ_OPS = {'=', ':'};
-				InputIterator value(std::find_first_of(first, last, std::begin(EQ_OPS), std::end(EQ_OPS)));
-				if(value == last)
-					return first;
-				else if(value == first)
-					return last;
-				return (std::find_first_of(++value, last, std::begin(EQ_OPS), std::end(EQ_OPS)) == last) ? value : last;
-			}
-		}
+				// higher general category
+				const int gc = GeneralCategory::of(c);
+				if((f[GeneralCategory::LETTER] && GeneralCategory::is<GeneralCategory::LETTER>(gc))
+						|| (f[GeneralCategory::CASED_LETTER] && GeneralCategory::is<GeneralCategory::CASED_LETTER>(gc))
+						|| (f[GeneralCategory::MARK] && GeneralCategory::is<GeneralCategory::MARK>(gc))
+						|| (f[GeneralCategory::NUMBER] && GeneralCategory::is<GeneralCategory::NUMBER>(gc))
+						|| (f[GeneralCategory::SYMBOL] && GeneralCategory::is<GeneralCategory::SYMBOL>(gc))
+						|| (f[GeneralCategory::PUNCTUATION] && GeneralCategory::is<GeneralCategory::PUNCTUATION>(gc))
+						|| (f[GeneralCategory::SEPARATOR] && GeneralCategory::is<GeneralCategory::SEPARATOR>(gc))
+						|| (f[GeneralCategory::OTHER] && GeneralCategory::is<GeneralCategory::OTHER>(gc))
+						|| (f[GC_ANY])
+						|| (f[GC_ASSIGNED] && gc != GeneralCategory::UNASSIGNED)
+						|| (f[GC_ASCII] && c < 0x0080))
+					return true;
 
-		RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, const char_type* p2) const {
-			using namespace text::ucd;
-			assert(p2 >= p1);
-			if(names_.empty())
-				buildNames();
-			char_class_type klass;
-			const char_type* const value = findPropertyValue(p1, p2);
-			if(value == p2)
-				return klass;
+				// lower general category, block, and script
+				if(f[gc] || f[Block::of(c)])
+					return true;
+				const int script = Script::of(c);
+				if(f[script] || (f[Script::KATAKANA_OR_HIRAGANA] && (script == Script::HIRAGANA || script == Script::KATAKANA)))
+					return true;
 
-			if(value != p1) {	// "name=value" or "name:value"
-				int(*valueNameDetector)(const char_type*) = nullptr;
-				const std::basic_string<char_type> name(p1, value - 1);
-				if(PropertyNameComparer::compare(name.c_str(), GeneralCategory::LONG_NAME) == 0
-						|| PropertyNameComparer::compare(name.c_str(), GeneralCategory::SHORT_NAME) == 0)
-					valueNameDetector = &GeneralCategory::forName<char_type>;
-				else if(PropertyNameComparer::compare(name.c_str(), Block::LONG_NAME) == 0
-						|| PropertyNameComparer::compare(name.c_str(), Block::SHORT_NAME) == 0)
-					valueNameDetector = &Block::forName<char_type>;
-				else if(PropertyNameComparer::compare(name.c_str(), Script::LONG_NAME) == 0
-						|| PropertyNameComparer::compare(name.c_str(), Script::SHORT_NAME) == 0)
-					valueNameDetector = &Script::forName<char_type>;
-				if(valueNameDetector != nullptr) {
-					const int p = valueNameDetector(std::basic_string<char_type>(value, p2).c_str());
-					if(p != NOT_PROPERTY)
-						klass.set(p);
+				if(!usesExtendedProperties) {
+					return (f[BinaryProperty::ALPHABETIC] && BinaryProperty::is<BinaryProperty::ALPHABETIC>(c))
+							|| (f[BinaryProperty::UPPERCASE] && BinaryProperty::is<BinaryProperty::UPPERCASE>(c))
+							|| (f[BinaryProperty::LOWERCASE] && BinaryProperty::is<BinaryProperty::LOWERCASE>(c))
+							|| (f[BinaryProperty::WHITE_SPACE] && BinaryProperty::is<BinaryProperty::WHITE_SPACE>(c))
+							|| (f[BinaryProperty::NONCHARACTER_CODE_POINT] && BinaryProperty::is<BinaryProperty::NONCHARACTER_CODE_POINT>(c))
+							|| (f[BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT] && BinaryProperty::is<BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(c));
+				} else {
+					// binary properties
+					for(int i = BinaryProperty::FIRST_VALUE; i < BinaryProperty::LAST_VALUE; ++i) {
+						if(f[i] && BinaryProperty::is(c, i))
+							return true;
+					}
+					// others
+					if(f[HangulSyllableType::of(c)]
+							|| f[GraphemeClusterBreak::of(c)]
+							|| f[WordBreak::of(c)]
+							|| f[SentenceBreak::of(c)])
+						return true;
+					return false;
 				}
-			} else {	// only "name" or "value"
-				std::string expression;
-				expression.reserve(p2 - p1);
-				for(std::size_t i = 0; i < static_cast<std::size_t>(p2 - p1); ++i) {
-					if(p1[i] > 0x007fu)
-						return klass;
-					expression += static_cast<char>(p1[i] & 0xff);
+			}
+
+			namespace {
+				template<typename InputIterator>
+				inline InputIterator findPropertyValue(InputIterator first, InputIterator last) {
+					static const std::array<char, 2> EQ_OPS = {'=', ':'};
+					InputIterator value(std::find_first_of(first, last, std::begin(EQ_OPS), std::end(EQ_OPS)));
+					if(value == last)
+						return first;
+					else if(value == first)
+						return last;
+					return (std::find_first_of(++value, last, std::begin(EQ_OPS), std::end(EQ_OPS)) == last) ? value : last;
 				}
-				const std::map<const char*, int, PropertyNameComparer>::const_iterator i(names_.find(expression.c_str()));
-				if(i != names_.end())
-					klass.set(i->second);
-				else {
+			}
+
+			RegexTraits::char_class_type RegexTraits::lookup_classname(const char_type* p1, const char_type* p2) const {
+				using namespace text::ucd;
+				assert(p2 >= p1);
+				if(names_.empty())
+					buildNames();
+				char_class_type klass;
+				const char_type* const value = findPropertyValue(p1, p2);
+				if(value == p2)
+					return klass;
+
+				if(value != p1) {	// "name=value" or "name:value"
+					int(*valueNameDetector)(const char_type*) = nullptr;
+					const std::basic_string<char_type> name(p1, value - 1);
+					if(PropertyNameComparer::compare(name.c_str(), GeneralCategory::LONG_NAME) == 0
+							|| PropertyNameComparer::compare(name.c_str(), GeneralCategory::SHORT_NAME) == 0)
+						valueNameDetector = &GeneralCategory::forName<char_type>;
+					else if(PropertyNameComparer::compare(name.c_str(), Block::LONG_NAME) == 0
+							|| PropertyNameComparer::compare(name.c_str(), Block::SHORT_NAME) == 0)
+						valueNameDetector = &Block::forName<char_type>;
+					else if(PropertyNameComparer::compare(name.c_str(), Script::LONG_NAME) == 0
+							|| PropertyNameComparer::compare(name.c_str(), Script::SHORT_NAME) == 0)
+						valueNameDetector = &Script::forName<char_type>;
+					if(valueNameDetector != nullptr) {
+						const int p = valueNameDetector(std::basic_string<char_type>(value, p2).c_str());
+						if(p != NOT_PROPERTY)
+							klass.set(p);
+					}
+				} else {	// only "name" or "value"
+					std::string expression;
+					expression.reserve(p2 - p1);
+					for(std::size_t i = 0; i < static_cast<std::size_t>(p2 - p1); ++i) {
+						if(p1[i] > 0x007fu)
+							return klass;
+						expression += static_cast<char>(p1[i] & 0xff);
+					}
+					const std::map<const char*, int, PropertyNameComparer>::const_iterator i(names_.find(expression.c_str()));
+					if(i != names_.end())
+						klass.set(i->second);
+					else {
 #define ASCENSION_CHECK_PREFIX(lower, upper)					\
 	((expression.length() > 2									\
 	&& (expression[0] == lower[0] || expression[0] == upper[0])	\
 	&& (expression[1] == lower[1] || expression[1] == upper[1])) ? 2 : 0)
 
-					int p = GeneralCategory::forName(expression.c_str() + ASCENSION_CHECK_PREFIX("is", "IS"));
-					if(p == NOT_PROPERTY) {
-						p = Block::forName(expression.c_str() + ASCENSION_CHECK_PREFIX("in", "IN"));
+						int p = GeneralCategory::forName(expression.c_str() + ASCENSION_CHECK_PREFIX("is", "IS"));
 						if(p == NOT_PROPERTY) {
-							p = Script::forName(expression.c_str() + ASCENSION_CHECK_PREFIX("is", "IS"));
-							if(p == NOT_PROPERTY)
-								p = BinaryProperty::forName(expression.c_str());
+							p = Block::forName(expression.c_str() + ASCENSION_CHECK_PREFIX("in", "IN"));
+							if(p == NOT_PROPERTY) {
+								p = Script::forName(expression.c_str() + ASCENSION_CHECK_PREFIX("is", "IS"));
+								if(p == NOT_PROPERTY)
+									p = BinaryProperty::forName(expression.c_str());
+							}
 						}
-					}
-					if(p != NOT_PROPERTY)
-						klass.set(p);
+						if(p != NOT_PROPERTY)
+							klass.set(p);
 #undef ASCENSION_CHECK_PREFIX
+					}
 				}
+				return klass;
 			}
-			return klass;
 		}
 	}
 }

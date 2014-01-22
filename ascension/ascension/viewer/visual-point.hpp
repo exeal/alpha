@@ -6,7 +6,7 @@
  * @date 2008 separated from point.hpp
  * @date 2009-2011 was caret.hpp
  * @date 2011-10-02 separated from caret.hpp
- * @date 2011-2013
+ * @date 2011-2014
  */
 
 #ifndef ASCENSION_VISUAL_POINT_HPP
@@ -15,12 +15,10 @@
 #include <ascension/graphics/font/line-layout-vector.hpp>	// graphics.font.VisualLinesListener
 
 namespace ascension {
-
-	namespace detail {
-		class VisualDestinationProxyMaker;
-	}
-
 	namespace viewers {
+		namespace detail {
+			class VisualDestinationProxyMaker;
+		}
 
 		class TextViewer;
 		class VisualPoint;
@@ -165,6 +163,10 @@ namespace ascension {
 			void recenter(VisualPoint& p);
 			void show(VisualPoint& p);
 		}	// namespace utils
+
+		namespace detail {
+			using kernel::detail::identifierSyntax;
+		}
 
 
 		/// Returns @c true if the text viewer the point connecting to has been disposed.

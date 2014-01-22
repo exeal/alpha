@@ -4,7 +4,7 @@
  * @date 2003-2006 was EditView.h
  * @date 2006-2011 was viewer.hpp
  * @date 2011-06-06 separated from viewer.hpp
- * @date 2011-2013
+ * @date 2011-2014
  */
 
 #ifndef ASCENSION_RULER_HPP
@@ -152,81 +152,80 @@ namespace ascension {
 
 		std::shared_ptr<const RulerStyles::LineNumbers> lineNumbers(const RulerStyles& rulerStyles);
 		std::shared_ptr<const RulerStyles::IndicatorMargin> indicatorMargin(const RulerStyles& rulerStyles);
-	}
 
-	namespace detail {
-		/// @internal @c RulerPainter paints the ruler of the @c TextViewer.
-		class RulerPainter {
-			ASCENSION_NONCOPYABLE_TAG(RulerPainter);
-		public:
-			explicit RulerPainter(viewers::TextViewer& viewer,
-				std::shared_ptr<const viewers::RulerStyles> initialStyles = nullptr);
-			graphics::PhysicalDirection alignment() const BOOST_NOEXCEPT;
-			graphics::Scalar allocationWidth() const BOOST_NOEXCEPT;
-			const viewers::RulerStyles& declaredStyles() const BOOST_NOEXCEPT;
-			graphics::Rectangle indicatorMarginAllocationRectangle() const BOOST_NOEXCEPT;
-			graphics::Scalar indicatorMarginAllocationWidth() const BOOST_NOEXCEPT;
-			graphics::Rectangle lineNumbersAllocationRectangle() const BOOST_NOEXCEPT;
-			graphics::Scalar lineNumbersAllocationWidth() const BOOST_NOEXCEPT;
-			void paint(graphics::PaintContext& context);
-			void scroll(const graphics::font::VisualLine& from);
-			void setStyles(std::shared_ptr<const viewers::RulerStyles> styles);
-			void update() BOOST_NOEXCEPT;
-		private:
-			std::uint8_t computeMaximumDigitsForLineNumbers() const BOOST_NOEXCEPT;
-			void computeAllocationWidth() BOOST_NOEXCEPT;
+		namespace detail {
+			/// @internal @c RulerPainter paints the ruler of the @c TextViewer.
+			class RulerPainter {
+				ASCENSION_NONCOPYABLE_TAG(RulerPainter);
+			public:
+				explicit RulerPainter(TextViewer& viewer, std::shared_ptr<const RulerStyles> initialStyles = nullptr);
+				graphics::PhysicalDirection alignment() const BOOST_NOEXCEPT;
+				graphics::Scalar allocationWidth() const BOOST_NOEXCEPT;
+				const RulerStyles& declaredStyles() const BOOST_NOEXCEPT;
+				graphics::Rectangle indicatorMarginAllocationRectangle() const BOOST_NOEXCEPT;
+				graphics::Scalar indicatorMarginAllocationWidth() const BOOST_NOEXCEPT;
+				graphics::Rectangle lineNumbersAllocationRectangle() const BOOST_NOEXCEPT;
+				graphics::Scalar lineNumbersAllocationWidth() const BOOST_NOEXCEPT;
+				void paint(graphics::PaintContext& context);
+				void scroll(const graphics::font::VisualLine& from);
+				void setStyles(std::shared_ptr<const RulerStyles> styles);
+				void update() BOOST_NOEXCEPT;
+			private:
+				std::uint8_t computeMaximumDigitsForLineNumbers() const BOOST_NOEXCEPT;
+				void computeAllocationWidth() BOOST_NOEXCEPT;
 #if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
-			void updateGDIObjects() BOOST_NOEXCEPT;
+				void updateGDIObjects() BOOST_NOEXCEPT;
 #endif
-		private:
-			viewers::TextViewer& viewer_;
-			std::shared_ptr<const viewers::RulerStyles> declaredStyles_;
-			graphics::font::ComputedBorderSide
-				computedIndicatorMarginBorderEnd_, computedLineNumbersBorderEnd_;
-			boost::value_initialized<graphics::Scalar>	// in user units
-				computedIndicatorMarginContentWidth_, computedLineNumbersContentWidth_,
-				computedLineNumbersPaddingStart_, computedLineNumbersPaddingEnd_;
-			boost::value_initialized<std::uint8_t> computedLineNumberDigits_;
+			private:
+				TextViewer& viewer_;
+				std::shared_ptr<const RulerStyles> declaredStyles_;
+				graphics::font::ComputedBorderSide
+					computedIndicatorMarginBorderEnd_, computedLineNumbersBorderEnd_;
+				boost::value_initialized<graphics::Scalar>	// in user units
+					computedIndicatorMarginContentWidth_, computedLineNumbersContentWidth_,
+					computedLineNumbersPaddingStart_, computedLineNumbersPaddingEnd_;
+				boost::value_initialized<std::uint8_t> computedLineNumberDigits_;
 #if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
-			win32::Handle<HPEN> indicatorMarginPen_, lineNumbersPen_;
-			win32::Handle<HBRUSH> indicatorMarginBrush_, lineNumbersBrush_;
-			const bool enablesDoubleBuffering_;
-			win32::Handle<HDC> memoryDC_;
-			win32::Handle<HBITMAP> memoryBitmap_;
+				win32::Handle<HPEN> indicatorMarginPen_, lineNumbersPen_;
+				win32::Handle<HBRUSH> indicatorMarginBrush_, lineNumbersBrush_;
+				const bool enablesDoubleBuffering_;
+				win32::Handle<HDC> memoryDC_;
+				win32::Handle<HBITMAP> memoryBitmap_;
 #endif
-		};
+			};
 
-		/**
-		 * Returns the width of 'allocation-rectangle' of the ruler in pixels.
-		 * @return The width of the ruler or zero if not visible
-		 * @see #indicatorMarginWidth, #lineNumbersWidth
-		 */
-		inline graphics::Scalar RulerPainter::allocationWidth() const BOOST_NOEXCEPT {
-			return indicatorMarginAllocationWidth() + lineNumbersAllocationWidth();
-		}
+			/**
+			 * Returns the width of 'allocation-rectangle' of the ruler in pixels.
+			 * @return The width of the ruler or zero if not visible
+			 * @see #indicatorMarginWidth, #lineNumbersWidth
+			 */
+			inline graphics::Scalar RulerPainter::allocationWidth() const BOOST_NOEXCEPT {
+				return indicatorMarginAllocationWidth() + lineNumbersAllocationWidth();
+			}
 
-		/// Returns the ruler's declared styles.
-		inline const viewers::RulerStyles& RulerPainter::declaredStyles() const BOOST_NOEXCEPT {
-			return *declaredStyles_;
-		}
+			/// Returns the ruler's declared styles.
+			inline const RulerStyles& RulerPainter::declaredStyles() const BOOST_NOEXCEPT {
+				return *declaredStyles_;
+			}
 
-		/**
-		 * Returns the width of 'allocation-rectangle' of the indicator margin in user units.
-		 * @return The width of the indicator margin or zero if not visible
-		 * @see #allocationWidth, #lineNumbersAllocationWidth, #indicatorMarginAllocationRectangle
-		 */
-		inline graphics::Scalar RulerPainter::indicatorMarginAllocationWidth() const BOOST_NOEXCEPT {
-			return computedIndicatorMarginContentWidth_ + computedIndicatorMarginBorderEnd_.computedWidth();
-		}
+			/**
+			 * Returns the width of 'allocation-rectangle' of the indicator margin in user units.
+			 * @return The width of the indicator margin or zero if not visible
+			 * @see #allocationWidth, #lineNumbersAllocationWidth, #indicatorMarginAllocationRectangle
+			 */
+			inline graphics::Scalar RulerPainter::indicatorMarginAllocationWidth() const BOOST_NOEXCEPT {
+				return computedIndicatorMarginContentWidth_ + computedIndicatorMarginBorderEnd_.computedWidth();
+			}
 
-		/**
-		 * Returns the width of 'allocation-rectangle' of the line numbers in user units.
-		 * @return The width of the line numbers or zero if not visible
-		 * @see #allocationWidth, #indicatorMarginWidth, #lineNumbersAllocationRectangle
-		 */
-		inline graphics::Scalar RulerPainter::lineNumbersAllocationWidth() const BOOST_NOEXCEPT {
-			return computedLineNumbersContentWidth_ + computedLineNumbersPaddingStart_
-				+ computedLineNumbersPaddingEnd_ + computedLineNumbersBorderEnd_.computedWidth();
+			/**
+			 * Returns the width of 'allocation-rectangle' of the line numbers in user units.
+			 * @return The width of the line numbers or zero if not visible
+			 * @see #allocationWidth, #indicatorMarginWidth, #lineNumbersAllocationRectangle
+			 */
+			inline graphics::Scalar RulerPainter::lineNumbersAllocationWidth() const BOOST_NOEXCEPT {
+				return computedLineNumbersContentWidth_ + computedLineNumbersPaddingStart_
+					+ computedLineNumbersPaddingEnd_ + computedLineNumbersBorderEnd_.computedWidth();
+			}
 		}
 	}
 }

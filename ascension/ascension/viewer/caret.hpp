@@ -195,10 +195,10 @@ namespace ascension {
 #ifdef ASCENSION_OS_WINDOWS
 			LCID clipboardLocale_;
 #endif // SCENSION_OS_WIND
-			detail::Listeners<CaretListener> listeners_;
-			detail::Listeners<CharacterInputListener> characterInputListeners_;
-			detail::Listeners<CaretStateListener> stateListeners_;
-			detail::Listeners<InputPropertyListener> inputPropertyListeners_;
+			ascension::detail::Listeners<CaretListener> listeners_;
+			ascension::detail::Listeners<CharacterInputListener> characterInputListeners_;
+			ascension::detail::Listeners<CaretStateListener> stateListeners_;
+			ascension::detail::Listeners<InputPropertyListener> inputPropertyListeners_;
 			bool overtypeMode_;
 			bool autoShow_;		// true if show itself when movements
 			MatchBracketsTrackingMode matchBracketsTrackingMode_;

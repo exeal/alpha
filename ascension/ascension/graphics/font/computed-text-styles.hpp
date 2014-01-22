@@ -7,6 +7,7 @@
  * @date 2011-2012 was text-layout.hpp
  * @date 2012-08-17 separated from text-layout.hpp
  * @date 2013-04-25 separated from text-layout-styles.hpp
+ * @date 2013-2014
  */
 
 #ifndef COMPUTED_TEXT_STYLES_HPP
@@ -119,14 +120,12 @@ namespace ascension {
 				/// Equality operator.
 				bool operator==(const ComputedTextEmphasis& other) const BOOST_NOEXCEPT;
 			};
-		}
-	}
 
-	namespace detail {
-		void paintBorder(graphics::PaintContext& context,
-			const graphics::Rectangle& rectangle,
-			const graphics::PhysicalFourSides<graphics::font::ComputedBorderSide>& style,
-			const presentation::WritingMode& writingMode);
+			namespace detail {
+				void paintBorder(PaintContext& context, const Rectangle& rectangle,
+					const PhysicalFourSides<ComputedBorderSide>& style, const presentation::WritingMode& writingMode);
+			}
+		}
 	}
 } // namespace ascension.graphics.font
 

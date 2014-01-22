@@ -1,7 +1,7 @@
 /**
  * @file encoder.hpp
  * @author exeal
- * @date 2004-2013
+ * @date 2004-2014
  */
 
 #ifndef ASCENSION_ENCODER_HPP
@@ -633,14 +633,12 @@ namespace ascension {
 					Line4, Line5, Line6, Line7, Line8, Line9, LineA, LineB, LineC, LineD, LineE, LineF> {};
 			} // namespace dbcs
 		}
-	}
 
-	namespace detail {
-		std::unique_ptr<encoding::Encoder> createSingleByteEncoder(
-			const Char** byteToCharacterWire, const encoding::EncodingProperties& properties) BOOST_NOEXCEPT;
-	}
+		namespace detail {
+			std::unique_ptr<Encoder> createSingleByteEncoder(
+				const Char** byteToCharacterWire, const EncodingProperties& properties) BOOST_NOEXCEPT;
+		}
 
-	namespace encoding {
 		/**
 		 * Returns informations for all available encodings.
 		 * @tparam OutputIterator The type of @a out

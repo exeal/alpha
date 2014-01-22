@@ -2,6 +2,7 @@
  * @file drag-and-drop.hpp
  * @author exeal
  * @date 2011-10-12 created
+ * @date 2014
  */
 
 #ifndef ASCENSION_DRAG_AND_DROP_HPP
@@ -218,35 +219,35 @@ namespace ascension {
 			};
 
 		}
-	}
 
-	namespace detail {
-		class DragEventAdapter {
-		public:
-			explicit DragEventAdapter(viewers::widgetapi::DropTarget& target) : target_(target) {}
+		namespace detail {
+			class DragEventAdapter {
+			public:
+				explicit DragEventAdapter(viewers::widgetapi::DropTarget& target) : target_(target) {}
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-			void adaptDragLeaveEvent(const Glib::RefPtr<Gdk::DragContext>& context, guint time);
-			bool adaptDragMoveEvent(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
-			bool adaptDropEvent(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
+				void adaptDragLeaveEvent(const Glib::RefPtr<Gdk::DragContext>& context, guint time);
+				bool adaptDragMoveEvent(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
+				bool adaptDropEvent(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
-			void adaptDragEnterEvent(QDragEnterEvent* event);
-			void adaptDragLeaveEvent(QDragLeaveEvent* event);
-			void adaptDragMoveEvent(QDragMoveEvent* event);
-			void adaptDropEvent(QDropEvent* event);
+				void adaptDragEnterEvent(QDragEnterEvent* event);
+				void adaptDragLeaveEvent(QDragLeaveEvent* event);
+				void adaptDragMoveEvent(QDragMoveEvent* event);
+				void adaptDropEvent(QDropEvent* event);
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-			HRESULT adaptDragEnterEvent(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
-			HRESULT adaptDragLeaveEvent();
-			HRESULT adaptDragMoveEvent(DWORD keyState, POINTL location, DWORD* effect);
-			HRESULT adaptDropEvent(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
+				HRESULT adaptDragEnterEvent(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
+				HRESULT adaptDragLeaveEvent();
+				HRESULT adaptDragMoveEvent(DWORD keyState, POINTL location, DWORD* effect);
+				HRESULT adaptDropEvent(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
 #else
-			ASCENSION_CANT_DETECT_PLATFORM();
+				ASCENSION_CANT_DETECT_PLATFORM();
 #endif
-		private:
-			viewers::widgetapi::DropTarget& target_;
+			private:
+				viewers::widgetapi::DropTarget& target_;
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 #endif
-		};
+			};
+		}
 	}
 }
 

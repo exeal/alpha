@@ -799,12 +799,12 @@ namespace ascension {
 				} // namespace @0
 			}
 		}
-	}
 
-	namespace detail {
-		std::unique_ptr<encoding::Encoder> createSingleByteEncoder(
-				const Char** byteToCharacterWire, const encoding::EncodingProperties& properties) BOOST_NOEXCEPT {
-			return std::unique_ptr<encoding::Encoder>(new encoding::implementation::sbcs::SingleByteEncoder(byteToCharacterWire, properties));
+		namespace detail {
+			std::unique_ptr<encoding::Encoder> createSingleByteEncoder(
+					const Char** byteToCharacterWire, const encoding::EncodingProperties& properties) BOOST_NOEXCEPT {
+				return std::unique_ptr<encoding::Encoder>(new encoding::implementation::sbcs::SingleByteEncoder(byteToCharacterWire, properties));
+			}
 		}
 	}
 }

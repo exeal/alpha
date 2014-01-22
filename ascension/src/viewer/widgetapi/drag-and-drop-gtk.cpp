@@ -47,7 +47,7 @@ namespace ascension {
 			MimeData::MimeData() : impl_(std::make_shared<Gtk::SelectionData>()) {
 			}
 
-			MimeData::MimeData(Gtk::SelectionData& impl) : impl_(&impl, detail::NullDeleter()) {
+			MimeData::MimeData(Gtk::SelectionData& impl) : impl_(&impl, ascension::detail::NullDeleter()) {
 			}
 
 			std::vector<std::uint8_t>&& MimeData::data(Format format) const {

@@ -11,24 +11,25 @@
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>
 
 namespace ascension {
-	namespace detail {
-		TextViewerScrollableProperties::TextViewerScrollableProperties() :
-				horizontalAdjustment_(*this, "hadjustment"), verticalAdjustment_(*this, "vadjustment"),
-				horizontalScrollPolicy_(*this, "hscroll-policy", Gtk::SCROLL_NATURAL), verticalScrollPolicy_(*this, "vscroll-policy", Gtk::SCROLL_NATURAL) {
-		}
+	namespace viewers {
+		namespace detail {
+			TextViewerScrollableProperties::TextViewerScrollableProperties() :
+					horizontalAdjustment_(*this, "hadjustment"), verticalAdjustment_(*this, "vadjustment"),
+					horizontalScrollPolicy_(*this, "hscroll-policy", Gtk::SCROLL_NATURAL), verticalScrollPolicy_(*this, "vscroll-policy", Gtk::SCROLL_NATURAL) {
+			}
 		
 #ifndef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-		inline const graphics::PhysicalTwoAxes<double>& TextViewerScrollableProperties::scrollPositionsBeforeChanged() const BOOST_NOEXCEPT {
-			return scrollPositionsBeforeChanged_;
-		}
+			inline const graphics::PhysicalTwoAxes<double>& TextViewerScrollableProperties::scrollPositionsBeforeChanged() const BOOST_NOEXCEPT {
+				return scrollPositionsBeforeChanged_;
+			}
 
-		inline void TextViewerScrollableProperties::updateScrollPositionsBeforeChanged() {
-			scrollPositionsBeforeChanged_.x() = horizontalAdjustment_.get_value()->get_value();
-			scrollPositionsBeforeChanged_.y() = verticalAdjustment_.get_value()->get_value();
-		}
+			inline void TextViewerScrollableProperties::updateScrollPositionsBeforeChanged() {
+				scrollPositionsBeforeChanged_.x() = horizontalAdjustment_.get_value()->get_value();
+				scrollPositionsBeforeChanged_.y() = verticalAdjustment_.get_value()->get_value();
+			}
 #endif
-	}
-	namespace viewers {
+		}	// namespace detail
+
 		void TextViewer::doBeep() BOOST_NOEXCEPT {
 #if 1
 			::gdk_beep();

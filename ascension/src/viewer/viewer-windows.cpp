@@ -7,12 +7,14 @@
  * @date 2011-2013
  */
 
+#include <ascension/viewer/viewer.hpp>
+
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 #define ASCENSION_TEST_TEXT_STYLES
 
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/caret.hpp>
-#include <ascension/viewer/viewer.hpp>
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <ascension/text-editor/command.hpp>
 #include <ascension/text-editor/input-sequence-checker.hpp>
@@ -1578,3 +1580,5 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, bool 
 	while(c > 13)
 		::DeleteMenu(toplevelPopup.get(), c--, MF_BYPOSITION);
 }
+
+#endif // ASCENSION_WINDOW_SYSTEM_WIN32

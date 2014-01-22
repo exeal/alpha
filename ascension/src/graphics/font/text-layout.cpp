@@ -37,126 +37,126 @@ namespace ascension {
 //#define TRACE_LAYOUT_CACHES
 	extern bool DIAGNOSE_INHERENT_DRAWING;
 
-	namespace detail {
-		std::shared_ptr<const graphics::font::Font> findMatchingFont(const StringPiece& textRun,
-				const graphics::font::FontCollection& collection, const graphics::font::ComputedFontSpecification& specification) {
-#if 0
-			void resolveFontSpecifications(const FontCollection& fontCollection,
-					std::shared_ptr<const TextRunStyle> requestedStyle, std::shared_ptr<const TextRunStyle> defaultStyle,
-					FontDescription* computedDescription, double* computedSizeAdjust) {
-				// family name
-				if(computedDescription != nullptr) {
-					String familyName = (requestedStyle.get() != nullptr) ? requestedStyle->fontFamily.getOrInitial() : String();
-					if(familyName.empty()) {
-						if(defaultStyle.get() != nullptr)
-							familyName = defaultStyle->fontFamily.getOrInitial();
-						if(computedFamilyName->empty())
-							*computedFamilyName = fontCollection.lastResortFallback(FontDescription())->familyName();
-					}
-					computedDescription->setFamilyName();
-				}
-				// size
-				if(computedPixelSize != nullptr) {
-					requestedStyle->fontProperties
-				}
-				// properties
-				if(computedProperties != 0) {
-					FontProperties<Inheritable> result;
-					if(requestedStyle.get() != nullptr)
-						result = requestedStyle->fontProperties;
-					Inheritable<double> computedSize(computedProperties->pixelSize());
-					if(computedSize.inherits()) {
-						if(defaultStyle.get() != nullptr)
-							computedSize = defaultStyle->fontProperties.pixelSize();
-						if(computedSize.inherits())
-							computedSize = fontCollection.lastResortFallback(FontProperties<>())->metrics().emHeight();
-					}
-					*computedProperties = FontProperties<>(
-						!result.weight().inherits() ? result.weight()
-							: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.weight() : FontPropertiesBase::NORMAL_WEIGHT),
-						!result.stretch().inherits() ? result.stretch()
-							: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.stretch() : FontPropertiesBase::NORMAL_STRETCH),
-						!result.style().inherits() ? result.style()
-							: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.style() : FontPropertiesBase::NORMAL_STYLE),
-						!result.variant().inherits() ? result.variant()
-							: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.variant() : FontPropertiesBase::NORMAL_VARIANT),
-						!result.orientation().inherits() ? result.orientation()
-							: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.orientation() : FontPropertiesBase::HORIZONTAL),
-						computedSize);
-				}
-				// size-adjust
-				if(computedSizeAdjust != nullptr) {
-					*computedSizeAdjust = (requestedStyle.get() != nullptr) ? requestedStyle->fontSizeAdjust : -1.0;
-					if(*computedSizeAdjust < 0.0)
-						*computedSizeAdjust = (defaultStyle.get() != nullptr) ? defaultStyle->fontSizeAdjust : 0.0;
-				}
-			}
-#else
-			// TODO: Not implemented (but this function is referred by noone.
-			return std::shared_ptr<const graphics::font::Font>();
-#endif
-		}
-
-		/**
-		 * @internal Paints border.
-		 * @param context The graphics context
-		 * @param rectangle The border box. This gives the edge surrounds the border
-		 * @param border The presentative style
-		 * @param writingMode The writing mode used to compute the directions and orientation of @a border
-		 */
-		void paintBorder(graphics::PaintContext& context, const graphics::Rectangle& rectangle,
-				const graphics::PhysicalFourSides<graphics::font::ComputedBorderSide>& border, const presentation::WritingMode& writingMode) {
-			using namespace ::ascension::graphics;	// TODO: 'detail' namespace should spread into individual namespaces.
-			using namespace ::ascension::graphics::font;
-			// TODO: not implemented.
-			for(PhysicalFourSides<ComputedBorderSide>::const_iterator side(std::begin(border)), e(std::end(border)); side != e; ++side) {
-				if(!side->hasVisibleStyle() || side->computedWidth() <= 0)
-					continue;
-				if(!boost::geometry::within(rectangle, context.boundsToPaint()))
-					continue;
-				const Color& color = side->color;
-				if(color.isFullyTransparent())
-					continue;
-				context.setStrokeStyle(std::make_shared<SolidColor>(color));
-				context.setLineWidth(side->width);
-//				context.setStrokeDashArray();
-//				context.setStrokeDashOffset();
-				context.beginPath();
-				switch(static_cast<PhysicalDirection>(side - std::begin(border))) {
-					case PhysicalDirection::TOP:
-						context
-							.moveTo(geometry::topLeft(rectangle))
-							.lineTo(geometry::translate(
-								geometry::topRight(rectangle), Dimension(geometry::_dx = 1.0f, geometry::_dy = 0.0f)));
-						break;
-					case PhysicalDirection::RIGHT:
-						context
-							.moveTo(geometry::topRight(rectangle))
-							.lineTo(geometry::translate(
-								geometry::bottomRight(rectangle), Dimension(geometry::_dx = 0.0f, geometry::_dy = 1.0f)));
-						break;
-					case PhysicalDirection::BOTTOM:
-						context
-							.moveTo(geometry::bottomLeft(rectangle))
-							.lineTo(geometry::translate(
-								geometry::bottomRight(rectangle), Dimension(geometry::_dx = 1.0f, geometry::_dy = 0.0f)));
-						break;
-					case PhysicalDirection::LEFT:
-						context
-							.moveTo(geometry::topLeft(rectangle))
-							.lineTo(geometry::translate(
-								geometry::bottomLeft(rectangle), Dimension(geometry::_dx = 0.0f, geometry::_dy = 1.0f)));
-						break;
-					default:
-						ASCENSION_ASSERT_NOT_REACHED();
-				}
-				context.stroke();
-			}
-		}
-	}	// namespace detail
-
 	namespace graphics {
 		namespace font {
+			namespace detail {
+				std::shared_ptr<const graphics::font::Font> findMatchingFont(const StringPiece& textRun,
+						const graphics::font::FontCollection& collection, const graphics::font::ComputedFontSpecification& specification) {
+#if 0
+					void resolveFontSpecifications(const FontCollection& fontCollection,
+							std::shared_ptr<const TextRunStyle> requestedStyle, std::shared_ptr<const TextRunStyle> defaultStyle,
+							FontDescription* computedDescription, double* computedSizeAdjust) {
+						// family name
+						if(computedDescription != nullptr) {
+							String familyName = (requestedStyle.get() != nullptr) ? requestedStyle->fontFamily.getOrInitial() : String();
+							if(familyName.empty()) {
+								if(defaultStyle.get() != nullptr)
+									familyName = defaultStyle->fontFamily.getOrInitial();
+								if(computedFamilyName->empty())
+									*computedFamilyName = fontCollection.lastResortFallback(FontDescription())->familyName();
+							}
+							computedDescription->setFamilyName();
+						}
+						// size
+						if(computedPixelSize != nullptr) {
+							requestedStyle->fontProperties
+						}
+						// properties
+						if(computedProperties != 0) {
+							FontProperties<Inheritable> result;
+							if(requestedStyle.get() != nullptr)
+								result = requestedStyle->fontProperties;
+							Inheritable<double> computedSize(computedProperties->pixelSize());
+							if(computedSize.inherits()) {
+								if(defaultStyle.get() != nullptr)
+									computedSize = defaultStyle->fontProperties.pixelSize();
+								if(computedSize.inherits())
+									computedSize = fontCollection.lastResortFallback(FontProperties<>())->metrics().emHeight();
+							}
+							*computedProperties = FontProperties<>(
+								!result.weight().inherits() ? result.weight()
+									: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.weight() : FontPropertiesBase::NORMAL_WEIGHT),
+								!result.stretch().inherits() ? result.stretch()
+									: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.stretch() : FontPropertiesBase::NORMAL_STRETCH),
+								!result.style().inherits() ? result.style()
+									: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.style() : FontPropertiesBase::NORMAL_STYLE),
+								!result.variant().inherits() ? result.variant()
+									: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.variant() : FontPropertiesBase::NORMAL_VARIANT),
+								!result.orientation().inherits() ? result.orientation()
+									: ((defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.orientation() : FontPropertiesBase::HORIZONTAL),
+								computedSize);
+						}
+						// size-adjust
+						if(computedSizeAdjust != nullptr) {
+							*computedSizeAdjust = (requestedStyle.get() != nullptr) ? requestedStyle->fontSizeAdjust : -1.0;
+							if(*computedSizeAdjust < 0.0)
+								*computedSizeAdjust = (defaultStyle.get() != nullptr) ? defaultStyle->fontSizeAdjust : 0.0;
+						}
+					}
+#else
+					// TODO: Not implemented (but this function is referred by noone.
+					return std::shared_ptr<const graphics::font::Font>();
+#endif
+				}
+
+				/**
+				 * @internal Paints border.
+				 * @param context The graphics context
+				 * @param rectangle The border box. This gives the edge surrounds the border
+				 * @param border The presentative style
+				 * @param writingMode The writing mode used to compute the directions and orientation of @a border
+				 */
+				void paintBorder(graphics::PaintContext& context, const graphics::Rectangle& rectangle,
+						const graphics::PhysicalFourSides<graphics::font::ComputedBorderSide>& border, const presentation::WritingMode& writingMode) {
+					using namespace ::ascension::graphics;	// TODO: 'detail' namespace should spread into individual namespaces.
+					using namespace ::ascension::graphics::font;
+					// TODO: not implemented.
+					for(PhysicalFourSides<ComputedBorderSide>::const_iterator side(std::begin(border)), e(std::end(border)); side != e; ++side) {
+						if(!side->hasVisibleStyle() || side->computedWidth() <= 0)
+							continue;
+						if(!boost::geometry::within(rectangle, context.boundsToPaint()))
+							continue;
+						const Color& color = side->color;
+						if(color.isFullyTransparent())
+							continue;
+						context.setStrokeStyle(std::make_shared<SolidColor>(color));
+						context.setLineWidth(side->width);
+//						context.setStrokeDashArray();
+//						context.setStrokeDashOffset();
+						context.beginPath();
+						switch(static_cast<PhysicalDirection>(side - std::begin(border))) {
+							case PhysicalDirection::TOP:
+								context
+									.moveTo(geometry::topLeft(rectangle))
+									.lineTo(geometry::translate(
+										geometry::topRight(rectangle), Dimension(geometry::_dx = 1.0f, geometry::_dy = 0.0f)));
+								break;
+							case PhysicalDirection::RIGHT:
+								context
+									.moveTo(geometry::topRight(rectangle))
+									.lineTo(geometry::translate(
+										geometry::bottomRight(rectangle), Dimension(geometry::_dx = 0.0f, geometry::_dy = 1.0f)));
+								break;
+							case PhysicalDirection::BOTTOM:
+								context
+									.moveTo(geometry::bottomLeft(rectangle))
+									.lineTo(geometry::translate(
+										geometry::bottomRight(rectangle), Dimension(geometry::_dx = 1.0f, geometry::_dy = 0.0f)));
+								break;
+							case PhysicalDirection::LEFT:
+								context
+									.moveTo(geometry::topLeft(rectangle))
+									.lineTo(geometry::translate(
+										geometry::bottomLeft(rectangle), Dimension(geometry::_dx = 0.0f, geometry::_dy = 1.0f)));
+								break;
+							default:
+								ASCENSION_ASSERT_NOT_REACHED();
+						}
+						context.stroke();
+					}
+				}
+			}	// namespace detail
+
 			// graphics.font free functions ///////////////////////////////////////////////////////////////////////////
 
 			void paintTextDecoration(PaintContext& context, const TextRun& run, const Point& origin, const ComputedTextDecoration& decoration) {
