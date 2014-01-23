@@ -4,7 +4,7 @@
  * @date 2006-2010 was rendering.hpp
  * @date 2010-11-20 separated from ascension/layout.hpp
  * @date 2011-05-21 separated from rendering.hpp
- * @date 2011-2013
+ * @date 2011-2014
  */
 
 #ifndef ASCENSION_LINE_LAYOUT_VECTOR_HPP
@@ -90,6 +90,7 @@ namespace ascension {
 				const TextLayout& operator[](Index line);
 				const TextLayout* at(Index line) const BOOST_NOEXCEPT;
 				const TextLayout& at(Index line, const UseCalculatedLayoutTag&);
+				std::unique_ptr<const TextLayout> createIsolatedLayout(Index line) const;
 				/// @}
 
 				/// @a name Attributes
@@ -228,6 +229,19 @@ namespace ascension {
 				if(line > document().numberOfLines())
 					throw IndexOutOfBoundsException("line");
 				return (*this)[line];
+			}
+
+			/**
+			 * Creates and returns an isolated layout for the specified line. This layout is not inserted into the
+			 * vector and the instances of @c VisualLinesListener are not invoked.
+			 * @param line The line number
+			 * @return The layout
+			 * @throw IndexOutOfBoundsException @a line is greater than the number of the lines
+			 */
+			inline std::unique_ptr<const TextLayout> LineLayoutVector::createIsolatedLayout(Index line) const {
+				if(line > document().numberOfLines())
+					throw IndexOutOfBoundsException("line");
+				return layoutGenerator_->generate(line);
 			}
 
 			/// Returns the document.

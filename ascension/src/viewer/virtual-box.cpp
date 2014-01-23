@@ -45,22 +45,25 @@ namespace ascension {
 			if(line < *lines_.begin() || line > *lines_.end())
 				return boost::none;	// out of the region
 
-			const graphics::font::TextLayout& layout = viewer_.textRenderer().layouts().at(line.line);
-			const graphics::Scalar baseline = layout.lineMetrics(line.subline).baselineOffset();
+			const graphics::font::TextLayout* layout = viewer_.textRenderer().layouts().at(line.line);
+			std::unique_ptr<const graphics::font::TextLayout> isolatedLayout;
+			if(layout == nullptr)
+				layout = (isolatedLayout = viewer_.textRenderer().layouts().createIsolatedLayout(line.line)).get();
+			const graphics::Scalar baseline = layout->lineMetrics(line.subline).baselineOffset();
 			graphics::Scalar first = *ipds_.begin(), second = *ipds_.end();
 			const graphics::Scalar lineStartOffset = viewer_.textRenderer().lineStartEdge(graphics::font::VisualLine(line.line, 0));
 			first -= lineStartOffset;
-			first = mapTextRendererInlineProgressionDimensionToLineLayout(layout.writingMode(), first);
+			first = mapTextRendererInlineProgressionDimensionToLineLayout(layout->writingMode(), first);
 			second -= lineStartOffset;
-			second = mapTextRendererInlineProgressionDimensionToLineLayout(layout.writingMode(), second);
+			second = mapTextRendererInlineProgressionDimensionToLineLayout(layout->writingMode(), second);
 
 			const boost::integer_range<Index> result(ordered(boost::irange(
-				layout.hitTestCharacter(presentation::AbstractTwoAxes<graphics::Scalar>(
+				layout->hitTestCharacter(presentation::AbstractTwoAxes<graphics::Scalar>(
 					presentation::_ipd = std::min(first, second), presentation::_bpd = baseline)).insertionIndex(),		
-				layout.hitTestCharacter(presentation::AbstractTwoAxes<graphics::Scalar>(
+				layout->hitTestCharacter(presentation::AbstractTwoAxes<graphics::Scalar>(
 					presentation::_ipd = std::max(first, second), presentation::_bpd = baseline)).insertionIndex())));
-			assert(layout.lineAt(*result.begin()) == line.subline);
-			assert(result.empty() || layout.lineAt(*result.end()) == line.subline);
+			assert(layout->lineAt(*result.begin()) == line.subline);
+			assert(result.empty() || layout->lineAt(*result.end()) == line.subline);
 			return result;
 		}
 
@@ -81,7 +84,7 @@ namespace ascension {
 			const std::shared_ptr<const graphics::font::TextViewport> viewport(viewer_.textRenderer().viewport());
 
 			// compute inline-progression-dimension in the TextRenderer for 'p'
-			graphics::Scalar ipd = graphics::font::inlineProgressionScrollOffsetInUserUnits(*viewport);
+			graphics::Scalar ipd = graphics::font::inlineProgressionOffsetInViewerGeometry(*viewport);
 			switch(viewer_.textRenderer().lineRelativeAlignment()) {
 				case TextRenderer::LEFT:
 					ipd = geometry::x(p) - geometry::left(viewport->boundsInView());
