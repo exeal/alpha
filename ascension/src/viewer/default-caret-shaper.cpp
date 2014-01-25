@@ -147,45 +147,54 @@ namespace ascension {
 					graphics::geometry::BasicDimension<std::uint32_t>(graphics::geometry::_dx = measure, graphics::geometry::_dy = extent), format));
 			}
 
-			void shapeCaret(const Caret& caret, bool localeSensitive, std::unique_ptr<graphics::Image>& image, graphics::geometry::BasicPoint<uint32_t>& alignmentPoint) {
+			void shapeCaret(const Caret& caret, bool localeSensitive, std::unique_ptr<graphics::Image>& image, graphics::geometry::BasicPoint<std::uint32_t>& alignmentPoint) {
 				const bool overtype = caret.isOvertypeMode() && isSelectionEmpty(caret);
 				const graphics::font::TextRenderer& renderer = caret.textViewer().textRenderer();
-				const graphics::font::TextLayout& layout = renderer.layouts().at(line(caret));
 
-				graphics::Rectangle bounds(currentCharacterLogicalBounds(caret));
-				if(!localeSensitive || !overtype) {
-					const uint16_t advance = systemDefinedCaretMeasure();
-					presentation::FlowRelativeFourSides<graphics::Scalar> temp(
-						mapPhysicalToFlowRelative(layout.writingMode(), graphics::PhysicalFourSides<graphics::Scalar>(bounds)));
-					temp.end() = temp.start() + advance;
-					bounds = graphics::geometry::make<graphics::Rectangle>(mapFlowRelativeToPhysical(layout.writingMode(), temp));
-				}
-
-				if(localeSensitive) {
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-					const bool inputMethodIsOpen = static_cast<Glib::ustring>(const_cast<TextViewer&>(caret.textViewer()).get_settings()->property_gtk_im_module()) != nullptr;
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-					win32::Handle<HIMC>::Type imc(win32::inputMethod(caret.textViewer()));
-					const bool inputMethodIsOpen = win32::boole(::ImmGetOpenStatus(imc.get()));
-#else
-					ASCENSION_CANT_DETECT_PLATFORM();
-#endif
-					if(inputMethodIsOpen) {
-						static const graphics::Color red(0x80, 0x00, 0x00);
-						image = createSolidCaretImage(static_cast<std::uint16_t>(graphics::geometry::dx(bounds)), static_cast<std::uint16_t>(graphics::geometry::dy(bounds)), red);
-						return;
-//					} else if(isHorizontal(layout.writingMode().blockFlowDirection)) {
-//						const WORD language = PRIMARYLANGID(LOWORD(::GetKeyboardLayout(::GetCurrentThreadId())));
-//						if(isRTLLanguage(language)) {	// RTL
-//							image = createRTLCaretImage(extent, black);
-//							return;
-//						} else if(isTISLanguage(language)) {	// Thai relations
-//							image = createTISCaretImage(extent, black);
-//							return;
-//						}
+				if(const graphics::font::TextLayout* const layout = renderer.layouts().at(line(caret))) {
+					graphics::Rectangle bounds(currentCharacterLogicalBounds(caret));
+					if(!localeSensitive || !overtype) {
+						const std::uint16_t advance = systemDefinedCaretMeasure();
+						presentation::FlowRelativeFourSides<graphics::Scalar> temp(
+							mapPhysicalToFlowRelative(layout->writingMode(), graphics::PhysicalFourSides<graphics::Scalar>(bounds)));
+						temp.end() = temp.start() + advance;
+						boost::geometry::assign(bounds, graphics::geometry::make<graphics::Rectangle>(presentation::mapFlowRelativeToPhysical(layout->writingMode(), temp)));
 					}
+
+					if(localeSensitive) {
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+						const bool inputMethodIsOpen = static_cast<Glib::ustring>(
+							const_cast<TextViewer&>(caret.textViewer()).get_settings()->property_gtk_im_module()) != nullptr;
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+						win32::Handle<HIMC>::Type imc(win32::inputMethod(caret.textViewer()));
+						const bool inputMethodIsOpen = win32::boole(::ImmGetOpenStatus(imc.get()));
+#else
+						ASCENSION_CANT_DETECT_PLATFORM();
+#endif
+						if(inputMethodIsOpen) {
+							static const graphics::Color red(0x80, 0x00, 0x00);
+							image = createSolidCaretImage(
+								static_cast<std::uint16_t>(graphics::geometry::dx(bounds)),
+								static_cast<std::uint16_t>(graphics::geometry::dy(bounds)), red);
+							return;
+//						} else if(isHorizontal(layout->writingMode().blockFlowDirection)) {
+//							const WORD language = PRIMARYLANGID(LOWORD(::GetKeyboardLayout(::GetCurrentThreadId())));
+//							if(isRTLLanguage(language)) {	// RTL
+//								image = createRTLCaretImage(extent, black);
+//								return;
+//							} else if(isTISLanguage(language)) {	// Thai relations
+//								image = createTISCaretImage(extent, black);
+//								return;
+//							}
+						}
+					}
+					image = createSolidCaretImage(static_cast<std::uint16_t>(graphics::geometry::dx(bounds)),
+						static_cast<std::uint16_t>(graphics::geometry::dy(bounds)), graphics::Color::OPAQUE_BLACK);
+					boost::geometry::assign(alignmentPoint, graphics::geometry::negate(graphics::geometry::topLeft(bounds)));
+				} else {
+					image = createSolidCaretImage(0, 0, graphics::Color::OPAQUE_BLACK);
+					boost::geometry::assign_zero(alignmentPoint);
 				}
-				image = createSolidCaretImage(static_cast<std::uint16_t>(graphics::geometry::dx(bounds)), static_cast<std::uint16_t>(graphics::geometry::dy(bounds)), graphics::Color::OPAQUE_BLACK);
 			}
 		}
 

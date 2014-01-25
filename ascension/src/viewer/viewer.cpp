@@ -31,11 +31,6 @@ namespace ascension {
 
 	namespace viewers {
 		namespace {
-			///
-			template<typename Coordinate> std::uint32_t scrollPositionInUserUnit(graphics::font::TextViewport::ScrollOffset offset);
-			template<> inline std::uint32_t scrollPositionInUserUnit<presentation::ReadingDirection>(graphics::font::TextViewport::ScrollOffset offset) {
-				return static_cast<std::uint32_t>(offset);
-			}
 			/// @internal Maps the given point in viewer-local coordinates into a point in text-area coordinates.
 			inline graphics::Point mapLocalToTextArea(const TextViewer& viewer, const graphics::Point& p) {
 				const graphics::Rectangle textArea(viewer.textAreaAllocationRectangle());
@@ -779,8 +774,9 @@ namespace ascension {
 
 			// scroll position
 			const graphics::PhysicalTwoAxes<widgetapi::NativeScrollPosition> scrollPosition(physicalScrollPosition(*this));
-			offset -= scrollPositionInUserUnit<presentation::ReadingDirection>(static_cast<graphics::font::TextViewport::ScrollOffset>(
-				horizontal ? boost::geometry::get<0>(scrollPosition) : boost::geometry::get<1>(scrollPosition)));
+			offset -= graphics::font::inlineProgressionOffsetInViewerGeometry(*textRenderer().viewport(),
+				static_cast<graphics::font::TextViewport::ScrollOffset>(
+					horizontal ? boost::geometry::get<0>(scrollPosition) : boost::geometry::get<1>(scrollPosition)));
 
 			// ruler width
 			if((horizontal && rulerPainter_->alignment() == graphics::PhysicalDirection::LEFT)
@@ -1953,8 +1949,8 @@ namespace ascension {
 			}
 			// 2-2. inline dimension
 			abstractScrollOffsetInPixels.ipd() = (abstractScrollOffsetInPixels.bpd() != std::numeric_limits<std::int32_t>::max()) ?
-				scrollPositionInUserUnit<presentation::ReadingDirection>(positionsBeforeScroll.ipd())
-					- scrollPositionInUserUnit<presentation::ReadingDirection>(viewport->scrollPositions().ipd())
+				inlineProgressionOffsetInViewerGeometry(*viewport, positionsBeforeScroll.ipd())
+					- inlineProgressionOffsetInViewerGeometry(*viewport, viewport->scrollPositions().ipd())
 				: std::numeric_limits<std::int32_t>::max();
 			// 2-3. calculate physical offsets
 			const auto scrollOffsetsInPixels(presentation::mapAbstractToPhysical(
