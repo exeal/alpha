@@ -16,19 +16,26 @@
 
 namespace ascension {
 	namespace viewers {
+		/**
+		 * Returns logical bounds of the character the given caret addresses.
+		 * @param caret The caret
+		 * @return The logical character bounds in user units. (0, 0) is the alignment point
+		 */
 		graphics::Rectangle&& currentCharacterLogicalBounds(const Caret& caret) {
 			const graphics::font::TextRenderer& textRenderer = caret.textViewer().textRenderer();
 			const graphics::font::TextLayout& layout = textRenderer.layouts().at(line(caret));
 			const Index subline = layout.lineAt(offsetInLine(caret));
-			const boost::integer_range<graphics::Scalar> extent(layout.extent(boost::irange(subline, subline + 1)));
+			boost::integer_range<graphics::Scalar> extent(layout.extent(boost::irange(subline, subline + 1)));
+
+			const presentation::AbstractTwoAxes<graphics::Scalar> leading(layout.hitToPoint(graphics::font::TextHit<>::leading(offsetInLine(caret))));
+			extent = boost::irange(*extent.begin() - leading.bpd(), *extent.end() - leading.bpd());
 
 			graphics::Scalar trailing;
 			if(kernel::locations::isEndOfLine(caret))	// EOL
 //				trailing = widgetapi::createRenderingContext(caret.textViewer())->fontMetrics(textRenderer.defaultFont())->averageCharacterWidth();
 				trailing = 0;
 			else
-				trailing = layout.hitToPoint(graphics::font::TextHit<>::trailing(offsetInLine(caret))).ipd()
-					- layout.hitToPoint(graphics::font::TextHit<>::leading(offsetInLine(caret))).ipd();
+				trailing = layout.hitToPoint(graphics::font::TextHit<>::trailing(offsetInLine(caret))).ipd() - leading.ipd();
 
 			return graphics::geometry::make<graphics::Rectangle>(presentation::mapFlowRelativeToPhysical(layout.writingMode(),
 				presentation::FlowRelativeFourSides<graphics::Scalar>(

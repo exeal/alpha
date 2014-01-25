@@ -561,7 +561,7 @@ namespace ascension {
 				const graphics::Rectangle bounds(currentCharacterLogicalBounds(*this));
 				image.reset(new graphics::Image(graphics::geometry::BasicDimension<std::uint32_t>(
 					static_cast<std::uint32_t>(graphics::geometry::dx(bounds)), static_cast<std::uint32_t>(graphics::geometry::dy(bounds))), graphics::Image::RGB16));
-				alignmentPoint = graphics::geometry::topLeft(bounds);
+				alignmentPoint = graphics::geometry::negate(graphics::geometry::topLeft(bounds));
 			} else if(context_.inputMethodCompositionActivated) {
 				image.reset(new graphics::Image(boost::geometry::make_zero<graphics::geometry::BasicDimension<std::uint32_t>>(), graphics::Image::RGB16));
 				alignmentPoint = boost::geometry::make_zero<decltype(alignmentPoint)>();
