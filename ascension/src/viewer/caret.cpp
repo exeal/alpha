@@ -555,17 +555,22 @@ namespace ascension {
 
 			std::unique_ptr<graphics::Image> image;
 			graphics::geometry::BasicPoint<std::uint32_t> alignmentPoint;
+			bool invisible = false;
 
 			if(context_.inputMethodComposingCharacter) {
 				const bool horizontal = isHorizontal(viewer.textRenderer().computedBlockFlowDirection());
-				const graphics::Rectangle bounds(currentCharacterLogicalBounds(*this));
-				image.reset(new graphics::Image(graphics::geometry::BasicDimension<std::uint32_t>(
-					static_cast<std::uint32_t>(graphics::geometry::dx(bounds)), static_cast<std::uint32_t>(graphics::geometry::dy(bounds))), graphics::Image::RGB16));
-				alignmentPoint = graphics::geometry::negate(graphics::geometry::topLeft(bounds));
-			} else if(context_.inputMethodCompositionActivated) {
-				image.reset(new graphics::Image(boost::geometry::make_zero<graphics::geometry::BasicDimension<std::uint32_t>>(), graphics::Image::RGB16));
-				alignmentPoint = boost::geometry::make_zero<decltype(alignmentPoint)>();
-			} else if(shaper_.get() != nullptr)
+				if(const boost::optional<graphics::Rectangle> bounds = currentCharacterLogicalBounds(*this)) {
+					image.reset(
+						new graphics::Image(graphics::geometry::BasicDimension<std::uint32_t>(
+							static_cast<std::uint32_t>(graphics::geometry::dx(*bounds)),
+							static_cast<std::uint32_t>(graphics::geometry::dy(*bounds))),
+							graphics::Image::RGB16));
+					alignmentPoint = graphics::geometry::negate(graphics::geometry::topLeft(*bounds));
+				} else
+					invisible = true;
+			} else if(context_.inputMethodCompositionActivated)
+				invisible = true;
+			else if(shaper_.get() != nullptr)
 				shaper_->shape(image, alignmentPoint);
 			else {
 				DefaultCaretShaper s;
@@ -573,6 +578,10 @@ namespace ascension {
 				static_cast<CaretShaper&>(s).install(u);
 				static_cast<CaretShaper&>(s).shape(image, alignmentPoint);
 				static_cast<CaretShaper&>(s).uninstall();
+			}
+			if(invisible) {
+				image.reset(new graphics::Image(boost::geometry::make_zero<graphics::geometry::BasicDimension<std::uint32_t>>(), graphics::Image::RGB16));
+				boost::geometry::assign_zero(alignmentPoint);
 			}
 			assert(image.get() != nullptr);
 

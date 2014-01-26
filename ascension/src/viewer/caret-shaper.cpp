@@ -20,26 +20,29 @@ namespace ascension {
 		 * Returns logical bounds of the character the given caret addresses.
 		 * @param caret The caret
 		 * @return The logical character bounds in user units. (0, 0) is the alignment point
+		 * @retval boost#none The layout of the line the given caret addresses is not calculated
 		 */
-		graphics::Rectangle&& currentCharacterLogicalBounds(const Caret& caret) {
+		boost::optional<graphics::Rectangle> currentCharacterLogicalBounds(const Caret& caret) {
 			const graphics::font::TextRenderer& textRenderer = caret.textViewer().textRenderer();
-			const graphics::font::TextLayout& layout = textRenderer.layouts().at(line(caret));
-			const Index subline = layout.lineAt(offsetInLine(caret));
-			boost::integer_range<graphics::Scalar> extent(layout.extent(boost::irange(subline, subline + 1)));
+			if(const graphics::font::TextLayout* const layout = textRenderer.layouts().at(kernel::line(caret))) {
+				const Index subline = layout->lineAt(kernel::offsetInLine(caret));
+				boost::integer_range<graphics::Scalar> extent(layout->extent(boost::irange(subline, subline + 1)));
 
-			const presentation::AbstractTwoAxes<graphics::Scalar> leading(layout.hitToPoint(graphics::font::TextHit<>::leading(offsetInLine(caret))));
-			extent = boost::irange(*extent.begin() - leading.bpd(), *extent.end() - leading.bpd());
+				const presentation::AbstractTwoAxes<graphics::Scalar> leading(layout->hitToPoint(graphics::font::TextHit<>::leading(kernel::offsetInLine(caret))));
+				extent = boost::irange(*extent.begin() - leading.bpd(), *extent.end() - leading.bpd());
 
-			graphics::Scalar trailing;
-			if(kernel::locations::isEndOfLine(caret))	// EOL
-//				trailing = widgetapi::createRenderingContext(caret.textViewer())->fontMetrics(textRenderer.defaultFont())->averageCharacterWidth();
-				trailing = 0;
-			else
-				trailing = layout.hitToPoint(graphics::font::TextHit<>::trailing(offsetInLine(caret))).ipd() - leading.ipd();
+				graphics::Scalar trailing;
+				if(kernel::locations::isEndOfLine(caret))	// EOL
+//					trailing = widgetapi::createRenderingContext(caret.textViewer())->fontMetrics(textRenderer.defaultFont())->averageCharacterWidth();
+					trailing = 0;
+				else
+					trailing = layout->hitToPoint(graphics::font::TextHit<>::trailing(kernel::offsetInLine(caret))).ipd() - leading.ipd();
 
-			return graphics::geometry::make<graphics::Rectangle>(presentation::mapFlowRelativeToPhysical(layout.writingMode(),
-				presentation::FlowRelativeFourSides<graphics::Scalar>(
-					presentation::_before = *extent.begin(), presentation::_after = *extent.end(), presentation::_start = 0.0f, presentation::_end = trailing)));
+				return graphics::geometry::make<graphics::Rectangle>(presentation::mapFlowRelativeToPhysical(layout->writingMode(),
+					presentation::FlowRelativeFourSides<graphics::Scalar>(
+						presentation::_before = *extent.begin(), presentation::_after = *extent.end(), presentation::_start = 0.0f, presentation::_end = trailing)));
+			}
+			return boost::none;
 		}
 
 
