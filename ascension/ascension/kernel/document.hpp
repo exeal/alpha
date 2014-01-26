@@ -14,6 +14,7 @@
 #include <ascension/corelib/gap-vector.hpp>	// detail.GapVector
 #include <ascension/corelib/listeners.hpp>
 #include <ascension/corelib/memory.hpp>		// FastArenaObject
+#include <ascension/corelib/signals.hpp>
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/newline.hpp>
 #include <ascension/kernel/document-observers.hpp>
