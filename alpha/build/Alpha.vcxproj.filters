@@ -796,6 +796,9 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\current-line-highlighter.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\signals.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">

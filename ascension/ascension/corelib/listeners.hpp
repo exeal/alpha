@@ -11,35 +11,8 @@
 #include <algorithm>	// std.find
 #include <list>
 #include <stdexcept>	// std.invalid_argument
-#include <boost/signals2.hpp>
 
 namespace ascension {
-	template<typename Signal>
-	class SignalConnector {
-	public:
-		SignalConnector(Signal& signal) BOOST_NOEXCEPT : signal_(signal) {
-		}
-		boost::signals2::connection connect(const typename Signal::slot_type& slot,
-				boost::signals2::connect_position where = boost::signals2::at_back) {
-			return signal_.connect(slot, where);
-		}
-		template<typename Slot>
-		void disconnect(const Slot& slot) {
-			return signal_.disconnect(slot);
-		}
-	private:
-		Signal& signal_;
-	};
-
-#define ASCENSION_DEFINE_SIGNAL(signalTypeName, signature, signalName)	\
-public:																	\
-	typedef boost::signals2::signal<signature> signalTypeName;			\
-	SignalConnector<signalTypeName> signalName() const BOOST_NOEXCEPT {	\
-		return const_cast<signalTypeName&>(signalName##_);				\
-	}																	\
-private:																\
-	signalTypeName signalName##_
-
 	namespace detail {
 #if ASCENSION_ABANDONED_AT_VERSION_08
 		/**
