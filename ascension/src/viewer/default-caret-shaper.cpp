@@ -151,14 +151,15 @@ namespace ascension {
 				const bool overtype = caret.isOvertypeMode() && isSelectionEmpty(caret);
 				const graphics::font::TextRenderer& renderer = caret.textViewer().textRenderer();
 
-				if(const graphics::font::TextLayout* const layout = renderer.layouts().at(line(caret))) {
-					graphics::Rectangle bounds(currentCharacterLogicalBounds(caret));
+				if(const graphics::font::TextLayout* const layout = renderer.layouts().at(kernel::line(caret))) {
+					boost::optional<graphics::Rectangle> bounds(currentCharacterLogicalBounds(caret));
+					assert(bounds);
 					if(!localeSensitive || !overtype) {
 						const std::uint16_t advance = systemDefinedCaretMeasure();
 						presentation::FlowRelativeFourSides<graphics::Scalar> temp(
-							mapPhysicalToFlowRelative(layout->writingMode(), graphics::PhysicalFourSides<graphics::Scalar>(bounds)));
+							mapPhysicalToFlowRelative(layout->writingMode(), graphics::PhysicalFourSides<graphics::Scalar>(*bounds)));
 						temp.end() = temp.start() + advance;
-						boost::geometry::assign(bounds, graphics::geometry::make<graphics::Rectangle>(presentation::mapFlowRelativeToPhysical(layout->writingMode(), temp)));
+						boost::geometry::assign(*bounds, graphics::geometry::make<graphics::Rectangle>(presentation::mapFlowRelativeToPhysical(layout->writingMode(), temp)));
 					}
 
 					if(localeSensitive) {
@@ -174,8 +175,8 @@ namespace ascension {
 						if(inputMethodIsOpen) {
 							static const graphics::Color red(0x80, 0x00, 0x00);
 							image = createSolidCaretImage(
-								static_cast<std::uint16_t>(graphics::geometry::dx(bounds)),
-								static_cast<std::uint16_t>(graphics::geometry::dy(bounds)), red);
+								static_cast<std::uint16_t>(graphics::geometry::dx(*bounds)),
+								static_cast<std::uint16_t>(graphics::geometry::dy(*bounds)), red);
 							return;
 //						} else if(isHorizontal(layout->writingMode().blockFlowDirection)) {
 //							const WORD language = PRIMARYLANGID(LOWORD(::GetKeyboardLayout(::GetCurrentThreadId())));
@@ -188,9 +189,9 @@ namespace ascension {
 //							}
 						}
 					}
-					image = createSolidCaretImage(static_cast<std::uint16_t>(graphics::geometry::dx(bounds)),
-						static_cast<std::uint16_t>(graphics::geometry::dy(bounds)), graphics::Color::OPAQUE_BLACK);
-					boost::geometry::assign(alignmentPoint, graphics::geometry::negate(graphics::geometry::topLeft(bounds)));
+					image = createSolidCaretImage(static_cast<std::uint16_t>(graphics::geometry::dx(*bounds)),
+						static_cast<std::uint16_t>(graphics::geometry::dy(*bounds)), graphics::Color::OPAQUE_BLACK);
+					boost::geometry::assign(alignmentPoint, graphics::geometry::negate(graphics::geometry::topLeft(*bounds)));
 				} else {
 					image = createSolidCaretImage(0, 0, graphics::Color::OPAQUE_BLACK);
 					boost::geometry::assign_zero(alignmentPoint);

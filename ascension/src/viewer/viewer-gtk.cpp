@@ -169,7 +169,7 @@ namespace ascension {
 					static_cast<int>(graphics::geometry::dx(r)), static_cast<int>(graphics::geometry::dy(r)));
 
 				const RulerStyles& rulerStyles = rulerPainter_->declaredStyles();
-				r = boost::geometry::make_zero<graphics::Rectangle>();
+				boost::geometry::assign_zero<graphics::Rectangle>(r);
 				if(indicatorMargin(rulerStyles)->visible)
 					r = graphics::geometry::joined(r, rulerPainter_->indicatorMarginAllocationRectangle());
 				if(lineNumbers(rulerStyles)->visible)

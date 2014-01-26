@@ -5,12 +5,13 @@
  * @date 2003-2006 was EditView.h
  * @date 2006-2011 was viewer.hpp
  * @date 2011-09-25 separated from viewer.hpp
- * @date 2012-2013
+ * @date 2012-2014
  */
 
 #ifndef ASCENSION_CARET_SHAPER_HPP
 #define ASCENSION_CARET_SHAPER_HPP
-#include <ascension/graphics/geometry.hpp>	// graphics.Scalar, graphics.Point^
+#include <ascension/graphics/geometry.hpp>	// graphics.Scalar, graphics.Point
+#include <boost/optional.hpp>
 #include <memory>	// std.unique_ptr
 
 
@@ -25,7 +26,7 @@ namespace ascension {
 		class Caret;
 		class TextViewer;
 
-		graphics::Rectangle&& currentCharacterLogicalBounds(const Caret& caret);
+		boost::optional<graphics::Rectangle> currentCharacterLogicalBounds(const Caret& caret);
 
 		/**
 		 * A @c CaretShapeUpdater gives a @c CaretShaper the trigger to update the visualization of
