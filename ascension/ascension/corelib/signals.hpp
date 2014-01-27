@@ -60,21 +60,17 @@ namespace ascension {
 	private:
 		Signal& signal_;
 	};
-}
 
-/**
- * Defines the new signal in the class.
- * @param signalTypeName The name of the signal type
- * @param signature The C++ signature of the signal
- * @param signalName The name of the signal
- */
-#define ASCENSION_DEFINE_SIGNAL(signalTypeName, signature, signalName)	\
-public:																	\
-	typedef boost::signals2::signal<signature> signalTypeName;			\
-	SignalConnector<signalTypeName> signalName() const BOOST_NOEXCEPT {	\
-		return const_cast<signalTypeName&>(signalName##_);				\
-	}																	\
-private:																\
-	signalTypeName signalName##_
+	/**
+	 * Makes and returns @c SignalConnector instance for the given signal.
+	 * @tparam Signal The type of @a signal
+	 * @param signal The signal object
+	 * @return A @c SignalConnector instance
+	 */
+	template<typename Signal>
+	inline SignalConnector<Signal> makeSignalConnector(Signal& signal) BOOST_NOEXCEPT {
+		return SignalConnector<Signal>(signal);
+	}
+}
 
 #endif // !ASCENSION_SIGNALS_HPP

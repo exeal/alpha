@@ -331,14 +331,14 @@ namespace ascension {
 
 			/// @name Signals
 			/// @{
-			/** The accessible region of the document was changed. */
-			ASCENSION_DEFINE_SIGNAL(AccessibleRegionChangedSignal, void(const Document&), accessibleRegionChangedSignal);
-			/// The modification flag of the document was changed.
-			ASCENSION_DEFINE_SIGNAL(ModificationSignChangedSignal, void(const Document&), modificationSignChangedSignal);
-			/// The property has @c key associated with the document was changed.
-			ASCENSION_DEFINE_SIGNAL(PropertyChangedSignal, void(const Document&, const DocumentPropertyKey& key), propertyChangedSignal);
-			/// The read only mode of the document was changed.
-			ASCENSION_DEFINE_SIGNAL(ReadOnlySignChangedSignal, void(const Document&), readOnlySignChangedSignal);
+			typedef boost::signals2::signal<void(const Document&)> AccessibleRegionChangedSignal;
+			SignalConnector<AccessibleRegionChangedSignal> accessibleRegionChangedSignal() BOOST_NOEXCEPT;
+			typedef boost::signals2::signal<void(const Document&)> ModificationSignChangedSignal;
+			SignalConnector<ModificationSignChangedSignal> modificationSignChangedSignal() BOOST_NOEXCEPT;
+			typedef boost::signals2::signal<void(const Document&, const DocumentPropertyKey& key)> PropertyChangedSignal;
+			SignalConnector<PropertyChangedSignal> propertyChangedSignal() BOOST_NOEXCEPT;
+			typedef boost::signals2::signal<void(const Document&)> ReadOnlySignChangedSignal;
+			SignalConnector<ReadOnlySignChangedSignal> readOnlySignChangedSignal() BOOST_NOEXCEPT;
 			/// @}
 
 			// overridables
@@ -389,6 +389,10 @@ namespace ascension {
 //			ascension::detail::Listeners<CompoundChangeListener> compoundChangeListeners_;
 			ascension::detail::Listeners<DocumentRollbackListener> rollbackListeners_;
 			ascension::detail::Listeners<DocumentPartitioningListener> partitioningListeners_;
+			AccessibleRegionChangedSignal accessibleRegionChangedSignal_;
+			ModificationSignChangedSignal modificationSignChangedSignal_;
+			PropertyChangedSignal propertyChangedSignal_;
+			ReadOnlySignChangedSignal readOnlySignChangedSignal_;
 
 			friend class DocumentPartitioner;
 		};
