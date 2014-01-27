@@ -44,25 +44,23 @@ namespace ascension {
 				: caret_(&caret), foreground_(foreground), background_(background) {
 			std::shared_ptr<presentation::TextLineColorSpecifier> temp(this);
 			caret.textViewer().presentation().addTextLineColorSpecifier(temp);
-			caret.addListener(*this);
-			caret.addStateListener(*this);
+			caretMotionConnection_ = caret.motionSignal().connect(std::bind(&CurrentLineHighlighter::caretMoved, this, std::placeholders::_1, std::placeholders::_2));
 			caret.addLifeCycleListener(*this);
 		}
-		
+
 		/// Destructor.
 		CurrentLineHighlighter::~CurrentLineHighlighter() BOOST_NOEXCEPT {
 			if(caret_ != nullptr) {
-				caret_->removeListener(*this);
-				caret_->removeStateListener(*this);
+//				caretMotionConnection_.disconnect();
 				caret_->textViewer().presentation().removeTextLineColorSpecifier(*this);
 			}
 		}
-		
+
 		/// Returns the background color.
 		const boost::optional<graphics::Color>& CurrentLineHighlighter::background() const BOOST_NOEXCEPT {
 			return background_;
 		}
-		
+
 		/// @see CaretListener#caretMoved
 		void CurrentLineHighlighter::caretMoved(const Caret&, const kernel::Region& oldRegion) {
 			if(oldRegion.isEmpty()) {
@@ -74,27 +72,19 @@ namespace ascension {
 					caret_->textViewer().redrawLine(line(*caret_), false);
 			}
 		}
-		
+
 		/// Returns the foreground color.
 		const boost::optional<graphics::Color>& CurrentLineHighlighter::foreground() const BOOST_NOEXCEPT {
 			return foreground_;
 		}
-		
-		/// @see CaretStateListener#matchBracketsChanged
-		void CurrentLineHighlighter::matchBracketsChanged(const Caret&, const boost::optional<std::pair<kernel::Position, kernel::Position>>&, bool) {
-		}
-		
-		/// @see CaretStateListener#overtypeModeChanged
-		void CurrentLineHighlighter::overtypeModeChanged(const Caret&) {
-		}
-		
+
 		/// @see PointLifeCycleListener#pointDestroyed
 		void CurrentLineHighlighter::pointDestroyed() {
 //			caret_->removeListener(*this);
 //			caret_->removeStateListener(*this);
 			caret_ = nullptr;
 		}
-		
+
 		/// @see TextLineColorSpecifier#specifyTextLineColors
 		presentation::TextLineColorSpecifier::Priority CurrentLineHighlighter::specifyTextLineColors(Index line,
 				boost::optional<graphics::Color>& foreground, boost::optional<graphics::Color>& background) const {
@@ -107,11 +97,7 @@ namespace ascension {
 				return 0;
 			}
 		}
-		
-		/// @see CaretStateListener#selectionShapeChanged
-		void CurrentLineHighlighter::selectionShapeChanged(const Caret&) {
-		}
-		
+
 		/**
 		 * Sets the background color and redraws the window.
 		 * @param color The background color to set
@@ -119,7 +105,7 @@ namespace ascension {
 		void CurrentLineHighlighter::setBackground(const boost::optional<graphics::Color>& color) BOOST_NOEXCEPT {
 			background_ = color;
 		}
-		
+
 		/**
 		 * Sets the foreground color and redraws the window.
 		 * @param color The foreground color to set
@@ -127,6 +113,5 @@ namespace ascension {
 		void CurrentLineHighlighter::setForeground(const boost::optional<graphics::Color>& color) BOOST_NOEXCEPT {
 			foreground_ = color;
 		}
-
 	}
 }

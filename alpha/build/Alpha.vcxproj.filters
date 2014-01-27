@@ -562,9 +562,6 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\range.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\caret-observers.hpp">
-      <Filter>ascension\Header Files\viewer</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\viewer-observers.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>

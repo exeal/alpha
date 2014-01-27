@@ -84,7 +84,7 @@ namespace ascension {
 			 */
 			Scalar inlineProgressionOffsetInViewportScroll(const TextViewport& viewport, const boost::optional<TextViewport::ScrollOffset>& offset /* = boost::none */) {
 #if 1
-				return boost::get_optional_value_or(offset, viewport.scrollPositions().ipd()) /* * viewport.dimensionRates().ipd() */;
+				return static_cast<Scalar>(boost::get_optional_value_or(offset, viewport.scrollPositions().ipd())) /* * viewport.dimensionRates().ipd() */;
 #else
 				const TextViewport::ScrollOffset offset = scrollOffset ? *scrollOffset : viewport.inlineProgressionOffset();
 				return viewport.averageCharacterWidth() * offset;
@@ -848,7 +848,7 @@ namespace ascension {
 					scrollPositions_(0, 0), repairingLayouts_(false) {
 				documentAccessibleRegionChangedConnection_ =
 					this->textRenderer().presentation().document().accessibleRegionChangedSignal().connect(
-						boost::bind(&TextViewport::documentAccessibleRegionChanged, this, _1));
+						std::bind(&TextViewport::documentAccessibleRegionChanged, this, std::placeholders::_1));
 				this->textRenderer().addDefaultFontListener(*this);
 				this->textRenderer().layouts().addVisualLinesListener(*this);
 				this->textRenderer().addComputedBlockFlowDirectionListener(*this);

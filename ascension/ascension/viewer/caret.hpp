@@ -10,7 +10,6 @@
 #ifndef ASCENSION_CARET_HPP
 #define ASCENSION_CARET_HPP
 #include <ascension/corelib/text/identifier-syntax.hpp>	// text.IdentifierSyntax
-#include <ascension/viewer/caret-observers.hpp>
 #include <ascension/viewer/caret-shaper.hpp>
 #include <ascension/viewer/viewer-observers.hpp>
 #include <ascension/viewer/visual-point.hpp>
@@ -65,14 +64,6 @@ namespace ascension {
 		public:
 			explicit Caret(TextViewer& viewer, const kernel::Position& position = kernel::Position(0, 0));
 			~Caret();
-
-			/// @name Listeners
-			/// @{
-			void addInputPropertyListener(InputPropertyListener& listener);
-			void addStateListener(CaretStateListener& listener);
-			void removeInputPropertyListener(InputPropertyListener& listener);
-			void removeStateListener(CaretStateListener& listener);
-			/// @}
 
 			/// @name The Anchor and The Caret
 			/// @{
@@ -144,12 +135,16 @@ namespace ascension {
 			/// @name Signals
 			/// @{
 			typedef boost::signals2::signal<void(const Caret&, CodePoint)> CharacterInputSignal;
+			typedef boost::signals2::signal<void(const Caret&)> InputLocaleChangedSignal;
+			typedef boost::signals2::signal<void(const Caret&)> InputMethodOpenStatusChangedSignal;
 			typedef boost::signals2::signal<void(const Caret&,
 				const boost::optional<std::pair<kernel::Position, kernel::Position>>& oldPair, bool outsideOfView)> MatchBracketsChangedSignal;
 			typedef boost::signals2::signal<void(const Caret&, const kernel::Region&)> MotionSignal;
 			typedef boost::signals2::signal<void(const Caret&)> OvertypeModeChangedSignal;
 			typedef boost::signals2::signal<void(const Caret&)> SelectionShapeChangedSignal;	// bad naming :(
 			SignalConnector<CharacterInputSignal> characterInputSignal() BOOST_NOEXCEPT;
+			SignalConnector<InputLocaleChangedSignal> inputLocaleChangedSignal() BOOST_NOEXCEPT;
+			SignalConnector<InputMethodOpenStatusChangedSignal> inputMethodOpenStatusChangedSignal() BOOST_NOEXCEPT;
 			SignalConnector<MatchBracketsChangedSignal> matchBracketsChangedSignal() BOOST_NOEXCEPT;
 			SignalConnector<MotionSignal> motionSignal() BOOST_NOEXCEPT;
 			SignalConnector<OvertypeModeChangedSignal> overtypeModeChangedSignal() BOOST_NOEXCEPT;
@@ -207,11 +202,12 @@ namespace ascension {
 			LCID clipboardLocale_;
 #endif // ASCENSION_OS_WINDOWS
 			CharacterInputSignal characterInputSignal_;
+			InputLocaleChangedSignal inputLocaleChangedSignal_;
+			InputMethodOpenStatusChangedSignal inputMethodOpenStatusChangedSignal_;
 			MatchBracketsChangedSignal matchBracketsChangedSignal_;
 			MotionSignal motionSignal_;
 			OvertypeModeChangedSignal overtypeModeChangedSignal_;
 			SelectionShapeChangedSignal selectionShapeChangedSignal_;
-			ascension::detail::Listeners<InputPropertyListener> inputPropertyListeners_;
 			bool overtypeMode_;
 			bool autoShow_;		// true if show itself when movements
 			MatchBracketsTrackingMode matchBracketsTrackingMode_;

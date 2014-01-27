@@ -144,8 +144,6 @@ namespace ascension {
 			textRenderer().removeComputedBlockFlowDirectionListener(*this);
 			textRenderer().removeDefaultFontListener(*this);
 			textRenderer().layouts().removeVisualLinesListener(*this);
-			caret().removeListener(*this);
-			caret().removeStateListener(*this);
 			BOOST_FOREACH(VisualPoint* p, points_)
 				p->viewerDisposed();
 
@@ -553,8 +551,12 @@ namespace ascension {
 //			renderer_->addFontListener(*this);
 //			renderer_->addVisualLinesListener(*this);
 			caret_.reset(new Caret(*this));
-			caret().addListener(*this);
-			caret().addStateListener(*this);
+			caretMotionConnection_ = caret().motionSignal().connect(
+				std::bind(&TextViewer::caretMoved, this, std::placeholders::_1, std::placeholders::_2));
+			matchBracketsChangedConnection_ = caret().matchBracketsChangedSignal().connect(
+				std::bind(&TextViewer::matchBracketsChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+			selectionShapeChangedConnection_ = caret().selectionShapeChangedSignal().connect(
+				std::bind(&TextViewer::selectionShapeChanged, this, std::placeholders::_1));
 			rulerPainter_.reset(new detail::RulerPainter(*this));
 
 			document().addListener(*this);
@@ -1304,9 +1306,9 @@ namespace ascension {
 		}
 #endif
 
-		/// @see CaretStateListener#matchBracketsChanged
-		void TextViewer::matchBracketsChanged(const Caret& self, const boost::optional<std::pair<kernel::Position, kernel::Position>>& oldPair, bool outsideOfView) {
-			const boost::optional<std::pair<kernel::Position, kernel::Position>>& newPair = self.matchBrackets();
+		/// @see Caret#MatchBracketsChangedSignal
+		void TextViewer::matchBracketsChanged(const Caret& caret, const boost::optional<std::pair<kernel::Position, kernel::Position>>& previouslyMatchedBrackets, bool outsideOfView) {
+			const boost::optional<std::pair<kernel::Position, kernel::Position>>& newPair = caret.matchBrackets();
 			if(newPair) {
 				redrawLine(newPair->first.line);
 				if(!isFrozen())
@@ -1316,22 +1318,22 @@ namespace ascension {
 					if(!isFrozen())
 						widgetapi::redrawScheduledRegion(*this);
 				}
-				if(oldPair	// clear the previous highlight
-						&& oldPair->first.line != newPair->first.line && oldPair->first.line != newPair->second.line) {
-					redrawLine(oldPair->first.line);
+				if(previouslyMatchedBrackets	// clear the previous highlight
+						&& previouslyMatchedBrackets->first.line != newPair->first.line && previouslyMatchedBrackets->first.line != newPair->second.line) {
+					redrawLine(previouslyMatchedBrackets->first.line);
 					if(!isFrozen())
 						widgetapi::redrawScheduledRegion(*this);
 				}
-				if(oldPair && oldPair->second.line != newPair->first.line
-						&& oldPair->second.line != newPair->second.line && oldPair->second.line != oldPair->first.line)
-					redrawLine(oldPair->second.line);
+				if(previouslyMatchedBrackets && previouslyMatchedBrackets->second.line != newPair->first.line
+						&& previouslyMatchedBrackets->second.line != newPair->second.line && previouslyMatchedBrackets->second.line != previouslyMatchedBrackets->first.line)
+					redrawLine(previouslyMatchedBrackets->second.line);
 			} else {
-				if(oldPair) {	// clear the previous highlight
-					redrawLine(oldPair->first.line);
+				if(previouslyMatchedBrackets) {	// clear the previous highlight
+					redrawLine(previouslyMatchedBrackets->first.line);
 					if(!isFrozen())
 						widgetapi::redrawScheduledRegion(*this);
-					if(oldPair->second.line != oldPair->first.line)
-						redrawLine(oldPair->second.line);
+					if(previouslyMatchedBrackets->second.line != previouslyMatchedBrackets->first.line)
+						redrawLine(previouslyMatchedBrackets->second.line);
 				}
 			}
 		}
@@ -1369,10 +1371,6 @@ namespace ascension {
 			cursorVanisher_.restore();
 			if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->mouseWheelRotated(input);
-		}
-
-		/// @see CaretStateListener#overtypeModeChanged
-		void TextViewer::overtypeModeChanged(const Caret&) {
 		}
 
 		/// @see Widget#paint
@@ -1543,10 +1541,10 @@ namespace ascension {
 				contentAssistant()->viewerBoundsChanged();
 		}
 
-		/// @see CaretStateListener#selectionShapeChanged
-		void TextViewer::selectionShapeChanged(const Caret& self) {
-			if(!isFrozen() && !isSelectionEmpty(self))
-				redrawLines(boost::irange(line(self.beginning()), line(self.end()) + 1));
+		/// @see Caret#SelectionShapeChangedSignal
+		void TextViewer::selectionShapeChanged(const Caret& caret) {
+			if(!isFrozen() && !isSelectionEmpty(caret))
+				redrawLines(boost::irange(kernel::line(caret.beginning()), kernel::line(caret.end()) + 1));
 		}
 
 		/**
@@ -1945,12 +1943,13 @@ namespace ascension {
 				if(p != firstVisibleLineBeforeScroll)
 					layout = nullptr;
 				if(layout == nullptr)
-					abstractScrollOffsetInPixels.bpd() = std::numeric_limits<std::int32_t>::max();
+					abstractScrollOffsetInPixels.bpd() = std::numeric_limits<graphics::font::TextViewport::SignedScrollOffset>::max();
 			}
 			// 2-2. inline dimension
 			abstractScrollOffsetInPixels.ipd() = (abstractScrollOffsetInPixels.bpd() != std::numeric_limits<std::int32_t>::max()) ?
-				inlineProgressionOffsetInViewerGeometry(*viewport, positionsBeforeScroll.ipd())
-					- inlineProgressionOffsetInViewerGeometry(*viewport, viewport->scrollPositions().ipd())
+				static_cast<graphics::font::TextViewport::SignedScrollOffset>(
+					inlineProgressionOffsetInViewerGeometry(*viewport, positionsBeforeScroll.ipd())
+						- inlineProgressionOffsetInViewerGeometry(*viewport, viewport->scrollPositions().ipd()))
 				: std::numeric_limits<std::int32_t>::max();
 			// 2-3. calculate physical offsets
 			const auto scrollOffsetsInPixels(presentation::mapAbstractToPhysical(

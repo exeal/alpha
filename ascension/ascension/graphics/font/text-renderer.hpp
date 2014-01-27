@@ -49,6 +49,7 @@ namespace ascension {
 					const FontCollection& fontCollection, const Dimension& initialSize);
 				TextRenderer(const TextRenderer& other);
 				virtual ~TextRenderer() BOOST_NOEXCEPT;
+				presentation::Presentation& presentation() BOOST_NOEXCEPT;
 				const presentation::Presentation& presentation() const BOOST_NOEXCEPT;
 
 				/// @name Viewport
@@ -172,6 +173,11 @@ namespace ascension {
 			/// @see presentation#GlobalTextStyleSwitch#writingMode
 			inline decltype(presentation::TextToplevelStyle().writingMode) TextRenderer::writingMode() const BOOST_NOEXCEPT {
 				return writingMode_;
+			}
+
+			/// Returns the presentation used by this object.
+			inline presentation::Presentation& TextRenderer::presentation() BOOST_NOEXCEPT {
+				return presentation_;
 			}
 
 			/// Returns the presentation used by this object.

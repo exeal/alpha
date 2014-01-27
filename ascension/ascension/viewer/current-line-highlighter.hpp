@@ -13,7 +13,6 @@
 #include <ascension/kernel/point.hpp>				// kernel.PointLifeCycleListener
 #include <ascension/graphics/color.hpp>				// graphics.Color
 #include <ascension/presentation/presentation.hpp>	// presentation.TextLineColorSpecifier
-#include <ascension/viewer/caret-observers.hpp>		// CaretListener, CaretStateListener
 #include <boost/optional.hpp>
 
 namespace ascension {
@@ -21,8 +20,7 @@ namespace ascension {
 		class Caret;
 
 		/// Highlights the line on which the caret is put.
-		class CurrentLineHighlighter : public presentation::TextLineColorSpecifier,
-				public CaretListener, public CaretStateListener, public kernel::PointLifeCycleListener {
+		class CurrentLineHighlighter : public presentation::TextLineColorSpecifier, public kernel::PointLifeCycleListener {
 			ASCENSION_NONCOPYABLE_TAG(CurrentLineHighlighter);
 		public:
 			// constant
@@ -42,19 +40,14 @@ namespace ascension {
 			presentation::TextLineColorSpecifier::Priority specifyTextLineColors(
 				Index line, boost::optional<graphics::Color>& foreground,
 				boost::optional<graphics::Color>& background) const;
-			// CaretListener
+			// Caret.MotionSignal
 			void caretMoved(const Caret& self, const kernel::Region& oldRegion);
-			// CaretStateListener
-			void matchBracketsChanged(const Caret& self,
-				const boost::optional<std::pair<kernel::Position, kernel::Position>>& oldPair,
-				bool outsideOfView);
-			void overtypeModeChanged(const Caret& self);
-			void selectionShapeChanged(const Caret& self);
 			// kernel.PointLifeCycleListener
 			void pointDestroyed();
 		private:
 			Caret* caret_;
 			boost::optional<graphics::Color> foreground_, background_;
+			boost::signals2::scoped_connection caretMotionConnection_;
 		};
 	}
 }

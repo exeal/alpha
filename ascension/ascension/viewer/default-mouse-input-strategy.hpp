@@ -5,7 +5,7 @@
  * @date 2003-2006 was EditView.h
  * @date 2006-2011 was viewer.hpp
  * @date 2011-10-04 separated from viewer.hpp
- * @date 2012
+ * @date 2012, 2014
  */
 
 #ifndef ASCENSION_DEFAULT_MOUSE_INPUT_STRATEGY_HPP
@@ -15,7 +15,6 @@
 #include <ascension/platforms.hpp>
 #include <ascension/corelib/timer.hpp>	// Timer
 #include <ascension/kernel/position.hpp>	// kernel.Position
-#include <ascension/viewer/caret-observers.hpp>
 #include <ascension/viewer/widgetapi/widget.hpp>
 #include <memory>	// std.unique_ptr
 #include <utility>	// std.pair
