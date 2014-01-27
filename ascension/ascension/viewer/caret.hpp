@@ -68,13 +68,9 @@ namespace ascension {
 
 			/// @name Listeners
 			/// @{
-			void addCharacterInputListener(CharacterInputListener& listener);
 			void addInputPropertyListener(InputPropertyListener& listener);
-			void addListener(CaretListener& listener);
 			void addStateListener(CaretStateListener& listener);
-			void removeCharacterInputListener(CharacterInputListener& listener);
 			void removeInputPropertyListener(InputPropertyListener& listener);
-			void removeListener(CaretListener& listener);
 			void removeStateListener(CaretStateListener& listener);
 			/// @}
 
@@ -145,11 +141,19 @@ namespace ascension {
 			void updateLocation();
 			/// @}
 
+			/// @name Signals
+			/// @{
+			typedef boost::signals2::signal<void(const Caret&, const kernel::Region&)> MotionSignal;
+			SignalConnector<MotionSignal> motionSignal() BOOST_NOEXCEPT;
+			typedef boost::signals2::signal<void(const Caret&, CodePoint)> CharacterInputSignal;
+			SignalConnector<CharacterInputSignal> characterInputSignal() BOOST_NOEXCEPT;
+			/// @}
+
 		private:
 			void adjustInputMethodCompositionWindow();
 			bool canPastePlatformData() const;
 			void checkMatchBrackets();
-			void fireCaretMoved(const kernel::Region& oldRegion);
+			void fireCaretMoved(const kernel::Region& regionBeforeMotion);
 			void internalExtendSelection(void (*algorithm)(void));
 			void prechangeDocument();
 			void update(const kernel::DocumentChange& change);
@@ -194,9 +198,9 @@ namespace ascension {
 			std::unique_ptr<SelectionAnchor> anchor_;
 #ifdef ASCENSION_OS_WINDOWS
 			LCID clipboardLocale_;
-#endif // SCENSION_OS_WIND
-			ascension::detail::Listeners<CaretListener> listeners_;
-			ascension::detail::Listeners<CharacterInputListener> characterInputListeners_;
+#endif // ASCENSION_OS_WINDOWS
+			MotionSignal motionSignal_;
+			CharacterInputSignal characterInputSignal_;
 			ascension::detail::Listeners<CaretStateListener> stateListeners_;
 			ascension::detail::Listeners<InputPropertyListener> inputPropertyListeners_;
 			bool overtypeMode_;
