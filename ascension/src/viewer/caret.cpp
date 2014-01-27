@@ -83,6 +83,23 @@ namespace ascension {
 		 */
 
 		/**
+		 * @typedef ascension::viewers::Caret::MotionSignal
+		 * The signal which gets emitted when the caret was moved.
+		 * @param caret The caret
+		 * @param regionBeforeMotion The region which the caret had before. The @c first member is the anchor and
+		 *                           @c second member is the caret
+		 * @see #motionSignal
+		 */
+
+		/**
+		 * @typedef ascension::viewers::Caret::CharacterInputSignal
+		 * The signal which gets emitted when a character was input by the caret.
+		 * @param caret The caret
+		 * @param c The code point of the input character
+		 * @see #characterInputSignal
+		 */
+
+		/**
 		 * Constructor.
 		 * @param viewer The text viewer
 		 * @param position The initial position of the point
@@ -117,30 +134,12 @@ namespace ascension {
 		}
 
 		/**
-		 * Registers the character input listener.
-		 * @param listener The listener to be registered
-		 * @throw std#invalid_argument @a listener is already registered
-		 */
-		void Caret::addCharacterInputListener(CharacterInputListener& listener) {
-			characterInputListeners_.add(listener);
-		}
-
-		/**
 		 * Registers the input property listener.
 		 * @param listener The listener to be registered
 		 * @throw std#invalid_argument @a listener is already registered
 		 */
 		void Caret::addInputPropertyListener(InputPropertyListener& listener) {
 			inputPropertyListeners_.add(listener);
-		}
-
-		/**
-		 * Registers the listener.
-		 * @param listener The listener to be registered
-		 * @throw std#invalid_argument @a listener is already registered
-		 */
-		void Caret::addListener(CaretListener& listener) {
-			listeners_.add(listener);
 		}
 
 		/**
@@ -199,6 +198,11 @@ namespace ascension {
 			if(context_.matchBrackets != oldPair)
 				stateListeners_.notify<const Caret&, const boost::optional<std::pair<kernel::Position,
 					kernel::Position>>&, bool>(&CaretStateListener::matchBracketsChanged, *this, oldPair, false);
+		}
+
+		/// Returns the @c CharacterInputSignal signal connector.
+		SignalConnector<Caret::CharacterInputSignal> Caret::characterInputSignal() BOOST_NOEXCEPT {
+			return SignalConnector<Caret::CharacterInputSignal>(characterInputSignal_);
 		}
 
 		/// Clears the selection. The anchor will move to the caret.
@@ -341,10 +345,11 @@ namespace ascension {
 			context_.leaveAnchorNext = false;
 		}
 
-		inline void Caret::fireCaretMoved(const kernel::Region& oldRegion) {
+		/// @internal Invokes @c MotionSignal.
+		inline void Caret::fireCaretMoved(const kernel::Region& regionBeforeMotion) {
 			if(!isTextViewerDisposed() && !textViewer().isFrozen() && (widgetapi::hasFocus(textViewer()) /*|| widgetapi::hasFocus(*completionWindow_)*/))
 				updateLocation();
-			listeners_.notify<const Caret&, const kernel::Region&>(&CaretListener::caretMoved, *this, oldRegion);
+			motionSignal_(*this, regionBeforeMotion);
 		}
 
 		namespace {
@@ -449,8 +454,13 @@ namespace ascension {
 					context_.lastTypedPosition = position();
 			}
 
-			characterInputListeners_.notify<const Caret&, CodePoint>(&CharacterInputListener::characterInput, *this, character);
+			characterInputSignal_(*this, character);
 			return true;
+		}
+
+		/// Returns the @c MotionSignal signal connector.
+		SignalConnector<Caret::MotionSignal> Caret::motionSignal() BOOST_NOEXCEPT {
+			return SignalConnector<Caret::MotionSignal>(motionSignal_);
 		}
 
 		/// @see VisualPoint#moved
@@ -489,30 +499,12 @@ namespace ascension {
 		}
 
 		/**
-		 * Removes the character input listener
-		 * @param listener The listener to be removed
-		 * @throw std#invalid_argument @a listener is not registered
-		 */
-		void Caret::removeCharacterInputListener(CharacterInputListener& listener) {
-			characterInputListeners_.remove(listener);
-		}
-
-		/**
 		 * Removes the input property listener
 		 * @param listener The listener to be removed
 		 * @throw std#invalid_argument @a listener is not registered
 		 */
 		void Caret::removeInputPropertyListener(InputPropertyListener& listener) {
 			inputPropertyListeners_.remove(listener);
-		}
-
-		/**
-		 * Removes the listener.
-		 * @param listener The listener to be removed
-		 * @throw std#invalid_argument @a listener is not registered
-		 */
-		void Caret::removeListener(CaretListener& listener) {
-			listeners_.remove(listener);
 		}
 
 		/**

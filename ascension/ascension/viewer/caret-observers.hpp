@@ -23,37 +23,6 @@ namespace ascension {
 		class Caret;
 
 		/**
-		 * Interface for objects which are interested in getting informed about caret movement.
-		 * @see Caret#addListener, Caret#removeListener
-		 */
-		class CaretListener {
-		private:
-			/**
-			 * The caret was moved.
-			 * @param caret The caret
-			 * @param oldRegion The region which the caret had before. @c first is the anchor, and
-			 *                  @c second is the caret
-			 */
-			virtual void caretMoved(const Caret& caret, const kernel::Region& oldRegion) = 0;
-			friend class Caret;
-		};
-
-		/**
-		 * Interface for objects which are interested in character input by a caret.
-		 * @see Caret#addCharacterInputListener, Caret#removeCharacterInputListener
-		 */
-		class CharacterInputListener {
-		private:
-			/**
-			 * A character was input by the caret.
-			 * @param caret The caret
-			 * @param c The code point of the input character
-			 */
-			virtual void characterInput(const Caret& caret, CodePoint c) = 0;
-			friend class Caret;
-		};
-
-		/**
 		 * Interface for objects which are interested in getting informed about changes of a caret.
 		 * @see IPointListener, Caret#addStateListener, Caret#removeStateListener
 		 */
