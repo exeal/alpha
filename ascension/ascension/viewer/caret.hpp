@@ -4,7 +4,7 @@
  * @author exeal
  * @date 2003-2008 was point.hpp
  * @date 2008 separated from point.hpp
- * @date 2009-2013
+ * @date 2009-2014
  */
 
 #ifndef ASCENSION_CARET_HPP
@@ -143,10 +143,17 @@ namespace ascension {
 
 			/// @name Signals
 			/// @{
-			typedef boost::signals2::signal<void(const Caret&, const kernel::Region&)> MotionSignal;
-			SignalConnector<MotionSignal> motionSignal() BOOST_NOEXCEPT;
 			typedef boost::signals2::signal<void(const Caret&, CodePoint)> CharacterInputSignal;
+			typedef boost::signals2::signal<void(const Caret&,
+				const boost::optional<std::pair<kernel::Position, kernel::Position>>& oldPair, bool outsideOfView)> MatchBracketsChangedSignal;
+			typedef boost::signals2::signal<void(const Caret&, const kernel::Region&)> MotionSignal;
+			typedef boost::signals2::signal<void(const Caret&)> OvertypeModeChangedSignal;
+			typedef boost::signals2::signal<void(const Caret&)> SelectionShapeChangedSignal;	// bad naming :(
 			SignalConnector<CharacterInputSignal> characterInputSignal() BOOST_NOEXCEPT;
+			SignalConnector<MatchBracketsChangedSignal> matchBracketsChangedSignal() BOOST_NOEXCEPT;
+			SignalConnector<MotionSignal> motionSignal() BOOST_NOEXCEPT;
+			SignalConnector<OvertypeModeChangedSignal> overtypeModeChangedSignal() BOOST_NOEXCEPT;
+			SignalConnector<SelectionShapeChangedSignal> selectionShapeChangedSignal() BOOST_NOEXCEPT;
 			/// @}
 
 		private:
@@ -199,9 +206,11 @@ namespace ascension {
 #ifdef ASCENSION_OS_WINDOWS
 			LCID clipboardLocale_;
 #endif // ASCENSION_OS_WINDOWS
-			MotionSignal motionSignal_;
 			CharacterInputSignal characterInputSignal_;
-			ascension::detail::Listeners<CaretStateListener> stateListeners_;
+			MatchBracketsChangedSignal matchBracketsChangedSignal_;
+			MotionSignal motionSignal_;
+			OvertypeModeChangedSignal overtypeModeChangedSignal_;
+			SelectionShapeChangedSignal selectionShapeChangedSignal_;
 			ascension::detail::Listeners<InputPropertyListener> inputPropertyListeners_;
 			bool overtypeMode_;
 			bool autoShow_;		// true if show itself when movements

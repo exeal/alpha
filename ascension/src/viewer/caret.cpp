@@ -83,6 +83,23 @@ namespace ascension {
 		 */
 
 		/**
+		 * @typedef ascension::viewers::Caret::CharacterInputSignal
+		 * The signal which gets emitted when a character was input by the caret.
+		 * @param caret The caret
+		 * @param c The code point of the input character
+		 * @see #characterInputSignal, #inputCharacter
+		 */
+
+		/**
+		 * @typedef ascension::viewers::Caret::MatchBracketsChangedSignal
+		 * The signal which gets emitted when the matched brackets were changed.
+		 * @param caret The caret
+		 * @param previouslyMatchedBrackets The pair of the brackets previously matched. May be @c boost#none
+		 * @param outsideOfView The brackets newly matched are outside of the view
+		 * @see #matchBrackets, #matchBracketsChangedSignal
+		 */
+
+		/**
 		 * @typedef ascension::viewers::Caret::MotionSignal
 		 * The signal which gets emitted when the caret was moved.
 		 * @param caret The caret
@@ -92,11 +109,17 @@ namespace ascension {
 		 */
 
 		/**
-		 * @typedef ascension::viewers::Caret::CharacterInputSignal
-		 * The signal which gets emitted when a character was input by the caret.
+		 * @typedef ascension::viewers::Caret::OvertypeModeChangedSignal
+		 * The signal which gets emitted when the overtype mode of the caret is changed.
 		 * @param caret The caret
-		 * @param c The code point of the input character
-		 * @see #characterInputSignal
+		 * @see #isOvertypeMode, #overtypeModeChangedSignal, #setOvertypeMode
+		 */
+
+		/**
+		 * @typedef ascension::viewers::Caret::SelectionShapeChangedSignal
+		 * The signal which gets emitted when tte shape (linear or rectangle) of the selection is changed.
+		 * @param caret The caret
+		 * @see #beginRectangleSelection, #endRectangleSelection, #isSelectionRectangle, #selectionShapeChangedSignal
 		 */
 
 		/**
@@ -143,22 +166,13 @@ namespace ascension {
 		}
 
 		/**
-		 * Registers the state listener.
-		 * @param listener The listener to be registered
-		 * @throw std#invalid_argument @a listener is already registered
-		 */
-		void Caret::addStateListener(CaretStateListener& listener) {
-			stateListeners_.add(listener);
-		}
-
-		/**
 		 * Starts rectangular selection.
 		 * @see #endRectangleSelection, #isSelectionRectangle
 		 */
 		void Caret::beginRectangleSelection() {
 			if(context_.selectedRectangle.get() == nullptr) {
 				context_.selectedRectangle.reset(new VirtualBox(textViewer(), selectedRegion()));
-				stateListeners_.notify<const Caret&>(&CaretStateListener::selectionShapeChanged, *this);
+				selectionShapeChangedSignal_(*this);
 			}
 		}
 
@@ -196,13 +210,12 @@ namespace ascension {
 				matchBrackets_.first = matchBrackets_.second = Position::INVALID_POSITION;
 */			// TODO: check if the pair is out of view.
 			if(context_.matchBrackets != oldPair)
-				stateListeners_.notify<const Caret&, const boost::optional<std::pair<kernel::Position,
-					kernel::Position>>&, bool>(&CaretStateListener::matchBracketsChanged, *this, oldPair, false);
+				matchBracketsChangedSignal_(*this, oldPair, false);
 		}
 
 		/// Returns the @c CharacterInputSignal signal connector.
 		SignalConnector<Caret::CharacterInputSignal> Caret::characterInputSignal() BOOST_NOEXCEPT {
-			return SignalConnector<Caret::CharacterInputSignal>(characterInputSignal_);
+			return makeSignalConnector(characterInputSignal_);
 		}
 
 		/// Clears the selection. The anchor will move to the caret.
@@ -233,7 +246,7 @@ namespace ascension {
 				throw TextViewerDisposedException();
 			if(context_.selectedRectangle.get() != nullptr) {
 				context_.selectedRectangle.reset();
-				stateListeners_.notify<const Caret&>(&CaretStateListener::selectionShapeChanged, *this);
+				selectionShapeChangedSignal_(*this);
 			}
 		}
 #if 0
@@ -458,9 +471,14 @@ namespace ascension {
 			return true;
 		}
 
+		/// Returns the @c MatchBracketsChangedSignal signal connector.
+		SignalConnector<Caret::MatchBracketsChangedSignal> Caret::matchBracketsChangedSignal() BOOST_NOEXCEPT {
+			return makeSignalConnector(matchBracketsChangedSignal_);
+		}
+
 		/// Returns the @c MotionSignal signal connector.
 		SignalConnector<Caret::MotionSignal> Caret::motionSignal() BOOST_NOEXCEPT {
-			return SignalConnector<Caret::MotionSignal>(motionSignal_);
+			return makeSignalConnector(motionSignal_);
 		}
 
 		/// @see VisualPoint#moved
@@ -477,6 +495,11 @@ namespace ascension {
 			VisualPoint::moved(from);
 			if(!document().isChanging())
 				updateVisualAttributes();
+		}
+
+		/// Returns the @c OvertypeModeChangedSignal signal connector.
+		SignalConnector<Caret::OvertypeModeChangedSignal> Caret::overtypeModeChangedSignal() BOOST_NOEXCEPT {
+			return makeSignalConnector(overtypeModeChangedSignal_);
 		}
 
 		/// @see PointListener#pointMoved
@@ -505,15 +528,6 @@ namespace ascension {
 		 */
 		void Caret::removeInputPropertyListener(InputPropertyListener& listener) {
 			inputPropertyListeners_.remove(listener);
-		}
-
-		/**
-		 * Removes the state listener
-		 * @param listener The listener to be removed
-		 * @throw std#invalid_argument @a listener is not registered
-		 */
-		void Caret::removeStateListener(CaretStateListener& listener) {
-			stateListeners_.remove(listener);
 		}
 
 		/**
@@ -625,6 +639,11 @@ namespace ascension {
 			checkMatchBrackets();
 		}
 
+		/// Returns the @c SelectionShapeChangedSignal signal connector.
+		SignalConnector<Caret::OvertypeModeChangedSignal> Caret::selectionShapeChangedSignal() BOOST_NOEXCEPT {
+			return makeSignalConnector(selectionShapeChangedSignal_);
+		}
+
 		/**
 		 * Sets character input mode.
 		 * @param overtype Set @c true to set to overtype mode, @c false to set to insert mode
@@ -634,7 +653,7 @@ namespace ascension {
 		Caret& Caret::setOvertypeMode(bool overtype) BOOST_NOEXCEPT {
 			if(overtype != overtypeMode_) {
 				overtypeMode_ = overtype;
-				stateListeners_.notify<const Caret&>(&CaretStateListener::overtypeModeChanged, *this);
+				overtypeModeChangedSignal_(*this);
 			}
 			return *this;
 		}
