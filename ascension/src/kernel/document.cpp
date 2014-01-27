@@ -529,6 +529,35 @@ namespace ascension {
 		 * @see DocumentPartitioner, Point, EditPoint
 		 */
 
+		/**
+		 * @typedef ascension::kernel::Document::AccessibleRegionChangedSignal
+		 * The signal which gets emitted when the accessible region of the document was changed.
+		 * @param document The document
+		 * @see #accessibleRegion, #accessibleRegionChangedSignal, #isNarrowed, #narrowToRegion, #widen
+		 */
+
+		/**
+		 * @typedef ascension::kernel::Document::ModificationSignChangedSignal
+		 * The signal which gets emitted when the modification flag of the document was changed.
+		 * @param document The document
+		 * @see #isModified, #markUnmodified, #modificationSignChangedSignal, #setModified
+		 */
+
+		/**
+		 * @typedef ascension::kernel::Document::PropertyChangedSignal
+		 * The signal which gets emitted when the property has @a key associated with the document was changed.
+		 * @param document The document
+		 * @param key The property key
+		 * @see #property, #propertyChangedSignal, #setProperty
+		 */
+
+		/**
+		 * @typedef ascension::kernel::Document::ReadOnlySignChangedSignal
+		 * The signal which gets emitted when the read only mode of the document was changed.
+		 * @param document The document
+		 * @see #isReadOnly, #readOnlySignChangedSignal, #setReadOnly
+		 */
+
 		const DocumentPropertyKey Document::TITLE_PROPERTY;
 
 		/**
@@ -537,6 +566,11 @@ namespace ascension {
 		 */
 		Region Document::accessibleRegion() const BOOST_NOEXCEPT {
 			return (accessibleRegion_.get() != nullptr) ? Region(accessibleRegion_->first, *accessibleRegion_->second) : region();
+		}
+
+		/// Returns the @c AccessibleRegionChangedSignal signal connector.
+		SignalConnector<Document::AccessibleRegionChangedSignal> Document::accessibleRegionChangedSignal() BOOST_NOEXCEPT {
+			return makeSignalConnector(accessibleRegionChangedSignal_);
 		}
 
 #if 0
@@ -693,6 +727,11 @@ namespace ascension {
 			}
 		}
 
+		/// Returns the @c ModificationSignChangedSignal signal connector.
+		SignalConnector<Document::ModificationSignChangedSignal> Document::modificationSignChangedSignal() BOOST_NOEXCEPT {
+			return makeSignalConnector(modificationSignChangedSignal_);
+		}
+
 		/**
 		 * Narrows the accessible area to the specified region.
 		 * If the document is already narrowed, the accessible region will just change to @a region. In this case,
@@ -717,6 +756,16 @@ namespace ascension {
 //					p->normalize();
 //			}
 			accessibleRegionChangedSignal_(*this);
+		}
+
+		/// Returns the @c PropertyChangedSignal signal connector.
+		SignalConnector<Document::PropertyChangedSignal> Document::propertyChangedSignal() BOOST_NOEXCEPT {
+			return makeSignalConnector(propertyChangedSignal_);
+		}
+
+		/// Returns the @c ReadOnlySignChangedSignal signal connector.
+		SignalConnector<Document::ReadOnlySignChangedSignal> Document::readOnlySignChangedSignal() BOOST_NOEXCEPT {
+			return makeSignalConnector(readOnlySignChangedSignal_);
 		}
 
 		/**
