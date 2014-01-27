@@ -14,7 +14,6 @@
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/kernel/point.hpp>
 #include <ascension/presentation/writing-mode.hpp>
-#include <ascension/viewer/caret-observers.hpp>
 #include <ascension/viewer/ruler.hpp>
 #include <ascension/viewer/viewer-observers.hpp>
 #include <ascension/viewer/widgetapi/scrollable.hpp>
@@ -48,6 +47,7 @@
 
 namespace ascension {
 	namespace viewers {
+		class Caret;
 		class VirtualBox;
 		class VisualPoint;
 		class TextViewer;
@@ -116,7 +116,7 @@ namespace ascension {
 				public kernel::DocumentListener, public kernel::DocumentRollbackListener,
 				public graphics::font::DefaultFontListener, public graphics::font::VisualLinesListener,
 				public graphics::font::TextViewportListener, public graphics::font::ComputedBlockFlowDirectionListener,
-				public CaretListener, public CaretStateListener, public kernel::detail::PointCollection<VisualPoint> {
+				public kernel::detail::PointCollection<VisualPoint> {
 		public:
 			/**
 			 * Result of hit test.
@@ -290,14 +290,12 @@ namespace ascension {
 
 			// protected interfaces
 		protected:
-			// CaretListener (overridable)
-			virtual void caretMoved(const Caret& self, const kernel::Region& oldRegion);
-			// CaretStateListener (overridable)
-			virtual void matchBracketsChanged(const Caret& self,
-				const boost::optional<std::pair<kernel::Position, kernel::Position>>& oldPair,
+			// Caret signals (overridable)
+			virtual void caretMoved(const Caret& caret, const kernel::Region& oldRegion);
+			virtual void matchBracketsChanged(const Caret& caret,
+				const boost::optional<std::pair<kernel::Position, kernel::Position>>& previouslyMatchedBrackets,
 				bool outsideOfView);
-			virtual void overtypeModeChanged(const Caret& self);
-			virtual void selectionShapeChanged(const Caret& self);
+			virtual void selectionShapeChanged(const Caret& caret);
 		private:
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 			// base.Widget
@@ -459,6 +457,8 @@ namespace ascension {
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
 			win32::com::SmartPointer<detail::AbstractAccessibleProxy> accessibleProxy_;
 #endif
+			boost::signals2::scoped_connection caretMotionConnection_,
+				matchBracketsChangedConnection_, selectionShapeChangedConnection_;
 
 			// modes
 			struct ModeState {

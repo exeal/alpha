@@ -36,7 +36,6 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 */
 		class DefaultContentAssistant : public ContentAssistant, public kernel::DocumentListener,
-			public viewers::CaretListener, public viewers::CharacterInputListener,
 			public viewers::ViewportListener, public graphics::font::TextViewportListener,
 			private ContentAssistant::CompletionProposalsUI {
 		public:
@@ -64,9 +63,9 @@ namespace ascension {
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
-			// viewers.CaretListener
-			void caretMoved(const viewers::Caret& caret, const kernel::Region& oldRegion);
-			// viewers.CharacterInputListener
+			// viewers.Caret.MotionSignal
+			void caretMoved(const viewers::Caret& caret, const kernel::Region& regionBeforeMotion);
+			// viewers.Caret.CharacterInputSignal
 			void characterInput(const viewers::Caret& caret, CodePoint c);
 			// viewers.ViewportListener
 			void viewportChanged(bool horizontal, bool vertical);
@@ -141,6 +140,7 @@ namespace ascension {
 				std::vector<std::shared_ptr<const CompletionProposal>> proposals_;
 			};
 			std::unique_ptr<CompletionProposalsPopup> proposalsPopup_;
+			boost::signals2::connection caretMotionConnection_, caretCharacterInputConnection_;
 		};
 	}
 } // namespace ascension.contentassist

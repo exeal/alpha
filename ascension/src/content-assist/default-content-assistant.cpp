@@ -91,7 +91,7 @@ namespace ascension {
 				// these connections were maken by startPopup() method
 				textViewer_->removeViewportListener(*this);
 				textViewer_->textRenderer().viewport()->removeListener(*this);
-				textViewer_->caret().removeListener(*this);
+				caretMotionConnection_.disconnect();
 				if(completionSession_->incremental)
 					textViewer_->document().removeListener(*this);
 				completionSession_.reset();
@@ -182,7 +182,9 @@ namespace ascension {
 
 		/// @see ContentAssistant#install
 		void DefaultContentAssistant::install(viewers::TextViewer& viewer) {
-			(textViewer_ = &viewer)->caret().addCharacterInputListener(*this);
+			textViewer_ = &viewer;
+			caretCharacterInputConnection_ = textViewer_->caret().characterInputSignal().connect(
+				std::bind(&DefaultContentAssistant::characterInput, this, std::placeholders::_1, std::placeholders::_2));
 		}
 
 		/**
@@ -248,14 +250,15 @@ namespace ascension {
 
 			// determine the horizontal orientation of the window
 			proposalsPopup_->setWritingMode(
-				textViewer_->textRenderer().layouts().at(line(textViewer_->caret()), graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT).writingMode());
+				textViewer_->textRenderer().layouts().at(kernel::line(textViewer_->caret()), graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT).writingMode());
 			proposalsPopup_->resetContent(completionSession_->proposals.get(), completionSession_->numberOfProposals);
 			updatePopupBounds();
 
 			// these connections are revoke by close() method
 			textViewer_->addViewportListener(*this);
 			textViewer_->textRenderer().viewport()->addListener(*this);
-			textViewer_->caret().addListener(*this);
+			caretMotionConnection_ = textViewer_->caret().motionSignal().connect(
+				std::bind(&DefaultContentAssistant::caretMoved, this, std::placeholders::_1, std::placeholders::_2));
 			if(completionSession_->incremental)
 				textViewer_->document().addListener(*this);
 		}
@@ -269,7 +272,7 @@ namespace ascension {
 		/// @see ContentAssistant#uninstall
 		void DefaultContentAssistant::uninstall() {
 			if(textViewer_ != nullptr) {
-				textViewer_->caret().removeCharacterInputListener(*this);
+				caretCharacterInputConnection_.disconnect();
 				textViewer_ = nullptr;
 			}
 		}

@@ -91,6 +91,21 @@ namespace ascension {
 		 */
 
 		/**
+		 * @typedef ascension::viewers::Caret::InputLocaleChangedSignal
+		 * The signal which gets emitted when the text viewer's input locale had been changed (ex.
+		 * @c WM_INPUTLANGCHANGE of Win32).
+		 * @param caret The caret
+		 * @see #inputLocaleChangedSignal
+		 */
+
+		/**
+		 * @typedef ascension::viewers::Caret::InputMethodOpenStatusChangedSignal
+		 * The signal which gets emitted when the text viewer's input method open status had been changed.
+		 * @param caret The caret
+		 * @see #inputMethodOpenStatusChangedSignal
+		 */
+
+		/**
 		 * @typedef ascension::viewers::Caret::MatchBracketsChangedSignal
 		 * The signal which gets emitted when the matched brackets were changed.
 		 * @param caret The caret
@@ -117,7 +132,7 @@ namespace ascension {
 
 		/**
 		 * @typedef ascension::viewers::Caret::SelectionShapeChangedSignal
-		 * The signal which gets emitted when tte shape (linear or rectangle) of the selection is changed.
+		 * The signal which gets emitted when the shape (linear or rectangle) of the selection is changed.
 		 * @param caret The caret
 		 * @see #beginRectangleSelection, #endRectangleSelection, #isSelectionRectangle, #selectionShapeChangedSignal
 		 */
@@ -154,15 +169,6 @@ namespace ascension {
 			if(kernel::positions::isOutsideOfDocumentRegion(document(), to))
 				throw kernel::BadPositionException(to, "Caret tried to move outside of document.");
 			VisualPoint::aboutToMove(to);
-		}
-
-		/**
-		 * Registers the input property listener.
-		 * @param listener The listener to be registered
-		 * @throw std#invalid_argument @a listener is already registered
-		 */
-		void Caret::addInputPropertyListener(InputPropertyListener& listener) {
-			inputPropertyListeners_.add(listener);
 		}
 
 		/**
@@ -519,15 +525,6 @@ namespace ascension {
 				document().insertUndoBoundary();
 				context_.lastTypedPosition = boost::none;
 			}
-		}
-
-		/**
-		 * Removes the input property listener
-		 * @param listener The listener to be removed
-		 * @throw std#invalid_argument @a listener is not registered
-		 */
-		void Caret::removeInputPropertyListener(InputPropertyListener& listener) {
-			inputPropertyListeners_.remove(listener);
 		}
 
 		/**

@@ -12,7 +12,6 @@
 #include <ascension/corelib/timer.hpp>
 #include <ascension/kernel/document-observers.hpp>
 #include <ascension/kernel/partition.hpp>	// kernel.ContentType
-#include <ascension/viewer/caret-observers.hpp>
 #include <ascension/viewer/viewer-observers.hpp>
 #include <memory>	// std.shared_ptr
 #include <set>
@@ -23,6 +22,7 @@
 namespace ascension {
 
 	namespace viewers {
+		class Caret;
 		class TextViewer;
 	}
 

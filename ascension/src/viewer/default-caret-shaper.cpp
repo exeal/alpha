@@ -26,10 +26,10 @@ namespace ascension {
 		}
 
 		/// @see CaretListener#caretMoved
-		void DefaultCaretShaper::caretMoved(const Caret& caret, const kernel::Region& oldRegion) {
+		void DefaultCaretShaper::caretMoved(const Caret& caret, const kernel::Region& regionBeforeMotion) {
 			if(updater_ != nullptr) {
 				assert(&updater_->caret() == &caret);	// sanity check...
-				if(line(caret) != oldRegion.second.line)
+				if(kernel::line(caret) != regionBeforeMotion.second.line)
 					updater_->update();
 			}
 		}
@@ -43,7 +43,8 @@ namespace ascension {
 		/// @see CaretShaper#install
 		void DefaultCaretShaper::install(CaretShapeUpdater& updater) BOOST_NOEXCEPT {
 			updater_ = &updater;
-			updater_->caret().addListener(*this);
+			caretMotionConnection_ = updater.caret().motionSignal().connect(
+				std::bind(&DefaultCaretShaper::caretMoved, this, std::placeholders::_1, std::placeholders::_2));
 			updater_->caret().textViewer().textRenderer().addComputedBlockFlowDirectionListener(*this);
 			updater_->caret().textViewer().textRenderer().layouts().addVisualLinesListener(*this);
 		}
@@ -74,7 +75,7 @@ namespace ascension {
 				DWORD width;
 				if(::SystemParametersInfo(SPI_GETCARETWIDTH, 0, &width, 0) == 0)
 					width = 1;	// NT4 does not support SPI_GETCARETWIDTH
-				return static_cast<uint16_t>(width);
+				return static_cast<std::uint16_t>(width);
 #else
 				// TODO: Write codes in other platforms.
 #endif
@@ -206,7 +207,7 @@ namespace ascension {
 
 		/// @see CaretShaper#uninstall
 		void DefaultCaretShaper::uninstall() BOOST_NOEXCEPT {
-			updater_->caret().removeListener(*this);
+			caretMotionConnection_.disconnect();
 			updater_->caret().textViewer().textRenderer().removeComputedBlockFlowDirectionListener(*this);
 			updater_->caret().textViewer().textRenderer().layouts().removeVisualLinesListener(*this);
 			updater_ = nullptr;
@@ -233,21 +234,21 @@ namespace ascension {
 		} // namespace @0
 
 		/// @see CaretListener#caretMoved
-		void LocaleSensitiveCaretShaper::caretMoved(const Caret& caret, const kernel::Region& oldRegion) {
+		void LocaleSensitiveCaretShaper::caretMoved(const Caret& caret, const kernel::Region& regionBeforeMotion) {
 			if(updater() != nullptr && caret.isOvertypeMode())
 				updater()->update();
 			else
-				DefaultCaretShaper::caretMoved(caret, oldRegion);
+				DefaultCaretShaper::caretMoved(caret, regionBeforeMotion);
 		}
 
 		/// @see TextViewerInputStatusListener#inputLocaleChanged
-		void LocaleSensitiveCaretShaper::inputLocaleChanged() BOOST_NOEXCEPT {
+		void LocaleSensitiveCaretShaper::inputLocaleChanged(const Caret&) BOOST_NOEXCEPT {
 			if(updater() != nullptr)
 				updater()->update();
 		}
 
 		/// @see InputPropertyListener#inputMethodOpenStatusChanged
-		void LocaleSensitiveCaretShaper::inputMethodOpenStatusChanged() BOOST_NOEXCEPT {
+		void LocaleSensitiveCaretShaper::inputMethodOpenStatusChanged(const Caret&) BOOST_NOEXCEPT {
 			if(updater() != nullptr)
 				updater()->update();
 		}
@@ -255,22 +256,18 @@ namespace ascension {
 		/// @see CaretShaper#install
 		void LocaleSensitiveCaretShaper::install(CaretShapeUpdater& updater) {
 			DefaultCaretShaper::install(updater);
-			updater.caret().addStateListener(*this);
-			updater.caret().addInputPropertyListener(*this);
-		}
-
-		/// @see CaretStateListener#matchBracketsChanged
-		void LocaleSensitiveCaretShaper::matchBracketsChanged(const Caret&, const std::pair<kernel::Position, kernel::Position>&, bool) {
+			caretOvertypeModeChangedConnection_ = updater.caret().overtypeModeChangedSignal().connect(
+				std::bind(&LocaleSensitiveCaretShaper::overtypeModeChanged, this, std::placeholders::_1));
+			inputLocaleChangedConnection_ = updater.caret().inputLocaleChangedSignal().connect(
+				std::bind(&LocaleSensitiveCaretShaper::inputLocaleChanged, this, std::placeholders::_1));
+			inputMethodOpenStatusChangedConnection_ = updater.caret().inputMethodOpenStatusChangedSignal().connect(
+				std::bind(&LocaleSensitiveCaretShaper::inputMethodOpenStatusChanged, this, std::placeholders::_1));
 		}
 
 		/// @see CaretStateListener#overtypeModeChanged
 		void LocaleSensitiveCaretShaper::overtypeModeChanged(const Caret&) {
 			if(updater() != nullptr)
 				updater()->update();
-		}
-
-		/// @see CaretShapeListener#selectionShapeChanged
-		void LocaleSensitiveCaretShaper::selectionShapeChanged(const Caret&) {
 		}
 
 		/// @see CaretShaper#shape
@@ -281,8 +278,9 @@ namespace ascension {
 		/// @see CaretShapeProvider#uninstall
 		void LocaleSensitiveCaretShaper::uninstall() {
 			assert(updater() != nullptr);
-			updater()->caret().removeStateListener(*this);
-			updater()->caret().removeInputPropertyListener(*this);
+			caretOvertypeModeChangedConnection_.disconnect();
+			inputLocaleChangedConnection_.disconnect();
+			inputMethodOpenStatusChangedConnection_.disconnect();
 			DefaultCaretShaper::uninstall();
 		}
 	}

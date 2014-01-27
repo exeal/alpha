@@ -11,7 +11,6 @@
 #ifndef ASCENSION_DEFAULT_CARET_SHAPER_HPP
 #define ASCENSION_DEFAULT_CARET_SHAPER_HPP
 #include <ascension/graphics/font/text-renderer.hpp>	// graphics.font.ComputedBlockFlowDirectionListener, graphics.font.VisualLinesListener
-#include <ascension/viewer/caret-observers.hpp>			// CaretListener, CaretStateListener, InputPropertyListener
 #include <ascension/viewer/caret-shaper.hpp>
 #include <utility>	// std.pair
 
@@ -24,7 +23,7 @@ namespace ascension {
 		 * the writing mode of the text viewer and the line metrics.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class DefaultCaretShaper : public CaretShaper, public CaretListener,
+		class DefaultCaretShaper : public CaretShaper,
 			public graphics::font::ComputedBlockFlowDirectionListener,
 			public graphics::font::VisualLinesListener {
 			ASCENSION_NONCOPYABLE_TAG(DefaultCaretShaper);
@@ -38,8 +37,8 @@ namespace ascension {
 			virtual void shape(std::unique_ptr<graphics::Image>& image,
 				graphics::geometry::BasicPoint<std::uint32_t>& alignmentPoint) const BOOST_NOEXCEPT;
 			virtual void uninstall() BOOST_NOEXCEPT;
-			// CaretListener
-			virtual void caretMoved(const Caret& caret, const kernel::Region& oldRegion);
+			// Caret.MotionSignal
+			virtual void caretMoved(const Caret& caret, const kernel::Region& regionBeforeMotion);
 			// graphics.font.ComputedBlockFlowDirectionListener
 			void computedBlockFlowDirectionChanged(presentation::BlockFlowDirection used);
 			// graphics.font.VisualLinesListener
@@ -51,14 +50,14 @@ namespace ascension {
 				bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT;
 		private:
 			CaretShapeUpdater* updater_;
+			boost::signals2::connection caretMotionConnection_;
 		};
 
 		/**
 		 * @c LocaleSensitiveCaretShaper defines caret shape based on active keyboard layout.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class LocaleSensitiveCaretShaper : public DefaultCaretShaper,
-			public CaretStateListener, public InputPropertyListener {
+		class LocaleSensitiveCaretShaper : public DefaultCaretShaper {
 		public:
 			explicit LocaleSensitiveCaretShaper() BOOST_NOEXCEPT;
 		private:
@@ -67,16 +66,14 @@ namespace ascension {
 			void shape(std::unique_ptr<graphics::Image>& image,
 				graphics::geometry::BasicPoint<std::uint32_t>& alignmentPoint) const BOOST_NOEXCEPT;
 			void uninstall() BOOST_NOEXCEPT;
-			// CaretListener
-			void caretMoved(const Caret& caret, const kernel::Region& oldRegion);
-			// CaretStateListener
-			void matchBracketsChanged(const Caret& self,
-				const std::pair<kernel::Position, kernel::Position>& oldPair, bool outsideOfView);
-			void overtypeModeChanged(const Caret& self);
-			void selectionShapeChanged(const Caret& self);
-			// InputPropertyListener
-			void inputLocaleChanged() BOOST_NOEXCEPT;
-			void inputMethodOpenStatusChanged() BOOST_NOEXCEPT;
+			// Caret signals
+			void caretMoved(const Caret& caret, const kernel::Region& regionBeforeMotion);
+			void inputLocaleChanged(const Caret& caret) BOOST_NOEXCEPT;
+			void inputMethodOpenStatusChanged(const Caret& caret) BOOST_NOEXCEPT;
+			void overtypeModeChanged(const Caret& caret);
+		private:
+			boost::signals2::connection caretOvertypeModeChangedConnection_,
+				inputLocaleChangedConnection_, inputMethodOpenStatusChangedConnection_;
 		};
 
 	}

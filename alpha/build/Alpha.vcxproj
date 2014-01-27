@@ -350,7 +350,6 @@
     <ClInclude Include="..\..\ascension\ascension\text-editor\input-sequence-checker.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\kill-ring.hpp" />
     <ClInclude Include="..\..\ascension\ascension\text-editor\session.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\viewer\caret-observers.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\caret-shaper.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\current-line-highlighter.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\default-caret-shaper.hpp" />
