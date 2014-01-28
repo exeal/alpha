@@ -442,7 +442,7 @@ LRESULT Caret::handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consum
 			break;
 		case WM_IME_NOTIFY:
 			if(wp == IMN_SETOPENSTATUS)
-				inputPropertyListeners_.notify(&InputPropertyListener::inputMethodOpenStatusChanged);
+				inputModeChangedSignal_(*this, INPUT_METHOD_OPEN_STATUS);
 			break;
 		case WM_IME_REQUEST:
 			return onImeRequest(wp, lp, consumed);
@@ -452,7 +452,7 @@ LRESULT Caret::handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consum
 			utils::closeCompletionProposalsPopup(textViewer());
 			break;
 		case WM_INPUTLANGCHANGE:
-			inputPropertyListeners_.notify(&InputPropertyListener::inputLocaleChanged);
+			inputModeChangedSignal_.(*this, INPUT_LOCALE);
 			break;
 		case WM_SYSCHAR:
 			break;

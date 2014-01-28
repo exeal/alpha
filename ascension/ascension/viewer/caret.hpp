@@ -135,19 +135,21 @@ namespace ascension {
 			/// @name Signals
 			/// @{
 			typedef boost::signals2::signal<void(const Caret&, CodePoint)> CharacterInputSignal;
-			typedef boost::signals2::signal<void(const Caret&)> InputLocaleChangedSignal;
-			typedef boost::signals2::signal<void(const Caret&)> InputMethodOpenStatusChangedSignal;
+			/// Describes types of @c InputModeChangedSignal.
+			enum InputModeChangedSignalType {
+				INPUT_LOCALE,				///< The text viewer's input locale had been changed.
+				INPUT_METHOD_OPEN_STATUS,	///< The text viewer's input method open status had been changed.
+				OVERTYPE_MODE				///< The overtype mode of the caret is changed.
+			};
+			typedef boost::signals2::signal<void(const Caret&, InputModeChangedSignalType)> InputModeChangedSignal;
 			typedef boost::signals2::signal<void(const Caret&,
 				const boost::optional<std::pair<kernel::Position, kernel::Position>>& oldPair, bool outsideOfView)> MatchBracketsChangedSignal;
 			typedef boost::signals2::signal<void(const Caret&, const kernel::Region&)> MotionSignal;
-			typedef boost::signals2::signal<void(const Caret&)> OvertypeModeChangedSignal;
 			typedef boost::signals2::signal<void(const Caret&)> SelectionShapeChangedSignal;	// bad naming :(
 			SignalConnector<CharacterInputSignal> characterInputSignal() BOOST_NOEXCEPT;
-			SignalConnector<InputLocaleChangedSignal> inputLocaleChangedSignal() BOOST_NOEXCEPT;
-			SignalConnector<InputMethodOpenStatusChangedSignal> inputMethodOpenStatusChangedSignal() BOOST_NOEXCEPT;
+			SignalConnector<InputModeChangedSignal> inputModeChangedSignal() BOOST_NOEXCEPT;
 			SignalConnector<MatchBracketsChangedSignal> matchBracketsChangedSignal() BOOST_NOEXCEPT;
 			SignalConnector<MotionSignal> motionSignal() BOOST_NOEXCEPT;
-			SignalConnector<OvertypeModeChangedSignal> overtypeModeChangedSignal() BOOST_NOEXCEPT;
 			SignalConnector<SelectionShapeChangedSignal> selectionShapeChangedSignal() BOOST_NOEXCEPT;
 			/// @}
 
@@ -202,11 +204,9 @@ namespace ascension {
 			LCID clipboardLocale_;
 #endif // ASCENSION_OS_WINDOWS
 			CharacterInputSignal characterInputSignal_;
-			InputLocaleChangedSignal inputLocaleChangedSignal_;
-			InputMethodOpenStatusChangedSignal inputMethodOpenStatusChangedSignal_;
+			InputModeChangedSignal inputModeChangedSignal_;
 			MatchBracketsChangedSignal matchBracketsChangedSignal_;
 			MotionSignal motionSignal_;
-			OvertypeModeChangedSignal overtypeModeChangedSignal_;
 			SelectionShapeChangedSignal selectionShapeChangedSignal_;
 			bool overtypeMode_;
 			bool autoShow_;		// true if show itself when movements
