@@ -91,18 +91,10 @@ namespace ascension {
 		 */
 
 		/**
-		 * @typedef ascension::viewers::Caret::InputLocaleChangedSignal
-		 * The signal which gets emitted when the text viewer's input locale had been changed (ex.
-		 * @c WM_INPUTLANGCHANGE of Win32).
+		 * @typedef ascension::viewers::Caret::InputModeChangedSignal
+		 * The signal which gets emitted when any input mode of the caret had been changed.
 		 * @param caret The caret
-		 * @see #inputLocaleChangedSignal
-		 */
-
-		/**
-		 * @typedef ascension::viewers::Caret::InputMethodOpenStatusChangedSignal
-		 * The signal which gets emitted when the text viewer's input method open status had been changed.
-		 * @param caret The caret
-		 * @see #inputMethodOpenStatusChangedSignal
+		 * @see #inputModeChangedSignal, #isOvertypeMode, #overtypeModeChangedSignal, #setOvertypeMode
 		 */
 
 		/**
@@ -121,13 +113,6 @@ namespace ascension {
 		 * @param regionBeforeMotion The region which the caret had before. The @c first member is the anchor and
 		 *                           @c second member is the caret
 		 * @see #motionSignal
-		 */
-
-		/**
-		 * @typedef ascension::viewers::Caret::OvertypeModeChangedSignal
-		 * The signal which gets emitted when the overtype mode of the caret is changed.
-		 * @param caret The caret
-		 * @see #isOvertypeMode, #overtypeModeChangedSignal, #setOvertypeMode
 		 */
 
 		/**
@@ -477,6 +462,11 @@ namespace ascension {
 			return true;
 		}
 
+		/// Returns the @c InputModeChangedSignal signal connector.
+		SignalConnector<Caret::InputModeChangedSignal> Caret::inputModeChangedSignal() BOOST_NOEXCEPT {
+			return makeSignalConnector(inputModeChangedSignal_);
+		}
+
 		/// Returns the @c MatchBracketsChangedSignal signal connector.
 		SignalConnector<Caret::MatchBracketsChangedSignal> Caret::matchBracketsChangedSignal() BOOST_NOEXCEPT {
 			return makeSignalConnector(matchBracketsChangedSignal_);
@@ -501,11 +491,6 @@ namespace ascension {
 			VisualPoint::moved(from);
 			if(!document().isChanging())
 				updateVisualAttributes();
-		}
-
-		/// Returns the @c OvertypeModeChangedSignal signal connector.
-		SignalConnector<Caret::OvertypeModeChangedSignal> Caret::overtypeModeChangedSignal() BOOST_NOEXCEPT {
-			return makeSignalConnector(overtypeModeChangedSignal_);
 		}
 
 		/// @see PointListener#pointMoved
@@ -637,7 +622,7 @@ namespace ascension {
 		}
 
 		/// Returns the @c SelectionShapeChangedSignal signal connector.
-		SignalConnector<Caret::OvertypeModeChangedSignal> Caret::selectionShapeChangedSignal() BOOST_NOEXCEPT {
+		SignalConnector<Caret::SelectionShapeChangedSignal> Caret::selectionShapeChangedSignal() BOOST_NOEXCEPT {
 			return makeSignalConnector(selectionShapeChangedSignal_);
 		}
 
@@ -650,7 +635,7 @@ namespace ascension {
 		Caret& Caret::setOvertypeMode(bool overtype) BOOST_NOEXCEPT {
 			if(overtype != overtypeMode_) {
 				overtypeMode_ = overtype;
-				overtypeModeChangedSignal_(*this);
+				inputModeChangedSignal_(*this, OVERTYPE_MODE);
 			}
 			return *this;
 		}
