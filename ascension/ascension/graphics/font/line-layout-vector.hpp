@@ -21,17 +21,35 @@
 namespace ascension {
 	namespace graphics {
 		namespace font {
+			/**
+			 * Interface for objects which are interested in getting informed about change of
+			 * visual lines of @c LineLayoutVector.
+			 */
+			class VisualLinesModificationListener {
+			private:
+				/**
+				 * Several visual lines were modified.
+				 * @param lines The range of modified lines. @a lines.end() is exclusive
+				 * @param sublinesDifference The difference of the number of sublines between
+				 *        before and after the modification
+				 * @param documentChanged Set @c true if the layouts were modified for the document
+				 *                        change
+				 * @param longestLineChanged Set @c true if the longest line is changed
+				 */
+				virtual void visualLinesModified(
+					const boost::integer_range<Index>& lines, SignedIndex sublinesDifference,
+					bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT = 0;
+				friend class LineLayoutVector;
+			};
 
 			/**
 			 * Interface for objects which are interested in getting informed about change of
 			 * visual lines of @c LineLayoutVector.
-			 * This interface is called by also @c TextViewport. See the documentation of
-			 * @c TextViewport class.
 			 * @see LineLayoutVector#addVisualLinesListener,
 			 *      LineLayoutVector#removeVisualLinesListener,
 			 *      TextViewport#addVisualLinesListener, TextViewport#removeVisualLinesListener
 			 */
-			class VisualLinesListener {
+			class VisualLinesListener : public VisualLinesModificationListener {
 			private:
 				/**
 				 * Several visual lines were deleted.
@@ -46,20 +64,7 @@ namespace ascension {
 				 * @param lines The range of inserted lines. @a lines.end() is exclusive
 				 */
 				virtual void visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT = 0;
-				/**
-				 * A visual lines were modified.
-				 * @param lines The range of modified lines. @a lines.end() is exclusive
-				 * @param sublinesDifference The difference of the number of sublines between
-				 *        before and after the modification
-				 * @param documentChanged Set @c true if the layouts were modified for the document
-				 *                        change
-				 * @param longestLineChanged Set @c true if the longest line is changed
-				 */
-				virtual void visualLinesModified(
-					const boost::integer_range<Index>& lines, SignedIndex sublinesDifference,
-					bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT = 0;
 				friend class LineLayoutVector;
-				friend class TextViewport;
 			};
 
 			/**
