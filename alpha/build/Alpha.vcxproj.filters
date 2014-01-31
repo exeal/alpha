@@ -380,6 +380,9 @@
     <ClCompile Include="..\..\ascension\src\rules\lexical-partitioning.cpp">
       <Filter>ascension\Source Files\rules</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\caret-blinker.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">

@@ -10,7 +10,6 @@
 #ifndef ASCENSION_CARET_HPP
 #define ASCENSION_CARET_HPP
 #include <ascension/corelib/text/identifier-syntax.hpp>	// text.IdentifierSyntax
-#include <ascension/viewer/caret-shaper.hpp>
 #include <ascension/viewer/viewer-observers.hpp>
 #include <ascension/viewer/visual-point.hpp>
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>
@@ -27,6 +26,8 @@ namespace ascension {
 	}
 
 	namespace viewers {
+		class Caret;
+
 		namespace utils {
 			widgetapi::MimeData&& createMimeDataForSelectedString(const Caret& caret, bool rtf);
 			std::pair<String, bool> getTextFromMimeData(const widgetapi::MimeData& data);
@@ -81,11 +82,6 @@ namespace ascension {
 			kernel::Region selectedRegion() const BOOST_NOEXCEPT;
 			/// @}
 
-			/// @name The Shape
-			/// @{
-			void setShaper(std::shared_ptr<CaretShaper> shaper) BOOST_NOEXCEPT;
-			/// @}
-
 			/// @name Character Input
 			/// @{
 			bool isOvertypeMode() const BOOST_NOEXCEPT;
@@ -125,13 +121,13 @@ namespace ascension {
 			/// @{
 			bool inputCharacter(CodePoint c, bool validateSequence = true, bool blockControls = true);
 			/// @}
-
+#if 0
 			/// @name Visualization Updates
 			/// @{
 			void resetVisualization();
 			void updateLocation();
 			/// @}
-
+#endif
 			/// @name Signals
 			/// @{
 			typedef boost::signals2::signal<void(const Caret&, CodePoint)> CharacterInputSignal;
@@ -211,7 +207,6 @@ namespace ascension {
 			bool overtypeMode_;
 			bool autoShow_;		// true if show itself when movements
 			MatchBracketsTrackingMode matchBracketsTrackingMode_;
-			std::shared_ptr<CaretShaper> shaper_;
 			struct Shape {
 				std::unique_ptr<graphics::Image> image;
 				graphics::geometry::BasicPoint<std::uint16_t> alignmentPoint;
@@ -332,12 +327,6 @@ namespace ascension {
 		inline kernel::Region Caret::selectedRegion() const BOOST_NOEXCEPT {
 			return kernel::Region(*anchor_, position());
 		}
-
-		/**
-		 * Sets the caret shaper.
-		 * @param shaper The new caret shaper
-		 */
-		inline void Caret::setShaper(std::shared_ptr<CaretShaper> shaper) {shaper_ = shaper;}
 
 		/**
 		 * Tracks the match bracket.

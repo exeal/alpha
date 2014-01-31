@@ -45,29 +45,9 @@ namespace ascension {
 			return boost::none;
 		}
 
-
-		// CaretShapeUpdater //////////////////////////////////////////////////////////////////////////////////////////
-
-		/**
-		 * Private constructor.
-		 * @param caret The caret
-		 */
-		CaretShapeUpdater::CaretShapeUpdater(Caret& caret) BOOST_NOEXCEPT : caret_(caret) {
-		}
-
-		/// Returns the caret.
-		Caret& CaretShapeUpdater::caret() BOOST_NOEXCEPT {
-			return caret_;
-		}
-
-		/// Returns the caret.
-		const Caret& CaretShapeUpdater::caret() const BOOST_NOEXCEPT {
-			return caret_;
-		}
-
-		/// Notifies the text viewer to update the shape of the caret.
-		void CaretShapeUpdater::update() BOOST_NOEXCEPT {
-			caret().resetVisualization();	// $friendly-access
+		/// Returns @c StaticShapeChangedSignal signal connector.
+		SignalConnector<CaretShaper::StaticShapeChangedSignal> CaretShaper::staticShapeChangedSignal() BOOST_NOEXCEPT {
+			return makeSignalConnector(staticShapeChangedSignal_);
 		}
 	}
 }

@@ -10,9 +10,8 @@
 
 #ifndef ASCENSION_DEFAULT_CARET_SHAPER_HPP
 #define ASCENSION_DEFAULT_CARET_SHAPER_HPP
-#include <ascension/graphics/font/text-renderer.hpp>	// graphics.font.ComputedBlockFlowDirectionListener, graphics.font.VisualLinesListener
 #include <ascension/viewer/caret-shaper.hpp>
-#include <utility>	// std.pair
+#include <map>
 
 
 namespace ascension {
@@ -21,36 +20,25 @@ namespace ascension {
 		 * Default implementation of @c CaretShaper.
 		 * @c DefaultCaretShaper returns system-defined caret shape (color, width) which depends on
 		 * the writing mode of the text viewer and the line metrics.
-		 * @note This class is not intended to be subclassed.
 		 */
-		class DefaultCaretShaper : public CaretShaper,
-			public graphics::font::ComputedBlockFlowDirectionListener,
-			public graphics::font::VisualLinesListener {
+		class DefaultCaretShaper : public CaretShaper {
 			ASCENSION_NONCOPYABLE_TAG(DefaultCaretShaper);
 		public:
 			DefaultCaretShaper() BOOST_NOEXCEPT;
+
 		protected:
-			CaretShapeUpdater* updater() BOOST_NOEXCEPT {return updater_;}
-			const CaretShapeUpdater* updater() const BOOST_NOEXCEPT {return updater_;}
+			Shape&& createSolidShape(const Caret& caret,
+				const boost::optional<graphics::Color>& color, const boost::optional<std::uint32_t>& measure) const;
 			// CaretShaper
-			virtual void install(CaretShapeUpdater& updater) BOOST_NOEXCEPT;
-			virtual void shape(std::unique_ptr<graphics::Image>& image,
-				graphics::geometry::BasicPoint<std::uint32_t>& alignmentPoint) const BOOST_NOEXCEPT;
-			virtual void uninstall() BOOST_NOEXCEPT;
+			virtual void install(Caret& caret) BOOST_NOEXCEPT;
+			virtual Shape&& shape(const Caret& caret,
+				const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT;
+			virtual void uninstall(Caret& caret) BOOST_NOEXCEPT;
 			// Caret.MotionSignal
 			virtual void caretMoved(const Caret& caret, const kernel::Region& regionBeforeMotion);
-			// graphics.font.ComputedBlockFlowDirectionListener
-			void computedBlockFlowDirectionChanged(presentation::BlockFlowDirection used);
-			// graphics.font.VisualLinesListener
-			void visualLinesDeleted(const boost::integer_range<Index>& lines,
-				Index sublines, bool longestLineChanged) BOOST_NOEXCEPT;
-			void visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT;
-			void visualLinesModified(
-				const boost::integer_range<Index>& lines, SignedIndex sublinesDifference,
-				bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT;
+
 		private:
-			CaretShapeUpdater* updater_;
-			boost::signals2::connection caretMotionConnection_;
+			std::map<const Caret*, boost::signals2::connection> caretMotionConnections_;
 		};
 
 		/**
@@ -60,22 +48,20 @@ namespace ascension {
 		class LocaleSensitiveCaretShaper : public DefaultCaretShaper {
 		public:
 			explicit LocaleSensitiveCaretShaper() BOOST_NOEXCEPT;
-		private:
-			// CaretShaper
-			void install(CaretShapeUpdater& updater) BOOST_NOEXCEPT;
-			void shape(std::unique_ptr<graphics::Image>& image,
-				graphics::geometry::BasicPoint<std::uint32_t>& alignmentPoint) const BOOST_NOEXCEPT;
-			void uninstall() BOOST_NOEXCEPT;
-			// Caret signals
-			void caretMoved(const Caret& caret, const kernel::Region& regionBeforeMotion);
-			void inputLocaleChanged(const Caret& caret) BOOST_NOEXCEPT;
-			void inputMethodOpenStatusChanged(const Caret& caret) BOOST_NOEXCEPT;
-			void overtypeModeChanged(const Caret& caret);
-		private:
-			boost::signals2::connection caretOvertypeModeChangedConnection_,
-				inputLocaleChangedConnection_, inputMethodOpenStatusChangedConnection_;
-		};
 
+		private:
+			// DefaultCaretShaper overrides
+			void caretMoved(const Caret& caret, const kernel::Region& regionBeforeMotion);
+			void install(Caret& caret) BOOST_NOEXCEPT;
+			Shape&& shape(const Caret& caret,
+				const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT;
+			void uninstall(Caret& caret) BOOST_NOEXCEPT;
+			// Caret.InputModeChangedSignal
+			void inputModeChanged(const Caret& caret, Caret::InputModeChangedSignalType type) BOOST_NOEXCEPT;
+
+		private:
+			std::map<const Caret*, boost::signals2::connection> inputModeChangedConnections_;
+		};
 	}
 } // namespace ascension.viewers
 

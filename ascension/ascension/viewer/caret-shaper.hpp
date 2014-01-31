@@ -10,40 +10,26 @@
 
 #ifndef ASCENSION_CARET_SHAPER_HPP
 #define ASCENSION_CARET_SHAPER_HPP
-#include <ascension/graphics/geometry.hpp>	// graphics.Scalar, graphics.Point
+#include <ascension/corelib/signals.hpp>
+#include <ascension/graphics/geometry.hpp>	// graphics.BasicPoint, graphics.Rectangle
 #include <boost/optional.hpp>
-#include <memory>	// std.unique_ptr
-
+#include <memory>	// std.shared_ptr
+#include <tuple>
 
 namespace ascension {
 	namespace graphics {
 		class Image;
 	}
 
-	namespace viewers {
+	namespace kernel {
+		class Position;
+	}
 
-		// these classes are also declared by *-observers.hpp
+	namespace viewers {
 		class Caret;
 		class TextViewer;
 
 		boost::optional<graphics::Rectangle> currentCharacterLogicalBounds(const Caret& caret);
-
-		/**
-		 * A @c CaretShapeUpdater gives a @c CaretShaper the trigger to update the visualization of
-		 * the caret of the text viewer.
-		 * @see Caret, CaretShaper
-		 */
-		class CaretShapeUpdater {
-			ASCENSION_UNASSIGNABLE_TAG(CaretShapeUpdater);
-		public:
-			Caret& caret() BOOST_NOEXCEPT;
-			const Caret& caret() const BOOST_NOEXCEPT;
-			void update() BOOST_NOEXCEPT;
-		private:
-			explicit CaretShapeUpdater(Caret& caret) BOOST_NOEXCEPT;
-			Caret& caret_;
-			friend class Caret;
-		};
 
 		/**
 		 * Interface for objects which define the shape of the text viewer's caret.
@@ -52,29 +38,54 @@ namespace ascension {
 		 */
 		class CaretShaper {
 		public:
+			/// Describes a shape of the caret.
+			struct Shape {
+				/// An image which defines shape of the caret. If this is @c null, the @c Caret ignores the result of
+				/// @c CaretShaper#shape and uses default implementation by @c DefaultCaretShaper class.
+				std::shared_ptr<const graphics::Image> image;
+				/// The alignment-point of the @c #image in pixels, which matches the alignment-point (a point on the
+				/// start-edge of the glyph on the the baseline of the line (not the glyph)) of the character addressed
+				/// by the caret.
+				graphics::geometry::BasicPoint<std::uint32_t> alignmentPoint;
+			};
 			/// Destructor.
 			virtual ~CaretShaper() BOOST_NOEXCEPT {}
 			/**
-			 * Returns the bitmap defines caret shape.
-			 * @param[out] image The bitmap defines caret shape. If @c null, the @c Caret ignores
-			 *                   the all result and uses default implementation by
-			 *                   @c DefaultCaretShaper class
-			 * @param[out] alignmentPoint The alignment-point of @a image in pixels, which matches
-			 *                            the alignment-point (a point on the start-edge of the
-			 *                            glyph on the the baseline of the line (not the glyph)) of
-			 *                            the character addressed by the caret
+			 * Returns the image defines caret shape.
+			 * @param caret The caret to shape
+			 * @param position The prior position of the @a caret. If this is @c boost#none, the value of
+			 *                 @c Caret#position() should be used
+			 * @return A shape of the caret
 			 */
-			virtual void shape(std::unique_ptr<graphics::Image>& image,
-				graphics::geometry::BasicPoint<std::uint32_t>& alignmentPoint) const BOOST_NOEXCEPT = 0;
+			virtual Shape&& shape(const Caret& caret,
+				const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT = 0;
+			typedef boost::signals2::signal<void(const Caret&)> StaticShapeChangedSignal;
+			SignalConnector<StaticShapeChangedSignal> staticShapeChangedSignal() BOOST_NOEXCEPT;
+
+		protected:
+			/**
+			 * Invokes @c StaticShapeChangedSignal with the specified caret.
+			 * @param caret The argument passed to the slots
+			 */
+			void signalStaticShapeChanged(const Caret& caret) BOOST_NOEXCEPT {
+				staticShapeChangedSignal_(caret);
+			}
+
 		private:
 			/**
-			 * Installs the shaper.
-			 * @param updater The caret updater which notifies the text viewer to update the caret
+			 * Installs the shaper for the specified caret.
+			 * @param caret The caret
 			 */
-			virtual void install(CaretShapeUpdater& updater) BOOST_NOEXCEPT = 0;
-			/// Uninstalls the shaper.
-			virtual void uninstall() BOOST_NOEXCEPT = 0;
-			friend class Caret;
+			virtual void install(Caret& caret) BOOST_NOEXCEPT = 0;
+			/**
+			 * Uninstalls the shaper for the specified caret.
+			 * @param caret The caret
+			 */
+			virtual void uninstall(Caret& caret) BOOST_NOEXCEPT = 0;
+			friend class TextViewer;
+
+		private:
+			StaticShapeChangedSignal staticShapeChangedSignal_;
 		};
 	}
 } // namespace ascension.viewers
