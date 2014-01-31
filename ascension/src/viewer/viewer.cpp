@@ -13,10 +13,11 @@
 #include <ascension/rules.hpp>
 #include <ascension/text-editor/command.hpp>
 #include <ascension/text-editor/session.hpp>
-#include <ascension/viewer/widgetapi/cursor.hpp>
 #include <ascension/viewer/caret.hpp>
+#include <ascension/viewer/default-caret-shaper.hpp>
 #include <ascension/viewer/default-mouse-input-strategy.hpp>
 #include <ascension/viewer/viewer.hpp>
+#include <ascension/viewer/widgetapi/cursor.hpp>
 #include <limits>	// std.numeric_limit
 #include <boost/foreach.hpp>
 #ifdef _DEBUG
@@ -249,7 +250,9 @@ namespace ascension {
 		/// @see DefaultFontListener#defaultFontChanged
 		void TextViewer::defaultFontChanged() BOOST_NOEXCEPT {
 			rulerPainter_->update();
+#ifdef ASCENSION_USE_SYSTEM_CARET
 			caret().resetVisualization();
+#endif
 			redrawLine(0, true);
 		}
 
@@ -517,6 +520,17 @@ namespace ascension {
 //						isc->setKeyboardLayout(::GetKeyboardLayout(::GetCurrentThreadId()));
 //				}
 //			}
+		}
+
+		/**
+		 * Hides the caret.
+		 * @see #hidesCaret, #showCaret
+		 */
+		void TextViewer::hideCaret() BOOST_NOEXCEPT {
+			if(!hidesCaret()) {
+				caretBlinker_.reset();
+				redrawLine(kernel::line(caret()));
+			}
 		}
 
 		/**
@@ -1388,6 +1402,16 @@ namespace ascension {
 
 			// paint the text area
 			textRenderer().paint(context);
+
+			// paint the caret(s)
+			paintCaret(context);
+		}
+
+		/**
+		 * @internal Paints the caret(s).
+		 * @param context The graphic context
+		 */
+		void TextViewer::paintCaret(graphics::PaintContext& context) {
 		}
 
 		/**
@@ -1548,6 +1572,23 @@ namespace ascension {
 		}
 
 		/**
+		 * Sets the caret shaper.
+		 * @param shaper The new caret shaper to set
+		 */
+		void TextViewer::setCaretShaper(std::shared_ptr<CaretShaper> shaper) {
+			if(shaper == caretShaper_)
+				return;
+			if(caretShaper_.get() != nullptr)
+				caretShaper_->uninstall(caret());	// TODO: Support multiple carets.
+			if(shaper.get() == nullptr)
+				shaper = std::make_shared<DefaultCaretShaper>();
+			(caretShaper_ = shaper)->install(caret());	// TODO: Support multiple carets.
+#ifdef ASCENSION_USE_SYSTEM_CARET
+			caretStaticShapeChanged(caret());	// update caret shapes immediately
+#endif
+		}
+
+		/**
 		 * Updates the configurations.
 		 * @param general The general configurations. @c null to unchange
 		 * @param ruler The configurations about the ruler. @c null to unchange
@@ -1573,10 +1614,12 @@ namespace ascension {
 //				scrolls_.resetBars(*this, 'a', false);
 //				updateScrollBars(AbstractTwoAxes<bool>(true, true), AbstractTwoAxes<bool>(true, true));
 
+#ifdef ASCENSION_USE_SYSTEM_CARET
 				if(!isFrozen() && (widgetapi::hasFocus(*this) /*|| handle() == Viewer::completionWindow_->getSafeHwnd()*/)) {
 					caret().resetVisualization();
 					caret().updateLocation();
 				}
+#endif
 				if(synchronizeUI) {
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 					if(get_direction() != Gtk::TEXT_DIR_NONE)
@@ -1628,6 +1671,15 @@ namespace ascension {
 				mouseInputStrategy_.reset(new DefaultMouseInputStrategy());	// TODO: the two parameters don't have rationales.
 			mouseInputStrategy_->install(*this);
 			dropTargetHandler_ = mouseInputStrategy_->handleDropTarget();
+		}
+
+		/**
+		 * Shows the hidden caret.
+		 * @see #hideCaret, #hidesCaret
+		 */
+		void TextViewer::showCaret() BOOST_NOEXCEPT {
+			if(hidesCaret())
+				caretBlinker_.reset(new CaretBlinker(*this));
 		}
 
 		/**

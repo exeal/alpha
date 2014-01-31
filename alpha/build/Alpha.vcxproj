@@ -220,6 +220,7 @@
     <ClCompile Include="..\..\ascension\src\text-editor\input-sequence-checker.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\kill-ring.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\session.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\caret-blinker.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\caret-shaper.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\caret-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\current-line-highlighter.cpp" />

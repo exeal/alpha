@@ -14,6 +14,7 @@
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/kernel/point.hpp>
 #include <ascension/presentation/writing-mode.hpp>
+#include <ascension/viewer/caret-shaper.hpp>
 #include <ascension/viewer/ruler.hpp>
 #include <ascension/viewer/viewer-observers.hpp>
 #include <ascension/viewer/widgetapi/scrollable.hpp>
@@ -219,6 +220,10 @@ namespace ascension {
 			/// @{
 			Caret& caret() BOOST_NOEXCEPT;
 			const Caret& caret() const BOOST_NOEXCEPT;
+			void hideCaret() BOOST_NOEXCEPT;
+			bool hidesCaret() const BOOST_NOEXCEPT;
+			void setCaretShaper(std::shared_ptr<CaretShaper> shaper) BOOST_NOEXCEPT;
+			void showCaret() BOOST_NOEXCEPT;
 			/// @}
 
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
@@ -283,6 +288,7 @@ namespace ascension {
 			graphics::Scalar inlineProgressionOffsetInViewport() const;
 			void initialize(const TextViewer* other);
 			void initializeNativeObjects(const TextViewer* other);
+			void paintCaret(graphics::PaintContext& context);
 			void repaintRuler();
 			void updateScrollBars(
 				const presentation::AbstractTwoAxes<bool>& positions,
@@ -440,6 +446,7 @@ namespace ascension {
 #endif	// ASCENSION_WINDOW_SYSTEM_GTK
 			presentation::Presentation& presentation_;
 			std::unique_ptr<Caret> caret_;
+			std::shared_ptr<CaretShaper> caretShaper_;
 			std::unique_ptr<Renderer> renderer_;
 			Configuration configuration_;
 			std::set<VisualPoint*> points_;
@@ -496,11 +503,23 @@ namespace ascension {
 				boost::integer_range<Index> linesToRedraw_;
 			} freezeRegister_;
 
+			class CaretBlinker : private HasTimer {
+			public:
+				explicit CaretBlinker(TextViewer& viewer) BOOST_NOEXCEPT;
+				bool isVisible() const BOOST_NOEXCEPT;
+				void pend();
+				void stop();
+				void update();
+			private:
+				void setVisible(bool visible);
+				void timeElapsed(Timer& timer);
+				TextViewer& viewer_;
+				Timer timer_;
+				bool visible_;
+			};
+
 			// input state
-#ifndef ASCENSION_WINDOW_SYSTEM_WIN32
-			bool blinkingCaretIsVisible_;
-			Timer caretBlinkingTimer_;
-#endif	// !ASCENSION_WINDOW_SYSTEM_WIN32
+			std::unique_ptr<CaretBlinker> caretBlinker_;	// null when the caret is set to invisible
 			unsigned long mouseInputDisabledCount_;
 #ifdef ASCENSION_WINDOW_SYSTEM_GTK
 			std::shared_ptr<GtkIMContext> inputMethodContext_;
@@ -606,6 +625,14 @@ namespace ascension {
 		inline void TextViewer::enableMouseInput(bool enable) {
 			if(mouseInputDisabledCount_ != 0 || !enable)
 				mouseInputDisabledCount_ += !enable ? 1 : -1;
+		}
+
+		/**
+		 * Returns @c true if the caret is hidden.
+		 * @see #hideCaret, showCaret
+		 */
+		inline bool TextViewer::hidesCaret() const BOOST_NOEXCEPT {
+			return caretBlinker_.get() == nullptr;
 		}
 		
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)

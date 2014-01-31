@@ -16,7 +16,6 @@
 #include <ascension/text-editor/input-sequence-checker.hpp>
 #include <ascension/text-editor/session.hpp>
 #include <ascension/viewer/caret.hpp>
-#include <ascension/viewer/default-caret-shaper.hpp>
 #include <ascension/viewer/viewer.hpp>
 #include <ascension/viewer/virtual-box.hpp>
 #include <boost/range/algorithm/binary_search.hpp>
@@ -351,8 +350,10 @@ namespace ascension {
 
 		/// @internal Invokes @c MotionSignal.
 		inline void Caret::fireCaretMoved(const kernel::Region& regionBeforeMotion) {
+#ifdef ASCENSION_USE_SYSTEM_CARET
 			if(!isTextViewerDisposed() && !textViewer().isFrozen() && (widgetapi::hasFocus(textViewer()) /*|| widgetapi::hasFocus(*completionWindow_)*/))
 				updateLocation();
+#endif
 			motionSignal_(*this, regionBeforeMotion);
 		}
 
@@ -531,7 +532,7 @@ namespace ascension {
 			}
 			moveTo(e);
 		}
-
+#if 0
 		/**
 		 * Recreates and shows the caret. If the text viewer does not have focus, nothing heppen.
 		 * @see #updateLocation
@@ -585,7 +586,7 @@ namespace ascension {
 			shapeCache_.alignmentPoint = alignmentPoint;
 			updateLocation();
 		}
-
+#endif
 		/**
 		 * Selects the specified region. The active selection mode will be cleared.
 		 * @param anchor The position where the anchor moves to
@@ -649,7 +650,7 @@ namespace ascension {
 			anchor_->endInternalUpdate();
 			context_.leaveAnchorNext = context_.leadingAnchor = false;
 		}
-
+#if 0
 		/**
 		 * Moves the caret to valid position with current position, scroll context, and the fonts.
 		 * @see #resetVisualization
@@ -684,7 +685,7 @@ namespace ascension {
 #endif
 			adjustInputMethodCompositionWindow();
 		}
-
+#endif
 		inline void Caret::updateVisualAttributes() {
 			if(isSelectionRectangle())
 				context_.selectedRectangle->update(selectedRegion());
@@ -698,13 +699,17 @@ namespace ascension {
 
 		/// @see DisplaySizeListener#viewerDisplaySizeChanged
 		void Caret::viewerDisplaySizeChanged() {
+#ifdef ASCENSION_USE_SYSTEM_CARET
 		//	if(textViewer().rulerConfiguration().alignment != ALIGN_LEFT)
 				resetVisualization();
+#endif
 		}
 
 		/// @see ViewportListener#viewportChanged
 		void Caret::viewportChanged(bool, bool) {
+#ifdef ASCENSION_USE_SYSTEM_CARET
 			updateLocation();
+#endif
 		}
 
 
@@ -1203,7 +1208,7 @@ namespace ascension {
 
 				mimeData.setText(text);
 				if(caret.isSelectionRectangle())
-					mimeData.setData(rectangleTextMimeDataFormat(), text);
+					mimeData.setData(rectangleTextMimeDataFormat(), boost::make_iterator_range<const unsigned char*>(nullptr, nullptr));
 
 				return std::move(mimeData);
 			}
