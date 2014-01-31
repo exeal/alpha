@@ -268,8 +268,7 @@ namespace ascension {
 
 		class EncoderFactory;
 
-		class Encoder {
-			ASCENSION_NONCOPYABLE_TAG(Encoder);
+		class Encoder : private boost::noncopyable {
 		public:
 			/// Result of conversion.
 			enum Result {
@@ -339,7 +338,9 @@ namespace ascension {
 
 		public:
 			virtual ~Encoder() BOOST_NOEXCEPT;
-			// attributes
+
+			/// @name Attributes
+			/// @{
 			int flags() const BOOST_NOEXCEPT;
 			virtual const EncodingProperties& properties() const BOOST_NOEXCEPT = 0;
 			virtual Encoder& resetDecodingState() BOOST_NOEXCEPT;
@@ -347,14 +348,20 @@ namespace ascension {
 			Encoder& setFlags(const int newFlags);
 			Encoder& setSubstitutionPolicy(SubstitutionPolicy newPolicy);
 			SubstitutionPolicy substitutionPolicy() const BOOST_NOEXCEPT;
-			// conversion
+			/// @}
+
+			/// @name Conversion
+			/// @{
 			bool canEncode(CodePoint c);
 			bool canEncode(const StringPiece& s);
 			Result fromUnicode(Byte* to, Byte* toEnd, Byte*& toNext, const Char* from, const Char* fromEnd, const Char*& fromNext);
 			std::string fromUnicode(const String& from);
 			Result toUnicode(Char* to, Char* toEnd, Char*& toNext, const Byte* from, const Byte* fromEnd, const Byte*& fromNext);
 			String toUnicode(const std::string& from);
-			// factory
+			/// @}
+
+			/// @name Factory
+			/// @{
 			template<typename OutputIterator> static void availableEncodings(OutputIterator out);
 			static Encoder& defaultInstance() BOOST_NOEXCEPT;
 			static std::unique_ptr<Encoder> forCCSID(int ccsid) BOOST_NOEXCEPT;
@@ -366,6 +373,7 @@ namespace ascension {
 			static bool supports(MIBenum mib) BOOST_NOEXCEPT;
 			static bool supports(const std::string& name) BOOST_NOEXCEPT;
 			static void registerFactory(std::shared_ptr<const EncoderFactory> newFactory);
+			/// @}
 
 		protected:
 			Encoder() BOOST_NOEXCEPT;
@@ -414,8 +422,7 @@ namespace ascension {
 			friend class Encoder;
 		};
 
-		class EncodingDetector {
-			ASCENSION_NONCOPYABLE_TAG(EncodingDetector);
+		class EncodingDetector : private boost::noncopyable {
 		public:
 			// constructors
 			virtual ~EncodingDetector() BOOST_NOEXCEPT;

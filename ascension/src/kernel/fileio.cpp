@@ -883,8 +883,7 @@ namespace ascension {
 
 			// TextFileDocumentInput.FileLocker ///////////////////////////////////////////////////////////////////////
 
-			class TextFileDocumentInput::FileLocker {
-				ASCENSION_NONCOPYABLE_TAG(FileLocker);
+			class TextFileDocumentInput::FileLocker : private boost::noncopyable {
 			public:
 				FileLocker() BOOST_NOEXCEPT;
 				~FileLocker() BOOST_NOEXCEPT;

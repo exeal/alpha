@@ -155,8 +155,7 @@ namespace ascension {
 
 		namespace detail {
 			/// @internal @c RulerPainter paints the ruler of the @c TextViewer.
-			class RulerPainter {
-				ASCENSION_NONCOPYABLE_TAG(RulerPainter);
+			class RulerPainter : private boost::noncopyable {
 			public:
 				explicit RulerPainter(TextViewer& viewer, std::shared_ptr<const RulerStyles> initialStyles = nullptr);
 				graphics::PhysicalDirection alignment() const BOOST_NOEXCEPT;

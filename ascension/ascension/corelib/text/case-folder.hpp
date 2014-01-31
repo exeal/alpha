@@ -3,7 +3,7 @@
  * @author exeal
  * @date 2005-2011
  * @date 2011-04-25 deparated from unicode.hpp
- * @date 2012-2013
+ * @date 2012-2014
  */
 
 #ifndef ASCENSION_CASE_FOLDER_HPP
@@ -28,7 +28,6 @@ namespace ascension {
 		 * @see Collator, Normalizer, searcher#LiteralPattern
 		 */
 		class CaseFolder {
-			ASCENSION_NONCOPYABLE_TAG(CaseFolder);
 		public:
 			static const Index MAXIMUM_EXPANSION_CHARACTERS;
 			static int compare(const CharacterIterator& s1,

@@ -21,11 +21,7 @@ namespace ascension {
 		 * @c DefaultCaretShaper returns system-defined caret shape (color, width) which depends on
 		 * the writing mode of the text viewer and the line metrics.
 		 */
-		class DefaultCaretShaper : public CaretShaper {
-			ASCENSION_NONCOPYABLE_TAG(DefaultCaretShaper);
-		public:
-			DefaultCaretShaper() BOOST_NOEXCEPT;
-
+		class DefaultCaretShaper : public CaretShaper, private boost::noncopyable {
 		protected:
 			Shape&& createSolidShape(const Caret& caret,
 				const boost::optional<graphics::Color>& color, const boost::optional<std::uint32_t>& measure) const;

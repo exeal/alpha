@@ -38,8 +38,7 @@ namespace ascension {
 		/**
 		 * @note This class is not intended to be subclassed.
 		 */
-		class Session {
-			ASCENSION_NONCOPYABLE_TAG(Session);
+		class Session : private boost::noncopyable {
 		public:
 			/// @name Document Collection
 			/// @{

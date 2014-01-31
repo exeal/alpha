@@ -15,7 +15,6 @@ namespace ascension {
 	namespace contentassist {
 		/// Default implementation of @c CompletionalProposal.
 		class DefaultCompletionProposal : public CompletionProposal {
-			ASCENSION_UNASSIGNABLE_TAG(DefaultCompletionProposal);
 		public:
 			explicit DefaultCompletionProposal(
 				const String& replacementString, const String& description = String(),

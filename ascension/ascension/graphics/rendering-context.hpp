@@ -108,8 +108,7 @@ namespace ascension {
 			CENTER = presentation::TextAlignment::CENTER
 		ASCENSION_SCOPED_ENUMS_END
 
-		class ImageData {
-			ASCENSION_NONCOPYABLE_TAG(ImageData);
+		class ImageData : private boost::noncopyable {
 		public:
 			/**
 			 * Constructor.
@@ -158,8 +157,7 @@ namespace ascension {
 		 * documents.
 		 * Many methods of this class may throw @c PlatformError exception.
 		 */
-		class RenderingContext2D {
-			ASCENSION_NONCOPYABLE_TAG(RenderingContext2D);
+		class RenderingContext2D : private boost::noncopyable {
 		public:
 			// platform-native interfaces
 #if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)

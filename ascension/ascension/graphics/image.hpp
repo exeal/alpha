@@ -23,7 +23,6 @@ namespace ascension {
 	namespace graphics {
 
 		class Image : public RenderingDevice {
-			ASCENSION_UNASSIGNABLE_TAG(Image);
 		public:
 			/**
 			 * <table>

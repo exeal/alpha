@@ -101,7 +101,6 @@ namespace ascension {
 		 * @see kernel#Point, kernel#PointListener, kernel#DisposedViewException
 		 */
 		class VisualPoint : public kernel::Point, public graphics::font::VisualLinesListener {
-			ASCENSION_UNASSIGNABLE_TAG(VisualPoint);
 		public:
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			explicit VisualPoint(TextViewer& viewer, kernel::PointListener* listener = nullptr);

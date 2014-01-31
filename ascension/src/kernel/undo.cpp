@@ -201,8 +201,7 @@ namespace ascension {
 		// Document.UndoManager ///////////////////////////////////////////////////////////////////////////////////////
 
 		/// @internal Manages undo/redo of the document.
-		class Document::UndoManager {
-			ASCENSION_NONCOPYABLE_TAG(UndoManager);
+		class Document::UndoManager : private boost::noncopyable {
 		public:
 			// constructors
 			explicit UndoManager(Document& document) BOOST_NOEXCEPT;

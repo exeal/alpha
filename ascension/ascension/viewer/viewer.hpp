@@ -169,7 +169,6 @@ namespace ascension {
 
 			/// Implementation of @c graphics#font#TextRenderer for @c TextViewer.
 			class Renderer : public graphics::font::TextRenderer {
-				ASCENSION_UNASSIGNABLE_TAG(Renderer);
 			public:
 				explicit Renderer(TextViewer& viewer);
 				Renderer(const Renderer& other, TextViewer& viewer);
@@ -539,8 +538,7 @@ namespace ascension {
 		};
 
 		// the documentation is viewer.cpp
-		class AutoFreeze {
-			ASCENSION_NONCOPYABLE_TAG(AutoFreeze);
+		class AutoFreeze : private boost::noncopyable {
 		public:
 			explicit AutoFreeze(TextViewer* textViewer);
 			~AutoFreeze() BOOST_NOEXCEPT;

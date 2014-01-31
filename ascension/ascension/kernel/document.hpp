@@ -52,8 +52,7 @@ namespace ascension {
 		 * A changed content of the document.
 		 * @see DocumentListener, PositionUpdater
 		 */
-		class DocumentChange {
-			ASCENSION_NONCOPYABLE_TAG(DocumentChange);
+		class DocumentChange : private boost::noncopyable {
 		public:
 			/**
 			 * Returns the erased region in the change.
@@ -76,12 +75,7 @@ namespace ascension {
 		 * A key of document property.
 		 * @see Document#property, Document#setProperty
 		 */
-		class DocumentPropertyKey {
-			ASCENSION_NONCOPYABLE_TAG(DocumentPropertyKey);
-		public:
-			/// Default constructor.
-			DocumentPropertyKey() BOOST_NOEXCEPT {}
-		};
+		class DocumentPropertyKey : private boost::noncopyable {};
 
 		/**
 		 * Base class of the exceptions represent @c Document#replace could not change the document
@@ -149,8 +143,7 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 * @see Document#bookmarker, locations#nextBookmark
 		 */
-		class Bookmarker : private DocumentListener {
-			ASCENSION_NONCOPYABLE_TAG(Bookmarker);
+		class Bookmarker : private DocumentListener, private boost::noncopyable {
 		public:
 			/// A @c Bookmarker#Iterator enumerates the all marked lines.
 			class Iterator : public boost::iterator_facade<
@@ -206,8 +199,8 @@ namespace ascension {
 		};
 
 		// the documentation is at document.cpp
-		class Document : public detail::PointCollection<Point>, public texteditor::detail::SessionElement {
-			ASCENSION_NONCOPYABLE_TAG(Document);
+		class Document : public detail::PointCollection<Point>,
+			public texteditor::detail::SessionElement, private boost::noncopyable {
 		public:
 			/// The property key for the title of the document.
 			static const DocumentPropertyKey TITLE_PROPERTY;
@@ -403,8 +396,7 @@ namespace ascension {
 		> CompoundChangeSaver;
 #if 0
 		// the documentation is document.cpp
-		class DocumentLocker {
-			ASCENSION_NONCOPYABLE_TAG(DocumentLocker);
+		class DocumentLocker : private boost::noncopyable {
 		public:
 			DocumentLocker(Document& document);
 			~DocumentLocker() BOOST_NOEXCEPT;

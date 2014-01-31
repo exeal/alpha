@@ -33,7 +33,6 @@ namespace ascension {
 		 * This class does not have an interface for standard C++ iterator.
 		 */
 		class BreakIterator {
-			ASCENSION_UNASSIGNABLE_TAG(BreakIterator);
 		public:
 			/// Destructor.
 			virtual ~BreakIterator() BOOST_NOEXCEPT {}
@@ -94,7 +93,6 @@ namespace ascension {
 		template<class BaseIterator>
 		class GraphemeBreakIterator : public AbstractGraphemeBreakIterator,
 			public detail::BreakIteratorFacade<GraphemeBreakIterator<BaseIterator>> {
-			ASCENSION_UNASSIGNABLE_TAG(GraphemeBreakIterator);
 		public:
 			/**
 			 * Constructor.
@@ -168,7 +166,6 @@ namespace ascension {
 		template<class BaseIterator>
 		class WordBreakIterator : public AbstractWordBreakIterator,
 			public detail::BreakIteratorFacade<WordBreakIterator<BaseIterator>> {
-			ASCENSION_UNASSIGNABLE_TAG(WordBreakIterator);
 		public:
 			/**
 			 * Constructor.
@@ -234,7 +231,6 @@ namespace ascension {
 		template<class BaseIterator>
 		class SentenceBreakIterator : public AbstractSentenceBreakIterator,
 			public detail::BreakIteratorFacade<SentenceBreakIterator<BaseIterator>> {
-			ASCENSION_UNASSIGNABLE_TAG(SentenceBreakIterator);
 		public:
 			/**
 			 * Constructor.
@@ -278,7 +274,6 @@ namespace ascension {
 		template<class BaseIterator>
 		class LineBreakIterator : public AbstractLineBreakIterator,
 			public detail::BreakIteratorFacade<LineBreakIterator<BaseIterator>> {
-			ASCENSION_UNASSIGNABLE_TAG(LineBreakIterator);
 		public:
 			/**
 			 * Constructor.

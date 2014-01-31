@@ -38,8 +38,7 @@ namespace ascension {
 		 * Collection of input sequence checkers.
 		 * @see InputSequenceChecker, Session#getInputSequenceCheckers
 		 */
-		class InputSequenceCheckers {
-			ASCENSION_NONCOPYABLE_TAG(InputSequenceCheckers);
+		class InputSequenceCheckers : private boost::noncopyable {
 		public:
 			void add(std::unique_ptr<InputSequenceChecker> checker);
 			bool check(const StringPiece& preceding, CodePoint c) const;
@@ -62,7 +61,6 @@ namespace ascension {
 
 			/// I.S.C. for Thai.
 			class ThaiInputSequenceChecker : public InputSequenceChecker {
-				ASCENSION_UNASSIGNABLE_TAG(ThaiInputSequenceChecker);
 			public:
 				enum Mode {PASS_THROUGH, BASIC_MODE, STRICT_MODE};
 				ThaiInputSequenceChecker(Mode mode = BASIC_MODE) BOOST_NOEXCEPT : mode_(mode) {}

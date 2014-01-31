@@ -20,8 +20,7 @@ namespace ascension {
 	namespace detail {
 
 		template<typename ProcedureEntries>
-		class SharedLibrary {
-			ASCENSION_NONCOPYABLE_TAG(SharedLibrary);
+		class SharedLibrary : private boost::noncopyable {
 		public:
 			explicit SharedLibrary(const char* fileName) : library_(
 #ifdef ASCENSION_OS_WINDOWS

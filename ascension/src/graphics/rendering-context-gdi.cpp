@@ -247,8 +247,7 @@ namespace ascension {
 		}
 
 		namespace {
-			class SubpathsSaver {
-				ASCENSION_NONCOPYABLE_TAG(SubpathsSaver);
+			class SubpathsSaver : private boost::noncopyable {
 			public:
 				explicit SubpathsSaver(win32::Handle<HDC>::Type deviceContext)
 						: deviceContext_(deviceContext), numberOfPoints_(::GetPath(deviceContext.get(), nullptr, nullptr, 0)) {
@@ -278,8 +277,7 @@ namespace ascension {
 				std::unique_ptr<BYTE[]> types_;
 			};
 
-			class FontSaver {
-				ASCENSION_NONCOPYABLE_TAG(FontSaver);
+			class FontSaver : private boost::noncopyable {
 			public:
 				explicit FontSaver(win32::Handle<HDC>::Type deviceContext) :
 						deviceContext_(deviceContext),

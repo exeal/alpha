@@ -4,7 +4,7 @@
  * @date 2004-2010
  * @date 2010-10-21 separated from common.hpp
  * @date 2010-11-07 joined with common.hpp
- * @date 2011-2013
+ * @date 2011-2014
  */
 
 #ifndef ASCENSION_BASIC_TYPES_HPP
@@ -37,6 +37,7 @@
 #include <iterator>	// std.back_insert_iterator, std.front_insert_iterator, std.ostream_iterator
 #include <string>
 #include <boost/config.hpp>	// BOOST_NOEXCEPT
+#include <boost/noncopyable.hpp>
 
 /// Version of Ascension library
 #define ASCENSION_LIBRARY_VERSION 0x0080	// 0.8.0
@@ -44,10 +45,12 @@
 /// Version of Unicode we're tracking
 #define ASCENSION_UNICODE_VERSION 0x0510	// 5.1.0
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 /// Makes the specified class unassignable. Used in class definition.
-#define ASCENSION_UNASSIGNABLE_TAG(className) private: className& operator=(const className&)
+#	define ASCENSION_UNASSIGNABLE_TAG(className) private: className& operator=(const className&)
 /// Makes the specified class uncopyable. Used in class definition
-#define ASCENSION_NONCOPYABLE_TAG(className) ASCENSION_UNASSIGNABLE_TAG(className); className(const className&)
+#	define ASCENSION_NONCOPYABLE_TAG(className) ASCENSION_UNASSIGNABLE_TAG(className); className(const className&)
+#endif
 
 namespace ascension {
 
@@ -56,8 +59,7 @@ namespace ascension {
 			void operator()(const void*) BOOST_NOEXCEPT {}
 		};
 		template<typename Lockable, void(Lockable::*lock)(void), void(Lockable::*unlock)(void)>
-		class LockGuard {
-			ASCENSION_NONCOPYABLE_TAG(LockGuard);
+		class LockGuard : private boost::noncopyable {
 		public:
 			explicit LockGuard(Lockable* lockable) : lockable_(lockable) {
 				if(lockable_ != nullptr)

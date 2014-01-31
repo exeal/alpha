@@ -134,8 +134,7 @@ namespace ascension {
 			 * @c std#basic_streambuf implementation of the text file with encoding conversion.
 			 * @note This class is not intended to be subclassed.
 			 */
-			class TextFileStreamBuffer : public std::basic_streambuf<Char> {
-				ASCENSION_NONCOPYABLE_TAG(TextFileStreamBuffer);
+			class TextFileStreamBuffer : public std::basic_streambuf<Char>, private boost::noncopyable {
 			public:
 				TextFileStreamBuffer(const PathStringPiece& fileName,
 					std::ios_base::openmode mode, const std::string& encoding,
@@ -183,8 +182,7 @@ namespace ascension {
 				std::array<Char, 8192> ucsBuffer_;
 			};
 
-			class TextFileDocumentInput : public DocumentInput {
-				ASCENSION_NONCOPYABLE_TAG(TextFileDocumentInput);
+			class TextFileDocumentInput : public DocumentInput, private boost::noncopyable {
 			public:
 				/// The structure used to represent a file time.
 #ifdef ASCENSION_OS_WINDOWS
@@ -269,8 +267,7 @@ namespace ascension {
 			};
 
 #ifndef ASCENSION_NO_GREP
-			class DirectoryIteratorBase {
-				ASCENSION_NONCOPYABLE_TAG(DirectoryIteratorBase);
+			class DirectoryIteratorBase : private boost::noncopyable {
 			public:
 				virtual ~DirectoryIteratorBase() BOOST_NOEXCEPT;
 				/**
