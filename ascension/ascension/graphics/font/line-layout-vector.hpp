@@ -73,11 +73,10 @@ namespace ascension {
 			 * @see TextLayout, TextRenderer
 			 * @note This class is not intended to be subclassed.
 			 */
-			class LineLayoutVector : public kernel::DocumentListener, public kernel::DocumentPartitioningListener {
-				ASCENSION_NONCOPYABLE_TAG(LineLayoutVector);
+			class LineLayoutVector : public kernel::DocumentListener,
+				public kernel::DocumentPartitioningListener, private boost::noncopyable {
 			public:
-				class UseCalculatedLayoutTag {
-					ASCENSION_NONCOPYABLE_TAG(UseCalculatedLayoutTag);
+				class UseCalculatedLayoutTag : private boost::noncopyable {
 					UseCalculatedLayoutTag() BOOST_NOEXCEPT;
 					friend class LineLayoutVector;
 				};
@@ -134,13 +133,12 @@ namespace ascension {
 			protected:
 				void invalidate(Index line);
 			private:
-				struct NumberedLayout {
+				struct NumberedLayout : private boost::noncopyable {
 					Index lineNumber;
 					std::unique_ptr<const TextLayout> layout;
 					NumberedLayout() BOOST_NOEXCEPT {}
 					NumberedLayout(NumberedLayout&& other) BOOST_NOEXCEPT
 						: lineNumber(other.lineNumber), layout(std::move(other.layout)) {}
-					ASCENSION_NONCOPYABLE_TAG(NumberedLayout);
 				};
 				void clearCaches(const boost::integer_range<Index>& lines, bool repair);
 				void deleteLineLayout(Index line, TextLayout* newLayout = nullptr) BOOST_NOEXCEPT;

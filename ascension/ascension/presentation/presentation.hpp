@@ -181,8 +181,7 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 * @see kernel#Document, kernel#DocumentPartitioner
 		 */
-		class Presentation : public kernel::DocumentListener {
-			ASCENSION_NONCOPYABLE_TAG(Presentation);
+		class Presentation : public kernel::DocumentListener, private boost::noncopyable {
 		public:
 			explicit Presentation(kernel::Document& document) BOOST_NOEXCEPT;
 			~Presentation() BOOST_NOEXCEPT;

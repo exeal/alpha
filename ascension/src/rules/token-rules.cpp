@@ -25,8 +25,7 @@ namespace ascension {
 		}
 
 		namespace detail {
-			class HashTable {
-				ASCENSION_NONCOPYABLE_TAG(HashTable);
+			class HashTable : private boost::noncopyable {
 			public:
 
 				/**

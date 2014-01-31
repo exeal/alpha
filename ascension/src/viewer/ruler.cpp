@@ -247,7 +247,9 @@ namespace ascension {
 				computedLineNumbersPaddingEnd_ = computedLineNumbersPaddingEnd;
 				if(allocationWidth() != oldAllocationWidth) {
 					viewers::widgetapi::scheduleRedraw(viewer_, false);
+#ifdef ASCENSION_USE_SYSTEM_CARET
 					viewer_.caret().updateLocation();
+#endif
 				}
 			}
 

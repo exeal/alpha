@@ -18,7 +18,6 @@ namespace ascension {
 		 * collecting identifiers in the document.
 		 */
 		class IdentifiersProposalProcessor : public ContentAssistProcessor {
-			ASCENSION_UNASSIGNABLE_TAG(IdentifiersProposalProcessor);
 		protected:
 			// constructors
 			IdentifiersProposalProcessor(

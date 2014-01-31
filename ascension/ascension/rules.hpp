@@ -28,8 +28,7 @@ namespace ascension {
 		 * <a href="http://www.ietf.org/rfc/rfc3986.txt">RFC 3986</a> and
 		 * <a href="http://www.ietf.org/rfc/rfc3987.txt">RFC 3987</a>.
 		 */
-		class URIDetector {
-			ASCENSION_NONCOPYABLE_TAG(URIDetector);
+		class URIDetector : private boost::noncopyable {
 		public:
 			explicit URIDetector() BOOST_NOEXCEPT;
 			~URIDetector() BOOST_NOEXCEPT;
@@ -80,7 +79,6 @@ namespace ascension {
 		 * @see LexicalTokenScanner, RegionRule, NumberRule, WordRule, RegexRule
 		 */
 		class Rule {
-			ASCENSION_UNASSIGNABLE_TAG(Rule);
 		public:
 			/// Destructor.
 			virtual ~Rule() BOOST_NOEXCEPT {}
@@ -211,8 +209,7 @@ namespace ascension {
 		 * not supported by this class.
 		 * @note This class is not intended to be subclassed.
 		 */
-		class LexicalTokenScanner : public TokenScanner {
-			ASCENSION_NONCOPYABLE_TAG(LexicalTokenScanner);
+		class LexicalTokenScanner : public TokenScanner, private boost::noncopyable {
 		public:
 			// constructors
 			explicit LexicalTokenScanner(kernel::ContentType contentType) BOOST_NOEXCEPT;
@@ -237,7 +234,6 @@ namespace ascension {
 		 * @see LexicalPartitioner
 		 */
 		class TransitionRule {
-			ASCENSION_UNASSIGNABLE_TAG(TransitionRule);
 		public:
 			virtual ~TransitionRule() BOOST_NOEXCEPT;
 			virtual std::unique_ptr<TransitionRule> clone() const = 0;
@@ -282,8 +278,7 @@ namespace ascension {
 		 * @note This class is not derivable.
 		 * @see kernel#Document
 		 */
-		class LexicalPartitioner : public kernel::DocumentPartitioner {
-			ASCENSION_NONCOPYABLE_TAG(LexicalPartitioner);
+		class LexicalPartitioner : public kernel::DocumentPartitioner, private boost::noncopyable {
 		public:
 			// constructor
 			LexicalPartitioner() BOOST_NOEXCEPT;
@@ -330,7 +325,6 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 */
 		class LexicalPartitionPresentationReconstructor : public presentation::PartitionPresentationReconstructor {
-			ASCENSION_UNASSIGNABLE_TAG(LexicalPartitionPresentationReconstructor);
 		public:
 			explicit LexicalPartitionPresentationReconstructor(
 				const presentation::Presentation& presentation, std::unique_ptr<TokenScanner> tokenScanner,

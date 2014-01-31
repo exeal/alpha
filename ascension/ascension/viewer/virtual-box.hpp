@@ -25,7 +25,6 @@ namespace ascension {
 		 * @see Caret#boxForRectangleSelection
 		 */
 		class VirtualBox {
-			ASCENSION_UNASSIGNABLE_TAG(VirtualBox);
 		public:
 			VirtualBox(const TextViewer& viewer, const kernel::Region& region) BOOST_NOEXCEPT;
 			boost::optional<boost::integer_range<Index>>

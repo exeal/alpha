@@ -6,17 +6,17 @@
  * @author exeal
  * @date 2005-2010 (was manah/memory.hpp)
  * @date 2010-10-21
- * @date 2011-2012
+ * @date 2011-2012, 2014
  */
 
 #ifndef ASCENSION_MEMORY_HPP
 #define ASCENSION_MEMORY_HPP
-#include <ascension/corelib/basic-types.hpp>	// ASCENSION_NONCOPYABLE_TAG
 #include <cassert>
 #include <algorithm>	// std.max
 #include <new>			// new[], delete[], std.bad_alloc, std.nothrow
 #include <cstddef>		// std.size_t
 #include <memory>		// std.unique_ptr
+#include <boost/noncopyable.hpp>
 #undef min
 #undef max
 
@@ -77,8 +77,7 @@ namespace ascension {
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 	// Efficient memory pool implementation (from MemoryPool of Efficient C++).
-	class MemoryPool {
-		ASCENSION_NONCOPYABLE_TAG(MemoryPool);
+	class MemoryPool : private boost::noncopyable {
 	public:
 		MemoryPool(std::size_t chunkSize) BOOST_NOEXCEPT : chunkSize_(std::max(chunkSize, sizeof(Chunk))), chunks_(nullptr) {}
 		~MemoryPool() BOOST_NOEXCEPT {release();}

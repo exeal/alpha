@@ -2,7 +2,7 @@
  * @file paint.hpp
  * @author exeal
  * @date 2011-03-13 created
- * @date 2011-2013
+ * @date 2011-2014
  */
 
 #ifndef ASCENSION_PAINT_HPP
@@ -25,8 +25,8 @@ namespace ascension {
 		 * @see RenderingContext2D#fillStyle, RenderingContext2D#strokeStyle,
 		 *      RenderingContext2D#setFillStyle, RenderingContext2D#setStrokeStyle
 		 */
-		class Paint : public std::enable_shared_from_this<Paint> /*, private boost::equality_comparable<Paint>*/ {
-			ASCENSION_NONCOPYABLE_TAG(Paint);
+		class Paint : public std::enable_shared_from_this<Paint> /*,
+			private boost::equality_comparable<Paint>*/, private boost::noncopyable {
 		public:
 			/// Constructor.
 			Paint() BOOST_NOEXCEPT : revisionNumber_(0) {}

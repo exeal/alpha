@@ -33,8 +33,8 @@ namespace ascension {
 
 			/**
 			 */
-			class TextViewport : public DefaultFontListener, public VisualLinesListener, public ComputedBlockFlowDirectionListener {
-				ASCENSION_NONCOPYABLE_TAG(TextViewport);
+			class TextViewport : public DefaultFontListener, public VisualLinesListener,
+				public ComputedBlockFlowDirectionListener, private boost::noncopyable {
 			public:
 				typedef Index ScrollOffset;
 				typedef SignedIndex SignedScrollOffset;

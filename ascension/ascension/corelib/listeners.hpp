@@ -48,8 +48,7 @@ namespace ascension {
 		 * @tparam Listener The type of listener/observer object
 		 */
 		template<class Listener>
-		class Listeners {
-			ASCENSION_NONCOPYABLE_TAG(Listeners);
+		class Listeners : private boost::noncopyable {
 		public:
 			Listeners() BOOST_NOEXCEPT {}
 			void add(Listener& listener) {

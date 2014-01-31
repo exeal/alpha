@@ -20,8 +20,8 @@ namespace ascension {
 		class Caret;
 
 		/// Highlights the line on which the caret is put.
-		class CurrentLineHighlighter : public presentation::TextLineColorSpecifier, public kernel::PointLifeCycleListener {
-			ASCENSION_NONCOPYABLE_TAG(CurrentLineHighlighter);
+		class CurrentLineHighlighter : public presentation::TextLineColorSpecifier,
+			public kernel::PointLifeCycleListener, private boost::noncopyable {
 		public:
 			// constant
 			static const presentation::TextLineColorSpecifier::Priority LINE_COLOR_PRIORITY;

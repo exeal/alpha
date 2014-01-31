@@ -56,9 +56,9 @@
 #include <stdexcept>
 #include <sstream>
 #include <utility>									// std.swap
-#include <ascension/corelib/basic-types.hpp>		// ASCENSION_NON_COPYABLE_TAG
 #include <ascension/corelib/basic-exceptions.hpp>	// makePlatformError
 #include <ascension/corelib/string-piece.hpp>		// BasicStringPiece
+#include <boost/noncopyable.hpp>
 
 namespace ascension {
 	namespace win32 {
@@ -109,8 +109,7 @@ namespace ascension {
 		explicit ClassName(Borrowed<HandleType>* handle) : BaseObject(handle) {}
 
 		/// A resource identifier can be initialized by using both a string and a numeric identifier.
-		class ResourceID {
-			ASCENSION_NONCOPYABLE_TAG(ResourceID);
+		class ResourceID : private boost::noncopyable {
 		public:
 			/// Constructor takes a string identifier.
 			ResourceID(const win32::StringPiece& name) BOOST_NOEXCEPT : name_(name.data()) {}

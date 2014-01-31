@@ -87,8 +87,7 @@ namespace ascension {
 //			class TabExpander;
 			class TextRun;
 
-			class TextLayout {
-				ASCENSION_NONCOPYABLE_TAG(TextLayout);
+			class TextLayout : private boost::noncopyable {
 			public:
 				/// 
 				class LineMetricsIterator : public boost::iterator_facade<LineMetricsIterator, std::nullptr_t, boost::bidirectional_traversal_tag> {

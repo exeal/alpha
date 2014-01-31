@@ -34,8 +34,7 @@ namespace ascension {
 		/**
 		 * @note This class is not intended to be subclassed.
 		 */
-		class LiteralPattern {
-			ASCENSION_NONCOPYABLE_TAG(LiteralPattern);
+		class LiteralPattern : private boost::noncopyable {
 		public:
 			// constructors
 			LiteralPattern(const String& pattern, bool caseSensitive = true
@@ -126,8 +125,7 @@ namespace ascension {
 		};
 
 		// the documentation is searcher.cpp
-		class TextSearcher {
-			ASCENSION_NONCOPYABLE_TAG(TextSearcher);
+		class TextSearcher : private boost::noncopyable {
 		public:
 			/// Types of search.
 			enum Type {
@@ -281,8 +279,8 @@ namespace ascension {
 		 * @see TextSearcher, texteditor#Session#getIncrementalSearcher,
 		 * texteditor#commands#IncrementalSearchCommand
 		 */
-		class IncrementalSearcher : public kernel::DocumentListener, public kernel::BookmarkListener {
-			ASCENSION_NONCOPYABLE_TAG(IncrementalSearcher);
+		class IncrementalSearcher : public kernel::DocumentListener,
+			public kernel::BookmarkListener, private boost::noncopyable {
 		public:
 			IncrementalSearcher() BOOST_NOEXCEPT;
 

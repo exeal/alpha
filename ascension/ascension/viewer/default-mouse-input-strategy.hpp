@@ -44,7 +44,6 @@ namespace ascension {
 				win32::com::IUnknownImpl<ASCENSION_WIN32_COM_INTERFACE(IDropSource), win32::com::NoReferenceCounting>,
 #endif // ASCENSION_WINDOW_SYSTEM_WIN32
 				private HasTimer, private widgetapi::DropTarget {
-			ASCENSION_UNASSIGNABLE_TAG(DefaultMouseInputStrategy);
 		public:
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			/**

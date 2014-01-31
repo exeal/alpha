@@ -52,7 +52,6 @@ namespace ascension {
 
 		// documentation is point.cpp
 		class Point : private boost::totally_ordered<Point> {
-			ASCENSION_UNASSIGNABLE_TAG(Point);
 		public:
 			// constructors
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08

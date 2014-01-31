@@ -41,9 +41,7 @@ namespace ascension {
 				AutoScrollOriginMarkBase;
 
 			/// Circled window displayed at which the auto scroll started.
-			class AutoScrollOriginMark : public AutoScrollOriginMarkBase
-			{
-				ASCENSION_NONCOPYABLE_TAG(AutoScrollOriginMark);
+			class AutoScrollOriginMark : public AutoScrollOriginMarkBase, private boost::noncopyable {
 			public:
 				/// Defines the type of the cursors obtained by @c #cursorForScrolling method.
 				enum CursorType {

@@ -222,7 +222,6 @@ namespace ascension {
 
 		/// Unchecked exception thrown to indicate a syntax error in a regular-expression pattern.
 		class PatternSyntaxException : public std::invalid_argument {
-			ASCENSION_UNASSIGNABLE_TAG(PatternSyntaxException);
 		public:
 			/// Error types (corresponds to @c boost#regex_constants#error_type).
 			enum Code {
@@ -245,7 +244,7 @@ namespace ascension {
 			/// Constructor.
 			PatternSyntaxException(const boost::regex_error& src, const String& pattern);
 			/// Destructor.
-			~PatternSyntaxException() throw() {}
+			~PatternSyntaxException() BOOST_NOEXCEPT {}
 			/// Retrieves the error code.
 			Code getCode() const;
 			/// Retrieves the description of the error.
@@ -263,7 +262,6 @@ namespace ascension {
 
 		// the documentation is regex.cpp
 		class Pattern {
-			ASCENSION_UNASSIGNABLE_TAG(Pattern);
 		public:
 			enum {
 				UNIX_LINES = 0x01,			///< Enables Unix lines mode (not implemented).
@@ -336,18 +334,19 @@ namespace ascension {
 				return matches(regex,
 					text::StringCharacterIterator(input), text::StringCharacterIterator(input, input.end()));
 			}
+
 			/**
 			 * Compiles the given regular expression and attempts to match the given input against it.
 			 * @param regex the expression to be compiled
 			 * @param first the character sequence to be matched
 			 * @param last the end of @a first
-
 			 * @throw PatternSyntaxException the expression's syntax is invalid
 			 */
 			template<typename CodePointIterator>
 			static bool matches(const StringPiece& regex, CodePointIterator first, CodePointIterator last) {
 				return compile(regex)->matcher(first, last)->matches();
 			}
+
 //			template<typename CodePointIterator, typename OutputIterator>
 //			std::size_t split(CodePointIteratorfirst, CodePointIteratorlast, OutputIterator out, std::size_t limit = -1);
 		protected:
@@ -734,7 +733,6 @@ namespace ascension {
 #ifndef ASCENSION_NO_MIGEMO
 		/// Builds regular expression pattern for Migemo use.
 		class MigemoPattern : public Pattern {
-			ASCENSION_UNASSIGNABLE_TAG(MigemoPattern);
 		public:
 			static std::unique_ptr<const MigemoPattern> compile(const StringPiece& pattern, bool caseSensitive);
 			static void initialize(const std::string& runtimePathName, const std::string& dictionaryPathName);

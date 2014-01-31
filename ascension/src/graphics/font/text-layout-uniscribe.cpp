@@ -616,8 +616,7 @@ namespace ascension {
 					ElementType* p_;
 				};
 
-				class TextRunImpl : public TextRun, public StringPiece {
-					ASCENSION_NONCOPYABLE_TAG(TextRunImpl);
+				class TextRunImpl : public TextRun, public StringPiece, private boost::noncopyable {
 				public:
 					struct Overlay {
 						Color color;
@@ -691,7 +690,7 @@ namespace ascension {
 					void paintLineDecorations() const;
 				private:
 					// this data is shared text runs separated by (only) line breaks and computed styles
-					struct RawGlyphVector /*: public StringPiece*/ {
+					struct RawGlyphVector /*: public StringPiece*/ : private boost::noncopyable {
 						const StringPiece::const_iterator position;
 						boost::flyweight<FontAndRenderContext> font;
 						const OpenTypeFontTag scriptTag;	// as OPENTYPE_TAG
@@ -711,7 +710,6 @@ namespace ascension {
 						RawGlyphVector& operator=(RawGlyphVector&& other) BOOST_NOEXCEPT;
 						~RawGlyphVector() BOOST_NOEXCEPT {::ScriptFreeCache(&fontCache);}
 						void vanish(const Font& font, StringPiece::const_iterator at);
-						ASCENSION_NONCOPYABLE_TAG(RawGlyphVector);
 					};
 				private:
 					TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,

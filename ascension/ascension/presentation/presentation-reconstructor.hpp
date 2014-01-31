@@ -44,7 +44,6 @@ namespace ascension {
 
 		/// Reconstructs document presentation with single text style.
 		class SingleStyledPartitionPresentationReconstructor : public PartitionPresentationReconstructor {
-			ASCENSION_UNASSIGNABLE_TAG(SingleStyledPartitionPresentationReconstructor);
 		public:
 			explicit SingleStyledPartitionPresentationReconstructor(std::shared_ptr<const TextRunStyle> style) BOOST_NOEXCEPT;
 		private:
@@ -80,7 +79,6 @@ namespace ascension {
 		 * 
 		 */
 		class PresentationReconstructor : public TextRunStyleDeclarator {
-			ASCENSION_UNASSIGNABLE_TAG(PresentationReconstructor);
 		public:
 			// constructors
 			explicit PresentationReconstructor(Presentation& presentation) BOOST_NOEXCEPT;
