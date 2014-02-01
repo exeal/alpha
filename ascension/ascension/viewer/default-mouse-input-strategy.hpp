@@ -75,6 +75,7 @@ namespace ascension {
 			virtual bool handleRightButton(Action action, const graphics::Point& position, int modifiers);
 			virtual bool handleX1Button(Action action, const graphics::Point& position, int modifiers);
 			virtual bool handleX2Button(Action action, const graphics::Point& position, int modifiers);
+			static void showCursor(TextViewer& viewer, const widgetapi::Cursor& cursor);
 		private:
 			bool endAutoScroll();
 			void extendSelectionTo(const kernel::Position* to = nullptr);

@@ -1135,28 +1135,45 @@ namespace ascension {
 
 		/// @see MouseInputStrategy#showCursor
 		bool DefaultMouseInputStrategy::showCursor(const graphics::Point& position) {
-			LPCTSTR cursorName = nullptr;
+			boost::optional<widgetapi::Cursor::BuiltinShape> builtinShape;
 			const presentation::hyperlink::Hyperlink* newlyHoveredHyperlink = nullptr;
 
-			// on the vertical ruler?
 			const TextViewer::HitTestResult htr = viewer_->hitTest(position);
-			if((htr & TextViewer::RULER_MASK) != 0)
-				cursorName = IDC_ARROW;
-			// on a draggable text selection?
-			else if(/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(viewer_->caret()) && isPointOverSelection(viewer_->caret(), position))
-				cursorName = IDC_ARROW;
+			if((htr & TextViewer::RULER_MASK) != 0	// on the ruler?
+					|| (/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(viewer_->caret()) && isPointOverSelection(viewer_->caret(), position)))	// on a draggable text selection?
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+				builtinShape = Gdk::ARROW;
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+				builtinShape = Qt::ArrowCursor;
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+				builtinShape = [NSCursor arrowCursor];
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+				builtinShape = IDC_ARROW;
+#else
+				ASCENSION_CANT_DETECT_PLATFORM();
+#endif
 			else if(htr == TextViewer::TEXT_AREA_CONTENT_RECTANGLE) {
 				// on a hyperlink?
 				if(const boost::optional<graphics::font::TextHit<kernel::Position>> p =
 						viewToModelInBounds(*viewer_->textRenderer().viewport(), position, kernel::locations::UTF16_CODE_UNIT))
 					newlyHoveredHyperlink = utils::getPointedHyperlink(*viewer_, p->characterIndex());
 				if(newlyHoveredHyperlink != nullptr && win32::boole(::GetAsyncKeyState(VK_CONTROL) & 0x8000))
-					cursorName = IDC_HAND;
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+				builtinShape = Gdk::HAND1;
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+				builtinShape = Qt::PointingHandCursor;
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+				builtinShape = [NSCursor pointingHandCursor];
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+				builtinShape = IDC_HAND;
+#else
+				ASCENSION_CANT_DETECT_PLATFORM();
+#endif
 			}
 
-			if(cursorName != nullptr) {
-				::SetCursor(static_cast<HCURSOR>(::LoadImageW(
-					nullptr, cursorName, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED)));
+			if(builtinShape != boost::none) {
+				const widgetapi::Cursor cursor(*builtinShape);
+				showCursor(*viewer_, cursor);
 				return true;
 			}
 			if(newlyHoveredHyperlink != nullptr) {
@@ -1166,6 +1183,20 @@ namespace ascension {
 				viewer_->hideToolTip();
 			lastHoveredHyperlink_ = newlyHoveredHyperlink;
 			return false;
+		}
+
+		inline void DefaultMouseInputStrategy::showCursor(TextViewer& viewer, const widgetapi::Cursor& cursor) {
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+			viewer.get_window()->set_cursor(const_cast<widgetapi::Cursor&>(cursor).asNativeObject());
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+			QApplication::setOverrideCursor(cursor.asNativeObject());	// TODO: Restore later.
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+			[cursor set];
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+			::SetCursor(cursor.asNativeObject().get());
+#else
+			ASCENSION_CANT_DETECT_PLATFORM();
+#endif
 		}
 
 		///
@@ -1219,27 +1250,11 @@ namespace ascension {
 					timer_.start(500 / static_cast<unsigned int>((std::pow(2.0f, abs(geometry::dy(scrollOffsets)) / 2))), *this);
 					const widgetapi::Cursor& cursor = AutoScrollOriginMark::cursorForScrolling(
 						(geometry::dy(scrollOffsets) > 0) ? AutoScrollOriginMark::CURSOR_DOWNWARD : AutoScrollOriginMark::CURSOR_UPWARD);
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-					viewer_->get_window()->set_cursor(cursor.asNativeObject());
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-					::SetCursor(cursor.asNativeObject().get());
-#else
-					ASCENSION_CANT_DETECT_PLATFORM();
-#endif
+					showCursor(*viewer_, cursor);
 				} else {
 					timer_.start(300, *this);
 					const widgetapi::Cursor& cursor = AutoScrollOriginMark::cursorForScrolling(AutoScrollOriginMark::CURSOR_NEUTRAL);
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-					viewer_->get_window()->set_cursor(cursor.asNativeObject());
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-					::SetCursor(cursor.asNativeObject().get());
-#else
-					ASCENSION_CANT_DETECT_PLATFORM();
-#endif
+					showCursor(*viewer_, cursor);
 				}
 #if 0
 			} else if(self.dnd_.enabled && (self.state_ & DND_MASK) == DND_MASK) {	// scroll automatically during dragging
