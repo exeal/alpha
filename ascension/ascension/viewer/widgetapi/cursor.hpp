@@ -67,6 +67,8 @@ namespace ascension {
 				Cursor& operator=(const Cursor& other);
 				/// Returns the underlying native object.
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+				Glib::RefPtr<Gdk::Cursor> asNativeObject() BOOST_NOEXCEPT {return impl_;}
+				/// Returns the underlying native object.
 				Glib::RefPtr<const Gdk::Cursor>
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
 				const QCursor&
@@ -102,7 +104,7 @@ namespace ascension {
 
 			private:
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-				Glib::RefPtr<const Gdk::Cursor>
+				Glib::RefPtr<Gdk::Cursor>
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
 				QCursor
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
