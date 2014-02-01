@@ -70,7 +70,7 @@ namespace ascension {
 			virtual void dragMoved(widgetapi::DragMoveInput& input);
 			virtual void dropped(widgetapi::DropInput& input);
 		private:
-			void beginDragAndDrop();
+			void beginDragAndDrop(const widgetapi::LocatedUserInput& input);
 			virtual bool handleLeftButtonDoubleClick(const graphics::Point& position, int modifiers);
 			virtual bool handleRightButton(Action action, const graphics::Point& position, int modifiers);
 			virtual bool handleX1Button(Action action, const graphics::Point& position, int modifiers);
