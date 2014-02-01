@@ -28,39 +28,81 @@ namespace ascension {
 
 	namespace viewers {
 		namespace widgetapi {
+			/// Provides a (mouse) cursor.
 			class Cursor {
 			public:
-				enum Shape {};
-			public:
-				explicit Cursor(Shape shape);
-				explicit Cursor(const graphics::Image& shape);
-				Cursor(const graphics::Image& shape, const graphics::Point& hotspot);
-				Cursor(const Cursor& other);
-				Cursor& operator=(const Cursor& other);
+				/// The coordinate type for images.
+				typedef std::uint16_t Coordinate;
+				/// Defines system-defined cursor types.
+				typedef
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-				Glib::RefPtr<Gdk::Cursor> asNativeObject() const BOOST_NOEXCEPT;
+					Gdk::CursorType
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
-				const QCursor& asNativeObject() const BOOST_NOEXCEPT;
+					Qt::CursorShape
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-				NSCursor??? asNativeObject() const BOOST_NOEXCEPT;
+					???
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-				win32::Handle<HCURSOR>::Type asNativeObject() const BOOST_NOEXCEPT;
+					LPCWSTR
+#else
+					ASCENSION_CANT_DETECT_PLATFORM();
+#endif
+					BuiltinShape;
+
+			public:
+				/**
+				 * Creates a new cursor with the specified built-in shape.
+				 * @param shape The built-in cursor shape
+				 */
+				explicit Cursor(BuiltinShape shape);
+				/**
+				 * Creates a new cursor with the given image.
+				 * @param shape The image which provides cursor pixels
+				 * @param hotspot The hotspot of the cursor in pixels. If @c boost#none, the center of @a shape is used
+				 */
+				explicit Cursor(const graphics::Image& shape,
+					const boost::optional<graphics::geometry::BasicPoint<Coordinate>>& hotspot = boost::none);
+				/// Copy-constructor.
+				Cursor(const Cursor& other);
+				/// Copy-assignment operator.
+				Cursor& operator=(const Cursor& other);
+				/// Returns the underlying native object.
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+				Glib::RefPtr<const Gdk::Cursor>
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+				const QCursor&
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+				NSCursor???
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+				win32::Handle<HCURSOR>::Type
 #else
 				ASCENSION_CANT_DETECT_PLATFORM();
 #endif
+					asNativeObject() const BOOST_NOEXCEPT {return impl_;}
+				/**
+				 * Creates a new cursor with the given monochrome pixel data.
+				 * @param size The size of the @a bitmap in pixels
+				 * @param bitmap The byte array which defines bitmap of the cursor
+				 * @param mask The byte array which defines mask data
+				 * @param hotspot The hotspot of the cursor in pixels. If @c boost#none, the center of bitmap is used
+				 */
 				static Cursor&& createMonochrome(
-					const graphics::geometry::BasicDimension<std::uint16_t>& size,
+					const graphics::geometry::BasicDimension<Coordinate>& size,
 					const std::uint8_t* bitmap, const std::uint8_t* mask,
-					boost::optional<graphics::geometry::BasicPoint<std::uint16_t>> hotspot
-						= boost::optional<graphics::geometry::BasicPoint<std::uint16_t>>());
+					const boost::optional<graphics::geometry::BasicPoint<Coordinate>>& hotspot = boost::none);
+
 			public:
+				/// Hides the global cursor.
 				static void hide();
+				/// Returns the position of the global cursor in pixels.
 				static graphics::Point position();
+				/// Moves the global cursor to the specified position in pixels.
 				static void setPosition(const graphics::Point& p);
+				/// Shows the global cursors.
 				static void show();
+
 			private:
 #if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-				Glib::RefPtr<Gdk::Cursor>
+				Glib::RefPtr<const Gdk::Cursor>
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
 				QCursor
 #elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
