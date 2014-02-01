@@ -293,7 +293,7 @@ namespace ascension {
 
 		namespace {
 			std::unique_ptr<graphics::Image> createSelectionImage(TextViewer& viewer,
-					const graphics::Point& cursorPosition, bool highlightSelection, graphics::geometry::BasicRectangle<std::uint16_t>& dimensions) {
+					const graphics::Point& cursorPosition, bool highlightSelection, graphics::geometry::BasicRectangle<std::int32_t>& dimensions) {
 				// determine the range to draw
 				const kernel::Region selectedRegion(viewer.caret());
 //				const shared_ptr<const TextViewport> viewport(viewer.textRenderer().viewport());
@@ -438,7 +438,7 @@ namespace ascension {
 			}
 		}
 
-		void DefaultMouseInputStrategy::beginDragAndDrop() {
+		void DefaultMouseInputStrategy::beginDragAndDrop(const widgetapi::LocatedUserInput& input) {
 			const Caret& caret = viewer_->caret();
 			if(!caret.isSelectionRectangle())
 				dnd_.numberOfRectangleLines = 0;
@@ -451,18 +451,22 @@ namespace ascension {
 			widgetapi::DragContext d(*viewer_);
 
 			const widgetapi::MimeData draggingContent(utils::createMimeDataForSelectedString(viewer_->caret(), true));
-			d.setMimeData(std::shared_ptr<widgetapi::MimeData>(&draggingContent, ascension::detail::NullDeleter()));
+			d.setMimeData(std::shared_ptr<const widgetapi::MimeData>(&draggingContent, ascension::detail::NullDeleter()));
 
-			graphics::geometry::BasicRectangle<std::uint16_t> imageDimensions;
+			graphics::geometry::BasicRectangle<std::int32_t> imageDimensions;
 			std::unique_ptr<graphics::Image> image(createSelectionImage(*viewer_, dragApproachedPosition_, true, imageDimensions));
-			d.setImage(*image, imageDimensions);
+			d.setImage(*image, graphics::geometry::negate(graphics::geometry::topLeft(imageDimensions)));
 
 			widgetapi::DropAction possibleActions = widgetapi::DROP_ACTION_COPY;
 			if(!viewer_->document().isReadOnly())
 				possibleActions |= widgetapi::DROP_ACTION_MOVE;
-			d.execute(possibleActions, );
+#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+			d.execute(possibleActions, input.modifiers(), nullptr);
+#else
+			d.execute(possibleActions);
+#endif
 
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32 && 0
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && 0
 			if(dnd_.dragSourceHelper.get() != nullptr) {
 				unique_ptr<Image> image(createSelectionImage(*viewer_, dragApproachedPosition_, true, imageDimensions));
 				if(image.get() != nullptr) {
@@ -538,6 +542,8 @@ namespace ascension {
 				// retrieve number of lines if text is rectangle
 				dnd_.numberOfRectangleLines = 0;
 				if(isMimeDataAcceptable(input.mimeDataFormats(), true)) {
+					// TODO: Not implemented.
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 					const presentation::TextAnchor anchor = defaultTextAnchor(viewer_->presentation());
 					const presentation::ReadingDirection readingDirection = defaultReadingDirection(viewer_->presentation());
 					if((anchor == presentation::TextAnchor::START && readingDirection == presentation::RIGHT_TO_LEFT)
@@ -549,6 +555,7 @@ namespace ascension {
 					} catch(...) {
 						return input.ignore(boost::none);
 					}
+#endif
 				}
 				state_ = DND_TARGET;
 			}
@@ -1087,7 +1094,7 @@ namespace ascension {
 							|| (geometry::y(input.location()) > geometry::y(dragApproachedPosition_) + cyDragBox / 2)
 							|| (geometry::y(input.location()) < geometry::y(dragApproachedPosition_) - cyDragBox / 2)) {
 						if(state_ == APPROACHING_DND)
-							beginDragAndDrop();
+							beginDragAndDrop(input);
 						else {
 							state_ = AUTO_SCROLL_DRAGGING;
 							timer_.start(0, *this);
@@ -1210,11 +1217,29 @@ namespace ascension {
 
 				if(geometry::dy(scrollOffsets) != 0) {
 					timer_.start(500 / static_cast<unsigned int>((std::pow(2.0f, abs(geometry::dy(scrollOffsets)) / 2))), *this);
-					::SetCursor(AutoScrollOriginMark::cursorForScrolling(
-						(geometry::dy(scrollOffsets) > 0) ? AutoScrollOriginMark::CURSOR_DOWNWARD : AutoScrollOriginMark::CURSOR_UPWARD).asNativeObject().get());
+					const widgetapi::Cursor& cursor = AutoScrollOriginMark::cursorForScrolling(
+						(geometry::dy(scrollOffsets) > 0) ? AutoScrollOriginMark::CURSOR_DOWNWARD : AutoScrollOriginMark::CURSOR_UPWARD);
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+					viewer_->get_window()->set_cursor(cursor.asNativeObject());
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+					::SetCursor(cursor.asNativeObject().get());
+#else
+					ASCENSION_CANT_DETECT_PLATFORM();
+#endif
 				} else {
 					timer_.start(300, *this);
-					::SetCursor(AutoScrollOriginMark::cursorForScrolling(AutoScrollOriginMark::CURSOR_NEUTRAL).asNativeObject().get());
+					const widgetapi::Cursor& cursor = AutoScrollOriginMark::cursorForScrolling(AutoScrollOriginMark::CURSOR_NEUTRAL);
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+					viewer_->get_window()->set_cursor(cursor.asNativeObject());
+#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+					::SetCursor(cursor.asNativeObject().get());
+#else
+					ASCENSION_CANT_DETECT_PLATFORM();
+#endif
 				}
 #if 0
 			} else if(self.dnd_.enabled && (self.state_ & DND_MASK) == DND_MASK) {	// scroll automatically during dragging

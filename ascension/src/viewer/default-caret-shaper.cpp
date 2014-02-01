@@ -20,9 +20,6 @@ namespace ascension {
 	namespace viewers {
 		// DefaultCaretShaper /////////////////////////////////////////////////////////////////////////////////////////
 
-		DefaultCaretShaper::DefaultCaretShaper() BOOST_NOEXCEPT {
-		}
-
 		/// @see Caret#MotionSignal
 		void DefaultCaretShaper::caretMoved(const Caret& caret, const kernel::Region& regionBeforeMotion) {
 			if(kernel::line(caret) != regionBeforeMotion.second.line)
