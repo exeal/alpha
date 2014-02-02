@@ -61,7 +61,7 @@ namespace ascension {
 		class Screen : public RenderingDevice {
 		public:
 			static Screen& instance();
-			std::unique_ptr<RenderingContext2D> createGraphicContext() const;
+			std::unique_ptr<RenderingContext2D> createGraphicsContext() const;
 		};
 
 	}
