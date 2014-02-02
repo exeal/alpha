@@ -37,6 +37,9 @@ namespace ascension {
 	}
 
 	namespace viewers {
+		namespace widgetapi {
+			class Cursor;
+		}
 
 		// the documentation is user-input.cpp
 		class DefaultMouseInputStrategy : public MouseInputStrategy,
