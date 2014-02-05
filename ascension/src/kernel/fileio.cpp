@@ -9,6 +9,7 @@
 
 #include <ascension/config.hpp>	// ASCENSION_NO_STANDARD_ENCODINGS
 #include <ascension/kernel/fileio.hpp>
+#include <boost/filesystem/operations.hpp>
 #include <boost/range/algorithm/copy.hpp>
 #include <boost/range/algorithm/find.hpp>
 #include <boost/range/algorithm/find_first_of.hpp>
@@ -27,25 +28,18 @@ namespace ascension {
 			// free function //////////////////////////////////////////////////////////////////////////////////////////
 
 			namespace {
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				inline void sanityCheckPathName(const PathStringPiece& s, const std::string& variableName) {
 					if(s.cbegin() == nullptr || s.cend() == nullptr)
 						throw NullPointerException(variableName);
 					if(s.cbegin() > s.cend())
 						throw std::invalid_argument(variableName + ".cbegin() > " + variableName + ".cend()");
 				}
+#endif
 			}
 
 			namespace {
-#ifdef ASCENSION_OS_WINDOWS
-				static const std::array<PathCharacter, 2> PATH_SEPARATORS = {0x005cu, 0x002fu};	// \ or /
-#else // ASCENSION_OS_POSIX
-				static const std::array<PathCharacter, 1> PATH_SEPARATORS = {'/'};
-#endif
-				static const PathCharacter PREFERRED_PATH_SEPARATOR = PATH_SEPARATORS[0];
-				/// Returns @c true if the given character is a path separator.
-				inline bool isPathSeparator(PathCharacter c) BOOST_NOEXCEPT {
-					return boost::find(PATH_SEPARATORS, c) != boost::end(PATH_SEPARATORS);
-				}
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				/**
 				 * Returns @c true if the specified file or directory exists.
 				 * @param name the name of the file
@@ -73,12 +67,9 @@ namespace ascension {
 #endif
 					throw IOException(name);
 				}
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
-				/// Finds the base name in the given file path name.
-				inline PathStringPiece::const_iterator findFileName(const PathStringPiece& s) {
-					return s.cbegin() + std::distance(boost::find_first_of(s | boost::adaptors::reversed, PATH_SEPARATORS), boost::rend(s));
-				}
-
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				/**
 				 * Returns the last write time of the specified file.
 				 * @param fileName The name of the file
@@ -98,7 +89,9 @@ namespace ascension {
 					else
 						throw IOException(fileName);
 				}
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				/**
 				 * Returns the size of the specified file.
 				 * @param fileName The name of the file
@@ -120,38 +113,36 @@ namespace ascension {
 					else
 						throw IOException(fileName);
 				}
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 				/**
 				 * Creates a name for a temporary file.
 				 * @param seed The string contains a directory path and a prefix string
-				 * @return The result string
+				 * @return The result temporary file path name
 				 * @throw std#bad_alloc POSIX @c tempnam failed (only when @c ASCENSION_OS_POSIX was defined)
 				 * @throw IOException Any I/O error occurred
 				 */
-				PathString makeTemporaryFileName(const PathStringPiece& seed) {
-#ifndef BOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS
-					PathString s(seed);
-#else
-					PathString s(seed.cbegin(), seed.cend());
-#endif
-					const PathString::const_iterator name(s.cbegin() + std::distance(seed.cbegin(), findFileName(seed)));
-					if(name != s.cbegin())
-						s.resize(distance(s.cbegin(), name) - 1);
+				boost::filesystem::path makeTemporaryFileName(const boost::filesystem::path& seed) {
+					const boost::filesystem::path name(seed.filename());
+					boost::filesystem::path parentPath(seed);
+					if(name != parentPath)
+						parentPath.remove_filename();
 #ifdef ASCENSION_OS_WINDOWS
-					WCHAR result[MAX_PATH];
-					if(::GetTempFileNameW(s.c_str(), s.data() + distance(s.cbegin(), name), 0, result) != 0)
+					boost::filesystem::path::value_type result[MAX_PATH];
+					if(::GetTempFileNameW(parentPath.c_str(), name.c_str(), 0, result) != 0)
 						return result;
 #else // ASCENSION_OS_POSIX
-					if(char* p = ::tempnam(s.get(), name)) {
-						PathString result(p);
+					if(boost::filesystem::path::value_type* p = ::tempnam(parentPath.c_str(), name.c_str())) {
+						boost::filesystem::path result(p);
 						::free(p);
 						return result;
 					} else if(errno == ENOMEM)
 						throw std::bad_alloc();	// tempnam failed
 #endif
-					throw IOException(PathString());
+					throw makePlatformError();
 				}
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				/**
 				 * Returns @c true if the specified file is special.
 				 * @param fileName The file name
@@ -181,6 +172,7 @@ namespace ascension {
 					else
 						throw IOException(fileName);
 				}
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 				/**
 				 * Verifies if the newline is allowed in the given character encoding.
@@ -221,72 +213,75 @@ namespace ascension {
 			 * @param pathName The absolute path name
 			 * @return The result real path name
 			 * @throw NullPointerException @a pathName is @c null
+			 * @note Unlike @c boost#filesystem#canonical, this function resolve real names of path.
 			 * @see comparePathNames
 			 */
-			PathString fileio::canonicalizePathName(const PathStringPiece& pathName) {
-				sanityCheckPathName(pathName, "pathName");
+			boost::filesystem::path fileio::canonicalizePathName(const boost::filesystem::path& pathName) {
+#ifdef ASCENSION_OS_WINDOWS
+				static const std::array<boost::filesystem::path::value_type, 2> PATH_SEPARATORS = {0x005cu, 0x002fu};	// \ or /
+#else // ASCENSION_OS_POSIX
+				static const std::array<boost::filesystem::path::value_type, 1> PATH_SEPARATORS = {'/'};
+#endif
+//				static const boost::filesystem::path::value_type PREFERRED_PATH_SEPARATOR = PATH_SEPARATORS[0];
+				const auto native(pathName.native());
 
 #ifdef ASCENSION_OS_WINDOWS
-
-				if(pathName.length() >= MAX_PATH)	// too long name
-#ifndef BOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS
-					return PathString(pathName);
-#else
-					return pathName.to_string();
-#endif
-
 				// resolve relative path name
-				std::array<WCHAR, MAX_PATH> fullName;
-				WCHAR* dummy;
-				if(::GetFullPathNameW(pathName.cbegin(), fullName.size(), fullName.data(), &dummy) == 0)
-					std::wcscpy(fullName.data(), pathName.cbegin());
+				std::array<WCHAR, MAX_PATH> shortFullName;
+				std::unique_ptr<WCHAR[]> longFullName;
+				WCHAR* fullName = shortFullName.data();
+				DWORD fullNameLength = ::GetFullPathNameW(native.c_str(), std::tuple_size<decltype(shortFullName)>::value, fullName, nullptr);
+				if(fullNameLength > std::tuple_size<decltype(shortFullName)>::value) {
+					longFullName.reset(new WCHAR[fullNameLength + 1]);
+					fullName = longFullName.get();
+					fullNameLength = ::GetFullPathNameW(native.c_str(), fullNameLength + 1, fullName, nullptr);
+				}
+				if(fullNameLength == 0)
+					throw makePlatformError();
 
 				// get real component names (from Ftruename implementation in xyzzy)
-				PathString result;
-				result.reserve(MAX_PATH);
-				auto view(boost::make_iterator_range(fullName));
+				boost::filesystem::path result;
+				auto view(boost::make_iterator_range(fullName, fullName + fullNameLength));
 				if(((view[0] >= L'A' && view[0] <= L'Z') || (view[0] >= L'a' && view[0] <= L'z'))
-						&& view[1] == L':' && isPathSeparator(view[2])) {	// drive letter
-					result.append(fullName.data(), 3);
-					result[0] = towupper(fullName[0]);	// unify with uppercase letters...
+						&& view[1] == L':' && boost::find(PATH_SEPARATORS, view[2]) != boost::end(PATH_SEPARATORS)) {	// drive letter
+					fullName[0] = std::towupper(fullName[0]);	// unify with uppercase letters... (no longer needed)
+					result /= boost::filesystem::path::string_type(fullName, 3);
 					view.advance_begin(+3);
-				} else if(std::all_of(std::begin(view), std::begin(view) + 1, &isPathSeparator)) {	// UNC?
-					view = boost::make_iterator_range(boost::find_first_of(view.advance_begin(+2), PATH_SEPARATORS), std::end(view));
+				} else if(std::all_of(std::begin(view), std::begin(view) + 1,
+						[](boost::filesystem::path::value_type c) {
+							return boost::find(PATH_SEPARATORS, c) != boost::end(PATH_SEPARATORS);
+						})) {	// UNC?
+					view = boost::make_iterator_range(boost::find_first_of(view.advance_begin(+2), PATH_SEPARATORS), boost::end(view));
 					if(view.empty())	// server name
-						return false;
-					view = boost::make_iterator_range(boost::find_first_of(view.advance_begin(+1), PATH_SEPARATORS), std::end(view));
+						return pathName;
+					view = boost::make_iterator_range(boost::find_first_of(view.advance_begin(+1), PATH_SEPARATORS), boost::end(view));
 					if(view.empty())	// shared name
-						return false;
-					result.append(std::begin(fullName), std::begin(view.advance_begin(+1)));
+						return pathName;
+					result /= boost::filesystem::path::string_type(fullName, std::begin(view.advance_begin(+1)));
 				} else	// not absolute name
-#ifndef BOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS
-					return PathString(pathName);
-#else
-					return pathName.to_string();
-#endif
+					return pathName;
 
 				WIN32_FIND_DATAW wfd;
 				while(true) {
 					auto next = boost::find_first_of(view, PATH_SEPARATORS);
 					if(next != boost::end(view)) {
-						const PathCharacter c = *next;
+						const boost::filesystem::path::value_type c = *next;
 						*next = 0;
-						HANDLE h = ::FindFirstFileW(fullName.data(), &wfd);
+						HANDLE h = ::FindFirstFileW(fullName, &wfd);
 						if(h != INVALID_HANDLE_VALUE) {
 							::FindClose(h);
-							result += wfd.cFileName;
+							result /= wfd.cFileName;
 						} else
-							result.append(std::begin(view), std::end(view));
+							result /= boost::filesystem::path::string_type(std::begin(view), std::end(view));
 						*next = c;
-						result += PREFERRED_PATH_SEPARATOR;
-						view = boost::make_iterator_range(next + 1, std::end(view));
+						view = boost::make_iterator_range(std::next(next), std::end(view));
 					} else {
-						HANDLE h = ::FindFirstFileW(fullName.data(), &wfd);
+						HANDLE h = ::FindFirstFileW(fullName, &wfd);
 						if(h != INVALID_HANDLE_VALUE) {
 							::FindClose(h);
-							result += wfd.cFileName;
+							result /= wfd.cFileName;
 						} else
-							result.append(std::begin(view), std::end(view));
+							result /= boost::filesystem::path::string_type(std::begin(view), std::end(view));
 						break;
 					}
 				}
@@ -294,12 +289,16 @@ namespace ascension {
 
 #else // ASCENSION_OS_POSIX
 
-				PathCharacter resolved[PATH_MAX];
-				return (::realpath(pathName, resolved) != nullptr) ? resolved : pathName;
-
+				if(char* const resolved = ::realpath(pathName, nullptr)) {
+					boost::filesystem::path result(resolved);
+					::free(resolved);
+					return result;
+				}
+				throw makePlatformError();
 #endif
 			}
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			/**
 			 * Returns @c true if the specified two file path names are equivalent.
 			 * @param s1 The first path name
@@ -308,7 +307,9 @@ namespace ascension {
 			 * @throw NullPointerException Either file name is @c null
 			 * @see canonicalizePathName
 			 */
-			bool fileio::comparePathNames(const PathStringPiece& s1, const PathStringPiece& s2) {
+			bool fileio::comparePathNames(
+					const boost::basic_string_ref<boost::filesystem::path::value_type>& s1,
+					const boost::basic_string_ref<boost::filesystem::path::value_type>& s2) {
 				sanityCheckPathName(s1, "s1");
 				sanityCheckPathName(s2, "s2");
 
@@ -326,7 +327,7 @@ namespace ascension {
 					::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s1.cbegin(), c1, fs1.get(), fc1);
 					::LCMapStringW(LOCALE_NEUTRAL, LCMAP_LOWERCASE, s2.cbegin(), c2, fs2.get(), fc2);
 					if(std::wmemcmp(fs1.get(), fs2.get(), fc1) == 0)
-						return pathExists(s1);
+						return boost::filesystem::exists(boost::filesystem::path(s1.cbegin(), s1.cend()));
 				}
 				// by volume information
 				bool eq = false;
@@ -360,6 +361,7 @@ namespace ascension {
 					&& st1.st_size == st2.st_size && st1.st_mtime == st2.st_mtime;
 #endif
 			}
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 			/**
 			 * Inserts the contents of the file into the specified position.
@@ -377,13 +379,13 @@ namespace ascension {
 			 * @throw ... Any exceptions @c TextFileStreamBuffer#TextFileStreamBuffer and @c kernel#insert throw
 			 */
 			std::pair<std::string, bool> fileio::insertFileContents(Document& document,
-					const Position& at, const PathStringPiece& fileName, const std::string& encoding,
+					const Position& at, const boost::filesystem::path& fileName, const std::string& encoding,
 					encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy, Position* endOfInsertedString /* = nullptr */) {
 				TextFileStreamBuffer sb(fileName, std::ios_base::in, encoding, encodingSubstitutionPolicy, false);
 				std::basic_istream<Char> in(&sb);
 				in.exceptions(std::ios_base::badbit);
 				insert(document, at, in, endOfInsertedString);
-				const std::pair<std::string, bool> result(make_pair(sb.encoding(), sb.unicodeByteOrderMark()));
+				const std::pair<std::string, bool> result(std::make_pair(sb.encoding(), sb.unicodeByteOrderMark()));
 				sb.close();
 				return result;
 			}
@@ -404,33 +406,30 @@ namespace ascension {
 			 * @throw ... Any I/O error occurred
 			 */
 			void fileio::writeRegion(const Document& document, const Region& region,
-					const PathStringPiece& fileName, const WritingFormat& format, bool append /* = false */) {
+					const boost::filesystem::path& fileName, const WritingFormat& format, bool append /* = false */) {
 				// verify encoding-specific newline
 				verifyNewline(format.encoding, format.newline);
 
 				// check if not special file
-				if(isSpecialFile(fileName))
-#ifdef ASCENSION_OS_WINDOWS
-					throw IOException(fileName, ERROR_BAD_FILE_TYPE);
-#else // ASCENSION_OS_POSIX
-					throw IOException(fileName, ENXIO);
-#endif
+				if(!boost::filesystem::is_regular_file(fileName))
+					throw boost::filesystem::filesystem_error("ascension.fileio.writeRegion", fileName,
+						boost::system::error_code(boost::system::errc::no_such_device_or_address, boost::system::generic_category()));
 
 				// check if writable
 #ifdef ASCENSION_OS_WINDOWS
-				const DWORD originalAttributes = ::GetFileAttributesW(fileName.cbegin());
+				const DWORD originalAttributes = ::GetFileAttributesW(fileName.native().c_str());
 				if(originalAttributes != INVALID_FILE_ATTRIBUTES && win32::boole(originalAttributes & FILE_ATTRIBUTE_READONLY))
-					throw IOException(fileName, ERROR_ACCESS_DENIED);
 #else // ASCENSION_OS_POSIX
 				struct stat originalStat;
-				bool gotStat = ::stat(fileName.c_str(), &originalStat) == 0;
+				bool gotStat = ::stat(fileName.native().c_str(), &originalStat) == 0;
 #if 1
-				if(::euidaccess(fileName.c_str(), 2) < 0)
+				if(::euidaccess(fileName.native().c_str(), 2) < 0)
 #else
-				if(::access(fileName.c_str(), 2) < 0)
+				if(::access(fileName.native().c_str(), 2) < 0)
 #endif
-					throw IOException(fileName, EACCES);	// EROFS is an alternative
 #endif
+					throw boost::filesystem::filesystem_error("ascension.fileio.writeRegion", fileName,
+						boost::system::error_code(boost::system::errc::permission_denied, boost::system::generic_category()));
 
 				// open file to write
 				TextFileStreamBuffer sb(fileName,
@@ -455,8 +454,8 @@ namespace ascension {
 			 * Constructor.
 			 * @param fileName
 			 */
-			IOException::IOException(const PathStringPiece& fileName) :
-					std::ios_base::failure(makePlatformError().what(), makePlatformError().code()), fileName_(fileName.cbegin(), fileName.cend()) {
+			IOException::IOException(const boost::filesystem::path& fileName) :
+					std::ios_base::failure(makePlatformError().what(), makePlatformError().code()), fileName_(fileName) {
 			}
 
 			/**
@@ -464,12 +463,12 @@ namespace ascension {
 			 * @param fileName
 			 * @param code
 			 */
-			IOException::IOException(const PathStringPiece& fileName, std::error_code::value_type code) :
-					std::ios_base::failure(makePlatformError(code).what(), makePlatformError(code).code()), fileName_(fileName.cbegin(), fileName.cend()) {
+			IOException::IOException(const boost::filesystem::path& fileName, std::error_code::value_type code) :
+					std::ios_base::failure(makePlatformError(code).what(), makePlatformError(code).code()), fileName_(fileName) {
 			}
 
 			/// Returns the file name.
-			const PathString& IOException::fileName() const BOOST_NOEXCEPT {
+			const boost::filesystem::path& IOException::fileName() const BOOST_NOEXCEPT {
 				return fileName_;
 			}
 
@@ -538,10 +537,10 @@ namespace ascension {
 			 * @throw UnsupportedEncodingException The encoding specified by @a encoding is not supported
 			 * @throw PlatformDependentIOError
 			 */
-			TextFileStreamBuffer::TextFileStreamBuffer(const PathStringPiece& fileName, std::ios_base::openmode mode,
+			TextFileStreamBuffer::TextFileStreamBuffer(const boost::filesystem::path& fileName, std::ios_base::openmode mode,
 					const std::string& encoding, encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
-					bool writeUnicodeByteOrderMark) : fileName_(fileName.cbegin(), fileName.cend()), mode_(mode) {
-				sanityCheckPathName(fileName, "fileName");
+					bool writeUnicodeByteOrderMark) : fileName_(fileName), mode_(mode) {
+//				sanityCheckPathName(fileName, "fileName");
 				if(mode == std::ios_base::in)
 					openForReading(encoding);
 				else if(mode == std::ios_base::out
@@ -584,7 +583,7 @@ namespace ascension {
 
 			void TextFileStreamBuffer::buildInputMapping() {
 				assert(isOpen());
-				const std::ptrdiff_t fileSize = getFileSize(fileName().c_str());
+				const std::uintmax_t fileSize = boost::filesystem::file_size(fileName());
 #ifdef ASCENSION_OS_WINDOWS
 				if(fileSize != 0) {
 					fileMapping_ = ::CreateFileMappingW(fileHandle_, nullptr, PAGE_READONLY, 0, 0, nullptr);
@@ -638,11 +637,7 @@ namespace ascension {
 					return close();
 				else if((mode() & ~std::ios_base::trunc) == std::ios_base::out) {
 					if(TextFileStreamBuffer* const self = closeFile()) {
-#ifdef ASCENSION_OS_WINDOWS
-						::DeleteFileW(fileName_.c_str());
-#else // ASCENSION_OS_POSIX
-						::unlink(fileName_.c_str());
-#endif
+						boost::filesystem::remove(fileName_);
 						return self;
 					} else
 						return nullptr;
@@ -888,7 +883,7 @@ namespace ascension {
 				FileLocker() BOOST_NOEXCEPT;
 				~FileLocker() BOOST_NOEXCEPT;
 				bool hasLock() const BOOST_NOEXCEPT;
-				bool lock(const PathString& fileName, bool share);
+				bool lock(const boost::filesystem::path& fileName, bool share);
 				LockType type() const BOOST_NOEXCEPT;
 				bool unlock() BOOST_NOEXCEPT;
 private:
@@ -899,7 +894,7 @@ private:
 				int file_;
 				bool deleteFileOnClose_;
 #endif
-				PathString fileName_;
+				boost::filesystem::path fileName_;
 			};
 
 			/// Default constructor.
@@ -934,14 +929,10 @@ private:
 			 *               the file with same lock mode
 			 * @throw IOException
 			 */
-			bool TextFileDocumentInput::FileLocker::lock(const PathString& fileName, bool share) {
-				sanityCheckPathName(fileName, "fileName");
+			bool TextFileDocumentInput::FileLocker::lock(const boost::filesystem::path& fileName, bool share) {
 				if(fileName.empty())
-#ifdef ASCENSION_OS_WINDOWS
-					throw IOException(fileName, ERROR_FILE_NOT_FOUND);
-#else // ASCENSION_OS_POSIX
-					throw IOException(fileName, ENOENT);
-#endif
+					throw boost::filesystem::filesystem_error("ascension.fileio.TextFileDocumentInput.FileLocker.lock", fileName,
+						boost::system::error_code(boost::system::errc::no_such_file_or_directory, boost::system::generic_category()));
 				bool alreadyShared = false;
 #ifdef ASCENSION_OS_POSIX
 				flock fl;
@@ -1083,8 +1074,6 @@ private:
 			TextFileDocumentInput::TextFileDocumentInput(Document& document) :
 					fileLocker_(new FileLocker), document_(document), encoding_(encoding::Encoder::defaultInstance().properties().name()),
 					unicodeByteOrderMark_(false), newline_(ASCENSION_DEFAULT_NEWLINE), savedDocumentRevision_(0), timeStampDirector_(nullptr) {
-				std::memset(&userLastWriteTime_, 0, sizeof(Time));
-				std::memset(&internalLastWriteTime_, 0, sizeof(Time));
 				desiredLockMode_.type = NO_LOCK;
 				desiredLockMode_.onlyAsEditing = false;
 				documentModificationSignChangedConnection_ =
@@ -1111,18 +1100,15 @@ private:
 			 *
 			 * @param fileName
 			 */
-			void TextFileDocumentInput::bind(const PathStringPiece& fileName) {
-				sanityCheckPathName(fileName, "fileName");
+			void TextFileDocumentInput::bind(const boost::filesystem::path& fileName) {
+//				sanityCheckPathName(fileName, "fileName");
 				if(fileName.empty())
 					return unbind();
 
-				const PathString realName(canonicalizePathName(fileName));
-				if(!pathExists(realName))
-#ifdef ASCENSION_OS_WINDOWS
-					throw IOException(fileName, ERROR_FILE_NOT_FOUND);
-#else // ASCENSION_OS_POSIX
-					throw IOException(fileName, ENOENT);
-#endif
+				const boost::filesystem::path realName(canonicalizePathName(fileName));
+				if(!boost::filesystem::exists(realName))
+					throw boost::filesystem::filesystem_error("ascension.fileio.TextFileDocumentInput.bind", fileName,
+						boost::system::error_code(boost::system::errc::no_such_file_or_directory, boost::system::generic_category()));
 				if(fileLocker_->hasLock()) {
 					assert(fileLocker_->type() == desiredLockMode_.type);
 					if(desiredLockMode_.onlyAsEditing)
@@ -1146,10 +1132,10 @@ private:
 			 * @return The value which the listener returned or @c true if the listener is not set
 			 */
 			bool TextFileDocumentInput::checkTimeStamp() {
-				Time newTimeStamp;
+				std::time_t newTimeStamp;
 				if(!verifyTimeStamp(false, newTimeStamp)) {
-					Time original = userLastWriteTime_;
-					std::memset(&userLastWriteTime_, 0, sizeof(Time));
+					const boost::optional<std::time_t> original(userLastWriteTime_);
+					userLastWriteTime_ = boost::none;
 					if(timeStampDirector_ == nullptr
 							|| timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(
 								document_, UnexpectedFileTimeStampDirector::CLIENT_INVOCATION)) {
@@ -1177,7 +1163,7 @@ private:
 				if(isBoundToFile()) {
 					// check the time stamp if this is the first modification
 					if(timeStampDirector_ != nullptr && !document().isModified()) {
-						Time realTimeStamp;
+						std::time_t realTimeStamp;
 						TextFileDocumentInput& self = const_cast<TextFileDocumentInput&>(*this);
 						if(!self.verifyTimeStamp(true, realTimeStamp)) {	// the other overwrote the file
 							if(!timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(
@@ -1198,7 +1184,7 @@ private:
 			/// @see DocumentInput#location
 			String TextFileDocumentInput::location() const BOOST_NOEXCEPT {
 #ifdef ASCENSION_OS_WINDOWS
-				return fileName();
+				return fileName().native();
 #else // ASCENSION_OS_POSIX
 				const std::codecvt<Char, PathCharacter, std::mbstate_t>& converter =
 					std::use_facet<std::codecvt<Char, PathCharacter, std::mbstate_t>>(std::locale());
@@ -1284,7 +1270,7 @@ private:
 				savedDocumentRevision_ = document().revisionNumber();
 				timeStampDirector_ = unexpectedTimeStampDirector;
 #ifdef ASCENSION_OS_WINDOWS
-				document_.setProperty(Document::TITLE_PROPERTY, fileName());
+				document_.setProperty(Document::TITLE_PROPERTY, fileName().native());
 #else // ASCENSION_OS_POSIX
 				const PathString title(fileName());
 				const std::locale lc("");
@@ -1309,7 +1295,7 @@ private:
 
 				// update the internal time stamp
 				try {
-					getFileLastWriteTime(fileName(), internalLastWriteTime_);
+					internalLastWriteTime_ = boost::filesystem::last_write_time(fileName());
 					userLastWriteTime_ = internalLastWriteTime_;
 				} catch(std::ios_base::failure&) {
 					// ignore...
@@ -1358,11 +1344,10 @@ private:
 						if(input.get() == static_cast<const DocumentInput*>(this))
 							document_.setInput(std::weak_ptr<DocumentInput>());
 					}
-					fileName_.erase();
+					fileName_.clear();
 					listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileNameChanged, *this);
 					setEncoding(encoding::Encoder::defaultInstance().properties().name());
-					std::memset(&userLastWriteTime_, 0, sizeof(Time));
-					std::memset(&internalLastWriteTime_, 0, sizeof(Time));
+					userLastWriteTime_ = internalLastWriteTime_ = boost::none;
 				}
 			}
 
@@ -1376,28 +1361,17 @@ private:
 			 * @param[out] newTimeStamp The actual time stamp
 			 * @return @c false if not match
 			 */
-			bool TextFileDocumentInput::verifyTimeStamp(bool internal, Time& newTimeStamp) BOOST_NOEXCEPT {
-				static Time uninitialized;
-				static bool initializedUninitialized = false;
-				if(!initializedUninitialized)
-					std::memset(&uninitialized, 0, sizeof(Time));
-
-				const Time& about = internal ? internalLastWriteTime_ : userLastWriteTime_;
-				if(!isBoundToFile()
-						|| std::memcmp(&about, &uninitialized, sizeof(Time)) == 0
-						|| fileLocker_->hasLock())
+			bool TextFileDocumentInput::verifyTimeStamp(bool internal, std::time_t& newTimeStamp) BOOST_NOEXCEPT {
+				const boost::optional<std::time_t>& about = internal ? internalLastWriteTime_ : userLastWriteTime_;
+				if(!isBoundToFile() || about == boost::none || fileLocker_->hasLock())
 					return true;	// not managed
 
 				try {
-					getFileLastWriteTime(fileName().c_str(), newTimeStamp);
-				} catch(IOException&) {
+					newTimeStamp = boost::filesystem::last_write_time(fileName());
+				} catch(const boost::filesystem::filesystem_error&) {
 					return true;
 				}
-#ifdef ASCENSION_OS_WINDOWS
-				return ::CompareFileTime(&about, &newTimeStamp) != -1;
-#else // ASCENSION_OS_POSIX
-				return about >= newTimeStamp;
-#endif
+				return std::difftime(*about, newTimeStamp) >= 0;
 			}
 
 			/*
@@ -1434,7 +1408,7 @@ private:
 
 				// check if the disk file had changed
 				if(timeStampDirector_ != nullptr) {
-					Time realTimeStamp;
+					std::time_t realTimeStamp;
 					if(!verifyTimeStamp(true, realTimeStamp)) {
 						if(!timeStampDirector_->queryAboutUnexpectedDocumentFileTimeStamp(
 								document_, UnexpectedFileTimeStampDirector::OVERWRITE_FILE))
@@ -1446,60 +1420,52 @@ private:
 				const bool makeBackup = false;
 
 				// create a temporary file and write into
-				const PathString tempFileName(makeTemporaryFileName(fileName()));
+				const boost::filesystem::path tempFileName(makeTemporaryFileName(fileName()));
 				writeRegion(document(), document().region(), tempFileName, format, false);
 
 				// copy file attributes (file mode) and delete the old file
 				try {
 					if(fileLocker_->type() != NO_LOCK)
 						unlockFile();
+
+					bool fileMayLost = false;
+					boost::system::error_code ignored;
 #ifdef ASCENSION_OS_WINDOWS
 					const DWORD attributes = ::GetFileAttributesW(fileName().c_str());
 					if(attributes != INVALID_FILE_ATTRIBUTES) {
 						::SetFileAttributesW(tempFileName.c_str(), attributes);
-						if(makeBackup) {
-						} else if(!win32::boole(::DeleteFileW(fileName().c_str()))) {
-							SystemErrorSaver ses;
-							if(ses.code() != ERROR_FILE_NOT_FOUND) {
-								::DeleteFileW(tempFileName.c_str());
-								throw IOException(tempFileName, ses.code());
-							}
-						}
-					}
-					if(!win32::boole(::MoveFileW(tempFileName.c_str(), fileName().c_str()))) {
-						if(attributes != INVALID_FILE_ATTRIBUTES)
-							throw std::ios_base::failure("lost the disk file.");
-						SystemErrorSaver ses;
-						::DeleteFileW(tempFileName.c_str());
-						throw IOException(fileName(), ses.code());
-					}
 #else // ASCENSION_OS_POSIX
 					struct stat s;
 					bool fileLost = false;
 					if(::stat(fileName().c_str(), &s) != -1) {
 						::chmod(tempFileName.c_str(), s.st_mode);
+#endif
+						fileMayLost = true;
+
 						if(makeBackup) {
-						} else if(::remove(fileName().c_str()) != 0) {
-							SystemErrorSaver ses;
-							if(ses.code() != ENOENT) {
-								::remove(tempFileName.c_str());
-								throw IOException(fileName(), ses.code());
+						} else {
+							try {
+								boost::filesystem::remove(fileName());
+							} catch(const boost::filesystem::filesystem_error& e) {
+								assert(e.code().value() != boost::system::errc::no_such_file_or_directory);
+								boost::filesystem::remove(tempFileName, ignored);	// ignore the result
+								throw;
 							}
 						}
-						fileLost = true;
 					}
-					if(::rename(tempFileName.c_str(), fileName().c_str()) != 0) {
-						if(fileLost)
+					try {
+						boost::filesystem::rename(tempFileName, fileName());
+					} catch(const boost::filesystem::filesystem_error&) {
+						if(fileMayLost)
 							throw std::ios_base::failure("lost the disk file.");
-						SystemErrorSaver ses;
-						::remove(tempFileName.c_str());
-						throw IOException(fileName(), ses.code());
+						boost::filesystem::remove(fileName(), ignored);	// ignore the result
+						throw;
 					}
-#endif
 				} catch(...) {
 					try {
 						lockFile(desiredLockMode_);
 					} catch(...) {
+						throw;
 					}
 				}
 
@@ -1513,15 +1479,15 @@ private:
 
 				// update the internal time stamp
 				try {
-					getFileLastWriteTime(fileName_, internalLastWriteTime_);
+					internalLastWriteTime_ = boost::filesystem::last_write_time(fileName_);
 				} catch(IOException&) {
-					std::memset(&internalLastWriteTime_, 0, sizeof(Time));
+					internalLastWriteTime_ = boost::none;
 				}
 				userLastWriteTime_ = internalLastWriteTime_;
 			}
 
 
-#ifndef ASCENSION_NO_GREP
+#if !defined(ASCENSION_NO_GREP) && defined(ASCENSION_ABANDONED_AT_VERSION_08)
 
 			// DirectoryIteratorBase ////////////////////////////////////////////////////
 
