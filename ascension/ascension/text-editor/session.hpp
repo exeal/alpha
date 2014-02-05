@@ -56,15 +56,15 @@ namespace ascension {
 			KillRing& killRing() BOOST_NOEXCEPT;
 			const KillRing& killRing() const BOOST_NOEXCEPT;
 #ifndef ASCENSION_NO_MIGEMO
-			const kernel::fileio::PathString& migemoDictionaryPathName() BOOST_NOEXCEPT;
-			const kernel::fileio::PathString& migemoLibraryPathName() BOOST_NOEXCEPT;
+			const boost::filesystem::path& migemoDictionaryPathName() BOOST_NOEXCEPT;
+			const boost::filesystem::path& migemoLibraryPathName() BOOST_NOEXCEPT;
 #endif // !ASCENSION_NO_MIGEMO
 			searcher::TextSearcher& textSearcher() BOOST_NOEXCEPT;
 			const searcher::TextSearcher& textSearcher() const BOOST_NOEXCEPT;
 			void setInputSequenceCheckers(std::unique_ptr<InputSequenceCheckers> isc) BOOST_NOEXCEPT;
 #ifndef ASCENSION_NO_MIGEMO
-			void setMigemoDictionaryPathName(const kernel::fileio::PathString& pathName);
-			void setMigemoLibraryPathName(const kernel::fileio::PathString& pathName);
+			void setMigemoDictionaryPathName(const boost::filesystem::path& pathName);
+			void setMigemoLibraryPathName(const boost::filesystem::path& pathName);
 #endif // !ASCENSION_NO_MIGEMO
 			/// @}
 
@@ -75,7 +75,7 @@ namespace ascension {
 			std::unique_ptr<searcher::TextSearcher> textSearcher_;
 			std::shared_ptr<InputSequenceCheckers> inputSequenceCheckers_;
 #ifndef ASCENSION_NO_MIGEMO
-			kernel::fileio::PathString migemoDictionaryPathName_, migemoLibraryPathName_;
+			boost::filesystem::path migemoDictionaryPathName_, migemoLibraryPathName_;
 #endif // !ASCENSION_NO_MIGEMO
 		};
 

@@ -57,7 +57,7 @@ namespace ascension {
 		 * @return The path name of the directory
 		 * @see #migemoLibraryPathName, #setMigemoDictionaryPathName
 		 */
-		const kernel::fileio::PathString& Session::migemoDictionaryPathName() BOOST_NOEXCEPT {
+		const boost::filesystem::path& Session::migemoDictionaryPathName() BOOST_NOEXCEPT {
 			return migemoDictionaryPathName_;
 		}
 
@@ -66,7 +66,7 @@ namespace ascension {
 		 * @return The path name of the directory
 		 * @see #migemoDictionaryPathName, #setMigemoLibraryPathName
 		 */
-		const kernel::fileio::PathString& Session::migemoLibraryPathName() BOOST_NOEXCEPT {
+		const boost::filesystem::path& Session::migemoLibraryPathName() BOOST_NOEXCEPT {
 			return migemoLibraryPathName_;
 		}
 #endif // !ASCENSION_NO_MIGEMO
@@ -90,11 +90,13 @@ namespace ascension {
 		 * @param pathName The path name of the directory
 		 * @param std#length_error @a @pathName is too long
 		 */
-		void Session::setMigemoDictionaryPathName(const kernel::fileio::PathString& pathName) {
+		void Session::setMigemoDictionaryPathName(const boost::filesystem::path& pathName) {
+#if 0
 #ifdef ASCENSION_OS_WINDOWS
 			if(pathName.length() > MAX_PATH - 1)
 #else // ASCENSION_OS_POSIX
 			if(pathName.length() > PATH_MAX - 1)
+#endif
 #endif
 				throw std::length_error("pathName");
 			migemoDictionaryPathName_ = pathName;
@@ -106,11 +108,13 @@ namespace ascension {
 		 * @param pathName The path name of the directory
 		 * @param std#length_error @a @pathName is too long
 		 */
-		void Session::setMigemoLibraryPathName(const kernel::fileio::PathString& pathName) {
+		void Session::setMigemoLibraryPathName(const boost::filesystem::path& pathName) {
+#if 0
 #ifdef ASCENSION_OS_WINDOWS
 			if(pathName.length() > MAX_PATH - 1)
 #else // ASCENSION_OS_POSIX
 			if(pathName.length() > PATH_MAX - 1)
+#endif
 #endif
 				throw std::length_error("pathName");
 			migemoLibraryPathName_ = pathName;

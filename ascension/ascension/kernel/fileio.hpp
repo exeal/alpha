@@ -3,7 +3,7 @@
  * Defines @c ascension#kernel#fileio namespace.
  * @author exeal
  * @date 2009 separated from document.hpp
- * @date 2009-2013
+ * @date 2009-2014
  */
 
 #ifndef ASCENSION_FILEIO_HPP
@@ -18,17 +18,19 @@
 #elif defined(ASCENSION_OS_POSIX)
 #	include <dirent.h>						// DIR
 #endif
+#include <boost/filesystem/path.hpp>
 #include <boost/range/const_iterator.hpp>
 #include <array>
-#ifndef ASCENSION_NO_GREP
+#if !defined(ASCENSION_NO_GREP) && defined(ASCENSION_ABANDONED_AT_VERSION_08)
 #	include <stack>
-#endif // !ASCENSION_NO_GREP
+#endif
 
 namespace ascension {
 	namespace kernel {
 
 		/// Provides features about file-bound document.
 		namespace fileio {
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			/**
 			 * Character type for file names. This is equivalent to
 			 * @c ASCENSION_FILE_NAME_CHARACTER_TYPE configuration symbol.
@@ -38,6 +40,7 @@ namespace ascension {
 			typedef std::basic_string<PathCharacter> PathString;
 			/// String reference type for file names.
 			typedef boost::basic_string_ref<PathCharacter, std::char_traits<PathCharacter>> PathStringPiece;
+#endif
 
 			/// Used by functions and methods write to files. 
 			struct WritingFormat {
@@ -52,17 +55,22 @@ namespace ascension {
 				bool unicodeByteOrderMark;
 			};
 
+			/**
+			 * Defines the type of objects thrown as exceptions to report I/O errors from functions and methods
+			 * described in @c fileio namespace.
+			 * @note @c fileio does not use @c boost#filesystem#filesystem_error class.
+			 */
 			class IOException : public std::ios_base::failure {
 			public:
-				explicit IOException(const PathStringPiece& fileName);
-				IOException(const PathStringPiece& fileName, const std::error_code::value_type code);
+				explicit IOException(const boost::filesystem::path& fileName);
+				IOException(const boost::filesystem::path& fileName, const std::error_code::value_type code);
 				~IOException() BOOST_NOEXCEPT;
-				const PathString& fileName() const BOOST_NOEXCEPT;
+				const boost::filesystem::path& fileName() const BOOST_NOEXCEPT;
 			public:
 				static bool isFileNotFound(const IOException& e);
 				static bool isPermissionDenied(const IOException& e);
 			private:
-				const PathString fileName_;
+				const boost::filesystem::path fileName_;
 			};
 
 			/**
@@ -136,7 +144,7 @@ namespace ascension {
 			 */
 			class TextFileStreamBuffer : public std::basic_streambuf<Char>, private boost::noncopyable {
 			public:
-				TextFileStreamBuffer(const PathStringPiece& fileName,
+				TextFileStreamBuffer(const boost::filesystem::path& fileName,
 					std::ios_base::openmode mode, const std::string& encoding,
 					encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy,
 					bool writeUnicodeByteOrderMark);
@@ -144,7 +152,7 @@ namespace ascension {
 				TextFileStreamBuffer* close();
 				TextFileStreamBuffer* closeAndDiscard();
 				std::string encoding() const BOOST_NOEXCEPT;
-				const PathString& fileName() const BOOST_NOEXCEPT;
+				const boost::filesystem::path& fileName() const BOOST_NOEXCEPT;
 				bool isOpen() const BOOST_NOEXCEPT;
 				std::ios_base::openmode mode() const BOOST_NOEXCEPT;
 				bool unicodeByteOrderMark() const BOOST_NOEXCEPT;
@@ -166,7 +174,7 @@ namespace ascension {
 #else // ASCENSION_OS_POSIX
 				int fileDescriptor_;
 #endif
-				const PathString fileName_;
+				const boost::filesystem::path fileName_;
 				std::ios_base::openmode mode_;
 				struct InputMapping {
 					boost::iterator_range<const Byte*> buffer;
@@ -184,12 +192,6 @@ namespace ascension {
 
 			class TextFileDocumentInput : public DocumentInput, private boost::noncopyable {
 			public:
-				/// The structure used to represent a file time.
-#ifdef ASCENSION_OS_WINDOWS
-				typedef FILETIME Time;
-#else // ASCENSION_OS_POSIX
-				typedef ::time_t Time;
-#endif
 				/// Lock types for opened file.
 				enum LockType {
 					NO_LOCK,		///< Does not lock or unlock.
@@ -219,8 +221,8 @@ namespace ascension {
 
 				/// @name Bound File
 				/// @{
-				void bind(const PathStringPiece& fileName);
-				PathString fileName() const BOOST_NOEXCEPT;
+				void bind(const boost::filesystem::path& fileName);
+				boost::filesystem::path fileName() const BOOST_NOEXCEPT;
 				bool isBoundToFile() const BOOST_NOEXCEPT;
 				void lockFile(const LockMode& mode);
 				LockType lockType() const BOOST_NOEXCEPT;
@@ -245,7 +247,7 @@ namespace ascension {
 				text::Newline newline() const BOOST_NOEXCEPT;
 			private:
 				void documentModificationSignChanged(const Document& document);
-				bool verifyTimeStamp(bool internal, Time& newTimeStamp) BOOST_NOEXCEPT;
+				bool verifyTimeStamp(bool internal, std::time_t& newTimeStamp) BOOST_NOEXCEPT;
 				// DocumentInput
 				bool isChangeable(const Document& document) const BOOST_NOEXCEPT;
 				void postFirstDocumentChange(const Document& document) BOOST_NOEXCEPT;
@@ -255,18 +257,18 @@ namespace ascension {
 				std::unique_ptr<FileLocker> fileLocker_;
 				Document& document_;
 				boost::signals2::scoped_connection documentModificationSignChangedConnection_;
-				PathString fileName_;
+				boost::filesystem::path fileName_;
 				std::string encoding_;
 				bool unicodeByteOrderMark_;
 				text::Newline newline_;
 				std::size_t savedDocumentRevision_;
-				Time userLastWriteTime_, internalLastWriteTime_;
+				boost::optional<std::time_t> userLastWriteTime_, internalLastWriteTime_;
 				LockMode desiredLockMode_;
 				ascension::detail::Listeners<FilePropertyListener> listeners_;
 				UnexpectedFileTimeStampDirector* timeStampDirector_;
 			};
 
-#ifndef ASCENSION_NO_GREP
+#if !defined(ASCENSION_NO_GREP) && defined(ASCENSION_ABANDONED_AT_VERSION_08)
 			class DirectoryIteratorBase : private boost::noncopyable {
 			public:
 				virtual ~DirectoryIteratorBase() BOOST_NOEXCEPT;
@@ -348,21 +350,25 @@ namespace ascension {
 
 			/// @defgroup file_pathname Free Functions Related to File Path Name
 			/// @{
-			PathString canonicalizePathName(const PathStringPiece& pathName);
-			bool comparePathNames(const PathStringPiece& s1, const PathStringPiece& s2);
+			boost::filesystem::path canonicalizePathName(const boost::filesystem::path& pathName);
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+			bool comparePathNames(
+				const boost::basic_string_ref<boost::filesystem::path::value_type>& s1,
+				const boost::basic_string_ref<boost::filesystem::path::value_type>& s2);
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 			/// @}
 
 			/// @defgroup Free Functions Related to Document and File Path Name
 			/// @{
 			std::pair<std::string, bool> insertFileContents(Document& document,
-				const Position& at, const PathStringPiece& fileName, const std::string& encoding,
+				const Position& at, const boost::filesystem::path& fileName, const std::string& encoding,
 				encoding::Encoder::SubstitutionPolicy encodingSubstitutionPolicy, Position* endOfInsertedString = nullptr);
 			void writeRegion(const Document& document, const Region& region,
-				const PathStringPiece& fileName, const WritingFormat& format, bool append = false);
+				const boost::filesystem::path& fileName, const WritingFormat& format, bool append = false);
 			/// @}
 
 			/// Returns the file name.
-			inline const PathString& TextFileStreamBuffer::fileName() const BOOST_NOEXCEPT {return fileName_;}
+			inline const boost::filesystem::path& TextFileStreamBuffer::fileName() const BOOST_NOEXCEPT {return fileName_;}
 
 			/// Returns the open mode.
 			inline std::ios_base::openmode TextFileStreamBuffer::mode() const BOOST_NOEXCEPT {return mode_;}
@@ -374,7 +380,7 @@ namespace ascension {
 			inline std::string TextFileDocumentInput::encoding() const BOOST_NOEXCEPT {return encoding_;}
 
 			/// Returns the file full name or an empty string if the document is not bound to any of the files.
-			inline PathString TextFileDocumentInput::fileName() const BOOST_NOEXCEPT {return fileName_;}
+			inline boost::filesystem::path TextFileDocumentInput::fileName() const BOOST_NOEXCEPT {return fileName_;}
 
 			/// Returns true if the document is bound to any file.
 			inline bool TextFileDocumentInput::isBoundToFile() const BOOST_NOEXCEPT {return !fileName_.empty();}
