@@ -55,10 +55,10 @@ namespace ascension {
 				bool unicodeByteOrderMark;
 			};
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			/**
 			 * Defines the type of objects thrown as exceptions to report I/O errors from functions and methods
 			 * described in @c fileio namespace.
-			 * @note @c fileio does not use @c boost#filesystem#filesystem_error class.
 			 */
 			class IOException : public std::ios_base::failure {
 			public:
@@ -72,6 +72,7 @@ namespace ascension {
 			private:
 				const boost::filesystem::path fileName_;
 			};
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 			/**
 			 * The encoding failed for unmappable character.
