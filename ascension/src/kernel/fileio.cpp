@@ -28,6 +28,21 @@ namespace ascension {
 			// free function //////////////////////////////////////////////////////////////////////////////////////////
 
 			namespace {
+				inline boost::filesystem::filesystem_error&& makeGenericFileSystemError(const std::string& what,
+						const boost::filesystem::path& path, boost::system::errc::errc_t value) {
+					return boost::filesystem::filesystem_error(what, path, boost::system::errc::make_error_code(value));
+				}
+
+				inline boost::filesystem::filesystem_error&& makeFileSystemError(const std::string& what,
+						const boost::filesystem::path& path, const boost::optional<int>& value = boost::none) {
+#ifdef ASCENSION_OS_POSIX
+					return makeGenericFileSystemError(what, path, boost::get_optional_value_or(value, makePlatformError().code().value()));
+#else
+					return boost::filesystem::filesystem_error(what, path,
+						boost::system::error_code(boost::get_optional_value_or(value, makePlatformError().code().value()), boost::system::system_category()));
+#endif
+				}
+
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				inline void sanityCheckPathName(const PathStringPiece& s, const std::string& variableName) {
 					if(s.cbegin() == nullptr || s.cend() == nullptr)
@@ -412,8 +427,7 @@ namespace ascension {
 
 				// check if not special file
 				if(!boost::filesystem::is_regular_file(fileName))
-					throw boost::filesystem::filesystem_error("ascension.fileio.writeRegion", fileName,
-						boost::system::error_code(boost::system::errc::no_such_device_or_address, boost::system::generic_category()));
+					throw makeGenericFileSystemError("ascension.fileio.writeRegion", fileName, boost::system::errc::no_such_device_or_address);
 
 				// check if writable
 #ifdef ASCENSION_OS_WINDOWS
@@ -428,8 +442,7 @@ namespace ascension {
 				if(::access(fileName.native().c_str(), 2) < 0)
 #endif
 #endif
-					throw boost::filesystem::filesystem_error("ascension.fileio.writeRegion", fileName,
-						boost::system::error_code(boost::system::errc::permission_denied, boost::system::generic_category()));
+					throw makeGenericFileSystemError("ascension.fileio.writeRegion", fileName, boost::system::errc::permission_denied);
 
 				// open file to write
 				TextFileStreamBuffer sb(fileName,
@@ -450,6 +463,7 @@ namespace ascension {
 
 			// exception classes //////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			/**
 			 * Constructor.
 			 * @param fileName
@@ -491,6 +505,7 @@ namespace ascension {
 				return code == EACCES;
 #endif
 			}
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
 
 			/// Default constructor.
 			UnmappableCharacterException::UnmappableCharacterException() : std::ios_base::failure("encountered an unmappable character in encoding/decoding.") {
@@ -557,7 +572,7 @@ namespace ascension {
 			TextFileStreamBuffer::~TextFileStreamBuffer() {
 				try {
 					close();	// this may throw
-				} catch(const IOException&) {
+				} catch(...) {
 				}
 			}
 
@@ -588,19 +603,19 @@ namespace ascension {
 				if(fileSize != 0) {
 					fileMapping_ = ::CreateFileMappingW(fileHandle_, nullptr, PAGE_READONLY, 0, 0, nullptr);
 					if(fileMapping_ == nullptr)
-						throw IOException(fileName());
+						throw makeFileSystemError("CreateFileMappingW() returned nullptr.", fileName());
 					inputMapping_.buffer = boost::make_iterator_range<const Byte*>(static_cast<const Byte*>(::MapViewOfFile(fileMapping_, FILE_MAP_READ, 0, 0, 0)), nullptr);
 					if(std::begin(inputMapping_.buffer) == nullptr) {
 						SystemErrorSaver ses;
 						::CloseHandle(fileMapping_);
-						throw IOException(fileName(), ses.code());
+						throw makeFileSystemError("MapViewOfFile() returned nullptr.", fileName());
 					}
 				} else
 					fileMapping_ = nullptr;
 #else // ASCENSION_OS_POSIX
 				inputMapping_.buffer = boost::make_iterator_range<const Byte*>(static_cast<const Byte*>(::mmap(0, fileSize, PROT_READ, MAP_PRIVATE, fileDescriptor_, 0)), nullptr);
 				if(std::begin(inputMapping_.buffer) == MAP_FAILED)
-					throw IOException(fileName());
+					throw makeFileSystemError("mmap(2) returned MAP_FAILED.", fileName());
 				bool succeeded = false;
 				off_t org = ::lseek(fileDescriptor_, 0, SEEK_CUR);
 				if(org != -1) {
@@ -611,7 +626,7 @@ namespace ascension {
 					}
 				}
 				if(!succeeded)
-					throw IOException(fileName());
+					throw makeGenericFileSystemError("lseek(2) returned -1.", fileName());
 #endif
 				inputMapping_.buffer = boost::make_iterator_range(std::begin(inputMapping_.buffer), std::begin(inputMapping_.buffer) + fileSize);
 				inputMapping_.current = std::begin(inputMapping_.buffer);
@@ -709,10 +724,11 @@ namespace ascension {
 				fileHandle_ = ::CreateFileW(fileName().c_str(), GENERIC_READ,
 					FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
 				if(fileHandle_ == INVALID_HANDLE_VALUE)
+					throw makeFileSystemError("CreateFileW() returned INVALID_HANDLE_VALUE.", fileName());
 #else // ASCENSION_OS_POSIX
 				if(-1 == (fileDescriptor_ = ::open(fileName().c_str(), O_RDONLY)))
+					throw makeFileSystemError("open(2) returned -1.", fileName());
 #endif
-					throw IOException(fileName());
 
 				try {
 					// create memory-mapped file
@@ -736,11 +752,11 @@ namespace ascension {
 						if(e == ERROR_FILE_NOT_FOUND)
 							mode_ &= ~std::ios_base::app;
 						else
-							throw IOException(fileName(), e);
+							throw makeFileSystemError("CreateFileW() returned INVALID_HANDLE_VALUE", fileName(), e);
 					} else {
 						originalFileEnd_.QuadPart = 0;
 						if(!win32::boole(::SetFilePointerEx(fileHandle_, originalFileEnd_, &originalFileEnd_, FILE_END)))
-							throw IOException(fileName());
+							throw makeFileSystemError("SetFilePointerEx() returned FALSE.", fileName());
 						writeUnicodeByteOrderMark = false;
 					}
 #else // ASCENSION_OS_POSIX
@@ -748,12 +764,12 @@ namespace ascension {
 					if(fileDescriptor_ != -1) {
 						originalFileEnd_ = ::lseek(fileDescriptor_, 0, SEEK_CUR);
 						if(originalFileEnd_ == static_cast<off_t>(-1))
-							throw IOException(fileName());
+							throw makeFileSystemError("lseek(2) returned -1.", fileName());
 					} else {
 						if(errno == ENOENT)
 							mode_ &= ~ios_base::app;
 						else
-							throw IOException(fileName());
+							throw makeFileSystemError("open(2) returned -1.", fileName());
 					}
 #endif
 				}
@@ -762,11 +778,12 @@ namespace ascension {
 					fileHandle_ = ::CreateFileW(fileName().c_str(), GENERIC_WRITE, 0, nullptr,
 						CREATE_ALWAYS, FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
 					if(fileHandle_ == INVALID_HANDLE_VALUE)
+						throw makeFileSystemError("CreateFileW() returned INVALID_HANDLE_VALUE.", fileName());
 #else // ASCENSION_OS_POSIX
 					fileDescriptor_ = ::open(fileName().c_str(), O_WRONLY | O_CREAT);
 					if(fileDescriptor_ == -1)
+						throw makeFileSystemError("open(2) returned -1", fileName());
 #endif
-						throw IOException(fileName());
 				}
 
 				try {
@@ -831,12 +848,13 @@ namespace ascension {
 						assert(static_cast<std::size_t>(toNext - nativeBuffer.data()) <= std::numeric_limits<DWORD>::max());
 						const DWORD bytes = static_cast<DWORD>(toNext - nativeBuffer.data());
 						if(::WriteFile(fileHandle_, nativeBuffer.data(), bytes, &writtenBytes, 0) == 0 || writtenBytes != bytes)
+							throw makeFileSystemError("WriteFile() failed.", fileName());
 #else // ASCENSION_OS_POSIX
 						const std::size_t bytes = toNext - nativeBuffer;
 						const ssize_t writtenBytes = ::write(fileDescriptor_, nativeBuffer, bytes);
 						if(writtenBytes == -1 || static_cast<std::size_t>(writtenBytes) != bytes)
+							throw makeFileSystemError("write(2) failed.", fileName());
 #endif
-							throw IOException(fileName());
 
 						setp(ucsBuffer_.data() + (fromNext - ucsBuffer_.data()), epptr());
 						pbump(static_cast<int>(fromEnd - pbase()));	// TODO: this cast may be danger.
@@ -927,12 +945,11 @@ private:
 			 * @retval true If locked successfully or the lock mode is @c DONT_LOCK
 			 * @retval false The current lock mode was @c SHARED_LOCK and an other existing process had already locked
 			 *               the file with same lock mode
-			 * @throw IOException
+			 * @throw boost#filesystem#filesystem_error
 			 */
 			bool TextFileDocumentInput::FileLocker::lock(const boost::filesystem::path& fileName, bool share) {
 				if(fileName.empty())
-					throw boost::filesystem::filesystem_error("ascension.fileio.TextFileDocumentInput.FileLocker.lock", fileName,
-						boost::system::error_code(boost::system::errc::no_such_file_or_directory, boost::system::generic_category()));
+					throw makeGenericFileSystemError("ascension.fileio.TextFileDocumentInput.FileLocker.lock", fileName, boost::system::errc::no_such_file_or_directory);
 				bool alreadyShared = false;
 #ifdef ASCENSION_OS_POSIX
 				flock fl;
@@ -970,26 +987,27 @@ private:
 				HANDLE f = ::CreateFileW(fileName.c_str(), GENERIC_READ,
 					share ? FILE_SHARE_READ : 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 				if(f == INVALID_HANDLE_VALUE) {
-					DWORD e = ::GetLastError();
+					const DWORD e = ::GetLastError();
 					if(e != ERROR_FILE_NOT_FOUND)
-						throw IOException(fileName, e);
+						throw makeFileSystemError("CreateFileW() returned INVALID_HANDLE_VALUE.", fileName, e);
 					f = ::CreateFileW(fileName.c_str(), GENERIC_READ,
 						share ? FILE_SHARE_READ : 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE, nullptr);
 					if(f == INVALID_HANDLE_VALUE)
-						throw IOException(fileName);
+						throw makeFileSystemError("CreateFileW() returned INVALID_HANDLE_VALUE.", fileName);
 				}
 #else // ASCENSION_OS_POSIX
 				int f = ::open(fileName.c_str(), O_RDONLY);
 				if(f == -1) {
 					if(errno != ENOENT)
-						throw IOException(fileName);
+						throw makeGenericFileSystemError("open(2) returned -1.", fileName);
 					f = ::open(fileName.c_str(), O_RDONLY | O_CREAT);
 					if(f == -1)
-						throw IOException(fileName);
+						throw makeGenericFileSystemError("open(2) returned -1.", fileName);
 					fl.l_type = share ? F_RDLCK : F_WRLCK;
 					if(::fcntl(f, F_SETLK, &fl) == 0) {
+						SystemErrorSaver ses;
 						::close(f);
-						throw IOException(fileName);
+						throw makeFileSystemError("fcntl(2) returned 0.", fileName, ses.code().value());
 					}
 					deleteFileOnClose_ = true;
 					fileName_ = fileName;
@@ -1107,8 +1125,7 @@ private:
 
 				const boost::filesystem::path realName(canonicalizePathName(fileName));
 				if(!boost::filesystem::exists(realName))
-					throw boost::filesystem::filesystem_error("ascension.fileio.TextFileDocumentInput.bind", fileName,
-						boost::system::error_code(boost::system::errc::no_such_file_or_directory, boost::system::generic_category()));
+					throw makeGenericFileSystemError("ascension.fileio.TextFileDocumentInput.bind", fileName, boost::system::errc::no_such_file_or_directory);
 				if(fileLocker_->hasLock()) {
 					assert(fileLocker_->type() == desiredLockMode_.type);
 					if(desiredLockMode_.onlyAsEditing)
@@ -1273,9 +1290,13 @@ private:
 				// set the new properties of the document
 				savedDocumentRevision_ = document().revisionNumber();
 				timeStampDirector_ = unexpectedTimeStampDirector;
+				// TODO: "String" type may change. The following code is as if wchar_t.
 #ifdef ASCENSION_OS_WINDOWS
 				document_.setProperty(Document::TITLE_PROPERTY, fileName().native());
 #else // ASCENSION_OS_POSIX
+#	ifndef ASCENSION_ABANDONED_AT_VERSION_08
+				document_.setProperty(Document::TITLE_PROPERTY, fileName().wstring(std::codecvt_utf8_utf16()));
+#	else
 				const PathString title(fileName());
 				const std::locale lc("");
 				const std::codecvt<Char, PathCharacter, std::mbstate_t>& conv = std::use_facet<std::codecvt<Char, PathCharacter, std::mbstate_t>>(lc);
@@ -1288,6 +1309,7 @@ private:
 					*ucsNext = L'0';
 					document_.setProperty(Document::TITLE_PROPERTY, ucs.get());
 				}
+#	endif
 #endif
 				encoding_ = resultEncoding.first;
 				newline_ = document().getLineInformation(0).newline();	// use the newline of the first line
@@ -1484,7 +1506,7 @@ private:
 				// update the internal time stamp
 				try {
 					internalLastWriteTime_ = boost::filesystem::last_write_time(fileName_);
-				} catch(IOException&) {
+				} catch(const boost::filesystem::filesystem_error&) {
 					internalLastWriteTime_ = boost::none;
 				}
 				userLastWriteTime_ = internalLastWriteTime_;
