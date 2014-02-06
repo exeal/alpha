@@ -1182,7 +1182,10 @@ private:
 			}
 
 			/// @see DocumentInput#location
-			String TextFileDocumentInput::location() const BOOST_NOEXCEPT {
+			DocumentInput::LocationType TextFileDocumentInput::location() const BOOST_NOEXCEPT {
+#ifndef ASCENSION_ABANDONED_AT_VERSION_08
+				return fileName().native();
+#else
 #ifdef ASCENSION_OS_WINDOWS
 				return fileName().native();
 #else // ASCENSION_OS_POSIX
@@ -1195,6 +1198,7 @@ private:
 				return (converter.in(dummy, fileName().c_str(),
 					fileName().c_str() + fileName().length() + 1, fromNext,
 					result, ASCENSION_ENDOF(result), toNext) == std::codecvt_base::ok) ? result : String();
+#endif
 #endif
 			}
 
