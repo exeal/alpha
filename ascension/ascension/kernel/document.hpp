@@ -112,6 +112,13 @@ namespace ascension {
 		 */
 		class DocumentInput {
 		public:
+			typedef
+#ifdef ASCENSION_OS_WINDOWS
+				std::wstring
+#else // ASCENSION_OS_POSIX
+				std::string
+#endif
+				LocationType;
 			/**
 			 * Thrown if @c DocumentInput rejected the change of the document. For details, see the
 			 * documentation of @c Document class.
@@ -128,7 +135,7 @@ namespace ascension {
 			/// Returns the character encoding of the document input.
 			virtual std::string encoding() const BOOST_NOEXCEPT = 0;
 			/// Returns a string represents the location of the document input or an empty string.
-			virtual String location() const BOOST_NOEXCEPT = 0;
+			virtual LocationType location() const BOOST_NOEXCEPT = 0;
 			/// Returns the default newline of the document. The returned value can be neighter
 			/// @c text#Newline#USE_INTRINSIC_VALUE nor @c text#Newline#USE_DOCUMENT_INPUT.
 			virtual text::Newline newline() const BOOST_NOEXCEPT = 0;

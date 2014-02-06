@@ -243,7 +243,8 @@ namespace ascension {
 
 				// DocumentInput
 				std::string encoding() const BOOST_NOEXCEPT;
-				String location() const BOOST_NOEXCEPT;
+				static_assert(std::is_same<DocumentInput::LocationType, boost::filesystem::path::string_type>::value, "");
+				DocumentInput::LocationType location() const BOOST_NOEXCEPT;
 				text::Newline newline() const BOOST_NOEXCEPT;
 			private:
 				void documentModificationSignChanged(const Document& document);
