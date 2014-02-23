@@ -84,7 +84,9 @@ namespace ascension {
 				void scroll(const presentation::AbstractTwoAxes<SignedScrollOffset>& offsets);
 				void scroll(const PhysicalTwoAxes<SignedScrollOffset>& offsets);
 				void scrollBlockFlowPage(SignedScrollOffset pages);
+				void scrollTo(const presentation::AbstractTwoAxes<ScrollOffset>& positions);
 				void scrollTo(const presentation::AbstractTwoAxes<boost::optional<ScrollOffset>>& positions);
+				void scrollTo(const PhysicalTwoAxes<ScrollOffset>& positions);
 				void scrollTo(const PhysicalTwoAxes<boost::optional<ScrollOffset>>& positions);
 				void scrollTo(const VisualLine& line, ScrollOffset ipd);
 				void unlockScroll();
@@ -282,6 +284,23 @@ namespace ascension {
 
 
 			// inline implementation //////////////////////////////////////////////////////////////
+
+			/**
+			 * Scrolls the viewport to the specified position in abstract dimensions.
+			 * This method does nothing if scroll is locked.
+			 * @param positions The destination of scroll in abstract dimensions in user units
+			 */
+			inline void TextViewport::scrollTo(const presentation::AbstractTwoAxes<TextViewport::ScrollOffset>& positions) {
+				 return scrollTo(presentation::AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>(presentation::_ipd = positions.ipd(), presentation::_bpd = positions.bpd()));
+			}
+
+			/**
+			 * Scrolls the viewport to the specified position.
+			 * @param positions
+			 */
+			inline void TextViewport::scrollTo(const PhysicalTwoAxes<TextViewport::ScrollOffset>& positions) {
+				 return scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(_x = positions.x(), _y = positions.y()));
+			}
 
 			/**
 			 * Returns the line the iterator addresses, or @c boost#none if out of the viewport.
