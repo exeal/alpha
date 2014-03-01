@@ -15,6 +15,7 @@
 #include <ascension/kernel/document-character-iterator.hpp>
 #include <forward_list>
 #include <set>
+#include <boost/range/algorithm/for_each.hpp>
 
 namespace ascension {
 	/// Provides a framework for rule based text scanning and document partitioning.
@@ -349,15 +350,20 @@ namespace ascension {
 		inline kernel::ContentType TransitionRule::destination() const BOOST_NOEXCEPT {return destination_;}
 
 		/**
-		 * @tparam SinglePassReadableRange
-		 * @param rules
+		 * @tparam SinglePassReadableRange The type of @a rules
+		 * @param rules The new rules to set
 		 */
 		template<typename SinglePassReadableRange>
 		inline void LexicalPartitioner::setRules(const SinglePassReadableRange& rules) {
 			if(document() != nullptr)
 				throw IllegalStateException("The partitioner is already connected to document.");
-			std::forward_list<std::unique_ptr<const TransitionRule>> newRules(std::make_move_iterator(std::begin(rules)), std::make_move_iterator(std::end(rules)));
-			std::swap(rules_, temp);
+//			std::forward_list<std::unique_ptr<const TransitionRule>> newRules(
+//				std::make_move_iterator(std::begin(rules)), std::make_move_iterator(std::end(rules)));
+			std::forward_list<std::unique_ptr<const TransitionRule>> newRules;
+			boost::for_each(rules, [&newRules](const std::unique_ptr<const TransitionRule>& rule) mutable {
+				newRules.push_front(std::move(rule->clone()));
+			});
+//			std::swap(rules_, newRules);
 		}
 
 	}
