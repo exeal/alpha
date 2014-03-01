@@ -222,8 +222,8 @@ namespace ascension {
 			 * @see #allocationWidth, #indicatorMarginWidth, #lineNumbersAllocationRectangle
 			 */
 			inline graphics::Scalar RulerPainter::lineNumbersAllocationWidth() const BOOST_NOEXCEPT {
-				return computedLineNumbersContentWidth_ + computedLineNumbersPaddingStart_
-					+ computedLineNumbersPaddingEnd_ + computedLineNumbersBorderEnd_.computedWidth();
+				return boost::get(computedLineNumbersContentWidth_) + boost::get(computedLineNumbersPaddingStart_)
+					+ boost::get(computedLineNumbersPaddingEnd_) + computedLineNumbersBorderEnd_.computedWidth();
 			}
 		}
 	}
