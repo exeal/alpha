@@ -245,6 +245,7 @@
     <ClCompile Include="..\src\buffer.cpp">
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</RuntimeTypeInfo>
     </ClCompile>
+    <ClCompile Include="..\src\editor-view.cpp" />
     <ClCompile Include="..\src\editor-window.cpp">
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</RuntimeTypeInfo>
     </ClCompile>
@@ -375,7 +376,9 @@
     <ClInclude Include="..\src\application.hpp" />
     <ClInclude Include="..\src\buffer-list.hpp" />
     <ClInclude Include="..\src\buffer.hpp" />
+    <ClInclude Include="..\src\editor-view.hpp" />
     <ClInclude Include="..\src\editor-window.hpp" />
+    <ClInclude Include="..\src\function-pointer.hpp" />
     <ClInclude Include="..\src\input.hpp" />
     <ClInclude Include="..\src\intrinsic.hpp" />
     <ClInclude Include="..\src\new-file-format-dialog.hpp" />
