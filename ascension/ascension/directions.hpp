@@ -2,7 +2,7 @@
  * @file directions.hpp
  * Defines abstract and physical directional terms.
  * @date 2012-03-31 created
- * @date 2012-2013
+ * @date 2012-2014
  * @see geometry.hpp, writing-mode.hpp
  * @see CSS Writing Modes Module Level 3, 6. Abstract Box Terminology
  *      (http://www.w3.org/TR/css3-writing-modes/#abstract-box)
@@ -48,6 +48,15 @@ namespace ascension {
 		explicit Direction(bool value) BOOST_NOEXCEPT : value_(value) {}
 		bool value_;
 	};
+
+	namespace detail {
+		template<typename T> struct DecayOrRefer {
+			typedef typename std::decay<T>::type Type;
+		};
+		template<typename T> struct DecayOrRefer<std::reference_wrapper<T>> {
+			typedef T& Type;
+		};
+	}
 
 	namespace graphics {
 		/// @defgroup physical_directions Physical Directions
@@ -137,6 +146,18 @@ namespace ascension {
 				return *this;
 			}
 		};
+
+		/**
+		 * Creates a @c PhysicalTwoAxes object, deducing the target type from the types of arguments.
+		 * @tparam ArgumentPack The type of @a arguments
+		 * @param arguments The named arguments same as the constructor of @c PhysicalTwoAxes class
+		 */
+		template<typename ArgumentPack>
+		inline auto makePhysicalTwoAxes(const ArgumentPack& arguments) -> PhysicalTwoAxes<typename detail::DecayOrRefer<decltype(arguments[_x])>::Type> {
+			typedef typename detail::DecayOrRefer<decltype(arguments[_x])>::Type Coordinate;
+			static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_y])>::Type, Coordinate>::value, "");
+			return PhysicalTwoAxes<Coordinate>(_x = arguments[_x], _y = arguments[_y]);
+		}
 
 #ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 		BOOST_PARAMETER_NAME(top)
@@ -230,6 +251,20 @@ namespace ascension {
 				return *this;
 			}
 		};
+
+		/**
+		 * Creates a @c PhysicalFourSides object, deducing the target type from the types of arguments.
+		 * @tparam ArgumentPack The type of @a arguments
+		 * @param arguments The named arguments same as the constructor of @c PhysicalFourSides class
+		 */
+		template<typename ArgumentPack>
+		inline auto makePhysicalFourSides(const ArgumentPack& arguments) -> PhysicalFourSides<typename detail::DecayOrRefer<decltype(arguments[_top])>::Type> {
+			typedef typename detail::DecayOrRefer<decltype(arguments[_top])>::Type Coordinate;
+			static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_right])>::Type, Coordinate>::value, "");
+			static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_bottom])>::Type, Coordinate>::value, "");
+			static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_left])>::Type, Coordinate>::value, "");
+			return PhysicalFourSides<Coordinate>(_top = arguments[_top], _right = arguments[_right], _bottom = arguments[_bottom], _left = arguments[_left]);
+		}
 
 		/**
 		 * Returns a range in horizontal direction of the given physical four sides.
@@ -364,6 +399,20 @@ namespace ascension {
 						(lineLeft, (value_type))
 						(lineRight, (value_type))))
 			};
+
+			/**
+			 * Creates a @c LineRelativeFourSides object, deducing the target type from the types of arguments.
+			 * @tparam ArgumentPack The type of @a arguments
+			 * @param arguments The named arguments same as the constructor of @c LineRelativeFourSides class
+			 */
+			template<typename ArgumentPack>
+			inline auto makeLineRelativeFourSides(const ArgumentPack& arguments) -> LineRelativeFourSides<typename detail::DecayOrRefer<decltype(arguments[_over])>::Type> {
+				typedef typename detail::DecayOrRefer<decltype(arguments[_over])>::Type Coordinate;
+				static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_under])>::Type, Coordinate>::value, "");
+				static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_lineLeft])>::Type, Coordinate>::value, "");
+				static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_lineRight])>::Type, Coordinate>::value, "");
+				return LineRelativeFourSides<Coordinate>(_over = arguments[_over], _under = arguments[_under], _lineLeft = arguments[_lineLeft], _lineRight = arguments[_lineRight]);
+			}
 			/// @}
 		}
 	}
@@ -465,6 +514,18 @@ namespace ascension {
 			}
 		};
 
+		/**
+		 * Creates a @c AbstractTwoAxes object, deducing the target type from the types of arguments.
+		 * @tparam ArgumentPack The type of @a arguments
+		 * @param arguments The named arguments same as the constructor of @c AbstractTwoAxes class
+		 */
+		template<typename ArgumentPack>
+		inline auto makeAbstractTwoAxes(const ArgumentPack& arguments) -> AbstractTwoAxes<typename detail::DecayOrRefer<decltype(arguments[_bpd])>::Type> {
+			typedef typename detail::DecayOrRefer<decltype(arguments[_bpd])>::Type Coordinate;
+			static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_ipd])>::Type, Coordinate>::value, "");
+			return AbstractTwoAxes<Coordinate>(_bpd = arguments[_bpd], _ipd = arguments[_ipd]);
+		}
+
 #ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 		BOOST_PARAMETER_NAME(before)
 		BOOST_PARAMETER_NAME(after)
@@ -553,6 +614,20 @@ namespace ascension {
 				return *this;
 			}
 		};
+
+		/**
+		 * Creates a @c FlowRelativeFourSides object, deducing the target type from the types of arguments.
+		 * @tparam ArgumentPack The type of @a arguments
+		 * @param arguments The named arguments same as the constructor of @c FlowRelativeFourSides class
+		 */
+		template<typename ArgumentPack>
+		inline auto makeFlowRelativeFourSides(const ArgumentPack& arguments) -> FlowRelativeFourSides<typename detail::DecayOrRefer<decltype(arguments[_before])>::Type> {
+			typedef typename detail::DecayOrRefer<decltype(arguments[_before])>::Type Coordinate;
+			static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_after])>::Type, Coordinate>::value, "");
+			static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_start])>::Type, Coordinate>::value, "");
+			static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_end])>::Type, Coordinate>::value, "");
+			return FlowRelativeFourSides<Coordinate>(_before = arguments[_before], _after = arguments[_after], _start = arguments[_start], _end = arguments[_end]);
+		}
 
 		/**
 		 * Returns a range in block flow direction of the given abstract four sides.
