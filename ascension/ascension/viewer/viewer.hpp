@@ -293,14 +293,15 @@ namespace ascension {
 				const presentation::AbstractTwoAxes<bool>& positions,
 				const presentation::AbstractTwoAxes<bool>& properties);
 
-			// protected interfaces
 		protected:
-			// Caret signals (overridable)
+			/// @name Overridable Caret Signals
 			virtual void caretMoved(const Caret& caret, const kernel::Region& oldRegion);
 			virtual void matchBracketsChanged(const Caret& caret,
 				const boost::optional<std::pair<kernel::Position, kernel::Position>>& previouslyMatchedBrackets,
 				bool outsideOfView);
 			virtual void selectionShapeChanged(const Caret& caret);
+			/// @}
+
 		private:
 #if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
 			// base.Widget
@@ -333,86 +334,88 @@ namespace ascension {
 			void addNewPoint(VisualPoint& point) {points_.insert(&point);}
 			void removePoint(VisualPoint& point) {points_.erase(&point);}
 
-			// platform-dependent events and other overrides
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
 		protected:
-			virtual void get_preferred_height_for_width_vfunc(int width, int& minimumHeight, int& naturalHeight) const;
-			virtual void get_preferred_height_vfunc(int& minimumHeight, int& naturalHeight) const;
-			virtual void get_preferred_width_vfunc(int& minimumWidth, int& naturalWidth) const;
-			virtual void get_preferred_width_for_height_vfunc(int height, int& minimumWidth, int& naturalWidth) const;
-			virtual Gtk::SizeRequestMode get_request_mode_vfunc() const;
-			virtual void on_realize();
-			virtual void on_size_allocate(Gtk::Allocation& allocation);
-			virtual void on_unrealize();
-		private:
-			bool on_button_press_event(GdkEventButton* event);
-			bool on_button_release_event(GdkEventButton* event);
-			bool on_configure_event(GdkEventConfigure* event);
-			void on_drag_leave(const Glib::RefPtr<Gdk::DragContext>& context, guint time);
-			bool on_drag_motion(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
-			bool on_drag_drop(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
-			bool on_draw(const Cairo::RefPtr<Cairo::Context>& context);
-			bool on_focus_in_event(GdkEventFocus* event);
-			bool on_focus_out_event(GdkEventFocus* event);
-			bool on_grab_broken_event(GdkEventGrabBroken* event);
-			void on_grab_focus();
-			bool on_key_press_event(GdkEventKey* event);
-			bool on_key_release(GdkEventKey* event);
-			bool on_motion_notify_event(GdkEventMotion* event);
-			bool on_scroll_event(GdkEventScroll* event);
+			/// @name Overridable Widget Events
+			/// @{
+			virtual void aboutToLoseFocus();
+			virtual void focusGained();
+			virtual void keyPressed(const widgetapi::KeyInput& input);
+			virtual void keyReleased(const widgetapi::KeyInput& input);
+			virtual void mouseDoubleClicked(const widgetapi::MouseButtonInput& input);
+			virtual void mouseMoved(const widgetapi::LocatedUserInput& input);
+			virtual void mousePressed(const widgetapi::MouseButtonInput& input);
+			virtual void mouseReleased(const widgetapi::MouseButtonInput& input);
+			virtual void mouseWheelChanged(const widgetapi::MouseWheelInput& input);
+			virtual void paint(graphics::PaintContext& context);
+			virtual void resized(const graphics::Dimension& newSize);
+			virtual void showContextMenu(const widgetapi::LocatedUserInput& input, bool byKeyboard);
+			/// @}
+
+			/// @name Overridable Widget Events (Platform-dependent)
+			/// @{
+#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+			virtual void get_preferred_height_for_width_vfunc(int width, int& minimumHeight, int& naturalHeight) const override;
+			virtual void get_preferred_height_vfunc(int& minimumHeight, int& naturalHeight) const override;
+			virtual void get_preferred_width_vfunc(int& minimumWidth, int& naturalWidth) const override;
+			virtual void get_preferred_width_for_height_vfunc(int height, int& minimumWidth, int& naturalWidth) const override;
+			virtual Gtk::SizeRequestMode get_request_mode_vfunc() const override;
+			virtual void on_realize() override;
+			virtual void on_size_allocate(Gtk::Allocation& allocation) override;
+			virtual void on_unrealize() override;
+			//
+			virtual bool on_button_press_event(GdkEventButton* event) override;
+			virtual bool on_button_release_event(GdkEventButton* event) override;
+			virtual bool on_configure_event(GdkEventConfigure* event) override;
+			virtual void on_drag_leave(const Glib::RefPtr<Gdk::DragContext>& context, guint time) override;
+			virtual bool on_drag_motion(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time) override;
+			virtual bool on_drag_drop(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time) override;
+			virtual bool on_draw(const Cairo::RefPtr<Cairo::Context>& context) override;
+			virtual bool on_focus_in_event(GdkEventFocus* event) override;
+			virtual bool on_focus_out_event(GdkEventFocus* event) override;
+//			virtual bool on_grab_broken_event(GdkEventGrabBroken* event) override;
+			virtual void on_grab_focus() override;
+			virtual bool on_key_press_event(GdkEventKey* event) override;
+			virtual bool on_key_release_event(GdkEventKey* event) override;
+			virtual bool on_motion_notify_event(GdkEventMotion* event) override;
+			virtual bool on_scroll_event(GdkEventScroll* event) override;
 #elif defined(ASCENSION_WINDOW_SYSTEM_QT)
-		private:
-			void contextMenuEvent(QContextMenuEvent* event);
-			void focusInEvent(QFocusEvent* event);
-			void focusOutEvent(QFocusEvent* event);
-			void keyPressEvent(QKeyEvent* event);
-			void keyReleaseEvent(QKeyEvent* event);
-			void mouseDoubleClickEvent(QMouseEvent* event);
-			void mouseMoveEvent(QMouseEvent* event);
-			void mousePressEvent(QMouseEvent* event);
-			void mouseReleaseEvent(QMouseEvent* event);
-			void paintEvent(QPaintEvent* event);
-			void resizeEvent(QResizeEvent* event);
-			void timerEvent(QTimerEvent* event);
-			void wheelEvent(QWheelEvent* event);
+			virtual void contextMenuEvent(QContextMenuEvent* event) override;
+			virtual void focusInEvent(QFocusEvent* event) override;
+			virtual void focusOutEvent(QFocusEvent* event) override;
+			virtual void keyPressEvent(QKeyEvent* event) override;
+			virtual void keyReleaseEvent(QKeyEvent* event) override;
+			virtual void mouseDoubleClickEvent(QMouseEvent* event) override;
+			virtual void mouseMoveEvent(QMouseEvent* event) override;
+			virtual void mousePressEvent(QMouseEvent* event) override;
+			virtual void mouseReleaseEvent(QMouseEvent* event) override;
+			virtual void paintEvent(QPaintEvent* event) override;
+			virtual void resizeEvent(QResizeEvent* event) override;
+			virtual void timerEvent(QTimerEvent* event) override;
+			virtual void wheelEvent(QWheelEvent* event) override;
 #elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
-		private:
-			void onCaptureChanged(const win32::Handle<HWND>::Type& newWindow, bool& consumed);
-			void onCommand(WORD id, WORD notifyCode, const win32::Handle<HWND>::Type& control, bool& consumed);
-			void onDestroy(bool& consumed);
-			void onEraseBkgnd(const win32::Handle<HDC>::Type& dc, bool& consumed);
-			const win32::Handle<HFONT>::Type onGetFont() const;
-			void onHScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>::Type& scrollBar);
-			bool onNcCreate(CREATESTRUCTW& cs);
-			void onNotify(int id, NMHDR& nmhdr, bool& consumed);
-			void onSetCursor(const win32::Handle<HWND>::Type& window, UINT hitTest, UINT message, bool& consumed);
-			void onStyleChanged(int type, const STYLESTRUCT& style);
-			void onStyleChanging(int type, STYLESTRUCT& style);
-			void onSysColorChange();
-			void onThemeChanged();
-			void onTimer(UINT_PTR eventId, TIMERPROC timerProc);
-			void onVScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>::Type& scrollBar);
-			LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
+			virtual void onCaptureChanged(const win32::Handle<HWND>::Type& newWindow, bool& consumed);
+			virtual void onCommand(WORD id, WORD notifyCode, const win32::Handle<HWND>::Type& control, bool& consumed);
+			virtual void onDestroy(bool& consumed);
+			virtual void onEraseBkgnd(const win32::Handle<HDC>::Type& dc, bool& consumed);
+			virtual const win32::Handle<HFONT>::Type onGetFont() const;
+			virtual void onHScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>::Type& scrollBar);
+			virtual bool onNcCreate(CREATESTRUCTW& cs);
+			virtual void onNotify(int id, NMHDR& nmhdr, bool& consumed);
+			virtual void onSetCursor(const win32::Handle<HWND>::Type& window, UINT hitTest, UINT message, bool& consumed);
+			virtual void onStyleChanged(int type, const STYLESTRUCT& style);
+			virtual void onStyleChanging(int type, STYLESTRUCT& style);
+			virtual void onSysColorChange();
+			virtual void onThemeChanged();
+			virtual void onTimer(UINT_PTR eventId, TIMERPROC timerProc);
+			virtual void onVScroll(UINT sbCode, UINT pos, const win32::Handle<HWND>::Type& scrollBar);
+			virtual LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
 			// IDropTarget
-			STDMETHODIMP DragEnter(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
-			STDMETHODIMP DragOver(DWORD keyState, POINTL location, DWORD* effect);
-			STDMETHODIMP DragLeave();
-			STDMETHODIMP Drop(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
+			virtual STDMETHODIMP DragEnter(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
+			virtual STDMETHODIMP DragOver(DWORD keyState, POINTL location, DWORD* effect);
+			virtual STDMETHODIMP DragLeave();
+			virtual STDMETHODIMP Drop(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
 #endif
-			// event handlers
-		private:
-			void aboutToLoseFocus();
-			void focusGained();
-			void keyPressed(const widgetapi::KeyInput& input);
-			void keyReleased(const widgetapi::KeyInput& input);
-			void mouseDoubleClicked(const widgetapi::MouseButtonInput& input);
-			void mouseMoved(const widgetapi::LocatedUserInput& input);
-			void mousePressed(const widgetapi::MouseButtonInput& input);
-			void mouseReleased(const widgetapi::MouseButtonInput& input);
-			void mouseWheelChanged(const widgetapi::MouseWheelInput& input);
-			void paint(graphics::PaintContext& context);
-			void resized(const graphics::Dimension& newSize);
-			void showContextMenu(const widgetapi::LocatedUserInput& input, bool byKeyboard);
+			/// @}
 
 			// internal classes
 		private:
