@@ -97,6 +97,8 @@ namespace ascension {
 		public:
 			/// Default constructor initializes nothing.
 			PhysicalTwoAxesBase() {}
+			/// Copy-constructor.
+			PhysicalTwoAxesBase(const PhysicalTwoAxesBase<T>& other) : std::array<T, 2>(other) {}
 			/// Constructor takes named parameters as initial values.
 			template<typename Arguments>
 			PhysicalTwoAxesBase(const Arguments& arguments) {
@@ -123,9 +125,11 @@ namespace ascension {
 		public:
 			/// Default constructor initializes nothing.
 			PhysicalTwoAxes() {}
+			/// Copy-constructor.
+			PhysicalTwoAxes(const PhysicalTwoAxes<T>& other) : PhysicalTwoAxesBase<T>(static_cast<const PhysicalTwoAxesBase<T>&>(other)) {}
 			/// Constructor takes a physical point.
 			template<typename Point>
-			PhysicalTwoAxes(const Point& point) :
+			PhysicalTwoAxes(const Point& point, typename geometry::detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* = nullptr) :
 				PhysicalTwoAxesBase<T>((_x = geometry::x(point), _y = geometry::y(point))) {}
 			/// Constructor takes named parameters as initial values (default value is zero).
 			BOOST_PARAMETER_CONSTRUCTOR(
