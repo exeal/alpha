@@ -122,6 +122,7 @@ namespace ascension {
 			 * @param p1 The end point of the gradient
 			 */
 			LinearGradient(const Point& p0, const Point& p1);
+			void addColorStop(double offset, const Color& color) override;
 		};
 
 		/**
@@ -139,6 +140,7 @@ namespace ascension {
 			 * @throw std#out_of_range Either of @a r0 or @a r1 are negative
 			 */
 			RadialGradient(const Point& p0, Scalar r0, const Point& p1, Scalar r1);
+			void addColorStop(double offset, const Color& color) override;
 		};
 
 		/**

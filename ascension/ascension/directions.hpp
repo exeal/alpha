@@ -102,8 +102,10 @@ namespace ascension {
 			/// Constructor takes named parameters as initial values.
 			template<typename Arguments>
 			PhysicalTwoAxesBase(const Arguments& arguments) {
-				x() = arguments[_x | value_type()];
-				y() = arguments[_y | value_type()];
+//				x() = arguments[_x | value_type()];
+//				y() = arguments[_y | value_type()];
+				x() = arguments[_x.operator|(value_type())];
+				y() = arguments[_y.operator|(value_type())];
 			}
 			/// Returns a reference 'x' (horizontal position) value.
 			value_type& x() BOOST_NOEXCEPT {return std::get<0>(*this);}
@@ -179,10 +181,14 @@ namespace ascension {
 			/// Constructor takes named parameters as initial values (default value is zero).
 			template<typename Arguments>
 			PhysicalFourSidesBase(const Arguments& arguments) {
-				top() = arguments[_top | value_type()];
-				right() = arguments[_right | value_type()];
-				bottom() = arguments[_bottom | value_type()];
-				left() = arguments[_left | value_type()];
+//				top() = arguments[_top | value_type()];
+//				right() = arguments[_right | value_type()];
+//				bottom() = arguments[_bottom | value_type()];
+//				left() = arguments[_left | value_type()];
+				top() = arguments[_top.operator|(value_type())];
+				right() = arguments[_right.operator|(value_type())];
+				bottom() = arguments[_bottom.operator|(value_type())];
+				left() = arguments[_left.operator|(value_type())];
 			}
 			/// Returns a reference to value of @a direction.
 			reference operator[](PhysicalDirection direction) {
@@ -348,10 +354,14 @@ namespace ascension {
 				/// Constructor takes named parameters as initial values.
 				template<typename Arguments>
 				LineRelativeFourSidesBase(const Arguments& arguments) {
-					over() = arguments[_over | value_type()];
-					under() = arguments[_under | value_type()];
-					lineLeft() = arguments[_lineLeft | value_type()];
-					lineRight() = arguments[_lineRight | value_type()];
+//					over() = arguments[_over | value_type()];
+//					under() = arguments[_under | value_type()];
+//					lineLeft() = arguments[_lineLeft | value_type()];
+//					lineRight() = arguments[_lineRight | value_type()];
+					over() = arguments[_over.operator|(value_type())];
+					under() = arguments[_under.operator|(value_type())];
+					lineLeft() = arguments[_lineLeft.operator|(value_type())];
+					lineRight() = arguments[_lineRight.operator|(value_type())];
 				}
 				/// Returns a reference to value of @a direction.
 				reference operator[](LineRelativeDirection direction) {
@@ -472,8 +482,10 @@ namespace ascension {
 			/// Constructor takes named parameters as initial values
 			template<typename Arguments>
 			AbstractTwoAxesBase(const Arguments& arguments) {
-				bpd() = arguments[_bpd | value_type()];
-				ipd() = arguments[_ipd | value_type()];
+//				bpd() = arguments[_bpd | value_type()];
+//				ipd() = arguments[_ipd | value_type()];
+				bpd() = arguments[_bpd.operator|(value_type())];
+				ipd() = arguments[_ipd.operator|(value_type())];
 			}
 			/// Returns a reference to 'block-dimension' value.
 			value_type& bpd() BOOST_NOEXCEPT {return std::get<0>(*this);}
@@ -546,10 +558,14 @@ namespace ascension {
 			/// Constructor takes named parameters as initial values.
 			template<typename Arguments>
 			FlowRelativeFourSidesBase(const Arguments& arguments) {
-				before() = arguments[_before | value_type()];
-				after() = arguments[_after | value_type()];
-				start() = arguments[_start | value_type()];
-				end() = arguments[_end | value_type()];
+//				before() = arguments[_before | value_type()];
+//				after() = arguments[_after | value_type()];
+//				start() = arguments[_start | value_type()];
+//				end() = arguments[_end | value_type()];
+				before() = arguments[_before.operator|(value_type())];
+				after() = arguments[_after.operator|(value_type())];
+				start() = arguments[_start.operator|(value_type())];
+				end() = arguments[_end.operator|(value_type())];
 			}
 			/// Returns a reference to value of @a direction.
 			reference operator[](FlowRelativeDirection direction) {
