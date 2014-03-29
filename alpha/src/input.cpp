@@ -2,118 +2,51 @@
  * @file input.cpp
  * @author exeal
  * @date 2003-2007 (was keyboard-map.cpp)
- * @date 2009
+ * @date 2009, 2014
  */
 
 #include "input.hpp"
 #include "application.hpp"	// StatusBar
+#include "function-pointer.hpp"
 //#include "resource/messages.h"
 #include <bitset>
 #include <boost/python/stl_iterator.hpp>
-using namespace alpha::ui;
-using namespace alpha::ambient;
-using namespace std;
-namespace py = boost::python;
+#include <glibmm/i18n.h>
+#include <gtkmm/accellabel.h>
 
 
 namespace {
 	template<typename ValueType>
-	inline py::stl_input_iterator<ValueType> makeStlInputIterator(const py::object& o) {
+	inline boost::python::stl_input_iterator<ValueType> makeStlInputIterator(boost::python::object o) {
 		if(PyObject* temp = ::PyObject_GetIter(o.ptr()))
-			Py_XDECREF(temp);
+			boost::python::xdecref(temp);
 		else
-			py::throw_error_already_set();
-		return py::stl_input_iterator<ValueType>(o);
+			boost::python::throw_error_already_set();
+		return boost::python::stl_input_iterator<ValueType>(o);
 	}
 }
 
+namespace alpha {
+	namespace ui {
+		// KeyStroke //////////////////////////////////////////////////////////////////////////////////////////////////
 
-// KeyStroke ////////////////////////////////////////////////////////////////
-
-KeyStroke::KeyStroke(VirtualKey naturalKey) : naturalKey_(naturalKey), modifierKeys_(NO_MODIFIER) {
-}
-
-KeyStroke::KeyStroke(ModifierKey modifierKeys, VirtualKey naturalKey) : naturalKey_(naturalKey), modifierKeys_(modifierKeys) {
-}
-
-namespace {
-	pair<KeyStroke::VirtualKey, KeyStroke::ModifierKey> crackKeyStroke(py::object o) {
-		if(py::extract<KeyStroke::VirtualKey>(o).check())
-			return make_pair(static_cast<KeyStroke::VirtualKey>(py::extract<KeyStroke::VirtualKey>(o)), KeyStroke::NO_MODIFIER);
-		WCHAR c = 0xffffu;
-	/*	if(py::extract<py::str>(o).check()) {	// o is a str
-			if(py::len(o) == 1) {
-				const py::str s = py::extract<py::str>(o);
-				c = ::PyString_AsString(s.ptr())[0];
-			}
-		} else*/ if(PyUnicode_Check(o.ptr()) != 0) {	// o is a unicode
-			if(::PyUnicode_GetSize(o.ptr()) == 1) {
-				wchar_t wc;
-				if(::PyUnicode_AsWideChar(reinterpret_cast<PyUnicodeObject*>(o.ptr()), &wc, 1) != -1)
-					c = wc;
-			}
+		/**
+		 * Creates a @c KeyStroke with the given key and modifiers.
+		 * @param naturalKey
+		 * @param modifierKeys
+		 */
+		KeyStroke::KeyStroke(NaturalKey naturalKey, ModifierKey modifierKeys /* = 0 */) : naturalKey_(naturalKey), modifierKeys_(modifierKeys) {
 		}
-		if(c != 0xffffu) {
-			const short k = ::VkKeyScanW(c);
-			if(HIBYTE(k) == 0)
-				return make_pair(LOBYTE(k), KeyStroke::NO_MODIFIER);
-			for(UINT vk = 0; vk < 0x100; ++vk) {
-				const UINT ch = ::MapVirtualKeyW(vk, MAPVK_VK_TO_CHAR);
-				if(ch != 0 && HIWORD(ch) == 0 && LOWORD(ch) == c)
-					return make_pair(static_cast<KeyStroke::VirtualKey>(vk), KeyStroke::NO_MODIFIER);
-			}
-			KeyStroke::ModifierKey m = KeyStroke::NO_MODIFIER;
-			if((HIBYTE(k) & 1) != 0)
-				m = static_cast<KeyStroke::ModifierKey>(m | KeyStroke::SHIFT_KEY);
-			if((HIBYTE(k) & 2) != 0)
-				m = static_cast<KeyStroke::ModifierKey>(m | KeyStroke::CONTROL_KEY);
-			if((HIBYTE(k) & 4) != 0)
-				m = static_cast<KeyStroke::ModifierKey>(m | KeyStroke::ALTERNATIVE_KEY);
-			return make_pair(LOBYTE(k), m);
+
+		/**
+		 * Equality operator returns @c true if equals to the given @c KeyStroke.
+		 * @param other The @c KeyStroke object to test
+		 * @return The result
+		 */
+		bool KeyStroke::operator==(const KeyStroke& other) const BOOST_NOEXCEPT {
+			return naturalKey() == other.naturalKey() && modifierKeys() == other.modifierKeys();
 		}
-		::PyErr_BadArgument();
-		py::throw_error_already_set();
-		throw;	// unreachable
-	}
-}
-
-KeyStroke::KeyStroke(py::object naturalKey) {
-	const pair<VirtualKey, ModifierKey> k(crackKeyStroke(naturalKey));
-	naturalKey_ = k.first;
-	modifierKeys_ = k.second;
-}
-
-KeyStroke::KeyStroke(py::object a1, py::object a2) {
-	bool ok = false;
-	pair<VirtualKey, ModifierKey> k;
-	if(py::extract<ModifierKey>(a1).check()) {
-		modifierKeys_ = py::extract<ModifierKey>(a1);
-		k = crackKeyStroke(a2);
-		ok = true;
-	} else if(py::extract<ModifierKey>(a2).check()) {
-		k = crackKeyStroke(a1);
-		modifierKeys_ = py::extract<ModifierKey>(a2);
-		ok = true;
-	}
-	if(ok && (k.second & modifierKeys_) != 0)
-		ok = false;
-	if(!ok) {
-		::PyErr_BadArgument();
-		py::throw_error_already_set();
-	}
-	naturalKey_ = k.first;
-	modifierKeys_ = static_cast<ModifierKey>(modifierKeys_ | k.second);
-}
-
-bool KeyStroke::operator==(const KeyStroke& other) const /*throw()*/ {
-	return naturalKey() == other.naturalKey() && modifierKeys() == other.modifierKeys();
-}
-
-bool KeyStroke::operator<(const KeyStroke& other) const /*throw()*/ {
-	return naturalKey() < other.naturalKey()
-		|| (naturalKey() == other.naturalKey() && modifierKeys() < other.modifierKeys());
-}
-
+/*
 namespace {
 	inline wstring modifierString(UINT vkey, const wchar_t* defaultString) {
 		if(const int sc = ::MapVirtualKeyW(vkey, MAPVK_VK_TO_VSC) << 16) {
@@ -125,343 +58,293 @@ namespace {
 	}
 }
 
-/// @see InputTrigger#format
-wstring KeyStroke::format() const {
-	wstring result;
-	result.reserve(256);
-
-	if((modifierKeys() & CONTROL_KEY) != 0)
-		result.append(modifierString(VK_CONTROL, L"Ctrl")).append(L"+");
-	if((modifierKeys() & SHIFT_KEY) != 0)
-		result.append(modifierString(VK_SHIFT, L"Shift")).append(L"+");
-	if((modifierKeys() & ALTERNATIVE_KEY) != 0)
-		result.append(modifierString(VK_MENU, L"Alt")).append(L"+");
-
-	if(UINT sc = ::MapVirtualKeyW(naturalKey(), MAPVK_VK_TO_VSC) << 16) {
-		switch(naturalKey()) {
-		case VK_INSERT:	case VK_DELETE:	case VK_HOME:	case VK_END:
-		case VK_NEXT:	case VK_PRIOR:	case VK_LEFT:	case VK_RIGHT:
-		case VK_UP:		case VK_DOWN:
-			sc |= (1 << 24);
-		}
-		wchar_t buffer[256];
-		if(::GetKeyNameTextW(sc | (1 << 25), buffer, MANAH_COUNTOF(buffer)) != 0) {
-			result += buffer;
-			return result;
-		}
-	}
-	return result += L"(unknown)";
-}
-
 wstring KeyStroke::format(py::object keys) {
 	if(py::extract<const KeyStroke&>(keys).check())
 		return static_cast<const KeyStroke&>(py::extract<const KeyStroke&>(keys)).format();
 	return format(makeStlInputIterator<const KeyStroke>(keys), py::stl_input_iterator<const KeyStroke>());
 }
-
-KeyStroke::ModifierKey KeyStroke::modifierKeys() const /*throw()*/ {
-	return modifierKeys_;
-}
-
-KeyStroke::VirtualKey KeyStroke::naturalKey() const /*throw()*/ {
-	return naturalKey_;
-}
-
-
-// InputMappingScheme.FirstKeyTable /////////////////////////////////////////////
-
-namespace {
-	class KeyTableElement {
-	public:
-		static const py::object SEQUENCE_NO_MATCH, SEQUENCE_PARTIAL_MATCH;
-	public:
-		virtual ~KeyTableElement() /*throw()*/ {}
-		virtual const py::object& command(vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last) const = 0;
-		virtual bool define(vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last, py::object command) = 0;
-		virtual bool find(py::object command, vector<const KeyStroke>&) const = 0;
-		void undefine(vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last) {
-			define(first, last, py::object());
+*/
+		/// Returns the modifier keys.
+		KeyStroke::ModifierKey KeyStroke::modifierKeys() const BOOST_NOEXCEPT {
+			return modifierKeys_;
 		}
-	};
-	const py::object KeyTableElement::SEQUENCE_NO_MATCH, KeyTableElement::SEQUENCE_PARTIAL_MATCH;
 
-	class CommandHolder : public KeyTableElement {
-	public:
-		explicit CommandHolder(py::object command);
-		const py::object& command(vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last) const;
-		bool define(vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last, py::object command);
-		bool find(py::object command, vector<const KeyStroke>&) const;
-	private:
-		py::object command_;
-	};
-
-	class SparseKeymap : public KeyTableElement {
-	public:
-		SparseKeymap(vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last, py::object command);
-		~SparseKeymap();
-		const py::object& command(vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last) const;
-		bool define(vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last, py::object command);
-		bool find(py::object command, vector<const KeyStroke>& sequence) const;
-	private:
-		map<const KeyStroke, KeyTableElement*> map_;
-	};
-}
-
-class InputMappingScheme::VectorKeymap : public KeyTableElement {
-public:
-	VectorKeymap();
-	~VectorKeymap();
-	const py::object& command(vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last) const;
-	bool define(vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last, py::object command);
-	bool find(py::object command, vector<const KeyStroke>& sequence) const;
-private:
-	KeyTableElement** access(const KeyStroke& keys, bool force) const;
-private:
-	KeyTableElement*** planes_[KeyStroke::ALTERNATIVE_KEY << 2];
-};
-
-CommandHolder::CommandHolder(py::object command) : command_(command) {
-}
-
-const py::object& CommandHolder::command(vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last) const {
-	return (first == last) ? command_ : SEQUENCE_NO_MATCH;
-}
-
-bool CommandHolder::define(vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last, py::object command) {
-	if(first < last)
-		return false;
-	assert(first == last);
-	return (command_ = command), true;
-}
-
-bool CommandHolder::find(py::object command, vector<const KeyStroke>&) const {
-	return command == command_;
-}
-
-SparseKeymap::SparseKeymap(vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last, py::object command) {
-	assert(first < last);
-	pair<const KeyStroke, KeyTableElement*> firstChild(make_pair(*(first++), static_cast<KeyTableElement*>(0)));
-	if(first == last)
-		firstChild.second = new CommandHolder(command);
-	else
-		firstChild.second = new SparseKeymap(first, last, command);
-	map_.insert(firstChild);
-}
-
-SparseKeymap::~SparseKeymap() {
-	for(map<const KeyStroke, KeyTableElement*>::const_iterator i(map_.begin()), e(map_.end()); i != e; ++i)
-		delete i->second;
-}
-
-const py::object& SparseKeymap::command(vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last) const {
-	if(first == last)
-		return SEQUENCE_PARTIAL_MATCH;
-	map<const KeyStroke, KeyTableElement*>::const_iterator i(map_.find(*first));
-	return (i != map_.end()) ? i->second->command(++first, last) : SEQUENCE_NO_MATCH;
-}
-
-bool SparseKeymap::define(vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last, py::object command) {
-	assert(first < last);
-	map<const KeyStroke, KeyTableElement*>::const_iterator i(map_.find(*first));
-	if(i == map_.end()) {	// new
-		if(command != py::object()) {
-			if(first == last - 1)
-				map_.insert(make_pair(*first, new CommandHolder(command)));
-			else
-				map_.insert(make_pair(*first, new SparseKeymap(first + 1, last, command)));
+		/// Returns the natural key code.
+		KeyStroke::NaturalKey KeyStroke::naturalKey() const BOOST_NOEXCEPT {
+			return naturalKey_;
 		}
-	} else if(command == py::object()) {	// undefine
-		if(first + 1 < last)
-			return false;
-		delete i->second;
-		map_.erase(i);
-	} else {	// overwrite
-		assert(i->second != 0);
-		return i->second->define(++first, last, command);
-	}
-	return true;
-}
 
-bool SparseKeymap::find(py::object command, vector<const KeyStroke>& sequence) const {
-	for(map<const KeyStroke, KeyTableElement*>::const_iterator i(map_.begin()), e(map_.end()); i != e; ++i) {
-		if(i->second->find(command, sequence))
-			return sequence.push_back(i->first), true;
-	}
-	return false;
-}
+		/// Returns a human-readable text represents this key stroke.
+		Glib::ustring KeyStroke::text() const BOOST_NOEXCEPT {
+#if 1
+			GtkAccelLabelClass* klass = GTK_ACCEL_LABEL_GET_CLASS(nullptr);
+			gchar* const p = ::_gtk_accel_label_class_get_accelerator_label(klass, naturalKey(), static_cast<GdkModifierType>(modifierKeys()));	// TODO: Private function.
+			Glib::ustring result(p);
+			::g_free(p);
+			return result;
+#else
+			wstring result;
+			result.reserve(256);
 
-InputMappingScheme::VectorKeymap::VectorKeymap() {
-	memset(planes_, 0, sizeof(KeyTableElement***) * MANAH_COUNTOF(planes_));
-}
+			if((modifierKeys() & CONTROL_KEY) != 0)
+				result.append(modifierString(VK_CONTROL, L"Ctrl")).append(L"+");
+			if((modifierKeys() & SHIFT_KEY) != 0)
+				result.append(modifierString(VK_SHIFT, L"Shift")).append(L"+");
+			if((modifierKeys() & ALTERNATIVE_KEY) != 0)
+				result.append(modifierString(VK_MENU, L"Alt")).append(L"+");
 
-InputMappingScheme::VectorKeymap::~VectorKeymap() {
-	for(KeyTableElement**** plane = planes_; plane < MANAH_ENDOF(planes_); ++plane) {
-		if(*plane != 0) {
-			for(size_t i = 0; i < 2; ++i) {
-				if(KeyTableElement** half = (*plane)[i]) {
-					for(size_t j = 0; j < 0x80; ++j)
-						delete half[j];
-					delete[] half;
+			if(UINT sc = ::MapVirtualKeyW(naturalKey(), MAPVK_VK_TO_VSC) << 16) {
+				switch(naturalKey()) {
+				case VK_INSERT:	case VK_DELETE:	case VK_HOME:	case VK_END:
+				case VK_NEXT:	case VK_PRIOR:	case VK_LEFT:	case VK_RIGHT:
+				case VK_UP:		case VK_DOWN:
+					sc |= (1 << 24);
+				}
+				wchar_t buffer[256];
+				if(::GetKeyNameTextW(sc | (1 << 25), buffer, MANAH_COUNTOF(buffer)) != 0) {
+					result += buffer;
+					return result;
 				}
 			}
-			delete[] *plane;
+			return result += L"(unknown)";
+#endif
 		}
-	}
-}
 
-KeyTableElement** InputMappingScheme::VectorKeymap::access(const KeyStroke& keys, bool force) const {
-	KeyTableElement*** const& plane = planes_[keys.modifierKeys()];
-	if(plane == 0) {
-		if(!force)
-			return 0;
-		memset(const_cast<KeyTableElement***&>(plane) = new KeyTableElement**[2], 0, sizeof(KeyTableElement**) * 2);
-	}
-	KeyTableElement** const& half = plane[(keys.naturalKey() & 0x80) >> 7];
-	if(half == 0) {
-		if(!force)
-			return 0;
-		memset(const_cast<KeyTableElement**&>(half) = new KeyTableElement*[0x80], 0, sizeof(KeyTableElement*) * 0x80);
-	}
-	return &half[keys.naturalKey() & 0x7f];
-}
 
-const py::object& InputMappingScheme::VectorKeymap::command(
-		vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last) const {
-	assert(first < last);
-	const KeyTableElement* const * const slot = access(*first, false);
-	return (slot != 0 && *slot != 0) ? (*slot)->command(++first, last) : SEQUENCE_NO_MATCH;
-}
+		// KeyMap /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool InputMappingScheme::VectorKeymap::define(
-		vector<const KeyStroke>::const_iterator first, vector<const KeyStroke>::const_iterator last, py::object command) {
-	if(first == last)
-		return false;
-	KeyTableElement** slot = access(*first, true);
-	if(*slot == 0) {	// new
-		if(first + 1 == last)
-			*slot = new CommandHolder(command);
-		else
-			*slot = new SparseKeymap(++first, last, command);
-	} else if(command == py::object()) {	// undefine
-		if(first + 1 < last)
+		/**
+		 * Creates and returns a new @c KeyMap object.
+		 * @param name The name of this @c KeyMap
+		 */
+		KeyMap::KeyMap(const Glib::ustring& name /* = Glib::ustring() */) : name_(name), lockedCount_(0) {
+		}
+
+		/// @internal Raises Python's @c PermissionError if locked.
+		inline void KeyMap::checkLock(const char* message) const {
+			if(isLocked()) {
+				::PyErr_SetString(PyExc_PermissionError, message);
+				boost::python::throw_error_already_set();
+			}
+		}
+
+		/**
+		 * Binds the specified key stroke to the specified definition.
+		 * @param key The key stroke
+		 * @param definition The definition which is either a command (Python callable object) or a keymap. If this is
+		 *                   @c boost#python#object(), @a key is set to undefined
+		 * @throw boost#python#error_already_error(PermissionError) This @c KeyMap is locked
+		 */
+		void KeyMap::define(const KeyStroke& key, boost::python::object definition) {
+			checkLock("KeyMap is locked");
+			if(definition == boost::python::object())
+				return undefine(key);
+			if(!boost::python::extract<KeyMap&>(definition).check() && ::PyCallable_Check(definition.ptr()) == 0) {	// type mismatch
+				::PyErr_BadArgument();
+				boost::python::throw_error_already_set();
+			} else
+				table_[key] = definition;	// may throw
+		}
+
+		/**
+		 * Binds the specified key stroke(s) to the specified definition.
+		 * @param key The key stroke(s). This must be either @c KeyStroke or sequence of @c KeyStroke
+		 * @param definition The definition which is either a command (Python callable object) or a keymap. If this is
+		 *                   @c boost#python#object(), @a key is set to undefined
+		 * @throw boost#python#error_already_set(TypeError) @a key had inappropriate type
+		 * @throw boost#python#error_already_error(PermissionError) This @c KeyMap is locked
+		 */
+		void KeyMap::define(boost::python::object key, boost::python::object definition) {
+			const auto k(lookupKeyMapAndKeyStroke(key));
+			return k.first.define(k.second, definition);
+		}
+
+		/// Returns @c true if this @c KeyMap is locked.
+		bool KeyMap::isLocked() const BOOST_NOEXCEPT {
+			return lockedCount_ != 0;
+		}
+
+		/// @see AbstractKeyMap#lookupKey(alpha#ui#KeyStroke)
+		boost::python::object KeyMap::lookupKey(const KeyStroke& key) const BOOST_NOEXCEPT {
+			try {
+				const auto found(table_.find(key));
+				if(found != std::end(table_))
+					return found->second;
+			} catch(...) {
+			}
+			return boost::python::object();
+		}
+
+		/// @see AbstractKeyMap#lookupKey(boost#python#object)
+		boost::python::object KeyMap::lookupKey(boost::python::object key) const {
+			const auto k(lookupKeyMapAndKeyStroke(key));
+			return k.first.lookupKey(k.second);
+		}
+
+		/// @internal
+		std::pair<KeyMap&, const KeyStroke&> KeyMap::lookupKeyMapAndKeyStroke(boost::python::object key) const {
+			const boost::python::extract<const KeyStroke&> singleStroke(key);
+			if(singleStroke.check())
+				return std::make_pair<KeyMap&, const KeyStroke&>(const_cast<KeyMap&>(*this), singleStroke);
+
+			const boost::python::ssize_t numberOfStrokes = boost::python::len(key);
+			if(::PySequence_Check(key.ptr()) == 0 || numberOfStrokes < 1) {
+				::PyErr_BadArgument();
+				boost::python::throw_error_already_set();
+			}
+
+			boost::python::object v;
+			for(boost::python::ssize_t i = 0; ; ++i) {
+				// these may throw Python's TypeError
+				const KeyMap& keyMap = boost::python::extract<const KeyMap&>(v);
+				const KeyStroke& keyStroke = boost::python::extract<const KeyStroke&>(key[i]);
+
+				if(i == numberOfStrokes - 1)
+					return std::make_pair<KeyMap&, const KeyStroke&>(const_cast<KeyMap&>(keyMap), keyStroke);
+				v = keyMap.lookupKey(keyStroke);
+			}
+
+			ASCENSION_ASSERT_NOT_REACHED();
+		}
+
+		/// Returns the name of this @c KeyMap.
+		const Glib::ustring& KeyMap::name() const BOOST_NOEXCEPT {
+			return name_;
+		}
+
+		/**
+		 * Undefines the specified key stroke.
+		 * @param key The key stroke
+		 * @throw boost#python#error_already_error(PermissionError) This @c KeyMap is locked
+		 */
+		void KeyMap::undefine(const KeyStroke& key) {
+			checkLock("KeyMap is locked");
+			try {
+				const auto found(table_.find(key));
+				if(found != std::end(table_))
+					table_.erase(found);
+			} catch(...) {
+			}
+		}
+
+		/**
+		 * Undefines the specified key stroke(s).
+		 * @param key The key stroke(s). This must be either @c KeyStroke or sequence of @c KeyStroke
+		 * @throw boost#python#error_already_set(TypeError) @a key had inappropriate type
+		 * @throw boost#python#error_already_error(PermissionError) This @c KeyMap is locked
+		 */
+		void KeyMap::undefine(boost::python::object key) {
+			const auto k(lookupKeyMapAndKeyStroke(key));
+			return k.first.undefine(k.second);
+		}
+
+		/**
+		 * Decrements the lock count.
+		 * @throw std#underflow_error
+		 */
+		void KeyMap::unlock() {
+			if(lockedCount_ == std::numeric_limits<decltype(lockedCount_)>::min())
+				throw std::underflow_error("KeyMap.unlock");
+			--lockedCount_;
+		}
+
+
+		// InputManager ///////////////////////////////////////////////////////////////////////////////////////////////
+
+		InputManager::InputManager() : mappingSchemeLocker_(nullptr), modalMappingSchemeLocker_(nullptr) {
+		}
+
+		/// Cancels (ends) the incomplete (pending) key strokes.
+		void InputManager::cancelIncompleteKeyStrokes() {
+			if(!pendingKeyStrokes_.empty()) {
+				pendingKeyStrokes_.clear();
+				if(mappingScheme_.get() != nullptr)
+					mappingSchemeLocker_.unlock();
+				if(modalMappingScheme_.get() != nullptr)
+					modalMappingSchemeLocker_.unlock();
+			}
+		}
+
+		/**
+		 * Handles button press event.
+		 * @param event The event object
+		 */
+		bool InputManager::input(const GdkEventButton& event) {
+			// TODO: Not implemented.
 			return false;
-		delete *slot;
-		*slot = 0;
-	} else	// overwrite
-		return (*slot)->define(++first, last, command);
-	return true;
-}
+		}
 
-bool InputMappingScheme::VectorKeymap::find(py::object command, vector<const KeyStroke>& sequence) const {
-	for(manah::byte m = 0; m < MANAH_COUNTOF(planes_); ++m) {
-		if(KeyTableElement*** const plane = planes_[m]) {
-			for(KeyStroke::VirtualKey h = 0; h < 2; ++h) {
-				if(KeyTableElement** const half = plane[h]) {
-					for(KeyStroke::VirtualKey k = 0; k < 0x80; ++k) {
-						if(const KeyTableElement* slot = half[k]) {
-							if(slot->find(command, sequence))
-								return sequence.push_back(KeyStroke(static_cast<KeyStroke::ModifierKey>(m), k | (h << 7))), true;
-						}
+		/**
+		 * Handles key press/release event.
+		 * @param event The event object
+		 */
+		bool InputManager::input(const GdkEventKey& event) {
+			if(event.type != Gdk::KEY_PRESS || event.is_modifier != 0)
+				return false;
+
+			const KeyStroke key(event.keyval, event.state);
+			boost::python::object definition;
+			if(pendingKeyStrokes_.empty())	// first stroke
+				definition = lookupKey(key);
+			else {
+				pendingKeyStrokes_.push_back(key);
+				boost::python::tuple keyStrokes(pendingKeyStrokes_);
+				definition = lookupKey(keyStrokes);
+			}
+
+			if(::PyCallable_Check(definition.ptr()) != 0) {
+				cancelIncompleteKeyStrokes();
+				bool typed = false;
+				if(inputTypedCharacterCommand_.is_none())
+					inputTypedCharacterCommand_ = ambient::Interpreter::instance().module("intrinsics").attr("input_typed_character");
+				if(definition == inputTypedCharacterCommand_)
+					typed = true;
+				if(!typed)
+					ambient::Interpreter::instance().executeCommand(definition);
+				return !typed;
+			} else {
+				// make human-readable text string for the incomplete (or undefined) key stroke(s)
+				Glib::ustring incompleteKeyStrokes;
+				assert(pendingKeyStrokes_.size() != 1);
+				if(pendingKeyStrokes_.empty())
+					incompleteKeyStrokes = key.text();
+				else {
+					for(std::size_t i = 0, c = pendingKeyStrokes_.size(); ; ++i) {
+						incompleteKeyStrokes += pendingKeyStrokes_[i].text();
+						if(i + 1 < c)
+							incompleteKeyStrokes += ' ';
+						else
+							break;
 					}
 				}
+
+				if(!definition.is_none()) {
+					// begin multiple key stroke(s)
+					assert(boost::python::extract<const KeyMap&>(definition).check());
+					if(mappingScheme_.get() != nullptr)
+						mappingSchemeLocker_.lock(*mappingScheme_);
+					if(modalMappingScheme_.get() != nullptr)
+						modalMappingSchemeLocker_.lock(*modalMappingScheme_);
+					Application::instance().window().statusBar().push(incompleteKeyStrokes);
+				} else {	// undefined key stroke(s)
+					cancelIncompleteKeyStrokes();
+					::gdk_beep();	// TODO: Use Gdk.Window.beep() or Gdk.Display.beep() instead.
+					Application::instance().window().statusBar().push(Glib::ustring::compose(_("%1 is undefined"), incompleteKeyStrokes));
+				}
+				return true;
 			}
 		}
-	}
-	return false;
-}
 
+		/**
+		 * Handles touch event.
+		 * @param event The event object
+		 */
+		bool InputManager::input(const GdkEventTouch& event) {
+			// TODO: Not implemented.
+			return false;
+		}
 
-// InputMappingScheme ///////////////////////////////////////////////////////
-
-InputMappingScheme::InputMappingScheme(const wstring& name) : name_(name), keymap_(new VectorKeymap) {
-}
-
-InputMappingScheme::~InputMappingScheme() {
-	delete keymap_;
-}
-
-py::object** InputMappingScheme::access(py::object input) const {
-//	return static_cast<py::object*>(firstKeyTable_->get(py::extract<const KeyCombination&>(input)));
-	return 0;
-}
-
-py::dict InputMappingScheme::allDefinitions() const {
-	return py::dict();
-}
-
-py::object InputMappingScheme::boundCommands() const {
-	return py::object(py::handle<>(::PyFrozenSet_New(0)));
-}
-
-namespace {
-	void toKeySequence(py::object input, vector<const KeyStroke>& v) {
-		if(py::extract<const KeyStroke&>(input).check()) {
-			const KeyStroke& keys = py::extract<const KeyStroke&>(input);
-			v.assign(&keys, &keys + 1);
-		} else
-			v.assign(makeStlInputIterator<const KeyStroke>(input), py::stl_input_iterator<const KeyStroke>());
-	}
-}
-
-py::object InputMappingScheme::command(const vector<const KeyStroke>& keySequence, bool* partialMatch) const {
-	const py::object& result = keymap_->command(keySequence.begin(), keySequence.end());
-	if(partialMatch)
-		*partialMatch = &result == &KeyTableElement::SEQUENCE_PARTIAL_MATCH;
-	return result;
-}
-
-py::object InputMappingScheme::command(py::object input) const {
-	vector<const KeyStroke> v;
-	toKeySequence(input, v);
-	return command(v, 0);
-}
-
-void InputMappingScheme::define(const py::object input, py::object command, bool force /* = true */) {
-	// TODO: consider force paramter.
-	vector<const KeyStroke> v;
-	toKeySequence(input, v);
-	keymap_->define(v.begin(), v.end(), command);
-}
-
-py::object InputMappingScheme::definedInputSequences() const {
-	return py::object(py::handle<>(::PyFrozenSet_New(0)));
-}
-
-py::object InputMappingScheme::inputSequencesForCommand(py::object command) const {
-	vector<const KeyStroke> keySequence;
-	if(!keymap_->find(command, keySequence))
-		return py::object(py::handle<>(::PyFrozenSet_New(0)));
-
-	py::list l;
-	for(vector<const KeyStroke>::const_reverse_iterator i(keySequence.rbegin()), e(keySequence.rend()); i != e; ++i)
-		l.append(py::object(*i));
-	py::list l2;
-	l2.append(l);
-	return /*py::object(py::handle<>(::PyFrozenSet_New(*/l2/*.ptr())))*/;
-}
-
-bool InputMappingScheme::isLocallyDefined(py::object input) const {
-	return access(input) != 0;
-}
-
-const wstring& InputMappingScheme::name() const /*throw()*/ {
-	return name_;
-}
-
-void InputMappingScheme::reset() {
-}
-
-void InputMappingScheme::undefine(py::object input) {
-}
-
-
-// InputManager /////////////////////////////////////////////////////////////
-
-InputManager::InputManager() :
-		mappingScheme_(make_pair(py::object(), static_cast<InputMappingScheme*>(0))),
-		modalMappingScheme_(make_pair(py::object(), static_cast<InputMappingScheme*>(0))) {
-}
-
+#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && 0
 /***/
 bool InputManager::input(const MSG& message) {
 	if((message.message == WM_KEYDOWN || message.message == WM_SYSKEYDOWN) && message.wParam != VK_PROCESSKEY) {
@@ -520,231 +403,132 @@ bool InputManager::input(const MSG& message) {
 */	}
 	return false;
 }
+#endif
 
-/// Returns the singleton instance.
-InputManager& InputManager::instance() {
-	static InputManager singleton;
-	return singleton;
-}
+		/// Returns the singleton instance.
+		InputManager& InputManager::instance() {
+			static InputManager singleton;
+			return singleton;
+		}
 
-py::object InputManager::mappingScheme() const {
-	return mappingScheme_.first;
-}
+		template<typename Key>
+		inline boost::python::object InputManager::internalLookupKey(const Key& key) const {
+			boost::python::object definition;
+			if(const std::shared_ptr<KeyMap> keyMap = mappingScheme())
+				definition = keyMap->lookupKey(key);
+			if(definition.is_none()) {
+				if(const std::shared_ptr<KeyMap> keyMap = modalMappingScheme())
+					definition = keyMap->lookupKey(key);
+			}
+			return definition;
+		}
 
-py::object InputManager::modalMappingScheme() const {
-	return modalMappingScheme_.first;
-}
+		/// @see AbstractKeyMap#lookupKey(alpha#ui#KeyStroke)
+		boost::python::object InputManager::lookupKey(const KeyStroke& key) const BOOST_NOEXCEPT {
+			return internalLookupKey(key);
+		}
 
-void InputManager::setMappingScheme(py::object scheme) {
-	if(scheme == modalMappingScheme()) {
-		::PyErr_BadArgument();
-		py::throw_error_already_set();
+		/// @see AbstractKeyMap#lookupKey(boost#python#object)
+		boost::python::object InputManager::lookupKey(boost::python::object key) const {
+			return internalLookupKey(key);
+		}
+
+		/**
+		 * Returns the global mapping scheme.
+		 * @see #modalMappingScheme, #setMappingScheme
+		 */
+		std::shared_ptr<KeyMap> InputManager::mappingScheme() const BOOST_NOEXCEPT {
+			return mappingScheme_;
+		}
+
+		/**
+		 * Returns the modal mapping scheme.
+		 * @see #mappingScheme, #setModalMappingScheme
+		 */
+		std::shared_ptr<KeyMap> InputManager::modalMappingScheme() const BOOST_NOEXCEPT {
+			return modalMappingScheme_;
+		}
+
+		/**
+		 * Sets the global mapping scheme.
+		 * @param scheme The mapping scheme to set. Can be @c null
+		 * @throw boost#python#error_already_set(PermissionError) @c InputManager is receiving some input
+		 * @throw boost#python#error_already_set(ValueError) @a scheme is same as @c #modalMappingScheme()
+		 * @see #mappingScheme, #setModalMappingScheme
+		 */
+		void InputManager::setMappingScheme(std::shared_ptr<KeyMap> scheme) {
+			if(!pendingKeyStrokes_.empty())
+				::PyErr_SetString(PyExc_PermissionError, "InputManager.setMappingScheme");
+			else if(scheme == modalMappingScheme())
+				::PyErr_SetString(PyExc_ValueError, "InputManager.setMappingScheme");
+			if(::PyErr_Occurred() != nullptr)
+				boost::python::throw_error_already_set();
+			mappingScheme_ = scheme;
+		}
+
+		/**
+		 * Sets the modal mapping scheme.
+		 * @param scheme The mapping scheme to set. Can be @c null
+		 * @throw boost#python#error_already_set(PermissionError) @c InputManager is receiving some input
+		 * @throw boost#python#error_already_set(ValueError) @a scheme is same as @c #modalMappingScheme()
+		 * @see #modalMappingScheme, #setMappingScheme
+		 */
+		void InputManager::setModalMappingScheme(std::shared_ptr<KeyMap> scheme) {
+			if(!pendingKeyStrokes_.empty())
+				::PyErr_SetString(PyExc_PermissionError, "InputManager.setModalMappingScheme");
+			else if(scheme == mappingScheme())
+				::PyErr_SetString(PyExc_ValueError, "InputManager.setModalMappingScheme");
+			if(::PyErr_Occurred() != nullptr)
+				boost::python::throw_error_already_set();
+			modalMappingScheme_ = scheme;
+		}
+
+
+		ALPHA_EXPOSE_PROLOGUE(ambient::Interpreter::LOWEST_INSTALLATION_ORDER)
+			ambient::Interpreter& interpreter = ambient::Interpreter::instance();
+			boost::python::scope scope(interpreter.module("bindings"));
+
+			boost::python::enum_<KeyStroke::NaturalKey>("NaturalKey");
+			// TODO: Define values of NaturalKey.
+
+			boost::python::enum_<KeyStroke::ModifierKey>("ModifierKey")
+				.value("none", 0)
+				.value("shift", ascension::viewers::widgetapi::UserInput::SHIFT_DOWN)
+				.value("ctrl", ascension::viewers::widgetapi::UserInput::CONTROL_DOWN)
+				.value("alt", ascension::viewers::widgetapi::UserInput::ALT_DOWN)
+				.value("meta", ascension::viewers::widgetapi::UserInput::META_DOWN);
+
+			boost::python::class_<KeyStroke>("KeyStroke", boost::python::no_init)
+				.def(boost::python::init<KeyStroke::NaturalKey, KeyStroke::ModifierKey>((boost::python::arg("natural_key"), boost::python::arg("modifier_keys") = 0)))
+				.add_property("natural_key", &KeyStroke::naturalKey)
+				.add_property("modifier_keys", &KeyStroke::modifierKeys)
+				.def("text", &KeyStroke::text);
+
+			boost::python::class_<KeyMap, std::shared_ptr<KeyMap>>("KeyMap")
+				.def(boost::python::init<>((boost::python::arg("name") = Glib::ustring())))
+				.def_readonly("name", boost::python::make_function(&KeyMap::name, boost::python::return_value_policy<boost::python::copy_const_reference>()))
+				.def<void(KeyMap::*)(boost::python::object, boost::python::object)>("define", &KeyMap::define)
+				.def<boost::python::object(KeyMap::*)(boost::python::object) const>("lookup_key", &KeyMap::lookupKey)
+				.def<void(KeyMap::*)(boost::python::object)>("undefine", &KeyMap::undefine)
+				.def("get", ambient::makeFunctionPointer([]() {
+					return InputManager::instance().mappingScheme();
+				})).staticmethod("get")
+				.def("get_modal", ambient::makeFunctionPointer([]() {
+					return InputManager::instance().modalMappingScheme();
+				})).staticmethod("get_modal")
+				.def("set_as_mapping_scheme", ambient::makeFunctionPointer([](std::shared_ptr<KeyMap> self) {
+					InputManager::instance().setMappingScheme(self);
+				}))
+				.def("set_as_modal_mapping_scheme", ambient::makeFunctionPointer([](std::shared_ptr<KeyMap> self) {
+					InputManager::instance().setModalMappingScheme(self);
+				}));
+
+			boost::python::scope scope1(interpreter.module("intrinsics"));
+			boost::python::def("input_typed_character",
+				ambient::makeFunctionPointer([](boost::python::object ed, boost::python::ssize_t n) {
+					::PyErr_SetString(PyExc_NotImplementedError, "This command is not callable.");
+				}),
+				(boost::python::arg("ed") = boost::python::object(), boost::python::arg("n") = 1));
+		ALPHA_EXPOSE_EPILOGUE()
 	}
-	mappingScheme_.first = scheme;
-	mappingScheme_.second = py::extract<InputMappingScheme*>(scheme);
 }
-
-void InputManager::setModalMappingScheme(py::object scheme) {
-	if(scheme == mappingScheme()) {
-		::PyErr_BadArgument();
-		py::throw_error_already_set();
-	}
-	modalMappingScheme_.first = scheme;
-	modalMappingScheme_.second = py::extract<InputMappingScheme*>(scheme);
-}
-
-
-namespace {
-	void inputTypedCharacter(py::object ed, py::ssize_t n) {::PyErr_SetString(PyExc_NotImplementedError, "This command is not callable.");}
-	py::object mappingScheme() {return InputManager::instance().mappingScheme();}
-	py::object modalMappingScheme() {return InputManager::instance().modalMappingScheme();}
-	void setAsMappingScheme(py::object s) {InputManager::instance().setMappingScheme(s);}
-	void setAsModalMappingScheme(py::object s) {InputManager::instance().setModalMappingScheme(s);}
-}
-
-ALPHA_EXPOSE_PROLOGUE(Interpreter::LOWEST_INSTALLATION_ORDER)
-	Interpreter& interpreter = Interpreter::instance();
-	py::scope scope(interpreter.module("bindings"));
-
-	py::enum_<KeyStroke::VirtualKey>("NaturalKey")
-		.value("left_mouse_button", VK_LBUTTON)
-		.value("right_mouse_button", VK_RBUTTON)
-		.value("cancel", VK_CANCEL)
-		.value("middle_mouse_button", VK_MBUTTON)
-		.value("x1_mouse_button", VK_XBUTTON1)
-		.value("x2_mouse_button", VK_XBUTTON2)
-		.value("back_space", VK_BACK).value("bs", VK_BACK)
-		.value("tab", VK_TAB)
-		.value("clear", VK_CLEAR)
-		.value("enter", VK_RETURN)
-		.value("shift", VK_SHIFT)
-		.value("control", VK_CONTROL)
-		.value("menu", VK_MENU).value("alt", VK_MENU)
-		.value("pause", VK_PAUSE)
-		.value("caps_lock", VK_CAPITAL).value("caps_lk", VK_CAPITAL)
-		.value("kana", VK_KANA).value("kana", VK_HANGUL)	// 0x15
-		.value("junja", VK_JUNJA)
-		.value("final", VK_FINAL)
-		.value("hanja", VK_HANJA).value("kanji", VK_KANJI)	// 0x19
-		.value("escape", VK_ESCAPE)
-		.value("convert", VK_CONVERT)
-		.value("nonconvert", VK_NONCONVERT)
-		.value("accept", VK_ACCEPT)
-		.value("modechange", VK_MODECHANGE)
-		.value("space", VK_SPACE)
-		.value("page_up", VK_PRIOR)
-		.value("page_down", VK_NEXT)
-		.value("end", VK_END)
-		.value("home", VK_HOME)
-		.value("left", VK_LEFT)
-		.value("up", VK_UP)
-		.value("right", VK_RIGHT)
-		.value("down", VK_DOWN)
-		.value("select", VK_SELECT)
-		.value("print", VK_PRINT)
-		.value("execute", VK_EXECUTE)
-		.value("print_screen", VK_SNAPSHOT).value("prt_sc", VK_SNAPSHOT)
-		.value("insert", VK_INSERT).value("ins", VK_INSERT)
-		.value("delete", VK_DELETE).value("del", VK_DELETE)
-		.value("help", VK_HELP)
-		.value("zero", 0x30)
-		.value("one", 0x31)
-		.value("two", 0x32)
-		.value("three", 0x33)
-		.value("four", 0x34)
-		.value("five", 0x35)
-		.value("six", 0x36)
-		.value("seven", 0x37)
-		.value("eight", 0x38)
-		.value("nine", 0x39)
-		.value("left_windows", VK_LWIN)
-		.value("right_windows", VK_RWIN)
-		.value("context_menu", VK_APPS).value("applications", VK_APPS)
-		.value("sleep", VK_SLEEP)
-		.value("numpad0", VK_NUMPAD0)
-		.value("numpad1", VK_NUMPAD1)
-		.value("numpad2", VK_NUMPAD2)
-		.value("numpad3", VK_NUMPAD3)
-		.value("numpad4", VK_NUMPAD4)
-		.value("numpad5", VK_NUMPAD5)
-		.value("numpad6", VK_NUMPAD6)
-		.value("numpad7", VK_NUMPAD7)
-		.value("numpad8", VK_NUMPAD8)
-		.value("numpad9", VK_NUMPAD9)
-		.value("multiply", VK_MULTIPLY)
-		.value("add", VK_ADD)
-		.value("plus", VK_ADD)
-		.value("separator", VK_SEPARATOR)
-		.value("minus", VK_SUBTRACT)
-		.value("decimal", VK_DECIMAL)
-		.value("divide", VK_DIVIDE)
-		.value("f1", VK_F1)
-		.value("f2", VK_F2)
-		.value("f3", VK_F3)
-		.value("f4", VK_F4)
-		.value("f5", VK_F5)
-		.value("f6", VK_F6)
-		.value("f7", VK_F7)
-		.value("f8", VK_F8)
-		.value("f9", VK_F9)
-		.value("f10", VK_F10)
-		.value("f11", VK_F11)
-		.value("f12", VK_F12)
-		.value("f13", VK_F13)
-		.value("f14", VK_F14)
-		.value("f15", VK_F15)
-		.value("f16", VK_F16)
-		.value("f17", VK_F17)
-		.value("f18", VK_F18)
-		.value("f19", VK_F19)
-		.value("f20", VK_F20)
-		.value("f21", VK_F21)
-		.value("f22", VK_F22)
-		.value("f23", VK_F23)
-		.value("f24", VK_F24)
-		.value("number_lock", VK_NUMLOCK).value("num_lock", VK_NUMLOCK).value("nm_lk", VK_NUMLOCK)
-		.value("scroll_lock", VK_SCROLL).value("scr_lk", VK_SCROLL)
-		.value("left_shift", VK_LSHIFT)
-		.value("right_shift", VK_RSHIFT)
-		.value("left_control", VK_LCONTROL)
-		.value("right_control", VK_RCONTROL)
-		.value("left_menu", VK_LMENU).value("left_alt", VK_LMENU)
-		.value("right_menu", VK_RMENU).value("right_alt", VK_RMENU)
-		.value("browser_back", VK_BROWSER_BACK)
-		.value("browser_forward", VK_BROWSER_FORWARD)
-		.value("browser_refresh", VK_BROWSER_REFRESH)
-		.value("browser_stop", VK_BROWSER_STOP)
-		.value("browser_search", VK_BROWSER_SEARCH)
-		.value("browser_favorites", VK_BROWSER_FAVORITES)
-		.value("browser_home", VK_BROWSER_HOME)
-		.value("volume_mute", VK_VOLUME_MUTE)
-		.value("volume_down", VK_VOLUME_DOWN)
-		.value("volume_up", VK_VOLUME_UP)
-		.value("media_next_track", VK_MEDIA_NEXT_TRACK)
-		.value("media_prev_track", VK_MEDIA_PREV_TRACK)
-		.value("media_stop", VK_MEDIA_STOP)
-		.value("media_play_pause", VK_MEDIA_PLAY_PAUSE)
-		.value("launch_mail", VK_LAUNCH_MAIL).value("start_mail", VK_LAUNCH_MAIL)
-		.value("launch_media_select", VK_LAUNCH_MEDIA_SELECT).value("media_select", VK_LAUNCH_MEDIA_SELECT)
-		.value("launch_application_1", VK_LAUNCH_APP1).value("start_application_1", VK_LAUNCH_APP1)
-		.value("launch_application_2", VK_LAUNCH_APP2).value("start_application_2", VK_LAUNCH_APP2)
-		.value("oem_1", VK_OEM_1)
-		.value("oem_plus", VK_OEM_PLUS)
-		.value("oem_comma", VK_OEM_COMMA)
-		.value("oem_minus", VK_OEM_MINUS)
-		.value("oem_period", VK_OEM_PERIOD)
-		.value("oem_2", VK_OEM_2)
-		.value("oem_3", VK_OEM_3)
-		.value("oem_4", VK_OEM_4)
-		.value("oem_5", VK_OEM_5)
-		.value("oem_6", VK_OEM_6)
-		.value("oem_7", VK_OEM_7)
-		.value("oem_8", VK_OEM_8)
-		.value("oem_ax", VK_OEM_AX)
-		.value("oem_102", VK_OEM_102)
-		.value("ico_help", VK_ICO_HELP)
-		.value("ico_00", VK_ICO_00)
-		.value("process", VK_PROCESSKEY)
-		.value("ico_clear", VK_ICO_CLEAR)
-//		.value("_packet", VK_PACKET)
-		.value("attn", VK_ATTN)
-		.value("crsel", VK_CRSEL)
-		.value("exsel", VK_EXSEL)
-		.value("ereof", VK_EREOF)
-		.value("play", VK_PLAY)
-		.value("zoom", VK_ZOOM)
-		.value("pa1", VK_PA1)
-		.value("oem_clear", VK_OEM_CLEAR);
-	py::enum_<KeyStroke::ModifierKey>("ModifierKey")
-		.value("none", KeyStroke::NO_MODIFIER)
-		.value("ctrl", KeyStroke::CONTROL_KEY)
-		.value("shift", KeyStroke::SHIFT_KEY)
-		.value("alt", KeyStroke::ALTERNATIVE_KEY)
-		.value("ctrl_shift", static_cast<KeyStroke::ModifierKey>(KeyStroke::CONTROL_KEY | KeyStroke::SHIFT_KEY))
-		.value("ctrl_alt", static_cast<KeyStroke::ModifierKey>(KeyStroke::CONTROL_KEY | KeyStroke::ALTERNATIVE_KEY))
-		.value("shift_alt", static_cast<KeyStroke::ModifierKey>(KeyStroke::SHIFT_KEY | KeyStroke::ALTERNATIVE_KEY))
-		.value("ctrl_shift_alt", static_cast<KeyStroke::ModifierKey>(KeyStroke::CONTROL_KEY | KeyStroke::SHIFT_KEY | KeyStroke::ALTERNATIVE_KEY));
-
-	py::class_<KeyStroke>("KeyStroke", py::init<py::object, py::object>())
-		.def(py::init<py::object>())
-		.add_property("natural_key", &KeyStroke::naturalKey)
-		.add_property("modifier_keys", &KeyStroke::modifierKeys)
-		.def<wstring(py::object)>("format", &KeyStroke::format).staticmethod("format");
-	py::class_<InputMappingScheme, boost::noncopyable>("InputMappingScheme", py::init<const std::wstring>())
-//		.add_property("resolve_parent", &InputMappingScheme::resolveParent, &InputMappingScheme::setResolveParent)
-		.def("all_definitions", &InputMappingScheme::allDefinitions)
-		.def("bound_commands", &InputMappingScheme::boundCommands)
-		.def<py::object (InputMappingScheme::*)(py::object) const>("command", &InputMappingScheme::command)
-		.def("define", &InputMappingScheme::define, (py::arg("input"), py::arg("command"), py::arg("force") = true))
-		.def("defined_input_sequences", &InputMappingScheme::definedInputSequences)
-		.def("get", &mappingScheme).staticmethod("get")
-		.def("get_modal", &modalMappingScheme).staticmethod("get_modal")
-		.def("is_locally_defined", &InputMappingScheme::isLocallyDefined)
-		.def("reset", &InputMappingScheme::reset)
-		.def("set_as_mapping_scheme", &setAsMappingScheme)
-		.def("set_as_modal_mapping_scheme", &setAsModalMappingScheme)
-		.def("undefine", &InputMappingScheme::undefine);
-
-	py::scope scope1(interpreter.module("intrinsics"));
-	py::def("input_typed_character", &inputTypedCharacter, (py::arg("ed") = py::object(), py::arg("n") = 1));
-ALPHA_EXPOSE_EPILOGUE()

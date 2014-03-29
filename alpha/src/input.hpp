@@ -2,81 +2,113 @@
  * @file input.hpp
  * @author exeal
  * @date 2003-2007 (was keyboard-map.hpp)
- * @date 2009
+ * @date 2009, 2014
  */
 
 #ifndef ALPHA_INPUT_HPP
 #define ALPHA_INPUT_HPP
-
-//#include "resource.h"
-#include <manah/win32/windows.hpp>
-//#include <sstream>
 #include "ambient.hpp"
+#include <ascension/viewer/widgetapi/user-input.hpp>
+#include <boost/functional/hash.hpp>	// boost.hash_combine, boost.hash_value
+#include <boost/operators.hpp>	// boost.equality_comparable
+#include <memory>
+#include <unordered_map>
 #include <vector>
-
 
 namespace alpha {
 	namespace ui {
-/*
-		class InputTrigger {
+		class Input {
 		public:
-			virtual bool equals(const InputTrigger& other) const throw() = 0;
-			virtual std::wstring format() const throw() = 0;
+//			virtual bool equals(const Input& other) const BOOST_NOEXCEPT = 0;
+//			virtual Glib::ustring format() const BOOST_NOEXCEPT = 0;
 		};
-		std::wostream& operator<<(std::wostream& out, const InputTrigger& v) {return out << v.format();}
-*/
-		class KeyStroke /*: public InputTrigger*/ {
-		public:
-			/// A virtual key code.
-			typedef manah::byte VirtualKey;
-			/// Modifier keys.
-			enum ModifierKey {
-				NO_MODIFIER = 0x00,		///< No modifier key.
-				CONTROL_KEY = 0x01,		///< Ctrl key.
-				SHIFT_KEY = 0x02,		///< Shift key.
-				ALTERNATIVE_KEY = 0x04	///< Alt key.
-			};
-		public:
-			explicit KeyStroke(VirtualKey naturalKey);
-			KeyStroke(ModifierKey modifierKeys, VirtualKey naturalKey);
-			KeyStroke(boost::python::object naturalKey);
-			KeyStroke(boost::python::object a1, boost::python::object a2);
-			bool operator==(const KeyStroke& other) const /*throw()*/;
-			bool operator<(const KeyStroke& other) const /*throw()*/;
-			template<typename InputIterator>
-			static std::wstring format(InputIterator first, InputIterator last);
-			static std::wstring format(boost::python::object keys);
-			ModifierKey modifierKeys() const /*throw()*/;
-			VirtualKey naturalKey() const /*throw()*/;
-		private:
-			// InputTrigger
-			std::wstring format() const /*throw()*/;
-		private:
-			/*const*/ VirtualKey naturalKey_;
-			/*const*/ ModifierKey modifierKeys_ : 8;
-		};
-/*
-		class InputTriggerSequence {
-		public:
-			virtual std::wostream& operator<<(std::wostream& out) = 0;
-			bool endsWith(const InputTriggerSequence& triggerSequence, bool equals) const;
-			bool isEmpty() const throw();
-			virtual boost::python::tuple prefixes() const = 0;
-			bool startsWith(const InputTriggerSequence& triggerSequence, bool equals) const;
-			boost::python::tuple triggers() const;
-		protected:
-			explicit InputTriggerSequence(const InputTrigger* first, const InputTrigger* last);
-		private:
-		};
-		std::wostream& operator<<(std::wostream& out, const InputTriggerSequence& v);
+//		std::wostream& operator<<(std::wostream& out, const Input& v) {return out << v.format();}
 
-		class KeySequence : public InputTriggerSequence {
+		/// Represents a key sequence.
+		class KeyStroke : public Input, private boost::equality_comparable<KeyStroke> {
 		public:
-			boost::python::tuple keyStrokes() const throw();
+			typedef ascension::viewers::widgetapi::KeyInput::Code NaturalKey;
+			typedef ascension::viewers::widgetapi::UserInput::KeyboardModifier ModifierKey;
+
+		public:
+			explicit KeyStroke(NaturalKey naturalKey, ModifierKey modifierKeys = 0);
+			explicit KeyStroke(const Glib::ustring& format);
+			bool operator==(const KeyStroke& other) const BOOST_NOEXCEPT;
+			ModifierKey modifierKeys() const BOOST_NOEXCEPT;
+			NaturalKey naturalKey() const BOOST_NOEXCEPT;
+			Glib::ustring text() const BOOST_NOEXCEPT;
+
 		private:
-			boost::python::tuple keyStrokes_;
+			/*const*/ NaturalKey naturalKey_;
+			/*const*/ ModifierKey modifierKeys_;
 		};
-*/
+	}
+}
+
+namespace std {
+	template<> struct hash<alpha::ui::KeyStroke> {
+		size_t operator()(const alpha::ui::KeyStroke& key) const {
+			size_t n = boost::hash_value(key.naturalKey());
+			boost::hash_combine(n, key.modifierKeys());
+			return n;
+		}
+	};
+}
+
+namespace alpha {
+	namespace ui {
+		class AbstractKeyMap {
+		public:
+			/**
+			 * Returns the definition bound to the specified key stroke.
+			 * @param key The key stroke
+			 * @return The definition or @c None if @a key is bound to nothing (undefined)
+			 */
+			virtual boost::python::object lookupKey(const KeyStroke& key) const BOOST_NOEXCEPT;
+			/**
+			 * Returns the definition bound to the specified key stroke(s).
+			 * @param key The key stroke(s). This must be either @c KeyStroke or sequence of @c KeyStroke
+			 * @return The definition or @c None if @a key is bound to nothing (undefined)
+			 * @throw boost#python#error_already_set(TypeError) @a key had inappropriate type
+			 */
+			virtual boost::python::object lookupKey(boost::python::object key) const;
+		};
+
+		class KeyMap : public AbstractKeyMap, public std::enable_shared_from_this<KeyMap> {
+		public:
+			explicit KeyMap(const Glib::ustring& name = Glib::ustring());
+
+			/// @name Attributes
+			/// @{
+			boost::python::object lookupKey(const KeyStroke& key) const override BOOST_NOEXCEPT;
+			boost::python::object lookupKey(boost::python::object key) const override;
+			const Glib::ustring& name() const BOOST_NOEXCEPT;
+			/// @}
+
+			/// @name Definitions
+			/// @{
+			void define(const KeyStroke& key, boost::python::object definition);
+			void define(boost::python::object key, boost::python::object definition);
+			void undefine(const KeyStroke& key);
+			void undefine(boost::python::object key);
+			/// @}
+
+			/// @name Access Control
+			/// @{
+			bool isLocked() const BOOST_NOEXCEPT;
+			void lock() BOOST_NOEXCEPT;
+			void unlock() BOOST_NOEXCEPT;
+			/// @}
+
+		private:
+			void checkLock(const char* message) const;
+			std::pair<KeyMap&, const KeyStroke&> lookupKeyMapAndKeyStroke(boost::python::object key) const;
+		private:
+			const Glib::ustring name_;
+			std::unordered_map<KeyStroke, boost::python::object> table_;
+			std::size_t lockedCount_;
+		};
+#if 0
 		/// Maps user inputs and commands.
 		class InputMappingScheme {
 			MANAH_NONCOPYABLE_TAG(InputMappingScheme);
@@ -105,35 +137,40 @@ namespace alpha {
 			VectorKeymap* keymap_;
 //			boost::python::object resolveParent_;
 		};
-
-		class InputManager {
-			MANAH_NONCOPYABLE_TAG(InputManager);
+#endif
+		class InputManager : public AbstractKeyMap, private boost::noncopyable {
 		public:
 			InputManager();
-			bool input(const MSG& message);
 			static InputManager& instance();
-			boost::python::object mappingScheme() const;
-			boost::python::object modalMappingScheme() const;
-			void setMappingScheme(boost::python::object scheme);
-			void setModalMappingScheme(boost::python::object scheme);
+
+			/// @name Key Maps
+			/// @{
+			boost::python::object lookupKey(const KeyStroke& key) const override BOOST_NOEXCEPT;
+			boost::python::object lookupKey(boost::python::object key) const override;
+			std::shared_ptr<KeyMap> mappingScheme() const BOOST_NOEXCEPT;
+			std::shared_ptr<KeyMap> modalMappingScheme() const BOOST_NOEXCEPT;
+			void setMappingScheme(std::shared_ptr<KeyMap> scheme);
+			void setModalMappingScheme(std::shared_ptr<KeyMap> scheme);
+			/// @}
+
+			/// @name Input Handling
+			/// @{
+			void cancelIncompleteKeyStrokes();
+			bool input(const GdkEventButton& event);	// for button_press_event
+			bool input(const GdkEventKey& event);	// for key_press_event
+			bool input(const GdkEventTouch& event);	// for touch_event
+			/// @}
+
 		private:
-			std::pair<boost::python::object, const InputMappingScheme*> mappingScheme_, modalMappingScheme_;
-			std::vector<const KeyStroke> pendingKeySequence_;
+			template<typename Key>
+			boost::python::object internalLookupKey(const Key& key) const;
+		private:
+			std::shared_ptr<KeyMap> mappingScheme_, modalMappingScheme_;
+			std::vector<KeyStroke> pendingKeyStrokes_;
 			boost::python::object inputTypedCharacterCommand_;
+			typedef ascension::detail::LockGuard<KeyMap, &KeyMap::lock, &KeyMap::unlock> KeyMapLocker;
+			KeyMapLocker mappingSchemeLocker_, modalMappingSchemeLocker_;
 		};
-
-
-		template<typename InputIterator> inline std::wstring KeyStroke::format(InputIterator first, InputIterator last) {
-			std::wstring s;
-			while(true) {
-				s += first->format();
-				if(++first == last)
-					break;
-				s += L" ";
-			}
-			return s;
-		}
-
 	}
 } // namespace alpha.ui
 
