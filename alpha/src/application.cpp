@@ -1,7 +1,7 @@
 /**
  * @file application.hpp
  * @author exeal
- * @date 2003-2009
+ * @date 2003-2009, 2014
  */
 
 #include "application.hpp"
@@ -22,16 +22,6 @@
 #include <shlwapi.h>	// PathXxxx
 #include <comcat.h>		// ICatInformation
 #include <dlgs.h>
-using namespace alpha;
-//using namespace alpha::command;
-using namespace ascension;
-using namespace ascension::text;
-using namespace ascension::viewers;
-using namespace ascension::encoding;
-using namespace ascension::texteditor::commands;
-using namespace manah;
-using namespace std;
-namespace py = boost::python;
 
 
 // グローバル関数//////////////////////////////////////////////////////////
@@ -123,21 +113,6 @@ AutoBuffer<char> alpha::u2a(const WCHAR* first, const WCHAR* last, DWORD flags /
 }
 
 namespace {
-	inline void showLastErrorMessage(HWND parent = 0) {
-		void* buffer;
-		::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-			0, ::GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<wchar_t*>(&buffer), 0, 0);
-		::MessageBoxW(parent, static_cast<wchar_t*>(buffer), IDS_APPNAME, MB_OK);
-		::LocalFree(buffer);
-	}
-
-	// スラッシュとバックスラッシュの交換
-	inline void s2b(WCHAR* first, WCHAR* last) {replace_if(first, last, bind2nd(equal_to<WCHAR>(), L'/'), L'\\');}
-	inline void b2s(WCHAR* first, WCHAR* last) {replace_if(first, last, bind2nd(equal_to<WCHAR>(), L'\\'), L'/');}
-	inline void s2b(std::basic_string<WCHAR>& s) {replace_if(s.begin(), s.end(), bind2nd(equal_to<WCHAR>(), L'/'), L'\\');}
-	inline void b2s(std::basic_string<WCHAR>& s) {replace_if(s.begin(), s.end(), bind2nd(equal_to<WCHAR>(), L'\\'), L'/');}
-
-	// UTF-16 とユーザ既定コードページの変換
 
 	/// ChooseFontW のためのフックプロシジャ
 	UINT_PTR CALLBACK chooseFontHookProc(HWND dialog, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -154,29 +129,15 @@ namespace {
 	}
 } // namespace @0
 
+namespace alpha {
 
-// Alpha //////////////////////////////////////////////////////////////
+	// Alpha //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Alpha* Alpha::instance_ = 0;
-
-/// コンストラクタ
-Alpha::Alpha() : editorFont_(0) {
-	assert(Alpha::instance_ == 0);
-	Alpha::instance_ = this;
-	searchDialog_.reset(new ui::SearchDialog());	// ctor of SearchDialog calls Alpha
-	onSettingChange(0, 0);	// statusFont_ の初期化
-}
-
-/// デストラクタ
-Alpha::~Alpha() {
-	::DeleteObject(statusFont_);
-	Alpha::instance_ = 0;
-}
-
-LRESULT CALLBACK Alpha::appWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
-	return (instance_ != 0) ?
-		instance_->dispatchEvent(window, message, wParam, lParam) : ::DefWindowProc(window, message, wParam, lParam);
-}
+	/// Constructor.
+	Application::Application() : editorFont_(0) {
+		searchDialog_.reset(new ui::SearchDialog());	// ctor of SearchDialog calls Alpha
+		onSettingChange(0, 0);	// statusFont_ の初期化
+	}
 
 /// [フォント] ダイアログを表示してエディタのフォントを変更する
 void Alpha::changeFont() {
@@ -196,87 +157,6 @@ void Alpha::changeFont() {
 		font.lfWeight = FW_REGULAR;
 		setFont(font);
 	}
-}
-
-/// メッセージの振り分け
-LRESULT	Alpha::dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
-	switch(message) {
-	case WM_ACTIVATE:
-		if(wParam == WA_ACTIVE) {
-			BufferList& buffers = BufferList::instance();
-			for(size_t i = 0; i < buffers.numberOfBuffers(); ++i)
-				buffers.at(i).textFile().checkTimeStamp();
-		}
-		return 0L;
-	case WM_COMMAND:
-		return onCommand(LOWORD(wParam), HIWORD(wParam), reinterpret_cast<HWND>(lParam));
-	case WM_CLOSE:
-		teardown();
-		return 0;
-	case WM_COPYDATA:
-		onCopyData(reinterpret_cast<HWND>(wParam), *reinterpret_cast<COPYDATASTRUCT*>(lParam));
-		break;
-	case WM_CREATE:
-		break;
-	case WM_DESTROY:
-		onDestroy();
-		break;
-	case WM_DRAWITEM:
-		onDrawItem(static_cast<UINT>(wParam), *reinterpret_cast<DRAWITEMSTRUCT*>(lParam));
-		break;
-	case WM_DROPFILES:
-		onDropFiles(reinterpret_cast<HDROP>(wParam));
-		break;
-	case WM_ENTERMENULOOP:
-		onEnterMenuLoop(toBoolean(wParam));	// ??? C4244@MSVC9
-		break;
-	case WM_EXITMENULOOP:
-		onExitMenuLoop(toBoolean(wParam));	// ??? C4244@MSVC9
-		break;
-	case WM_INITMENUPOPUP:
-		ui::handleINITMENUPOPUP(wParam, lParam);
-		break;
-	case WM_MEASUREITEM:
-		onMeasureItem(static_cast<UINT>(wParam), *reinterpret_cast<::MEASUREITEMSTRUCT*>(lParam));
-		break;
-//	case WM_MENUCHAR: {
-//		auto_ptr<Menu> activePopup(new Menu(reinterpret_cast<HMENU>(lParam)));
-//		return onMenuChar(LOWORD(wParam), HIWORD(wParam), *activePopup);
-//	}
-	case WM_MENUCOMMAND:
-		ui::handleMENUCOMMAND(wParam, lParam);
-		break;
-	case WM_MENUSELECT:
-		ui::handleMENUSELECT(wParam, lParam);
-		break;
-	case WM_NOTIFY:
-		onNotify(static_cast<UINT>(wParam), *reinterpret_cast<NMHDR*>(lParam));
-		break;
-	case WM_QUERYENDSESSION:
-		return teardown();
-	case WM_SETCURSOR:
-		if(onSetCursor(reinterpret_cast<HWND>(wParam),
-				static_cast<UINT>(LOWORD(lParam)), static_cast<UINT>(HIWORD(lParam))))
-			return false;
-		break;
-	case WM_SETFOCUS:
-		// m_iActiveView が閉じられようとしているビューを指す可能性がある
-//		if(m_buffers.GetCount() != 0 && m_buffers.GetActiveDocumentIndex() != -1
-//				&& reinterpret_cast<HWND>(wParam) != m_documents.GetActiveDocument()->GetWindow())
-//			::SendMessageW(m_documents.GetActiveDocument()->GetWindow(), message, wParam, lParam);
-		EditorWindows::instance().setFocus();
-		return 0L;
-	case WM_SETTINGCHANGE:
-		onSettingChange(static_cast<UINT>(wParam), reinterpret_cast<wchar_t*>(lParam));
-		break;
-	case WM_SIZE:
-		onSize(static_cast<UINT>(wParam), LOWORD(lParam), HIWORD(lParam));
-		break;
-	case WM_TIMER:
-		onTimer(static_cast<UINT>(wParam));
-		break;
-	}
-	return ::DefWindowProc(window, message, wParam, lParam);
 }
 
 /// @see manah#windows#Alpha#initInstance
@@ -332,7 +212,7 @@ bool Alpha::initInstance(int showCommand) {
 		if(newline == kernel::NLF_RAW_VALUE)
 			newline = kernel::NLF_CR_LF;
 //		kernel::Document::setDefaultCode(readIntegerProfile(L"File", L"defaultCodePage", ::GetACP()), newline);
-	} catch(invalid_argument&) {
+	} catch(std::invalid_argument&) {
 		// TODO: 設定が間違っていることをユーザに通知
 	}
 
@@ -360,7 +240,7 @@ bool Alpha::initInstance(int showCommand) {
 	assert(EditorWindows::instance().isWindow());
 
 	// 一般設定の読み込み
-	loadINISettings();
+	loadSettings();
 
 	// スクリプトによる設定
 	wchar_t dotAlpha[MAX_PATH];
@@ -423,144 +303,61 @@ bool Alpha::initInstance(int showCommand) {
 	return true;
 }
 
-/// INI ファイルから設定を読み込む
-void Alpha::loadINISettings() {
-	// 表示に関する設定
-	win32::AutoZero<LOGFONTW> lf;
-	if(!readStructureProfile(L"View", L"Font.default", lf)) {
-		lf.lfCharSet = ANSI_CHARSET;
-		lf.lfOutPrecision = OUT_DEFAULT_PRECIS;
-		lf.lfClipPrecision = CLIP_DEFAULT_PRECIS;
-		lf.lfQuality = DEFAULT_QUALITY;
-		lf.lfPitchAndFamily = DEFAULT_PITCH | FF_DONTCARE;
-		wcscpy(lf.lfFaceName, L"Terminal");
-	}
-	setFont(lf);
+	/// Loads settings from the file.
+	void Application::loadSettings() {
+		// 表示に関する設定
+		win32::AutoZero<LOGFONTW> lf;
+		if(!readStructureProfile(L"View", L"Font.default", lf)) {
+			lf.lfCharSet = ANSI_CHARSET;
+			lf.lfOutPrecision = OUT_DEFAULT_PRECIS;
+			lf.lfClipPrecision = CLIP_DEFAULT_PRECIS;
+			lf.lfQuality = DEFAULT_QUALITY;
+			lf.lfPitchAndFamily = DEFAULT_PITCH | FF_DONTCARE;
+			wcscpy(lf.lfFaceName, L"Terminal");
+		}
+		setFont(lf);
 
-	// Migemo DLL & 辞書パス
-	const basic_string<WCHAR> migemoRuntimePath = readStringProfile(L"Find", L"migemoRuntimePath", L"");
-	const basic_string<WCHAR> migemoDictionaryPath = readStringProfile(L"Find", L"migemoDictionaryPath", L"");
-	if(!migemoRuntimePath.empty() && !migemoDictionaryPath.empty()) {
-//		s2b(migemoRuntimePath);
-//		s2b(migemoDictionaryPath);
-		regex::MigemoPattern::initialize(
-			u2a(migemoRuntimePath.c_str(), migemoRuntimePath.c_str() + migemoRuntimePath.length() + 1).get(),
-			u2a(migemoDictionaryPath.c_str(), migemoDictionaryPath.c_str() + migemoDictionaryPath.length() + 1).get());
-	}
+		// Migemo DLL & 辞書パス
+		const Glib::ustring migemoRuntimePath(boost::get_optional_value_or(readStringProfile("Find", "migemoRuntimePath")), Glib::ustring());
+		const Glib::ustring migemoDictionaryPath(boost::get_optional_value_or(readStringProfile("Find", "migemoDictionaryPath")), Glib::ustring());
+		if(migemoRuntimePath != boost::none && !migemoRuntimePath->empty() && migemoDictionaryPath != boost::none && !migemoDictionaryPath->empty()) {
+	//		s2b(migemoRuntimePath);
+	//		s2b(migemoDictionaryPath);
+			ascension::regex::MigemoPattern::initialize(
+				u2a(migemoRuntimePath->c_str(), migemoRuntimePath->c_str() + migemoRuntimePath->length() + 1).get(),
+				u2a(migemoDictionaryPath->c_str(), migemoDictionaryPath->c_str() + migemoDictionaryPath->length() + 1).get());
+		}
 
-	// 検索文字列の履歴
-	wchar_t	keyName[30];
-	wstring	value;
-	list<wstring> findWhats, replacesWiths;
-	for(ushort i = 0; i < 16; ++i) {
+		// 検索文字列の履歴
+		char keyName[30];
+		std::list<ascension::String> findWhats, replacesWiths;
+		for(unsigned short i = 0; i < 16; ++i) {
 #if(_MSC_VER < 1400)
-		swprintf(keyName, L"findWhat(%u)", i);
+			std::sprintf(keyName, "findWhat(%u)", i);
 #else
-		swprintf(keyName, MANAH_COUNTOF(keyName), L"findWhat(%u)", i);
+			std::snprintf(keyName, std::extent<decltype(keyName)>::value, "findWhat(%u)", i);
 #endif // _MSC_VER < 1400
-		value = readStringProfile(L"Find", keyName);
-		if(value.empty())
-			break;
-		findWhats.push_back(value);
-	}
-	for(ushort i = 0; i < 16; ++i) {
+			const boost::optional<Glib::ustring>> v(readStringProfile("Find", keyName));
+			if(v == boost::none || v->empty())
+				break;
+			findWhats.push_back(*v);
+		}
+		for(unsigned short i = 0; i < 16; ++i) {
 #if(_MSC_VER < 1400)
-		swprintf(keyName, L"replaceWith(%u)", i);
+			std::sprintf(keyName, "replaceWith(%u)", i);
 #else
-		swprintf(keyName, MANAH_COUNTOF(keyName), L"replaceWith(%u)", i);
+			std::snprintf(keyName, std::extent<decltype(keyName)>::value, "replaceWith(%u)", i);
 #endif // _MSC_VER < 1400
-		value = readStringProfile(L"Find", keyName);
-		if(value.empty())
-			break;
-		replacesWiths.push_back(value);
+			const boost::optional<Glib::ustring>> v(readStringProfile("Find", keyName));
+			if(v == boost::none || v->empty())
+				break;
+			replacesWiths.push_back(*v);
+		}
+		ascension::searcher::TextSearcher& s = BufferList::instance().editorSession().textSearcher();
+		s.setMaximumNumberOfStoredStrings(16);
+		s.setStoredStrings(std::begin(findWhats), std::end(findWhats), false);
+		s.setStoredStrings(std::begin(replacesWiths), std::end(replacesWiths), true);
 	}
-	searcher::TextSearcher& s = BufferList::instance().editorSession().textSearcher();
-	s.setMaximumNumberOfStoredStrings(16);
-	s.setStoredStrings(findWhats.begin(), findWhats.end(), false);
-	s.setStoredStrings(replacesWiths.begin(), replacesWiths.end(), true);
-}
-
-/**
- * メッセージテーブルの文字列をメッセージボックスに表示する
- * @param id メッセージ識別子
- * @param type ダイアログのタイプ (::MessageBox と同じ)
- * @param args メッセージの引数
- * @return ユーザの返答 (::MessageBox と同じ)
- */
-int Alpha::messageBox(DWORD id, UINT type, MessageArguments& args /* = MessageArguments() */) {
-	return getMainWindow().messageBox(loadMessage(id, args).c_str(), IDS_APPNAME, type);
-}
-
-/**
- * コマンドラインを解析して実行する。無効な引数は無視する
- * @param currentDirectory カレントディレクトリ
- * @param commandLine コマンドライン
- * @see Alpha#onCopyData, WinMain
- */
-void Alpha::parseCommandLine(const WCHAR* currentDirectory, const WCHAR* commandLine) {
-	// TODO: this code should be reimplemented by Python.
-	// CommandLineToArgvW は argv[0] に対する二重引用符の扱いに問題があるようだ...
-/*	int argc;
-	WCHAR** argv = ::CommandLineToArgvW(commandLine, &argc);
-	WCHAR canonical[MAX_PATH];
-	for(int i = 1; i < argc; ++i) {
-		if(toBoolean(::PathIsRelativeW(argv[i])))
-			::PathCombineW(canonical, currentDirectory, argv[i]);
-		else
-			wcscpy(canonical, argv[i]);
-		if(toBoolean(::PathIsDirectoryW(canonical)))
-			BufferList::instance().openDialog(canonical);
-		else
-			BufferList::instance().open(canonical);
-	}
-	::LocalFree(argv);
-*/}
-
-/// @see manah#win32#Application#preTranslateMessage
-bool Alpha::preTranslateMessage(const MSG& message) {
-	return (message.message >= WM_KEYFIRST && message.message <= WM_KEYLAST) ? ui::InputManager::instance().input(message) : false;
-}
-
-/**
- * INI から文字列リストを読み込む
- * @param section セクション名
- * @param key キー名
- * @param[out] items リスト
- * @param[in] defaultValue 設定が見つからないときに使用する文字列
- */
-void Alpha::readProfileList(const wchar_t* section,
-		const wchar_t* key, std::list<std::wstring>& items, const wchar_t* defaultValue /* = 0 */) {
-	const std::wstring s = readStringProfile(section, key, defaultValue);
-
-	items.clear();
-	if(s.empty())
-		return;
-	std::wistringstream ss(s);
-	std::wstring buffer;
-	while(ss >> buffer)
-		items.push_back(buffer);
-}
-
-
-/**
- * INI から文字列の集合を読み込む
- * @param section セクション名
- * @param key キー名
- * @param[out] items 集合
- * @param[in] defaultValue 設定が見つからないときに使用する文字列
- */
-void Alpha::readProfileSet(const wchar_t* section,
-		const wchar_t* key, std::set<std::wstring>& items, const wchar_t* defaultValue /* = 0 */) {
-	const std::wstring s = readStringProfile(section, key, defaultValue);
-
-	items.clear();
-	if(s.empty())
-		return;
-	std::wistringstream	ss(s);
-	std::wstring buffer;
-	while(ss >> buffer)
-		items.insert(buffer);
-}
 
 #if 0
 /// スクリプトエンジンとファイルパターンの関連付けをする
@@ -593,50 +390,50 @@ void Alpha::registerScriptEngineAssociations() {
 }
 #endif // 0
 
-/// INI ファイルに設定を保存する
-void Alpha::saveINISettings() {
-	wchar_t keyName[30];
+	/// Saves the settings into the file.
+	void Application::saveSettings() {
+		char keyName[30];
 
-	// バーの可視性の保存
-	win32::AutoZero<REBARBANDINFOW> rbbi;
-	rbbi.fMask = RBBIM_STYLE;
-	rebar_.getBandInfo(rebar_.idToIndex(IDC_TOOLBAR), rbbi);
-	writeIntegerProfile(L"View", L"visibleToolbar", toBoolean(rbbi.fStyle & RBBS_HIDDEN) ? 0 : 1);
-	rebar_.getBandInfo(rebar_.idToIndex(IDC_BUFFERBAR), rbbi);
-	writeIntegerProfile(L"View", L"visibleBufferBar", toBoolean(rbbi.fStyle & RBBS_HIDDEN) ? 0 : 1);
-	writeIntegerProfile(L"View", L"visibleStatusBar", statusBar_.isVisible() ? 1 : 0);
+		// バーの可視性の保存
+		win32::AutoZero<REBARBANDINFOW> rbbi;
+		rbbi.fMask = RBBIM_STYLE;
+		rebar_.getBandInfo(rebar_.idToIndex(IDC_TOOLBAR), rbbi);
+		writeIntegerProfile(L"View", L"visibleToolbar", toBoolean(rbbi.fStyle & RBBS_HIDDEN) ? 0 : 1);
+		rebar_.getBandInfo(rebar_.idToIndex(IDC_BUFFERBAR), rbbi);
+		writeIntegerProfile(L"View", L"visibleBufferBar", toBoolean(rbbi.fStyle & RBBS_HIDDEN) ? 0 : 1);
+		writeIntegerProfile(L"View", L"visibleStatusBar", statusBar_.isVisible() ? 1 : 0);
 
-	// 検索文字列履歴の保存
-	const searcher::TextSearcher& s = BufferList::instance().editorSession().textSearcher();
-	for(size_t i = 0; i < s.numberOfStoredPatterns(); ++i) {
+		// 検索文字列履歴の保存
+		const ascension::searcher::TextSearcher& s = BufferList::instance().editorSession().textSearcher();
+		for(std::size_t i = 0; i < s.numberOfStoredPatterns(); ++i) {
 #if(_MSC_VER < 1400)
-		swprintf(keyName, L"findWhat(%u)", i);
+			std::sprintf(keyName, L"findWhat(%u)", i);
 #else
-		swprintf(keyName, MANAH_COUNTOF(keyName), L"findWhat(%u)", i);
+			std::snprintf(keyName, std::extent<decltype(keyName)>::value, "findWhat(%u)", i);
 #endif // _MSC_VER < 1400
-		writeStringProfile(L"Find", keyName, s.pattern(i).c_str());
+			writeStringProfile("Find", keyName, s.pattern(i).c_str());
+		}
+#if(_MSC_VER < 1400)
+		std::sprintf(keyName, "findWhat(%u)", s.numberOfStoredPatterns());
+#else
+		std::snprintf(keyName, std::extent<decltype(keyName)>::value, "findWhat(%u)", s.numberOfStoredPatterns());
+#endif // _MSC_VER < 1400
+		writeStringProfile("Find", keyName, "");
+		for(std::size_t i = 0; i < s.numberOfStoredReplacements(); ++i) {
+#if(_MSC_VER < 1400)
+			std::sprintf(keyName, "replaceWith(%u)", i);
+#else
+			std::snprintf(keyName, std::extent<decltype(keyName)>::value, "replaceWith(%u)", i);
+#endif // _MSC_VER < 1400
+			writeStringProfile("Find", keyName, s.replacement(i).c_str());
+		}
+#if(_MSC_VER < 1400)
+		std::sprintf(keyName, "replaceWith(%u)", s.numberOfStoredReplacements());
+#else
+		std::snprintf(keyName, std::extent<decltype(keyName)>::value, "replaceWith(%u)", s.numberOfStoredReplacements());
+#endif // _MSC_VER < 1400
+		writeStringProfile("Find", keyName, "");
 	}
-#if(_MSC_VER < 1400)
-	swprintf(keyName, L"findWhat(%u)", s.numberOfStoredPatterns());
-#else
-	swprintf(keyName, MANAH_COUNTOF(keyName), L"findWhat(%u)", s.numberOfStoredPatterns());
-#endif // _MSC_VER < 1400
-	writeStringProfile(L"Find", keyName, L"");
-	for(size_t i = 0; i < s.numberOfStoredReplacements(); ++i) {
-#if(_MSC_VER < 1400)
-		swprintf(keyName, L"replaceWith(%u)", i);
-#else
-		swprintf(keyName, MANAH_COUNTOF(keyName), L"replaceWith(%u)", i);
-#endif // _MSC_VER < 1400
-		writeStringProfile(L"Find", keyName, s.replacement(i).c_str());
-	}
-#if(_MSC_VER < 1400)
-	swprintf(keyName, L"replaceWith(%u)", s.numberOfStoredReplacements());
-#else
-	swprintf(keyName, MANAH_COUNTOF(keyName), L"replaceWith(%u)", s.numberOfStoredReplacements());
-#endif // _MSC_VER < 1400
-	writeStringProfile(L"Find", keyName, L"");
-}
 
 /// 全てのエディタと一部のコントロールに新しいフォントを設定
 void Alpha::setFont(const LOGFONTW& font) {
@@ -650,17 +447,17 @@ void Alpha::setFont(const LOGFONTW& font) {
 	const int ydpi = win32::gdi::ScreenDC().getDeviceCaps(LOGPIXELSY); 
 	BufferList& buffers = BufferList::instance();
 	for(size_t i = 0; i < buffers.numberOfBuffers(); ++i) {
-		presentation::Presentation& p = buffers.at(i).presentation();
-		tr1::shared_ptr<const presentation::RunStyle> defaultStyle(p.defaultTextRunStyle());
-		auto_ptr<presentation::RunStyle> newDefaultStyle(
-			(defaultStyle.get() != 0) ? new presentation::RunStyle(*defaultStyle) : new presentation::RunStyle);
+		ascension::presentation::Presentation& p = buffers.at(i).presentation();
+		std::shared_ptr<const ascension::presentation::RunStyle> defaultStyle(p.defaultTextRunStyle());
+		std::unique_ptr<ascension::presentation::RunStyle> newDefaultStyle(
+			(defaultStyle.get() != 0) ? new ascension::presentation::RunStyle(*defaultStyle) : new ascension::presentation::RunStyle);
 		newDefaultStyle->fontFamily = lf.lfFaceName;
-		newDefaultStyle->fontProperties.weight = static_cast<presentation::FontProperties::Weight>(lf.lfWeight);
+		newDefaultStyle->fontProperties.weight = static_cast<ascension::presentation::FontProperties::Weight>(lf.lfWeight);
 		newDefaultStyle->fontProperties.style = (lf.lfItalic != 0) ?
-			presentation::FontProperties::ITALIC : presentation::FontProperties::NORMAL_STYLE;
+			ascension::presentation::FontProperties::ITALIC : presentation::FontProperties::NORMAL_STYLE;
 		newDefaultStyle->fontProperties.size = lf.lfHeight * 96.0 / ydpi;
 		newDefaultStyle->fontSizeAdjust = 0.0;
-		p.setDefaultTextRunStyle(tr1::shared_ptr<const presentation::RunStyle>(newDefaultStyle.release()));
+		p.setDefaultTextRunStyle(std::shared_ptr<const ascension::presentation::RunStyle>(newDefaultStyle.release()));
 	}
 
 	// 一部のコントロールにも設定
@@ -674,7 +471,7 @@ void Alpha::setFont(const LOGFONTW& font) {
 	}
 
 	// INI ファイルに保存
-	writeStructureProfile(L"View", L"Font.default", lf);
+	writeStructureProfile("View", "Font.default", lf);
 
 	// 等幅 <-> 可変幅で表記を変える必要がある
 	statusBar_.adjustPaneWidths();
@@ -1202,155 +999,6 @@ bool Alpha::teardown(bool callHook /* = true */) {
 }
 
 
-// StatusBar ////////////////////////////////////////////////////////////////
-
-StatusBar::StatusBar() : columnStartValue_(1) {
-}
-
-void StatusBar::adjustPaneWidths() {
-	if(!isWindow())
-		return;
-
-	static const int ICON_WIDTH = 16;
-	int parts[5], borders[3];
-	getBorders(borders);
-	const int padding = (borders[0] + borders[2]) * 2 + 5;
-	RECT rc;
-	getRect(rc);
-
-	const Alpha& app = Alpha::instance();
-	win32::gdi::ClientDC dc = getDC();
-	win32::AutoZeroSize<NONCLIENTMETRICSW> ncm;
-	::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICSW), &ncm, 0);
-	HFONT font = ::CreateFontIndirectW(&ncm.lfStatusFont);
-	HFONT oldFont = static_cast<HFONT>(dc.selectObject(font_.get()));
-
-	parts[4] = rc.right - rc.left;
-	if(!app.getMainWindow().isZoomed())
-		parts[4] -= 20;
-	// ナローイング
-	parts[3] = parts[4] - ICON_WIDTH - padding;
-	// 上書き/挿入モード
-	const wstring overtypeMode = app.loadMessage(MSG_STATUS__OVERTYPE_MODE);
-	const wstring insertMode = app.loadMessage(MSG_STATUS__INSERT_MODE);
-	parts[2] = parts[3] - max(
-		dc.getTextExtent(overtypeMode.data(), static_cast<int>(overtypeMode.length())).cx,
-		dc.getTextExtent(insertMode.data(), static_cast<int>(insertMode.length())).cx) - padding;
-	// キーボードマクロ
-	parts[1] = parts[2] - ICON_WIDTH - padding;
-	// キャレット位置
-	wchar_t text[256];
-	static const wstring format(app.loadMessage(MSG_STATUS__CARET_POSITION));
-#if(_MSC_VER < 1400)
-	swprintf(text, format.c_str(), 88888888, 88888888, 88888888);
-#else
-	swprintf(text, MANAH_COUNTOF(text), format.c_str(), 88888888, 88888888, 88888888);
-#endif // _MSC_VER < 1400
-	parts[0] = parts[1] - dc.getTextExtent(text, static_cast<int>(wcslen(text))).cx - padding;
-
-	dc.selectObject(oldFont);
-	setParts(MANAH_COUNTOF(parts), parts);
-}
-
-bool StatusBar::create(HWND parent) {
-	return win32::ui::StatusBar::create(parent, win32::ui::DefaultWindowRect(), 0, IDC_STATUSBAR,
-		WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE | CCS_BOTTOM | CCS_NODIVIDER | SBARS_SIZEGRIP | SBT_TOOLTIPS);
-}
-
-void StatusBar::hide() {
-	win32::ui::StatusBar::show(SW_HIDE);
-}
-
-/**
- * Sets the text of the first pane.
- * @param text the text to set. if this is @c null, the default text is used
- * @param font the font to draw the text. if this is @c null, the default font is used
- */
-void StatusBar::setText(const WCHAR* text, HFONT font /* = 0 */) {
-	win32::ui::StatusBar::setText(0, (text != 0) ? text : IDS_DEFAULTSTATUSTEXT, SBT_NOBORDERS);
-	if(font != 0) {
-		LOGFONTW lf;
-		if(::GetObjectW(font, sizeof(LOGFONTW), &lf) == 0)
-			throw win32::InvalidHandleException("font");
-		if(HFONT newFont = ::CreateFontIndirectW(&lf))
-			font_.reset(win32::managed(newFont));
-	} else
-		font_.reset();
-	setFont(font_.get());
-}
-
-void StatusBar::show() {
-	win32::ui::StatusBar::show(SW_SHOWNA);
-}
-
-void StatusBar::updateAll() {
-	updateCaretPosition();
-	updateNarrowingStatus();
-	updateOvertypeMode();
-	updateTemporaryMacroRecordingStatus();
-}
-
-void StatusBar::updateCaretPosition() {
-	if(isWindow()) {
-		const EditorView& viewer = EditorWindows::instance().activePane().visibleView();
-		// build the current position indication string
-		static AutoBuffer<WCHAR> message, messageFormat;
-		static size_t formatLength = 0;
-		if(messageFormat.get() == 0) {
-			void* messageBuffer;
-			if(0 != ::FormatMessageW(
-					FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
-					::GetModuleHandle(0), MSG_STATUS__CARET_POSITION, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-					reinterpret_cast<wchar_t*>(&messageBuffer), 0, 0)) {
-				formatLength = wcslen(static_cast<WCHAR*>(messageBuffer));
-				messageFormat.reset(new WCHAR[formatLength + 1]);
-				wcscpy(messageFormat.get(), static_cast<WCHAR*>(messageBuffer));
-				::LocalFree(messageBuffer);
-			} else {
-				messageFormat.reset(new WCHAR[1]);
-				messageFormat[0] = 0;
-			}
-			message.reset(new WCHAR[formatLength + 100]);
-		}
-		if(formatLength != 0) {
-			length_t messageArguments[3];
-			win32::AutoZero<SCROLLINFO> si;
-			viewer.getScrollInformation(SB_VERT, si, SIF_POS | SIF_RANGE);
-			messageArguments[0] = viewer.caret().line() + viewer.verticalRulerConfiguration().lineNumbers.startValue;
-			messageArguments[1] = viewer.caret().visualColumn() + columnStartValue_;
-			messageArguments[2] = viewer.caret().column() + columnStartValue_;
-			::FormatMessageW(FORMAT_MESSAGE_ARGUMENT_ARRAY | FORMAT_MESSAGE_FROM_STRING, messageFormat.get(),
-				0, 0, message.get(), static_cast<DWORD>(formatLength) + 100, reinterpret_cast<va_list*>(messageArguments));
-			// show in the status bar
-			win32::ui::StatusBar::setText(1, message.get());
-		}
-	}
-}
-
-void StatusBar::updateNarrowingStatus() {
-	if(isWindow() && hasFocus()) {
-		const bool narrow = EditorWindows::instance().activePane().visibleBuffer().isNarrowed();
-		Alpha& app = Alpha::instance();
-		if(narrowingIcon_.get() == 0)
-			narrowingIcon_.reset(win32::managed(static_cast<HICON>(app.loadImage(IDR_ICON_NARROWING, IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR))));
-//		setText(4, narrow ? app.loadMessage(MSG_STATUS__NARROWING).c_str() : L"");
-		setTipText(4, narrow ? app.loadMessage(MSG_STATUS__NARROWING).c_str() : L"");
-		setIcon(4, narrow ? narrowingIcon_.use() : 0);
-	}
-}
-
-void StatusBar::updateOvertypeMode() {
-	if(isWindow())
-		win32::ui::StatusBar::setText(3, Alpha::instance().loadMessage(
-			EditorWindows::instance().activePane().visibleView().caret().isOvertypeMode() ?
-				MSG_STATUS__OVERTYPE_MODE : MSG_STATUS__INSERT_MODE).c_str());
-}
-
-void StatusBar::updateTemporaryMacroRecordingStatus() {
-	// TODO: not implemented.
-}
-
-
 namespace {
 	bool killAlpha(bool callHook) {return Alpha::instance().teardown(callHook);}
 }
@@ -1361,3 +1009,4 @@ ALPHA_EXPOSE_PROLOGUE(ambient::Interpreter::LOWEST_INSTALLATION_ORDER)
 
 	py::def("kill_alpha", &killAlpha, py::arg("call_hook") = true);
 ALPHA_EXPOSE_EPILOGUE()
+}

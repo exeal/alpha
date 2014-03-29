@@ -2,7 +2,7 @@
  * @file application.hpp
  * @author exeal
  * @date 2003-2006 (was Alpha.h)
- * @date 2006-2009, 2013
+ * @date 2006-2009, 2013-2014
  */
 
 #ifndef ALPHA_APPLICATION_HPP
@@ -10,13 +10,15 @@
 #include "resource.h"
 #include "buffer.hpp"
 //#include "search.hpp"	// ui.SearchDialog
-#include "win32/module.hpp"
+#include "status-bar.hpp"
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#	include "win32/module.hpp"
+#endif
 //#include <ascension/win32/ui/common-controls.hpp>
 //#include <ascension/win32/gdi-object.hpp>
-#include <list>
-#include <memory>
-#include <set>
-#include <string>
+#include <gtkmm/application.h>
+#include <gtkmm/applicationwindow.h>
+#include <memory>	// std.unique_ptr
 
 
 // タイトルバーとかに使うアプリケーション名
@@ -54,69 +56,62 @@
 
 
 namespace alpha {
-
-	// fwd
-	namespace ui {
-		class SearchDialog;
-//		class BookmarkDialog;
-	}
 	namespace ambient {
 		class ScriptSystem;
 	};
 
-	/// The status bar for the application main window.
-	class StatusBar : protected manah::win32::ui::StatusBar {
-	public:
-		StatusBar();
-		void adjustPaneWidths();
-		bool create(HWND parent);
-		using manah::win32::ui::StatusBar::get;
-		void hide();
-		using manah::win32::ui::StatusBar::isVisible;
-		using manah::win32::ui::StatusBar::setSimple;
-		void setText(const WCHAR* text, HFONT font = 0);
-		void show();
-		void updateAll();
-		void updateCaretPosition();
-		void updateNarrowingStatus();
-		void updateOvertypeMode();
-		void updateTemporaryMacroRecordingStatus();
-		using manah::win32::ui::StatusBar::use;
-	private:
-		ascension::length_t columnStartValue_;
-		manah::win32::gdi::Font font_;
-		manah::win32::Object<HICON, ::DestroyIcon> narrowingIcon_;
-	};
+	// fwd
+	class EditorPanes;
+	namespace ui {
+		class SearchDialog;
+//		class BookmarkDialog;
+
+		class MainWindow : public Gtk::ApplicationWindow {
+		public:
+			/// @name Children
+			/// @{
+			EditorPanes& editorPanes() const BOOST_NOEXCEPT;
+			SearchDialog& searchDialog() const BOOST_NOEXCEPT;
+			StatusBar& statusBar() const BOOST_NOEXCEPT;
+			/// @}
+
+		private:
+			std::unique_ptr<ui::SearchDialog> searchDialog_;
+			StatusBar statusBar_;
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+			manah::win32::ui::Rebar rebar_;		// rebar
+			manah::win32::ui::Toolbar toolbar_;	// standard toolbar
+#endif
+		};
+	}
 
 	/// The application class of Alpha.
-	class Alpha : public manah::win32::ProfilableApplication<> {
+	class Application : public Gtk::Application {
 	public:
 		// constructors
-		Alpha();
-		~Alpha() throw();
-		// 下位オブジェクト
-		ui::SearchDialog& searchDialog() /*throw()*/;
-		const ui::SearchDialog& searchDialog() const /*throw()*/;
-		StatusBar& statusBar() /*throw()*/;
+		Application();
 		// attributes
-		static Alpha& instance();
+		static Application& instance();
 		void textEditorFont(LOGFONTW& font) const /*throw()*/;
 		void setFont(const LOGFONTW& font);
+		ui::MainWindow& window() const BOOST_NOEXCEPT;
 		// operations
-		int messageBox(DWORD id, UINT type, manah::win32::Module::MessageArguments& args = MARGS);
-		void parseCommandLine(const WCHAR* currentDirectory, const WCHAR* commandLine);
 		bool teardown(bool callHook = true);
 
 	private:
 		void changeFont();
-		LRESULT dispatchEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 //		bool	handleKeyDown(command::VirtualKey key, command::KeyModifier modifiers);
 		bool initInstance(int showCommand);
-		void loadINISettings();
-		bool preTranslateMessage(const ::MSG& msg);
-		void readProfileList(const wchar_t* section, const wchar_t* key, std::list<std::wstring>& items, const wchar_t* defaultValue = 0);
-		void readProfileSet(const wchar_t* section, const wchar_t* key, std::set<std::wstring>& items, const wchar_t* defaultValue = 0);
-		void saveINISettings();
+		void loadSettings();
+		template<typename Section, typename Key, typename Container>
+		void readProfileList(Section section, Key key, Container& items, const Glib::ustring& defaultValue = Glib::ustring());
+		template<typename Section, typename Key>
+		boost::optional<int> readIntegerProfile(Section section, Key key) const;	// dummy
+		template<typename Section, typename Key>
+		boost::optional<Glib::ustring> readStringProfile(Section section, Key key) const;	// dummy
+		template<typename Section, typename Key, typename T>
+		bool readStructureProfile(Section section, Key key, T& data) const;	// dummy
+		void saveSettings();
 //		void	setupToolbar();
 		void updateTitleBar();
 
@@ -124,6 +119,7 @@ namespace alpha {
 	protected:
 		void onToolExecuteCommand();
 	protected:
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 		bool onCommand(WORD id, WORD notifyCode, HWND control);						// WM_COMMAND
 		void onCopyData(HWND window, const COPYDATASTRUCT& cds);					// WM_COPYDATA
 		void onDestroy();															// WM_DESTROY
@@ -146,14 +142,10 @@ namespace alpha {
 	protected:
 		/* ウィンドウプロシジャ */
 		static LRESULT CALLBACK appWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
+#endif
 
 	private:
-		static Alpha* instance_;	// ただ 1 つのインスタンス
 		// child windows
-		manah::win32::ui::Rebar rebar_;				// レバー
-		manah::win32::ui::Toolbar toolbar_;			// 標準ツールバー
-		StatusBar statusBar_;		// ステータスバー
-		std::auto_ptr<ui::SearchDialog> searchDialog_;
 		// GDI objects
 		HFONT editorFont_;	// エディタのフォント
 		HFONT statusFont_;	// ステータスバーのフォント
@@ -161,20 +153,27 @@ namespace alpha {
 
 
 	/// Returns the singleton application object.
-	inline Alpha& Alpha::instance() {assert(instance_ != 0); return *instance_;}
+	inline Application& Application::instance() {
+		static Application singleton;
+		return singleton;
+	}
 
-	/// Returns the search dialog box.
-	inline ui::SearchDialog& Alpha::searchDialog() throw() {return *searchDialog_;}
-
-	/// Returns the search dialog box.
-	inline const ui::SearchDialog& Alpha::searchDialog() const throw() {return *searchDialog_;}
-
-	/// Returns the status bar.
-	inline StatusBar& Alpha::statusBar() /*throw()*/ {return statusBar_;}
-
+#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
 	/// Returns the font for text editors.
 	inline void Alpha::textEditorFont(LOGFONTW& font) const throw() {::GetObjectW(editorFont_, sizeof(LOGFONTW), &font);}
+#endif
 
+	namespace ui {
+		/// Returns the search dialog box.
+		inline SearchDialog& MainWindow::searchDialog() const BOOST_NOEXCEPT {
+			return *searchDialog_;
+		}
+
+		/// Returns the status bar.
+		inline StatusBar& MainWindow::statusBar() const BOOST_NOEXCEPT {
+			return const_cast<MainWindow*>(this)->statusBar_;
+		}
+	}
 } // namespace alpha
 
 #endif // ALPHA_APPLICATION_HPP

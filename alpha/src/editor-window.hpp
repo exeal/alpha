@@ -1,165 +1,162 @@
 /**
  * @file editor-window.hpp
  * @author exeal
- * @date 2009-2010
+ * @date 2009-2010, 2014
  */
 
 #ifndef ALPHA_EDITOR_WINDOW_HPP
 #define ALPHA_EDITOR_WINDOW_HPP
 #include "ambient.hpp"
-#include <ascension/viewer.hpp>
-#include <ascension/searcher.hpp>	// ascension.searcher.IIncrementalSearchListener
-#include <manah/win32/ui/splitter.hpp>
+#include <memory>
+#include <vector>
+#include <boost/iterator/iterator_facade.hpp>
+#include <gtkmm/paned.h>
 
 namespace alpha {
 	class Buffer;
+	class BufferList;
+	class EditorView;
 
-	/// A view of a text editor.
-	class EditorView : public ascension::viewers::TextViewer,
-		public ascension::kernel::IBookmarkListener, public ascension::searcher::IIncrementalSearchCallback {
+	class EditorPane : public Gtk::Container, private boost::noncopyable {
 	public:
-		// constructors
-		EditorView(ascension::presentation::Presentation& presentation);
-		EditorView(const EditorView& rhs);
-		~EditorView();
-		// attributes
-		boost::python::object asCaret() const;
-		boost::python::object asTextEditor() const;
-		const wchar_t* currentPositionString() const;
-		Buffer& document() /*throw()*/;
-		const Buffer& document() const /*throw()*/;
-		ascension::length_t visualColumnStartValue() const /*throw()*/;
-		void setVisualColumnStartValue() throw();
-		// operations
-		void beginIncrementalSearch(ascension::searcher::TextSearcher::Type type, ascension::Direction direction);
-		// notification
-		void updateStatusBar();
-
-	private:
-		// ascension.viewers.TextViewer (overrides)
-		void drawIndicatorMargin(ascension::length_t line, manah::win32::gdi::DC& dc, const ::RECT& rect);
-		// ascension.viewers.ICaretListener (overrides)
-		void caretMoved(const ascension::viewers::Caret& self, const ascension::kernel::Region& oldRegion);
-		void characterInputted(const ascension::viewers::Caret& self, ascension::CodePoint c);
-		void matchBracketsChanged(const ascension::viewers::Caret& self,
-			const std::pair<ascension::kernel::Position, ascension::kernel::Position>& oldPair, bool outsideOfView);
-		void overtypeModeChanged(const ascension::viewers::Caret& self);
-		void selectionShapeChanged(const ascension::viewers::Caret& self);
-		// ascension.searcher.IIncrementalSearchCallback
-		void incrementalSearchAborted(const ascension::kernel::Position& initialPosition);
-		void incrementalSearchCompleted();
-		void incrementalSearchPatternChanged(ascension::searcher::IIncrementalSearchCallback::Result result,
-				const manah::Flags<ascension::searcher::IIncrementalSearchCallback::WrappingStatus>& wrappingStatus);
-		void incrementalSearchStarted(const ascension::kernel::Document& document);
-		// ascension.text.IBookmarkListener
-		void bookmarkChanged(ascension::length_t line);
-		void bookmarkCleared();
-		// message handlers
-		MANAH_DECLEAR_WINDOW_MESSAGE_MAP(EditorView);
-		void onKeyDown(UINT vkey, UINT flags, bool& handled);
-		void onKillFocus(HWND newWindow);
-		void onSetFocus(HWND oldWindow);
-	private:
-		mutable boost::python::object asCaret_, asTextEditor_;
-		ascension::length_t visualColumnStartValue_;
-		static manah::win32::Object<HICON, ::DestroyIcon> narrowingIcon_;
-	};
-
-	/// A window pane for a text editor.
-	class EditorWindow : public manah::win32::ui::AbstractPane {
-		MANAH_UNASSIGNABLE_TAG(EditorWindow);
-	public:
-		// constructor
-		EditorWindow(EditorView* initialView = 0);
-		EditorWindow(const EditorWindow& other);
-		~EditorWindow();
-		// attributes
-		std::size_t numberOfViews() const /*throw()*/;
+		explicit EditorPane(std::unique_ptr<EditorView> initialViewer = std::unique_ptr<EditorView>());
+		EditorPane::EditorPane(const EditorPane& other);
 		boost::python::object self() const;
-		Buffer& visibleBuffer() const;
-		EditorView& visibleView() const;
-		// operations
-		void addView(EditorView& view);
-		void removeAll();
+
+		/// @name Buffer
+		/// @{
 		void removeBuffer(const Buffer& buffer);
-		void showBuffer(const Buffer& buffer);
+		void selectBuffer(const Buffer& buffer);
+		void selectBuffer(const EditorView& viewer);
+		Buffer& selectedBuffer() BOOST_NOEXCEPT;
+		const Buffer& selectedBuffer() const BOOST_NOEXCEPT;
+		/// @}
+
+		/// @name Viewer
+		/// @{
+		void addView(std::unique_ptr<EditorView> viewer);
+		std::size_t numberOfViews() const BOOST_NOEXCEPT;
+		void removeAllViews() BOOST_NOEXCEPT;
+		EditorView& selectedView() BOOST_NOEXCEPT;
+		const EditorView& selectedView() const BOOST_NOEXCEPT;
+		/// @}
+
+		/// @name Splitting Panes
+		/// @{
 		void split();
 		void splitSideBySide();
-		// manah.win32.ui.AbstractPane
-		HWND getWindow() const /*throw()*/;
+		/// @}
+
+	private:
+		void split(Gtk::Orientation orientation);
+
 	private:
 		mutable boost::python::object self_;
-		std::vector<EditorView*> viewers_;
-		EditorView* visibleViewer_;
-		EditorView* lastVisibleViewer_;
+		std::vector<std::unique_ptr<EditorView>> viewers_;	// visible and invisible viewers
+		EditorView* selectedViewer_;
+		EditorView* lastSelectedViewer_;
 	};
 
-	class IBufferSelectionListener {
+	class EditorPanes : public Gtk::Paned, private boost::noncopyable {	// children may be either Gtk.Paned or EditorPane
 	private:
-		/// The active buffer was switched.
-		virtual void bufferSelectionChanged() = 0;
-		friend class EditorWindows;
-	};
+		template<typename Derived, typename Value>
+		class InternalIterator : public boost::iterator_facade<Derived, Value, boost::bidirectional_traversal_tag> {
+		public:
+			InternalIterator(pointer pane);
+		private:
+			friend class boost::iterator_core_access;
+			void decrement();
+			reference dereference() const;
+			bool equal(const InternalIterator& other) const;
+			void increment();
+		private:
+			pointer current_;
+		};
 
-	/// A splittable editor window.
-	class EditorWindows : public manah::win32::ui::Splitter<EditorWindow> {
 	public:
-		EditorWindows();
-		void addBufferSelectionListener(IBufferSelectionListener& listener);
-		EditorWindow& at(std::size_t index);
-		const EditorWindow& at(std::size_t index) const;
-		bool contains(const EditorWindow& pane) const;
-		static EditorWindows& instance();
-		void removeActiveBufferListener(IBufferSelectionListener& listener);
-		Buffer& selectedBuffer();
-		const Buffer& selectedBuffer() const;
+		class Iterator : public InternalIterator<Iterator, EditorPane> {
+		public:
+			Iterator(pointer pane) : InternalIterator<Iterator, EditorPane>(pane) {}
+		};
+		class ConstIterator : public InternalIterator<ConstIterator, const EditorPane> {
+		public:
+			ConstIterator(pointer pane) : InternalIterator<ConstIterator, const EditorPane>(pane) {}
+		};
+		typedef Iterator iterator;
+		typedef ConstIterator const_iterator;
+		typedef std::ptrdiff_t difference_type;
+
+	public:
+		static EditorPanes& instance() BOOST_NOEXCEPT;
 		boost::python::object self() const;
+
+		/// @name Pane Access
+		/// @{
+		EditorPane& activePane() BOOST_NOEXCEPT;
+		const EditorPane& activePane() const BOOST_NOEXCEPT;
+		Iterator begin() BOOST_NOEXCEPT;
+		ConstIterator begin() const BOOST_NOEXCEPT;
+		ConstIterator cbegin() const BOOST_NOEXCEPT;
+		ConstIterator cend() const BOOST_NOEXCEPT;
+		Iterator end() BOOST_NOEXCEPT;
+		ConstIterator end() const BOOST_NOEXCEPT;
+		/// @}
+
+		/// @name Removing Panes
+		/// @{
+		void remove(EditorPane* pane);
+		void removeOthers(const EditorPane* pane, Gtk::Paned* root = nullptr);
+		/// @}
+
+		Buffer& selectedBuffer() BOOST_NOEXCEPT;
+		const Buffer& selectedBuffer() const BOOST_NOEXCEPT;
+
+		/// @name Signals
+		/// @{
+		typedef boost::signals2::signal<void(EditorPanes&)> BufferSelectionChangedSignal;
+		ascension::SignalConnector<BufferSelectionChangedSignal> bufferSelectionChangedSignal() BOOST_NOEXCEPT;
+		/// @}
+
 	private:
-		void paneInserted(EditorWindow& pane);
-		void paneRemoved(EditorWindow& pane);
+		// BufferList signals
+		void bufferAboutToBeRemoved(BufferList& buffers, Buffer& buffer);
+		void bufferAdded(BufferList& buffers, Buffer& buffer);
+		// EditorView signals
+		bool viewFocused(GdkEventFocus* event);
+
 	private:
 		mutable boost::python::object self_;
-		std::vector<EditorWindow*> windows_;
-		std::list<IBufferSelectionListener*> bufferSelectionListeners_;
+		EditorPane* activePane_;
+		EditorPane* lastActivePane_;
+		BufferSelectionChangedSignal bufferSelectionChangedSignal_;
 	};
 
-
-	/// Returns the script object corresponding to the text editor.
-	inline boost::python::object EditorView::asCaret() const {
-		if(asCaret_ == boost::python::object()) asCaret_ = boost::python::object(boost::python::ptr(&caret())); return asCaret_;}
-
-	/// Returns the script object corresponding to the caret.
-	inline boost::python::object EditorView::asTextEditor() const {
-		if(asTextEditor_ == boost::python::object()) asTextEditor_ = boost::python::object(boost::python::ptr(this)); return asTextEditor_;}
-
-	/// Returns the script object corresponding to the window.
-	inline boost::python::object EditorWindow::self() const {
-		if(self_ == boost::python::object()) self_ = boost::python::object(boost::python::ptr(this)); return self_;}
-
-	/// @see ascension#viewers#TextViewer#document
-	inline Buffer& EditorView::document() /*throw()*/ {return reinterpret_cast<Buffer&>(ascension::viewers::TextViewer::document());}
-
-	/// @see ascension#viewers#TextViewer#document
-	inline const Buffer& EditorView::document() const /*throw()*/ {
-		return reinterpret_cast<const Buffer&>(ascension::viewers::TextViewer::document());}
-
-	/// @see manah#windows#controls#AbstractPane#getWindow
-	inline HWND EditorWindow::getWindow() const /*throw()*/ {return (visibleViewer_ != 0) ? visibleViewer_->get() : 0;}
 
 	/// Returns the number of the viewers.
-	inline std::size_t EditorWindow::numberOfViews() const /*throw()*/ {return viewers_.size();}
-
-	/// Returns the visible buffer.
-	inline Buffer& EditorWindow::visibleBuffer() const {return visibleView().document();}
+	inline std::size_t EditorPane::numberOfViews() const BOOST_NOEXCEPT {
+		return viewers_.size();
+	}
 
 	/// Returns the visible viewer.
-	inline EditorView& EditorWindow::visibleView() const {
-		if(visibleViewer_ == 0) throw std::logic_error("There no viewers."); return *visibleViewer_;}
+	inline EditorView& EditorPane::selectedView() {
+		if(selectedViewer_ == nullptr)
+			throw std::logic_error("There are no viewers.");
+		return *selectedViewer_;
+	}
+
+	/// Returns the visible viewer.
+	inline const EditorView& EditorPane::selectedView() const {
+		if(selectedViewer_ == nullptr)
+			throw std::logic_error("There are no viewers.");
+		return *selectedViewer_;
+	}
 
 	/// Returns the script object corresponding to the windows.
-	inline boost::python::object EditorWindows::self() const {
-		if(self_ == boost::python::object()) self_ = boost::python::object(boost::python::ptr(this)); return self_;}
-
+	inline boost::python::object EditorPanes::self() const {
+		if(self_ == boost::python::object())
+			self_ = boost::python::object(boost::python::ptr(this));
+		return self_;
+	}
 }
 
 #endif // !ALPHA_EDITOR_WINDOW_HPP

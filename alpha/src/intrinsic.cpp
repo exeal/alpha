@@ -1,278 +1,520 @@
 /**
  * @file intrinsic.cpp
+ * Exposes intrinsic commands.
  */
 
 #include "application.hpp"
 #include "buffer.hpp"
+#include "editor-view.hpp"
 #include "editor-window.hpp"
-#include <ascension/text-editor.hpp>
-using namespace alpha;
-using namespace alpha::ambient;
-namespace py = boost::python;
-using namespace ascension::texteditor::commands;
-namespace a = ascension;
-namespace k = ascension::kernel;
-namespace v = ascension::viewers;
+#include "function-pointer.hpp"
+#include <ascension/text-editor/command.hpp>
+#include <ascension/viewer/caret.hpp>
 
-namespace {	// helpers
-	inline EditorView& activeViewer() {
-		return EditorWindows::instance().activePane().visibleView();
-	}
-
-	inline EditorView& extractEditor(py::object o) {
-		if(o == py::object())
-			return activeViewer();
-		return py::extract<EditorView&>(o);
-	}
-}
-
-namespace {
-	py::ssize_t bookmarkMatchLines(py::object ed, bool onlySelection) {
-		EditorView& editor = extractEditor(ed);
-		BookmarkMatchLinesCommand temp(editor, onlySelection ? editor.caret().selectedRegion() : k::Region());
-		temp();
-		return temp.numberOfMarkedLines();
-	}
-
-	void cancel(py::object ed) {(CancelCommand(extractEditor(ed)))();}
-
-	bool convertCharacterToCodePoint(py::object ed) {return CharacterToCodePointConversionCommand(extractEditor(ed))();}
-
-	bool convertCodePointToCharacter(py::object ed) {return CodePointToCharacterConversionCommand(extractEditor(ed))();}
-
-/*	bool copySelection(py::object ed, bool useKillRing) {
-		try {
-			extractEditor(ed).caret().copySelection(useKillRing);
-		} catch(viewers::ClipboardException&) {
-			return false;
+namespace alpha {
+	namespace {	// helpers
+		inline EditorView& activeViewer() {
+			return EditorPanes::instance().activePane().selectedView();
 		}
-		return true;
+
+		inline EditorView& extractEditor(boost::python::object o) {
+			if(o.is_none())
+				return activeViewer();
+			return boost::python::extract<EditorView&>(o);
+		}
 	}
 
-	bool cutSelection(py::object ed, bool useKillRing) {
-		try {
-			extractEditor(ed).caret().cutSelection(useKillRing);
-		} catch(viewers::ClipboardException&) {
-			return false;
+	namespace {
+		template<const ascension::Direction* direction>
+		bool deleteCharacter(boost::python::object ed, boost::python::ssize_t n) {
+			return ascension::texteditor::commands::CharacterDeletionCommand(
+				extractEditor(ed), *direction).setNumericPrefix(
+					static_cast<ascension::texteditor::Command::NumericPrefix>(n))();
 		}
-		return true;
-	}
+
+		template<const ascension::Direction* direction>
+		bool deleteWord(boost::python::object ed, boost::python::ssize_t n) {
+			return ascension::texteditor::commands::WordDeletionCommand(
+				extractEditor(ed), *direction).setNumericPrefix(
+					static_cast<ascension::texteditor::Command::NumericPrefix>(n))();
+		}
+
+		template<const ascension::Direction* direction>
+		bool findNext(boost::python::object ed, boost::python::ssize_t n) {
+			return ascension::texteditor::commands::FindNextCommand(
+				extractEditor(ed), *direction).setNumericPrefix(
+					static_cast<ascension::texteditor::Command::NumericPrefix>(n))();
+		}
+
+		template<bool fromPreviousLine>
+		bool inputCharacterFromNextLine(boost::python::object ed) {
+			return ascension::texteditor::commands::CharacterInputFromNextLineCommand(extractEditor(ed), fromPreviousLine)();
+		}
+
+		bool indent(boost::python::object ed, boost::python::ssize_t n);
+
+		bool insertString(boost::python::object ed, const Glib::ustring& s, boost::python::ssize_t n) {
+			try {
+				return ascension::texteditor::commands::TextInputCommand(
+					extractEditor(ed), ascension::fromGlibUstring(s)).setNumericPrefix(
+						static_cast<ascension::texteditor::Command::NumericPrefix>(n))();
+			} catch(ascension::kernel::DocumentCantChangeException&) {
+				return false;	// TODO: Report the error to user.
+			}
+			return true;
+		}
+
+//		template<const Direction* direction>
+//		bool isearch() {}
+
+		template<typename Signature, Signature* procedure>
+		void moveCaret(boost::python::object ed, bool extendSelection) {
+			ascension::texteditor::commands::makeCaretMovementCommand(extractEditor(ed), procedure, extendSelection)();
+		}
+
+		template<typename Signature, Signature* procedure, const ascension::Direction* direction>
+		void moveCaretN(boost::python::object ed, bool extendSelection, boost::python::ssize_t n) {
+			ascension::texteditor::commands::makeCaretMovementCommand(
+				extractEditor(ed), procedure, *direction, extendSelection).setNumericPrefix(
+					static_cast<ascension::texteditor::Command::NumericPrefix>(n))();
+		}
+
+		template<const ascension::Direction* direction>
+		bool newline(boost::python::object ed, boost::python::ssize_t n) {
+			return ascension::texteditor::commands::NewlineCommand(
+				extractEditor(ed), *direction).setNumericPrefix(
+					static_cast<ascension::texteditor::Command::NumericPrefix>(n))();
+		}
+
+		template<bool(*procedure)(ascension::viewers::Caret&)>
+		bool transpose(boost::python::object ed /*, boost::python::ssize_t n*/) {
+			return ascension::texteditor::commands::TranspositionCommand(extractEditor(ed), procedure)();
+		}
+
+		void tryToBeginRectangleSelection(boost::python::object ed) {
+			EditorView& viewer = extractEditor(ed);
+			ascension::viewers::Caret& caret = viewer.caret();
+			// the following code is copied from ascension/text-editor.cpp
+			ascension::viewers::utils::closeCompletionProposalsPopup(viewer);
+			if(ascension::texteditor::Session* const session = viewer.document().session()) {
+				if(session->incrementalSearcher().isRunning())
+					session->incrementalSearcher().end();
+			}
+			if(isSelectionEmpty(caret) && !caret.isSelectionRectangle())
+				caret.beginRectangleSelection();
+		}
+
+		template<bool redo>
+		bool undo(boost::python::object ed, boost::python::ssize_t n) {
+			return ascension::texteditor::commands::UndoCommand(
+				extractEditor(ed), redo).setNumericPrefix(
+					static_cast<ascension::texteditor::Command::NumericPrefix>(n))();
+		}
+	} // namespace @0
+
+	ALPHA_EXPOSE_PROLOGUE(10)
+		boost::python::scope temp(ambient::Interpreter::instance().module("intrinsics"));
+
+		boost::python::def("backward_bookmark",
+			&moveCaretN<
+				boost::optional<ascension::kernel::Position>(const ascension::kernel::Point&, ascension::Direction, ascension::Index),
+				&ascension::kernel::locations::nextBookmark,
+				&ascension::Direction::BACKWARD
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
+
+		boost::python::def("backward_character",
+			&moveCaretN<
+				ascension::kernel::Position(const ascension::kernel::Point&, ascension::Direction, ascension::kernel::locations::CharacterUnit, ascension::Index),
+				&ascension::kernel::locations::nextCharacter,
+				&ascension::Direction::BACKWARD
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
+
+		boost::python::def("backward_line",
+			&moveCaretN<
+				ascension::kernel::Position(const ascension::kernel::Point&, ascension::Direction, ascension::Index),
+				&ascension::kernel::locations::nextLine,
+				&ascension::Direction::BACKWARD
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
+
+		boost::python::def("backward_page",
+			&moveCaretN<
+				ascension::viewers::VisualDestinationProxy(const ascension::viewers::VisualPoint&, ascension::Direction, ascension::Index),
+				&ascension::kernel::locations::nextPage,
+				&ascension::Direction::BACKWARD
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
+
+		boost::python::def("backward_visual_line",
+			&moveCaretN<
+				ascension::viewers::VisualDestinationProxy(const ascension::viewers::VisualPoint&, ascension::Direction, ascension::Index),
+				&ascension::kernel::locations::nextVisualLine,
+				&ascension::Direction::BACKWARD
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
+
+		boost::python::def("backward_word",
+			&moveCaretN<
+				ascension::kernel::Position(const ascension::kernel::Point&, ascension::Direction, ascension::Index),
+				&ascension::kernel::locations::nextWord,
+				&ascension::Direction::BACKWARD
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
+
+		boost::python::def("backward_word_end",
+			&moveCaretN<
+				ascension::kernel::Position(const ascension::kernel::Point&, ascension::Direction, ascension::Index),
+				&ascension::kernel::locations::nextWordEnd,
+				&ascension::Direction::BACKWARD
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
+
+		boost::python::def("beginning_of_buffer",
+			&moveCaret<
+				ascension::kernel::Position(const ascension::kernel::Point&),
+				&ascension::kernel::locations::beginningOfDocument
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
+
+		boost::python::def("beginning_of_line",
+			&moveCaret<
+				ascension::kernel::Position(const ascension::kernel::Point&),
+				&ascension::kernel::locations::beginningOfLine
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
+
+		boost::python::def("beginning_of_visual_line",
+			&moveCaret<
+				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				&ascension::kernel::locations::beginningOfVisualLine
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
+
+		boost::python::def("bookmark_match_lines",
+			ambient::makeFunctionPointer([](boost::python::object ed, bool onlySelection) -> boost::python::ssize_t {
+				EditorView& editor = extractEditor(ed);
+				ascension::texteditor::commands::BookmarkMatchLinesCommand temp(editor, onlySelection ? editor.caret().selectedRegion() : ascension::kernel::Region());
+				temp();
+				return temp.numberOfMarkedLines();
+			}),
+			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("only_selection") = false));
+
+		boost::python::def("cancel",
+			ambient::makeFunctionPointer([](boost::python::object ed) {
+				ascension::texteditor::commands::CancelCommand(extractEditor(ed))();
+			}),
+			boost::python::arg("ed") = boost::python::object());
+
+//		boost::python::def("clear_all_bookmarks", &);
+
+		boost::python::def("contextual_beginning_of_line",
+			&moveCaret<
+				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				&ascension::kernel::locations::contextualBeginningOfLine
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
+
+		boost::python::def("contextual_beginning_of_visual_line",
+			&moveCaret<
+				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				&ascension::kernel::locations::contextualBeginningOfVisualLine
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
+
+		boost::python::def("contextual_end_of_line",
+			&moveCaret<
+				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				&ascension::kernel::locations::contextualEndOfLine
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
+
+		boost::python::def("contextual_end_of_visual_line",
+			&moveCaret<
+				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				&ascension::kernel::locations::contextualEndOfVisualLine
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
+
+		boost::python::def("convert_character_to_code_point",
+			ambient::makeFunctionPointer([](boost::python::object ed) -> bool {
+				return ascension::texteditor::commands::CharacterToCodePointConversionCommand(extractEditor(ed))();
+			}),
+			boost::python::arg("ed") = boost::python::object());
+
+		boost::python::def("convert_code_point_to_character",
+			ambient::makeFunctionPointer([](boost::python::object ed) -> bool {
+				return ascension::texteditor::commands::CodePointToCharacterConversionCommand(extractEditor(ed))();
+			}),
+			boost::python::arg("ed") = boost::python::object());
+
+		boost::python::def("copy_selection",
+			ambient::makeFunctionPointer([](boost::python::object ed, bool useKillRing) -> bool {
+				try {
+					ascension::viewers::copySelection(extractEditor(ed).caret(), useKillRing);
+				} catch(const ascension::viewers::ClipboardException&) {
+					return false;	// TODO: Report the error to user.
+				}
+				return true;
+			}),
+			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("use_kill_ring") = true));
+
+		boost::python::def("cut_selection",
+			ambient::makeFunctionPointer([](boost::python::object ed, bool useKillRing) -> bool {
+				try {
+					ascension::viewers::cutSelection(extractEditor(ed).caret(), useKillRing);
+				} catch(const ascension::viewers::ClipboardException&) {
+					return false;	// TODO: Report the error to user.
+				}
+				return true;
+			}),
+			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("use_kill_ring") = true));
+
+		boost::python::def("delete_backward_character",
+			&deleteCharacter<&ascension::Direction::BACKWARD>,
+			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("n") = 1));
+
+		boost::python::def("delete_backward_word",
+			&deleteWord<&ascension::Direction::BACKWARD>,
+			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("n") = 1));
+
+		boost::python::def("delete_forward_character",
+			&deleteCharacter<&ascension::Direction::FORWARD>,
+			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("n") = 1));
+
+		boost::python::def("delete_forward_word",
+			&deleteWord<&ascension::Direction::FORWARD>,
+			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("n") = 1));
+
+//		boost::python::def("delete_line", &);
+
+		boost::python::def("end_of_buffer",
+			&moveCaret<
+				ascension::kernel::Position(const ascension::kernel::Point&),
+				&ascension::kernel::locations::endOfDocument
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
+
+		boost::python::def("end_of_line",
+			&moveCaret<
+				ascension::kernel::Position(const ascension::kernel::Point&),
+				&ascension::kernel::locations::endOfLine
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
+
+		boost::python::def("end_of_visual_line",
+			&moveCaret<
+				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				&ascension::kernel::locations::endOfVisualLine
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
+
+		boost::python::def("find_next",
+			&findNext<&ascension::Direction::FORWARD>,
+			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("n") = 1));
+
+		boost::python::def("find_previous",
+			&findNext<&ascension::Direction::BACKWARD>,
+			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("n") = 1));
+
+		boost::python::def("first_printable_character_of_line",
+			&moveCaret<
+				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				&ascension::kernel::locations::firstPrintableCharacterOfLine
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
+
+		boost::python::def("first_printable_character_of_visual_line",
+			&moveCaret<
+				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				&ascension::kernel::locations::firstPrintableCharacterOfVisualLine
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
+
+		boost::python::def("forward_bookmark",
+			&moveCaretN<
+				boost::optional<ascension::kernel::Position>(const ascension::kernel::Point&, ascension::Direction, ascension::Index),
+				&ascension::kernel::locations::nextBookmark,
+				&ascension::Direction::FORWARD
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
+
+		boost::python::def("forward_character",
+			&moveCaretN<
+				ascension::kernel::Position(const ascension::kernel::Point&, ascension::Direction, ascension::kernel::locations::CharacterUnit, ascension::Index),
+				&ascension::kernel::locations::nextCharacter,
+				&ascension::Direction::FORWARD
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
+
+		boost::python::def("forward_line",
+			&moveCaretN<
+				ascension::kernel::Position(const ascension::kernel::Point&, ascension::Direction, ascension::Index),
+				&ascension::kernel::locations::nextLine,
+				&ascension::Direction::FORWARD
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
+
+		boost::python::def("forward_page",
+			&moveCaretN<
+				ascension::viewers::VisualDestinationProxy(const ascension::viewers::VisualPoint&, ascension::Direction, ascension::Index),
+				&ascension::kernel::locations::nextPage,
+				&ascension::Direction::FORWARD
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
+
+		boost::python::def("forward_visual_line",
+			&moveCaretN<
+				ascension::viewers::VisualDestinationProxy(const ascension::viewers::VisualPoint&, ascension::Direction, ascension::Index),
+				&ascension::kernel::locations::nextVisualLine,
+				&ascension::Direction::FORWARD
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
+
+		boost::python::def("forward_word",
+			&moveCaretN<
+				ascension::kernel::Position(const ascension::kernel::Point&, ascension::Direction, ascension::Index),
+				&ascension::kernel::locations::nextWord,
+				&ascension::Direction::FORWARD
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
+
+		boost::python::def("forward_word_end",
+			&moveCaretN<
+				ascension::kernel::Position(const ascension::kernel::Point&, ascension::Direction, ascension::Index),
+				&ascension::kernel::locations::nextWordEnd,
+				&ascension::Direction::FORWARD
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
+
+		boost::python::def("input_character",
+			ambient::makeFunctionPointer([](boost::python::object ed, int character) -> bool {
+				return ascension::texteditor::commands::CharacterInputCommand(extractEditor(ed), character)();
+			}),
+			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("character")));
+
+		boost::python::def("input_character_from_next_line",
+			&inputCharacterFromNextLine<false>, boost::python::arg("ed") = boost::python::object());
+
+		boost::python::def("input_character_from_previous_line",
+			&inputCharacterFromNextLine<true>, boost::python::arg("ed") = boost::python::object());
+
+//		boost::python::def("indent", &indent);
+
+		boost::python::def("insert_previous_line", &newline<&ascension::Direction::BACKWARD>,
+			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("n") = 1));
+
+		boost::python::def("insert_string", &insertString,
+			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("string"), boost::python::arg("n") = 1));
+
+//		boost::python::def("isearch_backward", &);
+
+//		boost::python::def("isearch_forward", &);
+
+		boost::python::def("last_printable_character_of_line",
+			&moveCaret<
+				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				&ascension::kernel::locations::lastPrintableCharacterOfLine
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
+
+		boost::python::def("last_printable_character_of_visual_line",
+			&moveCaret<
+				ascension::kernel::Position(const ascension::viewers::VisualPoint&),
+				&ascension::kernel::locations::lastPrintableCharacterOfVisualLine
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
+/*
+		boost::python::def("left_character",
+			&moveCaretN<
+				ascension::kernel::Position(const ascension::viewers::VisualPoint&, ascension::kernel::locations::CharacterUnit, ascension::Index),
+				&ascension::kernel::locations::leftCharacter
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
+
+		boost::python::def("left_word",
+			&moveCaretN<
+				ascension::kernel::Position(const ascension::viewers::VisualPoint&, ascension::Index),
+				&ascension::kernel::locations::leftWord
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
+
+		boost::python::def("left_word_end",
+			&moveCaretN<
+				ascension::kernel::Position(const ascension::viewers::VisualPoint&, ascension::Index),
+				&ascension::kernel::locations::leftWordEnd
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
 */
-	template<const a::Direction* direction> bool deleteCharacter(py::object ed, py::ssize_t n) {
-		return CharacterDeletionCommand(extractEditor(ed), *direction).setNumericPrefix(static_cast<long>(n))();}
+		boost::python::def("matching_paren",
+			ambient::makeFunctionPointer([](boost::python::object ed, bool extendSelection) -> bool {
+				return ascension::texteditor::commands::MatchBracketCommand(extractEditor(ed), extendSelection)();
+			}),
+			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false));
 
-	template<const a::Direction* direction> bool deleteWord(py::object ed, py::ssize_t n) {
-		return WordDeletionCommand(extractEditor(ed), *direction).setNumericPrefix(static_cast<long>(n))();}
+		boost::python::def("newline",
+			&newline<&ascension::Direction::FORWARD>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("n") = 1));
 
-	template<const a::Direction* direction> bool findNext(py::object ed, py::ssize_t n) {
-		return FindNextCommand(extractEditor(ed), *direction).setNumericPrefix(static_cast<long>(n))();}
+		boost::python::def("paste",
+			ambient::makeFunctionPointer([](boost::python::object ed, bool useKillRing) -> bool {
+				return ascension::texteditor::commands::PasteCommand(extractEditor(ed), useKillRing)();
+			}),
+			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("use_killring") = true));
 
-	bool inputCharacter(py::object ed, int character) {return CharacterInputCommand(extractEditor(ed), character)();}
+		boost::python::def("reconvert",
+			ambient::makeFunctionPointer([](boost::python::object ed) -> bool {
+				return ascension::texteditor::commands::ReconversionCommand(extractEditor(ed))();
+			}),
+			boost::python::arg("ed") = boost::python::object());
 
-	template<bool previous> bool inputCharacterFromNextLine(py::object ed) {return CharacterInputFromNextLineCommand(extractEditor(ed), previous)();}
+		boost::python::def("redo", &undo<true>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("n") = 1));
 
-	bool indent(py::object ed, py::ssize_t n);
+//		boost::python::def("replace_all", &);
+/*
+		boost::python::def("right_character",
+			&moveCaretN<
+				ascension::kernel::Position(const ascension::viewers::VisualPoint&, ascension::kernel::locations::CharacterUnit, ascension::Index),
+				&ascension::kernel::locations::rightCharacter
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
 
-	bool insertString(py::object ed, const a::String& s, py::ssize_t n) {
-		try {
-			return TextInputCommand(extractEditor(ed), s).setNumericPrefix(static_cast<long>(n))();
-		} catch(k::DocumentCantChangeException&) {
-			return false;
-		}
-		return true;
-	}
+		boost::python::def("right_word",
+			&moveCaretN<
+				ascension::kernel::Position(const ascension::viewers::VisualPoint&, ascension::Index),
+				&ascension::kernel::locations::rightWord
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
 
-//	template<const Direction* direction> bool isearch() {}
+		boost::python::def("right_word_end",
+			&moveCaretN<
+				ascension::kernel::Position(const ascension::viewers::VisualPoint&, ascension::Index),
+				&ascension::kernel::locations::rightWordEnd
+			>, (boost::python::arg("ed") = boost::python::object(), boost::python::arg("extend_selection") = false, boost::python::arg("n") = 1));
+*/
+		boost::python::def("select_all",
+			ambient::makeFunctionPointer([](boost::python::object ed) {
+				ascension::texteditor::commands::EntireDocumentSelectionCreationCommand(extractEditor(ed))();
+			}),
+			boost::python::arg("ed") = boost::python::object());
 
-	bool matchingParen(py::object ed, bool extendSelection) {return MatchBracketCommand(extractEditor(ed), extendSelection)();}
+		boost::python::def("select_word",
+			ambient::makeFunctionPointer([](boost::python::object ed) {
+				ascension::texteditor::commands::WordSelectionCreationCommand(extractEditor(ed))();
+			}),
+			boost::python::arg("ed") = boost::python::object());
 
-	template<typename Signature, Signature* procedure>
-	void moveCaret(py::object ed, bool extendSelection) {CaretMovementCommand(extractEditor(ed), procedure, extendSelection)();}
+		boost::python::def("show_completion_proposals_popup",
+			ambient::makeFunctionPointer([](boost::python::object ed) -> bool {
+				return ascension::texteditor::commands::CompletionProposalPopupCommand(extractEditor(ed))();
+			}),
+			boost::python::arg("ed") = boost::python::object());
 
-	template<typename Signature, Signature* procedure> void moveCaretN(py::object ed, bool extendSelection, py::ssize_t n) {
-		CaretMovementCommand(extractEditor(ed), procedure, extendSelection).setNumericPrefix(static_cast<long>(n))();}
+//		boost::python::def("toggle_bookmark", &);
 
-	template<bool previous> bool newline(py::object ed, py::ssize_t n) {
-		return NewlineCommand(extractEditor(ed), previous).setNumericPrefix(static_cast<long>(n))();}
+		boost::python::def("toggle_ime_status",
+			ambient::makeFunctionPointer([](boost::python::object ed) -> bool {
+				return ascension::texteditor::commands::InputMethodOpenStatusToggleCommand(extractEditor(ed))();
+			}),
+			boost::python::arg("ed") = boost::python::object());
 
-	bool paste(py::object ed, bool useKillRing) {return PasteCommand(extractEditor(ed), useKillRing)();}
+		boost::python::def("toggle_overtype_mode",
+			ambient::makeFunctionPointer([](boost::python::object ed) -> bool {
+				return ascension::texteditor::commands::OvertypeModeToggleCommand(extractEditor(ed))();
+			}),
+			boost::python::arg("ed") = boost::python::object());
 
-	bool reconvert(py::object ed) {return (ReconversionCommand(extractEditor(ed)))();}
+		boost::python::def("toggle_soft_keyboard_mode",
+			ambient::makeFunctionPointer([](boost::python::object ed) -> bool {
+				return ascension::texteditor::commands::InputMethodSoftKeyboardModeToggleCommand(extractEditor(ed))();
+			}),
+			boost::python::arg("ed") = boost::python::object());
 
-	void selectAll(py::object ed) {(EntireDocumentSelectionCreationCommand(extractEditor(ed)))();}
+		boost::python::def("transpose_characters",
+			&transpose<&ascension::viewers::transposeCharacters>/*,
+			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("n") = 1)*/);
 
-	void selectWord(py::object ed) {(WordSelectionCreationCommand(extractEditor(ed)))();}
+		boost::python::def("transpose_lines",
+			&transpose<&ascension::viewers::transposeLines>/*,
+			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("n") = 1)*/);
 
-	bool showCompletionProposalsPopup(py::object ed) {return (CompletionProposalPopupCommand(extractEditor(ed)))();}
+		boost::python::def("transpose_words",
+			&transpose<&ascension::viewers::transposeWords>/*,
+			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("n") = 1)*/);
 
-	bool toggleIMEStatus(py::object ed) {return (InputMethodOpenStatusToggleCommand(extractEditor(ed)))();}
+		boost::python::def("try_to_begin_rectangle_selection",
+			&tryToBeginRectangleSelection, boost::python::arg("ed") = boost::python::object());
 
-	bool toggleOvertypeMode(py::object ed) {return (OvertypeModeToggleCommand(extractEditor(ed)))();}
+		boost::python::def("undo", &undo<false>,
+			(boost::python::arg("ed") = boost::python::object(), boost::python::arg("n") = 1));
 
-	bool toggleSoftKeyboardMode(py::object ed) {return (InputMethodSoftKeyboardModeToggleCommand(extractEditor(ed)))();}
-
-	template<bool(*procedure)(v::Caret&)> bool transpose(py::object ed /*, py::ssize_t n*/) {return TranspositionCommand(extractEditor(ed), procedure)();}
-
-	void tryToBeginRectangleSelection(py::object ed) {
-		EditorView& viewer = extractEditor(ed);
-		v::Caret& caret = viewer.caret();
-		// the following code is copied from ascension/text-editor.cpp
-		v::utils::closeCompletionProposalsPopup(viewer);
-		if(a::texteditor::Session* const session = viewer.document().session()) {
-			if(session->incrementalSearcher().isRunning())
-				session->incrementalSearcher().end();
-		}
-		if(isSelectionEmpty(caret) && !caret.isSelectionRectangle())
-			caret.beginRectangleSelection();
-	}
-
-	template<bool redo> bool undo(py::object ed, py::ssize_t n) {return UndoCommand(extractEditor(ed), redo).setNumericPrefix(static_cast<long>(n))();}
-} // namespace @0
-
-ALPHA_EXPOSE_PROLOGUE(10)
-	py::scope temp(ambient::Interpreter::instance().module("intrinsics"));
-
-	py::def("backward_bookmark",
-		&moveCaretN<k::Position(const k::Point&, a::length_t), &k::locations::backwardBookmark>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("backward_character",
-		&moveCaretN<k::Position(const k::Point&, k::locations::CharacterUnit, a::length_t), &k::locations::backwardCharacter>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("backward_line",
-		&moveCaretN<k::Position(const k::Point&, a::length_t), &k::locations::backwardLine>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("backward_page",
-		&moveCaretN<v::VerticalDestinationProxy(const v::VisualPoint&, a::length_t), &k::locations::backwardPage>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("backward_visual_line",
-		&moveCaretN<v::VerticalDestinationProxy(const v::VisualPoint&, a::length_t), &k::locations::backwardVisualLine>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("backward_word",
-		&moveCaretN<k::Position(const k::Point&, a::length_t), &k::locations::backwardWord>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("backward_word_end",
-		&moveCaretN<k::Position(const k::Point&, a::length_t), &k::locations::backwardWordEnd>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("beginning_of_buffer",
-		&moveCaret<k::Position(const k::Point&), &k::locations::beginningOfDocument>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false));
-	py::def("beginning_of_line",
-		&moveCaret<k::Position(const k::Point&), &k::locations::beginningOfLine>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false));
-	py::def("beginning_of_visual_line",
-		&moveCaret<k::Position(const v::VisualPoint&), &k::locations::beginningOfVisualLine>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false));
-	py::def("bookmark_match_lines", &bookmarkMatchLines, (py::arg("ed") = py::object(), py::arg("only_selection") = false));
-	py::def("cancel", &cancel, py::arg("ed") = py::object());
-//	py::def("clear_all_bookmarks", &);
-	py::def("contextual_beginning_of_line",
-		&moveCaret<k::Position(const v::VisualPoint&), &k::locations::contextualBeginningOfLine>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false));
-	py::def("contextual_beginning_of_visual_line",
-		&moveCaret<k::Position(const v::VisualPoint&), &k::locations::contextualBeginningOfVisualLine>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false));
-	py::def("contextual_end_of_line",
-		&moveCaret<k::Position(const v::VisualPoint&), &k::locations::contextualEndOfLine>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false));
-	py::def("contextual_end_of_visual_line",
-		&moveCaret<k::Position(const v::VisualPoint&), &k::locations::contextualEndOfVisualLine>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false));
-	py::def("convert_character_to_code_point", &convertCharacterToCodePoint, py::arg("ed") = py::object());
-	py::def("convert_code_point_to_character", &convertCodePointToCharacter, py::arg("ed") = py::object());
-//	py::def("copy_selection", &copySelection, (py::arg("ed") = py::object(), py::arg("use_kill_ring") = true));
-//	py::def("cut_selection", &cutSelection, (py::arg("ed") = py::object(), py::arg("use_kill_ring") = true));
-	py::def("delete_backward_character", &deleteCharacter<&a::Direction::BACKWARD>, (py::arg("ed") = py::object(), py::arg("n") = 1));
-	py::def("delete_backward_word", &deleteWord<&a::Direction::BACKWARD>, (py::arg("ed") = py::object(), py::arg("n") = 1));
-	py::def("delete_forward_character", &deleteCharacter<&a::Direction::FORWARD>, (py::arg("ed") = py::object(), py::arg("n") = 1));
-	py::def("delete_forward_word", &deleteWord<&a::Direction::FORWARD>, (py::arg("ed") = py::object(), py::arg("n") = 1));
-//	py::def("delete_line", &);
-	py::def("end_of_buffer",
-		&moveCaret<k::Position(const k::Point&), &k::locations::endOfDocument>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false));
-	py::def("end_of_line",
-		&moveCaret<k::Position(const k::Point&), &k::locations::endOfLine>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false));
-	py::def("end_of_visual_line",
-		&moveCaret<k::Position(const v::VisualPoint&), &k::locations::endOfVisualLine>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false));
-	py::def("find_next", &findNext<&a::Direction::FORWARD>, (py::arg("ed") = py::object(), py::arg("n") = 1));
-	py::def("find_previous", &findNext<&a::Direction::BACKWARD>, (py::arg("ed") = py::object(), py::arg("n") = 1));
-	py::def("first_printable_character_of_line",
-		&moveCaret<k::Position(const v::VisualPoint&), &k::locations::firstPrintableCharacterOfLine>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false));
-	py::def("first_printable_character_of_visual_line",
-		&moveCaret<k::Position(const v::VisualPoint&), &k::locations::firstPrintableCharacterOfVisualLine>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false));
-	py::def("forward_bookmark",
-		&moveCaretN<k::Position(const k::Point&, a::length_t), &k::locations::forwardBookmark>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("forward_character",
-		&moveCaretN<k::Position(const k::Point&, k::locations::CharacterUnit, a::length_t), &k::locations::forwardCharacter>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("forward_line",
-		&moveCaretN<k::Position(const k::Point&, a::length_t), &k::locations::forwardLine>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("forward_page",
-		&moveCaretN<v::VerticalDestinationProxy(const v::VisualPoint&, a::length_t), &k::locations::forwardPage>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("forward_visual_line",
-		&moveCaretN<v::VerticalDestinationProxy(const v::VisualPoint&, a::length_t), &k::locations::forwardVisualLine>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("forward_word",
-		&moveCaretN<k::Position(const k::Point&, a::length_t), &k::locations::forwardWord>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("forward_word_end",
-		&moveCaretN<k::Position(const k::Point&, a::length_t), &k::locations::forwardWordEnd>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("input_character", &inputCharacter, (py::arg("ed") = py::object(), py::arg("character")));
-	py::def("input_character_from_next_line", &inputCharacterFromNextLine<false>, py::arg("ed") = py::object());
-	py::def("input_character_from_previous_line", &inputCharacterFromNextLine<true>, py::arg("ed") = py::object());
-//	py::def("indent", &indent);
-	py::def("insert_previous_line", &newline<true>, (py::arg("ed") = py::object(), py::arg("n") = 1));
-	py::def("insert_string", &insertString, (py::arg("ed") = py::object(), py::arg("string"), py::arg("n") = 1));
-//	py::def("isearch_backward", &);
-//	py::def("isearch_forward", &);
-	py::def("last_printable_character_of_line",
-		&moveCaret<k::Position(const v::VisualPoint&), &k::locations::lastPrintableCharacterOfLine>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false));
-	py::def("last_printable_character_of_visual_line",
-		&moveCaret<k::Position(const v::VisualPoint&), &k::locations::lastPrintableCharacterOfVisualLine>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false));
-	py::def("left_character",
-		&moveCaretN<k::Position(const v::VisualPoint&, k::locations::CharacterUnit, a::length_t), &k::locations::leftCharacter>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("left_word",
-		&moveCaretN<k::Position(const v::VisualPoint&, a::length_t), &k::locations::leftWord>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("left_word_end",
-		&moveCaretN<k::Position(const v::VisualPoint&, a::length_t), &k::locations::leftWordEnd>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("matching_paren", &matchingParen, (py::arg("ed") = py::object(), py::arg("extend_selection") = false));
-	py::def("newline", &newline<false>, (py::arg("ed") = py::object(), py::arg("n") = 1));
-	py::def("paste", &paste, (py::arg("ed") = py::object(), py::arg("use_killring") = true));
-	py::def("reconvert", &reconvert, py::arg("ed") = py::object());
-	py::def("redo", &undo<true>, (py::arg("ed") = py::object(), py::arg("n") = 1));
-//	py::def("replace_all", &);
-	py::def("right_character",
-		&moveCaretN<k::Position(const v::VisualPoint&, k::locations::CharacterUnit, a::length_t), &k::locations::rightCharacter>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("right_word",
-		&moveCaretN<k::Position(const v::VisualPoint&, a::length_t), &k::locations::rightWord>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("right_word_end",
-		&moveCaretN<k::Position(const v::VisualPoint&, a::length_t), &k::locations::rightWordEnd>,
-		(py::arg("ed") = py::object(), py::arg("extend_selection") = false, py::arg("n") = 1));
-	py::def("select_all", &selectAll, py::arg("ed") = py::object());
-	py::def("select_word", &selectWord, py::arg("ed") = py::object());
-	py::def("show_completion_proposals_popup", &showCompletionProposalsPopup, py::arg("ed") = py::object());
-//	py::def("toggle_bookmark", &);
-	py::def("toggle_ime_status", &toggleIMEStatus, py::arg("ed") = py::object());
-	py::def("toggle_overtype_mode", &toggleOvertypeMode, py::arg("ed") = py::object());
-	py::def("toggle_soft_keyboard_mode", &toggleSoftKeyboardMode, py::arg("ed") = py::object());
-	py::def("transpose_characters", &transpose<&v::transposeCharacters>/*, (py::arg("ed") = py::object(), py::arg("n") = 1)*/);
-	py::def("transpose_lines", &transpose<&v::transposeLines>/*, (py::arg("ed") = py::object(), py::arg("n") = 1)*/);
-	py::def("transpose_words", &transpose<&v::transposeWords>/*, (py::arg("ed") = py::object(), py::arg("n") = 1)*/);
-	py::def("try_to_begin_rectangle_selection", &tryToBeginRectangleSelection, py::arg("ed") = py::object());
-	py::def("undo", &undo<false>, (py::arg("ed") = py::object(), py::arg("n") = 1));
-//	py::def("unindent", &unindent);
-ALPHA_EXPOSE_EPILOGUE()
+//		boost::python::def("unindent", &unindent);
+	ALPHA_EXPOSE_EPILOGUE()
+}
