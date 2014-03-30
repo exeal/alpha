@@ -185,7 +185,7 @@ namespace ascension {
 				return presentation_;
 			}
 
-			/// Returns the primary font.
+			/// Returns the primary font. The returned value can't be @c null.
 			inline std::shared_ptr<const Font> TextRenderer::defaultFont() const BOOST_NOEXCEPT {
 				return defaultFont_;
 			}
