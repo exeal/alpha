@@ -19,6 +19,9 @@
 #include <memory>									// std.unique_ptr
 #include <map>
 #include <bitset>
+#ifndef ASCENSION_NO_MIGEMO
+#	include <boost/filesystem/path.hpp>
+#endif // !ASCENSION_NO_MIGEMO
 #include <boost/regex.hpp>
 
 // workaround for UCS-4
@@ -735,7 +738,7 @@ namespace ascension {
 		class MigemoPattern : public Pattern {
 		public:
 			static std::unique_ptr<const MigemoPattern> compile(const StringPiece& pattern, bool caseSensitive);
-			static void initialize(const std::string& runtimePathName, const std::string& dictionaryPathName);
+			static void initialize(const boost::filesystem::path& runtimePathName, const boost::filesystem::path& dictionaryPathName);
 			static bool isMigemoInstalled() BOOST_NOEXCEPT;
 		private:
 			MigemoPattern(const StringPiece& pattern, bool caseSensitive);
