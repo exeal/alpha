@@ -393,13 +393,14 @@ namespace ascension {
 		}
 
 		/**
-		 * Initializes the library.
-		 * @param runtimePathName
-		 * @param dictionaryPathName
+		 * Initializes the library with the given path names.
+		 * @param runtimePathName The C/Migemo library file name
+		 * @param dictionaryPathName The directory name of the dictionaries to load (by @c migemo_load)
+		 * @note The given path names are converted into default encoding by using the C++ global locale
 		 */
-		void MigemoPattern::initialize(const std::string& runtimePathName, const std::string& dictionaryPathName) {
-			runtimePathName_ = runtimePathName;
-			dictionaryPathName_ = dictionaryPathName;
+		void MigemoPattern::initialize(const boost::filesystem::path& runtimePathName, const boost::filesystem::path& dictionaryPathName) {
+			runtimePathName_ = runtimePathName.string();
+			dictionaryPathName_ = dictionaryPathName.string();
 		}
 
 		inline void MigemoPattern::install() {
