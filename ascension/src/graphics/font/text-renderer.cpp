@@ -144,6 +144,7 @@ namespace ascension {
 					throw makePlatformError();
 				defaultFont_ = std::make_shared<Font>(win32::Handle<HFONT>::Type(::CreateFontIndirectW(&lf), &::DeleteObject));
 #endif
+				assert(defaultFont_.get() != nullptr);
 				presentation::FlowRelativeFourSides<presentation::Length> zeroSpaces;
 				zeroSpaces.fill(presentation::Length(0));
 //				spacePainter_->update(*this, initialSize, zeroSpaces);

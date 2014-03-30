@@ -206,6 +206,21 @@ namespace ascension {
 					if(pointSize < 0.0)
 						throw std::underflow_error("pointSize");
 				}
+#if defined(ASCENSION_SHAPING_ENGINE_CORE_GRAPHICS)
+#elif defined(ASCENSION_SHAPING_ENGINE_CORE_TEXT)
+				// TODO: Write CTFontDescriptor conversions.
+#elif defined(ASCENSION_SHAPING_ENGINE_DIRECT_WRITE)
+#elif defined(ASCENSION_SHAPING_ENGINE_HARFBUZZ)
+#elif defined(ASCENSION_SHAPING_ENGINE_PANGO)
+				explicit FontDescription(const Pango::FontDescription& nativeObject);
+				Pango::FontDescription&& asNativeObject() const;
+#elif defined(ASCENSION_SHAPING_ENGINE_QT)
+				explicit FontDescription(const QFontInfo& nativeObject);
+				QFontInfo&& asNativeObject() const;
+#elif defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDIPLUS)
+				explicit FontDescription(const LOGFONTW& nativeObject);
+				LOGFONTW&& asNativeObject() const;
+#endif
 				/// Equality operator.
 				bool operator==(const FontDescription& other) const BOOST_NOEXCEPT {
 					return family_ == other.family_
