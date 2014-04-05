@@ -35,14 +35,14 @@ namespace alpha {
 		boost::for_each(buffers_, [this](BufferEntry& buffer) {
 			this->editorSession_.removeDocument(*buffer.buffer);
 		});
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		if(icons_.get() != 0) {
 			const int c = icons_.getNumberOfImages();
 			for(int i = 0; i < c; ++i)
 				::DestroyIcon(icons_.getIcon(i, ILD_NORMAL));
 			icons_.destroy();
 		}
-#endif
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 	}
 
 	/**
@@ -232,7 +232,7 @@ namespace alpha {
 		return getConcreteDocument(const_cast<ascension::kernel::Document&>(document));
 	}
 
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 	/// Handles @c WM_NOTIFY message from the buffer bar.
 	LRESULT BufferList::handleBufferBarNotification(NMTOOLBARW& nmhdr) {
 		if(nmhdr.hdr.code == NM_RCLICK) {	// right click -> context menu
@@ -330,7 +330,7 @@ namespace alpha {
 
 		return false;
 	}
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
 	/// Returns the singleton instance.
 	BufferList& BufferList::instance() {
@@ -585,7 +585,7 @@ namespace alpha {
 
 	/// Reconstructs the image list and the menu according to the current buffer list.
 	void BufferList::resetResources() {
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		if(icons_.get() != 0) {
 			const int c = icons_.getNumberOfImages();
 			for(int i = 0; i < c; ++i)
@@ -610,7 +610,7 @@ namespace alpha {
 		bufferBar_.setImageList(icons_.use());
 		if(bufferBar_.isVisible())
 			bufferBar_.invalidateRect(0);
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 	}
 #if 0
 	/**
