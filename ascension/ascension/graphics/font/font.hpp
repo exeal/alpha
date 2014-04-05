@@ -75,40 +75,40 @@ namespace ascension {
 			 */
 			class Font : public std::enable_shared_from_this<Font> {
 			public:
-#if defined(ASCENSION_SHAPING_ENGINE_CAIRO)
+#if ASCENSION_SELECTS_SHAPING_ENGINE(CAIRO)
 				explicit Font(Cairo::RefPtr<Cairo::ScaledFont> nativeObject);
 				Glib::RefPtr<Cairo::ScaledFont> asNativeObject();
 				Glib::RefPtr<const Cairo::ScaledFont> asNativeObject() const;
-#elif defined(ASCENSION_SHAPING_ENGINE_CORE_GRAPHICS)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(CORE_GRAPHICS)
 				explicit Font(cg::Reference<CGFontRef>&& nativeObject);
 				cg::Reference<CGFontRef>& asNativeObject() const;
-#elif defined(ASCENSION_SHAPING_ENGINE_CORE_TEXT)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(CORE_TEXT)
 				explicit Font(cg::Reference<CTFontRef>&& nativeObject);
 				cg::Reference<CTFontRef>& asNativeObject() const;
-#elif defined(ASCENSION_SHAPING_ENGINE_DIRECT_WRITE)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)
 				explicit Font(win32::com::SmartPointer<IDWriteFont> nativeObject);
 				win32::com::SmartPointer<IDWriteFont> asNativeObject() const;
-#elif defined(ASCENSION_SHAPING_ENGINE_HARFBUZZ)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(HARFBUZZ)
 				explicit Font(boost::intrusive_ptr<hb_font_t> nativeObject);
 				boost::intrusive_ptr<hb_font_t> asNativeObject() const;
-#elif defined(ASCENSION_SHAPING_ENGINE_PANGO)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(PANGO)
 //				explicit Font(Glib::RefPtr<Pango::Font> nativeObject);
 //				Glib::RefPtr<Pango::Font> asNativeObject();
 //				Glib::RefPtr<const Pango::Font> asNativeObject() const;
 				explicit Font(Glib::RefPtr<Pango::Fontset> nativeObject);
 				Glib::RefPtr<Pango::Fontset> asNativeObject();
 				Glib::RefPtr<const Pango::Fontset> asNativeObject() const;
-#elif defined(ASCENSION_SHAPING_ENGINE_QT)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(QT)
 //				explicit Font(std::shared_ptr<QRawFont> nativeObject);
 //				std::shared_ptr<QRawFont> asNativeObject();
 //				std::shared_ptr<const QRawFont> asNativeObject() const;
 				explicit Font(std::shared_ptr<QFont> nativeObject);
 				std::shared_ptr<QFont> asNativeObject();
 				std::shared_ptr<const QFont> asNativeObject() const;
-#elif defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
 				explicit Font(win32::Handle<HFONT>::Type nativeObject) BOOST_NOEXCEPT;
 				win32::Handle<HFONT>::Type asNativeObject() const BOOST_NOEXCEPT;
-#elif defined(ASCENSION_SHAPING_ENGINE_WIN32_GDIPLUS)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
 				explicit Font(std::shared_ptr<Gdiplus::Font> nativeObject);
 				std::shared_ptr<Gdiplus::Font> asNativeObject();
 				std::shared_ptr<const Gdiplus::Font> asNativeObject() const;
@@ -168,28 +168,28 @@ namespace ascension {
 				AffineTransform&& transform() const BOOST_NOEXCEPT;
 			private:
 				void buildDescription() BOOST_NOEXCEPT;
-#if defined(ASCENSION_SHAPING_ENGINE_CAIRO)
+#if ASCENSION_SELECTS_SHAPING_ENGINE(CAIRO)
 				Cairo::RefPtr<Cairo::ScaledFont> nativeObject_;
-#elif defined(ASCENSION_SHAPING_ENGINE_CORE_GRAPHICS)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(CORE_GRAPHICS)
 				cg::Reference<CGFontRef> nativeObject_;
-#elif defined(ASCENSION_SHAPING_ENGINE_CORE_TEXT)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(CORE_TEXT)
 				cg::Reference<CTFontRef> nativeObject_;
-#elif defined(ASCENSION_SHAPING_ENGINE_DIRECT_WRITE)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)
 				win32::com::SmartPointer<IDWriteFont> nativeObject_;
-#elif defined(ASCENSION_SHAPING_ENGINE_HARFBUZZ)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(HARFBUZZ)
 				boost::intrusive_ptr<hb_font_t> nativeObject_;
-#elif defined(ASCENSION_SHAPING_ENGINE_PANGO)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(PANGO)
 //				Glib::RefPtr<Pango::Font> nativeObject_;
 				Glib::RefPtr<Pango::Fontset> nativeObject_;
-#elif defined(ASCENSION_SHAPING_ENGINE_QT)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(QT)
 //				std::shared_ptr<QRawFont> nativeObject_;
 				std::shared_ptr<QFont> nativeObject_;
-#elif defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
 				win32::Handle<HFONT>::Type nativeObject_;
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 				std::unique_ptr<detail::IdeographicVariationSequences> ivs_;
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-#elif defined(ASCENSION_SHAPING_ENGINE_WIN32_GDIPLUS)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
 				std::shared_ptr<Gdiplus::Font> nativeObject_;
 #endif
 				std::unique_ptr<const FontDescription> description_;
@@ -202,14 +202,14 @@ namespace ascension {
 			 */
 			class FontCollection {
 			public:
-#if defined(ASCENSION_SHAPING_ENGINE_CORE_TEXT)
-#elif defined(ASCENSION_SHAPING_ENGINE_DIRECT_WRITE)
-#elif defined(ASCENSION_SHAPING_ENGINE_HARFBUZZ)
-#elif defined(ASCENSION_SHAPING_ENGINE_PANGO)
-#elif defined(ASCENSION_SHAPING_ENGINE_QT)
-#elif defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
+#if ASCENSION_SELECTS_SHAPING_ENGINE(CORE_TEXT)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(HARFBUZZ)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(PANGO)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(QT)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
 				explicit FontCollection(win32::Handle<HDC>::Type deviceContext) BOOST_NOEXCEPT;
-#elif defined(ASCENSION_SHAPING_ENGINE_WIN32_GDIPLUS)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
 #endif
 				/// Returns a set of font families available in this collection.
 				std::set<FontFamily>&& families() const;
@@ -236,18 +236,18 @@ namespace ascension {
 					const AffineTransform& transform = AffineTransform(),
 					boost::optional<double> sizeAdjust = boost::none) const;
 			private:
-#if defined(ASCENSION_SHAPING_ENGINE_CORE_TEXT)
+#if ASCENSION_SELECTS_SHAPING_ENGINE(CORE_TEXT)
 				cg::Reference<CTFontCollectionRef> nativeObject_;
-#elif defined(ASCENSION_SHAPING_ENGINE_DIRECT_WRITE)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)
 				win32::com::SmartPointer<IDWriteFontCollection> nativeObject_;
-#elif defined(ASCENSION_SHAPING_ENGINE_HARFBUZZ)
-#elif defined(ASCENSION_SHAPING_ENGINE_PANGO)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(HARFBUZZ)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(PANGO)
 				Glib::RefPtr<Pango::FontMap> nativeObject_;
-#elif defined(ASCENSION_SHAPING_ENGINE_QT)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(QT)
 				std::shared_ptr<QFontDatabase> nativeObject_;
-#elif defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
 				win32::Handle<HDC>::Type deviceContext_;
-#elif defined(ASCENSION_SHAPING_ENGINE_WIN32_GDIPLUS)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
 				std::shared_ptr<Gdiplus::FontCollection> nativeObject_;
 #endif
 			};

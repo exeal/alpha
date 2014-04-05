@@ -12,10 +12,11 @@
 #include <ascension/corelib/memory.hpp>	// FastArenaObject
 #include <ascension/corelib/future.hpp>
 #include <ascension/platforms.hpp>
-#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
-#	include <ascension/win32/handle.hpp>
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)
 #	include <gdk/gdk.h>
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDI)
+#	include <ascension/win32/handle.hpp>
 #endif
 #include <boost/geometry/geometry.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
@@ -99,17 +100,21 @@ namespace ascension {
 					return *this;
 				}
 
-#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(QT)
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDI)
 				BasicPoint(const POINT& nativeObject);
 				BasicPoint(const POINTL& nativeObject);
 				BasicPoint(const POINTS& nativeObject);
 				operator POINT() const;
 				operator POINTL() const;
 				operator POINTS() const;
-#else
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
 #endif
 			private:
 				using BasicPointBase<Coordinate>::x_;
@@ -178,13 +183,15 @@ namespace ascension {
 					return *this;
 				}
 
-#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(QT)
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDI)
 				BasicDimension(const SIZE& nativeObject);
 				operator SIZE() const;
-#else
 #endif
 			private:
 				using BasicDimensionBase<Coordinate>::dx_;
@@ -283,17 +290,21 @@ namespace ascension {
 					return *this;
 				}
 
-#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(QT)
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDI)
 				BasicRectangle(const RECT& nativeObject);
 				BasicRectangle(const RECTL& nativeObject);
 				BasicRectangle(const SMALL_RECT& nativeObject);
 				operator RECT() const;
 				operator RECTL() const;
 				operator SMALL_RECT() const;
-#else
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
 #endif
 			private:
 				using BasicRectangleBase<Coordinate>::minimumCorner_;

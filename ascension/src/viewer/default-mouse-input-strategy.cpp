@@ -29,13 +29,13 @@ namespace ascension {
 
 		namespace {
 			typedef
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Gtk::Widget
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				QWidget
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 				NSView
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::CustomControl
 #endif
 				AutoScrollOriginMarkBase;
@@ -56,7 +56,7 @@ namespace ascension {
 			private:
 				void paint(graphics::PaintContext& context) const;
 				void paintPattern(graphics::RenderingContext2D& context) const;
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
 					if(message == WM_PAINT) {
 						PAINTSTRUCT ps;
@@ -74,12 +74,12 @@ namespace ascension {
 					classInformation.cursor = MAKEINTRESOURCEW(32513);	// IDC_IBEAM
 				}
 				basic_string<WCHAR> provideClassName() const {return L"AutoScrollOriginMark";}
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			private:
 				graphics::Scalar width_;
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				COLORREF maskColor_;
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			};
 		} // namespace @0
 
@@ -178,13 +178,13 @@ namespace ascension {
 					std::memcpy(andBits + 4 * 20, AND_LINE_20_TO_28, sizeof(AND_LINE_20_TO_28));
 					std::memcpy(xorBits + 4 * 20, XOR_LINE_20_TO_28, sizeof(XOR_LINE_20_TO_28));
 				}
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				namespace geometry = graphics::geometry;
 				widgetapi::Cursor::createMonochrome(
 					geometry::BasicDimension<std::uint16_t>(geometry::_dx = 32, geometry::_dy = 32),
 					andBits, xorBits,
 					geometry::BasicPoint<std::uint16_t>(geometry::_x = 16, geometry::_y = 16));
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				instances[type].reset(new widgetapi::Cursor(win32::Handle<HCURSOR>::Type(
 					::CreateCursor(::GetModuleHandleW(nullptr), 16, 16, 32, 32, andBits, xorBits), &::DestroyCursor)));
 #else
@@ -249,21 +249,21 @@ namespace ascension {
 			width_ = 28;	// TODO: This value must be computed by using user settings.
 			widgetapi::resize(*this, graphics::Dimension(width_ + 1, width_ + 1));
 	
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			// TODO: Implement by using Gtk.Window.shape_combine_region(Cairo.Region).
 			// TODO: Implement by using Gtk.Widget.shape_combine_mask(,int,int) and Gdk.Pixmap.create_cairo_context.
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 			// TODO: Implement by using QWidget.setMask(QBitmap).
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 			// TODO: Implement by using [NSWindow setBackgroundColor:[NSColor clearColor]] and [NSWindow setOpaque:NO].
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// calling CreateWindowExW with WS_EX_LAYERED will fail on NT 4.0
 			::SetWindowLongW(handle().get(), GWL_EXSTYLE,
 				::GetWindowLongW(handle().get(), GWL_EXSTYLE) | WS_EX_LAYERED);
 			::SetLayeredWindowAttributes(handle().get(), maskColor_ = ::GetSysColor(COLOR_WINDOW), 0, LWA_COLORKEY);
 //			win32::Handle<HRGN>::Type rgn(::CreateEllipticRgn(0, 0, width_ + 1, width_ + 1), &::DeleteObject);
 //			::SetWindowRgn(asNativeObject().get(), rgn.get(), true);
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif
 		}
 
 		/**
@@ -398,7 +398,7 @@ namespace ascension {
 
 					// set alpha values
 					const std::array<std::uint8_t, 2> alphaChunnels = {
-#ifndef ASCENSION_WINDOW_SYSTEM_WIN32
+#if !ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 						0x00,
 #else
 						0x01,
@@ -460,13 +460,13 @@ namespace ascension {
 			widgetapi::DropAction possibleActions = widgetapi::DROP_ACTION_COPY;
 			if(!viewer_->document().isReadOnly())
 				possibleActions |= widgetapi::DROP_ACTION_MOVE;
-#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			d.execute(possibleActions, input.modifiers(), nullptr);
 #else
 			d.execute(possibleActions);
 #endif
 
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && 0
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && 0
 			if(dnd_.dragSourceHelper.get() != nullptr) {
 				unique_ptr<Image> image(createSelectionImage(*viewer_, dragApproachedPosition_, true, imageDimensions));
 				if(image.get() != nullptr) {
@@ -504,12 +504,12 @@ namespace ascension {
 					return formats.hasFormat(utils::rectangleTextMimeDataFormat());
 				return formats.hasText();
 #if 0
-#	if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#	if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				return (data.get_target() == ASCENSION_RECTANGLE_TEXT_MIME_FORMAT) || (!onlyRectangle && data.targets_include_text());
-#	elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#	elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				return data.hasFormat(ASCENSION_RECTANGLE_TEXT_MIME_FORMAT) || (!onlyRectangle && data.hasText());
-#	elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#	elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#	elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#	elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				const array<CLIPFORMAT, 3> formats = {
 					static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_MIME_FORMAT)), CF_UNICODETEXT, CF_TEXT
 				};
@@ -543,7 +543,7 @@ namespace ascension {
 				dnd_.numberOfRectangleLines = 0;
 				if(isMimeDataAcceptable(input.mimeDataFormats(), true)) {
 					// TODO: Not implemented.
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					const presentation::TextAnchor anchor = defaultTextAnchor(viewer_->presentation());
 					const presentation::ReadingDirection readingDirection = defaultReadingDirection(viewer_->presentation());
 					if((anchor == presentation::TextAnchor::START && readingDirection == presentation::RIGHT_TO_LEFT)
@@ -636,9 +636,9 @@ namespace ascension {
 				dropAction = input.hasModifier(widgetapi::UserInput::CONTROL_DOWN) ? widgetapi::DROP_ACTION_COPY : widgetapi::DROP_ACTION_MOVE;
 				const graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset> scrollOffset(calculateDnDScrollOffset(*viewer_));
 				if(scrollOffset.x() != 0 || scrollOffset.y() != 0) {
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					dropAction |= widgetapi::DROP_ACTION_WIN32_SCROLL;
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					// only one direction to scroll
 					if(scrollOffset.x() != 0)
 						viewer_->textRenderer().viewport()->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(0, scrollOffset.y()));
@@ -836,12 +836,12 @@ namespace ascension {
 			}
 		}
 
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		/// @see IDropSource#GiveFeedback
 		STDMETHODIMP DefaultMouseInputStrategy::GiveFeedback(DWORD) {
 			return DRAGDROP_S_USEDEFAULTCURSORS;	// use the system default cursor
 		}
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
 		/// @see MouseInputStrategy#handleDropTarget
 		std::shared_ptr<widgetapi::DropTarget> DefaultMouseInputStrategy::handleDropTarget() const {
@@ -997,10 +997,10 @@ namespace ascension {
 			if(viewer_ != nullptr)
 				uninstall();
 			viewer_ = &viewer;
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			if(dnd_.dragSourceHelper.get() == nullptr)
 				dnd_.dragSourceHelper = win32::com::SmartPointer<IDragSourceHelper>::create(CLSID_DragDropHelper, IID_IDragSourceHelper, CLSCTX_INPROC_SERVER);
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			state_ = NONE;
 
 			// create the window for the auto scroll origin mark
@@ -1122,7 +1122,7 @@ namespace ascension {
 			}
 		}
 
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		/// Implements @c IDropSource#QueryContinueDrag method.
 		STDMETHODIMP DefaultMouseInputStrategy::QueryContinueDrag(BOOL escapePressed, DWORD keyState) {
 			if(win32::boole(escapePressed) || win32::boole(keyState & MK_RBUTTON))	// cancel
@@ -1131,7 +1131,7 @@ namespace ascension {
 				return DRAGDROP_S_DROP;
 			return S_OK;
 		}
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
 		/// @see MouseInputStrategy#showCursor
 		bool DefaultMouseInputStrategy::showCursor(const graphics::Point& position) {
@@ -1141,13 +1141,13 @@ namespace ascension {
 			const TextViewer::HitTestResult htr = viewer_->hitTest(position);
 			if((htr & TextViewer::RULER_MASK) != 0	// on the ruler?
 					|| (/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(viewer_->caret()) && isPointOverSelection(viewer_->caret(), position)))	// on a draggable text selection?
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				builtinShape = Gdk::ARROW;
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				builtinShape = Qt::ArrowCursor;
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 				builtinShape = [NSCursor arrowCursor];
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				builtinShape = IDC_ARROW;
 #else
 				ASCENSION_CANT_DETECT_PLATFORM();
@@ -1158,13 +1158,13 @@ namespace ascension {
 						viewToModelInBounds(*viewer_->textRenderer().viewport(), position, kernel::locations::UTF16_CODE_UNIT))
 					newlyHoveredHyperlink = utils::getPointedHyperlink(*viewer_, p->characterIndex());
 				if(newlyHoveredHyperlink != nullptr && win32::boole(::GetAsyncKeyState(VK_CONTROL) & 0x8000))
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				builtinShape = Gdk::HAND1;
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				builtinShape = Qt::PointingHandCursor;
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 				builtinShape = [NSCursor pointingHandCursor];
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				builtinShape = IDC_HAND;
 #else
 				ASCENSION_CANT_DETECT_PLATFORM();
@@ -1186,13 +1186,13 @@ namespace ascension {
 		}
 
 		inline void DefaultMouseInputStrategy::showCursor(TextViewer& viewer, const widgetapi::Cursor& cursor) {
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			viewer.get_window()->set_cursor(const_cast<widgetapi::Cursor&>(cursor).asNativeObject());
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 			QApplication::setOverrideCursor(cursor.asNativeObject());	// TODO: Restore later.
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 			[cursor set];
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			::SetCursor(cursor.asNativeObject().get());
 #else
 			ASCENSION_CANT_DETECT_PLATFORM();

@@ -13,7 +13,7 @@
 #include <ascension/graphics/geometry.hpp>
 #include <memory>	// std.unique_ptr, std.enable_shared_from_this
 //#include <boost/operators.hpp>
-#ifdef ASCENSION_GRAPHICS_SYSTEM_CAIRO
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 #	include <cairomm/cairomm.h>
 #endif
 
@@ -37,37 +37,37 @@ namespace ascension {
 				return revisionNumber_;
 			}
 			/// Returns the native object which implements this object.
-#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 			Cairo::RefPtr<Cairo::Pattern> asNativeObject() const BOOST_NOEXCEPT {return nativeObject_;}
 		protected:
 			void reset(Cairo::RefPtr<Cairo::Pattern> nativeObject) {nativeObject_ = nativeObject;}
 		private:
 			Cairo::RefPtr<Cairo::Pattern> nativeObject_;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
 			???? asNativeObject() const;
 		protected:
 			void reset(???? nativeObject) BOOST_NOEXCEPT;
 		private:
 			???? nativeObject_;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_DIRECT2D)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(DIRECT2D)
 			win32::com::SmartPointer<ID2D1Brush> asNativeObject() const BOOST_NOEXCEPT;
 		protected:
 			void reset(win32::com::SmartPointer<ID2D1Brush> nativeObject) BOOST_NOEXCEPT;
 		private:
 			win32::com::SmartPointer<ID2D1Brush> nativeObject_;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(QT)
 			const std::unique_ptr<QBrush>& asNativeObject() const BOOST_NOEXCEPT;
 		protected:
 			void reset(std::unique_ptr<QBrush>&& nativeObject) BOOST_NOEXCEPT;
 		private:
 			std::unique_ptr<QBrush> nativeObject_;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 			const LOGBRUSH& asNativeObject() const BOOST_NOEXCEPT;
 		protected:
 			void reset(LOGBRUSH&& nativeObject) BOOST_NOEXCEPT;
 		private:
 			LOGBRUSH nativeObject_;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
 			const std::unique_ptr<Gdiplus::Brush>& nativeObject() const BOOST_NOEXCEPT;
 		protected:
 			void reset(std::unique_ptr<Gdiplus::Brush>&& nativeObject) BOOST_NOEXCEPT;

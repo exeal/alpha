@@ -420,7 +420,7 @@ namespace ascension {
 			 * @param arguments The named arguments same as the constructor of @c LineRelativeFourSides class
 			 */
 			template<typename ArgumentPack>
-			inline auto makeLineRelativeFourSides(const ArgumentPack& arguments) -> LineRelativeFourSides<typename detail::DecayOrRefer<decltype(arguments[_over])>::Type> {
+			inline auto makeLineRelativeFourSides(const ArgumentPack& arguments) -> LineRelativeFourSides<typename ascension::detail::DecayOrRefer<decltype(arguments[_over])>::Type> {
 				typedef typename detail::DecayOrRefer<decltype(arguments[_over])>::Type Coordinate;
 				static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_under])>::Type, Coordinate>::value, "");
 				static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_lineLeft])>::Type, Coordinate>::value, "");
@@ -476,9 +476,9 @@ namespace ascension {
 		public:
 			/// Default constructor initializes nothing.
 			AbstractTwoAxesBase() {}
-#ifdef ASCENSION_COMPILER_MSVC
+#ifdef BOOST_COMP_MSVC
 			AbstractTwoAxesBase(const AbstractTwoAxesBase& other) : std::array<T, 2>(other) {}
-#endif	// ASCENSION_COMPILER_MSVC
+#endif	// BOOST_COMP_MSVC
 			/// Constructor takes named parameters as initial values
 			template<typename Arguments>
 			AbstractTwoAxesBase(const Arguments& arguments) {
@@ -507,9 +507,9 @@ namespace ascension {
 		public:
 			/// Default constructor initializes nothing.
 			AbstractTwoAxes() {}
-#ifdef ASCENSION_COMPILER_MSVC
+#ifdef BOOST_COMP_MSVC
 			AbstractTwoAxes(const AbstractTwoAxes& other) : AbstractTwoAxesBase<T>(static_cast<const AbstractTwoAxesBase<T>&>(other)) {}
-#endif	// ASCENSION_COMPILER_MSVC
+#endif	// BOOST_COMP_MSVC
 			/// Constructor takes named parameters (default value is zero).
 			BOOST_PARAMETER_CONSTRUCTOR(
 				AbstractTwoAxes, (AbstractTwoAxesBase<T>), tag,

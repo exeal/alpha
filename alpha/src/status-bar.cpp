@@ -104,6 +104,14 @@ namespace alpha {
 			}
 		}
 
+		void StatusBar::updateDefaultFont() {
+			ascension::win32::AutoZeroSize<NONCLIENTMETRICSW> ncm;
+			::DeleteObject(defaultFont_);
+			::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICSW), &ncm, 0);
+			defaultFont_ = ::CreateFontIndirectW(&ncm.lfStatusFont);
+			adjustPaneWidths();
+		}
+
 		void StatusBar::updateNarrowingStatus() {
 			if(isWindow() && hasFocus()) {
 				const bool narrow = EditorWindows::instance().activePane().visibleBuffer().isNarrowed();

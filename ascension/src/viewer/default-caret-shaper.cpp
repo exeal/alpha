@@ -12,7 +12,7 @@
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/default-caret-shaper.hpp>
 #include <ascension/viewer/viewer.hpp>
-#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/settings.h>
 #endif
 
@@ -73,7 +73,7 @@ namespace ascension {
 			}
 
 			inline std::uint32_t systemDefinedCaretMeasure() {
-#if defined(ASCENSION_OS_WINDOWS)
+#if defined(BOOST_OS_WINDOWS)
 				DWORD width;
 				if(::SystemParametersInfo(SPI_GETCARETWIDTH, 0, &width, 0) == 0)
 					width = 1;	// NT4 does not support SPI_GETCARETWIDTH
@@ -129,7 +129,7 @@ namespace ascension {
 		}
 
 		namespace {
-#ifdef ASCENSION_OS_WINDOWS
+#ifdef BOOST_OS_WINDOWS
 			/// Returns @c true if the specified language is RTL.
 			inline bool isRtlLanguage(LANGID id) BOOST_NOEXCEPT {
 				return id == LANG_ARABIC || id == LANG_FARSI || id == LANG_HEBREW || id == LANG_SYRIAC || id == LANG_URDU;
@@ -142,7 +142,7 @@ namespace ascension {
 #endif // !LANG_LAO
 				return id == LANG_THAI || id == LANG_LAO;
 			}
-#endif // ASCENSION_OS_WINDOWS
+#endif // BOOST_OS_WINDOWS
 
 			/**
 			 * Creates the bitmap for RTL caret.
@@ -240,10 +240,10 @@ namespace ascension {
 
 		/// @see CaretShaper#shape
 		CaretShaper::Shape&& LocaleSensitiveCaretShaper::shape(const Caret& caret, const boost::optional<kernel::Position>& position) const BOOST_NOEXCEPT {
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			const bool inputMethodIsOpen = static_cast<Glib::ustring>(
 				const_cast<TextViewer&>(caret.textViewer()).get_settings()->property_gtk_im_module()) != nullptr;
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_WINDOW_SYSTEM(WIN32)
 			win32::Handle<HIMC>::Type imc(win32::inputMethod(caret.textViewer()));
 			const bool inputMethodIsOpen = win32::boole(::ImmGetOpenStatus(imc.get()));
 #else

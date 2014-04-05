@@ -5,7 +5,7 @@
  */
 
 #include <ascension/viewer/widgetapi/cursor.hpp>
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
 namespace ascension {
 	namespace viewers {
@@ -25,4 +25,4 @@ namespace ascension {
 	}
 }
 
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)

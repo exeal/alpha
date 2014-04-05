@@ -9,9 +9,10 @@
 #define ASCENSION_TYPE_TRAITS_HPP
 
 #include <ascension/config.hpp>
-#if defined(ASCENSION_COMPILER_MSVC) && _MSC_VER >= 1500
+#include <boost/predef.h>
+#if defined(BOOST_COMP_MSVC) && (BOOST_COMP_MSVC >= BOOST_VERSION_NUMBER(9, 0, 0))
 #	include <type_traits>
-#elif defined(ASCENSION_COMPILER_GCC) && __GNUC__ >= 4
+#elif defined(BOOST_COMP_GNUC) && (BOOST_COMP_GNUC >= BOOST_VERSION_NUMBER(4, 0, 0))
 #	include <tr1/type_traits>
 #else
 #	include <boost/tr1/type_traits.hpp>

@@ -9,7 +9,7 @@
 #define VIEWER_OBSERVERS_HPP
 #include <ascension/graphics/geometry.hpp>	// graphics.NativeSize
 #include <ascension/platforms.hpp>
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/windows.hpp>
 #endif
 
@@ -130,7 +130,7 @@ namespace ascension {
 			class InputEventHandler {	// this is not an observer of caret...
 			private:
 				virtual void abortInput() = 0;
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				virtual LRESULT handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed) = 0;
 #endif
 				friend class TextViewer;

@@ -6,7 +6,7 @@
  */
 
 #include <ascension/viewer/viewer.hpp>
-#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>
 
@@ -189,4 +189,4 @@ namespace ascension {
 	}
 }
 
-#endif	// ASCENSION_WINDOW_SYSTEM_GTK
+#endif	// ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)

@@ -8,13 +8,13 @@
 #define ASCENSION_IMAGE_HPP
 #include <ascension/platforms.hpp>
 #include <ascension/graphics/rendering-device.hpp>
-#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 #	include <cairomm/surface.h>
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
 #	include <>
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(QT)
 #	include <QImage.h>
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 #	include <ascension/win32/handle.hpp>
 #endif
 #include <boost/range/iterator_range.hpp>
@@ -44,16 +44,16 @@ namespace ascension {
 			Image(const std::uint8_t* data, const geometry::BasicDimension<std::uint32_t>& size, Format format);
 			Image(std::unique_ptr<std::uint8_t[]> data, const geometry::BasicDimension<std::uint32_t>& size, Format format);
 			Image(const Image& other);
-#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 			explicit Image(Cairo::RefPtr<Cairo::ImageSurface> image, std::unique_ptr<unsigned char[]> data);
 			Cairo::RefPtr<Cairo::ImageSurface> asNativeObject();
 			Cairo::RefPtr<const Cairo::ImageSurface> asNativeObject() const;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(QT)
 			explicit Image(QImage&& image, std::unique_ptr<uchar[]> data);
 			QImage& asNativeObject() BOOST_NOEXCEPT;
 			const QImage& asNativeObject() const BOOST_NOEXCEPT;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 			explicit Image(win32::Handle<HBITMAP>::Type image);
 			win32::Handle<HBITMAP>::Type asNativeObject() const BOOST_NOEXCEPT;
 #endif
@@ -81,15 +81,15 @@ namespace ascension {
 			void initialize(std::unique_ptr<uint8_t[]> data, const geometry::BasicDimension<std::uint32_t>& size, Format format);
 			void initialize(const std::uint8_t* data, const geometry::BasicDimension<std::uint32_t>& size, Format format);
 		private:
-#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 			Cairo::RefPtr<Cairo::ImageSurface> impl_;
 			std::unique_ptr<std::uint8_t[]> buffer_;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
 			CGImageRef impl_;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(QT)
 			QImage impl_;
 			std::unique_ptr<std::uint8_t[]> buffer_;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 			win32::Handle<HBITMAP>::Type impl_;
 			std::unique_ptr<std::uint8_t[], detail::NullDeleter> buffer_;
 #endif

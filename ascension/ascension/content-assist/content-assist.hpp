@@ -15,7 +15,7 @@
 #include <ascension/viewer/viewer-observers.hpp>
 #include <memory>	// std.shared_ptr
 #include <set>
-#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gdkmm/pixbuf.h>
 #endif
 
@@ -38,14 +38,14 @@ namespace ascension {
 		class CompletionProposal {
 		public:
 			typedef
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Glib::RefPtr<Gdk::Pixbuf>
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				QIcon
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::Handle<HICON>::Type
-#elif defined(ASCENSION_WINDOW_SYSTEM_X)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(X)
 #endif
 				Icon;
 		public:

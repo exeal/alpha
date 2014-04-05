@@ -8,7 +8,7 @@
 #define ASCENSION_SCROLLABLE_HPP
 #include <ascension/corelib/range.hpp>
 #include <ascension/viewer/widgetapi/widget.hpp>
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/scrollable.h>
 #endif
 
@@ -43,16 +43,16 @@ namespace ascension {
 				virtual ScrollPosition singleStep() const = 0;
 			};
 
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			typedef Gtk::Scrollable NativeScrollableWidget;	// Gtk.Viewport is preferred?
 			typedef double NativeScrollPosition;
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 			typedef QScrollArea NativeScrollableWidget;
 			typedef int NativeScrollPosition;
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 			typedef NSScrollView NativeScrollableWidget;
 			typedef CGFloat NativeScrollPosition;
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			typedef win32::Window NativeScrollableWidget;
 			typedef int NativeScrollPosition;
 #endif

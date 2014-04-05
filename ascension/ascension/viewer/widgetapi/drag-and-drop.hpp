@@ -9,15 +9,15 @@
 #define ASCENSION_DRAG_AND_DROP_HPP
 #include <ascension/viewer/widgetapi/user-input.hpp>
 #include <ascension/viewer/widgetapi/widget.hpp>
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gdkmm/dragcontext.h>
 #	include <gtkmm/selectiondata.h>
 #	include <gtkmm/targetlist.h>
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #	include <QMimeData>
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #	include <NSPasteboard.h>
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/com/smart-pointer.hpp>
 #	include <ObjIdl.h>
 #	include <ShlObj.h>	// IDragSourceHelper
@@ -38,21 +38,21 @@ namespace ascension {
 			const DropAction DROP_ACTION_COPY = 1 << 0;
 			const DropAction DROP_ACTION_MOVE = 1 << 1;
 			const DropAction DROP_ACTION_LINK = 1 << 2;
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			const DropAction DROP_ACTION_WIN32_SCROLL = 1 << 3;
 #endif
 			DropAction resolveDefaultDropAction(DropAction possibleActions, UserInput::Modifiers modifiers);
 
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			typedef Glib::RefPtr<Gtk::TargetList> NativeMimeData;
 			typedef Glib::RefPtr<const Gtk::TargetList> ConstNativeMimeData;
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 			typedef std::shared_ptr<QMimeData> NativeMimeData;
 			typedef std::shared_ptr<const QMimeData> ConstNativeMimeData;
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 			typedef std::shared_ptr<NSPasteboard> NativeMimeData;
 			typedef std::shared_ptr<const NSPasteboard> ConstNativeMimeData;
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			typedef win32::com::SmartPointer<IDataObject> NativeMimeData;
 			typedef win32::com::SmartPointer<IDataObject> ConstNativeMimeData;
 #else
@@ -61,12 +61,12 @@ namespace ascension {
 			class MimeDataFormats {
 			public:
 				typedef
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 					std::string
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 					QString
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					CLIPFORMAT
 #else
 					ASCENSION_CANT_DETECT_PLATFORM();
@@ -83,7 +83,7 @@ namespace ascension {
 				/// Returns @c true if this object can return a list of URI.
 				virtual bool hasURIs() const BOOST_NOEXCEPT;
 
-#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			public:
 				explicit MimeDataFormats(std::vector<std::string>&& targets);
 			private:
@@ -116,16 +116,16 @@ namespace ascension {
 				bool hasURIs() const BOOST_NOEXCEPT;
 
 			public:
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				explicit MimeData(Gtk::SelectionData& impl);
 			private:
 				std::shared_ptr<Gtk::SelectionData> impl_;
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				explicit MimeData(QMimeData& impl);
 			private:
 				std::shared_ptr<QMimeData> impl_;
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				explicit MimeData(win32::com::SmartPointer<IDataObject> impl);
 			private:
 				win32::com::SmartPointer<IDataObject> impl_;
@@ -140,7 +140,7 @@ namespace ascension {
 				explicit DragContext(Widget::reference source) BOOST_NOEXCEPT : source_(source) {}
 				DropAction defaultAction() const BOOST_NOEXCEPT;
 				DropAction execute(DropAction supportedActions
-#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 					, int mouseButton, GdkEvent* event
 #endif
 				);
@@ -149,15 +149,15 @@ namespace ascension {
 				DropAction supportedActions() const BOOST_NOEXCEPT;
 			private:
 				Widget::reference source_;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Glib::RefPtr<Gdk::DragContext> context_;
 				std::shared_ptr<const MimeData> mimeData_;
 				Glib::RefPtr<Gdk::Pixbuf> icon_;
 				int iconHotspotX_, iconHotspotY_;
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				QDrag impl_;
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::com::SmartPointer<IDataObject> mimeData_;
 				win32::com::SmartPointer<IDragSourceHelper> imageProvider_;
 #else
@@ -224,17 +224,17 @@ namespace ascension {
 			class DragEventAdapter {
 			public:
 				explicit DragEventAdapter(viewers::widgetapi::DropTarget& target) : target_(target) {}
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				void adaptDragLeaveEvent(const Glib::RefPtr<Gdk::DragContext>& context, guint time);
 				bool adaptDragMoveEvent(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
 				bool adaptDropEvent(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				void adaptDragEnterEvent(QDragEnterEvent* event);
 				void adaptDragLeaveEvent(QDragLeaveEvent* event);
 				void adaptDragMoveEvent(QDragMoveEvent* event);
 				void adaptDropEvent(QDropEvent* event);
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				HRESULT adaptDragEnterEvent(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
 				HRESULT adaptDragLeaveEvent();
 				HRESULT adaptDragMoveEvent(DWORD keyState, POINTL location, DWORD* effect);
@@ -244,7 +244,7 @@ namespace ascension {
 #endif
 			private:
 				viewers::widgetapi::DropTarget& target_;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #endif
 			};
 		}

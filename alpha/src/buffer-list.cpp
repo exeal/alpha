@@ -369,7 +369,7 @@ namespace alpha {
 	}
 
 	namespace {
-#if defined(ASCENSION_OS_WINDOWS) && 0
+#if defined(BOOST_OS_WINDOWS) && 0
 		std::basic_string<WCHAR> resolveShortcut(const std::basic_string<WCHAR>& s) {
 			const WCHAR* extension = ::PathFindExtensionW(s.c_str());
 			if(std::wcslen(extension) != 0 && (
@@ -393,7 +393,7 @@ namespace alpha {
 			} else
 				return ascension::kernel::fileio::canonicalizePathName(s.c_str());
 		}
-#endif // ASCENSION_OS_WINDOWS
+#endif // BOOST_OS_WINDOWS
 	}
 #if 0
 	/**

@@ -234,13 +234,16 @@
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\cursor-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\drag-and-drop-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\widget-windows.cpp" />
-    <ClCompile Include="..\src\about-dialog.cpp" />
+    <ClCompile Include="..\src\about-dialog.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\src\ambient.cpp" />
     <ClCompile Include="..\src\application.cpp" />
     <ClCompile Include="..\src\bookmark-dialog.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\src\buffer-bar.cpp" />
     <ClCompile Include="..\src\buffer-list.cpp" />
     <ClCompile Include="..\src\buffer.cpp">
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</RuntimeTypeInfo>
@@ -249,17 +252,36 @@
     <ClCompile Include="..\src\editor-window.cpp">
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="..\src\encodings-dialog.cpp" />
-    <ClCompile Include="..\src\file-dialog.cpp" />
-    <ClCompile Include="..\src\goto-line-dialog.cpp" />
+    <ClCompile Include="..\src\encodings-dialog.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\src\file-dialog.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\src\goto-line-dialog.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\src\input.cpp" />
     <ClCompile Include="..\src\intrinsic.cpp" />
-    <ClCompile Include="..\src\menu.cpp" />
-    <ClCompile Include="..\src\message-box.cpp" />
-    <ClCompile Include="..\src\new-file-format-dialog.cpp" />
-    <ClCompile Include="..\src\print.cpp" />
-    <ClCompile Include="..\src\save-some-buffers-dialog.cpp" />
-    <ClCompile Include="..\src\search.cpp" />
+    <ClCompile Include="..\src\menu.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\src\message-box.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\src\new-file-format-dialog.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\src\print.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\src\save-some-buffers-dialog.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\src\search.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\src\status-bar.cpp" />
     <ClCompile Include="..\src\style.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
@@ -374,6 +396,7 @@
     <ClInclude Include="..\..\ascension\ascension\win32\window.hpp" />
     <ClInclude Include="..\src\ambient.hpp" />
     <ClInclude Include="..\src\application.hpp" />
+    <ClInclude Include="..\src\buffer-bar.hpp" />
     <ClInclude Include="..\src\buffer-list.hpp" />
     <ClInclude Include="..\src\buffer.hpp" />
     <ClInclude Include="..\src\editor-view.hpp" />
@@ -385,6 +408,7 @@
     <ClInclude Include="..\src\resource.h" />
     <ClInclude Include="..\src\save-some-buffers-dialog.hpp" />
     <ClInclude Include="..\src\search.hpp" />
+    <ClInclude Include="..\src\status-bar.hpp" />
     <ClInclude Include="..\src\ui.hpp" />
     <ClInclude Include="..\..\ascension\ascension\config.hpp" />
     <ClInclude Include="..\..\ascension\ascension\platforms.hpp" />

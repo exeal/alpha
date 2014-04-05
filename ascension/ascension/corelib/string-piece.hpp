@@ -19,7 +19,7 @@
 #	include <boost/utility/string_ref.hpp>
 #endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK) || defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO) || defined(ASCENSION_SHAPING_ENGINE_PANGO)
+#if ASCENSION_SUPPORTS_WINDOW_SYSTEM(GTK) || ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO) || ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
 #	include <glib.h>
 #	include <glibmm/ustring.h>
 #endif
@@ -105,7 +105,7 @@ namespace ascension {
 	}
 #endif	// ASCENSION_ABANDONED_AT_VERSION_08
 
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK) || defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO) || defined(ASCENSION_SHAPING_ENGINE_PANGO)
+#if ASCENSION_SUPPORTS_WINDOW_SYSTEM(GTK) || ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO) || ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
 	static_assert(sizeof(StringPiece::value_type) == 2, "");
 	static_assert(sizeof(StringPiece::value_type) == sizeof(gunichar2), "");
 

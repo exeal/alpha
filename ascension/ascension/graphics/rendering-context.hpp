@@ -15,34 +15,34 @@
 #include <ascension/presentation/text-style.hpp>	// presentation.AlignmentBaseline, presentation.TextAnchor
 #include <memory>
 #include <boost/optional.hpp>
-#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 #	include <cairomm/context.h>
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
 #	include <CGContext.h>
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_DIRECT2D)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(DIRECT2D)
 #	include <d2d1.h>
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(QT)
 #	include <QPainter>
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 #	include <ascension/win32/handle.hpp>
 #	include <stack>
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
 #	include <GdiPlus.h>
 #endif
 
 namespace ascension {
 	namespace graphics {
-#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 		typedef Cairo::RefPtr<Cairo::Context> NativeRenderingContext2D;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
 		typedef CGContextRef NativeRenderingContext2D;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_DIRECT2D)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(DIRECT2D)
 		typedef win32::com::SmartPointer<ID2D1RenderTarget> NativeRenderingContext2D;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(QT)
 		typedef QPainter& NativeRenderingContext2D;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 		typedef win32::Handle<HDC>::Type NativeRenderingContext2D;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
 		typedef Gdiplus::Graphics& NativeRenderingContext2D;
 #endif
 
@@ -160,26 +160,26 @@ namespace ascension {
 		class RenderingContext2D : private boost::noncopyable {
 		public:
 			// platform-native interfaces
-#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 			explicit RenderingContext2D(Cairo::RefPtr<Cairo::Context> nativeObject);
 			Cairo::RefPtr<Cairo::Context> asNativeObject();
 			Cairo::RefPtr<const Cairo::Context> asNativeObject() const;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
 			CGContextRef asNativeObject();
 			const CGContextRef asNativeObject() const;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_DIRECT2D)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(DIRECT2D)
 			explicit RenderingContext2D(win32::com::SmartPointer<ID2D1RenderTarget> nativeObject);
 			win32::com::SmartPointer<ID2D1RenderTarget> asNativeObject() const;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(QT)
 			explicit RenderingContext2D(QPainter& nativeObject);	// weak ref.
 			explicit RenderingContext2D(std::unique_ptr<QPainter> nativeObject);
 			explicit RenderingContext2D(std::shared_ptr<QPainter> nativeObject);
 			QPainter& asNativeObject();
 			const QPainter& asNativeObject() const;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 			explicit RenderingContext2D(win32::Handle<HDC>::Type nativeObject);
 			win32::Handle<HDC>::Type asNativeObject() const;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
 			explicit RenderingContext2D(Gdiplus::Graphics& nativeObject);	// weak ref.
 			explicit RenderingContext2D(std::unique_ptr<Gdiplus::Graphics> nativeObject);
 			explicit RenderingContext2D(std::shared_ptr<Gdiplus::Graphics> nativeObject);
@@ -773,15 +773,15 @@ namespace ascension {
 				double startAngle, double endAngle, bool counterClockwise = false);
 			/// @}
 		private:
-#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 			Cairo::RefPtr<Cairo::Context> nativeObject_;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
 			CGContextRef nativeObject_;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_DIRECT2D)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(DIRECT2D)
 			win32::com::SmartPointer<ID2D1RenderTarget> nativeObject_;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(QT)
 			std::shared_ptr<QPainter> nativeObject_;
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 			win32::Handle<HDC>::Type nativeObject_;
 			struct State {
 				State();
@@ -800,7 +800,7 @@ namespace ascension {
 			bool endPath();
 			bool ensureThereIsASubpathFor(const Point& p);
 			void updatePenAndBrush();
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDIPLUS)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
 			std::shared_ptr<Gdiplus::Graphics> nativeObject_;
 #endif
 		};

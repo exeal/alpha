@@ -92,7 +92,6 @@ namespace alpha {
 		Application();
 		// attributes
 		static Application& instance();
-		void textEditorFont(LOGFONTW& font) const /*throw()*/;
 		void setFont(const LOGFONTW& font);
 		ui::MainWindow& window() const BOOST_NOEXCEPT;
 		// operations
@@ -143,12 +142,6 @@ namespace alpha {
 		/* ウィンドウプロシジャ */
 		static LRESULT CALLBACK appWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 #endif
-
-	private:
-		// child windows
-		// GDI objects
-		HFONT editorFont_;	// エディタのフォント
-		HFONT statusFont_;	// ステータスバーのフォント
 	};
 
 
@@ -157,11 +150,6 @@ namespace alpha {
 		static Application singleton;
 		return singleton;
 	}
-
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-	/// Returns the font for text editors.
-	inline void Alpha::textEditorFont(LOGFONTW& font) const throw() {::GetObjectW(editorFont_, sizeof(LOGFONTW), &font);}
-#endif
 
 	namespace ui {
 		/// Returns the search dialog box.

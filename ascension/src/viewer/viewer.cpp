@@ -116,7 +116,7 @@ namespace ascension {
 		 * @param presentation The presentation object
 		 */
 		TextViewer::TextViewer(presentation::Presentation& presentation) :
-#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Glib::ObjectBase("ascension.viewers.TextViewer"),
 #endif
 				presentation_(presentation), mouseInputDisabledCount_(0) {
@@ -130,7 +130,7 @@ namespace ascension {
 		 * more details, see the description of @c TextViewer.
 		 */
 		TextViewer::TextViewer(const TextViewer& other) :
-#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Glib::ObjectBase("ascension.viewers.TextViewer"),
 #endif
 				presentation_(other.presentation_), mouseInputDisabledCount_(0) {
@@ -453,7 +453,7 @@ namespace ascension {
 			void configureScrollBar(TextViewer& viewer, std::size_t coordinate, const boost::optional<widgetapi::NativeScrollPosition>& position,
 					const boost::optional<boost::integer_range<widgetapi::NativeScrollPosition>>& range, const boost::optional<widgetapi::NativeScrollPosition>& pageSize) {
 				assert(coordinate <= 1);
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Glib::RefPtr<Gtk::Adjustment> adjustment((coordinate == 0) ? viewer.get_hadjustment() : viewer.get_vadjustment());
 				if(range) {
 					adjustment->set_lower(*range->begin());
@@ -466,7 +466,7 @@ namespace ascension {
 				}
 				if(position != boost::none)
 					adjustment->set_value(*position);
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				QScrollBar* const scrollBar = (coordinate == 0) ? viewer.horizontalScrollBar() : viewer.verticalScrollBar();
 				if(range != boost::none)
 					scrollBar->setRange(range->beginning(), range->end());
@@ -475,8 +475,8 @@ namespace ascension {
 					scrollBar->setPageStep(*pageSize);
 				if(position != boost::none)
 					scrollBar->setSliderPosition(*position);
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::AutoZeroSize<SCROLLINFO> si;
 				if(range/* != boost::none*/) {
 					si.fMask |= SIF_RANGE;
@@ -498,12 +498,12 @@ namespace ascension {
 
 		/// @see Widget#focusGained
 		void TextViewer::focusGained() {
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// restore the scroll positions
 			const auto scrollPositions(physicalScrollPosition(*this));
 			configureScrollBar(*this, 0, boost::geometry::get<0>(scrollPositions), boost::none, boost::none);
 			configureScrollBar(*this, 1, boost::geometry::get<1>(scrollPositions), boost::none, boost::none);
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
 			// hmm...
 //			if(/*sharedData_->options.appearance[SHOW_CURRENT_UNDERLINE] ||*/ !getCaret().isSelectionEmpty()) {
@@ -884,13 +884,13 @@ namespace ascension {
 //					return false;
 //			}
 			switch(input.keyboardCode()) {
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_BackSpace:
 				case GDK_KEY_F16:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_Backspace:
 				case Qt::Key_F16:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_BACK:
 				case VK_F16:
 #endif
@@ -908,25 +908,25 @@ namespace ascension {
 						break;
 				}
 				break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Clear:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_Clear:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_CLEAR:
 #endif
 					if(input.modifiers() == UserInput::CONTROL_DOWN)
 						EntireDocumentSelectionCreationCommand(*this)();
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Return:
 				case GDK_KEY_KP_Enter:
 				case GDK_KEY_ISO_Enter:
 				case GDK_KEY_3270_Enter:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_Enter:
 				case Qt::Key_Return:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_RETURN:
 #endif
 					switch(input.modifiers()) {
@@ -942,21 +942,21 @@ namespace ascension {
 							break;
 					}
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Escape:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_Escape:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_ESCAPE:
 #endif
 					if(input.modifiers() == 0)
 						CancelCommand(*this)();
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Page_Up:	// 'GDK_KEY_Prior' has same value
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_PageUp:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_PRIOR:
 #endif
 					if(!input.hasModifierOtherThan(UserInput::SHIFT_DOWN))
@@ -966,11 +966,11 @@ namespace ascension {
 							viewport->scrollBlockFlowPage(+1);
 					}
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Page_Down:	// 'GDK_KEY_Next' has same value
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_PageDown:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_NEXT:
 #endif
 					if(!input.hasModifierOtherThan(UserInput::SHIFT_DOWN))
@@ -980,11 +980,11 @@ namespace ascension {
 							viewport->scrollBlockFlowPage(-1);
 					}
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Home:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_Home:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_HOME:
 #endif
 					if(!input.hasModifierOtherThan(UserInput::SHIFT_DOWN | UserInput::CONTROL_DOWN)) {
@@ -994,11 +994,11 @@ namespace ascension {
 							makeCaretMovementCommand(*this, &kernel::locations::beginningOfVisualLine, input.hasModifier(UserInput::SHIFT_DOWN))();
 					}
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_End:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_End:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_END:
 #endif
 					if(!input.hasModifierOtherThan(UserInput::SHIFT_DOWN | UserInput::CONTROL_DOWN)) {
@@ -1008,47 +1008,47 @@ namespace ascension {
 							makeCaretMovementCommand(*this, &kernel::locations::endOfVisualLine, input.hasModifier(UserInput::SHIFT_DOWN))();
 					}
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Left:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_Left:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_LEFT:
 #endif
 					handleDirectionalKey(*this, graphics::PhysicalDirection::LEFT, input.modifiers());
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Up:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_Up:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_UP:
 #endif
 					handleDirectionalKey(*this, graphics::PhysicalDirection::TOP, input.modifiers());
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Right:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_Right:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_RIGHT:
 #endif
 					handleDirectionalKey(*this, graphics::PhysicalDirection::RIGHT, input.modifiers());
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Down:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_Down:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_DOWN:
 #endif
 					handleDirectionalKey(*this, graphics::PhysicalDirection::BOTTOM, input.modifiers());
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Insert:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_Insert:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_INSERT:
 #endif
 					if(!input.hasModifierOtherThan(UserInput::SHIFT_DOWN | UserInput::CONTROL_DOWN)) {
@@ -1060,12 +1060,12 @@ namespace ascension {
 							OvertypeModeToggleCommand(*this)();
 					}
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Delete:
 				case GDK_KEY_KP_Delete:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_Delete:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_DELETE:
 #endif
 					switch(input.modifiers()) {
@@ -1080,125 +1080,125 @@ namespace ascension {
 							break;
 					}
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_A:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_A:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case 'A':
 #endif
 					if(input.modifiers() == UserInput::CONTROL_DOWN)
 						EntireDocumentSelectionCreationCommand(*this)();	// ^A -> Select All
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_C:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_C:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case 'C':
 #endif
 					if(input.modifiers() == UserInput::CONTROL_DOWN)
 						copySelection(caret(), true);	// ^C -> Copy
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_H:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_H:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case 'H':
 #endif
 					if(input.modifiers() == UserInput::CONTROL_DOWN)
 						CharacterDeletionCommand(*this, Direction::BACKWARD)(), true;	// ^H -> Backspace
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_I:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_I:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case 'I':
 #endif
 					if(input.modifiers() == UserInput::CONTROL_DOWN)
 						CharacterInputCommand(*this, 0x0009u)();	// ^I -> Tab
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_J:
 				case GDK_KEY_M:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_J:
 				case Qt::Key_M:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case 'J':
 				case 'M':
 #endif
 					if(input.modifiers() == UserInput::CONTROL_DOWN)
 						NewlineCommand(*this, false)();	// ^J or ^M -> New Line
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_V:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_V:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case 'V':
 #endif
 					if(input.modifiers() == UserInput::CONTROL_DOWN)
 						PasteCommand(*this, false)();	// ^V -> Paste
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_X:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_X:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case 'X':
 #endif
 					if(input.modifiers() == UserInput::CONTROL_DOWN)
 						cutSelection(caret(), true);	// ^X -> Cut
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Y:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_Y:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case 'Y':
 #endif
 					if(input.modifiers() == UserInput::CONTROL_DOWN)
 						UndoCommand(*this, true)();	// ^Y -> Redo
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Z:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_Z:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case 'Z':
 #endif
 					if(input.modifiers() == UserInput::CONTROL_DOWN)
 						UndoCommand(*this, false)();	// ^Z -> Undo
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_KP_5:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_5:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_NUMPAD5:
 #endif
 					if(input.modifiers() == UserInput::CONTROL_DOWN) {
-#ifdef ASCENSION_WINDOW_SYSTEM_QT
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 						if(hasModifier<Qt::KeypadModifier>(input))
 #endif
 						EntireDocumentSelectionCreationCommand(*this)();
 					}
 					break;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_F12:
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_F12:
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_F12:
 #endif
 					if(input.modifiers() == (UserInput::CONTROL_DOWN | UserInput::SHIFT_DOWN))
 						CodePointToCharacterConversionCommand(*this)();
 					break;
 
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				case GDK_KEY_Undo:
 					UndoCommand(*this, false)();
 					break;
@@ -1222,7 +1222,7 @@ namespace ascension {
 				case GDK_KEY_Paste:
 					PasteCommand(*this, false)();
 					break;
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				case Qt::Key_Copy:
 					copySelection(caret(), true);
 					break;
@@ -1232,7 +1232,7 @@ namespace ascension {
 				case Qt::Key_Paste:
 					PasteCommand(*this, false)();
 					break;
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				case VK_SHIFT:
 					if(input.hasModifier(UserInput::CONTROL_DOWN)) {
 						if(::GetKeyState(VK_LSHIFT) < 0 && configuration_.readingDirection == RIGHT_TO_LEFT)
@@ -1546,7 +1546,7 @@ namespace ascension {
 			if(renderer_.get() == nullptr)
 				return;
 			textRenderer().viewport()->setBoundsInView(textAreaContentRectangle());
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// notify the tooltip
 			win32::AutoZeroSize<TOOLINFOW> ti;
 			const graphics::Rectangle viewerBounds(widgetapi::bounds(*this, false));
@@ -1554,7 +1554,7 @@ namespace ascension {
 			ti.uId = 1;
 			ti.rect = viewerBounds;
 			::SendMessageW(toolTip_.get(), TTM_NEWTOOLRECT, 0, reinterpret_cast<LPARAM>(&ti));
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			rulerPainter_->update();
 			if(rulerPainter_->alignment() != graphics::PhysicalDirection::LEFT && rulerPainter_->alignment() != graphics::PhysicalDirection::TOP) {
 //				recreateCaret();
@@ -1621,11 +1621,11 @@ namespace ascension {
 				}
 #endif
 				if(synchronizeUI) {
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 					if(get_direction() != Gtk::TEXT_DIR_NONE)
 						set_direction((configuration_.readingDirection == presentation::LEFT_TO_RIGHT) ? Gtk::TEXT_DIR_LTR : Gtk::TEXT_DIR_RTL);
 //					set_placement();
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					LONG style = ::GetWindowLongW(handle().get(), GWL_EXSTYLE);
 					if(configuration_.readingDirection == LEFT_TO_RIGHT) {
 						style &= ~(WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR);
@@ -1693,7 +1693,7 @@ namespace ascension {
 //			checkInitialization();
 
 			hideToolTip();
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			if(timeToWait == -1)
 				timeToWait = ::GetDoubleClickTime();
 			tipText_.assign(text);
@@ -1920,7 +1920,7 @@ namespace ascension {
 			void scrollBarParameters(const TextViewer& viewer,
 					std::size_t coordinate, widgetapi::NativeScrollPosition* position,
 					boost::integer_range<widgetapi::NativeScrollPosition>* range, widgetapi::NativeScrollPosition* pageSize) {
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				const Glib::RefPtr<const Gtk::Adjustment> adjustment((coordinate == 0) ? viewer.get_hadjustment() : viewer.get_vadjustment());
 				if(range != nullptr)
 					*range = boost::irange(adjustment->get_lower(), adjustment->get_upper());
@@ -1929,7 +1929,7 @@ namespace ascension {
 //					*pageSize = adjustment->get_page_size();
 				if(position != nullptr)
 					*position = adjustment->get_value();
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				const QScrollBar* const scrollBar = (coordinate == geometry::X_COORDINATE) ? viewer.horizontalScrollBar() : viewer.verticalScrollBar();
 				if(range != nullptr)
 					*range = boost::irange(scrollBar->minimum(), scrollBar->maximum());
@@ -1937,8 +1937,8 @@ namespace ascension {
 					*pageSize = scrollBar->pageStep();
 				if(position != nullptr)
 					*position = scrollBar->sliderPosition();
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::AutoZeroSize<SCROLLINFO> si;
 				si.fMask = SIF_PAGE | SIF_POS | SIF_RANGE;
 				if(win32::boole(::GetScrollInfo(viewer.handle().get(), (coordinate == 0) ? SB_HORZ : SB_VERT, &si)))
@@ -2015,10 +2015,10 @@ namespace ascension {
 				widgetapi::scheduleRedraw(*this, boundsToScroll, false);	// repaint all if the amount of the scroll is over a page
 			else {
 				// scroll image by BLIT
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				textAreaWindow_->scroll(geometry::x(scrollOffsetsInPixels), geometry::y(scrollOffsetsInPixels));
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				::ScrollWindowEx(handle().get(),
 					geometry::x(scrollOffsetsInPixels), geometry::y(scrollOffsetsInPixels), nullptr, &static_cast<RECT>(boundsToScroll), nullptr, nullptr, SW_INVALIDATE);
 #else

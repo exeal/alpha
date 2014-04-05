@@ -288,7 +288,7 @@ namespace ascension {
 				graphics::Rectangle screenBounds(viewers::widgetapi::bounds(viewers::widgetapi::desktop(), false));
 				screenBounds = viewers::widgetapi::mapFromGlobal(*textViewer_, screenBounds);
 				Dimension size;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Gtk::TreeView* view = static_cast<Gtk::TreeView*>(proposalsPopup_->get_child());
 				assert(view != nullptr);
 				Gtk::TreeModel::Path startPath, endPath;
@@ -296,7 +296,7 @@ namespace ascension {
 				Gdk::Rectangle cellArea;
 				view->get_cell_area(startPath, *view->get_column(0/*1*/), cellArea);
 				const Scalar itemHeight = static_cast<Scalar>(cellArea.get_height());
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				const LRESULT listItemHeight = ::SendMessageW(proposalsPopup_->handle().get(), LB_GETITEMHEIGHT, 0, 0);
 				if(listItemHeight == LB_ERR)
 					throw makePlatformError();

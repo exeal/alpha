@@ -41,6 +41,7 @@ namespace alpha {
 			ascension::Index columnStartValue_;
 			boost::signals2::connection selectedBufferAccessibleRegionChangedConnection_, bufferSelectionChangedConnection_;
 #ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+			ascension::win32::Handle<HFONT>::Type defaultFont_;
 			manah::win32::gdi::Font font_;
 			manah::win32::Object<HICON, ::DestroyIcon> narrowingIcon_;
 #endif

@@ -9,7 +9,7 @@
 
 #include <ascension/viewer/caret.hpp>
 
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #include <ascension/viewer/viewer.hpp>
 #include <ascension/corelib/text/character-property.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
@@ -730,4 +730,4 @@ void viewers::cutSelection(Caret& caret, bool useKillRing) {
 	}
 }
 
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)

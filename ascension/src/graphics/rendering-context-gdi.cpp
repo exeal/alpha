@@ -9,7 +9,7 @@
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <boost/math/special_functions/round.hpp>	// boost.iround
-#ifdef ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 
 namespace ascension {
 	namespace graphics {
@@ -883,4 +883,4 @@ namespace ascension {
 	}
 }
 
-#endif // ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI
+#endif // ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)

@@ -206,18 +206,24 @@ namespace ascension {
 					if(pointSize < 0.0)
 						throw std::underflow_error("pointSize");
 				}
-#if defined(ASCENSION_SHAPING_ENGINE_CORE_GRAPHICS)
-#elif defined(ASCENSION_SHAPING_ENGINE_CORE_TEXT)
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(CORE_GRAPHICS)
+#endif
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(CORE_TEXT)
 				// TODO: Write CTFontDescriptor conversions.
-#elif defined(ASCENSION_SHAPING_ENGINE_DIRECT_WRITE)
-#elif defined(ASCENSION_SHAPING_ENGINE_HARFBUZZ)
-#elif defined(ASCENSION_SHAPING_ENGINE_PANGO)
+#endif
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(DIRECT_WRITE)
+#endif
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(HARFBUZZ)
+#endif
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
 				explicit FontDescription(const Pango::FontDescription& nativeObject);
 				Pango::FontDescription&& asNativeObject() const;
-#elif defined(ASCENSION_SHAPING_ENGINE_QT)
+#endif
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(QT)
 				explicit FontDescription(const QFontInfo& nativeObject);
 				QFontInfo&& asNativeObject() const;
-#elif defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDIPLUS)
+#endif
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SUPPORTS_SHAPING_ENGINE(WIN32_GDI) || ASCENSION_SUPPORTS_SHAPING_ENGINE(WIN32_GDIPLUS)
 				explicit FontDescription(const LOGFONTW& nativeObject);
 				LOGFONTW&& asNativeObject() const;
 #endif
