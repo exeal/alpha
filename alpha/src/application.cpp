@@ -84,7 +84,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 	if(::GetLastError() != ERROR_ALREADY_EXISTS || ascension::win32::boole(::GetAsyncKeyState(VK_CONTROL) & 0x8000)) {
 		::OleInitialize(nullptr);	// STA に入る + 高水準サービスの初期化
 		std::atexit(&alpha::callOleUninitialize);
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		ascension::win32::ui::initCommonControls(ICC_COOL_CLASSES | ICC_PAGESCROLLER_CLASS | ICC_WIN95_CLASSES);
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		alpha::ambient::Interpreter::instance().install();
 		alpha::ambient::Interpreter::instance().toplevelPackage();
 		std::unique_ptr<alpha::Application> application(new alpha::Application());
