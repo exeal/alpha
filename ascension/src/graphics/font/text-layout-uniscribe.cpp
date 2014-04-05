@@ -560,7 +560,7 @@ namespace ascension {
 					AttributedCharacterRange() {}
 					AttributedCharacterRange(StringPiece::const_iterator position,
 						const Attribute& attribute) : position(position), attribute(attribute) {}
-#if defined(ASCENSION_COMPILER_MSVC) && 0
+#if defined(BOOST_COMP_MSVC) && 0
 					AttributedCharacterRange& operator=(AttributedCharacterRange&& other) BOOST_NOEXCEPT {
 						position = other.position;
 						attribute = move(other.attribute);

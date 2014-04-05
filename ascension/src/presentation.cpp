@@ -12,9 +12,9 @@
 #include <ascension/presentation/text-style.hpp>
 #include <ascension/rules.hpp>
 #include <boost/foreach.hpp>
-#ifdef ASCENSION_OS_WINDOWS
+#ifdef BOOST_OS_WINDOWS
 #include <shellapi.h>	// ShellExecuteW
-#endif // ASCENSION_OS_WINDOWS
+#endif // BOOST_OS_WINDOWS
 //using graphics::font::TextRenderer;
 
 
@@ -778,7 +778,7 @@ namespace ascension {
 					return PRECEDING + uri_ + FOLLOWING;
 				}
 				void invoke() const BOOST_NOEXCEPT {
-#ifdef ASCENSION_OS_WINDOWS
+#ifdef BOOST_OS_WINDOWS
 					::ShellExecuteW(nullptr, nullptr, uri_.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 #else
 #endif

@@ -12,7 +12,7 @@
 #include <sstream>	// std.ostringstream
 #include <string>	// std.string
 #include <system_error>
-#if defined(ASCENSION_OS_WINDOWS)
+#if defined(BOOST_OS_WINDOWS)
 #	include <windows.h>	// DWORD, GetLastError
 #elif defined(ASCENSION_OS_POSIX)
 #	include <cerrno>
@@ -65,7 +65,7 @@ namespace ascension {
 		explicit UnknownValueException(const std::string& message) : invalid_argument(message) {}
 	};
 
-#if defined(ASCENSION_OS_WINDOWS)
+#if defined(BOOST_OS_WINDOWS)
 	inline std::system_error makePlatformError(DWORD code = ::GetLastError()) {
 		std::string message;
 		void* buffer;
@@ -109,7 +109,7 @@ namespace ascension {
 		const Code code_;
 	};
 
-#if defined(ASCENSION_OS_WINDOWS)
+#if defined(BOOST_OS_WINDOWS)
 	template<typename Base = std::runtime_error>
 	class PlatformDependentError : public IntegralError<DWORD, Base> {
 	public:

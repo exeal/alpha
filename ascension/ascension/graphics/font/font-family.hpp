@@ -17,28 +17,28 @@
 #include <functional>	// std.hash
 #include <memory>		// std.unique_ptr, std.shared_ptr
 #include <boost/operators.hpp>
-#if defined(ASCENSION_SHAPING_ENGINE_CAIRO)
+#if ASCENSION_SELECTS_SHAPING_ENGINE(CAIRO)
 #	include <cairomm.h>
-#elif defined(ASCENSION_SHAPING_ENGINE_CORE_GRAPHICS)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(CORE_GRAPHICS)
 #	include <CGFont.h>
-#elif defined(ASCENSION_SHAPING_ENGINE_CORE_TEXT)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(CORE_TEXT)
 #	include <CTFont.h>
-#elif defined(ASCENSION_SHAPING_ENGINE_DIRECT_WRITE)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)
 #	include <dwrite.h>
-#elif defined(ASCENSION_SHAPING_ENGINE_HARFBUZZ)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(HARFBUZZ)
 #	include <hb.h>
 #	include <boost/intrusive_ptr.hpp>
 namespace boost {
 	inline void intrusive_ptr_add_ref(hb_font_t* p) {::hb_font_reference(p);}
 	inline void intrusive_ptr_release(hb_font_t* p) {::hb_font_destroy(p);}
 }
-#elif defined(ASCENSION_SHAPING_ENGINE_PANGO)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(PANGO)
 #	include <pangomm.h>
-#elif defined(ASCENSION_SHAPING_ENGINE_QT)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(QT)
 #	include <QFont>
-#elif defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
 #	include <ascension/win32/handle.hpp>	// win32.Handle
-#elif defined(ASCENSION_SHAPING_ENGINE_WIN32_GDIPLUS)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
 #	include <GdiPlus.h>
 #endif
 
@@ -78,18 +78,18 @@ namespace ascension {
 					MONOSPACE	///< 'monospace' font family.
 				};
 			public:
-#if defined(ASCENSION_SHAPING_ENGINE_DIRECT_WRITE)
+#if ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)
 				explicit FontFamily(const String& name);
 				explicit FontFamily(win32::com::SmartPointer<IDWriteFontFamily> nativeObject);
 				win32::com::SmartPointer<IDWriteFontFamily> asNativeObject() const;
-#elif defined(ASCENSION_SHAPING_ENGINE_PANGO)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(PANGO)
 				explicit FontFamily(const String& name);
 				explicit FontFamily(Glib::RefPtr<Pango::FontFamily> nativeObject);
 				Glib::RefPtr<Pango::FontFamily> asNativeObject();
 				Glib::RefPtr<const Pango::FontFamily> asNativeObject() const;
-#elif defined(ASCENSION_SHAPING_ENGINE_WIN32_GDIPLUS)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
 				explicit FontFamily(const String& name);
-				explicit FontFamily(std::unique_ptr<Gdiplus::FontFamily>&& nativeObject);
+				explicit FontFamily(std::unique_ptr<Gdiplus::FontFamily> nativeObject);
 				explicit FontFamily(std::shared_ptr<Gdiplus::FontFamily> nativeObject);
 				explicit FontFamily(Gdiplus::FontFamily& nativeObject);	// weak ref.
 				std::shared_ptr<Gdiplus::FontFamily> asNativeObject() BOOST_NOEXCEPT;
@@ -121,11 +121,11 @@ namespace ascension {
 				 */
 				String name(const std::locale& lc = std::locale::classic()) const BOOST_NOEXCEPT;
 			private:
-#if defined(ASCENSION_SHAPING_ENGINE_DIRECT_WRITE)
+#if ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)
 				win32::com::SmartPointer<IDWriteFontFamily> nativeObject_;
-#elif defined(ASCENSION_SHAPING_ENGINE_PANGO)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(PANGO)
 				Glib::RefPtr<Pango::FontFamily> nativeObject_;
-#elif defined(ASCENSION_SHAPING_ENGINE_WIN32_GDIPLUS)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
 				std::shared_ptr<Gdiplus::FontFamily> nativeObject_;
 #else
 				const String name_;

@@ -9,7 +9,7 @@
 
 #include <ascension/viewer/viewer.hpp>
 
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #define ASCENSION_TEST_TEXT_STYLES
 
 #include <ascension/graphics/font/font-metrics.hpp>
@@ -1583,4 +1583,4 @@ void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, bool 
 		::DeleteMenu(toplevelPopup.get(), c--, MF_BYPOSITION);
 }
 
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)

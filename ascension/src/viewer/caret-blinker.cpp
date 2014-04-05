@@ -6,7 +6,7 @@
 
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/viewer.hpp>
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/settings.h>
 #endif
 
@@ -14,14 +14,14 @@ namespace ascension {
 	namespace viewers {
 		namespace {
 			inline boost::optional<unsigned int> systemBlinkTimeInMilliseconds(TextViewer& viewer) {
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				const Glib::RefPtr<const Gtk::Settings> settings(viewer.get_settings());
 				if(!settings->property_gtk_cursor_blink().get_value())
 					return boost::none;
 				return settings->property_gtk_cursor_blink_time().get_value();
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				const UINT ms = ::GetCaretBlinkTime();
 				if(ms == 0)
 					throw makePlatformError();

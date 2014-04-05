@@ -162,12 +162,12 @@ namespace ascension {
 
 		/// Returns the default encoder.
 		Encoder& Encoder::defaultInstance() BOOST_NOEXCEPT {
-//#ifdef ASCENSION_OS_WINDOWS
+//#ifdef BOOST_OS_WINDOWS
 //			return convertWin32CPtoMIB(::GetACP());
 //#else
 			static std::unique_ptr<Encoder> instance(forMIB(fundamental::UTF_8));
 			return *instance;
-//#endif // ASCENSION_OS_WINDOWS
+//#endif // BOOST_OS_WINDOWS
 		}
 
 		std::shared_ptr<const EncoderFactory> Encoder::find(MIBenum mib) BOOST_NOEXCEPT {
@@ -236,7 +236,7 @@ namespace ascension {
 			return (factory.get() != nullptr) ? factory->create() : std::unique_ptr<Encoder>();
 		}
 
-#ifdef ASCENSION_OS_WINDOWS
+#ifdef BOOST_OS_WINDOWS
 		/**
 		 * Returns the encoder which has the given Win32 code page.
 		 * @param codePage The code page
@@ -246,7 +246,7 @@ namespace ascension {
 			// TODO: not implemented.
 			return std::unique_ptr<Encoder>();
 		}
-#endif // ASCENSION_OS_WINDOWS
+#endif // BOOST_OS_WINDOWS
 
 		/**
 		 * Converts the given string from UTF-16 into the native encoding.
@@ -465,7 +465,7 @@ namespace ascension {
 			return nullptr;
 		}
 
-#ifdef ASCENSION_OS_WINDOWS
+#ifdef BOOST_OS_WINDOWS
 		/**
 		 * Returns the encoding detector which has the given Windows code page.
 		 * @param codePage The code page
@@ -483,7 +483,7 @@ namespace ascension {
 					return std::shared_ptr<const EncodingDetector>();
 			}
 		}
-#endif // ASCENSION_OS_WINDOWS
+#endif // BOOST_OS_WINDOWS
 
 		std::vector<std::shared_ptr<const EncodingDetector>>& EncodingDetector::registry() {
 			static std::vector<std::shared_ptr<const EncodingDetector>> singleton;

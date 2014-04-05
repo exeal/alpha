@@ -10,13 +10,13 @@
 
 #include <ascension/graphics/geometry.hpp>	// graphics.Point
 #include <ctime>
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-#	include <gdkmm.h>
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#	include <gdkmm/types.h>
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #	error not implemented.
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #	include <QInputEvent>
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/windows.hpp>
 #endif
 
@@ -55,18 +55,18 @@ namespace ascension {
 				/// @var COMMAND_DOWN The Command key is down. Only for Mac OS X.
 
 				static const KeyboardModifier
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-					SHIFT_DOWN = GDK_SHIFT_MASK,
-					CONTROL_DOWN = GDK_CONTROL_MASK,
-					ALT_DOWN = GDK_MOD1_MASK,
-					META_DOWN = GDK_META_MASK
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+					SHIFT_DOWN = Gdk::SHIFT_MASK,
+					CONTROL_DOWN = Gdk::CONTROL_MASK,
+					ALT_DOWN = Gdk::MOD1_MASK,
+					META_DOWN = Gdk::META_MASK
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 					SHIFT_DOWN = Qt::ShiftModifier,
 					CONTROL_DOWN = Qt::ControlModifier,
 					ALT_DOWN = Qt::AltModifier,
 					META_DOWN = Qt::MetaModifier
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					SHIFT_DOWN = MOD_SHIFT,
 					CONTROL_DOWN = MOD_CONTROL,
 					ALT_DOWN = MOD_ALT,
@@ -93,20 +93,20 @@ namespace ascension {
 				/// @var BUTTON5_DOWN The Mouse Button5 (usually X2 button) is down.
 
 				static const MouseButton
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-					BUTTON1_DOWN = GDK_BUTTON1_MASK,
-					BUTTON2_DOWN = GDK_BUTTON2_MASK,
-					BUTTON3_DOWN = GDK_BUTTON3_MASK,
-					BUTTON4_DOWN = GDK_BUTTON4_MASK,
-					BUTTON5_DOWN = GDK_BUTTON5_MASK
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+					BUTTON1_DOWN = Gdk::BUTTON1_MASK,
+					BUTTON2_DOWN = Gdk::BUTTON2_MASK,
+					BUTTON3_DOWN = Gdk::BUTTON3_MASK,
+					BUTTON4_DOWN = Gdk::BUTTON4_MASK,
+					BUTTON5_DOWN = Gdk::BUTTON5_MASK
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 					BUTTON1_DOWN = Qt::LeftButton,
 					BUTTON2_DOWN = Qt::RightButton,
 					BUTTON3_DOWN = Qt::MiddleButton,
 					BUTTON4_DOWN = Qt::ExtraButton1,
 					BUTTON5_DOWN = Qt::ExtraButton2
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					BUTTON1_DOWN = MK_LBUTTON,
 					BUTTON2_DOWN = MK_RBUTTON,
 					BUTTON3_DOWN = MK_MBUTTON,
@@ -202,11 +202,11 @@ namespace ascension {
 			public:
 				/// Keyboard codes.
 				/// @note Corresponds to @c Qt#Key in Qt.
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				typedef guint Code;	// GDK_KEY_* in gdk/gdkkeysyms.h
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				typedef int Code;	// Qt.Key
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				typedef WORD Code;	// VK_* in WinUser.h
 #elif 0
 				typedef std::uint32_t Code;

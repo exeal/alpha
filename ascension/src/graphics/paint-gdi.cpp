@@ -7,7 +7,7 @@
  */
 
 #include <ascension/graphics/paint.hpp>
-#ifdef ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 
 namespace ascension {
 	namespace graphics {
@@ -34,4 +34,4 @@ namespace ascension {
 	}
 }
 
-#endif // !ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI
+#endif // !ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)

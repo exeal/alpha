@@ -172,7 +172,7 @@ namespace ascension {
 			private:
 				std::uint8_t computeMaximumDigitsForLineNumbers() const BOOST_NOEXCEPT;
 				void computeAllocationWidth() BOOST_NOEXCEPT;
-#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI) && 0
 				void updateGDIObjects() BOOST_NOEXCEPT;
 #endif
 			private:
@@ -184,7 +184,7 @@ namespace ascension {
 					computedIndicatorMarginContentWidth_, computedLineNumbersContentWidth_,
 					computedLineNumbersPaddingStart_, computedLineNumbersPaddingEnd_;
 				boost::value_initialized<std::uint8_t> computedLineNumberDigits_;
-#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI) && 0
 				win32::Handle<HPEN> indicatorMarginPen_, lineNumbersPen_;
 				win32::Handle<HBRUSH> indicatorMarginBrush_, lineNumbersBrush_;
 				const bool enablesDoubleBuffering_;

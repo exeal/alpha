@@ -8,7 +8,7 @@
 
 #include <ascension/graphics/font/font.hpp>
 
-#if defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
+#if ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/config.hpp>
 #include <vector>
@@ -263,4 +263,4 @@ namespace ascension {
 	}
 }
 
-#endif	// defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI)
+#endif	// ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)

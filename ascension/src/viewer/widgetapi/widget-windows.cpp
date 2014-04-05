@@ -6,7 +6,7 @@
 
 #include <ascension/viewer/widgetapi/widget.hpp>
 
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/win32/windows.hpp>
 #include <ShellAPI.h>
@@ -265,4 +265,4 @@ double widgetapi::windowOpacity(const NativeWidget& widget) {
 	return ((flags & LWA_ALPHA) != 0) ? alpha / 255.0 : 1.0;
 }
 
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)

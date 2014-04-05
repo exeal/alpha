@@ -5,9 +5,9 @@
  */
 
 #include <ascension/viewer/widgetapi/cursor.hpp>
-#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #include <ascension/graphics/image.hpp>
-#ifdef ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDI)
 #	include <ascension/graphics/rendering-context.hpp>
 #	include <cairomm/win32_surface.h>
 #endif
@@ -21,9 +21,9 @@ namespace ascension {
 			Cursor::Cursor(const graphics::Image& shape,
 					const boost::optional<graphics::geometry::BasicPoint<Cursor::Coordinate>>& hotspot /* = boost::none */) {
 				Cairo::RefPtr<Cairo::Surface> surface;
-#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 				surface = shape.asNativeObject();
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 				const std::unique_ptr<graphics::RenderingContext2D> context(graphics::Screen::instance().createGraphicsContext());
 				const win32::Handle<HDC>::Type dc(context->asNativeObject());
 				HBITMAP oldBitmap = static_cast<HBITMAP>(::SelectObject(dc.get(), shape.asNativeObject().get()));
@@ -38,7 +38,7 @@ namespace ascension {
 #else
 #endif
 
-#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 				::SelectObject(dc.get(), oldBitmap);
 #endif
 			}
@@ -60,4 +60,4 @@ namespace ascension {
 	}
 }
 
-#endif // ASCENSION_WINDOW_SYSTEM_GTK
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)

@@ -7,7 +7,7 @@
  */
 
 #include <ascension/graphics/image.hpp>
-#ifdef ASCENSION_GRAPHICS_SYSTEM_CAIRO
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 
 #include <ascension/corelib/basic-exceptions.hpp>
 #include <ascension/graphics/rendering-context.hpp>
@@ -111,4 +111,4 @@ namespace ascension {
 		}
 	}
 }
-#endif	// ASCENSION_GRAPHICS_SYSTEM_CAIRO
+#endif	// ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)

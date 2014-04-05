@@ -108,7 +108,7 @@ namespace ascension {
 				std::shared_ptr<const graphics::font::Font> oldFont(context.font());
 				context.setFont(font);
 /*
-#if defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE)
+#if ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE)
 				SCRIPT_STRING_ANALYSIS ssa;
 				win32::AutoZero<SCRIPT_CONTROL> sc;
 				win32::AutoZero<SCRIPT_STATE> ss;
@@ -152,9 +152,9 @@ namespace ascension {
 			}
 	
 			inline std::uint16_t platformIndicatorMarginWidthInPixels(bool horizontalLayout) {
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				return 15;	// TODO: Not implemented.
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #if 1
 				const int width = ::GetSystemMetrics(horizontalLayout ? SM_CYHSCROLL : SM_CXVSCROLL);
 				return static_cast<std::uint16_t>(width != 0) ? width : 15;
@@ -401,7 +401,7 @@ namespace ascension {
 					// TODO: paint glyphs.
 				}
 
-#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI) && 0
 				graphics::Scalar left;
 				HDC dcex;
 				if(enablesDoubleBuffering_) {
@@ -557,14 +557,14 @@ namespace ascension {
 				// TODO: Is this method need?
 				computedLineNumberDigits_ = boost::value_initialized<std::uint8_t>();
 				computeAllocationWidth();
-#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI) && 0
 				updateGDIObjects();
 				if(enablesDoubleBuffering_ && memoryBitmap_.get() != nullptr)
 					memoryBitmap_.reset();
 #endif
 			}
 
-#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && 0
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI) && 0
 			///
 			void RulerPainter::updateGDIObjects() BOOST_NOEXCEPT {
 				indicatorMarginPen_.reset();

@@ -13,19 +13,19 @@
 #include <ascension/graphics/font/glyph-vector.hpp>
 #include <ascension/graphics/font/text-hit.hpp>
 #include <boost/optional.hpp>
-#if defined(ASCENSION_SHAPING_ENGINE_CORE_TEXT)
+#if ASCENSION_SELECTS_SHAPING_ENGINE(CORE_TEXT)
 #	include <CTRun.h>
-#elif defined(ASCENSION_SHAPING_ENGINE_DIRECT_WRITE)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)
 #	include <dwrite.h>
-#elif defined(ASCENSION_SHAPING_ENGINE_HARF_BUZZ)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(HARF_BUZZ)
 #	include <hb.h>
-#elif defined(ASCENSION_SHAPING_ENGINE_PANGO)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(PANGO)
 #	include <pangomm.h>
-#elif defined(ASCENSION_SHAPING_ENGINE_QT)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(QT)
 #	include <QGlyphRun>
-#elif defined(ASCENSION_SHAPING_ENGINE_UNISCRIBE)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE)
 #	include <usp10.h>
-#elif defined(ASCENSION_SHAPING_ENGINE_WIN32_GDI) || defined(ASCENSION_SHAPING_ENGINE_WIN32_GDIPLUS)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
 #	include <ascension/win32/windows.hpp>
 #endif
 

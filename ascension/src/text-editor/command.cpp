@@ -698,7 +698,7 @@ namespace ascension {
 			 * @retval false The system didn't support the input method
 			 */
 			bool InputMethodOpenStatusToggleCommand::perform() {
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				if(win32::Handle<HIMC>::Type imc = win32::inputMethod(target()))
 					return win32::boole(::ImmSetOpenStatus(imc.get(), !win32::boole(::ImmGetOpenStatus(imc.get()))));
 #else
@@ -719,7 +719,7 @@ namespace ascension {
 			 * @retval false The system didn't support the input method
 			 */
 			bool InputMethodSoftKeyboardModeToggleCommand::perform() {
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				if(win32::Handle<HIMC>::Type imc = win32::inputMethod(target())) {
 					DWORD conversionMode, sentenceMode;
 					if(win32::boole(::ImmGetConversionStatus(imc.get(), &conversionMode, &sentenceMode))) {
@@ -892,7 +892,7 @@ namespace ascension {
 				bool succeeded = false;
 				viewers::Caret& caret = viewer.caret();
 				if(!caret.isSelectionRectangle()) {
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					if(win32::Handle<HIMC>::Type imc = win32::inputMethod(viewer)) {
 						if(!win32::boole(::ImmGetOpenStatus(imc.get())))	// without this, IME may ignore us?
 							::ImmSetOpenStatus(imc.get(), true);

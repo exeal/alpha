@@ -13,9 +13,6 @@
 #include <ascension/viewer/viewer-observers.hpp>
 #include <ascension/viewer/visual-point.hpp>
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
-#	include <ascension/win32/com/smart-pointer.hpp>	// win32.com.SmartPointer
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
 
 namespace ascension {
 
@@ -39,7 +36,7 @@ namespace ascension {
 		/// Clipboard Win32 API was failed.
 		class ClipboardException : public std::system_error {
 		public:
-#ifdef ASCENSION_OS_WINDOWS
+#ifdef BOOST_OS_WINDOWS
 			typedef HRESULT NativeErrorCode;
 #else
 			typedef void NativeErrorCode;
@@ -91,10 +88,10 @@ namespace ascension {
 			/// @name Clipboard
 			/// @{
 			bool canPaste(bool useKillRing) const BOOST_NOEXCEPT;
-#ifdef ASCENSION_OS_WINDOWS
+#ifdef BOOST_OS_WINDOWS
 			LCID clipboardLocale() const BOOST_NOEXCEPT;
 			LCID setClipboardLocale(LCID newLocale);
-#endif // SCENSION_OS_WINDOWS
+#endif // BOOST_OS_WINDOWS
 			/// @}
 
 			/// @name The Matched Braces/Brackets
@@ -163,7 +160,7 @@ namespace ascension {
 			void moved(const kernel::Position& from) BOOST_NOEXCEPT;
 			// detail.InputEventHandler
 			void abortInput();
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			LRESULT handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
 			void onChar(CodePoint c, bool& consumed);
 			void onImeComposition(WPARAM wp, LPARAM lp, bool& consumed);
@@ -196,9 +193,9 @@ namespace ascension {
 				boost::optional<kernel::Position> positionBeforeUpdate_;
 			};
 			std::unique_ptr<SelectionAnchor> anchor_;
-#ifdef ASCENSION_OS_WINDOWS
+#ifdef BOOST_OS_WINDOWS
 			LCID clipboardLocale_;
-#endif // ASCENSION_OS_WINDOWS
+#endif // BOOST_OS_WINDOWS
 			CharacterInputSignal characterInputSignal_;
 			InputModeChangedSignal inputModeChangedSignal_;
 			MatchBracketsChangedSignal matchBracketsChangedSignal_;

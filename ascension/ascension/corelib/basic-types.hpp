@@ -17,7 +17,7 @@
 #	include <cstdint>
 #else
 #	ifdef ASCENSION_HAS_CSTDINT
-#		if defined(ASCENSION_OS_AIX) || defined(ASCENSION_OS_BSD4) || defined(ASCENSION_OS_HPUX)
+#		if defined(BOOST_OS_AIX) || defined(BOOST_OS_BSD) || defined(BOOST_OS_HPUX)
 #			include <inttypes.h>
 #		else
 #			include <stdint.h>
@@ -26,9 +26,9 @@
 #endif
 #ifdef ASCENSION_CUSTOM_SHARED_PTR_HPP
 #	include ASCENSION_CUSTOM_SHARED_PTR_HPP
-#elif defined(ASCENSION_COMPILER_MSVC) && _MSC_VER >= 1500
+#elif defined(BOOST_COMP_MSVC) && BOOST_COMP_MSVC >= BOOST_VERSION_NUMBER(9, 0, 0)
 #	include <memory>
-#elif defined(ASCENSION_COMPILER_GCC) && __GNUC__ >= 4
+#elif defined(BOOST_COMP_GNUC) && BOOST_COMP_GNUC >= BOOST_VERSION_NUMBER(4, 0, 0)
 #	include <tr1/memory>
 #else
 #	include <boost/tr1/memory.hpp>
@@ -97,7 +97,7 @@ namespace ascension {
 	using ::uint16_t;
 	using ::uint32_t;
 	using ::uint64_t;
-#	elif defined(ASCENSION_COMPILER_MSVC)
+#	elif defined(BOOST_COMP_MSVC)
 	typedef signed char int8_t;
 	typedef short int16_t;
 	typedef long int32_t;

@@ -8,7 +8,7 @@
  */
 
 #include <ascension/platforms.hpp>
-#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 
 #include <ascension/content-assist/default-content-assistant.hpp>
 #include <ascension/viewer/widgetapi/widget.hpp>
@@ -128,4 +128,4 @@ namespace ascension {
 	}
 }
 
-#endif // ASCENSION_WINDOW_SYSTEM_GTK
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)

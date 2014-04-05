@@ -113,7 +113,7 @@ namespace ascension {
 		class DocumentInput {
 		public:
 			typedef
-#ifdef ASCENSION_OS_WINDOWS
+#ifdef BOOST_OS_WINDOWS
 				std::wstring
 #else // ASCENSION_OS_POSIX
 				std::string

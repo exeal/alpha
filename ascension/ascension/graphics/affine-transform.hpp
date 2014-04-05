@@ -9,13 +9,16 @@
 #include <ascension/graphics/geometry.hpp>
 #include <boost/operators.hpp>
 //#include <boost/math/constants/constants.hpp>	// boost.math.constants.pi
-#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)
 #	include <cairomm/matrix.h>
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
 #	include <CGAffineTransform.h>
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(QT)
 #	include <QMatrix>
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDI)
 #	include <ascension/win32/windows.hpp>
 #endif
 
@@ -73,25 +76,28 @@ namespace ascension {
 						(tx, (value_type))
 						(ty, (value_type))))
 
-#if defined(ASCENSION_GRAPHICS_SYSTEM_CAIRO)
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)
 				AffineTransform(const Cairo::Matrix& native) :
 					AffineTransformBase(native.xx, native.yx, native.xy, native.yy, native.x0, native.y0) {}
 				operator Cairo::Matrix() const {
 					return Cairo::Matrix(scaleX(), shearY(), shearX(), scaleY(), translateX(), translateY());
 				}
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_CORE_GRAPHICS)
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
 				AffineTransform(const CGAffineTransform& native) :
 					AffineTransformBase(native.a, native.b, native.c, native.d, native.tx, native.ty) {}
 				operator CGAffineTransform() const {
 					return ::CGAffineTransformMake(scaleX(), shearY(), shearX(), scaleY(), translateX(), translateY());
 				}
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_QT)
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(QT)
 				AffineTransform(const QMatrix& native) :
 					AffineTransformBase(native.m11(), native.m21(), native.m12(), native.m22, native.dx(), native.dy()) {}
 				operator QMatrix() const {
 					return QMatrix(scaleX(), shearY(), shearX(), scaleY(), translateX(), translateY());
 				}
-#elif defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI)
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDI)
 				AffineTransform(const XFORM& native) :
 					AffineTransformBase(native.eM11, native.eM21, native.eM12, native.eM22, native.eDx, native.eDy) {}
 				operator XFORM() const {
@@ -102,7 +108,6 @@ namespace ascension {
 					};
 					return temp;
 				}
-#else
 #endif
 
 				/// @name Factories For Known Transformations

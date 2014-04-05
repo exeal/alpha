@@ -9,13 +9,13 @@
 
 #include <ascension/graphics/geometry.hpp>
 #include <ascension/platforms.hpp>
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gdkmm/cursor.h>
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #	include <QCursor>
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #	include <NSCursor.h>
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/windows.hpp>
 #endif
 #include <boost/optional.hpp>
@@ -35,13 +35,13 @@ namespace ascension {
 				typedef std::uint16_t Coordinate;
 				/// Defines system-defined cursor types.
 				typedef
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 					Gdk::CursorType
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 					Qt::CursorShape
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 					???
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					LPCWSTR
 #else
 					ASCENSION_CANT_DETECT_PLATFORM();
@@ -66,15 +66,15 @@ namespace ascension {
 				/// Copy-assignment operator.
 				Cursor& operator=(const Cursor& other);
 				/// Returns the underlying native object.
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Glib::RefPtr<Gdk::Cursor> asNativeObject() BOOST_NOEXCEPT {return impl_;}
 				/// Returns the underlying native object.
 				Glib::RefPtr<const Gdk::Cursor>
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				const QCursor&
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 				NSCursor???
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::Handle<HCURSOR>::Type
 #else
 				ASCENSION_CANT_DETECT_PLATFORM();
@@ -103,13 +103,13 @@ namespace ascension {
 				static void show();
 
 			private:
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Glib::RefPtr<Gdk::Cursor>
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				QCursor
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 				NSCursor
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::Handle<HCURSOR>::Type
 #else
 				ASCENSION_CANT_DETECT_PLATFORM();

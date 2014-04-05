@@ -18,10 +18,10 @@
 #include <ascension/viewer/widgetapi/widget.hpp>
 #include <memory>	// std.unique_ptr
 #include <utility>	// std.pair
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/com/smart-pointer.hpp>
 #	include <ascension/win32/com/unknown-impl.hpp>
 #	include <shlobj.h>	// IDragSourceHelper
@@ -43,9 +43,9 @@ namespace ascension {
 
 		// the documentation is user-input.cpp
 		class DefaultMouseInputStrategy : public MouseInputStrategy,
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::com::IUnknownImpl<ASCENSION_WIN32_COM_INTERFACE(IDropSource), win32::com::NoReferenceCounting>,
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				private HasTimer, private widgetapi::DropTarget {
 		public:
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -96,7 +96,7 @@ namespace ascension {
 			void uninstall();
 			// HasTimer
 			void timeElapsed(Timer& timer);
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// IDropSource
 			STDMETHODIMP QueryContinueDrag(BOOL escapePressed, DWORD keyState);
 			STDMETHODIMP GiveFeedback(DWORD effect);
@@ -105,7 +105,7 @@ namespace ascension {
 			STDMETHODIMP DragOver(DWORD keyState, POINTL pt, DWORD* effect);
 			STDMETHODIMP DragLeave();
 			STDMETHODIMP Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect);
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		private:
 			TextViewer* viewer_;
 			enum {
@@ -121,9 +121,9 @@ namespace ascension {
 			} selection_;
 			struct DragAndDrop {
 				Index numberOfRectangleLines;
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::com::SmartPointer<IDragSourceHelper> dragSourceHelper;
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			} dnd_;
 			std::unique_ptr<widgetapi::Widget::value_type> autoScrollOriginMark_;
 			const presentation::hyperlink::Hyperlink* lastHoveredHyperlink_;

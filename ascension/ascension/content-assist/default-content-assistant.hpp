@@ -13,17 +13,17 @@
 #include <ascension/content-assist/content-assist.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/presentation/writing-mode.hpp>
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/liststore.h>
 #	include <gtkmm/scrolledwindow.h>
 #	include <gtkmm/treeview.h>
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #	include <???>
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #	include <QListView>
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/window.hpp>
-#elif defined(ASCENSION_WINDOW_SYSTEM_X)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(X)
 #	include <???>
 #endif
 #include <map>
@@ -96,15 +96,15 @@ namespace ascension {
 			};
 			std::unique_ptr<CompletionSession> completionSession_;
 			class CompletionProposalsPopup : public
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Gtk::ScrolledWindow
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 				???
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				QListView
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::SubclassedWindow
-#elif defined(ASCENSION_WINDOW_SYSTEM_X)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(X)
 				???
 #endif
 			{
@@ -117,7 +117,7 @@ namespace ascension {
 				void setWritingMode(const presentation::WritingMode& writingMode);
 //				bool start(const std::set<const CompletionProposal*>& proposals);
 			private:
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Gtk::TreeView view_;
 				Glib::RefPtr<Gtk::ListStore> model_;
 				struct ColumnRecord : Gtk::TreeModel::ColumnRecord {
@@ -126,14 +126,14 @@ namespace ascension {
 					Gtk::TreeModelColumn<Glib::ustring> displayString;
 					Gtk::TreeModelColumn<std::shared_ptr<const CompletionProposal>> proposalObject;
 				} columns_;
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				LRESULT processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
 				void setFont(const HFONT newFont);
 				void updateDefaultFont();
 				HFONT defaultFont_;
-#elif defined(ASCENSION_WINDOW_SYSTEM_X)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(X)
 #endif
 			private:
 				CompletionProposalsUI& ui_;

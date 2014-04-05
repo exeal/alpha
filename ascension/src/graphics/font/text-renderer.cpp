@@ -138,11 +138,13 @@ namespace ascension {
 				layouts_.reset(new LineLayoutVector(presentation.document(),
 					std::bind(&TextRenderer::generateLineLayout, this, std::placeholders::_1), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
 				updateComputedBlockFlowDirectionChanged();	// this initializes 'computedBlockFlowDirection_'
-#if defined(ASCENSION_OS_WINDOWS)
+#if defined(BOOST_OS_WINDOWS)
 				LOGFONTW lf;
 				if(::GetObjectW(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)), sizeof(LOGFONTW), &lf) == 0)
 					throw makePlatformError();
 				defaultFont_ = std::make_shared<Font>(win32::Handle<HFONT>::Type(::CreateFontIndirectW(&lf), &::DeleteObject));
+#else
+				// TODO: Not implemented.
 #endif
 				assert(defaultFont_.get() != nullptr);
 				presentation::FlowRelativeFourSides<presentation::Length> zeroSpaces;
@@ -262,7 +264,7 @@ namespace ascension {
 					return;
 //				}
 
-#if defined(ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI) && ASCENSION_ABANDONED_AT_VERSION_08
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI) && ASCENSION_ABANDONED_AT_VERSION_08
 				// TODO: this code uses deprecated terminologies for text coordinates.
 
 				const TextLayout& layout = layouts().at(line);

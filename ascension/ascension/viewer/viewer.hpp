@@ -21,9 +21,9 @@
 #include <algorithm>
 #include <array>
 #include <set>
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <glibmm/property.h>
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/com/smart-pointer.hpp>
 #	include <ascension/win32/com/unknown-impl.hpp>
 #	include <shlobj.h>	// IDropTargetHelper
@@ -41,9 +41,9 @@
 #		include <tom.h>
 #	endif // !ASCENSION_NO_TEXT_OBJECT_MODEL
 #endif
-#ifndef ASCENSION_WINDOW_SYSTEM_WIN32
+#if !ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/corelib/timer.hpp>
-#endif	// !ASCENSION_WINDOW_SYSTEM_WIN32
+#endif	// !ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
 
 namespace ascension {
@@ -69,7 +69,7 @@ namespace ascension {
 	}
 
 	namespace viewers {
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
 		namespace detail {
 			class AbstractAccessibleProxy : public IAccessible {
 			public:
@@ -79,7 +79,7 @@ namespace ascension {
 		}
 #endif
 
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		namespace detail {
 			class TextViewerScrollableProperties : public Gtk::Widget {
 			protected:
@@ -102,13 +102,13 @@ namespace ascension {
 				// Gtk.TextView inherits Gtk.Container (which inherits Gtk.Widget) and Gtk.Scrollable.
 				// QPlainTextEdit and QTextEdit inherit QAbstractScrollArea.
 				// NSTextView inherits NSText (which inherits NSView).
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				public detail::TextViewerScrollableProperties, public Gtk::Scrollable,
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				public QAbstractScrollArea,
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 				public NSView,
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				public win32::CustomControl,
 				public win32::com::IUnknownImpl<
 					ASCENSION_WIN32_COM_INTERFACE(IDropTarget), win32::com::NoReferenceCounting
@@ -225,7 +225,7 @@ namespace ascension {
 			void showCaret() BOOST_NOEXCEPT;
 			/// @}
 
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
 			/// @name Global IME (Only Windows)
 			/// @{
 			void enableActiveInputMethod(bool enable = true) BOOST_NOEXCEPT;
@@ -236,12 +236,12 @@ namespace ascension {
 			/// @name Other User Interface
 			/// @{
 			void beep() BOOST_NOEXCEPT;
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
 			HRESULT accessibleObject(IAccessible*& acc) const BOOST_NOEXCEPT;
 #endif
 			void hideToolTip();
 			void showToolTip(const String& text, unsigned long timeToWait = -1, unsigned long timeRemainsVisible = -1);
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_TEXT_SERVICES_FRAMEWORK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_TEXT_SERVICES_FRAMEWORK)
 			HRESULT startTextServices();
 #endif
 			/// @}
@@ -303,11 +303,11 @@ namespace ascension {
 			/// @}
 
 		private:
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// base.Widget
 			void provideClassInformation(ClassInformation& classInformation) const;
 			std::basic_string<WCHAR> provideClassName() const;
-#endif	// defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#endif	// ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// kernel.DocumentListener
 			void documentAboutToBeChanged(const kernel::Document& document);
 			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
@@ -353,7 +353,7 @@ namespace ascension {
 
 			/// @name Overridable Widget Events (Platform-dependent)
 			/// @{
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			virtual void get_preferred_height_for_width_vfunc(int width, int& minimumHeight, int& naturalHeight) const override;
 			virtual void get_preferred_height_vfunc(int& minimumHeight, int& naturalHeight) const override;
 			virtual void get_preferred_width_vfunc(int& minimumWidth, int& naturalWidth) const override;
@@ -378,7 +378,7 @@ namespace ascension {
 			virtual bool on_key_release_event(GdkEventKey* event) override;
 			virtual bool on_motion_notify_event(GdkEventMotion* event) override;
 			virtual bool on_scroll_event(GdkEventScroll* event) override;
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 			virtual void contextMenuEvent(QContextMenuEvent* event) override;
 			virtual void focusInEvent(QFocusEvent* event) override;
 			virtual void focusOutEvent(QFocusEvent* event) override;
@@ -392,7 +392,7 @@ namespace ascension {
 			virtual void resizeEvent(QResizeEvent* event) override;
 			virtual void timerEvent(QTimerEvent* event) override;
 			virtual void wheelEvent(QWheelEvent* event) override;
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			virtual void onCaptureChanged(const win32::Handle<HWND>::Type& newWindow, bool& consumed);
 			virtual void onCommand(WORD id, WORD notifyCode, const win32::Handle<HWND>::Type& control, bool& consumed);
 			virtual void onDestroy(bool& consumed);
@@ -443,19 +443,19 @@ namespace ascension {
 			// data members
 		private:
 			// big stars
-#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			Glib::RefPtr<Gdk::Window> textAreaWindow_, rulerWindow_;
-#endif	// ASCENSION_WINDOW_SYSTEM_GTK
+#endif	// ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			presentation::Presentation& presentation_;
 			std::unique_ptr<Caret> caret_;
 			std::shared_ptr<CaretShaper> caretShaper_;
 			std::unique_ptr<Renderer> renderer_;
 			Configuration configuration_;
 			std::set<VisualPoint*> points_;
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			win32::Handle<HWND>::Type toolTip_;
 			std::basic_string<WCHAR> tipText_;
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// strategies and listeners
 			std::shared_ptr<MouseInputStrategy> mouseInputStrategy_;
 			std::shared_ptr<widgetapi::DropTarget> dropTargetHandler_;
@@ -463,7 +463,7 @@ namespace ascension {
 			ascension::detail::Listeners<ViewportListener> viewportListeners_;
 			std::unique_ptr<detail::RulerPainter> rulerPainter_;
 			std::unique_ptr<contentassist::ContentAssistant> contentAssistant_;
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
 			win32::com::SmartPointer<detail::AbstractAccessibleProxy> accessibleProxy_;
 #endif
 			boost::signals2::scoped_connection caretMotionConnection_,
@@ -471,12 +471,12 @@ namespace ascension {
 
 			// modes
 			struct ModeState {
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
 				bool activeInputMethodEnabled;	// true if uses Global IME (deprecated)
 #endif
 
 				ModeState() BOOST_NOEXCEPT
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
 					: activeInputMethodEnabled(true)
 #endif
 				{}
@@ -523,10 +523,9 @@ namespace ascension {
 			// input state
 			std::unique_ptr<CaretBlinker> caretBlinker_;	// null when the caret is set to invisible
 			unsigned long mouseInputDisabledCount_;
-#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			std::shared_ptr<GtkIMContext> inputMethodContext_;
-#endif
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			win32::com::SmartPointer<IDropTargetHelper> dropTargetHelper_;
 			win32::com::SmartPointer<IDataObject> draggingData_;
 #else
@@ -602,7 +601,7 @@ namespace ascension {
 		/// Returns the document.
 		inline const kernel::Document& TextViewer::document() const {return presentation_.document();}
 		
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
 		/**
 		 * Enables Global IME. This setting effects under only Windows NT 4.0. Otherwise, Ascension
 		 * does not use Global IME.
@@ -636,7 +635,7 @@ namespace ascension {
 			return caretBlinker_.get() == nullptr;
 		}
 		
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_INPUT_METHOD_MANAGER)
 		/// Returns @c true if Global IME is enabled.
 		inline bool TextViewer::isActiveInputMethodEnabled() const BOOST_NOEXCEPT {
 			return modeState_.activeInputMethodEnabled;

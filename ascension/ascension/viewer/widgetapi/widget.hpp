@@ -12,12 +12,12 @@
 #include <ascension/graphics/rendering-device.hpp>	// graphics.RenderingDevice, ...
 //#include <ascension/viewer/widgetapi/drag-and-drop.hpp>
 #include <ascension/viewer/widgetapi/user-input.hpp>
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/widget.h>
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #	include <QWidget>
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/window.hpp>	// win32.Window
 #	include <ObjIdl.h>	// IDataObject
 #endif
@@ -42,25 +42,25 @@ namespace ascension {
 			};
 
 			struct Widget : WidgetOrWindowBase<
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Gtk::Widget, Glib::RefPtr
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				QWidget, std::shared_ptr
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 				NSView, ???
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::Window, std::shared_ptr
 #endif
 			> {};
 
 			struct Window : WidgetOrWindowBase<
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Gdk::Window, Glib::RefPtr
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				QWindow, std::shared_ptr
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 				NSWindow, ???
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				win32::Window, std::shared_ptr
 #endif
 			> {};
@@ -359,7 +359,7 @@ namespace ascension {
 				};
 				enum Style {WIDGET = 0};
 				typedef
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					std::shared_ptr<std::remove_pointer<HWND>::type>
 #endif
 					Identifier;
@@ -404,27 +404,27 @@ namespace ascension {
 				virtual void resizing();
 				virtual void showContextMenu(const base::LocatedUserInput& input, bool byKeyboard);
 				virtual void visibilityChanged(bool visible);
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				virtual LRESULT handleWindowSystemEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
 #endif
 				// window system specific
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #endif
 			private:
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				// Gtk.Widget
 				virtual void on_drag_leave(const Glib::RefPtr<Gdk::DragContext>& context, guint time);
 				virtual bool on_drag_motion(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
 				virtual bool on_drag_drop(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time);
 				virtual void on_drag_data_received(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, const SelectionData& selection_data, guint info, guint time);
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				// QWidget
 				virtual void dragEnterEvent(QDragEnterEvent* event);
 				virtual void dragLeaveEvent(QDragLeaveEvent* event);
 				virtual void dragMoveEvent(QDragMoveEvent* event);
 				virtual void dropEvent(QDropEvent* event);
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				// IDropTarget
 				virtual STDMETHODIMP DragEnter(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect);
 				virtual STDMETHODIMP DragOver(DWORD keyState, POINTL pt, DWORD* effect);
@@ -434,19 +434,19 @@ namespace ascension {
 
 			private:
 				Identifier identifier_;
-#ifndef ASCENSION_WINDOW_SYSTEM_QT
+#if !ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				bool acceptsDrops_;
-#endif // !ASCENSION_WINDOW_SYSTEM_QT
+#endif // !ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 			};
 
 		}
 #endif // 0
 	}
 
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 	namespace win32 {
 		inline Handle<HIMC>::Type inputMethod(const viewers::widgetapi::Proxy<Widget> widget) {
 			return Handle<HIMC>::Type(::ImmGetContext(widget.handle().get()),

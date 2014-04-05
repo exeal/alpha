@@ -7,7 +7,7 @@
  */
 
 #include <ascension/platforms.hpp>
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
 #include <ascension/content-assist/default-content-assistant.hpp>
 #include <ascension/viewer/caret.hpp>
@@ -211,4 +211,4 @@ void DefaultContentAssistant::nextProposal(int proposals) {
 	}
 }
 
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)

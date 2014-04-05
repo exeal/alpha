@@ -7,7 +7,7 @@
  */
 
 #include <ascension/graphics/image.hpp>
-#ifdef ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 
 #include <ascension/corelib/basic-exceptions.hpp>	// PlatformDependentError
 #include <ascension/graphics/rendering-context.hpp>
@@ -139,4 +139,4 @@ namespace ascension {
 		}
 	}
 }
-#endif	// ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI
+#endif	// ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)

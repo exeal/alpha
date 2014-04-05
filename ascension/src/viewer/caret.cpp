@@ -129,9 +129,9 @@ namespace ascension {
 		 */
 		Caret::Caret(TextViewer& viewer, const kernel::Position& position /* = kernel::Position(0, 0) */) BOOST_NOEXCEPT : VisualPoint(viewer, position, nullptr),
 				anchor_(new SelectionAnchor(viewer, position)),
-#ifdef ASCENSION_OS_WINDOWS
+#ifdef BOOST_OS_WINDOWS
 				clipboardLocale_(::GetUserDefaultLCID()),
-#endif // ASCENSION_OS_WINDOWS
+#endif // BOOST_OS_WINDOWS
 				overtypeMode_(false), autoShow_(true), matchBracketsTrackingMode_(DONT_TRACK) {
 			document().addListener(*this);
 			textViewer().addDisplaySizeListener(*this);
@@ -574,7 +574,7 @@ namespace ascension {
 			}
 			assert(image.get() != nullptr);
 
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			::DestroyCaret();
 			::CreateCaret(viewer.handle().get(), image->asNativeObject().get(), 0, 0);
 			::ShowCaret(viewer.handle().get());
@@ -678,7 +678,7 @@ namespace ascension {
 				boost::geometry::assign_values(newLocation,
 					static_cast<int>(graphics::geometry::x(p)) - graphics::geometry::x(shapeCache_.alignmentPoint),
 					static_cast<int>(graphics::geometry::y(p)) - graphics::geometry::y(shapeCache_.alignmentPoint));
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			::SetCaretPos(boost::geometry::get<0>(newLocation), boost::geometry::get<1>(newLocation));
 #else
 			ASCENSION_CANT_DETECT_PLATFORM();
@@ -1232,24 +1232,24 @@ namespace ascension {
 			/// Returns MIME data format for rectangle text.
 			widgetapi::MimeDataFormats::Format rectangleTextMimeDataFormat() {
 #ifndef ASCENSION_RECTANGLE_TEXT_MIME_FORMAT
-#	if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#	if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #		define ASCENSION_RECTANGLE_TEXT_MIME_FORMAT "text/x-ascension-rectangle"
-#	elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#	elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #		define ASCENSION_RECTANGLE_TEXT_MIME_FORMAT "text/x-ascension-rectangle"
-#	elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#	elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #		error Not implemented.
-#	elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#	elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #		define ASCENSION_RECTANGLE_TEXT_MIME_FORMAT L"MSDEVColumnSelect"
 #	endif
 #endif // !ASCENSION_RECTANGLE_TEXT_MIME_FORMAT
 				
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				return std::string(ASCENSION_RECTANGLE_TEXT_MIME_FORMAT);
-#elif defined(ASCENSION_WINDOW_SYSTEM_QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				return QString::fromLatin1(ASCENSION_RECTANGLE_TEXT_MIME_FORMAT);
-#elif defined(ASCENSION_WINDOW_SYSTEM_QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #		error Not implemented.
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				static boost::optional<CLIPFORMAT> registered;
 				if(!registered) {
 					if(0 == (registered = static_cast<CLIPFORMAT>(::RegisterClipboardFormatW(ASCENSION_RECTANGLE_TEXT_MIME_FORMAT))))

@@ -7,7 +7,7 @@
  */
 
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>
-#ifdef ASCENSION_WINDOW_SYSTEM_GTK
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 
 #include <ascension/graphics/image.hpp>
 #include <boost/foreach.hpp>
@@ -138,7 +138,7 @@ namespace ascension {
 			}
 
 			void DragContext::setImage(const graphics::Image& image, const graphics::geometry::BasicPoint<uint32_t>& hotspot) {
-#ifdef ASCENSION_GRAPHICS_SYSTEM_CAIRO
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 				Glib::RefPtr<Gdk::Pixbuf> icon(Gdk::Pixbuf::create(image.asNativeObject(), 0, 0, image.width(), image.height()));
 #else
 				Glib::RefPtr<Gdk::Pixbuf> icon(Gdk::Pixbuf::create_from_data(
@@ -167,4 +167,4 @@ namespace ascension {
 	}
 }
 
-#endif	// ASCENSION_WINDOW_SYSTEM_GTK
+#endif	// ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)

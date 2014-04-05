@@ -8,9 +8,10 @@
 #define ASCENSION_TIMER_HPP
 #include <ascension/platforms.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#include <boost/config.hpp>	// BOOST_NOEXCEPT
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <glibmm/main.h>
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/windows.hpp>
 #endif
 
@@ -57,9 +58,9 @@ namespace ascension {
 		void start(unsigned int milliseconds, HasTimer& object) {
 			stop();
 			object_ = &object;
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			Glib::signal_timeout().connect_once(sigc::mem_fun(*this, &Timer::function), milliseconds);
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			identifier_ = ::SetTimer(nullptr, 0, milliseconds, &function);
 			if(identifier_ == 0)
 				throw makePlatformError();
@@ -69,11 +70,11 @@ namespace ascension {
 		}
 		void stop();
 	private:
-#if defined(ASCENSION_WINDOW_SYSTEM_GTK)
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		void function() {
 			object_->timeElapsed(*this);
 		}
-#elif defined(ASCENSION_WINDOW_SYSTEM_WIN32)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		static void CALLBACK function(HWND, UINT, UINT_PTR identifier, DWORD);
 #else
 			ASCENSION_CANT_DETECT_PLATFORM();
