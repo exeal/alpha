@@ -344,7 +344,7 @@ wstring KeyStroke::format(py::object keys) {
 			return false;
 		}
 
-#if defined(ASCENSION_WINDOW_SYSTEM_WIN32) && 0
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && 0
 /***/
 bool InputManager::input(const MSG& message) {
 	if((message.message == WM_KEYDOWN || message.message == WM_SYSKEYDOWN) && message.wParam != VK_PROCESSKEY) {

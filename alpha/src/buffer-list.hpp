@@ -12,7 +12,7 @@
 #include <ascension/kernel/fileio.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/text-editor/session.hpp>
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/ui/menu.hpp>
 #	include <ascension/win32/ui/common-controls.hpp>
 #else
@@ -86,7 +86,7 @@ namespace alpha {
 		Buffer& getConcreteDocument(ascension::kernel::Document& document) const;
 		const Buffer& getConcreteDocument(const ascension::kernel::Document& document) const;
 		void fireDisplayNameChanged(const ascension::kernel::Document& buffer);
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		static UINT_PTR CALLBACK openFileNameHookProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 		void recalculateBufferBarSize();
 #endif

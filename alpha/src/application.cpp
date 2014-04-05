@@ -32,7 +32,7 @@
 #	include <CommCtrl.h>	// InitMUILanguage
 #	include <Ole2.h>		// OleInitialize, OleUninitialize
 #endif
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <CommDlg.h>	// ChooseFontW
 #	include <Dlgs.h>
 #endif
@@ -131,7 +131,7 @@ namespace alpha {
 #endif // BOOST_OS_WINDOWS
 
 namespace alpha {
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 	namespace {
 		/// Hook procedure for @c ChooseFontW.
 		UINT_PTR CALLBACK chooseFontHookProc(HWND dialog, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -147,7 +147,7 @@ namespace alpha {
 			return 0;
 		}
 	} // namespace @0
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
 	// Application ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -160,7 +160,7 @@ namespace alpha {
 	/// Shows font-chooser user interface and changes the font of the selected editor.
 	void Application::changeFont() {
 		EditorView& activeView = EditorPanes::instance().activePane().selectedView();
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		LOGFONTW font;
 		ascension::win32::AutoZeroSize<CHOOSEFONTW> cf;
 
@@ -184,7 +184,7 @@ namespace alpha {
 #endif
 	}
 
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 	/// @see alpha#win32#Application#initInstance
 	bool Application::initInstance(int showCommand) {
 		// setup the script engine
@@ -328,7 +328,7 @@ namespace alpha {
 		applicationWindow.setFocus();
 		return true;
 	}
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
 	/// Loads settings from the file.
 	void Application::loadSettings() {
@@ -420,7 +420,7 @@ void Alpha::registerScriptEngineAssociations() {
 		char keyName[30];
 
 		// バーの可視性の保存
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		ascension::win32::AutoZero<REBARBANDINFOW> rbbi;
 		rbbi.fMask = RBBIM_STYLE;
 		rebar_.getBandInfo(rebar_.idToIndex(IDC_TOOLBAR), rbbi);
@@ -428,7 +428,7 @@ void Alpha::registerScriptEngineAssociations() {
 		rebar_.getBandInfo(rebar_.idToIndex(IDC_BUFFERBAR), rbbi);
 		writeIntegerProfile(L"View", L"visibleBufferBar", ascension::win32::boole(rbbi.fStyle & RBBS_HIDDEN) ? 0 : 1);
 		writeIntegerProfile(L"View", L"visibleStatusBar", statusBar_.isVisible() ? 1 : 0);
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
 		// 検索文字列履歴の保存
 		const ascension::searcher::TextSearcher& s = BufferList::instance().editorSession().textSearcher();
@@ -464,7 +464,7 @@ void Alpha::registerScriptEngineAssociations() {
 
 /// 全てのエディタと一部のコントロールに新しいフォントを設定
 void Application::setFont(const LOGFONTW& font) {
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 	LOGFONTW lf = font;
 
 	lf.lfWeight = FW_NORMAL;
@@ -502,7 +502,7 @@ void Application::setFont(const LOGFONTW& font) {
 
 	// 等幅 <-> 可変幅で表記を変える必要がある
 	statusBar_.adjustPaneWidths();
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 }
 #if 0
 /// ツールバーの初期化 (1 回しか呼び出してはならない)
@@ -634,7 +634,7 @@ void Alpha::setupToolbar() {
 }
 #endif
 
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 /// @see Window::onCommand
 bool Alpha::onCommand(WORD id, WORD notifyCode, HWND control) {
 	EditorWindows::instance().activePane().showBuffer(BufferList::instance().at(id));
@@ -1003,7 +1003,7 @@ void Alpha::onTimer(UINT timerID) {
 */		getMainWindow().killTimer(ID_TIMER_MOUSEMOVE);
 	}
 }
-#endif // ASCENSION_WINDOW_SYSTEM_WIN32
+#endif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
 	bool Application::teardown(bool callHook /* = true */) {
 		if(callHook) {

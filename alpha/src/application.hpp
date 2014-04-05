@@ -11,7 +11,7 @@
 #include "buffer.hpp"
 //#include "search.hpp"	// ui.SearchDialog
 #include "status-bar.hpp"
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include "win32/module.hpp"
 #endif
 //#include <ascension/win32/ui/common-controls.hpp>
@@ -78,7 +78,7 @@ namespace alpha {
 		private:
 			std::unique_ptr<ui::SearchDialog> searchDialog_;
 			StatusBar statusBar_;
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			manah::win32::ui::Rebar rebar_;		// rebar
 			manah::win32::ui::Toolbar toolbar_;	// standard toolbar
 #endif
@@ -118,7 +118,7 @@ namespace alpha {
 	protected:
 		void onToolExecuteCommand();
 	protected:
-#ifdef ASCENSION_WINDOW_SYSTEM_WIN32
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		bool onCommand(WORD id, WORD notifyCode, HWND control);						// WM_COMMAND
 		void onCopyData(HWND window, const COPYDATASTRUCT& cds);					// WM_COPYDATA
 		void onDestroy();															// WM_DESTROY
