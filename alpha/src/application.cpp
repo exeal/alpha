@@ -90,7 +90,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 		alpha::ambient::Interpreter::instance().install();
 		alpha::ambient::Interpreter::instance().toplevelPackage();
 		std::unique_ptr<alpha::Application> application(new alpha::Application());
-		exitCode = application->run(nCmdShow);
+		exitCode = application->run(/*nCmdShow*/);
 	} else {	// 既存のプロセスにコマンドライン引数を渡す
 		HWND existWnd = ::FindWindowW(IDS_APPNAME, nullptr);
 		while(!ascension::win32::boole(::IsWindow(existWnd))) {
@@ -155,8 +155,8 @@ namespace alpha {
 
 	/// Constructor.
 	Application::Application() {
-		searchDialog_.reset(new ui::SearchDialog());	// ctor of SearchDialog calls Alpha
-		onSettingChange(0, 0);	// statusFont_ の初期化
+//		searchDialog_.reset(new ui::SearchDialog());	// ctor of SearchDialog calls Alpha
+//		onSettingChange(0, 0);	// statusFont_ の初期化
 	}
 
 	/// Shows font-chooser user interface and changes the font of the selected editor.
@@ -180,9 +180,9 @@ namespace alpha {
 		}
 #else
 		Gtk::FontChooserDialog dialog(Glib::ustring(), window());
-		dialog.set_font_desc(activeView.textRenderer().defaultFont()->describe().asNativeObject());
+		dialog.set_font_desc(activeView.textRenderer().defaultFont()->describe().as<Pango::FontDescription>());
 		if(dialog.run() == Gtk::RESPONSE_ACCEPT)
-			setFont();
+			setFont(ascension::graphics::font::FontDescription(dialog.get_font_desc()));
 #endif
 	}
 
@@ -335,47 +335,33 @@ namespace alpha {
 	/// Loads settings from the file.
 	void Application::loadSettings() {
 		// 表示に関する設定
-		ascension::win32::AutoZero<LOGFONTW> lf;
-		if(!readStructureProfile(L"View", L"Font.default", lf)) {
-			lf.lfCharSet = ANSI_CHARSET;
-			lf.lfOutPrecision = OUT_DEFAULT_PRECIS;
-			lf.lfClipPrecision = CLIP_DEFAULT_PRECIS;
-			lf.lfQuality = DEFAULT_QUALITY;
-			lf.lfPitchAndFamily = DEFAULT_PITCH | FF_DONTCARE;
-			std::wcscpy(lf.lfFaceName, L"Terminal");
-		}
-		setFont(lf);
+		ascension::graphics::font::FontDescription fd(ascension::graphics::font::FontFamily(ascension::graphics::font::FontFamily::MONOSPACE), 0.0);
+		readStructureProfile(L"View", L"Font.default", fd);	// this can fail
+		setFont(fd);
 
 		// Migemo DLL & 辞書パス
 		const Glib::ustring migemoRuntimePath(boost::get_optional_value_or(readStringProfile("Find", "migemoRuntimePath"), Glib::ustring()));
 		const Glib::ustring migemoDictionaryPath(boost::get_optional_value_or(readStringProfile("Find", "migemoDictionaryPath"), Glib::ustring()));
 		if(!migemoRuntimePath.empty() && !migemoDictionaryPath.empty()) {
 			ascension::regex::MigemoPattern::initialize(
-				boost::filesystem::path(migemoRuntimePath, std::codecvt_utf8_utf16<wchar_t>()),
-				boost::filesystem::path(migemoDictionaryPath, std::codecvt_utf8_utf16<wchar_t>()));
+				boost::filesystem::path(migemoRuntimePath.c_str(), std::codecvt_utf8_utf16<wchar_t>()),
+				boost::filesystem::path(migemoDictionaryPath.c_str(), std::codecvt_utf8_utf16<wchar_t>()));
 		}
 
 		// 検索文字列の履歴
-		char keyName[30];
 		std::list<ascension::String> findWhats, replacesWiths;
 		for(unsigned short i = 0; i < 16; ++i) {
-#if(_MSC_VER < 1400)
-			std::sprintf(keyName, "findWhat(%u)", i);
-#else
-			std::snprintf(keyName, std::extent<decltype(keyName)>::value, "findWhat(%u)", i);
-#endif // _MSC_VER < 1400
-			const boost::optional<Glib::ustring> v(readStringProfile("Find", keyName));
+			std::ostringstream keyName("findWhat(");
+			keyName << i << ")";
+			const boost::optional<Glib::ustring> v(readStringProfile("Find", keyName.str()));
 			if(v == boost::none || v->empty())
 				break;
 			findWhats.push_back(ascension::fromGlibUstring(*v));
 		}
 		for(unsigned short i = 0; i < 16; ++i) {
-#if(_MSC_VER < 1400)
-			std::sprintf(keyName, "replaceWith(%u)", i);
-#else
-			std::snprintf(keyName, std::extent<decltype(keyName)>::value, "replaceWith(%u)", i);
-#endif // _MSC_VER < 1400
-			const boost::optional<Glib::ustring> v(readStringProfile("Find", keyName));
+			std::ostringstream keyName("replaceWith(");
+			keyName << i << ")";
+			const boost::optional<Glib::ustring> v(readStringProfile("Find", keyName.str()));
 			if(v == boost::none || v->empty())
 				break;
 			replacesWiths.push_back(ascension::fromGlibUstring(*v));
@@ -419,9 +405,7 @@ void Alpha::registerScriptEngineAssociations() {
 
 	/// Saves the settings into the file.
 	void Application::saveSettings() {
-		char keyName[30];
-
-		// バーの可視性の保存
+		// visibility of bars
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		ascension::win32::AutoZero<REBARBANDINFOW> rbbi;
 		rbbi.fMask = RBBIM_STYLE;
@@ -432,40 +416,32 @@ void Alpha::registerScriptEngineAssociations() {
 		writeIntegerProfile(L"View", L"visibleStatusBar", statusBar_.isVisible() ? 1 : 0);
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 
-		// 検索文字列履歴の保存
+		// search and replacement strings
 		const ascension::searcher::TextSearcher& s = BufferList::instance().editorSession().textSearcher();
-		for(std::size_t i = 0; i < s.numberOfStoredPatterns(); ++i) {
-#if(_MSC_VER < 1400)
-			std::sprintf(keyName, L"findWhat(%u)", i);
-#else
-			std::snprintf(keyName, std::extent<decltype(keyName)>::value, "findWhat(%u)", i);
-#endif // _MSC_VER < 1400
-			writeStringProfile("Find", keyName, s.pattern(i).c_str());
+		for(std::size_t i = 0, c = s.numberOfStoredPatterns(); ; ++i) {
+			std::ostringstream keyName("findWhat(");
+			keyName << i << ")";
+			if(i < c)
+				writeStringProfile("Find", keyName.str(), s.pattern(i).c_str());
+			else {
+				writeStringProfile("Find", keyName.str(), "");
+				break;
+			}
 		}
-#if(_MSC_VER < 1400)
-		std::sprintf(keyName, "findWhat(%u)", s.numberOfStoredPatterns());
-#else
-		std::snprintf(keyName, std::extent<decltype(keyName)>::value, "findWhat(%u)", s.numberOfStoredPatterns());
-#endif // _MSC_VER < 1400
-		writeStringProfile("Find", keyName, "");
-		for(std::size_t i = 0; i < s.numberOfStoredReplacements(); ++i) {
-#if(_MSC_VER < 1400)
-			std::sprintf(keyName, "replaceWith(%u)", i);
-#else
-			std::snprintf(keyName, std::extent<decltype(keyName)>::value, "replaceWith(%u)", i);
-#endif // _MSC_VER < 1400
-			writeStringProfile("Find", keyName, s.replacement(i).c_str());
+		for(std::size_t i = 0, c = s.numberOfStoredReplacements(); ; ++i) {
+			std::ostringstream keyName("replaceWith(");
+			keyName << i << ")";
+			if(i < c)
+				writeStringProfile("Find", keyName.str(), s.replacement(i).c_str());
+			else {
+				writeStringProfile("Find", keyName.str(), "");
+				break;
+			}
 		}
-#if(_MSC_VER < 1400)
-		std::sprintf(keyName, "replaceWith(%u)", s.numberOfStoredReplacements());
-#else
-		std::snprintf(keyName, std::extent<decltype(keyName)>::value, "replaceWith(%u)", s.numberOfStoredReplacements());
-#endif // _MSC_VER < 1400
-		writeStringProfile("Find", keyName, "");
 	}
 
 /// 全てのエディタと一部のコントロールに新しいフォントを設定
-void Application::setFont(const LOGFONTW& font) {
+void Application::setFont(const ascension::graphics::font::FontDescription& font) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 	LOGFONTW lf = font;
 
@@ -1019,7 +995,7 @@ void Alpha::onTimer(UINT timerID) {
 				}
 			}
 		}
-		saveINISettings();
+		saveSettings();
 		quit();
 //		::PostQuitMessage(0);
 		return true;

@@ -33,7 +33,7 @@ namespace boost {
 	inline void intrusive_ptr_release(hb_font_t* p) {::hb_font_destroy(p);}
 }
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(PANGO)
-#	include <pangomm.h>
+#	include <pangomm/fontfamily.h>
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(QT)
 #	include <QFont>
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
