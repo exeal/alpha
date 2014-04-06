@@ -162,7 +162,7 @@ namespace ascension {
 		};
 
 		/// Equality operator returns @c true if and only if ....
-		bool Length::operator==(const Length& other) const BOOST_NOEXCEPT {
+		inline bool Length::operator==(const Length& other) const BOOST_NOEXCEPT {
 			return valueInSpecifiedUnits() == other.valueInSpecifiedUnits()
 				&& unitType() == other.unitType() && mode_ == other.mode_;
 		}
