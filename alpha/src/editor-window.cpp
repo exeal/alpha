@@ -9,6 +9,7 @@
 #include "buffer-list.hpp"
 #include "editor-window.hpp"
 #include "editor-view.hpp"
+#include "function-pointer.hpp"
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/find.hpp>
 
@@ -58,7 +59,7 @@ namespace alpha {
 	void EditorPane::addView(std::unique_ptr<EditorView> viewer) {
 		if(viewer.get() == 0)
 			throw ascension::NullPointerException("viewer");
-		viewers_.push_back(viewer);
+		viewers_.push_back(std::move(viewer));
 		if(viewers_.size() == 1)
 			selectBuffer(viewer->document());
 	}
@@ -245,20 +246,20 @@ namespace alpha {
 		if(current_ == nullptr)
 			throw ascension::NoSuchElementException();
 
-		const Gtk::Paned* parent = static_cast<const Gtk::Paned*>(current_->get_parent());
+		Gtk::Paned* parent = static_cast<Gtk::Paned*>(current_->get_parent());
 		assert(parent->get_type() == Gtk::Paned::get_type());
-		const Gtk::Widget* child = this;
+		Gtk::Widget* child = &**this;
 		while(parent->get_child1() != child) {
 			assert(parent->get_child2() == child);
 			child = parent;
-			parent = static_cast<const Gtk::Paned*>(child->get_parent());
+			parent = static_cast<Gtk::Paned*>(child->get_parent());
 			assert(parent->get_type() == Gtk::Paned::get_type());
 		}
 
 		child = parent->get_child2();
 		while(child != nullptr) {
 			if(child->get_type() == Gtk::Paned::get_type()) {
-				parent = static_cast<const Gtk::Paned*>(child);
+				parent = static_cast<Gtk::Paned*>(child);
 				child = parent->get_child1();
 			} else
 				break;
@@ -320,12 +321,12 @@ namespace alpha {
 
 		boost::python::def("current_buffer", &currentBuffer, boost::python::arg("pane_or_panes") = boost::python::object());
 
-		boost::python::def("selected_window", []() {
+		boost::python::def("selected_window", ambient::makeFunctionPointer([]() {
 			return editorPanes().activePane().self();
-		});
+		}));
 
-		boost::python::def("windows", []() {
+		boost::python::def("windows", ambient::makeFunctionPointer([]() {
 			return editorPanes().self();
-		});
+		}));
 	ALPHA_EXPOSE_EPILOGUE()
 }

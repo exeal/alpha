@@ -14,8 +14,7 @@
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include "win32/module.hpp"
 #endif
-//#include <ascension/win32/ui/common-controls.hpp>
-//#include <ascension/win32/gdi-object.hpp>
+#include <ascension/graphics/font/font-description.hpp>
 #include <gtkmm/application.h>
 #include <gtkmm/applicationwindow.h>
 #include <memory>	// std.unique_ptr
@@ -92,7 +91,7 @@ namespace alpha {
 		Application();
 		// attributes
 		static Application& instance();
-		void setFont(const LOGFONTW& font);
+		void setFont(const ascension::graphics::font::FontDescription& font);
 		ui::MainWindow& window() const BOOST_NOEXCEPT;
 		// operations
 		bool teardown(bool callHook = true);
@@ -113,6 +112,12 @@ namespace alpha {
 		void saveSettings();
 //		void	setupToolbar();
 		void updateTitleBar();
+		template<typename Section, typename Key, typename Value>
+		void writeIntegerProfile(Section section, Key key, Value value);	// dummy
+		template<typename Section, typename Key, typename Value>
+		void writeStringProfile(Section section, Key key, const Value& value) const;	// dummy
+		template<typename Section, typename Key, typename T>
+		void writeStructureProfile(Section section, Key key, const T& data) const;	// dummy
 
 		// message handlers
 	protected:

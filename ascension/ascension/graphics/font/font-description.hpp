@@ -10,6 +10,9 @@
 #define ASCENSION_FONT_DESCRIPTION_HPP
 
 #include <ascension/graphics/font/font-family.hpp>
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
+#	include <pangomm/fontdescription.h>
+#endif
 
 namespace ascension {
 	namespace graphics {
@@ -200,33 +203,16 @@ namespace ascension {
 				 * @param properties The other properties
 				 * @throw std#underflow_error @a pointSize is negative
 				 */
-				explicit FontDescription(const FontFamily& family,
+				FontDescription(const FontFamily& family,
 						double pointSize, const FontProperties& properties = FontProperties())
 						: family_(family), pointSize_(pointSize), properties_(properties) {
 					if(pointSize < 0.0)
 						throw std::underflow_error("pointSize");
 				}
-#if ASCENSION_SUPPORTS_SHAPING_ENGINE(CORE_GRAPHICS)
-#endif
-#if ASCENSION_SUPPORTS_SHAPING_ENGINE(CORE_TEXT)
-				// TODO: Write CTFontDescriptor conversions.
-#endif
-#if ASCENSION_SUPPORTS_SHAPING_ENGINE(DIRECT_WRITE)
-#endif
-#if ASCENSION_SUPPORTS_SHAPING_ENGINE(HARFBUZZ)
-#endif
-#if ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
-				explicit FontDescription(const Pango::FontDescription& nativeObject);
-				Pango::FontDescription&& asNativeObject() const;
-#endif
-#if ASCENSION_SUPPORTS_SHAPING_ENGINE(QT)
-				explicit FontDescription(const QFontInfo& nativeObject);
-				QFontInfo&& asNativeObject() const;
-#endif
-#if ASCENSION_SUPPORTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SUPPORTS_SHAPING_ENGINE(WIN32_GDI) || ASCENSION_SUPPORTS_SHAPING_ENGINE(WIN32_GDIPLUS)
-				explicit FontDescription(const LOGFONTW& nativeObject);
-				LOGFONTW&& asNativeObject() const;
-#endif
+				/***/
+				template<typename Native> explicit FontDescription(const Native& native);
+				/***/
+				template<typename Native> Native&& as() const;
 				/// Equality operator.
 				bool operator==(const FontDescription& other) const BOOST_NOEXCEPT {
 					return family_ == other.family_
@@ -259,6 +245,30 @@ namespace ascension {
 						throw std::underflow_error("newValue");
 					return (pointSize_ = newValue), *this;
 				}
+
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(CORE_GRAPHICS)
+#endif
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(CORE_TEXT)
+				template<> explicit FontDescription(const CTFontDescriptor& native);
+				template<> CTFontDescriptor&& as<QFontInfo>() const;
+#endif
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(DIRECT_WRITE)
+#endif
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(HARFBUZZ)
+#endif
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
+				template<> explicit FontDescription(const Pango::FontDescription& native);
+				template<> Pango::FontDescription&& as<Pango::FontDescription>() const;
+#endif
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(QT)
+				template<> explicit FontDescription(const QFontInfo& native);
+				template<> QFontInfo&& as<QFontInfo>() const;
+#endif
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SUPPORTS_SHAPING_ENGINE(WIN32_GDI) || ASCENSION_SUPPORTS_SHAPING_ENGINE(WIN32_GDIPLUS)
+				template<> explicit FontDescription(const LOGFONTW& native);
+				template<> LOGFONTW&& as<LOGFONTW>() const;
+#endif
+
 			private:
 				FontFamily family_;
 				double pointSize_;
