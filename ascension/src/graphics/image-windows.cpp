@@ -126,9 +126,9 @@ namespace ascension {
 			return boost::make_iterator_range(buffer_.get(), buffer_.get() + numberOfBytes());
 		}
 
-		std::uint32_t Image::stride() const {
-			return win32Object<BITMAP>(impl_).bmWidthBytes;
-		}
+//		std::uint32_t Image::stride() const {
+//			return win32Object<BITMAP>(impl_).bmWidthBytes;
+//		}
 
 		std::uint32_t Image::stride(std::uint32_t width, Format format) {
 			return ((width * depth(format) + 31) >> 5) * 4;
