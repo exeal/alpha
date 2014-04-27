@@ -1296,6 +1296,27 @@ namespace ascension {
 				return hr;
 			}
 
+			/// @see GlyphVector#glyphCharacterIndex
+			Index TextRunImpl::glyphCharacterIndex(std::size_t index) const {
+				if(index >= numberOfGlyphs())
+					throw std::out_of_range("index");
+				const auto glyphIndices = glyphs();
+				const LogicalClusterIterator e;
+				for(LogicalClusterIterator i(clusters(), glyphIndices, 0); i != e; ++i) {
+					if(index >= static_cast<std::size_t>(i.currentGlyphRange().begin() - glyphIndices.begin())
+							&& index < static_cast<std::size_t>(i.currentGlyphRange().end() - glyphIndices.begin()))
+						return i.currentCluster().front();
+				}
+				return length();
+			}
+
+			/// @see GlyphVector#glyphCode
+			GlyphCode TextRunImpl::glyphCode(std::size_t index) const {
+				if(index >= numberOfGlyphs())
+					throw std::out_of_range("index");
+				return glyphs()[index];
+			}
+
 			/// @see GlyphVector#glyphLogicalBounds
 			graphics::Rectangle TextRunImpl::glyphLogicalBounds(std::size_t index) const {
 				if(index >= numberOfGlyphs())
@@ -1354,6 +1375,23 @@ namespace ascension {
 				const Scalar logicalPosition = glyphLogicalPosition(index);
 				const GOFFSET& glyphOffset = glyphOffsets()[index];
 				return Point(geometry::_x = static_cast<Scalar>(logicalPosition + glyphOffset.du), geometry::_y = static_cast<Scalar>(glyphOffset.dv));
+			}
+
+			/// @see GlyphVector#glyphPositions
+			std::vector<Point>&& TextRunImpl::glyphPositions(const boost::integer_range<std::size_t>& range) const {
+				const auto orderedRange = ordered(range);
+				if(*orderedRange.end() > numberOfGlyphs())
+					throw IndexOutOfBoundsException("range");
+
+				std::vector<Point> positions;
+				positions.reserve(range.size());
+				for(std::size_t i = *std::begin(orderedRange); i < *std::end(orderedRange); ++i) {
+					const Scalar logicalPosition = glyphLogicalPosition(i);
+					const GOFFSET& glyphOffset = glyphOffsets()[i];
+					geometry::x(positions[i]) = static_cast<Scalar>(logicalPosition + glyphOffset.du);
+					geometry::y(positions[i]) = static_cast<Scalar>(glyphOffset.dv);
+				}
+				return std::move(positions);
 			}
 
 			inline boost::integer_range<std::size_t> TextRunImpl::glyphRange(const StringPiece& range /* = StringPiece() */) const {
@@ -1777,6 +1815,16 @@ namespace ascension {
 				glyphs_->advances = std::move(advances);
 				glyphs_->offsets = std::move(offsets);
 //				glyphs_->width = width;
+			}
+
+			/// @see GlyphVector#setGlyphPosition
+			void TextRunImpl::setGlyphPosition(std::size_t index, const Point& position) {
+				if(index > numberOfGlyphs())
+					throw IndexOutOfBoundsException("index");
+				const Scalar logicalPosition = glyphLogicalPosition(index);
+				GOFFSET& glyphOffset = glyphs_->offsets[glyphOffsets().begin() - glyphs_->offsets.get()];
+				glyphOffset.du = static_cast<LONG>(geometry::x(position) - logicalPosition);
+				glyphOffset.dv = static_cast<LONG>(geometry::y(position));
 			}
 
 			// shaping stuffs
