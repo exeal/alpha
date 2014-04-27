@@ -941,8 +941,8 @@ namespace ascension {
 				context.save();
 				context.setFont(font());
 				const MAT2 matrix = {1, 0, 0, 1};	// TODO: Consider glyph transform.
-				const double sx = fontRenderContext().transform().scaleX() / context.fontRenderContext().transform().scaleX();
-				const double sy = fontRenderContext().transform().scaleY() / context.fontRenderContext().transform().scaleY();
+				const auto sx = geometry::scaleX(fontRenderContext().transform()) / geometry::scaleX(context.fontRenderContext().transform());
+				const auto sy = geometry::scaleY(fontRenderContext().transform()) / geometry::scaleY(context.fontRenderContext().transform());
 				DWORD lastError = ERROR_SUCCESS;
 				const boost::iterator_range<const GOFFSET*> glyphOffsets2D(glyphOffsets());
 				for(const LogicalClusterIterator e; cluster != e; !rtl ? ++cluster : --cluster) {
@@ -1303,7 +1303,7 @@ namespace ascension {
 				const Scalar x = glyphLogicalPosition(index);
 				RenderingContext2D context(win32::detail::screenDC());
 				std::unique_ptr<const FontMetrics<Scalar>> fm(context.fontMetrics(font()));
-				const double sy = fontRenderContext().transform().scaleY() / context.fontRenderContext().transform().scaleY();
+				const double sy = geometry::scaleY(fontRenderContext().transform()) / geometry::scaleY(context.fontRenderContext().transform());
 				return graphics::Rectangle(
 					geometry::_top = -static_cast<Scalar>(fm->ascent() * sy), geometry::_bottom = static_cast<Scalar>(fm->descent() * sy + fm->internalLeading() * sy),
 					geometry::_left = x, geometry::_right = static_cast<Scalar>(x + (justifiedAdvances().begin() != nullptr) ? justifiedAdvances()[index] : advances()[index]));
@@ -1337,8 +1337,8 @@ namespace ascension {
 				context.setFont(oldFont);
 				if(lastError != ERROR_SUCCESS)
 					throw makePlatformError(lastError);
-				const double sx = fontRenderContext().transform().scaleX() / context.fontRenderContext().transform().scaleX();
-				const double sy = fontRenderContext().transform().scaleY() / context.fontRenderContext().transform().scaleY();
+				const auto sx = geometry::scaleX(fontRenderContext().transform()) / geometry::scaleX(context.fontRenderContext().transform());
+				const auto sy = geometry::scaleY(fontRenderContext().transform()) / geometry::scaleY(context.fontRenderContext().transform());
 				return GlyphMetrics(gm.gmCellIncY == 0,
 					Dimension(geometry::_dx = static_cast<Scalar>(gm.gmCellIncX * sx), geometry::_dy = static_cast<Scalar>(gm.gmCellIncY * sy)),
 					graphics::Rectangle(
@@ -1685,7 +1685,7 @@ namespace ascension {
 					throw makePlatformError();
 				assert(analysis_.fLogicalOrder == 0);
 				// paint glyphs
-				const RECT boundsToPaint(context.boundsToPaint());
+				const RECT boundsToPaint(geometry::toNative<RECT>(context.boundsToPaint()));
 				const boost::iterator_range<const int*> justifiedGlyphAdvances(justifiedAdvances());
 				const HRESULT hr = ::ScriptTextOut(context.asNativeObject().get(), &glyphs_->fontCache,
 					static_cast<int>(geometry::x(origin)), static_cast<int>(geometry::y(origin)),
@@ -2402,9 +2402,9 @@ namespace ascension {
 						case presentation::HORIZONTAL_TB:
 							return AffineTransform();
 						case presentation::VERTICAL_RL:
-							return AffineTransform::quadrantRotation(1);
+							return geometry::makeQuadrantRotationTransform(1);
 						case presentation::VERTICAL_LR:
-							return AffineTransform::quadrantRotation(3);
+							return geometry::makeQuadrantRotationTransform(3);
 						default:
 							throw UnknownValueException("blockFlowDirection");
 					}
@@ -2552,12 +2552,20 @@ namespace ascension {
 							const std::ptrdiff_t beginningOfRun = (*run)->characterRange().begin() - textString_.data();
 							const boost::integer_range<Index> offsetsInRun = boost::irange(*intersection.begin() - beginningOfRun, *intersection.end() - beginningOfRun);
 							std::vector<graphics::Rectangle> runBlackBoxBounds(static_cast<const TextRunImpl&>(**run).charactersBounds(offsetsInRun));
-							AffineTransform typographicalToPhysicalMapping(AffineTransform::translation(geometry::x(runTypographicOrigin), geometry::y(runTypographicOrigin)));
-							if(isVertical(writingMode().blockFlowDirection))
-								typographicalToPhysicalMapping.quadrantRotate((resolveTextOrientation(writingMode()) != presentation::SIDEWAYS_LEFT) ? -1 : +1);
+							AffineTransform typographicalToPhysicalMapping(geometry::makeTranslationTransform(
+								geometry::_tx = geometry::x(runTypographicOrigin), geometry::_ty = geometry::y(runTypographicOrigin)));
+							if(isVertical(writingMode().blockFlowDirection)) {
+//								geometry::quadrantRotate(typographicalToPhysicalMapping, (resolveTextOrientation(writingMode()) != presentation::SIDEWAYS_LEFT) ? -1 : +1);
+								typographicalToPhysicalMapping = AffineTransform(
+									boost::numeric::ublas::prod(
+										typographicalToPhysicalMapping.matrix(), 
+										geometry::makeQuadrantRotationTransform((resolveTextOrientation(writingMode()) != presentation::SIDEWAYS_LEFT) ? -1 : +1).matrix()));
+							}
 							BOOST_FOREACH(const graphics::Rectangle& typographicBounds, runBlackBoxBounds) {
 								// map typographic rectangle into physical coordinates
-								const graphics::Rectangle physicalBounds(typographicalToPhysicalMapping.transform(typographicBounds));
+
+								graphics::Rectangle physicalBounds;
+								boost::geometry::transform(typographicBounds, physicalBounds, typographicalToPhysicalMapping);
 								boost::geometry::model::polygon<Point> temp;
 								boost::geometry::append(temp, boost::geometry::box_view<graphics::Rectangle>(physicalBounds));
 								result.push_back(temp);

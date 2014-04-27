@@ -15,6 +15,7 @@
 #include <ascension/corelib/basic-types.hpp>		// std.uint32_t, ...
 #include <ascension/graphics/geometry.hpp>
 #include <functional>	// std.hash
+#include <locale>
 #include <memory>		// std.unique_ptr, std.shared_ptr
 #include <boost/operators.hpp>
 #if ASCENSION_SELECTS_SHAPING_ENGINE(CAIRO)
@@ -128,7 +129,7 @@ namespace ascension {
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
 				std::shared_ptr<Gdiplus::FontFamily> nativeObject_;
 #else
-				const String name_;
+				String name_;
 #endif
 			};
 
@@ -141,6 +142,18 @@ namespace ascension {
 			inline bool operator<(const FontFamily& lhs, const FontFamily& rhs) BOOST_NOEXCEPT {
 				return lhs.name() < rhs.name();
 			}
+
+#if ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(PANGO)
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
+#else
+			inline FontFamily& FontFamily::operator=(const FontFamily& other) {
+				return (name_ = other.name_), *this;
+			}
+			inline String FontFamily::name(const std::locale& lc /* = std::locale::classic() */) const BOOST_NOEXCEPT {
+				return name_;
+			}
+#endif
 		}
 	}
 }

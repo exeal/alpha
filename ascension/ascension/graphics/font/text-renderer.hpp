@@ -88,10 +88,10 @@ namespace ascension {
 				Scalar textWrappingMeasureInPixels() const BOOST_NOEXCEPT;
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 				// presentation.GlobalTextStyleSwitch
-				decltype(presentation::TextLineStyle().direction) direction() const BOOST_NOEXCEPT;
-				decltype(presentation::TextLineStyle().textAlignment) textAlignment() const BOOST_NOEXCEPT;
-				decltype(presentation::TextLineStyle().textOrientation) textOrientation() const BOOST_NOEXCEPT;
-				decltype(presentation::TextLineStyle().whiteSpace) whiteSpace() const BOOST_NOEXCEPT;
+				decltype(presentation::TextLineStyle().direction) direction() const override BOOST_NOEXCEPT;
+				decltype(presentation::TextLineStyle().textAlignment) textAlignment() const override BOOST_NOEXCEPT;
+				decltype(presentation::TextLineStyle().textOrientation) textOrientation() const override BOOST_NOEXCEPT;
+				decltype(presentation::TextLineStyle().whiteSpace) whiteSpace() const override BOOST_NOEXCEPT;
 				/// @}
 
 				/// @name Default (Globally Nominal) Font
@@ -116,14 +116,16 @@ namespace ascension {
 				void paint(Index line, PaintContext& context, const Point& alignmentPoint) const;
 				void setLineRenderingOptions(const std::shared_ptr<LineRenderingOptions> options);
 				/// @}
+
 			protected:
 				void buildLineLayoutConstructionParameters(Index line, ComputedTextLineStyle& lineStyle,
 					std::unique_ptr<ComputedStyledTextRunIterator>& runStyles, FontCollection& fontCollection) const;
+
 			private:
 				std::unique_ptr<const TextLayout> generateLineLayout(Index line) const;
 				void updateComputedBlockFlowDirectionChanged();
 				// presentation.TextToplevelStyleListener
-				void textToplevelStyleChanged(std::shared_ptr<const presentation::TextToplevelStyle> used);
+				void textToplevelStyleChanged(std::shared_ptr<const presentation::TextToplevelStyle> used) override;
 			private:
 				presentation::Presentation& presentation_;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
@@ -153,6 +155,16 @@ namespace ascension {
 			/// @see presentation#GlobalTextStyleSwitch#direction
 			inline decltype(presentation::TextLineStyle().direction) TextRenderer::direction() const BOOST_NOEXCEPT {
 				return direction_;
+			}
+
+			/// Returns the vector of layouts.
+			inline LineLayoutVector& TextRenderer::layouts() BOOST_NOEXCEPT {
+				return *layouts_;
+			}
+
+			/// Returns the vector of layouts.
+			inline const LineLayoutVector& TextRenderer::layouts() const BOOST_NOEXCEPT {
+				return *layouts_;
 			}
 
 			/// @see presentation#GlobalTextStyleSwitch#textAlignment
@@ -200,6 +212,15 @@ namespace ascension {
 			}
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 
+			/// Returns the viewport.
+			inline std::shared_ptr<TextViewport> TextRenderer::viewport() BOOST_NOEXCEPT {
+				return viewport_;
+			}
+
+			/// Returns the viewport.
+			inline std::shared_ptr<const TextViewport> TextRenderer::viewport() const BOOST_NOEXCEPT {
+				return viewport_;
+			}
 		}
 	}
 } // namespace ascension.graphics.font

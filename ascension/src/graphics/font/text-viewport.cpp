@@ -865,6 +865,15 @@ namespace ascension {
 			}
 
 			/**
+			 * Registers the viewport listener.
+			 * @param listener The listener to be registered
+			 * @throw std#invalid_argument @a listener is already registered
+			 */
+			void TextViewport::addListener(TextViewportListener& listener) {
+				listeners_.add(listener);
+			}
+
+			/**
 			 * @internal
 			 * @see #calculateBpdScrollPosition
 			 */
@@ -953,11 +962,17 @@ namespace ascension {
 				fireScrollPropertiesChanged(presentation::AbstractTwoAxes<bool>(presentation::_ipd = true, presentation::_bpd = false));
 			}
 
+			/// @see kernel#AccessibleRegionChangedSignal
+			void TextViewport::documentAccessibleRegionChanged(const kernel::Document& document) {
+				// TODO: Not implemented.
+			}
+
 			/// @internal Invokes @c TextViewportListener#viewportScrollPositionChanged
 			inline void TextViewport::fireScrollPositionChanged(
 					const presentation::AbstractTwoAxes<TextViewport::ScrollOffset>& positionsBeforeScroll,
 					const VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT {
-				if(frozenNotification_.count == 0)
+				static const decltype(frozenNotification_.count) minimumCount;
+				if(frozenNotification_.count == minimumCount)
 					listeners_.notify<const presentation::AbstractTwoAxes<TextViewport::ScrollOffset>&, const VisualLine&>(
 						&TextViewportListener::viewportScrollPositionChanged, positionsBeforeScroll, firstVisibleLineBeforeScroll);
 				else if(frozenNotification_.positionBeforeChanged == boost::none) {
@@ -969,7 +984,8 @@ namespace ascension {
 
 			/// @internal Invokes @c TextViewportListener#viewportScrollPropertiesChanged
 			inline void TextViewport::fireScrollPropertiesChanged(const presentation::AbstractTwoAxes<bool>& dimensions) BOOST_NOEXCEPT {
-				if(frozenNotification_.count == 0)
+				static const decltype(frozenNotification_.count) minimumCount;
+				if(frozenNotification_.count == minimumCount)
 					listeners_.notify<const presentation::AbstractTwoAxes<bool>&>(
 						&TextViewportListener::viewportScrollPropertiesChanged, dimensions);
 				else {
@@ -988,9 +1004,22 @@ namespace ascension {
 			 * @see #thawNotification
 			 */
 			void TextViewport::freezeNotification() {
-				if(frozenNotification_.count == std::numeric_limits<std::decay<decltype(frozenNotification_.count.data())>::type>::max())
+				const auto c = boost::get(frozenNotification_.count);
+				if(c == std::numeric_limits<std::decay<decltype(c)>::type>::max())
 					throw std::overflow_error("");
 				++frozenNotification_.count;
+			}
+
+			/**
+			 * Increments the scroll lock count.
+			 * @throw std#overflow_error
+			 * @see #isScrollLocked, #unlockScroll
+			 */
+			void TextViewport::lockScroll() {
+				const auto c = boost::get(lockCount_);
+				if(c == std::numeric_limits<std::decay<decltype(c)>::type>::max())
+					throw std::overflow_error("");
+				++lockCount_;
 			}
 
 #if 0
@@ -1036,6 +1065,15 @@ namespace ascension {
 					} else
 						++lm;
 				}
+			}
+
+			/**
+			 * Removes the viewport listener.
+			 * @param listener The listener to be removed
+			 * @throw std#invalid_argument @a listener is not registered
+			 */
+			void TextViewport::removeListener(TextViewportListener& listener) {
+				listeners_.remove(listener);
 			}
 
 			void TextViewport::repairUncalculatedLayouts() {
@@ -1459,6 +1497,7 @@ namespace ascension {
 			/**
 			 * Resets the size of the viewport.
 			 * @param bounds The new bounds to set, in viewer-local coordinates in pixels
+			 * @see #boundsInView
 			 */
 			void TextViewport::setBoundsInView(const graphics::Rectangle& bounds) {
 				const graphics::Rectangle oldBounds(boundsInView());
@@ -1471,9 +1510,10 @@ namespace ascension {
 			 * @see #freezeNotification
 			 */
 			void TextViewport::thawNotification() {
-				if(frozenNotification_.count == 0)
+				const decltype(frozenNotification_.count) minimum;
+				if(frozenNotification_.count == minimum)
 					throw std::underflow_error("");
-				if(--frozenNotification_.count == 0) {
+				if(--frozenNotification_.count == minimum) {
 					if(frozenNotification_.dimensionsPropertiesChanged.ipd() || frozenNotification_.dimensionsPropertiesChanged.bpd()) {
 						listeners_.notify<const presentation::AbstractTwoAxes<bool>&>(&TextViewportListener::viewportScrollPropertiesChanged, frozenNotification_.dimensionsPropertiesChanged);
 						frozenNotification_.dimensionsPropertiesChanged = presentation::AbstractTwoAxes<bool>(false, false);
@@ -1489,6 +1529,18 @@ namespace ascension {
 						frozenNotification_.boundsBeforeChanged = boost::none;
 					}
 				}
+			}
+
+			/**
+			 * Decrements the scroll lock count.
+			 * @throw std#underflow_error
+			 * @see #isScrollLocked, #lockScroll
+			 */
+			void TextViewport::unlockScroll() {
+				const auto c = boost::get(lockCount_);
+				if(c == boost::value_initialized<std::decay<decltype(c)>::type>())
+					throw std::underflow_error("");
+				--lockCount_;
 			}
 
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD

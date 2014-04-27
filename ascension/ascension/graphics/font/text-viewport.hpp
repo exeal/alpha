@@ -286,6 +286,39 @@ namespace ascension {
 			// inline implementation //////////////////////////////////////////////////////////////
 
 			/**
+			 * Returns the size of the viewport in viewer-local coordinate in pixels.
+			 * @see #setBoundsInView
+			 */
+			inline const Rectangle& TextViewport::boundsInView() const BOOST_NOEXCEPT {
+				return boundsInView_;
+			}
+
+			/**
+			 * Returns the first visible visual line in the viewport.
+			 * @see #scrollPositions
+			 */
+			inline const VisualLine& TextViewport::firstVisibleLine() const BOOST_NOEXCEPT {
+				return firstVisibleLine_;
+			}
+
+			/**
+			 * Returns @c true if the viewport scroll is locked.
+			 * @see #lockScroll, unlockScroll
+			 */
+			inline bool TextViewport::isScrollLocked() const BOOST_NOEXCEPT {
+				static const decltype(lockCount_) minimumCount;
+				return boost::get(lockCount_) != minimumCount;
+			}
+
+			/**
+			 * Returns the current scroll positions.
+			 * @see #firstVisibleLine
+			 */
+			inline const presentation::AbstractTwoAxes<TextViewport::ScrollOffset>& TextViewport::scrollPositions() const BOOST_NOEXCEPT {
+				return scrollPositions_;
+			}
+
+			/**
 			 * Scrolls the viewport to the specified position in abstract dimensions.
 			 * This method does nothing if scroll is locked.
 			 * @param positions The destination of scroll in abstract dimensions in user units
@@ -300,6 +333,16 @@ namespace ascension {
 			 */
 			inline void TextViewport::scrollTo(const PhysicalTwoAxes<TextViewport::ScrollOffset>& positions) {
 				 return scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(_x = positions.x(), _y = positions.y()));
+			}
+
+			/// Returns @c TextRenderer object.
+			inline TextRenderer& TextViewport::textRenderer() BOOST_NOEXCEPT {
+				return textRenderer_;
+			}
+
+			/// Returns @c TextRenderer object.
+			inline const TextRenderer& TextViewport::textRenderer() const BOOST_NOEXCEPT {
+				return textRenderer_;
 			}
 
 			/**

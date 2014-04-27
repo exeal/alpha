@@ -285,8 +285,17 @@ namespace ascension {
 			if(const std::shared_ptr<const font::TextViewport> viewport = textViewer_->textRenderer().viewport()) {
 				const presentation::WritingMode& writingMode = textViewer_->textRenderer().layouts().at(
 					kernel::line(textViewer_->caret()), graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT).writingMode();
+
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+				const Glib::RefPtr<const Gdk::Screen> screen(textViewer_->get_screen());
+				graphics::Rectangle screenBounds(
+					boost::geometry::make_zero<graphics::Point>(),
+					Dimension(graphics::geometry::_dx = static_cast<Scalar>(screen->get_width()), graphics::geometry::_dy = static_cast<Scalar>(screen->get_height())));
+#else
 				graphics::Rectangle screenBounds(viewers::widgetapi::bounds(viewers::widgetapi::desktop(), false));
+#endif
 				screenBounds = viewers::widgetapi::mapFromGlobal(*textViewer_, screenBounds);
+
 				Dimension size;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Gtk::TreeView* view = static_cast<Gtk::TreeView*>(proposalsPopup_->get_child());

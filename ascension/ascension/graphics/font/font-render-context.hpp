@@ -15,12 +15,13 @@
 #include <ascension/graphics/affine-transform.hpp>
 #include <memory>
 #include <boost/operators.hpp>
+#include <boost/optional.hpp>
 
 namespace ascension {
 	namespace graphics {
 		struct RenderingHints {
 			enum TextAntiAliasing {};
-			enum FractionalMetrics {};
+			typedef boost::optional<bool> FractionalMetrics;
 		};
 
 		namespace font {
@@ -31,19 +32,80 @@ namespace ascension {
 			 */
 			class FontRenderContext : private boost::equality_comparable<FontRenderContext> {
 			public:
-				FontRenderContext(const geometry::AffineTransform& tx, bool isAntiAliased, bool usesFractionalMetrics);
-				FontRenderContext(const geometry::AffineTransform& tx, RenderingHints::TextAntiAliasing aaHint, RenderingHints::FractionalMetrics fmHint);
-				bool operator==(const FontRenderContext& other) const;
-				RenderingHints::TextAntiAliasing antiAliasingHint() const BOOST_NOEXCEPT;
-				RenderingHints::FractionalMetrics fractionalMetricsHint() const BOOST_NOEXCEPT;
-				bool isAntiAliased() const BOOST_NOEXCEPT;
-				bool isTransformed() const BOOST_NOEXCEPT;
-				const geometry::AffineTransform& transform() const BOOST_NOEXCEPT;
-				bool usesFractionalMetrics() const BOOST_NOEXCEPT;
+				/**
+				 * Constructs a @c FontRenderContext object from an optional @c AffineTransform and two boolean values
+				 * that determine if the newly constructed object has anti-aliasing or fractional metrics.
+				 * @param tx The transform which is used to scale typographical points to pixels in this
+				 *           @c FontRenderContext. If @c boost#none, an identity transform is used.
+				 * @param isAntiAliased Determines if the newly constructed object has anti-aliasing
+				 * @param usesFractionalMetrics Determines if the newly constructed object has fractional metrics
+				 */
+				FontRenderContext(const boost::optional<geometry::AffineTransform> tx, bool isAntiAliased, bool usesFractionalMetrics) :
+						transform_((!tx && geometry::isIdentity(boost::get(tx))) ? new geometry::AffineTransform(boost::get(tx)) : nullptr),
+						antiAliasingRenderingHint_(), fractionalMetricsHint_(usesFractionalMetrics) {
+				}
+				/**
+				 * Constructs a @c FontRenderContext object from an optional @c AffineTransform and two values that
+				 * determine if the newly constructed object has anti-aliasing or fractional metrics.
+				 * @param tx The transform which is used to scale typographical points to pixels in this
+				 *           @c FontRenderContext
+				 * @param aaHint One of the text antialiasing rendering hint values defined in
+				 *               @c RenderingHints#TextAntiAliasing
+				 * @param fmHint
+				 */
+				FontRenderContext(const boost::optional<geometry::AffineTransform>& tx,
+						RenderingHints::TextAntiAliasing aaHint, const RenderingHints::FractionalMetrics& fmHint) :
+						transform_((!tx && geometry::isIdentity(boost::get(tx))) ? new geometry::AffineTransform(boost::get(tx)) : nullptr),
+						antiAliasingRenderingHint_(aaHint), fractionalMetricsHint_(fmHint) {
+				}
+				/// Copy-constructor.
+				FontRenderContext(const FontRenderContext& other) :
+						transform_((other.transform_.get() != nullptr) ? new geometry::AffineTransform(*other.transform_) : nullptr),
+						antiAliasingRenderingHint_(other.antiAliasingRenderingHint_), fractionalMetricsHint_(other.fractionalMetricsHint_) {
+				}
+				/// Returns @c true if @a other has the same transform, antialiasing, and fractional metrics values as
+				/// this.
+				bool operator==(const FontRenderContext& other) const {
+					if(antiAliasingRenderingHint_ != other.antiAliasingRenderingHint_ || fractionalMetricsHint_ != other.fractionalMetricsHint_)
+						return false;
+					assert(transform_.get() == nullptr || !geometry::isIdentity(*transform_));
+					assert(other.transform_.get() == nullptr || !geometry::isIdentity(*other.transform_));
+					if(transform_.get() == nullptr)
+						return other.transform_.get() == nullptr;
+					return other.transform_.get() != nullptr && geometry::equals(*transform_, *other.transform_);
+				}
+				/// Returns the text anti-aliasing rendering mode hint used in this @c FontRenderContext.
+				RenderingHints::TextAntiAliasing antiAliasingHint() const BOOST_NOEXCEPT {
+					return antiAliasingRenderingHint_;
+				}
+				/// Returns the text fractional metrics renderinf mode hint used in this @c FontRenderContext.
+				const RenderingHints::FractionalMetrics& fractionalMetricsHint() const BOOST_NOEXCEPT {
+					return fractionalMetricsHint_;
+				}
+				/// Returns a boolean which indicates whether or not some form of antialiasing is specified by this
+				/// @c FontRenderContext.
+				bool isAntiAliased() const BOOST_NOEXCEPT {
+					return true;	// TODO: Not implemented.
+				}
+				/// Indicates whether or not this @c FontRenderContext object measures text in a transformed render
+				/// context.
+				bool isTransformed() const BOOST_NOEXCEPT {
+					return transform_.get() != nullptr/* && !geometry::isIdentity(*transform_)*/;
+				}
+				/// Returns the transform that is used to scale typographical points to pixels in this
+				/// @c FontRenderContext.
+				geometry::AffineTransform&& transform() const BOOST_NOEXCEPT {
+					return (transform_.get() != nullptr) ? geometry::AffineTransform(*transform_) : geometry::makeIdentityTransform();
+				}
+				/// Returns a boolean which whether text fractional metrics mode is used in this @c FontRenderContext.
+				bool usesFractionalMetrics() const BOOST_NOEXCEPT {
+					return boost::get_optional_value_or(fractionalMetricsHint_, false);
+				}
+
 			private:
-				geometry::AffineTransform transform_;
-				RenderingHints::TextAntiAliasing antiAliasingRenderingHint_;
-				RenderingHints::FractionalMetrics fractionalMetricsHint_;
+				const std::unique_ptr<const geometry::AffineTransform> transform_;
+				const RenderingHints::TextAntiAliasing antiAliasingRenderingHint_;
+				const RenderingHints::FractionalMetrics fractionalMetricsHint_;
 			};
 
 			class Font;
@@ -71,6 +133,7 @@ namespace ascension {
 				const FontRenderContext& fontRenderContext() const BOOST_NOEXCEPT {
 					return fontRenderContext_;
 				}
+
 			private:
 				std::shared_ptr<const Font> font_;
 				FontRenderContext fontRenderContext_;

@@ -545,14 +545,20 @@ namespace ascension {
 			 * @return This object
 			 * @see #rotate, #translate, #transform, #setTransform
 			 */
-			RenderingContext2D& scale(AffineTransform::value_type sx, AffineTransform::value_type sy);
+			RenderingContext2D& scale(double sx, double sy) {
+				return transform(geometry::makeScalingTransform(geometry::_sx = sx, geometry::_sy = sy));
+			}
 			/**
 			 * Adds the rotation transformation described by @a angle to the transformation matrix.
-			 * @param angle A clockwise rotation angle in radians
+			 * @tparam DegreeOrRadian @c boost#geometry#degree or @c boost#geometry#radian
+			 * @param angle A clockwise rotation angle measured in units specified by @a DegreeOrRadian
 			 * @return This object
 			 * @see #scale, #translate, #transform, #setTransform
 			 */
-			RenderingContext2D& rotate(double angle);
+			template<typename DegreeOrRadian>
+			RenderingContext2D& rotate(double angle) {
+				return transform(geometry::makeRotationTransform<DegreeOrRadian>(angle));
+			}
 			/**
 			 * Adds the translation transformation described by @a delta to the transformation
 			 * matrix.
@@ -563,7 +569,9 @@ namespace ascension {
 			 * @return This object
 			 * @see #scale, #rotate, #transform, #setTransform
 			 */
-			RenderingContext2D& translate(const Dimension& delta);
+			RenderingContext2D& translate(const Dimension& delta) {
+				return translate(geometry::dx(delta), geometry::dy(delta));
+			}
 			/**
 			 * Adds the translation transformation described by @a dx and @a dy to the
 			 * transformation matrix.
@@ -572,7 +580,9 @@ namespace ascension {
 			 * @return This object
 			 * @see #scale, #rotate, #transform, #setTransform
 			 */
-			RenderingContext2D& translate(AffineTransform::value_type dx, AffineTransform::value_type dy);
+			RenderingContext2D& translate(double dx, double dy) {
+				return transform(geometry::makeTranslationTransform(geometry::_tx = dx, geometry::_ty = dy));
+			}
 			/**
 			 * Replaces the current transformation matrix with the result of multiplying the
 			 * current transformation matrix with the matrix described by @a matrix.
