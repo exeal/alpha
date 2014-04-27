@@ -398,6 +398,12 @@
     <ClCompile Include="..\src\status-bar.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\caret-gtk.cpp">
+      <Filter>ascension\Source Files\viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\viewer\widgetapi\widget-gtk.cpp">
+      <Filter>ascension\Source Files\viewer\widgetapi</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">

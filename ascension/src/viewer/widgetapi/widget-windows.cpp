@@ -91,24 +91,6 @@ void widgetapi::lower(NativeWidget& widget) {
 		throw makePlatformError();
 }
 
-template<typename Point>
-Point widgetapi::mapFromGlobal(const NativeWidget& widget, const Point& position,
-		typename detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* /* = nullptr */) {
-	Point temp(position);
-	if(!win32::boole(::ScreenToClient(widget.handle().get(), &temp)))
-		throw makePlatformError();
-	return temp;
-}
-
-template<typename Point>
-Point widgetapi::mapToGlobal(const NativeWidget& widget, const Point& position,
-		typename detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* /* = nullptr */) {
-	Point temp(position);
-	if(!win32::boole(::ClientToScreen(widget.handle().get(), &temp)))
-		throw makePlatformError();
-	return temp;
-}
-
 void widgetapi::move(NativeWidget& widget, const Point& newOrigin) {
 	if(!win32::boole(::SetWindowPos(widget.handle().get(), nullptr,
 			static_cast<int>(geometry::x(newOrigin)), static_cast<int>(geometry::y(newOrigin)), 0, 0,

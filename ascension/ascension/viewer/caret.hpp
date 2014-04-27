@@ -225,7 +225,24 @@ namespace ascension {
 
 		/// @defgroup functions_related_to_selection Free Functions Related-to Selection of @c Caret
 		/// @{
+		/**
+		 * Copies the selected content to the clipboard.
+		 * If the caret does not have a selection, this function does nothing.
+		 * @param caret The caret gives the selection
+		 * @param useKillRing Set @c true to send to the kill ring, not only the system clipboard
+		 * @throw ClipboardException The clipboard operation failed
+		 * @throw std#bad_alloc Internal memory allocation failed
+		 */
 		void copySelection(Caret& caret, bool useKillRing);
+		/**
+		 * Copies and deletes the selected text. If the selection is empty, this function does nothing.
+		 * @param caret The caret gives the selection
+		 * @param useKillRing Set @c true to send also the kill ring
+		 * @return false if the change was interrupted
+		 * @throw ClipboardException The clipboard operation failed
+		 * @throw std#bad_alloc Internal memory allocation failed
+		 * @throw ... Any exceptions @c Document#replace throws
+		 */
 		void cutSelection(Caret& caret, bool useKillRing);
 		bool isPointOverSelection(const Caret& caret, const graphics::Point& p);
 		bool isSelectionEmpty(const Caret& caret) BOOST_NOEXCEPT;
@@ -313,6 +330,19 @@ namespace ascension {
 		inline Caret::MatchBracketsTrackingMode Caret::matchBracketsTrackingMode() const BOOST_NOEXCEPT {
 			return matchBracketsTrackingMode_;
 		}
+
+		/**
+		 * @fn ascension::viewers::Caret::paste
+		 * Replaces the selected text by the content of the clipboard.
+		 * This method inserts undo boundaries at the beginning and the end.
+		 * @note When using the kill-ring, this method may exit in defective condition.
+		 * @param useKillRing Set @c true to use the kill ring
+		 * @throw ClipboardException The clipboard operation failed
+		 * @throw ClipboardException(DV_E_FORMATETC) The current clipboard format is not supported
+		 * @throw IllegalStateException @a useKillRing was @c true but the kill-ring was not available
+		 * @throw std#bad_alloc Internal memory allocation failed
+		 * @throw ... Any exceptions @c kernel#Document#replace throws
+		 */
 
 		/**
 		 * Selects the specified region.

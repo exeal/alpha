@@ -140,13 +140,13 @@ namespace ascension {
 
 				const FontProperties& properties = description.properties();
 				LONG orientation;
-				if(transform == AffineTransform())
+				if(geometry::equals(transform, geometry::makeQuadrantRotationTransform(0)))
 					orientation = 0;
-				if(transform == AffineTransform::quadrantRotation(1))
+				else if(geometry::equals(transform, geometry::makeQuadrantRotationTransform(1)))
 					orientation = 2700;
-				else if(transform == AffineTransform::quadrantRotation(2))
+				else if(geometry::equals(transform, geometry::makeQuadrantRotationTransform(2)))
 					orientation = 1800;
-				else if(transform == AffineTransform::quadrantRotation(3))
+				else if(geometry::equals(transform, geometry::makeQuadrantRotationTransform(3)))
 					orientation = 900;
 				else
 					throw std::invalid_argument("transform");	// TODO: This version of code supports only simple quadrant-rotations.

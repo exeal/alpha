@@ -1541,8 +1541,10 @@ namespace ascension {
 		/// @see Widget#resized
 		void TextViewer::resized(const graphics::Dimension&) {
 			utils::closeCompletionProposalsPopup(*this);
-			if(widgetapi::isMinimized(*this))
-				return;
+			if(widgetapi::Proxy<widgetapi::Window> window = widgetapi::window(*this)) {
+				if(widgetapi::isMinimized(window))
+					return;
+			}
 			if(renderer_.get() == nullptr)
 				return;
 			textRenderer().viewport()->setBoundsInView(textAreaContentRectangle());

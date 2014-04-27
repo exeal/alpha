@@ -13,10 +13,15 @@
 #include <ascension/corelib/future.hpp>
 #include <ascension/platforms.hpp>
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)
-#	include <gdk/gdk.h>
+#	include <cairomm/types.h>	// Cairo.Rectangle, Cairo.RectangleInt
+#	include <gdkmm/rectangle.h>
+#	include <gdkmm/types.h>	// Gdk.Point
 #endif
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDI)
 #	include <ascension/win32/handle.hpp>
+#endif
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
+#	include <pangomm/rectangle.h>
 #endif
 #include <boost/geometry/geometry.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
@@ -38,10 +43,38 @@ namespace ascension {
 					>::value, T> {};
 			}
 
-			/// @name Geometric Primitives
+			/// @defgroup
+			/// @{
+			/**
+			 * Converts a platform-native geometric type into a platform-independent.
+			 * @tparam Geometry The return type
+			 * @tparam Native The type of @a native
+			 * @param native The native object to convert
+			 * @return The converted platform-independent object
+			 * @see #toNative
+			 */
+			template<typename Geometry, typename Native> inline Geometry&& fromNative(const Native& native) {
+				return detail::fromNative<Geometry>(native);
+			}
+
+			/**
+			 * Converts a platform-independent geometric type into a platform-native.
+			 * @tparam Native The return type
+			 * @tparam Geometry The type of @a g
+			 * @param g The platform-independent object to convert
+			 * @return The converted native object
+			 * @see #fromNative
+			 */
+			template<typename Native, typename Geometry> inline Native&& toNative(const Geometry& g) {
+				return detail::toNative(g, static_cast<const Native*>(nullptr));
+			}
+			/// @}
+
+			/// @defgroup geometric_primitives Geometric Primitives
+			/// Basic primitives of @c ascension#graphics#geometry.
 			/// @{
 
-			typedef float Scalar;
+			typedef float Scalar;	/// A scalar value.
 
 #ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
 			BOOST_PARAMETER_NAME(x)
@@ -100,22 +133,6 @@ namespace ascension {
 					return *this;
 				}
 
-#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)
-#endif
-#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
-#endif
-#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(QT)
-#endif
-#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDI)
-				BasicPoint(const POINT& nativeObject);
-				BasicPoint(const POINTL& nativeObject);
-				BasicPoint(const POINTS& nativeObject);
-				operator POINT() const;
-				operator POINTL() const;
-				operator POINTS() const;
-#endif
-#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
-#endif
 			private:
 				using BasicPointBase<Coordinate>::x_;
 				using BasicPointBase<Coordinate>::y_;
@@ -183,16 +200,6 @@ namespace ascension {
 					return *this;
 				}
 
-#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)
-#endif
-#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
-#endif
-#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(QT)
-#endif
-#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDI)
-				BasicDimension(const SIZE& nativeObject);
-				operator SIZE() const;
-#endif
 			private:
 				using BasicDimensionBase<Coordinate>::dx_;
 				using BasicDimensionBase<Coordinate>::dy_;
@@ -263,7 +270,10 @@ namespace ascension {
 				/// Constructor creates a rectangle described by the given origin and size.
 				template<typename Origin, typename SizeCoordinate>
 				BasicRectangle(const Origin& origin, const BasicDimension<SizeCoordinate>& size,
-					typename detail::EnableIfTagIs<Origin, boost::geometry::point_tag>::type* = nullptr);
+						typename detail::EnableIfTagIs<Origin, boost::geometry::point_tag>::type* = nullptr)
+					: BasicRectangleBase<Coordinate>((
+						_left = x(origin), _top = y(origin),
+						_right = x(origin) + dx(size), _bottom = y(origin) + dy(size))) {}
 				/// Constructor creates a rectangle described by the two ranges in x and y-coordinates.
 				template<typename ScalarType>
 				BasicRectangle(const boost::integer_range<ScalarType>& xrange, const boost::integer_range<ScalarType>& yrange)
@@ -290,22 +300,6 @@ namespace ascension {
 					return *this;
 				}
 
-#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)
-#endif
-#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
-#endif
-#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(QT)
-#endif
-#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDI)
-				BasicRectangle(const RECT& nativeObject);
-				BasicRectangle(const RECTL& nativeObject);
-				BasicRectangle(const SMALL_RECT& nativeObject);
-				operator RECT() const;
-				operator RECTL() const;
-				operator SMALL_RECT() const;
-#endif
-#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
-#endif
 			private:
 				using BasicRectangleBase<Coordinate>::minimumCorner_;
 				using BasicRectangleBase<Coordinate>::maximumCorner_;
@@ -586,6 +580,16 @@ namespace ascension {
 				return std::move(temp);
 			}
 
+			template<typename Geometry, typename Arguments>
+			inline Geometry&& make(const Arguments& arguments, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+				return boost::geometry::make<Geometry>(arguments[_x], arguments[_y]);
+			}
+
+			template<typename Geometry, typename Arguments>
+			inline Geometry&& make(const Arguments& arguments, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+				return boost::geometry::make<Geometry>(arguments[_left], arguments[_top], arguments[_right], arguments[_bottom]);
+			}
+
 			template<typename Geometry>
 			inline Geometry& negate(Geometry& point, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
 				x(point) = -x(point);
@@ -811,6 +815,170 @@ namespace ascension {
 			template<typename Coordinate>
 			inline BasicDimension<Coordinate>& transpose(BasicDimension<Coordinate>& dimension) {
 				return dimension = BasicDimension<Coordinate>(_dx = dy(dimension), _dy = dx(dimension));
+			}
+
+			// platform-dependent conversions
+			namespace detail {
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)
+				template<typename Geometry>
+				inline Geometry&& fromNative(const Gdk::Point& native, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+					return make<Geometry>((_x = native.get_x(), _y = native.get_y()));
+				}
+				template<typename Geometry>
+				inline Geometry&& fromNative(const Gdk::Rectangle& native, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+					return make<Geometry>((_left = native.get_x(), _top = native.get_y(), _right = native.get_x() /*+ native.get_width()*/, _bottom = native.get_y() /*+ native.get_height()*/));
+				}
+				template<typename Geometry>
+				inline Geometry&& fromNative(const Cairo::Rectangle& native, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+					return make<Geometry>((_left = native.x, _top = native.y, _right = native.x + native.width, _bottom = native.y + native.height));
+				}
+				template<typename Geometry>
+				inline Geometry&& fromNative(const Cairo::RectangleInt& native, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+					return make<Geometry>((_left = native.x, _top = native.y, _right = native.x + native.width, _bottom = native.y + native.height));
+				}
+
+				template<typename Geometry>
+				inline Gdk::Point&& toNative(const Geometry& g, const Gdk::Point* = nullptr, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+					return Gdk::Point(static_cast<int>(x(g)), static_cast<int>(y(g)));
+				}
+				template<typename Geometry>
+				inline Gdk::Rectangle&& toNative(const Geometry& g, const Gdk::Rectangle* = nullptr, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+					return Gdk::Rectangle(static_cast<int>(left(g)), static_cast<int>(top(g)), static_cast<int>(dx(g)), static_cast<int>(dy(g)));
+				}
+				template<typename Geometry>
+				inline Cairo::Rectangle&& toNative(const Geometry& g, const Cairo::Rectangle* = nullptr, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+					Cairo::Rectangle native;
+					native.x = left(g);
+					native.y = top(g);
+					native.width = dx(g);
+					native.height = dy(g);
+					return std::move(native);
+				}
+				template<typename Geometry>
+				inline Cairo::RectangleInt&& toNative(const Geometry& g, const Cairo::RectangleInt* = nullptr, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+					Cairo::RectangleInt native;
+					native.x = static_cast<int>(left(g));
+					native.y = static_cast<int>(top(g));
+					native.width = static_cast<int>(dx(g));
+					native.height = static_cast<int>(dy(g));
+					return std::move(native);
+				}
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(QT)
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDI)
+				template<typename Geometry>
+				inline Geometry&& fromNative(const COORD& native, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+					return make<Geometry>((_x = native.x, _y = native.y));
+				}
+				template<typename Geometry>
+				inline Geometry&& fromNative(const POINT& native, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+					return make<Geometry>((_x = native.x, _y = native.y));
+				}
+				template<typename Geometry>
+				inline Geometry&& fromNative(const POINTL& native, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+					return make<Geometry>((_x = native.x, _y = native.y));
+				}
+				template<typename Geometry>
+				inline Geometry&& fromNative(const POINTS& native, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+					return make<Geometry>((_x = native.x, _y = native.y));
+				}
+				template<typename Geometry>
+				inline Geometry&& fromNative(const SIZE& native, typename detail::EnableIfTagIs<Geometry, DimensionTag>::type* = nullptr) {
+					return Geometry(_dx = native.cx, _dy = native.cy);
+				}
+				template<typename Geometry>
+				inline Geometry&& fromNative(const RECT& native, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+					return make<Geometry>((_left = native.left, _top = native.top, _right = native.right, _bottom = native.bottom));
+				}
+				template<typename Geometry>
+				inline Geometry&& fromNative(const RECTL& native, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+					return make<Geometry>((_left = native.left, _top = native.top, _right = native.right, _bottom = native.bottom));
+				}
+				template<typename Geometry>
+				inline Geometry&& fromNative(const SMALL_RECT& native, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+					return make<Geometry>((_left = native.left, _top = native.top, _right = native.right, _bottom = native.bottom));
+				}
+
+				template<typename Geometry>
+				inline COORD&& toNative(const Geometry& g, const COORD* = nullptr, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+					COORD native;
+					native.X = static_cast<SHORT>(x(g));
+					native.Y = static_cast<SHORT>(y(g));
+					return std::move(native);
+				}
+				template<typename Geometry>
+				inline POINT&& toNative(const Geometry& g, const POINT* = nullptr, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+					POINT native;
+					native.x = static_cast<LONG>(x(g));
+					native.y = static_cast<LONG>(y(g));
+					return std::move(native);
+				}
+				template<typename Geometry>
+				inline POINTL&& toNative(const Geometry& g, const POINTL* = nullptr, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+					POINTL native;
+					native.x = static_cast<LONG>(x(g));
+					native.y = static_cast<LONG>(y(g));
+					return std::move(native);
+				}
+				template<typename Geometry>
+				inline POINTS&& toNative(const Geometry& g, const POINTS* = nullptr, typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr) {
+					POINTS native;
+					native.x = static_cast<SHORT>(x(g));
+					native.y = static_cast<SHORT>(y(g));
+					return std::move(native);
+				}
+
+				template<typename Geometry>
+				inline SIZE&& toNative(const Geometry& g, const SIZE* = nullptr, typename detail::EnableIfTagIs<Geometry, DimensionTag>::type* = nullptr) {
+					SIZE native;
+					native.cx = static_cast<LONG>(dx(g));
+					native.cy = static_cast<LONG>(dy(g));
+					return std::move(native);
+				}
+
+				template<typename Geometry>
+				inline RECT&& toNative(const Geometry& g, const RECT* = nullptr, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+					RECT native;
+					native.left = static_cast<LONG>(left(g));
+					native.top = static_cast<LONG>(top(g));
+					native.right = static_cast<LONG>(right(g));
+					native.bottom = static_cast<LONG>(bottom(g));
+					return std::move(native);
+				}
+				template<typename Geometry>
+				inline RECTL&& toNative(const Geometry& g, const RECTL* = nullptr, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+					RECTL native;
+					native.left = static_cast<LONG>(left(g));
+					native.top = static_cast<LONG>(top(g));
+					native.right = static_cast<LONG>(right(g));
+					native.bottom = static_cast<LONG>(bottom(g));
+					return std::move(native);
+				}
+				template<typename Geometry>
+				inline SMALL_RECT&& toNative(const Geometry& g, const SMALL_RECT* = nullptr, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+					SMALL_RECT native;
+					native.Left = static_cast<SHORT>(left(g));
+					native.Top = static_cast<SHORT>(top(g));
+					native.Right = static_cast<SHORT>(right(g));
+					native.Bottom = static_cast<SHORT>(bottom(g));
+					return std::move(native);
+				}
+#endif
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
+				template<typename Geometry>
+				inline Geometry&& fromNative(const Pango::Rectangle& native, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+					return make<Geometry>((_left = native.get_x(), _top = native.get_y(), _right = native.get_x() + native.get_width(), _bottom = native.get_y() + native.get_height()));
+				}
+				template<typename Geometry>
+				inline Pango::Rectangle&& toNative(const Geometry& g, const Pango::Rectangle* = nullptr, typename detail::EnableIfTagIs<Geometry, boost::geometry::box_tag>::type* = nullptr) {
+					return Pango::Rectangle(left(g), top(g), dx(g), dy(g));
+				}
+#endif
+#if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
+#endif
 			}
 		}
 

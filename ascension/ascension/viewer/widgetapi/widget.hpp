@@ -57,7 +57,7 @@ namespace ascension {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 				Gdk::Window, Glib::RefPtr
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-				QWindow, std::shared_ptr
+				QWidget, std::shared_ptr
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 				NSWindow, ???
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
@@ -65,20 +65,107 @@ namespace ascension {
 #endif
 			> {};
 
+			namespace detail {
+				template<typename T> struct IsPointer : std::false_type {};
+				template<typename T> struct RemovePointer {typedef T Type;};
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+				template<typename T> struct IsPointer<typename Glib::RefPtr<T>> : std::true_type {};
+				template<typename T> struct RemovePointer<Glib::RefPtr<T>> {typedef T Type;};
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+				template<typename T> struct IsPointer<typename std::shared_ptr<T>> : std::true_type {};
+				template<typename T> struct RemovePointer<std::shared_ptr<T>> {typedef T Type;};
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+				template<typename T> struct IsPointer<typename ???<T>> : std::true_type {};
+				template<typename T> struct RemovePointer<???<T>> {typedef T Type;};
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+				template<typename T> struct IsPointer<typename std::shared_ptr<T>> : std::true_type {};
+				template<typename T> struct RemovePointer<std::shared_ptr<T>> {typedef T Type;};
+#endif
+			}
+
 			template<typename WidgetOrWindow>
 			class Proxy {
 			public:
-				typedef typename std::conditional<std::is_const<WidgetOrWindow>::value,
-					typename WidgetOrWindow::const_pointer, typename WidgetOrWindow::pointer>::type Result;
-				Proxy(typename WidgetOrWindow::pointer);
-				Proxy(typename WidgetOrWindow::const_pointer);
-				Proxy(typename WidgetOrWindow::reference);
-				Proxy(typename WidgetOrWindow::const_reference);
-				operator Proxy<const WidgetOrWindow>() const;
-				Result get() const {return p_;}
+				typedef typename WidgetOrWindow::pointer pointer;
+				template<typename T>
+				Proxy(T p, typename std::enable_if<
+					detail::IsPointer<T>::value
+					&& !std::is_const<typename detail::RemovePointer<T>::Type>::value
+					&& std::is_base_of<typename WidgetOrWindow::value_type, typename detail::RemovePointer<T>::Type>::value>::type* = nullptr) : p_(p) {}
+				template<typename T>
+				Proxy(T& v, typename std::enable_if<
+					!std::is_const<T>::value
+					&& std::is_base_of<typename WidgetOrWindow::value_type, T>::value>::type* = nullptr) : p_(&v) {}
+				template<typename T>
+				Proxy(T v, typename std::enable_if<
+					std::is_lvalue_reference<T>::value
+					&& !std::is_const<typename std::remove_reference<T>::type>::value
+					&& std::is_base_of<typename WidgetOrWindow::value_type, typename std::remove_reference<T>::type>::value>::type* = nullptr) : p_(&v) {}
+//				typename std::add_lvalue_reference<typename WidgetOrWindow::value_type>::type operator*() const {return *get();}
+				pointer operator->() const {return p_;}
+				operator Proxy<const WidgetOrWindow>() const {return Proxy<const WidgetOrWindow>(get());}
+#ifndef BOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS
+				explicit operator bool() const {return p_;}
+#else
 			private:
-				Result p_;
+				typedef void(Proxy::*safeBool)() const;
+			public:
+				operator safeBool() const {return p_ ? &Proxy::uncallable : nullptr;}
+#endif
+				pointer get() const {return p_;}
+
+			private:
+#ifdef BOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS
+				void uncallable() const {}
+#endif
+				pointer p_;
 			};
+
+			template<typename WidgetOrWindow>
+			class Proxy<const WidgetOrWindow> {
+			public:
+				typedef typename WidgetOrWindow::const_pointer pointer;
+				template<typename T>
+				Proxy(T p, typename std::enable_if<
+					detail::IsPointer<T>::value
+//					&& std::is_const<typename detail::RemovePointer<T>::Type>::value
+					&& std::is_base_of<typename WidgetOrWindow::value_type, typename detail::RemovePointer<T>::Type>::value>::type* = nullptr) : p_(p) {}
+				template<typename T>
+				Proxy(T& v, typename std::enable_if<
+/*					std::is_const<T>::value
+					&&*/ std::is_base_of<typename WidgetOrWindow::value_type, T>::value>::type* = nullptr) : p_(&v) {}
+				template<typename T>
+				Proxy(T v, typename std::enable_if<
+					std::is_lvalue_reference<T>::value
+//					&& std::is_const<typename std::remove_reference<T>::type>::value
+					&& std::is_base_of<typename WidgetOrWindow::value_type, typename std::remove_reference<T>::type>::value>::type* = nullptr) : p_(&v) {}
+//				typename std::add_lvalue_reference<typename WidgetOrWindow::value_type>::type operator*() const {return *get();}
+				pointer operator->() const {return p_;}
+				operator Proxy<const WidgetOrWindow>() const {return Proxy<const WidgetOrWindow>(get());}
+#ifndef BOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS
+				explicit operator bool() const {return p_;}
+#else
+			private:
+				typedef void(Proxy::*safeBool)() const;
+			public:
+				operator safeBool() const {return p_ ? &Proxy::uncallable : nullptr;}
+#endif
+				pointer get() const {return p_;}
+
+			private:
+#ifdef BOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS
+				void uncallable() const {}
+#endif
+				pointer p_;
+			};
+
+			/**
+			 * Returns the window of the widget.
+			 * @param widget The widget
+			 * @return The window or @c null
+			 */
+			Proxy<Window> window(Proxy<Widget> widget);
+			Proxy<const Window> cwindow(Proxy<const Widget> widget);
 
 			/**
 			 * Returns a bounds of the widget relative to its parent and including/excluding the
@@ -265,37 +352,37 @@ namespace ascension {
 
 			// top-level windows
 			/**
-			 * Returns @c true if the widget is maximized.
-			 * @param widget The widget
-			 * @return true if @a widget is maximized
+			 * Returns @c true if the window is maximized.
+			 * @param window The window
+			 * @return true if @a window is maximized
 			 * @see #isMinimized, #showMaximized
 			 */
-			bool isMaximized(Proxy<const Widget> widget);
+			bool isMaximized(Proxy<const Window> window);
 			/**
-			 * Returns @c true if the widget is minimized.
-			 * @param widget The widget
-			 * @return true if @a widget is minimized
+			 * Returns @c true if the window is minimized.
+			 * @param window The window
+			 * @return true if @a window is minimized
 			 * @see #isMaximized, #showMinimized
 			 */
-			bool isMinimized(Proxy<const Widget> widget);
+			bool isMinimized(Proxy<const Window> window);
 			/**
-			 * Shows the widget maximized.
-			 * @param widget The widget
+			 * Shows the window maximized.
+			 * @param window The window
 			 * @see #isMaximized, #showMinimized, #showNormal
 			 */
-			void showMaximized(Proxy<Widget> widget);
+			void showMaximized(Proxy<Window> window);
 			/**
-			 * Shows the widget minimized.
-			 * @param widget The widget
+			 * Shows the window minimized.
+			 * @param window The window
 			 * @see #isMinimized, #showMaximized, #showNormal
 			 */
-			void showMinimized(Proxy<Widget> widget);
+			void showMinimized(Proxy<Window> window);
 			/**
-			 * Restores the maximized or minimized widget.
-			 * @param widget The widget
+			 * Restores the maximized or minimized window.
+			 * @param window The window
 			 * @see #isMaximized, #isMinimized, #showMaximized, #showMinimized
 			 */
-			void showNormal(Proxy<Widget> widget);
+			void showNormal(Proxy<Window> window);
 
 			// hierarchy
 			/**
@@ -334,9 +421,9 @@ namespace ascension {
 			 */
 			bool acceptsDrops(Proxy<const Widget> widget);
 
-			/// Returns the desktop window.
+			/// Returns the desktop widget.
 			Proxy<Widget> desktop();
-		}
+		}	// namespace widgetapi
 #if 0
 		namespace base {
 
@@ -439,22 +526,68 @@ namespace ascension {
 #endif // !ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 			};
 
-		}
+		}	// namespace base
 #endif // 0
-	}
 
+		namespace widgetapi {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			template<typename Point>
+			Point mapFromGlobal(Proxy<const Widget> widget, const Point& position,
+					typename graphics::geometry::detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* /* = nullptr */) {
+				const Glib::RefPtr<const Gdk::Window> window(widget->get_window());
+				if(!window)
+					throw IllegalStateException("The widget passed to widgetapi.mapFromGlobal does not have a window.");
+				int rootOriginX, rootOriginY;
+				window->get_root_origin(rootOriginX, rootOriginY);
+				return graphics::geometry::make<Point>((
+					graphics::geometry::_x = graphics::geometry::x(position) - rootOriginX,
+					graphics::geometry::_y = graphics::geometry::y(position) - rootOriginY));
+			}
+
+			template<typename Point>
+			inline Point mapToGlobal(Proxy<const Widget> widget, const Point& position,
+					typename graphics::geometry::detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* /* = nullptr */) {
+				const Glib::RefPtr<const Gdk::Window> window(widget->get_window());
+				if(!window)
+					throw IllegalStateException("The widget passed to widgetapi.mapToGlobal does not have a window.");
+				const int localX = static_cast<int>(graphics::geometry::x(position)), localY = static_cast<int>(graphics::geometry::x(position));
+				int rootX, rootY;
+				Glib::RefPtr<Gdk::Window>::cast_const(window)->get_root_coords(localX, localX, rootX, rootY);	// damn! why is this method not const???
+				return graphics::geometry::make<Point>((graphics::geometry::_x = rootX, graphics::geometry::_y = rootY));
+			}
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			template<typename Point>
+			Point mapFromGlobal(Proxy<const Widget> widget, const Point& position,
+					typename detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* /* = nullptr */) {
+				Point temp(position);
+				if(!win32::boole(::ScreenToClient(widget.handle().get(), &temp)))
+					throw makePlatformError();
+				return temp;
+			}
+
+			template<typename Point>
+			Point mapToGlobal(Proxy<const Widget> widget, const Point& position,
+					typename detail::EnableIfTagIs<Point, boost::geometry::point_tag>::type* /* = nullptr */) {
+				Point temp(position);
+				if(!win32::boole(::ClientToScreen(widget.handle().get(), &temp)))
+					throw makePlatformError();
+				return temp;
+			}
+#else
+			ASCENSION_CANT_DETECT_PLATFORM();
+#endif
+		}
+	}
+
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 	namespace win32 {
 		inline Handle<HIMC>::Type inputMethod(const viewers::widgetapi::Proxy<Widget> widget) {
 			return Handle<HIMC>::Type(::ImmGetContext(widget.handle().get()),
 				std::bind(&::ImmReleaseContext, widget.handle().get(), std::placeholders::_1));
 		}
 	}
-#else
-	ASCENSION_CANT_DETECT_PLATFORM();
 #endif
 }
 

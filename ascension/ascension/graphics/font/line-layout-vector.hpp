@@ -77,7 +77,7 @@ namespace ascension {
 				public kernel::DocumentPartitioningListener, private boost::noncopyable {
 			public:
 				class UseCalculatedLayoutTag : private boost::noncopyable {
-					UseCalculatedLayoutTag() BOOST_NOEXCEPT;
+					UseCalculatedLayoutTag() BOOST_NOEXCEPT {}
 					friend class LineLayoutVector;
 				};
 				static const UseCalculatedLayoutTag USE_CALCULATED_LAYOUT;

@@ -73,7 +73,7 @@ namespace ascension {
 
 		RenderingContext2D& RenderingContext2D::bezierCurveTo(const Point& cp1, const Point& cp2, const Point& to) {
 			ensureThereIsASubpathFor(cp1);
-			const POINT points[3] = {cp1, cp2, to};
+			const POINT points[3] = {geometry::toNative<POINT>(cp1), geometry::toNative<POINT>(cp2), geometry::toNative<POINT>(to)};
 			if(!win32::boole(::PolyBezierTo(nativeObject_.get(), points, 3)))
 				throw makePlatformError();
 			return *this;
@@ -90,7 +90,7 @@ namespace ascension {
 		}
 
 		RenderingContext2D& RenderingContext2D::clearRectangle(const graphics::Rectangle& rectangle) {
-			const RECT temp(rectangle);
+			const RECT temp(geometry::toNative<RECT>(rectangle));
 			if(::FillRect(nativeObject_.get(), &temp, static_cast<HBRUSH>(::GetStockObject(BLACK_BRUSH))) == 0)
 				throw makePlatformError();
 			return *this;
@@ -235,7 +235,7 @@ namespace ascension {
 		RenderingContext2D& RenderingContext2D::fillRectangle(const graphics::Rectangle& rectangle) {
 			updatePenAndBrush();
 			if(HBRUSH currentBrush = static_cast<HBRUSH>(::GetCurrentObject(nativeObject_.get(), OBJ_BRUSH))) {
-				RECT temp(rectangle);
+				RECT temp(geometry::toNative<RECT>(rectangle));
 				if(::FillRect(nativeObject_.get(), &temp, currentBrush) != 0)
 					return *this;
 			}
@@ -514,7 +514,8 @@ namespace ascension {
 			SIZE s;
 			if(!win32::boole(::GetTextExtentPoint32W(nativeObject_.get(), text.cbegin(), text.length(), &s)))
 				throw makePlatformError();
-			return s;
+			const geometry::BasicDimension<LONG> temp(geometry::fromNative<geometry::BasicDimension<LONG>>(s));
+			return Dimension(geometry::_dx = static_cast<Scalar>(geometry::dx(temp)), geometry::_dy = static_cast<Scalar>(geometry::dy(temp)));
 		}
 
 		double RenderingContext2D::miterLimit() const {
@@ -611,10 +612,6 @@ namespace ascension {
 			return *this;
 		}
 
-		RenderingContext2D& RenderingContext2D::rotate(double angle) {
-			return transform(AffineTransform::rotation(angle));
-		}
-
 		RenderingContext2D& RenderingContext2D::save() {
 			const int cookie = ::SaveDC(nativeObject_.get());
 			if(cookie == 0)
@@ -622,10 +619,6 @@ namespace ascension {
 			savedStates_.push(savedStates_.top());
 			savedStates_.top().cookie = cookie;
 			return *this;
-		}
-
-		RenderingContext2D& RenderingContext2D::scale(AffineTransform::value_type sx, AffineTransform::value_type sy) {
-			return transform(AffineTransform::scaling(sx, sy));
 		}
 
 		RenderingContext2D& RenderingContext2D::scrollPathIntoView() {
@@ -741,8 +734,8 @@ namespace ascension {
 		}
 
 		RenderingContext2D& RenderingContext2D::setTransform(const AffineTransform& matrix) {
-			const XFORM temp(matrix);
-			if(!win32::boole(::SetWorldTransform(nativeObject_.get(), &temp)))
+			const XFORM native(geometry::toNative<XFORM>(matrix));
+			if(!win32::boole(::SetWorldTransform(nativeObject_.get(), &native)))
 				throw makePlatformError();
 			return *this;
 		}
@@ -822,18 +815,10 @@ namespace ascension {
 		}
 
 		RenderingContext2D& RenderingContext2D::transform(const AffineTransform& matrix) {
-			const XFORM temp(matrix);
-			if(!win32::boole(::ModifyWorldTransform(nativeObject_.get(), &temp, MWT_RIGHTMULTIPLY)))
+			const XFORM native(geometry::toNative<XFORM>(matrix));
+			if(!win32::boole(::ModifyWorldTransform(nativeObject_.get(), &native, MWT_RIGHTMULTIPLY)))
 				throw makePlatformError();
 			return *this;
-		}
-
-		RenderingContext2D& RenderingContext2D::translate(const Dimension& delta) {
-			return translate(geometry::dx(delta), geometry::dy(delta));
-		}
-
-		RenderingContext2D& RenderingContext2D::translate(AffineTransform::value_type dx, AffineTransform::value_type dy) {
-			return transform(AffineTransform::translation(dx, dy));
 		}
 
 		void RenderingContext2D::updatePenAndBrush() {
