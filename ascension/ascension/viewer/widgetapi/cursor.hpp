@@ -97,8 +97,8 @@ namespace ascension {
 				static void hide();
 				/// Returns the position of the global cursor in pixels.
 				static graphics::Point position();
-				/// Moves the global cursor to the specified position in pixels.
-				static void setPosition(const graphics::Point& p);
+//				/// Moves the global cursor to the specified position in pixels.
+//				static void setPosition(const graphics::Point& p);
 				/// Shows the global cursors.
 				static void show();
 
