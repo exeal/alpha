@@ -49,6 +49,10 @@ namespace ascension {
 ////			return Proxy<Window>(Gdk::Window::get_default_root_window());
 //			}
 
+			bool hasFocus(Proxy<const Widget> widget) {
+				return widget->has_focus();
+			}
+
 			void hide(Proxy<Widget> widget) {
 				widget->hide();
 			}
@@ -61,8 +65,44 @@ namespace ascension {
 				return (window->get_state() & Gdk::WINDOW_STATE_ICONIFIED) != 0;
 			}
 
+			bool isVisible(Proxy<const Widget> widget) {
+				return widget->get_visible();
+			}
+
+			void move(Proxy<Window> widget, const graphics::Point& newOrigin) {
+				widget->move(static_cast<int>(graphics::geometry::x(newOrigin)), static_cast<int>(graphics::geometry::y(newOrigin)));
+			}
+
+			void raise(Proxy<Window> window) {
+				window->raise();
+			}
+
+			void redrawScheduledRegion(Proxy<Widget> widget) {
+				if(const Glib::RefPtr<Gdk::Window> window = widget->get_window())
+					window->process_updates(true);
+			}
+
+			void resize(Proxy<Window> window, const graphics::Dimension& newSize) {
+				window->resize(static_cast<int>(graphics::geometry::dx(newSize)), static_cast<int>(graphics::geometry::dy(newSize)));
+			}
+
+			void scheduleRedraw(Proxy<Widget> widget, bool eraseBackground) {
+				widget->queue_draw();
+			}
+
+			void scheduleRedraw(Proxy<Widget> widget, const graphics::Rectangle& rect, bool eraseBackground) {
+				widget->queue_draw_area(
+					static_cast<int>(graphics::geometry::left(rect)), static_cast<int>(graphics::geometry::top(rect)),
+					static_cast<int>(graphics::geometry::dx(rect)), static_cast<int>(graphics::geometry::dy(rect)));
+			}
+
 			void setBounds(Proxy<Widget> widget, const graphics::Rectangle& bounds) {
 				widget->set_allocation(graphics::geometry::toNative<Gtk::Allocation>(bounds));
+			}
+
+			void setFocus(Proxy<Widget> widget) {
+//				widget->grab_focus();
+				widget->set_state(Gtk::STATE_FOCUSED);
 			}
 
 			void showMaximized(Proxy<Window> window) {
@@ -75,6 +115,10 @@ namespace ascension {
 
 			void showNormal(Proxy<Window> window) {
 				window->show_unraised();
+			}
+
+			void unsetFocus(Proxy<Widget> widget) {
+				widget->set_state(Gtk::STATE_NORMAL);
 			}
 
 			Proxy<Window> window(Proxy<Widget> widget) {

@@ -241,17 +241,17 @@ namespace ascension {
 					boost::geometry::get<0>(maximumCorner), boost::geometry::get<1>(maximumCorner));
 			}
 			/**
-			 * Moves the widget to the specified position.
-			 * @param widget
-			 * @param newOrigin The new origin of the widget in parent-relative coordinates
+			 * Moves the window to the specified position.
+			 * @param window
+			 * @param newOrigin The new origin of the window in parent-relative coordinates
 			 */
-			void move(Proxy<Widget> widget, const graphics::Point& newOrigin);
+			void move(Proxy<Window> window, const graphics::Point& newOrigin);
 			/**
-			 * Resizes the widget.
-			 * @param widget
-			 * @param newSize The new size of the widget excluding any window frame
+			 * Resizes the window.
+			 * @param window
+			 * @param newSize The new size of the window excluding any frame
 			 */
-			void resize(Proxy<Widget> widget, const graphics::Dimension& newSize);
+			void resize(Proxy<Window> window, const graphics::Dimension& newSize);
 			/**
 			 * Sets the bounds of the widget.
 			 * @param widget
@@ -292,11 +292,11 @@ namespace ascension {
 			 */
 			void lower(Proxy<Widget> widget);
 			/**
-			 * Raises the widget to the top of the parent widget's stack.
-			 * @param widget The widget to raise
+			 * Raises the window to the top of the parent window's stack.
+			 * @param window The window to raise
 			 * @see #lower
 			 */
-			void raise(Proxy<Widget> widget);
+			void raise(Proxy<Window> window);
 			/**
 			 * Returns the level of opacity for the window.
 			 * @param widget The widget
@@ -340,8 +340,8 @@ namespace ascension {
 			bool hasFocus(Proxy<const Widget> widget);
 			bool isActive(Proxy<const Widget> widget);
 			void releaseInput(Proxy<Widget> widget);
-			void setFocus();
 			void setFocus(Proxy<Widget> widget);
+			void unsetFocus(Proxy<Widget> widget);
 			class InputGrabLocker {
 			public:
 				~InputGrabLocker() {releaseInput(widget_);}

@@ -247,7 +247,7 @@ namespace ascension {
 
 		void AutoScrollOriginMark::resetWidgetShape() {
 			width_ = 28;	// TODO: This value must be computed by using user settings.
-			widgetapi::resize(*this, graphics::Dimension(width_ + 1, width_ + 1));
+			widgetapi::resize(widgetapi::window(*this), graphics::Dimension(width_ + 1, width_ + 1));
 	
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			// TODO: Implement by using Gtk.Window.shape_combine_region(Cairo.Region).
@@ -567,7 +567,7 @@ namespace ascension {
 
 		/// @see DropTarget#dragLeft
 		void DefaultMouseInputStrategy::dragLeft(widgetapi::DragLeaveInput& input) {
-			widgetapi::setFocus();
+			widgetapi::unsetFocus(*viewer_);
 			timer_.stop();
 //			if(dnd_.supportLevel >= SUPPORT_DND) {
 				if(state_ == DND_TARGET)
@@ -1050,12 +1050,13 @@ namespace ascension {
 						widgetapi::setFocus(*viewer_);
 						// show the indicator margin
 						graphics::Rectangle rect(widgetapi::bounds(*autoScrollOriginMark_, true));
-						widgetapi::move(*autoScrollOriginMark_,
+						widgetapi::move(
+							widgetapi::window(*autoScrollOriginMark_),
 							graphics::Point(
 								graphics::geometry::_x = graphics::geometry::x(p) - graphics::geometry::dx(rect) / 2,
 								graphics::geometry::_y = graphics::geometry::y(p) - graphics::geometry::dy(rect) / 2));
 						widgetapi::show(*autoScrollOriginMark_);
-						widgetapi::raise(*autoScrollOriginMark_);
+						widgetapi::raise(widgetapi::window(*autoScrollOriginMark_));
 						widgetapi::grabInput(*viewer_);
 						showCursor(input.location());
 						return true;
