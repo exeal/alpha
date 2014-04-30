@@ -91,7 +91,7 @@ namespace ascension {
 			std::unique_ptr<std::uint8_t[]> buffer_;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 			win32::Handle<HBITMAP>::Type impl_;
-			std::unique_ptr<std::uint8_t[], detail::NullDeleter> buffer_;
+			std::unique_ptr<std::uint8_t[], ascension::detail::NullDeleter> buffer_;
 #endif
 		};
 

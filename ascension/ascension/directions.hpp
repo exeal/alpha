@@ -159,9 +159,10 @@ namespace ascension {
 		 * @param arguments The named arguments same as the constructor of @c PhysicalTwoAxes class
 		 */
 		template<typename ArgumentPack>
-		inline auto makePhysicalTwoAxes(const ArgumentPack& arguments) -> PhysicalTwoAxes<typename detail::DecayOrRefer<decltype(arguments[_x])>::Type> {
-			typedef typename detail::DecayOrRefer<decltype(arguments[_x])>::Type Coordinate;
-			static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_y])>::Type, Coordinate>::value, "");
+		inline auto makePhysicalTwoAxes(const ArgumentPack& arguments)
+				-> PhysicalTwoAxes<typename ascension::detail::DecayOrRefer<decltype(arguments[_x])>::Type> {
+			typedef typename ascension::detail::DecayOrRefer<decltype(arguments[_x])>::Type Coordinate;
+			static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_y])>::Type, Coordinate>::value, "");
 			return PhysicalTwoAxes<Coordinate>(_x = arguments[_x], _y = arguments[_y]);
 		}
 
@@ -268,11 +269,12 @@ namespace ascension {
 		 * @param arguments The named arguments same as the constructor of @c PhysicalFourSides class
 		 */
 		template<typename ArgumentPack>
-		inline auto makePhysicalFourSides(const ArgumentPack& arguments) -> PhysicalFourSides<typename detail::DecayOrRefer<decltype(arguments[_top])>::Type> {
-			typedef typename detail::DecayOrRefer<decltype(arguments[_top])>::Type Coordinate;
-			static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_right])>::Type, Coordinate>::value, "");
-			static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_bottom])>::Type, Coordinate>::value, "");
-			static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_left])>::Type, Coordinate>::value, "");
+		inline auto makePhysicalFourSides(const ArgumentPack& arguments)
+				-> PhysicalFourSides<typename ascension::detail::DecayOrRefer<decltype(arguments[_top])>::Type> {
+			typedef typename ascension::detail::DecayOrRefer<decltype(arguments[_top])>::Type Coordinate;
+			static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_right])>::Type, Coordinate>::value, "");
+			static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_bottom])>::Type, Coordinate>::value, "");
+			static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_left])>::Type, Coordinate>::value, "");
 			return PhysicalFourSides<Coordinate>(_top = arguments[_top], _right = arguments[_right], _bottom = arguments[_bottom], _left = arguments[_left]);
 		}
 
@@ -420,11 +422,12 @@ namespace ascension {
 			 * @param arguments The named arguments same as the constructor of @c LineRelativeFourSides class
 			 */
 			template<typename ArgumentPack>
-			inline auto makeLineRelativeFourSides(const ArgumentPack& arguments) -> LineRelativeFourSides<typename ascension::detail::DecayOrRefer<decltype(arguments[_over])>::Type> {
-				typedef typename detail::DecayOrRefer<decltype(arguments[_over])>::Type Coordinate;
-				static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_under])>::Type, Coordinate>::value, "");
-				static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_lineLeft])>::Type, Coordinate>::value, "");
-				static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_lineRight])>::Type, Coordinate>::value, "");
+			inline auto makeLineRelativeFourSides(const ArgumentPack& arguments)
+					-> LineRelativeFourSides<typename ascension::detail::DecayOrRefer<decltype(arguments[_over])>::Type> {
+				typedef typename ascension::detail::DecayOrRefer<decltype(arguments[_over])>::Type Coordinate;
+				static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_under])>::Type, Coordinate>::value, "");
+				static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_lineLeft])>::Type, Coordinate>::value, "");
+				static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_lineRight])>::Type, Coordinate>::value, "");
 				return LineRelativeFourSides<Coordinate>(_over = arguments[_over], _under = arguments[_under], _lineLeft = arguments[_lineLeft], _lineRight = arguments[_lineRight]);
 			}
 			/// @}
@@ -536,9 +539,10 @@ namespace ascension {
 		 * @param arguments The named arguments same as the constructor of @c AbstractTwoAxes class
 		 */
 		template<typename ArgumentPack>
-		inline auto makeAbstractTwoAxes(const ArgumentPack& arguments) -> AbstractTwoAxes<typename detail::DecayOrRefer<decltype(arguments[_bpd])>::Type> {
-			typedef typename detail::DecayOrRefer<decltype(arguments[_bpd])>::Type Coordinate;
-			static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_ipd])>::Type, Coordinate>::value, "");
+		inline auto makeAbstractTwoAxes(const ArgumentPack& arguments)
+				-> AbstractTwoAxes<typename ascension::detail::DecayOrRefer<decltype(arguments[_bpd])>::Type> {
+			typedef typename ascension::detail::DecayOrRefer<decltype(arguments[_bpd])>::Type Coordinate;
+			static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_ipd])>::Type, Coordinate>::value, "");
 			return AbstractTwoAxes<Coordinate>(_bpd = arguments[_bpd], _ipd = arguments[_ipd]);
 		}
 
@@ -641,11 +645,12 @@ namespace ascension {
 		 * @param arguments The named arguments same as the constructor of @c FlowRelativeFourSides class
 		 */
 		template<typename ArgumentPack>
-		inline auto makeFlowRelativeFourSides(const ArgumentPack& arguments) -> FlowRelativeFourSides<typename detail::DecayOrRefer<decltype(arguments[_before])>::Type> {
-			typedef typename detail::DecayOrRefer<decltype(arguments[_before])>::Type Coordinate;
-			static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_after])>::Type, Coordinate>::value, "");
-			static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_start])>::Type, Coordinate>::value, "");
-			static_assert(std::is_same<detail::DecayOrRefer<decltype(arguments[_end])>::Type, Coordinate>::value, "");
+		inline auto makeFlowRelativeFourSides(const ArgumentPack& arguments)
+				-> FlowRelativeFourSides<typename ascension::detail::DecayOrRefer<decltype(arguments[_before])>::Type> {
+			typedef typename ascension::detail::DecayOrRefer<decltype(arguments[_before])>::Type Coordinate;
+			static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_after])>::Type, Coordinate>::value, "");
+			static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_start])>::Type, Coordinate>::value, "");
+			static_assert(std::is_same<ascension::detail::DecayOrRefer<decltype(arguments[_end])>::Type, Coordinate>::value, "");
 			return FlowRelativeFourSides<Coordinate>(_before = arguments[_before], _after = arguments[_after], _start = arguments[_start], _end = arguments[_end]);
 		}
 

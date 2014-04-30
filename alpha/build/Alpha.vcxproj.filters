@@ -832,6 +832,9 @@
     <ClInclude Include="..\src\status-bar.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\native-conversion.hpp">
+      <Filter>ascension\Header Files\graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">

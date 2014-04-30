@@ -7,6 +7,7 @@
 #include <ascension/viewer/widgetapi/widget.hpp>
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#	include <ascension/graphics/native-conversion.hpp>
 #	include <ascension/graphics/rendering-context.hpp>
 #	include <gtkmm/window.h>
 #	if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
@@ -24,9 +25,9 @@ namespace ascension {
 #else
 					Glib::RefPtr<Gtk::Widget>::cast_const(widget.get())->get_window()->get_frame_extents(extents);
 #endif
-					return graphics::geometry::fromNative<graphics::Rectangle>(extents);
+					return graphics::fromNative<graphics::Rectangle>(extents);
 				} else
-					return graphics::geometry::fromNative<graphics::Rectangle>(widget->get_allocation());
+					return graphics::fromNative<graphics::Rectangle>(widget->get_allocation());
 			}
 
 			std::unique_ptr<graphics::RenderingContext2D> createRenderingContext(Proxy<const Widget> widget) {
@@ -97,7 +98,7 @@ namespace ascension {
 			}
 
 			void setBounds(Proxy<Widget> widget, const graphics::Rectangle& bounds) {
-				widget->set_allocation(graphics::geometry::toNative<Gtk::Allocation>(bounds));
+				widget->set_allocation(graphics::toNative<Gtk::Allocation>(bounds));
 			}
 
 			void setFocus(Proxy<Widget> widget) {
