@@ -363,6 +363,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-run.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-viewport.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\image.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\native-conversion.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\paint.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-context.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\rendering-device.hpp" />

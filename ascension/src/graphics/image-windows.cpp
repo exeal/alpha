@@ -106,7 +106,7 @@ namespace ascension {
 
 			if(data != nullptr) {
 				const BITMAP temp(win32Object<BITMAP>(bitmap));
-				memcpy(buffer_.get(), data, temp.bmWidthBytes * temp.bmHeight);
+				std::memcpy(buffer_.get(), data, temp.bmWidthBytes * temp.bmHeight);
 			}
 
 			// commit

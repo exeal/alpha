@@ -9,6 +9,7 @@
  */
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
+#include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/rendering-device.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
@@ -1723,7 +1724,7 @@ namespace ascension {
 					throw makePlatformError();
 				assert(analysis_.fLogicalOrder == 0);
 				// paint glyphs
-				const RECT boundsToPaint(geometry::toNative<RECT>(context.boundsToPaint()));
+				const RECT boundsToPaint(toNative<RECT>(context.boundsToPaint()));
 				const boost::iterator_range<const int*> justifiedGlyphAdvances(justifiedAdvances());
 				const HRESULT hr = ::ScriptTextOut(context.asNativeObject().get(), &glyphs_->fontCache,
 					static_cast<int>(geometry::x(origin)), static_cast<int>(geometry::y(origin)),

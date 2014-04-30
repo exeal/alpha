@@ -15,6 +15,7 @@
 //#include "search.hpp"
 //#include <ascension/text-editor.hpp>
 #include <ascension/corelib/regex.hpp>
+#include <ascension/graphics/native-conversion.hpp>
 #include <gtkmm/fontchooserdialog.h>
 #include <gtkmm/messagedialog.h>
 #include <glibmm/i18n.h>
@@ -180,9 +181,9 @@ namespace alpha {
 		}
 #else
 		Gtk::FontChooserDialog dialog(Glib::ustring(), window());
-		dialog.set_font_desc(activeView.textRenderer().defaultFont()->describe().as<Pango::FontDescription>());
+		dialog.set_font_desc(ascension::graphics::toNative<Pango::FontDescription>(activeView.textRenderer().defaultFont()->describe()));
 		if(dialog.run() == Gtk::RESPONSE_ACCEPT)
-			setFont(ascension::graphics::font::FontDescription(dialog.get_font_desc()));
+			setFont(ascension::graphics::fromNative<ascension::graphics::font::FontDescription>(dialog.get_font_desc()));
 #endif
 	}
 

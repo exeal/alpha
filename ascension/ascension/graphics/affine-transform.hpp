@@ -281,74 +281,78 @@ namespace ascension {
 
 //			/// Affine transform identifying tag.
 //			struct AffineTransformTag {};
+		}
 
-			// platform-dependent conversions
-			namespace detail {
+		// platform-dependent conversions
+		namespace detail {
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)
-				template<typename Geometry>
-				inline Geometry&& fromNative(const Cairo::Matrix& native, typename std::enable_if<std::is_same<Geometry, AffineTransform>::value>::type* = nullptr) {
-					return AffineTransform(
-						native.xx, native.xy, native.x0,	// m00 m01 m02
-						native.yx, native.yy, native.y0,	// m10 m11 m12
-						0, 0, 1);							// m20 m21 m22
-				}
-				inline Cairo::Matrix&& toNative(const AffineTransform& tx, const Cairo::Matrix* = nullptr) {
-					return Cairo::Matrix(
-						scaleX(tx), shearY(tx),				// xx yx
-						shearX(tx), scaleY(tx),				// xy yy
-						translateX(tx), translateY(tx));	// x0 y0
-				}
+			template<typename Geometry>
+			inline Geometry&& fromNative(const Cairo::Matrix& native,
+					typename std::enable_if<std::is_same<Geometry, geometry::AffineTransform>::value>::type* = nullptr) {
+				return geometry::AffineTransform(
+					native.xx, native.xy, native.x0,	// m00 m01 m02
+					native.yx, native.yy, native.y0,	// m10 m11 m12
+					0, 0, 1);							// m20 m21 m22
+			}
+			inline Cairo::Matrix&& toNative(const geometry::AffineTransform& tx, const Cairo::Matrix* = nullptr) {
+				return Cairo::Matrix(
+					geometry::scaleX(tx), geometry::shearY(tx),				// xx yx
+					geometry::shearX(tx), geometry::scaleY(tx),				// xy yy
+					geometry::translateX(tx), geometry::translateY(tx));	// x0 y0
+			}
 #endif
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
-				template<typename Geometry>
-				inline Geometry&& fromNative(const CGAffineTransform& native, typename std::enable_if<std::is_same<Geometry, AffineTransform>::value>::type* = nullptr) {
-					return AffineTransform(
-						native.a, native.c, native.tx,	// m00 m01 m02
-						native.b, native.d, native.ty,	// m10 m11 m12
-						0, 0, 1);						// m20 m21 m22
-				}
-				inline CGAffineTransform&& toNative(const AffineTransform& tx, const CGAffineTransform* = nullptr) {
-					return ::CGAffineTransformMake(
-						scaleX(tx), shearY(tx),				// a  b
-						shearX(tx), scaleY(tx),				// c  d
-						translateX(tx), translateY(tx));	// tx ty
-				}
+			template<typename Geometry>
+			inline Geometry&& fromNative(const CGAffineTransform& native,
+					typename std::enable_if<std::is_same<Geometry, geometry::AffineTransform>::value>::type* = nullptr) {
+				return geometry::AffineTransform(
+					native.a, native.c, native.tx,	// m00 m01 m02
+					native.b, native.d, native.ty,	// m10 m11 m12
+					0, 0, 1);						// m20 m21 m22
+			}
+			inline CGAffineTransform&& toNative(const geometry::AffineTransform& tx, const CGAffineTransform* = nullptr) {
+				return ::CGAffineTransformMake(
+					geometry::scaleX(tx), geometry::shearY(tx),				// a  b
+					geometry::shearX(tx), geometry::scaleY(tx),				// c  d
+					geometry::translateX(tx), geometry::translateY(tx));	// tx ty
+			}
 #endif
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(QT)
-				template<typename Geometry>
-				inline Geometry&& fromNative(const QMatrix& native, typename std::enable_if<std::is_same<Geometry, AffineTransform>::value>::type* = nullptr) {
-					return AffineTransform(
-						native.m11(), native.m12(), native.dx(),	// m00 m01 m02
-						native.m21(), native.m22(), native.dy(),	// m10 m11 m12
-						0, 0, 1);									// m20 m21 m22
-				}
-				inline QMatrix&& toNative(const AffineTransform& tx, const QMatrix* = nullptr) {
-					return QMatrix(
-						scaleX(tx), shearY(tx),				// m11 m12
-						shearX(tx), scaleY(tx),				// m21 m22
-						translateX(tx), translateY(tx));	// dx  dy
-				}
+			template<typename Geometry>
+			inline Geometry&& fromNative(const QMatrix& native,
+					typename std::enable_if<std::is_same<Geometry, geometry::AffineTransform>::value>::type* = nullptr) {
+				return geometry::AffineTransform(
+					native.m11(), native.m12(), native.dx(),	// m00 m01 m02
+					native.m21(), native.m22(), native.dy(),	// m10 m11 m12
+					0, 0, 1);									// m20 m21 m22
+			}
+			inline QMatrix&& toNative(const geometry::AffineTransform& tx, const QMatrix* = nullptr) {
+				return QMatrix(
+					geometry::scaleX(tx), geometry::shearY(tx),				// m11 m12
+					geometry::shearX(tx), geometry::scaleY(tx),				// m21 m22
+					geometry::translateX(tx), geometry::translateY(tx));	// dx  dy
+			}
 #endif
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDI)
-				template<typename Geometry>
-				inline Geometry&& fromNative(const XFORM& native, typename std::enable_if<std::is_same<Geometry, AffineTransform>::value>::type* = nullptr) {
-					return AffineTransform(
-						native.eM11, native.eM21, native.eDx,	// m00 m01 m02
-						native.eM12, native.eM22, native.eDy,	// m10 m11 m12
-						0, 0, 1);								// m20 m21 m22
-				}
-				inline XFORM&& toNative(const AffineTransform& tx, const XFORM* = nullptr) {
-					XFORM native;
-					native.eM11 = static_cast<FLOAT>(scaleX(tx));
-					native.eM12 = static_cast<FLOAT>(shearY(tx));
-					native.eM21 = static_cast<FLOAT>(shearX(tx));
-					native.eM22 = static_cast<FLOAT>(scaleY(tx));
-					native.eDx = static_cast<FLOAT>(translateX(tx));
-					native.eDy = static_cast<FLOAT>(translateY(tx));
-					return std::move(native);
-				}
-#endif
+			template<typename Geometry>
+			inline Geometry&& fromNative(const XFORM& native,
+					typename std::enable_if<std::is_same<Geometry, geometry::AffineTransform>::value>::type* = nullptr) {
+				return geometry::AffineTransform(
+					native.eM11, native.eM21, native.eDx,	// m00 m01 m02
+					native.eM12, native.eM22, native.eDy,	// m10 m11 m12
+					0, 0, 1);								// m20 m21 m22
 			}
+			inline XFORM&& toNative(const geometry::AffineTransform& tx, const XFORM* = nullptr) {
+				XFORM native;
+				native.eM11 = static_cast<FLOAT>(geometry::scaleX(tx));
+				native.eM12 = static_cast<FLOAT>(geometry::shearY(tx));
+				native.eM21 = static_cast<FLOAT>(geometry::shearX(tx));
+				native.eM22 = static_cast<FLOAT>(geometry::scaleY(tx));
+				native.eDx = static_cast<FLOAT>(geometry::translateX(tx));
+				native.eDy = static_cast<FLOAT>(geometry::translateY(tx));
+				return std::move(native);
+			}
+#endif
 		}
 
 		using geometry::AffineTransform;

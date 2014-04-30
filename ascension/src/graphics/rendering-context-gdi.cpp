@@ -6,6 +6,7 @@
  */
 
 #include <ascension/graphics/paint.hpp>
+#include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <boost/math/special_functions/round.hpp>	// boost.iround
@@ -73,7 +74,7 @@ namespace ascension {
 
 		RenderingContext2D& RenderingContext2D::bezierCurveTo(const Point& cp1, const Point& cp2, const Point& to) {
 			ensureThereIsASubpathFor(cp1);
-			const POINT points[3] = {geometry::toNative<POINT>(cp1), geometry::toNative<POINT>(cp2), geometry::toNative<POINT>(to)};
+			const POINT points[3] = {toNative<POINT>(cp1), toNative<POINT>(cp2), toNative<POINT>(to)};
 			if(!win32::boole(::PolyBezierTo(nativeObject_.get(), points, 3)))
 				throw makePlatformError();
 			return *this;
@@ -81,7 +82,7 @@ namespace ascension {
 
 		RenderingContext2D& RenderingContext2D::changePen(win32::Handle<HPEN>::Type newPen) {
 			assert(newPen.get() != nullptr);
-			win32::Handle<HPEN>::Type oldPen(static_cast<HPEN>(::SelectObject(nativeObject_.get(), newPen.get())), detail::NullDeleter());
+			win32::Handle<HPEN>::Type oldPen(static_cast<HPEN>(::SelectObject(nativeObject_.get(), newPen.get())), ascension::detail::NullDeleter());
 			if(oldPen.get() == nullptr)
 				throw makePlatformError();
 			savedStates_.top().pen = newPen;
@@ -90,7 +91,7 @@ namespace ascension {
 		}
 
 		RenderingContext2D& RenderingContext2D::clearRectangle(const graphics::Rectangle& rectangle) {
-			const RECT temp(geometry::toNative<RECT>(rectangle));
+			const RECT temp(toNative<RECT>(rectangle));
 			if(::FillRect(nativeObject_.get(), &temp, static_cast<HBRUSH>(::GetStockObject(BLACK_BRUSH))) == 0)
 				throw makePlatformError();
 			return *this;
@@ -235,7 +236,7 @@ namespace ascension {
 		RenderingContext2D& RenderingContext2D::fillRectangle(const graphics::Rectangle& rectangle) {
 			updatePenAndBrush();
 			if(HBRUSH currentBrush = static_cast<HBRUSH>(::GetCurrentObject(nativeObject_.get(), OBJ_BRUSH))) {
-				RECT temp(geometry::toNative<RECT>(rectangle));
+				RECT temp(toNative<RECT>(rectangle));
 				if(::FillRect(nativeObject_.get(), &temp, currentBrush) != 0)
 					return *this;
 			}
@@ -514,7 +515,7 @@ namespace ascension {
 			SIZE s;
 			if(!win32::boole(::GetTextExtentPoint32W(nativeObject_.get(), text.cbegin(), text.length(), &s)))
 				throw makePlatformError();
-			const geometry::BasicDimension<LONG> temp(geometry::fromNative<geometry::BasicDimension<LONG>>(s));
+			const geometry::BasicDimension<LONG> temp(fromNative<geometry::BasicDimension<LONG>>(s));
 			return Dimension(geometry::_dx = static_cast<Scalar>(geometry::dx(temp)), geometry::_dy = static_cast<Scalar>(geometry::dy(temp)));
 		}
 
@@ -600,8 +601,8 @@ namespace ascension {
 					throw makePlatformError();
 				savedStates_.pop();
 				updatePenAndBrush();
-				win32::Handle<HPEN>::Type currentPen(static_cast<HPEN>(::GetCurrentObject(nativeObject_.get(), OBJ_PEN)), detail::NullDeleter());
-				win32::Handle<HBRUSH>::Type currentBrush(static_cast<HBRUSH>(::GetCurrentObject(nativeObject_.get(), OBJ_BRUSH)), detail::NullDeleter());
+				win32::Handle<HPEN>::Type currentPen(static_cast<HPEN>(::GetCurrentObject(nativeObject_.get(), OBJ_PEN)), ascension::detail::NullDeleter());
+				win32::Handle<HBRUSH>::Type currentBrush(static_cast<HBRUSH>(::GetCurrentObject(nativeObject_.get(), OBJ_BRUSH)), ascension::detail::NullDeleter());
 				if(currentPen.get() != savedStates_.top().pen.get())
 					::SelectObject(nativeObject_.get(), savedStates_.top().pen.get());
 				if(currentBrush.get() != savedStates_.top().brush.get())
@@ -734,7 +735,7 @@ namespace ascension {
 		}
 
 		RenderingContext2D& RenderingContext2D::setTransform(const AffineTransform& matrix) {
-			const XFORM native(geometry::toNative<XFORM>(matrix));
+			const XFORM native(toNative<XFORM>(matrix));
 			if(!win32::boole(::SetWorldTransform(nativeObject_.get(), &native)))
 				throw makePlatformError();
 			return *this;
@@ -815,7 +816,7 @@ namespace ascension {
 		}
 
 		RenderingContext2D& RenderingContext2D::transform(const AffineTransform& matrix) {
-			const XFORM native(geometry::toNative<XFORM>(matrix));
+			const XFORM native(toNative<XFORM>(matrix));
 			if(!win32::boole(::ModifyWorldTransform(nativeObject_.get(), &native, MWT_RIGHTMULTIPLY)))
 				throw makePlatformError();
 			return *this;

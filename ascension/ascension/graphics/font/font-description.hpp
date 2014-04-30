@@ -209,10 +209,6 @@ namespace ascension {
 					if(pointSize < 0.0)
 						throw std::underflow_error("pointSize");
 				}
-				/***/
-				template<typename Native> explicit FontDescription(const Native& native);
-				/***/
-				template<typename Native> Native&& as() const;
 				/// Equality operator.
 				bool operator==(const FontDescription& other) const BOOST_NOEXCEPT {
 					return family_ == other.family_
@@ -246,34 +242,40 @@ namespace ascension {
 					return (pointSize_ = newValue), *this;
 				}
 
+			private:
+				FontFamily family_;
+				double pointSize_;
+				FontProperties properties_;
+			};
+		}
+
+		namespace detail {
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(CORE_GRAPHICS)
 #endif
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(CORE_TEXT)
-				template<> explicit FontDescription(const CTFontDescriptor& native);
-				template<> CTFontDescriptor&& as<QFontInfo>() const;
+			template<typename T> T&& fromNative(const CTFontDescriptor& object);
+			template font::FontDescription&& fromNative<font::FontDescription>(const CTFontDescriptor& object);
+			CTFontDescriptor&& toNative(const font::FontDescription& object, const QFontInfo* = nullptr);
 #endif
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(DIRECT_WRITE)
 #endif
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(HARFBUZZ)
 #endif
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
-				template<> explicit FontDescription(const Pango::FontDescription& native);
-				template<> Pango::FontDescription&& as<Pango::FontDescription>() const;
+			template<typename T> T&& fromNative(const Pango::FontDescription& object);
+			template font::FontDescription&& fromNative<font::FontDescription>(const Pango::FontDescription& object);
+			Pango::FontDescription&& toNative(const font::FontDescription& object, const Pango::FontDescription* = nullptr);
 #endif
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(QT)
-				template<> explicit FontDescription(const QFontInfo& native);
-				template<> QFontInfo&& as<QFontInfo>() const;
+			template<typename T> T&& fromNative(const QFontInfo& object);
+			template font::FontDescription&& fromNative<font::FontDescription>(const QFontInfo& object);
+			QFontInfo&& toNative(const font::FontDescription& object, const QFontInfo* = nullptr);
 #endif
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SUPPORTS_SHAPING_ENGINE(WIN32_GDI) || ASCENSION_SUPPORTS_SHAPING_ENGINE(WIN32_GDIPLUS)
-				template<> explicit FontDescription(const LOGFONTW& native);
-				template<> LOGFONTW&& as<LOGFONTW>() const;
+			template<typename T> T&& fromNative(const LOGFONTW& object);
+			template font::FontDescription&& fromNative<font::FontDescription>(const LOGFONTW& object);
+			LOGFONTW&& toNative(const font::FontDescription& object, const LOGFONTW* = nullptr);
 #endif
-
-			private:
-				FontFamily family_;
-				double pointSize_;
-				FontProperties properties_;
-			};
 		}
 	}
 }
