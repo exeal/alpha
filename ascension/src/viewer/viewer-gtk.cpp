@@ -117,6 +117,26 @@ namespace ascension {
 			return false;
 		}
 
+		/**
+		 * Invokes @c #focusGained method.
+		 * @see Gtk#Widget#on_focus_in_event
+		 */
+		bool TextViewer::on_focus_in_event(GdkEventFocus*) {
+			widgetapi::Event e;
+			focusGained(e);
+			return e.isConsumed();
+		}
+
+		/**
+		 * Invokes @c #focusAboutToBeLost method.
+		 * @see Gtk#Widget#on_focus_out_event
+		 */
+		bool TextViewer::on_focus_out_event(GdkEventFocus*) {
+			widgetapi::Event e;
+			focusAboutToBeLost(e);
+			return e.isConsumed();
+		}
+
 		/// @see Gtk#Widget#on_realize
 		void TextViewer::on_realize() {
 			set_realized();

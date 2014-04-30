@@ -337,8 +337,8 @@ namespace ascension {
 		protected:
 			/// @name Overridable Widget Events
 			/// @{
-			virtual void aboutToLoseFocus();
-			virtual void focusGained();
+			virtual void focusAboutToBeLost(widgetapi::Event& event);
+			virtual void focusGained(widgetapi::Event& event);
 			virtual void keyPressed(const widgetapi::KeyInput& input);
 			virtual void keyReleased(const widgetapi::KeyInput& input);
 			virtual void mouseDoubleClicked(const widgetapi::MouseButtonInput& input);

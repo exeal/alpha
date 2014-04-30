@@ -152,28 +152,6 @@ namespace ascension {
 		//	delete selection_;
 		}
 
-		/// @see Widget#aboutToLoseFocus
-		void TextViewer::aboutToLoseFocus() {
-			cursorVanisher_.restore();
-			if(mouseInputStrategy_.get() != nullptr)
-				mouseInputStrategy_->interruptMouseReaction(false);
-/*			if(caret_->getMatchBracketsTrackingMode() != Caret::DONT_TRACK
-					&& getCaret().getMatchBrackets().first != Position::INVALID_POSITION) {	// 対括弧の通知を終了
-				FOR_EACH_LISTENERS()
-					(*it)->onMatchBracketFoundOutOfView(Position::INVALID_POSITION);
-			}
-			if(completionWindow_->isWindow() && newWindow != completionWindow_->getSafeHwnd())
-				closeCompletionProposalsPopup(*this);
-*/			texteditor::abortIncrementalSearch(*this);
-			static_cast<detail::InputEventHandler&>(caret()).abortInput();
-//			if(currentWin32WindowMessage().wParam != get()) {
-//				hideCaret();
-//				::DestroyCaret();
-//			}
-			redrawLines(boost::irange(kernel::line(caret().beginning()), kernel::line(caret().end()) + 1));
-			widgetapi::redrawScheduledRegion(*this);
-		}
-
 		/**
 		 * Registers the display size listener.
 		 * @param listener The listener to be registered
@@ -318,6 +296,58 @@ namespace ascension {
 		 * @param rect The rectangle to draw
 		 */
 		void TextViewer::drawIndicatorMargin(Index /* line */, graphics::PaintContext& /* context */, const graphics::Rectangle& /* rect */) {
+		}
+
+		/// Invoked when the widget is about to lose the keyboard focus.
+		void TextViewer::focusAboutToBeLost(widgetapi::Event& event) {
+			cursorVanisher_.restore();
+			if(mouseInputStrategy_.get() != nullptr)
+				mouseInputStrategy_->interruptMouseReaction(false);
+/*			if(caret_->getMatchBracketsTrackingMode() != Caret::DONT_TRACK
+					&& getCaret().getMatchBrackets().first != Position::INVALID_POSITION) {	// 対括弧の通知を終了
+				FOR_EACH_LISTENERS()
+					(*it)->onMatchBracketFoundOutOfView(Position::INVALID_POSITION);
+			}
+			if(completionWindow_->isWindow() && newWindow != completionWindow_->getSafeHwnd())
+				closeCompletionProposalsPopup(*this);
+*/			texteditor::abortIncrementalSearch(*this);
+			static_cast<detail::InputEventHandler&>(caret()).abortInput();
+//			if(currentWin32WindowMessage().wParam != get()) {
+//				hideCaret();
+//				::DestroyCaret();
+//			}
+			redrawLines(boost::irange(kernel::line(caret().beginning()), kernel::line(caret().end()) + 1));
+			widgetapi::redrawScheduledRegion(*this);
+
+			return event.consume();
+		}
+
+		/// Invoked when the widget gained the keyboard focus.
+		void TextViewer::focusGained(widgetapi::Event& event) {
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			// restore the scroll positions
+			const auto scrollPositions(physicalScrollPosition(*this));
+			configureScrollBar(*this, 0, boost::geometry::get<0>(scrollPositions), boost::none, boost::none);
+			configureScrollBar(*this, 1, boost::geometry::get<1>(scrollPositions), boost::none, boost::none);
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+
+			// hmm...
+//			if(/*sharedData_->options.appearance[SHOW_CURRENT_UNDERLINE] ||*/ !getCaret().isSelectionEmpty()) {
+				redrawLines(boost::irange(kernel::line(caret().beginning()), kernel::line(caret().end()) + 1));
+				widgetapi::redrawScheduledRegion(*this);
+//			}
+
+//			if(currentWin32WindowMessage().wParam != get()) {
+//				// resurrect the caret
+//				recreateCaret();
+//				updateCaretPosition();
+//				if(texteditor::Session* const session = document().session()) {
+//					if(texteditor::InputSequenceCheckers* const isc = session->inputSequenceCheckers())
+//						isc->setKeyboardLayout(::GetKeyboardLayout(::GetCurrentThreadId()));
+//				}
+//			}
+
+			return event.consume();
 		}
 
 		/**
@@ -494,32 +524,6 @@ namespace ascension {
 				::SetScrollInfo(viewer.handle().get(), (coordinate == 0) ? SB_HORZ : SB_VERT, &si, true);
 #endif
 			}
-		}
-
-		/// @see Widget#focusGained
-		void TextViewer::focusGained() {
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			// restore the scroll positions
-			const auto scrollPositions(physicalScrollPosition(*this));
-			configureScrollBar(*this, 0, boost::geometry::get<0>(scrollPositions), boost::none, boost::none);
-			configureScrollBar(*this, 1, boost::geometry::get<1>(scrollPositions), boost::none, boost::none);
-#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-
-			// hmm...
-//			if(/*sharedData_->options.appearance[SHOW_CURRENT_UNDERLINE] ||*/ !getCaret().isSelectionEmpty()) {
-				redrawLines(boost::irange(kernel::line(caret().beginning()), kernel::line(caret().end()) + 1));
-				widgetapi::redrawScheduledRegion(*this);
-//			}
-
-//			if(currentWin32WindowMessage().wParam != get()) {
-//				// resurrect the caret
-//				recreateCaret();
-//				updateCaretPosition();
-//				if(texteditor::Session* const session = document().session()) {
-//					if(texteditor::InputSequenceCheckers* const isc = session->inputSequenceCheckers())
-//						isc->setKeyboardLayout(::GetKeyboardLayout(::GetCurrentThreadId()));
-//				}
-//			}
 		}
 
 		/**

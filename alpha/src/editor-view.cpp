@@ -35,12 +35,6 @@ namespace alpha {
 		document().bookmarker().removeListener(*this);
 	}
 
-	/// @see TextViewer#aboutToLoseFocus
-	void EditorView::aboutToLoseFocus() {
-		ascension::viewers::TextViewer::aboutToLoseFocus();
-		BufferList::instance().editorSession().incrementalSearcher().end();
-	}
-
 	/// Begins incremental search.
 	void EditorView::beginIncrementalSearch(ascension::searcher::TextSearcher::Type type, ascension::Direction direction) {
 		ascension::texteditor::commands::IncrementalFindCommand(*this, type, direction, this)();
@@ -79,9 +73,15 @@ namespace alpha {
 		}
 	}
 
+	/// @see TextViewer#focusAboutToBeLost
+	void EditorView::focusAboutToBeLost(ascension::viewers::widgetapi::Event& event) {
+		ascension::viewers::TextViewer::focusAboutToBeLost(event);
+		BufferList::instance().editorSession().incrementalSearcher().end();
+	}
+
 	/// @see TextViewer#focusGained
-	void EditorView::focusGained() {
-		ascension::viewers::TextViewer::focusGained();
+	void EditorView::focusGained(ascension::viewers::widgetapi::Event& event) {
+		ascension::viewers::TextViewer::focusGained(event);
 		BufferList::instance().bufferSelectionChanged();
 	}
 
