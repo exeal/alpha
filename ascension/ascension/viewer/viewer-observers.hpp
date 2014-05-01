@@ -100,20 +100,18 @@ namespace ascension {
 			 * The mouse input was occurred and the viewer had focus.
 			 * @param action The action of the input
 			 * @param input The input information
-			 * @return @c true if the strategy processed
 			 */
-			virtual bool mouseButtonInput(Action action, const widgetapi::MouseButtonInput& input) = 0;
+			virtual void mouseButtonInput(Action action, widgetapi::MouseButtonInput& input) = 0;
 			/**
 			 * The mouse was moved and the viewer had focus.
 			 * @param input The input information
-			 * @return @c true if the strategy processed
 			 */
-			virtual void mouseMoved(const widgetapi::LocatedUserInput& input) = 0;
+			virtual void mouseMoved(widgetapi::LocatedUserInput& input) = 0;
 			/**
 			 * The mouse wheel was rolated and the viewer had focus.
 			 * @param input The input information
 			 */
-			virtual void mouseWheelRotated(const widgetapi::MouseWheelInput& input) = 0;
+			virtual void mouseWheelRotated(widgetapi::MouseWheelInput& input) = 0;
 			/**
 			 * Shows a cursor on the viewer.
 			 * @param position The cursor position (client coordinates)

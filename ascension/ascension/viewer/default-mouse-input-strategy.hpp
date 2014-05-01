@@ -66,45 +66,49 @@ namespace ascension {
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 		public:
 			DefaultMouseInputStrategy();
+
 		protected:
-			// widgetapi.DropTarget
-			virtual void dragEntered(widgetapi::DragEnterInput& input);
-			virtual void dragLeft(widgetapi::DragLeaveInput& input);
-			virtual void dragMoved(widgetapi::DragMoveInput& input);
-			virtual void dropped(widgetapi::DropInput& input);
+			/// @name Overridable @c widgetapi#DropTarget Implementation
+			/// @{
+			virtual void dragEntered(widgetapi::DragEnterInput& input) override;
+			virtual void dragLeft(widgetapi::DragLeaveInput& input) override;
+			virtual void dragMoved(widgetapi::DragMoveInput& input) override;
+			virtual void dropped(widgetapi::DropInput& input) override;
+			/// @}
+
 		private:
 			void beginDragAndDrop(const widgetapi::LocatedUserInput& input);
-			virtual bool handleLeftButtonDoubleClick(const graphics::Point& position, int modifiers);
-			virtual bool handleRightButton(Action action, const graphics::Point& position, int modifiers);
-			virtual bool handleX1Button(Action action, const graphics::Point& position, int modifiers);
-			virtual bool handleX2Button(Action action, const graphics::Point& position, int modifiers);
+			virtual void handleLeftButtonDoubleClick(widgetapi::MouseButtonInput& input);
+			virtual void handleRightButton(Action action, widgetapi::MouseButtonInput& input);
+			virtual void handleX1Button(Action action, widgetapi::MouseButtonInput& input);
+			virtual void handleX2Button(Action action, widgetapi::MouseButtonInput& input);
 			static void showCursor(TextViewer& viewer, const widgetapi::Cursor& cursor);
 		private:
 			bool endAutoScroll();
 			void extendSelectionTo(const kernel::Position* to = nullptr);
-			void handleLeftButtonPressed(const graphics::Point& position, int modifiers);
-			void handleLeftButtonReleased(const graphics::Point& position, int modifiers);
+			void handleLeftButtonPressed(widgetapi::MouseButtonInput& input);
+			void handleLeftButtonReleased(widgetapi::MouseButtonInput& input);
 			// MouseInputStrategy
-			void captureChanged();
-			std::shared_ptr<widgetapi::DropTarget> handleDropTarget() const;
-			void install(TextViewer& viewer);
-			void interruptMouseReaction(bool forKeyboardInput);
-			bool mouseButtonInput(Action action, const widgetapi::MouseButtonInput& input);
-			void mouseMoved(const widgetapi::LocatedUserInput& input);
-			void mouseWheelRotated(const widgetapi::MouseWheelInput& input);
-			bool showCursor(const graphics::Point& position);
-			void uninstall();
+			void captureChanged() override;
+			std::shared_ptr<widgetapi::DropTarget> handleDropTarget() const override;
+			void install(TextViewer& viewer) override;
+			void interruptMouseReaction(bool forKeyboardInput) override;
+			void mouseButtonInput(Action action, widgetapi::MouseButtonInput& input) override;
+			void mouseMoved(widgetapi::LocatedUserInput& input) override;
+			void mouseWheelRotated(widgetapi::MouseWheelInput& input) override;
+			bool showCursor(const graphics::Point& position) override;
+			void uninstall() override;
 			// HasTimer
-			void timeElapsed(Timer& timer);
+			void timeElapsed(Timer& timer) override;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// IDropSource
-			STDMETHODIMP QueryContinueDrag(BOOL escapePressed, DWORD keyState);
-			STDMETHODIMP GiveFeedback(DWORD effect);
+			STDMETHODIMP QueryContinueDrag(BOOL escapePressed, DWORD keyState) override;
+			STDMETHODIMP GiveFeedback(DWORD effect) override;
 			// IDropTarget
-			STDMETHODIMP DragEnter(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect);
-			STDMETHODIMP DragOver(DWORD keyState, POINTL pt, DWORD* effect);
-			STDMETHODIMP DragLeave();
-			STDMETHODIMP Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect);
+			STDMETHODIMP DragEnter(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) override;
+			STDMETHODIMP DragOver(DWORD keyState, POINTL pt, DWORD* effect) override;
+			STDMETHODIMP DragLeave() override;
+			STDMETHODIMP Drop(IDataObject* data, DWORD keyState, POINTL pt, DWORD* effect) override;
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		private:
 			TextViewer* viewer_;

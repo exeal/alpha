@@ -74,13 +74,58 @@ namespace ascension {
 #endif
 					;
 
+			public:
+				/**
+				 * Returns @c true if the user input is the specified keyboard modifier down.
+				 * @param modifier The modifiers to test
+				 * @return @c true if @a input has @a mask
+				 */
+				bool hasModifier(KeyboardModifier mask) const BOOST_NOEXCEPT {
+					return (modifiers() & mask) != 0;
+				}	
+				/**
+				 * Returns @c true if the user input has other than the specified keyboard modifiers.
+				 * @param mask The modifiers to test
+				 * @return @c true if @a input has modifiers other than @a mask
+				 */
+				bool hasModifierOtherThan(KeyboardModifier mask) const BOOST_NOEXCEPT {
+					return (modifiers() & ~mask) != 0;
+				}
+				/// Returns the keyboard modifier flags.
+				KeyboardModifier modifiers() const BOOST_NOEXCEPT {
+					return modifiers_;
+				}
+				/// Returns the time stamp.
+				const std::time_t& timeStamp() const BOOST_NOEXCEPT {
+					return timeStamp_;
+				}
+
+			protected:
+				/**
+				 * Protected constructor.
+				 * @param modifiers The keyboard modifier flags
+				 */
+				explicit UserInput(KeyboardModifier modifiers) : modifiers_(modifiers) {
+					std::time(&timeStamp_);
+				}
+
+			private:
+				const KeyboardModifier modifiers_;
+				std::time_t timeStamp_;
+			};
+
+			/// Abstract class represents a user input located at a specific position.
+			class LocatedUserInput : public UserInput {
+			public:
 				/**
 				 * Indicates the state of mouse buttons.
 				 * @note Corresponds to @c GdkModifierType in GDK.
 				 * @note Cooresponds to @c Qt#MouseButton in Qt.
-				 * @note Defined here because these values also can be used as modifiers.
+				 * @note Corresponds to @c MK_* in Win32.
 				 */
 				typedef std::uint32_t MouseButton;
+
+				/// @var NO_BUTTON Indicates no mouse buttons.
 
 				/// @var BUTTON1_DOWN The Mouse Button1 (usually left button) is down.
 
@@ -94,6 +139,7 @@ namespace ascension {
 
 				static const MouseButton
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+					NO_BUTTON = 0,
 					BUTTON1_DOWN = Gdk::BUTTON1_MASK,
 					BUTTON2_DOWN = Gdk::BUTTON2_MASK,
 					BUTTON3_DOWN = Gdk::BUTTON3_MASK,
@@ -101,67 +147,43 @@ namespace ascension {
 					BUTTON5_DOWN = Gdk::BUTTON5_MASK
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+					NO_BUTTON = Qt::NoButton,
 					BUTTON1_DOWN = Qt::LeftButton,
 					BUTTON2_DOWN = Qt::RightButton,
 					BUTTON3_DOWN = Qt::MiddleButton,
 					BUTTON4_DOWN = Qt::ExtraButton1,
 					BUTTON5_DOWN = Qt::ExtraButton2
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+					NO_BUTTON = 0,
 					BUTTON1_DOWN = MK_LBUTTON,
 					BUTTON2_DOWN = MK_RBUTTON,
 					BUTTON3_DOWN = MK_MBUTTON,
 					BUTTON4_DOWN = MK_XBUTTON1,
 					BUTTON5_DOWN = MK_XBUTTON2
 #endif
-					;
-
-				/// Indicates the state of modifier keys and mouse buttons.
-				typedef std::uint32_t Modifiers;
+				;
 
 			public:
 				/**
-				 * Returns @c true if the user input is the specified modifier down.
-				 * @param modifier The modifiers to test
-				 * @return true if @a input has @a mask
-				 */
-				bool hasModifier(Modifiers mask) const BOOST_NOEXCEPT {
-					return (modifiers() & mask) != 0;
-				}	
-				/**
-				 * Returns @c true if the user input has other than the specified modifiers.
-				 * @param mask The modifiers to test
-				 * @return true if @a input has modifiers other than @a mask
-				 */
-				bool hasModifierOtherThan(Modifiers mask) const BOOST_NOEXCEPT {
-					return (modifiers() & ~mask) != 0;
-				}
-				Modifiers modifiers() const BOOST_NOEXCEPT {return modifiers_;}
-				const std::time_t& timeStamp() const BOOST_NOEXCEPT {return timeStamp_;}
-			protected:
-				/**
 				 * Protected constructor.
-				 * @param modifiers The modifier flags
+				 * @param location The location in the widget-local coordinates
+				 * @param buttons The button state when the event was generated
+				 * @param modifiers The keyboard modifier flags
 				 */
-				explicit UserInput(Modifiers modifiers) : modifiers_(modifiers) {std::time(&timeStamp_);}
-			private:
-				const Modifiers modifiers_;
-				std::time_t timeStamp_;
-			};
+				LocatedUserInput(const graphics::Point& location, MouseButton buttons,
+					KeyboardModifier modifiers) : UserInput(modifiers), location_(location), buttons_(buttons) {}
+				/// Returns the button state when the event was generated.
+				MouseButton buttons() const BOOST_NOEXCEPT {
+					return buttons_;
+				}
+				/// Returns the location in the widget-local coordinates.
+				const graphics::Point& location() const BOOST_NOEXCEPT {
+					return location_;
+				}
 
-			/// Abstract class represents a user input located at a specific position in the screen.
-			class LocatedUserInput : public UserInput {
-			public:
-				/**
-				 * Protected constructor.
-				 * @param location The location
-				 * @param modifiers The modifier flags
-				 */
-				LocatedUserInput(const graphics::Point& location, Modifiers modifiers) : UserInput(modifiers), location_(location) {
-				}
-				/// Returns the location.
-				const graphics::Point& location() const BOOST_NOEXCEPT {return location_;}
 			private:
 				const graphics::Point location_;
+				const MouseButton buttons_;
 			};
 
 			/// A @c MouseButtonInput represents a mouse button event.
@@ -169,14 +191,17 @@ namespace ascension {
 			public:
 				/**
 				 * Constructor.
-				 * @param location
-				 * @param button
-				 * @param modifiers
+				 * @param location The location in the widget-local coordinates
+				 * @param button The button that caused the event
+				 * @param buttons The button state when the event was generated
+				 * @param modifiers The keyboard modifier flags
 				 */
-				MouseButtonInput(const graphics::Point& location, MouseButton button,
-					Modifiers modifiers) : LocatedUserInput(location, modifiers), button_(button) {}
-				/// Returns the mouse button.
-				MouseButton button() const BOOST_NOEXCEPT {return button_;}
+				MouseButtonInput(const graphics::Point& location, MouseButton button, MouseButton buttons,
+					KeyboardModifier modifiers) : LocatedUserInput(location, buttons, modifiers), button_(button) {}
+				/// Returns the button that caused the event.
+				MouseButton button() const BOOST_NOEXCEPT {
+					return button_;
+				}
 			private:
 				const MouseButton button_;
 			};
@@ -186,38 +211,53 @@ namespace ascension {
 			public:
 				/**
 				 * Constructor.
-				 * @param location
-				 * @param modifiers
+				 * @param location The location in the widget-local coordinates
+				 * @param buttons The button state when the event was generated
 				 * @param rotation
 				 */
-				MouseWheelInput(const graphics::Point& location, Modifiers modifiers,
-					graphics::Dimension& rotation) : LocatedUserInput(location, modifiers), rotation_(rotation) {}
+				MouseWheelInput(const graphics::Point& location, MouseButton buttons, KeyboardModifier modifiers,
+					graphics::Dimension& rotation) : LocatedUserInput(location, buttons, modifiers), rotation_(rotation) {}
 				/// Returns the mouse wheel rotation.
-				const graphics::Dimension& rotation() const BOOST_NOEXCEPT {return rotation_;}
+				const graphics::Dimension& rotation() const BOOST_NOEXCEPT {
+					return rotation_;
+				}
+
 			private:
 				const graphics::Dimension rotation_;
 			};
 
+			/// An event which indicates that keystroke occurred in a widget.
 			class KeyInput : public UserInput {
 			public:
-				/// Keyboard codes.
-				/// @note Corresponds to @c Qt#Key in Qt.
+				/**
+				 * Keyboard codes.
+				 * @note Corresponds to @c GDK_KEY_* in gdk/gdkkeysyms.h in GDK.
+				 * @note Corresponds to @c Qt#Key in Qt.
+				 * @note Cooresponds to @c VK_* in WinUser.h in Win32.
+				 */
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				typedef guint Code;	// GDK_KEY_* in gdk/gdkkeysyms.h
+				typedef guint Code;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
-				typedef int Code;	// Qt.Key
+				typedef int Code;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-				typedef WORD Code;	// VK_* in WinUser.h
+				typedef WORD Code;
 #elif 0
 				typedef std::uint32_t Code;
 #endif
 			public:
-				KeyInput(Code keyboardCode, Modifiers modifiers, int repeatCount, int messageFlags)
-					: UserInput(modifiers), keyboardCode_(keyboardCode), repeatCount_(repeatCount), messageFlags_(messageFlags) {}
-				Code keyboardCode() const BOOST_NOEXCEPT {return keyboardCode_;}
+				/**
+				 * Creates a @c KeyInput object with given keycode and modifiers.
+				 * @param keyboardCode The integer code for an actual key
+				 * @param modifiers The keyboard modifier flags during event
+				 */
+				KeyInput(Code keyboardCode, KeyboardModifier modifiers) : UserInput(modifiers), keyboardCode_(keyboardCode) {}
+				/// Returns the integer key code associated with the key in this event.
+				Code keyboardCode() const BOOST_NOEXCEPT {
+					return keyboardCode_;
+				}
+
 			private:
 				const Code keyboardCode_;
-				const int repeatCount_, messageFlags_;
 			};
 
 		}

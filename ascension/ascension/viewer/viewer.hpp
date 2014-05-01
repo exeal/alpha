@@ -339,13 +339,14 @@ namespace ascension {
 			/// @{
 			virtual void focusAboutToBeLost(widgetapi::Event& event);
 			virtual void focusGained(widgetapi::Event& event);
-			virtual void keyPressed(const widgetapi::KeyInput& input);
-			virtual void keyReleased(const widgetapi::KeyInput& input);
-			virtual void mouseDoubleClicked(const widgetapi::MouseButtonInput& input);
-			virtual void mouseMoved(const widgetapi::LocatedUserInput& input);
-			virtual void mousePressed(const widgetapi::MouseButtonInput& input);
-			virtual void mouseReleased(const widgetapi::MouseButtonInput& input);
-			virtual void mouseWheelChanged(const widgetapi::MouseWheelInput& input);
+			virtual void keyPressed(widgetapi::KeyInput& input);
+			virtual void keyReleased(widgetapi::KeyInput& input);
+			virtual void mouseDoubleClicked(widgetapi::MouseButtonInput& input);
+			virtual void mouseMoved(widgetapi::LocatedUserInput& input);
+			virtual void mousePressed(widgetapi::MouseButtonInput& input);
+			virtual void mouseReleased(widgetapi::MouseButtonInput& input);
+			virtual void mouseTripleClicked(widgetapi::MouseButtonInput& input);
+			virtual void mouseWheelChanged(widgetapi::MouseWheelInput& input);
 			virtual void paint(graphics::PaintContext& context);
 			virtual void resized(const graphics::Dimension& newSize);
 			virtual void showContextMenu(const widgetapi::LocatedUserInput& input, bool byKeyboard);
