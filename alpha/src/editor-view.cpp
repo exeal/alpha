@@ -136,7 +136,7 @@ namespace alpha {
 	}
 
 	/// @see TextViewer#keyPressed
-	void EditorView::keyPressed(const ascension::viewers::widgetapi::KeyInput& input) {
+	void EditorView::keyPressed(ascension::viewers::widgetapi::KeyInput& input) {
 		// disable default keyboard bindings
 //		return ascension::viewers::TextViewer::keyPressed(input);
 	}

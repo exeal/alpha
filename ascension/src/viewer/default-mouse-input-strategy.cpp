@@ -1119,6 +1119,7 @@ namespace ascension {
 		void DefaultMouseInputStrategy::mouseWheelRotated(widgetapi::MouseWheelInput& input) {
 			if(!endAutoScroll()) {
 				const std::shared_ptr<graphics::font::TextViewport> viewport(viewer_->textRenderer().viewport());
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && 0
 				// use system settings
 				UINT lines;	// the number of lines to scroll
 				if(!win32::boole(::SystemParametersInfoW(SPI_GETWHEELSCROLLLINES, 0, &lines, 0)))
@@ -1129,7 +1130,27 @@ namespace ascension {
 				}
 				viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(
 					0, static_cast<graphics::font::TextViewport::SignedScrollOffset>(-graphics::geometry::dy(input.rotation()) * static_cast<short>(lines) / WHEEL_DELTA)));
-				input.consume();
+#else
+				if(input.scrollType() == widgetapi::MouseWheelInput::WHEEL_UNIT_SCROLL) {
+					const auto units(input.unitsToScroll());
+					assert(units != boost::none);
+					const graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset> offsets(
+						graphics::_x = graphics::geometry::dx(*units), graphics::_y = graphics::geometry::dy(*units));
+					viewport->scroll(offsets);
+					input.consume();
+				} else if(input.scrollType() == widgetapi::MouseWheelInput::WHEEL_BLOCK_SCROLL) {
+					const graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset> physicalPages(
+						graphics::_x = graphics::geometry::dx(input.wheelRotation()), graphics::_y = graphics::geometry::dy(input.wheelRotation()));
+					presentation::AbstractTwoAxes<graphics::font::TextViewport::SignedScrollOffset> abstractPages(
+						mapPhysicalToAbstract(viewer_->textRenderer().presentation().computeWritingMode(&viewer_->textRenderer()), physicalPages));
+					if(abstractPages.bpd() != 0) {
+						viewport->scrollBlockFlowPage(abstractPages.bpd());
+						abstractPages.bpd() = 0;
+					}
+					viewport->scroll(abstractPages);
+					input.consume();
+				}
+#endif
 			}
 		}
 

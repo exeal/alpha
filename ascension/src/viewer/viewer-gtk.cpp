@@ -119,7 +119,7 @@ namespace ascension {
 		 * @see Widget#on_button_press_event
 		 */
 		bool TextViewer::on_button_press_event(GdkEventButton* event) {
-			const widgetapi::MouseButtonInput input(makeMouseButtonInput(*event));
+			widgetapi::MouseButtonInput input(makeMouseButtonInput(*event));
 			if(input.button() != widgetapi::LocatedUserInput::NO_BUTTON) {
 				switch(event->type) {
 					case GDK_BUTTON_PRESS:
@@ -141,7 +141,7 @@ namespace ascension {
 		 * @see Widget#on_button_release_event
 		 */
 		bool TextViewer::on_button_release_event(GdkEventButton* event) {
-			const widgetapi::MouseButtonInput input(makeMouseButtonInput(*event));
+			widgetapi::MouseButtonInput input(makeMouseButtonInput(*event));
 			if(input.button() != widgetapi::LocatedUserInput::NO_BUTTON && event->type == GDK_BUTTON_RELEASE)
 				mouseReleased(input);
 			return input.isConsumed();
@@ -270,6 +270,39 @@ namespace ascension {
 #else
 			rulerWindow_->set_user_data(Gtk::Widget::gobj());
 #endif
+		}
+
+		/**
+		 * Invokes @c #mouseWheelChanged method.
+		 * @see Gtk#Widget#on_scroll_event
+		 */
+		bool TextViewer::on_scroll_event(GdkEventScroll* event) {
+			const graphics::geometry::BasicDimension<unsigned int> scrollAmount(graphics::geometry::_dx = 3, graphics::geometry::_dy = 3);
+//			static const double NOTCH_RESOLUTION = 120;
+			graphics::geometry::BasicDimension<double> wheelRotation(graphics::geometry::_dx = 0, graphics::geometry::_dy = 0);
+			switch(event->direction) {
+				case GDK_SCROLL_UP:
+					graphics::geometry::dy(wheelRotation) = +1;
+					break;
+				case GDK_SCROLL_DOWN:
+					graphics::geometry::dy(wheelRotation) = -1;
+					break;
+				case GDK_SCROLL_LEFT:
+					graphics::geometry::dx(wheelRotation) = +1;
+					break;
+				case GDK_SCROLL_RIGHT:
+					graphics::geometry::dx(wheelRotation) = -1;
+					break;
+				case GDK_SCROLL_SMOOTH:
+					graphics::geometry::dx(wheelRotation) = event->delta_x;
+					graphics::geometry::dy(wheelRotation) = event->delta_y;
+					break;
+			}
+			widgetapi::MouseWheelInput input(
+				graphics::geometry::make<graphics::Point>((graphics::geometry::_x = event->x, graphics::geometry::_y = event->y)),
+				event->state & NATIVE_BUTTON_MASK, event->state & NATIVE_KEYBOARD_MASK, scrollAmount, wheelRotation);
+			mouseWheelChanged(input);
+			return input.isConsumed();
 		}
 
 		/// @see Gtk#Widget#on_size_allocate
