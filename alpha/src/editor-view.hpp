@@ -39,7 +39,7 @@ namespace alpha {
 	private:
 		// ascension.viewers.TextViewer (overrides)
 		void drawIndicatorMargin(ascension::Index line, ascension::graphics::PaintContext& context, const ascension::graphics::Rectangle& rect) override;
-		void keyPressed(const ascension::viewers::widgetapi::KeyInput& input) override;
+		void keyPressed(ascension::viewers::widgetapi::KeyInput& input) override;
 		void focusAboutToBeLost(ascension::viewers::widgetapi::Event& event) override;
 		void focusGained(ascension::viewers::widgetapi::Event& event) override;
 		// ascension.viewers.Caret signals
