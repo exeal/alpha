@@ -871,8 +871,8 @@ namespace ascension {
 			}
 		}
 
-		/// @see Widget#keyPressed
-		void TextViewer::keyPressed(const widgetapi::KeyInput& input) {
+		/// Invoked when a key has been pressed.
+		void TextViewer::keyPressed(widgetapi::KeyInput& input) {
 			if(mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->interruptMouseReaction(true);
 
@@ -1247,15 +1247,17 @@ namespace ascension {
 					break;
 #endif
 			}
+			return input.ignore();
 		}
 
-		/// @see Widget#keyReleased
-		void TextViewer::keyReleased(const widgetapi::KeyInput& input) {
+		/// Invoked when a key has been released.
+		void TextViewer::keyReleased(widgetapi::KeyInput& input) {
 			if(input.hasModifier(widgetapi::UserInput::ALT_DOWN)) {
 				cursorVanisher_.restore();
 				if(mouseInputStrategy_.get() != nullptr)
 					mouseInputStrategy_->interruptMouseReaction(true);
 			}
+			return input.ignore();
 		}
 
 #if 0
@@ -1356,36 +1358,42 @@ namespace ascension {
 			}
 		}
 
-		/// @see Widget#mouseDoubleClicked
-		void TextViewer::mouseDoubleClicked(const widgetapi::MouseButtonInput& input) {
+		/// Invoked when the mouse button has been double-clicked.
+		void TextViewer::mouseDoubleClicked(widgetapi::MouseButtonInput& input) {
 			if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->mouseButtonInput(MouseInputStrategy::DOUBLE_CLICKED, input);
 		}
 
-		/// @see Widget#mouseMoved
-		void TextViewer::mouseMoved(const widgetapi::LocatedUserInput& input) {
+		/// Invoked when the mouse cursor has been moved onto a widget.
+		void TextViewer::mouseMoved(widgetapi::LocatedUserInput& input) {
 			cursorVanisher_.restore();
 			if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->mouseMoved(input);
 		}
 
-		/// @see Widget#mousePressed
-		void TextViewer::mousePressed(const widgetapi::MouseButtonInput& input) {
+		/// Invoked when a mouse button has been pressed on a widget.
+		void TextViewer::mousePressed(widgetapi::MouseButtonInput& input) {
 			cursorVanisher_.restore();
 			if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->mouseButtonInput(MouseInputStrategy::PRESSED, input);
 		}
 
-		/// @see Widget#mouseReleased
-		void TextViewer::mouseReleased(const widgetapi::MouseButtonInput& input) {
-			if(allowsMouseInput() || input.button() == widgetapi::UserInput::BUTTON3_DOWN)
+		/// Invoked when a mouse button has been released on a widget.
+		void TextViewer::mouseReleased(widgetapi::MouseButtonInput& input) {
+			if(allowsMouseInput() || input.button() == widgetapi::LocatedUserInput::BUTTON3_DOWN)
 				cursorVanisher_.restore();
 			if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->mouseButtonInput(MouseInputStrategy::RELEASED, input);
 		}
 
-		/// @see Widget#mouseWheelChanged
-		void TextViewer::mouseWheelChanged(const widgetapi::MouseWheelInput& input) {
+		/// Invoked when the mouse button has been triple-clicked. 
+		void TextViewer::mouseTripleClicked(widgetapi::MouseButtonInput& input) {
+			if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
+				mouseInputStrategy_->mouseButtonInput(MouseInputStrategy::DOUBLE_CLICKED, input);
+		}
+
+		/// Invoked when the mouse wheel is rotated.
+		void TextViewer::mouseWheelChanged(widgetapi::MouseWheelInput& input) {
 			cursorVanisher_.restore();
 			if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->mouseWheelRotated(input);

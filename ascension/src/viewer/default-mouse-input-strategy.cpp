@@ -851,28 +851,26 @@ namespace ascension {
 
 		/**
 		 * Handles double click action of the left button.
-		 * @param position same as @c IMouseInputStrategy#mouseButtonInput
-		 * @param keyState same as @c IMouseInputStrategy#mouseButtonInput
-		 * @return true if processed the input. in this case, the original behavior of
-		 * @c DefaultMouseInputStrategy is suppressed. the default implementation returns false
+		 * @param input The input event. Call @c Event#consume() if processed the input; In this case, the original
+		 *              behavior of @c DefaultMouseInputStrategy is suppressed. The default implementation ignores this
 		 */
-		bool DefaultMouseInputStrategy::handleLeftButtonDoubleClick(const graphics::Point& position, int modifiers) {
-			return false;
+		void DefaultMouseInputStrategy::handleLeftButtonDoubleClick(widgetapi::MouseButtonInput& input) {
+			return input.ignore();
 		}
 
-		/// Handles @c WM_LBUTTONDOWN.
-		void DefaultMouseInputStrategy::handleLeftButtonPressed(const graphics::Point& position, int modifiers) {
+		/// @internal
+		void DefaultMouseInputStrategy::handleLeftButtonPressed(widgetapi::MouseButtonInput& input) {
 			bool boxDragging = false;
 			Caret& caret = viewer_->caret();
-			const TextViewer::HitTestResult htr = viewer_->hitTest(position);
+			const TextViewer::HitTestResult htr = viewer_->hitTest(input.location());
 
 			utils::closeCompletionProposalsPopup(*viewer_);
 			texteditor::endIncrementalSearch(*viewer_);
 
 			// select line(s)
 			if((htr & TextViewer::RULER_MASK) != 0) {
-				const kernel::Position to(viewToModel(*viewer_->textRenderer().viewport(), position).insertionIndex());
-				const bool extend = win32::boole(modifiers & MK_SHIFT) && to.line != line(caret.anchor());
+				const kernel::Position to(viewToModel(*viewer_->textRenderer().viewport(), input.location()).insertionIndex());
+				const bool extend = input.hasModifier(widgetapi::UserInput::SHIFT_DOWN) && to.line != line(caret.anchor());
 				state_ = EXTENDING_LINE_SELECTION;
 				selection_.initialLine = extend ? line(caret.anchor()) : to.line;
 				viewer_->caret().endRectangleSelection();
@@ -882,9 +880,9 @@ namespace ascension {
 			}
 
 			// approach drag-and-drop
-			else if(/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(caret) && isPointOverSelection(caret, position)) {
+			else if(/*dnd_.supportLevel >= SUPPORT_DND &&*/ !isSelectionEmpty(caret) && isPointOverSelection(caret, input.location())) {
 				state_ = APPROACHING_DND;
-				dragApproachedPosition_ = position;
+				dragApproachedPosition_ = input.location();
 				if(caret.isSelectionRectangle())
 					boxDragging = true;
 			}
@@ -892,9 +890,9 @@ namespace ascension {
 			else {
 				// try hyperlink
 				bool hyperlinkInvoked = false;
-				if(win32::boole(modifiers & MK_CONTROL)) {
-					if(!isPointOverSelection(caret, position)) {
-						if(const boost::optional<graphics::font::TextHit<kernel::Position>> p = viewToModelInBounds(*viewer_->textRenderer().viewport(), position)) {
+				if(input.hasModifier(widgetapi::UserInput::CONTROL_DOWN)) {
+					if(!isPointOverSelection(caret, input.location())) {
+						if(const boost::optional<graphics::font::TextHit<kernel::Position>> p = viewToModelInBounds(*viewer_->textRenderer().viewport(), input.location())) {
 							if(const presentation::hyperlink::Hyperlink* link = utils::getPointedHyperlink(*viewer_, p->characterIndex())) {
 								link->invoke();
 								hyperlinkInvoked = true;
@@ -909,22 +907,22 @@ namespace ascension {
 					// shift => keep the anchor and move the caret to the cursor position
 					// ctrl  => begin word selection
 					// alt   => begin rectangle selection
-					if(const boost::optional<graphics::font::TextHit<kernel::Position>> to = viewToModelInBounds(*viewer_->textRenderer().viewport(), position)) {
+					if(const boost::optional<graphics::font::TextHit<kernel::Position>> to = viewToModelInBounds(*viewer_->textRenderer().viewport(), input.location())) {
 						state_ = EXTENDING_CHARACTER_SELECTION;
-						if((modifiers & (widgetapi::UserInput::CONTROL_DOWN | widgetapi::UserInput::SHIFT_DOWN)) != 0) {
-							if((modifiers & widgetapi::UserInput::CONTROL_DOWN) != 0) {
+						if(input.hasModifier(widgetapi::UserInput::CONTROL_DOWN | widgetapi::UserInput::SHIFT_DOWN)) {
+							if(input.hasModifier(widgetapi::UserInput::CONTROL_DOWN)) {
 								// begin word selection
 								state_ = EXTENDING_WORD_SELECTION;
-								caret.moveTo((modifiers & widgetapi::UserInput::SHIFT_DOWN) != 0 ? caret.anchor() : to->characterIndex());
+								caret.moveTo(input.hasModifier(widgetapi::UserInput::SHIFT_DOWN) ? caret.anchor() : to->characterIndex());
 								selectWord(caret);
 								selection_.initialLine = line(caret);
 								selection_.initialWordColumns = std::make_pair(offsetInLine(caret.beginning()), offsetInLine(caret.end()));
 							}
-							if((modifiers & widgetapi::UserInput::SHIFT_DOWN) != 0)
+							if(input.hasModifier(widgetapi::UserInput::SHIFT_DOWN))
 								extendSelectionTo(&to->characterIndex());
 						} else
 							caret.moveTo(to->characterIndex());
-						if((modifiers & widgetapi::UserInput::ALT_DOWN) != 0)	// make the selection reactangle
+						if(input.hasModifier(widgetapi::UserInput::ALT_DOWN))	// make the selection reactangle
 							caret.beginRectangleSelection();
 						else
 							caret.endRectangleSelection();
@@ -937,16 +935,18 @@ namespace ascension {
 //			if(!caret.isSelectionRectangle() && !boxDragging)
 //				viewer_->redrawLine(caret.line());
 			widgetapi::setFocus(*viewer_);
+
+			return input.consume();
 		}
 
-/// Handles @c WM_LBUTTONUP.
-		void DefaultMouseInputStrategy::handleLeftButtonReleased(const graphics::Point& position, int) {
+		/// @internal
+		void DefaultMouseInputStrategy::handleLeftButtonReleased(widgetapi::MouseButtonInput& input) {
 			// cancel if drag-and-drop approaching
 			if(/*dnd_.supportLevel >= SUPPORT_DND
 					&&*/ (state_ == APPROACHING_DND
 					|| state_ == DND_SOURCE)) {	// TODO: this should handle only case APPROACHING_DND?
 				state_ = NONE;
-				viewer_->caret().moveTo(viewToModel(*viewer_->textRenderer().viewport(), position).characterIndex());
+				viewer_->caret().moveTo(viewToModel(*viewer_->textRenderer().viewport(), input.location()).characterIndex());
 				::SetCursor(::LoadCursor(nullptr, IDC_IBEAM));	// hmm...
 			}
 
@@ -957,39 +957,38 @@ namespace ascension {
 				utils::show(viewer_->caret());
 			}
 			widgetapi::releaseInput(*viewer_);
+
+			return input.consume();
 		}
 
 		/**
-		 * Handles the right button.
+		 * Handles mouse right button input.
 		 * @param action Same as @c MouseInputStrategy#mouseButtonInput
-		 * @param position Same as @c MouseInputStrategy#mouseButtonInput
-		 * @param modifiers Same as @c MouseInputStrategy#mouseButtonInput
-		 * @return Same as @c MouseInputStrategy#mouseButtonInput. The default implementation returns @c false
+		 * @param input The input event. Call @c Event#consume() if processed the input; In this case, the original
+		 *              behavior of @c DefaultMouseInputStrategy is suppressed. The default implementation ignores this
 		 */
-		bool DefaultMouseInputStrategy::handleRightButton(Action action, const graphics::Point& position, int modifiers) {
-			return false;
+		void DefaultMouseInputStrategy::handleRightButton(Action action, widgetapi::MouseButtonInput& input) {
+			return input.ignore();
 		}
 
 		/**
-		 * Handles the first X1 button.
+		 * Handles mouse first X1 button input.
 		 * @param action Same as @c MouseInputStrategy#mouseButtonInput
-		 * @param position Same as @c MouseInputStrategy#mouseButtonInput
-		 * @param modifiers Same as @c MouseInputStrategy#mouseButtonInput
-		 * @return Same as @c MouseInputStrategy#mouseButtonInput. The default implementation returns @c false
+		 * @param input The input event. Call @c Event#consume() if processed the input; In this case, the original
+		 *              behavior of @c DefaultMouseInputStrategy is suppressed. The default implementation ignores this
 		 */
-		bool DefaultMouseInputStrategy::handleX1Button(Action action, const graphics::Point& position, int modifiers) {
-			return false;
+		void DefaultMouseInputStrategy::handleX1Button(Action action, widgetapi::MouseButtonInput& input) {
+			return input.ignore();
 		}
 
 		/**
-		 * Handles the first X2 button.
+		 * Handles mouse first X2 button input.
 		 * @param action Same as @c MouseInputStrategy#mouseButtonInput
-		 * @param position Same as @c MouseInputStrategy#mouseButtonInput
-		 * @param modifiers Same as @c MouseInputStrategy#mouseButtonInput
-		 * @return Same as @c MouseInputStrategy#mouseButtonInput. The default implementation returns @c false
+		 * @param input The input event. Call @c Event#consume() if processed the input; In this case, the original
+		 *              behavior of @c DefaultMouseInputStrategy is suppressed. The default implementation ignores this
 		 */
-		bool DefaultMouseInputStrategy::handleX2Button(Action action, const graphics::Point& position, int modifiers) {
-			return false;
+		void DefaultMouseInputStrategy::handleX2Button(Action action, widgetapi::MouseButtonInput& input) {
+			return input.ignore();
 		}
 
 		/// @see MouseInputStrategy#install
@@ -1014,78 +1013,84 @@ namespace ascension {
 		}
 
 		/// @see MouseInputStrategy#mouseButtonInput
-		bool DefaultMouseInputStrategy::mouseButtonInput(Action action, const widgetapi::MouseButtonInput& input) {
+		void DefaultMouseInputStrategy::mouseButtonInput(Action action, widgetapi::MouseButtonInput& input) {
 			if(action != RELEASED && endAutoScroll())
-				return true;
+				return input.consume();
+
 			switch(input.button()) {
-			case widgetapi::UserInput::BUTTON1_DOWN:
-				if(action == PRESSED)
-					handleLeftButtonPressed(input.location(), input.modifiers());
-				else if(action == RELEASED)
-					handleLeftButtonReleased(input.location(), input.modifiers());
-				else if(action == DOUBLE_CLICKED) {
-					texteditor::abortIncrementalSearch(*viewer_);
-					if(handleLeftButtonDoubleClick(input.location(), input.modifiers()))
-						return true;
-					const TextViewer::HitTestResult htr = viewer_->hitTest(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
-					if((htr & TextViewer::TEXT_AREA_MASK) != 0) {
-						// begin word selection
-						Caret& caret = viewer_->caret();
-						selectWord(caret);
-						state_ = EXTENDING_WORD_SELECTION;
-						selection_.initialLine = line(caret);
-						selection_.initialWordColumns = std::make_pair(offsetInLine(caret.anchor()), offsetInLine(caret));
-						widgetapi::grabInput(*viewer_);
-						timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
-						return true;
+				case widgetapi::LocatedUserInput::BUTTON1_DOWN:
+					if(action == PRESSED)
+						handleLeftButtonPressed(input);
+					else if(action == RELEASED)
+						handleLeftButtonReleased(input);
+					else if(action == DOUBLE_CLICKED) {
+						texteditor::abortIncrementalSearch(*viewer_);
+						handleLeftButtonDoubleClick(input);
+						if(!input.isConsumed()) {
+							const TextViewer::HitTestResult htr = viewer_->hitTest(widgetapi::mapFromGlobal(*viewer_, widgetapi::Cursor::position()));
+							if((htr & TextViewer::TEXT_AREA_MASK) != 0) {
+								// begin word selection
+								Caret& caret = viewer_->caret();
+								selectWord(caret);
+								state_ = EXTENDING_WORD_SELECTION;
+								selection_.initialLine = line(caret);
+								selection_.initialWordColumns = std::make_pair(offsetInLine(caret.anchor()), offsetInLine(caret));
+								widgetapi::grabInput(*viewer_);
+								timer_.start(SELECTION_EXPANSION_INTERVAL, *this);
+								input.consume();
+							}
+						}
 					}
-				}
-				break;
-			case widgetapi::UserInput::BUTTON2_DOWN:
-				if(action == PRESSED) {
-					if(viewer_->document().numberOfLines() > viewer_->textRenderer().viewport()->numberOfVisibleLines()) {
-						state_ = APPROACHING_AUTO_SCROLL;
-						dragApproachedPosition_ = input.location();
-						const graphics::Point p(widgetapi::mapToGlobal(*viewer_, input.location()));
-						widgetapi::setFocus(*viewer_);
-						// show the indicator margin
-						graphics::Rectangle rect(widgetapi::bounds(*autoScrollOriginMark_, true));
-						widgetapi::move(
-							widgetapi::window(*autoScrollOriginMark_),
-							graphics::Point(
-								graphics::geometry::_x = graphics::geometry::x(p) - graphics::geometry::dx(rect) / 2,
-								graphics::geometry::_y = graphics::geometry::y(p) - graphics::geometry::dy(rect) / 2));
-						widgetapi::show(*autoScrollOriginMark_);
-						widgetapi::raise(widgetapi::window(*autoScrollOriginMark_));
-						widgetapi::grabInput(*viewer_);
-						showCursor(input.location());
-						return true;
+					break;
+				case widgetapi::LocatedUserInput::BUTTON2_DOWN:
+					if(action == PRESSED) {
+						if(viewer_->document().numberOfLines() > viewer_->textRenderer().viewport()->numberOfVisibleLines()) {
+							state_ = APPROACHING_AUTO_SCROLL;
+							dragApproachedPosition_ = input.location();
+							const graphics::Point p(widgetapi::mapToGlobal(*viewer_, input.location()));
+							widgetapi::setFocus(*viewer_);
+							// show the indicator margin
+							graphics::Rectangle rect(widgetapi::bounds(*autoScrollOriginMark_, true));
+							widgetapi::move(
+								widgetapi::window(*autoScrollOriginMark_),
+								graphics::Point(
+									graphics::geometry::_x = graphics::geometry::x(p) - graphics::geometry::dx(rect) / 2,
+									graphics::geometry::_y = graphics::geometry::y(p) - graphics::geometry::dy(rect) / 2));
+							widgetapi::show(*autoScrollOriginMark_);
+							widgetapi::raise(widgetapi::window(*autoScrollOriginMark_));
+							widgetapi::grabInput(*viewer_);
+							showCursor(input.location());
+							input.consume();
+						}
+					} else if(action == RELEASED) {
+						if(state_ == APPROACHING_AUTO_SCROLL) {
+							state_ = AUTO_SCROLL;
+							timer_.start(0, *this);
+						} else if(state_ == AUTO_SCROLL_DRAGGING)
+							endAutoScroll();
 					}
-				} else if(action == RELEASED) {
-					if(state_ == APPROACHING_AUTO_SCROLL) {
-						state_ = AUTO_SCROLL;
-						timer_.start(0, *this);
-					} else if(state_ == AUTO_SCROLL_DRAGGING)
-						endAutoScroll();
-				}
-				break;
-			case widgetapi::UserInput::BUTTON3_DOWN:
-				return handleRightButton(action, input.location(), input.modifiers());
-			case widgetapi::UserInput::BUTTON4_DOWN:
-				return handleX1Button(action, input.location(), input.modifiers());
-			case widgetapi::UserInput::BUTTON5_DOWN:
-				return handleX2Button(action, input.location(), input.modifiers());
+					break;
+				case widgetapi::LocatedUserInput::BUTTON3_DOWN:
+					handleRightButton(action, input);
+					break;
+				case widgetapi::LocatedUserInput::BUTTON4_DOWN:
+					handleX1Button(action, input);
+					break;
+				case widgetapi::LocatedUserInput::BUTTON5_DOWN:
+					handleX2Button(action, input);
+					break;
 			}
-			return false;
 		}
 
 		/// @see MouseInputStrategy#mouseMoved
-		void DefaultMouseInputStrategy::mouseMoved(const widgetapi::LocatedUserInput& input) {
+		void DefaultMouseInputStrategy::mouseMoved(widgetapi::LocatedUserInput& input) {
 			if(state_ == APPROACHING_AUTO_SCROLL
 					|| (/*dnd_.supportLevel >= SUPPORT_DND &&*/ state_ == APPROACHING_DND)) {	// dragging starts?
-				if(state_ == APPROACHING_DND && isSelectionEmpty(viewer_->caret()))
+				if(state_ == APPROACHING_DND && isSelectionEmpty(viewer_->caret())) {
 					state_ = NONE;	// approaching... => cancel
-				else {
+					input.consume();
+				} else {
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 					// the following code can be replaced with DragDetect in user32.lib
 					namespace geometry = graphics::geometry;
 					const int cxDragBox = ::GetSystemMetrics(SM_CXDRAG);
@@ -1101,13 +1106,17 @@ namespace ascension {
 							timer_.start(0, *this);
 						}
 					}
+					input.consume();
+#endif
 				}
-			} else if((state_ & SELECTION_EXTENDING_MASK) == SELECTION_EXTENDING_MASK)
+			} else if((state_ & SELECTION_EXTENDING_MASK) == SELECTION_EXTENDING_MASK) {
 				extendSelectionTo();
+				input.consume();
+			}
 		}
 
 		/// @see MouseInputStrategy#mouseWheelRotated
-		void DefaultMouseInputStrategy::mouseWheelRotated(const widgetapi::MouseWheelInput& input) {
+		void DefaultMouseInputStrategy::mouseWheelRotated(widgetapi::MouseWheelInput& input) {
 			if(!endAutoScroll()) {
 				const std::shared_ptr<graphics::font::TextViewport> viewport(viewer_->textRenderer().viewport());
 				// use system settings
@@ -1120,6 +1129,7 @@ namespace ascension {
 				}
 				viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(
 					0, static_cast<graphics::font::TextViewport::SignedScrollOffset>(-graphics::geometry::dy(input.rotation()) * static_cast<short>(lines) / WHEEL_DELTA)));
+				input.consume();
 			}
 		}
 

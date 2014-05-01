@@ -41,7 +41,8 @@ namespace ascension {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			const DropAction DROP_ACTION_WIN32_SCROLL = 1 << 3;
 #endif
-			DropAction resolveDefaultDropAction(DropAction possibleActions, UserInput::Modifiers modifiers);
+			DropAction resolveDefaultDropAction(DropAction possibleActions,
+				LocatedUserInput::MouseButton buttons, UserInput::KeyboardModifier modifiers);
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			typedef Glib::RefPtr<Gtk::TargetList> NativeMimeData;
@@ -171,7 +172,7 @@ namespace ascension {
 			public:
 				DragInputBase(const MouseButtonInput& mouse, DropAction possibleActions) :
 					MouseButtonInput(mouse), possibleActions_(possibleActions),
-					defaultAction_(resolveDefaultDropAction(possibleActions, mouse.modifiers())) {}
+					defaultAction_(resolveDefaultDropAction(possibleActions, mouse.buttons(), mouse.modifiers())) {}
 				void acceptProposedAction();
 				DropAction dropAction() const BOOST_NOEXCEPT {return action_;}
 				DropAction possibleActions() const BOOST_NOEXCEPT {return possibleActions_;}

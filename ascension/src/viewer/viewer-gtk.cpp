@@ -85,6 +85,68 @@ namespace ascension {
 			});
 		}
 
+		namespace {
+			static const int NATIVE_BUTTON_MASK = GDK_BUTTON1_MASK | GDK_BUTTON2_MASK | GDK_BUTTON3_MASK | GDK_BUTTON4_MASK | GDK_BUTTON5_MASK;
+			static const int NATIVE_KEYBOARD_MASK = ~NATIVE_BUTTON_MASK;
+
+			template<typename NativeEvent>
+			inline std::tuple<
+				graphics::Point,
+				widgetapi::LocatedUserInput::MouseButton,
+				widgetapi::UserInput::KeyboardModifier
+			>&& makeLocatedUserInput(const NativeEvent& event) {
+				return std::make_tuple(
+					graphics::geometry::make<graphics::Point>((graphics::geometry::_x = event.x, graphics::geometry::_y = event.y)),
+					static_cast<widgetapi::LocatedUserInput::MouseButton>(event.state & NATIVE_BUTTON_MASK),
+					static_cast<widgetapi::UserInput::KeyboardModifier>(event.state & NATIVE_KEYBOARD_MASK));
+			}
+
+			widgetapi::MouseButtonInput&& makeMouseButtonInput(const GdkEventButton& event) {
+				static const widgetapi::LocatedUserInput::MouseButton NATIVE_BUTTON_VALUES[] = {
+					widgetapi::LocatedUserInput::BUTTON1_DOWN, widgetapi::LocatedUserInput::BUTTON2_DOWN,
+					widgetapi::LocatedUserInput::BUTTON3_DOWN, widgetapi::LocatedUserInput::BUTTON4_DOWN,
+					widgetapi::LocatedUserInput::BUTTON5_DOWN
+				};
+				const auto a(makeLocatedUserInput(event));
+				const widgetapi::LocatedUserInput::MouseButton button =
+					(event.button >= 1 && event.button <= 5) ? NATIVE_BUTTON_VALUES[event.button - 1] : widgetapi::LocatedUserInput::NO_BUTTON;
+				return widgetapi::MouseButtonInput(std::get<0>(a), button, std::get<1>(a), std::get<2>(a));
+			}
+		}
+
+		/**
+		 * Invokes @c #mousePressed, @c #mouseDoubleClicked and @c #mouseTripleClicked
+		 * @see Widget#on_button_press_event
+		 */
+		bool TextViewer::on_button_press_event(GdkEventButton* event) {
+			const widgetapi::MouseButtonInput input(makeMouseButtonInput(*event));
+			if(input.button() != widgetapi::LocatedUserInput::NO_BUTTON) {
+				switch(event->type) {
+					case GDK_BUTTON_PRESS:
+						mousePressed(input);
+						break;
+					case GDK_2BUTTON_PRESS:
+						mouseDoubleClicked(input);
+						break;
+					case GDK_3BUTTON_PRESS:
+						mouseTripleClicked(input);
+						break;
+				}
+			}
+			return input.isConsumed();
+		}
+
+		/**
+		 * Invokes @c #mouseReleased
+		 * @see Widget#on_button_release_event
+		 */
+		bool TextViewer::on_button_release_event(GdkEventButton* event) {
+			const widgetapi::MouseButtonInput input(makeMouseButtonInput(*event));
+			if(input.button() != widgetapi::LocatedUserInput::NO_BUTTON && event->type == GDK_BUTTON_RELEASE)
+				mouseReleased(input);
+			return input.isConsumed();
+		}
+
 		/// @see Gtk#Widget#on_drag_drop
 		bool TextViewer::on_drag_drop(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time) {
 			if(mouseInputStrategy_.get() != nullptr) {
@@ -135,6 +197,37 @@ namespace ascension {
 			widgetapi::Event e;
 			focusAboutToBeLost(e);
 			return e.isConsumed();
+		}
+
+		/**
+		 * Invokes @c #keyPressed method.
+		 * @see Gtk#Widget#on_key_press_event
+		 */
+		bool TextViewer::on_key_press_event(GdkEventKey* event) {
+			widgetapi::KeyInput input(event->keyval, static_cast<widgetapi::UserInput::KeyboardModifier>(event->state));
+			keyPressed(input);
+			return input.isConsumed();
+		}
+
+		/**
+		 * Invokes @c #keyReleased method.
+		 * @see Gtk#Widget#on_key_release_event
+		 */
+		bool TextViewer::on_key_release_event(GdkEventKey* event) {
+			widgetapi::KeyInput input(event->keyval, static_cast<widgetapi::UserInput::KeyboardModifier>(event->state));
+			keyReleased(input);
+			return input.isConsumed();
+		}
+
+		/**
+		 * Invokes @c #mouseMoved method.
+		 * @see Widget#on_motion_notify_event
+		 */
+		bool TextViewer::on_motion_notify_event(GdkEventMotion* event) {
+			const auto a(makeLocatedUserInput(*event));
+			widgetapi::LocatedUserInput input(std::get<0>(a), std::get<1>(a), std::get<2>(a));
+			mouseMoved(input);
+			return input.isConsumed();
 		}
 
 		/// @see Gtk#Widget#on_realize
