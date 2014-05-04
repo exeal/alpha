@@ -1073,6 +1073,53 @@ namespace ascension {
 				return boost::geometry::model::multi_polygon<boost::geometry::model::polygon<Point>>();
 			}
 
+
+			// TextLayout.LineMetricsIterator /////////////////////////////////////////////////////////////////////////
+
+			/// Default constructor creates an iterator addresses the end.
+			TextLayout::LineMetricsIterator::LineMetricsIterator() BOOST_NOEXCEPT : layout_(nullptr) {
+			}
+
+			/**
+			 * Constructor creates an iterator addresses the specified line.
+			 * @param layout The target text layout
+			 * @param line The line number. Can be @c layout.numberOfLines()
+			 * @throw IndexOutOfBoundsException @a line &gt; @c layout.numberOfLines()
+			 */
+			TextLayout::LineMetricsIterator::LineMetricsIterator(const TextLayout& layout, Index line) : layout_(&layout), line_(line) {
+				if(line > layout.numberOfLines())
+					throw IndexOutOfBoundsException("line");
+
+				const Index i = (line != layout.numberOfLines()) ? line : (line - 1);
+				baselineOffset_ = layout_->extent(boost::irange<Index>(0, i)).front();
+				baselineOffset_ += !isNegativeVertical() ? std::get<0>(layout_->lineMetrics_[i]) : std::get<1>(layout_->lineMetrics_[i]);
+			}
+
+			/// Implements decrement operators.
+			void TextLayout::LineMetricsIterator::decrement() {
+				if(layout_ != nullptr && line() > 0) {
+					assert(line() <= layout_->numberOfLines());
+					if(--line_ < layout_->numberOfLines()) {
+						const bool negativeVertical = isNegativeVertical();
+						baselineOffset_ -= negativeVertical ? std::get<0>(layout_->lineMetrics_[line() + 1]) : std::get<1>(layout_->lineMetrics_[line() + 1]);
+						baselineOffset_ -= std::get<2>(layout_->lineMetrics_[line()]);
+						baselineOffset_ -= negativeVertical ? std::get<1>(layout_->lineMetrics_[line()]) : std::get<0>(layout_->lineMetrics_[line()]);
+					}
+				}
+			}
+
+			/// Implements incremental operators.
+			void TextLayout::LineMetricsIterator::increment() {
+				if(layout_ != nullptr && line() < layout_->numberOfLines()) {
+					if(++line_ < layout_->numberOfLines()) {
+						const bool negativeVertical = isNegativeVertical();
+						baselineOffset_ += negativeVertical ? std::get<1>(layout_->lineMetrics_[line() - 1]) : std::get<0>(layout_->lineMetrics_[line() - 1]);
+						baselineOffset_ += std::get<2>(layout_->lineMetrics_[line() - 1]);
+						baselineOffset_ += negativeVertical ? std::get<0>(layout_->lineMetrics_[line()]) : std::get<1>(layout_->lineMetrics_[line()]);
+					}
+				}
+			}
+
 #if 0
 			// TextLayout.StyledSegmentIterator ///////////////////////////////////////////////////////////////////////
 
