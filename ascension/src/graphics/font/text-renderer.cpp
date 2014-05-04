@@ -179,9 +179,20 @@ namespace ascension {
 			}
 
 			/**
+			 * Registers the computed block-flow-direction listener.
+			 * @param listener The listener to be registered
+			 * @throw std#invalid_argument @a listener is already registered
+			 * @see #computedBlockFlowDirection
+			 */
+			void TextRenderer::addComputedBlockFlowDirectionListener(ComputedBlockFlowDirectionListener& listener) {
+				computedBlockFlowDirectionListeners_.add(listener);
+			}
+
+			/**
 			 * Registers the default font selector listener.
 			 * @param listener The listener to be registered
 			 * @throw std#invalid_argument @a listener is already registered
+			 * @see #defaultFont
 			 */
 			void TextRenderer::addDefaultFontListener(DefaultFontListener& listener) {
 				defaultFontListeners_.add(listener);
@@ -309,9 +320,20 @@ namespace ascension {
 			}
 
 			/**
+			 * Removes the computed block-flow-direction listener.
+			 * @param listener The listener to be removed
+			 * @throw std#invalid_argument @a listener is not registered
+			 * @see #computedBlockFlowDirection
+			 */
+			void TextRenderer::removeComputedBlockFlowDirectionListener(ComputedBlockFlowDirectionListener& listener) {
+				computedBlockFlowDirectionListeners_.remove(listener);
+			}
+
+			/**
 			 * Removes the default font selector listener.
 			 * @param listener The listener to be removed
 			 * @throw std#invalid_argument @a listener is not registered
+			 * @see #defaultFont
 			 */
 			void TextRenderer::removeDefaultFontListener(DefaultFontListener& listener) {
 				defaultFontListeners_.remove(listener);
