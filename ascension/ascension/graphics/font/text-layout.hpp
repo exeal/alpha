@@ -104,6 +104,18 @@ namespace ascension {
 					Scalar leading() const;
 					Index line() const BOOST_NOEXCEPT;
 				private:
+					bool isDone() const BOOST_NOEXCEPT {
+						return layout_ == nullptr || line() >= layout_->numberOfLines();	// $friendly-access$
+					}
+					bool isNegativeVertical() const {
+						const presentation::WritingMode& writingMode = layout_->writingMode();
+						if(writingMode.blockFlowDirection == presentation::VERTICAL_RL)
+							return presentation::resolveTextOrientation(writingMode) == presentation::SIDEWAYS_LEFT;
+						else if(writingMode.blockFlowDirection == presentation::VERTICAL_LR)
+							return presentation::resolveTextOrientation(writingMode) != presentation::SIDEWAYS_LEFT;
+						return false;
+					}
+					// boost.iterator_facade
 					void decrement();
 					difference_type distance_to(const LineMetricsIterator& other) const;
 					bool equal(const LineMetricsIterator& other) const;
@@ -366,9 +378,14 @@ namespace ascension {
 			 * @throw NoSuchElementException The iterator is done
 			 */
 			inline Scalar TextLayout::LineMetricsIterator::ascent() const {
-				if(layout_ == nullptr || line_ >= layout_->numberOfLines())
+				if(isDone())
 					throw NoSuchElementException();
 				return std::get<0>(layout_->lineMetrics_[line_]);	// $friendly-access$
+			}
+
+			/// Returns the baseline of the current line.
+			inline DominantBaseline TextLayout::LineMetricsIterator::baseline() const {
+				return layout_->lineStyle_.get().dominantBaseline;
 			}
 
 			/**
@@ -378,7 +395,7 @@ namespace ascension {
 			 * @throw NoSuchElementException The iterator is done
 			 */
 			inline Scalar TextLayout::LineMetricsIterator::baselineOffset() const {
-				if(layout_ == nullptr || line_ >= layout_->numberOfLines())
+				if(isDone())
 					throw NoSuchElementException();
 				return baselineOffset_;
 			}
@@ -407,9 +424,33 @@ namespace ascension {
 			 * @throw NoSuchElementException The iterator is done
 			 */
 			inline Scalar TextLayout::LineMetricsIterator::descent() const {
-				if(layout_ == nullptr || line_ >= layout_->numberOfLines())
+				if(isDone())
 					throw NoSuchElementException();
 				return std::get<1>(layout_->lineMetrics_[line_]);	// $friendly-access$
+			}
+
+			/// @internal Implements relational and subtract operators.
+			inline TextLayout::LineMetricsIterator::difference_type TextLayout::LineMetricsIterator::distance_to(const LineMetricsIterator& other) const {
+				const bool done = isDone(), otherIsDone = other.isDone();
+				if(done != otherIsDone)
+					return done ? (other.layout_->numberOfLines() - other.line()) : (line() - layout_->numberOfLines());
+				if(done)
+					return 0;
+				if(layout_ != other.layout_)
+					throw std::invalid_argument("other");
+				return line() - other.line();
+			}
+
+			/// @internal Implements equality-operators.
+			inline bool TextLayout::LineMetricsIterator::equal(const LineMetricsIterator& other) const {
+				const bool done = isDone(), otherIsDone = other.isDone();
+				if(done != otherIsDone)
+					return false;
+				if(done)
+					return true;
+				if(layout_ != other.layout_)
+					throw std::invalid_argument("other");
+				return line() == other.line();
 			}
 
 			/**
@@ -420,16 +461,8 @@ namespace ascension {
 			 * @see TextLayout#extent
 			 */
 			inline boost::integer_range<Scalar> TextLayout::LineMetricsIterator::extent() const {
-				if(layout_ == nullptr)
-					throw NoSuchElementException();
-				const presentation::WritingMode& writingMode = layout_->writingMode();
-				bool negativeVertical = false;
-				if(writingMode.blockFlowDirection == presentation::VERTICAL_RL)
-					negativeVertical = presentation::resolveTextOrientation(writingMode) == presentation::SIDEWAYS_LEFT;
-				else if(writingMode.blockFlowDirection == presentation::VERTICAL_LR)
-					negativeVertical = presentation::resolveTextOrientation(writingMode) != presentation::SIDEWAYS_LEFT;
-				const Scalar bsln = baselineOffset();
-				return !negativeVertical ?
+				const Scalar bsln = baselineOffset();	// may throw NoSuchElementException
+				return !isNegativeVertical() ?
 					boost::irange(bsln - ascent(), bsln + descent() + leading())
 			    	: boost::irange(bsln - descent(), bsln + ascent() + leading());	// TODO: leading is there?
 			}
@@ -453,9 +486,14 @@ namespace ascension {
 			 * @throw NoSuchElementException The iterator is done
 			 */
 			inline Scalar TextLayout::LineMetricsIterator::leading() const {
-				if(layout_ == nullptr || line_ >= layout_->numberOfLines())
+				if(isDone())
 					throw NoSuchElementException();
 				return std::get<2>(layout_->lineMetrics_[line_]);	// $friendly-access$
+			}
+
+			/// Returns the line number of the current line.
+			inline Index TextLayout::LineMetricsIterator::line() const BOOST_NOEXCEPT {
+				return line_;
 			}
 
 		}
