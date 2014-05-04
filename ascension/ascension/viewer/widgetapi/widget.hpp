@@ -8,6 +8,7 @@
 #define ASCENSION_WIDGET_HPP
 #include <ascension/platforms.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>	// IllegalStateException
+#include <ascension/corelib/scope-guard.hpp>
 #include <ascension/graphics/geometry.hpp>
 #include <ascension/graphics/rendering-device.hpp>	// graphics.RenderingDevice, ...
 //#include <ascension/viewer/widgetapi/drag-and-drop.hpp>
@@ -336,19 +337,12 @@ namespace ascension {
 			std::unique_ptr<graphics::RenderingContext2D> createRenderingContext(Proxy<const Widget> widget);
 
 			// focus/input
-			void grabInput(Proxy<Widget> widget);
+			ascension::detail::ScopeGuard grabInput(Proxy<Widget> widget);
 			bool hasFocus(Proxy<const Widget> widget);
 			bool isActive(Proxy<const Widget> widget);
 			void releaseInput(Proxy<Widget> widget);
 			void setFocus(Proxy<Widget> widget);
 			void unsetFocus(Proxy<Widget> widget);
-			class InputGrabLocker {
-			public:
-				~InputGrabLocker() {releaseInput(widget_);}
-			private:
-				explicit InputGrabLocker(Proxy<Widget> widget) : widget_(widget) {}
-				Proxy<Widget> widget_;
-			};
 
 			// top-level windows
 			/**

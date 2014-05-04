@@ -50,6 +50,11 @@ namespace ascension {
 ////			return Proxy<Window>(Gdk::Window::get_default_root_window());
 //			}
 
+			ascension::detail::ScopeGuard grabInput(Proxy<Widget> widget) {
+				widget->add_modal_grab();
+				return ascension::detail::ScopeGuard(std::bind(&releaseInput, widget));
+			}
+
 			bool hasFocus(Proxy<const Widget> widget) {
 				return widget->has_focus();
 			}
@@ -81,6 +86,10 @@ namespace ascension {
 			void redrawScheduledRegion(Proxy<Widget> widget) {
 				if(const Glib::RefPtr<Gdk::Window> window = widget->get_window())
 					window->process_updates(true);
+			}
+
+			void releaseInput(Proxy<Widget> widget) {
+				widget->remove_modal_grab();
 			}
 
 			void resize(Proxy<Window> window, const graphics::Dimension& newSize) {
