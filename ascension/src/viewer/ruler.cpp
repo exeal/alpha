@@ -24,10 +24,36 @@ namespace ascension {
 		RulerStyles::LineNumbers::LineNumbers() BOOST_NOEXCEPT : visible(false) {
 		}
 
+		/**
+		 * Returns line numbers style of the given @c RulerStyles.
+		 * @param rulerStyles The parent ruler styles
+		 * @return @c rulerStyles.lineNumbers if not @c null. Otherwise default-constructed @c RulerStyles#LineNumbers
+		 *         object
+		 */
+		std::shared_ptr<const RulerStyles::LineNumbers> lineNumbers(const RulerStyles& rulerStyles) {
+			static const RulerStyles::LineNumbers defaultInstance;
+			if(const std::shared_ptr<const RulerStyles::LineNumbers> p = rulerStyles.lineNumbers)
+				return p;
+			return std::shared_ptr<const RulerStyles::LineNumbers>(&defaultInstance, ascension::detail::NullDeleter());
+		}
+
 		// RulerStyles.IndicatorMargin ////////////////////////////////////////////////////////////////////////////////
 
 		/// Constructor initializes the all members to their default values.
 		RulerStyles::IndicatorMargin::IndicatorMargin() BOOST_NOEXCEPT : visible(false), width(presentation::Length(0)) {
+		}
+
+		/**
+		 * Returns indicator margin style of the given @c RulerStyles.
+		 * @param rulerStyles The parent ruler styles
+		 * @return @c rulerStyles.indicatorMargin if not @c null. Otherwise default-constructed
+		 *         @c RulerStyles#IndicatorMargin object
+		 */
+		std::shared_ptr<const RulerStyles::IndicatorMargin> indicatorMargin(const RulerStyles& rulerStyles) {
+			static const RulerStyles::IndicatorMargin defaultInstance;
+			if(const std::shared_ptr<const RulerStyles::IndicatorMargin> p = rulerStyles.indicatorMargin)
+				return p;
+			return std::shared_ptr<const RulerStyles::IndicatorMargin>(&defaultInstance, ascension::detail::NullDeleter());
 		}
 
 		namespace detail {
