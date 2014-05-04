@@ -11,6 +11,7 @@
 #define ASCENSION_TEXT_VIEWPORT_HPP
 
 //#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
+#include <ascension/corelib/scope-guard.hpp>
 #include <ascension/graphics/geometry.hpp>
 #include <ascension/graphics/font/line-layout-vector.hpp>
 #include <ascension/graphics/font/text-renderer-observers.hpp>
@@ -151,10 +152,10 @@ namespace ascension {
 				ascension::detail::Listeners<TextViewportListener> listeners_;
 			};
 
-			typedef ascension::detail::LockGuard<
+			typedef ascension::detail::MutexWithClass<
 				TextViewport, &TextViewport::lockScroll, &TextViewport::unlockScroll
 			> ScrollLocker;
-			typedef ascension::detail::LockGuard<
+			typedef ascension::detail::MutexWithClass<
 				TextViewport, &TextViewport::freezeNotification, &TextViewport::thawNotification
 			> TextViewportNotificationLocker;
 

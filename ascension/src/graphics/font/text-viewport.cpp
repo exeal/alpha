@@ -15,6 +15,9 @@
 #include <ascension/presentation/text-style.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <tuple>
+#define BOOST_THREAD_NO_LIB
+#include <boost/thread/lock_guard.hpp>
+#undef BOOST_THREAD_NO_LIB
 
 namespace ascension {
 	namespace graphics {
@@ -1274,7 +1277,7 @@ namespace ascension {
 				decltype(blockFlowScrollOffsetInFirstVisibleVisualLine_) newBlockFlowScrollOffsetInFirstVisibleVisualLine;
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				if(offsets.bpd() != 0) {
-					TextViewportNotificationLocker notificationLockGuard(this);	// the following code can change the layouts
+					boost::lock_guard<TextViewportNotificationLocker> notificationLockGuard(TextViewportNotificationLocker(this));	// the following code can change the layouts
 //					const auto scrollableRangeBeforeScroll(scrollableRange<BlockFlowDirection>(*this));
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 					newPositions.bpd() += locateVisualLine(*this,

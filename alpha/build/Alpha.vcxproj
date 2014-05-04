@@ -328,6 +328,7 @@
     <ClInclude Include="..\..\ascension\ascension\corelib\listeners.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\native-object.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\range.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\corelib\scope-guard.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\shared-library.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\signals.hpp" />
     <ClInclude Include="..\..\ascension\ascension\corelib\text\break-iterator.hpp" />
