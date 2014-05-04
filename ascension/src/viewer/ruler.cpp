@@ -18,7 +18,13 @@ namespace ascension {
 	extern const bool DIAGNOSE_INHERENT_DRAWING;
 
 	namespace viewers {
-		// RulerConfiguration.IndicatorMargin /////////////////////////////////////////////////////////////////////////
+		// RulerStyles.LineNumbers ////////////////////////////////////////////////////////////////////////////////////
+
+		/// Constructor initializes the all members to their default values.
+		RulerStyles::LineNumbers::LineNumbers() BOOST_NOEXCEPT : visible(false) {
+		}
+
+		// RulerStyles.IndicatorMargin ////////////////////////////////////////////////////////////////////////////////
 
 		/// Constructor initializes the all members to their default values.
 		RulerStyles::IndicatorMargin::IndicatorMargin() BOOST_NOEXCEPT : visible(false), width(presentation::Length(0)) {

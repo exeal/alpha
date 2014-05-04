@@ -94,6 +94,8 @@ namespace ascension {
 					presentation::sp::Complex<presentation::NumberSubstitution>,
 					presentation::sp::NotInherited
 				> numberSubstitution;
+
+				LineNumbers() BOOST_NOEXCEPT;
 			};
 
 			/// Style of the indicator margin.
@@ -144,9 +146,9 @@ namespace ascension {
 					presentation::TextAlignment, presentation::TextAlignment::START
 				>, presentation::sp::NotInherited
 			> alignment;
-			/// Style of the line numbers area.
+			/// Style of the line numbers area. This can be @c null.
 			std::shared_ptr<const LineNumbers> lineNumbers;
-			/// Style of the indicator margin.
+			/// Style of the indicator margin. This can be @c null.
 			std::shared_ptr<const IndicatorMargin> indicatorMargin;
 		};
 
