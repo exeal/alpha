@@ -14,6 +14,7 @@
 #include <ascension/corelib/gap-vector.hpp>	// detail.GapVector
 #include <ascension/corelib/listeners.hpp>
 #include <ascension/corelib/memory.hpp>		// FastArenaObject
+#include <ascension/corelib/scope-guard.hpp>
 #include <ascension/corelib/signals.hpp>
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/corelib/text/newline.hpp>
@@ -398,7 +399,7 @@ namespace ascension {
 		};
 
 		// the documentation is document.cpp
-		typedef ascension::detail::LockGuard<
+		typedef ascension::detail::MutexWithClass<
 			Document, &Document::beginCompoundChange, &Document::endCompoundChange
 		> CompoundChangeSaver;
 #if 0

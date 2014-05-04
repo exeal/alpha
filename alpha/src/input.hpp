@@ -8,9 +8,11 @@
 #ifndef ALPHA_INPUT_HPP
 #define ALPHA_INPUT_HPP
 #include "ambient.hpp"
+#include <ascension/corelib/scope-guard.hpp>
 #include <ascension/viewer/widgetapi/user-input.hpp>
 #include <boost/functional/hash.hpp>	// boost.hash_combine, boost.hash_value
 #include <boost/operators.hpp>	// boost.equality_comparable
+#include <boost/thread/lock_guard.hpp>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -168,8 +170,8 @@ namespace alpha {
 			std::shared_ptr<KeyMap> mappingScheme_, modalMappingScheme_;
 			std::vector<KeyStroke> pendingKeyStrokes_;
 			boost::python::object inputTypedCharacterCommand_;
-			typedef ascension::detail::LockGuard<KeyMap, &KeyMap::lock, &KeyMap::unlock> KeyMapLocker;
-			KeyMapLocker mappingSchemeLocker_, modalMappingSchemeLocker_;
+			typedef ascension::detail::MutexWithClass<KeyMap, &KeyMap::lock, &KeyMap::unlock> KeyMapMutex;
+			std::unique_ptr<boost::lock_guard<KeyMapMutex>> mappingSchemeLocker_, modalMappingSchemeLocker_;
 		};
 	}
 } // namespace alpha.ui

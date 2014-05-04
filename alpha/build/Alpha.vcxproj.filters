@@ -835,6 +835,9 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\native-conversion.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\corelib\scope-guard.hpp">
+      <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">

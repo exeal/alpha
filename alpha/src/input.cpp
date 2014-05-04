@@ -258,10 +258,8 @@ wstring KeyStroke::format(py::object keys) {
 		void InputManager::cancelIncompleteKeyStrokes() {
 			if(!pendingKeyStrokes_.empty()) {
 				pendingKeyStrokes_.clear();
-				if(mappingScheme_.get() != nullptr)
-					mappingSchemeLocker_.unlock();
-				if(modalMappingScheme_.get() != nullptr)
-					modalMappingSchemeLocker_.unlock();
+				mappingSchemeLocker_.reset();
+				modalMappingSchemeLocker_.reset();
 			}
 		}
 
@@ -322,9 +320,9 @@ wstring KeyStroke::format(py::object keys) {
 					// begin multiple key stroke(s)
 					assert(boost::python::extract<const KeyMap&>(definition).check());
 					if(mappingScheme_.get() != nullptr)
-						mappingSchemeLocker_.lock(*mappingScheme_);
+						mappingSchemeLocker_.reset(new boost::lock_guard<KeyMapMutex>(KeyMapMutex(mappingScheme_.get())));
 					if(modalMappingScheme_.get() != nullptr)
-						modalMappingSchemeLocker_.lock(*modalMappingScheme_);
+						modalMappingSchemeLocker_.reset(new boost::lock_guard<KeyMapMutex>(KeyMapMutex(modalMappingScheme_.get())));
 					Application::instance().window().statusBar().push(incompleteKeyStrokes);
 				} else {	// undefined key stroke(s)
 					cancelIncompleteKeyStrokes();
