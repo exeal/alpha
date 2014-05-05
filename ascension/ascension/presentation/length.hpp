@@ -191,6 +191,11 @@ namespace ascension {
 			*this = temp;
 		}
 
+		/// Returns @c true if the specified @c #Unit value is valid.
+		inline bool Length::isValidUnit(Length::Unit unit) BOOST_NOEXCEPT {
+			return unit >= EM_HEIGHT && unit <= PERCENTAGE;
+		}
+
 		/**
 		 * [Copied from SVG 1.1 documentation] Resets the value as a number with an associated
 		 * @a unitType, thereby replacing the values for all of the attributes on the object.
