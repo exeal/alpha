@@ -76,11 +76,6 @@ namespace ascension {
 			}
 		}
 
-		/// @see RenderingDevice#heightInMillimeters
-		Scalar Image::heightInMillimeters() const {
-			return height() * 25.4f / physicalDpiY();
-		}
-
 		/**
 		 * @fn ascension::graphics::Image::Format ascension::graphics::Image::format() const
 		 * Returns the format of the image.
