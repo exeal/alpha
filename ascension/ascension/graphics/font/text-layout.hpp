@@ -332,6 +332,7 @@ namespace ascension {
 				const std::vector<Index> offsets(lineOffsets());
 				return *ascension::detail::searchBound(std::begin(offsets), std::end(offsets) - 1, offset);
 			}
+
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 			/**
 			 * Returns the metrics for the specified line.
@@ -347,6 +348,16 @@ namespace ascension {
 				if(lineMetrics_[line] == nullptr)
 					const_cast<TextLayout*>(this)->buildLineMetrics(line);
 				return *lineMetrics_[line];
+			}
+#else
+			/**
+			 * Returns the metrics for the specified line.
+			 * @param line The line number
+			 * @return The line metrics
+			 * @throw IndexOutOfBoundsException @a line is greater than the count of lines
+			 */
+			inline TextLayout::LineMetricsIterator&& TextLayout::lineMetrics(Index line) const {
+				return LineMetricsIterator(*this, line);	// this may throw IndexOutOfBoundsException
 			}
 #endif
 			/**
