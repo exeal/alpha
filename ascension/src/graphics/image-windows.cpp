@@ -16,6 +16,11 @@
 
 namespace ascension {
 	namespace graphics {
+		/// Returns the platform-native underlying @c HBITMAP handle.
+		win32::Handle<HBITMAP>::Type Image::asNative() const BOOST_NOEXCEPT {
+			return impl_;
+		}
+
 		namespace {
 			template<typename T>
 			inline T&& win32Object(const win32::Handle<HBITMAP>::Type& deviceContext) {

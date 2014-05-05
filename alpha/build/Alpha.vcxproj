@@ -159,7 +159,7 @@
       <Culture>0x0411</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>shlwapi.lib;comctl32.lib;imm32.lib;boost_python3-vc100-mt-gd-1_55.lib;atkmm-2.0.lib;cairo.lib;cairomm-1.0.lib;gdk-3.0.lib;gdkmm-3.0.lib;giomm-2.0.lib;glib-2.0.lib;glibmm-2.0.lib;gtk-3.0.lib;gtkmm-3.0.lib;libintl.lib;sigc-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;comctl32.lib;imm32.lib;boost_python3-vc100-mt-gd-1_55.lib;atkmm-2.0.lib;cairo.lib;cairomm-1.0.lib;gdk-3.0.lib;gdkmm-3.0.lib;giomm-2.0.lib;glib-2.0.lib;glibmm-2.0.lib;gtk-3.0.lib;gtkmm-3.0.lib;libintl.lib;pangomm-1.0.lib;sigc-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)Alpha.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <ManifestFile>$(IntDir)$(TargetFileName).intermediate.manifest</ManifestFile>

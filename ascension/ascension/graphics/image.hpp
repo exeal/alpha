@@ -21,7 +21,6 @@
 
 namespace ascension {
 	namespace graphics {
-
 		class Image : public RenderingDevice {
 		public:
 			/**
@@ -44,19 +43,19 @@ namespace ascension {
 			Image(const std::uint8_t* data, const geometry::BasicDimension<std::uint32_t>& size, Format format);
 			Image(std::unique_ptr<std::uint8_t[]> data, const geometry::BasicDimension<std::uint32_t>& size, Format format);
 			Image(const Image& other);
+
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
-			explicit Image(Cairo::RefPtr<Cairo::ImageSurface> image, std::unique_ptr<unsigned char[]> data);
-			Cairo::RefPtr<Cairo::ImageSurface> asNativeObject();
-			Cairo::RefPtr<const Cairo::ImageSurface> asNativeObject() const;
+			Cairo::RefPtr<Cairo::ImageSurface> asNative();
+			Cairo::RefPtr<const Cairo::ImageSurface> asNative() const;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
+			CGImageRef asNative() const;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(QT)
-			explicit Image(QImage&& image, std::unique_ptr<uchar[]> data);
-			QImage& asNativeObject() BOOST_NOEXCEPT;
-			const QImage& asNativeObject() const BOOST_NOEXCEPT;
+			QImage& asNative();
+			const QImage& asNative() const;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
-			explicit Image(win32::Handle<HBITMAP>::Type image);
-			win32::Handle<HBITMAP>::Type asNativeObject() const BOOST_NOEXCEPT;
+			win32::Handle<HBITMAP>::Type asNative() const BOOST_NOEXCEPT;
 #endif
+
 			static std::uint8_t depth(Format format);
 			Format format() const;
 			std::uint32_t numberOfBytes() const {return stride() * height();}
@@ -69,11 +68,9 @@ namespace ascension {
 			std::uint8_t depth() const;
 			std::uint32_t numberOfColors() const;
 			std::uint32_t height() const;
-			Scalar heightInMillimeters() const;
 			std::uint16_t logicalDpiX() const;
 			std::uint16_t logicalDpiY() const;
 			std::uint32_t width() const;
-			Scalar widthInMillimeters() const;
 			std::uint16_t physicalDpiX() const;
 			std::uint16_t physicalDpiY() const;
 
@@ -94,7 +91,6 @@ namespace ascension {
 			std::unique_ptr<std::uint8_t[], ascension::detail::NullDeleter> buffer_;
 #endif
 		};
-
 	}
 }
 
