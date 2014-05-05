@@ -57,6 +57,9 @@ namespace ascension {
 
 		/// Represents any NLF as the value of @c kernel#DocumentInput#newline().
 		const Newline Newline::USE_DOCUMENT_INPUT(0x80000001u);
+
+		Newline::Newline(std::uint32_t value) BOOST_NOEXCEPT : value_(value) {
+		}
 	}
 
 	namespace kernel {
