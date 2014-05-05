@@ -35,7 +35,7 @@ namespace ascension {
 		 *                          @c #Unit constants defined on this class)
 		 */
 		Length::Length(graphics::Scalar valueInSpecifiedUnits /* = 0.0 */, Unit unitType /* = PIXELS */, Mode mode /* = OTHER */) : mode_(mode) {
-			newValueSpecifiedUnits(unitType, valueInSpecifiedUnits);
+			newValueSpecifiedUnits(unitType, valueInSpecifiedUnits);	// may throw NotSupportedError
 		}
 
 		/**
