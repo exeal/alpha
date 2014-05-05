@@ -385,15 +385,28 @@ namespace ascension {
 			 * @return The parent widget or @c boost#none
 			 * @see #setParent
 			 */
-			Widget::pointer parent(Proxy<const Widget> widget);
+			Widget::pointer parentWidget(Proxy<const Widget> widget);
+			/**
+			 * Returns the parent of the widget.
+			 * @param widget The widget
+			 * @return The parent window or @c boost#none
+			 * @see #setParent
+			 */
+			Window::pointer parentWindow(Proxy<const Widget> widget);
 			/**
 			 * Sets the parent of the widget.
 			 * @param widget The widget
 			 * @param newParent The new parent widget or @c null
 			 * @see #parent
 			 */
-			template<typename T>
-			void setParent(Proxy<Widget> widget, T* newParent);
+			void setParentWidget(Proxy<Widget> widget, Proxy<Widget> newParent);
+			/**
+			 * Sets the parent of the widget.
+			 * @param widget The widget
+			 * @param newParent The new parent window or @c null
+			 * @see #parent
+			 */
+			void setParentWindow(Proxy<Widget> widget, Proxy<Window> newParent);
 			/***/
 			Proxy<Window> rootWindow(Proxy<Widget> widget);
 			/***/

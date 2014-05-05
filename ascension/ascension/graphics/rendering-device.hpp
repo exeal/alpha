@@ -10,12 +10,21 @@
 
 #include <ascension/graphics/geometry.hpp>	// geometry.BasicDimension
 
-namespace ascension {
-	
+namespace ascension {	
 	namespace graphics {
-
-		std::uint16_t defaultDpiX();
-		std::uint16_t defaultDpiY();
+		/// @defgroup default_dpi Default DPIs in Ascension
+		/// @{
+		/**
+		 * Returns the default DPI in x-coordinate.
+		 * @see defaultDpiY
+		 */
+		inline std::uint16_t defaultDpiX() BOOST_NOEXCEPT {return 96;}
+		/**
+		 * Returns the default DPI in y-coordinate.
+		 * @see defaultDpiX
+		 */
+		inline std::uint16_t defaultDpiY() BOOST_NOEXCEPT {return 96;}
+		/// @}
 
 		class RenderingContext2D;
 
@@ -36,7 +45,9 @@ namespace ascension {
 			/// Returns the width of the rendering device in device units.
 			virtual std::uint32_t height() const = 0;
 			/// Returns the height of the rendering device in millimeters.
-			virtual Scalar heightInMillimeters() const = 0;
+			virtual Scalar heightInMillimeters() const {
+				return static_cast<Scalar>(height()) / static_cast<Scalar>(physicalDpiX());
+			}
 			/// Returns the horizontal resolution of the device in dots per inch.
 			virtual std::uint16_t logicalDpiX() const = 0;
 			/// Returns the vertical resolution of the device in dots per inch.
@@ -44,7 +55,9 @@ namespace ascension {
 			/// Returns the width of the rendering device in device units.
 			virtual std::uint32_t width() const = 0;
 			/// Returns the width of the rendering device in millimeters.
-			virtual Scalar widthInMillimeters() const = 0;
+			virtual Scalar widthInMillimeters() const {
+				return static_cast<Scalar>(width()) / static_cast<Scalar>(physicalDpiY());
+			}
 			/// Returns the horizontal resolution of the device in dots per inch.
 			virtual std::uint16_t physicalDpiX() const = 0;
 			/// Returns the vertical resolution of the device in dots per inch.
@@ -63,7 +76,6 @@ namespace ascension {
 			static Screen& instance();
 			std::unique_ptr<RenderingContext2D> createGraphicsContext() const;
 		};
-
 	}
 }
 
