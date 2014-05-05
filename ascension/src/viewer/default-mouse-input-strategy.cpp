@@ -89,7 +89,7 @@ namespace ascension {
 		 */
 		AutoScrollOriginMark::AutoScrollOriginMark(TextViewer& viewer) BOOST_NOEXCEPT {
 			resetWidgetShape();
-			widgetapi::setParent(*this, &viewer);
+			widgetapi::setParentWidget(*this, viewer);
 		}
 
 		/**

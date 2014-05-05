@@ -115,6 +115,25 @@ namespace ascension {
 				widget->set_state(Gtk::STATE_FOCUSED);
 			}
 
+			void setParentWidget(Proxy<Widget> widget, Proxy<Widget> newParent) {
+				if(newParent)
+//					widget->set_parent(newParent.get());
+					widget->set_parent_window(newParent->get_window());
+				else
+					widget->unparent();
+			}
+
+			void setParentWindow(Proxy<Widget> widget, Proxy<Window> newParent) {
+				if(newParent)
+					widget->set_parent_window(newParent.get());
+				else
+					widget->unparent();
+			}
+
+			void show(Proxy<Widget> widget) {
+				widget->show();
+			}
+
 			void showMaximized(Proxy<Window> window) {
 				window->maximize();
 			}
