@@ -162,6 +162,16 @@ namespace alpha {
 
 	// EditorPanes ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+	/// Returns the iterator addresses the first editor pane.
+	EditorPanes::Iterator EditorPanes::begin() BOOST_NOEXCEPT {
+		return Iterator(firstPane());
+	}
+
+	/// Returns the iterator addresses the first editor pane.
+	EditorPanes::ConstIterator EditorPanes::begin() const BOOST_NOEXCEPT {
+		return cbegin();
+	}
+
 	/// @see BufferList#BufferAboutToBeRemoved
 	void EditorPanes::bufferAboutToBeRemoved(BufferList& buffers, Buffer& buffer) {
 		// remove the specified buffer from each panes
@@ -182,6 +192,56 @@ namespace alpha {
 				newView->setConfiguration(&originalView->configuration(), 0, true);
 			pane.addView(std::move(newView));
 		}
+	}
+
+	/// Returns the iterator addresses the first editor pane.
+	EditorPanes::ConstIterator EditorPanes::cbegin() const BOOST_NOEXCEPT {
+		return ConstIterator(firstPane());
+	}
+
+	/// Returns the iterator addresses one past the last editor pane.
+	EditorPanes::ConstIterator EditorPanes::cend() const BOOST_NOEXCEPT {
+		const EditorPane* const p = lastPane();
+		return (p != nullptr) ? ++ConstIterator(p) : ConstIterator(nullptr);
+	}
+
+	/// Returns the iterator addresses one past the last editor pane.
+	EditorPanes::Iterator EditorPanes::end() BOOST_NOEXCEPT {
+		EditorPane* const p = lastPane();
+		return (p != nullptr) ? ++Iterator(p) : Iterator(nullptr);
+	}
+
+	/// Returns the iterator addresses one past the last editor pane.
+	EditorPanes::ConstIterator EditorPanes::end() const BOOST_NOEXCEPT {
+		return cend();
+	}
+
+	/// @internal Returns the first editor pane, or @c null if empty.
+	EditorPane* EditorPanes::firstPane() const {
+		for(const Gtk::Paned* paned = this; ; ) {
+			const Gtk::Widget* const child = paned->get_child1();
+			if(child == nullptr)
+				break;
+			else if(child->get_type() != Gtk::Paned::get_type())
+				return const_cast<EditorPane*>(static_cast<const EditorPane*>(child));
+			paned = static_cast<const Gtk::Paned*>(child);
+		}
+		return nullptr;
+	}
+
+	/// @internal Returns the last editor pane, or @c null if empty.
+	EditorPane* EditorPanes::lastPane() const {
+		for(const Gtk::Paned* paned = this; ; ) {
+			const Gtk::Widget* child = paned->get_child2();
+			if(child == nullptr)
+				child = paned->get_child1();
+			if(child == nullptr)
+				break;
+			if(child->get_type() != Gtk::Paned::get_type())
+				return const_cast<EditorPane*>(static_cast<const EditorPane*>(child));
+			paned = static_cast<const Gtk::Paned*>(child);
+		}
+		return nullptr;
 	}
 
 	/**
@@ -226,46 +286,51 @@ namespace alpha {
 	// EditorPanes.InternalIterator ///////////////////////////////////////////////////////////////////////////////////
 
 	template<typename Derived, typename Reference>
-	EditorPanes::InternalIterator<Derived, Reference>::InternalIterator(pointer pane) : current_(pane) {
+	EditorPanes::InternalIterator<Derived, Reference>::InternalIterator(pointer pane) : current_(pane), end_(pane == nullptr) {
 	}
 
 	template<typename Derived, typename Reference>
 	bool EditorPanes::InternalIterator<Derived, Reference>::equal(const InternalIterator<Derived, Reference>& other) const {
-		return current_ == other.current_;
+		return current_ == other.current_ && end_ == other.end_;
 	}
 
 	template<typename Derived, typename Reference>
 	typename EditorPanes::InternalIterator<Derived, Reference>::reference EditorPanes::InternalIterator<Derived, Reference>::dereference() const {
-		if(current_ == nullptr)
+		if(end_ /* || current_ == nullptr*/)
 			throw ascension::NoSuchElementException();
 		return *current_;
 	}
 
 	template<typename Derived, typename Reference>
 	void EditorPanes::InternalIterator<Derived, Reference>::increment() {
-		if(current_ == nullptr)
+		if(end_ || current_ == nullptr)
 			throw ascension::NoSuchElementException();
 
-		Gtk::Paned* parent = static_cast<Gtk::Paned*>(current_->get_parent());
+		const bool isConst = std::is_const<Reference>::value;
+		typedef std::conditional<!isConst, Gtk::Paned, const Gtk::Paned>::type PanedType;
+		auto parent = static_cast<PanedType*>(current_->get_parent());
 		assert(parent->get_type() == Gtk::Paned::get_type());
-		Gtk::Widget* child = &**this;
+		std::conditional<!isConst, Gtk::Widget, const Gtk::Widget>::type* child = &**this;
 		while(parent->get_child1() != child) {
 			assert(parent->get_child2() == child);
 			child = parent;
-			parent = static_cast<Gtk::Paned*>(child->get_parent());
+			parent = static_cast<PanedType*>(child->get_parent());
 			assert(parent->get_type() == Gtk::Paned::get_type());
 		}
 
 		child = parent->get_child2();
 		while(child != nullptr) {
 			if(child->get_type() == Gtk::Paned::get_type()) {
-				parent = static_cast<Gtk::Paned*>(child);
+				parent = static_cast<PanedType*>(child);
 				child = parent->get_child1();
 			} else
 				break;
 		}
 
-		current_ = static_cast<pointer>(child);
+		if(child != nullptr)
+			current_ = static_cast<pointer>(child);
+		else
+			end_ = true;
 	}
 
 
