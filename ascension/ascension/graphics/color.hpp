@@ -18,6 +18,7 @@
 #endif
 #include <boost/math/special_functions/round.hpp>
 #include <boost/operators.hpp>
+#include <boost/optional.hpp>
 
 namespace ascension {
 	namespace graphics {
@@ -56,6 +57,7 @@ namespace ascension {
 				return red() == other.red() && green() == other.green()
 					&& blue() == other.blue() && alpha() == other.alpha();
 			}
+
 		private:
 			std::uint16_t red_, green_, blue_, alpha_;	// pre-multiplied values
 		};
@@ -109,9 +111,10 @@ namespace ascension {
 #endif
 
 		/**
-		 *
+		 * Provides color values defined by operating system (themes).
 		 * @see "CSS Color Module Level3, 4.5. CSS system colors"
 		 *      (http://www.w3.org/TR/css3-color/#css-system)
+		 * @note "CSS Color Module Level 4" deprecates system colors.
 		 */
 		class SystemColors {
 		public:
@@ -129,7 +132,7 @@ namespace ascension {
 				HIGHLIGHT,
 				HIGHLIGHT_TEXT,
 				INACTIVE_BORDER,
-				ANACTIVE_CAPTION,
+				INACTIVE_CAPTION,
 				INACTIVE_CAPTION_TEXT,
 				INFO_BACKGROUND,
 				INFO_TEXT,
@@ -145,7 +148,14 @@ namespace ascension {
 				WINDOW_FRAME,
 				WINDOW_TEXT
 			};
-			static Color get(Value value);
+
+			/**
+			 * Returns the specified system color.
+			 * @param value A value
+			 * @return A system color or @c #boost#none if @a value is not defined by the operating system (theme).
+			 * @throw UnknownValueException @a value is not valid
+			 */
+			static boost::optional<Color> get(Value value);	// defined in viewer/widgetapi/widget-*.cpp
 		};
 	}
 }

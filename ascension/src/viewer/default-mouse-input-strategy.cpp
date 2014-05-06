@@ -201,7 +201,8 @@ namespace ascension {
 
 		/// @internal
 		void AutoScrollOriginMark::paintPattern(graphics::RenderingContext2D& context) const {
-			const graphics::Color color(graphics::SystemColors::get(graphics::SystemColors::APP_WORKSPACE));
+			const graphics::Color color(boost::get_optional_value_or(
+				graphics::SystemColors::get(graphics::SystemColors::APP_WORKSPACE), graphics::Color::OPAQUE_BLACK));
 			context.setStrokeStyle(std::make_shared<graphics::SolidColor>(color));
 			context.setFillStyle(std::make_shared<graphics::SolidColor>(color));
 
