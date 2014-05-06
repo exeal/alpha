@@ -7,8 +7,14 @@
 #include <ascension/viewer/widgetapi/widget.hpp>
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#	include <ascension/graphics/color.hpp>
 #	include <ascension/graphics/native-conversion.hpp>
 #	include <ascension/graphics/rendering-context.hpp>
+#	include <gtkmm/button.h>
+#	include <gtkmm/menu.h>
+#	include <gtkmm/menuitem.h>
+#	include <gtkmm/scrollbar.h>
+#	include <gtkmm/tooltip.h>
 #	include <gtkmm/window.h>
 #	if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 #		include <gdk/win32/gdkwin32.h>
@@ -152,6 +158,95 @@ namespace ascension {
 
 			Proxy<Window> window(Proxy<Widget> widget) {
 				return Proxy<Window>(widget->get_window());
+			}
+		}
+	}
+
+	namespace graphics {
+		boost::optional<Color> SystemColors::get(Value value) {
+			if(value > WINDOW_TEXT)
+				throw UnknownValueException("value");
+
+			Gtk::WidgetPath path;
+			switch(value) {
+#ifdef GTK_STYLE_CLASS_TITLEBAR
+				case ACTIVE_CAPTION:
+				case CAPTION_TEXT:
+				case INACTIVE_CAPTION:
+				case INACTIVE_CAPTION_TEXT:
+					path.path_append_type(Gtk::Window::get_type());
+					path.iter_add_class(0, GTK_STYLE_CLASS_TITLEBAR);
+					break;
+#endif
+				case BUTTON_FACE:
+					path.path_append_type(Gtk::Button::get_type());
+					path.iter_add_class(0, GTK_STYLE_CLASS_BUTTON);
+					break;
+				case GRAY_TEXT:
+				case HIGHLIGHT:
+				case HIGHLIGHT_TEXT:
+				case THREE_D_FACE:
+				case WINDOW:
+				case WINDOW_TEXT:
+					path.path_append_type(Gtk::Widget::get_type());
+					path.iter_add_class(0, GTK_STYLE_CLASS_BACKGROUND);
+					break;
+				case INFO_BACKGROUND:
+				case INFO_TEXT:
+					path.path_append_type(Gtk::Tooltip::get_type());
+					path.iter_add_class(0, GTK_STYLE_CLASS_TOOLTIP);
+					break;
+				case MENU:
+				case MENU_TEXT:
+					path.path_append_type(Gtk::Menu::get_type());
+					path.path_append_type(Gtk::MenuItem::get_type());
+					path.iter_add_class(0, GTK_STYLE_CLASS_MENU);
+					path.iter_add_class(1, GTK_STYLE_CLASS_MENUITEM);
+					break;
+				case SCROLLBAR:
+					path.path_append_type(Gtk::Scrollbar::get_type());
+					path.iter_add_class(0, GTK_STYLE_CLASS_BUTTON);
+					break;
+				default:
+					return boost::none;
+			}
+
+			const Glib::RefPtr<Gtk::StyleContext> context(Gtk::StyleContext::create());
+			context->set_path(path);
+			switch(value) {
+#ifdef GTK_STYLE_CLASS_TITLEBAR
+				case ACTIVE_CAPTION:
+					return Color::from(context->get_background_color(Gtk::STATE_FLAG_ACTIVE));
+#endif
+				case BUTTON_FACE:
+				case INFO_BACKGROUND:
+				case MENU:
+				case SCROLLBAR:
+				case THREE_D_FACE:
+				case WINDOW:
+					return Color::from(context->get_background_color());
+#ifdef GTK_STYLE_CLASS_TITLEBAR
+				case CAPTION_TEXT:
+					return Color::from(context->get_color(Gtk::STATE_FLAG_ACTIVE));
+#endif
+				case GRAY_TEXT:
+					return Color::from(context->get_color(Gtk::STATE_FLAG_INSENSITIVE));
+				case HIGHLIGHT:
+					return Color::from(context->get_background_color(Gtk::STATE_FLAG_SELECTED));
+				case HIGHLIGHT_TEXT:
+					return Color::from(context->get_color(Gtk::STATE_FLAG_SELECTED));
+#ifdef GTK_STYLE_CLASS_TITLEBAR
+				case INACTIVE_CAPTION:
+#endif
+#ifdef GTK_STYLE_CLASS_TITLEBAR
+				case INACTIVE_CAPTION_TEXT:
+#endif
+				case INFO_TEXT:
+				case MENU_TEXT:
+				case WINDOW_TEXT:
+					return Color::from(context->get_color());
+				default:
+					return boost::none;
 			}
 		}
 	}

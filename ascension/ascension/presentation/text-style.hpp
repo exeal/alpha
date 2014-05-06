@@ -85,7 +85,8 @@ namespace ascension {
 			else if(!ancestor.inherits() && ancestor.get() != boost::none)
 				return *ancestor.get();
 			else
-				return graphics::SystemColors::get(graphics::SystemColors::WINDOW_TEXT);
+				return boost::get_optional_value_or(graphics::SystemColors::get(
+					graphics::SystemColors::WINDOW_TEXT), graphics::Color::OPAQUE_BLACK);
 		}
 		/// @}
 
@@ -147,7 +148,8 @@ namespace ascension {
 					&& ancestor.color.get() != boost::none && ancestor.color.get()->isFullyTransparent())
 				return std::unique_ptr<graphics::Paint>(new graphics::SolidColor(*ancestor.color.get()));
 			return std::unique_ptr<graphics::Paint>(
-				new graphics::SolidColor(graphics::SystemColors::get(graphics::SystemColors::WINDOW)));
+				new graphics::SolidColor(boost::get_optional_value_or(
+					graphics::SystemColors::get(graphics::SystemColors::WINDOW), graphics::Color::OPAQUE_WHITE)));
 		}
 
 		/**
