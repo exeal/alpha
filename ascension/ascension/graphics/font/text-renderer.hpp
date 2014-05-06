@@ -152,6 +152,11 @@ namespace ascension {
 #endif // ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI) && ASCENSION_ABANDONED_AT_VERSION_08
 			};
 
+			/// Returns the computed block-flow-direction.
+			inline presentation::BlockFlowDirection TextRenderer::computedBlockFlowDirection() const BOOST_NOEXCEPT {
+				return computedBlockFlowDirection_;
+			}
+
 			/// @see presentation#GlobalTextStyleSwitch#direction
 			inline decltype(presentation::TextLineStyle().direction) TextRenderer::direction() const BOOST_NOEXCEPT {
 				return direction_;
