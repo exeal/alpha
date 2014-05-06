@@ -559,6 +559,10 @@ namespace ascension {
 		public:
 			/// Default constructor initializes nothing.
 			FlowRelativeFourSidesBase() {}
+#ifdef BOOST_COMP_MSVC
+			FlowRelativeFourSidesBase(const FlowRelativeFourSidesBase& other) : std::array<T, 4>(other) {}
+			FlowRelativeFourSidesBase(FlowRelativeFourSidesBase&& other) : std::array<T, 4>(other) {}
+#endif	// BOOST_COMP_MSVC
 			/// Constructor takes named parameters as initial values.
 			template<typename Arguments>
 			FlowRelativeFourSidesBase(const Arguments& arguments) {
@@ -611,8 +615,10 @@ namespace ascension {
 		public:
 			/// Default constructor initializes nothing.
 			FlowRelativeFourSides() {}
-			FlowRelativeFourSides(const FlowRelativeFourSides&);
-			FlowRelativeFourSides(FlowRelativeFourSides&&);
+#ifdef BOOST_COMP_MSVC
+			FlowRelativeFourSides(const FlowRelativeFourSides& other) : FlowRelativeFourSidesBase(static_cast<const FlowRelativeFourSidesBase<T>&>(other)) {}
+			FlowRelativeFourSides(FlowRelativeFourSides&& other) : FlowRelativeFourSidesBase(other) {}
+#endif	// BOOST_COMP_MSVC
 			/// Constructor takes named parameters as initial values.
 			BOOST_PARAMETER_CONSTRUCTOR(
 				FlowRelativeFourSides, (FlowRelativeFourSidesBase<T>), tag,
