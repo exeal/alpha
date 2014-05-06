@@ -162,6 +162,13 @@ namespace alpha {
 
 	// EditorPanes ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+	/**
+	 * @typedef alpha::EditorPanes::BufferSelectionChangedSignal
+	 * The signal which gets emitted when the buffer selection was changed.
+	 * @param editorPanes The editor panes
+	 * @see #selectedBuffer
+	 */
+
 	/// Returns the iterator addresses the first editor pane.
 	EditorPanes::Iterator EditorPanes::begin() BOOST_NOEXCEPT {
 		return Iterator(firstPane());
@@ -192,6 +199,10 @@ namespace alpha {
 				newView->setConfiguration(&originalView->configuration(), 0, true);
 			pane.addView(std::move(newView));
 		}
+	}
+
+	ascension::SignalConnector<EditorPanes::BufferSelectionChangedSignal> EditorPanes::bufferSelectionChangedSignal() BOOST_NOEXCEPT {
+		return ascension::makeSignalConnector(bufferSelectionChangedSignal_);
 	}
 
 	/// Returns the iterator addresses the first editor pane.
