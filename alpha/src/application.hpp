@@ -62,7 +62,7 @@ namespace alpha {
 	// fwd
 	class EditorPanes;
 	namespace ui {
-		class SearchDialog;
+//		class SearchDialog;
 //		class BookmarkDialog;
 
 		class MainWindow : public Gtk::ApplicationWindow {
@@ -70,12 +70,12 @@ namespace alpha {
 			/// @name Children
 			/// @{
 			EditorPanes& editorPanes() const BOOST_NOEXCEPT;
-			SearchDialog& searchDialog() const BOOST_NOEXCEPT;
+//			SearchDialog& searchDialog() const BOOST_NOEXCEPT;
 			StatusBar& statusBar() const BOOST_NOEXCEPT;
 			/// @}
 
 		private:
-			std::unique_ptr<ui::SearchDialog> searchDialog_;
+//			std::unique_ptr<ui::SearchDialog> searchDialog_;
 			StatusBar statusBar_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			manah::win32::ui::Rebar rebar_;		// rebar
@@ -92,7 +92,8 @@ namespace alpha {
 		// attributes
 		static Application& instance();
 		void setFont(const ascension::graphics::font::FontDescription& font);
-		ui::MainWindow& window() const BOOST_NOEXCEPT;
+		ui::MainWindow& window() BOOST_NOEXCEPT;
+		const ui::MainWindow& window() const BOOST_NOEXCEPT;
 		// operations
 		bool teardown(bool callHook = true);
 
@@ -147,6 +148,9 @@ namespace alpha {
 		/* ウィンドウプロシジャ */
 		static LRESULT CALLBACK appWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 #endif
+
+	private:
+		ui::MainWindow window_;
 	};
 
 
@@ -156,11 +160,21 @@ namespace alpha {
 		return singleton;
 	}
 
+	/// Returns the main window.
+	inline ui::MainWindow& Application::window() BOOST_NOEXCEPT {
+		return window_;
+	}
+
+	/// Returns the main window.
+	inline const ui::MainWindow& Application::window() const BOOST_NOEXCEPT {
+		return window_;
+	}
+
 	namespace ui {
-		/// Returns the search dialog box.
-		inline SearchDialog& MainWindow::searchDialog() const BOOST_NOEXCEPT {
-			return *searchDialog_;
-		}
+//		/// Returns the search dialog box.
+//		inline SearchDialog& MainWindow::searchDialog() const BOOST_NOEXCEPT {
+//			return *searchDialog_;
+//		}
 
 		/// Returns the status bar.
 		inline StatusBar& MainWindow::statusBar() const BOOST_NOEXCEPT {

@@ -661,8 +661,8 @@ namespace ascension {
 					TextHit<>&& hitTestCharacter(Scalar ipd, const boost::optional<boost::integer_range<Scalar>>& bounds, bool* outOfBounds) const;
 					Scalar hitToLogicalPosition(const TextHit<>& hit) const;
 					Index length() const BOOST_NOEXCEPT;
-					const presentation::FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT;
-					const presentation::FlowRelativeFourSides<Scalar>* padding() const BOOST_NOEXCEPT;
+					const presentation::FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT {return &coreStyle_.get().margin;}
+					const presentation::FlowRelativeFourSides<Scalar>* padding() const BOOST_NOEXCEPT {return &coreStyle_.get().padding;}
 					// attributes
 					const ComputedTextRunStyleCore& style() const BOOST_NOEXCEPT {return coreStyle_;}
 					HRESULT logicalAttributes(SCRIPT_LOGATTR attributes[]) const;

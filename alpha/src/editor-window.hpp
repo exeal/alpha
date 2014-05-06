@@ -71,6 +71,7 @@ namespace alpha {
 			void increment();
 		private:
 			pointer current_;
+			bool end_;
 		};
 
 	public:
@@ -118,6 +119,8 @@ namespace alpha {
 		/// @}
 
 	private:
+		EditorPane* firstPane() const;
+		EditorPane* lastPane() const;
 		// BufferList signals
 		void bufferAboutToBeRemoved(BufferList& buffers, Buffer& buffer);
 		void bufferAdded(BufferList& buffers, Buffer& buffer);
@@ -149,6 +152,22 @@ namespace alpha {
 		if(selectedViewer_ == nullptr)
 			throw std::logic_error("There are no viewers.");
 		return *selectedViewer_;
+	}
+
+	/// Returns the active editor pane.
+	inline EditorPane& EditorPanes::activePane() BOOST_NOEXCEPT {
+		return *activePane_;
+	}
+
+	/// Returns the active editor pane.
+	inline const EditorPane& EditorPanes::activePane() const BOOST_NOEXCEPT {
+		return *activePane_;
+	}
+
+	/// Returns the singleton @c EditorPanes object.
+	inline EditorPanes& EditorPanes::instance() {
+		static EditorPanes singleton;
+		return singleton;
 	}
 
 	/// Returns the script object corresponding to the windows.
