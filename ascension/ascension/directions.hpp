@@ -617,7 +617,7 @@ namespace ascension {
 			FlowRelativeFourSides() {}
 #ifdef BOOST_COMP_MSVC
 			FlowRelativeFourSides(const FlowRelativeFourSides& other) : FlowRelativeFourSidesBase(static_cast<const FlowRelativeFourSidesBase<T>&>(other)) {}
-			FlowRelativeFourSides(FlowRelativeFourSides&& other) : FlowRelativeFourSidesBase(other) {}
+			FlowRelativeFourSides(FlowRelativeFourSides&& other) : FlowRelativeFourSidesBase(std::forward<FlowRelativeFourSidesBase>(other)) {}
 #endif	// BOOST_COMP_MSVC
 			/// Constructor takes named parameters as initial values.
 			BOOST_PARAMETER_CONSTRUCTOR(
