@@ -19,9 +19,9 @@ namespace alpha {
 			set_show_arrow(true);
 			set_toolbar_style(Gtk::TOOLBAR_BOTH_HORIZ);
 
-			bufferList_.bufferAboutToBeRemoved().connect(std::bind(&BufferBar::bufferAboutToBeRemoved, this, std::placeholders::_1, std::placeholders::_2));
-			bufferList_.bufferAdded().connect(std::bind(&BufferBar::bufferAdded, this, std::placeholders::_1, std::placeholders::_2));
-			bufferList_.displayNameChanged().connect(std::bind(&BufferBar::bufferDisplayNameChanged, this, std::placeholders::_1));
+			bufferList_.bufferAboutToBeRemovedSignal().connect(std::bind(&BufferBar::bufferAboutToBeRemoved, this, std::placeholders::_1, std::placeholders::_2));
+			bufferList_.bufferAddedSignal().connect(std::bind(&BufferBar::bufferAdded, this, std::placeholders::_1, std::placeholders::_2));
+			bufferList_.displayNameChangedSignal().connect(std::bind(&BufferBar::bufferDisplayNameChanged, this, std::placeholders::_1));
 		}
 
 		void BufferBar::bufferAboutToBeRemoved(BufferList&, Buffer& buffer) {

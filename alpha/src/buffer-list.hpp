@@ -70,13 +70,13 @@ namespace alpha {
 		/// @name Signals
 		/// @{
 		typedef boost::signals2::signal<void(BufferList&, Buffer&)> BufferAboutToBeRemovedSignal;
-		ascension::SignalConnector<BufferAboutToBeRemovedSignal> bufferAboutToBeRemoved() BOOST_NOEXCEPT;
+		ascension::SignalConnector<BufferAboutToBeRemovedSignal> bufferAboutToBeRemovedSignal() BOOST_NOEXCEPT;
 		typedef boost::signals2::signal<void(BufferList&, Buffer&)> BufferAddedSignal;
-		ascension::SignalConnector<BufferAddedSignal> bufferAdded() BOOST_NOEXCEPT;
+		ascension::SignalConnector<BufferAddedSignal> bufferAddedSignal() BOOST_NOEXCEPT;
 		typedef boost::signals2::signal<void(BufferList&, Buffer&)> BufferRemovedSignal;
-		ascension::SignalConnector<BufferRemovedSignal> bufferRemoved() BOOST_NOEXCEPT;
+		ascension::SignalConnector<BufferRemovedSignal> bufferRemovedSignal() BOOST_NOEXCEPT;
 		typedef boost::signals2::signal<void(const Buffer&)> DisplayNameChangedSignal;
-		ascension::SignalConnector<DisplayNameChangedSignal> displayNameChanged() BOOST_NOEXCEPT;
+		ascension::SignalConnector<DisplayNameChangedSignal> displayNameChangedSignal() BOOST_NOEXCEPT;
 		/// @}
 
 		void bufferSelectionChanged();

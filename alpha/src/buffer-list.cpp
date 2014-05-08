@@ -21,6 +21,37 @@ namespace alpha {
 
 	// BufferList /////////////////////////////////////////////////////////////////////////////////////////////////////
 
+	/**
+	 * @typedef alpha::BufferList::BufferAboutToBeRemovedSignal
+	 * The signal which gets emitted when a buffer was about to be removed from the buffer list.
+	 * @param bufferList The buffer list
+	 * @param buffer The buffer to be removed
+	 * @see #bufferAboutToBeRemovedSignal, #close
+	 */
+
+	/**
+	 * @typedef alpha::BufferList::BufferAddedSignal
+	 * The signal which gets emitted when a new buffer was added into the buffer list.
+	 * @param bufferList The buffer list
+	 * @param buffer The added buffer
+	 * @see #addNew, #bufferAddedSignal
+	 */
+
+	/**
+	 * @typedef alpha::BufferList::BufferRemovedSignal
+	 * The signal which gets emitted when a buffer was removed from the buffer list.
+	 * @param bufferList The buffer list
+	 * @param buffer The removed buffer
+	 * @see #bufferRemovedSignal, #close
+	 */
+
+	/**
+	 * @typedef alpha::BufferList::DisplayNameChangedSignal
+	 * The signal which gets emitted when the display name of the buffer was changed.
+	 * @param buffer The buffer whose display name was changed
+	 * @see #displayName, #displayNameChangedSignal, #forName
+	 */
+
 	/// Default constructor.
 	BufferList::BufferList() {
 		bufferSelectionChangedConnection_ = Application::instance().window().editorPanes().bufferSelectionChangedSignal().connect([this](EditorPanes&) {
@@ -114,6 +145,21 @@ namespace alpha {
 		return &addNew(name, dlg.encoding(), dlg.newline());
 	}
 */
+	/// Returns the @c BufferAboutToBeRemovedSignal signal connector.
+	ascension::SignalConnector<BufferList::BufferAboutToBeRemovedSignal> BufferList::bufferAboutToBeRemovedSignal() BOOST_NOEXCEPT {
+		return ascension::makeSignalConnector(bufferAboutToBeRemovedSignal_);
+	}
+
+	/// Returns the @c BufferAddedSignal signal connector.
+	ascension::SignalConnector<BufferList::BufferAddedSignal> BufferList::bufferAddedSignal() BOOST_NOEXCEPT {
+		return ascension::makeSignalConnector(bufferAddedSignal_);
+	}
+
+	/// Returns the @c BufferRemovedSignal signal connector.
+	ascension::SignalConnector<BufferList::BufferRemovedSignal> BufferList::bufferRemovedSignal() BOOST_NOEXCEPT {
+		return ascension::makeSignalConnector(bufferRemovedSignal_);
+	}
+
 	void BufferList::bufferSelectionChanged() {
 		updateTitleBar();
 	}
@@ -157,6 +203,11 @@ namespace alpha {
 		if(buffer.isReadOnly())
 			name.append(" #");
 		return name;
+	}
+
+	/// Returns the @c DisplayNameChangedSignal signal connector.
+	ascension::SignalConnector<BufferList::DisplayNameChangedSignal> BufferList::displayNameChangedSignal() BOOST_NOEXCEPT {
+		return ascension::makeSignalConnector(displayNameChangedSignal_);
 	}
 
 	/// @see ascension#kernel#Document#documentModificationSignChangedSignal

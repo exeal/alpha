@@ -104,21 +104,24 @@ namespace alpha {
 		void loadSettings();
 		template<typename Section, typename Key, typename Container>
 		void readProfileList(Section section, Key key, Container& items, const Glib::ustring& defaultValue = Glib::ustring());
-		template<typename Section, typename Key>
-		boost::optional<int> readIntegerProfile(Section section, Key key) const;	// dummy
-		template<typename Section, typename Key>
-		boost::optional<Glib::ustring> readStringProfile(Section section, Key key) const;	// dummy
-		template<typename Section, typename Key, typename T>
-		bool readStructureProfile(Section section, Key key, T& data) const;	// dummy
+		template<typename Section, typename Key> inline boost::optional<int> readIntegerProfile(Section section, Key key) const {
+			return boost::none;	// dummy
+		}
+		template<typename Section, typename Key> inline boost::optional<Glib::ustring> readStringProfile(Section section, Key key) const {
+			return boost::none;	// dummy
+		}
+		template<typename Section, typename Key, typename T> inline bool readStructureProfile(Section section, Key key, T& data) const {
+			return boost::none;	// dummy
+		}
 		void saveSettings();
 //		void	setupToolbar();
 		void updateTitleBar();
 		template<typename Section, typename Key, typename Value>
-		void writeIntegerProfile(Section section, Key key, Value value);	// dummy
+		inline void writeIntegerProfile(Section section, Key key, Value value) {}	// dummy
 		template<typename Section, typename Key, typename Value>
-		void writeStringProfile(Section section, Key key, const Value& value) const;	// dummy
+		inline void writeStringProfile(Section section, Key key, const Value& value) const {}	// dummy
 		template<typename Section, typename Key, typename T>
-		void writeStructureProfile(Section section, Key key, const T& data) const;	// dummy
+		inline void writeStructureProfile(Section section, Key key, const T& data) const {}	// dummy
 
 		// message handlers
 	protected:
