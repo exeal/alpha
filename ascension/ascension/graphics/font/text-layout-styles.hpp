@@ -152,10 +152,6 @@ namespace ascension {
 
 				/// Default constructor initializes nothing.
 				ComputedTextRunStyle() {}
-				/// Copy-assignment operator.
-				ComputedTextRunStyle& operator=(const ComputedTextRunStyle& other);
-				/// Move-assignment operator.
-				ComputedTextRunStyle& operator=(ComputedTextRunStyle&& other) BOOST_NOEXCEPT;
 				/// Equality operator.
 				bool operator==(const ComputedTextRunStyle& other) const BOOST_NOEXCEPT;
 			};
