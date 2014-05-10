@@ -95,34 +95,10 @@ namespace ascension {
 
 			// DragContext ////////////////////////////////////////////////////////////////////////////////////////////
 
-			namespace {
-				inline DropAction actionsFromGdkmm(Gdk::DragAction from) BOOST_NOEXCEPT {
-					DropAction to = 0;
-					if((from & Gdk::ACTION_COPY) != 0)
-						to |= DROP_ACTION_COPY;
-					if((from & Gdk::ACTION_MOVE) != 0)
-						to |= DROP_ACTION_MOVE;
-					if((from & Gdk::ACTION_LINK) != 0)
-						to |= DROP_ACTION_LINK;
-					return to;
-				}
-
-				inline Gdk::DragAction actionsToGdkmm(DropAction from) BOOST_NOEXCEPT {
-					Gdk::DragAction to = static_cast<Gdk::DragAction>(0);
-					if((from & DROP_ACTION_COPY) != 0)
-						to |= Gdk::ACTION_COPY;
-					if((from & DROP_ACTION_MOVE) != 0)
-						to |= Gdk::ACTION_MOVE;
-					if((from & DROP_ACTION_LINK) != 0)
-						to |= Gdk::ACTION_LINK;
-					return to;
-				}
-			}
-
 			DropAction DragContext::defaultAction() const {
 				if(!context_)
 					throw IllegalStateException("");
-				return actionsFromGdkmm(context_->get_suggested_action());
+				return context_->get_suggested_action();
 			}
 
 			DropAction DragContext::execute(DropAction supportedActions, int mouseButton, GdkEvent* event) {
@@ -133,8 +109,8 @@ namespace ascension {
 				BOOST_FOREACH(auto format, formats)
 					targetEntries.push_back(Gtk::TargetEntry(format));
 				Glib::RefPtr<Gtk::TargetList> targets(Gtk::TargetList::create(targetEntries));
-				Glib::RefPtr<Gdk::DragContext> context(source_.drag_begin(targets, actionsToGdkmm(supportedActions), mouseButton, event));
-				return actionsFromGdkmm(context->get_selected_action());
+				Glib::RefPtr<Gdk::DragContext> context(source_.drag_begin(targets, supportedActions, mouseButton, event));
+				return context->get_selected_action();
 			}
 
 			void DragContext::setImage(const graphics::Image& image, const graphics::geometry::BasicPoint<uint32_t>& hotspot) {
@@ -161,7 +137,21 @@ namespace ascension {
 			DropAction DragContext::supportedActions() const {
 				if(!context_)
 					throw IllegalStateException("");
-				return actionsFromGdkmm(context_->get_actions());
+				return context_->get_actions();
+			}
+		}
+
+		namespace detail {
+			void DragEventAdapter::adaptDragLeaveEvent(const Glib::RefPtr<Gdk::DragContext>& context, guint time) {
+				// TODO: Not implemented.
+			}
+
+			bool DragEventAdapter::adaptDragMoveEvent(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time) {
+				return false;	// TODO: Not implemented.
+			}
+
+			bool DragEventAdapter::adaptDropEvent(const Glib::RefPtr<Gdk::DragContext>& context, int x, int y, guint time) {
+				return false;	// TODO: Not implemented.
 			}
 		}
 	}

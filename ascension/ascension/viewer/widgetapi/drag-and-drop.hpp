@@ -16,6 +16,7 @@
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #	include <QMimeData>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#	include <NSDragging.h>	// NSDragOperation
 #	include <NSPasteboard.h>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/com/smart-pointer.hpp>
@@ -32,14 +33,41 @@ namespace ascension {
 
 	namespace viewers {
 		namespace widgetapi {
-
-			typedef std::uint16_t DropAction;
-			const DropAction DROP_ACTION_IGNORE = 0;
-			const DropAction DROP_ACTION_COPY = 1 << 0;
-			const DropAction DROP_ACTION_MOVE = 1 << 1;
-			const DropAction DROP_ACTION_LINK = 1 << 2;
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			const DropAction DROP_ACTION_WIN32_SCROLL = 1 << 3;
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			typedef Gdk::DragAction DropAction;
+			const DropAction DROP_ACTION_IGNORE = Gdk::ACTION_DEFAULT;
+			const DropAction DROP_ACTION_COPY = Gdk::ACTION_COPY;
+			const DropAction DROP_ACTION_MOVE = Gdk::ACTION_MOVE;
+			const DropAction DROP_ACTION_LINK = Gdk::ACTION_LINK;
+			const DropAction DROP_ACTION_GTK_PRIVATE = Gdk::ACTION_PRIVATE;
+			const DropAction DROP_ACTION_GTK_ASK = Gdk::ACTION_ASK;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+			typedef Gdk::DragAction DropAction;
+			const DropAction DROP_ACTION_IGNORE = Qt::IgnoreAction;
+			const DropAction DROP_ACTION_COPY = Qt::CopyAction;
+			const DropAction DROP_ACTION_MOVE = Qt::MoveAction;
+			const DropAction DROP_ACTION_LINK = Qt::LinkAction;
+			const DropAction DROP_ACTION_QT_MASK = Qt::ActionMask;
+			const DropAction DROP_ACTION_QT_TARGET_MOVE = Qt::TargetMoveAction;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+			typedef Gdk::DragAction DropAction;
+			const DropAction DROP_ACTION_IGNORE = NSDragOperationNone;
+			const DropAction DROP_ACTION_COPY = NSDragOperationCopy;
+			const DropAction DROP_ACTION_MOVE = NSDragOperationMove;
+			const DropAction DROP_ACTION_LINK = NSDragOperationLink;
+			const DropAction DROP_ACTION_OSX_GENERIC = NSDragOperationGeneric;
+			const DropAction DROP_ACTION_OSX_PRIVATE = NSDragOperationPrivate;
+			const DropAction DROP_ACTION_OSX_DELETE = NSDragOperationDelete;
+			const DropAction DROP_ACTION_OSX_EVERY = NSDragOperationEvery;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			typedef Gdk::DragAction DropAction;
+			const DropAction DROP_ACTION_IGNORE = DROPEFFECT_NONE;
+			const DropAction DROP_ACTION_COPY = DROPEFFECT_COPY;
+			const DropAction DROP_ACTION_MOVE = DROPEFFECT_MOVE;
+			const DropAction DROP_ACTION_LINK = DROPEFFECT_LINK;
+			const DropAction DROP_ACTION_WIN32_SCROLL = DROPEFFECT_SCROLL;
+#else
+			ASCENSION_CANT_DETECT_PLATFORM();
 #endif
 			DropAction resolveDefaultDropAction(DropAction possibleActions,
 				LocatedUserInput::MouseButton buttons, UserInput::KeyboardModifier modifiers);
@@ -110,11 +138,11 @@ namespace ascension {
 				template<typename SinglePassReadableRange> void setURIs(const SinglePassReadableRange& uris);
 
 				// MimeDataFormats
-				std::list<Format>&& formats() const;
-				virtual bool hasFormat(Format format) const BOOST_NOEXCEPT;
-//				bool hasImage() const BOOST_NOEXCEPT;
-				bool hasText() const BOOST_NOEXCEPT;
-				bool hasURIs() const BOOST_NOEXCEPT;
+				std::list<Format>&& formats() const override;
+				virtual bool hasFormat(Format format) const BOOST_NOEXCEPT override;
+//				bool hasImage() const BOOST_NOEXCEPT override;
+				bool hasText() const BOOST_NOEXCEPT override;
+				bool hasURIs() const BOOST_NOEXCEPT override;
 
 			public:
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -168,16 +196,16 @@ namespace ascension {
 
 			class DragLeaveInput : public Event {};
 
-			class DragInputBase : public MouseButtonInput {
+			class DragInputBase : public LocatedUserInput {
 			public:
-				DragInputBase(const MouseButtonInput& mouse, DropAction possibleActions) :
-					MouseButtonInput(mouse), possibleActions_(possibleActions),
-					defaultAction_(resolveDefaultDropAction(possibleActions, mouse.buttons(), mouse.modifiers())) {}
-				void acceptProposedAction();
+				DragInputBase(const LocatedUserInput& userInput, DropAction possibleActions) :
+					LocatedUserInput(userInput), possibleActions_(possibleActions),
+					defaultAction_(resolveDefaultDropAction(possibleActions, userInput.buttons(), userInput.modifiers())) {}
+				void acceptProposedAction() {setDropAction(proposedAction());}
 				DropAction dropAction() const BOOST_NOEXCEPT {return action_;}
 				DropAction possibleActions() const BOOST_NOEXCEPT {return possibleActions_;}
 				DropAction proposedAction() const BOOST_NOEXCEPT {return defaultAction_;}
-				void setDropAction(DropAction action);
+				void setDropAction(DropAction action) {action_ = action;}
 			private:
 				const DropAction possibleActions_, defaultAction_;
 				DropAction action_;
@@ -185,8 +213,8 @@ namespace ascension {
 
 			class DropInput : public DragInputBase {
 			public:
-				DropInput(const MouseButtonInput& mouse, DropAction possibleActions, std::shared_ptr<const MimeData> data) :
-					DragInputBase(mouse, possibleActions), mimeData_(data) {}
+				DropInput(const LocatedUserInput& userInput, DropAction possibleActions, std::shared_ptr<const MimeData> data) :
+					DragInputBase(userInput, possibleActions), mimeData_(data) {}
 				std::shared_ptr<const MimeData> mimeData() const BOOST_NOEXCEPT {return mimeData_;}
 			private:
 				std::shared_ptr<const MimeData> mimeData_;
@@ -194,9 +222,9 @@ namespace ascension {
 
 			class DragMoveInput : public DragInputBase {
 			public:
-				DragMoveInput(const MouseButtonInput& mouse, DropAction possibleActions, const MimeDataFormats& formats) : DragInputBase(mouse, possibleActions), formats_(formats) {}
-				void accept(boost::optional<const graphics::Rectangle> rectangle);
-				void ignore(boost::optional<const graphics::Rectangle> rectangle);
+				DragMoveInput(const LocatedUserInput& userInput, DropAction possibleActions, const MimeDataFormats& formats) : DragInputBase(userInput, possibleActions), formats_(formats) {}
+				void accept(boost::optional<const graphics::Rectangle> rectangle) {}	// TODO: Not implemented.
+				void ignore(boost::optional<const graphics::Rectangle> rectangle) {}	// TODO: Not implemented.
 				const MimeDataFormats& mimeDataFormats() const BOOST_NOEXCEPT {return formats_;}
 			private:
 				const MimeDataFormats& formats_;
@@ -204,7 +232,7 @@ namespace ascension {
 
 			class DragEnterInput : public DragMoveInput {
 			public:
-				DragEnterInput(const MouseButtonInput& mouse, DropAction possibleActions, const MimeDataFormats& formats) : DragMoveInput(mouse, possibleActions, formats) {}
+				DragEnterInput(const LocatedUserInput& userInput, DropAction possibleActions, const MimeDataFormats& formats) : DragMoveInput(userInput, possibleActions, formats) {}
 			};
 
 			/**
