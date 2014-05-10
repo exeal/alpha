@@ -53,7 +53,7 @@ namespace ascension {
 			 * @see ComputedTextRunStyle
 			 */
 			struct ComputedFontSpecification : private boost::equality_comparable<ComputedFontSpecification> {
-				const presentation::sp::IntrinsicType<
+				presentation::sp::IntrinsicType<
 					decltype(presentation::TextRunStyle().fontFamily)
 				>::Type families;
 				double pointSize;
@@ -65,9 +65,6 @@ namespace ascension {
 					decltype(presentation::TextRunStyle().fontSizeAdjust)
 				>::Type sizeAdjust;
 
-				/// Default constructor.
-				ComputedFontSpecification() : families() {}
-				ComputedFontSpecification& operator=(const ComputedFontSpecification&);
 				/// Equality operator.
 				bool operator==(const ComputedFontSpecification& other) const;
 			};
