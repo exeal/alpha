@@ -45,6 +45,30 @@ namespace ascension {
 			return *this;
 		}
 
+		/**
+		 * Returns the default line style of the specified line style.
+		 * @param lineStyle The line style
+		 * @return lineStyle.defaultRunStyle, of a default-constructed @c TextRunStyle instance if @c null
+		 * @see defaultTextLineStyle
+		 */
+		std::shared_ptr<const TextRunStyle> defaultTextRunStyle(const TextLineStyle& lineStyle) {
+			static const TextRunStyle defaultInstance;
+			return (lineStyle.defaultRunStyle.get() != nullptr) ?
+				lineStyle.defaultRunStyle : std::shared_ptr<const TextRunStyle>(&defaultInstance, ascension::detail::NullDeleter());
+		}
+
+		/**
+		 * Returns the default line style of the specified toplevel style.
+		 * @param toplevelStyle The toplevel style
+		 * @return toplevelStyle.defaultLineStyle, of a default-constructed @c TextLineStyle instance if @c null
+		 * @see defaultTextRunStyle
+		 */
+		std::shared_ptr<const TextLineStyle> defaultTextLineStyle(const TextToplevelStyle& toplevelStyle) {
+			static const TextLineStyle defaultInstance;
+			return (toplevelStyle.defaultLineStyle.get() != nullptr) ?
+				toplevelStyle.defaultLineStyle : std::shared_ptr<const TextLineStyle>(&defaultInstance, ascension::detail::NullDeleter());
+		}
+
 
 		// Presentation ///////////////////////////////////////////////////////////////////////////////////////////////
 
