@@ -125,7 +125,7 @@ namespace ascension {
 				/// @name Other Typographic Attributes
 				/// @{
 				virtual std::uint8_t characterLevel() const BOOST_NOEXCEPT = 0;
-				virtual std::shared_ptr<const Font> font() const BOOST_NOEXCEPT = 0;
+//				virtual std::shared_ptr<const Font> font() const BOOST_NOEXCEPT = 0;
 				/// @}
 
 				// GlyphVector

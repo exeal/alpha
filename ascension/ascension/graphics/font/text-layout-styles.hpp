@@ -102,7 +102,11 @@ namespace ascension {
 				/// Default constructor initializes the all properties with their default values.
 				ComputedTextRunStyleCore() : color(0, 0, 0), background(nullptr), border() {}
 				/// Equality operator.
-				bool operator==(const ComputedTextRunStyleCore& other) const BOOST_NOEXCEPT;
+				bool operator==(const ComputedTextRunStyleCore& other) const BOOST_NOEXCEPT {
+					return color == other.color && background == other.background
+						&& border == other.border && padding == other.padding && margin == other.margin
+						&& textDecoration == other.textDecoration && textEmphasis == other.textEmphasis;
+				}
 			};
 
 			std::size_t hash_value(const ComputedTextRunStyleCore& v);
@@ -119,11 +123,11 @@ namespace ascension {
 				/// Computed value of @c TextRunStyle#dominantBaseline property.
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextRunStyle().dominantBaseline)
-				> dominantBaseline;
+				>::Type dominantBaseline;
 				/// Computed value of @c TextRunStyle#alignmentBaseline property.
 				presentation::sp::IntrinsicType<
 					decltype(presentation::TextRunStyle().alignmentBaseline)
-				> alignmentBaseline;
+				>::Type alignmentBaseline;
 				/// Computed value of @c TextRunStyle#alignmentAdjustment property.
 				Scalar alignmentAdjustment;
 				/// Computed value of @c TextRunStyle#baselineShift property.
@@ -153,7 +157,14 @@ namespace ascension {
 				/// Default constructor initializes nothing.
 				ComputedTextRunStyle() {}
 				/// Equality operator.
-				bool operator==(const ComputedTextRunStyle& other) const BOOST_NOEXCEPT;
+				bool operator==(const ComputedTextRunStyle& other) const BOOST_NOEXCEPT {
+					return font == other.font
+						&& textHeight == other.textHeight && lineHeight == other.lineHeight
+						&& dominantBaseline == other.dominantBaseline && alignmentBaseline == other.alignmentBaseline
+						&& alignmentAdjustment == other.alignmentAdjustment && baselineShift == other.baselineShift
+						&& textTransform == other.textTransform && hyphens == other.hyphens
+						&& wordSpacing == other.wordSpacing && letterSpacing == other.letterSpacing;
+				}
 			};
 
 			/**
@@ -252,7 +263,19 @@ namespace ascension {
 				bool inhibitSymmetricSwapping;
 
 				/// Equality operator.
-				bool operator==(const ComputedTextLineStyle& other) const BOOST_NOEXCEPT;
+				bool operator==(const ComputedTextLineStyle& other) const BOOST_NOEXCEPT {
+					return writingMode == other.writingMode
+						&& background == other.background && nominalFont == other.nominalFont
+						&& lineBoxContain == other.lineBoxContain && whiteSpace == other.whiteSpace
+						&& tabExpander == other.tabExpander && lineBreak == other.lineBreak && wordBreak == other.wordBreak
+						&& overflowWrap == other.overflowWrap
+						&& alignment == other.alignment && alignmentLast == other.alignmentLast
+						&& justification == other.justification && indent == other.indent
+						&& hangingPunctuation == other.hangingPunctuation
+						&& dominantBaseline == other.dominantBaseline
+						&& lineHeight == other.lineHeight && measure == other.measure
+						&& numberSubstitution == other.numberSubstitution;
+				}
 			};
 
 			std::size_t hash_value(const ComputedTextLineStyle& v);

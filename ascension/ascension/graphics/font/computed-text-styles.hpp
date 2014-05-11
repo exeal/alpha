@@ -23,7 +23,7 @@ namespace ascension {
 
 		namespace font {
 			/// Computed value of @c presentation#Border#Side.
-			struct ComputedBorderSide {
+			struct ComputedBorderSide : private boost::equality_comparable<ComputedBorderSide> {
 				presentation::sp::IntrinsicType<
 					decltype(presentation::Border().sides.start().color)
 				>::Type::value_type color;
@@ -35,6 +35,10 @@ namespace ascension {
 				/// Default constructor.
 				ComputedBorderSide() BOOST_NOEXCEPT :
 					color(Color::TRANSPARENT_BLACK), style(presentation::Border::NONE), width(0) {}
+				/// Equality operator.
+				bool operator==(const ComputedBorderSide& other) const BOOST_NOEXCEPT {
+					return color == other.color && style == other.style && width == other.width;
+				}
 				/// Returns the computed width in device units.
 				Scalar computedWidth() const BOOST_NOEXCEPT {
 					return (style != presentation::Border::NONE) ? width : 0;
@@ -66,7 +70,10 @@ namespace ascension {
 				>::Type sizeAdjust;
 
 				/// Equality operator.
-				bool operator==(const ComputedFontSpecification& other) const;
+				bool operator==(const ComputedFontSpecification& other) const BOOST_NOEXCEPT {
+					return families == other.families && pointSize == other.pointSize
+						&& properties == other.properties && sizeAdjust == other.sizeAdjust;
+				}
 			};
 
 			/// Computed value of @c presentation#TextDecoration.
@@ -95,7 +102,10 @@ namespace ascension {
 					skip(presentation::TextDecoration::Skip::OBJECTS),
 					underlinePosition(presentation::TextDecoration::UnderlinePosition::AUTO) {}
 				/// Equality operator.
-				bool operator==(const ComputedTextDecoration& other) const BOOST_NOEXCEPT;
+				bool operator==(const ComputedTextDecoration& other) const BOOST_NOEXCEPT {
+					return lines == other.lines && color == other.color
+						&& style == other.style && skip == other.skip && underlinePosition == other.underlinePosition;
+				}
 			};
 
 			/// Computed value of @c presentation#TextEmphasis.
@@ -115,7 +125,9 @@ namespace ascension {
 					style(presentation::TextEmphasis::NONE), color(Color::TRANSPARENT_BLACK),
 					position(presentation::TextEmphasis::ABOVE | presentation::TextEmphasis::RIGHT) {}
 				/// Equality operator.
-				bool operator==(const ComputedTextEmphasis& other) const BOOST_NOEXCEPT;
+				bool operator==(const ComputedTextEmphasis& other) const BOOST_NOEXCEPT {
+					return style == other.style && color == other.color && position == other.position;
+				}
 			};
 
 			namespace detail {
