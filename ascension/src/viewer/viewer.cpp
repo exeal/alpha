@@ -477,9 +477,9 @@ namespace ascension {
 
 		namespace {
 			template<typename AbstractCoordinate>
-			widgetapi::NativeScrollPosition calculateScrollStepSize(const TextViewer& viewer);
+			inline widgetapi::NativeScrollPosition calculateScrollStepSize(const TextViewer& viewer) {return 1;}	// TODO: Not implemented.
 			template<std::size_t physicalCoordinate>
-			widgetapi::NativeScrollPosition calculateScrollStepSize(const TextViewer& viewer);
+			inline widgetapi::NativeScrollPosition calculateScrollStepSize(const TextViewer& viewer) {return 1;}	// TODO: Not implemented.
 			void configureScrollBar(TextViewer& viewer, std::size_t coordinate, const boost::optional<widgetapi::NativeScrollPosition>& position,
 					const boost::optional<boost::integer_range<widgetapi::NativeScrollPosition>>& range, const boost::optional<widgetapi::NativeScrollPosition>& pageSize) {
 				assert(coordinate <= 1);
