@@ -757,6 +757,12 @@ namespace ascension {
 							return boost::make_iterator_range(p + *glyphRange().begin(), p + *glyphRange().end());
 						return boost::make_iterator_range<const int*>(nullptr, nullptr);
 					}
+					boost::integer_range<Scalar> logicalExtents() const {
+						RenderingContext2D context(win32::detail::screenDC());
+						std::unique_ptr<const FontMetrics<Scalar>> fm(context.fontMetrics(font()));
+						const double sy = geometry::scaleY(fontRenderContext().transform()) / geometry::scaleY(context.fontRenderContext().transform());
+						return boost::irange(-static_cast<Scalar>(fm->ascent() * sy), static_cast<Scalar>(fm->descent() * sy + fm->internalLeading() * sy));
+					}
 					void paintGlyphs(PaintContext& context, const Point& origin/*,
 						boost::optional<boost::integer_range<std::size_t>> range*/, bool onlyStroke) const;
 					boost::iterator_range<const SCRIPT_VISATTR*> visualAttributes() const BOOST_NOEXCEPT {
@@ -1322,12 +1328,10 @@ namespace ascension {
 				if(index >= numberOfGlyphs())
 					throw std::out_of_range("index");
 				const Scalar x = glyphLogicalPosition(index);
-				RenderingContext2D context(win32::detail::screenDC());
-				std::unique_ptr<const FontMetrics<Scalar>> fm(context.fontMetrics(font()));
-				const double sy = geometry::scaleY(fontRenderContext().transform()) / geometry::scaleY(context.fontRenderContext().transform());
+				const auto yrange = logicalExtents();
 				return graphics::Rectangle(
-					geometry::_top = -static_cast<Scalar>(fm->ascent() * sy), geometry::_bottom = static_cast<Scalar>(fm->descent() * sy + fm->internalLeading() * sy),
-					geometry::_left = x, geometry::_right = static_cast<Scalar>(x + (justifiedAdvances().begin() != nullptr) ? justifiedAdvances()[index] : advances()[index]));
+					geometry::_top = *yrange.begin(), geometry::_bottom = *yrange.end(),
+					geometry::_left = x, geometry::_right = static_cast<Scalar>(x + effectiveAdvances()[index]));
 			}
 
 			inline Scalar TextRunImpl::glyphLogicalPosition(std::size_t index) const {
@@ -1505,6 +1509,18 @@ namespace ascension {
 			inline HRESULT TextRunImpl::logicalAttributes(SCRIPT_LOGATTR attributes[]) const {
 				raiseIfNull(attributes, "attributes");
 				return ::ScriptBreak(begin(), static_cast<int>(length()), &analysis_, attributes);
+			}
+
+			/// @see GlyphVector#logicalBounds
+			graphics::Rectangle TextRunImpl::logicalBounds() const {
+				const auto xs = effectiveAdvances();
+				Scalar left = std::numeric_limits<Scalar>::max(), right = std::numeric_limits<Scalar>::min();
+				for(std::size_t i = 0, c = numberOfGlyphs(); i < c; ++i) {
+					const Scalar x = glyphLogicalPosition(i);
+					left = std::min(x, left);
+					right = std::max(x + xs[i], right);
+				}
+				return graphics::Rectangle(boost::irange(left, right), logicalExtents());
 			}
 
 			inline HRESULT TextRunImpl::logicalWidths(int widths[]) const {
@@ -2293,6 +2309,21 @@ namespace ascension {
 #undef ASCENSION_VANISH_VARIATION_SELECTOR
 				}
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+			}
+
+			/// @see GlyphVector#visualBounds
+			graphics::Rectangle TextRunImpl::visualBounds() const {
+				Scalar top, right, bottom, left;
+				left = top = std::numeric_limits<Scalar>::max();
+				right = bottom = std::numeric_limits<Scalar>::min();
+				for(std::size_t i = 0, c = numberOfGlyphs(); i < c; ++i) {
+					const auto gvb(glyphVisualBounds(i));
+					top = std::min(geometry::top(gvb), top);
+					right = std::max(geometry::right(gvb), right);
+					bottom = std::max(geometry::bottom(gvb), bottom);
+					left = std::min(geometry::left(gvb), left);
+				}
+				return graphics::Rectangle(geometry::_top = top, geometry::_right = right, geometry::_bottom = bottom, geometry::_left = left);
 			}
 
 
