@@ -651,18 +651,17 @@ namespace ascension {
 						boost::optional<boost::integer_range<std::size_t>> range = boost::none*/) const;
 					graphics::Rectangle visualBounds() const;
 					// TextRun
-					const presentation::FlowRelativeFourSides<ComputedBorderSide>* border() const BOOST_NOEXCEPT;
+					const presentation::FlowRelativeFourSides<ComputedBorderSide>* border() const BOOST_NOEXCEPT override;
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 					boost::optional<Index> characterEncompassesPosition(float ipd) const BOOST_NOEXCEPT;
 					Index characterHasClosestLeadingEdge(float ipd) const;
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
-					std::uint8_t characterLevel() const BOOST_NOEXCEPT;
-					StringPiece characterRange() const BOOST_NOEXCEPT;
-					TextHit<>&& hitTestCharacter(Scalar ipd, const boost::optional<boost::integer_range<Scalar>>& bounds, bool* outOfBounds) const;
-					Scalar hitToLogicalPosition(const TextHit<>& hit) const;
-					Index length() const BOOST_NOEXCEPT;
-					const presentation::FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT {return &coreStyle_.get().margin;}
-					const presentation::FlowRelativeFourSides<Scalar>* padding() const BOOST_NOEXCEPT {return &coreStyle_.get().padding;}
+					std::uint8_t characterLevel() const BOOST_NOEXCEPT override;
+					StringPiece characterRange() const BOOST_NOEXCEPT override;
+					TextHit<>&& hitTestCharacter(Scalar ipd, const boost::optional<boost::integer_range<Scalar>>& bounds, bool* outOfBounds) const override;
+					Scalar hitToLogicalPosition(const TextHit<>& hit) const override;
+					const presentation::FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT override {return &coreStyle_.get().margin;}
+					const presentation::FlowRelativeFourSides<Scalar>* padding() const BOOST_NOEXCEPT override {return &coreStyle_.get().padding;}
 					// attributes
 					const ComputedTextRunStyleCore& style() const BOOST_NOEXCEPT {return coreStyle_;}
 					HRESULT logicalAttributes(SCRIPT_LOGATTR attributes[]) const;

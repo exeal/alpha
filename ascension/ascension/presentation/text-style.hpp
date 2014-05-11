@@ -451,13 +451,17 @@ namespace ascension {
 		 * @see XSL 1.1, 4.3 Spaces and Conditionality (http://www.w3.org/TR/xsl/#spacecond)
 		 */
 		template<typename T>
-		struct SpacingLimit {
-			T optimum, minimum, maximum;
+		struct SpacingLimit : private boost::equality_comparable<SpacingLimit<T>> {
+			typedef T value_type;
+			value_type optimum;	///< 'optimum' member.
+			value_type minimum;	///< 'minimum' member.
+			value_type maximum;	///< 'maximum' member.
 #if 0
 			// followings are defined in only XSL 1.1
 			boost::optional<int> precedence;	// boost.none means 'force'
 			enum Conditionality {DISCARD, RETAIN} conditionality;
 #endif
+			/// Default constructor initializes nothing.
 			SpacingLimit() {}
 			template<typename U>
 			explicit SpacingLimit(const U& allValues)
@@ -486,6 +490,10 @@ namespace ascension {
 				this->maximum = std::get<2>(other);
 				return *this;
 			}
+			/// Equality operator.
+			bool operator==(const SpacingLimit& other) const {
+				return optimum == other.optimum && minimum == other.minimum && maximum == other.maximum;
+			}
 		};
 
 		/**
@@ -498,7 +506,7 @@ namespace ascension {
 		 * @see XSL 1.1, 7.16.11 "text-indent" (http://www.w3.org/TR/xsl/#text-indent)
 		 */
 		template<typename LengthType, typename BooleanType>
-		struct TextIndent {
+		struct TextIndent : private boost::equality_comparable<TextIndent<LengthType, BooleanType>> {
 			/**
 			 * [Copied from CSS3] Gives the amount of the indent as an absolute length. If this is
 			 * in percentage, as a percentage of the containing block's logical width
@@ -517,6 +525,10 @@ namespace ascension {
 			 * @c LengthType, and @c hanging and @c eachLine with false.
 			 */
 			TextIndent() : length(), hanging(false), eachLine(false) {}
+			/// Equality operator.
+			bool operator==(const TextIndent<LengthType, BooleanType>& other) const {
+				return length == other.length && hanging == other.hanging && eachLine == other.eachLine;
+			}
 		};
 
 		/**
@@ -1076,7 +1088,7 @@ namespace ascension {
 		 * Specifies how numbers in text are displayed in different locales.
 		 * @see TextLineStyle#numberSubstitution, RulerStyles#LineNumbers#numberSubstitution
 		 */
-		struct NumberSubstitution {
+		struct NumberSubstitution : private boost::equality_comparable<NumberSubstitution> {
 			/// Specifies how the locale for numbers in a text run is determined.
 			enum LocaleSource {
 				/// Number locale is derived from the text run.
@@ -1132,6 +1144,11 @@ namespace ascension {
 
 			/// Default constructor initializes the all data members with their default values.
 			NumberSubstitution() BOOST_NOEXCEPT : localeSource(TEXT), method(AS_LOCALE) {}
+			/// Equality operator.
+			bool operator==(const NumberSubstitution& other) const BOOST_NOEXCEPT {
+				return localeOverride == other.localeOverride
+					&& localeSource == other.localeSource && method == other.method;
+			}
 		};
 
 		/**
