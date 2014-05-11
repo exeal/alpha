@@ -1301,8 +1301,8 @@ namespace ascension {
 			std::shared_ptr<const TextLineStyle> defaultLineStyle;
 		};
 
-		inline std::shared_ptr<const TextRunStyle> defaultTextRunStyle(const TextLineStyle&);
-		inline std::shared_ptr<const TextLineStyle> defaultTextLineStyle(const TextToplevelStyle&);
+		std::shared_ptr<const TextRunStyle> defaultTextRunStyle(const TextLineStyle& lineStyle);
+		std::shared_ptr<const TextLineStyle> defaultTextLineStyle(const TextToplevelStyle& toplevelStyle);
 				
 		/**
 		 * @see Presentation#computeTextLineStyle
