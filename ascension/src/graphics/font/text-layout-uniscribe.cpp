@@ -651,7 +651,7 @@ namespace ascension {
 						boost::optional<boost::integer_range<std::size_t>> range = boost::none*/) const;
 					graphics::Rectangle visualBounds() const;
 					// TextRun
-					const presentation::FlowRelativeFourSides<ComputedBorderSide>* border() const BOOST_NOEXCEPT override;
+					const presentation::FlowRelativeFourSides<ComputedBorderSide>* border() const BOOST_NOEXCEPT override {return &coreStyle_.get().border;}
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 					boost::optional<Index> characterEncompassesPosition(float ipd) const BOOST_NOEXCEPT;
 					Index characterHasClosestLeadingEdge(float ipd) const;
@@ -972,6 +972,11 @@ namespace ascension {
 				if(lastError != ERROR_SUCCESS)
 					throw makePlatformError(lastError);
 				return std::move(bounds);
+			}
+
+			/// @see TextRun#characterRange
+			inline StringPiece TextRunImpl::characterRange() const BOOST_NOEXCEPT {
+				return *this;
 			}
 
 			/**
