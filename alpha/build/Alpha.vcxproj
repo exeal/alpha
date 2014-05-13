@@ -128,7 +128,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(ProjectDir)../../ascension;$(ProjectDir)../..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOST_LIB_DIAGNOSTIC;BOOST_PYTHON_NO_LIB;ASCENSION_WINDOW_SYSTEM_GTK;ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOST_LIB_DIAGNOSTIC;BOOST_PYTHON_NO_LIB;ASCENSION_WINDOW_SYSTEM_GTK;ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI;ASCENSION_NO_PLATFORM_SELECTION_DIAGNOSIS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <SmallerTypeCheck>true</SmallerTypeCheck>
@@ -137,12 +137,9 @@
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <PrecompiledHeaderFile>
-      </PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>
-      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>stdafx.hpp</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>stdafx.pch</PrecompiledHeaderOutputFile>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <ProgramDataBaseFileName>$(IntDir)</ProgramDataBaseFileName>
@@ -153,6 +150,7 @@
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <DisableSpecificWarnings>4503;4786;4819;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <UndefinePreprocessorDefinitions>BOOST_DYN_LINK;%(UndefinePreprocessorDefinitions)</UndefinePreprocessorDefinitions>
+      <ForcedIncludeFiles>stdafx.hpp</ForcedIncludeFiles>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -197,6 +195,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\font\font-family-other.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\font-gdi.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\font-pango.cpp" />
     <ClCompile Include="..\..\ascension\src\graphics\font\line-layout-vector.cpp" />
@@ -284,6 +283,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\src\status-bar.cpp" />
+    <ClCompile Include="..\src\stdafx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\src\style.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
@@ -413,6 +415,7 @@
     <ClInclude Include="..\src\save-some-buffers-dialog.hpp" />
     <ClInclude Include="..\src\search.hpp" />
     <ClInclude Include="..\src\status-bar.hpp" />
+    <ClInclude Include="..\src\stdafx.hpp" />
     <ClInclude Include="..\src\ui.hpp" />
     <ClInclude Include="..\..\ascension\ascension\config.hpp" />
     <ClInclude Include="..\..\ascension\ascension\platforms.hpp" />

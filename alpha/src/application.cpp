@@ -336,7 +336,7 @@ namespace alpha {
 	/// Loads settings from the file.
 	void Application::loadSettings() {
 		// ï\é¶Ç…ä÷Ç∑ÇÈê›íË
-		ascension::graphics::font::FontDescription fd(ascension::graphics::font::FontFamily(ascension::graphics::font::FontFamily::MONOSPACE), 0.0);
+		ascension::graphics::font::FontDescription fd(*ascension::graphics::font::FontFamily::createMonospaceInstance(), 0.0);
 		readStructureProfile(L"View", L"Font.default", fd);	// this can fail
 		setFont(fd);
 

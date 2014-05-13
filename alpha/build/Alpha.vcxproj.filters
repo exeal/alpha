@@ -404,6 +404,12 @@
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\widget-gtk.cpp">
       <Filter>ascension\Source Files\viewer\widgetapi</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\stdafx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\graphics\font\font-family-other.cpp">
+      <Filter>ascension\Source Files\graphics\font</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -837,6 +843,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\scope-guard.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\stdafx.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
