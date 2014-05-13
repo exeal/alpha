@@ -14,6 +14,7 @@
 
 #include <ascension/graphics/affine-transform.hpp>
 #include <memory>
+#include <boost/functional/hash.hpp>
 #include <boost/operators.hpp>
 #include <boost/optional.hpp>
 
@@ -103,6 +104,7 @@ namespace ascension {
 				}
 
 			private:
+				friend std::size_t hash_value(const FontRenderContext& frc);
 				const std::unique_ptr<const geometry::AffineTransform> transform_;
 				const RenderingHints::TextAntiAliasing antiAliasingRenderingHint_;
 				const RenderingHints::FractionalMetrics fractionalMetricsHint_;
@@ -139,8 +141,18 @@ namespace ascension {
 				FontRenderContext fontRenderContext_;
 			};
 
-			std::size_t hash_value(const FontRenderContext& frc);		// for boost.flyweight instantiation
-			std::size_t hash_value(const FontAndRenderContext& farc);	// for boost.flyweight instantiation
+			inline std::size_t hash_value(const FontRenderContext& frc) {	// for boost.flyweight instantiation
+				std::size_t v = geometry::hash_value(frc.transform());
+				boost::hash_combine(v, frc.antiAliasingHint());
+				const RenderingHints::FractionalMetrics& fm = frc.fractionalMetricsHint();
+				boost::hash_combine(v, (fm != boost::none) ? (boost::get(fm) ? 1 : 0) : 2);
+				return v;
+			}
+			inline std::size_t hash_value(const FontAndRenderContext& farc) {	// for boost.flyweight instantiation
+				std::size_t v = boost::hash_value(farc.font().get());
+				boost::hash_combine(v, farc.fontRenderContext());
+				return v;
+			}
 		}
 	}
 }
