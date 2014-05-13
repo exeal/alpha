@@ -67,18 +67,6 @@ namespace ascension {
 			 */
 			class FontFamily : private boost::totally_ordered<FontFamily> {
 			public:
-				/**
-				 * @see CSS Fonts Module Level 3, 3.1.1 Generic font families
-				 *      (http://www.w3.org/TR/css3-fonts/#generic-font-families)
-				 */
-				enum GenericFamily {
-					SERIF,		///< 'serif' font family.
-					SANS_SERIF,	///< 'sans-serif' font family.
-					CURSIVE,	///< 'cursive' font family.
-					FANTASY,	///< 'fantasy' font family.
-					MONOSPACE	///< 'monospace' font family.
-				};
-			public:
 #if ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)
 				explicit FontFamily(const String& name);
 				explicit FontFamily(win32::com::SmartPointer<IDWriteFontFamily> nativeObject);
@@ -101,17 +89,24 @@ namespace ascension {
 				 * @param name The font family name
 				 * @throw std#length_error @a name is empty
 				 */
-				explicit FontFamily(const String& name) : name_(name) {
-					if(name.empty())
-						throw std::length_error("name");
-				}
+				explicit FontFamily(const String& name);
 #endif
 				/**
-				 * Constructor creates a font generic family.
-				 * @param genericFamily The generic family
-				 * @throw UnknownValueException @a genericFamily is invalid
+				 * @name Factories for Generic Families
+				 * @see CSS Fonts Module Level 3, 3.1.1 Generic font families
+				 *      (http://www.w3.org/TR/css3-fonts/#generic-font-families)
 				 */
-				explicit FontFamily(GenericFamily genericFamily);
+				/// Returns 'cursive' font family.
+				static std::shared_ptr<const FontFamily> createCursiveInstance();
+				/// Returns 'fantasy' font family.
+				static std::shared_ptr<const FontFamily> createFantasyInstance();
+				/// Returns 'monospace' font family.
+				static std::shared_ptr<const FontFamily> createMonospaceInstance();
+				/// Returns 'sans-serif' font family.
+				static std::shared_ptr<const FontFamily> createSansSerifInstance();
+				/// Returns 'serif' font family.
+				static std::shared_ptr<const FontFamily> createSerifInstance();
+				/// @}
 				/// Copy-assignment operator.
 				FontFamily& operator=(const FontFamily& other);
 				/**
@@ -121,6 +116,7 @@ namespace ascension {
 				 * @return The family name
 				 */
 				String name(const std::locale& lc = std::locale::classic()) const BOOST_NOEXCEPT;
+
 			private:
 #if ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)
 				win32::com::SmartPointer<IDWriteFontFamily> nativeObject_;
@@ -142,18 +138,6 @@ namespace ascension {
 			inline bool operator<(const FontFamily& lhs, const FontFamily& rhs) BOOST_NOEXCEPT {
 				return lhs.name() < rhs.name();
 			}
-
-#if ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)
-#elif ASCENSION_SELECTS_SHAPING_ENGINE(PANGO)
-#elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
-#else
-			inline FontFamily& FontFamily::operator=(const FontFamily& other) {
-				return (name_ = other.name_), *this;
-			}
-			inline String FontFamily::name(const std::locale& lc /* = std::locale::classic() */) const BOOST_NOEXCEPT {
-				return name_;
-			}
-#endif
 		}
 	}
 }
