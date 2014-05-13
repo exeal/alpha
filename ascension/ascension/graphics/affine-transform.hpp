@@ -7,6 +7,7 @@
 #ifndef ASCENSION_AFFINE_TRANSFORM_HPP
 #define ASCENSION_AFFINE_TRANSFORM_HPP
 #include <ascension/graphics/geometry.hpp>
+#include <boost/functional/hash.hpp>
 #include <boost/geometry/strategies/transform/matrix_transformers.hpp>
 #include <boost/operators.hpp>
 #include <boost/range/algorithm/equal.hpp>
@@ -212,6 +213,17 @@ namespace ascension {
 			/// Returns @c true if the two represents the same affine coordinate transform.
 			inline bool equals(const AffineTransform& lhs, const AffineTransform& rhs) {
 				return boost::equal(lhs.matrix().data(), rhs.matrix().data());
+			}
+
+			/// Implements the hash function for @c AffineTransform.
+			inline std::size_t hash_value(const AffineTransform& tx) BOOST_NOEXCEPT {
+				std::size_t v = boost::hash_value(scaleX(tx));
+				boost::hash_combine(v, scaleY(tx));
+				boost::hash_combine(v, shearX(tx));
+				boost::hash_combine(v, shearY(tx));
+				boost::hash_combine(v, translateX(tx));
+				boost::hash_combine(v, translateY(tx));
+				return v;
 			}
 
 			/// Returns @c true if this is an identity transform.
