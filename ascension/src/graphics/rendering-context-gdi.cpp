@@ -22,6 +22,13 @@ namespace ascension {
 			savedStates_.push(State());
 			setFillStyle(std::shared_ptr<Paint>(new SolidColor(Color::OPAQUE_BLACK)));
 			setStrokeStyle(std::shared_ptr<Paint>(new SolidColor(Color::OPAQUE_BLACK)));
+
+			win32::Handle<HFONT>::Type fontHandle(static_cast<HFONT>(::GetCurrentObject(nativeObject.get(), OBJ_FONT)), ascension::detail::NullDeleter());
+			if(fontHandle.get() == nullptr)
+				fontHandle.reset(static_cast<HFONT>(::GetStockObject(DEVICE_DEFAULT_FONT)), ascension::detail::NullDeleter());
+			assert(fontHandle.get() != nullptr);
+			setFont(std::make_shared<const font::Font>(fontHandle));
+
 			::SetBkMode(nativeObject_.get(), TRANSPARENT);
 			::SetGraphicsMode(nativeObject_.get(), GM_ADVANCED);
 			::SetPolyFillMode(nativeObject_.get(), WINDING);
@@ -245,6 +252,10 @@ namespace ascension {
 
 		std::shared_ptr<const Paint> RenderingContext2D::fillStyle() const {
 			return savedStates_.top().fillStyle.first;
+		}
+
+		std::shared_ptr<const font::Font> RenderingContext2D::font() const {
+			return savedStates_.top().font;
 		}
 
 		namespace {
@@ -641,6 +652,14 @@ namespace ascension {
 				}
 			}
 			throw makePlatformError();
+		}
+
+		RenderingContext2D& RenderingContext2D::setFont(std::shared_ptr<const font::Font> font) {
+			if(font.get() == nullptr || font->asNativeObject().get() == nullptr)
+				throw NullPointerException("font");
+			::SelectObject(nativeObject_.get(), font->asNativeObject().get());
+			savedStates_.top().font = font;
+			return *this;
 		}
 
 		RenderingContext2D& RenderingContext2D::setGlobalAlpha(double) {

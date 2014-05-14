@@ -800,6 +800,7 @@ namespace ascension {
 				std::pair<std::shared_ptr<const Paint>, std::size_t> fillStyle, strokeStyle;
 				win32::Handle<HPEN>::Type pen, previousPen;
 				win32::Handle<HBRUSH>::Type brush, previousBrush;
+				std::shared_ptr<const font::Font> font;
 			};
 			std::stack<State> savedStates_;
 			bool hasCurrentSubpath_;
