@@ -66,14 +66,14 @@ namespace alpha {
 			 * @param key The key stroke
 			 * @return The definition or @c None if @a key is bound to nothing (undefined)
 			 */
-			virtual boost::python::object lookupKey(const KeyStroke& key) const BOOST_NOEXCEPT;
+			virtual boost::python::object lookupKey(const KeyStroke& key) const BOOST_NOEXCEPT = 0;
 			/**
 			 * Returns the definition bound to the specified key stroke(s).
 			 * @param key The key stroke(s). This must be either @c KeyStroke or sequence of @c KeyStroke
 			 * @return The definition or @c None if @a key is bound to nothing (undefined)
 			 * @throw boost#python#error_already_set(TypeError) @a key had inappropriate type
 			 */
-			virtual boost::python::object lookupKey(boost::python::object key) const;
+			virtual boost::python::object lookupKey(boost::python::object key) const = 0;
 		};
 
 		class KeyMap : public AbstractKeyMap, public std::enable_shared_from_this<KeyMap> {
