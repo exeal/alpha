@@ -159,9 +159,23 @@ wstring KeyStroke::format(py::object keys) {
 			return k.first.define(k.second, definition);
 		}
 
-		/// Returns @c true if this @c KeyMap is locked.
+		/**
+		 * Returns @c true if this @c KeyMap is locked.
+		 * @see #lock, #unlock
+		 */
 		bool KeyMap::isLocked() const BOOST_NOEXCEPT {
 			return lockedCount_ != 0;
+		}
+
+		/**
+		 * Increments the lock count.
+		 * @throw std#overflow_error
+		 * @see #isLocked, #unlock
+		 */
+		void KeyMap::lock() {
+			if(lockedCount_ == std::numeric_limits<decltype(lockedCount_)>::max())
+				throw std::overflow_error("KeyMap.lock");
+			++lockedCount_;
 		}
 
 		/// @see AbstractKeyMap#lookupKey(alpha#ui#KeyStroke)
@@ -241,6 +255,7 @@ wstring KeyStroke::format(py::object keys) {
 		/**
 		 * Decrements the lock count.
 		 * @throw std#underflow_error
+		 * @see #isLocked, #lock
 		 */
 		void KeyMap::unlock() {
 			if(lockedCount_ == std::numeric_limits<decltype(lockedCount_)>::min())
