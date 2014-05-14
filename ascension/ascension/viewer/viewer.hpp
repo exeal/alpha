@@ -553,7 +553,6 @@ namespace ascension {
 		namespace utils {
 			void closeCompletionProposalsPopup(TextViewer& viewer) BOOST_NOEXCEPT;
 			const presentation::hyperlink::Hyperlink* getPointedHyperlink(const TextViewer& viewer, const kernel::Position& at);
-			bool isRulerLeftAligned(const TextViewer& viewer);
 			void toggleOrientation(TextViewer& viewer) BOOST_NOEXCEPT;
 		} // namespace utils
 
