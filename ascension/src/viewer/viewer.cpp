@@ -1542,12 +1542,8 @@ namespace ascension {
 
 		/// Redraws the ruler.
 		void TextViewer::repaintRuler() {
-			graphics::Rectangle r(widgetapi::bounds(*this, false));
-			if(utils::isRulerLeftAligned(*this))
-				graphics::geometry::range<0>(r) = boost::irange(graphics::geometry::left(r), graphics::geometry::left(r) + rulerPainter_->allocationWidth());
-			else
-				graphics::geometry::range<1>(r) = boost::irange(graphics::geometry::right(r) - rulerPainter_->allocationWidth(), graphics::geometry::right(r));
-			widgetapi::scheduleRedraw(*this, r, false);
+			widgetapi::scheduleRedraw(*this, graphics::geometry::joined(
+				rulerPainter_->indicatorMarginAllocationRectangle(), rulerPainter_->lineNumbersAllocationRectangle()), false);
 		}
 
 		/// @see Widget#resized
