@@ -128,7 +128,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(ProjectDir)../../ascension;$(ProjectDir)../..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOST_LIB_DIAGNOSTIC;BOOST_PYTHON_NO_LIB;ASCENSION_WINDOW_SYSTEM_GTK;ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI;ASCENSION_NO_PLATFORM_SELECTION_DIAGNOSIS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_WIN32_WINNT=0x0501;WINVER=0x0501;_WIN32_IE=0x0600;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOST_LIB_DIAGNOSTIC;ASCENSION_WINDOW_SYSTEM_GTK;ASCENSION_GRAPHICS_SYSTEM_WIN32_GDI;ASCENSION_NO_PLATFORM_SELECTION_DIAGNOSIS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <SmallerTypeCheck>true</SmallerTypeCheck>
@@ -157,7 +157,7 @@
       <Culture>0x0411</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>shlwapi.lib;comctl32.lib;imm32.lib;boost_python3-vc100-mt-gd-1_55.lib;atkmm-2.0.lib;cairo.lib;cairomm-1.0.lib;gdk-3.0.lib;gdkmm-3.0.lib;giomm-2.0.lib;glib-2.0.lib;glibmm-2.0.lib;gtk-3.0.lib;gtkmm-3.0.lib;libintl.lib;pangomm-1.0.lib;sigc-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;comctl32.lib;imm32.lib;atkmm-2.0.lib;cairo.lib;cairomm-1.0.lib;gdk-3.0.lib;gdkmm-3.0.lib;giomm-2.0.lib;glib-2.0.lib;glibmm-2.0.lib;gtk-3.0.lib;gtkmm-3.0.lib;libintl.lib;pangomm-1.0.lib;sigc-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)Alpha.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <ManifestFile>$(IntDir)$(TargetFileName).intermediate.manifest</ManifestFile>
