@@ -411,6 +411,30 @@ namespace ascension {
 			return std::unique_ptr<const font::FontMetrics<Scalar>>(new GdiFontMetrics(nativeObject_, font->asNativeObject()));
 		}
 
+		font::FontRenderContext&& RenderingContext2D::fontRenderContext() const BOOST_NOEXCEPT {
+			XFORM xf;
+			if(!win32::boole(::GetWorldTransform(nativeObject_.get(), &xf)))
+				throw makePlatformError();
+			const geometry::AffineTransform tx(fromNative<geometry::AffineTransform>(xf));
+
+			bool antiAliased;
+			LOGFONTW lf;
+			if(::GetObjectW(font()->asNativeObject().get(), sizeof(decltype(lf)), &lf) == 0)
+				throw makePlatformError();
+			if(lf.lfQuality == ANTIALIASED_QUALITY || lf.lfQuality == CLEARTYPE_QUALITY)
+				antiAliased = true;
+			else if(lf.lfQuality == NONANTIALIASED_QUALITY)
+				antiAliased = false;
+			else {
+				BOOL temp;
+				if(!win32::boole(::SystemParametersInfoW(SPI_GETFONTSMOOTHING, 0, &temp, 0)))
+					throw makePlatformError();
+				antiAliased = win32::boole(temp);
+			}
+
+			return font::FontRenderContext(tx, antiAliased, boost::none);
+		}
+
 		std::unique_ptr<ImageData> RenderingContext2D::getImageData(const graphics::Rectangle& bounds) const {
 			// TODO: not implemented.
 			return nullptr;
