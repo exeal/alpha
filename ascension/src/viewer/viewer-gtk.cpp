@@ -38,27 +38,27 @@ namespace ascension {
 #endif
 		}
 
-		/// Implements @c Gtk#Widget#get_preferred_height_for_width_vfunc
+		/// Implements @c Gtk#Widget#get_preferred_height_for_width_vfunc.
 		void TextViewer::get_preferred_height_for_width_vfunc(int, int& minimumHeight, int& naturalHeight) const {
 			return get_preferred_height_vfunc(minimumHeight, naturalHeight);
 		}
 
-		/// Implements @c Gtk#Widget#get_preferred_height_vfunc
+		/// Implements @c Gtk#Widget#get_preferred_height_vfunc.
 		void TextViewer::get_preferred_height_vfunc(int& minimumHeight, int& naturalHeight) const {
 			// TODO: Not implemented.
 		}
 
-		/// Implements @c Gtk#Widget#get_preferred_width_for_height_vfunc
+		/// Implements @c Gtk#Widget#get_preferred_width_for_height_vfunc.
 		void TextViewer::get_preferred_width_for_height_vfunc(int, int& minimumWidth, int& naturalWidth) const {
 			return get_preferred_width_vfunc(minimumWidth, naturalWidth);
 		}
 
-		/// Implements @c Gtk#Widget#get_preferred_width_vfunc
+		/// Implements @c Gtk#Widget#get_preferred_width_vfunc.
 		void TextViewer::get_preferred_width_vfunc(int& minimumWidth, int& naturalWidth) const {
 			// TODO: Not implemented.
 		}
 
-		/// Implements @c Gtk#Widget#get_request_mode_vfunc
+		/// Implements @c Gtk#Widget#get_request_mode_vfunc.
 		Gtk::SizeRequestMode TextViewer::get_request_mode_vfunc() const {
 			return Gtk::Widget::get_request_mode_vfunc();
 		}
@@ -115,7 +115,7 @@ namespace ascension {
 		}
 
 		/**
-		 * Invokes @c #mousePressed, @c #mouseDoubleClicked and @c #mouseTripleClicked
+		 * Invokes @c #mousePressed, @c #mouseDoubleClicked and @c #mouseTripleClicked methods.
 		 * @see Widget#on_button_press_event
 		 */
 		bool TextViewer::on_button_press_event(GdkEventButton* event) {
@@ -137,7 +137,7 @@ namespace ascension {
 		}
 
 		/**
-		 * Invokes @c #mouseReleased
+		 * Invokes @c #mouseReleased method.
 		 * @see Widget#on_button_release_event
 		 */
 		bool TextViewer::on_button_release_event(GdkEventButton* event) {
@@ -145,6 +145,17 @@ namespace ascension {
 			if(input.button() != widgetapi::LocatedUserInput::NO_BUTTON && event->type == GDK_BUTTON_RELEASE)
 				mouseReleased(input);
 			return input.isConsumed();
+		}
+
+		/**
+		 * Invokes @c #resized method.
+		 * @see Gtk#Widget#on_configure_event
+		 */
+		bool TextViewer::on_configure_event(GdkEventConfigure* event) {
+			resized(graphics::Dimension(
+				graphics::geometry::_dx = static_cast<graphics::Scalar>(event->width),
+				graphics::geometry::_dy = static_cast<graphics::Scalar>(event->height)));
+			return false;
 		}
 
 		/// @see Gtk#Widget#on_drag_drop
