@@ -16,9 +16,11 @@
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDI)
 #	include <ascension/win32/windows.hpp>	// COLORREF
 #endif
+#include <boost/functional/hash.hpp>
 #include <boost/math/special_functions/round.hpp>
 #include <boost/operators.hpp>
 #include <boost/optional.hpp>
+#include <functional>	// std.hash
 
 namespace ascension {
 	namespace graphics {
@@ -110,6 +112,16 @@ namespace ascension {
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
 #endif
 
+		/// Specialization of @c boost#hash_value function template for @c Color.
+		inline std::size_t hash_value(const Color& object) BOOST_NOEXCEPT {
+			std::size_t seed = 0;
+			boost::hash_combine(seed, object.blue());
+			boost::hash_combine(seed, object.green());
+			boost::hash_combine(seed, object.red());
+			boost::hash_combine(seed, object.alpha());
+			return seed;
+		}
+
 		/**
 		 * Provides color values defined by operating system (themes).
 		 * @see "CSS Color Module Level3, 4.5. CSS system colors"
@@ -158,6 +170,17 @@ namespace ascension {
 			static boost::optional<Color> get(Value value);	// defined in viewer/widgetapi/widget-*.cpp
 		};
 	}
+}
+
+namespace std {
+	/// Specialization of @c std#hash class template for @c Color.
+	template<>
+	class hash<ascension::graphics::Color> : public std::function<std::hash<void*>::result_type(const ascension::graphics::Color&)> {
+	public:
+		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {
+			return boost::hash<argument_type>()(key);
+		}
+	};
 }
 
 #endif // !ASCENSION_COLOR_HPP

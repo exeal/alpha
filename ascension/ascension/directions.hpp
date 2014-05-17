@@ -14,8 +14,10 @@
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
 #include <ascension/graphics/geometry.hpp>
 #include <array>
+#include <functional>	// std.hash
 #include <iterator>		// std.end
 #include <type_traits>	// std.extent
+#include <boost/functional/hash.hpp>
 #include <boost/operators.hpp>
 #include <boost/parameter.hpp>
 #include <boost/range/irange.hpp>
@@ -685,6 +687,15 @@ namespace ascension {
 			static_assert(std::is_arithmetic<T>::value, "T is not arithmetic.");
 			return boost::irange(sides.start(), sides.end());
 		}
+
+		/// Specialization of @c boost#hash_value function template for @c FlowRelativeFourSides.
+		template<typename T>
+		inline std::size_t hash_value(const FlowRelativeFourSides<T>& object) BOOST_NOEXCEPT {
+			std::size_t seed = 0;
+			for(auto i(std::begin(object)), e(std::end(object)); i != e; ++i)
+				boost::hash_combine(seed, *i);
+			return seed;
+		}
 		/// @}
 	}
 
@@ -735,6 +746,16 @@ namespace std {
 	inline typename ascension::presentation::FlowRelativeFourSides<T>::const_iterator end(const ascension::presentation::FlowRelativeFourSides<T>& v) {
 		return std::end(static_cast<const std::array<T, 4>&>(v));
 	}
+
+	/// Specialization of @c std#hash class template for @c FlowRelativeFourSides.
+	template<typename T>
+	class hash<ascension::presentation::FlowRelativeFourSides<T>> :
+		public std::function<std::hash<void*>::result_type(const ascension::presentation::FlowRelativeFourSides<T>&)> {
+	public:
+		std::size_t operator()(const ascension::presentation::FlowRelativeFourSides<T>& key) const BOOST_NOEXCEPT {
+			return boost::hash<argument_type>()(key);
+		}
+	};
 }
 
 namespace boost {

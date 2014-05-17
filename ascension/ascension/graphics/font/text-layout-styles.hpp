@@ -109,7 +109,18 @@ namespace ascension {
 				}
 			};
 
-			std::size_t hash_value(const ComputedTextRunStyleCore& v);
+			/// Specialization of @c boost#hash_value function template for @c ComputedTextRunStyleCore.
+			inline std::size_t hash_value(const ComputedTextRunStyleCore& object) BOOST_NOEXCEPT {
+				std::size_t seed = 0;
+				boost::hash_combine(seed, object.color);
+				boost::hash_combine(seed, object.background);
+				boost::hash_combine(seed, object.border);
+				boost::hash_combine(seed, object.padding);
+				boost::hash_combine(seed, object.margin);
+				boost::hash_combine(seed, object.textDecoration);
+				boost::hash_combine(seed, object.textEmphasis);
+				return seed;
+			}
 
 			/// Computed values of @c presentation#TextRunStyle.
 			struct ComputedTextRunStyle : public ComputedTextRunStyleCore, private boost::equality_comparable<ComputedTextRunStyle> {
@@ -342,5 +353,17 @@ namespace ascension {
 		}
 	}
 } // namespace ascension.graphics.font
+
+namespace std {
+	/// Specialization of @c std#hash class template for @c ComputedTextRunStyleCore.
+	template<>
+	class hash<ascension::graphics::font::ComputedTextRunStyleCore> :
+		public std::function<std::hash<void*>::result_type(const ascension::graphics::font::ComputedTextRunStyleCore&)> {
+	public:
+		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {
+			return boost::hash<argument_type>()(key);
+		}
+	};
+}
 
 #endif // !ASCENSION_TEXT_LAYOUT_STYLES_HPP

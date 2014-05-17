@@ -12,7 +12,9 @@
 #ifndef ASCENSION_WRITING_MODE_HPP
 #define ASCENSION_WRITING_MODE_HPP
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
+#include <boost/functional/hash.hpp>
 #include <boost/operators.hpp>
+#include <functional>	// std.hash
 
 namespace ascension {
 	namespace presentation {
@@ -131,6 +133,15 @@ namespace ascension {
 			}
 		};
 
+		/// Specialization of @c boost#hash_value function template for @c WritingMode.
+		inline std::size_t hash_value(const WritingMode& object) BOOST_NOEXCEPT {
+			std::size_t seed = 0;
+			boost::hash_combine(seed, object.inlineFlowDirection);
+			boost::hash_combine(seed, object.blockFlowDirection);
+			boost::hash_combine(seed, object.textOrientation);
+			return seed;
+		}
+
 		/**
 		 * Resolve ambiguous value of @c WritingMode#textOrientation.
 		 * @param writingMode The writing mode
@@ -153,5 +164,16 @@ namespace ascension {
 		}
 	}
 } // namespace ascension.presentation
+
+namespace std {
+	/// Specialization of @c std#hash class template for @c WritingMode.
+	template<>
+	class hash<ascension::presentation::WritingMode> : public std::function<std::hash<void*>::result_type(const ascension::presentation::WritingMode&)> {
+	public:
+		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {
+			return boost::hash<argument_type>()(key);
+		}
+	};
+}
 
 #endif // !ASCENSION_WRITING_MODE_HPP
