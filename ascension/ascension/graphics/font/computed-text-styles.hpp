@@ -53,6 +53,15 @@ namespace ascension {
 				}
 			};
 
+			/// Specialization of @c boost#hash_value function template for @c ComputedBorderSide.
+			inline std::size_t hash_value(const ComputedBorderSide& object) BOOST_NOEXCEPT {
+				std::size_t seed = 0;
+				boost::hash_combine(seed, object.color);
+				boost::hash_combine(seed, object.style);
+				boost::hash_combine(seed, object.width);
+				return seed;
+			}
+
 			/**
 			 * @see ComputedTextRunStyle
 			 */
@@ -108,6 +117,17 @@ namespace ascension {
 				}
 			};
 
+			/// Specialization of @c boost#hash_value function template for @c ComputedTextDecoration.
+			inline std::size_t hash_value(const ComputedTextDecoration& object) BOOST_NOEXCEPT {
+				std::size_t seed = 0;
+				boost::hash_combine<int>(seed, object.lines);
+				boost::hash_combine(seed, object.color);
+				boost::hash_combine<int>(seed, object.style);
+				boost::hash_combine<int>(seed, object.skip);
+				boost::hash_combine<int>(seed, object.underlinePosition);
+				return seed;
+			}
+
 			/// Computed value of @c presentation#TextEmphasis.
 			struct ComputedTextEmphasis : private boost::equality_comparable<ComputedTextEmphasis> {
 				presentation::sp::IntrinsicType<
@@ -130,6 +150,15 @@ namespace ascension {
 				}
 			};
 
+			/// Specialization of @c boost#hash_value function template for @c ComputedTextEmphasis.
+			inline std::size_t hash_value(const ComputedTextEmphasis& object) BOOST_NOEXCEPT {
+				std::size_t seed = 0;
+				boost::hash_combine(seed, object.style);
+				boost::hash_combine(seed, object.color);
+				boost::hash_combine(seed, object.position);
+				return seed;
+			}
+
 			namespace detail {
 				void paintBorder(PaintContext& context, const Rectangle& rectangle,
 					const PhysicalFourSides<ComputedBorderSide>& style, const presentation::WritingMode& writingMode);
@@ -137,5 +166,37 @@ namespace ascension {
 		}
 	}
 } // namespace ascension.graphics.font
+
+namespace std {
+	/// Specialization of @c std#hash class template for @c ComputedBorderSide.
+	template<>
+	class hash<ascension::graphics::font::ComputedBorderSide> :
+		public std::function<std::hash<void*>::result_type(const ascension::graphics::font::ComputedBorderSide&)> {
+	public:
+		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {
+			return boost::hash<argument_type>()(key);
+		}
+	};
+
+	/// Specialization of @c std#hash class template for @c ComputedTextDecoration.
+	template<>
+	class hash<ascension::graphics::font::ComputedTextDecoration> :
+		public std::function<std::hash<void*>::result_type(const ascension::graphics::font::ComputedTextDecoration&)> {
+	public:
+		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {
+			return boost::hash<argument_type>()(key);
+		}
+	};
+
+	/// Specialization of @c std#hash class template for @c ComputedTextEmphasis.
+	template<>
+	class hash<ascension::graphics::font::ComputedTextEmphasis> :
+		public std::function<std::hash<void*>::result_type(const ascension::graphics::font::ComputedTextEmphasis&)> {
+	public:
+		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {
+			return boost::hash<argument_type>()(key);
+		}
+	};
+}
 
 #endif // !COMPUTED_TEXT_STYLES_HPP

@@ -13,6 +13,8 @@
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
 #	include <pangomm/fontdescription.h>
 #endif
+#include <boost/functional/hash.hpp>
+#include <functional>	// std.hash
 
 namespace ascension {
 	namespace graphics {
@@ -191,6 +193,18 @@ namespace ascension {
 				}
 			};
 
+			/// Specialization of @c boost#hash_value function template for @c FontProperties.
+			inline std::size_t hash_value(const FontProperties& object) BOOST_NOEXCEPT {
+				std::size_t seed = 0;
+				boost::hash_combine<int>(seed, object.weight);
+				boost::hash_combine<int>(seed, object.stretch);
+				boost::hash_combine<int>(seed, object.style);
+//				boost::hash_combine<int>(seed, object.variant);
+//				boost::hash_combine<int>(seed, object.synthesis);
+//				boost::hash_combine<int>(seed, object.orientation);
+				return seed;
+			}
+
 			/**
 			 * @see FontProperties
 			 */
@@ -247,6 +261,15 @@ namespace ascension {
 				double pointSize_;
 				FontProperties properties_;
 			};
+
+			/// Specialization of @c boost#hash_value function template for @c FontDescription.
+			inline std::size_t hash_value(const FontDescription& object) BOOST_NOEXCEPT {
+				std::size_t seed = 0;
+				boost::hash_combine(seed, object.family().name());
+				boost::hash_combine(seed, object.pointSize());
+				boost::hash_combine(seed, object.properties());
+				return seed;
+			}
 		}
 
 		namespace detail {
@@ -286,12 +309,8 @@ namespace std {
 	class hash<ascension::graphics::font::FontProperties> :
 		public std::function<std::hash<void*>::result_type(const ascension::graphics::font::FontProperties&)> {
 	public:
-		result_type operator()(const argument_type& key) const {
-			// TODO: use boost.hash_combine.
-			return std::hash<ascension::graphics::font::FontWeight>()(key.weight)
-				+ std::hash<ascension::graphics::font::FontStretch>()(key.stretch)
-				+ std::hash<ascension::graphics::font::FontStyle>()(key.style)
-/*				+ std::hash<ascension::graphics::font::FontVariant>()(key.variant)*/;
+		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {
+			return boost::hash<argument_type>()(key);
 		}
 	};
 
@@ -300,11 +319,8 @@ namespace std {
 	class hash<ascension::graphics::font::FontDescription> :
 		public std::function<std::hash<void*>::result_type(const ascension::graphics::font::FontDescription&)> {
 	public:
-		result_type operator()(const argument_type& key) const {
-			// TODO: use boost.hash_combine.
-			return std::hash<ascension::graphics::font::FontFamily>()(key.family())
-				+ std::hash<double>()(key.pointSize())
-				+ std::hash<ascension::graphics::font::FontProperties>()(key.properties());
+		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {
+			return boost::hash<argument_type>()(key);
 		}
 	};
 }
