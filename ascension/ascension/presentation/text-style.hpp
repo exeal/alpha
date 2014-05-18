@@ -531,6 +531,16 @@ namespace ascension {
 			}
 		};
 
+		/// Specialization of @c boost#hash_value function template for @c TextIndent.
+		template<typename LengthType, typename BooleanType>
+		inline std::size_t hash_value(const TextIndent<LengthType, BooleanType>& object) {
+			std::size_t seed = 0;
+			boost::hash_combine(seed, object.length);
+			boost::hash_combine(seed, object.hanging);
+			boost::hash_combine(seed, object.eachLine);
+			return seed;
+		}
+
 		/**
 		 * [Copied from CSS3] This property determines whether a punctuation mark, if one is
 		 * present, may be placed outside the line box (or in the indent) at the start or at the
@@ -1151,6 +1161,15 @@ namespace ascension {
 			}
 		};
 
+		/// Specialization of @c boost#hash_value function template for @c NumberSubstitution.
+		std::size_t hash_value(const NumberSubstitution& object) BOOST_NOEXCEPT {
+			std::size_t seed = 0;
+			boost::hash_combine(seed, object.localeOverride);
+			boost::hash_combine(seed, object.localeSource);
+			boost::hash_combine(seed, object.method);
+			return seed;
+		}
+
 		/**
 		 * Specifies the style of a text line. This object also gives the default text run style.
 		 * @see TextRunStyle, TextToplevelStyle, TextLineStyleDirector
@@ -1406,5 +1425,27 @@ namespace ascension {
 		}
 	}
 } // namespace ascension.presentation
+
+namespace std {
+	/// Specialization of @c std#hash class template for @c NumberSubstitution.
+	template<>
+	class hash<ascension::presentation::NumberSubstitution> :
+		public std::function<std::hash<void*>::result_type(const ascension::presentation::NumberSubstitution&)> {
+	public:
+		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {
+			return boost::hash<argument_type>()(key);
+		}
+	};
+
+	/// Specialization of @c std#hash class template for @c TextIndent.
+	template<typename LengthType, typename BooleanType>
+	class hash<ascension::presentation::TextIndent<LengthType, BooleanType>> :
+		public std::function<std::hash<void*>::result_type(const ascension::presentation::TextIndent<LengthType, BooleanType>&)> {
+	public:
+		std::size_t operator()(const ascension::presentation::TextIndent<LengthType, BooleanType>& key) const BOOST_NOEXCEPT {
+			return boost::hash<argument_type>()(key);
+		}
+	};
+}
 
 #endif // !ASCENSION_TEXT_STYLE_HPP

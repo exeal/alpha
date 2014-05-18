@@ -85,6 +85,20 @@ namespace ascension {
 				}
 			};
 
+			/// Specialization of @c boost#hash_value function template for @c ComputedFontSpecification.
+			inline std::size_t hash_value(const ComputedFontSpecification& object) BOOST_NOEXCEPT {
+				std::size_t seed = 0;
+				for(auto i(std::begin(object.families)), e(std::end(object.families)); i != e; ++i)
+					boost::hash_combine(seed, i->name());
+				boost::hash_combine(seed, object.pointSize);
+				boost::hash_combine(seed, object.properties);
+				if(const presentation::FontSizeAdjustEnums* const e = boost::get<presentation::FontSizeAdjustEnums>(&object.sizeAdjust))
+					boost::hash_combine<int>(seed, *e);
+				if(const Scalar* const s = boost::get<Scalar>(&object.sizeAdjust))
+					boost::hash_combine(seed, *s);
+				return seed;
+			}
+
 			/// Computed value of @c presentation#TextDecoration.
 			struct ComputedTextDecoration : private boost::equality_comparable<ComputedTextDecoration> {
 				presentation::sp::IntrinsicType<
@@ -172,6 +186,16 @@ namespace std {
 	template<>
 	class hash<ascension::graphics::font::ComputedBorderSide> :
 		public std::function<std::hash<void*>::result_type(const ascension::graphics::font::ComputedBorderSide&)> {
+	public:
+		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {
+			return boost::hash<argument_type>()(key);
+		}
+	};
+
+	/// Specialization of @c std#hash class template for @c ComputedFontSpecification.
+	template<>
+	class hash<ascension::graphics::font::ComputedFontSpecification> :
+		public std::function<std::hash<void*>::result_type(const ascension::graphics::font::ComputedFontSpecification&)> {
 	public:
 		result_type operator()(const argument_type& key) const BOOST_NOEXCEPT {
 			return boost::hash<argument_type>()(key);
