@@ -1328,40 +1328,47 @@ namespace ascension {
 		 */
 		class GlobalTextStyleSwitch {
 		public:
+			typedef decltype(TextLineStyle().direction) Direction;
+			typedef decltype(TextLineStyle().textAlignment) TextAlignment;
+			typedef decltype(TextLineStyle().textOrientation) TextOrientation;
+			typedef decltype(TextLineStyle().whiteSpace) WhiteSpace;
+			typedef decltype(TextToplevelStyle().writingMode) WritingMode;
+		public:
 			/// Destructor.
 			virtual ~GlobalTextStyleSwitch() BOOST_NOEXCEPT {}
+
 		private:
 			/**
 			 * Returns the 'direction' style property which follows @c TextLineStyle#direction and
 			 * overrides @c TextToplevelStyle#defaultLineStyle#direction.
 			 * @return The declared value of 'direction' style property
 			 */
-			virtual decltype(TextLineStyle().direction) direction() const BOOST_NOEXCEPT = 0;
+			virtual Direction direction() const BOOST_NOEXCEPT = 0;
 			/**
 			 * Returns the 'text-align' style property which follows @c TextLineStyle#textAlignment
 			 * and overrides @c TextToplevelStyle#defaultLineStyle#textAlignment.
 			 * @return The declared value of 'text-align' style property
 			 */
-			virtual decltype(TextLineStyle().textAlignment) textAlignment() const BOOST_NOEXCEPT = 0;
+			virtual TextAlignment textAlignment() const BOOST_NOEXCEPT = 0;
 			/**
 			 * Returns 'text-orientation' style property which follows
 			 * @c TextLineStyle#textOrientation and overrides
 			 * @c TextToplevelStyle#defaultLineStyle#textOrientation.
 			 * @return The declared value of 'text-orientation' style property
 			 */
-			virtual decltype(TextLineStyle().textOrientation) textOrientation() const BOOST_NOEXCEPT = 0;
+			virtual TextOrientation textOrientation() const BOOST_NOEXCEPT = 0;
 			/**
 			 * Returns 'white-space' style property which follows @c TextLineStyle#whiteSpace and
 			 * overrides @c TextToplevelStyle#defaultLineStyle#whiteSpace.
 			 * @return The declared value of 'white-space' style property
 			 */
-			virtual decltype(TextLineStyle().whiteSpace) whiteSpace() const BOOST_NOEXCEPT = 0;
+			virtual WhiteSpace whiteSpace() const BOOST_NOEXCEPT = 0;
 			/**
 			 * Returns the 'writing-mode' style property which follows
 			 * @c TextToplevelStyle#writingMode.
 			 * @return The declared value of 'writing-mode' style property
 			 */
-			virtual decltype(TextToplevelStyle().writingMode) writingMode() const BOOST_NOEXCEPT = 0;
+			virtual WritingMode writingMode() const BOOST_NOEXCEPT = 0;
 			friend class Presentation;
 		};
 

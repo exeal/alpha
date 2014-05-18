@@ -80,18 +80,18 @@ namespace ascension {
 
 				/// @name Other Global Text Style Switch
 				/// @{
-				void setDirection(decltype(presentation::TextLineStyle().direction) direction);
-				void setTextAlignment(decltype(presentation::TextLineStyle().textAlignment) textAlignment);
-				void setTextOrientation(decltype(presentation::TextLineStyle().textOrientation) textOrientation);
-				void setWhiteSpace(decltype(presentation::TextLineStyle().whiteSpace) whiteSpace);
+				void setDirection(Direction direction);
+				void setTextAlignment(TextAlignment textAlignment);
+				void setTextOrientation(TextOrientation textOrientation);
+				void setWhiteSpace(WhiteSpace whiteSpace);
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 				Scalar textWrappingMeasureInPixels() const BOOST_NOEXCEPT;
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
 				// presentation.GlobalTextStyleSwitch
-				decltype(presentation::TextLineStyle().direction) direction() const override BOOST_NOEXCEPT;
-				decltype(presentation::TextLineStyle().textAlignment) textAlignment() const override BOOST_NOEXCEPT;
-				decltype(presentation::TextLineStyle().textOrientation) textOrientation() const override BOOST_NOEXCEPT;
-				decltype(presentation::TextLineStyle().whiteSpace) whiteSpace() const override BOOST_NOEXCEPT;
+				Direction direction() const override BOOST_NOEXCEPT;
+				TextAlignment textAlignment() const override BOOST_NOEXCEPT;
+				TextOrientation textOrientation() const override BOOST_NOEXCEPT;
+				WhiteSpace whiteSpace() const override BOOST_NOEXCEPT;
 				/// @}
 
 				/// @name Default (Globally Nominal) Font
@@ -138,10 +138,10 @@ namespace ascension {
 				std::shared_ptr<TextViewport> viewport_;
 //				class SpacePainter;
 //				std::unique_ptr<SpacePainter> spacePainter_;
-				decltype(presentation::TextLineStyle().direction) direction_;
-				decltype(presentation::TextLineStyle().textAlignment) textAlignment_;
-				decltype(presentation::TextLineStyle().textOrientation) textOrientation_;
-				decltype(presentation::TextLineStyle().whiteSpace) whiteSpace_;
+				Direction direction_;
+				TextAlignment textAlignment_;
+				TextOrientation textOrientation_;
+				WhiteSpace whiteSpace_;
 				decltype(presentation::TextToplevelStyle().writingMode) writingMode_;
 				presentation::BlockFlowDirection computedBlockFlowDirection_;
 				ascension::detail::Listeners<ComputedBlockFlowDirectionListener> computedBlockFlowDirectionListeners_;
@@ -158,7 +158,7 @@ namespace ascension {
 			}
 
 			/// @see presentation#GlobalTextStyleSwitch#direction
-			inline decltype(presentation::TextLineStyle().direction) TextRenderer::direction() const BOOST_NOEXCEPT {
+			inline TextRenderer::Direction TextRenderer::direction() const BOOST_NOEXCEPT {
 				return direction_;
 			}
 
@@ -173,22 +173,22 @@ namespace ascension {
 			}
 
 			/// @see presentation#GlobalTextStyleSwitch#textAlignment
-			inline decltype(presentation::TextLineStyle().textAlignment) TextRenderer::textAlignment() const BOOST_NOEXCEPT {
+			inline TextRenderer::TextAlignment TextRenderer::textAlignment() const BOOST_NOEXCEPT {
 				return textAlignment_;
 			}
 
 			/// @see presentation#GlobalTextStyleSwitch#textOrientation
-			inline decltype(presentation::TextLineStyle().textOrientation) TextRenderer::textOrientation() const BOOST_NOEXCEPT {
+			inline TextRenderer::TextOrientation TextRenderer::textOrientation() const BOOST_NOEXCEPT {
 				return textOrientation_;
 			}
 
 			/// @see presentation#GlobalTextStyleSwitch#whiteSpace
-			inline decltype(presentation::TextLineStyle().whiteSpace) TextRenderer::whiteSpace() const BOOST_NOEXCEPT {
+			inline TextRenderer::WhiteSpace TextRenderer::whiteSpace() const BOOST_NOEXCEPT {
 				return whiteSpace_;
 			}
 
 			/// @see presentation#GlobalTextStyleSwitch#writingMode
-			inline decltype(presentation::TextToplevelStyle().writingMode) TextRenderer::writingMode() const BOOST_NOEXCEPT {
+			inline TextRenderer::WritingMode TextRenderer::writingMode() const BOOST_NOEXCEPT {
 				return writingMode_;
 			}
 
