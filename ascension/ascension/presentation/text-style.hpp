@@ -1162,7 +1162,7 @@ namespace ascension {
 		};
 
 		/// Specialization of @c boost#hash_value function template for @c NumberSubstitution.
-		std::size_t hash_value(const NumberSubstitution& object) BOOST_NOEXCEPT {
+		inline std::size_t hash_value(const NumberSubstitution& object) BOOST_NOEXCEPT {
 			std::size_t seed = 0;
 			boost::hash_combine(seed, object.localeOverride);
 			boost::hash_combine(seed, object.localeSource);

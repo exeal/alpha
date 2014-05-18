@@ -390,13 +390,14 @@ namespace ascension {
 					if(xHeight_ == GDI_ERROR)
 						fail(dc, cookie);
 				}
-				Unit ascent() const BOOST_NOEXCEPT {return ascent_;}
-				Unit averageCharacterWidth() BOOST_NOEXCEPT const {return averageCharacterWidth_;}
-				Unit descent() const BOOST_NOEXCEPT {return descent_;}
-				Unit externalLeading() const BOOST_NOEXCEPT {return externalLeading_;}
-				Unit internalLeading() const BOOST_NOEXCEPT {return internalLeading_;}
-				std::uint16_t unitsPerEm() const BOOST_NOEXCEPT {return unitsPerEm_;}
-				Unit xHeight() const BOOST_NOEXCEPT {return xHeight_;}
+				Unit ascent() const BOOST_NOEXCEPT override {return ascent_;}
+				Unit averageCharacterWidth() BOOST_NOEXCEPT const override {return averageCharacterWidth_;}
+				Unit descent() const BOOST_NOEXCEPT override {return descent_;}
+				Unit externalLeading() const BOOST_NOEXCEPT override {return externalLeading_;}
+				Unit internalLeading() const BOOST_NOEXCEPT override {return internalLeading_;}
+				std::uint16_t unitsPerEm() const BOOST_NOEXCEPT override {return unitsPerEm_;}
+				Unit xHeight() const BOOST_NOEXCEPT override {return xHeight_;}
+
 			private:
 				static void fail(win32::Handle<HDC>::Type dc, int savedContext) {
 					::RestoreDC(dc.get(), savedContext);
