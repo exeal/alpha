@@ -339,6 +339,11 @@ namespace ascension {
 				defaultFontListeners_.remove(listener);
 			}
 
+			/// @see GlobalTextStyleSwitch#setDirection
+			void TextRenderer::setDirection(Direction direction) {
+				direction_ = direction;
+			}
+
 			/**
 			 * Sets the default UI writing mode. This method invalidates the all layouts and call listeners'
 			 * @c ComputedWritingModeListener#computedWritingModeChanged.
