@@ -289,7 +289,32 @@ namespace ascension {
 				}
 			};
 
-			std::size_t hash_value(const ComputedTextLineStyle& v);
+			/// Specialization of @c boost#hash_value function template for @c ComputedTextLineStyle.
+			inline std::size_t hash_value(const ComputedTextLineStyle& object) BOOST_NOEXCEPT {
+				std::size_t seed = 0;
+				boost::hash_combine(seed, object.writingMode);
+				boost::hash_combine(seed, object.background);
+				boost::hash_combine(seed, object.nominalFont);
+				boost::hash_combine<int>(seed, object.lineBoxContain);
+				boost::hash_combine<int>(seed, object.whiteSpace);
+				boost::hash_combine(seed, object.tabExpander);
+				boost::hash_combine<int>(seed, object.lineBreak);
+				boost::hash_combine<int>(seed, object.wordBreak);
+				boost::hash_combine<int>(seed, object.overflowWrap);
+				boost::hash_combine<int>(seed, object.alignment);
+				boost::hash_combine<int>(seed, object.alignmentLast);
+				boost::hash_combine<int>(seed, object.justification);
+				boost::hash_combine(seed, object.indent);
+				boost::hash_combine<int>(seed, object.hangingPunctuation);
+				boost::hash_combine<int>(seed, object.dominantBaseline);
+				boost::hash_combine(seed, object.lineHeight);
+				boost::hash_combine(seed, object.measure);
+				boost::hash_combine(seed, object.numberSubstitution);
+				boost::hash_combine(seed, object.displayShapingControls);
+				boost::hash_combine(seed, object.disableDeprecatedFormatCharacters);
+				boost::hash_combine(seed, object.inhibitSymmetricSwapping);
+				return true;
+			}
 
 			namespace detail {
 				class ComputedStyledTextRunEnumerator {
