@@ -42,7 +42,7 @@ namespace ascension {
 				/// Returns the pitch of lines.
 				Unit linePitch() const BOOST_NOEXCEPT {return cellHeight() + lineGap();}
 				/// Returns the units-per-em.
-				virtual std::uint16_t unitsPerEm() const BOOST_NOEXCEPT;
+				virtual std::uint16_t unitsPerEm() const BOOST_NOEXCEPT = 0;
 				/// Returns the x-height of the font.
 				virtual Unit xHeight() const BOOST_NOEXCEPT = 0;
 			};

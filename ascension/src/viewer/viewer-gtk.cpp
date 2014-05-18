@@ -63,6 +63,10 @@ namespace ascension {
 			return Gtk::Widget::get_request_mode_vfunc();
 		}
 
+		void TextViewer::hideToolTip() {
+			// TODO: Not implemented.
+		}
+
 		void TextViewer::initializeNativeObjects(const TextViewer* other) {
 			set_can_focus(true);
 			set_redraw_on_allocate(false);
