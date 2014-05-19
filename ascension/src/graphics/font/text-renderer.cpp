@@ -249,6 +249,50 @@ namespace ascension {
 			 * @see #buildLineLayoutConstructionParameters
 			 */
 
+			/// Returns the line relative alignment.
+			TextRenderer::LineRelativeAlignmentAxis TextRenderer::lineRelativeAlignment() const BOOST_NOEXCEPT {
+				const TextAlignment::value_type alignment(textAlignment().getOrInitial());
+				switch(alignment) {
+					case font::TextAlignment::START:
+					case font::TextAlignment::END:
+					case font::TextAlignment::JUSTIFY:
+					case font::TextAlignment::MATCH_PARENT:
+					case font::TextAlignment::START_END: {
+						const presentation::WritingMode writingMode(presentation().computeWritingMode(this));
+						std::pair<LineRelativeAlignmentAxis, LineRelativeAlignmentAxis> lra;
+						if(presentation::isHorizontal(writingMode.blockFlowDirection)) {
+							lra = std::make_pair(LEFT, RIGHT);
+							if(writingMode.inlineFlowDirection == presentation::RIGHT_TO_LEFT)
+								std::swap(lra.first, lra.second);
+						} else if(presentation::isVertical(writingMode.blockFlowDirection)) {
+							lra = std::make_pair(TOP, BOTTOM);
+							if(writingMode.inlineFlowDirection == presentation::RIGHT_TO_LEFT)
+								std::swap(lra.first, lra.second);
+							if(presentation::resolveTextOrientation(writingMode) == presentation::SIDEWAYS_LEFT)
+								std::swap(lra.first, lra.second);
+						} else
+							ASCENSION_ASSERT_NOT_REACHED();
+						return (alignment != font::TextAlignment::END) ? lra.first : lra.second;
+					}
+					case font::TextAlignment::LEFT:
+					case font::TextAlignment::RIGHT: {
+						const presentation::WritingMode writingMode(presentation().computeWritingMode(this));
+						if(presentation::isHorizontal(writingMode.blockFlowDirection))
+							return (alignment == font::TextAlignment::LEFT) ? LEFT : RIGHT;
+						else if(presentation::isVertical(writingMode.blockFlowDirection)) {
+							LineRelativeAlignmentAxis lra = (alignment == font::TextAlignment::LEFT) ? TOP : BOTTOM;
+							if(presentation::resolveTextOrientation(writingMode) == presentation::SIDEWAYS_LEFT)
+								lra = (lra == TOP) ? BOTTOM : TOP;
+							return lra;
+						}
+						break;
+					}
+					case font::TextAlignment::CENTER:
+						return presentation::isHorizontal(computedBlockFlowDirection()) ? HORIZONTAL_CENTER : VERTICAL_CENTER;
+				}
+				ASCENSION_ASSERT_NOT_REACHED();
+			}
+
 			/**
 			 * Paints the specified output device with text layout. The line rendering options provided by
 			 * @c #setLineRenderingOptions method is considered.

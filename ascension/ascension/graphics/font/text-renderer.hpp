@@ -75,7 +75,7 @@ namespace ascension {
 				void removeComputedBlockFlowDirectionListener(ComputedBlockFlowDirectionListener& listener);
 				void setWritingMode(decltype(presentation::TextToplevelStyle().writingMode) writingMode);
 				// presentation.GlobalTextStyleSwitch
-				decltype(presentation::TextToplevelStyle().writingMode) writingMode() const BOOST_NOEXCEPT;
+				WritingMode writingMode() const BOOST_NOEXCEPT;
 				/// @}
 
 				/// @name Other Global Text Style Switch

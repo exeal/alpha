@@ -1328,10 +1328,15 @@ namespace ascension {
 		 */
 		class GlobalTextStyleSwitch {
 		public:
+			/// Return type of @c #direction method.
 			typedef decltype(TextLineStyle().direction) Direction;
+			/// Return type of @c #textAlignment method.
 			typedef decltype(TextLineStyle().textAlignment) TextAlignment;
+			/// Return type of @c #textOrientation method.
 			typedef decltype(TextLineStyle().textOrientation) TextOrientation;
+			/// Return type of @c #whiteSpace method.
 			typedef decltype(TextLineStyle().whiteSpace) WhiteSpace;
+			/// Return type of @c #writingMode method.
 			typedef decltype(TextToplevelStyle().writingMode) WritingMode;
 		public:
 			/// Destructor.
