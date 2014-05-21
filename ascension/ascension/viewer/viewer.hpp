@@ -284,6 +284,7 @@ namespace ascension {
 
 			// helpers
 		private:
+			void doShowContextMenu(void* nativeEvent);
 			graphics::Scalar inlineProgressionOffsetInViewport() const;
 			void initialize(const TextViewer* other);
 			void initializeNativeObjects(const TextViewer* other);
@@ -349,7 +350,7 @@ namespace ascension {
 			virtual void mouseWheelChanged(widgetapi::MouseWheelInput& input);
 			virtual void paint(graphics::PaintContext& context);
 			virtual void resized(const graphics::Dimension& newSize);
-			virtual void showContextMenu(const widgetapi::LocatedUserInput& input, bool byKeyboard);
+			virtual void showContextMenu(const widgetapi::LocatedUserInput& input, void* nativeEvent);
 			/// @}
 
 			/// @name Overridable Widget Events (Platform-dependent)

@@ -303,6 +303,44 @@ namespace ascension {
 
 		}
 	}
+
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+	namespace win32 {
+		template<typename Point>
+		inline Point makeMouseLocation(LPARAM lp) {
+#ifndef GET_X_LPARAM
+	// <windowsx.h> defines the followings
+#	define GET_X_LPARAM(l) LOWORD(l)
+#	define GET_Y_LPARAM(l) HIWORD(l)
+#endif
+			return boost::geometry::make<Point>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
+		}
+		inline viewers::widgetapi::UserInput::ModifierKey makeModifiers() BOOST_NOEXCEPT {
+			viewers::widgetapi::UserInput::ModifierKey modifiers = 0;
+			if(::GetKeyState(VK_SHIFT) < 0)
+				modifiers |= viewers::widgetapi::UserInput::SHIFT_DOWN;
+			if(::GetKeyState(VK_CONTROL) < 0)
+				modifiers |= viewers::widgetapi::UserInput::CONTROL_DOWN;
+			if(::GetKeyState(VK_MENU) < 0)
+				modifiers |= viewers::widgetapi::UserInput::ALT_DOWN;
+			return modifiers;
+		}
+		inline viewers::widgetapi::UserInput::ModifierKey makeModifiers(WPARAM wp) BOOST_NOEXCEPT {
+			viewers::widgetapi::UserInput::ModifierKey modifiers = 0;
+			if((wp & MK_CONTROL) != 0)
+				modifiers = viewers::widgetapi::UserInput::CONTROL_DOWN;
+			if((wp & MK_SHIFT) != 0)
+				modifiers = viewers::widgetapi::UserInput::SHIFT_DOWN;
+			return modifiers;
+		}
+		inline viewers::widgetapi::KeyInput makeKeyInput(WPARAM wp, LPARAM lp) {
+			return viewers::widgetapi::KeyInput(wp, makeModifiers(), LOWORD(lp), HIWORD(lp));
+		}
+		inline viewers::widgetapi::MouseButtonInput makeMouseButtonInput(viewers::widgetapi::UserInput::MouseButton button, WPARAM wp, LPARAM lp) {
+			return viewers::widgetapi::MouseButtonInput(makeMouseLocation<graphics::Point>(lp), button, makeModifiers(wp));
+		}
+	}
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 }
 
 #endif // !ASCENSION_USER_INPUT_HPP
