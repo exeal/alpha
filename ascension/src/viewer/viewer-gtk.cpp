@@ -347,6 +347,10 @@ namespace ascension {
 			rulerWindow_.reset();
 			Gtk::Widget::on_unrealize();
 		}
+
+		void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, void* nativeEvent) {
+			// TODO: Not implemented.
+		}
 	}
 }
 

@@ -289,6 +289,76 @@ namespace ascension {
 			}
 		}
 
+		void TextViewer::doShowContextMenu(void* nativeEvent) {
+			namespace geom = graphics::geometry;
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			const Gdk::Event abstractEvent(Glib::wrap(static_cast<GdkEvent*>(nativeEvent)));
+			bool byKeyboard;
+			switch(abstractEvent.gobj()->type) {
+				case Gdk::BUTTON_RELEASE:
+					byKeyboard = false;
+					break;
+				case Gdk::KEY_RELEASE:
+					byKeyboard = true;
+					break;
+				default:
+					return;
+			}
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+			const MSG& message = *static_cast<const MSG*>(nativeEvent);
+			const auto globalLocation(win32::makeMouseLocation<geom::BasicPoint<WORD>>(message.lParam));
+			const bool byKeyboard = geom::x(globalLocation) == 0xffffu && geom::y(globalLocation) == 0xffffu;
+#endif
+
+			if(!allowsMouseInput() && !byKeyboard)	// however, may be invoked by other than the mouse...
+				return;
+			utils::closeCompletionProposalsPopup(*this);
+			texteditor::abortIncrementalSearch(*this);
+
+			graphics::Point location;
+			widgetapi::LocatedUserInput::MouseButton buttons;
+			widgetapi::UserInput::KeyboardModifier modifiers;
+
+			// invoked by the keyboard
+			if(byKeyboard) {
+				// MSDN says "the application should display the context menu at the location of the current selection."
+				location = graphics::font::modelToView(*textRenderer().viewport(), graphics::font::TextHit<kernel::Position>::leading(caret()));
+				// TODO: Support RTL and vertical window layout.
+				graphics::geometry::y(location) += widgetapi::createRenderingContext(*this)->fontMetrics(textRenderer().defaultFont())->cellHeight() + 1;
+				if(!boost::geometry::within(location, textAreaContentRectangle()))
+					location = graphics::Point(geom::_x = 1.0f, geom::_y = 1.0f);
+			} else {
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+				double x, y;
+				if(!abstractEvent.get_coords(x, y))
+					return;	// hmm...
+				Gdk::ModifierType state;
+				if(!abstractEvent.get_state(state))
+					return;
+				location = graphics::Point(geom::_x = x, geom::_y = y);
+				static const Gdk::ModifierType NATIVE_BUTTON_MASK = Gdk::BUTTON1_MASK | Gdk::BUTTON2_MASK | Gdk::BUTTON3_MASK | Gdk::BUTTON4_MASK | Gdk::BUTTON5_MASK;
+				buttons = !byKeyboard ? (state & NATIVE_BUTTON_MASK) : widgetapi::LocatedUserInput::NO_BUTTON;
+				modifiers = state & ~NATIVE_BUTTON_MASK;
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
+#elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+				location = graphics::Point(geom::_x = geom::x(globalLocation), geom::_y = geom::y(globalLocation));
+				widgetapi::mapFromGlobal(*this, location);
+				buttons = widgetapi::LocatedUserInput::NO_BUTTON;
+				modifiers = win32::makeModifiers();
+#endif
+			}
+
+			// ignore if the point is over the scroll bars
+			const graphics::Rectangle localBounds(widgetapi::bounds(*this, false));
+			if(!boost::geometry::within(location, localBounds))
+				return;
+
+			return showContextMenu(widgetapi::LocatedUserInput(location, buttons, modifiers), nativeEvent);
+		}
+
 		/**
 		 * Additionally draws the indicator margin on the vertical ruler.
 		 * @param line The line number

@@ -1089,42 +1089,6 @@ void TextViewer::onVScroll(UINT sbCode, UINT, const win32::Handle<HWND>::Type&) 
 	}
 }
 
-namespace {
-	template<typename Point>
-	inline Point makeMouseLocation(LPARAM lp) {
-#ifndef GET_X_LPARAM
-	// <windowsx.h> defines the followings
-#	define GET_X_LPARAM(l) LOWORD(l)
-#	define GET_Y_LPARAM(l) HIWORD(l)
-#endif
-		return boost::geometry::make<Point>(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
-	}
-	inline widgetapi::UserInput::ModifierKey makeModifiers() {
-		widgetapi::UserInput::ModifierKey modifiers = 0;
-		if(::GetKeyState(VK_SHIFT) < 0)
-			modifiers |= widgetapi::UserInput::SHIFT_DOWN;
-		if(::GetKeyState(VK_CONTROL) < 0)
-			modifiers |= widgetapi::UserInput::CONTROL_DOWN;
-		if(::GetKeyState(VK_MENU) < 0)
-			modifiers |= widgetapi::UserInput::ALT_DOWN;
-		return modifiers;
-	}
-	inline widgetapi::UserInput::ModifierKey makeModifiers(WPARAM wp) {
-		widgetapi::UserInput::ModifierKey modifiers = 0;
-		if((wp & MK_CONTROL) != 0)
-			modifiers = widgetapi::UserInput::CONTROL_DOWN;
-		if((wp & MK_SHIFT) != 0)
-			modifiers = widgetapi::UserInput::SHIFT_DOWN;
-		return modifiers;
-	}
-	inline widgetapi::KeyInput makeKeyInput(WPARAM wp, LPARAM lp) {
-		return widgetapi::KeyInput(wp, makeModifiers(), LOWORD(lp), HIWORD(lp));
-	}
-	inline widgetapi::MouseButtonInput makeMouseButtonInput(widgetapi::UserInput::MouseButton button, WPARAM wp, LPARAM lp) {
-		return widgetapi::MouseButtonInput(makeMouseLocation<graphics::Point>(lp), button, makeModifiers(wp));
-	}
-}
-
 /// @see win32#Window#processMessage
 LRESULT TextViewer::processMessage(UINT message, WPARAM wp, LPARAM lp, bool& consumed) {
 #ifndef WM_UNICHAR
@@ -1346,32 +1310,7 @@ basic_string<WCHAR> TextViewer::provideClassName() const {
 }
 
 /// @see Widget#showContextMenu
-void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, bool byKeyboard) {
-	if(!allowsMouseInput() && !byKeyboard)	// however, may be invoked by other than the mouse...
-		return;
-	utils::closeCompletionProposalsPopup(*this);
-	texteditor::abortIncrementalSearch(*this);
-
-	Point menuPosition;
-
-	// invoked by the keyboard
-	if(byKeyboard) {
-		// MSDN says "the application should display the context menu at the location of the current selection."
-		menuPosition = modelToView(*textRenderer().viewport(), TextHit<k::Position>::leading(caret()), false);
-		// TODO: Support RTL and vertical window layout.
-		geometry::y(menuPosition) += widgetapi::createRenderingContext(*this)->fontMetrics(textRenderer().defaultFont())->cellHeight() + 1;
-		if(!boost::geometry::within(menuPosition, textAreaContentRectangle()))
-			menuPosition = Point(geometry::_x = 1.0f, geometry::_y = 1.0f);
-		widgetapi::mapToGlobal(*this, menuPosition);
-	} else
-		menuPosition = input.location();
-
-	// ignore if the point is over the scroll bars
-	const graphics::Rectangle clientBounds(widgetapi::bounds(*this, false));
-	widgetapi::mapToGlobal(*this, clientBounds);
-	if(!boost::geometry::within(menuPosition, clientBounds))
-		return;
-
+void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, void* nativeEvent) {
 	const k::Document& doc = document();
 	const bool hasSelection = !isSelectionEmpty(caret());
 	const bool readOnly = doc.isReadOnly();
