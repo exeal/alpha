@@ -105,6 +105,8 @@ namespace alpha {
 		BufferEntry newEntry;
 		newEntry.buffer.reset(new Buffer(name));
 		Buffer& newBuffer = *newEntry.buffer;
+		newEntry.nameChangedConnection =
+			newBuffer.nameChangedSignal().connect(std::bind(&BufferList::fireDisplayNameChanged, this, std::placeholders::_1));
 		newEntry.modificationSignChangedConnection =
 			newBuffer.modificationSignChangedSignal().connect(std::bind(&BufferList::documentModificationSignChanged, this, std::placeholders::_1));
 		newEntry.readOnlySignChangedConnection =

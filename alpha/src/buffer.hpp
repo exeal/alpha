@@ -36,11 +36,18 @@ namespace alpha {
 		const ascension::kernel::fileio::TextFileDocumentInput& textFile() const BOOST_NOEXCEPT;
 		/// @}
 
+		/// @name Signals
+		/// @{
+		typedef boost::signals2::signal<void(const Buffer&)> NameChangedSignal;
+		ascension::SignalConnector<NameChangedSignal> nameChangedSignal() BOOST_NOEXCEPT;
+		/// @}
+
 	private:
 		mutable boost::python::object self_;
 		std::unique_ptr<ascension::presentation::Presentation> presentation_;
 		std::unique_ptr<ascension::kernel::fileio::TextFileDocumentInput> textFile_;
 		Glib::ustring name_;
+		NameChangedSignal nameChangedSignal_;
 	};
 
 

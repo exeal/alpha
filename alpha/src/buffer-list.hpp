@@ -109,7 +109,7 @@ namespace alpha {
 		ascension::texteditor::Session editorSession_;
 		struct BufferEntry : private boost::noncopyable {
 			std::unique_ptr<Buffer> buffer;
-			boost::signals2::connection modificationSignChangedConnection, readOnlySignChangedConnection;
+			boost::signals2::connection nameChangedConnection, modificationSignChangedConnection, readOnlySignChangedConnection;
 			BufferEntry() {}
 			BufferEntry(BufferEntry&& other) BOOST_NOEXCEPT : buffer(std::move(other.buffer)) {}
 			~BufferEntry() BOOST_NOEXCEPT;
