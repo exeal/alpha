@@ -84,6 +84,21 @@ namespace alpha {
 		return *presentation_;
 	}
 
+	/**
+	 * Changes the name of the buffer.
+	 * @param newName The new name
+	 * @param unique
+	 */
+	void Buffer::rename(const Glib::ustring& newName, bool unique /* = false */) {
+		if(unique && BufferList::instance().forName(newName) != boost::python::object()) {
+			const Glib::ustring message("Buffer name `" + newName + "' is in use");
+			::PyErr_SetString(PyExc_ValueError, message.c_str());
+			boost::python::throw_error_already_set();
+		}
+		name_ = BufferList::instance().makeUniqueName(newName);
+		nameChangedSignal_(*this);
+	}
+
 	namespace {
 		class RegexTransitionRuleAdapter : public ascension::rules::RegexTransitionRule {
 		public:
