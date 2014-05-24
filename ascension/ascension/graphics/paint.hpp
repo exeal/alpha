@@ -8,10 +8,10 @@
 #ifndef ASCENSION_PAINT_HPP
 #define ASCENSION_PAINT_HPP
 
-#include <ascension/corelib/basic-types.hpp>	// std.tr1.shared_ptr
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/geometry.hpp>
-#include <memory>	// std.unique_ptr, std.enable_shared_from_this
+#include <ascension/graphics/object.hpp>
+#include <memory>
 //#include <boost/operators.hpp>
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 #	include <cairomm/cairomm.h>
@@ -25,8 +25,8 @@ namespace ascension {
 		 * @see RenderingContext2D#fillStyle, RenderingContext2D#strokeStyle,
 		 *      RenderingContext2D#setFillStyle, RenderingContext2D#setStrokeStyle
 		 */
-		class Paint : public std::enable_shared_from_this<Paint> /*,
-			private boost::equality_comparable<Paint>*/, private boost::noncopyable {
+		class Paint : public Wrapper<Paint>, public std::enable_shared_from_this<Paint>
+			 /*, private boost::equality_comparable<Paint>*/ {
 		public:
 			/// Constructor.
 			Paint() BOOST_NOEXCEPT : revisionNumber_(0) {}

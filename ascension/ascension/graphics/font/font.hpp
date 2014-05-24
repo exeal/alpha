@@ -12,6 +12,7 @@
 #include <ascension/graphics/font/font-description.hpp>
 #include <ascension/graphics/font/glyph-vector.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
+#include <ascension/graphics/object.hpp>
 #include <locale>
 #include <memory>
 #include <set>
@@ -73,7 +74,7 @@ namespace ascension {
 			 * Represents a single physical instance of a font, or a set of fonts.
 			 * @see FontFamily, FontDescription, Fontset, FontFace, FontCollection
 			 */
-			class Font : public std::enable_shared_from_this<Font> {
+			class Font : public Wrapper<Font>, public std::enable_shared_from_this<Font> {
 			public:
 #if ASCENSION_SELECTS_SHAPING_ENGINE(CAIRO)
 				explicit Font(Cairo::RefPtr<Cairo::ScaledFont> nativeObject);
@@ -200,7 +201,7 @@ namespace ascension {
 			 * context, and provides a method to enumerate font families.
 			 * @see Fontset, RenderingContext2D
 			 */
-			class FontCollection {
+			class FontCollection : public Wrapper<FontCollection> {
 			public:
 #if ASCENSION_SELECTS_SHAPING_ENGINE(CORE_TEXT)
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)
