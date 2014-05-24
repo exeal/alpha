@@ -38,31 +38,31 @@ namespace ascension {
 			}
 			/// Returns the native object which implements this object.
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
-			Cairo::RefPtr<Cairo::Pattern> asNativeObject() const BOOST_NOEXCEPT {return nativeObject_;}
+			Cairo::RefPtr<Cairo::Pattern> native() const BOOST_NOEXCEPT {return nativeObject_;}
 		protected:
 			void reset(Cairo::RefPtr<Cairo::Pattern> nativeObject) {nativeObject_ = nativeObject;}
 		private:
 			Cairo::RefPtr<Cairo::Pattern> nativeObject_;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
-			???? asNativeObject() const;
+			???? native() const;
 		protected:
 			void reset(???? nativeObject) BOOST_NOEXCEPT;
 		private:
 			???? nativeObject_;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(DIRECT2D)
-			win32::com::SmartPointer<ID2D1Brush> asNativeObject() const BOOST_NOEXCEPT;
+			win32::com::SmartPointer<ID2D1Brush> native() const BOOST_NOEXCEPT;
 		protected:
 			void reset(win32::com::SmartPointer<ID2D1Brush> nativeObject) BOOST_NOEXCEPT;
 		private:
 			win32::com::SmartPointer<ID2D1Brush> nativeObject_;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(QT)
-			const std::unique_ptr<QBrush>& asNativeObject() const BOOST_NOEXCEPT;
+			const std::unique_ptr<QBrush>& native() const BOOST_NOEXCEPT;
 		protected:
 			void reset(std::unique_ptr<QBrush>&& nativeObject) BOOST_NOEXCEPT;
 		private:
 			std::unique_ptr<QBrush> nativeObject_;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
-			const LOGBRUSH& asNativeObject() const BOOST_NOEXCEPT;
+			const LOGBRUSH& native() const BOOST_NOEXCEPT;
 		protected:
 			void reset(LOGBRUSH&& nativeObject) BOOST_NOEXCEPT;
 		private:

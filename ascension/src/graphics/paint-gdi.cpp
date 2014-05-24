@@ -31,6 +31,10 @@ namespace ascension {
 			releaseBrush(nativeObject_);
 		}
 
+		const LOGBRUSH& Paint::native() const BOOST_NOEXCEPT {
+			return nativeObject_;
+		}
+
 		void Paint::reset(LOGBRUSH&& nativeObject) BOOST_NOEXCEPT {
 			std::swap(nativeObject_, nativeObject);
 			releaseBrush(nativeObject);
