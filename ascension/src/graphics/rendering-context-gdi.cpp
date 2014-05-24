@@ -666,7 +666,7 @@ namespace ascension {
 		RenderingContext2D& RenderingContext2D::setFillStyle(std::shared_ptr<const Paint> fillStyle) {
 			if(fillStyle.get() == nullptr)
 				throw NullPointerException("fillStyle");
-			win32::Handle<HBRUSH>::Type newBrush(::CreateBrushIndirect(&fillStyle->asNativeObject()), &::DeleteObject);
+			win32::Handle<HBRUSH>::Type newBrush(::CreateBrushIndirect(&fillStyle->native()), &::DeleteObject);
 			if(newBrush.get() != nullptr) {
 				win32::Handle<HBRUSH>::Type oldBrush(static_cast<HBRUSH>(::SelectObject(nativeObject_.get(), newBrush.get())));
 				if(oldBrush.get() != nullptr) {
@@ -724,7 +724,7 @@ namespace ascension {
 		RenderingContext2D& RenderingContext2D::setStrokeStyle(std::shared_ptr<const Paint> strokeStyle) {
 			if(strokeStyle.get() == nullptr)
 				throw NullPointerException("strokeStyle");
-			changePen(createModifiedPen(&strokeStyle->asNativeObject(), boost::none, boost::none, boost::none));
+			changePen(createModifiedPen(&strokeStyle->native(), boost::none, boost::none, boost::none));
 			savedStates_.top().strokeStyle = std::make_pair(strokeStyle, strokeStyle->revisionNumber());
 			return *this;
 		}
@@ -872,7 +872,7 @@ namespace ascension {
 			if(savedStates_.top().strokeStyle.second != savedStates_.top().strokeStyle.first->revisionNumber())
 				newPen = createModifiedPen(nullptr, boost::none, boost::none, boost::none);
 			if(savedStates_.top().fillStyle.second != savedStates_.top().fillStyle.first->revisionNumber())
-				newBrush.reset(::CreateBrushIndirect(&savedStates_.top().fillStyle.first->asNativeObject()), &::DeleteObject);
+				newBrush.reset(::CreateBrushIndirect(&savedStates_.top().fillStyle.first->native()), &::DeleteObject);
 
 			win32::Handle<HPEN>::Type oldPen;
 			win32::Handle<HBRUSH>::Type oldBrush;
