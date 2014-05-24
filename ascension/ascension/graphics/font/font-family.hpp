@@ -14,6 +14,7 @@
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
 #include <ascension/corelib/basic-types.hpp>		// std.uint32_t, ...
 #include <ascension/graphics/geometry.hpp>
+#include <ascension/graphics/object.hpp>
 #include <functional>	// std.hash
 #include <locale>
 #include <memory>		// std.unique_ptr, std.shared_ptr
@@ -65,7 +66,11 @@ namespace ascension {
 			 *      (http://www.w3.org/TR/SVG11/fonts.html#FontFaceElementFontFamilyAttribute)
 			 * @see FontFace, fontFaces
 			 */
-			class FontFamily : private boost::totally_ordered<FontFamily> {
+			class FontFamily :
+#if ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE) || ASCENSION_SELECTS_SHAPING_ENGINE(PANGO) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
+				public Wrapper<FontFamily>,
+#endif
+				private boost::totally_ordered<FontFamily> {
 			public:
 #if ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)
 				explicit FontFamily(const String& name);

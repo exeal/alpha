@@ -12,6 +12,7 @@
 #include <ascension/graphics/affine-transform.hpp>
 #include <ascension/graphics/color.hpp>
 #include <ascension/graphics/geometry.hpp>
+#include <ascension/graphics/object.hpp>
 #include <ascension/presentation/text-style.hpp>	// presentation.AlignmentBaseline, presentation.TextAnchor
 #include <memory>
 #include <boost/optional.hpp>
@@ -157,7 +158,7 @@ namespace ascension {
 		 * documents.
 		 * Many methods of this class may throw @c PlatformError exception.
 		 */
-		class RenderingContext2D : private boost::noncopyable {
+		class RenderingContext2D : public Wrapper<RenderingContext2D> {
 		public:
 			// platform-native interfaces
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
