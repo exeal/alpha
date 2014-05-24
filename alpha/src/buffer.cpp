@@ -74,6 +74,11 @@ namespace alpha {
 		textFile_.reset(new ascension::kernel::fileio::TextFileDocumentInput(*this));
 	}
 
+	/// Returns the @c NameChangedSignal signal connector.
+	ascension::SignalConnector<Buffer::NameChangedSignal> Buffer::nameChangedSignal() BOOST_NOEXCEPT {
+		return nameChangedSignal_;
+	}
+
 	/// Returns the presentation object of Ascension.
 	ascension::presentation::Presentation& Buffer::presentation() BOOST_NOEXCEPT {
 		return *presentation_;
