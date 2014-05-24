@@ -11,18 +11,29 @@
 
 namespace ascension {
 	namespace graphics {
-		Paint::~Paint() BOOST_NOEXCEPT {
-			switch(nativeObject_.lbStyle) {
-				case BS_DIBPATTERN:
-				case BS_DIBPATTERN8X8:
-				case BS_DIBPATTERNPT:
-					::GlobalFree(reinterpret_cast<HGLOBAL>(nativeObject_.lbHatch));
-					break;
-				case BS_PATTERN:
-				case BS_PATTERN8X8:
-					::DeleteObject(reinterpret_cast<HBITMAP>(nativeObject_.lbHatch));
-					break;
+		namespace {
+			void releaseBrush(LOGBRUSH& brush) BOOST_NOEXCEPT {
+				switch(brush.lbStyle) {
+					case BS_DIBPATTERN:
+					case BS_DIBPATTERN8X8:
+					case BS_DIBPATTERNPT:
+						::GlobalFree(reinterpret_cast<HGLOBAL>(brush.lbHatch));
+						break;
+					case BS_PATTERN:
+					case BS_PATTERN8X8:
+						::DeleteObject(reinterpret_cast<HBITMAP>(brush.lbHatch));
+						break;
+				}
 			}
+		}
+
+		Paint::~Paint() BOOST_NOEXCEPT {
+			releaseBrush(nativeObject_);
+		}
+
+		void Paint::reset(LOGBRUSH&& nativeObject) BOOST_NOEXCEPT {
+			std::swap(nativeObject_, nativeObject);
+			releaseBrush(nativeObject);
 		}
 
 		SolidColor::SolidColor(const Color& color) : color_(color) {
