@@ -8,6 +8,7 @@
 #include <ascension/viewer/viewer.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 
+#include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>
 
 namespace ascension {
@@ -192,6 +193,27 @@ namespace ascension {
 				}
 			}
 			return false;
+		}
+
+		/**
+		 * Invokes @c #paint method.
+		 * @see Gtk#Widget#on_draw
+		 */
+		bool TextViewer::on_draw(const Cairo::RefPtr<Cairo::Context>& context) {
+			double x1, y1, x2, y2;
+			context->get_clip_extents(x1, y1, x2, y2);
+			const graphics::Rectangle boundsToPaint(std::make_pair(
+				graphics::Point(graphics::geometry::_x = static_cast<graphics::Scalar>(x1), graphics::geometry::_y = static_cast<graphics::Scalar>(y1)),
+				graphics::Point(graphics::geometry::_x = static_cast<graphics::Scalar>(x2), graphics::geometry::_y = static_cast<graphics::Scalar>(y2))));
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
+			graphics::PaintContext pc(graphics::RenderingContext2D(context), boundsToPaint);
+#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
+			graphics::PaintContext pc(widgetapi::createRenderingContext(*this), boundsToPaint);
+#else
+			ASCENSION_CANT_DETECT_PLATFORM();
+#endif
+			paint(pc);
+			return true;
 		}
 
 		/**
