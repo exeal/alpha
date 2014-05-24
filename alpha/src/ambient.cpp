@@ -280,23 +280,6 @@ wstring alpha::ambient::convertUnicodeObjectToWideString(PyObject* object) {
 			installers_.clear();
 		}
 
-		template<typename Exception>
-		void Interpreter::installException(const std::string& name, boost::python::object base /* = py::object() */) {
-			if(exceptionClasses_.find(name) != std::end(exceptionClasses_))
-				throw std::invalid_argument("the exception with the given name has already been installed.");
-
-			const std::string fullName("ambient." + name);
-			boost::python::object newException(boost::python::handle<>(::PyErr_NewException(fullName.c_str(), base.ptr(), nullptr)));
-			if(-1 == ::PyModule_AddObject(toplevelPackage().ptr(), name.c_str(), newException.ptr()))
-				throw std::runtime_error("PyModule_AddObject failed.");
-
-			boost::python::register_exception_translator<Exception>([&newException](const Exception& e) {
-				::PyErr_SetString(newException.ptr(), e.what());
-			});
-
-			exceptionClasses_.insert(std::make_pair(name, newException));
-		}
-
 		Interpreter& Interpreter::instance() {
 			static Interpreter singleton;
 			return singleton;
