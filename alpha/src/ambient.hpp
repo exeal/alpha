@@ -64,6 +64,28 @@ namespace alpha {
 			std::map<const std::string, boost::python::object> exceptionClasses_;
 			boost::optional<boost::python::ssize_t> numericPrefix_;
 		};
+
+		/**
+		 * @tparam Exception The exception type to install
+		 * @param name The name of the exception type. The qualified name is prefixed by "ambient."
+		 * @param base The base type of the exception registered newly
+		 */
+		template<typename Exception>
+		inline void Interpreter::installException(const std::string& name, boost::python::object base /* = py::object() */) {
+			if(exceptionClasses_.find(name) != std::end(exceptionClasses_))
+				throw std::invalid_argument("the exception with the given name has already been installed.");
+
+			const std::string fullName("ambient." + name);
+			boost::python::object newException(boost::python::handle<>(::PyErr_NewException(fullName.c_str(), base.ptr(), nullptr)));
+			if(-1 == ::PyModule_AddObject(toplevelPackage().ptr(), name.c_str(), newException.ptr()))
+				throw std::runtime_error("PyModule_AddObject failed.");
+
+			boost::python::register_exception_translator<Exception>([&newException](const Exception& e) {
+				::PyErr_SetString(newException.ptr(), e.what());
+			});
+
+			exceptionClasses_.insert(std::make_pair(name, newException));
+		}
 	}
 }
 
