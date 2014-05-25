@@ -235,6 +235,7 @@
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\drag-and-drop-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\widget-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\widget-windows.cpp" />
+    <ClCompile Include="..\..\ascension\src\win32\windows.cpp" />
     <ClCompile Include="..\src\about-dialog.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>

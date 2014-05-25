@@ -46,59 +46,6 @@ using namespace ascension::viewers;
 using namespace std;
 namespace k = ascension::kernel;
 
-namespace {
-	// ‚·‚®‰º‚ÅŽg‚¤
-	BOOL CALLBACK enumResLangProc(HMODULE, const WCHAR*, const WCHAR* name, WORD langID, LONG_PTR param) {
-		if(name == nullptr)
-			return false;
-		else if(langID != MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US))
-			*reinterpret_cast<LANGID*>(param) = langID;
-		return true;
-	}
-} // namespace @0
-
-// defined at ascension/win32/windows.hpp
-LANGID ASCENSION_FASTCALL ascension::win32::userDefaultUILanguage() BOOST_NOEXCEPT {
-	// references (from Global Dev)
-	// - Writing Win32 Multilingual User Interface Applications (http://www.microsoft.com/globaldev/handson/dev/muiapp.mspx)
-	// - Ask Dr. International Column #9 (http://www.microsoft.com/globaldev/drintl/columns/009/default.mspx#EPD)
-	static LANGID id = 0;
-	if(id != 0)
-		return id;
-	id = MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US);
-	OSVERSIONINFOW version;
-	version.dwOSVersionInfoSize = sizeof(OSVERSIONINFOW);
-	::GetVersionExW(&version);
-	assert(version.dwPlatformId == VER_PLATFORM_WIN32_NT);
-
-	// forward to GetUserDefaultUILanguage (kernel32.dll) if after 2000/XP/Server 2003
-	if(version.dwMajorVersion >= 5) {
-		if(HMODULE dll = ::LoadLibraryW(L"kernel32.dll")) {
-			if(LANGID(WINAPI *function)(void) = reinterpret_cast<LANGID(WINAPI*)(void)>(::GetProcAddress(dll, "GetUserDefaultUILanguage")))
-				id = (*function)();
-			::FreeLibrary(dll);
-		}
-	}
-
-	// use language of version information of ntdll.dll if on NT 3.51-4.0
-	else if(HMODULE dll = ::LoadLibraryW(L"ntdll.dll")) {
-		::EnumResourceLanguagesW(dll, MAKEINTRESOURCEW(16)/*RT_VERSION*/,
-			MAKEINTRESOURCEW(1), enumResLangProc, reinterpret_cast<LONG_PTR>(&id));
-		::FreeLibrary(dll);
-		if(id == MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US)) {	// special cases
-			const UINT cp = ::GetACP();
-			if(cp == 874)	// Thai
-				id = MAKELANGID(LANG_THAI, SUBLANG_DEFAULT);
-			else if(cp == 1255)	// Hebrew
-				id = MAKELANGID(LANG_HEBREW, SUBLANG_DEFAULT);
-			else if(cp == 1256)	// Arabic
-				id = MAKELANGID(LANG_ARABIC, SUBLANG_ARABIC_SAUDI_ARABIA);
-		}
-	}
-
-	return id;	// (... or use value of HKCU\Control Panel\Desktop\ResourceLocale if on Win 9x
-}
-
 
 #ifndef ASCENSION_NO_ACTIVE_ACCESSIBILITY
 
