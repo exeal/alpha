@@ -50,6 +50,10 @@ namespace ascension {
 		LinearGradient::LinearGradient(const Point& p0, const Point& p1) {
 			// TODO: Not implemented.
 		}
+
+		void LinearGradient::addColorStop(double offset, const Color& color) {
+			// TODO: Not implemented.
+		}
 	}
 }
 

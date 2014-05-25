@@ -957,7 +957,7 @@ namespace ascension {
 					const boost::iterator_range<const WORD*> glyphRange(cluster.currentGlyphRange());
 					for(std::size_t i = 0; i < static_cast<std::size_t>(glyphRange.size()); ++i, x += glyphAdvances[i]) {
 						GLYPHMETRICS gm;
-						if(GDI_ERROR == ::GetGlyphOutlineW(context.asNativeObject().get(), glyphRange[i], GGO_GLYPH_INDEX | GGO_METRICS, &gm, 0, nullptr, &matrix)) {
+						if(GDI_ERROR == ::GetGlyphOutlineW(context.native().get(), glyphRange[i], GGO_GLYPH_INDEX | GGO_METRICS, &gm, 0, nullptr, &matrix)) {
 							lastError = ::GetLastError();
 							break;
 						}
@@ -988,7 +988,7 @@ namespace ascension {
 			inline std::size_t TextRunImpl::countMissingGlyphs(const RenderingContext2D& context) const {
 				SCRIPT_FONTPROPERTIES fp;
 				fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-				const HRESULT hr = ::ScriptGetFontProperties(context.asNativeObject().get(), &glyphs_->fontCache, &fp);
+				const HRESULT hr = ::ScriptGetFontProperties(context.native().get(), &glyphs_->fontCache, &fp);
 				if(FAILED(hr))
 					throw makePlatformError(hr);	// can't handle
 				// following is not offical way, but from Mozilla (gfxWindowsFonts.cpp)
@@ -1362,7 +1362,7 @@ namespace ascension {
 				context.setFont(font());
 				GLYPHMETRICS gm;
 				const MAT2 matrix = {1, 0, 0, 1};	// TODO: Consider glyph transform.
-				const DWORD lastError = (::GetGlyphOutlineW(context.asNativeObject().get(),
+				const DWORD lastError = (::GetGlyphOutlineW(context.native().get(),
 					glyphCode(index), GGO_GLYPH_INDEX | GGO_METRICS, &gm, 0, nullptr, &matrix) == GDI_ERROR) ? ::GetLastError() : ERROR_SUCCESS;
 				context.setFont(oldFont);
 				if(lastError != ERROR_SUCCESS)
@@ -1740,23 +1740,23 @@ namespace ascension {
 //				RECT temp;
 //				if(dirtyRect != nullptr)
 //					::SetRect(&temp, dirtyRect->left(), dirtyRect->top(), dirtyRect->right(), dirtyRect->bottom());
-				if(onlyStroke && !win32::boole(::BeginPath(context.asNativeObject().get())))
+				if(onlyStroke && !win32::boole(::BeginPath(context.native().get())))
 					throw makePlatformError();
 				assert(analysis_.fLogicalOrder == 0);
 				// paint glyphs
 				const RECT boundsToPaint(toNative<RECT>(context.boundsToPaint()));
 				const boost::iterator_range<const int*> justifiedGlyphAdvances(justifiedAdvances());
-				const HRESULT hr = ::ScriptTextOut(context.asNativeObject().get(), &glyphs_->fontCache,
+				const HRESULT hr = ::ScriptTextOut(context.native().get(), &glyphs_->fontCache,
 					static_cast<int>(geometry::x(origin)), static_cast<int>(geometry::y(origin)),
 					0, &boundsToPaint, &analysis_, nullptr, 0,
 					glyphs().begin(), numberOfGlyphs(), advances().begin(),
 					(justifiedGlyphAdvances.begin() != nullptr) ? justifiedGlyphAdvances.begin() : nullptr,
 					glyphOffsets().begin());
 				if(onlyStroke)
-					::EndPath(context.asNativeObject().get());
+					::EndPath(context.native().get());
 				if(FAILED(hr))
 					throw makePlatformError(hr);
-				if(onlyStroke && !win32::boole(::StrokePath(context.asNativeObject().get())))
+				if(onlyStroke && !win32::boole(::StrokePath(context.native().get())))
 					throw makePlatformError();
 			}
 
@@ -2545,12 +2545,12 @@ namespace ascension {
 				// 3. generate glyphs for each text runs
 				const RenderingContext2D context(win32::detail::screenDC());
 				BOOST_FOREACH(TextRunImpl* run, textRuns)
-					run->shape(context.asNativeObject());
+					run->shape(context.native());
 				TextRunImpl::substituteGlyphs(boost::make_iterator_range(textRuns));
 
 				// 4. position glyphs for each text runs
 				for(auto run(std::begin(textRuns)), b(std::begin(textRuns)), e(std::end(textRuns)); run != e; ++run)
-					(*run)->positionGlyphs(context.asNativeObject(), calculatedStyles[run - b].attribute);
+					(*run)->positionGlyphs(context.native(), calculatedStyles[run - b].attribute);
 
 				// 5. position each text runs
 				const FontDescription nominalFontDescription(
