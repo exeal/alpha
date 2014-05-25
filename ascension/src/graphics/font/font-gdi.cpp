@@ -264,3 +264,28 @@ namespace ascension {
 }
 
 #endif	// ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
+
+#if ASCENSION_SUPPORTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SUPPORTS_SHAPING_ENGINE(WIN32_GDI) || ASCENSION_SUPPORTS_SHAPING_ENGINE(WIN32_GDIPLUS)
+#include <ascension/graphics/rendering-device.hpp>
+
+namespace ascension {
+	namespace graphics {
+		namespace detail {
+			template<> font::FontDescription&& fromNative<font::FontDescription>(const LOGFONTW& object) {
+				return font::FontDescription(font::FontFamily(object.lfFaceName), -object.lfHeight * 72 / defaultDpiY(),
+					font::FontProperties(static_cast<font::FontWeight>(object.lfWeight),
+						font::FontStretch::NORMAL, win32::boole(object.lfItalic) ? font::FontStyle::ITALIC : font::FontStyle::NORMAL));
+			}
+
+			LOGFONTW&& toNative(const font::FontDescription& object, const LOGFONTW* /* = nullptr */) {
+				win32::AutoZero<LOGFONT> result;
+				result.lfHeight = static_cast<LONG>(-object.pointSize() * defaultDpiY() / 72);
+				result.lfWeight = object.properties().weight;
+				result.lfItalic = object.properties().style != font::FontStyle::ITALIC || object.properties().style != font::FontStyle::OBLIQUE;
+				std::wcsncpy(result.lfFaceName, object.family().name().c_str(), std::extent<decltype(result.lfFaceName)>::value);
+				return std::move(result);
+			}
+		}
+	}
+}
+#endif

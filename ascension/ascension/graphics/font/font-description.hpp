@@ -286,7 +286,7 @@ namespace ascension {
 #endif
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
 			template<typename T> T&& fromNative(const Pango::FontDescription& object);
-			template font::FontDescription&& fromNative<font::FontDescription>(const Pango::FontDescription& object);
+//			template font::FontDescription&& fromNative<font::FontDescription>(const Pango::FontDescription& object);
 			Pango::FontDescription&& toNative(const font::FontDescription& object, const Pango::FontDescription* = nullptr);
 #endif
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(QT)
@@ -296,7 +296,7 @@ namespace ascension {
 #endif
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SUPPORTS_SHAPING_ENGINE(WIN32_GDI) || ASCENSION_SUPPORTS_SHAPING_ENGINE(WIN32_GDIPLUS)
 			template<typename T> T&& fromNative(const LOGFONTW& object);
-			template font::FontDescription&& fromNative<font::FontDescription>(const LOGFONTW& object);
+//			template font::FontDescription&& fromNative<font::FontDescription>(const LOGFONTW& object);
 			LOGFONTW&& toNative(const font::FontDescription& object, const LOGFONTW* = nullptr);
 #endif
 		}
