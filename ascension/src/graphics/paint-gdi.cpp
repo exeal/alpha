@@ -46,6 +46,10 @@ namespace ascension {
 			brush.lbColor = color.as<COLORREF>();
 			reset(std::move(brush));
 		}
+
+		LinearGradient::LinearGradient(const Point& p0, const Point& p1) {
+			// TODO: Not implemented.
+		}
 	}
 }
 
