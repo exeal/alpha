@@ -102,6 +102,9 @@
     <Filter Include="ascension\Source Files\rules">
       <UniqueIdentifier>{d027426b-2ba0-4ada-8b8f-4aa635efc72a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Source Files\corelib\win32">
+      <UniqueIdentifier>{9bea9113-8894-4169-a20d-a938e3515830}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -409,6 +412,9 @@
     </ClCompile>
     <ClCompile Include="..\..\ascension\src\graphics\font\font-family-other.cpp">
       <Filter>ascension\Source Files\graphics\font</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ascension\src\win32\windows.cpp">
+      <Filter>ascension\Source Files\corelib\win32</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
