@@ -10,6 +10,7 @@
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, ...
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/font/text-renderer.hpp>
+#include <boost/foreach.hpp>
 
 namespace ascension {
 //#define TRACE_LAYOUT_CACHES
@@ -441,6 +442,18 @@ namespace ascension {
 					layouts().invalidate();
 			}
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
+
+			/// Returns the computed space widths.
+			const PhysicalFourSides<Scalar>& TextRenderer::spaceWidths() const BOOST_NOEXCEPT {
+				// TODO: Not implemented.
+				static boost::optional<PhysicalFourSides<Scalar>> dummy;
+				if(!dummy) {
+					dummy = PhysicalFourSides<Scalar>();
+					BOOST_FOREACH(auto side, *dummy)
+						side = static_cast<Scalar>(0);
+				}
+				return *dummy;
+			}
 
 			/// @see TextToplevelStyleListener#textToplevelStyleChanged
 			void TextRenderer::textToplevelStyleChanged(std::shared_ptr<const presentation::TextToplevelStyle>) {
