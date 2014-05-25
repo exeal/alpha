@@ -27,9 +27,9 @@ namespace ascension {
 				surface = shape.asNativeObject();
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 				const std::unique_ptr<graphics::RenderingContext2D> context(graphics::Screen::instance().createGraphicsContext());
-				const win32::Handle<HDC>::Type dc(context->asNativeObject());
+				const win32::Handle<HDC>::Type dc(context->native());
 				HBITMAP oldBitmap = static_cast<HBITMAP>(::SelectObject(dc.get(), shape.asNative().get()));
-				surface = Cairo::Win32Surface::create(context->asNativeObject().get());
+				surface = Cairo::Win32Surface::create(context->native().get());
 #else
 				ASCENSION_CANT_DETECT_PLATFORM();
 #endif

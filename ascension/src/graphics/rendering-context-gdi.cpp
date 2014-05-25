@@ -63,11 +63,6 @@ namespace ascension {
 			return *this;
 		}
 
-		/// Returns the internal Win32 @c HDC value.
-		win32::Handle<HDC>::Type RenderingContext2D::asNativeObject() const BOOST_NOEXCEPT {
-			return nativeObject_;
-		}
-
 		font::FontCollection&& RenderingContext2D::availableFonts() const {
 			return font::FontCollection(nativeObject_);
 		}
@@ -310,12 +305,12 @@ namespace ascension {
 
 			RenderingContext2D& paintText(RenderingContext2D& context, const StringPiece& text,
 					const Point& origin, boost::optional<Scalar> maximumMeasure, bool onlyStroke) {
-				const SubpathsSaver sb(context.asNativeObject());
-				const win32::Handle<HDC>::Type dc(context.asNativeObject());
+				const SubpathsSaver sb(context.native());
+				const win32::Handle<HDC>::Type dc(context.native());
 				std::unique_ptr<const FontSaver> fontSaver;
 				win32::Handle<HFONT>::Type condensedFont;
 				if(maximumMeasure) {
-					fontSaver.reset(new FontSaver(context.asNativeObject()));
+					fontSaver.reset(new FontSaver(context.native()));
 					const Scalar measure = geometry::dx(context.measureText(text));
 					if(measure > *maximumMeasure) {
 						LOGFONTW lf;
@@ -567,6 +562,11 @@ namespace ascension {
 				throw makePlatformError();
 			hasCurrentSubpath_ = true;
 			return *this;
+		}
+
+		/// Returns the internal Win32 @c HDC value.
+		win32::Handle<HDC>::Type RenderingContext2D::native() const BOOST_NOEXCEPT {
+			return nativeObject_;
 		}
 
 		RenderingContext2D& RenderingContext2D::putImageData(

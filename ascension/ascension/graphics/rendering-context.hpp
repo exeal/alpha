@@ -33,20 +33,6 @@
 
 namespace ascension {
 	namespace graphics {
-#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
-		typedef Cairo::RefPtr<Cairo::Context> NativeRenderingContext2D;
-#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
-		typedef CGContextRef NativeRenderingContext2D;
-#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(DIRECT2D)
-		typedef win32::com::SmartPointer<ID2D1RenderTarget> NativeRenderingContext2D;
-#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(QT)
-		typedef QPainter& NativeRenderingContext2D;
-#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
-		typedef win32::Handle<HDC>::Type NativeRenderingContext2D;
-#elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
-		typedef Gdiplus::Graphics& NativeRenderingContext2D;
-#endif
-
 		/**
 		 * Specifies how shapes and images are drawn onto the existing bitmap.
 		 * @see RenderingContext2D#globalCompositeOperation,
@@ -163,29 +149,29 @@ namespace ascension {
 			// platform-native interfaces
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(CAIRO)
 			explicit RenderingContext2D(Cairo::RefPtr<Cairo::Context> nativeObject);
-			Cairo::RefPtr<Cairo::Context> asNativeObject();
-			Cairo::RefPtr<const Cairo::Context> asNativeObject() const;
+			Cairo::RefPtr<Cairo::Context> native();
+			Cairo::RefPtr<const Cairo::Context> native() const;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
-			CGContextRef asNativeObject();
-			const CGContextRef asNativeObject() const;
+			CGContextRef native();
+			const CGContextRef native() const;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(DIRECT2D)
 			explicit RenderingContext2D(win32::com::SmartPointer<ID2D1RenderTarget> nativeObject);
-			win32::com::SmartPointer<ID2D1RenderTarget> asNativeObject() const;
+			win32::com::SmartPointer<ID2D1RenderTarget> native() const;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(QT)
 			explicit RenderingContext2D(QPainter& nativeObject);	// weak ref.
 			explicit RenderingContext2D(std::unique_ptr<QPainter> nativeObject);
 			explicit RenderingContext2D(std::shared_ptr<QPainter> nativeObject);
-			QPainter& asNativeObject();
-			const QPainter& asNativeObject() const;
+			QPainter& native();
+			const QPainter& native() const;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 			explicit RenderingContext2D(win32::Handle<HDC>::Type nativeObject);
-			win32::Handle<HDC>::Type asNativeObject() const;
+			win32::Handle<HDC>::Type native() const;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
 			explicit RenderingContext2D(Gdiplus::Graphics& nativeObject);	// weak ref.
 			explicit RenderingContext2D(std::unique_ptr<Gdiplus::Graphics> nativeObject);
 			explicit RenderingContext2D(std::shared_ptr<Gdiplus::Graphics> nativeObject);
-			Gdiplus::Graphics& asNativeObject();
-			const Gdiplus::Graphics& asNativeObject() const;
+			Gdiplus::Graphics& native();
+			const Gdiplus::Graphics& native() const;
 #endif
 		public:
 			/// Move-constructor.
@@ -831,7 +817,8 @@ namespace ascension {
 			 * @param context The rendering context
 			 * @param boundsToPaint The rectangle in which the painting is requested
 			 */
-			PaintContext(std::unique_ptr<RenderingContext2D> context, const Rectangle& boundsToPaint);
+			PaintContext(std::unique_ptr<RenderingContext2D> context, const Rectangle& boundsToPaint)
+				: RenderingContext2D(context->native()), boundsToPaint_(boundsToPaint) {}
 			/// Returns the rendering context.
 //			RenderingContext2D& operator*() BOOST_NOEXCEPT {return context_;}
 			/// Returns the rendering context.
