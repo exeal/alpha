@@ -404,7 +404,7 @@ namespace ascension {
 		}
 
 		std::unique_ptr<const font::FontMetrics<Scalar>> RenderingContext2D::fontMetrics(std::shared_ptr<const font::Font> font /* = nullptr */) const {
-			return std::unique_ptr<const font::FontMetrics<Scalar>>(new GdiFontMetrics(nativeObject_, font->asNativeObject()));
+			return std::unique_ptr<const font::FontMetrics<Scalar>>(new GdiFontMetrics(nativeObject_, font->native()));
 		}
 
 		font::FontRenderContext&& RenderingContext2D::fontRenderContext() const BOOST_NOEXCEPT {
@@ -415,7 +415,7 @@ namespace ascension {
 
 			bool antiAliased;
 			LOGFONTW lf;
-			if(::GetObjectW(font()->asNativeObject().get(), sizeof(decltype(lf)), &lf) == 0)
+			if(::GetObjectW(font()->native().get(), sizeof(decltype(lf)), &lf) == 0)
 				throw makePlatformError();
 			if(lf.lfQuality == ANTIALIASED_QUALITY || lf.lfQuality == CLEARTYPE_QUALITY)
 				antiAliased = true;
@@ -680,9 +680,9 @@ namespace ascension {
 		}
 
 		RenderingContext2D& RenderingContext2D::setFont(std::shared_ptr<const font::Font> font) {
-			if(font.get() == nullptr || font->asNativeObject().get() == nullptr)
+			if(font.get() == nullptr || font->native().get() == nullptr)
 				throw NullPointerException("font");
-			::SelectObject(nativeObject_.get(), font->asNativeObject().get());
+			::SelectObject(nativeObject_.get(), font->native().get());
 			savedStates_.top().font = font;
 			return *this;
 		}
