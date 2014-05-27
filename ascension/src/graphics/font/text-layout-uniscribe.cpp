@@ -786,7 +786,7 @@ namespace ascension {
 				WORD blankGlyph;
 				HRESULT hr = ::ScriptGetCMap(dc.get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
 				if(hr == E_PENDING) {
-					oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font.asNativeObject().get()));
+					oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font.native().get()));
 					hr = ::ScriptGetCMap(dc.get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
 				}
 				if(hr == S_OK) {
@@ -1776,7 +1776,7 @@ namespace ascension {
 				HRESULT hr = ::ScriptPlace(nullptr, &glyphs_->fontCache, glyphs_->indices.get(), numberOfGlyphs(),
 					glyphs_->visualAttributes.get(), &analysis_, advances.get(), offsets.get(), nullptr/*&width*/);
 				if(hr == E_PENDING) {
-					HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font()->asNativeObject().get()));
+					HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font()->native().get()));
 					hr = ::ScriptPlace(dc.get(), &glyphs_->fontCache, glyphs_->indices.get(), numberOfGlyphs(),
 						glyphs_->visualAttributes.get(), &analysis_, advances.get(), offsets.get(), nullptr/*&width*/);
 					::SelectObject(dc.get(), oldFont);
@@ -1892,7 +1892,7 @@ namespace ascension {
 				// TODO: check if the requested style (or the default one) disables shaping.
 
 				RawGlyphVector glyphs(glyphs_->position, glyphs_->font.get().font(), glyphs_->font.get().fontRenderContext(), glyphs_->scriptTag);
-				HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font()->asNativeObject().get()));
+				HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font()->native().get()));
 				HRESULT hr = generateGlyphs(dc, *this, analysis_, glyphs);
 				if(hr == USP_E_SCRIPT_NOT_IN_FONT) {
 					analysis_.eScript = SCRIPT_UNDEFINED;

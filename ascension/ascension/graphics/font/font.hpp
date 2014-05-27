@@ -78,41 +78,41 @@ namespace ascension {
 			public:
 #if ASCENSION_SELECTS_SHAPING_ENGINE(CAIRO)
 				explicit Font(Cairo::RefPtr<Cairo::ScaledFont> nativeObject);
-				Glib::RefPtr<Cairo::ScaledFont> asNativeObject();
-				Glib::RefPtr<const Cairo::ScaledFont> asNativeObject() const;
+				Glib::RefPtr<Cairo::ScaledFont> native();
+				Glib::RefPtr<const Cairo::ScaledFont> native() const;
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(CORE_GRAPHICS)
 				explicit Font(cg::Reference<CGFontRef>&& nativeObject);
-				cg::Reference<CGFontRef>& asNativeObject() const;
+				cg::Reference<CGFontRef>& native() const;
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(CORE_TEXT)
 				explicit Font(cg::Reference<CTFontRef>&& nativeObject);
-				cg::Reference<CTFontRef>& asNativeObject() const;
+				cg::Reference<CTFontRef>& native() const;
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)
 				explicit Font(win32::com::SmartPointer<IDWriteFont> nativeObject);
-				win32::com::SmartPointer<IDWriteFont> asNativeObject() const;
+				win32::com::SmartPointer<IDWriteFont> native() const;
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(HARFBUZZ)
 				explicit Font(boost::intrusive_ptr<hb_font_t> nativeObject);
-				boost::intrusive_ptr<hb_font_t> asNativeObject() const;
+				boost::intrusive_ptr<hb_font_t> native() const;
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(PANGO)
 //				explicit Font(Glib::RefPtr<Pango::Font> nativeObject);
-//				Glib::RefPtr<Pango::Font> asNativeObject();
-//				Glib::RefPtr<const Pango::Font> asNativeObject() const;
+//				Glib::RefPtr<Pango::Font> native();
+//				Glib::RefPtr<const Pango::Font> native() const;
 				explicit Font(Glib::RefPtr<Pango::Fontset> nativeObject);
-				Glib::RefPtr<Pango::Fontset> asNativeObject();
-				Glib::RefPtr<const Pango::Fontset> asNativeObject() const;
+				Glib::RefPtr<Pango::Fontset> native();
+				Glib::RefPtr<const Pango::Fontset> native() const;
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(QT)
 //				explicit Font(std::shared_ptr<QRawFont> nativeObject);
-//				std::shared_ptr<QRawFont> asNativeObject();
-//				std::shared_ptr<const QRawFont> asNativeObject() const;
+//				std::shared_ptr<QRawFont> native();
+//				std::shared_ptr<const QRawFont> native() const;
 				explicit Font(std::shared_ptr<QFont> nativeObject);
-				std::shared_ptr<QFont> asNativeObject();
-				std::shared_ptr<const QFont> asNativeObject() const;
+				std::shared_ptr<QFont> native();
+				std::shared_ptr<const QFont> native() const;
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
 				explicit Font(win32::Handle<HFONT>::Type nativeObject) BOOST_NOEXCEPT;
-				win32::Handle<HFONT>::Type asNativeObject() const BOOST_NOEXCEPT;
+				win32::Handle<HFONT>::Type native() const BOOST_NOEXCEPT;
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
 				explicit Font(std::shared_ptr<Gdiplus::Font> nativeObject);
-				std::shared_ptr<Gdiplus::Font> asNativeObject();
-				std::shared_ptr<const Gdiplus::Font> asNativeObject() const;
+				std::shared_ptr<Gdiplus::Font> native();
+				std::shared_ptr<const Gdiplus::Font> native() const;
 #endif
 				/**
 				 * Creates a @c GlyphVector by mapping characters to glyphs one-to-one based on the

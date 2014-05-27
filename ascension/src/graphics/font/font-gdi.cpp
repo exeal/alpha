@@ -9,6 +9,7 @@
 #include <ascension/graphics/font/font.hpp>
 
 #if ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
+#include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/config.hpp>
 #include <vector>
@@ -22,6 +23,81 @@
 
 namespace ascension {
 	namespace graphics {
+		namespace {
+			LOGFONT&& makeLogFont(win32::Handle<HDC>::Type deviceContext, const font::FontDescription& description, const AffineTransform& transform, boost::optional<double> sizeAdjust) {
+				const String& familyName = description.family().name();
+				if(familyName.length() >= LF_FACESIZE)
+					throw std::length_error("description.family().name()");
+
+				LONG orientation;
+				if(geometry::equals(transform, geometry::makeQuadrantRotationTransform(0)))
+					orientation = 0;
+				else if(geometry::equals(transform, geometry::makeQuadrantRotationTransform(1)))
+					orientation = 2700;
+				else if(geometry::equals(transform, geometry::makeQuadrantRotationTransform(2)))
+					orientation = 1800;
+				else if(geometry::equals(transform, geometry::makeQuadrantRotationTransform(3)))
+					orientation = 900;
+				else
+					throw std::invalid_argument("transform");	// TODO: This version of code supports only simple quadrant-rotations.
+
+				const int oldMapMode = ::SetMapMode(deviceContext.get(), MM_TEXT);
+				if(oldMapMode == 0)
+					throw makePlatformError();
+				int dpi;
+				if(orientation == 0 || orientation == 1800)
+					dpi = ::GetDeviceCaps(deviceContext.get(), LOGPIXELSY);
+				else if(orientation == 900 || orientation == 2700)
+					dpi = ::GetDeviceCaps(deviceContext.get(), LOGPIXELSX);
+				else
+					dpi = static_cast<int>(sqrt(
+						std::pow(static_cast<float>(::GetDeviceCaps(deviceContext.get(), LOGPIXELSX)), 2)
+						+ std::pow(static_cast<float>(::GetDeviceCaps(deviceContext.get(), LOGPIXELSY)), 2)));
+				::SetMapMode(deviceContext.get(), oldMapMode);
+
+				// TODO: handle properties.orientation().
+
+				win32::AutoZero<LOGFONTW> lf;
+				lf.lfHeight = -font::round(description.pointSize() * dpi / 72.0);
+				lf.lfEscapement = lf.lfOrientation = orientation;
+				lf.lfWeight = description.properties().weight;
+				lf.lfItalic = (description.properties().style == font::FontStyle::ITALIC) || (description.properties().style == font::FontStyle::OBLIQUE);
+				std::wcscpy(lf.lfFaceName, familyName.c_str());
+
+				// handle 'font-size-adjust'
+				if(sizeAdjust != boost::none && boost::get(sizeAdjust) > 0.0) {
+					win32::Handle<HFONT>::Type font(::CreateFontIndirectW(&lf), &::DeleteObject);
+					win32::Handle<HFONT>::Type oldFont(static_cast<HFONT>(::SelectObject(deviceContext.get(), font.get())), ascension::detail::NullDeleter());
+					TEXTMETRICW tm;
+					if(win32::boole(::GetTextMetricsW(deviceContext.get(), &tm))) {
+						GLYPHMETRICS gm;
+						const MAT2 temp = {{0, 1}, {0, 0}, {0, 0}, {0, 1}};
+						const int xHeight =
+							(::GetGlyphOutlineW(deviceContext.get(), L'x', GGO_METRICS, &gm, 0, nullptr, nullptr) != GDI_ERROR && gm.gmptGlyphOrigin.y > 0) ?
+								gm.gmptGlyphOrigin.y : font::round(static_cast<double>(tm.tmAscent) * 0.56);
+						const double aspect = static_cast<double>(xHeight) / static_cast<double>(tm.tmHeight - tm.tmInternalLeading);
+						font::FontDescription adjustedDescription(description);
+						adjustedDescription.setPointSize(std::max(description.pointSize() * (boost::get(sizeAdjust) / aspect), 1.0));
+						::SelectObject(deviceContext.get(), oldFont.get());
+						return makeLogFont(deviceContext, adjustedDescription, transform, boost::none);
+					}
+					::SelectObject(deviceContext.get(), oldFont.get());
+				}
+
+				// handle 'font-stretch'
+				if(description.properties().stretch != font::FontStretch::NORMAL) {
+					// TODO: this implementation is too simple...
+					win32::Handle<HFONT>::Type font(::CreateFontIndirectW(&lf), &::DeleteObject);
+					if(::GetObjectW(font.get(), sizeof(LOGFONTW), &lf) > 0) {
+						static const int WIDTH_RATIOS[] = {1000, 1000, 1000, 500, 625, 750, 875, 1125, 1250, 1500, 2000, 1000};
+						lf.lfWidth = ::MulDiv(lf.lfWidth, WIDTH_RATIOS[description.properties().stretch], 1000);
+					}
+				}
+
+				return std::move(lf);
+			}
+		}
+
 		namespace font {
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 			namespace {
@@ -94,8 +170,14 @@ namespace ascension {
 			Font::Font(win32::Handle<HFONT>::Type handle) BOOST_NOEXCEPT : nativeObject_(std::move(handle)) {
 			}
 
-			win32::Handle<HFONT>::Type Font::asNativeObject() const BOOST_NOEXCEPT {
-				return nativeObject_;
+			void Font::buildDescription() BOOST_NOEXCEPT {
+				assert(description_.get() == nullptr);
+
+				LOGFONTW lf;
+				if(::GetObjectW(native().get(), sizeof(decltype(lf)), &lf) == 0)
+					throw makePlatformError();
+				description_.reset(new FontDescription(fromNative<FontDescription>(lf)));
+//				description_.reset(new FontDescription(graphics::detail::fromNative<FontDescription>(lf)));
 			}
 
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
@@ -130,51 +212,15 @@ namespace ascension {
 			}
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
+			win32::Handle<HFONT>::Type Font::native() const BOOST_NOEXCEPT {
+				return nativeObject_;
+			}
+
 			FontCollection::FontCollection(win32::Handle<HDC>::Type deviceContext) BOOST_NOEXCEPT : deviceContext_(deviceContext) {
 			}
 
 			std::shared_ptr<const Font> FontCollection::get(const FontDescription& description, const AffineTransform& transform, boost::optional<double> sizeAdjust) const {
-				const String& familyName = description.family().name();
-				if(familyName.length() >= LF_FACESIZE)
-					throw std::length_error("description.family().name()");
-
-				const FontProperties& properties = description.properties();
-				LONG orientation;
-				if(geometry::equals(transform, geometry::makeQuadrantRotationTransform(0)))
-					orientation = 0;
-				else if(geometry::equals(transform, geometry::makeQuadrantRotationTransform(1)))
-					orientation = 2700;
-				else if(geometry::equals(transform, geometry::makeQuadrantRotationTransform(2)))
-					orientation = 1800;
-				else if(geometry::equals(transform, geometry::makeQuadrantRotationTransform(3)))
-					orientation = 900;
-				else
-					throw std::invalid_argument("transform");	// TODO: This version of code supports only simple quadrant-rotations.
-
-				const int oldMapMode = ::SetMapMode(deviceContext_.get(), MM_TEXT);
-				if(oldMapMode == 0)
-					throw makePlatformError();
-				int dpi;
-				if(orientation == 0 || orientation == 1800)
-					dpi = ::GetDeviceCaps(deviceContext_.get(), LOGPIXELSY);
-				else if(orientation == 900 || orientation == 2700)
-					dpi = ::GetDeviceCaps(deviceContext_.get(), LOGPIXELSX);
-				else
-					dpi = static_cast<int>(sqrt(
-						std::pow(static_cast<float>(::GetDeviceCaps(deviceContext_.get(), LOGPIXELSX)), 2)
-						+ std::pow(static_cast<float>(::GetDeviceCaps(deviceContext_.get(), LOGPIXELSY)), 2)));
-				::SetMapMode(deviceContext_.get(), oldMapMode);
-
-				// TODO: handle properties.orientation().
-
-				LOGFONTW lf;
-				std::memset(&lf, 0, sizeof(LOGFONTW));
-				lf.lfHeight = -round(description.pointSize() * dpi / 72.0);
-				lf.lfEscapement = lf.lfOrientation = orientation;
-				lf.lfWeight = properties.weight;
-				lf.lfItalic = (properties.style == FontStyle::ITALIC) || (properties.style == FontStyle::OBLIQUE);
-				std::wcscpy(lf.lfFaceName, familyName.c_str());
-
+				const LOGFONT lf(makeLogFont(deviceContext_, description, transform, sizeAdjust));
 				struct LogFontHash {
 					std::size_t operator()(const LOGFONTW& v) const {
 						std::size_t n = boost::hash_value(v.lfHeight);
@@ -197,45 +243,15 @@ namespace ascension {
 
 				win32::Handle<HFONT>::Type font(::CreateFontIndirectW(&lf), &::DeleteObject);
 #ifdef _DEBUG
-				if(::GetObjectW(font.get(), sizeof(LOGFONTW), &lf) > 0) {
+				LOGFONT lf2;
+				if(::GetObjectW(font.get(), sizeof(decltype(lf2)), &lf2) > 0) {
 					::OutputDebugStringW(L"[SystemFonts.cache] Created font '");
-					::OutputDebugStringW(lf.lfFaceName);
+					::OutputDebugStringW(lf2.lfFaceName);
 					::OutputDebugStringW(L"' for request '");
-					::OutputDebugStringW(familyName.c_str());
+					::OutputDebugStringW(description.family().name().c_str());
 					::OutputDebugStringW(L"'.\n");
 				}
 #endif
-
-				// handle 'font-size-adjust'
-				if(sizeAdjust && *sizeAdjust > 0.0) {
-					win32::Handle<HFONT>::Type oldFont(static_cast<HFONT>(::SelectObject(deviceContext_.get(), font.get())), ascension::detail::NullDeleter());
-					TEXTMETRICW tm;
-					if(::GetTextMetricsW(deviceContext_.get(), &tm)) {
-						GLYPHMETRICS gm;
-						const MAT2 temp = {{0, 1}, {0, 0}, {0, 0}, {0, 1}};
-						const int xHeight =
-							(::GetGlyphOutlineW(deviceContext_.get(), L'x', GGO_METRICS, &gm, 0, nullptr, nullptr) != GDI_ERROR && gm.gmptGlyphOrigin.y > 0) ?
-								gm.gmptGlyphOrigin.y : round(static_cast<double>(tm.tmAscent) * 0.56);
-						const double aspect = static_cast<double>(xHeight) / static_cast<double>(tm.tmHeight - tm.tmInternalLeading);
-						FontDescription adjustedDescription(description);
-						adjustedDescription.setPointSize(std::max(description.pointSize() * (*sizeAdjust / aspect), 1.0));
-						::SelectObject(deviceContext_.get(), oldFont.get());
-						return get(description, transform, boost::none);
-					}
-					::SelectObject(deviceContext_.get(), oldFont.get());
-				}
-
-				// handle 'font-stretch'
-				if(properties.stretch != FontStretch::NORMAL) {
-					// TODO: this implementation is too simple...
-					if(::GetObjectW(font.get(), sizeof(LOGFONTW), &lf) > 0) {
-						static const int WIDTH_RATIOS[] = {1000, 1000, 1000, 500, 625, 750, 875, 1125, 1250, 1500, 2000, 1000};
-						lf.lfWidth = ::MulDiv(lf.lfWidth, WIDTH_RATIOS[properties.stretch], 1000);
-						if(win32::Handle<HFONT>::Type temp = win32::Handle<HFONT>::Type(::CreateFontIndirectW(&lf), &::DeleteObject))
-							font = temp;
-					}
-				}
-
 				std::shared_ptr<Font> newFont(new Font(std::move(font)));
 				cachedFonts.insert(std::make_pair(lf, newFont));
 				return newFont;
@@ -278,7 +294,13 @@ namespace ascension {
 			}
 
 			LOGFONTW&& toNative(const font::FontDescription& object, const LOGFONTW* /* = nullptr */) {
+				makeLogFont(win32::detail::screenDC(), object, geometry::makeIdentityTransform(), boost::none);
 				win32::AutoZero<LOGFONT> result;
+				LONG orientation = 0;
+#if 0
+				if(object.properties().orientation == font::FontOrientation::VERTICAL)
+					orientation = 900;
+#endif
 				result.lfHeight = static_cast<LONG>(-object.pointSize() * defaultDpiY() / 72);
 				result.lfWeight = object.properties().weight;
 				result.lfItalic = object.properties().style != font::FontStyle::ITALIC || object.properties().style != font::FontStyle::OBLIQUE;
