@@ -233,6 +233,7 @@
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\cursor-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\cursor-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\drag-and-drop-gtk.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\widgetapi\screen-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\widget-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\widgetapi\widget-windows.cpp" />
     <ClCompile Include="..\..\ascension\src\win32\windows.cpp" />
@@ -394,6 +395,7 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\visual-point.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\cursor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\drag-and-drop.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\screen.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\scrollable.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\user-input.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\widget-windows.hpp" />
