@@ -46,7 +46,7 @@ namespace ascension {
 			virtual std::uint32_t height() const = 0;
 			/// Returns the height of the rendering device in millimeters.
 			virtual Scalar heightInMillimeters() const {
-				return static_cast<Scalar>(height()) / static_cast<Scalar>(physicalDpiX());
+				return static_cast<Scalar>(static_cast<double>(height()) / static_cast<double>(physicalDpiX()) * 25.4);
 			}
 			/// Returns the horizontal resolution of the device in dots per inch.
 			virtual std::uint16_t logicalDpiX() const = 0;
@@ -56,7 +56,7 @@ namespace ascension {
 			virtual std::uint32_t width() const = 0;
 			/// Returns the width of the rendering device in millimeters.
 			virtual Scalar widthInMillimeters() const {
-				return static_cast<Scalar>(width()) / static_cast<Scalar>(physicalDpiY());
+				return static_cast<Scalar>(static_cast<double>(width()) / static_cast<double>(physicalDpiY()) * 25.4);
 			}
 			/// Returns the horizontal resolution of the device in dots per inch.
 			virtual std::uint16_t physicalDpiX() const = 0;
@@ -69,12 +69,6 @@ namespace ascension {
 			Dimension sizeInMillimeters() const {
 				return Dimension(geometry::_dx = widthInMillimeters(), geometry::_dy = heightInMillimeters());
 			}
-		};
-
-		class Screen : public RenderingDevice {
-		public:
-			static Screen& instance();
-			std::unique_ptr<RenderingContext2D> createGraphicsContext() const;
 		};
 	}
 }
