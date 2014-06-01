@@ -7,6 +7,7 @@
  * @date 2013-2014
  */
 
+#include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/viewer/viewer.hpp>
 #include <ascension/viewer/virtual-box.hpp>
 

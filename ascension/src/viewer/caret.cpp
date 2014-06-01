@@ -10,6 +10,7 @@
 #include <ascension/corelib/text/character-property.hpp>
 #include <ascension/corelib/text/utf.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/image.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/kernel/document-character-iterator.hpp>
@@ -134,18 +135,15 @@ namespace ascension {
 #endif // BOOST_OS_WINDOWS
 				overtypeMode_(false), autoShow_(true), matchBracketsTrackingMode_(DONT_TRACK) {
 			document().addListener(*this);
-			textViewer().addDisplaySizeListener(*this);
-			textViewer().addViewportListener(*this);
+			textViewer().textRenderer().viewport()->addListener(*this);
 		}
 
 		/// Destructor.
 		Caret::~Caret() BOOST_NOEXCEPT {
 			if(!isDocumentDisposed())
 				document().removeListener(*this);
-			if(!isTextViewerDisposed()) {
-				textViewer().removeDisplaySizeListener(*this);
-				textViewer().removeViewportListener(*this);
-			}
+			if(!isTextViewerDisposed())
+				textViewer().textRenderer().viewport()->removeListener(*this);
 		}
 
 		/// @see VisualPoint#aboutToMove
@@ -697,19 +695,25 @@ namespace ascension {
 			context_.regionBeforeMoved = boost::none;
 		}
 
-		/// @see DisplaySizeListener#viewerDisplaySizeChanged
-		void Caret::viewerDisplaySizeChanged() {
+		/// @see TextViewportListener#viewportBoundsInViewChanged
+		void Caret::viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT {
 #ifdef ASCENSION_USE_SYSTEM_CARET
-		//	if(textViewer().rulerConfiguration().alignment != ALIGN_LEFT)
+//			if(textViewer().rulerConfiguration().alignment != ALIGN_LEFT)
 				resetVisualization();
 #endif
 		}
 
-		/// @see ViewportListener#viewportChanged
-		void Caret::viewportChanged(bool, bool) {
+		/// @see TextViewportListener#viewportScrollPositionChanged
+		void Caret::viewportScrollPositionChanged(
+				const presentation::AbstractTwoAxes<graphics::font::TextViewportScrollOffset>&,
+				const graphics::font::VisualLine&) BOOST_NOEXCEPT {
 #ifdef ASCENSION_USE_SYSTEM_CARET
 			updateLocation();
 #endif
+		}
+
+		/// @see TextViewportListener#viewportScrollPropertiesChanged
+		void Caret::viewportScrollPropertiesChanged(const presentation::AbstractTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT {
 		}
 
 

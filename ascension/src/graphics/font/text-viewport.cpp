@@ -24,28 +24,28 @@ namespace ascension {
 		namespace font {
 			// free functions /////////////////////////////////////////////////////////////////////////////////////////
 
-			PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>
+			PhysicalTwoAxes<boost::optional<TextViewportScrollOffset>>
 			convertFlowRelativeScrollPositionsToPhysical(const TextViewport& viewport,
-					const presentation::AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
+					const presentation::AbstractTwoAxes<boost::optional<TextViewportScrollOffset>>& positions) {
 				switch(viewport.textRenderer().computedBlockFlowDirection()) {
 					case presentation::HORIZONTAL_TB:
-						return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.ipd(), positions.bpd());
+						return PhysicalTwoAxes<boost::optional<TextViewportScrollOffset>>(positions.ipd(), positions.bpd());
 					case presentation::VERTICAL_RL:
-						return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(
+						return PhysicalTwoAxes<boost::optional<TextViewportScrollOffset>>(
 							(positions.bpd() != boost::none) ?
 								boost::make_optional(viewport.textRenderer().layouts().numberOfVisualLines() - *positions.bpd() - 1) : boost::none,
 							positions.ipd());
 					case presentation::VERTICAL_LR:
-						return PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(positions.bpd(), positions.ipd());
+						return PhysicalTwoAxes<boost::optional<TextViewportScrollOffset>>(positions.bpd(), positions.ipd());
 					default:
 						ASCENSION_ASSERT_NOT_REACHED();
 				}
 			}
 
-			presentation::AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>
+			presentation::AbstractTwoAxes<boost::optional<TextViewportScrollOffset>>
 			convertPhysicalScrollPositionsToAbstract(const TextViewport& viewport,
-					const PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
-				presentation::AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>> result;
+					const PhysicalTwoAxes<boost::optional<TextViewportScrollOffset>>& positions) {
+				presentation::AbstractTwoAxes<boost::optional<TextViewportScrollOffset>> result;
 				switch(viewport.textRenderer().computedBlockFlowDirection()) {
 					case presentation::HORIZONTAL_TB:
 						result.bpd() = positions.y();
@@ -73,8 +73,8 @@ namespace ascension {
 			 * @return A converted inline progression scroll offset in @a viewport
 			 * @see inlineProgressionOffsetInViewportScroll
 			 */
-			TextViewport::ScrollOffset inlineProgressionOffsetInViewerGeometry(const TextViewport& viewport, Scalar offset) {
-				return static_cast<TextViewport::ScrollOffset>(offset /* / viewport.dimensionRates().ipd() */);
+			TextViewportScrollOffset inlineProgressionOffsetInViewerGeometry(const TextViewport& viewport, Scalar offset) {
+				return static_cast<TextViewportScrollOffset>(offset /* / viewport.dimensionRates().ipd() */);
 			}
 
 			/**
@@ -85,11 +85,11 @@ namespace ascension {
 			 * @return A converted inline progression offset in viewer geometry in user units
 			 * @see inlineProgressionOffsetInViewerGeometry
 			 */
-			Scalar inlineProgressionOffsetInViewportScroll(const TextViewport& viewport, const boost::optional<TextViewport::ScrollOffset>& offset /* = boost::none */) {
+			Scalar inlineProgressionOffsetInViewportScroll(const TextViewport& viewport, const boost::optional<TextViewportScrollOffset>& offset /* = boost::none */) {
 #if 1
 				return static_cast<Scalar>(boost::get_optional_value_or(offset, viewport.scrollPositions().ipd())) /* * viewport.dimensionRates().ipd() */;
 #else
-				const TextViewport::ScrollOffset offset = scrollOffset ? *scrollOffset : viewport.inlineProgressionOffset();
+				const TextViewportScrollOffset offset = scrollOffset ? *scrollOffset : viewport.inlineProgressionOffset();
 				return viewport.averageCharacterWidth() * offset;
 #endif
 			}
@@ -344,14 +344,14 @@ namespace ascension {
 			}
 
 			template<>
-			TextViewport::ScrollOffset pageSize<presentation::BlockFlowDirection>(const TextViewport& viewport) {
-				return static_cast<TextViewport::ScrollOffset>(viewport.numberOfVisibleLines());
+			TextViewportScrollOffset pageSize<presentation::BlockFlowDirection>(const TextViewport& viewport) {
+				return static_cast<TextViewportScrollOffset>(viewport.numberOfVisibleLines());
 			}
 
 			template<>
-			TextViewport::ScrollOffset pageSize<presentation::ReadingDirection>(const TextViewport& viewport) {
+			TextViewportScrollOffset pageSize<presentation::ReadingDirection>(const TextViewport& viewport) {
 				const Rectangle& bounds = viewport.boundsInView();
-				return static_cast<TextViewport::ScrollOffset>(isHorizontal(viewport.textRenderer().computedBlockFlowDirection()) ? geometry::dx(bounds) : geometry::dy(bounds));
+				return static_cast<TextViewportScrollOffset>(isHorizontal(viewport.textRenderer().computedBlockFlowDirection()) ? geometry::dx(bounds) : geometry::dy(bounds));
 			}
 
 			/**
@@ -363,21 +363,21 @@ namespace ascension {
 			 */
 
 			template<>
-			TextViewport::SignedScrollOffset pageSize<0>(const TextViewport& viewport) {
+			TextViewportSignedScrollOffset pageSize<0>(const TextViewport& viewport) {
 				switch(viewport.textRenderer().computedBlockFlowDirection()) {
 					case presentation::HORIZONTAL_TB:
 						return pageSize<presentation::ReadingDirection>(viewport);
 					case presentation::VERTICAL_RL:
-						return -static_cast<TextViewport::SignedScrollOffset>(pageSize<presentation::BlockFlowDirection>(viewport));
+						return -static_cast<TextViewportSignedScrollOffset>(pageSize<presentation::BlockFlowDirection>(viewport));
 					case presentation::VERTICAL_LR:
-						return +static_cast<TextViewport::SignedScrollOffset>(pageSize<presentation::BlockFlowDirection>(viewport));
+						return +static_cast<TextViewportSignedScrollOffset>(pageSize<presentation::BlockFlowDirection>(viewport));
 					default:
 						ASCENSION_ASSERT_NOT_REACHED();
 				}
 			}
 
 			template<>
-			TextViewport::SignedScrollOffset pageSize<1>(const TextViewport& viewport) {
+			TextViewportSignedScrollOffset pageSize<1>(const TextViewport& viewport) {
 				return isHorizontal(viewport.textRenderer().computedBlockFlowDirection()) ?
 					pageSize<presentation::BlockFlowDirection>(viewport) : pageSize<presentation::ReadingDirection>(viewport);
 			}
@@ -388,41 +388,41 @@ namespace ascension {
 //			template TextViewport::SignedScrollOffset pageSize<1>(const TextViewport& viewport);
 
 			template<>
-			boost::integer_range<TextViewport::ScrollOffset> scrollableRange<presentation::BlockFlowDirection>(const TextViewport& viewport) {
-				return boost::irange(static_cast<TextViewport::ScrollOffset>(0),
+			boost::integer_range<TextViewportScrollOffset> scrollableRange<presentation::BlockFlowDirection>(const TextViewport& viewport) {
+				return boost::irange(static_cast<TextViewportScrollOffset>(0),
 					viewport.textRenderer().layouts().numberOfVisualLines()/* - pageSize<presentation::BlockFlowDirection>(viewport) + 1*/);
 			}
 
 			template<>
-			boost::integer_range<TextViewport::ScrollOffset> scrollableRange<presentation::ReadingDirection>(const TextViewport& viewport) {
-				return boost::irange(static_cast<TextViewport::ScrollOffset>(0),
-					static_cast<TextViewport::ScrollOffset>(viewport.contentMeasure()) - pageSize<presentation::ReadingDirection>(viewport) + 1);
+			boost::integer_range<TextViewportScrollOffset> scrollableRange<presentation::ReadingDirection>(const TextViewport& viewport) {
+				return boost::irange(static_cast<TextViewportScrollOffset>(0),
+					static_cast<TextViewportScrollOffset>(viewport.contentMeasure()) - pageSize<presentation::ReadingDirection>(viewport) + 1);
 			}
 
 			template<>
-			boost::integer_range<TextViewport::ScrollOffset> scrollableRange<0>(const TextViewport& viewport) {
+			boost::integer_range<TextViewportScrollOffset> scrollableRange<0>(const TextViewport& viewport) {
 				return isHorizontal(viewport.textRenderer().computedBlockFlowDirection()) ?
 					scrollableRange<presentation::ReadingDirection>(viewport) : scrollableRange<presentation::BlockFlowDirection>(viewport);
 			}
 
 			template<>
-			boost::integer_range<TextViewport::ScrollOffset> scrollableRange<1>(const TextViewport& viewport) {
+			boost::integer_range<TextViewportScrollOffset> scrollableRange<1>(const TextViewport& viewport) {
 				return isHorizontal(viewport.textRenderer().computedBlockFlowDirection()) ?
 					scrollableRange<presentation::BlockFlowDirection>(viewport) : scrollableRange<presentation::ReadingDirection>(viewport);
 			}
 
-//			template boost::integer_range<TextViewport::ScrollOffset> scrollableRange<presentation::BlockFlowDirection>(const TextViewport& viewport);
-//			template boost::integer_range<TextViewport::ScrollOffset> scrollableRange<presentation::ReadingDirection>(const TextViewport& viewport);
-//			template boost::integer_range<TextViewport::ScrollOffset> scrollableRange<0>(const TextViewport& viewport);
-//			template boost::integer_range<TextViewport::ScrollOffset> scrollableRange<1>(const TextViewport& viewport);
+//			template boost::integer_range<TextViewportScrollOffset> scrollableRange<presentation::BlockFlowDirection>(const TextViewport& viewport);
+//			template boost::integer_range<TextViewportScrollOffset> scrollableRange<presentation::ReadingDirection>(const TextViewport& viewport);
+//			template boost::integer_range<TextViewportScrollOffset> scrollableRange<0>(const TextViewport& viewport);
+//			template boost::integer_range<TextViewportScrollOffset> scrollableRange<1>(const TextViewport& viewport);
 
 			/**
 			 * Scrolls the specified viewport by the given physical dimensions.
 			 * @param viewport The viewport
 			 * @param pages The number of pages to scroll
 			 */
-			void scrollPage(TextViewport& viewport, const PhysicalTwoAxes<TextViewport::SignedScrollOffset>& pages) {
-				presentation::AbstractTwoAxes<TextViewport::SignedScrollOffset> delta =
+			void scrollPage(TextViewport& viewport, const PhysicalTwoAxes<TextViewportSignedScrollOffset>& pages) {
+				presentation::AbstractTwoAxes<TextViewportSignedScrollOffset> delta =
 					mapPhysicalToAbstract(viewport.textRenderer().presentation().computeWritingMode(&viewport.textRenderer()), pages);
 				viewport.scrollBlockFlowPage(delta.bpd());
 				delta.bpd() = 0;
@@ -920,7 +920,7 @@ namespace ascension {
 			 * @return The scroll position value for @a line
 			 * @see #adjustBpdScrollPositions
 			 */
-			inline TextViewport::ScrollOffset TextViewport::calculateBpdScrollPosition(const boost::optional<VisualLine>& line) const BOOST_NOEXCEPT {
+			inline TextViewportScrollOffset TextViewport::calculateBpdScrollPosition(const boost::optional<VisualLine>& line) const BOOST_NOEXCEPT {
 				const VisualLine ln(boost::get_optional_value_or(line, firstVisibleLine()));
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				// TODO: Not implemented.
@@ -972,11 +972,11 @@ namespace ascension {
 
 			/// @internal Invokes @c TextViewportListener#viewportScrollPositionChanged
 			inline void TextViewport::fireScrollPositionChanged(
-					const presentation::AbstractTwoAxes<TextViewport::ScrollOffset>& positionsBeforeScroll,
+					const presentation::AbstractTwoAxes<TextViewportScrollOffset>& positionsBeforeScroll,
 					const VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT {
 				static const decltype(frozenNotification_.count) minimumCount;
 				if(frozenNotification_.count == minimumCount)
-					listeners_.notify<const presentation::AbstractTwoAxes<TextViewport::ScrollOffset>&, const VisualLine&>(
+					listeners_.notify<const presentation::AbstractTwoAxes<TextViewportScrollOffset>&, const VisualLine&>(
 						&TextViewportListener::viewportScrollPositionChanged, positionsBeforeScroll, firstVisibleLineBeforeScroll);
 				else if(frozenNotification_.positionBeforeChanged == boost::none) {
 					frozenNotification_.positionBeforeChanged = FrozenNotification::Position();
@@ -1209,12 +1209,12 @@ namespace ascension {
 					}
 				}
 #else
-				std::tuple<VisualLine, TextViewport::ScrollOffset>&& locateVisualLine(const TextViewport& viewport,
-						const boost::optional<TextViewport::ScrollOffset>& to, const boost::optional<VisualLine>& toLine,
-						TextViewport::ScrollOffset from, const VisualLine& lineFrom) {
+				std::tuple<VisualLine, TextViewportScrollOffset>&& locateVisualLine(const TextViewport& viewport,
+						const boost::optional<TextViewportScrollOffset>& to, const boost::optional<VisualLine>& toLine,
+						TextViewportScrollOffset from, const VisualLine& lineFrom) {
 					assert((to != boost::none && toLine == boost::none) || (to == boost::none && toLine != boost::none));
 
-					TextViewport::ScrollOffset bpd = from;
+					TextViewportScrollOffset bpd = from;
 					VisualLine line(lineFrom);
 					const TextLayout* layout = viewport.textRenderer().layouts().at(line.line);
 					while((to != boost::none && boost::get(to) > bpd) || (toLine != boost::none && boost::get(toLine) > line)) {
@@ -1256,7 +1256,7 @@ namespace ascension {
 			 * This method does nothing if scroll is locked.
 			 * @param offsets The offsets to scroll in abstract dimensions in user units
 			 */
-			void TextViewport::scroll(const presentation::AbstractTwoAxes<TextViewport::SignedScrollOffset>& offsets) {
+			void TextViewport::scroll(const presentation::AbstractTwoAxes<TextViewportSignedScrollOffset>& offsets) {
 				if(isScrollLocked())
 					return;
 
@@ -1264,11 +1264,11 @@ namespace ascension {
 
 				// inline dimension
 				if(offsets.ipd() < 0)
-					newPositions.ipd() = (static_cast<ScrollOffset>(-offsets.ipd()) < scrollPositions().ipd()) ? (scrollPositions().ipd() + offsets.ipd()) : 0;
+					newPositions.ipd() = (static_cast<TextViewportScrollOffset>(-offsets.ipd()) < scrollPositions().ipd()) ? (scrollPositions().ipd() + offsets.ipd()) : 0;
 				else if(offsets.ipd() > 0) {
 					const bool vertical = presentation::isVertical(textRenderer().computedBlockFlowDirection());
 					const Scalar maximumIpd = !vertical ? geometry::dx(boundsInView()) : geometry::dy(boundsInView());
-					newPositions.ipd() = std::min(scrollPositions().ipd() + offsets.ipd(), static_cast<ScrollOffset>(contentMeasure() - maximumIpd));
+					newPositions.ipd() = std::min(scrollPositions().ipd() + offsets.ipd(), static_cast<TextViewportScrollOffset>(contentMeasure() - maximumIpd));
 				}
 
 				// block dimension
@@ -1313,7 +1313,7 @@ namespace ascension {
 			 * This method does nothing if scroll is locked.
 			 * @param offsets The offsets to scroll in physical dimensions in user units
 			 */
-			void TextViewport::scroll(const PhysicalTwoAxes<TextViewport::SignedScrollOffset>& offsets) {
+			void TextViewport::scroll(const PhysicalTwoAxes<TextViewportSignedScrollOffset>& offsets) {
 				return scroll(mapPhysicalToAbstract(textRenderer().presentation().computeWritingMode(&textRenderer()), offsets));
 			}
 
@@ -1322,15 +1322,15 @@ namespace ascension {
 			 * This method does nothing if scroll is locked.
 			 * @param pages The number of pages to scroll in block flow direction
 			 */
-			void TextViewport::scrollBlockFlowPage(SignedScrollOffset pages) {
+			void TextViewport::scrollBlockFlowPage(TextViewportSignedScrollOffset pages) {
 				if(isScrollLocked())
 					return;
 
-				const boost::integer_range<ScrollOffset> rangeBeforeScroll(scrollableRange<presentation::BlockFlowDirection>(*this));
+				const boost::integer_range<TextViewportScrollOffset> rangeBeforeScroll(scrollableRange<presentation::BlockFlowDirection>(*this));
 				if(pages > 0) {
 					const TextViewportNotificationLocker notificationLockGuard(this);
 					for(; pages > 0 && scrollPositions().bpd() < rangeBeforeScroll.back(); --pages) {
-						const presentation::AbstractTwoAxes<SignedScrollOffset> delta(presentation::_bpd = pageSize<presentation::BlockFlowDirection>(*this), presentation::_ipd = 0);
+						const presentation::AbstractTwoAxes<TextViewportSignedScrollOffset> delta(presentation::_bpd = pageSize<presentation::BlockFlowDirection>(*this), presentation::_ipd = 0);
 						scroll(delta);
 					}
 				} else if(pages < 0) {
@@ -1339,7 +1339,7 @@ namespace ascension {
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 					decltype(blockFlowScrollOffsetInFirstVisibleVisualLine_) newBlockFlowScrollOffsetInFirstVisibleVisualLine;
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
-					static_assert(std::is_integral<ScrollOffset>::value, "");
+					static_assert(std::is_integral<TextViewportScrollOffset>::value, "");
 					{
 						const TextViewportNotificationLocker notificationLockGuard(this);	// the following code can change the layouts
 						LineLayoutVector& layouts = textRenderer().layouts();
@@ -1392,7 +1392,7 @@ namespace ascension {
 			 * This method does nothing if scroll is locked.
 			 * @param positions The destination of scroll in abstract dimensions in user units
 			 */
-			void TextViewport::scrollTo(const presentation::AbstractTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
+			void TextViewport::scrollTo(const presentation::AbstractTwoAxes<boost::optional<TextViewportScrollOffset>>& positions) {
 				if(isScrollLocked())
 					return;
 
@@ -1418,7 +1418,7 @@ namespace ascension {
 
 					// locate the nearest visual line
 					const Index numberOfLogicalLines = textRenderer().presentation().document().numberOfLines();
-					ScrollOffset bpd;
+					TextViewportScrollOffset bpd;
 					VisualLine line;
 					assert(includes(range, scrollPositions().bpd()));
 					if(newPositions.bpd() < scrollPositions().bpd()) {
@@ -1489,11 +1489,11 @@ namespace ascension {
 			 * Scrolls the viewport to the specified position.
 			 * @param positions
 			 */
-			void TextViewport::scrollTo(const PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>& positions) {
+			void TextViewport::scrollTo(const PhysicalTwoAxes<boost::optional<TextViewportScrollOffset>>& positions) {
 				return scrollTo(convertPhysicalScrollPositionsToAbstract(*this, positions));
 			}
 
-			void TextViewport::scrollTo(const VisualLine& line, TextViewport::ScrollOffset ipd) {
+			void TextViewport::scrollTo(const VisualLine& line, TextViewportScrollOffset ipd) {
 				// TODO: not implemented.
 			}
 
@@ -1522,7 +1522,7 @@ namespace ascension {
 						frozenNotification_.dimensionsPropertiesChanged = presentation::AbstractTwoAxes<bool>(false, false);
 					}
 					if(frozenNotification_.positionBeforeChanged != boost::none) {
-						listeners_.notify<const presentation::AbstractTwoAxes<ScrollOffset>&, const VisualLine&>(
+						listeners_.notify<const presentation::AbstractTwoAxes<TextViewportScrollOffset>&, const VisualLine&>(
 							&TextViewportListener::viewportScrollPositionChanged,
 							boost::get(frozenNotification_.positionBeforeChanged).offsets, boost::get(frozenNotification_.positionBeforeChanged).line);
 						frozenNotification_.positionBeforeChanged = boost::none;

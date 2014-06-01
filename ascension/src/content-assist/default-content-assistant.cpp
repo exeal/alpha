@@ -9,6 +9,7 @@
 
 #include <ascension/content-assist/default-content-assistant.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/viewer.hpp>	// TextViewer
@@ -89,7 +90,6 @@ namespace ascension {
 		void DefaultContentAssistant::close() {
 			if(completionSession_.get() != nullptr) {
 				// these connections were maken by startPopup() method
-				textViewer_->removeViewportListener(*this);
 				textViewer_->textRenderer().viewport()->removeListener(*this);
 				caretMotionConnection_.disconnect();
 				if(completionSession_->incremental)
@@ -255,7 +255,6 @@ namespace ascension {
 			updatePopupBounds();
 
 			// these connections are revoke by close() method
-			textViewer_->addViewportListener(*this);
 			textViewer_->textRenderer().viewport()->addListener(*this);
 			caretMotionConnection_ = textViewer_->caret().motionSignal().connect(
 				std::bind(&DefaultContentAssistant::caretMoved, this, std::placeholders::_1, std::placeholders::_2));
@@ -356,9 +355,14 @@ namespace ascension {
 
 		/// @see graphics.font.TextViewportListener.viewportScrollPositionChanged
 		void DefaultContentAssistant::viewportScrollPositionChanged(
-				const presentation::AbstractTwoAxes<graphics::font::TextViewport::SignedScrollOffset>&,
-				const graphics::font::VisualLine&, graphics::font::TextViewport::ScrollOffset) BOOST_NOEXCEPT {
+				const presentation::AbstractTwoAxes<graphics::font::TextViewportScrollOffset>&,
+				const graphics::font::VisualLine&) BOOST_NOEXCEPT {
 			viewerBoundsChanged();
+		}
+
+		/// @see graphics.font.TextViewportListener.viewportScrollPropertiesChanged
+		void DefaultContentAssistant::viewportScrollPropertiesChanged(
+				const presentation::AbstractTwoAxes<bool>&) BOOST_NOEXCEPT {
 		}
 	}
 }

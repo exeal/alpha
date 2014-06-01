@@ -7,8 +7,9 @@
 
 #ifndef VIEWER_OBSERVERS_HPP
 #define VIEWER_OBSERVERS_HPP
-#include <ascension/graphics/geometry.hpp>	// graphics.NativeSize
+#include <ascension/graphics/geometry.hpp>	// graphics.Point
 #include <ascension/platforms.hpp>
+#include <ascension/viewer/widgetapi/drag-and-drop.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/windows.hpp>
 #endif
@@ -17,34 +18,6 @@ namespace ascension {
 	namespace viewers {
 
 		class TextViewer;
-
-		/**
-		 * Interface for objects which are interested in change of scroll positions of a
-		 * @c TextViewer.
-		 * @see TextViewer#addViewportListener, TextViewer#removeViewportListener
-		 */
-		class ViewportListener {
-		private:
-			/**
-			 * The scroll positions of the viewer were changed.
-			 * @param horizontal @c true if the horizontal scroll position is changed
-			 * @param vertical @c true if the vertical scroll position is changed
-			 * @see TextViewer#firstVisibleLine
-			 */
-			virtual void viewportChanged(bool horizontal, bool vertical) = 0;
-			friend class TextViewer;
-		};
-		
-		/**
-		 * Interface for objects which are interested in change of size of a @c TextViewer.
-		 * @see TextViewer#addDisplaySizeListener, TextViewer#removeDisplaySizeListener
-		 */
-		class DisplaySizeListener {
-		private:
-			/// The size of the viewer was changed.
-			virtual void viewerDisplaySizeChanged() = 0;
-			friend class TextViewer;
-		};
 #if 0
 		/**
 		 * Interface of objects which define how the text editors react to the users' keyboard

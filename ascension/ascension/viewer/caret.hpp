@@ -10,6 +10,7 @@
 #ifndef ASCENSION_CARET_HPP
 #define ASCENSION_CARET_HPP
 #include <ascension/corelib/text/identifier-syntax.hpp>	// text.IdentifierSyntax
+#include <ascension/graphics/font/text-viewport-listener.hpp>
 #include <ascension/viewer/viewer-observers.hpp>
 #include <ascension/viewer/visual-point.hpp>
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>
@@ -50,7 +51,7 @@ namespace ascension {
 		// documentation is caret.cpp
 		class Caret : public VisualPoint, public detail::InputEventHandler,
 			public kernel::PointListener, public kernel::DocumentListener,
-			public DisplaySizeListener, public ViewportListener {
+			public graphics::font::TextViewportListener {
 		public:
 			/// Mode of tracking match brackets.
 			enum MatchBracketsTrackingMode {
@@ -159,7 +160,7 @@ namespace ascension {
 			void aboutToMove(kernel::Position& to);
 			void moved(const kernel::Position& from) BOOST_NOEXCEPT;
 			// detail.InputEventHandler
-			void abortInput();
+			void abortInput() override;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			LRESULT handleInputEvent(UINT message, WPARAM wp, LPARAM lp, bool& consumed);
 			void onChar(CodePoint c, bool& consumed);
@@ -167,14 +168,17 @@ namespace ascension {
 			LRESULT onImeRequest(WPARAM command, LPARAM lp, bool& consumed);
 #endif
 			// kernel.PointListener
-			void pointMoved(const kernel::Point& self, const kernel::Position& oldPosition);
+			void pointMoved(const kernel::Point& self, const kernel::Position& oldPosition) override;
 			// kernel.DocumentListener
-			void documentAboutToBeChanged(const kernel::Document& document);
-			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
-			// DisplaySizeListener
-			void viewerDisplaySizeChanged();
-			// ViewportListener
-			void viewportChanged(bool horizontal, bool vertical);
+			void documentAboutToBeChanged(const kernel::Document& document) override;
+			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
+			// graphics.font.TextViewportListener
+			void viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT override;
+			void viewportScrollPositionChanged(
+				const presentation::AbstractTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
+				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT override;
+			void viewportScrollPropertiesChanged(
+				const presentation::AbstractTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT override;
 		private:
 			class SelectionAnchor : public VisualPoint {
 			public:

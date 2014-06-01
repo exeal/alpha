@@ -8,6 +8,7 @@
 
 #include <ascension/content-assist/content-assist.hpp>
 #include <ascension/corelib/text/break-iterator.hpp>	// text.WordBreakIterator
+#include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/text-editor/command.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/win32/ui/wait-cursor.hpp>
@@ -169,9 +170,9 @@ namespace ascension {
 				inline void scrollTextViewer(viewers::TextViewer& target, viewers::VisualDestinationProxy(*procedure)(const viewers::VisualPoint&, Direction, Index), Direction direction, long n) {
 					// TODO: consider the numeric prefix.
 					if(procedure == &kernel::locations::nextPage) {
-						graphics::font::TextViewport::SignedScrollOffset offset = (direction == Direction::FORWARD) ? n : -n;
+						graphics::font::TextViewportSignedScrollOffset offset = (direction == Direction::FORWARD) ? n : -n;
 						if(offset != 0) {
-							presentation::AbstractTwoAxes<graphics::font::TextViewport::SignedScrollOffset> delta;
+							presentation::AbstractTwoAxes<graphics::font::TextViewportSignedScrollOffset> delta;
 							delta.bpd() = offset;
 							delta.ipd() = 0;
 							target.textRenderer().viewport()->scroll(delta);

@@ -8,6 +8,7 @@
 #include <ascension/viewer/viewer.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 
+#include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>
 
@@ -74,17 +75,17 @@ namespace ascension {
 //			drag_dest_set_target_list();
 			property_hadjustment().get_value()->signal_value_changed().connect([this]() {
 				if(const std::shared_ptr<graphics::font::TextViewport> viewport = this->textRenderer().viewport())
-					viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(
-						graphics::_x = static_cast<graphics::font::TextViewport::SignedScrollOffset>(
+					viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(
+						graphics::_x = static_cast<graphics::font::TextViewportSignedScrollOffset>(
 							this->property_hadjustment().get_value()->get_value() - this->scrollPositionsBeforeChanged().x()),
 						graphics::_y = 0));
 				this->updateScrollPositionsBeforeChanged();
 			});
 			property_vadjustment().get_value()->signal_value_changed().connect([this]() {
 				if(const std::shared_ptr<graphics::font::TextViewport> viewport = this->textRenderer().viewport())
-					viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewport::SignedScrollOffset>(
+					viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(
 						graphics::_x = 0,
-						graphics::_y = static_cast<graphics::font::TextViewport::SignedScrollOffset>(
+						graphics::_y = static_cast<graphics::font::TextViewportSignedScrollOffset>(
 							this->property_vadjustment().get_value()->get_value() - this->scrollPositionsBeforeChanged().y())));
 				this->updateScrollPositionsBeforeChanged();
 			});
