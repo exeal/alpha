@@ -11,7 +11,7 @@
 
 #include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION, ...
 #include <ascension/graphics/font/text-renderer.hpp>
-#include <ascension/graphics/font/text-viewport.hpp>
+#include <ascension/graphics/font/text-viewport-listener.hpp>
 #include <ascension/kernel/point.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <ascension/viewer/caret-shaper.hpp>
@@ -193,10 +193,6 @@ namespace ascension {
 
 			/// @name Listeners and Strategies
 			/// @{
-			void addDisplaySizeListener(DisplaySizeListener& listener);
-			void addViewportListener(ViewportListener& listener);
-			void removeDisplaySizeListener(DisplaySizeListener& listener);
-			void removeViewportListener(ViewportListener& listener);
 			void setMouseInputStrategy(std::shared_ptr<MouseInputStrategy> newStrategy);
 			/// @}
 
@@ -310,30 +306,30 @@ namespace ascension {
 			std::basic_string<WCHAR> provideClassName() const;
 #endif	// ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// kernel.DocumentListener
-			void documentAboutToBeChanged(const kernel::Document& document);
-			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			void documentAboutToBeChanged(const kernel::Document& document) override;
+			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
 			// kernel.DocumentRollbackListener
-			void documentUndoSequenceStarted(const kernel::Document& document);
-			void documentUndoSequenceStopped(const kernel::Document& document, const kernel::Position& resultPosition);
+			void documentUndoSequenceStarted(const kernel::Document& document) override;
+			void documentUndoSequenceStopped(const kernel::Document& document, const kernel::Position& resultPosition) override;
 			// graphics.font.DefaultFontListener
-			void defaultFontChanged() BOOST_NOEXCEPT;
+			void defaultFontChanged() BOOST_NOEXCEPT override;
 			// graphics.font.VisualLinesListener
-			void visualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines, bool longestLineChanged) BOOST_NOEXCEPT;
-			void visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT;
+			void visualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines, bool longestLineChanged) BOOST_NOEXCEPT override;
+			void visualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT override;
 			void visualLinesModified(const boost::integer_range<Index>& lines,
-				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT;
+				SignedIndex sublinesDifference, bool documentChanged, bool longestLineChanged) BOOST_NOEXCEPT override;
 			// graphics.font.TextViewportListener
-			void viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT;
+			void viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT override;
 			void viewportScrollPositionChanged(
-				const presentation::AbstractTwoAxes<graphics::font::TextViewport::ScrollOffset>& positionsBeforeScroll,
-				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT;
+				const presentation::AbstractTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
+				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT override;
 			void viewportScrollPropertiesChanged(
-				const presentation::AbstractTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT;
+				const presentation::AbstractTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT override;
 			// graphics.font.ComputedBlockFlowDirectionListener
-			void computedBlockFlowDirectionChanged(presentation::BlockFlowDirection used);
+			void computedBlockFlowDirectionChanged(presentation::BlockFlowDirection used) override;
 			// detail.PointCollection<VisualPoint>
-			void addNewPoint(VisualPoint& point) {points_.insert(&point);}
-			void removePoint(VisualPoint& point) {points_.erase(&point);}
+			void addNewPoint(VisualPoint& point) override {points_.insert(&point);}
+			void removePoint(VisualPoint& point) override {points_.erase(&point);}
 
 		protected:
 			/// @name Overridable Widget Events
@@ -461,8 +457,6 @@ namespace ascension {
 			// strategies and listeners
 			std::shared_ptr<MouseInputStrategy> mouseInputStrategy_;
 			std::shared_ptr<widgetapi::DropTarget> dropTargetHandler_;
-			ascension::detail::Listeners<DisplaySizeListener> displaySizeListeners_;
-			ascension::detail::Listeners<ViewportListener> viewportListeners_;
 			std::unique_ptr<detail::RulerPainter> rulerPainter_;
 			std::unique_ptr<contentassist::ContentAssistant> contentAssistant_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)

@@ -10,6 +10,7 @@
 #include "editor-window.hpp"
 #include "editor-view.hpp"
 #include "function-pointer.hpp"
+#include <ascension/graphics/font/text-viewport.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/find.hpp>
 

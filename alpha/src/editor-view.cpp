@@ -9,6 +9,7 @@
 #include "buffer-list.hpp"
 #include "editor-view.hpp"
 #include "function-pointer.hpp"
+#include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/text-editor/command.hpp>	// ascension.texteditor.commands.IncrementalSearchCommand
 #include <ascension/viewer/caret.hpp>
@@ -286,10 +287,10 @@ namespace alpha {
 				return editor.document().self();
 			}))
 			.add_property("caret", &EditorView::asCaret)
-			.add_property("page_size_in_block_flow_direction", ambient::makeFunctionPointer([](const EditorView& editor) -> ascension::graphics::font::TextViewport::ScrollOffset {
+			.add_property("page_size_in_block_flow_direction", ambient::makeFunctionPointer([](const EditorView& editor) -> ascension::graphics::font::TextViewportScrollOffset {
 				return ascension::graphics::font::pageSize<ascension::presentation::BlockFlowDirection>(*editor.textRenderer().viewport());
 			}))
-			.add_property("page_size_in_inline_flow_direction", ambient::makeFunctionPointer([](const EditorView& editor) -> ascension::graphics::font::TextViewport::ScrollOffset {
+			.add_property("page_size_in_inline_flow_direction", ambient::makeFunctionPointer([](const EditorView& editor) -> ascension::graphics::font::TextViewportScrollOffset {
 				return ascension::graphics::font::pageSize<ascension::presentation::ReadingDirection>(*editor.textRenderer().viewport());
 			}))
 			.add_property("scrollable_range_in_block_flow_direction", ambient::makeFunctionPointer([](const EditorView& editor) -> boost::python::object {
@@ -308,23 +309,23 @@ namespace alpha {
 				const boost::python::extract<AbstractTwoAxes> abstractOffsets(offsets);
 				if(abstractOffsets.check()) {
 					const AbstractTwoAxes ao(static_cast<AbstractTwoAxes>(abstractOffsets));
-					const boost::python::extract<ascension::graphics::font::TextViewport::SignedScrollOffset> ebpd(ao.bpd()), eipd(ao.ipd());
+					const boost::python::extract<ascension::graphics::font::TextViewportSignedScrollOffset> ebpd(ao.bpd()), eipd(ao.ipd());
 					if(ebpd.check() && eipd.check()) {
-						const ascension::graphics::font::TextViewport::SignedScrollOffset bpd(ebpd), ipd(eipd);
+						const ascension::graphics::font::TextViewportSignedScrollOffset bpd(ebpd), ipd(eipd);
 						return editor.textRenderer().viewport()->scroll(
 #if 0
 							ascension::presentation::makeAbstractTwoAxes((ascension::presentation::_bpd = bpd, ascension::presentation::_ipd = ipd)));
 #else
-							ascension::presentation::AbstractTwoAxes<ascension::graphics::font::TextViewport::SignedScrollOffset>(ascension::presentation::_bpd = ebpd, ascension::presentation::_ipd = eipd));
+							ascension::presentation::AbstractTwoAxes<ascension::graphics::font::TextViewportSignedScrollOffset>(ascension::presentation::_bpd = ebpd, ascension::presentation::_ipd = eipd));
 #endif
 					}
 				}
 				const boost::python::extract<PhysicalTwoAxes> physicalOffsets(offsets);
 				if(physicalOffsets.check()) {
 					const PhysicalTwoAxes po(static_cast<PhysicalTwoAxes>(physicalOffsets));
-					const boost::python::extract<ascension::graphics::font::TextViewport::SignedScrollOffset> ex(po.x()), ey(po.y());
+					const boost::python::extract<ascension::graphics::font::TextViewportSignedScrollOffset> ex(po.x()), ey(po.y());
 					if(ex.check() && ey.check()) {
-						const ascension::graphics::font::TextViewport::SignedScrollOffset x(ex), y(ey);
+						const ascension::graphics::font::TextViewportSignedScrollOffset x(ex), y(ey);
 						return editor.textRenderer().viewport()->scroll(
 							ascension::graphics::makePhysicalTwoAxes((ascension::graphics::_x = x, ascension::graphics::_y = y)));
 					}

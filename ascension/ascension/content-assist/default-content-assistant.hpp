@@ -11,7 +11,7 @@
 
 #include <ascension/platforms.hpp>
 #include <ascension/content-assist/content-assist.hpp>
-#include <ascension/graphics/font/text-viewport.hpp>
+#include <ascension/graphics/font/text-viewport-listener.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/liststore.h>
@@ -28,6 +28,7 @@
 #endif
 #include <map>
 #include <memory>	// std.unique_ptr
+#include <boost/signals2.hpp>
 
 namespace ascension {
 	namespace contentassist {
@@ -36,8 +37,7 @@ namespace ascension {
 		 * @note This class is not intended to be subclassed.
 		 */
 		class DefaultContentAssistant : public ContentAssistant, public kernel::DocumentListener,
-			public viewers::ViewportListener, public graphics::font::TextViewportListener,
-			private ContentAssistant::CompletionProposalsUI {
+			public graphics::font::TextViewportListener, private ContentAssistant::CompletionProposalsUI {
 		public:
 			// constructors
 			DefaultContentAssistant() BOOST_NOEXCEPT;
@@ -48,39 +48,39 @@ namespace ascension {
 			void setContentAssistProcessor(kernel::ContentType contentType, std::unique_ptr<ContentAssistProcessor> processor);
 			// operation
 			void showPossibleCompletions();
+
 		private:
 			void startPopup();
 			void updatePopupBounds();
 			// HasTimer
-			void timeElapsed(Timer& timer);
+			void timeElapsed(Timer& timer) override;
 			// ContentAssistant
-			ContentAssistant::CompletionProposalsUI* completionProposalsUI() const BOOST_NOEXCEPT;
+			ContentAssistant::CompletionProposalsUI* completionProposalsUI() const BOOST_NOEXCEPT override;
 			std::shared_ptr<const ContentAssistProcessor>
-				contentAssistProcessor(kernel::ContentType contentType) const BOOST_NOEXCEPT;
-			void install(viewers::TextViewer& viewer);
-			void uninstall();
-			void viewerBoundsChanged() BOOST_NOEXCEPT;
+				contentAssistProcessor(kernel::ContentType contentType) const BOOST_NOEXCEPT override;
+			void install(viewers::TextViewer& viewer) override;
+			void uninstall() override;
+			void viewerBoundsChanged() BOOST_NOEXCEPT override;
 			// kernel.DocumentListener
-			void documentAboutToBeChanged(const kernel::Document& document);
-			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change);
+			void documentAboutToBeChanged(const kernel::Document& document) override;
+			void documentChanged(const kernel::Document& document, const kernel::DocumentChange& change) override;
 			// viewers.Caret.MotionSignal
 			void caretMoved(const viewers::Caret& caret, const kernel::Region& regionBeforeMotion);
 			// viewers.Caret.CharacterInputSignal
 			void characterInput(const viewers::Caret& caret, CodePoint c);
-			// viewers.ViewportListener
-			void viewportChanged(bool horizontal, bool vertical);
 			// graphics.font.TextViewportListener
-			void viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT;
+			void viewportBoundsInViewChanged(const graphics::Rectangle& oldBounds) BOOST_NOEXCEPT override;
 			void viewportScrollPositionChanged(
-				const presentation::AbstractTwoAxes<graphics::font::TextViewport::SignedScrollOffset>& offsets,
-				const graphics::font::VisualLine& oldLine,
-				graphics::font::TextViewport::ScrollOffset oldInlineProgressionOffset) BOOST_NOEXCEPT;
+				const presentation::AbstractTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
+				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT override;
+			void viewportScrollPropertiesChanged(
+				const presentation::AbstractTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT override;
 			// ContentAssistant.CompletionProposalsUI
-			void close();
-			bool complete();
-			bool hasSelection() const BOOST_NOEXCEPT;
-			void nextPage(int pages);
-			void nextProposal(int proposals);
+			void close() override;
+			bool complete() override;
+			bool hasSelection() const BOOST_NOEXCEPT override;
+			void nextPage(int pages) override;
+			void nextProposal(int proposals) override;
 		private:
 			viewers::TextViewer* textViewer_;
 			std::map<kernel::ContentType, std::shared_ptr<ContentAssistProcessor>> processors_;

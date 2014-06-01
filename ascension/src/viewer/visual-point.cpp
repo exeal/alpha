@@ -8,6 +8,7 @@
  */
 
 #include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/viewer.hpp>
 #include <ascension/viewer/visual-point.hpp>
@@ -51,11 +52,11 @@ namespace ascension {
 				const graphics::font::TextLayout& layout = viewer.textRenderer().layouts().at(
 					np.line, graphics::font::LineLayoutVector::USE_CALCULATED_LAYOUT);	// this call may change the layouts
 				const float visibleLines = viewport->numberOfVisibleLines();
-				presentation::AbstractTwoAxes<boost::optional<graphics::font::TextViewport::ScrollOffset>> to;	// scroll destination
+				presentation::AbstractTwoAxes<boost::optional<graphics::font::TextViewportScrollOffset>> to;	// scroll destination
 
 				// scroll if the point is outside of 'before-edge' or 'after-edge'
 				to.bpd() = std::min(p.visualLine(), viewport->scrollPositions().bpd());
-				to.bpd() = std::max(p.visualLine() - static_cast<graphics::font::TextViewport::ScrollOffset>(visibleLines) + 1, *to.bpd());
+				to.bpd() = std::max(p.visualLine() - static_cast<graphics::font::TextViewportScrollOffset>(visibleLines) + 1, *to.bpd());
 
 				// scroll if the point is outside of 'start-edge' or 'end-edge'
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08

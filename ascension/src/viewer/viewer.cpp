@@ -8,6 +8,7 @@
 #include <ascension/content-assist/content-assist.hpp>
 #include <ascension/corelib/text/break-iterator.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/rules.hpp>
@@ -150,24 +151,6 @@ namespace ascension {
 
 			// 非共有データ
 		//	delete selection_;
-		}
-
-		/**
-		 * Registers the display size listener.
-		 * @param listener The listener to be registered
-		 * @throw std#invalid_argument @a listener is already registered
-		 */
-		void TextViewer::addDisplaySizeListener(DisplaySizeListener& listener) {
-			displaySizeListeners_.add(listener);
-		}
-
-		/**
-		 * Registers the viewport listener.
-		 * @param listener The listener to be registered
-		 * @throw std#invalid_argument @a listener is already registered
-		 */
-		void TextViewer::addViewportListener(ViewportListener& listener) {
-			viewportListeners_.add(listener);
 		}
 
 		/// @see CaretListener#caretMoved
@@ -520,7 +503,7 @@ namespace ascension {
 				const graphics::font::TextRenderer& textRenderer = textViewer.textRenderer();
 				const std::shared_ptr<const graphics::font::TextViewport> viewport(textRenderer.viewport());
 				const presentation::WritingMode writingMode(textViewer.presentation().computeWritingMode(&textRenderer));
-				const presentation::AbstractTwoAxes<graphics::font::TextViewport::ScrollOffset> scrollPositions(viewport->scrollPositions());
+				const presentation::AbstractTwoAxes<graphics::font::TextViewportScrollOffset> scrollPositions(viewport->scrollPositions());
 				graphics::PhysicalTwoAxes<widgetapi::NativeScrollPosition> result;
 				switch(writingMode.blockFlowDirection) {
 					case presentation::HORIZONTAL_TB:
@@ -865,7 +848,7 @@ namespace ascension {
 			// scroll position
 			const graphics::PhysicalTwoAxes<widgetapi::NativeScrollPosition> scrollPosition(physicalScrollPosition(*this));
 			offset -= graphics::font::inlineProgressionOffsetInViewerGeometry(*textRenderer().viewport(),
-				static_cast<graphics::font::TextViewport::ScrollOffset>(
+				static_cast<graphics::font::TextViewportScrollOffset>(
 					horizontal ? boost::geometry::get<0>(scrollPosition) : boost::geometry::get<1>(scrollPosition)));
 
 			// ruler width
@@ -1592,24 +1575,6 @@ namespace ascension {
 			widgetapi::scheduleRedraw(*this, boundsToRedraw, false);
 		}
 
-		/**
-		 * Removes the display size listener.
-		 * @param listener The listener to be removed
-		 * @throw std#invalid_argument @a listener is not registered
-		 */
-		void TextViewer::removeDisplaySizeListener(DisplaySizeListener& listener) {
-			displaySizeListeners_.remove(listener);
-		}
-
-		/**
-		 * Removes the viewport listener.
-		 * @param listener The listener to be removed
-		 * @throw std#invalid_argument @a listener is not registered
-		 */
-		void TextViewer::removeViewportListener(ViewportListener& listener) {
-			viewportListeners_.remove(listener);
-		}
-
 		/// Redraws the ruler.
 		void TextViewer::repaintRuler() {
 			widgetapi::scheduleRedraw(*this, graphics::geometry::joined(
@@ -1684,7 +1649,7 @@ namespace ascension {
 //				const Inheritable<ReadingDirection> oldReadingDirection(configuration_.readingDirection);
 //				assert(!oldReadingDirection.inherits());
 				configuration_ = *general;
-				displaySizeListeners_.notify(&DisplaySizeListener::viewerDisplaySizeChanged);
+				textRenderer().viewport()->setBoundsInView(textAreaContentRectangle());	// TODO: Should we call resized() instead?
 				renderer_->layouts().invalidate();
 
 //				if((oldReadingDirection == LEFT_TO_RIGHT && configuration_.readingDirection == RIGHT_TO_LEFT)
@@ -1960,7 +1925,7 @@ namespace ascension {
 					caret().updateLocation();
 				}
 			} else if(geometry::x(positions) > minimum)
-				viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(minimum, boost::none));
+				viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewportScrollOffset>>(minimum, boost::none));
 			assert(calculateMaximumScrollPosition(geometry::x(endPositions), geometry::x(pageSizes)) > 0 || geometry::x(positions) == 0);
 			if(!isFrozen())
 				configureScrollBar(*this, 0, geometry::x(positions),
@@ -1979,7 +1944,7 @@ namespace ascension {
 					caret().updateLocation();
 				}
 			} else if(static_cast<widgetapi::NativeScrollPosition>(geometry::y(positions)) > minimum)
-				viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewport::ScrollOffset>>(boost::none, minimum));
+				viewport->scrollTo(PhysicalTwoAxes<boost::optional<TextViewportScrollOffset>>(boost::none, minimum));
 			assert(calculateMaximumScrollPosition(geometry::y(endPositions), geometry::y(pageSteps)) > 0 || geometry::y(positions) == 0);
 			if(!isFrozen())
 				configureScrollBar(*this, 1, geometry::y(positions),
@@ -2035,7 +2000,7 @@ namespace ascension {
 
 		/// @see TextViewportListener#viewportScrollPositionChanged
 		void TextViewer::viewportScrollPositionChanged(
-				const presentation::AbstractTwoAxes<graphics::font::TextViewport::ScrollOffset>& positionsBeforeScroll,
+				const presentation::AbstractTwoAxes<graphics::font::TextViewportScrollOffset>& positionsBeforeScroll,
 				const graphics::font::VisualLine& firstVisibleLineBeforeScroll) BOOST_NOEXCEPT {
 			assert(!isFrozen());
 
@@ -2075,11 +2040,11 @@ namespace ascension {
 				if(p != firstVisibleLineBeforeScroll)
 					layout = nullptr;
 				if(layout == nullptr)
-					abstractScrollOffsetInPixels.bpd() = std::numeric_limits<graphics::font::TextViewport::SignedScrollOffset>::max();
+					abstractScrollOffsetInPixels.bpd() = std::numeric_limits<graphics::font::TextViewportSignedScrollOffset>::max();
 			}
 			// 2-2. inline dimension
 			abstractScrollOffsetInPixels.ipd() = (abstractScrollOffsetInPixels.bpd() != std::numeric_limits<std::int32_t>::max()) ?
-				static_cast<graphics::font::TextViewport::SignedScrollOffset>(
+				static_cast<graphics::font::TextViewportSignedScrollOffset>(
 					inlineProgressionOffsetInViewerGeometry(*viewport, positionsBeforeScroll.ipd())
 						- inlineProgressionOffsetInViewerGeometry(*viewport, viewport->scrollPositions().ipd()))
 				: std::numeric_limits<std::int32_t>::max();
@@ -2134,7 +2099,7 @@ namespace ascension {
 			widgetapi::redrawScheduledRegion(*this);
 		}
 
-		/// @see ViewportListener#viewportScrollPropertiesChanged
+		/// @see TextViewportListener#viewportScrollPropertiesChanged
 		void TextViewer::viewportScrollPropertiesChanged(const presentation::AbstractTwoAxes<bool>& changedDimensions) BOOST_NOEXCEPT {
 			updateScrollBars(presentation::AbstractTwoAxes<bool>(true, true), presentation::AbstractTwoAxes<bool>(true, true));
 		}

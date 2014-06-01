@@ -862,6 +862,9 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\screen.hpp">
       <Filter>ascension\Header Files\viewer\widgetapi</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\text-viewport-listener.hpp">
+      <Filter>ascension\Header Files\graphics\font</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
