@@ -80,7 +80,7 @@ namespace ascension {
 			static const Index MAXIMUM_IDENTIFIER_LENGTH = 100;
 			if(!incremental || kernel::locations::isBeginningOfLine(caret))
 				replacementRegion.first = caret;
-			else if(source::getNearestIdentifier(caret.document(), caret, &replacementRegion.first.offsetInLine, nullptr))
+			else if(viewers::source::getNearestIdentifier(caret.document(), caret, &replacementRegion.first.offsetInLine, nullptr))
 				replacementRegion.first.line = kernel::line(caret);
 			else
 				replacementRegion.first = caret;
