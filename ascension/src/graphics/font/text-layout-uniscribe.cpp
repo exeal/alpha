@@ -691,9 +691,9 @@ namespace ascension {
 				private:
 					// this data is shared text runs separated by (only) line breaks and computed styles
 					struct RawGlyphVector /*: public StringPiece*/ : private boost::noncopyable {
-						const StringPiece::const_iterator position;
+						StringPiece::const_iterator position;
 						boost::flyweight<FontAndRenderContext> font;
-						const OpenTypeFontTag scriptTag;	// as OPENTYPE_TAG
+						OpenTypeFontTag scriptTag;	// as OPENTYPE_TAG
 						mutable SCRIPT_CACHE fontCache;
 						std::size_t numberOfGlyphs;
 						// only 'clusters' is character-base. others are glyph-base
@@ -775,6 +775,29 @@ namespace ascension {
 					SCRIPT_ANALYSIS analysis_;	// fLogicalOrder member is always 0 (however see shape())
 					std::shared_ptr<RawGlyphVector> glyphs_;
 				};
+			}
+
+			TextRunImpl::RawGlyphVector::RawGlyphVector(RawGlyphVector&& other) BOOST_NOEXCEPT :
+					position(other.position), font(std::move(other.font)), scriptTag(other.scriptTag),
+					fontCache(other.fontCache), numberOfGlyphs(other.numberOfGlyphs),
+					indices(std::move(other.indices)), clusters(std::move(other.clusters)),
+					visualAttributes(std::move(other.visualAttributes)), justifiedAdvances(std::move(other.justifiedAdvances)),
+					offsets(std::move(other.offsets)) {
+				other.fontCache = nullptr;
+			}
+
+			TextRunImpl::RawGlyphVector& TextRunImpl::RawGlyphVector::operator=(RawGlyphVector&& other) BOOST_NOEXCEPT {
+				position = other.position;
+				font = std::move(other.font);
+				scriptTag = other.scriptTag;
+				fontCache = other.fontCache;
+				numberOfGlyphs = other.numberOfGlyphs;
+				indices = std::move(other.indices);
+				clusters = std::move(other.clusters);
+				visualAttributes = std::move(other.visualAttributes);
+				justifiedAdvances = std::move(other.justifiedAdvances);
+				offsets = std::move(other.offsets);
+				return *this;
 			}
 
 			void TextRunImpl::RawGlyphVector::vanish(const Font& font, StringPiece::const_iterator at) {
