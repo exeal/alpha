@@ -255,7 +255,7 @@ namespace ascension {
 				TextHit<>&& internalHitTestCharacter(const presentation::AbstractTwoAxes<Scalar>& point,
 					const presentation::FlowRelativeFourSides<Scalar>* bounds, bool* outOfBounds) const;
 //				void buildLineMetrics(Index line);
-				void expandTabsWithoutWrapping() BOOST_NOEXCEPT;
+				void expandTabsWithoutWrapping(const TabExpander& tabExpander) BOOST_NOEXCEPT;
 				typedef std::vector<std::unique_ptr<const TextRun>> RunVector;
 				RunVector::const_iterator runForPosition(Index offset) const BOOST_NOEXCEPT;
 				boost::iterator_range<RunVector::const_iterator> runsForLine(Index line) const;
