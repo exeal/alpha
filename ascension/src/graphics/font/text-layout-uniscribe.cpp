@@ -672,7 +672,7 @@ namespace ascension {
 					// layout
 					std::unique_ptr<TextRunImpl> breakAt(StringPiece::const_iterator at);
 					bool expandTabCharacters(const TabExpander& tabExpander,
-						const String& layoutString, Scalar ipd, Scalar maximumMeasure);
+						const String& layoutString, Scalar ipd, boost::optional<Scalar> maximumMeasure);
 					HRESULT justify(int width);
 #if 0
 					static void mergeScriptsAndStyles(const StringPiece& layoutString, const SCRIPT_ITEM scriptRuns[],
@@ -1015,14 +1015,16 @@ namespace ascension {
 			 * @return @c true if expanded tab characters
 			 * @throw std#invalid_argument @a maximumMeasure &lt;= 0
 			 */
-			inline bool TextRunImpl::expandTabCharacters(
-					const TabExpander& tabExpander, const String& layoutString, Scalar ipd, Scalar maximumMeasure) {
-				if(maximumMeasure <= 0)
+			inline bool TextRunImpl::expandTabCharacters(const TabExpander& tabExpander,
+					const String& layoutString, Scalar ipd, boost::optional<Scalar> maximumMeasure) {
+				if(maximumMeasure != boost::none && boost::get(maximumMeasure) <= 0)
 					throw std::invalid_argument("maximumMeasure");
 				if(front() != '\t')
 					return false;
 				assert(length() == 1 && glyphs_.unique());
-				glyphs_->advances[0] = static_cast<int>(std::min(tabExpander.nextTabStop(ipd, begin() - layoutString.data()), maximumMeasure));
+				glyphs_->advances[0] = static_cast<int>(tabExpander.nextTabStop(ipd, begin() - layoutString.data()));
+				if(maximumMeasure != boost::none)
+					glyphs_->advances[0] = std::min(glyphs_->advances[0], static_cast<int>(boost::get(maximumMeasure)));
 				glyphs_->justifiedAdvances.reset();
 				return true;
 			}
@@ -2571,10 +2573,15 @@ namespace ascension {
 				if(runs_.empty() || !wrapsText(lineStyle.whiteSpace)) {
 					numberOfLines_ = 1;
 					assert(firstRunsInLines_.get() == nullptr);
+					// 5-1. expand horizontal tabs (with logical ordered runs)
+					if(const std::shared_ptr<const TabExpander> tabExpander = lineStyle.tabExpander)
+						expandTabsWithoutWrapping(*tabExpander);
+					else
+						expandTabsWithoutWrapping(FixedWidthTabExpander(context.fontMetrics(nominalFont)->averageCharacterWidth() * 8));
 					// 5-2. reorder each text runs
 					reorder();
 					// 5-3. reexpand horizontal tabs
-					expandTabsWithoutWrapping();
+//					expandTabsWithoutWrapping();
 				} else {
 					// 5-1. expand horizontal tabs and wrap into lines
 					if(const std::shared_ptr<const TabExpander> tabExpander = lineStyle.tabExpander)
@@ -3097,29 +3104,18 @@ namespace ascension {
 				}
 				context.restore();
 			}
-#if 0
-			/// Expands the all tabs and resolves each width.
-			inline void TextLayout::expandTabsWithoutWrapping() BOOST_NOEXCEPT {
-				const String& s = text();
-				const int fullTabWidth = lip_.textMetrics().averageCharacterWidth() * lip_.layoutSettings().tabWidth;
-				int x = 0;
 
-				if(lineTerminatorOrientation(style(), lip_.presentation().defaultTextLineStyle()) == LEFT_TO_RIGHT) {	// expand from the left most
-					for(std::size_t i = 0; i < numberOfRuns_; ++i) {
-						TextRun& run = *runs_[i];
-						run.expandTabCharacters(s, x, fullTabWidth, numeric_limits<int>::max());
-						x += run.totalWidth();
-					}
-				} else {	// expand from the right most
-					for(std::size_t i = numberOfRuns_; i > 0; --i) {
-						TextRun& run = *runs_[i - 1];
-						run.expandTabCharacters(s, x, fullTabWidth, numeric_limits<int>::max());
-						x += run.totalWidth();
-					}
+			/// Expands the all tabs and resolves each width.
+			inline void TextLayout::expandTabsWithoutWrapping(const TabExpander& tabExpander) BOOST_NOEXCEPT {
+				Scalar ipd = 0;
+				// for each runs... (at this time, 'runs_' is in logical order)
+				BOOST_FOREACH(RunVector::const_reference p, runs_) {
+					TextRunImpl& run = *const_cast<TextRunImpl*>(static_cast<const TextRunImpl*>(p.get()));
+					run.expandTabCharacters(tabExpander, textString_, ipd, boost::none);
+					ipd += allocationMeasure(run);
 				}
-				longestLineWidth_ = x;
+				maximumMeasure_ = ipd;
 			}
-#endif
 
 			/**
 			 * Returns the space string added to the end of the specified line to reach the specified virtual
