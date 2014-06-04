@@ -9,6 +9,7 @@
 #include "ambient.hpp"
 #include <memory>
 #include <vector>
+#include <ascension/corelib/signals.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <gtkmm/paned.h>
 

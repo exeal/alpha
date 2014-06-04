@@ -10,14 +10,12 @@
 #include "resource.h"
 #include "buffer.hpp"
 //#include "search.hpp"	// ui.SearchDialog
-#include "status-bar.hpp"
+#include "main-window.hpp"
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include "win32/module.hpp"
 #endif
 #include <ascension/graphics/font/font-description.hpp>
 #include <gtkmm/application.h>
-#include <gtkmm/applicationwindow.h>
-#include <memory>	// std.unique_ptr
 
 
 // タイトルバーとかに使うアプリケーション名
@@ -58,31 +56,6 @@ namespace alpha {
 	namespace ambient {
 		class ScriptSystem;
 	};
-
-	// fwd
-	class EditorPanes;
-	namespace ui {
-//		class SearchDialog;
-//		class BookmarkDialog;
-
-		class MainWindow : public Gtk::ApplicationWindow {
-		public:
-			/// @name Children
-			/// @{
-			EditorPanes& editorPanes() const BOOST_NOEXCEPT;
-//			SearchDialog& searchDialog() const BOOST_NOEXCEPT;
-			StatusBar& statusBar() const BOOST_NOEXCEPT;
-			/// @}
-
-		private:
-//			std::unique_ptr<ui::SearchDialog> searchDialog_;
-			StatusBar statusBar_;
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
-			manah::win32::ui::Rebar rebar_;		// rebar
-			manah::win32::ui::Toolbar toolbar_;	// standard toolbar
-#endif
-		};
-	}
 
 	/// The application class of Alpha.
 	class Application : public Gtk::Application {
@@ -171,18 +144,6 @@ namespace alpha {
 	/// Returns the main window.
 	inline const ui::MainWindow& Application::window() const BOOST_NOEXCEPT {
 		return window_;
-	}
-
-	namespace ui {
-//		/// Returns the search dialog box.
-//		inline SearchDialog& MainWindow::searchDialog() const BOOST_NOEXCEPT {
-//			return *searchDialog_;
-//		}
-
-		/// Returns the status bar.
-		inline StatusBar& MainWindow::statusBar() const BOOST_NOEXCEPT {
-			return const_cast<MainWindow*>(this)->statusBar_;
-		}
 	}
 } // namespace alpha
 
