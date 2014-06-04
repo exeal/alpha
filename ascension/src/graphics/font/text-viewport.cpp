@@ -69,12 +69,14 @@ namespace ascension {
 			/**
 			 * Converts the given inline progression offset in text viewer into scroll offset.
 			 * @param viewport The viewport
-			 * @param offset The inline progression offset in the viewer associated with @a viewport in user units
+			 * @param offset The inline progression offset in the viewer associated with @a viewport in user units. If
+			 *               this is @c boost#none, @c viewport.scrollPositions().ipd() is used
 			 * @return A converted inline progression scroll offset in @a viewport
 			 * @see inlineProgressionOffsetInViewportScroll
 			 */
-			TextViewportScrollOffset inlineProgressionOffsetInViewerGeometry(const TextViewport& viewport, Scalar offset) {
-				return static_cast<TextViewportScrollOffset>(offset /* / viewport.dimensionRates().ipd() */);
+			TextViewportScrollOffset inlineProgressionOffsetInViewerGeometry(const TextViewport& viewport, boost::optional<Scalar> offset /* = boost::none */) {
+				return static_cast<TextViewportScrollOffset>(
+					boost::get_optional_value_or(offset, viewport.scrollPositions().ipd()) /* / viewport.dimensionRates().ipd() */);
 			}
 
 			/**
