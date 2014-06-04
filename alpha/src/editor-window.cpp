@@ -15,10 +15,6 @@
 #include <boost/range/algorithm/find.hpp>
 
 namespace alpha {
-	namespace {
-		EditorPanes& editorPanes() BOOST_NOEXCEPT;
-	}
-
 	// EditorPane /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	/**
@@ -352,7 +348,7 @@ namespace alpha {
 			if(pane == nullptr) {
 				EditorPanes* panes = boost::python::extract<EditorPanes*>(o);
 				if(panes == nullptr)
-					panes = &editorPanes();
+					panes = &Application::instance().window().editorPanes();
 				pane = &panes->activePane();
 			}
 			return pane->selectedBuffer().self();
@@ -399,11 +395,11 @@ namespace alpha {
 		boost::python::def("current_buffer", &currentBuffer, boost::python::arg("pane_or_panes") = boost::python::object());
 
 		boost::python::def("selected_window", ambient::makeFunctionPointer([]() {
-			return editorPanes().activePane().self();
+			return Application::instance().window().editorPanes().activePane().self();
 		}));
 
 		boost::python::def("windows", ambient::makeFunctionPointer([]() {
-			return editorPanes().self();
+			return Application::instance().window().editorPanes().self();
 		}));
 	ALPHA_EXPOSE_EPILOGUE()
 }
