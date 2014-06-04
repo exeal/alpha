@@ -212,6 +212,57 @@ namespace ascension {
 			}
 #endif //ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 
+			std::unique_ptr<const LineMetrics> Font::lineMetrics(const StringPiece& text, const FontRenderContext& frc) const {
+				struct LineMetricsImpl : public LineMetrics {
+					Scalar ascent() const BOOST_NOEXCEPT override {return std::get<0>(adl);}
+					DominantBaseline baseline() const BOOST_NOEXCEPT override {return DominantBaseline::ALPHABETIC;}
+					Scalar baselineOffset(AlignmentBaseline baseline) const BOOST_NOEXCEPT override {return 0;}
+					Scalar descent() const BOOST_NOEXCEPT override {return std::get<1>(adl);}
+					Scalar leading() const BOOST_NOEXCEPT override {return std::get<2>(adl);}
+					Scalar strikeThroughOffset() const BOOST_NOEXCEPT override {return std::get<0>(strikeThrough);}
+					Scalar strikeThroughThickness() const BOOST_NOEXCEPT override {return std::get<1>(strikeThrough);}
+					Scalar underlineOffset() const BOOST_NOEXCEPT override {return std::get<0>(underline);}
+					Scalar underlineThickness() const BOOST_NOEXCEPT override {return std::get<1>(underline);}
+
+					std::tuple<Scalar, Scalar, Scalar> adl;
+					std::tuple<Scalar, Scalar> strikeThrough, underline;
+				};
+
+				win32::Handle<HDC>::Type dc(win32::detail::screenDC());
+				const int cookie = ::SaveDC(dc.get());
+				const XFORM xform(graphics::toNative<XFORM>(frc.transform()));
+				if(::SetGraphicsMode(dc.get(), GM_ADVANCED) != 0 && ::SetMapMode(dc.get(), MM_TEXT) != 0 && ::SetWorldTransform(dc.get(), &xform)) {
+					::SelectObject(dc.get(), native().get());
+					if(const UINT bytes = ::GetOutlineTextMetricsW(dc.get(), 0, nullptr)) {
+						OUTLINETEXTMETRICW* const otm = static_cast<OUTLINETEXTMETRICW*>(::operator new(bytes));
+						if(::GetOutlineTextMetricsW(dc.get(), bytes, otm) != 0) {
+							std::unique_ptr<LineMetricsImpl> lm(new LineMetricsImpl);
+							std::get<0>(lm->adl) = static_cast<Scalar>(otm->otmAscent);
+							std::get<1>(lm->adl) = static_cast<Scalar>(otm->otmDescent);
+							std::get<2>(lm->adl) = static_cast<Scalar>(otm->otmTextMetrics.tmInternalLeading);
+							std::get<0>(lm->strikeThrough) = static_cast<Scalar>(otm->otmsStrikeoutPosition);
+							std::get<1>(lm->strikeThrough) = static_cast<Scalar>(otm->otmsStrikeoutSize);
+							std::get<0>(lm->underline) = static_cast<Scalar>(otm->otmsUnderscorePosition);
+							std::get<1>(lm->underline) = static_cast<Scalar>(otm->otmsUnderscoreSize);
+						}
+					} else {
+						TEXTMETRICW tm;
+						if(win32::boole(::GetTextMetricsW(dc.get(), &tm))) {
+							std::unique_ptr<LineMetricsImpl> lm(new LineMetricsImpl);
+							std::get<0>(lm->adl) = static_cast<Scalar>(tm.tmAscent);
+							std::get<1>(lm->adl) = static_cast<Scalar>(tm.tmDescent);
+							std::get<2>(lm->adl) = static_cast<Scalar>(tm.tmInternalLeading);
+							std::get<0>(lm->strikeThrough) = static_cast<Scalar>(tm.tmAscent / 3.0);
+							std::get<1>(lm->strikeThrough) = 1.0;
+							std::get<0>(lm->underline) = static_cast<Scalar>(tm.tmAscent);
+							std::get<1>(lm->underline) = 1.0;
+						}
+					}
+				}
+				::RestoreDC(dc.get(), cookie);
+				throw makePlatformError();
+			}
+
 			win32::Handle<HFONT>::Type Font::native() const BOOST_NOEXCEPT {
 				return nativeObject_;
 			}
