@@ -2418,6 +2418,8 @@ namespace ascension {
 					next(true);
 				}
 
+				const std::vector<std::unique_ptr<const TextRun>> InlineProgressionDimensionRangeIterator::dummy_;
+
 				InlineProgressionDimensionRangeIterator::value_type InlineProgressionDimensionRangeIterator::dereference() const {
 					if(isDone())
 						throw NoSuchElementException();
