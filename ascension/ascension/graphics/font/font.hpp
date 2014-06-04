@@ -65,9 +65,9 @@ namespace ascension {
 				/// Returns the thickness of the strike-through line in user units.
 				virtual Scalar strikeThroughThickness() const BOOST_NOEXCEPT = 0;
 				/// Returns the position of the underline relative to the baseline in user units.
-				virtual Scalar strikeUnderlineOffset() const BOOST_NOEXCEPT = 0;
+				virtual Scalar underlineOffset() const BOOST_NOEXCEPT = 0;
 				/// Returns the thickness of the underline in user units.
-				virtual Scalar strikeUnderlineThickness() const BOOST_NOEXCEPT = 0;
+				virtual Scalar underlineThickness() const BOOST_NOEXCEPT = 0;
 			};
 
 			/**
