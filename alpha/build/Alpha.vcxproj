@@ -266,6 +266,7 @@
     </ClCompile>
     <ClCompile Include="..\src\input.cpp" />
     <ClCompile Include="..\src\intrinsic.cpp" />
+    <ClCompile Include="..\src\main-window.cpp" />
     <ClCompile Include="..\src\menu.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
@@ -415,6 +416,7 @@
     <ClInclude Include="..\src\function-pointer.hpp" />
     <ClInclude Include="..\src\input.hpp" />
     <ClInclude Include="..\src\intrinsic.hpp" />
+    <ClInclude Include="..\src\main-window.hpp" />
     <ClInclude Include="..\src\new-file-format-dialog.hpp" />
     <ClInclude Include="..\src\resource.h" />
     <ClInclude Include="..\src\save-some-buffers-dialog.hpp" />
