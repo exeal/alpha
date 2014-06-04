@@ -313,9 +313,9 @@ namespace ascension {
 				assert(line <= numberOfLines());
 				if(firstRunsInLines_.get() == nullptr) {
 					assert(numberOfLines() == 1);
-					return begin(runs_);
+					return std::begin(runs_);
 				}
-				return (line < numberOfLines()) ? firstRunsInLines_[line] : end(runs_);
+				return (line < numberOfLines()) ? firstRunsInLines_[line] : std::end(runs_);
 			}
 
 			/**
@@ -376,6 +376,21 @@ namespace ascension {
 
 			/// Returns the number of the wrapped lines.
 			inline Index TextLayout::numberOfLines() const BOOST_NOEXCEPT {return numberOfLines_;}
+
+			/**
+			 * @internal Returns iterator range addresses the all text runs belong to the specified visual line.
+			 * @param line The visual line
+			 * @return An iterator range addresses the all text runs belong to @a line
+			 */
+			inline boost::iterator_range<TextLayout::RunVector::const_iterator> TextLayout::runsForLine(Index line) const BOOST_NOEXCEPT {
+				assert(line < numberOfLines());
+				if(firstRunsInLines_.get() == nullptr) {
+					assert(numberOfLines() == 1);
+					return boost::make_iterator_range(runs_);
+				}
+				return boost::make_iterator_range(firstRunsInLines_[line],
+					(line + 1 < numberOfLines()) ? firstRunsInLines_[line + 1] : std::end(runs_));
+			}
 
 			/// Returns the writing mode for this @c TextLayout.
 			inline const presentation::WritingMode& TextLayout::writingMode() const BOOST_NOEXCEPT {
