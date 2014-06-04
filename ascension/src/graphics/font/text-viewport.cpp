@@ -69,12 +69,13 @@ namespace ascension {
 			/**
 			 * Converts the given inline progression offset in text viewer into scroll offset.
 			 * @param viewport The viewport
-			 * @param offset The inline progression offset in the viewer associated with @a viewport in user units
+			 * @param offset The inline progression offset in the viewer associated with @a viewport in user units. If
+			 *               this is @c boost#none, @c viewport.scrollPositions().ipd() is used
 			 * @return A converted inline progression scroll offset in @a viewport
 			 * @see inlineProgressionOffsetInViewportScroll
 			 */
-			TextViewportScrollOffset inlineProgressionOffsetInViewerGeometry(const TextViewport& viewport, Scalar offset) {
-				return static_cast<TextViewportScrollOffset>(offset /* / viewport.dimensionRates().ipd() */);
+			Scalar inlineProgressionOffsetInViewerGeometry(const TextViewport& viewport, const boost::optional<TextViewportScrollOffset>& offset /* = boost::none */) {
+				return static_cast<Scalar>(boost::get_optional_value_or(offset, viewport.scrollPositions().ipd()) /* / viewport.dimensionRates().ipd() */);
 			}
 
 			/**
@@ -85,9 +86,10 @@ namespace ascension {
 			 * @return A converted inline progression offset in viewer geometry in user units
 			 * @see inlineProgressionOffsetInViewerGeometry
 			 */
-			Scalar inlineProgressionOffsetInViewportScroll(const TextViewport& viewport, const boost::optional<TextViewportScrollOffset>& offset /* = boost::none */) {
+			TextViewportScrollOffset inlineProgressionOffsetInViewportScroll(const TextViewport& viewport, const boost::optional<Scalar>& offset /* = boost::none */) {
 #if 1
-				return static_cast<Scalar>(boost::get_optional_value_or(offset, viewport.scrollPositions().ipd())) /* * viewport.dimensionRates().ipd() */;
+				return (offset != boost::none) ?
+					static_cast<TextViewportScrollOffset>(boost::get(offset) /* * viewport.dimensionRates().ipd() */) : viewport.scrollPositions().ipd();
 #else
 				const TextViewportScrollOffset offset = scrollOffset ? *scrollOffset : viewport.inlineProgressionOffset();
 				return viewport.averageCharacterWidth() * offset;
