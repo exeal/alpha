@@ -392,6 +392,26 @@ namespace alpha {
 	}
 
 	/**
+	 * Returns a string that is the name of no existing buffer based on the specified string.
+	 * @param name The base name string
+	 * @return The generated name string
+	 * @throw std#overflow_error
+	 */
+	Glib::ustring BufferList::makeUniqueName(const Glib::ustring& name) const {
+		if(forName(name) == boost::python::object())
+			return name;
+		const Glib::ustring format(name + "<%1>");
+		for(std::size_t n = 2; ; ++n) {
+			const Glib::ustring newName(Glib::ustring::compose(format, n));
+			if(forName(newName) == boost::python::object())
+				return newName;
+			if(n == std::numeric_limits<decltype(n)>::max())
+				break;
+		}
+		throw std::overflow_error("name");
+	}
+
+	/**
 	 * Moves the specified buffer in the buffer list.
 	 * @param from The index of the buffer to move
 	 * @param to The index of the destination
