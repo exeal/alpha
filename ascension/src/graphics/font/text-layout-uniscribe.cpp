@@ -616,42 +616,37 @@ namespace ascension {
 					std::size_t capacity_;
 					ElementType* p_;
 				};
+			}
 
-				class TextRunImpl : public TextRun, public StringPiece, private boost::noncopyable {
+			 
+			// GlyphVectorImpl file-local class ///////////////////////////////////////////////////////////////////////
+
+			namespace {
+				class GlyphVectorImpl : public TextRun, public StringPiece {
 				public:
-					struct Overlay {
-						Color color;
-						boost::integer_range<Index> range;
-					};
-				public:
-					TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
-						std::shared_ptr<const Font> font, const FontRenderContext& frc,
-						OpenTypeFontTag scriptTag, const ComputedTextRunStyleCore& coreStyle);
-					~TextRunImpl() BOOST_NOEXCEPT;
-					static void generate(const StringPiece& textString,
-						const ComputedTextLineStyle& lineStyle, std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles,
-						const FontCollection& fontCollection, const FontRenderContext& frc,
-						std::vector<TextRunImpl*>& textRuns, std::vector<AttributedCharacterRange<ComputedTextRunStyle>>& calculatedStyles);
+					GlyphVectorImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
+						std::shared_ptr<const Font> font, const FontRenderContext& frc, OpenTypeFontTag scriptTag);
+
 					// GlyphVector
 					void fillGlyphs(PaintContext& context, const Point& origin/*,
-						boost::optional<boost::integer_range<std::size_t>> range = boost::none*/) const;
-					std::shared_ptr<const Font> font() const BOOST_NOEXCEPT;
-					const FontRenderContext& fontRenderContext() const;
-					Index glyphCharacterIndex(std::size_t index) const;
-					GlyphCode glyphCode(std::size_t index) const;
-					graphics::Rectangle glyphLogicalBounds(std::size_t index) const;
-					GlyphMetrics&& glyphMetrics(std::size_t index) const;
-					Point glyphPosition(std::size_t index) const;
-					std::vector<Point>&& glyphPositions(const boost::integer_range<std::size_t>& range) const;
-					graphics::Rectangle glyphVisualBounds(std::size_t index) const;
-					graphics::Rectangle logicalBounds() const;
-					std::size_t numberOfGlyphs() const BOOST_NOEXCEPT;
-					void setGlyphPosition(std::size_t index, const Point& position);
+						boost::optional<boost::integer_range<std::size_t>> range = boost::none*/) const override;
+					std::shared_ptr<const Font> font() const BOOST_NOEXCEPT override;
+					const FontRenderContext& fontRenderContext() const override;
+					Index glyphCharacterIndex(std::size_t index) const override;
+					GlyphCode glyphCode(std::size_t index) const override;
+					graphics::Rectangle glyphLogicalBounds(std::size_t index) const override;
+					GlyphMetrics&& glyphMetrics(std::size_t index) const override;
+					Point glyphPosition(std::size_t index) const override;
+					std::vector<Point>&& glyphPositions(const boost::integer_range<std::size_t>& range) const override;
+					graphics::Rectangle glyphVisualBounds(std::size_t index) const override;
+					graphics::Rectangle logicalBounds() const override;
+					std::size_t numberOfGlyphs() const BOOST_NOEXCEPT override;
+					void setGlyphPosition(std::size_t index, const Point& position) override;
 					void strokeGlyphs(PaintContext& context, const Point& origin/*,
-						boost::optional<boost::integer_range<std::size_t>> range = boost::none*/) const;
-					graphics::Rectangle visualBounds() const;
+						boost::optional<boost::integer_range<std::size_t>> range = boost::none*/) const override;
+					graphics::Rectangle visualBounds() const override;
 					// TextRun
-					const presentation::FlowRelativeFourSides<ComputedBorderSide>* border() const BOOST_NOEXCEPT override {return &coreStyle_.get().border;}
+					const presentation::FlowRelativeFourSides<ComputedBorderSide>* border() const BOOST_NOEXCEPT override {return nullptr;}
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 					boost::optional<Index> characterEncompassesPosition(float ipd) const BOOST_NOEXCEPT;
 					Index characterHasClosestLeadingEdge(float ipd) const;
@@ -660,35 +655,28 @@ namespace ascension {
 					StringPiece characterRange() const BOOST_NOEXCEPT override;
 					TextHit<>&& hitTestCharacter(Scalar ipd, const boost::optional<boost::integer_range<Scalar>>& bounds, bool* outOfBounds) const override;
 					Scalar hitToLogicalPosition(const TextHit<>& hit) const override;
-					const presentation::FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT override {return &coreStyle_.get().margin;}
-					const presentation::FlowRelativeFourSides<Scalar>* padding() const BOOST_NOEXCEPT override {return &coreStyle_.get().padding;}
+					const presentation::FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT override {return nullptr;}
+					const presentation::FlowRelativeFourSides<Scalar>* padding() const BOOST_NOEXCEPT override {return nullptr;}
 					// attributes
-					const ComputedTextRunStyleCore& style() const BOOST_NOEXCEPT {return coreStyle_;}
 					HRESULT logicalAttributes(SCRIPT_LOGATTR attributes[]) const;
 					// geometry
 					std::vector<graphics::Rectangle>&& charactersBounds(const boost::integer_range<Index>& characterRange) const;
 					HRESULT logicalWidths(int widths[]) const;
 //					int totalAdvance() const BOOST_NOEXCEPT {return boost::accumulate(advances(), 0);}
 					// layout
-					std::unique_ptr<TextRunImpl> breakAt(StringPiece::const_iterator at);
+					std::unique_ptr<GlyphVectorImpl> breakAt(StringPiece::const_iterator at);
+					std::unique_ptr<GlyphVectorImpl> breakIfTooLong();
 					bool expandTabCharacters(const TabExpander& tabExpander,
 						const String& layoutString, Scalar ipd, boost::optional<Scalar> maximumMeasure);
 					HRESULT justify(int width);
-#if 0
-					static void mergeScriptsAndStyles(const StringPiece& layoutString, const SCRIPT_ITEM scriptRuns[],
-						const OPENTYPE_TAG scriptTags[], std::size_t numberOfScriptRuns, const FontCollection& fontCollection,
-						shared_ptr<const TextRunStyle> defaultStyle, unique_ptr<ComputedStyledTextRunIterator> styles,
-						vector<TextRunImpl*>& textRuns, vector<const ComputedTextRunStyle>& computedStyles,
-						vector<vector<const ComputedTextRunStyle>::size_type>& computedStylesIndices);
-#endif
 					void shape(win32::Handle<HDC>::Type dc);
-					void positionGlyphs(win32::Handle<HDC>::Type dc, const ComputedTextRunStyle& style);
-					std::unique_ptr<TextRunImpl> splitIfTooLong();
-					static void substituteGlyphs(const boost::iterator_range<std::vector<TextRunImpl*>::iterator>& runs);
+					void positionGlyphs(win32::Handle<HDC>::Type dc);
+					template<typename SinglePassReadableRange>
+					static void substituteGlyphs(const SinglePassReadableRange& runs);
 					// drawing and painting
 					void drawGlyphs(PaintContext& context, const Point& p, const boost::integer_range<Index>& range) const;
-					void paintLineDecorations() const;
-				private:
+
+				protected:
 					// this data is shared text runs separated by (only) line breaks and computed styles
 					struct RawGlyphVector /*: public StringPiece*/ : private boost::noncopyable {
 						StringPiece::const_iterator position;
@@ -711,10 +699,9 @@ namespace ascension {
 						~RawGlyphVector() BOOST_NOEXCEPT {::ScriptFreeCache(&fontCache);}
 						void vanish(const Font& font, StringPiece::const_iterator at);
 					};
-				private:
-					TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
-						std::unique_ptr<RawGlyphVector> glyphs, const ComputedTextRunStyleCore& coreStyle);
-					TextRunImpl(TextRunImpl& leading, StringPiece::const_iterator beginningOfNewRun);
+				protected:
+					GlyphVectorImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script, std::unique_ptr<RawGlyphVector> glyphs);
+					GlyphVectorImpl(GlyphVectorImpl& leading, StringPiece::const_iterator beginningOfNewRun);
 					boost::iterator_range<const int*> advances() const BOOST_NOEXCEPT {
 						if(const int* const p = glyphs_->advances.get())
 							return boost::make_iterator_range(p + *glyphRange().begin(), p + *glyphRange().end());
@@ -770,1259 +757,882 @@ namespace ascension {
 							return boost::make_iterator_range(p + *glyphRange().begin(), p + *glyphRange().end());
 						return boost::make_iterator_range<const SCRIPT_VISATTR*>(nullptr, nullptr);
 					}
+
 				private:
-					boost::flyweight<ComputedTextRunStyleCore> coreStyle_;
 					SCRIPT_ANALYSIS analysis_;	// fLogicalOrder member is always 0 (however see shape())
 					std::shared_ptr<RawGlyphVector> glyphs_;
 				};
-			}
 
-			TextRunImpl::RawGlyphVector::RawGlyphVector(RawGlyphVector&& other) BOOST_NOEXCEPT :
-					position(other.position), font(std::move(other.font)), scriptTag(other.scriptTag),
-					fontCache(other.fontCache), numberOfGlyphs(other.numberOfGlyphs),
-					indices(std::move(other.indices)), clusters(std::move(other.clusters)),
-					visualAttributes(std::move(other.visualAttributes)), justifiedAdvances(std::move(other.justifiedAdvances)),
-					offsets(std::move(other.offsets)) {
-				other.fontCache = nullptr;
-			}
-
-			TextRunImpl::RawGlyphVector& TextRunImpl::RawGlyphVector::operator=(RawGlyphVector&& other) BOOST_NOEXCEPT {
-				position = other.position;
-				font = std::move(other.font);
-				scriptTag = other.scriptTag;
-				fontCache = other.fontCache;
-				numberOfGlyphs = other.numberOfGlyphs;
-				indices = std::move(other.indices);
-				clusters = std::move(other.clusters);
-				visualAttributes = std::move(other.visualAttributes);
-				justifiedAdvances = std::move(other.justifiedAdvances);
-				offsets = std::move(other.offsets);
-				return *this;
-			}
-
-			void TextRunImpl::RawGlyphVector::vanish(const Font& font, StringPiece::const_iterator at) {
-				assert(advances.get() == nullptr);
-				assert(at != nullptr);
-				assert(at >= position);
-				win32::Handle<HDC>::Type dc(win32::detail::screenDC());
-				HFONT oldFont = nullptr;
-				WORD blankGlyph;
-				HRESULT hr = ::ScriptGetCMap(dc.get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
-				if(hr == E_PENDING) {
-					oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font.native().get()));
-					hr = ::ScriptGetCMap(dc.get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
+				GlyphVectorImpl::RawGlyphVector::RawGlyphVector(RawGlyphVector&& other) BOOST_NOEXCEPT :
+						position(other.position), font(std::move(other.font)), scriptTag(other.scriptTag),
+						fontCache(other.fontCache), numberOfGlyphs(other.numberOfGlyphs),
+						indices(std::move(other.indices)), clusters(std::move(other.clusters)),
+						visualAttributes(std::move(other.visualAttributes)), justifiedAdvances(std::move(other.justifiedAdvances)),
+						offsets(std::move(other.offsets)) {
+					other.fontCache = nullptr;
 				}
-				if(hr == S_OK) {
-					SCRIPT_FONTPROPERTIES fp;
-					fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-					if(FAILED(hr = ::ScriptGetFontProperties(dc.get(), &fontCache, &fp)))
-						fp.wgBlank = 0;	// hmm...
-					blankGlyph = fp.wgBlank;
+
+				GlyphVectorImpl::RawGlyphVector& GlyphVectorImpl::RawGlyphVector::operator=(RawGlyphVector&& other) BOOST_NOEXCEPT {
+					position = other.position;
+					font = std::move(other.font);
+					scriptTag = other.scriptTag;
+					fontCache = other.fontCache;
+					numberOfGlyphs = other.numberOfGlyphs;
+					indices = std::move(other.indices);
+					clusters = std::move(other.clusters);
+					visualAttributes = std::move(other.visualAttributes);
+					justifiedAdvances = std::move(other.justifiedAdvances);
+					offsets = std::move(other.offsets);
+					return *this;
 				}
-				if(oldFont != nullptr)
-					::SelectObject(dc.get(), oldFont);
-				indices[clusters[at - position]] = indices[clusters[at - position + 1]] = blankGlyph;
-				SCRIPT_VISATTR* const va = visualAttributes.get();
-				va[clusters[at - position]].uJustification = SCRIPT_JUSTIFY_BLANK;
-				va[clusters[at - position]].fZeroWidth = 1;
-			}
 
-			/**
-			 * Constructor.
-			 * @param characterRange The string this text run covers
-			 * @param script @c SCRIPT_ANALYSIS The object obtained by @c ScriptItemize(OpenType)
-			 * @param font The font renders this text run. Can't be @c null
-			 * @param scriptTag An OpenType script tag describes the script of this text run
-			 * @param coreStyle The core text style
-			 * @throw NullPointerException @a characterRange and/or @a font are @c null
-			 * @throw std#invalid_argument @a characterRange is empty
-			 * @note This constructor is called by only @c #splitIfTooLong.
-			 */
-			TextRunImpl::TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
-					std::shared_ptr<const Font> font, const FontRenderContext& frc, OpenTypeFontTag scriptTag, const ComputedTextRunStyleCore& coreStyle)
-					: StringPiece(characterRange), coreStyle_(coreStyle), analysis_(script),
-					glyphs_(new RawGlyphVector(characterRange.cbegin(), font, frc, scriptTag)) {	// may throw NullPointerException for 'font'
-				raiseIfNullOrEmpty(characterRange, "characterRange");
-//				raiseIfNull(font.get(), "font");
-			}
-
-			/**
-			 * Private constructor.
-			 * @param characterRange The string this text run covers
-			 * @param script @c SCRIPT_ANALYSIS The object obtained by @c ScriptItemize(OpenType)
-			 * @param glyphs The glyph vector
-			 * @param coreStyle The core text style
-			 * @throw NullPointerException @a characterRange and/or @a glyphs are @c null
-			 * @throw std#invalid_argument @a characterRange is empty
-			 * @note This constructor is called by only @c #generate.
-			 */
-			TextRunImpl::TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
-					std::unique_ptr<RawGlyphVector> glyphs, const ComputedTextRunStyleCore& coreStyle) :
-					StringPiece(characterRange), coreStyle_(coreStyle), analysis_(script), glyphs_(std::move(glyphs)) {
-				raiseIfNullOrEmpty(characterRange, "characterRange");
-				raiseIfNull(glyphs_.get(), "glyphs");
-			}
-
-			/**
-			 * Another private constructor separates an existing text run.
-			 * @param leading The original text run
-			 * @param beginningOfNewRun
-			 * @throw std#invalid_argument @a leading has not been shaped
-			 * @throw NullPointerException @a beginningOfNewRun is @c null
-			 * @throw std#out_of_range @a beginningOfNewRun is outside of the character range @a leading covers
-			 * @see #splitIfTooLong
-			 * @note This constructor is called by only @c #breakAt.
-			 */
-			TextRunImpl::TextRunImpl(TextRunImpl& leading, StringPiece::const_iterator beginningOfNewRun) :
-					StringPiece(makeStringPiece(beginningOfNewRun, leading.end())),
-					coreStyle_(leading.style()), analysis_(leading.analysis_), glyphs_(leading.glyphs_) {
-				if(leading.glyphs_.get() == nullptr)
-					throw std::invalid_argument("leading has not been shaped");
-				raiseIfNull(beginningOfNewRun, "beginningOfNewRun");
-				if(!includes(leading.characterRange(), beginningOfNewRun))
-					throw std::out_of_range("beginningOfNewRun");
-
-				// compute 'glyphRange_'
-
-				// modify clusters
-//				TextRun& target = ltr ? *this : leading;
-//				WORD* const clusters = glyphs_->clusters.get();
-//				transform(target.clusters(), target.clusters() + target.length(),
-//					clusters + target.beginning(), bind2nd(minus<WORD>(), clusters[ltr ? target.beginning() : (target.end() - 1)]));
-			}
-
-			/// Destructor.
-			TextRunImpl::~TextRunImpl() BOOST_NOEXCEPT {
-			//	if(cache_ != nullptr)
-			//		::ScriptFreeCache(&cache_);
-			}
-
-			/**
-			 * Breaks the text run into two runs at the specified position.
-			 * @param at The position at which break this run
-			 * @return The new text run following this run
-			 * @note This method is called by only @c #wrap.
-			 */
-			std::unique_ptr<TextRunImpl> TextRunImpl::breakAt(StringPiece::const_iterator at) {
-				raiseIfNull(at, "at");
-				if(!includes(*this, at))
-					throw std::out_of_range("at");
-				else if(glyphs_->clusters[at - begin()] == glyphs_->clusters[at - begin() - 1])
-					throw std::invalid_argument("at");
-			
-				const bool ltr = direction() == presentation::LEFT_TO_RIGHT;
-				assert(ltr == (analysis_.fRTL == 0));
-			
-				// create the new following run
-				std::unique_ptr<TextRunImpl> following(new TextRunImpl(*this, at));
-			
-				// update placements
-//				place(context, layoutString, lip);
-//				following->place(dc, layoutString, lip);
-			
-				return following;
-			}
-
-#ifdef ASCENSION_ABANDONED_AT_VERSION_08
-			/// @see TextRun#characterEncompassesPosition
-			boost::optional<Index> TextRunImpl::characterEncompassesPosition(float ipd) const BOOST_NOEXCEPT {
-				int character;
-				hitTest(ipd, character, nullptr);
-				if(character == -1 || character == length())
-					return boost::none;
-				assert(character >= 0);
-				return character;
-			}
-
-			/// @see TextRun#characterHasClosestLeadingEdge
-			Index TextRunImpl::characterHasClosestLeadingEdge(float ipd) const {
-				int character, trailing;
-				hitTest(ipd, character, &trailing);
-				if(character == -1)
-					return 0;
-				const int result = (character == length()) ? length() : (character + trailing);
-				assert(result >= 0);
-				return result;
-			}
-#endif // ASCENSION_ABANDONED_AT_VERSION_08
-
-			/// @see TextRun#characterLevel
-			std::uint8_t TextRunImpl::characterLevel() const BOOST_NOEXCEPT {
-				return static_cast<std::uint8_t>(analysis_.s.uBidiLevel);
-			}
-
-			std::vector<graphics::Rectangle>&& TextRunImpl::charactersBounds(const boost::integer_range<Index>& characterRange) const {
-				if(characterRange.empty())
-					return std::vector<graphics::Rectangle>();
-				// 'characterRange' are offsets from the beginning of this text run
-
-				// measure glyph black box bounds
-				const boost::iterator_range<const WORD*> glyphIndices(glyphs());
-				const boost::iterator_range<const int*> glyphAdvances(effectiveAdvances());
-				const bool rtl = LogicalClusterIterator::readingDirection(clusters()) == presentation::RIGHT_TO_LEFT;
-				LogicalClusterIterator cluster(clusters(), glyphs(), !rtl ? characterRange.front() : characterRange.back());
-				Scalar x = 0;
-				for(std::size_t i = 0, firstGlyph = cluster.currentGlyphRange().begin() - glyphIndices.begin(); i < firstGlyph; ++i)
-					x += glyphAdvances[i];
-
-				std::vector<graphics::Rectangle> bounds;
-				RenderingContext2D context(win32::detail::screenDC());
-				context.save();
-				context.setFont(font());
-				const MAT2 matrix = {1, 0, 0, 1};	// TODO: Consider glyph transform.
-				const auto sx = geometry::scaleX(fontRenderContext().transform()) / geometry::scaleX(context.fontRenderContext().transform());
-				const auto sy = geometry::scaleY(fontRenderContext().transform()) / geometry::scaleY(context.fontRenderContext().transform());
-				DWORD lastError = ERROR_SUCCESS;
-				const boost::iterator_range<const GOFFSET*> glyphOffsets2D(glyphOffsets());
-				for(const LogicalClusterIterator e; cluster != e; !rtl ? ++cluster : --cluster) {
-					Scalar left = std::numeric_limits<Scalar>::max(), top = std::numeric_limits<Scalar>::max(),
-						right = std::numeric_limits<Scalar>::min(), bottom = std::numeric_limits<Scalar>::min();
-					const boost::iterator_range<const WORD*> glyphRange(cluster.currentGlyphRange());
-					for(std::size_t i = 0; i < static_cast<std::size_t>(glyphRange.size()); ++i, x += glyphAdvances[i]) {
-						GLYPHMETRICS gm;
-						if(GDI_ERROR == ::GetGlyphOutlineW(context.native().get(), glyphRange[i], GGO_GLYPH_INDEX | GGO_METRICS, &gm, 0, nullptr, &matrix)) {
-							lastError = ::GetLastError();
-							break;
-						}
-						left = std::min(x - static_cast<Scalar>(gm.gmptGlyphOrigin.x * sx) + glyphOffsets2D[i].du, left);
-						top = std::min(0 - static_cast<Scalar>(gm.gmptGlyphOrigin.y * sy) + glyphOffsets2D[i].dv, top);
-						right = std::max(x + static_cast<Scalar>(gm.gmBlackBoxX * sx) + glyphOffsets2D[i].du, right);
-						bottom = std::max(0 + static_cast<Scalar>(gm.gmBlackBoxY * sy) + glyphOffsets2D[i].dv, bottom);
+				void GlyphVectorImpl::RawGlyphVector::vanish(const Font& font, StringPiece::const_iterator at) {
+					assert(advances.get() == nullptr);
+					assert(at != nullptr);
+					assert(at >= position);
+					win32::Handle<HDC>::Type dc(win32::detail::screenDC());
+					HFONT oldFont = nullptr;
+					WORD blankGlyph;
+					HRESULT hr = ::ScriptGetCMap(dc.get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
+					if(hr == E_PENDING) {
+						oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font.native().get()));
+						hr = ::ScriptGetCMap(dc.get(), &fontCache, L"\x0020", 1, 0, &blankGlyph);
 					}
-					bounds.push_back(graphics::Rectangle(geometry::_left = left, geometry::_top = top, geometry::_right = right, geometry::_bottom = bottom));
-				}
-				context.restore();
-				if(lastError != ERROR_SUCCESS)
-					throw makePlatformError(lastError);
-				return std::move(bounds);
-			}
-
-			/// @see TextRun#characterRange
-			inline StringPiece TextRunImpl::characterRange() const BOOST_NOEXCEPT {
-				return *this;
-			}
-
-			/**
-			 * Returns the number of missing glyphs in this run.
-			 * @param context The graphics context
-			 * @return The number of missing glyphs
-			 * @throw PlatformError
-			 */
-			inline std::size_t TextRunImpl::countMissingGlyphs(const RenderingContext2D& context) const {
-				SCRIPT_FONTPROPERTIES fp;
-				fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-				const HRESULT hr = ::ScriptGetFontProperties(context.native().get(), &glyphs_->fontCache, &fp);
-				if(FAILED(hr))
-					throw makePlatformError(hr);	// can't handle
-				// following is not offical way, but from Mozilla (gfxWindowsFonts.cpp)
-				std::size_t c = 0;
-				for(text::StringCharacterIterator i(*this); i.hasNext(); i.next()) {
-					if(!text::ucd::BinaryProperty::is<text::ucd::BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(i.current())) {
-						const WORD glyph = glyphs_->indices[glyphs_->clusters[i.tell() - i.beginning()]];
-						if(glyph == fp.wgDefault || (glyph == fp.wgInvalid && glyph != fp.wgBlank))
-							++c;
-						else if(glyphs_->visualAttributes[i.tell() - i.beginning()].fZeroWidth == 1
-								&& scriptProperties.get(analysis_.eScript).fComplex == 0)
-							++c;
+					if(hr == S_OK) {
+						SCRIPT_FONTPROPERTIES fp;
+						fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
+						if(FAILED(hr = ::ScriptGetFontProperties(dc.get(), &fontCache, &fp)))
+							fp.wgBlank = 0;	// hmm...
+						blankGlyph = fp.wgBlank;
 					}
+					if(oldFont != nullptr)
+						::SelectObject(dc.get(), oldFont);
+					indices[clusters[at - position]] = indices[clusters[at - position + 1]] = blankGlyph;
+					SCRIPT_VISATTR* const va = visualAttributes.get();
+					va[clusters[at - position]].uJustification = SCRIPT_JUSTIFY_BLANK;
+					va[clusters[at - position]].fZeroWidth = 1;
 				}
-				return c;
-			}
 
-			/**
-			 * Expands tab characters in this run and modifies the measure (advance).
-			 * @param tabExpander The tab expander
-			 * @param layoutString The text string for the layout to which this text run belongs
-			 * @param ipd The position in writing direction this text run begins, in pixels
-			 * @param maximumMeasure The maximum measure this text run can take place, in pixels
-			 * @return @c true if expanded tab characters
-			 * @throw std#invalid_argument @a maximumMeasure &lt;= 0
-			 */
-			inline bool TextRunImpl::expandTabCharacters(const TabExpander& tabExpander,
-					const String& layoutString, Scalar ipd, boost::optional<Scalar> maximumMeasure) {
-				if(maximumMeasure != boost::none && boost::get(maximumMeasure) <= 0)
-					throw std::invalid_argument("maximumMeasure");
-				if(front() != '\t')
-					return false;
-				assert(length() == 1 && glyphs_.unique());
-				glyphs_->advances[0] = static_cast<int>(tabExpander.nextTabStop(ipd, begin() - layoutString.data()));
-				if(maximumMeasure != boost::none)
-					glyphs_->advances[0] = std::min(glyphs_->advances[0], static_cast<int>(boost::get(maximumMeasure)));
-				glyphs_->justifiedAdvances.reset();
-				return true;
-			}
-
-			/// @see GlyphVector#fillGlyphs
-			void TextRunImpl::fillGlyphs(PaintContext& context, const Point& origin/*, boost::optional<boost::integer_range<std::size_t>> range = boost::none*/) const {
-				return paintGlyphs(context, origin/*, range*/, false);
-			}
-
-			/// @see GlyphVector#font
-			std::shared_ptr<const Font> TextRunImpl::font() const BOOST_NOEXCEPT {
-				return glyphs_->font.get().font();
-			}
-
-			/// @see GlyphVector#fontRenderContext
-			const FontRenderContext& TextRunImpl::fontRenderContext() const BOOST_NOEXCEPT {
-				return glyphs_->font.get().fontRenderContext();
-			}
-
-			namespace {
-				inline HRESULT callScriptItemize(const WCHAR* text, int length, int estimatedNumberOfItems,
-						const SCRIPT_CONTROL& control, const SCRIPT_STATE& initialState, SCRIPT_ITEM items[], OPENTYPE_TAG scriptTags[], int& numberOfItems) BOOST_NOEXCEPT {
-					static HRESULT(WINAPI* scriptItemizeOpenType)(const WCHAR*, int, int,
-						const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*, OPENTYPE_TAG*, int*) = uspLib->get<0>();
-					if(scriptItemizeOpenType != nullptr && scriptTags != nullptr)
-						return (*scriptItemizeOpenType)(text, length, estimatedNumberOfItems, &control, &initialState, items, scriptTags, &numberOfItems);
-					else
-						return ::ScriptItemize(text, length, estimatedNumberOfItems, &control, &initialState, items, &numberOfItems);
+				/**
+				 * Creates a @c GlyphVectorImpl instance with a text string, script information and font rendering context.
+				 * @param characterRange The string this text run covers
+				 * @param script @c SCRIPT_ANALYSIS The object obtained by @c ScriptItemize(OpenType)
+				 * @param font The font renders this text run. Can't be @c null
+				 * @param scriptTag An OpenType script tag describes the script of this text run
+				 * @throw NullPointerException @a characterRange and/or @a font are @c null
+				 * @throw std#invalid_argument @a characterRange is empty
+				 * @note This constructor is called by only @c #breakIfTooLong.
+				 */
+				GlyphVectorImpl::GlyphVectorImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
+						std::shared_ptr<const Font> font, const FontRenderContext& frc, OpenTypeFontTag scriptTag)
+						: StringPiece(characterRange), analysis_(script),
+						glyphs_(new RawGlyphVector(characterRange.cbegin(), font, frc, scriptTag)) {	// may throw NullPointerException for 'font'
+					raiseIfNullOrEmpty(characterRange, "characterRange");
+//					raiseIfNull(font.get(), "font");
 				}
-				std::shared_ptr<const Font> selectFont(const StringPiece& textString, const FontCollection& fontCollection, const ComputedFontSpecification& specification);
-			}
 
-			/**
-			 * @param textString
-			 * @param lineStyle
-			 * @param textRunStyles
-			 * @param fontCollection
-			 * @param frc
-			 * @param[out] textRuns
-			 * @param[out] calculatedStyles
-			 */
-			void TextRunImpl::generate(const StringPiece& textString,
-					const ComputedTextLineStyle& lineStyle, std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles,
-					const FontCollection& fontCollection, const FontRenderContext& frc,
-					std::vector<TextRunImpl*>& textRuns, std::vector<AttributedCharacterRange<ComputedTextRunStyle>>& calculatedStyles) {
-				raiseIfNullOrEmpty(textString, "textString");
-
-				// split the text line into text runs as following steps:
-				// 1. split the text into script runs (SCRIPT_ITEMs) by Uniscribe
-				// 2. split each script runs into atomically-shapable runs (TextRuns) with StyledRunIterator
-
-				// 1. split the text into script runs by Uniscribe
-				HRESULT hr;
-
-				// 1-1. configure Uniscribe's itemize
-				win32::AutoZero<SCRIPT_CONTROL> control;
-				win32::AutoZero<SCRIPT_STATE> initialState;
-				initialState.uBidiLevel = (lineStyle.writingMode.inlineFlowDirection == presentation::RIGHT_TO_LEFT) ? 1 : 0;
-//				initialState.fOverrideDirection = 1;
-				initialState.fInhibitSymSwap = lineStyle.inhibitSymmetricSwapping;
-				initialState.fDisplayZWG = lineStyle.displayShapingControls;
-				const SCRIPT_DIGITSUBSTITUTE sds(convertNumberSubstitutionToUniscribe(lineStyle.numberSubstitution));
-				hr = ::ScriptApplyDigitSubstitution(&sds, &control, &initialState);
-				if(FAILED(hr))
-					throw makePlatformError(hr);
-
-				// 1-2. itemize
-				// note that ScriptItemize can cause a buffer overflow (see Mozilla bug 366643)
-				AutoArray<SCRIPT_ITEM, 128> scriptRuns;
-				AutoArray<OPENTYPE_TAG, scriptRuns.STATIC_CAPACITY> scriptTags;
-				int estimatedNumberOfScriptRuns = std::max(static_cast<int>(textString.length()) / 4, 2), numberOfScriptRuns;
-				HRESULT(WINAPI* scriptItemizeOpenType)(const WCHAR*, int, int,
-					const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*, OPENTYPE_TAG*, int*) = uspLib->get<0>();
-				while(true) {
-					scriptRuns.reallocate(estimatedNumberOfScriptRuns);
-					scriptTags.reallocate(estimatedNumberOfScriptRuns);
-					hr = callScriptItemize(std::begin(textString), static_cast<int>(textString.length()),
-						estimatedNumberOfScriptRuns, control, initialState, scriptRuns.get(), scriptTags.get(), numberOfScriptRuns);
-					if(hr != E_OUTOFMEMORY)	// estimatedNumberOfRuns was enough...
-						break;
-					estimatedNumberOfScriptRuns *= 2;
+				/**
+				 * Creates a @c GlyphVectorImpl instance with a text string, script information and a computed glyph
+				 * vector.
+				 * @param characterRange The string this text run covers
+				 * @param script @c SCRIPT_ANALYSIS The object obtained by @c ScriptItemize(OpenType)
+				 * @param glyphs The glyph vector
+				 * @throw NullPointerException @a characterRange and/or @a glyphs are @c null
+				 * @throw std#invalid_argument @a characterRange is empty
+				 * @note This constructor is called by only @c #generate.
+				 */
+				GlyphVectorImpl::GlyphVectorImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script, std::unique_ptr<RawGlyphVector> glyphs)
+						: StringPiece(characterRange), analysis_(script), glyphs_(std::move(glyphs)) {
+					raiseIfNullOrEmpty(characterRange, "characterRange");
+					raiseIfNull(glyphs_.get(), "glyphs");
 				}
-				if(lineStyle.disableDeprecatedFormatCharacters) {
-					for(int i = 0; i < numberOfScriptRuns; ++i) {
-						scriptRuns[i].a.s.fInhibitSymSwap = initialState.fInhibitSymSwap;
-						scriptRuns[i].a.s.fDigitSubstitute = initialState.fDigitSubstitute;
-					}
+
+				/**
+				 * Creates a @c GlyphVectorImpl instance by breaking an existing one.
+				 * @param leading The original @c GlyphVectorImpl object
+				 * @param beginningOfNewRun The beginning position of the newly created vector
+				 * @throw std#invalid_argument @a leading has not been shaped
+				 * @throw NullPointerException @a beginningOfNewRun is @c null
+				 * @throw std#out_of_range @a beginningOfNewRun is outside of the character range @a leading covers
+				 * @see #breakAt, breakIfTooLong
+				 * @note This constructor is called by only @c #breakAt.
+				 */
+				GlyphVectorImpl::GlyphVectorImpl(GlyphVectorImpl& leading, StringPiece::const_iterator beginningOfNewRun) :
+						StringPiece(makeStringPiece(beginningOfNewRun, leading.end())), analysis_(leading.analysis_), glyphs_(leading.glyphs_) {
+					if(leading.glyphs_.get() == nullptr)
+						throw std::invalid_argument("'leading' has not been shaped");
+					raiseIfNull(beginningOfNewRun, "beginningOfNewRun");
+					if(!includes(leading.characterRange(), beginningOfNewRun))
+						throw std::out_of_range("beginningOfNewRun");
+
+					// compute 'glyphRange_'
+
+					// modify clusters
+//					TextRun& target = ltr ? *this : leading;
+//					WORD* const clusters = glyphs_->clusters.get();
+//					transform(target.clusters(), target.clusters() + target.length(),
+//						clusters + target.beginning(), bind2nd(minus<WORD>(), clusters[ltr ? target.beginning() : (target.end() - 1)]));
 				}
-				if(scriptItemizeOpenType == nullptr)
-					std::fill_n(scriptTags.get(), numberOfScriptRuns, SCRIPT_TAG_UNKNOWN);
 
-				// 2. generate raw glyph vectors and computed styled text runs
-				std::vector<std::unique_ptr<RawGlyphVector>> glyphRuns;
-				glyphRuns.reserve(numberOfScriptRuns);
-				std::vector<const SCRIPT_ANALYSIS*> scriptPointers;
-				scriptPointers.reserve(numberOfScriptRuns);
-				std::vector<AttributedCharacterRange<ComputedTextRunStyle>> styleRuns;
-				{
-					StringPiece::const_iterator lastGlyphRunEnd = nullptr;
-					// script cursors
-					AttributedCharacterRange<const SCRIPT_ITEM*>
-						scriptRun(std::begin(textString) + scriptRuns[0].iCharPos, &scriptRuns[0]),
-						nextScriptRun((numberOfScriptRuns > 1) ?
-							std::begin(textString) + scriptRuns[1].iCharPos : textString.end(), scriptRun.attribute + 1);
-					// style cursors
-					detail::ComputedStyledTextRunEnumerator styledTextRunEnumerator(textString, move(textRunStyles));
-					assert(!styledTextRunEnumerator.isDone());
-					AttributedCharacterRange<ComputedTextRunStyle> styleRun, nextStyleRun;
-					styledTextRunEnumerator.style(styleRun.attribute);
-					styleRun.position = styledTextRunEnumerator.position();
-					styledTextRunEnumerator.next();
-					if(!styledTextRunEnumerator.isDone()) {
-						styledTextRunEnumerator.style(nextStyleRun.attribute);
-						nextStyleRun.position = styledTextRunEnumerator.position();
-					} else
-						nextStyleRun.position = textString.end();
-					styleRuns.push_back(AttributedCharacterRange<ComputedTextRunStyle>(styleRun.position, styleRun.attribute));
+				/**
+				 * Breaks this vector into two vectors at the specified position.
+				 * @param at The position at which break this vector
+				 * @return The new vector following this one
+				 * @note This method is called by only @c #wrap.
+				 */
+				std::unique_ptr<GlyphVectorImpl> GlyphVectorImpl::breakAt(StringPiece::const_iterator at) {
+					raiseIfNull(at, "at");
+					if(!includes(*this, at))
+						throw std::out_of_range("at");
+					else if(glyphs_->clusters[at - begin()] == glyphs_->clusters[at - begin() - 1])
+						throw std::invalid_argument("at");
 
-					do {
-						const StringPiece::const_iterator next = std::min(nextScriptRun.position, nextStyleRun.position);
-						const bool advanceScriptRun = next == nextScriptRun.position;
-						const bool advanceStyleRun = next == nextStyleRun.position;
+					const bool ltr = direction() == presentation::LEFT_TO_RIGHT;
+					assert(ltr == (analysis_.fRTL == 0));
 
-						if(advanceScriptRun) {
-							const StringPiece subRange(scriptRun.position, next - scriptRun.position);
-							assert(glyphRuns.empty() || subRange.cbegin() == lastGlyphRunEnd);
-							glyphRuns.push_back(
-								std::unique_ptr<RawGlyphVector>(
-									new RawGlyphVector(subRange.cbegin(),
-										selectFont(subRange, fontCollection, styleRun.attribute.font),
-										frc, scriptTags[scriptRun.attribute - scriptRuns.get()])));
-							scriptPointers.push_back(&scriptRuns[scriptRun.attribute - scriptRuns.get()].a);
-							assert(nextScriptRun.position < textString.end());
-							scriptRun = nextScriptRun;
-							if(++nextScriptRun.attribute < scriptRuns.get() + numberOfScriptRuns)
-								nextScriptRun.position = textString.cbegin() + nextScriptRun.attribute->iCharPos;
-							else
-								nextScriptRun.position = textString.end();
-						}
-						if(advanceStyleRun) {
-							if(!advanceScriptRun) {
-								const StringPiece subRange(makeStringPiece(!glyphRuns.empty() ? lastGlyphRunEnd : textString.cbegin(), next));
-								glyphRuns.push_back(
-									std::unique_ptr<RawGlyphVector>(
-										new RawGlyphVector(subRange.cbegin(),
-											selectFont(subRange, fontCollection, styleRun.attribute.font),
-											frc, scriptTags[scriptRun.attribute - scriptRuns.get()])));
+					// create the new following run
+					std::unique_ptr<GlyphVectorImpl> following(new GlyphVectorImpl(*this, at));
+
+					// update placements
+//					place(context, layoutString, lip);
+//					following->place(dc, layoutString, lip);
+
+					return following;
+				}
+
+				std::unique_ptr<GlyphVectorImpl> GlyphVectorImpl::breakIfTooLong() {
+					if(estimateNumberOfGlyphs(length()) <= 65535)
+						return std::unique_ptr<GlyphVectorImpl>();
+
+					// split this run, because the length would cause ScriptShape to fail (see also Mozilla bug 366643).
+					static const Index MAXIMUM_RUN_LENGTH = 43680;	// estimateNumberOfGlyphs(43680) == 65536
+					Index opportunity = 0;
+					std::unique_ptr<SCRIPT_LOGATTR[]> la(new SCRIPT_LOGATTR[length()]);
+					const HRESULT hr = logicalAttributes(la.get());
+					if(SUCCEEDED(hr)) {
+						for(Index i = MAXIMUM_RUN_LENGTH; i > 0; --i) {
+							if(la[i].fCharStop != 0) {
+								if(text::ucd::legacyctype::isspace((*this)[i]) || text::ucd::legacyctype::isspace((*this)[i - 1])) {
+									opportunity = i;
+									break;
+								}
+								opportunity = std::max(i, opportunity);
 							}
-							assert(nextStyleRun.position < textString.end());
-							styleRun = std::move(nextStyleRun);	// C2668 if included <boost/log/trivial.hpp> without 'std::' ???
-							styleRuns.push_back(AttributedCharacterRange<ComputedTextRunStyle>(styleRun.position, styleRun.attribute));
-							assert(!styledTextRunEnumerator.isDone());
-							styledTextRunEnumerator.next();
-							if(!styledTextRunEnumerator.isDone()) {
-								styledTextRunEnumerator.style(nextStyleRun.attribute);
-								nextStyleRun.position = styledTextRunEnumerator.position();
-							} else
-								nextStyleRun.position = textString.end();
 						}
-						lastGlyphRunEnd = next;
-					} while(scriptRun.position < textString.end() || styleRun.position < textString.end());
-					assert(glyphRuns.size() == scriptPointers.size());
+					}
+					if(opportunity == 0) {
+						opportunity = MAXIMUM_RUN_LENGTH;
+						if(text::surrogates::isLowSurrogate((*this)[opportunity]) && text::surrogates::isHighSurrogate((*this)[opportunity - 1]))
+							--opportunity;
+					}
+
+					StringPiece followingRange(*this);
+					followingRange.remove_prefix(opportunity);
+					std::unique_ptr<GlyphVectorImpl> following(new GlyphVectorImpl(
+						followingRange, analysis_, glyphs_->font.get().font(), glyphs_->font.get().fontRenderContext(), glyphs_->scriptTag));
+					static_cast<StringPiece&>(*this) = StringPiece(begin(), opportunity);
+					analysis_.fLinkAfter = following->analysis_.fLinkBefore = 0;
+					return following;
 				}
 
-				// 3. merge script runs and style runs into TextRunImpls
-				std::vector<TextRunImpl*> mergedTextRuns;
-				mergedTextRuns.reserve(glyphRuns.size() + styleRuns.size());
-				{
-					auto glyphRun(std::begin(glyphRuns)), lastGlyphRun(std::end(glyphRuns));
-					auto styleRun(std::begin(styleRuns)), lastStyleRun(std::end(styleRuns));
-					do {
-						auto nextGlyphRun(glyphRun + 1);
-						auto nextStyleRun(styleRun + 1);
-						const StringPiece::const_iterator
-							nextGlyphRunPosition((nextGlyphRun != lastGlyphRun) ? (*nextGlyphRun)->position : textString.end()),
-							nextStyleRunPosition((nextStyleRun != lastStyleRun) ? nextStyleRun->position : textString.end());
-						const StringPiece::const_iterator nextPosition(std::min(nextGlyphRunPosition, nextStyleRunPosition));
-						const StringPiece::const_iterator previousPosition(!mergedTextRuns.empty() ? mergedTextRuns.back()->end() : textString.cbegin());
-
-						mergedTextRuns.push_back(new TextRunImpl(
-							makeStringPiece(previousPosition, nextPosition),
-							*scriptPointers[glyphRuns.size() - (lastGlyphRun - glyphRun)], std::move(*glyphRun), styleRun->attribute));
-						if(nextPosition == nextGlyphRunPosition)
-							++glyphRun;
-						if(nextPosition == nextStyleRunPosition)
-							++styleRun;
-					} while(glyphRun != lastGlyphRun && styleRun != lastStyleRun);
+				/// @see TextRun#characterLevel
+				std::uint8_t GlyphVectorImpl::characterLevel() const BOOST_NOEXCEPT {
+					return static_cast<std::uint8_t>(analysis_.s.uBidiLevel);
 				}
 
-				// 4. generate results
-				using std::swap;
-				swap(mergedTextRuns, textRuns);
-				swap(styleRuns, calculatedStyles);
-			}
+				std::vector<graphics::Rectangle>&& GlyphVectorImpl::charactersBounds(const boost::integer_range<Index>& characterRange) const {
+					if(characterRange.empty())
+						return std::vector<graphics::Rectangle>();
+					// 'characterRange' are offsets from the beginning of this vector
 
-			/// Fills the glyph array with default index, instead of using @c ScriptShape.
-			inline void TextRunImpl::generateDefaultGlyphs(win32::Handle<HDC>::Type dc,
-					const StringPiece& text, const SCRIPT_ANALYSIS& analysis, RawGlyphVector& glyphs) {
-				SCRIPT_CACHE fontCache(nullptr);
-				SCRIPT_FONTPROPERTIES fp;
-				fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-				if(FAILED(::ScriptGetFontProperties(dc.get(), &fontCache, &fp)))
-					fp.wgDefault = 0;	// hmm...
+					// measure glyph black box bounds
+					const boost::iterator_range<const WORD*> glyphIndices(glyphs());
+					const boost::iterator_range<const int*> glyphAdvances(effectiveAdvances());
+					const bool rtl = LogicalClusterIterator::readingDirection(clusters()) == presentation::RIGHT_TO_LEFT;
+					LogicalClusterIterator cluster(clusters(), glyphs(), !rtl ? characterRange.front() : characterRange.back());
+					Scalar x = 0;
+					for(std::size_t i = 0, firstGlyph = cluster.currentGlyphRange().begin() - glyphIndices.begin(); i < firstGlyph; ++i)
+						x += glyphAdvances[i];
 
-				std::unique_ptr<WORD[]> indices, clusters;
-				std::unique_ptr<SCRIPT_VISATTR[]> visualAttributes;
-				const int numberOfGlyphs = static_cast<int>(text.length());
-				indices.reset(new WORD[numberOfGlyphs]);
-				clusters.reset(new WORD[text.length()]);
-				visualAttributes.reset(new SCRIPT_VISATTR[numberOfGlyphs]);
-				std::fill_n(indices.get(), numberOfGlyphs, fp.wgDefault);
-				const bool ltr = analysis.fRTL == 0 || analysis.fLogicalOrder == 1;
-				for(std::size_t i = 0, c = text.length(); i < c; ++i)
-					clusters[i] = static_cast<WORD>(ltr ? i : (c - i));
-				const SCRIPT_VISATTR va = {SCRIPT_JUSTIFY_NONE, 1, 0, 0, 0, 0};
-				std::fill_n(visualAttributes.get(), numberOfGlyphs, va);
-
-				// commit
-				glyphs.numberOfGlyphs = numberOfGlyphs;
-				using std::swap;
-				swap(glyphs.fontCache, fontCache);
-				swap(glyphs.indices, indices);
-				swap(glyphs.clusters, clusters);
-				swap(glyphs.visualAttributes, visualAttributes);
-				::ScriptFreeCache(&fontCache);
-			}
-
-			/**
-			 * Generates glyphs for the text.
-			 * @param context the graphics context
-			 * @param text the text to generate glyphs
-			 * @param analysis the Uniscribe's @c SCRIPT_ANALYSIS object
-			 * @param[out] glyphs
-			 * @retval S_OK succeeded
-			 * @retval USP_E_SCRIPT_NOT_IN_FONT the font does not support the required script
-			 * @retval E_INVALIDARG other Uniscribe error. usually, too long run was specified
-			 * @retval HRESULT other Uniscribe error
-			 * @throw std#bad_alloc failed to allocate buffer for glyph indices or visual attributes array
-			 */
-			HRESULT TextRunImpl::generateGlyphs(win32::Handle<HDC>::Type dc,
-					const StringPiece& text, const SCRIPT_ANALYSIS& analysis, RawGlyphVector& glyphs) {
-#ifdef _DEBUG
-				if(HFONT currentFont = static_cast<HFONT>(::GetCurrentObject(dc.get(), OBJ_FONT))) {
-					LOGFONTW lf;
-					if(::GetObjectW(currentFont, sizeof(LOGFONTW), &lf) > 0)
-						BOOST_LOG_TRIVIAL(debug) << L"[TextLayout.TextRun.generateGlyphs] Selected font is '" << lf.lfFaceName << L"'.\n";
+					std::vector<graphics::Rectangle> bounds;
+					RenderingContext2D context(win32::detail::screenDC());
+					context.save();
+					context.setFont(font());
+					const MAT2 matrix = {1, 0, 0, 1};	// TODO: Consider glyph transform.
+					const auto sx = geometry::scaleX(fontRenderContext().transform()) / geometry::scaleX(context.fontRenderContext().transform());
+					const auto sy = geometry::scaleY(fontRenderContext().transform()) / geometry::scaleY(context.fontRenderContext().transform());
+					DWORD lastError = ERROR_SUCCESS;
+					const boost::iterator_range<const GOFFSET*> glyphOffsets2D(glyphOffsets());
+					for(const LogicalClusterIterator e; cluster != e; !rtl ? ++cluster : --cluster) {
+						Scalar left = std::numeric_limits<Scalar>::max(), top = std::numeric_limits<Scalar>::max(),
+							right = std::numeric_limits<Scalar>::min(), bottom = std::numeric_limits<Scalar>::min();
+						const boost::iterator_range<const WORD*> glyphRange(cluster.currentGlyphRange());
+						for(std::size_t i = 0; i < static_cast<std::size_t>(glyphRange.size()); ++i, x += glyphAdvances[i]) {
+							GLYPHMETRICS gm;
+							if(GDI_ERROR == ::GetGlyphOutlineW(context.native().get(), glyphRange[i], GGO_GLYPH_INDEX | GGO_METRICS, &gm, 0, nullptr, &matrix)) {
+								lastError = ::GetLastError();
+								break;
+							}
+							left = std::min(x - static_cast<Scalar>(gm.gmptGlyphOrigin.x * sx) + glyphOffsets2D[i].du, left);
+							top = std::min(0 - static_cast<Scalar>(gm.gmptGlyphOrigin.y * sy) + glyphOffsets2D[i].dv, top);
+							right = std::max(x + static_cast<Scalar>(gm.gmBlackBoxX * sx) + glyphOffsets2D[i].du, right);
+							bottom = std::max(0 + static_cast<Scalar>(gm.gmBlackBoxY * sy) + glyphOffsets2D[i].dv, bottom);
+						}
+						bounds.push_back(graphics::Rectangle(geometry::_left = left, geometry::_top = top, geometry::_right = right, geometry::_bottom = bottom));
+					}
+					context.restore();
+					if(lastError != ERROR_SUCCESS)
+						throw makePlatformError(lastError);
+					return std::move(bounds);
 				}
-#endif
 
-				SCRIPT_CACHE fontCache(nullptr);	// TODO: this object should belong to a font, not glyph run???
-				std::unique_ptr<WORD[]> indices, clusters;
-				std::unique_ptr<SCRIPT_VISATTR[]> visualAttributes;
-				clusters.reset(new WORD[text.length()]);
-				int numberOfGlyphs = estimateNumberOfGlyphs(text.length());
-				HRESULT hr;
-				while(true) {
+				/// @see TextRun#characterRange
+				inline StringPiece GlyphVectorImpl::characterRange() const BOOST_NOEXCEPT {
+					return *this;
+				}
+
+				/**
+				 * Returns the number of missing glyphs in this vector.
+				 * @param context The graphics context
+				 * @return The number of missing glyphs
+				 * @throw PlatformError
+				 */
+				inline std::size_t GlyphVectorImpl::countMissingGlyphs(const RenderingContext2D& context) const {
+					SCRIPT_FONTPROPERTIES fp;
+					fp.cBytes = sizeof(decltype(fp));
+					const HRESULT hr = ::ScriptGetFontProperties(context.native().get(), &glyphs_->fontCache, &fp);
+					if(FAILED(hr))
+						throw makePlatformError(hr);	// can't handle
+					// following is not offical way, but from Mozilla (gfxWindowsFonts.cpp)
+					std::size_t c = 0;
+					for(text::StringCharacterIterator i(*this); i.hasNext(); i.next()) {
+						if(!text::ucd::BinaryProperty::is<text::ucd::BinaryProperty::DEFAULT_IGNORABLE_CODE_POINT>(i.current())) {
+							const WORD glyph = glyphs_->indices[glyphs_->clusters[i.tell() - i.beginning()]];
+							if(glyph == fp.wgDefault || (glyph == fp.wgInvalid && glyph != fp.wgBlank))
+								++c;
+							else if(glyphs_->visualAttributes[i.tell() - i.beginning()].fZeroWidth == 1
+									&& scriptProperties.get(analysis_.eScript).fComplex == 0)
+								++c;
+						}
+					}
+					return c;
+				}
+
+				/**
+				 * Expands tab characters in this vector and modifies the measure (advance).
+				 * @param tabExpander The tab expander
+				 * @param layoutString The text string for the layout to which this text run belongs
+				 * @param ipd The position in writing direction this text run begins, in pixels
+				 * @param maximumMeasure The maximum measure this text run can take place, in pixels
+				 * @return @c true if expanded tab characters
+				 * @throw std#invalid_argument @a maximumMeasure &lt;= 0
+				 */
+				inline bool GlyphVectorImpl::expandTabCharacters(const TabExpander& tabExpander,
+						const String& layoutString, Scalar ipd, boost::optional<Scalar> maximumMeasure) {
+					if(maximumMeasure != boost::none && boost::get(maximumMeasure) <= 0)
+						throw std::invalid_argument("maximumMeasure");
+					if(front() != '\t')
+						return false;
+					assert(length() == 1 && glyphs_.unique());
+					glyphs_->advances[0] = static_cast<int>(tabExpander.nextTabStop(ipd, begin() - layoutString.data()));
+					if(maximumMeasure != boost::none)
+						glyphs_->advances[0] = std::min(glyphs_->advances[0], static_cast<int>(boost::get(maximumMeasure)));
+					glyphs_->justifiedAdvances.reset();
+					return true;
+				}
+
+				/// @see GlyphVector#fillGlyphs
+				void GlyphVectorImpl::fillGlyphs(PaintContext& context, const Point& origin/*, boost::optional<boost::integer_range<std::size_t>> range = boost::none*/) const {
+					return paintGlyphs(context, origin/*, range*/, false);
+				}
+
+				/// @see GlyphVector#font
+				std::shared_ptr<const Font> GlyphVectorImpl::font() const BOOST_NOEXCEPT {
+					return glyphs_->font.get().font();
+				}
+
+				/// @see GlyphVector#fontRenderContext
+				const FontRenderContext& GlyphVectorImpl::fontRenderContext() const BOOST_NOEXCEPT {
+					return glyphs_->font.get().fontRenderContext();
+				}
+
+				namespace {
+					inline HRESULT callScriptItemize(const WCHAR* text, int length, int estimatedNumberOfItems,
+							const SCRIPT_CONTROL& control, const SCRIPT_STATE& initialState, SCRIPT_ITEM items[], OPENTYPE_TAG scriptTags[], int& numberOfItems) BOOST_NOEXCEPT {
+						static HRESULT(WINAPI* scriptItemizeOpenType)(const WCHAR*, int, int,
+							const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*, OPENTYPE_TAG*, int*) = uspLib->get<0>();
+						if(scriptItemizeOpenType != nullptr && scriptTags != nullptr)
+							return (*scriptItemizeOpenType)(text, length, estimatedNumberOfItems, &control, &initialState, items, scriptTags, &numberOfItems);
+						else
+							return ::ScriptItemize(text, length, estimatedNumberOfItems, &control, &initialState, items, &numberOfItems);
+					}
+					std::shared_ptr<const Font> selectFont(const StringPiece& textString, const FontCollection& fontCollection, const ComputedFontSpecification& specification);
+				}
+
+				/// Fills the glyph array with default index, instead of using @c ScriptShape.
+				inline void GlyphVectorImpl::generateDefaultGlyphs(win32::Handle<HDC>::Type dc,
+						const StringPiece& text, const SCRIPT_ANALYSIS& analysis, RawGlyphVector& glyphs) {
+					SCRIPT_CACHE fontCache(nullptr);
+					SCRIPT_FONTPROPERTIES fp;
+					fp.cBytes = sizeof(decltype(fp));
+					if(FAILED(::ScriptGetFontProperties(dc.get(), &fontCache, &fp)))
+						fp.wgDefault = 0;	// hmm...
+
+					std::unique_ptr<WORD[]> indices, clusters;
+					std::unique_ptr<SCRIPT_VISATTR[]> visualAttributes;
+					const int numberOfGlyphs = static_cast<int>(text.length());
 					indices.reset(new WORD[numberOfGlyphs]);
+					clusters.reset(new WORD[text.length()]);
 					visualAttributes.reset(new SCRIPT_VISATTR[numberOfGlyphs]);
-					hr = ::ScriptShape(dc.get(), &fontCache,
-						text.cbegin(), static_cast<int>(text.length()),
-						numberOfGlyphs, const_cast<SCRIPT_ANALYSIS*>(&analysis),
-						indices.get(), clusters.get(), visualAttributes.get(), &numberOfGlyphs);
-					if(hr != E_OUTOFMEMORY)
-						break;
-					// repeat until a large enough buffer is provided
-					numberOfGlyphs *= 2;
-				}
+					std::fill_n(indices.get(), numberOfGlyphs, fp.wgDefault);
+					const bool ltr = analysis.fRTL == 0 || analysis.fLogicalOrder == 1;
+					for(std::size_t i = 0, c = text.length(); i < c; ++i)
+						clusters[i] = static_cast<WORD>(ltr ? i : (c - i));
+					const SCRIPT_VISATTR va = {SCRIPT_JUSTIFY_NONE, 1, 0, 0, 0, 0};
+					std::fill_n(visualAttributes.get(), numberOfGlyphs, va);
 
-				if(analysis.fNoGlyphIndex != 0)
-					hr = GDI_ERROR;	// the caller should try other fonts or disable shaping
-
-				// commit
-				if(SUCCEEDED(hr)) {
+					// commit
 					glyphs.numberOfGlyphs = numberOfGlyphs;
 					using std::swap;
 					swap(glyphs.fontCache, fontCache);
 					swap(glyphs.indices, indices);
 					swap(glyphs.clusters, clusters);
 					swap(glyphs.visualAttributes, visualAttributes);
+					::ScriptFreeCache(&fontCache);
 				}
-				::ScriptFreeCache(&fontCache);
-				return hr;
-			}
 
-			/// @see GlyphVector#glyphCharacterIndex
-			Index TextRunImpl::glyphCharacterIndex(std::size_t index) const {
-				if(index >= numberOfGlyphs())
-					throw std::out_of_range("index");
-				const auto glyphIndices = glyphs();
-				const LogicalClusterIterator e;
-				for(LogicalClusterIterator i(clusters(), glyphIndices, 0); i != e; ++i) {
-					if(index >= static_cast<std::size_t>(i.currentGlyphRange().begin() - glyphIndices.begin())
-							&& index < static_cast<std::size_t>(i.currentGlyphRange().end() - glyphIndices.begin()))
-						return i.currentCluster().front();
-				}
-				return length();
-			}
-
-			/// @see GlyphVector#glyphCode
-			GlyphCode TextRunImpl::glyphCode(std::size_t index) const {
-				if(index >= numberOfGlyphs())
-					throw std::out_of_range("index");
-				return glyphs()[index];
-			}
-
-			/// @see GlyphVector#glyphLogicalBounds
-			graphics::Rectangle TextRunImpl::glyphLogicalBounds(std::size_t index) const {
-				if(index >= numberOfGlyphs())
-					throw std::out_of_range("index");
-				const Scalar x = glyphLogicalPosition(index);
-				const auto yrange = logicalExtents();
-				return graphics::Rectangle(
-					geometry::_top = *yrange.begin(), geometry::_bottom = *yrange.end(),
-					geometry::_left = x, geometry::_right = static_cast<Scalar>(x + effectiveAdvances()[index]));
-			}
-
-			inline Scalar TextRunImpl::glyphLogicalPosition(std::size_t index) const {
-				assert(index <= numberOfGlyphs());
-				const boost::iterator_range<const int*> glyphAdvances(effectiveAdvances());
-				assert(glyphAdvances.begin() != nullptr);
-				int x = 0;
-				for(std::size_t i = 0, c = numberOfGlyphs(); i < c; ++i) {
-					if(i == index)
-						break;
-					x += glyphAdvances[i];
-				}
-				return static_cast<Scalar>(x);
-			}
-
-			/// @see GlyphVector#glyphMetrics
-			GlyphMetrics&& TextRunImpl::glyphMetrics(std::size_t index) const {
-				if(index >= numberOfGlyphs())
-					throw IndexOutOfBoundsException("index");
-	
-				RenderingContext2D context(win32::detail::screenDC());
-				std::shared_ptr<const Font> oldFont(context.font());
-				context.setFont(font());
-				GLYPHMETRICS gm;
-				const MAT2 matrix = {1, 0, 0, 1};	// TODO: Consider glyph transform.
-				const DWORD lastError = (::GetGlyphOutlineW(context.native().get(),
-					glyphCode(index), GGO_GLYPH_INDEX | GGO_METRICS, &gm, 0, nullptr, &matrix) == GDI_ERROR) ? ::GetLastError() : ERROR_SUCCESS;
-				context.setFont(oldFont);
-				if(lastError != ERROR_SUCCESS)
-					throw makePlatformError(lastError);
-				const auto sx = geometry::scaleX(fontRenderContext().transform()) / geometry::scaleX(context.fontRenderContext().transform());
-				const auto sy = geometry::scaleY(fontRenderContext().transform()) / geometry::scaleY(context.fontRenderContext().transform());
-				return GlyphMetrics(gm.gmCellIncY == 0,
-					Dimension(geometry::_dx = static_cast<Scalar>(gm.gmCellIncX * sx), geometry::_dy = static_cast<Scalar>(gm.gmCellIncY * sy)),
-					graphics::Rectangle(
-						Point(geometry::_x = static_cast<Scalar>(gm.gmptGlyphOrigin.x * sx), geometry::_y = -static_cast<Scalar>(gm.gmptGlyphOrigin.y * sy)),
-						Dimension(geometry::_dx = static_cast<Scalar>(gm.gmBlackBoxX * sx), geometry::_dy = static_cast<Scalar>(gm.gmBlackBoxY * sy))),
-					static_cast<GlyphMetrics::Type>(0));
-			}
-
-			/// @see GlyphVector#glyphPosition
-			Point TextRunImpl::glyphPosition(std::size_t index) const {
-				if(index > numberOfGlyphs())
-					throw IndexOutOfBoundsException("index");
-				const Scalar logicalPosition = glyphLogicalPosition(index);
-				const GOFFSET& glyphOffset = glyphOffsets()[index];
-				return Point(geometry::_x = static_cast<Scalar>(logicalPosition + glyphOffset.du), geometry::_y = static_cast<Scalar>(glyphOffset.dv));
-			}
-
-			/// @see GlyphVector#glyphPositions
-			std::vector<Point>&& TextRunImpl::glyphPositions(const boost::integer_range<std::size_t>& range) const {
-				const auto orderedRange = ordered(range);
-				if(*orderedRange.end() > numberOfGlyphs())
-					throw IndexOutOfBoundsException("range");
-
-				std::vector<Point> positions;
-				positions.reserve(range.size());
-				for(std::size_t i = *std::begin(orderedRange); i < *std::end(orderedRange); ++i) {
-					const Scalar logicalPosition = glyphLogicalPosition(i);
-					const GOFFSET& glyphOffset = glyphOffsets()[i];
-					geometry::x(positions[i]) = static_cast<Scalar>(logicalPosition + glyphOffset.du);
-					geometry::y(positions[i]) = static_cast<Scalar>(glyphOffset.dv);
-				}
-				return std::move(positions);
-			}
-
-			inline boost::integer_range<std::size_t> TextRunImpl::glyphRange(const StringPiece& range /* = StringPiece() */) const {
-				assert(glyphs_.get() != nullptr);
-				assert(analysis_.fLogicalOrder == 0);
-				boost::integer_range<ptrdiff_t> characterRange((range != StringPiece()) ?
-					boost::irange(range.cbegin() - begin(), range.cend() - begin()) : boost::irange<std::ptrdiff_t>(0, length()));
-				assert(includes(boost::irange<ptrdiff_t>(0, length()), characterRange));
-				assert(*characterRange.begin() == 0 || *characterRange.begin() == length()
-					|| glyphs_->clusters[*characterRange.begin()] != glyphs_->clusters[*characterRange.begin() - 1]);
-				assert(*characterRange.end() == 0 || *characterRange.end() == length()
-					|| glyphs_->clusters[*characterRange.end()] != glyphs_->clusters[*characterRange.end() + 1]);
-
-				if(analysis_.fRTL == 0)	// LTR
-					return boost::irange(
-						(range.cbegin() < end()) ? glyphs_->clusters[range.cbegin() - begin()] : glyphs_->numberOfGlyphs,
-						(range.cend() < end()) ? glyphs_->clusters[range.cend() - begin() + 1] : glyphs_->numberOfGlyphs);
-				else					// RTL
-					return boost::irange(
-						(range.cend() > begin()) ? glyphs_->clusters[range.cend() - begin() - 1] : glyphs_->numberOfGlyphs,
-						(range.cbegin() > begin()) ? glyphs_->clusters[range.cbegin() - begin() - 1] : glyphs_->numberOfGlyphs
-					);
-			}
-
-			/// @see GlyphVector#glyphVisualBounds
-			graphics::Rectangle TextRunImpl::glyphVisualBounds(std::size_t index) const {
-				if(index >= numberOfGlyphs())
-					throw std::out_of_range("index");
-				Scalar originX = glyphLogicalPosition(index);
-				const GlyphMetrics gm(glyphMetrics(index));
-				const GOFFSET& offset = glyphOffsets()[index];
-				graphics::Rectangle temp(gm.bounds());
-				return geometry::translate(temp, Dimension(geometry::_dx = static_cast<Scalar>(originX + offset.du), geometry::_dy = static_cast<Scalar>(offset.dv)));
-			}
-
-#if 0
-			inline void TextRunImpl::hitTest(Scalar ipd, int& encompasses, int* trailing) const {
-				int tr;
-				const int x = static_cast<int>((direction() == LEFT_TO_RIGHT) ? ipd : (measure(*this) - ipd));
-				const HRESULT hr = ::ScriptXtoCP(x, static_cast<int>(length()), numberOfGlyphs(), clusters().begin(),
-					visualAttributes().begin(), effectiveAdvances().begin(), &analysis_, &encompasses, &tr);
-				if(FAILED(hr))
-					throw makePlatformError(hr);
-				if(trailing != nullptr)
-					*trailing = encompasses + tr;
-			}
+				/**
+				 * Generates glyphs for the text.
+				 * @param context the graphics context
+				 * @param text the text to generate glyphs
+				 * @param analysis the Uniscribe's @c SCRIPT_ANALYSIS object
+				 * @param[out] glyphs
+				 * @retval S_OK succeeded
+				 * @retval USP_E_SCRIPT_NOT_IN_FONT the font does not support the required script
+				 * @retval E_INVALIDARG other Uniscribe error. usually, too long run was specified
+				 * @retval HRESULT other Uniscribe error
+				 * @throw std#bad_alloc failed to allocate buffer for glyph indices or visual attributes array
+				 */
+				HRESULT GlyphVectorImpl::generateGlyphs(win32::Handle<HDC>::Type dc,
+						const StringPiece& text, const SCRIPT_ANALYSIS& analysis, RawGlyphVector& glyphs) {
+#ifdef _DEBUG
+					if(HFONT currentFont = static_cast<HFONT>(::GetCurrentObject(dc.get(), OBJ_FONT))) {
+						LOGFONTW lf;
+						if(::GetObjectW(currentFont, sizeof(LOGFONTW), &lf) > 0)
+							BOOST_LOG_TRIVIAL(debug) << L"[TextLayout.TextRun.generateGlyphs] Selected font is '" << lf.lfFaceName << L"'.\n";
+					}
 #endif
 
-			/// @see TextRun#hitTestCharacter
-			TextHit<>&& TextRunImpl::hitTestCharacter(Scalar position, const boost::optional<boost::integer_range<Scalar>>& bounds, bool* outOfBounds) const {
-				bool beyondLineLeft = false, beyondLineRight = false;
-				if(bounds) {
-					if(position < std::min(*bounds->begin(), *bounds->end()))
-						beyondLineLeft = true;
-					else if(position >= std::max(*bounds->begin(), *bounds->end()))
-						beyondLineRight = true;
+					SCRIPT_CACHE fontCache(nullptr);	// TODO: this object should belong to a font, not glyph run???
+					std::unique_ptr<WORD[]> indices, clusters;
+					std::unique_ptr<SCRIPT_VISATTR[]> visualAttributes;
+					clusters.reset(new WORD[text.length()]);
+					int numberOfGlyphs = estimateNumberOfGlyphs(text.length());
+					HRESULT hr;
+					while(true) {
+						indices.reset(new WORD[numberOfGlyphs]);
+						visualAttributes.reset(new SCRIPT_VISATTR[numberOfGlyphs]);
+						hr = ::ScriptShape(dc.get(), &fontCache,
+							text.cbegin(), static_cast<int>(text.length()),
+							numberOfGlyphs, const_cast<SCRIPT_ANALYSIS*>(&analysis),
+							indices.get(), clusters.get(), visualAttributes.get(), &numberOfGlyphs);
+						if(hr != E_OUTOFMEMORY)
+							break;
+						// repeat until a large enough buffer is provided
+						numberOfGlyphs *= 2;
+					}
+
+					if(analysis.fNoGlyphIndex != 0)
+						hr = GDI_ERROR;	// the caller should try other fonts or disable shaping
+
+					// commit
+					if(SUCCEEDED(hr)) {
+						glyphs.numberOfGlyphs = numberOfGlyphs;
+						using std::swap;
+						swap(glyphs.fontCache, fontCache);
+						swap(glyphs.indices, indices);
+						swap(glyphs.clusters, clusters);
+						swap(glyphs.visualAttributes, visualAttributes);
+					}
+					::ScriptFreeCache(&fontCache);
+					return hr;
 				}
 
-				if(!beyondLineLeft && !beyondLineRight) {
-					int cp, trailing;
-					const HRESULT hr = ::ScriptXtoCP(static_cast<int>(position), static_cast<int>(length()), numberOfGlyphs(),
-						clusters().begin(), visualAttributes().begin(), effectiveAdvances().begin(), &analysis_, &cp, &trailing);
+				/// @see GlyphVector#glyphCharacterIndex
+				Index GlyphVectorImpl::glyphCharacterIndex(std::size_t index) const {
+					if(index >= numberOfGlyphs())
+						throw std::out_of_range("index");
+					const auto glyphIndices = glyphs();
+					const LogicalClusterIterator e;
+					for(LogicalClusterIterator i(clusters(), glyphIndices, 0); i != e; ++i) {
+						if(index >= static_cast<std::size_t>(i.currentGlyphRange().begin() - glyphIndices.begin())
+								&& index < static_cast<std::size_t>(i.currentGlyphRange().end() - glyphIndices.begin()))
+							return i.currentCluster().front();
+					}
+					return length();
+				}
+
+				/// @see GlyphVector#glyphCode
+				GlyphCode GlyphVectorImpl::glyphCode(std::size_t index) const {
+					if(index >= numberOfGlyphs())
+						throw std::out_of_range("index");
+					return glyphs()[index];
+				}
+
+				/// @see GlyphVector#glyphLogicalBounds
+				graphics::Rectangle GlyphVectorImpl::glyphLogicalBounds(std::size_t index) const {
+					if(index >= numberOfGlyphs())
+						throw std::out_of_range("index");
+					const Scalar x = glyphLogicalPosition(index);
+					const auto yrange = logicalExtents();
+					return graphics::Rectangle(
+						geometry::_top = *yrange.begin(), geometry::_bottom = *yrange.end(),
+						geometry::_left = x, geometry::_right = static_cast<Scalar>(x + effectiveAdvances()[index]));
+				}
+
+				inline Scalar GlyphVectorImpl::glyphLogicalPosition(std::size_t index) const {
+					assert(index <= numberOfGlyphs());
+					const boost::iterator_range<const int*> glyphAdvances(effectiveAdvances());
+					assert(glyphAdvances.begin() != nullptr);
+					int x = 0;
+					for(std::size_t i = 0, c = numberOfGlyphs(); i < c; ++i) {
+						if(i == index)
+							break;
+						x += glyphAdvances[i];
+					}
+					return static_cast<Scalar>(x);
+				}
+
+				/// @see GlyphVector#glyphMetrics
+				GlyphMetrics&& GlyphVectorImpl::glyphMetrics(std::size_t index) const {
+					if(index >= numberOfGlyphs())
+						throw IndexOutOfBoundsException("index");
+	
+					RenderingContext2D context(win32::detail::screenDC());
+					std::shared_ptr<const Font> oldFont(context.font());
+					context.setFont(font());
+					GLYPHMETRICS gm;
+					const MAT2 matrix = {1, 0, 0, 1};	// TODO: Consider glyph transform.
+					const DWORD lastError = (::GetGlyphOutlineW(context.native().get(),
+						glyphCode(index), GGO_GLYPH_INDEX | GGO_METRICS, &gm, 0, nullptr, &matrix) == GDI_ERROR) ? ::GetLastError() : ERROR_SUCCESS;
+					context.setFont(oldFont);
+					if(lastError != ERROR_SUCCESS)
+						throw makePlatformError(lastError);
+					const auto sx = geometry::scaleX(fontRenderContext().transform()) / geometry::scaleX(context.fontRenderContext().transform());
+					const auto sy = geometry::scaleY(fontRenderContext().transform()) / geometry::scaleY(context.fontRenderContext().transform());
+					return GlyphMetrics(gm.gmCellIncY == 0,
+						Dimension(geometry::_dx = static_cast<Scalar>(gm.gmCellIncX * sx), geometry::_dy = static_cast<Scalar>(gm.gmCellIncY * sy)),
+						graphics::Rectangle(
+							Point(geometry::_x = static_cast<Scalar>(gm.gmptGlyphOrigin.x * sx), geometry::_y = -static_cast<Scalar>(gm.gmptGlyphOrigin.y * sy)),
+							Dimension(geometry::_dx = static_cast<Scalar>(gm.gmBlackBoxX * sx), geometry::_dy = static_cast<Scalar>(gm.gmBlackBoxY * sy))),
+						static_cast<GlyphMetrics::Type>(0));
+				}
+
+				/// @see GlyphVector#glyphPosition
+				Point GlyphVectorImpl::glyphPosition(std::size_t index) const {
+					if(index > numberOfGlyphs())
+						throw IndexOutOfBoundsException("index");
+					const Scalar logicalPosition = glyphLogicalPosition(index);
+					const GOFFSET& glyphOffset = glyphOffsets()[index];
+					return Point(geometry::_x = static_cast<Scalar>(logicalPosition + glyphOffset.du), geometry::_y = static_cast<Scalar>(glyphOffset.dv));
+				}
+
+				/// @see GlyphVector#glyphPositions
+				std::vector<Point>&& GlyphVectorImpl::glyphPositions(const boost::integer_range<std::size_t>& range) const {
+					const auto orderedRange = ordered(range);
+					if(*orderedRange.end() > numberOfGlyphs())
+						throw IndexOutOfBoundsException("range");
+
+					std::vector<Point> positions;
+					positions.reserve(range.size());
+					for(std::size_t i = *std::begin(orderedRange); i < *std::end(orderedRange); ++i) {
+						const Scalar logicalPosition = glyphLogicalPosition(i);
+						const GOFFSET& glyphOffset = glyphOffsets()[i];
+						geometry::x(positions[i]) = static_cast<Scalar>(logicalPosition + glyphOffset.du);
+						geometry::y(positions[i]) = static_cast<Scalar>(glyphOffset.dv);
+					}
+					return std::move(positions);
+				}
+
+				inline boost::integer_range<std::size_t> GlyphVectorImpl::glyphRange(const StringPiece& range /* = StringPiece() */) const {
+					assert(glyphs_.get() != nullptr);
+					assert(analysis_.fLogicalOrder == 0);
+					boost::integer_range<ptrdiff_t> characterRange((range != StringPiece()) ?
+						boost::irange(range.cbegin() - begin(), range.cend() - begin()) : boost::irange<std::ptrdiff_t>(0, length()));
+					assert(includes(boost::irange<ptrdiff_t>(0, length()), characterRange));
+					assert(*characterRange.begin() == 0 || *characterRange.begin() == length()
+						|| glyphs_->clusters[*characterRange.begin()] != glyphs_->clusters[*characterRange.begin() - 1]);
+					assert(*characterRange.end() == 0 || *characterRange.end() == length()
+						|| glyphs_->clusters[*characterRange.end()] != glyphs_->clusters[*characterRange.end() + 1]);
+
+					if(analysis_.fRTL == 0)	// LTR
+						return boost::irange(
+							(range.cbegin() < end()) ? glyphs_->clusters[range.cbegin() - begin()] : glyphs_->numberOfGlyphs,
+							(range.cend() < end()) ? glyphs_->clusters[range.cend() - begin() + 1] : glyphs_->numberOfGlyphs);
+					else					// RTL
+						return boost::irange(
+							(range.cend() > begin()) ? glyphs_->clusters[range.cend() - begin() - 1] : glyphs_->numberOfGlyphs,
+							(range.cbegin() > begin()) ? glyphs_->clusters[range.cbegin() - begin() - 1] : glyphs_->numberOfGlyphs
+						);
+				}
+
+				/// @see GlyphVector#glyphVisualBounds
+				graphics::Rectangle GlyphVectorImpl::glyphVisualBounds(std::size_t index) const {
+					if(index >= numberOfGlyphs())
+						throw std::out_of_range("index");
+					Scalar originX = glyphLogicalPosition(index);
+					const GlyphMetrics gm(glyphMetrics(index));
+					const GOFFSET& offset = glyphOffsets()[index];
+					graphics::Rectangle temp(gm.bounds());
+					return geometry::translate(temp, Dimension(geometry::_dx = static_cast<Scalar>(originX + offset.du), geometry::_dy = static_cast<Scalar>(offset.dv)));
+				}
+
+#if 0
+				inline void GlyphVectorImpl::hitTest(Scalar ipd, int& encompasses, int* trailing) const {
+					int tr;
+					const int x = static_cast<int>((direction() == LEFT_TO_RIGHT) ? ipd : (measure(*this) - ipd));
+					const HRESULT hr = ::ScriptXtoCP(x, static_cast<int>(length()), numberOfGlyphs(), clusters().begin(),
+						visualAttributes().begin(), effectiveAdvances().begin(), &analysis_, &encompasses, &tr);
 					if(FAILED(hr))
 						throw makePlatformError(hr);
-					if(cp == -1)
-						beyondLineLeft = true;	// 'trailing' should be 0
-					else if(cp == length() && trailing == 1)
-						beyondLineRight = true;
-					else
-						return (trailing == 0) ? TextHit<>::leading(cp) : TextHit<>::beforeOffset(cp + trailing);
+					if(trailing != nullptr)
+						*trailing = encompasses + tr;
 				}
-
-				if((beyondLineLeft || beyondLineRight) && outOfBounds != nullptr)
-					*outOfBounds = true;
-				if(beyondLineLeft)
-					return (direction() == presentation::LEFT_TO_RIGHT) ? TextHit<>::leading(0) : TextHit<>::beforeOffset(length());
-				else if(beyondLineRight)
-					return (direction() == presentation::LEFT_TO_RIGHT) ? TextHit<>::beforeOffset(length()) : TextHit<>::leading(0);
-				ASCENSION_ASSERT_NOT_REACHED();
-			}
-
-			/// @see TextRun#hitToLogicalPosition
-			Scalar TextRunImpl::hitToLogicalPosition(const TextHit<>& hit) const {
-				if(hit.insertionIndex() > characterRange().length())
-					throw IndexOutOfBoundsException("hit");
-				int logicalPosition;
-				const HRESULT hr = ::ScriptCPtoX(static_cast<int>(hit.characterIndex()), !hit.isLeadingEdge(),
-					static_cast<int>(length()), numberOfGlyphs(), clusters().begin(), visualAttributes().begin(),
-					effectiveAdvances().begin(), &analysis_, &logicalPosition);
-				if(FAILED(hr))
-					throw makePlatformError(hr);
-				// TODO: handle letter-spacing correctly.
-//				if(visualAttributes()[offset].fClusterStart == 0) {	// oops, i can't remember what this code means...
-//				}
-				return static_cast<Scalar>(logicalPosition);
-			}
-
-			inline HRESULT TextRunImpl::justify(int width) {
-				assert(glyphs_->indices.get() != nullptr && advances().begin() != nullptr);
-				HRESULT hr = S_OK;
-				const int totalAdvances = boost::accumulate(advances(), 0);
-				if(width != totalAdvances) {
-					if(glyphs_->justifiedAdvances.get() == nullptr)
-						glyphs_->justifiedAdvances.reset(new int[numberOfGlyphs()]);
-					hr = ::ScriptJustify(visualAttributes().begin(), advances().begin(), numberOfGlyphs(), width - totalAdvances,
-						2, glyphs_->justifiedAdvances.get() + (begin() - glyphs_->position));
-				}
-				return hr;
-			}
-
-			inline HRESULT TextRunImpl::logicalAttributes(SCRIPT_LOGATTR attributes[]) const {
-				raiseIfNull(attributes, "attributes");
-				return ::ScriptBreak(begin(), static_cast<int>(length()), &analysis_, attributes);
-			}
-
-			/// @see GlyphVector#logicalBounds
-			graphics::Rectangle TextRunImpl::logicalBounds() const {
-				const auto xs = effectiveAdvances();
-				Scalar left = std::numeric_limits<Scalar>::max(), right = std::numeric_limits<Scalar>::min();
-				for(std::size_t i = 0, c = numberOfGlyphs(); i < c; ++i) {
-					const Scalar x = glyphLogicalPosition(i);
-					left = std::min(x, left);
-					right = std::max(x + xs[i], right);
-				}
-				return graphics::Rectangle(boost::irange(left, right), logicalExtents());
-			}
-
-			inline HRESULT TextRunImpl::logicalWidths(int widths[]) const {
-				raiseIfNull(widths, "widths");
-				return ::ScriptGetLogicalWidths(&analysis_, static_cast<int>(length()),
-					numberOfGlyphs(), advances().begin(), clusters().begin(), visualAttributes().begin(), widths);
-			}
-
-#if 0
-			namespace {
-				pair<StringPiece::const_pointer, shared_ptr<const Font>> findNextFontRun(
-					const StringPiece& textString, const FontCollection& fontCollection,
-					const ComputedTextRunStyle& style, shared_ptr<const Font> previousFont);
-			} // namespace @0
-
-			/**
-			 * Merges the given item runs and the given style runs.
-			 * @param layoutString
-			 * @param items The items itemized by @c #itemize()
-			 * @param numberOfItems The length of the array @a items
-			 * @param styles The iterator returns the styled runs in the line. Can be @c null
-			 * @param[out] textRuns
-			 * @param[out] computedStyles
-			 * @see presentation#Presentation#getLineStyle
-			 */
-			void TextRunImpl::mergeScriptsAndStyles(
-					const StringPiece& layoutString, const SCRIPT_ITEM scriptRuns[],
-					const OPENTYPE_TAG scriptTags[], std::size_t numberOfScriptRuns,
-					const FontCollection& fontCollection, shared_ptr<const TextRunStyle> defaultStyle,
-					std::unique_ptr<ComputedStyledTextRunIterator> styles, vector<TextRunImpl*>& textRuns,
-					std::vector<const ComputedTextRunStyle>& computedStyles,
-					std::vector<std::vector<const ComputedTextRunStyle>::size_type>& computedStylesIndices) {
-				raiseIfNullOrEmpty(layoutString, "layoutString");
-				if(scriptRuns == nullptr)
-					throw NullPointerException("scriptRuns");
-				else if(numberOfScriptRuns == 0)
-					throw invalid_argument("numberOfScriptRuns");
-
-#define ASCENSION_SPLIT_LAST_RUN()												\
-	while(runs.back()->length() > MAXIMUM_RUN_LENGTH) {							\
-		TextRunImpl& back = *runs.back();										\
-		std::unique_ptr<TextRunImpl> piece(new SimpleRun(back.style));				\
-		Index pieceLength = MAXIMUM_RUN_LENGTH;									\
-		if(surrogates::isLowSurrogate(line[back.offsetInLine + pieceLength]))	\
-			--pieceLength;														\
-		piece->analysis = back.analysis;										\
-		piece->offsetInLine = back.offsetInLine + pieceLength;					\
-		piece->setLength(back.length() - pieceLength);							\
-		back.setLength(pieceLength);											\
-		runs.push_back(piece.release());										\
-	}
-
-				// result buffers
-				std::vector<TextRunImpl*> calculatedRuns;
-				std::vector<const ComputedTextRunStyle> calculatedStyles;
-				calculatedRuns.reserve(static_cast<std::size_t>(numberOfScriptRuns * ((styles.get() != nullptr) ? 1.2 : 1)));	// hmm...
-				std::vector<std::vector<const ComputedTextRunStyle>::size_type> calculatedStylesIndices;
-				calculatedStylesIndices.reserve(calculatedRuns.capacity());
-
-				// script cursors
-				AttributedCharacterRange<const SCRIPT_ITEM*> scriptRun;
-				scriptRun.attribute = scriptRuns;
-				scriptRun.position = layoutString.beginning() + scriptRun.attribute->iCharPos;
-				AttributedCharacterRange<const SCRIPT_ITEM*> nextScriptRun;
-				nextScriptRun.attribute = scriptRuns + 1;
-				nextScriptRun.position = (nextScriptRun.attribute < scriptRuns + numberOfScriptRuns) ?
-					layoutString.beginning() + nextScriptRun.attribute->iCharPos : layoutString.end();
-
-				// style cursors
-				detail::ComputedStyledTextRunEnumerator styleEnumerator(layoutString, move(styles));
-				AttributedCharacterRange<ComputedTextRunStyle> styleRun;
-				assert(!styleEnumerator.isDone());
-				styleRun.position = styleEnumerator.position();
-				styleEnumerator.style(styleRun.attribute);
-				styleEnumerator.next();
-				calculatedStyles.push_back(styleRun.attribute);
-				AttributedCharacterRange<ComputedTextRunStyle> nextStyleRun;
-				if(!styleEnumerator.isDone()) {
-					nextStyleRun.position = styleEnumerator.position();
-					styleEnumerator.style(nextStyleRun.attribute);
-				} else
-					nextStyleRun.position = layoutString.end();
-
-				assert(scriptRun.position == layoutString.beginning());
-				assert(styleRun.position == layoutString.beginning());
-
-				std::shared_ptr<const Font> font;	// font for current glyph run
-				do {
-					const StringPiece::const_pointer previousRunEnd = max(scriptRun.position, styleRun.position);
-					assert(
-						(previousRunEnd == layoutString.beginning() && calculatedRuns.empty() && calculatedStyles.empty())
-						|| (!calculatedRuns.empty() && previousRunEnd == calculatedRuns.back()->end())
-						|| (!calculatedStyles.empty() && previousRunEnd == styleRun.position));
-					StringPiece::const_pointer newRunEnd;
-					bool forwardScriptRun = false, forwardStyleRun = false, forwardGlyphRun = false;
-
-					if(nextScriptRun.position == nextStyleRun.position) {
-						newRunEnd = nextScriptRun.position;
-						forwardScriptRun = forwardStyleRun = true;
-					} else if(nextScriptRun.position < nextStyleRun.position) {
-						newRunEnd = nextScriptRun.position;
-						forwardScriptRun = true;
-					} else {	// nextScriptRun.position > nextStyleRun.position
-						newRunEnd = nextStyleRun.position;
-						forwardStyleRun = true;
-					}
-
-					if((++utf::makeCharacterDecodeIterator(previousRunEnd, newRunEnd)).tell() < newRunEnd || font.get() == nullptr) {
-						const std::pair<StringPiece::const_pointer, std::shared_ptr<const Font>> nextFontRun(
-							findNextFontRun(makeStringPiece(previousRunEnd, newRunEnd), fontCollection,
-								(styleRun.position != nullptr) ? styleRun.attribute : ComputedTextRunStyle(), font));
-						font = nextFontRun.second;
-						assert(font.get() != nullptr);
-						if(nextFontRun.first != nullptr) {
-							forwardGlyphRun = true;
-							newRunEnd = nextFontRun.first;
-							forwardScriptRun = forwardStyleRun = false;
-						}
-					}
-					if(!forwardGlyphRun && forwardScriptRun)
-						forwardGlyphRun = true;
-
-					if(forwardGlyphRun) {
-						const bool breakScriptRun = newRunEnd < nextScriptRun.position;
-						if(breakScriptRun)
-							const_cast<SCRIPT_ITEM*>(scriptRun.attribute)->a.fLinkAfter = 0;
-						calculatedRuns.push_back(
-							new TextRunImpl(Range<Index>(!calculatedRuns.empty() ? calculatedRuns.back()->end() : 0, newRunEnd - layoutString.beginning()),
-								scriptRun.attribute->a, font,
-								(scriptTags != nullptr) ? scriptTags[scriptRun.attribute - scriptRuns] : SCRIPT_TAG_UNKNOWN));	// TODO: 'DFLT' is preferred?
-						calculatedStylesIndices.push_back(calculatedStyles.size());
-						while(true) {
-							std::unique_ptr<TextRunImpl> piece(calculatedRuns.back()->splitIfTooLong());
-							if(piece.get() == nullptr)
-								break;
-							calculatedRuns.push_back(piece.release());
-							calculatedStylesIndices.push_back(calculatedStyles.size());
-						}
-						if(breakScriptRun)
-							const_cast<SCRIPT_ITEM*>(scriptRun.attribute)->a.fLinkBefore = 0;
-					}
-					if(forwardScriptRun) {
-						assert(nextScriptRun.position < layoutString.end());
-						scriptRun = nextScriptRun;
-						nextScriptRun.position =
-							(++nextScriptRun.attribute < scriptRuns + numberOfScriptRuns) ?
-								layoutString.beginning() + nextScriptRun.attribute->iCharPos : layoutString.end();
-					}
-					if(forwardStyleRun) {
-						assert(nextStyleRun.position < layoutString.end());
-						styleRun = move(nextStyleRun);
-						calculatedStyles.push_back(styleRun.attribute);
-						assert(!styleEnumerator.isDone());
-						styleEnumerator.next();
-						if(!styleEnumerator.isDone()) {
-							nextStyleRun.position = styleEnumerator.position();
-							styleEnumerator.style(nextStyleRun.attribute);
-						} else
-							nextStyleRun.position = layoutString.end();
-					}
-				} while(scriptRun.position < layoutString.end() || styleRun.position < layoutString.end());
-
-				assert(calculatedRuns.size() == calculatedStylesIndices.size());
-				assert(!calculatedStyles.empty());
-
-				// commit
-				using std::swap;
-				swap(textRuns, calculatedRuns);
-				swap(computedStyles, calculatedStyles);
-				swap(computedStylesIndices, calculatedStylesIndices);
-
-#undef ASCENSION_SPLIT_LAST_RUN
-			}
-#endif // 0
-
-			/// @see GlyphVector#numberOfGlyphs
-			std::size_t TextRunImpl::numberOfGlyphs() const BOOST_NOEXCEPT {
-				return glyphRange().size();
-			}
-
-#if 0
-			/**
-			 * @internal Fills or strokes the glyphs of the specified range in this run.
-			 * This method uses the stroke and fill styles which are set in @a context.
-			 * @param context The graphics context
-			 * @param origin The base point of this run (, does not corresponds to @c range-&gt;beginning())
-			 * @param range The character range to paint. If this is @c boost#none, the all characters are painted
-			 * @param onlyStroke If @c true, this method only strokes the glyphs without filling
-			 */
-			inline void TextRunImpl::paintGlyphs(PaintContext& context, const Point& origin, const StringPiece& range, bool onlyStroke) const {
-				return paintGlyphs(context, origin, glyphRange(range), onlyStroke);
-			}
 #endif
 
-			/**
-			 * @internal Fills or strokes the glyphs of the specified range in this run.
-			 * This method uses the stroke and fill styles which are set in @a context.
-			 * @param context The graphics context
-			 * @param origin The base point of this run (, does not corresponds to @c range-&gt;beginning())
+				/// @see TextRun#hitTestCharacter
+				TextHit<>&& GlyphVectorImpl::hitTestCharacter(Scalar position, const boost::optional<boost::integer_range<Scalar>>& bounds, bool* outOfBounds) const {
+					bool beyondLineLeft = false, beyondLineRight = false;
+					if(bounds) {
+						if(position < std::min(*bounds->begin(), *bounds->end()))
+							beyondLineLeft = true;
+						else if(position >= std::max(*bounds->begin(), *bounds->end()))
+							beyondLineRight = true;
+					}
+
+					if(!beyondLineLeft && !beyondLineRight) {
+						int cp, trailing;
+						const HRESULT hr = ::ScriptXtoCP(static_cast<int>(position), static_cast<int>(length()), numberOfGlyphs(),
+							clusters().begin(), visualAttributes().begin(), effectiveAdvances().begin(), &analysis_, &cp, &trailing);
+						if(FAILED(hr))
+							throw makePlatformError(hr);
+						if(cp == -1)
+							beyondLineLeft = true;	// 'trailing' should be 0
+						else if(cp == length() && trailing == 1)
+							beyondLineRight = true;
+						else
+							return (trailing == 0) ? TextHit<>::leading(cp) : TextHit<>::beforeOffset(cp + trailing);
+					}
+
+					if((beyondLineLeft || beyondLineRight) && outOfBounds != nullptr)
+						*outOfBounds = true;
+					if(beyondLineLeft)
+						return (direction() == presentation::LEFT_TO_RIGHT) ? TextHit<>::leading(0) : TextHit<>::beforeOffset(length());
+					else if(beyondLineRight)
+						return (direction() == presentation::LEFT_TO_RIGHT) ? TextHit<>::beforeOffset(length()) : TextHit<>::leading(0);
+					ASCENSION_ASSERT_NOT_REACHED();
+				}
+
+				/// @see TextRun#hitToLogicalPosition
+				Scalar GlyphVectorImpl::hitToLogicalPosition(const TextHit<>& hit) const {
+					if(hit.insertionIndex() > characterRange().length())
+						throw IndexOutOfBoundsException("hit");
+					int logicalPosition;
+					const HRESULT hr = ::ScriptCPtoX(static_cast<int>(hit.characterIndex()), !hit.isLeadingEdge(),
+						static_cast<int>(length()), numberOfGlyphs(), clusters().begin(), visualAttributes().begin(),
+						effectiveAdvances().begin(), &analysis_, &logicalPosition);
+					if(FAILED(hr))
+						throw makePlatformError(hr);
+					// TODO: handle letter-spacing correctly.
+//					if(visualAttributes()[offset].fClusterStart == 0) {	// oops, i can't remember what this code means...
+//					}
+					return static_cast<Scalar>(logicalPosition);
+				}
+
+				inline HRESULT GlyphVectorImpl::justify(int width) {
+					assert(glyphs_->indices.get() != nullptr && advances().begin() != nullptr);
+					HRESULT hr = S_OK;
+					const int totalAdvances = boost::accumulate(advances(), 0);
+					if(width != totalAdvances) {
+						if(glyphs_->justifiedAdvances.get() == nullptr)
+							glyphs_->justifiedAdvances.reset(new int[numberOfGlyphs()]);
+						hr = ::ScriptJustify(visualAttributes().begin(), advances().begin(), numberOfGlyphs(), width - totalAdvances,
+							2, glyphs_->justifiedAdvances.get() + (begin() - glyphs_->position));
+					}
+					return hr;
+				}
+
+				inline HRESULT GlyphVectorImpl::logicalAttributes(SCRIPT_LOGATTR attributes[]) const {
+					raiseIfNull(attributes, "attributes");
+					return ::ScriptBreak(begin(), static_cast<int>(length()), &analysis_, attributes);
+				}
+
+				/// @see GlyphVector#logicalBounds
+				graphics::Rectangle GlyphVectorImpl::logicalBounds() const {
+					const auto xs = effectiveAdvances();
+					Scalar left = std::numeric_limits<Scalar>::max(), right = std::numeric_limits<Scalar>::min();
+					for(std::size_t i = 0, c = numberOfGlyphs(); i < c; ++i) {
+						const Scalar x = glyphLogicalPosition(i);
+						left = std::min(x, left);
+						right = std::max(x + xs[i], right);
+					}
+					return graphics::Rectangle(boost::irange(left, right), logicalExtents());
+				}
+
+				inline HRESULT GlyphVectorImpl::logicalWidths(int widths[]) const {
+					raiseIfNull(widths, "widths");
+					return ::ScriptGetLogicalWidths(&analysis_, static_cast<int>(length()),
+						numberOfGlyphs(), advances().begin(), clusters().begin(), visualAttributes().begin(), widths);
+				}
+
+				/// @see GlyphVector#numberOfGlyphs
+				std::size_t GlyphVectorImpl::numberOfGlyphs() const BOOST_NOEXCEPT {
+					return glyphRange().size();
+				}
+
 #if 0
-			 * @param range The glyph range to paint. If this is @c boost#none, the all glyphs are painted
-#endif
-			 * @param onlyStroke If @c true, this method only strokes the glyphs without filling
-			 */
-			void TextRunImpl::paintGlyphs(PaintContext& context, const Point& origin/*, boost::optional<boost::integer_range<std::size_t>> range*/, bool onlyStroke) const {
-//				if(!range)
-//					return paintGlyphs(context, origin, *this, onlyStroke);
-//				else if(range->empty())
-//					return;
-
-				context.setFont(font());
-//				RECT temp;
-//				if(dirtyRect != nullptr)
-//					::SetRect(&temp, dirtyRect->left(), dirtyRect->top(), dirtyRect->right(), dirtyRect->bottom());
-				if(onlyStroke && !win32::boole(::BeginPath(context.native().get())))
-					throw makePlatformError();
-				assert(analysis_.fLogicalOrder == 0);
-				// paint glyphs
-				const RECT boundsToPaint(toNative<RECT>(context.boundsToPaint()));
-				const boost::iterator_range<const int*> justifiedGlyphAdvances(justifiedAdvances());
-				const HRESULT hr = ::ScriptTextOut(context.native().get(), &glyphs_->fontCache,
-					static_cast<int>(geometry::x(origin)), static_cast<int>(geometry::y(origin)),
-					0, &boundsToPaint, &analysis_, nullptr, 0,
-					glyphs().begin(), numberOfGlyphs(), advances().begin(),
-					(justifiedGlyphAdvances.begin() != nullptr) ? justifiedGlyphAdvances.begin() : nullptr,
-					glyphOffsets().begin());
-				if(onlyStroke)
-					::EndPath(context.native().get());
-				if(FAILED(hr))
-					throw makePlatformError(hr);
-				if(onlyStroke && !win32::boole(::StrokePath(context.native().get())))
-					throw makePlatformError();
-			}
-
-			/**
-			 * Positions the glyphs in the text run.
-			 * @param dc The device context
-			 * @param style The computed text run style
-			 * @see #generate, #substituteGlyphs
-			 */
-			void TextRunImpl::positionGlyphs(win32::Handle<HDC>::Type dc, const ComputedTextRunStyle& style) {
-				assert(glyphs_.get() != nullptr && glyphs_.unique());
-				assert(glyphs_->indices.get() != nullptr && glyphs_->advances.get() == nullptr);
-
-				std::unique_ptr<int[]> advances(new int[numberOfGlyphs()]);
-				std::unique_ptr<GOFFSET[]> offsets(new GOFFSET[numberOfGlyphs()]);
-//				ABC width;
-				HRESULT hr = ::ScriptPlace(nullptr, &glyphs_->fontCache, glyphs_->indices.get(), numberOfGlyphs(),
-					glyphs_->visualAttributes.get(), &analysis_, advances.get(), offsets.get(), nullptr/*&width*/);
-				if(hr == E_PENDING) {
-					HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font()->native().get()));
-					hr = ::ScriptPlace(dc.get(), &glyphs_->fontCache, glyphs_->indices.get(), numberOfGlyphs(),
-						glyphs_->visualAttributes.get(), &analysis_, advances.get(), offsets.get(), nullptr/*&width*/);
-					::SelectObject(dc.get(), oldFont);
-				}
-				if(FAILED(hr))
-					throw hr;
-
-				// apply text run styles
-/*
-				// query widths of C0 and C1 controls in this run
-				unique_ptr<WORD[]> glyphIndices;
-				if(ISpecialCharacterRenderer* scr = lip.specialCharacterRenderer()) {
-					ISpecialCharacterRenderer::LayoutContext context(dc);
-					context.readingDirection = readingDirection();
-					dc.selectObject(glyphs_->font->handle().get());
-					SCRIPT_FONTPROPERTIES fp;
-					fp.cBytes = 0;
-					for(Index i = beginning(); i < end(); ++i) {
-						if(isC0orC1Control(layoutString[i])) {
-							if(const int w = scr->getControlCharacterWidth(context, layoutString[i])) {
-								// substitute the glyph
-								width.abcB += w - glyphs_->advances[i - beginning()];
-								glyphs_->advances[i] = w;
-								if(fp.cBytes == 0) {
-									fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
-									const HRESULT hr2 = ::ScriptGetFontProperties(dc.get(), &glyphs_->fontCache, &fp);
-									if(FAILED(hr2))
-										fp.wgBlank = 0;	// hmm...
-								}
-								if(glyphIndices.get() == nullptr) {
-									glyphIndices.reset(new WORD[numberOfGlyphs()]);
-									std::memcpy(glyphIndices.get(), glyphs(), sizeof(WORD) * numberOfGlyphs());
-								}
-								glyphIndices[i] = fp.wgBlank;
-							}
-						}
-					}
-				}
-*/
-/*				// handle letter spacing
-				if(styledRange.style.get() != nullptr && styledRange.style->letterSpacing.unit != Length::INHERIT) {
-					if(const int letterSpacing = pixels(dc, styledRange.style->letterSpacing, false, glyphs_->font->metrics())) {
-						const bool rtl = readingDirection() == RIGHT_TO_LEFT;
-						for(std::size_t i = textRun.glyphRange_.beginning(), e = textRun.glyphRange_.end(); i < e; ++i) {
-							if((!rtl && (i + 1 == e || glyphs_->visualAttributes[i + 1].fClusterStart != 0))
-									|| (rtl && (i == 0 || glyphs_->visualAttributes[i - 1].fClusterStart != 0))) {
-								advances[i] += letterSpacing;
-								if(rtl)
-									offsets[i].du += letterSpacing;
-							}
-						}
-					}
-				}
-*/
-
-				// commit
-				glyphs_->advances = std::move(advances);
-				glyphs_->offsets = std::move(offsets);
-//				glyphs_->width = width;
-			}
-
-			/// @see GlyphVector#setGlyphPosition
-			void TextRunImpl::setGlyphPosition(std::size_t index, const Point& position) {
-				if(index > numberOfGlyphs())
-					throw IndexOutOfBoundsException("index");
-				const Scalar logicalPosition = glyphLogicalPosition(index);
-				GOFFSET& glyphOffset = glyphs_->offsets[glyphOffsets().begin() - glyphs_->offsets.get()];
-				glyphOffset.du = static_cast<LONG>(geometry::x(position) - logicalPosition);
-				glyphOffset.dv = static_cast<LONG>(geometry::y(position));
-			}
-
-			// shaping stuffs
-			namespace {
 				/**
-				 * Returns a Unicode script corresponds to Win32 language identifier for digit substitution.
-				 * @param id the language identifier
-				 * @return the script or @c NOT_PROPERTY
+				 * @internal Fills or strokes the glyphs of the specified range in this run.
+				 * This method uses the stroke and fill styles which are set in @a context.
+				 * @param context The graphics context
+				 * @param origin The base point of this run (, does not corresponds to @c range-&gt;beginning())
+				 * @param range The character range to paint. If this is @c boost#none, the all characters are painted
+				 * @param onlyStroke If @c true, this method only strokes the glyphs without filling
 				 */
-				inline int convertWin32LangIDtoUnicodeScript(LANGID id) BOOST_NOEXCEPT {
-					using text::ucd::Script;
-					switch(id) {
-						case LANG_ARABIC:		return Script::ARABIC;
-						case LANG_ASSAMESE:		return Script::BENGALI;
-						case LANG_BENGALI:		return Script::BENGALI;
-						case 0x5c:				return Script::CHEROKEE;
-						case LANG_DIVEHI:		return Script::THAANA;
-						case 0x5e:				return Script::ETHIOPIC;
-						case LANG_FARSI:		return Script::ARABIC;	// Persian
-						case LANG_GUJARATI:		return Script::GUJARATI;
-						case LANG_HINDI:		return Script::DEVANAGARI;
-						case LANG_KANNADA:		return Script::KANNADA;
-						case 0x53:				return Script::KHMER;
-						case 0x54:				return Script::LAO;
-						case LANG_MALAYALAM:	return Script::MALAYALAM;
-						case 0x55:				return Script::MYANMAR;
-						case LANG_ORIYA:		return Script::ORIYA;
-						case LANG_PUNJABI:		return Script::GURMUKHI;
-						case 0x5b:				return Script::SINHALA;
-						case LANG_SYRIAC:		return Script::SYRIAC;
-						case LANG_TAMIL:		return Script::TAMIL;
-						case 0x51:				return Script::TIBETAN;
-						case LANG_TELUGU:		return Script::TELUGU;
-						case LANG_THAI:			return Script::THAI;
-						case LANG_URDU:			return Script::ARABIC;
-					}
-					return text::ucd::NOT_PROPERTY;
+				inline void GlyphVectorImpl::paintGlyphs(PaintContext& context, const Point& origin, const StringPiece& range, bool onlyStroke) const {
+					return paintGlyphs(context, origin, glyphRange(range), onlyStroke);
 				}
-			} // namespace @0
+#endif
 
-			void TextRunImpl::shape(win32::Handle<HDC>::Type dc) {
-				assert(glyphs_.unique());
-
-				// TODO: check if the requested style (or the default one) disables shaping.
-
-				RawGlyphVector glyphs(glyphs_->position, glyphs_->font.get().font(), glyphs_->font.get().fontRenderContext(), glyphs_->scriptTag);
-				HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font()->native().get()));
-				HRESULT hr = generateGlyphs(dc, *this, analysis_, glyphs);
-				if(hr == USP_E_SCRIPT_NOT_IN_FONT) {
-					analysis_.eScript = SCRIPT_UNDEFINED;
-					hr = generateGlyphs(dc, *this, analysis_, glyphs);
-				}
-				if(FAILED(hr))
-					generateDefaultGlyphs(dc, *this, analysis_, glyphs);
-				::SelectObject(dc.get(), oldFont);
-
-				// commit
-				using std::swap;
-				swap(*glyphs_, glyphs);
-			}
+				/**
+				 * @internal Fills or strokes the glyphs of the specified range in this run.
+				 * This method uses the stroke and fill styles which are set in @a context.
+				 * @param context The graphics context
+				 * @param origin The base point of this run (, does not corresponds to @c range-&gt;beginning())
 #if 0
-			void TextRunImpl::shape(DC& dc, const String& layoutString, const ILayoutInformationProvider& lip, TextRun* nextRun) {
-				if(glyphs_->clusters.get() != nullptr)
-					throw IllegalStateException("");
-				if(requestedStyle().get() != nullptr) {
-					if(!requestedStyle()->shapingEnabled)
-						analysis_.eScript = SCRIPT_UNDEFINED;
-				} else {
-					shared_ptr<const RunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
-					if(defaultStyle.get() != nullptr && !defaultStyle->shapingEnabled)
-						analysis_.eScript = SCRIPT_UNDEFINED;
+				 * @param range The glyph range to paint. If this is @c boost#none, the all glyphs are painted
+#endif
+				 * @param onlyStroke If @c true, this method only strokes the glyphs without filling
+				 */
+				void GlyphVectorImpl::paintGlyphs(PaintContext& context, const Point& origin/*, boost::optional<boost::integer_range<std::size_t>> range*/, bool onlyStroke) const {
+//					if(!range)
+//						return paintGlyphs(context, origin, *this, onlyStroke);
+//					else if(range->empty())
+//						return;
+
+					context.setFont(font());
+//					RECT temp;
+//					if(dirtyRect != nullptr)
+//						::SetRect(&temp, dirtyRect->left(), dirtyRect->top(), dirtyRect->right(), dirtyRect->bottom());
+					if(onlyStroke && !win32::boole(::BeginPath(context.native().get())))
+						throw makePlatformError();
+					assert(analysis_.fLogicalOrder == 0);
+					// paint glyphs
+					const RECT boundsToPaint(toNative<RECT>(context.boundsToPaint()));
+					const boost::iterator_range<const int*> justifiedGlyphAdvances(justifiedAdvances());
+					const HRESULT hr = ::ScriptTextOut(context.native().get(), &glyphs_->fontCache,
+						static_cast<int>(geometry::x(origin)), static_cast<int>(geometry::y(origin)),
+						0, &boundsToPaint, &analysis_, nullptr, 0,
+						glyphs().begin(), numberOfGlyphs(), advances().begin(),
+						(justifiedGlyphAdvances.begin() != nullptr) ? justifiedGlyphAdvances.begin() : nullptr,
+						glyphOffsets().begin());
+					if(onlyStroke)
+						::EndPath(context.native().get());
+					if(FAILED(hr))
+						throw makePlatformError(hr);
+					if(onlyStroke && !win32::boole(::StrokePath(context.native().get())))
+						throw makePlatformError();
 				}
 
-				HRESULT hr;
-				const WORD originalScript = analysis_.eScript;
-				HFONT oldFont;
+				/**
+				 * Positions the glyphs in the vector.
+				 * @param dc The device context
+				 * @see #substituteGlyphs, TextRunImpl#positionGlyphs
+				 */
+				void GlyphVectorImpl::positionGlyphs(win32::Handle<HDC>::Type dc) {
+					assert(glyphs_.get() != nullptr && glyphs_.unique());
+					assert(glyphs_->indices.get() != nullptr && glyphs_->advances.get() == nullptr);
 
-				// compute font properties
-				String computedFontFamily((requestedStyle().get() != nullptr) ?
-					requestedStyle()->fontFamily : String(L"\x5c0f\x585a\x660e\x671d Pr6N R"));
-				FontProperties computedFontProperties((requestedStyle().get() != nullptr) ? requestedStyle()->fontProperties : FontProperties());
-				double computedFontSizeAdjust = (requestedStyle().get() != nullptr) ? requestedStyle()->fontSizeAdjust : -1.0;
-				std::shared_ptr<const RunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
-				if(computedFontFamily.empty()) {
-					if(defaultStyle.get() != nullptr)
-						computedFontFamily = lip.presentation().defaultTextRunStyle()->fontFamily;
-					if(computedFontFamily.empty())
-						computedFontFamily = lip.textMetrics().familyName();
-				}
-				if(computedFontProperties.weight == FontProperties::INHERIT_WEIGHT)
-					computedFontProperties.weight = (defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.weight : FontProperties::NORMAL_WEIGHT;
-				if(computedFontProperties.stretch == FontProperties::INHERIT_STRETCH)
-					computedFontProperties.stretch = (defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.stretch : FontProperties::NORMAL_STRETCH;
-				if(computedFontProperties.style == FontProperties::INHERIT_STYLE)
-					computedFontProperties.style = (defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.style : FontProperties::NORMAL_STYLE;
-				if(computedFontProperties.size == 0.0f) {
-					if(defaultStyle.get() != nullptr)
-						computedFontProperties.size = defaultStyle->fontProperties.size;
-					if(computedFontProperties.size == 0.0f)
-						computedFontProperties.size = lip.textMetrics().emHeight();
-				}
-				if(computedFontSizeAdjust < 0.0)
-					computedFontSizeAdjust = (defaultStyle.get() != nullptr) ? defaultStyle->fontSizeAdjust : 0.0;
-
-#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-				bool firstVariationSelectorWasted = false;
-				if(analysis_.fLogicalOrder != 0) {
-					analysis_.fLogicalOrder = 0;
-					firstVariationSelectorWasted = true;
-				}
-#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-
-				if(analysis_.s.fDisplayZWG != 0 && scriptProperties.get(analysis_.eScript).fControl != 0) {
-					// bidirectional format controls
-					FontProperties fp;
-					fp.size = computedFontProperties.size;
-					std::shared_ptr<const Font> font(lip.fontCollection().get(L"Arial", fp, computedFontSizeAdjust));
-					oldFont = dc.selectObject((font_ = font)->handle().get());
-					if(USP_E_SCRIPT_NOT_IN_FONT == (hr = buildGlyphs(dc, layoutString.data()))) {
-						analysis_.eScript = SCRIPT_UNDEFINED;
-						hr = buildGlyphs(dc, layoutString.data());
+					std::unique_ptr<int[]> advances(new int[numberOfGlyphs()]);
+					std::unique_ptr<GOFFSET[]> offsets(new GOFFSET[numberOfGlyphs()]);
+//					ABC width;
+					HRESULT hr = ::ScriptPlace(nullptr, &glyphs_->fontCache, glyphs_->indices.get(), numberOfGlyphs(),
+						glyphs_->visualAttributes.get(), &analysis_, advances.get(), offsets.get(), nullptr/*&width*/);
+					if(hr == E_PENDING) {
+						HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font()->native().get()));
+						hr = ::ScriptPlace(dc.get(), &glyphs_->fontCache, glyphs_->indices.get(), numberOfGlyphs(),
+							glyphs_->visualAttributes.get(), &analysis_, advances.get(), offsets.get(), nullptr/*&width*/);
+						::SelectObject(dc.get(), oldFont);
 					}
 					if(FAILED(hr))
-						generateDefaultGlyphs(dc);
-					for(int i = 0; i < numberOfGlyphs(); ++i)
-						glyphs_->visualAttributes[i].fZeroWidth = 1;
-					dc.selectObject(oldFont);
+						throw hr;
+
+					// commit
+					glyphs_->advances = std::move(advances);
+					glyphs_->offsets = std::move(offsets);
+//					glyphs_->width = width;
 				}
 
-				else {
-					// buildGlyphs() returns glyphs for the run. however it can contain missing glyphs.
-					// we try candidate fonts in following order:
-					//
-					// 1. the primary font
-					// 2. the national font for digit substitution
-					// 3. the linked fonts
-					// 4. the fallback font
-					//
-					// with storing the fonts failed to shape ("failedFonts"). and then retry the failed
-					// fonts returned USP_E_SCRIPT_NOT_IN_FONT with shaping)
+				/// @see GlyphVector#setGlyphPosition
+				void GlyphVectorImpl::setGlyphPosition(std::size_t index, const Point& position) {
+					if(index > numberOfGlyphs())
+						throw IndexOutOfBoundsException("index");
+					const Scalar logicalPosition = glyphLogicalPosition(index);
+					GOFFSET& glyphOffset = glyphs_->offsets[glyphOffsets().begin() - glyphs_->offsets.get()];
+					glyphOffset.du = static_cast<LONG>(geometry::x(position) - logicalPosition);
+					glyphOffset.dv = static_cast<LONG>(geometry::y(position));
+				}
 
-					int script = NOT_PROPERTY;	// script of the run for fallback
-					typedef std::vector<std::pair<std::shared_ptr<const Font>, int>> FailedFonts;
-					FailedFonts failedFonts;	// failed fonts (font handle vs. # of missings)
-					int numberOfMissingGlyphs;
+				// shaping stuffs
+				namespace {
+					/**
+					 * Returns a Unicode script corresponds to Win32 language identifier for digit substitution.
+					 * @param id the language identifier
+					 * @return the script or @c NOT_PROPERTY
+					 */
+					inline int convertWin32LangIDtoUnicodeScript(LANGID id) BOOST_NOEXCEPT {
+						using text::ucd::Script;
+						switch(id) {
+							case LANG_ARABIC:		return Script::ARABIC;
+							case LANG_ASSAMESE:		return Script::BENGALI;
+							case LANG_BENGALI:		return Script::BENGALI;
+							case 0x5c:				return Script::CHEROKEE;
+							case LANG_DIVEHI:		return Script::THAANA;
+							case 0x5e:				return Script::ETHIOPIC;
+							case LANG_FARSI:		return Script::ARABIC;	// Persian
+							case LANG_GUJARATI:		return Script::GUJARATI;
+							case LANG_HINDI:		return Script::DEVANAGARI;
+							case LANG_KANNADA:		return Script::KANNADA;
+							case 0x53:				return Script::KHMER;
+							case 0x54:				return Script::LAO;
+							case LANG_MALAYALAM:	return Script::MALAYALAM;
+							case 0x55:				return Script::MYANMAR;
+							case LANG_ORIYA:		return Script::ORIYA;
+							case LANG_PUNJABI:		return Script::GURMUKHI;
+							case 0x5b:				return Script::SINHALA;
+							case LANG_SYRIAC:		return Script::SYRIAC;
+							case LANG_TAMIL:		return Script::TAMIL;
+							case 0x51:				return Script::TIBETAN;
+							case LANG_TELUGU:		return Script::TELUGU;
+							case LANG_THAI:			return Script::THAI;
+							case LANG_URDU:			return Script::ARABIC;
+						}
+						return text::ucd::NOT_PROPERTY;
+					}
+				} // namespace @0
 
-					const Char* textString = layoutString.data() + beginning();
+				void GlyphVectorImpl::shape(win32::Handle<HDC>::Type dc) {
+					assert(glyphs_.unique());
+
+					// TODO: check if the requested style (or the default one) disables shaping.
+
+					RawGlyphVector glyphs(glyphs_->position, glyphs_->font.get().font(), glyphs_->font.get().fontRenderContext(), glyphs_->scriptTag);
+					HFONT oldFont = static_cast<HFONT>(::SelectObject(dc.get(), font()->native().get()));
+					HRESULT hr = generateGlyphs(dc, *this, analysis_, glyphs);
+					if(hr == USP_E_SCRIPT_NOT_IN_FONT) {
+						analysis_.eScript = SCRIPT_UNDEFINED;
+						hr = generateGlyphs(dc, *this, analysis_, glyphs);
+					}
+					if(FAILED(hr))
+						generateDefaultGlyphs(dc, *this, analysis_, glyphs);
+					::SelectObject(dc.get(), oldFont);
+
+					// commit
+					using std::swap;
+					swap(*glyphs_, glyphs);
+				}
+#if 0
+				void GlyphVectorImpl::shape(DC& dc, const String& layoutString, const ILayoutInformationProvider& lip, TextRun* nextRun) {
+					if(glyphs_->clusters.get() != nullptr)
+						throw IllegalStateException("");
+					if(requestedStyle().get() != nullptr) {
+						if(!requestedStyle()->shapingEnabled)
+							analysis_.eScript = SCRIPT_UNDEFINED;
+					} else {
+						shared_ptr<const RunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
+						if(defaultStyle.get() != nullptr && !defaultStyle->shapingEnabled)
+							analysis_.eScript = SCRIPT_UNDEFINED;
+					}
+
+					HRESULT hr;
+					const WORD originalScript = analysis_.eScript;
+					HFONT oldFont;
+
+					// compute font properties
+					String computedFontFamily((requestedStyle().get() != nullptr) ?
+						requestedStyle()->fontFamily : String(L"\x5c0f\x585a\x660e\x671d Pr6N R"));
+					FontProperties computedFontProperties((requestedStyle().get() != nullptr) ? requestedStyle()->fontProperties : FontProperties());
+					double computedFontSizeAdjust = (requestedStyle().get() != nullptr) ? requestedStyle()->fontSizeAdjust : -1.0;
+					std::shared_ptr<const RunStyle> defaultStyle(lip.presentation().defaultTextRunStyle());
+					if(computedFontFamily.empty()) {
+						if(defaultStyle.get() != nullptr)
+							computedFontFamily = lip.presentation().defaultTextRunStyle()->fontFamily;
+						if(computedFontFamily.empty())
+							computedFontFamily = lip.textMetrics().familyName();
+					}
+					if(computedFontProperties.weight == FontProperties::INHERIT_WEIGHT)
+						computedFontProperties.weight = (defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.weight : FontProperties::NORMAL_WEIGHT;
+					if(computedFontProperties.stretch == FontProperties::INHERIT_STRETCH)
+						computedFontProperties.stretch = (defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.stretch : FontProperties::NORMAL_STRETCH;
+					if(computedFontProperties.style == FontProperties::INHERIT_STYLE)
+						computedFontProperties.style = (defaultStyle.get() != nullptr) ? defaultStyle->fontProperties.style : FontProperties::NORMAL_STYLE;
+					if(computedFontProperties.size == 0.0f) {
+						if(defaultStyle.get() != nullptr)
+							computedFontProperties.size = defaultStyle->fontProperties.size;
+						if(computedFontProperties.size == 0.0f)
+							computedFontProperties.size = lip.textMetrics().emHeight();
+					}
+					if(computedFontSizeAdjust < 0.0)
+						computedFontSizeAdjust = (defaultStyle.get() != nullptr) ? defaultStyle->fontSizeAdjust : 0.0;
+
+#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+					bool firstVariationSelectorWasted = false;
+					if(analysis_.fLogicalOrder != 0) {
+						analysis_.fLogicalOrder = 0;
+						firstVariationSelectorWasted = true;
+					}
+#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+
+					if(analysis_.s.fDisplayZWG != 0 && scriptProperties.get(analysis_.eScript).fControl != 0) {
+						// bidirectional format controls
+						FontProperties fp;
+						fp.size = computedFontProperties.size;
+						std::shared_ptr<const Font> font(lip.fontCollection().get(L"Arial", fp, computedFontSizeAdjust));
+						oldFont = dc.selectObject((font_ = font)->handle().get());
+						if(USP_E_SCRIPT_NOT_IN_FONT == (hr = buildGlyphs(dc, layoutString.data()))) {
+							analysis_.eScript = SCRIPT_UNDEFINED;
+							hr = buildGlyphs(dc, layoutString.data());
+						}
+						if(FAILED(hr))
+							generateDefaultGlyphs(dc);
+						for(int i = 0; i < numberOfGlyphs(); ++i)
+							glyphs_->visualAttributes[i].fZeroWidth = 1;
+						dc.selectObject(oldFont);
+					}
+
+					else {
+						// buildGlyphs() returns glyphs for the run. however it can contain missing glyphs.
+						// we try candidate fonts in following order:
+						//
+						// 1. the primary font
+						// 2. the national font for digit substitution
+						// 3. the linked fonts
+						// 4. the fallback font
+						//
+						// with storing the fonts failed to shape ("failedFonts"). and then retry the failed
+						// fonts returned USP_E_SCRIPT_NOT_IN_FONT with shaping)
+
+						int script = NOT_PROPERTY;	// script of the run for fallback
+						typedef std::vector<std::pair<std::shared_ptr<const Font>, int>> FailedFonts;
+						FailedFonts failedFonts;	// failed fonts (font handle vs. # of missings)
+						int numberOfMissingGlyphs;
+
+						const Char* textString = layoutString.data() + beginning();
 
 #define ASCENSION_MAKE_TEXT_STRING_SAFE()												\
 	assert(safeString.get() == nullptr);												\
 	safeString.reset(new Char[length()]);												\
-	std::wmemcpy(safeString.get(), layoutString.data() + beginning(), length());				\
+	std::wmemcpy(safeString.get(), layoutString.data() + beginning(), length());		\
 	replace_if(safeString.get(),														\
 		safeString.get() + length(), surrogates::isSurrogate, REPLACEMENT_CHARACTER);	\
 	textString = safeString.get();
@@ -2037,151 +1647,151 @@ namespace ascension {
 		}																	\
 	}
 
-					// ScriptShape may crash if the shaping is disabled (see Mozilla bug 341500).
-					// Following technique is also from Mozilla (gfxWindowsFonts.cpp).
-					std::unique_ptr<Char[]> safeString;
-					if(analysis_.eScript == SCRIPT_UNDEFINED
-							&& std::find_if(textString, textString + length(), surrogates::isSurrogate) != textString + length()) {
-						ASCENSION_MAKE_TEXT_STRING_SAFE();
-					}
+						// ScriptShape may crash if the shaping is disabled (see Mozilla bug 341500).
+						// Following technique is also from Mozilla (gfxWindowsFonts.cpp).
+						std::unique_ptr<Char[]> safeString;
+						if(analysis_.eScript == SCRIPT_UNDEFINED
+								&& std::find_if(textString, textString + length(), surrogates::isSurrogate) != textString + length()) {
+							ASCENSION_MAKE_TEXT_STRING_SAFE();
+						}
 
-					// 1. the primary font
-					oldFont = dc.selectObject((font_ = lip.fontCollection().get(computedFontFamily, computedFontProperties))->handle().get());
-					hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
-					if(hr == USP_E_SCRIPT_NOT_IN_FONT) {
-						::ScriptFreeCache(&glyphs_->fontCache);
-						failedFonts.push_back(std::make_pair(font_, (hr == S_FALSE) ? numberOfMissingGlyphs : std::numeric_limits<int>::max()));
-					}
+						// 1. the primary font
+						oldFont = dc.selectObject((font_ = lip.fontCollection().get(computedFontFamily, computedFontProperties))->handle().get());
+						hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
+						if(hr == USP_E_SCRIPT_NOT_IN_FONT) {
+							::ScriptFreeCache(&glyphs_->fontCache);
+							failedFonts.push_back(std::make_pair(font_, (hr == S_FALSE) ? numberOfMissingGlyphs : std::numeric_limits<int>::max()));
+						}
 
-					// 2. the national font for digit substitution
-					if(hr == USP_E_SCRIPT_NOT_IN_FONT && analysis_.eScript != SCRIPT_UNDEFINED && analysis_.s.fDigitSubstitute != 0) {
-						script = convertWin32LangIDtoUnicodeScript(scriptProperties.get(analysis_.eScript).langid);
-						if(script != NOT_PROPERTY) {
-							const std::basic_string<WCHAR> fallbackFontFamily(fallback(script));
-							if(!fallbackFontFamily.empty()) {
-								font_ = lip.fontCollection().get(fallbackFontFamily, computedFontProperties, computedFontSizeAdjust);
+						// 2. the national font for digit substitution
+						if(hr == USP_E_SCRIPT_NOT_IN_FONT && analysis_.eScript != SCRIPT_UNDEFINED && analysis_.s.fDigitSubstitute != 0) {
+							script = convertWin32LangIDtoUnicodeScript(scriptProperties.get(analysis_.eScript).langid);
+							if(script != NOT_PROPERTY) {
+								const std::basic_string<WCHAR> fallbackFontFamily(fallback(script));
+								if(!fallbackFontFamily.empty()) {
+									font_ = lip.fontCollection().get(fallbackFontFamily, computedFontProperties, computedFontSizeAdjust);
+									ASCENSION_CHECK_FAILED_FONTS()
+									if(!skip) {
+										dc.selectObject(font_->handle().get());
+										hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
+										if(hr != S_OK) {
+											::ScriptFreeCache(&glyphs_->fontCache);
+											failedFonts.push_back(make_pair(font_, numberOfMissingGlyphs));	// not material what hr is...
+										}
+									}
+								}
+							}
+						}
+/*
+						// 3. the linked fonts
+						if(hr != S_OK) {
+							for(std::size_t i = 0; i < lip.getFontSelector().numberOfLinkedFonts(); ++i) {
+								font_ = lip.getFontSelector().linkedFont(i, run->style.bold, run->style.italic);
+								ASCENSION_CHECK_FAILED_FONTS()
+								if(!skip) {
+									dc.selectObject(font_);
+									if(S_OK == (hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs)))
+										break;
+									::ScriptFreeCache(&cache_);
+									failedFonts.push_back(make_pair(font_, (hr == S_FALSE) ? numberOfMissingGlyphs : numeric_limits<int>::max()));
+								}
+							}
+						}
+*/
+						// 4. the fallback font
+						if(hr != S_OK) {
+							for(StringCharacterIterator i(StringPiece(textString, length())); i.hasNext(); i.next()) {
+								script = Script::of(i.current());
+								if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
+									break;
+							}
+							if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED) {
+								const std::basic_string<WCHAR> fallbackFontFamily(fallback(script));
+								if(!fallbackFontFamily.empty())
+									font_ = lip.fontCollection().get(fallbackFontFamily, computedFontProperties, computedFontSizeAdjust);
+							} else {
+								font_.reset();
+								// ambiguous CJK?
+								if(script == Script::COMMON && scriptProperties.get(analysis_.eScript).fAmbiguousCharSet != 0) {
+									// TODO: this code check only the first character in the run?
+									switch(Block::of(surrogates::decodeFirst(textString, textString + length()))) {
+										case Block::CJK_SYMBOLS_AND_PUNCTUATION:
+										case Block::ENCLOSED_CJK_LETTERS_AND_MONTHS:
+										case Block::CJK_COMPATIBILITY:
+										case Block::VERTICAL_FORMS:	// as of GB 18030
+										case Block::CJK_COMPATIBILITY_FORMS:
+										case Block::SMALL_FORM_VARIANTS:	// as of CNS-11643
+										case Block::HALFWIDTH_AND_FULLWIDTH_FORMS: {
+											const basic_string<WCHAR> fallbackFontFamily(fallback(Script::HAN));
+											if(!fallbackFontFamily.empty())
+												font_ = lip.fontCollection().get(fallbackFontFamily, computedFontProperties, computedFontSizeAdjust);
+											break;
+											}
+										}
+								}
+//								if(font_ == nullptr && previousRun != nullptr) {
+//									// use the previous run setting (but this will copy the style of the font...)
+//									analysis_.eScript = previousRun->analysis_.eScript;
+//									font_ = previousRun->font_;
+//								}
+							}
+							if(font_ != nullptr) {
 								ASCENSION_CHECK_FAILED_FONTS()
 								if(!skip) {
 									dc.selectObject(font_->handle().get());
 									hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
 									if(hr != S_OK) {
 										::ScriptFreeCache(&glyphs_->fontCache);
-										failedFonts.push_back(make_pair(font_, numberOfMissingGlyphs));	// not material what hr is...
+										failedFonts.push_back(make_pair(font_, (hr == S_FALSE) ? numberOfMissingGlyphs : numeric_limits<int>::max()));
 									}
 								}
 							}
 						}
-					}
-/*
-					// 3. the linked fonts
-					if(hr != S_OK) {
-						for(std::size_t i = 0; i < lip.getFontSelector().numberOfLinkedFonts(); ++i) {
-							font_ = lip.getFontSelector().linkedFont(i, run->style.bold, run->style.italic);
-							ASCENSION_CHECK_FAILED_FONTS()
-							if(!skip) {
-								dc.selectObject(font_);
-								if(S_OK == (hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs)))
-									break;
-								::ScriptFreeCache(&cache_);
-								failedFonts.push_back(make_pair(font_, (hr == S_FALSE) ? numberOfMissingGlyphs : numeric_limits<int>::max()));
-							}
-						}
-					}
-*/
-					// 4. the fallback font
-					if(hr != S_OK) {
-						for(StringCharacterIterator i(StringPiece(textString, length())); i.hasNext(); i.next()) {
-							script = Script::of(i.current());
-							if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED)
-								break;
-						}
-						if(script != Script::UNKNOWN && script != Script::COMMON && script != Script::INHERITED) {
-							const std::basic_string<WCHAR> fallbackFontFamily(fallback(script));
-							if(!fallbackFontFamily.empty())
-								font_ = lip.fontCollection().get(fallbackFontFamily, computedFontProperties, computedFontSizeAdjust);
-						} else {
-							font_.reset();
-							// ambiguous CJK?
-							if(script == Script::COMMON && scriptProperties.get(analysis_.eScript).fAmbiguousCharSet != 0) {
-								// TODO: this code check only the first character in the run?
-								switch(Block::of(surrogates::decodeFirst(textString, textString + length()))) {
-									case Block::CJK_SYMBOLS_AND_PUNCTUATION:
-									case Block::ENCLOSED_CJK_LETTERS_AND_MONTHS:
-									case Block::CJK_COMPATIBILITY:
-									case Block::VERTICAL_FORMS:	// as of GB 18030
-									case Block::CJK_COMPATIBILITY_FORMS:
-									case Block::SMALL_FORM_VARIANTS:	// as of CNS-11643
-									case Block::HALFWIDTH_AND_FULLWIDTH_FORMS: {
-										const basic_string<WCHAR> fallbackFontFamily(fallback(Script::HAN));
-										if(!fallbackFontFamily.empty())
-											font_ = lip.fontCollection().get(fallbackFontFamily, computedFontProperties, computedFontSizeAdjust);
-										break;
-										}
-									}
-							}
-//							if(font_ == nullptr && previousRun != nullptr) {
-//								// use the previous run setting (but this will copy the style of the font...)
-//								analysis_.eScript = previousRun->analysis_.eScript;
-//								font_ = previousRun->font_;
-//							}
-						}
-						if(font_ != nullptr) {
-							ASCENSION_CHECK_FAILED_FONTS()
-							if(!skip) {
-								dc.selectObject(font_->handle().get());
-								hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
-								if(hr != S_OK) {
-									::ScriptFreeCache(&glyphs_->fontCache);
-									failedFonts.push_back(make_pair(font_, (hr == S_FALSE) ? numberOfMissingGlyphs : numeric_limits<int>::max()));
-								}
-							}
-						}
-					}
 
-					// retry without shaping
-					if(hr != S_OK) {
-						if(analysis_.eScript != SCRIPT_UNDEFINED) {
-							const WORD oldScript = analysis_.eScript;
-							analysis_.eScript = SCRIPT_UNDEFINED;	// disable shaping
-							if(std::find_if(textString, textString + length(), surrogates::isSurrogate) != textString + length()) {
-								ASCENSION_MAKE_TEXT_STRING_SAFE();
+						// retry without shaping
+						if(hr != S_OK) {
+							if(analysis_.eScript != SCRIPT_UNDEFINED) {
+								const WORD oldScript = analysis_.eScript;
+								analysis_.eScript = SCRIPT_UNDEFINED;	// disable shaping
+								if(std::find_if(textString, textString + length(), surrogates::isSurrogate) != textString + length()) {
+									ASCENSION_MAKE_TEXT_STRING_SAFE();
+								}
+								for(FailedFonts::iterator i(failedFonts.begin()), e(failedFonts.end()); i != e; ++i) {
+									if(i->second == numeric_limits<int>::max()) {
+										font_.reset();
+										dc.selectObject((font_ = i->first)->handle().get());
+										hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
+										if(hr == S_OK)
+											break;	// found the best
+										::ScriptFreeCache(&glyphs_->fontCache);
+										if(hr == S_FALSE)
+											i->second = -numberOfMissingGlyphs;
+									}
+								}
+								analysis_.eScript = oldScript;
 							}
-							for(FailedFonts::iterator i(failedFonts.begin()), e(failedFonts.end()); i != e; ++i) {
-								if(i->second == numeric_limits<int>::max()) {
-									font_.reset();
-									dc.selectObject((font_ = i->first)->handle().get());
-									hr = generateGlyphs(dc, textString, &numberOfMissingGlyphs);
-									if(hr == S_OK)
-										break;	// found the best
+							if(hr != S_OK) {
+								// select the font which generated the least missing glyphs
+								assert(!failedFonts.empty());
+								FailedFonts::const_iterator bestFont(failedFonts.begin());
+								for(FailedFonts::const_iterator i(bestFont + 1), e(failedFonts.end()); i != e; ++i) {
+									if(i->second < bestFont->second)
+										bestFont = i;
+								}
+								dc.selectObject((font_ = bestFont->first)->handle().get());
+								if(bestFont->second < 0)
+									analysis_.eScript = SCRIPT_UNDEFINED;
+								hr = generateGlyphs(dc, textString, 0);
+								if(FAILED(hr)) {
 									::ScriptFreeCache(&glyphs_->fontCache);
-									if(hr == S_FALSE)
-										i->second = -numberOfMissingGlyphs;
+									generateDefaultGlyphs(dc);	// worst case...
 								}
 							}
-							analysis_.eScript = oldScript;
 						}
-						if(hr != S_OK) {
-							// select the font which generated the least missing glyphs
-							assert(!failedFonts.empty());
-							FailedFonts::const_iterator bestFont(failedFonts.begin());
-							for(FailedFonts::const_iterator i(bestFont + 1), e(failedFonts.end()); i != e; ++i) {
-								if(i->second < bestFont->second)
-									bestFont = i;
-							}
-							dc.selectObject((font_ = bestFont->first)->handle().get());
-							if(bestFont->second < 0)
-								analysis_.eScript = SCRIPT_UNDEFINED;
-							hr = generateGlyphs(dc, textString, 0);
-							if(FAILED(hr)) {
-								::ScriptFreeCache(&glyphs_->fontCache);
-								generateDefaultGlyphs(dc);	// worst case...
-							}
-						}
-					}
 
 #undef ASCENSION_MAKE_TEXT_STRING_SAFE
 #undef ASCENSION_CHECK_FAILED_FONTS
-				}
+					}
 
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 	if(!uniscribeSupportsIVS()) {
@@ -2203,157 +1813,646 @@ namespace ascension {
 	va[glyphs_->clusters[index]].fZeroWidth																\
 		= va[glyphs_->clusters[index + 1]].fZeroWidth = 1
 
-					if(firstVariationSelectorWasted) {
-						// remove glyphs correspond to the first character which is conjuncted with the last
-						// character as a variation character
-						assert(length() > 1);
-						ASCENSION_VANISH_VARIATION_SELECTOR(0);
-					} else if(analysis_.eScript != SCRIPT_UNDEFINED && length() > 3
-							&& surrogates::isHighSurrogate(layoutString[beginning()]) && surrogates::isLowSurrogate(layoutString[beginning() + 1])) {
-						for(StringCharacterIterator i(
-								StringPiece(layoutString.data() + beginning(), length()), layoutString.data() + beginning() + 2); i.hasNext(); i.next()) {
-							const CodePoint variationSelector = i.current();
-							if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
-								StringCharacterIterator baseCharacter(i);
-								baseCharacter.previous();
-								if(static_cast<const SystemFont*>(font_.get())->ivsGlyph(
-										baseCharacter.current(), variationSelector,
-										glyphs_->indices[glyphs_->clusters[baseCharacter.tell() - layoutString.data()]])) {
-									ASCENSION_VANISH_VARIATION_SELECTOR(i.tell() - layoutString.data());
-								}
-							}
-						}
-					}
-					if(nextRun != nullptr && nextRun->length() > 1) {
-						const CodePoint variationSelector = surrogates::decodeFirst(
-							layoutString.begin() + nextRun->beginning(), layoutString.begin() + nextRun->beginning() + 2);
-						if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
-							const CodePoint baseCharacter = surrogates::decodeLast(
-								layoutString.data() + beginning(), layoutString.data() + end());
-							if(static_cast<const SystemFont*>(font_.get())->ivsGlyph(
-									baseCharacter, variationSelector, glyphs_->indices[glyphs_->clusters[length() - 1]]))
-								nextRun->analysis_.fLogicalOrder = 1;
-						}
-					}
-#undef ASCENSION_VANISH_VARIATION_SELECTOR
-				}
-#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-			}
-#endif
-
-			std::unique_ptr<TextRunImpl> TextRunImpl::splitIfTooLong() {
-				if(estimateNumberOfGlyphs(length()) <= 65535)
-					return std::unique_ptr<TextRunImpl>();
-
-				// split this run, because the length would cause ScriptShape to fail (see also Mozilla bug 366643).
-				static const Index MAXIMUM_RUN_LENGTH = 43680;	// estimateNumberOfGlyphs(43680) == 65536
-				Index opportunity = 0;
-				std::unique_ptr<SCRIPT_LOGATTR[]> la(new SCRIPT_LOGATTR[length()]);
-				const HRESULT hr = logicalAttributes(la.get());
-				if(SUCCEEDED(hr)) {
-					for(Index i = MAXIMUM_RUN_LENGTH; i > 0; --i) {
-						if(la[i].fCharStop != 0) {
-							if(text::ucd::legacyctype::isspace((*this)[i]) || text::ucd::legacyctype::isspace((*this)[i - 1])) {
-								opportunity = i;
-								break;
-							}
-							opportunity = std::max(i, opportunity);
-						}
-					}
-				}
-				if(opportunity == 0) {
-					opportunity = MAXIMUM_RUN_LENGTH;
-					if(text::surrogates::isLowSurrogate((*this)[opportunity]) && text::surrogates::isHighSurrogate((*this)[opportunity - 1]))
-						--opportunity;
-				}
-
-				StringPiece followingRange(*this);
-				followingRange.remove_prefix(opportunity);
-				std::unique_ptr<TextRunImpl> following(new TextRunImpl(
-					followingRange, analysis_, glyphs_->font.get().font(), glyphs_->font.get().fontRenderContext(), glyphs_->scriptTag, style()));
-				static_cast<StringPiece&>(*this) = StringPiece(begin(), opportunity);
-				analysis_.fLinkAfter = following->analysis_.fLinkBefore = 0;
-				return following;
-			}
-
-			/// @see GlyphVector#strokeGlyphs
-			void TextRunImpl::strokeGlyphs(PaintContext& context, const Point& origin/*, boost::optional<boost::integer_range<std::size_t>> range = boost::none*/) const {
-				return paintGlyphs(context, origin/*, range*/, true);
-			}
-
-			/**
-			 * 
-			 * @param runs the minimal runs
-			 * @param layoutString the whole string of the layout
-			 * @see #merge, #positionGlyphs
-			 */
-			void TextRunImpl::substituteGlyphs(const boost::iterator_range<std::vector<TextRunImpl*>::iterator>& runs) {
-				// this method processes the following substitutions:
-				// 1. missing glyphs
-				// 2. ideographic variation sequences (if Uniscribe did not support)
-
-				// 1. Presentative glyphs for missing ones
-
-				// TODO: generate missing glyphs.
-
-				// 2. Ideographic Variation Sequences (Uniscribe workaround)
-				// Older Uniscribe (version < 1.626.7100.0) does not support IVS.
-
-#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-				if(!uniscribeSupportsIVS()) {
-					for(auto i(runs.begin()); i != runs.end(); ++i) {
-						TextRunImpl& run = **i;
-
-						// process IVSes in a glyph run
-						if(run.analysis_.eScript != SCRIPT_UNDEFINED && run.length() > 3
-								&& text::surrogates::isHighSurrogate(run[0]) && text::surrogates::isLowSurrogate(run[1])) {
-							for(text::StringCharacterIterator i(run, run.begin() + 2); i.hasNext(); i.next()) {
+						if(firstVariationSelectorWasted) {
+							// remove glyphs correspond to the first character which is conjuncted with the last
+							// character as a variation character
+							assert(length() > 1);
+							ASCENSION_VANISH_VARIATION_SELECTOR(0);
+						} else if(analysis_.eScript != SCRIPT_UNDEFINED && length() > 3
+								&& surrogates::isHighSurrogate(layoutString[beginning()]) && surrogates::isLowSurrogate(layoutString[beginning() + 1])) {
+							for(StringCharacterIterator i(
+									StringPiece(layoutString.data() + beginning(), length()), layoutString.data() + beginning() + 2); i.hasNext(); i.next()) {
 								const CodePoint variationSelector = i.current();
 								if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
-									text::StringCharacterIterator baseCharacter(i);
+									StringCharacterIterator baseCharacter(i);
 									baseCharacter.previous();
-									if(run.font()->ivsGlyph(
+									if(static_cast<const SystemFont*>(font_.get())->ivsGlyph(
 											baseCharacter.current(), variationSelector,
-											run.glyphs_->indices[run.glyphs_->clusters[baseCharacter.tell() - run.begin()]])) {
-										run.glyphs_->vanish(*run.font(), i.tell());
-										run.glyphs_->vanish(*run.font(), i.tell() + 1);
+											glyphs_->indices[glyphs_->clusters[baseCharacter.tell() - layoutString.data()]])) {
+										ASCENSION_VANISH_VARIATION_SELECTOR(i.tell() - layoutString.data());
 									}
 								}
 							}
 						}
-
-						// process an IVS across two glyph runs
-						if(i + 1 != runs.end() && i[1]->length() > 1) {
-							TextRunImpl& next = *i[1];
-							const CodePoint variationSelector = text::utf::decodeFirst(next.begin(), next.begin() + 2);
+						if(nextRun != nullptr && nextRun->length() > 1) {
+							const CodePoint variationSelector = surrogates::decodeFirst(
+								layoutString.begin() + nextRun->beginning(), layoutString.begin() + nextRun->beginning() + 2);
 							if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
-								const CodePoint baseCharacter = text::utf::decodeLast(run.begin(), run.end());
-								if(run.font()->ivsGlyph(baseCharacter, variationSelector,
-										run.glyphs_->indices[run.glyphs_->clusters[run.length() - 1]])) {
-									next.glyphs_->vanish(*run.font(), next.begin());
-									next.glyphs_->vanish(*run.font(), next.begin() + 1);
+								const CodePoint baseCharacter = surrogates::decodeLast(
+									layoutString.data() + beginning(), layoutString.data() + end());
+								if(static_cast<const SystemFont*>(font_.get())->ivsGlyph(
+										baseCharacter, variationSelector, glyphs_->indices[glyphs_->clusters[length() - 1]]))
+									nextRun->analysis_.fLogicalOrder = 1;
+							}
+						}
+#undef ASCENSION_VANISH_VARIATION_SELECTOR
+					}
+#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+				}
+#endif
+				/// @see GlyphVector#strokeGlyphs
+				void GlyphVectorImpl::strokeGlyphs(PaintContext& context, const Point& origin/*, boost::optional<boost::integer_range<std::size_t>> range = boost::none*/) const {
+					return paintGlyphs(context, origin/*, range*/, true);
+				}
+
+				/**
+				 * 
+				 * @tparam SinglePassReadableRange The type of @a runs
+				 * @param runs the minimal runs
+				 * @param layoutString the whole string of the layout
+				 * @see #merge, #positionGlyphs
+				 */
+				template<typename SinglePassReadableRange>
+				void GlyphVectorImpl::substituteGlyphs(const SinglePassReadableRange/*boost::iterator_range<std::vector<GlyphVectorImpl*>::iterator>*/& runs) {
+					// this method processes the following substitutions:
+					// 1. missing glyphs
+					// 2. ideographic variation sequences (if Uniscribe did not support)
+
+					// 1. Presentative glyphs for missing ones
+
+					// TODO: generate missing glyphs.
+
+					// 2. Ideographic Variation Sequences (Uniscribe workaround)
+					// Older Uniscribe (version < 1.626.7100.0) does not support IVS.
+
+#ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+					if(!uniscribeSupportsIVS()) {
+						for(auto i(std::begin(runs)); i != std::end(runs); ++i) {
+							GlyphVectorImpl& run = **i;
+
+							// process IVSes in a glyph run
+							if(run.analysis_.eScript != SCRIPT_UNDEFINED && run.length() > 3
+									&& text::surrogates::isHighSurrogate(run[0]) && text::surrogates::isLowSurrogate(run[1])) {
+								for(text::StringCharacterIterator i(run, run.begin() + 2); i.hasNext(); i.next()) {
+									const CodePoint variationSelector = i.current();
+									if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
+										text::StringCharacterIterator baseCharacter(i);
+										baseCharacter.previous();
+										if(run.font()->ivsGlyph(
+												baseCharacter.current(), variationSelector,
+												run.glyphs_->indices[run.glyphs_->clusters[baseCharacter.tell() - run.begin()]])) {
+											run.glyphs_->vanish(*run.font(), i.tell());
+											run.glyphs_->vanish(*run.font(), i.tell() + 1);
+										}
+									}
+								}
+							}
+
+							// process an IVS across two glyph runs
+							if(i + 1 != runs.end() && i[1]->length() > 1) {
+								GlyphVectorImpl& next = *i[1];
+								const CodePoint variationSelector = text::utf::decodeFirst(next.begin(), next.begin() + 2);
+								if(variationSelector >= 0xe0100ul && variationSelector <= 0xe01eful) {
+									const CodePoint baseCharacter = text::utf::decodeLast(run.begin(), run.end());
+									if(run.font()->ivsGlyph(baseCharacter, variationSelector,
+											run.glyphs_->indices[run.glyphs_->clusters[run.length() - 1]])) {
+										next.glyphs_->vanish(*run.font(), next.begin());
+										next.glyphs_->vanish(*run.font(), next.begin() + 1);
+									}
+								}
+							}
+						}
+#undef ASCENSION_VANISH_VARIATION_SELECTOR
+					}
+#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+				}
+
+				/// @see GlyphVector#visualBounds
+				graphics::Rectangle GlyphVectorImpl::visualBounds() const {
+					Scalar top, right, bottom, left;
+					left = top = std::numeric_limits<Scalar>::max();
+					right = bottom = std::numeric_limits<Scalar>::min();
+					for(std::size_t i = 0, c = numberOfGlyphs(); i < c; ++i) {
+						const auto gvb(glyphVisualBounds(i));
+						top = std::min(geometry::top(gvb), top);
+						right = std::max(geometry::right(gvb), right);
+						bottom = std::max(geometry::bottom(gvb), bottom);
+						left = std::min(geometry::left(gvb), left);
+					}
+					return graphics::Rectangle(geometry::_top = top, geometry::_right = right, geometry::_bottom = bottom, geometry::_left = left);
+				}
+			}
+
+
+			// TextRunImpl file-local class ///////////////////////////////////////////////////////////////////////////
+
+			namespace {
+				class TextRunImpl : public GlyphVectorImpl {
+				public:
+					struct Overlay {
+						Color color;
+						boost::integer_range<Index> range;
+					};
+				public:
+					TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
+						std::shared_ptr<const Font> font, const FontRenderContext& frc,
+						OpenTypeFontTag scriptTag, const ComputedTextRunStyleCore& coreStyle);
+					~TextRunImpl() BOOST_NOEXCEPT;
+					static void generate(const StringPiece& textString,
+						const ComputedTextLineStyle& lineStyle, std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles,
+						const FontCollection& fontCollection, const FontRenderContext& frc,
+						std::vector<TextRunImpl*>& textRuns, std::vector<AttributedCharacterRange<ComputedTextRunStyle>>& calculatedStyles);
+					// TextRun
+					const presentation::FlowRelativeFourSides<ComputedBorderSide>* border() const BOOST_NOEXCEPT override {return &coreStyle_.get().border;}
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+					boost::optional<Index> characterEncompassesPosition(float ipd) const BOOST_NOEXCEPT;
+					Index characterHasClosestLeadingEdge(float ipd) const;
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
+					const presentation::FlowRelativeFourSides<Scalar>* margin() const BOOST_NOEXCEPT override {return &coreStyle_.get().margin;}
+					const presentation::FlowRelativeFourSides<Scalar>* padding() const BOOST_NOEXCEPT override {return &coreStyle_.get().padding;}
+					// attributes
+					const ComputedTextRunStyleCore& style() const BOOST_NOEXCEPT {return coreStyle_;}
+					// layout
+					std::unique_ptr<TextRunImpl> breakAt(StringPiece::const_iterator at);
+					std::unique_ptr<TextRunImpl> breakIfTooLong();
+#if 0
+					static void mergeScriptsAndStyles(const StringPiece& layoutString, const SCRIPT_ITEM scriptRuns[],
+						const OPENTYPE_TAG scriptTags[], std::size_t numberOfScriptRuns, const FontCollection& fontCollection,
+						shared_ptr<const TextRunStyle> defaultStyle, unique_ptr<ComputedStyledTextRunIterator> styles,
+						vector<TextRunImpl*>& textRuns, vector<const ComputedTextRunStyle>& computedStyles,
+						vector<vector<const ComputedTextRunStyle>::size_type>& computedStylesIndices);
+#endif
+					void positionGlyphs(win32::Handle<HDC>::Type dc, const ComputedTextRunStyle& style);
+					// drawing and painting
+					void drawGlyphs(PaintContext& context, const Point& p, const boost::integer_range<Index>& range) const;
+					void paintLineDecorations() const;
+
+				private:
+					TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
+						std::unique_ptr<RawGlyphVector> glyphs, const ComputedTextRunStyleCore& coreStyle);
+					TextRunImpl(const TextRunImpl& other, std::unique_ptr<GlyphVectorImpl> leading);
+					using GlyphVectorImpl::breakAt;
+					using GlyphVectorImpl::breakIfTooLong;
+					using GlyphVectorImpl::positionGlyphs;
+				private:
+					boost::flyweight<ComputedTextRunStyleCore> coreStyle_;
+				};
+
+				/**
+				 * Creates a @c TextRunImpl instance with a text string, script information, font rendering context and
+				 * styles.
+				 * @param characterRange The string this text run covers
+				 * @param script @c SCRIPT_ANALYSIS The object obtained by @c ScriptItemize(OpenType)
+				 * @param font The font renders this text run. Can't be @c null
+				 * @param scriptTag An OpenType script tag describes the script of this text run
+				 * @param coreStyle The core text style
+				 * @throw NullPointerException @a characterRange and/or @a font are @c null
+				 * @throw std#invalid_argument @a characterRange is empty
+				 * @note This constructor is called by only @c #breakIfTooLong.
+				 */
+				TextRunImpl::TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
+						std::shared_ptr<const Font> font, const FontRenderContext& frc, OpenTypeFontTag scriptTag, const ComputedTextRunStyleCore& coreStyle)
+						: GlyphVectorImpl(characterRange, script, font, frc, scriptTag), coreStyle_(coreStyle) {	// may throw NullPointerException for 'font'
+				}
+
+				/**
+				 * Creates a @c TextRunImpl instance with a text string, script information, a computed glyph vector
+				 * and styles.
+				 * @param characterRange The string this text run covers
+				 * @param script @c SCRIPT_ANALYSIS The object obtained by @c ScriptItemize(OpenType)
+				 * @param glyphs The glyph vector
+				 * @param coreStyle The core text style
+				 * @throw NullPointerException @a characterRange and/or @a glyphs are @c null
+				 * @throw std#invalid_argument @a characterRange is empty
+				 * @note This constructor is called by only @c #generate.
+				 */
+				TextRunImpl::TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
+						std::unique_ptr<RawGlyphVector> glyphs, const ComputedTextRunStyleCore& coreStyle)
+						: GlyphVectorImpl(characterRange, script, std::move(glyphs)), coreStyle_(coreStyle) {
+				}
+
+				/**
+				 * Creates a @c TextRunImpl instance with a @c GlyphVectorImpl object.
+				 * @param other The original @c TextRunImpl object
+				 * @param leading The original @c GlyphVectorImpl object
+				 * @see #breakAt, #breakIfTooLong
+				 * @note This constructor is called by only @c #breakAt.
+				 */
+				TextRunImpl::TextRunImpl(const TextRunImpl& other, std::unique_ptr<GlyphVectorImpl> leading)
+						: GlyphVectorImpl(*leading), coreStyle_(other.style()) {
+				}
+
+				/**
+				 * Breaks the text run into two runs at the specified position.
+				 * @param at The position at which break this run
+				 * @return The new text run following this run
+				 * @note This method is called by only @c #wrap.
+				 */
+				std::unique_ptr<TextRunImpl> TextRunImpl::breakAt(StringPiece::const_iterator at) {
+					// create the new following run
+					return std::unique_ptr<TextRunImpl>(new TextRunImpl(*this, GlyphVectorImpl::breakAt(at)));
+				}
+
+				std::unique_ptr<TextRunImpl> TextRunImpl::breakIfTooLong() {
+					return std::unique_ptr<TextRunImpl>(new TextRunImpl(*this, GlyphVectorImpl::breakIfTooLong()));
+				}
+
+#ifdef ASCENSION_ABANDONED_AT_VERSION_08
+				/// @see TextRun#characterEncompassesPosition
+				boost::optional<Index> TextRunImpl::characterEncompassesPosition(float ipd) const BOOST_NOEXCEPT {
+					int character;
+					hitTest(ipd, character, nullptr);
+					if(character == -1 || character == length())
+						return boost::none;
+					assert(character >= 0);
+					return character;
+				}
+
+				/// @see TextRun#characterHasClosestLeadingEdge
+				Index TextRunImpl::characterHasClosestLeadingEdge(float ipd) const {
+					int character, trailing;
+					hitTest(ipd, character, &trailing);
+					if(character == -1)
+						return 0;
+					const int result = (character == length()) ? length() : (character + trailing);
+					assert(result >= 0);
+					return result;
+				}
+#endif // ASCENSION_ABANDONED_AT_VERSION_08
+
+				/**
+				 * @param textString
+				 * @param lineStyle
+				 * @param textRunStyles
+				 * @param fontCollection
+				 * @param frc
+				 * @param[out] textRuns
+				 * @param[out] calculatedStyles
+				 */
+				void TextRunImpl::generate(const StringPiece& textString,
+						const ComputedTextLineStyle& lineStyle, std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles,
+						const FontCollection& fontCollection, const FontRenderContext& frc,
+						std::vector<TextRunImpl*>& textRuns, std::vector<AttributedCharacterRange<ComputedTextRunStyle>>& calculatedStyles) {
+					raiseIfNullOrEmpty(textString, "textString");
+
+					// split the text line into text runs as following steps:
+					// 1. split the text into script runs (SCRIPT_ITEMs) by Uniscribe
+					// 2. split each script runs into atomically-shapable runs (TextRuns) with StyledRunIterator
+
+					// 1. split the text into script runs by Uniscribe
+					HRESULT hr;
+
+					// 1-1. configure Uniscribe's itemize
+					win32::AutoZero<SCRIPT_CONTROL> control;
+					win32::AutoZero<SCRIPT_STATE> initialState;
+					initialState.uBidiLevel = (lineStyle.writingMode.inlineFlowDirection == presentation::RIGHT_TO_LEFT) ? 1 : 0;
+//					initialState.fOverrideDirection = 1;
+					initialState.fInhibitSymSwap = lineStyle.inhibitSymmetricSwapping;
+					initialState.fDisplayZWG = lineStyle.displayShapingControls;
+					const SCRIPT_DIGITSUBSTITUTE sds(convertNumberSubstitutionToUniscribe(lineStyle.numberSubstitution));
+					hr = ::ScriptApplyDigitSubstitution(&sds, &control, &initialState);
+					if(FAILED(hr))
+						throw makePlatformError(hr);
+
+					// 1-2. itemize
+					// note that ScriptItemize can cause a buffer overflow (see Mozilla bug 366643)
+					AutoArray<SCRIPT_ITEM, 128> scriptRuns;
+					AutoArray<OPENTYPE_TAG, scriptRuns.STATIC_CAPACITY> scriptTags;
+					int estimatedNumberOfScriptRuns = std::max(static_cast<int>(textString.length()) / 4, 2), numberOfScriptRuns;
+					HRESULT(WINAPI* scriptItemizeOpenType)(const WCHAR*, int, int,
+						const SCRIPT_CONTROL*, const SCRIPT_STATE*, SCRIPT_ITEM*, OPENTYPE_TAG*, int*) = uspLib->get<0>();
+					while(true) {
+						scriptRuns.reallocate(estimatedNumberOfScriptRuns);
+						scriptTags.reallocate(estimatedNumberOfScriptRuns);
+						hr = callScriptItemize(std::begin(textString), static_cast<int>(textString.length()),
+							estimatedNumberOfScriptRuns, control, initialState, scriptRuns.get(), scriptTags.get(), numberOfScriptRuns);
+						if(hr != E_OUTOFMEMORY)	// estimatedNumberOfRuns was enough...
+							break;
+						estimatedNumberOfScriptRuns *= 2;
+					}
+					if(lineStyle.disableDeprecatedFormatCharacters) {
+						for(int i = 0; i < numberOfScriptRuns; ++i) {
+							scriptRuns[i].a.s.fInhibitSymSwap = initialState.fInhibitSymSwap;
+							scriptRuns[i].a.s.fDigitSubstitute = initialState.fDigitSubstitute;
+						}
+					}
+					if(scriptItemizeOpenType == nullptr)
+						std::fill_n(scriptTags.get(), numberOfScriptRuns, SCRIPT_TAG_UNKNOWN);
+
+					// 2. generate raw glyph vectors and computed styled text runs
+					std::vector<std::unique_ptr<RawGlyphVector>> glyphRuns;
+					glyphRuns.reserve(numberOfScriptRuns);
+					std::vector<const SCRIPT_ANALYSIS*> scriptPointers;
+					scriptPointers.reserve(numberOfScriptRuns);
+					std::vector<AttributedCharacterRange<ComputedTextRunStyle>> styleRuns;
+					{
+						StringPiece::const_iterator lastGlyphRunEnd = nullptr;
+						// script cursors
+						AttributedCharacterRange<const SCRIPT_ITEM*>
+							scriptRun(std::begin(textString) + scriptRuns[0].iCharPos, &scriptRuns[0]),
+							nextScriptRun((numberOfScriptRuns > 1) ?
+								std::begin(textString) + scriptRuns[1].iCharPos : textString.end(), scriptRun.attribute + 1);
+						// style cursors
+						detail::ComputedStyledTextRunEnumerator styledTextRunEnumerator(textString, move(textRunStyles));
+						assert(!styledTextRunEnumerator.isDone());
+						AttributedCharacterRange<ComputedTextRunStyle> styleRun, nextStyleRun;
+						styledTextRunEnumerator.style(styleRun.attribute);
+						styleRun.position = styledTextRunEnumerator.position();
+						styledTextRunEnumerator.next();
+						if(!styledTextRunEnumerator.isDone()) {
+							styledTextRunEnumerator.style(nextStyleRun.attribute);
+							nextStyleRun.position = styledTextRunEnumerator.position();
+						} else
+							nextStyleRun.position = textString.end();
+						styleRuns.push_back(AttributedCharacterRange<ComputedTextRunStyle>(styleRun.position, styleRun.attribute));
+
+						do {
+							const StringPiece::const_iterator next = std::min(nextScriptRun.position, nextStyleRun.position);
+							const bool advanceScriptRun = next == nextScriptRun.position;
+							const bool advanceStyleRun = next == nextStyleRun.position;
+
+							if(advanceScriptRun) {
+								const StringPiece subRange(scriptRun.position, next - scriptRun.position);
+								assert(glyphRuns.empty() || subRange.cbegin() == lastGlyphRunEnd);
+								glyphRuns.push_back(
+									std::unique_ptr<RawGlyphVector>(
+										new RawGlyphVector(subRange.cbegin(),
+											selectFont(subRange, fontCollection, styleRun.attribute.font),
+											frc, scriptTags[scriptRun.attribute - scriptRuns.get()])));
+								scriptPointers.push_back(&scriptRuns[scriptRun.attribute - scriptRuns.get()].a);
+								assert(nextScriptRun.position < textString.end());
+								scriptRun = nextScriptRun;
+								if(++nextScriptRun.attribute < scriptRuns.get() + numberOfScriptRuns)
+									nextScriptRun.position = textString.cbegin() + nextScriptRun.attribute->iCharPos;
+								else
+									nextScriptRun.position = textString.end();
+							}
+							if(advanceStyleRun) {
+								if(!advanceScriptRun) {
+									const StringPiece subRange(makeStringPiece(!glyphRuns.empty() ? lastGlyphRunEnd : textString.cbegin(), next));
+									glyphRuns.push_back(
+										std::unique_ptr<RawGlyphVector>(
+											new RawGlyphVector(subRange.cbegin(),
+												selectFont(subRange, fontCollection, styleRun.attribute.font),
+												frc, scriptTags[scriptRun.attribute - scriptRuns.get()])));
+								}
+								assert(nextStyleRun.position < textString.end());
+								styleRun = std::move(nextStyleRun);	// C2668 if included <boost/log/trivial.hpp> without 'std::' ???
+								styleRuns.push_back(AttributedCharacterRange<ComputedTextRunStyle>(styleRun.position, styleRun.attribute));
+								assert(!styledTextRunEnumerator.isDone());
+								styledTextRunEnumerator.next();
+								if(!styledTextRunEnumerator.isDone()) {
+									styledTextRunEnumerator.style(nextStyleRun.attribute);
+									nextStyleRun.position = styledTextRunEnumerator.position();
+								} else
+									nextStyleRun.position = textString.end();
+							}
+							lastGlyphRunEnd = next;
+						} while(scriptRun.position < textString.end() || styleRun.position < textString.end());
+						assert(glyphRuns.size() == scriptPointers.size());
+					}
+
+					// 3. merge script runs and style runs into TextRunImpls
+					std::vector<TextRunImpl*> mergedTextRuns;
+					mergedTextRuns.reserve(glyphRuns.size() + styleRuns.size());
+					{
+						auto glyphRun(std::begin(glyphRuns)), lastGlyphRun(std::end(glyphRuns));
+						auto styleRun(std::begin(styleRuns)), lastStyleRun(std::end(styleRuns));
+						do {
+							auto nextGlyphRun(glyphRun + 1);
+							auto nextStyleRun(styleRun + 1);
+							const StringPiece::const_iterator
+								nextGlyphRunPosition((nextGlyphRun != lastGlyphRun) ? (*nextGlyphRun)->position : textString.end()),
+								nextStyleRunPosition((nextStyleRun != lastStyleRun) ? nextStyleRun->position : textString.end());
+							const StringPiece::const_iterator nextPosition(std::min(nextGlyphRunPosition, nextStyleRunPosition));
+							const StringPiece::const_iterator previousPosition(!mergedTextRuns.empty() ? mergedTextRuns.back()->end() : textString.cbegin());
+
+							mergedTextRuns.push_back(new TextRunImpl(
+								makeStringPiece(previousPosition, nextPosition),
+								*scriptPointers[glyphRuns.size() - (lastGlyphRun - glyphRun)], std::move(*glyphRun), styleRun->attribute));
+							if(nextPosition == nextGlyphRunPosition)
+								++glyphRun;
+							if(nextPosition == nextStyleRunPosition)
+								++styleRun;
+						} while(glyphRun != lastGlyphRun && styleRun != lastStyleRun);
+					}
+
+					// 4. generate results
+					using std::swap;
+					swap(mergedTextRuns, textRuns);
+					swap(styleRuns, calculatedStyles);
+				}
+#if 0
+				pair<StringPiece::const_pointer, shared_ptr<const Font>> findNextFontRun(
+					const StringPiece& textString, const FontCollection& fontCollection,
+					const ComputedTextRunStyle& style, shared_ptr<const Font> previousFont);
+
+				/**
+				 * Merges the given item runs and the given style runs.
+				 * @param layoutString
+				 * @param items The items itemized by @c #itemize()
+				 * @param numberOfItems The length of the array @a items
+				 * @param styles The iterator returns the styled runs in the line. Can be @c null
+				 * @param[out] textRuns
+				 * @param[out] computedStyles
+				 * @see presentation#Presentation#getLineStyle
+				 */
+				void TextRunImpl::mergeScriptsAndStyles(
+						const StringPiece& layoutString, const SCRIPT_ITEM scriptRuns[],
+						const OPENTYPE_TAG scriptTags[], std::size_t numberOfScriptRuns,
+						const FontCollection& fontCollection, shared_ptr<const TextRunStyle> defaultStyle,
+						std::unique_ptr<ComputedStyledTextRunIterator> styles, vector<TextRunImpl*>& textRuns,
+						std::vector<const ComputedTextRunStyle>& computedStyles,
+						std::vector<std::vector<const ComputedTextRunStyle>::size_type>& computedStylesIndices) {
+					raiseIfNullOrEmpty(layoutString, "layoutString");
+					if(scriptRuns == nullptr)
+						throw NullPointerException("scriptRuns");
+					else if(numberOfScriptRuns == 0)
+						throw invalid_argument("numberOfScriptRuns");
+
+#define ASCENSION_SPLIT_LAST_RUN()												\
+	while(runs.back()->length() > MAXIMUM_RUN_LENGTH) {							\
+		TextRunImpl& back = *runs.back();										\
+		std::unique_ptr<TextRunImpl> piece(new SimpleRun(back.style));			\
+		Index pieceLength = MAXIMUM_RUN_LENGTH;									\
+		if(surrogates::isLowSurrogate(line[back.offsetInLine + pieceLength]))	\
+			--pieceLength;														\
+		piece->analysis = back.analysis;										\
+		piece->offsetInLine = back.offsetInLine + pieceLength;					\
+		piece->setLength(back.length() - pieceLength);							\
+		back.setLength(pieceLength);											\
+		runs.push_back(piece.release());										\
+	}
+
+					// result buffers
+					std::vector<TextRunImpl*> calculatedRuns;
+					std::vector<const ComputedTextRunStyle> calculatedStyles;
+					calculatedRuns.reserve(static_cast<std::size_t>(numberOfScriptRuns * ((styles.get() != nullptr) ? 1.2 : 1)));	// hmm...
+					std::vector<std::vector<const ComputedTextRunStyle>::size_type> calculatedStylesIndices;
+					calculatedStylesIndices.reserve(calculatedRuns.capacity());
+
+					// script cursors
+					AttributedCharacterRange<const SCRIPT_ITEM*> scriptRun;
+					scriptRun.attribute = scriptRuns;
+					scriptRun.position = layoutString.beginning() + scriptRun.attribute->iCharPos;
+					AttributedCharacterRange<const SCRIPT_ITEM*> nextScriptRun;
+					nextScriptRun.attribute = scriptRuns + 1;
+					nextScriptRun.position = (nextScriptRun.attribute < scriptRuns + numberOfScriptRuns) ?
+						layoutString.beginning() + nextScriptRun.attribute->iCharPos : layoutString.end();
+
+					// style cursors
+					detail::ComputedStyledTextRunEnumerator styleEnumerator(layoutString, move(styles));
+					AttributedCharacterRange<ComputedTextRunStyle> styleRun;
+					assert(!styleEnumerator.isDone());
+					styleRun.position = styleEnumerator.position();
+					styleEnumerator.style(styleRun.attribute);
+					styleEnumerator.next();
+					calculatedStyles.push_back(styleRun.attribute);
+					AttributedCharacterRange<ComputedTextRunStyle> nextStyleRun;
+					if(!styleEnumerator.isDone()) {
+						nextStyleRun.position = styleEnumerator.position();
+						styleEnumerator.style(nextStyleRun.attribute);
+					} else
+						nextStyleRun.position = layoutString.end();
+
+					assert(scriptRun.position == layoutString.beginning());
+					assert(styleRun.position == layoutString.beginning());
+
+					std::shared_ptr<const Font> font;	// font for current glyph run
+					do {
+						const StringPiece::const_pointer previousRunEnd = max(scriptRun.position, styleRun.position);
+						assert(
+							(previousRunEnd == layoutString.beginning() && calculatedRuns.empty() && calculatedStyles.empty())
+							|| (!calculatedRuns.empty() && previousRunEnd == calculatedRuns.back()->end())
+							|| (!calculatedStyles.empty() && previousRunEnd == styleRun.position));
+						StringPiece::const_pointer newRunEnd;
+						bool forwardScriptRun = false, forwardStyleRun = false, forwardGlyphRun = false;
+
+						if(nextScriptRun.position == nextStyleRun.position) {
+							newRunEnd = nextScriptRun.position;
+							forwardScriptRun = forwardStyleRun = true;
+						} else if(nextScriptRun.position < nextStyleRun.position) {
+							newRunEnd = nextScriptRun.position;
+							forwardScriptRun = true;
+						} else {	// nextScriptRun.position > nextStyleRun.position
+							newRunEnd = nextStyleRun.position;
+							forwardStyleRun = true;
+						}
+
+						if((++utf::makeCharacterDecodeIterator(previousRunEnd, newRunEnd)).tell() < newRunEnd || font.get() == nullptr) {
+							const std::pair<StringPiece::const_pointer, std::shared_ptr<const Font>> nextFontRun(
+								findNextFontRun(makeStringPiece(previousRunEnd, newRunEnd), fontCollection,
+									(styleRun.position != nullptr) ? styleRun.attribute : ComputedTextRunStyle(), font));
+							font = nextFontRun.second;
+							assert(font.get() != nullptr);
+							if(nextFontRun.first != nullptr) {
+								forwardGlyphRun = true;
+								newRunEnd = nextFontRun.first;
+								forwardScriptRun = forwardStyleRun = false;
+							}
+						}
+						if(!forwardGlyphRun && forwardScriptRun)
+							forwardGlyphRun = true;
+
+						if(forwardGlyphRun) {
+							const bool breakScriptRun = newRunEnd < nextScriptRun.position;
+							if(breakScriptRun)
+								const_cast<SCRIPT_ITEM*>(scriptRun.attribute)->a.fLinkAfter = 0;
+							calculatedRuns.push_back(
+								new TextRunImpl(Range<Index>(!calculatedRuns.empty() ? calculatedRuns.back()->end() : 0, newRunEnd - layoutString.beginning()),
+									scriptRun.attribute->a, font,
+									(scriptTags != nullptr) ? scriptTags[scriptRun.attribute - scriptRuns] : SCRIPT_TAG_UNKNOWN));	// TODO: 'DFLT' is preferred?
+							calculatedStylesIndices.push_back(calculatedStyles.size());
+							while(true) {
+								std::unique_ptr<TextRunImpl> piece(calculatedRuns.back()->breakIfTooLong());
+								if(piece.get() == nullptr)
+									break;
+								calculatedRuns.push_back(piece.release());
+								calculatedStylesIndices.push_back(calculatedStyles.size());
+							}
+							if(breakScriptRun)
+								const_cast<SCRIPT_ITEM*>(scriptRun.attribute)->a.fLinkBefore = 0;
+						}
+						if(forwardScriptRun) {
+							assert(nextScriptRun.position < layoutString.end());
+							scriptRun = nextScriptRun;
+							nextScriptRun.position =
+								(++nextScriptRun.attribute < scriptRuns + numberOfScriptRuns) ?
+									layoutString.beginning() + nextScriptRun.attribute->iCharPos : layoutString.end();
+						}
+						if(forwardStyleRun) {
+							assert(nextStyleRun.position < layoutString.end());
+							styleRun = move(nextStyleRun);
+							calculatedStyles.push_back(styleRun.attribute);
+							assert(!styleEnumerator.isDone());
+							styleEnumerator.next();
+							if(!styleEnumerator.isDone()) {
+								nextStyleRun.position = styleEnumerator.position();
+								styleEnumerator.style(nextStyleRun.attribute);
+							} else
+								nextStyleRun.position = layoutString.end();
+						}
+					} while(scriptRun.position < layoutString.end() || styleRun.position < layoutString.end());
+
+					assert(calculatedRuns.size() == calculatedStylesIndices.size());
+					assert(!calculatedStyles.empty());
+
+					// commit
+					using std::swap;
+					swap(textRuns, calculatedRuns);
+					swap(computedStyles, calculatedStyles);
+					swap(computedStylesIndices, calculatedStylesIndices);
+
+#undef ASCENSION_SPLIT_LAST_RUN
+				}
+#endif // 0
+
+				/**
+				 * Positions the glyphs in the text run.
+				 * @param dc The device context
+				 * @param style The computed text run style
+				 * @see #generate, GlyphVectorImpl#positionGlyphs, GlyphVectorImpl#substituteGlyphs
+				 */
+				void TextRunImpl::positionGlyphs(win32::Handle<HDC>::Type dc, const ComputedTextRunStyle& style) {
+					return positionGlyphs(dc);
+
+					// apply text run styles
+/*
+					// query widths of C0 and C1 controls in this run
+					unique_ptr<WORD[]> glyphIndices;
+					if(ISpecialCharacterRenderer* scr = lip.specialCharacterRenderer()) {
+						ISpecialCharacterRenderer::LayoutContext context(dc);
+						context.readingDirection = readingDirection();
+						dc.selectObject(glyphs_->font->handle().get());
+						SCRIPT_FONTPROPERTIES fp;
+						fp.cBytes = 0;
+						for(Index i = beginning(); i < end(); ++i) {
+							if(isC0orC1Control(layoutString[i])) {
+								if(const int w = scr->getControlCharacterWidth(context, layoutString[i])) {
+									// substitute the glyph
+									width.abcB += w - glyphs_->advances[i - beginning()];
+									glyphs_->advances[i] = w;
+									if(fp.cBytes == 0) {
+										fp.cBytes = sizeof(SCRIPT_FONTPROPERTIES);
+										const HRESULT hr2 = ::ScriptGetFontProperties(dc.get(), &glyphs_->fontCache, &fp);
+										if(FAILED(hr2))
+											fp.wgBlank = 0;	// hmm...
+									}
+									if(glyphIndices.get() == nullptr) {
+										glyphIndices.reset(new WORD[numberOfGlyphs()]);
+										std::memcpy(glyphIndices.get(), glyphs(), sizeof(WORD) * numberOfGlyphs());
+									}
+									glyphIndices[i] = fp.wgBlank;
 								}
 							}
 						}
 					}
-#undef ASCENSION_VANISH_VARIATION_SELECTOR
-				}
-#endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
-			}
-
-			/// @see GlyphVector#visualBounds
-			graphics::Rectangle TextRunImpl::visualBounds() const {
-				Scalar top, right, bottom, left;
-				left = top = std::numeric_limits<Scalar>::max();
-				right = bottom = std::numeric_limits<Scalar>::min();
-				for(std::size_t i = 0, c = numberOfGlyphs(); i < c; ++i) {
-					const auto gvb(glyphVisualBounds(i));
-					top = std::min(geometry::top(gvb), top);
-					right = std::max(geometry::right(gvb), right);
-					bottom = std::max(geometry::bottom(gvb), bottom);
-					left = std::min(geometry::left(gvb), left);
-				}
-				return graphics::Rectangle(geometry::_top = top, geometry::_right = right, geometry::_bottom = bottom, geometry::_left = left);
+*/
+/*					// handle letter spacing
+					if(styledRange.style.get() != nullptr && styledRange.style->letterSpacing.unit != Length::INHERIT) {
+						if(const int letterSpacing = pixels(dc, styledRange.style->letterSpacing, false, glyphs_->font->metrics())) {
+							const bool rtl = readingDirection() == RIGHT_TO_LEFT;
+							for(std::size_t i = textRun.glyphRange_.beginning(), e = textRun.glyphRange_.end(); i < e; ++i) {
+								if((!rtl && (i + 1 == e || glyphs_->visualAttributes[i + 1].fClusterStart != 0))
+										|| (rtl && (i == 0 || glyphs_->visualAttributes[i - 1].fClusterStart != 0))) {
+									advances[i] += letterSpacing;
+									if(rtl)
+										offsets[i].du += letterSpacing;
+								}
+							}
+						}
+					}
+*/				}
 			}
 
 
@@ -3361,6 +3460,19 @@ namespace ascension {
 				runs_ = std::move(newRuns);
 				for(std::vector<Index>::size_type i = 0, c = firstRunsInLines.size(); i < c; ++i)
 					firstRunsInLines_[i] = std::begin(runs_) + firstRunsInLines[i];
+			}
+
+
+			// Font ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+			std::unique_ptr<const GlyphVector> Font::createGlyphVector(const FontRenderContext& frc, const StringPiece& text) const {
+				win32::AutoZero<SCRIPT_ANALYSIS> script;
+				script.eScript = SCRIPT_UNDEFINED;
+				std::unique_ptr<GlyphVectorImpl> gv(new GlyphVectorImpl(text, script, shared_from_this(), frc, SCRIPT_TAG_UNKNOWN));
+				auto dc(win32::detail::screenDC());
+				gv->shape(dc);
+				gv->positionGlyphs(dc);
+				return std::move(gv);
 			}
 		}
 	}
