@@ -16,6 +16,10 @@
 #include <boost/functional/hash.hpp>	// boost.hash_combine, boost.hash_value
 #include <boost/range/algorithm/binary_search.hpp>
 #include <boost/range/algorithm/sort.hpp>
+#if ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE)
+#	include <usp10.h>
+#	pragma comment(lib, "usp10.lib")
+#endif // ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE)
 
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 #	include <ascension/corelib/text/character.hpp>	// text.isValidCodePoint
@@ -179,6 +183,31 @@ namespace ascension {
 				description_.reset(new FontDescription(fromNative<FontDescription>(lf)));
 //				description_.reset(new FontDescription(graphics::detail::fromNative<FontDescription>(lf)));
 			}
+#if 0
+			std::unique_ptr<const GlyphVector> Font::createGlyphVector(const FontRenderContext& frc, const StringPiece& text) const {
+				const win32::Handle<HDC>::Type dc(win32::detail::screenDC());
+				const int cookie = ::SaveDC(dc.get());
+				::SelectObject(dc.get(), native().get());
+				static_assert(sizeof(WORD) == sizeof(GlyphCode), "");
+				std::vector<GlyphCode> glyphCodes(text.length());
+#if ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE)
+				SCRIPT_CACHE fontCache(nullptr);
+				const HRESULT hr = ::ScriptGetCMap(dc.get(), &fontCache, text.data(), text.length(), 0, glyphCodes.data());
+				::ScriptFreeCache(&fontCache);
+				::RestoreDC(dc.get(), cookie);
+				if(FAILED(hr))
+					throw makePlatformError(hr);
+#elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
+				const DWORD n = ::GetGlyphIndicesW(dc.get(), text.data(), text.length(), glyphCodes.data(), GGI_MARK_NONEXISTING_GLYPHS);
+				::RestoreDC(dc.get(), cookie);
+				if(n == GDI_ERROR)
+					throw makePlatformError();
+#else
+				ASCENSION_CANT_DETECT_PLATFORM();
+#endif
+				return createGlyphVector(frc, glyphCodes);
+			}
+#endif
 
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 			boost::optional<GlyphCode> Font::ivsGlyph(CodePoint baseCharacter, CodePoint variationSelector, GlyphCode defaultGlyph) const {
