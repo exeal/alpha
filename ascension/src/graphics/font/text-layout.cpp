@@ -25,6 +25,8 @@
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm/sort.hpp>
 #include <boost/range/numeric.hpp>	// boost.accumulate
+//#define ASCENSION_TRACE_LAYOUT_CACHES
+//#define ASCENSION_DIAGNOSE_INHERENT_DRAWING;
 
 namespace boost {
 	template<typename T, typename U>
@@ -34,9 +36,6 @@ namespace boost {
 }
 
 namespace ascension {
-//#define TRACE_LAYOUT_CACHES
-	extern bool DIAGNOSE_INHERENT_DRAWING;
-
 	namespace graphics {
 		namespace font {
 			namespace detail {

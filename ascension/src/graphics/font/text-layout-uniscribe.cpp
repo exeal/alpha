@@ -33,14 +33,13 @@
 #include <usp10.h>
 #ifdef _DEBUG
 #	include <boost/log/trivial.hpp>
+//#	define ASCENSION_TRACE_LAYOUT_CACHES
+//#	define ASCENSION_DIAGNOSE_INHERENT_DRAWING
 #endif
 
 #pragma comment(lib, "usp10.lib")
 
 namespace ascension {
-//#define TRACE_LAYOUT_CACHES
-	extern bool DIAGNOSE_INHERENT_DRAWING;
-
 	namespace graphics {
 		namespace font {
 			namespace {
@@ -2905,10 +2904,9 @@ namespace ascension {
 					const Point& origin, const TextPaintOverride* paintOverride /* = nullptr */,
 					const InlineObject* endOfLine/* = nullptr */, const InlineObject* lineWrappingMark /* = nullptr */) const {
 
-#if /*defined(_DEBUG)*/ 0
-				if(DIAGNOSE_INHERENT_DRAWING)
-					BOOST_LOG_TRIVIAL(debug) << L"@TextLayout.draw draws line " << lineNumber_ << L" (" << line << L")\n";
-#endif // defined(_DEBUG)
+#if defined(_DEBUG) && defined(ASCENSION_DIAGNOSE_INHERENT_DRAWING)
+				BOOST_LOG_TRIVIAL(debug) << L"@TextLayout.draw draws line " << lineNumber_ << L" (" << line << L")\n";
+#endif
 
 				if(isEmpty() || geometry::dy(context.boundsToPaint()) == 0)
 					return;
