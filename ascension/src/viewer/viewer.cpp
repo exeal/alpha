@@ -23,14 +23,11 @@
 #include <boost/foreach.hpp>
 #ifdef _DEBUG
 #	include <boost/log/trivial.hpp>
+//#	define ASCENSIOB_DIAGNOSE_INHERENT_DRAWING
+//#	define ASCENSION_TRACE_DRAWING_STRING
 #endif // _DEBUG
 
 namespace ascension {
-#ifdef _DEBUG
-	bool DIAGNOSE_INHERENT_DRAWING = false;	// 余計な描画を行っていないか診断するフラグ
-//#define TRACE_DRAWING_STRING	// テキスト (代替グリフ以外) のレンダリングをトレース
-#endif // _DEBUG
-
 	namespace viewers {
 		namespace {
 			/// @internal Maps the given point in viewer-local coordinates into a point in text-area coordinates.
@@ -1514,13 +1511,12 @@ namespace ascension {
 			if(orderedLines.back() < textRenderer().viewport()->firstVisibleLine().line)
 				return;
 
-#ifdef _DEBUG
-			if(DIAGNOSE_INHERENT_DRAWING)
-				BOOST_LOG_TRIVIAL(debug)
-					<< L"@TextViewer.redrawLines invalidates lines ["
-					<< static_cast<unsigned long>(*lines.begin())
-					<< L".." << static_cast<unsigned long>(*lines.end()) << L"]\n";
-#endif // _DEBUG
+#if defined(_DEBUG) && defined(ASCENSION_DIAGNOSE_INHERENT_DRAWING)
+			BOOST_LOG_TRIVIAL(debug)
+				<< L"@TextViewer.redrawLines invalidates lines ["
+				<< static_cast<unsigned long>(*lines.begin())
+				<< L".." << static_cast<unsigned long>(*lines.end()) << L"]\n";
+#endif
 
 			using graphics::Scalar;
 			const presentation::WritingMode writingMode(presentation().computeWritingMode(&textRenderer()));

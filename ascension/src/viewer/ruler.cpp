@@ -12,11 +12,10 @@
 #include <ascension/viewer/viewer.hpp>
 #ifdef _DEBUG
 #	include <boost/log/trivial.hpp>
+//#	define ASCENSION_DIAGNOSE_INHERENT_DRAWING
 #endif
 
 namespace ascension {
-	extern const bool DIAGNOSE_INHERENT_DRAWING;
-
 	namespace viewers {
 		// RulerStyles.LineNumbers ////////////////////////////////////////////////////////////////////////////////////
 
@@ -382,11 +381,10 @@ namespace ascension {
 				if(!indicatorMarginToPaint && !lineNumbersToPaint)
 					return;
 
-#ifdef _DEBUG
-				if(DIAGNOSE_INHERENT_DRAWING)
-					BOOST_LOG_TRIVIAL(debug) << L"@RulerPainter.paint draws y = "
-						<< graphics::geometry::top(paintBounds) << L" ~ " << graphics::geometry::bottom(paintBounds) << L"\n";
-#endif // _DEBUG
+#if defined(_DEBUG) && defined(ASCENSION_DIAGNOSE_INHERENT_DRAWING)
+				BOOST_LOG_TRIVIAL(debug) << L"@RulerPainter.paint draws y = "
+					<< graphics::geometry::top(paintBounds) << L" ~ " << graphics::geometry::bottom(paintBounds) << L"\n";
+#endif
 
 				context.save();
 

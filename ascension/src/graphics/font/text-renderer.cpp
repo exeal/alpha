@@ -13,9 +13,6 @@
 #include <boost/foreach.hpp>
 
 namespace ascension {
-//#define TRACE_LAYOUT_CACHES
-	extern bool DIAGNOSE_INHERENT_DRAWING;
-
 	namespace graphics {
 		namespace font {
 			// FontSelector ///////////////////////////////////////////////////////////////////////////////////////////
