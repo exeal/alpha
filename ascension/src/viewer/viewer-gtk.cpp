@@ -237,6 +237,10 @@ namespace ascension {
 			return e.isConsumed();
 		}
 
+		void TextViewer::on_grab_focus() {
+			// TODO: Not implemented.
+		}
+
 		/**
 		 * Invokes @c #keyPressed method.
 		 * @see Gtk#Widget#on_key_press_event
