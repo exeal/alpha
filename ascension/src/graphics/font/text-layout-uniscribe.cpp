@@ -1946,7 +1946,6 @@ namespace ascension {
 					TextRunImpl(const StringPiece& characterRange, const SCRIPT_ANALYSIS& script,
 						std::shared_ptr<const Font> font, const FontRenderContext& frc,
 						OpenTypeFontTag scriptTag, const ComputedTextRunStyleCore& coreStyle);
-					~TextRunImpl() BOOST_NOEXCEPT;
 					static void generate(const StringPiece& textString,
 						const ComputedTextLineStyle& lineStyle, std::unique_ptr<ComputedStyledTextRunIterator> textRunStyles,
 						const FontCollection& fontCollection, const FontRenderContext& frc,
