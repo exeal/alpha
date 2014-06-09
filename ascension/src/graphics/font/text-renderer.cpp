@@ -247,6 +247,11 @@ namespace ascension {
 			 * @see #buildLineLayoutConstructionParameters
 			 */
 
+			/// @internal Calls @c #createLineLayout overridable method.
+			std::unique_ptr<const TextLayout> TextRenderer::generateLineLayout(Index line) const {
+				return createLineLayout(line);
+			}
+
 			/// Returns the line relative alignment.
 			TextRenderer::LineRelativeAlignmentAxis TextRenderer::lineRelativeAlignment() const BOOST_NOEXCEPT {
 				const TextAlignment::value_type alignment(textAlignment().getOrInitial());
