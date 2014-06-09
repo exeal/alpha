@@ -12,7 +12,7 @@
 #include <bitset>
 #include <boost/python/stl_iterator.hpp>
 #include <glibmm/i18n.h>
-#include <gtkmm/accellabel.h>
+#include <gtkmm/accelgroup.h>
 
 
 namespace {
@@ -77,11 +77,7 @@ wstring KeyStroke::format(py::object keys) {
 		/// Returns a human-readable text represents this key stroke.
 		Glib::ustring KeyStroke::text() const BOOST_NOEXCEPT {
 #if 1
-			GtkAccelLabelClass* klass = GTK_ACCEL_LABEL_GET_CLASS(nullptr);
-			gchar* const p = ::_gtk_accel_label_class_get_accelerator_label(klass, naturalKey(), static_cast<GdkModifierType>(modifierKeys()));	// TODO: Private function.
-			Glib::ustring result(p);
-			::g_free(p);
-			return result;
+			return Gtk::AccelGroup::get_label(naturalKey(), static_cast<Gdk::ModifierType>(modifierKeys()));
 #else
 			wstring result;
 			result.reserve(256);
