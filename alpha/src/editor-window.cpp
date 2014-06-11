@@ -25,96 +25,134 @@ namespace alpha {
 	 */
 
 	/// Constructor.
-	EditorPane::EditorPane(std::unique_ptr<EditorView> initialViewer /* = std::unique_ptr<EditorView> */) : selectedViewer_(nullptr), lastSelectedViewer_(nullptr) {
+	EditorPane::EditorPane(std::unique_ptr<EditorView> initialViewer /* = std::unique_ptr<EditorView> */) {
 		if(initialViewer.get() != nullptr)
-			addView(std::move(initialViewer));
+			add(std::move(initialViewer));
 	}
 
 	/// Copy-constructor.
 	EditorPane::EditorPane(const EditorPane& other) {
-		for(std::size_t i = 0, c = other.viewers_.size(); i != c; ++i) {
-			std::unique_ptr<EditorView> newView(new EditorView(*other.viewers_[i]));
-//			const bool succeeded = newViewer->create(other.viewers_[i]->getParent().use(), win32::ui::DefaultWindowRect(),
+		BOOST_FOREACH(const std::unique_ptr<EditorView>& p, other.viewers_) {
+			std::unique_ptr<EditorView> newView(new EditorView(*p));
+//			const bool succeeded = newViewer->create(p->getParent().use(), win32::ui::DefaultWindowRect(),
 //				WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 //			assert(succeeded);
-			newView->setConfiguration(&other.viewers_[i]->configuration(), 0, true);
-			newView->textRenderer().viewport()->scrollTo(other.viewers_[i]->textRenderer().viewport()->scrollPositions());
-			addView(std::move(newView));
-			viewers_.push_back(std::move(newView));
-			if(other.viewers_[i].get() == other.selectedViewer_)
-				selectedViewer_ = viewers_[i].get();
-			if(other.viewers_[i].get() == other.lastSelectedViewer_)
-				lastSelectedViewer_ = viewers_[i].get();
+			newView->setConfiguration(&p->configuration(), 0, true);
+			newView->textRenderer().viewport()->scrollTo(p->textRenderer().viewport()->scrollPositions());
+			add(std::move(newView));
 		}
 	}
 
 	/**
 	 * Adds the new viewer.
 	 * @param viewer the viewer to add
+	 * @param select If set to @c true, @a viewer is selected automatically
 	 * @throw ascension#NullPointerException @a viewer is @c null
 	 */
-	void EditorPane::addView(std::unique_ptr<EditorView> viewer) {
-		if(viewer.get() == 0)
+	void EditorPane::add(std::unique_ptr<EditorView> viewer, bool select /* = true */) {
+		if(viewer.get() == nullptr)
 			throw ascension::NullPointerException("viewer");
-		viewers_.push_back(std::move(viewer));
-		if(viewers_.size() == 1)
-			selectBuffer(viewer->document());
-	}
-
-	/// Removes all viewers.
-	void EditorPane::removeAllViews() BOOST_NOEXCEPT {
-		viewers_.clear();
-		selectedViewer_ = lastSelectedViewer_ = nullptr;
+		if(viewers_.empty()) {
+			viewers_.push_front(std::move(viewer));
+			this->select(*viewers_.front());
+		} else
+			viewers_.push_back(std::move(viewer));
 	}
 
 	/**
-	 * Removes the viewer belongs to the specified buffer.
-	 * @param buffer the buffer has the viewer to remove
+	 * Removes the specified viewer from this @c EditorPane.
+	 * @param viewer The viewer to remove
+	 * @throw ascension#NoSuchElementException @a viewer is not exist
+	 */
+	void EditorPane::remove(const EditorView& viewer) {
+		try {
+			return removeBuffer(viewer.document());
+		} catch(const ascension::NoSuchElementException&) {
+			throw ascension::NoSuchElementException("viewer");
+		}
+	}
+
+	/// Removes all viewers from this @c EditorPane.
+	void EditorPane::removeAll() BOOST_NOEXCEPT {
+		viewers_.clear();
+	}
+
+	/**
+	 * Removes the viewer belongs to the specified buffer from this @c EditorPane.
+	 * @param buffer The buffer has the viewer to remove
+	 * @throw ascension#NoSuchElementException @a buffer is not exist
 	 */
 	void EditorPane::removeBuffer(const Buffer& buffer) {
-		for(std::vector<std::unique_ptr<EditorView>>::iterator viewer(std::begin(viewers_)), e(std::end(viewers_)); viewer != e; ++viewer) {
-			if(&(*viewer)->document() == &buffer) {
-				const std::unique_ptr<EditorView>& removing = *viewer;
-				viewers_.erase(viewer);
-				if(removing.get() == selectedViewer_) {
-					selectedViewer_ = nullptr;
-					if(removing.get() == lastSelectedViewer_)
-						lastSelectedViewer_ = nullptr;
-					if(viewers_.size() == 1 || lastSelectedViewer_ == nullptr)
-						selectBuffer(viewers_.front()->document());
-					else if(!viewers_.empty()) {
-						selectBuffer(lastSelectedViewer_->document());
-						lastSelectedViewer_ = nullptr;
+		if(!viewers_.empty()) {
+			auto i(std::begin(viewers_));
+			if(&(*(i++))->document() == &buffer) {
+				if(i != std::end(viewers_))
+					select(**i);
+				viewers_.erase(--i);
+				return;
+			} else {
+				for(const auto e(std::end(viewers_)); i != e; ++i) {
+					if(&(*i)->document() == &buffer) {
+						viewers_.erase(i);
+						return;
 					}
 				}
-				return;
 			}
+		}
+		throw ascension::NoSuchElementException("buffer");
+	}
+
+	/**
+	 * Shows the specified viewer in this @c EditorPane.
+	 * @param viewer The viewer to show
+	 * @throw ascension#NoSuchElementException @a viewer is not exist
+	 */
+	void EditorPane::select(const EditorView& viewer) {
+		try {
+			return selectBuffer(viewer.document());
+		} catch(const ascension::NoSuchElementException&) {
+			throw ascension::NoSuchElementException("viewer");
 		}
 	}
 
 	/**
-	 * Shows the specified buffer in the pane.
-	 * @param buffer the buffer to show
-	 * @throw std#invalid_argument @a buffer is not exist
+	 * Shows the specified buffer in this @c EditorPane.
+	 * @param buffer The buffer to show
+	 * @throw ascension#NoSuchElementException @a buffer is not exist
 	 */
 	void EditorPane::selectBuffer(const Buffer& buffer) {
-		if(selectedViewer_ != nullptr && &selectedBuffer() == &buffer)
-			return;
-		BOOST_FOREACH(std::unique_ptr<EditorView>& viewer, viewers_) {
-			if(&viewer->document() == &buffer) {
-				const bool hadFocus = selectedViewer_ == nullptr || selectedView().has_focus();
-				lastSelectedViewer_ = selectedViewer_;
-				selectedViewer_ = viewer.get();
-//				EditorWindows::instance().adjustPanes();
-				selectedView().show();
-				if(lastSelectedViewer_ != nullptr)
-					lastSelectedViewer_->hide();
-				if(hadFocus)
-					selectedView().grab_focus();
-				return;
+		const bool hadFocus = !viewers_.empty() && selectedView().has_focus();
+
+		if(viewers_.size() > 1) {
+			// bring to the front of the list
+			const auto e(std::end(viewers_));
+			for(auto i(std::next(std::begin(viewers_))); i != e; ++i) {
+				if(&(*i)->document() == &buffer) {
+					std::unique_ptr<EditorView> temp(std::move(*i));
+					viewers_.erase(i);
+					viewers_.push_front(std::move(temp));
+				}
 			}
 		}
-		throw std::invalid_argument("Specified buffer is not contained in the pane.");
+
+		// show and focus
+		bool found = false;
+		BOOST_FOREACH(const std::unique_ptr<EditorView>& viewer, viewers_) {
+			if(&viewer->document() == &buffer) {
+				viewer->show();
+				if(hadFocus)
+					viewer->grab_focus();
+				found = true;
+			}
+		}
+		if(!found)
+			throw ascension::NoSuchElementException("buffer");
+
+		// hide the others
+		BOOST_FOREACH(const std::unique_ptr<EditorView>& viewer, viewers_) {
+			if(&viewer->document() != &buffer)
+				viewer->hide();
+		}
 	}
 
 	/// Returns the selected buffer.
@@ -146,12 +184,18 @@ namespace alpha {
 			panedParent->add2(*Gtk::manage(newPaned.release()));
 	}
 
-	/// Splits this pane.
+	/**
+	 * Splits this pane.
+	 * @see #splitSideBySide
+	 */
 	void EditorPane::split() {
 		return split(Gtk::ORIENTATION_VERTICAL);
 	}
 
-	/// Splits this pane side-by-side.
+	/**
+	 * Splits this pane side-by-side.
+	 * @see #split
+	 */
 	void EditorPane::splitSideBySide() {
 		return split(Gtk::ORIENTATION_HORIZONTAL);
 	}
@@ -194,7 +238,7 @@ namespace alpha {
 				originalView = newView.get();
 			if(originalView != newView.get())
 				newView->setConfiguration(&originalView->configuration(), 0, true);
-			pane.addView(std::move(newView));
+			pane.add(std::move(newView));
 		}
 	}
 
@@ -362,7 +406,7 @@ namespace alpha {
 			if(boost::python::extract<Buffer*>(o).check())
 				pane.selectBuffer(boost::python::extract<Buffer&>(o));
 			else if(boost::python::extract<EditorView&>(o).check())
-				pane.selectBuffer(boost::python::extract<EditorView&>(o));
+				pane.select(boost::python::extract<EditorView&>(o));
 			else {
 				::PyErr_BadArgument();
 				boost::python::throw_error_already_set();
