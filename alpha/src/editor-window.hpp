@@ -7,8 +7,8 @@
 #ifndef ALPHA_EDITOR_WINDOW_HPP
 #define ALPHA_EDITOR_WINDOW_HPP
 #include "ambient.hpp"
+#include <list>
 #include <memory>
-#include <vector>
 #include <ascension/corelib/signals.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <gtkmm/paned.h>
@@ -28,16 +28,17 @@ namespace alpha {
 		/// @{
 		void removeBuffer(const Buffer& buffer);
 		void selectBuffer(const Buffer& buffer);
-		void selectBuffer(const EditorView& viewer);
 		Buffer& selectedBuffer() BOOST_NOEXCEPT;
 		const Buffer& selectedBuffer() const BOOST_NOEXCEPT;
 		/// @}
 
 		/// @name Viewer
 		/// @{
-		void addView(std::unique_ptr<EditorView> viewer);
+		void add(std::unique_ptr<EditorView> viewer, bool select = true);
 		std::size_t numberOfViews() const BOOST_NOEXCEPT;
-		void removeAllViews() BOOST_NOEXCEPT;
+		void remove(const EditorView& viewer);
+		void removeAll() BOOST_NOEXCEPT;
+		void select(const EditorView& viewer);
 		EditorView& selectedView() BOOST_NOEXCEPT;
 		const EditorView& selectedView() const BOOST_NOEXCEPT;
 		/// @}
@@ -50,12 +51,11 @@ namespace alpha {
 
 	private:
 		void split(Gtk::Orientation orientation);
+		void touch(const EditorView& viewer);
 
 	private:
 		mutable boost::python::object self_;
-		std::vector<std::unique_ptr<EditorView>> viewers_;	// visible and invisible viewers
-		EditorView* selectedViewer_;
-		EditorView* lastSelectedViewer_;
+		std::list<std::unique_ptr<EditorView>> viewers_;	// visible and invisible viewers
 	};
 
 	class EditorPanes : public Gtk::Paned, private boost::noncopyable {	// children may be either Gtk.Paned or EditorPane
@@ -143,16 +143,16 @@ namespace alpha {
 
 	/// Returns the visible viewer.
 	inline EditorView& EditorPane::selectedView() {
-		if(selectedViewer_ == nullptr)
+		if(viewers_.empty())
 			throw std::logic_error("There are no viewers.");
-		return *selectedViewer_;
+		return *viewers_.front();
 	}
 
 	/// Returns the visible viewer.
 	inline const EditorView& EditorPane::selectedView() const {
-		if(selectedViewer_ == nullptr)
+		if(viewers_.empty())
 			throw std::logic_error("There are no viewers.");
-		return *selectedViewer_;
+		return *viewers_.front();
 	}
 
 	/// Returns the active editor pane.
