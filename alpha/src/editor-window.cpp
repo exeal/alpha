@@ -387,7 +387,7 @@ namespace alpha {
 
 
 	namespace {
-		boost::python::object currentBuffer(boost::python::object o) {
+		Buffer& currentBuffer(boost::python::object o) {
 			EditorPane* pane = boost::python::extract<EditorPane*>(o);
 			if(pane == nullptr) {
 				EditorPanes* panes = boost::python::extract<EditorPanes*>(o);
@@ -395,7 +395,7 @@ namespace alpha {
 					panes = &Application::instance().window().editorPanes();
 				pane = &panes->activePane();
 			}
-			return pane->selectedBuffer().self();
+			return pane->selectedBuffer();
 		}
 
 		void selectBuffer(EditorPane& pane, boost::python::object o) {
@@ -418,7 +418,7 @@ namespace alpha {
 		boost::python::scope scope(ambient::Interpreter::instance().toplevelPackage());
 
 		boost::python::class_<EditorPane, boost::noncopyable>("_Window", boost::python::no_init)
-			.add_property("current_buffer", &currentBuffer)
+			.add_property("current_buffer", boost::python::make_function(&currentBuffer, boost::python::return_internal_reference<>()))
 //			.add_property("selected_editor", &selectedTextEditor)
 			.def("select", &selectBuffer, boost::python::arg("object") = boost::python::object())
 			.def<void (EditorPane::*)(void)>("split", &EditorPane::split)
@@ -436,14 +436,19 @@ namespace alpha {
 			.def("delete", &EditorPanes::remove, boost::python::arg("pane") = nullptr)
 			.def("delete_others", &EditorPanes::removeOthers, boost::python::arg("pane") = nullptr, boost::python::arg("root") = nullptr);
 
-		boost::python::def("current_buffer", &currentBuffer, boost::python::arg("pane_or_panes") = boost::python::object());
+		boost::python::def("current_buffer", &currentBuffer,
+			boost::python::arg("pane_or_panes") = boost::python::object(), boost::python::return_internal_reference<>());
 
-		boost::python::def("selected_window", ambient::makeFunctionPointer([]() {
-			return Application::instance().window().editorPanes().activePane().self();
-		}));
+		boost::python::def("selected_window", boost::python::make_function(
+			ambient::makeFunctionPointer([]() -> EditorPane& {
+				return Application::instance().window().editorPanes().activePane();
+			}),
+			boost::python::return_value_policy<boost::python::reference_existing_object>()));
 
-		boost::python::def("windows", ambient::makeFunctionPointer([]() {
-			return Application::instance().window().editorPanes().self();
-		}));
+		boost::python::def("windows", boost::python::make_function(
+			ambient::makeFunctionPointer([]() -> EditorPanes& {
+				return Application::instance().window().editorPanes();
+			}),
+			boost::python::return_value_policy<boost::python::reference_existing_object>()));
 	ALPHA_EXPOSE_EPILOGUE()
 }
