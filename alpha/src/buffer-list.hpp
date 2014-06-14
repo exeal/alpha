@@ -38,14 +38,13 @@ namespace alpha {
 
 		~BufferList();
 		static BufferList& instance();
-		boost::python::object self() const;
 
 		/// @name
 		/// @{
 		Buffer& at(std::size_t index) const;
 		Glib::ustring displayName(const Buffer& buffer) const BOOST_NOEXCEPT;
 		boost::optional<std::size_t> find(const Buffer& buffer) const BOOST_NOEXCEPT;
-		boost::python::object forName(const Glib::ustring& name) const;
+		Buffer* forName(const Glib::ustring& name) const;
 		Glib::ustring makeUniqueName(const Glib::ustring& name) const;
 		void move(boost::python::ssize_t from, boost::python::ssize_t to);
 		std::size_t numberOfBuffers() const BOOST_NOEXCEPT;
@@ -105,7 +104,6 @@ namespace alpha {
 		// for properties
 		boost::python::object unexpectedFileTimeStampDirector;
 	private:
-		mutable boost::python::object self_;
 		ascension::texteditor::Session editorSession_;
 		struct BufferEntry : private boost::noncopyable {
 			std::unique_ptr<Buffer> buffer;
@@ -142,13 +140,6 @@ namespace alpha {
 	/// Returns the number of the buffers.
 	inline std::size_t BufferList::numberOfBuffers() const BOOST_NOEXCEPT {
 		return buffers_.size();
-	}
-
-	/// Returns the script object corresponding to the buffer list.
-	inline boost::python::object BufferList::self() const {
-		if(self_ == boost::python::object())
-			self_ = boost::python::object(boost::python::ptr(this));
-		return self_;
 	}
 }
 
