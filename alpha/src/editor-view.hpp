@@ -42,12 +42,14 @@ namespace alpha {
 		void keyPressed(ascension::viewers::widgetapi::KeyInput& input) override;
 		void focusAboutToBeLost(ascension::viewers::widgetapi::Event& event) override;
 		void focusGained(ascension::viewers::widgetapi::Event& event) override;
+#if 0
 		// ascension.viewers.Caret signals
 		void characterInputted(const ascension::viewers::Caret& self, ascension::CodePoint c);
 		void matchBracketsChanged(const ascension::viewers::Caret& self,
 			const boost::optional<std::pair<ascension::kernel::Position, ascension::kernel::Position>>& previouslyMatchedBrackets, bool outsideOfView);
 		void overtypeModeChanged(const ascension::viewers::Caret& self);
 		void selectionShapeChanged(const ascension::viewers::Caret& self);
+#endif
 		// ascension.searcher.IncrementalSearchCallback
 		void incrementalSearchAborted(const ascension::kernel::Position& initialPosition);
 		void incrementalSearchCompleted();

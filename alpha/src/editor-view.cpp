@@ -139,12 +139,12 @@ namespace alpha {
 		// disable default keyboard bindings
 //		return ascension::viewers::TextViewer::keyPressed(input);
 	}
-
+#if 0
 	/// @see Caret#MatchBracketsChangedSignal
 	void EditorView::matchBracketsChanged(const ascension::viewers::Caret& self, const boost::optional<std::pair<ascension::kernel::Position, ascension::kernel::Position>>& previouslyMatchedBrackets, bool outsideOfView) {
 		// TODO: indicate if the pair is outside of the viewer.
 	}
-
+#endif
 
 	namespace {
 		void extendSelection(ascension::viewers::Caret& caret, boost::python::object to) {
