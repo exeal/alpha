@@ -258,11 +258,11 @@ namespace alpha {
 	 * @param The name of buffer
 	 * @return The buffer, or @c boost#python#object() if there is no buffer with @a name
 	 */
-	boost::python::object BufferList::forName(const Glib::ustring& name) const {
+	Buffer* BufferList::forName(const Glib::ustring& name) const {
 		const auto found = boost::find_if(buffers_, [&name](const BufferEntry& e) {
 			return e.buffer->name() == name;
 		});
-		return (found != boost::end(buffers_)) ? found->buffer->self() : boost::python::object();
+		return (found != boost::end(buffers_)) ? found->buffer.get() : nullptr;
 	}
 
 	/**
@@ -881,15 +881,17 @@ namespace alpha {
 		boost::python::class_<BufferList, boost::noncopyable>("_BufferList", boost::python::no_init)
 			.def_readwrite("unexpected_file_time_stamp_director", &BufferList::unexpectedFileTimeStampDirector)
 //			.def("__contains__", &)
-			.def("__getitem__", ambient::makeFunctionPointer([](const BufferList& buffers, boost::python::ssize_t at) -> boost::python::object {
-				try {
-					return buffers.at(at).self();
-				} catch(const std::out_of_range& e) {
-					::PyErr_SetString(PyExc_IndexError, e.what());
-					boost::python::throw_error_already_set();
-					return boost::python::object();	// unreachable
-				}
-			}))
+			.def("__getitem__", boost::python::make_function(
+				ambient::makeFunctionPointer([](const BufferList& buffers, boost::python::ssize_t at) -> Buffer& {
+					try {
+						return buffers.at(at);
+					} catch(const std::out_of_range& e) {
+						::PyErr_SetString(PyExc_IndexError, e.what());
+						boost::python::throw_error_already_set();
+						throw;	// unreachable
+					}
+				}),
+				boost::python::return_internal_reference<>()))
 //			.def("__iter__", &)
 			.def("__len__", &BufferList::numberOfBuffers)
 			.def("add_new", &BufferList::addNew,
@@ -900,15 +902,15 @@ namespace alpha {
 				boost::python::arg("name") = wstring(), boost::python::return_value_policy<py::reference_existing_object>())
 #endif
 //			.def("close_all", &BufferList::closeAll)
-			.def("for_name", &BufferList::forName)
+			.def("for_name", &BufferList::forName, boost::python::return_internal_reference<>())
 			.def("move", &BufferList::move)
 #if 0
 			.def("save_some_dialog", &BufferList::saveSomeDialog, boost::python::arg("buffers_to_save") = boost::python::tuple())
 #endif
 			;
 
-		boost::python::def("buffers", ambient::makeFunctionPointer([] {
-			return BufferList::instance().self();
-		}));
+		boost::python::def("buffers", boost::python::make_function(
+			&BufferList::instance,
+			boost::python::return_value_policy<boost::python::reference_existing_object>()));
 	ALPHA_EXPOSE_EPILOGUE()
 }

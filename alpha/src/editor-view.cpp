@@ -20,14 +20,12 @@ namespace alpha {
 	/// Constructor.
 	EditorView::EditorView(ascension::presentation::Presentation& presentation) : ascension::viewers::TextViewer(presentation), visualColumnStartValue_(1) {
 		document().bookmarker().addListener(*this);
-//		self_.reset(new EditorViewProxy(*this));
 //		caretObject_.reset(new CaretProxy(caret()));
 	}
 
 	/// Copy-constructor.
 	EditorView::EditorView(const EditorView& other) : ascension::viewers::TextViewer(other), visualColumnStartValue_(other.visualColumnStartValue_) {
 		document().bookmarker().addListener(*this);
-//		self_.reset(EditorViewProxy(*this));
 //		caretObject_.reset(new CaretProxy(caret()));
 	}
 
@@ -243,9 +241,11 @@ namespace alpha {
 		boost::python::class_<ascension::kernel::Point>("Point", boost::python::init<Buffer&, const ascension::kernel::Position&>())
 			.add_property("adapts_to_buffer", &ascension::kernel::Point::adaptsToDocument,
 				boost::python::make_function(&ascension::kernel::Point::adaptToDocument, boost::python::return_value_policy<boost::python::reference_existing_object>()))
-			.add_property("buffer", ambient::makeFunctionPointer([](const ascension::kernel::Point& p) -> boost::python::object {
-				return static_cast<const Buffer&>(p.document()).self();
-			}))
+			.add_property("buffer", boost::python::make_function(
+				ambient::makeFunctionPointer([](const ascension::kernel::Point& p) -> const Buffer& {
+					return static_cast<const Buffer&>(p.document());
+				}),
+				boost::python::return_internal_reference<>()))
 //			.add_property("excluded_from_restriction", &ascension::kernel::Point::isExcludedFromRestriction,
 //				boost::python::make_function(&ascension::kernel::Point::excludeFromRestriction, boost::python::return_value_policy<boost::python::reference_existing_object>()))
 			.add_property("gravity", &ascension::kernel::Point::gravity,
@@ -283,9 +283,11 @@ namespace alpha {
 			.def("shows_automatically", &Caret::showsAutomatically)*/;
 
 		boost::python::class_<EditorView, boost::noncopyable>("_TextEditor", boost::python::no_init)
-			.add_property("buffer", ambient::makeFunctionPointer([](const EditorView& editor) -> boost::python::object {
-				return editor.document().self();
-			}))
+			.add_property("buffer", boost::python::make_function(
+				ambient::makeFunctionPointer([](const EditorView& editor) -> const Buffer& {
+					return editor.document();
+				}),
+				boost::python::return_internal_reference<>()))
 			.add_property("caret", &EditorView::asCaret)
 			.add_property("page_size_in_block_flow_direction", ambient::makeFunctionPointer([](const EditorView& editor) -> ascension::graphics::font::TextViewportScrollOffset {
 				return ascension::graphics::font::pageSize<ascension::presentation::BlockFlowDirection>(*editor.textRenderer().viewport());

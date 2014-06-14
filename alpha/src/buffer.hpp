@@ -18,7 +18,6 @@ namespace alpha {
 	class Buffer : public ascension::kernel::Document {
 	public:
 		explicit Buffer(const Glib::ustring& name);
-		boost::python::object self() const;
 
 		/// @name Attributes
 		/// @{
@@ -43,7 +42,6 @@ namespace alpha {
 		/// @}
 
 	private:
-		mutable boost::python::object self_;
 		std::unique_ptr<ascension::presentation::Presentation> presentation_;
 		std::unique_ptr<ascension::kernel::fileio::TextFileDocumentInput> textFile_;
 		Glib::ustring name_;
@@ -54,13 +52,6 @@ namespace alpha {
 	/// Returns the name of the buffer.
 	inline const Glib::ustring& Buffer::name() const BOOST_NOEXCEPT {
 		return name_;
-	}
-
-	/// Returns the script object corresponding to the buffer.
-	inline boost::python::object Buffer::self() const {
-		if(self_ == boost::python::object())
-			self_ = boost::python::object(boost::python::ptr(this));
-		return self_;
 	}
 
 	/// Returns the input text file.
