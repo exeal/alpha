@@ -22,7 +22,6 @@ namespace alpha {
 	public:
 		explicit EditorPane(std::unique_ptr<EditorView> initialViewer = std::unique_ptr<EditorView>());
 		EditorPane::EditorPane(const EditorPane& other);
-		boost::python::object self() const;
 
 		/// @name Buffer
 		/// @{
@@ -54,7 +53,6 @@ namespace alpha {
 		void touch(const EditorView& viewer);
 
 	private:
-		mutable boost::python::object self_;
 		std::list<std::unique_ptr<EditorView>> viewers_;	// visible and invisible viewers
 	};
 
@@ -90,7 +88,6 @@ namespace alpha {
 
 	public:
 		static EditorPanes& instance() BOOST_NOEXCEPT;
-		boost::python::object self() const;
 
 		/// @name Pane Access
 		/// @{
@@ -129,7 +126,6 @@ namespace alpha {
 		bool viewFocused(GdkEventFocus* event);
 
 	private:
-		mutable boost::python::object self_;
 		EditorPane* activePane_;
 		EditorPane* lastActivePane_;
 		BufferSelectionChangedSignal bufferSelectionChangedSignal_;
@@ -169,13 +165,6 @@ namespace alpha {
 	inline EditorPanes& EditorPanes::instance() {
 		static EditorPanes singleton;
 		return singleton;
-	}
-
-	/// Returns the script object corresponding to the windows.
-	inline boost::python::object EditorPanes::self() const {
-		if(self_ == boost::python::object())
-			self_ = boost::python::object(boost::python::ptr(this));
-		return self_;
 	}
 }
 
