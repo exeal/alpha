@@ -224,7 +224,7 @@ namespace ascension {
 				std::shared_ptr<const Font> get(
 					const FontDescription& description,
 					const AffineTransform& transform = AffineTransform(),
-					boost::optional<double> sizeAdjust = boost::none) const;
+					boost::optional<Scalar> sizeAdjust = boost::none) const;
 				/**
 				 * Returns the fontset for last resort fallback.
 				 * @param description The font description
@@ -235,7 +235,7 @@ namespace ascension {
 				std::shared_ptr<const Font> lastResortFallback(
 					const FontDescription& description,
 					const AffineTransform& transform = AffineTransform(),
-					boost::optional<double> sizeAdjust = boost::none) const;
+					boost::optional<Scalar> sizeAdjust = boost::none) const;
 			private:
 #if ASCENSION_SELECTS_SHAPING_ENGINE(CORE_TEXT)
 				cg::Reference<CTFontCollectionRef> nativeObject_;
@@ -253,9 +253,9 @@ namespace ascension {
 #endif
 			};
 
-			template<typename InputIterator>
-			InputIterator findMatchingFontFamily(
-				const FontCollection& fontCollection, InputIterator first, InputIterator last);
+			template<typename SinglePassReadableRange>
+			typename boost::range_iterator<SinglePassReadableRange>::type findMatchingFontFamily(
+				const FontCollection& fontCollection, const SinglePassReadableRange& fontFamilies);
 
 			/**
 			 * Used to represent a group of fonts with the same family, slant, weight, width, but

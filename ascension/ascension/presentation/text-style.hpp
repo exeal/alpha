@@ -239,11 +239,6 @@ namespace ascension {
 		ASCENSION_SCOPED_ENUMS_BEGIN(RelativeFontSize)
 			LARGER, SMALLER
 		ASCENSION_SCOPED_ENUMS_END
-
-		/// Enumerated values for @c TextRunStyle#fontSizeAdjust.
-		ASCENSION_SCOPED_ENUMS_BEGIN(FontSizeAdjustEnums)
-			NONE, AUTO
-		ASCENSION_SCOPED_ENUMS_END;
 		/// @}
 
 		/// @defgroup css3_line_layout CSS Line Layout Module Level 3
@@ -853,7 +848,7 @@ namespace ascension {
 			 * @see CSS Fonts Module Level 3, 3.5 Font size: the font-size property
 			 *      (http://www.w3.org/TR/css3-fonts/#font-size-prop)
 			 * @see SVG 1.1 (Second Edition), 10.10 Font selection properties
-			 *      (http://www.w3.org/TR/SVG11/text.html#FontFamilyProperty)
+			 *      (http://www.w3.org/TR/SVG11/text.html#FontSizeProperty)
 			 * @see XSL 1.1, 7.9.4 "font-size" (http://www.w3.org/TR/xsl/#font-size)
 			 */
 			StyleProperty<
@@ -862,11 +857,17 @@ namespace ascension {
 					AbsoluteFontSize, AbsoluteFontSize::MEDIUM
 				>, sp::Inherited
 			> fontSize;
-			/// 'font-size-adjust' property.
+			/**
+			 * 'font-size-adjust' property.
+			 * @see CSS Fonts Module Level 3, 3.6 Relative sizing: the font-size-adjust property
+			 *      (http://www.w3.org/TR/css3-fonts/#font-size-adjust-prop)
+			 * @see SVG 1.1 (Second Edition), 10.10 Font selection properties
+			 *      (http://www.w3.org/TR/SVG11/text.html#FontSizeAdjustProperty)
+			 * @see XSL 1.1, 7.9.6 "font-size-adjust" (http://www.w3.org/TR/xsl/#font-size-adjust)
+			 */
 			StyleProperty<
-				sp::Multiple<
-					boost::variant<FontSizeAdjustEnums, graphics::Scalar>,
-					FontSizeAdjustEnums, FontSizeAdjustEnums::NONE
+				sp::Complex<
+					boost::optional<graphics::Scalar>
 				>, sp::Inherited
 			> fontSizeAdjust;
 //			StyleProperty<
