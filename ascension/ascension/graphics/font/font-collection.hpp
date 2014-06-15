@@ -78,8 +78,13 @@ namespace ascension {
 			};
 
 			template<typename SinglePassReadableRange>
-			typename boost::range_iterator<SinglePassReadableRange>::type findMatchingFontFamily(
-				const FontCollection& fontCollection, const SinglePassReadableRange& fontFamilies);
+			inline typename boost::range_iterator<const SinglePassReadableRange>::type findMatchingFontFamily(
+					const FontCollection& fontCollection, const SinglePassReadableRange& fontFamilies) {
+				// TODO: This code is adhoc. Should be rewritten according to CSS Fonts Module Level 3,
+				//       5 Font Matching Algorithm (http://www.w3.org/TR/css3-fonts/#font-matching-algorithm).
+				assert(boost::const_begin(fontFamilies) != boost::const_end(fontFamilies));
+				return boost::const_begin(fontFamilies);
+			}
 		}
 	}
 }
