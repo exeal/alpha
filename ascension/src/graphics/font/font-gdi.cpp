@@ -28,7 +28,7 @@
 namespace ascension {
 	namespace graphics {
 		namespace {
-			LOGFONT&& makeLogFont(win32::Handle<HDC>::Type deviceContext, const font::FontDescription& description, const AffineTransform& transform, boost::optional<double> sizeAdjust) {
+			LOGFONT&& makeLogFont(win32::Handle<HDC>::Type deviceContext, const font::FontDescription& description, const AffineTransform& transform, boost::optional<Scalar> sizeAdjust) {
 				const String& familyName = description.family().name();
 				if(familyName.length() >= LF_FACESIZE)
 					throw std::length_error("description.family().name()");
@@ -299,7 +299,7 @@ namespace ascension {
 			FontCollection::FontCollection(win32::Handle<HDC>::Type deviceContext) BOOST_NOEXCEPT : deviceContext_(deviceContext) {
 			}
 
-			std::shared_ptr<const Font> FontCollection::get(const FontDescription& description, const AffineTransform& transform, boost::optional<double> sizeAdjust) const {
+			std::shared_ptr<const Font> FontCollection::get(const FontDescription& description, const AffineTransform& transform, boost::optional<Scalar> sizeAdjust) const {
 				const LOGFONT lf(makeLogFont(deviceContext_, description, transform, sizeAdjust));
 				struct LogFontHash {
 					std::size_t operator()(const LOGFONTW& v) const {
@@ -337,7 +337,7 @@ namespace ascension {
 				return newFont;
 			}
 
-			std::shared_ptr<const Font> FontCollection::lastResortFallback(const FontDescription& description, const AffineTransform& transform, boost::optional<double> sizeAdjust) const {
+			std::shared_ptr<const Font> FontCollection::lastResortFallback(const FontDescription& description, const AffineTransform& transform, boost::optional<Scalar> sizeAdjust) const {
 				static String familyName;
 				// TODO: 'familyName' should update when system property changed.
 				if(familyName.empty()) {

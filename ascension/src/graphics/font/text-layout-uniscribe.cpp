@@ -1065,7 +1065,12 @@ namespace ascension {
 						else
 							return ::ScriptItemize(text, length, estimatedNumberOfItems, &control, &initialState, items, &numberOfItems);
 					}
-					std::shared_ptr<const Font> selectFont(const StringPiece& textString, const FontCollection& fontCollection, const ComputedFontSpecification& specification);
+
+					std::shared_ptr<const Font> selectFont(const StringPiece& textString, const FontCollection& fontCollection, const ComputedFontSpecification& specification) {
+						const auto family(findMatchingFontFamily(fontCollection, specification.families));
+						const FontDescription description(*family, specification.pointSize, specification.properties);
+						return fontCollection.get(description, geometry::makeIdentityTransform(), specification.sizeAdjust);
+					}
 				}
 
 				/// Fills the glyph array with default index, instead of using @c ScriptShape.
@@ -2680,15 +2685,7 @@ namespace ascension {
 				const FontDescription nominalFontDescription(
 					!lineStyle.nominalFont.families.empty() ? lineStyle.nominalFont.families.front() : FontFamily(String()),
 					lineStyle.nominalFont.pointSize, lineStyle.nominalFont.properties);
-				boost::optional<double> nominalFontSizeAdjust;
-				if(const presentation::FontSizeAdjustEnums* const keyword = boost::get<presentation::FontSizeAdjustEnums>(&lineStyle.nominalFont.sizeAdjust)) {
-					if(*keyword == presentation::FontSizeAdjustEnums::NONE)
-						nominalFontSizeAdjust = boost::none;
-					else if(*keyword == presentation::FontSizeAdjustEnums::AUTO)
-						nominalFontSizeAdjust = 1.0;
-					else
-						throw UnknownValueException("lineStyle.nominalFont.sizeAdjust");
-				}
+				const boost::optional<Scalar> nominalFontSizeAdjust(lineStyle.nominalFont.sizeAdjust);
 				const std::shared_ptr<const Font> nominalFont(fontCollection.get(nominalFontDescription,
 					fontRotationForWritingMode(writingMode().blockFlowDirection), nominalFontSizeAdjust));
 				// wrap into visual lines and reorder runs in each lines

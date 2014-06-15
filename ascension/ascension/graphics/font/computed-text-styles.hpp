@@ -92,10 +92,8 @@ namespace ascension {
 					boost::hash_combine(seed, i->name());
 				boost::hash_combine(seed, object.pointSize);
 				boost::hash_combine(seed, object.properties);
-				if(const presentation::FontSizeAdjustEnums* const e = boost::get<presentation::FontSizeAdjustEnums>(&object.sizeAdjust))
-					boost::hash_combine<int>(seed, *e);
-				if(const Scalar* const s = boost::get<Scalar>(&object.sizeAdjust))
-					boost::hash_combine(seed, *s);
+				if(object.sizeAdjust != boost::none)
+					boost::hash_combine(seed, boost::get(object.sizeAdjust));
 				return seed;
 			}
 
