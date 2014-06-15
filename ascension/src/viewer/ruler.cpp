@@ -6,6 +6,7 @@
  */
 
 #include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/font/font-render-context.hpp>
 #include <ascension/graphics/font/glyph-metrics.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/caret.hpp>

@@ -7,15 +7,17 @@
  */
 
 #include <ascension/graphics/font/font.hpp>
+#include <ascension/graphics/font/font-collection.hpp>
 
 #if ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
+#include <ascension/graphics/font/font-render-context.hpp>
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/config.hpp>
-#include <vector>
 #include <boost/functional/hash.hpp>	// boost.hash_combine, boost.hash_value
 #include <boost/range/algorithm/binary_search.hpp>
 #include <boost/range/algorithm/sort.hpp>
+#include <vector>
 #if ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE)
 #	include <usp10.h>
 #	pragma comment(lib, "usp10.lib")

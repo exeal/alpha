@@ -354,6 +354,7 @@
     <ClInclude Include="..\..\ascension\ascension\directions.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\affine-transform.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\computed-text-styles.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\font\font-collection.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-description.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-family.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\font-metrics.hpp" />
