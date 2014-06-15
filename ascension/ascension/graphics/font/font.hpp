@@ -7,25 +7,27 @@
 
 #ifndef ASCENSION_FONT_HPP
 #define ASCENSION_FONT_HPP
-
 #include <ascension/corelib/string-piece.hpp>
+#include <ascension/graphics/affine-transform.hpp>
 #include <ascension/graphics/font/font-description.hpp>
 #include <ascension/graphics/font/glyph-vector.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
 #include <ascension/graphics/object.hpp>
 #include <locale>
 #include <memory>
-#include <set>
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
+#	include <boost/optional.hpp>
 #	include <unordered_map>
 #endif // ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 #include <vector>
-#include <boost/optional.hpp>
 
 namespace ascension {
 
 	namespace graphics {
 		namespace font {
+			class FontCollection;
+			class FontFamily;
+
 #ifdef ASCENSION_VARIATION_SELECTORS_SUPPLEMENT_WORKAROUND
 			namespace detail {
 				struct IdeographicVariationSequences {
@@ -195,67 +197,6 @@ namespace ascension {
 #endif
 				std::unique_ptr<const FontDescription> description_;
 			};
-
-			/**
-			 * @c FontCollection represents the set of fonts available for a particular graphics
-			 * context, and provides a method to enumerate font families.
-			 * @see Fontset, RenderingContext2D
-			 */
-			class FontCollection : public Wrapper<FontCollection> {
-			public:
-#if ASCENSION_SELECTS_SHAPING_ENGINE(CORE_TEXT)
-#elif ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)
-#elif ASCENSION_SELECTS_SHAPING_ENGINE(HARFBUZZ)
-#elif ASCENSION_SELECTS_SHAPING_ENGINE(PANGO)
-#elif ASCENSION_SELECTS_SHAPING_ENGINE(QT)
-#elif ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
-				explicit FontCollection(win32::Handle<HDC>::Type deviceContext) BOOST_NOEXCEPT;
-#elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
-#endif
-				/// Returns a set of font families available in this collection.
-				std::set<FontFamily>&& families() const;
-				/**
-				 * Returns the fontset matches the given description.
-				 * @param description The font description
-				 * @param transform The transform associated with the font
-				 * @param sizeAdjust The 'font-size-adjust' value. Set @c boost#none for 'none'
-				 * @return The font has the requested description or the default one
-				 */
-				std::shared_ptr<const Font> get(
-					const FontDescription& description,
-					const AffineTransform& transform = AffineTransform(),
-					boost::optional<Scalar> sizeAdjust = boost::none) const;
-				/**
-				 * Returns the fontset for last resort fallback.
-				 * @param description The font description
-				 * @param transform The transform associated with the font
-				 * @param sizeAdjust The 'font-size-adjust' value. Set @c boost#none for 'none'
-				 * @return The font has the requested property
-				 */
-				std::shared_ptr<const Font> lastResortFallback(
-					const FontDescription& description,
-					const AffineTransform& transform = AffineTransform(),
-					boost::optional<Scalar> sizeAdjust = boost::none) const;
-			private:
-#if ASCENSION_SELECTS_SHAPING_ENGINE(CORE_TEXT)
-				cg::Reference<CTFontCollectionRef> nativeObject_;
-#elif ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE)
-				win32::com::SmartPointer<IDWriteFontCollection> nativeObject_;
-#elif ASCENSION_SELECTS_SHAPING_ENGINE(HARFBUZZ)
-#elif ASCENSION_SELECTS_SHAPING_ENGINE(PANGO)
-				Glib::RefPtr<Pango::FontMap> nativeObject_;
-#elif ASCENSION_SELECTS_SHAPING_ENGINE(QT)
-				std::shared_ptr<QFontDatabase> nativeObject_;
-#elif ASCENSION_SELECTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDI)
-				win32::Handle<HDC>::Type deviceContext_;
-#elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
-				std::shared_ptr<Gdiplus::FontCollection> nativeObject_;
-#endif
-			};
-
-			template<typename SinglePassReadableRange>
-			typename boost::range_iterator<SinglePassReadableRange>::type findMatchingFontFamily(
-				const FontCollection& fontCollection, const SinglePassReadableRange& fontFamilies);
 
 			/**
 			 * Used to represent a group of fonts with the same family, slant, weight, width, but

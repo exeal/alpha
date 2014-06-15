@@ -11,7 +11,6 @@
 #define ASCENSION_GLYPH_VECTOR_HPP
 
 #include <ascension/graphics/geometry.hpp>
-#include <ascension/graphics/font/font-render-context.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <cstdint>
 #include <memory>
@@ -27,6 +26,8 @@ namespace ascension {
 			/// 16-bit glyph index value.
 			typedef std::uint16_t GlyphCode;
 
+			class Font;
+			class FontRenderContext;
 			class GlyphMetrics;
 
 			/**
