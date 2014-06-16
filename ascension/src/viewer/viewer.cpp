@@ -2296,6 +2296,17 @@ namespace ascension {
 		TextViewer::Renderer::Renderer(const Renderer& other, TextViewer& viewer) : TextRenderer(other), viewer_(viewer) {
 		}
 
+		/// @see graphics#font#TextRenderer#createLineLayout
+		std::unique_ptr<const graphics::font::TextLayout> TextViewer::Renderer::createLineLayout(Index line) const {
+			const std::unique_ptr<graphics::RenderingContext2D> renderingContext(widgetapi::createRenderingContext(viewer_));
+			graphics::font::ComputedTextLineStyle lineStyle;
+			std::unique_ptr<graphics::font::ComputedStyledTextRunIterator> runStyles;
+			buildLineLayoutConstructionParameters(line, *renderingContext, lineStyle, runStyles);
+			return std::unique_ptr<const graphics::font::TextLayout>(new graphics::font::TextLayout(
+				viewer_.document().line(line), lineStyle, std::move(runStyles), fontCollection(),
+				renderingContext->fontRenderContext()));
+		}
+
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 		/// Rewraps the visual lines at the window's edge.
 		void TextViewer::Renderer::rewrapAtWindowEdge() {
