@@ -118,8 +118,9 @@ namespace ascension {
 				/// @}
 
 			protected:
-				void buildLineLayoutConstructionParameters(Index line, ComputedTextLineStyle& lineStyle,
-					std::unique_ptr<ComputedStyledTextRunIterator>& runStyles, FontCollection& fontCollection) const;
+				void buildLineLayoutConstructionParameters(Index line, const RenderingContext2D& graphics2D,
+					ComputedTextLineStyle& lineStyle, std::unique_ptr<ComputedStyledTextRunIterator>& runStyles) const;
+				const FontCollection& fontCollection() const BOOST_NOEXCEPT;
 
 			private:
 				std::unique_ptr<const TextLayout> generateLineLayout(Index line) const;
@@ -160,6 +161,14 @@ namespace ascension {
 			/// @see presentation#GlobalTextStyleSwitch#direction
 			inline TextRenderer::Direction TextRenderer::direction() const BOOST_NOEXCEPT {
 				return direction_;
+			}
+
+			/**
+			 * Returns the @c FontCollection object used by this @c TextRenderer.
+			 * @see #buildLineLayoutConstructionParameters
+			 */
+			inline const FontCollection& TextRenderer::fontCollection() const BOOST_NOEXCEPT {
+				return fontCollection_;
 			}
 
 			/// Returns the vector of layouts.
