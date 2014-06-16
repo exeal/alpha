@@ -11,6 +11,7 @@
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/font/font-collection.hpp>
 #include <ascension/graphics/font/text-renderer.hpp>
+#include <ascension/graphics/font/text-viewport.hpp>
 #include <boost/foreach.hpp>
 
 namespace ascension {
@@ -229,15 +230,18 @@ namespace ascension {
 			/**
 			 * Builds construction parameters for @c TextLayout object.
 			 * @param[in] line The line number
+			 * @param[in] graphics2D The rendering context to pass to @c presentation#Length#Context object
 			 * @param[out] lineStyle
 			 * @param[out] runStyles
-			 * @param[out] fontCollection
 			 * @see #createLineLayout
 			 */
-			void TextRenderer::buildLineLayoutConstructionParameters(Index line, ComputedTextLineStyle& lineStyle,
-					std::unique_ptr<ComputedStyledTextRunIterator>& runStyles, FontCollection& fontCollection) const {
-//				presentation().computeTextLineStyle(line, );
-//				presentation().computeTextRunStyles(line, );
+			void TextRenderer::buildLineLayoutConstructionParameters(
+					Index line, const RenderingContext2D& graphics2D,
+					ComputedTextLineStyle& lineStyle, std::unique_ptr<ComputedStyledTextRunIterator>& runStyles) const {
+				const Dimension viewportSize(geometry::size(viewport()->boundsInView()));
+				const presentation::Length::Context lengthContext(&graphics2D, &viewportSize);
+				lineStyle = presentation().computeTextLineStyle(line, lengthContext, this);
+				runStyles = presentation().computeTextRunStyles(line, lengthContext);
 			}
 
 			/**
