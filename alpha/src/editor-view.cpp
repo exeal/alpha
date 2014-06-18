@@ -189,7 +189,7 @@ namespace alpha {
 //		}
 	}
 
-	ALPHA_EXPOSE_PROLOGUE(2)
+	ALPHA_EXPOSE_PROLOGUE(5)
 		boost::python::scope scope(ambient::Interpreter::instance().toplevelPackage());
 
 		typedef ascension::graphics::PhysicalTwoAxes<boost::python::object/*ssize_t*/> /*Integral*/PhysicalTwoAxes;

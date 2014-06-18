@@ -874,7 +874,7 @@ namespace alpha {
 		return *this;
 	}
 
-	ALPHA_EXPOSE_PROLOGUE(1)
+	ALPHA_EXPOSE_PROLOGUE(2)
 		ambient::Interpreter& interpreter = ambient::Interpreter::instance();
 		boost::python::scope temp(interpreter.toplevelPackage());
 
