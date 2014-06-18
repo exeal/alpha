@@ -414,7 +414,7 @@ namespace alpha {
 		}
 	}
 
-	ALPHA_EXPOSE_PROLOGUE(2)
+	ALPHA_EXPOSE_PROLOGUE(6)
 		boost::python::scope scope(ambient::Interpreter::instance().toplevelPackage());
 
 		boost::python::class_<EditorPane, boost::noncopyable>("_Window", boost::python::no_init)
@@ -433,8 +433,8 @@ namespace alpha {
 //			.def("__len__", [](const EditorPanes& panes) {
 //				return std::distance(std::begin(panes), std::end(panes));
 //			})
-			.def("delete", &EditorPanes::remove, boost::python::arg("pane") = nullptr)
-			.def("delete_others", &EditorPanes::removeOthers, boost::python::arg("pane") = nullptr, boost::python::arg("root") = nullptr);
+			.def("delete", &EditorPanes::remove, boost::python::arg("pane") = boost::python::object())
+			.def("delete_others", &EditorPanes::removeOthers, boost::python::arg("pane") = boost::python::object(), boost::python::arg("root") = boost::python::object());
 
 		boost::python::def("current_buffer", &currentBuffer,
 			boost::python::arg("pane_or_panes") = boost::python::object(), boost::python::return_internal_reference<>());
