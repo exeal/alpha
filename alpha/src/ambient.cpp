@@ -274,6 +274,8 @@ wstring alpha::ambient::convertUnicodeObjectToWideString(PyObject* object) {
 		}
 
 		void Interpreter::install() {
+			boost::python::to_python_converter<Glib::ustring, UstringToPython, true>();
+			UstringFromPython();
 			boost::for_each(installers_, [](Installer& installer) {
 				(*installer.function)();
 			});
