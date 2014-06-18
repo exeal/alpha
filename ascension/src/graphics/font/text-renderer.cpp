@@ -302,6 +302,67 @@ namespace ascension {
 			}
 
 			/**
+			 * Returns the start-edge of the specified visual line in pixels.
+			 * @param line The line number
+			 * @return The start-edge, which is distance from the start-edge of content-area to the one of the line
+			 * @throw IndexOutOfBoundsException @a line is invalid
+			 * @see TextLayout#lineStartEdge
+			 */
+			Scalar TextRenderer::lineStartEdge(const VisualLine& line) const {
+				if(line.line >= presentation().document().numberOfLines())
+					throw IndexOutOfBoundsException("line.line");
+
+				const TextLayout* const layout = layouts().at(line.line);
+				TextAnchor anchor;
+				if(layout != nullptr)
+					anchor = layout->anchor(0);
+				else {
+					switch(textAlignment().getOrInitial()) {
+						case font::TextAlignment::START:
+						case font::TextAlignment::JUSTIFY:
+						case font::TextAlignment::MATCH_PARENT:
+						case font::TextAlignment::START_END:
+							anchor = TextAnchor::START;
+							break;
+						case font::TextAlignment::END:
+							anchor = TextAnchor::END;
+							break;
+						case font::TextAlignment::CENTER:
+							anchor = TextAnchor::MIDDLE;
+							break;
+						case font::TextAlignment::LEFT:
+							anchor = (direction().getOrInitial() == presentation::LEFT_TO_RIGHT) ? TextAnchor::START : TextAnchor::END;
+							break;
+						case font::TextAlignment::RIGHT:
+							anchor = (direction().getOrInitial() == presentation::RIGHT_TO_LEFT) ? TextAnchor::START : TextAnchor::END;
+							break;
+						default:
+							ASCENSION_ASSERT_NOT_REACHED();
+					}
+				}
+
+				Scalar d;
+				switch(anchor) {
+					case TextAnchor::START:
+						d = 0;
+						break;
+					case TextAnchor::MIDDLE:
+						d = (layouts().maximumMeasure() - ((layout != nullptr) ? layout->measure() : 0)) / 2;
+						break;
+					case TextAnchor::END:
+						d = layouts().maximumMeasure() - ((layout != nullptr) ? layout->measure() : 0);
+						break;
+				}
+
+				if(layout != nullptr)
+					return d += layout->lineStartEdge(line.subline);	// this may throw
+				else if(line.subline > 0)
+					throw IndexOutOfBoundsException("line.subline");
+				else
+					return d;
+			}
+
+			/**
 			 * Paints the specified output device with text layout. The line rendering options provided by
 			 * @c #setLineRenderingOptions method is considered.
 			 * @param context The graphics context
