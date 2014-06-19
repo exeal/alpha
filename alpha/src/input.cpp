@@ -291,7 +291,7 @@ wstring KeyStroke::format(py::object keys) {
 			if(event.type != Gdk::KEY_PRESS || event.is_modifier != 0)
 				return false;
 
-			const KeyStroke key(event.keyval, event.state);
+			const KeyStroke key(static_cast<KeyStroke::NaturalKey>(event.keyval), static_cast<KeyStroke::ModifierKey>(event.state));
 			boost::python::object definition;
 			if(pendingKeyStrokes_.empty())	// first stroke
 				definition = lookupKey(key);
@@ -501,11 +501,11 @@ bool InputManager::input(const MSG& message) {
 			// TODO: Define values of NaturalKey.
 
 			boost::python::enum_<KeyStroke::ModifierKey>("ModifierKey")
-				.value("none", 0)
-				.value("shift", ascension::viewers::widgetapi::UserInput::SHIFT_DOWN)
-				.value("ctrl", ascension::viewers::widgetapi::UserInput::CONTROL_DOWN)
-				.value("alt", ascension::viewers::widgetapi::UserInput::ALT_DOWN)
-				.value("meta", ascension::viewers::widgetapi::UserInput::META_DOWN);
+				.value("none", static_cast<KeyStroke::ModifierKey>(0))
+				.value("shift", static_cast<KeyStroke::ModifierKey>(ascension::viewers::widgetapi::UserInput::SHIFT_DOWN))
+				.value("ctrl", static_cast<KeyStroke::ModifierKey>(ascension::viewers::widgetapi::UserInput::CONTROL_DOWN))
+				.value("alt", static_cast<KeyStroke::ModifierKey>(ascension::viewers::widgetapi::UserInput::ALT_DOWN))
+				.value("meta", static_cast<KeyStroke::ModifierKey>(ascension::viewers::widgetapi::UserInput::META_DOWN));
 
 			boost::python::class_<KeyStroke>("KeyStroke", boost::python::no_init)
 				.def(boost::python::init<KeyStroke::NaturalKey, KeyStroke::ModifierKey>((boost::python::arg("natural_key"), boost::python::arg("modifier_keys") = 0)))

@@ -29,11 +29,13 @@ namespace alpha {
 		/// Represents a key sequence.
 		class KeyStroke : public Input, private boost::equality_comparable<KeyStroke> {
 		public:
-			typedef ascension::viewers::widgetapi::KeyInput::Code NaturalKey;
-			typedef ascension::viewers::widgetapi::UserInput::KeyboardModifier ModifierKey;
+//			typedef ascension::viewers::widgetapi::KeyInput::Code NaturalKey;
+//			typedef ascension::viewers::widgetapi::UserInput::KeyboardModifier ModifierKey;
+			enum NaturalKey {};		// for export to Python
+			enum ModifierKey {};	// for export to Python
 
 		public:
-			explicit KeyStroke(NaturalKey naturalKey, ModifierKey modifierKeys = 0);
+			explicit KeyStroke(NaturalKey naturalKey, ModifierKey modifierKeys = static_cast<ModifierKey>(0));
 			explicit KeyStroke(const Glib::ustring& format);
 			bool operator==(const KeyStroke& other) const BOOST_NOEXCEPT;
 			ModifierKey modifierKeys() const BOOST_NOEXCEPT;
