@@ -54,7 +54,7 @@ namespace alpha {
 
 	/// Default constructor.
 	BufferList::BufferList() {
-		bufferSelectionChangedConnection_ = Application::instance().window().editorPanes().bufferSelectionChangedSignal().connect([this](EditorPanes&) {
+		bufferSelectionChangedConnection_ = Application::instance()->window().editorPanes().bufferSelectionChangedSignal().connect([this](EditorPanes&) {
 			this->updateTitleBar();
 		});
 	}
@@ -846,7 +846,7 @@ namespace alpha {
 #endif
 
 	void BufferList::updateTitleBar() {
-		Gtk::Window& window = Application::instance().window();
+		Gtk::Window& window = Application::instance()->window();
 //		if(mainWindow.isWindow()) {
 			// show the display name of the selected buffer and application credit
 			static Glib::ustring titleCache;

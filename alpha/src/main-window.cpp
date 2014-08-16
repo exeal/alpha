@@ -10,10 +10,11 @@
 namespace alpha {
 	namespace ui {
 		/// Default constructor.
-		MainWindow::MainWindow() : Gtk::Window(Gtk::WINDOW_TOPLEVEL) {
+		MainWindow::MainWindow() /*: Gtk::Window(Gtk::WINDOW_TOPLEVEL)*/ {
 			add(vbox_);
 			vbox_.pack_start(editorPanes());
 			vbox_.pack_start(statusBar());
+			show_all_children();
 		}
 	}
 }

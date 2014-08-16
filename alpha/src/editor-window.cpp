@@ -392,7 +392,7 @@ namespace alpha {
 			if(pane == nullptr) {
 				EditorPanes* panes = boost::python::extract<EditorPanes*>(o);
 				if(panes == nullptr)
-					panes = &Application::instance().window().editorPanes();
+					panes = &Application::instance()->window().editorPanes();
 				pane = &panes->activePane();
 			}
 			return pane->selectedBuffer();
@@ -441,13 +441,13 @@ namespace alpha {
 
 		boost::python::def("selected_window", boost::python::make_function(
 			ambient::makeFunctionPointer([]() -> EditorPane& {
-				return Application::instance().window().editorPanes().activePane();
+				return Application::instance()->window().editorPanes().activePane();
 			}),
 			boost::python::return_value_policy<boost::python::reference_existing_object>()));
 
 		boost::python::def("windows", boost::python::make_function(
 			ambient::makeFunctionPointer([]() -> EditorPanes& {
-				return Application::instance().window().editorPanes();
+				return Application::instance()->window().editorPanes();
 			}),
 			boost::python::return_value_policy<boost::python::reference_existing_object>()));
 	ALPHA_EXPOSE_EPILOGUE()

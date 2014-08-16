@@ -92,13 +92,14 @@ namespace alpha {
 
 	/// @see IncrementalSearchListener#incrementalSearchCompleted
 	void EditorView::incrementalSearchCompleted() {
-		Application::instance().window().statusBar().pop();
+		Application::instance()->window().statusBar().pop();
 	}
 
 	/// @see IncrementalSearchListener#incrementalSearchPatternChanged
 	void EditorView::incrementalSearchPatternChanged(ascension::searcher::IncrementalSearchCallback::Result result, int wrappingStatus) {
-		Application& app = Application::instance();
-		ui::StatusBar& statusBar = app.window().statusBar();
+
+		const Glib::RefPtr<Application> app(Application::instance());
+		ui::StatusBar& statusBar = app->window().statusBar();
 		const ascension::searcher::IncrementalSearcher& isearch = BufferList::instance().editorSession().incrementalSearcher();
 		const bool forward = isearch.direction() == ascension::Direction::FORWARD;
 		Glib::ustring message;
@@ -126,7 +127,7 @@ namespace alpha {
 			message = temp;
 		}
 		statusBar.push(message);
-//		if(boost::get_optional_value_or(app.readIntegerProfile("View", "applyMainFontToSomeControls"), 1) != 0)
+//		if(boost::get_optional_value_or(app->readIntegerProfile("View", "applyMainFontToSomeControls"), 1) != 0)
 //			statusBar.override_font(textRenderer().defaultFont()->describeProperties());
 	}
 

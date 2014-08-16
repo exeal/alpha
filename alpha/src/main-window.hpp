@@ -23,7 +23,7 @@ namespace alpha {
 //		class SearchDialog;
 //		class BookmarkDialog;
 
-		class MainWindow : public Gtk::/*Application*/Window {
+		class MainWindow : public Gtk::ApplicationWindow {
 		public:
 			MainWindow();
 

@@ -334,11 +334,11 @@ wstring KeyStroke::format(py::object keys) {
 						mappingSchemeLocker_.reset(new boost::lock_guard<KeyMapMutex>(KeyMapMutex(mappingScheme_.get())));
 					if(modalMappingScheme_.get() != nullptr)
 						modalMappingSchemeLocker_.reset(new boost::lock_guard<KeyMapMutex>(KeyMapMutex(modalMappingScheme_.get())));
-					Application::instance().window().statusBar().push(incompleteKeyStrokes);
+					Application::instance()->window().statusBar().push(incompleteKeyStrokes);
 				} else {	// undefined key stroke(s)
 					cancelIncompleteKeyStrokes();
 					::gdk_beep();	// TODO: Use Gdk.Window.beep() or Gdk.Display.beep() instead.
-					Application::instance().window().statusBar().push(Glib::ustring::compose(_("%1 is undefined"), incompleteKeyStrokes));
+					Application::instance()->window().statusBar().push(Glib::ustring::compose(_("%1 is undefined"), incompleteKeyStrokes));
 				}
 				return true;
 			}
