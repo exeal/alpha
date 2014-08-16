@@ -15,10 +15,12 @@ namespace ascension {
 		namespace {
 			inline boost::optional<unsigned int> systemBlinkTimeInMilliseconds(TextViewer& viewer) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+#ifndef GTKMM_DISABLE_DEPRECATED
 				const Glib::RefPtr<const Gtk::Settings> settings(viewer.get_settings());
-				if(!settings->property_gtk_cursor_blink().get_value())
-					return boost::none;
-				return settings->property_gtk_cursor_blink_time().get_value();
+				if(settings->property_gtk_cursor_blink().get_value())
+					return settings->property_gtk_cursor_blink_time().get_value();
+#endif // !GTKMM_DISABLE_DEPRECATED
+				return boost::none;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
