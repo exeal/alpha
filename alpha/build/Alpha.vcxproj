@@ -48,7 +48,7 @@
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)Debug\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)Debug\Objs\</IntDir>
-    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Midl>
@@ -157,7 +157,7 @@
       <Culture>0x0411</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>shlwapi.lib;comctl32.lib;imm32.lib;atkmm-2.0.lib;cairo.lib;cairomm-1.0.lib;gdk-3.0.lib;gdkmm-3.0.lib;giomm-2.0.lib;glib-2.0.lib;glibmm-2.0.lib;gtk-3.0.lib;gtkmm-3.0.lib;libintl.lib;pangomm-1.0.lib;sigc-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;comctl32.lib;imm32.lib;atkmm-vc100-d-1_6.lib;cairo.lib;cairomm-vc100-d-1_0.lib;gdk-3.0.lib;gdkmm-vc100-d-3_0.lib;giomm-vc100-d-2_4.lib;glib-2.0.lib;glibmm-vc100-d-2_4.lib;gtk-3.0.lib;gtkmm-vc100-d-3_0.lib;intl.lib;pangomm-vc100-d-1_4.lib;sigc-vc100-d-2_0.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)Alpha.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <ManifestFile>$(IntDir)$(TargetFileName).intermediate.manifest</ManifestFile>
@@ -169,6 +169,7 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
     </Link>
     <Manifest>
       <OutputManifestFile>$(IntDir)$(TargetFileName).embed.manifest</OutputManifestFile>
@@ -177,6 +178,9 @@
     <ManifestResourceCompile>
       <ResourceOutputFileName>$(IntDir)$(TargetFileName).embed.manifest.res</ResourceOutputFileName>
     </ManifestResourceCompile>
+    <Bscmake>
+      <AdditionalOptions>/Es %(AdditionalOptions)</AdditionalOptions>
+    </Bscmake>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\ascension\src\content-assist\content-assist-gtk.cpp" />

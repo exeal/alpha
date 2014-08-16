@@ -60,10 +60,12 @@ namespace alpha {
 	/// The application class of Alpha.
 	class Application : public Gtk::Application {
 	public:
-		// constructors
-		Application();
-		// attributes
-		static Application& instance();
+		/// @name Instance
+		/// @{
+		static Glib::RefPtr<Application> create();
+		static Glib::RefPtr<Application> instance();
+		/// @}
+
 		void setFont(const ascension::graphics::font::FontDescription& font);
 		ui::MainWindow& window() BOOST_NOEXCEPT;
 		const ui::MainWindow& window() const BOOST_NOEXCEPT;
@@ -71,6 +73,7 @@ namespace alpha {
 		bool teardown(bool callHook = true);
 
 	private:
+		Application();
 		void changeFont();
 //		bool	handleKeyDown(command::VirtualKey key, command::KeyModifier modifiers);
 		bool initInstance(int showCommand);
@@ -95,6 +98,10 @@ namespace alpha {
 		inline void writeStringProfile(Section section, Key key, const Value& value) const {}	// dummy
 		template<typename Section, typename Key, typename T>
 		inline void writeStructureProfile(Section section, Key key, const T& data) const {}	// dummy
+
+		// Gio.Application
+		void on_activate() override;
+		void on_open(const Gio::Application::type_vec_files& files, const Glib::ustring& hint) override;
 
 		// message handlers
 	protected:
@@ -126,24 +133,28 @@ namespace alpha {
 #endif
 
 	private:
-		ui::MainWindow window_;
+		static Glib::RefPtr<Application> instance_;
+		std::unique_ptr<ui::MainWindow> window_;
 	};
 
 
 	/// Returns the singleton application object.
-	inline Application& Application::instance() {
-		static Application singleton;
-		return singleton;
+	inline Glib::RefPtr<Application> Application::instance() {
+		if(!instance_)
+			throw ascension::NullPointerException("There is no singleton instance.");
+		return instance_;
 	}
 
 	/// Returns the main window.
 	inline ui::MainWindow& Application::window() BOOST_NOEXCEPT {
-		return window_;
+		assert(window_.get() != nullptr);
+		return *window_;
 	}
 
 	/// Returns the main window.
 	inline const ui::MainWindow& Application::window() const BOOST_NOEXCEPT {
-		return window_;
+		assert(window_.get() != nullptr);
+		return *window_;
 	}
 } // namespace alpha
 

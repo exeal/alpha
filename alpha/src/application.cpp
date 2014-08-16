@@ -47,9 +47,13 @@ namespace alpha {
 		}
 	}
 }
+#endif
 
 /// The entry point.
-int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
+int main(int argc, char* argv[]) {
+	int	exitCode = 0/*EXIT_SUCCESS*/;
+
+#ifdef BOOST_OS_WINDOWS
 	// Shift キーを押しながら起動すると英語モードになるようにしてみた
 	if(ascension::win32::boole(::GetAsyncKeyState(VK_SHIFT) & 0x8000)) {
 		::MessageBeep(MB_OK);
@@ -70,29 +74,30 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
 	// NT 系か調べる
 	OSVERSIONINFOA osvi;
-	osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOA);
+	osvi.dwOSVersionInfoSize = sizeof(decltype(osvi));
 	::GetVersionExA(&osvi);
 	if(!ascension::win32::boole(osvi.dwPlatformId & VER_PLATFORM_WIN32_NT)) {
 		Gtk::MessageDialog dialog(_("Alpha does not support your platform."), false, Gtk::MESSAGE_ERROR);
 		dialog.run();
-		return -1;
+		return exitCode = -1;
 	}
 	ascension::win32::Handle<HANDLE>::Type mutex(::CreateMutexW(0, false, IDS_APPFULLVERSION), &::CloseHandle);
 
-	int	exitCode = 0/*EXIT_SUCCESS*/;
-
 	// 簡単な多重起動抑止 (Ctrl キーを押しながら起動すると多重起動するようにしてみた)
 	if(::GetLastError() != ERROR_ALREADY_EXISTS || ascension::win32::boole(::GetAsyncKeyState(VK_CONTROL) & 0x8000)) {
-		::OleInitialize(nullptr);	// STA に入る + 高水準サービスの初期化
+		::OleInitialize(nullptr);	// enter STA and initialize high-level services
 		std::atexit(&alpha::callOleUninitialize);
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 		ascension::win32::ui::initCommonControls(ICC_COOL_CLASSES | ICC_PAGESCROLLER_CLASS | ICC_WIN95_CLASSES);
 #endif // ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+#endif
 		alpha::ambient::Interpreter::instance().install();
 		alpha::ambient::Interpreter::instance().toplevelPackage();
-		std::unique_ptr<alpha::Application> application(new alpha::Application());
-		exitCode = application->run(/*nCmdShow*/);
-	} else {	// 既存のプロセスにコマンドライン引数を渡す
+
+		const Glib::RefPtr<alpha::Application> application(alpha::Application::create());
+		exitCode = application->run(argc, argv);
+#ifdef BOOST_OS_WINDOWS
+	} else {	// pass the command line arguments to the existing process
 		HWND existWnd = ::FindWindowW(IDS_APPNAME, nullptr);
 		while(!ascension::win32::boole(::IsWindow(existWnd))) {
 			::Sleep(1000);
@@ -110,28 +115,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 		::Sleep(300);
 		::SetForegroundWindow(existWnd);
 	}
+#endif
 
 	return exitCode;
 }
-
-#	if 0
-namespace alpha {
-	std::unique_ptr<WCHAR[]> a2u(const char* first, const char* last, DWORD flags /* = MB_PRECOMPOSED */) {
-		const int len = ::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, first, static_cast<int>(last - first), 0, 0);
-		std::unique_ptr<WCHAR[]> buffer(new WCHAR[len]);
-		::MultiByteToWideChar(CP_ACP, flags, first, static_cast<int>(last - first), buffer.get(), len);
-		return buffer;
-	}
-
-	std::unique_ptr<char[]> u2a(const WCHAR* first, const WCHAR* last, DWORD flags /* = 0 */) {
-		const int len = ::WideCharToMultiByte(CP_ACP, 0, first, static_cast<int>(last - first), 0, 0, 0, 0);
-		std::unique_ptr<char[]> buffer(new char[len]);
-		::WideCharToMultiByte(CP_ACP, flags, first, static_cast<int>(last - first), buffer.get(), len, 0, 0);
-		return buffer;
-	}
-}
-#	endif
-#endif // BOOST_OS_WINDOWS
 
 namespace alpha {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
@@ -154,8 +141,11 @@ namespace alpha {
 
 	// Application ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	/// Constructor.
-	Application::Application() {
+	Glib::RefPtr<Application> Application::instance_;
+
+	/// Private constructor.
+	Application::Application() : Gtk::Application("alpha", Gio::APPLICATION_HANDLES_OPEN) {
+		Glib::set_application_name("alpha");
 //		searchDialog_.reset(new ui::SearchDialog());	// ctor of SearchDialog calls Alpha
 //		onSettingChange(0, 0);	// statusFont_ の初期化
 	}
@@ -185,6 +175,14 @@ namespace alpha {
 		if(dialog.run() == Gtk::RESPONSE_ACCEPT)
 			setFont(ascension::graphics::fromNative<ascension::graphics::font::FontDescription>(dialog.get_font_desc()));
 #endif
+	}
+
+	/// Creates a new @c Application instance.
+	Glib::RefPtr<Application> Application::create() {
+		if(instance_)
+			throw ascension::IllegalStateException("");
+		instance_ = Glib::RefPtr<Application>(new Application);
+		return instance_;
 	}
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
@@ -371,6 +369,21 @@ namespace alpha {
 		s.setMaximumNumberOfStoredStrings(16);
 		s.setStoredStrings(std::begin(findWhats), std::end(findWhats), false);
 		s.setStoredStrings(std::begin(replacesWiths), std::end(replacesWiths), true);
+	}
+
+	/// Overrides @c Gio#Application#on_activate method.
+	void Application::on_activate() {
+		assert(window_.get() == nullptr);
+		window_.reset(new ui::MainWindow);
+
+		add_window(*window_);
+		window_->show();
+	}
+
+	/// Overrides @c Gio#Application#on_open method.
+	void Application::on_open(const Gio::Application::type_vec_files& files, const Glib::ustring& hint) {
+		// TODO: Not implemented.
+		return on_open(files, hint);
 	}
 
 #if 0
@@ -1009,7 +1022,7 @@ void Alpha::onTimer(UINT timerID) {
 
 		boost::python::def("kill_alpha",
 			ambient::makeFunctionPointer([](bool callHook) -> bool {
-				return Application::instance().teardown(callHook);
+				return Application::instance()->teardown(callHook);
 			}),
 			boost::python::arg("call_hook") = true);
 	ALPHA_EXPOSE_EPILOGUE()

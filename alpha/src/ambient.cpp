@@ -156,7 +156,7 @@ wstring alpha::ambient::convertUnicodeObjectToWideString(PyObject* object) {
 					if(type != nullptr && value != nullptr) {
 						const boost::python::extract<Glib::ustring> message(value);
 						if(message.check()) {
-							Gtk::MessageDialog dialog(Application::instance().window(), static_cast<Glib::ustring>(message).c_str(), false, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_OK, true);
+							Gtk::MessageDialog dialog(Application::instance()->window(), static_cast<Glib::ustring>(message).c_str(), false, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_OK, true);
 							dialog.set_title(_("Alpha"));
 							dialog.run();
 							return boost::python::object();
@@ -263,7 +263,7 @@ wstring alpha::ambient::convertUnicodeObjectToWideString(PyObject* object) {
 #endif // _DEBUG
 					}
 				}
-				Gtk::MessageDialog dialog(Application::instance().window(), message, false, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_OK, true);
+				Gtk::MessageDialog dialog(Application::instance()->window(), message, false, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_OK, true);
 				dialog.set_title(_("Alpha"));
 				dialog.run();
 			}
