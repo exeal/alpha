@@ -378,6 +378,7 @@ namespace alpha {
 
 		add_window(*window_);
 		window_->show();
+		BufferList::instance().addNew("*Messages*");
 	}
 
 	/// Overrides @c Gio#Application#on_open method.

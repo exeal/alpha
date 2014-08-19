@@ -27,6 +27,8 @@ namespace alpha {
 		public:
 			MainWindow();
 
+			void updateTitle();
+
 			/// @name Children
 			/// @{
 			EditorPanes& editorPanes() const BOOST_NOEXCEPT;
@@ -39,6 +41,7 @@ namespace alpha {
 			EditorPanes editorPanes_;
 //			std::unique_ptr<ui::SearchDialog> searchDialog_;
 			StatusBar statusBar_;
+			boost::signals2::scoped_connection bufferSelectionChangedConnection_;
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			manah::win32::ui::Rebar rebar_;		// rebar
 			manah::win32::ui::Toolbar toolbar_;	// standard toolbar

@@ -207,8 +207,19 @@ namespace alpha {
 	 * @typedef alpha::EditorPanes::BufferSelectionChangedSignal
 	 * The signal which gets emitted when the buffer selection was changed.
 	 * @param editorPanes The editor panes
-	 * @see #selectedBuffer
+	 * @see #selectedBuffer, BufferList#BufferSelectionChangedSignal
 	 */
+
+	/// Default constructor.
+	EditorPanes::EditorPanes() {
+		BufferList& bufferList = BufferList::instance();
+		bufferAboutToBeRemovedConnection_ =
+			bufferList.bufferAboutToBeRemovedSignal().connect(
+				std::bind(&EditorPanes::bufferAboutToBeRemoved, this, std::placeholders::_1, std::placeholders::_2));
+		bufferAddedConnection_ =
+			bufferList.bufferAddedSignal().connect(
+				std::bind(&EditorPanes::bufferAdded, this, std::placeholders::_1, std::placeholders::_2));
+	}
 
 	/// Returns the iterator addresses the first editor pane.
 	EditorPanes::Iterator EditorPanes::begin() BOOST_NOEXCEPT {
