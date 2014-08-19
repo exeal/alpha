@@ -81,7 +81,7 @@ namespace alpha {
 	/// @see TextViewer#focusGained
 	void EditorView::focusGained(ascension::viewers::widgetapi::Event& event) {
 		ascension::viewers::TextViewer::focusGained(event);
-		BufferList::instance().bufferSelectionChanged();
+		BufferList::instance().select(document());
 	}
 
 	/// @see IncrementalSearchListener#incrementalSearchAborted
