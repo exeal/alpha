@@ -87,6 +87,7 @@ namespace alpha {
 		typedef std::ptrdiff_t difference_type;
 
 	public:
+		EditorPanes();
 		static EditorPanes& instance() BOOST_NOEXCEPT;
 
 		/// @name Pane Access
@@ -128,6 +129,7 @@ namespace alpha {
 	private:
 		EditorPane* activePane_;
 		EditorPane* lastActivePane_;
+		boost::signals2::connection bufferAboutToBeRemovedConnection_, bufferAddedConnection_;
 		BufferSelectionChangedSignal bufferSelectionChangedSignal_;
 	};
 
