@@ -15,6 +15,7 @@
 #include <boost/python/stl_iterator.hpp>
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/range/algorithm/for_each.hpp>
+#include <boost/thread/lock_guard.hpp>
 #include <glibmm/i18n.h>
 
 namespace alpha {
@@ -46,6 +47,13 @@ namespace alpha {
 	 */
 
 	/**
+	 * @typedef alpha::BufferList::BufferSelectionChangedSignal
+	 * The signal which gets emitted when the buffer selection was changed.
+	 * @param bufferList The buffer list
+	 * @see #selected, EditorPanes#BufferSelectionChangedSignal
+	 */
+
+	/**
 	 * @typedef alpha::BufferList::DisplayNameChangedSignal
 	 * The signal which gets emitted when the display name of the buffer was changed.
 	 * @param buffer The buffer whose display name was changed
@@ -54,9 +62,8 @@ namespace alpha {
 
 	/// Default constructor.
 	BufferList::BufferList() {
-		bufferSelectionChangedConnection_ = Application::instance()->window().editorPanes().bufferSelectionChangedSignal().connect([this](EditorPanes&) {
-			this->updateTitleBar();
-		});
+		selection_ = std::end(buffers_);
+		locker_.swap(boost::recursive_mutex::scoped_lock(mutex_, boost::defer_lock));
 	}
 
 	/// Destructor.
@@ -77,7 +84,7 @@ namespace alpha {
 	}
 
 	/**
-	 * Opens the new empty buffer. This method does not activate the new buffer.
+	 * Opens the new empty buffer. This method does not select the new buffer.
 	 * @param name the name of the buffer
 	 * @param encoding the encoding
 	 * @param newline the newline
@@ -87,21 +94,6 @@ namespace alpha {
 	 */
 	Buffer& BufferList::addNew(const Glib::ustring& name /* = Glib::ustring() */,
 			const std::string& encoding /* = "UTF-8" */, ascension::text::Newline newline /* = ascension::text::Newline::USE_INTRINSIC_VALUE */) {
-/*		if(::GetCurrentThreadId() != app_.getMainWindow().getWindowThreadID()) {
-			// ウィンドウの作成をメインスレッドに委譲
-			struct X : virtual public ICallable {
-				X(BufferList& buffers, CodePage cp, Ascension::LineBreak lineBreak, const wstring& docType)
-					: buffers_(buffer), cp_(cp), bt_(lineBreak), doctype_(docType) {}
-				void call() {buffers_.addNew(cp_, bt_, doctype_);}
-				BufferList&					buffers_;
-				const CodePage				cp_;
-				const Ascension::LineBreak	bt_;
-				const wstring				doctype_;
-			} x(*this, cp, lineBreak, docType);
-			app_.getMainWindow().sendMessage(MYWM_CALLOVERTHREAD, 0, reinterpret_cast<LPARAM>(static_cast<ICallable*>(&x)));
-			return;
-		}
-*/
 		BufferEntry newEntry;
 		newEntry.buffer.reset(new Buffer(name));
 		Buffer& newBuffer = *newEntry.buffer;
@@ -118,7 +110,12 @@ namespace alpha {
 
 		editorSession_.addDocument(newBuffer);
 //		newBuffer.setProperty(ascension::kernel::Document::TITLE_PROPERTY, !name.empty() ? name : L"*untitled*");
-		buffers_.push_back(std::move(newEntry));
+		{
+			boost::lock_guard<decltype(locker_)> lg(locker_);
+			const auto selectedOffset = std::distance(selection_, std::end(buffers_));
+			buffers_.push_back(std::move(newEntry));
+			selection_ = std::prev(std::end(buffers_), selectedOffset);
+		}
 
 //		view.addEventListener(app_);
 		newBuffer.textFile().addListener(*this);
@@ -162,31 +159,40 @@ namespace alpha {
 		return ascension::makeSignalConnector(bufferRemovedSignal_);
 	}
 
-	void BufferList::bufferSelectionChanged() {
-		updateTitleBar();
+	/// Returns the @c BufferSelectionChangedSignal signal connector.
+	ascension::SignalConnector<BufferList::BufferSelectionChangedSignal> BufferList::bufferSelectionChangedSignal() BOOST_NOEXCEPT {
+		return ascension::makeSignalConnector(bufferSelectionChangedSignal_);
 	}
 
 	/**
 	 * Closes the specified buffer.
-	 * @param buffer the buffer to close
+	 * @param buffer The buffer to close
 	 * @return true if the buffer was closed successfully
-	 * @throw std#invalid_argument @a buffer is invalid
+	 * @throw ascension#NoSuchElementException @a buffer is not in this list
 	 */
 	void BufferList::close(Buffer& buffer) {
 		const boost::optional<std::size_t> position = find(buffer);
 		if(position == boost::none)
-			throw std::invalid_argument("buffer");
+			throw ascension::NoSuchElementException("buffer");
 		if(buffers_.size() > 1) {
 			bufferAboutToBeRemovedSignal_(*this, buffer);
-			BufferEntry entryToRemove(std::move(buffers_[boost::get(position)]));
-			buffers_.erase(buffers_.begin() + boost::get(position));
-			editorSession_.removeDocument(buffer);
-			buffer.textFile().removeListener(*this);
-			buffer.textFile().unbind();
+			{
+				boost::lock_guard<decltype(locker_)> lg(locker_);
+				// track the selection
+				std::size_t selection = std::distance(std::begin(buffers_), selection_);
+				if(selection > boost::get(position) || (selection == boost::get(position) && selection == buffers_.size() - 1))
+					--selection;
 
-			resetResources();
+				BufferEntry entryToRemove(std::move(buffers_[boost::get(position)]));
+				buffers_.erase(buffers_.begin() + boost::get(position));
+				selection_ = std::next(std::begin(buffers_), selection);
+				editorSession_.removeDocument(buffer);
+				buffer.textFile().removeListener(*this);
+				buffer.textFile().unbind();
+
+				resetResources();
+			}
 			bufferRemovedSignal_(*this, buffer);
-			bufferSelectionChanged();
 		} else {	// the buffer is last one
 			buffer.textFile().unbind();
 			buffer.resetContent();
@@ -201,9 +207,9 @@ namespace alpha {
 	Glib::ustring BufferList::displayName(const Buffer& buffer) const BOOST_NOEXCEPT {
 		Glib::ustring name(buffer.name());
 		if(buffer.isModified())
-			name.append(" *");
+			name.append(" *");	// TODO: Be customizable.
 		if(buffer.isReadOnly())
-			name.append(" #");
+			name.append(" #");	// TODO: Be customizable.
 		return name;
 	}
 
@@ -249,7 +255,7 @@ namespace alpha {
 
 	/// @internal
 	inline void BufferList::fireDisplayNameChanged(const ascension::kernel::Document& buffer) {
-		updateTitleBar();
+		Application::instance()->window().updateTitle();
 		displayNameChangedSignal_(getConcreteDocument(buffer));
 	}
 
@@ -398,7 +404,7 @@ namespace alpha {
 	 * @throw std#overflow_error
 	 */
 	Glib::ustring BufferList::makeUniqueName(const Glib::ustring& name) const {
-		if(forName(name) == boost::python::object())
+		if(forName(name) == nullptr)
 			return name;
 		const Glib::ustring format(name + "<%1>");
 		for(std::size_t n = 2; ; ++n) {
@@ -418,6 +424,7 @@ namespace alpha {
 	 * @throw std::out_of_range @a from is invalid
 	 */
 	void BufferList::move(boost::python::ssize_t from, boost::python::ssize_t to) {
+		boost::lock_guard<decltype(locker_)> lg(locker_);
 #if 0
 		if(from < 0 || to < 0 || static_cast<std::size_t>(from) >= buffers_.size() || static_cast<std::size_t>(to) > buffers_.size()) {
 			::PyErr_SetString(PyExc_IndexError, "The specified index is out of range.");
@@ -557,7 +564,7 @@ namespace alpha {
 #endif
 	/// @see ascension#text#UnexpectedFileTimeStampDirector::queryAboutUnexpectedTimeStamp
 	bool BufferList::queryAboutUnexpectedDocumentFileTimeStamp(
-			ascension::kernel::Document& document, UnexpectedFileTimeStampDirector::Context context) throw() {
+			ascension::kernel::Document& document, UnexpectedFileTimeStampDirector::Context context) BOOST_NOEXCEPT {
 		if(unexpectedFileTimeStampDirector == boost::python::object())
 			return false;
 		try {
@@ -844,21 +851,22 @@ namespace alpha {
 		return true;
 	}
 #endif
-
-	void BufferList::updateTitleBar() {
-		Gtk::Window& window = Application::instance()->window();
-//		if(mainWindow.isWindow()) {
-			// show the display name of the selected buffer and application credit
-			static Glib::ustring titleCache;
-			Glib::ustring title(displayName(EditorPanes::instance().selectedBuffer()));
-			if(title != titleCache) {
-				titleCache = title;
-				title += " - ";
-//				title += ALPHA_APPLICATION_FULL_NAME;
-				title += _("Alpha");
-				window.set_title(title.c_str());
+	/**
+	 * Selects the specified buffer.
+	 * @param buffer The buffer to select
+	 * @throw ascension#NoSuchElementException @a buffer is not in this list
+	 */
+	void BufferList::select(Buffer& buffer) {
+		boost::lock_guard<decltype(locker_)> lg(locker_);
+		if(const boost::optional<std::size_t> index = find(buffer)) {
+			auto i(std::begin(buffers_));
+			std::advance(i, boost::get(index));
+			if(i == selection_) {
+				selection_ = i;
+				bufferSelectionChangedSignal_(*this);
 			}
-//		}
+		} else
+			throw ascension::NoSuchElementException("buffer");
 	}
 
 	BufferList::BufferEntry::~BufferEntry() BOOST_NOEXCEPT {

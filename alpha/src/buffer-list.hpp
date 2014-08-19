@@ -9,9 +9,11 @@
 #define ALPHA_BUFFER_LIST_HPP
 
 #include "ambient.hpp"
+#include "buffer.hpp"
 #include <ascension/kernel/fileio.hpp>
 #include <ascension/presentation/presentation.hpp>
 #include <ascension/text-editor/session.hpp>
+#include <boost/thread/recursive_mutex.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 #	include <ascension/win32/ui/menu.hpp>
 #	include <ascension/win32/ui/common-controls.hpp>
@@ -50,6 +52,13 @@ namespace alpha {
 		std::size_t numberOfBuffers() const BOOST_NOEXCEPT;
 		/// @}
 
+		/// @name Selection
+		/// @{
+		void select(Buffer& buffer);
+		Buffer& selected() BOOST_NOEXCEPT;
+		const Buffer& selected() const BOOST_NOEXCEPT;
+		/// @}
+
 		/// @name Open and Save
 		/// @{
 		Buffer& addNew(
@@ -74,11 +83,11 @@ namespace alpha {
 		ascension::SignalConnector<BufferAddedSignal> bufferAddedSignal() BOOST_NOEXCEPT;
 		typedef boost::signals2::signal<void(BufferList&, Buffer&)> BufferRemovedSignal;
 		ascension::SignalConnector<BufferRemovedSignal> bufferRemovedSignal() BOOST_NOEXCEPT;
+		typedef boost::signals2::signal<void(BufferList&)> BufferSelectionChangedSignal;
+		ascension::SignalConnector<BufferSelectionChangedSignal> bufferSelectionChangedSignal() BOOST_NOEXCEPT;
 		typedef boost::signals2::signal<void(const Buffer&)> DisplayNameChangedSignal;
 		ascension::SignalConnector<DisplayNameChangedSignal> displayNameChangedSignal() BOOST_NOEXCEPT;
 		/// @}
-
-		void bufferSelectionChanged();
 
 	private:
 		BufferList();
@@ -90,16 +99,15 @@ namespace alpha {
 		void recalculateBufferBarSize();
 #endif
 		void resetResources();
-		void updateTitleBar();
 		// ascension.kernel.Document signals
 		void documentModificationSignChanged(const ascension::kernel::Document& document);
 		void documentReadOnlySignChanged(const ascension::kernel::Document& document);
 		// ascension.kernel.fileio.FilePropertyListener
-		void fileEncodingChanged(const ascension::kernel::fileio::TextFileDocumentInput& textFile);
-		void fileNameChanged(const ascension::kernel::fileio::TextFileDocumentInput& textFile);
+		void fileEncodingChanged(const ascension::kernel::fileio::TextFileDocumentInput& textFile) override;
+		void fileNameChanged(const ascension::kernel::fileio::TextFileDocumentInput& textFile) override;
 		// ascension.kernel.fileio.UnexpectedFileTimeStampDerector
 		bool queryAboutUnexpectedDocumentFileTimeStamp(ascension::kernel::Document& document,
-				ascension::kernel::fileio::UnexpectedFileTimeStampDirector::Context context) /*throw()*/;
+			ascension::kernel::fileio::UnexpectedFileTimeStampDirector::Context context) BOOST_NOEXCEPT override;
 	public:
 		// for properties
 		boost::python::object unexpectedFileTimeStampDirector;
@@ -114,11 +122,14 @@ namespace alpha {
 			BufferEntry& operator=(BufferEntry&& other) BOOST_NOEXCEPT;
 		};
 		std::vector<BufferEntry> buffers_;
+		std::vector<BufferEntry>::iterator selection_;
+		boost::recursive_mutex mutex_;
+		boost::recursive_mutex::scoped_lock locker_;
 		BufferAboutToBeRemovedSignal bufferAboutToBeRemovedSignal_;
 		BufferAddedSignal bufferAddedSignal_;
 		BufferRemovedSignal bufferRemovedSignal_;
+		BufferSelectionChangedSignal bufferSelectionChangedSignal_;
 		DisplayNameChangedSignal displayNameChangedSignal_;
-		boost::signals2::scoped_connection bufferSelectionChangedConnection_;
 	};
 
 
@@ -140,6 +151,26 @@ namespace alpha {
 	/// Returns the number of the buffers.
 	inline std::size_t BufferList::numberOfBuffers() const BOOST_NOEXCEPT {
 		return buffers_.size();
+	}
+
+	/**
+	 * Returns the logically selected buffer.
+	 * @throw ascension#IllegalStateException The list is empty
+	 */
+	inline Buffer& BufferList::selected() {
+		if(selection_ == std::end(buffers_))
+			throw ascension::IllegalStateException("There is no buffer in the BufferList.");
+		return *selection_->buffer;
+	}
+
+	/**
+	 * Returns the logically selected buffer.
+	 * @throw ascension#IllegalStateException The list is empty
+	 */
+	inline const Buffer& BufferList::selected() const {
+		if(selection_ == std::end(buffers_))
+			throw ascension::IllegalStateException("There is no buffer in the BufferList.");
+		return *selection_->buffer;
 	}
 }
 
