@@ -20,7 +20,6 @@ namespace alpha {
 			add(vbox_);
 			vbox_.pack_start(editorPanes());
 			vbox_.pack_start(statusBar());
-			show_all_children();
 		}
 
 		/// Updates the text string of the title bar.

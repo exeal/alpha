@@ -219,6 +219,7 @@ namespace alpha {
 		bufferAddedConnection_ =
 			bufferList.bufferAddedSignal().connect(
 				std::bind(&EditorPanes::bufferAdded, this, std::placeholders::_1, std::placeholders::_2));
+		add1(*Gtk::manage(new EditorPane()));
 	}
 
 	/// Returns the iterator addresses the first editor pane.

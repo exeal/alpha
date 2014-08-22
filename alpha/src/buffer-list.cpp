@@ -123,6 +123,7 @@ namespace alpha {
 
 		resetResources();
 //		app_.applyDocumentType(*buffer, docType);
+		bufferAddedSignal_(*this, newBuffer);
 
 		return newBuffer;
 	}
