@@ -306,6 +306,7 @@ namespace ascension {
 			assert(!textAreaWindow_);
 //			attributes.event_mask = Gdk::
 			textAreaWindow_ = Gdk::Window::create(window, &attributes, attributesMask);
+			initializeGraphics();
 			textAreaWindow_->show();
 #if 0
 			register_window(textAreaWindow_);
