@@ -614,19 +614,6 @@ namespace ascension {
 
 		/// @internal Called by constructors.
 		void TextViewer::initialize(const TextViewer* other) {
-			renderer_.reset((other == nullptr) ? new Renderer(*this) : new Renderer(*other->renderer_, *this));
-			textRenderer().addComputedBlockFlowDirectionListener(*this);
-//			renderer_->addFontListener(*this);
-//			renderer_->addVisualLinesListener(*this);
-			caret_.reset(new Caret(*this));
-			caretMotionConnection_ = caret().motionSignal().connect(
-				std::bind(&TextViewer::caretMoved, this, std::placeholders::_1, std::placeholders::_2));
-			matchBracketsChangedConnection_ = caret().matchBracketsChangedSignal().connect(
-				std::bind(&TextViewer::matchBracketsChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-			selectionShapeChangedConnection_ = caret().selectionShapeChangedSignal().connect(
-				std::bind(&TextViewer::selectionShapeChanged, this, std::placeholders::_1));
-			rulerPainter_.reset(new detail::RulerPainter(*this));
-
 			document().addListener(*this);
 			document().addRollbackListener(*this);
 
@@ -830,6 +817,23 @@ namespace ascension {
 			renderer_->layouts().addVisualLinesListener(*this);
 
 			initializeNativeObjects(other);
+		}
+
+		/// @internal
+		void TextViewer::initializeGraphics() {
+			renderer_.reset(/*(other != nullptr) ? new Renderer(*other->renderer_, *this) : */new Renderer(*this));
+			textRenderer().addComputedBlockFlowDirectionListener(*this);
+//			renderer_->addFontListener(*this);
+//			renderer_->addVisualLinesListener(*this);
+			rulerPainter_.reset(new detail::RulerPainter(*this));
+
+			caret_.reset(new Caret(*this));
+			caretMotionConnection_ = caret().motionSignal().connect(
+				std::bind(&TextViewer::caretMoved, this, std::placeholders::_1, std::placeholders::_2));
+			matchBracketsChangedConnection_ = caret().matchBracketsChangedSignal().connect(
+				std::bind(&TextViewer::matchBracketsChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+			selectionShapeChangedConnection_ = caret().selectionShapeChangedSignal().connect(
+				std::bind(&TextViewer::selectionShapeChanged, this, std::placeholders::_1));
 		}
 
 		/**

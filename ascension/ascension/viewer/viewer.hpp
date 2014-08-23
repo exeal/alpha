@@ -283,6 +283,7 @@ namespace ascension {
 			void doShowContextMenu(void* nativeEvent);
 			graphics::Scalar inlineProgressionOffsetInViewport() const;
 			void initialize(const TextViewer* other);
+			void initializeGraphics();
 			void initializeNativeObjects(const TextViewer* other);
 			void paintCaret(graphics::PaintContext& context);
 			void repaintRuler();
