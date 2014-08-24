@@ -425,6 +425,9 @@
     <ClCompile Include="..\src\editor-pane.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\editor-panes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ambient.hpp">
@@ -875,6 +878,9 @@
       <Filter>ascension\Header Files\graphics\font</Filter>
     </ClInclude>
     <ClInclude Include="..\src\editor-pane.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor-panes.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

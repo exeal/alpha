@@ -262,6 +262,7 @@
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</RuntimeTypeInfo>
     </ClCompile>
     <ClCompile Include="..\src\editor-pane.cpp" />
+    <ClCompile Include="..\src\editor-panes.cpp" />
     <ClCompile Include="..\src\editor-view.cpp" />
     <ClCompile Include="..\src\encodings-dialog.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -421,6 +422,7 @@
     <ClInclude Include="..\src\buffer-list.hpp" />
     <ClInclude Include="..\src\buffer.hpp" />
     <ClInclude Include="..\src\editor-pane.hpp" />
+    <ClInclude Include="..\src\editor-panes.hpp" />
     <ClInclude Include="..\src\editor-view.hpp" />
     <ClInclude Include="..\src\function-pointer.hpp" />
     <ClInclude Include="..\src\input.hpp" />

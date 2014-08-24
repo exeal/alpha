@@ -6,7 +6,7 @@
 #include "application.hpp"
 #include "buffer.hpp"
 #include "editor-view.hpp"
-#include "editor-window.hpp"
+#include "editor-panes.hpp"
 #include "function-pointer.hpp"
 #include <ascension/text-editor/command.hpp>
 #include <ascension/viewer/caret.hpp>

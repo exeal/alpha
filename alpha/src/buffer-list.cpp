@@ -7,7 +7,6 @@
 
 #include "application.hpp"
 #include "buffer-list.hpp"
-#include "editor-window.hpp"
 #include "function-pointer.hpp"
 #include <ascension/rules.hpp>
 #include <ascension/kernel/searcher.hpp>
