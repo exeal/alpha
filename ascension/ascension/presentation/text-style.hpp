@@ -326,15 +326,15 @@ namespace ascension {
 		ASCENSION_SCOPED_ENUMS_END;
 
 		inline bool collapsesNewLines(WhiteSpace value) BOOST_NOEXCEPT {
-			return (value & (1 << 0)) != 0;
+			return (boost::native_value(value) & (1 << 0)) != 0;
 		}
 
 		inline bool collapsesSpacesAndTabs(WhiteSpace value) BOOST_NOEXCEPT {
-			return (value & (1 << 1)) != 0;
+			return (boost::native_value(value) & (1 << 1)) != 0;
 		}
 
 		inline bool wrapsText(WhiteSpace value) BOOST_NOEXCEPT {
-			return (value & (1 << 2)) != 0;
+			return (boost::native_value(value) & (1 << 2)) != 0;
 		}
 
 		/**
@@ -1424,7 +1424,7 @@ namespace ascension {
 
 			inline PhysicalTextAnchor computePhysicalTextAnchor(
 					presentation::TextAnchor anchor, presentation::ReadingDirection readingDirection) {
-				switch(anchor) {
+				switch(boost::native_value(anchor)) {
 					case presentation::TextAnchor::MIDDLE:
 						return PhysicalTextAnchor::CENTER;
 					case presentation::TextAnchor::START:

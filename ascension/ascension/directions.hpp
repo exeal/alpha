@@ -83,9 +83,10 @@ namespace ascension {
 				PhysicalDirection::BOTTOM, PhysicalDirection::LEFT,
 				PhysicalDirection::TOP, PhysicalDirection::RIGHT
 			};
-			if(direction >= std::extent<decltype(opposites)>::value)
+			const std::size_t index = boost::underlying_cast<std::size_t>(direction);
+			if(index >= std::extent<decltype(opposites)>::value)
 				throw UnknownValueException("direction");
-			return opposites[direction];
+			return opposites[index];
 		}
 
 #ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
@@ -195,11 +196,11 @@ namespace ascension {
 			}
 			/// Returns a reference to value of @a direction.
 			reference operator[](PhysicalDirection direction) {
-				return (*this)[static_cast<size_type>(direction)];
+				return (*this)[boost::underlying_cast<size_type>(direction)];
 			}
 			/// Returns a reference to value of @a direction.
 			const_reference operator[](PhysicalDirection direction) const {
-				return (*this)[static_cast<size_type>(direction)];
+				return (*this)[boost::underlying_cast<size_type>(direction)];
 			}
 			using std::array<T, 4>::operator[];
 			/// Returns a reference to 'top' value.
@@ -337,9 +338,10 @@ namespace ascension {
 					LineRelativeDirection::UNDER, LineRelativeDirection::OVER,
 					LineRelativeDirection::LINE_RIGHT, LineRelativeDirection::LINE_LEFT
 				};
-				if(direction >= std::extent<decltype(opposites)>::value)
+				const std::size_t index = boost::underlying_cast<std::size_t>(direction);
+				if(index >= std::extent<decltype(opposites)>::value)
 					throw UnknownValueException("direction");
-				return opposites[direction];
+				return opposites[index];
 			}
 
 #ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
@@ -465,9 +467,10 @@ namespace ascension {
 				FlowRelativeDirection::AFTER, FlowRelativeDirection::BEFORE,
 				FlowRelativeDirection::END, FlowRelativeDirection::START
 			};
-			if(direction >= std::extent<decltype(opposites)>::value)
+			const std::size_t index = boost::underlying_cast<std::size_t>(direction);
+			if(index >= std::extent<decltype(opposites)>::value)
 				throw UnknownValueException("direction");
-			return opposites[direction];
+			return opposites[index];
 		}
 
 #ifndef ASCENSION_DOXYGEN_SHOULD_SKIP_THIS
@@ -579,11 +582,11 @@ namespace ascension {
 			}
 			/// Returns a reference to value of @a direction.
 			reference operator[](FlowRelativeDirection direction) {
-				return (*this)[static_cast<size_type>(direction)];
+				return (*this)[boost::underlying_cast<size_type>(direction)];
 			}
 			/// Returns a reference to value of @a direction.
 			const_reference operator[](FlowRelativeDirection direction) const {
-				return (*this)[static_cast<size_type>(direction)];
+				return (*this)[boost::underlying_cast<size_type>(direction)];
 			}
 			using std::array<T, 4>::operator[];
 			/// Returns a reference to 'before' value.

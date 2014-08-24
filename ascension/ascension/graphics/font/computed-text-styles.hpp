@@ -132,11 +132,11 @@ namespace ascension {
 			/// Specialization of @c boost#hash_value function template for @c ComputedTextDecoration.
 			inline std::size_t hash_value(const ComputedTextDecoration& object) BOOST_NOEXCEPT {
 				std::size_t seed = 0;
-				boost::hash_combine<int>(seed, object.lines);
+				boost::hash_combine<int>(seed, boost::native_value(object.lines));
 				boost::hash_combine(seed, object.color);
-				boost::hash_combine<int>(seed, object.style);
-				boost::hash_combine<int>(seed, object.skip);
-				boost::hash_combine<int>(seed, object.underlinePosition);
+				boost::hash_combine<int>(seed, boost::native_value(object.style));
+				boost::hash_combine<int>(seed, boost::native_value(object.skip));
+				boost::hash_combine<int>(seed, boost::native_value(object.underlinePosition));
 				return seed;
 			}
 

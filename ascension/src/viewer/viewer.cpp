@@ -890,7 +890,7 @@ namespace ascension {
 				const presentation::WritingMode writingMode(viewer.presentation().computeWritingMode(&viewer.textRenderer()));
 				const FlowRelativeDirection abstractDirection = mapPhysicalToFlowRelative(writingMode, direction);
 				const Direction logicalDirection = (abstractDirection == FlowRelativeDirection::AFTER || abstractDirection == FlowRelativeDirection::END) ? Direction::FORWARD : Direction::BACKWARD;
-				switch(abstractDirection) {
+				switch(boost::native_value(abstractDirection)) {
 					case FlowRelativeDirection::BEFORE:
 					case FlowRelativeDirection::AFTER:
 						if((modifiers & ~(UserInput::SHIFT_DOWN | UserInput::ALT_DOWN)) == 0) {
@@ -1771,7 +1771,7 @@ namespace ascension {
 			using graphics::PhysicalDirection;
 			const graphics::Rectangle window(widgetapi::bounds(*this, false));
 			graphics::PhysicalFourSides<graphics::Scalar> result(window);
-			switch(rulerPainter_->alignment()) {
+			switch(boost::native_value(rulerPainter_->alignment())) {
 				case PhysicalDirection::LEFT:
 					result.left() += rulerPainter_->allocationWidth();
 					break;

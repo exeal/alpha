@@ -108,7 +108,7 @@ namespace ascension {
 			 */
 			Scalar lineIndent(const TextLayout& layout, Scalar contentMeasure, Index subline /* = 0 */) {
 				// TODO: ??? Is this same as TextLayout.lineStartEdge method?
-				switch(layout.anchor(subline)) {
+				switch(boost::native_value(layout.anchor(subline))) {
 					case TextAnchor::START:
 						return 0;
 					case TextAnchor::MIDDLE:

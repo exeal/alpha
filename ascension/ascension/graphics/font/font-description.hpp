@@ -196,12 +196,12 @@ namespace ascension {
 			/// Specialization of @c boost#hash_value function template for @c FontProperties.
 			inline std::size_t hash_value(const FontProperties& object) BOOST_NOEXCEPT {
 				std::size_t seed = 0;
-				boost::hash_combine<int>(seed, object.weight);
-				boost::hash_combine<int>(seed, object.stretch);
-				boost::hash_combine<int>(seed, object.style);
-//				boost::hash_combine<int>(seed, object.variant);
-//				boost::hash_combine<int>(seed, object.synthesis);
-//				boost::hash_combine<int>(seed, object.orientation);
+				boost::hash_combine<int>(seed, boost::native_value(object.weight));
+				boost::hash_combine<int>(seed, boost::native_value(object.stretch));
+				boost::hash_combine<int>(seed, boost::native_value(object.style));
+//				boost::hash_combine<int>(seed, boost::native_value(object.variant));
+//				boost::hash_combine<int>(seed, boost::native_value(object.synthesis));
+//				boost::hash_combine<int>(seed, boost::native_value(object.orientation));
 				return seed;
 			}
 

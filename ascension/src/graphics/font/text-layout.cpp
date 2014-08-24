@@ -123,7 +123,7 @@ namespace ascension {
 //						context.setStrokeDashArray();
 //						context.setStrokeDashOffset();
 						context.beginPath();
-						switch(static_cast<PhysicalDirection>(side - std::begin(border))) {
+						switch(boost::native_value(static_cast<PhysicalDirection>(side - std::begin(border)))) {
 							case PhysicalDirection::TOP:
 								context
 									.moveTo(geometry::topLeft(rectangle))
@@ -580,7 +580,7 @@ namespace ascension {
 			Scalar TextLayout::lineStartEdge(Index line) const {
 				if(line == 0)
 					return 0;
-				switch(anchor(line)) {
+				switch(boost::native_value(anchor(line))) {
 				case TextAnchor::START:
 					return 0;
 				case TextAnchor::MIDDLE:

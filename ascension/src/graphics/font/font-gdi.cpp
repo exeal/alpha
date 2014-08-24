@@ -66,7 +66,7 @@ namespace ascension {
 				win32::AutoZero<LOGFONTW> lf;
 				lf.lfHeight = -font::round(description.pointSize() * dpi / 72.0);
 				lf.lfEscapement = lf.lfOrientation = orientation;
-				lf.lfWeight = description.properties().weight;
+				lf.lfWeight = boost::underlying_cast<LONG>(description.properties().weight);
 				lf.lfItalic = (description.properties().style == font::FontStyle::ITALIC) || (description.properties().style == font::FontStyle::OBLIQUE);
 				std::wcscpy(lf.lfFaceName, familyName.c_str());
 
@@ -96,7 +96,7 @@ namespace ascension {
 					win32::Handle<HFONT>::Type font(::CreateFontIndirectW(&lf), &::DeleteObject);
 					if(::GetObjectW(font.get(), sizeof(LOGFONTW), &lf) > 0) {
 						static const int WIDTH_RATIOS[] = {1000, 1000, 1000, 500, 625, 750, 875, 1125, 1250, 1500, 2000, 1000};
-						lf.lfWidth = ::MulDiv(lf.lfWidth, WIDTH_RATIOS[description.properties().stretch], 1000);
+						lf.lfWidth = ::MulDiv(lf.lfWidth, WIDTH_RATIOS[boost::underlying_cast<std::size_t>(description.properties().stretch)], 1000);
 					}
 				}
 
@@ -384,7 +384,7 @@ namespace ascension {
 					orientation = 900;
 #endif
 				result.lfHeight = static_cast<LONG>(-object.pointSize() * defaultDpiY() / 72);
-				result.lfWeight = object.properties().weight;
+				result.lfWeight = boost::underlying_cast<LONG>(object.properties().weight);
 				result.lfItalic = object.properties().style != font::FontStyle::ITALIC || object.properties().style != font::FontStyle::OBLIQUE;
 				std::wcsncpy(result.lfFaceName, object.family().name().c_str(), std::extent<decltype(result.lfFaceName)>::value);
 				return std::move(result);

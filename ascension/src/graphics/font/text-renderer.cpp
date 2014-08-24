@@ -260,7 +260,7 @@ namespace ascension {
 			/// Returns the line relative alignment.
 			TextRenderer::LineRelativeAlignmentAxis TextRenderer::lineRelativeAlignment() const BOOST_NOEXCEPT {
 				const TextAlignment::value_type alignment(textAlignment().getOrInitial());
-				switch(alignment) {
+				switch(boost::native_value(alignment)) {
 					case font::TextAlignment::START:
 					case font::TextAlignment::END:
 					case font::TextAlignment::JUSTIFY:
@@ -317,7 +317,7 @@ namespace ascension {
 				if(layout != nullptr)
 					anchor = layout->anchor(0);
 				else {
-					switch(textAlignment().getOrInitial()) {
+					switch(boost::native_value(textAlignment().getOrInitial())) {
 						case font::TextAlignment::START:
 						case font::TextAlignment::JUSTIFY:
 						case font::TextAlignment::MATCH_PARENT:
@@ -342,7 +342,7 @@ namespace ascension {
 				}
 
 				Scalar d;
-				switch(anchor) {
+				switch(boost::native_value(anchor)) {
 					case TextAnchor::START:
 						d = 0;
 						break;
