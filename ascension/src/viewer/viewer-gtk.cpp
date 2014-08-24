@@ -69,7 +69,7 @@ namespace ascension {
 			// TODO: Not implemented.
 		}
 
-		void TextViewer::initializeNativeObjects(const TextViewer* other) {
+		void TextViewer::initializeNativeObjects() {
 			set_can_focus(true);
 			set_redraw_on_allocate(false);
 //			drag_dest_set_target_list();

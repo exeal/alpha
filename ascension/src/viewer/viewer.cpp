@@ -812,11 +812,6 @@ namespace ascension {
 			presentation().setTextRunStyleDirector(
 				shared_ptr<TextRunStyleDirector>(new ZebraTextRunStyleTest(document())));
 #endif // ASCENSION_TEST_TEXT_STYLES
-	
-			renderer_->addDefaultFontListener(*this);
-			renderer_->layouts().addVisualLinesListener(*this);
-
-			initializeNativeObjects(other);
 		}
 
 		/// @internal
@@ -834,6 +829,11 @@ namespace ascension {
 				std::bind(&TextViewer::matchBracketsChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 			selectionShapeChangedConnection_ = caret().selectionShapeChangedSignal().connect(
 				std::bind(&TextViewer::selectionShapeChanged, this, std::placeholders::_1));
+	
+			renderer_->addDefaultFontListener(*this);
+			renderer_->layouts().addVisualLinesListener(*this);
+
+			initializeNativeObjects();
 		}
 
 		/**
