@@ -284,7 +284,7 @@ namespace ascension {
 			graphics::Scalar inlineProgressionOffsetInViewport() const;
 			void initialize(const TextViewer* other);
 			void initializeGraphics();
-			void initializeNativeObjects(const TextViewer* other);
+			void initializeNativeObjects();
 			void paintCaret(graphics::PaintContext& context);
 			void repaintRuler();
 			void updateScrollBars(
