@@ -54,12 +54,6 @@
 
 namespace ascension {
 
-	namespace detail {
-		struct NullDeleter {
-			void operator()(const void*) BOOST_NOEXCEPT {}
-		};
-	} // namespace detail
-
 #ifdef ASCENSION_ABANDONED_AT_VERSION_08
 	// sized integer types
 #	if defined(ASCENSION_HAS_CSTDINT)

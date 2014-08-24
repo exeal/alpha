@@ -14,6 +14,7 @@
  */
 
 #include <ascension/corelib/encoder.hpp>
+#include <boost/core/null_deleter.hpp>
 #include <cassert>
 #include <cstring>	// std.memcpy
 
@@ -79,7 +80,7 @@ namespace ascension {
 								SingleByteEncoderFactory<VISCII_BYTE_TABLE>
 							>("VISCII", standard::VISCII, "Vietnamese (VISCII)", "csVISCII", 0x1a));
 
-							Encoder::registerFactory(std::shared_ptr<const EncoderFactory>(&VIQR, ascension::detail::NullDeleter()));
+							Encoder::registerFactory(std::shared_ptr<const EncoderFactory>(&VIQR, boost::null_deleter()));
 
 							Encoder::registerFactory(std::make_shared<
 								SingleByteEncoderFactory<

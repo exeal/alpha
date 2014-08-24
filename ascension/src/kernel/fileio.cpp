@@ -9,6 +9,7 @@
 
 #include <ascension/config.hpp>	// ASCENSION_NO_STANDARD_ENCODINGS
 #include <ascension/kernel/fileio.hpp>
+#include <boost/core/null_deleter.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/range/algorithm/copy.hpp>
 #include <boost/range/algorithm/find.hpp>
@@ -1135,7 +1136,7 @@ private:
 				}
 
 				if(weakSelf_.get() == nullptr)
-					weakSelf_.reset(this, ascension::detail::NullDeleter());
+					weakSelf_.reset(this, boost::null_deleter());
 				document_.setInput(std::weak_ptr<DocumentInput>(weakSelf_));
 				fileName_ = realName;
 				listeners_.notify<const TextFileDocumentInput&>(&FilePropertyListener::fileNameChanged, *this);

@@ -6,6 +6,7 @@
 
 #include <ascension/graphics/font/font-family.hpp>
 #if !ASCENSION_SELECTS_SHAPING_ENGINE(DIRECT_WRITE) && !ASCENSION_SELECTS_SHAPING_ENGINE(PANGO) && !ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
+#include <boost/core/null_deleter.hpp>
 
 namespace ascension {
 	namespace graphics {
@@ -19,27 +20,27 @@ namespace ascension {
 
 			std::shared_ptr<const FontFamily> FontFamily::createCursiveInstance() {
 				static const FontFamily instance(makeString("cursive"));
-				return std::shared_ptr<const FontFamily>(&instance, ascension::detail::NullDeleter());
+				return std::shared_ptr<const FontFamily>(&instance, boost::null_deleter());
 			}
 
 			std::shared_ptr<const FontFamily> FontFamily::createFantasyInstance() {
 				static const FontFamily instance(makeString("fantasy"));
-				return std::shared_ptr<const FontFamily>(&instance, ascension::detail::NullDeleter());
+				return std::shared_ptr<const FontFamily>(&instance, boost::null_deleter());
 			}
 
 			std::shared_ptr<const FontFamily> FontFamily::createMonospaceInstance() {
 				static const FontFamily instance(makeString("monospace"));
-				return std::shared_ptr<const FontFamily>(&instance, ascension::detail::NullDeleter());
+				return std::shared_ptr<const FontFamily>(&instance, boost::null_deleter());
 			}
 
 			std::shared_ptr<const FontFamily> FontFamily::createSansSerifInstance() {
 				static const FontFamily instance(makeString("sans-serif"));
-				return std::shared_ptr<const FontFamily>(&instance, ascension::detail::NullDeleter());
+				return std::shared_ptr<const FontFamily>(&instance, boost::null_deleter());
 			}
 
 			std::shared_ptr<const FontFamily> FontFamily::createSerifInstance() {
 				static const FontFamily instance(makeString("serif"));
-				return std::shared_ptr<const FontFamily>(&instance, ascension::detail::NullDeleter());
+				return std::shared_ptr<const FontFamily>(&instance, boost::null_deleter());
 			}
 
 			FontFamily::FontFamily(const String& name) : name_(name) {

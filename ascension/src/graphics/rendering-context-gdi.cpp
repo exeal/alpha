@@ -5,14 +5,15 @@
  * @date 2012-2014
  */
 
+#include <ascension/graphics/rendering-context.hpp>
+#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 #include <ascension/graphics/paint.hpp>
 #include <ascension/graphics/native-conversion.hpp>
-#include <ascension/graphics/rendering-context.hpp>
 #include <ascension/graphics/font/font-collection.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/font-render-context.hpp>
+#include <boost/core/null_deleter.hpp>
 #include <boost/math/special_functions/round.hpp>	// boost.iround
-#if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 
 namespace ascension {
 	namespace graphics {
@@ -25,9 +26,9 @@ namespace ascension {
 			setFillStyle(std::shared_ptr<Paint>(new SolidColor(Color::OPAQUE_BLACK)));
 			setStrokeStyle(std::shared_ptr<Paint>(new SolidColor(Color::OPAQUE_BLACK)));
 
-			win32::Handle<HFONT>::Type fontHandle(static_cast<HFONT>(::GetCurrentObject(nativeObject.get(), OBJ_FONT)), ascension::detail::NullDeleter());
+			win32::Handle<HFONT>::Type fontHandle(static_cast<HFONT>(::GetCurrentObject(nativeObject.get(), OBJ_FONT)), boost::null_deleter());
 			if(fontHandle.get() == nullptr)
-				fontHandle.reset(static_cast<HFONT>(::GetStockObject(DEVICE_DEFAULT_FONT)), ascension::detail::NullDeleter());
+				fontHandle.reset(static_cast<HFONT>(::GetStockObject(DEVICE_DEFAULT_FONT)), boost::null_deleter());
 			assert(fontHandle.get() != nullptr);
 			setFont(std::make_shared<const font::Font>(fontHandle));
 
@@ -86,7 +87,7 @@ namespace ascension {
 
 		RenderingContext2D& RenderingContext2D::changePen(win32::Handle<HPEN>::Type newPen) {
 			assert(newPen.get() != nullptr);
-			win32::Handle<HPEN>::Type oldPen(static_cast<HPEN>(::SelectObject(nativeObject_.get(), newPen.get())), ascension::detail::NullDeleter());
+			win32::Handle<HPEN>::Type oldPen(static_cast<HPEN>(::SelectObject(nativeObject_.get(), newPen.get())), boost::null_deleter());
 			if(oldPen.get() == nullptr)
 				throw makePlatformError();
 			savedStates_.top().pen = newPen;
@@ -639,8 +640,8 @@ namespace ascension {
 					throw makePlatformError();
 				savedStates_.pop();
 				updatePenAndBrush();
-				win32::Handle<HPEN>::Type currentPen(static_cast<HPEN>(::GetCurrentObject(nativeObject_.get(), OBJ_PEN)), ascension::detail::NullDeleter());
-				win32::Handle<HBRUSH>::Type currentBrush(static_cast<HBRUSH>(::GetCurrentObject(nativeObject_.get(), OBJ_BRUSH)), ascension::detail::NullDeleter());
+				win32::Handle<HPEN>::Type currentPen(static_cast<HPEN>(::GetCurrentObject(nativeObject_.get(), OBJ_PEN)), boost::null_deleter());
+				win32::Handle<HBRUSH>::Type currentBrush(static_cast<HBRUSH>(::GetCurrentObject(nativeObject_.get(), OBJ_BRUSH)), boost::null_deleter());
 				if(currentPen.get() != savedStates_.top().pen.get())
 					::SelectObject(nativeObject_.get(), savedStates_.top().pen.get());
 				if(currentBrush.get() != savedStates_.top().brush.get())

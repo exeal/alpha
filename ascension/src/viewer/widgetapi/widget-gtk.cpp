@@ -10,6 +10,7 @@
 #	include <ascension/graphics/color.hpp>
 #	include <ascension/graphics/native-conversion.hpp>
 #	include <ascension/graphics/rendering-context.hpp>
+#	include <boost/core/null_deleter.hpp>
 #	include <gtkmm/button.h>
 #	include <gtkmm/menu.h>
 #	include <gtkmm/menuitem.h>
@@ -42,7 +43,7 @@ namespace ascension {
 				const Glib::RefPtr<const Gdk::Window> window(widget->get_window());
 				if(!window)
 					throw NullPointerException("widget");
-				win32::Handle<HWND>::Type hwnd(::gdk_win32_window_get_impl_hwnd(const_cast<GdkWindow*>(window->gobj())), ascension::detail::NullDeleter());
+				win32::Handle<HWND>::Type hwnd(::gdk_win32_window_get_impl_hwnd(const_cast<GdkWindow*>(window->gobj())), boost::null_deleter());
 				win32::Handle<HDC>::Type dc(::GetDC(hwnd.get()), std::bind(&::ReleaseDC, hwnd.get(), std::placeholders::_1));
 				return std::unique_ptr<graphics::RenderingContext2D>(new graphics::RenderingContext2D(dc));
 #endif
