@@ -7,7 +7,7 @@
 
 #include "buffer.hpp"
 #include "buffer-list.hpp"
-#include "editor-window.hpp"
+#include "editor-panes.hpp"
 #include "function-pointer.hpp"
 //#include "command.hpp"
 #include "../resource/messages.h"

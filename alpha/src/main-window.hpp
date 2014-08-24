@@ -9,7 +9,7 @@
 #ifndef ALPHA_MAIN_WINDOW_HPP
 #define ALPHA_MAIN_WINDOW_HPP
 //#include "buffer.hpp"
-#include "editor-window.hpp"
+#include "editor-panes.hpp"
 //#include "search.hpp"	// ui.SearchDialog
 #include "status-bar.hpp"
 #include <gtkmm/hvbox.h>
@@ -17,8 +17,6 @@
 #include <memory>	// std.unique_ptr
 
 namespace alpha {
-	// fwd
-	class EditorPanes;
 	namespace ui {
 //		class SearchDialog;
 //		class BookmarkDialog;

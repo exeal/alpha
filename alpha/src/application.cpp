@@ -9,8 +9,8 @@
 #include "buffer-list.hpp"
 #include "input.hpp"
 //#include "ui.hpp"
+#include "editor-panes.hpp"
 #include "editor-view.hpp"
-#include "editor-window.hpp"
 #include "function-pointer.hpp"
 //#include "search.hpp"
 //#include <ascension/text-editor.hpp>
