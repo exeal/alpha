@@ -18,7 +18,7 @@ namespace alpha {
 	class BufferList;
 	class EditorView;
 
-	class EditorPane : public Gtk::Container, private boost::noncopyable {
+	class EditorPane : public Gtk::Stack, private boost::noncopyable {
 	public:
 		explicit EditorPane(std::unique_ptr<EditorView> initialViewer = std::unique_ptr<EditorView>());
 		EditorPane::EditorPane(const EditorPane& other);
