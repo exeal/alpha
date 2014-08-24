@@ -55,19 +55,19 @@ namespace ascension {
 			static const PhysicalDirection
 				horizontalMappings[]  = {PhysicalDirection::TOP, PhysicalDirection::BOTTOM, PhysicalDirection::LEFT, PhysicalDirection::RIGHT},
 				verticalMappings[] = {PhysicalDirection::RIGHT, PhysicalDirection::LEFT, PhysicalDirection::TOP, PhysicalDirection::BOTTOM};
-			if(static_cast<int>(from) < 0 || static_cast<std::size_t>(from) >= std::extent<decltype(horizontalMappings)>::value)
+			if(boost::native_value(from) < 0 || boost::underlying_cast<std::size_t>(from) >= std::extent<decltype(horizontalMappings)>::value)
 				throw UnknownValueException("from");
 			if(writingMode.inlineFlowDirection == RIGHT_TO_LEFT && (from == FlowRelativeDirection::START || from == FlowRelativeDirection::END))
 				from = !from;
 			if(isHorizontal(writingMode.blockFlowDirection))	// this may throw UnknownValueException
-				return horizontalMappings[from];
+				return horizontalMappings[boost::underlying_cast<std::size_t>(from)];
 			else {
 				if(from == FlowRelativeDirection::BEFORE || from == FlowRelativeDirection::AFTER) {
 					if(writingMode.blockFlowDirection == VERTICAL_LR)
 						from = !from;
 				} else if(resolveTextOrientation(writingMode) == SIDEWAYS_LEFT)
 					from = !from;
-				return verticalMappings[from];
+				return verticalMappings[boost::underlying_cast<std::size_t>(from)];
 			}
 		}
 
@@ -84,12 +84,12 @@ namespace ascension {
 			static const PhysicalDirection
 				horizontalMappings[] = {PhysicalDirection::TOP, PhysicalDirection::BOTTOM, PhysicalDirection::LEFT, PhysicalDirection::RIGHT},
 				verticalMappings[] = {PhysicalDirection::RIGHT, PhysicalDirection::LEFT, PhysicalDirection::TOP, PhysicalDirection::BOTTOM};
-			if(static_cast<int>(from) < 0 || static_cast<std::size_t>(from) >= std::extent<decltype(horizontalMappings)>::value)
+			if(boost::native_value(from) < 0 || boost::underlying_cast<std::size_t>(from) >= std::extent<decltype(horizontalMappings)>::value)
 				throw UnknownValueException("from");
 			if(isHorizontal(writingMode.blockFlowDirection))	// this may throw UnknownValueException
-				return horizontalMappings[from];
+				return horizontalMappings[boost::underlying_cast<std::size_t>(from)];
 			else
-				return verticalMappings[(resolveTextOrientation(writingMode) != SIDEWAYS_LEFT) ? from : !from];
+				return verticalMappings[boost::underlying_cast<std::size_t>((resolveTextOrientation(writingMode) != SIDEWAYS_LEFT) ? from : !from)];
 		}
 
 		/**
@@ -104,12 +104,12 @@ namespace ascension {
 			static const FlowRelativeDirection
 				horizontalMappings[] = {FlowRelativeDirection::BEFORE, FlowRelativeDirection::END, FlowRelativeDirection::AFTER, FlowRelativeDirection::START},
 				verticalMappings[] = {FlowRelativeDirection::START, FlowRelativeDirection::BEFORE, FlowRelativeDirection::END, FlowRelativeDirection::AFTER};
-			if(static_cast<int>(from) < 0 || static_cast<std::size_t>(from) >= std::extent<decltype(horizontalMappings)>::value)
+			if(boost::native_value(from) < 0 || boost::underlying_cast<std::size_t>(from) >= std::extent<decltype(horizontalMappings)>::value)
 				throw UnknownValueException("from");
 			if(isHorizontal(writingMode.blockFlowDirection)) {	// this may throw UnknownValueException
 				if(writingMode.inlineFlowDirection == RIGHT_TO_LEFT && (from == graphics::PhysicalDirection::LEFT || from == graphics::PhysicalDirection::RIGHT))
 					from = !from;
-				return horizontalMappings[from];
+				return horizontalMappings[boost::underlying_cast<std::size_t>(from)];
 			} else {
 				if(from == graphics::PhysicalDirection::LEFT || from == graphics::PhysicalDirection::RIGHT) {
 					if(writingMode.blockFlowDirection == VERTICAL_LR)
@@ -120,7 +120,7 @@ namespace ascension {
 					if(resolveTextOrientation(writingMode) == SIDEWAYS_LEFT)
 						from = !from;
 				}
-				return verticalMappings[from];
+				return verticalMappings[boost::underlying_cast<std::size_t>(from)];
 			}
 		}
 
@@ -137,12 +137,12 @@ namespace ascension {
 			static const LineRelativeDirection
 				horizontalMappings[] = {LineRelativeDirection::OVER, LineRelativeDirection::LINE_RIGHT, LineRelativeDirection::UNDER, LineRelativeDirection::LINE_LEFT},
 				verticalMappings[] = {LineRelativeDirection::LINE_LEFT, LineRelativeDirection::OVER, LineRelativeDirection::LINE_RIGHT, LineRelativeDirection::UNDER};
-			if(static_cast<int>(from) < 0 || static_cast<std::size_t>(from) >= std::extent<decltype(horizontalMappings)>::value)
+			if(boost::native_value(from) < 0 || boost::underlying_cast<std::size_t>(from) >= std::extent<decltype(horizontalMappings)>::value)
 				throw UnknownValueException("from");
 			if(isHorizontal(writingMode.blockFlowDirection))	// this may throw UnknownValueException
-				return horizontalMappings[from];
+				return horizontalMappings[boost::underlying_cast<std::size_t>(from)];
 			else
-				return verticalMappings[(resolveTextOrientation(writingMode) != SIDEWAYS_LEFT) ? from : !from];
+				return verticalMappings[boost::underlying_cast<std::size_t>((resolveTextOrientation(writingMode) != SIDEWAYS_LEFT) ? from : !from)];
 		}
 		/// @}
 

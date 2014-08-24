@@ -166,7 +166,7 @@ namespace ascension {
 				width = boost::get_optional_value_or(lineWidth, width);
 				if(lineCap) {
 					style &= ~PS_ENDCAP_MASK;
-					switch(*lineCap) {
+					switch(boost::native_value(*lineCap)) {
 						case LineCap::BUTT:
 							style |= PS_ENDCAP_FLAT;
 							break;
@@ -182,7 +182,7 @@ namespace ascension {
 				}
 				if(lineJoin) {
 					style &= ~PS_JOIN_MASK;
-					switch(*lineJoin) {
+					switch(boost::native_value(*lineJoin)) {
 						case LineJoin::BEVEL:
 							style |= PS_JOIN_BEVEL;
 							break;
@@ -737,7 +737,7 @@ namespace ascension {
 				throw makePlatformError();
 			const bool rtl = (v & TA_RTLREADING) != 0;
 			v &= ~(TA_LEFT | TA_CENTER | TA_RIGHT);
-			switch(textAlignment) {
+			switch(boost::native_value(textAlignment)) {
 				case TextAlignment::START:
 					v |= rtl ? TA_RIGHT : TA_LEFT;
 					break;
@@ -764,7 +764,7 @@ namespace ascension {
 			if(v == GDI_ERROR)
 				throw makePlatformError();
 			v &= ~(TA_BASELINE | TA_BOTTOM | TA_TOP);
-			switch(textBaseline) {
+			switch(boost::native_value(textBaseline)) {
 				case presentation::AlignmentBaseline::BEFORE_EDGE:
 				case presentation::AlignmentBaseline::TEXT_BEFORE_EDGE:
 					v |= TA_TOP;

@@ -116,7 +116,7 @@ namespace ascension {
 
 			Pango::FontDescription&& toNative(const font::FontDescription& object, const Pango::FontDescription* /* = nullptr */) {
 				Pango::FontDescription result(toGlibUstring(object.family().name()));
-				switch(object.properties().style) {
+				switch(boost::native_value(object.properties().style)) {
 					case font::FontStyle::NORMAL:
 						result.set_style(Pango::STYLE_NORMAL);
 						break;
@@ -135,7 +135,7 @@ namespace ascension {
 						result.set_variant(Pango::VARIANT_SMALL_CAPS);
 						break;
 				}
-*/				switch(object.properties().weight) {
+*/				switch(boost::native_value(object.properties().weight)) {
 					case font::FontWeight::ULTRA_LIGHT:
 						result.set_weight(Pango::WEIGHT_ULTRALIGHT);
 						break;
@@ -158,7 +158,7 @@ namespace ascension {
 						result.set_weight(Pango::WEIGHT_HEAVY);
 						break;
 				}
-				switch(object.properties().stretch) {
+				switch(boost::native_value(object.properties().stretch)) {
 					case font::FontStretch::ULTRA_CONDENSED:
 						result.set_stretch(Pango::STRETCH_ULTRA_CONDENSED);
 						break;

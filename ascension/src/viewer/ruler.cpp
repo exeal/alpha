@@ -106,7 +106,7 @@ namespace ascension {
 				using presentation::detail::computePhysicalTextAnchor;
 				const presentation::WritingMode writingMode(viewer_.presentation().computeWritingMode(&viewer_.textRenderer()));
 				PhysicalTextAnchor anchor;
-				switch(declaredStyles().alignment.getOrInitial()) {
+				switch(boost::native_value(declaredStyles().alignment.getOrInitial())) {
 					case presentation::TextAlignment::START:
 						anchor = computePhysicalTextAnchor(presentation::TextAnchor::START, writingMode.inlineFlowDirection);
 						break;
@@ -122,7 +122,7 @@ namespace ascension {
 					default:
 						ASCENSION_ASSERT_NOT_REACHED();
 				}
-				switch(anchor) {
+				switch(boost::native_value(anchor)) {
 					// TODO: 'text-orientation' is ignored.
 					case PhysicalTextAnchor::LEFT:
 						return presentation::isHorizontal(writingMode.blockFlowDirection) ? graphics::PhysicalDirection::LEFT : graphics::PhysicalDirection::TOP;
@@ -303,7 +303,7 @@ namespace ascension {
 				using graphics::Dimension;
 				using graphics::PhysicalDirection;
 				const graphics::Rectangle localBounds(viewers::widgetapi::bounds(viewer_, false));
-				switch(alignment()) {
+				switch(boost::native_value(alignment())) {
 					case PhysicalDirection::LEFT:
 						return graphics::Rectangle(
 							geometry::topLeft(localBounds),
@@ -333,7 +333,7 @@ namespace ascension {
 				using graphics::Dimension;
 				using graphics::PhysicalDirection;
 				const graphics::Rectangle localBounds(viewers::widgetapi::bounds(viewer_, false));
-				switch(alignment()) {
+				switch(boost::native_value(alignment())) {
 					case PhysicalDirection::LEFT:
 						return graphics::Rectangle(
 							geometry::translate(

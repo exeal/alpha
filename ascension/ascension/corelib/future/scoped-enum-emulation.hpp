@@ -2,13 +2,13 @@
  * @file scoped-enum-emulation.hpp
  * Defines macros emulate C++11 scoped enums.
  * @author exeal
- * @date 2012-05-31 separated from future.hpp
+ * @date 2012-05-31 Separated from future.hpp
  */
 
 #ifndef ASCENSION_SCOPED_ENUM_EMULATION_HPP
 #define ASCENSION_SCOPED_ENUM_EMULATION_HPP
 #include <boost/config.hpp>
-#include <boost/detail/scoped_enum_emulation.hpp>
+#include <boost/core/scoped_enum.hpp>
 
 #ifndef ASCENSION_SCOPED_ENUMS_BEGIN
 #	if defined(BOOST_NO_SCOPED_ENUMS) || defined(BOOST_NO_CXX11_SCOPED_ENUMS)
