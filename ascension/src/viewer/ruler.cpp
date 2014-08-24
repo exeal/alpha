@@ -11,6 +11,7 @@
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/viewer.hpp>
+#include <boost/core/null_deleter.hpp>
 #ifdef _DEBUG
 #	include <boost/log/trivial.hpp>
 //#	define ASCENSION_DIAGNOSE_INHERENT_DRAWING
@@ -34,7 +35,7 @@ namespace ascension {
 			static const RulerStyles::LineNumbers defaultInstance;
 			if(const std::shared_ptr<const RulerStyles::LineNumbers> p = rulerStyles.lineNumbers)
 				return p;
-			return std::shared_ptr<const RulerStyles::LineNumbers>(&defaultInstance, ascension::detail::NullDeleter());
+			return std::shared_ptr<const RulerStyles::LineNumbers>(&defaultInstance, boost::null_deleter());
 		}
 
 		// RulerStyles.IndicatorMargin ////////////////////////////////////////////////////////////////////////////////
@@ -53,7 +54,7 @@ namespace ascension {
 			static const RulerStyles::IndicatorMargin defaultInstance;
 			if(const std::shared_ptr<const RulerStyles::IndicatorMargin> p = rulerStyles.indicatorMargin)
 				return p;
-			return std::shared_ptr<const RulerStyles::IndicatorMargin>(&defaultInstance, ascension::detail::NullDeleter());
+			return std::shared_ptr<const RulerStyles::IndicatorMargin>(&defaultInstance, boost::null_deleter());
 		}
 
 		namespace detail {

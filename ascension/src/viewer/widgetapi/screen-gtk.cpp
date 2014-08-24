@@ -8,6 +8,7 @@
 #include <ascension/viewer/widgetapi/screen.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <ascension/graphics/rendering-context.hpp>
+#	include <boost/core/null_deleter.hpp>
 #	include <gdkmm/visual.h>
 #	include <gdkmm/window.h>
 #	if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
@@ -27,7 +28,7 @@ namespace ascension {
 			std::unique_ptr<graphics::RenderingContext2D> Screen::createRenderingContext() const {
 				if(const Glib::RefPtr<Gdk::Window> window = Glib::RefPtr<Gdk::Window>::cast_const(native()->get_root_window())) {
 #if ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
-					win32::Handle<HWND>::Type hwnd(::gdk_win32_window_get_impl_hwnd(window->gobj()), ascension::detail::NullDeleter());
+					win32::Handle<HWND>::Type hwnd(::gdk_win32_window_get_impl_hwnd(window->gobj()), boost::null_deleter());
 					win32::Handle<HDC>::Type dc(::GetDC(hwnd.get()), std::bind(&::ReleaseDC, hwnd.get(), std::placeholders::_1));
 					return std::unique_ptr<graphics::RenderingContext2D>(new graphics::RenderingContext2D(dc));
 #else

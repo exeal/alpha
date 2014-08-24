@@ -13,7 +13,7 @@ namespace ascension {
 			Cursor::Cursor(Cursor::BuiltinShape shape) {
 				if(!IS_INTRESOURCE(shape))
 					throw std::invalid_argument("shape");
-				impl_.reset(static_cast<HCURSOR>(::LoadImageW(nullptr, shape, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED)), detail::NullDeleter());
+				impl_.reset(static_cast<HCURSOR>(::LoadImageW(nullptr, shape, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED)), boost::null_deleter());
 			}
 
 			Cursor::Cursor(const Cursor& other) : impl_(::CopyCursor(other.impl_), &::DestroyCursor) {

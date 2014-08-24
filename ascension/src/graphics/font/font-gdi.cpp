@@ -14,6 +14,7 @@
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/config.hpp>
+#include <boost/core/null_deleter.hpp>
 #include <boost/functional/hash.hpp>	// boost.hash_combine, boost.hash_value
 #include <boost/range/algorithm/binary_search.hpp>
 #include <boost/range/algorithm/sort.hpp>
@@ -73,7 +74,7 @@ namespace ascension {
 				// handle 'font-size-adjust'
 				if(sizeAdjust != boost::none && boost::get(sizeAdjust) > 0.0) {
 					win32::Handle<HFONT>::Type font(::CreateFontIndirectW(&lf), &::DeleteObject);
-					win32::Handle<HFONT>::Type oldFont(static_cast<HFONT>(::SelectObject(deviceContext.get(), font.get())), ascension::detail::NullDeleter());
+					win32::Handle<HFONT>::Type oldFont(static_cast<HFONT>(::SelectObject(deviceContext.get(), font.get())), boost::null_deleter());
 					TEXTMETRICW tm;
 					if(win32::boole(::GetTextMetricsW(deviceContext.get(), &tm))) {
 						GLYPHMETRICS gm;

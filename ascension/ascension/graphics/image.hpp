@@ -17,6 +17,7 @@
 #	include <QImage.h>
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 #	include <ascension/win32/handle.hpp>
+#	include <boost/core/null_deleter.hpp>
 #endif
 #include <boost/range/iterator_range.hpp>
 
@@ -89,7 +90,7 @@ namespace ascension {
 			std::unique_ptr<std::uint8_t[]> buffer_;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 			win32::Handle<HBITMAP>::Type impl_;
-			std::unique_ptr<std::uint8_t[], ascension::detail::NullDeleter> buffer_;
+			std::unique_ptr<std::uint8_t[], boost::null_deleter> buffer_;
 #endif
 		};
 	}

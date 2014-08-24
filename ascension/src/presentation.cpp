@@ -11,6 +11,7 @@
 #include <ascension/presentation/presentation-reconstructor.hpp>
 #include <ascension/presentation/text-style.hpp>
 #include <ascension/rules.hpp>
+#include <boost/core/null_deleter.hpp>
 #include <boost/foreach.hpp>
 #ifdef BOOST_OS_WINDOWS
 #include <shellapi.h>	// ShellExecuteW
@@ -54,7 +55,7 @@ namespace ascension {
 		std::shared_ptr<const TextRunStyle> defaultTextRunStyle(const TextLineStyle& lineStyle) {
 			static const TextRunStyle defaultInstance;
 			return (lineStyle.defaultRunStyle.get() != nullptr) ?
-				lineStyle.defaultRunStyle : std::shared_ptr<const TextRunStyle>(&defaultInstance, ascension::detail::NullDeleter());
+				lineStyle.defaultRunStyle : std::shared_ptr<const TextRunStyle>(&defaultInstance, boost::null_deleter());
 		}
 
 		/**
@@ -66,7 +67,7 @@ namespace ascension {
 		std::shared_ptr<const TextLineStyle> defaultTextLineStyle(const TextToplevelStyle& toplevelStyle) {
 			static const TextLineStyle defaultInstance;
 			return (toplevelStyle.defaultLineStyle.get() != nullptr) ?
-				toplevelStyle.defaultLineStyle : std::shared_ptr<const TextLineStyle>(&defaultInstance, ascension::detail::NullDeleter());
+				toplevelStyle.defaultLineStyle : std::shared_ptr<const TextLineStyle>(&defaultInstance, boost::null_deleter());
 		}
 
 
