@@ -223,6 +223,10 @@
     <ClCompile Include="..\..\ascension\src\text-editor\input-sequence-checker.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\kill-ring.cpp" />
     <ClCompile Include="..\..\ascension\src\text-editor\session.cpp" />
+    <ClCompile Include="..\..\ascension\src\viewer\auto-scroll-origin-mark.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\..\ascension\src\viewer\caret-blinker.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\caret-gtk.cpp" />
     <ClCompile Include="..\..\ascension\src\viewer\caret-shaper.cpp" />
