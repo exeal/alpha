@@ -31,6 +31,10 @@ namespace alpha {
 #endif
 
 		private:
+#ifdef _DEBUG
+			bool on_event(GdkEvent* event) override;
+			void on_realize() override;
+#endif
 			// ascension.kernel.Document signals
 			void selectedBufferAccessibleRegionChanged(const ascension::kernel::Document& document);
 			// EditorPanes signals

@@ -81,7 +81,7 @@ namespace ascension {
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 		namespace detail {
-			class TextViewerScrollableProperties : public Gtk::Widget {
+			class TextViewerScrollableProperties : public Gtk::Scrollable, public Gtk::Widget {
 			protected:
 				TextViewerScrollableProperties();
 #ifndef ASCENSION_PIXELFUL_SCROLL_IN_BPD
@@ -89,8 +89,8 @@ namespace ascension {
 				void updateScrollPositionsBeforeChanged();
 #endif
 		private:
-				Glib::Property<Glib::RefPtr<Gtk::Adjustment>> horizontalAdjustment_, verticalAdjustment_;
-				Glib::Property<Gtk::ScrollablePolicy> horizontalScrollPolicy_, verticalScrollPolicy_;
+//				Glib::Property<Glib::RefPtr<Gtk::Adjustment>> horizontalAdjustment_, verticalAdjustment_;
+//				Glib::Property<Gtk::ScrollablePolicy> horizontalScrollPolicy_, verticalScrollPolicy_;
 #ifndef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 				graphics::PhysicalTwoAxes<double> scrollPositionsBeforeChanged_;
 #endif
@@ -103,7 +103,7 @@ namespace ascension {
 				// QPlainTextEdit and QTextEdit inherit QAbstractScrollArea.
 				// NSTextView inherits NSText (which inherits NSView).
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				public detail::TextViewerScrollableProperties, public Gtk::Scrollable,
+				public detail::TextViewerScrollableProperties,/* public Gtk::Scrollable,*/
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				public QAbstractScrollArea,
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
@@ -443,7 +443,7 @@ namespace ascension {
 		private:
 			// big stars
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-			Glib::RefPtr<Gdk::Window> textAreaWindow_, rulerWindow_;
+			Glib::RefPtr<Gdk::Window> window_;
 #endif	// ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			presentation::Presentation& presentation_;
 			std::unique_ptr<Caret> caret_;

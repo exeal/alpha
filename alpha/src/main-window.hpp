@@ -35,6 +35,10 @@ namespace alpha {
 			/// @}
 
 		private:
+#ifdef _DEBUG
+			bool on_event(GdkEvent* event) override;
+#endif
+		private:
 			Gtk::VBox vbox_;
 			EditorPanes editorPanes_;
 //			std::unique_ptr<ui::SearchDialog> searchDialog_;

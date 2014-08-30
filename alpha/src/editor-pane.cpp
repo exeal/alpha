@@ -12,6 +12,7 @@
 #include "editor-view.hpp"
 #include "function-pointer.hpp"
 #include <ascension/graphics/font/text-viewport.hpp>
+#include <boost/core/addressof.hpp>
 #include <boost/foreach.hpp>
 
 namespace alpha {
@@ -43,19 +44,33 @@ namespace alpha {
 
 	/**
 	 * Adds the new viewer.
-	 * @param viewer the viewer to add
-	 * @param select If set to @c true, @a viewer is selected automatically
+	 * @param viewer The viewer to add
 	 * @throw ascension#NullPointerException @a viewer is @c null
 	 */
-	void EditorPane::add(std::unique_ptr<EditorView> viewer, bool select /* = true */) {
+	void EditorPane::add(std::unique_ptr<EditorView> viewer) {
 		if(viewer.get() == nullptr)
 			throw ascension::NullPointerException("viewer");
+		std::ostringstream oss;
+		oss << std::hex << reinterpret_cast<std::uintptr_t>(boost::addressof(*viewer));
+		const Glib::ustring name(oss.str());	// dummy
+		viewer->show();
+		Gtk::Stack::add(*viewer, name);
 		if(viewers_.empty()) {
 			viewers_.push_front(std::move(viewer));
 			this->select(*viewers_.front());
 		} else
 			viewers_.push_back(std::move(viewer));
 	}
+
+#ifdef _DEBUG
+	bool EditorPane::on_event(GdkEvent* event) {
+		return Gtk::Stack::on_event(event);
+	}
+
+	void EditorPane::on_realize() {
+		return Gtk::Stack::on_realize();
+	}
+#endif
 
 	/**
 	 * Removes the specified viewer from this @c EditorPane.
@@ -72,6 +87,8 @@ namespace alpha {
 
 	/// Removes all viewers from this @c EditorPane.
 	void EditorPane::removeAll() BOOST_NOEXCEPT {
+		BOOST_FOREACH(std::unique_ptr<EditorView>& viewer, viewers_)
+			Gtk::Stack::remove(*viewer);
 		viewers_.clear();
 	}
 
@@ -86,16 +103,16 @@ namespace alpha {
 			if(&(*(i++))->document() == &buffer) {
 				if(i != std::end(viewers_))
 					select(**i);
-				viewers_.erase(--i);
-				return;
+				--i;
 			} else {
 				for(const auto e(std::end(viewers_)); i != e; ++i) {
-					if(&(*i)->document() == &buffer) {
-						viewers_.erase(i);
-						return;
-					}
+					if(&(*i)->document() == &buffer)
+						break;
 				}
 			}
+			Gtk::Stack::remove(**i);
+			viewers_.erase(i);
+			return;
 		}
 		throw ascension::NoSuchElementException("buffer");
 	}
@@ -137,20 +154,30 @@ namespace alpha {
 		bool found = false;
 		BOOST_FOREACH(const std::unique_ptr<EditorView>& viewer, viewers_) {
 			if(&viewer->document() == &buffer) {
-				viewer->show();
+				set_visible_child(*viewer);
+//				viewer->show();
 				if(hadFocus)
 					viewer->grab_focus();
 				found = true;
+#ifdef _DEBUG
+				bool visible = is_visible();
+				bool has_window = get_has_window();
+				int width = get_width(), height = get_height();
+				visible = viewer->is_visible();
+				has_window = viewer->get_has_window();
+				width = viewer->get_width();
+				height = viewer->get_height();
+#endif
 			}
 		}
 		if(!found)
 			throw ascension::NoSuchElementException("buffer");
 
-		// hide the others
-		BOOST_FOREACH(const std::unique_ptr<EditorView>& viewer, viewers_) {
-			if(&viewer->document() != &buffer)
-				viewer->hide();
-		}
+//		// hide the others
+//		BOOST_FOREACH(const std::unique_ptr<EditorView>& viewer, viewers_) {
+//			if(&viewer->document() != &buffer)
+//				viewer->hide();
+//		}
 	}
 
 	/// Returns the selected buffer.

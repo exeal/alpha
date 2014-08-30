@@ -9,6 +9,7 @@
 #include <ascension/corelib/text/break-iterator.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
+#include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>
 #include <ascension/presentation/writing-mode-mappings.hpp>
 #include <ascension/rules.hpp>
@@ -113,11 +114,11 @@ namespace ascension {
 		 * Constructor.
 		 * @param presentation The presentation object
 		 */
-		TextViewer::TextViewer(presentation::Presentation& presentation) :
+		TextViewer::TextViewer(presentation::Presentation& presentation) :/*
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				Glib::ObjectBase("ascension.viewers.TextViewer"),
+				Glib::ObjectBase("ascension.viewers.TextViewer"), detail::TextViewerScrollableProperties(),
 #endif
-				presentation_(presentation), mouseInputDisabledCount_(0) {
+*/				presentation_(presentation), mouseInputDisabledCount_(0) {
 			initialize(nullptr);
 
 			// initializations of renderer_ and mouseInputStrategy_ are in initializeWindow()
@@ -129,7 +130,7 @@ namespace ascension {
 		 */
 		TextViewer::TextViewer(const TextViewer& other) :
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				Glib::ObjectBase("ascension.viewers.TextViewer"),
+				Glib::ObjectBase("ascension.viewers.TextViewer"), detail::TextViewerScrollableProperties(),
 #endif
 				presentation_(other.presentation_), mouseInputDisabledCount_(0) {
 			initialize(&other);
@@ -2061,7 +2062,7 @@ namespace ascension {
 			else {
 				// scroll image by BLIT
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				textAreaWindow_->scroll(geometry::x(scrollOffsetsInPixels), geometry::y(scrollOffsetsInPixels));
+				Cairo::RefPtr<Cairo::Region> boundsToMove(Cairo::Region::create(graphics::toNative<Cairo::RectangleInt>(boundsToScroll)));
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				::ScrollWindowEx(handle().get(),
