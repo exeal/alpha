@@ -131,9 +131,12 @@ namespace ascension {
 			}
 
 			void setParentWindow(Proxy<Widget> widget, Proxy<Window> newParent) {
-				if(newParent)
-					widget->set_parent_window(newParent.get());
-				else
+				if(newParent) {
+					if(newParent.sp())
+						widget->set_parent_window(newParent.sp());
+					else
+						::gtk_widget_set_parent_window(widget->gobj(), newParent->gobj());
+				} else
 					widget->unparent();
 			}
 
