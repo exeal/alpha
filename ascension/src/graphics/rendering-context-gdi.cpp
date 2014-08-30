@@ -671,7 +671,7 @@ namespace ascension {
 				throw NullPointerException("fillStyle");
 			win32::Handle<HBRUSH>::Type newBrush(::CreateBrushIndirect(&fillStyle->native()), &::DeleteObject);
 			if(newBrush.get() != nullptr) {
-				win32::Handle<HBRUSH>::Type oldBrush(static_cast<HBRUSH>(::SelectObject(nativeObject_.get(), newBrush.get())));
+				win32::Handle<HBRUSH>::Type oldBrush(static_cast<HBRUSH>(::SelectObject(nativeObject_.get(), newBrush.get())), boost::null_deleter());
 				if(oldBrush.get() != nullptr) {
 					swap(savedStates_.top().brush, newBrush);
 					swap(savedStates_.top().previousBrush, oldBrush);
