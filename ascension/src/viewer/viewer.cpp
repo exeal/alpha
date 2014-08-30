@@ -1772,21 +1772,23 @@ namespace ascension {
 			using graphics::PhysicalDirection;
 			const graphics::Rectangle window(widgetapi::bounds(*this, false));
 			graphics::PhysicalFourSides<graphics::Scalar> result(window);
-			switch(boost::native_value(rulerPainter_->alignment())) {
-				case PhysicalDirection::LEFT:
-					result.left() += rulerPainter_->allocationWidth();
-					break;
-				case PhysicalDirection::TOP:
-					result.top() += rulerPainter_->allocationWidth();
-					break;
-				case PhysicalDirection::RIGHT:
-					result.right() -= rulerPainter_->allocationWidth();
-					break;
-				case PhysicalDirection::BOTTOM:
-					result.bottom() -= rulerPainter_->allocationWidth();
-					break;
-				default:
-					ASCENSION_ASSERT_NOT_REACHED();
+			if(rulerPainter_.get() != nullptr) {
+				switch(boost::native_value(rulerPainter_->alignment())) {
+					case PhysicalDirection::LEFT:
+						result.left() += rulerPainter_->allocationWidth();
+						break;
+					case PhysicalDirection::TOP:
+						result.top() += rulerPainter_->allocationWidth();
+						break;
+					case PhysicalDirection::RIGHT:
+						result.right() -= rulerPainter_->allocationWidth();
+						break;
+					case PhysicalDirection::BOTTOM:
+						result.bottom() -= rulerPainter_->allocationWidth();
+						break;
+					default:
+						ASCENSION_ASSERT_NOT_REACHED();
+				}
 			}
 			return graphics::geometry::make<graphics::Rectangle>(result);
 		}
