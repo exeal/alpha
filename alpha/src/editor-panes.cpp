@@ -24,7 +24,7 @@ namespace alpha {
 	 */
 
 	/// Default constructor.
-	EditorPanes::EditorPanes() {
+	EditorPanes::EditorPanes() : Gtk::Paned(Gtk::ORIENTATION_VERTICAL) {
 		BufferList& bufferList = BufferList::instance();
 		bufferAboutToBeRemovedConnection_ =
 			bufferList.bufferAboutToBeRemovedSignal().connect(
@@ -33,6 +33,7 @@ namespace alpha {
 			bufferList.bufferAddedSignal().connect(
 				std::bind(&EditorPanes::bufferAdded, this, std::placeholders::_1, std::placeholders::_2));
 		add1(*Gtk::manage(new EditorPane()));
+		show_all_children();
 	}
 
 	/// Returns the iterator addresses the first editor pane.
@@ -120,6 +121,16 @@ namespace alpha {
 		}
 		return nullptr;
 	}
+
+#ifdef _DEBUG
+	bool EditorPanes::on_event(GdkEvent* event) {
+		return Gtk::Paned::on_event(event);
+	}
+
+	void EditorPanes::on_realize() {
+		return Gtk::Paned::on_realize();
+	}
+#endif
 
 	/**
 	 * Deletes the specified pane

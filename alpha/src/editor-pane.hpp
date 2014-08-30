@@ -31,7 +31,7 @@ namespace alpha {
 
 		/// @name Viewer
 		/// @{
-		void add(std::unique_ptr<EditorView> viewer, bool select = true);
+		void add(std::unique_ptr<EditorView> viewer);
 		std::size_t numberOfViews() const BOOST_NOEXCEPT;
 		void remove(const EditorView& viewer);
 		void removeAll() BOOST_NOEXCEPT;
@@ -47,6 +47,10 @@ namespace alpha {
 		/// @}
 
 	private:
+#ifdef _DEBUG
+		bool on_event(GdkEvent* event) override;
+		void on_realize() override;
+#endif
 		void split(Gtk::Orientation orientation);
 		void touch(const EditorView& viewer);
 

@@ -19,8 +19,16 @@ namespace alpha {
 
 			add(vbox_);
 			vbox_.pack_start(editorPanes());
-			vbox_.pack_start(statusBar());
+			vbox_.pack_start(statusBar(), Gtk::PACK_SHRINK);
+//			vbox_.show_all_children();
+			show_all_children();
 		}
+
+#ifdef _DEBUG
+		bool MainWindow::on_event(GdkEvent* event) {
+			return Gtk::ApplicationWindow::on_event(event);
+		}
+#endif
 
 		/// Updates the text string of the title bar.
 		void MainWindow::updateTitle() {

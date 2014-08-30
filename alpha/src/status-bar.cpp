@@ -14,6 +14,16 @@ namespace alpha {
 		StatusBar::StatusBar() : columnStartValue_(1) {
 		}
 
+#ifdef _DEBUG
+		bool StatusBar::on_event(GdkEvent* event) {
+			return Gtk::Statusbar::on_event(event);
+		}
+
+		void StatusBar::on_realize() {
+			return Gtk::Statusbar::on_realize();
+		}
+#endif
+
 #if 0
 		void StatusBar::adjustPaneWidths() {
 			if(!isWindow())

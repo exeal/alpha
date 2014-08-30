@@ -16,8 +16,15 @@ namespace ascension {
 	namespace viewers {
 		namespace detail {
 			TextViewerScrollableProperties::TextViewerScrollableProperties() :
+					Glib::ObjectBase("ascension.viewers.TextViewer"), Gtk::Widget()/*,
 					horizontalAdjustment_(*this, "hadjustment"), verticalAdjustment_(*this, "vadjustment"),
-					horizontalScrollPolicy_(*this, "hscroll-policy", Gtk::SCROLL_NATURAL), verticalScrollPolicy_(*this, "vscroll-policy", Gtk::SCROLL_NATURAL) {
+					horizontalScrollPolicy_(*this, "hscroll-policy", Gtk::SCROLL_NATURAL), verticalScrollPolicy_(*this, "vscroll-policy", Gtk::SCROLL_NATURAL)*/ {
+				set_has_window(true);
+#ifdef _DEBUG
+				GtkWidget* const p = static_cast<Gtk::Widget*>(this)->gobj();
+				std::cout << "GType name: " << G_OBJECT_TYPE_NAME(p) << std::endl;
+				std::cout << "GType is a GtkWidget?: " << GTK_IS_WIDGET(p) << std::endl;
+#endif
 			}
 		
 #ifndef ASCENSION_PIXELFUL_SCROLL_IN_BPD
@@ -26,8 +33,8 @@ namespace ascension {
 			}
 
 			inline void TextViewerScrollableProperties::updateScrollPositionsBeforeChanged() {
-				scrollPositionsBeforeChanged_.x() = horizontalAdjustment_.get_value()->get_value();
-				scrollPositionsBeforeChanged_.y() = verticalAdjustment_.get_value()->get_value();
+				scrollPositionsBeforeChanged_.x() = get_hadjustment()->get_value();
+				scrollPositionsBeforeChanged_.y() = get_vadjustment()->get_value();
 			}
 #endif
 		}	// namespace detail
@@ -284,34 +291,22 @@ namespace ascension {
 			attributes.y = allocation.get_y();
 			attributes.width = allocation.get_width();
 			attributes.height = allocation.get_height();
-			attributes.event_mask = get_events() | Gdk::EXPOSURE_MASK;
+			attributes.event_mask = get_events()
+				| Gdk::BUTTON_PRESS_MASK | Gdk::BUTTON_RELEASE_MASK
+				| Gdk::EXPOSURE_MASK | Gdk::KEY_PRESS_MASK
+				| Gdk::POINTER_MOTION_MASK | Gdk::POINTER_MOTION_HINT_MASK
+				| Gdk::SCROLL_MASK | Gdk::SMOOTH_SCROLL_MASK;
 //			attributes.visual = ::gtk_widget_get_visual(gobj());
 			attributes.window_type = GDK_WINDOW_CHILD;
 			attributes.wclass = GDK_INPUT_OUTPUT;
-			const Glib::RefPtr<Gdk::Window> window(Gdk::Window::create(get_parent_window(), &attributes, attributesMask));
-			set_window(window);
-
-			assert(!rulerWindow_);
-			attributes.event_mask |= Gdk::SCROLL_MASK | Gdk::SMOOTH_SCROLL_MASK
-				| Gdk::KEY_PRESS_MASK | Gdk::BUTTON_PRESS_MASK | Gdk::BUTTON_RELEASE_MASK
-				| Gdk::POINTER_MOTION_MASK | Gdk::POINTER_MOTION_HINT_MASK;
-			rulerWindow_ = Gdk::Window::create(window, &attributes, attributesMask);
-			rulerWindow_->show();
-#if 0
-			register_window(rulerWindow_);
-#else
-			rulerWindow_->set_user_data(Gtk::Widget::gobj());
-#endif
-
-			assert(!textAreaWindow_);
-//			attributes.event_mask = Gdk::
-			textAreaWindow_ = Gdk::Window::create(window, &attributes, attributesMask);
+			window_ = Gdk::Window::create(get_parent_window(), &attributes, attributesMask);
+			assert(window_);
+			set_window(window_);
 			initializeGraphics();
-			textAreaWindow_->show();
 #if 0
 			register_window(textAreaWindow_);
 #else
-			rulerWindow_->set_user_data(Gtk::Widget::gobj());
+			window_->set_user_data(Gtk::Widget::gobj());
 #endif
 		}
 
@@ -351,6 +346,7 @@ namespace ascension {
 		/// @see Gtk#Widget#on_size_allocate
 		void TextViewer::on_size_allocate(Gtk::Allocation& allocation) {
 			set_allocation(allocation);
+#if 0
 			if(textAreaWindow_ && get_realized()) {
 				graphics::Rectangle r(textAreaAllocationRectangle());
 				textAreaWindow_->move_resize(
@@ -367,12 +363,15 @@ namespace ascension {
 					static_cast<int>(graphics::geometry::left(r)), static_cast<int>(graphics::geometry::top(r)),
 					static_cast<int>(graphics::geometry::dx(r)), static_cast<int>(graphics::geometry::dy(r)));
 			}
+#else
+			if(window_)
+				window_->move_resize(allocation.get_x(), allocation.get_y(), allocation.get_width(), allocation.get_height());
+#endif
 		}
 
 		/// @see Gtk#Widget#on_unrealize
 		void TextViewer::on_unrealize() {
-			textAreaWindow_.reset();
-			rulerWindow_.reset();
+			window_.reset();
 			Gtk::Widget::on_unrealize();
 		}
 

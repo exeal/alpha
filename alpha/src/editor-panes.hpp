@@ -87,6 +87,10 @@ namespace alpha {
 		void bufferAdded(BufferList& buffers, Buffer& buffer);
 		// EditorView signals
 		bool viewFocused(GdkEventFocus* event);
+#ifdef _DEBUG
+		bool on_event(GdkEvent* event) override;
+		void on_realize() override;
+#endif
 
 	private:
 		EditorPane* activePane_;
