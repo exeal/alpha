@@ -31,13 +31,14 @@ namespace alpha {
 
 	/// Copy-constructor.
 	EditorPane::EditorPane(const EditorPane& other) {
-		BOOST_FOREACH(const std::unique_ptr<EditorView>& p, other.viewers_) {
-			std::unique_ptr<EditorView> newView(new EditorView(*p));
+		BOOST_FOREACH(const Child& child, other.children_) {
+			const EditorView& src = *std::get<2>(child);
+			std::unique_ptr<EditorView> newView(new EditorView(src));
 //			const bool succeeded = newViewer->create(p->getParent().use(), win32::ui::DefaultWindowRect(),
 //				WS_CHILD | WS_CLIPCHILDREN | WS_HSCROLL | WS_VISIBLE | WS_VSCROLL, WS_EX_CLIENTEDGE);
 //			assert(succeeded);
-			newView->setConfiguration(&p->configuration(), 0, true);
-			newView->textRenderer().viewport()->scrollTo(p->textRenderer().viewport()->scrollPositions());
+			newView->setConfiguration(&src.configuration(), 0, true);
+			newView->textRenderer().viewport()->scrollTo(src.textRenderer().viewport()->scrollPositions());
 			add(std::move(newView));
 		}
 	}
@@ -53,13 +54,29 @@ namespace alpha {
 		std::ostringstream oss;
 		oss << std::hex << reinterpret_cast<std::uintptr_t>(boost::addressof(*viewer));
 		const Glib::ustring name(oss.str());	// dummy
-		viewer->show();
-		Gtk::Stack::add(*viewer, name);
-		if(viewers_.empty()) {
-			viewers_.push_front(std::move(viewer));
-			this->select(*viewers_.front());
-		} else
-			viewers_.push_back(std::move(viewer));
+
+		std::unique_ptr<Gtk::Box> box(new Gtk::Box(Gtk::ORIENTATION_VERTICAL));
+		std::unique_ptr<Gtk::ScrolledWindow> scroller(new Gtk::ScrolledWindow());
+//		std::unique_ptr<ModeLine> modeLine(new ModeLine());
+
+
+		children_.push_back(Child());
+		Child& newChild = children_.back();
+		try {
+			box->add(*scroller);
+			std::get<1>(newChild) = Glib::RefPtr<Gtk::ScrolledWindow>(scroller.release());
+			std::get<1>(newChild)->add(*viewer);
+			std::get<2>(newChild) = std::move(viewer);
+		} catch(...) {
+			children_.pop_back();
+			throw;
+		}
+		Gtk::Stack::add(*box, name);
+		std::get<0>(newChild) = Gtk::manage(box.release());
+		if(children_.size() == 1)
+			this->select(*std::get<2>(children_.front()));
+		std::get<0>(newChild)->show_all_children();
+		std::get<0>(newChild)->show();
 	}
 
 #ifdef _DEBUG
@@ -87,9 +104,9 @@ namespace alpha {
 
 	/// Removes all viewers from this @c EditorPane.
 	void EditorPane::removeAll() BOOST_NOEXCEPT {
-		BOOST_FOREACH(std::unique_ptr<EditorView>& viewer, viewers_)
-			Gtk::Stack::remove(*viewer);
-		viewers_.clear();
+		BOOST_FOREACH(Child& child, children_)
+			Gtk::Stack::remove(*std::get<0>(child));
+		children_.clear();
 	}
 
 	/**
@@ -98,20 +115,20 @@ namespace alpha {
 	 * @throw ascension#NoSuchElementException @a buffer is not exist
 	 */
 	void EditorPane::removeBuffer(const Buffer& buffer) {
-		if(!viewers_.empty()) {
-			auto i(std::begin(viewers_));
-			if(&(*(i++))->document() == &buffer) {
-				if(i != std::end(viewers_))
-					select(**i);
+		if(!children_.empty()) {
+			auto i(std::begin(children_));
+			if(&std::get<2>(*(i++))->document() == &buffer) {
+				if(i != std::end(children_))
+					select(*std::get<2>(*i));
 				--i;
 			} else {
-				for(const auto e(std::end(viewers_)); i != e; ++i) {
-					if(&(*i)->document() == &buffer)
+				for(const auto e(std::end(children_)); i != e; ++i) {
+					if(&std::get<2>(*i)->document() == &buffer)
 						break;
 				}
 			}
-			Gtk::Stack::remove(**i);
-			viewers_.erase(i);
+			Gtk::Stack::remove(*std::get<2>(*i));
+			children_.erase(i);
 			return;
 		}
 		throw ascension::NoSuchElementException("buffer");
@@ -136,23 +153,24 @@ namespace alpha {
 	 * @throw ascension#NoSuchElementException @a buffer is not exist
 	 */
 	void EditorPane::selectBuffer(const Buffer& buffer) {
-		const bool hadFocus = !viewers_.empty() && selectedView().has_focus();
+		const bool hadFocus = !children_.empty() && selectedView().has_focus();
 
-		if(viewers_.size() > 1) {
+		if(children_.size() > 1) {
 			// bring to the front of the list
-			const auto e(std::end(viewers_));
-			for(auto i(std::next(std::begin(viewers_))); i != e; ++i) {
-				if(&(*i)->document() == &buffer) {
-					std::unique_ptr<EditorView> temp(std::move(*i));
-					viewers_.erase(i);
-					viewers_.push_front(std::move(temp));
+			const auto e(std::end(children_));
+			for(auto i(std::next(std::begin(children_))); i != e; ++i) {
+				if(&std::get<2>(*i)->document() == &buffer) {
+					Child temp(std::move(*i));
+					children_.erase(i);
+					children_.push_front(std::move(temp));
 				}
 			}
 		}
 
 		// show and focus
 		bool found = false;
-		BOOST_FOREACH(const std::unique_ptr<EditorView>& viewer, viewers_) {
+		BOOST_FOREACH(const Child& child, children_) {
+			const std::unique_ptr<EditorView>& viewer = std::get<2>(child);
 			if(&viewer->document() == &buffer) {
 				set_visible_child(*viewer);
 //				viewer->show();

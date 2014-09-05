@@ -10,6 +10,8 @@
 #include <list>
 #include <memory>
 #include <boost/core/noncopyable.hpp>
+#include <gtkmm/box.h>
+#include <gtkmm/scrolledwindow.h>
 #include <gtkmm/stack.h>
 
 namespace alpha {
@@ -55,26 +57,32 @@ namespace alpha {
 		void touch(const EditorView& viewer);
 
 	private:
-		std::list<std::unique_ptr<EditorView>> viewers_;	// visible and invisible viewers
+		typedef std::tuple<
+			Gtk::Box*,	// child of EditorPane. managed by gtkmm
+			Glib::RefPtr<Gtk::ScrolledWindow>,
+			std::unique_ptr<EditorView>
+//			std::unique_ptr<ModeLine>
+		> Child;
+		std::list<Child> children_;	// visible and invisible children
 	};
 
 	/// Returns the number of the viewers.
 	inline std::size_t EditorPane::numberOfViews() const BOOST_NOEXCEPT {
-		return viewers_.size();
+		return children_.size();
 	}
 
 	/// Returns the visible viewer.
 	inline EditorView& EditorPane::selectedView() {
-		if(viewers_.empty())
+		if(children_.empty())
 			throw std::logic_error("There are no viewers.");
-		return *viewers_.front();
+		return *std::get<2>(children_.front());
 	}
 
 	/// Returns the visible viewer.
 	inline const EditorView& EditorPane::selectedView() const {
-		if(viewers_.empty())
+		if(children_.empty())
 			throw std::logic_error("There are no viewers.");
-		return *viewers_.front();
+		return *std::get<2>(children_.front());
 	}
 }
 
