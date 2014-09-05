@@ -137,6 +137,7 @@ namespace ascension {
 			//	textWrapping_.measure = 0;
 				layouts_.reset(new LineLayoutVector(presentation.document(),
 					std::bind(&TextRenderer::generateLineLayout, this, std::placeholders::_1), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
+				viewport_ = detail::createTextViewport(*this);
 				updateComputedBlockFlowDirectionChanged();	// this initializes 'computedBlockFlowDirection_'
 #if defined(BOOST_OS_WINDOWS)
 				LOGFONTW lf;
@@ -166,6 +167,7 @@ namespace ascension {
 					presentation_(other.presentation_), layouts_(), fontCollection_(other.fontCollection_), defaultFont_(other.defaultFont_) {
 				layouts_.reset(new LineLayoutVector(other.presentation_.document(),
 					std::bind(&TextRenderer::generateLineLayout, this, std::placeholders::_1), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
+				viewport_ = detail::createTextViewport(*this);
 				updateComputedBlockFlowDirectionChanged();	// this initializes 'computedBlockFlowDirection_'
 			//	updateViewerSize(); ???
 				presentation_.addTextToplevelStyleListener(*this);
