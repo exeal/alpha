@@ -18,7 +18,8 @@
 
 namespace alpha {
 	/// Constructor.
-	EditorView::EditorView(ascension::presentation::Presentation& presentation) : ascension::viewers::TextViewer(presentation), visualColumnStartValue_(1) {
+	EditorView::EditorView(ascension::presentation::Presentation& presentation) :
+			Glib::ObjectBase("alpha.EditorView"), ascension::viewers::TextViewer(presentation), visualColumnStartValue_(1) {
 		document().bookmarker().addListener(*this);
 //		caretObject_.reset(new CaretProxy(caret()));
 	}
