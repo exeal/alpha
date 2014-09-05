@@ -27,6 +27,12 @@
 namespace ascension {
 	namespace graphics {
 		namespace font {
+			class TextViewport;
+
+			namespace detail {
+				std::shared_ptr<TextViewport> createTextViewport(TextRenderer& textRenderer);
+			}
+
 			/**
 			 */
 			class TextViewport : public DefaultFontListener, public VisualLinesListener,
@@ -142,6 +148,7 @@ namespace ascension {
 				} frozenNotification_;
 				bool repairingLayouts_;
 				ascension::detail::Listeners<TextViewportListener> listeners_;
+				friend std::shared_ptr<TextViewport> detail::createTextViewport(TextRenderer& textRenderer);
 			};
 
 			typedef ascension::detail::MutexWithClass<

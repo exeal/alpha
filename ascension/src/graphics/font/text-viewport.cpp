@@ -1090,7 +1090,7 @@ namespace ascension {
 					LineLayoutVector& layouts = textRenderer().layouts();
 					VisualLine line(firstVisibleLine());
 					const TextLayout* layout = &layouts.at(line.line, LineLayoutVector::USE_CALCULATED_LAYOUT);
-					Scalar bpd = (line.subline > 0) ? -layout->extent(boost::irange(static_cast<Index>(0), line.subline)).size() : static_cast<Scalar>(0);
+					Scalar bpd = (line.subline > 0) ? -static_cast<Scalar>(layout->extent(boost::irange(static_cast<Index>(0), line.subline)).size()) : static_cast<Scalar>(0);
 
 					for(const Index nlines = layouts.document().numberOfLines(); line.line < nlines && bpd < extent; layout = &layouts.at(++line.line, LineLayoutVector::USE_CALCULATED_LAYOUT)) {
 						const auto lineExtent(layout->extent());
@@ -1598,6 +1598,14 @@ namespace ascension {
 				}
 				fireScrollPropertiesChanged(presentation::AbstractTwoAxes<bool>(presentation::_ipd = longestLineChanged, presentation::_bpd = sublinesDifference != 0));
 				repairUncalculatedLayouts();
+			}
+
+			namespace detail {
+				/// @internal
+				std::shared_ptr<TextViewport> createTextViewport(TextRenderer& textRenderer) {
+//					return std::make_shared<TextViewport>(textRenderer);
+					return std::shared_ptr<TextViewport>(new TextViewport(textRenderer));
+				}
 			}
 		}
 	}
