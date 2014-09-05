@@ -78,32 +78,13 @@ namespace ascension {
 			};
 		}
 #endif
-
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-		namespace detail {
-			class TextViewerScrollableProperties : public Gtk::Scrollable, public Gtk::Widget {
-			protected:
-				TextViewerScrollableProperties();
-#ifndef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-				const graphics::PhysicalTwoAxes<double>& scrollPositionsBeforeChanged() const BOOST_NOEXCEPT;
-				void updateScrollPositionsBeforeChanged();
-#endif
-		private:
-//				Glib::Property<Glib::RefPtr<Gtk::Adjustment>> horizontalAdjustment_, verticalAdjustment_;
-//				Glib::Property<Gtk::ScrollablePolicy> horizontalScrollPolicy_, verticalScrollPolicy_;
-#ifndef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-				graphics::PhysicalTwoAxes<double> scrollPositionsBeforeChanged_;
-#endif
-			};
-		}
-#endif
 		class TextViewer :
 				// note:
 				// Gtk.TextView inherits Gtk.Container (which inherits Gtk.Widget) and Gtk.Scrollable.
 				// QPlainTextEdit and QTextEdit inherit QAbstractScrollArea.
 				// NSTextView inherits NSText (which inherits NSView).
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				public detail::TextViewerScrollableProperties,/* public Gtk::Scrollable,*/
+				public Gtk::Scrollable, public Gtk::Widget,
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 				public QAbstractScrollArea,
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
@@ -478,8 +459,12 @@ namespace ascension {
 #endif
 				{}
 			} modeState_;
-#if 0
+
 			// scroll information
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK) && !defined(ASCENSION_PIXELFUL_SCROLL_IN_BPD)
+			graphics::PhysicalTwoAxes<double> scrollPositionsBeforeChanged_;
+#endif
+#if 0
 			struct Scrolls {
 //				unsigned long horizontalRate, verticalRate;	// 最小スクロール量が何文字 (何行) に相当するか (普通は 1)
 				bool changed;
