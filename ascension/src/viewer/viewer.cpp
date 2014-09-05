@@ -114,11 +114,11 @@ namespace ascension {
 		 * Constructor.
 		 * @param presentation The presentation object
 		 */
-		TextViewer::TextViewer(presentation::Presentation& presentation) :/*
+		TextViewer::TextViewer(presentation::Presentation& presentation) :
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				Glib::ObjectBase("ascension.viewers.TextViewer"), detail::TextViewerScrollableProperties(),
+				Glib::ObjectBase("ascension.viewers.TextViewer"),
 #endif
-*/				presentation_(presentation), mouseInputDisabledCount_(0) {
+				presentation_(presentation), mouseInputDisabledCount_(0) {
 			initialize(nullptr);
 
 			// initializations of renderer_ and mouseInputStrategy_ are in initializeWindow()
@@ -130,7 +130,7 @@ namespace ascension {
 		 */
 		TextViewer::TextViewer(const TextViewer& other) :
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
-				Glib::ObjectBase("ascension.viewers.TextViewer"), detail::TextViewerScrollableProperties(),
+				Glib::ObjectBase("ascension.viewers.TextViewer"),
 #endif
 				presentation_(other.presentation_), mouseInputDisabledCount_(0) {
 			initialize(&other);
@@ -615,6 +615,11 @@ namespace ascension {
 
 		/// @internal Called by constructors.
 		void TextViewer::initialize(const TextViewer* other) {
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
+			assert(GTK_IS_WIDGET(static_cast<Gtk::Widget&>(*this).gobj()));
+			assert(GTK_IS_SCROLLABLE(static_cast<Gtk::Scrollable&>(*this).gobj()));
+			set_has_window(true);
+#endif // ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			document().addListener(*this);
 			document().addRollbackListener(*this);
 

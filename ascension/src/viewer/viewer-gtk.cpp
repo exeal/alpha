@@ -14,31 +14,6 @@
 
 namespace ascension {
 	namespace viewers {
-		namespace detail {
-			TextViewerScrollableProperties::TextViewerScrollableProperties() :
-					Glib::ObjectBase("ascension.viewers.TextViewer"), Gtk::Widget()/*,
-					horizontalAdjustment_(*this, "hadjustment"), verticalAdjustment_(*this, "vadjustment"),
-					horizontalScrollPolicy_(*this, "hscroll-policy", Gtk::SCROLL_NATURAL), verticalScrollPolicy_(*this, "vscroll-policy", Gtk::SCROLL_NATURAL)*/ {
-				set_has_window(true);
-#ifdef _DEBUG
-				GtkWidget* const p = static_cast<Gtk::Widget*>(this)->gobj();
-				std::cout << "GType name: " << G_OBJECT_TYPE_NAME(p) << std::endl;
-				std::cout << "GType is a GtkWidget?: " << GTK_IS_WIDGET(p) << std::endl;
-#endif
-			}
-		
-#ifndef ASCENSION_PIXELFUL_SCROLL_IN_BPD
-			inline const graphics::PhysicalTwoAxes<double>& TextViewerScrollableProperties::scrollPositionsBeforeChanged() const BOOST_NOEXCEPT {
-				return scrollPositionsBeforeChanged_;
-			}
-
-			inline void TextViewerScrollableProperties::updateScrollPositionsBeforeChanged() {
-				scrollPositionsBeforeChanged_.x() = get_hadjustment()->get_value();
-				scrollPositionsBeforeChanged_.y() = get_vadjustment()->get_value();
-			}
-#endif
-		}	// namespace detail
-
 		void TextViewer::doBeep() BOOST_NOEXCEPT {
 #if 1
 			::gdk_beep();
@@ -80,21 +55,24 @@ namespace ascension {
 			set_can_focus(true);
 			set_redraw_on_allocate(false);
 //			drag_dest_set_target_list();
-			property_hadjustment().get_value()->signal_value_changed().connect([this]() {
+
+			get_hadjustment()->signal_value_changed().connect([this]() {
 				if(const std::shared_ptr<graphics::font::TextViewport> viewport = this->textRenderer().viewport())
 					viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(
 						graphics::_x = static_cast<graphics::font::TextViewportSignedScrollOffset>(
-							this->property_hadjustment().get_value()->get_value() - this->scrollPositionsBeforeChanged().x()),
+							this->property_hadjustment().get_value()->get_value() - this->scrollPositionsBeforeChanged_.x()),
 						graphics::_y = 0));
-				this->updateScrollPositionsBeforeChanged();
+//				this->scrollPositionsBeforeChanged_.x() = this->get_hadjustment()->get_value();
+//				this->scrollPositionsBeforeChanged_.y() = this->get_vadjustment()->get_value();
 			});
-			property_vadjustment().get_value()->signal_value_changed().connect([this]() {
+			get_vadjustment()->signal_value_changed().connect([this]() {
 				if(const std::shared_ptr<graphics::font::TextViewport> viewport = this->textRenderer().viewport())
 					viewport->scroll(graphics::PhysicalTwoAxes<graphics::font::TextViewportSignedScrollOffset>(
 						graphics::_x = 0,
 						graphics::_y = static_cast<graphics::font::TextViewportSignedScrollOffset>(
-							this->property_vadjustment().get_value()->get_value() - this->scrollPositionsBeforeChanged().y())));
-				this->updateScrollPositionsBeforeChanged();
+							this->property_vadjustment().get_value()->get_value() - this->scrollPositionsBeforeChanged_.y())));
+//				this->scrollPositionsBeforeChanged_.x() = this->get_hadjustment()->get_value();
+//				this->scrollPositionsBeforeChanged_.y() = this->get_vadjustment()->get_value();
 			});
 		}
 
@@ -302,12 +280,12 @@ namespace ascension {
 			window_ = Gdk::Window::create(get_parent_window(), &attributes, attributesMask);
 			assert(window_);
 			set_window(window_);
-			initializeGraphics();
 #if 0
 			register_window(textAreaWindow_);
 #else
 			window_->set_user_data(Gtk::Widget::gobj());
 #endif
+			initializeGraphics();
 		}
 
 		/**
