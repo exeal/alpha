@@ -101,7 +101,8 @@ namespace ascension {
 				const auto a(makeLocatedUserInput(event));
 				const widgetapi::LocatedUserInput::MouseButton button =
 					(event.button >= 1 && event.button <= 5) ? NATIVE_BUTTON_VALUES[event.button - 1] : widgetapi::LocatedUserInput::NO_BUTTON;
-				return widgetapi::MouseButtonInput(std::get<0>(a), button, std::get<1>(a), std::get<2>(a));
+				widgetapi::MouseButtonInput temp(std::get<0>(a), button, std::get<1>(a), std::get<2>(a));
+				return std::move(temp);
 			}
 		}
 
@@ -124,7 +125,8 @@ namespace ascension {
 						break;
 				}
 			}
-			return input.isConsumed();
+			return Gtk::Widget::on_button_press_event(event);
+//			return input.isConsumed();
 		}
 
 		/**
@@ -135,7 +137,8 @@ namespace ascension {
 			widgetapi::MouseButtonInput input(makeMouseButtonInput(*event));
 			if(input.button() != widgetapi::LocatedUserInput::NO_BUTTON && event->type == GDK_BUTTON_RELEASE)
 				mouseReleased(input);
-			return input.isConsumed();
+			return Gtk::Widget::on_button_release_event(event);
+//			return input.isConsumed();
 		}
 
 		/**
@@ -271,7 +274,8 @@ namespace ascension {
 			attributes.height = allocation.get_height();
 			attributes.event_mask = get_events()
 				| Gdk::BUTTON_PRESS_MASK | Gdk::BUTTON_RELEASE_MASK
-				| Gdk::EXPOSURE_MASK | Gdk::KEY_PRESS_MASK
+				| Gdk::EXPOSURE_MASK | Gdk::FOCUS_CHANGE_MASK
+				| Gdk::KEY_PRESS_MASK | Gdk::KEY_RELEASE_MASK
 				| Gdk::POINTER_MOTION_MASK | Gdk::POINTER_MOTION_HINT_MASK
 				| Gdk::SCROLL_MASK | Gdk::SMOOTH_SCROLL_MASK;
 //			attributes.visual = ::gtk_widget_get_visual(gobj());

@@ -370,6 +370,10 @@ namespace ascension {
 			 * @param context The graphics context
 			 */
 			void TextRenderer::paint(PaintContext& context) const {
+				const Color c(boost::get_optional_value_or(SystemColors::get(SystemColors::WINDOW), Color::OPAQUE_WHITE));
+				auto p = std::make_shared<SolidColor>(c);
+				context.setFillStyle(p);
+				context.fillRectangle(context.boundsToPaint());
 			}
 
 			/**
