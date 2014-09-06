@@ -170,18 +170,29 @@ namespace alpha {
 		// show and focus
 		bool found = false;
 		BOOST_FOREACH(const Child& child, children_) {
+			Gtk::Box& box = *std::get<0>(child);
 			const std::unique_ptr<EditorView>& viewer = std::get<2>(child);
 			if(&viewer->document() == &buffer) {
-				set_visible_child(*viewer);
-//				viewer->show();
+				box.show();
+				assert(box.get_visible());
+				set_visible_child(box);
+				box.show_all_children();
 				if(hadFocus)
 					viewer->grab_focus();
 				found = true;
 #ifdef _DEBUG
-				bool visible = is_visible();
+				bool visible = get_visible();
 				bool has_window = get_has_window();
 				int width = get_width(), height = get_height();
-				visible = viewer->is_visible();
+				visible = std::get<0>(child)->get_visible();
+				has_window = std::get<0>(child)->get_has_window();
+				width = std::get<0>(child)->get_width();
+				height = std::get<0>(child)->get_height();
+				visible = std::get<1>(child)->get_visible();
+				has_window = std::get<1>(child)->get_has_window();
+				width = std::get<1>(child)->get_width();
+				height = std::get<1>(child)->get_height();
+				visible = viewer->get_visible();
 				has_window = viewer->get_has_window();
 				width = viewer->get_width();
 				height = viewer->get_height();
