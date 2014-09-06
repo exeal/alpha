@@ -69,15 +69,29 @@ namespace ascension {
 	}
 
 	namespace viewers {
-#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
 		namespace detail {
+			/// @internal Implementes "Mouse Vanish" feature.
+			template<typename Derived>
+			class MouseVanish {
+			protected:
+				MouseVanish() BOOST_NOEXCEPT;
+				virtual ~MouseVanish();
+				void hideCursor();
+				bool hidesCursor() const BOOST_NOEXCEPT;
+				void restoreHiddenCursor();
+			private:
+				bool hidden_;
+			};
+
+#if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32) && !defined(ASCENSION_NO_ACTIVE_ACCESSIBILITY)
 			class AbstractAccessibleProxy : public IAccessible {
 			public:
 				virtual ~AbstractAccessibleProxy() BOOST_NOEXCEPT {}
 				virtual void dispose() = 0;
 			};
-		}
 #endif
+		}
+
 		class TextViewer :
 				// note:
 				// Gtk.TextView inherits Gtk.Container (which inherits Gtk.Widget) and Gtk.Scrollable.
@@ -98,7 +112,7 @@ namespace ascension {
 				public kernel::DocumentListener, public kernel::DocumentRollbackListener,
 				public graphics::font::DefaultFontListener, public graphics::font::VisualLinesListener,
 				public graphics::font::TextViewportListener, public graphics::font::ComputedBlockFlowDirectionListener,
-				public kernel::detail::PointCollection<VisualPoint> {
+				private detail::MouseVanish<TextViewer>, public kernel::detail::PointCollection<VisualPoint> {
 		public:
 			/**
 			 * Result of hit test.
@@ -396,21 +410,6 @@ namespace ascension {
 			virtual STDMETHODIMP Drop(IDataObject* data, DWORD keyState, POINTL location, DWORD* effect);
 #endif
 			/// @}
-
-			// internal classes
-		private:
-			class CursorVanisher {
-			public:
-				CursorVanisher() BOOST_NOEXCEPT;
-				~CursorVanisher();
-				void install(TextViewer& viewer);
-				void restore();
-				void vanish();
-				bool vanished() const;
-			private:
-				TextViewer* viewer_;
-				bool vanished_;
-			} cursorVanisher_;
 
 			// enumerations
 		private:

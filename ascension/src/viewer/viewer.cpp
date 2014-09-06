@@ -351,7 +351,7 @@ namespace ascension {
 
 		/// Invoked when the widget is about to lose the keyboard focus.
 		void TextViewer::focusAboutToBeLost(widgetapi::Event& event) {
-			cursorVanisher_.restore();
+			restoreHiddenCursor();
 			if(mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->interruptMouseReaction(false);
 /*			if(caret_->getMatchBracketsTrackingMode() != Caret::DONT_TRACK
@@ -1313,7 +1313,7 @@ namespace ascension {
 		/// Invoked when a key has been released.
 		void TextViewer::keyReleased(widgetapi::KeyInput& input) {
 			if(input.hasModifier(widgetapi::UserInput::ALT_DOWN)) {
-				cursorVanisher_.restore();
+				restoreHiddenCursor();
 				if(mouseInputStrategy_.get() != nullptr)
 					mouseInputStrategy_->interruptMouseReaction(true);
 			}
@@ -1426,14 +1426,14 @@ namespace ascension {
 
 		/// Invoked when the mouse cursor has been moved onto a widget.
 		void TextViewer::mouseMoved(widgetapi::LocatedUserInput& input) {
-			cursorVanisher_.restore();
+			restoreHiddenCursor();
 			if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->mouseMoved(input);
 		}
 
 		/// Invoked when a mouse button has been pressed on a widget.
 		void TextViewer::mousePressed(widgetapi::MouseButtonInput& input) {
-			cursorVanisher_.restore();
+			restoreHiddenCursor();
 			if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->mouseButtonInput(MouseInputStrategy::PRESSED, input);
 		}
@@ -1441,7 +1441,7 @@ namespace ascension {
 		/// Invoked when a mouse button has been released on a widget.
 		void TextViewer::mouseReleased(widgetapi::MouseButtonInput& input) {
 			if(allowsMouseInput() || input.button() == widgetapi::LocatedUserInput::BUTTON3_DOWN)
-				cursorVanisher_.restore();
+				restoreHiddenCursor();
 			if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->mouseButtonInput(MouseInputStrategy::RELEASED, input);
 		}
@@ -1454,7 +1454,7 @@ namespace ascension {
 
 		/// Invoked when the mouse wheel is rotated.
 		void TextViewer::mouseWheelChanged(widgetapi::MouseWheelInput& input) {
-			cursorVanisher_.restore();
+			restoreHiddenCursor();
 			if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->mouseWheelRotated(input);
 		}
@@ -2211,41 +2211,6 @@ namespace ascension {
 		}
 
 
-		// TextViewer.CursorVanisher //////////////////////////////////////////////////////////////////////////////////
-
-		TextViewer::CursorVanisher::CursorVanisher() BOOST_NOEXCEPT : viewer_(nullptr) {
-		}
-
-		TextViewer::CursorVanisher::~CursorVanisher() BOOST_NOEXCEPT {
-			restore();
-		}
-
-		void TextViewer::CursorVanisher::install(TextViewer& viewer) {
-			assert(viewer_ == nullptr);
-			viewer_ = &viewer;
-		}
-
-		void TextViewer::CursorVanisher::restore() {
-			if(vanished_) {
-				widgetapi::Cursor::show();
-				widgetapi::releaseInput(*viewer_);
-				vanished_ = false;
-			}
-		}
-
-		void TextViewer::CursorVanisher::vanish() {
-			if(!vanished_ && viewer_->configuration().vanishesCursor && widgetapi::hasFocus(*viewer_)) {
-				vanished_ = true;
-				widgetapi::Cursor::hide();
-				widgetapi::grabInput(*viewer_);
-			}
-		}
-
-		bool TextViewer::CursorVanisher::vanished() const {
-			return vanished_;
-		}
-
-
 		// TextViewer.FreezeRegister //////////////////////////////////////////////////////////////////////////////////
 
 		TextViewer::FreezeRegister::FreezeRegister() BOOST_NOEXCEPT : linesToRedraw_(boost::irange<Index>(0, 0)) {
@@ -2507,6 +2472,42 @@ namespace ascension {
 						widgetapi::mapFromGlobal(viewer, widgetapi::Cursor::position())).characterIndex());
 //				}
 				return boost::none;
+			}
+		}
+
+		namespace detail {
+			// viewers.detail.MouseVanish<> ///////////////////////////////////////////////////////////////////////////
+
+			template<typename Derived> MouseVanish<Derived>::MouseVanish() BOOST_NOEXCEPT : hidden_(false) {
+			}
+
+			template<typename Derived> MouseVanish<Derived>::~MouseVanish() BOOST_NOEXCEPT {
+				restoreHiddenCursor();
+			}
+/*
+			template<typename Derived> void MouseVanish<Derived>::MouseVanish::install(TextViewer& viewer) {
+				assert(viewer_ == nullptr);
+				viewer_ = &viewer;
+			}
+*/
+			template<typename Derived> void MouseVanish<Derived>::restoreHiddenCursor() {
+				if(hidesCursor()) {
+					widgetapi::Cursor::show();
+					widgetapi::releaseInput(*static_cast<Derived*>(this));
+					hidden_ = false;
+				}
+			}
+
+			template<typename Derived> void MouseVanish<Derived>::hideCursor() {
+				if(!vanished_ && viewer_->configuration().vanishesCursor && widgetapi::hasFocus(*static_cast<Derived*>(this))) {
+					vanished_ = true;
+					widgetapi::Cursor::hide();
+					widgetapi::grabInput(*static_cast<Derived*>(this));
+				}
+			}
+
+			template<typename Derived> bool MouseVanish<Derived>::hidesCursor() const BOOST_NOEXCEPT {
+				return hidden_;
 			}
 		}
 	}
