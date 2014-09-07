@@ -299,8 +299,8 @@ namespace ascension {
 			texteditor::abortIncrementalSearch(*this);
 
 			graphics::Point location;
-			widgetapi::LocatedUserInput::MouseButton buttons;
-			widgetapi::UserInput::KeyboardModifier modifiers;
+			widgetapi::event::LocatedUserInput::MouseButton buttons;
+			widgetapi::event::UserInput::KeyboardModifier modifiers;
 
 			// invoked by the keyboard
 			if(byKeyboard) {
@@ -320,14 +320,14 @@ namespace ascension {
 					return;
 				location = graphics::Point(geom::_x = x, geom::_y = y);
 				static const Gdk::ModifierType NATIVE_BUTTON_MASK = Gdk::BUTTON1_MASK | Gdk::BUTTON2_MASK | Gdk::BUTTON3_MASK | Gdk::BUTTON4_MASK | Gdk::BUTTON5_MASK;
-				buttons = !byKeyboard ? (state & NATIVE_BUTTON_MASK) : widgetapi::LocatedUserInput::NO_BUTTON;
+				buttons = !byKeyboard ? (state & NATIVE_BUTTON_MASK) : widgetapi::event::LocatedUserInput::NO_BUTTON;
 				modifiers = state & ~NATIVE_BUTTON_MASK;
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QUARTZ)
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 				location = graphics::Point(geom::_x = geom::x(globalLocation), geom::_y = geom::y(globalLocation));
 				widgetapi::mapFromGlobal(*this, location);
-				buttons = widgetapi::LocatedUserInput::NO_BUTTON;
+				buttons = widgetapi::event::LocatedUserInput::NO_BUTTON;
 				modifiers = win32::makeModifiers();
 #endif
 			}
@@ -337,7 +337,7 @@ namespace ascension {
 			if(!boost::geometry::within(location, localBounds))
 				return;
 
-			return showContextMenu(widgetapi::LocatedUserInput(location, buttons, modifiers), nativeEvent);
+			return showContextMenu(widgetapi::event::LocatedUserInput(location, buttons, modifiers), nativeEvent);
 		}
 
 		/**
@@ -350,7 +350,7 @@ namespace ascension {
 		}
 
 		/// Invoked when the widget is about to lose the keyboard focus.
-		void TextViewer::focusAboutToBeLost(widgetapi::Event& event) {
+		void TextViewer::focusAboutToBeLost(widgetapi::event::Event& event) {
 			restoreHiddenCursor();
 			if(mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->interruptMouseReaction(false);
@@ -374,7 +374,7 @@ namespace ascension {
 		}
 
 		/// Invoked when the widget gained the keyboard focus.
-		void TextViewer::focusGained(widgetapi::Event& event) {
+		void TextViewer::focusGained(widgetapi::event::Event& event) {
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
 			// restore the scroll positions
 			const auto scrollPositions(physicalScrollPosition(*this));
@@ -887,10 +887,10 @@ namespace ascension {
 		}
 
 		namespace {
-			void handleDirectionalKey(TextViewer& viewer, graphics::PhysicalDirection direction, widgetapi::UserInput::KeyboardModifier modifiers) {
+			void handleDirectionalKey(TextViewer& viewer, graphics::PhysicalDirection direction, widgetapi::event::UserInput::KeyboardModifier modifiers) {
 				using namespace ascension::texteditor::commands;
 				using presentation::FlowRelativeDirection;
-				using widgetapi::UserInput;
+				using widgetapi::event::UserInput;
 				static kernel::Position(*const nextCharacterLocation)(const kernel::Point&, Direction, kernel::locations::CharacterUnit, Index) = kernel::locations::nextCharacter;
 
 				const presentation::WritingMode writingMode(viewer.presentation().computeWritingMode(&viewer.textRenderer()));
@@ -932,13 +932,13 @@ namespace ascension {
 		}
 
 		/// Invoked when a key has been pressed.
-		void TextViewer::keyPressed(widgetapi::KeyInput& input) {
+		void TextViewer::keyPressed(widgetapi::event::KeyInput& input) {
 			if(mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->interruptMouseReaction(true);
 
 			// TODO: This code is temporary. The following code provides a default implementation of
 			// TODO: "key combination to command" map.
-			using namespace ascension::viewers::widgetapi;
+			using namespace ascension::viewers::widgetapi::event;
 			using namespace ascension::texteditor::commands;
 			static kernel::Position(*const nextCharacterLocation)(const kernel::Point&, Direction, kernel::locations::CharacterUnit, Index) = kernel::locations::nextCharacter;
 //			if(hasModifier<UserInput::ALT_DOWN>(input)) {
@@ -1311,8 +1311,8 @@ namespace ascension {
 		}
 
 		/// Invoked when a key has been released.
-		void TextViewer::keyReleased(widgetapi::KeyInput& input) {
-			if(input.hasModifier(widgetapi::UserInput::ALT_DOWN)) {
+		void TextViewer::keyReleased(widgetapi::event::KeyInput& input) {
+			if(input.hasModifier(widgetapi::event::UserInput::ALT_DOWN)) {
 				restoreHiddenCursor();
 				if(mouseInputStrategy_.get() != nullptr)
 					mouseInputStrategy_->interruptMouseReaction(true);
@@ -1419,41 +1419,41 @@ namespace ascension {
 		}
 
 		/// Invoked when the mouse button has been double-clicked.
-		void TextViewer::mouseDoubleClicked(widgetapi::MouseButtonInput& input) {
+		void TextViewer::mouseDoubleClicked(widgetapi::event::MouseButtonInput& input) {
 			if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->mouseButtonInput(MouseInputStrategy::DOUBLE_CLICKED, input);
 		}
 
 		/// Invoked when the mouse cursor has been moved onto a widget.
-		void TextViewer::mouseMoved(widgetapi::LocatedUserInput& input) {
+		void TextViewer::mouseMoved(widgetapi::event::LocatedUserInput& input) {
 			restoreHiddenCursor();
 			if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->mouseMoved(input);
 		}
 
 		/// Invoked when a mouse button has been pressed on a widget.
-		void TextViewer::mousePressed(widgetapi::MouseButtonInput& input) {
+		void TextViewer::mousePressed(widgetapi::event::MouseButtonInput& input) {
 			restoreHiddenCursor();
 			if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->mouseButtonInput(MouseInputStrategy::PRESSED, input);
 		}
 
 		/// Invoked when a mouse button has been released on a widget.
-		void TextViewer::mouseReleased(widgetapi::MouseButtonInput& input) {
-			if(allowsMouseInput() || input.button() == widgetapi::LocatedUserInput::BUTTON3_DOWN)
+		void TextViewer::mouseReleased(widgetapi::event::MouseButtonInput& input) {
+			if(allowsMouseInput() || input.button() == widgetapi::event::LocatedUserInput::BUTTON3_DOWN)
 				restoreHiddenCursor();
 			if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->mouseButtonInput(MouseInputStrategy::RELEASED, input);
 		}
 
 		/// Invoked when the mouse button has been triple-clicked. 
-		void TextViewer::mouseTripleClicked(widgetapi::MouseButtonInput& input) {
+		void TextViewer::mouseTripleClicked(widgetapi::event::MouseButtonInput& input) {
 			if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->mouseButtonInput(MouseInputStrategy::DOUBLE_CLICKED, input);
 		}
 
 		/// Invoked when the mouse wheel is rotated.
-		void TextViewer::mouseWheelChanged(widgetapi::MouseWheelInput& input) {
+		void TextViewer::mouseWheelChanged(widgetapi::event::MouseWheelInput& input) {
 			restoreHiddenCursor();
 			if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
 				mouseInputStrategy_->mouseWheelRotated(input);

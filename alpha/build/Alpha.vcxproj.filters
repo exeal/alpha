@@ -105,6 +105,9 @@
     <Filter Include="ascension\Source Files\corelib\win32">
       <UniqueIdentifier>{9bea9113-8894-4169-a20d-a938e3515830}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Header Files\viewer\widgetapi\event">
+      <UniqueIdentifier>{7af15831-29e2-422f-8900-9f434e4691f8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -745,9 +748,6 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\scrollable.hpp">
       <Filter>ascension\Header Files\viewer\widgetapi</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\user-input.hpp">
-      <Filter>ascension\Header Files\viewer\widgetapi</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\widget.hpp">
       <Filter>ascension\Header Files\viewer\widgetapi</Filter>
     </ClInclude>
@@ -885,6 +885,24 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\widget-proxy.hpp">
       <Filter>ascension\Header Files\viewer\widgetapi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\user-input.hpp">
+      <Filter>ascension\Header Files\viewer\widgetapi\event</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\event.hpp">
+      <Filter>ascension\Header Files\viewer\widgetapi\event</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\key-input.hpp">
+      <Filter>ascension\Header Files\viewer\widgetapi\event</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\mouse-wheel-input.hpp">
+      <Filter>ascension\Header Files\viewer\widgetapi\event</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\mouse-button-input.hpp">
+      <Filter>ascension\Header Files\viewer\widgetapi\event</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\located-user-input.hpp">
+      <Filter>ascension\Header Files\viewer\widgetapi\event</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

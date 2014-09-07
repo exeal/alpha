@@ -17,6 +17,9 @@
 #include <ascension/viewer/caret-shaper.hpp>
 #include <ascension/viewer/ruler.hpp>
 #include <ascension/viewer/viewer-observers.hpp>
+#include <ascension/viewer/widgetapi/event/key-input.hpp>
+#include <ascension/viewer/widgetapi/event/mouse-button-input.hpp>
+#include <ascension/viewer/widgetapi/event/mouse-wheel-input.hpp>
 #include <ascension/viewer/widgetapi/scrollable.hpp>
 #include <algorithm>
 #include <array>
@@ -330,19 +333,19 @@ namespace ascension {
 		protected:
 			/// @name Overridable Widget Events
 			/// @{
-			virtual void focusAboutToBeLost(widgetapi::Event& event);
-			virtual void focusGained(widgetapi::Event& event);
-			virtual void keyPressed(widgetapi::KeyInput& input);
-			virtual void keyReleased(widgetapi::KeyInput& input);
-			virtual void mouseDoubleClicked(widgetapi::MouseButtonInput& input);
-			virtual void mouseMoved(widgetapi::LocatedUserInput& input);
-			virtual void mousePressed(widgetapi::MouseButtonInput& input);
-			virtual void mouseReleased(widgetapi::MouseButtonInput& input);
-			virtual void mouseTripleClicked(widgetapi::MouseButtonInput& input);
-			virtual void mouseWheelChanged(widgetapi::MouseWheelInput& input);
+			virtual void focusAboutToBeLost(widgetapi::event::Event& event);
+			virtual void focusGained(widgetapi::event::Event& event);
+			virtual void keyPressed(widgetapi::event::KeyInput& input);
+			virtual void keyReleased(widgetapi::event::KeyInput& input);
+			virtual void mouseDoubleClicked(widgetapi::event::MouseButtonInput& input);
+			virtual void mouseMoved(widgetapi::event::LocatedUserInput& input);
+			virtual void mousePressed(widgetapi::event::MouseButtonInput& input);
+			virtual void mouseReleased(widgetapi::event::MouseButtonInput& input);
+			virtual void mouseTripleClicked(widgetapi::event::MouseButtonInput& input);
+			virtual void mouseWheelChanged(widgetapi::event::MouseWheelInput& input);
 			virtual void paint(graphics::PaintContext& context);
 			virtual void resized(const graphics::Dimension& newSize);
-			virtual void showContextMenu(const widgetapi::LocatedUserInput& input, void* nativeEvent);
+			virtual void showContextMenu(const widgetapi::event::LocatedUserInput& input, void* nativeEvent);
 			/// @}
 
 			/// @name Overridable Widget Events (Platform-dependent)

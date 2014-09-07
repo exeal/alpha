@@ -77,25 +77,25 @@ namespace ascension {
 			/// @}
 
 		private:
-			void beginDragAndDrop(const widgetapi::LocatedUserInput& input);
-			virtual void handleLeftButtonDoubleClick(widgetapi::MouseButtonInput& input);
-			virtual void handleRightButton(Action action, widgetapi::MouseButtonInput& input);
-			virtual void handleX1Button(Action action, widgetapi::MouseButtonInput& input);
-			virtual void handleX2Button(Action action, widgetapi::MouseButtonInput& input);
+			void beginDragAndDrop(const widgetapi::event::LocatedUserInput& input);
+			virtual void handleLeftButtonDoubleClick(widgetapi::event::MouseButtonInput& input);
+			virtual void handleRightButton(Action action, widgetapi::event::MouseButtonInput& input);
+			virtual void handleX1Button(Action action, widgetapi::event::MouseButtonInput& input);
+			virtual void handleX2Button(Action action, widgetapi::event::MouseButtonInput& input);
 			static void showCursor(TextViewer& viewer, const widgetapi::Cursor& cursor);
 		private:
 			bool endAutoScroll();
 			void extendSelectionTo(const kernel::Position* to = nullptr);
-			void handleLeftButtonPressed(widgetapi::MouseButtonInput& input);
-			void handleLeftButtonReleased(widgetapi::MouseButtonInput& input);
+			void handleLeftButtonPressed(widgetapi::event::MouseButtonInput& input);
+			void handleLeftButtonReleased(widgetapi::event::MouseButtonInput& input);
 			// MouseInputStrategy
 			void captureChanged() override;
 			std::shared_ptr<widgetapi::DropTarget> handleDropTarget() const override;
 			void install(TextViewer& viewer) override;
 			void interruptMouseReaction(bool forKeyboardInput) override;
-			void mouseButtonInput(Action action, widgetapi::MouseButtonInput& input) override;
-			void mouseMoved(widgetapi::LocatedUserInput& input) override;
-			void mouseWheelRotated(widgetapi::MouseWheelInput& input) override;
+			void mouseButtonInput(Action action, widgetapi::event::MouseButtonInput& input) override;
+			void mouseMoved(widgetapi::event::LocatedUserInput& input) override;
+			void mouseWheelRotated(widgetapi::event::MouseWheelInput& input) override;
 			bool showCursor(const graphics::Point& position) override;
 			void uninstall() override;
 			// HasTimer

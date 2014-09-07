@@ -83,25 +83,25 @@ namespace ascension {
 			template<typename NativeEvent>
 			inline std::tuple<
 				graphics::Point,
-				widgetapi::LocatedUserInput::MouseButton,
-				widgetapi::UserInput::KeyboardModifier
+				widgetapi::event::LocatedUserInput::MouseButton,
+				widgetapi::event::UserInput::KeyboardModifier
 			>&& makeLocatedUserInput(const NativeEvent& event) {
 				return std::make_tuple(
 					graphics::geometry::make<graphics::Point>((graphics::geometry::_x = event.x, graphics::geometry::_y = event.y)),
-					static_cast<widgetapi::LocatedUserInput::MouseButton>(event.state & NATIVE_BUTTON_MASK),
-					static_cast<widgetapi::UserInput::KeyboardModifier>(event.state & NATIVE_KEYBOARD_MASK));
+					static_cast<widgetapi::event::LocatedUserInput::MouseButton>(event.state & NATIVE_BUTTON_MASK),
+					static_cast<widgetapi::event::UserInput::KeyboardModifier>(event.state & NATIVE_KEYBOARD_MASK));
 			}
 
-			widgetapi::MouseButtonInput&& makeMouseButtonInput(const GdkEventButton& event) {
-				static const widgetapi::LocatedUserInput::MouseButton NATIVE_BUTTON_VALUES[] = {
-					widgetapi::LocatedUserInput::BUTTON1_DOWN, widgetapi::LocatedUserInput::BUTTON2_DOWN,
-					widgetapi::LocatedUserInput::BUTTON3_DOWN, widgetapi::LocatedUserInput::BUTTON4_DOWN,
-					widgetapi::LocatedUserInput::BUTTON5_DOWN
+			widgetapi::event::MouseButtonInput&& makeMouseButtonInput(const GdkEventButton& event) {
+				static const widgetapi::event::LocatedUserInput::MouseButton NATIVE_BUTTON_VALUES[] = {
+					widgetapi::event::LocatedUserInput::BUTTON1_DOWN, widgetapi::event::LocatedUserInput::BUTTON2_DOWN,
+					widgetapi::event::LocatedUserInput::BUTTON3_DOWN, widgetapi::event::LocatedUserInput::BUTTON4_DOWN,
+					widgetapi::event::LocatedUserInput::BUTTON5_DOWN
 				};
 				const auto a(makeLocatedUserInput(event));
-				const widgetapi::LocatedUserInput::MouseButton button =
-					(event.button >= 1 && event.button <= 5) ? NATIVE_BUTTON_VALUES[event.button - 1] : widgetapi::LocatedUserInput::NO_BUTTON;
-				widgetapi::MouseButtonInput temp(std::get<0>(a), button, std::get<1>(a), std::get<2>(a));
+				const widgetapi::event::LocatedUserInput::MouseButton button =
+					(event.button >= 1 && event.button <= 5) ? NATIVE_BUTTON_VALUES[event.button - 1] : widgetapi::event::LocatedUserInput::NO_BUTTON;
+				widgetapi::event::MouseButtonInput temp(std::get<0>(a), button, std::get<1>(a), std::get<2>(a));
 				return std::move(temp);
 			}
 		}
@@ -111,8 +111,8 @@ namespace ascension {
 		 * @see Widget#on_button_press_event
 		 */
 		bool TextViewer::on_button_press_event(GdkEventButton* event) {
-			widgetapi::MouseButtonInput input(makeMouseButtonInput(*event));
-			if(input.button() != widgetapi::LocatedUserInput::NO_BUTTON) {
+			widgetapi::event::MouseButtonInput input(makeMouseButtonInput(*event));
+			if(input.button() != widgetapi::event::LocatedUserInput::NO_BUTTON) {
 				switch(event->type) {
 					case GDK_BUTTON_PRESS:
 						mousePressed(input);
@@ -134,8 +134,8 @@ namespace ascension {
 		 * @see Widget#on_button_release_event
 		 */
 		bool TextViewer::on_button_release_event(GdkEventButton* event) {
-			widgetapi::MouseButtonInput input(makeMouseButtonInput(*event));
-			if(input.button() != widgetapi::LocatedUserInput::NO_BUTTON && event->type == GDK_BUTTON_RELEASE)
+			widgetapi::event::MouseButtonInput input(makeMouseButtonInput(*event));
+			if(input.button() != widgetapi::event::LocatedUserInput::NO_BUTTON && event->type == GDK_BUTTON_RELEASE)
 				mouseReleased(input);
 			return Gtk::Widget::on_button_release_event(event);
 //			return input.isConsumed();
@@ -210,7 +210,7 @@ namespace ascension {
 		 * @see Gtk#Widget#on_focus_in_event
 		 */
 		bool TextViewer::on_focus_in_event(GdkEventFocus*) {
-			widgetapi::Event e;
+			widgetapi::event::Event e;
 			focusGained(e);
 			return e.isConsumed();
 		}
@@ -220,7 +220,7 @@ namespace ascension {
 		 * @see Gtk#Widget#on_focus_out_event
 		 */
 		bool TextViewer::on_focus_out_event(GdkEventFocus*) {
-			widgetapi::Event e;
+			widgetapi::event::Event e;
 			focusAboutToBeLost(e);
 			return e.isConsumed();
 		}
@@ -234,7 +234,7 @@ namespace ascension {
 		 * @see Gtk#Widget#on_key_press_event
 		 */
 		bool TextViewer::on_key_press_event(GdkEventKey* event) {
-			widgetapi::KeyInput input(event->keyval, static_cast<widgetapi::UserInput::KeyboardModifier>(event->state));
+			widgetapi::event::KeyInput input(event->keyval, static_cast<widgetapi::event::UserInput::KeyboardModifier>(event->state));
 			keyPressed(input);
 			return input.isConsumed();
 		}
@@ -244,7 +244,7 @@ namespace ascension {
 		 * @see Gtk#Widget#on_key_release_event
 		 */
 		bool TextViewer::on_key_release_event(GdkEventKey* event) {
-			widgetapi::KeyInput input(event->keyval, static_cast<widgetapi::UserInput::KeyboardModifier>(event->state));
+			widgetapi::event::KeyInput input(event->keyval, static_cast<widgetapi::event::UserInput::KeyboardModifier>(event->state));
 			keyReleased(input);
 			return input.isConsumed();
 		}
@@ -255,7 +255,7 @@ namespace ascension {
 		 */
 		bool TextViewer::on_motion_notify_event(GdkEventMotion* event) {
 			const auto a(makeLocatedUserInput(*event));
-			widgetapi::LocatedUserInput input(std::get<0>(a), std::get<1>(a), std::get<2>(a));
+			widgetapi::event::LocatedUserInput input(std::get<0>(a), std::get<1>(a), std::get<2>(a));
 			mouseMoved(input);
 			return input.isConsumed();
 		}
@@ -318,7 +318,7 @@ namespace ascension {
 					graphics::geometry::dy(wheelRotation) = event->delta_y;
 					break;
 			}
-			widgetapi::MouseWheelInput input(
+			widgetapi::event::MouseWheelInput input(
 				graphics::geometry::make<graphics::Point>((graphics::geometry::_x = event->x, graphics::geometry::_y = event->y)),
 				event->state & NATIVE_BUTTON_MASK, event->state & NATIVE_KEYBOARD_MASK, scrollAmount, wheelRotation);
 			mouseWheelChanged(input);
@@ -357,7 +357,7 @@ namespace ascension {
 			Gtk::Widget::on_unrealize();
 		}
 
-		void TextViewer::showContextMenu(const widgetapi::LocatedUserInput& input, void* nativeEvent) {
+		void TextViewer::showContextMenu(const widgetapi::event::LocatedUserInput& input, void* nativeEvent) {
 			// TODO: Not implemented.
 		}
 	}

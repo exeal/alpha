@@ -407,9 +407,14 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\visual-point.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\cursor.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\drag-and-drop.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\event.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\key-input.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\located-user-input.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\mouse-button-input.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\mouse-wheel-input.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\user-input.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\screen.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\scrollable.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\user-input.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\widget-proxy.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\widget-windows.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\widget.hpp" />

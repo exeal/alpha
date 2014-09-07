@@ -74,13 +74,13 @@ namespace alpha {
 	}
 
 	/// @see TextViewer#focusAboutToBeLost
-	void EditorView::focusAboutToBeLost(ascension::viewers::widgetapi::Event& event) {
+	void EditorView::focusAboutToBeLost(ascension::viewers::widgetapi::event::Event& event) {
 		ascension::viewers::TextViewer::focusAboutToBeLost(event);
 		BufferList::instance().editorSession().incrementalSearcher().end();
 	}
 
 	/// @see TextViewer#focusGained
-	void EditorView::focusGained(ascension::viewers::widgetapi::Event& event) {
+	void EditorView::focusGained(ascension::viewers::widgetapi::event::Event& event) {
 		ascension::viewers::TextViewer::focusGained(event);
 		BufferList::instance().select(document());
 	}
@@ -137,7 +137,7 @@ namespace alpha {
 	}
 
 	/// @see TextViewer#keyPressed
-	void EditorView::keyPressed(ascension::viewers::widgetapi::KeyInput& input) {
+	void EditorView::keyPressed(ascension::viewers::widgetapi::event::KeyInput& input) {
 		// disable default keyboard bindings
 //		return ascension::viewers::TextViewer::keyPressed(input);
 	}
