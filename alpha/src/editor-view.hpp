@@ -39,9 +39,9 @@ namespace alpha {
 	private:
 		// ascension.viewers.TextViewer (overrides)
 		void drawIndicatorMargin(ascension::Index line, ascension::graphics::PaintContext& context, const ascension::graphics::Rectangle& rect) override;
-		void keyPressed(ascension::viewers::widgetapi::KeyInput& input) override;
-		void focusAboutToBeLost(ascension::viewers::widgetapi::Event& event) override;
-		void focusGained(ascension::viewers::widgetapi::Event& event) override;
+		void keyPressed(ascension::viewers::widgetapi::event::KeyInput& input) override;
+		void focusAboutToBeLost(ascension::viewers::widgetapi::event::Event& event) override;
+		void focusGained(ascension::viewers::widgetapi::event::Event& event) override;
 #if 0
 		// ascension.viewers.Caret signals
 		void characterInputted(const ascension::viewers::Caret& self, ascension::CodePoint c);

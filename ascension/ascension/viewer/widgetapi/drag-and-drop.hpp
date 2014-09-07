@@ -7,7 +7,7 @@
 
 #ifndef ASCENSION_DRAG_AND_DROP_HPP
 #define ASCENSION_DRAG_AND_DROP_HPP
-#include <ascension/viewer/widgetapi/user-input.hpp>
+#include <ascension/viewer/widgetapi/event/located-user-input.hpp>
 #include <ascension/viewer/widgetapi/widget.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gdkmm/dragcontext.h>
@@ -70,7 +70,7 @@ namespace ascension {
 			ASCENSION_CANT_DETECT_PLATFORM();
 #endif
 			DropAction resolveDefaultDropAction(DropAction possibleActions,
-				LocatedUserInput::MouseButton buttons, UserInput::KeyboardModifier modifiers);
+				event::LocatedUserInput::MouseButton buttons, event::UserInput::KeyboardModifier modifiers);
 
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 			typedef Glib::RefPtr<Gtk::TargetList> NativeMimeData;
@@ -194,12 +194,12 @@ namespace ascension {
 #endif
 			};
 
-			class DragLeaveInput : public Event {};
+			class DragLeaveInput : public event::Event {};
 
-			class DragInputBase : public LocatedUserInput {
+			class DragInputBase : public event::LocatedUserInput {
 			public:
 				DragInputBase(const LocatedUserInput& userInput, DropAction possibleActions) :
-					LocatedUserInput(userInput), possibleActions_(possibleActions),
+					event::LocatedUserInput(userInput), possibleActions_(possibleActions),
 					defaultAction_(resolveDefaultDropAction(possibleActions, userInput.buttons(), userInput.modifiers())) {}
 				void acceptProposedAction() {setDropAction(proposedAction());}
 				DropAction dropAction() const BOOST_NOEXCEPT {return action_;}

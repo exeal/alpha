@@ -10,8 +10,6 @@
 #include <ascension/corelib/scope-guard.hpp>
 #include <ascension/graphics/geometry.hpp>
 #include <ascension/graphics/rendering-device.hpp>	// graphics.RenderingDevice, ...
-//#include <ascension/viewer/widgetapi/drag-and-drop.hpp>
-#include <ascension/viewer/widgetapi/user-input.hpp>
 #include <ascension/viewer/widgetapi/widget-proxy.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gtkmm/widget.h>

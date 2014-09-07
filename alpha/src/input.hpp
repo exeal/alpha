@@ -9,7 +9,6 @@
 #define ALPHA_INPUT_HPP
 #include "ambient.hpp"
 #include <ascension/corelib/scope-guard.hpp>
-#include <ascension/viewer/widgetapi/user-input.hpp>
 #include <boost/functional/hash.hpp>	// boost.hash_combine, boost.hash_value
 #include <boost/operators.hpp>	// boost.equality_comparable
 #include <boost/thread/lock_guard.hpp>

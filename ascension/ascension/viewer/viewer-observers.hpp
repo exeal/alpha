@@ -30,9 +30,12 @@ namespace ascension {
 #endif
 		namespace widgetapi {
 			class DropTarget;
-			class LocatedUserInput;
-			class MouseButtonInput;
-			class MouseWheelInput;
+
+			namespace event {
+				class LocatedUserInput;
+				class MouseButtonInput;
+				class MouseWheelInput;
+			}
 		}
 
 		/**
@@ -74,17 +77,17 @@ namespace ascension {
 			 * @param action The action of the input
 			 * @param input The input information
 			 */
-			virtual void mouseButtonInput(Action action, widgetapi::MouseButtonInput& input) = 0;
+			virtual void mouseButtonInput(Action action, widgetapi::event::MouseButtonInput& input) = 0;
 			/**
 			 * The mouse was moved and the viewer had focus.
 			 * @param input The input information
 			 */
-			virtual void mouseMoved(widgetapi::LocatedUserInput& input) = 0;
+			virtual void mouseMoved(widgetapi::event::LocatedUserInput& input) = 0;
 			/**
 			 * The mouse wheel was rolated and the viewer had focus.
 			 * @param input The input information
 			 */
-			virtual void mouseWheelRotated(widgetapi::MouseWheelInput& input) = 0;
+			virtual void mouseWheelRotated(widgetapi::event::MouseWheelInput& input) = 0;
 			/**
 			 * Shows a cursor on the viewer.
 			 * @param position The cursor position (client coordinates)
