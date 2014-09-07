@@ -379,6 +379,7 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-run.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-viewport-listener.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-viewport.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\geometry.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\image.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\native-conversion.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\object.hpp" />
@@ -478,7 +479,6 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\caret.hpp" />
     <ClInclude Include="..\..\ascension\ascension\viewer\viewer.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\color.hpp" />
-    <ClInclude Include="..\..\ascension\ascension\graphics\geometry.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-character-iterator.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document-stream.hpp" />
     <ClInclude Include="..\..\ascension\ascension\kernel\document.hpp" />

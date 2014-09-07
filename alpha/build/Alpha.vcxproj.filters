@@ -108,6 +108,9 @@
     <Filter Include="ascension\Header Files\viewer\widgetapi\event">
       <UniqueIdentifier>{7af15831-29e2-422f-8900-9f434e4691f8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ascension\Header Files\graphics\geometry">
+      <UniqueIdentifier>{b45b59ef-1f6d-49a6-9164-19a2776da6f6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\about-dialog.cpp">
@@ -574,9 +577,6 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\color.hpp">
       <Filter>ascension\Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\geometry.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\kernel\document-character-iterator.hpp">
       <Filter>ascension\Header Files\kernel</Filter>
     </ClInclude>
@@ -903,6 +903,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\viewer\widgetapi\event\located-user-input.hpp">
       <Filter>ascension\Header Files\viewer\widgetapi\event</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\geometry.hpp">
+      <Filter>ascension\Header Files\graphics\geometry</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
