@@ -7,7 +7,8 @@
 #ifndef ASCENSION_CURSOR_HPP
 #define ASCENSION_CURSOR_HPP
 
-#include <ascension/graphics/geometry.hpp>
+#include <ascension/graphics/geometry/dimension.hpp>
+#include <ascension/graphics/geometry/point.hpp>
 #include <ascension/platforms.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
 #	include <gdkmm/cursor.h>

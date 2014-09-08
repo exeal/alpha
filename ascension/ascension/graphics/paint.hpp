@@ -9,7 +9,7 @@
 #define ASCENSION_PAINT_HPP
 
 #include <ascension/graphics/color.hpp>
-#include <ascension/graphics/geometry.hpp>
+#include <ascension/graphics/geometry/point.hpp>
 #include <ascension/graphics/object.hpp>
 #include <memory>
 //#include <boost/operators.hpp>

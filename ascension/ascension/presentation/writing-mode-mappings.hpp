@@ -15,7 +15,6 @@
 #ifndef ASCENSION_WRITING_MODE_MAPPINGS_HPP
 #define ASCENSION_WRITING_MODE_MAPPINGS_HPP
 #include <ascension/directions.hpp>
-#include <ascension/graphics/geometry.hpp>			// graphics.PhysicalFourSides
 #include <ascension/presentation/writing-mode.hpp>	// WritingMode, ...
 
 namespace ascension {

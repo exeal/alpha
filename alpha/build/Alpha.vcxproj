@@ -379,7 +379,12 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-run.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-viewport-listener.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\font\text-viewport.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithm.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\common.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\dimension.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\geometry.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\point.hpp" />
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\rectangle.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\image.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\native-conversion.hpp" />
     <ClInclude Include="..\..\ascension\ascension\graphics\object.hpp" />

@@ -9,6 +9,7 @@
 #ifndef ASCENSION_LOCATED_USER_INPUT_HPP
 #define ASCENSION_LOCATED_USER_INPUT_HPP
 
+#include <ascension/graphics/geometry/point.hpp>
 #include <ascension/viewer/widgetapi/event/user-input.hpp>
 
 namespace ascension {

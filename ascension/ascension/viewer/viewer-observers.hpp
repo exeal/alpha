@@ -7,7 +7,7 @@
 
 #ifndef VIEWER_OBSERVERS_HPP
 #define VIEWER_OBSERVERS_HPP
-#include <ascension/graphics/geometry.hpp>	// graphics.Point
+#include <ascension/graphics/geometry/point.hpp>
 #include <ascension/platforms.hpp>
 #include <ascension/viewer/widgetapi/drag-and-drop.hpp>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)

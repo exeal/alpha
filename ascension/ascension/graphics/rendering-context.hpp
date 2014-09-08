@@ -11,7 +11,9 @@
 #include <ascension/corelib/string-piece.hpp>
 #include <ascension/graphics/affine-transform.hpp>
 #include <ascension/graphics/color.hpp>
-#include <ascension/graphics/geometry.hpp>
+#include <ascension/graphics/geometry/dimension.hpp>
+#include <ascension/graphics/geometry/point.hpp>
+#include <ascension/graphics/geometry/rectangle.hpp>
 #include <ascension/graphics/object.hpp>
 #include <ascension/presentation/text-style.hpp>	// presentation.AlignmentBaseline, presentation.TextAnchor
 #include <memory>

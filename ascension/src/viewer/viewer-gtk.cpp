@@ -85,11 +85,17 @@ namespace ascension {
 				graphics::Point,
 				widgetapi::event::LocatedUserInput::MouseButton,
 				widgetapi::event::UserInput::KeyboardModifier
-			>&& makeLocatedUserInput(const NativeEvent& event) {
-				return std::make_tuple(
-					graphics::geometry::make<graphics::Point>((graphics::geometry::_x = event.x, graphics::geometry::_y = event.y)),
+			> makeLocatedUserInput(const NativeEvent& event) {
+				graphics::Point p0(graphics::geometry::make<graphics::Point>((graphics::geometry::_x = 23., graphics::geometry::_y = 42.)));
+				graphics::Point p1(p0);
+				graphics::Point p2(std::move(p1));
+
+				const auto p(graphics::geometry::make<graphics::Point>((graphics::geometry::_x = event.x, graphics::geometry::_y = event.y)));
+				auto a(std::make_tuple(
+					p,
 					static_cast<widgetapi::event::LocatedUserInput::MouseButton>(event.state & NATIVE_BUTTON_MASK),
-					static_cast<widgetapi::event::UserInput::KeyboardModifier>(event.state & NATIVE_KEYBOARD_MASK));
+					static_cast<widgetapi::event::UserInput::KeyboardModifier>(event.state & NATIVE_KEYBOARD_MASK)));
+				return a;
 			}
 
 			widgetapi::event::MouseButtonInput&& makeMouseButtonInput(const GdkEventButton& event) {

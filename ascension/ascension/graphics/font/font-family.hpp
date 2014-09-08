@@ -13,7 +13,6 @@
 #include <ascension/platforms.hpp>
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
 #include <ascension/corelib/basic-types.hpp>		// std.uint32_t, ...
-#include <ascension/graphics/geometry.hpp>
 #include <ascension/graphics/object.hpp>
 #include <functional>	// std.hash
 #include <locale>
