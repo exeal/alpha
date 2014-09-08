@@ -86,19 +86,13 @@ namespace ascension {
 				widgetapi::event::LocatedUserInput::MouseButton,
 				widgetapi::event::UserInput::KeyboardModifier
 			> makeLocatedUserInput(const NativeEvent& event) {
-				graphics::Point p0(graphics::geometry::make<graphics::Point>((graphics::geometry::_x = 23., graphics::geometry::_y = 42.)));
-				graphics::Point p1(p0);
-				graphics::Point p2(std::move(p1));
-
-				const auto p(graphics::geometry::make<graphics::Point>((graphics::geometry::_x = event.x, graphics::geometry::_y = event.y)));
-				auto a(std::make_tuple(
-					p,
+				return std::make_tuple(
+					graphics::geometry::make<graphics::Point>((graphics::geometry::_x = event.x, graphics::geometry::_y = event.y)),
 					static_cast<widgetapi::event::LocatedUserInput::MouseButton>(event.state & NATIVE_BUTTON_MASK),
-					static_cast<widgetapi::event::UserInput::KeyboardModifier>(event.state & NATIVE_KEYBOARD_MASK)));
-				return a;
+					static_cast<widgetapi::event::UserInput::KeyboardModifier>(event.state & NATIVE_KEYBOARD_MASK));
 			}
 
-			widgetapi::event::MouseButtonInput&& makeMouseButtonInput(const GdkEventButton& event) {
+			widgetapi::event::MouseButtonInput makeMouseButtonInput(const GdkEventButton& event) {
 				static const widgetapi::event::LocatedUserInput::MouseButton NATIVE_BUTTON_VALUES[] = {
 					widgetapi::event::LocatedUserInput::BUTTON1_DOWN, widgetapi::event::LocatedUserInput::BUTTON2_DOWN,
 					widgetapi::event::LocatedUserInput::BUTTON3_DOWN, widgetapi::event::LocatedUserInput::BUTTON4_DOWN,
@@ -107,8 +101,7 @@ namespace ascension {
 				const auto a(makeLocatedUserInput(event));
 				const widgetapi::event::LocatedUserInput::MouseButton button =
 					(event.button >= 1 && event.button <= 5) ? NATIVE_BUTTON_VALUES[event.button - 1] : widgetapi::event::LocatedUserInput::NO_BUTTON;
-				widgetapi::event::MouseButtonInput temp(std::get<0>(a), button, std::get<1>(a), std::get<2>(a));
-				return std::move(temp);
+				return widgetapi::event::MouseButtonInput(std::get<0>(a), button, std::get<1>(a), std::get<2>(a));
 			}
 		}
 

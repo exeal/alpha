@@ -8,7 +8,7 @@
 
 #ifndef ASCENSION_FONT_COLLECTION_HPP
 #define ASCENSION_FONT_COLLECTION_HPP
-#include <ascension/graphics/affine-transform.hpp>
+#include <ascension/graphics/geometry/affine-transform.hpp>
 #include <ascension/graphics/font/font.hpp>
 #include <boost/optional.hpp>
 #include <boost/range/iterator.hpp>
