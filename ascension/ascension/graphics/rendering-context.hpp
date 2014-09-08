@@ -9,8 +9,8 @@
 
 #include <ascension/corelib/basic-types.hpp>	// std.tr1.shared_ptr
 #include <ascension/corelib/string-piece.hpp>
-#include <ascension/graphics/affine-transform.hpp>
 #include <ascension/graphics/color.hpp>
+#include <ascension/graphics/geometry/affine-transform.hpp>
 #include <ascension/graphics/geometry/dimension.hpp>
 #include <ascension/graphics/geometry/point.hpp>
 #include <ascension/graphics/geometry/rectangle.hpp>

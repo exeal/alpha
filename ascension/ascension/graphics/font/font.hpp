@@ -8,10 +8,10 @@
 #ifndef ASCENSION_FONT_HPP
 #define ASCENSION_FONT_HPP
 #include <ascension/corelib/string-piece.hpp>
-#include <ascension/graphics/affine-transform.hpp>
 #include <ascension/graphics/font/font-description.hpp>
 #include <ascension/graphics/font/glyph-vector.hpp>
 #include <ascension/graphics/font/text-alignment.hpp>
+#include <ascension/graphics/geometry/affine-transform.hpp>
 #include <ascension/graphics/object.hpp>
 #include <locale>
 #include <memory>
