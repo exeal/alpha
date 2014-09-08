@@ -10,7 +10,8 @@
 #ifndef ASCENSION_GLYPH_VECTOR_HPP
 #define ASCENSION_GLYPH_VECTOR_HPP
 
-#include <ascension/graphics/geometry.hpp>
+#include <ascension/graphics/geometry/point.hpp>
+#include <ascension/graphics/geometry/rectangle.hpp>
 #include <ascension/presentation/writing-mode.hpp>
 #include <cstdint>
 #include <memory>

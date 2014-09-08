@@ -10,9 +10,9 @@
 
 #ifndef ASCENSION_LENGTH_HPP
 #define ASCENSION_LENGTH_HPP
-#include <ascension/graphics/geometry.hpp>	// graphics.Scalar, graphics.Dimension
-#include <stdexcept>						// std.invalid_argument
-#include <boost/operators.hpp>				// boost.equality_comparable
+#include <ascension/graphics/geometry/dimension.hpp>
+#include <stdexcept>			// std.invalid_argument
+#include <boost/operators.hpp>	// boost.equality_comparable
 
 namespace ascension {
 	namespace graphics {

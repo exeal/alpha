@@ -12,6 +12,7 @@
 #include <ascension/viewer/caret.hpp>
 #include <ascension/viewer/viewer.hpp>
 #include <boost/core/null_deleter.hpp>
+#include <boost/geometry/algorithms/intersects.hpp>
 #ifdef _DEBUG
 #	include <boost/log/trivial.hpp>
 //#	define ASCENSION_DIAGNOSE_INHERENT_DRAWING

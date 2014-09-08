@@ -12,6 +12,7 @@
 
 #include <ascension/graphics/font/glyph-vector.hpp>
 #include <ascension/graphics/font/text-hit.hpp>
+#include <boost/geometry/algorithms/distance.hpp>
 #include <boost/optional.hpp>
 #if ASCENSION_SELECTS_SHAPING_ENGINE(CORE_TEXT)
 #	include <CTRun.h>

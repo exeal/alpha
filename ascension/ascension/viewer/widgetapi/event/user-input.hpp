@@ -8,7 +8,6 @@
 #ifndef ASCENSION_USER_INPUT_HPP
 #define ASCENSION_USER_INPUT_HPP
 
-#include <ascension/graphics/geometry.hpp>	// graphics.Point
 #include <ascension/viewer/widgetapi/event/event.hpp>
 #include <ctime>
 #if ASCENSION_SELECTS_WINDOW_SYSTEM(GTK)
@@ -18,6 +17,7 @@
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(QT)
 #	include <QInputEvent>
 #elif ASCENSION_SELECTS_WINDOW_SYSTEM(WIN32)
+#	include <ascension/graphics/geometry/point.hpp>
 #	include <ascension/win32/windows.hpp>
 #endif
 

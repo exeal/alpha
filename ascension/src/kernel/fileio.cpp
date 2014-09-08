@@ -21,6 +21,9 @@
 #	include <unistd.h>		// fcntl
 #	include <sys/mman.h>	// mmap, munmap, ...
 #endif // !ASCENSION_OS_POSIX
+#ifdef BOOST_OS_WINDOWS
+#	include <cwctype>
+#endif
 
 
 namespace ascension {

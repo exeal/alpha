@@ -22,6 +22,8 @@
 #include <ascension/viewer/widgetapi/cursor.hpp>
 #include <limits>	// std.numeric_limit
 #include <boost/foreach.hpp>
+#include <boost/geometry/algorithms/equals.hpp>
+#include <boost/geometry/algorithms/within.hpp>
 #ifdef _DEBUG
 #	include <boost/log/trivial.hpp>
 //#	define ASCENSIOB_DIAGNOSE_INHERENT_DRAWING

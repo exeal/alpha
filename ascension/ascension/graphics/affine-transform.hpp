@@ -6,10 +6,12 @@
 
 #ifndef ASCENSION_AFFINE_TRANSFORM_HPP
 #define ASCENSION_AFFINE_TRANSFORM_HPP
-#include <ascension/graphics/geometry.hpp>
+
+#include <ascension/graphics/geometry/common.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/geometry/strategies/transform/matrix_transformers.hpp>
 #include <boost/operators.hpp>
+#include <boost/parameter.hpp>
 #include <boost/range/algorithm/equal.hpp>
 //#include <boost/math/constants/constants.hpp>	// boost.math.constants.pi
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)

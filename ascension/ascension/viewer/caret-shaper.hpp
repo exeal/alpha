@@ -11,7 +11,8 @@
 #ifndef ASCENSION_CARET_SHAPER_HPP
 #define ASCENSION_CARET_SHAPER_HPP
 #include <ascension/corelib/signals.hpp>
-#include <ascension/graphics/geometry.hpp>	// graphics.BasicPoint, graphics.Rectangle
+#include <ascension/graphics/geometry/point.hpp>
+#include <ascension/graphics/geometry/rectangle.hpp>
 #include <boost/optional.hpp>
 #include <memory>	// std.shared_ptr
 #include <tuple>

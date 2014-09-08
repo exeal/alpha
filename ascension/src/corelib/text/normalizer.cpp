@@ -9,6 +9,7 @@
 #include <ascension/corelib/text/normalizer.hpp>
 #include <ascension/corelib/text/character-property.hpp>
 #include <ascension/corelib/text/utf-iterator.hpp>
+#include <boost/optional.hpp>
 #include <boost/range/algorithm/lower_bound.hpp>
 #include <algorithm>	// std.find_if, std.lower_bound, std.sort
 

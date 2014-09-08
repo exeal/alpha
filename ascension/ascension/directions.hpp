@@ -12,7 +12,7 @@
 #define ASCENSION_DIRECTIONS_HPP
 #include <ascension/corelib/basic-exceptions.hpp>	// UnknownValueException
 #include <ascension/corelib/future/scoped-enum-emulation.hpp>
-#include <ascension/graphics/geometry.hpp>
+#include <ascension/graphics/geometry/algorithm.hpp>
 #include <array>
 #include <functional>	// std.hash
 #include <iterator>		// std.end

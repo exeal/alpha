@@ -11,9 +11,9 @@
 #ifndef ASCENSION_TEXT_VIEWPORT_LISTENER_HPP
 #define ASCENSION_TEXT_VIEWPORT_LISTENER_HPP
 
-//#include <ascension/config.hpp>	// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
-#include <ascension/directions.hpp>	// presentation.AbstractTwoAxes
-#include <ascension/graphics/geometry.hpp>	// graphics.Rectangle
+//#include <ascension/config.hpp>						// ASCENSION_DEFAULT_TEXT_READING_DIRECTION
+#include <ascension/directions.hpp>						// presentation.AbstractTwoAxes
+#include <ascension/graphics/geometry/rectangle.hpp>	// graphics.Rectangle
 
 namespace ascension {
 	namespace graphics {

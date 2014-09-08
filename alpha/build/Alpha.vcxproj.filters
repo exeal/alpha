@@ -907,6 +907,21 @@
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\geometry.hpp">
       <Filter>ascension\Header Files\graphics\geometry</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\common.hpp">
+      <Filter>ascension\Header Files\graphics\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\point.hpp">
+      <Filter>ascension\Header Files\graphics\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\dimension.hpp">
+      <Filter>ascension\Header Files\graphics\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\rectangle.hpp">
+      <Filter>ascension\Header Files\graphics\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithm.hpp">
+      <Filter>ascension\Header Files\graphics\geometry</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resource\alpha.ico">
