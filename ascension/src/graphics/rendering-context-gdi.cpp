@@ -407,6 +407,8 @@ namespace ascension {
 		}
 
 		std::unique_ptr<const font::FontMetrics<Scalar>> RenderingContext2D::fontMetrics(std::shared_ptr<const font::Font> font /* = nullptr */) const {
+			if(font.get() == nullptr)
+				font = this->font();
 			return std::unique_ptr<const font::FontMetrics<Scalar>>(new GdiFontMetrics(nativeObject_, font->native()));
 		}
 
