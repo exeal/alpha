@@ -363,9 +363,9 @@ namespace ascension {
 //					const double ydpi = ::GetDeviceCaps(dc.get(), LOGPIXELSY);
 
 					// generic font metrics
-					OUTLINETEXTMETRICW otm;
+					win32::AutoZeroSize<OUTLINETEXTMETRICW, UINT> otm;
 					TEXTMETRICW tm;
-					if(::GetOutlineTextMetricsW(dc.get(), sizeof(OUTLINETEXTMETRICW), &otm) == 0) {
+					if(::GetOutlineTextMetricsW(dc.get(), sizeof(decltype(otm)), &otm) == 0) {
 						tm = otm.otmTextMetrics;
 						unitsPerEm_ = otm.otmEMSquare;
 					} else if(win32::boole(::GetTextMetricsW(dc.get(), &tm)))
