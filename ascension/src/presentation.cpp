@@ -149,12 +149,12 @@ namespace ascension {
 		 * @param line The line number
 		 * @param lengthContext 
 		 * @param globalSwitch 
-		 * @return The computed text line style
+		 * @param[out] result The computed text line style
 		 * @throw BadPositionException @a line is outside of the document
 		 * @throw NullPointerException Internal @c Length#value call may throw this exception
 		 */
-		graphics::font::ComputedTextLineStyle&& Presentation::computeTextLineStyle(Index line,
-				const Length::Context& lengthContext, const GlobalTextStyleSwitch* globalSwitch) const {
+		void Presentation::computeTextLineStyle(Index line, const Length::Context& lengthContext,
+				const GlobalTextStyleSwitch* globalSwitch, graphics::font::ComputedTextLineStyle& result) const {
 			if(line >= document_.numberOfLines())
 				throw kernel::BadPositionException(kernel::Position(line, 0));
 		
@@ -201,22 +201,21 @@ namespace ascension {
 			resolveProperty(&TextLineStyle::numberSubstitutionLocaleSource, *defaultStyle, precomputed);
 			resolveProperty(&TextLineStyle::numberSubstitutionMethod, *defaultStyle, precomputed);
 		
-			graphics::font::ComputedTextLineStyle computed;
-			computed.writingMode = WritingMode(precomputed.direction.getOrInitial(), toplevel.writingMode.getOrInitial(), precomputed.textOrientation.getOrInitial());
-			computed.lineBoxContain = precomputed.lineBoxContain.getOrInitial();
-			computed.whiteSpace = precomputed.whiteSpace.getOrInitial();
+			result.writingMode = WritingMode(precomputed.direction.getOrInitial(), toplevel.writingMode.getOrInitial(), precomputed.textOrientation.getOrInitial());
+			result.lineBoxContain = precomputed.lineBoxContain.getOrInitial();
+			result.whiteSpace = precomputed.whiteSpace.getOrInitial();
 			precomputed.tabSize.getOrInitial();
-			computed.lineBreak = precomputed.lineBreak.getOrInitial();
-			computed.wordBreak = precomputed.wordBreak.getOrInitial();
-			computed.overflowWrap = precomputed.overflowWrap.getOrInitial();
-			computed.alignment = precomputed.textAlignment.getOrInitial();
-			computed.alignmentLast = precomputed.textAlignmentLast.getOrInitial();
-			computed.justification = precomputed.textJustification.getOrInitial();
-			computed.indent.length = static_cast<graphics::Scalar>(precomputed.textIndent.getOrInitial().length.value(lengthContext));
-			computed.indent.hanging = precomputed.textIndent.getOrInitial().hanging;
-			computed.indent.eachLine = precomputed.textIndent.getOrInitial().eachLine;
-			computed.hangingPunctuation = precomputed.hangingPunctuation.getOrInitial();
-			computed.dominantBaseline = precomputed.dominantBaseline.getOrInitial();
+			result.lineBreak = precomputed.lineBreak.getOrInitial();
+			result.wordBreak = precomputed.wordBreak.getOrInitial();
+			result.overflowWrap = precomputed.overflowWrap.getOrInitial();
+			result.alignment = precomputed.textAlignment.getOrInitial();
+			result.alignmentLast = precomputed.textAlignmentLast.getOrInitial();
+			result.justification = precomputed.textJustification.getOrInitial();
+			result.indent.length = static_cast<graphics::Scalar>(precomputed.textIndent.getOrInitial().length.value(lengthContext));
+			result.indent.hanging = precomputed.textIndent.getOrInitial().hanging;
+			result.indent.eachLine = precomputed.textIndent.getOrInitial().eachLine;
+			result.hangingPunctuation = precomputed.hangingPunctuation.getOrInitial();
+			result.dominantBaseline = precomputed.dominantBaseline.getOrInitial();
 			{
 				// TODO: This code is temporary.
 				auto precomputedLineHeight(precomputed.lineHeight.getOrInitial());
@@ -228,22 +227,20 @@ namespace ascension {
 				} else if(const graphics::Scalar* const number = boost::get<graphics::Scalar>(&precomputedLineHeight))
 					precomputedLineHeight = Length(*number, Length::EM_HEIGHT);
 				if(const Length* const length = boost::get<Length>(&precomputedLineHeight))
-					computed.lineHeight = static_cast<graphics::Scalar>(length->value(lengthContext));
+					result.lineHeight = static_cast<graphics::Scalar>(length->value(lengthContext));
 				else
 					ASCENSION_ASSERT_NOT_REACHED();
 			}
 			{
 				const boost::optional<Length> value(precomputed.measure.getOrInitial());
 				if(value != boost::none)
-					computed.measure = static_cast<graphics::Scalar>(value->value(lengthContext));
+					result.measure = static_cast<graphics::Scalar>(value->value(lengthContext));
 				else
-					computed.measure = Length(100, Length::PERCENTAGE, isHorizontal(computed.writingMode.blockFlowDirection) ? Length::WIDTH : Length::HEIGHT).value(lengthContext);
+					result.measure = Length(100, Length::PERCENTAGE, isHorizontal(result.writingMode.blockFlowDirection) ? Length::WIDTH : Length::HEIGHT).value(lengthContext);
 			}
-			computed.numberSubstitution.localeOverride = precomputed.numberSubstitutionLocaleOverride.getOrInitial();
-			computed.numberSubstitution.localeSource = precomputed.numberSubstitutionLocaleSource.getOrInitial();
-			computed.numberSubstitution.method = precomputed.numberSubstitutionMethod.getOrInitial();
-		
-			return std::move(computed);
+			result.numberSubstitution.localeOverride = precomputed.numberSubstitutionLocaleOverride.getOrInitial();
+			result.numberSubstitution.localeSource = precomputed.numberSubstitutionLocaleSource.getOrInitial();
+			result.numberSubstitution.method = precomputed.numberSubstitutionMethod.getOrInitial();
 		}
 
 		namespace {
@@ -374,9 +371,9 @@ namespace ascension {
 		/**
 		 * Computes the writing mode. This method does not call @c TextLineStyleDeclarator.
 		 * @param globalSwitch
-		 * @return The computed writing mode value
+		 * @preturn The computed writing mode value
 		 */
-		WritingMode&& Presentation::computeWritingMode(const GlobalTextStyleSwitch* globalSwitch) const {
+		WritingMode Presentation::computeWritingMode(const GlobalTextStyleSwitch* globalSwitch) const {
 			const TextToplevelStyle& toplevel = textToplevelStyle();
 			boost::optional<BlockFlowDirection> writingMode(toplevel.writingMode.getOrNone());
 			if(writingMode == boost::none) {

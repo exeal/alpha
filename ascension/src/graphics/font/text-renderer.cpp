@@ -137,7 +137,7 @@ namespace ascension {
 			//	textWrapping_.measure = 0;
 				layouts_.reset(new LineLayoutVector(presentation.document(),
 					std::bind(&TextRenderer::generateLineLayout, this, std::placeholders::_1), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
-				viewport_ = detail::createTextViewport(*this);
+//				viewport_ = detail::createTextViewport(*this);
 				updateComputedBlockFlowDirectionChanged();	// this initializes 'computedBlockFlowDirection_'
 #if defined(BOOST_OS_WINDOWS)
 				LOGFONTW lf;
@@ -167,7 +167,7 @@ namespace ascension {
 					presentation_(other.presentation_), layouts_(), fontCollection_(other.fontCollection_), defaultFont_(other.defaultFont_) {
 				layouts_.reset(new LineLayoutVector(other.presentation_.document(),
 					std::bind(&TextRenderer::generateLineLayout, this, std::placeholders::_1), ASCENSION_DEFAULT_LINE_LAYOUT_CACHE_SIZE, true));
-				viewport_ = detail::createTextViewport(*this);
+//				viewport_ = detail::createTextViewport(*this);
 				updateComputedBlockFlowDirectionChanged();	// this initializes 'computedBlockFlowDirection_'
 			//	updateViewerSize(); ???
 				presentation_.addTextToplevelStyleListener(*this);
@@ -242,7 +242,7 @@ namespace ascension {
 					ComputedTextLineStyle& lineStyle, std::unique_ptr<ComputedStyledTextRunIterator>& runStyles) const {
 				const Dimension viewportSize(geometry::size(viewport()->boundsInView()));
 				const presentation::Length::Context lengthContext(&graphics2D, &viewportSize);
-				lineStyle = presentation().computeTextLineStyle(line, lengthContext, this);
+				presentation().computeTextLineStyle(line, lengthContext, this, lineStyle);
 				runStyles = presentation().computeTextRunStyles(line, lengthContext);
 			}
 
@@ -540,6 +540,24 @@ namespace ascension {
 				computedBlockFlowDirection_ = writingMode.blockFlowDirection;
 				computedBlockFlowDirectionListeners_.notify<presentation::BlockFlowDirection>(
 					&ComputedBlockFlowDirectionListener::computedBlockFlowDirectionChanged, used);
+			}
+
+			/// Returns the viewport.
+			std::shared_ptr<TextViewport> TextRenderer::viewport() BOOST_NOEXCEPT {
+				if(viewport_.get() == nullptr) {
+					viewport_ = detail::createTextViewport(*this);
+					layouts().at(viewport_->firstVisibleLine().line, LineLayoutVector::USE_CALCULATED_LAYOUT);
+				}
+				return viewport_;
+			}
+
+			/// Returns the viewport.
+			std::shared_ptr<const TextViewport> TextRenderer::viewport() const BOOST_NOEXCEPT {
+				if(viewport_.get() == nullptr) {
+					const_cast<TextRenderer*>(this)->viewport_ = detail::createTextViewport(*const_cast<TextRenderer*>(this));
+					const_cast<TextRenderer*>(this)->layouts().at(viewport_->firstVisibleLine().line, LineLayoutVector::USE_CALCULATED_LAYOUT);
+				}
+				return viewport_;
 			}
 		}
 	}

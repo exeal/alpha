@@ -254,10 +254,13 @@ namespace ascension {
 				switch(viewport.textRenderer().computedBlockFlowDirection()) {
 					case presentation::HORIZONTAL_TB:
 						bpd = geometry::y(p) - *viewportContentExtent(viewport).begin();
+						break;
 					case presentation::VERTICAL_RL:
 						bpd = geometry::dx(viewport.boundsInView()) - geometry::x(p) - *viewportContentExtent(viewport).begin();
+						break;
 					case presentation::VERTICAL_LR:
 						bpd = geometry::x(p) - *viewportContentExtent(viewport).begin();
+						break;
 					default:
 						ASCENSION_ASSERT_NOT_REACHED();
 				}
@@ -850,7 +853,7 @@ namespace ascension {
 #ifdef ASCENSION_PIXELFUL_SCROLL_IN_BPD
 					fontRenderContext_(frc),
 #endif	// ASCENSION_PIXELFUL_SCROLL_IN_BPD
-					scrollPositions_(0, 0), repairingLayouts_(false) {
+					scrollPositions_(0, 0), firstVisibleLine_(0, 0), repairingLayouts_(false) {
 				documentAccessibleRegionChangedConnection_ =
 					this->textRenderer().presentation().document().accessibleRegionChangedSignal().connect(
 						std::bind(&TextViewport::documentAccessibleRegionChanged, this, std::placeholders::_1));

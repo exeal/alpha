@@ -225,16 +225,6 @@ namespace ascension {
 				return textWrappingMeasureInPixels_;
 			}
 #endif // ASCENSION_ABANDONED_AT_VERSION_08
-
-			/// Returns the viewport.
-			inline std::shared_ptr<TextViewport> TextRenderer::viewport() BOOST_NOEXCEPT {
-				return viewport_;
-			}
-
-			/// Returns the viewport.
-			inline std::shared_ptr<const TextViewport> TextRenderer::viewport() const BOOST_NOEXCEPT {
-				return viewport_;
-			}
 		}
 	}
 } // namespace ascension.graphics.font
