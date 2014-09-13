@@ -232,7 +232,13 @@ namespace ascension {
 				else
 					ASCENSION_ASSERT_NOT_REACHED();
 			}
-			computed.measure = static_cast<graphics::Scalar>(precomputed.measure.getOrInitial()->value(lengthContext));
+			{
+				const boost::optional<Length> value(precomputed.measure.getOrInitial());
+				if(value != boost::none)
+					computed.measure = static_cast<graphics::Scalar>(value->value(lengthContext));
+				else
+					computed.measure = Length(100, Length::PERCENTAGE, isHorizontal(computed.writingMode.blockFlowDirection) ? Length::WIDTH : Length::HEIGHT).value(lengthContext);
+			}
 			computed.numberSubstitution.localeOverride = precomputed.numberSubstitutionLocaleOverride.getOrInitial();
 			computed.numberSubstitution.localeSource = precomputed.numberSubstitutionLocaleSource.getOrInitial();
 			computed.numberSubstitution.method = precomputed.numberSubstitutionMethod.getOrInitial();

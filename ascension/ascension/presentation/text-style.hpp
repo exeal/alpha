@@ -1277,7 +1277,10 @@ namespace ascension {
 					LineHeightEnums, LineHeightEnums::NORMAL
 				>, sp::Inherited
 			> lineHeight;
-			/// ‘width’ property.
+			/**
+			 * ‘width’ property. @c boost#none stands ‘auto’ value.
+			 * @see CSS basic box model (http://www.w3.org/TR/css-box)
+			 */
 			StyleProperty<
 				sp::Complex<
 					boost::optional<Length>
