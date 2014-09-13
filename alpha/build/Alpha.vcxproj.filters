@@ -709,9 +709,6 @@
     <ClInclude Include="..\..\ascension\ascension\viewer\default-mouse-input-strategy.hpp">
       <Filter>ascension\Header Files\viewer</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ascension\ascension\graphics\affine-transform.hpp">
-      <Filter>ascension\Header Files\graphics</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\corelib\future.hpp">
       <Filter>ascension\Header Files\corelib</Filter>
     </ClInclude>
@@ -920,6 +917,9 @@
       <Filter>ascension\Header Files\graphics\geometry</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ascension\ascension\graphics\geometry\algorithm.hpp">
+      <Filter>ascension\Header Files\graphics\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ascension\ascension\graphics\geometry\affine-transform.hpp">
       <Filter>ascension\Header Files\graphics\geometry</Filter>
     </ClInclude>
   </ItemGroup>
