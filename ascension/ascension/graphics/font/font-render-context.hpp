@@ -95,7 +95,7 @@ namespace ascension {
 				}
 				/// Returns the transform that is used to scale typographical points to pixels in this
 				/// @c FontRenderContext.
-				geometry::AffineTransform&& transform() const BOOST_NOEXCEPT {
+				geometry::AffineTransform transform() const BOOST_NOEXCEPT {
 					return (transform_.get() != nullptr) ? geometry::AffineTransform(*transform_) : geometry::makeIdentityTransform();
 				}
 				/// Returns a boolean which whether text fractional metrics mode is used in this @c FontRenderContext.
