@@ -189,11 +189,11 @@ namespace ascension {
 
 			void LineLayoutVector::fireVisualLinesDeleted(const boost::integer_range<Index>& lines, Index sublines) {
 				numberOfVisualLines_ -= sublines;
-				const bool widthChanged = includes(lines, *longestLine_);
-				if(widthChanged)
-					updateLongestLine(static_cast<Index>(-1), 0);
+				const bool measureChanged = longestLine_ == boost::none || includes(lines, boost::get(longestLine_));
+				if(measureChanged)
+					updateLongestLine(boost::none, 0);
 				listeners_.notify<const boost::integer_range<Index>&, Index>(
-					&VisualLinesListener::visualLinesDeleted, lines, sublines, widthChanged);
+					&VisualLinesListener::visualLinesDeleted, lines, sublines, measureChanged);
 			}
 
 			void LineLayoutVector::fireVisualLinesInserted(const boost::integer_range<Index>& lines) BOOST_NOEXCEPT {
@@ -208,11 +208,11 @@ namespace ascension {
 
 				// update the longest line
 				bool longestLineChanged = false;
-				if(includes(lines, *longestLine_)) {
+				if(longestLine_ == boost::none || includes(lines, boost::get(longestLine_))) {
 					updateLongestLine(boost::none, 0);
 					longestLineChanged = true;
 				} else {
-					Index newLongestLine = *longestLine_;
+					Index newLongestLine = boost::get(longestLine_);
 					Scalar newMaximumIpd = maximumMeasure();
 					BOOST_FOREACH(const NumberedLayout& layout, layouts_) {
 						if(layout.layout->measure() > newMaximumIpd) {
