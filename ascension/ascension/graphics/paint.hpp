@@ -56,11 +56,11 @@ namespace ascension {
 		private:
 			win32::com::SmartPointer<ID2D1Brush> nativeObject_;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(QT)
-			const std::unique_ptr<QBrush>& native() const BOOST_NOEXCEPT;
+			std::shared_ptr<QBrush> native() const BOOST_NOEXCEPT;
 		protected:
-			void reset(std::unique_ptr<QBrush>&& nativeObject) BOOST_NOEXCEPT;
+			void reset(std::shared_ptr<QBrush> nativeObject) BOOST_NOEXCEPT;
 		private:
-			std::unique_ptr<QBrush> nativeObject_;
+			std::shared_ptr<QBrush> nativeObject_;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDI)
 			const LOGBRUSH& native() const BOOST_NOEXCEPT;
 		protected:
@@ -68,11 +68,11 @@ namespace ascension {
 		private:
 			LOGBRUSH nativeObject_;
 #elif ASCENSION_SELECTS_GRAPHICS_SYSTEM(WIN32_GDIPLUS)
-			const std::unique_ptr<Gdiplus::Brush>& nativeObject() const BOOST_NOEXCEPT;
+			std::shared_ptr<Gdiplus::Brush> nativeObject() const BOOST_NOEXCEPT;
 		protected:
-			void reset(std::unique_ptr<Gdiplus::Brush>&& nativeObject) BOOST_NOEXCEPT;
+			void reset(std::shared_ptr<Gdiplus::Brush> nativeObject) BOOST_NOEXCEPT;
 		private:
-			std::unique_ptr<Gdiplus::Brush> nativeObject_;
+			std::shared_ptr<Gdiplus::Brush> nativeObject_;
 #endif
 			std::size_t revisionNumber_;
 		};
