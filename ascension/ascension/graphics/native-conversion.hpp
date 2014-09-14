@@ -22,7 +22,7 @@ namespace ascension {
 		 * @return The converted platform-independent object
 		 * @see #toNative
 		 */
-		template<typename Model, typename Native> inline Model&& fromNative(const Native& object) {
+		template<typename Model, typename Native> inline Model fromNative(const Native& object) {
 			return detail::fromNative<Model>(object);
 		}
 
@@ -34,7 +34,7 @@ namespace ascension {
 		 * @return The converted native object
 		 * @see #fromNative
 		 */
-		template<typename Native, typename Model> inline Native&& toNative(const Model& object) {
+		template<typename Native, typename Model> inline Native toNative(const Model& object) {
 			return detail::toNative(object, static_cast<const Native*>(nullptr));
 		}
 		/// @}

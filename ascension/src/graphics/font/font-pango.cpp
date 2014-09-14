@@ -37,7 +37,7 @@ namespace ascension {
 		}
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
 		namespace detail {
-			template<> font::FontDescription&& fromNative<font::FontDescription>(const Pango::FontDescription& object) {
+			template<> font::FontDescription fromNative<font::FontDescription>(const Pango::FontDescription& object) {
 				font::FontProperties properties;
 				switch(object.get_weight()) {
 					case Pango::WEIGHT_ULTRALIGHT:
@@ -114,7 +114,7 @@ namespace ascension {
 				return font::FontDescription(font::FontFamily(fromGlibUstring(object.get_family())), !object.get_size_is_absolute() ? object.get_size() : 0, properties);
 			}
 
-			Pango::FontDescription&& toNative(const font::FontDescription& object, const Pango::FontDescription* /* = nullptr */) {
+			Pango::FontDescription toNative(const font::FontDescription& object, const Pango::FontDescription* /* = nullptr */) {
 				Pango::FontDescription result(toGlibUstring(object.family().name()));
 				switch(boost::native_value(object.properties().style)) {
 					case font::FontStyle::NORMAL:

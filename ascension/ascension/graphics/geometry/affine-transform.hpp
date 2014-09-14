@@ -84,7 +84,7 @@ namespace ascension {
 			 */
 
 			/// Creates a new @c AffineTransform representing Identity transformation.
-			inline AffineTransform&& makeIdentityTransform() {
+			inline AffineTransform makeIdentityTransform() {
 				return makeAffineTransform(_sx = 1.0, _sy = 1.0, _shx = 0, _shy = 0, _tx = 0, _ty = 0);
 			}
 
@@ -92,7 +92,7 @@ namespace ascension {
 			 * Creates a transform that rotates coordinates by the specified number of quadrants.
 			 * @param numberOfQuadrants The number of 90 degree arcs to rotate by
 			 */
-			inline AffineTransform&& makeQuadrantRotationTransform(int numberOfQuadrants) {
+			inline AffineTransform makeQuadrantRotationTransform(int numberOfQuadrants) {
 				switch(numberOfQuadrants % 3) {
 			 		case 0:
 						return makeIdentityTransform();
@@ -114,7 +114,7 @@ namespace ascension {
 			 * @param anchor The rotation anchor point
 			 */ 
 			template<typename Geometry>
-			inline AffineTransform&& makeQuadrantRotationTransform(int numberOfQuadrants, const Geometry& anchor,
+			inline AffineTransform makeQuadrantRotationTransform(int numberOfQuadrants, const Geometry& anchor,
 				typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr);
 #endif
 			/**
@@ -124,7 +124,7 @@ namespace ascension {
 			 * @return An @c AffineTransform object that is a rotation transform, created with the specified angle of rotation
 			 */
 			template<typename DegreeOrRadian>
-			inline AffineTransform&& makeRotationTransform(double theta) {
+			inline AffineTransform makeRotationTransform(double theta) {
 				return AffineTransform(boost::geometry::strategy::transform::rotate_transformer<DegreeOrRadian, double, 2, 2>(thetaInRadians));
 			}
 #if 0
@@ -137,7 +137,7 @@ namespace ascension {
 			 * @return An @c AffineTransform object that rotates coordinates around the specified angle of rotation
 			 */
 			template<typename DegreeOrRadian, typename Geometry>
-			inline AffineTransform&& makeRotationTransform(double thetaInRadians, const Geometry& anchor,
+			inline AffineTransform makeRotationTransform(double thetaInRadians, const Geometry& anchor,
 				typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr);
 
 			/**
@@ -145,7 +145,7 @@ namespace ascension {
 			 * @param rotationVector The rotation vector
 			 * @return An @c AffineTransform object that rotates coordinates according to the specified rotation vector
 			 */
-			inline AffineTransform&& makeRotationTransform(const BasicDimension<double>& rotationVector);
+			inline AffineTransform makeRotationTransform(const BasicDimension<double>& rotationVector);
 
 			/**
 			 * Creates a transform that rotates coorinates around an anchor point according to a rotation vector.
@@ -155,7 +155,7 @@ namespace ascension {
 			 * @return An @c AffineTransform object that rotates coordinates around the specified point according to the specified rotation vector
 			 */
 			template<typename Geometry>
-			inline AffineTransform&& makeRotationTransform(
+			inline AffineTransform makeRotationTransform(
 				const BasicDimension<double>& rotationVector, const Geometry& anchor,
 				typename detail::EnableIfTagIs<Geometry, boost::geometry::point_tag>::type* = nullptr);
 #endif
@@ -285,11 +285,11 @@ namespace ascension {
 			/// @defgroup affine_transform_transformations Transformations
 			/// @{
 			template<typename Geometry>
-			Geometry&& deltaTransform(const AffineTransform& tx, const Geometry& g);
+			Geometry deltaTransform(const AffineTransform& tx, const Geometry& g);
 			template<typename Geometry>
-			Geometry&& inverseTransform(const AffineTransform& tx, const Geometry& g);
+			Geometry inverseTransform(const AffineTransform& tx, const Geometry& g);
 			template<typename Geometry>
-			Geometry&& transform(const AffineTransform& tx, const Geometry& g);
+			Geometry transform(const AffineTransform& tx, const Geometry& g);
 			/// @}
 #endif
 
@@ -301,14 +301,14 @@ namespace ascension {
 		namespace detail {
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CAIRO)
 			template<typename Geometry>
-			inline Geometry&& fromNative(const Cairo::Matrix& native,
+			inline Geometry fromNative(const Cairo::Matrix& native,
 					typename std::enable_if<std::is_same<Geometry, geometry::AffineTransform>::value>::type* = nullptr) {
 				return geometry::AffineTransform(
 					native.xx, native.xy, native.x0,	// m00 m01 m02
 					native.yx, native.yy, native.y0,	// m10 m11 m12
 					0, 0, 1);							// m20 m21 m22
 			}
-			inline Cairo::Matrix&& toNative(const geometry::AffineTransform& tx, const Cairo::Matrix* = nullptr) {
+			inline Cairo::Matrix toNative(const geometry::AffineTransform& tx, const Cairo::Matrix* = nullptr) {
 				return Cairo::Matrix(
 					geometry::scaleX(tx), geometry::shearY(tx),				// xx yx
 					geometry::shearX(tx), geometry::scaleY(tx),				// xy yy
@@ -317,14 +317,14 @@ namespace ascension {
 #endif
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(CORE_GRAPHICS)
 			template<typename Geometry>
-			inline Geometry&& fromNative(const CGAffineTransform& native,
+			inline Geometry fromNative(const CGAffineTransform& native,
 					typename std::enable_if<std::is_same<Geometry, geometry::AffineTransform>::value>::type* = nullptr) {
 				return geometry::AffineTransform(
 					native.a, native.c, native.tx,	// m00 m01 m02
 					native.b, native.d, native.ty,	// m10 m11 m12
 					0, 0, 1);						// m20 m21 m22
 			}
-			inline CGAffineTransform&& toNative(const geometry::AffineTransform& tx, const CGAffineTransform* = nullptr) {
+			inline CGAffineTransform toNative(const geometry::AffineTransform& tx, const CGAffineTransform* = nullptr) {
 				return ::CGAffineTransformMake(
 					geometry::scaleX(tx), geometry::shearY(tx),				// a  b
 					geometry::shearX(tx), geometry::scaleY(tx),				// c  d
@@ -333,14 +333,14 @@ namespace ascension {
 #endif
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(QT)
 			template<typename Geometry>
-			inline Geometry&& fromNative(const QMatrix& native,
+			inline Geometry fromNative(const QMatrix& native,
 					typename std::enable_if<std::is_same<Geometry, geometry::AffineTransform>::value>::type* = nullptr) {
 				return geometry::AffineTransform(
 					native.m11(), native.m12(), native.dx(),	// m00 m01 m02
 					native.m21(), native.m22(), native.dy(),	// m10 m11 m12
 					0, 0, 1);									// m20 m21 m22
 			}
-			inline QMatrix&& toNative(const geometry::AffineTransform& tx, const QMatrix* = nullptr) {
+			inline QMatrix toNative(const geometry::AffineTransform& tx, const QMatrix* = nullptr) {
 				return QMatrix(
 					geometry::scaleX(tx), geometry::shearY(tx),				// m11 m12
 					geometry::shearX(tx), geometry::scaleY(tx),				// m21 m22
@@ -349,14 +349,14 @@ namespace ascension {
 #endif
 #if ASCENSION_SUPPORTS_GRAPHICS_SYSTEM(WIN32_GDI)
 			template<typename Geometry>
-			inline Geometry&& fromNative(const XFORM& native,
+			inline Geometry fromNative(const XFORM& native,
 					typename std::enable_if<std::is_same<Geometry, geometry::AffineTransform>::value>::type* = nullptr) {
 				return geometry::AffineTransform(
 					native.eM11, native.eM21, native.eDx,	// m00 m01 m02
 					native.eM12, native.eM22, native.eDy,	// m10 m11 m12
 					0, 0, 1);								// m20 m21 m22
 			}
-			inline XFORM&& toNative(const geometry::AffineTransform& tx, const XFORM* = nullptr) {
+			inline XFORM toNative(const geometry::AffineTransform& tx, const XFORM* = nullptr) {
 				XFORM native;
 				native.eM11 = static_cast<FLOAT>(geometry::scaleX(tx));
 				native.eM12 = static_cast<FLOAT>(geometry::shearY(tx));

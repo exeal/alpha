@@ -276,28 +276,28 @@ namespace ascension {
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(CORE_GRAPHICS)
 #endif
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(CORE_TEXT)
-			template<typename T> T&& fromNative(const CTFontDescriptor& object);
-			template font::FontDescription&& fromNative<font::FontDescription>(const CTFontDescriptor& object);
-			CTFontDescriptor&& toNative(const font::FontDescription& object, const QFontInfo* = nullptr);
+			template<typename T> T fromNative(const CTFontDescriptor& object);
+			template font::FontDescription fromNative<font::FontDescription>(const CTFontDescriptor& object);
+			CTFontDescriptor toNative(const font::FontDescription& object, const QFontInfo* = nullptr);
 #endif
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(DIRECT_WRITE)
 #endif
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(HARFBUZZ)
 #endif
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(PANGO)
-			template<typename T> T&& fromNative(const Pango::FontDescription& object);
-//			template font::FontDescription&& fromNative<font::FontDescription>(const Pango::FontDescription& object);
-			Pango::FontDescription&& toNative(const font::FontDescription& object, const Pango::FontDescription* = nullptr);
+			template<typename T> T fromNative(const Pango::FontDescription& object);
+//			template font::FontDescription fromNative<font::FontDescription>(const Pango::FontDescription& object);
+			Pango::FontDescription toNative(const font::FontDescription& object, const Pango::FontDescription* = nullptr);
 #endif
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(QT)
-			template<typename T> T&& fromNative(const QFontInfo& object);
-			template font::FontDescription&& fromNative<font::FontDescription>(const QFontInfo& object);
-			QFontInfo&& toNative(const font::FontDescription& object, const QFontInfo* = nullptr);
+			template<typename T> T fromNative(const QFontInfo& object);
+			template font::FontDescription fromNative<font::FontDescription>(const QFontInfo& object);
+			QFontInfo toNative(const font::FontDescription& object, const QFontInfo* = nullptr);
 #endif
 #if ASCENSION_SUPPORTS_SHAPING_ENGINE(UNISCRIBE) || ASCENSION_SUPPORTS_SHAPING_ENGINE(WIN32_GDI) || ASCENSION_SUPPORTS_SHAPING_ENGINE(WIN32_GDIPLUS)
-			template<typename T> T&& fromNative(const LOGFONTW& object);
-//			template font::FontDescription&& fromNative<font::FontDescription>(const LOGFONTW& object);
-			LOGFONTW&& toNative(const font::FontDescription& object, const LOGFONTW* = nullptr);
+			template<typename T> T fromNative(const LOGFONTW& object);
+//			template font::FontDescription fromNative<font::FontDescription>(const LOGFONTW& object);
+			LOGFONTW toNative(const font::FontDescription& object, const LOGFONTW* = nullptr);
 #endif
 		}
 	}

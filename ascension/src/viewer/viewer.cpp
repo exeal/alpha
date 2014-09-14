@@ -7,7 +7,9 @@
 
 #include <ascension/content-assist/content-assist.hpp>
 #include <ascension/corelib/text/break-iterator.hpp>
+#include <ascension/graphics/font/font-collection.hpp>
 #include <ascension/graphics/font/font-metrics.hpp>
+#include <ascension/graphics/font/font-render-context.hpp>
 #include <ascension/graphics/font/text-viewport.hpp>
 #include <ascension/graphics/native-conversion.hpp>
 #include <ascension/graphics/rendering-context.hpp>

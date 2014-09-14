@@ -23,7 +23,7 @@
 
 namespace ascension {
 	namespace graphics {
-		class Image : public RenderingDevice, public Wrapper<Image> {
+		class Image : public RenderingDevice, public Wrapper<Image>, private boost::noncopyable {
 		public:
 			/**
 			 * <table>
