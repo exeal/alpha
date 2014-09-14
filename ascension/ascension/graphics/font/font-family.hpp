@@ -82,7 +82,6 @@ namespace ascension {
 				Glib::RefPtr<const Pango::FontFamily> asNativeObject() const;
 #elif ASCENSION_SELECTS_SHAPING_ENGINE(WIN32_GDIPLUS)
 				explicit FontFamily(const String& name);
-				explicit FontFamily(std::unique_ptr<Gdiplus::FontFamily> nativeObject);
 				explicit FontFamily(std::shared_ptr<Gdiplus::FontFamily> nativeObject);
 				explicit FontFamily(Gdiplus::FontFamily& nativeObject);	// weak ref.
 				std::shared_ptr<Gdiplus::FontFamily> asNativeObject() BOOST_NOEXCEPT;
