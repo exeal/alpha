@@ -1453,7 +1453,7 @@ namespace ascension {
 		/// Invoked when the mouse button has been triple-clicked. 
 		void TextViewer::mouseTripleClicked(widgetapi::event::MouseButtonInput& input) {
 			if(allowsMouseInput() && mouseInputStrategy_.get() != nullptr)
-				mouseInputStrategy_->mouseButtonInput(MouseInputStrategy::DOUBLE_CLICKED, input);
+				mouseInputStrategy_->mouseButtonInput(MouseInputStrategy::TRIPLE_CLICKED, input);
 		}
 
 		/// Invoked when the mouse wheel is rotated.

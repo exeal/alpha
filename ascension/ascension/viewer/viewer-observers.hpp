@@ -52,7 +52,8 @@ namespace ascension {
 			enum Action {
 				PRESSED,		///< The button was pressed (down).
 				RELEASED,		///< The button was released (up).
-				DOUBLE_CLICKED	///< The button was double-clicked.
+				DOUBLE_CLICKED,	///< The button was double-clicked.
+				TRIPLE_CLICKED	///< The button was triple-clicked.
 			};
 		private:
 			/// The viewer lost the mouse capture.
